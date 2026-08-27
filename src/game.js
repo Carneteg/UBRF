@@ -32,7 +32,7 @@ addEventListener("keydown",e=>{
       if(G.scen==="lektion"||G.scen==="bana"){
         const oid=G.moment&&MOMENT_OVNING[G.moment.id];
         if(oid)visaOvning(oid,"spel");
-      }else if(G.scen==="gard"||G.scen==="stallinne")visaTraningsbok("spel");
+      }else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne")visaTraningsbok("spel");
       break;}
   }
 });
@@ -335,7 +335,7 @@ function loop(now){
     if(G.luft>0)G.luft-=dt;
     if(G.vy==="2d")draw2D(G);else draw3D(G);
     ritaHUD();
-  } else if(G.scen==="gard"||G.scen==="stallinne"){
+  } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
     stegaVandring(dt);ritaVandring();
   } else if(G.scen==="resultat"){
     if(G.vy==="2d")draw2D(G);else draw3D(G);

@@ -171,9 +171,10 @@ const ANL = {
      mot:"stallinne", spawn:{x:1.2, y:25, rikt:0}},
     {id:"stall_n",  pos:[160.3,100.8], text:"Gå in i stallet (bakre dörren)",
      mot:"stallinne", spawn:{x:7.5, y:50, rikt:-Math.PI/2}},
-    {id:"ridhus_o", pos:[144.4,50], text:"In i ridhuset", mot:"ridhus"},
-    {id:"ridhus_s", pos:[122.5,43.6], text:"Ridhusets entré", mot:"info",
-     info:"Omklädningsrummet och läktaren ligger här inne. Hästarna tas in från gårdssidan."},
+    {id:"ridhus_o", pos:[144.4,50], text:"In i ridhuset (durkplåtdörrarna)",
+     mot:"ridhusinne", spawn:{x:24.4,y:4.5,rikt:Math.PI}},
+    {id:"ridhus_s", pos:[122.5,43.6], text:"In i ridhuset (entrén)",
+     mot:"ridhusinne", spawn:{x:5,y:1.4,rikt:Math.PI/2}},
     {id:"cafe", pos:[137.5,43.4], text:"Café Krubban (trappan upp)", mot:"info",
      info:"Café Krubban har stängt för kvällen. Kolla in vyn över banan från läktaren i stället."},
   ],
@@ -221,3 +222,55 @@ const STALLINNE = {
   ],
   ridlarare:{pos:[7.5,18], namn:"Ridläraren"},
 };
+
+/* ── Ridhuset invändigt — lokala koordinater: origo i sydväst,
+      +x öster (bredd 26), +y norr (längd 65). Banan 20×60 innanför
+      vit murad sarg med svart sockel (IMG_0095–0116): sponsorväggen
+      med speglarna i väster, läktaren med domarbåset i öster,
+      cafeteria-överbyggnaden med fönsterband och trappan i söder,
+      hinderförrådet i norr. Sargporten vid A släpper in ekipagen. ── */
+const RIDHUSINNE = {
+  bredd:26, langd:65, tak:6.2,
+  bana:{x:2.5, y:3, w:20, h:60}, sargH:1.35,
+  vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#5E4A36", gangFarg:"#8C8880",
+  panel:"#6B4A34", panelList:"#EFE8D8",           // sponsorväggens bruna trä
+  laktare:{x0:23.5, y0:6, y1:54, steg:3, stegH:0.28, stegD:0.8},
+  domarbas:{x:24.2, y:56.5, b:1.8, h:2.2},
+  cafe:{djup:3.0, z0:2.55, z1:5.4},               // överbyggnaden i söder
+  trappa:{x:22.2, y:3.2},                          // trätrappan upp till caféet
+  speglar:[ {y:28,b:4.2},{y:45,b:3.2} ],           // på västra långsidan
+  skyltar:[
+    {y:12,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
+    {y:18.5,b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
+    {y:33.5,b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
+    {y:38.5,b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
+    {y:50,  b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
+    {y:57,  b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
+  ],
+  port:{x0:11.5, x1:13.5},                         // sargporten vid A (södra kortsidan)
+  dorrar:[
+    {id:"ut_o", pos:[25.2,4.5],  text:"Ut till gårdsplanen", mot:"gard",
+     spawn:{x:145.6,y:50,rikt:0}},
+    {id:"ut_s", pos:[5,0.8],   text:"Ut mot parkeringen (entrén)", mot:"gard",
+     spawn:{x:122.5,y:42.6,rikt:-Math.PI/2}},
+  ],
+  info:[
+    {pos:[22.4,3.6],  text:"Trappan till Café Krubban",
+     svar:"Café Krubban har stängt för kvällen. Genom fönsterbanden ser man hela banan från borden där uppe."},
+    {pos:[24.5,57],   text:"Domarbåset",
+     svar:"Domarbåset — härifrån döms hoppklasserna på Påskhoppet. En trappa, en pall och bästa utsikten i huset."},
+    {pos:[12.5,64.2], text:"Hinderförrådet",
+     svar:"Hinderförrådet: bommar i blått, vitt och rött, kandelabrar, koner och cavaletti. ”HINDERSTÖD MED KLÄMHÅLLARE”, står det på lappen."},
+  ],
+};
+/* Infopunkter i stallet (klubbdelen och servicedelen). */
+STALLINNE.info=[
+  {pos:[6.2,4.5],  text:"Uppehållsrummet",
+   svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
+  {pos:[8.8,4.5],  text:"Teorisalen",
+   svar:"Teorisalen: whiteboard med dagens hästlistor, anatomiplanscher och käpphästar på hyllan. Teorilektionerna kommer i ett senare steg."},
+  {pos:[6.2,46.2], text:"Spolspiltan",
+   svar:"Spolspiltan: gummimattor, duschblandare och slangvinda. Att spola av hästen efter lektionen kommer med stallmomenten i steg 2."},
+  {pos:[8.8,46.2], text:"Spånförrådet",
+   svar:"Spånförrådet: Mustang kutterspån på pall i galvad bur. Mockning och strö kommer med stallmomenten i steg 2."},
+];
