@@ -182,8 +182,8 @@ function interaktioner(){
       gor(){visaTilldelning();}});
     if(G.hastId&&!G.skotselRes){
       const b=hittaBox(G.hastId);
-      if(b) L.push({pos:b.dorr, text:`Gör i ordning ${HORSES[G.hastId].namn}`,
-        gor(){visaSkotsel();}});
+      if(b) L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
+        gor(){visaBoxmeny();}});
     }
     for(const i of (S.info||[])) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
   }
@@ -230,6 +230,7 @@ function gaTill(scen,spawn){
 function startaVandring(){
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
+  G.sysslor={mockat:0,fodrat:0};
   const s=ANL.spawn; VD.px=s.x;VD.py=s.y;VD.rikt=s.rikt;VD.spår.length=0;
   hudLage("gang");
   saga("Du är framme på Husbyvägen 1A. Ridläraren väntar i stallgången.",4.5);
@@ -1319,8 +1320,8 @@ function ritaVandring(){
       :G.scen==="ridhusinne"?["Titta dig omkring","Läktaren, speglarna, Café Krubban — lektionen börjar i stallet."]
       :["Prata med ridläraren","Hon står i stallgången och fördelar hästarna."])
     : !G.skotselRes
-    ? [`Gör i ordning ${HORSES[G.hastId].namn}`,
-       G.scen==="stallinne"?"Gå till boxen med den gula markören.":"Boxen är inne i stallet."]
+    ? [`Sköt om ${HORSES[G.hastId].namn}`,
+       G.scen==="stallinne"?"Vid boxen (E): mocka, fodra och sadla.":"Boxen är inne i stallet."]
     : [`Led ${HORSES[G.hastId].namn} till ridhuset`,
        G.scen==="stallinne"?"Ut genom stalldörren och över gräsgården."
        :G.scen==="ridhusinne"?"Fram till sargporten vid A — sitt upp där."

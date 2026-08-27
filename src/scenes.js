@@ -47,7 +47,8 @@ function visaTilldelning(){
   // enkel tilldelningslogik i ridlärarens anda: rotation + nivåmatchning
   const kandidater=["toblerone","cosmo","larry","hamilton","conor","dexter"];
   const val=kandidater[G.seed%kandidater.length];
-  G.hastId=val;G.skotselRes=null;const h=HORSES[val];
+  G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
+  const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
     cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
     larry:"Han hoppar gärna. Ge honom en rak linje så gör han resten.",
@@ -223,6 +224,9 @@ function ritaGroom(){
 }
 function avslutaSkotsel(){
   const tid=(performance.now()-SK.start)/1000;
+  // stallron byggs i boxen: mockat och rätt foder ger en lugnare häst
+  const sys=G.sysslor||{mockat:0,fodrat:0};
+  G.stallro=clamp(0.72+0.14*sys.mockat+0.14*sys.fodrat,0,1);
   const res=utvarderaSkotsel({
     visitering:SK.visitering, ryktning:SK.ryktning.size/RYKTZONER.length,
     hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1),
@@ -239,8 +243,14 @@ function avslutaSkotsel(){
     <tr><td>Dagsform</td><td class="num">${res.dagsform.toFixed(2).replace(".",",")}</td></tr>
     <tr><td>Sadelläge</td><td class="num">${res.sadellage.toFixed(2).replace(".",",")}</td></tr>
     <tr><td>Risker under lektionen</td><td class="num">${res.risker.length?res.risker.join(", ").replaceAll("_"," "):"inga"}</td></tr>
+    <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
+    <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>
+    <tr><td>Stallro</td><td class="num">${G.stallro.toFixed(2).replace(".",",")}</td></tr>
     <tr><td>Tid i stallet</td><td class="num">${Math.round(tid)} s</td></tr>
   </tbody></table>
+  ${sys.mockat<0.99||sys.fodrat<0.99?`<div class="note bad" style="font-size:13px">${
+    sys.mockat<0.99?"Boxen är inte färdigmockad. ":""}${
+    sys.fodrat<0.99?"Fodringen stämmer inte med schemat. ":""}Det sänker stallron — hästen känner av oredan.</div>`:""}
   <p class="dim" style="font-size:13.5px">Dagsformen skalar hela avsprångskvaliteten i hoppningen,
   och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
   <div class="btnrow"><button class="btn" id="bLek">Led honom till ridhuset</button></div>`);
@@ -301,7 +311,7 @@ function visaResultat(dom){
     visaSkotsel();};
 }
 function nollstall(){
-  G.auto=false;G.leder=false;
+  G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
   document.getElementById("protWrap").hidden=true;

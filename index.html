@@ -186,6 +186,35 @@ tr:last-child td{border-bottom:0}
 .red{color:var(--crit)}
 .grn{color:var(--ok)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ── Små skärmar: krymp HUD:en, ge plats åt pekkontrollerna ──── */
+@media(max-width:760px){
+  body{font-size:14px}
+  .box{padding:8px 10px}
+  #moment{min-width:0; max-width:46vw}
+  #momentNamn{font-size:15px}
+  #momentText{font-size:11.5px}
+  #gait{font-size:19px}
+  #tempo{font-size:10.5px}
+  #pyr{width:152px}
+  #aids{width:142px}
+  #saga{font-size:16px}
+  #approach{font-size:11px}
+  .hud.tl{top:8px;left:8px}.hud.tr{top:8px;right:8px}
+  .hud.bl{bottom:8px;left:8px}.hud.br{bottom:8px;right:8px}
+  .hud.bc{bottom:10px}
+  #viewToggle{top:8px}
+  .sheet h1{font-size:24px}
+}
+@media(max-width:560px){
+  #aids{display:none}
+  #pyr{width:134px}
+  .prow{grid-template-columns:56px 1fr; gap:5px}
+  .pname{font-size:8px}
+  #faults{font-size:36px}
+  #momentText{display:none}
+  #prot{width:150px; font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -239,9 +268,11 @@ tr:last-child td{border-bottom:0}
 <script src="src/site.js"></script>
 <script src="src/hast.js"></script>
 <script src="src/ovningar.js"></script>
+<script src="src/sysslor.js"></script>
 <script src="src/render.js"></script>
 <script src="src/world.js"></script>
 <script src="src/game.js"></script>
 <script src="src/scenes.js"></script>
+<script src="src/mobil.js"></script>
 </body>
 </html>

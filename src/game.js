@@ -236,6 +236,7 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
+  document.getElementById("approach").textContent="";
   G.moment=LEKTION[0];visaMoment();
   overlay(false);document.getElementById("viewToggle").hidden=false;
 }
