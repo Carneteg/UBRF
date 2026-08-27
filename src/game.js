@@ -26,6 +26,14 @@ addEventListener("keydown",e=>{
     case"KeyN":G.hoppaMoment=true;break;
     case"KeyP":G.auto=!G.auto;saga(G.auto?"Jag visar. Titta på vägen jag väljer.":"Din tur.",2.5);break;
     case"KeyV":vaxlaVy();break;
+    case"KeyT":{
+      const ov2=document.getElementById("ov");
+      if(!ov2.classList.contains("hide"))break;
+      if(G.scen==="lektion"||G.scen==="bana"){
+        const oid=G.moment&&(G.moment.ovning||MOMENT_OVNING[G.moment.id]);
+        if(oid)visaOvning(oid,"spel");
+      }else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne")visaTraningsbok("spel");
+      break;}
   }
 });
 addEventListener("keyup",e=>{
@@ -54,8 +62,8 @@ function stegaInput(dt){
 
 /* ── Speltillstånd ── */
 const G={
-  scen:"meny",vy:"2d",t:0,
-  hastId:"toblerone",ride:null,aids:null,
+  scen:"meny",vy:"2d",t:0,grupp:"grupp2",plats:"ridhus",
+  hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,
   moment:null,momentIx:0,momentT:0,
@@ -98,7 +106,11 @@ function stegaRitt(dt){
   // svängradie ur faktisk kursändring
   const omega=G.aids.styrning*clamp(0.5+G.ride.tempo*0.22,0.4,2.2);
   const radie=Math.abs(omega)>0.02?Math.abs(G.ride.tempo/omega):1000;
-  stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag:.92,stallro:G.stallro,utomhus:false},dt);
+  /* Utomhus väger skyggheten tyngre (modellen har faktorn), och regn
+     gör underlaget tyngre än ridhusets harvade fiber. */
+  const ute=G.plats!=="ridhus";
+  const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
+  stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,utomhus:ute},dt);
   G.rikt+=omega*dt*(G.ride.tempo>0.2?1:0);
   // väggkollision: mjuk knuff in
   let nx=G.px+Math.cos(G.rikt)*G.ride.tempo*dt;
@@ -228,14 +240,36 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
-  G.moment=LEKTION[0];visaMoment();
+  document.getElementById("approach").textContent="";
+  G.lektion=byggLektion(G.grupp,G.seed,G.plats);
+  /* Vägen tillbaka: första passet efter en skada rids utan galopp
+     och utan bana — stegrande arbete, som efter en hälta. */
+  const mReh=hastminne(G.hastId);
+  if(mReh.rehab){
+    G.lektion=G.lektion.filter(m=>{
+      if(m.id==="bana")return false;
+      const o=OVNINGAR.find(o=>o.id===m.ovning);
+      return !o||o.gangart!=="galopp";
+    });
+  }
+  G.hadeBana=G.lektion.some(m=>m.id==="bana");
+  G.moment=G.lektion[0];visaMoment();
+  if(mReh.rehab)
+    saga(`${HORSES[G.hastId].namn} är på väg tillbaka efter sin skada — bara skritt och trav i dag, säger ridläraren.`,4.5);
+  else if(G.plats!=="ridhus"&&G.vader&&G.vader.typ==="regn")
+    saga("Regnet gör underlaget tungt — räkna med mindre schvung och rid med marginal.",4.5);
+  else if(G.plats==="stig")
+    saga("Uteritt på skogsstigen. Lydighetsövningar behöver ingen bana — grusvägar duger.",4.5);
   overlay(false);document.getElementById("viewToggle").hidden=false;
 }
 function visaMoment(){
   const m=G.moment;
-  document.getElementById("momentLbl").textContent=`Moment ${G.momentIx+1} av ${LEKTION.length}`;
+  const platsTxt=G.plats==="utebana"?" · uteridbanan":G.plats==="stig"?" · skogsstigen":"";
+  document.getElementById("momentLbl").textContent=
+    `Moment ${G.momentIx+1} av ${G.lektion.length} · ${GRUPPNAMN[G.grupp]||G.grupp}${platsTxt}`;
   document.getElementById("momentNamn").textContent=m.namn;
-  document.getElementById("momentText").textContent=m.text;
+  document.getElementById("momentText").textContent=
+    m.text+((m.ovning||MOMENT_OVNING[m.id])?" · T öppnar övningen i träningsboken.":"");
   saga(m.text,4);
 }
 function stegaLektion(dt){
@@ -250,19 +284,25 @@ function stegaLektion(dt){
     // ridlärartillsägelser
     G.sagaCd-=dt;
     if(G.sagaCd<=0&&G.momentT>6){
-      const[rop]=ridlararRop(G.ride,"grupp2",Math.floor(G.t));
+      const[rop]=ridlararRop(G.ride,G.grupp,Math.floor(G.t));
       saga(rop,3.4);G.sagaCd=11+Math.random()*5;
     }
     if(G.momentT>=m.tid||G.hoppaMoment){
       G.hoppaMoment=false;
-      if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,"grupp2");
+      if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp);
       G.momentIx++;
-      if(G.momentIx<LEKTION.length){G.moment=LEKTION[G.momentIx];G.momentT=0;visaMoment();}
+      if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;visaMoment();}
+      else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
+        const dom=domaRitt([],0,true);
+        dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
+        avslutaBana(dom);
+      }
     }
   }
 }
 function avslutaBana(dom){
-  G.betyg.bana=Skala.inverkan(G.ride.skala,"grupp2");
+  if(G.hadeBana)G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
+  G.passRes=registreraPass(dom);
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;
   document.getElementById("viewToggle").hidden=true;
@@ -302,7 +342,7 @@ function ritaHUD(){
     if(kapad)cap.style.width=((golv+Skala.TOL)*100).toFixed(1)+"%";
   }
   document.querySelector("#inverkan b").textContent=
-    Skala.inverkan(G.ride.skala,"grupp2").toFixed(2).replace(".",",");
+    Skala.inverkan(G.ride.skala,G.grupp).toFixed(2).replace(".",",");
   const g=Gait.G[G.ride.gangart];
   document.getElementById("gait").textContent=g.namn+(G.ride.gangart==="trav"?(IN.latt?" · lättridning":" · nedsittning"):"");
   document.getElementById("tempo").textContent=G.ride.tempo.toFixed(1).replace(".",",")+" m/s";
@@ -326,6 +366,8 @@ function loop(now){
     if(G.luft>0)G.luft-=dt;
     if(G.vy==="2d")draw2D(G);else draw3D(G);
     ritaHUD();
+  } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
+    stegaVandring(dt);ritaVandring();
   } else if(G.scen==="resultat"){
     if(G.vy==="2d")draw2D(G);else draw3D(G);
   }

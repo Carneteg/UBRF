@@ -14,6 +14,10 @@ function visaMeny(){
   och hjälperna flyttar hästens tillstånd på <em>utbildningsskalan</em>. Tillståndet avgör vad hästen gör.
   Det finns ingen hoppknapp.</p>
   <div class="keys">
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> gå — till fots</div>
+    <div><kbd>E</kbd> interagera (dörrar, ridlärare, box)</div>
+    <div><kbd>Shift</kbd> jogga (till fots)</div>
+    <div><kbd>T</kbd> träningsboken (även mitt i momentet)</div>
     <div><kbd>W</kbd><kbd>S</kbd> skänkel på / av</div>
     <div><kbd>Space</kbd> tygeltag (håll)</div>
     <div><kbd>A</kbd><kbd>D</kbd> styrning</div>
@@ -29,25 +33,51 @@ function visaMeny(){
   </div>
   <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
   Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
+  ${profilHTML()}
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
-    <span class="dim" style="font-size:13px">Dagens lektion: hoppgrupp, 60 minuter, sex hinder på 0,60 m</span>
+    <button class="btn ghost" id="bBok">Träningsboken</button>
+    <span class="dim" style="font-size:13px">Dagens lektion: ${GRUPPNAMN[G.grupp]||G.grupp} · sex hinder på 0,60 m</span>
   </div>`);
-  document.getElementById("bStart").onclick=visaTilldelning;
+  document.getElementById("bStart").onclick=startaVandring;
+  document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
+  kopplaProfil();
 }
 
 /* ── Ridläraren tilldelar häst ── */
 function visaTilldelning(){
-  // enkel tilldelningslogik i ridlärarens anda: rotation + nivåmatchning
-  const kandidater=["toblerone","cosmo","larry","hamilton","conor","dexter"];
+  // rotation ur gruppens hästpool — känsligare hästar på högre nivåer
+  const kandidater=hastpool(G.grupp);
   const val=kandidater[G.seed%kandidater.length];
-  G.hastId=val;const h=HORSES[val];
+  G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
+  G.hamtad=false;G.tackePa=false;G.fangstForsok=false;
+  const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
+    lydia:"Lydia tar hand om dig. Lyssna på henne, så lär hon dig takten.",
     cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
+    air:"Air går i alla grupper — idag går han med dig. Rid framåt.",
     larry:"Han hoppar gärna. Ge honom en rak linje så gör han resten.",
+    dexter:"Håll i dig. Han har lite mer fart — låt honom inte bestämma tempot.",
     hamilton:"Arbetsvillig men känslig — sitt stilla, så växer han.",
+    crokino:"Stor men lättriden. Och du såg lappen om spöet, va?",
     conor:"Du får Conor idag. Mjuk hand, balanserad sits. Han ger tillbaka exakt vad du ger honom.",
-    dexter:"Håll i dig. Han har lite mer fart — låt honom inte bestämma tempot."}[val];
+    lady:"Lady kan det här bättre än vi båda. Din uppgift är att inte störa henne.",
+    chip:"Chip testar dig direkt — var vänlig men bestämd, annars bestämmer han.",
+    tina:"Tina har stallets finaste trav. Rykta försiktigt, hon är kittlig.",
+    westside:"Westside gör jobbet om du gör ditt. Rak och ärlig — som en lektionshäst ska vara.",
+    makadu:"Makadu är snäll som få. Men kolla gjorden en extra gång innan du sitter upp.",
+    mara:"Bry dig inte om minen i boxen. Mara ger dig allt när ni väl är på banan.",
+    husky:"Om du får med dig Husky från hagen är halva lektionen redan vunnen.",
+    kennedy:"Kennedy är ung och allt är på riktigt för honom. Visa honom att världen är ofarlig."}[val]
+    ||"Rid som du red senast — fast bättre.";
+  const minne=hastminne(val);
+  const EGENHET={radd_for_spo:"är rädd för spö — det står på hästlistan. Låt bli F-tangenten.",
+    blaser_upp_magen:"blåser upp magen när du gjordar. Vänta en stund och dra åt igen innan du sitter upp.",
+    kittlig:"är kittlig — rykta med lugna, långsamma drag, annars registreras de inte.",
+    svarfangad:"är svårfångad i hagen. Drar han sig undan: stå still och gå lugnt fram en gång till."};
+  const egenheter=Object.keys(h.flaggor||{}).map(f=>EGENHET[f]).filter(Boolean);
+  const trott=minne.pass>0&&minne.sistaPassNr===SPAR.pass;
+  const rehab=!!minne.rehab;
   overlay(true,`
   <span class="lbl">Ridläraren fördelar hästarna</span>
   <h1 style="margin-top:8px">Du får ${h.namn}</h1>
@@ -62,16 +92,22 @@ function visaTilldelning(){
         <span>Maxhöjd <b>${h.maxhojd.toFixed(2).replace(".",",")} m</b></span>
       </div>
       <div class="why">”${motiv}”</div>
+      ${minne.pass>0?`<div class="dim" style="font-size:12px;margin-top:8px">Ni har ridit ${minne.pass} pass ihop — han minns dig (rang ${minne.rang.toFixed(2).replace(".",",")})${
+        typeof minne.sistaForm==="number"?` · dagsform senast ${minne.sistaForm.toFixed(2).replace(".",",")}`:""}.</div>`
+        :`<div class="dim" style="font-size:12px;margin-top:8px">Första gången ni möts.</div>`}
     </div>
   </div>
-  ${h.flaggor.radd_for_spo?`<div class="note bad">Crokino är rädd för spö — det står på hästlistan. Låt bli F-tangenten på honom.</div>`:""}
+  ${egenheter.map(e=>`<div class="note bad">${h.namn} ${e}</div>`).join("")}
+  ${rehab?`<div class="note" style="font-size:13px"><b class="gold">Vägen tillbaka:</b> ${h.namn} är åter i tjänst efter sin skada. Första passet rids försiktigt — bara skritt och trav, säger ridläraren.</div>`:""}
+  ${trott?`<div class="note" style="font-size:13px">${h.namn} gick lektion alldeles nyss och är inte utvilad — det kommer märkas på dagsformen.</div>`:""}
   <p class="dim" style="font-size:13.5px">Du väljer inte häst på en ridskola. Ridläraren tilldelar —
   att få rida en bättre häst är belöningen. Nästa gång du spelar får du en annan.</p>
   <div class="btnrow">
-    <button class="btn" id="bGroom">Gör i ordning honom</button>
+    <button class="btn" id="bGroom">Hämta honom i hagen</button>
     <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
   </div>`);
-  document.getElementById("bGroom").onclick=visaSkotsel;
+  document.getElementById("bGroom").onclick=()=>{overlay(false);
+    saga(`${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta honom.`,4);};
   document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
     setTimeout(()=>{const w=document.querySelector(".why");
       if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};
@@ -81,9 +117,18 @@ function visaTilldelning(){
 const SK={steg:0,ryktning:new Set(),hovar:[0,0,0,0],sadelX:0.5,gjord:0.1,visitering:0,betsling:0,
   start:0,drar:false,sista:null};
 function visaSkotsel(){
-  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.30;SK.gjord=0.10;
+  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
   SK.visitering=0;SK.betsling=0;SK.start=performance.now();
   const h=HORSES[G.hastId];
+  /* Egenhet: en häst som blåser upp magen släpper sakta ut luften —
+     gjorden glider ner igen tills du drar åt en gång till. */
+  if(SK.magTimer){clearInterval(SK.magTimer);SK.magTimer=null;}
+  if(h.flaggor&&h.flaggor.blaser_upp_magen)
+    SK.magTimer=setInterval(()=>{
+      if(SK.gjord>0.30&&!SK.drar){
+        SK.gjord=Math.max(0.30,SK.gjord-0.025);
+        if(SK.steg===3){dok3();ritaGroom();}
+      }},900);
   overlay(true,`
   <span class="lbl">Före lektionen · stallregel 10</span>
   <h1 style="margin-top:6px">Visitera, rykta, kratsa, sadla</h1>
@@ -108,15 +153,26 @@ function visaSkotsel(){
   initGroomCanvas();groomHint();
 }
 function groomHint(){
-  const t=["Klicka på mungipan och sadelläget för att visitera — kolla skav innan du lägger på något.",
+  const h=HORSES[G.hastId];
+  let t=["Klicka på mungipan och sadelläget för att visitera — kolla skav innan du lägger på något.",
     "Håll och dra över kroppen, i pälsens riktning (framifrån och bak). Täckning räknas per område.",
     "Klicka på en hov för att lyfta den, dra sedan nedåt över den för att kratsa. Alla fyra.",
     "Dra sadeln till rätt läge — precis bakom manken — och dra sedan gjordreglaget till det gröna bandet."][SK.steg];
+  if(SK.steg===1&&h.flaggor&&h.flaggor.kittlig)
+    t+=` OBS: ${h.namn} är kittlig — bara lugna, långsamma drag räknas.`;
+  if(SK.steg===3&&h.flaggor&&h.flaggor.blaser_upp_magen)
+    t+=` OBS: ${h.namn} blåser upp magen — gjorden glider ner igen. Dra åt en sista gång precis innan du sitter upp.`;
   document.getElementById("groomHint").textContent=t;
   document.querySelectorAll(".gstep").forEach(e=>e.classList.toggle("on",+e.dataset.s===SK.steg));
 }
 let gcv,gcx,lyftHov=-1;
-const RYKTZONER=[[0.30,0.30],[0.44,0.28],[0.58,0.28],[0.70,0.32],[0.36,0.48],[0.52,0.46],[0.66,0.48],[0.76,0.42]];
+/* Ankarpunkter på hästen (normaliserade canvaskoordinater) — hästen
+   ritas med ritaHastSida: mitt 0.55W, mark 0.88H, mankhöjd 0.52H,
+   huvudet åt vänster. */
+const RYKTZONER=[[0.44,0.31],[0.45,0.46],[0.55,0.39],[0.55,0.54],
+                 [0.66,0.52],[0.73,0.44],[0.43,0.57],[0.70,0.59]];
+const HOVP=[[0.44,0.85],[0.49,0.85],[0.68,0.85],[0.735,0.85]];
+const MUNGIPA=[0.267,0.33], SADELPLATS=[0.57,0.34], SADEL_RATT=0.565;
 function initGroomCanvas(){
   gcv=document.getElementById("groomCanvas");gcx=gcv.getContext("2d");
   const fit=()=>{const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
@@ -133,73 +189,78 @@ function initGroomCanvas(){
 function hantera(p,klick){
   const[x,y]=p;
   if(SK.steg===0&&klick){
-    if(Math.hypot(x-0.155,y-0.315)<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
-    if(Math.hypot(x-0.48,y-0.30)<0.10)SK.visitering=Math.min(1,SK.visitering+0.5);     // sadelläge
+    if(Math.hypot(x-MUNGIPA[0],y-MUNGIPA[1])<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
+    if(Math.hypot(x-SADELPLATS[0],y-SADELPLATS[1])<0.10)SK.visitering=Math.min(1,SK.visitering+0.5); // sadelläge
     if(SK.visitering>=1)SK.betsling=0.9;
     dok(0,SK.visitering>=1?"klart":"…");
   }
   if(SK.steg===1&&SK.drar){
     const dir=SK.sista?x-SK.sista[0]:0;
+    const kittlig=HORSES[G.hastId].flaggor&&HORSES[G.hastId].flaggor.kittlig;
+    const lugnt=!kittlig||dir<0.022;   // kittlig häst: bara långsamma drag räknas
     for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
-      if(Math.hypot(x-zx,y-zy)<0.085&&dir>0.0005)SK.ryktning.add(i);}
-    dok(1,Math.round(SK.ryktning.size/RYKTZONER.length*100)+" %");
+      if(Math.hypot(x-zx,y-zy)<0.085&&dir>0.0005&&lugnt)SK.ryktning.add(i);}
+    dok(1,Math.round(SK.ryktning.size/RYKTZONER.length*100)+" %"+(!lugnt?" · för fort!":""));
   }
   if(SK.steg===2){
-    const hovP=[[0.30,0.82],[0.42,0.84],[0.60,0.84],[0.74,0.82]];
-    if(klick){for(let i=0;i<4;i++)if(Math.hypot(x-hovP[i][0],y-hovP[i][1])<0.06)lyftHov=i;}
+    if(klick){let bi=-1,bd=0.055;
+      for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
+        if(d<bd){bd=d;bi=i;}}
+      if(bi>=0)lyftHov=bi;}
     else if(lyftHov>=0&&SK.sista&&y-SK.sista[1]>0.004)
       SK.hovar[lyftHov]=Math.min(1,SK.hovar[lyftHov]+0.10);
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
   }
   if(SK.steg===3&&SK.drar){
-    if(y<0.55)SK.sadelX=clamp(x,0.25,0.75);
+    if(y<0.55)SK.sadelX=clamp(x,0.35,0.80);
     else SK.gjord=clamp((x-0.2)/0.6,0,1);
-    const lage=1-clamp(Math.abs(SK.sadelX-0.455)/0.16,0,1);
-    const gOk=SK.gjord>=0.42&&SK.gjord<=0.74;
-    dok(3,(lage>0.7?"läge ✓":"läge ✗")+(gOk?" gjord ✓":" gjord ✗"));
+    dok3();
   }
   ritaGroom();
 }
-function dok(i,v){document.getElementById("gv"+i).textContent=v;}
+function dok(i,v){const el=document.getElementById("gv"+i);if(el)el.textContent=v;}
+function dok3(){
+  const lage=1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1);
+  const gOk=SK.gjord>=0.42&&SK.gjord<=0.74;
+  dok(3,(lage>0.7?"läge ✓":"läge ✗")+(gOk?" gjord ✓":" gjord ✗"));
+}
 function ritaGroom(){
   const W=gcv.clientWidth,H=gcv.clientHeight,h=HORSES[G.hastId];
   gcx.clearRect(0,0,W,H);
-  // häst i profil, vänd åt vänster
-  gcx.fillStyle=h.farg;
-  gcx.beginPath();gcx.ellipse(W*0.52,H*0.44,W*0.27,H*0.20,0,0,Math.PI*2);gcx.fill();       // kropp
-  gcx.beginPath();gcx.ellipse(W*0.245,H*0.33,W*0.085,H*0.115,-0.5,0,Math.PI*2);gcx.fill(); // hals
-  gcx.beginPath();gcx.ellipse(W*0.165,H*0.295,W*0.055,H*0.062,-0.2,0,Math.PI*2);gcx.fill();// huvud
-  gcx.fillRect(W*0.185,H*0.175,W*0.016,H*0.075); gcx.fillRect(W*0.215,H*0.175,W*0.016,H*0.075); // öron
-  for(const bx of[0.30,0.42,0.60,0.74]){gcx.fillRect(W*bx-W*0.016,H*0.55,W*0.032,H*0.28);} // ben
-  gcx.strokeStyle=h.man;gcx.lineWidth=4;
-  gcx.beginPath();gcx.moveTo(W*0.80,H*0.36);gcx.quadraticCurveTo(W*0.85,H*0.55,W*0.82,H*0.72);gcx.stroke(); // svans
-  gcx.fillStyle=h.man;gcx.beginPath();gcx.ellipse(W*0.27,H*0.245,W*0.055,H*0.03,-0.45,0,Math.PI*2);gcx.fill(); // man
+  // stallmiljö bakom: varmt golv och väggpanel
+  const gr=gcx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,"#3A342C"); gr.addColorStop(0.72,"#4A423A"); gr.addColorStop(0.73,"#6E6152"); gr.addColorStop(1,"#5E5346");
+  gcx.fillStyle=gr; gcx.fillRect(0,0,W,H);
+  gcx.strokeStyle="rgba(0,0,0,.12)"; gcx.lineWidth=1;
+  for(let i=1;i<8;i++){gcx.beginPath();gcx.moveTo(W*i/8,0);gcx.lineTo(W*i/8,H*0.72);gcx.stroke();}
+  // hästen i profil, huvudet åt vänster
+  ritaHastSida(gcx, W*0.55, H*0.88, H*0.52, -1, h.farg, h.man, {pose:"sta"});
   // ryktzoner
   if(SK.steg===1)for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
     gcx.fillStyle=SK.ryktning.has(i)?"rgba(127,180,137,.4)":"rgba(230,228,222,.10)";
     gcx.beginPath();gcx.arc(W*zx,H*zy,W*0.045,0,Math.PI*2);gcx.fill();}
   // visitering-markörer
   if(SK.steg===0){
-    for(const[mx,my]of[[0.155,0.315],[0.48,0.30]]){
+    for(const[mx,my]of[MUNGIPA,SADELPLATS]){
       gcx.strokeStyle="rgba(214,174,60,.8)";gcx.lineWidth=2;gcx.setLineDash([4,4]);
       gcx.beginPath();gcx.arc(W*mx,H*my,W*0.05,0,Math.PI*2);gcx.stroke();gcx.setLineDash([]);}
   }
   // hovar
-  if(SK.steg===2){const hovP=[[0.30,0.82],[0.42,0.84],[0.60,0.84],[0.74,0.82]];
-    for(let i=0;i<4;i++){const[hx,hy]=hovP[i];
-      gcx.fillStyle=SK.hovar[i]>0.6?"rgba(127,180,137,.85)":lyftHov===i?"rgba(214,174,60,.9)":"rgba(230,228,222,.25)";
-      gcx.beginPath();gcx.arc(W*hx,H*hy+ (lyftHov===i?-H*0.05:0),W*0.028,0,Math.PI*2);gcx.fill();}}
+  if(SK.steg===2){
+    for(let i=0;i<4;i++){const[hx,hy]=HOVP[i];
+      gcx.fillStyle=SK.hovar[i]>0.6?"rgba(127,180,137,.85)":lyftHov===i?"rgba(214,174,60,.9)":"rgba(240,238,232,.35)";
+      gcx.beginPath();gcx.arc(W*hx,H*hy+(lyftHov===i?-H*0.05:0),W*0.024,0,Math.PI*2);gcx.fill();}}
   // sadel
   if(SK.steg===3){
     const sx=W*SK.sadelX;
-    const ok=Math.abs(SK.sadelX-0.455)<0.11;
-    gcx.fillStyle=ok?"rgba(127,180,137,.9)":"rgba(214,174,60,.9)";
-    gcx.beginPath();gcx.ellipse(sx,H*0.315,W*0.075,H*0.06,0,0,Math.PI*2);gcx.fill();
+    const ok=Math.abs(SK.sadelX-SADEL_RATT)<0.11;
+    gcx.fillStyle=ok?"rgba(107,160,117,.92)":"rgba(214,174,60,.92)";
+    gcx.beginPath();gcx.ellipse(sx,H*0.345,W*0.068,H*0.055,0,0,Math.PI*2);gcx.fill();
     gcx.strokeStyle=gcx.fillStyle;gcx.lineWidth=5;
-    gcx.beginPath();gcx.moveTo(sx,H*0.36);gcx.quadraticCurveTo(sx-W*0.01,H*0.52,sx,H*0.60);gcx.stroke();
+    gcx.beginPath();gcx.moveTo(sx,H*0.39);gcx.quadraticCurveTo(sx-W*0.01,H*0.52,sx,H*0.62);gcx.stroke();
     // rätt läge-markering
-    gcx.strokeStyle="rgba(230,228,222,.35)";gcx.setLineDash([4,5]);gcx.lineWidth=1.5;
-    gcx.beginPath();gcx.moveTo(W*0.455,H*0.20);gcx.lineTo(W*0.455,H*0.55);gcx.stroke();gcx.setLineDash([]);
+    gcx.strokeStyle="rgba(240,238,232,.4)";gcx.setLineDash([4,5]);gcx.lineWidth=1.5;
+    gcx.beginPath();gcx.moveTo(W*SADEL_RATT,H*0.22);gcx.lineTo(W*SADEL_RATT,H*0.56);gcx.stroke();gcx.setLineDash([]);
     // gjordmätare
     gcx.fillStyle="rgba(11,13,16,.85)";gcx.fillRect(W*0.2,H*0.90,W*0.6,10);
     gcx.fillStyle="rgba(127,180,137,.35)";gcx.fillRect(W*0.2+W*0.6*0.42,H*0.90,W*0.6*0.32,10);
@@ -209,14 +270,29 @@ function ritaGroom(){
   }
 }
 function avslutaSkotsel(){
+  if(SK.magTimer){clearInterval(SK.magTimer);SK.magTimer=null;}
   const tid=(performance.now()-SK.start)/1000;
+  // stallron byggs i boxen: mockat och rätt foder ger en lugnare häst
+  const sys=G.sysslor||{mockat:0,fodrat:0};
+  G.stallro=clamp(0.72+0.14*sys.mockat+0.14*sys.fodrat,0,1);
   const res=utvarderaSkotsel({
     visitering:SK.visitering, ryktning:SK.ryktning.size/RYKTZONER.length,
-    hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-0.455)/0.16,0,1),
+    hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1),
     gjord:SK.gjord, betsling:SK.betsling, tid,
   },HORSES[G.hastId].forlatande,G.stallro);
+  /* Individen: gårdagens skötsel sitter i kroppen, och en häst som
+     gick lektion nyss är inte utvilad. */
+  const m0=hastminne(G.hastId);
+  const trott=m0.pass>0&&m0.sistaPassNr===SPAR.pass;
+  let igarRad="första passet på länge", vilaRad="utvilad";
+  if(typeof m0.sistaForm==="number"){
+    res.dagsform=clamp(res.dagsform+(m0.sistaForm-0.66)*0.18,0,1);
+    igarRad=m0.sistaForm.toFixed(2).replace(".",",")
+      +(m0.sistaForm>=0.72?" — det sitter i":m0.sistaForm<0.55?" — slarvet sitter i":"");
+  }
+  if(trott){res.dagsform=clamp(res.dagsform-0.08,0,1);vilaRad="gick lektion nyss (−0,08)";}
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
-  G.ride=nyState(G.dagsform,0.5,G.sadellage);
+  G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
   initNPC();
   G.px=10;G.py=52;G.rikt=-Math.PI/2;
   overlay(true,`
@@ -226,12 +302,24 @@ function avslutaSkotsel(){
     <tr><td>Dagsform</td><td class="num">${res.dagsform.toFixed(2).replace(".",",")}</td></tr>
     <tr><td>Sadelläge</td><td class="num">${res.sadellage.toFixed(2).replace(".",",")}</td></tr>
     <tr><td>Risker under lektionen</td><td class="num">${res.risker.length?res.risker.join(", ").replaceAll("_"," "):"inga"}</td></tr>
+    <tr><td>Gårdagens dagsform</td><td class="num">${igarRad}</td></tr>
+    <tr><td>Vila</td><td class="num">${vilaRad}</td></tr>
+    <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
+    <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>
+    <tr><td>Stallro</td><td class="num">${G.stallro.toFixed(2).replace(".",",")}</td></tr>
     <tr><td>Tid i stallet</td><td class="num">${Math.round(tid)} s</td></tr>
   </tbody></table>
+  ${sys.mockat<0.99||sys.fodrat<0.99?`<div class="note bad" style="font-size:13px">${
+    sys.mockat<0.99?"Boxen är inte färdigmockad. ":""}${
+    sys.fodrat<0.99?"Fodringen stämmer inte med schemat. ":""}Det sänker stallron — hästen känner av oredan.</div>`:""}
   <p class="dim" style="font-size:13.5px">Dagsformen skalar hela avsprångskvaliteten i hoppningen,
   och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
-  <div class="btnrow"><button class="btn" id="bLek">In i ridhuset</button></div>`);
-  document.getElementById("bLek").onclick=startaLektion;
+  <div class="btnrow"><button class="btn" id="bLek">Led honom ut till lektionen</button></div>`);
+  document.getElementById("bLek").onclick=()=>{overlay(false);
+    G.leder=true;VD.spår.length=0;
+    const gIdx=GRUPPSTEGE.indexOf(G.grupp);
+    saga("Led hästen ut. I dag kan ni ta ridhuset eller uteridbanan"+
+      (gIdx>=5?" — eller sitta upp för uteritt på skogsstigen.":"."),4.5);};
 }
 
 /* ── Resultatet ── */
@@ -239,12 +327,17 @@ function visaResultat(dom){
   const h=HORSES[G.hastId];
   const inv=Object.values(G.betyg);
   const snitt=inv.length?inv.reduce((a,b)=>a+b,0)/inv.length:0;
-  const forv=Skala.FORVANTAN.grupp2;
-  const radNamn={uppvarmning:"Uppvärmning",losgorande:"Lösgörande",galopp:"Galopp",bana:"Banan"};
+  const P=G.passRes||{forv:Skala.FORVANTAN[G.grupp]??0.55,godkand:false,uppflyttad:false,
+    gruppNamn:GRUPPNAMN[G.grupp]||G.grupp,poang:0};
+  const forv=P.forv;
+  const radNamn=k=>{const m=(G.lektion||[]).find(x=>x.id===k);return m?m.namn:k;};
   let momRows="";
-  for(const k in G.betyg)momRows+=`<tr><td>${radNamn[k]||k}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
+  for(const k in G.betyg)momRows+=`<tr><td>${radNamn(k)}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
   const domRows=dom.protokoll.map(r=>`<li>${r}</li>`).join("");
-  const omdome= dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
+  const omdome= P.uppflyttad?`Det där satt. Från och med nästa vecka rider du i ${P.gruppNamn}.`
+    : dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
+    : !G.hadeBana?(snitt>=forv?`Bra ridet. Ridningen håller för din grupp — fortsätt så.`
+      :`Vi jobbar vidare. Snittet nådde inte gruppens förväntan idag — läs övningarna i träningsboken.`)
     : dom.totalfel===0&&snitt>=forv?`Felfritt, och du red vägen — inte hindren. Jag flyttar upp dig en grupp efter jul.`
     : dom.totalfel===0?`Felfritt! Men ridningen mellan hindren var stökigare än resultatet. Vi jobbar vidare där.`
     : snitt>=forv?`${dom.totalfel} fel, men ridningen håller. Felen försvinner när distanserna sätter sig.`
@@ -254,32 +347,58 @@ function visaResultat(dom){
   <h1 style="margin-top:8px">”${omdome}”</h1>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
     <div>
-      <div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
+      ${G.hadeBana?`<div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
       <ul style="font-size:13px;font-family:'IBM Plex Mono',monospace;line-height:1.7">${domRows||"<li>—</li>"}</ul>
       <table><tbody>
         <tr><td>Hinderfel</td><td class="num">${dom.hinderfel}</td></tr>
         <tr><td>Tid</td><td class="num">${dom.tid.toFixed(1).replace(".",",")} s</td></tr>
         <tr><td>Resultat</td><td class="num">${dom.utesluten?"UTESLUTEN":dom.totalfel+" fel"}</td></tr>
-      </tbody></table>
+      </tbody></table>`
+      :`<div class="lbl" style="margin-bottom:6px">Dagens lektion — ${GRUPPNAMN[P.riddenGrupp||G.grupp]||G.grupp}${
+        {utebana:" · uteridbanan",stig:" · uteritt på skogsstigen"}[G.plats]||""}</div>
+      <ul style="font-size:13px;line-height:1.8">${(G.lektion||[]).map(m=>`<li>${m.namn}</li>`).join("")}</ul>
+      <p class="dim" style="font-size:12.5px">Hoppning kommer först i hoppgruppen — vägen dit går genom utbildningsskalan.</p>`}
     </div>
     <div>
-      <div class="lbl" style="margin-bottom:6px">Inverkan per moment (förväntan grupp 2: ${forv.toFixed(2).replace(".",",")})</div>
+      <div class="lbl" style="margin-bottom:6px">Inverkan per moment (förväntan ${P.riddenNamn||GRUPPNAMN[G.grupp]||G.grupp}: ${forv.toFixed(2).replace(".",",")})</div>
       <table><tbody>${momRows}
         <tr><td><b style="color:var(--ink)">Snitt</b></td><td class="num" style="color:${snitt>=forv?"var(--ok)":"var(--crit)"}">${snitt.toFixed(2).replace(".",",")}</td></tr>
       </tbody></table>
-      <div class="note" style="font-size:13px">Andra vägran gav 8 fel — inte uteslutning. I klasser till och med
-      1,05 m rider man vidare, och först tredje vägran utesluter. Svensk regel, TR III mom. 381.</div>
+      ${P.uppflyttad?`<div class="note" style="font-size:14px"><b class="gold">UPPFLYTTAD.</b>
+        Du rider nu i <b>${P.gruppNamn}</b> — nya hästar väntar i rotationen.</div>`
+        :`<div class="note" style="font-size:13px">${P.godkand
+          ?`Godkänt pass — snittet höll gruppens förväntan. Uppflyttning: <b class="gold">${P.poang}/2</b>.`
+          :`Uppflyttning kräver snitt över gruppens förväntan (${forv.toFixed(2).replace(".",",")}) utan uteslutning. Just nu: ${P.poang}/2.`}</div>`}
+      ${P.skada?`<div class="note bad" style="font-size:13px">Efter lektionen visar ${h.namn} <b>${P.skada.namn}</b>.
+        Han sätts på vila i ${P.skada.passKvar} pass — och första passet tillbaka blir bara skritt och trav.
+        Nästa gång: visitera och kratsa ordentligt <em>före</em> lektionen.</div>`:""}
     </div>
   </div>
   <div class="btnrow">
     <button class="btn" id="bIgen">Rid igen — ny häst</button>
     <button class="btn ghost" id="bSamma">Samma häst igen</button>
   </div>`);
-  document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();visaTilldelning();};
-  document.getElementById("bSamma").onclick=()=>{nollstall();visaSkotsel();};
+  document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();
+    G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
+    gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
+    saga("Tillbaka i stallgången. Ridläraren fördelar hästarna.",3.5);};
+  document.getElementById("bSamma").onclick=()=>{
+    const mS=hastminne(G.hastId);
+    if(mS.skada&&mS.skada.passKvar>0){
+      G.seed++;nollstall();G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
+      gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
+      saga(`${h.namn} står på vila — ${mS.skada.namn}. Ridläraren ger dig en annan häst.`,4);
+      return;
+    }
+    nollstall();
+    G.skotselRes=null;G.hamtad=true;G.tackePa=false;
+    overlay(false);hudLage("gang");
+    const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
+    gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});
+    visaSkotsel();};
 }
 function nollstall(){
-  G.auto=false;
+  G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
   document.getElementById("protWrap").hidden=true;
