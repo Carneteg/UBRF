@@ -15,27 +15,43 @@ const VD={
 };
 
 const VCOL={
-  gras:"#39462C", grasLj:"#455438", grus:"#7C766A", asfalt:"#44464A",
-  sand:"#CFC5AC", sandKant:"#8E856D", aker:"#6E6544", betong:"#8A8B8C",
-  slant:"#4A5836",
-  tak:"#41454C", vit:"#E3DDD1", knut:"#D8D2C6",
-  fonster:"#2E3A48", fonsterLj:"#55677A",
-  dorrgul:"#C99435", dorrvit:"#DDD8CC", dorrgra:"#9A9C9E", dorrmork:"#3A3430",
-  portplat:"#A8ABAD", portsilver:"#B9BCBE", dorr:"#26221E",
-  himmel0:"#33404E", himmel1:"#8A93A0", skog:"#26301F",
-  staketTra:"#9C9484", staketEl:"#7C766B", staketRail:"#7C2A24",
-  galv:"#AEB2B5",
-  stallVagg:"#CFC8BC", boxFront:"#3E4144", boxRam:"#AEB2B5", galler:"#8E9296",
-  skylt:"#20242B", parlspont:"#E8E2D6",
+  gras:"#5D6C39", grasLj:"#6C7C44", grus:"#BCA179", asfalt:"#54524E",
+  sand:"#DCC9A0", sandKant:"#9C8B66", aker:"#B08F55", betong:"#A09A8C",
+  slant:"#54663A",
+  tak:"#41454C", vit:"#F0EADC", knut:"#EFE8D8",
+  fonster:"#3A4A5C", fonsterLj:"#93A9BC",
+  dorrgul:"#D9A13E", dorrvit:"#E8E2D4", dorrgra:"#A2A4A6", dorrmork:"#463F38",
+  portplat:"#B4B7B9", portsilver:"#C4C7C9", dorr:"#33291F",
+  himmel0:"#6F9BC4", himmel1:"#F4DFB2", skog:"#44502B",
+  staketTra:"#B0A184", staketEl:"#8C8578", staketRail:"#8A3129",
+  galv:"#B9BDC0",
+  stallVagg:"#CFC8BC", boxFront:"#4A4D50", boxRam:"#B4B8BB", galler:"#989CA0",
+  skylt:"#2A2E34", parlspont:"#F0EADC",
+  moln:"#FBF6EA", molnSkugga:"#E4D2B4", sol:"#FFE9B0",
+  stam:"#5E4A34",
 };
+/* Höstlövverk — färg per träd ur hash. */
+const TRADFARG=[
+  ["#4E6B33","#5E7B3C"],["#5A7438","#6B8542"],["#C1762F","#D28A3C"],
+  ["#B0512E","#C4653A"],["#C99B3A","#D9AE4C"],["#54703A","#648044"],
+  ["#A8622C","#BC7838"],
+];
 
 function fargSkala(hex,f){
   const n=parseInt(hex.slice(1),16);
   const r=Math.min(255,(n>>16)*f)|0, g=Math.min(255,((n>>8)&255)*f)|0, b=Math.min(255,(n&255)*f)|0;
   return `rgb(${r},${g},${b})`;
 }
-/* Solen står i sydväst — söderfasader ljusast, norr i skugga. */
-const SKUGGA={S:1.00,W:0.90,E:0.74,N:0.62,takW:0.96,takE:0.76,platt:0.88};
+/* Kvällssol i sydväst — västfasader glöder, norr i skugga. */
+const SKUGGA={S:0.98,W:1.08,E:0.72,N:0.60,takW:1.02,takE:0.74,platt:0.94};
+const SOLRIKT=[0.62,0.38];   // skuggor faller mot nordost
+function fargVarm(hex,f){    // solbelysta ytor drar åt guld
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.min(255,((n>>16)&255)*f*1.06)|0;
+  const g=Math.min(255,((n>>8)&255)*f)|0;
+  const b=Math.min(255,(n&255)*f*0.90)|0;
+  return `rgb(${r},${g},${b})`;
+}
 
 /* ── Gå-fysik ─────────────────────────────────────────────────── */
 function kollideraRekt(nx,ny,r,rekt){
@@ -283,23 +299,68 @@ function byggnadsYtor(b){
       pts.push([m[0],m[1],hN]);
     }
     pts.push([p0[0],p0[1],hV]);
+    const solig=sida==="W"||sida==="S";
     ytor.push({mitt:[(p0[0]+p1[0])/2,(p0[1]+p1[1])/2], pts,
-      farg:fargSkala(b.fargV,SKUGGA[sida]), sida, p0, p1});
+      farg:(solig?fargVarm:fargSkala)(b.fargV,SKUGGA[sida]), sida, p0, p1, gavel});
   };
   vagg(hörn.SW,hörn.SE,"S"); vagg(hörn.SE,hörn.NE,"E");
   vagg(hörn.NE,hörn.NW,"N"); vagg(hörn.NW,hörn.SW,"W");
   if(b.nock==="NS"){
-    ytor.push({mitt:[x+w*0.25,my], tak:true, farg:fargSkala(b.fargT,SKUGGA.takW),
+    ytor.push({mitt:[x+w*0.25,my], tak:true, farg:fargVarm(b.fargT,SKUGGA.takW),
       pts:[[x,y,hV],[x,y+h,hV],[mx,y+h,hN],[mx,y,hN]]});
     ytor.push({mitt:[x+w*0.75,my], tak:true, farg:fargSkala(b.fargT,SKUGGA.takE),
       pts:[[x+w,y,hV],[x+w,y+h,hV],[mx,y+h,hN],[mx,y,hN]]});
   }else{
     ytor.push({mitt:[mx,y+h*0.25], tak:true, farg:fargSkala(b.fargT,SKUGGA.takE),
       pts:[[x,y,hV],[x+w,y,hV],[x+w,my,hN],[x,my,hN]]});
-    ytor.push({mitt:[mx,y+h*0.75], tak:true, farg:fargSkala(b.fargT,SKUGGA.takW),
+    ytor.push({mitt:[mx,y+h*0.75], tak:true, farg:fargVarm(b.fargT,SKUGGA.takW),
       pts:[[x,y+h,hV],[x+w,y+h,hV],[x+w,my,hN],[x,my,hN]]});
   }
   return ytor;
+}
+/* Fasaddetaljer: plåtprofiler eller träpanel, vita knutar, sockel,
+   takfotsskugga. Ritas ovanpå väggfyllningen. */
+function ritaFasadDetalj(k,b,y){
+  const p0=y.p0, p1=y.p1, hV=b.hV;
+  const L=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]);
+  const ux=(p1[0]-p0[0])/L, uy=(p1[1]-p0[1])/L;
+  const P=(t,z)=>[p0[0]+ux*t, p0[1]+uy*t, z];
+  const mitt=tillKam(k,y.mitt[0],y.mitt[1],1);
+  if(mitt.d<K3.nara) return;
+  const nara=mitt.d<40;
+  if(b.plat){                       // korrugerad plåt: vertikala profiler
+    if(nara){const steg=Math.max(0.9,mitt.d*0.05);
+      for(let t=steg;t<L;t+=steg)
+        ritaLinje3D(k,P(t,0.12),P(t,hV-0.1),"rgba(0,0,0,.10)",1);}
+  }else{                            // liggande träpanel
+    if(nara){const steg=Math.max(0.5,mitt.d*0.035);
+      for(let z=steg;z<hV-0.15;z+=steg)
+        ritaLinje3D(k,P(0.05,z),P(L-0.05,z),"rgba(40,20,10,.12)",1);}
+    // vita knutar i hörnen
+    ritaPoly3D(k,[P(0,0),P(0.16,0),P(0.16,hV),P(0,hV)],VCOL.knut,null);
+    ritaPoly3D(k,[P(L-0.16,0),P(L,0),P(L,hV),P(L-0.16,hV)],VCOL.knut,null);
+    // vit takfotslist (inte över gavelfältet)
+    if(!y.gavel)
+      ritaPoly3D(k,[P(0,hV-0.14),P(L,hV-0.14),P(L,hV),P(0,hV)],VCOL.knut,null);
+  }
+  // sockel + takfotsskugga
+  ritaPoly3D(k,[P(0,0),P(L,0),P(L,0.22),P(0,0.22)],"rgba(60,58,54,.35)",null);
+  if(!y.gavel)
+    ritaPoly3D(k,[P(0,hV-0.30),P(L,hV-0.30),P(L,hV-0.16),P(0,hV-0.16)],"rgba(20,12,6,.18)",null);
+}
+function ritaTakDetalj(k,b,y){
+  const mitt=tillKam(k,y.mitt[0],y.mitt[1],b.hV);
+  if(mitt.d<K3.nara||mitt.d>60) return;
+  // falsade skarvar längs fallriktningen + nockplåt
+  const [e0,e1,r1,r0]=y.pts;   // takyta: [takfot0, takfot1, nock1, nock0]
+  const n=Math.max(3,Math.round(Math.hypot(e1[0]-e0[0],e1[1]-e0[1])/2.2));
+  for(let i=1;i<n;i++){
+    const t=i/n;
+    ritaLinje3D(k,[e0[0]+(e1[0]-e0[0])*t,e0[1]+(e1[1]-e0[1])*t,e0[2]],
+      [r0[0]+(r1[0]-r0[0])*t,r0[1]+(r1[1]-r0[1])*t,r0[2]],"rgba(0,0,0,.10)",1);
+  }
+  ritaLinje3D(k,r0,r1,fargSkala(b.fargT,1.35),2);
+  ritaLinje3D(k,e0,e1,"rgba(0,0,0,.30)",1.5);
 }
 function vaggPunkt(b,sida){ // fasadens p0→p1 (medurs sedd utifrån)
   const {x,y,w,h}=b.rekt;
@@ -317,23 +378,50 @@ function ritaOppning(k,b,o){
     portsilver:VCOL.portsilver, fonster:VCOL.fonster, valv:VCOL.fonster,
     rund:VCOL.fonster};
   const farg=FARG[o.typ]||VCOL.dorr;
-  if(o.typ==="valv"){       // välvt spröjsfönster: rekt + båge
-    const pts=[P(o.u,o.z0),P(o.u+o.b,o.z0),P(o.u+o.b,o.z0+o.h*0.7)];
-    for(let i=1;i<5;i++){const t=i/5;
-      pts.push(P(o.u+o.b*(1-t), o.z0+o.h*(0.7+0.3*Math.sin(Math.PI*t))));}
-    pts.push(P(o.u,o.z0+o.h*0.7));
-    ritaPoly3D(k,pts,farg,VCOL.knut);
+  if(o.typ==="valv"){       // välvt spröjsfönster med vit karm
+    const båge=(u0,b0,z0,h0)=>{
+      const pts=[P(u0,z0),P(u0+b0,z0),P(u0+b0,z0+h0*0.7)];
+      for(let i=1;i<5;i++){const t=i/5;
+        pts.push(P(u0+b0*(1-t), z0+h0*(0.7+0.3*Math.sin(Math.PI*t))));}
+      pts.push(P(u0,z0+h0*0.7));
+      return pts;
+    };
+    ritaPoly3D(k,båge(o.u-0.08,o.b+0.16,o.z0-0.08,o.h+0.16),VCOL.knut,null);
+    ritaPoly3D(k,båge(o.u,o.b,o.z0,o.h),farg,null);
+    // himmelspegling i glasets övre del + spröjs
+    ritaPoly3D(k,båge(o.u+0.06,o.b-0.12,o.z0+o.h*0.42,o.h*0.52),VCOL.fonsterLj,null);
+    ritaLinje3D(k,P(o.u+o.b/2,o.z0),P(o.u+o.b/2,o.z0+o.h*0.94),VCOL.knut,1.2);
+    ritaLinje3D(k,P(o.u,o.z0+o.h*0.5),P(o.u+o.b,o.z0+o.h*0.5),VCOL.knut,1.2);
   }else if(o.typ==="rund"){ // bullseye-fönster
     const cu=o.u+o.b/2, cz=o.z0+o.h/2, pts=[];
     for(let i=0;i<10;i++){const v=i/10*Math.PI*2;
       pts.push(P(cu+Math.cos(v)*o.b/2, cz+Math.sin(v)*o.h/2));}
     ritaPoly3D(k,pts,farg,VCOL.knut);
+  }else if(o.typ==="fonster"){
+    // vit karm, glas med himmelspegling, spröjs
+    const m=0.07;
+    ritaPoly3D(k,[P(o.u-m,o.z0-m),P(o.u+o.b+m,o.z0-m),
+      P(o.u+o.b+m,o.z0+o.h+m),P(o.u-m,o.z0+o.h+m)],VCOL.knut,null);
+    ritaPoly3D(k,[P(o.u,o.z0),P(o.u+o.b,o.z0),P(o.u+o.b,o.z0+o.h),P(o.u,o.z0+o.h)],farg,null);
+    ritaPoly3D(k,[P(o.u,o.z0+o.h*0.45),P(o.u+o.b,o.z0+o.h*0.45),
+      P(o.u+o.b,o.z0+o.h),P(o.u,o.z0+o.h)],VCOL.fonsterLj,null);
+    ritaLinje3D(k,P(o.u+o.b/2,o.z0),P(o.u+o.b/2,o.z0+o.h),VCOL.knut,1.2);
+    ritaLinje3D(k,P(o.u,o.z0+o.h/2),P(o.u+o.b,o.z0+o.h/2),VCOL.knut,1.2);
   }else{
     ritaPoly3D(k,[P(o.u,o.z0),P(o.u+o.b,o.z0),P(o.u+o.b,o.z0+o.h),P(o.u,o.z0+o.h)],
       farg, o.typ==="portplat"?"#5A5C5E":VCOL.knut);
-    if(o.typ==="fonster")
-      ritaPoly3D(k,[P(o.u,o.z0+o.h*0.55),P(o.u+o.b,o.z0+o.h*0.55),
-        P(o.u+o.b,o.z0+o.h),P(o.u,o.z0+o.h)],VCOL.fonsterLj,null);
+    if(o.typ==="portplat"||o.typ==="portsilver"){ // durkplåtens skarv + trycke
+      ritaLinje3D(k,P(o.u+o.b/2,o.z0+0.05),P(o.u+o.b/2,o.z0+o.h-0.05),"#6E7072",1.5);
+    }else if(o.typ!=="dorrmork"){ // spegeldörr med handtag
+      const m2=0.12;
+      ritaPoly3D(k,[P(o.u+m2,o.z0+0.25),P(o.u+o.b-m2,o.z0+0.25),
+        P(o.u+o.b-m2,o.z0+o.h-0.2),P(o.u+m2,o.z0+o.h-0.2)],
+        fargSkala(farg,0.88),null);
+      const hp=tillKam(k,...(()=>{const q=P(o.u+o.b*0.82,o.z0+o.h*0.5);return [q[0],q[1]];})(),o.z0+o.h*0.48);
+      if(hp.d>=K3.nara&&hp.d<25){const hs=projK(k,hp);
+        cx.fillStyle="#2A2C2E"; cx.beginPath();
+        cx.arc(hs[0],hs[1],Math.max(1.2,k.f*0.02/hp.d),0,Math.PI*2); cx.fill();}
+    }
   }
 }
 function ritaHuvar(k,b){ // stallets rad av svarta ventilationshuvar på nocken
@@ -487,12 +575,48 @@ function markFarg(typ){
   return typ==="gras"?VCOL.grasLj:typ==="grus"?VCOL.grus:typ==="asfalt"?VCOL.asfalt
     :typ==="aker"?VCOL.aker:typ==="betong"?VCOL.betong:typ==="slant"?VCOL.slant:VCOL.sand;
 }
+/* Himlen: azimutlåsta moln och kvällssol i sydväst. */
+const MOLN=[{az:0.6,h:0.66,s:1.25},{az:1.9,h:0.80,s:0.9},{az:3.1,h:0.58,s:1.5},
+            {az:4.3,h:0.74,s:1.0},{az:5.4,h:0.62,s:1.3}];
+function azX(az){
+  let d=az-VD.rikt;
+  while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2;
+  return CW/2 + d/K3.fov*CW*0.85;
+}
+function ritaHimmel(k){
+  const gr=cx.createLinearGradient(0,0,0,k.hor);
+  gr.addColorStop(0,VCOL.himmel0); gr.addColorStop(0.75,"#BFC9BE");
+  gr.addColorStop(1,VCOL.himmel1);
+  cx.fillStyle=gr; cx.fillRect(0,0,CW,k.hor);
+  // solen i sydväst
+  const sx=azX(Math.atan2(-1,-1));
+  if(sx>-CW*0.3&&sx<CW*1.3){
+    const sg=cx.createRadialGradient(sx,k.hor*0.86,0,sx,k.hor*0.86,CH*0.30);
+    sg.addColorStop(0,"rgba(255,238,190,.95)"); sg.addColorStop(0.25,"rgba(255,226,160,.45)");
+    sg.addColorStop(1,"rgba(255,226,160,0)");
+    cx.fillStyle=sg; cx.beginPath(); cx.arc(sx,k.hor*0.86,CH*0.30,0,Math.PI*2); cx.fill();
+  }
+  for(const m of MOLN){
+    const x=azX(m.az); if(x<-CW*0.3||x>CW*1.3)continue;
+    const y=k.hor*(1-m.h*0.72), s=CH*0.05*m.s;
+    cx.fillStyle=VCOL.molnSkugga;
+    cx.beginPath(); cx.ellipse(x,y+s*0.35,s*2.1,s*0.55,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle=VCOL.moln;
+    for(const [ox,oy,r] of [[-1.2,0.1,0.8],[-0.3,-0.4,1.0],[0.6,-0.15,0.9],[1.3,0.15,0.7]]){
+      cx.beginPath(); cx.ellipse(x+ox*s,y+oy*s,r*s,r*s*0.8,0,0,Math.PI*2); cx.fill();}
+  }
+  // skogsbrynet vid horisonten — höstkulor
+  cx.fillStyle=VCOL.skog; cx.fillRect(0,k.hor-CH*0.030,CW,CH*0.030);
+  for(let i=0;i<26;i++){
+    const x=((i*127)%29)/29*CW*1.1-CW*0.05 + ((VD.rikt*80)%(CW/13));
+    const f=TRADFARG[(i*7)%TRADFARG.length][0];
+    cx.fillStyle=f;
+    cx.beginPath(); cx.ellipse(x,k.hor-CH*0.026,CW*0.026,CH*0.020,0,0,Math.PI*2); cx.fill();
+  }
+}
 function ritaGard3D(){
   const k=kamera();
-  const gr=cx.createLinearGradient(0,0,0,k.hor);
-  gr.addColorStop(0,VCOL.himmel0); gr.addColorStop(1,VCOL.himmel1);
-  cx.fillStyle=gr; cx.fillRect(0,0,CW,k.hor);
-  cx.fillStyle=VCOL.skog; cx.fillRect(0,k.hor-CH*0.035,CW,CH*0.035);
+  ritaHimmel(k);
   cx.fillStyle=VCOL.gras; cx.fillRect(0,k.hor,CW,CH-k.hor);
   for(const m of ANL.mark){ if(m.typ==="gras")continue;
     const r=m.rekt;
@@ -505,12 +629,30 @@ function ritaGard3D(){
       pts.push([c.c[0]+Math.cos(v)*c.r, c.c[1]+Math.sin(v)*c.r, 0.015]);}
     ritaPoly3D(k,pts,fargSkala(markFarg(c.typ),SKUGGA.platt),c.kant?VCOL.sandKant:null);
   }
+  // slagskuggor mot nordost
+  for(const b of ANL.byggnader){
+    const {x,y,w,h}=b.rekt, ox=b.hN*SOLRIKT[0], oy=b.hN*SOLRIKT[1];
+    ritaPoly3D(k,[[x,y,0.02],[x+w,y,0.02],[x+w+ox,y+oy,0.02],
+      [x+w+ox,y+h+oy,0.02],[x+ox,y+h+oy,0.02],[x,y+h,0.02]],
+      "rgba(28,26,14,.26)",null);
+  }
+  for(const t of ANL.trad){
+    ritaPoly3D(k,(()=>{const pts=[];
+      for(let i=0;i<8;i++){const v=i/8*Math.PI*2;
+        pts.push([t[0]+t[2]*1.6*SOLRIKT[0]*0.9+Math.cos(v)*t[2]*0.9,
+                  t[1]+t[2]*1.6*SOLRIKT[1]*0.9+Math.sin(v)*t[2]*0.55,0.02]);}
+      return pts;})(),"rgba(28,26,14,.20)",null);
+  }
   const items=[];
   for(const b of ANL.byggnader){
     for(const y of byggnadsYtor(b))
       items.push({d:-avst2(y.mitt), rita(){
-        ritaPoly3D(k,y.pts,y.farg,fargSkala(y.farg,0.75));
-        if(!y.tak) for(const o of (b.oppningar||[])) if(o.sida===y.sida) ritaOppning(k,b,o);
+        ritaPoly3D(k,y.pts,y.farg,fargSkala(y.farg,0.8));
+        if(y.tak){ ritaTakDetalj(k,b,y); }
+        else{
+          ritaFasadDetalj(k,b,y);
+          for(const o of (b.oppningar||[])) if(o.sida===y.sida) ritaOppning(k,b,o);
+        }
       }});
     if(b.huvar) items.push({d:-avst2([b.rekt.x+b.rekt.w/2,b.rekt.y+b.rekt.h/2])+1,
       rita(){ritaHuvar(k,b);}});
@@ -552,28 +694,30 @@ function ritaStaket3D(k,a,c,typ){
 function ritaTrad3D(k,t){
   const p=tillKam(k,t[0],t[1],0); if(p.d<K3.nara)return;
   const s=projK(k,p), sz=t[2]*k.f/p.d;
-  cx.strokeStyle="#3A3128"; cx.lineWidth=Math.max(1.5,sz*0.09);
-  cx.beginPath();cx.moveTo(s[0],s[1]);cx.lineTo(s[0],s[1]-sz*1.1);cx.stroke();
-  cx.fillStyle="#25301F";
-  cx.beginPath();cx.ellipse(s[0],s[1]-sz*1.5,sz*0.65,sz*0.75,0,0,Math.PI*2);cx.fill();
-  cx.fillStyle="#2E3B26";
-  cx.beginPath();cx.ellipse(s[0]-sz*0.2,s[1]-sz*1.62,sz*0.42,sz*0.5,0,0,Math.PI*2);cx.fill();
+  const hash=(t[0]*13+t[1]*7)|0;
+  const [mork,ljus]=TRADFARG[hash%TRADFARG.length];
+  cx.strokeStyle=VCOL.stam; cx.lineWidth=Math.max(1.5,sz*0.10);
+  cx.beginPath();cx.moveTo(s[0],s[1]);cx.lineTo(s[0]+sz*0.05,s[1]-sz*1.05);cx.stroke();
+  cx.lineWidth=Math.max(1,sz*0.06);
+  cx.beginPath();cx.moveTo(s[0]+sz*0.03,s[1]-sz*0.7);cx.lineTo(s[0]+sz*0.35,s[1]-sz*1.2);
+  cx.moveTo(s[0]+sz*0.02,s[1]-sz*0.8);cx.lineTo(s[0]-sz*0.3,s[1]-sz*1.25);cx.stroke();
+  // lövklungor: mörk bas + två ljusare kullar + solkant
+  cx.fillStyle=mork;
+  cx.beginPath();cx.ellipse(s[0],s[1]-sz*1.42,sz*0.72,sz*0.62,0,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.ellipse(s[0]-sz*0.42,s[1]-sz*1.22,sz*0.42,sz*0.38,0,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.ellipse(s[0]+sz*0.44,s[1]-sz*1.25,sz*0.40,sz*0.36,0,0,Math.PI*2);cx.fill();
+  cx.fillStyle=ljus;
+  cx.beginPath();cx.ellipse(s[0]-sz*0.22,s[1]-sz*1.58,sz*0.40,sz*0.34,0,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.ellipse(s[0]+sz*0.24,s[1]-sz*1.40,sz*0.32,sz*0.28,0,0,Math.PI*2);cx.fill();
+  cx.fillStyle="rgba(255,236,190,.18)";
+  cx.beginPath();cx.ellipse(s[0]-sz*0.34,s[1]-sz*1.66,sz*0.26,sz*0.20,0,0,Math.PI*2);cx.fill();
 }
 function ritaHage3DHast(k,x,y,h,i){
   const p=tillKam(k,x,y,0); if(p.d<K3.nara)return;
-  const s=projK(k,p), sz=clamp(1.6*k.f/p.d,3,90);
-  const beta=Math.sin(VD.tid*0.6+i*2.1)>0.3; // betar med huvudet nere
-  cx.fillStyle="rgba(0,0,0,.25)";
-  cx.beginPath();cx.ellipse(s[0],s[1],sz*0.62,sz*0.13,0,0,Math.PI*2);cx.fill();
-  cx.fillStyle=h.farg;
-  cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.52,sz*0.58,sz*0.34,0,0,Math.PI*2);cx.fill();
-  for(const bx of[-0.38,-0.16,0.14,0.36])
-    cx.fillRect(s[0]+bx*sz-sz*0.035,s[1]-sz*0.36,sz*0.07,sz*0.38);
-  const hx=s[0]+sz*0.62, hy=beta?s[1]-sz*0.12:s[1]-sz*0.78;
-  cx.beginPath();cx.ellipse(s[0]+sz*0.52,s[1]-(beta?sz*0.35:sz*0.68),sz*0.16,sz*0.28,beta?0.9:0.25,0,Math.PI*2);cx.fill();
-  cx.beginPath();cx.ellipse(hx,hy,sz*0.12,sz*0.17,beta?1.2:0.5,0,Math.PI*2);cx.fill();
-  cx.strokeStyle=h.man;cx.lineWidth=Math.max(1,sz*0.06);
-  cx.beginPath();cx.moveTo(s[0]-sz*0.58,s[1]-sz*0.6);cx.lineTo(s[0]-sz*0.66,s[1]-sz*0.1);cx.stroke();
+  const s=projK(k,p), sz=clamp(1.6*k.f/p.d,3,110);
+  const beta=Math.sin(VD.tid*0.35+i*2.1)>-0.1;   // betar mest, tittar upp ibland
+  const dir=(i%2===0)?1:-1;
+  ritaHastSida(cx,s[0],s[1],sz,dir,h.farg,h.man,{pose:beta?"beta":"sta"});
 }
 function ritaMarkor3D(k,pos){
   const p=tillKam(k,pos[0],pos[1],2.6+0.15*Math.sin(VD.tid*3));
@@ -586,35 +730,64 @@ function ritaMarkor3D(k,pos){
 function ritaLeddHast3D(k){
   const h=HORSES[G.hastId]; if(!h)return;
   const p=tillKam(k,VD.hastX,VD.hastY,0); if(p.d<K3.nara)return;
-  const s=projK(k,p), sz=clamp(1.7*k.f/p.d,6,240);
-  const bob=Math.sin(VD.fas*Math.PI*2)*sz*0.02;
-  cx.fillStyle="rgba(0,0,0,.28)";
-  cx.beginPath();cx.ellipse(s[0],s[1],sz*0.6,sz*0.13,0,0,Math.PI*2);cx.fill();
-  cx.fillStyle=h.farg;
-  cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.55+bob,sz*0.56,sz*0.36,0,0,Math.PI*2);cx.fill();
-  for(const bx of[-0.36,-0.14,0.16,0.38]){
-    const sving=Math.sin(VD.fas*Math.PI*2+(bx>0?0:Math.PI))*sz*0.05;
-    cx.fillRect(s[0]+bx*sz-sz*0.04+sving,s[1]-sz*0.38,sz*0.08,sz*0.4);}
-  cx.beginPath();cx.ellipse(s[0]+sz*0.5,s[1]-sz*0.86+bob,sz*0.17,sz*0.3,0.35,0,Math.PI*2);cx.fill();
-  cx.beginPath();cx.ellipse(s[0]+sz*0.66,s[1]-sz*1.02+bob,sz*0.13,sz*0.18,0.5,0,Math.PI*2);cx.fill();
-  cx.strokeStyle=h.man;cx.lineWidth=Math.max(1.5,sz*0.06);
-  cx.beginPath();cx.moveTo(s[0]+sz*0.42,s[1]-sz*0.95);cx.quadraticCurveTo(s[0]+sz*0.3,s[1]-sz*0.75,s[0]+sz*0.28,s[1]-sz*0.6);cx.stroke();
-  cx.beginPath();cx.moveTo(s[0]-sz*0.56,s[1]-sz*0.62);cx.lineTo(s[0]-sz*0.64,s[1]-sz*0.12);cx.stroke();
+  const s=projK(k,p), sz=clamp(1.7*k.f/p.d,6,260);
+  // profilsida efter hästens kurs relativt kameran
+  let rel=VD.hastRikt-VD.rikt;
+  while(rel>Math.PI)rel-=Math.PI*2; while(rel<-Math.PI)rel+=Math.PI*2;
+  const dir=Math.abs(rel)<Math.PI/2 ? (rel>=0?-1:1) : (rel>=0?1:-1);
+  const rorSig=VD.spår.length>1;
+  ritaHastSida(cx,s[0],s[1],sz,dir,h.farg,h.man,
+    {pose:rorSig?"ga":"sta", fas:VD.fas, grimma:true, sadel:!!G.skotselRes});
+  // grimskaftet mot din hand
+  const mx=s[0]+dir*sz*0.84, my=s[1]-sz*1.05;
+  cx.strokeStyle="#8A6A4C"; cx.lineWidth=Math.max(1.5,sz*0.015);
+  cx.beginPath(); cx.moveTo(mx,my);
+  cx.quadraticCurveTo((mx+CW/2)/2,Math.max(my,CH*0.82)+sz*0.1, CW/2+CH*0.04,CH*0.90);
+  cx.stroke();
 }
 function ritaSpelare3D(){
   const y0=CH*0.995, x0=CW/2, s=CH*0.30;
   const gung=Math.sin(VD.fas*Math.PI*2)*s*0.03;
-  cx.fillStyle="#23272E";
+  const sväng=Math.sin(VD.fas*Math.PI*2)*s*0.02;
+  // jeans
+  cx.fillStyle="#46566E";
   cx.beginPath();
-  cx.moveTo(x0-s*0.30,CH+2);
-  cx.quadraticCurveTo(x0-s*0.32,y0-s*0.52+gung,x0-s*0.18,y0-s*0.60+gung);
-  cx.lineTo(x0+s*0.18,y0-s*0.60+gung);
-  cx.quadraticCurveTo(x0+s*0.32,y0-s*0.52+gung,x0+s*0.30,CH+2);
-  cx.closePath();cx.fill();
-  cx.fillStyle="#181B20";
-  cx.beginPath();cx.ellipse(x0,y0-s*0.72+gung,s*0.155,s*0.17,0,0,Math.PI*2);cx.fill();
-  cx.fillStyle="#0F1114";
-  cx.beginPath();cx.ellipse(x0,y0-s*0.76+gung,s*0.15,s*0.12,0,0,Math.PI,true);cx.fill();
+  cx.moveTo(x0-s*0.24+sväng,CH+2);
+  cx.lineTo(x0-s*0.26,y0-s*0.30+gung); cx.lineTo(x0+s*0.26,y0-s*0.30+gung);
+  cx.lineTo(x0+s*0.24-sväng,CH+2); cx.closePath(); cx.fill();
+  cx.strokeStyle="rgba(20,24,34,.4)"; cx.lineWidth=Math.max(1,s*0.012);
+  cx.beginPath(); cx.moveTo(x0,y0-s*0.28+gung); cx.lineTo(x0,CH); cx.stroke();
+  // vit t-shirt med axlar och armar
+  cx.fillStyle="#EFEAE0";
+  cx.beginPath();
+  cx.moveTo(x0-s*0.28,y0-s*0.30+gung);
+  cx.quadraticCurveTo(x0-s*0.33,y0-s*0.52+gung,x0-s*0.26,y0-s*0.62+gung);
+  cx.quadraticCurveTo(x0,y0-s*0.70+gung,x0+s*0.26,y0-s*0.62+gung);
+  cx.quadraticCurveTo(x0+s*0.33,y0-s*0.52+gung,x0+s*0.28,y0-s*0.30+gung);
+  cx.closePath(); cx.fill();
+  cx.fillStyle="rgba(120,110,95,.25)";
+  cx.beginPath(); cx.ellipse(x0,y0-s*0.33+gung,s*0.26,s*0.045,0,0,Math.PI*2); cx.fill();
+  // armar
+  cx.fillStyle="#E4C9A8";
+  cx.beginPath(); cx.ellipse(x0-s*0.30,y0-s*0.44+gung-sväng,s*0.05,s*0.14,0.12,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(x0+s*0.30,y0-s*0.44+gung+sväng,s*0.05,s*0.14,-0.12,0,Math.PI*2); cx.fill();
+  // nacke + hår
+  cx.fillStyle="#E4C9A8";
+  cx.fillRect(x0-s*0.045,y0-s*0.70+gung,s*0.09,s*0.06);
+  cx.fillStyle="#8A5A32";
+  cx.beginPath(); cx.ellipse(x0,y0-s*0.76+gung,s*0.145,s*0.15,0,0,Math.PI*2); cx.fill();
+  cx.beginPath();
+  cx.moveTo(x0-s*0.13,y0-s*0.74+gung);
+  cx.quadraticCurveTo(x0-s*0.16,y0-s*0.62+gung,x0-s*0.10,y0-s*0.56+gung);
+  cx.lineTo(x0-s*0.05,y0-s*0.62+gung); cx.closePath(); cx.fill();
+  // grön ridhjälm med ventilation
+  cx.fillStyle="#4E7A3C";
+  cx.beginPath(); cx.ellipse(x0,y0-s*0.82+gung,s*0.15,s*0.115,0,Math.PI,0); cx.fill();
+  cx.fillStyle="#3E6230";
+  cx.beginPath(); cx.ellipse(x0,y0-s*0.775+gung,s*0.155,s*0.035,0,0,Math.PI*2); cx.fill();
+  cx.strokeStyle="rgba(240,240,225,.5)"; cx.lineWidth=Math.max(1,s*0.012);
+  cx.beginPath(); cx.moveTo(x0-s*0.07,y0-s*0.90+gung);
+  cx.quadraticCurveTo(x0,y0-s*0.94+gung,x0+s*0.07,y0-s*0.90+gung); cx.stroke();
 }
 
 /* ── Gården i 2D (karta) ─────────────────────────────────────── */
@@ -645,7 +818,11 @@ function ritaGard2D(){
       i?cx.lineTo(a,b):cx.moveTo(a,b);}
     cx.stroke();}
   for(const t of ANL.trad){const[a,b]=gs(t[0],t[1]);
-    cx.fillStyle="#25301F";cx.beginPath();cx.arc(a,b,t[2]*s*0.8,0,Math.PI*2);cx.fill();}
+    const hash=(t[0]*13+t[1]*7)|0, [mork,ljus]=TRADFARG[hash%TRADFARG.length];
+    cx.fillStyle="rgba(28,26,14,.25)";
+    cx.beginPath();cx.arc(a+t[2]*s*0.5,b+t[2]*s*0.3,t[2]*s*0.75,0,Math.PI*2);cx.fill();
+    cx.fillStyle=mork;cx.beginPath();cx.arc(a,b,t[2]*s*0.8,0,Math.PI*2);cx.fill();
+    cx.fillStyle=ljus;cx.beginPath();cx.arc(a-t[2]*s*0.25,b-t[2]*s*0.25,t[2]*s*0.45,0,Math.PI*2);cx.fill();}
   for(const p of ANL.props){const[a,b]=gs(p.pos[0],p.pos[1]);
     if(p.typ==="silo"){cx.fillStyle="#9EA2A6";cx.beginPath();cx.arc(a,b,s*1.2,0,Math.PI*2);cx.fill();}
     else if(p.typ==="balar"){cx.fillStyle="#DDDBD4";
@@ -819,20 +996,11 @@ function ritaStall3D(){
         }
         // hästhuvud över boxdörren
         if(h){
-          const p=tillKam(k,fx,my,1.6);
+          const p=tillKam(k,fx,my,1.75);
           if(p.d>=K3.nara){
-            const s=projK(k,p), sz=clamp(0.75*k.f/p.d,4,120);
-            const nick=Math.sin(VD.tid*0.9+i*1.7+(sida==="E"?2:0))*sz*0.05;
-            cx.fillStyle=h.farg;
-            cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.2+nick,sz*0.34,sz*0.5,sida==="W"?-0.25:0.25,0,Math.PI*2);cx.fill();
-            cx.beginPath();cx.ellipse(s[0]+(sida==="W"?sz*0.26:-sz*0.26),s[1]+sz*0.16+nick,sz*0.2,sz*0.3,sida==="W"?-0.3:0.3,0,Math.PI*2);cx.fill();
-            cx.fillStyle=h.man;
-            cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.62+nick,sz*0.22,sz*0.13,0,0,Math.PI*2);cx.fill();
-            const öra=(d2)=>{cx.beginPath();
-              cx.moveTo(s[0]+d2*sz*0.12,s[1]-sz*0.62+nick);
-              cx.lineTo(s[0]+d2*sz*0.22,s[1]-sz*0.95+nick);
-              cx.lineTo(s[0]+d2*sz*0.30,s[1]-sz*0.60+nick);cx.closePath();cx.fill();};
-            cx.fillStyle=h.farg;öra(-1);öra(1);
+            const s=projK(k,p), sz=clamp(0.62*k.f/p.d,4,150);
+            const nick=Math.sin(VD.tid*0.9+i*1.7+(sida==="E"?2:0))*sz*0.06;
+            ritaHastHuvudFront(cx,s[0],s[1],sz,h.farg,h.man,nick);
           }
         }
         // namnskylt

@@ -88,7 +88,7 @@ function visaTilldelning(){
 const SK={steg:0,ryktning:new Set(),hovar:[0,0,0,0],sadelX:0.5,gjord:0.1,visitering:0,betsling:0,
   start:0,drar:false,sista:null};
 function visaSkotsel(){
-  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.30;SK.gjord=0.10;
+  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
   SK.visitering=0;SK.betsling=0;SK.start=performance.now();
   const h=HORSES[G.hastId];
   overlay(true,`
@@ -123,7 +123,13 @@ function groomHint(){
   document.querySelectorAll(".gstep").forEach(e=>e.classList.toggle("on",+e.dataset.s===SK.steg));
 }
 let gcv,gcx,lyftHov=-1;
-const RYKTZONER=[[0.30,0.30],[0.44,0.28],[0.58,0.28],[0.70,0.32],[0.36,0.48],[0.52,0.46],[0.66,0.48],[0.76,0.42]];
+/* Ankarpunkter på hästen (normaliserade canvaskoordinater) — hästen
+   ritas med ritaHastSida: mitt 0.55W, mark 0.88H, mankhöjd 0.52H,
+   huvudet åt vänster. */
+const RYKTZONER=[[0.44,0.31],[0.45,0.46],[0.55,0.39],[0.55,0.54],
+                 [0.66,0.52],[0.73,0.44],[0.43,0.57],[0.70,0.59]];
+const HOVP=[[0.44,0.85],[0.49,0.85],[0.68,0.85],[0.735,0.85]];
+const MUNGIPA=[0.267,0.33], SADELPLATS=[0.57,0.34], SADEL_RATT=0.565;
 function initGroomCanvas(){
   gcv=document.getElementById("groomCanvas");gcx=gcv.getContext("2d");
   const fit=()=>{const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
@@ -140,8 +146,8 @@ function initGroomCanvas(){
 function hantera(p,klick){
   const[x,y]=p;
   if(SK.steg===0&&klick){
-    if(Math.hypot(x-0.155,y-0.315)<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
-    if(Math.hypot(x-0.48,y-0.30)<0.10)SK.visitering=Math.min(1,SK.visitering+0.5);     // sadelläge
+    if(Math.hypot(x-MUNGIPA[0],y-MUNGIPA[1])<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
+    if(Math.hypot(x-SADELPLATS[0],y-SADELPLATS[1])<0.10)SK.visitering=Math.min(1,SK.visitering+0.5); // sadelläge
     if(SK.visitering>=1)SK.betsling=0.9;
     dok(0,SK.visitering>=1?"klart":"…");
   }
@@ -152,16 +158,18 @@ function hantera(p,klick){
     dok(1,Math.round(SK.ryktning.size/RYKTZONER.length*100)+" %");
   }
   if(SK.steg===2){
-    const hovP=[[0.30,0.82],[0.42,0.84],[0.60,0.84],[0.74,0.82]];
-    if(klick){for(let i=0;i<4;i++)if(Math.hypot(x-hovP[i][0],y-hovP[i][1])<0.06)lyftHov=i;}
+    if(klick){let bi=-1,bd=0.055;
+      for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
+        if(d<bd){bd=d;bi=i;}}
+      if(bi>=0)lyftHov=bi;}
     else if(lyftHov>=0&&SK.sista&&y-SK.sista[1]>0.004)
       SK.hovar[lyftHov]=Math.min(1,SK.hovar[lyftHov]+0.10);
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
   }
   if(SK.steg===3&&SK.drar){
-    if(y<0.55)SK.sadelX=clamp(x,0.25,0.75);
+    if(y<0.55)SK.sadelX=clamp(x,0.35,0.80);
     else SK.gjord=clamp((x-0.2)/0.6,0,1);
-    const lage=1-clamp(Math.abs(SK.sadelX-0.455)/0.16,0,1);
+    const lage=1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1);
     const gOk=SK.gjord>=0.42&&SK.gjord<=0.74;
     dok(3,(lage>0.7?"läge ✓":"läge ✗")+(gOk?" gjord ✓":" gjord ✗"));
   }
@@ -171,42 +179,40 @@ function dok(i,v){document.getElementById("gv"+i).textContent=v;}
 function ritaGroom(){
   const W=gcv.clientWidth,H=gcv.clientHeight,h=HORSES[G.hastId];
   gcx.clearRect(0,0,W,H);
-  // häst i profil, vänd åt vänster
-  gcx.fillStyle=h.farg;
-  gcx.beginPath();gcx.ellipse(W*0.52,H*0.44,W*0.27,H*0.20,0,0,Math.PI*2);gcx.fill();       // kropp
-  gcx.beginPath();gcx.ellipse(W*0.245,H*0.33,W*0.085,H*0.115,-0.5,0,Math.PI*2);gcx.fill(); // hals
-  gcx.beginPath();gcx.ellipse(W*0.165,H*0.295,W*0.055,H*0.062,-0.2,0,Math.PI*2);gcx.fill();// huvud
-  gcx.fillRect(W*0.185,H*0.175,W*0.016,H*0.075); gcx.fillRect(W*0.215,H*0.175,W*0.016,H*0.075); // öron
-  for(const bx of[0.30,0.42,0.60,0.74]){gcx.fillRect(W*bx-W*0.016,H*0.55,W*0.032,H*0.28);} // ben
-  gcx.strokeStyle=h.man;gcx.lineWidth=4;
-  gcx.beginPath();gcx.moveTo(W*0.80,H*0.36);gcx.quadraticCurveTo(W*0.85,H*0.55,W*0.82,H*0.72);gcx.stroke(); // svans
-  gcx.fillStyle=h.man;gcx.beginPath();gcx.ellipse(W*0.27,H*0.245,W*0.055,H*0.03,-0.45,0,Math.PI*2);gcx.fill(); // man
+  // stallmiljö bakom: varmt golv och väggpanel
+  const gr=gcx.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,"#3A342C"); gr.addColorStop(0.72,"#4A423A"); gr.addColorStop(0.73,"#6E6152"); gr.addColorStop(1,"#5E5346");
+  gcx.fillStyle=gr; gcx.fillRect(0,0,W,H);
+  gcx.strokeStyle="rgba(0,0,0,.12)"; gcx.lineWidth=1;
+  for(let i=1;i<8;i++){gcx.beginPath();gcx.moveTo(W*i/8,0);gcx.lineTo(W*i/8,H*0.72);gcx.stroke();}
+  // hästen i profil, huvudet åt vänster
+  ritaHastSida(gcx, W*0.55, H*0.88, H*0.52, -1, h.farg, h.man, {pose:"sta"});
   // ryktzoner
   if(SK.steg===1)for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
     gcx.fillStyle=SK.ryktning.has(i)?"rgba(127,180,137,.4)":"rgba(230,228,222,.10)";
     gcx.beginPath();gcx.arc(W*zx,H*zy,W*0.045,0,Math.PI*2);gcx.fill();}
   // visitering-markörer
   if(SK.steg===0){
-    for(const[mx,my]of[[0.155,0.315],[0.48,0.30]]){
+    for(const[mx,my]of[MUNGIPA,SADELPLATS]){
       gcx.strokeStyle="rgba(214,174,60,.8)";gcx.lineWidth=2;gcx.setLineDash([4,4]);
       gcx.beginPath();gcx.arc(W*mx,H*my,W*0.05,0,Math.PI*2);gcx.stroke();gcx.setLineDash([]);}
   }
   // hovar
-  if(SK.steg===2){const hovP=[[0.30,0.82],[0.42,0.84],[0.60,0.84],[0.74,0.82]];
-    for(let i=0;i<4;i++){const[hx,hy]=hovP[i];
-      gcx.fillStyle=SK.hovar[i]>0.6?"rgba(127,180,137,.85)":lyftHov===i?"rgba(214,174,60,.9)":"rgba(230,228,222,.25)";
-      gcx.beginPath();gcx.arc(W*hx,H*hy+ (lyftHov===i?-H*0.05:0),W*0.028,0,Math.PI*2);gcx.fill();}}
+  if(SK.steg===2){
+    for(let i=0;i<4;i++){const[hx,hy]=HOVP[i];
+      gcx.fillStyle=SK.hovar[i]>0.6?"rgba(127,180,137,.85)":lyftHov===i?"rgba(214,174,60,.9)":"rgba(240,238,232,.35)";
+      gcx.beginPath();gcx.arc(W*hx,H*hy+(lyftHov===i?-H*0.05:0),W*0.024,0,Math.PI*2);gcx.fill();}}
   // sadel
   if(SK.steg===3){
     const sx=W*SK.sadelX;
-    const ok=Math.abs(SK.sadelX-0.455)<0.11;
-    gcx.fillStyle=ok?"rgba(127,180,137,.9)":"rgba(214,174,60,.9)";
-    gcx.beginPath();gcx.ellipse(sx,H*0.315,W*0.075,H*0.06,0,0,Math.PI*2);gcx.fill();
+    const ok=Math.abs(SK.sadelX-SADEL_RATT)<0.11;
+    gcx.fillStyle=ok?"rgba(107,160,117,.92)":"rgba(214,174,60,.92)";
+    gcx.beginPath();gcx.ellipse(sx,H*0.345,W*0.068,H*0.055,0,0,Math.PI*2);gcx.fill();
     gcx.strokeStyle=gcx.fillStyle;gcx.lineWidth=5;
-    gcx.beginPath();gcx.moveTo(sx,H*0.36);gcx.quadraticCurveTo(sx-W*0.01,H*0.52,sx,H*0.60);gcx.stroke();
+    gcx.beginPath();gcx.moveTo(sx,H*0.39);gcx.quadraticCurveTo(sx-W*0.01,H*0.52,sx,H*0.62);gcx.stroke();
     // rätt läge-markering
-    gcx.strokeStyle="rgba(230,228,222,.35)";gcx.setLineDash([4,5]);gcx.lineWidth=1.5;
-    gcx.beginPath();gcx.moveTo(W*0.455,H*0.20);gcx.lineTo(W*0.455,H*0.55);gcx.stroke();gcx.setLineDash([]);
+    gcx.strokeStyle="rgba(240,238,232,.4)";gcx.setLineDash([4,5]);gcx.lineWidth=1.5;
+    gcx.beginPath();gcx.moveTo(W*SADEL_RATT,H*0.22);gcx.lineTo(W*SADEL_RATT,H*0.56);gcx.stroke();gcx.setLineDash([]);
     // gjordmätare
     gcx.fillStyle="rgba(11,13,16,.85)";gcx.fillRect(W*0.2,H*0.90,W*0.6,10);
     gcx.fillStyle="rgba(127,180,137,.35)";gcx.fillRect(W*0.2+W*0.6*0.42,H*0.90,W*0.6*0.32,10);
@@ -219,7 +225,7 @@ function avslutaSkotsel(){
   const tid=(performance.now()-SK.start)/1000;
   const res=utvarderaSkotsel({
     visitering:SK.visitering, ryktning:SK.ryktning.size/RYKTZONER.length,
-    hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-0.455)/0.16,0,1),
+    hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1),
     gjord:SK.gjord, betsling:SK.betsling, tid,
   },HORSES[G.hastId].forlatande,G.stallro);
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
