@@ -62,7 +62,7 @@ function stegaInput(dt){
 
 /* ── Speltillstånd ── */
 const G={
-  scen:"meny",vy:"2d",t:0,
+  scen:"meny",vy:"2d",t:0,grupp:"grupp2",
   hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,
@@ -242,7 +242,8 @@ function startaLektion(){
 }
 function visaMoment(){
   const m=G.moment;
-  document.getElementById("momentLbl").textContent=`Moment ${G.momentIx+1} av ${LEKTION.length}`;
+  document.getElementById("momentLbl").textContent=
+    `Moment ${G.momentIx+1} av ${LEKTION.length} · ${GRUPPNAMN[G.grupp]||G.grupp}`;
   document.getElementById("momentNamn").textContent=m.namn;
   document.getElementById("momentText").textContent=
     m.text+(MOMENT_OVNING[m.id]?" · T öppnar övningen i träningsboken.":"");
@@ -260,19 +261,20 @@ function stegaLektion(dt){
     // ridlärartillsägelser
     G.sagaCd-=dt;
     if(G.sagaCd<=0&&G.momentT>6){
-      const[rop]=ridlararRop(G.ride,"grupp2",Math.floor(G.t));
+      const[rop]=ridlararRop(G.ride,G.grupp,Math.floor(G.t));
       saga(rop,3.4);G.sagaCd=11+Math.random()*5;
     }
     if(G.momentT>=m.tid||G.hoppaMoment){
       G.hoppaMoment=false;
-      if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,"grupp2");
+      if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp);
       G.momentIx++;
       if(G.momentIx<LEKTION.length){G.moment=LEKTION[G.momentIx];G.momentT=0;visaMoment();}
     }
   }
 }
 function avslutaBana(dom){
-  G.betyg.bana=Skala.inverkan(G.ride.skala,"grupp2");
+  G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
+  G.passRes=registreraPass(dom);
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;
   document.getElementById("viewToggle").hidden=true;
@@ -312,7 +314,7 @@ function ritaHUD(){
     if(kapad)cap.style.width=((golv+Skala.TOL)*100).toFixed(1)+"%";
   }
   document.querySelector("#inverkan b").textContent=
-    Skala.inverkan(G.ride.skala,"grupp2").toFixed(2).replace(".",",");
+    Skala.inverkan(G.ride.skala,G.grupp).toFixed(2).replace(".",",");
   const g=Gait.G[G.ride.gangart];
   document.getElementById("gait").textContent=g.namn+(G.ride.gangart==="trav"?(IN.latt?" · lättridning":" · nedsittning"):"");
   document.getElementById("tempo").textContent=G.ride.tempo.toFixed(1).replace(".",",")+" m/s";

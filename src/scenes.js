@@ -33,29 +33,36 @@ function visaMeny(){
   </div>
   <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
   Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
+  ${profilHTML()}
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
     <button class="btn ghost" id="bBok">Träningsboken</button>
-    <span class="dim" style="font-size:13px">Dagens lektion: hoppgrupp, 60 minuter, sex hinder på 0,60 m</span>
+    <span class="dim" style="font-size:13px">Dagens lektion: ${GRUPPNAMN[G.grupp]||G.grupp} · sex hinder på 0,60 m</span>
   </div>`);
   document.getElementById("bStart").onclick=startaVandring;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
+  kopplaProfil();
 }
 
 /* ── Ridläraren tilldelar häst ── */
 function visaTilldelning(){
-  // enkel tilldelningslogik i ridlärarens anda: rotation + nivåmatchning
-  const kandidater=["toblerone","cosmo","larry","hamilton","conor","dexter"];
+  // rotation ur gruppens hästpool — känsligare hästar på högre nivåer
+  const kandidater=hastpool(G.grupp);
   const val=kandidater[G.seed%kandidater.length];
   G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
   G.hamtad=false;G.tackePa=false;
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
+    lydia:"Lydia tar hand om dig. Lyssna på henne, så lär hon dig takten.",
     cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
+    air:"Air går i alla grupper — idag går han med dig. Rid framåt.",
     larry:"Han hoppar gärna. Ge honom en rak linje så gör han resten.",
+    dexter:"Håll i dig. Han har lite mer fart — låt honom inte bestämma tempot.",
     hamilton:"Arbetsvillig men känslig — sitt stilla, så växer han.",
-    conor:"Du får Conor idag. Mjuk hand, balanserad sits. Han ger tillbaka exakt vad du ger honom.",
-    dexter:"Håll i dig. Han har lite mer fart — låt honom inte bestämma tempot."}[val];
+    crokino:"Stor men lättriden. Och du såg lappen om spöet, va?",
+    conor:"Du får Conor idag. Mjuk hand, balanserad sits. Han ger tillbaka exakt vad du ger honom."}[val]
+    ||"Rid som du red senast — fast bättre.";
+  const minne=hastminne(val);
   overlay(true,`
   <span class="lbl">Ridläraren fördelar hästarna</span>
   <h1 style="margin-top:8px">Du får ${h.namn}</h1>
@@ -70,6 +77,8 @@ function visaTilldelning(){
         <span>Maxhöjd <b>${h.maxhojd.toFixed(2).replace(".",",")} m</b></span>
       </div>
       <div class="why">”${motiv}”</div>
+      ${minne.pass>0?`<div class="dim" style="font-size:12px;margin-top:8px">Ni har ridit ${minne.pass} pass ihop — han minns dig (rang ${minne.rang.toFixed(2).replace(".",",")}).</div>`
+        :`<div class="dim" style="font-size:12px;margin-top:8px">Första gången ni möts.</div>`}
     </div>
   </div>
   ${h.flaggor.radd_for_spo?`<div class="note bad">Crokino är rädd för spö — det står på hästlistan. Låt bli F-tangenten på honom.</div>`:""}
@@ -234,7 +243,7 @@ function avslutaSkotsel(){
     gjord:SK.gjord, betsling:SK.betsling, tid,
   },HORSES[G.hastId].forlatande,G.stallro);
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
-  G.ride=nyState(G.dagsform,0.5,G.sadellage);
+  G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
   initNPC();
   G.px=10;G.py=52;G.rikt=-Math.PI/2;
   overlay(true,`
@@ -265,12 +274,15 @@ function visaResultat(dom){
   const h=HORSES[G.hastId];
   const inv=Object.values(G.betyg);
   const snitt=inv.length?inv.reduce((a,b)=>a+b,0)/inv.length:0;
-  const forv=Skala.FORVANTAN.grupp2;
+  const P=G.passRes||{forv:Skala.FORVANTAN[G.grupp]??0.55,godkand:false,uppflyttad:false,
+    gruppNamn:GRUPPNAMN[G.grupp]||G.grupp,poang:0};
+  const forv=P.forv;
   const radNamn={uppvarmning:"Uppvärmning",losgorande:"Lösgörande",galopp:"Galopp",bana:"Banan"};
   let momRows="";
   for(const k in G.betyg)momRows+=`<tr><td>${radNamn[k]||k}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
   const domRows=dom.protokoll.map(r=>`<li>${r}</li>`).join("");
-  const omdome= dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
+  const omdome= P.uppflyttad?`Det där satt. Från och med nästa vecka rider du i ${P.gruppNamn}.`
+    : dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
     : dom.totalfel===0&&snitt>=forv?`Felfritt, och du red vägen — inte hindren. Jag flyttar upp dig en grupp efter jul.`
     : dom.totalfel===0?`Felfritt! Men ridningen mellan hindren var stökigare än resultatet. Vi jobbar vidare där.`
     : snitt>=forv?`${dom.totalfel} fel, men ridningen håller. Felen försvinner när distanserna sätter sig.`
@@ -289,12 +301,15 @@ function visaResultat(dom){
       </tbody></table>
     </div>
     <div>
-      <div class="lbl" style="margin-bottom:6px">Inverkan per moment (förväntan grupp 2: ${forv.toFixed(2).replace(".",",")})</div>
+      <div class="lbl" style="margin-bottom:6px">Inverkan per moment (förväntan ${P.riddenNamn||GRUPPNAMN[G.grupp]||G.grupp}: ${forv.toFixed(2).replace(".",",")})</div>
       <table><tbody>${momRows}
         <tr><td><b style="color:var(--ink)">Snitt</b></td><td class="num" style="color:${snitt>=forv?"var(--ok)":"var(--crit)"}">${snitt.toFixed(2).replace(".",",")}</td></tr>
       </tbody></table>
-      <div class="note" style="font-size:13px">Andra vägran gav 8 fel — inte uteslutning. I klasser till och med
-      1,05 m rider man vidare, och först tredje vägran utesluter. Svensk regel, TR III mom. 381.</div>
+      ${P.uppflyttad?`<div class="note" style="font-size:14px"><b class="gold">UPPFLYTTAD.</b>
+        Du rider nu i <b>${P.gruppNamn}</b> — nya hästar väntar i rotationen.</div>`
+        :`<div class="note" style="font-size:13px">${P.godkand
+          ?`Godkänt pass — snittet höll gruppens förväntan. Uppflyttning: <b class="gold">${P.poang}/2</b>.`
+          :`Uppflyttning kräver snitt över gruppens förväntan (${forv.toFixed(2).replace(".",",")}) utan uteslutning. Just nu: ${P.poang}/2.`}</div>`}
     </div>
   </div>
   <div class="btnrow">
