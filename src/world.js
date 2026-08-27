@@ -203,7 +203,8 @@ function interaktioner(){
     }
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
       gor(){visaSchema();}});
-    for(const i of (S.info||[])) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
+    for(const i of (S.info||[])) L.push({pos:i.pos, text:i.text,
+      gor(){ if(i.teori)visaTeori(); else saga(i.svar,4.5); }});
   }
   return L;
 }

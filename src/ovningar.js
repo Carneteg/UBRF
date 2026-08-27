@@ -249,3 +249,124 @@ function visaOvning(id,fran){
   <div class="btnrow"><button class="btn" id="tbT">Till träningsboken</button></div>`);
   document.getElementById("tbT").onclick=()=>visaTraningsbok(fran);
 }
+
+/* ── Lektionsbyggaren — steg 4: ridläraren sätter ihop dagens
+      lektion ur banken efter din grupp. Alltid skritt på lång tygel
+      först, sedan skritt-, trav- och galoppövningar som roterar med
+      dagen, och i hoppgruppen banan som avslutning. ── */
+const NIVAIDX={alla:0, grupp2:4, grupp3:5, grupp4:6, grupp5:7, hoppgrupp:8};
+
+function byggLektion(grupp,seed){
+  const gIdx=(typeof GRUPPSTEGE!=="undefined")?GRUPPSTEGE.indexOf(grupp):4;
+  const tillg=OVNINGAR.filter(o=>(NIVAIDX[o.niva]??0)<=Math.max(gIdx,0));
+  const av=(g)=>tillg.filter(o=>o.gangart===g&&o.id!=="langtygel"&&o.id!=="ridvagar");
+  const valj=(arr,k)=>arr.length?arr[(seed+k)%arr.length]:null;
+  const moment=(o,tid,bedoms)=>o&&{id:o.id, namn:o.namn, tid, bedoms,
+    ovning:o.id, text:o.utforande[0]};
+  const lek=[];
+  const lt=OVNINGAR.find(o=>o.id==="langtygel");
+  lek.push({id:"skritt", namn:lt.namn, tid:26, bedoms:false, ovning:"langtygel",
+    text:"Skritta ett varv på fyrkanten och låt hästen titta sig omkring."});
+  const sk=moment(valj(av("skritt").concat(av("halt")),1),38,true);
+  if(sk)lek.push(sk);
+  const travA=av("trav");
+  const t1=moment(valj(travA,2),40,true); if(t1)lek.push(t1);
+  const t2=moment(valj(travA.filter(o=>!t1||o.id!==t1.id),3),40,true);
+  if(t2&&gIdx>=3)lek.push(t2);
+  const g1=moment(valj(av("galopp"),4),40,true);
+  if(g1)lek.push(g1);
+  if(grupp==="hoppgrupp")
+    lek.push({id:"bana", namn:"Banan", tid:0, bedoms:true, ovning:"ridvagar",
+      text:"Nu hela banan — sex hinder, 60 cm. Rid vägen, inte hindret."});
+  return lek;
+}
+
+/* Banguider: geometri per övning, ritas i banskissen (20×60). */
+const OVNINGSGUIDE={
+  langtygel:{typ:"spar"},
+  halt_skritt:{typ:"punkter", p:[[10,1.5],[18.5,30],[10,58.5],[1.5,30]]},
+  trav_skritt:{typ:"punkter", p:[[10,1.5],[10,58.5]]},
+  storvolt:{typ:"volt", cx:10, cy:10, r:10},
+  serpentin:{typ:"serpentin", bagar:3},
+  framdelsvandning:{typ:"punkter", p:[[10,30]]},
+  skankelvikning:{typ:"diagonal", fran:[1.8,6], till:[18.2,54]},
+  stromsholm:{typ:"diagonal", fran:[1.8,6], till:[10,30], ater:[1.8,54]},
+  oppna:{typ:"langsida", x:1.8, inre:3.2, y0:10, y1:50},
+  kontrabojning:{typ:"spar"},
+  galoppfattning:{typ:"horn"},
+  voltfattning:{typ:"volt", cx:13.5, cy:30, r:5},
+  galoppserpentin:{typ:"serpentin", bagar:3},
+  kontragalopp:{typ:"bage"},
+  halvhalter:{typ:"horn"},
+};
+
+/* ── Teorisalen — tre frågor ur kunskapskapitlen ─────────────── */
+const FRAGOR=[
+  {f:"Vilken form är ”kontrollformen” som alltid ska finnas ett tygeltag bort?",
+   alt:["Framåt–nedåt","Samlad form","Bakom handen"], ratt:0},
+  {f:"Vad prövar eftergiften?",
+   alt:["Att hästen söker bettet och bär sig själv","Hästens topptempo","Sadelns läge"], ratt:0},
+  {f:"Vad kallas öppna, sluta och förvänd sluta tillsammans?",
+   alt:["Skolorna","Vändningarna","Programmen"], ratt:0},
+  {f:"Vad heter half-pass i ridhandbokens språk?",
+   alt:["Diagonalsluta","Skänkelvikning","Förvänd piruett"], ratt:0},
+  {f:"Vilken övning lär bakdelen att flytta i sidled?",
+   alt:["Framdelsvändning","Ryggning","Stora volten"], ratt:0},
+  {f:"Vad är det enda som bygger samling?",
+   alt:["Halvhalter — omtag","Mer skänkel hela tiden","Kortare tyglar"], ratt:0},
+  {f:"När är det rätt att longera enligt handboken?",
+   alt:["Med syfte — aldrig bara för att trötta ut hästen","För att få bort överskottsenergi","För att forma halsen"], ratt:0},
+  {f:"Vad gör en övergång?",
+   alt:["Byter gångart, tempo eller form","Byter varv","Byter diagonal"], ratt:0},
+  {f:"Varför rids kontraböjning?",
+   alt:["Den tränar hjälperna och förbereder galoppombyten","Den vilar hästens rygg","Den ser snygg ut för domaren"], ratt:0},
+  {f:"Vad gäller för spöet på Crokino?",
+   alt:["Låt bli det helt — det står på hästlistan","Bara lätta klappar","Bara i galopp"], ratt:0},
+  {f:"Vad skiljer den utbildade hästen från den ogymnastiserade?",
+   alt:["Övergångarna den klarar","Hur hög den hoppar","Färgen på täcket"], ratt:0},
+  {f:"Varför finns de tjugo minuterna i stallet före lektionen?",
+   alt:["Dagsformen och sadelläget avgör hela ritten","Ridläraren behöver rast","Hästen ska hinna äta klart"], ratt:0},
+];
+const TE={fragor:[],i:0,ratt:0};
+function visaTeori(){
+  // tre roterande frågor med blandad alternativordning
+  const start=(G.seed*7+ (SPAR?SPAR.pass:0)*3)%FRAGOR.length;
+  TE.fragor=[0,1,2].map(k=>FRAGOR[(start+k*4)%FRAGOR.length]);
+  TE.i=0; TE.ratt=0;
+  visaFraga();
+}
+function visaFraga(){
+  if(TE.i>=TE.fragor.length){
+    overlay(true,`
+    <span class="lbl">Teorisalen · resultat</span>
+    <h1 style="margin-top:8px">${TE.ratt} rätt av ${TE.fragor.length}</h1>
+    <p style="font-size:16px">${TE.ratt===3?"Ridläraren nickar. Teorin sitter — nu ska den ner i sadeln."
+      :TE.ratt===2?"Nästan. Slå upp det sista i träningsboken."
+      :"Sätt dig en stund med träningsboken — teorin gör ridningen billigare."}</p>
+    <div class="btnrow">
+      <button class="btn" id="bTeoriOk">Tillbaka till stallet</button>
+      <button class="btn ghost" id="bTeoriBok">Öppna träningsboken</button>
+    </div>`);
+    document.getElementById("bTeoriOk").onclick=()=>overlay(false);
+    document.getElementById("bTeoriBok").onclick=()=>visaTraningsbok("spel");
+    return;
+  }
+  const q=TE.fragor[TE.i];
+  const ordning=[0,1,2].sort((a,b)=>((a*7+TE.i*5+G.seed)%3)-((b*7+TE.i*5+G.seed)%3));
+  overlay(true,`
+  <span class="lbl">Teorisalen · fråga ${TE.i+1} av ${TE.fragor.length}</span>
+  <h1 style="margin-top:8px;font-size:clamp(22px,3vw,30px)">${q.f}</h1>
+  <div style="display:grid;gap:10px;margin-top:16px">
+    ${ordning.map(i=>`<button class="btn ghost te-alt" data-i="${i}"
+      style="width:100%;text-align:left;justify-content:flex-start">${q.alt[i]}</button>`).join("")}
+  </div>
+  <div class="btnrow"><button class="btn ghost" id="bTeoriAvbryt">Avbryt</button></div>`);
+  for(const b of document.querySelectorAll(".te-alt"))
+    b.onclick=()=>{
+      const ratt=+b.dataset.i===q.ratt;
+      if(ratt)TE.ratt++;
+      saga(ratt?"Rätt.":"Inte riktigt — "+q.alt[q.ratt].toLowerCase()+".",2.5);
+      TE.i++; visaFraga();
+    };
+  document.getElementById("bTeoriAvbryt").onclick=()=>overlay(false);
+}

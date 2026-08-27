@@ -30,7 +30,7 @@ addEventListener("keydown",e=>{
       const ov2=document.getElementById("ov");
       if(!ov2.classList.contains("hide"))break;
       if(G.scen==="lektion"||G.scen==="bana"){
-        const oid=G.moment&&MOMENT_OVNING[G.moment.id];
+        const oid=G.moment&&(G.moment.ovning||MOMENT_OVNING[G.moment.id]);
         if(oid)visaOvning(oid,"spel");
       }else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne")visaTraningsbok("spel");
       break;}
@@ -237,16 +237,18 @@ function saga(txt,dur){const s=document.getElementById("saga");
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
   document.getElementById("approach").textContent="";
-  G.moment=LEKTION[0];visaMoment();
+  G.lektion=byggLektion(G.grupp,G.seed);
+  G.hadeBana=G.lektion.some(m=>m.id==="bana");
+  G.moment=G.lektion[0];visaMoment();
   overlay(false);document.getElementById("viewToggle").hidden=false;
 }
 function visaMoment(){
   const m=G.moment;
   document.getElementById("momentLbl").textContent=
-    `Moment ${G.momentIx+1} av ${LEKTION.length} · ${GRUPPNAMN[G.grupp]||G.grupp}`;
+    `Moment ${G.momentIx+1} av ${G.lektion.length} · ${GRUPPNAMN[G.grupp]||G.grupp}`;
   document.getElementById("momentNamn").textContent=m.namn;
   document.getElementById("momentText").textContent=
-    m.text+(MOMENT_OVNING[m.id]?" · T öppnar övningen i träningsboken.":"");
+    m.text+((m.ovning||MOMENT_OVNING[m.id])?" · T öppnar övningen i träningsboken.":"");
   saga(m.text,4);
 }
 function stegaLektion(dt){
@@ -268,12 +270,17 @@ function stegaLektion(dt){
       G.hoppaMoment=false;
       if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp);
       G.momentIx++;
-      if(G.momentIx<LEKTION.length){G.moment=LEKTION[G.momentIx];G.momentT=0;visaMoment();}
+      if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;visaMoment();}
+      else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
+        const dom=domaRitt([],0,true);
+        dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
+        avslutaBana(dom);
+      }
     }
   }
 }
 function avslutaBana(dom){
-  G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
+  if(G.hadeBana)G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
   G.passRes=registreraPass(dom);
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;

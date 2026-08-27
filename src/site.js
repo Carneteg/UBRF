@@ -270,8 +270,8 @@ const RIDHUSINNE = {
 STALLINNE.info=[
   {pos:[6.2,4.5],  text:"Uppehållsrummet",
    svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
-  {pos:[8.8,4.5],  text:"Teorisalen",
-   svar:"Teorisalen: whiteboard med dagens hästlistor, anatomiplanscher och käpphästar på hyllan. Teorilektionerna kommer i ett senare steg."},
+  {pos:[8.8,4.5],  text:"Teorilektion i teorisalen", teori:true,
+   svar:""},
   {pos:[6.2,46.2], text:"Spolspiltan",
    svar:"Spolspiltan: gummimattor, duschblandare och slangvinda. Att spola av hästen efter lektionen kommer med stallmomenten i steg 2."},
   {pos:[8.8,46.2], text:"Spånförrådet",

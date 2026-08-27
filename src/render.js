@@ -83,12 +83,10 @@ function draw2D(G){
     if(x===0)a-=s*0.9; if(x===20)a+=s*0.9; if(y===0)c-=s*0.6; if(y===60)c+=s*1.3;
     cx.fillText(b,a,c+4);}
 
-  // volt-guide under lösgörande
-  if(G.scen==="lektion"&&G.moment?.id==="losgorande"){
-    const[a,b]=w2s(10,10);
-    cx.strokeStyle="rgba(214,174,60,.30)";cx.lineWidth=2;cx.setLineDash([6,7]);
-    cx.beginPath();cx.arc(a,b,10*s,0,Math.PI*2);cx.stroke();cx.setLineDash([]);
-  }
+  // banguide för dagens övning (ur träningsboken)
+  const guide=G.scen==="lektion"&&G.moment&&
+    (typeof OVNINGSGUIDE!=="undefined")&&OVNINGSGUIDE[G.moment.ovning];
+  if(guide)ritaGuide2D(guide,s);
 
   // hinder
   if(G.hinderAktiva)for(const h of BANA.hinder)drawFence2D(h,s,G);
@@ -96,6 +94,42 @@ function draw2D(G){
   for(const n of G.npcs)drawHorse2D(n.x,n.y,n.rikt,n.farg,s*0.9,false);
   // spelaren
   drawHorse2D(G.px,G.py,G.rikt,HORSES[G.hastId].farg,s,true,G);
+}
+function ritaGuide2D(g,s){
+  cx.strokeStyle="rgba(214,174,60,.32)";cx.fillStyle="rgba(214,174,60,.32)";
+  cx.lineWidth=2;cx.setLineDash([6,7]);
+  cx.beginPath();
+  if(g.typ==="volt"){
+    const[a,b]=w2s(g.cx,g.cy);cx.arc(a,b,g.r*s,0,Math.PI*2);
+  }else if(g.typ==="serpentin"){
+    for(let y=0;y<=60;y+=1.5){
+      const x=10+8.2*Math.cos(Math.PI*y/20);
+      const[a,b]=w2s(x,y);
+      y===0?cx.moveTo(a,b):cx.lineTo(a,b);}
+  }else if(g.typ==="diagonal"){
+    let[a,b]=w2s(g.fran[0],g.fran[1]);cx.moveTo(a,b);
+    [a,b]=w2s(g.till[0],g.till[1]);cx.lineTo(a,b);
+    if(g.ater){[a,b]=w2s(g.ater[0],g.ater[1]);cx.lineTo(a,b);}
+  }else if(g.typ==="langsida"){
+    let[a,b]=w2s(g.x,g.y0);cx.moveTo(a,b);
+    [a,b]=w2s(g.x,g.y1);cx.lineTo(a,b);
+    [a,b]=w2s(g.inre,g.y0);cx.moveTo(a,b);
+    [a,b]=w2s(g.inre,g.y1);cx.lineTo(a,b);
+  }else if(g.typ==="horn"){
+    for(const[hx,hy,v0]of[[1.5,1.5,0],[18.5,1.5,Math.PI/2],[18.5,58.5,Math.PI],[1.5,58.5,-Math.PI/2]]){
+      const[a,b]=w2s(hx,hy);
+      cx.moveTo(a+Math.cos(v0)*6*s,b+Math.sin(v0)*6*s);
+      cx.arc(a,b,6*s,v0,v0+Math.PI/2);}
+  }else if(g.typ==="bage"){
+    for(let y=10;y<=50;y+=1.5){
+      const x=1.8+5.5*Math.sin(Math.PI*(y-10)/40);
+      const[a,b]=w2s(x,y);
+      y===10?cx.moveTo(a,b):cx.lineTo(a,b);}
+  }
+  cx.stroke();cx.setLineDash([]);
+  if(g.typ==="punkter")for(const p of g.p){
+    const[a,b]=w2s(p[0],p[1]);
+    cx.beginPath();cx.arc(a,b,Math.max(4,s*0.5),0,Math.PI*2);cx.fill();}
 }
 function drawFence2D(h,s,G){
   const[a,b]=w2s(h.x,h.y),L=4*s/2;

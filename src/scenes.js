@@ -277,12 +277,14 @@ function visaResultat(dom){
   const P=G.passRes||{forv:Skala.FORVANTAN[G.grupp]??0.55,godkand:false,uppflyttad:false,
     gruppNamn:GRUPPNAMN[G.grupp]||G.grupp,poang:0};
   const forv=P.forv;
-  const radNamn={uppvarmning:"Uppvärmning",losgorande:"Lösgörande",galopp:"Galopp",bana:"Banan"};
+  const radNamn=k=>{const m=(G.lektion||[]).find(x=>x.id===k);return m?m.namn:k;};
   let momRows="";
-  for(const k in G.betyg)momRows+=`<tr><td>${radNamn[k]||k}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
+  for(const k in G.betyg)momRows+=`<tr><td>${radNamn(k)}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
   const domRows=dom.protokoll.map(r=>`<li>${r}</li>`).join("");
   const omdome= P.uppflyttad?`Det där satt. Från och med nästa vecka rider du i ${P.gruppNamn}.`
     : dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
+    : !G.hadeBana?(snitt>=forv?`Bra ridet. Ridningen håller för din grupp — fortsätt så.`
+      :`Vi jobbar vidare. Snittet nådde inte gruppens förväntan idag — läs övningarna i träningsboken.`)
     : dom.totalfel===0&&snitt>=forv?`Felfritt, och du red vägen — inte hindren. Jag flyttar upp dig en grupp efter jul.`
     : dom.totalfel===0?`Felfritt! Men ridningen mellan hindren var stökigare än resultatet. Vi jobbar vidare där.`
     : snitt>=forv?`${dom.totalfel} fel, men ridningen håller. Felen försvinner när distanserna sätter sig.`
@@ -292,13 +294,16 @@ function visaResultat(dom){
   <h1 style="margin-top:8px">”${omdome}”</h1>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
     <div>
-      <div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
+      ${G.hadeBana?`<div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
       <ul style="font-size:13px;font-family:'IBM Plex Mono',monospace;line-height:1.7">${domRows||"<li>—</li>"}</ul>
       <table><tbody>
         <tr><td>Hinderfel</td><td class="num">${dom.hinderfel}</td></tr>
         <tr><td>Tid</td><td class="num">${dom.tid.toFixed(1).replace(".",",")} s</td></tr>
         <tr><td>Resultat</td><td class="num">${dom.utesluten?"UTESLUTEN":dom.totalfel+" fel"}</td></tr>
-      </tbody></table>
+      </tbody></table>`
+      :`<div class="lbl" style="margin-bottom:6px">Dagens lektion — ${GRUPPNAMN[P.riddenGrupp||G.grupp]||G.grupp}</div>
+      <ul style="font-size:13px;line-height:1.8">${(G.lektion||[]).map(m=>`<li>${m.namn}</li>`).join("")}</ul>
+      <p class="dim" style="font-size:12.5px">Hoppning kommer först i hoppgruppen — vägen dit går genom utbildningsskalan.</p>`}
     </div>
     <div>
       <div class="lbl" style="margin-bottom:6px">Inverkan per moment (förväntan ${P.riddenNamn||GRUPPNAMN[G.grupp]||G.grupp}: ${forv.toFixed(2).replace(".",",")})</div>
