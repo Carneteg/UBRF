@@ -216,7 +216,10 @@ function visaUppgift(rubrik,text){
 /* ── 3D-maskineri: kamera, near-klipp, painter ────────────────── */
 const K3={hojd:1.62, bak:3.6, fov:1.02, horisont:0.52, nara:0.35};
 function kamera(){
-  return {x:VD.px-Math.cos(VD.rikt)*K3.bak, y:VD.py-Math.sin(VD.rikt)*K3.bak,
+  let kx=VD.px-Math.cos(VD.rikt)*K3.bak, ky=VD.py-Math.sin(VD.rikt)*K3.bak;
+  if(G.scen==="gard")
+    for(const b of ANL.byggnader)[kx,ky]=kollideraRekt(kx,ky,0.4,b.rekt);
+  return {x:kx, y:ky,
     z:K3.hojd+0.5, fx:Math.cos(VD.rikt), fy:Math.sin(VD.rikt),
     f:(CH*0.92)/K3.fov, hor:CH*K3.horisont};
 }
@@ -351,6 +354,7 @@ function billboard(k,x,y,storlek){
 }
 function ritaProp3D(k,p){
   const [x,y]=p.pos;
+  if(p.norm && (k.x-x)*p.norm[0]+(k.y-y)*p.norm[1] < 0) return; // fasadprop, fel sida
   switch(p.typ){
     case "silo":{ const B=billboard(k,x,y,5.6); if(!B)return;
       const {s,sz}=B, br=sz*0.24;

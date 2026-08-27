@@ -144,9 +144,9 @@ const ANL = {
     {typ:"stol",      pos:[149,88]},
     {typ:"bord",      pos:[158,38]},                     // gårdsplanens möbler
     {typ:"bank",      pos:[164,40]},
-    {typ:"trappa",    pos:[137,43.6]},                   // cafétrappan på södra gaveln
-    {typ:"skylt",     pos:[118,77], text:"UPPLANDS-BRO RYTTARFÖRENING", vagg:"W"},
-    {typ:"cafeskylt", pos:[135,43.8]},
+    {typ:"trappa",    pos:[137,43.6], norm:[0,-1]},                   // cafétrappan på södra gaveln
+    {typ:"skylt",     pos:[118,77], text:"UPPLANDS-BRO RYTTARFÖRENING", norm:[-1,0]},
+    {typ:"cafeskylt", pos:[135,43.8], norm:[0,-1]},
     {typ:"flagga",    pos:[107,15]},
     {typ:"skyltstolpe",pos:[147,40]},
     {typ:"stenhast",  pos:[149.5,29.5]},                 // stenhästarna i lekhagen
@@ -157,9 +157,9 @@ const ANL = {
     {typ:"mast",      pos:[112,122]},
     {typ:"mast",      pos:[66,156]},
     {typ:"sopstation",pos:[103,13]},
-    {typ:"ac",        pos:[144.4,54]},                   // värmepumparna mot gården
-    {typ:"ac",        pos:[144.4,58]},
-    {typ:"veranda",   pos:[160.3,45.6]},                 // verandan vid stallentrén
+    {typ:"ac",        pos:[144.4,54], norm:[1,0]},                   // värmepumparna mot gården
+    {typ:"ac",        pos:[144.4,58], norm:[1,0]},
+    {typ:"veranda",   pos:[160.3,45.6], norm:[0,-1]},                 // verandan vid stallentrén
     {typ:"busskylt",  pos:[118,7.6]},
   ],
 
