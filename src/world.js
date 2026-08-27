@@ -128,6 +128,7 @@ function stegaVandring(dt){
   }
   VD.px=nx; VD.py=ny;
   if(Math.abs(fart)>0.05){
+    ljudFotsteg(Math.abs(fart)*dt,G.scen==="stallinne"?"sten":"grus");
     VD.fas=(VD.fas+Math.abs(fart)*dt*1.9)%1;
     const s=VD.spår;
     if(!s.length||Math.hypot(nx-s[s.length-1][0],ny-s[s.length-1][1])>0.35)
@@ -189,6 +190,7 @@ function interaktioner(){
             return;
           }
           G.leder=true; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
+          ljudGnagg();
           saga(G.tackePa
             ?`${h.namn} har täcket på i det här vädret. Grimman på — led honom till boxen.`
             :`Grimman på. Led ${h.namn} till boxen i stallet.`,4);
@@ -218,7 +220,7 @@ function interaktioner(){
       const b=hittaBox(G.hastId);
       if(b&&G.leder&&!G.hamtad){
         L.push({pos:b.dorr, text:`Släpp in ${HORSES[G.hastId].namn} i boxen`,
-          gor(){G.leder=false;G.hamtad=true;
+          gor(){G.leder=false;G.hamtad=true;ljudFnys();
             saga("Han går in och drar en tugga hö. Nu: boxen, fodret och sadeln.",3.5);}});
       }else if(b&&G.hamtad){
         L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
@@ -775,6 +777,8 @@ function ritaGard3D(){
   }
   for(const d of ANL.dorrar) items.push({d:-avst2(d.pos), rita(){ritaMarkor3D(k,d.pos);}});
   if(G.leder) items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
+  for(const f of gardsFolk())
+    items.push({d:-avst2([f.x,f.y]), rita(){ritaPerson3D(k,f.x,f.y,f);}});
   items.sort((a,b)=>a.d-b.d);
   for(const o of items)o.rita();
   if(G.vader&&G.vader.typ==="regn")ritaRegn();
@@ -962,6 +966,8 @@ function ritaGard2D(){
     cx.strokeStyle="rgba(214,174,60,.85)";cx.lineWidth=2;
     cx.beginPath();cx.arc(ga2,gb,s*1.4+Math.sin(VD.tid*3)*2,0,Math.PI*2);cx.stroke();
   }
+  for(const f of gardsFolk()){const[a,b]=gs(f.x,f.y);
+    cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.4),0,Math.PI*2);cx.fill();}
   for(const b of ANL.byggnader){
     const[a,c,w,h]=gsRekt(b.rekt);
     cx.fillStyle=fargSkala(b.fargT,0.95); cx.fillRect(a,c,w,h);
@@ -1053,6 +1059,13 @@ function ritaStall2D(){
     cx.fillStyle=HORSES[G.hastId].farg;
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
+  for(const f of stallFolk()){
+    const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
+    if(fy>S.serviceY-1)continue;
+    const fx2=f.sida==="W"?S.bredd/2-S.ganghalva+0.55:S.bredd/2+S.ganghalva-0.55;
+    const[a,b]=ss(fx2,fy);
+    cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.35),0,Math.PI*2);cx.fill();
+  }
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
 
@@ -1194,6 +1207,13 @@ function ritaStall3D(){
     const rl=S.ridlarare;
     items.push({d:-avst2(rl.pos), rita(){ritaPerson3D(k,rl.pos[0],rl.pos[1]);}});
   }
+  // elever som sköter sina hästar i gången
+  for(const f of stallFolk()){
+    const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
+    if(fy>S.serviceY-1)continue;
+    const fx2=f.sida==="W"?vx-S.ganghalva+0.55:vx+S.ganghalva-0.55;
+    items.push({d:-avst2([fx2,fy]), rita(){ritaPerson3D(k,fx2,fy,{farg:f.farg,fasel:f.ix,rorlig:true});}});
+  }
   if(G.leder) items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
   const mb=G.hastId&&!G.skotselRes&&hittaBox(G.hastId);
   if(mb) items.push({d:-avst2(mb.dorr), rita(){ritaMarkor3D(k,mb.dorr);}});
@@ -1202,19 +1222,39 @@ function ritaStall3D(){
   for(const o of items)o.rita();
   ritaSpelare3D();
 }
-function ritaPerson3D(k,x,y){
+function ritaPerson3D(k,x,y,opts){
+  const o=opts||{};
   const p=tillKam(k,x,y,0); if(p.d<K3.nara)return;
   const s=projK(k,p), sz=clamp(1.72*k.f/p.d,6,220);
+  const sv=Math.sin(VD.tid*1.5+(o.fasel||0))*sz*(o.rorlig?0.03:0.012);
   cx.fillStyle="rgba(0,0,0,.25)";
   cx.beginPath();cx.ellipse(s[0],s[1],sz*0.2,sz*0.06,0,0,Math.PI*2);cx.fill();
-  cx.fillStyle="#2E4638";
-  cx.beginPath();cx.moveTo(s[0]-sz*0.16,s[1]);cx.lineTo(s[0]-sz*0.14,s[1]-sz*0.62);
-  cx.quadraticCurveTo(s[0],s[1]-sz*0.70,s[0]+sz*0.14,s[1]-sz*0.62);
+  cx.fillStyle=o.farg||"#2E4638";
+  cx.beginPath();cx.moveTo(s[0]-sz*0.16,s[1]);cx.lineTo(s[0]-sz*0.14+sv,s[1]-sz*0.62);
+  cx.quadraticCurveTo(s[0]+sv,s[1]-sz*0.70,s[0]+sz*0.14+sv,s[1]-sz*0.62);
   cx.lineTo(s[0]+sz*0.16,s[1]);cx.closePath();cx.fill();
   cx.fillStyle="#C9A882";
-  cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.80,sz*0.11,sz*0.13,0,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.ellipse(s[0]+sv,s[1]-sz*0.80,sz*0.11,sz*0.13,0,0,Math.PI*2);cx.fill();
   cx.fillStyle="#3A3128";
-  cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.88,sz*0.12,sz*0.07,0,0,Math.PI,true);cx.fill();
+  cx.beginPath();cx.ellipse(s[0]+sv,s[1]-sz*0.88,sz*0.12,sz*0.07,0,0,Math.PI,true);cx.fill();
+}
+/* Livet på anläggningen: elever som sköter sina hästar i stallgången
+   och folk på gården — en på väg längs grusvägen, andra vid borden
+   och lekhagen. Deterministiskt ur dagens frö. */
+function stallFolk(){
+  const s=((G.seed||1)*29+7)>>>0;
+  const farger=["#5C4A6E","#7A3E36","#3E5C74","#6B5E3C"];
+  return [{sida:"W", ix:(s%7)+1, farg:farger[s%4]},
+          {sida:"E", ix:((s>>3)%6)+2, farg:farger[(s+1)%4]}];
+}
+function gardsFolk(){
+  const t=VD.tid*0.55, span=42;
+  const tri=Math.abs((t%(span*2))-span);
+  return [
+    {x:115.5, y:52+tri, farg:"#3E5C74", rorlig:true},   // på väg längs grusvägen
+    {x:150.5, y:60.8, farg:"#7A3E36"},                  // vid picknickborden
+    {x:151.3, y:30.6, farg:"#5C4A6E"},                  // förälder vid lekhagen
+  ];
 }
 
 /* ── Ridhuset invändigt: 2D ───────────────────────────────────── */

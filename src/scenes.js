@@ -27,6 +27,7 @@ function visaMeny(){
     <div><kbd>R</kbd> lättridning av/på</div>
     <div><kbd>Q</kbd> byt diagonal</div>
     <div><kbd>V</kbd> växla vy (bana / bakom hästen)</div>
+    <div><kbd>M</kbd> ljud av/på (hovslag, stall, röst)</div>
     <div><kbd>N</kbd> nästa moment (POC-genväg)</div>
     <div><kbd>P</kbd> ridläraren visar (autopilot)</div>
     <div><kbd>F</kbd> spö — men läs hästlistan först</div>

@@ -90,10 +90,13 @@ function draw2D(G){
     if(s>7){cx.save();cx.translate(gx-1.3*s,gy+30*s);cx.rotate(-Math.PI/2);
       cx.fillStyle="#5D636C";cx.font=`500 ${s*0.8}px "IBM Plex Mono"`;cx.textAlign="center";
       cx.fillText("LÄKTARE",0,3);cx.restore();}
-    if(G.tavling)for(let i=0;i<14;i++){ // publiken på läktaren
-      const[a,b]=w2s(-1.3,15.6+i*2.15);
-      cx.fillStyle=["#8A4A3A","#3E5C74","#6B5E3C","#4E6B4A"][i%4];
-      cx.beginPath();cx.arc(a,b,Math.max(2,s*0.22),0,Math.PI*2);cx.fill();}
+    { // publiken på läktaren: fullsatt på tävling, några föräldrar annars
+      const antal=G.tavling?14:3, steg2=G.tavling?2.15:7.5;
+      for(let i=0;i<antal;i++){
+        const[a,b]=w2s(-1.3,(G.tavling?15.6:22)+i*steg2);
+        cx.fillStyle=["#8A4A3A","#3E5C74","#6B5E3C","#4E6B4A"][i%4];
+        cx.beginPath();cx.arc(a,b,Math.max(2,s*0.22),0,Math.PI*2);cx.fill();}
+    }
     // tre ingångar
     cx.strokeStyle=COL.sandDark;cx.lineWidth=Math.max(3,s*0.5);
     for(const[ix,iy,horiz]of[[10,0,1],[20,10,0],[20,50,0]]){
@@ -281,13 +284,13 @@ function draw3D(G){
   }
   // bokstäver
   if(!stig)for(const B of DRESSYRBOKSTAVER)items.push({typ:"bokstav",...B});
-  // tävlingsdag: publik på läktaren inne, domarkur och åskådare ute
-  if(G.tavling){
-    if(!ute)for(let i=0;i<14;i++)items.push({typ:"publik",x:-1.4,y:16+i*2.2,c:i});
-    else if(!stig){
-      items.push({typ:"kur",x:10,y:62.6});
-      for(let i=0;i<6;i++)items.push({typ:"publik",x:-1.8,y:18+i*4.6,c:i});
-    }
+  // publik: fullsatt läktare på tävlingsdag, några föräldrar annars
+  if(!ute){
+    const antal=G.tavling?14:3, steg=G.tavling?2.2:7.5;
+    for(let i=0;i<antal;i++)items.push({typ:"publik",x:-1.4,y:(G.tavling?16:22)+i*steg,c:i});
+  }else if(G.tavling&&!stig){
+    items.push({typ:"kur",x:10,y:62.6});
+    for(let i=0;i<6;i++)items.push({typ:"publik",x:-1.8,y:18+i*4.6,c:i});
   }
   // hinder
   if(G.hinderAktiva)for(const h of BANA.hinder)items.push({typ:"hinder",h});
