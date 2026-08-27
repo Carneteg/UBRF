@@ -14,6 +14,9 @@ function visaMeny(){
   och hjälperna flyttar hästens tillstånd på <em>utbildningsskalan</em>. Tillståndet avgör vad hästen gör.
   Det finns ingen hoppknapp.</p>
   <div class="keys">
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> gå — till fots</div>
+    <div><kbd>E</kbd> interagera (dörrar, ridlärare, box)</div>
+    <div><kbd>Shift</kbd> jogga (till fots)</div>
     <div><kbd>W</kbd><kbd>S</kbd> skänkel på / av</div>
     <div><kbd>Space</kbd> tygeltag (håll)</div>
     <div><kbd>A</kbd><kbd>D</kbd> styrning</div>
@@ -33,7 +36,7 @@ function visaMeny(){
     <button class="btn" id="bStart">Till stallet</button>
     <span class="dim" style="font-size:13px">Dagens lektion: hoppgrupp, 60 minuter, sex hinder på 0,60 m</span>
   </div>`);
-  document.getElementById("bStart").onclick=visaTilldelning;
+  document.getElementById("bStart").onclick=startaVandring;
 }
 
 /* ── Ridläraren tilldelar häst ── */
@@ -41,7 +44,7 @@ function visaTilldelning(){
   // enkel tilldelningslogik i ridlärarens anda: rotation + nivåmatchning
   const kandidater=["toblerone","cosmo","larry","hamilton","conor","dexter"];
   const val=kandidater[G.seed%kandidater.length];
-  G.hastId=val;const h=HORSES[val];
+  G.hastId=val;G.skotselRes=null;const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
     cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
     larry:"Han hoppar gärna. Ge honom en rak linje så gör han resten.",
@@ -71,7 +74,8 @@ function visaTilldelning(){
     <button class="btn" id="bGroom">Gör i ordning honom</button>
     <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
   </div>`);
-  document.getElementById("bGroom").onclick=visaSkotsel;
+  document.getElementById("bGroom").onclick=()=>{overlay(false);
+    saga(`${h.namn} står i sin box — den gula markören visar var.`,3.5);};
   document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
     setTimeout(()=>{const w=document.querySelector(".why");
       if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};
@@ -230,8 +234,10 @@ function avslutaSkotsel(){
   </tbody></table>
   <p class="dim" style="font-size:13.5px">Dagsformen skalar hela avsprångskvaliteten i hoppningen,
   och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
-  <div class="btnrow"><button class="btn" id="bLek">In i ridhuset</button></div>`);
-  document.getElementById("bLek").onclick=startaLektion;
+  <div class="btnrow"><button class="btn" id="bLek">Led honom till ridhuset</button></div>`);
+  document.getElementById("bLek").onclick=()=>{overlay(false);
+    G.leder=true;VD.spår.length=0;
+    saga("Led hästen ut genom stalldörren och över gårdsplanen till ridhuset.",4);};
 }
 
 /* ── Resultatet ── */
@@ -275,11 +281,18 @@ function visaResultat(dom){
     <button class="btn" id="bIgen">Rid igen — ny häst</button>
     <button class="btn ghost" id="bSamma">Samma häst igen</button>
   </div>`);
-  document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();visaTilldelning();};
-  document.getElementById("bSamma").onclick=()=>{nollstall();visaSkotsel();};
+  document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();
+    G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
+    gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
+    saga("Tillbaka i stallgången. Ridläraren fördelar hästarna.",3.5);};
+  document.getElementById("bSamma").onclick=()=>{nollstall();
+    G.skotselRes=null;overlay(false);hudLage("gang");
+    const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
+    gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});
+    visaSkotsel();};
 }
 function nollstall(){
-  G.auto=false;
+  G.auto=false;G.leder=false;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
   document.getElementById("protWrap").hidden=true;

@@ -55,7 +55,7 @@ function stegaInput(dt){
 /* ── Speltillstånd ── */
 const G={
   scen:"meny",vy:"2d",t:0,
-  hastId:"toblerone",ride:null,aids:null,
+  hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,
   moment:null,momentIx:0,momentT:0,
@@ -326,6 +326,8 @@ function loop(now){
     if(G.luft>0)G.luft-=dt;
     if(G.vy==="2d")draw2D(G);else draw3D(G);
     ritaHUD();
+  } else if(G.scen==="gard"||G.scen==="stallinne"){
+    stegaVandring(dt);ritaVandring();
   } else if(G.scen==="resultat"){
     if(G.vy==="2d")draw2D(G);else draw3D(G);
   }
