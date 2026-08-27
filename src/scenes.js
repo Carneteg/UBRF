@@ -36,18 +36,25 @@ function visaMeny(){
   ${profilHTML()}
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
+    <button class="btn ghost" id="bTavling">Tävlingsdag</button>
     <button class="btn ghost" id="bBok">Träningsboken</button>
     <span class="dim" style="font-size:13px">Dagens lektion: ${GRUPPNAMN[G.grupp]||G.grupp} · sex hinder på 0,60 m</span>
   </div>`);
-  document.getElementById("bStart").onclick=startaVandring;
+  document.getElementById("bStart").onclick=()=>{G.tavling=null;startaVandring();};
+  document.getElementById("bTavling").onclick=visaTavlingsval;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
   kopplaProfil();
 }
 
 /* ── Ridläraren tilldelar häst ── */
 function visaTilldelning(){
-  // rotation ur gruppens hästpool — känsligare hästar på högre nivåer
-  const kandidater=hastpool(G.grupp);
+  // rotation ur gruppens hästpool — känsligare hästar på högre nivåer.
+  // På tävlingsdag startar ingen häst som är mitt i sin rehab.
+  let kandidater=hastpool(G.grupp);
+  if(G.tavling){
+    const friska=kandidater.filter(id=>!hastminne(id).rehab);
+    if(friska.length)kandidater=friska;
+  }
   const val=kandidater[G.seed%kandidater.length];
   G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
   G.hamtad=false;G.tackePa=false;G.fangstForsok=false;
@@ -70,6 +77,9 @@ function visaTilldelning(){
     husky:"Om du får med dig Husky från hagen är halva lektionen redan vunnen.",
     kennedy:"Kennedy är ung och allt är på riktigt för honom. Visa honom att världen är ofarlig."}[val]
     ||"Rid som du red senast — fast bättre.";
+  const tavMotiv=G.tavling?(G.tavling.typ==="hoppning"
+    ?`Tävlingsdag — ${G.tavling.klass.namn} i Påskhoppet. Du rider ${h.namn}. Sköt honom extra noga, domarna ser allt.`
+    :`Tävlingsdag — dressyr LC på uteridbanan. Du rider ${h.namn}. Ren ridning slår djärv ridning i dag.`):null;
   const minne=hastminne(val);
   const EGENHET={radd_for_spo:"är rädd för spö — det står på hästlistan. Låt bli F-tangenten.",
     blaser_upp_magen:"blåser upp magen när du gjordar. Vänta en stund och dra åt igen innan du sitter upp.",
@@ -79,7 +89,7 @@ function visaTilldelning(){
   const trott=minne.pass>0&&minne.sistaPassNr===SPAR.pass;
   const rehab=!!minne.rehab;
   overlay(true,`
-  <span class="lbl">Ridläraren fördelar hästarna</span>
+  <span class="lbl">${G.tavling?"Tävlingsdag · ridläraren fördelar hästarna":"Ridläraren fördelar hästarna"}</span>
   <h1 style="margin-top:8px">Du får ${h.namn}</h1>
   <div class="hcard">
     <div style="flex:1">
@@ -91,7 +101,7 @@ function visaTilldelning(){
         <span>Framåt <b>${h.framatbjudning.toFixed(2).replace(".",",")}</b></span>
         <span>Maxhöjd <b>${h.maxhojd.toFixed(2).replace(".",",")} m</b></span>
       </div>
-      <div class="why">”${motiv}”</div>
+      <div class="why">”${tavMotiv||motiv}”</div>
       ${minne.pass>0?`<div class="dim" style="font-size:12px;margin-top:8px">Ni har ridit ${minne.pass} pass ihop — han minns dig (rang ${minne.rang.toFixed(2).replace(".",",")})${
         typeof minne.sistaForm==="number"?` · dagsform senast ${minne.sistaForm.toFixed(2).replace(".",",")}`:""}.</div>`
         :`<div class="dim" style="font-size:12px;margin-top:8px">Första gången ni möts.</div>`}
@@ -399,6 +409,7 @@ function visaResultat(dom){
 }
 function nollstall(){
   G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
+  G.tavling=null;BANA.hojd=0.60;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
   document.getElementById("protWrap").hidden=true;

@@ -268,7 +268,7 @@ const RIDHUSINNE = {
 };
 /* Infopunkter i stallet (klubbdelen och servicedelen). */
 STALLINNE.info=[
-  {pos:[6.2,4.5],  text:"Uppehållsrummet",
+  {pos:[6.2,4.5],  text:"Klubbrummet — rosettväggen", klubb:true,
    svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
   {pos:[8.8,4.5],  text:"Teorilektion i teorisalen", teori:true,
    svar:""},

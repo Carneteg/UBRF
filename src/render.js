@@ -90,6 +90,10 @@ function draw2D(G){
     if(s>7){cx.save();cx.translate(gx-1.3*s,gy+30*s);cx.rotate(-Math.PI/2);
       cx.fillStyle="#5D636C";cx.font=`500 ${s*0.8}px "IBM Plex Mono"`;cx.textAlign="center";
       cx.fillText("LÄKTARE",0,3);cx.restore();}
+    if(G.tavling)for(let i=0;i<14;i++){ // publiken på läktaren
+      const[a,b]=w2s(-1.3,15.6+i*2.15);
+      cx.fillStyle=["#8A4A3A","#3E5C74","#6B5E3C","#4E6B4A"][i%4];
+      cx.beginPath();cx.arc(a,b,Math.max(2,s*0.22),0,Math.PI*2);cx.fill();}
     // tre ingångar
     cx.strokeStyle=COL.sandDark;cx.lineWidth=Math.max(3,s*0.5);
     for(const[ix,iy,horiz]of[[10,0,1],[20,10,0],[20,50,0]]){
@@ -107,6 +111,13 @@ function draw2D(G){
       cx.fillRect(a-s*0.14,b-s*0.14,s*0.28,s*0.28);cx.fillRect(a-s*0.14,b2-s*0.14,s*0.28,s*0.28);}
     if(s>7){cx.fillStyle="#5D6C58";cx.font=`500 ${Math.max(9,s*0.8)}px "IBM Plex Mono"`;
       cx.textAlign="center";cx.fillText("UTERIDBANAN · 36×80",gx+10*s,gy-s*0.8);}
+    if(G.tavling&&G.tavling.typ==="dressyr"){ // domarkuren vid C
+      const[a,b]=w2s(10,62.2);
+      cx.fillStyle="#E6E1D5";cx.fillRect(a-1.3*s,b-0.5*s,2.6*s,1.1*s);
+      cx.strokeStyle="#4A4536";cx.strokeRect(a-1.3*s,b-0.5*s,2.6*s,1.1*s);
+      if(s>7){cx.fillStyle="#3A3E44";cx.font=`600 ${s*0.55}px "IBM Plex Mono"`;
+        cx.textAlign="center";cx.fillText("DOMARE",a,b+s*0.2);}
+    }
   }else{
     // skogen: träd runt stigen
     for(let i=0;i<STIGTRAD.length;i++){const[tx,ty]=STIGTRAD[i];
@@ -270,6 +281,14 @@ function draw3D(G){
   }
   // bokstäver
   if(!stig)for(const B of DRESSYRBOKSTAVER)items.push({typ:"bokstav",...B});
+  // tävlingsdag: publik på läktaren inne, domarkur och åskådare ute
+  if(G.tavling){
+    if(!ute)for(let i=0;i<14;i++)items.push({typ:"publik",x:-1.4,y:16+i*2.2,c:i});
+    else if(!stig){
+      items.push({typ:"kur",x:10,y:62.6});
+      for(let i=0;i<6;i++)items.push({typ:"publik",x:-1.8,y:18+i*4.6,c:i});
+    }
+  }
   // hinder
   if(G.hinderAktiva)for(const h of BANA.hinder)items.push({typ:"hinder",h});
   // NPC
@@ -307,6 +326,26 @@ function draw3D(G){
       cx.beginPath();cx.ellipse(B[0],B[1]-sz*0.18,sz*0.55,sz*0.62,0,0,Math.PI*2);cx.fill();
       cx.fillStyle="rgba(0,0,0,.14)";
       cx.beginPath();cx.ellipse(B[0]+sz*0.16,B[1]-sz*0.05,sz*0.34,sz*0.38,0,0,Math.PI*2);cx.fill();
+    }else if(o.typ==="publik"){
+      const A=proj(o.x,o.y,0,cam);if(!A)continue;
+      const sz=clamp(700/A[2],5,60);
+      const cols=["#8A4A3A","#3E5C74","#6B5E3C","#4E6B4A","#7A4A6B","#5A5A66"];
+      cx.fillStyle=cols[o.c%6];
+      cx.beginPath();cx.ellipse(A[0],A[1]-sz*0.5,sz*0.22,sz*0.42,0,0,Math.PI*2);cx.fill();
+      cx.fillStyle="#C9A98A";
+      cx.beginPath();cx.arc(A[0],A[1]-sz*1.0,sz*0.15,0,Math.PI*2);cx.fill();
+    }else if(o.typ==="kur"){
+      const P2=(x,y,z)=>proj(x,y,z,cam);
+      const a=P2(o.x-1.3,o.y,0),b2=P2(o.x+1.3,o.y,0),c2=P2(o.x+1.3,o.y,2.2),d2=P2(o.x-1.3,o.y,2.2);
+      if(a&&b2&&c2&&d2){
+        cx.fillStyle="#E6E1D5";
+        cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b2[0],b2[1]);cx.lineTo(c2[0],c2[1]);cx.lineTo(d2[0],d2[1]);cx.closePath();cx.fill();
+        cx.strokeStyle="#4A4536";cx.lineWidth=1.5;cx.stroke();
+        const t=P2(o.x,o.y,1.45);
+        if(t){const fz=clamp(240/t[2],8,20);
+          cx.fillStyle="#3A3E44";cx.font=`600 ${fz}px "IBM Plex Mono"`;cx.textAlign="center";
+          cx.fillText("DOMARE",t[0],t[1]);}
+      }
     }else if(o.typ==="bokstav"){
       let bx=o.x,by=o.y; if(o.x===0)bx=-0.6; if(o.x===20)bx=20.6; if(o.y===0)by=-0.6; if(o.y===60)by=60.6;
       const A=proj(bx,by,1.1,cam);if(!A)continue;

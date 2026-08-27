@@ -62,7 +62,7 @@ function stegaInput(dt){
 
 /* ── Speltillstånd ── */
 const G={
-  scen:"meny",vy:"2d",t:0,grupp:"grupp2",plats:"ridhus",
+  scen:"meny",vy:"2d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
   hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,
@@ -241,6 +241,16 @@ function saga(txt,dur){const s=document.getElementById("saga");
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
   document.getElementById("approach").textContent="";
+  if(G.tavling){
+    G.lektion=byggTavlingsprogram(G.tavling);
+    G.hadeBana=G.lektion.some(m=>m.id==="bana");
+    G.moment=G.lektion[0];visaMoment();
+    saga(G.tavling.typ==="hoppning"
+      ?`Framridning. Sedan är det din tur i ${G.tavling.klass.namn} — publiken sitter på läktaren.`
+      :"Domaren sitter i kuren vid C. In på medellinjen när klockan ringer.",4.5);
+    overlay(false);document.getElementById("viewToggle").hidden=false;
+    return;
+  }
   G.lektion=byggLektion(G.grupp,G.seed,G.plats);
   /* Vägen tillbaka: första passet efter en skada rids utan galopp
      och utan bana — stegrande arbete, som efter en hälta. */
@@ -302,6 +312,13 @@ function stegaLektion(dt){
 }
 function avslutaBana(dom){
   if(G.hadeBana)G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
+  if(G.tavling){ // tävlingen ger placering och rosett, inte uppflyttning
+    G.domare=dom;G.scen="resultat";
+    document.getElementById("protWrap").hidden=true;
+    document.getElementById("viewToggle").hidden=true;
+    visaTavlingsResultat(dom);
+    return;
+  }
   G.passRes=registreraPass(dom);
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;

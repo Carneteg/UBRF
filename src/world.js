@@ -165,14 +165,16 @@ function interaktioner(){
     /* Med sadlad häst vid handen kan lektionen ridas utomhus:
        uteridbanan väster om gården, eller skogsstigen från grupp 3. */
     if(G.leder&&G.skotselRes&&G.hastId){
-      L.push({pos:[113,132], text:`Sitt upp på uteridbanan — lektion utomhus`,
-        gor(){G.leder=false;G.plats="utebana";hudLage("ritt");startaLektion();}});
+      L.push({pos:[113,132], text:G.tavling&&G.tavling.typ==="dressyr"
+          ?`Sitt upp — Dressyr LC börjar här`
+          :`Sitt upp på uteridbanan — lektion utomhus`,
+        gor(){sittUpp("utebana");}});
       const gIdx=GRUPPSTEGE.indexOf(G.grupp);
       L.push({pos:[116,113], text:gIdx>=5
           ?`Sitt upp för uteritt — skogsstigen`
           :`Skogsstigen (uteritt rids från grupp 3)`,
         gor(){
-          if(gIdx>=5){G.leder=false;G.plats="stig";hudLage("ritt");startaLektion();}
+          if(gIdx>=5)sittUpp("stig");
           else saga("Uteritt får du följa med på från grupp 3 — skogen kräver en säker ryttare.",4);
         }});
     }
@@ -199,9 +201,11 @@ function interaktioner(){
     for(const i of R.info) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
     const portX=(R.port.x0+R.port.x1)/2;
     L.push({pos:[portX,R.bana.y], text:G.leder
-        ? `Sitt upp på ${HORSES[G.hastId].namn} — lektionen börjar`
+        ? (G.tavling&&G.tavling.typ==="hoppning"
+          ? `Sitt upp — Påskhoppet, ${G.tavling.klass.namn}`
+          : `Sitt upp på ${HORSES[G.hastId].namn} — lektionen börjar`)
         : "Sargporten vid A",
-      gor(){ if(G.leder){G.leder=false; G.plats="ridhus"; hudLage("ritt"); startaLektion();}
+      gor(){ if(G.leder)sittUpp("ridhus");
              else saga("Genom sargporten släpps ekipagen in på banan. Din häst väntar i stallet.",3.5); }});
   }else{
     const S=STALLINNE;
@@ -224,7 +228,9 @@ function interaktioner(){
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
       gor(){visaSchema();}});
     for(const i of (S.info||[])) L.push({pos:i.pos, text:i.text,
-      gor(){ if(i.teori)visaTeori(); else saga(i.svar,4.5); }});
+      gor(){ if(i.teori)visaTeori();
+        else if(i.klubb&&typeof visaKlubbrum==="function")visaKlubbrum();
+        else saga(i.svar,4.5); }});
   }
   return L;
 }
@@ -1131,6 +1137,24 @@ function ritaStall3D(){
           cx.font=`600 ${hh*0.55}px "IBM Plex Mono"`;cx.textAlign="center";
           cx.fillText(h?h.namn.toUpperCase():"—",s[0],s[1]+hh*0.2);
         }
+        // hästens finaste rosett hänger på boxdörren
+        if(typeof hastRosett==="function"){
+          const ro=hastRosett(rad[i]);
+          if(ro){
+            const rp=tillKam(k,fx,my+1.15,2.05);
+            if(rp.d>=K3.nara&&rp.d<12){
+              const sp=projK(k,rp), r=clamp(0.30*k.f/rp.d,3,26);
+              cx.fillStyle=ro.farg;
+              cx.fillRect(sp[0]-r*0.5,sp[1]+r*0.6,r*0.36,r*1.15);
+              cx.fillStyle=ro.farg2||ro.farg;
+              cx.fillRect(sp[0]+r*0.14,sp[1]+r*0.6,r*0.36,r*1.15);
+              cx.fillStyle=ro.farg;cx.beginPath();cx.arc(sp[0],sp[1],r,0,Math.PI*2);cx.fill();
+              if(ro.farg2){cx.fillStyle=ro.farg2;cx.beginPath();cx.arc(sp[0],sp[1],r*0.55,0,Math.PI*2);cx.fill();}
+              cx.strokeStyle="rgba(0,0,0,.4)";cx.lineWidth=1;
+              cx.beginPath();cx.arc(sp[0],sp[1],r,0,Math.PI*2);cx.stroke();
+            }
+          }
+        }
       }});
     }
   }
@@ -1419,6 +1443,13 @@ function ritaVandring(){
     : !G.skotselRes
     ? [`Sköt om ${HORSES[G.hastId].namn}`,
        G.scen==="stallinne"?"Vid boxen (E): mocka, fodra och sadla.":"Boxen är inne i stallet."]
+    : G.tavling
+    ? [`Led ${HORSES[G.hastId].namn} till tävlingen`,
+       G.scen==="stallinne"?"Ut genom stalldörren — tävlingsdagen väntar."
+       :G.tavling.typ==="hoppning"
+         ?(G.scen==="ridhusinne"?"Sekretariatet ropar upp startordningen vid sargporten."
+           :"Påskhoppet rids i ridhuset — in genom durkplåtdörrarna.")
+         :"Dressyren rids på uteridbanan i väster. Domaren sitter i kuren."]
     : [`Led ${HORSES[G.hastId].namn} till lektionen`,
        G.scen==="stallinne"?"Ut genom stalldörren och över gräsgården."
        :G.scen==="ridhusinne"?"Fram till sargporten vid A — sitt upp där."
