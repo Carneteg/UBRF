@@ -17,6 +17,7 @@ function visaMeny(){
     <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> gå — till fots</div>
     <div><kbd>E</kbd> interagera (dörrar, ridlärare, box)</div>
     <div><kbd>Shift</kbd> jogga (till fots)</div>
+    <div><kbd>T</kbd> träningsboken (även mitt i momentet)</div>
     <div><kbd>W</kbd><kbd>S</kbd> skänkel på / av</div>
     <div><kbd>Space</kbd> tygeltag (håll)</div>
     <div><kbd>A</kbd><kbd>D</kbd> styrning</div>
@@ -34,9 +35,11 @@ function visaMeny(){
   Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
+    <button class="btn ghost" id="bBok">Träningsboken</button>
     <span class="dim" style="font-size:13px">Dagens lektion: hoppgrupp, 60 minuter, sex hinder på 0,60 m</span>
   </div>`);
   document.getElementById("bStart").onclick=startaVandring;
+  document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
 }
 
 /* ── Ridläraren tilldelar häst ── */

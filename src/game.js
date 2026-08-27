@@ -26,6 +26,14 @@ addEventListener("keydown",e=>{
     case"KeyN":G.hoppaMoment=true;break;
     case"KeyP":G.auto=!G.auto;saga(G.auto?"Jag visar. Titta på vägen jag väljer.":"Din tur.",2.5);break;
     case"KeyV":vaxlaVy();break;
+    case"KeyT":{
+      const ov2=document.getElementById("ov");
+      if(!ov2.classList.contains("hide"))break;
+      if(G.scen==="lektion"||G.scen==="bana"){
+        const oid=G.moment&&MOMENT_OVNING[G.moment.id];
+        if(oid)visaOvning(oid,"spel");
+      }else if(G.scen==="gard"||G.scen==="stallinne")visaTraningsbok("spel");
+      break;}
   }
 });
 addEventListener("keyup",e=>{
@@ -235,7 +243,8 @@ function visaMoment(){
   const m=G.moment;
   document.getElementById("momentLbl").textContent=`Moment ${G.momentIx+1} av ${LEKTION.length}`;
   document.getElementById("momentNamn").textContent=m.namn;
-  document.getElementById("momentText").textContent=m.text;
+  document.getElementById("momentText").textContent=
+    m.text+(MOMENT_OVNING[m.id]?" · T öppnar övningen i träningsboken.":"");
   saga(m.text,4);
 }
 function stegaLektion(dt){
