@@ -113,9 +113,9 @@ const ANL = {
     {typ:"rail",p:[[146,26],[146,36]]},                                // rail vid lekhagen
   ],
   hagar: [ // betande hästar (id ur HORSES) för liv i bilden
-    {rekt:{x:176,y:44,w:30,h:28}, hastar:["cosmo","air"]},
-    {rekt:{x:176,y:76,w:30,h:26}, hastar:["larry"]},
-    {rekt:{x:152,y:110,w:50,h:24}, hastar:["lydia","toblerone","dexter"]},
+    {rekt:{x:176,y:44,w:30,h:28}, hastar:["cosmo","air","mara"]},
+    {rekt:{x:176,y:76,w:30,h:26}, hastar:["larry","husky","westside"]},
+    {rekt:{x:152,y:110,w:50,h:24}, hastar:["lydia","toblerone","dexter","chip"]},
   ],
 
   /* Träd: [x, y, radie]. Skogsbryn i norr och väster, björkraden
@@ -201,8 +201,8 @@ const STALLINNE = {
      riktiga namnskyltar ur fotona (LADY, WESTSIDE, MAKADU, KENNEDY,
      TINA, MARA, HUSKY, CHIP), null = tom box. */
   boxar:{
-    W:[ "#LADY","toblerone","#WESTSIDE","lydia","#MAKADU","conor","#MARA","hamilton","#HUSKY",null ],
-    E:[ "#KENNEDY","cosmo","#TINA","air","#CHIP","larry","crokino","dexter",null,null ],
+    W:[ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky",null ],
+    E:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null,null ],
   },
   rum:[
     {id:"uppehallsrum", rekt:{x:0,   y:0, w:6.0, h:9}, label:"UPPEHÅLLSRUM"},

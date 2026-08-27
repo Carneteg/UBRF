@@ -19,6 +19,14 @@ const FODERSCHEMA={
   crokino:  {ho:3, kraft:"pellets", notis:"Stor häst, standardgiva."},
   lydia:    {ho:2, kraft:"inget", notis:"Barnponny på dietlista sedan i våras."},
   dexter:   {ho:2, kraft:"pellets", notis:"Mer fart än foder — snåla med pelletsen."},
+  lady:     {ho:2, kraft:"inget", notis:"Welsh cob på gräns till rund — höet räcker gott."},
+  chip:     {ho:1, kraft:"inget", notis:"Russ. Ge honom mer och han rullar till lektionen."},
+  tina:     {ho:2, kraft:"betfor", notis:"Blötlagd betfor — och stå på hennes vänstra sida."},
+  westside: {ho:3, kraft:"pellets", notis:"Stor kropp, standardgiva, inga konstigheter."},
+  makadu:   {ho:3, kraft:"betfor", notis:"Äter lugnt. Gjorda om honom EFTER fodringen."},
+  mara:     {ho:2, kraft:"müsli", notis:"Sur min vid krubban är normalläge. Ge och backa."},
+  husky:    {ho:3, kraft:"müsli", notis:"Bränner allt han får — full giva."},
+  kennedy:  {ho:2, kraft:"müsli", notis:"Unghäst under uppbyggnad — müslin blötläggs."},
 };
 const KRAFTVAL=["inget","müsli","betfor","pellets"];
 
@@ -79,6 +87,14 @@ function visaSchema(){
     ${rad(!!G.skotselRes,"Visitera, rykta, kratsa och sadla")}
     ${rad(false,"Lektion — sitt upp vid sargporten i ridhuset")}
   </ul>
+  ${(()=>{ // hörnet av tavlan: hästar som inte går i dag
+    const hand=(typeof dagensHandelser==="function")?dagensHandelser():{};
+    const rader=Object.entries(hand)
+      .map(([id,e])=>`<li><b style="color:var(--ink)">${HORSES[id]?HORSES[id].namn:id}</b> — ${e.text}</li>`);
+    return rader.length?`<div class="note" style="font-size:13px">
+      <b class="lbl" style="display:block;margin-bottom:4px;color:var(--gold-2)">Går ej i dag</b>
+      <ul style="list-style:none;padding:0;margin:0;display:grid;gap:4px">${rader.join("")}</ul></div>`:"";
+  })()}
   <div class="btnrow"><button class="btn" id="bSchemaOk">Tillbaka till stallet</button></div>`);
   document.getElementById("bSchemaOk").onclick=()=>overlay(false);
 }

@@ -238,8 +238,20 @@ function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
   document.getElementById("approach").textContent="";
   G.lektion=byggLektion(G.grupp,G.seed);
+  /* Vägen tillbaka: första passet efter en skada rids utan galopp
+     och utan bana — stegrande arbete, som efter en hälta. */
+  const mReh=hastminne(G.hastId);
+  if(mReh.rehab){
+    G.lektion=G.lektion.filter(m=>{
+      if(m.id==="bana")return false;
+      const o=OVNINGAR.find(o=>o.id===m.ovning);
+      return !o||o.gangart!=="galopp";
+    });
+  }
   G.hadeBana=G.lektion.some(m=>m.id==="bana");
   G.moment=G.lektion[0];visaMoment();
+  if(mReh.rehab)
+    saga(`${HORSES[G.hastId].namn} är på väg tillbaka efter sin skada — bara skritt och trav i dag, säger ridläraren.`,4.5);
   overlay(false);document.getElementById("viewToggle").hidden=false;
 }
 function visaMoment(){

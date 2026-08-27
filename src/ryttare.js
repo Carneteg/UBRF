@@ -16,8 +16,9 @@ const GRUPPNAMN={ledlektion:"Ledlektion",knatte:"Knattegruppen",minior:"Miniorgr
   hoppgrupp:"Hoppgruppen"};
 /* Från vilket steg varje häst anförtros — de förlåtande först,
    de känsliga som belöning. */
-const HAST_MINGRUPP={toblerone:0, lydia:0, cosmo:3, air:3, larry:5, dexter:5,
-  hamilton:6, crokino:6, conor:7};
+const HAST_MINGRUPP={toblerone:0, lydia:0, lady:0, chip:1, tina:2, cosmo:3, air:3,
+  westside:3, husky:4, mara:4, larry:5, dexter:5, makadu:5,
+  hamilton:6, crokino:6, conor:7, kennedy:7};
 const UPPFLYTT_KRAV=2;   // godkända pass för uppflyttning
 
 const SPAR_NYCKEL="ubrf-ridskolan-v1";
@@ -46,13 +47,32 @@ function nollstallRyttare(){
   try{localStorage.removeItem(SPAR_NYCKEL);}catch(_){}
 }
 
-/* Hästpoolen för en grupp: alla hästar som anförtros på den nivån. */
+/* Dagens händelser i stallet: hovslagaren och veterinären roterar
+   över listan efter dagens frö, och skadade hästar står på vila.
+   En häst med händelse går inte i rotationen den dagen. */
+function dagensHandelser(){
+  const alla=Object.keys(HORSES), n=alla.length;
+  const s=((typeof G!=="undefined"&&G.seed)||0)>>>0;
+  const ut={};
+  if(s%3===0) ut[alla[(s*7+3)%n]]={typ:"hovslagare", text:"skos om — hovslagaren är här"};
+  if(s%5===2){ const id=alla[(s*11+5)%n];
+    if(!ut[id]) ut[id]={typ:"veterinar", text:"veterinärbesök — vaccination och tandkoll"}; }
+  for(const id of alla){ const m=hastminne(id);
+    if(m.skada&&m.skada.passKvar>0)
+      ut[id]={typ:"skada", text:`vila — ${m.skada.namn} (${m.skada.passKvar} pass kvar)`}; }
+  return ut;
+}
+/* Hästpoolen för en grupp: alla hästar som anförtros på den nivån
+   och som är i tjänst i dag. */
 function hastpool(grupp){
   const idx=GRUPPSTEGE.indexOf(grupp);
-  const pool=Object.keys(HAST_MINGRUPP).filter(id=>HAST_MINGRUPP[id]<=idx);
-  return pool.length?pool:["toblerone"];
+  const enligtGrupp=Object.keys(HAST_MINGRUPP).filter(id=>HAST_MINGRUPP[id]<=idx);
+  const borta=dagensHandelser();
+  const pool=enligtGrupp.filter(id=>!borta[id]);
+  return pool.length?pool:(enligtGrupp.length?enligtGrupp:["toblerone"]);
 }
-/* Hästens sparade minne av dig. */
+/* Hästens sparade minne av dig — rang, pass, gårdagens form och
+   eventuell skada eller rehab. */
 function hastminne(id){
   return (SPAR&&SPAR.fortroende[id])||{rang:0.45, pass:0};
 }
@@ -65,11 +85,35 @@ function registreraPass(dom){
   const forv=Skala.FORVANTAN[G.grupp]??0.55;
   const godkand=!dom.utesluten&&snitt>=forv;
   const m=hastminne(G.hastId);
-  SPAR.fortroende[G.hastId]={rang:clamp(G.ride?G.ride.rang:m.rang,0,1), pass:m.pass+1};
+  SPAR.pass++;
+  /* Hästen minns passet: rang, form och att den gick nyss. Efter en
+     ridd rehab-dag är vägen tillbaka avklarad. */
+  const ny={...m, rang:clamp(G.ride?G.ride.rang:m.rang,0,1), pass:m.pass+1,
+    sistaPassNr:SPAR.pass, sistaForm:Math.round(G.dagsform*100)/100, rehab:false};
+  delete ny.skada;
+  /* Slarv i skötseln har ett pris dagen efter — sten i hoven eller
+     missat skav blir en skada som kräver vila. */
+  const risker=(G.skotselRes&&G.skotselRes.risker)||[];
+  let nySkada=null;
+  if(risker.includes("sten_i_hoven"))
+    nySkada={namn:"känning efter sten i hoven", passKvar:2};
+  else if(risker.includes("missat_skav"))
+    nySkada={namn:"skav under sadelgjorden", passKvar:1};
+  if(nySkada)ny.skada=nySkada;
+  SPAR.fortroende[G.hastId]=ny;
+  /* De andra hästarnas skador läker med vilan — ett pass i taget.
+     När vilan är slut väntar ett rehab-pass: bara skritt och trav. */
+  for(const id in SPAR.fortroende){
+    if(id===G.hastId)continue;
+    const f=SPAR.fortroende[id];
+    if(f.skada&&f.skada.passKvar>0){
+      f.skada.passKvar--;
+      if(f.skada.passKvar<=0){delete f.skada; f.rehab=true;}
+    }
+  }
   SPAR.historik.unshift({hast:G.hastId, grupp:G.grupp,
     snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten});
   if(SPAR.historik.length>20)SPAR.historik.length=20;
-  SPAR.pass++;
   let uppflyttad=false;
   if(godkand){
     SPAR.poang++;
@@ -84,7 +128,7 @@ function registreraPass(dom){
   sparaRyttare();
   return {snitt, forv, godkand, uppflyttad, grupp:SPAR.grupp,
     gruppNamn:GRUPPNAMN[SPAR.grupp], poang:SPAR.poang,
-    riddenGrupp, riddenNamn};
+    riddenGrupp, riddenNamn, skada:nySkada};
 }
 
 /* Profilrutan i menyn. */

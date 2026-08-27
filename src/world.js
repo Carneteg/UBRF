@@ -166,6 +166,12 @@ function interaktioner(){
       const h=HORSES[G.hastId];
       L.push({pos:ANL.hamtHage.grind, text:`Öppna grinden och hämta ${h.namn}`,
         gor(){
+          /* Egenhet: en svårfångad häst drar sig undan första försöket. */
+          if(h.flaggor&&h.flaggor.svarfangad&&!G.fangstForsok){
+            G.fangstForsok=true;
+            saga(`${h.namn} lyfter huvudet och drar sig undan — precis som det står på listan. Stå still en stund och gå lugnt fram igen.`,4.5);
+            return;
+          }
           G.leder=true; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
           saga(G.tackePa
             ?`${h.namn} har täcket på i det här vädret. Grimman på — led honom till boxen.`
@@ -250,6 +256,7 @@ function startaVandring(){
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
   G.sysslor={mockat:0,fodrat:0}; G.hamtad=false; G.tackePa=false;
+  G.fangstForsok=false;
   // dagens väder — avgör om hästarna går med täcke i hagen
   const v=(G.seed*2654435761>>>0)%100;
   G.vader={typ:v<52?"sol":v<80?"mulet":"regn", temp:7+(v%11)};
