@@ -162,6 +162,20 @@ function interaktioner(){
         L.push({pos:d.pos, text:d.text, gor(){gaTill(d.mot,d.spawn);}});
       }
     }
+    /* Med sadlad häst vid handen kan lektionen ridas utomhus:
+       uteridbanan väster om gården, eller skogsstigen från grupp 3. */
+    if(G.leder&&G.skotselRes&&G.hastId){
+      L.push({pos:[113,132], text:`Sitt upp på uteridbanan — lektion utomhus`,
+        gor(){G.leder=false;G.plats="utebana";hudLage("ritt");startaLektion();}});
+      const gIdx=GRUPPSTEGE.indexOf(G.grupp);
+      L.push({pos:[116,113], text:gIdx>=5
+          ?`Sitt upp för uteritt — skogsstigen`
+          :`Skogsstigen (uteritt rids från grupp 3)`,
+        gor(){
+          if(gIdx>=5){G.leder=false;G.plats="stig";hudLage("ritt");startaLektion();}
+          else saga("Uteritt får du följa med på från grupp 3 — skogen kräver en säker ryttare.",4);
+        }});
+    }
     if(G.hastId&&!G.hamtad&&!G.leder){
       const h=HORSES[G.hastId];
       L.push({pos:ANL.hamtHage.grind, text:`Öppna grinden och hämta ${h.namn}`,
@@ -187,7 +201,7 @@ function interaktioner(){
     L.push({pos:[portX,R.bana.y], text:G.leder
         ? `Sitt upp på ${HORSES[G.hastId].namn} — lektionen börjar`
         : "Sargporten vid A",
-      gor(){ if(G.leder){G.leder=false; hudLage("ritt"); startaLektion();}
+      gor(){ if(G.leder){G.leder=false; G.plats="ridhus"; hudLage("ritt"); startaLektion();}
              else saga("Genom sargporten släpps ekipagen in på banan. Din häst väntar i stallet.",3.5); }});
   }else{
     const S=STALLINNE;
@@ -1405,9 +1419,9 @@ function ritaVandring(){
     : !G.skotselRes
     ? [`Sköt om ${HORSES[G.hastId].namn}`,
        G.scen==="stallinne"?"Vid boxen (E): mocka, fodra och sadla.":"Boxen är inne i stallet."]
-    : [`Led ${HORSES[G.hastId].namn} till ridhuset`,
+    : [`Led ${HORSES[G.hastId].namn} till lektionen`,
        G.scen==="stallinne"?"Ut genom stalldörren och över gräsgården."
        :G.scen==="ridhusinne"?"Fram till sargporten vid A — sitt upp där."
-       :"In genom durkplåtdörrarna på ridhusets gårdssida."];
+       :"Ridhuset genom durkplåtdörrarna — eller uteridbanan i väster. Skogsstigen (uteritt) börjar vid åkerkanten i norr."];
   visaUppgift(mål[0],mål[1]);
 }

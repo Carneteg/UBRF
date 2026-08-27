@@ -314,10 +314,12 @@ function avslutaSkotsel(){
     sys.fodrat<0.99?"Fodringen stämmer inte med schemat. ":""}Det sänker stallron — hästen känner av oredan.</div>`:""}
   <p class="dim" style="font-size:13.5px">Dagsformen skalar hela avsprångskvaliteten i hoppningen,
   och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
-  <div class="btnrow"><button class="btn" id="bLek">Led honom till ridhuset</button></div>`);
+  <div class="btnrow"><button class="btn" id="bLek">Led honom ut till lektionen</button></div>`);
   document.getElementById("bLek").onclick=()=>{overlay(false);
     G.leder=true;VD.spår.length=0;
-    saga("Led hästen ut genom stalldörren och över gårdsplanen till ridhuset.",4);};
+    const gIdx=GRUPPSTEGE.indexOf(G.grupp);
+    saga("Led hästen ut. I dag kan ni ta ridhuset eller uteridbanan"+
+      (gIdx>=5?" — eller sitta upp för uteritt på skogsstigen.":"."),4.5);};
 }
 
 /* ── Resultatet ── */
@@ -352,7 +354,8 @@ function visaResultat(dom){
         <tr><td>Tid</td><td class="num">${dom.tid.toFixed(1).replace(".",",")} s</td></tr>
         <tr><td>Resultat</td><td class="num">${dom.utesluten?"UTESLUTEN":dom.totalfel+" fel"}</td></tr>
       </tbody></table>`
-      :`<div class="lbl" style="margin-bottom:6px">Dagens lektion — ${GRUPPNAMN[P.riddenGrupp||G.grupp]||G.grupp}</div>
+      :`<div class="lbl" style="margin-bottom:6px">Dagens lektion — ${GRUPPNAMN[P.riddenGrupp||G.grupp]||G.grupp}${
+        {utebana:" · uteridbanan",stig:" · uteritt på skogsstigen"}[G.plats]||""}</div>
       <ul style="font-size:13px;line-height:1.8">${(G.lektion||[]).map(m=>`<li>${m.namn}</li>`).join("")}</ul>
       <p class="dim" style="font-size:12.5px">Hoppning kommer först i hoppgruppen — vägen dit går genom utbildningsskalan.</p>`}
     </div>
@@ -395,7 +398,7 @@ function visaResultat(dom){
     visaSkotsel();};
 }
 function nollstall(){
-  G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};
+  G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
   document.getElementById("protWrap").hidden=true;

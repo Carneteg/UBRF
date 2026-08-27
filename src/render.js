@@ -32,56 +32,98 @@ function v2fit(){
 function w2s(x,y){ // världsmeter → skärm. Banan centrerad, y nedåt = C-sidan
   return [CW/2+(x-10)*V2.scale, CH/2+(y-30)*V2.scale];
 }
+/* Träden längs skogsstigen (banrums-koordinater, utanför spåret). */
+const STIGTRAD=[[-2.5,6],[22.5,14],[-3,26],[23,38],[-2,50],[22.5,56],
+  [4,-3],[15,-2.6],[6,62.8],[16,63],[-3.2,40],[23.2,26]];
+function tradfarg2(i){
+  // TRADFARG (world.js) är par [bas, ljus] — ta basen
+  if(typeof TRADFARG!=="undefined")return TRADFARG[i%TRADFARG.length][0];
+  return ["#7A6A32","#8A5A2E","#6E7038","#9A6A28"][i%4];
+}
 function draw2D(G){
   v2fit();
-  cx.fillStyle=COL.mark;cx.fillRect(0,0,CW,CH);
+  const ute=G.plats&&G.plats!=="ridhus", stig=G.plats==="stig";
+  cx.fillStyle=ute?"#20281B":COL.mark;cx.fillRect(0,0,CW,CH);
   const s=V2.scale;
 
-  // anläggningen runtomkring — svaga fotavtryck med etiketter
-  cx.save();cx.globalAlpha=0.9;
-  const foot=(r,label,fill)=>{
-    const[a,b]=w2s(r.x,r.y);
-    cx.fillStyle=fill||"#20242B";cx.strokeStyle="#31363E";cx.lineWidth=1;
-    cx.fillRect(a,b,r.w*s,r.h*s);cx.strokeRect(a,b,r.w*s,r.h*s);
-    if(label&&s>7){cx.fillStyle="#5D636C";cx.font=`500 ${Math.max(9,s*0.85)}px "IBM Plex Mono"`;
-      cx.textAlign="center";cx.fillText(label,a+r.w*s/2,b+r.h*s/2+3);}
-  };
-  foot(SITE.stall,"STALL","#232028");
-  foot(SITE.sadelkammare,s>9?"SADELK.":"", "#232028");
-  foot(SITE.cafe,"CAFÉ","#232028");
-  foot(SITE.utebana,"UTERIDBANA","#1E241C");
-  for(const h of SITE.hagar)foot(h,"HAGE","#1B231A");
-  foot(SITE.framridning,"FRAMRIDNING","#1E241C");
-  cx.restore();
+  // anläggningen runtomkring — svaga fotavtryck med etiketter (i ridhuset)
+  if(!ute){
+    cx.save();cx.globalAlpha=0.9;
+    const foot=(r,label,fill)=>{
+      const[a,b]=w2s(r.x,r.y);
+      cx.fillStyle=fill||"#20242B";cx.strokeStyle="#31363E";cx.lineWidth=1;
+      cx.fillRect(a,b,r.w*s,r.h*s);cx.strokeRect(a,b,r.w*s,r.h*s);
+      if(label&&s>7){cx.fillStyle="#5D636C";cx.font=`500 ${Math.max(9,s*0.85)}px "IBM Plex Mono"`;
+        cx.textAlign="center";cx.fillText(label,a+r.w*s/2,b+r.h*s/2+3);}
+    };
+    foot(SITE.stall,"STALL","#232028");
+    foot(SITE.sadelkammare,s>9?"SADELK.":"", "#232028");
+    foot(SITE.cafe,"CAFÉ","#232028");
+    foot(SITE.utebana,"UTERIDBANA","#1E241C");
+    for(const h of SITE.hagar)foot(h,"HAGE","#1B231A");
+    foot(SITE.framridning,"FRAMRIDNING","#1E241C");
+    cx.restore();
+  }
 
-  // ridhuset: golv
+  // golvet: fibersand inne, grus ute, gräs med stig i skogen
   const[gx,gy]=w2s(0,0);
-  cx.fillStyle=COL.sand;cx.fillRect(gx,gy,20*s,60*s);
-  // harvade spår
-  cx.strokeStyle="rgba(0,0,0,.05)";cx.lineWidth=1;
-  for(let i=1;i<20;i++){cx.beginPath();cx.moveTo(gx+i*s,gy);cx.lineTo(gx+i*s,gy+60*s);cx.stroke();}
-  // fyrkantspåret
-  cx.strokeStyle=COL.spar;cx.lineWidth=Math.max(2,s*0.5);
+  cx.fillStyle=stig?"#2A331F":ute?"#B7A88A":COL.sand;
+  cx.fillRect(gx,gy,20*s,60*s);
+  if(!stig){ // harvade spår
+    cx.strokeStyle="rgba(0,0,0,.05)";cx.lineWidth=1;
+    for(let i=1;i<20;i++){cx.beginPath();cx.moveTo(gx+i*s,gy);cx.lineTo(gx+i*s,gy+60*s);cx.stroke();}
+  }
+  // fyrkantspåret — på stigen är spåret själva grusvägen
+  cx.strokeStyle=stig?"#6E6459":COL.spar;
+  cx.lineWidth=stig?Math.max(6,s*1.7):Math.max(2,s*0.5);
   cx.strokeRect(gx+1.5*s,gy+1.5*s,17*s,57*s);
-  // sarg + läktare
-  cx.strokeStyle=COL.vagg;cx.lineWidth=Math.max(3,s*0.45);
-  cx.strokeRect(gx,gy,20*s,60*s);
-  cx.fillStyle=COL.laktare;cx.fillRect(gx-2.2*s,gy+14*s,1.8*s,32*s);
-  if(s>7){cx.save();cx.translate(gx-1.3*s,gy+30*s);cx.rotate(-Math.PI/2);
-    cx.fillStyle="#5D636C";cx.font=`500 ${s*0.8}px "IBM Plex Mono"`;cx.textAlign="center";
-    cx.fillText("LÄKTARE",0,3);cx.restore();}
-  // tre ingångar
-  cx.strokeStyle=COL.sandDark;cx.lineWidth=Math.max(3,s*0.5);
-  for(const[ix,iy,horiz]of[[10,0,1],[20,10,0],[20,50,0]]){
-    const[a,b]=w2s(ix,iy);cx.beginPath();
-    if(horiz){cx.moveTo(a-1.2*s,b);cx.lineTo(a+1.2*s,b);}else{cx.moveTo(a,b-1.2*s);cx.lineTo(a,b+1.2*s);}
-    cx.stroke();}
-  // bokstäver
-  cx.font=`600 ${Math.max(11,s*1.05)}px Petrona,serif`;cx.textAlign="center";cx.fillStyle=COL.bokstav;
-  for(const{b,x,y}of DRESSYRBOKSTAVER){
-    let[a,c]=w2s(x,y);
-    if(x===0)a-=s*0.9; if(x===20)a+=s*0.9; if(y===0)c-=s*0.6; if(y===60)c+=s*1.3;
-    cx.fillText(b,a,c+4);}
+  if(stig){ // mittsträng av gräs i grusvägen
+    cx.strokeStyle="rgba(52,64,38,.55)";cx.lineWidth=Math.max(1.5,s*0.22);
+    cx.setLineDash([s*1.2,s*0.9]);
+    cx.strokeRect(gx+1.5*s,gy+1.5*s,17*s,57*s);cx.setLineDash([]);
+  }
+  if(!ute){
+    // sarg + läktare
+    cx.strokeStyle=COL.vagg;cx.lineWidth=Math.max(3,s*0.45);
+    cx.strokeRect(gx,gy,20*s,60*s);
+    cx.fillStyle=COL.laktare;cx.fillRect(gx-2.2*s,gy+14*s,1.8*s,32*s);
+    if(s>7){cx.save();cx.translate(gx-1.3*s,gy+30*s);cx.rotate(-Math.PI/2);
+      cx.fillStyle="#5D636C";cx.font=`500 ${s*0.8}px "IBM Plex Mono"`;cx.textAlign="center";
+      cx.fillText("LÄKTARE",0,3);cx.restore();}
+    // tre ingångar
+    cx.strokeStyle=COL.sandDark;cx.lineWidth=Math.max(3,s*0.5);
+    for(const[ix,iy,horiz]of[[10,0,1],[20,10,0],[20,50,0]]){
+      const[a,b]=w2s(ix,iy);cx.beginPath();
+      if(horiz){cx.moveTo(a-1.2*s,b);cx.lineTo(a+1.2*s,b);}else{cx.moveTo(a,b-1.2*s);cx.lineTo(a,b+1.2*s);}
+      cx.stroke();}
+  }else if(!stig){
+    // uteridbanans trästaket med stolpar
+    cx.strokeStyle="#5A4633";cx.lineWidth=Math.max(2.5,s*0.3);
+    cx.strokeRect(gx,gy,20*s,60*s);
+    cx.fillStyle="#4A3A28";
+    for(let y=0;y<=60;y+=4){const[a,b]=w2s(0,y),[a2]=w2s(20,y);
+      cx.fillRect(a-s*0.14,b-s*0.14,s*0.28,s*0.28);cx.fillRect(a2-s*0.14,b-s*0.14,s*0.28,s*0.28);}
+    for(let x=4;x<=16;x+=4){const[a,b]=w2s(x,0),[,b2]=w2s(x,60);
+      cx.fillRect(a-s*0.14,b-s*0.14,s*0.28,s*0.28);cx.fillRect(a-s*0.14,b2-s*0.14,s*0.28,s*0.28);}
+    if(s>7){cx.fillStyle="#5D6C58";cx.font=`500 ${Math.max(9,s*0.8)}px "IBM Plex Mono"`;
+      cx.textAlign="center";cx.fillText("UTERIDBANAN · 36×80",gx+10*s,gy-s*0.8);}
+  }else{
+    // skogen: träd runt stigen
+    for(let i=0;i<STIGTRAD.length;i++){const[tx,ty]=STIGTRAD[i];
+      const[a,b]=w2s(tx,ty);
+      cx.fillStyle="rgba(0,0,0,.25)";
+      cx.beginPath();cx.ellipse(a+s*0.3,b+s*0.3,s*1.4,s*1.1,0,0,Math.PI*2);cx.fill();
+      cx.fillStyle=tradfarg2(i);
+      cx.beginPath();cx.arc(a,b,s*(1.1+0.35*((i*7)%3)),0,Math.PI*2);cx.fill();}
+  }
+  // bokstäver — dressyrbokstäver finns inne och på uteridbanan
+  if(!stig){
+    cx.font=`600 ${Math.max(11,s*1.05)}px Petrona,serif`;cx.textAlign="center";cx.fillStyle=COL.bokstav;
+    for(const{b,x,y}of DRESSYRBOKSTAVER){
+      let[a,c]=w2s(x,y);
+      if(x===0)a-=s*0.9; if(x===20)a+=s*0.9; if(y===0)c-=s*0.6; if(y===60)c+=s*1.3;
+      cx.fillText(b,a,c+4);}
+  }
 
   // banguide för dagens övning (ur träningsboken)
   const guide=G.scen==="lektion"&&G.moment&&
@@ -194,21 +236,40 @@ function proj(px,py,pz,cam){
 function draw3D(G){
   const cam={x:G.px-Math.cos(G.rikt)*V3.back, y:G.py-Math.sin(G.rikt)*V3.back,
     z0:V3.h, fx:Math.cos(G.rikt), fy:Math.sin(G.rikt)};
+  const ute=G.plats&&G.plats!=="ridhus", stig=G.plats==="stig";
+  const vader=(G.vader&&G.vader.typ)||"sol";
   // himmel/tak + golv
   const grad=cx.createLinearGradient(0,0,0,CH*0.60);
-  grad.addColorStop(0,"#15181D");grad.addColorStop(1,"#23272E");
+  if(!ute){grad.addColorStop(0,"#15181D");grad.addColorStop(1,"#23272E");}
+  else{const sky={sol:["#2C3A55","#B08A5C"],mulet:["#39404A","#7A7A70"],
+      regn:["#2C3138","#4E545A"]}[vader];
+    grad.addColorStop(0,sky[0]);grad.addColorStop(1,sky[1]);}
   cx.fillStyle=grad;cx.fillRect(0,0,CW,CH*0.60);
-  cx.fillStyle=COL.sand;cx.fillRect(0,CH*0.60,CW,CH*0.40);
+  cx.fillStyle=stig?"#2A331F":ute?"#B7A88A":COL.sand;
+  cx.fillRect(0,CH*0.60,CW,CH*0.40);
   const items=[];
-  // golvlinjer (var 5 m + fyrkantspår)
-  for(let y=0;y<=60;y+=5)items.push({z:0,typ:"linje",p:[[0,y],[20,y]]});
-  for(const seg of [[[1.5,1.5],[18.5,1.5]],[[18.5,1.5],[18.5,58.5]],[[18.5,58.5],[1.5,58.5]],[[1.5,58.5],[1.5,1.5]]])
-    items.push({z:0,typ:"spar",p:seg});
-  // väggar som stolpar + band
-  for(let y=0;y<=60;y+=4){items.push({typ:"stolpe",x:0,y});items.push({typ:"stolpe",x:20,y});}
-  for(let x=0;x<=20;x+=4){items.push({typ:"stolpe",x,y:0});items.push({typ:"stolpe",x,y:60});}
+  // golvlinjer (var 5 m + fyrkantspår — på stigen är spåret grusvägen)
+  if(!stig)for(let y=0;y<=60;y+=5)items.push({z:0,typ:"linje",p:[[0,y],[20,y]]});
+  // fyrkantspåret i korta bitar så att närliggande delar inte klipps
+  // bort med hela segmentet när ena änden hamnar bakom kameran
+  for(const[[x0,y0],[x1,y1]]of[[[1.5,1.5],[18.5,1.5]],[[18.5,1.5],[18.5,58.5]],
+      [[18.5,58.5],[1.5,58.5]],[[1.5,58.5],[1.5,1.5]]]){
+    const n=Math.max(1,Math.round(Math.hypot(x1-x0,y1-y0)/4));
+    for(let i=0;i<n;i++){
+      const a=i/n,b2=(i+1)/n;
+      items.push({z:0,typ:"spar",p:[[x0+(x1-x0)*a,y0+(y1-y0)*a],[x0+(x1-x0)*b2,y0+(y1-y0)*b2]]});
+    }
+  }
+  // väggar som stolpar + band (staketstolpar ute, träd på stigen)
+  if(!stig){
+    for(let y=0;y<=60;y+=4){items.push({typ:"stolpe",x:0,y});items.push({typ:"stolpe",x:20,y});}
+    for(let x=0;x<=20;x+=4){items.push({typ:"stolpe",x,y:0});items.push({typ:"stolpe",x,y:60});}
+  }else{
+    for(let i=0;i<STIGTRAD.length;i++)
+      items.push({typ:"trad",x:STIGTRAD[i][0],y:STIGTRAD[i][1],farg:tradfarg2(i)});
+  }
   // bokstäver
-  for(const B of DRESSYRBOKSTAVER)items.push({typ:"bokstav",...B});
+  if(!stig)for(const B of DRESSYRBOKSTAVER)items.push({typ:"bokstav",...B});
   // hinder
   if(G.hinderAktiva)for(const h of BANA.hinder)items.push({typ:"hinder",h});
   // NPC
@@ -223,14 +284,29 @@ function draw3D(G){
     if(o.typ==="linje"||o.typ==="spar"){
       const A=proj(o.p[0][0],o.p[0][1],0,cam),B=proj(o.p[1][0],o.p[1][1],0,cam);
       if(!A||!B)continue;
-      cx.strokeStyle=o.typ==="spar"?"rgba(120,110,80,.5)":"rgba(0,0,0,.10)";
-      cx.lineWidth=o.typ==="spar"?2:1;
+      cx.strokeStyle=stig?"rgba(94,86,77,.92)":o.typ==="spar"?"rgba(120,110,80,.5)":"rgba(0,0,0,.10)";
+      cx.lineWidth=stig?clamp(900/Math.min(A[2],B[2]),6,110):o.typ==="spar"?2:1;
+      if(stig)cx.lineCap="round";
       cx.beginPath();cx.moveTo(A[0],A[1]);cx.lineTo(B[0],B[1]);cx.stroke();
+      if(stig)cx.lineCap="butt";
     }else if(o.typ==="stolpe"){
-      const A=proj(o.x,o.y,0,cam),B=proj(o.x,o.y,1.3,cam);
+      const A=proj(o.x,o.y,0,cam),B=proj(o.x,o.y,ute?1.15:1.3,cam);
       if(!A||!B)continue;
-      cx.strokeStyle=COL.vaggLjus;cx.lineWidth=Math.max(1,90/A[2]);
+      cx.strokeStyle=ute?"#5A4633":COL.vaggLjus;cx.lineWidth=Math.max(1,(ute?110:90)/A[2]);
       cx.beginPath();cx.moveTo(A[0],A[1]);cx.lineTo(B[0],B[1]);cx.stroke();
+      if(ute){ // överliggare mot nästa stolpe åt öster/söder ritas som kort band
+        cx.strokeStyle="rgba(90,70,51,.7)";cx.lineWidth=Math.max(1,70/A[2]);
+        cx.beginPath();cx.moveTo(B[0]-14,B[1]);cx.lineTo(B[0]+14,B[1]);cx.stroke();}
+    }else if(o.typ==="trad"){
+      const A=proj(o.x,o.y,0,cam),B=proj(o.x,o.y,3.1,cam);
+      if(!A||!B)continue;
+      cx.strokeStyle="#4A3A28";cx.lineWidth=Math.max(2,150/A[2]);
+      cx.beginPath();cx.moveTo(A[0],A[1]);cx.lineTo(B[0],B[1]);cx.stroke();
+      const sz=clamp(2600/A[2],10,190);
+      cx.fillStyle=o.farg;
+      cx.beginPath();cx.ellipse(B[0],B[1]-sz*0.18,sz*0.55,sz*0.62,0,0,Math.PI*2);cx.fill();
+      cx.fillStyle="rgba(0,0,0,.14)";
+      cx.beginPath();cx.ellipse(B[0]+sz*0.16,B[1]-sz*0.05,sz*0.34,sz*0.38,0,0,Math.PI*2);cx.fill();
     }else if(o.typ==="bokstav"){
       let bx=o.x,by=o.y; if(o.x===0)bx=-0.6; if(o.x===20)bx=20.6; if(o.y===0)by=-0.6; if(o.y===60)by=60.6;
       const A=proj(bx,by,1.1,cam);if(!A)continue;
@@ -249,6 +325,16 @@ function draw3D(G){
     }
   }
   drawOwnHorse3D(G);
+  if(ute&&vader==="regn"){ // regnstrimmor framför allt
+    cx.strokeStyle="rgba(190,200,210,.26)";cx.lineWidth=1;
+    const off=(G.t*640)%CH;
+    cx.beginPath();
+    for(let i=0;i<70;i++){
+      const rx=(i*97+i*i*13)%CW, ry=((i*173)%CH+off)%CH;
+      cx.moveTo(rx,ry);cx.lineTo(rx-3,ry+14);
+    }
+    cx.stroke();
+  }
 }
 function drawFence3D(h,cam,G){
   const L=2, dx=Math.cos(h.rot+Math.PI/2)*L, dy=Math.sin(h.rot+Math.PI/2)*L;

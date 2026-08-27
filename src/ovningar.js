@@ -256,7 +256,7 @@ function visaOvning(id,fran){
       dagen, och i hoppgruppen banan som avslutning. ── */
 const NIVAIDX={alla:0, grupp2:4, grupp3:5, grupp4:6, grupp5:7, hoppgrupp:8};
 
-function byggLektion(grupp,seed){
+function byggLektion(grupp,seed,plats){
   const gIdx=(typeof GRUPPSTEGE!=="undefined")?GRUPPSTEGE.indexOf(grupp):4;
   const tillg=OVNINGAR.filter(o=>(NIVAIDX[o.niva]??0)<=Math.max(gIdx,0));
   const av=(g)=>tillg.filter(o=>o.gangart===g&&o.id!=="langtygel"&&o.id!=="ridvagar");
@@ -264,8 +264,25 @@ function byggLektion(grupp,seed){
   const moment=(o,tid,bedoms)=>o&&{id:o.id, namn:o.namn, tid, bedoms,
     ovning:o.id, text:o.utforande[0]};
   const lek=[];
-  const lt=OVNINGAR.find(o=>o.id==="langtygel");
-  lek.push({id:"skritt", namn:lt.namn, tid:26, bedoms:false, ovning:"langtygel",
+  const skrittrunda={id:"skrittrunda", namn:"Skritta av på lång tygel", tid:20,
+    bedoms:false, ovning:"langtygel",
+    text:"Ge tygeln och låt hästen sträcka sig framåt-nedåt. Lektionen slutar alltid i skritt."};
+  /* Uteritt på skogsstigen: lydighetsövningar behöver ingen bana —
+     övergångar, halvhalter och fattningar rids på grusvägen. */
+  if(plats==="stig"){
+    const lydIds=["halt_skritt","trav_skritt","halvhalter","kontrabojning","galoppfattning"];
+    const lyd=lydIds.map(id=>OVNINGAR.find(o=>o.id===id))
+      .filter(o=>o&&(NIVAIDX[o.niva]??0)<=Math.max(gIdx,0));
+    lek.push({id:"skritt", namn:"Skritt ut på stigen", tid:26, bedoms:false, ovning:"langtygel",
+      text:"Skritta ut på skogsstigen på lång tygel. Låt hästen titta — här ute finns mer att titta på."});
+    for(let k=0;k<3&&lyd.length;k++){
+      const o=lyd[(seed+k*2)%lyd.length];
+      if(!lek.some(m=>m.id===o.id))lek.push(moment(o,40,true));
+    }
+    lek.push(skrittrunda);
+    return lek;
+  }
+  lek.push({id:"skritt", namn:"Skritt på lång tygel", tid:26, bedoms:false, ovning:"langtygel",
     text:"Skritta ett varv på fyrkanten och låt hästen titta sig omkring."});
   const sk=moment(valj(av("skritt").concat(av("halt")),1),38,true);
   if(sk)lek.push(sk);
@@ -278,6 +295,8 @@ function byggLektion(grupp,seed){
   if(grupp==="hoppgrupp")
     lek.push({id:"bana", namn:"Banan", tid:0, bedoms:true, ovning:"ridvagar",
       text:"Nu hela banan — sex hinder, 60 cm. Rid vägen, inte hindret."});
+  else
+    lek.push(skrittrunda);   // efter banan går ekipagen direkt till protokollet
   return lek;
 }
 
