@@ -151,6 +151,23 @@ function ritaHastSida(c,x0,y0,u,dir,farg,man,o){
   B(K(0.05,-1.04),K(-0.30,-1.04),K(-0.50,-0.99));
   c.closePath(); c.fill();
 
+  /* Täcke — hänger över ryggen med gjordar */
+  if(o.tacke){
+    c.fillStyle="#6E2A30";
+    c.beginPath();
+    M(K(0.30,-1.00));
+    B(K(0.10,-1.05),K(-0.30,-1.05),K(-0.60,-0.98));
+    B(K(-0.70,-0.90),K(-0.72,-0.70),K(-0.66,-0.55));
+    c.lineTo(...K(-0.50,-0.52));
+    B(K(-0.30,-0.55),K(0.05,-0.55),K(0.24,-0.60));
+    B(K(0.30,-0.75),K(0.32,-0.90),K(0.30,-1.00));
+    c.closePath(); c.fill();
+    c.strokeStyle="#4A1C20"; c.lineWidth=Math.max(1,u*0.02);
+    c.beginPath(); M(K(0.05,-0.55)); c.lineTo(...K(0.03,-0.44)); c.stroke();
+    c.beginPath(); M(K(-0.35,-0.54)); c.lineTo(...K(-0.37,-0.44)); c.stroke();
+    c.strokeStyle="#8E9296";
+    c.beginPath(); M(K(0.30,-0.86)); B(K(0.10,-0.90),K(-0.20,-0.90),K(-0.55,-0.84)); c.stroke();
+  }
   /* Grimma */
   if(o.grimma&&!beta){
     c.strokeStyle="#7A3B2A"; c.lineWidth=Math.max(1,u*0.018);

@@ -162,6 +162,16 @@ function interaktioner(){
         L.push({pos:d.pos, text:d.text, gor(){gaTill(d.mot,d.spawn);}});
       }
     }
+    if(G.hastId&&!G.hamtad&&!G.leder){
+      const h=HORSES[G.hastId];
+      L.push({pos:ANL.hamtHage.grind, text:`Öppna grinden och hämta ${h.namn}`,
+        gor(){
+          G.leder=true; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
+          saga(G.tackePa
+            ?`${h.namn} har täcket på i det här vädret. Grimman på — led honom till boxen.`
+            :`Grimman på. Led ${h.namn} till boxen i stallet.`,4);
+        }});
+    }
   }else if(G.scen==="ridhusinne"){
     const R=RIDHUSINNE;
     for(const d of R.dorrar) L.push({pos:d.pos, text:d.text,
@@ -182,9 +192,17 @@ function interaktioner(){
       gor(){visaTilldelning();}});
     if(G.hastId&&!G.skotselRes){
       const b=hittaBox(G.hastId);
-      if(b) L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
-        gor(){visaBoxmeny();}});
+      if(b&&G.leder&&!G.hamtad){
+        L.push({pos:b.dorr, text:`Släpp in ${HORSES[G.hastId].namn} i boxen`,
+          gor(){G.leder=false;G.hamtad=true;
+            saga("Han går in och drar en tugga hö. Nu: boxen, fodret och sadeln.",3.5);}});
+      }else if(b&&G.hamtad){
+        L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
+          gor(){visaBoxmeny();}});
+      }
     }
+    L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
+      gor(){visaSchema();}});
     for(const i of (S.info||[])) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
   }
   return L;
@@ -230,10 +248,17 @@ function gaTill(scen,spawn){
 function startaVandring(){
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
-  G.sysslor={mockat:0,fodrat:0};
+  G.sysslor={mockat:0,fodrat:0}; G.hamtad=false; G.tackePa=false;
+  // dagens väder — avgör om hästarna går med täcke i hagen
+  const v=(G.seed*2654435761>>>0)%100;
+  G.vader={typ:v<52?"sol":v<80?"mulet":"regn", temp:7+(v%11)};
+  G.vader.tacke=G.vader.typ==="regn"||G.vader.temp<10;
   const s=ANL.spawn; VD.px=s.x;VD.py=s.y;VD.rikt=s.rikt;VD.spår.length=0;
   hudLage("gang");
-  saga("Du är framme på Husbyvägen 1A. Ridläraren väntar i stallgången.",4.5);
+  const vtext={sol:"Kvällssolen ligger över åkrarna.",
+    mulet:"Mulet och stilla över Bro.",
+    regn:"Regnet trummar på plåttaken."}[G.vader.typ];
+  saga(`Du är framme på Husbyvägen 1A. ${vtext} Ridläraren väntar i stallgången.`,4.5);
 }
 function hudLage(lage){
   const gang=lage==="gang";
@@ -610,13 +635,20 @@ function azX(az){
   return CW/2 - d/K3.fov*CW*0.85;   // moturs vinkel = vänster på skärmen
 }
 function ritaHimmel(k){
+  const vader=G.vader?G.vader.typ:"sol";
   const gr=cx.createLinearGradient(0,0,0,k.hor);
-  gr.addColorStop(0,VCOL.himmel0); gr.addColorStop(0.75,"#BFC9BE");
-  gr.addColorStop(1,VCOL.himmel1);
+  if(vader==="sol"){
+    gr.addColorStop(0,VCOL.himmel0); gr.addColorStop(0.75,"#BFC9BE");
+    gr.addColorStop(1,VCOL.himmel1);
+  }else if(vader==="mulet"){
+    gr.addColorStop(0,"#7C8894"); gr.addColorStop(1,"#C4C8C4");
+  }else{
+    gr.addColorStop(0,"#5C6670"); gr.addColorStop(1,"#9AA0A2");
+  }
   cx.fillStyle=gr; cx.fillRect(0,0,CW,k.hor);
   // solen i sydväst
   const sx=azX(Math.atan2(-1,-1));
-  if(sx>-CW*0.3&&sx<CW*1.3){
+  if(vader==="sol"&&sx>-CW*0.3&&sx<CW*1.3){
     const sg=cx.createRadialGradient(sx,k.hor*0.86,0,sx,k.hor*0.86,CH*0.30);
     sg.addColorStop(0,"rgba(255,238,190,.95)"); sg.addColorStop(0.25,"rgba(255,226,160,.45)");
     sg.addColorStop(1,"rgba(255,226,160,0)");
@@ -624,7 +656,13 @@ function ritaHimmel(k){
   }
   for(const m of MOLN){
     const x=azX(m.az); if(x<-CW*0.3||x>CW*1.3)continue;
-    const y=k.hor*(1-m.h*0.72), s=CH*0.05*m.s;
+    const y=k.hor*(1-m.h*0.72), s=CH*0.05*m.s*(vader==="sol"?1:1.6);
+    if(vader!=="sol"){ // tunga moln i grått
+      cx.fillStyle=vader==="regn"?"#6E767E":"#A6ACB0";
+      for(const [ox,oy,r] of [[-1.2,0.1,0.9],[-0.2,-0.35,1.1],[0.7,-0.1,0.95],[1.4,0.2,0.75]]){
+        cx.beginPath(); cx.ellipse(x+ox*s,y+oy*s,r*s,r*s*0.7,0,0,Math.PI*2); cx.fill();}
+      continue;
+    }
     cx.fillStyle=VCOL.molnSkugga;
     cx.beginPath(); cx.ellipse(x,y+s*0.35,s*2.1,s*0.55,0,0,Math.PI*2); cx.fill();
     cx.fillStyle=VCOL.moln;
@@ -690,16 +728,38 @@ function ritaGard3D(){
   for(const t of ANL.trad) items.push({d:-avst2(t), rita(){ritaTrad3D(k,t);}});
   for(const p of ANL.props) items.push({d:-avst2(p.pos), rita(){ritaProp3D(k,p);}});
   for(const hg of ANL.hagar) for(let i=0;i<hg.hastar.length;i++){
+    if(hg.hastar[i]===G.hastId&&!G.hamtad)continue;   // din häst står vid grinden
     const h=HORSES[hg.hastar[i]]; if(!h)continue;
     const hx=hg.rekt.x+hg.rekt.w*(0.25+0.5*((i*0.618)%1));
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     items.push({d:-avst2([hx,hy]), rita(){ritaHage3DHast(k,hx,hy,h,i);}});
   }
+  if(G.hastId&&!G.hamtad&&!G.leder){
+    const f=ANL.hamtHage.falt, h=HORSES[G.hastId];
+    items.push({d:-avst2(f), rita(){
+      const p=tillKam(k,f[0],f[1],0); if(p.d<K3.nara)return;
+      const s=projK(k,p), sz=clamp(1.6*k.f/p.d,3,140);
+      ritaHastSida(cx,s[0],s[1],sz,-1,h.farg,h.man,
+        {pose:"beta", tacke:!!(G.vader&&G.vader.tacke)});
+    }});
+    items.push({d:-avst2(ANL.hamtHage.grind),
+      rita(){ritaMarkor3D(k,ANL.hamtHage.grind);}});
+  }
   for(const d of ANL.dorrar) items.push({d:-avst2(d.pos), rita(){ritaMarkor3D(k,d.pos);}});
   if(G.leder) items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
   items.sort((a,b)=>a.d-b.d);
   for(const o of items)o.rita();
+  if(G.vader&&G.vader.typ==="regn")ritaRegn();
   ritaSpelare3D();
+}
+function ritaRegn(){
+  cx.strokeStyle="rgba(210,222,232,.30)"; cx.lineWidth=1;
+  cx.beginPath();
+  for(let i=0;i<70;i++){
+    const x=Math.random()*CW, y=Math.random()*CH;
+    cx.moveTo(x,y); cx.lineTo(x-CH*0.008,y+CH*0.026);
+  }
+  cx.stroke();
 }
 function ritaStaket3D(k,a,c,typ){
   const L=Math.hypot(c[0]-a[0],c[1]-a[1]); if(L<0.01)return;
@@ -763,7 +823,8 @@ function ritaLeddHast3D(k){
   const dir=Math.abs(rel)<Math.PI/2 ? (rel>=0?-1:1) : (rel>=0?1:-1);
   const rorSig=VD.spår.length>1;
   ritaHastSida(cx,s[0],s[1],sz,dir,h.farg,h.man,
-    {pose:rorSig?"ga":"sta", fas:VD.fas, grimma:true, sadel:!!G.skotselRes});
+    {pose:rorSig?"ga":"sta", fas:VD.fas, grimma:true,
+     sadel:!!G.skotselRes, tacke:!!G.tackePa});
   // grimskaftet mot din hand
   const mx=s[0]+dir*sz*0.84, my=s[1]-sz*1.05;
   cx.strokeStyle="#8A6A4C"; cx.lineWidth=Math.max(1.5,sz*0.015);
@@ -859,11 +920,20 @@ function ritaGard2D(){
     else if(p.typ==="mast"||p.typ==="flagga"){cx.fillStyle="#B9BCBE";cx.beginPath();cx.arc(a,b,s*0.35,0,Math.PI*2);cx.fill();}
   }
   for(const hg of ANL.hagar)for(let i=0;i<hg.hastar.length;i++){
+    if(hg.hastar[i]===G.hastId&&!G.hamtad)continue;
     const h=HORSES[hg.hastar[i]];if(!h)continue;
     const hx=hg.rekt.x+hg.rekt.w*(0.25+0.5*((i*0.618)%1));
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     const[a,b]=gs(hx,hy);
     cx.fillStyle=h.farg;cx.beginPath();cx.ellipse(a,b,s*0.9,s*0.5,i,0,Math.PI*2);cx.fill();}
+  if(G.hastId&&!G.hamtad&&!G.leder){
+    const[a,b]=gs(ANL.hamtHage.falt[0],ANL.hamtHage.falt[1]);
+    cx.fillStyle=HORSES[G.hastId].farg;
+    cx.beginPath();cx.ellipse(a,b,s*1.1,s*0.6,0,0,Math.PI*2);cx.fill();
+    const[ga2,gb]=gs(ANL.hamtHage.grind[0],ANL.hamtHage.grind[1]);
+    cx.strokeStyle="rgba(214,174,60,.85)";cx.lineWidth=2;
+    cx.beginPath();cx.arc(ga2,gb,s*1.4+Math.sin(VD.tid*3)*2,0,Math.PI*2);cx.stroke();
+  }
   for(const b of ANL.byggnader){
     const[a,c,w,h]=gsRekt(b.rekt);
     cx.fillStyle=fargSkala(b.fargT,0.95); cx.fillRect(a,c,w,h);
@@ -1319,6 +1389,11 @@ function ritaVandring(){
     ? (G.scen==="gard"?["Gå till stallet","Stallentrén är den gula dörren under verandan, bortom parkeringen."]
       :G.scen==="ridhusinne"?["Titta dig omkring","Läktaren, speglarna, Café Krubban — lektionen börjar i stallet."]
       :["Prata med ridläraren","Hon står i stallgången och fördelar hästarna."])
+    : !G.hamtad
+    ? (G.leder?[`Led ${HORSES[G.hastId].namn} till boxen`,
+         G.scen==="gard"?"In genom stalldörren och fram till boxen.":"Fram till boxen och släpp in honom (E)."]
+       :[`Hämta ${HORSES[G.hastId].namn} i hagen`,
+         "Grinden sitter på hagens västra sida, öster om stallet."])
     : !G.skotselRes
     ? [`Sköt om ${HORSES[G.hastId].namn}`,
        G.scen==="stallinne"?"Vid boxen (E): mocka, fodra och sadla.":"Boxen är inne i stallet."]

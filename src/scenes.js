@@ -48,6 +48,7 @@ function visaTilldelning(){
   const kandidater=["toblerone","cosmo","larry","hamilton","conor","dexter"];
   const val=kandidater[G.seed%kandidater.length];
   G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
+  G.hamtad=false;G.tackePa=false;
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
     cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
@@ -75,11 +76,11 @@ function visaTilldelning(){
   <p class="dim" style="font-size:13.5px">Du väljer inte häst på en ridskola. Ridläraren tilldelar —
   att få rida en bättre häst är belöningen. Nästa gång du spelar får du en annan.</p>
   <div class="btnrow">
-    <button class="btn" id="bGroom">Gör i ordning honom</button>
+    <button class="btn" id="bGroom">Hämta honom i hagen</button>
     <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
   </div>`);
   document.getElementById("bGroom").onclick=()=>{overlay(false);
-    saga(`${h.namn} står i sin box — den gula markören visar var.`,3.5);};
+    saga(`${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta honom.`,4);};
   document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
     setTimeout(()=>{const w=document.querySelector(".why");
       if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};
@@ -305,7 +306,8 @@ function visaResultat(dom){
     gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
     saga("Tillbaka i stallgången. Ridläraren fördelar hästarna.",3.5);};
   document.getElementById("bSamma").onclick=()=>{nollstall();
-    G.skotselRes=null;overlay(false);hudLage("gang");
+    G.skotselRes=null;G.hamtad=true;G.tackePa=false;
+    overlay(false);hudLage("gang");
     const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
     gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});
     visaSkotsel();};

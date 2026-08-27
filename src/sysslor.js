@@ -34,6 +34,8 @@ function visaBoxmeny(){
   <p class="dim" style="font-size:13.5px">Stallro byggs i boxen: en mockad box och rätt
   foder ger en lugnare häst på lektionen. Ridläraren ser om du slarvar.</p>
   <div style="display:grid;gap:10px;margin-top:14px">
+    ${G.tackePa?`<button class="btn ghost" id="bTacke" style="justify-content:space-between;width:100%">
+      <span>0 · Ta av täcket och häng upp det</span><span class="gold">täcket är på</span></button>`:""}
     <button class="btn ghost" id="bMocka" style="justify-content:space-between;width:100%">
       <span>1 · Mocka boxen</span><span>${bock(s.mockat)}</span></button>
     <button class="btn ghost" id="bFodra" style="justify-content:space-between;width:100%">
@@ -42,10 +44,43 @@ function visaBoxmeny(){
       <span>3 · Visitera, rykta, kratsa, sadla</span><span></span></button>
   </div>
   <div class="btnrow"><button class="btn ghost" id="bStang">Stäng</button></div>`);
+  const bT=document.getElementById("bTacke");
+  if(bT)bT.onclick=()=>{G.tackePa=false;
+    saga("Täcket av och upphängt över boxkanten. Han skakar på sig.",3);visaBoxmeny();};
   document.getElementById("bMocka").onclick=visaMockning;
   document.getElementById("bFodra").onclick=visaFodring;
-  document.getElementById("bSkots").onclick=visaSkotsel;
+  document.getElementById("bSkots").onclick=()=>{
+    if(G.tackePa){saga("Täcket hänger i vägen — ta av det först.",3);return;}
+    visaSkotsel();};
   document.getElementById("bStang").onclick=()=>overlay(false);
+}
+
+/* ── Whiteboarden — dagens schema som checklista ─────────────── */
+function visaSchema(){
+  const s=G.sysslor||{mockat:0,fodrat:0};
+  const v=G.vader||{typ:"sol",temp:12,tacke:false};
+  const vtxt={sol:"Sol",mulet:"Mulet",regn:"Regn"}[v.typ]+` · ${v.temp} °C`
+    +(v.tacke?" — hästarna går med täcke":"");
+  const hast=G.hastId?HORSES[G.hastId].namn:"—";
+  const rad=(klar,txt)=>`<li style="display:flex;gap:10px;align-items:baseline">
+    <span class="${klar?'grn':'dim'}" style="font-family:'IBM Plex Mono',monospace">${klar?"✓":"○"}</span>
+    <span class="${klar?'':'dim'}">${txt}</span></li>`;
+  overlay(true,`
+  <span class="lbl">Whiteboarden i servicedelen · dagens schema</span>
+  <h1 style="margin-top:8px">${vtxt}</h1>
+  <p class="dim" style="font-size:13.5px">Din häst i dag: <b style="color:var(--ink)">${hast}</b>.
+  Schemat gäller tills lektionen börjar — ridläraren bockar av resten.</p>
+  <ul style="list-style:none;padding:0;margin:14px 0;display:grid;gap:9px;font-size:14.5px">
+    ${rad(!!G.hastId,"Prata med ridläraren — dagens häst")}
+    ${rad(!!G.hamtad,"Hämta hästen i hagen och led till boxen")}
+    ${v.tacke?rad(G.hamtad&&!G.tackePa,"Ta av täcket och häng upp det"):""}
+    ${rad(s.mockat>=0.99,"Mocka boxen och strö nytt spån")}
+    ${rad(s.fodrat>=0.99,"Fodra och vattna efter schemat")}
+    ${rad(!!G.skotselRes,"Visitera, rykta, kratsa och sadla")}
+    ${rad(false,"Lektion — sitt upp vid sargporten i ridhuset")}
+  </ul>
+  <div class="btnrow"><button class="btn" id="bSchemaOk">Tillbaka till stallet</button></div>`);
+  document.getElementById("bSchemaOk").onclick=()=>overlay(false);
 }
 
 /* ── Mockningen — plocka högarna, strö nytt ──────────────────── */

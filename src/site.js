@@ -179,6 +179,8 @@ const ANL = {
      info:"Café Krubban har stängt för kvällen. Kolla in vyn över banan från läktaren i stället."},
   ],
   spawn: {x:113, y:10, rikt:Math.PI/2},   // vid infarten från Husbyvägen
+  /* Hagen där dagens häst hämtas: grinden på västra sidan av hage Ö1. */
+  hamtHage: {grind:[176,58], falt:[184,56]},
   skylt: {pos:[113,5.5], text:"HUSBYVÄGEN 1A · UPPLANDS-BRO RYTTARFÖRENING"},
 };
 
@@ -221,6 +223,7 @@ const STALLINNE = {
      spawn:{x:160.3,y:101.8,rikt:Math.PI/2}},
   ],
   ridlarare:{pos:[7.5,18], namn:"Ridläraren"},
+  whiteboard:{pos:[7.5,45.0]},   // veckoschemat vid spolspiltan (IMG_0154)
 };
 
 /* ── Ridhuset invändigt — lokala koordinater: origo i sydväst,
