@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ridskolan POC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Spelet committar till ett visuellt uttryck: kall stallmorgon, varm sand.
+   Ingen temaväxling — men varje färg är målad, inget ärvs från värden. */
+:root{
+  --ground:#101216; --panel:#181B21; --panel-2:#1F232A; --sunk:#0B0D10;
+  --ink:#E6E4DE; --ink-2:#C2C1BB; --muted:#8E939B; --faint:#666B73;
+  --rule:#2A2E35; --rule-soft:#22262C;
+  --gold:#D6AE3C; --gold-2:#E7C86B; --gold-wash:#2A2415;
+  --crit:#D0655A; --crit-wash:#2C1917;
+  --ok:#7FB489;
+  --sand:#C9BFA6; --sand-2:#B8AC8E; --sand-dark:#8E856D;
+  --p1:#4A737E; --p2:#56888A; --p3:#5F9C85; --p4:#86AE79; --p5:#C0B063; --p6:#D6AE3C;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink); overflow:hidden;
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:Petrona,Georgia,serif; margin:0; text-wrap:balance; font-weight:600; letter-spacing:-.01em}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+.lbl{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint); font-weight:500}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--gold); outline-offset:2px; border-radius:2px}
+
+#app{position:fixed; inset:0}
+#cv{position:absolute; inset:0; width:100%; height:100%; display:block; background:var(--ground)}
+
+/* ── HUD ─────────────────────────────────────────────────────── */
+.hud{position:absolute; pointer-events:none; z-index:5}
+.hud.tl{top:14px; left:14px}
+.hud.tr{top:14px; right:14px; text-align:right}
+.hud.bl{bottom:14px; left:14px}
+.hud.br{bottom:14px; right:14px}
+.hud.bc{bottom:16px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
+.hud.tc{top:14px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
+
+.box{background:rgba(24,27,33,.90); border:1px solid var(--rule); border-radius:3px;
+  padding:11px 14px; backdrop-filter:blur(6px)}
+
+/* moment */
+#moment{min-width:250px; max-width:min(360px,42vw)}
+#momentNamn{font-family:Petrona,serif; font-size:19px; line-height:1.2}
+#momentText{font-size:13.5px; color:var(--ink-2); margin-top:4px; line-height:1.45}
+#momentBar{height:3px; background:var(--sunk); border-radius:2px; margin-top:10px; overflow:hidden}
+#momentBar i{display:block; height:100%; background:var(--gold); width:0%; transition:width .3s linear}
+
+/* gångart */
+#gait{font-family:Petrona,serif; font-size:26px; line-height:1}
+#tempo{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted);
+  font-variant-numeric:tabular-nums; margin-top:3px}
+#gaitWarn{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--crit); margin-top:5px; min-height:14px}
+
+/* pyramid */
+#pyr{width:210px}
+.prow{display:grid; grid-template-columns:70px 1fr; gap:7px; align-items:center; margin:2px 0}
+.pname{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); text-align:right; white-space:nowrap}
+.ptrack{position:relative; height:9px; background:var(--sunk); border-radius:1px}
+.pfill{position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); border-radius:1px}
+.pcap{position:absolute; top:-2px; bottom:-2px; left:50%; transform:translateX(-50%);
+  border-left:1.5px solid var(--crit); border-right:1.5px solid var(--crit); opacity:0}
+.pcap.on{opacity:1}
+#inverkan{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted);
+  margin-top:9px; padding-top:8px; border-top:1px solid var(--rule-soft);
+  display:flex; justify-content:space-between; font-variant-numeric:tabular-nums}
+#inverkan b{color:var(--gold); font-weight:500}
+
+/* hjälper */
+#aids{width:180px}
+.arow{display:grid; grid-template-columns:52px 1fr 26px; gap:7px; align-items:center; margin:3px 0}
+.aname{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--muted); text-align:right}
+.atrack{position:relative; height:7px; background:var(--sunk); border-radius:1px; overflow:hidden}
+.atrack i{position:absolute; top:0; bottom:0; background:var(--gold); border-radius:1px}
+.atrack .band{position:absolute; top:0; bottom:0; background:rgba(127,180,137,.22)}
+.akey{font-family:"IBM Plex Mono",monospace; font-size:9px; color:var(--faint); text-align:left}
+
+/* ridlärarens röst */
+#saga{font-family:Petrona,serif; font-size:20px; font-style:italic; color:var(--ink);
+  text-shadow:0 2px 10px rgba(0,0,0,.9); opacity:0; transition:opacity .35s; min-height:1.5em}
+#saga.on{opacity:1}
+#approach{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--gold-2);
+  letter-spacing:.02em; margin-top:6px; min-height:18px; text-shadow:0 2px 10px rgba(0,0,0,.9)}
+
+/* fel-flash */
+#faults{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-family:Petrona,serif; font-size:52px; color:var(--crit); opacity:0;
+  text-shadow:0 4px 24px rgba(0,0,0,.9); pointer-events:none; z-index:6;
+  transition:opacity .25s, transform .25s}
+
+/* protokoll under hoppning */
+#prot{width:200px; font-family:"IBM Plex Mono",monospace; font-size:11px}
+#prot .r{display:flex; justify-content:space-between; padding:1.5px 0; color:var(--muted)}
+#prot .r b{color:var(--ink); font-weight:500; font-variant-numeric:tabular-nums}
+#prot .r.bad b{color:var(--crit)}
+
+/* ── overlays ────────────────────────────────────────────────── */
+#ov{position:absolute; inset:0; z-index:20; display:flex; align-items:center;
+  justify-content:center; padding:20px; background:rgba(10,12,15,.90);
+  backdrop-filter:blur(10px); overflow-y:auto}
+#ov.hide{display:none}
+.sheet{background:var(--panel); border:1px solid var(--rule); border-radius:4px;
+  padding:clamp(22px,3.5vw,34px); width:min(760px,94vw); max-height:92vh; overflow-y:auto;
+  box-shadow:0 24px 80px -20px rgba(0,0,0,.85)}
+.sheet h1{font-size:clamp(26px,4vw,40px); line-height:1.05; margin-bottom:6px}
+.sheet h2{font-size:22px; margin:1.5em 0 .4em}
+.sheet p{margin:.8em 0; color:var(--ink-2); max-width:62ch}
+.sheet ul{padding-left:1.2em; margin:.8em 0; color:var(--ink-2)}
+.sheet li{margin:.3em 0}
+.btn{display:inline-flex; align-items:center; gap:9px; background:var(--gold); color:#17140A;
+  border:0; border-radius:3px; padding:11px 20px; font-size:14.5px; font-weight:600;
+  cursor:pointer; transition:.15s; font-family:inherit}
+.btn:hover{background:var(--gold-2)}
+.btn.ghost{background:transparent; color:var(--ink-2); border:1px solid var(--rule)}
+.btn.ghost:hover{border-color:var(--gold); color:var(--gold-2)}
+.btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; align-items:center}
+
+.keys{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:8px 20px; margin:1.2em 0}
+.keys div{display:flex; gap:10px; align-items:baseline; font-size:13.5px; color:var(--ink-2)}
+kbd{font-family:"IBM Plex Mono",monospace; font-size:11px; background:var(--panel-2);
+  border:1px solid var(--rule); border-bottom-width:2px; border-radius:3px; padding:2px 6px;
+  color:var(--ink); white-space:nowrap; min-width:22px; text-align:center}
+
+.hcard{display:flex; gap:18px; align-items:flex-start; background:var(--panel-2);
+  border:1px solid var(--rule); border-radius:3px; padding:16px 18px; margin:1.2em 0}
+.hcard .n{font-family:Petrona,serif; font-size:24px; line-height:1.1}
+.hcard .k{font-size:13px; color:var(--muted); font-style:italic; margin-top:5px; max-width:44ch}
+.hcard .tr{display:flex; gap:14px; flex-wrap:wrap; margin-top:11px}
+.hcard .tr span{font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--muted);
+  letter-spacing:.05em; text-transform:uppercase}
+.hcard .tr b{color:var(--ink); font-weight:500}
+.hcard .why{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--gold-2);
+  margin-top:11px; letter-spacing:.02em}
+
+table{border-collapse:collapse; width:100%; font-size:13px; margin:1em 0}
+th{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); font-weight:500; text-align:left; padding:8px 10px; border-bottom:1px solid var(--rule)}
+td{padding:7px 10px; border-bottom:1px solid var(--rule-soft); color:var(--ink-2)}
+td.num,th.num{text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+
+.note{border-left:3px solid var(--gold); background:var(--gold-wash); padding:13px 16px;
+  border-radius:0 3px 3px 0; margin:1.2em 0; font-size:14px; color:var(--ink-2)}
+.bad{border-left-color:var(--crit); background:var(--crit-wash)}
+
+/* skötsel */
+#groom{display:grid; grid-template-columns:1fr 260px; gap:24px; align-items:start}
+@media(max-width:720px){#groom{grid-template-columns:1fr}}
+#groomCanvas{position:relative; width:100%; aspect-ratio:16/10; background:var(--sunk); border:1px solid var(--rule);
+  border-radius:3px; cursor:crosshair; touch-action:none; display:block}
+.gstep{padding:9px 0; border-bottom:1px solid var(--rule-soft); font-size:13.5px; color:var(--muted);
+  display:flex; justify-content:space-between; gap:10px; align-items:baseline; cursor:pointer}
+.gstep.on{color:var(--ink)}
+.gstep.on .gn{color:var(--gold)}
+.gstep .gn{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--faint)}
+.gstep .gv{font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-variant-numeric:tabular-nums}
+#groomHint{font-size:13.5px; color:var(--ink-2); margin-top:14px; min-height:3.4em; line-height:1.5}
+
+/* topprad i spelet */
+#topbar{position:absolute; top:0; left:0; right:0; height:0; z-index:7}
+#viewToggle{position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:7;
+  display:flex; gap:0; background:rgba(24,27,33,.9); border:1px solid var(--rule);
+  border-radius:3px; overflow:hidden; backdrop-filter:blur(6px)}
+#viewToggle button{background:transparent; border:0; color:var(--muted); cursor:pointer;
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; padding:7px 13px; transition:.15s}
+#viewToggle button.on{background:var(--gold); color:#17140A}
+#viewToggle button:hover:not(.on){color:var(--ink)}
+
+.dim{color:var(--muted)}
+.gold{color:var(--gold-2)}
+.red{color:var(--crit)}
+.grn{color:var(--ok)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="cv"></canvas>
+
+  <div id="viewToggle" hidden>
+    <button data-v="2d" class="on">Bana</button>
+    <button data-v="3d">Bakom hästen</button>
+  </div>
+
+  <div class="hud tl"><div class="box" id="moment">
+    <div class="lbl" id="momentLbl">Moment</div>
+    <div id="momentNamn">—</div>
+    <div id="momentText"></div>
+    <div id="momentBar"><i></i></div>
+  </div></div>
+
+  <div class="hud tr"><div class="box">
+    <div class="lbl">Gångart</div>
+    <div id="gait">Halt</div>
+    <div id="tempo">0,0 m/s</div>
+    <div id="gaitWarn"></div>
+  </div></div>
+
+  <div class="hud bl"><div class="box" id="pyr">
+    <div class="lbl" style="margin-bottom:7px">Utbildningsskalan</div>
+    <div id="pyrRows"></div>
+    <div id="inverkan"><span>Inverkan</span><b>0,00</b></div>
+  </div></div>
+
+  <div class="hud br"><div class="box" id="aids">
+    <div class="lbl" style="margin-bottom:7px">Hjälper</div>
+    <div id="aidRows"></div>
+  </div></div>
+
+  <div class="hud br" id="protWrap" hidden style="bottom:auto; top:120px"><div class="box" id="prot"></div></div>
+
+  <div class="hud bc">
+    <div id="saga"></div>
+    <div id="approach"></div>
+  </div>
+
+  <div id="faults"></div>
+
+  <div id="ov"><div class="sheet" id="sheet"></div></div>
+</div>
+<script src="src/model.js"></script>
+<script src="src/data.js"></script>
+<script src="src/render.js"></script>
+<script src="src/game.js"></script>
+<script src="src/scenes.js"></script>
+</body>
+</html>

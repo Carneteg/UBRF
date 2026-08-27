@@ -1,0 +1,288 @@
+/* ══════════════════════════════════════════════════════════════════
+   SCENER — meny, hästtilldelning, skötsel, resultat. Overlay-ark.
+   ══════════════════════════════════════════════════════════════════ */
+const ov=document.getElementById("ov"),sheet=document.getElementById("sheet");
+function overlay(on,html){ov.classList.toggle("hide",!on);if(html!==undefined)sheet.innerHTML=html;}
+
+/* ── Meny ── */
+function visaMeny(){
+  G.scen="meny";
+  overlay(true,`
+  <span class="lbl">POC · utanför Roblox · byggd på ubrf.se</span>
+  <h1 style="margin-top:8px">Ridskolan</h1>
+  <p style="font-size:17px">Du styr inte hästen. Du styr fyra hjälper — skänkel, tygel, sits och styrning —
+  och hjälperna flyttar hästens tillstånd på <em>utbildningsskalan</em>. Tillståndet avgör vad hästen gör.
+  Det finns ingen hoppknapp.</p>
+  <div class="keys">
+    <div><kbd>W</kbd><kbd>S</kbd> skänkel på / av</div>
+    <div><kbd>Space</kbd> tygeltag (håll)</div>
+    <div><kbd>A</kbd><kbd>D</kbd> styrning</div>
+    <div><kbd>E</kbd> halvhalt</div>
+    <div><kbd>Shift</kbd> lätt sits</div>
+    <div><kbd>Ctrl</kbd> djup nedsittning</div>
+    <div><kbd>R</kbd> lättridning av/på</div>
+    <div><kbd>Q</kbd> byt diagonal</div>
+    <div><kbd>V</kbd> växla vy (bana / bakom hästen)</div>
+    <div><kbd>N</kbd> nästa moment (POC-genväg)</div>
+    <div><kbd>P</kbd> ridläraren visar (autopilot)</div>
+    <div><kbd>F</kbd> spö — men läs hästlistan först</div>
+  </div>
+  <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
+  Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
+  <div class="btnrow">
+    <button class="btn" id="bStart">Till stallet</button>
+    <span class="dim" style="font-size:13px">Dagens lektion: hoppgrupp, 60 minuter, sex hinder på 0,60 m</span>
+  </div>`);
+  document.getElementById("bStart").onclick=visaTilldelning;
+}
+
+/* ── Ridläraren tilldelar häst ── */
+function visaTilldelning(){
+  // enkel tilldelningslogik i ridlärarens anda: rotation + nivåmatchning
+  const kandidater=["toblerone","cosmo","larry","hamilton","conor","dexter"];
+  const val=kandidater[G.seed%kandidater.length];
+  G.hastId=val;const h=HORSES[val];
+  const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
+    cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
+    larry:"Han hoppar gärna. Ge honom en rak linje så gör han resten.",
+    hamilton:"Arbetsvillig men känslig — sitt stilla, så växer han.",
+    conor:"Du får Conor idag. Mjuk hand, balanserad sits. Han ger tillbaka exakt vad du ger honom.",
+    dexter:"Håll i dig. Han har lite mer fart — låt honom inte bestämma tempot."}[val];
+  overlay(true,`
+  <span class="lbl">Ridläraren fördelar hästarna</span>
+  <h1 style="margin-top:8px">Du får ${h.namn}</h1>
+  <div class="hcard">
+    <div style="flex:1">
+      <div class="n">${h.namn}</div>
+      <div class="k">”${h.besk}”</div>
+      <div class="tr">
+        <span>Känslighet <b>${h.kanslighet.toFixed(2).replace(".",",")}</b></span>
+        <span>Förlåter <b>${h.forlatande.toFixed(2).replace(".",",")}</b></span>
+        <span>Framåt <b>${h.framatbjudning.toFixed(2).replace(".",",")}</b></span>
+        <span>Maxhöjd <b>${h.maxhojd.toFixed(2).replace(".",",")} m</b></span>
+      </div>
+      <div class="why">”${motiv}”</div>
+    </div>
+  </div>
+  ${h.flaggor.radd_for_spo?`<div class="note bad">Crokino är rädd för spö — det står på hästlistan. Låt bli F-tangenten på honom.</div>`:""}
+  <p class="dim" style="font-size:13.5px">Du väljer inte häst på en ridskola. Ridläraren tilldelar —
+  att få rida en bättre häst är belöningen. Nästa gång du spelar får du en annan.</p>
+  <div class="btnrow">
+    <button class="btn" id="bGroom">Gör i ordning honom</button>
+    <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
+  </div>`);
+  document.getElementById("bGroom").onclick=visaSkotsel;
+  document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
+    setTimeout(()=>{const w=document.querySelector(".why");
+      if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};
+}
+
+/* ── Skötseln — fyra handgrepp på en canvas ── */
+const SK={steg:0,ryktning:new Set(),hovar:[0,0,0,0],sadelX:0.5,gjord:0.1,visitering:0,betsling:0,
+  start:0,drar:false,sista:null};
+function visaSkotsel(){
+  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.30;SK.gjord=0.10;
+  SK.visitering=0;SK.betsling=0;SK.start=performance.now();
+  const h=HORSES[G.hastId];
+  overlay(true,`
+  <span class="lbl">Före lektionen · stallregel 10</span>
+  <h1 style="margin-top:6px">Visitera, rykta, kratsa, sadla</h1>
+  <p class="dim" style="font-size:13.5px;margin-top:2px">Skickligt, inte länge. Det du gör nu avgör hur ${h.namn} går på lektionen.</p>
+  <div id="groom">
+    <div>
+      <canvas id="groomCanvas"></canvas>
+      <div id="groomHint"></div>
+    </div>
+    <div>
+      <div class="gstep" data-s="0"><span><span class="gn">1 · Visitera</span><br>mungipor och skav</span><span class="gv" id="gv0">—</span></div>
+      <div class="gstep" data-s="1"><span><span class="gn">2 · Rykta</span><br>dra över hela kroppen</span><span class="gv" id="gv1">0 %</span></div>
+      <div class="gstep" data-s="2"><span><span class="gn">3 · Kratsa hovar</span><br>alla fyra</span><span class="gv" id="gv2">0/4</span></div>
+      <div class="gstep" data-s="3"><span><span class="gn">4 · Sadla</span><br>läge + gjord i bandet</span><span class="gv" id="gv3">—</span></div>
+      <div style="margin-top:14px"><button class="btn" id="bKlar">Sitt upp</button></div>
+      <div class="dim" style="font-size:12px;margin-top:10px">Du kan sitta upp när du vill.<br>Hästen märker vad du hoppade över.</div>
+    </div>
+  </div>`);
+  for(const el of document.querySelectorAll(".gstep"))
+    el.onclick=()=>{SK.steg=+el.dataset.s;groomHint();};
+  document.getElementById("bKlar").onclick=avslutaSkotsel;
+  initGroomCanvas();groomHint();
+}
+function groomHint(){
+  const t=["Klicka på mungipan och sadelläget för att visitera — kolla skav innan du lägger på något.",
+    "Håll och dra över kroppen, i pälsens riktning (framifrån och bak). Täckning räknas per område.",
+    "Klicka på en hov för att lyfta den, dra sedan nedåt över den för att kratsa. Alla fyra.",
+    "Dra sadeln till rätt läge — precis bakom manken — och dra sedan gjordreglaget till det gröna bandet."][SK.steg];
+  document.getElementById("groomHint").textContent=t;
+  document.querySelectorAll(".gstep").forEach(e=>e.classList.toggle("on",+e.dataset.s===SK.steg));
+}
+let gcv,gcx,lyftHov=-1;
+const RYKTZONER=[[0.30,0.30],[0.44,0.28],[0.58,0.28],[0.70,0.32],[0.36,0.48],[0.52,0.46],[0.66,0.48],[0.76,0.42]];
+function initGroomCanvas(){
+  gcv=document.getElementById("groomCanvas");gcx=gcv.getContext("2d");
+  const fit=()=>{const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
+    gcx.setTransform(DPR,0,0,DPR,0,0);ritaGroom();};
+  fit();new ResizeObserver(fit).observe(gcv);
+  const pos=e=>{const r=gcv.getBoundingClientRect();
+    const p=e.touches?e.touches[0]:e;return[(p.clientX-r.left)/r.width,(p.clientY-r.top)/r.height];};
+  const ned=e=>{SK.drar=true;SK.sista=pos(e);hantera(pos(e),true);e.preventDefault();};
+  const rr=e=>{if(!SK.drar)return;hantera(pos(e),false);SK.sista=pos(e);e.preventDefault();};
+  const upp=()=>{SK.drar=false;lyftHov=-1;ritaGroom();};
+  gcv.addEventListener("pointerdown",ned);gcv.addEventListener("pointermove",rr);
+  addEventListener("pointerup",upp);
+}
+function hantera(p,klick){
+  const[x,y]=p;
+  if(SK.steg===0&&klick){
+    if(Math.hypot(x-0.155,y-0.315)<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
+    if(Math.hypot(x-0.48,y-0.30)<0.10)SK.visitering=Math.min(1,SK.visitering+0.5);     // sadelläge
+    if(SK.visitering>=1)SK.betsling=0.9;
+    dok(0,SK.visitering>=1?"klart":"…");
+  }
+  if(SK.steg===1&&SK.drar){
+    const dir=SK.sista?x-SK.sista[0]:0;
+    for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
+      if(Math.hypot(x-zx,y-zy)<0.085&&dir>0.0005)SK.ryktning.add(i);}
+    dok(1,Math.round(SK.ryktning.size/RYKTZONER.length*100)+" %");
+  }
+  if(SK.steg===2){
+    const hovP=[[0.30,0.82],[0.42,0.84],[0.60,0.84],[0.74,0.82]];
+    if(klick){for(let i=0;i<4;i++)if(Math.hypot(x-hovP[i][0],y-hovP[i][1])<0.06)lyftHov=i;}
+    else if(lyftHov>=0&&SK.sista&&y-SK.sista[1]>0.004)
+      SK.hovar[lyftHov]=Math.min(1,SK.hovar[lyftHov]+0.10);
+    dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
+  }
+  if(SK.steg===3&&SK.drar){
+    if(y<0.55)SK.sadelX=clamp(x,0.25,0.75);
+    else SK.gjord=clamp((x-0.2)/0.6,0,1);
+    const lage=1-clamp(Math.abs(SK.sadelX-0.455)/0.16,0,1);
+    const gOk=SK.gjord>=0.42&&SK.gjord<=0.74;
+    dok(3,(lage>0.7?"läge ✓":"läge ✗")+(gOk?" gjord ✓":" gjord ✗"));
+  }
+  ritaGroom();
+}
+function dok(i,v){document.getElementById("gv"+i).textContent=v;}
+function ritaGroom(){
+  const W=gcv.clientWidth,H=gcv.clientHeight,h=HORSES[G.hastId];
+  gcx.clearRect(0,0,W,H);
+  // häst i profil, vänd åt vänster
+  gcx.fillStyle=h.farg;
+  gcx.beginPath();gcx.ellipse(W*0.52,H*0.44,W*0.27,H*0.20,0,0,Math.PI*2);gcx.fill();       // kropp
+  gcx.beginPath();gcx.ellipse(W*0.245,H*0.33,W*0.085,H*0.115,-0.5,0,Math.PI*2);gcx.fill(); // hals
+  gcx.beginPath();gcx.ellipse(W*0.165,H*0.295,W*0.055,H*0.062,-0.2,0,Math.PI*2);gcx.fill();// huvud
+  gcx.fillRect(W*0.185,H*0.175,W*0.016,H*0.075); gcx.fillRect(W*0.215,H*0.175,W*0.016,H*0.075); // öron
+  for(const bx of[0.30,0.42,0.60,0.74]){gcx.fillRect(W*bx-W*0.016,H*0.55,W*0.032,H*0.28);} // ben
+  gcx.strokeStyle=h.man;gcx.lineWidth=4;
+  gcx.beginPath();gcx.moveTo(W*0.80,H*0.36);gcx.quadraticCurveTo(W*0.85,H*0.55,W*0.82,H*0.72);gcx.stroke(); // svans
+  gcx.fillStyle=h.man;gcx.beginPath();gcx.ellipse(W*0.27,H*0.245,W*0.055,H*0.03,-0.45,0,Math.PI*2);gcx.fill(); // man
+  // ryktzoner
+  if(SK.steg===1)for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
+    gcx.fillStyle=SK.ryktning.has(i)?"rgba(127,180,137,.4)":"rgba(230,228,222,.10)";
+    gcx.beginPath();gcx.arc(W*zx,H*zy,W*0.045,0,Math.PI*2);gcx.fill();}
+  // visitering-markörer
+  if(SK.steg===0){
+    for(const[mx,my]of[[0.155,0.315],[0.48,0.30]]){
+      gcx.strokeStyle="rgba(214,174,60,.8)";gcx.lineWidth=2;gcx.setLineDash([4,4]);
+      gcx.beginPath();gcx.arc(W*mx,H*my,W*0.05,0,Math.PI*2);gcx.stroke();gcx.setLineDash([]);}
+  }
+  // hovar
+  if(SK.steg===2){const hovP=[[0.30,0.82],[0.42,0.84],[0.60,0.84],[0.74,0.82]];
+    for(let i=0;i<4;i++){const[hx,hy]=hovP[i];
+      gcx.fillStyle=SK.hovar[i]>0.6?"rgba(127,180,137,.85)":lyftHov===i?"rgba(214,174,60,.9)":"rgba(230,228,222,.25)";
+      gcx.beginPath();gcx.arc(W*hx,H*hy+ (lyftHov===i?-H*0.05:0),W*0.028,0,Math.PI*2);gcx.fill();}}
+  // sadel
+  if(SK.steg===3){
+    const sx=W*SK.sadelX;
+    const ok=Math.abs(SK.sadelX-0.455)<0.11;
+    gcx.fillStyle=ok?"rgba(127,180,137,.9)":"rgba(214,174,60,.9)";
+    gcx.beginPath();gcx.ellipse(sx,H*0.315,W*0.075,H*0.06,0,0,Math.PI*2);gcx.fill();
+    gcx.strokeStyle=gcx.fillStyle;gcx.lineWidth=5;
+    gcx.beginPath();gcx.moveTo(sx,H*0.36);gcx.quadraticCurveTo(sx-W*0.01,H*0.52,sx,H*0.60);gcx.stroke();
+    // rätt läge-markering
+    gcx.strokeStyle="rgba(230,228,222,.35)";gcx.setLineDash([4,5]);gcx.lineWidth=1.5;
+    gcx.beginPath();gcx.moveTo(W*0.455,H*0.20);gcx.lineTo(W*0.455,H*0.55);gcx.stroke();gcx.setLineDash([]);
+    // gjordmätare
+    gcx.fillStyle="rgba(11,13,16,.85)";gcx.fillRect(W*0.2,H*0.90,W*0.6,10);
+    gcx.fillStyle="rgba(127,180,137,.35)";gcx.fillRect(W*0.2+W*0.6*0.42,H*0.90,W*0.6*0.32,10);
+    gcx.fillStyle="#D6AE3C";gcx.fillRect(W*0.2,H*0.90,W*0.6*SK.gjord,10);
+    gcx.fillStyle="#8E939B";gcx.font='10px "IBM Plex Mono"';gcx.textAlign="center";
+    gcx.fillText("GJORD — dra hit",W*0.5,H*0.90-6);
+  }
+}
+function avslutaSkotsel(){
+  const tid=(performance.now()-SK.start)/1000;
+  const res=utvarderaSkotsel({
+    visitering:SK.visitering, ryktning:SK.ryktning.size/RYKTZONER.length,
+    hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-0.455)/0.16,0,1),
+    gjord:SK.gjord, betsling:SK.betsling, tid,
+  },HORSES[G.hastId].forlatande,G.stallro);
+  G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
+  G.ride=nyState(G.dagsform,0.5,G.sadellage);
+  initNPC();
+  G.px=10;G.py=52;G.rikt=-Math.PI/2;
+  overlay(true,`
+  <span class="lbl">Ridläraren tittar på ${HORSES[G.hastId].namn}</span>
+  <h1 style="margin-top:8px" ${res.dagsform<0.55?'class="red"':""}>”${res.omdome}”</h1>
+  <table><tbody>
+    <tr><td>Dagsform</td><td class="num">${res.dagsform.toFixed(2).replace(".",",")}</td></tr>
+    <tr><td>Sadelläge</td><td class="num">${res.sadellage.toFixed(2).replace(".",",")}</td></tr>
+    <tr><td>Risker under lektionen</td><td class="num">${res.risker.length?res.risker.join(", ").replaceAll("_"," "):"inga"}</td></tr>
+    <tr><td>Tid i stallet</td><td class="num">${Math.round(tid)} s</td></tr>
+  </tbody></table>
+  <p class="dim" style="font-size:13.5px">Dagsformen skalar hela avsprångskvaliteten i hoppningen,
+  och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
+  <div class="btnrow"><button class="btn" id="bLek">In i ridhuset</button></div>`);
+  document.getElementById("bLek").onclick=startaLektion;
+}
+
+/* ── Resultatet ── */
+function visaResultat(dom){
+  const h=HORSES[G.hastId];
+  const inv=Object.values(G.betyg);
+  const snitt=inv.length?inv.reduce((a,b)=>a+b,0)/inv.length:0;
+  const forv=Skala.FORVANTAN.grupp2;
+  const radNamn={uppvarmning:"Uppvärmning",losgorande:"Lösgörande",galopp:"Galopp",bana:"Banan"};
+  let momRows="";
+  for(const k in G.betyg)momRows+=`<tr><td>${radNamn[k]||k}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
+  const domRows=dom.protokoll.map(r=>`<li>${r}</li>`).join("");
+  const omdome= dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
+    : dom.totalfel===0&&snitt>=forv?`Felfritt, och du red vägen — inte hindren. Jag flyttar upp dig en grupp efter jul.`
+    : dom.totalfel===0?`Felfritt! Men ridningen mellan hindren var stökigare än resultatet. Vi jobbar vidare där.`
+    : snitt>=forv?`${dom.totalfel} fel, men ridningen håller. Felen försvinner när distanserna sätter sig.`
+    : `${dom.totalfel} fel. Titta mindre på hindret och mer på vägen dit.`;
+  overlay(true,`
+  <span class="lbl">Efter lektionen</span>
+  <h1 style="margin-top:8px">”${omdome}”</h1>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
+    <div>
+      <div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
+      <ul style="font-size:13px;font-family:'IBM Plex Mono',monospace;line-height:1.7">${domRows||"<li>—</li>"}</ul>
+      <table><tbody>
+        <tr><td>Hinderfel</td><td class="num">${dom.hinderfel}</td></tr>
+        <tr><td>Tid</td><td class="num">${dom.tid.toFixed(1).replace(".",",")} s</td></tr>
+        <tr><td>Resultat</td><td class="num">${dom.utesluten?"UTESLUTEN":dom.totalfel+" fel"}</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <div class="lbl" style="margin-bottom:6px">Inverkan per moment (förväntan grupp 2: ${forv.toFixed(2).replace(".",",")})</div>
+      <table><tbody>${momRows}
+        <tr><td><b style="color:var(--ink)">Snitt</b></td><td class="num" style="color:${snitt>=forv?"var(--ok)":"var(--crit)"}">${snitt.toFixed(2).replace(".",",")}</td></tr>
+      </tbody></table>
+      <div class="note" style="font-size:13px">Andra vägran gav 8 fel — inte uteslutning. I klasser till och med
+      1,05 m rider man vidare, och först tredje vägran utesluter. Svensk regel, TR III mom. 381.</div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="btn" id="bIgen">Rid igen — ny häst</button>
+    <button class="btn ghost" id="bSamma">Samma häst igen</button>
+  </div>`);
+  document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();visaTilldelning();};
+  document.getElementById("bSamma").onclick=()=>{nollstall();visaSkotsel();};
+}
+function nollstall(){
+  G.auto=false;
+  G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
+  G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
+  document.getElementById("protWrap").hidden=true;
+  document.getElementById("approach").textContent="";
+}
+visaMeny();
