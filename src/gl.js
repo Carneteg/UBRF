@@ -82,6 +82,39 @@ function glFarg(h){
 }
 function glMorka(f,k){const c=glFarg(f);return [c[0]*k,c[1]*k,c[2]*k];}
 
+/* Plana ytnormaler — fasettering.
+   Varje triangel får en egen normal och egna hörn, så ljuset bryts vid
+   varje kant i stället för att glida över ytan. Det är den tekniken som
+   ger lågpolygonuttrycket i förlagan: formen är rundad, men varje
+   polygon läser som ett eget plan. Kostar tre hörn per triangel, vilket
+   är billigt på modeller i den här storleken. */
+function glPlatta(b){
+  const p=[],n=[],c=[],u=[],idx=[];
+  for(let k=0;k<b.i.length;k+=3){
+    const t=[b.i[k],b.i[k+1],b.i[k+2]];
+    const P=t.map(v=>[b.p[v*3],b.p[v*3+1],b.p[v*3+2]]);
+    const e1=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]];
+    const e2=[P[2][0]-P[0][0],P[2][1]-P[0][1],P[2][2]-P[0][2]];
+    let nx=e1[1]*e2[2]-e1[2]*e2[1],
+        ny=e1[2]*e2[0]-e1[0]*e2[2],
+        nz=e1[0]*e2[1]-e1[1]*e2[0];
+    const l=Math.hypot(nx,ny,nz);
+    if(l<1e-9)continue;                    // hoppa över degenererade trianglar
+    nx/=l; ny/=l; nz/=l;
+    const bas=p.length/3;
+    for(let j=0;j<3;j++){
+      const v=t[j];
+      p.push(P[j][0],P[j][1],P[j][2]);
+      n.push(nx,ny,nz);
+      c.push(b.c[v*3],b.c[v*3+1],b.c[v*3+2]);
+      u.push(b.u[v*2],b.u[v*2+1]);
+    }
+    idx.push(bas,bas+1,bas+2);
+  }
+  b.p=p; b.n=n; b.c=c; b.u=u; b.i=idx;
+  return b;
+}
+
 /* ── Geometribyggare ──────────────────────────────────────────────
    Samlar trianglar med position, normal, färg och uv. Primitiverna
    läggs in med en transform så att en hel byggnad kan bakas till ett

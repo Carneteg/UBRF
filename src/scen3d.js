@@ -90,7 +90,14 @@ function s3Texturer(){
 /* ── Hästens delar. Byggs en gång i mankhöjd 1,60 m och skalas. ── */
 function s3BygHast(){
   const D=S3.del, vit="#FFFFFF";
-  const nyNat=b=>GL.nat(b);
+  /* Lågpolyläget: samma form, färre segment och plana ytnormaler.
+     Förlagans hästar är inte klossiga — de är fasetterade. Anatomin är
+     kvar in i minsta detalj, men varje polygon läser som ett eget plan
+     eftersom ljuset bryts vid varje kant i stället för att glida över
+     ytan. Det är fasetteringen som gör uttrycket, inte grovheten. */
+  const lp=STIL==="kloss";
+  const S=(hog,lag)=>lp?lag:hog;
+  const nyNat=b=>GL.nat(lp?glPlatta(b):b);
   /* Måtten är en varmblodshäst på 1,62 m i mankhöjd: bålen 1,85 m
      lång, 0,72 m hög och 0,58 m bred, benen 1,08 m från bog till hov. */
   /* Bålen sveps i ett stycke: bringan smal och djup, gjordläget vidast,
@@ -108,7 +115,7 @@ function s3BygHast(){
               [0.85,1.200],[1,1.300]];
   const KBRE=[[0,0.105],[0.10,0.200],[0.22,0.266],[0.42,0.300],[0.60,0.296],
               [0.74,0.254],[0.85,0.296],[0.94,0.238],[1,0.115]];
-  D.kropp=nyNat(s3Svep(new Bygge(),vit,30,16,(t,u)=>{
+  D.kropp=nyNat(s3Svep(new Bygge(),vit,S(30,17),S(16,10),(t,u)=>{
     const a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
     const r=ROND(t,0.045,0.965);
     const topp=s3Stn(t,KTOPP), buk=s3Stn(t,KBUK);
@@ -118,18 +125,24 @@ function s3BygHast(){
   }));
   /* Halsen: djup och smal, med kam ovanpå och struphuvud under.
      Byggs i halsens eget rum, x 0→1 från manken till nacken. */
-  D.hals=nyNat(s3Svep(new Bygge(),vit,18,13,(p,u)=>{
+  D.hals=nyNat(s3Svep(new Bygge(),vit,S(18,10),S(13,8),(p,u)=>{
     const t=-0.12+1.18*p, a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
     const r=ROND(p,0.05,0.94);
-    const topp=s3Stn(t,[[-0.12,0.20],[0.05,0.30],[0.45,0.245],[0.80,0.175],[1.06,0.120]]);
-    const buk=s3Stn(t,[[-0.12,-0.22],[0.05,-0.275],[0.40,-0.225],[0.75,-0.135],[1.06,-0.100]]);
-    const bre=s3Stn(t,[[-0.12,0.20],[0.05,0.205],[0.45,0.160],[0.80,0.108],[1.06,0.082]]);
+    const topp=s3Stn(t,lp
+      ?[[-0.12,0.21],[0.05,0.31],[0.45,0.270],[0.80,0.215],[1.06,0.160]]
+      :[[-0.12,0.20],[0.05,0.30],[0.45,0.245],[0.80,0.175],[1.06,0.120]]);
+    const buk=s3Stn(t,lp
+      ?[[-0.12,-0.23],[0.05,-0.285],[0.40,-0.250],[0.75,-0.180],[1.06,-0.140]]
+      :[[-0.12,-0.22],[0.05,-0.275],[0.40,-0.225],[0.75,-0.135],[1.06,-0.100]]);
+    const bre=s3Stn(t,lp
+      ?[[-0.12,0.21],[0.05,0.215],[0.45,0.185],[0.80,0.145],[1.06,0.118]]
+      :[[-0.12,0.20],[0.05,0.205],[0.45,0.160],[0.80,0.108],[1.06,0.082]]);
     const yc=(topp+buk)/2, h=(topp-buk)/2*r;
     const w=bre*r*(1-0.34*Math.max(0,ca)*Math.max(0,ca));
     return [t, yc+h*ca, w*sa];
   }));
   /* Huvudet: pannben brett, käkpartiet tungt, nosen avsmalnande. */
-  D.huvud=nyNat(s3Svep(new Bygge(),vit,18,13,(p,u)=>{
+  D.huvud=nyNat(s3Svep(new Bygge(),vit,S(18,10),S(13,7),(p,u)=>{
     const x=-0.32+0.68*p, a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
     const r=ROND(p,0.06,0.93);
     const topp=s3Stn(x,[[-0.32,0.075],[-0.20,0.135],[-0.05,0.126],[0.08,0.096],
@@ -141,45 +154,52 @@ function s3BygHast(){
     const yc=(topp+buk)/2, h=(topp-buk)/2*r;
     return [x, yc+h*ca, bre*r*sa];
   }));
-  D.ora=nyNat(new Bygge().cyl(0.038,0.004,0.14,vit,null,7));
-  D.overben=nyNat(new Bygge().cyl(0.078,0.058,1,vit,null,12));
-  D.skenben=nyNat(new Bygge().cyl(0.050,0.040,1,vit,null,12));
-  D.hov=nyNat(new Bygge().cyl(0.062,0.058,0.10,"#2E2A26",null,9));
-  D.svansrot=nyNat(new Bygge().cyl(0.085,0.075,1,vit,null,8));
-  D.svanstagel=nyNat(new Bygge().cyl(0.095,0.030,1,vit,null,8));
+  D.ora=nyNat(new Bygge().cyl(0.038,0.004,0.14,vit,null,S(7,4)));
+  D.overben=nyNat(new Bygge().cyl(S(0.078,0.096),S(0.058,0.072),1,vit,null,S(12,6)));
+  D.skenben=nyNat(new Bygge().cyl(S(0.050,0.062),S(0.040,0.052),1,vit,null,S(12,6)));
+  D.hov=nyNat(new Bygge().cyl(S(0.062,0.078),S(0.058,0.072),S(0.10,0.125),"#2E2A26",null,S(9,6)));
+  D.svansrot=nyNat(new Bygge().cyl(0.085,0.075,1,vit,null,S(8,5)));
+  D.svanstagel=nyNat(new Bygge().cyl(0.095,0.030,1,vit,null,S(8,5)));
   D.man=nyNat(new Bygge().lada(1,1,0.030,vit));
   /* Manen hänger som lockar, inte som en kam: varje lock är en smal
      avsmalnande sträng som faller längs halsens sida. */
-  D.lock=nyNat(new Bygge().cyl(0.082,0.030,1,vit,null,9));
+  D.lock=nyNat(new Bygge().cyl(0.082,0.030,1,vit,null,S(9,4)));
   /* Manen byggs en gång som en hel matta i halsens eget rum: x går
      0→1 från manken till nacken, y uppåt, z ut åt sidan manen faller.
      Överlappande klot ger en sammanhängande massa i stället för en kam. */
   /* Manen i två lager: ett mörkare under och ett ljusare över, båda
      med skålad kant så att lockarna syns. */
-  const manYta=(skal,djup)=>s3Yta(new Bygge(),vit,22,10,(t,v)=>{
+  /* I lågpolyläget ligger manen tätt mot halsen som en kam med grova
+     flikar, inte som ett draperi — det är så förlagan ser ut. */
+  const mFall=lp?0.58:1, mFrek=lp?2.6:4.5, mTjock=lp?0.032:0.014;
+  const manYta=(skal,djup)=>s3Yta(new Bygge(),vit,S(22,13),S(10,6),(t,v)=>{
     const r=0.215-0.108*t+0.020+djup;
     const kl=Math.min(v/0.26,1), th=-0.34+0.88*kl;
     const h=Math.max(0,v-0.26)/0.74;
-    const lock=0.80+0.20*Math.cos(t*Math.PI*2*4.5);   // lockarnas kant
+    const lock=0.80+0.20*Math.cos(t*Math.PI*2*mFrek);   // lockarnas kant
     const fall=(0.15+0.16*Math.sin(t*Math.PI*0.85))
-      *(1-0.45*Math.max(0,t-0.72)/0.28)*lock*skal;
+      *(1-0.45*Math.max(0,t-0.72)/0.28)*lock*skal*mFall;
     return [t+0.020*h*h,
             r*Math.cos(th)-fall*h*(1.30-0.30*h),
-            r*Math.sin(th)+0.028*h*h+0.014*Math.sin(t*Math.PI*2*4.5)*h];
-  },0.014);
+            r*Math.sin(th)+0.028*h*h+0.014*Math.sin(t*Math.PI*2*mFrek)*h];
+  },mTjock);
   D.manunder=nyNat(manYta(0.86,0.0));
   D.manmatta=nyNat(manYta(1.0,0.026));
   /* Svanstageln: en tofs som faller från svansroten och smalnar av. */
-  D.svansmassa=nyNat(s3Yta(new Bygge(),vit,10,12,(u,t)=>{
-    const vin=u*Math.PI*2;
-    const w=(0.105+0.075*Math.sin(t*Math.PI*0.85))*(1-t*t*0.92);
-    return [Math.sin(vin)*w*0.80 - 0.16*t*t,
-            -t*0.98,
-            Math.cos(vin)*w];
-  },0.010));
+  D.svansmassa=nyNat(lp
+    ? s3Svep(new Bygge(),vit,9,6,(t,u)=>{
+        const a=u*Math.PI*2;
+        const w=(0.095+0.080*Math.sin(t*Math.PI*0.90))*(1-0.78*t*t);
+        return [Math.cos(a)*w*0.85 - 0.10*t*t, -t*1.06, Math.sin(a)*w];
+      })
+    : s3Yta(new Bygge(),vit,10,12,(u,t)=>{
+        const vin=u*Math.PI*2;
+        const w=(0.105+0.075*Math.sin(t*Math.PI*0.85))*(1-t*t*0.92);
+        return [Math.sin(vin)*w*0.80 - 0.16*t*t, -t*0.98, Math.cos(vin)*w];
+      },0.010));
   /* Hovskägget — den tunga typens flikar över kotan. */
-  D.fjader=nyNat(new Bygge().cyl(0.052,0.098,0.19,vit,null,12));
-  D.strumpa=nyNat(new Bygge().cyl(0.056,0.048,1,"#F2EFE6",null,10));
+  D.fjader=nyNat(new Bygge().cyl(0.052,0.098,0.19,vit,null,S(12,6)));
+  D.strumpa=nyNat(new Bygge().cyl(0.056,0.048,1,"#F2EFE6",null,S(10,6)));
   /* Kontaktskuggan: en platt skiva som läggs i tre storlekar med
      fallande täckning. En mjuk fläck kostar tjugo trianglar; en
      projicerad silhuett av hela hästen kostar tusentals. */
@@ -243,13 +263,13 @@ function s3BygHast(){
     return b;})());
   D.led=nyNat(new Bygge().klot(0.042,"#FFFFFF",null,9));
   D.hand=nyNat(new Bygge().klot(1,"#2B2620",M4.skala(0.046,0.050,0.038),9));
-  D.rem=nyNat(new Bygge().cyl(0.012,0.012,1,"#241A12",null,5));
+  D.rem=nyNat(new Bygge().cyl(0.012,0.012,1,"#241A12",null,S(5,4)));
   /* Hinder och stolpar. */
-  D.bom=nyNat(new Bygge().cyl(0.055,0.055,1,vit,null,8));
+  D.bom=nyNat(new Bygge().cyl(0.055,0.055,1,vit,null,S(8,6)));
   D.stod=nyNat(new Bygge().lada(0.10,1,0.10,"#4A3F30"));
   /* Natur och staket. */
-  D.stam=nyNat(new Bygge().cyl(0.16,0.11,1,"#4A3A28",null,7));
-  D.krona=nyNat(new Bygge().klot(1,vit,null,12));
+  D.stam=nyNat(new Bygge().cyl(0.16,0.11,1,"#4A3A28",null,S(7,5)));
+  D.krona=nyNat(new Bygge().klot(1,vit,null,S(12,6)));
   D.pale=nyNat(new Bygge().lada(0.12,1,0.12,"#5A4633"));
   D.regel=nyNat(new Bygge().lada(1,0.10,0.05,"#6B5540"));
   D.person=nyNat((()=>{
@@ -259,7 +279,7 @@ function s3BygHast(){
     return b;})());
   /* Klosstilen ersätter delarna i samma lokala rum, så riggen ovan
      ritar dem utan att veta om bytet. */
-  if(STIL==="kloss")klossHastDelar(D);
+  if(STIL==="kloss")klossDelar(D);
 }
 
 /* Slät yta ur en punktfunktion f(t,v) — ger mjuka normaler och en
@@ -721,7 +741,7 @@ function s3ByggPlats(plats){
     let fro=7;
     const rnd=()=>{fro=(fro*16807)%2147483647;return fro/2147483647;};
     const trad=(x,z,h,f)=>{
-      if(STIL==="kloss")return klossTrad(skog,x,z,h,f,glMorka(f,0.88));
+      if(STIL==="kloss")return klossTrad(skog,x,z,h,f,glMorka(f,0.86));
       skog.cyl(0.20,0.13,h*0.42,"#4A3A28",M4.translation(x,0,z),7);
       skog.klot(1,f,M4.mul(M4.translation(x,h*0.62,z),M4.skala(h*0.36,h*0.42,h*0.36)),10);
       skog.klot(1,f,M4.mul(M4.translation(x+h*0.10,h*0.85,z),M4.skala(h*0.24,h*0.26,h*0.24)),9);
