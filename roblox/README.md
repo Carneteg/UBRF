@@ -8,6 +8,9 @@ delar ingen kod med den här mappen. Det som *är* gemensamt är siffrorna: gån
 tempoband är portade rakt av från `src/model.js`, som i sin tur var en port från
 Luau. Samma häst, samma takt, två motorer.
 
+`roblox/buildings/` är ett tredje, fristående spår: byggstenar för att bygga
+anläggningens hus i Studio. Det delar ingen kod med hästsystemet.
+
 ## Installation
 
 Med [Rojo](https://rojo.space):

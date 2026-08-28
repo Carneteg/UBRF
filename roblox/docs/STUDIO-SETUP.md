@@ -1,4 +1,11 @@
-# Så sätter du upp Claude Code för UBRF-byggnaderna
+# Koppla Claude Code till Roblox Studio
+
+> **Läs först.** Det här är uppsättningsguiden som kom med paketet, bevarad för
+> att MCP-delen är användbar. Mappträdet den beskriver stämmer inte med repot —
+> filerna ligger nu i `roblox/buildings/`, `.claude/commands/` och `references/`.
+> Fotostegen är dessutom lösta: `/fotoanalys` och `/bygg-byggnad` finns redan,
+> anpassade till att JS-spelet inte är ett Roblox-projekt.
+
 
 Målet: Claude Code ska **titta på fotona, skriva ner vad den ser, bygga efter det, och sedan jämföra sitt bygge med fotot** – inte gissa.
 Det här paketet gör det till standardbeteende i projektet.
@@ -13,7 +20,7 @@ UBRF/
 ├── .claude/commands/
 │   ├── fotoanalys.md              ← /fotoanalys <byggnad>
 │   └── bygg-byggnad.md            ← /bygg-byggnad <byggnad>
-├── reference/
+├── references/
 │   ├── SITEPLAN.md                ← situationsplan (du fyller i med Claude)
 │   ├── renders/                   ← skärmdumpar från Studio hamnar här
 │   └── buildings/
@@ -65,16 +72,16 @@ Stäng och öppna Studio; pluginen ska visa "Connected". Verktyget `capture_scre
 Kör bara en av dem åt gången i samma projekt (`claude mcp list` visar vad som är aktivt). Saknas skärmdumpsverktyg är arbetsflödet
 ändå byggt för att du klistrar in en skärmdump från Studio när Claude ber om det.
 
-Lägg BuildKit i Studio en gång: skapa en `ModuleScript` i `ServerStorage` som heter `BuildKit` och klistra in `src/BuildKit.lua`,
+Lägg BuildKit i Studio en gång: skapa en `ModuleScript` i `ServerStorage` som heter `BuildKit` och klistra in `roblox/buildings/BuildKit.luau`,
 eller låt Claude klistra in BuildKit överst i varje `run_code`-anrop (det gör mallen).
 
 ## 4. Arbetsflödet per byggnad
 
 ```
-/fotoanalys ridhus        → Claude öppnar alla foton och fyller i reference/buildings/ridhus/KORT.md. Du rättar mått som känns fel.
+/fotoanalys ridhus        → Claude öppnar alla foton och fyller i references/buildings/ridhus/KORT.md. Du rättar mått som känns fel.
 /bygg-byggnad ridhus      → Claude bygger via MCP, sätter kameran som fotot, tar/ber om skärmdump, listar avvikelser, rättar, upprepar.
 ```
-Börja med ridhuset (störst, tydligast form), sedan stallet. Fyll i `reference/SITEPLAN.md` med Claude innan stallet
+Börja med ridhuset (störst, tydligast form), sedan stallet. Fyll i `references/SITEPLAN.md` med Claude innan stallet
 så att avstånd och rotation mellan byggnaderna stämmer – satellitbilden på Google Maps är bästa källan för det.
 
 ## 5. Så får du Claude att verkligen hålla sig till fotona

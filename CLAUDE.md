@@ -18,9 +18,12 @@ delar ingen kod. Det enda gemensamma är siffrorna: gångarternas tempoband i
 `roblox/src/shared/HorseCore/Gaits.luau` är portade från `src/model.js`, som i sin
 tur var en port från Luau.
 
+Roblox-spåret har i sin tur två fristående delar: `roblox/src/` är hästsystemet
+och `roblox/buildings/` är byggstenar för anläggningens hus. De delar ingen kod.
+
 Arbetar du i `src/` gäller reglerna nedan. Arbetar du i `roblox/` gäller
 `roblox/README.md` — nämn aldrig `Bygge`, `STIL` eller `tools/build.py` där, och
-nämn aldrig `BuildKit.lua` eller studs här.
+nämn aldrig `BuildKit.luau` eller studs här.
 
 Kör lokalt: `python3 tools/build.py && python3 -m http.server 8931`, öppna
 `http://localhost:8931/dist/ridskolan.html`. Skärmdumpar tas med Playwright
