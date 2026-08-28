@@ -204,9 +204,13 @@ const STALLINNE = {
     W:[ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky",null ],
     E:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null,null ],
   },
+  /* Klubbdelen: uppehållsrummet mot entrén, sadelkammaren innanför
+     med de inre fönsterpartierna emellan (IMG_0141), teorisalen i
+     öster. */
   rum:[
-    {id:"uppehallsrum", rekt:{x:0,   y:0, w:6.0, h:9}, label:"UPPEHÅLLSRUM"},
-    {id:"teorisal",     rekt:{x:9.0, y:0, w:6.0, h:9}, label:"TEORISAL · WC"},
+    {id:"uppehallsrum", rekt:{x:0,   y:0,   w:6.0, h:5.2}, label:"UPPEHÅLLSRUM"},
+    {id:"sadelkammare", rekt:{x:0,   y:5.2, w:6.0, h:3.8}, label:"SADELKAMMARE"},
+    {id:"teorisal",     rekt:{x:9.0, y:0,   w:6.0, h:9},   label:"TEORISAL · WC"},
   ],
   service:[
     {id:"spolspilta",   rekt:{x:0,   y:45.5, w:6.0, h:6.5}, label:"SPOLSPILTA"},
@@ -268,12 +272,12 @@ const RIDHUSINNE = {
 };
 /* Infopunkter i stallet (klubbdelen och servicedelen). */
 STALLINNE.info=[
-  {pos:[6.2,4.5],  text:"Uppehållsrummet",
+  {pos:[6.2,2.4],  text:"Klubbrummet — rosettväggen", klubb:true,
    svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
+  {pos:[6.2,7.0],  text:"Sadelkammaren", sadelkammare:true, svar:""},
   {pos:[8.8,4.5],  text:"Teorilektion i teorisalen", teori:true,
    svar:""},
-  {pos:[6.2,46.2], text:"Spolspiltan",
-   svar:"Spolspiltan: gummimattor, duschblandare och slangvinda. Att spola av hästen efter lektionen kommer med stallmomenten i steg 2."},
+  {pos:[6.2,46.2], text:"Spolspiltan", spolspilta:true, svar:""},
   {pos:[8.8,46.2], text:"Spånförrådet",
-   svar:"Spånförrådet: Mustang kutterspån på pall i galvad bur. Mockning och strö kommer med stallmomenten i steg 2."},
+   svar:"Spånförrådet: Mustang kutterspån på pall i galvad bur. Härifrån hämtas spånet du strör med när boxen är mockad."},
 ];

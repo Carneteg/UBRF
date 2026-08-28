@@ -25,7 +25,7 @@ const SPAR_NYCKEL="ubrf-ridskolan-v1";
 let SPAR=null;
 
 function nyProfil(){
-  return {grupp:"ledlektion", poang:0, pass:0, fortroende:{}, historik:[]};
+  return {grupp:"ledlektion", poang:0, pass:0, fortroende:{}, historik:[], rosetter:[]};
 }
 function laddaRyttare(){
   SPAR=nyProfil();
@@ -34,7 +34,8 @@ function laddaRyttare(){
     if(s){
       const d=JSON.parse(s);
       if(d&&GRUPPSTEGE.includes(d.grupp))
-        SPAR={...nyProfil(),...d, fortroende:d.fortroende||{}, historik:d.historik||[]};
+        SPAR={...nyProfil(),...d, fortroende:d.fortroende||{}, historik:d.historik||[],
+          rosetter:d.rosetter||[]};
     }
   }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
   G.grupp=SPAR.grupp;

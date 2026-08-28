@@ -26,6 +26,7 @@ addEventListener("keydown",e=>{
     case"KeyN":G.hoppaMoment=true;break;
     case"KeyP":G.auto=!G.auto;saga(G.auto?"Jag visar. Titta på vägen jag väljer.":"Din tur.",2.5);break;
     case"KeyV":vaxlaVy();break;
+    case"KeyM":ljudToggle();break;
     case"KeyT":{
       const ov2=document.getElementById("ov");
       if(!ov2.classList.contains("hide"))break;
@@ -62,8 +63,9 @@ function stegaInput(dt){
 
 /* ── Speltillstånd ── */
 const G={
-  scen:"meny",vy:"2d",t:0,grupp:"grupp2",plats:"ridhus",
+  scen:"meny",vy:"2d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
   hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
+  utrustning:false,lerig:false,spolad:0,felUtrustning:0,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,
   moment:null,momentIx:0,momentT:0,
@@ -123,6 +125,8 @@ function stegaRitt(dt){
   // gångartsfas för animation
   const stegFrek=G.ride.gangart==="skritt"?1.0:G.ride.gangart==="trav"?1.5:G.ride.gangart==="galopp"?1.75:0;
   G.gaitFas=(G.gaitFas+stegFrek*dt*(0.6+G.ride.tempo*0.12))%1;
+  ljudRittSteg(G.gaitFas,G.ride.gangart,
+    G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;
 }
 function lerpAngle(a,b,t){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*t;}
@@ -235,12 +239,24 @@ function flash(txt){const f=document.getElementById("faults");
   f.textContent=txt;f.style.opacity=1;f.style.transform="translate(-50%,-50%) scale(1.06)";
   setTimeout(()=>{f.style.opacity=0;f.style.transform="translate(-50%,-50%) scale(1)";},900);}
 function saga(txt,dur){const s=document.getElementById("saga");
-  s.textContent=txt;s.classList.add("on");G.sagaT=dur||3;}
+  s.textContent=txt;s.classList.add("on");G.sagaT=dur||3;
+  if(typeof ljudRost==="function")ljudRost(txt);}
 
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
   document.getElementById("approach").textContent="";
+  if(G.tavling){
+    G.lektion=byggTavlingsprogram(G.tavling);
+    G.hadeBana=G.lektion.some(m=>m.id==="bana");
+    G.moment=G.lektion[0];visaMoment();
+    saga(G.tavling.typ==="hoppning"
+      ?`Framridning. Sedan är det din tur i ${G.tavling.klass.namn} — publiken sitter på läktaren.`
+      :"Domaren sitter i kuren vid C. In på medellinjen när klockan ringer.",4.5);
+    ljudKlocka();
+    overlay(false);document.getElementById("viewToggle").hidden=false;
+    return;
+  }
   G.lektion=byggLektion(G.grupp,G.seed,G.plats);
   /* Vägen tillbaka: första passet efter en skada rids utan galopp
      och utan bana — stegrande arbete, som efter en hälta. */
@@ -302,6 +318,13 @@ function stegaLektion(dt){
 }
 function avslutaBana(dom){
   if(G.hadeBana)G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
+  if(G.tavling){ // tävlingen ger placering och rosett, inte uppflyttning
+    G.domare=dom;G.scen="resultat";
+    document.getElementById("protWrap").hidden=true;
+    document.getElementById("viewToggle").hidden=true;
+    visaTavlingsResultat(dom);
+    return;
+  }
   G.passRes=registreraPass(dom);
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;
@@ -361,16 +384,18 @@ function ritaHUD(){
 let last=performance.now();
 function loop(now){
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
+  ljudPuls(dt);
   if(G.scen==="lektion"||G.scen==="bana"){
     stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
     if(G.luft>0)G.luft-=dt;
-    if(G.vy==="2d")draw2D(G);else draw3D(G);
+    if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
     ritaHUD();
   } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
+    gl3dLage(false);
     stegaVandring(dt);ritaVandring();
   } else if(G.scen==="resultat"){
-    if(G.vy==="2d")draw2D(G);else draw3D(G);
-  }
+    if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
+  } else gl3dLage(false);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

@@ -50,6 +50,7 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
       <div class="pekSmaRad">
         <button class="pekKnapp liten" data-tap="KeyV">VY</button>
         <button class="pekKnapp liten" data-tap="KeyT">BOK</button>
+        <button class="pekKnapp liten" data-tap="KeyM">LJUD</button>
       </div>
       <button class="pekKnapp liten" data-hall="ShiftLeft">JOGGA</button>
       <button class="pekKnapp stor" data-tap="KeyE">ANVÄND</button>

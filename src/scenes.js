@@ -27,6 +27,7 @@ function visaMeny(){
     <div><kbd>R</kbd> lättridning av/på</div>
     <div><kbd>Q</kbd> byt diagonal</div>
     <div><kbd>V</kbd> växla vy (bana / bakom hästen)</div>
+    <div><kbd>M</kbd> ljud av/på (hovslag, stall, röst)</div>
     <div><kbd>N</kbd> nästa moment (POC-genväg)</div>
     <div><kbd>P</kbd> ridläraren visar (autopilot)</div>
     <div><kbd>F</kbd> spö — men läs hästlistan först</div>
@@ -36,21 +37,29 @@ function visaMeny(){
   ${profilHTML()}
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
+    <button class="btn ghost" id="bTavling">Tävlingsdag</button>
     <button class="btn ghost" id="bBok">Träningsboken</button>
     <span class="dim" style="font-size:13px">Dagens lektion: ${GRUPPNAMN[G.grupp]||G.grupp} · sex hinder på 0,60 m</span>
   </div>`);
-  document.getElementById("bStart").onclick=startaVandring;
+  document.getElementById("bStart").onclick=()=>{G.tavling=null;startaVandring();};
+  document.getElementById("bTavling").onclick=visaTavlingsval;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
   kopplaProfil();
 }
 
 /* ── Ridläraren tilldelar häst ── */
 function visaTilldelning(){
-  // rotation ur gruppens hästpool — känsligare hästar på högre nivåer
-  const kandidater=hastpool(G.grupp);
+  // rotation ur gruppens hästpool — känsligare hästar på högre nivåer.
+  // På tävlingsdag startar ingen häst som är mitt i sin rehab.
+  let kandidater=hastpool(G.grupp);
+  if(G.tavling){
+    const friska=kandidater.filter(id=>!hastminne(id).rehab);
+    if(friska.length)kandidater=friska;
+  }
   const val=kandidater[G.seed%kandidater.length];
   G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
   G.hamtad=false;G.tackePa=false;G.fangstForsok=false;
+  G.utrustning=false;G.lerig=false;G.spolad=0;G.felUtrustning=0;
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
     lydia:"Lydia tar hand om dig. Lyssna på henne, så lär hon dig takten.",
@@ -70,6 +79,9 @@ function visaTilldelning(){
     husky:"Om du får med dig Husky från hagen är halva lektionen redan vunnen.",
     kennedy:"Kennedy är ung och allt är på riktigt för honom. Visa honom att världen är ofarlig."}[val]
     ||"Rid som du red senast — fast bättre.";
+  const tavMotiv=G.tavling?(G.tavling.typ==="hoppning"
+    ?`Tävlingsdag — ${G.tavling.klass.namn} i Påskhoppet. Du rider ${h.namn}. Sköt honom extra noga, domarna ser allt.`
+    :`Tävlingsdag — dressyr LC på uteridbanan. Du rider ${h.namn}. Ren ridning slår djärv ridning i dag.`):null;
   const minne=hastminne(val);
   const EGENHET={radd_for_spo:"är rädd för spö — det står på hästlistan. Låt bli F-tangenten.",
     blaser_upp_magen:"blåser upp magen när du gjordar. Vänta en stund och dra åt igen innan du sitter upp.",
@@ -79,7 +91,7 @@ function visaTilldelning(){
   const trott=minne.pass>0&&minne.sistaPassNr===SPAR.pass;
   const rehab=!!minne.rehab;
   overlay(true,`
-  <span class="lbl">Ridläraren fördelar hästarna</span>
+  <span class="lbl">${G.tavling?"Tävlingsdag · ridläraren fördelar hästarna":"Ridläraren fördelar hästarna"}</span>
   <h1 style="margin-top:8px">Du får ${h.namn}</h1>
   <div class="hcard">
     <div style="flex:1">
@@ -91,7 +103,7 @@ function visaTilldelning(){
         <span>Framåt <b>${h.framatbjudning.toFixed(2).replace(".",",")}</b></span>
         <span>Maxhöjd <b>${h.maxhojd.toFixed(2).replace(".",",")} m</b></span>
       </div>
-      <div class="why">”${motiv}”</div>
+      <div class="why">”${tavMotiv||motiv}”</div>
       ${minne.pass>0?`<div class="dim" style="font-size:12px;margin-top:8px">Ni har ridit ${minne.pass} pass ihop — han minns dig (rang ${minne.rang.toFixed(2).replace(".",",")})${
         typeof minne.sistaForm==="number"?` · dagsform senast ${minne.sistaForm.toFixed(2).replace(".",",")}`:""}.</div>`
         :`<div class="dim" style="font-size:12px;margin-top:8px">Första gången ni möts.</div>`}
@@ -291,6 +303,14 @@ function avslutaSkotsel(){
       +(m0.sistaForm>=0.72?" — det sitter i":m0.sistaForm<0.55?" — slarvet sitter i":"");
   }
   if(trott){res.dagsform=clamp(res.dagsform-0.08,0,1);vilaRad="gick lektion nyss (−0,08)";}
+  /* Leran från hagen: spolad häst går att sköta, olerad gör det inte. */
+  let lerRad="torr efter hagen";
+  if(G.spolad>=0.8&&!G.lerig){res.dagsform=clamp(res.dagsform+0.03,0,1);
+    lerRad="avspolad i spiltan (+0,03)";}
+  else if(G.lerig){res.dagsform=clamp(res.dagsform-0.09,0,1);
+    res.risker.push("lera_kvar");
+    lerRad="lera kvar på benen (−0,09)";
+    res.omdome="Du sköter ingen häst genom leran. Spola av benen i spiltan innan du borstar nästa gång.";}
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
   G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
   initNPC();
@@ -304,6 +324,7 @@ function avslutaSkotsel(){
     <tr><td>Risker under lektionen</td><td class="num">${res.risker.length?res.risker.join(", ").replaceAll("_"," "):"inga"}</td></tr>
     <tr><td>Gårdagens dagsform</td><td class="num">${igarRad}</td></tr>
     <tr><td>Vila</td><td class="num">${vilaRad}</td></tr>
+    <tr><td>Benen efter hagen</td><td class="num">${lerRad}</td></tr>
     <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
     <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>
     <tr><td>Stallro</td><td class="num">${G.stallro.toFixed(2).replace(".",",")}</td></tr>
@@ -392,6 +413,7 @@ function visaResultat(dom){
     }
     nollstall();
     G.skotselRes=null;G.hamtad=true;G.tackePa=false;
+    G.utrustning=true;G.lerig=false;G.spolad=0;   // sadeln är redan hämtad
     overlay(false);hudLage("gang");
     const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
     gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});
@@ -399,6 +421,7 @@ function visaResultat(dom){
 }
 function nollstall(){
   G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
+  G.tavling=null;BANA.hojd=0.60;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
   document.getElementById("protWrap").hidden=true;
