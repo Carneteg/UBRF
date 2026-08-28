@@ -318,11 +318,15 @@ function avslutaSkotsel(){
   {const steg=fardighetSkotsel(res.dagsform);
    if(steg&&typeof visaFardighetsSteg==="function")
      setTimeout(()=>visaFardighetsSteg(steg),900);}
+  /* Humöret sätts en gång, här, av skötseln du just gjort och av vad ni
+     har ihop sedan tidigare. Sedan ligger det fast under passet. */
+  G.humor=dagensHumor(G.hastId);
   G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
   initNPC();
   G.px=10;G.py=52;G.rikt=-Math.PI/2;
   overlay(true,`
   <span class="lbl">Ridläraren tittar på ${HORSES[G.hastId].namn}</span>
+  <p class="humor">${humorText(G.hastId,G.humor)}</p>
   <h1 style="margin-top:8px" ${res.dagsform<0.55?'class="red"':""}>”${res.omdome}”</h1>
   <table><tbody>
     <tr><td>Dagsform</td><td class="num">${res.dagsform.toFixed(2).replace(".",",")}</td></tr>

@@ -116,11 +116,26 @@ function stepRide(s,a,h,ctx,dt){
   }
   // tempo — förhandling, inte kommando
   {const g=Gait.G[s.gangart]||Gait.G.halt;
-   const eget=g.norm*(0.80+0.40*h.framatbjudning);
+   /* Avdriften: hästens eget tempo ligger inte still. Hon glider sakta
+      åt sitt håll och rycker till ibland, och hur mycket beror på
+      lydnaden och dagens humör. Det är den här termen som gör att
+      stillasittande inte längre är optimalt — släpper du henne faller
+      takten, och takten är det inverkan mäter.
+
+      Två frekvenser med olika period, så att vandringen aldrig blir en
+      förutsägbar sinus man lär sig utantill. */
+   const D=ctx.avdrift||{glid:0,ryck:0,tröghet:1};
+   const t=s._tid;
+   const vandring=D.glid*(0.62*Math.sin(t*0.41)+0.38*Math.sin(t*0.97+1.3))
+     + D.ryck*Math.max(0,Math.sin(t*0.23+2.1))**6;
+   const eget=g.norm*(0.80+0.40*h.framatbjudning)+vandring*(g.norm>0?1:0);
    const begaran=(a.skankel-a.tygel*0.9)*3.2;
    const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
-   const tr=1.6+1.4*h.tyngd;
+   /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
+      omöjlig, hon kräver att du ber tydligare och håller kvar. */
+   const tr=(1.6+1.4*h.tyngd)*D.tröghet;
    s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
+   s._avdrift=vandring;
    s.gangart=Gait.forTempo(s.tempo,s.gangart);
    s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
   }

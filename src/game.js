@@ -67,7 +67,7 @@ const G={
   hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   utrustning:false,lerig:false,spolad:0,felUtrustning:0,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
-  dagsform:0.7,sadellage:0.8,stallro:0.9,
+  dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
   moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,
   betyg:{},npcs:[],
   hinderAktiva:false,nastaHinder:0,rivna:new Set(),handelser:[],banTid:0,banStart:0,
@@ -113,7 +113,8 @@ function stegaRitt(dt){
   const ute=G.plats!=="ridhus";
   const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
   stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,
-    utomhus:ute,fard:fardighetsMod()},dt);
+    utomhus:ute,fard:fardighetsMod(),
+    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,fardighetsMod().halla)},dt);
   /* Färdigheterna växer av det som just hände. Returnerar ett id när en
      färdighet passerar ett helt tiondelssteg, så att det går att visa. */
   {const steg=stegaFardighet(G.ride,G.aids,dt);
@@ -308,8 +309,11 @@ function stegaLektion(dt){
        ögonblicks slarv inte ska radera en hel långsida. */
     const mal=momentMal(m,G.grupp);
     if(mal){
+      /* Både kvaliteten OCH tempot måste hållas. Kvaliteten ensam går
+         att nå genom att sitta still; tempobandet gör att hon glider
+         ur det om du inte rider henne. */
       const kval=Skala.inverkan(G.ride.skala,G.grupp);
-      const over=kval>=mal.krav;
+      const over=kval>=mal.krav&&iTempoBand(G.ride,G.grupp);
       G.momentHall=clamp((G.momentHall||0)+(over?dt:-dt*0.45),0,mal.hall);
       document.querySelector("#momentBar i").style.width=G.momentHall/mal.hall*100+"%";
       document.querySelector("#momentBar").classList.toggle("haller",over);
@@ -318,6 +322,8 @@ function stegaLektion(dt){
       document.querySelector("#momentBar i").style.width=clamp(G.momentT/m.tid*100,0,100)+"%";
       G.momentKlart=G.momentT>=m.tid;
     }
+    {const mt=document.getElementById("momentMal");
+     if(mt)mt.textContent=momentMalText(m,G.grupp);}
     // ridlärartillsägelser
     G.sagaCd-=dt;
     if(G.sagaCd<=0&&G.momentT>6){

@@ -68,6 +68,11 @@ function fardighetsMod(){
     lugn: 0.55*f.sits+0.35*f.kansla,
     /* Mjukheten hittar tillbaka snabbare efter ett misstag. */
     mjukhetFart: 1+0.60*f.sits,
+    /* Att hålla ihop hästen. En van ryttare låter henne inte glida iväg
+       från början, så avdriften dämpas. Det här är skillnaden mellan att
+       rätta till hela tiden och att bara rida — och den märks direkt i
+       hur många korrigeringar ett moment kostar. */
+    halla: 0.48*f.sits+0.34*f.kansla,
   };
 }
 
@@ -150,11 +155,46 @@ function momentMal(m,grupp){
   return {krav,hall,vad:"inverkan"};
 }
 
+/* ── Tempobandet ──────────────────────────────────────────────────
+   Kvalitetskravet ensamt räcker inte. Utbildningsskalans takt mäter hur
+   JÄMNT du rider, inte om tempot är rätt, så en häst som glider bort i
+   jämn takt får full pott — och då blir stillasittande optimalt igen.
+
+   Därför måste momentet också kräva ett tempo. Då biter avdriften: hon
+   vandrar ut ur bandet och du måste hämta hem henne. Det är det som gör
+   ridning till att korrigera i stället för att vänta.
+
+   Bandet är brett för nybörjaren och smalnar uppåt i grupperna. Jämför
+   med avdriften: en nöjd, lydig häst glider ±0,35 m/s och håller sig
+   mest inne av sig själv; en sur häst glider ±0,63 och kräver att du
+   rider varje steg. Det är meningen att en bra dag ska kännas som en
+   bra dag. */
+function tempoBand(gangart,grupp){
+  const g=Gait.G[gangart];
+  if(!g||g.norm<=0)return null;
+  const forv=Skala.FORVANTAN[grupp]||0.55;
+  const bredd=0.30+0.30*(1-forv);
+  return {min:g.norm-bredd, max:g.norm+bredd, norm:g.norm, bredd};
+}
+
+/* Rider du inom bandet just nu? Halt räknas alltid som inne — man kan
+   inte hålla ett tempo man inte har. */
+function iTempoBand(ride,grupp){
+  if(!ride)return false;
+  const b=tempoBand(ride.gangart,grupp);
+  if(!b)return true;
+  return ride.tempo>=b.min&&ride.tempo<=b.max;
+}
+
 /* Texten som står under stapeln, så att spelaren vet vad som mäts. */
 function momentMalText(m,grupp){
   const mal=momentMal(m,grupp);
   if(!mal)return "";
-  return `Håll inverkan över ${mal.krav.toFixed(2).replace(".",",")} i ${Math.round(mal.hall)} s`;
+  const b=G.ride&&tempoBand(G.ride.gangart,grupp);
+  const tempoDel=b?` och tempot mellan ${b.min.toFixed(1).replace(".",",")}`
+    +` och ${b.max.toFixed(1).replace(".",",")} m/s`:"";
+  return `Håll inverkan över ${mal.krav.toFixed(2).replace(".",",")}${tempoDel}`
+    +` i ${Math.round(mal.hall)} s`;
 }
 
 /* ── Det som syns ─────────────────────────────────────────────────
