@@ -1491,9 +1491,7 @@ function ritaRidhus3D(){
 
 /* ── Huvudingång från spelloopen ─────────────────────────────── */
 function ritaVandring(){
-  if(G.scen==="gard"){ if(G.vy==="2d")ritaGard2D(); else ritaGard3D(); }
-  else if(G.scen==="ridhusinne"){ if(G.vy==="2d")ritaRidhus2D(); else ritaRidhus3D(); }
-  else { if(G.vy==="2d")ritaStall2D(); else ritaStall3D(); }
+  ritaVandringVy();
   const ap=document.getElementById("approach");
   ap.textContent=VD.prompt&&!overlayUppe()?`Tryck E — ${VD.prompt.text}`:"";
   if(G.sagaT>0){G.sagaT-=1/60;if(G.sagaT<=0)document.getElementById("saga").classList.remove("on");}

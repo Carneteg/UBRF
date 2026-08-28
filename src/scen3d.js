@@ -18,8 +18,9 @@ const S3={
 };
 
 /* ── Ljussättning per plats och väder ─────────────────────────── */
-function s3Ljus(){
-  const v=(G.vader&&G.vader.typ)||"sol", inne=G.plats==="ridhus";
+function s3Ljus(over){
+  const v=(G.vader&&G.vader.typ)||"sol";
+  const inne=(over||G.plats)==="ridhus";
   if(inne)return {   // ridhusets lysrör: jämnt, varmt och utan hårda skuggor
     sol:[0.35,0.88,0.32], solFarg:"#B3A78A", himmel:"#7E838A", mark:"#4A443A",
     dimFarg:"#3A3C40", dimNara:44, dimFjarr:120, skuggAlfa:0.24, skuggFarg:"#0A0A0C",
@@ -247,11 +248,13 @@ function s3RitaHast(o){
   /* Halsen: reser sig när hästen samlas, sträcks på lång tygel. */
   const samling=o.samling===undefined?0.4:o.samling;
   const halsA=P(0.86,1.36,0), halsL=0.76+0.06*(1-samling);
-  const halsVin=0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
+  /* Betande häst sänker halsen till marken; annars styr samlingen. */
+  const halsVin=o.beta ? -0.72
+    : 0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
   const halsB=P(halsA[0]+Math.cos(halsVin)*halsL, halsA[1]+Math.sin(halsVin)*halsL, 0);
   rita(D.hals,s3Segment(halsA,halsB,1),farg);
   /* Huvudet följer halsens vinkel, nosen något nedåt. */
-  const nick=halsVin-0.95-0.25*samling;
+  const nick=o.beta ? -1.15 : halsVin-0.95-0.25*samling;
   const huvudM=M4.mul(M4.translation(halsB[0]+Math.cos(nick)*0.16,
     halsB[1]+Math.sin(nick)*0.16-0.02,0), M4.rotZ(nick));
   rita(D.huvud,huvudM,farg);
@@ -349,24 +352,31 @@ function s3RitaRyttare(bas,o){
   }
 }
 
+/* Himlen: en ring av band från horisont till zenit, plus ett lock.
+   Ritas obelyst, så färgen i banden är gradienten. Centrum flyttas
+   med scenen så att kupolen alltid omsluter kameran. */
+function s3Himmel(centrum){
+  if(S3.himmel)GL.fritt(S3.himmel.nat);
+  const L=s3Ljus(), himmel=new Bygge();
+  const topp=glFarg(L.himmelTopp), bot=glFarg(L.himmelBotten);
+  const BANDN=8, H0=-30, HTOT=170, bh=HTOT/BANDN;
+  const cx0=centrum[0], cz0=centrum[1];
+  for(let i=0;i<BANDN;i++){
+    const t=i/(BANDN-1), e=Math.pow(t,1.45);   // glöden når högre upp
+    const f=[bot[0]+(topp[0]-bot[0])*e, bot[1]+(topp[1]-bot[1])*e, bot[2]+(topp[2]-bot[2])*e];
+    himmel.cyl(150,150,bh*1.02,f,M4.translation(cx0,H0+i*bh,cz0),24,false);
+  }
+  himmel.yta(320,320,topp,M4.translation(cx0,H0+HTOT,cz0),1);
+  S3.himmel={nat:GL.nat(himmel)};
+  S3.himmelC=centrum;
+}
+
 /* ── Anläggningen: byggs om när platsen byter ─────────────────── */
 function s3ByggPlats(plats){
   for(const s of S3.statiskt)GL.fritt(s.nat);
   S3.statiskt=[];
   const T=S3.tex, lagg=(bygge,tex)=>S3.statiskt.push({nat:GL.nat(bygge),tex});
-  /* Himlen: en ring av band från horisont till zenit, plus ett lock.
-     Ritas obelyst, så färgen i banden är gradienten. */
-  if(S3.himmel)GL.fritt(S3.himmel.nat);
-  const L=s3Ljus(), himmel=new Bygge();
-  const topp=glFarg(L.himmelTopp), bot=glFarg(L.himmelBotten);
-  const BANDN=8, H0=-30, HTOT=170, bh=HTOT/BANDN;
-  for(let i=0;i<BANDN;i++){
-    const t=i/(BANDN-1), e=Math.pow(t,0.75);
-    const f=[bot[0]+(topp[0]-bot[0])*e, bot[1]+(topp[1]-bot[1])*e, bot[2]+(topp[2]-bot[2])*e];
-    himmel.cyl(150,150,bh*1.02,f,M4.translation(10,H0+i*bh,30),24,false);
-  }
-  himmel.yta(320,320,topp,M4.translation(10,H0+HTOT,30),1);
-  S3.himmel={nat:GL.nat(himmel)};
+  s3Himmel([10,30]);
 
   if(plats==="ridhus"){
     /* Golvet: hallens betong och banans fibersand. */
@@ -505,6 +515,7 @@ function s3ByggPlats(plats){
   }
   S3.plats=plats;
   S3.vaderNyckel=(G.vader&&G.vader.typ)||"sol";
+  if(typeof V3D!=="undefined")V3D.plats=null;   // gå-lägets nät är frigjorda
 }
 
 /* ── Hindren ──────────────────────────────────────────────────── */
@@ -578,7 +589,7 @@ function rita3D(Gs){
   /* Himlen först, utan djup. */
   const gl=GL.gl;
   gl.depthMask(false);
-  GL.rita(S3.himmel.nat,M4.translation(k.x-10,0,k.z-30),{platt:true,baksidor:true});
+  GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),{platt:true,baksidor:true});
   gl.depthMask(true);
   /* Anläggningen. */
   for(const s of S3.statiskt)GL.rita(s.nat,M4.ny(),{tex:s.tex});
