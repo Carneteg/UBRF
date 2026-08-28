@@ -39,11 +39,11 @@ function s3Ljus(over){
     himmelTopp:"#39404A", himmelBotten:"#8A8A80",
     kantFarg:"#E4DCC8", kant:0.22, mattnad:1.14,
   };
-  return { // gyllene timme — varmt ljus, men marken ska behålla sin färg
-    sol:[-0.58,0.46,0.66], solFarg:"#E6C594", himmel:"#96A8C4", mark:"#6A6048",
-    dimFarg:"#B9A488", dimNara:95, dimFjarr:320, skuggAlfa:0.24, skuggFarg:"#241A0C",
-    himmelTopp:"#43608E", himmelBotten:"#E8B98A",
-    kantFarg:"#FFE0B4", kant:0.24, mattnad:1.10,
+  return { // klar solig dag — kitets himmel och gräs (ui-kit-demo.html)
+    sol:[-0.42,0.72,0.55], solFarg:"#FFF3D2", himmel:"#BFE2F5", mark:"#6FA84A",
+    dimFarg:"#B7E0F4", dimNara:110, dimFjarr:340, skuggAlfa:0.13, skuggFarg:"#1E5C22",
+    himmelTopp:"#4EA8DE", himmelBotten:"#9BD4F5",
+    kantFarg:"#FFF6D0", kant:0.20, mattnad:1.08,
   };
 }
 
@@ -51,7 +51,7 @@ function s3Ljus(over){
 function s3Texturer(){
   const T=S3.tex;
   T.sand=glCanvasTex(256,256,(c,w,h)=>{
-    c.fillStyle="#C0B394";c.fillRect(0,0,w,h);
+    c.fillStyle="#D9C08D";c.fillRect(0,0,w,h);  // ljus men mättad ridbanesand
     for(let i=0;i<2600;i++){
       const x=Math.random()*w,y=Math.random()*h,r=Math.random();
       c.fillStyle=r<0.5?"rgba(150,138,112,.35)":r<0.8?"rgba(212,200,172,.35)":"rgba(120,104,80,.30)";
@@ -61,11 +61,12 @@ function s3Texturer(){
     for(let i=0;i<16;i++){c.beginPath();c.moveTo(0,i*16+4);c.lineTo(w,i*16+4);c.stroke();}
   },true);
   T.gras=glCanvasTex(256,256,(c,w,h)=>{
-    c.fillStyle="#4A5C34";c.fillRect(0,0,w,h);
-    for(let i=0;i<3000;i++){
-      const x=Math.random()*w,y=Math.random()*h;
-      c.fillStyle=Math.random()<0.5?"rgba(96,116,64,.5)":"rgba(58,72,40,.5)";
-      c.fillRect(x,y,2,1+Math.random()*3);
+    c.fillStyle="#5CBB3F";c.fillRect(0,0,w,h);          // kitets --grass
+    for(let i=0;i<3400;i++){
+      const x=Math.random()*w,y=Math.random()*h,r=Math.random();
+      c.fillStyle=r<0.45?"rgba(143,214,90,.30)"          // --grass-light
+        :r<0.90?"rgba(46,139,46,.26)":"rgba(255,255,255,.08)";
+      c.fillRect(x,y,2,2+Math.random()*4);
     }
   },true);
   T.grus=glCanvasTex(256,256,(c,w,h)=>{
@@ -711,7 +712,7 @@ function s3ByggPlats(plats){
     }
     /* Träden. */
     const skog=new Bygge();
-    const TF=["#4E6B33","#C1762F","#B0512E","#C99B3A","#54703A","#A8622C"];
+    const TF=["#4FAE3A","#5CBB3F","#3E9E2E","#8FD65A","#46A233","#6BC44A"];
     let fro=7;
     const rnd=()=>{fro=(fro*16807)%2147483647;return fro/2147483647;};
     const trad=(x,z,h,f)=>{

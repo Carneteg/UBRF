@@ -1,0 +1,180 @@
+/* ══════════════════════════════════════════════════════════════════
+   SKIN — kopplar spelets befintliga struktur till ui-kit-demo.html.
+   Kitet (src/ui.css) är sanningen och rörs inte. Här översätts spelets
+   egna klasser — .sheet, .box, .note, .hcard, HUD:ens mätare — till
+   kitets paneler, knappar och mätare, så att hela spelet byter uttryck
+   utan att varje overlay skrivs om.
+   Alla färger kommer från kitets variabler. Ingen hex här.
+   ══════════════════════════════════════════════════════════════════ */
+
+body{
+  font-family:"Arial Rounded MT Bold","Trebuchet MS",Verdana,Arial,sans-serif;
+  font-weight:700; color:#fff;
+  background:linear-gradient(180deg,var(--sky-top) 0%,var(--sky-bottom) 55%,#C8ECFF 70%);
+}
+h1,h2,h3{font-family:inherit; font-weight:900; letter-spacing:.4px}
+
+/* ── Overlayn ─────────────────────────────────────────────────── */
+#ov{background:rgba(40,10,60,.62); backdrop-filter:blur(6px)}
+.sheet{
+  background:linear-gradient(180deg,var(--panel-top),var(--panel-bottom));
+  border:4px solid var(--panel-border); border-radius:22px;
+  box-shadow:0 14px 34px rgba(30,5,50,.5), inset 0 3px 6px rgba(255,255,255,.28);
+  color:#fff; padding:clamp(20px,3vw,30px);
+}
+.sheet h1{
+  font-size:clamp(28px,5vw,46px); line-height:1.05; letter-spacing:1px;
+  background:linear-gradient(180deg,#FFF3C4 15%,var(--gold) 55%,var(--gold-dark) 90%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 3px 0 #5A2470) drop-shadow(0 5px 7px rgba(40,10,60,.45));
+}
+.sheet h2{font-size:20px; text-shadow:var(--text-outline); margin:1.4em 0 .4em}
+.sheet p, .sheet li{color:var(--cream); font-weight:700; text-shadow:0 1px 0 rgba(40,10,60,.35)}
+.sheet .dim, .dim{color:#E2D3F2; font-weight:700}
+.lbl{font-family:inherit; font-weight:900; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--gold); text-shadow:var(--text-outline)}
+.grn{color:var(--emerald)} .gold{color:var(--gold)} .red{color:var(--heart)}
+em{color:#FFF3C4; font-style:italic}
+b{color:#fff}
+
+/* ── Knappar: spelets .btn blir kitets .btn ───────────────────── */
+.btn{
+  border:none; border-radius:18px; padding:13px 30px; gap:10px;
+  font-family:inherit; font-size:17px; font-weight:900; color:#fff; letter-spacing:.4px;
+  text-shadow:var(--text-outline);
+  background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  box-shadow:0 6px 0 rgba(30,5,50,.45), inset 0 3px 5px rgba(255,255,255,.5),
+             inset 0 -6px 8px rgba(0,0,0,.18);
+  outline:3px solid rgba(255,255,255,.65); outline-offset:-6px;
+  transition:transform .08s, box-shadow .08s;
+}
+.btn:hover{background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  filter:brightness(1.06)}
+.btn:active{transform:translateY(4px);
+  box-shadow:0 2px 0 rgba(30,5,50,.45), inset 0 3px 5px rgba(255,255,255,.5)}
+.btn.ghost{
+  background:linear-gradient(180deg,var(--btn-purple-top),var(--btn-purple-bottom));
+  color:#fff; border:none;
+}
+.btn.ghost:hover{border:none; color:#fff; filter:brightness(1.08)}
+.btn:focus-visible{outline:4px solid #fff; outline-offset:2px}
+/* små knappar tål inte den indragna outlinen */
+.btn[style*="12px"], .btn[style*="6px 12px"]{outline-offset:-4px}
+.btnrow{gap:14px; margin-top:24px}
+
+/* ── Noter och kort ───────────────────────────────────────────── */
+.note{
+  border:2px solid rgba(255,255,255,.28); border-left:2px solid rgba(255,255,255,.28);
+  background:rgba(255,255,255,.13); border-radius:14px; padding:12px 15px;
+  color:var(--cream); font-weight:700; margin:1.1em 0;
+}
+.note.bad{border-color:rgba(255,90,121,.55); background:rgba(255,90,121,.18)}
+.note b, .note .gold{color:var(--gold)}
+.hcard{
+  background:rgba(255,255,255,.13); border:2px solid rgba(255,255,255,.25);
+  border-radius:16px; padding:15px 17px; gap:16px;
+}
+.hcard .n{font-family:inherit; font-weight:900; font-size:23px; color:#fff;
+  text-shadow:var(--text-outline)}
+.hcard .k{color:var(--cream); font-style:italic; font-weight:700}
+.hcard .tr span{font-family:inherit; font-weight:800; font-size:11px; color:#E2D3F2}
+.hcard .tr b{color:#fff; font-weight:900}
+.hcard .why{font-family:inherit; font-weight:800; color:var(--gold);
+  text-shadow:var(--text-outline)}
+
+/* ── Tabeller ─────────────────────────────────────────────────── */
+table{font-size:14px}
+th{font-family:inherit; font-weight:900; color:var(--gold); letter-spacing:.08em;
+  border-bottom:2px solid rgba(246,196,69,.45)}
+td{color:var(--cream); font-weight:700; border-bottom:1px solid rgba(255,255,255,.16)}
+td.num,th.num{font-family:inherit; font-variant-numeric:tabular-nums}
+
+kbd{font-family:inherit; font-weight:900; color:var(--panel-bottom);
+  background:linear-gradient(180deg,#FFF3C4,var(--gold));
+  border:2px solid var(--gold-dark); border-radius:7px; padding:2px 7px}
+.keys div{color:var(--cream); font-weight:700}
+
+/* ── HUD:ens rutor blir paneler ───────────────────────────────── */
+.box{
+  background:linear-gradient(180deg,var(--panel-top),var(--panel-bottom));
+  border:3px solid var(--panel-border); border-radius:18px; padding:12px 15px;
+  box-shadow:0 8px 18px rgba(30,5,50,.42), inset 0 2px 5px rgba(255,255,255,.26);
+  backdrop-filter:none;
+}
+#momentNamn{font-family:inherit; font-weight:900; font-size:19px; color:#fff;
+  text-shadow:var(--text-outline)}
+#momentText{color:var(--cream); font-weight:700}
+#momentBar{height:14px; border-radius:9px; background:#2A0F45;
+  border:2.5px solid var(--gold); overflow:hidden}
+#momentBar i{border-radius:7px;
+  background:linear-gradient(180deg,#8FE06A 0%,#4CAF3E 100%)}
+
+/* pyramidens och hjälpernas mätare */
+.ptrack, .atrack{border-radius:9px; background:#2A0F45; border:2px solid var(--gold);
+  overflow:hidden; height:14px}
+.pfill{border-radius:7px}
+.prow .pname, .arow .aname, .arow .akey{font-family:inherit; font-weight:800;
+  color:var(--cream); text-shadow:0 1px 0 rgba(40,10,60,.4)}
+#inverkan b, #tempo, #gait{font-family:inherit; font-weight:900; color:#fff;
+  text-shadow:var(--text-outline)}
+
+/* ── Pratbubbla och anridningstext ────────────────────────────── */
+#saga:not(:empty){
+  font-family:inherit; font-weight:900; font-size:17px; color:#fff;
+  text-shadow:var(--text-outline);
+  background:linear-gradient(180deg,#5B2A86,#3A1259);
+  border:3px solid var(--gold); border-radius:999px; padding:11px 24px;
+  box-shadow:0 6px 14px rgba(30,5,50,.45), inset 0 2px 4px rgba(255,255,255,.28);
+  backdrop-filter:none;
+}
+#approach:not(:empty){
+  font-family:inherit; font-weight:900; color:var(--panel-bottom);
+  background:linear-gradient(180deg,#FFF3C4,var(--gold));
+  border:3px solid var(--gold-dark); border-radius:999px; padding:8px 20px;
+  box-shadow:0 5px 12px rgba(30,5,50,.4);
+}
+#faults{font-family:inherit; font-weight:900; color:var(--heart);
+  text-shadow:0 3px 0 rgba(40,10,60,.6)}
+
+/* ── Vyväljaren ───────────────────────────────────────────────── */
+#viewToggle{gap:8px; background:none; border:0; padding:0}
+#viewToggle button{
+  font-family:inherit; font-weight:900; font-size:13px; color:#fff; letter-spacing:.4px;
+  text-shadow:var(--text-outline); border:none; border-radius:14px; padding:9px 18px;
+  background:linear-gradient(180deg,var(--btn-purple-top),var(--btn-purple-bottom));
+  box-shadow:0 4px 0 rgba(30,5,50,.45), inset 0 2px 4px rgba(255,255,255,.45);
+  outline:2px solid rgba(255,255,255,.5); outline-offset:-4px; cursor:pointer;
+}
+#viewToggle button.on{
+  color:var(--panel-bottom);
+  background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  text-shadow:none;
+}
+
+/* ── Skötselns steg och canvasar ──────────────────────────────── */
+.gstep{border-bottom:1px solid rgba(255,255,255,.18); color:#E2D3F2; font-weight:800}
+.gstep.on{color:#fff}
+.gstep .gn{font-family:inherit; font-weight:900}
+#groomCanvas, #mockCanvas, #spolCanvas{
+  border:3px solid var(--gold); border-radius:16px; background:rgba(42,15,69,.6);
+}
+#groomHint{color:var(--cream); font-weight:700}
+
+/* ── Pekkontrollerna följer kitets knappar ────────────────────── */
+.pekKnapp{
+  font-family:inherit; font-weight:900; color:#fff; text-shadow:var(--text-outline);
+  border:none; border-radius:18px;
+  background:linear-gradient(180deg,var(--btn-purple-top),var(--btn-purple-bottom));
+  box-shadow:0 5px 0 rgba(30,5,50,.45), inset 0 3px 5px rgba(255,255,255,.45);
+  outline:3px solid rgba(255,255,255,.55); outline-offset:-5px;
+}
+.pekKnapp.ner{transform:translateY(4px);
+  background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  color:var(--panel-bottom); text-shadow:none;
+  box-shadow:0 1px 0 rgba(30,5,50,.45), inset 0 3px 5px rgba(255,255,255,.5)}
+#joy{border:3px solid var(--gold); background:rgba(58,18,89,.55)}
+#joyKnopp{background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  border:3px solid #fff}
+
+/* HUD:en hör inte hemma bakom en overlay */
+body:has(#ov:not(.hide)) .hud{opacity:0; pointer-events:none}
