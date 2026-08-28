@@ -59,6 +59,7 @@ function visaTilldelning(){
   const val=kandidater[G.seed%kandidater.length];
   G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
   G.hamtad=false;G.tackePa=false;G.fangstForsok=false;
+  G.utrustning=false;G.lerig=false;G.spolad=0;G.felUtrustning=0;
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
     lydia:"Lydia tar hand om dig. Lyssna på henne, så lär hon dig takten.",
@@ -302,6 +303,14 @@ function avslutaSkotsel(){
       +(m0.sistaForm>=0.72?" — det sitter i":m0.sistaForm<0.55?" — slarvet sitter i":"");
   }
   if(trott){res.dagsform=clamp(res.dagsform-0.08,0,1);vilaRad="gick lektion nyss (−0,08)";}
+  /* Leran från hagen: spolad häst går att sköta, olerad gör det inte. */
+  let lerRad="torr efter hagen";
+  if(G.spolad>=0.8&&!G.lerig){res.dagsform=clamp(res.dagsform+0.03,0,1);
+    lerRad="avspolad i spiltan (+0,03)";}
+  else if(G.lerig){res.dagsform=clamp(res.dagsform-0.09,0,1);
+    res.risker.push("lera_kvar");
+    lerRad="lera kvar på benen (−0,09)";
+    res.omdome="Du sköter ingen häst genom leran. Spola av benen i spiltan innan du borstar nästa gång.";}
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
   G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
   initNPC();
@@ -315,6 +324,7 @@ function avslutaSkotsel(){
     <tr><td>Risker under lektionen</td><td class="num">${res.risker.length?res.risker.join(", ").replaceAll("_"," "):"inga"}</td></tr>
     <tr><td>Gårdagens dagsform</td><td class="num">${igarRad}</td></tr>
     <tr><td>Vila</td><td class="num">${vilaRad}</td></tr>
+    <tr><td>Benen efter hagen</td><td class="num">${lerRad}</td></tr>
     <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
     <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>
     <tr><td>Stallro</td><td class="num">${G.stallro.toFixed(2).replace(".",",")}</td></tr>
@@ -403,6 +413,7 @@ function visaResultat(dom){
     }
     nollstall();
     G.skotselRes=null;G.hamtad=true;G.tackePa=false;
+    G.utrustning=true;G.lerig=false;G.spolad=0;   // sadeln är redan hämtad
     overlay(false);hudLage("gang");
     const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
     gaTill("stallinne",{x:7.5,y:b.dorr[1],rikt:0});

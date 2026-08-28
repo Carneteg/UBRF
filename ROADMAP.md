@@ -25,11 +25,15 @@ meny → stall → lektion fungerar i test.
 
 **Mål:** att den som rider på UBRF känner igen varje meter.
 
-- Flygbild/karta → korrekta mått och lägen för alla byggnader och banor.
-- Ridhuset invändigt i gå-läge: läktaren, sponsorväggarna, speglarna,
+- ⏳ Flygbild/karta → korrekta mått och lägen för alla byggnader och
+  banor. **Väntar på en flygbild i Drive-mappen** — måtten är tills
+  vidare rekonstruerade ur referensfotona.
+- ✅ Ridhuset invändigt i gå-läge: läktaren, sponsorväggarna, speglarna,
   domarbåset, trappan till Café Krubban.
-- Stallets servicedel spelbar: spolspilta och sadelkammare som rum.
-- Fler foton ur Drive-mappen vävs in (interiörer, detaljer, hästarna).
+- ✅ Stallets servicedel spelbar: spolspiltan med slangvinda (leriga ben
+  efter hagen spolas av) och sadelkammaren där varje häst har sin egen
+  sadelbygel och tränskrok med namnskylt.
+- ✅ Fler foton ur Drive-mappen vävs in (interiörer, detaljer, hästarna).
 
 **Klart när:** kartvyn kan läggas bredvid en flygbild utan att skämmas.
 

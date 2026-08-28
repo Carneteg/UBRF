@@ -191,6 +191,9 @@ function interaktioner(){
           }
           G.leder=true; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
           ljudGnagg();
+          /* Hagen är blöt i regn och lerig i slasket — benen ska spolas. */
+          G.lerig=!!(G.vader&&(G.vader.typ==="regn"||G.vader.temp<9));
+          G.spolad=0;
           saga(G.tackePa
             ?`${h.namn} har täcket på i det här vädret. Grimman på — led honom till boxen.`
             :`Grimman på. Led ${h.namn} till boxen i stallet.`,4);
@@ -219,9 +222,13 @@ function interaktioner(){
     if(G.hastId&&!G.skotselRes){
       const b=hittaBox(G.hastId);
       if(b&&G.leder&&!G.hamtad){
-        L.push({pos:b.dorr, text:`Släpp in ${HORSES[G.hastId].namn} i boxen`,
+        L.push({pos:b.dorr, text:G.lerig
+            ?`Släpp in ${HORSES[G.hastId].namn} (leriga ben — spolspiltan ligger i norr)`
+            :`Släpp in ${HORSES[G.hastId].namn} i boxen`,
           gor(){G.leder=false;G.hamtad=true;ljudFnys();
-            saga("Han går in och drar en tugga hö. Nu: boxen, fodret och sadeln.",3.5);}});
+            saga(G.lerig
+              ?"Han går in med leran kvar på benen. Ridläraren kommer att se den."
+              :"Han går in och drar en tugga hö. Nu: boxen, fodret och sadeln.",3.5);}});
       }else if(b&&G.hamtad){
         L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
           gor(){visaBoxmeny();}});
@@ -229,10 +236,29 @@ function interaktioner(){
     }
     L.push({pos:S.whiteboard.pos, text:"Dagens schema (whiteboarden)",
       gor(){visaSchema();}});
-    for(const i of (S.info||[])) L.push({pos:i.pos, text:i.text,
-      gor(){ if(i.teori)visaTeori();
-        else if(i.klubb&&typeof visaKlubbrum==="function")visaKlubbrum();
-        else saga(i.svar,4.5); }});
+    for(const i of (S.info||[])){
+      /* Spolspiltan används med hästen vid handen, på väg in från hagen. */
+      if(i.spolspilta){
+        const kanSpola=G.hastId&&G.leder&&!G.hamtad;
+        L.push({pos:i.pos, text:kanSpola
+            ?(G.lerig?`Spola av leran på ${HORSES[G.hastId].namn}`
+              :`Spola av ${HORSES[G.hastId].namn} i spiltan`)
+            :"Spolspiltan",
+          gor(){ if(kanSpola)visaSpolning();
+            else saga("Spolspiltan: gummimattor, duschblandare och slangvinda på väggen. Hit leds hästen in från hagen när benen är leriga.",4.5); }});
+        continue;
+      }
+      if(i.sadelkammare){
+        L.push({pos:i.pos, text:G.hastId&&!G.utrustning
+            ?`Hämta ${HORSES[G.hastId].namn}s sadel och träns`:"Sadelkammaren",
+          gor(){visaSadelkammare();}});
+        continue;
+      }
+      L.push({pos:i.pos, text:i.text,
+        gor(){ if(i.teori)visaTeori();
+          else if(i.klubb&&typeof visaKlubbrum==="function")visaKlubbrum();
+          else saga(i.svar,4.5); }});
+    }
   }
   return L;
 }
@@ -278,7 +304,7 @@ function startaVandring(){
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
   G.sysslor={mockat:0,fodrat:0}; G.hamtad=false; G.tackePa=false;
-  G.fangstForsok=false;
+  G.fangstForsok=false; G.utrustning=false; G.lerig=false; G.spolad=0;
   // dagens väder — avgör om hästarna går med täcke i hagen
   const v=(G.seed*2654435761>>>0)%100;
   G.vader={typ:v<52?"sol":v<80?"mulet":"regn", temp:7+(v%11)};
@@ -1477,12 +1503,16 @@ function ritaVandring(){
       :["Prata med ridläraren","Hon står i stallgången och fördelar hästarna."])
     : !G.hamtad
     ? (G.leder?[`Led ${HORSES[G.hastId].namn} till boxen`,
-         G.scen==="gard"?"In genom stalldörren och fram till boxen.":"Fram till boxen och släpp in honom (E)."]
+         G.scen==="gard"?"In genom stalldörren och fram till boxen."
+         :G.lerig?"Leriga ben efter hagen — spola av honom i spiltan i norra änden först."
+         :"Fram till boxen och släpp in honom (E)."]
        :[`Hämta ${HORSES[G.hastId].namn} i hagen`,
          "Grinden sitter på hagens västra sida, öster om stallet."])
     : !G.skotselRes
     ? [`Sköt om ${HORSES[G.hastId].namn}`,
-       G.scen==="stallinne"?"Vid boxen (E): mocka, fodra och sadla.":"Boxen är inne i stallet."]
+       G.scen!=="stallinne"?"Boxen är inne i stallet."
+       :!G.utrustning?"Hämta sadel och träns i sadelkammaren (klubbdelen) — sedan boxen."
+       :"Vid boxen (E): mocka, fodra och sadla."]
     : G.tavling
     ? [`Led ${HORSES[G.hastId].namn} till tävlingen`,
        G.scen==="stallinne"?"Ut genom stalldörren — tävlingsdagen väntar."

@@ -30,6 +30,163 @@ const FODERSCHEMA={
 };
 const KRAFTVAL=["inget","müsli","betfor","pellets"];
 
+/* ── Sadelkammaren ────────────────────────────────────────────────
+   Varje ridskolehäst har sin egen sadel på egen bygel och sitt träns
+   på egen krok, båda med namnskylt. Att hämta rätt utrustning är
+   första handgreppet — fel sadel passar inte ryggen den ska ligga på.
+   ── */
+function visaSadelkammare(){
+  if(!G.hastId){
+    saga("Sadelkammaren: sadelbyglar i två rader, träns på krokar och en vit pegboard med putsgrejer. Du hämtar din utrustning när du fått veta vilken häst du rider.",5);
+    return;
+  }
+  const h=HORSES[G.hastId];
+  /* Åtta byglar runt din häst — samma urval varje gång för samma frö. */
+  const alla=Object.keys(HORSES);
+  const mig=alla.indexOf(G.hastId);
+  const grannar=[];
+  for(let i=0;i<8;i++)grannar.push(alla[(mig+i+alla.length-3)%alla.length]);
+  if(!grannar.includes(G.hastId))grannar[3]=G.hastId;
+  const bygel=(id,typ)=>`<button class="btn ghost sk-val" data-typ="${typ}" data-id="${id}"
+    style="padding:8px 12px;font-size:12.5px;font-family:'IBM Plex Mono',monospace">${HORSES[id].namn}</button>`;
+  overlay(true,`
+  <span class="lbl">Sadelkammaren · innanför uppehållsrummet</span>
+  <h1 style="margin-top:6px">Din sadel, ditt träns</h1>
+  <p class="dim" style="font-size:13.5px;margin-top:2px">Varje häst har sin egen sadel på egen bygel — en sadel som
+  passar en annan rygg gör ingen nytta på ${h.namn}s. Namnskyltarna sitter på byglarna.</p>
+  <div style="margin-top:14px">
+    <div class="lbl" style="margin-bottom:6px">Sadelbyglarna</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${grannar.map(id=>bygel(id,"sadel")).join("")}</div>
+    <div class="lbl" style="margin:14px 0 6px">Tränskrokarna</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${grannar.map(id=>bygel(id,"trans")).join("")}</div>
+  </div>
+  <div class="note" id="skStatus" style="font-size:13px;margin-top:14px">
+    Du rider <b style="color:var(--ink)">${h.namn}</b> i dag. Ta hans sadel och hans träns.</div>
+  <div class="btnrow">
+    <button class="btn" id="bSkKlar">Ta med utrustningen</button>
+    <button class="btn ghost" id="bSkStang">Stäng</button>
+  </div>`);
+  const val={sadel:null,trans:null};
+  if(!document.getElementById("skStil")){
+    const st=document.createElement("style");st.id="skStil";
+    st.textContent=`.sk-val.sk-pa{background:var(--gold);color:#17140A;border-color:var(--gold)}`;
+    document.head.appendChild(st);
+  }
+  for(const b of document.querySelectorAll(".sk-val"))
+    b.onclick=()=>{
+      const typ=b.dataset.typ; val[typ]=b.dataset.id;
+      for(const b2 of document.querySelectorAll(`.sk-val[data-typ="${typ}"]`))
+        b2.classList.toggle("sk-pa",b2===b);
+    };
+  document.getElementById("bSkStang").onclick=()=>overlay(false);
+  document.getElementById("bSkKlar").onclick=()=>{
+    const st=document.getElementById("skStatus");
+    if(!val.sadel||!val.trans){
+      st.className="note bad";st.style.fontSize="13px";
+      st.textContent="Ta både sadel och träns — de hänger på var sin plats.";
+      return;
+    }
+    if(val.sadel!==G.hastId||val.trans!==G.hastId){
+      const fel=[val.sadel!==G.hastId?"sadeln":null,val.trans!==G.hastId?"tränset":null]
+        .filter(Boolean).join(" och ");
+      st.className="note bad";st.style.fontSize="13px";
+      st.innerHTML=`Fel ${fel}. Det där är <b>${HORSES[val.sadel!==G.hastId?val.sadel:val.trans].namn}</b>s —
+        läs namnskylten en gång till. ${h.namn}s hänger på sin egen plats.`;
+      G.felUtrustning=(G.felUtrustning||0)+1;
+      return;
+    }
+    G.utrustning=true;
+    saga(`Sadel, träns och ryktväska med dig. ${h.namn} väntar i boxen.`,3.5);
+    overlay(false);
+  };
+}
+
+/* ── Spolspiltan ──────────────────────────────────────────────────
+   Hästar som stått i hagen kommer in leriga, särskilt när det regnat.
+   Leran spolas av innan skötseln — genom lera går det varken att
+   visitera eller borsta, och lera under sadelgjorden ger skav.
+   ── */
+const SP={zoner:[],slang:false,cv:null,cx:null,sista:null};
+const SPOLZONER=[[0.44,0.72],[0.49,0.74],[0.68,0.74],[0.735,0.72],
+                 [0.46,0.85],[0.70,0.85],[0.57,0.66],[0.62,0.63]];
+function visaSpolning(){
+  const h=HORSES[G.hastId];
+  SP.zoner=SPOLZONER.map(()=>0);SP.slang=false;SP.sista=null;
+  overlay(true,`
+  <span class="lbl">Spolspiltan · gummimattor och slangvinda</span>
+  <h1 style="margin-top:6px">Spola av leran</h1>
+  <p class="dim" style="font-size:13.5px;margin-top:2px">Ta slangen och dra över benen och magen —
+  nerifrån och upp, ljummet vatten. Genom lera går det varken att visitera eller borsta ${h.namn} ordentligt.</p>
+  <canvas id="spolCanvas" style="width:100%;aspect-ratio:16/9;background:var(--sunk);
+    border:1px solid var(--rule);border-radius:3px;cursor:crosshair;touch-action:none;display:block"></canvas>
+  <div class="btnrow">
+    <span class="lbl" id="spolStatus" style="letter-spacing:.08em"></span>
+    <button class="btn" id="bSpolKlar">Tillbaka till stallgången</button>
+  </div>`);
+  SP.cv=document.getElementById("spolCanvas");SP.cx=SP.cv.getContext("2d");
+  const fit=()=>{const r=SP.cv.getBoundingClientRect();
+    SP.cv.width=r.width*DPR;SP.cv.height=r.height*DPR;
+    SP.cx.setTransform(DPR,0,0,DPR,0,0);ritaSpolning();};
+  fit();new ResizeObserver(fit).observe(SP.cv);
+  const pos=e=>{const r=SP.cv.getBoundingClientRect();
+    return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];};
+  const dra=p=>{
+    const[x,y]=p;
+    for(let i=0;i<SPOLZONER.length;i++){
+      const[zx,zy]=SPOLZONER[i];
+      if(Math.hypot(x-zx,y-zy)<0.075)SP.zoner[i]=Math.min(1,SP.zoner[i]+0.16);
+    }
+    uppdSpol();ritaSpolning();
+  };
+  SP.cv.addEventListener("pointerdown",e=>{SP.slang=true;dra(pos(e));e.preventDefault();});
+  SP.cv.addEventListener("pointermove",e=>{if(SP.slang)dra(pos(e));});
+  addEventListener("pointerup",()=>{SP.slang=false;});
+  document.getElementById("bSpolKlar").onclick=()=>{
+    G.spolad=SP.zoner.reduce((a,b)=>a+b,0)/SP.zoner.length;
+    if(G.spolad>=0.8){G.lerig=false;
+      saga(`${h.namn} skakar av sig vattnet och ser ut som en häst igen.`,3.5);}
+    else saga("Det sitter lera kvar. Ridläraren kommer att se den.",3.5);
+    overlay(false);
+  };
+  uppdSpol();
+}
+function uppdSpol(){
+  const kvar=SP.zoner.filter(v=>v<0.99).length;
+  document.getElementById("spolStatus").textContent=
+    kvar?`${SP.zoner.length-kvar} / ${SP.zoner.length} områden rena`:"Ren. Skrapa av vattnet och gå ut.";
+}
+function ritaSpolning(){
+  const c=SP.cx,W=SP.cv.clientWidth,H=SP.cv.clientHeight,h=HORSES[G.hastId];
+  c.clearRect(0,0,W,H);
+  // spiltan: kompositplank i galvade ramar, gummimatta på golvet
+  const gr=c.createLinearGradient(0,0,0,H);
+  gr.addColorStop(0,"#3E4247");gr.addColorStop(0.70,"#4A4E53");
+  gr.addColorStop(0.71,"#37383A");gr.addColorStop(1,"#2E2F31");
+  c.fillStyle=gr;c.fillRect(0,0,W,H);
+  c.strokeStyle="rgba(255,255,255,.05)";c.lineWidth=1;
+  for(let i=1;i<7;i++){c.beginPath();c.moveTo(0,H*0.10*i);c.lineTo(W,H*0.10*i);c.stroke();}
+  // slangvinda och blandare på väggen
+  c.strokeStyle="#8E939B";c.lineWidth=3;
+  c.beginPath();c.arc(W*0.09,H*0.15,W*0.035,0,Math.PI*2);c.stroke();
+  c.strokeStyle="#C4622E";c.lineWidth=4;
+  c.beginPath();c.moveTo(W*0.09,H*0.19);
+  c.quadraticCurveTo(W*0.12,H*0.62,W*0.30,H*0.84);c.stroke();
+  c.fillStyle="#8E939B";                                   // strålmunstycket
+  c.beginPath();c.ellipse(W*0.305,H*0.845,W*0.012,H*0.02,0.7,0,Math.PI*2);c.fill();
+  ritaHastSida(c,W*0.55,H*0.88,H*0.52,-1,h.farg,h.man,{pose:"sta"});
+  // leran och det avspolade
+  for(let i=0;i<SPOLZONER.length;i++){
+    const[zx,zy]=SPOLZONER[i], v=SP.zoner[i];
+    c.fillStyle=v>=0.99?"rgba(127,180,137,.40)"
+      :`rgba(92,74,52,${0.72-0.55*v})`;
+    c.beginPath();c.arc(W*zx,H*zy,W*0.036,0,Math.PI*2);c.fill();
+  }
+  // vattenpöl på mattan
+  c.fillStyle="rgba(120,150,170,.16)";
+  const blott=SP.zoner.reduce((a,b)=>a+b,0)/SP.zoner.length;
+  c.beginPath();c.ellipse(W*0.56,H*0.93,W*0.20*blott+W*0.04,H*0.035,0,0,Math.PI*2);c.fill();
+}
+
 /* ── Boxmenyn ─────────────────────────────────────────────────── */
 function visaBoxmeny(){
   const h=HORSES[G.hastId];
@@ -49,7 +206,8 @@ function visaBoxmeny(){
     <button class="btn ghost" id="bFodra" style="justify-content:space-between;width:100%">
       <span>2 · Fodra och vattna</span><span>${bock(s.fodrat)}</span></button>
     <button class="btn" id="bSkots" style="justify-content:space-between;width:100%">
-      <span>3 · Visitera, rykta, kratsa, sadla</span><span></span></button>
+      <span>3 · Visitera, rykta, kratsa, sadla</span>
+      <span>${G.utrustning?"":'<span class="gold">sadeln saknas</span>'}</span></button>
   </div>
   <div class="btnrow"><button class="btn ghost" id="bStang">Stäng</button></div>`);
   const bT=document.getElementById("bTacke");
@@ -59,6 +217,9 @@ function visaBoxmeny(){
   document.getElementById("bFodra").onclick=visaFodring;
   document.getElementById("bSkots").onclick=()=>{
     if(G.tackePa){saga("Täcket hänger i vägen — ta av det först.",3);return;}
+    if(!G.utrustning){overlay(false);
+      saga(`Du har varken sadel eller träns här. ${h.namn}s hänger på sin bygel i sadelkammaren, innanför uppehållsrummet.`,4.5);
+      return;}
     visaSkotsel();};
   document.getElementById("bStang").onclick=()=>overlay(false);
 }
@@ -81,7 +242,9 @@ function visaSchema(){
   <ul style="list-style:none;padding:0;margin:14px 0;display:grid;gap:9px;font-size:14.5px">
     ${rad(!!G.hastId,"Prata med ridläraren — dagens häst")}
     ${rad(!!G.hamtad,"Hämta hästen i hagen och led till boxen")}
+    ${G.lerig||G.spolad>0?rad(!G.lerig,"Spola av leriga ben i spolspiltan"):""}
     ${v.tacke?rad(G.hamtad&&!G.tackePa,"Ta av täcket och häng upp det"):""}
+    ${rad(!!G.utrustning,"Hämta sadel och träns i sadelkammaren")}
     ${rad(s.mockat>=0.99,"Mocka boxen och strö nytt spån")}
     ${rad(s.fodrat>=0.99,"Fodra och vattna efter schemat")}
     ${rad(!!G.skotselRes,"Visitera, rykta, kratsa och sadla")}
