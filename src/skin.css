@@ -178,3 +178,44 @@ kbd{font-family:inherit; font-weight:900; color:var(--panel-bottom);
 
 /* HUD:en hör inte hemma bakom en overlay */
 body:has(#ov:not(.hide)) .hud{opacity:0; pointer-events:none}
+
+/* ── Pekkontrollerna injiceras av mobil.js sist i head; högre
+      specificitet krävs för att kitets knappar ska vinna. ───────── */
+body.pek .pekKnapp{
+  font-family:inherit; font-weight:900; color:#fff; text-shadow:var(--text-outline);
+  border:none; border-radius:18px;
+  background:linear-gradient(180deg,var(--btn-purple-top),var(--btn-purple-bottom));
+  box-shadow:0 5px 0 rgba(30,5,50,.45), inset 0 3px 5px rgba(255,255,255,.45);
+  outline:3px solid rgba(255,255,255,.55); outline-offset:-5px;
+}
+body.pek .pekKnapp.ner{
+  transform:translateY(4px);
+  background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  color:var(--panel-bottom); text-shadow:none;
+  box-shadow:0 1px 0 rgba(30,5,50,.45), inset 0 3px 5px rgba(255,255,255,.5);
+}
+body.pek #joy{border:3px solid var(--gold); background:rgba(58,18,89,.55)}
+body.pek #joyKnopp{background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom));
+  border:3px solid #fff}
+
+/* ── Liten skärm: HUD:en krymper så att rutorna inte krockar ──── */
+@media (max-width:700px){
+  .box{padding:8px 11px; border-radius:14px; border-width:2.5px}
+  .hud.tl, .hud.tr{max-width:46vw}
+  #moment{min-width:0}
+  #momentNamn{font-size:15px; line-height:1.15}
+  #momentText{font-size:11px; line-height:1.35}
+  #momentBar{height:10px; border-width:2px}
+  .hud.tr #gait{font-size:17px}
+  .hud.tr #tempo{font-size:11px}
+  #pyr .prow, #aids .arow{font-size:9.5px; gap:5px}
+  #pyr .pname{min-width:64px} #aids .aname{min-width:44px}
+  .ptrack, .atrack{height:10px; border-width:1.5px; min-width:56px}
+  #pyr, #aids{transform:scale(.92); transform-origin:left bottom}
+  #inverkan{font-size:10.5px}
+  #saga:not(:empty){font-size:14px; padding:8px 16px}
+  #viewToggle button{font-size:11px; padding:7px 12px}
+  .sheet{padding:16px 15px; border-radius:18px; border-width:3px}
+  .sheet h1{font-size:clamp(22px,7vw,32px)}
+  .btn{font-size:15px; padding:11px 20px; border-radius:15px}
+}

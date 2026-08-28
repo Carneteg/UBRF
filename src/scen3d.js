@@ -844,23 +844,10 @@ function gl3dLage(pa){
   const app=document.getElementById("app");
   if(app&&app.classList.contains("gl3d")!==!!pa)app.classList.toggle("gl3d",!!pa);
 }
-/* Tredjepersonsvyn: äkta 3D när kortet räcker, annars målarvyn. */
+/* Ridvyn är sidovyn i lager (src/ritt2d.js). WebGL-motorn används
+   fortfarande av gå-läget; ridscenen behöver den inte. */
 function draw3D(Gs){
-  if(rita3D(Gs)){
-    gl3dLage(true);
-    cx.clearRect(0,0,CW,CH);
-    if(G.plats!=="ridhus"&&G.vader&&G.vader.typ==="regn"){
-      cx.strokeStyle="rgba(190,200,210,.26)";cx.lineWidth=1;
-      const off=(G.t*640)%CH;
-      cx.beginPath();
-      for(let i=0;i<70;i++){
-        const rx=(i*97+i*i*13)%CW, ry=((i*173)%CH+off)%CH;
-        cx.moveTo(rx,ry);cx.lineTo(rx-3,ry+14);
-      }
-      cx.stroke();
-    }
-    return;
-  }
   gl3dLage(false);
-  draw3DCanvas(Gs);
+  cx.clearRect(0,0,CW,CH);
+  ritaRitt2D();
 }

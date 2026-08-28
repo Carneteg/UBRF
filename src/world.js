@@ -325,7 +325,7 @@ function hudLage(lage){
   const vt=document.getElementById("viewToggle");
   vt.hidden=false;
   vt.querySelector('[data-v="2d"]').textContent=gang?"Karta":"Bana";
-  vt.querySelector('[data-v="3d"]').textContent=gang?"Bakom dig":"Bakom hästen";
+  vt.querySelector('[data-v="3d"]').textContent=gang?"Bakom dig":"Sidovy";
 }
 function visaUppgift(rubrik,text){
   document.getElementById("momentLbl").textContent="Uppgift";
