@@ -115,16 +115,54 @@ function s3BygHast(){
   const nyNat=b=>GL.nat(b);
   /* Måtten är en varmblodshäst på 1,62 m i mankhöjd: bålen 1,85 m
      lång, 0,72 m hög och 0,58 m bred, benen 1,08 m från bog till hov. */
-  D.kropp=nyNat(new Bygge().klot(1,vit,M4.skala(0.92,0.36,0.29),16));
-  D.bringa=nyNat(new Bygge().klot(1,vit,M4.skala(0.40,0.40,0.30),14));
-  D.kors=nyNat(new Bygge().klot(1,vit,M4.skala(0.40,0.37,0.30),14));
-  D.hals=nyNat(new Bygge().cyl(0.215,0.105,1,vit,null,14));
-  D.huvud=nyNat((()=>{
-    const b=new Bygge();
-    b.klot(1,vit,M4.skala(0.29,0.135,0.108),14);
-    b.klot(1,vit,M4.mul(M4.translation(0.27,-0.045,0),M4.skala(0.115,0.088,0.086)),12);
-    b.klot(1,vit,M4.mul(M4.translation(-0.16,0.02,0),M4.skala(0.16,0.15,0.125)),12);
-    return b;})());
+  /* Bålen sveps i ett stycke: bringan smal och djup, gjordläget vidast,
+     flanken indragen och korset runt igen. Ryggen är smalare än buken,
+     så ryggraden syns som en linje i stället för som ett rör. */
+  const ROND=(t,a,b)=>{                        // rundar av ändarna
+    if(t<a)return Math.sqrt(Math.max(0,1-Math.pow((a-t)/a,2)));
+    if(t>b)return Math.sqrt(Math.max(0,1-Math.pow((t-b)/(1-b),2)));
+    return 1;
+  };
+  const KX=[[0,0.98],[0.22,0.60],[0.50,0.14],[0.78,-0.52],[1,-1.04]];
+  const KTOPP=[[0,1.335],[0.10,1.450],[0.22,1.520],[0.42,1.478],[0.62,1.466],
+               [0.80,1.516],[0.90,1.498],[1,1.420]];
+  const KBUK=[[0,1.140],[0.10,1.030],[0.25,0.990],[0.50,1.000],[0.70,1.090],
+              [0.85,1.200],[1,1.300]];
+  const KBRE=[[0,0.105],[0.10,0.200],[0.22,0.266],[0.42,0.300],[0.60,0.296],
+              [0.74,0.254],[0.85,0.296],[0.94,0.238],[1,0.115]];
+  D.kropp=nyNat(s3Svep(new Bygge(),vit,44,22,(t,u)=>{
+    const a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
+    const r=ROND(t,0.045,0.965);
+    const topp=s3Stn(t,KTOPP), buk=s3Stn(t,KBUK);
+    const yc=(topp+buk)/2, h=(topp-buk)/2*r;
+    const w=s3Stn(t,KBRE)*r*(1-0.28*Math.max(0,ca)*Math.max(0,ca));
+    return [s3Stn(t,KX), yc+h*ca, w*sa];
+  }));
+  /* Halsen: djup och smal, med kam ovanpå och struphuvud under.
+     Byggs i halsens eget rum, x 0→1 från manken till nacken. */
+  D.hals=nyNat(s3Svep(new Bygge(),vit,26,18,(p,u)=>{
+    const t=-0.12+1.18*p, a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
+    const r=ROND(p,0.05,0.94);
+    const topp=s3Stn(t,[[-0.12,0.20],[0.05,0.30],[0.45,0.245],[0.80,0.175],[1.06,0.120]]);
+    const buk=s3Stn(t,[[-0.12,-0.22],[0.05,-0.275],[0.40,-0.225],[0.75,-0.135],[1.06,-0.100]]);
+    const bre=s3Stn(t,[[-0.12,0.20],[0.05,0.205],[0.45,0.160],[0.80,0.108],[1.06,0.082]]);
+    const yc=(topp+buk)/2, h=(topp-buk)/2*r;
+    const w=bre*r*(1-0.34*Math.max(0,ca)*Math.max(0,ca));
+    return [t, yc+h*ca, w*sa];
+  }));
+  /* Huvudet: pannben brett, käkpartiet tungt, nosen avsmalnande. */
+  D.huvud=nyNat(s3Svep(new Bygge(),vit,24,18,(p,u)=>{
+    const x=-0.32+0.68*p, a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
+    const r=ROND(p,0.06,0.93);
+    const topp=s3Stn(x,[[-0.32,0.075],[-0.20,0.135],[-0.05,0.126],[0.08,0.096],
+                        [0.20,0.058],[0.36,0.046]]);
+    const buk=s3Stn(x,[[-0.32,-0.075],[-0.20,-0.128],[-0.05,-0.156],[0.08,-0.163],
+                       [0.20,-0.114],[0.36,-0.086]]);
+    const bre=s3Stn(x,[[-0.32,0.072],[-0.20,0.106],[-0.05,0.114],[0.08,0.099],
+                       [0.20,0.068],[0.36,0.059]]);
+    const yc=(topp+buk)/2, h=(topp-buk)/2*r;
+    return [x, yc+h*ca, bre*r*sa];
+  }));
   D.ora=nyNat(new Bygge().cyl(0.038,0.004,0.14,vit,null,7));
   D.overben=nyNat(new Bygge().cyl(0.078,0.058,1,vit,null,12));
   D.skenben=nyNat(new Bygge().cyl(0.050,0.040,1,vit,null,12));
@@ -272,6 +310,49 @@ function s3Yta(b,farg,nt,nv,f,tjock){
   return b.las(P,N,U,I,farg,null);
 }
 
+/* ── Svepta kroppar ───────────────────────────────────────────────
+   Ett djur är inte staplade klot. s3Svep bygger en sluten, solid yta
+   av ringar längs en led: f(t,u) ger punkten där t går längs kroppen
+   och u varvet runt. Normalerna räknas ur grannringarna, så ytan blir
+   len över hela längden — bog, buk och kors i ett stycke.
+   Ringarna måste smalna av mot noll i båda ändarna; då sluter sig
+   kroppen av sig själv. ── */
+function s3Svep(b,farg,nt,nu,f){
+  const rut=[],P=[],N=[],U=[],I=[];
+  for(let i=0;i<=nt;i++){const rad=[];
+    for(let j=0;j<=nu;j++)rad.push(f(i/nt, j/nu));
+    rut.push(rad);}
+  for(let i=0;i<=nt;i++)for(let j=0;j<=nu;j++){
+    const q=rut[i][j];
+    const a=rut[Math.min(i+1,nt)][j], c=rut[Math.max(i-1,0)][j];
+    const d=rut[i][(j+1)%nu], e=rut[i][(j-1+nu)%nu];
+    const t=[a[0]-c[0],a[1]-c[1],a[2]-c[2]];
+    const w=[d[0]-e[0],d[1]-e[1],d[2]-e[2]];
+    let n=[t[1]*w[2]-t[2]*w[1], t[2]*w[0]-t[0]*w[2], t[0]*w[1]-t[1]*w[0]];
+    let L=Math.hypot(n[0],n[1],n[2]);
+    if(L<1e-9){n=[0,1,0];L=1;}
+    P.push(q[0],q[1],q[2]); N.push(n[0]/L,n[1]/L,n[2]/L); U.push(i/nt, j/nu);
+  }
+  for(let i=0;i<nt;i++)for(let j=0;j<nu;j++){
+    const a=i*(nu+1)+j, c=a+1, d=a+nu+1, e=d+1;
+    I.push(a,d,e, a,e,c);
+  }
+  return b.las(P,N,U,I,farg,null);
+}
+/* Linjär tolkning över stationer [[t,v],…] — kroppens mått anges
+   där de betyder något: bog, gjordläge, flank, kors. */
+function s3Stn(t,st){
+  if(t<=st[0][0])return st[0][1];
+  for(let i=1;i<st.length;i++){
+    if(t<=st[i][0]){
+      const a=st[i-1], b=st[i], k=(t-a[0])/Math.max(b[0]-a[0],1e-6);
+      const s=k*k*(3-2*k);                       // mjuk övergång
+      return a[1]+(b[1]-a[1])*s;
+    }
+  }
+  return st[st.length-1][1];
+}
+
 /* Matris som lägger en enhetscylinder (radie 1, höjd 1, längs +Y)
    mellan två punkter — används till ben, tyglar, bommar och reglar. */
 function s3Segment(a,b,r){
@@ -346,10 +427,8 @@ function s3RitaHast(o){
     if(o.skugga)gl.skugga(nat,m,0);
   };
 
-  /* Bålen. */
-  rita(D.kropp,M4.translation(0,1.18,0),farg);
-  rita(D.bringa,M4.translation(0.72,1.24,0),farg);
-  rita(D.kors,M4.translation(-0.72,1.22,0),glMorka(farg,0.96));
+  /* Bålen — en enda svept kropp, redan i hästens egna mått. */
+  rita(D.kropp,M4.ny(),farg);
   /* Halsen: reser sig när hästen samlas, sträcks på lång tygel. */
   const samling=o.samling===undefined?0.4:o.samling;
   const halsA=P(0.84,1.34,0), halsL=0.88+0.07*(1-samling);
@@ -357,7 +436,9 @@ function s3RitaHast(o){
   const halsVin=o.beta ? -0.72
     : 0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
   const halsB=P(halsA[0]+Math.cos(halsVin)*halsL, halsA[1]+Math.sin(halsVin)*halsL, 0);
-  rita(D.hals,s3Segment(halsA,halsB,1),farg);
+  const halsM=M4.mul(M4.mul(M4.translation(halsA[0],halsA[1],0),M4.rotZ(halsVin)),
+    M4.skala(halsL,1,1));
+  rita(D.hals,halsM,farg);
   /* Huvudet följer halsens vinkel, nosen något nedåt. */
   const nick=o.beta ? -1.15 : halsVin-0.95-0.25*samling;
   const huvudM=M4.mul(M4.translation(halsB[0]+Math.cos(nick)*0.19,
