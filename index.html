@@ -61,6 +61,30 @@ button{font-family:inherit}
 #momentText{font-size:14px; color:#DCD9D1; margin-top:5px; line-height:1.5}
 #momentBar{height:3px; background:var(--sunk); border-radius:2px; margin-top:10px; overflow:hidden}
 #momentBar i{display:block; height:100%; background:var(--gold); width:0%; transition:width .3s linear}
+/* Stapeln lyser medan kravet hålls. Det är den enda återkopplingen som
+   syns i ögonvrån utan att man tittar bort från hästen. */
+#momentBar.haller i{background:var(--emerald); box-shadow:0 0 8px var(--emerald)}
+#momentMal{font-size:11px; opacity:.72; margin-top:5px; letter-spacing:.02em}
+/* Hur hästen är idag, sagt med ord i stället för som en mätare. Det är
+   meningen att spelaren ska lära sig läsa hästen, inte en siffra. */
+.humor{margin:6px 0 0; font-style:italic; opacity:.9}
+/* Raderna ligger i momentrutan, inte i en egen — HUD:en har inte plats
+   för fler paneler på en liten skärm. */
+#vaxer{margin-top:9px; padding-top:8px; border-top:1px solid rgba(255,255,255,.14)}
+.vaxrad{display:flex; align-items:center; gap:8px; font-size:12px; margin-top:5px}
+.vaxrad span{flex:1; white-space:nowrap}
+.vaxrad b{display:block; width:74px; height:6px; background:var(--sunk);
+  border-radius:3px; overflow:hidden}
+.vaxrad b i{display:block; height:100%; width:0%; background:var(--emerald);
+  transition:width .25s ease-out}
+/* Blixten när en färdighet passerar ett helt steg. Kort och tyst — det
+   ska kännas som en klapp på axeln, inte som en nivåhöjning i ett
+   mobilspel. */
+#fardBlixt{position:fixed; left:50%; top:22%; transform:translateX(-50%);
+  background:var(--panel-top); color:var(--cream); border:2px solid var(--gold);
+  border-radius:14px; padding:10px 18px; font-weight:700; pointer-events:none;
+  opacity:0; transition:opacity .4s ease, transform .4s ease; z-index:60}
+#fardBlixt.pa{opacity:1; transform:translateX(-50%) translateY(-8px)}
 
 /* gångart */
 #gait{font-family:Petrona,serif; font-size:27px; line-height:1; color:#F4F1E8}
@@ -249,6 +273,11 @@ tr:last-child td{border-bottom:0}
     <div id="momentNamn">—</div>
     <div id="momentText"></div>
     <div id="momentBar"><i></i></div>
+    <div id="momentMal"></div>
+    <div id="vaxer">
+      <div class="vaxrad"><span>Hästen slappnar av</span><b id="vHast"><i></i></b></div>
+      <div class="vaxrad"><span>Du blir mjukare</span><b id="vDu"><i></i></b></div>
+    </div>
   </div></div>
 
   <div class="hud tr"><div class="box">
@@ -295,6 +324,8 @@ tr:last-child td{border-bottom:0}
 <script src="src/world.js"></script>
 <script src="src/game.js"></script>
 <script src="src/ryttare.js"></script>
+<script src="src/framsteg.js"></script>
+<script src="src/humor.js"></script>
 <script src="src/tavling.js"></script>
 <script src="src/scen3d.js"></script>
 <script src="src/ritt2d.js"></script>

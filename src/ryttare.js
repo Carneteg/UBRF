@@ -89,7 +89,20 @@ function registreraPass(dom){
   SPAR.pass++;
   /* Hästen minns passet: rang, form och att den gick nyss. Efter en
      ridd rehab-dag är vägen tillbaka avklarad. */
-  const ny={...m, rang:clamp(G.ride?G.ride.rang:m.rang,0,1), pass:m.pass+1,
+  /* Skötseln väger in i relationen, inte bara i dagsformen. Sköter du
+     henne väl minns hon det; slarvar du minns hon det också, och den
+     skulden rider man inte av sig på ett pass. Priset är medvetet
+     större nedåt än uppåt — förtroende byggs långsamt och tappas fort,
+     hos hästar som hos människor. */
+  let rangEfterRitt=clamp(G.ride?G.ride.rang:m.rang,0,1);
+  {const sk=G.skotselRes;
+   if(sk){
+     const form=clamp(sk.dagsform??0.7,0,1);
+     const slarv=(sk.risker||[]).length;
+     const skotselDelta=(form-0.62)*0.12-slarv*0.035;
+     rangEfterRitt=clamp(rangEfterRitt+skotselDelta,0,1);
+   }}
+  const ny={...m, rang:rangEfterRitt, pass:m.pass+1,
     sistaPassNr:SPAR.pass, sistaForm:Math.round(G.dagsform*100)/100, rehab:false};
   delete ny.skada;
   /* Slarv i skötseln har ett pris dagen efter — sten i hoven eller

@@ -76,44 +76,66 @@ function stepRide(s,a,h,ctx,dt){
       +0.7*Math.abs(a.sits-m.sits)+0.7*Math.abs(a.styrning-m.styrning);
     m.skankel+=(a.skankel-m.skankel)*beta; m.tygel+=(a.tygel-m.tygel)*beta;
     m.sits+=(a.sits-m.sits)*beta; m.styrning+=(a.styrning-m.styrning)*beta;
-    const kvot=avvik/K.AMPLITUD_SKALA, tick=1/(1+kvot*kvot);
-    s.mjukhet+= (tick-s.mjukhet)*clamp(K.MJUKHET_EMA*dt,0,1);
+    /* Färdigheten vidgar fönstret: en van hand får darra mer innan
+       mjukheten faller, och hittar tillbaka snabbare efter ett ryck.
+       Saknas F gäller nybörjarens värden — modellen fungerar utan. */
+    const F=ctx.fard||{};
+    const kvot=avvik/(K.AMPLITUD_SKALA*(F.amplitud||1)), tick=1/(1+kvot*kvot);
+    s.mjukhet+= (tick-s.mjukhet)*clamp(K.MJUKHET_EMA*(F.mjukhetFart||1)*dt,0,1);
   }
   // halvhalt
   let hhKval=0;
   {const hh=s._hh,p=s._prev;
    if(p){const dS=a.sits-p.sits,dK=a.skankel-p.skankel,dT=a.tygel-p.tygel;
     if(hh.fas===0){
-      if(dS>0&&dK>0&&dT>0&&(dS+dK+dT)>=K.HH_MIN_AMPLITUD&&(s._tid-s._senasteHH)>K.HH_COOLDOWN){
+      const hhMin=K.HH_MIN_AMPLITUD*((ctx.fard&&ctx.fard.hhAmplitud)||1);
+      if(dS>0&&dK>0&&dT>0&&(dS+dK+dT)>=hhMin&&(s._tid-s._senasteHH)>K.HH_COOLDOWN){
         hh.fas=1;hh.t=0;const m=(dS+dK+dT)/3;
         const av=(Math.abs(dS-m)+Math.abs(dK-m)+Math.abs(dT-m))/3;
         hh.kval=clamp(1-av/Math.max(m,0.05),0,1);}
     }else{hh.t+=dt;
-      if(hh.t>K.HH_FONSTER){hh.fas=0;hhKval=-0.35;}
+      if(hh.t>K.HH_FONSTER*((ctx.fard&&ctx.fard.hhFonster)||1)){hh.fas=0;hhKval=-0.35;}
       else if(dT<-0.02&&a.tygel<=p.tygel){hh.fas=0;s._senasteHH=s._tid;hhKval=hh.kval;}}}
   }
   // spänning
   {const kf=0.55+0.9*h.kanslighet;let press=0;
+   const bandExtra=(ctx.fard&&ctx.fard.tygelband)||0;
    if(a.tygel>K.TYGEL_HART)press+=(a.tygel-K.TYGEL_HART)*2.6;
-   else if(a.tygel>K.TYGEL_BAND_MAX)press+=(a.tygel-K.TYGEL_BAND_MAX)*0.9;
+   else if(a.tygel>K.TYGEL_BAND_MAX+bandExtra)press+=(a.tygel-K.TYGEL_BAND_MAX-bandExtra)*0.9;
    press+=(1-s.mjukhet)*0.85;
    if(a.skankel>K.SKANKEL_FOR_MYCKET)press+=(a.skankel-K.SKANKEL_FOR_MYCKET)*1.1;
    if(a.sits>0.75&&s.gangart==="galopp")press+=(a.sits-0.75)*0.7;
    if(a.spo&&h.flaggor.radd_for_spo)press+=1.6; else if(a.spo)press+=0.15;
    press+=(1-ctx.stallro)*0.5+(1-s.sadellage)*0.7+(1-ctx.underlag)*0.25;
    press+=h.skygghet*0.18*(ctx.utomhus?1.5:1);
-   const lugn=s.rang*0.6+h.forlatande*0.5+s.mjukhet*0.6+s.dagsform*0.3;
+   const lugn=s.rang*0.6+h.forlatande*0.5+s.mjukhet*0.6+s.dagsform*0.3
+     +((ctx.fard&&ctx.fard.lugn)||0);
    const mal=clamp(press*kf-lugn*0.45,0,1);
    s.spanning=clamp(approach(s.spanning,mal,K.SPANNING_STIGNING*(0.6+0.8*h.kanslighet),
      K.SPANNING_FALL*(0.5+1.0*h.forlatande),dt),0,1);
   }
   // tempo — förhandling, inte kommando
   {const g=Gait.G[s.gangart]||Gait.G.halt;
-   const eget=g.norm*(0.80+0.40*h.framatbjudning);
+   /* Avdriften: hästens eget tempo ligger inte still. Hon glider sakta
+      åt sitt håll och rycker till ibland, och hur mycket beror på
+      lydnaden och dagens humör. Det är den här termen som gör att
+      stillasittande inte längre är optimalt — släpper du henne faller
+      takten, och takten är det inverkan mäter.
+
+      Två frekvenser med olika period, så att vandringen aldrig blir en
+      förutsägbar sinus man lär sig utantill. */
+   const D=ctx.avdrift||{glid:0,ryck:0,tröghet:1};
+   const t=s._tid;
+   const vandring=D.glid*(0.62*Math.sin(t*0.41)+0.38*Math.sin(t*0.97+1.3))
+     + D.ryck*Math.max(0,Math.sin(t*0.23+2.1))**6;
+   const eget=g.norm*(0.80+0.40*h.framatbjudning)+vandring*(g.norm>0?1:0);
    const begaran=(a.skankel-a.tygel*0.9)*3.2;
    const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
-   const tr=1.6+1.4*h.tyngd;
+   /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
+      omöjlig, hon kräver att du ber tydligare och håller kvar. */
+   const tr=(1.6+1.4*h.tyngd)*D.tröghet;
    s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
+   s._avdrift=vandring;
    s.gangart=Gait.forTempo(s.tempo,s.gangart);
    s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
   }
@@ -130,7 +152,7 @@ function stepRide(s,a,h,ctx,dt){
    if(s.gangart==="trav"&&a.lattridning)diag=(1-clamp(a.diagonal,0,1))*0.30;
    if(s.gangart==="trav"&&!a.lattridning&&s.spanning>0.5)diag+=0.10;
    mal.takt=clamp(0.15+0.42*stab+0.28*s.mjukhet+0.15*h.utbildning-svang-diag-0.30*s.spanning,0,1);
-   const handMjuk=1-clamp((a.tygel-K.TYGEL_BAND_MAX)/0.35,0,1);
+   const handMjuk=1-clamp((a.tygel-K.TYGEL_BAND_MAX-((ctx.fard&&ctx.fard.tygelband)||0))/0.35,0,1);
    mal.losgjordhet=clamp(0.10+0.55*(1-s.spanning)+0.20*handMjuk+0.18*s.dagsform
      +0.12*s.sadellage+0.10*h.forlatande-0.15*(1-s.mjukhet),0,1);
    const mitt=(K.TYGEL_BAND_MIN+K.TYGEL_BAND_MAX)/2,halv=(K.TYGEL_BAND_MAX-K.TYGEL_BAND_MIN)/2;

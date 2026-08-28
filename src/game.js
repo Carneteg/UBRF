@@ -67,8 +67,8 @@ const G={
   hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   utrustning:false,lerig:false,spolad:0,felUtrustning:0,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
-  dagsform:0.7,sadellage:0.8,stallro:0.9,
-  moment:null,momentIx:0,momentT:0,
+  dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
+  moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,
   betyg:{},npcs:[],
   hinderAktiva:false,nastaHinder:0,rivna:new Set(),handelser:[],banTid:0,banStart:0,
   vagranStopp:0,sisteHopp:0,luft:0,auto:false,
@@ -112,7 +112,13 @@ function stegaRitt(dt){
      gör underlaget tyngre än ridhusets harvade fiber. */
   const ute=G.plats!=="ridhus";
   const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
-  stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,utomhus:ute},dt);
+  stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,
+    utomhus:ute,fard:fardighetsMod(),
+    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,fardighetsMod().halla)},dt);
+  /* Färdigheterna växer av det som just hände. Returnerar ett id när en
+     färdighet passerar ett helt tiondelssteg, så att det går att visa. */
+  {const steg=stegaFardighet(G.ride,G.aids,dt);
+   if(steg)visaFardighetsSteg(steg);}
   G.rikt+=omega*dt*(G.ride.tempo>0.2?1:0);
   // väggkollision: mjuk knuff in
   let nx=G.px+Math.cos(G.rikt)*G.ride.tempo*dt;
@@ -286,6 +292,7 @@ function visaMoment(){
   document.getElementById("momentNamn").textContent=m.namn;
   document.getElementById("momentText").textContent=
     m.text+((m.ovning||MOMENT_OVNING[m.id])?" · T öppnar övningen i träningsboken.":"");
+  document.getElementById("momentMal").textContent=momentMalText(m,G.grupp);
   saga(m.text,4);
 }
 function stegaLektion(dt){
@@ -296,18 +303,41 @@ function stegaLektion(dt){
     stegaBana(dt);
     document.querySelector("#momentBar i").style.width=(G.nastaHinder-1)/6*100+"%";
   }else{
-    document.querySelector("#momentBar i").style.width=clamp(G.momentT/m.tid*100,0,100)+"%";
+    /* Momentet klaras genom att HÅLLA kvaliteten, inte genom att vänta ut
+       en klocka. Stapeln visar hållen tid, inte förfluten. Sjunker du under
+       kravet rinner den tillbaka — långsammare än den fylls, för att ett
+       ögonblicks slarv inte ska radera en hel långsida. */
+    const mal=momentMal(m,G.grupp);
+    if(mal){
+      /* Både kvaliteten OCH tempot måste hållas. Kvaliteten ensam går
+         att nå genom att sitta still; tempobandet gör att hon glider
+         ur det om du inte rider henne. */
+      const kval=Skala.inverkan(G.ride.skala,G.grupp);
+      const over=kval>=mal.krav&&iTempoBand(G.ride,G.grupp);
+      G.momentHall=clamp((G.momentHall||0)+(over?dt:-dt*0.45),0,mal.hall);
+      document.querySelector("#momentBar i").style.width=G.momentHall/mal.hall*100+"%";
+      document.querySelector("#momentBar").classList.toggle("haller",over);
+      G.momentKlart=G.momentHall>=mal.hall;
+    }else{
+      document.querySelector("#momentBar i").style.width=clamp(G.momentT/m.tid*100,0,100)+"%";
+      G.momentKlart=G.momentT>=m.tid;
+    }
+    {const mt=document.getElementById("momentMal");
+     if(mt)mt.textContent=momentMalText(m,G.grupp);}
     // ridlärartillsägelser
     G.sagaCd-=dt;
     if(G.sagaCd<=0&&G.momentT>6){
       const[rop]=ridlararRop(G.ride,G.grupp,Math.floor(G.t));
       saga(rop,3.4);G.sagaCd=11+Math.random()*5;
     }
-    if(G.momentT>=m.tid||G.hoppaMoment){
+    /* Taket: även ett moment man inte klarar tar slut till slut, så att
+       ingen fastnar. Då blir det underkänt, inte oändligt. */
+    if(G.momentKlart||G.momentT>=m.tid*2.2||G.hoppaMoment){
       G.hoppaMoment=false;
       if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp);
       G.momentIx++;
-      if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;visaMoment();}
+      if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;
+        G.momentHall=0;G.momentKlart=false;visaMoment();}
       else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
         const dom=domaRitt([],0,true);
         dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
@@ -391,7 +421,7 @@ function loop(now){
     stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
     if(G.luft>0)G.luft-=dt;
     if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
-    ritaHUD();
+    ritaHUD(); ritaVaxer();
   } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
     gl3dLage(false);
     stegaVandring(dt);ritaVandring();

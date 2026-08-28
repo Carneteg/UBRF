@@ -6,7 +6,7 @@ local BK = BuildKit -- (om BuildKit är inklistrad ovanför) eller: require(game
 
 -- KORT.md › Placering
 local model, base = BK.newBuilding("Ridhuset", Vector3.new(0, 0, 0), 0, {
-	Källa = "reference/buildings/ridhus", Version = 1,
+	Referens = "references/buildings/ridhus", Version = 1,
 })
 
 -- KORT.md › Volym: fotavtryck 60 × 22 m, takfot 4,5 m   [PLATSHÅLLARE]
