@@ -131,8 +131,7 @@ ryttaren lättrider, sitter lätt och tar tygel med hjälperna.
 
 Ingen three.js och inget CDN — motorn är skriven för spelet, så det
 förblir en enda fil som fungerar utan nätverk. Saknas WebGL faller
-vyn tillbaka på den handrullade målarrenderaren, och gå-läget till
-fots använder den fortfarande.
+alla vyer tillbaka på den handrullade målarrenderaren.
 
 Gå-läget till fots renderas i samma motor: gården med byggnadernas
 sadeltak, fasadöppningar, staket, träd och rekvisita byggda ur ANL:s
