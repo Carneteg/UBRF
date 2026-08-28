@@ -581,63 +581,127 @@ function v3dKamera(dt){
    som smalnar mot midjan, sluttande axlar, leder som kulor så att
    armar och ben hänger ihop, och armbåge och knä som verkligen viker
    sig i gången. ── */
+/* Ett lem som svept kropp: radien anges där den betyder något —
+   axel, armbåge, handled — och ytan går i ett stycke däremellan.
+   Byggs i enhetsramen y 0→1 så att s3Segment kan lägga den mellan
+   två punkter. bredd() ger halva bredden, djup() halva djupet. */
+function v3dLem(st, seg){
+  return s3Svep(new Bygge(),"#FFFFFF",seg||16,10,(t,u)=>{
+    const a=u*Math.PI*2;
+    const r=ROND2(t);
+    return [Math.sin(a)*s3Stn(t,st.b)*r, t, Math.cos(a)*s3Stn(t,st.d)*r];
+  });
+}
+/* Rundar av lemmens ändar så att den sluter sig. */
+function ROND2(t){
+  const k=0.06;
+  if(t<k)return Math.sqrt(Math.max(0,1-Math.pow((k-t)/k,2)));
+  if(t>1-k)return Math.sqrt(Math.max(0,1-Math.pow((t-(1-k))/k,2)));
+  return 1;
+}
+
 function v3dBygFigur(){
   if(S3.del.gTorso)return;
-  const D=S3.del, JEANS="#3C4A63", HUD="#E0B892";
-  /* Bålen är en enda avsmalnande form, inte staplade klot: midjan
-     smal, bröstkorgen bred, axlarna rundade. Jackan bakas vit så att
-     varje figur kan få sin egen färg via ton. */
-  D.gTorso=GL.nat((()=>{
-    const b=new Bygge(), V="#FFFFFF";
-    b.cyl(0.120,0.162,0.36,V,M4.mul(M4.translation(0,0.02,0),
-      M4.skala(1,1,0.78)),18);                                     // midja → bröst
-    b.klot(1,V,M4.mul(M4.translation(0,0.35,0),M4.skala(0.168,0.092,0.112)),16);
-    b.klot(1,V,M4.mul(M4.translation(-0.02,0.375,0),
-      M4.skala(0.105,0.070,0.098)),12);                            // kragen
-    return b;})());
-  /* Höften och skärpet behåller sin egen färg. */
+  const D=S3.del, JEANS="#3C4A63", HUD="#E0B892", HAR="#5E4028";
+
+  /* Bålen sveps i ett stycke i figurens egna mått, fötterna i y=0:
+     höften bred, midjan indragen, bröstkorgen djup, axlarna sluttande.
+     Jackan bakas vit så att varje figur får sin egen färg via ton. */
+  D.gTorso=GL.nat(s3Svep(new Bygge(),"#FFFFFF",26,16,(t,u)=>{
+    const y=0.855+t*0.575;                       // höftkam → nackgrop
+    const a=u*Math.PI*2, r=ROND2(t);
+    const B=[[0,0.152],[0.12,0.130],[0.34,0.146],[0.58,0.180],
+             [0.78,0.212],[0.90,0.204],[1,0.088]];
+    const Dj=[[0,0.114],[0.12,0.098],[0.34,0.112],[0.58,0.130],
+              [0.78,0.126],[0.90,0.112],[1,0.078]];
+    /* bröstkorgen buktar framåt, ryggen är rakare */
+    const fram=Math.max(0,Math.cos(a))*s3Stn(t,[[0,0],[0.5,0.012],[0.75,0.026],[1,0.004]]);
+    return [Math.sin(a)*s3Stn(t,B)*r, y, Math.cos(a)*s3Stn(t,Dj)*r + fram];
+  }));
+
+  /* Höften och skärpet i byxans färg. */
   D.gHoft=GL.nat((()=>{
-    const b=new Bygge();
-    b.lada(0.29,0.048,0.220,"#2A2620",M4.translation(0,0.005,0));  // skärp
-    b.cyl(0.150,0.126,0.21,JEANS,M4.mul(M4.translation(0,-0.20,0),
-      M4.skala(1,1,0.80)),16);
-    b.cyl(0.050,0.050,0.11,HUD,M4.translation(0,0.39,0),10);       // hals
+    const b=s3Svep(new Bygge(),JEANS,14,14,(t,u)=>{
+      const y=0.70+t*0.185, a=u*Math.PI*2, r=ROND2(t);
+      const B=[[0,0.118],[0.45,0.140],[1,0.152]];
+      const Dj=[[0,0.098],[0.45,0.108],[1,0.115]];
+      return [Math.sin(a)*s3Stn(t,B)*r, y, Math.cos(a)*s3Stn(t,Dj)*r];
+    });
+    b.lada(0.315,0.042,0.238,"#2A2620",M4.translation(0,0.878,0));   // skärp
+    b.cyl(0.048,0.044,0.075,HUD,M4.translation(0,1.418,0),12);       // hals
     return b;})());
-  D.gAxel=GL.nat(new Bygge().klot(0.046,"#FFFFFF",null,11));
-  D.gArmO=GL.nat(new Bygge().cyl(0.049,0.042,1,"#FFFFFF",null,14));
-  D.gArmU=GL.nat(new Bygge().cyl(0.042,0.036,1,"#FFFFFF",null,14));
-  D.gLedA=GL.nat(new Bygge().klot(0.038,"#FFFFFF",null,10));
-  D.gHand=GL.nat(new Bygge().klot(1,HUD,M4.skala(0.044,0.052,0.036),10));
-  D.gLar=GL.nat(new Bygge().cyl(0.080,0.062,1,JEANS,null,14));
-  D.gVad=GL.nat(new Bygge().cyl(0.058,0.046,1,JEANS,null,14));
-  D.gKna=GL.nat(new Bygge().klot(0.046,JEANS,null,10));
+
+  /* Armarna: överarm med axelmuskel, underarm som smalnar mot handleden. */
+  D.gArmO=GL.nat(v3dLem({b:[[0,0.058],[0.25,0.052],[1,0.041]],
+                         d:[[0,0.056],[0.25,0.050],[1,0.040]]},14));
+  D.gArmU=GL.nat(v3dLem({b:[[0,0.045],[0.30,0.043],[1,0.030]],
+                         d:[[0,0.044],[0.30,0.041],[1,0.029]]},14));
+  D.gAxel=GL.nat(new Bygge().klot(1,"#FFFFFF",M4.skala(0.048,0.042,0.046),12));
+  D.gLedA=GL.nat(new Bygge().klot(0.036,"#FFFFFF",null,10));
+  /* Handen: en formad kupa, inte ett klot. */
+  D.gHand=GL.nat(s3Svep(new Bygge(),HUD,10,10,(t,u)=>{
+    const a=u*Math.PI*2, r=ROND2(t);
+    const b=(0.036+0.014*Math.sin(t*Math.PI))*r, d=(0.024+0.006*Math.sin(t*Math.PI))*r;
+    return [Math.sin(a)*b, -t*0.115, Math.cos(a)*d];
+  }));
+
+  /* Benen: låret tjockt upptill, vaden med muskelbuk, smalben. */
+  D.gLar=GL.nat(v3dLem({b:[[0,0.092],[0.30,0.082],[1,0.056]],
+                        d:[[0,0.088],[0.30,0.080],[1,0.055]]},14));
+  D.gVad=GL.nat(v3dLem({b:[[0,0.058],[0.28,0.062],[0.72,0.042],[1,0.033]],
+                        d:[[0,0.057],[0.28,0.060],[0.72,0.041],[1,0.032]]},14));
+  D.gKna=GL.nat(new Bygge().klot(1,JEANS,M4.skala(0.052,0.046,0.050),10));
+  /* Kängan med klack och tå. */
   D.gKanga=GL.nat((()=>{
-    const b=new Bygge();
-    b.klot(1,"#2B211A",M4.mul(M4.translation(0.025,0.05,0),M4.skala(0.118,0.058,0.060)),11);
-    b.lada(0.215,0.035,0.108,"#181310",M4.translation(0.025,0.020,0));
+    const b=s3Svep(new Bygge(),"#2B211A",12,10,(t,u)=>{
+      const a=u*Math.PI*2, r=ROND2(t);
+      const br=(0.052+0.006*Math.sin(t*Math.PI))*r;
+      return [ -0.055+t*0.225, 0.052+Math.cos(a)*0.044*r - t*t*0.012,
+               Math.sin(a)*br ];
+    });
+    b.lada(0.075,0.030,0.092,"#181310",M4.translation(-0.028,0.015,0)); // klack
+    b.lada(0.215,0.022,0.104,"#181310",M4.translation(0.030,0.011,0));  // sula
     return b;})());
+
+  /* Huvudet: pannben, kindben, haka — och ett ansikte. */
   D.gHuvud=GL.nat((()=>{
-    const b=new Bygge();
-    b.klot(1,HUD,M4.skala(0.093,0.108,0.088),14);
-    b.klot(1,HUD,M4.mul(M4.translation(0.055,-0.042,0),
-      M4.skala(0.042,0.050,0.056)),10);                            // hakan
+    const b=s3Svep(new Bygge(),HUD,18,14,(t,u)=>{
+      const x=-0.092+t*0.184, a=u*Math.PI*2, r=ROND2(t);
+      const H=[[0,0.086],[0.28,0.108],[0.55,0.106],[0.80,0.082],[1,0.058]];
+      const B=[[0,0.080],[0.28,0.092],[0.55,0.086],[0.80,0.062],[1,0.044]];
+      const yc=s3Stn(t,[[0,0.004],[0.55,-0.004],[1,-0.030]]);
+      return [x, yc+Math.cos(a)*s3Stn(t,H)*r, Math.sin(a)*s3Stn(t,B)*r];
+    });
     for(const s of [-1,1]){                                        // ögonen
-      b.klot(1,"#FFFFFF",M4.mul(M4.translation(0.060,0.004,s*0.033),
+      b.klot(1,"#FFFFFF",M4.mul(M4.translation(0.058,0.004,s*0.033),
         M4.skala(0.015,0.019,0.016)),7);
-      b.klot(1,"#2B2118",M4.mul(M4.translation(0.070,0.002,s*0.034),
+      b.klot(1,"#2B2118",M4.mul(M4.translation(0.068,0.002,s*0.034),
         M4.skala(0.010,0.013,0.011)),7);
     }
-    b.klot(1,"#B9755E",M4.mul(M4.translation(0.080,-0.052,0),
+    b.klot(1,"#B9755E",M4.mul(M4.translation(0.076,-0.054,0),
       M4.skala(0.010,0.008,0.024)),6);                             // munnen
+    b.klot(1,HUD,M4.mul(M4.translation(0.030,-0.078,0),
+      M4.skala(0.036,0.030,0.048)),9);                             // hakan
     return b;})());
-  /* Håret: nacklugg och hästsvans — samma siluett som i ridscenen. */
+
+  /* Håret: en kalott som täcker hjässa, sidor och nacke men lämnar
+     ansiktet fritt, plus en hästsvans som faller från nacken.
+     fi mäts från hjässan, te runt lodaxeln med 0 rakt fram. */
   D.gHar=GL.nat((()=>{
-    const b=new Bygge(), H="#5E4028";
-    b.klot(1,H,M4.mul(M4.translation(-0.048,0.012,0),M4.skala(0.088,0.100,0.094)),12);
-    for(let i=0;i<6;i++){
-      const t=i/5;
-      b.klot(1,H,M4.mul(M4.translation(-0.088-0.030*t*t,-0.070-0.105*t,0),
-        M4.skala(0.052,0.066,0.058)),9);
+    const rx=0.100, ry=0.114, rz=0.096;
+    const b=s3Yta(new Bygge(),HAR,14,16,(t,v)=>{
+      const fi=t*1.34;                       // hjässa → nacke
+      const te=0.78+v*(Math.PI*2-1.56);      // lämnar en kil fri åt ansiktet
+      return [rx*Math.sin(fi)*Math.cos(te),
+              0.010+ry*Math.cos(fi),
+              rz*Math.sin(fi)*Math.sin(te)];
+    },0.013);
+    /* hästsvansen faller från nacken */
+    for(let i=0;i<=9;i++){
+      const t=i/9, w=0.042*(1-0.36*t)+0.016*Math.sin(t*Math.PI);
+      b.klot(1,HAR,M4.mul(
+        M4.translation(-0.108-0.062*t*t, -0.034-0.170*t, 0),
+        M4.skala(w*1.15,0.048,w)),9);
     }
     return b;})());
   D.gHjalm=GL.nat((()=>{
@@ -663,31 +727,36 @@ function v3dFigur(o){
   const fas=o.fas||0, rr=o.rorlig===false?0:1;
   const g=Math.sin(fas*Math.PI*2)*rr, g2=Math.cos(fas*Math.PI*2)*rr;
   const gung=0.018*Math.abs(Math.sin(fas*Math.PI*2))*rr;
-  const jacka=o.jacka||"#3E5F7A";
+  const jacka=o.jacka||"#3E5F7A", BYXA="#3C4A63";
   const rita=(nat,mat,ton)=>{const m=M4.mul(bas,mat);
     GL.rita(nat,m,{ton}); GL.skugga(nat,m,0);};
   const H=1.02+gung;                       // midjans höjd
-  const kropp=M4.mul(M4.translation(0,H,0),M4.rotZ(0.045));
+  /* Bålen och höften är byggda i figurens egna mått med fötterna i
+     y=0, så de flyttas bara med gungningen och lutas kring höften. */
+  const kropp=M4.mul(M4.mul(M4.translation(0,gung,0),
+    M4.mul(M4.translation(0,0.86,0),M4.rotZ(0.045))),
+    M4.translation(0,-0.86,0));
   rita(D.gHoft,kropp,"#FFFFFF");
   rita(D.gTorso,kropp,jacka);
-  const hy=H+0.53;
-  const huv=M4.translation(0.015,hy,0);
+  const hy=H+0.505;
+  const huv=M4.mul(M4.translation(0.015,hy,0),M4.skala(1.12));
   rita(D.gHar,huv,"#FFFFFF");
   rita(D.gHuvud,huv,"#FFFFFF");
-  if(o.hjalm!==false)rita(D.gHjalm,M4.translation(0.015,hy+0.098,0),"#FFFFFF");
+  if(o.hjalm!==false)rita(D.gHjalm,M4.mul(M4.translation(0.015,hy+0.108,0),M4.skala(1.12)),"#FFFFFF");
   for(const s of [-1,1]){
     const sv=s>0?g:-g, av=s>0?-g2:g2;
     /* Benen: höft → knä → fot. */
     const hoft=[0,H-0.17,s*0.082];
     const kna=[sv*0.17,0.49+gung*0.4,s*0.092];
     const fot=[sv*0.25,0.13,s*0.092];
-    rita(D.gLar,s3Segment(hoft,kna,1),"#FFFFFF");
-    rita(D.gVad,s3Segment(kna,fot,1),"#FFFFFF");
-    rita(D.gKanga,M4.translation(fot[0],fot[1]-0.07,fot[2]),"#FFFFFF");
+    rita(D.gLar,s3Segment(hoft,kna,1),BYXA);
+    rita(D.gKna,M4.translation(kna[0],kna[1],kna[2]),"#FFFFFF");
+    rita(D.gVad,s3Segment(kna,fot,1),BYXA);
+    rita(D.gKanga,M4.translation(fot[0],fot[1]-0.13,fot[2]),"#FFFFFF");
     /* Armarna hänger tätt intill kroppen och svänger mot benen. */
-    const axel=[0,H+0.325,s*0.150];
-    const bage=[av*0.08,H+0.09,s*0.162];
-    const hand=[av*0.15+0.02,H-0.15,s*0.146];
+    const axel=[0,H+0.315,s*0.172];
+    const bage=[av*0.08,H+0.085,s*0.180];
+    const hand=[av*0.15+0.02,H-0.16,s*0.160];
     rita(D.gAxel,M4.translation(axel[0],axel[1],axel[2]),jacka);
     rita(D.gArmO,s3Segment(axel,bage,1),jacka);
     rita(D.gArmU,s3Segment(bage,hand,1),jacka);
