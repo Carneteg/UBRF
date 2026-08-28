@@ -720,7 +720,133 @@ function v3dRitaSpelare(){
 
 /* En figur till fots — spelaren och stallets folk ritas likadant, med
    egen jackfärg. Går i takt med fas och svänger armarna mot benen. */
+/* ══════════════════════════════════════════════════════════════════
+   KLOSSFIGUREN — Roblox-stil.
+
+   Sex delar: huvud, bål, två armar, två ben. Inga leder, inga knän,
+   ingen hals. Delarna är rätblock som svänger stelt kring axel och
+   höft. Poängen är att klossigheten är avsikten och inte ett
+   misslyckat försök till en skulpterad kropp — därför läser den som
+   rätt i stället för som ofärdig.
+
+   Måtten är R6:s proportioner skalade till 1,72 m: benen och bålen
+   lika höga, armarna lika långa som bålen, huvudet en bredare kloss
+   ovanpå utan hals.
+   ══════════════════════════════════════════════════════════════════ */
+const KLOSS={
+  /* B = bredd i sidled (Z), D = djup framåt (X). Figuren tittar mot +X,
+     så det är B som ska vara axelbredden — inte D. */
+  benH:0.64, benB:0.205, benD:0.205,
+  balH:0.66, balB:0.420, balD:0.215,
+  armH:0.64, armB:0.195, armD:0.200,
+  huvB:0.380, huvH:0.360, huvD:0.340,
+  stovel:0.40,             // andel av benet som är stövel
+  hand:0.17,               // andel av armen som är hand
+};
+
+function v3dBygKloss(){
+  if(S3.del.kBal)return;
+  const D=S3.del, K=KLOSS, V="#FFFFFF";
+  const lada=(d,h,b,mat)=>GL.nat(new Bygge().lada(d,h,b,V,mat));
+
+  D.kBal   = lada(K.balD,K.balH,K.balB);
+  D.kArm   = lada(K.armD,K.armH*(1-K.hand),K.armB);
+  D.kHand  = lada(K.armD,K.armH*K.hand,K.armB);
+  D.kBen   = lada(K.benD,K.benH*(1-K.stovel),K.benB);
+  D.kStovel= lada(K.benD*1.04,K.benH*K.stovel,K.benB*1.04);
+  D.kHuvud = lada(K.huvD,K.huvH,K.huvB);
+
+  D.kHjalm=GL.nat((()=>{
+    const b=new Bygge();
+    b.lada(K.huvD*1.10,0.170,K.huvB*1.10,"#2B3038",
+      M4.translation(0,K.huvH*0.32,0));                      // kåpan ned över pannan
+    b.lada(0.105,0.032,K.huvB*0.82,"#20252C",
+      M4.translation(K.huvD*0.58,K.huvH*0.25,0));            // skärmen fram
+    b.lada(K.huvD*0.45,0.036,K.huvB*0.34,"#3E6B47",
+      M4.translation(0,K.huvH*0.32+0.085,0));                // klubbens färg överst
+    return b;})());
+
+  /* Håret: en lugg runt hjässan och en hästsvans rakt bakåt. */
+  D.kHar=GL.nat((()=>{
+    const b=new Bygge(), H="#5E4028";
+    b.lada(K.huvD*1.01,0.080,K.huvB*1.01,H,M4.translation(0,K.huvH*0.39,0));
+    b.lada(0.105,0.300,K.huvB*0.44,H,
+      M4.translation(-(K.huvD/2+0.050),-K.huvH*0.12,0));    // hästsvansen hänger ned
+    b.lada(0.085,0.075,K.huvB*0.52,"#4A3120",
+      M4.translation(-(K.huvD/2+0.040),K.huvH*0.16,0));     // snodden
+    return b;})());
+
+  /* Ansiktet ligger som en panel strax framför huvudets framsida.
+     Texturen är vit i botten och tonas med hudfärgen. */
+  D.kAnsikte=GL.nat(new Bygge().panel(K.huvB*0.98,K.huvH*0.98,V,
+    M4.mul(M4.translation(K.huvD/2+0.004,0,0),M4.rotY(Math.PI/2))));
+  S3.tex.ansikte=glCanvasTex(128,128,(c,w,h)=>{
+    c.fillStyle="#FFFFFF"; c.fillRect(0,0,w,h);
+    c.fillStyle="#241A14";
+    for(const x of [42,86]){ c.beginPath(); c.ellipse(x,52,8.5,12,0,0,Math.PI*2); c.fill(); }
+    c.strokeStyle="#241A14"; c.lineWidth=7; c.lineCap="round";
+    c.beginPath(); c.arc(64,72,21,0.34,Math.PI-0.34); c.stroke();
+  });
+
+  /* Jackan: krage upptill, skärp nertill. Vit botten så att varje
+     person kan få sin egen färg genom uTon. */
+  S3.tex.klossJacka=glCanvasTex(64,64,(c,w,h)=>{
+    c.fillStyle="#FFFFFF"; c.fillRect(0,0,w,h);
+    c.fillStyle="#E4E4E4"; c.fillRect(0,0,w,5);              // krage
+    c.fillStyle="#5A5A5A"; c.fillRect(0,h-14,w,7);           // skärp
+    c.fillStyle="#D2D2D2"; c.fillRect(0,h-4,w,4);            // fållen
+  });
+}
+
+/* Ritar klossfiguren. Armar och ben svänger stelt kring axel och höft,
+   precis som R6 gör — inga knän, ingen hals. */
+function v3dFigurKloss(o){
+  v3dBygKloss();
+  const D=S3.del, K=KLOSS;
+  const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));
+  const fas=o.fas||0, rr=o.rorlig===false?0:1;
+  const sv=Math.sin(fas*Math.PI*2)*rr*0.42;       // benens utslag i radianer
+  const gung=0.022*Math.abs(Math.sin(fas*Math.PI*2))*rr;
+  const jacka=o.jacka||"#3E5F7A", byxa=o.byxa||"#38455C",
+        stovel="#4A3524", hud=o.hud||"#F0C083";
+  const rita=(nat,mat,ton,tex)=>GL.rita(nat,M4.mul(bas,mat),{ton,tex});
+
+  const hoftY=K.benH+gung;                        // höftlinjen = benets topp
+  const axelY=hoftY+K.balH;                       // bålens topp
+
+  rita(D.kBal,M4.translation(0,hoftY+K.balH/2,0),jacka,S3.tex.klossJacka);
+
+  for(const s of [-1,1]){
+    /* Benet svänger kring höften: rotZ(-v) för ned (0,-h) till
+       (-h·sin v, -h·cos v), så delens mitt hamnar på svängens båge. */
+    const v=s>0?sv:-sv, bz=s*K.benB/2;
+    const bl=K.benH*(1-K.stovel), st=K.benH*K.stovel;
+    const led=(niva,hojd)=>M4.mul(
+      M4.translation(-Math.sin(v)*niva, hoftY-Math.cos(v)*niva, bz),M4.rotZ(-v));
+    rita(D.kBen,led(bl/2),byxa);
+    rita(D.kStovel,led(bl+st/2),stovel);
+
+    /* Armen svänger motsatt det egna benet, med kortare utslag. */
+    const a=(s>0?-sv:sv)*0.70, az=s*(K.balB/2+K.armB/2);
+    const ar=K.armH*(1-K.hand), hd=K.armH*K.hand;
+    const skuldra=(niva)=>M4.mul(
+      M4.translation(-Math.sin(a)*niva, axelY-Math.cos(a)*niva, az),M4.rotZ(-a));
+    rita(D.kArm,skuldra(ar/2),jacka,S3.tex.klossJacka);
+    rita(D.kHand,skuldra(ar+hd/2),hud);
+  }
+
+  const huvY=axelY+K.huvH/2;
+  rita(D.kHuvud,M4.translation(0,huvY,0),hud);
+  rita(D.kAnsikte,M4.translation(0,huvY,0),hud,S3.tex.ansikte);
+  rita(D.kHar,M4.translation(0,huvY,0),"#FFFFFF");
+  if(o.hjalm!==false)rita(D.kHjalm,M4.translation(0,huvY,0),"#FFFFFF");
+
+  /* En mjuk fläck under figuren i stället för tio projicerade skuggor. */
+  if(typeof s3Skuggflack==="function")s3Skuggflack(o.x,o.z,0.42,0.85);
+}
+
 function v3dFigur(o){
+  if(FIGURSTIL==="kloss")return v3dFigurKloss(o);
   v3dBygFigur();
   const D=S3.del;
   const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));

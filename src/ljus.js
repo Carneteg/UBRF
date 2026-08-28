@@ -122,3 +122,7 @@ function glTonRGBA(hex,a){
   const n=parseInt(hex.slice(1),16);
   return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
 }
+
+/* Figurens stil: "svept" är den handbyggda kroppen, "kloss" är
+   Roblox-snittet med sex rätblock. Byt här. */
+let FIGURSTIL="svept";
