@@ -85,8 +85,13 @@ function stegaVandring(dt){
   VD.tid+=dt;
   if(overlayUppe())return;
   const fram=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?0.6:0);
-  // D svänger höger = medurs sett uppifrån = minskande vinkel
-  const sv=(IN.ned.KeyA?1:0)-(IN.ned.KeyD?1:0);
+  /* Riktningen är atan2-vinkeln i (x, z)-planet och rörelsen går längs
+     (cos rikt, sin rikt). Med Y uppåt blir spelarens högersida
+     framåt × upp = (−sin, 0, cos) — vilket är exakt derivatan av framåt
+     med avseende på rikt. Ökande rikt svänger alltså HÖGER.
+     Ridningen i stegaRitt har alltid räknat så (KeyD ger styrning +0,72);
+     gå-läget gjorde tvärtom, så A och D var spegelvända mot varandra. */
+  const sv=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
   VD.rikt+=sv*GA.svang*dt;
   const jogg=IN.ned.ShiftLeft||IN.ned.ShiftRight;
   const fart=fram*(jogg?GA.jogg:GA.fart);
