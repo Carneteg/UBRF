@@ -729,9 +729,10 @@ function ritaVandring3D(){
     const k=v3dKamera(dt);
     GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.05);
     const gl=GL.gl;
+    GL.himmel(L);                                 // gradient och sol
     gl.depthMask(false);
     GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),
-      {platt:true,baksidor:true});
+      {platt:true,baksidor:true});                // molnen
     gl.depthMask(true);
     for(const s of S3.statiskt)GL.rita(s.nat,M4.ny(),{tex:s.tex,baksidor:s.baksidor});
     if(V3D.oppningar)GL.rita(V3D.oppningar.nat,M4.ny(),{baksidor:true});
@@ -800,6 +801,7 @@ function ritaVandring3D(){
         sadel:!!G.skotselRes, tacke:!!G.tackePa});
     v3dRitaMarkor();
     v3dRitaSpelare();
+    GL.efter();          // glöd och mättnad
     if(G.scen==="gard"&&G.vader&&G.vader.typ==="regn"){
       cx.clearRect(0,0,CW,CH); ritaRegn();
     }else cx.clearRect(0,0,CW,CH);

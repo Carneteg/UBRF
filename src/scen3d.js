@@ -19,53 +19,30 @@ const S3={
 
 /* ── Ljussättning per plats och väder ─────────────────────────── */
 function s3Ljus(over){
-  const v=(G.vader&&G.vader.typ)||"sol";
-  const inne=(over||G.plats)==="ridhus";
-  if(inne)return {   // ridhusets lysrör: jämnt, varmt och utan hårda skuggor
-    sol:[0.35,0.88,0.32], solFarg:"#C6B48E", himmel:"#8A8E92", mark:"#544C40",
-    dimFarg:"#3A3C40", dimNara:44, dimFjarr:120, skuggAlfa:0.24, skuggFarg:"#0A0A0C",
-    himmelTopp:"#15181D", himmelBotten:"#23272E",
-    kantFarg:"#F0DCB0", kant:0.22, mattnad:1.16,
-  };
-  if(v==="regn")return {
-    sol:[-0.35,0.72,0.60], solFarg:"#9AA2AA", himmel:"#828A94", mark:"#4E5448",
-    dimFarg:"#6E747C", dimNara:26, dimFjarr:130, skuggAlfa:0.12, skuggFarg:"#0A0C10",
-    himmelTopp:"#2C3138", himmelBotten:"#5E646C",
-    kantFarg:"#C8D2DC", kant:0.20, mattnad:1.05,
-  };
-  if(v==="mulet")return {
-    sol:[-0.30,0.78,0.55], solFarg:"#BCB8A6", himmel:"#949AA0", mark:"#5A5E44",
-    dimFarg:"#9A9A8E", dimNara:34, dimFjarr:160, skuggAlfa:0.14, skuggFarg:"#0C0E12",
-    himmelTopp:"#39404A", himmelBotten:"#8A8A80",
-    kantFarg:"#E4DCC8", kant:0.22, mattnad:1.14,
-  };
-  return { // klar solig dag — kitets himmel och gräs (ui-kit-demo.html)
-    sol:[-0.42,0.72,0.55], solFarg:"#FFF3D2", himmel:"#BFE2F5", mark:"#6FA84A",
-    dimFarg:"#B7E0F4", dimNara:110, dimFjarr:340, skuggAlfa:0.13, skuggFarg:"#1E5C22",
-    himmelTopp:"#4EA8DE", himmelBotten:"#9BD4F5",
-    kantFarg:"#FFF6D0", kant:0.20, mattnad:1.08,
-  };
+  /* Alla värden bor i src/ljus.js — justera dem där. */
+  return ljusFor(over||G.plats, (G.vader&&G.vader.typ)||"sol");
 }
 
 /* ── Texturer, målade i spelet ────────────────────────────────── */
 function s3Texturer(){
   const T=S3.tex;
   T.sand=glCanvasTex(256,256,(c,w,h)=>{
-    c.fillStyle="#D9C08D";c.fillRect(0,0,w,h);  // ljus men mättad ridbanesand
+    c.fillStyle=MARKFARG.sand;c.fillRect(0,0,w,h);
     for(let i=0;i<2600;i++){
       const x=Math.random()*w,y=Math.random()*h,r=Math.random();
-      c.fillStyle=r<0.5?"rgba(150,138,112,.35)":r<0.8?"rgba(212,200,172,.35)":"rgba(120,104,80,.30)";
+      c.fillStyle=r<0.5?glTonRGBA(MARKFARG.sandMork,.32)
+        :r<0.82?glTonRGBA(MARKFARG.sandLjus,.34):"rgba(120,98,58,.26)";
       c.fillRect(x,y,1+Math.random()*2,1+Math.random()*2);
     }
-    c.strokeStyle="rgba(140,128,102,.30)";c.lineWidth=1.5;   // harvspåren
+    c.strokeStyle=glTonRGBA(MARKFARG.sandMork,.26);c.lineWidth=1.5;  // harvspåren
     for(let i=0;i<16;i++){c.beginPath();c.moveTo(0,i*16+4);c.lineTo(w,i*16+4);c.stroke();}
   },true);
   T.gras=glCanvasTex(256,256,(c,w,h)=>{
-    c.fillStyle="#5CBB3F";c.fillRect(0,0,w,h);          // kitets --grass
-    for(let i=0;i<3400;i++){
+    c.fillStyle=MARKFARG.gras;c.fillRect(0,0,w,h);
+    for(let i=0;i<3200;i++){
       const x=Math.random()*w,y=Math.random()*h,r=Math.random();
-      c.fillStyle=r<0.45?"rgba(143,214,90,.30)"          // --grass-light
-        :r<0.90?"rgba(46,139,46,.26)":"rgba(255,255,255,.08)";
+      c.fillStyle=r<0.46?glTonRGBA(MARKFARG.grasLjus,.34)
+        :r<0.92?glTonRGBA(MARKFARG.grasMork,.30):"rgba(255,255,255,.07)";
       c.fillRect(x,y,2,2+Math.random()*4);
     }
   },true);
@@ -131,7 +108,7 @@ function s3BygHast(){
               [0.85,1.200],[1,1.300]];
   const KBRE=[[0,0.105],[0.10,0.200],[0.22,0.266],[0.42,0.300],[0.60,0.296],
               [0.74,0.254],[0.85,0.296],[0.94,0.238],[1,0.115]];
-  D.kropp=nyNat(s3Svep(new Bygge(),vit,44,22,(t,u)=>{
+  D.kropp=nyNat(s3Svep(new Bygge(),vit,30,16,(t,u)=>{
     const a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
     const r=ROND(t,0.045,0.965);
     const topp=s3Stn(t,KTOPP), buk=s3Stn(t,KBUK);
@@ -141,7 +118,7 @@ function s3BygHast(){
   }));
   /* Halsen: djup och smal, med kam ovanpå och struphuvud under.
      Byggs i halsens eget rum, x 0→1 från manken till nacken. */
-  D.hals=nyNat(s3Svep(new Bygge(),vit,26,18,(p,u)=>{
+  D.hals=nyNat(s3Svep(new Bygge(),vit,18,13,(p,u)=>{
     const t=-0.12+1.18*p, a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
     const r=ROND(p,0.05,0.94);
     const topp=s3Stn(t,[[-0.12,0.20],[0.05,0.30],[0.45,0.245],[0.80,0.175],[1.06,0.120]]);
@@ -152,7 +129,7 @@ function s3BygHast(){
     return [t, yc+h*ca, w*sa];
   }));
   /* Huvudet: pannben brett, käkpartiet tungt, nosen avsmalnande. */
-  D.huvud=nyNat(s3Svep(new Bygge(),vit,24,18,(p,u)=>{
+  D.huvud=nyNat(s3Svep(new Bygge(),vit,18,13,(p,u)=>{
     const x=-0.32+0.68*p, a=u*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a);
     const r=ROND(p,0.06,0.93);
     const topp=s3Stn(x,[[-0.32,0.075],[-0.20,0.135],[-0.05,0.126],[0.08,0.096],
@@ -179,7 +156,7 @@ function s3BygHast(){
      Överlappande klot ger en sammanhängande massa i stället för en kam. */
   /* Manen i två lager: ett mörkare under och ett ljusare över, båda
      med skålad kant så att lockarna syns. */
-  const manYta=(skal,djup)=>s3Yta(new Bygge(),vit,30,14,(t,v)=>{
+  const manYta=(skal,djup)=>s3Yta(new Bygge(),vit,22,10,(t,v)=>{
     const r=0.215-0.108*t+0.020+djup;
     const kl=Math.min(v/0.26,1), th=-0.34+0.88*kl;
     const h=Math.max(0,v-0.26)/0.74;
@@ -193,7 +170,7 @@ function s3BygHast(){
   D.manunder=nyNat(manYta(0.86,0.0));
   D.manmatta=nyNat(manYta(1.0,0.026));
   /* Svanstageln: en tofs som faller från svansroten och smalnar av. */
-  D.svansmassa=nyNat(s3Yta(new Bygge(),vit,12,18,(u,t)=>{
+  D.svansmassa=nyNat(s3Yta(new Bygge(),vit,10,12,(u,t)=>{
     const vin=u*Math.PI*2;
     const w=(0.105+0.075*Math.sin(t*Math.PI*0.85))*(1-t*t*0.92);
     return [Math.sin(vin)*w*0.80 - 0.16*t*t,
@@ -203,6 +180,10 @@ function s3BygHast(){
   /* Hovskägget — den tunga typens flikar över kotan. */
   D.fjader=nyNat(new Bygge().cyl(0.052,0.098,0.19,vit,null,12));
   D.strumpa=nyNat(new Bygge().cyl(0.056,0.048,1,"#F2EFE6",null,10));
+  /* Kontaktskuggan: en platt skiva som läggs i tre storlekar med
+     fallande täckning. En mjuk fläck kostar tjugo trianglar; en
+     projicerad silhuett av hela hästen kostar tusentals. */
+  D.skuggflack=nyNat(new Bygge().yta(1,1,"#FFFFFF"));
   D.blas=nyNat(new Bygge().klot(1,"#F2EFE6",M4.skala(0.19,0.030,0.048),12));
   D.sadel=nyNat((()=>{
     const b=new Bygge();
@@ -422,11 +403,10 @@ function s3RitaHast(o){
     M4.mul(M4.translation(o.x,bob*M,o.z), M4.rotY(-o.rikt)),
     M4.mul(M4.rotZ(lut), M4.skala(M)));
   const P=(x,y,z)=>[x,y,z];                              // lokala punkter
-  const rita=(nat,mat,ton)=>{
-    const m=M4.mul(bas,mat);
-    gl.rita(nat,m,{ton});
-    if(o.skugga)gl.skugga(nat,m,0);
-  };
+  const rita=(nat,mat,ton)=>{ gl.rita(nat,M4.mul(bas,mat),{ton}); };
+  /* Skuggan läggs en gång för hela ekipaget, som en mjuk fläck under
+     buken — inte som en projicerad silhuett per kroppsdel. */
+  if(o.skugga)s3Skuggflack(o.x,o.z,1.05*M,1-Math.min(luft/0.55,1)*0.55);
 
   /* Bålen — en enda svept kropp, redan i hästens egna mått. */
   rita(D.kropp,M4.ny(),farg);
@@ -520,11 +500,27 @@ function s3RitaHast(o){
   function huvudB(hb,n){return [hb[0]+Math.cos(n)*0.34, hb[1]+Math.sin(n)*0.34-0.04, 0];}
 }
 
+/* Mjuk kontaktskugga på marken: tre skivor med fallande täckning.
+   Solens riktning skjuter fläcken något åt sidan. */
+function s3Skuggflack(x,z,r,styrka){
+  const D=S3.del, L=GL.ljus; if(!D.skuggflack||!L)return;
+  const sl=Math.hypot(L.sol[0],L.sol[1],L.sol[2])||1;
+  const dx=-L.sol[0]/sl*0.45, dz=-L.sol[2]/sl*0.45;
+  const gl=GL.gl, a=(L.skuggAlfa===undefined?0.22:L.skuggAlfa)*(styrka===undefined?1:styrka);
+  gl.enable(gl.BLEND); gl.depthMask(false);
+  for(const [k,v] of [[1.00,0.42],[1.55,0.24],[2.20,0.14]]){
+    GL.rita(D.skuggflack,
+      M4.mul(M4.translation(x+dx*k*0.4,0.05,z+dz*k*0.4),
+             M4.skala(r*2.4*k,1,r*1.5*k)),
+      {platt:true, alfa:a*v, ton:L.skuggFarg||"#000000"});
+  }
+  gl.depthMask(true); gl.disable(gl.BLEND);
+}
+
 /* ── Ryttaren: sits, lättridning, lätt sits och tyglarna ──────── */
 function s3RitaRyttare(bas,o){
   const D=S3.del, gl=GL;
-  const rita=(nat,mat,ton)=>{const m=M4.mul(bas,mat);
-    gl.rita(nat,m,{ton}); if(o.skugga)gl.skugga(nat,m,0);};
+  const rita=(nat,mat,ton)=>{ gl.rita(nat,M4.mul(bas,mat),{ton}); };
   const a=o.aids||{sits:0.5,tygel:0.3,lattridning:true,diagonal:1};
   /* Lättridning: upp ur sadeln vartannat travsteg. */
   const latt=o.gangart==="trav"&&a.lattridning
@@ -575,17 +571,23 @@ function s3RitaRyttare(bas,o){
    Ritas obelyst, så färgen i banden är gradienten. Centrum flyttas
    med scenen så att kupolen alltid omsluter kameran. */
 function s3Himmel(centrum){
+  /* Gradienten och solen ritas av GL.himmel som ett helskärmspass.
+     Här byggs bara molnen — klungor av tillplattade klot högt upp. */
   if(S3.himmel)GL.fritt(S3.himmel.nat);
-  const L=s3Ljus(), himmel=new Bygge();
-  const topp=glFarg(L.himmelTopp), bot=glFarg(L.himmelBotten);
-  const BANDN=8, H0=-30, HTOT=170, bh=HTOT/BANDN;
+  const himmel=new Bygge();
   const cx0=centrum[0], cz0=centrum[1];
-  for(let i=0;i<BANDN;i++){
-    const t=i/(BANDN-1), e=Math.pow(t,1.45);   // glöden når högre upp
-    const f=[bot[0]+(topp[0]-bot[0])*e, bot[1]+(topp[1]-bot[1])*e, bot[2]+(topp[2]-bot[2])*e];
-    himmel.cyl(150,150,bh*1.02,f,M4.translation(cx0,H0+i*bh,cz0),24,false);
+  let fro=91; const rnd=()=>{fro=(fro*16807)%2147483647;return fro/2147483647;};
+  for(let i=0;i<14;i++){
+    const v=rnd()*Math.PI*2, r=74+rnd()*54, y=26+rnd()*20;
+    const mx=cx0+Math.cos(v)*r, mz=cz0+Math.sin(v)*r;
+    const st=4.5+rnd()*4.0;
+    for(const [ox,oy,oz,rr] of [[-1.25,.10,.2,.80],[-.30,-.30,-.1,1.05],
+        [.62,-.05,.15,.92],[1.34,.18,-.2,.70],[.15,.34,.3,.72]]){
+      himmel.klot(1,"#FFFFFF",M4.mul(
+        M4.translation(mx+ox*st, y+oy*st, mz+oz*st),
+        M4.skala(rr*st, rr*st*0.55, rr*st*0.8)),8);
+    }
   }
-  himmel.yta(320,320,topp,M4.translation(cx0,H0+HTOT,cz0),1);
   S3.himmel={nat:GL.nat(himmel)};
   S3.himmelC=centrum;
 }
@@ -712,7 +714,7 @@ function s3ByggPlats(plats){
     }
     /* Träden. */
     const skog=new Bygge();
-    const TF=["#4FAE3A","#5CBB3F","#3E9E2E","#8FD65A","#46A233","#6BC44A"];
+    const TF=LOVFARG;
     let fro=7;
     const rnd=()=>{fro=(fro*16807)%2147483647;return fro/2147483647;};
     const trad=(x,z,h,f)=>{
@@ -770,14 +772,14 @@ function s3RitaHinder(){
 /* ── Kameran: bakom hästen, mjukt efterföljande ───────────────── */
 function s3Kamera(dt){
   const fram=[Math.cos(G.rikt),0,Math.sin(G.rikt)];
-  const hojd=G.luft>0?2.85:2.45, bak=G.luft>0?6.4:5.3;
+  const hojd=G.luft>0?2.30:1.95, bak=G.luft>0?5.0:4.05;
   const mx=G.px-fram[0]*bak, mz=G.py-fram[2]*bak;
   const k=S3.kam;
   if(!k.satt){k.x=mx;k.y=hojd;k.z=mz;k.tx=G.px;k.ty=1.35;k.tz=G.py;k.satt=true;}
   const f=1-Math.pow(0.0016,Math.min(dt,0.05));   // ramtidsoberoende mjukhet
   k.x+=(mx-k.x)*f; k.y+=(hojd-k.y)*f; k.z+=(mz-k.z)*f;
   k.tx+=((G.px+fram[0]*2.6)-k.tx)*f;
-  k.ty+=((1.42+(G.luft>0?0.6:0))-k.ty)*f;
+  k.ty+=((1.58+(G.luft>0?0.6:0))-k.ty)*f;
   k.tz+=((G.py+fram[2]*2.6)-k.tz)*f;
   return k;
 }
@@ -805,8 +807,10 @@ function rita3D(Gs){
   GL.start(CW,CH,DPR,L);
   const k=s3Kamera(dt);
   GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.02);
-  /* Himlen först, utan djup. */
+  /* Himlen först: gradient och sol som ett helskärmspass, molnen som
+     geometri ovanpå. Ingen djupskrivning. */
   const gl=GL.gl;
+  GL.himmel(L);
   gl.depthMask(false);
   GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),{platt:true,baksidor:true});
   gl.depthMask(true);
@@ -835,6 +839,7 @@ function rita3D(Gs){
     gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas, luft:G.luft,
     sadel:true, ryttare:true, skugga:true, aids:G.aids,
     samling:G.ride?clamp(G.ride.skala.samling*0.6+G.ride.skala.kontakt*0.4,0,1):0.4});
+  GL.efter();          // glöd och mättnad
   /* Regnet ritas av 2D-lagret ovanpå. */
   return true;
 }
@@ -844,10 +849,25 @@ function gl3dLage(pa){
   const app=document.getElementById("app");
   if(app&&app.classList.contains("gl3d")!==!!pa)app.classList.toggle("gl3d",!!pa);
 }
-/* Ridvyn är sidovyn i lager (src/ritt2d.js). WebGL-motorn används
-   fortfarande av gå-läget; ridscenen behöver den inte. */
+/* Ridvyn: äkta 3D bakom hästen. Saknas WebGL faller den tillbaka på
+   den handrullade målarvyn. Sidovyn i src/ritt2d.js ligger kvar men
+   används inte. */
 function draw3D(Gs){
+  if(rita3D(Gs)){
+    gl3dLage(true);
+    cx.clearRect(0,0,CW,CH);
+    if(G.plats!=="ridhus"&&G.vader&&G.vader.typ==="regn"){
+      cx.strokeStyle="rgba(210,226,238,.30)";cx.lineWidth=1;
+      const off=(G.t*640)%CH;
+      cx.beginPath();
+      for(let i=0;i<70;i++){
+        const rx=(i*97+i*i*13)%CW, ry=((i*173)%CH+off)%CH;
+        cx.moveTo(rx,ry);cx.lineTo(rx-3,ry+14);
+      }
+      cx.stroke();
+    }
+    return;
+  }
   gl3dLage(false);
-  cx.clearRect(0,0,CW,CH);
-  ritaRitt2D();
+  draw3DCanvas(Gs);
 }
