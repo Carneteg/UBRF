@@ -1,0 +1,21 @@
+{
+  "name": "UBRF-Horse",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "HorseCore": { "$path": "src/shared/HorseCore" }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Horse": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Horse": { "$path": "src/client" }
+      }
+    }
+  }
+}

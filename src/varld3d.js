@@ -240,30 +240,33 @@ function v3dGard(lagg,opp){
   for(let i=0;i<ANL.trad.length;i++){
     const[tx,tz,tr]=ANL.trad[i];
     const f=TRADFARG[i%TRADFARG.length], h=tr*2.2+2.5;
+    if(STIL==="kloss"){ klossTrad(skog,tx,tz,h,f[0],glMorka(f[0],0.86)); continue; }
     skog.cyl(tr*0.16,tr*0.11,h*0.45,"#5E4A34",M4.translation(tx,0,tz),7);
     skog.klot(1,f[0],M4.mul(M4.translation(tx,h*0.66,tz),
       M4.skala(tr*0.95,tr*1.05,tr*0.95)),10);
     skog.klot(1,f[1],M4.mul(M4.translation(tx+tr*0.3,h*0.86,tz-tr*0.2),
       M4.skala(tr*0.6,tr*0.62,tr*0.6)),9);
   }
-  lagg(skog,null);
+  lagg(STIL==="kloss"?glPlatta(skog):skog,null);
 
-  /* Rekvisitan. */
+  /* Rekvisitan. I lågpolyläget dras segmentantalet ner så att
+     cylindrarna läser som fasetterade prismor. */
+  const SEG=(hog,lag)=>STIL==="kloss"?lag:hog;
   const pr=new Bygge();
   for(const p of ANL.props){
     const[x,z]=p.pos;
     switch(p.typ){
       case"silo":
-        pr.cyl(1.5,1.5,7.5,"#C4C7C9",M4.translation(x,0,z),14);
-        pr.cyl(1.55,0.2,1.8,"#A2A4A6",M4.translation(x,7.5,z),14);
-        pr.cyl(0.9,0.9,1.2,"#8A8C90",M4.translation(x,-0.0,z-1.8),10);
+        pr.cyl(1.5,1.5,7.5,"#C4C7C9",M4.translation(x,0,z),SEG(14,7));
+        pr.cyl(1.55,0.2,1.8,"#A2A4A6",M4.translation(x,7.5,z),SEG(14,7));
+        pr.cyl(0.9,0.9,1.2,"#8A8C90",M4.translation(x,-0.0,z-1.8),SEG(10,6));
         break;
       case"balar":
         for(let i=0;i<3;i++)for(let j=0;j<2;j++)
           pr.cyl(0.65,0.65,1.2,"#E4E2DA",
-            M4.mul(M4.translation(x+i*1.4,0.65,z+j*1.5),M4.rotZ(Math.PI/2)),10);
+            M4.mul(M4.translation(x+i*1.4,0.65,z+j*1.5),M4.rotZ(Math.PI/2)),SEG(10,6));
         break;
-      case"grushog": pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),12); break;
+      case"grushog": pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),SEG(12,6)); break;
       case"transport":
         pr.lada(2.2,1.9,5.4,"#E8E6E0",M4.mul(M4.translation(x,1.25,z),M4.rotY(-(p.rikt||0))));
         pr.lada(2.0,0.5,2.0,"#4A4E52",M4.mul(M4.translation(x,0.3,z),M4.rotY(-(p.rikt||0))));
@@ -338,7 +341,7 @@ function v3dGard(lagg,opp){
       M4.mul(M4.translation(x,p.typ==="skylt"?3.4:3.0,z),M4.rotY(vin)));
     S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(txt)});
   }
-  lagg(pr,null);
+  lagg(STIL==="kloss"?glPlatta(pr):pr,null);
 }
 
 /* ── Stallet invändigt ────────────────────────────────────────── */
@@ -846,7 +849,7 @@ function v3dFigurKloss(o){
 }
 
 function v3dFigur(o){
-  if(FIGURSTIL==="kloss")return v3dFigurKloss(o);
+  if(STIL==="kloss")return v3dFigurKloss(o);
   v3dBygFigur();
   const D=S3.del;
   const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));
