@@ -1,0 +1,126 @@
+/* ══════════════════════════════════════════════════════════════════
+   UI — spelets grafiska stil, hämtad ur ui-kit-demo.html.
+   Variabler och komponenter används som de är. Skriv aldrig en ny
+   variant av en komponent som redan finns här, och lägg aldrig en
+   hex-färg i en komponent — den hör hemma i :root.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+    --sky-top:#4EA8DE; --sky-bottom:#9BD4F5;
+    --grass:#5CBB3F; --grass-dark:#2E8B2E; --grass-light:#8FD65A;
+    --panel-top:#8A3BD4; --panel-bottom:#4A1B6D; --panel-border:#F6C445;
+    --gold:#F6C445; --gold-dark:#C99424; --cream:#F5EFE0;
+    --emerald:#3DDC97; --heart:#FF5A79; --brown:#8B5A2B;
+    --btn-green-top:#7ED957; --btn-green-bottom:#3E9E2E;
+    --btn-gold-top:#FFD966; --btn-gold-bottom:#E0A62E;
+    --btn-purple-top:#A55BE8; --btn-purple-bottom:#6A2C91;
+    --text-outline: 0 2px 0 rgba(40,10,60,.55);
+  }
+  .scene{position:relative;min-height:100vh;padding-bottom:60px}
+
+  /* ---- clouds & sun ---- */
+  .sun{position:absolute;top:36px;right:8%;width:90px;height:90px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#FFF6C9,#FFE070 60%,#FFCC33);
+    box-shadow:0 0 60px 25px rgba(255,230,120,.55)}
+  .cloud{position:absolute;background:#fff;border-radius:60px;opacity:.95;
+    animation:drift 60s linear infinite}
+  .cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%}
+  .c1{top:190px;left:4%;width:150px;height:44px}
+  .c1::before{width:70px;height:70px;top:-32px;left:22px}
+  .c1::after{width:52px;height:52px;top:-22px;left:74px}
+  .c2{top:290px;left:62%;width:110px;height:34px;opacity:.8;animation-duration:80s}
+  .c2::before{width:52px;height:52px;top:-24px;left:16px}
+  .c2::after{width:40px;height:40px;top:-16px;left:56px}
+  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(45vw)}}
+
+  /* ---- hills ---- */
+  .hills{position:absolute;left:0;right:0;bottom:0;height:46vh;pointer-events:none}
+  .hill{position:absolute;border-radius:50% 50% 0 0}
+  .h1{width:120%;height:75%;left:-10%;bottom:-18%;background:linear-gradient(180deg,var(--grass-light),var(--grass))}
+  .h2{width:90%;height:65%;left:45%;bottom:-22%;background:linear-gradient(180deg,var(--grass),var(--grass-dark))}
+  .h3{width:100%;height:45%;left:-25%;bottom:-16%;background:linear-gradient(180deg,var(--grass),var(--grass-dark))}
+
+  /* ================= HUD ================= */
+  .hud{position:relative;z-index:5;display:flex;align-items:center;gap:14px;
+    flex-wrap:wrap;padding:14px 18px}
+  .badge-lvl{position:relative;width:64px;height:64px;border-radius:50%;
+    background:radial-gradient(circle at 30% 25%,var(--btn-purple-top),var(--panel-bottom));
+    border:4px solid var(--gold);box-shadow:0 4px 10px rgba(30,5,50,.35),inset 0 3px 6px rgba(255,255,255,.35);
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .badge-lvl b{font-size:24px;text-shadow:var(--text-outline)}
+  .badge-lvl span{font-size:9px;letter-spacing:.5px;color:var(--cream)}
+  .pill{display:flex;align-items:center;gap:8px;height:38px;padding:0 16px 0 8px;border-radius:19px;
+    background:linear-gradient(180deg,#5B2A86,#3A1259);
+    border:2.5px solid var(--gold);box-shadow:0 3px 8px rgba(30,5,50,.3),inset 0 2px 3px rgba(255,255,255,.25);
+    font-weight:800;font-size:15px;text-shadow:var(--text-outline)}
+  .coin{width:24px;height:24px;border-radius:50%;display:inline-block;
+    box-shadow:inset -2px -3px 4px rgba(0,0,0,.25),inset 2px 3px 4px rgba(255,255,255,.6)}
+  .coin.gold{background:radial-gradient(circle at 35% 30%,#FFE9A0,var(--gold) 55%,var(--gold-dark))}
+  .gem{width:22px;height:22px;display:inline-block;transform:rotate(45deg);border-radius:5px;
+    background:linear-gradient(135deg,#B9FFE2,var(--emerald) 45%,#1E9E68);
+    box-shadow:inset -2px -2px 3px rgba(0,0,0,.25),inset 2px 2px 3px rgba(255,255,255,.7)}
+  .heart{font-size:20px;filter:drop-shadow(0 2px 1px rgba(40,10,60,.4))}
+  .plus{width:22px;height:22px;border-radius:50%;background:linear-gradient(180deg,var(--btn-green-top),var(--btn-green-bottom));
+    border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:900;cursor:pointer;margin-left:2px}
+  .xp{flex:1 1 180px;min-width:160px;max-width:320px}
+  .xp .label{font-size:11px;font-weight:800;letter-spacing:.5px;text-shadow:var(--text-outline);margin-bottom:3px}
+  .bar{position:relative;height:22px;border-radius:11px;background:#2A0F45;
+    border:2.5px solid var(--gold);overflow:hidden;box-shadow:inset 0 3px 5px rgba(0,0,0,.45)}
+  .bar .fill{position:absolute;inset:0;width:62%;border-radius:9px;
+    background:linear-gradient(180deg,#8FE06A 0%,#4CAF3E 100%)}
+  .bar .fill.mint{background:linear-gradient(180deg,#8CF5CB,#25B67F);width:80%}
+  .bar .gloss{position:absolute;left:2%;right:2%;top:2px;height:8px;border-radius:6px;
+    background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,0))}
+  .bar .txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:900;text-shadow:var(--text-outline)}
+
+  /* ================= Title ================= */
+  .titlewrap{position:relative;z-index:4;text-align:center;margin:26px 10px 8px}
+  .gametitle{display:inline-block;font-size:clamp(34px,6vw,58px);font-weight:900;line-height:1.05;
+    background:linear-gradient(180deg,#FFF3C4 15%,var(--gold) 55%,var(--gold-dark) 90%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 0 #5A2470) drop-shadow(0 6px 8px rgba(40,10,60,.45));
+    letter-spacing:1px}
+  .subtitle{margin-top:6px;font-size:15px;font-weight:800;color:var(--cream);text-shadow:var(--text-outline)}
+
+  /* ================= Panels ================= */
+  .row{position:relative;z-index:4;display:flex;flex-wrap:wrap;gap:22px;justify-content:center;
+    padding:20px 18px;align-items:flex-start}
+  .panel{width:300px;border-radius:22px;padding:0 0 18px;
+    background:linear-gradient(180deg,var(--panel-top),var(--panel-bottom));
+    border:4px solid var(--panel-border);
+    box-shadow:0 10px 24px rgba(30,5,50,.4),inset 0 3px 6px rgba(255,255,255,.28)}
+  .panel h2{margin:-2px -4px 14px;padding:10px 16px;text-align:center;font-size:19px;font-weight:900;
+    letter-spacing:.5px;text-shadow:var(--text-outline);border-radius:18px 18px 40% 40%;
+    background:linear-gradient(180deg,#B06CE8,#7B2FBE);border-bottom:3px solid var(--gold)}
+  .panel .inner{padding:0 18px}
+  .quest{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.12);
+    border:2px solid rgba(255,255,255,.25);border-radius:14px;padding:10px;margin-bottom:10px}
+  .quest .icon{flex:0 0 46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:22px;background:radial-gradient(circle at 32% 28%,#FFE9A0,var(--gold) 60%,var(--gold-dark));
+    border:3px solid #fff;box-shadow:0 3px 6px rgba(30,5,50,.35)}
+  .quest .info{flex:1}
+  .quest .info b{display:block;font-size:14px;text-shadow:var(--text-outline)}
+  .quest .info small{font-size:11px;color:var(--cream)}
+  .quest .bar{height:14px;margin-top:5px;border-width:2px}
+  .quest .bar .txt{font-size:9px}
+
+  /* ================= Buttons ================= */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    border:none;cursor:pointer;border-radius:18px;padding:14px 34px;
+    font-family:inherit;font-size:20px;font-weight:900;color:#fff;letter-spacing:.5px;
+    text-shadow:var(--text-outline);
+    box-shadow:0 6px 0 rgba(30,5,50,.45),inset 0 3px 5px rgba(255,255,255,.5),inset 0 -6px 8px rgba(0,0,0,.18);
+    outline:3px solid rgba(255,255,255,.65);outline-offset:-6px;
+    transition:transform .08s, box-shadow .08s}
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(30,5,50,.45),inset 0 3px 5px rgba(255,255,255,.5)}
+  .btn.green{background:linear-gradient(180deg,var(--btn-green-top),var(--btn-green-bottom))}
+  .btn.gold{background:linear-gradient(180deg,var(--btn-gold-top),var(--btn-gold-bottom))}
+  .btn.purple{background:linear-gradient(180deg,var(--btn-purple-top),var(--btn-purple-bottom))}
+  .btn.big{font-size:26px;padding:18px 54px;border-radius:24px;animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+  .btn.round{width:58px;height:58px;padding:0;border-radius:50%;font-size:24px}
+  .btnstack{display:flex;flex-direction:column;gap:14px;align-items:center;padding-top:6px}
+  .btnrow{display:flex;gap:12px;justify-content:center;margin-top:4px}
+
+  .menu-center{position:relative;z-index:4;text-align:center;margin:10px 0 26px}

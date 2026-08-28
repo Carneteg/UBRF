@@ -131,9 +131,13 @@ ryttaren lättrider, sitter lätt och tar tygel med hjälperna.
 
 Ingen three.js och inget CDN — motorn är skriven för spelet, så det
 förblir en enda fil som fungerar utan nätverk. Saknas WebGL faller
-vyn tillbaka på den handrullade målarrenderaren, och gå-läget till
-fots använder den fortfarande.
+alla vyer tillbaka på den handrullade målarrenderaren.
 
-**Kvar att ta vidare:** gå-läget (gården, stallet, ridhuset invändigt)
-kan flyttas över till samma motor, och Roblox-porten finns kvar som
-möjlighet — modellen, anläggningen och övningarna följer med oavsett.
+Gå-läget till fots renderas i samma motor: gården med byggnadernas
+sadeltak, fasadöppningar, staket, träd och rekvisita byggda ur ANL:s
+egna mått, stallgången med boxfronter, galler, namnskyltar och
+hästhuvuden över dörrarna, och ridhuset invändigt med sarg, läktare,
+sponsorvägg och cafeteria. Figuren går i tredjeperson.
+
+**Kvar att ta vidare:** Roblox-porten finns fortfarande som möjlighet
+— modellen, anläggningen och övningarna följer med oavsett motor.

@@ -252,7 +252,9 @@ const GL={
     const fs=`
       precision mediump float;
       varying vec3 vNrm, vCol; varying vec2 vUv; varying float vDjup; varying vec3 vPos;
-      uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon;
+      uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga, uKantFarg;
+      uniform float uKant, uSolStyrka, uHalvskugga, uAmbient;
+      uniform float uAoHojd, uAoStyrka, uDimStyrka;
       uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;
       uniform sampler2D uTex;
       void main(){
@@ -263,16 +265,31 @@ const GL={
           return;
         }
         vec3 N = normalize(vNrm);
-        float d = max(dot(N, uSol), 0.0);
-        // hemisfäriskt omgivningsljus: himmel ovanifrån, mark underifrån
+        float nd = dot(N, uSol);
+        float d = max(nd, 0.0);
+        // hemisfäriskt omgivningsljus: himmel ovanifrån, grönt återsken under
         float h = N.y * 0.5 + 0.5;
-        vec3 amb = mix(uMark, uHimmel, h);
-        // mjuk halvskugga så att skuggsidan inte blir platt svart
-        float wrap = max(dot(N, uSol) * 0.5 + 0.5, 0.0);
-        vec3 ljus = amb + uSolFarg * (d * 0.78 + wrap * 0.22);
+        vec3 amb = mix(uMark, uHimmel, h) * uAmbient;
+        // bred halvskugga: skuggsidan behåller sin egen färg i stället för
+        // att falla ihop till svart
+        float wrap = max(nd * (1.0 - uHalvskugga) + uHalvskugga, 0.0);
+        // kamerafyllnad: en svag lykta vid ögat så att den sida vi ser
+        // aldrig blir en mörk skiva när solen står bakom
+        vec3 mot = normalize(uOga - vPos);
+        float fyll = max(dot(N, mot), 0.0);
+        // kontaktocklusion: allt nära marken mörknar, som i en riktig scen
+        float ao = mix(1.0 - uAoStyrka, 1.0,
+          clamp(vPos.y / max(uAoHojd, 0.001), 0.0, 1.0));
+        vec3 ljus = amb * ao + uSolFarg *
+          (d * uSolStyrka + wrap * wrap * uSolStyrka * 0.72 + fyll * 0.16) * ao;
         vec3 farg = bas * ljus;
+        // konturen tänds av ljuset bakifrån och ger volym åt runda former
+        float fres = 1.0 - abs(dot(N, mot));
+        fres = fres * fres * fres;
+        farg *= (1.0 - 0.10 * fres);
+        farg += uKantFarg * (fres * uKant * (0.30 + 0.70 * d));
         float dim = clamp((vDjup - uDimNara) / max(uDimFjarr - uDimNara, 0.001), 0.0, 1.0);
-        farg = mix(farg, uDimFarg, dim * 0.85);
+        farg = mix(farg, uDimFarg, dim * uDimStyrka);
         gl_FragColor = vec4(farg, uAlfa);
       }`;
     const p=this._program(vs,fs);
@@ -281,7 +298,9 @@ const GL={
     gl.useProgram(p);
     for(const n of ["aPos","aNrm","aCol","aUv"])this.a[n]=gl.getAttribLocation(p,n);
     for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
-      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon"])
+      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
+      "uKantFarg","uKant","uSolStyrka","uHalvskugga","uAmbient",
+      "uAoHojd","uAoStyrka","uDimStyrka"])
       this.u[n]=gl.getUniformLocation(p,n);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -360,6 +379,12 @@ const GL={
       this.canvas.width=w;this.canvas.height=h;
     }
     this.bredd=bredd;this.hojd=hojd;
+    /* Scenen ritas i en textur så att efterbehandlingen — glöd och
+       mättnad — kan arbeta på hela bilden innan den når skärmen. */
+    this._postRedo=this._post(w,h);
+    if(this._postRedo){
+      gl.bindFramebuffer(gl.FRAMEBUFFER,this.post.scenFB);
+    }
     gl.viewport(0,0,w,h);
     gl.useProgram(this.prog);
     gl.clearColor(0,0,0,0);
@@ -376,15 +401,34 @@ const GL={
     gl.uniform1f(this.u.uDimFjarr,ljus.dimFjarr);
     gl.uniform1f(this.u.uAlfa,1);
     gl.uniform1f(this.u.uPlatt,0);
+    gl.uniform3fv(this.u.uKantFarg,glFarg(ljus.kantFarg||ljus.solFarg));
+    const tal=(v,d)=>v===undefined?d:v;
+    gl.uniform1f(this.u.uKant,tal(ljus.kant,0.20));
+    gl.uniform1f(this.u.uSolStyrka,tal(ljus.solStyrka,0.62));
+    gl.uniform1f(this.u.uHalvskugga,tal(ljus.halvskugga,0.38));
+    gl.uniform1f(this.u.uAmbient,tal(ljus.ambient,0.74));
+    gl.uniform1f(this.u.uAoHojd,tal(ljus.aoHojd,0.85));
+    gl.uniform1f(this.u.uAoStyrka,tal(ljus.aoStyrka,0.22));
+    gl.uniform1f(this.u.uDimStyrka,tal(ljus.dimStyrka,0.80));
     gl.uniform3f(this.u.uTon,1,1,1);
     this.ljus=ljus;
   },
   kamera(oga,mal,fov){
-    this.proj=M4.perspektiv(fov||1.02, this.bredd/Math.max(this.hojd,1), 0.12, 320);
+    const f=fov||1.02, asp=this.bredd/Math.max(this.hojd,1);
+    this.proj=M4.perspektiv(f, asp, 0.12, 320);
     this.vy=M4.seFran(oga,mal,[0,1,0]);
     this.gl.uniformMatrix4fv(this.u.uProj,false,this.proj);
     this.gl.uniformMatrix4fv(this.u.uVy,false,this.vy);
+    this.gl.uniform3f(this.u.uOga,oga[0],oga[1],oga[2]);
     this.ogaPos=oga;
+    /* Kamerans bas sparas så att himlen kan räknas ut per bildpunkt
+       i stället för att ritas som en kupol med tung överritning. */
+    const n=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];};
+    const fwd=n([mal[0]-oga[0],mal[1]-oga[1],mal[2]-oga[2]]);
+    const hj=n([fwd[2],0,-fwd[0]]);
+    const upp=[hj[1]*fwd[2]-hj[2]*fwd[1], hj[2]*fwd[0]-hj[0]*fwd[2],
+               hj[0]*fwd[1]-hj[1]*fwd[0]];
+    this.kamBas={fwd, hj, upp, tanF:Math.tan(f/2), asp};
   },
   /* Ritar ett nät med given modellmatris. */
   rita(nat,modell,opt){
@@ -414,15 +458,244 @@ const GL={
     if(o.baksidor)gl.enable(gl.CULL_FACE);
   },
   /* Skuggan: samma nät plattat ner i marken längs solens riktning. */
+  /* Skuggan: samma nät plattat ner i marken längs solens riktning,
+     lagt flera gånger i en liten ring så att kanten blir mjuk i
+     stället för knivskarp. Färgad, aldrig svart. */
   skugga(nat,modell,markY){
     if(!nat||!this.ljus)return;
-    const gl=this.gl;
-    const sm=M4.skugga(this.ljus.sol,(markY||0)+0.012);
+    const gl=this.gl, L=this.ljus;
+    const y0=(markY||0)+0.055;
+    const mj=L.skuggMjukhet===undefined?0.06:L.skuggMjukhet;
+    const alfa=L.skuggAlfa===undefined?0.22:L.skuggAlfa;
+    const ton=L.skuggFarg||"#000000";
     gl.enable(gl.BLEND);gl.depthMask(false);gl.disable(gl.CULL_FACE);
-    this.rita(nat,M4.mul(sm,modell),{platt:true,alfa:this.ljus.skuggAlfa||0.22,
-      ton:this.ljus.skuggFarg||"#000000"});
+    /* ringen: två avtryck runt mitten, vart och ett svagare */
+    const ring=[[0,0],[mj,mj*0.55],[-mj,-mj*0.55]];
+    const vikt=[0.50,0.25,0.25];
+    for(let i=0;i<ring.length;i++){
+      const sm=M4.skugga(L.sol,y0);
+      const m=M4.mul(M4.translation(ring[i][0],0,ring[i][1]),M4.mul(sm,modell));
+      this.rita(nat,m,{platt:true,alfa:alfa*vikt[i],ton});
+    }
     gl.enable(gl.CULL_FACE);gl.depthMask(true);gl.disable(gl.BLEND);
   },
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   EFTERBEHANDLING — glöd och mättnad.
+   Scenen renderas till en textur. Ur den plockas de ljusaste
+   partierna ut, suddas i två pass på fjärdedels upplösning och läggs
+   tillbaka ovanpå. Sist höjs mättnaden och exponeringen. Det är det
+   som gör skillnaden mellan platt geometri och en solig dag.
+   ══════════════════════════════════════════════════════════════════ */
+const POST_VS=`
+  attribute vec2 aP; varying vec2 vT;
+  void main(){ vT=aP*0.5+0.5; gl_Position=vec4(aP,0.0,1.0); }`;
+const POST_LJUS=`
+  precision mediump float; varying vec2 vT;
+  uniform sampler2D uTex; uniform float uTroskel;
+  void main(){
+    vec3 c=texture2D(uTex,vT).rgb;
+    float l=dot(c,vec3(0.299,0.587,0.114));
+    float k=max(l-uTroskel,0.0)/max(1.0-uTroskel,0.001);
+    gl_FragColor=vec4(c*k*k,1.0);
+  }`;
+const POST_SUDD=`
+  precision mediump float; varying vec2 vT;
+  uniform sampler2D uTex; uniform vec2 uSteg;
+  void main(){
+    vec3 s=texture2D(uTex,vT).rgb*0.227027;
+    s+=texture2D(uTex,vT+uSteg*1.3846).rgb*0.316216;
+    s+=texture2D(uTex,vT-uSteg*1.3846).rgb*0.316216;
+    s+=texture2D(uTex,vT+uSteg*3.2308).rgb*0.070270;
+    s+=texture2D(uTex,vT-uSteg*3.2308).rgb*0.070270;
+    gl_FragColor=vec4(s,1.0);
+  }`;
+const POST_KOMP=`
+  precision mediump float; varying vec2 vT;
+  uniform sampler2D uScen, uGlod;
+  uniform float uBloom, uMattnad, uExponering;
+  void main(){
+    vec3 c=texture2D(uScen,vT).rgb;
+    c+=texture2D(uGlod,vT).rgb*uBloom;
+    c*=uExponering;
+    float l=dot(c,vec3(0.299,0.587,0.114));
+    c=mix(vec3(l),c,uMattnad);
+    // mjuk knä mot vitt så att glöden inte klipper
+    c=c/(1.0+max(c-1.0,0.0)*0.65);
+    gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
+  }`;
+
+GL._mal=function(w,h){
+  const gl=this.gl;
+  const t=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  const f=gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER,f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+  return {tex:t, fb:f};
+};
+
+/* Bygger målen en gång per storlek. Returnerar false om kortet inte
+   klarar det — då ritas scenen rakt på skärmen som förut. */
+GL._post=function(w,h){
+  if(this._postTrasig)return false;
+  const gl=this.gl;
+  const p=this.post;
+  if(p&&p.w===w&&p.h===h)return true;
+  try{
+    if(p){
+      for(const m of [p.scen,p.ljus1,p.ljus2]){gl.deleteTexture(m.tex);gl.deleteFramebuffer(m.fb);}
+      gl.deleteRenderbuffer(p.djup);
+    }
+    const bw=Math.max(1,w>>2), bh=Math.max(1,h>>2);
+    const scen=this._mal(w,h), ljus1=this._mal(bw,bh), ljus2=this._mal(bw,bh);
+    const djup=gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER,djup);
+    gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,w,h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,scen.fb);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,djup);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)
+      throw new Error("ofullständig framebuffer");
+    if(!this.kvad){
+      this.kvad=gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.kvad);
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+      this.pLjus=this._program(POST_VS,POST_LJUS);
+      this.pSudd=this._program(POST_VS,POST_SUDD);
+      this.pKomp=this._program(POST_VS,POST_KOMP);
+      if(!this.pLjus||!this.pSudd||!this.pKomp)throw new Error("postshader");
+    }
+    this.post={w,h,bw,bh,scen,ljus1,ljus2,djup,
+      scenFB:scen.fb, scenTex:scen.tex};
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    return true;
+  }catch(e){
+    console.warn("efterbehandling av:",e.message);
+    this._postTrasig=true; this.post=null;
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    return false;
+  }
+};
+
+/* Kallas när bildrutans geometri är ritad. Löser upp scenen till
+   skärmen med glöd och mättnad. */
+GL.efter=function(){
+  if(!this._postRedo||!this.post)return;
+  const gl=this.gl, p=this.post, L=this.ljus||{};
+  const ritaKvad=()=>{
+    gl.bindBuffer(gl.ARRAY_BUFFER,this.kvad);
+    const a=gl.getAttribLocation(gl.getParameter(gl.CURRENT_PROGRAM),"aP");
+    gl.enableVertexAttribArray(a);
+    gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  };
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND);
+  gl.activeTexture(gl.TEXTURE0);
+
+  /* 1. Plocka ut det ljusa. */
+  gl.bindFramebuffer(gl.FRAMEBUFFER,p.ljus1.fb);
+  gl.viewport(0,0,p.bw,p.bh);
+  gl.useProgram(this.pLjus);
+  gl.uniform1i(gl.getUniformLocation(this.pLjus,"uTex"),0);
+  gl.uniform1f(gl.getUniformLocation(this.pLjus,"uTroskel"),
+    L.bloomTroskel===undefined?0.78:L.bloomTroskel);
+  gl.bindTexture(gl.TEXTURE_2D,p.scen.tex); ritaKvad();
+
+  /* 2. Sudda i två pass. */
+  gl.useProgram(this.pSudd);
+  gl.uniform1i(gl.getUniformLocation(this.pSudd,"uTex"),0);
+  for(const [fran,till,sx,sy] of
+      [[p.ljus1,p.ljus2,1/p.bw,0],[p.ljus2,p.ljus1,0,1/p.bh]]){
+    gl.bindFramebuffer(gl.FRAMEBUFFER,till.fb);
+    gl.uniform2f(gl.getUniformLocation(this.pSudd,"uSteg"),sx,sy);
+    gl.bindTexture(gl.TEXTURE_2D,fran.tex); ritaKvad();
+  }
+
+  /* 3. Lägg ihop och lyft mättnaden. */
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  gl.viewport(0,0,p.w,p.h);
+  gl.useProgram(this.pKomp);
+  gl.uniform1i(gl.getUniformLocation(this.pKomp,"uScen"),0);
+  gl.uniform1i(gl.getUniformLocation(this.pKomp,"uGlod"),1);
+  gl.uniform1f(gl.getUniformLocation(this.pKomp,"uBloom"),
+    L.bloomStyrka===undefined?0.35:L.bloomStyrka);
+  gl.uniform1f(gl.getUniformLocation(this.pKomp,"uMattnad"),
+    L.mattnad===undefined?1.2:L.mattnad);
+  gl.uniform1f(gl.getUniformLocation(this.pKomp,"uExponering"),
+    L.exponering===undefined?1.05:L.exponering);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,p.ljus1.tex);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,p.scen.tex);
+  ritaKvad();
+
+  gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+  gl.useProgram(this.prog);
+};
+
+
+/* ══════════════════════════════════════════════════════════════════
+   HIMLEN — en enda helskärmsritning i stället för en kupol.
+   En kupol av band ritar över samma bildpunkter tolv gånger om; här
+   räknas riktningen ut per bildpunkt och färgen läggs en gång. Solen
+   och dess gloria räknas analytiskt i samma pass.
+   ══════════════════════════════════════════════════════════════════ */
+const HIMMEL_FS=`
+  precision mediump float; varying vec2 vT;
+  uniform vec3 uFwd, uHoger, uUpp, uSol;
+  uniform vec3 uTopp, uMitt, uBotten, uSkiva, uGloria;
+  uniform float uTanF, uAsp;
+  void main(){
+    vec2 s=vT*2.0-1.0;
+    vec3 d=normalize(uFwd + uHoger*(s.x*uTanF*uAsp) + uUpp*(s.y*uTanF));
+    float h=clamp(d.y,0.0,1.0);
+    // två steg: ljust vid horisonten, klart blått i zenit
+    vec3 himmel = h<0.30
+      ? mix(uBotten,uMitt,h/0.30)
+      : mix(uMitt,uTopp,clamp((h-0.30)/0.70,0.0,1.0));
+    // under horisonten fortsätter horisontfärgen, aldrig grått
+    himmel = mix(uBotten, himmel, smoothstep(-0.12,0.02,d.y));
+    float sd=max(dot(d,normalize(uSol)),0.0);
+    himmel += uGloria*pow(sd,26.0)*0.55;          // gloria runt solen
+    himmel += uSkiva*smoothstep(0.9975,0.9990,sd); // skivan
+    gl_FragColor=vec4(himmel,1.0);
+  }`;
+
+GL.himmel=function(ljus){
+  const gl=this.gl, b=this.kamBas;
+  if(!b)return;
+  if(!this.pHimmel){
+    if(!this.kvad){
+      this.kvad=gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER,this.kvad);
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+    }
+    this.pHimmel=this._program(POST_VS,HIMMEL_FS);
+    if(!this.pHimmel)return;
+  }
+  const P=this.pHimmel, U=n=>gl.getUniformLocation(P,n);
+  gl.useProgram(P);
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND);
+  gl.uniform3fv(U("uFwd"),b.fwd); gl.uniform3fv(U("uHoger"),b.hj);
+  gl.uniform3fv(U("uUpp"),b.upp); gl.uniform1f(U("uTanF"),b.tanF);
+  gl.uniform1f(U("uAsp"),b.asp);
+  const sl=Math.hypot(ljus.sol[0],ljus.sol[1],ljus.sol[2])||1;
+  gl.uniform3f(U("uSol"),ljus.sol[0]/sl,ljus.sol[1]/sl,ljus.sol[2]/sl);
+  gl.uniform3fv(U("uTopp"),glFarg(ljus.himmelTopp));
+  gl.uniform3fv(U("uMitt"),glFarg(ljus.himmelMitt||ljus.himmelTopp));
+  gl.uniform3fv(U("uBotten"),glFarg(ljus.himmelBotten));
+  gl.uniform3fv(U("uSkiva"),glFarg(ljus.solskiva||"#FFF6C9"));
+  gl.uniform3fv(U("uGloria"),glFarg(ljus.solGloria||"#FFE070"));
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.kvad);
+  const a=gl.getAttribLocation(P,"aP");
+  gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+  gl.useProgram(this.prog);
 };
 
 /* Textur ur en ritfunktion — allt är målat i spelet, inga bildfiler. */

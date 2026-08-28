@@ -383,6 +383,8 @@ function ritaHUD(){
 /* ── Huvudloop ── */
 let last=performance.now();
 function loop(now){
+  /* 3D-modulerna laddas efter den här filen — vänta tills de finns. */
+  if(typeof gl3dLage!=="function"){requestAnimationFrame(loop);return;}
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
   ljudPuls(dt);
   if(G.scen==="lektion"||G.scen==="bana"){

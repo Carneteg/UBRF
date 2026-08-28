@@ -30,7 +30,7 @@ body{
 h1,h2,h3{font-family:Petrona,Georgia,serif; margin:0; text-wrap:balance; font-weight:600; letter-spacing:-.01em}
 .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
 .lbl{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.14em;
-  text-transform:uppercase; color:var(--faint); font-weight:500}
+  text-transform:uppercase; color:#8D939C; font-weight:600}
 button{font-family:inherit}
 :focus-visible{outline:2px solid var(--gold); outline-offset:2px; border-radius:2px}
 
@@ -51,19 +51,20 @@ button{font-family:inherit}
 .hud.bc{bottom:16px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
 .hud.tc{top:14px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
 
-.box{background:rgba(24,27,33,.90); border:1px solid var(--rule); border-radius:3px;
-  padding:11px 14px; backdrop-filter:blur(6px)}
+.box{background:rgba(14,16,20,.94); border:1px solid rgba(214,174,60,.22); border-radius:4px;
+  padding:11px 14px; backdrop-filter:blur(8px);
+  box-shadow:0 6px 26px -6px rgba(0,0,0,.85)}
 
 /* moment */
 #moment{min-width:250px; max-width:min(360px,42vw)}
-#momentNamn{font-family:Petrona,serif; font-size:19px; line-height:1.2}
-#momentText{font-size:13.5px; color:var(--ink-2); margin-top:4px; line-height:1.45}
+#momentNamn{font-family:Petrona,serif; font-size:20px; line-height:1.2; color:#F4F1E8}
+#momentText{font-size:14px; color:#DCD9D1; margin-top:5px; line-height:1.5}
 #momentBar{height:3px; background:var(--sunk); border-radius:2px; margin-top:10px; overflow:hidden}
 #momentBar i{display:block; height:100%; background:var(--gold); width:0%; transition:width .3s linear}
 
 /* gångart */
-#gait{font-family:Petrona,serif; font-size:26px; line-height:1}
-#tempo{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted);
+#gait{font-family:Petrona,serif; font-size:27px; line-height:1; color:#F4F1E8}
+#tempo{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:#A6ABB3;
   font-variant-numeric:tabular-nums; margin-top:3px}
 #gaitWarn{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
   text-transform:uppercase; color:var(--crit); margin-top:5px; min-height:14px}
@@ -71,8 +72,8 @@ button{font-family:inherit}
 /* pyramid */
 #pyr{width:210px}
 .prow{display:grid; grid-template-columns:70px 1fr; gap:7px; align-items:center; margin:2px 0}
-.pname{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.06em;
-  text-transform:uppercase; color:var(--muted); text-align:right; white-space:nowrap}
+.pname{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.06em;
+  text-transform:uppercase; color:#A6ABB3; text-align:right; white-space:nowrap}
 .ptrack{position:relative; height:9px; background:var(--sunk); border-radius:1px}
 .pfill{position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); border-radius:1px}
 .pcap{position:absolute; top:-2px; bottom:-2px; left:50%; transform:translateX(-50%);
@@ -86,19 +87,27 @@ button{font-family:inherit}
 /* hjälper */
 #aids{width:180px}
 .arow{display:grid; grid-template-columns:52px 1fr 26px; gap:7px; align-items:center; margin:3px 0}
-.aname{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.05em;
-  text-transform:uppercase; color:var(--muted); text-align:right}
+.aname{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.05em;
+  text-transform:uppercase; color:#A6ABB3; text-align:right}
 .atrack{position:relative; height:7px; background:var(--sunk); border-radius:1px; overflow:hidden}
 .atrack i{position:absolute; top:0; bottom:0; background:var(--gold); border-radius:1px}
 .atrack .band{position:absolute; top:0; bottom:0; background:rgba(127,180,137,.22)}
-.akey{font-family:"IBM Plex Mono",monospace; font-size:9px; color:var(--faint); text-align:left}
+.akey{font-family:"IBM Plex Mono",monospace; font-size:9.5px; color:#8D939C; text-align:left}
 
 /* ridlärarens röst */
-#saga{font-family:Petrona,serif; font-size:20px; font-style:italic; color:var(--ink);
-  text-shadow:0 2px 10px rgba(0,0,0,.9); opacity:0; transition:opacity .35s; min-height:1.5em}
+#saga{font-family:Petrona,serif; font-size:21px; font-style:italic; color:#F6F2E8;
+  opacity:0; transition:opacity .35s; min-height:1.5em;
+  text-shadow:0 2px 4px rgba(0,0,0,.95), 0 0 18px rgba(0,0,0,.85)}
 #saga.on{opacity:1}
-#approach{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--gold-2);
-  letter-spacing:.02em; margin-top:6px; min-height:18px; text-shadow:0 2px 10px rgba(0,0,0,.9)}
+#saga:not(:empty){display:inline-block; padding:8px 18px; border-radius:20px;
+  background:rgba(12,14,18,.72); backdrop-filter:blur(7px);
+  box-shadow:0 6px 26px -8px rgba(0,0,0,.9)}
+#approach{font-family:"IBM Plex Mono",monospace; font-size:14px; font-weight:600;
+  color:#F4DFA0; letter-spacing:.02em; margin-top:8px; min-height:20px;
+  text-shadow:0 2px 4px rgba(0,0,0,.95)}
+#approach:not(:empty){display:inline-block; padding:7px 16px; border-radius:4px;
+  background:rgba(12,14,18,.86); border:1px solid rgba(214,174,60,.42);
+  backdrop-filter:blur(7px); box-shadow:0 6px 22px -8px rgba(0,0,0,.9)}
 
 /* fel-flash */
 #faults{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -221,6 +230,8 @@ tr:last-child td{border-bottom:0}
   #prot{width:150px; font-size:10px}
 }
 </style>
+<link rel="stylesheet" href="src/ui.css">
+<link rel="stylesheet" href="src/skin.css">
 </head>
 <body>
 
@@ -273,7 +284,9 @@ tr:last-child td{border-bottom:0}
 <script src="src/data.js"></script>
 <script src="src/site.js"></script>
 <script src="src/hast.js"></script>
+<script src="src/sprites.js"></script>
 <script src="src/ljud.js"></script>
+<script src="src/ljus.js"></script>
 <script src="src/gl.js"></script>
 <script src="src/ovningar.js"></script>
 <script src="src/sysslor.js"></script>
@@ -283,6 +296,8 @@ tr:last-child td{border-bottom:0}
 <script src="src/ryttare.js"></script>
 <script src="src/tavling.js"></script>
 <script src="src/scen3d.js"></script>
+<script src="src/ritt2d.js"></script>
+<script src="src/varld3d.js"></script>
 <script src="src/scenes.js"></script>
 <script src="src/mobil.js"></script>
 </body>
