@@ -121,8 +121,19 @@ meny → stall → lektion fungerar i test.
 
 **Klart när:** man hör var man är med ögonen stängda.
 
-## Parkerat · Riktig 3D
+## ✅ Riktig 3D
 
-3D-motor (three.js/GLTF eller Roblox-porten) med riggade hästmodeller.
-Vi väntar med det tills spelet ovan är färdigt — allt vi bygger nu
-(modell, data, anläggning, övningar) följer med oavsett motor.
+Ridscenen renderas i äkta 3D med en egen WebGL-motor (`src/gl.js`,
+`src/scen3d.js`) — perspektiv med djupbuffert, sol och hemisfäriskt
+omgivningsljus, dimma och projicerade skuggor. Hästen är riggad:
+skuldror, höfter, knän och kotor animeras ur gångartens takt, och
+ryttaren lättrider, sitter lätt och tar tygel med hjälperna.
+
+Ingen three.js och inget CDN — motorn är skriven för spelet, så det
+förblir en enda fil som fungerar utan nätverk. Saknas WebGL faller
+vyn tillbaka på den handrullade målarrenderaren, och gå-läget till
+fots använder den fortfarande.
+
+**Kvar att ta vidare:** gå-läget (gården, stallet, ridhuset invändigt)
+kan flyttas över till samma motor, och Roblox-porten finns kvar som
+möjlighet — modellen, anläggningen och övningarna följer med oavsett.

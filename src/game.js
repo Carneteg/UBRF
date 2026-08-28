@@ -388,13 +388,14 @@ function loop(now){
   if(G.scen==="lektion"||G.scen==="bana"){
     stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
     if(G.luft>0)G.luft-=dt;
-    if(G.vy==="2d")draw2D(G);else draw3D(G);
+    if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
     ritaHUD();
   } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
+    gl3dLage(false);
     stegaVandring(dt);ritaVandring();
   } else if(G.scen==="resultat"){
-    if(G.vy==="2d")draw2D(G);else draw3D(G);
-  }
+    if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
+  } else gl3dLage(false);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

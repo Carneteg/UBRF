@@ -247,7 +247,8 @@ function proj(px,py,pz,cam){
   const f=(CH*0.9)/V3.fov;
   return [CW/2+cxm/cz*f, CH*0.60-(dz)/cz*f, cz];
 }
-function draw3D(G){
+/* Reservrenderaren: den handrullade målarvyn används när WebGL saknas. */
+function draw3DCanvas(G){
   const cam={x:G.px-Math.cos(G.rikt)*V3.back, y:G.py-Math.sin(G.rikt)*V3.back,
     z0:V3.h, fx:Math.cos(G.rikt), fy:Math.sin(G.rikt)};
   const ute=G.plats&&G.plats!=="ridhus", stig=G.plats==="stig";

@@ -36,6 +36,11 @@ button{font-family:inherit}
 
 #app{position:fixed; inset:0}
 #cv{position:absolute; inset:0; width:100%; height:100%; display:block; background:var(--ground)}
+/* WebGL-lagret ligger under 2D-canvasen; när 3D är aktivt blir 2D-lagret
+   genomskinligt och används bara till regn och skärmtext. */
+#gl{position:absolute; inset:0; width:100%; height:100%; display:none; background:var(--ground)}
+#app.gl3d #gl{display:block}
+#app.gl3d #cv{background:transparent}
 
 /* ── HUD ─────────────────────────────────────────────────────── */
 .hud{position:absolute; pointer-events:none; z-index:5}
@@ -220,6 +225,7 @@ tr:last-child td{border-bottom:0}
 <body>
 
 <div id="app">
+  <canvas id="gl"></canvas>
   <canvas id="cv"></canvas>
 
   <div id="viewToggle" hidden>
@@ -268,6 +274,7 @@ tr:last-child td{border-bottom:0}
 <script src="src/site.js"></script>
 <script src="src/hast.js"></script>
 <script src="src/ljud.js"></script>
+<script src="src/gl.js"></script>
 <script src="src/ovningar.js"></script>
 <script src="src/sysslor.js"></script>
 <script src="src/render.js"></script>
@@ -275,6 +282,7 @@ tr:last-child td{border-bottom:0}
 <script src="src/game.js"></script>
 <script src="src/ryttare.js"></script>
 <script src="src/tavling.js"></script>
+<script src="src/scen3d.js"></script>
 <script src="src/scenes.js"></script>
 <script src="src/mobil.js"></script>
 </body>
