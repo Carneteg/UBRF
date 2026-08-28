@@ -240,6 +240,7 @@ function v3dGard(lagg,opp){
   for(let i=0;i<ANL.trad.length;i++){
     const[tx,tz,tr]=ANL.trad[i];
     const f=TRADFARG[i%TRADFARG.length], h=tr*2.2+2.5;
+    if(STIL==="kloss"){ klossTrad(skog,tx,tz,h,f[0],glMorka(f[0],0.88)); continue; }
     skog.cyl(tr*0.16,tr*0.11,h*0.45,"#5E4A34",M4.translation(tx,0,tz),7);
     skog.klot(1,f[0],M4.mul(M4.translation(tx,h*0.66,tz),
       M4.skala(tr*0.95,tr*1.05,tr*0.95)),10);
@@ -254,16 +255,31 @@ function v3dGard(lagg,opp){
     const[x,z]=p.pos;
     switch(p.typ){
       case"silo":
+        if(STIL==="kloss"){
+          pr.lada(2.7,7.5,2.7,"#C4C7C9",M4.translation(x,3.75,z));
+          pr.lada(2.9,0.55,2.9,"#A2A4A6",M4.translation(x,7.80,z));
+          pr.lada(1.9,0.90,1.9,"#A2A4A6",M4.translation(x,8.45,z));   // toppen i två steg
+          pr.lada(1.6,1.20,1.6,"#8A8C90",M4.translation(x,0.60,z-1.9));
+          break;
+        }
         pr.cyl(1.5,1.5,7.5,"#C4C7C9",M4.translation(x,0,z),14);
         pr.cyl(1.55,0.2,1.8,"#A2A4A6",M4.translation(x,7.5,z),14);
         pr.cyl(0.9,0.9,1.2,"#8A8C90",M4.translation(x,-0.0,z-1.8),10);
         break;
       case"balar":
-        for(let i=0;i<3;i++)for(let j=0;j<2;j++)
-          pr.cyl(0.65,0.65,1.2,"#E4E2DA",
-            M4.mul(M4.translation(x+i*1.4,0.65,z+j*1.5),M4.rotZ(Math.PI/2)),10);
+        for(let i=0;i<3;i++)for(let j=0;j<2;j++){
+          const m=M4.translation(x+i*1.4,0.65,z+j*1.5);
+          if(STIL==="kloss"){ pr.lada(1.3,1.3,1.2,"#E4E2DA",m); continue; }
+          pr.cyl(0.65,0.65,1.2,"#E4E2DA",M4.mul(m,M4.rotZ(Math.PI/2)),10);
+        }
         break;
-      case"grushog": pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),12); break;
+      case"grushog":
+        if(STIL==="kloss"){
+          pr.lada(3.4,0.70,3.4,"#BCA179",M4.translation(x,0.35,z));
+          pr.lada(2.0,0.60,2.0,"#BCA179",M4.translation(x,0.95,z));
+          break;
+        }
+        pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),12); break;
       case"transport":
         pr.lada(2.2,1.9,5.4,"#E8E6E0",M4.mul(M4.translation(x,1.25,z),M4.rotY(-(p.rikt||0))));
         pr.lada(2.0,0.5,2.0,"#4A4E52",M4.mul(M4.translation(x,0.3,z),M4.rotY(-(p.rikt||0))));
@@ -846,7 +862,7 @@ function v3dFigurKloss(o){
 }
 
 function v3dFigur(o){
-  if(FIGURSTIL==="kloss")return v3dFigurKloss(o);
+  if(STIL==="kloss")return v3dFigurKloss(o);
   v3dBygFigur();
   const D=S3.del;
   const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));

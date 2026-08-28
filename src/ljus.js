@@ -123,6 +123,7 @@ function glTonRGBA(hex,a){
   return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
 }
 
-/* Figurens stil: "svept" är den handbyggda kroppen, "kloss" är
-   Roblox-snittet med sex rätblock. Byt här. */
-let FIGURSTIL="svept";
+/* Världens formspråk. "kloss" bygger häst, ryttare, figurer och träd
+   av rätblock; "svept" är den äldre handbyggda geometrin. Byt här —
+   allt annat läser den här raden. */
+let STIL="kloss";

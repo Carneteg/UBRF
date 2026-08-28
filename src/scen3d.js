@@ -257,6 +257,9 @@ function s3BygHast(){
     b.klot(1,vit,M4.mul(M4.translation(0,0.55,0),M4.skala(0.19,0.32,0.17)),10);
     b.klot(0.13,"#D8B08C",M4.translation(0,0.98,0),10);
     return b;})());
+  /* Klosstilen ersätter delarna i samma lokala rum, så riggen ovan
+     ritar dem utan att veta om bytet. */
+  if(STIL==="kloss")klossHastDelar(D);
 }
 
 /* Slät yta ur en punktfunktion f(t,v) — ger mjuka normaler och en
@@ -718,6 +721,7 @@ function s3ByggPlats(plats){
     let fro=7;
     const rnd=()=>{fro=(fro*16807)%2147483647;return fro/2147483647;};
     const trad=(x,z,h,f)=>{
+      if(STIL==="kloss")return klossTrad(skog,x,z,h,f,glMorka(f,0.88));
       skog.cyl(0.20,0.13,h*0.42,"#4A3A28",M4.translation(x,0,z),7);
       skog.klot(1,f,M4.mul(M4.translation(x,h*0.62,z),M4.skala(h*0.36,h*0.42,h*0.36)),10);
       skog.klot(1,f,M4.mul(M4.translation(x+h*0.10,h*0.85,z),M4.skala(h*0.24,h*0.26,h*0.24)),9);
