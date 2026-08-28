@@ -1,0 +1,117 @@
+--!strict
+--[[
+	Inmatningen — tangenter, gamepad och peksk��rm till en Intent.
+
+	Ingen spellogik här. Modulen översätter knappar till avsikt och inget
+	annat, så att styrningen går att binda om utan att rörelsen rörs.
+
+	W  framåt          S  ned i gångart, sedan stopp, sedan backa
+	A/D styr           Shift  upp en gångart     Ctrl  ned en gångart
+	Space hoppa        E  sitt upp/av
+]]
+
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
+
+local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
+
+local Input = {}
+
+local state = {
+	forward = 0,
+	steer = 0,
+	gaitUp = false,
+	gaitDown = false,
+	jump = false,
+	_upEdge = false,
+	_downEdge = false,
+}
+
+local bound = false
+
+local KEY_ACTIONS = {
+	[Enum.KeyCode.W] = function(v) state.forward = if v then 1 else (if state.forward > 0 then 0 else state.forward) end,
+	[Enum.KeyCode.S] = function(v) state.forward = if v then -1 else (if state.forward < 0 then 0 else state.forward) end,
+	[Enum.KeyCode.A] = function(v) state.steer = if v then -1 else (if state.steer < 0 then 0 else state.steer) end,
+	[Enum.KeyCode.D] = function(v) state.steer = if v then 1 else (if state.steer > 0 then 0 else state.steer) end,
+}
+
+local function onInput(_, inputState: Enum.UserInputState, obj: InputObject)
+	local pressed = inputState == Enum.UserInputState.Begin
+	local action = KEY_ACTIONS[obj.KeyCode]
+	if action then
+		action(pressed)
+		return Enum.ContextActionResult.Sink
+	end
+	if obj.KeyCode == Enum.KeyCode.LeftShift or obj.KeyCode == Enum.KeyCode.ButtonR1 then
+		if pressed and not state.gaitUp then state._upEdge = true end
+		state.gaitUp = pressed
+	elseif obj.KeyCode == Enum.KeyCode.LeftControl or obj.KeyCode == Enum.KeyCode.ButtonL1 then
+		if pressed and not state.gaitDown then state._downEdge = true end
+		state.gaitDown = pressed
+	elseif obj.KeyCode == Enum.KeyCode.Space or obj.KeyCode == Enum.KeyCode.ButtonA then
+		state.jump = pressed
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+function Input.bind()
+	if bound then return end
+	bound = true
+	ContextActionService:BindAction("HorseControl", onInput, false,
+		Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D,
+		Enum.KeyCode.Space, Enum.KeyCode.LeftShift, Enum.KeyCode.LeftControl,
+		Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonR1, Enum.KeyCode.ButtonL1)
+end
+
+function Input.unbind()
+	if not bound then return end
+	bound = false
+	ContextActionService:UnbindAction("HorseControl")
+	state.forward, state.steer = 0, 0
+	state.gaitUp, state.gaitDown, state.jump = false, false, false
+end
+
+--[[ Gamepadens vänsterspak går in vid sidan av tangenterna, så att båda
+     fungerar samtidigt utan att slå ut varandra. ]]
+local function stick(): (number, number)
+	for _, obj in UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1) do
+		if obj.KeyCode == Enum.KeyCode.Thumbstick1 then
+			local v = obj.Position
+			local dead = 0.18
+			local x = if math.abs(v.X) > dead then v.X else 0
+			local y = if math.abs(v.Y) > dead then v.Y else 0
+			return y, x
+		end
+	end
+	return 0, 0
+end
+
+--[[ Läser av och nollställer flankerna. Anropas exakt en gång per bildruta
+     av klientens loop — kallas den två gånger tappas ett gångartsbyte. ]]
+function Input.consume(): Types.Intent
+	local padForward, padSteer = stick()
+	local intent: Types.Intent = {
+		forward = math.clamp(state.forward + padForward, -1, 1),
+		steer = math.clamp(state.steer + padSteer, -1, 1),
+		gaitUp = state._upEdge,
+		gaitDown = state._downEdge,
+		jump = state.jump,
+	}
+	state._upEdge, state._downEdge = false, false
+	return intent
+end
+
+--[[ För pekskärm: mobilens knappar kallar de här i stället för tangenter. ]]
+function Input.setTouch(forward: number, steer: number)
+	state.forward, state.steer = forward, steer
+end
+function Input.touchGait(up: boolean)
+	if up then state._upEdge = true else state._downEdge = true end
+end
+function Input.touchJump()
+	state.jump = true
+	task.delay(0.15, function() state.jump = false end)
+end
+
+return Input

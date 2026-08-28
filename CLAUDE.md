@@ -10,8 +10,17 @@ Ett HTML5-spel som byggs till **en enda fil**: `tools/build.py` fogar ihop `inde
 3D-delen är en egen WebGL-motor i `src/gl.js` — inget Three.js, inga färdiga modellformat.
 Geometri byggs i kod med `Bygge` (lådor, klot, cylindrar, svepta ytor).
 
-Det här är **inte** ett Roblox-projekt. Instruktioner som talar om Luau, `BuildKit.lua`,
-studs eller Roblox Studio hör till ett annat spår och gäller inte den här kodbasen.
+### Två spår i samma repo
+
+`src/`, `index.html` och `tools/build.py` är **JS-spelet** ovan. `roblox/` är ett
+**separat Roblox-spår** i Luau, med ett eget hästsystem för riggade modeller. De
+delar ingen kod. Det enda gemensamma är siffrorna: gångarternas tempoband i
+`roblox/src/shared/HorseCore/Gaits.luau` är portade från `src/model.js`, som i sin
+tur var en port från Luau.
+
+Arbetar du i `src/` gäller reglerna nedan. Arbetar du i `roblox/` gäller
+`roblox/README.md` — nämn aldrig `Bygge`, `STIL` eller `tools/build.py` där, och
+nämn aldrig `BuildKit.lua` eller studs här.
 
 Kör lokalt: `python3 tools/build.py && python3 -m http.server 8931`, öppna
 `http://localhost:8931/dist/ridskolan.html`. Skärmdumpar tas med Playwright
