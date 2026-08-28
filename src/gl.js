@@ -252,7 +252,8 @@ const GL={
     const fs=`
       precision mediump float;
       varying vec3 vNrm, vCol; varying vec2 vUv; varying float vDjup; varying vec3 vPos;
-      uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga;
+      uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga, uKantFarg;
+      uniform float uKant, uMattnad;
       uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;
       uniform sampler2D uTex;
       void main(){
@@ -263,18 +264,29 @@ const GL={
           return;
         }
         vec3 N = normalize(vNrm);
-        float d = max(dot(N, uSol), 0.0);
+        float nd = dot(N, uSol);
+        float d = max(nd, 0.0);
         // hemisfäriskt omgivningsljus: himmel ovanifrån, mark underifrån
         float h = N.y * 0.5 + 0.5;
         vec3 amb = mix(uMark, uHimmel, h);
-        // mjuk halvskugga så att skuggsidan inte blir platt svart
-        float wrap = max(dot(N, uSol) * 0.5 + 0.5, 0.0);
-        vec3 ljus = amb + uSolFarg * (d * 0.78 + wrap * 0.22);
-        vec3 farg = bas * ljus;
-        // kantskuggning ger volym åt runda former
+        // bred halvskugga: skuggsidan behåller sin egen färg i stället
+        // för att falla ihop till brunt — som i tecknad ridspelsgrafik
+        float wrap = max(nd * 0.38 + 0.62, 0.0);
+        // kamerafyllnad: en svag lykta vid ögat så att den sida vi ser
+        // aldrig faller ihop till en mörk skiva när solen står bakom
         vec3 mot = normalize(uOga - vPos);
-        float kant = 1.0 - abs(dot(N, mot));
-        farg *= (1.0 - 0.30 * kant * kant);
+        float fyll = max(dot(N, mot), 0.0);
+        vec3 ljus = amb * 0.78
+          + uSolFarg * (d * 0.44 + wrap * wrap * 0.46 + fyll * 0.24);
+        vec3 farg = bas * ljus;
+        // konturen tänds av ljuset bakifrån och ger volym åt runda former
+        float fres = 1.0 - abs(dot(N, mot));
+        fres = fres * fres * fres;
+        farg *= (1.0 - 0.10 * fres);
+        farg += uKantFarg * (fres * uKant * (0.30 + 0.70 * d));
+        // mättnaden lyfter höstfärgerna
+        float lum = dot(farg, vec3(0.299, 0.587, 0.114));
+        farg = mix(vec3(lum), farg, uMattnad);
         float dim = clamp((vDjup - uDimNara) / max(uDimFjarr - uDimNara, 0.001), 0.0, 1.0);
         farg = mix(farg, uDimFarg, dim * 0.85);
         gl_FragColor = vec4(farg, uAlfa);
@@ -285,7 +297,8 @@ const GL={
     gl.useProgram(p);
     for(const n of ["aPos","aNrm","aCol","aUv"])this.a[n]=gl.getAttribLocation(p,n);
     for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
-      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga"])
+      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga",
+      "uKantFarg","uKant","uMattnad"])
       this.u[n]=gl.getUniformLocation(p,n);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -380,6 +393,9 @@ const GL={
     gl.uniform1f(this.u.uDimFjarr,ljus.dimFjarr);
     gl.uniform1f(this.u.uAlfa,1);
     gl.uniform1f(this.u.uPlatt,0);
+    gl.uniform3fv(this.u.uKantFarg,glFarg(ljus.kantFarg||ljus.solFarg));
+    gl.uniform1f(this.u.uKant,ljus.kant===undefined?0.45:ljus.kant);
+    gl.uniform1f(this.u.uMattnad,ljus.mattnad===undefined?1.22:ljus.mattnad);
     gl.uniform3f(this.u.uTon,1,1,1);
     this.ljus=ljus;
   },

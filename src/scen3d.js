@@ -22,24 +22,28 @@ function s3Ljus(over){
   const v=(G.vader&&G.vader.typ)||"sol";
   const inne=(over||G.plats)==="ridhus";
   if(inne)return {   // ridhusets lysrör: jämnt, varmt och utan hårda skuggor
-    sol:[0.35,0.88,0.32], solFarg:"#B3A78A", himmel:"#7E838A", mark:"#4A443A",
+    sol:[0.35,0.88,0.32], solFarg:"#C6B48E", himmel:"#8A8E92", mark:"#544C40",
     dimFarg:"#3A3C40", dimNara:44, dimFjarr:120, skuggAlfa:0.24, skuggFarg:"#0A0A0C",
     himmelTopp:"#15181D", himmelBotten:"#23272E",
+    kantFarg:"#F0DCB0", kant:0.22, mattnad:1.16,
   };
   if(v==="regn")return {
-    sol:[-0.35,0.72,0.60], solFarg:"#8E969E", himmel:"#7A828C", mark:"#4A4E44",
+    sol:[-0.35,0.72,0.60], solFarg:"#9AA2AA", himmel:"#828A94", mark:"#4E5448",
     dimFarg:"#6E747C", dimNara:26, dimFjarr:130, skuggAlfa:0.12, skuggFarg:"#0A0C10",
     himmelTopp:"#2C3138", himmelBotten:"#5E646C",
+    kantFarg:"#C8D2DC", kant:0.20, mattnad:1.05,
   };
   if(v==="mulet")return {
-    sol:[-0.30,0.78,0.55], solFarg:"#A8A89C", himmel:"#868C94", mark:"#50543E",
-    dimFarg:"#8E8E84", dimNara:34, dimFjarr:160, skuggAlfa:0.14, skuggFarg:"#0C0E12",
+    sol:[-0.30,0.78,0.55], solFarg:"#BCB8A6", himmel:"#949AA0", mark:"#5A5E44",
+    dimFarg:"#9A9A8E", dimNara:34, dimFjarr:160, skuggAlfa:0.14, skuggFarg:"#0C0E12",
     himmelTopp:"#39404A", himmelBotten:"#8A8A80",
+    kantFarg:"#E4DCC8", kant:0.22, mattnad:1.14,
   };
-  return { // gyllene timme
-    sol:[-0.58,0.50,0.64], solFarg:"#E2B478", himmel:"#7C8CA8", mark:"#5E5238",
-    dimFarg:"#B08A5C", dimNara:55, dimFjarr:210, skuggAlfa:0.26, skuggFarg:"#1A1206",
-    himmelTopp:"#2C3A55", himmelBotten:"#D8A268",
+  return { // gyllene timme — varmt ljus, men marken ska behålla sin färg
+    sol:[-0.58,0.46,0.66], solFarg:"#E6C594", himmel:"#96A8C4", mark:"#6A6048",
+    dimFarg:"#B9A488", dimNara:95, dimFjarr:320, skuggAlfa:0.24, skuggFarg:"#241A0C",
+    himmelTopp:"#43608E", himmelBotten:"#E8B98A",
+    kantFarg:"#FFE0B4", kant:0.24, mattnad:1.10,
   };
 }
 
@@ -112,13 +116,14 @@ function s3BygHast(){
   /* Måtten är en varmblodshäst på 1,62 m i mankhöjd: bålen 1,85 m
      lång, 0,72 m hög och 0,58 m bred, benen 1,08 m från bog till hov. */
   D.kropp=nyNat(new Bygge().klot(1,vit,M4.skala(0.92,0.36,0.29),16));
-  D.bringa=nyNat(new Bygge().klot(1,vit,M4.skala(0.34,0.36,0.28),14));
+  D.bringa=nyNat(new Bygge().klot(1,vit,M4.skala(0.40,0.40,0.30),14));
   D.kors=nyNat(new Bygge().klot(1,vit,M4.skala(0.40,0.37,0.30),14));
-  D.hals=nyNat(new Bygge().cyl(0.21,0.115,1,vit,null,12));
+  D.hals=nyNat(new Bygge().cyl(0.215,0.105,1,vit,null,14));
   D.huvud=nyNat((()=>{
     const b=new Bygge();
-    b.klot(1,vit,M4.skala(0.24,0.115,0.095),12);
-    b.klot(1,vit,M4.mul(M4.translation(0.23,-0.035,0),M4.skala(0.10,0.075,0.075)),10);
+    b.klot(1,vit,M4.skala(0.29,0.135,0.108),14);
+    b.klot(1,vit,M4.mul(M4.translation(0.27,-0.045,0),M4.skala(0.115,0.088,0.086)),12);
+    b.klot(1,vit,M4.mul(M4.translation(-0.16,0.02,0),M4.skala(0.16,0.15,0.125)),12);
     return b;})());
   D.ora=nyNat(new Bygge().cyl(0.038,0.004,0.14,vit,null,7));
   D.overben=nyNat(new Bygge().cyl(0.078,0.058,1,vit,null,12));
@@ -127,32 +132,97 @@ function s3BygHast(){
   D.svansrot=nyNat(new Bygge().cyl(0.085,0.075,1,vit,null,8));
   D.svanstagel=nyNat(new Bygge().cyl(0.095,0.030,1,vit,null,8));
   D.man=nyNat(new Bygge().lada(1,1,0.030,vit));
+  /* Manen hänger som lockar, inte som en kam: varje lock är en smal
+     avsmalnande sträng som faller längs halsens sida. */
+  D.lock=nyNat(new Bygge().cyl(0.082,0.030,1,vit,null,9));
+  /* Manen byggs en gång som en hel matta i halsens eget rum: x går
+     0→1 från manken till nacken, y uppåt, z ut åt sidan manen faller.
+     Överlappande klot ger en sammanhängande massa i stället för en kam. */
+  /* Manen i två lager: ett mörkare under och ett ljusare över, båda
+     med skålad kant så att lockarna syns. */
+  const manYta=(skal,djup)=>s3Yta(new Bygge(),vit,30,14,(t,v)=>{
+    const r=0.215-0.108*t+0.020+djup;
+    const kl=Math.min(v/0.26,1), th=-0.34+0.88*kl;
+    const h=Math.max(0,v-0.26)/0.74;
+    const lock=0.80+0.20*Math.cos(t*Math.PI*2*4.5);   // lockarnas kant
+    const fall=(0.15+0.16*Math.sin(t*Math.PI*0.85))
+      *(1-0.45*Math.max(0,t-0.72)/0.28)*lock*skal;
+    return [t+0.020*h*h,
+            r*Math.cos(th)-fall*h*(1.30-0.30*h),
+            r*Math.sin(th)+0.028*h*h+0.014*Math.sin(t*Math.PI*2*4.5)*h];
+  },0.014);
+  D.manunder=nyNat(manYta(0.86,0.0));
+  D.manmatta=nyNat(manYta(1.0,0.026));
+  /* Svanstageln: en tofs som faller från svansroten och smalnar av. */
+  D.svansmassa=nyNat(s3Yta(new Bygge(),vit,12,18,(u,t)=>{
+    const vin=u*Math.PI*2;
+    const w=(0.105+0.075*Math.sin(t*Math.PI*0.85))*(1-t*t*0.92);
+    return [Math.sin(vin)*w*0.80 - 0.16*t*t,
+            -t*0.98,
+            Math.cos(vin)*w];
+  },0.010));
+  /* Hovskägget — den tunga typens flikar över kotan. */
+  D.fjader=nyNat(new Bygge().cyl(0.052,0.098,0.19,vit,null,12));
+  D.strumpa=nyNat(new Bygge().cyl(0.056,0.048,1,"#F2EFE6",null,10));
+  D.blas=nyNat(new Bygge().klot(1,"#F2EFE6",M4.skala(0.19,0.030,0.048),12));
   D.sadel=nyNat((()=>{
     const b=new Bygge();
     b.klot(1,"#4A3526",M4.mul(M4.translation(0,0.03,0),M4.skala(0.26,0.075,0.20)),12);
-    b.lada(0.54,0.025,0.46,"#E8E4DA",M4.translation(-0.03,-0.05,0));  // schabrak
+    b.lada(0.56,0.028,0.48,"#3E6B47",M4.translation(-0.03,-0.05,0));  // grönt schabrak
     return b;})());
   D.tacke=nyNat(new Bygge().klot(1,"#7A2E33",M4.skala(0.90,0.38,0.33),14));
-  /* Ryttaren. */
-  D.bal=nyNat(new Bygge().lada(0.30,0.22,0.34,"#3B4A63"));
+  /* Ryttaren: ridkavaj, ljusa ridbyxor, långa stövlar och hjälm med
+     hästsvans — samma siluett som en elev på ridskolan. */
+  const KAVAJ="#33465F", BYXA="#D6C9AE", HUD="#E0B490", HAR="#6B4526";
+  D.bal=nyNat(new Bygge().klot(1,BYXA,M4.skala(0.165,0.125,0.185),11));
   D.torso=nyNat((()=>{
     const b=new Bygge();
-    b.klot(1,"#F0EDE4",M4.skala(0.15,0.24,0.19),12);          // överkroppen
-    b.klot(1,"#F0EDE4",M4.mul(M4.translation(0,0.16,0),M4.skala(0.17,0.09,0.20)),10);
-    b.klot(0.075,"#D8B08C",M4.translation(0.01,0.26,0),8);    // halsen
+    b.klot(1,KAVAJ,M4.mul(M4.translation(0,-0.02,0),M4.skala(0.125,0.215,0.155)),13);
+    b.klot(1,KAVAJ,M4.mul(M4.translation(-0.01,0.15,0),M4.skala(0.135,0.105,0.185)),12);
+    b.klot(1,"#F4F1E8",M4.mul(M4.translation(0.02,0.235,0),M4.skala(0.075,0.045,0.085)),9);
+    b.klot(0.062,HUD,M4.translation(0.01,0.27,0),9);          // halsen
     return b;})());
-  D.arm=nyNat(new Bygge().cyl(0.055,0.05,1,"#F0EDE4",null,11));
-  D.lar=nyNat(new Bygge().cyl(0.085,0.07,1,"#3B4A63",null,11));
-  D.vad=nyNat(new Bygge().cyl(0.065,0.055,1,"#3B4A63",null,11));
-  D.stovel=nyNat(new Bygge().lada(0.22,0.10,0.11,"#241C16"));
-  D.huvudR=nyNat(new Bygge().klot(0.105,"#D8B08C",null,10));
+  D.arm=nyNat(new Bygge().cyl(0.044,0.038,1,KAVAJ,null,11));
+  D.lar=nyNat(new Bygge().cyl(0.078,0.058,1,BYXA,null,11));
+  D.vad=nyNat(new Bygge().cyl(0.056,0.048,1,"#1E1A16",null,11));
+  D.stovel=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,"#1E1A16",M4.mul(M4.translation(0.02,0,0),M4.skala(0.115,0.052,0.062)),10);
+    return b;})());
+  D.huvudR=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,HUD,M4.skala(0.098,0.115,0.098),13);
+    b.klot(1,HUD,M4.mul(M4.translation(0.048,-0.048,0),M4.skala(0.042,0.052,0.058)),9);
+    for(const s of [-1,1]){                                   // ögonen
+      b.klot(1,"#FFFFFF",M4.mul(M4.translation(0.062,0.004,s*0.034),
+        M4.skala(0.015,0.019,0.016)),7);
+      b.klot(1,"#2B2118",M4.mul(M4.translation(0.072,0.002,s*0.035),
+        M4.skala(0.010,0.013,0.011)),7);
+    }
+    b.klot(1,"#B9755E",M4.mul(M4.translation(0.082,-0.054,0),
+      M4.skala(0.010,0.008,0.024)),6);                        // munnen
+    return b;})());
+  /* Håret: nacklugg under hjälmen och en hästsvans som faller. */
+  D.har=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,HAR,M4.mul(M4.translation(-0.052,0.012,0),M4.skala(0.092,0.104,0.098)),12);
+    for(let i=0;i<5;i++){
+      const t=i/4;
+      b.klot(1,HAR,M4.mul(M4.translation(-0.085-0.035*t*t,-0.055-0.115*t,0),
+        M4.skala(0.055,0.070,0.062)),9);
+    }
+    return b;})());
   D.hjalm=nyNat((()=>{
     const b=new Bygge();
-    b.klot(1,"#3E6B47",M4.skala(0.135,0.115,0.135),12);
-    b.lada(0.20,0.02,0.20,"#2E5237",M4.translation(0.03,-0.04,0));   // skärmen
+    b.klot(1,"#23282F",M4.mul(M4.translation(-0.014,0,0),
+      M4.skala(0.114,0.082,0.110)),14);
+    b.klot(1,"#2E343C",M4.mul(M4.translation(0.090,-0.012,0),
+      M4.skala(0.076,0.012,0.086)),12);                        // skärmen
+    b.klot(1,"#3E6B47",M4.mul(M4.translation(-0.03,0.062,0),
+      M4.skala(0.070,0.026,0.080)),10);                        // klubbens färg
     return b;})());
-  D.led=nyNat(new Bygge().klot(0.048,"#F0EDE4",null,9));
-  D.hand=nyNat(new Bygge().klot(1,"#D8B08C",M4.skala(0.048,0.052,0.038),9));
+  D.led=nyNat(new Bygge().klot(0.042,"#FFFFFF",null,9));
+  D.hand=nyNat(new Bygge().klot(1,"#2B2620",M4.skala(0.046,0.050,0.038),9));
   D.rem=nyNat(new Bygge().cyl(0.012,0.012,1,"#241A12",null,5));
   /* Hinder och stolpar. */
   D.bom=nyNat(new Bygge().cyl(0.055,0.055,1,vit,null,8));
@@ -167,6 +237,39 @@ function s3BygHast(){
     b.klot(1,vit,M4.mul(M4.translation(0,0.55,0),M4.skala(0.19,0.32,0.17)),10);
     b.klot(0.13,"#D8B08C",M4.translation(0,0.98,0),10);
     return b;})());
+}
+
+/* Slät yta ur en punktfunktion f(t,v) — ger mjuka normaler och en
+   tunn skiva åt båda håll. Manen och svansen ska läsas som hår, inte
+   som ett pärlband av klot. */
+function s3Yta(b,farg,nt,nv,f,tjock){
+  const rut=[],nrm=[],P=[],N=[],U=[],I=[];
+  for(let i=0;i<=nt;i++){const rad=[];
+    for(let j=0;j<=nv;j++)rad.push(f(i/nt,j/nv));
+    rut.push(rad);}
+  for(let i=0;i<=nt;i++){const rad=[];
+    for(let j=0;j<=nv;j++){
+      const a=rut[Math.min(i+1,nt)][j], c=rut[Math.max(i-1,0)][j];
+      const d=rut[i][Math.min(j+1,nv)], e=rut[i][Math.max(j-1,0)];
+      const u=[a[0]-c[0],a[1]-c[1],a[2]-c[2]];
+      const w=[d[0]-e[0],d[1]-e[1],d[2]-e[2]];
+      let n=[u[1]*w[2]-u[2]*w[1], u[2]*w[0]-u[0]*w[2], u[0]*w[1]-u[1]*w[0]];
+      const L=Math.hypot(n[0],n[1],n[2])||1;
+      rad.push([n[0]/L,n[1]/L,n[2]/L]);}
+    nrm.push(rad);}
+  const tj=tjock===undefined?0.018:tjock;
+  for(const sida of [1,-1]){
+    const bas=P.length/3;
+    for(let i=0;i<=nt;i++)for(let j=0;j<=nv;j++){
+      const q=rut[i][j], n=nrm[i][j];
+      P.push(q[0]+n[0]*tj*sida, q[1]+n[1]*tj*sida, q[2]+n[2]*tj*sida);
+      N.push(n[0]*sida, n[1]*sida, n[2]*sida);
+      U.push(i/nt, j/nv);}
+    for(let i=0;i<nt;i++)for(let j=0;j<nv;j++){
+      const a=bas+i*(nv+1)+j, c=a+1, d=a+nv+1, e=d+1;
+      if(sida>0)I.push(a,d,e, a,e,c); else I.push(a,e,d, a,c,e);}
+  }
+  return b.las(P,N,U,I,farg,null);
 }
 
 /* Matris som lägger en enhetscylinder (radie 1, höjd 1, längs +Y)
@@ -211,7 +314,7 @@ function s3Ben(fas,gangart,i){
   }else{                         // sving: knäet viks och benet förs fram
     const u=(p-D)/(1-D);
     t1=-A+2*A*(0.5-0.5*Math.cos(Math.PI*u));
-    t2=0.15+(bak?1.05:0.95)*Math.sin(Math.PI*u);
+    t2=0.12+(bak?0.78:0.62)*Math.sin(Math.PI*u);
   }
   return {t1, t2};
 }
@@ -245,11 +348,11 @@ function s3RitaHast(o){
 
   /* Bålen. */
   rita(D.kropp,M4.translation(0,1.18,0),farg);
-  rita(D.bringa,M4.translation(0.70,1.20,0),farg);
+  rita(D.bringa,M4.translation(0.72,1.24,0),farg);
   rita(D.kors,M4.translation(-0.72,1.22,0),glMorka(farg,0.96));
   /* Halsen: reser sig när hästen samlas, sträcks på lång tygel. */
   const samling=o.samling===undefined?0.4:o.samling;
-  const halsA=P(0.86,1.36,0), halsL=0.76+0.06*(1-samling);
+  const halsA=P(0.84,1.34,0), halsL=0.88+0.07*(1-samling);
   /* Betande häst sänker halsen till marken; annars styr samlingen. */
   const halsVin=o.beta ? -0.72
     : 0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
@@ -257,21 +360,40 @@ function s3RitaHast(o){
   rita(D.hals,s3Segment(halsA,halsB,1),farg);
   /* Huvudet följer halsens vinkel, nosen något nedåt. */
   const nick=o.beta ? -1.15 : halsVin-0.95-0.25*samling;
-  const huvudM=M4.mul(M4.translation(halsB[0]+Math.cos(nick)*0.16,
-    halsB[1]+Math.sin(nick)*0.16-0.02,0), M4.rotZ(nick));
+  const huvudM=M4.mul(M4.translation(halsB[0]+Math.cos(nick)*0.19,
+    halsB[1]+Math.sin(nick)*0.19-0.02,0), M4.rotZ(nick));
   rita(D.huvud,huvudM,farg);
   for(const s of [-1,1])
     rita(D.ora,M4.mul(M4.mul(huvudM,M4.translation(-0.10,0.10,s*0.085)),
       M4.rotZ(-0.25*s*0+0.15)),glMorka(farg,0.9));
-  /* Manen längs halsen. */
-  for(let i=0;i<10;i++){
-    const t=i/9, mx=halsA[0]+(halsB[0]-halsA[0])*t, my=halsA[1]+(halsB[1]-halsA[1])*t;
-    const sv=Math.sin(fas*Math.PI*2+i*0.7)*0.025*(gangart==="halt"?0.3:1);
-    const ut=0.13+0.03*Math.sin(t*Math.PI);      // manen faller utanför halsen
-    rita(D.man,M4.mul(M4.mul(
-      M4.translation(mx-Math.cos(halsVin)*0.02+Math.sin(halsVin)*ut,
-                     my+Math.cos(halsVin)*ut, sv),
-      M4.rotZ(halsVin-1.57)), M4.skala(0.09,0.20,1)),man);
+  if(h.tecken&&h.tecken.blas)     // bläsen längs nosryggen
+    rita(D.blas,M4.mul(huvudM,M4.translation(0.07,0.105,0)),"#FFFFFF");
+  /* Tränset: nosgrimma, kindstycke och pannband i läder. */
+  if(o.sadel){
+    const HP=(x,y,z)=>{
+      const m=M4.mul(huvudM,M4.translation(x,y,z));
+      return [m[12],m[13],m[14]];
+    };
+    for(const s of [-1,1]){
+      rita(D.rem,s3Segment(HP(0.04,0.09,s*0.085),HP(0.04,-0.09,s*0.075),1.6),"#6B4A2E");
+      rita(D.rem,s3Segment(HP(-0.16,0.11,s*0.09),HP(0.05,0.05,s*0.10),1.5),"#6B4A2E");
+    }
+    rita(D.rem,s3Segment(HP(0.04,0.10,-0.085),HP(0.04,0.10,0.085),1.5),"#6B4A2E");
+    rita(D.rem,s3Segment(HP(-0.17,0.12,-0.09),HP(-0.17,0.12,0.09),1.5),"#6B4A2E");
+  }
+  /* Manen: en sammanhängande matta som följer halsen. */
+  {
+    const sv=Math.sin(fas*Math.PI*2)*0.05*(gangart==="halt"?0.2:1);
+    const mm=M4.mul(M4.mul(M4.mul(
+      M4.translation(halsA[0],halsA[1],0), M4.rotZ(halsVin)),
+      M4.rotX(sv)), M4.skala(halsL,1,1));
+    rita(D.manunder,mm,glMorka(man,0.72));
+    rita(D.manmatta,mm,man);
+  }
+  /* Pannlugg mellan öronen. */
+  for(const d of [-1,0,1]){
+    const lp=[halsB[0]+Math.cos(nick)*0.10, halsB[1]+Math.sin(nick)*0.10+0.05, d*0.045];
+    rita(D.lock,s3Segment(lp,[lp[0]+0.16,lp[1]-0.20,d*0.05],0.8),man);
   }
   /* Benen: fram vh/hf, bak vb/hb. Knät viks bakåt fram, framåt bak. */
   const fasten=[[0.64,1.12,0.17],[0.64,1.12,-0.17],[-0.70,1.16,0.19],[-0.70,1.16,-0.19]];
@@ -291,13 +413,20 @@ function s3RitaHast(o){
     const kota=P(kna[0]+Math.sin(d2)*L2, kna[1]-Math.cos(d2)*L2, f[2]);
     rita(D.overben,s3Segment(f,kna,1),farg);
     rita(D.skenben,s3Segment(kna,kota,1),glMorka(farg,0.94));
+    const tecken=h.tecken||{};
+    if(tecken.strumpor&&tecken.strumpor[i])
+      rita(D.strumpa,s3Segment([kna[0],kna[1]-0.10,kna[2]],kota,1),"#FFFFFF");
+    if(h.fjader)   // hovskägget faller över kotan
+      rita(D.fjader,M4.translation(kota[0],kota[1]-0.17,kota[2]),
+        tecken.strumpor&&tecken.strumpor[i]?"#F6F3EA":glMorka(man,1.0));
     rita(D.hov,M4.translation(kota[0],kota[1]-0.10,kota[2]),"#FFFFFF");
   }
   /* Svansen. */
   const svSv=Math.sin(fas*Math.PI*2)*0.09*(gangart==="halt"?0.2:1);
-  const rotA=P(-1.02,1.46,0), rotB=P(-1.17,1.33,svSv*0.15);
+  const rotA=P(-1.00,1.48,0), rotB=P(-1.13,1.30,svSv*0.12);
   rita(D.svansrot,s3Segment(rotA,rotB,1),farg);          // svansroten bär pälsens färg
-  rita(D.svanstagel,s3Segment(rotB,P(rotB[0]-0.10,rotB[1]-0.66,svSv*0.5),1),man);
+  rita(D.svansmassa,M4.mul(M4.translation(rotB[0],rotB[1]+0.02,0),
+    M4.rotZ(svSv*0.35)),man);
   /* Täcke, sadel och ryttare. */
   if(o.tacke)rita(D.tacke,M4.translation(-0.02,1.20,0),"#FFFFFF");
   if(o.sadel){
@@ -324,33 +453,33 @@ function s3RitaRyttare(bas,o){
   const satY=1.64+latt, satX=0.06+lutning*0.10;
   const bal=M4.mul(M4.translation(satX,satY,0),M4.rotZ(-lutning*0.5));
   rita(D.bal,bal,"#FFFFFF");
-  const torso=M4.mul(M4.translation(satX+0.02,satY+0.30,0),M4.rotZ(-lutning));
+  const torso=M4.mul(M4.translation(satX+0.02,satY+0.28,0),M4.rotZ(-lutning));
   rita(D.torso,torso,"#FFFFFF");
-  /* Huvudet blickar dit hästen ska. */
-  const hx=satX+0.04+Math.sin(lutning)*0.52, hy=satY+0.30+Math.cos(lutning)*0.30;
-  rita(D.huvudR,M4.translation(hx,hy,0),"#FFFFFF");
-  rita(D.hjalm,M4.translation(hx,hy+0.05,0),"#FFFFFF");
+  /* Huvudet blickar dit hästen ska; håret följer med. */
+  const hx=satX+0.04+Math.sin(lutning)*0.50, hy=satY+0.28+Math.cos(lutning)*0.33;
+  const huvM=M4.mul(M4.translation(hx,hy,0),M4.rotZ(-lutning*0.6));
+  rita(D.har,huvM,"#FFFFFF");
+  rita(D.huvudR,huvM,"#FFFFFF");
+  rita(D.hjalm,M4.mul(huvM,M4.translation(0,0.100,0)),"#FFFFFF");
   /* Benen: låret ner mot stigbygeln, vaden längs hästens sida. */
   for(const s of [-1,1]){
     const hoft=[satX-0.02,satY-0.02,s*0.19];
     const kna=[hoft[0]+0.30,hoft[1]-0.26,s*0.30];
     const hal=[kna[0]-0.05,kna[1]-0.42,s*0.30];
     rita(D.lar,s3Segment(hoft,kna,1),"#FFFFFF");
-    rita(D.led,M4.translation(kna[0],kna[1],kna[2]),"#3B4A63");   // knäet
     rita(D.vad,s3Segment(kna,hal,1),"#FFFFFF");
-    rita(D.stovel,M4.translation(hal[0]+0.04,hal[1]-0.04,hal[2]),"#FFFFFF");
+    rita(D.stovel,M4.translation(hal[0]+0.03,hal[1]-0.03,hal[2]),"#FFFFFF");
     // stigbygeln
     rita(D.rem,s3Segment([satX+0.02,satY-0.06,s*0.26],[hal[0],hal[1]+0.02,hal[2]],1),"#9A9AA0");
   }
   /* Armarna och tyglarna: handen närmare kroppen när du tar tygel. */
   const drag=clamp(a.tygel,0,1);
-  const hand=[satX+0.34-drag*0.10, satY+0.34-lutning*0.12, 0];
+  const hand=[satX+0.44-drag*0.06, satY+0.06-lutning*0.10, 0];
   for(const s of [-1,1]){
-    const axel=[satX+0.02,satY+0.46,s*0.16];
-    const bage=[(axel[0]+hand[0])/2+0.02,(axel[1]+hand[1])/2-0.03,s*0.155];
-    rita(D.led,M4.translation(axel[0],axel[1],axel[2]),"#F0EDE4");   // axeln
+    const axel=[satX+0.01,satY+0.44,s*0.145];
+    const bage=[axel[0]+0.09,(axel[1]+hand[1])/2+0.05,s*0.155];
+    rita(D.led,M4.translation(axel[0],axel[1],axel[2]),"#33465F");   // axeln
     rita(D.arm,s3Segment(axel,bage,1),"#FFFFFF");
-    rita(D.led,M4.translation(bage[0],bage[1],bage[2]),"#F0EDE4");   // armbågen
     rita(D.arm,s3Segment(bage,[hand[0],hand[1],s*0.13],1),"#FFFFFF");
     rita(D.hand,M4.translation(hand[0],hand[1]-0.02,s*0.13),"#FFFFFF");
     // tygeln till bettet
@@ -559,15 +688,15 @@ function s3RitaHinder(){
 /* ── Kameran: bakom hästen, mjukt efterföljande ───────────────── */
 function s3Kamera(dt){
   const fram=[Math.cos(G.rikt),0,Math.sin(G.rikt)];
-  const hojd=G.luft>0?3.35:3.05, bak=G.luft>0?7.6:7.0;
+  const hojd=G.luft>0?2.85:2.45, bak=G.luft>0?6.4:5.3;
   const mx=G.px-fram[0]*bak, mz=G.py-fram[2]*bak;
   const k=S3.kam;
   if(!k.satt){k.x=mx;k.y=hojd;k.z=mz;k.tx=G.px;k.ty=1.35;k.tz=G.py;k.satt=true;}
   const f=1-Math.pow(0.0016,Math.min(dt,0.05));   // ramtidsoberoende mjukhet
   k.x+=(mx-k.x)*f; k.y+=(hojd-k.y)*f; k.z+=(mz-k.z)*f;
-  k.tx+=((G.px+fram[0]*3.4)-k.tx)*f;
-  k.ty+=((1.52+(G.luft>0?0.7:0))-k.ty)*f;
-  k.tz+=((G.py+fram[2]*3.4)-k.tz)*f;
+  k.tx+=((G.px+fram[0]*2.6)-k.tx)*f;
+  k.ty+=((1.42+(G.luft>0?0.6:0))-k.ty)*f;
+  k.tz+=((G.py+fram[2]*2.6)-k.tz)*f;
   return k;
 }
 

@@ -583,54 +583,98 @@ function v3dKamera(dt){
    sig i gången. ── */
 function v3dBygFigur(){
   if(S3.del.gTorso)return;
-  const D=S3.del, HY="#E6E1D4", JEANS="#33415C";
+  const D=S3.del, JEANS="#3C4A63", HUD="#E0B892";
   /* Bålen är en enda avsmalnande form, inte staplade klot: midjan
-     smal, bröstkorgen bred, axlarna rundade. */
+     smal, bröstkorgen bred, axlarna rundade. Jackan bakas vit så att
+     varje figur kan få sin egen färg via ton. */
   D.gTorso=GL.nat((()=>{
-    const b=new Bygge();
-    b.cyl(0.132,0.168,0.34,HY,M4.translation(0,0.02,0),14);        // midja → bröst
-    b.klot(1,HY,M4.mul(M4.translation(0,0.35,0),M4.skala(0.168,0.085,0.115)),14);
-    b.klot(1,HY,M4.mul(M4.translation(0,0.02,0),M4.skala(0.133,0.05,0.10)),12);
-    b.lada(0.28,0.045,0.215,"#2A2620",M4.translation(0,0.005,0)); // skärp
-    b.cyl(0.155,0.132,0.20,JEANS,M4.translation(0,-0.19,0),14);   // höften
-    b.cyl(0.048,0.048,0.10,"#E0B892",M4.translation(0,0.40,0),9); // hals
+    const b=new Bygge(), V="#FFFFFF";
+    b.cyl(0.120,0.162,0.36,V,M4.mul(M4.translation(0,0.02,0),
+      M4.skala(1,1,0.78)),18);                                     // midja → bröst
+    b.klot(1,V,M4.mul(M4.translation(0,0.35,0),M4.skala(0.168,0.092,0.112)),16);
+    b.klot(1,V,M4.mul(M4.translation(-0.02,0.375,0),
+      M4.skala(0.105,0.070,0.098)),12);                            // kragen
     return b;})());
-  D.gArmO=GL.nat(new Bygge().cyl(0.049,0.042,1,HY,null,14));
-  D.gArmU=GL.nat(new Bygge().cyl(0.042,0.036,1,HY,null,14));
-  D.gLedA=GL.nat(new Bygge().klot(0.042,HY,null,10));
-  D.gHand=GL.nat(new Bygge().klot(1,"#E0B892",M4.skala(0.044,0.052,0.036),9));
-  D.gLar=GL.nat(new Bygge().cyl(0.078,0.062,1,JEANS,null,14));
+  /* Höften och skärpet behåller sin egen färg. */
+  D.gHoft=GL.nat((()=>{
+    const b=new Bygge();
+    b.lada(0.29,0.048,0.220,"#2A2620",M4.translation(0,0.005,0));  // skärp
+    b.cyl(0.150,0.126,0.21,JEANS,M4.mul(M4.translation(0,-0.20,0),
+      M4.skala(1,1,0.80)),16);
+    b.cyl(0.050,0.050,0.11,HUD,M4.translation(0,0.39,0),10);       // hals
+    return b;})());
+  D.gAxel=GL.nat(new Bygge().klot(0.046,"#FFFFFF",null,11));
+  D.gArmO=GL.nat(new Bygge().cyl(0.049,0.042,1,"#FFFFFF",null,14));
+  D.gArmU=GL.nat(new Bygge().cyl(0.042,0.036,1,"#FFFFFF",null,14));
+  D.gLedA=GL.nat(new Bygge().klot(0.038,"#FFFFFF",null,10));
+  D.gHand=GL.nat(new Bygge().klot(1,HUD,M4.skala(0.044,0.052,0.036),10));
+  D.gLar=GL.nat(new Bygge().cyl(0.080,0.062,1,JEANS,null,14));
   D.gVad=GL.nat(new Bygge().cyl(0.058,0.046,1,JEANS,null,14));
-  D.gKna=GL.nat(new Bygge().klot(0.058,JEANS,null,10));
+  D.gKna=GL.nat(new Bygge().klot(0.046,JEANS,null,10));
   D.gKanga=GL.nat((()=>{
     const b=new Bygge();
-    b.klot(1,"#2B211A",M4.mul(M4.translation(0.025,0.05,0),M4.skala(0.115,0.055,0.058)),10);
+    b.klot(1,"#2B211A",M4.mul(M4.translation(0.025,0.05,0),M4.skala(0.118,0.058,0.060)),11);
     b.lada(0.215,0.035,0.108,"#181310",M4.translation(0.025,0.020,0));
     return b;})());
   D.gHuvud=GL.nat((()=>{
     const b=new Bygge();
-    b.klot(1,"#E0B892",M4.skala(0.093,0.108,0.088),13);
-    b.klot(1,"#4A3A28",M4.mul(M4.translation(-0.030,-0.030,0),M4.skala(0.086,0.088,0.086)),10);
+    b.klot(1,HUD,M4.skala(0.093,0.108,0.088),14);
+    b.klot(1,HUD,M4.mul(M4.translation(0.055,-0.042,0),
+      M4.skala(0.042,0.050,0.056)),10);                            // hakan
+    for(const s of [-1,1]){                                        // ögonen
+      b.klot(1,"#FFFFFF",M4.mul(M4.translation(0.060,0.004,s*0.033),
+        M4.skala(0.015,0.019,0.016)),7);
+      b.klot(1,"#2B2118",M4.mul(M4.translation(0.070,0.002,s*0.034),
+        M4.skala(0.010,0.013,0.011)),7);
+    }
+    b.klot(1,"#B9755E",M4.mul(M4.translation(0.080,-0.052,0),
+      M4.skala(0.010,0.008,0.024)),6);                             // munnen
+    return b;})());
+  /* Håret: nacklugg och hästsvans — samma siluett som i ridscenen. */
+  D.gHar=GL.nat((()=>{
+    const b=new Bygge(), H="#5E4028";
+    b.klot(1,H,M4.mul(M4.translation(-0.048,0.012,0),M4.skala(0.088,0.100,0.094)),12);
+    for(let i=0;i<6;i++){
+      const t=i/5;
+      b.klot(1,H,M4.mul(M4.translation(-0.088-0.030*t*t,-0.070-0.105*t,0),
+        M4.skala(0.052,0.066,0.058)),9);
+    }
     return b;})());
   D.gHjalm=GL.nat((()=>{
     const b=new Bygge();
-    b.klot(1,"#3E6B47",M4.skala(0.108,0.098,0.104),14);
-    b.klot(1,"#355E3E",M4.mul(M4.translation(0.052,-0.052,0),M4.skala(0.098,0.014,0.100)),12);
+    b.klot(1,"#23282F",M4.mul(M4.translation(-0.012,0,0),
+      M4.skala(0.108,0.078,0.104)),14);
+    b.klot(1,"#2E343C",M4.mul(M4.translation(0.086,-0.012,0),
+      M4.skala(0.072,0.011,0.082)),12);
+    b.klot(1,"#3E6B47",M4.mul(M4.translation(-0.02,0.072,0),
+      M4.skala(0.068,0.026,0.078)),10);                            // klubbens färg
     return b;})());
 }
 function v3dRitaSpelare(){
+  v3dFigur({x:VD.px,z:VD.py,rikt:VD.rikt,fas:VD.fas,jacka:"#3E5F7A",hjalm:true});
+}
+
+/* En figur till fots — spelaren och stallets folk ritas likadant, med
+   egen jackfärg. Går i takt med fas och svänger armarna mot benen. */
+function v3dFigur(o){
   v3dBygFigur();
   const D=S3.del;
-  const bas=M4.mul(M4.translation(VD.px,0,VD.py),M4.rotY(-VD.rikt));
-  const g=Math.sin(VD.fas*Math.PI*2), g2=Math.cos(VD.fas*Math.PI*2);
-  const gung=0.018*Math.abs(Math.sin(VD.fas*Math.PI*2));
+  const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));
+  const fas=o.fas||0, rr=o.rorlig===false?0:1;
+  const g=Math.sin(fas*Math.PI*2)*rr, g2=Math.cos(fas*Math.PI*2)*rr;
+  const gung=0.018*Math.abs(Math.sin(fas*Math.PI*2))*rr;
+  const jacka=o.jacka||"#3E5F7A";
   const rita=(nat,mat,ton)=>{const m=M4.mul(bas,mat);
     GL.rita(nat,m,{ton}); GL.skugga(nat,m,0);};
   const H=1.02+gung;                       // midjans höjd
-  rita(D.gTorso,M4.mul(M4.translation(0,H,0),M4.rotZ(0.045)),"#FFFFFF");
+  const kropp=M4.mul(M4.translation(0,H,0),M4.rotZ(0.045));
+  rita(D.gHoft,kropp,"#FFFFFF");
+  rita(D.gTorso,kropp,jacka);
   const hy=H+0.53;
-  rita(D.gHuvud,M4.translation(0.015,hy,0),"#FFFFFF");
-  rita(D.gHjalm,M4.translation(0.015,hy+0.038,0),"#FFFFFF");
+  const huv=M4.translation(0.015,hy,0);
+  rita(D.gHar,huv,"#FFFFFF");
+  rita(D.gHuvud,huv,"#FFFFFF");
+  if(o.hjalm!==false)rita(D.gHjalm,M4.translation(0.015,hy+0.098,0),"#FFFFFF");
   for(const s of [-1,1]){
     const sv=s>0?g:-g, av=s>0?-g2:g2;
     /* Benen: höft → knä → fot. */
@@ -638,16 +682,15 @@ function v3dRitaSpelare(){
     const kna=[sv*0.17,0.49+gung*0.4,s*0.092];
     const fot=[sv*0.25,0.13,s*0.092];
     rita(D.gLar,s3Segment(hoft,kna,1),"#FFFFFF");
-    rita(D.gKna,M4.translation(kna[0],kna[1],kna[2]),"#FFFFFF");
     rita(D.gVad,s3Segment(kna,fot,1),"#FFFFFF");
     rita(D.gKanga,M4.translation(fot[0],fot[1]-0.07,fot[2]),"#FFFFFF");
     /* Armarna hänger tätt intill kroppen och svänger mot benen. */
-    const axel=[0,H+0.335,s*0.152];
-    const bage=[av*0.08,H+0.09,s*0.158];
-    const hand=[av*0.15+0.02,H-0.15,s*0.140];
-    rita(D.gArmO,s3Segment(axel,bage,1),"#FFFFFF");
-    rita(D.gLedA,M4.translation(bage[0],bage[1],bage[2]),"#FFFFFF");
-    rita(D.gArmU,s3Segment(bage,hand,1),"#FFFFFF");
+    const axel=[0,H+0.325,s*0.150];
+    const bage=[av*0.08,H+0.09,s*0.162];
+    const hand=[av*0.15+0.02,H-0.15,s*0.146];
+    rita(D.gAxel,M4.translation(axel[0],axel[1],axel[2]),jacka);
+    rita(D.gArmO,s3Segment(axel,bage,1),jacka);
+    rita(D.gArmU,s3Segment(bage,hand,1),jacka);
     rita(D.gHand,M4.translation(hand[0],hand[1]-0.03,hand[2]),"#FFFFFF");
   }
 }
@@ -711,7 +754,8 @@ function ritaVandring3D(){
           samling:-0.3,beta:true,skugga:true,tacke:!!(G.vader&&G.vader.tacke)});
       }
       for(const p of gardsFolk())
-        GL.rita(S3.del.person,M4.mul(M4.translation(p.x,0,p.y),M4.skala(1.7)),{ton:p.farg});
+        v3dFigur({x:p.x,z:p.y,rikt:p.rikt===undefined?2.1:p.rikt,
+          fas:(VD.tid*0.5+p.x*0.3)%1,jacka:p.farg,hjalm:false});
     }else if(G.scen==="stallinne"){
       const S=STALLINNE, vx=S.bredd/2;
       for(const sida of["W","E"]){                 // hästhuvuden över boxdörrarna
@@ -739,13 +783,14 @@ function ritaVandring3D(){
         }
       }
       if(!G.hastId)
-        GL.rita(S3.del.person,M4.mul(M4.translation(S.ridlarare.pos[0],0,
-          S.ridlarare.pos[1]),M4.skala(1.7)),{ton:"#2E4638"});
+        v3dFigur({x:S.ridlarare.pos[0],z:S.ridlarare.pos[1],rikt:Math.PI,
+          fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
       for(const f of stallFolk()){
         const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
         if(fy>S.serviceY-1)continue;
         const fx2=f.sida==="W"?vx-S.ganghalva+0.6:vx+S.ganghalva-0.6;
-        GL.rita(S3.del.person,M4.mul(M4.translation(fx2,0,fy),M4.skala(1.7)),{ton:f.farg});
+        v3dFigur({x:fx2,z:fy,rikt:f.sida==="W"?-Math.PI/2:Math.PI/2,
+          fas:(VD.tid*0.4+f.ix)%1,rorlig:false,jacka:f.farg,hjalm:false});
       }
     }
     /* Hästen du leder. */
