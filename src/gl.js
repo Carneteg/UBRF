@@ -252,7 +252,7 @@ const GL={
     const fs=`
       precision mediump float;
       varying vec3 vNrm, vCol; varying vec2 vUv; varying float vDjup; varying vec3 vPos;
-      uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon;
+      uniform vec3 uSol, uSolFarg, uHimmel, uMark, uDimFarg, uTon, uOga;
       uniform float uDimNara, uDimFjarr, uAlfa, uAnvTex, uPlatt;
       uniform sampler2D uTex;
       void main(){
@@ -271,6 +271,10 @@ const GL={
         float wrap = max(dot(N, uSol) * 0.5 + 0.5, 0.0);
         vec3 ljus = amb + uSolFarg * (d * 0.78 + wrap * 0.22);
         vec3 farg = bas * ljus;
+        // kantskuggning ger volym åt runda former
+        vec3 mot = normalize(uOga - vPos);
+        float kant = 1.0 - abs(dot(N, mot));
+        farg *= (1.0 - 0.30 * kant * kant);
         float dim = clamp((vDjup - uDimNara) / max(uDimFjarr - uDimNara, 0.001), 0.0, 1.0);
         farg = mix(farg, uDimFarg, dim * 0.85);
         gl_FragColor = vec4(farg, uAlfa);
@@ -281,7 +285,7 @@ const GL={
     gl.useProgram(p);
     for(const n of ["aPos","aNrm","aCol","aUv"])this.a[n]=gl.getAttribLocation(p,n);
     for(const n of ["uProj","uVy","uModell","uNM","uSol","uSolFarg","uHimmel","uMark",
-      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon"])
+      "uDimFarg","uDimNara","uDimFjarr","uAlfa","uAnvTex","uPlatt","uTex","uTon","uOga"])
       this.u[n]=gl.getUniformLocation(p,n);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -384,6 +388,7 @@ const GL={
     this.vy=M4.seFran(oga,mal,[0,1,0]);
     this.gl.uniformMatrix4fv(this.u.uProj,false,this.proj);
     this.gl.uniformMatrix4fv(this.u.uVy,false,this.vy);
+    this.gl.uniform3f(this.u.uOga,oga[0],oga[1],oga[2]);
     this.ogaPos=oga;
   },
   /* Ritar ett nät med given modellmatris. */

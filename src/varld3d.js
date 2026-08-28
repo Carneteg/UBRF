@@ -577,57 +577,79 @@ function v3dKamera(dt){
 }
 
 /* ── Vandraren i tredjeperson ─────────────────────────────────────
-   En egen figur, byggd stående: jacka, jeans, kängor och den gröna
-   hjälmen. Armar och ben svänger mot varandra i gångtakten. ── */
+   Figuren byggs som en kropp och inte som staplade klossar: bröstkorg
+   som smalnar mot midjan, sluttande axlar, leder som kulor så att
+   armar och ben hänger ihop, och armbåge och knä som verkligen viker
+   sig i gången. ── */
 function v3dBygFigur(){
   if(S3.del.gTorso)return;
-  const D=S3.del;
+  const D=S3.del, HY="#E6E1D4", JEANS="#33415C";
+  /* Bålen är en enda avsmalnande form, inte staplade klot: midjan
+     smal, bröstkorgen bred, axlarna rundade. */
   D.gTorso=GL.nat((()=>{
     const b=new Bygge();
-    b.klot(1,"#F0EDE4",M4.skala(0.155,0.27,0.19),12);             // överkropp
-    b.klot(1,"#E4E0D2",M4.mul(M4.translation(0,0.21,0),M4.skala(0.145,0.075,0.21)),10);
-    b.cyl(0.052,0.052,0.10,"#D8B08C",M4.translation(0,0.25,0),8); // hals
+    b.cyl(0.132,0.168,0.34,HY,M4.translation(0,0.02,0),14);        // midja → bröst
+    b.klot(1,HY,M4.mul(M4.translation(0,0.35,0),M4.skala(0.168,0.085,0.115)),14);
+    b.klot(1,HY,M4.mul(M4.translation(0,0.02,0),M4.skala(0.133,0.05,0.10)),12);
+    b.lada(0.28,0.045,0.215,"#2A2620",M4.translation(0,0.005,0)); // skärp
+    b.cyl(0.155,0.132,0.20,JEANS,M4.translation(0,-0.19,0),14);   // höften
+    b.cyl(0.048,0.048,0.10,"#E0B892",M4.translation(0,0.40,0),9); // hals
     return b;})());
-  D.gArm=GL.nat(new Bygge().cyl(0.045,0.038,1,"#E4E0D2",null,9));
-  D.gHand=GL.nat(new Bygge().klot(0.045,"#D8B08C",null,8));
-  D.gLar=GL.nat(new Bygge().cyl(0.072,0.062,1,"#2E3B52",null,7));
-  D.gVad=GL.nat(new Bygge().cyl(0.058,0.050,1,"#2E3B52",null,7));
-  D.gKanga=GL.nat(new Bygge().lada(0.24,0.10,0.11,"#241C16"));
-  D.gHuvud=GL.nat(new Bygge().klot(0.105,"#D8B08C",null,10));
+  D.gArmO=GL.nat(new Bygge().cyl(0.049,0.042,1,HY,null,14));
+  D.gArmU=GL.nat(new Bygge().cyl(0.042,0.036,1,HY,null,14));
+  D.gLedA=GL.nat(new Bygge().klot(0.042,HY,null,10));
+  D.gHand=GL.nat(new Bygge().klot(1,"#E0B892",M4.skala(0.044,0.052,0.036),9));
+  D.gLar=GL.nat(new Bygge().cyl(0.078,0.062,1,JEANS,null,14));
+  D.gVad=GL.nat(new Bygge().cyl(0.058,0.046,1,JEANS,null,14));
+  D.gKna=GL.nat(new Bygge().klot(0.058,JEANS,null,10));
+  D.gKanga=GL.nat((()=>{
+    const b=new Bygge();
+    b.klot(1,"#2B211A",M4.mul(M4.translation(0.025,0.05,0),M4.skala(0.115,0.055,0.058)),10);
+    b.lada(0.215,0.035,0.108,"#181310",M4.translation(0.025,0.020,0));
+    return b;})());
+  D.gHuvud=GL.nat((()=>{
+    const b=new Bygge();
+    b.klot(1,"#E0B892",M4.skala(0.093,0.108,0.088),13);
+    b.klot(1,"#4A3A28",M4.mul(M4.translation(-0.030,-0.030,0),M4.skala(0.086,0.088,0.086)),10);
+    return b;})());
   D.gHjalm=GL.nat((()=>{
     const b=new Bygge();
-    b.klot(1,"#3E6B47",M4.skala(0.125,0.105,0.125),12);
-    b.lada(0.19,0.025,0.20,"#2E5237",M4.translation(0.05,-0.035,0));
+    b.klot(1,"#3E6B47",M4.skala(0.108,0.098,0.104),14);
+    b.klot(1,"#355E3E",M4.mul(M4.translation(0.052,-0.052,0),M4.skala(0.098,0.014,0.100)),12);
     return b;})());
 }
 function v3dRitaSpelare(){
   v3dBygFigur();
   const D=S3.del;
-  const gar=Math.abs(VD.fas)>0;
   const bas=M4.mul(M4.translation(VD.px,0,VD.py),M4.rotY(-VD.rikt));
   const g=Math.sin(VD.fas*Math.PI*2), g2=Math.cos(VD.fas*Math.PI*2);
   const gung=0.018*Math.abs(Math.sin(VD.fas*Math.PI*2));
   const rita=(nat,mat,ton)=>{const m=M4.mul(bas,mat);
     GL.rita(nat,m,{ton}); GL.skugga(nat,m,0);};
-  /* Höft, bål och huvud. */
-  rita(D.gTorso,M4.translation(0,1.16+gung,0),"#FFFFFF");
-  rita(D.gHuvud,M4.translation(0.01,1.545+gung,0),"#FFFFFF");
-  rita(D.gHjalm,M4.translation(0.01,1.59+gung,0),"#FFFFFF");
-  /* Benen svänger mot varandra, armarna tvärtom. */
+  const H=1.02+gung;                       // midjans höjd
+  rita(D.gTorso,M4.mul(M4.translation(0,H,0),M4.rotZ(0.045)),"#FFFFFF");
+  const hy=H+0.53;
+  rita(D.gHuvud,M4.translation(0.015,hy,0),"#FFFFFF");
+  rita(D.gHjalm,M4.translation(0.015,hy+0.038,0),"#FFFFFF");
   for(const s of [-1,1]){
     const sv=s>0?g:-g, av=s>0?-g2:g2;
-    const hoft=[0,0.92+gung,s*0.095];
-    const kna=[sv*0.20,0.50+gung*0.5,s*0.10];
-    const fot=[sv*0.30,0.10,s*0.10];
+    /* Benen: höft → knä → fot. */
+    const hoft=[0,H-0.17,s*0.082];
+    const kna=[sv*0.17,0.49+gung*0.4,s*0.092];
+    const fot=[sv*0.25,0.13,s*0.092];
     rita(D.gLar,s3Segment(hoft,kna,1),"#FFFFFF");
+    rita(D.gKna,M4.translation(kna[0],kna[1],kna[2]),"#FFFFFF");
     rita(D.gVad,s3Segment(kna,fot,1),"#FFFFFF");
-    rita(D.gKanga,M4.translation(fot[0]+0.05,0.05,fot[2]),"#FFFFFF");
-    const axel=[0,1.34+gung,s*0.185];
-    const hand=[av*0.17,0.99+gung,s*0.175];
-    rita(D.gArm,s3Segment(axel,hand,1),"#FFFFFF");
+    rita(D.gKanga,M4.translation(fot[0],fot[1]-0.07,fot[2]),"#FFFFFF");
+    /* Armarna hänger tätt intill kroppen och svänger mot benen. */
+    const axel=[0,H+0.335,s*0.152];
+    const bage=[av*0.08,H+0.09,s*0.158];
+    const hand=[av*0.15+0.02,H-0.15,s*0.140];
+    rita(D.gArmO,s3Segment(axel,bage,1),"#FFFFFF");
+    rita(D.gLedA,M4.translation(bage[0],bage[1],bage[2]),"#FFFFFF");
+    rita(D.gArmU,s3Segment(bage,hand,1),"#FFFFFF");
     rita(D.gHand,M4.translation(hand[0],hand[1]-0.03,hand[2]),"#FFFFFF");
   }
-  void gar;
 }
 
 /* ── Markör vid det närmaste du kan använda ───────────────────── */
