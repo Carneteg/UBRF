@@ -312,6 +312,12 @@ function avslutaSkotsel(){
     lerRad="lera kvar på benen (−0,09)";
     res.omdome="Du sköter ingen häst genom leran. Spola av benen i spiltan innan du borstar nästa gång.";}
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
+  /* Skötseln ger hästkunskap. Måttet är dagsformen du lyckades lämna
+     hästen i — det är den enda siffra som säger något om hur väl du
+     faktiskt skötte henne, och den syns redan på skärmen. */
+  {const steg=fardighetSkotsel(res.dagsform);
+   if(steg&&typeof visaFardighetsSteg==="function")
+     setTimeout(()=>visaFardighetsSteg(steg),900);}
   G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
   initNPC();
   G.px=10;G.py=52;G.rikt=-Math.PI/2;
