@@ -146,7 +146,13 @@ ihoptryckt. Proportionen ovan är grov, och den exakta uppdelningen mellan bana 
 gaveldel går inte att mäta.
 
 `RIDHUSINNE` är ombyggd efter det här: 25 × 75 med banan 20×60 och en 13 m djup
-entré- och trapphusdel i norra gaveln, mot parkeringen. Går man in från parkeringen kommer man in i
+entré- och trapphusdel i norra gaveln, mot parkeringen.
+
+Hallens inredning ligger i `RIDHUSINNE.hallMobler` som måttsatta rektanglar —
+receptionsdisk, tre bänkar längs västra väggen, kansliets och omklädningens
+skiljeväggar samt det andra trapphuset. De är `[antagande]`: utrymningsplanen
+visar rum, inte möbler. Måtten finns där för att de ska vara solida att gå
+emot; ett foto inifrån hallen skulle ersätta dem. Går man in från parkeringen kommer man in i
 en hall och ser banan genom öppningen mitt för sargporten, i stället för att kliva
 rakt ut på banan. Rummen i hallen är antydda med väggar, inte ritade rum för rum —
 planen går inte att läsa så noga.

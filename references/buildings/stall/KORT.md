@@ -151,6 +151,65 @@ kortet antar ur `STALLINNE`, och med hur smal byggnaden ser ut i satellitbilden.
 Tills dess är `STALLINNE` kvar som den är, med en gång och två boxrader. Den är
 känd fel i planform och ska byggas om när underlaget finns.
 
+## Stallgången invändigt — läst ur filmerna
+
+Underlaget är **37 bildrutor** ur `video/IMG_0249.mov` (13,3 s, gången norrut)
+och `video/IMG_0250.mov` (5,2 s, motsatt håll), uttagna i två bilder per sekund.
+Det här är det bästa underlag som finns för insidan, och det säger att gången
+inte alls ser ut som ett vanligt trästall.
+
+### Taket — det man känner igen gången på inifrån
+- **Sadeltak**, inte platt innertak. Undertaket är **galvaniserad korrugerad
+  plåt**, ljus hela vägen upp i nocken.
+- **Tvärbalkar i tegelrött** (ungefär (156, 74, 50)) ligger tvärs över gången
+  med omkring fyra meters mellanrum, med **snedstag** upp mot en genomgående
+  **nockbalk** i samma färg. Fackverket är byggnadens tydligaste inre drag.
+- **Galvade dragstag** — smala vertikala rör — hänger från varje balk ner till
+  boxarnas överkant. De ger gången sin vertikala rytm.
+- **Takfönster** i rad högt i det ena takfallet, syns som ljusa rektanglar
+  mellan balkarna.
+- **Runda pendelarmaturer** i två rader, en över vardera boxraden, hängande i
+  korta pendlar.
+
+### Golvet — två material, inte ett
+- **Markstensgång i mitten**, grå betongsten i rätmönster, ungefär tre fjärde-
+  delar av gångens bredd.
+- **Ljus spånremsa** (gulbeige) längs boxfronterna på båda sidor. Remsan är det
+  som gör gången läsbar som en gång och inte som en korridor.
+
+### Boxarna från gången
+- Nedre delen: **mörkgrå kompositpanel** i hela sektioner, ungefär 1,3 m hög,
+  med en galvad list i överkant.
+- Övre delen: **galvad ram med galler**, och boxdörrarna har ett gallerparti.
+- **Galvade stolpar** mellan boxarna går hela vägen upp till ungefär 2,2 m.
+- På fronterna hänger sadlar med underlag, täcken, grimmor, träns och
+  benskydd — mycket saker, tätt. `[ej byggt i spelet ännu]`
+- Svarta reglar och handtag på boxdörrarna.
+
+### Gångens ändar
+- I fonden syns en **grå metallport** i en vit vägg, med en **rund klocka**
+  ovanför och en grön utrymningsskylt bredvid. `[ej byggt i spelet ännu]`
+- En vit, rundad form högt upp vid ena änden — troligen ventilationstrumma
+  eller en vit gavelvägg bortom taket. `[REFERENCE GAP — inte fastställd]`
+
+### Vad som är byggt efter det här
+`v3dStall` i `src/varld3d.js`: sadeltaket i galvad plåt (ritat obelyst, för en
+takundersida som bara får ambient blev nästan svart medan filmen visar den
+jämnt upplyst av armaturerna), de röda tvärbalkarna med snedstag och nockbalk,
+dragstagen, takfönstren, pendelarmaturerna, och golvets två material.
+
+Kvar mot filmen: sakerna som hänger på boxfronterna, och porten med klockan i
+fonden.
+
+### Vad filmerna inte avgör
+- **Gångens exakta bredd.** Spelet har 5,2 m mellan boxfronterna, vilket ser
+  rimligt ut mot bildrutorna, men inget mått är läsbart. `[antagande]`
+- **Antalet boxar.** Filmen panorerar och samma box kan räknas två gånger.
+- **Planformen.** Filmerna visar en gång med boxar på båda sidor, men
+  utrymningsplanen visar ett dubbelstall med fyra boxlängor och två gångar.
+  Filmerna kan mycket väl visa en av de två gångarna. **Detta är oavgjort och
+  spelet bygger den enklare varianten** — se "Invändigt" ovan.
+
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (154, 46), fotavtryck 15 × 54 m
 - Rotation: nocken nord–syd; västra långsidan mot gården och ridhuset
