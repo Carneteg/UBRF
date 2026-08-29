@@ -15,13 +15,23 @@ Två långa byggnader **parallellt intill varandra**, med en smal gräsgård eme
 Stallet ligger på ridhusets nordöstra sida. Båda löper **nordväst–sydost**, ungefär
 **40° vridet från norr**.
 
-- **Grusplanen** ligger i väster och sydväst, utanför ridhusets ena gavel — det är
-  därifrån gavelfotona i `buildings/ridhus/` är tagna.
+- **Grusplanen — parkeringen** ligger vid husens **nordvästra gavlar**, mot
+  Björklidsvägen. Utrymningsplanerna pekar dit ("parkeringen mot Björklidsvägen"
+  är återsamlingsplats), och det är därifrån gavelfotona i `buildings/ridhus/`
+  och `buildings/stall/` är tagna. **Står man på grusplanen har man ridhuset
+  till höger och stallet till vänster**, med förbindelselängan synlig mellan
+  gavlarna längre bort — det är ankomstvyn, och den spelet ska träffa.
+- **Björklidsvägen** kommer in från nordväst, till grusplanen.
 - **Enköpingsvägen** går längs ridhusets sydvästra långsida. Det är den sidan som
-  bär UBRF-skylten och den långa entrékvisten.
-- **Husbyvägen** går i öster. Infarten till anläggningen kommer den vägen.
+  bär UBRF-skylten och den långa entrékvisten — och kvisten sitter närmast
+  **caféets gavel i nordväst** (Street View).
+- **Husbyvägen** går i öster/sydost; därifrån går en grusväg in till gårdsplanen
+  vid stallets sydöstra gavel. Den gaveln (Street View) har två entrédörrar
+  under vita skärmtak och en rak ståltrappa till övervåningen; strax intill
+  står fodersilon (satellit).
 - **Hagarna** ligger direkt öster om stallet, med trästaket.
-- **Utebanorna** ligger nordost om hagarna: en stor sandbana och en mindre paddock.
+- **Utebanorna** ligger norr och nordost om hagarna: en stor sandbana och en
+  mindre paddock.
 - Aspviks koloniträdgårdsförening ligger sydost om anläggningen.
 
 ### Skala i satellitbilden
@@ -34,17 +44,18 @@ oberoende vägar till samma tal.
 
 | Byggnad/yta | Position (m, X/Y) | Rotation | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
-| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot grusplanen i söder | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
-| Stallet | 154 / 46 (sydvästra hörnet) | nock nord–syd, västra långsidan mot gården | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. |
-| Gräsgården mellan husen | 144–154 | — | 10 × 56 | Smal, precis som i satellitbilden |
-| Grusplanen / parkeringen | 112 / 16 | — | 38 × 28 | Utanför ridhusets gavel, mot vägen |
-| Grusvägen längs ridhuset | 112 / 44 | — | 6 × 76 | Mot åkern i väster |
+| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, cafégaveln mot grusplanen i **norr** | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
+| Stallet | 154 / 46 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. |
+| Gräsgården mellan husen | 144–154 | — | 10 × 48 | Smal, precis som i satellitbilden; stängd i söder av längan |
+| Grusplanen / parkeringen | 106 / 121 | — | 48 × 34 | Vid norra gavlarna, mot Björklidsvägen. Hit kommer man. |
+| Gårdsplanen i sydost | 144 / 18 | — | 40 × 26 | Vid stallets södra gavel; infart från Husbyvägen |
+| Grusvägen längs ridhuset | 112 / 20 | — | 6 × 101 | Mot åkern i väster |
 | Hage Ö1 | 176 / 44 | — | 30 × 28 | Direkt öster om stallet |
 | Hage Ö2 | 176 / 76 | — | 30 × 24 | |
-| Uteridbanan (dressyr) | 176 / 106 | långsidan nord–syd | 20 × 40 | Nordost om hagarna |
-| Paddocken bredvid | 150 / 112 | — | 20 × 34 | |
+| Uteridbanan (dressyr) | 176 / 106 | långsidan nord–syd | 20 × 40 | Norr om hagarna |
+| Paddocken bredvid | 156 / 118 | — | 20 × 28 | Norr om stallet, bortom grusremsan |
 | Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
-| Fodersilon | 171 / 102 | — | — | Vid stallets norra gavel, syns i Street View |
+| Fodersilon | 166 / 40 | — | — | Vid stallets **södra** gavel, syns i satellitbilden |
 
 Marknivå: plant över hela anläggningen. Den slänt upp mot banorna som fanns i den
 första versionen är borttagen — satellitbilden visar ingen höjdskillnad.
@@ -58,9 +69,13 @@ Väderstreck i spelet: solens riktning ligger i `LJUS.dag.sol` i `src/ljus.js`.
    spelets norr är verklighetens nordväst. Inbördes placering, avstånd och vilken
    sida som vetter åt vad stämmer; kompassriktningen gör det inte. Att vrida hela
    anläggningen skulle kräva att varje rektangel blev en polygon.
-2. **Infarten.** I verkligheten kommer man in från Husbyvägen i öster. I spelet
-   ligger infarten i söder, vid grusplanen, eftersom det är därifrån man ser
-   ridhusets gavel — det första man ska känna igen. `[avvikelse]`
+2. **Gavlarna rättade 2026-08-29.** Spelet lade tidigare grusplanen, entréerna
+   och silon vid fel gavlar — hela ankomsten blev spegelvänd (ridhuset till
+   vänster i stället för till höger). Nu ligger ankomsten vid spel-norr
+   (verklighetens nordväst): satellitbilden, Street View-bilderna och
+   utrymningsplanernas återsamlingsplats pekar alla på samma sak. Kvar som
+   avvikelse: Björklidsvägen och Husbyvägen är förenklade till raka
+   kantvägar. `[avvikelse]`
 3. **Skogsstigen** i norr är påhittad. Det finns skog runt anläggningen, men
    sträckningen är inte läst ur någon bild. `[antagande]`
 4. **Åkern i väster** är en förenkling av markerna och koloniområdet.

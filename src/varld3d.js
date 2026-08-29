@@ -497,14 +497,16 @@ function v3dGard(lagg,opp){
        trappan upp till Café Krubban
      · stuprören i hörnen och strålkastarna under takfoten
 
-   Alla mått i meter, u räknat österut längs södra gaveln från husets
-   sydvästra hörn — samma u som fasadöppningarna i site.js.
+   Alla mått i meter, u räknat västerut längs norra gaveln från husets
+   nordöstra hörn (moturs) — samma u som fasadöppningarna i site.js.
+   Gaveln mot parkeringen är den NORRA: grusplanen ligger vid husets
+   norra ände, precis som i verkligheten (SITEPLAN.md).
    ── */
 function v3dRidhusYttre(bg,d,opp){
   const r=bg.rekt, hV=bg.hV;
   const SVART=bg.svart||"#202022", STAL="#B4B9BE", MORK="#3A3E44";
-  /* +X längs södra gaveln, +Y uppåt, +Z ut mot parkeringen. */
-  const F=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);
+  /* u längs norra gaveln, +Y uppåt, +Z ut mot parkeringen i norr. */
+  const F=(u,z,ut)=>v3dFasadMat([r.x+r.w,r.y+r.h],-1,0,u,z,ut);
 
   /* Runt ventilationsgaller, ensamt på en tom fasadyta. */
   d.cyl(0.27,0.27,0.09,"#8C9096",M4.mul(F(5.3,5.65,0.02),M4.rotX(Math.PI/2)),12);
@@ -528,7 +530,9 @@ function v3dRidhusYttre(bg,d,opp){
      det man ser från Enköpingsvägen, näst efter skylten. */
   {
     const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);
-    const ku0=59, ku1=73, kut=2.6, kz=3.05, kmitt=(ku0+ku1)/2, klen=ku1-ku0;
+    /* Kvisten sitter närmast caféets gavel — den norra (Street View
+       från Enköpingsvägen). W-sidans u räknas från norra gaveln. */
+    const ku0=2, ku1=16, kut=2.6, kz=3.05, kmitt=(ku0+ku1)/2, klen=ku1-ku0;
     d.lada(klen,0.12,kut+0.25,MORK,FW(kmitt,kz,kut/2));
     d.lada(klen+0.1,0.17,0.13,"#EEEEE8",FW(kmitt,kz-0.13,kut+0.07));
     for(let u=ku0+0.7;u<=ku1-0.5;u+=3.2)
@@ -567,9 +571,9 @@ function v3dRidhusYttre(bg,d,opp){
   for(const u of [bu0+0.30,bu1-0.30])
     d.lada(0.10,tz-bz,0.10,SVART,F(u,(bz+tz)/2,bdj-0.20));
 
-  /* Den utvändiga ståltrappan. Stiger österut längs fasaden och
-     landar på balkongen — precis som på fotot, där den delar gaveln
-     diagonalt under caféskylten. */
+  /* Den utvändiga ståltrappan. Stiger västerut längs fasaden (mot
+     caféhörnet) och landar på balkongen — precis som på fotot från
+     grusplanen, där den delar gaveln diagonalt under caféskylten. */
   const su0=12.9, su1=bu0, sbr=1.10, sut=0.62, steg=22;
   const lut=Math.atan2(bz,su1-su0), hyp=Math.hypot(bz,su1-su0);
   for(let i=0;i<steg;i++){
@@ -603,10 +607,13 @@ function v3dRidhusYttre(bg,d,opp){
      · snörasskyddet, ett svart streck tvärs över det stora grå taket,
        och den svarta hängrännan med stuprör
      · förstukvisten med sitt vita ribbräcke och den ockragula dörren
-     · södra gavelns balkong och svarta spiraltrappa
+     · norra gavelns balkong och svarta spiraltrappa — klubbgaveln
+       mot grusplanen, den man ser när man kommer (stall-fasad-04)
+     · södra gavelns raka ståltrappa mot gårdsplanen (Street View)
 
    u räknas moturs runt huset, alltså från norra gaveln på västra
-   långsidan — samma u som fasadöppningarna i site.js.
+   långsidan och från östra hörnet på norra gaveln — samma u som
+   fasadöppningarna i site.js.
    ── */
 function v3dStallYttre(bg,d,opp){
   const r=bg.rekt, hV=bg.hV, hN=bg.hN;
@@ -614,13 +621,14 @@ function v3dStallYttre(bg,d,opp){
   const SVART=bg.svart||"#26292E", VIT="#EEECE4", GRA=bg.fargT;
   const HUV=glMorka(GRA,0.86);
   /* Fasadramar: +Y uppåt, +Z utåt. */
+  const FN=(u,z,ut)=>v3dFasadMat([r.x+r.w,r.y+r.h],-1,0,u,z,ut); // norra gaveln (klubbgaveln)
   const FS=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);          // södra gaveln
   const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);     // västra långsidan
 
-  /* Huvraden. Boxarna börjar 10,4 m in och är 3,5 m breda (STALLINNE),
-     och en huv sitter mitt över varje box. */
+  /* Huvraden. Boxarna börjar 10,4 m från klubbgaveln i norr och är
+     3,5 m breda (STALLINNE); en huv sitter mitt över varje box. */
   for(let i=0;i<11;i++){
-    const z=r.y+10.4+3.5*i+1.75;
+    const z=r.y+r.h-(10.4+3.5*i+1.75);
     d.lada(0.44,0.62,0.44,HUV,M4.translation(cx,hN+0.28,z));
     d.lada(0.50,0.06,0.50,glMorka(GRA,0.7),M4.translation(cx,hN+0.58,z));
     d.lada(0.66,0.09,0.66,HUV,M4.translation(cx,hN+0.66,z));
@@ -638,10 +646,10 @@ function v3dStallYttre(bg,d,opp){
       d.cyl(0.055,0.055,hV-0.22,SVART,M4.translation(cx+s*(halv+0.15),0,z),6);
   }
 
-  /* ── Förstukvisten, 5,6 m från södra gaveln ──
+  /* ── Förstukvisten, 5,6 m från klubbgaveln i norr ──
      Sadeltak med nocken ut från väggen, vita stolpar, och ett räcke av
      liggande ribbor — det är räcket man ser först när man går fram. */
-  const PU=r.h-5.6, bw=5.2, but=2.8, be=2.95, br=1.05;
+  const PU=5.6, bw=5.2, but=2.8, be=2.95, br=1.05;
   const F2=(du,z,ut)=>FW(PU+du,z,ut);
   const hh=bw/2, hyp=Math.hypot(hh,br), pv=Math.atan2(br,hh);
   d.lada(bw+0.4,0.14,but+0.2,"#C2BFB6",F2(0,0.07,but/2));        // betonggolvet
@@ -667,22 +675,43 @@ function v3dStallYttre(bg,d,opp){
   d.lada(0.10,0.24,0.10,SVART,F2(0,2.52,0.09));                   // vägglampan
   d.cyl(0.17,0.11,0.13,"#E4E0D6",M4.mul(F2(0,2.40,0.20),M4.rotX(-Math.PI/2)),10);
 
-  /* ── Södra gaveln: balkongen och spiraltrappan ── */
+  /* ── Norra gaveln — klubbgaveln: balkongen och spiraltrappan ── */
   const bz=4.55;
-  d.lada(2.2,0.12,1.10,"#4A4E52",FS(7.5,bz-0.06,0.55));
+  d.lada(2.2,0.12,1.10,"#4A4E52",FN(7.5,bz-0.06,0.55));
   for(const y of [bz+0.42,bz+0.88]){
-    d.lada(2.2,0.05,0.05,SVART,FS(7.5,y,1.06));
-    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FS(7.5+s*1.08,y,0.55));
+    d.lada(2.2,0.05,0.05,SVART,FN(7.5,y,1.06));
+    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FN(7.5+s*1.08,y,0.55));
   }
-  for(let u=6.55;u<8.5;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FS(u,bz+0.46,1.06));
+  for(let u=6.55;u<8.5;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FN(u,bz+0.46,1.06));
   const sr=0.70, steg=18, sh=bz/steg, su=5.2, sut=0.62;
-  d.cyl(0.085,0.085,bz+0.50,SVART,FS(su,0,sut),8);
+  d.cyl(0.085,0.085,bz+0.50,SVART,FN(su,0,sut),8);
   for(let i=0;i<steg;i++){
-    const m=M4.mul(FS(su,(i+1)*sh,sut),M4.rotY(i*0.40));
+    const m=M4.mul(FN(su,(i+1)*sh,sut),M4.rotY(i*0.40));
     d.lada(sr,0.05,0.30,"#3A3E44",M4.mul(m,M4.translation(sr/2,0,0)));
     d.lada(0.035,0.92,0.035,SVART,M4.mul(m,M4.translation(sr-0.05,0.46,0)));
   }
-  d.cyl(0.23,0.23,0.10,"#F0C24A",M4.mul(FS(6.3,6.10,0.03),M4.rotX(-Math.PI/2)),10);
+  d.cyl(0.23,0.23,0.10,"#F0C24A",M4.mul(FN(6.3,6.10,0.03),M4.rotX(-Math.PI/2)),10);
+
+  /* ── Södra gaveln mot gårdsplanen: den raka ståltrappan upp till
+     trappdörren (Street View från infartsvägen). Skärmtaken över de
+     två entrédörrarna ritas av den generella öppningsslingan. ── */
+  {
+    const tz=4.35, tu0=8.6, tu1=12.4, tbr=1.00, tut=0.55, tsteg=14;
+    const tlut=Math.atan2(tz,tu1-tu0), thyp=Math.hypot(tz,tu1-tu0);
+    for(let i=0;i<tsteg;i++){
+      const u=tu0+(tu1-tu0)*(i+0.5)/tsteg, y=tz*(i+1)/tsteg;
+      d.lada((tu1-tu0)/tsteg+0.03,0.05,tbr,"#C6CACE",FS(u,y-0.03,tut+tbr/2));
+    }
+    for(const ut of [tut+0.03,tut+tbr-0.03])
+      d.lada(thyp,0.22,0.05,"#9AA0A6",
+        M4.mul(FS((tu0+tu1)/2,tz/2-0.20,ut),M4.rotZ(tlut)));
+    for(const y of [0.60,1.04])
+      d.lada(thyp,0.05,0.05,"#B4B9BE",
+        M4.mul(FS((tu0+tu1)/2,tz/2+y,tut+tbr-0.03),M4.rotZ(tlut)));
+    d.lada(1.5,0.10,tbr,"#C6CACE",FS(tu1+0.6,tz-0.05,tut+tbr/2));   // avsatsen
+    d.lada(0.09,tz+1.1,0.09,"#9AA0A6",FS(tu0,0.55,tut+tbr-0.03));
+    d.lada(0.09,1.15,0.09,"#9AA0A6",FS(tu1+1.3,tz+0.58,tut+tbr-0.03));
+  }
 }
 
 /* ── Stallet invändigt ────────────────────────────────────────── */
@@ -696,7 +725,7 @@ function v3dStall(lagg,opp){
     const rad=S.boxar[sida];
     for(let i=0;i<rad.length;i++){
       const y0=S.boxStartY+i*S.boxB;
-      if(y0+S.boxB>S.serviceY)break;
+      if(y0+S.boxB>S.klubbY)break;
       const x=sida==="W"?vx-S.ganghalva-S.boxDjup/2:vx+S.ganghalva+S.boxDjup/2;
       span.yta(S.boxDjup,S.boxB-0.1,"#FFFFFF",M4.translation(x,0.03,y0+S.boxB/2),3);
     }
@@ -726,7 +755,7 @@ function v3dStall(lagg,opp){
     const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
     for(let i=0;i<rad.length;i++){
       const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
-      if(y1>S.serviceY)break;
+      if(y1>S.klubbY)break;
       const my=(y0+y1)/2;
       front.lada(0.12,1.35,S.boxB-0.04,"#4A4D50",M4.translation(fx,0.675,my));
       front.lada(0.16,0.10,S.boxB,"#B4B8BB",M4.translation(fx,1.38,my));
@@ -798,8 +827,8 @@ function v3dRidhus(lagg,opp){
     sarg.lada(len,R.sargH-0.26,0.14,"#E9E5DC",M4.mul(m,M4.translation(0,0.26+(R.sargH-0.26)/2,0)));
     sarg.lada(len,0.07,0.18,"#CFC8BC",M4.mul(m,M4.translation(0,R.sargH+0.03,0)));
   };
-  bit(ba.x,ba.y,R.port.x0,ba.y); bit(R.port.x1,ba.y,ba.x+ba.w,ba.y);
-  bit(ba.x,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+  bit(ba.x,ba.y+ba.h,R.port.x0,ba.y+ba.h); bit(R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+  bit(ba.x,ba.y,ba.x+ba.w,ba.y);
   bit(ba.x,ba.y,ba.x,ba.y+ba.h); bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
   lagg(sarg,null);
   /* Ytterväggar, sadeltak och limträstolar. */
@@ -865,32 +894,43 @@ function v3dRidhus(lagg,opp){
     lak.lada(1.2,0.19,0.30,"#FFFFFF",
       M4.translation(R.trappa.x,0.19*i+0.10,R.trappa.y+0.30*i));
   lagg(lak,T.tra);
-  /* Entré- och trapphusdelen i södra gaveln. Utrymningsplanen visar en
+  /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.
+     Utrymningsplanen visar en
      djup del med två trapphus, hiss och rum — inte en tre meter grund
      överbyggnad. Kommer man in från parkeringen står man i en hall och
      ser banan genom öppningen, i stället för att kliva rakt ut på den. */
+  /* Hela entré-delen är byggd i gavelns lokala ände z∈[0,E] och vrids
+     180° runt husets mitt, så att den hamnar i den NORRA gaveln och
+     speglingen stämmer med utsidans dörrar (entrén i öster, caféets
+     trappa i väster). En rotation, inte en spegling — normalerna
+     behåller sin riktning. */
+  const RT=m=>M4.mul(M4.mul(M4.translation(R.bredd/2,0,R.langd/2),M4.rotY(Math.PI)),
+    M4.mul(M4.translation(-R.bredd/2,0,-R.langd/2),m));
+  const RTt=(x,y,z)=>RT(M4.translation(x,y,z));   // som M4.translation, fast vriden
   const cafe=new Bygge(), E=R.entre||R.cafe.djup;
   cafe.lada(R.bredd,0.26,E,"#CFC8BC",                   // caféets golv, banans tak
-    M4.translation(R.bredd/2,R.cafe.z0,E/2));
+    RTt(R.bredd/2,R.cafe.z0,E/2));
   cafe.lada(R.bredd,R.cafe.z1-R.cafe.z0-0.26,0.16,"#E9E5DC",
-    M4.translation(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,E));
+    RTt(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,E));
   for(let x=2;x<R.bredd-1;x+=3.2)                       // fönsterbandet mot banan
-    cafe.panel(2.4,1.1,"#3A4A5C",M4.translation(x,R.cafe.z0+1.3,E+0.10));
+    cafe.panel(2.4,1.1,"#3A4A5C",RTt(x,R.cafe.z0+1.3,E+0.10));
   /* Skiljeväggen mot banan. Öppningen är bred och går ända upp — man
      ska se banan från dörren, annars blir hallen en återvändsgränd. */
-  {const op0=R.port.x0-2.6, op1=R.port.x1+2.6;
-   cafe.lada(op0,R.cafe.z0,0.18,"#EFEBE2",M4.translation(op0/2,R.cafe.z0/2,E));
+  {/* Öppningen anges i det ovridna systemet så att den efter
+      180°-vridningen hamnar mitt för sargporten. */
+   const op0=R.bredd-R.port.x1-2.6, op1=R.bredd-R.port.x0+2.6;
+   cafe.lada(op0,R.cafe.z0,0.18,"#EFEBE2",RTt(op0/2,R.cafe.z0/2,E));
    cafe.lada(R.bredd-op1,R.cafe.z0,0.18,"#EFEBE2",
-     M4.translation((op1+R.bredd)/2,R.cafe.z0/2,E));
-   cafe.lada(op1-op0,0.22,0.22,"#8A6A44",M4.translation((op0+op1)/2,R.cafe.z0-0.11,E));}
+     RTt((op1+R.bredd)/2,R.cafe.z0/2,E));
+   cafe.lada(op1-op0,0.22,0.22,"#8A6A44",RTt((op0+op1)/2,R.cafe.z0-0.11,E));}
   /* Rummen: kansliet till vänster, omklädningen till höger, trapphusen
      i bortre hörnen. Väggarna är antydda, inte ritade rum för rum —
      planen går inte att läsa så noga. */
-  cafe.lada(0.16,2.6,E-3.4,"#EFEBE2",M4.translation(6.4,1.3,E/2-0.2));
-  cafe.lada(5.2,2.6,0.16,"#EFEBE2",M4.translation(3.8,1.3,E-3.4));
-  cafe.lada(0.16,2.6,4.4,"#EFEBE2",M4.translation(18.6,1.3,E-2.4));
+  cafe.lada(0.16,2.6,E-3.4,"#EFEBE2",RTt(6.4,1.3,E/2-0.2));
+  cafe.lada(5.2,2.6,0.16,"#EFEBE2",RTt(3.8,1.3,E-3.4));
+  cafe.lada(0.16,2.6,4.4,"#EFEBE2",RTt(18.6,1.3,E-2.4));
   for(let i=0;i<9;i++)                                   // andra trapphuset
-    cafe.lada(1.3,0.17,0.30,"#D8CFC0",M4.translation(19.6,0.17*i+0.09,E-4.4+0.30*i));
+    cafe.lada(1.3,0.17,0.30,"#D8CFC0",RTt(19.6,0.17*i+0.09,E-4.4+0.30*i));
   lagg(cafe,null);
 
   /* ── Hallen möblerad ──────────────────────────────────────────────
@@ -899,36 +939,36 @@ function v3dRidhus(lagg,opp){
      och saker man känner igen: disken, bänkarna, anslagstavlan och
      hyllan med hjälmar. ── */
   lagg(new Bygge().yta(R.bredd-0.4,E-0.4,"#FFFFFF",
-    M4.translation(R.bredd/2,0.02,E/2),6),T.marksten);
+    RTt(R.bredd/2,0.02,E/2),6),T.marksten);
   const mob=new Bygge();
   for(let x=3;x<R.bredd-1;x+=4.4)                        // takarmaturerna
     for(let z=2.2;z<E-1;z+=4.0)
-      mob.lada(1.5,0.09,0.34,"#FBF6E6",M4.translation(x,R.cafe.z0-0.16,z));
+      mob.lada(1.5,0.09,0.34,"#FBF6E6",RTt(x,R.cafe.z0-0.16,z));
   /* Receptionsdisken innanför dörren. */
-  mob.lada(3.2,1.08,0.70,"#8A6A44",M4.translation(9.8,0.54,3.4));
-  mob.lada(3.4,0.09,0.86,"#C4A87E",M4.translation(9.8,1.12,3.4));
+  mob.lada(3.2,1.08,0.70,"#8A6A44",RTt(9.8,0.54,3.4));
+  mob.lada(3.4,0.09,0.86,"#C4A87E",RTt(9.8,1.12,3.4));
   /* Bänkar längs väggen, och hyllan med hjälmar ovanför. */
   for(const z of [5.4,7.6,9.8]){
-    mob.lada(0.44,0.07,1.70,"#C4A87E",M4.translation(1.1,0.46,z));
+    mob.lada(0.44,0.07,1.70,"#C4A87E",RTt(1.1,0.46,z));
     for(const d of [-0.7,0.7])
-      mob.lada(0.09,0.46,0.09,"#8A6A44",M4.translation(1.1,0.23,z+d));
-    mob.lada(0.50,0.07,1.70,"#C4A87E",M4.translation(1.2,1.62,z));
+      mob.lada(0.09,0.46,0.09,"#8A6A44",RTt(1.1,0.23,z+d));
+    mob.lada(0.50,0.07,1.70,"#C4A87E",RTt(1.2,1.62,z));
     for(let i=0;i<3;i++)
-      mob.klot(0.14,"#3A4A5C",M4.mul(M4.translation(1.2,1.78,z-0.6+i*0.6),
+      mob.klot(0.14,"#3A4A5C",M4.mul(RTt(1.2,1.78,z-0.6+i*0.6),
         M4.skala(1,0.72,1)),8);
   }
   /* Anslagstavlan och en pokalhylla mot kansliväggen. */
-  mob.lada(0.10,1.10,2.40,"#6B4A34",M4.translation(6.28,1.55,E/2-0.2));
-  mob.lada(0.09,0.90,2.20,"#F2EDE2",M4.translation(6.22,1.55,E/2-0.2));
-  mob.lada(0.34,0.07,2.00,"#C4A87E",M4.translation(6.55,2.15,E/2-2.6));
+  mob.lada(0.10,1.10,2.40,"#6B4A34",RTt(6.28,1.55,E/2-0.2));
+  mob.lada(0.09,0.90,2.20,"#F2EDE2",RTt(6.22,1.55,E/2-0.2));
+  mob.lada(0.34,0.07,2.00,"#C4A87E",RTt(6.55,2.15,E/2-2.6));
   for(let i=0;i<5;i++)
-    mob.cyl(0.07,0.05,0.22,"#D6AE3C",M4.translation(6.55,2.22,E/2-3.4+i*0.42),8);
+    mob.cyl(0.07,0.05,0.22,"#D6AE3C",RTt(6.55,2.22,E/2-3.4+i*0.42),8);
   lagg(mob,T.tra);
-  /* Glaspartiet mot parkeringen, så att hallen får dager söderifrån. */
+  /* Glaspartiet mot parkeringen, så att hallen får dager norrifrån. */
   const glas=new Bygge();
   for(const x of [3.1,4.4])
-    glas.panel(1.1,2.2,"#BFD4DE",M4.mul(M4.translation(x,1.15,0.14),M4.ny()));
-  glas.panel(1.5,1.5,"#BFD4DE",M4.mul(M4.translation(3.4,3.6,0.14),M4.ny()));
+    glas.panel(1.1,2.2,"#BFD4DE",M4.mul(RTt(x,1.15,0.14),M4.ny()));
+  glas.panel(1.5,1.5,"#BFD4DE",M4.mul(RTt(3.4,3.6,0.14),M4.ny()));
   S3.statiskt.push({nat:GL.nat(glas), tex:null, baksidor:true});
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
@@ -976,14 +1016,17 @@ function v3dRidhus(lagg,opp){
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.skyltar||[])[R.skyltar.indexOf(s)]
       ||v3dEtikettTex(s.text)});
   }
-  /* Dressyrbokstäverna på sargen. */
+  /* Dressyrbokstäverna på sargen. Banans A ska stå vid sargporten,
+     som nu sitter i norra kortsidan — hela bokstavsringen vrids
+     därför 180° (en vridning bevarar varvriktningen A-K-V-E-...). */
   for(const bo of DRESSYRBOKSTAVER){
-    const bx=ba.x+bo.x, bz=ba.y+bo.y;
+    const lx=20-bo.x, ly=60-bo.y;
+    const bx=ba.x+lx, bz=ba.y+ly;
     let mat;
-    if(bo.x===0)      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));
-    else if(bo.x===20)mat=M4.mul(M4.translation(bx-0.12,1.05,bz),M4.rotY(-Math.PI/2));
-    else if(bo.y===0) mat=M4.mul(M4.translation(bx,1.05,bz+0.12),M4.ny());
-    else              mat=M4.mul(M4.translation(bx,1.05,bz-0.12),M4.rotY(Math.PI));
+    if(lx===0)      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));
+    else if(lx===20)mat=M4.mul(M4.translation(bx-0.12,1.05,bz),M4.rotY(-Math.PI/2));
+    else if(ly===0) mat=M4.mul(M4.translation(bx,1.05,bz+0.12),M4.ny());
+    else            mat=M4.mul(M4.translation(bx,1.05,bz-0.12),M4.rotY(Math.PI));
     const b=new Bygge(); v3dTextPanel(b,0.62,0.31,mat);
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.bokstav||{})[bo.b]});
   }
@@ -1424,7 +1467,7 @@ function ritaVandring3D(){
         const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
         for(let i=0;i<rad.length;i++){
           const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
-          if(y1>S.serviceY)break;
+          if(y1>S.klubbY)break;
           const h=boxHast(rad[i]); if(!h)continue;
           const my=(y0+y1)/2, ut=sida==="W"?-1:1;
           const nick=Math.sin(VD.tid*0.9+i*1.7+(sida==="E"?2:0))*0.06;
@@ -1449,7 +1492,7 @@ function ritaVandring3D(){
           fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
       for(const f of stallFolk()){
         const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
-        if(fy>S.serviceY-1)continue;
+        if(fy>S.klubbY-1)continue;
         const fx2=f.sida==="W"?vx-S.ganghalva+0.6:vx+S.ganghalva-0.6;
         v3dFigur({x:fx2,z:fy,rikt:f.sida==="W"?-Math.PI/2:Math.PI/2,
           fas:(VD.tid*0.4+f.ix)%1,rorlig:false,jacka:f.farg,hjalm:false});
