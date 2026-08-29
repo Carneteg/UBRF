@@ -2,13 +2,58 @@
 
 Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, tränar och lär sig sköta hästar. Privat familjeprojekt.
 
-## AKTUELLT PRODUKTBESLUT — ROBLOX FÖRST
+## Produktkanon — läs först
 
-**UBRF är ett Roblox-spel. `roblox/` är den primära produktkoden.**
+**Läs `docs/PRODUCT-CANON.md` före allt arbete som påverkar produkt, gameplay, innehåll,
+ridning, hästar, stallrutiner, progression, UX eller värld.** Det dokumentet är projektets
+North Star och väger tyngre än lokala implementationer och antaganden.
 
-Det äldre HTML5/JS-spelet under `src/`, `index.html` och `dist/` är från och med nu referens, prototyp och analysverktyg. Bygg inte nya produktfunktioner där om Tobias inte uttryckligen ber om det.
+Kärnan är låst:
 
-Målet är ett **bra, lätt, responsivt Roblox-ridspel** — inte en avancerad hästsimulator. Prioritera game feel, tydlighet, stabilitet och igenkänning före systemdjup.
+- spelet ska vara **roligt att spela**,
+- spelaren ska **lära sig verklig hästkunskap genom att göra**,
+- **ansvaret och plikterna kring hästen är gameplay**, inte dekoration,
+- **UBRF är den verkliga spelplatsen och verkligheten är facit**,
+- webbversionen är utvecklings- och testmiljö; **Roblox är målplattformen**.
+
+Hitta aldrig på en UBRF-detalj för att fylla ett hål. Saknas underlag: markera `[REFERENCE GAP]`
+eller `[antagande]` tills verkligheten kan verifieras.
+
+## Samarbete med ChatGPT
+
+Läs **`docs/AI-COLLABORATION.md`** före uppgifter som rör gameplay, spelkänsla,
+arkitektur, UX, större prioriteringar eller review.
+
+Rollerna är medvetet olika:
+
+- **Tobias** är Product Owner och har sista ordet.
+- **ChatGPT** är Senior Game Director / Game Systems Architect / Reviewer och ansvarar
+  främst för diagnos, prioritering, acceptance criteria och review.
+- **Claude** är Lead Implementation Engineer / Builder och ansvarar främst för
+  implementation, integration, testning och verifierbara repoändringar.
+
+Repot är den gemensamma överlämningsytan. Anta aldrig att den andra modellen har gjort
+eller godkänt något som inte går att verifiera i aktuell kod, commit, PR, audit eller
+uttrycklig instruktion från Tobias.
+
+**Aktuell produktprincip:** webbversionen i `src/` är den primära miljön för snabb
+utveckling och test av spelupplevelsen. Roblox är målplattformen. Gameplaybeslut ska
+bevisas i webben först och hållas rimligt portabla till Roblox, men flytta inte arbete
+till `roblox/` om Tobias inte uttryckligen ber om det.
+
+## Tekniken
+
+**Roblox är målplattformen. `src/` är den primära utvecklings- och testmiljön.**
+
+Gameplaybeslut bevisas i webbversionen först och hålls rimligt portabla till Roblox.
+Flytta inte arbete till `roblox/` om Tobias inte uttryckligen ber om det.
+
+Målet är ett **bra, lätt, responsivt ridspel** — inte en avancerad hästsimulator.
+Prioritera game feel, tydlighet, stabilitet och igenkänning före systemdjup.
+
+*(Det här ersätter formuleringen "Roblox först" från issue #12. Styrdokumenten i
+`docs/` är två timmar nyare och gäller: se `docs/PRODUCT-CANON.md` och
+`docs/ACTIVE-GATE.md`.)*
 
 ### Source of truth
 
@@ -17,8 +62,8 @@ Vid konflikt gäller denna ordning:
 1. Originalfoton och originalfilmer i Google Drive-mappen `UBRF`.
 2. Verifierade referenser i `references/`, byggnadskort och `references/SITEPLAN.md` som härletts ur originalmaterialet.
 3. Tobias uttryckliga produktbeslut.
-4. Roblox-implementationen under `roblox/`.
-5. JS-prototypen.
+4. Webbversionen under `src/`, där gameplaybeslut bevisas.
+5. Roblox-implementationen under `roblox/`.
 6. Antaganden — endast när nödvändigt, minimalt och tydligt markerade `[REFERENCE GAP]` eller `[antagande]`.
 
 **Bilder och filmer är specifikation, inte inspiration.** Finns visuell evidens får arkitektur, interiör, färg, proportioner, öppningar, möblering eller placering inte hittas på.
@@ -43,12 +88,13 @@ Vid konflikt gäller denna ordning:
 
 ### Claude Code — Primary Implementer
 
-- Äger implementationen under `roblox/` på feature branch.
+- Äger implementationen på feature branch, i det spår den aktiva gaten pekar ut
+  (`docs/ACTIVE-GATE.md`).
 - Bygger mot beslutad task och acceptance criteria; expanderar inte scope på eget initiativ.
 - Får använda Sonnet-subagenter för analys/test, men en huvudagent äger integrationen.
-- Kör Luau-kompilering och de automatiska tester som kan köras utanför Studio.
+- Kör de automatiska tester som går att köra utanför Studio, och Luau-kompilering
+  när arbetet rör `roblox/`.
 - Skriver uttryckligen vad som **inte** kunnat verifieras utan Roblox Studio.
-- Ska inte föra nya funktioner till JS-spåret när uppgiften gäller Roblox.
 
 ### Arbetsloop
 
@@ -60,6 +106,10 @@ Vid konflikt gäller denna ordning:
 6. Fynd tillbaka till Claude Code som konkreta korrigeringar.
 
 Ingen agent får både införa en större förändring och ensam slutgodkänna den.
+
+**Aktiv kvalitetsgrind:** `docs/ACTIVE-GATE.md` pekar ut vilken gate som gäller nu,
+och dess brief är kanon för scope. Läs den före ändringar i gameplay, rörelse,
+kamera eller inmatning.
 
 ## Roblox — primär teknik
 
