@@ -1,102 +1,150 @@
 # UBRF — Ridskolan
 
-Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, tränar och
-lär sig sköta hästar. Privat familjeprojekt.
+Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, tränar och lär sig sköta hästar. Privat familjeprojekt.
 
-## Tekniken
+## AKTUELLT PRODUKTBESLUT — ROBLOX FÖRST
 
-Ett HTML5-spel som byggs till **en enda fil**: `tools/build.py` fogar ihop `index.html` och
-`src/*.js` till `dist/ridskolan.html`. Ingen CDN, inga externa filer.
+**UBRF är ett Roblox-spel. `roblox/` är den primära produktkoden.**
 
-**Local-first.** `localStorage` är sanningen och hela spelet fungerar utan nät. `src/synk.js`
-lägger en frivillig molnsynk ovanpå (Supabase-projektet `UBRF`, tabellerna i
-`supabase/migrations/`) så att man kan rida på mobilen i stallet och fortsätta på datorn.
-Den är aldrig ett krav: utan inloggning, utan nät eller med trasig server spelar man precis
-som förut, och varje anrop i den filen får misslyckas tyst. Synken pratar med REST- och
-auth-slutpunkterna över vanliga `fetch`-anrop — **dra aldrig in `supabase-js`**, det vore ett
-externt beroende och bryter regeln om en enda fil.
-3D-delen är en egen WebGL-motor i `src/gl.js` — inget Three.js, inga färdiga modellformat.
-Geometri byggs i kod med `Bygge` (lådor, klot, cylindrar, svepta ytor).
+Det äldre HTML5/JS-spelet under `src/`, `index.html` och `dist/` är från och med nu referens, prototyp och analysverktyg. Bygg inte nya produktfunktioner där om Tobias inte uttryckligen ber om det.
 
-### Två spår i samma repo
+Målet är ett **bra, lätt, responsivt Roblox-ridspel** — inte en avancerad hästsimulator. Prioritera game feel, tydlighet, stabilitet och igenkänning före systemdjup.
 
-`src/`, `index.html` och `tools/build.py` är **JS-spelet** ovan. `roblox/` är ett
-**separat Roblox-spår** i Luau, med ett eget hästsystem för riggade modeller. De
-delar ingen kod. Det enda gemensamma är siffrorna: gångarternas tempoband i
-`roblox/src/shared/HorseCore/Gaits.luau` är portade från `src/model.js`, som i sin
-tur var en port från Luau.
+### Source of truth
 
-Roblox-spåret har i sin tur två fristående delar: `roblox/src/` är hästsystemet
-och `roblox/buildings/` är byggstenar för anläggningens hus. De delar ingen kod.
+Vid konflikt gäller denna ordning:
 
-Arbetar du i `src/` gäller reglerna nedan. Arbetar du i `roblox/` gäller
-`roblox/README.md` — nämn aldrig `Bygge`, `STIL` eller `tools/build.py` där, och
-nämn aldrig `BuildKit.luau` eller studs här.
+1. Originalfoton och originalfilmer i Google Drive-mappen `UBRF`.
+2. Verifierade referenser i `references/`, byggnadskort och `references/SITEPLAN.md` som härletts ur originalmaterialet.
+3. Tobias uttryckliga produktbeslut.
+4. Roblox-implementationen under `roblox/`.
+5. JS-prototypen.
+6. Antaganden — endast när nödvändigt, minimalt och tydligt markerade `[REFERENCE GAP]` eller `[antagande]`.
 
-Kör lokalt: `python3 tools/build.py && python3 -m http.server 8931`, öppna
-`http://localhost:8931/dist/ridskolan.html`. Skärmdumpar tas med Playwright
-(`executablePath:"/opt/pw-browsers/chromium"`).
+**Bilder och filmer är specifikation, inte inspiration.** Finns visuell evidens får arkitektur, interiör, färg, proportioner, öppningar, möblering eller placering inte hittas på.
 
-## Grafisk stil
+## Roller och samarbete
 
-`STIL` i `src/ljus.js` styr formspråket. `"kloss"` betyder: **figurerna är klossiga,
-världen är lågpolygon med plana ytor.** Hästen, träden och rekvisitan får sin form av
-fasettering — samma anatomi, färre segment, en egen normal per triangel (`glPlatta`).
-Ryttaren och figurerna till fots är rätblock. Det är den kombinationen förlagan använder.
+### Tobias — Product Owner
 
-Alla färg- och ljusvärden ligger i `src/ljus.js`. Ändra där, ingen annanstans.
-**Ryttarens egna färger** — hy, hår, kavaj, byxor, hjälm — hör inte hemma där utan
-i `src/jag.js`, för de är spelarens val och inte världens ljus. Skriv aldrig in dem
-i `kloss.js` eller `scen3d.js`: bägge bygger ryttaren ur paletten de får in, och det
-finns två uppsättningar delar — `S3.del` för de andra eleverna och `S3.del.jag` för
-spelaren. Rör du den ena, rör du inte den andra.
-UI:ts formspråk är `ui-kit-demo.html` — dess variabler är utbrutna till `src/ui.css`
-och ska inte redigeras där.
+- Bestämmer scope och prioritering.
+- Avgör subjektiv game feel i faktisk Roblox Studio-playtest.
+- Godkänner större designförändringar.
+- Håller spelet på Roblox-nivå; ingen simulator-expansion utan uttryckligt beslut.
 
-## Byggnader — den viktigaste regeln
+### ChatGPT — Architect / Reference Custodian / QA Lead
 
-**Anläggningen ska kännas igen av någon som varit på UBRF.** Byggnaderna ritas i spelets
-stil, men proportioner, färger, takform, fönster- och portplacering och placering på tomten
-ska stämma med verkligheten. Verkligheten är facit. Fotona i `references/buildings/` är
-facit. Gissa aldrig — titta.
+- Läser Google Drive-material och repo parallellt.
+- Förvaltar visuell sanning och pekar ut referensluckor.
+- Skriver acceptance criteria och prioriterar arbete.
+- Granskar Claude Codes PR:er för arkitektur, scope, regressioner och referensfidelitet.
+- Skriver normalt inte parallellt i samma produktfiler som Claude Code arbetar i.
+- Får skapa governance-, audit- och referensdokument samt separata korrigerings-PR:er.
 
-### Hårda regler
+### Claude Code — Primary Implementer
 
-1. **Bygg aldrig en byggnad utan att först ha öppnat dess foton** (`Read` på varje JPG i
-   `references/buildings/<byggnad>/`). Alla foton, inte bara det första.
-2. **Bygg aldrig utan ett ifyllt byggnadskort** (`references/buildings/<byggnad>/KORT.md`).
-   Saknas det: fyll i det först med `/fotoanalys <byggnad>`. Kortet är kontraktet — mått,
-   färger, takvinkel, antal fönster, portar, detaljer. Koden följer kortet, kortet följer fotona.
-3. **Verifiera visuellt innan du säger "klart".** Ta en skärmdump från samma vinkel som
-   referensfotot, lägg dem bredvid varandra och lista avvikelserna konkret
-   ("taket är för flackt — foto ~25°, modell ~40°"). Rätta. Minst en runda, oftast två–tre.
-4. **Stiliserat ≠ påhittat.** Förenkla detaljer, men ändra aldrig form, antal, färgton
-   eller proportioner. Har ridhuset röd plåtfasad och ljust tak har det det i spelet också.
-5. **Namnge som i verkligheten.** Ridhuset, Stallet, Ridbanan — aldrig "Byggnad1".
-6. **Hitta inte på.** Saknas ett foto för en fasad: säg det, bygg den som spegling av
-   motsatta sidan och markera `[antagande]` i kortet. Be om ett foto.
-7. **Mått i meter, överallt.** Samma tal i kortet, i `ANL` (`src/world.js`) och i
-   `src/varld3d.js`. Ingen omräkning.
-8. **Placering på tomten** styrs av `references/SITEPLAN.md`.
+- Äger implementationen under `roblox/` på feature branch.
+- Bygger mot beslutad task och acceptance criteria; expanderar inte scope på eget initiativ.
+- Får använda Sonnet-subagenter för analys/test, men en huvudagent äger integrationen.
+- Kör Luau-kompilering och de automatiska tester som kan köras utanför Studio.
+- Skriver uttryckligen vad som **inte** kunnat verifieras utan Roblox Studio.
+- Ska inte föra nya funktioner till JS-spåret när uppgiften gäller Roblox.
 
-### Arbetsflöde per byggnad
+### Arbetsloop
 
-`/fotoanalys <byggnad>` → granska kortet med Tobias → `/bygg-byggnad <byggnad>` →
-jämför mot foto → justera → commit.
+1. ChatGPT: referens-/arkitekturanalys + tydlig brief.
+2. Claude Code: implementation på egen branch.
+3. Claude Code: PR med testbevis, ändrade filer och kända Studio-begränsningar.
+4. ChatGPT: PR-review av kod, scope och referensfidelitet.
+5. Tobias: subjektiv Roblox Studio-playtest när känsla/visuell träff måste avgöras.
+6. Fynd tillbaka till Claude Code som konkreta korrigeringar.
 
-## Foton
+Ingen agent får både införa en större förändring och ensam slutgodkänna den.
 
-Källa: Google Drive-mappen `UBRF` (HEIC från iPhone). **HEIC kan inte läsas** — konvertera
-alltid först med `tools/convert-photos.sh`, och sortera in i
-`references/buildings/<byggnad>/` med namnet `<byggnad>-<fasad>-<nr>.jpg`.
-Konverteringen måste göras lokalt: `drive.google.com` och `facebook.com` är blockerade av
-nätverksproxyn i den här miljön, och Drive-anslutningen returnerar filinnehåll som base64
-vilket inte fungerar för fotostora filer.
+## Roblox — primär teknik
 
-Klubbens Instagram @ubrflikeshorses och Facebook finns som extra referens, men fotona i
-repot är de primära.
+Följ `roblox/README.md` och `roblox/docs/HORSE-MODEL-SPEC.md`.
+
+Roblox-spåret har två separata delar:
+
+- `roblox/src/` — hästsystemet och gameplay i Luau.
+- `roblox/buildings/` — byggstenar för anläggningen i Studio.
+
+Behåll befintliga bra gränser: Input → Movement → State/Animation/Rider/Camera, RigAdapter som modellgräns och klientägd lokal rörelse med servervalidering.
+
+### Scope guardrail
+
+Prioritera:
+
+- mjuk och responsiv horse movement
+- stabil kamera
+- rena animation transitions
+- keyboard/gamepad/touch
+- häst/rider-loop som fungerar varje gång
+- enkel interaction och collision
+- anläggning som känns igen från UBRF
+- responsiv Roblox-UI
+- enkelt test/demo-flöde där relevant
+- performance och stabilitet
+
+Bygg inte utan uttryckligt beslut:
+
+- avancerad hästbiomekanik
+- simulatornivå på dressyrfysik
+- onödiga state machines eller abstraktionslager
+- egna stora fysikmotorer när Roblox redan löser problemet bra
+- nya JS-only features
+- system som gör projektet större utan tydlig spelarvinst
+
+## JS-spåret — referens/prototyp
+
+`src/`, `index.html`, `tools/build.py` och `dist/` får användas för att bevara tidigare spelmekanik, mäta beteenden, jämföra geometri och återanvända verifierad domänlogik. De är inte längre produktens primära destination.
+
+När en gammal JS-funktion ska till Roblox: porta **avsikten och verifierade regler**, inte implementationen rad för rad.
+
+## Byggnader och interiörer — hårdaste regeln
+
+**Anläggningen ska kännas igen av någon som varit på UBRF. Verkligheten är facit.**
+
+1. Öppna relevant foto/video innan implementation.
+2. Kontrollera alla tillgängliga vinklar, inte en enda bild.
+3. Uppdatera byggnadskort/SITEPLAN först när ny evidens ändrar facit.
+4. Koden följer kortet; kortet följer originalmaterialet.
+5. Verifiera visuellt från motsvarande vinkel innan "klart".
+6. Stiliserat betyder förenklat — inte påhittat.
+7. Saknas evidens: använd minsta neutrala antagande och märk `[REFERENCE GAP]`.
+8. Placering på tomten styrs av verifierad `references/SITEPLAN.md`.
+9. Flytta inte byggnader, dörrar, fönster eller möbler för att lösa UI-/kamera-problem. Lös UI/kamera separat.
+
+## Google Drive-referenser
+
+Google Drive-mappen `UBRF` innehåller original-HEIC och MOV samt andra underlag. ChatGPT kan läsa och analysera dessa via den anslutna Drive-källan och för in verifierade observationer i repoets referenslager.
+
+Claude Code ska **inte gissa** om den själv saknar åtkomst till Drive. Använd då `references/DRIVE-SOURCE-INDEX.md`, befintliga sorterade bilder/frames och byggnadskorten; markera luckor och lämna dem till ChatGPT/Tobias för referenskontroll.
+
+Originalmedia behöver inte dupliceras i GitHub bara för att koden ska byggas. För in härledda fakta, valda referensframes och tydlig proveniens.
+
+## Movement quality — release blocker
+
+För Roblox-ridningen gäller:
+
+- kontroll först, smoothness därefter, realism sist
+- snabb men mjuk styrrespons
+- bra low-speed precision
+- ingen synlig creep/jitter
+- förutsägbar acceleration och inbromsning
+- kamera får aldrig göra styrningen trög
+- keyboard ska inte kännas binärt trots digital A/D
+- gamepad/touch ska behålla analog precision
+- frame-rate-oberoende beteende
+
+Förbättra befintlig arkitektur innan du uppfinner en ny.
 
 ## Git
 
-Utveckla på den anvisade grenen, committa med beskrivande meddelanden på svenska, pusha,
-och håll utkasts-PR:en uppdaterad.
+- Arbeta på feature branch.
+- En implementation/ett tydligt ansvar per PR.
+- Undvik parallella PR:er som ändrar samma kärnfiler.
+- Beskriv vad som testats och vad som kräver Roblox Studio.
+- Mergas först efter review och relevanta regressionskontroller.
+- Issue #12 beskriver den aktuella AI-arbetsfördelningen och Roblox-first-beslutet.
