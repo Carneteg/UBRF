@@ -76,7 +76,27 @@ function fardighetsMod(){
        rätta till hela tiden och att bara rida — och den märks direkt i
        hur många korrigeringar ett moment kostar. */
     halla: 0.48*f.sits+0.34*f.kansla,
+    /* Spänningen sjunker undan snabbare. Bara egenskapen Lugn rör den
+       här — färdigheterna verkar på pressen, inte på återhämtningen. */
+    spanningFall: 1,
   };
+}
+
+/* Egenskaperna ovanpå färdigheterna. De valda tre lutar samma
+   toleranser som färdigheterna, men de växer inte — de är det du bar
+   med dig när du kom hit. Additivt, och medvetet mycket mindre än vad
+   ett halvt liv i sadeln ger. */
+function fardighetsModMedJag(){
+  const m=fardighetsMod();
+  const j=(typeof jagMod==="function")?jagMod():{};
+  if(j.halla)       m.halla       += j.halla;
+  if(j.mjukhetFart) m.mjukhetFart += j.mjukhetFart;
+  if(j.lugn)        m.lugn        += j.lugn;
+  if(j.tygelband)   m.tygelband   += j.tygelband;
+  if(j.amplitud)    m.amplitud    += j.amplitud;
+  if(j.spanningFall)m.spanningFall+= j.spanningFall;
+  if(j.skygghet)    m.skygghet     = (m.skygghet||0)+j.skygghet;
+  return m;
 }
 
 /* ── Växten ───────────────────────────────────────────────────────

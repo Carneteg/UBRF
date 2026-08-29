@@ -34,6 +34,7 @@ function visaMeny(){
   </div>
   <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
   Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
+  ${typeof jagPanelHTML==="function"?jagPanelHTML():""}
   ${profilHTML()}
   ${typeof synkPanelHTML==="function"?synkPanelHTML():""}
   <div class="btnrow">
@@ -46,6 +47,7 @@ function visaMeny(){
   document.getElementById("bTavling").onclick=visaTavlingsval;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
   kopplaProfil();
+  if(typeof kopplaJagPanel==="function")kopplaJagPanel();
   if(typeof kopplaSynkPanel==="function")kopplaSynkPanel();
 }
 
@@ -536,4 +538,7 @@ function nollstall(){
   document.getElementById("protWrap").hidden=true;
   document.getElementById("approach").textContent="";
 }
-visaMeny();
+/* Första gången: skapa ryttaren innan menyn. Den som redan har en
+   profil ser den aldrig — men kan alltid öppna den från menyn. */
+if(typeof jagKlar==="function"&&!jagKlar())visaSkaparen("meny");
+else visaMeny();

@@ -33,7 +33,8 @@ function klossTrad(b,x,z,h,f0,f1){
    det: en R6-gubbe bredvid en häst med riktig anatomi. Så hästen får
    sin form av fasettering, och figuren av rätblock. */
 function klossDelar(D){
-  klossRyttarDelar(D);
+  /* Ryttardelarna byggs av s3BygRyttare, som gör två uppsättningar —
+     en för eleverna och en för dig. Här byggs bara resten. */
   D.person=GL.nat((()=>{
     const b=new Bygge();
     kLada(b, 0, 0.55, 0, 0.34,0.62,0.24, "#FFFFFF");
@@ -43,9 +44,11 @@ function klossDelar(D){
 
 /* Ryttaren i sadeln. Samma fästpunkter som den svepta ryttaren, så
    sitsen, lättridningen och tyglarna räknas oförändrat. */
-function klossRyttarDelar(D){
+/* Paletten kommer utifrån (jag.js via s3BygRyttare), så att samma kod
+   kan bygga både elevernas och din ryttare. */
+function klossRyttarDelar(D,J){
   const nat=b=>GL.nat(b);
-  const KAVAJ="#33465F", BYXA="#D6C9AE", HUD="#E0B490", HAR="#6B4526";
+  const KAVAJ=J.kavaj, BYXA=J.byxa, HUD=J.hy, HAR=J.har, STOVEL=J.stovel;
 
   D.bal=nat(new Bygge().lada(0.30,0.24,0.40,BYXA));
   D.torso=nat((()=>{
@@ -56,8 +59,8 @@ function klossRyttarDelar(D){
     return b;})());
   D.arm=nat(new Bygge().lada(0.090,1,0.090,KAVAJ,M4.translation(0,0.5,0)));
   D.lar=nat(new Bygge().lada(0.155,1,0.155,BYXA,M4.translation(0,0.5,0)));
-  D.vad=nat(new Bygge().lada(0.110,1,0.110,"#1E1A16",M4.translation(0,0.5,0)));
-  D.stovel=nat(new Bygge().lada(0.23,0.11,0.13,"#1E1A16",M4.translation(0.02,0,0)));
+  D.vad=nat(new Bygge().lada(0.110,1,0.110,STOVEL,M4.translation(0,0.5,0)));
+  D.stovel=nat(new Bygge().lada(0.23,0.11,0.13,STOVEL,M4.translation(0.02,0,0)));
   D.led=nat(new Bygge().lada(0.09,0.09,0.09,"#FFFFFF"));
   D.hand=nat(new Bygge().lada(0.092,0.10,0.076,"#2B2620"));
 
@@ -72,13 +75,18 @@ function klossRyttarDelar(D){
   D.har=nat((()=>{
     const b=new Bygge();
     kLada(b,-0.010, 0.100, 0, 0.210,0.090,0.220, HAR);     // luggen
-    kLada(b,-0.160,-0.060, 0, 0.100,0.300,0.140, HAR);     // hästsvansen
+    /* Frisyren: svansen faller längst, flätan är smalare, kort hår
+       slutar i nacken och uppsatt syns bara som luggen. */
+    if(J.harstil==="svans")   kLada(b,-0.160,-0.060,0, 0.100,0.300,0.140, HAR);
+    else if(J.harstil==="flata")kLada(b,-0.155,-0.070,0, 0.075,0.320,0.090, HAR);
+    else if(J.harstil==="kort") kLada(b,-0.140, 0.020,0, 0.110,0.130,0.190, HAR);
     return b;})());
   /* Hjälmen ritas redan 0,10 upp, så skalet ligger kring y=0 här. */
   D.hjalm=nat((()=>{
     const b=new Bygge();
-    kLada(b, 0,    -0.010, 0, 0.230,0.150,0.230, "#23282F");
-    kLada(b, 0.115,-0.030, 0, 0.100,0.035,0.200, "#20252C");  // skärmen
-    kLada(b, 0,     0.072, 0, 0.100,0.035,0.090, "#3E6B47");  // klubbens färg
+    const skarm=(typeof jagMorkare==="function")?jagMorkare(J.hjalm,0.14):J.hjalm;
+    kLada(b, 0,    -0.010, 0, 0.230,0.150,0.230, J.hjalm);
+    kLada(b, 0.115,-0.030, 0, 0.100,0.035,0.200, skarm);      // skärmen
+    kLada(b, 0,     0.072, 0, 0.100,0.035,0.090, J.klubb);    // klubbens färg
     return b;})());
 }

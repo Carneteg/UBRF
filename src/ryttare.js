@@ -111,7 +111,11 @@ function registreraPass(dom){
      Men som MINNE är det för snabbt: efter-passet visade en relation
      som gick från 0,45 till 1,00 på en lektion, och då betyder den
      ingenting. Nedåt är taket större än uppåt, som förut. */
-  {const TAK=0.06, d=clamp(rangEfterRitt-m.rang,-TAK*1.6,TAK);
+  {const TAK=0.06;
+   /* Tålamod skyddar nedåt, inte uppåt: ett dåligt pass river mindre av
+      det ni byggt, men det bygger inget snabbare. */
+   const skydd=1-clamp(((typeof jagMod==="function")&&jagMod().fortroendeskydd)||0,0,0.6);
+   const d=clamp(rangEfterRitt-m.rang,-TAK*1.6*skydd,TAK);
    rangEfterRitt=clamp(m.rang+d,0,1);}
   const ny={...m, rang:rangEfterRitt, pass:m.pass+1,
     sistaPassNr:SPAR.pass, sistaForm:Math.round(G.dagsform*100)/100, rehab:false};

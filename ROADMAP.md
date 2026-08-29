@@ -141,3 +141,36 @@ sponsorvägg och cafeteria. Figuren går i tredjeperson.
 
 **Kvar att ta vidare:** Roblox-porten finns fortfarande som möjlighet
 — modellen, anläggningen och övningarna följer med oavsett motor.
+
+## ✅ Din egen ryttare
+
+Första gången spelet öppnas frågar det vem du är innan menyn: namn, hy,
+hårfärg, frisyr, kavaj, ridbyxor och hjälm — och tre egenskaper av sex.
+Allt bor i `src/jag.js` och sparas i ryttarprofilen, så det följer med
+både till localStorage och till molnet.
+
+Utseendet ändrar ingenting i ridningen. Det syns i sadeln, i stallet och
+på gården, och de andra eleverna i ridhuset behåller sina egna färger —
+det finns två uppsättningar ryttardelar, `S3.del` för dem och
+`S3.del.jag` för dig.
+
+Egenskaperna är en **lutning, inte en genväg**. Var och en är hämtad ur
+Ridhandboken och skriver ut både vad den gör och varför boken säger så:
+
+| Egenskap | Ur boken | Vad den gör, uppmätt |
+|---|---|---|
+| Styrka | del 6, Sitsen | `halla` +0,10 och `mjukhetFart` +0,22 — hästen glider mindre ifrån dig |
+| Upprätt sits | del 6, Sitsen | `lugn` +0,12 — mindre press på hästen |
+| Pondus | del 2, Säkerhet och hästhantering | spänningen på den skyggaste hästen 0,186 → 0,143 |
+| Mjuk hand | del 7, Inverkan | tygelbandet +0,035 innan hästen tolkar det som hårdhet |
+| Lugn | del 5, Ryttarens och hästens språk | spänningens fall 22 % snabbare |
+| Tålamod | del 10, Övergångar | förtroendetappet −0,096 → −0,053 per dåligt pass |
+
+Ingen av dem gör något moment onödigt. En egenskap som lät dig hoppa
+över att lära dig något vore ett designfel, inte en belöning.
+
+Kontorutan är samtidigt omgjord: `Skapa konto` och `Logga in` är två
+lägen med validering och besked som säger vad som är fel, i stället för
+tre fält som misslyckades tyst. Panelens knappar var aldrig kopplade —
+`scenes.js` anropade `kopplaSynkPanel`, `synk.js` definierade
+`kopplaMolnPanel`. Kvarleva från namnbytet `moln` → `synk`.

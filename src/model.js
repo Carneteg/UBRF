@@ -107,12 +107,18 @@ function stepRide(s,a,h,ctx,dt){
    if(a.sits>0.75&&s.gangart==="galopp")press+=(a.sits-0.75)*0.7;
    if(a.spo&&h.flaggor.radd_for_spo)press+=1.6; else if(a.spo)press+=0.15;
    press+=(1-ctx.stallro)*0.5+(1-s.sadellage)*0.7+(1-ctx.underlag)*0.25;
-   press+=h.skygghet*0.18*(ctx.utomhus?1.5:1);
+   /* Skyggheten: en ryttare med pondus tar udden av den. Hon slutar
+      inte vara skygg — hon reagerar mindre på dig som ledare. */
+   const damp=1-clamp((ctx.fard&&ctx.fard.skygghet)||0,0,0.5);
+   press+=h.skygghet*0.18*(ctx.utomhus?1.5:1)*damp;
    const lugn=s.rang*0.6+h.forlatande*0.5+s.mjukhet*0.6+s.dagsform*0.3
      +((ctx.fard&&ctx.fard.lugn)||0);
    const mal=clamp(press*kf-lugn*0.45,0,1);
+   /* Fallet är hur fort spänningen släpper när pressen lättar. En lugn
+      ryttare får den att sjunka undan fortare — hon smittar av sig. */
+   const fall=(ctx.fard&&ctx.fard.spanningFall)||1;
    s.spanning=clamp(approach(s.spanning,mal,K.SPANNING_STIGNING*(0.6+0.8*h.kanslighet),
-     K.SPANNING_FALL*(0.5+1.0*h.forlatande),dt),0,1);
+     K.SPANNING_FALL*(0.5+1.0*h.forlatande)*fall,dt),0,1);
   }
   // tempo — förhandling, inte kommando
   {const g=Gait.G[s.gangart]||Gait.G.halt;

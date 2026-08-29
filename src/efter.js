@@ -268,7 +268,7 @@ function efterPassHTML(){
       <ul class="eLista">${hastLi}</ul>
     </div>
     <div class="eKol">
-      <div class="lbl">Du växte</div>
+      <div class="lbl">${(typeof jagNamn==="function"?jagNamn():"Du")} växte</div>
       <ul class="eLista">${duLi}</ul>
     </div>
     <div class="eBred">${loftet}</div>

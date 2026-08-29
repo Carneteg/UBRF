@@ -112,9 +112,12 @@ function stegaRitt(dt){
      gör underlaget tyngre än ridhusets harvade fiber. */
   const ute=G.plats!=="ridhus";
   const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
+  /* Färdigheter plus de valda egenskaperna, i ett anrop — modellen ska
+     inte behöva veta att lutningen har två källor. */
+  const F=fardighetsModMedJag();
   stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,
-    utomhus:ute,fard:fardighetsMod(),
-    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,fardighetsMod().halla)},dt);
+    utomhus:ute,fard:F,
+    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,F.halla)},dt);
   /* Färdigheterna växer av det som just hände. Returnerar ett id när en
      färdighet passerar ett helt tiondelssteg, så att det går att visa. */
   {const steg=stegaFardighet(G.ride,G.aids,dt);

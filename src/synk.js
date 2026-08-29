@@ -24,6 +24,8 @@ const SYNK={
   session:null,                 // {access_token, refresh_token, user:{id}}
   status:"av",                  // av | ute | inne | jobbar | fel
   info:"",
+  lage:"ny",                    // ny | in — vilken ruta som visas
+  epost:"",                     // sparas mellan omritningar, aldrig lösenordet
 };
 const SYNK_SESSION="ubrf-synk-session-v1";
 
@@ -120,8 +122,12 @@ function synkLoggaUt(){
    i förvirring än den vinner i noggrannhet. */
 function synkProfilRad(){
   return {
+    namn:(typeof jagNamn==="function"?jagNamn():"Ryttare"),
     grupp:SPAR.grupp, poang:SPAR.poang, pass:SPAR.pass,
     fardighet:(typeof fard==="function")?fard():(SPAR.fardighet||{}),
+    /* Utseendet och egenskaperna följer med som ett stycke. Se
+       0002_ryttarens_jag.sql för varför det är jsonb och inte kolumner. */
+    jag:(typeof jag==="function")?jag():(SPAR.jag||{}),
     uppdaterad:SPAR.uppdaterad||new Date().toISOString(),
   };
 }
@@ -165,6 +171,12 @@ async function synkDra(){
 
     SPAR.grupp=rad.grupp; SPAR.poang=rad.poang; SPAR.pass=rad.pass;
     if(rad.fardighet)SPAR.fardighet={...(SPAR.fardighet||{}),...rad.fardighet};
+    /* Ryttaren du skapat. Bara om molnet faktiskt bär en — en tom rad
+       ska inte radera utseendet på den här enheten. */
+    if(rad.jag&&rad.jag.skapad){
+      SPAR.jag={...(SPAR.jag||{}),...rad.jag};
+      if(typeof jagBygg==="function")jagBygg();
+    }
     const h=await synkFetch("/rest/v1/hastminne?select=*&ryttare_id=eq."+id);
     const rader=await h.json();
     if(Array.isArray(rader)){
@@ -224,29 +236,65 @@ function synkPanelHTML(){
         <button class="btn ghost" id="bSynkUt" style="padding:6px 12px;font-size:12px">Logga ut</button>
       </div></div>`;
   }
+  const ny=SYNK.lage!=="in";
+  const namn=(typeof jagNamn==="function")?jagNamn():"";
   return `<div class="note" id="synkRuta" style="font-size:13px">
-    <b class="gold">Spara framstegen i molnet</b> — frivilligt. Utan inloggning
-    sparas allt i den här webbläsaren som förut.
-    ${SYNK.info?`<br><span class="dim">${SYNK.info}</span>`:""}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-      <input id="synkNamn"  placeholder="Ditt namn"  style="flex:1 1 120px;min-width:0">
-      <input id="synkEpost" placeholder="E-post" type="email" style="flex:1 1 160px;min-width:0">
-      <input id="synkLosen" placeholder="Lösenord" type="password" style="flex:1 1 120px;min-width:0">
+    <b class="gold">${ny?"Skapa ett konto":"Logga in"}</b> — frivilligt.
+    Med konto följer framstegen med mellan datorn och mobilen. Utan konto
+    sparas allt i den här webbläsaren, precis som förut.
+    <div class="synkFalt">
+      ${ny?`<input id="synkNamn" placeholder="Ditt namn" maxlength="18"
+        value="${namn.replace(/"/g,"&quot;")}">`:""}
+      <input id="synkEpost" placeholder="E-post" type="email" autocomplete="email"
+        value="${(SYNK.epost||"").replace(/"/g,"&quot;")}">
+      <input id="synkLosen" placeholder="Lösenord${ny?" (minst 6 tecken)":""}"
+        type="password" autocomplete="${ny?"new-password":"current-password"}">
     </div>
+    ${SYNK.info?`<div class="synkBesked ${SYNK.status==="fel"?"bad":""}">${SYNK.info}</div>`:""}
     <div class="btnrow" style="margin-top:8px">
-      <button class="btn ghost" id="bSynkIn" style="padding:6px 12px;font-size:12px">Logga in</button>
-      <button class="btn ghost" id="bSynkNy" style="padding:6px 12px;font-size:12px">Ny ryttare</button>
+      <button class="btn" id="${ny?"bSynkNy":"bSynkIn"}" style="padding:7px 16px;font-size:13px"
+        ${SYNK.status==="jobbar"?"disabled":""}>${ny?"Skapa konto":"Logga in"}</button>
+      <button class="btn ghost" id="bSynkVaxla" style="padding:6px 12px;font-size:12px">
+        ${ny?"Jag har redan ett konto":"Skapa ett nytt konto i stället"}</button>
     </div></div>`;
 }
-function kopplaMolnPanel(){
+
+/* Kontrollerna görs här och inte på servern först. Ett fel som går att
+   se innan anropet ska sägas innan anropet — annars ser det ut som att
+   nätet strulade när det egentligen var ett tomt fält. */
+function synkGranska(ny,namn,epost,losen){
+  if(ny&&!namn)                       return "Skriv ditt namn först.";
+  if(!epost)                          return "Skriv din e-postadress.";
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(epost))
+                                      return "Det där ser inte ut som en e-postadress.";
+  if(!losen)                          return "Skriv ett lösenord.";
+  if(ny&&losen.length<6)              return "Lösenordet behöver vara minst sex tecken.";
+  return "";
+}
+function kopplaSynkPanel(){
   if(!synkPa())return;
   const om=()=>{ if(typeof visaMeny==="function"&&G.scen==="meny")visaMeny(); };
   const v=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
   const b=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f;};
-  b("bSynkIn",  async()=>{ await synkLoggaIn(v("synkEpost"),v("synkLosen")); om(); });
-  b("bSynkNy",  async()=>{ await synkRegistrera(v("synkNamn")||"Ryttare",v("synkEpost"),v("synkLosen")); om(); });
+  const ny=SYNK.lage!=="in";
+
+  const kor=async()=>{
+    const namn=v("synkNamn"), epost=v("synkEpost"), losen=v("synkLosen");
+    const fel=synkGranska(ny,namn,epost,losen);
+    SYNK.epost=epost;
+    if(fel){ SYNK.status="fel"; SYNK.info=fel; om(); return; }
+    if(ny)await synkRegistrera(namn||"Ryttare",epost,losen);
+    else   await synkLoggaIn(epost,losen);
+    om();
+  };
+  b("bSynkNy",kor); b("bSynkIn",kor);
+  b("bSynkVaxla",()=>{ SYNK.lage=ny?"in":"ny"; SYNK.info=""; SYNK.status="ute"; om(); });
   b("bSynkDra", async()=>{ await synkDra(); om(); });
   b("bSynkUt",  ()=>{ synkLoggaUt(); om(); });
+
+  /* Enter i lösenordsfältet gör det knappen gör. */
+  const l=document.getElementById("synkLosen");
+  if(l)l.onkeydown=e=>{ if(e.key==="Enter"){e.preventDefault();kor();} };
 }
 
 /* Sparning sker ofta — varje färdighetssteg och varje syssla. Trycket

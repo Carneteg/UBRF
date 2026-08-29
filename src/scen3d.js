@@ -170,6 +170,86 @@ function s3BokstavsBild(c,id,x,y,s){
   }
 }
 
+/* ── Ryttarens delar ──────────────────────────────────────────────
+   Bryts ut ur hästbygget för att de ska kunna byggas om ensamma: byter
+   du färg i skaparrutan är det bara de här näten som ska ersättas, inte
+   hela hästen. Färgerna kommer ur ryttarprofilen (jag.js) — samma
+   källa som klossläget läser, så de två kan aldrig glida isär. */
+const RYTTARDELAR=["bal","torso","arm","lar","vad","stovel","huvudR","har","hjalm"];
+const RYTTARE_NORM={kavaj:"#33465F",byxa:"#D6C9AE",hy:"#E0B490",har:"#6B4526",
+  hjalm:"#23282F",stovel:"#1E1A16",klubb:"#3E6B47",harstil:"svans"};
+
+/* Anropas två gånger: en gång för de andra eleverna i ridhuset, som ska
+   se ut som de alltid gjort, och en gång för dig. Näten är små, så två
+   uppsättningar kostar mindre än att göra din färg till allas. */
+function s3BygRyttare(){
+  const D=S3.del;
+  s3BygRyttarSet(D, RYTTARE_NORM);
+  D.jag=D.jag||{};
+  s3BygRyttarSet(D.jag,
+    (typeof jagFarg==="function")?jagFarg():RYTTARE_NORM);
+}
+function s3BygRyttarSet(D,J0){
+  const lp=STIL==="kloss", nyNat=b=>GL.nat(lp?glPlatta(b):b);
+  const J={...J0};
+  J.hjalmMork=(typeof jagMorkare==="function")?jagMorkare(J.hjalm,0.14):J.hjalm;
+  /* I klossläget är ryttaren rätblock, inte svepta ytor. Samma lokala
+     rum, så riggen nedan ritar dem utan att veta om bytet. */
+  if(lp&&typeof klossRyttarDelar==="function"){ klossRyttarDelar(D,J); return; }
+  /* Ryttaren: ridkavaj, ljusa ridbyxor, långa stövlar och hjälm med
+     hästsvans — samma siluett som en elev på ridskolan. */
+  D.bal=nyNat(new Bygge().klot(1,J.byxa,M4.skala(0.165,0.125,0.185),11));
+  D.torso=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,J.kavaj,M4.mul(M4.translation(0,-0.02,0),M4.skala(0.125,0.215,0.155)),13);
+    b.klot(1,J.kavaj,M4.mul(M4.translation(-0.01,0.15,0),M4.skala(0.135,0.105,0.185)),12);
+    b.klot(1,"#F4F1E8",M4.mul(M4.translation(0.02,0.235,0),M4.skala(0.075,0.045,0.085)),9);
+    b.klot(0.062,J.hy,M4.translation(0.01,0.27,0),9);          // halsen
+    return b;})());
+  D.arm=nyNat(new Bygge().cyl(0.044,0.038,1,J.kavaj,null,11));
+  D.lar=nyNat(new Bygge().cyl(0.078,0.058,1,J.byxa,null,11));
+  D.vad=nyNat(new Bygge().cyl(0.056,0.048,1,J.stovel,null,11));
+  D.stovel=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,J.stovel,M4.mul(M4.translation(0.02,0,0),M4.skala(0.115,0.052,0.062)),10);
+    return b;})());
+  D.huvudR=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,J.hy,M4.skala(0.098,0.115,0.098),13);
+    b.klot(1,J.hy,M4.mul(M4.translation(0.048,-0.048,0),M4.skala(0.042,0.052,0.058)),9);
+    for(const s of [-1,1]){                                   // ögonen
+      b.klot(1,"#FFFFFF",M4.mul(M4.translation(0.062,0.004,s*0.034),
+        M4.skala(0.015,0.019,0.016)),7);
+      b.klot(1,"#2B2118",M4.mul(M4.translation(0.072,0.002,s*0.035),
+        M4.skala(0.010,0.013,0.011)),7);
+    }
+    b.klot(1,"#B9755E",M4.mul(M4.translation(0.082,-0.054,0),
+      M4.skala(0.010,0.008,0.024)),6);                        // munnen
+    return b;})());
+  /* Håret: nacklugg under hjälmen, och därefter den valda frisyren.
+     Hästsvansen faller längst, flätan smalnar av, kort hår slutar vid
+     nacken och uppsatt syns bara som luggen. */
+  D.har=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,J.har,M4.mul(M4.translation(-0.052,0.012,0),M4.skala(0.092,0.104,0.098)),12);
+    const n={svans:5, flata:4, kort:2, uppsatt:0}[J.harstil];
+    for(let i=0;i<(n===undefined?5:n);i++){
+      const t=i/4, av=J.harstil==="flata"?(1-0.16*i):1;
+      b.klot(1,J.har,M4.mul(M4.translation(-0.085-0.035*t*t,-0.055-0.115*t,0),
+        M4.skala(0.055*av,0.070,0.062*av)),9);
+    }
+    return b;})());
+  D.hjalm=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,J.hjalm,M4.mul(M4.translation(-0.014,0,0),
+      M4.skala(0.114,0.082,0.110)),14);
+    b.klot(1,J.hjalmMork,M4.mul(M4.translation(0.090,-0.012,0),
+      M4.skala(0.076,0.012,0.086)),12);                        // skärmen
+    b.klot(1,J.klubb,M4.mul(M4.translation(-0.03,0.062,0),
+      M4.skala(0.070,0.026,0.080)),10);                        // klubbens färg
+    return b;})());
+}
+
 /* ── Hästens delar. Byggs en gång i mankhöjd 1,60 m och skalas. ── */
 function s3BygHast(){
   const D=S3.del, vit="#FFFFFF";
@@ -294,56 +374,7 @@ function s3BygHast(){
     b.lada(0.56,0.028,0.48,"#3E6B47",M4.translation(-0.03,-0.05,0));  // grönt schabrak
     return b;})());
   D.tacke=nyNat(new Bygge().klot(1,"#7A2E33",M4.skala(0.90,0.38,0.33),14));
-  /* Ryttaren: ridkavaj, ljusa ridbyxor, långa stövlar och hjälm med
-     hästsvans — samma siluett som en elev på ridskolan. */
-  const KAVAJ="#33465F", BYXA="#D6C9AE", HUD="#E0B490", HAR="#6B4526";
-  D.bal=nyNat(new Bygge().klot(1,BYXA,M4.skala(0.165,0.125,0.185),11));
-  D.torso=nyNat((()=>{
-    const b=new Bygge();
-    b.klot(1,KAVAJ,M4.mul(M4.translation(0,-0.02,0),M4.skala(0.125,0.215,0.155)),13);
-    b.klot(1,KAVAJ,M4.mul(M4.translation(-0.01,0.15,0),M4.skala(0.135,0.105,0.185)),12);
-    b.klot(1,"#F4F1E8",M4.mul(M4.translation(0.02,0.235,0),M4.skala(0.075,0.045,0.085)),9);
-    b.klot(0.062,HUD,M4.translation(0.01,0.27,0),9);          // halsen
-    return b;})());
-  D.arm=nyNat(new Bygge().cyl(0.044,0.038,1,KAVAJ,null,11));
-  D.lar=nyNat(new Bygge().cyl(0.078,0.058,1,BYXA,null,11));
-  D.vad=nyNat(new Bygge().cyl(0.056,0.048,1,"#1E1A16",null,11));
-  D.stovel=nyNat((()=>{
-    const b=new Bygge();
-    b.klot(1,"#1E1A16",M4.mul(M4.translation(0.02,0,0),M4.skala(0.115,0.052,0.062)),10);
-    return b;})());
-  D.huvudR=nyNat((()=>{
-    const b=new Bygge();
-    b.klot(1,HUD,M4.skala(0.098,0.115,0.098),13);
-    b.klot(1,HUD,M4.mul(M4.translation(0.048,-0.048,0),M4.skala(0.042,0.052,0.058)),9);
-    for(const s of [-1,1]){                                   // ögonen
-      b.klot(1,"#FFFFFF",M4.mul(M4.translation(0.062,0.004,s*0.034),
-        M4.skala(0.015,0.019,0.016)),7);
-      b.klot(1,"#2B2118",M4.mul(M4.translation(0.072,0.002,s*0.035),
-        M4.skala(0.010,0.013,0.011)),7);
-    }
-    b.klot(1,"#B9755E",M4.mul(M4.translation(0.082,-0.054,0),
-      M4.skala(0.010,0.008,0.024)),6);                        // munnen
-    return b;})());
-  /* Håret: nacklugg under hjälmen och en hästsvans som faller. */
-  D.har=nyNat((()=>{
-    const b=new Bygge();
-    b.klot(1,HAR,M4.mul(M4.translation(-0.052,0.012,0),M4.skala(0.092,0.104,0.098)),12);
-    for(let i=0;i<5;i++){
-      const t=i/4;
-      b.klot(1,HAR,M4.mul(M4.translation(-0.085-0.035*t*t,-0.055-0.115*t,0),
-        M4.skala(0.055,0.070,0.062)),9);
-    }
-    return b;})());
-  D.hjalm=nyNat((()=>{
-    const b=new Bygge();
-    b.klot(1,"#23282F",M4.mul(M4.translation(-0.014,0,0),
-      M4.skala(0.114,0.082,0.110)),14);
-    b.klot(1,"#2E343C",M4.mul(M4.translation(0.090,-0.012,0),
-      M4.skala(0.076,0.012,0.086)),12);                        // skärmen
-    b.klot(1,"#3E6B47",M4.mul(M4.translation(-0.03,0.062,0),
-      M4.skala(0.070,0.026,0.080)),10);                        // klubbens färg
-    return b;})());
+  s3BygRyttare();
   D.led=nyNat(new Bygge().klot(0.042,"#FFFFFF",null,9));
   D.hand=nyNat(new Bygge().klot(1,"#2B2620",M4.skala(0.046,0.050,0.038),9));
   D.rem=nyNat(new Bygge().cyl(0.012,0.012,1,"#241A12",null,S(5,4)));
@@ -625,7 +656,8 @@ function s3Skuggflack(x,z,r,styrka){
 
 /* ── Ryttaren: sits, lättridning, lätt sits och tyglarna ──────── */
 function s3RitaRyttare(bas,o){
-  const D=S3.del, gl=GL;
+  /* o.jag sant = du. Övriga elever ritas ur normaluppsättningen. */
+  const D=(o.jag&&S3.del.jag&&S3.del.jag.torso)?S3.del.jag:S3.del, gl=GL;
   const rita=(nat,mat,ton)=>{ gl.rita(nat,M4.mul(bas,mat),{ton}); };
   const a=o.aids||{sits:0.5,tygel:0.3,lattridning:true,diagonal:1};
   /* Lättridning: upp ur sadeln vartannat travsteg. */
@@ -654,21 +686,23 @@ function s3RitaRyttare(bas,o){
     rita(D.vad,s3Segment(kna,hal,1),"#FFFFFF");
     rita(D.stovel,M4.translation(hal[0]+0.03,hal[1]-0.03,hal[2]),"#FFFFFF");
     // stigbygeln
-    rita(D.rem,s3Segment([satX+0.02,satY-0.06,s*0.26],[hal[0],hal[1]+0.02,hal[2]],1),"#9A9AA0");
+    rita(S3.del.rem,s3Segment([satX+0.02,satY-0.06,s*0.26],[hal[0],hal[1]+0.02,hal[2]],1),"#9A9AA0");
   }
-  /* Armarna och tyglarna: handen närmare kroppen när du tar tygel. */
+  /* Armarna och tyglarna: handen närmare kroppen när du tar tygel.
+     Axelleden är vit i nätet och färgas här, så den följer kavajen. */
+  const kavajTon=(o.jag&&typeof jagFarg==="function")?jagFarg().kavaj:"#33465F";
   const drag=clamp(a.tygel,0,1);
   const hand=[satX+0.44-drag*0.06, satY+0.06-lutning*0.10, 0];
   for(const s of [-1,1]){
     const axel=[satX+0.01,satY+0.44,s*0.145];
     const bage=[axel[0]+0.09,(axel[1]+hand[1])/2+0.05,s*0.155];
-    rita(D.led,M4.translation(axel[0],axel[1],axel[2]),"#33465F");   // axeln
+    rita(S3.del.led,M4.translation(axel[0],axel[1],axel[2]),kavajTon); // axeln
     rita(D.arm,s3Segment(axel,bage,1),"#FFFFFF");
     rita(D.arm,s3Segment(bage,[hand[0],hand[1],s*0.13],1),"#FFFFFF");
-    rita(D.hand,M4.translation(hand[0],hand[1]-0.02,s*0.13),"#FFFFFF");
+    rita(S3.del.hand,M4.translation(hand[0],hand[1]-0.02,s*0.13),"#FFFFFF");
     // tygeln till bettet
     if(o.huvudPos)
-      rita(D.rem,s3Segment([hand[0],hand[1],s*0.13],
+      rita(S3.del.rem,s3Segment([hand[0],hand[1],s*0.13],
         [o.huvudPos[0],o.huvudPos[1],s*0.075],1),"#3A2E20");
   }
 }
@@ -942,7 +976,7 @@ function rita3D(Gs){
       aids:{sits:0.5,tygel:0.35,lattridning:true}, samling:0.35});
   /* Din häst. */
   const h=HORSES[G.hastId];
-  if(h)s3RitaHast({hast:h, x:G.px, z:G.py, rikt:G.rikt,
+  if(h)s3RitaHast({hast:h, jag:true, x:G.px, z:G.py, rikt:G.rikt,
     gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas, luft:G.luft,
     sadel:true, ryttare:true, skugga:true, aids:G.aids,
     samling:G.ride?clamp(G.ride.skala.samling*0.6+G.ride.skala.kontakt*0.4,0,1):0.4});
