@@ -13,6 +13,10 @@
 	  2. Svarvheten sjunker med farten. I fyrsprång svänger man vidsträckt.
 	  3. Svängen tar tag gradvis (TurnAccel), så inget snäpper till 90 grader.
 	  4. Accelerationen är olika uppåt och nedåt, och tyngre hästar är trögare.
+	  5. Styrutslaget rampas innan det används. En tangent är av eller på,
+	     och utan rampen finns bara tre lägen: helt vänster, rakt, helt
+	     höger. Med den doserar man svängen genom hur länge man håller, och
+	     en gamepadspak som redan står halvvägs rampas mot just halvvägs.
 
 	Marken sköts av Humanoid. Det är medvetet: Roblox löser sluttningar,
 	kanter och trappor bättre än en egen strålkastning gör, och det som
@@ -61,7 +65,20 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	} :: Types.Locomotion
 
 	self.slopePitch = 0
+	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
 	return self
+end
+
+--[[ Styrutslaget mellan tangent och sväng. Tar snabbare än det släpper:
+     att börja svänga ska kännas omedelbart, att sluta svänga ska kännas
+     som att hästen rätar upp sig — inte som att någon släpper ett reglage. ]]
+function MovementController:_steer(raw: number, dt: number): number
+	local M = Config.MOVEMENT
+	local tau = if math.abs(raw) > math.abs(self.steerInput)
+		then M.SteerTauPress else M.SteerTauRelease
+	self.steerInput = smooth(self.steerInput, raw, tau, dt)
+	if math.abs(self.steerInput) < 0.004 then self.steerInput = 0 end
+	return self.steerInput
 end
 
 --[[ Vilken gångart spelaren begär. W från stillastående startar skritt,
@@ -118,7 +135,8 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     Svängen tar tag gradvis — utan det snäpper hästen runt hörn. ]]
 	local speedAbs = math.abs(loco.speed)
 	local base = math.clamp(M.TurnRateBase + M.TurnRateGain * speedAbs, M.TurnRateMin, M.TurnRateMax)
-	local wanted = intent.steer * base * gait.turn * (0.70 + 0.60 * stats.Agility)
+	local steer = self:_steer(intent.steer, dt)
+	local wanted = steer * base * gait.turn * (0.70 + 0.60 * stats.Agility)
 	if loco.speed < -0.05 then
 		wanted = -wanted                              -- backar man styr man spegelvänt
 	end
@@ -180,13 +198,21 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     input. AutoRotate vrider mot den, och eftersom riktningen bara
 	     ändras i vår egen svängtakt syns aldrig Humanoids snärt.
 
-	     Golvet på 0,35 studs/s finns för att AutoRotate slutar vrida vid
-	     noll fart. Hästen kryper omärkligt medan den vänder på stället —
-	     vilket för övrigt är precis vad en häst gör. ]]
+	     AutoRotate slutar vrida vid noll fart. Förut löstes det med ett
+	     golv på 0,35 studs/s, men då gled hästen synligt i sidled medan den
+	     vände — en krypning som syns i alla stillastående lägen. I stället
+	     vrids roten direkt när farten är noll: samma vändning, ingen glidning.
+	     Det krockar inte med kroppens lutning, som ligger i rootJoint.C0. ]]
 	if hum then
 		local studs = Config.toStuds(math.abs(loco.speed))
 		local turningInPlace = math.abs(loco.turnRate) > 0.05 and studs < 0.35
-		hum.WalkSpeed = if turningInPlace then 0.35 else studs
+		if turningInPlace then
+			hum.WalkSpeed = 0
+			local root = rig.root
+			root.CFrame = CFrame.new(root.CFrame.Position) * CFrame.Angles(0, loco.heading, 0)
+		else
+			hum.WalkSpeed = studs
+		end
 		local dir = if loco.speed < -0.05 then -forwardVector else forwardVector
 		hum:Move(dir, false)
 	end
@@ -199,6 +225,7 @@ function MovementController:setCeiling(gait: string)
 end
 
 function MovementController:release()
+	self.steerInput = 0
 	local hum = self.rig.humanoid
 	if hum then
 		hum.WalkSpeed = 0

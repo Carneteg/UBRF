@@ -43,6 +43,14 @@ Config.MOVEMENT = {
 	TurnRateMax = 2.20,
 	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
 
+	--[[ Rampen på styrutslaget, sekunder. En tangent är av eller på, så
+	     utan den finns bara tre lägen: helt vänster, rakt, helt höger.
+	     Press är kortare än Release: svängen ska ta direkt men lämnas
+	     mjukt. Hålls tiderna under ~0,2 s känns styrningen fortfarande
+	     omedelbar — över det börjar den kännas trög. ]]
+	SteerTauPress = 0.11,
+	SteerTauRelease = 0.17,
+
 	LeanMax = 0.26,        -- radianer roll i skarp sväng
 	LeanGain = 0.075,      -- roll per (rad/s × m/s)
 	LeanTau = 0.16,        -- utjämning, sekunder
@@ -134,6 +142,10 @@ Config.CAMERA = {
 	BaseFov = 70,
 	MaxFov = 80,
 	Tau = 0.35,          -- hur trögt kameran följer gångartsbytet
+	YawTau = 0.13,       -- hur trögt kameran följer hästens kurs
+	                     -- Kort: hästen ska svänga först och bilden hinna
+	                     -- ifatt. Över ~0,2 s tappar man känslan av att
+	                     -- styra, under ~0,08 s rycker bilden igen.
 	Shoulder = 2.0,      -- studs åt sidan
 	LookAhead = 6.0,     -- studs framför hästen som kameran siktar mot
 }
