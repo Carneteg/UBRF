@@ -160,3 +160,68 @@ if fails > 0 then
 else
 	print("Alla mätningar gick igenom.")
 end
+
+print("\n── Gångartsbyten: inget flimmer vid gränserna ──")
+do
+	--[[ Det som gör ett gångartsbyte orent är flimmer: hästen ligger på en
+	     bandgräns och gångarten hoppar fram och tillbaka mellan bildrutor,
+	     så animationen studsar. Mäts genom att sakta rulla farten genom
+	     hela spannet och räkna hur många gånger gångarten byter. En ren
+	     upprullning från halt till fyrsprång ska ge fyra byten, inte fler. ]]
+	local mc = newMC()
+	local dt = 1 / 60
+	local byten, forra = 0, mc.loco.gait
+	local sekvens = { mc.loco.gait }
+	--[[ Stega upp en gångart var tredje sekund och låt farten hinna ifatt. ]]
+	for steg = 1, 4 do
+		for i = 1, 180 do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+			if mc.loco.gait ~= forra then
+				byten += 1; forra = mc.loco.gait
+				table.insert(sekvens, mc.loco.gait)
+			end
+		end
+	end
+	print("  uppåt:  " .. table.concat(sekvens, " → "))
+	check("fyra byten upp, inget flimmer", byten == 4,
+		string.format("(%d byten)", byten))
+
+	--[[ Och samma väg ned. ]]
+	local ned, forraNed = 0, mc.loco.gait
+	local sekvensNed = { mc.loco.gait }
+	for steg = 1, 4 do
+		for i = 1, 180 do
+			mc:step(intent({ forward = 0, gaitDown = (i == 1) }), dt)
+			if mc.loco.gait ~= forraNed then
+				ned += 1; forraNed = mc.loco.gait
+				table.insert(sekvensNed, mc.loco.gait)
+			end
+		end
+	end
+	print("  nedåt:  " .. table.concat(sekvensNed, " → "))
+	check("fyra byten ned, inget flimmer", ned == 4,
+		string.format("(%d byten)", ned))
+end
+
+print("\n── Låg fart: precision i skritt ──")
+do
+	--[[ Precision vid låg fart betyder att man kan lägga en liten
+	     kursändring utan att hästen kastar sig runt. Mäts som kurs efter
+	     ett halvsekunds utslag i skritt jämfört med i fyrsprång — skritt
+	     ska ge finare kontroll, alltså mindre utslag per tidsenhet. ]]
+	local function svangIGangart(gangart, steg)
+		local mc = newMC()
+		for _ = 1, steg do mc:step(intent({ forward = 1, gaitUp = true }), 1 / 60) end
+		run(mc, 4.0, { forward = 1 })
+		local h0 = mc.loco.heading
+		run(mc, 0.5, { forward = 1, steer = 1 })
+		local d = math.abs((mc.loco.heading - h0 + math.pi) % (2 * math.pi) - math.pi)
+		return d, mc.loco.speed
+	end
+	local dSkritt, vSkritt = svangIGangart("walk", 1)
+	local dGalopp, vGalopp = svangIGangart("gallop", 4)
+	print(string.format("  skritt    (%.1f m/s): %.3f rad på 0,5 s", vSkritt, dSkritt))
+	print(string.format("  fyrsprång (%.1f m/s): %.3f rad på 0,5 s", vGalopp, dGalopp))
+	check("skritt ger finare kontroll än fyrsprång", dSkritt < dGalopp,
+		string.format("(%.3f mot %.3f rad)", dSkritt, dGalopp))
+end
