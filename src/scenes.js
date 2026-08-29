@@ -35,6 +35,7 @@ function visaMeny(){
   <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
   Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
   ${profilHTML()}
+  ${typeof synkPanelHTML==="function"?synkPanelHTML():""}
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
     <button class="btn ghost" id="bTavling">Tävlingsdag</button>
@@ -45,6 +46,7 @@ function visaMeny(){
   document.getElementById("bTavling").onclick=visaTavlingsval;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
   kopplaProfil();
+  if(typeof kopplaSynkPanel==="function")kopplaSynkPanel();
 }
 
 /* ── Ridläraren tilldelar häst ── */

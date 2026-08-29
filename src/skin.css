@@ -279,3 +279,14 @@ body.pek #joyKnopp{background:linear-gradient(180deg,var(--btn-gold-top),var(--b
 @media (max-width:720px){
   .efterPass{grid-template-columns:1fr; gap:12px}
 }
+
+/* ── Synkrutans fält ──────────────────────────────────────────────
+   Tre inmatningar och två knappar. Formspråket kommer från kitet; det
+   enda som behövs här är att fälten inte ser ut som webbläsarens. */
+#synkRuta input{
+  font-family:inherit; font-weight:700; font-size:13px; color:var(--cream);
+  background:rgba(0,0,0,.26); border:2px solid var(--panel-border);
+  border-radius:10px; padding:7px 11px;
+}
+#synkRuta input::placeholder{color:var(--cream); opacity:.55}
+#synkRuta input:focus{outline:2px solid var(--gold); outline-offset:1px}

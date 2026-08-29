@@ -41,7 +41,11 @@ function laddaRyttare(){
   G.grupp=SPAR.grupp;
 }
 function sparaRyttare(){
+  /* Stämpeln avgör vem som vinner när två enheter har olika versioner.
+     Den sätts här, vid varje sparning, och ingen annanstans. */
+  SPAR.uppdaterad=new Date().toISOString();
   try{localStorage.setItem(SPAR_NYCKEL,JSON.stringify(SPAR));}catch(_){}
+  if(typeof synkKnuffa==="function")synkKnuffa();
 }
 function nollstallRyttare(){
   SPAR=nyProfil(); G.grupp=SPAR.grupp;

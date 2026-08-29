@@ -359,6 +359,9 @@ function avslutaBana(dom){
     return;
   }
   G.passRes=registreraPass(dom);
+  /* Molnet är frivilligt och får misslyckas tyst — resultatrutan visas
+     likadant vare sig raden kom fram eller inte. */
+  if(typeof synkSparaPass==="function"){synkSparaPass(dom);synkTryck();}
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;
   document.getElementById("viewToggle").hidden=true;
