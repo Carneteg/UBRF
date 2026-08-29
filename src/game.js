@@ -85,17 +85,66 @@ function initNPC(){
   G.npcs=NPC_ELEVER.map((n,i)=>({...n,farg:HORSES[n.hast].farg,
     s:15+i*19, fart:1.2+n.skick*1.6, x:0,y:0,rikt:0}));
 }
+/* ── Trafiken på fyrkantspåret ────────────────────────────────────
+   Ett hästlängds avstånd är en riktig stallregel, inte en spelregel, och
+   den gäller alla på spåret — även dig. Förut red alla i konstant fart
+   rakt igenom varandra; en NPC kunde stå mitt i kameran med huvudet över
+   halva bilden.
+
+   Ekipagen KROCKAR inte, de BROMSAR. Det är vad man gör på en lektion:
+   kommer man ikapp den framför så saktar man ner, man kör inte in i
+   henne. Bromsningen är mjuk och proportionell mot luckan, så en NPC som
+   hinner ikapp lägger sig på avstånd i stället för att tvärstanna. */
+const HASTLANGD=3.2;      // avståndet man håller på spåret
+const HASTRUM=2.1;        // närmare än så kommer ingen — hästen är i vägen
+
+/* Hur mycket ska n sakta ner för det som ligger framför? Returnerar
+   0 (stilla) till 1 (fri väg). Bara det som ligger i färdriktningen
+   räknas — man bromsar inte för någon man just passerat. */
+function npcBroms(n){
+  let minsta=Infinity;
+  const fx=Math.cos(n.rikt), fy=Math.sin(n.rikt);
+  const kolla=(x,y)=>{
+    const dx=x-n.x, dy=y-n.y, d=Math.hypot(dx,dy);
+    if(d<0.001||d>HASTLANGD*2)return;
+    /* Framförkonen: 0,55 ≈ 57° åt vardera hållet. Bredare än så och man
+       bromsar för ekipage på andra långsidan. */
+    if((dx*fx+dy*fy)/d<0.55)return;
+    if(d<minsta)minsta=d;
+  };
+  for(const m of G.npcs)if(m!==n)kolla(m.x,m.y);
+  if(G.scen==="lektion"||G.scen==="bana")kolla(G.px,G.py);
+  if(minsta===Infinity)return 1;
+  return clamp((minsta-HASTRUM)/(HASTLANGD-HASTRUM),0,1);
+}
+
 function stegaNPC(dt){
   // fyrkantspåret som sluten bana: omkrets 2*(17+57)=148 m
   for(const n of G.npcs){
     if(G.scen==="bana"){ // står på medellinjen och tittar på
       n.x=4+G.npcs.indexOf(n)*2.2;n.y=56.5;n.rikt=-Math.PI/2;continue;}
-    n.s=(n.s+n.fart*dt*(0.95+0.1*Math.sin(G.t*0.5+n.skick*9)))%148;
+    /* Bromsen glider mot sitt mål i stället för att slå till — en häst
+       som saktar ner gör det över ett par steg. */
+    const mal=npcBroms(n);
+    n.broms=(n.broms===undefined?1:n.broms)+(mal-(n.broms===undefined?1:n.broms))
+      *Math.min(1,dt*2.6);
+    n.s=(n.s+n.fart*n.broms*dt*(0.95+0.1*Math.sin(G.t*0.5+n.skick*9)))%148;
     const s=n.s;
     if(s<57){n.x=1.5;n.y=58.5-s;n.rikt=-Math.PI/2;}
     else if(s<74){n.x=1.5+(s-57);n.y=1.5;n.rikt=0;}
     else if(s<131){n.x=18.5;n.y=1.5+(s-74);n.rikt=Math.PI/2;}
     else{n.x=18.5-(s-131);n.y=58.5;n.rikt=Math.PI;}
+    /* Att bara bromsa räcker inte: står någon still på spåret köar alla
+       bakom och stannar för gott. Tre hästar frös i en hög i provet.
+       Det man gör på riktigt är att gå om på INSIDAN — så ekipaget
+       skjuts inåt banan medan det är blockerat och söker sig ut mot
+       spåret igen när vägen är fri. */
+    const blockad=n.broms<0.55;
+    n.sido=clamp((n.sido||0)+(blockad?1.1:-0.7)*dt,0,1.7);
+    if(n.sido>0.001){
+      const ix=10-n.x, iy=30-n.y, il=Math.hypot(ix,iy)||1;
+      n.x+=ix/il*n.sido; n.y+=iy/il*n.sido;
+    }
   }
 }
 
@@ -131,6 +180,24 @@ function stegaRitt(dt){
   if(nx>19.2){nx=19.2;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,0.06);}
   if(ny<0.8){ny=0.8;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,0.06);}
   if(ny>59.2){ny=59.2;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,0.06);}
+  /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
+     och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
+     är till för hästarnas skull, inte för ordningens. */
+  for(const n of G.npcs){
+    const dx=nx-n.x, dy=ny-n.y, d=Math.hypot(dx,dy);
+    if(d>=HASTRUM||d<0.001)continue;
+    const k=(HASTRUM-d)/d;
+    nx+=dx*k; ny+=dy*k;                       // mjuk utknuffning
+    /* Hästen tvärnitar inte, men hon vägrar gå in i en annan häst: farten
+       bryts och spänningen stiger. Utan farttappet gick det att stå och
+       trycka mot ekipaget framför utan att märka något. */
+    G.ride.tempo*=0.90;
+    G.ride.spanning=clamp(G.ride.spanning+1.1*dt,0,1);
+    if(G.t-(G.narkontaktT||-99)>9){
+      G.narkontaktT=G.t; G.narkontakter=(G.narkontakter||0)+1;
+      saga("För nära! Håll en hästlängd till ekipaget framför.",3.2);
+    }
+  }
   G.px=nx;G.py=ny;
   // gångartsfas för animation
   const stegFrek=G.ride.gangart==="skritt"?1.0:G.ride.gangart==="trav"?1.5:G.ride.gangart==="galopp"?1.75:0;
@@ -255,6 +322,7 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
+  G.narkontakter=0; G.narkontaktT=-99;
   /* HUD:en tillbaka i ridläge. Gå-läget döljer pyramiden, hjälpmätarna
      och gångartsrutan, och bara tävlingsvägen slog på dem igen — en
      vanlig lektion reds alltså helt utan utbildningsskalan, som är den
