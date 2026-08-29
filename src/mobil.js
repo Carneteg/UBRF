@@ -28,6 +28,13 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
      pekskärm i stället för att alla enheter få desktopens mått. */
   .pek #viewToggle button{min-height:44px; min-width:64px; font-size:12px;
     padding:0 16px; display:flex; align-items:center; justify-content:center}
+  /* Samma golv för menyernas knappar. Höjden sätts som min-height och inte
+     som padding, eftersom flera av de små spökknapparna bär sin padding
+     inline — min-height vinner utan att någon inline-regel behöver rivas,
+     och inline-flex centrerar texten i den nya höjden. Bredden rörs inte:
+     knapparna är redan bredare än 44 px och ska inte tvingas isär. */
+  .pek .btn{min-height:44px; min-width:44px;
+    display:inline-flex; align-items:center; justify-content:center}
   @supports(padding:max(0px)){        /* hakens och hemknappens säkra zon */
     .pek #viewToggle{top:max(8px,env(safe-area-inset-top))}
     .pek #pekUI{padding-bottom:env(safe-area-inset-bottom)}
