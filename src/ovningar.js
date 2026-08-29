@@ -200,6 +200,22 @@ function visaTraningsbok(fran){
     <div><div class="lbl" style="margin-bottom:6px">Övningsbanken · ${OVNIN_ANTAL()} övningar</div>
       <div style="max-height:46vh;overflow:auto">${ovn}</div></div>
   </div>
+  <div class="lbl" style="margin-top:22px;margin-bottom:6px">Tangenter</div>
+  <div class="keys">${
+    (typeof TANGENTSTEG!=="undefined"?TANGENTSTEG:[]).map(t=>{
+      const av=(typeof introNiva==="function")&&t.fran>introNiva();
+      return `<div${av?' class="dim"':''}>`
+        +t.k.split(" ").map(k=>`<kbd>${k}</kbd>`).join("")+" "+t.txt
+        +(av?` <span class="dim">(från ${GRUPPNAMN[GRUPPSTEGE[t.fran]]})</span>`:"")
+        +`</div>`;}).join("")
+  }${
+    (typeof TANGENTOVRIGA!=="undefined"?TANGENTOVRIGA:[])
+      .map(t=>`<div><kbd>${t.k}</kbd> ${t.txt}</div>`).join("")
+  }<div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> gå — till fots</div>
+   <div><kbd>E</kbd> interagera (dörrar, ridlärare, box)</div>
+   <div><kbd>Shift</kbd> jogga — till fots</div></div>
+  <p class="dim" style="font-size:12.5px">Raderna som är nedtonade kommer när du flyttas
+  upp. I ridningen visas bara de du har, de tre första passen.</p>
   <div class="btnrow"><button class="btn ghost" id="tbTillbaka">Tillbaka</button></div>`);
   stylaTraningsbok();
   for(const el of document.querySelectorAll("[data-k]"))

@@ -262,6 +262,14 @@ function efterPassHTML(){
     loftet=`<p class="eLofte eRad" style="--i:${i++}">${txt}</p>`;
   }
 
+  /* Var passet förberett av ridläraren ska det stå här, inte bara
+     försvinna. Annars undrar spelaren nästa gång varför hästen plötsligt
+     är sämre. */
+  if(G.forberettPass)
+    loftet+=`<p class="eLofte eRad" style="--i:${i++}">Idag hade ridläraren `
+      +`gjort i ordning ${h.namn} åt dig. <b>Nästa gång gör du det själv</b> — `
+      +`visitera, rykta, kratsa och sadla. Det du gör där avgör hur hon går.</p>`;
+
   return `<div class="efterPass" id="efterPass">
     <div class="eKol">
       <div class="lbl">${h.namn} idag</div>

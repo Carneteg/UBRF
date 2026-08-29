@@ -255,6 +255,13 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
+  /* HUD:en tillbaka i ridläge. Gå-läget döljer pyramiden, hjälpmätarna
+     och gångartsrutan, och bara tävlingsvägen slog på dem igen — en
+     vanlig lektion reds alltså helt utan utbildningsskalan, som är den
+     återkoppling hela modellen vilar på. Menyn hänvisade till och med
+     till "mätaren" som inte fanns på skärmen. Anropet hör hemma här, i
+     lektionen, inte hos varje anropare. */
+  if(typeof hudLage==="function")hudLage("ritt");
   passStart();                       // avskrift av allt som ska jämföras efteråt
   document.getElementById("approach").textContent="";
   if(G.tavling){
@@ -301,7 +308,17 @@ function visaMoment(){
   saga(m.text,4);
 }
 function stegaLektion(dt){
+  /* Passet är slut när scenen bytt. Utan den här raden räknar ett extra
+     anrop in ett helt nytt pass: avslutaBana registrerar, men G.moment
+     ligger kvar och G.momentKlart är fortfarande sant, så nästa anrop
+     registrerar igen. I dag skyddas det av att loopen slutar anropa vid
+     scenbytet — det är ett skydd på fel ställe. */
+  if(G.scen!=="lektion"&&G.scen!=="bana")return;
   const m=G.moment;if(!m)return;
+  /* Den ledda genomgången först. Så länge den pågår tickar inte
+     momentets stapel — annars mäts spelaren mot ett krav hon inte fått
+     höra än. */
+  if(typeof introRittSteg==="function"&&introRittSteg(dt))return;
   G.momentT+=dt;
   if(m.id==="bana"){
     if(!G.hinderAktiva)startaBana();
@@ -346,6 +363,7 @@ function stegaLektion(dt){
       else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
         const dom=domaRitt([],0,true);
         dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
+        G.moment=null; G.momentKlart=false;   // passet är över, inte pausat
         avslutaBana(dom);
       }
     }
@@ -427,6 +445,7 @@ function ritaHUD(){
     if(k==="styrning"){row.style.left=(v*100-2)+"%";row.style.width="4%";}
     else{row.style.left=0;row.style.width=(v*100)+"%";}
   }
+  if(typeof ritaIntroTangenter==="function")ritaIntroTangenter();
   if(G.sagaT>0){G.sagaT-=1/60;if(G.sagaT<=0)document.getElementById("saga").classList.remove("on");}
 }
 
