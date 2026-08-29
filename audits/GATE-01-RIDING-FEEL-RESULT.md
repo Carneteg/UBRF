@@ -1,9 +1,16 @@
 # Gate 01 — Riding Feel: resultat
 
-Commit att granska: `33559d96e59b8ba7e88f2ba6a5ff7a71ab32c30b`
+Struktur enligt `docs/GATE-01-PLATFORM-ADDENDUM.md`, som gör Gate 01 till ett
+plattformsparitetsarbete: Roblox är primär spelplattform och primär subjektiv
+playtest, HTML/webb är en parallell spelbar distribution som ska hålla samma
+kärnupplevelse.
+
+Commit att granska: `61d503dbde6e40befa7519a1e0e2fc1b02b56497`
 Datum: 2026-08-29
 Implementation: Claude Code
-Status: **lämnas till ChatGPT för review.** Gaten stängs inte av mig.
+Status: **lämnas till ChatGPT för review.** Gaten stängs inte av mig, och kan
+enligt addendumet inte stängas alls förrän Tobias har gjort en Roblox
+Studio-playtest — den kan inte utföras härifrån.
 
 ---
 
@@ -146,6 +153,99 @@ animationen, men det är den siffra som är känsligast av de mätta.
 
 ---
 
+## 7b · Roblox implementation & Studio evidence
+
+Roblox-spåret fick tre riktade ändringar samma dag, innan addendumet gjorde det
+till primärt Gate 01-target. De löser samma tre feel-fel som webbsidan, i den
+motoroberoende delen av modellen.
+
+| Ändring | Fil | Mätt |
+|---|---|---|
+| Styrutslaget rampas innan det används; en tangent har annars tre lägen | `roblox/src/client/MovementController.luau` (`_steer`), `Config.MOVEMENT.SteerTauPress/Release` | Tid tillbaka till nära noll 0,09 → **0,38 s**; tid till halva svängen står kvar på **0,09 s** |
+| Låg fart: krypningen borta. `WalkSpeed 0.35` ersatt av att roten vrids direkt | `MovementController.luau` | WalkSpeed 0,350 → **0,000** medan hästen fortfarande vänder sig (0,45 rad) |
+| Kameran har egen kurs i stället för att läsa hästens rått | `roblox/src/client/CameraController.luau`, `Config.CAMERA.YawTau` | 0,88 rad kvar efter en bildruta, ifatt inom 0,5 s, största kurssteg 0,02 rad vid nollpassage |
+
+**Verifiering utanför Studio.** `roblox/tests/` innehåller en mätbänk som kör
+**produktionskoden ordagrant** mot stubbade Roblox-globaler. `build.py` fogar ihop
+stubbar och källfiler till en körbar fil — luau-CLI:t sandboxar varje modul, så
+stubbar går inte att injicera via `require`. Nio mätningar på rörelsen och fem på
+kameran, alla gröna:
+
+```
+python3 roblox/tests/build.py && luau roblox/tests/.build/movement.spec.luau
+python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build/camera.spec.luau
+```
+
+Utöver det: `luau-compile` rent på samtliga filer under `roblox/src/`.
+
+**Två saker mätbänken visade som inte behövde lagas:** gångartsbytena är redan rena
+(fyra byten upp, fyra ned, inget flimmer vid bandgränserna — hysteresen i `Gaits`
+gör sitt jobb), och lågfartsprecisionen ligger på 0,343 rad per halvsekund i skritt
+mot 0,367 i fyrsprång. Ingenting ändrades där.
+
+### Vad som INTE kan verifieras utanför Roblox Studio
+
+Detta är listan addendumet ber om, och den är lång med flit:
+
+- **All subjektiv känsla.** Siffrorna säger att svängen släpper fyra gånger mjukare, inte om det känns rätt.
+- **Humanoid-samspelet.** Marken, sluttningar, kanter och trappor sköts av `Humanoid`; stubben ger plan mark och kan inte säga hur `AutoRotate` beter sig mot vår egen rotation vid noll fart.
+- **Att vrida roten direkt** (krypningsfixen) mot fysikmotorn och nätverksägarskapet — bänken har ingen fysik.
+- **Animationsblending**, `AnimationTrack`-övergångar och procedurell påbyggnad.
+- **Kameran mot verklig geometri**: väggkontrollens strålkastning finns inte i stubben.
+- **Frame-rate-känsla i praktiken**, gamepad, och touch i Roblox-klienten.
+- **Hela kärnloopen i Studio**: uppsittning, uthållighet, ljud, damm.
+
+## 7c · HTML/web implementation & browser evidence
+
+Se avsnitt 1–7 ovan. Sammanfattat: ridinputkontraktet (`RIDIN`), svängen som
+kurvatur med gångartstak, gångartsfas ur markförflyttning, kroppens svänglutning ur
+centripetalkraft, dt-baserad väggrespons och kamera med egen kurs.
+
+Bevisen är körda i Chromium via Playwright mot `dist/ridskolan.html`: hela
+lektionskedjan från start till resultatskärm på 1280×800 och 390×844 touch utan
+konsolfel, tolv viewports utan layoutfel, styrtabellen per gångart och nivå,
+touchmätningen med riktiga `PointerEvent`, och 30/60/144 Hz-jämförelsen.
+
+Webbversionen är direkt spelbar och bruten av ingenting i det här arbetet.
+
+## 7d · Parity table
+
+Vad som är samma regel på båda plattformarna, och var siffrorna skiljer sig.
+
+| Regel | Roblox | HTML/webb | Paritet |
+|---|---|---|---|
+| Styrutslaget rampas före användning | `SteerTauPress 0,11` / `Release 0,17` | `kappaTau 0,13` upp / `0,19` ned | ✅ samma princip, tal i samma storleksordning |
+| Svarvheten sjunker per gångart | `Gaits.turn`: 1,00 / 0,82 / 0,62 / 0,42 | `GANGSVANG`: 1,00 / 0,82 / 0,52 | ✅ samma storhet; webben har fyra gångarter mot Roblox fem |
+| Snabbare gångart ger vidare sväng | via `turn`-faktorn på grundsvarvheten | via kurvaturtak; radie 3,6 → 4,4 → 7,0 m | ⚠️ samma resultat, olika formulering — se skillnad 1 |
+| Acceleration olika upp och ned | `gait.accel` / `gait.retard` | modellens `stepRide` | ✅ |
+| Analog touchprecision | pekstöd finns, otestat i klient | expo-kurva + dödzon; 25/50/100 % → 61 / 19,6 / 4,4 m | ⚠️ webben verifierad, Roblox inte |
+| Gångartsfas ur rörelsen | `Gaits.beatRate` × fart | sträcka ÷ cykellängd | ⚠️ Roblox är fart-, webben distansdriven — se skillnad 2 |
+| Turn/body response | `LeanGain` × turnRate × fart, tak 0,26 rad | centripetal × 0,012, tak 0,075 rad | ⚠️ olika tak — se skillnad 3 |
+| Kamera med egen kurs | `CAMERA.YawTau 0,13` | `KAM_YAW_TAU 0,16` | ✅ |
+| Ingen krypning vid låg fart | roten vrids direkt, `WalkSpeed 0` | omega = kurvatur × tempo, noll vid stillastående | ✅ olika mekanism, samma utfall |
+| Frame-rate-oberoende | `dt`-baserade filter, mätt över 30/60/144 i bänken | mätt: kurvatur identisk, väggkurs identisk | ✅ |
+| Utbildningsmässiga ridregler | gångart väljs, aldrig exakt tempo | hjälper (skänkel/tygel/sits) + utbildningsskalan | ⚠️ webben bär pedagogiken — se skillnad 4 |
+
+## 7e · Intentional platform differences
+
+1. **Svängen är formulerad olika.** Webben räknar kurvatur direkt (1/m) och får
+   vridhastigheten som kurvatur × tempo. Roblox räknar vridhastighet och drar ned
+   den per gångart med `turn`-faktorn. Utfallet är detsamma — vidare svängar i
+   högre fart — men webbens form är den renare, och är den jag skulle porta till
+   Roblox om paritet ska bli exakt i stället för likvärdig.
+2. **Fasen drivs olika.** Roblox `beatRate` är fart-driven, webben är
+   distansdriven. Distansdrivet är riktigare (samma sträcka ger samma hovtakt) och
+   är kandidat att porta.
+3. **Lutningens tak skiljer.** Roblox tillåter 0,26 rad (15°), webben 0,075 rad
+   (4,3°). Roblox-värdet är från innan mätningen och ser motorcykelartat ut på
+   papperet; webbens är valt mot referensen "en häst lutar sig knappt". Bör
+   samordnas, sannolikt nedåt i Roblox.
+4. **Pedagogiken finns bara i webben.** Hjälper, utbildningsskala, ridlärare och
+   lektionsmoment är JS-sidans, och Roblox-spåret har inte den lagren än. Det är en
+   känd skillnad i mognad, inte ett designval.
+5. **Fyra mot fem gångarter.** Webben har halt/skritt/trav/galopp; Roblox har
+   dessutom fyrsprång. Webbens `galopp` motsvarar Roblox `canter`.
+
 ## 8 · Kvarvarande begränsningar
 
 1. **Ryttarens sekundärrörelse (P1) är inte byggd.** Den pedagogiska sitslogiken är
@@ -200,6 +300,31 @@ så designen översätts i stället för att uppfinnas igen.
 **Tolv av femton uppfyllda, en obyggd, en som kräver mänsklig bedömning.**
 
 ---
+
+## 10b · Remaining risks
+
+Riskerna, som addendumet kräver dem — sorterade efter vad som mest sannolikt sänker
+gaten vid review eller playtest.
+
+1. **Ingen Roblox Studio-playtest har skett.** Addendumet säger uttryckligen att
+   Gate 01 inte kan stängas utan den, och den kan inte göras härifrån. Det här är
+   den enda risk som ensam blockerar gaten.
+2. **Roblox-ändringarna är mätta i en stubbad miljö.** Krypningsfixen vrider roten
+   direkt; hur det samspelar med `Humanoid.AutoRotate`, fysiken och
+   nätverksägarskapet är oprövat och är den ändring som mest sannolikt beter sig
+   annorlunda i Studio än i bänken.
+3. **Pariteten är likvärdig, inte exakt.** Fyra av elva rader i paritetstabellen är
+   gula. Sväng, fas och lutning har olika formulering eller olika tal; skillnad 3
+   (lutningens tak, 15° mot 4,3°) är den som mest sannolikt syns som olika känsla.
+4. **Ryttarens sekundärrörelse är obyggd på båda plattformarna.** Det är den enda
+   P0/P1-punkten i det ursprungliga Gate-dokumentet som står obesvarad.
+5. **Konstanterna är trimmade mot mätningar, inte mot playtest.** Alla tal i båda
+   spåren är valda för att träffa rimliga siffror i tabellerna, inte för att någon
+   ridit med dem.
+6. **Touch är overifierad i Roblox.** Webbens analoga touch är mätt med riktiga
+   pekhändelser; Roblox-klientens är det inte.
+7. **Gamepad är overifierad på båda.** Kontrakten tar emot analoga värden, ingen
+   gamepad har testats.
 
 ## 11 · Överlämning
 
