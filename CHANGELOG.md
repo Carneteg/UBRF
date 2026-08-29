@@ -23,6 +23,17 @@ inte. Byggnadsarbete efter foton loggas som en post per byggnad och pass.
 
 ## Augusti 2026
 
+### 2026-08-29 · Anläggningen vänd rätt — grusplanen ligger i norr
+Man kommer nu fram till grusparkeringen vid husens norra gavlar, precis
+som i verkligheten: ridhuset till höger, stallet till vänster, och
+gavlarna man ser är de från fotona — stallets spiraltrappa och ridhusets
+caféstege. Silon, gårdsplanen och infartsvägen från Husbyvägen ligger i
+söder, stallets södra gavel är byggd efter Street View (två dörrar under
+skärmtak och en rak ståltrappa), och A-bokstaven står vid sargporten där
+den hör hemma. Klubbdelen och ridhusets entréhall har följt med till rätt
+ände, och entrén leder in i en hall i stället för rakt in i ett rum.
+(235d94b)
+
 ### 2026-08-29 · Höger är höger igen, och kartan går att peka på
 D svängde vänster och A höger — i både ridningen och gå-läget, sedan
 spelets början. Nu svänger tangenterna åt det håll de heter, så byggnaderna
