@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Bygger dist/ridskolan.html — en enda HTML-fil av index.html + src/*.js.
 
-Artefakt-versionen av spelet är en fil utan externa beroenden
-(förutom Google Fonts som är tillåtet). Skriptordningen tas från
-index.html så den inte kan glida ur synk med utvecklingsversionen.
+Artefakt-versionen av spelet är en fil utan externa beroenden och utan
+nätanrop vid körning. Skriptordningen tas från index.html så den inte
+kan glida ur synk med utvecklingsversionen.
 """
 import re, pathlib
 

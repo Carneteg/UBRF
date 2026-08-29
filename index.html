@@ -96,7 +96,12 @@ button{font-family:inherit}
 #tempo{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:#A6ABB3;
   font-variant-numeric:tabular-nums; margin-top:3px}
 #gaitWarn{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
-  text-transform:uppercase; color:var(--crit); margin-top:5px; min-height:14px}
+  text-transform:uppercase; color:var(--crit); margin-top:5px; min-height:14px;
+  font-variant-numeric:tabular-nums}
+/* Egenskapen Känsla visar spänningen hela tiden, inte bara varningen.
+   Färgen stiger med värdet så man ser den bygga upp sig. */
+#gaitWarn.lag{color:var(--muted)} #gaitWarn.mitt{color:var(--gold-2)}
+#gaitWarn.hog{color:var(--crit)}
 
 /* pyramid */
 #pyr{width:210px}
@@ -231,6 +236,59 @@ tr:last-child td{border-bottom:0}
   #momentText{display:none}
 }
 
+/* ── Skaparrutan: utseendet och egenskaperna ─────────────────── */
+#skapDelar{display:grid; grid-template-columns:230px 1fr; gap:22px; align-items:start;
+  margin-top:14px}
+#skapDuk{width:100%; aspect-ratio:3/4; background:var(--sunk); border:1px solid var(--rule);
+  border-radius:3px; display:block}
+.skapNamn input{width:100%; margin-top:9px; text-align:center; font-size:15px}
+.skapFlikar{display:flex; gap:6px; margin-bottom:12px}
+.skapFlik{background:transparent; border:1px solid var(--rule); color:var(--muted);
+  padding:7px 14px; border-radius:3px; cursor:pointer; font-family:inherit; font-size:13px}
+.skapFlik.pa{background:var(--gold); color:#17140A; border-color:var(--gold)}
+.skapRad{display:flex; gap:10px; align-items:baseline; margin-bottom:9px; flex-wrap:wrap}
+.skapEtikett{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--faint); min-width:76px}
+.skapChipp{display:flex; gap:6px; flex-wrap:wrap; flex:1 1 200px}
+.skapChip{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  background:var(--panel-2); border:1px solid var(--rule); color:var(--ink-2);
+  border-radius:3px; padding:5px 9px; font-family:inherit; font-size:12px}
+.skapChip:hover{border-color:var(--gold)}
+.skapChip.pa{border-color:var(--gold); color:var(--ink); box-shadow:inset 0 0 0 1px var(--gold)}
+.skapProv{width:13px; height:13px; border-radius:2px; background:var(--prov);
+  border:1px solid rgba(0,0,0,.35); display:inline-block}
+/* Egenskapskorten: namnet, vad det gör, och varför boken säger så. */
+#egLista{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:9px}
+.egKort{text-align:left; cursor:pointer; background:var(--panel-2); color:var(--ink-2);
+  border:1px solid var(--rule); border-radius:3px; padding:10px 12px; font-family:inherit;
+  display:flex; flex-direction:column; gap:4px}
+.egKort:hover{border-color:var(--gold)}
+.egKort.pa{border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold)}
+.egKort.tom{opacity:.45}
+.egNamn{font-size:15px; color:var(--ink); font-weight:600}
+.egKort2{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--gold-2)}
+.egEffekt{font-size:12.5px; line-height:1.45}
+.egVarfor{font-size:11.5px; line-height:1.45; color:var(--faint); margin-top:2px}
+.egRad{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:3px}
+.egBricka{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.06em;
+  border:1px solid var(--rule); border-radius:999px; padding:2px 9px; color:var(--gold-2)}
+/* Ryttarprovet i menyn: hjälm, kavaj och ansikte i tre band. */
+.jagProv{width:34px; height:34px; border-radius:3px; flex:0 0 auto;
+  background:linear-gradient(180deg,
+    var(--hjalm) 0 34%, var(--hy) 34% 52%, var(--kavaj) 52% 100%);
+  border:1px solid var(--rule)}
+/* Kontorutan */
+.synkFalt{display:flex; gap:8px; flex-wrap:wrap; margin-top:9px}
+.synkFalt input{flex:1 1 150px; min-width:0}
+.synkBesked{margin-top:8px; font-size:12.5px; color:var(--gold-2)}
+.synkBesked.bad{color:var(--crit)}
+@media(max-width:640px){
+  #skapDelar{grid-template-columns:1fr}
+  #skapDuk{max-width:220px; margin:0 auto}
+  .skapEtikett{min-width:0; flex:1 0 100%}
+}
+
 /* topprad i spelet */
 #topbar{position:absolute; top:0; left:0; right:0; height:0; z-index:7}
 #viewToggle{position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:7;
@@ -241,6 +299,14 @@ tr:last-child td{border-bottom:0}
   text-transform:uppercase; padding:7px 13px; transition:.15s}
 #viewToggle button.on{background:var(--gold); color:#17140A}
 #viewToggle button:hover:not(.on){color:var(--ink)}
+
+/* Tangentremsan: bara de tangenter gruppen faktiskt använder, och bara
+   de tre första passen. Hela listan bor i träningsboken. */
+#tangenter{margin-top:9px; padding-top:8px; border-top:1px solid var(--rule-soft)}
+#tangenter .tRad{display:flex; align-items:center; gap:5px; margin-top:4px;
+  font-size:11px; color:var(--muted); justify-content:flex-end}
+#tangenter .tRad span{margin-left:2px}
+#tangenter kbd{font-size:10px; padding:1px 5px}
 
 .dim{color:var(--muted)}
 .gold{color:var(--gold-2)}
@@ -299,7 +365,7 @@ tr:last-child td{border-bottom:0}
     <div id="momentText"></div>
     <div id="momentBar"><i></i></div>
     <div id="momentMal"></div>
-    <div id="vaxer">
+    <div id="vaxer" style="display:none">
       <div class="vaxrad"><span>Hästen slappnar av</span><b id="vHast"><i></i></b></div>
       <div class="vaxrad"><span>Du blir mjukare</span><b id="vDu"><i></i></b></div>
     </div>
@@ -310,6 +376,7 @@ tr:last-child td{border-bottom:0}
     <div id="gait">Halt</div>
     <div id="tempo">0,0 m/s</div>
     <div id="gaitWarn"></div>
+    <div id="tangenter" hidden></div>
   </div></div>
 
   <div class="hudh bl"><div class="box" id="pyr">
@@ -349,7 +416,10 @@ tr:last-child td{border-bottom:0}
 <script src="src/world.js"></script>
 <script src="src/game.js"></script>
 <script src="src/ryttare.js"></script>
+<script src="src/jag.js"></script>
+<script src="src/intro.js"></script>
 <script src="src/framsteg.js"></script>
+<script src="src/larare.js"></script>
 <script src="src/humor.js"></script>
 <script src="src/efter.js"></script>
 <script src="src/synk.js"></script>

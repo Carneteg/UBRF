@@ -24,8 +24,12 @@ for f in "$SRC"/*.HEIC "$SRC"/*.heic "$SRC"/*.jpg "$SRC"/*.JPG "$SRC"/*.png; do
     magick "$f" -auto-orient -resize 2000x2000\> -quality 88 "$dest"
   elif command -v heif-convert >/dev/null 2>&1; then      # libheif
     heif-convert "$f" "$dest" >/dev/null
+  elif python3 -c "import pillow_heif" >/dev/null 2>&1; then   # Pillow + pillow-heif
+    python3 "$(dirname "$0")/heic2jpg.py" "$f" "$dest"
   else
-    echo "Hittar inget konverteringsverktyg. macOS: sips finns inbyggt. Windows: installera ImageMagick (winget install ImageMagick.ImageMagick)." >&2
+    echo "Hittar inget konverteringsverktyg. macOS: sips finns inbyggt." >&2
+    echo "Windows: winget install ImageMagick.ImageMagick" >&2
+    echo "Eller, var som helst med Python: pip install pillow pillow-heif" >&2
     exit 1
   fi
   echo "→ $dest"

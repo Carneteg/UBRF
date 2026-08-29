@@ -73,7 +73,7 @@ const G={
   hinderAktiva:false,nastaHinder:0,rivna:new Set(),handelser:[],banTid:0,banStart:0,
   vagranStopp:0,sisteHopp:0,luft:0,auto:false,
   rngHopp:null,spanningPuls:0,hoppaMoment:false,
-  sagaT:0,sagaCd:8,seed:1,
+  sagaT:0,sagaCd:8,naraRop:0,seed:1,
 };
 function vaxlaVy(){G.vy=G.vy==="2d"?"3d":"2d";
   document.querySelectorAll("#viewToggle button").forEach(b=>b.classList.toggle("on",b.dataset.v===G.vy));}
@@ -85,17 +85,69 @@ function initNPC(){
   G.npcs=NPC_ELEVER.map((n,i)=>({...n,farg:HORSES[n.hast].farg,
     s:15+i*19, fart:1.2+n.skick*1.6, x:0,y:0,rikt:0}));
 }
+/* ── Trafiken på fyrkantspåret ────────────────────────────────────
+   Ett hästlängds avstånd är en riktig stallregel, inte en spelregel, och
+   den gäller alla på spåret — även dig. Förut red alla i konstant fart
+   rakt igenom varandra; en NPC kunde stå mitt i kameran med huvudet över
+   halva bilden.
+
+   Ekipagen KROCKAR inte, de BROMSAR. Det är vad man gör på en lektion:
+   kommer man ikapp den framför så saktar man ner, man kör inte in i
+   henne. Bromsningen är mjuk och proportionell mot luckan, så en NPC som
+   hinner ikapp lägger sig på avstånd i stället för att tvärstanna. */
+const HASTLANGD=3.2;      // avståndet man håller på spåret
+const HASTRUM=2.1;        // närmare än så kommer ingen — hästen är i vägen
+
+/* Hur mycket ska n sakta ner för det som ligger framför? Returnerar
+   0 (stilla) till 1 (fri väg). Bara det som ligger i färdriktningen
+   räknas — man bromsar inte för någon man just passerat. */
+function npcBroms(n){
+  let minsta=Infinity;
+  const fx=Math.cos(n.rikt), fy=Math.sin(n.rikt);
+  const kolla=(x,y)=>{
+    const dx=x-n.x, dy=y-n.y, d=Math.hypot(dx,dy);
+    if(d<0.001||d>HASTLANGD*2)return;
+    /* Framförkonen: 0,55 ≈ 57° åt vardera hållet. Bredare än så och man
+       bromsar för ekipage på andra långsidan. */
+    if((dx*fx+dy*fy)/d<0.55)return;
+    if(d<minsta)minsta=d;
+  };
+  for(const m of G.npcs)if(m!==n)kolla(m.x,m.y);
+  if(G.scen==="lektion"||G.scen==="bana")kolla(G.px,G.py);
+  if(minsta===Infinity)return 1;
+  return clamp((minsta-HASTRUM)/(HASTLANGD-HASTRUM),0,1);
+}
+
 function stegaNPC(dt){
   // fyrkantspåret som sluten bana: omkrets 2*(17+57)=148 m
   for(const n of G.npcs){
     if(G.scen==="bana"){ // står på medellinjen och tittar på
       n.x=4+G.npcs.indexOf(n)*2.2;n.y=56.5;n.rikt=-Math.PI/2;continue;}
-    n.s=(n.s+n.fart*dt*(0.95+0.1*Math.sin(G.t*0.5+n.skick*9)))%148;
+    /* Bromsen glider mot sitt mål i stället för att slå till — en häst
+       som saktar ner gör det över ett par steg. */
+    const mal=npcBroms(n);
+    n.broms=(n.broms===undefined?1:n.broms)+(mal-(n.broms===undefined?1:n.broms))
+      *Math.min(1,dt*2.6);
+    n.s=(n.s+n.fart*n.broms*dt*(0.95+0.1*Math.sin(G.t*0.5+n.skick*9)))%148;
     const s=n.s;
     if(s<57){n.x=1.5;n.y=58.5-s;n.rikt=-Math.PI/2;}
     else if(s<74){n.x=1.5+(s-57);n.y=1.5;n.rikt=0;}
     else if(s<131){n.x=18.5;n.y=1.5+(s-74);n.rikt=Math.PI/2;}
     else{n.x=18.5-(s-131);n.y=58.5;n.rikt=Math.PI;}
+    /* Att bara bromsa räcker inte: står någon still på spåret köar alla
+       bakom och stannar för gott. Tre hästar frös i en hög i provet.
+       Det man gör på riktigt är att gå om på INSIDAN — så ekipaget
+       skjuts inåt banan medan det är blockerat och söker sig ut mot
+       spåret igen när vägen är fri. */
+    const blockad=n.broms<0.55;
+    /* Taket måste vara större än HASTRUM, annars räcker sidosteget inte
+       för att komma förbi någon som står still på spåret — då lägger sig
+       hela gruppen i en klunga bredvid hindret i stället. */
+    n.sido=clamp((n.sido||0)+(blockad?1.1:-0.7)*dt,0,2.8);
+    if(n.sido>0.001){
+      const ix=10-n.x, iy=30-n.y, il=Math.hypot(ix,iy)||1;
+      n.x+=ix/il*n.sido; n.y+=iy/il*n.sido;
+    }
   }
 }
 
@@ -112,9 +164,12 @@ function stegaRitt(dt){
      gör underlaget tyngre än ridhusets harvade fiber. */
   const ute=G.plats!=="ridhus";
   const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
+  /* Färdigheter plus de valda egenskaperna, i ett anrop — modellen ska
+     inte behöva veta att lutningen har två källor. */
+  const F=fardighetsModMedJag();
   stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,
-    utomhus:ute,fard:fardighetsMod(),
-    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,fardighetsMod().halla)},dt);
+    utomhus:ute,fard:F,
+    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,F.halla)},dt);
   /* Färdigheterna växer av det som just hände. Returnerar ett id när en
      färdighet passerar ett helt tiondelssteg, så att det går att visa. */
   {const steg=stegaFardighet(G.ride,G.aids,dt);
@@ -128,6 +183,45 @@ function stegaRitt(dt){
   if(nx>19.2){nx=19.2;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,0.06);}
   if(ny<0.8){ny=0.8;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,0.06);}
   if(ny>59.2){ny=59.2;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,0.06);}
+  /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
+     och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
+     är till för hästarnas skull, inte för ordningens. */
+  for(const n of G.npcs){
+    const dx=nx-n.x, dy=ny-n.y, d=Math.hypot(dx,dy);
+    if(d>=HASTRUM||d<0.001)continue;
+    const k=(HASTRUM-d)/d;
+    nx+=dx*k; ny+=dy*k;                       // mjuk utknuffning
+    /* Hästen tvärnitar inte, men hon vägrar gå in i en annan häst: farten
+       bryts och spänningen stiger. Utan farttappet gick det att stå och
+       trycka mot ekipaget framför utan att märka något. */
+    G.ride.tempo*=0.90;
+    G.ride.spanning=clamp(G.ride.spanning+1.1*dt,0,1);
+    if(G.t-(G.narkontaktT||-99)>9){
+      G.narkontaktT=G.t; G.narkontakter=(G.narkontakter||0)+1;
+      G.naraRop=G.t;                          // repliken köas, se nedan
+    }
+  }
+  /* Tillsägelsen om avståndet köas i stället för att sägas på fläcken.
+     Ridläraren har numera ett tema och säger få saker, och mätt över tre
+     pass landade avståndsropet gång på gång en till fyra tiondelar efter
+     hennes rättelse och skrev över den innan den gick att läsa — sju till
+     åtta gånger per pass. Nu väntar ropet tills rutan hunnit läsas, som
+     mest sex sekunder; är man fortfarande för nära då kommer nästa
+     tillsägelse ändå på sin egen niosekunderstakt.
+
+     Straffet — farttappet, spänningen och räkningen — ligger kvar där
+     uppe och tas ut i samma bildruta som förut. Det är bara repliken som
+     väntar, aldrig regeln. */
+  if(G.naraRop){
+    if(G.t-G.naraRop>6)G.naraRop=0;           // för gammal att säga
+    else if(G.sagaT<=0.9){
+      G.naraRop=0;
+      /* Och hon tystnar en stund efteråt: säkerheten har sin egen röst
+         och ska inte trängas med en rättelse om handen. */
+      if(typeof LARARE!=="undefined")LARARE.cd=Math.max(LARARE.cd,4.5);
+      saga("För nära! Håll en hästlängd till ekipaget framför.",3.2);
+    }
+  }
   G.px=nx;G.py=ny;
   // gångartsfas för animation
   const stegFrek=G.ride.gangart==="skritt"?1.0:G.ride.gangart==="trav"?1.5:G.ride.gangart==="galopp"?1.75:0;
@@ -222,7 +316,13 @@ function stegaBana(dt){
     }else{
       G.luft=0.55; // hopp-animation
       if(utfall.resultat==="rivning"){G.rivna.add(h.nr);G.handelser.push({typ:"nedslag",hinder:h.nr});
-        flash("4 FEL");saga(utfall.kommentar,2.6);}
+        flash("4 FEL");saga(utfall.kommentar,2.6);
+        /* Vägran prövade uteslutning direkt, nedslag gjorde det inte —
+           man kunde riva sig långt förbi gränsen och hoppa färdigt hela
+           banan, och fick beskedet retroaktivt på resultatskärmen.
+           Uteslutning ska komma när den inträffar. */
+        const domR=domaRitt(G.handelser,G.t-G.banStart,true);
+        if(domR.utesluten){avslutaBana(domR);return;}}
       else if(q>0.8)saga(utfall.kommentar,2.2);
       G.nastaHinder++;
       if(G.nastaHinder>BANA.hinder.length){
@@ -235,7 +335,10 @@ function angDiff(a,b){let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 function uppdateraProt(){
   const dom=domaRitt(G.handelser,G.t-G.banStart,true);
   const el=document.getElementById("prot");
-  let rows=`<div class="lbl" style="margin-bottom:6px">Protokoll · 0,60 m</div>`;
+  /* Höjden ur banan, inte hårdkodad — Klass 2 och 3 rids på 0,75 och
+     0,85 m och protokollet påstod 0,60 hela ritten. */
+  const hojd=((BANA&&BANA.hojd)||0.60).toFixed(2).replace(".",",");
+  let rows=`<div class="lbl" style="margin-bottom:6px">Protokoll · ${hojd} m</div>`;
   rows+=`<div class="r"><span>Hinder</span><b>${Math.min(G.nastaHinder,6)} / 6</b></div>`;
   rows+=`<div class="r ${dom.hinderfel?"bad":""}"><span>Fel</span><b>${dom.hinderfel}</b></div>`;
   rows+=`<div class="r"><span>Olydnader</span><b>${dom.olydnader}</b></div>`;
@@ -252,6 +355,16 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
+  G.narkontakter=0; G.narkontaktT=-99; G.naraRop=0;
+  G.bedomda=0; G.klarade=0;
+  if(typeof lararNollstall==="function")lararNollstall();
+  /* HUD:en tillbaka i ridläge. Gå-läget döljer pyramiden, hjälpmätarna
+     och gångartsrutan, och bara tävlingsvägen slog på dem igen — en
+     vanlig lektion reds alltså helt utan utbildningsskalan, som är den
+     återkoppling hela modellen vilar på. Menyn hänvisade till och med
+     till "mätaren" som inte fanns på skärmen. Anropet hör hemma här, i
+     lektionen, inte hos varje anropare. */
+  if(typeof hudLage==="function")hudLage("ritt");
   passStart();                       // avskrift av allt som ska jämföras efteråt
   document.getElementById("approach").textContent="";
   if(G.tavling){
@@ -277,6 +390,11 @@ function startaLektion(){
     });
   }
   G.hadeBana=G.lektion.some(m=>m.id==="bana");
+  /* Ridläraren bestämmer dagens tema INNAN första momentet visas. Hon
+     säger det själv några sekunder in (se lararSteg) — en tävling har
+     en domare i stället och får inget tema alls, därför står valet här
+     och inte högre upp. */
+  if(typeof lararValjFokus==="function")lararValjFokus();
   G.moment=G.lektion[0];visaMoment();
   if(mReh.rehab)
     saga(`${HORSES[G.hastId].namn} är på väg tillbaka efter sin skada — bara skritt och trav i dag, säger ridläraren.`,4.5);
@@ -289,8 +407,14 @@ function startaLektion(){
 function visaMoment(){
   const m=G.moment;
   const platsTxt=G.plats==="utebana"?" · uteridbanan":G.plats==="stig"?" · skogsstigen":"";
+  /* Dagens tema står kvar i rubriken hela lektionen. Hon säger det en
+     gång, sex sekunder in, och sedan är det borta — men det är den enda
+     saken hon bedömer, så det ska gå att läsa av när som helst. En
+     tävling har en domare i stället för ett tema och får ingen. */
+  const tema=(typeof lararFokusNamn==="function")?lararFokusNamn():"";
   document.getElementById("momentLbl").textContent=
-    `Moment ${G.momentIx+1} av ${G.lektion.length} · ${GRUPPNAMN[G.grupp]||G.grupp}${platsTxt}`;
+    `Moment ${G.momentIx+1} av ${G.lektion.length} · ${GRUPPNAMN[G.grupp]||G.grupp}${platsTxt}`
+    +(tema?` · tema: ${tema.toLowerCase()}`:"");
   document.getElementById("momentNamn").textContent=m.namn;
   document.getElementById("momentText").textContent=
     m.text+((m.ovning||MOMENT_OVNING[m.id])?" · T öppnar övningen i träningsboken.":"");
@@ -298,7 +422,17 @@ function visaMoment(){
   saga(m.text,4);
 }
 function stegaLektion(dt){
+  /* Passet är slut när scenen bytt. Utan den här raden räknar ett extra
+     anrop in ett helt nytt pass: avslutaBana registrerar, men G.moment
+     ligger kvar och G.momentKlart är fortfarande sant, så nästa anrop
+     registrerar igen. I dag skyddas det av att loopen slutar anropa vid
+     scenbytet — det är ett skydd på fel ställe. */
+  if(G.scen!=="lektion"&&G.scen!=="bana")return;
   const m=G.moment;if(!m)return;
+  /* Den ledda genomgången först. Så länge den pågår tickar inte
+     momentets stapel — annars mäts spelaren mot ett krav hon inte fått
+     höra än. */
+  if(typeof introRittSteg==="function"&&introRittSteg(dt))return;
   G.momentT+=dt;
   if(m.id==="bana"){
     if(!G.hinderAktiva)startaBana();
@@ -315,7 +449,20 @@ function stegaLektion(dt){
          att nå genom att sitta still; tempobandet gör att hon glider
          ur det om du inte rider henne. */
       const kval=Skala.inverkan(G.ride.skala,G.grupp);
-      const over=kval>=mal.krav&&iTempoBand(G.ride,G.grupp);
+      /* Och du måste ha KONTAKT. Ett moment mäter hästens tillstånd, och
+         hästen kan hamna rätt av sig själv — en häst som driver in i
+         skritt låg i skrittens band utan att någon rörde en tangent, och
+         tre grupper gick att bli uppflyttad ur på det viset.
+
+         Kravet är medvetet LÅGT: tygeln ska ligga över slakgränsen.
+         Vilovärdet efter ett släppt Space är 0,34, alltså mitt i bandet
+         — har du en gång tagit upp tyglarna har du kontakt, och så är
+         det på riktigt också. Kravet fångar därför den som ALDRIG tagit
+         upp dem, inte den som släpper mellan tagen. Det är hela
+         avsikten: att stänga rent passivt spel, inte att kräva att man
+         håller nere en tangent i tre minuter. */
+      const kontakt=G.aids&&G.aids.tygel>K.TYGEL_BAND_MIN;
+      const over=kval>=mal.krav&&kontakt&&iTempoBand(G.ride,G.grupp,m);
       G.momentHall=clamp((G.momentHall||0)+(over?dt:-dt*0.45),0,mal.hall);
       document.querySelector("#momentBar i").style.width=G.momentHall/mal.hall*100+"%";
       document.querySelector("#momentBar").classList.toggle("haller",over);
@@ -326,23 +473,43 @@ function stegaLektion(dt){
     }
     {const mt=document.getElementById("momentMal");
      if(mt)mt.textContent=momentMalText(m,G.grupp);}
-    // ridlärartillsägelser
-    G.sagaCd-=dt;
-    if(G.sagaCd<=0&&G.momentT>6){
-      const[rop]=ridlararRop(G.ride,G.grupp,Math.floor(G.t));
-      saga(rop,3.4);G.sagaCd=11+Math.random()*5;
+    /* Ridläraren. Förr lästes den lägsta siffran på utbildningsskalan
+       upp var trettonde sekund, och bytte den lägsta siffran bytte hon
+       ämne mitt i meningen — en felrapport, inte en instruktör. Nu
+       håller hon ETT tema hela lektionen och tiger när det går bra.
+       Hon räknar sin egen paus, så G.sagaCd behövs inte här. */
+    if(G.momentT>6&&typeof lararSteg==="function"){
+      const rop=lararSteg(dt);
+      if(rop)saga(rop,4.2);
     }
     /* Taket: även ett moment man inte klarar tar slut till slut, så att
        ingen fastnar. Då blir det underkänt, inte oändligt. */
     if(G.momentKlart||G.momentT>=m.tid*2.2||G.hoppaMoment){
       G.hoppaMoment=false;
-      if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp);
+      /* Betyget vägs med hur mycket av hålltiden du faktiskt klarade.
+         Utan det gick hela lektionen att sitta av i HALT: kvaliteten
+         driver upp mot 0,72 när ingenting händer, taket m.tid*2.2 tvingar
+         fram varje moment ändå, och passet blev godkänt med
+         uppflyttningspoäng utan en meter ridning. Ett moment man aldrig
+         höll är inte ett ridet moment.
+
+         Golvet på 0,25 finns för att en ryttare som kämpar och nästan
+         lyckas inte ska nollas — men 0,72 × 0,25 = 0,18 ligger under
+         varje grupps krav, så att stå still räcker aldrig. */
+      if(m.bedoms){
+        const mal2=momentMal(m,G.grupp);
+        const andel=mal2?clamp((G.momentHall||0)/mal2.hall,0,1):1;
+        G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp)*(0.25+0.75*andel);
+        G.bedomda=(G.bedomda||0)+1;
+        if(andel>=0.999)G.klarade=(G.klarade||0)+1;
+      }
       G.momentIx++;
       if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;
         G.momentHall=0;G.momentKlart=false;visaMoment();}
       else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
         const dom=domaRitt([],0,true);
         dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
+        G.moment=null; G.momentKlart=false;   // passet är över, inte pausat
         avslutaBana(dom);
       }
     }
@@ -405,14 +572,26 @@ function ritaHUD(){
   const g=Gait.G[G.ride.gangart];
   document.getElementById("gait").textContent=g.namn+(G.ride.gangart==="trav"?(IN.latt?" · lättridning":" · nedsittning"):"");
   document.getElementById("tempo").textContent=G.ride.tempo.toFixed(1).replace(".",",")+" m/s";
-  document.getElementById("gaitWarn").textContent=
-    G.ride.spanning>0.6?"SPÄND":(G.ride.gangart==="trav"&&IN.latt&&IN.diagonal===0?"FEL DIAGONAL (Q)":"");
+  /* Känsla är information, inte kraft: har du den ser du spänningen
+     hela tiden, inte bara när den redan är för hög. */
+  {const w=document.getElementById("gaitWarn"), sp=G.ride.spanning;
+   const diag=G.ride.gangart==="trav"&&IN.latt&&IN.diagonal===0;
+   const kanner=(typeof jagHar==="function")&&jagHar("kansla");
+   let txt, ton="";
+   if(sp>0.6){ txt="SPÄND"+(kanner?" "+sp.toFixed(2).replace(".",","):""); ton="hog"; }
+   else if(diag) txt="FEL DIAGONAL (Q)";
+   else if(kanner){ txt="SPÄNNING "+sp.toFixed(2).replace(".",",");
+     ton=sp>0.40?"mitt":"lag"; }
+   else txt="";
+   w.textContent=txt;
+   w.className=ton;}
   if(G.aids)for(const k in IN.kan){
     const row=document.querySelector(`.arow[data-k="${k}"] .v`);if(!row)continue;
     const v=k==="sits"?(G.aids[k]+1)/2:k==="styrning"?(G.aids[k]+1)/2:G.aids[k];
     if(k==="styrning"){row.style.left=(v*100-2)+"%";row.style.width="4%";}
     else{row.style.left=0;row.style.width=(v*100)+"%";}
   }
+  if(typeof ritaIntroTangenter==="function")ritaIntroTangenter();
   if(G.sagaT>0){G.sagaT-=1/60;if(G.sagaT<=0)document.getElementById("saga").classList.remove("on");}
 }
 

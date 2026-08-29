@@ -76,7 +76,29 @@ function fardighetsMod(){
        rätta till hela tiden och att bara rida — och den märks direkt i
        hur många korrigeringar ett moment kostar. */
     halla: 0.48*f.sits+0.34*f.kansla,
+    /* Spänningen sjunker undan snabbare. Bara egenskapen Lugn rör den
+       här — färdigheterna verkar på pressen, inte på återhämtningen. */
+    spanningFall: 1,
   };
+}
+
+/* Egenskaperna ovanpå färdigheterna. De valda tre lutar samma
+   toleranser som färdigheterna, men de växer inte — de är det du bar
+   med dig när du kom hit. Additivt, och medvetet mycket mindre än vad
+   ett halvt liv i sadeln ger. */
+function fardighetsModMedJag(){
+  const m=fardighetsMod();
+  const j=(typeof jagMod==="function")?jagMod():{};
+  if(j.halla)       m.halla       += j.halla;
+  if(j.mjukhetFart) m.mjukhetFart += j.mjukhetFart;
+  if(j.lugn)        m.lugn        += j.lugn;
+  if(j.tygelband)   m.tygelband   += j.tygelband;
+  if(j.amplitud)    m.amplitud    += j.amplitud;
+  if(j.spanningFall)m.spanningFall+= j.spanningFall;
+  if(j.skygghet)    m.skygghet     = (m.skygghet||0)+j.skygghet;
+  if(j.hhFonster)   m.hhFonster   += j.hhFonster;
+  if(j.hhAmplitud)  m.hhAmplitud  += j.hhAmplitud;
+  return m;
 }
 
 /* ── Växten ───────────────────────────────────────────────────────
@@ -98,8 +120,12 @@ function stegaFardighet(ride,aids,dt){
      ifrån bandet — hjälperna låg still, mjukheten låg på 1,00, och
      färdigheterna växte alltså som snabbast när ridningen var som
      sämst. Att rida är att korrigera; det ska växten också mäta. */
-  if(typeof iTempoBand==="function"&&!iTempoBand(ride,G.grupp))return null;
+  if(typeof iTempoBand==="function"&&!iTempoBand(ride,G.grupp,G.moment))return null;
   const f=fard(), fore={...f};
+  /* Kontinuerligt lärande snabbar på växten — men villkoren ovan gäller
+     fortfarande. Egenskapen ger ingenting gratis; den gör bara att det du
+     faktiskt gör bra fastnar lite fortare. */
+  dt*=1+(((typeof jagMod==="function")&&jagMod().larande)||0);
 
   /* Sits: låg spänning i dina egna sitsutslag och en häst som inte
      stör sig. Mäts som mjukhet, som redan är amplitud mot medel. */
@@ -173,7 +199,14 @@ function momentMal(m,grupp){
   /* Hålltiden är kortare än den gamla klockan. Ett moment som kräver
      tjugo sekunders hållen kvalitet är svårare än fyrtio sekunders
      väntan, och tar ändå halva tiden. */
-  const hall=clamp((m.tid||30)*0.45,8,26);
+  /* Hålltiden skalar med gruppen, precis som kravet gör. Med en fast
+     tid på 17 s klarade en rimlig nybörjare noll moment i ledlektion
+     trots att snittet (0,475) låg dubbelt över kravet (0,25) — hon red
+     tillräckligt bra, men inte tillräckligt LÄNGE i sträck. En tioåring
+     på sin första ledlektion ska inte behöva hålla samma obrutna kvalitet
+     som en ryttare i grupp5. */
+  const langd=0.55+0.75*forvantan;         // ledlektion 0,74 · grupp5 1,12
+  const hall=clamp((m.tid||30)*0.45*langd,6,26);
   return {krav,hall,vad:"inverkan"};
 }
 
@@ -199,12 +232,31 @@ function tempoBand(gangart,grupp){
   return {min:g.norm-bredd, max:g.norm+bredd, norm:g.norm, bredd};
 }
 
-/* Rider du inom bandet just nu? Halt räknas alltid som inne — man kan
-   inte hålla ett tempo man inte har. */
-function iTempoBand(ride,grupp){
+/* Rider du inom bandet just nu?
+
+   Halt räknades förut alltid som inne, med motiveringen att man inte kan
+   hålla ett tempo man inte har. Det gjorde "gör ingenting" till den
+   snabbaste vägen genom ett moment: en spelare som inte rörde en tangent
+   klarade ledlektionens första moment på 14,0 s — exakt lika fort som en
+   ryttare som höll tempot perfekt, och fortare än någon som faktiskt red
+   (58,5 s med konstant skänkel). Kvaliteten driver nämligen upp mot 0,65
+   i halt, och kravet på ledlektion är 0,22.
+
+   Halt räknas nu som inne bara när övningen FAKTISKT rids i halt. Står du
+   still under en skrittövning gör du inte övningen. */
+function iTempoBand(ride,grupp,moment){
   if(!ride)return false;
-  const b=tempoBand(ride.gangart,grupp);
-  if(!b)return true;
+  /* Bandet mäts mot den gångart ÖVNINGEN kräver, inte den hästen råkar
+     vara i. Det var den andra halvan av samma lucka: när halt slutade
+     räknas drev hästen av sig själv in i skritt — och då låg hon i
+     SKRITTENS band mitt under en travövning, så passet gick fortfarande
+     att klara utan att röra en tangent. Sex grupper av nio blev
+     godkända, värst på nybörjarnivåerna där kraven är lägst.
+
+     Rider du skritt under en travövning gör du inte övningen. */
+  const kravG=moment&&moment.gangart;
+  const b=tempoBand(kravG||ride.gangart,grupp);
+  if(!b)return !kravG||kravG==="halt";      // halt-övning rids i halt
   return ride.tempo>=b.min&&ride.tempo<=b.max;
 }
 

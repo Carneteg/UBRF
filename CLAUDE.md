@@ -45,6 +45,11 @@ fasettering — samma anatomi, färre segment, en egen normal per triangel (`glP
 Ryttaren och figurerna till fots är rätblock. Det är den kombinationen förlagan använder.
 
 Alla färg- och ljusvärden ligger i `src/ljus.js`. Ändra där, ingen annanstans.
+**Ryttarens egna färger** — hy, hår, kavaj, byxor, hjälm — hör inte hemma där utan
+i `src/jag.js`, för de är spelarens val och inte världens ljus. Skriv aldrig in dem
+i `kloss.js` eller `scen3d.js`: bägge bygger ryttaren ur paletten de får in, och det
+finns två uppsättningar delar — `S3.del` för de andra eleverna och `S3.del.jag` för
+spelaren. Rör du den ena, rör du inte den andra.
 UI:ts formspråk är `ui-kit-demo.html` — dess variabler är utbrutna till `src/ui.css`
 och ska inte redigeras där.
 

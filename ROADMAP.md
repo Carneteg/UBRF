@@ -141,3 +141,45 @@ sponsorvägg och cafeteria. Figuren går i tredjeperson.
 
 **Kvar att ta vidare:** Roblox-porten finns fortfarande som möjlighet
 — modellen, anläggningen och övningarna följer med oavsett motor.
+
+## ✅ Din egen ryttare
+
+Första gången spelet öppnas frågar det vem du är innan menyn: namn, hy,
+hårfärg, frisyr, kavaj, ridbyxor och hjälm — och tre egenskaper av åtta.
+Allt bor i `src/jag.js` och sparas i ryttarprofilen, så det följer med
+både till localStorage och till molnet.
+
+Utseendet ändrar ingenting i ridningen. Det syns i sadeln, i stallet och
+på gården, och de andra eleverna i ridhuset behåller sina egna färger —
+det finns två uppsättningar ryttardelar, `S3.del` för dem och
+`S3.del.jag` för dig.
+
+Egenskaperna är en **lutning, inte en genväg**. Tre av åtta. Sju kommer
+ur artikeln *7 egenskaper hos en skicklig ryttare* (Ophena) — utan dess
+produktdelar; det här är ett spel, ingen annonsplats — och den åttonde,
+Pondus, ur Ridhandbokens del om hästhantering. Varje kort skriver ut både
+vad egenskapen gör och varför källan säger så.
+
+Var och en är mätt mot en körning utan egenskaper:
+
+| Egenskap | Källa | Uppmätt |
+|---|---|---|
+| Balans och kärnstyrka | artikeln · Ridhandboken del 6 | `halla` +0,10 och `mjukhetFart` +0,22 |
+| Oberoende sits | artikeln · Ridhandboken del 6 | `lugn` +0,12 |
+| Timing | artikeln · Ridhandboken del 10 | halvhaltens fönster 1,04 → 1,34, gesten 0,97 → 0,85 |
+| Självförtroende | artikeln | spänningens fall 0,0221 → 0,0269 per steg (+22 %) |
+| Känsla och lyhördhet | artikeln · Ridhandboken del 5 | HUD:en visar spänningen hela tiden — information, ingen kraft |
+| Mjukhet | artikeln · Ridhandboken del 7 | tygelbandet +0,035 |
+| Kontinuerligt lärande | artikeln | växttakten +15 %, vilket över ett pass ger 7–12 % mer |
+| Pondus | Ridhandboken del 2 | spänning 0,186 → 0,143 på den skyggaste hästen |
+
+Ingen av dem gör något moment onödigt. En egenskap som lät dig hoppa
+över att lära dig något vore ett designfel, inte en belöning. Två av dem
+ger ingen kraft alls: Känsla ger information, Lärande ger bara snabbare
+växt av det du redan gör bra.
+
+Kontorutan är samtidigt omgjord: `Skapa konto` och `Logga in` är två
+lägen med validering och besked som säger vad som är fel, i stället för
+tre fält som misslyckades tyst. Panelens knappar var aldrig kopplade —
+`scenes.js` anropade `kopplaSynkPanel`, `synk.js` definierade
+`kopplaMolnPanel`. Kvarleva från namnbytet `moln` → `synk`.
