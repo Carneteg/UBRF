@@ -130,9 +130,9 @@ const INTROSTEG=[
    sag:"Så. Mer än så är det inte — resten är att göra det jämnt. Nu rider vi.",
    klar:()=>true},
 ];
-const INTRO={steg:-1, t:0, kvar:0};
+const INTRO={steg:-1, t:0, kvar:0, pafminnelser:0};
 
-function introNollstall(){ INTRO.steg=-1; INTRO.t=0; INTRO.kvar=0; }
+function introNollstall(){ INTRO.steg=-1; INTRO.t=0; INTRO.kvar=0; INTRO.pafminnelser=0; }
 
 /* Anropas varje bildruta under lektionen. Returnerar sant så länge
    introt håller på — då pausas momentets stapel, så att den ledda
@@ -156,7 +156,24 @@ function introRittSteg(dt){
     return true;
   }
   /* Fastnar man i ett steg upprepas uppmaningen — men bara var tolfte
-     sekund, så att den blir en påminnelse och inte ett gnäll. */
-  if(INTRO.t>12){ INTRO.t=0; saga(s.sag,5); }
+     sekund, så att den blir en påminnelse och inte ett gnäll.
+
+     Och efter tre påminnelser går ridläraren vidare ändå. En guidad
+     genomgång får aldrig bli en vägg: gör spelaren inte just det steget
+     — hon kanske inte hittar tangenten, kanske inte vill svänga — ska
+     lektionen börja i alla fall. Utan den här utgången pausades
+     momentets stapel i all evighet, och passet gick aldrig att avsluta.
+     Provat: en styrning som låg exakt på gränsen låste introt för gott. */
+  if(INTRO.t>12){
+    INTRO.t=0; INTRO.pafminnelser=(INTRO.pafminnelser||0)+1;
+    if(INTRO.pafminnelser>=3){
+      INTRO.pafminnelser=0; INTRO.steg++;
+      if(INTRO.steg>=INTROSTEG.length){
+        saga("Vi tar resten medan vi rider. Nu kör vi.",4); return false; }
+      saga(INTROSTEG[INTRO.steg].sag,6); INTRO.kvar=1.6;
+      return true;
+    }
+    saga(s.sag,5);
+  }
   return true;
 }

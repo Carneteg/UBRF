@@ -105,7 +105,7 @@ function visaTilldelning(){
   <p class="dim" style="font-size:13.5px">Du väljer inte häst på en ridskola. Ridläraren tilldelar —
   att få rida en bättre häst är belöningen. Nästa gång du spelar får du en annan.</p>
   <div class="btnrow">
-    <button class="btn" id="bGroom">Hämta honom i hagen</button>
+    <button class="btn" id="bGroom">Hämta ${h.namn} i hagen</button>
     <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
   </div>`);
   document.getElementById("bGroom").onclick=()=>{overlay(false);

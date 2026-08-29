@@ -653,7 +653,15 @@ function s3Skuggflack(x,z,r,styrka){
   const dx=-L.sol[0]/sl*0.45, dz=-L.sol[2]/sl*0.45;
   const gl=GL.gl, a=(L.skuggAlfa===undefined?0.22:L.skuggAlfa)*(styrka===undefined?1:styrka);
   gl.enable(gl.BLEND); gl.depthMask(false);
-  for(const [k,v] of [[0.72,0.62],[1.00,0.44],[1.34,0.28],[1.74,0.16],[2.20,0.08]]){
+  /* Ringarna syntes som band: fem skivor med rejäla alfasteg ritar fem
+     synliga kanter på marken. Fler ringar med mindre steg gör samma
+     avtoning utan att man ser trappan. */
+  const ringar=[];
+  for(let i=0;i<9;i++){
+    const t=i/8;                            // 0 innerst, 1 ytterst
+    ringar.push([0.62+t*1.62, 0.30*(1-t)*(1-t)]);
+  }
+  for(const [k,v] of ringar){
     GL.rita(D.skuggflack,
       M4.mul(M4.translation(x+dx*k*0.4,0.045,z+dz*k*0.4),
              M4.skala(r*2.3*k,1,r*1.5*k)),

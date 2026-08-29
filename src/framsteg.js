@@ -239,11 +239,17 @@ function tempoBand(gangart,grupp){
    still under en skrittövning gör du inte övningen. */
 function iTempoBand(ride,grupp,moment){
   if(!ride)return false;
-  const b=tempoBand(ride.gangart,grupp);
-  if(!b){
-    const g=moment&&moment.gangart;
-    return !g||g==="halt";
-  }
+  /* Bandet mäts mot den gångart ÖVNINGEN kräver, inte den hästen råkar
+     vara i. Det var den andra halvan av samma lucka: när halt slutade
+     räknas drev hästen av sig själv in i skritt — och då låg hon i
+     SKRITTENS band mitt under en travövning, så passet gick fortfarande
+     att klara utan att röra en tangent. Sex grupper av nio blev
+     godkända, värst på nybörjarnivåerna där kraven är lägst.
+
+     Rider du skritt under en travövning gör du inte övningen. */
+  const kravG=moment&&moment.gangart;
+  const b=tempoBand(kravG||ride.gangart,grupp);
+  if(!b)return !kravG||kravG==="halt";      // halt-övning rids i halt
   return ride.tempo>=b.min&&ride.tempo<=b.max;
 }
 

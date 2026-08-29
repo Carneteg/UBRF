@@ -295,7 +295,13 @@ function stegaBana(dt){
     }else{
       G.luft=0.55; // hopp-animation
       if(utfall.resultat==="rivning"){G.rivna.add(h.nr);G.handelser.push({typ:"nedslag",hinder:h.nr});
-        flash("4 FEL");saga(utfall.kommentar,2.6);}
+        flash("4 FEL");saga(utfall.kommentar,2.6);
+        /* Vägran prövade uteslutning direkt, nedslag gjorde det inte —
+           man kunde riva sig långt förbi gränsen och hoppa färdigt hela
+           banan, och fick beskedet retroaktivt på resultatskärmen.
+           Uteslutning ska komma när den inträffar. */
+        const domR=domaRitt(G.handelser,G.t-G.banStart,true);
+        if(domR.utesluten){avslutaBana(domR);return;}}
       else if(q>0.8)saga(utfall.kommentar,2.2);
       G.nastaHinder++;
       if(G.nastaHinder>BANA.hinder.length){
@@ -308,7 +314,10 @@ function angDiff(a,b){let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 function uppdateraProt(){
   const dom=domaRitt(G.handelser,G.t-G.banStart,true);
   const el=document.getElementById("prot");
-  let rows=`<div class="lbl" style="margin-bottom:6px">Protokoll · 0,60 m</div>`;
+  /* Höjden ur banan, inte hårdkodad — Klass 2 och 3 rids på 0,75 och
+     0,85 m och protokollet påstod 0,60 hela ritten. */
+  const hojd=((BANA&&BANA.hojd)||0.60).toFixed(2).replace(".",",");
+  let rows=`<div class="lbl" style="margin-bottom:6px">Protokoll · ${hojd} m</div>`;
   rows+=`<div class="r"><span>Hinder</span><b>${Math.min(G.nastaHinder,6)} / 6</b></div>`;
   rows+=`<div class="r ${dom.hinderfel?"bad":""}"><span>Fel</span><b>${dom.hinderfel}</b></div>`;
   rows+=`<div class="r"><span>Olydnader</span><b>${dom.olydnader}</b></div>`;
@@ -326,6 +335,7 @@ function saga(txt,dur){const s=document.getElementById("saga");
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
   G.narkontakter=0; G.narkontaktT=-99;
+  G.bedomda=0; G.klarade=0;
   /* HUD:en tillbaka i ridläge. Gå-läget döljer pyramiden, hjälpmätarna
      och gångartsrutan, och bara tävlingsvägen slog på dem igen — en
      vanlig lektion reds alltså helt utan utbildningsskalan, som är den
@@ -406,7 +416,17 @@ function stegaLektion(dt){
          att nå genom att sitta still; tempobandet gör att hon glider
          ur det om du inte rider henne. */
       const kval=Skala.inverkan(G.ride.skala,G.grupp);
-      const over=kval>=mal.krav&&iTempoBand(G.ride,G.grupp,m);
+      /* Och du måste ha KONTAKT. Ett moment mäter hästens tillstånd, och
+         hästen kan hamna rätt av sig själv — en häst som driver in i
+         skritt låg i skrittens band utan att någon rörde en tangent, och
+         tre grupper gick att bli uppflyttad ur på det viset.
+
+         Kravet är inte hårt: tygeln ska ligga över slakgränsen, alltså
+         att du håller en förbindelse. Det är samma sak boken menar med
+         att kontakt är en förbindelse och inte ett grepp — och den som
+         rider med hängande tygel rider inte, hon åker med. */
+      const kontakt=G.aids&&G.aids.tygel>K.TYGEL_BAND_MIN;
+      const over=kval>=mal.krav&&kontakt&&iTempoBand(G.ride,G.grupp,m);
       G.momentHall=clamp((G.momentHall||0)+(over?dt:-dt*0.45),0,mal.hall);
       document.querySelector("#momentBar i").style.width=G.momentHall/mal.hall*100+"%";
       document.querySelector("#momentBar").classList.toggle("haller",over);
@@ -441,6 +461,8 @@ function stegaLektion(dt){
         const mal2=momentMal(m,G.grupp);
         const andel=mal2?clamp((G.momentHall||0)/mal2.hall,0,1):1;
         G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp)*(0.25+0.75*andel);
+        G.bedomda=(G.bedomda||0)+1;
+        if(andel>=0.999)G.klarade=(G.klarade||0)+1;
       }
       G.momentIx++;
       if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;

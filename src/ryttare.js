@@ -33,9 +33,18 @@ function laddaRyttare(){
     const s=localStorage.getItem(SPAR_NYCKEL);
     if(s){
       const d=JSON.parse(s);
+      /* Vakterna kollar TYP, inte bara sanningsvärde. En sparning där
+         fortroende är strängen "trasig" är truthy och slank förut
+         igenom — sedan kraschade registreraPass permanent på
+         SPAR.fortroende[id]=..., och varje pass därefter med. En trasig
+         sparning ska ge ett spelbart spel, inte ett dött. */
+      const obj=v=>(v&&typeof v==="object"&&!Array.isArray(v))?v:{};
+      const arr=v=>Array.isArray(v)?v:[];
       if(d&&GRUPPSTEGE.includes(d.grupp))
-        SPAR={...nyProfil(),...d, fortroende:d.fortroende||{}, historik:d.historik||[],
-          rosetter:d.rosetter||[]};
+        SPAR={...nyProfil(),...d, fortroende:obj(d.fortroende),
+          historik:arr(d.historik), rosetter:arr(d.rosetter),
+          fardighet:obj(d.fardighet), jag:obj(d.jag),
+          poang:+d.poang||0, pass:+d.pass||0};
     }
   }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
   G.grupp=SPAR.grupp;
@@ -88,7 +97,22 @@ function registreraPass(dom){
   const inv=Object.values(G.betyg);
   const snitt=inv.length?inv.reduce((a,b)=>a+b,0)/inv.length:0;
   const forv=Skala.FORVANTAN[G.grupp]??0.55;
-  const godkand=!dom.utesluten&&snitt>=forv;
+  /* Godkänt kräver att du KLARADE minst hälften av de bedömda momenten,
+     inte bara att snittet blev högt. Utan det räckte det att låta hästen
+     driva: hon hamnar av sig själv i skritt, betyget blir delvis, och
+     snittet slog kravet i ledlektion, knatte och grupp2 — alltså gick
+     man upp ur nybörjargrupperna utan att röra en tangent.
+
+     Betyget får fortsätta vara gradvis; det är UPPFLYTTNINGEN som ska
+     kräva att man faktiskt kan göra övningarna. Så säger en ridlärare
+     också: du flyttas upp när du klarar momenten, inte när hästen råkar
+     bete sig. */
+  const bedomda=G.bedomda||0, klarade=G.klarade||0;
+  /* Över hälften, inte precis hälften: med två bedömda moment räckte
+     "ett av två" och då passerade nybörjargrupperna på ett enda moment
+     som hästen råkade klara själv. */
+  const nogKlarade=bedomda===0||klarade>bedomda/2;
+  const godkand=!dom.utesluten&&snitt>=forv&&nogKlarade;
   const m=hastminne(G.hastId);
   SPAR.pass++;
   /* Hästen minns passet: rang, form och att den gick nyss. Efter en
