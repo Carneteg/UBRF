@@ -10,7 +10,7 @@ behövs — skriv meter här och meter i koden.
 | Byggnad/yta | Position (m, X/Z) | Rotation (° från nord) | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
 | Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot parkeringen i söder | 26 × 66 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
-| Stallet | | | | |
+| Stallet | 154 / 46 (sydvästra hörnet) | nock nord–syd, västra långsidan mot gården | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. Förstukvisten på västra långsidan, 5,6 m från södra gaveln. |
 | Utebana (ridbana) | | | | |
 | Paddockar/hagar | | | | |
 | Parkering / infart | | | | |

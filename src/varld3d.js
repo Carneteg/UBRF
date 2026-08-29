@@ -221,6 +221,7 @@ function v3dGard(lagg,opp){
     vt.ladaM(r.w,hV,r.h,bg.fargV,M4.translation(r.x+r.w/2,hV/2,r.y+r.h/2),VARV);
     const cx=r.x+r.w/2, cz=r.y+r.h/2;
     const SVART=bg.svart||"#202022";
+    const TAKF=typeof bg.takfot==="string"?bg.takfot:SVART;
     /* Takutsprånget: 25 cm, med en svart vindskiva i kanten. Utan den
        läser plåttaket som en pappskiva ovanpå en låda. */
     const UT=bg.takfot?0.25:0.0;
@@ -239,10 +240,10 @@ function v3dGard(lagg,opp){
       }
       if(bg.takfot){
         for(const s of [-1,1]){               // takfoten längs långsidorna
-          husD.lada(0.11,0.26,r.h+0.5+2*UT,SVART,
+          husD.lada(0.10,0.22,r.h+0.5+2*UT,TAKF,
             M4.translation(cx+s*(halv+UT*cv),hV-UT*sv-0.10,cz));
           for(const zs of [r.y-0.25-UT,r.y+r.h+0.25+UT])   // vindskivorna på gavlarna
-            husD.lada(len+2*UT,0.20,0.13,SVART,
+            husD.lada(len+2*UT,0.16,0.11,TAKF,
               M4.mul(M4.translation(cx+s*(halv/2+UT*cv),hV+res/2-UT*sv-0.19,zs),M4.rotZ(-s*vin)));
         }
       }
@@ -256,6 +257,12 @@ function v3dGard(lagg,opp){
         v3dTriangel(vt,[x,hV,r.y],[x,hV,r.y+r.h],[x,hN,cz],bg.fargV,VARV);
       }
     }
+    /* Ljusgrå betongsockel — stallets vägg står inte i marken. */
+    if(bg.sockel){
+      const u=0.06;
+      husD.lada(r.w+2*u,bg.sockel,r.h+2*u,"#B8B4AA",
+        M4.translation(cx,bg.sockel/2,cz));
+    }
     /* Den svarta listen som delar plåtfasaden i två våder. På
        ridhuset är den det första ögat fastnar på från parkeringen —
        den ligger i övre bjälklagets höjd, samma nivå som balkongen. */
@@ -268,14 +275,9 @@ function v3dGard(lagg,opp){
     }
     /* Vita knutar på trähusen. */
     if(!bg.plat)for(const[dx,dz]of[[0,0],[r.w,0],[0,r.h],[r.w,r.h]])
-      husV.lada(0.34,hV,0.34,"#EFE8D8",M4.translation(r.x+dx,hV/2,r.y+dz));
-    /* Ventilationshuvar på stallet. */
-    if(bg.huvar)for(let z=r.y+6;z<r.y+r.h-4;z+=8){
-      husT.lada(0.9,0.5,0.9,"#3A3E44",M4.translation(cx,hN+0.25,z));
-      husT.cyl(0.20,0.20,0.5,"#2E3238",M4.translation(cx,hN+0.5,z),8);
-    }
+      husV.lada(0.18,hV,0.18,"#EEECE4",M4.translation(r.x+dx,hV/2,r.y+dz));
     /* Fasadöppningar. */
-    const FARG={dorr:"#1A1A1C", dorrgul:"#D9A13E", dorrvit:"#E8E2D4",
+    const FARG={dorr:"#1A1A1C", dorrgul:"#A87650", dorrvit:"#E8E2D4",
       dorrgra:"#A2A4A6", dorrmork:"#463F38", portplat:"#B4B7B9",
       portsilver:"#C4C7C9", fonster:"#3A4A5C", valv:"#3A4A5C", rund:"#3A4A5C"};
     for(const o of (bg.oppningar||[])){
@@ -306,8 +308,8 @@ function v3dGard(lagg,opp){
         v3dPolygon(opp,v3dValvKontur(o.b,o.h),glas,mat);
         v3dSprojs(opp,o.b*0.9,o.h*0.72,F(o.z0+o.h*0.36,OPPDJUP.sprojs),3,2);
       }else if(o.typ==="rund"){               // bullseye
-        v3dPolygon(opp,v3dRundKontur(o.b+0.20),"#EEEEE8",F(o.z0+o.h/2,OPPDJUP.karm));
-        v3dPolygon(opp,v3dRundKontur(o.b),glas,mat);
+        v3dPolygon(opp,v3dRundKontur(o.b+0.26,16),"#EEEEE8",F(o.z0+o.h/2,OPPDJUP.karm));
+        v3dPolygon(opp,v3dRundKontur(o.b,16),glas,mat);
         v3dSprojs(opp,o.b*0.68,o.b*0.68,F(o.z0+o.h/2,OPPDJUP.sprojs),2,2);
       }else{
         opp.panel(o.b,o.h,glas,mat);
@@ -321,6 +323,9 @@ function v3dGard(lagg,opp){
               F2(sd*o.b*0.24,o.z0+o.h*0.72,OPPDJUP.sprojs));
           opp.lada(0.05,o.h*0.92,0.05,"#EEEEE8",F2(0,o.z0+o.h/2,OPPDJUP.sprojs));
         }
+        if(o.typ==="dorrgul")                 // solfjäderfönstret överst
+          v3dPolygon(opp,v3dValvKontur(o.b*0.74,o.h*0.30),"#C8D6DE",
+            F(o.z0+o.h*0.79,OPPDJUP.sprojs));
         if(o.typ==="dorr"||o.typ==="dorrmork") // handtag
           opp.lada(0.05,0.16,0.05,"#C4C7C9",F2(o.b*0.34,o.z0+1.05,OPPDJUP.sprojs));
       }
@@ -329,6 +334,7 @@ function v3dGard(lagg,opp){
         v3dSkarmtak(husD,F(o.z0+o.h+0.30,0.02),o.skarm,0.80,0.42);
     }
     if(bg.detalj==="ridhus")v3dRidhusYttre(bg,husD,opp);
+    else if(bg.detalj==="stall")v3dStallYttre(bg,husD,opp);
   }
   lagg(husV,T.falu); lagg(husP,T.ridhusplat); lagg(husT,T.takplat); lagg(husD,null);
 
@@ -400,10 +406,17 @@ function v3dGard(lagg,opp){
             M4.mul(M4.translation(x+i*1.4,0.65,z+j*1.5),M4.rotZ(Math.PI/2)),SEG(10,6));
         break;
       case"grushog": pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),SEG(12,6)); break;
-      case"transport":
-        pr.lada(2.2,1.9,5.4,"#E8E6E0",M4.mul(M4.translation(x,1.25,z),M4.rotY(-(p.rikt||0))));
-        pr.lada(2.0,0.5,2.0,"#4A4E52",M4.mul(M4.translation(x,0.3,z),M4.rotY(-(p.rikt||0))));
-        break;
+      case"transport":{                       // hästtransporten
+        const m=M4.mul(M4.translation(x,0,z),M4.rotY(-(p.rikt||0)));
+        pr.lada(2.2,1.75,5.4,"#E8E6E0",M4.mul(m,M4.translation(0,1.35,0)));
+        pr.lada(2.24,0.34,4.2,"#8A8C90",M4.mul(m,M4.translation(0,1.95,-0.3)));
+        pr.lada(2.05,0.34,3.0,"#3A4A5C",M4.mul(m,M4.translation(0,1.62,0.4)));
+        pr.lada(1.9,1.25,0.10,"#B9BCC0",M4.mul(m,M4.translation(0,1.05,2.72)));
+        for(const dx of [-1.12,1.12])for(const dz of [-1.0,0.3])
+          pr.cyl(0.36,0.36,0.24,"#2E3238",
+            M4.mul(M4.mul(m,M4.translation(dx,0.36,dz)),M4.rotZ(Math.PI/2)),SEG(10,6));
+        pr.lada(0.12,0.5,1.6,"#8A8C90",M4.mul(m,M4.translation(0,0.28,-3.4)));
+        break;}
       case"bord":
         pr.lada(1.5,0.08,0.8,"#8A7250",M4.translation(x,0.74,z));
         for(const[dx,dz]of[[-0.6,0],[0.6,0]])
@@ -419,12 +432,6 @@ function v3dGard(lagg,opp){
       case"stol":
         pr.lada(0.46,0.06,0.46,"#8A7250",M4.translation(x,0.45,z));
         pr.lada(0.46,0.5,0.06,"#8A7250",M4.translation(x,0.70,z-0.20));
-        break;
-      case"veranda":
-        pr.lada(5.2,0.18,2.4,"#7E8288",M4.translation(x,2.55,z));
-        for(const dx of [-2.3,2.3])
-          pr.lada(0.16,2.5,0.16,"#EFE8D8",M4.translation(x+dx,1.25,z-1.0));
-        pr.lada(5.2,0.10,0.10,"#EFE8D8",M4.translation(x,2.42,z-1.05));
         break;
       case"mast":
         pr.cyl(0.13,0.09,7.5,"#8C8F92",M4.translation(x,0,z),8);
@@ -449,6 +456,12 @@ function v3dGard(lagg,opp){
       case"busskylt":
         pr.cyl(0.06,0.06,2.4,"#8C8F92",M4.translation(x,0,z),6);
         pr.panel(0.5,0.7,"#2F5C8F",M4.translation(x,2.2,z+0.05));
+        break;
+      case"vagvisare":                        // vägvisaren framför stallet
+        pr.cyl(0.07,0.07,3.15,"#4A4E52",M4.translation(x,0,z),8);
+        for(let i=0;i<8;i++)
+          pr.lada(1.05,0.17,0.045,"#2A2E34",
+            M4.translation(x+(i%2?0.58:-0.58),2.86-i*0.27,z));
         break;
       case"skyltstolpe":
         pr.cyl(0.08,0.08,2.6,"#6B5540",M4.translation(x,0,z),6);
@@ -560,6 +573,100 @@ function v3dRidhusYttre(bg,d,opp){
   }
   d.lada(0.09,1.06,0.09,STAL,F(su0,0.53,sut+sbr-0.03));   // nedersta stolpen
   d.lada(0.09,1.30,0.09,STAL,F(su1-0.05,bz+0.65,sut+sbr-0.03));
+}
+
+
+/* ── Stallet utvändigt ─────────────────────────────────────────────
+   Byggt efter references/buildings/stall/KORT.md. Volymen, fönster-
+   raden och den vita takfoten sköts av den generella slingan ovan;
+   här läggs det som bara stallet har:
+
+     · huvraden på nocken — en huv per box, och den börjar först efter
+       förstukvisten, inte vid gaveln. Det är byggnadens tydligaste
+       drag på håll.
+     · snörasskyddet, ett svart streck tvärs över det stora grå taket,
+       och den svarta hängrännan med stuprör
+     · förstukvisten med sitt vita ribbräcke och den ockragula dörren
+     · södra gavelns balkong och svarta spiraltrappa
+
+   u räknas moturs runt huset, alltså från norra gaveln på västra
+   långsidan — samma u som fasadöppningarna i site.js.
+   ── */
+function v3dStallYttre(bg,d,opp){
+  const r=bg.rekt, hV=bg.hV, hN=bg.hN;
+  const cx=r.x+r.w/2, cz=r.y+r.h/2, halv=r.w/2, res=hN-hV;
+  const SVART=bg.svart||"#26292E", VIT="#EEECE4", GRA=bg.fargT;
+  const HUV=glMorka(GRA,0.86);
+  /* Fasadramar: +Y uppåt, +Z utåt. */
+  const FS=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);          // södra gaveln
+  const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);     // västra långsidan
+
+  /* Huvraden. Boxarna börjar 10,4 m in och är 3,5 m breda (STALLINNE),
+     och en huv sitter mitt över varje box. */
+  for(let i=0;i<11;i++){
+    const z=r.y+10.4+3.5*i+1.75;
+    d.lada(0.44,0.62,0.44,HUV,M4.translation(cx,hN+0.28,z));
+    d.lada(0.50,0.06,0.50,glMorka(GRA,0.7),M4.translation(cx,hN+0.58,z));
+    d.lada(0.66,0.09,0.66,HUV,M4.translation(cx,hN+0.66,z));
+  }
+  /* Snörasskyddet på båda takfallen, en tredjedel upp, och hängrännan
+     med stuprör i hörnen. */
+  for(const s of [-1,1]){
+    const px=cx+s*halv*0.70, py=hV+res*0.30;
+    d.cyl(0.035,0.035,r.h-1.2,SVART,
+      M4.mul(M4.translation(px,py+0.17,r.y+0.6),M4.rotX(Math.PI/2)),6);
+    for(let z=r.y+1.4;z<r.y+r.h-1;z+=2.2)
+      d.lada(0.06,0.24,0.05,SVART,M4.translation(px,py+0.08,z));
+    d.lada(0.14,0.14,r.h+0.4,SVART,M4.translation(cx+s*(halv+0.17),hV-0.13,cz));
+    for(const z of [r.y+0.9,r.y+r.h-0.9])
+      d.cyl(0.055,0.055,hV-0.22,SVART,M4.translation(cx+s*(halv+0.15),0,z),6);
+  }
+
+  /* ── Förstukvisten, 5,6 m från södra gaveln ──
+     Sadeltak med nocken ut från väggen, vita stolpar, och ett räcke av
+     liggande ribbor — det är räcket man ser först när man går fram. */
+  const PU=r.h-5.6, bw=5.2, but=2.8, be=2.95, br=1.05;
+  const F2=(du,z,ut)=>FW(PU+du,z,ut);
+  const hh=bw/2, hyp=Math.hypot(hh,br), pv=Math.atan2(br,hh);
+  d.lada(bw+0.4,0.14,but+0.2,"#C2BFB6",F2(0,0.07,but/2));        // betonggolvet
+  for(const s of [-1,1]){
+    d.lada(hyp,0.10,but+0.45,GRA,
+      M4.mul(M4.mul(F2(0,be+br/2,but/2-0.05),M4.translation(s*hh/2,0,0)),M4.rotZ(-s*pv)));
+    d.lada(hyp,0.17,0.10,VIT,                                     // vindskivorna
+      M4.mul(M4.mul(F2(0,be+br/2,but+0.10),M4.translation(s*hh/2,0,0)),M4.rotZ(-s*pv)));
+    d.lada(0.12,0.19,but+0.35,VIT,F2(s*(hh+0.05),be-0.07,but/2)); // takfoten på sidorna
+    d.lada(0.15,be-0.14,0.15,VIT,F2(s*(hh-0.14),(be-0.14)/2+0.14,but-0.20));
+  }
+  /* Kvistens gavelspets är röd panel med vita vindskivor, inte vit. */
+  v3dPolygon(d,[[-hh,0],[hh,0],[0,br]],bg.fargV,F2(0,be,but+0.06));
+  d.lada(bw+0.2,0.13,0.14,VIT,F2(0,be-0.03,but+0.12));   // fris under spetsen
+  for(let y=0.26;y<1.22;y+=0.125){                                // ribbräcket
+    d.lada(bw-0.34,0.072,0.042,VIT,F2(0,y+0.14,but-0.20));
+    for(const s of [-1,1])
+      d.lada(0.042,0.072,but-0.75,VIT,F2(s*(hh-0.14),y+0.14,but/2+0.16));
+  }
+  d.lada(bw-0.34,0.07,0.11,VIT,F2(0,1.46,but-0.20));              // handledaren
+  for(const s of [-1,1])
+    d.lada(0.11,0.07,but-0.75,VIT,F2(s*(hh-0.14),1.46,but/2+0.16));
+  d.lada(0.10,0.24,0.10,SVART,F2(0,2.52,0.09));                   // vägglampan
+  d.cyl(0.17,0.11,0.13,"#E4E0D6",M4.mul(F2(0,2.40,0.20),M4.rotX(-Math.PI/2)),10);
+
+  /* ── Södra gaveln: balkongen och spiraltrappan ── */
+  const bz=4.55;
+  d.lada(2.2,0.12,1.10,"#4A4E52",FS(7.5,bz-0.06,0.55));
+  for(const y of [bz+0.42,bz+0.88]){
+    d.lada(2.2,0.05,0.05,SVART,FS(7.5,y,1.06));
+    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FS(7.5+s*1.08,y,0.55));
+  }
+  for(let u=6.55;u<8.5;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FS(u,bz+0.46,1.06));
+  const sr=0.70, steg=18, sh=bz/steg, su=5.2, sut=0.62;
+  d.cyl(0.085,0.085,bz+0.50,SVART,FS(su,0,sut),8);
+  for(let i=0;i<steg;i++){
+    const m=M4.mul(FS(su,(i+1)*sh,sut),M4.rotY(i*0.40));
+    d.lada(sr,0.05,0.30,"#3A3E44",M4.mul(m,M4.translation(sr/2,0,0)));
+    d.lada(0.035,0.92,0.035,SVART,M4.mul(m,M4.translation(sr-0.05,0.46,0)));
+  }
+  d.cyl(0.23,0.23,0.10,"#F0C24A",M4.mul(FS(6.3,6.10,0.03),M4.rotX(-Math.PI/2)),10);
 }
 
 /* ── Stallet invändigt ────────────────────────────────────────── */

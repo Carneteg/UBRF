@@ -11,6 +11,25 @@
    Geometrin här är den enda sanningen — rendering läser bara detta.
    ══════════════════════════════════════════════════════════════════ */
 
+/* Fasadernas u löper moturs runt huset: på västra långsidan räknas den
+   från NORRA gaveln, på östra från den södra. Stallets foton och kort
+   beskriver allt som avstånd från södra gaveln, så omräkningen görs här
+   en gång i stället för i huvudet varje rad. Stallet är 54 m långt. */
+const sV = s => 54 - s;
+
+/* Stallets långsidor har ett valvbågat fönster per box, i samma takt som
+   boxarna innanför (STALLINNE: boxarna börjar 10,4 m in och är 3,5 m
+   breda). Rytmen är byggnadens tydligaste drag på håll — därför räknas
+   den fram ur samma tal i stället för att skrivas av för hand. */
+function stallFonster(sida){
+  const ut=[];
+  for(let i=0;i<10;i++){
+    const s=10.4+3.5*i+1.75;
+    ut.push({sida, u:sida==="W"?sV(s):s, b:1.15, h:1.55, z0:1.55, typ:"valv"});
+  }
+  return ut;
+}
+
 const ANL = {
   bredd: 210, djup: 170,
 
@@ -70,27 +89,40 @@ const ANL = {
        {sida:"E", u:4,  b:3.4, h:2.9, z0:0, typ:"portplat"}, // durkplåtdörrarna mot gården
        {sida:"N", u:9,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten
      ]},
-    /* Stallet — faluröd träpanel, vita knutar, välvda småfönster,
-       grått plåttak med rad av svarta ventilationshuvar. Byggt 2016.
-       Södra gaveln: klubbdelens entré med veranda och gulockra dörr. */
-    {id:"stall", rekt:{x:154, y:46, w:15, h:54}, hV:3.5, hN:6.0, nock:"NS",
-     fargV:"#7C2A24", fargT:"#7E8288", huvar:true, label:"STALLET",
+    /* Stallet. Måtten och färgerna kommer ur byggnadskortet
+       references/buildings/stall/KORT.md, läst ur fasad- och
+       entrébilderna i samma mapp.
+         · liggande träpanel i mörk falurött (80,35,47), vita knutar,
+           vitt foder runt varje fönster, ljusgrå betongsockel
+         · sadeltak i mörk blågrå bandtäckt plåt, 28° resning, med
+           snörasskydd och svart hängränna
+         · huvraden på nocken — en huv per box, och den börjar först
+           efter förstukvisten, inte vid gaveln
+         · ett valvbågat fönster per box längs båda långsidorna
+         · förstukvisten på västra långsidan, 5,6 m från södra gaveln:
+           ockragul dörr, runda fönster, vitt ribbräcke
+         · södra gaveln: valvfönster, balkongdörr och spiraltrappa */
+    {id:"stall", rekt:{x:154, y:46, w:15, h:54}, hV:4.4, hN:8.4, nock:"NS",
+     fargV:"#6E2F44", fargT:"#5E646C", svart:"#26292E", takfot:"#EEECE4",
+     detalj:"stall", sockel:0.35, label:"STALLET",
      oppningar:[
-       {sida:"S", u:6.3, b:1.2, h:2.1, z0:0, typ:"dorrgul"}, // Entré (gulockra)
-       {sida:"S", u:3.4, b:0.9, h:0.9, z0:1.5, typ:"rund"},  // bullseye-fönstren
-       {sida:"S", u:10.6,b:0.9, h:0.9, z0:1.5, typ:"rund"},
-       {sida:"W", u:25,  b:1.8, h:2.2, z0:0, typ:"dorrvit"}, // vita dubbeldörren mot gården
-       {sida:"W", u:6,  b:1.1, h:1.0, z0:1.4, typ:"valv"},   // välvda småfönster
-       {sida:"W", u:12, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"W", u:18, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"W", u:33, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"W", u:39, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"W", u:45, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"E", u:8,  b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"E", u:20, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"E", u:32, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"E", u:44, b:1.1, h:1.0, z0:1.4, typ:"valv"},
-       {sida:"N", u:6.1, b:2.8, h:2.7, z0:0, typ:"dorrgra"}, // grå dubbeldörren (service)
+       /* Förstukvisten på västra långsidan. */
+       {sida:"W", u:sV(5.6), b:1.15, h:2.10, z0:0,    typ:"dorrgul"},  // ockragula entrédörren
+       {sida:"W", u:sV(4.0), b:0.66, h:0.66, z0:1.78, typ:"rund"},     // runda fönstren vid dörren
+       {sida:"W", u:sV(7.2), b:0.66, h:0.66, z0:1.78, typ:"rund"},
+       {sida:"W", u:sV(2.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},     // valvfönster kring kvisten
+       {sida:"W", u:sV(8.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
+       ...stallFonster("W"), ...stallFonster("E"),
+       /* Södra gaveln — den höga, med balkongen och spiraltrappan. */
+       {sida:"S", u:3.4,  b:1.15, h:1.55, z0:4.75, typ:"valv"},
+       {sida:"S", u:11.6, b:1.15, h:1.55, z0:4.75, typ:"valv"},
+       {sida:"S", u:5.4,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
+       {sida:"S", u:9.6,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
+       {sida:"S", u:7.5,  b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},     // balkongdörren
+       /* Norra gaveln: servicedelens dubbeldörr. [saknas foto] */
+       {sida:"N", u:6.1,  b:2.8,  h:2.7,  z0:0, typ:"dorrgra"},
+       /* Vita dubbeldörren mot gräsgården. */
+       {sida:"W", u:25,   b:1.8,  h:2.2,  z0:0, typ:"dorrvit"},
      ]},
     /* Förbindelselängan som gör stallet till ett L och stänger gården. */
     {id:"langa", rekt:{x:144, y:100, w:10, h:6}, hV:3.0, hN:4.4, nock:"EW",
@@ -152,7 +184,7 @@ const ANL = {
     {typ:"silo",      pos:[171,102]},                    // fodersilon vid norra gaveln
     {typ:"balar",     pos:[160,105]},                    // ensilagebalarna
     {typ:"grushog",   pos:[152,104]},
-    {typ:"transport", pos:[148,42], rikt:0.3},           // hästtransporten
+    {typ:"transport", pos:[147,23], rikt:0.5},           // hästtransporten på grusplanen
     {typ:"bord",      pos:[150,60]},                     // picknickborden på gräsgården
     {typ:"bord",      pos:[148,72]},
     {typ:"bank",      pos:[146,80]},
@@ -162,7 +194,7 @@ const ANL = {
     {typ:"skylt",     pos:[118,77], text:"UPPLANDS-BRO RYTTARFÖRENING", norm:[-1,0]},
     {typ:"cafeskylt", pos:[136.4,43.8], norm:[0,-1]},   // skylten vid trappans fot
     {typ:"flagga",    pos:[107,15]},
-    {typ:"skyltstolpe",pos:[147,40]},
+    {typ:"vagvisare", pos:[151.5,57]},   // vägvisaren med åtta armar
     {typ:"stenhast",  pos:[149.5,29.5]},                 // stenhästarna i lekhagen
     {typ:"stenhast",  pos:[152.5,32]},
     {typ:"stenhast",  pos:[150.5,33]},
@@ -173,14 +205,13 @@ const ANL = {
     {typ:"sopstation",pos:[103,13]},
     {typ:"ac",        pos:[144.4,54], norm:[1,0]},                   // värmepumparna mot gården
     {typ:"ac",        pos:[144.4,58], norm:[1,0]},
-    {typ:"veranda",   pos:[160.3,45.6], norm:[0,-1]},                 // verandan vid stallentrén
     {typ:"busskylt",  pos:[118,7.6]},
   ],
 
   /* Interaktionspunkter på gården. */
   dorrar: [
-    {id:"stallentre", pos:[160.3,45.2], text:"Gå in i stallet (Entré)",
-     mot:"stallinne", spawn:{x:7.5, y:2.2, rikt:Math.PI/2}},
+    {id:"stallentre", pos:[152.9,51.6], text:"Gå in i stallet (Entré)",
+     mot:"stallinne", spawn:{x:1.8, y:5.6, rikt:0}},
     {id:"stall_v",  pos:[153.6,71], text:"Gå in i stallet (gårdsdörren)",
      mot:"stallinne", spawn:{x:1.2, y:25, rikt:0}},
     {id:"stall_n",  pos:[160.3,100.8], text:"Gå in i stallet (bakre dörren)",
@@ -233,8 +264,8 @@ const STALLINNE = {
   /* Tvärväggar med dörröppning i gångens bredd. */
   tvarvaggar:[ {y:9, gap:2.8, brand:true}, {y:45.5, gap:2.8, brand:false} ],
   dorrar:[
-    {id:"ut_s", pos:[7.5,0.8],  text:"Ut till gårdsplanen", mot:"gard",
-     spawn:{x:160.3,y:44.2,rikt:-Math.PI/2}},
+    {id:"ut_s", pos:[0.8,5.6],  text:"Ut genom entrén", mot:"gard",
+     spawn:{x:152.6,y:51.6,rikt:Math.PI}},
     {id:"ut_v", pos:[0.8,25],   text:"Ut till gräsgården", mot:"gard",
      spawn:{x:152.6,y:71,rikt:Math.PI}},
     {id:"ut_n", pos:[7.5,51.2], text:"Ut till bakgården", mot:"gard",
