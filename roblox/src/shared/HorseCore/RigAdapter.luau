@@ -177,6 +177,24 @@ function RigAdapter.setBodyTilt(rig: Types.Rig, roll: number, pitch: number)
 	joint.C0 = (base :: CFrame) * CFrame.Angles(pitch, 0, -roll)
 end
 
+--[[ Ryttarens sekundärrörelse. Samma mönster som setBodyTilt: en
+     bas-CFrame sparas första gången och offseten läggs ovanpå, så att
+     sitsanimationen aldrig skrivs över utan bara vinklas.
+
+     Sätet är den led ryttaren sitter i. Saknas den händer ingenting —
+     ryttaren sitter kvar i sin vanliga pose, vilket är rätt sorts
+     degradering: en saknad led ska inte kunna krascha ridningen. ]]
+function RigAdapter.setRiderLean(rig: Types.Rig, roll: number, pitch: number)
+	local seat = rig.seat
+	if not seat then return end
+	local base = seat:GetAttribute("BaseRiderC0")
+	if base == nil then
+		seat:SetAttribute("BaseRiderC0", seat.C0)
+		base = seat.C0
+	end
+	seat.C0 = (base :: CFrame) * CFrame.Angles(pitch, 0, -roll)
+end
+
 --[[ Procedurell påbyggnad ovanpå animationen: huvudet vrids något mot
      svängen, svansen följer farten. Skrivs efter att animationen har
      uppdaterat benen, annars skriver klippet över den. Aldrig så mycket

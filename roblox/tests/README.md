@@ -9,6 +9,7 @@ i stället för att beskrivas.
 ```bash
 python3 roblox/tests/build.py && luau roblox/tests/.build/movement.spec.luau
 python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build/camera.spec.luau
+python3 roblox/tests/build.py tests/rider.spec.luau && luau roblox/tests/.build/rider.spec.luau
 ```
 
 ## Varför en byggfil
@@ -23,8 +24,11 @@ redan laddats. Det som mäts är alltså den kod som körs i Studio, inte en kop
 ## Vad stubbarna täcker
 
 Bara det rörelse- och kamerakoden faktiskt rör: vektorer med de operatorer som
-används, `CFrame` som bär position och yaw, en `Humanoid` som sparar `WalkSpeed`
-och rörelseriktning, och ett `workspace` vars `Raycast` alltid ger plan mark.
+används, `CFrame` som bär position och de tre vinklarna, en `Humanoid` som
+sparar `WalkSpeed` och rörelseriktning, ett `workspace` vars `Raycast` alltid ger
+plan mark, och en led med attribut och `C0` för kropps- och ryttarlutningen.
+`CFrame`-stubben summerar vinklar i stället för att multiplicera matriser; för de
+små utslag koden lägger på skilda axlar ger det samma svar.
 Saknas en stub kraschar bänken med tjänstens namn i klartext, i stället för att
 tyst mäta fel sak.
 

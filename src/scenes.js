@@ -539,7 +539,7 @@ function visaResultat(dom){
 }
 function nollstall(){
   G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
-  G.kappa=0;G.gaitSpar=0;G.gaitFas=0;
+  G.kappa=0;G.gaitSpar=0;G.gaitFas=0;G.accel=0;G.forraTempo=0;G.banLut=0;G.ryttarPitch=0;G.ryttarRoll=0;
   G.tavling=null;BANA.hojd=0.60;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";

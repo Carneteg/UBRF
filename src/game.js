@@ -114,6 +114,10 @@ const G={
   sagaT:0,sagaCd:8,naraRop:0,seed:1,
   kappa:0,           // aktuell kurvatur, 1/m — se svängmodellen i stegaRitt
   banLut:0,          // kroppens lutning i svängen, radianer
+  accel:0,           // utjämnad tempoderivata, m/s² — ryttarens tröghet
+  forraTempo:0,      // förra bildrutans tempo, för derivatan
+  ryttarPitch:0,     // ryttarens tröghet framåt/bakåt, radianer
+  ryttarRoll:0,      // ryttarens balans i svängen, radianer
   gaitSpar:0,        // tillryggalagd sträcka i m, driver gångartsfasen
 };
 /* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
@@ -367,6 +371,30 @@ function stegaRitt(dt){
   {const centripetal=G.kappa*G.ride.tempo*G.ride.tempo;
    const mal=clamp(centripetal*0.012,-0.075,0.075);
    G.banLut=(G.banLut||0)+(mal-(G.banLut||0))*(1-Math.exp(-dt/0.22));}
+
+  /* ── Ryttarens tröghetssignaler ───────────────────────────────────
+     En ryttare är en massa ovanpå en annan massa. Accelererar hästen
+     hamnar hon en aning efter; bromsar hästen kommer hon en aning före.
+     I en sväng söker hon balansen inåt, men mindre än hästen gör.
+
+     Här räknas bara SIGNALERNA — själva rörelsen ritas i scen3d.js, så
+     att den pedagogiska sitslogiken (Ctrl djupt, Shift lätt) inte blandas
+     ihop med den ofrivilliga. Accelerationen jämnas ut hårt: rå
+     tempoderivata hackar, och en ryttare som ryckte per bildruta skulle
+     läsa som ragdoll. */
+  {const dTempo=(G.ride.tempo-(G.forraTempo||0))/Math.max(dt,1e-4);
+   G.forraTempo=G.ride.tempo;
+   G.accel=(G.accel||0)+(clamp(dTempo,-6,6)-(G.accel||0))*(1-Math.exp(-dt/0.18));
+   /* Signalerna räknas HÄR och inte i ritfunktionen, så att de går att
+      mäta och så att konstanterna finns på ett ställe. Skalan är satt
+      så att det mest extrema fallet — full skänkel ur halt, drygt
+      4 m/s² — landar strax under taket i stället för att klippa mot
+      det, och en vanlig övergång ger drygt en grad.
+
+      Ryttaren följer hästen i svängen men lägger sig inte som hästen:
+      en tredjedel av banlutningen. Kroppen ska följa, inte tävla. */
+   G.ryttarPitch=clamp(-G.accel*0.014,-0.055,0.055);
+   G.ryttarRoll=clamp((G.banLut||0)*0.34,-0.030,0.030);}
 }
 function lerpAngle(a,b,t){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*t;}
 

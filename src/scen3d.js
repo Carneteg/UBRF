@@ -657,7 +657,7 @@ function s3RitaHast(o){
     for(const s of [-1,1])   // gjorden runt bålen
       rita(D.rem,s3Segment(P(0.10,1.52,s*0.16),P(0.10,1.06,s*0.26),1),"#4A3526");
   }
-  if(o.ryttare)s3RitaRyttare(bas,{...o,fas,gangart,luft,u,bage,huvudPos:huvudB(halsB,nick)});
+  if(o.ryttare)s3RitaRyttare(bas,{...o,fas,gangart,luft,u,bage,banlut:banLut,huvudPos:huvudB(halsB,nick)});
   function huvudB(hb,n){return [hb[0]+Math.cos(n)*0.34, hb[1]+Math.sin(n)*0.34-0.04, 0];}
 }
 
@@ -703,17 +703,54 @@ function s3RitaRyttare(bas,o){
   /* Lättridning: upp ur sadeln vartannat travsteg. */
   const latt=o.gangart==="trav"&&a.lattridning
     ? 0.085*Math.max(0,Math.sin(4*Math.PI*o.fas)) : 0;
-  /* Sitsen: Ctrl djupt ner, Shift lätt sits framåt. Språng = framåt. */
+  /* Sitsen: Ctrl djupt ner, Shift lätt sits framåt. Språng = framåt.
+     Det här är den PEDAGOGISKA sitsen — den ryttaren väljer — och den
+     ändras inte av det som läggs till nedan. */
   let lutning=0.16+0.42*(0.5-clamp(a.sits,0,1));
   if(o.luft>0)lutning=0.55*o.bage+0.16;
-  const satY=1.64+latt, satX=0.06+lutning*0.10;
-  const bal=M4.mul(M4.translation(satX,satY,0),M4.rotZ(-lutning*0.5));
+
+  /* ── Sekundärrörelsen ─────────────────────────────────────────────
+     Ovanpå sitsen, aldrig i stället för den: de ofrivilliga rörelser en
+     kropp gör när den sitter på en annan kropp som rör sig.
+
+       · RYTMEN — bäckenet följer hästens takt. Skritt gungar långsamt i
+         fyrtakt, trav studsar i tvåtakt, galopp vaggar i entakt. Mycket
+         små tal: den stora rörelsen i trav är lättridningen ovan, och
+         två rytmer som konkurrerar läser som skakning.
+       · TRÖGHETEN — accelererar hästen hamnar ryttaren efter och lutar
+         bakåt en aning; bromsar hästen kommer hon före. Signalen är den
+         utjämnade tempoderivatan från stegaRitt.
+       · BALANSEN — i en sväng söker hon sig inåt, men mindre än hästen:
+         kroppen ska följa hästen, inte lägga sig som en motorcyklist.
+         Därför bara en tredjedel av hästens banlutning.
+
+     Allt är klampat. En ryttare som studsar mer än några centimeter
+     eller lutar mer än ett par grader läser som ragdoll, och det är
+     precis vad Gate-dokumentet varnar för. */
+  const rytmAmp={skritt:0.008, trav:0.014, galopp:0.020}[o.gangart]||0;
+  const rytmTakt={skritt:4, trav:4, galopp:2}[o.gangart]||0;
+  const rytm=rytmAmp*Math.sin(rytmTakt*Math.PI*o.fas);
+  /* Tröghet och balans räknas i stegaRitt och läses här — samma tal
+     som mätningarna använder. Andra ekipage än ditt får noll: de rids
+     av NPC-logik utan tempoderivata. */
+  const troghet=(o.jag&&typeof G!=="undefined"&&G.ryttarPitch)||0;
+  const balans=(o.jag&&typeof G!=="undefined"&&G.ryttarRoll)||0;
+
+  const satY=1.64+latt+rytm, satX=0.06+lutning*0.10;
+  /* Bäckenet bär rytmen och tröghetens halva; överkroppen hela, så att
+     kroppen viker sig i midjan i stället för att luta som en stolpe. */
+  const bal=M4.mul(M4.mul(M4.translation(satX,satY,0),M4.rotZ(-lutning*0.5-troghet*0.5)),
+    M4.rotX(balans*0.5));
   rita(D.bal,bal,"#FFFFFF");
-  const torso=M4.mul(M4.translation(satX+0.02,satY+0.28,0),M4.rotZ(-lutning));
+  const torso=M4.mul(M4.mul(M4.translation(satX+0.02,satY+0.28,0),
+    M4.rotZ(-lutning-troghet)), M4.rotX(balans));
   rita(D.torso,torso,"#FFFFFF");
-  /* Huvudet blickar dit hästen ska; håret följer med. */
+  /* Huvudet blickar dit hästen ska; håret följer med. Huvudet håller
+     sig stillare än överkroppen — en ryttare stabiliserar blicken, och
+     det är också det som skiljer en ryttare från en säck. */
   const hx=satX+0.04+Math.sin(lutning)*0.50, hy=satY+0.28+Math.cos(lutning)*0.33;
-  const huvM=M4.mul(M4.translation(hx,hy,0),M4.rotZ(-lutning*0.6));
+  const huvM=M4.mul(M4.mul(M4.translation(hx,hy,0),
+    M4.rotZ(-lutning*0.6-troghet*0.35)), M4.rotX(balans*0.4));
   rita(D.har,huvM,"#FFFFFF");
   rita(D.huvudR,huvM,"#FFFFFF");
   rita(D.hjalm,M4.mul(huvM,M4.translation(0,0.100,0)),"#FFFFFF");

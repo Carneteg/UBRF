@@ -50,20 +50,23 @@ function vec(x, y, z)
 end
 Vector3 = { new = vec, yAxis = vec(0, 1, 0), zero = vec(0, 0, 0) }
 
-local function cframe(pos, look, yaw)
+local function cframe(pos, look, yaw, pitch, roll)
 	local c = { Position = pos or vec(), LookVector = look or vec(0, 0, 1),
-		Yaw = yaw or 0 }
-	--[[ Multiplikation används för att vrida roten på stället; stubben
-	     behöver bara bära yaw:en vidare så att testet kan läsa den. ]]
+		Yaw = yaw or 0, Pitch = pitch or 0, Roll = roll or 0 }
+	--[[ Multiplikation används för att vrida en led på stället. Stubben bär
+	     de tre vinklarna vidare som summor så att testet kan läsa dem. Det
+	     är inte riktig rotationsmatematik — men för små vinklar kring skilda
+	     axlar, vilket är allt koden lägger på, ger den samma svar. ]]
 	c.__mul = function(a, b)
-		return cframe(a.Position, a.LookVector, (a.Yaw or 0) + (b.Yaw or 0))
+		return cframe(a.Position, a.LookVector, (a.Yaw or 0) + (b.Yaw or 0),
+			(a.Pitch or 0) + (b.Pitch or 0), (a.Roll or 0) + (b.Roll or 0))
 	end
 	return setmetatable(c, c)
 end
 CFrame = {
 	new = cframe,
 	lookAt = function(a, b) return cframe(a, b) end,
-	Angles = function(_, y) return cframe(nil, nil, y or 0) end,
+	Angles = function(x, y, z) return cframe(nil, nil, y or 0, x or 0, z or 0) end,
 	identity = cframe(),
 	fromMatrix = function(p) return cframe(p) end,
 }
@@ -121,6 +124,7 @@ local __services = {
 __Core = {
 	RigAdapter = {
 		setBodyTilt = function() end,
+		setRiderLean = function() end,
 		resolve = function() return nil end,
 		playAnimation = function() end,
 		stopAnimation = function() end,
@@ -152,4 +156,14 @@ function __makeRig()
 	}
 	return { model = { Name = "Horse" }, root = root, humanoid = hum,
 		bones = {}, attachments = {}, animator = nil }
+end
+
+--[[ En led med attribut och C0 — det setBodyTilt och setRiderLean rör.
+     Instansen bär också :IsA så att den kan passera RigAdapter.build. ]]
+function __makeJoint(klass)
+	local j = { C0 = cframe(), _attr = {}, ClassName = klass or "Motor6D" }
+	function j:GetAttribute(k) return self._attr[k] end
+	function j:SetAttribute(k, v) self._attr[k] = v end
+	function j:IsA(k) return k == self.ClassName end
+	return j
 end
