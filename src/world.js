@@ -7,9 +7,9 @@
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
-const GA={fart:1.7, jogg:3.3, svang:2.7, radie:0.35};
+const GA={fart:1.8, jogg:3.4, svangMax:5.5, accel:8, broms:13, radie:0.35};
 const VD={
-  px:0, py:0, rikt:0, fas:0, tid:0,
+  px:0, py:0, rikt:0, fart:0, fas:0, tid:0,
   spår:[], hastX:0, hastY:0, hastRikt:0,
   prompt:null, ePrev:false, _ov:null,
   /* Klickmålet på kartan: {x, y, namn} eller null. Se GÅ HIT nedan. */
@@ -166,27 +166,28 @@ function overlayUppe(){
 function stegaVandring(dt){
   VD.tid+=dt;
   if(overlayUppe())return;
-  const fram=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?0.6:0);
-  /* Kursen är atan2-vinkeln i markplanet (framåt = cos, sin), och i ett
-     y-uppåt-plan svänger VÄXANDE vinkel moturs — alltså vänster. Därför
-     MINUS här.
-
-     Den gamla kommentaren på den här raden räknade fram spelarens
-     högersida som framåt × upp och fick (−sin, 0, cos). Det stämmer i en
-     högerhänt bas, men spelets bas (öster, upp, norr) är vänsterhänt —
-     GL.kamera speglar därför vyn i X och sätter frontFace till CW. Med
-     den speglingen inräknad är (−sin, cos) spelarens VÄNSTER, inte
-     höger, och gå-läget rättades en gång åt fel håll för att stämma med
-     en ridning som redan var spegelvänd.
-
-     Mätt: nosen rakt norrut (90°), D nedtryckt en halv sekund → 167°.
-     Moturs. Nu blir det 13°, alltså höger. */
-  let sv=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
+  /* Styrningen är KAMERARELATIV: W går dit kameran tittar, A/D i sidled,
+     S mot kameran — figuren vrider sig mjukt mot rörelseriktningen och
+     går dit. I kartvyn är referensen norr, så W alltid är uppåt på
+     kartan. Det gamla tankläget (A/D roterar, W ger gas) är borta: det
+     var det som gjorde att höger och vänster kändes slumpartade, och
+     varje rättning bara flyttade felet. Kursen är atan2-vinkel där
+     VÄXANDE vinkel är moturs — höger om en kurs v är därför
+     (sin v, −cos v). */
+  const ix=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
+  const iy=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?1:0);
   const jogg=IN.ned.ShiftLeft||IN.ned.ShiftRight;
-  let fart=fram*(jogg?GA.jogg:GA.fart);
+  let onskad=null, malFart=0;
+  if(ix||iy){
+    const v=vandringYaw();
+    const rx=Math.cos(v)*iy+Math.sin(v)*ix;
+    const ry=Math.sin(v)*iy-Math.cos(v)*ix;
+    onskad=Math.atan2(ry,rx);
+    malFart=jogg?GA.jogg:GA.fart;
+  }
 
-  /* GÅ HIT: klickmålet skriver över sv och fart — men bara så länge
-     spelaren håller fingrarna borta. Minsta tangenttryck avbryter. */
+  /* GÅ HIT: klickmålet styr — men bara så länge spelaren håller
+     fingrarna borta. Minsta tangenttryck avbryter. */
   if(VD.mal){
     /* Nästa punkt på vägen, inte målet självt — det är skillnaden
        mellan att gå runt ridhuset och att gå in i det. */
@@ -194,18 +195,11 @@ function stegaVandring(dt){
       Math.hypot(VD.vag[0][0]-VD.px,VD.vag[0][1]-VD.py)<1.1)VD.vag.shift();
     const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
     const avst=Math.hypot(VD.mal.x-VD.px, VD.mal.y-VD.py);
-    if(fram||sv||avst<0.9){
+    if(ix||iy||avst<0.9){
       slutaGa();
     }else{
-      const onskad=Math.atan2(delmal[1]-VD.py, delmal[0]-VD.px);
-      let d=onskad-VD.rikt;
-      while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
-      /* sv går genom samma minustecken som tangenterna nedan, så den
-         måste vändas här: vi vill att kursen ska VÄXA mot d. */
-      sv=-clamp(d*2.2,-1,1);
-      /* Full fart först när man är någorlunda riktad — annars ritar man
-         en båge runt målet i stället för att gå dit. */
-      fart=GA.fart*(Math.abs(d)>0.9?0.35:1);
+      onskad=Math.atan2(delmal[1]-VD.py, delmal[0]-VD.px);
+      malFart=GA.fart;
       /* Fastnar man bakom ett hörn ska gåendet SLUTA, inte stå och
          trycka mot en vägg. Kommer man inte 0,2 m närmare på två
          sekunder är vägen inte fri, och då får spelaren styra själv. */
@@ -216,20 +210,45 @@ function stegaVandring(dt){
       }
     }
   }
-  VD.rikt-=sv*GA.svang*dt;
-  let nx=VD.px+Math.cos(VD.rikt)*fart*dt;
-  let ny=VD.py+Math.sin(VD.rikt)*fart*dt;
+
+  /* Vrid mjukt mot önskad kurs, och håll igen på farten i skarpa
+     svängar — figuren går i en båge i stället för att kana i sidled. */
+  if(onskad!==null){
+    let d=onskad-VD.rikt;
+    while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+    VD.rikt+=clamp(d*10,-GA.svangMax,GA.svangMax)*dt;
+    if(Math.abs(d)>1.4)malFart*=0.25;
+    else if(Math.abs(d)>0.6)malFart*=0.6;
+  }
+  /* Ansats och broms i stället för tvärstart och tvärstopp. */
+  VD.fart+=clamp(malFart-VD.fart,-GA.broms*dt,GA.accel*dt);
+  if(!malFart&&VD.fart<0.04)VD.fart=0;
+
+  let nx=VD.px+Math.cos(VD.rikt)*VD.fart*dt;
+  let ny=VD.py+Math.sin(VD.rikt)*VD.fart*dt;
   [nx,ny]=vandringKollision(nx,ny,GA.radie);
   VD.px=nx; VD.py=ny;
-  if(Math.abs(fart)>0.05){
-    ljudFotsteg(Math.abs(fart)*dt,G.scen==="stallinne"?"sten":"grus");
-    VD.fas=(VD.fas+Math.abs(fart)*dt*1.9)%1;
+  if(VD.fart>0.05){
+    ljudFotsteg(VD.fart*dt,G.scen==="stallinne"?"sten":"grus");
+    VD.fas=(VD.fas+VD.fart*dt*1.9)%1;
     const sp=VD.spår;
     if(!sp.length||Math.hypot(nx-sp[sp.length-1][0],ny-sp[sp.length-1][1])>0.35)
       sp.push([nx,ny]); if(sp.length>40)sp.shift();
   }
   ledHasten();
   interagera();
+}
+
+/* Styrningens referenskurs: GL-kamerans blick i 3D, norr i kartvyn,
+   och figurens egen kurs i målarvyn (vars kamera sitter fast bakom
+   ryggen — där är kamerarelativt och figurrelativt samma sak). */
+function vandringYaw(){
+  if(G.vy==="2d")return Math.PI/2;
+  if(typeof V3D!=="undefined"&&V3D.kam&&V3D.kam.satt){
+    const k=V3D.kam, dx=VD.px-k.x, dy=VD.py-k.z;
+    if(dx*dx+dy*dy>0.04)return Math.atan2(dy,dx);
+  }
+  return VD.rikt;
 }
 
 /* Scenens väggar, i ETT anrop. Både gåendet och vägsökningen frågar den
@@ -255,6 +274,10 @@ function vandringKollision(nx,ny,r){
       w:R.bredd-R.laktare.x0,h:R.laktare.y1-R.laktare.y0});
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
+    /* Entréhallens möbler och skiljeväggar. De ritades men gick att gå
+       rakt igenom, vilket gjorde hallen svårläst: man visste inte vad
+       som var rum och vad som var utsmyckning. */
+    for(const m of (R.hallMobler||[])) [nx,ny]=kollideraRekt(nx,ny,r,m.rekt);
   }else{ // stallinne
     const S=STALLINNE, vx=S.bredd/2;
     nx=clamp(nx,0.5,S.bredd-0.5); ny=clamp(ny,0.5,S.langd-0.5);
@@ -601,14 +624,22 @@ function boxHast(id){
 }
 
 /* ── Scenbyten ────────────────────────────────────────────────── */
+/* Kameran ska SNAPPA vid scenbyte, inte flyga. Utan det svävar den
+   genom väggar i en halv sekund, och — värre — den kamerarelativa
+   styrningen läser den gamla blickriktningen så länge flygningen pågår,
+   så W bär iväg åt fel håll precis när man kommit in genom en dörr. */
+function kameraNollstall(){
+  if(typeof V3D!=="undefined"&&V3D.kam)V3D.kam.satt=false;
+}
 function gaTill(scen,spawn){
   G.scen=scen;
-  if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;}
+  if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;VD.fart=0;}
   slutaGa();                       // ett mål i förra scenen betyder inget här
   /* Rutnätet byggs vid dörren, inte vid första klicket. Gården kostar
      69 ms att rasta, och den pausen hör hemma i scenbytet — där det redan
      hackar — och inte i ett klick som ska kännas omedelbart. */
   navBygg();
+  kameraNollstall();
 }
 function startaVandring(){
   overlay(false);
@@ -620,6 +651,7 @@ function startaVandring(){
   G.vader={typ:v<52?"sol":v<80?"mulet":"regn", temp:7+(v%11)};
   G.vader.tacke=G.vader.typ==="regn"||G.vader.temp<10;
   const s=ANL.spawn; VD.px=s.x;VD.py=s.y;VD.rikt=s.rikt;VD.spår.length=0;
+  VD.fart=0; kameraNollstall();
   hudLage("gang");
   const vtext={sol:"Kvällssolen ligger över åkrarna.",
     mulet:"Mulet och stilla över Bro.",
