@@ -87,6 +87,16 @@ function visaTavlingsval(){
 
 /* ── Uppsittning — ett ställe för alla tre platserna ──────────── */
 function sittUpp(plats){
+  /* Ingen sitter upp på en häst som inte är hämtad och skött. I spelet
+     går det inte att komma hit utan det, men vakten hör hemma här och
+     inte bara hos den som råkar anropa: utan häst finns ingen G.ride,
+     och första bildrutan i sadeln föll på en null-referens. */
+  if(!G.hastId||!G.skotselRes){
+    saga(G.hastId
+      ? `${HORSES[G.hastId].namn} är inte färdigskött — visitera, rykta och sadla först.`
+      : "Du har ingen häst än. Prata med ridläraren i stallgången.",4);
+    return;
+  }
   if(G.tavling){
     const ratt=G.tavling.typ==="hoppning"?"ridhus":"utebana";
     if(plats!==ratt){
@@ -201,7 +211,7 @@ function visaTavlingsResultat(dom){
   overlay(true,`
   <span class="lbl">${tavNamn} · resultat</span>
   <h1 style="margin-top:8px">”${omdome}”</h1>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
+  <div class="tvakol" style="margin-top:10px">
     <div>
       <div class="lbl" style="margin-bottom:6px">Resultatlista</div>
       <table><tbody>${rader.map(rad).join("")}</tbody></table>

@@ -195,7 +195,7 @@ function visaTraningsbok(fran){
   <p class="dim" style="font-size:13.5px">Kunskapen och övningarna nedan följer ridhandbokens
   uppbyggnad — fem grundkommandon, formen, övergångarna, skolorna. Texterna är spelets egna.
   Lektionens moment hämtas härifrån.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:12px">
+  <div class="tvakol" style="margin-top:12px">
     <div><div class="lbl" style="margin-bottom:6px">Hästkunskap</div>${kap}</div>
     <div><div class="lbl" style="margin-bottom:6px">Övningsbanken · ${OVNIN_ANTAL()} övningar</div>
       <div style="max-height:46vh;overflow:auto">${ovn}</div></div>
@@ -255,7 +255,7 @@ function visaOvning(id,fran){
   <span class="lbl">Träningsboken · övning · ${o.gangart} · från ${o.niva}</span>
   <h1 style="margin-top:8px">${o.namn}</h1>
   <p style="font-size:15px;margin-top:8px">${o.syfte}</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px">
+  <div class="tvakol" style="margin-top:8px">
     <div><div class="lbl" style="margin-bottom:6px">Utförande</div>
       <ol style="font-size:13.5px;line-height:1.6;padding-left:18px">${steg}</ol></div>
     <div><div class="lbl" style="margin-bottom:6px">Vanliga fel</div>

@@ -266,9 +266,14 @@ function visaSkaparen(retur){
 
   <div class="btnrow">
     <button class="btn" id="bSkapKlar">${forsta?"Så här ser jag ut":"Spara"}</button>
-    ${forsta?"":'<button class="btn ghost" id="bSkapAvbryt">Avbryt</button>'}
+    ${forsta?'<button class="btn ghost" id="bSkapGast">Prova direkt</button>'
+      :'<button class="btn ghost" id="bSkapAvbryt">Avbryt</button>'}
     <span class="dim" style="font-size:13px" id="skapVarning"></span>
-  </div>`);
+  </div>
+  ${forsta?`<p class="dim" style="font-size:12px;margin-top:8px">Prova direkt hoppar in i spelet
+    med en färdig ryttare — namn, utseende och egenskaper går att ändra när som helst
+    från menyn. Inget konto behövs någonsin; molnsynken i menyn är frivillig och
+    tar med sig allt du hunnit spela.</p>`:""}`);
 
   kopplaSkaparen(forsta);
 }
@@ -313,6 +318,26 @@ function kopplaSkaparen(forsta){
   const avb=document.getElementById("bSkapAvbryt");
   if(avb)avb.onclick=()=>{ SKAP.utkast=null; SKAP.flik=0;
     if(SKAP.retur==="meny")visaMeny(); else overlay(false); };
+
+  /* Prova direkt — testläget. Ingen ska behöva fylla i något för att få
+     känna på spelet: ryttaren får ett namn och tre slumpade egenskaper,
+     och allt går att ändra i efterhand från menyn. Det som redan hunnit
+     väljas i skaparen behålls. */
+  const gast=document.getElementById("bSkapGast");
+  if(gast)gast.onclick=()=>{
+    const u=SKAP.utkast;
+    if(!(u.namn||"").trim())u.namn="Gäst";
+    while(u.egenskaper.length<EGENSKAP_ANTAL){
+      const e=EGENSKAP[Math.floor(Math.random()*EGENSKAP.length)].id;
+      if(!u.egenskaper.includes(e))u.egenskaper.push(e);
+    }
+    u.skapad=true;
+    SPAR.jag={...u};
+    sparaRyttare();
+    jagBygg();
+    SKAP.utkast=null; SKAP.flik=0;
+    visaMeny();
+  };
 
   const duk=document.getElementById("skapDuk");
   if(duk){

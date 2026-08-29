@@ -7,10 +7,43 @@
    ══════════════════════════════════════════════════════════════════ */
 const cv=document.getElementById("cv"),cx=cv.getContext("2d");
 let CW=0,CH=0,DPR=1;
-function resize(){DPR=Math.min(window.devicePixelRatio||1,2);
+
+/* ── Automatisk kvalitet ──────────────────────────────────────────
+   Upplösningen följer vad hårdvaran orkar: tre nivåer på canvasens
+   pixeltäthet (1, 1,45, 2 × CSS-pixlar). Går bilduppdateringen trögt
+   trappas den ner INNAN reservrenderaren behöver ta över; flyter det
+   på länge trappas den försiktigt upp igen. Geometrin, färgerna och
+   anläggningen är exakt desamma på alla nivåer — bara skärpan skiljer.
+   Måste stå före resize(): den läser KVAL redan vid inladdningen. */
+const KVAL={niva:2, tak:[1,1.45,2], ack:0, n:0, sist:0};
+function kvalPuls(dt){
+  KVAL.ack+=dt; KVAL.n++;
+  if(KVAL.ack<2)return;
+  const snitt=KVAL.ack/KVAL.n, nu=performance.now();
+  KVAL.ack=0; KVAL.n=0;
+  if(snitt>0.032&&KVAL.niva>0&&nu-KVAL.sist>4000){
+    KVAL.niva--; KVAL.sist=nu; resize();          // under ~31 fps: släpp skärpa
+  }else if(snitt<0.013&&KVAL.niva<2&&nu-KVAL.sist>12000){
+    KVAL.niva++; KVAL.sist=nu; resize();          // stabilt snabbt: ta tillbaka
+  }
+}
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,KVAL.tak[KVAL.niva]);
   CW=cv.clientWidth;CH=cv.clientHeight;cv.width=CW*DPR;cv.height=CH*DPR;
   cx.setTransform(DPR,0,0,DPR,0,0);}
 window.addEventListener("resize",resize);resize();
+
+/* ── Bildformatet ─────────────────────────────────────────────────
+   3D-kamerorna anger LODRÄT synfält. På en stående telefon blir det
+   vågräta då mycket smalare än på en bildskärm — samma komposition
+   beskuren, inte anpassad. Här breddas synfältet gradvis när skärmen
+   är högre än den är bred, så att man ser lika mycket av världen.
+   Världen ändras inte — bara hur mycket av den som får plats i rutan. */
+function glFov(bas){
+  const a=CW/Math.max(CH,1);
+  return a>=1?bas:clamp(bas*(1+0.5*(1-a)),bas,bas*1.5);
+}
 
 const COL={
   sand:"#C9BFA6",sandDark:"#B4A98D",sandLine:"#A2976E",

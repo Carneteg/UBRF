@@ -260,7 +260,28 @@ function autopilot(dt){
   const onskad=Math.atan2(my-G.py,mx-G.px);
   let d=onskad-G.rikt;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
   G.aids.styrning=clamp(d*1.4,-0.8,0.8);
-  G.aids.skankel=0.62; G.aids.tygel=0.37; G.aids.sits=0.2;
+  /* Tempot regleras, det gissas inte. Med fasta hjälper (skänkel 0,62 mot
+     tygel 0,37) landade autopiloten på hästens eget arbetstempo, ~4,2 m/s
+     i trav — utanför gruppens tempoband hela passet. Den "red" alltså
+     utan att någonsin kunna bli godkänd, och på hoppbanan tidsuteslöts
+     tre hästar av fyra.
+
+     Nu siktar den mot bandets mitt för den gångart övningen kräver och
+     förhandlar som en ryttare gör: mer skänkel när takten faller, mer
+     hand när den stiger. P-delen tar det snabba, I-delen äter upp
+     skillnaden mellan hästar (framåtbjudningen flyttar jämviktstempot
+     nästan en meter i sekunden mellan den tröga och den villiga). */
+  const kravG=G.hinderAktiva?"galopp"
+    :((G.moment&&G.moment.gangart)||(G.ride&&G.ride.gangart)||"trav");
+  const band=(typeof tempoBand==="function")?tempoBand(kravG,G.grupp):null;
+  const malT=band?(band.min+band.max)/2:((Gait.G[kravG]||Gait.G.trav).norm);
+  const fel=malT-((G.ride&&G.ride.tempo)||0);
+  if(G._apI===undefined||!isFinite(G._apI))G._apI=0;
+  G._apI=clamp(G._apI+fel*dt*0.45,-0.55,0.55);
+  const drag=clamp(fel*0.22+G._apI,-0.75,0.75);
+  G.aids.skankel=clamp(0.30+drag,0,1);
+  G.aids.tygel=clamp(0.30-drag*0.85,0,1);
+  G.aids.sits=0.2;
   G.aids.lattridning=true; G.aids.diagonal=1; G.aids.spo=false;
 }
 
@@ -603,18 +624,37 @@ function loop(now){
   /* 3D-modulerna laddas efter den här filen — vänta tills de finns. */
   if(typeof gl3dLage!=="function"){requestAnimationFrame(loop);return;}
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
-  ljudPuls(dt);
-  if(G.scen==="lektion"||G.scen==="bana"){
-    stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
-    if(G.luft>0)G.luft-=dt;
-    if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
-    ritaHUD(); ritaVaxer();
-  } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
-    gl3dLage(false);
-    stegaVandring(dt);ritaVandring();
-  } else if(G.scen==="resultat"){
-    if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
-  } else gl3dLage(false);
+  /* Felbarriär runt bildrutan. requestAnimationFrame låg förut sist i
+     funktionen, så ett enda oväntat undantag mitt i en bildruta stoppade
+     loopen för gott: ingen rörelse, ingen rendering, ingen input, och
+     ingenting som sa varför. Nu loggas felet och nästa bildruta begärs
+     ändå — spelet hackar till i stället för att dö tyst. */
+  try{
+    ljudPuls(dt);
+    if(typeof kvalPuls==="function")kvalPuls(dt);
+    if(G.scen==="lektion"||G.scen==="bana"){
+      /* Öppnar man träningsboken mitt i ett moment ska hästen vänta.
+         Förut red hon vidare bakom rutan: momentklockan gick, tempot drev
+         iväg och man kom tillbaka till ett misslyckat moment man inte
+         hade sett gå fel. Bilden ritas fortfarande, bara tiden står
+         still. */
+      const ov=document.getElementById("ov");
+      const pausad=ov&&!ov.classList.contains("hide");
+      if(pausad){G.t-=dt;}
+      else{stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
+        if(G.luft>0)G.luft-=dt;}
+      if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
+      ritaHUD(); ritaVaxer();
+    } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
+      gl3dLage(false);
+      stegaVandring(dt);ritaVandring();
+    } else if(G.scen==="resultat"){
+      if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
+    } else gl3dLage(false);
+  }catch(e){
+    console.warn("bildrutan fallerade:",e);
+    G.bildruteFel=(G.bildruteFel||0)+1;
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

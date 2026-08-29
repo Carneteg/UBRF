@@ -2,7 +2,13 @@
    SCENER — meny, hästtilldelning, skötsel, resultat. Overlay-ark.
    ══════════════════════════════════════════════════════════════════ */
 const ov=document.getElementById("ov"),sheet=document.getElementById("sheet");
-function overlay(on,html){ov.classList.toggle("hide",!on);if(html!==undefined)sheet.innerHTML=html;}
+function overlay(on,html){
+  /* Skötselduken har en lyssnare på fönstret som måste bort när arket
+     byts eller stängs — annars ritar den vidare på en vy som inte finns. */
+  if(typeof groomLossa==="function")groomLossa();
+  ov.classList.toggle("hide",!on);
+  if(html!==undefined)sheet.innerHTML=html;
+}
 
 /* ── Meny ── */
 function visaMeny(){
@@ -205,16 +211,31 @@ const HOVP=[[0.44,0.85],[0.49,0.85],[0.68,0.85],[0.735,0.85]];
 const SADEL_RATT=0.565;
 function initGroomCanvas(){
   gcv=document.getElementById("groomCanvas");gcx=gcv.getContext("2d");
-  const fit=()=>{const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
+  const fit=()=>{if(!gcv)return;
+    const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
     gcx.setTransform(DPR,0,0,DPR,0,0);ritaGroom();};
-  fit();new ResizeObserver(fit).observe(gcv);
+  fit();
+  if(SK.observer)SK.observer.disconnect();
+  SK.observer=new ResizeObserver(fit); SK.observer.observe(gcv);
   const pos=e=>{const r=gcv.getBoundingClientRect();
     const p=e.touches?e.touches[0]:e;return[(p.clientX-r.left)/r.width,(p.clientY-r.top)/r.height];};
   const ned=e=>{SK.drar=true;SK.sista=pos(e);hantera(pos(e),true);e.preventDefault();};
   const rr=e=>{if(!SK.drar)return;hantera(pos(e),false);SK.sista=pos(e);e.preventDefault();};
+  /* Släppet måste fångas på fönstret — fingret lämnar ofta duken innan
+     det lyfts. Men lyssnaren MÅSTE tas bort när skötseln stängs: låg den
+     kvar ritade varje klick i hela spelet om en skötselvy som inte längre
+     finns, och första klicket efter ett avslutat pass kraschade på en
+     häst som inte var tilldelad längre. */
   const upp=()=>{SK.drar=false;HOV.sista=null;if(HOV.i<0)lyftHov=-1;ritaGroom();};
   gcv.addEventListener("pointerdown",ned);gcv.addEventListener("pointermove",rr);
+  if(SK.slappLyssnare)removeEventListener("pointerup",SK.slappLyssnare);
+  SK.slappLyssnare=upp;
   addEventListener("pointerup",upp);
+}
+function groomLossa(){
+  if(SK.slappLyssnare){removeEventListener("pointerup",SK.slappLyssnare);SK.slappLyssnare=null;}
+  if(SK.observer){SK.observer.disconnect();SK.observer=null;}
+  gcv=null; gcx=null;
 }
 function hantera(p,klick){
   /* Hoven först: när närbilden är uppe är det den som tar dragen. */
@@ -280,7 +301,11 @@ function dok3(){
     +(gOk&&SA.tag>=3?" gjord ✓":" gjord ✗"));
 }
 function ritaGroom(){
-  const W=gcv.clientWidth,H=gcv.clientHeight,h=HORSES[G.hastId];
+  /* Duken kan vara borttagen och hästen återlämnad när ett släpp kommer
+     in sent — då finns ingenting att rita, och det är inte ett fel. */
+  if(!gcv||!gcx)return;
+  const h=HORSES[G.hastId]; if(!h)return;
+  const W=gcv.clientWidth,H=gcv.clientHeight;
   gcx.clearRect(0,0,W,H);
   // stallmiljö bakom: varmt golv och väggpanel
   const gr=gcx.createLinearGradient(0,0,0,H);
@@ -488,7 +513,7 @@ function visaResultat(dom){
   <span class="lbl">Efter lektionen · ${(typeof dagensLedare==="function")?dagensLedare().namn:"ridläraren"}</span>
   <h1 style="margin-top:8px">”${omdome}”</h1>
   ${typeof efterPassHTML==="function"?efterPassHTML():""}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
+  <div class="tvakol" style="margin-top:10px">
     <div>
       ${G.hadeBana?`<div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
       <ul style="font-size:13px;font-family:'IBM Plex Mono',monospace;line-height:1.7">${domRows||"<li>—</li>"}</ul>

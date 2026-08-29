@@ -84,17 +84,30 @@ function overlayUppe(){
 function stegaVandring(dt){
   VD.tid+=dt;
   if(overlayUppe())return;
-  const fram=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?0.6:0);
+  /* Ingången: tangenter, eller joystickens analoga värden (mobil.js).
+     Joysticken ger gradvis fart och sväng — långt tryck framåt går
+     över i jogg utan någon extra knapp. */
+  const an=IN.analog;
+  const fram=an?an.fram:((IN.ned.KeyW?1:0)-(IN.ned.KeyS?0.6:0));
   /* Riktningen är atan2-vinkeln i (x, z)-planet och rörelsen går längs
      (cos rikt, sin rikt). Med Y uppåt blir spelarens högersida
      framåt × upp = (−sin, 0, cos) — vilket är exakt derivatan av framåt
      med avseende på rikt. Ökande rikt svänger alltså HÖGER.
      Ridningen i stegaRitt har alltid räknat så (KeyD ger styrning +0,72);
      gå-läget gjorde tvärtom, så A och D var spegelvända mot varandra. */
-  const sv=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
-  VD.rikt+=sv*GA.svang*dt;
+  const sv=an?an.sv:((IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0));
+  /* Svängen mjukas upp: full svängfart nås på ~0,1 s i stället för på
+     en bildruta, så figuren vrider sig i stället för att knycka. */
+  VD.svFart=approach(VD.svFart===undefined?0:VD.svFart,sv,9,12,dt);
+  VD.rikt+=VD.svFart*GA.svang*dt;
   const jogg=IN.ned.ShiftLeft||IN.ned.ShiftRight;
-  const fart=fram*(jogg?GA.jogg:GA.fart);
+  const joggGrad=an?Math.max(an.jogg,jogg?1:0):(jogg?1:0);
+  /* Fart med acceleration och retardation: ~0,15 s till gångfart,
+     ~0,2 s till stopp. Ingången känns omedelbar, rörelsen ser mjuk ut
+     — figuren tvärstannar inte och teleporterar inte igång. */
+  const malFart=fram*(GA.fart+(GA.jogg-GA.fart)*joggGrad);
+  VD.fart=approach(VD.fart===undefined?0:VD.fart,malFart,11,15,dt);
+  const fart=VD.fart;
   let nx=VD.px+Math.cos(VD.rikt)*fart*dt;
   let ny=VD.py+Math.sin(VD.rikt)*fart*dt;
   const r=GA.radie;
@@ -121,7 +134,15 @@ function stegaVandring(dt){
     const S=STALLINNE, vx=S.bredd/2;
     nx=clamp(nx,0.5,S.bredd-0.5); ny=clamp(ny,0.5,S.langd-0.5);
     if(ny>S.boxStartY&&ny<S.serviceY){          // stallgången mellan boxfronterna
-      nx=clamp(nx,vx-S.ganghalva+r,vx+S.ganghalva-r);
+      /* … utom rakt framför en dörr i långsidan. Där står ingen boxfront,
+         utan en passage ut — och utan den gick hästporten mot gården inte
+         att nå: gången klämde spelaren till mitten hela vägen förbi. */
+      const dorr=(S.dorrar||[]).find(d=>Math.abs(d.pos[1]-ny)<1.8
+        && (d.pos[0]<vx-S.ganghalva || d.pos[0]>vx+S.ganghalva));
+      if(dorr){
+        const vast=dorr.pos[0]<vx;
+        nx=clamp(nx, vast?0.5:vx-S.ganghalva+r, vast?vx+S.ganghalva-r:S.bredd-0.5);
+      }else nx=clamp(nx,vx-S.ganghalva+r,vx+S.ganghalva-r);
     }else{
       for(const rum of S.rum)     [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
       for(const rum of S.service) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
@@ -305,6 +326,13 @@ function boxHast(id){
 function gaTill(scen,spawn){
   G.scen=scen;
   if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;}
+  /* Varje scen har sitt eget koordinatsystem: gården mäts i 210 × 170 m,
+     stallet i 15 × 52. Kameran interpolerar mjukt mot sitt mål — men
+     behöll den sin gamla position över ett scenbyte låg den plötsligt
+     sjuttio meter fel och flög genom en främmande rymd i ett par
+     sekunder innan den hann ikapp. Den ska sättas om, inte glida. */
+  if(typeof V3D!=="undefined"&&V3D.kam)V3D.kam.satt=false;
+  if(typeof S3!=="undefined"&&S3.kam)S3.kam.satt=false;
 }
 function startaVandring(){
   overlay(false);
@@ -349,7 +377,7 @@ function kamera(){
     for(const b of ANL.byggnader)[kx,ky]=kollideraRekt(kx,ky,0.4,b.rekt);
   return {x:kx, y:ky,
     z:K3.hojd+0.5, fx:Math.cos(VD.rikt), fy:Math.sin(VD.rikt),
-    f:(CH*0.92)/K3.fov, hor:CH*K3.horisont};
+    f:(CH*0.92)/((typeof glFov==="function")?glFov(K3.fov):K3.fov), hor:CH*K3.horisont};
 }
 function tillKam(k,x,y,z){
   // s är höger-axeln: öster hamnar till höger när man tittar norrut,
@@ -944,10 +972,49 @@ function ritaSpelare3D(){
 
 /* ── Gården i 2D (karta) ─────────────────────────────────────── */
 const V2G={s:4,ox:0,oy:0};
+/* ── Kartvyernas ram ──────────────────────────────────────────────
+   Samma karta, olika skärmar. Tre saker skiljer en telefon i porträtt
+   från en bildskärm, och alla tre hanteras här:
+
+   HUD-BREDDEN  Mätarna står bredvid kartan bara när det finns plats.
+                På smala skärmar ligger de ovanpå, och då får kartan
+                hela bredden — förut drogs 340 px av ändå, vilket gav
+                NEGATIV skala under 400 px och en trasig vy.
+   FORMATET     Är rutan mycket högre än världen är djup blir en
+                inpassad karta en liten fläck mitt i tomrum. Då zoomas
+                den i stället in mot den korta axeln.
+   PANORERING   Zoomad karta följer spelaren, klampad mot världens
+                kanter så att man aldrig ser utanför den.
+
+   Världen ändras inte av något av detta — bara hur mycket av den som
+   ryms i rutan. */
+function kartRam(bredd,djup,px,py,hudBredd){
+  const m=CW<560?12:26;
+  const hud=(CW>=900&&hudBredd)?hudBredd:0;
+  /* Den TRYGGA ytan: rutan minus det som ligger ovanpå kartan. Uppgifts-
+     rutan tar överkanten, och på pekskärm tar spaken och knapparna
+     nederkanten. Utan det hamnade figuren bakom sina egna kontroller på
+     en stående surfplatta — kartan var rätt, men man såg inte sig själv. */
+  const pek=document.body.classList.contains("pek");
+  const topp=m+(CW<560?76:92), botten=m+(pek?(CW>=760?200:172):0);
+  const w=Math.max(CW-2*m-hud,80), h=Math.max(CH-topp-botten,80);
+  const passa=Math.min(w/bredd,h/djup), fyll=Math.max(w/bredd,h/djup);
+  /* Skillnaden mellan axlarna avgör om det är värt att zooma. Taket på
+     2,2 gånger hindrar att man hamnar med näsan i marken. */
+  const s=(fyll/passa>1.35)?Math.min(fyll,passa*2.2):passa;
+  const bw=bredd*s, bh=djup*s;
+  /* Mitten av den trygga ytan är där figuren ska stå. */
+  const mx=hud?(CW-hud)/2:CW/2, my=topp+h/2;
+  let ox,oy;
+  if(bw<=w)ox=mx-bw/2;                         // ryms: centrera i ytan
+  else ox=clamp(mx-px*s, CW-m-bw, m);          // annars: följ spelaren
+  if(bh<=h)oy=my-bh/2;
+  else oy=clamp(my-(djup-py)*s, CH-botten-bh, topp);
+  return {s,ox,oy};
+}
 function g2fit(){
-  const m=26;
-  V2G.s=Math.min((CW-2*m)/ANL.bredd,(CH-2*m)/ANL.djup);
-  V2G.ox=(CW-ANL.bredd*V2G.s)/2; V2G.oy=(CH-ANL.djup*V2G.s)/2;
+  const r=kartRam(ANL.bredd,ANL.djup,VD.px,VD.py,0);
+  V2G.s=r.s; V2G.ox=r.ox; V2G.oy=r.oy;
 }
 function gs(x,y){return [V2G.ox+x*V2G.s, V2G.oy+(ANL.djup-y)*V2G.s];}
 function gsRekt(r){const[a,b]=gs(r.x,r.y+r.h);return[a,b,r.w*V2G.s,r.h*V2G.s];}
@@ -1038,8 +1105,8 @@ function ritaSpelare2D(pos,rikt,s){
 /* ── Stallet invändigt: 2D ────────────────────────────────────── */
 function ritaStall2D(){
   const S=STALLINNE, m=30;
-  const s=Math.min((CW-2*m-340)/S.bredd,(CH-2*m)/S.langd);
-  const ox=(CW-S.bredd*s)/2, oy=(CH-S.langd*s)/2;
+  const R0=kartRam(S.bredd,S.langd,VD.px,VD.py,340);
+  const s=R0.s, ox=R0.ox, oy=R0.oy;
   const ss=(x,y)=>[ox+x*s, oy+(S.langd-y)*s];
   cx.fillStyle="#14171B";cx.fillRect(0,0,CW,CH);
   const[fa,fb]=ss(0,S.langd);
@@ -1295,8 +1362,8 @@ function gardsFolk(){
 /* ── Ridhuset invändigt: 2D ───────────────────────────────────── */
 function ritaRidhus2D(){
   const R=RIDHUSINNE, ba=R.bana, m=30;
-  const s=Math.min((CW-2*m-320)/R.bredd,(CH-2*m)/R.langd);
-  const ox=(CW-R.bredd*s)/2, oy=(CH-R.langd*s)/2;
+  const R0=kartRam(R.bredd,R.langd,VD.px,VD.py,320);
+  const s=R0.s, ox=R0.ox, oy=R0.oy;
   const ss=(x,y)=>[ox+x*s, oy+(R.langd-y)*s];
   cx.fillStyle="#14171B";cx.fillRect(0,0,CW,CH);
   const[fa,fb]=ss(0,R.langd);

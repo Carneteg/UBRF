@@ -998,7 +998,7 @@ function rita3D(Gs){
   const L=s3Ljus();
   GL.start(CW,CH,DPR,L);
   const k=s3Kamera(dt);
-  GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.02);
+  GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],(typeof glFov==="function")?glFov(1.02):1.02);
   /* Himlen först: gradient och sol som ett helskärmspass, molnen som
      geometri ovanpå. Ingen djupskrivning. */
   const gl=GL.gl;

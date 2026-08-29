@@ -1388,7 +1388,7 @@ function ritaVandring3D(){
     const L=s3Ljus(inne?"ridhus":"ute");
     GL.start(CW,CH,DPR,L);
     const k=v3dKamera(dt);
-    GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.05);
+    GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],(typeof glFov==="function")?glFov(1.05):1.05);
     const gl=GL.gl;
     GL.himmel(L);                                 // gradient och sol
     gl.depthMask(false);

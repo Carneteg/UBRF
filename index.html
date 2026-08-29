@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ridskolan</title>
 <!-- Ikonen ligger i filen, som allt annat. Utan den frågar webbläsaren
      efter /favicon.ico och får 404. -->
@@ -49,12 +49,14 @@ button{font-family:inherit}
 /* Egen klass, inte .hud: ui.css har en egen .hud (nivåraden ur ui-kit-demo)
    och den laddas efter det här, så den vann och sköt HUD-rutorna ur läge. */
 .hudh{position:absolute; pointer-events:none; z-index:5}
-.hudh.tl{top:14px; left:14px}
-.hudh.tr{top:14px; right:14px; text-align:right}
-.hudh.bl{bottom:14px; left:14px}
-.hudh.br{bottom:14px; right:14px}
-.hudh.bc{bottom:16px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
-.hudh.tc{top:14px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
+/* Safe areas: på telefoner med urtag/hemstreck skjuts HUD:en innanför
+   dem. env() med reservvärde ignoreras av äldre webbläsare. */
+.hudh.tl{top:calc(14px + env(safe-area-inset-top,0px)); left:calc(14px + env(safe-area-inset-left,0px))}
+.hudh.tr{top:calc(14px + env(safe-area-inset-top,0px)); right:calc(14px + env(safe-area-inset-right,0px)); text-align:right}
+.hudh.bl{bottom:calc(14px + env(safe-area-inset-bottom,0px)); left:calc(14px + env(safe-area-inset-left,0px))}
+.hudh.br{bottom:calc(14px + env(safe-area-inset-bottom,0px)); right:calc(14px + env(safe-area-inset-right,0px))}
+.hudh.bc{bottom:calc(16px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
+.hudh.tc{top:calc(14px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
 
 .box{background:rgba(14,16,20,.94); border:1px solid rgba(214,174,60,.22); border-radius:4px;
   padding:11px 14px; backdrop-filter:blur(8px);
@@ -271,6 +273,18 @@ tr:last-child td{border-bottom:0}
 .egEffekt{font-size:12.5px; line-height:1.45}
 .egVarfor{font-size:11.5px; line-height:1.45; color:var(--faint); margin-top:2px}
 .egRad{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:3px}
+/* Pekskärm: varje knapp måste gå att träffa med ett finger.
+   44 px är gränsen där en tumme träffar rätt utan att sikta. */
+/* Två kolumner när det finns bredd, en när det inte gör det. Förut var
+   det ett fast 1fr 1fr överallt, och på en 320 px-telefon klipptes
+   högerkolumnen bort utanför arket. */
+.tvakol{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+@media (max-width:560px){ .tvakol{grid-template-columns:1fr; gap:14px} }
+
+@media (pointer:coarse){
+  .btn{min-height:44px}
+  .skapChip,.egKort,.tb-rad{min-height:44px}
+}
 .egBricka{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.06em;
   border:1px solid var(--rule); border-radius:999px; padding:2px 9px; color:var(--gold-2)}
 /* Ryttarprovet i menyn: hjälm, kavaj och ansikte i tre band. */

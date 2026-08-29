@@ -189,8 +189,23 @@ function stepRide(s,a,h,ctx,dt){
   s.steglangd=Gait.steglangd(h.kategori,s.gangart,s.skala.schvung,s.spanning);
   s.rang=clamp(s.rang+((s.mjukhet-0.55)*0.020-s.spanning*0.012)*dt,0,1);
   s._prev={...a};
+  /* Spärr mot NaN. En enda hjälp som kommer in som NaN — ett ostädat
+     värde från en pekhändelse, en delning med noll uppströms — smittar
+     annars hela tillståndet inom en bildruta: tempot blir NaN, gångarten
+     fastnar, stapeln försvinner och spelet ser trasigt ut utan att något
+     kastar. Här stannar smittan i stället vid ett steg: fälten återställs
+     till senast dugliga värde och ritten fortsätter. */
+  s.tempo=talEller(s.tempo,0);
+  s.mjukhet=clamp(talEller(s.mjukhet,0.5),0,1);
+  s.spanning=clamp(talEller(s.spanning,0.15),0,1);
+  s.steglangd=talEller(s.steglangd,0);
+  s.rang=clamp(talEller(s.rang,0.5),0,1);
+  for(const k of Skala.ORDER)s.skala[k]=clamp(talEller(s.skala[k],0),0,1);
+  if(!Gait.G[s.gangart])s.gangart=Gait.forTempo(s.tempo,"halt");
   return s;
 }
+/* Sista utvägen för ett tal som inte är ett tal. */
+function talEller(v,standard){return (typeof v==="number"&&isFinite(v))?v:standard;}
 
 /* ROP och ridlararRop låg här: bildrutans lägsta tal på
    utbildningsskalan slogs upp i en replikbank och lästes upp var

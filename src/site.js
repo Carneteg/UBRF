@@ -221,13 +221,13 @@ const ANL = {
   /* Interaktionspunkter på gården. */
   dorrar: [
     {id:"stallentre", pos:[152.9,51.6], text:"Gå in i stallet (Entré)",
-     mot:"stallinne", spawn:{x:1.8, y:5.6, rikt:0}},
+     mot:"stallinne", spawn:{x:7.0, y:2.2, rikt:Math.PI/2}},
     {id:"stall_v",  pos:[153.4,71], text:"Gå in i stallet (hästporten mot gården)",
-     mot:"stallinne", spawn:{x:1.2, y:25, rikt:0}},
+     mot:"stallinne", spawn:{x:2.2, y:25, rikt:0}},
     {id:"stall_n",  pos:[160.3,100.8], text:"Gå in i stallet (bakre dörren)",
      mot:"stallinne", spawn:{x:7.5, y:50, rikt:-Math.PI/2}},
-    {id:"ridhus_o", pos:[143.4,66], text:"In i ridhuset (durkplåtdörrarna)",
-     mot:"ridhusinne", spawn:{x:23.4,y:22,rikt:Math.PI}},
+    {id:"ridhus_o", pos:[143.4,48], text:"In i ridhuset (durkplåtdörrarna)",
+     mot:"ridhusinne", spawn:{x:23.5,y:4.5,rikt:Math.PI}},
     {id:"ridhus_s", pos:[121.1,43.6], text:"In i ridhuset (entrén)",
      mot:"ridhusinne", spawn:{x:3.1,y:1.6,rikt:Math.PI/2}},
     {id:"cafe", pos:[136.6,43.4], text:"Café Krubban (trappan upp)", mot:"info",
@@ -274,9 +274,9 @@ const STALLINNE = {
   /* Tvärväggar med dörröppning i gångens bredd. */
   tvarvaggar:[ {y:9, gap:2.8, brand:true}, {y:45.5, gap:2.8, brand:false} ],
   dorrar:[
-    {id:"ut_s", pos:[0.8,5.6],  text:"Ut genom entrén", mot:"gard",
+    {id:"ut_s", pos:[6.8,1.2],  text:"Ut genom entrén", mot:"gard",
      spawn:{x:152.6,y:51.6,rikt:Math.PI}},
-    {id:"ut_v", pos:[0.8,29],   text:"Ut till gräsgården — vägen till ridhuset", mot:"gard",
+    {id:"ut_v", pos:[1.0,25],   text:"Ut till gräsgården — vägen till ridhuset", mot:"gard",
      spawn:{x:152.4,y:71,rikt:Math.PI}},
     {id:"ut_n", pos:[7.5,51.2], text:"Ut till bakgården — mot hagarna", mot:"gard",
      spawn:{x:160.3,y:101.8,rikt:Math.PI/2}},
@@ -333,8 +333,8 @@ const RIDHUSINNE = {
   ],
   port:{x0:9.6, x1:11.6},                         // sargporten vid A (södra kortsidan)
   dorrar:[
-    {id:"ut_o", pos:[24.2,22],   text:"Ut till gårdsplanen", mot:"gard",
-     spawn:{x:144.6,y:66,rikt:0}},
+    {id:"ut_o", pos:[23.5,4.5],   text:"Ut till gårdsplanen", mot:"gard",
+     spawn:{x:144.6,y:48,rikt:0}},
     {id:"ut_s", pos:[3.1,0.8], text:"Ut mot parkeringen (entrén)", mot:"gard",
      spawn:{x:122.5,y:42.6,rikt:-Math.PI/2}},
   ],
