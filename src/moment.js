@@ -72,6 +72,26 @@ function momentTillBild(sx,sy){
 /* ══ HOVEN ════════════════════════════════════════════════════════
    Tillstånd för närbilden. i = vilken hov (0–3), −1 = ingen.
    t = hur långt in zoomningen kommit, 0–1. */
+/* En riktig blandning av fröet. En LCG är affin i sitt tillstånd, så
+   fröet lyser igenom även efter uppvärmning: dag 3, 4 och 5 gav utfall
+   0,95 / 0,03 / 0,10 — en rak trappa. Det gör dagarna gissningsbara.
+   Den här hashen sprider bitarna först, och sedan spelar det ingen roll
+   att generatorn är enkel. */
+function momentFro(...tal){
+  let h=2166136261>>>0;
+  for(const t of tal){
+    let v=(t|0)>>>0;
+    for(let k=0;k<4;k++){ h^=(v&0xFF); h=Math.imul(h,16777619)>>>0; v>>>=8; }
+  }
+  h^=h>>>15; h=Math.imul(h,2246822507)>>>0;
+  h^=h>>>13; h=Math.imul(h,3266489909)>>>0;
+  h^=h>>>16;
+  let s=h>>>0;
+  return()=>{ s=(Math.imul(s,1664525)+1013904223)>>>0;
+    let x=s; x^=x>>>15; x=Math.imul(x,2246822507)>>>0; x^=x>>>13;
+    return ((x>>>8)&0xFFFFFF)/0x1000000; };
+}
+
 const HOV={i:-1, t:0, smuts:[], ren:0, fel:0, sista:null, varning:"", sten:null};
 
 /* Fyllningen: gruset ligger i strålfårorna, ibland en sten i den ena.
@@ -79,8 +99,7 @@ const HOV={i:-1, t:0, smuts:[], ren:0, fel:0, sista:null, varning:"", sten:null}
    och in igen — men olika mellan hovar och mellan dagar. */
 function hovOppna(i){
   HOV.i=i; HOV.t=0; HOV.ren=0; HOV.fel=0; HOV.varning=""; HOV.sista=null;
-  let fro=((G.seed||1)*7919+i*131+(G.hastId||"").length*17)>>>0;
-  const rnd=()=>{fro=(fro*1664525+1013904223)>>>0; return fro/4294967296;};
+  const rnd=momentFro(G.seed||1, i, (G.hastId||"").length, 7919);
   HOV.smuts=[];
   const antal=7+Math.floor(rnd()*5);
   for(let k=0;k<antal;k++){
@@ -112,7 +131,7 @@ function hovDrag(p){
      tvärs över räknas inte som fel — det är bara verkningslöst. */
   if(dy>0.030){
     HOV.fel++;
-    HOV.varning="Kratsa från trakten mot tån — annars pressar du in gruset mot strålen.";
+    HOV.varning="Kratsa från trakten mot tån. Åt andra hållet pressar du in gruset mot strålen — och drar redskapet mot dig själv.";
     return;
   }
   if(dy>-0.012)return;
@@ -293,7 +312,7 @@ function ryktDrag(p,f){
   RY.forr=vin;
   const kittlig=HORSES[G.hastId]&&HORSES[G.hastId].flaggor&&HORSES[G.hastId].flaggor.kittlig;
   if(kittlig&&len>0.030){
-    RY.varning=HORSES[G.hastId].namn+" är kittlig — ta det långsammare.";
+    RY.varning=HORSES[G.hastId].namn+" är kittlig — snabba drag känns som knuffar. Ta det långsammare.";
     return;
   }
   let traff=false;
@@ -303,13 +322,13 @@ function ryktDrag(p,f){
     traff=true;
     if(!RYKTKRAV[z.typ].includes(R.id)){
       RY.varning = R.id==="skrapa"
-        ? "Gummiskrapan går på musklerna, aldrig över ben eller huvud."
-        : "Kardborsten är för hård för huvudet — ta den mjuka.";
+        ? "Gummiskrapan går på musklerna, aldrig över ben eller huvud — där sitter huden direkt på benet och det gör ont."
+        : "Kardborsten är för hård för huvudet. Huden är tunn där, och hon lär sig dra undan nosen.";
       return;
     }
     if(R.id==="skrapa"){ if(RY.vrid>1.9)RY.gjort[i].add("skrapa"); }
     else if(dx>0.0006)  RY.gjort[i].add(R.id);
-    else if(dx<-0.010)  RY.varning="Borsta med hårets riktning — framifrån och bakåt.";
+    else if(dx<-0.010)  RY.varning="Borsta med hårets riktning, framifrån och bakåt. Mot håret bryts pälsen och hon blir öm.";
   }
   if(traff&&RY.varning&&RY.varning.indexOf("hårets")<0&&RY.varning.indexOf("kittlig")<0)return;
   if(traff)RY.varning=RY.varning.indexOf("hårets")>=0?RY.varning:"";
@@ -370,7 +389,7 @@ function sadelDrag(p,f,klick){
     if(y<0.44){ SA.ux=clamp(x,0.40,0.72);
       if(x-f[0]>0.0008)SA.bakat+=x-f[0];
       if(SA.ux>0.50&&SA.bakat>0.055){SA.fas=1;SA.bakat=0;SA.varning="";}
-      else if(x-f[0]<-0.012)SA.varning="Skjut bakåt, med hårets riktning — aldrig framåt.";
+      else if(x-f[0]<-0.012)SA.varning="Skjut bakåt, med hårets riktning. Framåt reser sig pälsen, och strån som hamnar fel skaver hela lektionen.";
     }
     return;
   }
@@ -378,14 +397,14 @@ function sadelDrag(p,f,klick){
     if(!f)return;
     if(y<0.55){ SK.sadelX=clamp(x,0.35,0.80);
       if(x-f[0]>0.0008)SA.bakat+=x-f[0];
-      if(x-f[0]<-0.012)SA.varning="Sadeln skjuts bakåt på plats, inte framåt — pälsen ska ligga rätt.";
+      if(x-f[0]<-0.012)SA.varning="Sadeln skjuts bakåt på plats. Skjuter du framåt lägger sig pälsen mot håret under sadeln.";
       /* Kravet för att gå vidare är hårdare än gränsen för godkänt
          läge — annars kan man klara momentet i en position som sedan
          bedöms som fel, och det är obegripligt. */
       if(Math.abs(SK.sadelX-SADEL_RATT)<0.040&&SA.bakat>0.045){SA.fas=2;SA.varning="";}
       else if(SA.bakat>0.045)SA.varning=SK.sadelX<SADEL_RATT
-        ? "För långt fram — sadeln ska ligga bakom bogbladet."
-        : "För långt bak — då ligger den på njurarna.";
+        ? "För långt fram — då ligger sadeln på bogbladet och låser skuldran. Hon kan inte ta ut steget."
+        : "För långt bak — då vilar den på njurarna i stället för på revbenen.";
     }
     return;
   }
@@ -403,7 +422,7 @@ function sadelDrag(p,f,klick){
   const nu=performance.now();
   const takPerTag=0.16;
   if(nu-SA.sisteTag<900&&SA.tag>0&&ny-SK.gjord>0.02&&SK.gjord>0.12){
-    SA.varning="Ett tag i taget — vänta en stund innan du drar mer.";
+    SA.varning="Ett tag i taget. Hon behöver hinna andas ut emellan, annars blir hon gjordsur och börjar hugga när du sadlar.";
     return;
   }
   const fore=SK.gjord;
@@ -424,5 +443,142 @@ function ritaSadel(cx,W,H){
     cx.font='11px "IBM Plex Mono", monospace';
     cx.fillStyle=SA.tag>=3?"#7FB489":"#A6ABB3";
     cx.fillText(`TAG ${Math.min(SA.tag,3)}/3`,W*0.5,H*0.135);
+  }
+}
+
+/* ══ VISITERINGEN ═════════════════════════════════════════════════
+   Fem ställen man går igenom innan man lägger på någonting. De flesta
+   dagar är allt bra — och det är just därför momentet är svårt att lära
+   sig: man slutar titta.
+
+   Därför finns det ett fynd ibland. Hittar man det ska man göra det en
+   ridskoleelev ska göra, alltså säga till. Inte lösa det själv med en
+   extra vojlock, och inte sadla ändå. Missar man det står det kvar och
+   blir en skada nästa pass — samma väg som slarv med hovarna. */
+const VISITPUNKT=[
+  {id:"ogon", x:0.250,y:0.283, namn:"Ögon och nos",
+   ok:"Klara ögon, torr nos. %N ser dig i ögonen — hon är pigg idag."},
+  {id:"mun",  x:0.267,y:0.330, namn:"Mungiporna",
+   ok:"Mjuka och hela. Bettet har inte skavt sedan sist."},
+  {id:"sadel",x:0.560,y:0.335, namn:"Sadelläget",
+   ok:"Slät och sval rygg. %N står still när du trycker — inget ömmar."},
+  {id:"gjord",x:0.500,y:0.560, namn:"Gjordläget",
+   ok:"Ingen svullnad bakom bogen. Huden är len där gjorden ska gå."},
+  {id:"ben",  x:0.455,y:0.720, namn:"Benen",
+   ok:"Svala och tunna hela vägen ner. %N lyfter foten innan du hinner be om det."},
+];
+const VISITFYND={
+  ogon: "Nosen rinner och ögonen är lite matta.",
+  mun:  "En liten sårskorpa i vänstra mungipan.",
+  sadel:"En varm, öm fläck mitt där sadeln ska ligga.",
+  gjord:"Huden är röd och skavd efter gjorden.",
+  ben:  "Höger framben är varmare än det vänstra.",
+};
+/* Svarsalternativen. Det rätta är alltid att säga till — en elev
+   diagnostiserar inte, hon rapporterar. De andra två är de frestande. */
+const VISITSVAR=[
+  {t:"Säg till ridläraren", ratt:true},
+  {t:"Det går nog bra idag", ratt:false},
+  {t:"Lös det själv och sadla", ratt:false},
+];
+const VIS={sedd:new Set(), fynd:null, oppen:null, svar:-1, t:0};
+
+function visitNollstall(){
+  VIS.sedd=new Set(); VIS.oppen=null; VIS.svar=-1; VIS.t=0;
+  /* Fyndet är samma hela dagen för samma häst, som humöret. */
+  const rnd=momentFro(G.seed||1, (G.hastId||"").length, 104729);
+  VIS.fynd=rnd()<0.42 ? VISITPUNKT[Math.floor(rnd()*VISITPUNKT.length)].id : null;
+}
+function visitOppna(id){
+  VIS.oppen=id; VIS.svar=-1; VIS.sedd.add(id);
+  const p=VISITPUNKT.find(v=>v.id===id);
+  if(p)momentKamPunkt(p.x,p.y,2.9);
+  momentKamKor();
+}
+function visitStang(){ VIS.oppen=null; momentKamTill(0); }
+function visitAndel(){ return VIS.sedd.size/VISITPUNKT.length; }
+/* Klarade man visiteringen? Sant när allt är genomgånget och ett
+   eventuellt fynd är rapporterat. */
+function visitKlar(){
+  if(VIS.sedd.size<VISITPUNKT.length)return false;
+  if(!VIS.fynd)return true;
+  return VIS.svar>=0&&VISITSVAR[VIS.svar].ratt;
+}
+function visitMissat(){
+  if(!VIS.fynd)return false;
+  return !VIS.sedd.has(VIS.fynd)||(VIS.svar>=0&&!VISITSVAR[VIS.svar].ratt);
+}
+function momentKamPunkt(x,y,s){ KAM.mal={s,x,y}; momentKamKor(); }
+
+function visitChipp(W,H){
+  const b=W*0.29, h=H*0.075, y=H-h-H*0.030;
+  return VISITSVAR.map((v,i)=>({v,i,x:W*0.025+i*(b+W*0.012),y,b,h}));
+}
+/* Klick i skärmrymd. Returnerar sant om rutan tog hand om klicket. */
+function visitKlick(sx,sy,W,H){
+  if(VIS.oppen&&VIS.fynd===VIS.oppen&&VIS.svar<0){
+    for(const c of visitChipp(W,H))
+      if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
+        VIS.svar=c.i;
+        if(typeof ljudStot==="function")
+          ljudStot(c.v.ratt?720:280,"sine",0.10,0.05);
+        return true;
+      }
+  }
+  if(VIS.oppen&&sy>0.86){ visitStang(); return true; }
+  return false;
+}
+function ritaVisit(cx,W,H){
+  /* Punkterna: ring för ogjord, bock för genomgången. */
+  cx.save();
+  cx.translate(W/2,H/2); cx.scale(KAM.s,KAM.s); cx.translate(-KAM.x*W,-KAM.y*H);
+  for(const p of VISITPUNKT){
+    const sedd=VIS.sedd.has(p.id), r=W*0.030;
+    cx.beginPath(); cx.arc(W*p.x,H*p.y,r,0,Math.PI*2);
+    cx.lineWidth=2.4/KAM.s;
+    cx.strokeStyle=sedd?"rgba(127,180,137,.9)":"rgba(214,174,60,.85)";
+    cx.setLineDash(sedd?[]:[5/KAM.s,4/KAM.s]); cx.stroke(); cx.setLineDash([]);
+    if(sedd){
+      cx.beginPath();
+      cx.moveTo(W*p.x-r*0.42,H*p.y); cx.lineTo(W*p.x-r*0.08,H*p.y+r*0.36);
+      cx.lineTo(W*p.x+r*0.46,H*p.y-r*0.34);
+      cx.lineWidth=3/KAM.s; cx.strokeStyle="rgba(127,180,137,.95)"; cx.stroke();
+    }
+  }
+  cx.restore();
+  cx.textAlign="center";
+  if(!VIS.oppen){
+    cx.font='12.5px "IBM Plex Sans", sans-serif'; cx.fillStyle="#A6ABB3";
+    cx.fillText(`Gå igenom alla fem — ${VIS.sedd.size}/${VISITPUNKT.length}`,W*0.5,H*0.075);
+    return;
+  }
+  const p=VISITPUNKT.find(v=>v.id===VIS.oppen);
+  const fynd=VIS.fynd===VIS.oppen;
+  /* Rutan under bilden: vad du ser, och vad du gör åt det. */
+  const y0=H*0.66;
+  cx.fillStyle="rgba(12,14,18,.90)"; cx.fillRect(0,y0,W,H-y0);
+  cx.fillStyle=fynd?"#D0655A":"#7FB489"; cx.textAlign="left";
+  cx.font='600 13px "IBM Plex Sans", sans-serif';
+  cx.fillText(p.namn.toUpperCase(),W*0.03,y0+H*0.055);
+  cx.fillStyle="#E6E4DE"; cx.font='13px "IBM Plex Sans", sans-serif';
+  const namn=(HORSES[G.hastId]||{}).namn||"Hon";
+  cx.fillText((fynd?VISITFYND[p.id]:p.ok).replace(/%N/g,namn),W*0.03,y0+H*0.105);
+  if(fynd&&VIS.svar<0){
+    for(const c of visitChipp(W,H)){
+      cx.fillStyle="rgba(24,27,33,.95)"; cx.fillRect(c.x,c.y,c.b,c.h);
+      cx.strokeStyle="rgba(214,174,60,.55)"; cx.lineWidth=1.4;
+      cx.strokeRect(c.x+1,c.y+1,c.b-2,c.h-2);
+      cx.fillStyle="#E6E4DE"; cx.textAlign="center";
+      cx.font='11.5px "IBM Plex Sans", sans-serif';
+      cx.fillText(c.v.t,c.x+c.b/2,c.y+c.h*0.62);
+    }
+  }else{
+    cx.textAlign="left"; cx.font='12px "IBM Plex Sans", sans-serif';
+    cx.fillStyle=fynd?(VISITSVAR[VIS.svar].ratt?"#7FB489":"#D0655A"):"#8E939B";
+    cx.fillText(fynd
+      ? (VISITSVAR[VIS.svar].ratt
+         ? "Rätt gjort. Ridläraren tittar på det innan ni rider — och hon slipper gå på det."
+         : "Hon går på det hela lektionen. Det märks imorgon.")
+      : "Klicka nederst för att gå vidare.", W*0.03, y0+H*0.165);
   }
 }

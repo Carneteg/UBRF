@@ -133,7 +133,7 @@ const SK={steg:0,ryktning:new Set(),hovar:[0,0,0,0],sadelX:0.5,gjord:0.1,visiter
 function visaSkotsel(){
   SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
   SK.visitering=0;SK.betsling=0;SK.start=performance.now();
-  ryktNollstall();sadelNollstall();
+  ryktNollstall();sadelNollstall();visitNollstall();
   const h=HORSES[G.hastId];
   /* Egenhet: en häst som blåser upp magen släpper sakta ut luften —
      gjorden glider ner igen tills du drar åt en gång till. */
@@ -163,13 +163,14 @@ function visaSkotsel(){
     </div>
   </div>`);
   for(const el of document.querySelectorAll(".gstep"))
-    el.onclick=()=>{SK.steg=+el.dataset.s;hovStang();momentKamTill(SK.steg);groomHint();};
+    el.onclick=()=>{SK.steg=+el.dataset.s;hovStang();VIS.oppen=null;
+      momentKamTill(SK.steg);groomHint();};
   document.getElementById("bKlar").onclick=avslutaSkotsel;
   initGroomCanvas();momentKamTill(0,true);groomHint();
 }
 function groomHint(){
   const h=HORSES[G.hastId];
-  let t=["Klicka på mungipan och sadelläget för att visitera — kolla skav innan du lägger på något.",
+  let t=["Klicka på de fem ringarna: ögon, mungipor, sadelläge, gjordläge och ben. De flesta dagar är allt bra — det är därför man slutar titta.",
     "Håll och dra över kroppen, i pälsens riktning (framifrån och bak). Täckning räknas per område.",
     "Klicka på en hov för att lyfta den, dra sedan nedåt över den för att kratsa. Alla fyra.",
     "Dra sadeln till rätt läge — precis bakom manken — och dra sedan gjordreglaget till det gröna bandet."][SK.steg];
@@ -209,16 +210,26 @@ function hantera(p,klick){
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
     ritaGroom(); return;
   }
+  if(SK.steg===0&&klick){
+    const r0=gcv.getBoundingClientRect();
+    if(visitKlick(p[0],p[1],r0.width,r0.height)){
+      SK.visitering=visitAndel();
+      dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
+      ritaGroom(); return;
+    }
+  }
   if(SK.steg===1&&klick){
     const r0=gcv.getBoundingClientRect();
     if(ryktKlickChipp(p[0],p[1],r0.width,r0.height)){ritaGroom();return;}
   }
   const[x,y]=momentTillBild(p[0],p[1]);
   if(SK.steg===0&&klick){
-    if(Math.hypot(x-MUNGIPA[0],y-MUNGIPA[1])<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
-    if(Math.hypot(x-SADELPLATS[0],y-SADELPLATS[1])<0.10)SK.visitering=Math.min(1,SK.visitering+0.5); // sadelläge
-    if(SK.visitering>=1)SK.betsling=0.9;
-    dok(0,SK.visitering>=1?"klart":"…");
+    let b=null,bd=0.085;
+    for(const v of VISITPUNKT){const d=Math.hypot(x-v.x,y-v.y);if(d<bd){bd=d;b=v;}}
+    if(b)visitOppna(b.id);
+    SK.visitering=visitAndel();
+    SK.betsling=VIS.sedd.has("mun")?0.9:0.2;
+    dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
   }
   if(SK.steg===1){
     const fs=SK.sista?momentTillBild(SK.sista[0],SK.sista[1]):null;
@@ -282,12 +293,7 @@ function ritaGroom(){
       gcx.stroke();
     }
   }
-  // visitering-markörer
-  if(SK.steg===0){
-    for(const[mx,my]of[MUNGIPA,SADELPLATS]){
-      gcx.strokeStyle="rgba(214,174,60,.8)";gcx.lineWidth=2;gcx.setLineDash([4,4]);
-      gcx.beginPath();gcx.arc(W*mx,H*my,W*0.05,0,Math.PI*2);gcx.stroke();gcx.setLineDash([]);}
-  }
+
   // hovar
   if(SK.steg===2){
     for(let i=0;i<4;i++){const[hx,hy]=HOVP[i];
@@ -322,6 +328,7 @@ function ritaGroom(){
     }
   }
   gcx.restore();
+  if(SK.steg===0)ritaVisit(gcx,W,H);
   if(SK.steg===1)ritaRykt(gcx,W,H);
   if(SK.steg===3)ritaSadel(gcx,W,H);
   /* Hovens närbild ligger över allt annat — den är ett eget moment. */
@@ -362,6 +369,28 @@ function avslutaSkotsel(){
     res.risker.push("lera_kvar");
     lerRad="lera kvar på benen (−0,09)";
     res.omdome="Du sköter ingen häst genom leran. Spola av benen i spiltan innan du borstar nästa gång.";}
+  /* Fel utrustning räknades men kostade ingenting. Nu gör den det: varje
+     vända tillbaka till sadelkammaren är en häst som står uppbunden och
+     väntar, och det syns på dagsformen. Priset är litet — poängen är att
+     misstaget inte glöms bort utan får ett skäl. */
+  let utrRad="rätt sadel och träns direkt";
+  if(G.felUtrustning>0){
+    res.dagsform=clamp(res.dagsform-0.03*Math.min(G.felUtrustning,3),0,1);
+    utrRad=`fel utrustning ${G.felUtrustning} gång${G.felUtrustning>1?"er":""} `
+      +`(−${(0.03*Math.min(G.felUtrustning,3)).toFixed(2).replace(".",",")}) — `
+      +`hon stod uppbunden och väntade`;
+  }
+  /* Visiteringen ska löna sig, inte bara straffa. Hittade du något och
+     sa till får hon en bättre dag — det är hela poängen med att titta. */
+  let visRad="inget att anmärka";
+  if(visitMissat()){
+    if(!res.risker.includes("missat_skav"))res.risker.push("missat_skav");
+    visRad=VIS.sedd.has(VIS.fynd)?"du såg det och lät det vara"
+      :"du hann inte gå igenom allt";
+  }else if(VIS.fynd){
+    res.dagsform=clamp(res.dagsform+0.05,0,1);
+    visRad="du hittade det och sa till (+0,05)";
+  }
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
   /* Skötseln ger hästkunskap. Måttet är dagsformen du lyckades lämna
      hästen i — det är den enda siffra som säger något om hur väl du
@@ -389,6 +418,8 @@ function avslutaSkotsel(){
     <tr><td>Gårdagens dagsform</td><td class="num">${igarRad}</td></tr>
     <tr><td>Vila</td><td class="num">${vilaRad}</td></tr>
     <tr><td>Benen efter hagen</td><td class="num">${lerRad}</td></tr>
+    <tr><td>Utrustningen</td><td class="num">${utrRad}</td></tr>
+    <tr><td>Visiteringen</td><td class="num">${visRad}</td></tr>
     <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
     <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>
     <tr><td>Stallro</td><td class="num">${G.stallro.toFixed(2).replace(".",",")}</td></tr>
