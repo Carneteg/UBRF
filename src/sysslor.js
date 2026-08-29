@@ -247,7 +247,9 @@ function visaSchema(){
   <span class="lbl">Whiteboarden i servicedelen · dagens schema</span>
   <h1 style="margin-top:8px">${vtxt}</h1>
   <p class="dim" style="font-size:13.5px">Din häst i dag: <b style="color:var(--ink)">${hast}</b>.
-  Schemat gäller tills lektionen börjar — ridläraren bockar av resten.</p>
+  Ridlärare: <b style="color:var(--ink)">${(typeof dagensLedare==="function")?dagensLedare().namn:"—"}</b>
+  <span class="dim">(${(typeof dagensLedare==="function")?dagensLedare().stil:""})</span>.
+  Schemat gäller tills lektionen börjar.</p>
   <ul style="list-style:none;padding:0;margin:14px 0;display:grid;gap:9px;font-size:14.5px">
     ${rad(!!G.hastId,"Prata med ridläraren — dagens häst")}
     ${rad(!!G.hamtad,"Hämta hästen i hagen och led till boxen")}

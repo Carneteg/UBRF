@@ -1446,7 +1446,8 @@ function ritaVandring3D(){
       }
       if(!G.hastId)
         v3dFigur({x:S.ridlarare.pos[0],z:S.ridlarare.pos[1],rikt:Math.PI,
-          fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
+          fas:0,rorlig:false,hjalm:false,
+          jacka:(typeof dagensLedare==="function")?dagensLedare().farg:"#2E4638"});
       for(const f of stallFolk()){
         const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
         if(fy>S.serviceY-1)continue;

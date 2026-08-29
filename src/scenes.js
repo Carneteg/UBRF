@@ -10,9 +10,11 @@ function visaMeny(){
   overlay(true,`
   <span class="lbl">POC · utanför Roblox · byggd på ubrf.se</span>
   <h1 style="margin-top:8px">Ridskolan</h1>
-  <p style="font-size:17px">Du styr inte hästen. Du styr fyra hjälper — skänkel, tygel, sits och styrning —
-  och hjälperna flyttar hästens tillstånd på <em>utbildningsskalan</em>. Tillståndet avgör vad hästen gör.
+  <p style="font-size:17px">Du styr inte hästen — du pratar med den. Fyra hjälper:
+  skänkel, tygel, sits och styrning. Rider du bra blir hästen bättre, steg för steg.
   Det finns ingen hoppknapp.</p>
+  <p class="dim" style="font-size:13.5px">Ridlärarna ${LEDARE.slice(0,-1).map(l=>l.namn).join(", ")} och ${LEDARE[LEDARE.length-1].namn}
+  turas om att hålla lektionerna — och de säger till på olika sätt.</p>
   <div class="keys">
     <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> gå — till fots</div>
     <div><kbd>E</kbd> interagera (dörrar, ridlärare, box)</div>
@@ -32,8 +34,8 @@ function visaMeny(){
     <div><kbd>P</kbd> ridläraren visar (autopilot)</div>
     <div><kbd>F</kbd> spö — men läs hästlistan först</div>
   </div>
-  <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
-  Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
+  <div class="note">Tips: håll tygeln i det <b>gröna bandet</b> på mätaren — inte löst, inte hårt.
+  Och gör en halvhalt (E) före hörnen, så blir hästen samlad.</div>
   ${typeof jagPanelHTML==="function"?jagPanelHTML():""}
   ${profilHTML()}
   ${typeof synkPanelHTML==="function"?synkPanelHTML():""}
@@ -94,8 +96,10 @@ function visaTilldelning(){
   const egenheter=Object.keys(h.flaggor||{}).map(f=>EGENHET[f]).filter(Boolean);
   const trott=minne.pass>0&&minne.sistaPassNr===SPAR.pass;
   const rehab=!!minne.rehab;
+  const led=dagensLedare();
   overlay(true,`
-  <span class="lbl">${G.tavling?"Tävlingsdag · ridläraren fördelar hästarna":"Ridläraren fördelar hästarna"}</span>
+  <span class="lbl">${G.tavling?"Tävlingsdag · ":""}${led.namn} fördelar hästarna</span>
+  <p class="dim" style="font-size:12.5px;margin:4px 0 0">I dag: <b style="color:var(--ink)">${led.namn}</b>, ${led.roll} — ${led.stil}.</p>
   <h1 style="margin-top:8px">Du får ${h.namn}</h1>
   <div class="hcard">
     <div style="flex:1">
@@ -126,7 +130,7 @@ function visaTilldelning(){
     saga(`${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta honom.`,4);};
   document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
     setTimeout(()=>{const w=document.querySelector(".why");
-      if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};
+      if(w&&G.seed%3===0)w.textContent=`”${dagensLedare().nej}”`;},50);};
 }
 
 /* ── Skötseln — fyra handgrepp på en canvas ── */
@@ -172,10 +176,12 @@ function visaSkotsel(){
 }
 function groomHint(){
   const h=HORSES[G.hastId];
-  let t=["Gå fram till henne först — hon ska se dig komma. Sedan de fem ställena i tur och ordning, framifrån och bakåt: ögon, mungipor, sadelläge, gjordläge, ben. De flesta dagar är allt bra, och det är därför man slutar titta.",
-    "Tre redskap, i den ordningen: gummiskrapan i cirklar på musklerna, kardborsten i korta drag med hårets riktning, och den mjuka borsten över hela hästen. Ringen runt varje fläck visar vilka redskap som varit där.",
-    "Klicka på en hov. Bilden går ner till sulan, och där kratsar du från trakten mot tån — längs fårorna på var sida om strålen. Alla fyra.",
-    "Fyra moment i ordning: underlägget högt på manken och bakåt, sadeln bakåt på plats bakom bogbladet, lyft upp underlägget i sadelbommen, och gjorda i tre tag med paus emellan."][SK.steg];
+  /* Instruktionerna är skrivna för 8–15 år: en sak i taget, korta
+     meningar. Detaljerna finns i träningsboken för den som vill mer. */
+  let t=["Gå fram så hon ser dig. Titta sen på de fem ställena, framifrån och bakåt: ögon, mun, sadelläge, gjord, ben.",
+    "Tre borstar, i tur och ordning: gummiskrapan i cirklar, kardan i korta drag, mjuka borsten över allt. Ringarna visar vad som är kvar.",
+    "Klicka på en hov för att lyfta den. Kratsa sedan bakifrån och framåt, på båda sidor om strålen. Alla fyra hovarna.",
+    "Fyra steg: lägg underlägget högt på manken, sadeln bakom bogen, lyft upp underlägget, och dra gjorden i tre tag med paus emellan."][SK.steg];
   if(SK.steg===1&&h.flaggor&&h.flaggor.kittlig)
     t+=` OBS: ${h.namn} är kittlig — bara lugna, långsamma drag räknas.`;
   if(SK.steg===3&&h.flaggor&&h.flaggor.blaser_upp_magen)
@@ -355,6 +361,9 @@ function avslutaSkotsel(){
       *(SA.mankfri?1:0.62)*(SA.tag>=3?1:SA.tag>=2?0.86:0.70),
     gjord:SK.gjord, betsling:SK.betsling, tid,
   },HORSES[G.hastId].forlatande,G.stallro);
+  /* Samma bedömning, ledarens ord: riskerna behåller sina lärande
+     rader, helhetsomdömet sägs som dagens ledare skulle säga det. */
+  if(typeof ledarSkotselOmdome==="function")res.omdome=ledarSkotselOmdome(res);
   /* Individen: gårdagens skötsel sitter i kroppen, och en häst som
      gick lektion nyss är inte utvilad. */
   const m0=hastminne(G.hastId);
@@ -421,7 +430,7 @@ function avslutaSkotsel(){
   initNPC();
   G.px=10;G.py=52;G.rikt=-Math.PI/2;
   overlay(true,`
-  <span class="lbl">Ridläraren tittar på ${HORSES[G.hastId].namn}</span>
+  <span class="lbl">${(typeof dagensLedare==="function")?dagensLedare().namn:"Ridläraren"} tittar på ${HORSES[G.hastId].namn}</span>
   <p class="humor">${humorText(G.hastId,G.humor)}</p>
   <h1 style="margin-top:8px" ${res.dagsform<0.55?'class="red"':""}>”${res.omdome}”</h1>
   <table><tbody>
@@ -464,16 +473,13 @@ function visaResultat(dom){
   let momRows="";
   for(const k in G.betyg)momRows+=`<tr><td>${radNamn(k)}</td><td class="num">${G.betyg[k].toFixed(2).replace(".",",")}</td></tr>`;
   const domRows=dom.protokoll.map(r=>`<li>${r}</li>`).join("");
-  const omdome= P.uppflyttad?`Det där satt. Från och med nästa vecka rider du i ${P.gruppNamn}.`
-    : dom.utesluten?`Det blev inte er dag. ${h.namn} förtjänade en lugnare ritt — vi tar det igen nästa vecka.`
-    : !G.hadeBana?(snitt>=forv?`Bra ridet. Ridningen håller för din grupp — fortsätt så.`
-      :`Vi jobbar vidare. Snittet nådde inte gruppens förväntan idag — läs övningarna i träningsboken.`)
-    : dom.totalfel===0&&snitt>=forv?`Felfritt, och du red vägen — inte hindren. Jag flyttar upp dig en grupp efter jul.`
-    : dom.totalfel===0?`Felfritt! Men ridningen mellan hindren var stökigare än resultatet. Vi jobbar vidare där.`
-    : snitt>=forv?`${dom.totalfel} fel, men ridningen håller. Felen försvinner när distanserna sätter sig.`
-    : `${dom.totalfel} fel. Titta mindre på hindret och mer på vägen dit.`;
+  /* Omdömet: samma utfall, dagens ledares ord — Bengt säger "Godkänt"
+     där Sofie hade sagt "Vilken fin lektion ni hade!". */
+  const omdome=(typeof ledarLektionsOmdome==="function")
+    ? ledarLektionsOmdome(P,dom,snitt,forv,G.hadeBana,h.namn)
+    : `${dom.totalfel} fel.`;
   overlay(true,`
-  <span class="lbl">Efter lektionen</span>
+  <span class="lbl">Efter lektionen · ${(typeof dagensLedare==="function")?dagensLedare().namn:"ridläraren"}</span>
   <h1 style="margin-top:8px">”${omdome}”</h1>
   ${typeof efterPassHTML==="function"?efterPassHTML():""}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">

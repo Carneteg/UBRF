@@ -329,11 +329,16 @@ function stegaLektion(dt){
     }
     {const mt=document.getElementById("momentMal");
      if(mt)mt.textContent=momentMalText(m,G.grupp);}
-    // ridlärartillsägelser
+    /* Ledarens röst under ridningen. Går det bra får du beröm — hur
+       ofta beror på vem som håller lektionen. Går det sämre säger hon
+       till om det svagaste, med sina egna ord. */
     G.sagaCd-=dt;
     if(G.sagaCd<=0&&G.momentT>6){
-      const[rop]=ridlararRop(G.ride,G.grupp,Math.floor(G.t));
-      saga(rop,3.4);G.sagaCd=11+Math.random()*5;
+      const bra=Skala.inverkan(G.ride.skala,G.grupp)>=(Skala.FORVANTAN[G.grupp]??0.55);
+      const txt=bra&&Math.random()<dagensLedare().beromChans
+        ? ledarBerom(Math.floor(G.t))
+        : ledarRop(G.ride,G.grupp,Math.floor(G.t))[0];
+      saga(txt,3.4);G.sagaCd=ledarPaus();
     }
     /* Taket: även ett moment man inte klarar tar slut till slut, så att
        ingen fastnar. Då blir det underkänt, inte oändligt. */

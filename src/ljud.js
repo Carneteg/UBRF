@@ -168,7 +168,10 @@ function ljudRost(text){
     if(!("speechSynthesis"in window))return;
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);
-    u.lang="sv-SE";u.rate=1.04;u.pitch=1.0;u.volume=0.85;
+    /* Varje ledare har sin egen röst: Sofie ljus och snabb, Bengt mörk
+       och långsam. Samma talsyntes, olika människor. */
+    const led=(typeof dagensLedare==="function")?dagensLedare():null;
+    u.lang="sv-SE";u.rate=led?led.rost.rate:1.04;u.pitch=led?led.rost.pitch:1.0;u.volume=0.85;
     const sv=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.startsWith("sv"));
     if(sv)u.voice=sv;
     speechSynthesis.speak(u);

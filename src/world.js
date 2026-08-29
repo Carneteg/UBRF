@@ -222,7 +222,8 @@ function interaktioner(){
     for(const d of S.dorrar) L.push({pos:d.pos,
       text:G.leder?`Led hästen ${d.text.toLowerCase().replace("ut ","ut ")}`:d.text,
       gor(){gaTill(d.mot,d.spawn);}});
-    if(!G.hastId) L.push({pos:S.ridlarare.pos, text:"Prata med ridläraren",
+    if(!G.hastId) L.push({pos:S.ridlarare.pos,
+      text:`Prata med ${(typeof dagensLedare==="function")?dagensLedare().namn:"ridläraren"}`,
       gor(){visaTilldelning();}});
     if(G.hastId&&!G.skotselRes){
       const b=hittaBox(G.hastId);
@@ -316,10 +317,11 @@ function startaVandring(){
   G.vader.tacke=G.vader.typ==="regn"||G.vader.temp<10;
   const s=ANL.spawn; VD.px=s.x;VD.py=s.y;VD.rikt=s.rikt;VD.spår.length=0;
   hudLage("gang");
+  const led=(typeof nyLedareForDagen==="function")?nyLedareForDagen():{namn:"Ridläraren"};
   const vtext={sol:"Kvällssolen ligger över åkrarna.",
     mulet:"Mulet och stilla över Bro.",
     regn:"Regnet trummar på plåttaken."}[G.vader.typ];
-  saga(`Du är framme på Husbyvägen 1A. ${vtext} Ridläraren väntar i stallgången.`,4.5);
+  saga(`Du är framme på Husbyvägen 1A. ${vtext} ${led.namn} väntar i stallgången.`,4.5);
 }
 function hudLage(lage){
   const gang=lage==="gang";
@@ -1079,7 +1081,8 @@ function ritaStall2D(){
   if(!G.hastId){const[a,b]=ss(rl.pos[0],rl.pos[1]);
     cx.fillStyle="#D6AE3C";cx.beginPath();cx.arc(a,b,s*0.5,0,Math.PI*2);cx.fill();
     cx.fillStyle="#C7C2B6";cx.font=`500 ${Math.max(8,s*0.55)}px "IBM Plex Mono",monospace`;
-    cx.textAlign="left";cx.fillText(rl.namn,a+s*0.8,b+3);}
+    cx.textAlign="left";
+    cx.fillText((typeof dagensLedare==="function")?dagensLedare().namn:rl.namn,a+s*0.8,b+3);}
   const mb=G.hastId&&!G.skotselRes&&hittaBox(G.hastId);
   if(mb){const[a,b]=ss(mb.dorr[0],mb.dorr[1]);
     cx.strokeStyle="rgba(214,174,60,.8)";cx.lineWidth=2;
@@ -1233,10 +1236,11 @@ function ritaStall3D(){
     const B=billboard(k,vx+1.9,30,0.9); if(!B)return;
     const {s,sz}=B;
     cx.fillStyle="#C0392B";cx.fillRect(s[0]-sz*0.09,s[1]-sz*0.6,sz*0.18,sz*0.5);}});
-  // ridläraren
+  // ridläraren — dagens ledare i sin egen jackfärg
   if(!G.hastId){
     const rl=S.ridlarare;
-    items.push({d:-avst2(rl.pos), rita(){ritaPerson3D(k,rl.pos[0],rl.pos[1]);}});
+    items.push({d:-avst2(rl.pos), rita(){ritaPerson3D(k,rl.pos[0],rl.pos[1],
+      {farg:(typeof dagensLedare==="function")?dagensLedare().farg:undefined});}});
   }
   // elever som sköter sina hästar i gången
   for(const f of stallFolk()){
@@ -1503,7 +1507,8 @@ function ritaVandring(){
   const mål=!G.hastId
     ? (G.scen==="gard"?["Gå till stallet","Stallentrén är den gula dörren under verandan, bortom parkeringen."]
       :G.scen==="ridhusinne"?["Titta dig omkring","Läktaren, speglarna, Café Krubban — lektionen börjar i stallet."]
-      :["Prata med ridläraren","Hon står i stallgången och fördelar hästarna."])
+      :[`Prata med ${(typeof dagensLedare==="function")?dagensLedare().namn:"ridläraren"}`,
+        "Ridläraren står i stallgången och delar ut hästarna."])
     : !G.hamtad
     ? (G.leder?[`Led ${HORSES[G.hastId].namn} till boxen`,
          G.scen==="gard"?"In genom stalldörren och fram till boxen."
