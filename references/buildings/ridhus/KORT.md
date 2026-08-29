@@ -42,7 +42,7 @@ Kortet är facit för byggfunktionen i `src/varld3d.js`.
 
 ## Tak
 - Form: sadeltak
-- Nockriktning: längs långsidan; gaveln vetter mot parkeringen (troligen mot väster)
+- Nockriktning: längs långsidan; gaveln mot parkeringen är den nordvästra — i spelet den norra (SITEPLAN.md)
 - Lutning: **13,0°** som byggd, ur intervallet nedan (26 m bredd, 3,0 m resning).
 - Uppmätt lutning: **~14°**, rimligt intervall 11–17° (hur: i bild 03 syns nocken vid
   bildpunkt x≈440 och båda takfallen. Vänstra fallet mäter 11,6°, det högra 16,3°.
@@ -146,7 +146,13 @@ ihoptryckt. Proportionen ovan är grov, och den exakta uppdelningen mellan bana 
 gaveldel går inte att mäta.
 
 `RIDHUSINNE` är ombyggd efter det här: 25 × 75 med banan 20×60 och en 13 m djup
-entré- och trapphusdel i södra gaveln. Går man in från parkeringen kommer man in i
+entré- och trapphusdel i norra gaveln, mot parkeringen.
+
+Hallens inredning ligger i `RIDHUSINNE.hallMobler` som måttsatta rektanglar —
+receptionsdisk, tre bänkar längs västra väggen, kansliets och omklädningens
+skiljeväggar samt det andra trapphuset. De är `[antagande]`: utrymningsplanen
+visar rum, inte möbler. Måtten finns där för att de ska vara solida att gå
+emot; ett foto inifrån hallen skulle ersätta dem. Går man in från parkeringen kommer man in i
 en hall och ser banan genom öppningen mitt för sargporten, i stället för att kliva
 rakt ut på banan. Rummen i hallen är antydda med väggar, inte ritade rum för rum —
 planen går inte att läsa så noga.
@@ -192,8 +198,9 @@ Banan är en **20×60** med tolv bokstäver (A-K-V-E-S-H-C-M-R-B-P-F). Spelet ha
 bara åtta, alltså 20×40-uppsättningen på en 20×60-bana; V, S, P och R är tillagda.
 
 ## Placering (från SITEPLAN.md)
-- Position: sydvästra hörnet i (118, 44), fotavtryck 26 × 66 m
-- Rotation: nocken i nord–sydlig riktning, gaveln mot parkeringen i söder
+- Position: sydvästra hörnet i (118, 44), fotavtryck 25 × 75 m
+- Rotation: nocken i nord–sydlig riktning, cafégaveln mot parkeringen i norr
+  (rättat 2026-08-29 — grusplanen ligger vid husets nordvästra ände)
 - Marknivå: plant
 
 ## Fotobrist

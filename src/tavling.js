@@ -225,7 +225,7 @@ function visaTavlingsResultat(dom){
   document.getElementById("bTavKlar").onclick=()=>{
     G.seed++;nollstall();
     G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
-    gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
+    gaTill("stallinne",{x:7.5,y:40,rikt:-Math.PI/2});
     saga(ro?"Rosetten sitter på boxdörren. Resultatlistan hänger i klubbrummet.":"Resultatlistan hänger i klubbrummet. Nästa tävling kommer.",4);
   };
 }

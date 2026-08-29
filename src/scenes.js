@@ -519,13 +519,13 @@ function visaResultat(dom){
   if(typeof kopplaEfterPass==="function")kopplaEfterPass();
   document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();
     G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
-    gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
+    gaTill("stallinne",{x:7.5,y:40,rikt:-Math.PI/2});
     saga("Tillbaka i stallgången. Ridläraren fördelar hästarna.",3.5);};
   document.getElementById("bSamma").onclick=()=>{
     const mS=hastminne(G.hastId);
     if(mS.skada&&mS.skada.passKvar>0){
       G.seed++;nollstall();G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
-      gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
+      gaTill("stallinne",{x:7.5,y:40,rikt:-Math.PI/2});
       saga(`${h.namn} står på vila — ${mS.skada.namn}. Ridläraren ger dig en annan häst.`,4);
       return;
     }

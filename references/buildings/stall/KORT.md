@@ -9,8 +9,10 @@ gissningar `[antagande]`. Kortet är facit för byggfunktionen i `src/varld3d.js
 > entrébilderna.
 >
 > Fasadbilderna täcker **västra långsidan och den gavel som ligger närmast
-> förstukvisten** — i spelets väderstreck den södra. Östra långsidan, norra
-> gaveln och takytan uppifrån saknas helt.
+> förstukvisten** — klubbgaveln mot grusplanen, i spelets väderstreck den
+> **norra** (rättat 2026-08-29: grusplanen ligger vid nordvästra gaveln, se
+> SITEPLAN.md). Östra långsidan och takytan uppifrån saknas; södra gaveln
+> är läst ur Street View.
 
 ## Foton
 | Fil | Fasad/vinkel | Visar |
@@ -68,8 +70,8 @@ Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 | Sida | Material | Färg RGB / namn | Fönster | Dörrar/portar | Övrigt |
 |---|---|---|---|---|---|
 | Långsida V (mot gården) | **liggande träpanel** | **(80, 35, 47)** "mörk falurött" | **Rad av valvbågade, flerrutiga fönster med vit karm, ett per box (~3,5 m)** | förstukvistens ockragula dörr | Vita knutbrädor, vit foder runt varje fönster, ljusgrå betongsockel |
-| Gavel S (den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong** | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
-| Gavel N | `[saknas foto]` | | | | |
+| Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong** | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
+| Gavel S (mot gårdsplanen från Husbyvägen) | samma (Street View) | samma | valvfönster i två plan | **två entrédörrar under vita spetsiga skärmtak** | **rak ståltrappa** med avsats upp till en dörr i övervåningen `[läst ur Street View på avstånd]` |
 | Långsida Ö | `[saknas foto]` | | | | |
 
 Detaljfärger:
@@ -149,10 +151,71 @@ kortet antar ur `STALLINNE`, och med hur smal byggnaden ser ut i satellitbilden.
 Tills dess är `STALLINNE` kvar som den är, med en gång och två boxrader. Den är
 känd fel i planform och ska byggas om när underlaget finns.
 
+## Stallgången invändigt — läst ur filmerna
+
+Underlaget är **37 bildrutor** ur `video/IMG_0249.mov` (13,3 s, gången norrut)
+och `video/IMG_0250.mov` (5,2 s, motsatt håll), uttagna i två bilder per sekund.
+Det här är det bästa underlag som finns för insidan, och det säger att gången
+inte alls ser ut som ett vanligt trästall.
+
+### Taket — det man känner igen gången på inifrån
+- **Sadeltak**, inte platt innertak. Undertaket är **galvaniserad korrugerad
+  plåt**, ljus hela vägen upp i nocken.
+- **Tvärbalkar i tegelrött** (ungefär (156, 74, 50)) ligger tvärs över gången
+  med omkring fyra meters mellanrum, med **snedstag** upp mot en genomgående
+  **nockbalk** i samma färg. Fackverket är byggnadens tydligaste inre drag.
+- **Galvade dragstag** — smala vertikala rör — hänger från varje balk ner till
+  boxarnas överkant. De ger gången sin vertikala rytm.
+- **Takfönster** i rad högt i det ena takfallet, syns som ljusa rektanglar
+  mellan balkarna.
+- **Runda pendelarmaturer** i två rader, en över vardera boxraden, hängande i
+  korta pendlar.
+
+### Golvet — två material, inte ett
+- **Markstensgång i mitten**, grå betongsten i rätmönster, ungefär tre fjärde-
+  delar av gångens bredd.
+- **Ljus spånremsa** (gulbeige) längs boxfronterna på båda sidor. Remsan är det
+  som gör gången läsbar som en gång och inte som en korridor.
+
+### Boxarna från gången
+- Nedre delen: **mörkgrå kompositpanel** i hela sektioner, ungefär 1,3 m hög,
+  med en galvad list i överkant.
+- Övre delen: **galvad ram med galler**, och boxdörrarna har ett gallerparti.
+- **Galvade stolpar** mellan boxarna går hela vägen upp till ungefär 2,2 m.
+- På fronterna hänger sadlar med underlag, täcken, grimmor, träns och
+  benskydd — mycket saker, tätt. `[ej byggt i spelet ännu]`
+- Svarta reglar och handtag på boxdörrarna.
+
+### Gångens ändar
+- I fonden syns en **grå metallport** i en vit vägg, med en **rund klocka**
+  ovanför och en grön utrymningsskylt bredvid. `[ej byggt i spelet ännu]`
+- En vit, rundad form högt upp vid ena änden — troligen ventilationstrumma
+  eller en vit gavelvägg bortom taket. `[REFERENCE GAP — inte fastställd]`
+
+### Vad som är byggt efter det här
+`v3dStall` i `src/varld3d.js`: sadeltaket i galvad plåt (ritat obelyst, för en
+takundersida som bara får ambient blev nästan svart medan filmen visar den
+jämnt upplyst av armaturerna), de röda tvärbalkarna med snedstag och nockbalk,
+dragstagen, takfönstren, pendelarmaturerna, och golvets två material.
+
+Kvar mot filmen: sakerna som hänger på boxfronterna, och porten med klockan i
+fonden.
+
+### Vad filmerna inte avgör
+- **Gångens exakta bredd.** Spelet har 5,2 m mellan boxfronterna, vilket ser
+  rimligt ut mot bildrutorna, men inget mått är läsbart. `[antagande]`
+- **Antalet boxar.** Filmen panorerar och samma box kan räknas två gånger.
+- **Planformen.** Filmerna visar en gång med boxar på båda sidor, men
+  utrymningsplanen visar ett dubbelstall med fyra boxlängor och två gångar.
+  Filmerna kan mycket väl visa en av de två gångarna. **Detta är oavgjort och
+  spelet bygger den enklare varianten** — se "Invändigt" ovan.
+
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (154, 46), fotavtryck 15 × 54 m
 - Rotation: nocken nord–syd; västra långsidan mot gården och ridhuset
-- Förstukvisten på västra långsidan, ~6 m från södra gaveln
+- Klubbgaveln (spiraltrappan) mot grusplanen i norr; servicegaveln mot
+  gårdsplanen i söder
+- Förstukvisten på västra långsidan, ~6 m från norra gaveln
 - Marknivå: plant
 
 ## Fotobrist
@@ -162,12 +225,13 @@ känd fel i planform och ska byggas om när underlaget finns.
 
 - samma huvrad på nocken och samma fönsterrytm som på västra sidan
 - en **stor skjutport i blågrått** ungefär mitt på längden
-- fodersilon vid norra gaveln
+- fodersilon vid södra gaveln
 - trästaketade hagar direkt utanför, och sandbanan bortom dem
 
 1. **Östra långsidan på nära håll** — fönstrens antal och portens mått är lästa ur
    en Street View-bild på avstånd, inte mätta. `[antagande]`
-2. **Norra gaveln** — osedd. Där ligger servicedelen enligt `STALLINNE`.
+2. **Södra gaveln på nära håll** — läst ur Street View på avstånd; portarnas
+   och trappans mått är uppskattade. Där ligger servicedelen enligt `STALLINNE`.
 3. **Takytan uppifrån**, för att räkna huvarna och se hela nocken.
 4. **En rak bild på långsidan**, för längdmåttet och exakt fönsterantal.
 5. Närbild på gavelns balkong och spiraltrappa.
@@ -192,8 +256,10 @@ Det som rättades mellan omgångarna:
 - Medvetna avvikelser från verkligheten:
   - Östra långsidan har inget fotounderlag och byggs som spegling av den
     västra: samma fönsterrytm, ingen förstukvist. `[antagande]`
-  - Norra gavelns dubbeldörr är kvar från den tidigare modellen. `[antagande]`
+  - Södra gavelns dörr- och trappmått är lästa ur Street View på avstånd. `[antagande]`
   - Längden 54 m är inte mätt, se Volym.
   - Entrén låg tidigare på södra gaveln i spelet. Fotona visar den på
-    långsidan, ~5,6 m från gaveln, och den är flyttad dit — både
+    långsidan, ~5,6 m från klubbgaveln, och den är flyttad dit — både
     dörrmarkören på gården och utgången i stallgången.
+  - 2026-08-29: hela huset vändes rätt — klubbgaveln med spiraltrappan
+    vetter mot grusplanen i norr, servicedelen mot gårdsplanen i söder.

@@ -18,9 +18,22 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
   stil.textContent=`
   .pek .hudh.bl{bottom:172px}
   .pek .hudh.br{bottom:172px}
-  /* Ridlärarens replik ska ligga ovanför knapparna, inte under dem. */
-  .pek .hudh.bc{bottom:272px; width:min(420px,88vw)}
+  /* Ridlärarens replik ska ligga ovanför knapparna, inte under dem —
+     och inte heller mitt över figuren, vilket 272 px gjorde på en hög
+     porträttskärm. Den läggs precis ovanför knappraden i stället, och
+     hålls smal så att den inte täcker vägen framåt. */
+  .pek .hudh.bc{bottom:200px; width:min(360px,84vw); font-size:13px}
   .pek #viewToggle{bottom:auto; top:8px; left:auto; right:14px; transform:none}
+  /* Touchmål: fingret behöver 44 px, inte 26. Knapparna växer på
+     pekskärm i stället för att alla enheter få desktopens mått. */
+  .pek #viewToggle button{min-height:44px; min-width:64px; font-size:12px;
+    padding:0 16px; display:flex; align-items:center; justify-content:center}
+  @supports(padding:max(0px)){        /* hakens och hemknappens säkra zon */
+    .pek #viewToggle{top:max(8px,env(safe-area-inset-top))}
+    .pek #pekUI{padding-bottom:env(safe-area-inset-bottom)}
+    .pek #joy{left:max(18px,env(safe-area-inset-left))}
+    .pek .pekKnappar{right:max(14px,env(safe-area-inset-right))}
+  }
   @media(max-height:560px) and (orientation:landscape){
     .pek .hudh.bc{bottom:96px; width:min(360px,52vw)}
     .pek .hudh.bl, .pek .hudh.br{bottom:150px}
@@ -42,7 +55,7 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
   .pekKnapp.ner{background:var(--gold); color:#17140A; border-color:var(--gold)}
   .pekKnapp.stor{height:64px; min-width:76px; font-size:13px; font-weight:600}
   .pekSmaRad{display:flex; gap:8px}
-  .pekKnapp.liten{min-width:44px; height:40px; padding:0 10px; font-size:10.5px}
+  .pekKnapp.liten{min-width:48px; height:44px; padding:0 12px; font-size:11px}
   @media(max-width:430px){
     #joy{width:112px;height:112px}
     .pekKnapp.stor{height:56px;min-width:64px}
@@ -95,13 +108,19 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     const dy=(e.clientY-(r.top+r.height/2))/(r.height/2);
     const l=Math.hypot(dx,dy), k=l>1?1/l:1;
     knopp.style.transform=`translate(calc(-50% + ${dx*k*36}px), calc(-50% + ${dy*k*36}px))`;
+    /* Analogt: hur långt man drar styr farten, inte bara riktningen.
+       Halvvägs ut är skritt, ytterläget är jogg — samma spann som
+       tangentbordets Shift, fast steglöst. Dödzonen finns för att
+       tummen alltid darrar en aning. */
+    const langd=Math.min(l,1);
+    IN.joy=langd>0.14?{x:dx*k, y:dy*k, styrka:(langd-0.14)/0.86}:null;
     tangent("KeyW", dy<-0.28);
     tangent("KeyS", dy> 0.45);
     tangent("KeyA", dx<-0.32);
     tangent("KeyD", dx> 0.32);
   }
   function joySlapp(){
-    joyPek=null;
+    joyPek=null; IN.joy=null;
     knopp.style.transform="translate(-50%,-50%)";
     for(const c of ["KeyW","KeyS","KeyA","KeyD"]) tangent(c,false);
   }
