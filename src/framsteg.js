@@ -199,7 +199,14 @@ function momentMal(m,grupp){
   /* Hålltiden är kortare än den gamla klockan. Ett moment som kräver
      tjugo sekunders hållen kvalitet är svårare än fyrtio sekunders
      väntan, och tar ändå halva tiden. */
-  const hall=clamp((m.tid||30)*0.45,8,26);
+  /* Hålltiden skalar med gruppen, precis som kravet gör. Med en fast
+     tid på 17 s klarade en rimlig nybörjare noll moment i ledlektion
+     trots att snittet (0,475) låg dubbelt över kravet (0,25) — hon red
+     tillräckligt bra, men inte tillräckligt LÄNGE i sträck. En tioåring
+     på sin första ledlektion ska inte behöva hålla samma obrutna kvalitet
+     som en ryttare i grupp5. */
+  const langd=0.55+0.75*forvantan;         // ledlektion 0,74 · grupp5 1,12
+  const hall=clamp((m.tid||30)*0.45*langd,6,26);
   return {krav,hall,vad:"inverkan"};
 }
 

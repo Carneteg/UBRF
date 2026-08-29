@@ -362,7 +362,12 @@ function s3BygHast(){
       },0.010));
   /* Hovskägget — den tunga typens flikar över kotan. */
   D.fjader=nyNat(new Bygge().cyl(0.052,0.098,0.19,vit,null,S(12,6)));
-  D.strumpa=nyNat(new Bygge().cyl(0.056,0.048,1,"#F2EFE6",null,S(10,6)));
+  /* Strumpan måste vara GROVARE än skenbenet den läggs över. Radierna
+     var fasta medan skenbenet går genom S(), som i klossläget väljer de
+     tjockare lågpolytalen (0,062/0,052) — strumpan hamnade alltså inuti
+     benet och syntes aldrig, på nio av sjutton hästar. */
+  D.strumpa=nyNat(new Bygge().cyl(S(0.050,0.062)*1.10,S(0.040,0.052)*1.10,
+    1,"#F2EFE6",null,S(10,6)));
   /* Kontaktskuggan: en platt skiva som läggs i tre storlekar med
      fallande täckning. En mjuk fläck kostar tjugo trianglar; en
      projicerad silhuett av hela hästen kostar tusentals. */

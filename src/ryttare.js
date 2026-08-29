@@ -108,10 +108,19 @@ function registreraPass(dom){
      också: du flyttas upp när du klarar momenten, inte när hästen råkar
      bete sig. */
   const bedomda=G.bedomda||0, klarade=G.klarade||0;
-  /* Över hälften, inte precis hälften: med två bedömda moment räckte
-     "ett av två" och då passerade nybörjargrupperna på ett enda moment
-     som hästen råkade klara själv. */
-  const nogKlarade=bedomda===0||klarade>bedomda/2;
+  /* MINST hälften, uppåt avrundat: 1 av 2, 2 av 3, 2 av 4.
+
+     Först skrev jag "över hälften" — och det degenererar till ALLA när
+     det bara finns två bedömda moment, vilket är precis vad ledlektion,
+     knatte och minior har. Noll av tjugofem simulerade nybörjarpass blev
+     godkända, och en fullt kompetent ryttare med snitt 0,335 mot kravet
+     0,25 föll på att 1 inte är större än 1. Regeln låste alltså just den
+     del av spelet som ska vara mest förlåtande.
+
+     Det som faktiskt stänger den passiva vägen är kontaktkravet i
+     stegaLektion, inte den här kvoten. Passivt spel klarar 0 av 2 och
+     faller på raden nedan ändå. */
+  const nogKlarade=bedomda===0||klarade>=Math.ceil(bedomda/2);
   const godkand=!dom.utesluten&&snitt>=forv&&nogKlarade;
   const m=hastminne(G.hastId);
   SPAR.pass++;

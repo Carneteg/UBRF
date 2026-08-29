@@ -421,10 +421,13 @@ function stegaLektion(dt){
          skritt låg i skrittens band utan att någon rörde en tangent, och
          tre grupper gick att bli uppflyttad ur på det viset.
 
-         Kravet är inte hårt: tygeln ska ligga över slakgränsen, alltså
-         att du håller en förbindelse. Det är samma sak boken menar med
-         att kontakt är en förbindelse och inte ett grepp — och den som
-         rider med hängande tygel rider inte, hon åker med. */
+         Kravet är medvetet LÅGT: tygeln ska ligga över slakgränsen.
+         Vilovärdet efter ett släppt Space är 0,34, alltså mitt i bandet
+         — har du en gång tagit upp tyglarna har du kontakt, och så är
+         det på riktigt också. Kravet fångar därför den som ALDRIG tagit
+         upp dem, inte den som släpper mellan tagen. Det är hela
+         avsikten: att stänga rent passivt spel, inte att kräva att man
+         håller nere en tangent i tre minuter. */
       const kontakt=G.aids&&G.aids.tygel>K.TYGEL_BAND_MIN;
       const over=kval>=mal.krav&&kontakt&&iTempoBand(G.ride,G.grupp,m);
       G.momentHall=clamp((G.momentHall||0)+(over?dt:-dt*0.45),0,mal.hall);
