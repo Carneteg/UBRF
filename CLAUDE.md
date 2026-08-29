@@ -3,6 +3,23 @@
 Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, tränar och
 lär sig sköta hästar. Privat familjeprojekt.
 
+## Produktkanon — läs först
+
+**Läs `docs/PRODUCT-CANON.md` före allt arbete som påverkar produkt, gameplay, innehåll,
+ridning, hästar, stallrutiner, progression, UX eller värld.** Det dokumentet är projektets
+North Star och väger tyngre än lokala implementationer och antaganden.
+
+Kärnan är låst:
+
+- spelet ska vara **roligt att spela**,
+- spelaren ska **lära sig verklig hästkunskap genom att göra**,
+- **ansvaret och plikterna kring hästen är gameplay**, inte dekoration,
+- **UBRF är den verkliga spelplatsen och verkligheten är facit**,
+- webbversionen är utvecklings- och testmiljö; **Roblox är målplattformen**.
+
+Hitta aldrig på en UBRF-detalj för att fylla ett hål. Saknas underlag: markera `[REFERENCE GAP]`
+eller `[antagande]` tills verkligheten kan verifieras.
+
 ## Samarbete med ChatGPT
 
 Läs **`docs/AI-COLLABORATION.md`** före uppgifter som rör gameplay, spelkänsla,
