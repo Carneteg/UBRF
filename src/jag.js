@@ -13,11 +13,12 @@
                 lära dig något. En egenskap som gjorde ett moment
                 onödigt vore ett designfel, inte en belöning.
 
-   Egenskaperna är hämtade ur Markus Holsts Ridhandbok, samma delar som
-   `KUNSKAP` i ovningar.js sammanfattar. Varje egenskap bär sin del med
-   sig, och skaparrutan skriver ut både vad den gör i spelet och varför
-   den finns i boken. Det är hela poängen: valet ska lära dig något om
-   ridning, inte bara ge dig en siffra.
+   Sju av egenskaperna kommer ur artikeln "7 egenskaper hos en skicklig
+   ryttare", den åttonde — Pondus — ur Markus Holsts Ridhandbok, samma
+   delar som `KUNSKAP` i ovningar.js sammanfattar. Varje egenskap bär sin
+   källa med sig, och skaparrutan skriver ut både vad den gör i spelet
+   och varför källan säger så. Det är hela poängen: valet ska lära dig
+   något om ridning, inte bara ge dig en siffra.
 
    Allt bor i ryttarprofilen (SPAR) och följer därmed med både till
    localStorage och till molnet, utan egen lagring.
@@ -46,7 +47,7 @@ const JAGVAL={
 const KLUBBFARG="#3E6B47";
 
 /* ── Egenskaperna ─────────────────────────────────────────────────
-   Sex att välja mellan, tre att bära. `mod` är lutningen: nycklarna är
+   Åtta att välja mellan, tre att bära. `mod` är lutningen: nycklarna är
    samma som fardighetsMod() i framsteg.js skickar in i ridmodellen,
    plus tre egna: `skygghet` dämpar hästens skygghet i modellen,
    `larande` snabbar på färdighetsväxten i framsteg.js, och

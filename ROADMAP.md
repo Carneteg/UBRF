@@ -145,7 +145,7 @@ sponsorvägg och cafeteria. Figuren går i tredjeperson.
 ## ✅ Din egen ryttare
 
 Första gången spelet öppnas frågar det vem du är innan menyn: namn, hy,
-hårfärg, frisyr, kavaj, ridbyxor och hjälm — och tre egenskaper av sex.
+hårfärg, frisyr, kavaj, ridbyxor och hjälm — och tre egenskaper av åtta.
 Allt bor i `src/jag.js` och sparas i ryttarprofilen, så det följer med
 både till localStorage och till molnet.
 
