@@ -4,9 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ridskolan</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<!-- Ikonen ligger i filen, som allt annat. Utan den frågar webbläsaren
+     efter /favicon.ico och får 404. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23181B21'/%3E%3Cpath d='M11 24V14a5 5 0 0 1 10 0v10' fill='none' stroke='%23D6AE3C' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Inga webbfonter. Spelet ska gå att öppna utan nät, och en länk till
+     Google Fonts är just ett nätanrop vid körning. Typsnitten nedan är
+     de vi ritar för; finns de inte i systemet tar reserverna vid. -->
 <style>
 /* Spelet committar till ett visuellt uttryck: kall stallmorgon, varm sand.
    Ingen temaväxling — men varje färg är målad, inget ärvs från värden. */
@@ -43,13 +46,15 @@ button{font-family:inherit}
 #app.gl3d #cv{background:transparent}
 
 /* ── HUD ─────────────────────────────────────────────────────── */
-.hud{position:absolute; pointer-events:none; z-index:5}
-.hud.tl{top:14px; left:14px}
-.hud.tr{top:14px; right:14px; text-align:right}
-.hud.bl{bottom:14px; left:14px}
-.hud.br{bottom:14px; right:14px}
-.hud.bc{bottom:16px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
-.hud.tc{top:14px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
+/* Egen klass, inte .hud: ui.css har en egen .hud (nivåraden ur ui-kit-demo)
+   och den laddas efter det här, så den vann och sköt HUD-rutorna ur läge. */
+.hudh{position:absolute; pointer-events:none; z-index:5}
+.hudh.tl{top:14px; left:14px}
+.hudh.tr{top:14px; right:14px; text-align:right}
+.hudh.bl{bottom:14px; left:14px}
+.hudh.br{bottom:14px; right:14px}
+.hudh.bc{bottom:16px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
+.hudh.tc{top:14px; left:50%; transform:translateX(-50%); text-align:center; width:min(560px,86vw)}
 
 .box{background:rgba(14,16,20,.94); border:1px solid rgba(214,174,60,.22); border-radius:4px;
   padding:11px 14px; backdrop-filter:blur(8px);
@@ -207,6 +212,24 @@ tr:last-child td{border-bottom:0}
   text-transform:uppercase; color:var(--faint)}
 .gstep .gv{font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-variant-numeric:tabular-nums}
 #groomHint{font-size:13.5px; color:var(--ink-2); margin-top:14px; min-height:3.4em; line-height:1.5}
+/* Liggande mobil: skärmen är låg, inte smal. Då styr höjden rutans storlek
+   — annars hamnar hästen nedanför skärmkanten. */
+@media(max-height:560px) and (orientation:landscape){
+  .sheet{padding:14px 18px; max-height:96vh}
+  .sheet h1{font-size:20px; margin-top:0}
+  .sheet p{margin:.4em 0; font-size:12.5px}
+  .sheet>p.dim:first-of-type{display:none}
+  .sheet .lbl{display:none}
+  .sheet h1{margin-bottom:2px}
+  #groom{grid-template-columns:auto 224px; gap:16px; margin-top:6px}
+  #groomCanvas{width:auto; max-width:100%; height:62vh; margin:0}
+  #groomHint{margin-top:8px; min-height:0; font-size:12px}
+  .gstep{padding:5px 0; font-size:12.5px}
+  /* Låg skärm: momentrutan tog halva höjden och la sig över replikbubblan. */
+  .hudh.tl{max-width:32vw}
+  #moment{max-width:32vw}
+  #momentText{display:none}
+}
 
 /* topprad i spelet */
 #topbar{position:absolute; top:0; left:0; right:0; height:0; z-index:7}
@@ -238,10 +261,12 @@ tr:last-child td{border-bottom:0}
   #aids{width:142px}
   #saga{font-size:16px}
   #approach{font-size:11px}
-  .hud.tl{top:8px;left:8px}.hud.tr{top:8px;right:8px}
-  .hud.bl{bottom:8px;left:8px}.hud.br{bottom:8px;right:8px}
-  .hud.bc{bottom:10px}
-  #viewToggle{top:8px}
+  .hudh.tl{top:8px;left:8px}.hudh.tr{top:8px;right:8px}
+  .hudh.bl{bottom:8px;left:8px}.hudh.br{bottom:8px;right:8px}
+  .hudh.bc{bottom:10px}
+  /* Vyknapparna satt i mitten och la sig över momentrutan på smal skärm.
+     De flyttar ner under den i stället. */
+  #viewToggle{top:auto; bottom:8px; left:50%}
   .sheet h1{font-size:24px}
 }
 @media(max-width:560px){
@@ -268,7 +293,7 @@ tr:last-child td{border-bottom:0}
     <button data-v="3d">Bakom hästen</button>
   </div>
 
-  <div class="hud tl"><div class="box" id="moment">
+  <div class="hudh tl"><div class="box" id="moment">
     <div class="lbl" id="momentLbl">Moment</div>
     <div id="momentNamn">—</div>
     <div id="momentText"></div>
@@ -280,27 +305,27 @@ tr:last-child td{border-bottom:0}
     </div>
   </div></div>
 
-  <div class="hud tr"><div class="box">
+  <div class="hudh tr"><div class="box">
     <div class="lbl">Gångart</div>
     <div id="gait">Halt</div>
     <div id="tempo">0,0 m/s</div>
     <div id="gaitWarn"></div>
   </div></div>
 
-  <div class="hud bl"><div class="box" id="pyr">
+  <div class="hudh bl"><div class="box" id="pyr">
     <div class="lbl" style="margin-bottom:7px">Utbildningsskalan</div>
     <div id="pyrRows"></div>
     <div id="inverkan"><span>Inverkan</span><b>0,00</b></div>
   </div></div>
 
-  <div class="hud br"><div class="box" id="aids">
+  <div class="hudh br"><div class="box" id="aids">
     <div class="lbl" style="margin-bottom:7px">Hjälper</div>
     <div id="aidRows"></div>
   </div></div>
 
-  <div class="hud br" id="protWrap" hidden style="bottom:auto; top:120px"><div class="box" id="prot"></div></div>
+  <div class="hudh br" id="protWrap" hidden style="bottom:auto; top:120px"><div class="box" id="prot"></div></div>
 
-  <div class="hud bc">
+  <div class="hudh bc">
     <div id="saga"></div>
     <div id="approach"></div>
   </div>

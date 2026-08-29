@@ -77,6 +77,41 @@ function momentTillBild(sx,sy){
    0,95 / 0,03 / 0,10 — en rak trappa. Det gör dagarna gissningsbara.
    Den här hashen sprider bitarna först, och sedan spelar det ingen roll
    att generatorn är enkel. */
+/* Rutan är olika bred på mobil och skrivbord, men texterna var satta i
+   fasta pixlar — på en smal skärm rann de ur sina chipp. Allt mäts nu mot
+   408 px, bredden rutan har på en laptop. */
+const MOMENTREF=408;
+function momentSk(W){ return clamp(W/MOMENTREF,0.68,1.30); }
+function momentFont(W,px,vikt){
+  const f=Math.round(px*momentSk(W)*10)/10;
+  return (vikt?vikt+" ":"")+f+'px "IBM Plex Sans", sans-serif';
+}
+/* Text som ska rymmas i en given bredd: krymp tills den gör det, men
+   bara till 78 % — under det blir den oläslig och då är radbrytning rätt. */
+function momentPassa(cx,txt,maxW,W,px,vikt){
+  let f=px;
+  for(let k=0;k<3;k++){
+    cx.font=momentFont(W,f,vikt);
+    if(cx.measureText(txt).width<=maxW)return;
+    f*=0.92;
+  }
+}
+/* En mening som bryts på ordmellanrum och ritas centrerad. Sista raden
+   ligger på y, raderna ovanför staplas uppåt — så håller botten sin plats. */
+function momentMening(cx,txt,x,y,maxW,radH,maxRader){
+  const ord=String(txt).split(" "), rader=[];
+  let rad="";
+  for(const o of ord){
+    const test=rad?rad+" "+o:o;
+    if(rad&&cx.measureText(test).width>maxW){ rader.push(rad); rad=o; }
+    else rad=test;
+  }
+  if(rad)rader.push(rad);
+  const max=maxRader||2;
+  while(rader.length>max){ rader[max-1]+=" "+rader.splice(max,1)[0]; }
+  rader.forEach((r,i)=>cx.fillText(r,x,y-(rader.length-1-i)*radH));
+}
+
 function momentFro(...tal){
   let h=2166136261>>>0;
   for(const t of tal){
@@ -92,13 +127,18 @@ function momentFro(...tal){
     return ((x>>>8)&0xFFFFFF)/0x1000000; };
 }
 
-const HOV={i:-1, t:0, smuts:[], ren:0, fel:0, sista:null, varning:"", sten:null};
+const HOV={i:-1, t:0, smuts:[], ren:0, fel:0, sista:null, varning:"", sten:null, minne:{}};
+function hovNollstall(){ HOV.i=-1; HOV.t=0; HOV.smuts=[]; HOV.ren=0; HOV.fel=0;
+  HOV.sista=null; HOV.varning=""; HOV.sten=null; HOV.minne={}; }
 
 /* Fyllningen: gruset ligger i strålfårorna, ibland en sten i den ena.
    Fröet är hoven och dagen, så samma hov ser likadan ut om man går ur
    och in igen — men olika mellan hovar och mellan dagar. */
 function hovOppna(i){
   HOV.i=i; HOV.t=0; HOV.ren=0; HOV.fel=0; HOV.varning=""; HOV.sista=null;
+  /* Går man ur och in igen ligger gruset kvar där man lämnade det. */
+  const m=HOV.minne[i];
+  if(m){ HOV.smuts=m.smuts; HOV.sten=m.sten; HOV.ren=m.ren; momentKamKor(); return; }
   const rnd=momentFro(G.seed||1, i, (G.hastId||"").length, 7919);
   HOV.smuts=[];
   const antal=7+Math.floor(rnd()*5);
@@ -116,7 +156,10 @@ function hovOppna(i){
   HOV.sten=rnd()<0.45?{x:(rnd()<0.5?-1:1)*0.24, y:0.10+rnd()*0.25, r:0.075, liv:1}:null;
   momentKamKor();
 }
-function hovStang(){ HOV.i=-1; HOV.sista=null; momentKamKor(); }
+function hovStang(){
+  if(HOV.i>=0)HOV.minne[HOV.i]={smuts:HOV.smuts, sten:HOV.sten, ren:HOV.ren};
+  HOV.i=-1; HOV.sista=null; momentKamKor();
+}
 
 /* Ett drag över sulan. p är i hovens egna koordinater: (0,0) i mitten,
    −y mot tån, +y mot trakten, x åt sidorna. */
@@ -149,11 +192,13 @@ function hovDrag(p){
   const kvar=HOV.smuts.reduce((a,o)=>a+o.liv,0)+(HOV.sten?HOV.sten.liv*1.5:0);
   const allt=HOV.smuts.length+(HOV.sten?1.5:0);
   HOV.ren=clamp(1-kvar/allt,0,1);
+  /* Delvis kredit: det man faktiskt fått bort räknas, även om man
+     lämnar hoven halvfärdig. Först vid 94 % är den klar och stängs. */
   if(HOV.ren>=0.94){
     SK.hovar[HOV.i]=1;
     if(typeof ljudStot==="function")ljudStot(720,"sine",0.10,0.05);
     setTimeout(hovStang,420);
-  }
+  }else SK.hovar[HOV.i]=Math.max(SK.hovar[HOV.i],HOV.ren);
 }
 
 /* ── Ritningen ────────────────────────────────────────────────────
@@ -241,13 +286,36 @@ function ritaHov(cx,W,H){
   /* Texten: vilken hov, hur rent, och tillsägelsen om man drar fel. */
   const namn=["vänster fram","höger fram","vänster bak","höger bak"][HOV.i]||"";
   cx.fillStyle="#E6E4DE"; cx.textAlign="center";
-  cx.font='600 15px "IBM Plex Sans", sans-serif';
+  cx.font=momentFont(W,15,"600");
   cx.fillText(namn.toUpperCase()+" · "+Math.round(HOV.ren*100)+" %", W*0.5, H*0.075);
-  cx.font='13px "IBM Plex Sans", sans-serif';
+  cx.font=momentFont(W,13);
   cx.fillStyle=HOV.varning?"#D0655A":"#A6ABB3";
   const rad=HOV.varning||"Dra från trakten mot tån, i fårorna på var sida om strålen.";
-  cx.fillText(rad, W*0.5, H*0.945);
+  cx.font=momentFont(W,13);
+  momentMening(cx,rad,W*0.5,H*0.955,W*0.92,H*0.045,2);
+
+  /* Vägen ut. Utan den sitter man fast i närbilden tills hoven är ren. */
+  const b=hovTillbakaRuta(W,H);
+  cx.fillStyle="rgba(28,31,38,.85)";
+  cx.strokeStyle="rgba(240,238,232,.28)"; cx.lineWidth=1;
+  cx.beginPath();
+  if(cx.roundRect)cx.roundRect(b.x,b.y,b.w,b.h,b.h*0.4);
+  else cx.rect(b.x,b.y,b.w,b.h);
+  cx.fill(); cx.stroke();
+  cx.fillStyle="#E6E4DE"; cx.textAlign="center";
+  momentPassa(cx,"‹ Släpp ner",b.w*0.86,W,13,"600");
+  cx.fillText("‹ Släpp ner", b.x+b.w/2, b.y+b.h*0.66);
   cx.restore();
+}
+
+/* Knappens ruta i skärmpunkter — samma tal i ritningen och i träffen. */
+function hovTillbakaRuta(W,H){
+  const k=momentSk(W);
+  return {x:W*0.035, y:H*0.035, w:Math.max(84,110*k), h:Math.max(26,30*k)};
+}
+function hovTillbakaTraff(sx,sy,W,H){
+  const b=hovTillbakaRuta(W,H), x=sx*W, y=sy*H;
+  return x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h;
 }
 
 /* Skärmpunkt (0–1) → hovens koordinater, för dragen i närbilden. */
@@ -353,14 +421,16 @@ function ritaRykt(cx,W,H){
     cx.strokeStyle=pa?c.r.farg:"rgba(230,228,222,.22)";
     cx.lineWidth=pa?2.5:1; cx.strokeRect(c.x+1,c.y+1,c.b-2,c.h-2);
     cx.fillStyle=pa?c.r.farg:"#A6ABB3"; cx.textAlign="center";
-    cx.font='600 12px "IBM Plex Sans", sans-serif';
+    cx.font=momentFont(W,12,"600");
+    momentPassa(cx,c.r.namn,c.b-6,W,12,"600");
     cx.fillText(c.r.namn,c.x+c.b/2,c.y+c.h*0.42);
-    cx.font='10.5px "IBM Plex Sans", sans-serif'; cx.fillStyle="#8E939B";
+    cx.font=momentFont(W,10.5); cx.fillStyle="#8E939B";
+    momentPassa(cx,c.r.kort,c.b-6,W,10.5);
     cx.fillText(c.r.kort,c.x+c.b/2,c.y+c.h*0.78);
   }
-  cx.textAlign="center"; cx.font='12.5px "IBM Plex Sans", sans-serif';
+  cx.textAlign="center"; cx.font=momentFont(W,12.5);
   cx.fillStyle=RY.varning?"#D0655A":"#A6ABB3";
-  cx.fillText(RY.varning||RYKTREDSKAP[RY.verktyg].text,W*0.5,H*0.072);
+  momentMening(cx,RY.varning||RYKTREDSKAP[RY.verktyg].text,W*0.5,H*0.082,W*0.92,H*0.040,2);
 }
 
 /* ══ SADLINGEN ════════════════════════════════════════════════════
@@ -433,14 +503,14 @@ function sadelDrag(p,f,klick){
 }
 function ritaSadel(cx,W,H){
   cx.textAlign="center";
-  cx.font='600 12.5px "IBM Plex Sans", sans-serif';
+  cx.font=momentFont(W,12.5,"600");
   cx.fillStyle="#D6AE3C";
   cx.fillText(`${SA.fas+1} av 4`,W*0.5,H*0.055);
-  cx.font='12.5px "IBM Plex Sans", sans-serif';
+  cx.font=momentFont(W,12.5);
   cx.fillStyle=SA.varning?"#D0655A":"#A6ABB3";
-  cx.fillText(SA.varning||SADELFAS[SA.fas].t,W*0.5,H*0.095);
+  momentMening(cx,SA.varning||SADELFAS[SA.fas].t,W*0.5,H*0.105,W*0.92,H*0.040,2);
   if(SA.fas>=3){
-    cx.font='11px "IBM Plex Mono", monospace';
+    cx.font=Math.round(11*momentSk(W)*10)/10+'px "IBM Plex Mono", monospace';
     cx.fillStyle=SA.tag>=3?"#7FB489":"#A6ABB3";
     cx.fillText(`TAG ${Math.min(SA.tag,3)}/3`,W*0.5,H*0.135);
   }
@@ -579,21 +649,24 @@ function ritaVisit(cx,W,H){
   if(VIS.gang<0){
     /* Hela hästen syns medan man väljer väg fram — valet handlar om var
        man ställer sig, och då måste man se henne. */
-    cx.fillStyle="rgba(12,14,18,.55)"; cx.fillRect(0,0,W,H*0.155);
-    cx.textAlign="center"; cx.font='600 13px "IBM Plex Sans", sans-serif';
+    cx.fillStyle="rgba(12,14,18,.55)"; cx.fillRect(0,0,W,H*0.180);
+    cx.textAlign="center"; cx.font=momentFont(W,13,"600");
     cx.fillStyle="#D6AE3C";
-    cx.fillText("HUR GÅR DU FRAM TILL HENNE?",W*0.5,H*0.075);
-    cx.font='12.5px "IBM Plex Sans", sans-serif';
+    momentPassa(cx,"HUR GÅR DU FRAM TILL HENNE?",W*0.94,W,13,"600");
+    cx.fillText("HUR GÅR DU FRAM TILL HENNE?",W*0.5,H*0.068);
+    cx.font=momentFont(W,12.5);
     cx.fillStyle=VIS.ordningsfel?"#D0655A":"#A6ABB3";
-    cx.fillText(VIS.ordningsfel||"Hon ska se dig komma och höra dig först.",W*0.5,H*0.115);
+    momentMening(cx,VIS.ordningsfel||"Hon ska se dig komma och höra dig först.",W*0.5,H*0.148,W*0.92,H*0.038,2);
     for(const c of visitGangChipp(W,H)){
       cx.fillStyle="rgba(20,24,30,.94)"; cx.fillRect(c.x,c.y,c.b,c.h);
       cx.strokeStyle="rgba(214,174,60,.5)"; cx.lineWidth=1.4;
       cx.strokeRect(c.x+1,c.y+1,c.b-2,c.h-2);
-      cx.fillStyle="#E6E4DE"; cx.font='11.5px "IBM Plex Sans", sans-serif';
       const ord=c.v.t.split(", ");
+      cx.fillStyle="#E6E4DE";
+      momentPassa(cx,ord[0],c.b-8,W,11.5);
       cx.fillText(ord[0],c.x+c.b/2,c.y+c.h*0.42);
-      if(ord[1]){cx.fillStyle="#8E939B";cx.font='10.5px "IBM Plex Sans", sans-serif';
+      if(ord[1]){cx.fillStyle="#8E939B";
+        momentPassa(cx,ord[1],c.b-8,W,10.5);
         cx.fillText(ord[1],c.x+c.b/2,c.y+c.h*0.74);}
     }
     return;
@@ -618,13 +691,15 @@ function ritaVisit(cx,W,H){
   cx.textAlign="center";
   if(!VIS.oppen){
     const n=visitNasta();
-    cx.font='11.5px "IBM Plex Sans", sans-serif'; cx.fillStyle="#8E939B";
+    cx.font=momentFont(W,11.5); cx.fillStyle="#8E939B";
+    momentPassa(cx,VISITGANG[VIS.gang].svar.replace(/%N/g,namn0),W*0.94,W,11.5);
     cx.fillText(VISITGANG[VIS.gang].svar.replace(/%N/g,namn0),W*0.5,H*0.055);
-    cx.font='12.5px "IBM Plex Sans", sans-serif';
+    cx.font=momentFont(W,12.5);
     cx.fillStyle=VIS.ordningsfel?"#D0655A":"#A6ABB3";
-    cx.fillText(VIS.ordningsfel||(n
+    momentMening(cx,VIS.ordningsfel||(n
       ? `Framifrån och bakåt — nu ${n.namn.toLowerCase()} (${VIS.sedd.size+1}/${VISITPUNKT.length})`
-      : `Genomgången klar — ${VISITPUNKT.length}/${VISITPUNKT.length}`),W*0.5,H*0.098);
+      : `Genomgången klar — ${VISITPUNKT.length}/${VISITPUNKT.length}`),
+      W*0.5,H*0.118,W*0.92,H*0.038,2);
     return;
   }
   const p=VISITPUNKT.find(v=>v.id===VIS.oppen);
@@ -633,27 +708,29 @@ function ritaVisit(cx,W,H){
   const y0=H*0.66;
   cx.fillStyle="rgba(12,14,18,.90)"; cx.fillRect(0,y0,W,H-y0);
   cx.fillStyle=fynd?"#D0655A":"#7FB489"; cx.textAlign="left";
-  cx.font='600 13px "IBM Plex Sans", sans-serif';
+  cx.font=momentFont(W,13,"600");
   cx.fillText(p.namn.toUpperCase(),W*0.03,y0+H*0.055);
-  cx.fillStyle="#E6E4DE"; cx.font='13px "IBM Plex Sans", sans-serif';
+  cx.fillStyle="#E6E4DE"; cx.font=momentFont(W,13);
   const namn=(HORSES[G.hastId]||{}).namn||"Hon";
-  cx.fillText((fynd?VISITFYND[p.id]:p.ok).replace(/%N/g,namn),W*0.03,y0+H*0.105);
+  momentMening(cx,(fynd?VISITFYND[p.id]:p.ok).replace(/%N/g,namn),
+    W*0.03,y0+H*0.135,W*0.94,H*0.042,2);
   if(fynd&&VIS.svar<0){
     for(const c of visitChipp(W,H)){
       cx.fillStyle="rgba(24,27,33,.95)"; cx.fillRect(c.x,c.y,c.b,c.h);
       cx.strokeStyle="rgba(214,174,60,.55)"; cx.lineWidth=1.4;
       cx.strokeRect(c.x+1,c.y+1,c.b-2,c.h-2);
       cx.fillStyle="#E6E4DE"; cx.textAlign="center";
-      cx.font='11.5px "IBM Plex Sans", sans-serif';
+      cx.font=momentFont(W,11.5);
+      momentPassa(cx,c.v.t,c.b-8,W,11.5);
       cx.fillText(c.v.t,c.x+c.b/2,c.y+c.h*0.62);
     }
   }else{
-    cx.textAlign="left"; cx.font='12px "IBM Plex Sans", sans-serif';
+    cx.textAlign="left"; cx.font=momentFont(W,12);
     cx.fillStyle=fynd?(VISITSVAR[VIS.svar].ratt?"#7FB489":"#D0655A"):"#8E939B";
-    cx.fillText(fynd
+    momentMening(cx,fynd
       ? (VISITSVAR[VIS.svar].ratt
          ? "Rätt gjort. Ridläraren tittar på det innan ni rider — och hon slipper gå på det."
          : "Hon går på det hela lektionen. Det märks imorgon.")
-      : "Klicka nederst för att gå vidare.", W*0.03, y0+H*0.165);
+      : "Klicka nederst för att gå vidare.", W*0.03, y0+H*0.215, W*0.94, H*0.040, 2);
   }
 }

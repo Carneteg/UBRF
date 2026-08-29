@@ -177,7 +177,7 @@ kbd{font-family:inherit; font-weight:900; color:var(--panel-bottom);
   border:3px solid #fff}
 
 /* HUD:en hör inte hemma bakom en overlay */
-body:has(#ov:not(.hide)) .hud{opacity:0; pointer-events:none}
+body:has(#ov:not(.hide)) .hudh{opacity:0; pointer-events:none}
 
 /* ── Pekkontrollerna injiceras av mobil.js sist i head; högre
       specificitet krävs för att kitets knappar ska vinna. ───────── */
@@ -201,13 +201,13 @@ body.pek #joyKnopp{background:linear-gradient(180deg,var(--btn-gold-top),var(--b
 /* ── Liten skärm: HUD:en krymper så att rutorna inte krockar ──── */
 @media (max-width:700px){
   .box{padding:8px 11px; border-radius:14px; border-width:2.5px}
-  .hud.tl, .hud.tr{max-width:46vw}
+  .hudh.tl, .hudh.tr{max-width:46vw}
   #moment{min-width:0}
   #momentNamn{font-size:15px; line-height:1.15}
   #momentText{font-size:11px; line-height:1.35}
   #momentBar{height:10px; border-width:2px}
-  .hud.tr #gait{font-size:17px}
-  .hud.tr #tempo{font-size:11px}
+  .hudh.tr #gait{font-size:17px}
+  .hudh.tr #tempo{font-size:11px}
   #pyr .prow, #aids .arow{font-size:9.5px; gap:5px}
   #pyr .pname{min-width:64px} #aids .aname{min-width:44px}
   .ptrack, .atrack{height:10px; border-width:1.5px; min-width:56px}

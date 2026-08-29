@@ -131,9 +131,9 @@ function visaTilldelning(){
 const SK={steg:0,ryktning:new Set(),hovar:[0,0,0,0],sadelX:0.5,gjord:0.1,visitering:0,betsling:0,
   start:0,drar:false,sista:null};
 function visaSkotsel(){
-  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
+  SK.steg=0;SK.ryktning=new Set();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
   SK.visitering=0;SK.betsling=0;SK.start=performance.now();
-  ryktNollstall();sadelNollstall();visitNollstall();
+  ryktNollstall();sadelNollstall();visitNollstall();hovNollstall();
   const h=HORSES[G.hastId];
   /* Egenhet: en häst som blåser upp magen släpper sakta ut luften —
      gjorden glider ner igen tills du drar åt en gång till. */
@@ -171,9 +171,9 @@ function visaSkotsel(){
 function groomHint(){
   const h=HORSES[G.hastId];
   let t=["Gå fram till henne först — hon ska se dig komma. Sedan de fem ställena i tur och ordning, framifrån och bakåt: ögon, mungipor, sadelläge, gjordläge, ben. De flesta dagar är allt bra, och det är därför man slutar titta.",
-    "Håll och dra över kroppen, i pälsens riktning (framifrån och bak). Täckning räknas per område.",
-    "Klicka på en hov för att lyfta den, dra sedan nedåt över den för att kratsa. Alla fyra.",
-    "Dra sadeln till rätt läge — precis bakom manken — och dra sedan gjordreglaget till det gröna bandet."][SK.steg];
+    "Tre redskap, i den ordningen: gummiskrapan i cirklar på musklerna, kardborsten i korta drag med hårets riktning, och den mjuka borsten över hela hästen. Ringen runt varje fläck visar vilka redskap som varit där.",
+    "Klicka på en hov. Bilden går ner till sulan, och där kratsar du från trakten mot tån — längs fårorna på var sida om strålen. Alla fyra.",
+    "Fyra moment i ordning: underlägget högt på manken och bakåt, sadeln bakåt på plats bakom bogbladet, lyft upp underlägget i sadelbommen, och gjorda i tre tag med paus emellan."][SK.steg];
   if(SK.steg===1&&h.flaggor&&h.flaggor.kittlig)
     t+=` OBS: ${h.namn} är kittlig — bara lugna, långsamma drag räknas.`;
   if(SK.steg===3&&h.flaggor&&h.flaggor.blaser_upp_magen)
@@ -185,10 +185,10 @@ let gcv,gcx,lyftHov=-1;
 /* Ankarpunkter på hästen (normaliserade canvaskoordinater) — hästen
    ritas med ritaHastSida: mitt 0.55W, mark 0.88H, mankhöjd 0.52H,
    huvudet åt vänster. */
-const RYKTZONER=[[0.44,0.31],[0.45,0.46],[0.55,0.39],[0.55,0.54],
-                 [0.66,0.52],[0.73,0.44],[0.43,0.57],[0.70,0.59]];
+/* Ryktzonerna och visiteringens punkter bor i moment.js sedan de blev
+   egna moment. Här står bara hovarnas lägen och sadelns rätta plats. */
 const HOVP=[[0.44,0.85],[0.49,0.85],[0.68,0.85],[0.735,0.85]];
-const MUNGIPA=[0.267,0.33], SADELPLATS=[0.57,0.34], SADEL_RATT=0.565;
+const SADEL_RATT=0.565;
 function initGroomCanvas(){
   gcv=document.getElementById("groomCanvas");gcx=gcv.getContext("2d");
   const fit=()=>{const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
@@ -206,6 +206,7 @@ function hantera(p,klick){
   /* Hoven först: när närbilden är uppe är det den som tar dragen. */
   if(HOV.i>=0){
     const r=gcv.getBoundingClientRect();
+    if(klick&&hovTillbakaTraff(p[0],p[1],r.width,r.height)){hovStang();ritaGroom();return;}
     if(SK.drar)hovDrag(hovTillLokal(p[0],p[1],r.width,r.height));
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
     ritaGroom(); return;
@@ -247,7 +248,7 @@ function hantera(p,klick){
     let bi=-1,bd=0.075;
     for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
       if(d<bd){bd=d;bi=i;}}
-    if(bi>=0&&SK.hovar[bi]<0.6){lyftHov=bi;hovOppna(bi);}
+    if(bi>=0&&SK.hovar[bi]<1){lyftHov=bi;hovOppna(bi);}
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
   }
   if(SK.steg===3){
@@ -322,7 +323,7 @@ function ritaGroom(){
     gcx.fillStyle="rgba(11,13,16,.85)";gcx.fillRect(W*0.2,H*0.90,W*0.6,10);
     gcx.fillStyle="rgba(127,180,137,.35)";gcx.fillRect(W*0.2+W*0.6*0.42,H*0.90,W*0.6*0.32,10);
     gcx.fillStyle="#D6AE3C";gcx.fillRect(W*0.2,H*0.90,W*0.6*SK.gjord,10);
-    gcx.fillStyle="#8E939B";gcx.font='10px "IBM Plex Mono"';gcx.textAlign="center";
+    gcx.fillStyle="#8E939B";gcx.font='10px "IBM Plex Mono",monospace';gcx.textAlign="center";
     gcx.fillText("GJORD — dra hit",W*0.5,H*0.90-6);
     if(SA.mankfri){                              // manken fri: bommen markerad
       gcx.strokeStyle="rgba(127,180,137,.85)";gcx.lineWidth=2.5;

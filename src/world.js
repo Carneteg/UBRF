@@ -325,7 +325,7 @@ function hudLage(lage){
   const gang=lage==="gang";
   for(const id of ["pyr","aids","gait"]){
     const el=document.getElementById(id);
-    if(el){const hud=el.closest(".hud")||el; hud.style.display=gang?"none":"";}
+    if(el){const hud=el.closest(".hudh")||el; hud.style.display=gang?"none":"";}
   }
   const vt=document.getElementById("viewToggle");
   vt.hidden=false;
@@ -1008,13 +1008,13 @@ function ritaGard2D(){
     if(b.nock==="NS"){const mx=a+w/2;cx.moveTo(mx,c);cx.lineTo(mx,c+h);}
     else{const my=c+h/2;cx.moveTo(a,my);cx.lineTo(a+w,my);}
     cx.stroke();
-    if(b.label&&s>1.8){cx.fillStyle="#C7C2B6";cx.font=`500 ${Math.max(9,s*2.4)}px "IBM Plex Mono"`;
+    if(b.label&&s>1.8){cx.fillStyle="#C7C2B6";cx.font=`500 ${Math.max(9,s*2.4)}px "IBM Plex Mono",monospace`;
       cx.textAlign="center";cx.fillText(b.label,a+w/2,c+h/2+3);}
   }
   for(const d of ANL.dorrar){const[a,b]=gs(d.pos[0],d.pos[1]);
     cx.fillStyle="rgba(214,174,60,.9)";cx.beginPath();cx.arc(a,b,3.5,0,Math.PI*2);cx.fill();}
   const[sx,sy]=gs(ANL.skylt.pos[0],ANL.skylt.pos[1]);
-  cx.fillStyle="#8E939B";cx.font=`500 ${Math.max(9,s*2.0)}px "IBM Plex Mono"`;
+  cx.fillStyle="#8E939B";cx.font=`500 ${Math.max(9,s*2.0)}px "IBM Plex Mono",monospace`;
   cx.textAlign="center";cx.fillText(ANL.skylt.text,sx,sy);
   if(G.leder){const[a,b]=gs(VD.hastX,VD.hastY);
     cx.fillStyle=HORSES[G.hastId].farg;
@@ -1065,7 +1065,7 @@ function ritaStall2D(){
       if(h){cx.fillStyle=h.farg;
         cx.beginPath();cx.ellipse(a+S.boxDjup*s/2,b+S.boxB*s/2,s*1.1,s*0.5,sida==="W"?0.4:-0.4,0,Math.PI*2);cx.fill();
         if(s>6){cx.fillStyle=h.spelbar?"#E6E4DE":"#8E877A";
-          cx.font=`500 ${Math.max(8,s*0.6)}px "IBM Plex Mono"`;
+          cx.font=`500 ${Math.max(8,s*0.6)}px "IBM Plex Mono",monospace`;
           cx.textAlign=sida==="W"?"right":"left";
           cx.fillText(h.namn,sida==="W"?a-6:a+S.boxDjup*s+6,b+S.boxB*s/2+3);}}
     }
@@ -1073,12 +1073,12 @@ function ritaStall2D(){
   for(const grupp of [S.rum,S.service]) for(const r of grupp){
     const[a,b]=ss(r.rekt.x,r.rekt.y+r.rekt.h);
     cx.strokeStyle="#4A4438";cx.lineWidth=1.5;cx.strokeRect(a,b,r.rekt.w*s,r.rekt.h*s);
-    cx.fillStyle="#8E877A";cx.font=`500 ${Math.max(7,s*0.45)}px "IBM Plex Mono"`;cx.textAlign="center";
+    cx.fillStyle="#8E877A";cx.font=`500 ${Math.max(7,s*0.45)}px "IBM Plex Mono",monospace`;cx.textAlign="center";
     cx.fillText(r.label,a+r.rekt.w*s/2,b+r.rekt.h*s/2);}
   const rl=S.ridlarare;
   if(!G.hastId){const[a,b]=ss(rl.pos[0],rl.pos[1]);
     cx.fillStyle="#D6AE3C";cx.beginPath();cx.arc(a,b,s*0.5,0,Math.PI*2);cx.fill();
-    cx.fillStyle="#C7C2B6";cx.font=`500 ${Math.max(8,s*0.55)}px "IBM Plex Mono"`;
+    cx.fillStyle="#C7C2B6";cx.font=`500 ${Math.max(8,s*0.55)}px "IBM Plex Mono",monospace`;
     cx.textAlign="left";cx.fillText(rl.namn,a+s*0.8,b+3);}
   const mb=G.hastId&&!G.skotselRes&&hittaBox(G.hastId);
   if(mb){const[a,b]=ss(mb.dorr[0],mb.dorr[1]);
@@ -1178,7 +1178,7 @@ function ritaStall3D(){
           cx.fillStyle=VCOL.skylt;cx.fillRect(s[0]-b/2,s[1]-hh/2,b,hh);
           cx.strokeStyle="#3A3E44";cx.strokeRect(s[0]-b/2,s[1]-hh/2,b,hh);
           cx.fillStyle=h?"#E6E4DE":"#5A5F66";
-          cx.font=`600 ${hh*0.55}px "IBM Plex Mono"`;cx.textAlign="center";
+          cx.font=`600 ${hh*0.55}px "IBM Plex Mono",monospace`;cx.textAlign="center";
           cx.fillText(h?h.namn.toUpperCase():"—",s[0],s[1]+hh*0.2);
         }
         // hästens finaste rosett hänger på boxdörren
@@ -1311,12 +1311,12 @@ function ritaRidhus2D(){
   cx.fillRect(la,lb,(R.bredd-R.laktare.x0)*s,(R.laktare.y1-R.laktare.y0)*s);
   if(s>4){cx.save();cx.translate(la+(R.bredd-R.laktare.x0)*s/2,lb+(R.laktare.y1-R.laktare.y0)*s/2);
     cx.rotate(-Math.PI/2);cx.fillStyle="#2A241C";
-    cx.font=`500 ${Math.max(9,s*1.6)}px "IBM Plex Mono"`;cx.textAlign="center";
+    cx.font=`500 ${Math.max(9,s*1.6)}px "IBM Plex Mono",monospace`;cx.textAlign="center";
     cx.fillText("LÄKTAREN",0,3);cx.restore();}
   // caféöverbyggnaden i söder
   const[ca,cb]=ss(0,R.cafe.djup);
   cx.fillStyle="rgba(233,229,220,.35)";cx.fillRect(ca,cb,R.bredd*s,R.cafe.djup*s);
-  if(s>4){cx.fillStyle="#8E877A";cx.font=`500 ${Math.max(8,s*1.2)}px "IBM Plex Mono"`;
+  if(s>4){cx.fillStyle="#8E877A";cx.font=`500 ${Math.max(8,s*1.2)}px "IBM Plex Mono",monospace`;
     cx.textAlign="center";cx.fillText("CAFÉ KRUBBAN (OVANPÅ)",ca+R.bredd*s/2,cb+R.cafe.djup*s/2+3);}
   // speglar och skyltar på västra långsidan
   for(const sp of R.speglar){const[a,b]=ss(0.4,sp.y+sp.b/2);
