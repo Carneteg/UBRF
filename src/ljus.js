@@ -32,11 +32,16 @@ const LJUS={
     himmelBotten:"#CDE8F7",
     solskiva:"#FFF6C9", solGloria:"#FFE070",
 
-    /* Dimman ligger långt bort och är ljusblå, inte grå. */
-    dimFarg:"#C7E4F5", dimNara:120, dimFjarr:380, dimStyrka:0.80,
+    /* Dimman ligger långt bort och är ljusblå, inte grå. Räckvidden är
+       satt efter markplanet: det är 400 × 400, så kanten ligger ~200 m
+       bort, och dimman måste vara framme där. Med de gamla 380 m tog
+       marken slut mot himlen i en skarp linje vid horisonten. */
+    dimFarg:"#C7E4F5", dimNara:70, dimFjarr:195, dimStyrka:0.92,
 
-    /* Skuggan: färgad, mjuk, aldrig svart. */
-    skuggAlfa:0.26, skuggFarg:"#3A5230", skuggMjukhet:0.075,
+    /* Skuggan: färgad, mjuk, aldrig svart. Talen höjdes efter en
+       mätning — den innersta ringen låg på 6,7 % alfa och syntes inte
+       alls, och en häst utan kontaktskugga ser ut att sväva. */
+    skuggAlfa:0.42, skuggFarg:"#3A5230", skuggMjukhet:0.075,
 
     /* Kontaktocklusion: mörkare nära marken, som i en riktig scen. */
     aoHojd:0.85, aoStyrka:0.22,
@@ -57,8 +62,8 @@ const LJUS={
     himmel:"#C2D2DC", mark:"#7E9464", ambient:0.88,
     himmelTopp:"#6E93B4", himmelMitt:"#9FBCD2", himmelBotten:"#D8E4EC",
     solskiva:"#F4F2E4", solGloria:"#E8E6D4",
-    dimFarg:"#D4E2EC", dimNara:80, dimFjarr:300, dimStyrka:0.85,
-    skuggAlfa:0.11, skuggFarg:"#3E4A38", skuggMjukhet:0.075,
+    dimFarg:"#D4E2EC", dimNara:60, dimFjarr:185, dimStyrka:0.94,
+    skuggAlfa:0.24, skuggFarg:"#3E4A38", skuggMjukhet:0.075,
     aoHojd:0.90, aoStyrka:0.26,
     kantFarg:"#EAF2F6", kant:0.14,
     mattnad:1.08, exponering:1.02, bloomTroskel:0.86, bloomStyrka:0.18,
@@ -70,8 +75,8 @@ const LJUS={
     himmel:"#A8BAC8", mark:"#6E8656", ambient:0.86,
     himmelTopp:"#55738E", himmelMitt:"#7C97AC", himmelBotten:"#B4C6D2",
     solskiva:"#E4EAEE", solGloria:"#D2DCE4",
-    dimFarg:"#BCCEDA", dimNara:50, dimFjarr:220, dimStyrka:0.90,
-    skuggAlfa:0.08, skuggFarg:"#33402E", skuggMjukhet:0.09,
+    dimFarg:"#BCCEDA", dimNara:45, dimFjarr:170, dimStyrka:0.96,
+    skuggAlfa:0.20, skuggFarg:"#33402E", skuggMjukhet:0.09,
     aoHojd:0.95, aoStyrka:0.28,
     kantFarg:"#DCE8F0", kant:0.12,
     mattnad:1.02, exponering:1.00, bloomTroskel:0.90, bloomStyrka:0.12,
@@ -84,7 +89,7 @@ const LJUS={
     himmelTopp:"#EDE9DE", himmelMitt:"#F2EEE4", himmelBotten:"#F6F2E8",
     solskiva:"#FFF8DC", solGloria:"#FFEFC0",
     dimFarg:"#E4DED0", dimNara:60, dimFjarr:180, dimStyrka:0.55,
-    skuggAlfa:0.16, skuggFarg:"#4A3E2E", skuggMjukhet:0.05,
+    skuggAlfa:0.34, skuggFarg:"#4A3E2E", skuggMjukhet:0.05,
     aoHojd:1.10, aoStyrka:0.30,
     kantFarg:"#FFF4D8", kant:0.16,
     mattnad:1.12, exponering:1.04, bloomTroskel:0.84, bloomStyrka:0.22,
