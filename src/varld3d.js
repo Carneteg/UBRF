@@ -717,9 +717,18 @@ function v3dStallYttre(bg,d,opp){
 /* ── Stallet invändigt ────────────────────────────────────────── */
 function v3dStall(lagg,opp){
   const S=STALLINNE, T=S3.tex, vx=S.bredd/2;
-  /* Golvet: marksten i gången, spån i boxarna. */
-  lagg(new Bygge().yta(S.ganghalva*2,S.langd,"#FFFFFF",
+  /* Golvet, efter IMG_0249: en markstensgång i mitten — smalare än
+     hela gången — och en ljus spånremsa längs boxfronterna på båda
+     sidor. Remsan är det första ögat läser i filmen; utan den blir
+     gången en enfärgad korridor. */
+  const gangSten=S.ganghalva*0.72;
+  lagg(new Bygge().yta(gangSten*2,S.langd,"#FFFFFF",
     M4.translation(vx,0.02,S.langd/2),10),T.marksten);
+  {const remsa=new Bygge(), rb=S.ganghalva-gangSten;
+   for(const sida of [-1,1])
+     remsa.yta(rb,S.langd,"#D8C9A4",
+       M4.translation(vx+sida*(gangSten+rb/2),0.025,S.langd/2),4);
+   lagg(remsa,T.span);}
   const span=new Bygge();
   for(const sida of["W","E"]){
     const rad=S.boxar[sida];
@@ -741,13 +750,55 @@ function v3dStall(lagg,opp){
   vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(-0.1,S.tak/2,S.langd/2));
   vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
   lagg(vagg,T.parlspont);
+  /* Taket, efter IMG_0249 och IMG_0250. Det är inte ett platt vitt
+     innertak med limträbalkar utan ett SADELTAK: galvaniserad
+     korrugerad plåt som undertak, tvärgående balkar i tegelrött var
+     fjärde meter, en rad takfönster högt i västra takfallet, och
+     galvade dragstag som hänger ner från varje balk till boxarnas
+     överkant. Det är stagen och de röda balkarna man känner igen
+     stallet på inifrån. */
+  const RESN=2.1, NOCK=S.tak+RESN, halvB=S.bredd/2;
+  const takL=Math.hypot(halvB,RESN), takV=Math.atan2(RESN,halvB);
   const tak=new Bygge();
-  tak.lada(S.bredd+0.6,0.16,S.langd+0.4,"#B8BCC0",M4.translation(vx,S.tak,S.langd/2));
-  for(let z=2;z<S.langd;z+=4)                       // limträbalkar
-    tak.lada(S.bredd,0.22,0.20,"#7A5C3E",M4.translation(vx,S.tak-0.22,z));
-  for(let z=6;z<S.langd;z+=9)                       // taklanterniner
-    tak.lada(1.6,0.10,1.2,"#F6F2E4",M4.translation(vx,S.tak-0.10,z));
-  lagg(tak,null);
+  for(const sida of [-1,1])                         // takfallen i galvad plåt
+    tak.lada(takL,0.14,S.langd+0.5,"#D9DDE1",
+      M4.mul(M4.translation(vx+sida*halvB/2,S.tak+RESN/2,S.langd/2),
+             M4.rotZ(-sida*takV)));
+  /* Undersidan av ett tak får bara ambient och blev nästan svart, fast
+     filmen visar ljus galvplåt hela vägen upp i nocken — armaturerna
+     lyser den jämnt. Den ritas därför obelyst, med sin egen ton. */
+  S3.statiskt.push({nat:GL.nat(tak), tex:T.takplat, platt:true});
+  const stomme=new Bygge();
+  for(let z=2;z<S.langd;z+=4){
+    /* Tvärbalken i tegelrött, precis under takfoten. */
+    stomme.lada(S.bredd,0.26,0.22,"#9C4A32",M4.translation(vx,S.tak-0.13,z));
+    /* Nockbalken och snedstagen upp mot nocken. */
+    for(const sida of [-1,1])
+      stomme.lada(takL*0.9,0.16,0.14,"#9C4A32",
+        M4.mul(M4.translation(vx+sida*halvB*0.45,S.tak+RESN*0.45,z),
+               M4.rotZ(-sida*takV)));
+  }
+  stomme.lada(0.20,0.24,S.langd,"#9C4A32",M4.translation(vx,NOCK-0.2,S.langd/2));
+  lagg(stomme,T.tra);
+  const galv=new Bygge();
+  for(let z=2;z<S.langd;z+=4)                       // dragstagen ner till boxarna
+    for(const sida of [-1,1])
+      galv.cyl(0.035,0.035,S.tak-2.3,"#B4B9BE",
+        M4.translation(vx+sida*S.ganghalva,2.3,z),6);
+  lagg(galv,null);
+  /* Takfönstren i västra takfallet — ljuset som gör gången läsbar. */
+  const lykt=new Bygge();
+  for(let z=5;z<S.langd-3;z+=4.5)
+    lykt.lada(1.5,0.10,0.85,"#F8F5E8",
+      M4.mul(M4.translation(vx-halvB*0.52,S.tak+RESN*0.52,z),M4.rotZ(takV)));
+  /* Runda pendelarmaturer i rad över vardera boxraden. */
+  for(let z=3;z<S.langd;z+=4.5)
+    for(const sida of [-1,1]){
+      const ax=vx+sida*S.ganghalva*0.62;
+      lykt.cyl(0.012,0.012,0.55,"#8E939B",M4.translation(ax,S.tak-0.55,z),5);
+      lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.62,z),10);
+    }
+  lagg(lykt,null);
 
   /* Boxfronterna: komposit, galvad ram, galler och namnskylt. */
   const front=new Bygge(), galler=new Bygge();
@@ -1438,7 +1489,7 @@ function ritaVandring3D(){
     GL.rita(S3.himmel.nat,M4.translation(k.x-S3.himmelC[0],0,k.z-S3.himmelC[1]),
       {platt:true,baksidor:true});                // molnen
     gl.depthMask(true);
-    for(const s of S3.statiskt)GL.rita(s.nat,M4.ny(),{tex:s.tex,baksidor:s.baksidor});
+    for(const s of S3.statiskt)GL.rita(s.nat,M4.ny(),{tex:s.tex,baksidor:s.baksidor,platt:s.platt});
     if(V3D.oppningar)GL.rita(V3D.oppningar.nat,M4.ny(),{baksidor:true});
     /* Levande figurer och hästar. */
     if(G.scen==="gard"){
