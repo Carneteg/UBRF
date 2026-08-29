@@ -90,8 +90,17 @@ function visaSadelkammare(){
       const fel=[val.sadel!==G.hastId?"sadeln":null,val.trans!==G.hastId?"tränset":null]
         .filter(Boolean).join(" och ");
       st.className="note bad";st.style.fontSize="13px";
-      st.innerHTML=`Fel ${fel}. Det där är <b>${HORSES[val.sadel!==G.hastId?val.sadel:val.trans].namn}</b>s —
-        läs namnskylten en gång till. ${h.namn}s hänger på sin egen plats.`;
+      /* Varför det spelar roll, inte bara att det är fel. En elev som
+         bara får "fel" lär sig leta efter rätt namn; en som får skälet
+         lär sig varför namnskylten finns. */
+      const varfor=val.sadel!==G.hastId
+        ? `En sadel är formad efter en bestämd rygg. På fel häst trycker den
+           antingen på manken eller på njurarna, och då kan ${h.namn} inte gå
+           igenom ryggen hur bra du än rider.`
+        : `Ett träns är inställt efter ett bestämt huvud. På fel häst hamnar
+           bettet för högt eller för lågt i munnen och skaver i mungiporna.`;
+      st.innerHTML=`Fel ${fel}. Det där är <b>${HORSES[val.sadel!==G.hastId?val.sadel:val.trans].namn}</b>s.
+        ${varfor} Läs namnskylten en gång till — ${h.namn}s hänger på sin egen plats.`;
       G.felUtrustning=(G.felUtrustning||0)+1;
       return;
     }

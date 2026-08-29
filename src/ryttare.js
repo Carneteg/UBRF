@@ -41,7 +41,11 @@ function laddaRyttare(){
   G.grupp=SPAR.grupp;
 }
 function sparaRyttare(){
+  /* Stämpeln avgör vem som vinner när två enheter har olika versioner.
+     Den sätts här, vid varje sparning, och ingen annanstans. */
+  SPAR.uppdaterad=new Date().toISOString();
   try{localStorage.setItem(SPAR_NYCKEL,JSON.stringify(SPAR));}catch(_){}
+  if(typeof synkKnuffa==="function")synkKnuffa();
 }
 function nollstallRyttare(){
   SPAR=nyProfil(); G.grupp=SPAR.grupp;
@@ -102,6 +106,13 @@ function registreraPass(dom){
      const skotselDelta=(form-0.62)*0.12-slarv*0.035;
      rangEfterRitt=clamp(rangEfterRitt+skotselDelta,0,1);
    }}
+  /* Taket per pass. Ridningens rang stiger snabbt inom ett pass, och så
+     ska det vara — det är känslan i sadeln av att ni hittar varandra.
+     Men som MINNE är det för snabbt: efter-passet visade en relation
+     som gick från 0,45 till 1,00 på en lektion, och då betyder den
+     ingenting. Nedåt är taket större än uppåt, som förut. */
+  {const TAK=0.06, d=clamp(rangEfterRitt-m.rang,-TAK*1.6,TAK);
+   rangEfterRitt=clamp(m.rang+d,0,1);}
   const ny={...m, rang:rangEfterRitt, pass:m.pass+1,
     sistaPassNr:SPAR.pass, sistaForm:Math.round(G.dagsform*100)/100, rehab:false};
   delete ny.skada;
@@ -142,7 +153,10 @@ function registreraPass(dom){
   sparaRyttare();
   return {snitt, forv, godkand, uppflyttad, grupp:SPAR.grupp,
     gruppNamn:GRUPPNAMN[SPAR.grupp], poang:SPAR.poang,
-    riddenGrupp, riddenNamn, skada:nySkada};
+    riddenGrupp, riddenNamn, skada:nySkada,
+    /* Efter-passet visar hur förtroendet rörde sig — både ridningen och
+       skötseln väger in, och båda ska kunna läsas i en mening. */
+    rangFore:clamp(m.rang??0.45,0,1), rangEfter:rangEfterRitt};
 }
 
 /* Profilrutan i menyn. */

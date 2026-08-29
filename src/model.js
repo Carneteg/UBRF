@@ -255,7 +255,8 @@ function utvarderaSkotsel(sk,forlatande,stallro){
   df*=(0.80+0.20*stallro); df=clamp(0.25+0.75*df,0,1);
   df=clamp(df+(forlatande-0.5)*0.14,0,1);
   let omdome;
-  if(risker.includes("gar_inte_igenom_ryggen"))omdome="Sadeln ligger på bogbladet. Lägg om den, annars kan han inte gå igenom ryggen.";
+  if(risker.includes("skrammd_bakifran"))omdome="Du kom rakt bakifrån. Hon är på helspänn nu — gå fram där hon ser dig nästa gång, och säg något.";
+  else if(risker.includes("gar_inte_igenom_ryggen"))omdome="Sadeln ligger på bogbladet. Lägg om den, annars kan han inte gå igenom ryggen.";
   else if(risker.includes("sadeln_glider"))omdome="Dra åt gjorden ett hål till innan du sitter upp.";
   else if(risker.includes("sten_i_hoven"))omdome="Kratsa hovarna ordentligt — alla fyra.";
   else if(risker.length)omdome="Visitera henne innan du sadlar. Mungipor och skav.";

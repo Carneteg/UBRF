@@ -6,7 +6,15 @@ lär sig sköta hästar. Privat familjeprojekt.
 ## Tekniken
 
 Ett HTML5-spel som byggs till **en enda fil**: `tools/build.py` fogar ihop `index.html` och
-`src/*.js` till `dist/ridskolan.html`. Ingen CDN, inga externa filer, inget nätverk vid körning.
+`src/*.js` till `dist/ridskolan.html`. Ingen CDN, inga externa filer.
+
+**Local-first.** `localStorage` är sanningen och hela spelet fungerar utan nät. `src/synk.js`
+lägger en frivillig molnsynk ovanpå (Supabase-projektet `UBRF`, tabellerna i
+`supabase/migrations/`) så att man kan rida på mobilen i stallet och fortsätta på datorn.
+Den är aldrig ett krav: utan inloggning, utan nät eller med trasig server spelar man precis
+som förut, och varje anrop i den filen får misslyckas tyst. Synken pratar med REST- och
+auth-slutpunkterna över vanliga `fetch`-anrop — **dra aldrig in `supabase-js`**, det vore ett
+externt beroende och bryter regeln om en enda fil.
 3D-delen är en egen WebGL-motor i `src/gl.js` — inget Three.js, inga färdiga modellformat.
 Geometri byggs i kod med `Bygge` (lådor, klot, cylindrar, svepta ytor).
 

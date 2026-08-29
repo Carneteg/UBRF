@@ -35,6 +35,7 @@ function visaMeny(){
   <div class="note">Håll tygeln i det <b>gröna bandet</b> på mätaren — inte noll, inte max.
   Kontakt är en förbindelse, inte ett grepp. Och en halvhalt (E) är det enda som bygger samling.</div>
   ${profilHTML()}
+  ${typeof synkPanelHTML==="function"?synkPanelHTML():""}
   <div class="btnrow">
     <button class="btn" id="bStart">Till stallet</button>
     <button class="btn ghost" id="bTavling">Tävlingsdag</button>
@@ -45,6 +46,7 @@ function visaMeny(){
   document.getElementById("bTavling").onclick=visaTavlingsval;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
   kopplaProfil();
+  if(typeof kopplaSynkPanel==="function")kopplaSynkPanel();
 }
 
 /* ── Ridläraren tilldelar häst ── */
@@ -129,8 +131,9 @@ function visaTilldelning(){
 const SK={steg:0,ryktning:new Set(),hovar:[0,0,0,0],sadelX:0.5,gjord:0.1,visitering:0,betsling:0,
   start:0,drar:false,sista:null};
 function visaSkotsel(){
-  SK.steg=0;SK.ryktning.clear();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
+  SK.steg=0;SK.ryktning=new Set();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
   SK.visitering=0;SK.betsling=0;SK.start=performance.now();
+  ryktNollstall();sadelNollstall();visitNollstall();hovNollstall();
   const h=HORSES[G.hastId];
   /* Egenhet: en häst som blåser upp magen släpper sakta ut luften —
      gjorden glider ner igen tills du drar åt en gång till. */
@@ -160,16 +163,17 @@ function visaSkotsel(){
     </div>
   </div>`);
   for(const el of document.querySelectorAll(".gstep"))
-    el.onclick=()=>{SK.steg=+el.dataset.s;groomHint();};
+    el.onclick=()=>{SK.steg=+el.dataset.s;hovStang();VIS.oppen=null;
+      momentKamTill(SK.steg);groomHint();};
   document.getElementById("bKlar").onclick=avslutaSkotsel;
-  initGroomCanvas();groomHint();
+  initGroomCanvas();momentKamTill(1,true);groomHint();   // hela hästen tills man gått fram
 }
 function groomHint(){
   const h=HORSES[G.hastId];
-  let t=["Klicka på mungipan och sadelläget för att visitera — kolla skav innan du lägger på något.",
-    "Håll och dra över kroppen, i pälsens riktning (framifrån och bak). Täckning räknas per område.",
-    "Klicka på en hov för att lyfta den, dra sedan nedåt över den för att kratsa. Alla fyra.",
-    "Dra sadeln till rätt läge — precis bakom manken — och dra sedan gjordreglaget till det gröna bandet."][SK.steg];
+  let t=["Gå fram till henne först — hon ska se dig komma. Sedan de fem ställena i tur och ordning, framifrån och bakåt: ögon, mungipor, sadelläge, gjordläge, ben. De flesta dagar är allt bra, och det är därför man slutar titta.",
+    "Tre redskap, i den ordningen: gummiskrapan i cirklar på musklerna, kardborsten i korta drag med hårets riktning, och den mjuka borsten över hela hästen. Ringen runt varje fläck visar vilka redskap som varit där.",
+    "Klicka på en hov. Bilden går ner till sulan, och där kratsar du från trakten mot tån — längs fårorna på var sida om strålen. Alla fyra.",
+    "Fyra moment i ordning: underlägget högt på manken och bakåt, sadeln bakåt på plats bakom bogbladet, lyft upp underlägget i sadelbommen, och gjorda i tre tag med paus emellan."][SK.steg];
   if(SK.steg===1&&h.flaggor&&h.flaggor.kittlig)
     t+=` OBS: ${h.namn} är kittlig — bara lugna, långsamma drag räknas.`;
   if(SK.steg===3&&h.flaggor&&h.flaggor.blaser_upp_magen)
@@ -181,10 +185,10 @@ let gcv,gcx,lyftHov=-1;
 /* Ankarpunkter på hästen (normaliserade canvaskoordinater) — hästen
    ritas med ritaHastSida: mitt 0.55W, mark 0.88H, mankhöjd 0.52H,
    huvudet åt vänster. */
-const RYKTZONER=[[0.44,0.31],[0.45,0.46],[0.55,0.39],[0.55,0.54],
-                 [0.66,0.52],[0.73,0.44],[0.43,0.57],[0.70,0.59]];
+/* Ryktzonerna och visiteringens punkter bor i moment.js sedan de blev
+   egna moment. Här står bara hovarnas lägen och sadelns rätta plats. */
 const HOVP=[[0.44,0.85],[0.49,0.85],[0.68,0.85],[0.735,0.85]];
-const MUNGIPA=[0.267,0.33], SADELPLATS=[0.57,0.34], SADEL_RATT=0.565;
+const SADEL_RATT=0.565;
 function initGroomCanvas(){
   gcv=document.getElementById("groomCanvas");gcx=gcv.getContext("2d");
   const fit=()=>{const r=gcv.getBoundingClientRect();gcv.width=r.width*DPR;gcv.height=r.height*DPR;
@@ -194,38 +198,62 @@ function initGroomCanvas(){
     const p=e.touches?e.touches[0]:e;return[(p.clientX-r.left)/r.width,(p.clientY-r.top)/r.height];};
   const ned=e=>{SK.drar=true;SK.sista=pos(e);hantera(pos(e),true);e.preventDefault();};
   const rr=e=>{if(!SK.drar)return;hantera(pos(e),false);SK.sista=pos(e);e.preventDefault();};
-  const upp=()=>{SK.drar=false;lyftHov=-1;ritaGroom();};
+  const upp=()=>{SK.drar=false;HOV.sista=null;if(HOV.i<0)lyftHov=-1;ritaGroom();};
   gcv.addEventListener("pointerdown",ned);gcv.addEventListener("pointermove",rr);
   addEventListener("pointerup",upp);
 }
 function hantera(p,klick){
-  const[x,y]=p;
+  /* Hoven först: när närbilden är uppe är det den som tar dragen. */
+  if(HOV.i>=0){
+    const r=gcv.getBoundingClientRect();
+    if(klick&&hovTillbakaTraff(p[0],p[1],r.width,r.height)){hovStang();ritaGroom();return;}
+    if(SK.drar)hovDrag(hovTillLokal(p[0],p[1],r.width,r.height));
+    dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
+    ritaGroom(); return;
+  }
   if(SK.steg===0&&klick){
-    if(Math.hypot(x-MUNGIPA[0],y-MUNGIPA[1])<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
-    if(Math.hypot(x-SADELPLATS[0],y-SADELPLATS[1])<0.10)SK.visitering=Math.min(1,SK.visitering+0.5); // sadelläge
-    if(SK.visitering>=1)SK.betsling=0.9;
-    dok(0,SK.visitering>=1?"klart":"…");
+    const r0=gcv.getBoundingClientRect();
+    if(visitKlick(p[0],p[1],r0.width,r0.height)){
+      SK.visitering=visitAndel();
+      if(VIS.gang>=0&&!VIS.oppen)momentKamTill(0);
+      dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
+      ritaGroom(); return;
+    }
   }
-  if(SK.steg===1&&SK.drar){
-    const dir=SK.sista?x-SK.sista[0]:0;
-    const kittlig=HORSES[G.hastId].flaggor&&HORSES[G.hastId].flaggor.kittlig;
-    const lugnt=!kittlig||dir<0.022;   // kittlig häst: bara långsamma drag räknas
-    for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
-      if(Math.hypot(x-zx,y-zy)<0.085&&dir>0.0005&&lugnt)SK.ryktning.add(i);}
-    dok(1,Math.round(SK.ryktning.size/RYKTZONER.length*100)+" %"+(!lugnt?" · för fort!":""));
+  if(SK.steg===1&&klick){
+    const r0=gcv.getBoundingClientRect();
+    if(ryktKlickChipp(p[0],p[1],r0.width,r0.height)){ritaGroom();return;}
   }
-  if(SK.steg===2){
-    if(klick){let bi=-1,bd=0.055;
-      for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
-        if(d<bd){bd=d;bi=i;}}
-      if(bi>=0)lyftHov=bi;}
-    else if(lyftHov>=0&&SK.sista&&y-SK.sista[1]>0.004)
-      SK.hovar[lyftHov]=Math.min(1,SK.hovar[lyftHov]+0.10);
+  const[x,y]=momentTillBild(p[0],p[1]);
+  if(SK.steg===0&&klick){
+    let b=null,bd=0.085;
+    for(const v of VISITPUNKT){const d=Math.hypot(x-v.x,y-v.y);if(d<bd){bd=d;b=v;}}
+    if(b)visitOppna(b.id);
+    else if(VIS.gang>=0&&!VIS.oppen)momentKamTill(0);
+    SK.visitering=visitAndel();
+    SK.betsling=VIS.sedd.has("mun")?0.9:0.2;
+    dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
+  }
+  if(SK.steg===1){
+    const fs=SK.sista?momentTillBild(SK.sista[0],SK.sista[1]):null;
+    if(SK.drar)ryktDrag([x,y],fs);
+    SK.ryktning=new Set();                       // för utvärderingen
+    for(let i=0;i<RYKTZON.length;i++)
+      if(RY.gjort[i]&&RY.gjort[i].size>=RYKTKRAV[RYKTZON[i].typ].length)SK.ryktning.add(i);
+    dok(1,Math.round(ryktAndel()*100)+" %");
+  }
+  if(SK.steg===2&&klick){
+    /* Klicka på en hov: bilden zoomar in på sulan och kratsandet sker
+       där, inte som ett drag längs benet i profil. */
+    let bi=-1,bd=0.075;
+    for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
+      if(d<bd){bd=d;bi=i;}}
+    if(bi>=0&&SK.hovar[bi]<1){lyftHov=bi;hovOppna(bi);}
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
   }
-  if(SK.steg===3&&SK.drar){
-    if(y<0.55)SK.sadelX=clamp(x,0.35,0.80);
-    else SK.gjord=clamp((x-0.2)/0.6,0,1);
+  if(SK.steg===3){
+    const fs=SK.sista?momentTillBild(SK.sista[0],SK.sista[1]):null;
+    sadelDrag([x,y],SK.drar?fs:null,klick);
     dok3();
   }
   ritaGroom();
@@ -234,7 +262,8 @@ function dok(i,v){const el=document.getElementById("gv"+i);if(el)el.textContent=
 function dok3(){
   const lage=1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1);
   const gOk=SK.gjord>=0.42&&SK.gjord<=0.74;
-  dok(3,(lage>0.7?"läge ✓":"läge ✗")+(gOk?" gjord ✓":" gjord ✗"));
+  dok(3,(lage>0.7?"läge ✓":"läge ✗")+(SA.mankfri?" manke ✓":" manke ✗")
+    +(gOk&&SA.tag>=3?" gjord ✓":" gjord ✗"));
 }
 function ritaGroom(){
   const W=gcv.clientWidth,H=gcv.clientHeight,h=HORSES[G.hastId];
@@ -245,18 +274,29 @@ function ritaGroom(){
   gcx.fillStyle=gr; gcx.fillRect(0,0,W,H);
   gcx.strokeStyle="rgba(0,0,0,.12)"; gcx.lineWidth=1;
   for(let i=1;i<8;i++){gcx.beginPath();gcx.moveTo(W*i/8,0);gcx.lineTo(W*i/8,H*0.72);gcx.stroke();}
+  /* Utsnittet för momentet. Allt som ritas i bildens koordinater ligger
+     innanför — hästen, zonerna och markörerna. */
+  gcx.save();
+  gcx.translate(W/2,H/2); gcx.scale(KAM.s,KAM.s); gcx.translate(-KAM.x*W,-KAM.y*H);
   // hästen i profil, huvudet åt vänster
   ritaHastSida(gcx, W*0.55, H*0.88, H*0.52, -1, h.farg, h.man, {pose:"sta"});
-  // ryktzoner
-  if(SK.steg===1)for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
-    gcx.fillStyle=SK.ryktning.has(i)?"rgba(127,180,137,.4)":"rgba(230,228,222,.10)";
-    gcx.beginPath();gcx.arc(W*zx,H*zy,W*0.045,0,Math.PI*2);gcx.fill();}
-  // visitering-markörer
-  if(SK.steg===0){
-    for(const[mx,my]of[MUNGIPA,SADELPLATS]){
-      gcx.strokeStyle="rgba(214,174,60,.8)";gcx.lineWidth=2;gcx.setLineDash([4,4]);
-      gcx.beginPath();gcx.arc(W*mx,H*my,W*0.05,0,Math.PI*2);gcx.stroke();gcx.setLineDash([]);}
+  /* Ryktzonerna. Varje zon är en ring delad i lika många bågar som den
+     kräver redskap, och bågen tänds när det redskapet varit där. */
+  if(SK.steg===1)for(let i=0;i<RYKTZON.length;i++){
+    const z=RYKTZON[i], krav=RYKTKRAV[z.typ], r=W*0.040;
+    gcx.fillStyle="rgba(230,228,222,.09)";
+    gcx.beginPath();gcx.arc(W*z.x,H*z.y,r,0,Math.PI*2);gcx.fill();
+    for(let k=0;k<krav.length;k++){
+      const gjort=RY.gjort[i]&&RY.gjort[i].has(krav[k]);
+      const red=RYKTREDSKAP.find(v=>v.id===krav[k]);
+      gcx.beginPath();
+      gcx.arc(W*z.x,H*z.y,r*1.22,-Math.PI/2+k*2*Math.PI/krav.length+0.10,
+        -Math.PI/2+(k+1)*2*Math.PI/krav.length-0.10);
+      gcx.lineWidth=3.2; gcx.strokeStyle=gjort?red.farg:"rgba(230,228,222,.16)";
+      gcx.stroke();
+    }
   }
+
   // hovar
   if(SK.steg===2){
     for(let i=0;i<4;i++){const[hx,hy]=HOVP[i];
@@ -264,6 +304,12 @@ function ritaGroom(){
       gcx.beginPath();gcx.arc(W*hx,H*hy+(lyftHov===i?-H*0.05:0),W*0.024,0,Math.PI*2);gcx.fill();}}
   // sadel
   if(SK.steg===3){
+    /* Underlägget ligger först, sadeln kommer i fas 1. */
+    gcx.fillStyle=SA.fas>=1?"rgba(240,238,232,.90)":"rgba(240,238,232,.65)";
+    gcx.beginPath();
+    gcx.ellipse(W*(SA.fas>=1?SADEL_RATT:SA.ux),H*0.352,W*0.088,H*0.070,0,0,Math.PI*2);
+    gcx.fill();
+    if(SA.fas<1){ gcx.restore(); ritaSadel(gcx,W,H); return; }
     const sx=W*SK.sadelX;
     const ok=Math.abs(SK.sadelX-SADEL_RATT)<0.11;
     gcx.fillStyle=ok?"rgba(107,160,117,.92)":"rgba(214,174,60,.92)";
@@ -277,9 +323,19 @@ function ritaGroom(){
     gcx.fillStyle="rgba(11,13,16,.85)";gcx.fillRect(W*0.2,H*0.90,W*0.6,10);
     gcx.fillStyle="rgba(127,180,137,.35)";gcx.fillRect(W*0.2+W*0.6*0.42,H*0.90,W*0.6*0.32,10);
     gcx.fillStyle="#D6AE3C";gcx.fillRect(W*0.2,H*0.90,W*0.6*SK.gjord,10);
-    gcx.fillStyle="#8E939B";gcx.font='10px "IBM Plex Mono"';gcx.textAlign="center";
+    gcx.fillStyle="#8E939B";gcx.font='10px "IBM Plex Mono",monospace';gcx.textAlign="center";
     gcx.fillText("GJORD — dra hit",W*0.5,H*0.90-6);
+    if(SA.mankfri){                              // manken fri: bommen markerad
+      gcx.strokeStyle="rgba(127,180,137,.85)";gcx.lineWidth=2.5;
+      gcx.beginPath();gcx.arc(sx,H*0.315,W*0.030,0,Math.PI*2);gcx.stroke();
+    }
   }
+  gcx.restore();
+  if(SK.steg===0)ritaVisit(gcx,W,H);
+  if(SK.steg===1)ritaRykt(gcx,W,H);
+  if(SK.steg===3)ritaSadel(gcx,W,H);
+  /* Hovens närbild ligger över allt annat — den är ett eget moment. */
+  ritaHov(gcx,W,H);
 }
 function avslutaSkotsel(){
   if(SK.magTimer){clearInterval(SK.magTimer);SK.magTimer=null;}
@@ -288,8 +344,13 @@ function avslutaSkotsel(){
   const sys=G.sysslor||{mockat:0,fodrat:0};
   G.stallro=clamp(0.72+0.14*sys.mockat+0.14*sys.fodrat,0,1);
   const res=utvarderaSkotsel({
-    visitering:SK.visitering, ryktning:SK.ryktning.size/RYKTZONER.length,
-    hovar:SK.hovar, sadellage:1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1),
+    visitering:SK.visitering, ryktning:ryktAndel(),
+    hovar:SK.hovar,
+    /* Sadelläget är inte bara var sadeln hamnade. En sadel som ligger
+       rätt men med underlägget nedtryckt i manken, eller en gjord som
+       drogs i ett enda tag, är inte en sadlad häst. */
+    sadellage:(1-clamp(Math.abs(SK.sadelX-SADEL_RATT)/0.16,0,1))
+      *(SA.mankfri?1:0.62)*(SA.tag>=3?1:SA.tag>=2?0.86:0.70),
     gjord:SK.gjord, betsling:SK.betsling, tid,
   },HORSES[G.hastId].forlatande,G.stallro);
   /* Individen: gårdagens skötsel sitter i kroppen, och en häst som
@@ -311,11 +372,44 @@ function avslutaSkotsel(){
     res.risker.push("lera_kvar");
     lerRad="lera kvar på benen (−0,09)";
     res.omdome="Du sköter ingen häst genom leran. Spola av benen i spiltan innan du borstar nästa gång.";}
+  /* Fel utrustning räknades men kostade ingenting. Nu gör den det: varje
+     vända tillbaka till sadelkammaren är en häst som står uppbunden och
+     väntar, och det syns på dagsformen. Priset är litet — poängen är att
+     misstaget inte glöms bort utan får ett skäl. */
+  let utrRad="rätt sadel och träns direkt";
+  if(G.felUtrustning>0){
+    res.dagsform=clamp(res.dagsform-0.03*Math.min(G.felUtrustning,3),0,1);
+    utrRad=`fel utrustning ${G.felUtrustning} gång${G.felUtrustning>1?"er":""} `
+      +`(−${(0.03*Math.min(G.felUtrustning,3)).toFixed(2).replace(".",",")}) — `
+      +`hon stod uppbunden och väntade`;
+  }
+  /* Att komma rakt bakifrån skrämmer henne, och det sitter i hela
+     passet. Det är den enda regeln på en ridskola som kan sluta illa. */
+  let gangRad="du gick fram där hon kunde se dig";
+  if(visitSkrammd()){
+    res.dagsform=clamp(res.dagsform-0.07,0,1);
+    res.risker.push("skrammd_bakifran");
+    gangRad="du kom rakt bakifrån (−0,07) — hon rycker till";
+  }else if(VIS.gang<0)gangRad="du gick rakt på utan att hälsa";
+  /* Visiteringen ska löna sig, inte bara straffa. Hittade du något och
+     sa till får hon en bättre dag — det är hela poängen med att titta. */
+  let visRad="inget att anmärka";
+  if(visitMissat()){
+    if(!res.risker.includes("missat_skav"))res.risker.push("missat_skav");
+    visRad=VIS.sedd.has(VIS.fynd)?"du såg det och lät det vara"
+      :"du hann inte gå igenom allt";
+  }else if(VIS.fynd){
+    res.dagsform=clamp(res.dagsform+0.05,0,1);
+    visRad="du hittade det och sa till (+0,05)";
+  }
   G.dagsform=res.dagsform;G.sadellage=res.sadellage;G.skotselRes=res;
   /* Skötseln ger hästkunskap. Måttet är dagsformen du lyckades lämna
      hästen i — det är den enda siffra som säger något om hur väl du
      faktiskt skötte henne, och den syns redan på skärmen. */
-  {const steg=fardighetSkotsel(res.dagsform);
+  {const foreSk=(typeof fard==="function")?fard().skotsel:0;
+   const steg=fardighetSkotsel(res.dagsform);
+   if(typeof passSkotsel==="function")
+     passSkotsel(foreSk,(typeof fard==="function")?fard().skotsel:0,res);
    if(steg&&typeof visaFardighetsSteg==="function")
      setTimeout(()=>visaFardighetsSteg(steg),900);}
   /* Humöret sätts en gång, här, av skötseln du just gjort och av vad ni
@@ -335,6 +429,9 @@ function avslutaSkotsel(){
     <tr><td>Gårdagens dagsform</td><td class="num">${igarRad}</td></tr>
     <tr><td>Vila</td><td class="num">${vilaRad}</td></tr>
     <tr><td>Benen efter hagen</td><td class="num">${lerRad}</td></tr>
+    <tr><td>Utrustningen</td><td class="num">${utrRad}</td></tr>
+    <tr><td>Framgången till hästen</td><td class="num">${gangRad}</td></tr>
+    <tr><td>Visiteringen</td><td class="num">${visRad}</td></tr>
     <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
     <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>
     <tr><td>Stallro</td><td class="num">${G.stallro.toFixed(2).replace(".",",")}</td></tr>
@@ -376,6 +473,7 @@ function visaResultat(dom){
   overlay(true,`
   <span class="lbl">Efter lektionen</span>
   <h1 style="margin-top:8px">”${omdome}”</h1>
+  ${typeof efterPassHTML==="function"?efterPassHTML():""}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
     <div>
       ${G.hadeBana?`<div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
@@ -409,6 +507,7 @@ function visaResultat(dom){
     <button class="btn" id="bIgen">Rid igen — ny häst</button>
     <button class="btn ghost" id="bSamma">Samma häst igen</button>
   </div>`);
+  if(typeof kopplaEfterPass==="function")kopplaEfterPass();
   document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();
     G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
     gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});

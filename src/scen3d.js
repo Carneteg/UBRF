@@ -75,16 +75,99 @@ function s3Texturer(){
       c.font=`600 ${px}px "IBM Plex Sans", sans-serif`;}
     c.fillText(s.text,w/2,h/2);
   }));
-  /* Dressyrbokstäverna på sargen. */
+  /* Dressyrbokstäverna på sargen — två små skyltar bredvid varandra,
+     bilden till vänster och bokstaven till höger, precis som i verkligheten. */
   T.bokstav={};
   for(const b of DRESSYRBOKSTAVER) if(!T.bokstav[b.b])
-    T.bokstav[b.b]=glCanvasTex(128,128,(c,w,h)=>{
-      c.fillStyle="#F2EDE2";c.fillRect(0,0,w,h);
-      c.strokeStyle="#3A3E44";c.lineWidth=6;c.strokeRect(3,3,w-6,h-6);
+    T.bokstav[b.b]=glCanvasTex(256,128,(c,w,h)=>{
+      c.clearRect(0,0,w,h);
+      const skylt=(x0,x1)=>{
+        c.fillStyle="#F6F2E8";c.fillRect(x0,10,x1-x0,h-20);
+        c.strokeStyle="#4A4E52";c.lineWidth=4;c.strokeRect(x0+2,12,x1-x0-4,h-24);
+      };
+      skylt(4,118); skylt(138,252);
+      s3BokstavsBild(c,b.bild,61,64,84);
       c.fillStyle="#2E3238";c.textAlign="center";c.textBaseline="middle";
-      c.font='700 84px Petrona, Georgia, serif';
-      c.fillText(b.b,w/2,h/2+4);
+      c.font='700 82px Petrona, Georgia, serif';
+      c.fillText(b.b,195,68);
     });
+}
+
+/* ── Bildgåtorna ──────────────────────────────────────────────────
+   Ritade som få, feta former: de ska läsas på tio meters håll i ett
+   ridhus, inte granskas. Mitt i (x,y), ungefär s stor. */
+function s3BokstavsBild(c,id,x,y,s){
+  const r=s/2, F=(f,fn)=>{c.fillStyle=f;c.beginPath();fn();c.fill();};
+  switch(id){
+    case"banan":
+      F("#F2C53D",()=>{c.arc(x,y-r*0.15,r*0.92,0.25*Math.PI,0.95*Math.PI);
+        c.arc(x,y+r*0.30,r*0.92,0.95*Math.PI,0.25*Math.PI,true);});
+      break;
+    case"morot":
+      F("#E2801E",()=>{c.moveTo(x-r*0.42,y-r*0.35);c.lineTo(x+r*0.42,y-r*0.35);c.lineTo(x,y+r*0.92);});
+      F("#4E9B3A",()=>{c.moveTo(x-r*0.45,y-r*0.42);c.lineTo(x,y-r*0.95);c.lineTo(x+r*0.45,y-r*0.42);});
+      break;
+    case"cykel":
+      c.strokeStyle="#2E3238";c.lineWidth=s*0.10;
+      for(const d of [-1,1]){c.beginPath();c.arc(x+d*r*0.52,y+r*0.22,r*0.44,0,7);c.stroke();}
+      c.beginPath();c.moveTo(x-r*0.52,y+r*0.22);c.lineTo(x,y-r*0.42);
+      c.lineTo(x+r*0.52,y+r*0.22);c.stroke();
+      break;
+    case"fisk":
+      F("#3E7FB8",()=>{c.ellipse(x+r*0.10,y,r*0.70,r*0.45,0,0,7);});
+      F("#3E7FB8",()=>{c.moveTo(x-r*0.55,y);c.lineTo(x-r*0.98,y-r*0.45);c.lineTo(x-r*0.98,y+r*0.45);});
+      F("#F6F2E8",()=>{c.arc(x+r*0.45,y-r*0.12,r*0.10,0,7);});
+      break;
+    case"ananas":
+      F("#E8B93C",()=>{c.ellipse(x,y+r*0.22,r*0.52,r*0.68,0,0,7);});
+      F("#4E9B3A",()=>{c.moveTo(x-r*0.50,y-r*0.38);c.lineTo(x,y-r*0.98);c.lineTo(x+r*0.50,y-r*0.38);});
+      break;
+    case"elefant":
+      F("#8E96A0",()=>{c.ellipse(x-r*0.10,y+r*0.05,r*0.62,r*0.50,0,0,7);});
+      F("#8E96A0",()=>{c.ellipse(x-r*0.62,y-r*0.10,r*0.34,r*0.38,0,0,7);});
+      c.strokeStyle="#8E96A0";c.lineWidth=s*0.13;c.beginPath();
+      c.moveTo(x-r*0.80,y+r*0.10);c.quadraticCurveTo(x-r*1.00,y+r*0.70,x-r*0.62,y+r*0.86);c.stroke();
+      break;
+    case"hus":
+      F("#B0332E",()=>{c.rect(x-r*0.52,y-r*0.12,r*1.04,r*0.94);});
+      F("#3A3E44",()=>{c.moveTo(x-r*0.72,y-r*0.12);c.lineTo(x,y-r*0.86);c.lineTo(x+r*0.72,y-r*0.12);});
+      break;
+    case"katt":
+      F("#E09A3E",()=>{c.arc(x,y+r*0.14,r*0.60,0,7);});
+      for(const d of [-1,1])F("#E09A3E",()=>{c.moveTo(x+d*r*0.18,y-r*0.34);
+        c.lineTo(x+d*r*0.62,y-r*0.92);c.lineTo(x+d*r*0.66,y-r*0.20);});
+      F("#2E3238",()=>{c.arc(x-r*0.22,y+r*0.02,r*0.09,0,7);});
+      F("#2E3238",()=>{c.arc(x+r*0.22,y+r*0.02,r*0.09,0,7);});
+      break;
+    case"sol":
+      F("#F0C24A",()=>{c.arc(x,y,r*0.50,0,7);});
+      c.strokeStyle="#F0C24A";c.lineWidth=s*0.09;
+      for(let i=0;i<8;i++){const a=i*Math.PI/4;c.beginPath();
+        c.moveTo(x+Math.cos(a)*r*0.66,y+Math.sin(a)*r*0.66);
+        c.lineTo(x+Math.cos(a)*r*0.95,y+Math.sin(a)*r*0.95);c.stroke();}
+      break;
+    case"vante":
+      F("#B0332E",()=>{c.roundRect?c.roundRect(x-r*0.40,y-r*0.55,r*0.80,r*1.15,r*0.30)
+        :c.rect(x-r*0.40,y-r*0.55,r*0.80,r*1.15);});
+      F("#B0332E",()=>{c.ellipse(x-r*0.58,y+r*0.10,r*0.22,r*0.34,0,0,7);});
+      F("#F6F2E8",()=>{c.rect(x-r*0.46,y+r*0.42,r*0.92,r*0.22);});
+      break;
+    case"paron":
+      F("#9BB84A",()=>{c.ellipse(x,y+r*0.32,r*0.52,r*0.60,0,0,7);});
+      F("#9BB84A",()=>{c.ellipse(x,y-r*0.28,r*0.34,r*0.40,0,0,7);});
+      c.strokeStyle="#6B4A34";c.lineWidth=s*0.08;c.beginPath();
+      c.moveTo(x,y-r*0.62);c.lineTo(x+r*0.12,y-r*0.96);c.stroke();
+      break;
+    case"ros":
+      F("#C8404E",()=>{c.arc(x,y-r*0.18,r*0.48,0,7);});
+      F("#E8737E",()=>{c.arc(x,y-r*0.18,r*0.24,0,7);});
+      c.strokeStyle="#4E9B3A";c.lineWidth=s*0.09;c.beginPath();
+      c.moveTo(x,y+r*0.28);c.lineTo(x,y+r*0.95);c.stroke();
+      F("#4E9B3A",()=>{c.ellipse(x+r*0.30,y+r*0.60,r*0.26,r*0.13,0,0,7);});
+      break;
+    default:
+      F("#8E96A0",()=>{c.arc(x,y,r*0.5,0,7);});
+  }
 }
 
 /* ── Hästens delar. Byggs en gång i mankhöjd 1,60 m och skalas. ── */

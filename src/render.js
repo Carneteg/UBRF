@@ -53,7 +53,7 @@ function draw2D(G){
       const[a,b]=w2s(r.x,r.y);
       cx.fillStyle=fill||"#20242B";cx.strokeStyle="#31363E";cx.lineWidth=1;
       cx.fillRect(a,b,r.w*s,r.h*s);cx.strokeRect(a,b,r.w*s,r.h*s);
-      if(label&&s>7){cx.fillStyle="#5D636C";cx.font=`500 ${Math.max(9,s*0.85)}px "IBM Plex Mono"`;
+      if(label&&s>7){cx.fillStyle="#5D636C";cx.font=`500 ${Math.max(9,s*0.85)}px "IBM Plex Mono",monospace`;
         cx.textAlign="center";cx.fillText(label,a+r.w*s/2,b+r.h*s/2+3);}
     };
     foot(SITE.stall,"STALL","#232028");
@@ -88,7 +88,7 @@ function draw2D(G){
     cx.strokeRect(gx,gy,20*s,60*s);
     cx.fillStyle=COL.laktare;cx.fillRect(gx-2.2*s,gy+14*s,1.8*s,32*s);
     if(s>7){cx.save();cx.translate(gx-1.3*s,gy+30*s);cx.rotate(-Math.PI/2);
-      cx.fillStyle="#5D636C";cx.font=`500 ${s*0.8}px "IBM Plex Mono"`;cx.textAlign="center";
+      cx.fillStyle="#5D636C";cx.font=`500 ${s*0.8}px "IBM Plex Mono",monospace`;cx.textAlign="center";
       cx.fillText("LÄKTARE",0,3);cx.restore();}
     { // publiken på läktaren: fullsatt på tävling, några föräldrar annars
       const antal=G.tavling?14:3, steg2=G.tavling?2.15:7.5;
@@ -112,13 +112,13 @@ function draw2D(G){
       cx.fillRect(a-s*0.14,b-s*0.14,s*0.28,s*0.28);cx.fillRect(a2-s*0.14,b-s*0.14,s*0.28,s*0.28);}
     for(let x=4;x<=16;x+=4){const[a,b]=w2s(x,0),[,b2]=w2s(x,60);
       cx.fillRect(a-s*0.14,b-s*0.14,s*0.28,s*0.28);cx.fillRect(a-s*0.14,b2-s*0.14,s*0.28,s*0.28);}
-    if(s>7){cx.fillStyle="#5D6C58";cx.font=`500 ${Math.max(9,s*0.8)}px "IBM Plex Mono"`;
+    if(s>7){cx.fillStyle="#5D6C58";cx.font=`500 ${Math.max(9,s*0.8)}px "IBM Plex Mono",monospace`;
       cx.textAlign="center";cx.fillText("UTERIDBANAN · 36×80",gx+10*s,gy-s*0.8);}
     if(G.tavling&&G.tavling.typ==="dressyr"){ // domarkuren vid C
       const[a,b]=w2s(10,62.2);
       cx.fillStyle="#E6E1D5";cx.fillRect(a-1.3*s,b-0.5*s,2.6*s,1.1*s);
       cx.strokeStyle="#4A4536";cx.strokeRect(a-1.3*s,b-0.5*s,2.6*s,1.1*s);
-      if(s>7){cx.fillStyle="#3A3E44";cx.font=`600 ${s*0.55}px "IBM Plex Mono"`;
+      if(s>7){cx.fillStyle="#3A3E44";cx.font=`600 ${s*0.55}px "IBM Plex Mono",monospace`;
         cx.textAlign="center";cx.fillText("DOMARE",a,b+s*0.2);}
     }
   }else{
@@ -204,7 +204,7 @@ function drawFence2D(h,s,G){
   cx.fillStyle=nasta?"#8A6A12":"#4A4536";
   cx.beginPath();cx.arc(nx,ny,Math.max(7,s*0.62),0,Math.PI*2);cx.fill();
   cx.fillStyle=nasta?"#F2E4B8":"#C9BFA6";
-  cx.font=`600 ${Math.max(9,s*0.78)}px "IBM Plex Mono"`;cx.textAlign="center";
+  cx.font=`600 ${Math.max(9,s*0.78)}px "IBM Plex Mono",monospace`;cx.textAlign="center";
   cx.fillText(String(h.nr),nx,ny+Math.max(3,s*0.27));
 }
 function drawHorse2D(x,y,rikt,farg,s,arSpelare,G){
@@ -347,7 +347,7 @@ function draw3DCanvas(G){
         cx.strokeStyle="#4A4536";cx.lineWidth=1.5;cx.stroke();
         const t=P2(o.x,o.y,1.45);
         if(t){const fz=clamp(240/t[2],8,20);
-          cx.fillStyle="#3A3E44";cx.font=`600 ${fz}px "IBM Plex Mono"`;cx.textAlign="center";
+          cx.fillStyle="#3A3E44";cx.font=`600 ${fz}px "IBM Plex Mono",monospace`;cx.textAlign="center";
           cx.fillText("DOMARE",t[0],t[1]);}
       }
     }else if(o.typ==="bokstav"){
@@ -398,7 +398,7 @@ function drawFence3D(h,cam,G){
   // nummerplatta
   const NP=P(h.x-dx*1.1,h.y-dy*1.1,H+0.5);
   if(NP){const sz=clamp(300/NP[2],9,22);
-    cx.fillStyle=nasta?"#E7C86B":"#8A8066";cx.font=`600 ${sz}px "IBM Plex Mono"`;
+    cx.fillStyle=nasta?"#E7C86B":"#8A8066";cx.font=`600 ${sz}px "IBM Plex Mono",monospace`;
     cx.textAlign="center";cx.fillText(String(h.nr),NP[0],NP[1]);}
 }
 function drawOwnHorse3D(G){

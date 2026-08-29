@@ -16,9 +16,15 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
 
   const stil=document.createElement("style");
   stil.textContent=`
-  .pek .hud.bl{bottom:172px}
-  .pek .hud.br{bottom:172px}
-  .pek .hud.bc{bottom:132px; width:min(420px,64vw)}
+  .pek .hudh.bl{bottom:172px}
+  .pek .hudh.br{bottom:172px}
+  /* Ridlärarens replik ska ligga ovanför knapparna, inte under dem. */
+  .pek .hudh.bc{bottom:272px; width:min(420px,88vw)}
+  .pek #viewToggle{bottom:auto; top:8px; left:auto; right:14px; transform:none}
+  @media(max-height:560px) and (orientation:landscape){
+    .pek .hudh.bc{bottom:96px; width:min(360px,52vw)}
+    .pek .hudh.bl, .pek .hudh.br{bottom:150px}
+  }
   #pekUI{position:fixed; inset:0; pointer-events:none; z-index:12}
   #joy{position:absolute; left:18px; bottom:20px; width:132px; height:132px;
     border-radius:50%; background:rgba(24,27,33,.55); border:1.5px solid var(--rule);

@@ -119,6 +119,7 @@ function stegaRitt(dt){
      färdighet passerar ett helt tiondelssteg, så att det går att visa. */
   {const steg=stegaFardighet(G.ride,G.aids,dt);
    if(steg)visaFardighetsSteg(steg);}
+  passSteg(dt);
   G.rikt+=omega*dt*(G.ride.tempo>0.2?1:0);
   // väggkollision: mjuk knuff in
   let nx=G.px+Math.cos(G.rikt)*G.ride.tempo*dt;
@@ -251,6 +252,7 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
+  passStart();                       // avskrift av allt som ska jämföras efteråt
   document.getElementById("approach").textContent="";
   if(G.tavling){
     G.lektion=byggTavlingsprogram(G.tavling);
@@ -347,6 +349,7 @@ function stegaLektion(dt){
   }
 }
 function avslutaBana(dom){
+  passSlut();                        // före registreraPass — färdigheterna ska stå still
   if(G.hadeBana)G.betyg.bana=Skala.inverkan(G.ride.skala,G.grupp);
   if(G.tavling){ // tävlingen ger placering och rosett, inte uppflyttning
     G.domare=dom;G.scen="resultat";
@@ -356,6 +359,9 @@ function avslutaBana(dom){
     return;
   }
   G.passRes=registreraPass(dom);
+  /* Molnet är frivilligt och får misslyckas tyst — resultatrutan visas
+     likadant vare sig raden kom fram eller inte. */
+  if(typeof synkSparaPass==="function"){synkSparaPass(dom);synkTryck();}
   G.domare=dom;G.scen="resultat";
   document.getElementById("protWrap").hidden=true;
   document.getElementById("viewToggle").hidden=true;
