@@ -163,7 +163,14 @@ Fem interiörbilder visar sargen och väggarna. Det som är byggt efter dem:
   stallströ och foder), **Stigsbergs Gård Hästsportbutik** (vit med grön logotyp),
   **Agria Djurförsäkring** (blå).
 - **Speglar i träram**, två stycken på långsidan.
-- **Läktaren** med träbänkar, räcke, trappa och caféets fönster ovanför.
+- **Läktaren** är en **trästomme**, inte gjutna trappsteg: fyrkantsstolpar och
+  balkar, sittplankor i ljus furu med en fotplanka under, ett översta trädäck, och
+  ett räcke av grova stolpar mot banan. På översta bänken ligger **elons svarta
+  dynor** med handtagshål, och på däcket står **orange plaststolar**. Under stommen
+  finns ett mörkt förvaringsutrymme där bommar och stöd ligger.
+- **Hindren står framme** mellan lektionerna: vita stöd med kupfot, bommar i
+  blå-vitt och röd-vitt, en bom direkt på marken, orange koner och en
+  uppsittningspall i trä vid sargen.
 - **Taket**: mörka fackverk med rader av lysrör, och ljusband längs väggkrönet.
 - **Underlaget** är brunt och träfiberbemängt, inte gul sand.
 

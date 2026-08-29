@@ -309,6 +309,17 @@ const RIDHUSINNE = {
   panel:"#6B4A34", panelList:"#EFE8D8",           // sponsorväggens bruna trä
   laktare:{x0:21.0, y0:16, y1:66, steg:4, stegH:0.28, stegD:0.85},
   domarbas:{x:23.4, y:68, b:1.8, h:2.2},
+  /* Hindren som står framme mellan lektionerna, ur interiörfotona:
+     vita stöd, blå-vita och röd-vita bommar, en bom på marken och
+     uppsittningspallen vid sargen. Koordinaterna är i banans system. */
+  hinder:[
+    {x:6.5, y:24, b:2.8, h:0.68, farg:"bla"},
+    {x:13.5,y:38, b:2.8, h:0.52, farg:"rod"},
+    {x:9.0, y:50, b:3.0, h:0,    farg:"rod"},
+  ],
+  koner:[[4.0,17],[16.6,44],[11.0,58]],
+  pall:{x:18.9, y:20},
+  dynor:12,                                        // elon-dynorna på översta bänken
   cafe:{djup:13.0, z0:2.55, z1:5.4},               // överbyggnaden i söder
   trappa:{x:22.0, y:9.6},                          // trätrappan upp till caféet
   speglar:[ {y:38,b:4.2},{y:56,b:3.2} ],           // på västra långsidan

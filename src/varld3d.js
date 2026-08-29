@@ -823,12 +823,34 @@ function v3dRidhus(lagg,opp){
       hall.lada(1.3,0.10,0.26,"#F6F2E4",M4.translation(x,R.tak-0.35,z));
   lagg(hall,null);
   /* Läktaren, domarbåset, cafeterian och trappan. */
-  const lak=new Bygge(), L=R.laktare;
+  /* Läktaren är en trästomme: fyrkantsstolpar, balkar och plankbänkar i
+     ljus furu — inte gjutna trappsteg. Under den finns ett mörkt utrymme
+     där bommar och stöd förvaras, och på översta bänken ligger elons
+     svarta dynor. Allt ur interiörfotona. */
+  const lak=new Bygge(), L=R.laktare, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
   for(let i=0;i<L.steg;i++){
-    lak.lada(L.stegD,L.stegH,L.y1-L.y0,"#FFFFFF",
-      M4.translation(L.x0+i*L.stegD+L.stegD/2,L.stegH/2+i*L.stegH,(L.y0+L.y1)/2));
-    lak.lada(L.stegD,0.08,L.y1-L.y0,"#F0EAE0",
-      M4.translation(L.x0+i*L.stegD+L.stegD/2,L.stegH*(i+1),(L.y0+L.y1)/2));
+    const x=L.x0+i*L.stegD+L.stegD/2, y=L.stegH*(i+1);
+    lak.lada(L.stegD-0.04,0.07,LL,"#D8C7A4",M4.translation(x,y,Lm));      // sittplankan
+    lak.lada(L.stegD-0.04,0.06,LL,"#C4B08C",M4.translation(x,y-0.20,Lm)); // fotplankan
+    for(let z=L.y0;z<=L.y1;z+=2.5)                                        // stommen
+      lak.lada(0.10,y,0.10,"#A98F68",M4.translation(x-L.stegD/2+0.08,y/2,z));
+  }
+  {const xt=L.x0+L.steg*L.stegD;                    // översta däcket och räckesbalk
+   lak.lada(0.9,0.09,LL,"#D8C7A4",M4.translation(xt+0.4,L.steg*L.stegH,Lm));
+   for(let z=L.y0;z<=L.y1;z+=2.5)
+     lak.lada(0.12,L.steg*L.stegH,0.12,"#A98F68",
+       M4.translation(xt+0.8,L.steg*L.stegH/2,z));}
+  for(let i=0;i<(R.dynor||0);i++){                  // elon-dynorna
+    const z=L.y0+2.0+i*((LL-4)/Math.max(1,R.dynor-1));
+    lak.lada(0.44,0.06,0.34,"#26282C",
+      M4.translation(L.x0+(L.steg-1)*L.stegD+L.stegD/2,L.stegH*L.steg+0.06,z));
+  }
+  for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
+    const x=L.x0+L.steg*L.stegD+0.4;
+    lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.steg*L.stegH,z));
+    lak.lada(0.42,0.46,0.06,"#D4551E",M4.translation(x,0.68+L.steg*L.stegH,z-0.18));
+    for(const d of [-0.16,0.16])
+      lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.steg*L.stegH,z));
   }
   {const L2=R.laktare;                              // räcket längs läktarens framkant
    for(const y of [0.62,1.02])
@@ -867,6 +889,33 @@ function v3dRidhus(lagg,opp){
   for(let i=0;i<9;i++)                                   // andra trapphuset
     cafe.lada(1.3,0.17,0.30,"#CFC8BC",M4.translation(19.6,0.17*i+0.09,E-4.4+0.30*i));
   lagg(cafe,null);
+  /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
+     med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
+     står i ridhuset mellan lektionerna och gör det till en arbetsplats
+     i stället för en tom låda. */
+  const hind=new Bygge();
+  for(const hi of (R.hinder||[])){
+    const bx=ba.x+hi.x, bz=ba.y+hi.y;
+    const fa=hi.farg==="rod"?"#B0332E":"#3E7FB8";
+    for(const s of [-1,1]){
+      hind.lada(0.10,1.28,0.10,"#EFEAE0",M4.translation(bx+s*hi.b/2,0.64,bz));
+      hind.lada(0.46,0.07,0.46,"#EFEAE0",M4.translation(bx+s*hi.b/2,0.035,bz));
+    }
+    const y=hi.h>0.02?hi.h:0.055, n=6;
+    for(let i=0;i<n;i++)
+      hind.lada(hi.b/n,0.10,0.10,i%2?fa:"#F2EDE2",
+        M4.translation(bx-hi.b/2+hi.b/n*(i+0.5),y,bz));
+  }
+  for(const k of (R.koner||[]))
+    hind.cyl(0.17,0.035,0.44,"#D4551E",M4.translation(ba.x+k[0],0,ba.y+k[1]),8);
+  if(R.pall){                                       // uppsittningspallen vid sargen
+    const px=ba.x+R.pall.x, pz=ba.y+R.pall.y;
+    for(let i=0;i<3;i++)
+      hind.lada(0.90-i*0.02,0.19,0.34,"#C4A87E",M4.translation(px,0.19*i+0.095,pz+0.34*i));
+    for(const d of [-0.42,0.42])
+      hind.lada(0.06,0.57,0.06,"#A98F68",M4.translation(px+d,0.285,pz+0.55));
+  }
+  lagg(hind,null);
   /* Sponsorväggen med speglar och banderoller. */
   const panel=new Bygge();
   for(const sp of R.speglar){                       // speglar i träram
