@@ -65,6 +65,19 @@ Väderstreck i spelet: solens riktning ligger i `LJUS.dag.sol` i `src/ljus.js`.
    sträckningen är inte läst ur någon bild. `[antagande]`
 4. **Åkern i väster** är en förenkling av markerna och koloniområdet.
 
+## Utrymningsplanerna
+
+Det finns uppsatta utrymningsplaner (Presto AB, 2025-10-11) i båda husen, och de är
+det bästa underlaget som finns för insidorna — bättre än varje foto. De är
+fotograferade snett och sitter i reflekterande ramar, så måtten går inte att läsa ur
+dem, men planformen gör det. Vad de säger står i respektive byggnadskort under
+"Invändigt".
+
+Kort: **stallet är ett dubbelstall** med fyra boxlängor och två gångar, och
+**ridhuset har en djup entré- och trapphusdel i gaveln** med två trapphus och en
+hiss. Spelets `STALLINNE` och `RIDHUSINNE` har fel planform på båda punkterna och
+står som kända fel tills det finns raka bilder på ritningarna.
+
 ## Kvar att kontrollera på plats
 
 - Stallets längd. 54 m är räknat baklänges ur boxantalet och stämmer grovt med

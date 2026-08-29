@@ -21,9 +21,9 @@ Kortet är facit för byggfunktionen i `src/varld3d.js`.
 | `ridhus-gavel-03.jpg` | Längst till vänster i panoreringen, hela hallen | **Nocken och båda takfallen.** Caféannexet i två våningar till höger, med balkong, utvändig trappa och valvbågade fönster |
 
 ## Volym
-- Fotavtryck (L × B): `[saknas foto]` — ingen bild visar byggnaden på längden.
-  Ett ridhus med normalbana rymmer 20 × 60 m, så ytterhöljet blir omkring
-  **24 × 66 m** `[antagande]`. Måste bekräftas.
+- Fotavtryck (L × B): **26 × 66 m**. Var ett antagande ur "en 20×60-bana ryms";
+  utrymningsplanen (se nedan) ger proportionen 2,7:1, alltså ~70 m vid 26 m bredd.
+  Kortets 66 m ligger inom felmarginalen för en snett fotograferad ritning.
 - Höjd till takfot: **6,2 m** `[antagande]`. Den svarta listen är **inte** takfoten
   — det syns i bild 03, där taklinjen fortsätter långt ovanför listen. Listen är
   övre bjälklaget, se nedan. Takfotens höjd går inte att mäta ur något foto
@@ -91,6 +91,44 @@ Detaljfärger:
 - Ljusa block (hinderstöd eller betongsuggor) uppradade bakom staketet
 - Ett ungt lövträd med stödkäpp framför fasaden
 - Skylt "Café Krubban" vid trappan
+
+## Invändigt — utrymningsplanen
+
+En fotograferad **utrymningsplan (Presto AB, 2025-10-11)**, rubricerad
+"Upplands-Bro kommun Ridhus, Husbyvägen 1, Bro, Entréplan", visar ridhusets
+bottenvåning.
+
+**Det den bekräftar:**
+
+- **Fotavtryckets proportion är 2,7:1.** Byggnaden mäter 1790 × 665 bildpunkter i
+  planen. Med bredden 26 m ger det längden **~70 m** — kortets 66 m var en ren
+  gissning ur "en 20×60-bana ryms", och den håller. Det här är den enda oberoende
+  kontrollen av längdmåttet som finns.
+- **Läktaren ligger längs ena långsidan** och löper större delen av längden, med
+  ett smalt band mellan läktaren och banan. Det stämmer med `RIDHUSINNE`.
+- **Entré- och trapphusdelen ligger i ena gaveln** — samma gavel som caféet och
+  yttertrappan utvändigt.
+- Utrymningsvägar längs långsidan och i båda ändar.
+
+**Det den ändrar:**
+
+Gaveldelen är **djup — omkring en sjättedel av byggnadens längd** — och innehåller
+**två trapphus, en hiss** och ett antal rum. I spelet är den bara en 3 m djup
+caféöverbyggnad, och går man in från parkeringen kommer man rakt ut i ridhuset. I
+verkligheten kommer man in i en entréhall.
+
+Det betyder också att banan är **kortare än byggnaden** med god marginal. Om
+gaveldelen tar tolv meter ryms ingen 20×60-bana i en 66 m lång byggnad, och
+antingen är huset längre än 66 m eller banan kortare än 60 m.
+
+**Vad jag inte kan läsa:** bilden är tagen snett, och underkanten lutar synligt mot
+överkanten. Längdmått blir därför fel — den bortre delen av planen är
+ihoptryckt. Proportionen ovan är grov, och den exakta uppdelningen mellan bana och
+gaveldel går inte att mäta.
+
+`RIDHUSINNE` lämnas orörd tills det finns en rak bild. Banan är 20×60 där, vilket
+är den bana ridmodellen och dressyrbokstäverna räknar med — att korta den är ingen
+liten ändring och ska inte göras på ett snett foto.
 
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (118, 44), fotavtryck 26 × 66 m
