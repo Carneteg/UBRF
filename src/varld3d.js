@@ -876,19 +876,60 @@ function v3dRidhus(lagg,opp){
     M4.translation(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,E));
   for(let x=2;x<R.bredd-1;x+=3.2)                       // fönsterbandet mot banan
     cafe.panel(2.4,1.1,"#3A4A5C",M4.translation(x,R.cafe.z0+1.3,E+0.10));
-  /* Skiljeväggen mot banan, med en bred öppning mitt för sargporten. */
-  {const op0=R.port.x0-1.2, op1=R.port.x1+1.2;
-   cafe.lada(op0,R.cafe.z0,0.18,"#E9E5DC",M4.translation(op0/2,R.cafe.z0/2,E));
-   cafe.lada(R.bredd-op1,R.cafe.z0,0.18,"#E9E5DC",
-     M4.translation((op1+R.bredd)/2,R.cafe.z0/2,E));}
-  /* Rummen i hallen: reception, omklädning, trapphusen. Väggarna är
-     antydda, inte ritade rum för rum — planen går inte att läsa så. */
-  cafe.lada(0.16,2.6,E-2.2,"#E9E5DC",M4.translation(6.4,1.3,E/2-0.6));
-  cafe.lada(5.2,2.6,0.16,"#E9E5DC",M4.translation(3.8,1.3,E-2.8));
-  cafe.lada(0.16,2.6,4.4,"#E9E5DC",M4.translation(18.6,1.3,E-2.4));
+  /* Skiljeväggen mot banan. Öppningen är bred och går ända upp — man
+     ska se banan från dörren, annars blir hallen en återvändsgränd. */
+  {const op0=R.port.x0-2.6, op1=R.port.x1+2.6;
+   cafe.lada(op0,R.cafe.z0,0.18,"#EFEBE2",M4.translation(op0/2,R.cafe.z0/2,E));
+   cafe.lada(R.bredd-op1,R.cafe.z0,0.18,"#EFEBE2",
+     M4.translation((op1+R.bredd)/2,R.cafe.z0/2,E));
+   cafe.lada(op1-op0,0.22,0.22,"#8A6A44",M4.translation((op0+op1)/2,R.cafe.z0-0.11,E));}
+  /* Rummen: kansliet till vänster, omklädningen till höger, trapphusen
+     i bortre hörnen. Väggarna är antydda, inte ritade rum för rum —
+     planen går inte att läsa så noga. */
+  cafe.lada(0.16,2.6,E-3.4,"#EFEBE2",M4.translation(6.4,1.3,E/2-0.2));
+  cafe.lada(5.2,2.6,0.16,"#EFEBE2",M4.translation(3.8,1.3,E-3.4));
+  cafe.lada(0.16,2.6,4.4,"#EFEBE2",M4.translation(18.6,1.3,E-2.4));
   for(let i=0;i<9;i++)                                   // andra trapphuset
-    cafe.lada(1.3,0.17,0.30,"#CFC8BC",M4.translation(19.6,0.17*i+0.09,E-4.4+0.30*i));
+    cafe.lada(1.3,0.17,0.30,"#D8CFC0",M4.translation(19.6,0.17*i+0.09,E-4.4+0.30*i));
   lagg(cafe,null);
+
+  /* ── Hallen möblerad ──────────────────────────────────────────────
+     En tom hall med lågt tak läser som en tunnel. Det som gör den till
+     en entré är ljuset i taket, ett golv som skiljer sig från banan,
+     och saker man känner igen: disken, bänkarna, anslagstavlan och
+     hyllan med hjälmar. ── */
+  lagg(new Bygge().yta(R.bredd-0.4,E-0.4,"#FFFFFF",
+    M4.translation(R.bredd/2,0.02,E/2),6),T.marksten);
+  const mob=new Bygge();
+  for(let x=3;x<R.bredd-1;x+=4.4)                        // takarmaturerna
+    for(let z=2.2;z<E-1;z+=4.0)
+      mob.lada(1.5,0.09,0.34,"#FBF6E6",M4.translation(x,R.cafe.z0-0.16,z));
+  /* Receptionsdisken innanför dörren. */
+  mob.lada(3.2,1.08,0.70,"#8A6A44",M4.translation(9.8,0.54,3.4));
+  mob.lada(3.4,0.09,0.86,"#C4A87E",M4.translation(9.8,1.12,3.4));
+  /* Bänkar längs väggen, och hyllan med hjälmar ovanför. */
+  for(const z of [5.4,7.6,9.8]){
+    mob.lada(0.44,0.07,1.70,"#C4A87E",M4.translation(1.1,0.46,z));
+    for(const d of [-0.7,0.7])
+      mob.lada(0.09,0.46,0.09,"#8A6A44",M4.translation(1.1,0.23,z+d));
+    mob.lada(0.50,0.07,1.70,"#C4A87E",M4.translation(1.2,1.62,z));
+    for(let i=0;i<3;i++)
+      mob.klot(0.14,"#3A4A5C",M4.mul(M4.translation(1.2,1.78,z-0.6+i*0.6),
+        M4.skala(1,0.72,1)),8);
+  }
+  /* Anslagstavlan och en pokalhylla mot kansliväggen. */
+  mob.lada(0.10,1.10,2.40,"#6B4A34",M4.translation(6.28,1.55,E/2-0.2));
+  mob.lada(0.09,0.90,2.20,"#F2EDE2",M4.translation(6.22,1.55,E/2-0.2));
+  mob.lada(0.34,0.07,2.00,"#C4A87E",M4.translation(6.55,2.15,E/2-2.6));
+  for(let i=0;i<5;i++)
+    mob.cyl(0.07,0.05,0.22,"#D6AE3C",M4.translation(6.55,2.22,E/2-3.4+i*0.42),8);
+  lagg(mob,T.tra);
+  /* Glaspartiet mot parkeringen, så att hallen får dager söderifrån. */
+  const glas=new Bygge();
+  for(const x of [3.1,4.4])
+    glas.panel(1.1,2.2,"#BFD4DE",M4.mul(M4.translation(x,1.15,0.14),M4.ny()));
+  glas.panel(1.5,1.5,"#BFD4DE",M4.mul(M4.translation(3.4,3.6,0.14),M4.ny()));
+  S3.statiskt.push({nat:GL.nat(glas), tex:null, baksidor:true});
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
      står i ridhuset mellan lektionerna och gör det till en arbetsplats
