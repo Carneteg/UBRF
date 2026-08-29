@@ -318,7 +318,7 @@ function stegaLektion(dt){
          att nå genom att sitta still; tempobandet gör att hon glider
          ur det om du inte rider henne. */
       const kval=Skala.inverkan(G.ride.skala,G.grupp);
-      const over=kval>=mal.krav&&iTempoBand(G.ride,G.grupp);
+      const over=kval>=mal.krav&&iTempoBand(G.ride,G.grupp,m);
       G.momentHall=clamp((G.momentHall||0)+(over?dt:-dt*0.45),0,mal.hall);
       document.querySelector("#momentBar i").style.width=G.momentHall/mal.hall*100+"%";
       document.querySelector("#momentBar").classList.toggle("haller",over);

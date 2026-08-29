@@ -120,7 +120,7 @@ function stegaFardighet(ride,aids,dt){
      ifrån bandet — hjälperna låg still, mjukheten låg på 1,00, och
      färdigheterna växte alltså som snabbast när ridningen var som
      sämst. Att rida är att korrigera; det ska växten också mäta. */
-  if(typeof iTempoBand==="function"&&!iTempoBand(ride,G.grupp))return null;
+  if(typeof iTempoBand==="function"&&!iTempoBand(ride,G.grupp,G.moment))return null;
   const f=fard(), fore={...f};
   /* Kontinuerligt lärande snabbar på växten — men villkoren ovan gäller
      fortfarande. Egenskapen ger ingenting gratis; den gör bara att det du
@@ -225,12 +225,25 @@ function tempoBand(gangart,grupp){
   return {min:g.norm-bredd, max:g.norm+bredd, norm:g.norm, bredd};
 }
 
-/* Rider du inom bandet just nu? Halt räknas alltid som inne — man kan
-   inte hålla ett tempo man inte har. */
-function iTempoBand(ride,grupp){
+/* Rider du inom bandet just nu?
+
+   Halt räknades förut alltid som inne, med motiveringen att man inte kan
+   hålla ett tempo man inte har. Det gjorde "gör ingenting" till den
+   snabbaste vägen genom ett moment: en spelare som inte rörde en tangent
+   klarade ledlektionens första moment på 14,0 s — exakt lika fort som en
+   ryttare som höll tempot perfekt, och fortare än någon som faktiskt red
+   (58,5 s med konstant skänkel). Kvaliteten driver nämligen upp mot 0,65
+   i halt, och kravet på ledlektion är 0,22.
+
+   Halt räknas nu som inne bara när övningen FAKTISKT rids i halt. Står du
+   still under en skrittövning gör du inte övningen. */
+function iTempoBand(ride,grupp,moment){
   if(!ride)return false;
   const b=tempoBand(ride.gangart,grupp);
-  if(!b)return true;
+  if(!b){
+    const g=moment&&moment.gangart;
+    return !g||g==="halt";
+  }
   return ride.tempo>=b.min&&ride.tempo<=b.max;
 }
 

@@ -77,7 +77,7 @@ function passSteg(dt){
   if(r.spanning>PASS.spanningTopp)PASS.spanningTopp=r.spanning;
   PASS.mjukhetSum+=r.mjukhet*dt; PASS.mjukhetTid+=dt;
 
-  const inne=(typeof iTempoBand==="function")?iTempoBand(r,G.grupp):true;
+  const inne=(typeof iTempoBand==="function")?iTempoBand(r,G.grupp,G.moment):true;
   if(!inne){
     PASS._ute+=dt; PASS.tidUte+=dt;
     if(PASS._ute>0.5)PASS._varUte=true;
