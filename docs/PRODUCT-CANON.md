@@ -120,13 +120,24 @@ En ny spelare får hjälp och gör en sak i taget. Med erfarenhet förväntas ho
 
 Det ska kännas som att gå från nybörjare på ridskola till en trygg och kunnig hästmänniska.
 
-## Webb och Roblox
+## Plattform: Roblox + HTML/webb
 
-Webbversionen är den aktiva prototyp- och utvecklingsmiljön. Där kan gameplay, UX, flöden och ridkänsla testas snabbt.
+**Roblox är den primära spelplattformen. Det är där UBRF-spelet i första hand ska spelas och där Roblox-versionen är ett förstaklassresultat — inte en senare port.**
 
-Roblox är målplattformen för den färdiga spelupplevelsen.
+Samtidigt ska samma kärnupplevelse vara **spelbar via HTML/webben**. Webbversionen är alltså inte bara ett internt prototypverktyg. Den ska kunna öppnas, provas och spelas utan Roblox-klienten och fungerar samtidigt som en snabb utvecklings-, QA- och delningsyta.
 
-När en mekanik bevisats i webben ska dess **designprincip, parametrar och acceptance criteria** kunna flyttas till Roblox. Webbspecifik rendering får inte bli produktens egentliga design.
+Plattformskontrakt:
+
+- Roblox = primär spelplattform.
+- HTML/webb = riktig spelbar parallell distribution.
+- Kärnloop, hästlogik, lärande, ansvar, UBRF-värld och centrala gameplayregler ska motsvara varandra.
+- Input, rendering, UI och teknisk implementation får vara plattformsspecifika.
+- Gameplayparametrar och acceptance criteria ska hållas motoroberoende där det är rimligt.
+- Ingen ny funktion får betraktas som fullständigt produktklar om den gör den avsedda kärnupplevelsen omöjlig att hålla fungerande på den andra spelbara ytan utan uttryckligt produktbeslut.
+- Webb får användas för snabb iteration, men beslut får inte leda till att Roblox behandlas som en framtida eftertanke.
+- Roblox får inte heller bli skäl att låta HTML/webbversionen förfalla till en icke-spelbar demo.
+
+Se även `docs/ASSET-SOURCE-OF-TRUTH.md` för material- och datakällor.
 
 ## Beslutsfilter
 
@@ -136,7 +147,7 @@ Före en större feature eller ändring ska ChatGPT och Claude kunna svara ja p�
 2. Lär spelaren något sant om hästar, ridning, ansvar eller UBRF — eller stödjer det tydligt en sådan upplevelse?
 3. Stämmer det med verkligheten eller är eventuella antaganden tydligt markerade?
 4. Förbättrar det kärnloopen snarare än att bara öka mängden innehåll?
-5. Kan lösningen rimligen överföras till Roblox när den är bevisad?
+5. Är designen rimligt konsekvent mellan Roblox och den spelbara HTML/webbversionen?
 
 Om svaret är nej på flera punkter ska arbetet normalt inte prioriteras.
 
