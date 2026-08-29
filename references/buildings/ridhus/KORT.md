@@ -197,6 +197,35 @@ långsida räcker — då syns fem åt gången.
 Banan är en **20×60** med tolv bokstäver (A-K-V-E-S-H-C-M-R-B-P-F). Spelet hade
 bara åtta, alltså 20×40-uppsättningen på en 20×60-bana; V, S, P och R är tillagda.
 
+## Verifierat Drive-material — avvikelser mot spelet
+
+`references/DRIVE-SOURCE-INDEX.md` (verifierat av ChatGPT 2026-08-29) beskriver
+fem originalbilder och en film ur Google Drive som visar ridhuset inifrån. Jag har
+inte Drive-åtkomst och har alltså inte sett dem själv; det som står här är hämtat
+ur indexet, med filnamnet angivet enligt referensregeln.
+
+**Observationerna motsäger spelet på fem punkter.** De är listade som avvikelser,
+inte åtgärdade: Gate 01 (`docs/ACTIVE-GATE.md`) är aktiv och interiörarbete ligger
+utanför dess scope. De ska rättas när gaten släpper, eller tidigare om Tobias
+begär det.
+
+| # | Drive-fil säger | Spelet har | Var |
+|---|---|---|---|
+| 1 | Långsidan har **mörkröd/maroon** övre väggyta med horisontella detaljer (`IMG_0183.HEIC`) | Brun träpanel, `panel:"#6B4A34"` | `src/site.js` RIDHUSINNE |
+| 2 | Taket har stora träbalkar **plus stål-/metallprofiler, kabelstegar och ventilation** (`IMG_0179.HEIC`, `IMG_0183.HEIC`) | Bara limträbalkar och lysrörsrader | `v3dRidhus` i `src/varld3d.js` |
+| 3 | **Central passage/trappa med klocka** i närheten (`IMG_0179.HEIC`) | Trappa finns (`trappa:{x:22,y:65.4}`), ingen klocka | RIDHUSINNE |
+| 4 | Vid **dressyrbokstaven E**: trappa med träräcken upp till ett litet mörkt träbyggt bås med exit-skylt (`IMG_0198.HEIC`) | Domarbås finns men vid annan plats, utan trappa eller skylt | RIDHUSINNE `domarbas` |
+| 5 | Bakom sargen finns **flera glasade rum/fönsterpartier** och upphöjda träbänkar i nivåer (`IMG_0179.HEIC`) | Läktare i fyra steg, inga glasade rum | RIDHUSINNE `laktare` |
+
+Det indexet **bekräftar** och som spelet redan har rätt: vit sarg med mörk
+nederkant, brun ridbaneyta, sponsorplåtar på långsidan ovanför sargen, höga smala
+translucenta fönsterband nära taknivå, och att interiören inte får ersättas av ett
+generiskt modernt ridhus.
+
+`IMG_0191.MOV` (ca 31 s, ridhusinteriör från läktarsidan) är enligt indexet det
+material som ska korsrefereras innan en placering låses. Den är inte genomgången
+frame för frame ännu.
+
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (118, 44), fotavtryck 25 × 75 m
 - Rotation: nocken i nord–sydlig riktning, cafégaveln mot parkeringen i norr
