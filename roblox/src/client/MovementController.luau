@@ -234,25 +234,35 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	end
 
 	--[[ ── Ut i världen ───────────────────────────────────────────────
-	     Humanoid får riktningen som VI har räknat fram, inte spelarens råa
-	     input. AutoRotate vrider mot den, och eftersom riktningen bara
-	     ändras i vår egen svängtakt syns aldrig Humanoids snärt.
+	     VRIDNINGEN HAR EN ÄGARE, OCH DET ÄR DEN HÄR RADEN.
 
-	     AutoRotate slutar vrida vid noll fart. Förut löstes det med ett
-	     golv på 0,35 studs/s, men då gled hästen synligt i sidled medan den
-	     vände — en krypning som syns i alla stillastående lägen. I stället
-	     vrids roten direkt när farten är noll: samma vändning, ingen glidning.
-	     Det krockar inte med kroppens lutning, som ligger i rootJoint.C0. ]]
+	     `HorseService` sätter `AutoRotate = false` med motiveringen att
+	     spelet äger vridningen. Den här modulen räknade fram `loco.heading`
+	     och lämnade sedan över till en AutoRotate som inte fanns — så bara
+	     vändning på stället vred faktiskt riggen. Under ritt kunde
+	     rörelsevektorn böja av medan hästen fortsatte peka rakt fram: en
+	     häst som åker i sidled genom svängen.
+
+	     Nu skrivs kursen på roten varje bildruta, i alla lägen. Positionen
+	     lämnas orörd — `Humanoid:Move` sköter förflyttningen, fysiken sköter
+	     höjden — och roten hålls upprätt: kroppens lutning och sluttningens
+	     pitch ligger i `rootJoint.C0`, inte här. Skriver man dem på samma
+	     ställe går den ena inte att trimma utan att den andra ändras.
+
+	     `loco.heading` är redan utjämnad genom kurvaturens tidskonstanter,
+	     så det finns ingen snärt att dämpa här. Att i stället slå på
+	     AutoRotate igen vore att lämna vridtakten till Roblox, och det är
+	     precis den fordonskänsla gaten ska bort ifrån. ]]
+	local root = rig.root
+	root.CFrame = CFrame.new(root.CFrame.Position) * CFrame.Angles(0, loco.heading, 0)
+
 	if hum then
+		--[[ Vändning på stället: farten noll, men kursen ändras ändå av
+		     raden ovan. Golvet på 0,35 studs/s som fanns förut gav en
+		     synlig sidledsglidning i alla stillastående lägen. ]]
 		local studs = Config.toStuds(math.abs(loco.speed))
 		local turningInPlace = math.abs(loco.turnRate) > 0.05 and studs < 0.35
-		if turningInPlace then
-			hum.WalkSpeed = 0
-			local root = rig.root
-			root.CFrame = CFrame.new(root.CFrame.Position) * CFrame.Angles(0, loco.heading, 0)
-		else
-			hum.WalkSpeed = studs
-		end
+		hum.WalkSpeed = if turningInPlace then 0 else studs
 		local dir = if loco.speed < -0.05 then -forwardVector else forwardVector
 		hum:Move(dir, false)
 	end

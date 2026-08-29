@@ -31,6 +31,48 @@ local function newMC()
 	return MovementController.new(__makeRig(), STATS)
 end
 
+--[[ ── En rigg som faktiskt förflyttar sig ────────────────────────────
+     `run` ovan låter roten stå still: Humanoid finns inte här, så ingen
+     flyttar den. Det räcker för att mäta styrning och gångarter, men inte
+     för att mäta något som beror på verklig förflyttning — och fasen gör
+     numera just det.
+
+     `runMoving` gör det Roblox Humanoid gör: den tar riktningen och
+     farten koden själv skrev, och integrerar positionen med samma dt.
+     Ingen fysik, ingen friktion — bara den förflyttning koden begärt.
+     Blockeras hästen (`block = true`) skrivs ingen position alls, vilket
+     är precis vad en vägg gör. ]]
+local function runMoving(mc, seconds, o, dt, block)
+	dt = dt or 1 / 60
+	local rig = mc.rig
+	local steps = math.floor(seconds / dt + 0.5)
+	local travelled = 0
+	for _ = 1, steps do
+		mc:step(intent(o), dt)
+		local hum = rig.humanoid
+		local dir = hum._moves[#hum._moves]
+		if dir and not block then
+			local steg = hum.WalkSpeed * dt
+			local ny = rig.root.Position + dir * steg
+			travelled += steg
+			rig.root.Position = ny
+			rig.root.CFrame = CFrame.new(ny) * CFrame.Angles(0, mc.loco.heading, 0)
+		end
+	end
+	return travelled / Config.STUDS_PER_METRE
+end
+
+--[[ Kursen som faktiskt står skriven på riggen, inte den vi räknat fram. ]]
+local function rigYaw(mc)
+	return mc.rig.root.CFrame.Yaw % (2 * math.pi)
+end
+
+local function vinkelDiff(a, b)
+	local d = (a - b) % (2 * math.pi)
+	if d > math.pi then d -= 2 * math.pi end
+	return d
+end
+
 local fails = 0
 local function check(namn, villkor, detalj)
 	if villkor then
@@ -286,4 +328,179 @@ do
 	check("25/50/100 % ger tre skilda kurvaturer",
 		w[0.25] < w[0.50] and w[0.50] < w[1.00],
 		string.format("(%.4f < %.4f < %.4f)", w[0.25], w[0.50], w[1.00]))
+end
+
+--[[ Stega upp till en gångart med samma gaitUp-pulser som spelaren ger. ]]
+local function upToGait(mc, steg, dt)
+	dt = dt or 1 / 60
+	for _ = 1, steg do
+		for i = 1, math.floor(2.5 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+			local hum = mc.rig.humanoid
+			local dir = hum._moves[#hum._moves]
+			if dir then
+				local ny = mc.rig.root.Position + dir * (hum.WalkSpeed * dt)
+				mc.rig.root.Position = ny
+				mc.rig.root.CFrame = CFrame.new(ny) * CFrame.Angles(0, mc.loco.heading, 0)
+			end
+		end
+	end
+end
+
+print("\n── Blocker A: riggens kurs följer den vi räknat fram ──")
+do
+	--[[ `HorseService` sätter AutoRotate = false. Då finns det ingen som
+	     vrider riggen åt oss, och den enda kurs spelaren ser är den som
+	     står skriven på roten. Mätningen jämför den mot `loco.heading`.
+	     Innan rättningen skrevs kursen bara vid vändning på stället: under
+	     ritt böjde rörelsevektorn av medan riggen stod kvar och pekade
+	     rakt fram. ]]
+	local rader = {}
+	for _, fall in { { 1, "walk" }, { 2, "trot" }, { 3, "canter" } } do
+		local mc = newMC()
+		upToGait(mc, fall[1])
+		runMoving(mc, 2.0, { forward = 1, steer = 1 })
+		local avvik = math.abs(vinkelDiff(rigYaw(mc), mc.loco.heading))
+		table.insert(rader, { gangart = mc.loco.gait, heading = mc.loco.heading,
+			yaw = rigYaw(mc), avvik = avvik })
+	end
+	print("  gångart   loco.heading  riggens yaw   avvikelse")
+	local varst = 0
+	for _, r in rader do
+		varst = math.max(varst, r.avvik)
+		print(string.format("  %-8s  %8.4f      %8.4f     %.2e rad",
+			r.gangart, r.heading, r.yaw, r.avvik))
+	end
+	check("riggen pekar dit hästen är på väg i alla gångarter", varst < 1e-6,
+		string.format("(värsta avvikelsen %.2e rad)", varst))
+
+	--[[ Rak linje: ingen drift. En kurs som kryper utan styrning är det
+	     som får en häst att gå snett över ridhuset. ]]
+	local mc = newMC()
+	upToGait(mc, 2)
+	local h0 = mc.loco.heading
+	runMoving(mc, 5.0, { forward = 1 })
+	local drift = math.abs(vinkelDiff(rigYaw(mc), h0))
+	check("ingen kursdrift utan styrutslag", drift < 1e-9,
+		string.format("(%.2e rad på 5 s i %s)", drift, mc.loco.gait))
+
+	--[[ Vändning vänster → höger ska passera neutralläget utan snärt.
+	     Måttet är största kurssteg per bildruta: ett snäpp syns som en
+	     enda ruta som är mångdubbelt större än de omkring. ]]
+	local mcv = newMC()
+	upToGait(mcv, 2)
+	runMoving(mcv, 1.5, { forward = 1, steer = -1 })
+	local forra, storst, dt = rigYaw(mcv), 0, 1 / 60
+	local passerade = false
+	for _ = 1, math.floor(3.0 / dt) do
+		local innan = mcv.loco.turnRate
+		runMoving(mcv, dt, { forward = 1, steer = 1 }, dt)
+		if innan * mcv.loco.turnRate < 0 then passerade = true end
+		local nu = rigYaw(mcv)
+		storst = math.max(storst, math.abs(vinkelDiff(nu, forra)))
+		forra = nu
+	end
+	check("vänster → höger passerar faktiskt genom neutralt", passerade)
+	check("och gör det utan snäpp", storst < 0.03,
+		string.format("(största kurssteg %.4f rad/bildruta i %s)", storst, mcv.loco.gait))
+
+	--[[ Vändning på stället ska fortfarande fungera, och övergången till
+	     framåtrörelse får inte ge ett hopp i kursen. ]]
+	local mcs = newMC()
+	local fore = rigYaw(mcs)
+	runMoving(mcs, 1.5, { steer = 1 })
+	local efterStilla = rigYaw(mcs)
+	check("vändning på stället vrider riggen",
+		math.abs(vinkelDiff(efterStilla, fore)) > 0.3,
+		string.format("(%.3f rad)", math.abs(vinkelDiff(efterStilla, fore))))
+
+	local forraS, storstS = efterStilla, 0
+	for _ = 1, math.floor(2.5 / dt) do
+		runMoving(mcs, dt, { forward = 1, steer = 1 }, dt)
+		local nu = rigYaw(mcs)
+		storstS = math.max(storstS, math.abs(vinkelDiff(nu, forraS)))
+		forraS = nu
+	end
+	check("övergången från vändning på stället till ritt är kontinuerlig",
+		storstS < 0.03, string.format("(största kurssteg %.4f rad/bildruta)", storstS))
+end
+
+print("\n── Blocker B: sträcka per fasvarv ──")
+do
+	--[[ CYKELLÄNGD = sträckan under ETT helt normaliserat fasvarv, fas
+	     0 → 1. Den mäts här som den faktiskt blir, inte som tabellen
+	     påstår. Fasen summeras kontinuerligt i stället för att räkna hela
+	     varv: annars kastas den sista ofullständiga biten och siffran blir
+	     några procent fel av ren avrundning. ]]
+	local function matCykel(steg, sekunder)
+		local mc = newMC()
+		upToGait(mc, steg)
+		local dt, forra, varv, stracka = 1 / 60, mc.loco.phase, 0, 0
+		for _ = 1, math.floor(sekunder / dt) do
+			stracka += runMoving(mc, dt, { forward = 1 }, dt)
+			varv += (mc.loco.phase - forra) % 1
+			forra = mc.loco.phase
+		end
+		return { gangart = mc.loco.gait, stracka = stracka, varv = varv,
+			perVarv = stracka / varv, tabell = Gaits.cycleLength(mc.loco.gait) }
+	end
+
+	print("  gångart   sträcka   fasvarv   m/varv   tabell   avvikelse")
+	local varst = 0
+	for _, steg in { 1, 2, 3 } do
+		local r = matCykel(steg, 20.0)
+		local avvik = math.abs(r.perVarv - r.tabell) / r.tabell
+		varst = math.max(varst, avvik)
+		print(string.format("  %-8s  %6.1f m   %6.2f   %.3f    %.3f    %.2f %%",
+			r.gangart, r.stracka, r.varv, r.perVarv, r.tabell, avvik * 100))
+	end
+	check("uppmätt sträcka per fasvarv följer cycleLength", varst < 0.005,
+		string.format("(värsta avvikelsen %.3f %%)", varst * 100))
+
+	--[[ 10 m och 20 m rak linje: antalet fasvarv ska fördubblas. ]]
+	local varvVid = {}
+	for _, mal in { 10, 20 } do
+		local mc = newMC()
+		upToGait(mc, 2)
+		local dt, forra, varv, gatt = 1 / 60, mc.loco.phase, 0, 0
+		while gatt < mal do
+			gatt += runMoving(mc, dt, { forward = 1 }, dt)
+			varv += (mc.loco.phase - forra) % 1
+			forra = mc.loco.phase
+		end
+		varvVid[mal] = varv
+		print(string.format("  %2d m i %-7s → %.2f fasvarv", mal, mc.loco.gait, varv))
+	end
+	check("dubbel sträcka ger dubbelt antal fasvarv",
+		math.abs(varvVid[20] / varvVid[10] - 2) < 0.02,
+		string.format("(kvot %.4f)", varvVid[20] / varvVid[10]))
+
+	--[[ Ingen förflyttning ska inte flytta fasen — inte ens när koden
+	     begär full fart. Det är krocken mot väggen. Den allra första
+	     bildrutan efter blockeringen bär den sträcka hästen HANN gå innan
+	     den tog i väggen, så kravet är att fasen stannar därefter. ]]
+	local mcb = newMC()
+	upToGait(mcb, 2)
+	local dt = 1 / 60
+	runMoving(mcb, dt, { forward = 1 }, dt, true)      -- bildrutan som bär resten
+	local fasFore = mcb.loco.phase
+	runMoving(mcb, 3.0, { forward = 1 }, dt, true)
+	check("blockerad häst trampar inte i luften",
+		math.abs(mcb.loco.phase - fasFore) < 1e-9,
+		string.format("(fasen rörde sig %.2e på 3 s mot vägg)",
+			math.abs(mcb.loco.phase - fasFore)))
+
+	--[[ Och stillastående häst med noll begärd fart. ]]
+	local mch = newMC()
+	local fasH = mch.loco.phase
+	runMoving(mch, 3.0, {})
+	check("stillastående häst går inte på stället",
+		math.abs(mch.loco.phase - fasH) < 1e-9)
+end
+
+print("")
+if fails > 0 then
+	print(string.format("%d mätning(ar) föll.", fails))
+else
+	print("Alla mätningar gick igenom.")
 end

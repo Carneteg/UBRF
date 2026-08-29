@@ -332,20 +332,27 @@ function stegaRitt(dt){
      hovarna gled synligt mot underlaget.
 
      Nu räknas den tillryggalagda sträckan, och fasen är sträckan delad
-     med gångartens effektiva cykellängd — steglängden gånger antalet
-     steg i cykeln. Då landar hovarna på samma ställen varje varv, och
-     stillastående häst rör inte fasen alls: står man still går man inte
-     på stället.
+     med gångartens CYKELLÄNGD. Då landar hovarna på samma ställen varje
+     varv, och stillastående häst rör inte fasen alls: står man still går
+     man inte på stället.
 
-     Steglängden kommer ur modellen (Gait.steglangd) och bär redan
-     hästens kategori, schvung och spänning, så en häst med mer schvung
-     tar längre steg — och färre av dem på samma sträcka. */
+     CYKELLÄNGD betyder EN sak, på båda plattformarna: sträckan hästen
+     färdas under ett helt normaliserat fasvarv, fas 0 → 1. Det är inte
+     samma sak som en hovs kliv. S3FAS i scen3d.js lägger alla fyra ben
+     inuti samma fasvarv med var sin förskjutning — vf 0, hf 0,25, vb
+     0,50, hb 0,75 i skritt — så ett ben hinner precis en stance och en
+     sving per varv. Antalet hovnedslag är alltså redan inbakat i
+     benens förskjutningar och får inte multipliceras in en gång till.
+
+     Gait.steglangd är just den sträckan: SPRANG-basen gånger gångartens
+     steg-faktor, med hästens schvung och spänning inräknade. Den låg
+     tidigare multiplicerad med antalet hovnedslag, vilket gjorde
+     fasvarvet 2,7–4 gånger för långt — hovarna gled fortfarande, bara
+     långsammare. Roblox räknar samma storhet som norm ÷ cycles. */
   const strackaSteg=Math.hypot(nx-G.px, ny-G.py);
   G.px=nx;G.py=ny;
   G.gaitSpar+=strackaSteg;
-  {const CYKELSTEG={halt:0, skritt:4, trav:2, galopp:3};
-   const stegPerCykel=CYKELSTEG[G.ride.gangart]||0;
-   const cykelLangd=G.ride.steglangd*stegPerCykel;
+  {const cykelLangd=G.ride.steglangd;
    if(cykelLangd>0.05){
      G.gaitFas=(G.gaitFas+strackaSteg/cykelLangd)%1;
    }else if(G.ride.gangart!=="halt"){
