@@ -6,6 +6,7 @@
 const IN={
   kan:{skankel:{v:.15,mal:.15},tygel:{v:0,mal:0},sits:{v:.2,mal:.2},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,ned:{},
+  joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
 const STIG=0.28,FALL=0.22;
 addEventListener("keydown",e=>{
@@ -63,7 +64,7 @@ function stegaInput(dt){
 
 /* ── Speltillstånd ── */
 const G={
-  scen:"meny",vy:"2d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
+  scen:"meny",vy:"3d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
   hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
   utrustning:false,lerig:false,spolad:0,felUtrustning:0,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
@@ -75,6 +76,10 @@ const G={
   rngHopp:null,spanningPuls:0,hoppaMoment:false,
   sagaT:0,sagaCd:8,naraRop:0,seed:1,
 };
+/* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
+   spelas, och kartan är ett uppslag man tar när man vill orientera
+   sig. Med kartan som förval landade en ny spelare i en ovanifrånvy
+   där styrningen har en annan referens än den hon strax byter till. */
 function vaxlaVy(){G.vy=G.vy==="2d"?"3d":"2d";
   document.querySelectorAll("#viewToggle button").forEach(b=>b.classList.toggle("on",b.dataset.v===G.vy));}
 document.querySelectorAll("#viewToggle button").forEach(b=>b.addEventListener("click",()=>{

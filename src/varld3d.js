@@ -1105,7 +1105,14 @@ function v3dBygg(scen){
 /* ── Kameran bakom vandraren ──────────────────────────────────── */
 function v3dKamera(dt){
   const fram=[Math.cos(VD.rikt),0,Math.sin(VD.rikt)];
-  const bak=3.6, hojd=2.25;
+  /* Kameran ställs efter skärmens format. En porträttskärm ser en smal
+     kil av världen med samma kameraläge som en bred — figuren fyller
+     bilden och man ser inte vart man går. Den backar därför undan och
+     lyfter en aning när bilden är hög, och kryper närmare när den är
+     bred. Världen är densamma; det är bara utsnittet som ändras. */
+  const form=Math.max(0.5,Math.min(2.2,CW/Math.max(1,CH)));
+  const bak=form<1 ? 3.6+(1-form)*2.6 : 3.6-Math.min(0.5,(form-1)*0.35);
+  const hojd=form<1 ? 2.25+(1-form)*0.75 : 2.25;
   let mx=VD.px-fram[0]*bak, mz=VD.py-fram[2]*bak;
   /* På gården knuffas kameran ut ur byggnaderna, annars fylls bilden
      av en vägg när man går tätt intill en fasad. */

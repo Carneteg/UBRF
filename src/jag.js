@@ -266,9 +266,14 @@ function visaSkaparen(retur){
 
   <div class="btnrow">
     <button class="btn" id="bSkapKlar">${forsta?"Så här ser jag ut":"Spara"}</button>
-    ${forsta?"":'<button class="btn ghost" id="bSkapAvbryt">Avbryt</button>'}
+    ${forsta
+      ? '<button class="btn ghost" id="bSkapHoppa">Rid direkt — jag fixar det sen</button>'
+      : '<button class="btn ghost" id="bSkapAvbryt">Avbryt</button>'}
     <span class="dim" style="font-size:13px" id="skapVarning"></span>
-  </div>`);
+  </div>
+  ${forsta?`<p class="dim" style="font-size:12.5px;margin-top:10px">
+    Inget konto behövs för att spela — allt sparas i den här webbläsaren.
+    Utseende och egenskaper går att ändra när som helst från menyn.</p>`:""}`);
 
   kopplaSkaparen(forsta);
 }
@@ -291,6 +296,25 @@ function kopplaSkaparen(forsta){
     };
   const namn=document.getElementById("skapNamnFalt");
   if(namn)namn.oninput=()=>{ SKAP.utkast.namn=namn.value; };
+
+  /* Vägen förbi skaparen. En elva-åring som öppnar spelet ska kunna
+     rida, inte fylla i ett formulär först: knappen slumpar ett utseende
+     och tar de tre egenskaper som är minst laddade, och allt går att
+     ändra sedan. Utan den här knappen är skaparen en registrering. */
+  const hoppa=document.getElementById("bSkapHoppa");
+  if(hoppa)hoppa.onclick=()=>{
+    const u=SKAP.utkast, sl=n=>Math.floor(Math.random()*n);
+    for(const k of ["hy","har","harstil","kavaj","byxa","hjalm"])
+      if(JAGVAL[k])u[k]=sl(JAGVAL[k].length);
+    if(!u.namn)u.namn="Ryttaren";
+    if(u.egenskaper.length<EGENSKAP_ANTAL){
+      u.egenskaper=EGENSKAP.slice(0,EGENSKAP_ANTAL).map(e=>e.id);
+    }
+    u.namn=(u.namn||"Ryttaren").trim(); u.skapad=true;
+    SPAR.jag={...u}; sparaRyttare(); jagBygg();
+    SKAP.utkast=null; SKAP.flik=0;
+    if(SKAP.retur==="meny")visaMeny(); else overlay(false);
+  };
 
   const klar=document.getElementById("bSkapKlar");
   if(klar)klar.onclick=()=>{

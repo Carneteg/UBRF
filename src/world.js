@@ -174,8 +174,14 @@ function stegaVandring(dt){
      varje rättning bara flyttade felet. Kursen är atan2-vinkel där
      VÄXANDE vinkel är moturs — höger om en kurs v är därför
      (sin v, −cos v). */
-  const ix=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
-  const iy=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?1:0);
+  /* Pekskärmens joystick är analog: riktningen och styrkan kommer
+     därifrån när den används, annars från tangenterna. Diagonalen
+     normaliseras av att farten sätts separat från riktningen — den
+     blir aldrig snabbare än en rak linje. */
+  let ix=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
+  let iy=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?1:0);
+  let styrka=1;
+  if(IN.joy){ ix=IN.joy.x; iy=-IN.joy.y; styrka=IN.joy.styrka; }
   const jogg=IN.ned.ShiftLeft||IN.ned.ShiftRight;
   let onskad=null, malFart=0;
   if(ix||iy){
@@ -183,7 +189,8 @@ function stegaVandring(dt){
     const rx=Math.cos(v)*iy+Math.sin(v)*ix;
     const ry=Math.sin(v)*iy-Math.cos(v)*ix;
     onskad=Math.atan2(ry,rx);
-    malFart=jogg?GA.jogg:GA.fart;
+    malFart=IN.joy ? GA.fart+(GA.jogg-GA.fart)*Math.max(0,styrka-0.55)/0.45
+                   : (jogg?GA.jogg:GA.fart);
   }
 
   /* GÅ HIT: klickmålet styr — men bara så länge spelaren håller
