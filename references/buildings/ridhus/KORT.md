@@ -99,13 +99,28 @@ Detaljfärger:
 
 ## Fotobrist
 
-Det här behövs för att kortet ska gå att bygga efter. I fallande ordning:
+**Delvis löst av Street View.** Bilder från Enköpingsvägen (sep 2024 och juli 2026)
+visar ridhusets **sydvästra långsida** — den som i spelet är den västra. De sparas
+inte i repot, men det de visar är byggt:
 
-1. **Gaveln rakt framifrån**, hela byggnaden i bild. Lutningen är nu uppskattad
-   till 14° ur bild 03, men spannet 11–17° är för brett för att bygga efter utan
-   att gissa fel på just det som avgör igenkänningen.
-2. **Långsidan rakt från sidan**, gärna två bilder som täcker hela längden. Ger
-   längdmåttet och antalet portar och fönster.
+- en **lång entrékvist** närmast caféets gavel: pulpettak på vita stolpar, ramp med
+  räcke, vita dubbeldörrar
+- den **svarta dörren** intill UBRF-skylten, ungefär mitt på längden
+- en rad **små fyrkantsfönster högt uppe** på den bortre delen
+- taket är mörkt och flackt, och långsidan är i övrigt en obruten röd plåtvägg
+
+`[öppen fråga]` Om den svarta listen går runt hela huset eller bara sitter på
+gaveln går inte att avgöra ur Street View — upplösningen räcker inte. Modellen låter
+den gå runt, eftersom den ligger i övre bjälklagets höjd och en bjälklagslinje inte
+brukar sluta i ett hörn. En bild rakt på långsidan avgör saken.
+
+Kvar att fotografera, i fallande ordning:
+
+1. **Gaveln rakt framifrån**, hela byggnaden i bild. Lutningen är uppskattad till
+   14° ur bild 03, men spannet 11–17° är för brett för att bygga efter utan att
+   gissa fel på just det som avgör igenkänningen.
+2. **Långsidan rakt från sidan** på nära håll — för listens höjd, fönstrens antal
+   och längdmåttet.
 3. **Ett foto på avstånd som visar hela taket**, för täckning, ljusband och nock.
 4. Baksidan och den östra gaveln.
 5. Närbild på entrén med dörren helt synlig ned till marken, för höjdskalan.

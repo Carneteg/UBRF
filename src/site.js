@@ -1,13 +1,15 @@
 /* ══════════════════════════════════════════════════════════════════
    ANLÄGGNINGEN — UBRF, Husbyvägen 1A, Bro. All geometri i meter.
    Koordinatsystem: origo i sydväst, +x öster, +y norr.
-   Byggd mot referensfotona i Drive-mappen UBRF (IMG_0064–0166):
-   ridhuset i mörkröd korrugerad plåt med svarta detaljer, cafétrappan
-   på södra gaveln, UBRF-skylten på västra långsidan mot grusvägen och
-   åkrarna, gräsgården mellan ridhus och stall, stallets faluröda
-   träpanel med vita knutar och välvda småfönster, verandan med den
-   gulockra entrédörren på södra gaveln, fodersilon vid norra gaveln,
-   utebanorna på slänten i nordväst med domarkuren, hagarna i öster.
+   Byggd mot fotona i references/buildings/ och mot satellit- och
+   Street View-bilder över Husbyvägen 1A (se references/SITEPLAN.md):
+   ridhuset i mörkröd korrugerad plåt med svarta detaljer, caféet med
+   balkong och yttertrappa på gaveln mot grusplanen, UBRF-skylten och
+   den långa entrékvisten på västra långsidan mot vägen, gräsgården
+   mellan ridhus och stall, stallets faluröda träpanel med huvraden på
+   nocken och ett valvfönster per box, förstukvisten på västra
+   långsidan, fodersilon vid norra gaveln, hagarna öster om stallet och
+   utebanorna nordost om dem.
    Geometrin här är den enda sanningen — rendering läser bara detta.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -44,12 +46,11 @@ const ANL = {
     {typ:"grus",  rekt:{x:112, y:110, w:34,  h:16}},   // vägen svänger runt norra gaveln
     {typ:"grus",  rekt:{x:144, y:20,  w:48,  h:26}},   // gårdsplanen vid stallentrén
     {typ:"grus",  rekt:{x:166, y:44,  w:10,  h:60}},   // gången öster om stallet mot hagarna
-    {typ:"grus",  rekt:{x:88,  y:112, w:26,  h:10}},   // stigen mot utebanorna
-    {typ:"betong",rekt:{x:100, y:112, w:8,   h:6}},    // betongplattan nedanför slänten
-    {typ:"slant", rekt:{x:64,  y:114, w:52,  h:6}},    // slänten upp mot banorna
-    {typ:"sand",  rekt:{x:92,  y:122, w:20,  h:40}},   // uteridbanan (dressyr, 20×40 synlig del)
-    {typ:"sand",  rekt:{x:66,  y:122, w:20,  h:34}},   // grusbanan/paddocken bortom
     {typ:"grus",  rekt:{x:150, y:102, w:26,  h:8}},    // bakgården vid silon
+    {typ:"grus",  rekt:{x:168, y:104, w:10,  h:46}},   // gången upp till banorna
+    {typ:"sand",  rekt:{x:176, y:106, w:20,  h:40}},   // uteridbanan (dressyr 20×40)
+    {typ:"sand",  rekt:{x:150, y:112, w:20,  h:34}},   // grusbanan/paddocken bredvid
+    {typ:"betong",rekt:{x:170, y:100, w:6,   h:5}},    // betongplattan vid uppgången
   ],
   cirklar: [ // runda markytor
     {typ:"sand", c:[151,31], r:4.6, kant:true},        // lekhagen med stenhästarna
@@ -84,8 +85,14 @@ const ANL = {
        {sida:"S", u:20.9,b:1.05,h:1.45,z0:4.45,typ:"valv"},   // caféet, övre våningen
        {sida:"S", u:25.1,b:1.05,h:1.45,z0:4.45,typ:"valv"},
        {sida:"S", u:23.2,b:1.0, h:2.05,z0:4.02,typ:"dorr"},   // cafédörren mot balkongen
-       {sida:"W", u:14, b:1.5, h:2.2, z0:0, typ:"dorr"},     // rampentrén (handikapp)
-       {sida:"W", u:52, b:1.1, h:2.1, z0:0, typ:"dorr"},     // personaldörren
+       /* Västra långsidan, mot vägen. Street View visar en lång
+          entrékvist närmast caféet, den svarta dörren vid UBRF-skylten
+          och en rad små fyrkantsfönster högt uppe. */
+       {sida:"W", u:57, b:2.0, h:2.2, z0:0,    typ:"dorrvit"},  // dubbeldörrarna under kvisten
+       {sida:"W", u:36, b:1.1, h:2.1, z0:0,    typ:"dorr"},     // svarta dörren vid skylten
+       {sida:"W", u:12, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
+       {sida:"W", u:18, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
+       {sida:"W", u:24, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
        {sida:"E", u:4,  b:3.4, h:2.9, z0:0, typ:"portplat"}, // durkplåtdörrarna mot gården
        {sida:"N", u:9,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten
      ]},
@@ -119,6 +126,8 @@ const ANL = {
        {sida:"S", u:5.4,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
        {sida:"S", u:9.6,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
        {sida:"S", u:7.5,  b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},     // balkongdörren
+       /* Stora skjutporten mitt på östra långsidan, mot hagarna. */
+       {sida:"E", u:24, b:3.6, h:3.2, z0:0, typ:"portbla"},
        /* Norra gaveln: servicedelens dubbeldörr. [saknas foto] */
        {sida:"N", u:6.1,  b:2.8,  h:2.7,  z0:0, typ:"dorrgra"},
        /* Vita dubbeldörren mot gräsgården. */
@@ -134,15 +143,15 @@ const ANL = {
      oppningar:[{sida:"E", u:1.2, b:1.6, h:0.9, z0:1.1, typ:"fonster"},
                 {sida:"S", u:1.6, b:1.4, h:0.9, z0:1.1, typ:"fonster"}]},
     /* Domarkuren vid uteridbanan. */
-    {id:"domarkur", rekt:{x:114, y:146, w:4.5, h:3.5}, hV:2.3, hN:3.4, nock:"EW",
+    {id:"domarkur", rekt:{x:184, y:148, w:4.5, h:3.5}, hV:2.3, hN:3.4, nock:"EW",
      fargV:"#8A3A30", fargT:"#5A2B26", label:"",
      oppningar:[{sida:"W", u:0.8, b:2.6, h:1.0, z0:1.0, typ:"fonster"}]},
     /* Boden vid norra gaveln (vid sopstationen). */
-    {id:"bod", rekt:{x:120, y:116, w:5, h:4}, hV:2.3, hN:3.4, nock:"NS",
+    {id:"bod", rekt:{x:172, y:150, w:5, h:4}, hV:2.3, hN:3.4, nock:"NS",
      fargV:"#8A3A30", fargT:"#3A3E44", label:"",
      oppningar:[{sida:"S", u:1.4, b:1.4, h:0.9, z0:1.1, typ:"fonster"}]},
     /* Elcentralen/boden vid stigen mot banorna. */
-    {id:"elbod", rekt:{x:88, y:116, w:3, h:2.5}, hV:2.0, hN:2.8, nock:"NS",
+    {id:"elbod", rekt:{x:171, y:96, w:3, h:2.5}, hV:2.0, hN:2.8, nock:"NS",
      fargV:"#8A3A30", fargT:"#3A3E44", label:"", oppningar:[]},
   ],
 
@@ -150,19 +159,18 @@ const ANL = {
      (banor och hagar), "el" = trådstängsel mot åkern, "rail" = låg
      falurödmålad trärail (parkering/lekhage). */
   staket: [
-    {typ:"tra", p:[[92,122],[112,122],[112,162],[92,162],[92,122]]},   // uteridbanan
-    {typ:"tra", p:[[66,122],[86,122],[86,156],[66,156],[66,122]]},     // paddocken bortom
+    {typ:"tra", p:[[176,106],[196,106],[196,146],[176,146],[176,106]]},// uteridbanan
+    {typ:"tra", p:[[150,112],[170,112],[170,146],[150,146],[150,112]]},// paddocken bredvid
     {typ:"tra", p:[[176,44],[206,44],[206,72],[176,72],[176,44]]},     // hage Ö1
-    {typ:"tra", p:[[176,76],[206,76],[206,102],[176,102],[176,76]]},   // hage Ö2
-    {typ:"tra", p:[[152,110],[202,110],[202,134],[152,134],[152,110]]},// hage N
+    {typ:"tra", p:[[176,76],[206,76],[206,100],[176,100],[176,76]]},   // hage Ö2
     {typ:"el",  p:[[112,44],[112,110]]},                               // trådstängsel mot åkern
     {typ:"rail",p:[[112,42],[150,42]]},                                // rail mot parkeringen
     {typ:"rail",p:[[146,26],[146,36]]},                                // rail vid lekhagen
   ],
   hagar: [ // betande hästar (id ur HORSES) för liv i bilden
     {rekt:{x:176,y:44,w:30,h:28}, hastar:["cosmo","air","mara"]},
-    {rekt:{x:176,y:76,w:30,h:26}, hastar:["larry","husky","westside"]},
-    {rekt:{x:152,y:110,w:50,h:24}, hastar:["lydia","toblerone","dexter","chip"]},
+    {rekt:{x:176,y:76,w:30,h:24}, hastar:["larry","husky","westside","lydia"]},
+    {rekt:{x:150,y:112,w:20,h:34}, hastar:["toblerone","dexter","chip"]},
   ],
 
   /* Träd: [x, y, radie]. Skogsbryn i norr och väster, björkraden
@@ -176,7 +184,7 @@ const ANL = {
     [80,166,3.4],[92,168,3.0],[104,166,3.2],[116,166,3.0],[128,164,3.4],
     [140,162,3.0],[150,158,2.8],[160,150,2.6],[120,158,2.4],[88,160,2.8],
     [46,120,3.2],[40,132,3.0],[44,148,3.4],[36,160,3.0],
-    [148,120,2.2],[148,128,2.0],
+    [144,120,2.2],[146,132,2.0],[200,158,2.6],[192,164,3.0],
   ],
 
   /* Rekvisita — ritas i 2D och 3D av world.js. */
@@ -199,10 +207,10 @@ const ANL = {
     {typ:"stenhast",  pos:[152.5,32]},
     {typ:"stenhast",  pos:[150.5,33]},
     {typ:"stenhast",  pos:[152,29]},
-    {typ:"mast",      pos:[92,162]},                     // belysningsmasterna vid banorna
-    {typ:"mast",      pos:[112,122]},
-    {typ:"mast",      pos:[66,156]},
-    {typ:"sopstation",pos:[103,13]},
+    {typ:"mast",      pos:[176,146]},                    // belysningsmasterna vid banorna
+    {typ:"mast",      pos:[196,106]},
+    {typ:"mast",      pos:[150,146]},
+    {typ:"sopstation",pos:[147,104]},
     {typ:"ac",        pos:[144.4,54], norm:[1,0]},                   // värmepumparna mot gården
     {typ:"ac",        pos:[144.4,58], norm:[1,0]},
     {typ:"busskylt",  pos:[118,7.6]},

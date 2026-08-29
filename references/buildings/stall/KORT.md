@@ -113,8 +113,17 @@ Egen sadeltakad utbyggnad på långsidan, med:
 - Marknivå: plant
 
 ## Fotobrist
-1. **Östra långsidan** — helt osedd. Byggs som spegling av den västra
-   `[antagande]`.
+
+**Delvis löst av Street View.** En bild från Husbyvägen (sep 2024) visar stallets
+**östra långsida**, mot hagarna. Den sparas inte i repot, men det den visar är byggt:
+
+- samma huvrad på nocken och samma fönsterrytm som på västra sidan
+- en **stor skjutport i blågrått** ungefär mitt på längden
+- fodersilon vid norra gaveln
+- trästaketade hagar direkt utanför, och sandbanan bortom dem
+
+1. **Östra långsidan på nära håll** — fönstrens antal och portens mått är lästa ur
+   en Street View-bild på avstånd, inte mätta. `[antagande]`
 2. **Norra gaveln** — osedd. Där ligger servicedelen enligt `STALLINNE`.
 3. **Takytan uppifrån**, för att räkna huvarna och se hela nocken.
 4. **En rak bild på långsidan**, för längdmåttet och exakt fönsterantal.

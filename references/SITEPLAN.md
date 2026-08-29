@@ -1,20 +1,73 @@
 # Situationsplan – UBRF, Husbyvägen 1A, Bro
 
-Fylls i av Tobias (som varit på plats) tillsammans med Claude. Använd gärna Google Maps/Eniro satellitvy som stöd
-för inbördes avstånd och rotation – det är den bästa källan för fotavtryck och placering.
+Underlaget är satellitvy och Street View över Husbyvägen 1A (Google Maps), lästa
+tillsammans med fotona i `buildings/`. **Bilderna sparas inte i repot** — de är
+Googles, och det är måtten vi behöver, inte bilderna. Det som är läst ur dem står
+här nedan med metoden angiven.
 
-Koordinatsystem: spelets eget, i meter. Anläggningen ligger i `ANL` i `src/world.js`;
-`x` ökar österut och `z` söderut, samma tal i kartvyn som i 3D-världen. Ingen omräkning
+Koordinatsystem: spelets eget, i meter. Anläggningen ligger i `ANL` i `src/site.js`;
+`x` ökar österut och `y` norrut, samma tal i kartvyn som i 3D-världen. Ingen omräkning
 behövs — skriv meter här och meter i koden.
 
-| Byggnad/yta | Position (m, X/Z) | Rotation (° från nord) | Fotavtryck (m) | Kommentar |
-|---|---|---|---|---|
-| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot parkeringen i söder | 26 × 66 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
-| Stallet | 154 / 46 (sydvästra hörnet) | nock nord–syd, västra långsidan mot gården | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. Förstukvisten på västra långsidan, 5,6 m från södra gaveln. |
-| Utebana (ridbana) | | | | |
-| Paddockar/hagar | | | | |
-| Parkering / infart | | | | |
-| Klubbstuga/kansli | | | | |
+## Så ser tomten ut i verkligheten
 
-Marknivå: __ (skillnader i höjd mellan byggnader noteras här)
+Två långa byggnader **parallellt intill varandra**, med en smal gräsgård emellan.
+Stallet ligger på ridhusets nordöstra sida. Båda löper **nordväst–sydost**, ungefär
+**40° vridet från norr**.
+
+- **Grusplanen** ligger i väster och sydväst, utanför ridhusets ena gavel — det är
+  därifrån gavelfotona i `buildings/ridhus/` är tagna.
+- **Enköpingsvägen** går längs ridhusets sydvästra långsida. Det är den sidan som
+  bär UBRF-skylten och den långa entrékvisten.
+- **Husbyvägen** går i öster. Infarten till anläggningen kommer den vägen.
+- **Hagarna** ligger direkt öster om stallet, med trästaket.
+- **Utebanorna** ligger nordost om hagarna: en stor sandbana och en mindre paddock.
+- Aspviks koloniträdgårdsförening ligger sydost om anläggningen.
+
+### Skala i satellitbilden
+Ridhuset mäter 330 bildpunkter på längden. Med en 20×60-bana inuti blir ytterhöljet
+omkring 70 m, alltså **~4,7 bildpunkter per meter**. Stallets 236 bildpunkter ger då
+50 m — nära de 54 m som stallkortet antar, vilket är den enda oberoende kontrollen
+av den siffran som finns.
+
+## Placeringen i spelet
+
+| Byggnad/yta | Position (m, X/Y) | Rotation | Fotavtryck (m) | Kommentar |
+|---|---|---|---|---|
+| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot grusplanen i söder | 26 × 66 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
+| Stallet | 154 / 46 (sydvästra hörnet) | nock nord–syd, västra långsidan mot gården | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. |
+| Gräsgården mellan husen | 144–154 | — | 10 × 56 | Smal, precis som i satellitbilden |
+| Grusplanen / parkeringen | 112 / 16 | — | 38 × 28 | Utanför ridhusets gavel, mot vägen |
+| Grusvägen längs ridhuset | 112 / 44 | — | 6 × 76 | Mot åkern i väster |
+| Hage Ö1 | 176 / 44 | — | 30 × 28 | Direkt öster om stallet |
+| Hage Ö2 | 176 / 76 | — | 30 × 24 | |
+| Uteridbanan (dressyr) | 176 / 106 | långsidan nord–syd | 20 × 40 | Nordost om hagarna |
+| Paddocken bredvid | 150 / 112 | — | 20 × 34 | |
+| Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
+| Fodersilon | 171 / 102 | — | — | Vid stallets norra gavel, syns i Street View |
+
+Marknivå: plant över hela anläggningen. Den slänt upp mot banorna som fanns i den
+första versionen är borttagen — satellitbilden visar ingen höjdskillnad.
+
 Väderstreck i spelet: solens riktning ligger i `LJUS.dag.sol` i `src/ljus.js`.
+
+## Medvetna avvikelser
+
+1. **Rotationen.** Verkligheten är vriden ~40° från norr. `ANL` är byggd av
+   axelriktade rektanglar, så spelets rutnät är i stället lagt **längs byggnaderna**:
+   spelets norr är verklighetens nordväst. Inbördes placering, avstånd och vilken
+   sida som vetter åt vad stämmer; kompassriktningen gör det inte. Att vrida hela
+   anläggningen skulle kräva att varje rektangel blev en polygon.
+2. **Infarten.** I verkligheten kommer man in från Husbyvägen i öster. I spelet
+   ligger infarten i söder, vid grusplanen, eftersom det är därifrån man ser
+   ridhusets gavel — det första man ska känna igen. `[avvikelse]`
+3. **Skogsstigen** i norr är påhittad. Det finns skog runt anläggningen, men
+   sträckningen är inte läst ur någon bild. `[antagande]`
+4. **Åkern i väster** är en förenkling av markerna och koloniområdet.
+
+## Kvar att kontrollera på plats
+
+- Stallets längd. 54 m är räknat baklänges ur boxantalet och stämmer grovt med
+  satellitbilden, men är inte mätt.
+- Avståndet mellan husen. 10 m i spelet, ser ut som 10–14 m i satellitbilden.
+- Var exakt hagarnas grindar sitter.

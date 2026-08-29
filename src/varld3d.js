@@ -279,7 +279,7 @@ function v3dGard(lagg,opp){
     /* Fasadöppningar. */
     const FARG={dorr:"#1A1A1C", dorrgul:"#A87650", dorrvit:"#E8E2D4",
       dorrgra:"#A2A4A6", dorrmork:"#463F38", portplat:"#B4B7B9",
-      portsilver:"#C4C7C9", fonster:"#3A4A5C", valv:"#3A4A5C", rund:"#3A4A5C"};
+      portsilver:"#C4C7C9", portbla:"#7E93A6", fonster:"#3A4A5C", valv:"#3A4A5C", rund:"#3A4A5C"};
     for(const o of (bg.oppningar||[])){
       const P=(function(sida){
         const{x,y,w,h}=r;
@@ -522,6 +522,22 @@ function v3dRidhusYttre(bg,d,opp){
   for(const u of [7.2,17.6]){
     d.lada(0.30,0.10,0.20,SVART,F(u,5.30,0.12));
     d.lada(0.09,0.22,0.09,SVART,F(u,5.44,0.06));
+  }
+  /* Entrékvisten på västra långsidan, mot vägen: ett långt pulpettak på
+     vita stolpar, med ramp och räcke fram till dubbeldörrarna. Det är
+     det man ser från Enköpingsvägen, näst efter skylten. */
+  {
+    const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);
+    const ku0=50, ku1=64, kut=2.6, kz=3.05, kmitt=(ku0+ku1)/2, klen=ku1-ku0;
+    d.lada(klen,0.12,kut+0.25,MORK,FW(kmitt,kz,kut/2));
+    d.lada(klen+0.1,0.17,0.13,"#EEEEE8",FW(kmitt,kz-0.13,kut+0.07));
+    for(let u=ku0+0.7;u<=ku1-0.5;u+=3.2)
+      d.lada(0.13,kz-0.13,0.13,"#EEEEE8",FW(u,(kz-0.13)/2,kut-0.24));
+    d.lada(klen-1.0,0.11,kut-0.5,"#B4B7B9",FW(kmitt,0.11,kut/2-0.1));
+    for(const y of [0.56,1.00])
+      d.lada(klen-1.0,0.05,0.05,STAL,FW(kmitt,y+0.16,kut-0.38));
+    for(let u=ku0+0.9;u<ku1-0.6;u+=0.52)
+      d.lada(0.03,0.90,0.03,STAL,FW(u,0.63,kut-0.38));
   }
   /* Stuprören i gavelns båda hörn. */
   for(const u of [0.22,r.w-0.22]){

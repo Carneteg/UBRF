@@ -169,14 +169,14 @@ function interaktioner(){
       }
     }
     /* Med sadlad häst vid handen kan lektionen ridas utomhus:
-       uteridbanan väster om gården, eller skogsstigen från grupp 3. */
+       uteridbanan nordost om stallet, eller skogsstigen från grupp 3. */
     if(G.leder&&G.skotselRes&&G.hastId){
-      L.push({pos:[113,132], text:G.tavling&&G.tavling.typ==="dressyr"
+      L.push({pos:[174,126], text:G.tavling&&G.tavling.typ==="dressyr"
           ?`Sitt upp — Dressyr LC börjar här`
           :`Sitt upp på uteridbanan — lektion utomhus`,
         gor(){sittUpp("utebana");}});
       const gIdx=GRUPPSTEGE.indexOf(G.grupp);
-      L.push({pos:[116,113], text:gIdx>=5
+      L.push({pos:[118,112], text:gIdx>=5
           ?`Sitt upp för uteritt — skogsstigen`
           :`Skogsstigen (uteritt rids från grupp 3)`,
         gor(){
