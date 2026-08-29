@@ -96,6 +96,8 @@ function fardighetsModMedJag(){
   if(j.amplitud)    m.amplitud    += j.amplitud;
   if(j.spanningFall)m.spanningFall+= j.spanningFall;
   if(j.skygghet)    m.skygghet     = (m.skygghet||0)+j.skygghet;
+  if(j.hhFonster)   m.hhFonster   += j.hhFonster;
+  if(j.hhAmplitud)  m.hhAmplitud  += j.hhAmplitud;
   return m;
 }
 
@@ -120,6 +122,10 @@ function stegaFardighet(ride,aids,dt){
      sämst. Att rida är att korrigera; det ska växten också mäta. */
   if(typeof iTempoBand==="function"&&!iTempoBand(ride,G.grupp))return null;
   const f=fard(), fore={...f};
+  /* Kontinuerligt lärande snabbar på växten — men villkoren ovan gäller
+     fortfarande. Egenskapen ger ingenting gratis; den gör bara att det du
+     faktiskt gör bra fastnar lite fortare. */
+  dt*=1+(((typeof jagMod==="function")&&jagMod().larande)||0);
 
   /* Sits: låg spänning i dina egna sitsutslag och en häst som inte
      stör sig. Mäts som mjukhet, som redan är amplitud mot medel. */

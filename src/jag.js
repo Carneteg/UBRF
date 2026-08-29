@@ -7,7 +7,7 @@
                 enda kravet är att det syns i sadeln, i stallet och på
                 gården — samma färger i klossläget som i det svepta.
 
-     EGENSKAPERNA är tre av sex, valda en gång. De är en LUTNING, inte
+     EGENSKAPERNA är tre av åtta, valda en gång. De är en LUTNING, inte
                 en genväg: var och en flyttar en tolerans i ridmodellen
                 någon tiondel, och ingen av dem låter dig hoppa över att
                 lära dig något. En egenskap som gjorde ett moment
@@ -48,25 +48,83 @@ const KLUBBFARG="#3E6B47";
 /* ── Egenskaperna ─────────────────────────────────────────────────
    Sex att välja mellan, tre att bära. `mod` är lutningen: nycklarna är
    samma som fardighetsMod() i framsteg.js skickar in i ridmodellen,
-   plus två egna: `skygghet` dämpar hästens skygghet i modellen, och
-   `fortroendeskydd` bromsar förtroendetappet i ryttare.js. Håll talen
-   små — de ska kännas, inte bära passet. */
+   plus tre egna: `skygghet` dämpar hästens skygghet i modellen,
+   `larande` snabbar på färdighetsväxten i framsteg.js, och
+   `visaSpanning` är ingen kraft alls utan information — HUD:en visar
+   spänningen i stället för att bara varna när den redan är för hög.
+
+   Sju av dem kommer ur artikeln "7 egenskaper hos en skicklig ryttare"
+   (Ophena). Produktdelarna i den — säkerhetsstigbyglarna — är inte med:
+   det här är ett spel, ingen annonsplats. Pondus är den åttonde och
+   kommer ur Ridhandbokens del om hästhantering.
+
+   Håll talen små — de ska kännas, inte bära passet. */
 const EGENSKAP=[
-  {id:"styrka", namn:"Styrka",
-   kort:"Underskänkeln står stilla",
+  {id:"balans", namn:"Balans och kärnstyrka",
+   kort:"Grunden i sadeln",
    effekt:"Hästen glider mindre ifrån dig, och du hittar tillbaka snabbare efter ett ryck.",
-   varfor:"Ridning är kroppsarbete. Det som håller sitsen på plats är inte viljan utan benen "+
-     "— och en underskänkel som står still är det boken beskriver som utgångsläget.",
-   kalla:"Ridhandboken del 6 · Sitsen",
+   varfor:"Allt du gör i sadeln börjar i kärnan. Är du obalanserad känner hästen det "+
+     "omedelbart och kompenserar för dina viktförskjutningar — det påverkar hennes "+
+     "rörelser och kan göra ont över tid.",
+   kalla:"7 egenskaper hos en skicklig ryttare · Ridhandboken del 6",
    mod:{halla:0.10, mjukhetFart:0.22}},
 
-  {id:"upprätt", namn:"Upprätt sits",
-   kort:"Axel–höft–häl i lodlinje",
+  {id:"oberoende", namn:"Oberoende sits",
+   kort:"Hand, ben och sits var för sig",
    effekt:"Hästen blir mindre spänd av dig. Du tynger henne inte framåt.",
-   varfor:"Den lodräta sitsen är utgångsläget som allt annat mäts emot. Sitter du bakom "+
-     "eller framför lodlinjen jobbar hästen mot din vikt hela passet.",
-   kalla:"Ridhandboken del 6 · Sitsen",
+   varfor:"En stark kärna ger en oberoende sits: händer, ben och sits kan arbeta "+
+     "separat utan att du tappar balansen. Utan den ger varje benrörelse också ett "+
+     "handutslag, och hästen får två besked när du menade ett.",
+   kalla:"7 egenskaper hos en skicklig ryttare · Ridhandboken del 6",
    mod:{lugn:0.12}},
+
+  {id:"timing", namn:"Timing",
+   kort:"Rätt ögonblick, inte rätt kraft",
+   effekt:"Halvhalten får ett bredare tidsfönster och gesten får vara mindre.",
+   varfor:"Hästar lever i nuet. Ber du om en galoppövergång precis när yttre bakbenet "+
+     "är på väg att ta steget talar du deras språk; dålig timing skapar förvirring, "+
+     "för hon är inte positionerad för att göra det du ber om.",
+   kalla:"7 egenskaper hos en skicklig ryttare · Ridhandboken del 10",
+   mod:{hhFonster:0.30, hhAmplitud:-0.12}},
+
+  {id:"sjalvfortroende", namn:"Självförtroende",
+   kort:"Utan vårdslöshet",
+   effekt:"Hästens spänning sjunker undan fortare när något skrämt henne.",
+   varfor:"Självförtroende är inte oräddhet — det är att lita på sin förberedelse och "+
+     "känna sina gränser. Duktiga ryttare blir också nervösa; skillnaden är att de "+
+     "arbetar sig igenom nervositeten i stället för att bli paralyserade av den. "+
+     "Hästen känner skillnaden.",
+   kalla:"7 egenskaper hos en skicklig ryttare",
+   mod:{spanningFall:0.22}},
+
+  {id:"kansla", namn:"Känsla och lyhördhet",
+   kort:"Ditt sjätte sinne",
+   effekt:"Du ser hästens spänning hela tiden, inte bara när den redan är för hög.",
+   varfor:"Känsla är att märka vad som händer under dig — spänningen i ryggen, den "+
+     "lilla tvekan innan hon skyggar. Det går inte att läsa sig till, men det går att "+
+     "träna: blunda i skritt och känn efter hur ryggen svänger och när varje bakben "+
+     "tar av.",
+   kalla:"7 egenskaper hos en skicklig ryttare · Ridhandboken del 5",
+   mod:{visaSpanning:1}},
+
+  {id:"mjukhet", namn:"Mjukhet",
+   kort:"En förbindelse, inte ett grepp",
+   effekt:"Du får ta mer tygel innan hästen tolkar det som hårdhet.",
+   varfor:"Hästar känner när en fluga landar på huden. Använder du kraft dämpar du "+
+     "hennes svarsförmåga med tiden; lätta, vältajmade hjälper som hon knappt kan se "+
+     "skapar en villig partner.",
+   kalla:"7 egenskaper hos en skicklig ryttare · Ridhandboken del 7",
+   mod:{tygelband:0.035}},
+
+  {id:"larande", namn:"Kontinuerligt lärande",
+   kort:"Du slutar aldrig ta lektioner",
+   effekt:"Färdigheterna växer omkring en tiondel snabbare — men bara av pass som räknas.",
+   varfor:"De bästa ryttarna du känner tar fortfarande lektioner. Bra hästhantering är "+
+     "inget mål man når och sedan vilar på; varje ritt bär en lärdom om man är "+
+     "uppmärksam. Egenskapen ger dig ingenting gratis — den gör bara att det du "+
+     "faktiskt gör bra fastnar lite fortare.",
+   kalla:"7 egenskaper hos en skicklig ryttare",
+   mod:{larande:0.15}},
 
   {id:"pondus", namn:"Pondus",
    kort:"Hästen följer när du leder",
@@ -75,30 +133,6 @@ const EGENSKAP=[
      "Led i grimskaft med handen nära grimman, och låt hästen veta var du är.",
    kalla:"Ridhandboken del 2 · Säkerhet och hästhantering",
    mod:{skygghet:0.30}},
-
-  {id:"mjukhand", namn:"Mjuk hand",
-   kort:"En förbindelse, inte ett grepp",
-   effekt:"Du får ta mer tygel innan hästen tolkar det som hårdhet.",
-   varfor:"Handen hör till en mjuk och jämn förbindelse. Tygeltag är korta — "+
-     "aldrig hängande, aldrig ett grepp som hålls.",
-   kalla:"Ridhandboken del 7 · Inverkan",
-   mod:{tygelband:0.035}},
-
-  {id:"lugn", namn:"Lugn",
-   kort:"Lågt bakgrundsbrus",
-   effekt:"Hästens spänning sjunker undan fortare när något skrämt henne.",
-   varfor:"En hjälp som ges hela tiden slutar betyda något. Skruva ner bruset, "+
-     "så hör hästen frågan när du väl ställer den.",
-   kalla:"Ridhandboken del 5 · Ryttarens och hästens språk",
-   mod:{spanningFall:0.22}},
-
-  {id:"talamod", namn:"Tålamod",
-   kort:"Ett dåligt pass river inte allt",
-   effekt:"Förtroendet ni byggt tappas långsammare när en dag går snett.",
-   varfor:"Byt, byt och byt igen. Det som skiljer den utbildade hästen från den "+
-     "ogymnastiserade är övergångarna — och de kommer av upprepning, inte av tur.",
-   kalla:"Ridhandboken del 10 · Övergångar",
-   mod:{fortroendeskydd:0.45}},
 ];
 const EGENSKAP_ANTAL=3;
 
@@ -197,8 +231,9 @@ function visaSkaparen(retur){
   <h1 style="margin-top:6px">${forsta?"Vem är du?":"Ändra din ryttare"}</h1>
   <p class="dim" style="font-size:13.5px;margin-top:2px">
     Utseendet är ditt och ändrar ingenting i ridningen.
-    Egenskaperna är tre stycken, och var och en lutar spelet en aning —
-    ingen av dem gör något moment onödigt.</p>
+    Egenskaperna är <b>tre av ${EGENSKAP.length}</b>, och var och en lutar spelet en
+    aning — ingen av dem gör något moment onödigt. Sju kommer ur artikeln
+    <i>7 egenskaper hos en skicklig ryttare</i>, den åttonde ur Ridhandboken.</p>
 
   <div id="skapDelar">
     <div>

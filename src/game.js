@@ -408,8 +408,19 @@ function ritaHUD(){
   const g=Gait.G[G.ride.gangart];
   document.getElementById("gait").textContent=g.namn+(G.ride.gangart==="trav"?(IN.latt?" · lättridning":" · nedsittning"):"");
   document.getElementById("tempo").textContent=G.ride.tempo.toFixed(1).replace(".",",")+" m/s";
-  document.getElementById("gaitWarn").textContent=
-    G.ride.spanning>0.6?"SPÄND":(G.ride.gangart==="trav"&&IN.latt&&IN.diagonal===0?"FEL DIAGONAL (Q)":"");
+  /* Känsla är information, inte kraft: har du den ser du spänningen
+     hela tiden, inte bara när den redan är för hög. */
+  {const w=document.getElementById("gaitWarn"), sp=G.ride.spanning;
+   const diag=G.ride.gangart==="trav"&&IN.latt&&IN.diagonal===0;
+   const kanner=(typeof jagHar==="function")&&jagHar("kansla");
+   let txt, ton="";
+   if(sp>0.6){ txt="SPÄND"+(kanner?" "+sp.toFixed(2).replace(".",","):""); ton="hog"; }
+   else if(diag) txt="FEL DIAGONAL (Q)";
+   else if(kanner){ txt="SPÄNNING "+sp.toFixed(2).replace(".",",");
+     ton=sp>0.40?"mitt":"lag"; }
+   else txt="";
+   w.textContent=txt;
+   w.className=ton;}
   if(G.aids)for(const k in IN.kan){
     const row=document.querySelector(`.arow[data-k="${k}"] .v`);if(!row)continue;
     const v=k==="sits"?(G.aids[k]+1)/2:k==="styrning"?(G.aids[k]+1)/2:G.aids[k];

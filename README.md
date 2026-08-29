@@ -25,10 +25,12 @@ python3 tools/build.py     # → dist/ridskolan.html
 ## Din ryttare
 
 Första gången frågar spelet vem du är: utseende (namn, hy, hår, frisyr,
-kavaj, ridbyxor, hjälm) och **tre egenskaper av sex** — Styrka, Upprätt
-sits, Pondus, Mjuk hand, Lugn och Tålamod. Alla sex är hämtade ur
-Ridhandboken och lutar ridmodellen någon tiondel; ingen av dem låter dig
-hoppa över att lära dig något. Allt bor i `src/jag.js`.
+kavaj, ridbyxor, hjälm) och **tre egenskaper av åtta** — Balans och
+kärnstyrka, Oberoende sits, Timing, Självförtroende, Känsla och
+lyhördhet, Mjukhet, Kontinuerligt lärande och Pondus. Sju är hämtade ur
+artikeln *7 egenskaper hos en skicklig ryttare*, den åttonde ur
+Ridhandboken. Var och en lutar ridmodellen någon tiondel; ingen av dem
+låter dig hoppa över att lära dig något. Allt bor i `src/jag.js`.
 
 ## Tangenter
 
