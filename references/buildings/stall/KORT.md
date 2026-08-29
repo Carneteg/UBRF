@@ -106,6 +106,49 @@ Egen sadeltakad utbyggnad på långsidan, med:
 - Betongsuggor vid gaveln
 - Rödbrunt tvåregelsstaket mot grusplanen
 
+## Invändigt — utrymningsplanen ändrar bilden
+
+En fotograferad **utrymningsplan (Presto AB, 2025-10-11)** visar stallets Plan 1.
+Den är det bästa underlag som finns för insidan, och den säger att `STALLINNE` har
+fel planform.
+
+**Det som går att läsa säkert:**
+
+- Stallet är ett **dubbelstall: fyra boxlängor och två gångar**, inte en gång med
+  boxar på var sida. Från ena långsidan räknat: boxrad — gång — boxrad — boxrad —
+  gång — boxrad. De två mittersta raderna står rygg mot rygg mot en gemensam spine
+  med regelbundna märken på (troligen vattenkoppar eller foderluckor).
+- Varje box har sitt dörrslag ritat ut mot gången, och de yttre raderna har ett
+  märke på ytterväggen i varje box — rimligen valvfönstret, ett per box, vilket
+  stämmer med fönsterrytmen utvändigt.
+- **Klubbdelen ligger i ena änden**, med en **rak trappa** och en **spiraltrappa**,
+  och "Här är du"-markeringen sitter vid entrén där. Det stämmer med fasadfotona:
+  förstukvisten på långsidan nära gaveln, spiraltrappan på gaveln, och en Plan 2
+  över just den delen.
+- **Servicedelen ligger i andra änden**, med flera rum och en rund detalj.
+- Utrymningsvägar finns på båda långsidorna, ungefär en tredjedel och två
+  tredjedelar in, plus en utskjutande korridor mitt på.
+
+**Det som INTE går att läsa ur den här bilden:**
+
+Bilden är tagen snett, i en reflekterande ram, och mittpartiet är just det som
+behöver läsas exakt. Antalet boxar ser ut att vara ett tiotal per länga — alltså
+kanske ett fyrtiotal totalt — men jag har inte räknat dem med säkerhet, och måtten
+går inte att härleda: beroende på om en box antas vara 3,0 eller 3,5 m bred landar
+byggnadens bredd någonstans mellan 20 och 26 m. Det är oförenligt med de 15 m som
+kortet antar ur `STALLINNE`, och med hur smal byggnaden ser ut i satellitbilden.
+
+**Något stämmer alltså inte, och jag gissar inte vilket.** Vad som behövs:
+
+1. **En rak bild på "Plan 1"**, hela planen i bild, utan vinkel och utan reflex.
+   Då går boxarna att räkna och proportionerna att mäta.
+2. **Samma på "Plan 2"**, för övervåningen.
+3. Har ritningen en **skalstock eller ett måttsatt rum**, ta med det — då blir allt
+   annat mätbart.
+
+Tills dess är `STALLINNE` kvar som den är, med en gång och två boxrader. Den är
+känd fel i planform och ska byggas om när underlaget finns.
+
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (154, 46), fotavtryck 15 × 54 m
 - Rotation: nocken nord–syd; västra långsidan mot gården och ridhuset
