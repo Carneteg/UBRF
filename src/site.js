@@ -37,19 +37,34 @@ const ANL = {
   ],
 
   byggnader: [
-    /* Ridhuset — mörkröd korrugerad plåt, svart takfot och hörnpartier.
-       Tvåvåningsdel i söder med Café Krubban och yttertrappan;
-       UBRF-skylten mitt på västra långsidan; banan 20×60 därinne. */
+    /* Ridhuset. Måtten och färgerna kommer ur byggnadskortet
+       references/buildings/ridhus/KORT.md, som i sin tur är läst ur
+       fotona i samma mapp — inget här är gissat fritt.
+         · mörkt vinröd, vertikalt korrugerad stålplåt. Medelvärdet över
+           alla tre fotona är (97,45,57) — mörkare och blåare än kortets
+           första avläsning (138,34,40), som togs i en dager. Färgen här
+           är råvaran (135,47,64); belysningen tar ner den till fotots.
+         · svart list runt hela huset vid 4,1 m: övre bjälklaget, och
+           det första man ser från parkeringen
+         · sadeltak med 13° resning (kortets ~14°, spann 11–17°),
+           svart plåt och svarta vindskivor
+         · södra gaveln mot parkeringen: dubbeldörren i väster med
+           valvfönstret över, den svarta dörren under sitt vita
+           skärmtak, och i öster Café Krubban med fyra valvbågade
+           fönster, balkong och utvändig ståltrappa
+       Banan 20×60 därinne; UBRF-skylten mitt på västra långsidan. */
     {id:"ridhus", rekt:{x:118, y:44, w:26, h:66}, hV:6.2, hN:9.2, nock:"NS",
-     fargV:"#6E1F1D", fargT:"#26282C", plat:true, label:"RIDHUSET",
+     fargV:"#872F40", fargT:"#202022", svart:"#202022", plat:true,
+     list:4.10, takfot:true, detalj:"ridhus", label:"RIDHUSET",
      oppningar:[
-       {sida:"S", u:4,  b:1.3, h:2.1, z0:0, typ:"dorr"},     // entré under skärmtak
-       {sida:"S", u:8,  b:1.3, h:2.1, z0:0, typ:"dorr"},
-       {sida:"S", u:15, b:2.0, h:1.4, z0:1.2, typ:"fonster"},// välvda vita fönster nere
-       {sida:"S", u:21, b:2.0, h:1.4, z0:1.2, typ:"fonster"},
-       {sida:"S", u:15, b:2.0, h:1.3, z0:3.9, typ:"fonster"},// ... och uppe (caféet)
-       {sida:"S", u:21, b:2.0, h:1.3, z0:3.9, typ:"fonster"},
-       {sida:"S", u:18.6,b:1.1,h:2.0, z0:3.8, typ:"dorr"},   // cafédörren vid trappan
+       {sida:"S", u:3.2, b:1.8, h:2.2, z0:0,   typ:"dorrvit", skarm:2.6}, // dubbeldörren
+       {sida:"S", u:3.4, b:1.20,h:1.55,z0:4.45,typ:"valv"},   // valvfönstret över entrén
+       {sida:"S", u:8.4, b:1.1, h:2.1, z0:0,   typ:"dorr", skarm:2.1},    // svarta dörren
+       {sida:"S", u:20.9,b:1.05,h:1.45,z0:1.35,typ:"valv"},   // caféet, nedre våningen
+       {sida:"S", u:25.1,b:1.05,h:1.45,z0:1.35,typ:"valv"},
+       {sida:"S", u:20.9,b:1.05,h:1.45,z0:4.45,typ:"valv"},   // caféet, övre våningen
+       {sida:"S", u:25.1,b:1.05,h:1.45,z0:4.45,typ:"valv"},
+       {sida:"S", u:23.2,b:1.0, h:2.05,z0:4.02,typ:"dorr"},   // cafédörren mot balkongen
        {sida:"W", u:14, b:1.5, h:2.2, z0:0, typ:"dorr"},     // rampentrén (handikapp)
        {sida:"W", u:52, b:1.1, h:2.1, z0:0, typ:"dorr"},     // personaldörren
        {sida:"E", u:4,  b:3.4, h:2.9, z0:0, typ:"portplat"}, // durkplåtdörrarna mot gården
@@ -144,9 +159,8 @@ const ANL = {
     {typ:"stol",      pos:[149,88]},
     {typ:"bord",      pos:[158,38]},                     // gårdsplanens möbler
     {typ:"bank",      pos:[164,40]},
-    {typ:"trappa",    pos:[137,43.6], norm:[0,-1]},                   // cafétrappan på södra gaveln
     {typ:"skylt",     pos:[118,77], text:"UPPLANDS-BRO RYTTARFÖRENING", norm:[-1,0]},
-    {typ:"cafeskylt", pos:[135,43.8], norm:[0,-1]},
+    {typ:"cafeskylt", pos:[136.4,43.8], norm:[0,-1]},   // skylten vid trappans fot
     {typ:"flagga",    pos:[107,15]},
     {typ:"skyltstolpe",pos:[147,40]},
     {typ:"stenhast",  pos:[149.5,29.5]},                 // stenhästarna i lekhagen

@@ -144,6 +144,8 @@ class Bygge{
     return this;
   }
   lada(w,h,d,farg,mat){const g=GEO.lada(w,h,d);return this.las(g.p,g.n,g.u,g.i,farg,mat);}
+  ladaM(w,h,d,farg,mat,varv){const g=GEO.ladaM(w,h,d,varv);
+    return this.las(g.p,g.n,g.u,g.i,farg,mat);}
   klot(r,farg,mat,seg){const g=GEO.klot(r,seg||14);return this.las(g.p,g.n,g.u,g.i,farg,mat);}
   cyl(r0,r1,h,farg,mat,seg,lock){const g=GEO.cyl(r0,r1,h,seg||12,lock!==false);
     return this.las(g.p,g.n,g.u,g.i,farg,mat);}
@@ -175,6 +177,25 @@ const GEO={
       i.push(b,b+1,b+2, b,b+2,b+3);
     }
     return this._cache[nyckel]={p,n,u,i};
+  },
+  /* Låda vars textur mäts i meter i stället för att töjas ut över varje
+     sida. varv = hur många meter ett texturvarv täcker. Alla fyra
+     väggsidorna får u i sidled och v i höjdled, så att en stående
+     korrugering står upp på både långsida och gavel — lada() lägger
+     u längs höjden på gavelsidorna, vilket lade plåtens ränder ner. */
+  ladaM(w,h,d,varv){
+    const nyckel="lm"+w+"_"+h+"_"+d+"_"+varv;
+    if(this._cache[nyckel])return this._cache[nyckel];
+    const g=this.lada(w,h,d), v=varv||2;
+    const u=[];
+    for(let k=0;k<g.p.length;k+=3){
+      const px=g.p[k],py=g.p[k+1],pz=g.p[k+2];
+      const nx=g.n[k],ny=g.n[k+1];
+      if(Math.abs(nx)>0.5)      u.push(pz/v, py/v);   // långsidorna
+      else if(Math.abs(ny)>0.5) u.push(px/v, pz/v);   // tak och botten
+      else                      u.push(px/v, py/v);   // gavlarna
+    }
+    return this._cache[nyckel]={p:g.p,n:g.n,u,i:g.i};
   },
   klot(r,seg){
     const nyckel="k"+r+"_"+seg;
@@ -230,14 +251,17 @@ const GEO={
     }
     return this._cache[nyckel]={p,n,u,i};
   },
-  /* Liggande yta i XZ, centrerad. Vindningen moturs sedd uppifrån,
-     så att ytan är framsida uppåt och inte kullas bort. */
+  /* Liggande yta i XZ, centrerad, framsida uppåt. Vindningen är samma
+     som lada() och panel() använder — den var tidigare handvänd för
+     att överleva den spegelvända kameran, och då kullades lådorna bort
+     i stället så fort speglingen rättades. En vindning för hela
+     motorn, ingen annan. */
   yta(w,d,uvS){
     const x=w/2,z=d/2;
     return {p:[-x,0,-z, x,0,-z, x,0,z, -x,0,z],
             n:[0,1,0, 0,1,0, 0,1,0, 0,1,0],
             u:[0,0, uvS,0, uvS,uvS, 0,uvS],
-            i:[0,2,1, 0,3,2]};
+            i:[0,1,2, 0,2,3]};
   },
   /* Stående yta i XY, centrerad, normal +Z. Texturen laddas med
      UNPACK_FLIP_Y, så nederkanten ska ha v = 0 för att bilden ska
@@ -449,7 +473,15 @@ const GL={
   kamera(oga,mal,fov){
     const f=fov||1.02, asp=this.bredd/Math.max(this.hojd,1);
     this.proj=M4.perspektiv(f, asp, 0.12, 320);
-    this.vy=M4.seFran(oga,mal,[0,1,0]);
+    /* Anläggningens x går österut och y norrut, och i 3D blir de X och
+       Z med Y uppåt. Den kombinationen är vänsterhänt, så en vanlig
+       seFran ger en spegelvänd bild: öster hamnar till vänster när man
+       tittar norrut. Canvasrenderaren i world.js räknar redan höger-
+       axeln som (fy, −fx) — öster till höger — och kamBas.hj här nedan
+       gör likadant. Vyn speglas därför i kamerans X, och frontFace är
+       satt till CW i start() eftersom speglingen vänder trianglarnas
+       varvriktning. */
+    this.vy=M4.mul(M4.skala(-1,1,1),M4.seFran(oga,mal,[0,1,0]));
     this.gl.uniformMatrix4fv(this.u.uProj,false,this.proj);
     this.gl.uniformMatrix4fv(this.u.uVy,false,this.vy);
     this.gl.uniform3f(this.u.uOga,oga[0],oga[1],oga[2]);
@@ -738,3 +770,4 @@ function glCanvasTex(bredd,hojd,rita,upprepa){
   rita(c.getContext("2d"),bredd,hojd);
   return GL.textur(c,upprepa);
 }
+

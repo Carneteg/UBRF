@@ -22,10 +22,12 @@ function v3dTexturer(){
     c.strokeStyle="rgba(255,255,255,.55)";
     for(let i=0;i<9;i++){c.beginPath();c.moveTo(0,i*14+8);c.lineTo(w,i*14+8);c.stroke();}
   },true);
-  T.korr=glCanvasTex(128,128,(c,w,h)=>{           // korrugerad plåt, otonad
+  /* Korrugerad plåt: en stående rand per 12 cm. Kontrasten hålls låg —
+     med en kraftig vit rand blir den mörkt vinröda plåten skär. */
+  T.korr=glCanvasTex(128,128,(c,w,h)=>{
     c.fillStyle="#FFFFFF";c.fillRect(0,0,w,h);
     for(let i=0;i<16;i++){
-      c.fillStyle=i%2?"rgba(255,255,255,.6)":"rgba(0,0,0,.20)";
+      c.fillStyle=i%2?"rgba(255,255,255,.20)":"rgba(0,0,0,.16)";
       c.fillRect(i*8,0,4,h);
     }
   },true);
@@ -101,17 +103,29 @@ function v3dTextPanel(bygge,w,h,mat){
   bygge.panel(w,h,"#FFFFFF",
     M4.mul(M4.mul(mat,M4.translation(0,0,-0.005)),M4.rotY(Math.PI)));
 }
+/* Fasadöppningarnas djup i tre steg, så att karm, ruta och spröjs inte
+   z-slåss mot varandra på håll. Väggen ligger på 0. */
+const OPPDJUP={karm:0.05, ruta:0.11, sprojs:0.15};
 
 /* En triangel (gavelspetsar) — Bygge har bara slutna kroppar. */
-function v3dTriangel(b,p0,p1,p2,farg){
+function v3dTriangel(b,p0,p1,p2,farg,varv){
   const ux=p1[0]-p0[0], uy=p1[1]-p0[1], uz=p1[2]-p0[2];
   const vx=p2[0]-p0[0], vy=p2[1]-p0[1], vz=p2[2]-p0[2];
   let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
   const l=Math.hypot(nx,ny,nz)||1; nx/=l;ny/=l;nz/=l;
-  b.las([...p0,...p1,...p2],[nx,ny,nz,nx,ny,nz,nx,ny,nz],
-    [0,0,1,0,0.5,1],[0,1,2],farg,null);
-  b.las([...p0,...p2,...p1],[-nx,-ny,-nz,-nx,-ny,-nz,-nx,-ny,-nz],
-    [0,0,0.5,1,1,0],[0,1,2],farg,null);
+  /* Texturen mäts i meter, som på väggen under, så att korrugeringen
+     löper obruten upp i gavelspetsen. */
+  const v=varv||1.92;
+  const uv=p=>[(Math.abs(nz)>0.5?p[0]:p[2])/v, p[1]/v];
+  /* Lådorna i GEO.lada lagrar normalen åt motsatt håll mot vindningen,
+     och kullningen går på vindningen. Triangeln måste följa samma
+     konvention, annars får gavelspetsen normalen inåt huset och lyses
+     upp som om solen stod bakom väggen — den blir ljusare än plåten
+     rakt under, vilket syns som ett skarvband vid takfoten. */
+  const U=[...uv(p0),...uv(p1),...uv(p2)];
+  b.las([...p0,...p1,...p2],[-nx,-ny,-nz,-nx,-ny,-nz,-nx,-ny,-nz],U,[0,1,2],farg,null);
+  b.las([...p0,...p2,...p1],[nx,ny,nz,nx,ny,nz,nx,ny,nz],
+    [...uv(p0),...uv(p2),...uv(p1)],[0,1,2],farg,null);
 }
 /* Matris för en panel längs en fasad: +X längs väggen, +Z utåt. */
 function v3dFasadMat(p0,ux,uy,u,z,ut){
@@ -119,6 +133,59 @@ function v3dFasadMat(p0,ux,uy,u,z,ut){
   return new Float32Array([
     ux,0,uy,0,  0,1,0,0,  nx*1,0,nz*1,0,
     p0[0]+ux*u+nx*ut, z, p0[1]+uy*u+nz*ut, 1]);
+}
+
+/* En plan polygon i sitt eget XY-plan, vänd mot +Z. Bygge har bara
+   slutna kroppar och rektangulära paneler; valvbågarna och skärm-
+   takens gavelspetsar behöver en fri kontur. */
+function v3dPolygon(b,pts,farg,mat){
+  const p=[],n=[],u=[],idx=[];
+  for(const q of pts){p.push(q[0],q[1],0); n.push(0,0,1); u.push(0.5+q[0]*0.3,0.5+q[1]*0.3);}
+  for(let i=1;i<pts.length-1;i++)idx.push(0,i,i+1);
+  return b.las(p,n,u,idx,farg,mat);
+}
+/* Konturen till ett valvbågat fönster: rak nedre del, halvcirkel
+   överst. Så ser de ut på både stallet och caféannexet — flerrutiga
+   med vit karm. Origo i mitten, moturs sett framifrån. */
+function v3dValvKontur(b,h,seg){
+  const r=b/2, ym=h/2-r, pts=[[-r,-h/2],[r,-h/2],[r,ym]];
+  const n=seg||7;
+  for(let i=1;i<n;i++){const a=i/n*Math.PI; pts.push([r*Math.cos(a),ym+r*Math.sin(a)]);}
+  pts.push([-r,ym]);
+  return pts;
+}
+/* Cirkelkontur — stallets bullseye-fönster. */
+function v3dRundKontur(d,seg){
+  const r=d/2, n=seg||12, pts=[];
+  for(let i=0;i<n;i++){const a=i/n*Math.PI*2; pts.push([r*Math.cos(a),r*Math.sin(a)]);}
+  return pts;
+}
+/* Spröjsen: tunna vita lister över rutan. */
+function v3dSprojs(b,br,h,mat,rader,kol){
+  for(let i=1;i<(kol||2);i++)
+    b.lada(0.035,h*0.92,0.02,"#EEEEE8",M4.mul(mat,M4.translation(-br/2+br*i/(kol||2),0,0)));
+  for(let i=1;i<(rader||3);i++)
+    b.lada(br*0.94,0.035,0.02,"#EEEEE8",M4.mul(mat,M4.translation(0,-h/2+h*i/(rader||3),0)));
+}
+
+/* Det vita skärmtaket över ridhusets dörrar: en liten sadelform med
+   nocken ut från väggen, så att man ser gavelspetsen rakt framifrån.
+   Det är husets näst tydligaste kännetecken efter den svarta listen.
+   mat har +X längs fasaden, +Y uppåt, +Z utåt, med origo vid dörrens
+   överkant. */
+function v3dSkarmtak(b,mat,bredd,ut,res){
+  const halv=bredd/2, hyp=Math.hypot(halv,res), vin=Math.atan2(res,halv);
+  const V="#EEEEE8";
+  for(const s of [-1,1])
+    b.lada(hyp,0.08,ut,V,
+      M4.mul(M4.mul(mat,M4.translation(s*halv/2,res/2,ut/2)),M4.rotZ(-s*vin)));
+  v3dPolygon(b,[[-halv,0],[halv,0],[0,res]],V,
+    M4.mul(mat,M4.translation(0,0,ut+0.015)));
+  b.lada(bredd+0.10,0.13,0.10,V,M4.mul(mat,M4.translation(0,-0.06,ut-0.05)));
+  for(const s of [-1,1]){                       // konsolerna ner mot dörrfodret
+    b.lada(0.11,0.62,0.11,V,M4.mul(mat,M4.translation(s*(halv-0.12),-0.36,0.07)));
+    b.lada(0.09,0.09,ut,"#232326",M4.mul(mat,M4.translation(s*(halv+0.10),-0.02,ut/2)));
+  }
 }
 
 /* ── Gården ───────────────────────────────────────────────────── */
@@ -141,31 +208,63 @@ function v3dGard(lagg,opp){
     const b=new Bygge().cyl(c.r,c.r,0.05,"#FFFFFF",M4.translation(c.c[0],niva,c.c[1]),20);
     lagg(b,T.sand); niva+=0.008;
   }
-  /* Byggnaderna: väggar, sadeltak, gavelspetsar. */
-  const husV=new Bygge(), husT=new Bygge(), husP=new Bygge();
+  /* Byggnaderna: väggar, sadeltak, gavelspetsar. husD samlar de
+     omålade detaljerna — svarta lister, vindskivor, plåtbeslag —
+     som ska ligga ovanpå fasadtexturen utan att ta upp den. */
+  const husV=new Bygge(), husT=new Bygge(), husP=new Bygge(), husD=new Bygge();
   for(const bg of ANL.byggnader){
     const r=bg.rekt, hV=bg.hV, hN=bg.hN;
     const vt=bg.plat?husP:husV;
-    vt.lada(r.w,hV,r.h,bg.fargV,M4.translation(r.x+r.w/2,hV/2,r.y+r.h/2));
+    /* Väggarna med texturen mätt i meter: plåtens korrugering blir
+       ~12 cm bred och står upp, träpanelens brädor ~20 cm och ligger. */
+    const VARV=bg.plat?1.92:1.80;
+    vt.ladaM(r.w,hV,r.h,bg.fargV,M4.translation(r.x+r.w/2,hV/2,r.y+r.h/2),VARV);
     const cx=r.x+r.w/2, cz=r.y+r.h/2;
+    const SVART=bg.svart||"#202022";
+    /* Takutsprånget: 25 cm, med en svart vindskiva i kanten. Utan den
+       läser plåttaket som en pappskiva ovanpå en låda. */
+    const UT=bg.takfot?0.25:0.0;
     if(bg.nock==="NS"){                       // nocken längs y
       const halv=r.w/2, res=hN-hV, len=Math.hypot(halv,res), vin=Math.atan2(res,halv);
+      const cv=Math.cos(vin), sv=Math.sin(vin);
+      /* Takfallet lutar NEDÅT ut mot takfoten. rotZ vrider lokal +X mot
+         +Y, så östra fallet (s=+1) ska ha negativ vinkel — annars blir
+         sadeltaket en dalgång i stället för en nock. */
       for(const s of [-1,1])
-        husT.lada(len,0.14,r.h+0.5,bg.fargT,
-          M4.mul(M4.translation(cx+s*halv/2,hV+res/2,cz),M4.rotZ(s*vin)));
+        husT.lada(len+2*UT,0.11,r.h+0.5+2*UT,bg.fargT,
+          M4.mul(M4.translation(cx+s*(halv/2+UT*cv),hV+res/2-UT*sv,cz),M4.rotZ(-s*vin)));
       for(const s of [-1,1]){                 // gavelspetsarna i söder och norr
         const z=s<0?r.y:r.y+r.h;
-        v3dTriangel(vt,[r.x,hV,z],[r.x+r.w,hV,z],[cx,hN,z],glMorka(bg.fargV,0.88));
+        v3dTriangel(vt,[r.x,hV,z],[r.x+r.w,hV,z],[cx,hN,z],bg.fargV,VARV);
+      }
+      if(bg.takfot){
+        for(const s of [-1,1]){               // takfoten längs långsidorna
+          husD.lada(0.11,0.26,r.h+0.5+2*UT,SVART,
+            M4.translation(cx+s*(halv+UT*cv),hV-UT*sv-0.10,cz));
+          for(const zs of [r.y-0.25-UT,r.y+r.h+0.25+UT])   // vindskivorna på gavlarna
+            husD.lada(len+2*UT,0.20,0.13,SVART,
+              M4.mul(M4.translation(cx+s*(halv/2+UT*cv),hV+res/2-UT*sv-0.19,zs),M4.rotZ(-s*vin)));
+        }
       }
     }else{                                    // nocken längs x
       const halv=r.h/2, res=hN-hV, len=Math.hypot(halv,res), vin=Math.atan2(res,halv);
       for(const s of [-1,1])
         husT.lada(r.w+0.5,0.14,len,bg.fargT,
-          M4.mul(M4.translation(cx,hV+res/2,cz+s*halv/2),M4.rotX(-s*vin)));
+          M4.mul(M4.translation(cx,hV+res/2,cz+s*halv/2),M4.rotX(s*vin)));
       for(const s of [-1,1]){
         const x=s<0?r.x:r.x+r.w;
-        v3dTriangel(vt,[x,hV,r.y],[x,hV,r.y+r.h],[x,hN,cz],glMorka(bg.fargV,0.88));
+        v3dTriangel(vt,[x,hV,r.y],[x,hV,r.y+r.h],[x,hN,cz],bg.fargV,VARV);
       }
+    }
+    /* Den svarta listen som delar plåtfasaden i två våder. På
+       ridhuset är den det första ögat fastnar på från parkeringen —
+       den ligger i övre bjälklagets höjd, samma nivå som balkongen. */
+    if(bg.list){
+      const u=0.07, lh=0.22;
+      husD.lada(r.w+2*u,lh,u,SVART,M4.translation(cx,bg.list,r.y-u/2));
+      husD.lada(r.w+2*u,lh,u,SVART,M4.translation(cx,bg.list,r.y+r.h+u/2));
+      husD.lada(u,lh,r.h,SVART,M4.translation(r.x-u/2,bg.list,cz));
+      husD.lada(u,lh,r.h,SVART,M4.translation(r.x+r.w+u/2,bg.list,cz));
     }
     /* Vita knutar på trähusen. */
     if(!bg.plat)for(const[dx,dz]of[[0,0],[r.w,0],[0,r.h],[r.w,r.h]])
@@ -176,7 +275,7 @@ function v3dGard(lagg,opp){
       husT.cyl(0.20,0.20,0.5,"#2E3238",M4.translation(cx,hN+0.5,z),8);
     }
     /* Fasadöppningar. */
-    const FARG={dorr:"#33291F", dorrgul:"#D9A13E", dorrvit:"#E8E2D4",
+    const FARG={dorr:"#1A1A1C", dorrgul:"#D9A13E", dorrvit:"#E8E2D4",
       dorrgra:"#A2A4A6", dorrmork:"#463F38", portplat:"#B4B7B9",
       portsilver:"#C4C7C9", fonster:"#3A4A5C", valv:"#3A4A5C", rund:"#3A4A5C"};
     for(const o of (bg.oppningar||[])){
@@ -189,17 +288,49 @@ function v3dGard(lagg,opp){
       })(o.sida);
       const L=Math.hypot(P[1][0]-P[0][0],P[1][1]-P[0][1]);
       const ux=(P[1][0]-P[0][0])/L, uy=(P[1][1]-P[0][1])/L;
-      const mat=v3dFasadMat(P[0],ux,uy,o.u+o.b/2,o.z0+o.h/2,0.09);
-      opp.panel(o.b,o.h,FARG[o.typ]||"#33291F",mat);
-      if(o.typ==="fonster"||o.typ==="valv"||o.typ==="rund")   // vit foderlist
-        opp.panel(o.b+0.22,o.h+0.22,"#EFE8D8",
-          v3dFasadMat(P[0],ux,uy,o.u+o.b/2,o.z0+o.h/2,0.06));
-      if(o.typ==="dorrgul"||o.typ==="dorrvit")
-        opp.panel(o.b+0.26,o.h+0.16,"#EFE8D8",
-          v3dFasadMat(P[0],ux,uy,o.u+o.b/2,o.z0+o.h/2,0.06));
+      const F=(z,ut)=>v3dFasadMat(P[0],ux,uy,o.u+o.b/2,z,ut);
+      const F2=(du,z,ut)=>v3dFasadMat(P[0],ux,uy,o.u+o.b/2+du,z,ut);
+      const mat=F(o.z0+o.h/2,OPPDJUP.ruta);
+      const glas=FARG[o.typ]||"#33291F";
+      /* Vitt foder som en ram runt öppningen, inte en skiva bakom den.
+         En skiva gör dörr och foder till ett enda blekt block; ramen är
+         det man ser på fotona: smal vit list, mörk dörr innanför. */
+      const foder=(tj,sockel)=>{
+        opp.lada(o.b+2*tj,tj,0.07,"#EEEEE8",F2(0,o.z0+o.h+tj/2,OPPDJUP.karm));
+        for(const sd of [-1,1])
+          opp.lada(tj,o.h+tj,0.07,"#EEEEE8",F2(sd*(o.b+tj)/2,o.z0+(o.h+tj)/2,OPPDJUP.karm));
+        if(sockel)opp.lada(o.b+2*tj,tj,0.07,"#EEEEE8",F2(0,o.z0-tj/2,OPPDJUP.karm));
+      };
+      if(o.typ==="valv"){                     // valvbågat, flerrutigt
+        v3dPolygon(opp,v3dValvKontur(o.b+0.20,o.h+0.20),"#EEEEE8",F(o.z0+o.h/2+0.06,OPPDJUP.karm));
+        v3dPolygon(opp,v3dValvKontur(o.b,o.h),glas,mat);
+        v3dSprojs(opp,o.b*0.9,o.h*0.72,F(o.z0+o.h*0.36,OPPDJUP.sprojs),3,2);
+      }else if(o.typ==="rund"){               // bullseye
+        v3dPolygon(opp,v3dRundKontur(o.b+0.20),"#EEEEE8",F(o.z0+o.h/2,OPPDJUP.karm));
+        v3dPolygon(opp,v3dRundKontur(o.b),glas,mat);
+        v3dSprojs(opp,o.b*0.68,o.b*0.68,F(o.z0+o.h/2,OPPDJUP.sprojs),2,2);
+      }else{
+        opp.panel(o.b,o.h,glas,mat);
+        if(o.typ==="fonster"){foder(0.10,true);
+          v3dSprojs(opp,o.b*0.94,o.h*0.94,F(o.z0+o.h/2,OPPDJUP.sprojs),2,2);}
+        if(o.typ==="dorr"||o.typ==="dorrgul"||o.typ==="dorrvit"||o.typ==="dorrmork")
+          foder(0.12,false);
+        if(o.typ==="dorrvit"){                // glasade rutor i dubbeldörren
+          for(const sd of [-1,1])
+            opp.panel(o.b*0.30,o.h*0.22,"#3A4A5C",
+              F2(sd*o.b*0.24,o.z0+o.h*0.72,OPPDJUP.sprojs));
+          opp.lada(0.05,o.h*0.92,0.05,"#EEEEE8",F2(0,o.z0+o.h/2,OPPDJUP.sprojs));
+        }
+        if(o.typ==="dorr"||o.typ==="dorrmork") // handtag
+          opp.lada(0.05,0.16,0.05,"#C4C7C9",F2(o.b*0.34,o.z0+1.05,OPPDJUP.sprojs));
+      }
+      /* Skärmtaket: sadelform med nocken ut från väggen. */
+      if(o.skarm)
+        v3dSkarmtak(husD,F(o.z0+o.h+0.30,0.02),o.skarm,0.80,0.42);
     }
+    if(bg.detalj==="ridhus")v3dRidhusYttre(bg,husD,opp);
   }
-  lagg(husV,T.falu); lagg(husP,T.ridhusplat); lagg(husT,T.takplat);
+  lagg(husV,T.falu); lagg(husP,T.ridhusplat); lagg(husT,T.takplat); lagg(husD,null);
 
   /* Staketen. */
   const stak=new Bygge();
@@ -225,11 +356,13 @@ function v3dGard(lagg,opp){
           stak.lada(0.07,1.15,0.07,"#6E6A5E",
             M4.mul(mitt,M4.translation(-len/2+len*k/n,0.58,0)));
       }else{
-        stak.lada(len,0.12,0.06,"#8A3129",M4.mul(mitt,M4.translation(0,0.75,0)));
+        /* Rödbrunt tvåregelsstaket, som det framför ridhuset på fotona. */
+        for(const y of [0.70,1.12])
+          stak.lada(len,0.12,0.06,"#7A2E28",M4.mul(mitt,M4.translation(0,y,0)));
         const n=Math.max(1,Math.round(len/3));
         for(let k=0;k<=n;k++)
-          stak.lada(0.12,0.86,0.12,"#7A2B24",
-            M4.mul(mitt,M4.translation(-len/2+len*k/n,0.43,0)));
+          stak.lada(0.12,1.24,0.12,"#6A2822",
+            M4.mul(mitt,M4.translation(-len/2+len*k/n,0.62,0)));
       }
     }
   }
@@ -287,12 +420,6 @@ function v3dGard(lagg,opp){
         pr.lada(0.46,0.06,0.46,"#8A7250",M4.translation(x,0.45,z));
         pr.lada(0.46,0.5,0.06,"#8A7250",M4.translation(x,0.70,z-0.20));
         break;
-      case"trappa":
-        for(let i=0;i<7;i++)
-          pr.lada(2.6,0.18,0.32,"#B4B7B9",M4.translation(x,0.18*i+0.09,z+0.32*i));
-        pr.lada(0.08,1.1,2.3,"#8A8C90",M4.translation(x-1.25,1.2,z+1.1));
-        pr.lada(0.08,1.1,2.3,"#8A8C90",M4.translation(x+1.25,1.2,z+1.1));
-        break;
       case"veranda":
         pr.lada(5.2,0.18,2.4,"#7E8288",M4.translation(x,2.55,z));
         for(const dx of [-2.3,2.3])
@@ -342,6 +469,97 @@ function v3dGard(lagg,opp){
     S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(txt)});
   }
   lagg(STIL==="kloss"?glPlatta(pr):pr,null);
+}
+
+
+/* ── Ridhuset utvändigt ────────────────────────────────────────────
+   Byggt efter references/buildings/ridhus/KORT.md, som är läst ur
+   fotona i samma mapp. Volymen, den svarta listen och takfoten sköts
+   av den generella slingan ovan; här läggs det som bara det här huset
+   har, och som är själva igenkänningen från parkeringen:
+
+     · gallren högt uppe på gaveln — det runda, jalusigallret och den
+       svarta fläktlådan med sin kanal
+     · caféannexets balkong med pulpettak, stålräcke och den utvändiga
+       trappan upp till Café Krubban
+     · stuprören i hörnen och strålkastarna under takfoten
+
+   Alla mått i meter, u räknat österut längs södra gaveln från husets
+   sydvästra hörn — samma u som fasadöppningarna i site.js.
+   ── */
+function v3dRidhusYttre(bg,d,opp){
+  const r=bg.rekt, hV=bg.hV;
+  const SVART=bg.svart||"#202022", STAL="#B4B9BE", MORK="#3A3E44";
+  /* +X längs södra gaveln, +Y uppåt, +Z ut mot parkeringen. */
+  const F=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);
+
+  /* Runt ventilationsgaller, ensamt på en tom fasadyta. */
+  d.cyl(0.27,0.27,0.09,"#8C9096",M4.mul(F(5.5,5.65,0.02),M4.rotX(Math.PI/2)),12);
+  d.cyl(0.21,0.21,0.05,MORK,M4.mul(F(5.5,5.65,0.10),M4.rotX(Math.PI/2)),12);
+  /* Rektangulärt jalusigaller strax väster om nocklinjen. */
+  d.lada(0.52,1.05,0.09,"#4C4A44",F(13.0,5.60,0.045));
+  for(let i=0;i<7;i++)
+    d.lada(0.46,0.06,0.06,"#7A6E5C",F(13.0,5.16+i*0.145,0.10));
+  /* Fläktlådan med rund kanal — den är stor på fotot, nästan en halv
+     kvadratmeter svart plåt mitt på den tomma väggen. */
+  d.lada(1.10,0.74,0.18,SVART,F(16.6,5.65,0.09));
+  d.cyl(0.19,0.19,0.42,"#141416",M4.mul(F(16.95,5.60,0.16),M4.rotX(Math.PI/2)),10);
+  /* Kameran vid nocken och strålkastarna under takfoten. */
+  d.lada(0.16,0.15,0.20,SVART,F(13.4,6.55,0.12));
+  for(const u of [7.2,17.6]){
+    d.lada(0.30,0.10,0.20,SVART,F(u,5.30,0.12));
+    d.lada(0.09,0.22,0.09,SVART,F(u,5.44,0.06));
+  }
+  /* Stuprören i gavelns båda hörn. */
+  for(const u of [0.22,r.w-0.22]){
+    d.cyl(0.06,0.06,hV-0.25,SVART,F(u,0,0.12),8);
+    d.lada(0.34,0.10,0.10,SVART,F(u,hV-0.28,0.12));
+  }
+
+  /* ── Caféannexet: balkongen och trappan upp till Café Krubban ──
+     Balkonggolvet ligger i samma höjd som den svarta listen, alltså i
+     övre bjälklaget. Över balkongen ett pulpettak på två stolpar —
+     i fotot syns dess mörka framkant över räcket. */
+  const bz=3.95, bu0=21.3, bu1=25.9, bdj=1.50;
+  d.lada(bu1-bu0,0.18,bdj,MORK,F((bu0+bu1)/2,bz-0.09,bdj/2));
+  d.lada(bu1-bu0,0.10,0.10,SVART,F((bu0+bu1)/2,bz-0.20,bdj-0.05));
+  for(const y of [bz+0.54,bz+1.02])            // räckets liggande rör
+    d.lada(bu1-bu0,0.05,0.05,STAL,F((bu0+bu1)/2,y,bdj-0.06));
+  for(let u=bu0+0.18;u<bu1-0.1;u+=0.40)        // spjälorna
+    d.lada(0.035,1.02,0.035,STAL,F(u,bz+0.51,bdj-0.06));
+  for(const u of [bu0+0.05,bu1-0.05]){         // räcket på balkongens kortsidor
+    for(const y of [bz+0.54,bz+1.02])
+      d.lada(0.05,0.05,bdj,STAL,F(u,y,bdj/2));
+    d.lada(0.035,1.02,0.035,STAL,F(u,bz+0.51,bdj-0.14));
+  }
+  const tz=5.55, tdj=1.65;                     // pulpettaket över balkongen
+  d.lada(bu1-bu0+0.20,0.10,tdj,MORK,F((bu0+bu1)/2,tz,tdj/2-0.1));
+  d.lada(bu1-bu0+0.20,0.12,0.09,SVART,F((bu0+bu1)/2,tz-0.09,tdj-0.15));
+  for(const u of [bu0+0.30,bu1-0.30])
+    d.lada(0.10,tz-bz,0.10,SVART,F(u,(bz+tz)/2,bdj-0.20));
+
+  /* Den utvändiga ståltrappan. Stiger österut längs fasaden och
+     landar på balkongen — precis som på fotot, där den delar gaveln
+     diagonalt under caféskylten. */
+  const su0=13.4, su1=bu0, sbr=1.10, sut=0.62, steg=22;
+  const lut=Math.atan2(bz,su1-su0), hyp=Math.hypot(bz,su1-su0);
+  for(let i=0;i<steg;i++){
+    const u=su0+(su1-su0)*(i+0.5)/steg, y=bz*(i+1)/steg;
+    d.lada((su1-su0)/steg+0.03,0.05,sbr,"#C6CACE",F(u,y-0.03,sut+sbr/2));
+    d.lada((su1-su0)/steg+0.03,0.16,0.04,"#9AA0A6",F(u,y-0.12,sut+0.04));
+  }
+  for(const ut of [sut+0.03,sut+sbr-0.03])     // vangstyckena
+    d.lada(hyp,0.24,0.05,"#9AA0A6",
+      M4.mul(F((su0+su1)/2,bz/2-0.22,ut),M4.rotZ(lut)));
+  for(const y of [0.62,1.06])                  // ledstängerna
+    d.lada(hyp,0.05,0.05,STAL,
+      M4.mul(F((su0+su1)/2,bz/2+y,sut+sbr-0.03),M4.rotZ(lut)));
+  for(let i=1;i<steg;i+=3){
+    const u=su0+(su1-su0)*i/steg, y=bz*i/steg;
+    d.lada(0.035,1.06,0.035,STAL,F(u,y+0.53,sut+sbr-0.03));
+  }
+  d.lada(0.09,1.06,0.09,STAL,F(su0,0.53,sut+sbr-0.03));   // nedersta stolpen
+  d.lada(0.09,1.30,0.09,STAL,F(su1-0.05,bz+0.65,sut+sbr-0.03));
 }
 
 /* ── Stallet invändigt ────────────────────────────────────────── */
@@ -467,9 +685,10 @@ function v3dRidhus(lagg,opp){
   hall.lada(0.3,R.tak,R.langd,"#FFFFFF",M4.translation(R.bredd+0.15,R.tak/2,R.langd/2));
   const halvS=R.bredd/2, resn=2.8;
   const takL=Math.hypot(halvS,resn), takV=Math.atan2(resn,halvS);
+  /* Takfallen lutar ned mot väggarna — samma teckenregel som utvändigt. */
   for(const s of [-1,1])
     hall.lada(takL,0.18,R.langd+0.6,"#3A3E44",
-      M4.mul(M4.translation(R.bredd/2+s*halvS/2,R.tak+resn/2,R.langd/2),M4.rotZ(s*takV)));
+      M4.mul(M4.translation(R.bredd/2+s*halvS/2,R.tak+resn/2,R.langd/2),M4.rotZ(-s*takV)));
   for(let z=1;z<R.langd;z+=6){
     hall.lada(R.bredd,0.26,0.24,"#7A5C3E",M4.translation(R.bredd/2,R.tak-0.2,z));
     hall.lada(0.22,2.7,0.22,"#7A5C3E",M4.translation(R.bredd/2,R.tak+1.3,z));

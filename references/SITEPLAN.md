@@ -9,7 +9,7 @@ behövs — skriv meter här och meter i koden.
 
 | Byggnad/yta | Position (m, X/Z) | Rotation (° från nord) | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
-| Ridhuset | 0 / 0 | | | |
+| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot parkeringen i söder | 26 × 66 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
 | Stallet | | | | |
 | Utebana (ridbana) | | | | |
 | Paddockar/hagar | | | | |
