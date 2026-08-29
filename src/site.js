@@ -42,8 +42,8 @@ const ANL = {
     {typ:"asfalt",rekt:{x:0,   y:2,   w:210, h:5}},    // Husbyvägen
     {typ:"grus",  rekt:{x:106, y:7,   w:16,  h:14}},   // infarten
     {typ:"grus",  rekt:{x:112, y:16,  w:38,  h:28}},   // grusparkeringen vid södra gaveln
-    {typ:"grus",  rekt:{x:112, y:44,  w:6,   h:76}},   // grusvägen längs västra långsidan
-    {typ:"grus",  rekt:{x:112, y:110, w:34,  h:16}},   // vägen svänger runt norra gaveln
+    {typ:"grus",  rekt:{x:112, y:44,  w:6,   h:85}},   // grusvägen längs västra långsidan
+    {typ:"grus",  rekt:{x:112, y:119, w:34,  h:14}},   // vägen svänger runt norra gaveln
     {typ:"grus",  rekt:{x:144, y:20,  w:48,  h:26}},   // gårdsplanen vid stallentrén
     {typ:"grus",  rekt:{x:166, y:44,  w:10,  h:60}},   // gången öster om stallet mot hagarna
     {typ:"grus",  rekt:{x:150, y:102, w:26,  h:8}},    // bakgården vid silon
@@ -73,28 +73,28 @@ const ANL = {
            skärmtak, och i öster Café Krubban med fyra valvbågade
            fönster, balkong och utvändig ståltrappa
        Banan 20×60 därinne; UBRF-skylten mitt på västra långsidan. */
-    {id:"ridhus", rekt:{x:118, y:44, w:26, h:66}, hV:6.2, hN:9.2, nock:"NS",
+    {id:"ridhus", rekt:{x:118, y:44, w:25, h:75}, hV:6.2, hN:9.2, nock:"NS",
      fargV:"#872F40", fargT:"#202022", svart:"#202022", plat:true,
      list:4.10, takfot:true, detalj:"ridhus", label:"RIDHUSET",
      oppningar:[
-       {sida:"S", u:3.2, b:1.8, h:2.2, z0:0,   typ:"dorrvit", skarm:2.6}, // dubbeldörren
-       {sida:"S", u:3.4, b:1.20,h:1.55,z0:4.45,typ:"valv"},   // valvfönstret över entrén
-       {sida:"S", u:8.4, b:1.1, h:2.1, z0:0,   typ:"dorr", skarm:2.1},    // svarta dörren
-       {sida:"S", u:20.9,b:1.05,h:1.45,z0:1.35,typ:"valv"},   // caféet, nedre våningen
-       {sida:"S", u:25.1,b:1.05,h:1.45,z0:1.35,typ:"valv"},
-       {sida:"S", u:20.9,b:1.05,h:1.45,z0:4.45,typ:"valv"},   // caféet, övre våningen
-       {sida:"S", u:25.1,b:1.05,h:1.45,z0:4.45,typ:"valv"},
-       {sida:"S", u:23.2,b:1.0, h:2.05,z0:4.02,typ:"dorr"},   // cafédörren mot balkongen
+       {sida:"S", u:3.1, b:1.8, h:2.2, z0:0,   typ:"dorrvit", skarm:2.6}, // dubbeldörren
+       {sida:"S", u:3.3, b:1.20,h:1.55,z0:4.45,typ:"valv"},   // valvfönstret över entrén
+       {sida:"S", u:8.1, b:1.1, h:2.1, z0:0,   typ:"dorr", skarm:2.1},    // svarta dörren
+       {sida:"S", u:20.1,b:1.05,h:1.45,z0:1.35,typ:"valv"},   // caféet, nedre våningen
+       {sida:"S", u:24.1,b:1.05,h:1.45,z0:1.35,typ:"valv"},
+       {sida:"S", u:20.1,b:1.05,h:1.45,z0:4.45,typ:"valv"},   // caféet, övre våningen
+       {sida:"S", u:24.1,b:1.05,h:1.45,z0:4.45,typ:"valv"},
+       {sida:"S", u:22.3,b:1.0, h:2.05,z0:4.02,typ:"dorr"},   // cafédörren mot balkongen
        /* Västra långsidan, mot vägen. Street View visar en lång
           entrékvist närmast caféet, den svarta dörren vid UBRF-skylten
           och en rad små fyrkantsfönster högt uppe. */
-       {sida:"W", u:57, b:2.0, h:2.2, z0:0,    typ:"dorrvit"},  // dubbeldörrarna under kvisten
-       {sida:"W", u:36, b:1.1, h:2.1, z0:0,    typ:"dorr"},     // svarta dörren vid skylten
-       {sida:"W", u:12, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
-       {sida:"W", u:18, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
-       {sida:"W", u:24, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
-       {sida:"E", u:4,  b:3.4, h:2.9, z0:0, typ:"portplat"}, // durkplåtdörrarna mot gården
-       {sida:"N", u:9,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten
+       {sida:"W", u:66, b:2.0, h:2.2, z0:0,    typ:"dorrvit"},  // dubbeldörrarna under kvisten
+       {sida:"W", u:45, b:1.1, h:2.1, z0:0,    typ:"dorr"},     // svarta dörren vid skylten
+       {sida:"W", u:14, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
+       {sida:"W", u:22, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
+       {sida:"W", u:30, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
+       {sida:"E", u:22, b:3.4, h:2.9, z0:0, typ:"portplat"}, // durkplåtdörrarna mot gården
+       {sida:"N", u:8,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten
      ]},
     /* Stallet. Måtten och färgerna kommer ur byggnadskortet
        references/buildings/stall/KORT.md, läst ur fasad- och
@@ -163,7 +163,7 @@ const ANL = {
     {typ:"tra", p:[[150,112],[170,112],[170,146],[150,146],[150,112]]},// paddocken bredvid
     {typ:"tra", p:[[176,44],[206,44],[206,72],[176,72],[176,44]]},     // hage Ö1
     {typ:"tra", p:[[176,76],[206,76],[206,100],[176,100],[176,76]]},   // hage Ö2
-    {typ:"el",  p:[[112,44],[112,110]]},                               // trådstängsel mot åkern
+    {typ:"el",  p:[[112,44],[112,119]]},                               // trådstängsel mot åkern
     {typ:"rail",p:[[112,42],[150,42]]},                                // rail mot parkeringen
     {typ:"rail",p:[[146,26],[146,36]]},                                // rail vid lekhagen
   ],
@@ -199,8 +199,8 @@ const ANL = {
     {typ:"stol",      pos:[149,88]},
     {typ:"bord",      pos:[158,38]},                     // gårdsplanens möbler
     {typ:"bank",      pos:[164,40]},
-    {typ:"skylt",     pos:[118,77], text:"UPPLANDS-BRO RYTTARFÖRENING", norm:[-1,0]},
-    {typ:"cafeskylt", pos:[136.4,43.8], norm:[0,-1]},   // skylten vid trappans fot
+    {typ:"skylt",     pos:[118,82], text:"UPPLANDS-BRO RYTTARFÖRENING", norm:[-1,0]},
+    {typ:"cafeskylt", pos:[135.4,43.8], norm:[0,-1]},   // skylten vid trappans fot
     {typ:"flagga",    pos:[107,15]},
     {typ:"vagvisare", pos:[151.5,57]},   // vägvisaren med åtta armar
     {typ:"stenhast",  pos:[149.5,29.5]},                 // stenhästarna i lekhagen
@@ -211,8 +211,8 @@ const ANL = {
     {typ:"mast",      pos:[196,106]},
     {typ:"mast",      pos:[150,146]},
     {typ:"sopstation",pos:[147,104]},
-    {typ:"ac",        pos:[144.4,54], norm:[1,0]},                   // värmepumparna mot gården
-    {typ:"ac",        pos:[144.4,58], norm:[1,0]},
+    {typ:"ac",        pos:[143.4,54], norm:[1,0]},                   // värmepumparna mot gården
+    {typ:"ac",        pos:[143.4,58], norm:[1,0]},
     {typ:"busskylt",  pos:[118,7.6]},
   ],
 
@@ -224,11 +224,11 @@ const ANL = {
      mot:"stallinne", spawn:{x:1.2, y:25, rikt:0}},
     {id:"stall_n",  pos:[160.3,100.8], text:"Gå in i stallet (bakre dörren)",
      mot:"stallinne", spawn:{x:7.5, y:50, rikt:-Math.PI/2}},
-    {id:"ridhus_o", pos:[144.4,50], text:"In i ridhuset (durkplåtdörrarna)",
-     mot:"ridhusinne", spawn:{x:24.4,y:4.5,rikt:Math.PI}},
-    {id:"ridhus_s", pos:[122.5,43.6], text:"In i ridhuset (entrén)",
-     mot:"ridhusinne", spawn:{x:5,y:1.4,rikt:Math.PI/2}},
-    {id:"cafe", pos:[137.5,43.4], text:"Café Krubban (trappan upp)", mot:"info",
+    {id:"ridhus_o", pos:[143.4,66], text:"In i ridhuset (durkplåtdörrarna)",
+     mot:"ridhusinne", spawn:{x:23.4,y:22,rikt:Math.PI}},
+    {id:"ridhus_s", pos:[121.1,43.6], text:"In i ridhuset (entrén)",
+     mot:"ridhusinne", spawn:{x:3.1,y:1.6,rikt:Math.PI/2}},
+    {id:"cafe", pos:[136.6,43.4], text:"Café Krubban (trappan upp)", mot:"info",
      info:"Café Krubban har stängt för kvällen. Kolla in vyn över banan från läktaren i stället."},
   ],
   spawn: {x:113, y:10, rikt:Math.PI/2},   // vid infarten från Husbyvägen
@@ -289,37 +289,48 @@ const STALLINNE = {
       med speglarna i väster, läktaren med domarbåset i öster,
       cafeteria-överbyggnaden med fönsterband och trappan i söder,
       hinderförrådet i norr. Sargporten vid A släpper in ekipagen. ── */
+/* Ridhuset invändigt. Måtten kommer ur utrymningsplanen (se
+   references/buildings/ridhus/KORT.md) med banans 20×60 som fast punkt:
+   planens längder är ihoptryckta av perspektivet, men banans två kända
+   mått ger skalan i båda led och resten faller ut.
+
+     bredd  20 m bana + 4,4 m läktarband  = 25 m
+     längd  60 m bana + 13 m gaveldel     = 75 m
+
+   Gaveldelen i söder är entré, trapphus och café — inte en tre meter
+   djup överbyggnad som förut. Går man in från parkeringen kommer man in
+   i en hall, inte rakt ut på banan. */
 const RIDHUSINNE = {
-  bredd:26, langd:65, tak:6.2,
-  bana:{x:2.5, y:3, w:20, h:60}, sargH:1.35,
+  bredd:25, langd:75, tak:6.2, entre:13,
+  bana:{x:0.6, y:13, w:20, h:60}, sargH:1.35,
   vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#5E4A36", gangFarg:"#8C8880",
   panel:"#6B4A34", panelList:"#EFE8D8",           // sponsorväggens bruna trä
-  laktare:{x0:23.5, y0:6, y1:54, steg:3, stegH:0.28, stegD:0.8},
-  domarbas:{x:24.2, y:56.5, b:1.8, h:2.2},
-  cafe:{djup:3.0, z0:2.55, z1:5.4},               // överbyggnaden i söder
-  trappa:{x:22.2, y:3.2},                          // trätrappan upp till caféet
-  speglar:[ {y:28,b:4.2},{y:45,b:3.2} ],           // på västra långsidan
+  laktare:{x0:21.0, y0:16, y1:66, steg:4, stegH:0.28, stegD:0.85},
+  domarbas:{x:23.4, y:68, b:1.8, h:2.2},
+  cafe:{djup:13.0, z0:2.55, z1:5.4},               // överbyggnaden i söder
+  trappa:{x:22.0, y:9.6},                          // trätrappan upp till caféet
+  speglar:[ {y:38,b:4.2},{y:56,b:3.2} ],           // på västra långsidan
   skyltar:[
-    {y:12,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
-    {y:18.5,b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
-    {y:33.5,b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
-    {y:38.5,b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
-    {y:50,  b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
-    {y:57,  b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
+    {y:22,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
+    {y:28.5,b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
+    {y:43.5,b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
+    {y:48.5,b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
+    {y:60,  b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
+    {y:67,  b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
   ],
-  port:{x0:11.5, x1:13.5},                         // sargporten vid A (södra kortsidan)
+  port:{x0:9.6, x1:11.6},                         // sargporten vid A (södra kortsidan)
   dorrar:[
-    {id:"ut_o", pos:[25.2,4.5],  text:"Ut till gårdsplanen", mot:"gard",
-     spawn:{x:145.6,y:50,rikt:0}},
-    {id:"ut_s", pos:[5,0.8],   text:"Ut mot parkeringen (entrén)", mot:"gard",
+    {id:"ut_o", pos:[24.2,22],   text:"Ut till gårdsplanen", mot:"gard",
+     spawn:{x:144.6,y:66,rikt:0}},
+    {id:"ut_s", pos:[3.1,0.8], text:"Ut mot parkeringen (entrén)", mot:"gard",
      spawn:{x:122.5,y:42.6,rikt:-Math.PI/2}},
   ],
   info:[
-    {pos:[22.4,3.6],  text:"Trappan till Café Krubban",
+    {pos:[22.2,9.9], text:"Trappan till Café Krubban",
      svar:"Café Krubban har stängt för kvällen. Genom fönsterbanden ser man hela banan från borden där uppe."},
-    {pos:[24.5,57],   text:"Domarbåset",
+    {pos:[23.6,68],  text:"Domarbåset",
      svar:"Domarbåset — härifrån döms hoppklasserna på Påskhoppet. En trappa, en pall och bästa utsikten i huset."},
-    {pos:[12.5,64.2], text:"Hinderförrådet",
+    {pos:[10.6,74.2],text:"Hinderförrådet",
      svar:"Hinderförrådet: bommar i blått, vitt och rött, kandelabrar, koner och cavaletti. ”HINDERSTÖD MED KLÄMHÅLLARE”, står det på lappen."},
   ],
 };

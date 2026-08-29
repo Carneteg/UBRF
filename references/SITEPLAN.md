@@ -25,16 +25,16 @@ Stallet ligger på ridhusets nordöstra sida. Båda löper **nordväst–sydost*
 - Aspviks koloniträdgårdsförening ligger sydost om anläggningen.
 
 ### Skala i satellitbilden
-Ridhuset mäter 330 bildpunkter på längden. Med en 20×60-bana inuti blir ytterhöljet
-omkring 70 m, alltså **~4,7 bildpunkter per meter**. Stallets 236 bildpunkter ger då
-50 m — nära de 54 m som stallkortet antar, vilket är den enda oberoende kontrollen
-av den siffran som finns.
+Ridhuset mäter 330 bildpunkter på längden. Med byggnadens 75 m (uträknat ur
+utrymningsplanen, se ridhuskortet) blir det **4,4 bildpunkter per meter**. Stallets
+236 bildpunkter ger då **54 m** — exakt det stallkortet antar ur boxantalet. Två
+oberoende vägar till samma tal.
 
 ## Placeringen i spelet
 
 | Byggnad/yta | Position (m, X/Y) | Rotation | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
-| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot grusplanen i söder | 26 × 66 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
+| Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, gavel mot grusplanen i söder | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. |
 | Stallet | 154 / 46 (sydvästra hörnet) | nock nord–syd, västra långsidan mot gården | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. |
 | Gräsgården mellan husen | 144–154 | — | 10 × 56 | Smal, precis som i satellitbilden |
 | Grusplanen / parkeringen | 112 / 16 | — | 38 × 28 | Utanför ridhusets gavel, mot vägen |
@@ -75,8 +75,12 @@ dem, men planformen gör det. Vad de säger står i respektive byggnadskort unde
 
 Kort: **stallet är ett dubbelstall** med fyra boxlängor och två gångar, och
 **ridhuset har en djup entré- och trapphusdel i gaveln** med två trapphus och en
-hiss. Spelets `STALLINNE` och `RIDHUSINNE` har fel planform på båda punkterna och
-står som kända fel tills det finns raka bilder på ritningarna.
+hiss.
+
+Ridhuset är ombyggt efter sin plan. Ritningen saknar skalstock, men Tobias har
+bekräftat att banan är **20×60**, och två kända mått räcker för att räkna bort
+perspektivet: byggnaden är **25 × 75 m**, inte 26 × 66 som gissades förut.
+`STALLINNE` står kvar som känt fel tills det finns en rak bild på stallets plan.
 
 ## Kvar att kontrollera på plats
 

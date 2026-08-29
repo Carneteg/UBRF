@@ -507,19 +507,19 @@ function v3dRidhusYttre(bg,d,opp){
   const F=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);
 
   /* Runt ventilationsgaller, ensamt på en tom fasadyta. */
-  d.cyl(0.27,0.27,0.09,"#8C9096",M4.mul(F(5.5,5.65,0.02),M4.rotX(Math.PI/2)),12);
-  d.cyl(0.21,0.21,0.05,MORK,M4.mul(F(5.5,5.65,0.10),M4.rotX(Math.PI/2)),12);
+  d.cyl(0.27,0.27,0.09,"#8C9096",M4.mul(F(5.3,5.65,0.02),M4.rotX(Math.PI/2)),12);
+  d.cyl(0.21,0.21,0.05,MORK,M4.mul(F(5.3,5.65,0.10),M4.rotX(Math.PI/2)),12);
   /* Rektangulärt jalusigaller strax väster om nocklinjen. */
-  d.lada(0.52,1.05,0.09,"#4C4A44",F(13.0,5.60,0.045));
+  d.lada(0.52,1.05,0.09,"#4C4A44",F(12.5,5.60,0.045));
   for(let i=0;i<7;i++)
-    d.lada(0.46,0.06,0.06,"#7A6E5C",F(13.0,5.16+i*0.145,0.10));
+    d.lada(0.46,0.06,0.06,"#7A6E5C",F(12.5,5.16+i*0.145,0.10));
   /* Fläktlådan med rund kanal — den är stor på fotot, nästan en halv
      kvadratmeter svart plåt mitt på den tomma väggen. */
-  d.lada(1.10,0.74,0.18,SVART,F(16.6,5.65,0.09));
-  d.cyl(0.19,0.19,0.42,"#141416",M4.mul(F(16.95,5.60,0.16),M4.rotX(Math.PI/2)),10);
+  d.lada(1.10,0.74,0.18,SVART,F(16.0,5.65,0.09));
+  d.cyl(0.19,0.19,0.42,"#141416",M4.mul(F(16.3,5.60,0.16),M4.rotX(Math.PI/2)),10);
   /* Kameran vid nocken och strålkastarna under takfoten. */
-  d.lada(0.16,0.15,0.20,SVART,F(13.4,6.55,0.12));
-  for(const u of [7.2,17.6]){
+  d.lada(0.16,0.15,0.20,SVART,F(12.9,6.55,0.12));
+  for(const u of [6.9,16.9]){
     d.lada(0.30,0.10,0.20,SVART,F(u,5.30,0.12));
     d.lada(0.09,0.22,0.09,SVART,F(u,5.44,0.06));
   }
@@ -528,7 +528,7 @@ function v3dRidhusYttre(bg,d,opp){
      det man ser från Enköpingsvägen, näst efter skylten. */
   {
     const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);
-    const ku0=50, ku1=64, kut=2.6, kz=3.05, kmitt=(ku0+ku1)/2, klen=ku1-ku0;
+    const ku0=59, ku1=73, kut=2.6, kz=3.05, kmitt=(ku0+ku1)/2, klen=ku1-ku0;
     d.lada(klen,0.12,kut+0.25,MORK,FW(kmitt,kz,kut/2));
     d.lada(klen+0.1,0.17,0.13,"#EEEEE8",FW(kmitt,kz-0.13,kut+0.07));
     for(let u=ku0+0.7;u<=ku1-0.5;u+=3.2)
@@ -549,7 +549,7 @@ function v3dRidhusYttre(bg,d,opp){
      Balkonggolvet ligger i samma höjd som den svarta listen, alltså i
      övre bjälklaget. Över balkongen ett pulpettak på två stolpar —
      i fotot syns dess mörka framkant över räcket. */
-  const bz=3.95, bu0=21.3, bu1=25.9, bdj=1.50;
+  const bz=3.95, bu0=20.5, bu1=24.9, bdj=1.50;
   d.lada(bu1-bu0,0.18,bdj,MORK,F((bu0+bu1)/2,bz-0.09,bdj/2));
   d.lada(bu1-bu0,0.10,0.10,SVART,F((bu0+bu1)/2,bz-0.20,bdj-0.05));
   for(const y of [bz+0.54,bz+1.02])            // räckets liggande rör
@@ -570,7 +570,7 @@ function v3dRidhusYttre(bg,d,opp){
   /* Den utvändiga ståltrappan. Stiger österut längs fasaden och
      landar på balkongen — precis som på fotot, där den delar gaveln
      diagonalt under caféskylten. */
-  const su0=13.4, su1=bu0, sbr=1.10, sut=0.62, steg=22;
+  const su0=12.9, su1=bu0, sbr=1.10, sut=0.62, steg=22;
   const lut=Math.atan2(bz,su1-su0), hyp=Math.hypot(bz,su1-su0);
   for(let i=0;i<steg;i++){
     const u=su0+(su1-su0)*(i+0.5)/steg, y=bz*(i+1)/steg;
@@ -834,13 +834,29 @@ function v3dRidhus(lagg,opp){
     lak.lada(1.2,0.19,0.30,"#FFFFFF",
       M4.translation(R.trappa.x,0.19*i+0.10,R.trappa.y+0.30*i));
   lagg(lak,T.tra);
-  const cafe=new Bygge();
-  cafe.lada(R.bredd,0.26,R.cafe.djup,"#CFC8BC",
-    M4.translation(R.bredd/2,R.cafe.z0,R.cafe.djup/2));
+  /* Entré- och trapphusdelen i södra gaveln. Utrymningsplanen visar en
+     djup del med två trapphus, hiss och rum — inte en tre meter grund
+     överbyggnad. Kommer man in från parkeringen står man i en hall och
+     ser banan genom öppningen, i stället för att kliva rakt ut på den. */
+  const cafe=new Bygge(), E=R.entre||R.cafe.djup;
+  cafe.lada(R.bredd,0.26,E,"#CFC8BC",                   // caféets golv, banans tak
+    M4.translation(R.bredd/2,R.cafe.z0,E/2));
   cafe.lada(R.bredd,R.cafe.z1-R.cafe.z0-0.26,0.16,"#E9E5DC",
-    M4.translation(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,R.cafe.djup));
-  for(let x=2;x<R.bredd-1;x+=3.2)                       // fönsterbandet
-    cafe.panel(2.4,1.1,"#3A4A5C",M4.translation(x,R.cafe.z0+1.3,R.cafe.djup+0.10));
+    M4.translation(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,E));
+  for(let x=2;x<R.bredd-1;x+=3.2)                       // fönsterbandet mot banan
+    cafe.panel(2.4,1.1,"#3A4A5C",M4.translation(x,R.cafe.z0+1.3,E+0.10));
+  /* Skiljeväggen mot banan, med en bred öppning mitt för sargporten. */
+  {const op0=R.port.x0-1.2, op1=R.port.x1+1.2;
+   cafe.lada(op0,R.cafe.z0,0.18,"#E9E5DC",M4.translation(op0/2,R.cafe.z0/2,E));
+   cafe.lada(R.bredd-op1,R.cafe.z0,0.18,"#E9E5DC",
+     M4.translation((op1+R.bredd)/2,R.cafe.z0/2,E));}
+  /* Rummen i hallen: reception, omklädning, trapphusen. Väggarna är
+     antydda, inte ritade rum för rum — planen går inte att läsa så. */
+  cafe.lada(0.16,2.6,E-2.2,"#E9E5DC",M4.translation(6.4,1.3,E/2-0.6));
+  cafe.lada(5.2,2.6,0.16,"#E9E5DC",M4.translation(3.8,1.3,E-2.8));
+  cafe.lada(0.16,2.6,4.4,"#E9E5DC",M4.translation(18.6,1.3,E-2.4));
+  for(let i=0;i<9;i++)                                   // andra trapphuset
+    cafe.lada(1.3,0.17,0.30,"#CFC8BC",M4.translation(19.6,0.17*i+0.09,E-4.4+0.30*i));
   lagg(cafe,null);
   /* Sponsorväggen med speglar och banderoller. */
   const panel=new Bygge();

@@ -21,9 +21,9 @@ Kortet är facit för byggfunktionen i `src/varld3d.js`.
 | `ridhus-gavel-03.jpg` | Längst till vänster i panoreringen, hela hallen | **Nocken och båda takfallen.** Caféannexet i två våningar till höger, med balkong, utvändig trappa och valvbågade fönster |
 
 ## Volym
-- Fotavtryck (L × B): **26 × 66 m**. Var ett antagande ur "en 20×60-bana ryms";
-  utrymningsplanen (se nedan) ger proportionen 2,7:1, alltså ~70 m vid 26 m bredd.
-  Kortets 66 m ligger inom felmarginalen för en snett fotograferad ritning.
+- Fotavtryck (L × B): **25 × 75 m**. Uträknat, inte gissat — se "Invändigt" nedan.
+  Tobias har bekräftat att **banan är 20×60**, och med två kända mått går
+  utrymningsplanens perspektiv att räkna bort.
 - Höjd till takfot: **6,2 m** `[antagande]`. Den svarta listen är **inte** takfoten
   — det syns i bild 03, där taklinjen fortsätter långt ovanför listen. Listen är
   övre bjälklaget, se nedan. Takfotens höjd går inte att mäta ur något foto
@@ -110,6 +110,25 @@ bottenvåning.
   yttertrappan utvändigt.
 - Utrymningsvägar längs långsidan och i båda ändar.
 
+**Måtten, uträknade:**
+
+Ritningen har ingen skalstock, men banan har två kända mått och det räcker.
+
+| | i planen | mot känt mått | skala |
+|---|---|---|---|
+| Banans bredd | 540 bp | 20 m | 27,0 bp/m |
+| Banans längd | ~1425 bp | 60 m | 23,8 bp/m |
+
+Skillnaden mellan de två skalorna är perspektivet: bilden är tagen snett, så
+**längder är ihoptryckta omkring 13 %**. Med det borträknat:
+
+- byggnaden **1790 bp lång → ~75 m**
+- byggnaden **665 bp bred → ~24,6 m**
+- gaveldelen **340 bp → ~13 m**
+
+Det stämmer på båda ledder utan att något behöver tvingas: 20 m bana + 4,4 m
+läktarband = 24,4 m bredd, och 60 m bana + 13 m gaveldel + marginal = 75 m längd.
+
 **Det den ändrar:**
 
 Gaveldelen är **djup — omkring en sjättedel av byggnadens längd** — och innehåller
@@ -117,18 +136,20 @@ Gaveldelen är **djup — omkring en sjättedel av byggnadens längd** — och i
 caféöverbyggnad, och går man in från parkeringen kommer man rakt ut i ridhuset. I
 verkligheten kommer man in i en entréhall.
 
-Det betyder också att banan är **kortare än byggnaden** med god marginal. Om
-gaveldelen tar tolv meter ryms ingen 20×60-bana i en 66 m lång byggnad, och
-antingen är huset längre än 66 m eller banan kortare än 60 m.
+Det betydde också att något inte gick ihop: gaveldelens tolv meter plus en
+20×60-bana ryms inte i en 66 m lång byggnad. Banan är bekräftad 20×60, alltså var
+det längden som var fel. **Huset är 75 m, inte 66.**
 
 **Vad jag inte kan läsa:** bilden är tagen snett, och underkanten lutar synligt mot
 överkanten. Längdmått blir därför fel — den bortre delen av planen är
 ihoptryckt. Proportionen ovan är grov, och den exakta uppdelningen mellan bana och
 gaveldel går inte att mäta.
 
-`RIDHUSINNE` lämnas orörd tills det finns en rak bild. Banan är 20×60 där, vilket
-är den bana ridmodellen och dressyrbokstäverna räknar med — att korta den är ingen
-liten ändring och ska inte göras på ett snett foto.
+`RIDHUSINNE` är ombyggd efter det här: 25 × 75 med banan 20×60 och en 13 m djup
+entré- och trapphusdel i södra gaveln. Går man in från parkeringen kommer man in i
+en hall och ser banan genom öppningen mitt för sargporten, i stället för att kliva
+rakt ut på banan. Rummen i hallen är antydda med väggar, inte ritade rum för rum —
+planen går inte att läsa så noga.
 
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (118, 44), fotavtryck 26 × 66 m
