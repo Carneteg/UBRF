@@ -533,17 +533,36 @@ function s3RitaHast(o){
   const luft=o.luft||0;
   const u=luft>0?1-luft/0.55:0;                          // 0→1 genom språnget
   const bage=luft>0?Math.sin(Math.PI*u):0;
-  /* Kroppens rörelse: takten lyfter, galoppen vaggar, språnget stiger. */
+  /* Kroppens rörelse: takten lyfter, galoppen vaggar, språnget stiger.
+     Det här är gångartens egen rytm, räknad ur fasen — den ska hållas
+     skild från svängens lutning nedan, annars går det inte att trimma
+     den ena utan att den andra ändras. */
   let bob=0,lut=0;
   if(gangart==="trav")bob=0.035*Math.sin(4*Math.PI*fas);
   else if(gangart==="galopp"){bob=0.06*Math.sin(2*Math.PI*fas);lut=0.07*Math.sin(2*Math.PI*fas);}
   else if(gangart==="skritt")bob=0.018*Math.sin(4*Math.PI*fas);
   if(luft>0){bob+=1.15*bage; lut-=0.52*Math.cos(Math.PI*u);}
 
-  /* Grundmatris: position, riktning (hästen är byggd mot +X), skala. */
+  /* ── Svängens lutning ─────────────────────────────────────────────
+     Kroppen lade sig inte i svängen: positionen böjde av medan hästen
+     såg neutral ut, och det är en av de tydligaste sakerna som får en
+     ridning att läsa som ett fordon.
+
+     Signalen är centripetalkraften — kurvatur gånger tempo i kvadrat,
+     alltså samma storhet som faktiskt drar i en kropp i en böj — inte
+     rå knappinput. Låg fart ger då nästan ingen lutning, och trav och
+     galopp ger tydlig men kontrollerad. Klampningen finns för att en
+     häst inte lägger sig som en motorcykel: fyra grader är mycket på en
+     häst, och mer läser som fel. */
+  const banLut=o.banlut||0;
+
+  /* Grundmatris: position, riktning (hästen är byggd mot +X), skala.
+     Svängens lutning är en rullning kring färdriktningen och läggs som
+     en egen rotation efter kursen, så att den inte blandas ihop med
+     gångartens vaggning. */
   const bas=M4.mul(
     M4.mul(M4.translation(o.x,bob*M,o.z), M4.rotY(-o.rikt)),
-    M4.mul(M4.rotZ(lut), M4.skala(M)));
+    M4.mul(M4.mul(M4.rotX(banLut), M4.rotZ(lut)), M4.skala(M)));
   const P=(x,y,z)=>[x,y,z];                              // lokala punkter
   const rita=(nat,mat,ton)=>{ gl.rita(nat,M4.mul(bas,mat),{ton}); };
   /* Skuggan läggs en gång för hela ekipaget, som en mjuk fläck under
@@ -937,9 +956,29 @@ function s3RitaHinder(){
 
 /* ── Kameran: bakom hästen, mjukt efterföljande ───────────────── */
 function s3Kamera(dt){
+  /* ── Kamerans egen kurs ───────────────────────────────────────────
+     Kameran satt fastsvetsad i hästens kurs: varje styrutslag vred hela
+     bilden i samma bildruta som hästen vred sig, vilket läser som att
+     man styr en kamera snarare än rider framåt. Nu har den en EGEN kurs
+     som följer hästens med kort fördröjning — hästen svänger först,
+     bilden hinner ifatt.
+
+     Skillnaden räknas den korta vägen runt cirkeln, annars snurrar
+     kameran ett helt varv när kursen passerar noll. */
+  const k=S3.kam;
+  const KAM_YAW_TAU=0.16;
+  if(k.yaw===undefined)k.yaw=G.rikt;
+  {let d=G.rikt-k.yaw;
+   while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+   k.yaw+=d*(1-Math.exp(-dt/KAM_YAW_TAU));}
+
+  /* Boomen ligger bakom kamerans kurs; blicken siktar i hästens
+     FÄRDRIKTNING, så att vägen framåt är läsbar även mitt i en sväng. */
+  const bakat=[Math.cos(k.yaw),0,Math.sin(k.yaw)];
   const fram=[Math.cos(G.rikt),0,Math.sin(G.rikt)];
   const hojd=G.luft>0?2.30:1.95;
-  let bak=G.luft>0?5.0:4.05;
+  let bakMal=G.luft>0?5.0:4.05;
+
   /* Boomen kortas tills kameran ligger innanför rummets väggar. Utan
      det går kameran rakt genom sargen så fort man rider i ett hörn —
      och man rider i hörnen hela tiden, eftersom fyrkantspåret går där.
@@ -955,24 +994,37 @@ function s3Kamera(dt){
       if(Math.hypot(px-n.x,pz-n.y)<1.9)return false;
     return true;
   };
-  for(let i=0;i<10&&bak>1.35;i++){
-    if(fritt(G.px-fram[0]*bak, G.py-fram[2]*bak))break;
-    bak*=0.82;
+  for(let i=0;i<10&&bakMal>1.35;i++){
+    if(fritt(G.px-bakat[0]*bakMal, G.py-bakat[2]*bakMal))break;
+    bakMal*=0.82;
   }
-  const mx=G.px-fram[0]*bak, mz=G.py-fram[2]*bak;
-  const k=S3.kam;
+  /* Boomlängden mjukas i stället för att hoppa. Söksteget ovan ger
+     diskreta längder — 4,05, 3,32, 2,72 — och utan utjämningen syntes
+     varje steg som ett ryck när man red längs sargen. Den drar in sig
+     snabbare än den åker ut, så att kameran aldrig hinner fastna i en
+     vägg men lugnt återtar sitt läge när det är fritt igen. */
+  if(k.bak===undefined)k.bak=bakMal;
+  k.bak+=(bakMal-k.bak)*(1-Math.exp(-dt/(bakMal<k.bak?0.10:0.42)));
+
+  const mx=G.px-bakat[0]*k.bak, mz=G.py-bakat[2]*k.bak;
   if(!k.satt){k.x=mx;k.y=hojd;k.z=mz;k.tx=G.px;k.ty=1.35;k.tz=G.py;k.satt=true;}
-  const f=1-Math.pow(0.0016,Math.min(dt,0.05));   // ramtidsoberoende mjukhet
-  k.x+=(mx-k.x)*f; k.y+=(hojd-k.y)*f; k.z+=(mz-k.z)*f;
+
+  /* Position och blickpunkt har SEPARATA svar. Blicken är snabbare än
+     kroppen: den ska ligga stadigt på vägen framåt medan kameran själv
+     glider mjukare. Med en gemensam faktor blev det antingen en slängig
+     blick eller en trög kamera. */
+  const fPos=1-Math.exp(-dt/0.13);
+  const fBlick=1-Math.exp(-dt/0.09);
+  k.x+=(mx-k.x)*fPos; k.y+=(hojd-k.y)*fPos; k.z+=(mz-k.z)*fPos;
   /* Mjukningen kan glida ut genom en vägg i en sväng även när målet
      ligger innanför. Ett hårt tak efteråt, så att det aldrig händer. */
   if(R){
     k.x=Math.max(R.x0,Math.min(R.x1,k.x));
     k.z=Math.max(R.z0,Math.min(R.z1,k.z));
   }
-  k.tx+=((G.px+fram[0]*2.6)-k.tx)*f;
-  k.ty+=((1.58+(G.luft>0?0.6:0))-k.ty)*f;
-  k.tz+=((G.py+fram[2]*2.6)-k.tz)*f;
+  k.tx+=((G.px+fram[0]*2.6)-k.tx)*fBlick;
+  k.ty+=((1.58+(G.luft>0?0.6:0))-k.ty)*fBlick;
+  k.tz+=((G.py+fram[2]*2.6)-k.tz)*fBlick;
   return k;
 }
 
@@ -1029,6 +1081,7 @@ function rita3D(Gs){
   const h=HORSES[G.hastId];
   if(h)s3RitaHast({hast:h, jag:true, x:G.px, z:G.py, rikt:G.rikt,
     gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas, luft:G.luft,
+    banlut:G.banLut||0,
     sadel:true, ryttare:true, skugga:true, aids:G.aids,
     samling:G.ride?clamp(G.ride.skala.samling*0.6+G.ride.skala.kontakt*0.4,0,1):0.4});
   GL.efter();          // glöd och mättnad

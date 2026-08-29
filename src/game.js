@@ -3,23 +3,58 @@
    ══════════════════════════════════════════════════════════════════ */
 
 /* ── Input: tryck är handlingar, inte tillstånd ── */
+
+/* ── Ridinputkontraktet ───────────────────────────────────────────
+   ETT normaliserat lager mellan enheten och ridmodellen. Tangentbord
+   och pekskärm skriver båda hit, och ridningen läser bara härifrån —
+   den vet inte vilken enhet spelaren har.
+
+   Förut översattes joysticken till syntetiska W/A/S/D när dess axlar
+   passerade en tröskel. Spaken såg analog ut men ridningen fick tre
+   lägen, och 25, 50 och 100 procents utslag gav samma sväng. Det är
+   den buggen det här lagret finns för.
+
+   Fälten är avsikter, inte hjälper: hur mycket spelaren ber om, i
+   spannet −1 till 1. Översättningen till skänkel, tygel och sits sker
+   i stegaInput, på ett ställe. ]] */
+const RIDIN={
+  skankel:0,      // −1 håll tillbaka … 0 neutral … 1 be om framåt
+  styr:0,         // −1 vänster … 0 rakt … 1 höger   (styraxeln)
+  tygel:0,        // 0 lös … 1 tagen
+  sits:0,         // −1 lätt (avlastad) … 0 normal … 1 djup
+  pek:false,      // sant när spaken senast rörde värdena
+};
+
 const IN={
   kan:{skankel:{v:.15,mal:.15},tygel:{v:0,mal:0},sits:{v:.2,mal:.2},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,ned:{},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
+
+/* Avsikt → hjälpvärde. Neutralläget — det som gäller när ingenting
+   hålls — är inte noll skänkel: en häst rids inte med släppt skänkel.
+   Det är därför nollan i varje rad nedan är ett mittvärde och inte 0. Samma kurva för tangent och spak, så att ett
+   halvt spakutslag ger precis halva vägen mot tangentens läge. */
+function ridAvsiktTillHjalp(){
+  const r=RIDIN, k=IN.kan;
+  k.skankel.mal = r.skankel>=0
+    ? 0.42+r.skankel*(0.78-0.42)
+    : 0.42+r.skankel*(0.42-0.05);
+  k.tygel.mal   = 0.34+clamp(r.tygel,0,1)*(0.80-0.34);
+  k.sits.mal    = r.sits>=0 ? 0.2+r.sits*(0.85-0.2) : 0.2+r.sits*(0.2-(-0.6));
+  k.styrning.mal= clamp(r.styr,-1,1)*0.72;
+}
 const STIG=0.28,FALL=0.22;
 addEventListener("keydown",e=>{
   if(e.repeat)return; IN.ned[e.code]=true;
-  const k=IN.kan;
   switch(e.code){
-    case"KeyW":k.skankel.mal=0.78;break;
-    case"KeyS":k.skankel.mal=0.05;break;
-    case"Space":k.tygel.mal=0.80;e.preventDefault();break;
-    case"ShiftLeft":case"ShiftRight":k.sits.mal=-0.6;break;
-    case"ControlLeft":case"ControlRight":k.sits.mal=0.85;e.preventDefault();break;
-    case"KeyA":k.styrning.mal=-0.72;break;
-    case"KeyD":k.styrning.mal=0.72;break;
+    case"KeyW":RIDIN.skankel=1;RIDIN.pek=false;break;
+    case"KeyS":RIDIN.skankel=-1;RIDIN.pek=false;break;
+    case"Space":RIDIN.tygel=1;e.preventDefault();break;
+    case"ShiftLeft":case"ShiftRight":RIDIN.sits=-1;break;
+    case"ControlLeft":case"ControlRight":RIDIN.sits=1;e.preventDefault();break;
+    case"KeyA":RIDIN.styr=-1;RIDIN.pek=false;break;
+    case"KeyD":RIDIN.styr=1;RIDIN.pek=false;break;
     case"KeyR":IN.latt=!IN.latt;break;
     case"KeyQ":IN.diagonal=1-IN.diagonal;break;
     case"KeyF":IN.spo=true;break;
@@ -39,17 +74,19 @@ addEventListener("keydown",e=>{
   }
 });
 addEventListener("keyup",e=>{
-  IN.ned[e.code]=false;const k=IN.kan;
+  IN.ned[e.code]=false;
   switch(e.code){
-    case"KeyW":case"KeyS":k.skankel.mal=0.42;break;
-    case"Space":k.tygel.mal=0.34;break;
-    case"ShiftLeft":case"ShiftRight":case"ControlLeft":case"ControlRight":k.sits.mal=0.2;break;
-    case"KeyA":if(!IN.ned.KeyD)k.styrning.mal=0;break;
-    case"KeyD":if(!IN.ned.KeyA)k.styrning.mal=0;break;
+    case"KeyW":RIDIN.skankel=IN.ned.KeyS?-1:0;break;
+    case"KeyS":RIDIN.skankel=IN.ned.KeyW?1:0;break;
+    case"Space":RIDIN.tygel=0;break;
+    case"ShiftLeft":case"ShiftRight":case"ControlLeft":case"ControlRight":RIDIN.sits=0;break;
+    case"KeyA":RIDIN.styr=IN.ned.KeyD?1:0;break;
+    case"KeyD":RIDIN.styr=IN.ned.KeyA?-1:0;break;
     case"KeyF":IN.spo=false;break;
   }
 });
 function stegaInput(dt){
+  ridAvsiktTillHjalp();          // avsikt → hjälpmål, en gång per bildruta
   for(const n in IN.kan){const k=IN.kan[n];
     const fart=(k.mal>k.v?1/STIG:1/FALL)*dt;
     if(Math.abs(k.mal-k.v)<=fart)k.v=k.mal;else k.v+=k.mal>k.v?fart:-fart;}
@@ -75,6 +112,9 @@ const G={
   vagranStopp:0,sisteHopp:0,luft:0,auto:false,
   rngHopp:null,spanningPuls:0,hoppaMoment:false,
   sagaT:0,sagaCd:8,naraRop:0,seed:1,
+  kappa:0,           // aktuell kurvatur, 1/m — se svängmodellen i stegaRitt
+  banLut:0,          // kroppens lutning i svängen, radianer
+  gaitSpar:0,        // tillryggalagd sträcka i m, driver gångartsfasen
 };
 /* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
    spelas, och kartan är ett uppslag man tar när man vill orientera
@@ -162,9 +202,36 @@ function stegaRitt(dt){
   G.aids=stegaInput(dt);
   if(G.auto)autopilot(dt);
   const h=HORSES[G.hastId];
-  // svängradie ur faktisk kursändring
-  const omega=G.aids.styrning*clamp(0.5+G.ride.tempo*0.22,0.4,2.2);
-  const radie=Math.abs(omega)>0.02?Math.abs(G.ride.tempo/omega):1000;
+
+  /* ── Svängen som KURVATUR, inte som vridhastighet ────────────────
+     Förut: omega = styrning × (0,5 + 0,22 × tempo). Vridhastigheten
+     växte alltså med farten — i fyrsprång kunde hästen snurra 2,2 rad/s,
+     alltså 126° i sekunden. Det ger snäva, fordonslika kurvor och gör
+     att man kan vika hästen genom en sväng i stället för att rida en
+     båge.
+
+     Nu ber styraxeln om en KURVATUR: hur snävt hästen ska böja sig, i
+     1/meter. Vridhastigheten faller ut som kurvatur × tempo, vilket är
+     samma sak som att svängradien blir 1/kurvatur oavsett fart. Varje
+     gångart har ett tak för hur snävt den kan böja — en häst i fyrsprång
+     böjer sig inte som en häst i skritt — och taken är samma siffror som
+     Roblox-spårets turn-faktorer, så designen bara översätts. */
+  const GANGSVANG={halt:1.00, skritt:1.00, trav:0.82, galopp:0.52};
+  const KAPPA_MAX=0.42;          // 1/m vid full styrning i skritt ≈ 2,4 m radie
+  const gv=GANGSVANG[G.ride.gangart]||1.00;
+  /* Smidigheten sitter i hästen och i ryttarens hand: en vig häst böjer
+     sig snävare, och den som rider mjukt får mer båge för samma utslag. */
+  const kappaTak=KAPPA_MAX*gv*(0.78+0.44*clamp(h.kanslighet,0,1));
+  const kappaBegard=clamp(G.aids.styrning,-1,1)*kappaTak;
+  /* Kurvaturen tar tag och släpper mjukt, dt-baserat. Utan den snäpper
+     bågen till sin nya radie i samma bildruta som fingret rör sig.
+     Att lägga sig i en båge går fortare än att räta upp sig ur den —
+     det är så en häst gör, och det är också vad som känns rätt. */
+  const kappaTau=Math.abs(kappaBegard)>Math.abs(G.kappa)?0.13:0.19;
+  G.kappa+=(kappaBegard-G.kappa)*(1-Math.exp(-dt/kappaTau));
+  if(Math.abs(G.kappa)<0.0015)G.kappa=0;
+  const omega=G.kappa*G.ride.tempo;
+  const radie=Math.abs(G.kappa)>0.002?1/Math.abs(G.kappa):1000;
   /* Utomhus väger skyggheten tyngre (modellen har faktorn), och regn
      gör underlaget tyngre än ridhusets harvade fiber. */
   const ute=G.plats!=="ridhus";
@@ -194,14 +261,27 @@ function stegaRitt(dt){
      högerdrag ger, och vad HUD:ens markör visar. Kameran var oskyldig —
      en punkt rakt öster om spelaren projiceras till NDC-x +13,9, alltså
      höger på skärmen, precis som den ska. */
-  G.rikt-=omega*dt*(G.ride.tempo>0.2?1:0);
-  // väggkollision: mjuk knuff in
+  /* Ingen extra fartgrind behövs: omega är kurvatur × tempo, så en
+     stillastående häst svänger inte av sig själv. Det är också kravet
+     om att inga vridningar på stället får ske under rörelse. */
+  G.rikt-=omega*dt;
+  /* ── Väggen: glid längs den, snäpp inte ──────────────────────────
+     Korrigeringen mot sargen använde en fast lerp-faktor per bildruta,
+     alltså 0,06 oavsett om spelet gick i 30 eller 144 Hz. Samma vägg
+     kändes då olika hård på olika datorer. Faktorn är nu dt-baserad med
+     samma tidskonstant som resten av rörelsen.
+
+     Hästen vrids mot väggens riktning i stället för att stoppas mot den,
+     så att man glider längs sargen — det är vad som händer när en häst
+     rider på spåret, och det är också vad kravet ber om. */
   let nx=G.px+Math.cos(G.rikt)*G.ride.tempo*dt;
   let ny=G.py+Math.sin(G.rikt)*G.ride.tempo*dt;
-  if(nx<0.8){nx=0.8;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,0.06);}
-  if(nx>19.2){nx=19.2;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,0.06);}
-  if(ny<0.8){ny=0.8;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,0.06);}
-  if(ny>59.2){ny=59.2;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,0.06);}
+  const VAGG_TAU=0.55;                      // sekunder att lägga sig längs sargen
+  const vaggT=1-Math.exp(-dt/VAGG_TAU);
+  if(nx<0.8){nx=0.8;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
+  if(nx>19.2){nx=19.2;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
+  if(ny<0.8){ny=0.8;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  if(ny>59.2){ny=59.2;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
   /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
      och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
      är till för hästarnas skull, inte för ordningens. */
@@ -241,13 +321,52 @@ function stegaRitt(dt){
       saga("För nära! Håll en hästlängd till ekipaget framför.",3.2);
     }
   }
+  /* ── Gångartsfasen följer MARKEN, inte klockan ────────────────────
+     Förut drevs fasen av en frekvens gånger tempot, vilket är nästan
+     rätt men inte riktigt: samma sträcka i samma gångart kunde ge olika
+     många hovnedslag beroende på hur tempot råkade variera på vägen, och
+     hovarna gled synligt mot underlaget.
+
+     Nu räknas den tillryggalagda sträckan, och fasen är sträckan delad
+     med gångartens effektiva cykellängd — steglängden gånger antalet
+     steg i cykeln. Då landar hovarna på samma ställen varje varv, och
+     stillastående häst rör inte fasen alls: står man still går man inte
+     på stället.
+
+     Steglängden kommer ur modellen (Gait.steglangd) och bär redan
+     hästens kategori, schvung och spänning, så en häst med mer schvung
+     tar längre steg — och färre av dem på samma sträcka. */
+  const strackaSteg=Math.hypot(nx-G.px, ny-G.py);
   G.px=nx;G.py=ny;
-  // gångartsfas för animation
-  const stegFrek=G.ride.gangart==="skritt"?1.0:G.ride.gangart==="trav"?1.5:G.ride.gangart==="galopp"?1.75:0;
-  G.gaitFas=(G.gaitFas+stegFrek*dt*(0.6+G.ride.tempo*0.12))%1;
+  G.gaitSpar+=strackaSteg;
+  {const CYKELSTEG={halt:0, skritt:4, trav:2, galopp:3};
+   const stegPerCykel=CYKELSTEG[G.ride.gangart]||0;
+   const cykelLangd=G.ride.steglangd*stegPerCykel;
+   if(cykelLangd>0.05){
+     G.gaitFas=(G.gaitFas+strackaSteg/cykelLangd)%1;
+   }else if(G.ride.gangart!=="halt"){
+     /* Har modellen ingen steglängd att ge (första bildrutan efter ett
+        gångartsbyte) faller fasen tillbaka på tempot, så att den aldrig
+        fryser mitt i ett steg. */
+     G.gaitFas=(G.gaitFas+G.ride.tempo*dt*0.5)%1;
+   }}
   ljudRittSteg(G.gaitFas,G.ride.gangart,
     G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;
+
+  /* ── Kroppens lutning i svängen ───────────────────────────────────
+     Centripetalaccelerationen är kurvatur gånger tempo i kvadrat. Den
+     storheten är noll när hästen står still hur mycket man än styr, växer
+     med farten i en given böj, och är densamma oavsett vilken enhet
+     spelaren håller i — allt tre är precis vad lutningen ska göra.
+
+     Utjämningen är dt-baserad och trögare än styrningen: kroppen lägger
+     sig i böjen efter att riktningen ändrats, inte samtidigt. Taket på
+     0,075 rad är knappt fyra och en halv grad, vilket är mycket på en
+     häst; mer läser som motorcykel. */
+  {const centripetal=G.kappa*G.ride.tempo*G.ride.tempo;
+   const mal=clamp(centripetal*0.012,-0.075,0.075);
+   G.banLut=(G.banLut||0)+(mal-(G.banLut||0))*(1-Math.exp(-dt/0.22));}
 }
 function lerpAngle(a,b,t){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*t;}
 
