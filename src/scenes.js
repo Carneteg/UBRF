@@ -162,9 +162,9 @@ function visaSkotsel(){
     </div>
   </div>`);
   for(const el of document.querySelectorAll(".gstep"))
-    el.onclick=()=>{SK.steg=+el.dataset.s;groomHint();};
+    el.onclick=()=>{SK.steg=+el.dataset.s;hovStang();momentKamTill(SK.steg);groomHint();};
   document.getElementById("bKlar").onclick=avslutaSkotsel;
-  initGroomCanvas();groomHint();
+  initGroomCanvas();momentKamTill(0,true);groomHint();
 }
 function groomHint(){
   const h=HORSES[G.hastId];
@@ -196,12 +196,19 @@ function initGroomCanvas(){
     const p=e.touches?e.touches[0]:e;return[(p.clientX-r.left)/r.width,(p.clientY-r.top)/r.height];};
   const ned=e=>{SK.drar=true;SK.sista=pos(e);hantera(pos(e),true);e.preventDefault();};
   const rr=e=>{if(!SK.drar)return;hantera(pos(e),false);SK.sista=pos(e);e.preventDefault();};
-  const upp=()=>{SK.drar=false;lyftHov=-1;ritaGroom();};
+  const upp=()=>{SK.drar=false;HOV.sista=null;if(HOV.i<0)lyftHov=-1;ritaGroom();};
   gcv.addEventListener("pointerdown",ned);gcv.addEventListener("pointermove",rr);
   addEventListener("pointerup",upp);
 }
 function hantera(p,klick){
-  const[x,y]=p;
+  /* Hoven först: när närbilden är uppe är det den som tar dragen. */
+  if(HOV.i>=0){
+    const r=gcv.getBoundingClientRect();
+    if(SK.drar)hovDrag(hovTillLokal(p[0],p[1],r.width,r.height));
+    dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
+    ritaGroom(); return;
+  }
+  const[x,y]=momentTillBild(p[0],p[1]);
   if(SK.steg===0&&klick){
     if(Math.hypot(x-MUNGIPA[0],y-MUNGIPA[1])<0.07)SK.visitering=Math.min(1,SK.visitering+0.5);   // mungipa
     if(Math.hypot(x-SADELPLATS[0],y-SADELPLATS[1])<0.10)SK.visitering=Math.min(1,SK.visitering+0.5); // sadelläge
@@ -209,20 +216,21 @@ function hantera(p,klick){
     dok(0,SK.visitering>=1?"klart":"…");
   }
   if(SK.steg===1&&SK.drar){
-    const dir=SK.sista?x-SK.sista[0]:0;
+    const fs=SK.sista?momentTillBild(SK.sista[0],SK.sista[1]):null;
+    const dir=fs?x-fs[0]:0;
     const kittlig=HORSES[G.hastId].flaggor&&HORSES[G.hastId].flaggor.kittlig;
     const lugnt=!kittlig||dir<0.022;   // kittlig häst: bara långsamma drag räknas
     for(let i=0;i<RYKTZONER.length;i++){const[zx,zy]=RYKTZONER[i];
       if(Math.hypot(x-zx,y-zy)<0.085&&dir>0.0005&&lugnt)SK.ryktning.add(i);}
     dok(1,Math.round(SK.ryktning.size/RYKTZONER.length*100)+" %"+(!lugnt?" · för fort!":""));
   }
-  if(SK.steg===2){
-    if(klick){let bi=-1,bd=0.055;
-      for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
-        if(d<bd){bd=d;bi=i;}}
-      if(bi>=0)lyftHov=bi;}
-    else if(lyftHov>=0&&SK.sista&&y-SK.sista[1]>0.004)
-      SK.hovar[lyftHov]=Math.min(1,SK.hovar[lyftHov]+0.10);
+  if(SK.steg===2&&klick){
+    /* Klicka på en hov: bilden zoomar in på sulan och kratsandet sker
+       där, inte som ett drag längs benet i profil. */
+    let bi=-1,bd=0.075;
+    for(let i=0;i<4;i++){const d=Math.hypot(x-HOVP[i][0],y-HOVP[i][1]);
+      if(d<bd){bd=d;bi=i;}}
+    if(bi>=0&&SK.hovar[bi]<0.6){lyftHov=bi;hovOppna(bi);}
     dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
   }
   if(SK.steg===3&&SK.drar){
@@ -247,6 +255,10 @@ function ritaGroom(){
   gcx.fillStyle=gr; gcx.fillRect(0,0,W,H);
   gcx.strokeStyle="rgba(0,0,0,.12)"; gcx.lineWidth=1;
   for(let i=1;i<8;i++){gcx.beginPath();gcx.moveTo(W*i/8,0);gcx.lineTo(W*i/8,H*0.72);gcx.stroke();}
+  /* Utsnittet för momentet. Allt som ritas i bildens koordinater ligger
+     innanför — hästen, zonerna och markörerna. */
+  gcx.save();
+  gcx.translate(W/2,H/2); gcx.scale(KAM.s,KAM.s); gcx.translate(-KAM.x*W,-KAM.y*H);
   // hästen i profil, huvudet åt vänster
   ritaHastSida(gcx, W*0.55, H*0.88, H*0.52, -1, h.farg, h.man, {pose:"sta"});
   // ryktzoner
@@ -282,6 +294,9 @@ function ritaGroom(){
     gcx.fillStyle="#8E939B";gcx.font='10px "IBM Plex Mono"';gcx.textAlign="center";
     gcx.fillText("GJORD — dra hit",W*0.5,H*0.90-6);
   }
+  gcx.restore();
+  /* Hovens närbild ligger över allt annat — den är ett eget moment. */
+  ritaHov(gcx,W,H);
 }
 function avslutaSkotsel(){
   if(SK.magTimer){clearInterval(SK.magTimer);SK.magTimer=null;}
