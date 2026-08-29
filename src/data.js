@@ -84,13 +84,13 @@ const NPC_ELEVER=[
 /* Lektion — hopplektionens moment ur LessonDirector, komprimerade för POC.
    Andelarna är samma; längden är POC-vänlig. */
 const LEKTION=[
-  {id:"skritt", namn:"Skritt på lång tygel", tid:26, bedoms:false,
+  {id:"skritt", namn:"Skritt på lång tygel", tid:26, bedoms:false, gangart:"skritt",
    text:"Skritta ett varv på fyrkanten och låt honom titta sig omkring."},
-  {id:"uppvarmning", namn:"Uppvärmning", tid:45, bedoms:true,
+  {id:"uppvarmning", namn:"Uppvärmning", tid:45, bedoms:true, gangart:"trav",
    text:"Trav på fyrkanten. Lättridning — och sitt på rätt ben (Q byter diagonal)."},
-  {id:"losgorande", namn:"Lösgörande", tid:40, bedoms:true,
+  {id:"losgorande", namn:"Lösgörande", tid:40, bedoms:true, gangart:"trav",
    text:"Stora volten vid A. Håll den rund — inre skänkel, yttre tygel."},
-  {id:"galopp", namn:"Galoppfattning", tid:40, bedoms:true,
+  {id:"galopp", namn:"Galoppfattning", tid:40, bedoms:true, gangart:"galopp",
    text:"Fatta galopp i hörnet. Lätt sits (Shift) om det rusar."},
   {id:"bana", namn:"Banan", tid:0, bedoms:true,
    text:"Nu hela banan — sex hinder, 60 cm. Rid vägen, inte hindret."},

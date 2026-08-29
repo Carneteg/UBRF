@@ -140,7 +140,10 @@ function stegaNPC(dt){
        skjuts inåt banan medan det är blockerat och söker sig ut mot
        spåret igen när vägen är fri. */
     const blockad=n.broms<0.55;
-    n.sido=clamp((n.sido||0)+(blockad?1.1:-0.7)*dt,0,1.7);
+    /* Taket måste vara större än HASTRUM, annars räcker sidosteget inte
+       för att komma förbi någon som står still på spåret — då lägger sig
+       hela gruppen i en klunga bredvid hindret i stället. */
+    n.sido=clamp((n.sido||0)+(blockad?1.1:-0.7)*dt,0,2.8);
     if(n.sido>0.001){
       const ix=10-n.x, iy=30-n.y, il=Math.hypot(ix,iy)||1;
       n.x+=ix/il*n.sido; n.y+=iy/il*n.sido;
@@ -424,7 +427,21 @@ function stegaLektion(dt){
        ingen fastnar. Då blir det underkänt, inte oändligt. */
     if(G.momentKlart||G.momentT>=m.tid*2.2||G.hoppaMoment){
       G.hoppaMoment=false;
-      if(m.bedoms)G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp);
+      /* Betyget vägs med hur mycket av hålltiden du faktiskt klarade.
+         Utan det gick hela lektionen att sitta av i HALT: kvaliteten
+         driver upp mot 0,72 när ingenting händer, taket m.tid*2.2 tvingar
+         fram varje moment ändå, och passet blev godkänt med
+         uppflyttningspoäng utan en meter ridning. Ett moment man aldrig
+         höll är inte ett ridet moment.
+
+         Golvet på 0,25 finns för att en ryttare som kämpar och nästan
+         lyckas inte ska nollas — men 0,72 × 0,25 = 0,18 ligger under
+         varje grupps krav, så att stå still räcker aldrig. */
+      if(m.bedoms){
+        const mal2=momentMal(m,G.grupp);
+        const andel=mal2?clamp((G.momentHall||0)/mal2.hall,0,1):1;
+        G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp)*(0.25+0.75*andel);
+      }
       G.momentIx++;
       if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;
         G.momentHall=0;G.momentKlart=false;visaMoment();}

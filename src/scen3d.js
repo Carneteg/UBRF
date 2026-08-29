@@ -933,12 +933,18 @@ function s3Kamera(dt){
      Att korta boomen i stället för att flytta kameran i sidled håller
      hästen kvar mitt i bilden. */
   const R=S3.rum;
-  if(R){
-    for(let i=0;i<10&&bak>1.35;i++){
-      const px=G.px-fram[0]*bak, pz=G.py-fram[2]*bak;
-      if(px>=R.x0&&px<=R.x1&&pz>=R.z0&&pz<=R.z1)break;
-      bak*=0.82;
-    }
+  /* Kameran väjer för väggar OCH för andra ekipage. Utan hästarna kunde
+     boompunkten hamna närmare en NPC än ryttaren själv, och då fyllde ett
+     annat hästhuvud hela skärmen. */
+  const fritt=(px,pz)=>{
+    if(R&&(px<R.x0||px>R.x1||pz<R.z0||pz>R.z1))return false;
+    for(const n of (G.npcs||[]))
+      if(Math.hypot(px-n.x,pz-n.y)<1.9)return false;
+    return true;
+  };
+  for(let i=0;i<10&&bak>1.35;i++){
+    if(fritt(G.px-fram[0]*bak, G.py-fram[2]*bak))break;
+    bak*=0.82;
   }
   const mx=G.px-fram[0]*bak, mz=G.py-fram[2]*bak;
   const k=S3.kam;

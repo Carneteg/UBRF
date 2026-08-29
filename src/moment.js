@@ -97,8 +97,19 @@ function momentPassa(cx,txt,maxW,W,px,vikt){
   }
 }
 /* En mening som bryts på ordmellanrum och ritas centrerad. Sista raden
-   ligger på y, raderna ovanför staplas uppåt — så håller botten sin plats. */
-function momentMening(cx,txt,x,y,maxW,radH,maxRader){
+   ligger på y och raderna ovanför staplas UPPÅT — så håller botten sin
+   plats, vilket är rätt för tipsraderna längst ned.
+
+   Med `ned` sant flödar den i stället nedåt från y, vilket är rätt när
+   något står ovanför: i sadlingen låg fasräknaren på 0,055·H och texten
+   staplades upp mot den, så en tvåradig mening lade sin första rad 3 px
+   under räknaren och skrev rakt över den. Tre av fyra faser bryts till
+   två rader, och varningarna med — alltså just den återkoppling man mest
+   behöver kunna läsa.
+
+   Returnerar antalet ritade rader, så att den som ritar under vet var
+   nästa rad får börja. */
+function momentMening(cx,txt,x,y,maxW,radH,maxRader,ned){
   const ord=String(txt).split(" "), rader=[];
   let rad="";
   for(const o of ord){
@@ -109,7 +120,8 @@ function momentMening(cx,txt,x,y,maxW,radH,maxRader){
   if(rad)rader.push(rad);
   const max=maxRader||2;
   while(rader.length>max){ rader[max-1]+=" "+rader.splice(max,1)[0]; }
-  rader.forEach((r,i)=>cx.fillText(r,x,y-(rader.length-1-i)*radH));
+  rader.forEach((r,i)=>cx.fillText(r,x, ned?y+i*radH:y-(rader.length-1-i)*radH));
+  return rader.length;
 }
 
 function momentFro(...tal){
@@ -508,11 +520,14 @@ function ritaSadel(cx,W,H){
   cx.fillText(`${SA.fas+1} av 4`,W*0.5,H*0.055);
   cx.font=momentFont(W,12.5);
   cx.fillStyle=SA.varning?"#D0655A":"#A6ABB3";
-  momentMening(cx,SA.varning||SADELFAS[SA.fas].t,W*0.5,H*0.105,W*0.92,H*0.040,2);
+  /* Rubriken läses uppifrån och ned, så texten flödar NEDÅT från
+     räknaren — och TAG-raden läggs under så många rader det blev. */
+  const rader=momentMening(cx,SA.varning||SADELFAS[SA.fas].t,
+    W*0.5,H*0.100,W*0.92,H*0.042,2,true);
   if(SA.fas>=3){
     cx.font=Math.round(11*momentSk(W)*10)/10+'px "IBM Plex Mono", monospace';
     cx.fillStyle=SA.tag>=3?"#7FB489":"#A6ABB3";
-    cx.fillText(`TAG ${Math.min(SA.tag,3)}/3`,W*0.5,H*0.135);
+    cx.fillText(`TAG ${Math.min(SA.tag,3)}/3`,W*0.5,H*(0.100+rader*0.048));
   }
 }
 

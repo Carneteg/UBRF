@@ -277,11 +277,16 @@ function byggLektion(grupp,seed,plats){
   const tillg=OVNINGAR.filter(o=>(NIVAIDX[o.niva]??0)<=Math.max(gIdx,0));
   const av=(g)=>tillg.filter(o=>o.gangart===g&&o.id!=="langtygel"&&o.id!=="ridvagar");
   const valj=(arr,k)=>arr.length?arr[(seed+k)%arr.length]:null;
+  /* Gångarten MÅSTE följa med. Utan den vet iTempoBand inte vilken
+     gångart momentet rids i, och räknar då halt som "inne i bandet" —
+     alltså gick hela lektionen att sitta av i stillastående. Rättningen i
+     iTempoBand var verkningslös just för att momenten aldrig bar sin
+     gångart hit. */
   const moment=(o,tid,bedoms)=>o&&{id:o.id, namn:o.namn, tid, bedoms,
-    ovning:o.id, text:o.utforande[0]};
+    gangart:o.gangart, ovning:o.id, text:o.utforande[0]};
   const lek=[];
   const skrittrunda={id:"skrittrunda", namn:"Skritta av på lång tygel", tid:20,
-    bedoms:false, ovning:"langtygel",
+    bedoms:false, gangart:"skritt", ovning:"langtygel",
     text:"Ge tygeln och låt hästen sträcka sig framåt-nedåt. Lektionen slutar alltid i skritt."};
   /* Uteritt på skogsstigen: lydighetsövningar behöver ingen bana —
      övergångar, halvhalter och fattningar rids på grusvägen. */
@@ -289,7 +294,8 @@ function byggLektion(grupp,seed,plats){
     const lydIds=["halt_skritt","trav_skritt","halvhalter","kontrabojning","galoppfattning"];
     const lyd=lydIds.map(id=>OVNINGAR.find(o=>o.id===id))
       .filter(o=>o&&(NIVAIDX[o.niva]??0)<=Math.max(gIdx,0));
-    lek.push({id:"skritt", namn:"Skritt ut på stigen", tid:26, bedoms:false, ovning:"langtygel",
+    lek.push({id:"skritt", namn:"Skritt ut på stigen", tid:26, bedoms:false,
+      gangart:"skritt", ovning:"langtygel",
       text:"Skritta ut på skogsstigen på lång tygel. Låt hästen titta — här ute finns mer att titta på."});
     for(let k=0;k<3&&lyd.length;k++){
       const o=lyd[(seed+k*2)%lyd.length];
@@ -298,7 +304,8 @@ function byggLektion(grupp,seed,plats){
     lek.push(skrittrunda);
     return lek;
   }
-  lek.push({id:"skritt", namn:"Skritt på lång tygel", tid:26, bedoms:false, ovning:"langtygel",
+  lek.push({id:"skritt", namn:"Skritt på lång tygel", tid:26, bedoms:false,
+    gangart:"skritt", ovning:"langtygel",
     text:"Skritta ett varv på fyrkanten och låt hästen titta sig omkring."});
   const sk=moment(valj(av("skritt").concat(av("halt")),1),38,true);
   if(sk)lek.push(sk);
