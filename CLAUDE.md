@@ -3,6 +3,28 @@
 Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, tränar och
 lär sig sköta hästar. Privat familjeprojekt.
 
+## Samarbete med ChatGPT
+
+Läs **`docs/AI-COLLABORATION.md`** före uppgifter som rör gameplay, spelkänsla,
+arkitektur, UX, större prioriteringar eller review.
+
+Rollerna är medvetet olika:
+
+- **Tobias** är Product Owner och har sista ordet.
+- **ChatGPT** är Senior Game Director / Game Systems Architect / Reviewer och ansvarar
+  främst för diagnos, prioritering, acceptance criteria och review.
+- **Claude** är Lead Implementation Engineer / Builder och ansvarar främst för
+  implementation, integration, testning och verifierbara repoändringar.
+
+Repot är den gemensamma överlämningsytan. Anta aldrig att den andra modellen har gjort
+eller godkänt något som inte går att verifiera i aktuell kod, commit, PR, audit eller
+uttrycklig instruktion från Tobias.
+
+**Aktuell produktprincip:** webbversionen i `src/` är den primära miljön för snabb
+utveckling och test av spelupplevelsen. Roblox är målplattformen. Gameplaybeslut ska
+bevisas i webben först och hållas rimligt portabla till Roblox, men flytta inte arbete
+till `roblox/` om Tobias inte uttryckligen ber om det.
+
 ## Tekniken
 
 Ett HTML5-spel som byggs till **en enda fil**: `tools/build.py` fogar ihop `index.html` och
