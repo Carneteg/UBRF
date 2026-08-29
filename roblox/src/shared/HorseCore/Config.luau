@@ -37,18 +37,48 @@ Config.STATS = {
 
 --[[ ── Rörelse ──────────────────────────────────────────────────────── ]]
 Config.MOVEMENT = {
-	TurnRateBase = 0.50,   -- rad/s vid nolltempo
-	TurnRateGain = 0.22,   -- tillägg per m/s
-	TurnRateMin = 0.40,
-	TurnRateMax = 2.20,
-	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
+	--[[ ── Styrningens svarslager ────────────────────────────────────
+	     Tangenter ger −1/0/+1. Rått vore det en strömbrytare: full sväng
+	     eller ingen, och inga små korrigeringar. Därför rampas ett INTERNT
+	     styrvärde mot tangentens läge. Attack är hög nog att första
+	     bildrutan redan svarar, release ännu högre så att hästen rätar upp
+	     sig direkt när man släpper. Kurvan gäller analoga spakar: exponent
+	     över 1 ger fin upplösning nära mitten utan att ta bort utslaget. ]]
+	SteerAttack = 13.0,    -- 1/s mot tangentens läge
+	SteerRelease = 17.0,   -- 1/s tillbaka mot noll
+	SteerCurve = 1.7,      -- exponent för spak och pekstyrning
+
+	--[[ ── Svarvhet ──────────────────────────────────────────────────
+	     Grundsvarvheten är nästan platt mot farten; det är gångartens
+	     turn-faktor som vidgar svängen när man rider fortare. Förut steg
+	     grunden brant med farten, och nettot blev att hästen svängde
+	     SNABBAST i galopp och trögast i skritt — tvärtemot både känsla och
+	     verklighet. Nu faller vinkelhastigheten jämnt uppåt i gångarterna
+	     medan radien växer, vilket är vad man vill ha i en ridbana. ]]
+	TurnRateBase = 1.15,   -- rad/s vid nolltempo
+	TurnRateGain = 0.02,   -- tillägg per m/s
+	TurnRateMin = 0.55,
+	TurnRateMax = 1.45,
+	TurnAccel = 9.0,       -- hur snabbt svängen får fäste, rad/s²
+
+	--[[ Vridning på stället sker med full svarvhet och utan att hästen
+	     kryper framåt: rotationen skrivs direkt (se ExplicitHeading). ]]
+	ExplicitHeading = true,
+	TurnInPlaceSpeed = 0.0,  -- studs/s; 0 = ingen krypfart alls
+
+	--[[ ── Accelerationens första tag ────────────────────────────────
+	     En enda linjär kurva känns antingen slö i början eller ryckig i
+	     slutet. Kicken ger ett tydligt tag när skillnaden mot måltempot är
+	     stor och klingar av när hästen närmar sig det: omedelbar avsikt,
+	     mjuk infasning. ]]
+	KickGain = 1.8,        -- extra andel acceleration vid stort tempohopp
 
 	LeanMax = 0.26,        -- radianer roll i skarp sväng
 	LeanGain = 0.075,      -- roll per (rad/s × m/s)
 	LeanTau = 0.16,        -- utjämning, sekunder
 
 	ReverseSpeed = 1.1,    -- m/s bakåt
-	BrakeExtra = 2.4,      -- m/s² extra retardation vid begärt stopp
+	BrakeExtra = 3.0,      -- m/s² extra retardation vid begärt stopp
 
 	JumpPower = 42,        -- studs/s uppåt
 	JumpMinSpeed = 1.6,
@@ -136,6 +166,15 @@ Config.CAMERA = {
 	Tau = 0.35,          -- hur trögt kameran följer gångartsbytet
 	Shoulder = 2.0,      -- studs åt sidan
 	LookAhead = 6.0,     -- studs framför hästen som kameran siktar mot
+
+	--[[ Kameran satt förut klistrad på hästens rot och ärvde varje litet
+	     skutt i fysiken. FollowTau är en lätt dämpning — kort nog att
+	     styrningen känns direkt, lång nog att skakningen försvinner.
+	     LeadGain lägger blicken en bit in i svängen, så att man ser vart
+	     man är på väg i stället för var man nyss var. ]]
+	FollowTau = 0.08,    -- sekunder; kamerapositionens dämpning
+	LeadGain = 2.2,      -- studs sikte in i svängen per rad/s
+	SpeedLead = 0.35,    -- extra sikte framåt per m/s
 }
 
 --[[ ── Uthållighet ───────────────────────────────────────────────────

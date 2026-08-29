@@ -53,13 +53,13 @@ Gaits.BY_NAME = ({
 	canter = {
 		name = "canter", label = "Galopp", min = 4.60, max = 7.00,
 		norm = 5.60, stride = 1.00, cycles = 1.75, steps = 3,
-		accel = 3.4, retard = 3.2, turn = 0.62, stamina = 2.2,
+		accel = 3.4, retard = 3.2, turn = 0.70, stamina = 2.2,
 		camera = { dist = 19, height = 6.0, fov = 4 },
 	},
 	gallop = {
 		name = "gallop", label = "Fyrsprång", min = 7.20, max = 11.0,
 		norm = 8.60, stride = 1.28, cycles = 2.05, steps = 4,
-		accel = 3.0, retard = 2.6, turn = 0.42, stamina = 5.5,
+		accel = 3.0, retard = 2.6, turn = 0.52, stamina = 5.5,
 		camera = { dist = 23, height = 6.4, fov = 8 },
 	},
 } :: { [string]: Gait })

@@ -56,8 +56,13 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 	     Det är den detaljen som gör att svängar läses som svängar. ]]
 	local trail = right * math.clamp(-loco.turnRate, -1, 1) * C.Shoulder
 
+	--[[ Blicken går en bit in i svängen och längre fram ju fortare man
+	     rider. Utan det tittar kameran på var hästen nyss var, och i en
+	     volt ser man aldrig vart man är på väg. ]]
+	local fram = Vector3.new(math.sin(heading), 0, math.cos(heading))
+	local lead = right * math.clamp(loco.turnRate, -1.5, 1.5) * C.LeadGain
 	local focus = root.Position + Vector3.new(0, 2, 0)
-		+ Vector3.new(math.sin(heading), 0, math.cos(heading)) * C.LookAhead
+		+ fram * (C.LookAhead + math.abs(loco.speed) * C.SpeedLead) + lead
 	local wanted = root.Position + back * self.dist + Vector3.new(0, self.height, 0) + trail
 
 	--[[ Håll kameran ur väggar: en strålkastning från hästen ut mot
@@ -71,7 +76,14 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 		wanted = hit.Position + (origin - wanted).Unit * 1.2
 	end
 
-	self.camera.CFrame = CFrame.lookAt(wanted, focus)
+	--[[ Lätt dämpning på själva kamerapositionen. Förut satt den klistrad
+	     på roten och ärvde varje skutt i fysiken; nu filtreras skakningen
+	     bort utan att styrningen känns fördröjd — tau är kort med flit. ]]
+	local f = 1 - math.exp(-dt / math.max(C.FollowTau, 0.0001))
+	self.pos = if self.pos then self.pos:Lerp(wanted, f) else wanted
+	self.blick = if self.blick then self.blick:Lerp(focus, f) else focus
+
+	self.camera.CFrame = CFrame.lookAt(self.pos, self.blick)
 	self.camera.FieldOfView = self.fov
 end
 

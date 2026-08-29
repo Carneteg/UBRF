@@ -61,7 +61,15 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	} :: Types.Locomotion
 
 	self.slopePitch = 0
+	self.steer = 0                                  -- internt, rampat styrvärde
 	return self
+end
+
+--[[ Tangenten ger −1/0/+1, spaken ett tal däremellan. Kurvan ger fin
+     upplösning nära mitten utan att kapa utslaget; tecknet behålls. ]]
+local function steerCurve(raw: number, exponent: number): number
+	local sign = if raw < 0 then -1 else 1
+	return sign * (math.abs(math.clamp(raw, -1, 1)) ^ exponent)
 end
 
 --[[ Vilken gångart spelaren begär. W från stillastående startar skritt,
@@ -105,7 +113,12 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	end
 
 	local accelScale = (0.65 + 0.70 * stats.Acceleration) * self.temperament.accelBias
-	local up = gait.accel * accelScale
+	--[[ Kicken: fullt tag när tempot ligger långt från målet, avklingande
+	     när hästen är nästan framme. Ett tydligt ryck i starten och en mjuk
+	     landning, i stället för en enda linjär ramp som känns slö. ]]
+	local avstand = math.abs(target - loco.speed)
+	local kick = 1 + M.KickGain * math.clamp(avstand / math.max(math.abs(target), 0.6), 0, 1)
+	local up = gait.accel * accelScale * kick
 	local down = gait.retard * accelScale
 	if intent.forward < -0.5 then
 		down += M.BrakeExtra
@@ -116,9 +129,18 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     Grundsvarvheten stiger med farten, men gångartens turn-faktor drar
 	     ned den mer, så nettoresultatet är vidare svängar i högre fart.
 	     Svängen tar tag gradvis — utan det snäpper hästen runt hörn. ]]
+	--[[ Först styrvärdet: tangentens läge rampas in i ett kontinuerligt
+	     tal. Snabbt mot utslaget, ännu snabbare tillbaka mot noll — då
+	     svarar hästen direkt men rätar också upp sig utan eftersläp, och
+	     små tryck ger små korrigeringar i stället för allt-eller-inget. ]]
+	local steerWanted = steerCurve(intent.steer, M.SteerCurve)
+	local steerRate = if math.abs(steerWanted) > math.abs(self.steer)
+		then M.SteerAttack else M.SteerRelease
+	self.steer = smooth(self.steer, steerWanted, 1 / steerRate, dt)
+
 	local speedAbs = math.abs(loco.speed)
 	local base = math.clamp(M.TurnRateBase + M.TurnRateGain * speedAbs, M.TurnRateMin, M.TurnRateMax)
-	local wanted = intent.steer * base * gait.turn * (0.70 + 0.60 * stats.Agility)
+	local wanted = self.steer * base * gait.turn * (0.70 + 0.60 * stats.Agility)
 	if loco.speed < -0.05 then
 		wanted = -wanted                              -- backar man styr man spegelvänt
 	end
@@ -180,14 +202,20 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     input. AutoRotate vrider mot den, och eftersom riktningen bara
 	     ändras i vår egen svängtakt syns aldrig Humanoids snärt.
 
-	     Golvet på 0,35 studs/s finns för att AutoRotate slutar vrida vid
-	     noll fart. Hästen kryper omärkligt medan den vänder på stället —
-	     vilket för övrigt är precis vad en häst gör. ]]
+	     Riktningen skrivs numera rakt på roten i stället för att lämnas åt
+	     AutoRotate. Skälet är rent spelkänsla: AutoRotate vrider bara medan
+	     hästen rör sig, så vändning på stället krävde en krypfart på 0,35
+	     studs/s — hästen sladdade sakta framåt medan man vände, och 180
+	     grader tog över sex sekunder. Med egen rotation vänder den på
+	     stället utan att flytta sig alls, och Humanoid får fortsätta med
+	     det den är bra på: mark, sluttningar, kanter och kollision. ]]
 	if hum then
-		local studs = Config.toStuds(math.abs(loco.speed))
-		local turningInPlace = math.abs(loco.turnRate) > 0.05 and studs < 0.35
-		hum.WalkSpeed = if turningInPlace then 0.35 else studs
+		hum.WalkSpeed = Config.toStuds(math.abs(loco.speed))
 		local dir = if loco.speed < -0.05 then -forwardVector else forwardVector
+		if M.ExplicitHeading then
+			hum.AutoRotate = false
+			RigAdapter.setHeading(rig, loco.heading)
+		end
 		hum:Move(dir, false)
 	end
 

@@ -192,6 +192,17 @@ function RigAdapter.setBoneOffset(rig: Types.Rig, name: string, offset: CFrame)
 	bone.Transform = (base :: CFrame) * offset
 end
 
+--[[ Riktningen skrivs på roten. Bara yaw — positionen och lodlinjen rörs
+     inte, så Humanoid behåller mark, sluttningar och kollision. Enda stället
+     i systemet som vet hur en hästmodell vrids. ]]
+function RigAdapter.setHeading(rig: Types.Rig, heading: number)
+	local root = rig.root
+	if not root then return end
+	local pos = root.CFrame.Position
+	local fram = Vector3.new(math.sin(heading), 0, math.cos(heading))
+	root.CFrame = CFrame.lookAt(pos, pos + fram)
+end
+
 function RigAdapter.saddleCFrame(rig: Types.Rig): CFrame
 	local a = rig.attachments.Saddle
 	if a then return a.WorldCFrame end
