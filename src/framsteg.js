@@ -35,8 +35,11 @@ const FARDIGHETER=[
 
 /* Hur snabbt en färdighet får växa. Medvetet långsamt: den ska märkas
    över ett pass, inte över en långsida. Taket sjunker ju högre du
-   kommer — de sista tiondelarna ska kosta. */
-const VAXT={sits:0.055, hand:0.060, kansla:0.045, skotsel:0.080};
+   kommer — de sista tiondelarna ska kosta, och därför dämpas växten med
+   (1−f)³ och inte (1−f). Med de gamla talen tog en enda felfri lektion
+   en nybörjare från 0,12 till nästan 1,00; det syntes först när
+   efter-passet började redovisa vad som faktiskt växte. */
+const VAXT={sits:0.020, hand:0.022, kansla:0.017, skotsel:0.045};
 
 function nyFardighet(){ return {sits:0.12, hand:0.10, kansla:0.08, skotsel:0.15}; }
 
@@ -85,25 +88,44 @@ function fardighetsMod(){
    sig fel saker, och det ska spelet inte belöna. */
 function stegaFardighet(ride,aids,dt){
   if(!SPAR||!ride||ride.spanning>0.70)return null;
+  /* Man lär sig inte rida av att stå still. Utan det här villkoret
+     växte sits och hand som mest i halt, där hjälperna ligger stilla av
+     sig själva och ingenting kan gå fel — precis den strategi resten av
+     spelet är byggt för att inte belöna. */
+  if(ride.tempo<0.45)return null;
+  /* Och växten kräver samma sak som momentet: att du håller henne i
+     tempot. Utan det räckte det att sitta blick stilla medan hon sprang
+     ifrån bandet — hjälperna låg still, mjukheten låg på 1,00, och
+     färdigheterna växte alltså som snabbast när ridningen var som
+     sämst. Att rida är att korrigera; det ska växten också mäta. */
+  if(typeof iTempoBand==="function"&&!iTempoBand(ride,G.grupp))return null;
   const f=fard(), fore={...f};
 
   /* Sits: låg spänning i dina egna sitsutslag och en häst som inte
      stör sig. Mäts som mjukhet, som redan är amplitud mot medel. */
   if(ride.mjukhet>0.62)
-    f.sits=clamp(f.sits+VAXT.sits*dt*(ride.mjukhet-0.62)*(1-f.sits)*1.6,0,1);
+    f.sits=clamp(f.sits+VAXT.sits*dt*(ride.mjukhet-0.62)*(1-f.sits)**3*1.6,0,1);
 
   /* Hand: tygeln i det mjuka bandet, varken slak eller hård. */
   const t=aids.tygel;
   if(t>K.TYGEL_BAND_MIN&&t<K.TYGEL_BAND_MAX&&ride.skala.kontakt>0.35)
-    f.hand=clamp(f.hand+VAXT.hand*dt*(1-f.hand)*1.4,0,1);
+    f.hand=clamp(f.hand+VAXT.hand*dt*(1-f.hand)**3*1.4,0,1);
 
   /* Känsla: spänningen sjunker medan du rider. Det är den enda
-     färdighet som mäter en förändring i stället för ett tillstånd. */
-  if(ride._spanningFore===undefined)ride._spanningFore=ride.spanning;
-  const dSp=ride._spanningFore-ride.spanning;
-  ride._spanningFore=ride.spanning;
-  if(dSp>0&&ride.skala.losgjordhet>0.30)
-    f.kansla=clamp(f.kansla+VAXT.kansla*dSp*40*dt*(1-f.kansla),0,1);
+     färdighet som mäter en förändring i stället för ett tillstånd — och
+     därför den lättaste att lura. Med "sjönk sedan förra bildrutan" gav
+     en ryttare som hackade med hjälperna mest känsla av alla, eftersom
+     spänningen studsade upp och ned hela passet och varje nedstuds
+     räknades. Bara NY mark räknas nu: referensen är det lägsta hon
+     varit på, och den kryper långsamt uppåt så att nästa moment kan
+     förtjäna sitt eget. */
+  if(ride._spanningRef===undefined)ride._spanningRef=ride.spanning;
+  ride._spanningRef=Math.min(ride._spanningRef+0.010*dt,1);
+  if(ride.spanning<ride._spanningRef-0.001&&ride.skala.losgjordhet>0.30){
+    const vinst=ride._spanningRef-ride.spanning;
+    f.kansla=clamp(f.kansla+VAXT.kansla*vinst*40*dt*(1-f.kansla)**3,0,1);
+    ride._spanningRef=ride.spanning;
+  }
 
   for(const k of FARDIGHETER){
     const id=k.id;
@@ -117,7 +139,7 @@ function fardighetSkotsel(kvalitet){
   if(!SPAR)return null;
   const f=fard(), fore=f.skotsel;
   if(kvalitet>0.55)
-    f.skotsel=clamp(f.skotsel+VAXT.skotsel*(kvalitet-0.55)*(1-f.skotsel)*2.2,0,1);
+    f.skotsel=clamp(f.skotsel+VAXT.skotsel*(kvalitet-0.55)*(1-f.skotsel)**3*2.2,0,1);
   sparaRyttare();
   return Math.floor(f.skotsel*10)>Math.floor(fore*10)?"skotsel":null;
 }

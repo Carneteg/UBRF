@@ -315,7 +315,10 @@ function avslutaSkotsel(){
   /* Skötseln ger hästkunskap. Måttet är dagsformen du lyckades lämna
      hästen i — det är den enda siffra som säger något om hur väl du
      faktiskt skötte henne, och den syns redan på skärmen. */
-  {const steg=fardighetSkotsel(res.dagsform);
+  {const foreSk=(typeof fard==="function")?fard().skotsel:0;
+   const steg=fardighetSkotsel(res.dagsform);
+   if(typeof passSkotsel==="function")
+     passSkotsel(foreSk,(typeof fard==="function")?fard().skotsel:0,res);
    if(steg&&typeof visaFardighetsSteg==="function")
      setTimeout(()=>visaFardighetsSteg(steg),900);}
   /* Humöret sätts en gång, här, av skötseln du just gjort och av vad ni
@@ -376,6 +379,7 @@ function visaResultat(dom){
   overlay(true,`
   <span class="lbl">Efter lektionen</span>
   <h1 style="margin-top:8px">”${omdome}”</h1>
+  ${typeof efterPassHTML==="function"?efterPassHTML():""}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px">
     <div>
       ${G.hadeBana?`<div class="lbl" style="margin-bottom:6px">Protokoll — bedömning A, låg klass</div>
@@ -409,6 +413,7 @@ function visaResultat(dom){
     <button class="btn" id="bIgen">Rid igen — ny häst</button>
     <button class="btn ghost" id="bSamma">Samma häst igen</button>
   </div>`);
+  if(typeof kopplaEfterPass==="function")kopplaEfterPass();
   document.getElementById("bIgen").onclick=()=>{G.seed++;nollstall();
     G.hastId=null;G.skotselRes=null;overlay(false);hudLage("gang");
     gaTill("stallinne",{x:7.5,y:12,rikt:Math.PI/2});
