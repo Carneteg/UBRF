@@ -151,6 +151,39 @@ en hall och ser banan genom öppningen mitt för sargporten, i stället för att
 rakt ut på banan. Rummen i hallen är antydda med väggar, inte ritade rum för rum —
 planen går inte att läsa så noga.
 
+## Banan invändigt — bokstäverna och skyltarna
+
+Fem interiörbilder visar sargen och väggarna. Det som är byggt efter dem:
+
+- **Sargen**: vitmålade brädor med en **svart sockel** nertill, runt hela banan.
+- **Ovanför sargen**: mörkt rödbrun panel med **vita liggande läkt**.
+- **Sponsorskyltarna** på långsidan, i ordning: "Välkommen till Upplands-Bro
+  Ryttarförening" med hästskologotypen, **elon Barkarby** (svart, huvudsponsor),
+  **"Vi tror på dig!" Sparbanken i Enköping** (laxrosa), **RS Mustang** (blå,
+  stallströ och foder), **Stigsbergs Gård Hästsportbutik** (vit med grön logotyp),
+  **Agria Djurförsäkring** (blå).
+- **Speglar i träram**, två stycken på långsidan.
+- **Läktaren** med träbänkar, räcke, trappa och caféets fönster ovanför.
+- **Taket**: mörka fackverk med rader av lysrör, och ljusband längs väggkrönet.
+- **Underlaget** är brunt och träfiberbemängt, inte gul sand.
+
+### Bildgåtorna vid bokstäverna
+
+Varje dressyrbokstav har **en liten bildskylt till vänster om sig**. Barnen lär sig
+banan på bilderna innan de lär sig bokstäverna, och det är bilderna man känner igen
+sargen på.
+
+Fyra går att läsa i fotona: **B = banan**, **M = morot**, **C = cykel**,
+**F = fisk**. De övriga åtta är byggda med rimliga svenska ord på rätt bokstav och
+står som `[antagande]`: A = ananas, K = katt, V = vante, E = elefant, S = sol,
+H = hus, P = päron, R = ros.
+
+**Behövs:** en bild på skyltarna vid A, K, V, E, S, H, P och R. En bild per
+långsida räcker — då syns fem åt gången.
+
+Banan är en **20×60** med tolv bokstäver (A-K-V-E-S-H-C-M-R-B-P-F). Spelet hade
+bara åtta, alltså 20×40-uppsättningen på en 20×60-bana; V, S, P och R är tillagda.
+
 ## Placering (från SITEPLAN.md)
 - Position: sydvästra hörnet i (118, 44), fotavtryck 26 × 66 m
 - Rotation: nocken i nord–sydlig riktning, gaveln mot parkeringen i söder

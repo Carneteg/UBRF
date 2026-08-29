@@ -783,8 +783,10 @@ function v3dRidhus(lagg,opp){
   const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
   lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
     M4.translation(R.bredd/2,0.01,R.langd/2),8),T.grus);
-  lagg(new Bygge().yta(ba.w,ba.h,"#FFFFFF",
-    M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),7),T.sand);
+  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula
+     sand. Tonen tas ner på plats i stället för att göra en egen textur. */
+  lagg(new Bygge().yta(ba.w,ba.h,"#9C8663",
+    M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);
   /* Sargen med svart sockel — porten vid A lämnas öppen. */
   const sarg=new Bygge();
   const bit=(x0,z0,x1,z1)=>{
@@ -828,6 +830,13 @@ function v3dRidhus(lagg,opp){
     lak.lada(L.stegD,0.08,L.y1-L.y0,"#F0EAE0",
       M4.translation(L.x0+i*L.stegD+L.stegD/2,L.stegH*(i+1),(L.y0+L.y1)/2));
   }
+  {const L2=R.laktare;                              // räcket längs läktarens framkant
+   for(const y of [0.62,1.02])
+     lak.lada(0.09,0.09,L2.y1-L2.y0,"#8A6A44",
+       M4.translation(L2.x0-0.10,y+L2.steg*L2.stegH,(L2.y0+L2.y1)/2));
+   for(let z=L2.y0;z<=L2.y1;z+=2.4)
+     lak.lada(0.09,1.05,0.09,"#8A6A44",
+       M4.translation(L2.x0-0.10,0.52+L2.steg*L2.stegH,z));}
   lak.lada(1.9,2.2,1.9,"#FFFFFF",M4.translation(R.domarbas.x,1.1,R.domarbas.y));
   lak.lada(2.1,0.14,2.1,"#C8BCA8",M4.translation(R.domarbas.x,2.25,R.domarbas.y));
   for(let i=0;i<8;i++)                                  // trappan upp till caféet
@@ -860,8 +869,14 @@ function v3dRidhus(lagg,opp){
   lagg(cafe,null);
   /* Sponsorväggen med speglar och banderoller. */
   const panel=new Bygge();
-  for(const sp of R.speglar)
-    panel.lada(0.10,1.9,sp.b,"#7E858C",M4.translation(ba.x-0.22,2.2,sp.y));
+  for(const sp of R.speglar){                       // speglar i träram
+    panel.lada(0.08,1.9,sp.b,"#8E969E",M4.translation(ba.x-0.22,2.25,sp.y));
+    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(ba.x-0.24,3.27,sp.y));
+    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(ba.x-0.24,1.23,sp.y));
+    for(const d of [-1,1])
+      panel.lada(0.11,2.18,0.12,"#7A5636",M4.translation(ba.x-0.24,2.25,sp.y+d*(sp.b/2+0.06)));
+    panel.lada(0.06,1.9,0.05,"#7A5636",M4.translation(ba.x-0.26,2.25,sp.y));
+  }
   panel.lada(0.12,0.9,R.langd*0.8,"#6B4A34",M4.translation(ba.x-0.24,3.7,R.langd/2));
   lagg(panel,null);
   for(const s of R.skyltar){
@@ -875,11 +890,11 @@ function v3dRidhus(lagg,opp){
   for(const bo of DRESSYRBOKSTAVER){
     const bx=ba.x+bo.x, bz=ba.y+bo.y;
     let mat;
-    if(bo.x===0)      mat=M4.mul(M4.translation(bx+0.12,0.95,bz),M4.rotY(Math.PI/2));
-    else if(bo.x===20)mat=M4.mul(M4.translation(bx-0.12,0.95,bz),M4.rotY(-Math.PI/2));
-    else if(bo.y===0) mat=M4.mul(M4.translation(bx,0.95,bz+0.12),M4.ny());
-    else              mat=M4.mul(M4.translation(bx,0.95,bz-0.12),M4.rotY(Math.PI));
-    const b=new Bygge(); v3dTextPanel(b,0.5,0.5,mat);
+    if(bo.x===0)      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));
+    else if(bo.x===20)mat=M4.mul(M4.translation(bx-0.12,1.05,bz),M4.rotY(-Math.PI/2));
+    else if(bo.y===0) mat=M4.mul(M4.translation(bx,1.05,bz+0.12),M4.ny());
+    else              mat=M4.mul(M4.translation(bx,1.05,bz-0.12),M4.rotY(Math.PI));
+    const b=new Bygge(); v3dTextPanel(b,0.62,0.31,mat);
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.bokstav||{})[bo.b]});
   }
 }

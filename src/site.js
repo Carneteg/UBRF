@@ -130,8 +130,10 @@ const ANL = {
        {sida:"E", u:24, b:3.6, h:3.2, z0:0, typ:"portbla"},
        /* Norra gaveln: servicedelens dubbeldörr. [saknas foto] */
        {sida:"N", u:6.1,  b:2.8,  h:2.7,  z0:0, typ:"dorrgra"},
-       /* Vita dubbeldörren mot gräsgården. */
-       {sida:"W", u:25,   b:1.8,  h:2.2,  z0:0, typ:"dorrvit"},
+       /* Hästarnas väg ut. Den här porten leder till gräsgården och
+          vidare till ridhuset — det är den man leder hästen genom före
+          lektionen, så den ska vara en port och inte en dörr. */
+       {sida:"W", u:29,   b:3.4,  h:3.2,  z0:0, typ:"portbla"},
      ]},
     /* Förbindelselängan som gör stallet till ett L och stänger gården. */
     {id:"langa", rekt:{x:144, y:100, w:10, h:6}, hV:3.0, hN:4.4, nock:"EW",
@@ -220,7 +222,7 @@ const ANL = {
   dorrar: [
     {id:"stallentre", pos:[152.9,51.6], text:"Gå in i stallet (Entré)",
      mot:"stallinne", spawn:{x:1.8, y:5.6, rikt:0}},
-    {id:"stall_v",  pos:[153.6,71], text:"Gå in i stallet (gårdsdörren)",
+    {id:"stall_v",  pos:[153.4,71], text:"Gå in i stallet (hästporten mot gården)",
      mot:"stallinne", spawn:{x:1.2, y:25, rikt:0}},
     {id:"stall_n",  pos:[160.3,100.8], text:"Gå in i stallet (bakre dörren)",
      mot:"stallinne", spawn:{x:7.5, y:50, rikt:-Math.PI/2}},
@@ -274,9 +276,9 @@ const STALLINNE = {
   dorrar:[
     {id:"ut_s", pos:[0.8,5.6],  text:"Ut genom entrén", mot:"gard",
      spawn:{x:152.6,y:51.6,rikt:Math.PI}},
-    {id:"ut_v", pos:[0.8,25],   text:"Ut till gräsgården", mot:"gard",
-     spawn:{x:152.6,y:71,rikt:Math.PI}},
-    {id:"ut_n", pos:[7.5,51.2], text:"Ut till bakgården", mot:"gard",
+    {id:"ut_v", pos:[0.8,29],   text:"Ut till gräsgården — vägen till ridhuset", mot:"gard",
+     spawn:{x:152.4,y:71,rikt:Math.PI}},
+    {id:"ut_n", pos:[7.5,51.2], text:"Ut till bakgården — mot hagarna", mot:"gard",
      spawn:{x:160.3,y:101.8,rikt:Math.PI/2}},
   ],
   ridlarare:{pos:[7.5,18], namn:"Ridläraren"},

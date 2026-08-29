@@ -124,8 +124,26 @@ const SITE={
   framridning:{x:-18,y:-16,w:16,h:12, label:"FRAMRIDNING"},
 };
 
-const DRESSYRBOKSTAVER=[ // 20×60-bana: A-C kortsidor, K/E/H och F/B/M långsidor
-  {b:"A",x:10,y:0},{b:"C",x:10,y:60},
-  {b:"K",x:0,y:6},{b:"E",x:0,y:30},{b:"H",x:0,y:54},
-  {b:"F",x:20,y:6},{b:"B",x:20,y:30},{b:"M",x:20,y:54},
+/* Dressyrbokstäverna på en 20×60-bana. A och C på kortsidorna,
+   K-V-E-S-H på ena långsidan och F-P-B-R-M på den andra, med sex meter
+   till första bokstaven och tolv meter mellan resten.
+
+   Och bildgåtorna. På UBRF sitter en liten bildskylt till vänster om
+   varje bokstav — banan vid B, morot vid M, cykel vid C. Barnen lär sig
+   banan på bilderna innan de lär sig bokstäverna, och det är bilderna
+   man känner igen sargen på. Fyra av dem går att läsa i fotona; de
+   övriga är märkta [antagande] i ridhuskortet och behöver en bild. */
+const DRESSYRBOKSTAVER=[
+  {b:"A",x:10,y:0,  bild:"ananas"},   // [antagande]
+  {b:"C",x:10,y:60, bild:"cykel"},    // ur foto
+  {b:"K",x:0, y:6,  bild:"katt"},     // [antagande]
+  {b:"V",x:0, y:18, bild:"vante"},    // [antagande]
+  {b:"E",x:0, y:30, bild:"elefant"},  // [antagande]
+  {b:"S",x:0, y:42, bild:"sol"},      // [antagande]
+  {b:"H",x:0, y:54, bild:"hus"},      // [antagande]
+  {b:"F",x:20,y:6,  bild:"fisk"},     // ur foto
+  {b:"P",x:20,y:18, bild:"paron"},    // [antagande]
+  {b:"B",x:20,y:30, bild:"banan"},    // ur foto
+  {b:"R",x:20,y:42, bild:"ros"},      // [antagande]
+  {b:"M",x:20,y:54, bild:"morot"},    // ur foto
 ];
