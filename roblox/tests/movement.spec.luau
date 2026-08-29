@@ -124,31 +124,44 @@ end
 print("\n── Svarsprofil: tar snabbt, släpper mjukt ──")
 do
 	--[[ En bra styrning bygger upp svängen fort när man ber om den och
-	     lämnar den mjukt när man släpper. Mäts som tid till halva utslaget
-	     respektive tid tillbaka till nära noll. ]]
-	local mc = newMC()
-	run(mc, 3.0, { forward = 1, gaitUp = false })
-	run(mc, 0.5, { forward = 1, gaitUp = true })
-	local dt, t = 1 / 240, 0
-	local topp, tHalv = 0, nil
+	     lämnar den mjukt när man släpper. Mäts som tid till halva
+	     utslaget respektive tid tillbaka till nära noll.
+
+	     Referensvärdet MÅSTE mätas i samma gångart som mätningen sker i:
+	     med kurvaturmodellen skalar vridhastigheten med tempot, så ett
+	     toppvärde från en högre gångart går aldrig att nå i en lägre.
+	     Den första versionen av det här testet gjorde just det och
+	     rapporterade ett fel som inte fanns. ]]
+	local dt = 1 / 240
+	local function varmUpp()
+		local mc = newMC()
+		run(mc, 3.0, { forward = 1 })       -- upp i skritt och låt tempot sätta sig
+		return mc
+	end
+	--[[ Steg 1: vad ÄR full sväng i den här gångarten? ]]
+	local mc = varmUpp()
+	local topp = 0
 	for _ = 1, 240 * 2 do
-		mc:step(intent({ forward = 1, steer = 1 }), dt); t += dt
+		mc:step(intent({ forward = 1, steer = 1 }), dt)
 		topp = math.max(topp, math.abs(mc.loco.turnRate))
 	end
-	local mal = topp
-	mc = newMC(); run(mc, 3.5, { forward = 1 }); t = 0
+	--[[ Steg 2: hur fort når vi halva den? ]]
+	mc = varmUpp()
+	local t, tHalv = 0, nil
 	for _ = 1, 240 * 2 do
 		mc:step(intent({ forward = 1, steer = 1 }), dt); t += dt
-		if not tHalv and math.abs(mc.loco.turnRate) >= mal * 0.5 then tHalv = t end
+		if not tHalv and math.abs(mc.loco.turnRate) >= topp * 0.5 then tHalv = t end
 	end
+	--[[ Steg 3: hur mjukt släpper den? ]]
 	local tSlapp = 0
-	for _ = 1, 240 * 2 do
+	for _ = 1, 240 * 3 do
 		mc:step(intent({ forward = 1 }), dt); tSlapp += dt
-		if math.abs(mc.loco.turnRate) <= mal * 0.1 then break end
+		if math.abs(mc.loco.turnRate) <= topp * 0.1 then break end
 	end
+	print(string.format("  full sväng i skritt: %.3f rad/s", topp))
 	print(string.format("  tid till halva svängen: %.3f s", tHalv or -1))
 	print(string.format("  tid tillbaka till nära noll: %.3f s", tSlapp))
-	check("svängen tar fäste snabbt", tHalv and tHalv < 0.30,
+	check("svängen tar fäste snabbt", tHalv ~= nil and tHalv < 0.30,
 		string.format("(%.3f s, kräver < 0,30)", tHalv or -1))
 	check("svängen släpper utan att snäppa", tSlapp > 0.05,
 		string.format("(%.3f s)", tSlapp))
@@ -224,4 +237,53 @@ do
 	print(string.format("  fyrsprång (%.1f m/s): %.3f rad på 0,5 s", vGalopp, dGalopp))
 	check("skritt ger finare kontroll än fyrsprång", dSkritt < dGalopp,
 		string.format("(%.3f mot %.3f rad)", dSkritt, dGalopp))
+end
+
+print("\n── Svängradie per gångart och nivå (paritet mot webben) ──")
+do
+	--[[ Samma tabell som webbversionens mätning, så att paritetsraden i
+	     auditen bygger på jämförbara siffror och inte på en beskrivning.
+	     Tempot låses vid gångartens hemtempo och styrningen hålls tills
+	     kurvaturen satt sig. ]]
+	local dt = 1 / 120
+	local rader = {}
+	for _, rad in { { "walk", 1.45, 2 }, { "trot", 3.20, 3 }, { "canter", 5.60, 4 } } do
+		local namn, tempo, steg = rad[1], rad[2], rad[3]
+		for _, s in { 0.25, 0.50, 1.00 } do
+			local mc = newMC()
+			--[[ Stega upp i rätt gångart, lås sedan tempot. ]]
+			for _ = 1, steg do
+				for i = 1, 120 * 3 do
+					mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+				end
+			end
+			mc.loco.speed = tempo
+			for _ = 1, 120 * 3 do
+				mc.loco.speed = tempo
+				mc:step(intent({ forward = 1, steer = s }), dt)
+			end
+			local k = math.abs(mc.curvature)
+			local omega = math.abs(mc.loco.turnRate)
+			rader[#rader + 1] = { namn = namn, tempo = tempo, styr = s,
+				kappa = k, radie = if k > 1e-4 then 1 / k else 999,
+				grader = omega * 180 / math.pi }
+		end
+	end
+	print("  gångart  tempo  styr   kurvatur  radie(m)   °/s")
+	for _, r in rader do
+		print(string.format("  %-8s %5.2f  %.2f   %.4f   %7.2f   %5.1f",
+			r.namn, r.tempo, r.styr, r.kappa, r.radie, r.grader))
+	end
+	--[[ Kravet: radien ska ÖKA med gångarten vid samma styrutslag. ]]
+	local full = {}
+	for _, r in rader do if r.styr == 1.00 then full[r.namn] = r.radie end end
+	check("radien ökar med gångarten vid full styrning",
+		full.walk < full.trot and full.trot < full.canter,
+		string.format("(%.1f → %.1f → %.1f m)", full.walk, full.trot, full.canter))
+	--[[ Och 25 < 50 < 100 i kurvatur, alltså tre användbara nivåer. ]]
+	local w = {}
+	for _, r in rader do if r.namn == "walk" then w[r.styr] = r.kappa end end
+	check("25/50/100 % ger tre skilda kurvaturer",
+		w[0.25] < w[0.50] and w[0.50] < w[1.00],
+		string.format("(%.4f < %.4f < %.4f)", w[0.25], w[0.50], w[1.00]))
 end

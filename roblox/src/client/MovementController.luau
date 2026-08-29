@@ -10,8 +10,10 @@
 
 	  1. Tempot dras mot gångartens hemtempo, inte mot en knapp. Släpper man
 	     W stannar hästen inte — den rullar ned i skritt.
-	  2. Svarvheten sjunker med farten. I fyrsprång svänger man vidsträckt.
-	  3. Svängen tar tag gradvis (TurnAccel), så inget snäpper till 90 grader.
+	  2. Styraxeln ber om en KURVATUR, inte om en vridhastighet. Radien
+	     blir 1/kurvatur oavsett fart, så en snabbare gångart ger en
+	     vidare båge av sig själv i stället för genom en motkraft.
+	  3. Svängen tar tag gradvis, så inget snäpper till 90 grader.
 	  4. Accelerationen är olika uppåt och nedåt, och tyngre hästar är trögare.
 	  5. Styrutslaget rampas innan det används. En tangent är av eller på,
 	     och utan rampen finns bara tre lägen: helt vänster, rakt, helt
@@ -66,6 +68,8 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
+	self.curvature = 0         -- aktuell kurvatur, 1/m
+	self.lastPos = nil         -- förra bildrutans läge, driver fasen
 	return self
 end
 
@@ -130,17 +134,38 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	loco.speed = approach(loco.speed, target, up, down, dt)
 
 	--[[ ── Sväng ──────────────────────────────────────────────────────
-	     Grundsvarvheten stiger med farten, men gångartens turn-faktor drar
-	     ned den mer, så nettoresultatet är vidare svängar i högre fart.
-	     Svängen tar tag gradvis — utan det snäpper hästen runt hörn. ]]
+	     Kurvaturen är det spelaren styr: hur snävt hästen böjer sig, i
+	     1/meter. Gångartens turn-faktor sätter taket — en häst i fyrsprång
+	     böjer sig inte som en häst i skritt — och vridhastigheten faller
+	     ut som kurvatur × tempo. Radien blir därmed 1/kurvatur oavsett
+	     fart, alltså vidare bågar i högre gångart utan att någon motkraft
+	     behöver räknas fram.
+
+	     Kurvaturen tar tag snabbare än den släpper: att lägga sig i en
+	     båge går fortare än att räta upp sig ur den, både i verkligheten
+	     och i känslan. ]]
 	local speedAbs = math.abs(loco.speed)
-	local base = math.clamp(M.TurnRateBase + M.TurnRateGain * speedAbs, M.TurnRateMin, M.TurnRateMax)
 	local steer = self:_steer(intent.steer, dt)
-	local wanted = steer * base * gait.turn * (0.70 + 0.60 * stats.Agility)
+	local kappaCeiling = M.CurvatureMax * gait.turn * (0.70 + 0.60 * stats.Agility)
+	local kappaWanted = steer * kappaCeiling
 	if loco.speed < -0.05 then
-		wanted = -wanted                              -- backar man styr man spegelvänt
+		kappaWanted = -kappaWanted                    -- backar man styr man spegelvänt
 	end
-	loco.turnRate = approach(loco.turnRate, wanted, M.TurnAccel, M.TurnAccel * 1.4, dt)
+	local kappaTau = if math.abs(kappaWanted) > math.abs(self.curvature)
+		then M.CurvatureTauPress else M.CurvatureTauRelease
+	self.curvature = smooth(self.curvature, kappaWanted, kappaTau, dt)
+	if math.abs(self.curvature) < 0.0015 then self.curvature = 0 end
+	loco.turnRate = self.curvature * loco.speed
+	--[[ Vändning på stället läggs till där farten är låg. Utan den kan en
+	     stående häst inte vrida sig alls, eftersom omega är kurvatur
+	     gånger tempo — och tillståndsmaskinen har ett eget läge för just
+	     att vända på stället. Termen tonas ut linjärt och är helt borta
+	     när hästen går, så den kan aldrig ge en pivot under ritt. ]]
+	if speedAbs < M.TurnInPlaceBelow then
+		local andel = 1 - speedAbs / M.TurnInPlaceBelow
+		loco.turnRate += steer * M.TurnInPlaceRate
+			* (0.70 + 0.60 * stats.Agility) * andel
+	end
 	loco.heading = (loco.heading + loco.turnRate * dt) % (2 * math.pi)
 
 	--[[ ── Lutning ─────────────────────────────────────────────────────
@@ -191,7 +216,22 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		jumpFired = jumpFired,
 	}, dt)
 	loco.gait = self.machine.gait
-	loco.phase = (loco.phase + Gaits.beatRate(loco.gait, speedAbs) * dt) % 1
+
+	--[[ ── Fasen följer MARKEN ────────────────────────────────────────
+	     Förut drevs fasen av beatRate × dt, alltså av den fart vi BEGÄRT.
+	     Nu mäts hur långt hästen faktiskt kom sedan förra bildrutan, och
+	     fasen är den sträckan delad med gångartens cykellängd. Krockar
+	     hästen med något eller bromsas av terrängen slutar hovarna att
+	     trampa i luften, och stillastående häst går inte på stället.
+
+	     Rootens läge är i studs; cykellängden i meter. ]]
+	local pos = rig.root.Position
+	local moved = if self.lastPos then (pos - self.lastPos).Magnitude else 0
+	self.lastPos = pos
+	local cycle = Gaits.cycleLength(loco.gait)
+	if cycle > 0 then
+		loco.phase = (loco.phase + (moved / Config.STUDS_PER_METRE) / cycle) % 1
+	end
 
 	--[[ ── Ut i världen ───────────────────────────────────────────────
 	     Humanoid får riktningen som VI har räknat fram, inte spelarens råa
@@ -226,6 +266,8 @@ end
 
 function MovementController:release()
 	self.steerInput = 0
+	self.curvature = 0
+	self.lastPos = nil
 	local hum = self.rig.humanoid
 	if hum then
 		hum.WalkSpeed = 0

@@ -37,11 +37,34 @@ Config.STATS = {
 
 --[[ ── Rörelse ──────────────────────────────────────────────────────── ]]
 Config.MOVEMENT = {
-	TurnRateBase = 0.50,   -- rad/s vid nolltempo
-	TurnRateGain = 0.22,   -- tillägg per m/s
-	TurnRateMin = 0.40,
-	TurnRateMax = 2.20,
+	--[[ ── Svängen som kurvatur ──────────────────────────────────────
+	     Styraxeln ber om en KURVATUR i 1/meter — hur snävt hästen böjer
+	     sig — och vridhastigheten faller ut som kurvatur × tempo. Det
+	     betyder att svängradien blir 1/kurvatur oavsett fart, alltså att
+	     en snabbare gångart automatiskt ger en vidare båge.
+
+	     Förut räknades vridhastigheten direkt och växte med farten
+	     (TurnRateBase + TurnRateGain × tempo, tak 2,20 rad/s). I
+	     fyrsprång gav det 126 grader i sekunden, vilket gör att man viker
+	     hästen genom en sväng i stället för att rida den. De gamla
+	     fälten är borta; gångartens turn-faktor lever kvar och skalar
+	     kurvaturtaket i stället för vridhastigheten.
+
+	     CurvatureMax är satt så att full styrning i skritt ger ungefär
+	     3,3 m radie, samma som webbversionens modell. ]]
+	CurvatureMax = 0.30,   -- 1/m vid full styrning i skritt
+	CurvatureTauPress = 0.13,   -- sekunder att lägga sig i bågen
+	CurvatureTauRelease = 0.19, -- längre: att räta upp sig tar tid
 	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
+
+	--[[ Vändning på stället. Kurvaturmodellen ger noll vridning vid noll
+	     fart — omega är kurvatur GÅNGER tempo — och det är rätt under
+	     ritt: en häst i rörelse ska inte kunna snurra på fläcken. Men en
+	     häst som STÅR ska kunna vrida sig, och tillståndsmaskinen har ett
+	     eget läge för det. Den här termen blandas in där farten är låg
+	     och tonas ut helt när hästen går. ]]
+	TurnInPlaceRate = 0.85,   -- rad/s vid full styrning från stillastående
+	TurnInPlaceBelow = 0.55,  -- m/s: över detta finns den inte alls
 
 	--[[ Rampen på styrutslaget, sekunder. En tangent är av eller på, så
 	     utan den finns bara tre lägen: helt vänster, rakt, helt höger.
@@ -51,8 +74,13 @@ Config.MOVEMENT = {
 	SteerTauPress = 0.11,
 	SteerTauRelease = 0.17,
 
-	LeanMax = 0.26,        -- radianer roll i skarp sväng
-	LeanGain = 0.075,      -- roll per (rad/s × m/s)
+	--[[ Lutningen samordnad med webbversionen. Signalen är densamma på
+	     båda — centripetalkraften, alltså vridhastighet × tempo, vilket
+	     är samma storhet som kurvatur × tempo² — men Roblox tillät 0,26
+	     rad (15°) mot webbens 0,075 (4,3°). Femton grader läser som
+	     motorcykel; en häst lutar sig knappt. ]]
+	LeanMax = 0.075,       -- radianer roll i skarp sväng ≈ 4,3°
+	LeanGain = 0.012,      -- roll per (rad/s × m/s)
 	LeanTau = 0.16,        -- utjämning, sekunder
 
 	ReverseSpeed = 1.1,    -- m/s bakåt
