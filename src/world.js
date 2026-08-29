@@ -12,7 +12,89 @@ const VD={
   px:0, py:0, rikt:0, fas:0, tid:0,
   spår:[], hastX:0, hastY:0, hastRikt:0,
   prompt:null, ePrev:false, _ov:null,
+  /* Klickmålet på kartan: {x, y, namn} eller null. Se GÅ HIT nedan. */
+  mal:null, malT:0, malAvst:0, vag:null,
 };
+
+/* ── GÅ HIT ────────────────────────────────────────────────────────
+   Kartan visade var man var men gick inte att använda till något: man
+   såg ridhuset i andra änden av tomten och fick ändå hålla W nedtryckt
+   i tjugo sekunder. En karta man inte kan peka på är en bild.
+
+   Klicka någonstans och figuren går dit. Klickar du på ett hus eller en
+   dörr siktar den på dörren i stället för på väggen — annars går man
+   fram till fasaden och står där, vilket är precis det kartan skulle
+   slippa. Framme dyker den vanliga E-prompten upp; gåendet öppnar
+   ingenting av sig självt, för ett scenbyte man inte bad om är värre än
+   ett steg för mycket.
+
+   Vilken som helst av W/A/S/D avbryter direkt. Målet ska aldrig ta ifrån
+   någon styrningen — det är en genväg, inte en autopilot. */
+const V2T={ox:0, oy:0, s:1, hojd:0, scen:null};   // senaste 2D-vyns transform
+function v2tSatt(ox,oy,s,hojd){ V2T.ox=ox; V2T.oy=oy; V2T.s=s;
+  V2T.hojd=hojd; V2T.scen=G.scen; }
+function v2tVarld(sx,sy){ return [(sx-V2T.ox)/V2T.s, V2T.hojd-(sy-V2T.oy)/V2T.s]; }
+
+/* Närmaste dörr/interaktion till en punkt, inom `max` meter. */
+function malNaraDorr(x,y,max){
+  let bast=null, bd=max;
+  for(const i of interaktioner()){
+    const d=Math.hypot(x-i.pos[0], y-i.pos[1]);
+    if(d<bd){bd=d; bast=i;}
+  }
+  return bast;
+}
+/* Ligger punkten inne i ett hus? Då menade man huset, inte väggen. */
+function malIHus(x,y){
+  if(G.scen!=="gard")return null;
+  for(const b of ANL.byggnader){
+    const r=b.rekt;
+    if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)return b;
+  }
+  return null;
+}
+function satMal(x,y){
+  if(G.scen!=="gard"&&G.scen!=="stallinne"&&G.scen!=="ridhusinne")return;
+  let namn="";
+  const hus=malIHus(x,y);
+  if(hus){
+    /* Klick på ett hus → närmaste dörr TILL det huset. Utan det gick man
+       in i fasaden och blev stående. */
+    let bast=null, bd=1e9;
+    for(const i of interaktioner()){
+      const r=hus.rekt, p=i.pos;
+      const nara=p[0]>=r.x-4&&p[0]<=r.x+r.w+4&&p[1]>=r.y-4&&p[1]<=r.y+r.h+4;
+      if(!nara)continue;
+      const d=Math.hypot(x-p[0],y-p[1]);
+      if(d<bd){bd=d;bast=i;}
+    }
+    if(bast){x=bast.pos[0]; y=bast.pos[1]; namn=hus.label||"";}
+  }else{
+    const d=malNaraDorr(x,y,3.0);
+    if(d){x=d.pos[0]; y=d.pos[1];}
+  }
+  VD.mal={x, y, namn};
+  VD.malT=0;
+  VD.malAvst=Math.hypot(x-VD.px, y-VD.py);
+  /* Vägen räknas ut EN gång, vid klicket. Går ingen väg att hitta får
+     den raka linjen försöka ändå — då fångar fastnadsvakten det, och
+     spelaren får ett besked i stället för en figur som maler mot en
+     vägg. */
+  VD.vag=navVag(VD.px,VD.py,x,y);
+}
+function slutaGa(){ VD.mal=null; VD.vag=null; }
+
+/* Klick och tryck på kartan. Bara i 2D — i 3D är det ingen karta, och
+   ett klick där skulle betyda något annat. */
+if(typeof cv!=="undefined"&&cv&&cv.addEventListener)
+  cv.addEventListener("pointerdown",e=>{
+    if(G.vy!=="2d")return;
+    if(G.scen!=="gard"&&G.scen!=="stallinne"&&G.scen!=="ridhusinne")return;
+    if(typeof overlayUppe==="function"&&overlayUppe())return;
+    if(V2T.scen!==G.scen)return;                  // vyn har inte ritats än
+    const [x,y]=v2tVarld(e.offsetX,e.offsetY);
+    satMal(x,y);
+  });
 
 const VCOL={
   gras:"#5D6C39", grasLj:"#6C7C44", grus:"#BCA179", asfalt:"#54524E",
@@ -85,19 +167,75 @@ function stegaVandring(dt){
   VD.tid+=dt;
   if(overlayUppe())return;
   const fram=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?0.6:0);
-  /* Riktningen är atan2-vinkeln i (x, z)-planet och rörelsen går längs
-     (cos rikt, sin rikt). Med Y uppåt blir spelarens högersida
-     framåt × upp = (−sin, 0, cos) — vilket är exakt derivatan av framåt
-     med avseende på rikt. Ökande rikt svänger alltså HÖGER.
-     Ridningen i stegaRitt har alltid räknat så (KeyD ger styrning +0,72);
-     gå-läget gjorde tvärtom, så A och D var spegelvända mot varandra. */
-  const sv=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
-  VD.rikt+=sv*GA.svang*dt;
+  /* Kursen är atan2-vinkeln i markplanet (framåt = cos, sin), och i ett
+     y-uppåt-plan svänger VÄXANDE vinkel moturs — alltså vänster. Därför
+     MINUS här.
+
+     Den gamla kommentaren på den här raden räknade fram spelarens
+     högersida som framåt × upp och fick (−sin, 0, cos). Det stämmer i en
+     högerhänt bas, men spelets bas (öster, upp, norr) är vänsterhänt —
+     GL.kamera speglar därför vyn i X och sätter frontFace till CW. Med
+     den speglingen inräknad är (−sin, cos) spelarens VÄNSTER, inte
+     höger, och gå-läget rättades en gång åt fel håll för att stämma med
+     en ridning som redan var spegelvänd.
+
+     Mätt: nosen rakt norrut (90°), D nedtryckt en halv sekund → 167°.
+     Moturs. Nu blir det 13°, alltså höger. */
+  let sv=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
   const jogg=IN.ned.ShiftLeft||IN.ned.ShiftRight;
-  const fart=fram*(jogg?GA.jogg:GA.fart);
+  let fart=fram*(jogg?GA.jogg:GA.fart);
+
+  /* GÅ HIT: klickmålet skriver över sv och fart — men bara så länge
+     spelaren håller fingrarna borta. Minsta tangenttryck avbryter. */
+  if(VD.mal){
+    /* Nästa punkt på vägen, inte målet självt — det är skillnaden
+       mellan att gå runt ridhuset och att gå in i det. */
+    while(VD.vag&&VD.vag.length>1&&
+      Math.hypot(VD.vag[0][0]-VD.px,VD.vag[0][1]-VD.py)<1.1)VD.vag.shift();
+    const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
+    const avst=Math.hypot(VD.mal.x-VD.px, VD.mal.y-VD.py);
+    if(fram||sv||avst<0.9){
+      slutaGa();
+    }else{
+      const onskad=Math.atan2(delmal[1]-VD.py, delmal[0]-VD.px);
+      let d=onskad-VD.rikt;
+      while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+      /* sv går genom samma minustecken som tangenterna nedan, så den
+         måste vändas här: vi vill att kursen ska VÄXA mot d. */
+      sv=-clamp(d*2.2,-1,1);
+      /* Full fart först när man är någorlunda riktad — annars ritar man
+         en båge runt målet i stället för att gå dit. */
+      fart=GA.fart*(Math.abs(d)>0.9?0.35:1);
+      /* Fastnar man bakom ett hörn ska gåendet SLUTA, inte stå och
+         trycka mot en vägg. Kommer man inte 0,2 m närmare på två
+         sekunder är vägen inte fri, och då får spelaren styra själv. */
+      VD.malT+=dt;
+      if(VD.malT>2){
+        if(VD.malAvst-avst<0.2){ slutaGa(); saga("Du kommer inte fram den vägen.",2.6); }
+        VD.malT=0; VD.malAvst=avst;
+      }
+    }
+  }
+  VD.rikt-=sv*GA.svang*dt;
   let nx=VD.px+Math.cos(VD.rikt)*fart*dt;
   let ny=VD.py+Math.sin(VD.rikt)*fart*dt;
-  const r=GA.radie;
+  [nx,ny]=vandringKollision(nx,ny,GA.radie);
+  VD.px=nx; VD.py=ny;
+  if(Math.abs(fart)>0.05){
+    ljudFotsteg(Math.abs(fart)*dt,G.scen==="stallinne"?"sten":"grus");
+    VD.fas=(VD.fas+Math.abs(fart)*dt*1.9)%1;
+    const sp=VD.spår;
+    if(!sp.length||Math.hypot(nx-sp[sp.length-1][0],ny-sp[sp.length-1][1])>0.35)
+      sp.push([nx,ny]); if(sp.length>40)sp.shift();
+  }
+  ledHasten();
+  interagera();
+}
+
+/* Scenens väggar, i ETT anrop. Både gåendet och vägsökningen frågar den
+   här funktionen, så att en väg aldrig kan gå genom något gåendet stoppas
+   av — två beskrivningar av samma hus blir förr eller senare oense. */
+function vandringKollision(nx,ny,r){
   if(G.scen==="gard"){
     for(const b of ANL.byggnader) [nx,ny]=kollideraRekt(nx,ny,r+0.2,b.rekt);
     for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++)
@@ -131,15 +269,147 @@ function stegaVandring(dt){
       [nx,ny]=kollideraSeg(nx,ny,r,vx+tv.gap/2,tv.y,S.bredd,tv.y);
     }
   }
-  VD.px=nx; VD.py=ny;
-  if(Math.abs(fart)>0.05){
-    ljudFotsteg(Math.abs(fart)*dt,G.scen==="stallinne"?"sten":"grus");
-    VD.fas=(VD.fas+Math.abs(fart)*dt*1.9)%1;
-    const s=VD.spår;
-    if(!s.length||Math.hypot(nx-s[s.length-1][0],ny-s[s.length-1][1])>0.35)
-      s.push([nx,ny]); if(s.length>40)s.shift();
+  return [nx,ny];
+}
+
+/* ── Vägsökning ────────────────────────────────────────────────────
+   Ett klick i andra änden av tomten dög inte med en rak linje: figuren
+   gick in i ridhusets långsida och blev stående 24 m från dörren, och
+   fastnadsvakten stängde av gåendet. En genväg som bara fungerar när
+   ingenting står i vägen är ingen genväg.
+
+   Därför ett grovt rutnät och A*. Rutnätet frågar `vandringKollision` om
+   varje ruta, alltså exakt samma väggar som gåendet självt stoppas av —
+   ingen andra beskrivning av husen som kan bli osams med den första.
+   Rutnätet byggs om bara när scenen byts; geometrin står still.
+
+   210 × 170 m med 1,6-metersrutor blir 131 × 106 = knappt 14 000 rutor.
+   A* över det tar under en millisekund och körs en gång per klick. */
+const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null};
+
+function navBygg(){
+  const matt=G.scen==="gard" ? [ANL.bredd,ANL.djup]
+    : G.scen==="ridhusinne" ? [RIDHUSINNE.bredd,RIDHUSINNE.langd]
+    : [STALLINNE.bredd,STALLINNE.langd];
+  NAV.cell=G.scen==="gard"?1.2:0.6;              // inomhus är gångarna smala
+  NAV.nx=Math.ceil(matt[0]/NAV.cell); NAV.ny=Math.ceil(matt[1]/NAV.cell);
+  NAV.fri=new Uint8Array(NAV.nx*NAV.ny);
+  /* Rutan provas med en radie som täcker HELA rutan, inte bara dess
+     mitt. Med enbart mittpunkten gled ett staket rakt mellan mätpunkterna
+     och rutnätet svor på att vägen var fri: figuren gick 20 m och stod
+     sedan still mot ett räcke vid y=42,0 som inga prov hade sett.
+     Rutnätet får hellre vara för försiktigt än för optimistiskt — en väg
+     som inte finns är värre än en väg som går en meter från väggen. */
+  const r=GA.radie+NAV.cell*0.71;
+  for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
+    const x=(i+0.5)*NAV.cell, y=(j+0.5)*NAV.cell;
+    const [kx,ky]=vandringKollision(x,y,r);
+    NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
   }
-  // hästen följer 2,2 m bakom i spåret när du leder
+  NAV.scen=G.scen;
+}
+function navRedo(){ if(NAV.scen!==G.scen)navBygg(); }
+function navIx(x,y){
+  const i=clamp(Math.floor(x/NAV.cell),0,NAV.nx-1);
+  const j=clamp(Math.floor(y/NAV.cell),0,NAV.ny-1);
+  return [i,j];
+}
+function navPunkt(i,j){ return [(i+0.5)*NAV.cell,(j+0.5)*NAV.cell]; }
+
+/* Dörrar ligger i väggen och hamnar därför i en spärrad ruta. Sikta på
+   den närmaste fria i stället — annars går ingen väg alls att hitta. */
+function navNarmasteFri(x,y){
+  let [i,j]=navIx(x,y);
+  if(NAV.fri[j*NAV.nx+i])return [i,j];
+  for(let rad=1;rad<=8;rad++){
+    let bast=null,bd=1e9;
+    for(let dj=-rad;dj<=rad;dj++)for(let di=-rad;di<=rad;di++){
+      if(Math.max(Math.abs(di),Math.abs(dj))!==rad)continue;
+      const a=i+di, b=j+dj;
+      if(a<0||b<0||a>=NAV.nx||b>=NAV.ny||!NAV.fri[b*NAV.nx+a])continue;
+      const [px,py]=navPunkt(a,b), d=Math.hypot(px-x,py-y);
+      if(d<bd){bd=d;bast=[a,b];}
+    }
+    if(bast)return bast;
+  }
+  return null;
+}
+
+/* Fri sikt mellan två punkter? Används för att räta ut trapporna som
+   ett rutnät alltid ger. */
+function navFriSikt(ax,ay,bx,by){
+  /* Mot de RIKTIGA väggarna, inte mot rutnätet. Rutnätet är avsiktligt
+     försiktigt (se ovan) och skulle annars vägra den sista metern fram
+     till en dörr, som per definition ligger i en vägg. */
+  const d=Math.hypot(bx-ax,by-ay), steg=Math.max(1,Math.ceil(d/0.25));
+  for(let k=1;k<steg;k++){
+    const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
+    const [kx,ky]=vandringKollision(x,y,GA.radie);
+    if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
+  }
+  return true;
+}
+
+/* A* med oktilheuristik. Returnerar en lista världspunkter, eller null. */
+function navVag(sx,sy,mx,my){
+  navRedo();
+  const start=navNarmasteFri(sx,sy), mal=navNarmasteFri(mx,my);
+  if(!start||!mal)return null;
+  const N=NAV.nx*NAV.ny, si=start[1]*NAV.nx+start[0], mi=mal[1]*NAV.nx+mal[0];
+  if(si===mi)return [[mx,my]];
+  const g=new Float32Array(N).fill(Infinity), fr=new Int32Array(N).fill(-1);
+  const stangd=new Uint8Array(N);
+  const h=(i)=>{const a=i%NAV.nx,b=(i/NAV.nx)|0;
+    const dx=Math.abs(a-mal[0]),dy=Math.abs(b-mal[1]);
+    return (dx+dy)+(Math.SQRT2-2)*Math.min(dx,dy);};
+  /* En enkel binärhög räcker gott — kön blir aldrig stor. */
+  const hog=[[h(si),si]];
+  const putt=(v)=>{hog.push(v);let i=hog.length-1;
+    while(i>0){const p=(i-1)>>1; if(hog[p][0]<=hog[i][0])break;
+      [hog[p],hog[i]]=[hog[i],hog[p]]; i=p;}};
+  const ta=()=>{const t=hog[0], sist=hog.pop();
+    if(hog.length){hog[0]=sist;let i=0;
+      for(;;){const l=2*i+1,r=l+1;let m=i;
+        if(l<hog.length&&hog[l][0]<hog[m][0])m=l;
+        if(r<hog.length&&hog[r][0]<hog[m][0])m=r;
+        if(m===i)break; [hog[m],hog[i]]=[hog[i],hog[m]]; i=m;}}
+    return t;};
+  g[si]=0;
+  while(hog.length){
+    const [,cur]=ta();
+    if(stangd[cur])continue;
+    stangd[cur]=1;
+    if(cur===mi)break;
+    const a=cur%NAV.nx, b=(cur/NAV.nx)|0;
+    for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){
+      if(!di&&!dj)continue;
+      const na=a+di, nb=b+dj;
+      if(na<0||nb<0||na>=NAV.nx||nb>=NAV.ny)continue;
+      const ni=nb*NAV.nx+na;
+      if(!NAV.fri[ni]||stangd[ni])continue;
+      /* Ingen genväg diagonalt förbi ett hörn. */
+      if(di&&dj&&(!NAV.fri[b*NAV.nx+na]||!NAV.fri[nb*NAV.nx+a]))continue;
+      const ny2=g[cur]+((di&&dj)?Math.SQRT2:1);
+      if(ny2<g[ni]){ g[ni]=ny2; fr[ni]=cur; putt([ny2+h(ni),ni]); }
+    }
+  }
+  if(fr[mi]<0&&si!==mi)return null;
+  const rutor=[]; for(let i=mi;i>=0;i=fr[i]){rutor.push(i); if(i===si)break;}
+  rutor.reverse();
+  const pkt=rutor.map(i=>navPunkt(i%NAV.nx,(i/NAV.nx)|0));
+  pkt.push([mx,my]);
+  /* Räta ut: hoppa så långt fram fri sikt räcker. */
+  const ut=[]; let i=0;
+  while(i<pkt.length-1){
+    let j=pkt.length-1;
+    while(j>i+1&&!navFriSikt(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1]))j--;
+    ut.push(pkt[j]); i=j;
+  }
+  return ut;
+}
+
+/* Hästen följer 2,2 m bakom i spåret när du leder. */
+function ledHasten(){
   if(G.leder){
     let kvar=2.2, hx=VD.px, hy=VD.py, vin=VD.rikt;
     const s=VD.spår;
@@ -154,7 +424,37 @@ function stegaVandring(dt){
     if(kvar>0){hx=fx-Math.cos(VD.rikt)*kvar; hy=fy-Math.sin(VD.rikt)*kvar;}
     VD.hastX=hx; VD.hastY=hy; VD.hastRikt=vin;
   }
-  interagera();
+}
+
+/* Målmarkören: en ring som drar ihop sig, plus en streckad linje från
+   figuren. Linjen är den som gör att man förstår att klicket TOG — utan
+   den ser en ensam ring ut som pynt. */
+function ritaMal2D(proj){
+  if(!VD.mal)return;
+  const [a,b]=proj(VD.mal.x,VD.mal.y);
+  const puls=0.6+0.4*Math.sin(VD.tid*4);
+  const r=Math.max(V2T.s*0.9,7);
+  cx.save();
+  cx.strokeStyle="rgba(240,206,110,.45)"; cx.lineWidth=1.5; cx.setLineDash([5,5]);
+  cx.beginPath();
+  {const [pa,pb]=proj(VD.px,VD.py); cx.moveTo(pa,pb);}
+  /* Hela vägen, inte en rak linje till målet — annars ser det ut som att
+     figuren tänker gå rakt genom huset, och det tänker den inte. */
+  for(const q of (VD.vag||[[VD.mal.x,VD.mal.y]])){
+    const [qa,qb]=proj(q[0],q[1]); cx.lineTo(qa,qb);
+  }
+  cx.stroke();
+  cx.setLineDash([]);
+  cx.strokeStyle="rgba(240,206,110,.95)"; cx.lineWidth=2.2;
+  cx.beginPath(); cx.arc(a,b,r*puls,0,Math.PI*2); cx.stroke();
+  cx.fillStyle="rgba(240,206,110,.9)";
+  cx.beginPath(); cx.arc(a,b,2.4,0,Math.PI*2); cx.fill();
+  if(VD.mal.namn){
+    cx.font="600 12px system-ui,sans-serif"; cx.textAlign="center";
+    cx.fillStyle="rgba(255,240,200,.95)";
+    cx.fillText(VD.mal.namn,a,b-r-6);
+  }
+  cx.restore();
 }
 
 /* ── Interaktion ──────────────────────────────────────────────── */
@@ -304,6 +604,11 @@ function boxHast(id){
 function gaTill(scen,spawn){
   G.scen=scen;
   if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;}
+  slutaGa();                       // ett mål i förra scenen betyder inget här
+  /* Rutnätet byggs vid dörren, inte vid första klicket. Gården kostar
+     69 ms att rasta, och den pausen hör hemma i scenbytet — där det redan
+     hackar — och inte i ett klick som ska kännas omedelbart. */
+  navBygg();
 }
 function startaVandring(){
   overlay(false);
@@ -951,6 +1256,7 @@ function gs(x,y){return [V2G.ox+x*V2G.s, V2G.oy+(ANL.djup-y)*V2G.s];}
 function gsRekt(r){const[a,b]=gs(r.x,r.y+r.h);return[a,b,r.w*V2G.s,r.h*V2G.s];}
 function ritaGard2D(){
   g2fit();
+  v2tSatt(V2G.ox,V2G.oy,V2G.s,ANL.djup);
   cx.fillStyle=VCOL.gras; cx.fillRect(0,0,CW,CH);
   const s=V2G.s;
   for(const m of ANL.mark){const[a,b,w,h]=gsRekt(m.rekt);
@@ -1020,6 +1326,7 @@ function ritaGard2D(){
     cx.fillStyle=HORSES[G.hastId].farg;
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.3,s*0.55,0,0,Math.PI*2);cx.fill();cx.restore();}
+  ritaMal2D(gs);
   ritaSpelare2D(gs(VD.px,VD.py),-VD.rikt,Math.max(s,2.2));
 }
 function ritaSpelare2D(pos,rikt,s){
@@ -1036,9 +1343,15 @@ function ritaSpelare2D(pos,rikt,s){
 /* ── Stallet invändigt: 2D ────────────────────────────────────── */
 function ritaStall2D(){
   const S=STALLINNE, m=30;
-  const s=Math.min((CW-2*m-340)/S.bredd,(CH-2*m)/S.langd);
+  /* Avdraget lämnar plats åt HUD-rutorna på en bred skärm. På en telefon
+     (CW 390) blev (390−60−340)/15 = −0,67 och hela kartan ritades ut och
+     in — spelaren, boxarna och gången hamnade utanför duken. Avdraget
+     görs därför bara när det får plats, och skalan har ett golv. */
+  const sido=CW>=820?340:0;
+  const s=Math.max(Math.min((CW-2*m-sido)/S.bredd,(CH-2*m)/S.langd),0.5);
   const ox=(CW-S.bredd*s)/2, oy=(CH-S.langd*s)/2;
   const ss=(x,y)=>[ox+x*s, oy+(S.langd-y)*s];
+  v2tSatt(ox,oy,s,S.langd);
   cx.fillStyle="#14171B";cx.fillRect(0,0,CW,CH);
   const[fa,fb]=ss(0,S.langd);
   cx.fillStyle=S.golv;cx.fillRect(fa,fb,S.bredd*s,S.langd*s);
@@ -1097,6 +1410,7 @@ function ritaStall2D(){
     const[a,b]=ss(fx2,fy);
     cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.35),0,Math.PI*2);cx.fill();
   }
+  ritaMal2D(ss);
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
 
@@ -1291,9 +1605,11 @@ function gardsFolk(){
 /* ── Ridhuset invändigt: 2D ───────────────────────────────────── */
 function ritaRidhus2D(){
   const R=RIDHUSINNE, ba=R.bana, m=30;
-  const s=Math.min((CW-2*m-320)/R.bredd,(CH-2*m)/R.langd);
+  const sido=CW>=820?320:0;                    // se ritaStall2D
+  const s=Math.max(Math.min((CW-2*m-sido)/R.bredd,(CH-2*m)/R.langd),0.5);
   const ox=(CW-R.bredd*s)/2, oy=(CH-R.langd*s)/2;
   const ss=(x,y)=>[ox+x*s, oy+(R.langd-y)*s];
+  v2tSatt(ox,oy,s,R.langd);
   cx.fillStyle="#14171B";cx.fillRect(0,0,CW,CH);
   const[fa,fb]=ss(0,R.langd);
   cx.fillStyle=R.gangFarg;cx.fillRect(fa,fb,R.bredd*s,R.langd*s);
@@ -1336,6 +1652,7 @@ function ritaRidhus2D(){
     cx.fillStyle=HORSES[G.hastId].farg;
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
+  ritaMal2D(ss);
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
 

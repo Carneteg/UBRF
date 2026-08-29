@@ -175,7 +175,21 @@ function stegaRitt(dt){
   {const steg=stegaFardighet(G.ride,G.aids,dt);
    if(steg)visaFardighetsSteg(steg);}
   passSteg(dt);
-  G.rikt+=omega*dt*(G.ride.tempo>0.2?1:0);
+  /* MINUS, inte plus. Kursen är atan2-vinkeln i ett y-uppåt-plan
+     (framåt = cos, sin), och där betyder VÄXANDE vinkel moturs — alltså
+     vänster. D gav styrning +0,72 och därmed en vänstersväng: höger och
+     vänster har varit spegelvända i hela spelet.
+
+     Uppmätt före rättningen: med nosen rakt norrut (90°) och D nedtryckt
+     en halv sekund gick kursen till 130° i ridningen och 167° i gå-läget
+     — bägge moturs, alltså vänster.
+
+     Rättningen ligger HÄR och inte i tangentborden, så att styrning > 0
+     genomgående betyder höger: det är vad D ger, vad pekstyrningens
+     högerdrag ger, och vad HUD:ens markör visar. Kameran var oskyldig —
+     en punkt rakt öster om spelaren projiceras till NDC-x +13,9, alltså
+     höger på skärmen, precis som den ska. */
+  G.rikt-=omega*dt*(G.ride.tempo>0.2?1:0);
   // väggkollision: mjuk knuff in
   let nx=G.px+Math.cos(G.rikt)*G.ride.tempo*dt;
   let ny=G.py+Math.sin(G.rikt)*G.ride.tempo*dt;
@@ -259,7 +273,10 @@ function autopilot(dt){
   }
   const onskad=Math.atan2(my-G.py,mx-G.px);
   let d=onskad-G.rikt;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;
-  G.aids.styrning=clamp(d*1.4,-0.8,0.8);
+  /* Minustecknet följer av rättningen ovan: d är hur mycket kursen ska
+     ÖKA för att peka på målet, och sedan kursen räknas moturs betyder en
+     ökning vänster — alltså negativ styrning. */
+  G.aids.styrning=clamp(-d*1.4,-0.8,0.8);
   G.aids.skankel=0.62; G.aids.tygel=0.37; G.aids.sits=0.2;
   G.aids.lattridning=true; G.aids.diagonal=1; G.aids.spo=false;
 }
