@@ -23,6 +23,40 @@ inte. Byggnadsarbete efter foton loggas som en post per byggnad och pass.
 
 ## Augusti 2026
 
+### 2026-08-29 · Varje dörr du ser går att öppna
+Husen ritade tio dörrar men bara en handfull fanns i dörrlistan — man
+stod framför en dörr, tryckte E och ingenting hände. Dörrarna kommer nu
+ur fasaderna själva, så en dörr som syns också fungerar, och det finns
+en väg ut på samma ställe. Tretton ingångar på gården i stället för sju.
+(43615e7)
+
+### 2026-08-29 · Gåendet styrs mot kameran, med ansats och broms
+A och D vred figuren som ett stridsvagnstorn medan W gav gas, och med
+kameran bakom ryggen kändes höger och vänster godtyckliga. Nu går W dit
+kameran tittar, A och D i sidled, och figuren vänder sig mjukt mot
+rörelsen i stället för att snäppa. Farten tar sats och bromsar, skarpa
+svängar håller igen, och kameran snappar på plats vid varje dörr i
+stället för att flyga genom väggen. 3D bakom figuren är standardvy —
+kartan var förval förut, och dess styrning har en annan referens.
+Entréhallens disk och bänkar går inte längre att gå igenom. (43615e7)
+
+### 2026-08-29 · Stallgången ser ut som stallgången
+Byggd efter filmerna från anläggningen i stället för tre stillbilder:
+sadeltak i ljus galvad plåt, tegelröda tvärbalkar med snedstag upp mot
+nocken, de galvade dragstagen ner mot boxarna, takfönstren och de runda
+lamporna i två rader. Golvet är två material som i verkligheten —
+markstensgång i mitten och en ljus spånremsa längs boxfronterna.
+(bb2b13b)
+
+### 2026-08-29 · Rid direkt, utan att fylla i något först
+Skaparen krävde namn, utseende och tre egenskaper innan man fick se
+spelet. Nu finns "Rid direkt — jag fixar det sen" bredvid: två klick
+från start till att stå på grusplanen, och allt går att ändra sedan.
+Knapparna på pekskärm är stora nog för ett finger, joysticken är analog
+så att draglängden styr farten, och kameran backar undan på en hög
+telefonskärm där figuren annars stod i vägen. Provat från 320 × 568 till
+1920 × 1080, stående och liggande. (5f45d49)
+
 ### 2026-08-29 · Anläggningen vänd rätt — grusplanen ligger i norr
 Man kommer nu fram till grusparkeringen vid husens norra gavlar, precis
 som i verkligheten: ridhuset till höger, stallet till vänster, och
