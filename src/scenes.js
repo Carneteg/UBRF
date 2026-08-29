@@ -166,11 +166,11 @@ function visaSkotsel(){
     el.onclick=()=>{SK.steg=+el.dataset.s;hovStang();VIS.oppen=null;
       momentKamTill(SK.steg);groomHint();};
   document.getElementById("bKlar").onclick=avslutaSkotsel;
-  initGroomCanvas();momentKamTill(0,true);groomHint();
+  initGroomCanvas();momentKamTill(1,true);groomHint();   // hela hästen tills man gått fram
 }
 function groomHint(){
   const h=HORSES[G.hastId];
-  let t=["Klicka på de fem ringarna: ögon, mungipor, sadelläge, gjordläge och ben. De flesta dagar är allt bra — det är därför man slutar titta.",
+  let t=["Gå fram till henne först — hon ska se dig komma. Sedan de fem ställena i tur och ordning, framifrån och bakåt: ögon, mungipor, sadelläge, gjordläge, ben. De flesta dagar är allt bra, och det är därför man slutar titta.",
     "Håll och dra över kroppen, i pälsens riktning (framifrån och bak). Täckning räknas per område.",
     "Klicka på en hov för att lyfta den, dra sedan nedåt över den för att kratsa. Alla fyra.",
     "Dra sadeln till rätt läge — precis bakom manken — och dra sedan gjordreglaget till det gröna bandet."][SK.steg];
@@ -214,6 +214,7 @@ function hantera(p,klick){
     const r0=gcv.getBoundingClientRect();
     if(visitKlick(p[0],p[1],r0.width,r0.height)){
       SK.visitering=visitAndel();
+      if(VIS.gang>=0&&!VIS.oppen)momentKamTill(0);
       dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
       ritaGroom(); return;
     }
@@ -227,6 +228,7 @@ function hantera(p,klick){
     let b=null,bd=0.085;
     for(const v of VISITPUNKT){const d=Math.hypot(x-v.x,y-v.y);if(d<bd){bd=d;b=v;}}
     if(b)visitOppna(b.id);
+    else if(VIS.gang>=0&&!VIS.oppen)momentKamTill(0);
     SK.visitering=visitAndel();
     SK.betsling=VIS.sedd.has("mun")?0.9:0.2;
     dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
@@ -380,6 +382,14 @@ function avslutaSkotsel(){
       +`(−${(0.03*Math.min(G.felUtrustning,3)).toFixed(2).replace(".",",")}) — `
       +`hon stod uppbunden och väntade`;
   }
+  /* Att komma rakt bakifrån skrämmer henne, och det sitter i hela
+     passet. Det är den enda regeln på en ridskola som kan sluta illa. */
+  let gangRad="du gick fram där hon kunde se dig";
+  if(visitSkrammd()){
+    res.dagsform=clamp(res.dagsform-0.07,0,1);
+    res.risker.push("skrammd_bakifran");
+    gangRad="du kom rakt bakifrån (−0,07) — hon rycker till";
+  }else if(VIS.gang<0)gangRad="du gick rakt på utan att hälsa";
   /* Visiteringen ska löna sig, inte bara straffa. Hittade du något och
      sa till får hon en bättre dag — det är hela poängen med att titta. */
   let visRad="inget att anmärka";
@@ -419,6 +429,7 @@ function avslutaSkotsel(){
     <tr><td>Vila</td><td class="num">${vilaRad}</td></tr>
     <tr><td>Benen efter hagen</td><td class="num">${lerRad}</td></tr>
     <tr><td>Utrustningen</td><td class="num">${utrRad}</td></tr>
+    <tr><td>Framgången till hästen</td><td class="num">${gangRad}</td></tr>
     <tr><td>Visiteringen</td><td class="num">${visRad}</td></tr>
     <tr><td>Boxen mockad</td><td class="num">${Math.round(sys.mockat*100)} %</td></tr>
     <tr><td>Fodrat efter schema</td><td class="num">${Math.round(sys.fodrat*100)} %</td></tr>

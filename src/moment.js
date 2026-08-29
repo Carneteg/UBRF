@@ -481,20 +481,65 @@ const VISITSVAR=[
   {t:"Det går nog bra idag", ratt:false},
   {t:"Lös det själv och sadla", ratt:false},
 ];
-const VIS={sedd:new Set(), fynd:null, oppen:null, svar:-1, t:0};
+/* Framgången till hästen. Det första man gör, och den enda regel på en
+   ridskola som kan sluta illa på riktigt: hon ska se dig komma och höra
+   dig först. Aldrig rakt bakifrån, aldrig tyst. */
+const VISITGANG=[
+  {t:"Framifrån, och säg hennes namn", ratt:true,
+   svar:"Hon lyfter huvudet och ser på dig. Nu vet hon att du är här."},
+  {t:"Från sidan vid bogen, med handen på halsen", ratt:true,
+   svar:"Bra. Hon känner handen innan hon ser dig — och du står där hon kan se dig."},
+  {t:"Rakt bakifrån, tyst", ratt:false,
+   svar:"Hon rycker till och slår upp huvudet. Bakifrån ser hon dig inte, och en häst som blir överrumplad sparkar först och tittar sedan."},
+];
+const VIS={sedd:new Set(), fynd:null, oppen:null, svar:-1, t:0,
+  gang:-1, ordningsfel:""};
 
 function visitNollstall(){
   VIS.sedd=new Set(); VIS.oppen=null; VIS.svar=-1; VIS.t=0;
+  VIS.gang=-1; VIS.ordningsfel="";
   /* Fyndet är samma hela dagen för samma häst, som humöret. */
   const rnd=momentFro(G.seed||1, (G.hastId||"").length, 104729);
   VIS.fynd=rnd()<0.42 ? VISITPUNKT[Math.floor(rnd()*VISITPUNKT.length)].id : null;
 }
+/* Punkterna tas i tur och ordning, framifrån och bakåt. Det är inte
+   pedanteri: går man huller om buller missar man något, och hästen blir
+   orolig av att man dyker upp än här, än där. */
+function visitNasta(){ return VISITPUNKT[VIS.sedd.size]; }
 function visitOppna(id){
+  if(VIS.gang<0){
+    VIS.ordningsfel="Gå fram till henne först — hon ska veta att du är där.";
+    return false;
+  }
+  const nasta=visitNasta();
+  if(!VIS.sedd.has(id)&&nasta&&id!==nasta.id){
+    VIS.ordningsfel=`Framifrån och bakåt — ${nasta.namn.toLowerCase()} står på tur. `
+      +`Går man huller om buller missar man något, och hon blir orolig av att `
+      +`man dyker upp än här, än där.`;
+    return false;
+  }
+  VIS.ordningsfel="";
   VIS.oppen=id; VIS.svar=-1; VIS.sedd.add(id);
   const p=VISITPUNKT.find(v=>v.id===id);
   if(p)momentKamPunkt(p.x,p.y,2.9);
   momentKamKor();
+  return true;
 }
+/* Framgången: valet innan visiteringen börjar. */
+function visitGangChipp(W,H){
+  const b=W*0.30, h=H*0.115, y=H-h-H*0.030;
+  return VISITGANG.map((v,i)=>({v,i,x:W*0.021+i*(b+W*0.010),y,b,h}));
+}
+function visitGangKlick(sx,sy,W,H){
+  for(const c of visitGangChipp(W,H))
+    if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
+      VIS.gang=c.i; VIS.ordningsfel="";
+      if(typeof ljudStot==="function")ljudStot(c.v.ratt?700:240,"sine",0.10,0.05);
+      return true;
+    }
+  return false;
+}
+function visitSkrammd(){ return VIS.gang>=0&&!VISITGANG[VIS.gang].ratt; }
 function visitStang(){ VIS.oppen=null; momentKamTill(0); }
 function visitAndel(){ return VIS.sedd.size/VISITPUNKT.length; }
 /* Klarade man visiteringen? Sant när allt är genomgånget och ett
@@ -516,6 +561,7 @@ function visitChipp(W,H){
 }
 /* Klick i skärmrymd. Returnerar sant om rutan tog hand om klicket. */
 function visitKlick(sx,sy,W,H){
+  if(VIS.gang<0)return visitGangKlick(sx,sy,W,H);
   if(VIS.oppen&&VIS.fynd===VIS.oppen&&VIS.svar<0){
     for(const c of visitChipp(W,H))
       if(sx*W>=c.x&&sx*W<=c.x+c.b&&sy*H>=c.y&&sy*H<=c.y+c.h){
@@ -529,6 +575,29 @@ function visitKlick(sx,sy,W,H){
   return false;
 }
 function ritaVisit(cx,W,H){
+  const namn0=(HORSES[G.hastId]||{}).namn||"Hon";
+  if(VIS.gang<0){
+    /* Hela hästen syns medan man väljer väg fram — valet handlar om var
+       man ställer sig, och då måste man se henne. */
+    cx.fillStyle="rgba(12,14,18,.55)"; cx.fillRect(0,0,W,H*0.155);
+    cx.textAlign="center"; cx.font='600 13px "IBM Plex Sans", sans-serif';
+    cx.fillStyle="#D6AE3C";
+    cx.fillText("HUR GÅR DU FRAM TILL HENNE?",W*0.5,H*0.075);
+    cx.font='12.5px "IBM Plex Sans", sans-serif';
+    cx.fillStyle=VIS.ordningsfel?"#D0655A":"#A6ABB3";
+    cx.fillText(VIS.ordningsfel||"Hon ska se dig komma och höra dig först.",W*0.5,H*0.115);
+    for(const c of visitGangChipp(W,H)){
+      cx.fillStyle="rgba(20,24,30,.94)"; cx.fillRect(c.x,c.y,c.b,c.h);
+      cx.strokeStyle="rgba(214,174,60,.5)"; cx.lineWidth=1.4;
+      cx.strokeRect(c.x+1,c.y+1,c.b-2,c.h-2);
+      cx.fillStyle="#E6E4DE"; cx.font='11.5px "IBM Plex Sans", sans-serif';
+      const ord=c.v.t.split(", ");
+      cx.fillText(ord[0],c.x+c.b/2,c.y+c.h*0.42);
+      if(ord[1]){cx.fillStyle="#8E939B";cx.font='10.5px "IBM Plex Sans", sans-serif';
+        cx.fillText(ord[1],c.x+c.b/2,c.y+c.h*0.74);}
+    }
+    return;
+  }
   /* Punkterna: ring för ogjord, bock för genomgången. */
   cx.save();
   cx.translate(W/2,H/2); cx.scale(KAM.s,KAM.s); cx.translate(-KAM.x*W,-KAM.y*H);
@@ -548,8 +617,14 @@ function ritaVisit(cx,W,H){
   cx.restore();
   cx.textAlign="center";
   if(!VIS.oppen){
-    cx.font='12.5px "IBM Plex Sans", sans-serif'; cx.fillStyle="#A6ABB3";
-    cx.fillText(`Gå igenom alla fem — ${VIS.sedd.size}/${VISITPUNKT.length}`,W*0.5,H*0.075);
+    const n=visitNasta();
+    cx.font='11.5px "IBM Plex Sans", sans-serif'; cx.fillStyle="#8E939B";
+    cx.fillText(VISITGANG[VIS.gang].svar.replace(/%N/g,namn0),W*0.5,H*0.055);
+    cx.font='12.5px "IBM Plex Sans", sans-serif';
+    cx.fillStyle=VIS.ordningsfel?"#D0655A":"#A6ABB3";
+    cx.fillText(VIS.ordningsfel||(n
+      ? `Framifrån och bakåt — nu ${n.namn.toLowerCase()} (${VIS.sedd.size+1}/${VISITPUNKT.length})`
+      : `Genomgången klar — ${VISITPUNKT.length}/${VISITPUNKT.length}`),W*0.5,H*0.098);
     return;
   }
   const p=VISITPUNKT.find(v=>v.id===VIS.oppen);
