@@ -149,6 +149,8 @@ class Bygge{
   klot(r,farg,mat,seg){const g=GEO.klot(r,seg||14);return this.las(g.p,g.n,g.u,g.i,farg,mat);}
   cyl(r0,r1,h,farg,mat,seg,lock){const g=GEO.cyl(r0,r1,h,seg||12,lock!==false);
     return this.las(g.p,g.n,g.u,g.i,farg,mat);}
+  disk(d,farg,mat,seg){const g=GEO.disk(seg);
+    return this.las(g.p,g.n,g.u,g.i,farg,M4.mul(mat||M4.ny(),M4.skala(d,1,d)));}
   yta(w,d,farg,mat,uvSkala){const g=GEO.yta(w,d,uvSkala||1);
     return this.las(g.p,g.n,g.u,g.i,farg,mat);}
   /* Stående rektangel i XY-planet (för skyltar, speglar, banderoller). */
@@ -262,6 +264,21 @@ const GEO={
             n:[0,1,0, 0,1,0, 0,1,0, 0,1,0],
             u:[0,0, uvS,0, uvS,uvS, 0,uvS],
             i:[0,1,2, 0,2,3]};
+  },
+  /* Liggande skiva i XZ, normal uppåt. Kontaktskuggan var förut en
+     fyrkant, och tre staplade fyrkanter läser som tre rutor på marken —
+     sämre än ingen skugga alls. En skiva staplad i ringar läser som en
+     mjuk fläck. */
+  disk(seg){
+    const n=Math.max(6,seg||20);
+    const p=[0,0,0], nr=[0,1,0], u=[0.5,0.5], i=[];
+    for(let k=0;k<=n;k++){
+      const a=k/n*Math.PI*2, c=Math.cos(a), si=Math.sin(a);
+      p.push(c*0.5,0,si*0.5); nr.push(0,1,0);
+      u.push(0.5+c*0.5,0.5+si*0.5);
+      if(k>0)i.push(0,k,k+1);
+    }
+    return {p,n:nr,u,i};
   },
   /* Stående yta i XY, centrerad, normal +Z. Texturen laddas med
      UNPACK_FLIP_Y, så nederkanten ska ha v = 0 för att bilden ska

@@ -33,9 +33,18 @@ function laddaRyttare(){
     const s=localStorage.getItem(SPAR_NYCKEL);
     if(s){
       const d=JSON.parse(s);
+      /* Vakterna kollar TYP, inte bara sanningsvärde. En sparning där
+         fortroende är strängen "trasig" är truthy och slank förut
+         igenom — sedan kraschade registreraPass permanent på
+         SPAR.fortroende[id]=..., och varje pass därefter med. En trasig
+         sparning ska ge ett spelbart spel, inte ett dött. */
+      const obj=v=>(v&&typeof v==="object"&&!Array.isArray(v))?v:{};
+      const arr=v=>Array.isArray(v)?v:[];
       if(d&&GRUPPSTEGE.includes(d.grupp))
-        SPAR={...nyProfil(),...d, fortroende:d.fortroende||{}, historik:d.historik||[],
-          rosetter:d.rosetter||[]};
+        SPAR={...nyProfil(),...d, fortroende:obj(d.fortroende),
+          historik:arr(d.historik), rosetter:arr(d.rosetter),
+          fardighet:obj(d.fardighet), jag:obj(d.jag),
+          poang:+d.poang||0, pass:+d.pass||0};
     }
   }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
   G.grupp=SPAR.grupp;
@@ -88,7 +97,31 @@ function registreraPass(dom){
   const inv=Object.values(G.betyg);
   const snitt=inv.length?inv.reduce((a,b)=>a+b,0)/inv.length:0;
   const forv=Skala.FORVANTAN[G.grupp]??0.55;
-  const godkand=!dom.utesluten&&snitt>=forv;
+  /* Godkänt kräver att du KLARADE minst hälften av de bedömda momenten,
+     inte bara att snittet blev högt. Utan det räckte det att låta hästen
+     driva: hon hamnar av sig själv i skritt, betyget blir delvis, och
+     snittet slog kravet i ledlektion, knatte och grupp2 — alltså gick
+     man upp ur nybörjargrupperna utan att röra en tangent.
+
+     Betyget får fortsätta vara gradvis; det är UPPFLYTTNINGEN som ska
+     kräva att man faktiskt kan göra övningarna. Så säger en ridlärare
+     också: du flyttas upp när du klarar momenten, inte när hästen råkar
+     bete sig. */
+  const bedomda=G.bedomda||0, klarade=G.klarade||0;
+  /* MINST hälften, uppåt avrundat: 1 av 2, 2 av 3, 2 av 4.
+
+     Först skrev jag "över hälften" — och det degenererar till ALLA när
+     det bara finns två bedömda moment, vilket är precis vad ledlektion,
+     knatte och minior har. Noll av tjugofem simulerade nybörjarpass blev
+     godkända, och en fullt kompetent ryttare med snitt 0,335 mot kravet
+     0,25 föll på att 1 inte är större än 1. Regeln låste alltså just den
+     del av spelet som ska vara mest förlåtande.
+
+     Det som faktiskt stänger den passiva vägen är kontaktkravet i
+     stegaLektion, inte den här kvoten. Passivt spel klarar 0 av 2 och
+     faller på raden nedan ändå. */
+  const nogKlarade=bedomda===0||klarade>=Math.ceil(bedomda/2);
+  const godkand=!dom.utesluten&&snitt>=forv&&nogKlarade;
   const m=hastminne(G.hastId);
   SPAR.pass++;
   /* Hästen minns passet: rang, form och att den gick nyss. Efter en
@@ -140,8 +173,13 @@ function registreraPass(dom){
       if(f.skada.passKvar<=0){delete f.skada; f.rehab=true;}
     }
   }
+  /* Dagens tema följer med. Nästa pass läser det: satt det går hon
+     vidare, satt det inte tar hon om det och SÄGER att hon gör det.
+     Det är hela skillnaden mellan en lärare och en främling. */
   SPAR.historik.unshift({hast:G.hastId, grupp:G.grupp,
-    snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten});
+    snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten,
+    fokus:(typeof lararDagensId==="function")?lararDagensId():null,
+    fokusAndel:(typeof lararAndel==="function")?Math.round(lararAndel()*100)/100:null});
   if(SPAR.historik.length>20)SPAR.historik.length=20;
   let uppflyttad=false;
   if(godkand){

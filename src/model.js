@@ -192,16 +192,13 @@ function stepRide(s,a,h,ctx,dt){
   return s;
 }
 
-const ROP={
-  takt:["Håll takten! Samma tempo hela varvet.","Du travar fortare på långsidan — jämna ut.","Räkna takten: ett-två, ett-två."],
-  losgjordhet:["Hon är spänd. Ge lite med handen och andas.","Låt honom sträcka sig framåt-nedåt ett varv.","Du håller emot. Släpp, så kommer ryggen."],
-  kontakt:["Ta upp tyglarna — du har ingen kontakt alls.","Mjuka händer! Du hänger i munnen.","Jämn förbindelse, inte ryck och släpp."],
-  schvung:["Mer skänkel! Rid framåt.","Bakbenen sover. Driv in i handen.","Du drar i tygeln utan att ha något framåt först."],
-  rakriktning:["Han faller in i hörnet — inre skänkel!","Rid volten rund, inte som en potatis.","Rakrikta på medellinjen."],
-  samling:["Halvhalt före hörnet.","Balansera om henne innan du vänder.","En halvhalt till, och släpp sedan."],
-};
-function ridlararRop(s,niva,seed){const svag=Skala.svagaste(s.skala,niva);
-  const l=ROP[svag];return [l[(seed||0)%l.length],svag];}
+/* ROP och ridlararRop låg här: bildrutans lägsta tal på
+   utbildningsskalan slogs upp i en replikbank och lästes upp var
+   trettonde sekund. Det bytte ämne så fort den lägsta siffran bytte,
+   och det är inte undervisning — det är en felrapport uppläst högt.
+   Ridläraren bor numera i src/larare.js och håller ETT tema per
+   lektion. Skala.svagaste finns kvar; den är en modellfråga och inte
+   en pedagogisk. */
 
 /* ── ApproachSolver ── */
 const Approach={

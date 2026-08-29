@@ -12,7 +12,7 @@
 
 const S3={
   redo:false, forsokt:false, canvas:null,
-  plats:null, statiskt:[], hinderNat:null, stolpNat:null,
+  plats:null, rum:null, statiskt:[], hinderNat:null, stolpNat:null,
   del:{}, tex:{},
   kam:{x:10,y:2.6,z:52, tx:10,ty:1.4,tz:46, satt:false},
 };
@@ -362,11 +362,16 @@ function s3BygHast(){
       },0.010));
   /* Hovskägget — den tunga typens flikar över kotan. */
   D.fjader=nyNat(new Bygge().cyl(0.052,0.098,0.19,vit,null,S(12,6)));
-  D.strumpa=nyNat(new Bygge().cyl(0.056,0.048,1,"#F2EFE6",null,S(10,6)));
+  /* Strumpan måste vara GROVARE än skenbenet den läggs över. Radierna
+     var fasta medan skenbenet går genom S(), som i klossläget väljer de
+     tjockare lågpolytalen (0,062/0,052) — strumpan hamnade alltså inuti
+     benet och syntes aldrig, på nio av sjutton hästar. */
+  D.strumpa=nyNat(new Bygge().cyl(S(0.050,0.062)*1.10,S(0.040,0.052)*1.10,
+    1,"#F2EFE6",null,S(10,6)));
   /* Kontaktskuggan: en platt skiva som läggs i tre storlekar med
      fallande täckning. En mjuk fläck kostar tjugo trianglar; en
      projicerad silhuett av hela hästen kostar tusentals. */
-  D.skuggflack=nyNat(new Bygge().yta(1,1,"#FFFFFF"));
+  D.skuggflack=nyNat(new Bygge().disk(1,"#FFFFFF",null,24));
   D.blas=nyNat(new Bygge().klot(1,"#F2EFE6",M4.skala(0.19,0.030,0.048),12));
   D.sadel=nyNat((()=>{
     const b=new Bygge();
@@ -637,18 +642,34 @@ function s3RitaHast(o){
   function huvudB(hb,n){return [hb[0]+Math.cos(n)*0.34, hb[1]+Math.sin(n)*0.34-0.04, 0];}
 }
 
-/* Mjuk kontaktskugga på marken: tre skivor med fallande täckning.
-   Solens riktning skjuter fläcken något åt sidan. */
+/* Mjuk kontaktskugga på marken. Fem ringar av en SKIVA med fallande
+   täckning — förut var det tre fyrkanter, och tre staplade rutor på
+   marken läser sämre än ingen skugga alls.
+
+   Den innersta ringen låg dessutom på 0,16 × 0,42 = 6,7 % alfa, alltså
+   osynlig. Kontaktskuggan är det enskilt starkaste tecknet på att något
+   står på marken i stället för att sväva; den ska synas.
+
+   Solens riktning skjuter fläcken något åt sidan, och ringarna glider
+   med — så skuggan tänjs åt det håll ljuset faller. */
 function s3Skuggflack(x,z,r,styrka){
   const D=S3.del, L=GL.ljus; if(!D.skuggflack||!L)return;
   const sl=Math.hypot(L.sol[0],L.sol[1],L.sol[2])||1;
   const dx=-L.sol[0]/sl*0.45, dz=-L.sol[2]/sl*0.45;
   const gl=GL.gl, a=(L.skuggAlfa===undefined?0.22:L.skuggAlfa)*(styrka===undefined?1:styrka);
   gl.enable(gl.BLEND); gl.depthMask(false);
-  for(const [k,v] of [[1.00,0.42],[1.55,0.24],[2.20,0.14]]){
+  /* Ringarna syntes som band: fem skivor med rejäla alfasteg ritar fem
+     synliga kanter på marken. Fler ringar med mindre steg gör samma
+     avtoning utan att man ser trappan. */
+  const ringar=[];
+  for(let i=0;i<9;i++){
+    const t=i/8;                            // 0 innerst, 1 ytterst
+    ringar.push([0.62+t*1.62, 0.30*(1-t)*(1-t)]);
+  }
+  for(const [k,v] of ringar){
     GL.rita(D.skuggflack,
-      M4.mul(M4.translation(x+dx*k*0.4,0.05,z+dz*k*0.4),
-             M4.skala(r*2.4*k,1,r*1.5*k)),
+      M4.mul(M4.translation(x+dx*k*0.4,0.045,z+dz*k*0.4),
+             M4.skala(r*2.3*k,1,r*1.5*k)),
       {platt:true, alfa:a*v, ton:L.skuggFarg||"#000000"});
   }
   gl.depthMask(true); gl.disable(gl.BLEND);
@@ -736,6 +757,10 @@ function s3Himmel(centrum){
 function s3ByggPlats(plats){
   for(const s of S3.statiskt)GL.fritt(s.nat);
   S3.statiskt=[];
+  /* Rummet kameran måste hålla sig inom. Ridhusets golv är 30 × 72 med
+     mitten i (10, 30); marginalen håller kameran innanför panelen.
+     Utomhus finns inga väggar och boomen får vara fri. */
+  S3.rum=plats==="ridhus"?{x0:-4.3,x1:24.3,z0:-5.3,z1:65.3}:null;
   const T=S3.tex, lagg=(bygge,tex)=>S3.statiskt.push({nat:GL.nat(bygge),tex});
   s3Himmel([10,30]);
 
@@ -913,12 +938,38 @@ function s3RitaHinder(){
 /* ── Kameran: bakom hästen, mjukt efterföljande ───────────────── */
 function s3Kamera(dt){
   const fram=[Math.cos(G.rikt),0,Math.sin(G.rikt)];
-  const hojd=G.luft>0?2.30:1.95, bak=G.luft>0?5.0:4.05;
+  const hojd=G.luft>0?2.30:1.95;
+  let bak=G.luft>0?5.0:4.05;
+  /* Boomen kortas tills kameran ligger innanför rummets väggar. Utan
+     det går kameran rakt genom sargen så fort man rider i ett hörn —
+     och man rider i hörnen hela tiden, eftersom fyrkantspåret går där.
+     Att korta boomen i stället för att flytta kameran i sidled håller
+     hästen kvar mitt i bilden. */
+  const R=S3.rum;
+  /* Kameran väjer för väggar OCH för andra ekipage. Utan hästarna kunde
+     boompunkten hamna närmare en NPC än ryttaren själv, och då fyllde ett
+     annat hästhuvud hela skärmen. */
+  const fritt=(px,pz)=>{
+    if(R&&(px<R.x0||px>R.x1||pz<R.z0||pz>R.z1))return false;
+    for(const n of (G.npcs||[]))
+      if(Math.hypot(px-n.x,pz-n.y)<1.9)return false;
+    return true;
+  };
+  for(let i=0;i<10&&bak>1.35;i++){
+    if(fritt(G.px-fram[0]*bak, G.py-fram[2]*bak))break;
+    bak*=0.82;
+  }
   const mx=G.px-fram[0]*bak, mz=G.py-fram[2]*bak;
   const k=S3.kam;
   if(!k.satt){k.x=mx;k.y=hojd;k.z=mz;k.tx=G.px;k.ty=1.35;k.tz=G.py;k.satt=true;}
   const f=1-Math.pow(0.0016,Math.min(dt,0.05));   // ramtidsoberoende mjukhet
   k.x+=(mx-k.x)*f; k.y+=(hojd-k.y)*f; k.z+=(mz-k.z)*f;
+  /* Mjukningen kan glida ut genom en vägg i en sväng även när målet
+     ligger innanför. Ett hårt tak efteråt, så att det aldrig händer. */
+  if(R){
+    k.x=Math.max(R.x0,Math.min(R.x1,k.x));
+    k.z=Math.max(R.z0,Math.min(R.z1,k.z));
+  }
   k.tx+=((G.px+fram[0]*2.6)-k.tx)*f;
   k.ty+=((1.58+(G.luft>0?0.6:0))-k.ty)*f;
   k.tz+=((G.py+fram[2]*2.6)-k.tz)*f;

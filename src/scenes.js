@@ -7,44 +7,29 @@ function overlay(on,html){ov.classList.toggle("hide",!on);if(html!==undefined)sh
 /* ── Meny ── */
 function visaMeny(){
   G.scen="meny";
+  const forsta=SPAR.pass===0;
+  /* Menyn hade 142 ord och en tabell med arton tangenter innan man fick
+     rida. Den som redan vet vad spelet är ska inte behöva läsa om det,
+     och den som inte vet lär sig det snabbare i sadeln än i en meny.
+     Tangenterna bor numera i träningsboken och i HUD-remsan. */
   overlay(true,`
-  <span class="lbl">POC · utanför Roblox · byggd på ubrf.se</span>
-  <h1 style="margin-top:8px">Ridskolan</h1>
-  <p style="font-size:17px">Du styr inte hästen — du pratar med den. Fyra hjälper:
-  skänkel, tygel, sits och styrning. Rider du bra blir hästen bättre, steg för steg.
-  Det finns ingen hoppknapp.</p>
-  <p class="dim" style="font-size:13.5px">Ridlärarna ${LEDARE.slice(0,-1).map(l=>l.namn).join(", ")} och ${LEDARE[LEDARE.length-1].namn}
-  turas om att hålla lektionerna — och de säger till på olika sätt.</p>
-  <div class="keys">
-    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> gå — till fots</div>
-    <div><kbd>E</kbd> interagera (dörrar, ridlärare, box)</div>
-    <div><kbd>Shift</kbd> jogga (till fots)</div>
-    <div><kbd>T</kbd> träningsboken (även mitt i momentet)</div>
-    <div><kbd>W</kbd><kbd>S</kbd> skänkel på / av</div>
-    <div><kbd>Space</kbd> tygeltag (håll)</div>
-    <div><kbd>A</kbd><kbd>D</kbd> styrning</div>
-    <div><kbd>E</kbd> halvhalt</div>
-    <div><kbd>Shift</kbd> lätt sits</div>
-    <div><kbd>Ctrl</kbd> djup nedsittning</div>
-    <div><kbd>R</kbd> lättridning av/på</div>
-    <div><kbd>Q</kbd> byt diagonal</div>
-    <div><kbd>V</kbd> växla vy (bana / bakom hästen)</div>
-    <div><kbd>M</kbd> ljud av/på (hovslag, stall, röst)</div>
-    <div><kbd>N</kbd> nästa moment (POC-genväg)</div>
-    <div><kbd>P</kbd> ridläraren visar (autopilot)</div>
-    <div><kbd>F</kbd> spö — men läs hästlistan först</div>
-  </div>
-  <div class="note">Tips: håll tygeln i det <b>gröna bandet</b> på mätaren — inte löst, inte hårt.
-  Och gör en halvhalt (E) före hörnen, så blir hästen samlad.</div>
-  ${typeof jagPanelHTML==="function"?jagPanelHTML():""}
-  ${profilHTML()}
-  ${typeof synkPanelHTML==="function"?synkPanelHTML():""}
-  <div class="btnrow">
-    <button class="btn" id="bStart">Till stallet</button>
+  <h1>Ridskolan</h1>
+  <p style="font-size:16px;margin-top:4px">
+    ${forsta
+      ? "Du styr inte hästen. Du styr fyra hjälper — skänkel, tygel, sits och styrning — och hon svarar på dem. Ridläraren visar dig resten."
+      : "Du styr inte hästen. Du styr fyra hjälper, och hon svarar på dem."}</p>
+  <div class="btnrow" style="margin-top:16px">
+    <button class="btn" id="bStart">${forsta?"Rid nu":"Till stallet"}</button>
     <button class="btn ghost" id="bTavling">Tävlingsdag</button>
     <button class="btn ghost" id="bBok">Träningsboken</button>
-    <span class="dim" style="font-size:13px">Dagens lektion: ${GRUPPNAMN[G.grupp]||G.grupp} · sex hinder på 0,60 m</span>
-  </div>`);
+  </div>
+  <p class="dim" style="font-size:13px;margin-top:10px">
+    Dagens lektion: ${GRUPPNAMN[G.grupp]||G.grupp}${
+      forsta?" · ridläraren har sadlat åt dig idag":""}
+    · Ridlärarna ${LEDARE.slice(0,-1).map(l=>l.namn).join(", ")} och ${LEDARE[LEDARE.length-1].namn} turas om.</p>
+  ${typeof jagPanelHTML==="function"?jagPanelHTML():""}
+  ${profilHTML()}
+  ${typeof synkPanelHTML==="function"?synkPanelHTML():""}`);
   document.getElementById("bStart").onclick=()=>{G.tavling=null;startaVandring();};
   document.getElementById("bTavling").onclick=visaTavlingsval;
   document.getElementById("bBok").onclick=()=>visaTraningsbok("meny");
@@ -123,7 +108,7 @@ function visaTilldelning(){
   <p class="dim" style="font-size:13.5px">Du väljer inte häst på en ridskola. Ridläraren tilldelar —
   att få rida en bättre häst är belöningen. Nästa gång du spelar får du en annan.</p>
   <div class="btnrow">
-    <button class="btn" id="bGroom">Hämta honom i hagen</button>
+    <button class="btn" id="bGroom">Hämta ${h.namn} i hagen</button>
     <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
   </div>`);
   document.getElementById("bGroom").onclick=()=>{overlay(false);
@@ -140,6 +125,12 @@ function visaSkotsel(){
   SK.steg=0;SK.ryktning=new Set();SK.hovar=[0,0,0,0];SK.sadelX=0.42;SK.gjord=0.10;
   SK.visitering=0;SK.betsling=0;SK.start=performance.now();
   ryktNollstall();sadelNollstall();visitNollstall();hovNollstall();
+  if(typeof introNollstall==="function")introNollstall();
+  /* Första passet i livet är förberett av ridläraren. Utan det får en
+     nybörjare som trycker "Sitt upp" dagsform 0,35 och fem risker
+     samtidigt — utskälld innan hon ridit en meter. */
+  const forberett=(typeof introForstaPasset==="function")&&introForstaPasset();
+  G.forberettPass=forberett;   // efter-passet säger vad som blir ditt nästa gång
   const h=HORSES[G.hastId];
   /* Egenhet: en häst som blåser upp magen släpper sakta ut luften —
      gjorden glider ner igen tills du drar åt en gång till. */
@@ -153,7 +144,9 @@ function visaSkotsel(){
   overlay(true,`
   <span class="lbl">Före lektionen · stallregel 10</span>
   <h1 style="margin-top:6px">Visitera, rykta, kratsa, sadla</h1>
-  <p class="dim" style="font-size:13.5px;margin-top:2px">Skickligt, inte länge. Det du gör nu avgör hur ${h.namn} går på lektionen.</p>
+  <p class="dim" style="font-size:13.5px;margin-top:2px">${forberett
+    ? `Ridläraren har sadlat och tränsat ${h.namn} åt dig — det som måste sitta rätt. Ryktning och hovar är påbörjade; prova gärna, annars: sitt upp.`
+    : `Skickligt, inte länge. Det du gör nu avgör hur ${h.namn} går på lektionen.`}</p>
   <div id="groom">
     <div>
       <canvas id="groomCanvas"></canvas>
@@ -165,7 +158,9 @@ function visaSkotsel(){
       <div class="gstep" data-s="2"><span><span class="gn">3 · Kratsa hovar</span><br>alla fyra</span><span class="gv" id="gv2">0/4</span></div>
       <div class="gstep" data-s="3"><span><span class="gn">4 · Sadla</span><br>läge + gjord i bandet</span><span class="gv" id="gv3">—</span></div>
       <div style="margin-top:14px"><button class="btn" id="bKlar">Sitt upp</button></div>
-      <div class="dim" style="font-size:12px;margin-top:10px">Du kan sitta upp när du vill.<br>Hästen märker vad du hoppade över.</div>
+      <div class="dim" style="font-size:12px;margin-top:10px">${forberett
+        ? "Sadel och träns är klara — det är det som måste sitta rätt.<br>Resten är ditt nästa gång."
+        : "Du kan sitta upp när du vill.<br>Hästen märker vad du hoppade över."}</div>
     </div>
   </div>`);
   for(const el of document.querySelectorAll(".gstep"))
@@ -173,6 +168,17 @@ function visaSkotsel(){
       momentKamTill(SK.steg);groomHint();};
   document.getElementById("bKlar").onclick=avslutaSkotsel;
   initGroomCanvas();momentKamTill(1,true);groomHint();   // hela hästen tills man gått fram
+  /* Fyllningen görs EFTER att rutan byggts, så att räknarna visar det
+     ridläraren gjort i stället för nollor. */
+  if(forberett&&typeof introForberedd==="function"){
+    introForberedd();
+    /* Räknarna ska visa vad som FAKTISKT är gjort. Med en hårdkodad
+       "4/4" på hovar som ligger på 0,55 ljuger rutan om hästen. */
+    dok(0,visitKlar()?"klart":`${VIS.sedd.size}/${VISITPUNKT.length}`);
+    dok(1,Math.round(ryktAndel()*100)+" %");
+    dok(2,SK.hovar.filter(v=>v>0.6).length+"/4");
+    dok3(); ritaGroom();
+  }
 }
 function groomHint(){
   const h=HORSES[G.hastId];

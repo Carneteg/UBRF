@@ -77,7 +77,7 @@ function passSteg(dt){
   if(r.spanning>PASS.spanningTopp)PASS.spanningTopp=r.spanning;
   PASS.mjukhetSum+=r.mjukhet*dt; PASS.mjukhetTid+=dt;
 
-  const inne=(typeof iTempoBand==="function")?iTempoBand(r,G.grupp):true;
+  const inne=(typeof iTempoBand==="function")?iTempoBand(r,G.grupp,G.moment):true;
   if(!inne){
     PASS._ute+=dt; PASS.tidUte+=dt;
     if(PASS._ute>0.5)PASS._varUte=true;
@@ -246,7 +246,13 @@ function efterPassHTML(){
         +`Färdigheter växer inte medan hästen är spänd över 0,70 — `
         +`då lär man sig fel saker.</span>`,"in");
 
-  let loftet="";
+  /* Ridlärarens omdöme om dagens tema. Står först i den breda spalten,
+     före siffrorna: det är hennes lektion man just ridit, och det är
+     hennes mening man ska bära med sig till nästa gång. Raderna fälls
+     in i den ordning --i sätts, så den måste räknas här — inte läggas
+     till efteråt. */
+  const omd=(typeof lararOmdome==="function")?lararOmdome():"";
+  let loftet=omd?`<p class="eLofte eRad" style="--i:${i++}">${omd}</p>`:"";
   if(L){
     const bitar=[];
     bitar.push(`<b>${L.hamtningar}</b> gånger fick du hämta hem henne`
@@ -259,8 +265,16 @@ function efterPassHTML(){
       txt+=` Nästa pass, med det du lärde dig idag: ungefär <b>${L.nasta}</b>.`;
     if(L.amplitud)
       txt+=` Handen får darra <b>${L.amplitud} %</b> mer innan mjukheten faller.`;
-    loftet=`<p class="eLofte eRad" style="--i:${i++}">${txt}</p>`;
+    loftet+=`<p class="eLofte eRad" style="--i:${i++}">${txt}</p>`;
   }
+
+  /* Var passet förberett av ridläraren ska det stå här, inte bara
+     försvinna. Annars undrar spelaren nästa gång varför hästen plötsligt
+     är sämre. */
+  if(G.forberettPass)
+    loftet+=`<p class="eLofte eRad" style="--i:${i++}">Idag hade ridläraren `
+      +`gjort i ordning ${h.namn} åt dig. <b>Nästa gång gör du det själv</b> — `
+      +`visitera, rykta, kratsa och sadla. Det du gör där avgör hur hon går.</p>`;
 
   return `<div class="efterPass" id="efterPass">
     <div class="eKol">

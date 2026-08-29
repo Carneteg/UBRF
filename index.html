@@ -300,6 +300,14 @@ tr:last-child td{border-bottom:0}
 #viewToggle button.on{background:var(--gold); color:#17140A}
 #viewToggle button:hover:not(.on){color:var(--ink)}
 
+/* Tangentremsan: bara de tangenter gruppen faktiskt använder, och bara
+   de tre första passen. Hela listan bor i träningsboken. */
+#tangenter{margin-top:9px; padding-top:8px; border-top:1px solid var(--rule-soft)}
+#tangenter .tRad{display:flex; align-items:center; gap:5px; margin-top:4px;
+  font-size:11px; color:var(--muted); justify-content:flex-end}
+#tangenter .tRad span{margin-left:2px}
+#tangenter kbd{font-size:10px; padding:1px 5px}
+
 .dim{color:var(--muted)}
 .gold{color:var(--gold-2)}
 .red{color:var(--crit)}
@@ -357,7 +365,7 @@ tr:last-child td{border-bottom:0}
     <div id="momentText"></div>
     <div id="momentBar"><i></i></div>
     <div id="momentMal"></div>
-    <div id="vaxer">
+    <div id="vaxer" style="display:none">
       <div class="vaxrad"><span>Hästen slappnar av</span><b id="vHast"><i></i></b></div>
       <div class="vaxrad"><span>Du blir mjukare</span><b id="vDu"><i></i></b></div>
     </div>
@@ -368,6 +376,7 @@ tr:last-child td{border-bottom:0}
     <div id="gait">Halt</div>
     <div id="tempo">0,0 m/s</div>
     <div id="gaitWarn"></div>
+    <div id="tangenter" hidden></div>
   </div></div>
 
   <div class="hudh bl"><div class="box" id="pyr">
@@ -408,7 +417,9 @@ tr:last-child td{border-bottom:0}
 <script src="src/game.js"></script>
 <script src="src/ryttare.js"></script>
 <script src="src/jag.js"></script>
+<script src="src/intro.js"></script>
 <script src="src/framsteg.js"></script>
+<script src="src/larare.js"></script>
 <script src="src/humor.js"></script>
 <script src="src/ledare.js"></script>
 <script src="src/efter.js"></script>

@@ -138,22 +138,20 @@ function nyLedareForDagen(){
   return dagensLedare();
 }
 
-/* Tillsägelsen under ridning: ledarens egna ord om det svagaste. */
-function ledarRop(s,niva,seed){
-  const led=dagensLedare(), svag=Skala.svagaste(s.skala,niva);
-  const l=led.rop[svag]||[""];
-  return [l[(seed||0)%l.length],svag];
+/* ── Kopplingen till lektionsmotorn (larare.js) ───────────────────
+   Motorn bestämmer VAD som sägs och NÄR (ett tema hela lektionen);
+   ledaren färgar HUR. Varje tema mappas till den punkt på skalan som
+   ledarens egna repliker handlar om, och läggs till som varianter. */
+const LEDARE_TEMA={hand:"kontakt", sits:"losgjordhet", framat:"schvung",
+  timing:"samling", lugn:"losgjordhet", vagen:"rakriktning"};
+function ledarTemaRattor(fokusId){
+  const k=LEDARE_TEMA[fokusId], led=dagensLedare();
+  return (k&&led.rop[k])?led.rop[k]:[];
 }
-function ledarBerom(seed){
-  const led=dagensLedare();
-  return led.berom[(seed||0)%led.berom.length];
-}
-/* Hur länge det dröjer till nästa tillsägelse — pratiga ledare ropar
-   oftare. Slumpen gör att det inte tickar som en klocka. */
-function ledarPaus(){
-  const led=dagensLedare();
-  return led.prat*(0.9+Math.random()*0.5);
-}
+function ledarTemaBerom(){ return dagensLedare().berom; }
+/* Pratiga ledare håller kortare pauser mellan replikerna. 1,0 = motorns
+   egen takt; Sofie ligger under, Elin över. */
+function ledarTakt(){ return dagensLedare().prat/12; }
 
 /* Skötselomdömet: risker behåller sina lärande rader (de säger exakt
    vad som blev fel), men helhetsbetyget sägs med ledarens ord. */
