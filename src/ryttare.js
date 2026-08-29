@@ -173,8 +173,13 @@ function registreraPass(dom){
       if(f.skada.passKvar<=0){delete f.skada; f.rehab=true;}
     }
   }
+  /* Dagens tema följer med. Nästa pass läser det: satt det går hon
+     vidare, satt det inte tar hon om det och SÄGER att hon gör det.
+     Det är hela skillnaden mellan en lärare och en främling. */
   SPAR.historik.unshift({hast:G.hastId, grupp:G.grupp,
-    snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten});
+    snitt:Math.round(snitt*100)/100, fel:dom.totalfel, utesluten:dom.utesluten,
+    fokus:(typeof lararDagensId==="function")?lararDagensId():null,
+    fokusAndel:(typeof lararAndel==="function")?Math.round(lararAndel()*100)/100:null});
   if(SPAR.historik.length>20)SPAR.historik.length=20;
   let uppflyttad=false;
   if(godkand){

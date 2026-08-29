@@ -73,7 +73,7 @@ const G={
   hinderAktiva:false,nastaHinder:0,rivna:new Set(),handelser:[],banTid:0,banStart:0,
   vagranStopp:0,sisteHopp:0,luft:0,auto:false,
   rngHopp:null,spanningPuls:0,hoppaMoment:false,
-  sagaT:0,sagaCd:8,seed:1,
+  sagaT:0,sagaCd:8,naraRop:0,seed:1,
 };
 function vaxlaVy(){G.vy=G.vy==="2d"?"3d":"2d";
   document.querySelectorAll("#viewToggle button").forEach(b=>b.classList.toggle("on",b.dataset.v===G.vy));}
@@ -198,6 +198,27 @@ function stegaRitt(dt){
     G.ride.spanning=clamp(G.ride.spanning+1.1*dt,0,1);
     if(G.t-(G.narkontaktT||-99)>9){
       G.narkontaktT=G.t; G.narkontakter=(G.narkontakter||0)+1;
+      G.naraRop=G.t;                          // repliken köas, se nedan
+    }
+  }
+  /* Tillsägelsen om avståndet köas i stället för att sägas på fläcken.
+     Ridläraren har numera ett tema och säger få saker, och mätt över tre
+     pass landade avståndsropet gång på gång en till fyra tiondelar efter
+     hennes rättelse och skrev över den innan den gick att läsa — sju till
+     åtta gånger per pass. Nu väntar ropet tills rutan hunnit läsas, som
+     mest sex sekunder; är man fortfarande för nära då kommer nästa
+     tillsägelse ändå på sin egen niosekunderstakt.
+
+     Straffet — farttappet, spänningen och räkningen — ligger kvar där
+     uppe och tas ut i samma bildruta som förut. Det är bara repliken som
+     väntar, aldrig regeln. */
+  if(G.naraRop){
+    if(G.t-G.naraRop>6)G.naraRop=0;           // för gammal att säga
+    else if(G.sagaT<=0.9){
+      G.naraRop=0;
+      /* Och hon tystnar en stund efteråt: säkerheten har sin egen röst
+         och ska inte trängas med en rättelse om handen. */
+      if(typeof LARARE!=="undefined")LARARE.cd=Math.max(LARARE.cd,4.5);
       saga("För nära! Håll en hästlängd till ekipaget framför.",3.2);
     }
   }
@@ -334,8 +355,9 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
-  G.narkontakter=0; G.narkontaktT=-99;
+  G.narkontakter=0; G.narkontaktT=-99; G.naraRop=0;
   G.bedomda=0; G.klarade=0;
+  if(typeof lararNollstall==="function")lararNollstall();
   /* HUD:en tillbaka i ridläge. Gå-läget döljer pyramiden, hjälpmätarna
      och gångartsrutan, och bara tävlingsvägen slog på dem igen — en
      vanlig lektion reds alltså helt utan utbildningsskalan, som är den
@@ -368,6 +390,11 @@ function startaLektion(){
     });
   }
   G.hadeBana=G.lektion.some(m=>m.id==="bana");
+  /* Ridläraren bestämmer dagens tema INNAN första momentet visas. Hon
+     säger det själv några sekunder in (se lararSteg) — en tävling har
+     en domare i stället och får inget tema alls, därför står valet här
+     och inte högre upp. */
+  if(typeof lararValjFokus==="function")lararValjFokus();
   G.moment=G.lektion[0];visaMoment();
   if(mReh.rehab)
     saga(`${HORSES[G.hastId].namn} är på väg tillbaka efter sin skada — bara skritt och trav i dag, säger ridläraren.`,4.5);
@@ -380,8 +407,14 @@ function startaLektion(){
 function visaMoment(){
   const m=G.moment;
   const platsTxt=G.plats==="utebana"?" · uteridbanan":G.plats==="stig"?" · skogsstigen":"";
+  /* Dagens tema står kvar i rubriken hela lektionen. Hon säger det en
+     gång, sex sekunder in, och sedan är det borta — men det är den enda
+     saken hon bedömer, så det ska gå att läsa av när som helst. En
+     tävling har en domare i stället för ett tema och får ingen. */
+  const tema=(typeof lararFokusNamn==="function")?lararFokusNamn():"";
   document.getElementById("momentLbl").textContent=
-    `Moment ${G.momentIx+1} av ${G.lektion.length} · ${GRUPPNAMN[G.grupp]||G.grupp}${platsTxt}`;
+    `Moment ${G.momentIx+1} av ${G.lektion.length} · ${GRUPPNAMN[G.grupp]||G.grupp}${platsTxt}`
+    +(tema?` · tema: ${tema.toLowerCase()}`:"");
   document.getElementById("momentNamn").textContent=m.namn;
   document.getElementById("momentText").textContent=
     m.text+((m.ovning||MOMENT_OVNING[m.id])?" · T öppnar övningen i träningsboken.":"");
@@ -440,11 +473,14 @@ function stegaLektion(dt){
     }
     {const mt=document.getElementById("momentMal");
      if(mt)mt.textContent=momentMalText(m,G.grupp);}
-    // ridlärartillsägelser
-    G.sagaCd-=dt;
-    if(G.sagaCd<=0&&G.momentT>6){
-      const[rop]=ridlararRop(G.ride,G.grupp,Math.floor(G.t));
-      saga(rop,3.4);G.sagaCd=11+Math.random()*5;
+    /* Ridläraren. Förr lästes den lägsta siffran på utbildningsskalan
+       upp var trettonde sekund, och bytte den lägsta siffran bytte hon
+       ämne mitt i meningen — en felrapport, inte en instruktör. Nu
+       håller hon ETT tema hela lektionen och tiger när det går bra.
+       Hon räknar sin egen paus, så G.sagaCd behövs inte här. */
+    if(G.momentT>6&&typeof lararSteg==="function"){
+      const rop=lararSteg(dt);
+      if(rop)saga(rop,4.2);
     }
     /* Taket: även ett moment man inte klarar tar slut till slut, så att
        ingen fastnar. Då blir det underkänt, inte oändligt. */
