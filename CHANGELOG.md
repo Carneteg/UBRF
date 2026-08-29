@@ -23,6 +23,22 @@ inte. Byggnadsarbete efter foton loggas som en post per byggnad och pass.
 
 ## Augusti 2026
 
+### 2026-08-29 · Höger är höger igen, och kartan går att peka på
+D svängde vänster och A höger — i både ridningen och gå-läget, sedan
+spelets början. Nu svänger tangenterna åt det håll de heter, så byggnaderna
+ligger där man väntar sig dem när man vänder sig om. Kartan går dessutom
+att klicka eller peka på: figuren går själv dit, runt hus och staket, och
+klick på ett hus siktar på dess dörr. Minsta tangenttryck tar tillbaka
+styrningen. Stallets och ridhusets kartor ritades ut och in på mobil och
+är rättade. (6c96f2e)
+
+### 2026-08-29 · Ridläraren håller ett tema hela lektionen
+Ridläraren väljer en sak vid lektionens start — handen, sitsen, lugnet —
+säger den, och håller fast vid den hela passet i stället för att rabbla
+det som råkar vara sämst för stunden. Hon minns förra passets tema, skiljer
+på ditt fel och hästens, berömmer sällan men exakt, och skriver sitt omdöme
+i efter-passet. Temat står i momentrubriken hela lektionen. (86abc99)
+
 ### 2026-08-29 · Underhållsrunda: snabbare gård, tydligare första ritt
 Gården i 3D ritar bara hästar inom synhåll och bygger inte om scenen vid
 varje dörr — draw calls per bildruta sjönk från ~405 till 95–310 och
