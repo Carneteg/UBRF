@@ -98,19 +98,33 @@ const RIDHUS_NORR = 119;
    liv. Ett påstående om liv är dessutom en STARKARE utsaga än underlaget bär
    — det säger att två ändar sammanfaller på decimetern.
 
-   Riktningen är läsbar i satellitbilden: stallet ligger förskjutet mot
-   sydost längs axeln, alltså söderut i spelets rutnät. STORLEKEN är det
-   inte. 6 m nedan är ett `[ASSUMPTION]` valt för att förskjutningen ska
-   FINNAS och ha rätt tecken — inte för att den är mätt.
+   RIKTNINGEN VAR FÖRST FEL. Jag skrev att stallet låg förskjutet söderut
+   och kallade riktningen "läsbar i satellitbilden". Den avläsningen gjordes
+   ur minnet av en skärmbild som inte finns i repot, och den höll inte.
 
-   Det som behövs för att stänga den: en satellitmätning från ridhusets
-   norra gavelhörn till stallets norra gavelhörn, längs husens axel. */
-const GAVELFORSKJUTNING = 6;   // stallet söderut relativt ridhuset
+   Det som avgör finns i repot: `stall-gavel-06-silon.jpg`, tagen söder om
+   båda husen. Ridhusets södra ände sträcker sig LÅNGT närmare kameran än
+   stallets gavel — de ligger inte i närheten av varandra. Med stallet
+   förskjutet söderut hamnade de två södra ändarna nästan i liv (43,05 mot
+   41,82), vilket fotot motsäger direkt. Med förskjutningen åt andra hållet
+   blir avståndet ~13 m, vilket stämmer med bilden.
+
+   Stallet ligger alltså förskjutet NORRUT relativt ridhuset. Det stämmer
+   också med Senior Site Fidelity Review 07:s avläsning av satellitkällan.
+
+   STORLEKEN är fortfarande `[ASSUMPTION]`. 6 m är valt för att
+   förskjutningen ska finnas och ha rätt tecken, inte för att den är mätt.
+
+   `[REFERENCE GAP]` Det som stänger den: en satellitmätning från ridhusets
+   norra gavelhörn till stallets, längs husens axel. Och — för att den här
+   sortens tvist inte ska behöva avgöras ur minnet igen — satellitbilden i
+   repot. */
+const GAVELFORSKJUTNING = 6;   // stallet NORRUT relativt ridhuset
 const RIDHUS_X = 118;
 const RIDHUS_Y = RIDHUS_NORR - RIDHUS_LANGD;               // 41,82
 const STALL_X  = RIDHUS_X + RIDHUS_BREDD + GARDSGAP;       // 152,67
-const STALL_NORR = RIDHUS_NORR - GAVELFORSKJUTNING;        // 113
-const STALL_Y  = STALL_NORR - STALL_LANGD;                // 43,05
+const STALL_NORR = RIDHUS_NORR + GAVELFORSKJUTNING;        // 125
+const STALL_Y  = STALL_NORR - STALL_LANGD;                // 55,05
 
 /* `[REFERENCE GAP]` Hästgångens läge längs husen är OLÖST.
 
@@ -161,7 +175,11 @@ const STALL_BOXAR = 12;      // sex söder om tvärkorridoren, sex norr
 const TRANINGSYTOR = {
   /* Kortsidan är mätt; långsidan är ett arbetsvärde som ryms mellan
      gavellinjen och tomtdjupet 170. Att den ryms säger inget om UBRF. */
-  NO_STOR:  {x:170, y:120, w:33.57, h:46, matt:"kortsida MEASURED 33,57"},
+  /* x flyttad från 170 till 173: med stallets gavelförskjutning norrut nådde
+     huset in i ytan, och byggnad-i-ridbana-testet fällde det. Läget är ändå
+     ett arbetsvärde — det enda som styr det är att ytan ska ligga norr om
+     husen, öster om stallet och innanför tomten. */
+  NO_STOR:  {x:173, y:126, w:33.57, h:40, matt:"kortsida MEASURED 33,57"},
   NO_LITEN: {x:150, y:132, w:18,    h:24, matt:"REFERENCE GAP"},
 };
 
@@ -830,7 +848,7 @@ const STALLINNE = {
      spawn:{x:STALL_X-1.5,y:113.4,rikt:Math.PI}},
     {id:"ut_n2",pos:[10.5,65.95], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (klubbdörren)",
-     spawn:{x:STALL_X+STALL_BREDD*0.55,y:120.6,rikt:Math.PI/2}},
+     spawn:{x:STALL_X+STALL_BREDD*0.55,y:STALL_NORR+1.6,rikt:Math.PI/2}},
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
      uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
      spawn:{x:STALL_X+5.6,y:STALL_Y-1.6,rikt:-Math.PI/2}},

@@ -103,10 +103,13 @@ check("hästgången ligger inom båda husens längd",
 do
 	local rn = ridhus.rekt.y + ridhus.rekt.h
 	local sn = stall.rekt.y + stall.rekt.h
-	check("husen ligger förskjutna i längdled, inte i liv",
-		rn - sn > 0.5,
+	-- Tecknet spelar roll: stallet ligger NORR om ridhuset. Med fel tecken
+	-- hamnade husens södra ändar nästan i liv, vilket stall-gavel-06-silon.jpg
+	-- motsäger direkt — ridhusets södra ände går långt närmare kameran.
+	check("stallets norra gavel ligger norr om ridhusets",
+		sn - rn > 0.5,
 		string.format("ridhusets norra gavel y = %.2f, stallets y = %.2f (%.2f m isär)",
-			rn, sn, rn - sn))
+			rn, sn, sn - rn))
 end
 
 --[[ ── Interna öppningar ──────────────────────────────────────────────

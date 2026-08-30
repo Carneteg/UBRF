@@ -140,10 +140,10 @@ return {
 		{
 			typ = "sand",
 			rekt = {
-				x = 170,
-				y = 120,
+				x = 173,
+				y = 126,
 				w = 33.57,
-				h = 46,
+				h = 40,
 				matt = "kortsida MEASURED 33,57",
 			},
 		},
@@ -294,7 +294,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 29.58,
+					u = 41.58,
 					b = 2.4,
 					h = 2.6,
 					z0 = 0,
@@ -315,7 +315,7 @@ return {
 			id = "stall",
 			rekt = {
 				x = 151.1,
-				y = 43.05,
+				y = 55.05,
 				w = 21,
 				h = 69.95,
 			},
@@ -684,7 +684,7 @@ return {
 			id = "hastgang",
 			rekt = {
 				x = 143,
-				y = 70.85,
+				y = 82.85,
 				w = 8.1,
 				h = 3.5,
 			},
@@ -895,7 +895,7 @@ return {
 			id = "stall_n2",
 			pos = {
 				162.65,
-				120.6,
+				126.6,
 			},
 			text = "Gå in i stallet (klubbdörren)",
 			mot = "stallinne",
@@ -909,7 +909,7 @@ return {
 			id = "stall_s",
 			pos = {
 				156.7,
-				41.45,
+				53.45,
 			},
 			text = "Gå in i stallet (gaveldörren vid gårdsplanen)",
 			mot = "stallinne",
@@ -983,7 +983,7 @@ return {
 			id = "stall_W_6",
 			pos = {
 				150,
-				106.825,
+				118.825,
 			},
 			text = "Gå in i stallet",
 			mot = "stallinne",
@@ -995,25 +995,10 @@ return {
 			},
 		},
 		{
-			id = "stall_N_11",
-			pos = {
-				161.025,
-				114.1,
-			},
-			text = "Gå in i stallet",
-			mot = "stallinne",
-			auto = true,
-			spawn = {
-				x = 9.925,
-				y = 68.35,
-				rikt = -1.570796,
-			},
-		},
-		{
 			id = "stall_S_13",
 			pos = {
 				164.175,
-				41.95,
+				53.95,
 			},
 			text = "Gå in i stallet",
 			mot = "stallinne",
@@ -1256,7 +1241,7 @@ return {
 				uttext = "Gå in i stallet (klubbdörren)",
 				spawn = {
 					x = 162.65,
-					y = 120.6,
+					y = 126.6,
 					rikt = 1.570796,
 				},
 			},
@@ -1272,7 +1257,7 @@ return {
 				uttext = "Gå in i stallet (gaveldörren vid gårdsplanen)",
 				spawn = {
 					x = 156.7,
-					y = 41.45,
+					y = 53.45,
 					rikt = -1.570796,
 				},
 			},
@@ -1288,7 +1273,7 @@ return {
 				inne = true,
 				spawn = {
 					x = 23.6,
-					y = 30.78,
+					y = 42.78,
 					rikt = 3.141593,
 				},
 			},
@@ -1303,23 +1288,8 @@ return {
 				auto = true,
 				spawn = {
 					x = 150,
-					y = 106.825,
+					y = 118.825,
 					rikt = 3.141593,
-				},
-			},
-			{
-				id = "ut_stall_N_11",
-				pos = {
-					9.925,
-					68.35,
-				},
-				text = "Ut",
-				mot = "gard",
-				auto = true,
-				spawn = {
-					x = 161.025,
-					y = 114.1,
-					rikt = 1.570796,
 				},
 			},
 			{
@@ -1333,14 +1303,14 @@ return {
 				auto = true,
 				spawn = {
 					x = 164.175,
-					y = 41.95,
+					y = 53.95,
 					rikt = -1.570796,
 				},
 			},
 		},
 		origo = {
 			x = 151.1,
-			y = 43.05,
+			y = 55.05,
 		},
 	},
 	identitet = {
@@ -1467,10 +1437,10 @@ return {
 	},
 	traningsytor = {
 		NO_STOR = {
-			x = 170,
-			y = 120,
+			x = 173,
+			y = 126,
 			w = 33.57,
-			h = 46,
+			h = 40,
 			matt = "kortsida MEASURED 33,57",
 		},
 		NO_LITEN = {
@@ -1490,10 +1460,10 @@ return {
 			matt = "REFERENCE GAP",
 		},
 		paddock = {
-			x = 170,
-			y = 120,
+			x = 173,
+			y = 126,
 			w = 33.57,
-			h = 46,
+			h = 40,
 			matt = "kortsida MEASURED 33,57",
 		},
 	},
@@ -1529,24 +1499,24 @@ return {
 			sandkant = true,
 			p = {
 				{
-					170,
-					120,
+					173,
+					126,
 				},
 				{
-					203.57,
-					120,
+					206.57,
+					126,
 				},
 				{
-					203.57,
+					206.57,
 					166,
 				},
 				{
-					170,
+					173,
 					166,
 				},
 				{
-					170,
-					120,
+					173,
+					126,
 				},
 			},
 		},
@@ -1794,7 +1764,7 @@ return {
 		{
 			typ = "mast",
 			pos = {
-				170,
+				173,
 				166,
 			},
 		},
@@ -1859,8 +1829,8 @@ return {
 			x1 = 11.6,
 		},
 		sargGrind = {
-			y0 = 28.88,
-			y1 = 32.68,
+			y0 = 40.88,
+			y1 = 44.68,
 		},
 		laktare = {
 			x0 = 21,
@@ -1870,8 +1840,8 @@ return {
 			stegH = 0.28,
 			stegD = 0.85,
 			gap = {
-				y0 = 26.43,
-				y1 = 35.13,
+				y0 = 38.43,
+				y1 = 47.13,
 			},
 		},
 		kortanda = {
@@ -1927,7 +1897,7 @@ return {
 				id = "hastgang",
 				pos = {
 					23.6,
-					30.78,
+					42.78,
 				},
 				text = "Hästgången — in i stallet",
 				mot = "stallinne",
