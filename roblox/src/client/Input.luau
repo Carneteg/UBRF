@@ -17,9 +17,15 @@ local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
 
 local Input = {}
 
+--[[ Tangenterna och pekskärmen har varsitt axelpar, av samma skäl som
+     gamepaden har sitt: skriver de i samma fält slår de ut varandra. En
+     spelare som håller D och samtidigt drar spaken åt vänster ska få
+     summan, inte den som råkade skriva sist. ]]
 local state = {
 	forward = 0,
 	steer = 0,
+	touchForward = 0,
+	touchSteer = 0,
 	gaitUp = false,
 	gaitDown = false,
 	jump = false,
@@ -69,6 +75,7 @@ function Input.unbind()
 	bound = false
 	ContextActionService:UnbindAction("HorseControl")
 	state.forward, state.steer = 0, 0
+	state.touchForward, state.touchSteer = 0, 0
 	state.gaitUp, state.gaitDown, state.jump = false, false, false
 end
 
@@ -92,8 +99,8 @@ end
 function Input.consume(): Types.Intent
 	local padForward, padSteer = stick()
 	local intent: Types.Intent = {
-		forward = math.clamp(state.forward + padForward, -1, 1),
-		steer = math.clamp(state.steer + padSteer, -1, 1),
+		forward = math.clamp(state.forward + padForward + state.touchForward, -1, 1),
+		steer = math.clamp(state.steer + padSteer + state.touchSteer, -1, 1),
 		gaitUp = state._upEdge,
 		gaitDown = state._downEdge,
 		jump = state.jump,
@@ -102,9 +109,12 @@ function Input.consume(): Types.Intent
 	return intent
 end
 
---[[ För pekskärm: mobilens knappar kallar de här i stället för tangenter. ]]
+--[[ För pekskärm: `TouchControls` kallar de här i stället för tangenter.
+     Värdena är normaliserade avsikter i −1..1, precis som tangenternas och
+     spakens, och läggs till dem i `consume` i stället för att ersätta dem. ]]
 function Input.setTouch(forward: number, steer: number)
-	state.forward, state.steer = forward, steer
+	state.touchForward = math.clamp(forward, -1, 1)
+	state.touchSteer = math.clamp(steer, -1, 1)
 end
 function Input.touchGait(up: boolean)
 	if up then state._upEdge = true else state._downEdge = true end

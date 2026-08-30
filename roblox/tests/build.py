@@ -25,6 +25,8 @@ MODULER = [
     ("MovementController", "src/client/MovementController.luau"),
     ("CameraController",   "src/client/CameraController.luau"),
     ("RiderController",    "src/client/RiderController.luau"),
+    ("Input",              "src/client/Input.luau"),
+    ("TouchControls",      "src/client/TouchControls.luau"),
 ]
 
 # require-formerna som förekommer i koden, till modulnamn.

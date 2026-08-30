@@ -10,6 +10,7 @@ i stället för att beskrivas.
 python3 roblox/tests/build.py && luau roblox/tests/.build/movement.spec.luau
 python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build/camera.spec.luau
 python3 roblox/tests/build.py tests/rider.spec.luau && luau roblox/tests/.build/rider.spec.luau
+python3 roblox/tests/build.py tests/touch.spec.luau && luau roblox/tests/.build/touch.spec.luau
 ```
 
 ## Varför en byggfil
@@ -37,6 +38,10 @@ tyst mäta fel sak.
 - **Hur det känns.** Siffrorna säger att svängen släpper på 0,38 s i stället för
   0,09 s. Om det känns rätt avgörs i Studio, av en människa.
 - **Animation, ljud, nätverk.** Ligger utanför bänken.
+- **Pekgester och GUI-layout.** `touch.spec.luau` mäter spakens kurva och
+  `Input`-kontraktet, alltså allt under fingret. Att spaken hamnar rätt på
+  skärmen, att knapparna går att träffa och att inget skymmer hästen kan bara
+  ses i Studio eller på en enhet.
 - **Sluttningar och kollisioner.** Marken är plan i stubben. Humanoid gör det
   riktiga arbetet och går inte att stubba meningsfullt.
 - **Typkontroll.** `luau-analyze` kan inte lösa Roblox-`require` utan Studios

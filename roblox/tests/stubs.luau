@@ -106,9 +106,25 @@ local __services = {
 		IsClient = function() return true end,
 		IsServer = function() return false end,
 	},
-	Players = { LocalPlayer = { Character = { Name = "Spelare" } } },
-	UserInputService = { GetGamepadState = function() return {} end, TouchEnabled = false },
-	ContextActionService = { BindAction = function() end, UnbindAction = function() end },
+	Players = { LocalPlayer = {
+		Character = { Name = "Spelare" },
+		FindFirstChild = function() return nil end,
+		FindFirstChildOfClass = function() return nil end,
+	} },
+	--[[ Spaken sätts av testet när gamepad ska mätas. TouchEnabled är falskt:
+	     bänken mäter kontraktet, inte gesterna — GUI:t byggs bara i Studio. ]]
+	UserInputService = {
+		_pad = {},
+		GetGamepadState = function(self) return self._pad end,
+		TouchEnabled = false,
+		InputChanged = { Connect = function() return { Disconnect = function() end } end },
+		InputEnded = { Connect = function() return { Disconnect = function() end } end },
+	},
+	ContextActionService = {
+		_bound = {},
+		BindAction = function(self, namn, fn) self._bound[namn] = fn end,
+		UnbindAction = function(self, namn) self._bound[namn] = nil end,
+	},
 	TweenService = { Create = function() return { Play = function() end } end },
 	Debris = { AddItem = function() end },
 	CollectionService = {
@@ -167,3 +183,22 @@ function __makeJoint(klass)
 	function j:IsA(k) return k == self.ClassName end
 	return j
 end
+
+--[[ Sätter gamepadens vänsterspak i stubben, så att summeringen mellan
+     tangenter, spak och pekskärm går att mäta. ]]
+function __setStick(x, y)
+	local usv = game:GetService("UserInputService")
+	if x == nil then usv._pad = {} return end
+	usv._pad = { { KeyCode = Enum.KeyCode.Thumbstick1, Position = vec(x, y, 0) } }
+end
+
+--[[ Skickar en tangenthändelse genom den bindning Input.bind() la upp. ]]
+function __key(kod, nere)
+	local fn = game:GetService("ContextActionService")._bound.HorseControl
+	if not fn then return end
+	fn("HorseControl",
+		if nere then Enum.UserInputState.Begin else Enum.UserInputState.End,
+		{ KeyCode = kod })
+end
+
+task = { delay = function(_, fn) __senasteDelay = fn end }
