@@ -7,9 +7,9 @@
 	dem; klienten väntar in dem.
 
 	Regeln för vad som får skickas: klienten skickar *avsikt* och sin egen
-	simulerade position. Servern skickar *sanning* om ägarskap, uppsittning
-	och uthållighet. Klienten får aldrig sätta ett värde som andra spelare
-	påverkas av.
+	simulerade position. Servern skickar *sanning* om ägarskap, uppsittning,
+	förberedelse och uthållighet. Klienten får aldrig sätta ett värde som
+	andra spelare påverkas av.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +26,9 @@ local DEFINITIONS = {
 	StateSync = "RemoteEvent",          -- klient → server: tempo och gångart
 	StaminaSync = "RemoteEvent",        -- server → ägaren: uthållighet
 	HorseReaction = "RemoteEvent",      -- server → alla: gnägg, stegring, reaktion
+	G01GetState = "RemoteFunction",     -- klient → server: min tilldelning/progression
+	G01Action = "RemoteFunction",       -- klient → server: avsikt i förberedelsemoment
+	G01StateChanged = "RemoteEvent",    -- server → spelaren: progression/feedback
 }
 
 local cache: { [string]: Instance } = {}
