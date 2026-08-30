@@ -4,10 +4,14 @@ Datum: 2026-08-30
 Metod: listad via Drive-API, **dedupliceras på titel + filstorlek**, och det
 som faktiskt granskats är visuellt öppnat — inte klassat på mappnamn.
 
-> **Status: PÅBÖRJAD, INTE KLAR.** Omnejd är helt genomgången. Byggnaden är
-> granskad till 14 av 19. Ridhusets tre nyckelbilder och sex av Stallhusets är
-> sedda och migrerade. Raderna nedan säger uttryckligen vilka jag har SETT och
-> vilka jag bara har metadata om.
+> **Status: GENOMGÅNGEN.** Omnejd (3), Byggnaden (19) och Stallhuset (32) är
+> alla visuellt öppnade, en och en. Kvar som `[DRIVE-ONLY]` är bara Ridhusets
+> åtta filmer, som inte går att hämta genom det här gränssnittet.
+>
+> **RÄTTELSE AV ANTALET.** Den här filen sade först att Stallhuset hade
+> "~20 unika". Det är fel: mappen har **32 unika** (`IMG_0132`–`0162` plus
+> `IMG_0168`). Siffran var en uppskattning som skrevs som om den vore räknad.
+> Antalet är nu listat ur Drive-API:t, inte gissat.
 
 ## Dubbletterna
 
@@ -19,7 +23,7 @@ Nyare kopian gäller; den äldre är dubblett.
 |---|---|---|---|
 | Omnejd | 6 | **3** | 3 |
 | Byggnaden | 38 | **19** | 19 |
-| Stallhuset | ~40 | ~20 | ~20 |
+| Stallhuset | 64 | **32** | 32 |
 | Ridhuset | bilder + **8 filmer** | — | — |
 
 ## Omnejd — genomgången och migrerad
@@ -116,7 +120,57 @@ Mapp-ID `1gzcJz-UB78POfvZOXvMP_KNdnfNFJgE0`
 Klassificeringen i issue #23 är kontrollerad och stämmer: `0159–0162` är stall,
 inte ridhus.
 
-`[EJ GRANSKAT]` Resterande ~14 unika bilder i mappen.
+### Resten av mappen — nu granskad, 32 av 32
+
+Mappen är stallets **insida**, och den delar sig i två tydliga halvor.
+
+**Klubbdelen** (`IMG_0132`–`0144`)
+
+| I repot | Ur Drive | Vad |
+|---|---|---|
+| `buildings/stall/stall-entre-16-runda-fonstren.jpg` | `IMG_0132` | Entrédörren: **ockragul** pardörr med **solfjäderformat överljus**, och **ett runt fönster på var sida** |
+| `buildings/stall/stall-inne-01-uppehallsrummet.jpg` | `IMG_0134` | Uppehållsrum: vitmålad panel, svarta skinnsoffor, valvfönster **och** runt fönster, inramade foton, klocka, **rosa träklapphäst med sadel** |
+| `buildings/stall/stall-inne-02-pentryt.jpg` | `IMG_0135` | **Pentry**: valvfönster, runt fönster, hyllkub med textilier, mikro, kyl, bord |
+| `buildings/stall/stall-inne-03-sadelkammaren.jpg` | `IMG_0137` | Hyllor **fulla av ridstövlar** i tak, **täcken hängande** på rad |
+| `buildings/stall/stall-inne-04-teorisalen.jpg` | `IMG_0138` | Teorisal: långbord i ljust trä, whiteboard med scheman, **anatomiplanscher**, runda fönster, lysrör |
+| — | `IMG_0133`, `0136`, `0139`, `0140` | Fler vinklar av samma klubbrum: bokhylla, hjälmar på krokar, valvfönster, brandsläckare, färglära-plansch |
+| — | `IMG_0141`–`0144` | **Två toaletter**, varav en tillgänglighetsanpassad med stödhandtag, plus dörrarna till dem |
+
+**Stalldelen** (`IMG_0145`–`0162`)
+
+| I repot | Ur Drive | Vad |
+|---|---|---|
+| `buildings/stall/stall-inne-05-stallgangen.jpg` | `IMG_0148` | Stallgången: **galvade boxfronter med lodräta galler** över **mörkt antracitfärgade heldelar**, **orangebruna limträbalkar**, synlig **korrugerad plåt** i taket, hängande lysrörsarmaturer, betonggolv |
+| `buildings/stall/stall-inne-06-boxen-inifran.jpg` | `IMG_0150` | Inifrån en box: djup halmbädd, mörkgrå skivväggar |
+| `buildings/stall/stall-inne-07-spolspiltan.jpg` | `IMG_0154` | **Spolspilta**: upphöjt räfflat golv med fall mot avlopp, varmvattenberedare och rörinstallation, slangfästen |
+| `buildings/stall/stall-inne-08-breda-gangen.jpg` | `IMG_0156` | En **bred, hög inomhusgång** med grå betongväggar och ett **gallergrindsparti i bortre änden** |
+| `buildings/stall/stall-inne-09-gangen-ut.jpg` | `IMG_0158` | Gångens ände med **dörr rakt ut i det fria**, städvagn, rörinstallation |
+| — | `IMG_0145`–`0149`, `0151`–`0153`, `0155`, `0157`, `0159`–`0162` | Fler vinklar av samma gångar, boxar och spolspilta. Ingen av dem motsäger raderna ovan |
+
+### Vad Stallhuset avgör
+
+**Spelets rumslista stämmer.** `STALLINNE.rum` och `.service` har
+uppehållsrum, teorisal, sadelkammare, spolspilta och spånförråd. Alla fem
+finns på bild. `VERIFIED`
+
+`[REFERENCE GAP]` **Pentryt saknas i spelet.** `IMG_0135` visar ett riktigt
+kök i klubbdelen. Att det FINNS är `VERIFIED`; VAR det ligger i planen är det
+inte. Det läggs inte in på gissning — utrymningsplanen får avgöra läget.
+
+**Runda fönster (oxögon) hör till klubbdelen.** De syns i entrén, i
+uppehållsrummet, i pentryt och i teorisalen. `VERIFIED`
+
+**Stallgångens material** — galvade gallerfronter, mörka heldelar,
+orangebruna limträbalkar, korrugerad plåt i taket — är samstämmigt över ett
+dussin bildrutor. `VERIFIED`
+
+`[REFERENCE GAP]` **Den breda gången i `IMG_0156`/`0157`.** Den är bred och
+hög nog att leda en häst genom, och har en gallergrind i bortre änden. Den
+skulle kunna vara hästgången mot ridhuset — men bilden visar inte vad den
+mynnar i, och jag har inget som binder den till en plats i planen. Den
+klassas därför INTE som hästgången. Att kalla den det vore precis samma fel
+som när jag placerade hästgången i norränden på ett uteslutningsargument ur
+min egen modell.
 
 ## Byggnaden — 14 av 19 granskade
 
@@ -178,7 +232,50 @@ avsats till en dörr. `VERIFIED`
 | Staket och belysning **i Roblox** | — | **åtgärdad** — `byggStaket`/`byggMaster` |
 | Marknivåskillnaden upp till banan | se Omnejd | `KNOWN MISMATCH` — **kvarstår**, se nedan |
 
-`[EJ GRANSKAT]` `IMG_0075`, `0076`, `0077`, `0127`, `0128`, `0130`.
+### De sex sista i Byggnaden — nu granskade
+
+| I repot | Ur Drive | Vad |
+|---|---|---|
+| `buildings/ridhus/ridhus-langsida-03-dubbeldorren.jpg` | `IMG_0075` | Ridhusets långsida: **ljus pardörr** i den mörkröda plåten, ventilationsgaller högt uppe, svart list längs takfoten |
+| `buildings/stall/stall-gavel-06-silon.jpg` | `IMG_0076` | **Stallets södra gavel med fodersilon** tätt intill, valvfönster, glasat gavelparti, **huvraden på nocken**, och de vitplastade balarna bredvid. I bakgrunden banorna med belysningsmaster |
+| `buildings/ridhus/ridhus-skylten-06-narbild.jpg` | `IMG_0077` | **UBRF-skylten** i närbild: vitt band med hästskologotypen och tre figurer, monterat på den lodrätt korrugerade plåten |
+| `buildings/ridhus/ridhus-trappan-05-cafeskylten.jpg` | `IMG_0127` | Ridhusets **raka ståltrappa** med mellanavsats upp till en dörr under litet skärmtak. **CAFÉ-skylten sitter på den ÖVRE avsatsens räcke** |
+| `buildings/ridhus/ridhus-durkplatdorrarna-07.jpg` | `IMG_0128` | **Durkplåtsdörrarna** i närbild, med en ljus fönsterdörr bredvid, svart stuprör, kortläsare |
+| `omnejd/garden-01-mellan-husen-huvraden.jpg` | `IMG_0130` | **Gården mellan husen**, se nedan |
+
+### Vad de sex avgör
+
+**`IMG_0130` är den bild som visar att husen hänger ihop.** Den står i
+gräsgården mellan husen och ser: stallets långsida till vänster med
+**huvraden på nocken**, **valvfönsterraden** och **snörasskydden** vid
+takfoten; ridhusets vägg till höger med **två luftvärmepumpar** och
+durkplåtspartiet; picknickbord och bänk på gräset. Och i fonden **en lägre
+byggnadskropp som går tvärs över och binder ihop de båda röda väggarna**,
+med en grå dörr i.
+
+Det bekräftar Tobias besked — *"husen är sammanbyggda"* och *"det är
+hästgång mellan byggnaderna"* — med bild, inte bara med ord. `VERIFIED`
+
+`[REFERENCE GAP]` Bilden avgör **inte** var längs gården förbindelsen
+ligger. Den tvärgående kroppen syns i fondens ände av det synliga utsnittet,
+men kameran ser bara en del av gården, och husens flykt gör det omöjligt att
+säga hur långt bort den står. Hästgångens läge (y = 89,3) står kvar som det
+är, avläst ur satellit.
+
+**Silon står tätt mot stallets gavel.** `IMG_0076` visar den från marknivå,
+ungefär mitt för gaveln och drygt halva gavelhöjden hög. Spelet hade den
+5 m ut på tomten — ett läge avläst ovanifrån i satellit. Flyttad till
+`[164.6, 63.4]`, vilket lägger mantelns kant på 64,9 mot gavelns 65.
+`VERIFIED`, och ett litet exempel på samma sak som slänten: **ovanifrån ser
+man var något står, inte hur det möter marken eller väggen.**
+
+**CAFÉ-skylten sitter högt.** Kommentaren i `src/site.js` sade *"skylten vid
+trappans fot"*. Höjden i `v3dRekvisita` är 3,0 m och stämde redan mot fotot —
+det var alltså beskrivningen som var fel, inte geometrin. Rättad, så att
+nästa läsare inte "rättar" höjden efter kommentaren.
+
+**Ensilagebalarna ligger vid stallets gavel**, inte bara på satellitgissning.
+`IMG_0076` visar dem staplade intill silon. `VERIFIED`
 
 ### `[REFERENCE GAP]` Ingen grind syns till uteridbanan
 
@@ -212,7 +309,18 @@ verkligen det det påstår.
 
 ## Vad som gäller härnäst
 
-1. Granska `Byggnaden` visuellt — den kan avgöra förbindelsefrågan.
-2. Granska resten av `Stallhuset`.
-3. Nyckelbildrutor ur ridhusfilmerna, om någon kan extrahera dem.
+Inventeringen är klar. Kvar står tre saker, och ingen av dem kan jag lösa
+själv i den här miljön:
+
+1. **Nyckelbildrutor ur ridhusfilmerna.** Åtta `.MOV` på 23–99 MB som inte
+   går att hämta genom gränssnittet. `IMG_0191.MOV` är den utpekade källan
+   för ridhuset.
+2. **Ett mätt höjdmått** mellan grusvägen och uteridbanans yta, så att
+   marknivåns `KNOWN MISMATCH` kan stängas.
+3. **Ett mätt breddmått i stallet**, så att `STALLINNE.bredd` slutar vara
+   ett `[ASSUMPTION]` i intervallet 15–23 m.
+
+Utöver det: pentryts läge i planen, hästgångens läge längs gården, och
+grinden in till uteridbanan är alla `[REFERENCE GAP]` som väntar på
+underlag — inte på arbete.
 4. Först därefter: rätta siteplan, volymer och interiörer.

@@ -290,7 +290,13 @@ const ANL = {
 
   /* Rekvisita — ritas i 2D och 3D av world.js. */
   props: [
-    {typ:"silo",      pos:[166,60]},                     // fodersilon vid södra gaveln (satellit)
+    /* Fodersilon vid stallets södra gavel. Låg tidigare på y = 60, alltså
+       5 m ut från gaveln (y = 65) — det var ett satellitläge, avläst
+       ovanifrån. `references/buildings/stall/stall-gavel-06-silon.jpg`
+       (Byggnaden, IMG_0076) visar den från marknivå: silon står TÄTT MOT
+       gaveln, ungefär i dess mitt, och når drygt halva gavelhöjden.
+       Radien är 1,5 m i v3d, så y = 63,4 lägger mantelns kant på 64,9. */
+    {typ:"silo",      pos:[164.6,63.4]},
     {typ:"balar",     pos:[157,56]},                     // ensilagebalarna
     {typ:"grushog",   pos:[122,131]},                    // grushögen på grusplanen (Street View)
     {typ:"transport", pos:[133,125], rikt:0.5},          // hästtransporten på grusplanen
@@ -299,7 +305,12 @@ const ANL = {
     {typ:"bank",      pos:[146,94]},
     {typ:"stol",      pos:[149,102]},
     {typ:"skylt",     pos:[118,82], text:"UPPLANDS-BRO RYTTARFÖRENING", norm:[-1,0]},
-    {typ:"cafeskylt", pos:[124.4,119.8], norm:[0,1]},   // skylten vid trappans fot
+    /* CAFÉ-skylten sitter på trappans ÖVRE avsats, inte vid dess fot —
+       references/buildings/ridhus/ridhus-trappan-05-cafeskylten.jpg.
+       Kommentaren här sade "vid trappans fot"; höjden i v3dRekvisita är
+       3,0 m och stämde redan, så det var beskrivningen som var fel, inte
+       geometrin. Rättat för att nästa läsare inte ska "rätta" höjden. */
+    {typ:"cafeskylt", pos:[124.4,119.8], norm:[0,1]},
     {typ:"flagga",    pos:[123,149]},
     {typ:"vagvisare", pos:[172,123]},    // vägvisaren med åtta armar, vid klubbgaveln
     {typ:"stenhast",  pos:[98.5,129.5]},                 // stenhästarna i lekhagen
