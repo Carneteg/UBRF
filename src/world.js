@@ -275,7 +275,16 @@ function vandringKollision(nx,ny,r){
     [nx,ny]=kollideraSeg(nx,ny,r,R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x+ba.w,ba.y);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x,ba.y+ba.h);
-    [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
+    /* Östra långsidan i två stycken: grinden mot hästgången är gapet.
+       Utan den går det inte att leda hästen mellan banan och gången, och
+       vägsökningen hittar ingen väg dit — det var precis vad den sa. */
+    {const gr=R.sargGrind;
+     if(gr){
+       [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,gr.y0);
+       [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,gr.y1,ba.x+ba.w,ba.y+ba.h);
+     }else{
+       [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
+     }}
     // läktaren och domarbåset är solida. Läktaren i sektioner: hästgången
     // går igenom den, och ett obrutet block här stänger gången.
     for(const sek of laktarSektioner(R.laktare))
@@ -1777,7 +1786,11 @@ function ritaRidhus3D(){
   sarg(R.port.x1,ba.y+ba.h, ba.x+ba.w,ba.y+ba.h);
   sarg(ba.x,ba.y, ba.x+ba.w,ba.y);
   sarg(ba.x,ba.y, ba.x,ba.y+ba.h);
-  sarg(ba.x+ba.w,ba.y, ba.x+ba.w,ba.y+ba.h);
+  /* Östra långsidan delad av grinden mot hästgången. */
+  {const gr=R.sargGrind;
+   if(gr){ sarg(ba.x+ba.w,ba.y, ba.x+ba.w,gr.y0);
+           sarg(ba.x+ba.w,gr.y1, ba.x+ba.w,ba.y+ba.h); }
+   else sarg(ba.x+ba.w,ba.y, ba.x+ba.w,ba.y+ba.h);}
   // ytterväggar: vit panel med lodräta läkt
   const yttervagg=(p0,p1,ljus)=>{
     items.push({d:-avst2([(p0[0]+p1[0])/2,(p0[1]+p1[1])/2])-2e6, rita(){

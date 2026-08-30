@@ -308,6 +308,26 @@ end
 check("de tre glasade rummen finns med", #R.glasrum == 3, #R.glasrum .. " st")
 
 do
+	--[[ Grinden i sargens östra långsida. Utan den är hästgången dekoration:
+	     man kommer in i ridhuset men inte ut på banan. Webbens vägsökning
+	     hittade ingen väg dit förrän grinden fanns. ]]
+	local gr = R.sargGrind
+	check("sargen har en grind mot hästgången", gr ~= nil)
+	if gr then
+		check("grinden är bred nog att leda en häst igenom", gr.y1 - gr.y0 >= 2.5,
+			string.format("%.1f m", gr.y1 - gr.y0))
+		check("grinden ligger inom läktargapet",
+			gr.y0 >= R.laktare.gap.y0 - 0.01 and gr.y1 <= R.laktare.gap.y1 + 0.01,
+			string.format("grind %g–%g, gap %g–%g",
+				gr.y0, gr.y1, R.laktare.gap.y0, R.laktare.gap.y1))
+		local gMitt = R.origo.y + (gr.y0 + gr.y1) / 2
+		local hMitt = hastgang.rekt.y + hastgang.rekt.h / 2
+		check("grinden ligger mitt för hästgången", math.abs(gMitt - hMitt) < 1.5,
+			string.format("grindens mitt y = %.2f, gångens y = %.2f", gMitt, hMitt))
+	end
+end
+
+do
 	--[[ Satellitbilden (references/plans/SATELLIT-HASTGANG-2026-08-30.md):
 	     förbindelsen ligger CENTRALT i husens gemensamma längd, inte vid en
 	     ände, och delar mellanrummet i två skilda gårdsytor. Flyttar någon

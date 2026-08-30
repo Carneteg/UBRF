@@ -207,6 +207,23 @@ check("sargen byggdes med en port i norr",
 	raknaNamn("Sarg norr väst") == 1 and raknaNamn("Sarg norr öst") == 1
 		and raknaNamn("Sarg syd") == 1)
 
+check("östra sargen byggdes i två delar, med grinden emellan",
+	raknaNamn("Sarg öst syd") == 1 and raknaNamn("Sarg öst norr") == 1
+		and raknaNamn("Sarg öst") == 2,
+	"annars är hästgången dekoration")
+
+do
+	-- Grinden ska vara ett verkligt gap, inte två delar som möts.
+	local syd, norr = nil, nil
+	for _, d in ipairs(delar) do
+		if d.Name == "Sarg öst syd" then syd = fot(d) end
+		if d.Name == "Sarg öst norr" then norr = fot(d) end
+	end
+	local gap = if syd and norr then (norr.y - (syd.y + syd.h)) else -1
+	check("grinden är ett verkligt gap i sargen", gap > 2.5,
+		string.format("%.2f m", gap))
+end
+
 check("läktaren byggdes i två sektioner om fyra steg",
 	raknaNamn("Läktarsteg") == UBRFKomplex.ridhus.laktare.steg * 2,
 	raknaNamn("Läktarsteg") .. " stegdelar")

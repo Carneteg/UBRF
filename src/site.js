@@ -552,6 +552,13 @@ const RIDHUSINNE = {
     {y:8,   b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
   ],
   port:{x0:9.6, x1:11.6},                         // sargporten vid A (norra kortsidan)
+  /* GRINDEN mot hästgången, i sargens östra långsida. Den måste finnas: annars
+     är hästgången dekoration. Man leder hästen in genom gången, och då ska man
+     komma ut på banan — sargen kan inte vara obruten just där.
+
+     Läget följer läktargapet, alltså hästgången. Bredden är vald, inte mätt.
+     [ASSUMPTION] */
+  sargGrind:{y0:45.4, y1:48.6},
   /* Möblerna i entréhallen, som solida rektanglar. Utan dem gick man
      rakt genom disken och bänkarna — de syntes men fanns inte.
      Koordinaterna är hallens, alltså husets: hallen ligger i norr,

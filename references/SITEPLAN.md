@@ -80,7 +80,7 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
 | Fodersilon | 166 / 60 | — | — | Vid stallets **södra** gavel, syns i satellitbilden |
 | **Hästgången** | **143 / 89,3** | nock öst–väst | **11 × 3,5** | Binder ihop ridhusets östvägg (x = 143) med stallets västvägg (x = 154). Takfot 3,2 m, nock 4,0 m. Scenövergång åt båda hållen: stallets tvärkorridor ↔ ridhusets bana genom läktargapet. **Den centrala placeringen är `[VERIFIED]`** — satellitbild, se `references/plans/SATELLIT-HASTGANG-2026-08-30.md`, och den ligger i liv med stallets tvärkorridor (mitt y 91,05 mot husens gemensamma mitt y 92,0). Måtten är `[ASSUMPTION]`: bilden ger topologi, inte meter. Låg tidigare på y 106 — det var ett antagande som satellitbilden underkände. |
-| Låga längan i söder | 147 / 59 | nock öst–väst | 7 × 6 | `[ASSUMPTION]` Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. Smalnad från 10 m 2026-08-30 så att gården fortfarande når gårdsplanen sedan hästgången stängt norra änden |
+| Låga längan i söder | 147 / 59 | nock öst–väst | 7 × 6 | `[ASSUMPTION]` Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. Smalnad från 10 m till 7 m 2026-08-30 så att den södra gårdsytan fortfarande når gårdsplanen |
 | Röda stugan | 94 / 140 | nock öst–väst | 6,5 × 4,5 | Vid infarten från Björklidsvägen `[antagande]` |
 | Spelarens startpunkt | 146 / 136, blickriktning söder | — | — | På grusplanen: ridhuset till höger, stallet till vänster |
 

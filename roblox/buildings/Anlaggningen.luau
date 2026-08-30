@@ -230,7 +230,18 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	-- Sargen runt banan, med porten som en lucka i norra kortsidan.
 	local sh = R.sargH
 	BK.box(model, base, "Sarg väst", o.x + b.x - 0.1, 0, o.y + b.y, 0.1, sh, b.h, INRE.sarg)
-	BK.box(model, base, "Sarg öst",  o.x + b.x + b.w, 0, o.y + b.y, 0.1, sh, b.h, INRE.sarg)
+	-- Östra långsidan i två stycken: grinden mot hästgången är gapet. Utan den
+	-- går det inte att leda hästen mellan banan och gången, och gången blir
+	-- dekoration. Webbens vägsökning fällde precis det.
+	local gr = R.sargGrind
+	if gr then
+		BK.box(model, base, "Sarg öst syd", o.x + b.x + b.w, 0, o.y + b.y,
+			0.1, sh, gr.y0 - b.y, INRE.sarg)
+		BK.box(model, base, "Sarg öst norr", o.x + b.x + b.w, 0, o.y + gr.y1,
+			0.1, sh, b.y + b.h - gr.y1, INRE.sarg)
+	else
+		BK.box(model, base, "Sarg öst", o.x + b.x + b.w, 0, o.y + b.y, 0.1, sh, b.h, INRE.sarg)
+	end
 	BK.box(model, base, "Sarg syd",  o.x + b.x, 0, o.y + b.y - 0.1, b.w, sh, 0.1, INRE.sarg)
 	-- Norra kortsidan i två stycken: porten är gapet mellan dem, och det är
 	-- där A står — se docs/ och src/data.js.

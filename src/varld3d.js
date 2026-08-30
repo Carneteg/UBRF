@@ -905,7 +905,13 @@ function v3dRidhus(lagg,opp){
   };
   bit(ba.x,ba.y+ba.h,R.port.x0,ba.y+ba.h); bit(R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
   bit(ba.x,ba.y,ba.x+ba.w,ba.y);
-  bit(ba.x,ba.y,ba.x,ba.y+ba.h); bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
+  bit(ba.x,ba.y,ba.x,ba.y+ba.h);
+  /* Östra långsidan delad av grinden mot hästgången — utan den är gången
+     dekoration, för då kan man inte leda hästen mellan banan och gången. */
+  {const gr=R.sargGrind;
+   if(gr){ bit(ba.x+ba.w,ba.y,ba.x+ba.w,gr.y0);
+           bit(ba.x+ba.w,gr.y1,ba.x+ba.w,ba.y+ba.h); }
+   else bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);}
   lagg(sarg,null);
   /* Ytterväggar, sadeltak och limträstolar. */
   const hall=new Bygge();
