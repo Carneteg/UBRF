@@ -245,6 +245,17 @@ frame för frame ännu.
 - Position: sydvästra hörnet i (118, 44), fotavtryck 25 × 75 m
 - Rotation: nocken i nord–sydlig riktning, cafégaveln mot parkeringen i norr
   (rättat 2026-08-29 — grusplanen ligger vid husets nordvästra ände)
+- **Sammanbyggt med stallet.** Tobias 2026-08-30: *"husen är sammanbyggda, jag
+  har varit där"*, *"det är hästgång mellan byggnaderna"*. Hästgången (11 × 6 m)
+  går från ridhusets östvägg till stallets västvägg, med öppningen i östfasaden
+  65 m från södra gaveln — alltså i entréhallens höjd, norr om läktaren.
+  Utrymningsplanernas situationsplan ritar husen som skilda volymer; det är en
+  CONTRADICTION avgjord till Product Owners fördel, se
+  `references/plans/OAVGJORT.md` fråga 1. **Var** gången ansluter är
+  `[ASSUMPTION]`.
+- Durkplåtsdörrarna i östfasaden sitter 5 m från södra gaveln. Låg tidigare vid
+  22 m, alltså rakt bakom läktaren (som upptar lokala y 9–59) — både markören
+  och landningspunkten hamnade inuti en solid läktarstomme. Rättat 2026-08-30.
 - Marknivå: plant
 
 ## Fotobrist

@@ -1,25 +1,28 @@
 # Två frågor planerna reser som jag inte får avgöra själv
 
 Båda kommer ur mätningar i `references/plans/`, och båda motsäger något som står
-som givet i briefen eller i byggnadskorten. Gate F01 säger uttryckligen: *"Om plan
+som givet i briefen eller i byggnadskorten. **Fråga 1 är besvarad av Tobias
+2026-08-30 och står kvar som dokumentation av beslutet; fråga 2 är öppen.** Gate F01 säger uttryckligen: *"Om plan
 och foto verkar krocka, hitta inte på en kompromiss."* Därför står de här i stället
 för att lösas.
 
 ---
 
-## 1 · Situationsplanen visar husen som SKILDA volymer
+## 1 · Situationsplanen visar husen som SKILDA volymer — AVGJORD 2026-08-30
 
-Issue #21 lade 2026-08-30 till en connected-complex-regel som P0:
+**Tobias svar:** *"husen är sammanbyggda, jag har varit där"* och *"det är
+hästgång mellan byggnaderna"*.
 
-> **The riding hall and stable are not two isolated buildings with empty space
-> between them.** … forming one continuous UBRF building complex.
+Alternativ 2 nedan gäller alltså: det finns en förbindelse som situationsplanen
+inte visar, och den är en **hästgång** — man leder hästen inomhus mellan stallet
+och ridhuset i stället för att gå ut över gården. Product Owner på plats väger
+tyngre än en schematisk situationsplan i frimärksstorlek, och en låg förbindelse
+behöver inte vara ritad som egen volym om den inte är en egen brandcell.
 
-Regeln är villkorad i sin egen text:
+Frågan om **att** husen sitter ihop är därmed stängd. Frågan om **var** gången
+går är det inte — se rutan sist i avsnittet.
 
-> Do not leave a free-standing gap between riding hall and stable **if the
-> authoritative plan shows connected building mass.**
-
-**Den auktoritativa planen visar inte sammanhängande byggnadsmassa.**
+### Vad planerna faktiskt visar (står kvar som källa)
 
 Båda utrymningsplanerna bär samma SITUATIONSPLAN, och den ritar två separata
 volymer med vit yta emellan, längs hela deras längd:
@@ -31,32 +34,31 @@ Färgerna byter plats, formerna gör det inte. Ingen förbindande volym är rita
 någondera. Se `derivat-situationsplan-ridhus.jpg`.
 
 Husen står parallellt, förskjutna i längdled, med ridhuset i väster och stallet i
-öster — precis som spelet redan bygger dem.
+öster.
 
-### Vad detta betyder
+Detta är alltså en **CONTRADICTION** mellan situationsplanen och Product Owner,
+avgjord till Product Owners fördel enligt konflikthierarkin i `CLAUDE.md`
+(punkt 1 slår punkt 3). Den skrivs inte om till att planen "egentligen" visar en
+förbindelse — den gör den inte.
 
-Enligt Gate F01:s egen källhierarki vinner planen för geometri. Då är den
-nuvarande frilagda geometrin **inte** en P0-motsägelse, utan planenlig.
+### Vad spelet bygger
 
-Men Tobias skrev regeln utifrån att han **varit på plats**, och en person på plats
-väger tyngre än en schematisk situationsplan i frimärksstorlek. Det kan mycket väl
-finnas en låg förbindande byggnad som situationsplanen utelämnar därför att den
-inte är en egen brandcell.
+Byggnaden `hastgang` i `src/site.js`, 11 × 6 m mellan ridhusets östvägg
+(x = 143) och stallets västvägg (x = 154), med scenövergång åt båda hållen.
+Fasadöppningarna mot grannhuset är märkta `intern` och STALLINNE-dörren `inne`,
+så att förbindelsen inte får någon markör ute på gården — den finns inte där.
 
-**Detta är Tobias beslut, inte mitt.** Tre möjliga svar:
+`[ASSUMPTION]` **Läget är härlett, inte hämtat ur en källa.** Hästgången ligger
+där den ligger därför att det är det enda stället där båda husen har gångbar
+insida mot varandra: ridhusets läktare upptar hela östväggen mellan y 53 och
+103, och stallets boxlängor upptar y 71–108. Kvar blir y 108–115, alltså
+stallets klubbdel mot ridhusets entréhall.
 
-1. **Planen har rätt** — husen är fristående, connected-complex-regeln byggde på ett
-   missminne, och regeln tas bort ur issue #21.
-2. **Tobias har rätt** — det finns en förbindelse som planen inte visar. Då behövs
-   ett foto av den, eller en beskrivning av var den sitter och hur man går igenom.
-3. **Båda har rätt** — husen är fristående men en låg länga/skärmtak binder dem på
-   ett ställe. Spelet har redan en "förbindelselänga" på 10 × 6 m vid södra änden;
-   den kan vara just det, och behöver då bara byggas ihop ordentligt.
-
-Tills svaret finns bygger spelet det planen visar: **skilda hus**. Det är inte ett
-val — det är den enda källan i repot som visar båda husen samtidigt.
-
-`[REFERENCE GAP]` Ett foto som visar utrymmet mellan gavlarna från marknivå.
+`[REFERENCE GAP]` **Frågan till Tobias:** var går hästgången i verkligheten?
+Vid norra änden (klubbdelen mot entréhallen, som spelet nu gissar), på mitten,
+eller i söder? Och kommer man ut i ridhusets hall eller direkt i ridbanan? Ett
+foto inifrån gången, eller bara "den ligger i norra/södra änden", räcker för att
+byta ut antagandet mot verklighet.
 
 ---
 

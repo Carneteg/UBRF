@@ -2,9 +2,15 @@
 
 Struktur enligt `docs/GATE-F01-UBRF-FIDELITY.md`.
 
-Datum: 2026-08-30
+Datum: 2026-08-30 (uppdaterad efter Senior Fidelity Review 01)
 Implementation: Claude Code
-Status: **lämnas till ChatGPT för Senior Fidelity Review 01.**
+Status: **lämnas till ChatGPT för Senior Fidelity Review 02.**
+
+Sedan Review 01 har fyra saker hänt: utrymningsplanerna ligger i repot och är
+mätta, stallets bredd är nedgraderad från slutsats till antagande med intervall,
+ridhusets evidensklass är omärkt till vad den faktiskt är, och **husen är
+byggda ihop** efter Tobias besked att de sitter ihop och att det som binder dem
+är en hästgång.
 
 Gaten stängs inte av mig, och UBRF kallas inte "100 % identiskt": båda byggnaderna
 har kvarvarande `ASSUMPTION` och `REFERENCE GAP` som är listade nedan. Väntat
@@ -19,6 +25,9 @@ utfall om alla kända motsägelser är lösta men luckor kvarstår är
 |---|---|---|
 | `e23b5fb` | Stallet blir ett dubbelstall: 21 m bredd, fyra boxlängor, två gångar, tvärkorridor | Stall inne + ute |
 | `424018c` | Ridhusets fem interiörmotsägelser, och bokstäverna flyttade så att A står vid sargporten | Ridhus inne |
+| `0d91f8e` | Utrymningsplanerna in i repot; stallets band mätta i planen i stället för likadelade | Källa + stall inne |
+| `2fa66dc` | Stallets entréer går att komma in genom igen (räcket, dörrlistorna, balkongen, markörmarginalen) | Stall ute |
+| `9b814d7` | Hästgången mellan husen; ridhusets durkplåtsdörrar ur läktarstommen; längan smalnad | Komplex |
 
 Föregående gate (`aec77cd`, mergad) rörde ridkänslan, inte miljön.
 
@@ -142,6 +151,21 @@ medan tabellen i `src/data.js` inte var vriden och kartan i `src/render.js` läs
 tabellen rått. **2D-kartan visade A i söder samtidigt som 3D-vyn visade A i norr.**
 Vridningen ligger nu i tabellen; båda renderarna läser den som den är.
 
+**Fynd 8 — husen var inte sammanbyggda.** Se § 6b. Tobias besked stängde frågan;
+hästgången är byggd.
+
+**Fynd 9 — ridhusets durkplåtsdörrar låg inne i läktaren.** Öppningen satt vid
+u = 22 i östfasaden, alltså rakt bakom läktaren, som upptar lokala y 9–59. Både
+dörrmarkören på gården och landningspunkten inne hamnade inuti en solid
+läktarstomme; dörren gick inte att använda i någon riktning. Den hittades först
+när hästgången skulle placeras och samma vägg behövde granskas. Flyttad till
+u = 5, söder om läktaren.
+
+**Fynd 10 — fyra entréfel i stallet** (`2fa66dc`): förstukvistens räcke gick
+obrutet över entrén, två dörrlistor levde parallellt så att `stall_v` satte
+spelaren inne i en boxrad, balkongen satt kvar på den gamla gavelmitten 7,5, och
+`ridhus_o` låg 0,4 m från väggen mot en kollisionsmarginal på 0,55 m.
+
 ---
 
 ## 5 · Ridhus exteriör
@@ -183,12 +207,103 @@ Gavelns takfall mäter 31° och 48°, båda för branta eftersom gaveln står vr
 **Nockmätningen 9,8 m avfärdades tidigare som "för hög". Den var inte för hög —
 bredden var för smal.** Med 21 m blir nocken 10,0 m.
 
+### Rättelse efter Review 01: 21 m är ett ANTAGANDE, inte en slutsats
+
+Review 01 underkände låsningen med rätta: *"3,5 m fönster-/huvrytm är en
+mätning i längdriktningen och kan inte bevisa sex tvärgående band à 3,5 m."*
+Det är korrekt — väg 2 ovan mäter längs huset och används på tvären. Den faller.
+
+Utrymningsplanen (`0d91f8e`) avgjorde inte heller frågan. Den visade att
+**inget** av alternativen går ihop:
+
+| Om … | då blir … | rimligt? |
+|---|---|---|
+| längden 54 m (satellit) | bredden 15,2 m, gångarna **1,9 m** | nej, en gång på 1,9 m går inte att leda hästar i |
+| boxfacket 3,5 m (rytmen) | längden **~83 m**, bredden 23,3 m | nej, då vore stallet längre än ridhuset |
+| bredden 21 m (spelet) | gångarna 2,6 m, boxdjup 3,7–4,4 m, längden 75 m | måtten inne är rimliga, längden inte |
+
+Vad planen däremot gav är **bandens inbördes andelar**, som är skaloberoende och
+lika i tre snitt — de används rakt av och är `VERIFIED`. Kvar blir:
+
+- **`STALLINNE.bredd` = 21 m är `ASSUMPTION`** i mitten av intervallet **15–23 m**.
+  Den ligger på ett enda ställe i koden; ändras den följer allt annat med.
+- **Längden 54 m är `ASSUMPTION`.**
+- Väg 1 (15 m är fysiskt omöjligt givet planformen) och väg 3 (takgeometrin)
+  står kvar och är det som håller nedre gränsen uppe. Väg 2 är struken.
+
+Se `references/plans/OAVGJORT.md` fråga 2. Det som stänger frågan är **ett
+mått** — en skalstock, ett måttsatt rum, eller gångens bredd stegad på plats.
+
 Västra långsidan — den fotograferade — står kvar vid x = 154; huset växer österut
 till x = 175. Gången öster om stallet smalnar 7 → 3 m och hagarna flyttas 2 m ut.
 Norra gavlarna ligger fortfarande i liv med ridhusets, som i satellitbilden, och
 gräsgården mellan husen är 11 m.
 
 Tolv exteriörkontroller på stallet, alla gröna.
+
+---
+
+## 6b · Byggnadskomplexet — husen sitter ihop
+
+Issue #21 la in en connected-complex-regel som P0, men villkorade den i sin egen
+text: *"Do not leave a free-standing gap … if the authoritative plan shows
+connected building mass."* När utrymningsplanerna kom in i repot visade
+situationsplanen **skilda volymer** — två separata former med vit yta emellan,
+i båda planerna, med bara färgerna ombytta. Regelns villkor var alltså inte
+uppfyllt, och jag stannade där i stället för att gissa: `OAVGJORT.md` fråga 1.
+
+**Tobias avgjorde 2026-08-30:** *"husen är sammanbyggda, jag har varit där"* och
+*"det är hästgång mellan byggnaderna"*.
+
+Det är en verklig `CONTRADICTION` mellan två källor, avgjord enligt
+konflikthierarkin i `CLAUDE.md`: Tobias uttryckliga produktbeslut (punkt 1) slår
+verifierad referens (punkt 3). Situationsplanen skrivs **inte** om till att
+"egentligen" visa en förbindelse — den gör den inte, och båda beskeden står kvar
+i `OAVGJORT.md`. En låg förbindelse behöver inte ritas som egen volym i en
+schematisk situationsplan om den inte är en egen brandcell.
+
+### Vad som byggdes
+
+Hästgången är inte en dekorativ länga utan en **väg för hästen**: man leder den
+inomhus mellan stallet och ridhuset i stället för att gå ut över gården. Den är
+byggd med samma mekanism som alla andra dörrar i spelet — scenövergång åt båda
+hållen — så att gången faktiskt går att använda, inte bara ses.
+
+| Gränssnitt | Var | Fidelity |
+|---|---|---|
+| Byggnadsvolym `hastgang` | (143, 106), 11 × 6 m, takfot 3,2 m, nock 4,2 m, nock öst–väst | Formen `ASSUMPTION`; att den finns `VERIFIED` (Product Owner på plats) |
+| Ridhusets östfasad | öppning `u = 65`, 2,4 × 2,6 m, `intern:true` | `ASSUMPTION` |
+| Stallets västfasad | öppning `sV(10.0)`, 2,4 × 2,6 m, `intern:true` | `ASSUMPTION` |
+| `RIDHUSINNE.dorrar.hastgang` | (24,0 · 65,0) i entréhallen → stallet | `ASSUMPTION` |
+| `STALLINNE.dorrar.hastgang` | (0,9 · 44,0) i klubbdelen → ridhuset, `inne:true` | `ASSUMPTION` |
+
+`intern` gör att fasadöppningen inte får någon dörrmarkör ute på gården, och
+`inne` gör detsamma för STALLINNE-dörren i generatorn som annars speglar varje
+stalldörr till anläggningen. Utan dem hade förbindelsen fått spökmarkörer i
+väggen och ute på gräset.
+
+### Läget är härlett, inte hämtat
+
+`[ASSUMPTION]` Hästgången ligger i norra änden därför att det är **enda stället
+där båda husen har gångbar insida mot varandra**: ridhusets läktare upptar hela
+östväggen mellan y 53 och 103, och stallets boxlängor upptar y 71–108. Kvar
+blir y 108–115 — stallets klubbdel mot ridhusets entréhall. Det är ett
+uteslutningsargument ur den befintliga modellen, inte en källa.
+
+`[REFERENCE GAP]` **Frågan till Tobias:** var går hästgången i verkligheten —
+norra änden (som spelet gissar), mitten eller söder? Och kommer man ut i
+ridhusets hall eller direkt i ridbanan? Ett foto inifrån gången, eller bara
+"norra/södra änden", byter ut antagandet mot verklighet.
+
+### Följdändringar
+
+Att stänga gårdens norra ände fick konsekvenser som testerna fångade:
+
+- **Förbindelselängan i söder** smalnades från 10 till 7 m (x 144 → 147). Med
+  hästgången i norr och den breda längan i söder blev gräsgården helt innesluten
+  och stalldörren mot gräsgården fick ingen väg ut till gårdsplanen.
+- **Ridhusets durkplåtsdörrar** flyttades ur läktarstommen, se fynd 9.
+- **`ridhus_o`-markören** flyttades med, från (143,9 · 66) till (143,9 · 49).
 
 ---
 
@@ -245,14 +360,26 @@ skärmdumpar förrän Roblox-byggnaderna finns.
 
 ## 10 · Visuella jämförelser
 
-| Vy | Mot vilken referens | Vad som stämmer |
-|---|---|---|
-| Stallet från grusplanen, snett framifrån | `stall-fasad-04.jpg` | Gaveln med spiraltrappa och balkong, förstukvisten med vitt ribbräcke och ockragul dörr, valvfönsterrytmen, huvraden som börjar efter förstukvisten, snörasskyddet, blågrått tak. Gaveln läser nu bredare och flackare, närmare fotot än den smala 15 m-gaveln |
-| Gång A inifrån | `stall-gang-*.jpg` | Boxar på båda sidor, hästhuvuden över dörrarna, namnskyltar, galvade stolpar, spånremsa längs fronterna, marksten i mitten, tegelröda tvärbalkar, takfönster, pendelarmaturer |
-| Tvärkorridoren, från västra långsidan | — | Man ser genom huset mellan boxlängorna; fyra rader läsbara |
-| Vid E, mot båset | `IMG_0198` via indexet | Bokstaven E på sargen, mörkt träbås direkt bakom, grön exit-skylt över öppningen, låg upphöjd träläktarnivå, trappa med räcken |
-| Från banan mot läktaren | `IMG_0179` via indexet | Läktarens nivåer och räcke, båset med skylten, mörkröd övre vägg, stålprofiler och ventilationskanaler i taket |
-| Mot sponsorväggen | `IMG_0183` via indexet | Mörkröd övre yta med vita läkt, sponsorplåtar, speglarna, takets installationer |
+**Omärkning efter Review 01.** Review 01 påpekade att ridhusets rader nedan inte
+är jämförelser mot bilder: `IMG_0179`, `IMG_0183` och `IMG_0198` finns bara i
+Drive och jag har aldrig sett dem. Raderna är **implementation jämförd med ett
+verifierat textderivat** av bilder, inte visuell verifiering. De är omärkta
+därutefter i kolumnen "Referensens art". Stallets rader är riktiga
+bildjämförelser — fotona ligger i repot.
+
+Kolumnen "Vad som stämmer" beskriver alltså för ridhusraderna vad som är byggt
+enligt beskrivningen, inte vad jag har sett stämma.
+
+| Vy | Mot vilken referens | Referensens art | Vad som stämmer |
+|---|---|---|---|
+| Stallet från grusplanen, snett framifrån | `stall-fasad-04.jpg` | **Bild i repot** — visuell jämförelse | Gaveln med spiraltrappa och balkong, förstukvisten med vitt ribbräcke och ockragul dörr, valvfönsterrytmen, huvraden som börjar efter förstukvisten, snörasskyddet, blågrått tak. Gaveln läser nu bredare och flackare, närmare fotot än den smala 15 m-gaveln |
+| Gång A inifrån | `stall-gang-*.jpg` | **Bild i repot** — visuell jämförelse | Boxar på båda sidor, hästhuvuden över dörrarna, namnskyltar, galvade stolpar, spånremsa längs fronterna, marksten i mitten, tegelröda tvärbalkar, takfönster, pendelarmaturer |
+| Tvärkorridoren, från västra långsidan | — | Härledd ur planen — ingen bild | Man ser genom huset mellan boxlängorna; fyra rader läsbara |
+| Vid E, mot båset | `IMG_0198` via indexet | `[DRIVE-ONLY]` — **textderivat**, ej sedd bild | Bokstaven E på sargen, mörkt träbås direkt bakom, grön exit-skylt över öppningen, låg upphöjd träläktarnivå, trappa med räcken |
+| Från banan mot läktaren | `IMG_0179` via indexet | `[DRIVE-ONLY]` — **textderivat**, ej sedd bild | Läktarens nivåer och räcke, båset med skylten, mörkröd övre vägg, stålprofiler och ventilationskanaler i taket |
+| Mot sponsorväggen | `IMG_0183` via indexet | `[DRIVE-ONLY]` — **textderivat**, ej sedd bild | Mörkröd övre yta med vita läkt, sponsorplåtar, speglarna, takets installationer |
+| Gräsgården norrut, mot hästgången | — | Ingen referens; kontroll av **läsbarhet**, inte likhet | Gården stängs i norr av en låg röd volym med blågrått sadeltak som möter ridhusets vägg till vänster och stallets till höger |
+| Grusplanen mot nordgavlarna (ankomstvyn) | — | Ingen referens; kontroll av **läsbarhet**, inte likhet | Husen läser som ett sammanhängande komplex, inte som två fristående lador med genomsikt mellan gavlarna |
 
 ---
 
@@ -260,12 +387,19 @@ skärmdumpar förrän Roblox-byggnaderna finns.
 
 | Svit | Kontroller | Resultat |
 |---|---|---|
-| Stallets planform | 9 | alla gröna |
+| Entréer och dörrar (inkl. hästgångens sex) | 17 | alla gröna |
+| Stallets planform | 10 | alla gröna |
 | Ridhusets interiör och bokstäver | 10 | alla gröna |
 | Exteriörerna (ridhus 6, stall 12) | 18 | alla gröna |
 | Ridloopen (Gate 01) | 5 | alla gröna |
 | Ryttarens sekundärrörelse | 7 | alla gröna |
 | Fyra viewports, rörelse och touchmål | 4 | alla gröna |
+
+Hästgångens sex egna kontroller: dörren finns i båda husen; stalländens
+landningspunkt hamnar i en gångyta och inte i en boxrad; ridhusändens
+landningspunkt hamnar i entréhallen och inte i läktarstommen; volymen möter
+ridhusets östvägg; volymen möter stallets västvägg; och den ligger i liv med
+båda husens längdriktning.
 
 Inga konsolfel i någon svit. Framkomlighet mätt: tvärs stallet 1,0 → 20,2 m av 21
 genom tvärkorridoren, och längs gång A till y = 42,6, alltså hela boxlängan.
@@ -276,10 +410,13 @@ Inga nya gameplay-features. Ridkänslan är orörd.
 
 ## 12 · Kvarvarande ASSUMPTION
 
-1. **Stallets fördelning mellan box och gång**, 3,5 / 3,5 m. Totalen 21 m stöds av
-   takgeometrin oberoende av hur den delas; fördelningen är residualen. Filmerna
-   antyder en bredare gång, vilket i så fall gör boxarna grundare.
+1. **Stallets totalbredd 21 m**, i intervallet 15–23 m — se § 6. Nedgraderad från
+   slutsats till antagande efter Review 01. Ligger på ett enda ställe i koden
+   (`STALLINNE.bredd`). **Stallets längd 54 m** är antagen på samma sätt.
+   Bandens inbördes andelar är däremot mätta i planen och `VERIFIED`.
 2. **Nio boxar per länga**, 36 totalt.
+2b. **Hästgångens läge, mått och anslutningspunkter** — se § 6b. Att husen sitter
+   ihop är avgjort; var gången går är härlett ur var husen har gångbar insida.
 3. **Vilken av de två gångarna filmerna visar.**
 4. **Stallets taklutning 28°** och därmed nockhöjden.
 5. **Södra gaveln och östra långsidan** på stallet.
@@ -290,8 +427,11 @@ Inga nya gameplay-features. Ridkänslan är orörd.
 
 ## 13 · Kvarvarande REFERENCE GAP
 
-1. **En rak bild på stallets "Plan 1"** — utan vinkel, utan reflex, helst med
-   skalstock. Stänger punkt 1, 2 och 3 ovan på en gång.
+1. **Ett mått på stallet.** En skalstock i ritningen, ett måttsatt rum, eller ett
+   uppmätt avstånd på plats — gångens bredd mellan två boxfronter räcker. Planen
+   finns nu i repot men saknar skala, så den kan inte stänga frågan ensam.
+1b. **Var hästgången går** — norra änden, mitten eller söder, och vad man kommer
+   ut i på ridhussidan. Ett foto inifrån gången, eller ett kort besked.
 2. **Samma på "Plan 2"** för övervåningen.
 3. **En sparad satellitbeskärning** med byggnadernas längd OCH bredd i bildpunkter.
    Kortets invändning att 20–26 m är "oförenligt med hur smal byggnaden ser ut i
@@ -310,13 +450,20 @@ Inga nya gameplay-features. Ridkänslan är orörd.
 1. **Jag har inte sett Drive-bilderna.** Ridhusets interiör är byggd ur ChatGPTs
    verifierade index. Det är ett led längre från verkligheten än stallet, och en
    review bör granska just de raderna hårdast.
-2. **Utrymningsplanerna finns inte i repot.** Både stallets och ridhusets mått
-   vilar på avläsningar som inte går att kontrollera om.
+2. **Utrymningsplanerna ligger nu i repot** (`references/plans/`, `0d91f8e`) och
+   är mätta där. Men de saknar skalstock, så de fastställer proportioner, inte
+   meter — stallets absoluta mått vilar fortfarande på antaganden, se § 6.
 3. **Roblox-pariteten är inte visad**, bara förberedd — se § 9.
 4. **Interiörernas möblering är inte komplett.** Sakerna på boxfronterna och porten
    med klockan i stallgångens fond är kända men obyggda.
 5. **Ingen mänsklig igenkänningskontroll.** Att någon som varit på UBRF känner igen
-   sig kan bara Tobias avgöra.
+   sig kan bara Tobias avgöra. Hästgången är det första exemplet på att det
+   fungerar: den fanns i verkligheten men i ingen av mina källor, och kom in i
+   modellen först när Tobias sa att den finns.
+6. **Hästgången är byggd på ett besked, inte på en bild.** Att den finns är
+   avgjort. Var den går, hur bred den är och vad man kommer ut i är gissat ur
+   vad som är möjligt i modellen. Det är den enskilt svagast underbyggda
+   byggnaden i spelet just nu, och den bör granskas som sådan.
 
 ---
 
@@ -327,7 +474,13 @@ UBRF identiskt. Arbetet lämnas till ChatGPT för Senior Fidelity Review av fakt
 diff och källkedja, och till Tobias för avgörandet om igenkänningen räcker och om
 nya foton behövs för att stänga luckorna ovan.
 
-De två P0-punkterna i gatens acceptance — ridhusets fem interiörmotsägelser och
-stallets felaktiga en-gångsplan — är åtgärdade. Punkt 3–8 (exteriörernas
+De tre P0-punkterna i gatens acceptance — ridhusets fem interiörmotsägelser,
+stallets felaktiga en-gångsplan och connected-complex-regeln — är åtgärdade.
+Den tredje var villkorad och kunde inte avgöras ur källorna; den avgjordes av
+Tobias och är byggd som hästgången, § 6b.
+
+Review 01:s tre invändningar är hanterade: bredden är nedgraderad till antagande
+med intervall (§ 6), ridhusets evidensklass är omärkt till textderivat (§ 10),
+och planerna ligger i repot (§ 14.2). Punkt 3–8 (exteriörernas
 regressionstest, den gemensamma matrisen, paritetsredovisningen, byggets
 funktion och att inga nya features smugit in) är redovisade ovan.

@@ -11,7 +11,8 @@ behövs — skriv meter här och meter i koden.
 
 ## Så ser tomten ut i verkligheten
 
-Två långa byggnader **parallellt intill varandra**, med en smal gräsgård emellan.
+Två långa byggnader **parallellt intill varandra**, sammanbyggda med en hästgång,
+med en smal gräsgård emellan.
 Stallet ligger på ridhusets nordöstra sida. Båda löper **nordväst–sydost**, ungefär
 **40° vridet från norr**.
 
@@ -19,8 +20,9 @@ Stallet ligger på ridhusets nordöstra sida. Båda löper **nordväst–sydost*
   Björklidsvägen. Utrymningsplanerna pekar dit ("parkeringen mot Björklidsvägen"
   är återsamlingsplats), och det är därifrån gavelfotona i `buildings/ridhus/`
   och `buildings/stall/` är tagna. **Står man på grusplanen har man ridhuset
-  till höger och stallet till vänster**, med förbindelselängan synlig mellan
-  gavlarna längre bort — det är ankomstvyn, och den spelet ska träffa.
+  till höger och stallet till vänster**, med hästgången som binder ihop dem
+  synlig mellan gavlarna längre bort — det är ankomstvyn, och den spelet ska
+  träffa. Husen läser som **ett** komplex, inte som två fristående lador.
 - **Björklidsvägen** kommer in från nordväst, till grusplanen.
 - **Enköpingsvägen** går längs ridhusets sydvästra långsida. Det är den sidan som
   bär UBRF-skylten och den långa entrékvisten — och kvisten sitter närmast
@@ -40,17 +42,21 @@ utrymningsplanen, se ridhuskortet) blir det **4,4 bildpunkter per meter**. Stall
 236 bildpunkter ger då **54 m** — exakt det stallkortet antar ur boxantalet. Två
 oberoende vägar till samma tal.
 
-## Är husen sammanbyggda?
+## Är husen sammanbyggda? — ja, med en hästgång
 
-Issue #21 lade 2026-08-30 till en regel om att ridhus och stall är ett
-sammanhängande byggnadskomplex. **Utrymningsplanernas egen situationsplan visar
-motsatsen**: två separata volymer med vit yta emellan, i båda planerna, med bara
-färgerna ombytta.
+**Avgjort av Tobias 2026-08-30:** *"husen är sammanbyggda, jag har varit där"*
+och *"det är hästgång mellan byggnaderna"*. Man leder hästen inomhus mellan
+stallet och ridhuset i stället för att gå ut över gården.
 
-Frågan är inte avgjord och avgörs inte av mig. Se
-`references/plans/OAVGJORT.md` för vad de två källorna säger och vad som skulle
-stänga frågan. Tills dess bygger spelet det planen visar: skilda hus med
-gräsgården emellan, och förbindelselängan som stänger gårdens södra ände.
+**Utrymningsplanernas egen situationsplan visar motsatsen** — två separata
+volymer med vit yta emellan, i båda planerna, med bara färgerna ombytta. Det är
+en verklig CONTRADICTION mellan källorna, avgjord till Product Owners fördel
+enligt konflikthierarkin i `CLAUDE.md` (Tobias uttryckliga beslut slår
+verifierad referens). En låg förbindelse behöver inte vara ritad som egen volym
+i en schematisk situationsplan om den inte är en egen brandcell.
+
+Kvar som öppen fråga: **var** hästgången går. Läget i spelet är härlett, inte
+hämtat ur en källa — se `references/plans/OAVGJORT.md` fråga 1.
 
 ## Placeringen i spelet
 
@@ -61,7 +67,7 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 |---|---|---|---|---|
 | Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, cafégaveln mot grusplanen i **norr** | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. Norra gaveln vid y = 119. |
 | Stallet | 154 / 65 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | **21 × 54** | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock **10,0 m**, 28° resning. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden. Bredden rättad 2026-08-30 från 15 m: dubbelstallets fyra boxlängor och två gångar ryms inte i 15 m, och takgeometrin ger 20–22 m. Västra långsidan står kvar där den var; huset växer österut. |
-| Gräsgården mellan husen | 144–154, y 65–119 | — | 10 × 54 | Smal, precis som i satellitbilden; stängd i söder av längan |
+| Gräsgården mellan husen | 143–154, y 65–106 | — | 11 × 41 | Smal, precis som i satellitbilden. Stängd i **norr** av hästgången och delvis i söder av längan; öppningen mot gårdsplanen i sydost är kvar |
 | Grusplanen / parkeringen | 106 / 121 | — | 48 × 34 | Vid norra gavlarna, mot Björklidsvägen. Hit kommer man. |
 | Planen framför klubbgaveln | 144 / 119 | — | 36 × 16 | Mellan grusplanen och stallets entrégavel |
 | Gårdsplanen i sydost | 148 / 40 | — | 44 × 24 | Vid stallets södra gavel; infart från Husbyvägen (144/10, 62 × 8) |
@@ -73,7 +79,8 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Paddocken bredvid | 156 / 135 | — | 18 × 22 | Norr om stallet |
 | Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
 | Fodersilon | 166 / 60 | — | — | Vid stallets **södra** gavel, syns i satellitbilden |
-| Förbindelselängan | 144 / 59 | nock öst–väst | 10 × 6 | Stänger gårdens södra ände; syns mellan gavlarna i Street View |
+| **Hästgången** | **143 / 106** | nock öst–väst | **11 × 6** | Binder ihop ridhusets östvägg (x = 143) med stallets västvägg (x = 154). Takfot 3,2 m, nock 4,2 m. Scenövergång åt båda hållen: stallets klubbdel ↔ ridhusets entréhall. **Läget är `[ASSUMPTION]`** — enda stället där båda husen har gångbar insida mot varandra (ridhusets läktare upptar y 53–103, stallets boxlängor y 71–108). |
+| Förbindelselängan | 147 / 59 | nock öst–väst | 7 × 6 | Stänger gårdens södra ände; syns mellan gavlarna i Street View. Smalnad från 10 m 2026-08-30 så att gräsgården fortfarande når gårdsplanen sedan hästgången stängt norra änden |
 | Röda stugan | 94 / 140 | nock öst–väst | 6,5 × 4,5 | Vid infarten från Björklidsvägen `[antagande]` |
 | Spelarens startpunkt | 146 / 136, blickriktning söder | — | — | På grusplanen: ridhuset till höger, stallet till vänster |
 

@@ -316,6 +316,16 @@ fonden.
 - Rotation: nocken nord–syd; västra långsidan mot gården och ridhuset
 - Klubbgaveln (spiraltrappan) mot grusplanen i norr; servicegaveln mot
   gårdsplanen i söder
+- **Sammanbyggt med ridhuset.** Tobias 2026-08-30: *"husen är sammanbyggda, jag
+  har varit där"*, *"det är hästgång mellan byggnaderna"*. Hästgången (11 × 6 m)
+  går från stallets västvägg till ridhusets östvägg, så att hästen kan ledas
+  inomhus mellan husen. Utrymningsplanernas situationsplan ritar husen som
+  skilda volymer — det är en CONTRADICTION som avgjorts till Product Owners
+  fördel; se `references/plans/OAVGJORT.md` fråga 1.
+- `[ASSUMPTION]` **Var** hästgången ansluter. Spelet lägger den i norra änden,
+  mot klubbdelen, därför att det är enda stället där båda husen har gångbar
+  insida mot varandra. Öppningen i stallets västvägg sitter 10 m från
+  klubbgaveln.
 - Förstukvisten på västra långsidan, ~6 m från norra gaveln
 - Marknivå: plant
 
