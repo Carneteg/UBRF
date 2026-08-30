@@ -705,9 +705,12 @@ const STALL_BAND = [
 ];
 
 const STALLINNE = {
-  /* `VERIFIED` 29,28 m. Bredden var projektets äldsta öppna fråga — ett
-     antagande på 21 m i ett intervall källorna inte var eniga om. Nu mätt.
-     Bandindelningen i STALL_BAND är proportionell och följer med. */
+  /* `[REFERENCE GAP]` Bredden är projektets äldsta öppna fråga och är
+     fortfarande öppen. 29,28 m stod här kortvarigt som VERIFIED och är
+     ÅTERTAGET — linjen gick inte gavelhörn till gavelhörn. 21 m är ett
+     arbetsvärde i intervallet 15–23 m, se buildings/stall/KORT.md.
+     Bandindelningen i STALL_BAND är proportionell och följer med om
+     siffran ändras. */
   bredd:STALL_BREDD,
   /* `VERIFIED` 69,95 m — Product Owner satellitmätning 2026-08-30, linje
      längs långsidan parallellt med nocken, båda ändpunkter på samma
@@ -735,13 +738,6 @@ const STALLINNE = {
      och nio boxar var en följd av det för korta huset.
 
      Kontroll: 6,8 + 12 × 3,5 + 3,5 (tvärgång) = 52,3 ≤ 52,85. */
-  /* boxStartY är flyttad från 6,8 till 8,1 för att boxrutnätet ska gå JÄMNT
-     UPP mot tvärkorridoren. Korridoren ligger där hästgången mynnar, och
-     gångens läge är mätt (39,83 m från ridhusets södra gavel) — alltså är
-     det rutnätet som ska anpassas, inte korridoren. Med 8,1 hamnar
-     fackgränserna på 8,1 + n × 3,5 och korridoren på 32,6–36,1 blir exakt
-     ett överhoppat fack. Sju boxar söder om den, fyra norr: elva per rad.
-     Kontroll: 8,1 + 11 × 3,5 + 3,5 = 50,1 ≤ klubbY 52,85. */
   klubbY:52.85, boxStartY:6.8, serviceY:6.5,
   boxB:3.5, antalBoxar:STALL_BOXAR,
   /* Tvärgången mitt i boxhallen. Mätt på planen ligger den på ~50 % av

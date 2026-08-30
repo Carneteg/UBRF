@@ -37,10 +37,19 @@ Stallet ligger på ridhusets nordöstra sida. Båda löper **nordväst–sydost*
 - Aspviks koloniträdgårdsförening ligger sydost om anläggningen.
 
 ### Skala i satellitbilden
-Ridhuset mäter 330 bildpunkter på längden. Med byggnadens 75 m (uträknat ur
-utrymningsplanen, se ridhuskortet) blir det **4,4 bildpunkter per meter**. Stallets
-236 bildpunkter ger då **54 m** — exakt det stallkortet antar ur boxantalet. Två
-oberoende vägar till samma tal.
+
+`[SUPERSEDED]` **Pixelskalargumentet gäller inte längre.** Det löd: ridhuset
+är 330 bildpunkter långt, vid 75 m ger det 4,4 punkter per meter, och stallets
+236 punkter blir då 54 m — "två oberoende vägar till samma tal".
+
+De två vägarna var inte oberoende. Båda vilade på ridhusets 75 m, som var ett
+antagande, och pixelskalan ärvde felet rakt av. Product Owner har sedan mätt
+längdaxlarna direkt: **ridhuset 77,18 m** och **stallet 69,95 m**, båda
+`MEASURED`. Stallet var alltså 16 m för kort, och argumentet ovan bekräftade
+bara sitt eget antagande.
+
+Det är därför inget skalargument kvar här. Mått kommer från direkta mätningar
+med två ändpunkter, eller så är de `[REFERENCE GAP]`.
 
 ## Är husen sammanbyggda? — ja, med en hästgång
 
@@ -66,8 +75,8 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Byggnad/yta | Position (m, X/Y) | Rotation | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
 | Ridhuset | 118 / 41,82 (sydvästra hörnet) | nock nord–syd, cafégaveln mot grusplanen i **norr** | 25 `[REFERENCE GAP]` × **77,18** `MEASURED` | Längden är Product Owner-satellitmätning 2026-08-30, se `site/MATLISTA-SATELLIT.md`; tidigare 75 m var ett antagande. Norra gaveln ligger still, huset växer söderut. Den inre banan 20 × 60 skalas INTE med skalet. Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. Norra gaveln vid y = 119. |
-| Stallet | **151,10** / 49,05 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | 21 `[REFERENCE GAP]` × **69,95** `MEASURED` | **Längden är mätt, bredden är det inte.** 29,28 m stod här en kort stund som verifierad bredd och är ÅTERTAGEN — linjen gick inte gavelhörn till gavelhörn. Bredden är därmed olöst igen; 21 m är ett arbetsvärde. Längden är `MEASURED` med Google Maps-tolerans, och huset är oregelbundet, så den definierar inte ett fullständigt rätblock. Product Owner-satellitmätning 2026-08-30, linje längs långsidan med båda ändpunkter på husets ytterkontur. Spelet hade 54 m — 16 m, 30 %, för kort. Norra klubbgaveln ligger still (y = 119); huset växer söderut, in på gårdsplanen. Boxantalet följde med: utrymningsplanen visar ~12 boxar per rad, inte 9, och 12/9 = 1,33 mot längdkvoten 1,30. Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 10,0 m, 28° resning — alla tre följer med bredden och är antaganden de också. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden `[VERIFIED]`. **Bredden är inte fastställd**: 21 m är arbetsvärdet i intervallet 15–23 m, se avsnittet om utrymningsplanerna. Västra långsidan, den fotograferade, står kvar där den var; ändras bredden växer huset österut. |
-| Gårdarna mellan husen | 143–154, y 65–89,3 och y 92,8–119 | — | 11 × 24 och 11 × 26 | **Två skilda gårdsytor**, en på var sida om hästgången — så visar satellitbilden mellanrummet. Inte en obruten gräsgård. Skyltstolpen och picknickborden står i den norra, som i `stall-fasad-01` |
+| Stallet | **151,10** / 49,05 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | 21 `[REFERENCE GAP]` × **69,95** `MEASURED` | **Längden är mätt, bredden är det inte.** Längden är Product Owner-satellitmätning 2026-08-30 längs långsidan, `MEASURED` med Google Maps-tolerans; huset är oregelbundet, så måttet definierar inte ett fullständigt rätblock. Spelet hade 54 m — 16 m, 30 %, för kort. Boxantalet följde med: utrymningsplanen visar ~12 boxar per rad, inte 9, och 12/9 = 1,33 mot längdkvoten 1,30. **Bredden 29,28 m är ÅTERTAGEN** — den linjen gick inte gavelhörn till gavelhörn — så 21 m är åter ett arbetsvärde i intervallet 15–23 m. Takfot 4,4 m, nock 10,0 m, 28° resning hör ihop med bredden och är antaganden de också. Norra klubbgaveln ligger still vid y = 119, **i liv med ridhusets**; huset växer söderut. Västra långsidan, den fotograferade, står kvar; ändras bredden växer huset österut. Byggd efter `buildings/stall/KORT.md`. |
+| Gårdarna mellan husen | 143–151,10, y 49,05–76,85 och y 80,35–119 | — | 8,10 × 27,8 och 8,10 × 38,65 | **Två skilda gårdsytor**, en på var sida om hästgången — så visar satellitbilden mellanrummet. Inte en obruten gräsgård. Skyltstolpen och picknickborden står i den norra, som i `stall-fasad-01`. Bredden 8,10 m är det MÄTTA lokala gapet i södra tvärsnittet; de gamla 11 m är `[SUPERSEDED]`. `[ASSUMPTION]` att gapet är sig likt hela vägen norrut — det är inte visat. |
 | Grusplanen / parkeringen | 106 / 121 | — | 48 × 34 | Vid norra gavlarna, mot Björklidsvägen. Hit kommer man. |
 | Planen framför klubbgaveln | 144 / 119 | — | 36 × 16 | Mellan grusplanen och stallets entrégavel |
 | Gårdsplanen i sydost | 148 / 40 | — | 44 × 24 | Vid stallets södra gavel; infart från Husbyvägen (144/10, 62 × 8) |
@@ -79,7 +88,7 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Paddocken bredvid | 156 / 135 | — | 18 × 22 | Norr om stallet |
 | Domarkuren | 183,75 / 159,8 | — | 4,5 × 3,5 | **Utanför** banans norra kortsida, mot trädridån. Låg tidigare 184/148 — det är helt innanför banans staket. `[ASSUMPTION]` vilken kortsida |
 | Fodersilon | 166 / 60 | — | — | Vid stallets **södra** gavel, syns i satellitbilden |
-| **Hästgången** | **143 / 76,85** | nock öst–väst | **8,10 × 3,5** | Binder ihop ridhusets östvägg (x = 143) med stallets västvägg (x = 151,10). Bredden är det MÄTTA lokala gårdsgapet i södra tvärsnittet — inte bevis för konstant avstånd längs hela gården. Djupet 3,5 m är `[ASSUMPTION]`. `[REFERENCE GAP]` LÄGET längs husen: 39,83 m är ÅTERTAGET (bilden har tre mätpunkter, talet är kumulativt). Gången ligger där stallets tvärkorridor mynnar — en härledning ur den mätta längden och utrymningsplanens proportioner, inte ett mått. Takfot 3,2 m, nock 4,0 m. Scenövergång åt båda hållen: stallets tvärkorridor ↔ ridhusets bana genom läktargapet. `[DERIVED]` **Läget flyttades från y 89,3 till 76,85** när stallets längd mättes. 89,3 kom ur en satellitavläsning UTAN skala och låg i liv med tvärkorridoren i ett 54 m långt hus. Med 69,95 m hamnar korridoren på 76,85–80,35, och gången måste mynna där — annars mynnar den i en boxrad. Ridhusets läktargap och sarggrind följde med. Gångens eget läge är fortfarande omätt (MATLISTA punkt 4). Måtten är `[ASSUMPTION]`: bilden ger topologi, inte meter. Låg tidigare på y 106 — det var ett antagande som satellitbilden underkände. |
+| **Hästgången** | **143 / 76,85** | nock öst–väst | **8,10 × 3,5** | Binder ihop ridhusets östvägg (x = 143) med stallets västvägg (x = 151,10). Bredden är det MÄTTA lokala gårdsgapet i södra tvärsnittet — inte bevis för konstant avstånd längs hela gården. Djupet 3,5 m är `[ASSUMPTION]`. `[REFERENCE GAP]` LÄGET längs husen: 39,83 m är ÅTERTAGET (bilden har tre mätpunkter, talet är kumulativt). Gången ligger där stallets tvärkorridor mynnar — en härledning ur den mätta längden och utrymningsplanens proportioner, inte ett mått. Takfot 3,2 m, nock 4,0 m. Scenövergång åt båda hållen: stallets tvärkorridor ↔ ridhusets bana genom läktargapet. Låg tidigare på y 89,3 — en satellitavläsning utan skala, i liv med korridoren i ett 54 m långt hus. |
 | Låga längan i söder | 147 / 59 | nock öst–väst | 7 × 6 | `[ASSUMPTION]` Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. Smalnad från 10 m till 7 m 2026-08-30 så att den södra gårdsytan fortfarande når gårdsplanen |
 | Röda stugan | 94 / 140 | nock öst–väst | 6,5 × 4,5 | Vid infarten från Björklidsvägen `[antagande]` |
 | Spelarens startpunkt | 146 / 136, blickriktning söder | — | — | På grusplanen: ridhuset till höger, stallet till vänster |
