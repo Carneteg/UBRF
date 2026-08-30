@@ -14,4 +14,5 @@ return {
 	StateMachine = require(script.StateMachine),
 	RigAdapter = require(script.RigAdapter),
 	Networking = require(script.Networking),
+	Preparation = require(script.Preparation),
 }
