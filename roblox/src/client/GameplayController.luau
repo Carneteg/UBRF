@@ -21,7 +21,6 @@ local objectiveLabel: TextLabel? = nil
 local horseLabel: TextLabel? = nil
 local feedbackLabel: TextLabel? = nil
 local prepPrompt: ProximityPrompt? = nil
-local currentHorse: Model? = nil
 local refreshSerial = 0
 
 local function ensureGui()
@@ -36,12 +35,19 @@ local function ensureGui()
 	local panel = Instance.new("Frame")
 	panel.Name = "ObjectivePanel"
 	panel.AnchorPoint = Vector2.new(0, 0)
-	panel.Position = UDim2.fromOffset(18, 18)
-	panel.Size = UDim2.new(0, 360, 0, 118)
+	panel.Position = UDim2.fromOffset(12, 12)
+	panel.Size = UDim2.new(1, -24, 0, 132)
 	panel.BackgroundColor3 = Color3.fromRGB(25, 27, 27)
 	panel.BackgroundTransparency = 0.12
 	panel.BorderSizePixel = 0
 	panel.Parent = screen
+
+	-- Telefonen får nästan hela skärmbredden, surfplatta/dator stannar vid
+	-- 360 px. Samma panel ska alltså aldrig gå utanför en 320 px viewport.
+	local size = Instance.new("UISizeConstraint")
+	size.MinSize = Vector2.new(240, 132)
+	size.MaxSize = Vector2.new(360, 132)
+	size.Parent = panel
 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 10)
@@ -82,7 +88,7 @@ local function ensureGui()
 	objective.Name = "Objective"
 	objective.BackgroundTransparency = 1
 	objective.Position = UDim2.fromOffset(0, 44)
-	objective.Size = UDim2.new(1, 0, 0, 38)
+	objective.Size = UDim2.new(1, 0, 0, 48)
 	objective.Font = Enum.Font.Gotham
 	objective.Text = ""
 	objective.TextWrapped = true
@@ -96,8 +102,8 @@ local function ensureGui()
 	local feedback = Instance.new("TextLabel")
 	feedback.Name = "Feedback"
 	feedback.BackgroundTransparency = 1
-	feedback.Position = UDim2.fromOffset(0, 84)
-	feedback.Size = UDim2.new(1, 0, 0, 22)
+	feedback.Position = UDim2.fromOffset(0, 96)
+	feedback.Size = UDim2.new(1, 0, 0, 24)
 	feedback.Font = Enum.Font.Gotham
 	feedback.Text = ""
 	feedback.TextWrapped = true
@@ -117,7 +123,6 @@ local function clearPrompt()
 		prepPrompt:Destroy()
 		prepPrompt = nil
 	end
-	currentHorse = nil
 end
 
 local function attachPrompt(state: any)
@@ -157,7 +162,6 @@ local function attachPrompt(state: any)
 	end)
 
 	prepPrompt = prompt
-	currentHorse = model
 end
 
 local function render(state: any, feedback: string?)
