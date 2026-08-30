@@ -130,19 +130,21 @@ return {
 		{
 			typ = "sand",
 			rekt = {
-				x = 176,
-				y = 119,
-				w = 20,
-				h = 40,
+				x = 150,
+				y = 132,
+				w = 18,
+				h = 24,
+				matt = "REFERENCE GAP",
 			},
 		},
 		{
 			typ = "sand",
 			rekt = {
-				x = 156,
-				y = 135,
-				w = 18,
-				h = 22,
+				x = 170,
+				y = 120,
+				w = 33.57,
+				h = 46,
+				matt = "kortsida MEASURED 33,57",
 			},
 		},
 		{
@@ -292,7 +294,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 35.58,
+					u = 29.58,
 					b = 2.4,
 					h = 2.6,
 					z0 = 0,
@@ -313,7 +315,7 @@ return {
 			id = "stall",
 			rekt = {
 				x = 151.1,
-				y = 49.05,
+				y = 43.05,
 				w = 21,
 				h = 69.95,
 			},
@@ -682,7 +684,7 @@ return {
 			id = "hastgang",
 			rekt = {
 				x = 143,
-				y = 76.85,
+				y = 70.85,
 				w = 8.1,
 				h = 3.5,
 			},
@@ -715,7 +717,7 @@ return {
 			id = "langa",
 			rekt = {
 				x = 147,
-				y = 43,
+				y = 34,
 				w = 7,
 				h = 6,
 			},
@@ -772,8 +774,8 @@ return {
 		{
 			id = "domarkur",
 			rekt = {
-				x = 183.75,
-				y = 159.8,
+				x = 156.75,
+				y = 156.8,
 				w = 4.5,
 				h = 3.5,
 			},
@@ -907,7 +909,7 @@ return {
 			id = "stall_s",
 			pos = {
 				156.7,
-				47.45,
+				41.45,
 			},
 			text = "Gå in i stallet (gaveldörren vid gårdsplanen)",
 			mot = "stallinne",
@@ -978,10 +980,40 @@ return {
 			},
 		},
 		{
+			id = "stall_W_6",
+			pos = {
+				150,
+				106.825,
+			},
+			text = "Gå in i stallet",
+			mot = "stallinne",
+			auto = true,
+			spawn = {
+				x = 1.6,
+				y = 63.775,
+				rikt = 0,
+			},
+		},
+		{
+			id = "stall_N_11",
+			pos = {
+				161.025,
+				114.1,
+			},
+			text = "Gå in i stallet",
+			mot = "stallinne",
+			auto = true,
+			spawn = {
+				x = 9.925,
+				y = 68.35,
+				rikt = -1.570796,
+			},
+		},
+		{
 			id = "stall_S_13",
 			pos = {
 				164.175,
-				47.95,
+				41.95,
 			},
 			text = "Gå in i stallet",
 			mot = "stallinne",
@@ -1240,7 +1272,7 @@ return {
 				uttext = "Gå in i stallet (gaveldörren vid gårdsplanen)",
 				spawn = {
 					x = 156.7,
-					y = 47.45,
+					y = 41.45,
 					rikt = -1.570796,
 				},
 			},
@@ -1256,8 +1288,38 @@ return {
 				inne = true,
 				spawn = {
 					x = 23.6,
-					y = 36.78,
+					y = 30.78,
 					rikt = 3.141593,
+				},
+			},
+			{
+				id = "ut_stall_W_6",
+				pos = {
+					1.6,
+					63.775,
+				},
+				text = "Ut",
+				mot = "gard",
+				auto = true,
+				spawn = {
+					x = 150,
+					y = 106.825,
+					rikt = 3.141593,
+				},
+			},
+			{
+				id = "ut_stall_N_11",
+				pos = {
+					9.925,
+					68.35,
+				},
+				text = "Ut",
+				mot = "gard",
+				auto = true,
+				spawn = {
+					x = 161.025,
+					y = 114.1,
+					rikt = 1.570796,
 				},
 			},
 			{
@@ -1271,14 +1333,14 @@ return {
 				auto = true,
 				spawn = {
 					x = 164.175,
-					y = 47.95,
+					y = 41.95,
 					rikt = -1.570796,
 				},
 			},
 		},
 		origo = {
 			x = 151.1,
-			y = 49.05,
+			y = 43.05,
 		},
 	},
 	identitet = {
@@ -1403,18 +1465,36 @@ return {
 			lampDelning = 0.92,
 		},
 	},
+	traningsytor = {
+		NO_STOR = {
+			x = 170,
+			y = 120,
+			w = 33.57,
+			h = 46,
+			matt = "kortsida MEASURED 33,57",
+		},
+		NO_LITEN = {
+			x = 150,
+			y = 132,
+			w = 18,
+			h = 24,
+			matt = "REFERENCE GAP",
+		},
+	},
 	banor = {
 		uteridbanan = {
-			x = 176,
-			y = 119,
-			w = 20,
-			h = 40,
+			x = 150,
+			y = 132,
+			w = 18,
+			h = 24,
+			matt = "REFERENCE GAP",
 		},
 		paddock = {
-			x = 156,
-			y = 135,
-			w = 18,
-			h = 22,
+			x = 170,
+			y = 120,
+			w = 33.57,
+			h = 46,
+			matt = "kortsida MEASURED 33,57",
 		},
 	},
 	staket = {
@@ -1423,24 +1503,24 @@ return {
 			sandkant = true,
 			p = {
 				{
-					176,
-					119,
+					150,
+					132,
 				},
 				{
-					196,
-					119,
+					168,
+					132,
 				},
 				{
-					196,
-					159,
+					168,
+					156,
 				},
 				{
-					176,
-					159,
+					150,
+					156,
 				},
 				{
-					176,
-					119,
+					150,
+					132,
 				},
 			},
 		},
@@ -1449,24 +1529,24 @@ return {
 			sandkant = true,
 			p = {
 				{
-					156,
-					135,
+					170,
+					120,
 				},
 				{
-					174,
-					135,
+					203.57,
+					120,
 				},
 				{
-					174,
-					157,
+					203.57,
+					166,
 				},
 				{
-					156,
-					157,
+					170,
+					166,
 				},
 				{
-					156,
-					135,
+					170,
+					120,
 				},
 			},
 		},
@@ -1686,43 +1766,43 @@ return {
 		{
 			typ = "mast",
 			pos = {
-				176,
-				119,
+				150,
+				132,
 			},
 		},
 		{
 			typ = "mast",
 			pos = {
-				196,
-				119,
+				168,
+				132,
 			},
 		},
 		{
 			typ = "mast",
 			pos = {
-				176,
-				159,
-			},
-		},
-		{
-			typ = "mast",
-			pos = {
-				196,
-				159,
-			},
-		},
-		{
-			typ = "mast",
-			pos = {
+				150,
 				156,
-				157,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				168,
+				156,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				170,
+				166,
 			},
 		},
 		{
 			typ = "torvbalar",
 			pos = {
-				172.4,
-				124.6,
+				146.4,
+				137.6,
 			},
 		},
 		{
@@ -1779,8 +1859,8 @@ return {
 			x1 = 11.6,
 		},
 		sargGrind = {
-			y0 = 34.88,
-			y1 = 38.68,
+			y0 = 28.88,
+			y1 = 32.68,
 		},
 		laktare = {
 			x0 = 21,
@@ -1790,8 +1870,8 @@ return {
 			stegH = 0.28,
 			stegD = 0.85,
 			gap = {
-				y0 = 32.43,
-				y1 = 41.13,
+				y0 = 26.43,
+				y1 = 35.13,
 			},
 		},
 		kortanda = {
@@ -1847,7 +1927,7 @@ return {
 				id = "hastgang",
 				pos = {
 					23.6,
-					36.78,
+					30.78,
 				},
 				text = "Hästgången — in i stallet",
 				mot = "stallinne",

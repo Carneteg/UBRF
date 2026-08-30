@@ -85,11 +85,32 @@ const STALL_BREDD  = 21;     // `[REFERENCE GAP]` — se noten om återtaget
 const RIDHUS_LANGD = 77.18;  // `VERIFIED`
 const RIDHUS_BREDD = 25;     // `[REFERENCE GAP]` — se noten om återtaget
 const GARDSGAP     = 8.10;   // `VERIFIED LOCAL` i södra tvärsnittet
-const NORRA_GAVELN = 119;    // gemensam gavellinje, ligger still
+/* Ridhusets norra gavel. Referenslinjen som allt annat mäts från, eftersom
+   det är den gaveln som är mest fotoverifierad — caféet, ståltrappan och
+   parkeringen framför. */
+const RIDHUS_NORR = 119;
+
+/* `[REFERENCE GAP]` HUSEN LIGGER FÖRSKJUTNA I LÄNGDLED.
+
+   Modellen tvingade tidigare båda husens norra gavlar till SAMMA linje och
+   kallade det `[VERIFIED]` "i liv, som i satellitbilden". Det var fel läst:
+   satellitbilden visar husen förskjutna längs sin gemensamma axel, inte i
+   liv. Ett påstående om liv är dessutom en STARKARE utsaga än underlaget bär
+   — det säger att två ändar sammanfaller på decimetern.
+
+   Riktningen är läsbar i satellitbilden: stallet ligger förskjutet mot
+   sydost längs axeln, alltså söderut i spelets rutnät. STORLEKEN är det
+   inte. 6 m nedan är ett `[ASSUMPTION]` valt för att förskjutningen ska
+   FINNAS och ha rätt tecken — inte för att den är mätt.
+
+   Det som behövs för att stänga den: en satellitmätning från ridhusets
+   norra gavelhörn till stallets norra gavelhörn, längs husens axel. */
+const GAVELFORSKJUTNING = 6;   // stallet söderut relativt ridhuset
 const RIDHUS_X = 118;
-const RIDHUS_Y = NORRA_GAVELN - RIDHUS_LANGD;              // 41,82
+const RIDHUS_Y = RIDHUS_NORR - RIDHUS_LANGD;               // 41,82
 const STALL_X  = RIDHUS_X + RIDHUS_BREDD + GARDSGAP;       // 152,67
-const STALL_Y  = NORRA_GAVELN - STALL_LANGD;               // 49,05
+const STALL_NORR = RIDHUS_NORR - GAVELFORSKJUTNING;        // 113
+const STALL_Y  = STALL_NORR - STALL_LANGD;                // 43,05
 
 /* `[REFERENCE GAP]` Hästgångens läge längs husen är OLÖST.
 
@@ -107,28 +128,46 @@ const GANG_DJUP  = 3.5;                                    // `[ASSUMPTION]`
 
 const STALL_BOXAR = 12;      // sex söder om tvärkorridoren, sex norr
 
-/* ══ TRÄNINGSBANORNA ═══════════════════════════════════════════════════
-   `[REFERENCE GAP]` Banans mått och läge är OLÖSTA.
+/* ══ TRÄNINGSYTORNA ════════════════════════════════════════════════════
+   Review 06 blocker 2: lös det här REALITY-FIRST, inte UTEBANA-first.
 
-   ÅTERTAG. 33,57 m är ett `MEASURED SIDE` — men på "den stora nordöstra
-   träningsytan", och det är INTE dokumenterat att den ytan är samma sak som
-   spelets `uteridbanan`. Jag hann sätta 33,57 som banans kortsida och flytta
-   hela banområdet efter den. Det är utrivet: identiteten måste dokumenteras
-   innan måttet får byta banans mått.
+   Källorna visar FLERA inhägnade sandytor nordost om husen, och spelet hade
+   en enda bana. Att fråga "hur stor är spelets bana" var fel fråga; rätt
+   fråga är "vilka ytor finns, och vilken av dem rider man på".
 
-   Banan står därför kvar som den var — 20 × 40 på sitt gamla läge. Det är
-   inget bättre underbyggt än förut, bara ärligare klassat: 20 × 40 är ett
-   `[ASSUMPTION]` som ingen källa stödjer, och det ska inte läsas som
-   dressyrmått bara för att det råkar se ut som ett.
+   Ytorna listas därför med NEUTRALA plats-ID, oberoende av vad de heter i
+   spelet. `33,57` hör till `NO_STOR` oavsett vilket gameplaynamn den ytan
+   senare får — det är en egenskap hos marken, inte hos spelobjektet.
 
-   ATT LÖSA, i den ordningen: dokumentera vilken yta i satellitbilden som är
-   spelets uteridbana, mät DEN ytans båda sidor med rena tvåpunktslinjer, och
-   mät avståndet till husen. Först då får måtten skrivas in här.
+   Underlag: references/omnejd/banan-01..03 och
+   references/site/BANIDENTITET.md.
 
-   Allt runt banan — staket, master, domarkur, torvbalar — läser den här
-   rektangeln, så när måtten kommer behöver de bara skrivas på ETT ställe. ══ */
-const UTEBANA = {x:176, y:119, w:20, h:40};
-const PADDOCK = {x:156, y:135, w:18, h:22};
+     · `NO_STOR`   — den stora ytan. `banan-03` visar ekipage på den och
+                    hästar uppbundna längs dess bortre staket; belysnings-
+                    masterna står runt DEN. Kortsidan **33,57 m**
+                    `MEASURED SIDE`. Långsidan `[REFERENCE GAP]`.
+     · `NO_LITEN`  — den lägre sandytan i förgrunden i `banan-03`, avskild
+                    från den stora med en kant. Mått `[REFERENCE GAP]`.
+
+   `[REFERENCE GAP]` BÅDA YTORNAS LÄGE på tomten. Marknivåbilderna visar
+   deras inbördes ordning men inte var de ligger relativt husen. Rektanglarna
+   nedan är arbetslägen som håller dem norr om gavellinjen och innanför
+   tomten — inte mätta lägen.
+
+   SPELETS BANA. `UTEBANA` pekar på `NO_LITEN`, och det är ett `[ASSUMPTION]`
+   som BANIDENTITET.md redovisar öppet: masterna talar för den stora,
+   storleken för den lilla. Kopplingen ligger på EN rad här nere, så när
+   Tobias säger vilken det är räcker det att flytta pekaren. ══ */
+const TRANINGSYTOR = {
+  /* Kortsidan är mätt; långsidan är ett arbetsvärde som ryms mellan
+     gavellinjen och tomtdjupet 170. Att den ryms säger inget om UBRF. */
+  NO_STOR:  {x:170, y:120, w:33.57, h:46, matt:"kortsida MEASURED 33,57"},
+  NO_LITEN: {x:150, y:132, w:18,    h:24, matt:"REFERENCE GAP"},
+};
+
+/* Spelets uteridbana och paddock pekar in i listan ovan. En rad var. */
+const UTEBANA = TRANINGSYTOR.NO_LITEN;
+const PADDOCK = TRANINGSYTOR.NO_STOR;
 
 const rektRunt = r => [[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h],[r.x,r.y]];
 const hornRunt = r => [[r.x,r.y],[r.x+r.w,r.y],[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]];
@@ -250,11 +289,11 @@ const ANL = {
          · norra gaveln: valvfönster, balkongdörr och spiraltrappa
          · södra gaveln mot gårdsplanen (Street View): två entrédörrar
            under vita skärmtak och en rak ståltrappa till övervåningen */
-    /* Stallets NORRA gavel ligger i liv med ridhusets — det syns i
-       satellitbilden: båda gavlarna vetter mot grusplanen i samma linje.
-       Ytan mellan husen är INTE en verifierad obruten gräsgård: husen är
-       sammanbyggda (Tobias på plats), och gården är det som blir kvar
-       mellan förbindelserna. Se hastgang nedan. */
+    /* Stallets norra gavel ligger INTE i liv med ridhusets — se
+       GAVELFORSKJUTNING ovan. Båda vetter mot grusplanen, men förskjutna.
+       Ytan mellan husen är inte heller en verifierad obruten gräsgård:
+       husen är sammanbyggda (Tobias på plats), och gården är det som blir
+       kvar mellan förbindelserna. Se hastgang nedan. */
     {id:"stall", rekt:{x:STALL_X, y:STALL_Y, w:STALL_BREDD, h:STALL_LANGD},
      /* Nocken hör ihop med bredden: 4,4 + 21/2 × tan 28° = 10,0. När bredden
         kortvarigt stod på 29,28 räknades nocken om till 12,18; båda är
@@ -271,7 +310,7 @@ const ANL = {
        {sida:"W", u:sV(8.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
        /* HÄSTGÅNGEN mot ridhuset. På W mäts u från NORRA gaveln söderut,
           så tvärkorridorens mitt (lokalt y 26,05) ligger på u 26,75. */
-       {sida:"W", u:sV(NORRA_GAVELN-(GANG_FASTE+GANG_DJUP-0.55)), b:2.4, h:2.6,
+       {sida:"W", u:sV(STALL_NORR-(GANG_FASTE+GANG_DJUP-0.55)), b:2.4, h:2.6,
         z0:0, typ:"portbla", intern:true},
        ...stallFonster("W"), ...stallFonster("E"),
        /* Norra gaveln — klubbgaveln mot grusplanen, den höga, med
@@ -360,8 +399,19 @@ const ANL = {
        verkliga läge är okänt får inte flyttas för att bevara en roll man
        själv har tilldelat det. Den är flyttad av EN anledning — den krockade
        med verifierad geometri — och det nya läget är lika osourcat som det
-       gamla. Den styr ingenting annat och ska inte läsas som placerad. */
-    {id:"langa", rekt:{x:147, y:43, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
+       gamla. Den styr ingenting annat och ska inte läsas som placerad.
+
+       ANDRA FLYTTEN. När gavelförskjutningen lade stallet sex meter söderut
+       krockade längan igen, 17,3 m². Byggnadsöverlappstestet fällde det
+       direkt. Flyttad till y 34..40.
+
+       Att den nu har flyttats två gånger utan att någon källa sagt något om
+       var den står är i sig ett argument: den kanske inte hör hemma i den
+       kanoniska geometrin alls, utan borde plockas bort tills något visar
+       att den finns och var. Jag tar inte bort den på eget bevåg — men
+       nästa gång den krockar bör frågan ställas i stället för att den
+       flyttas en tredje gång. */
+    {id:"langa", rekt:{x:147, y:34, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
      fargV:"#7C2A24", fargT:"#7E8288", label:"",
      oppningar:[{sida:"N", u:4.4, b:1.1, h:2.0, z0:0, typ:"dorrmork"}]},
     /* Röda stugan vid infarten från Björklidsvägen (förråd/sekretariat). */

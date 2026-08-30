@@ -95,8 +95,19 @@ check("hästgången ligger inom båda husens längd",
 			<= math.min(ridhus.rekt.y + ridhus.rekt.h, stall.rekt.y + stall.rekt.h),
 	string.format("hästgången y %g–%g", hastgang.rekt.y, hastgang.rekt.y + hastgang.rekt.h))
 
-check("de norra gavlarna ligger i liv, som i satellitbilden",
-	nara(ridhus.rekt.y + ridhus.rekt.h, stall.rekt.y + stall.rekt.h))
+-- Husen är FÖRSKJUTNA i längdled, inte i liv. Testet krävde tidigare att de
+-- norra gavlarna sammanföll och kallade det satellitverifierat; det var en
+-- starkare utsaga än underlaget bär, och satellitbilden visar förskjutning.
+-- Nu kontrolleras att förskjutningen FINNS och har rätt tecken: stallets
+-- norra gavel ligger söder om ridhusets. Storleken är REFERENCE GAP.
+do
+	local rn = ridhus.rekt.y + ridhus.rekt.h
+	local sn = stall.rekt.y + stall.rekt.h
+	check("husen ligger förskjutna i längdled, inte i liv",
+		rn - sn > 0.5,
+		string.format("ridhusets norra gavel y = %.2f, stallets y = %.2f (%.2f m isär)",
+			rn, sn, rn - sn))
+end
 
 --[[ ── Interna öppningar ──────────────────────────────────────────────
 	En öppning märkt intern vetter mot ett grannhus, inte ut mot gården. Den
@@ -509,6 +520,36 @@ do
 	end
 	check("ingen byggnad överlappar en annan", #krockar == 0,
 		#krockar == 0 and (#b .. " byggnader") or table.concat(krockar, ", "))
+end
+
+do
+	-- Träningsytorna listas med NEUTRALA plats-ID, oberoende av spelnamn.
+	-- Måttet 33,57 hör till marken, inte till spelobjektet, så testet frågar
+	-- efter ytan — inte efter "uteridbanan".
+	local Y = UBRFKomplex.traningsytor
+	check("den stora nordöstra ytan finns i listan", Y.NO_STOR ~= nil)
+	check("dess mätta kortsida är 33,57",
+		Y.NO_STOR ~= nil and math.abs(Y.NO_STOR.w - 33.57) < 0.01,
+		Y.NO_STOR and string.format("%.2f m", Y.NO_STOR.w) or "saknas")
+	check("den mindre ytan finns också", Y.NO_LITEN ~= nil)
+
+	-- Båda ska ligga norr om husens gavellinje och innanför tomten.
+	for namn, r in pairs(Y) do
+		check(namn .. " ligger norr om husen och innanför tomten",
+			r.y >= 119 - 6.5 and r.x >= 0 and r.x + r.w <= UBRFKomplex.bredd
+				and r.y + r.h <= UBRFKomplex.djup,
+			string.format("x %.1f..%.1f  y %.1f..%.1f", r.x, r.x + r.w, r.y, r.y + r.h))
+	end
+
+	-- Ytorna får inte överlappa varandra.
+	local a, b = Y.NO_STOR, Y.NO_LITEN
+	if a and b then
+		local ox = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)
+		local oy = math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y)
+		check("de två ytorna överlappar inte varandra",
+			not (ox > 0.01 and oy > 0.01),
+			(ox > 0.01 and oy > 0.01) and string.format("%.1f m²", ox * oy) or nil)
+	end
 end
 
 if fails > 0 then

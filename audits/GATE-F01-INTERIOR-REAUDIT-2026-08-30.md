@@ -1,7 +1,16 @@
 # Om-audit av interiörerna mot rätt klassade bilder — issue #23
 
 Datum: 2026-08-30
-Status: **de tre ridhusbilderna finns nu i repot, och jag har sett dem.**
+Status: **AKTUELL SANNING per 2026-08-30.**
+
+> Den här filen skrevs i lager: först om-auditen, sedan rättningarna, sedan
+> stallets genomgång. Punkt A, B och C stod därför två gånger med
+> MOTSATT status — först som `KNOWN MISMATCH`, längre ner som åtgärdade.
+> Review 06 blocker 4 underkände det, och med rätta: en auditfil som säger
+> emot sig själv är värdelös som facit.
+>
+> Filen är omskriven till EN status per fynd. Historiken ligger i
+> git-loggen, inte här.
 
 ## Det viktigaste först
 
@@ -48,113 +57,48 @@ utesluta för arbete som gjordes innan bilderna fanns tillgängliga för mig.
 bekräftas rakt av, två delvis. Det är värt att säga rakt ut, eftersom
 motsatsen — att det skulle ha varit fel — var en rimlig farhåga.
 
-## Nya fynd: vad som INTE stämmer
+## Fynden och deras status
 
-### A · Läktarens karaktär och läge
+En rad per fynd. Ingen historik, bara vad som gäller nu.
 
-Spelet bygger läktaren som **ljusa furutrappsteg längs hela östra långsidan**,
-lokala y 9–59, alltså 50 m.
-
-Fotona visar något annat:
-
-- `-01`: läktaren ligger vid **kortändan** (vid bokstaven C), som breda
-  trappsteg i ljust trä under de glasade rummen, med **två trappor** upp.
-- `-02` och `-03`: i förgrunden syns läktarens ovansida som ett **brett
-  plankdäck**, och dess framsida mot banan är en **hög, solid, mörkbetsad
-  brädvägg** — inte öppna trappsteg.
-
-`[KNOWN MISMATCH]` Läktarens utbredning och dess front mot banan.
-
-### B · Den mörkröda väggen täcker inte hela långsidan
-
-Spelet målar båda långsidorna. Fotot visar den rostbruna panelen med vita band
-på **en del** av en långsida; resten är ljus.
-
-`[KNOWN MISMATCH]` Utbredningen.
-
-### C · Sponsorskyltarna sitter på den mörka väggen
-
-`-02` visar skyltar — Agria, RS Mustang, Svenskt Stallströ, Ingeborgs Gård —
-hängande på den rostbruna panelen, ovanför sargen. Spelet har sponsorplåtar,
-men deras läge är inte kopplat till väggens utbredning.
-
-## Två antaganden som nu kan uppgraderas
-
-| Vad | Var | Status |
+| # | Fynd | Status |
 |---|---|---|
-| **E har en elefant** som bild | `-03`, tydligt bredvid bokstaven E på sargen | `[antagande]` → **VERIFIED** |
-| **C har en cykel** | `-01`, bredvid C på sargen | Redan "ur foto" — **bekräftad igen** |
-| Sargen är vit/gräddvit med **svart sockelband** | alla tre | **VERIFIED** |
+| A | Läktarens FRONT mot banan är en hög, solid, mörkbetsad brädvägg med plankdäck ovanpå — inte öppna ljusa trappsteg | **RESOLVED** — `IDENTITET.ridhus.laktarfront`, byggd |
+| A2 | Läktarens topologi: ett trappstegsblock med TVÅ trappor och glasband ovanför ligger vid **kortändan där C sitter**, inte längs långsidan | **RESOLVED** — `RIDHUSINNE.kortanda`, byggd i webb och Roblox |
+| A3 | Långsideläktarens exakta utbredning i meter | `REFERENCE GAP` |
+| B | Den mörkröda panelen täcker en DEL av EN långsida, inte båda i full längd | **RESOLVED** — `IDENTITET.ridhus.ovreVagg.sida/y0/y1` |
+| B2 | Var panelens stycke börjar och slutar i meter | `REFERENCE GAP` |
+| C | Sponsorskyltarna hänger på den rostbruna panelen ovanför sargen | **RESOLVED** — skyltarna samlade innanför panelens stycke |
+| D | E har en elefant som bild (`-03`) | **RESOLVED** — uppgraderad från antagande till verifierad |
+| E | C har en cykel (`-01`) | **RESOLVED** — bekräftad igen |
+| F | Sargen är vit/gräddvit med svart sockelband | **RESOLVED** — verifierad i alla tre bilderna |
+| G | Kabelstegar i taket syns inte tydligt i någon bild | `REFERENCE GAP` — byggda, men underlaget bekräftar dem inte |
 
-## Vad som ÄR gjort sedan om-auditen skrevs
+## Stallinteriören mot `IMG_0159–0162`
 
-`28a768f` och framåt:
+Issue #23 punkt 2. Alla fyra öppnade en och en, med `IMG_0145–0149` och
+`0152` ur samma serie.
 
-- **Punkt A — läktarens front.** Läktaren byggde öppna ljusa furutrappsteg
-  hela vägen ner. Båda interiörfotona är tagna FRÅN läktaren och visar samma
-  sak i förgrunden: ett brett plankdäck upptill och en **hög, solid,
-  mörkbetsad brädvägg av liggande panel** mot banan. Fronten finns nu i
-  `IDENTITET.ridhus.laktarfront` och byggs av webben. `VERIFIED` att den är
-  solid, mörk och liggande; `[ASSUMPTION]` brädhöjd och ton.
+**De motsäger ingenting i den byggda stallgången.** Gallerfronter över mörka
+heldelar, genomgående topplist, orangebruna limträåsar, korrugerad plåt som
+undertak, markstensgången i mitten och boxar på båda sidor stämmer allihop.
+Om-auditens syfte var att pröva, och prövningen föll ut till byggets fördel.
 
-- **Punkt B — den mörkröda väggens utbredning.** Spelet målade BÅDA
-  långsidorna i hela sin längd. Panelen ligger nu på **en** långsida (väster,
-  mitt emot läktaren) och över **ett stycke** av den,
-  `IDENTITET.ridhus.ovreVagg.sida/y0/y1`. `VERIFIED` att den är partiell och
-  sitter på en sida; `[ASSUMPTION]` var den börjar och slutar.
+| Fynd | Status |
+|---|---|
+| Limträets och plåtens färg, mätta ur fotot till `#C39575` och `#878783` | **RESOLVED** — `IDENTITET.stall.stallgang` |
+| Klockan i gångens bortre ände, i två oberoende bildrutor | **RESOLVED** — `STALLINNE.klocka`, byggd |
+| Gångens bredd i meter | `REFERENCE GAP` — ärver den återtagna husbredden |
+| Antalet boxar | `REFERENCE GAP` — bilderna visar aldrig hela längden i en ruta |
+| Balkarnas täthet och dimension (var fjärde meter, snedstag) | `REFERENCE GAP` — avläst ur `IMG_0249`/`0250`, som varken finns i repot eller är granskade av mig |
 
-- **Punkt C — sponsorskyltarna.** De låg utspridda på y 8–53 och hamnade
-  därmed delvis på den ljusa delen av väggen. Nu samlade innanför panelens
-  stycke, i den ordning `-02` visar dem.
+## Kvar för att stänga issue #23
 
-`[REFERENCE GAP]` Läktarens exakta utbredning längs långsidan, och
-trappblocket vid kortändan under glasrummen som `-01` visar, är inte
-måttsatta. Fronten är rättad; utbredningen är det inte.
+Inget av det nedan går att lösa från befintligt material:
 
-## Vad som fortfarande INTE är gjort
-
-Den här filen var från början **om-auditen**, alltså issue #23 punkt 5.
-Punkt A, B och C är nu åtgärdade — se avsnittet ovan. Kvar: de ändrar läktarens och väggens geometri,
-och den geometrin ligger i den delade datan som båda plattformarna läser.
-Att ändra den är ett eget arbete, och det ska göras med samma kedja som
-resten — `src/site.js` → webben och exporten → Roblox.
-
-## Stallinteriören mot `IMG_0159–0162` — omgranskad
-
-Issue #23 punkt 2. Alla fyra bilderna är öppnade en och en, tillsammans med
-`IMG_0145–0149` och `0152` ur samma serie. De visar samma stallgång från
-olika punkter längs den.
-
-### Vad de BEKRÄFTAR i det som redan är byggt
-
-| Drag | Läge i koden | Status |
-|---|---|---|
-| Boxfronter: galvad ram, lodräta galler upptill, **mörk antracitfärgad heldel** nedtill | `v3dStall`, boxfronterna | `VERIFIED` |
-| **Genomgående topplist** i galvat stål ovanför fronterna | `galler.lada(...)` på z = 2,20 | `VERIFIED` — fanns redan |
-| **Orangebruna limträåsar** längs taket | `IDENTITET.stall.stallgang.limtra` | `VERIFIED`, färgen mätt |
-| **Korrugerad plåt** som undertak, följer takfallet | `IDENTITET.stall.stallgang.takplat` | `VERIFIED`, färgen mätt |
-| **Markstensgång i mitten** med ljusare kanter | golvet i `v3dStall` | `VERIFIED` |
-| Runda armaturer tätt under plåten | `lykt` | `VERIFIED` — kortade pendlar |
-| Boxar på BÅDA sidor hela vägen | `STALL_BAND` | `VERIFIED` |
-| Hönät och täcken hängande på fronterna | rekvisita | `VERIFIED` |
-
-Bilderna motsäger alltså ingenting i den byggda stallgången. Det är ett
-resultat värt att skriva ut: om-auditens syfte var att pröva, och prövningen
-föll ut till byggets fördel.
-
-### Vad de LÄGGER TILL
-
-- **Klockan i gångens bortre ände.** Syns i `IMG_0160` och i
-  `stall-inne-05-stallgangen.jpg`. Två oberoende bildrutor. Byggd.
-
-### Vad de INTE avgör
-
-`[REFERENCE GAP]` **Gångens bredd.** Ingen av bilderna har något av känd
-storlek att skala mot. Spelets 2,6 m kommer ur `STALL_BAND`:s andelar av den
-antagna bredden 21 m — och bredden är själv `[REFERENCE GAP]` efter
-återtaget. Gångbredden ärver alltså den osäkerheten och kan inte stängas
-härifrån.
-
-`[REFERENCE GAP]` **Antalet boxar.** Bilderna är tagna längs gången och visar
-aldrig hela längden i en ruta, så de kan varken bekräfta eller motsäga de
-tolv per rad som utrymningsplanen gav.
+- **Roblox Studio.** Utseende, material, ljus och prestanda är oprövade där.
+  Stub- och byggbänksbevis är inte visuellt Studio-bevis.
+- `IMG_0249` och `IMG_0250` in i repot, så att takstommen vilar på granskade
+  bilder i stället för på en beskrivning.
+- Nyckelbildrutor ur ridhusfilmerna (`IMG_0191.MOV` m.fl.), som fortfarande
+  är `[DRIVE-ONLY]`.
