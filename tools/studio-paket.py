@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Fogar ihop en enda fil att klistra in i Roblox Studio.
+
+Studio-kontrollen är det enda som återstår innan Gate F01 kan stängas, och den
+ska inte kräva att någon lägger fyra ModuleScripts i rätt ordning i
+ServerStorage. Det här skriptet gör en fil man klistrar in i ett
+`run_code`-anrop eller en Script i Studio, kör en gång, och är klar.
+
+    python3 tools/studio-paket.py
+
+Filen skrivs till roblox/buildings/.studio/ och är avsiktligt INTE committad:
+den är bara en hopfogning av filer som redan ligger i repot, och en kopia i
+git hade blivit ännu en sanning att hålla i synk.
+
+Modulerna inlinas ordagrant, som roblox/tests/build.py gör för testbänken —
+det som körs i Studio är alltså exakt den kod som ligger i repot.
+"""
+import pathlib
+import subprocess
+import sys
+
+ROT = pathlib.Path(__file__).resolve().parent.parent
+BYGG = ROT / "roblox" / "buildings"
+UT = BYGG / ".studio" / "UBRF-klistra-in.luau"
+
+# Ordningen är beroendeordningen. Anlaggningen sist: den är ett skript som körs
+# för sin verkan, inte en modul som returnerar något.
+MODULER = [
+    ("BuildKit",     "BuildKit.luau"),
+    ("Geometri",     "Geometri.luau"),
+    ("UBRFKomplex",  "UBRFKomplex.luau"),
+    ("Vyer",         "Vyer.luau"),
+]
+SKRIPT = "Anlaggningen.luau"
+
+
+def main() -> int:
+    # Geometrin måste vara i synk, annars bygger Studio en gammal anläggning.
+    synk = subprocess.run(
+        [sys.executable and "node", str(ROT / "tools" / "exportera-geometri.js"),
+         "--kontrollera"],
+        capture_output=True, text=True)
+    if synk.returncode != 0:
+        print(synk.stdout + synk.stderr, end="")
+        print("\nAvbryter: kör om exporten innan du bygger i Studio.")
+        return 1
+
+    delar = ["""--[[ ══════════════════════════════════════════════════════════════════
+     UBRF — hela anläggningen, att klistra in i Roblox Studio.
+
+     GENERERAD av tools/studio-paket.py. Ändra inte här; ändra i
+     src/site.js (geometrin) eller i roblox/buildings/ (byggandet), och
+     kör om skriptet.
+
+     Kör en gång. Sedan:
+
+         Vyer.lista()             -- de fem vyer Gate F01 kräver
+         Vyer.ga("ankomsten")     -- ställ kameran, ta skärmdump
+
+     Checklistan står i roblox/buildings/STUDIO-KONTROLL.md.
+     ══════════════════════════════════════════════════════════════════ ]]
+
+"""]
+
+    for namn, fil in MODULER:
+        kropp = (BYGG / fil).read_text(encoding="utf-8")
+        delar.append(f"--[[ ══ {fil} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
+
+    delar.append(f"--[[ ══ {SKRIPT} ══ ]]\n"
+                 + (BYGG / SKRIPT).read_text(encoding="utf-8") + "\n")
+    delar.append('\nVyer.lista()\n')
+
+    UT.parent.mkdir(parents=True, exist_ok=True)
+    UT.write_text("\n".join(delar), encoding="utf-8")
+
+    rader = UT.read_text(encoding="utf-8").count("\n")
+    print(f"{UT.relative_to(ROT)}: {rader} rader")
+    print("Klistra in hela filen i Studio och kör den en gång.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

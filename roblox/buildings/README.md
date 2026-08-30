@@ -12,6 +12,8 @@ koppling hit. De två delar bara repo.
 | `Geometri.luau` | ren geometri: var en öppning sitter i en fasad, hur brant ett tak är, om två hus sitter ihop. Inga Roblox-anrop, så den går att mäta utanför Studio |
 | `UBRFKomplex.luau` | **genererad** — hela anläggningens mått, färger och öppningar |
 | `Anlaggningen.luau` | bygger hela komplexet ur `UBRFKomplex` |
+| `Vyer.luau` | de fem vyer Gate F01 kräver, uträknade ur geometrin |
+| `STUDIO-KONTROLL.md` | checklistan för Product Owner visual acceptance |
 | `_exempel.luau` | mall för ett byggnadsskript, med Ridhuset som exempel |
 
 ## Var måtten kommer ifrån
@@ -42,9 +44,23 @@ att interna öppningar vetter mot ett grannhus och inte ut i luften, och att
 
 ## Så byggs anläggningen
 
-Klistra in `BuildKit.luau`, `Geometri.luau`, `UBRFKomplex.luau` och
-`Anlaggningen.luau` i samma `run_code`-anrop, i den ordningen — eller lägg de
-tre första som `ModuleScript` i `ServerStorage`.
+```bash
+python3 tools/studio-paket.py
+```
+
+fogar ihop **en** fil att klistra in — `roblox/buildings/.studio/UBRF-klistra-in.luau`
+— efter att först ha kontrollerat att geometrin är i synk med `src/site.js`.
+Klistra in hela filen i Studio och kör den en gång.
+
+Paketet är avsiktligt inte committat: det är bara en hopfogning av filer som
+redan ligger här, och en kopia i git hade blivit ännu en sanning att hålla i
+synk.
+
+Vill du hellre göra det för hand går det också: `BuildKit`, `Geometri`,
+`UBRFKomplex` och `Vyer` som `ModuleScript` i `ServerStorage`, sedan
+`Anlaggningen.luau`.
+
+**Checklistan för Studio-kontrollen står i `STUDIO-KONTROLL.md`.**
 
 ## Så används det
 

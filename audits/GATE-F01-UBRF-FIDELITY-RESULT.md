@@ -4,7 +4,17 @@ Struktur enligt `docs/GATE-F01-UBRF-FIDELITY.md`.
 
 Datum: 2026-08-30 (uppdaterad efter Senior Fidelity Review 01)
 Implementation: Claude Code
-Status: **lämnas till ChatGPT för Senior Fidelity Review 03.**
+Status efter Senior Fidelity Review 03 (`2f0e662`): **PASS FOR IMPLEMENTATION
+REVIEW** → **FIDELITY READY WITH DOCUMENTED GAPS — PRODUCT OWNER STUDIO VISUAL
+ACCEPTANCE REQUIRED**.
+
+Gaten stängs inte av mig och inte av reviewen. Det som återstår kan bara en
+människa avgöra: om komplexet känns igen som UBRF. Checklistan för den
+kontrollen ligger i `roblox/buildings/STUDIO-KONTROLL.md`, och paketet att
+klistra in byggs med `python3 tools/studio-paket.py`.
+
+Reviewen var uttrycklig: *"Do not start another speculative geometry pass before
+that visual acceptance."* Inget mer byggs innan Tobias har tittat.
 
 Sedan Review 01 har fem saker hänt: utrymningsplanerna ligger i repot och är
 mätta, stallets bredd är nedgraderad från slutsats till antagande med intervall,
@@ -597,15 +607,21 @@ ljus eller prestanda. Men den flyttar bevisningen från *"koden kompilerar"* til
 *"koden kör och lägger delarna här"*, och den fällde ett verkligt fel som ingen
 kompilering hade hittat.
 
-**Så här körs det i Studio** (för Tobias eller den som har klienten):
+**Så här körs det i Studio.** Hela checklistan står i
+`roblox/buildings/STUDIO-KONTROLL.md`. Kort:
 
-1. Lägg `BuildKit.luau`, `Geometri.luau` och `UBRFKomplex.luau` som
-   `ModuleScript` i `ServerStorage`, eller klistra in dem först i samma
-   `run_code`-anrop.
-2. Kör `Anlaggningen.luau`.
-3. Utskriften ska sluta med `OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader,
-   6 gångytor, 400 objekt`.
-4. Kameran: raden längst ned i skriptet ger ankomstvyn från grusplanen.
+1. `python3 tools/studio-paket.py` — kontrollerar att geometrin är i synk och
+   fogar ihop **en** fil att klistra in.
+2. Klistra in `roblox/buildings/.studio/UBRF-klistra-in.luau` i Studio, kör en
+   gång. Utskriften ska sluta med `OK UBRF byggd: 8 byggnader, 11 dörrar,
+   4 boxrader, 6 gångytor, 404 objekt`.
+3. `Vyer.ga(id)` ställer kameran i var och en av de fem vyer Review 03 kräver,
+   och skriver ut vad man ska titta efter i den vyn. `Vyer.lista()` visar dem.
+4. Gå dessutom sträckan stall → hästgång → ridhus → bana, och tillbaka.
+
+Paketet är verifierat att köra: hopfogat med byggbänkens stubbar bygger det
+404 objekt utan fel, och alla fem vyerna går att ställa. Det säger ingenting om
+hur det ser ut — bara att skriptet fungerar när Tobias kör det.
 
 Enligt Review 01: *"If full Roblox rendering is deliberately deferred, Gate F01
 must not be reported as parity-ready."* Det gäller. **Gate F01 är inte
