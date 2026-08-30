@@ -1,7 +1,18 @@
 # Mätlista — vad som ska mätas på satellitbilden
 
 Datum: 2026-08-30
-Status: **PÅGÅR — två giltiga längdmått mottagna**
+Status: **PÅGÅR — tre mått giltiga, tre återtagna**
+
+> **ÅTERTAG 2026-08-30.** Efter att Tobias ifrågasatt siffrorna öppnades
+> screenshotarna igen. `29,28` (stallets bredd), `26,57` (ridhusets bredd)
+> och `39,83` (hästgångens längsmått) är **INTE** giltiga byggnadsmått:
+> de två första går inte gavelhörn till gavelhörn, och den tredje är
+> kumulativ över tre mätpunkter. De var kortvarigt inbyggda och är utrivna.
+>
+> Giltiga: stallets långaxel **69,95** `MEASURED`, ridhusets **77,18**
+> `MEASURED`, det lokala gårdsgapet **8,10** `MEASURED LOCAL GAP`, och
+> **33,57** som `MEASURED SIDE` på den stora nordöstra träningsytan — vars
+> identitet mot spelets uteridbana ännu inte är dokumenterad.
 
 Tobias har visat att han kan dra mätlinjer i Google Maps och läsa av meter.
 Det är rätt verktyg för de planmått som är blockerade, men varje mått får bara
