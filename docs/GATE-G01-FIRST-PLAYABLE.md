@@ -2,9 +2,14 @@
 
 **Status:** ÖPPEN. Skiva 1 av 6 levererad.
 
-Gate F01 är `WAITING_FOR_HUMAN_STUDIO_VISUAL_ACCEPTANCE` och fryst. Ingen
-byggnadspolering görs medan G01 är aktiv, om inte Studio rapporterar ett
-faktiskt fel.
+Gate F01 är `ACCEPTED_IN_ROBLOX_STUDIO` sedan **2026-08-30**:
+
+- 11 / 11 QA-vyer PASS
+- gångvägen `ankomsten → stallet → hästgången → ridhuset → banan` PASS
+- observation: stallet upplevs lite mörkt — **icke-blockerande polish**
+
+Ingen bred byggnadspolering görs medan G01 är aktiv. Endast konkreta Studio-fel
+eller senare avgränsad lighting/game-feel-polish får öppna riktade ändringar.
 
 ## Målet
 
