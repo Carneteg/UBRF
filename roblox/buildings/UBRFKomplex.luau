@@ -1882,9 +1882,10 @@ return {
 			x0 = 21,
 			y0 = 9,
 			y1 = 59,
-			steg = 4,
-			stegH = 0.28,
-			stegD = 0.85,
+			dackZ = 0.8,
+			dackDjup = 3.4,
+			frontTopp = 1.45,
+			kappH = 0.09,
 			gap = {
 				y0 = 38.43,
 				y1 = 47.13,

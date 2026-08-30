@@ -1155,8 +1155,39 @@ const RIDHUSINNE = {
      Läktarens utsträckning är själv ett Drive-textderivat (ASSUMPTION), och
      satellitbilden är DIRECT VISUAL. Enligt källhierarkin viker läktaren.
      Exakt hur bred öppningen är i verkligheten vet jag inte; 5,0 m är valt
-     för att en häst ska gå igenom med marginal. [ASSUMPTION] */
-  laktare:{x0:21.0, y0:9, y1:59, steg:4, stegH:0.28, stegD:0.85,
+     för att en häst ska gå igenom med marginal. [ASSUMPTION]
+
+     `KNOWN MISMATCH A`, RÄTTAD HÄR: spelet byggde läktaren som FYRA
+     TRAPPSTEG i ljus furu längs hela långsidan. Fotona visar något annat.
+
+     `ridhus-inne-01-glasrummen.jpg`, förgrunden beskuren och tittad på:
+     ett PLANT, brett plankdäck i ljust gråbrunt trä, och mot banan en
+     SOLID mörkbetsad brädvägg med en ljus kappregel överst. Inga
+     trappsteg, inga sittbänkar, ingen stomme av furu.
+     `ridhus-inne-02-langsidan.jpg` visar samma sak från samma däck.
+
+     Trappstegen finns — men vid KORTÄNDAN, under glasrummen, och de står
+     redan i `kortanda` nedan. De två strukturerna hade blandats ihop.
+
+     `VERIFIED`: plant däck, solid mörk front, ljus kappregel, inga steg.
+     `DERIVED`: höjderna, och de är HÄRLEDDA ur en bild, inte valda.
+     `ridhus-inne-03-baset-vid-E.jpg` visar sittande personer bakom sargen:
+     deras huvuden ligger ungefär 0,7 m över sargkrönet. Sittande ögonhöjd
+     är ~1,25 m, och sargen är 1,35 — alltså däck ≈ 1,35 + 0,7 − 1,25
+     ≈ 0,80. Fronten går strax över sargkrönet.
+
+     Topologin fotona kräver: man ska från däcket se ÖVER fronten ner i
+     banan, och fronten ska stå över bansanden. Testet mäter den
+     RELATIONEN, inte talen.
+
+     `[REFERENCE GAP]`, öppet och inte gissat: hur sargen och läktarfronten
+     förhåller sig till varandra. `-01` och `-02` visar den mörka
+     brädväggen SOM bangräns på däckets sida, utan vit sarg framför. `-03`
+     visar en vit sarg med sittplatser bakom, vid bokstaven E — som ligger
+     på samma långsida. De två går inte att förena ur bilderna. Spelet
+     bygger tills vidare båda, och motsägelsen står i auditen. */
+  laktare:{x0:21.0, y0:9, y1:59,
+           dackZ:0.80, dackDjup:3.4, frontTopp:1.45, kappH:0.09,
            gap:{y0:GANG_FASTE-RIDHUS_Y-2.6, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+2.6}},
   /* KORTÄNDANS LÄKTARE (`IMG_0179`), Review 05 blocker 3.
 

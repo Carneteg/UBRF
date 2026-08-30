@@ -352,9 +352,26 @@ do
 		string.format("%.2f m", gap))
 end
 
-check("läktaren byggdes i två sektioner om fyra steg",
-	raknaNamn("Läktarsteg") == UBRFKomplex.ridhus.laktare.steg * 2,
-	raknaNamn("Läktarsteg") .. " stegdelar")
+--[[ Läktaren är ett PLANT DÄCK med solid front, inte trappsteg. Testets gamla
+	lydelse ("två sektioner om fyra steg") mätte den struktur som fotona
+	motsäger; den är utbytt tillsammans med bygget. ]]
+check("läktaren byggdes som plant däck i två sektioner",
+	raknaNamn("Läktardäck") == 2 and raknaNamn("Läktarfront") == 2
+		and raknaNamn("Läktarsteg") == 0,
+	string.format("%d däck, %d fronter, %d gamla stegdelar",
+		raknaNamn("Läktardäck"), raknaNamn("Läktarfront"),
+		raknaNamn("Läktarsteg")))
+
+--[[ Topologin fotona kräver, mätt som RELATION och inte mot talen: man ska
+	från däcket se över fronten ner i banan. Ändras höjderna i site.js ska
+	det här testet fortsätta gälla — annars är höjderna fel. ]]
+do
+	local L = UBRFKomplex.ridhus.laktare
+	check("man ser från däcket över fronten ner i banan",
+		L.dackZ < L.frontTopp and L.frontTopp > 0
+			and L.dackZ + 1.25 > L.frontTopp,
+		string.format("däck %.2f, fronttopp %.2f", L.dackZ, L.frontTopp))
+end
 
 do
 	-- Inget läktarsteg får stå i hästgångens öppning. Bygger man läktaren i

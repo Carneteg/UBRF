@@ -711,16 +711,35 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	BK.box(model, base, "Sarg norr öst", o.x + R.port.x1, 0, o.y + b.y + b.h,
 		b.x + b.w - R.port.x1, sh, 0.1, INRE.sarg)
 
-	-- Läktaren längs östra långsidan, som trappsteg — i sektioner, med
-	-- hästgångens öppning bortdragen. Ett obrutet block murar igen gången.
+	--[[ Läktaren längs östra långsidan.
+
+		`KNOWN MISMATCH A`, rättad på båda ytorna: den byggdes som fyra
+		TRAPPSTEG i ljust trä. `ridhus-inne-01` och `-02` är båda tagna FRÅN
+		läktaren och visar ett PLANT plankdäck med en solid mörkbetsad
+		brädfront och en ljus kappregel — inga steg. Trappstegen finns vid
+		KORTÄNDAN, under glasrummen, och byggs där nedan. De två
+		strukturerna hade blandats ihop.
+
+		Höjderna kommer ur den delade datan och är härledda ur `-03`; se
+		noten i src/site.js. ]]
 	local L = R.laktare
+	local FR = G.identitet.ridhus.laktarfront and G.identitet.ridhus.laktarfront.farg
 	for s, sek in ipairs(GEO.laktarSektioner(L)) do
-		for i = 1, L.steg do
-			BK.box(model, base, "Läktarsteg " .. s .. ":" .. i,
-				o.x + L.x0 + (i - 1) * L.stegD, (i - 1) * L.stegH, o.y + sek.y0,
-				L.stegD, L.stegH * i + 0.1, sek.y1 - sek.y0,
-				INRE.laktare, Enum.Material.WoodPlanks)
-		end
+		local dj = sek.y1 - sek.y0
+		BK.box(model, base, "Läktardäck " .. s,
+			o.x + L.x0, L.dackZ, o.y + sek.y0, L.dackDjup, 0.10, dj,
+			INRE.laktare, Enum.Material.WoodPlanks)
+		-- Solid front mot banan, upp till kappregeln.
+		BK.box(model, base, "Läktarfront " .. s,
+			o.x + L.x0 - 0.10, 0, o.y + sek.y0, 0.10, L.frontTopp, dj,
+			FR or INRE.laktare, Enum.Material.WoodPlanks)
+		BK.box(model, base, "Läktarkapp " .. s,
+			o.x + L.x0 - 0.14, L.frontTopp, o.y + sek.y0, 0.18, L.kappH, dj,
+			Color3.fromRGB(201, 188, 164), Enum.Material.WoodPlanks)
+		-- Stomme under däcket, så att det inte svävar.
+		BK.box(model, base, "Läktarstomme " .. s,
+			o.x + L.x0 + L.dackDjup - 0.3, 0, o.y + sek.y0, 0.12, L.dackZ, dj,
+			INRE.laktare, Enum.Material.Wood).CanCollide = false
 	end
 
 	-- Kortändans läktare: trappstegsblock, två trappor och glasbandet ovanför.
@@ -750,7 +769,7 @@ local function byggRidhusInre(model: Model, base: CFrame)
 
 	-- Domarbåset vid E, med exit-skylten över öppningen.
 	local D = R.domarbas
-	BK.box(model, base, "Domarbås", o.x + D.x, 0, o.y + D.y - D.b / 2,
+	BK.box(model, base, "Domarbås", o.x + D.x, L.dackZ, o.y + D.y - D.b / 2,
 		1.6, D.h, D.b, INRE.laktare, Enum.Material.WoodPlanks)
 	if D.exit then
 		local skylt = BK.box(model, base, "Exit-skylt", o.x + D.x - 0.1,

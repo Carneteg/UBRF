@@ -311,7 +311,7 @@ check("interiörens origo är husets sydvästra hörn",
 do
 	-- Läktaren ligger öster om banan och får inte äta in i den.
 	local laktare = { x = R.laktare.x0, y = R.laktare.y0,
-		w = R.laktare.steg * R.laktare.stegD, h = R.laktare.y1 - R.laktare.y0 }
+		w = R.laktare.dackDjup, h = R.laktare.y1 - R.laktare.y0 }
 	local bana = { x = R.bana.x, y = R.bana.y, w = R.bana.w, h = R.bana.h }
 	check("läktaren tränger inte in på banan",
 		Geometri.overlapp(laktare, bana) < 0.01,

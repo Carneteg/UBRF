@@ -1257,40 +1257,35 @@ function v3dRidhus(lagg,opp){
      obrutet block här murar igen gången. */
   for(const sek of laktarSektioner(R.laktare)){
   const L={...R.laktare, y0:sek.y0, y1:sek.y1}, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
-  for(let i=0;i<L.steg;i++){
-    const x=L.x0+i*L.stegD+L.stegD/2, y=L.stegH*(i+1);
-    lak.lada(L.stegD-0.04,0.07,LL,"#D8C7A4",M4.translation(x,y,Lm));      // sittplankan
-    lak.lada(L.stegD-0.04,0.06,LL,"#C4B08C",M4.translation(x,y-0.20,Lm)); // fotplankan
-    for(let z=L.y0;z<=L.y1;z+=2.5)                                        // stommen
-      lak.lada(0.10,y,0.10,"#A98F68",M4.translation(x-L.stegD/2+0.08,y/2,z));
-  }
-  /* Fronten mot banan: solid, mörkbetsad liggande panel upp till däcket.
-     Både interiörfotona är tagna från läktaren och visar just den här
-     väggen i förgrunden — inte öppna trappsteg. */
-  {const F=IDENTITET.ridhus.laktarfront, H=L.steg*L.stegH;
-   for(let y=0;y<H-0.01;y+=F.brada){
-     const h=Math.min(F.brada,H-y);
+  /* PLANT DÄCK, inte trappsteg — se noten i site.js. Fotonas förgrund är
+     ett brett plankdäck med en solid mörk front och en ljus kappregel. */
+  {const D2=L.x0+L.dackDjup;
+   lak.lada(L.dackDjup,0.10,LL,"#C9BCA4",
+     M4.translation(L.x0+L.dackDjup/2,L.dackZ,Lm));            // plankdäcket
+   for(let z=L.y0;z<=L.y1;z+=2.5)                              // stomme under däcket
+     lak.lada(0.12,L.dackZ,0.12,"#A98F68",M4.translation(D2-0.2,L.dackZ/2,z));
+   /* Fronten mot banan: solid, mörkbetsad liggande panel upp till
+      kappregeln. Båda interiörfotona är tagna från däcket och visar just
+      den här väggen i förgrunden. */
+   const F=IDENTITET.ridhus.laktarfront;
+   for(let y=0;y<L.frontTopp-0.01;y+=F.brada){
+     const h=Math.min(F.brada,L.frontTopp-y);
      lak.lada(F.tjocklek,h*0.94,LL,F.farg,
        M4.translation(L.x0-F.tjocklek/2,y+h/2,Lm));
    }
-   lak.lada(F.tjocklek+0.06,0.07,LL,F.fogFarg,
-     M4.translation(L.x0-F.tjocklek/2,H,Lm));}
-  {const xt=L.x0+L.steg*L.stegD;                    // översta däcket och räckesbalk
-   lak.lada(0.9,0.09,LL,"#D8C7A4",M4.translation(xt+0.4,L.steg*L.stegH,Lm));
-   for(let z=L.y0;z<=L.y1;z+=2.5)
-     lak.lada(0.12,L.steg*L.stegH,0.12,"#A98F68",
-       M4.translation(xt+0.8,L.steg*L.stegH/2,z));}
+   lak.lada(F.tjocklek+0.10,L.kappH,LL,"#C9BCA4",             // ljus kappregel
+     M4.translation(L.x0-F.tjocklek/2,L.frontTopp+L.kappH/2,Lm));}
   for(let i=0;i<(R.dynor||0);i++){                  // elon-dynorna
     const z=L.y0+2.0+i*((LL-4)/Math.max(1,R.dynor-1));
     lak.lada(0.44,0.06,0.34,"#26282C",
-      M4.translation(L.x0+(L.steg-1)*L.stegD+L.stegD/2,L.stegH*L.steg+0.06,z));
+      M4.translation(L.x0+L.dackDjup*0.55,L.dackZ+0.11,z));
   }
   for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
-    const x=L.x0+L.steg*L.stegD+0.4;
-    lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.steg*L.stegH,z));
-    lak.lada(0.42,0.46,0.06,"#D4551E",M4.translation(x,0.68+L.steg*L.stegH,z-0.18));
+    const x=L.x0+L.dackDjup*0.8;
+    lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.dackZ,z));
+    lak.lada(0.42,0.46,0.06,"#D4551E",M4.translation(x,0.68+L.dackZ,z-0.18));
     for(const d of [-0.16,0.16])
-      lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.steg*L.stegH,z));
+      lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.dackZ,z));
   }
   {const L2=L;                                      // räcket längs läktarens framkant
    for(const y of [0.62,1.02])
@@ -1308,7 +1303,7 @@ function v3dRidhus(lagg,opp){
      Båset ligger nu vid E (husets y = 32, se DRESSYRBOKSTAVER). Måtten är
      `[ASSUMPTION]`; det verifierade är att båset är mörkt trä, att det
      står upphöjt, att trappan har träräcken och att skylten finns. ── */
-  {const D=R.domarbas, dy=D.y, golv=L.steg*L.stegH*0.5;
+  {const D=R.domarbas, dy=D.y, golv=L.dackZ;
    /* Den låga upphöjda nivån båset står på — indexet kallar den en låg,
       upphöjd trä-/läktarnivå, och sittstegen fortsätter åt sidan. */
    lak.lada(D.b+1.6,golv,D.b+1.2,"#8A6A44",M4.translation(D.x,golv/2,dy));
@@ -1343,7 +1338,7 @@ function v3dRidhus(lagg,opp){
   /* Exit-skylten över båsets öppning, och klockan vid den centrala
      passagen — MOTSÄGELSE 4 respektive 3. Båda ligger utanför trä-
      texturen: en grön skylt och en vit urtavla ska inte ha ådring. */
-  {const sk=new Bygge(), D=R.domarbas, golv=L.steg*L.stegH*0.5;
+  {const sk=new Bygge(), D=R.domarbas, golv=L.dackZ;
    if(D.exit){
      sk.lada(0.05,0.26,0.72,"#1E7A3C",
        M4.translation(D.x-D.b/2-0.05,golv+D.h+0.30,D.y));
