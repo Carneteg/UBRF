@@ -22,6 +22,7 @@ Beskriver **nuläget**, inte historiken.
 | Banan 20 × 60 m | `VERIFIED` | Tobias bekräftelse, `SITEPLAN.md` | `bana` |
 | Sargen vit/gräddvit med svart sockelband | `VERIFIED` | r01 + r03 | `vagg`/`sockel` |
 | Sarghöjd 1,35 m | `DERIVED` | — | `sargH` |
+| Sockelbandets andel av sarghöjden | **prövat, ej ändrat** | r03 | 0,26 av 1,35 = 19 % |
 | Dressyrbokstäver på sargen | `VERIFIED` | C i r01, E i r03 | byggs |
 | E har en elefantbild | `VERIFIED` | r03 | `[REFERENCE GAP]` — ritas inte |
 
@@ -101,6 +102,16 @@ De två strukturerna hade blandats ihop.
 | Takets resning | `[ASSUMPTION]` | — | 0,42 m |
 | Grön exit-skylt | `VERIFIED` | r03 | byggs |
 | Sitter på läktarnivå | `DERIVED` | r03 | följer `dackZ` |
+
+## Prövat men INTE ändrat
+
+**Sockelbandets höjd.** Spelet har 0,26 m av 1,35 (19 %). Ett ögonmått på en
+nedskalad beskärning av r03 gav snarare ~28 %. Jag ändrade INTE värdet: mitt
+mått är taget på en skalad bild utan tydliga kanter, och det är inte
+precisare än det tal som redan står där. Att flytta ett rimligt värde på ett
+osäkert ögonmått är samma fel som att mäta tröskeln i stället för ytan — det
+har kostat två varv i det här arbetet redan. Behövs det, mät på en
+beskärning i full upplösning med känd referenslängd i bild.
 
 ## Rättat i det här passet
 
