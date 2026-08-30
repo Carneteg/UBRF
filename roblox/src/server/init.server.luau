@@ -5,6 +5,8 @@
 ]]
 
 local HorseService = require(script.HorseService)
+local GameplayService = require(script.GameplayService)
 
 HorseService.start()
+GameplayService.start(HorseService)
 print("[Horse] Servern igång")
