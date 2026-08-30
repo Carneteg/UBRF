@@ -34,7 +34,7 @@ end
 BK.door(model, base, "Skjutport", 3, 0, 4, 3.5, "X", -1, Color3.fromRGB(200, 200, 205))
 
 -- Tak: sadeltak, nock längs långsidan, ~22°, överhäng 0,5 m  [KORT.md › Tak]
-model:SetAttribute("GavelFärg", FASAD)
+model:SetAttribute("GavelFarg", FASAD)
 BK.gableRoof(model, base, 0, 0, L, B, H, 22, "X", 0.5, TAK)
 
 print("OK Ridhuset byggd, " .. #model:GetDescendants() .. " objekt")

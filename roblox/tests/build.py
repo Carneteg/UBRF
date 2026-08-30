@@ -16,6 +16,23 @@ ROT = pathlib.Path(__file__).resolve().parent.parent      # roblox/
 UT = ROT / "tests" / ".build"
 
 # Ordningen är beroendeordningen: en modul får bara referera det som står över.
+#
+# Geometrispecen mäter en annan del av spåret — anläggningen, inte hästen — och
+# behöver därför inte hästsystemets moduler. Den får sin egen lista; att foga
+# ihop hela hästsystemet för att kontrollera var en dörr sitter vore bara
+# långsamt och skulle koppla ihop två spår som inte har med varandra att göra.
+GEOMETRI = [
+    ("Geometri",    "buildings/Geometri.luau"),
+    ("UBRFKomplex", "buildings/UBRFKomplex.luau"),
+]
+
+# Byggbänken kör själva byggskriptet. Anlaggningen.luau är inte en modul utan
+# ett skript som körs för sin verkan, så det inlinas sist och returnerar inget.
+BYGGE = GEOMETRI + [
+    ("BuildKit",     "buildings/BuildKit.luau"),
+    ("Anlaggningen", "buildings/Anlaggningen.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -45,8 +62,14 @@ def inlina(kalla: str) -> str:
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
-    delar = [las("tests/stubs.luau")]
-    for namn, rel in MODULER:
+    if "bygge" in spec_rel:
+        moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
+    elif "geometri" in spec_rel:
+        moduler, stubbar = GEOMETRI, "tests/stubs.luau"
+    else:
+        moduler, stubbar = MODULER, "tests/stubs.luau"
+    delar = [las(stubbar)]
+    for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
         if namn in ("Config", "Gaits", "StateMachine", "RigAdapter"):

@@ -25,26 +25,106 @@ gissningar `[antagande]`. Kortet är facit för byggfunktionen i `src/varld3d.js
 | `stall-entre-01.jpg` | Under förstukvistens tak | Runt fönster, valvfönster, den vita ribbräcket, liggande panel |
 | `stall-entre-03.jpg` | Vid räcket, mot dörren | Ockragul dörr, runt fönster, räckets ribbor |
 | `stall-entre-06.jpg` | Rakt på dörren | Dörrens solfjäderfönster, "Entré"-skylten, mässingsplakett, vägglampa, betongsockel |
+| `stall-entre-15-dorren.jpg` | Rakt på entrédörren, närbild | **Migrerad ur Drive/Stallhuset 2026-08-30** (`IMG_0132.HEIC`, fil-ID `1Ooy6szpBI0Kd0q1SXkNPG9GlZxwCTcUd`). Ockragul dörr med solfjäderfönster, "Entré"-skylt, två mässingsplaketter, kodlås, **runt vitt fönster på BÅDA sidor**, liggande faluröd panel, betongsockel |
 | `stall-entre-12.jpg` | Inne i klubbdelen | Branddörren mot stallgången, pärlspont — hör till `STALLINNE` |
 
 ## Volym
-- Fotavtryck (L × B): **15 × 54 m**. Bredden följer `STALLINNE` (5,2 m gång plus
-  två boxdjup på 5,0 m). Längden går inte att mäta ur bilderna — ingen visar båda
-  gavlarna samtidigt — men huvraden och fönsterrytmen stämmer med 54 m `[antagande]`.
+- Fotavtryck (L × B): **21 × 54 m** `[ASSUMPTION 2026-08-30 — bredden i
+  intervallet 15–23 m, se "Bredden" nedan och references/plans/OAVGJORT.md
+  fråga 2. Nedgraderad från DERIVED efter Senior Fidelity Review 01: rytmen
+  som bar talet är en mätning i längdriktningen och kan inte bevisa sex
+  tvärgående band.]`.
+  Längden går inte att mäta ur bilderna — ingen visar båda gavlarna samtidigt —
+  men huvraden och fönsterrytmen stämmer med 54 m, och satellitbildens 236 px vid
+  4,4 px/m ger samma tal (SITEPLAN.md).
 - Höjd till takfot: **4,4 m** (hur: entrédörren mäter 85 px för 2,05 m i bild 04,
   alltså 41,5 px/m; takfoten ligger 190 px över marklinjen vid förstukvisten)
-- Höjd till nock: **8,4 m** — takfoten plus 28° resning över halva bredden. Direkt
-  mätning i bild 04 ger 9,8 m men gaveln står snett och blir för hög.
+- Höjd till nock: **10,0 m** — takfoten plus 28° resning över halva bredden 21 m.
+  Direkt mätning i bild 04 ger 9,8 m, vilket stämmer inom en halvmeter.
 - Byggnadsform: rak länga med sadeltak och **en utskjutande förstukvist** på
-  västra långsidan, nära södra gaveln.
+  västra långsidan, nära norra gaveln.
+
+### Bredden — oavgjord, se `references/plans/OAVGJORT.md`
+
+Kortet antog 15 m därför att `STALLINNE` hade en gång och två boxrader, och
+`STALLINNE` byggdes ur de 15 metrarna. Den cirkeln är bruten, men **bredden är
+inte fastställd** — den är ett antagande i mitten av ett intervall.
+
+Sedan 2026-08-30 finns utrymningsplanen i repot
+(`references/plans/stall-plan1-utrymning.jpg`) och är mätt direkt. Den avgör
+**planformen och bandens inbördes andelar**, men inte skalan: ritningen saknar
+skalstock, och de två vägarna till en skala pekar åt olika håll.
+
+| Om … | då blir … | rimligt? |
+|---|---|---|
+| längden 54 m | bredden 15,2 m, gångarna 1,9 m | nej, gången för smal |
+| boxfacket 3,5 m | längden ~83 m, bredden 23,3 m | nej, längre än ridhuset |
+| bredden 21 m | gångar 2,6 m, boxdjup 3,7–4,4 m | måtten inne rimliga, längden inte |
+
+**Spelet bygger 21 m som `[ASSUMPTION]`**, mitt i intervallet 15–23 m. Siffran
+ligger på ett enda ställe i koden (`STALLINNE.bredd`) och allt annat följer
+andelarna. Ett enda uppmätt mått på plats stänger frågan — se `OAVGJORT.md`.
+
+**Det som däremot ÄR mätt i planen och gäller:**
+
+| Band | Andel av bredden |
+|---|---|
+| boxrad mot västra ytterväggen | 20,9 % |
+| gång A | 12,4 % |
+| boxrad, mitt | 17,8 % |
+| boxrad, mitt | 17,6 % |
+| gång B | 12,3 % |
+| boxrad mot östra ytterväggen | 19,0 % |
+
+Samma sex band, i samma ordning, med samma andelar i tre olika tvärsnitt.
+**Gångarna är smalare än boxarna är djupa, ungefär två tredjedelar.** Spelet antog
+tidigare att alla sex banden var lika breda; det var fel, och det är rättat.
+
+Takgeometrin (takfot 4,4 m, nock 9,8 m mätt i bild 04) ger bredden 20,3 m vid 28°
+och 22,1 m vid 26°. Det stöder intervallets övre del, men 28° är självt ett
+antagande, så det kan inte låsa något.
+
+- Byggnadsform: rak länga med sadeltak och **en utskjutande förstukvist** på
+  västra långsidan, nära norra gaveln.
+
+<details>
+<summary><strong>ÖVERSPELAT 2026-08-30 — det gamla beviset för 21 m (öppna bara för historik)</strong></summary>
+
+**Det här avsnittet gäller inte längre.** Det står kvar därför att det förklarar
+varför spelet bygger just 21 m, inte för att bevisa att 21 m är rätt. Läs
+avsnittet "Bredden — oavgjord" ovan; det är facit.
+
+Senior Fidelity Review 01 underkände beviskedjan, och Review 02 krävde att den
+inte får ligga kvar som aktiv kanon bredvid den rättade klassningen. Skälet är
+konkret: en framtida agent som läser kortet före implementation kan annars låsa
+om samma underkända slutsats.
+
+Kedjan bestod av tre vägar. Så här föll de:
+
+| Väg | Vad den sade | Status |
+|---|---|---|
+| Planformens sex band | vid 15 m blir varje band 2,50 m — fysiskt omöjligt för en häst | **Står kvar.** Den är ett undre gränsvärde, inte ett mått |
+| Huvarnas och fönstrens 3,5 m-rytm | sex band à 3,5 m = 21,0 m | **STRUKEN.** Rytmen mäts i byggnadens längdriktning och kan inte bevisa tvärgående band. Planen visade dessutom att gångarna är ~2/3 av boxdjupet, inte lika breda |
+| Takgeometrin | takfot 4,4 + nock 9,8 ger 20,3 m vid 28° | **Svagt stöd.** 28° är självt ett antagande; spannet 26–30° ger 18,7–22,1 m |
+
+Formuleringar som stod här och som inte ska återanvändas: att bredden är
+*"rättad"* eller *"fastställd"*, och att nockmätningen bevisade att *"bredden var
+för smal"*. Nockmätningen är förenlig med intervallet 15–23 m; den pekar inte ut
+en punkt i det.
+
+Fördelningen mellan box och gång som det här avsnittet antog — sex lika breda
+band à 3,5 m — är **också struken**. Planen mäter andelarna, och de är ojämna;
+se tabellen ovan.
+
+</details>
 
 ## Tak
 - Form: sadeltak
 - Nockriktning: längs byggnadens längd
 - Lutning: **28°** `[antagande inom mätspann]`. Gavelns vänstra takfall mäter
   31° i bild 05 och 48° i bild 04, men gaveln står vriden i båda, så mätningen
-  blir för brant. 28° är den flackaste rimliga tolkningen och den som stämmer med
-  takfot 4,4 och nock 8,4 över 15 m bredd.
+  blir för brant. 28° är den flackaste rimliga tolkningen, och den som stämmer med
+  takfot 4,4 och nock 9,8 över 21 m bredd — se "Bredden" ovan.
 - Täckning: **mörk blågrå bandtäckt plåt**, med tydliga stående falsar
 - Färg: **(103, 112, 121)** (hur: medianen av de gråa bildpunkterna på takytan i
   bild 03 och 05)
@@ -61,8 +141,8 @@ bild 03 fler.
 
 **De börjar inte vid gaveln.** I bild 04 ligger gaveln vid bildpunkt x≈120 och
 den första huven vid x≈610 — alltså först efter förstukvisten. Raden täcker
-boxlängorna, inte klubbdelen i söder. Det stämmer med `STALLINNE`, där boxarna
-börjar vid y = 10,4.
+boxlängorna, inte klubbdelen. Det stämmer med `STALLINNE`, där boxarna börjar
+söder om klubbdelen i norr.
 
 Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 
@@ -135,21 +215,24 @@ fel planform.
 
 Bilden är tagen snett, i en reflekterande ram, och mittpartiet är just det som
 behöver läsas exakt. Antalet boxar ser ut att vara ett tiotal per länga — alltså
-kanske ett fyrtiotal totalt — men jag har inte räknat dem med säkerhet, och måtten
-går inte att härleda: beroende på om en box antas vara 3,0 eller 3,5 m bred landar
-byggnadens bredd någonstans mellan 20 och 26 m. Det är oförenligt med de 15 m som
-kortet antar ur `STALLINNE`, och med hur smal byggnaden ser ut i satellitbilden.
+kanske ett fyrtiotal totalt — men de är inte räknade med säkerhet, och de exakta
+måtten går inte att läsa ur just den här bilden.
 
-**Något stämmer alltså inte, och jag gissar inte vilket.** Vad som behövs:
+**Vad som behövs för full 1:1-verifiering:**
 
 1. **En rak bild på "Plan 1"**, hela planen i bild, utan vinkel och utan reflex.
    Då går boxarna att räkna och proportionerna att mäta.
 2. **Samma på "Plan 2"**, för övervåningen.
 3. Har ritningen en **skalstock eller ett måttsatt rum**, ta med det — då blir allt
    annat mätbart.
+4. En sparad **satellitbeskärning** med byggnadens längd OCH bredd i bildpunkter.
 
-Tills dess är `STALLINNE` kvar som den är, med en gång och två boxrader. Den är
-känd fel i planform och ska byggas om när underlaget finns.
+**Vad som ändå går att bygga nu.** Planformens ordning är läsbar och entydig, och
+bredden faller ut ur takgeometrin oberoende av hur planen delas — se "Bredden"
+under Volym. `STALLINNE` är därför ombyggd 2026-08-30 till fyra boxlängor och två
+gångar på 21 m bredd. Antalet boxar per länga och den exakta fördelningen mellan
+box och gång är `[ASSUMPTION]` tills en rak planbild finns; ordningen är
+`[VERIFIED]`.
 
 ## Stallgången invändigt — läst ur filmerna
 
@@ -204,17 +287,37 @@ fonden.
 ### Vad filmerna inte avgör
 - **Gångens exakta bredd.** Spelet har 5,2 m mellan boxfronterna, vilket ser
   rimligt ut mot bildrutorna, men inget mått är läsbart. `[antagande]`
-- **Antalet boxar.** Filmen panorerar och samma box kan räknas två gånger.
-- **Planformen.** Filmerna visar en gång med boxar på båda sidor, men
-  utrymningsplanen visar ett dubbelstall med fyra boxlängor och två gångar.
-  Filmerna kan mycket väl visa en av de två gångarna. **Detta är oavgjort och
-  spelet bygger den enklare varianten** — se "Invändigt" ovan.
+- **Vilken av de två gångarna filmerna visar.** De visar en gång med boxar på
+  båda sidor, vilket båda gångarna har i dubbelstallsplanen. Spelet lägger
+  filmernas gång som den västra, närmast entrén, eftersom det är den man kommer
+  in i från förstukvisten. `[ASSUMPTION]`
+- **Antalet boxar per länga.** Filmen panorerar och samma box kan räknas två
+  gånger; planbilden är för sned för att räkna i. Spelet bygger tio per länga,
+  vilket ger fyrtio totalt och stämmer med planens "ett tiotal per länga".
+  `[ASSUMPTION]`
 
 ## Placering (från SITEPLAN.md)
-- Position: sydvästra hörnet i (154, 46), fotavtryck 15 × 54 m
+- Position: sydvästra hörnet i (154, 65), fotavtryck **21 × 54 m** (rättat
+  2026-08-30; västra långsidan står kvar där den var, huset växer österut)
 - Rotation: nocken nord–syd; västra långsidan mot gården och ridhuset
 - Klubbgaveln (spiraltrappan) mot grusplanen i norr; servicegaveln mot
   gårdsplanen i söder
+- **Sammanbyggt med ridhuset.** Tobias 2026-08-30: *"husen är sammanbyggda, jag
+  har varit där"*, *"det är hästgång mellan byggnaderna"*. Hästgången (11 × 6 m)
+  går från stallets västvägg till ridhusets östvägg, så att hästen kan ledas
+  inomhus mellan husen. Utrymningsplanernas situationsplan ritar husen som
+  skilda volymer — det är en CONTRADICTION som avgjorts till Product Owners
+  fördel; se `references/plans/OAVGJORT.md` fråga 1.
+- **Var hästgången ansluter är verifierat.** Satellitbilden
+  (`references/plans/SATELLIT-HASTGANG-2026-08-30.md`) visar förbindelsen
+  centralt i husens gemensamma längd. Den ligger i liv med **stallets egen
+  tvärkorridor** — korridorens mitt ligger på y 91,05 och husens gemensamma
+  mitt på y 92,0. Öppningen i västväggen sitter därför 26,75 m från
+  klubbgaveln, mitt för korridoren, och ingen ny öppning behövde uppfinnas.
+- Den västra hästporten på u 30 är **borttagen**. Den var uppfunnen för spelets
+  skull och låg i tvärkorridorens västra ände, alltså där gången nu går.
+  Skjutporten på östra långsidan mot hagarna står kvar — den är läst i
+  Street View.
 - Förstukvisten på västra långsidan, ~6 m från norra gaveln
 - Marknivå: plant
 

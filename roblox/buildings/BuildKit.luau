@@ -98,7 +98,7 @@ function BuildKit.gableRoof(model: Model, base: CFrame, x: number, z: number, w:
 		for _, s in ipairs({ -1, 1 }) do
 			local wdg = Instance.new("WedgePart")
 			wdg.Name = "Gavelspets"; wdg.Anchored = true
-			wdg.Color = model:GetAttribute("GavelFärg") or color
+			wdg.Color = model:GetAttribute("GavelFarg") or color
 			wdg.Material = Enum.Material.SmoothPlastic
 			wdg.Size = Vector3.new(studs(0.2), studs(rise - overhang * math.tan(math.rad(pitchDeg))), studs(span/2))
 			local yaw = (ridgeAlong == "X") and (s > 0 and 0 or math.rad(180)) or (s > 0 and math.rad(90) or math.rad(-90))
@@ -131,10 +131,13 @@ function BuildKit.fence(model: Model, base: CFrame, x1: number, z1: number, x2: 
 end
 
 -- Sätter Studio-kameran i ögonhöjd på ett sätt som matchar ett foto: stå på (x,z) i lokala meter, titta mot (tx,tz).
-function BuildKit.cameraLike(base: CFrame, x: number, z: number, tx: number, tz: number, eyeH: number?)
+--[[ Siktmalet lag forut fast pa 2.5 m. Det gor det omojligt att titta UPP,
+	och takstommen i ridhuset gar bara att bedoma underifran. aimH ar darfor
+	valbar; utan den beter sig anropet exakt som forut. ]]
+function BuildKit.cameraLike(base: CFrame, x: number, z: number, tx: number, tz: number, eyeH: number?, aimH: number?)
 	local cam = workspace.CurrentCamera
 	local from = base * CFrame.new(studs(x), studs(eyeH or 1.6), studs(z))
-	local to = base * CFrame.new(studs(tx), studs(2.5), studs(tz))
+	local to = base * CFrame.new(studs(tx), studs(aimH or 2.5), studs(tz))
 	cam.CameraType = Enum.CameraType.Scriptable
 	cam.CFrame = CFrame.lookAt(from.Position, to.Position)
 end

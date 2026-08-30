@@ -348,12 +348,29 @@ function v3dGard(lagg,opp){
       const vin=Math.atan2(dz,dx);
       const mitt=M4.mul(M4.translation((a[0]+b[0])/2,0,(a[1]+b[1])/2),M4.rotY(-vin));
       if(st.typ==="tra"){
-        for(const y of [0.62,1.14])
-          stak.lada(len,0.10,0.05,"#B0A184",M4.mul(mitt,M4.translation(0,y,0)));
-        const n=Math.max(1,Math.round(len/2.6));
-        for(let k=0;k<=n;k++)
-          stak.lada(0.11,1.30,0.11,"#8A7A5E",
-            M4.mul(mitt,M4.translation(-len/2+len*k/n,0.65,0)));
+        /* Toppregel + eltråd + sandsyll, mätt i references/omnejd/banan-01.
+           Måtten ligger i BANOMRADE.staket så Roblox läser samma sanning. */
+        const S=BANOMRADE.staket, T=S.toppregel;
+        stak.lada(len,T.h,T.d,"#B0A184",M4.mul(mitt,M4.translation(0,T.z,0)));
+        /* Eltråden: tunn och mörk, inte virke. */
+        for(const y of S.tradar)
+          stak.lada(len,S.tradTjocklek,S.tradTjocklek,"#3A362E",
+            M4.mul(mitt,M4.translation(0,y,0)));
+        /* Sandsyllen bara där staketet omsluter sand. */
+        if(st.sandkant){
+          const Y=S.sandsyll;
+          stak.lada(len,Y.h,Y.d,"#9C8A6E",M4.mul(mitt,M4.translation(0,Y.z,0)));
+        }
+        const n=Math.max(1,Math.round(len/S.stolpDelning));
+        for(let k=0;k<=n;k++){
+          const u=-len/2+len*k/n;
+          stak.lada(S.stolpTvarsnitt,S.stolpH,S.stolpTvarsnitt,"#8A7A5E",
+            M4.mul(mitt,M4.translation(u,S.stolpH/2,0)));
+          /* De svarta isolatorerna på stolpen — de syns på fotot. */
+          for(const y of S.tradar)
+            stak.lada(S.isolatorB,S.isolatorH,S.isolatorB,"#26241F",
+              M4.mul(mitt,M4.translation(u,y,S.stolpTvarsnitt/2)));
+        }
       }else if(st.typ==="el"){
         for(const y of [0.70,1.05])
           stak.lada(len,0.03,0.02,"#8C8578",M4.mul(mitt,M4.translation(0,y,0)));
@@ -405,6 +422,15 @@ function v3dGard(lagg,opp){
           pr.cyl(0.65,0.65,1.2,"#E4E2DA",
             M4.mul(M4.translation(x+i*1.4,0.65,z+j*1.5),M4.rotZ(Math.PI/2)),SEG(10,6));
         break;
+      case"torvbalar":
+        /* RS Mustang-torv, banan-03: fyrkantiga vitplastade paket med rött
+           tryck, staplade tre högt. Annat än ensilagebalarna vid stallet. */
+        for(let i=0;i<2;i++)for(let j=0;j<2;j++)for(let k=0;k<3;k++){
+          const bx=x+i*1.30, bz=z+j*0.78, by=0.31+k*0.62;
+          pr.lada(1.22,0.60,0.72,"#EDEBE6",M4.translation(bx,by,bz));
+          pr.lada(1.24,0.20,0.74,"#B03028",M4.translation(bx,by+0.10,bz));
+        }
+        break;
       case"grushog": pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),SEG(12,6)); break;
       case"transport":{                       // hästtransporten
         const m=M4.mul(M4.translation(x,0,z),M4.rotY(-(p.rikt||0)));
@@ -433,10 +459,16 @@ function v3dGard(lagg,opp){
         pr.lada(0.46,0.06,0.46,"#8A7250",M4.translation(x,0.45,z));
         pr.lada(0.46,0.5,0.06,"#8A7250",M4.translation(x,0.70,z-0.20));
         break;
-      case"mast":
-        pr.cyl(0.13,0.09,7.5,"#8C8F92",M4.translation(x,0,z),8);
-        pr.lada(0.7,0.16,0.4,"#C8CBD0",M4.translation(x,7.55,z));
-        break;
+      case"mast":{
+        /* Dubbel armatur på en tvärarm — banan-03. Måtten i BANOMRADE.mast. */
+        const MA=BANOMRADE.mast;
+        pr.cyl(MA.stamOver,MA.stamUnder,MA.hojd,"#8C8F92",M4.translation(x,0,z),8);
+        pr.lada(MA.armB,MA.armH,MA.armD,"#8C8F92",
+          M4.translation(x,MA.hojd+MA.armH/2,z));
+        for(const dx of [-MA.lampDelning/2, MA.lampDelning/2])
+          pr.lada(MA.lampB,MA.lampH,MA.lampD,"#3A3D40",
+            M4.translation(x+dx,MA.hojd+MA.armH-MA.lampH/2,z));
+        break;}
       case"flagga":
         pr.cyl(0.09,0.06,7.0,"#E8E6E0",M4.translation(x,0,z),8);
         pr.panel(1.4,0.9,"#2F5C8F",M4.translation(x+0.72,6.2,z));
@@ -625,31 +657,34 @@ function v3dStallYttre(bg,d,opp){
   const FS=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);          // södra gaveln
   const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);     // västra långsidan
 
-  /* Huvraden. Boxarna börjar 10,4 m från klubbgaveln i norr och är
-     3,5 m breda (STALLINNE); en huv sitter mitt över varje box. */
-  for(let i=0;i<11;i++){
-    const z=r.y+r.h-(10.4+3.5*i+1.75);
-    d.lada(0.44,0.62,0.44,HUV,M4.translation(cx,hN+0.28,z));
-    d.lada(0.50,0.06,0.50,glMorka(GRA,0.7),M4.translation(cx,hN+0.58,z));
-    d.lada(0.66,0.09,0.66,HUV,M4.translation(cx,hN+0.66,z));
-  }
+  /* Huvraden, en huv per box. Måtten kommer ur IDENTITET.stall.huvrad —
+     samma tal som Roblox bygger av. */
+  {const H=IDENTITET.stall.huvrad;
+   for(let i=0;i<H.antal;i++){
+     const z=r.y+r.h-(H.forstaFranNorr+H.delning*i);
+     d.lada(H.sida,H.hojd,H.sida,HUV,M4.translation(cx,hN+0.28,z));
+     d.lada(H.sida*1.14,0.06,H.sida*1.14,glMorka(GRA,0.7),M4.translation(cx,hN+0.58,z));
+     d.lada(H.hattB,0.09,H.hattB,HUV,M4.translation(cx,hN+0.66,z));
+   }}
   /* Snörasskyddet på båda takfallen, en tredjedel upp, och hängrännan
      med stuprör i hörnen. */
+  {const N=IDENTITET.stall.snorasskydd;
   for(const s of [-1,1]){
-    const px=cx+s*halv*0.70, py=hV+res*0.30;
+    const px=cx+s*halv*N.andelUt, py=hV+res*N.andelUpp;
     d.cyl(0.035,0.035,r.h-1.2,SVART,
       M4.mul(M4.translation(px,py+0.17,r.y+0.6),M4.rotX(Math.PI/2)),6);
-    for(let z=r.y+1.4;z<r.y+r.h-1;z+=2.2)
+    for(let z=r.y+1.4;z<r.y+r.h-1;z+=N.stolpDelning)
       d.lada(0.06,0.24,0.05,SVART,M4.translation(px,py+0.08,z));
     d.lada(0.14,0.14,r.h+0.4,SVART,M4.translation(cx+s*(halv+0.17),hV-0.13,cz));
     for(const z of [r.y+0.9,r.y+r.h-0.9])
       d.cyl(0.055,0.055,hV-0.22,SVART,M4.translation(cx+s*(halv+0.15),0,z),6);
-  }
+  }}
 
   /* ── Förstukvisten, 5,6 m från klubbgaveln i norr ──
      Sadeltak med nocken ut från väggen, vita stolpar, och ett räcke av
      liggande ribbor — det är räcket man ser först när man går fram. */
-  const PU=5.6, bw=5.2, but=2.8, be=2.95, br=1.05;
+  const KV=IDENTITET.stall.forstukvist;
+  const PU=KV.uFranNorr, bw=KV.bredd, but=KV.djup, be=KV.takfot, br=KV.resning;
   const F2=(du,z,ut)=>FW(PU+du,z,ut);
   const hh=bw/2, hyp=Math.hypot(hh,br), pv=Math.atan2(br,hh);
   d.lada(bw+0.4,0.14,but+0.2,"#C2BFB6",F2(0,0.07,but/2));        // betonggolvet
@@ -664,26 +699,47 @@ function v3dStallYttre(bg,d,opp){
   /* Kvistens gavelspets är röd panel med vita vindskivor, inte vit. */
   v3dPolygon(d,[[-hh,0],[hh,0],[0,br]],bg.fargV,F2(0,be,but+0.06));
   d.lada(bw+0.2,0.13,0.14,VIT,F2(0,be-0.03,but+0.12));   // fris under spetsen
-  for(let y=0.26;y<1.22;y+=0.125){                                // ribbräcket
-    d.lada(bw-0.34,0.072,0.042,VIT,F2(0,y+0.14,but-0.20));
-    for(const s of [-1,1])
+  /* Räcket av liggande ribbor — MED EN ÖPPNING MITT FÖR DÖRREN.
+     Det gick tidigare i ett obrutet stycke tvärs hela framsidan, så
+     verandan såg inlåst ut och man förstod inte att man kunde gå in.
+     Ett räcke utan öppning är inte heller ett riktigt hus: fotografen
+     bakom `stall-entre-03.jpg` står inne på verandan, alltså finns
+     ingången. Bredden på öppningen är `[ASSUMPTION]` — fotona visar
+     räcket inifrån och uppifrån, aldrig rakt på framsidan. */
+  const oppB=KV.oppning, sido=(bw-0.34-oppB)/2, sidoM=(oppB+sido)/2;
+  for(let y=0.26;y<1.22;y+=0.125){
+    for(const s of [-1,1])                                        // ribborna, två stycken
+      d.lada(sido,0.072,0.042,VIT,F2(s*sidoM,y+0.14,but-0.20));
+    for(const s of [-1,1])                                        // och längs sidorna
       d.lada(0.042,0.072,but-0.75,VIT,F2(s*(hh-0.14),y+0.14,but/2+0.16));
   }
-  d.lada(bw-0.34,0.07,0.11,VIT,F2(0,1.46,but-0.20));              // handledaren
-  for(const s of [-1,1])
+  for(const s of [-1,1]){
+    d.lada(sido,0.07,0.11,VIT,F2(s*sidoM,1.46,but-0.20));         // handledaren
     d.lada(0.11,0.07,but-0.75,VIT,F2(s*(hh-0.14),1.46,but/2+0.16));
+    /* Stolpe i vardera kanten av öppningen, så att räcket får ett slut
+       i stället för att bara ta tvärt slut i luften. */
+    d.lada(0.11,1.42,0.11,VIT,F2(s*oppB/2,0.85,but-0.20));
+  }
+  /* Trappsteget upp till betonggolvet, mitt för öppningen. */
+  d.lada(oppB+0.5,0.09,0.34,"#C2BFB6",F2(0,0.045,but+0.17));
   d.lada(0.10,0.24,0.10,SVART,F2(0,2.52,0.09));                   // vägglampan
   d.cyl(0.17,0.11,0.13,"#E4E0D6",M4.mul(F2(0,2.40,0.20),M4.rotX(-Math.PI/2)),10);
 
   /* ── Norra gaveln — klubbgaveln: balkongen och spiraltrappan ── */
-  const bz=4.55;
-  d.lada(2.2,0.12,1.10,"#4A4E52",FN(7.5,bz-0.06,0.55));
+  /* Balkongen sitter mitt för sin dörr, och dörren ligger i gavelns
+     mitt. När huset blev 21 m brett flyttades öppningarna dit men den
+     här geometrin stod kvar på den gamla mitten 7,5 — balkongen hamnade
+     tre meter vid sidan av sin egen dörr. Den räknas nu ur bredden. */
+  const BA=IDENTITET.stall.balkong, SP=IDENTITET.stall.spiraltrappa;
+  const bz=BA.z, gm=r.w/2, su=gm-SP.franGavelmitt, bb=BA.bredd, bd=BA.djup;
+  d.lada(bb,0.12,bd,"#4A4E52",FN(gm,bz-0.06,bd/2));
   for(const y of [bz+0.42,bz+0.88]){
-    d.lada(2.2,0.05,0.05,SVART,FN(7.5,y,1.06));
-    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FN(7.5+s*1.08,y,0.55));
+    d.lada(bb,0.05,0.05,SVART,FN(gm,y,bd-0.04));
+    for(const s of [-1,1])d.lada(0.05,0.05,bd,SVART,FN(gm+s*(bb/2-0.02),y,bd/2));
   }
-  for(let u=6.55;u<8.5;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FN(u,bz+0.46,1.06));
-  const sr=0.70, steg=18, sh=bz/steg, su=5.2, sut=0.62;
+  for(let u=gm-bb/2+0.15;u<gm+bb/2-0.15;u+=0.24)
+    d.lada(0.028,BA.rackeH,0.028,SVART,FN(u,bz+0.46,bd-0.04));
+  const sr=SP.radie, steg=SP.steg, sh=bz/steg, sut=0.62;
   d.cyl(0.085,0.085,bz+0.50,SVART,FN(su,0,sut),8);
   for(let i=0;i<steg;i++){
     const m=M4.mul(FN(su,(i+1)*sh,sut),M4.rotY(i*0.40));
@@ -715,53 +771,116 @@ function v3dStallYttre(bg,d,opp){
 }
 
 /* ── Stallet invändigt ────────────────────────────────────────── */
+/* Uppmätt dämpning från renderarens ljus, inverterad. Mätta färger står i
+   site.js; den här hör till renderaren, precis som LYFT. */
+function golvKompStall(hex,dam){
+  return "#"+[1,3,5].map((i,k)=>
+    Math.min(255,Math.round(parseInt(hex.substr(i,2),16)/dam[k]))
+      .toString(16).padStart(2,"0")).join("");
+}
 function v3dStall(lagg,opp){
   const S=STALLINNE, T=S3.tex, vx=S.bredd/2;
   /* Golvet, efter IMG_0249: en markstensgång i mitten — smalare än
      hela gången — och en ljus spånremsa längs boxfronterna på båda
      sidor. Remsan är det första ögat läser i filmen; utan den blir
      gången en enfärgad korridor. */
-  const gangSten=S.ganghalva*0.72;
-  lagg(new Bygge().yta(gangSten*2,S.langd,"#FFFFFF",
-    M4.translation(vx,0.02,S.langd/2),10),T.marksten);
-  {const remsa=new Bygge(), rb=S.ganghalva-gangSten;
-   for(const sida of [-1,1])
-     remsa.yta(rb,S.langd,"#D8C9A4",
-       M4.translation(vx+sida*(gangSten+rb/2),0.025,S.langd/2),4);
-   lagg(remsa,T.span);}
+
+  const sten=new Bygge(), remsa=new Bygge();
+  /* Golvfärgerna är MÄTTA och står i site.js. Här ligger bara den uppmätta
+     dämpningen från textur och ljus, så att det som FAKTISKT hamnar på
+     skärmen blir de mätta värdena — samma princip som LYFT och PANELLYFT.
+     Mätt på skärmdump: vit botten under T.marksten renderades #A79E89
+     (0,655/0,620/0,537) och #D8C9A4 under T.span renderades #CBA962
+     (0,940/0,841/0,598). Ändras texturerna eller src/ljus.js måste de
+     mätas om. */
+  const golvKomp=golvKompStall;
+  const STEN=golvKomp(S.gangSten,[0.655,0.620,0.537]);
+  const SPAN=golvKomp(S.gangSpan,[0.940,0.841,0.598]);
+  for(const g of S.gangytor){
+    const gangSten=Math.max(g.w*0.72, g.w-1.4), rb=(g.w-gangSten)/2;
+    sten.yta(gangSten,g.h,STEN,
+      M4.translation(g.x+g.w/2,0.02,g.y+g.h/2),10);
+    if(rb>0.05) for(const sida of [-1,1])
+      remsa.yta(rb,g.h,SPAN,
+        M4.translation(g.x+g.w/2+sida*(gangSten/2+rb/2),0.025,g.y+g.h/2),4);
+  }
+  lagg(sten,T.marksten);
+  lagg(remsa,T.span);
   const span=new Bygge();
-  for(const sida of["W","E"]){
-    const rad=S.boxar[sida];
-    for(let i=0;i<rad.length;i++){
-      const y0=S.boxStartY+i*S.boxB;
-      if(y0+S.boxB>S.klubbY)break;
-      const x=sida==="W"?vx-S.ganghalva-S.boxDjup/2:vx+S.ganghalva+S.boxDjup/2;
-      span.yta(S.boxDjup,S.boxB-0.1,"#FFFFFF",M4.translation(x,0.03,y0+S.boxB/2),3);
+  for(const rad of S.rader){
+    const lista=S.boxar[rad.id]||[];
+    for(let i=0;i<lista.length;i++){
+      const my=boxY(i);
+      if(my+S.boxB/2>S.klubbY)break;
+      span.yta(rad.djup,S.boxB-0.1,"#FFFFFF",
+        M4.translation(rad.x0+rad.djup/2,0.03,my),3);
     }
   }
   lagg(span,T.span);
-  lagg(new Bygge().yta(S.bredd,S.langd,"#FFFFFF",
+  /* Golvplattan låg på ren vit botten under betongtexturen. Vit är inte ett
+     mätt värde, och tillsammans med texturen blev plattan en av de ljusa
+     ytorna i den underkända vyn. Den läser nu STALLINNE.golv. */
+  lagg(new Bygge().yta(S.bredd,S.langd,S.golv,
     M4.translation(vx,0.005,S.langd/2),14),T.betong);
 
-  /* Ytterväggar och tak. */
+  /* YTTERVÄGGARNA.
+
+     De här fanns hela tiden — jag påstod i ett tidigare pass att stallscenen
+     saknade ytterväggar och byggde en egen uppsättning ovanpå dem. Fel, och
+     dubbletten är borttagen. Det som var fel var FÄRGEN: väggarna låg på ren
+     vit botten under pärlspontstexturen. Vit är inte ett mätt värde, och en
+     vit botten under en ljus textur är precis den krämfärgade korridor som
+     underkändes.
+
+     En ID-rendering med unik platt färg per yta avgjorde det: de stora ljusa
+     väggarna i spelarvyn hade INGEN av mina färger, alltså kom de varken från
+     mina nya väggar eller från STALLINNE.vagg. De kom härifrån.
+
+     Väggen läser nu det MÄTTA `#C1C0C3` ur stall-inne-09, och södra gaveln
+     byggs i bitar runt gaveldörren så att dagsljuset syns. */
   const vagg=new Bygge();
-  vagg.lada(S.bredd+0.4,S.tak,0.25,"#FFFFFF",M4.translation(vx,S.tak/2,-0.1));
-  vagg.lada(S.bredd+0.4,S.tak,0.25,"#FFFFFF",M4.translation(vx,S.tak/2,S.langd+0.1));
-  vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(-0.1,S.tak/2,S.langd/2));
-  vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
-  lagg(vagg,T.parlspont);
-  /* Taket, efter IMG_0249 och IMG_0250. Det är inte ett platt vitt
-     innertak med limträbalkar utan ett SADELTAK: galvaniserad
-     korrugerad plåt som undertak, tvärgående balkar i tegelrött var
-     fjärde meter, en rad takfönster högt i västra takfallet, och
-     galvade dragstag som hänger ner från varje balk till boxarnas
-     överkant. Det är stagen och de röda balkarna man känner igen
-     stallet på inifrån. */
-  const RESN=2.1, NOCK=S.tak+RESN, halvB=S.bredd/2;
+  vagg.lada(S.bredd+0.4,S.tak,0.25,S.vagg,M4.translation(vx,S.tak/2,S.langd+0.1));
+  vagg.lada(0.25,S.tak,S.langd,S.vagg,M4.translation(-0.1,S.tak/2,S.langd/2));
+  vagg.lada(0.25,S.tak,S.langd,S.vagg,M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
+  {const G2=S.gaveloppning;
+   const bitar=G2?[[-0.2,G2.x],[G2.x+G2.bredd,S.bredd+0.2]]:[[-0.2,S.bredd+0.2]];
+   for(const [x0,x1] of bitar) if(x1-x0>0.05)
+     vagg.lada(x1-x0,S.tak,0.25,S.vagg,M4.translation((x0+x1)/2,S.tak/2,-0.1));
+   if(G2) vagg.lada(G2.bredd,S.tak-G2.hojd,0.25,S.vagg,
+     M4.translation(G2.x+G2.bredd/2,G2.hojd+(S.tak-G2.hojd)/2,-0.1));}
+  /* OBETEXTURERAD. Väggen låg under `T.parlspont` — en varm träpaneltextur —
+     och det var den, inte ljuset, som gjorde ytan gulaktig: renderad #B9AE93
+     mot fotots kalla #C1C0C3. Skillnaden satt nästan helt i blått.
+
+     stall-inne-09 och -07 visar en SLÄT MÅLAD vägg, inte träpanel. Texturen
+     var alltså fel material från början, och att kompensera för den hade
+     varit att laga ett materialfel med en färgjustering. Den tas bort i
+     stället, och väggen ligger på sitt mätta värde. */
+  lagg(vagg,null);
+  /* Taket. Formen — sadeltak med korrugerad plåt som undertak, balkar var
+     fjärde meter, takfönster i västra fallet och galvade dragstag ner till
+     boxarna — kommer ur IMG_0249/0250 och stämmer mot
+     references/buildings/stall/stall-inne-05-stallgangen.jpg.
+
+     FÄRGERNA var däremot fel, och det gick att mäta. Genom att leta upp
+     de varma, mättade pixlarna i fotots takzon på FÄRGEN i stället för på
+     gissade koordinater faller balkarna ut på **#C39575** — ett ljust,
+     varmt orangebrunt limträ — och plåten på **#878783**, en neutral
+     mellangrå. Koden hade #9C4A32 (mörkt tegelrött) och #D9DDE1 (nästan
+     vit). Balkarna lästes därför nästan svarta i gången, och taket som ett
+     platt vitt innertak — precis det kommentaren här sade att det INTE var.
+
+     Plåten ritas obelyst (platt:true), så dess ton sätts nära det mätta
+     värdet direkt. Balkarna är belysta, så råvaran ligger ljusare än fotot
+     och belysningen tar ner den — samma princip som ridhusets fasadfärg. */
+  const SG=IDENTITET.stall.stallgang, LYFT=1.05;
+  const damp=(h)=>"#"+[1,3,5].map(i=>
+    Math.round(parseInt(h.substr(i,2),16)/LYFT).toString(16).padStart(2,"0")).join("");
+  const RESN=S.takresning, NOCK=S.tak+RESN, halvB=S.bredd/2;
   const takL=Math.hypot(halvB,RESN), takV=Math.atan2(RESN,halvB);
   const tak=new Bygge();
   for(const sida of [-1,1])                         // takfallen i galvad plåt
-    tak.lada(takL,0.14,S.langd+0.5,"#D9DDE1",
+    tak.lada(takL,0.14,S.langd+0.5,damp(SG.takplat),
       M4.mul(M4.translation(vx+sida*halvB/2,S.tak+RESN/2,S.langd/2),
              M4.rotZ(-sida*takV)));
   /* Undersidan av ett tak får bara ambient och blev nästan svart, fast
@@ -771,20 +890,41 @@ function v3dStall(lagg,opp){
   const stomme=new Bygge();
   for(let z=2;z<S.langd;z+=4){
     /* Tvärbalken i tegelrött, precis under takfoten. */
-    stomme.lada(S.bredd,0.26,0.22,"#9C4A32",M4.translation(vx,S.tak-0.13,z));
+    stomme.lada(S.bredd,0.26,0.22,damp(SG.limtra),M4.translation(vx,S.tak-0.13,z));
     /* Nockbalken och snedstagen upp mot nocken. */
     for(const sida of [-1,1])
-      stomme.lada(takL*0.9,0.16,0.14,"#9C4A32",
+      stomme.lada(takL*0.9,0.16,0.14,damp(SG.limtra),
         M4.mul(M4.translation(vx+sida*halvB*0.45,S.tak+RESN*0.45,z),
                M4.rotZ(-sida*takV)));
   }
-  stomme.lada(0.20,0.24,S.langd,"#9C4A32",M4.translation(vx,NOCK-0.2,S.langd/2));
-  lagg(stomme,T.tra);
+  stomme.lada(0.20,0.24,S.langd,damp(SG.limtra),M4.translation(vx,NOCK-0.2,S.langd/2));
+  /* Balkarna ritas OBELYSTA, av samma skäl som plåten intill dem. Mätning:
+     med belysning renderades de #6A472B mot fotots #C39575 — belysningen tar
+     ner den här ytan till ungefär halva värdet, och råvaran skulle behöva
+     ligga runt rgb(398,339,325) för att nå fram. Det går inte. Zonen under
+     ett tak får bara ambient, precis som kommentaren ovan säger, och lösningen
+     som redan valts för plåten gäller balkarna: rita dem obelysta och sätt
+     tonen till det mätta värdet.
+
+     Obelysta räckte inte heller: med trätexturen på renderades de #71492E.
+     Texturen multiplicerar ner ytan till ungefär 0,58/0,49/0,39, och råvaran
+     skulle behöva ligga runt rgb(336,304,300) för att nå fram — också omöjligt.
+     Balkarna ritas därför UTAN textur. Ådringen syns ändå inte på det
+     avståndet, och plåten intill dem hanteras likadant.
+
+     Sista kalibreringen: platt:true är inte helt 1:1 — renderingen lyfter
+     tonen ungefär 5 %. De mätta färgerna står i IDENTITET.stall.stallgang;
+     LYFT nedan tar bort renderarens överskott, så att det som FAKTISKT
+     hamnar på skärmen blir de mätta värdena. Lyftet är en egenskap hos
+     webbrenderaren, inte hos byggnaden, och hör därför hemma här och inte i
+     site.js. Kontrollerat genom att räkna de vanligaste tonerna i takzonen
+     på en skärmdump. */
+  S3.statiskt.push({nat:GL.nat(stomme), platt:true});
   const galv=new Bygge();
   for(let z=2;z<S.langd;z+=4)                       // dragstagen ner till boxarna
-    for(const sida of [-1,1])
+    for(const rad of S.rader)
       galv.cyl(0.035,0.035,S.tak-2.3,"#B4B9BE",
-        M4.translation(vx+sida*S.ganghalva,2.3,z),6);
+        M4.translation(boxFrontX(rad),2.3,z),6);
   lagg(galv,null);
   /* Takfönstren i västra takfallet — ljuset som gör gången läsbar. */
   const lykt=new Bygge();
@@ -793,33 +933,75 @@ function v3dStall(lagg,opp){
       M4.mul(M4.translation(vx-halvB*0.52,S.tak+RESN*0.52,z),M4.rotZ(takV)));
   /* Runda pendelarmaturer i rad över vardera boxraden. */
   for(let z=3;z<S.langd;z+=4.5)
-    for(const sida of [-1,1]){
-      const ax=vx+sida*S.ganghalva*0.62;
-      lykt.cyl(0.012,0.012,0.55,"#8E939B",M4.translation(ax,S.tak-0.55,z),5);
-      lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.62,z),10);
+    for(const g of [S.gangar.A,S.gangar.B]){
+      const ax=(g.x0+g.x1)/2;
+      lykt.cyl(0.012,0.012,0.16,"#8E939B",M4.translation(ax,S.tak-0.16,z),5);
+      lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.23,z),10);
     }
   lagg(lykt,null);
 
-  /* Boxfronterna: komposit, galvad ram, galler och namnskylt. */
+  /* Klockan i gångens bortre ände — IMG_0160 och stall-inne-05. */
+  if(S.klocka){const K=S.klocka, kl=new Bygge();
+    kl.cyl(K.r,K.r,0.09,"#EEECE4",
+      M4.mul(M4.translation(K.x,K.z,K.y),M4.rotZ(Math.PI/2)),14);
+    kl.cyl(K.r*0.82,K.r*0.82,0.02,"#2E2E2C",
+      M4.mul(M4.translation(K.x+0.06,K.z,K.y),M4.rotZ(Math.PI/2)),14);
+    lagg(kl,null);}
+
+  /* Boxfronterna: komposit, galvad ram, vågräta reglar och namnskylt.
+     Färger och form ur IDENTITET.stall.boxfront — samma data som Roblox
+     läser, så att fronterna inte kan glida isär mellan ytorna. */
+  const BF=IDENTITET.stall.boxfront;
+  /* Samma sorts renderarkompensation som LYFT gör för taket, fast åt andra
+     hållet, och bara för den täta panelen.
+
+     Mätning på skärmdump av stallgången: den mätta panelen #454A4F
+     renderades #2E2F2E, alltså 0,63 av råvaran. Panelen är en lodrät yta
+     som vetter bort från armaturerna och får nästan bara ambient.
+
+     FÖRSTA FÖRSÖKET, förkastat: invertera dämpningen per kanal, och göra
+     det för ramen också. Medianen sa att det konvergerade — men
+     skärmdumpen visade att reglarna sköt i vitt och panelen drog i blått.
+     De runda reglarna fångar mycket mer ljus än den plana panelen, så en
+     kompensation som passar panelen spränger reglarna, och en kanalvis
+     invertering förstärker ljusets färgstick i stället för att ta bort det.
+     Det är därför bara ett skalärt ljushetslyft här, och bara på panelen.
+
+     Ramen står kvar på sitt mätta värde: den renderades #8F8A74 mot fotots
+     #9A9B93, vilket ligger inom spridningen mellan de två bildrutorna.
+
+     Lyftet är en egenskap hos webbrenderarens ljus, inte hos byggnaden, och
+     hör därför hemma här och inte i site.js. Ändras src/ljus.js måste det
+     mätas om — det står i auditen. */
+  const PANELLYFT=1.58;
+  const BF_HELDEL="#"+[1,3,5].map(i=>
+    Math.min(255,Math.round(parseInt(BF.heldel.substr(i,2),16)*PANELLYFT))
+      .toString(16).padStart(2,"0")).join("");
+  const BF_RAM=BF.ram;
   const front=new Bygge(), galler=new Bygge();
-  for(const sida of["W","E"]){
-    const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
+  for(const rad2 of S.rader){
+    const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
     for(let i=0;i<rad.length;i++){
-      const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
+      const my=boxY(i), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
-      const my=(y0+y1)/2;
-      front.lada(0.12,1.35,S.boxB-0.04,"#4A4D50",M4.translation(fx,0.675,my));
-      front.lada(0.16,0.10,S.boxB,"#B4B8BB",M4.translation(fx,1.38,my));
+      front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_HELDEL,
+        M4.translation(fx,BF.heldelH/2,my));
+      front.lada(0.16,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.ramZ,my));
       for(const dy of [y0,y1])
-        galler.lada(0.14,2.15,0.14,"#B4B8BB",M4.translation(fx,1.07,dy));
-      for(let g=1;g<8;g++)
-        galler.cyl(0.022,0.022,0.78,"#989CA0",
-          M4.translation(fx,1.43,y0+(y1-y0)*g/8),6);
-      galler.lada(0.14,0.10,S.boxB,"#B4B8BB",M4.translation(fx,2.20,my));
+        galler.lada(0.14,BF.stolpH,0.14,BF_RAM,
+          M4.translation(fx,BF.stolpH/2,dy));
+      /* VÅGRÄTA reglar, inte lodräta spjälor: de delar spannet mellan
+         kappregeln och överliggaren jämnt. Fotona visar fem. */
+      for(let g=1;g<=BF.reglar;g++)
+        galler.cyl(BF.regelD/2,BF.regelD/2,S.boxB-0.14,BF_RAM,
+          M4.mul(M4.translation(fx,
+                   BF.ramZ+(BF.toppregelZ-BF.ramZ)*g/(BF.reglar+1), y0+0.07),
+                 M4.rotX(Math.PI/2)),8);
+      galler.lada(0.14,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.toppregelZ,my));
       /* Skiljeväggar mellan boxarna. */
       const ut=sida==="W"?-1:1;
-      front.lada(S.boxDjup,1.35,0.10,"#4A4D50",
-        M4.translation(fx+ut*S.boxDjup/2,0.675,y0));
+      front.lada(rad2.djup,BF.heldelH,0.10,BF_HELDEL,
+        M4.translation(fx+ut*rad2.djup/2,BF.heldelH/2,y0));
       const h=boxHast(rad[i]);
       const b=new Bygge();
       v3dTextPanel(b,0.85,0.22,
@@ -831,25 +1013,122 @@ function v3dStall(lagg,opp){
 
   /* Rummen i klubbdelen och servicedelen. */
   const rum=new Bygge();
+  /* KLUBBRUMMEN har riktiga väggar: brandplanen ritar dem som rum, och
+     stall-inne-01..04 visar slutna rum. SERVICEBUKTARNA har det inte —
+     se den långa noten i site.js. `oppen` avgör vilket. */
+  const bukt=new Bygge();
   for(const grupp of [S.rum,S.service]) for(const r of grupp){
     const k=r.rekt;
     const gx=k.x<vx?k.x+k.w:k.x;                    // väggen mot gången
-    rum.lada(0.16,2.6,k.h,"#FFFFFF",M4.translation(gx,1.3,k.y+k.h/2));
-    rum.lada(k.w,2.6,0.16,"#FFFFFF",M4.translation(k.x+k.w/2,1.3,k.y));
-    rum.lada(k.w,2.6,0.16,"#FFFFFF",M4.translation(k.x+k.w/2,1.3,k.y+k.h));
+    const ut=k.x<vx?1:-1;                           // in mot gången
+    if(!r.oppen){
+      rum.lada(0.16,2.6,k.h,S.vagg,M4.translation(gx,1.3,k.y+k.h/2));
+      rum.lada(k.w,2.6,0.16,S.vagg,M4.translation(k.x+k.w/2,1.3,k.y));
+      rum.lada(k.w,2.6,0.16,S.vagg,M4.translation(k.x+k.w/2,1.3,k.y+k.h));
+    }else{
+      /* Buktens RYGG mot ytterväggen, i samma mörka panel som boxfronterna
+         — stall-inne-09 visar att det är samma produkt. Ingen vägg mot
+         gången: det är hela poängen. */
+      const bx=k.x<vx?k.x+0.10:k.x+k.w-0.10;
+      bukt.lada(0.10,r.panelH,k.h-0.3,BF.heldel,
+        M4.translation(bx,r.panelH/2,k.y+k.h/2));
+      if(r.bommar){
+        /* Fristående galvade spolbommar i rad, med en vågrät rail bakom. */
+        for(let i=0;i<r.bommar;i++){
+          const bz=k.y+k.h*(i+0.8)/(r.bommar+0.6);
+          bukt.lada(0.13,2.0,0.13,BF.ram,
+            M4.translation(bx+ut*(k.w*0.55),1.0,bz));
+        }
+        bukt.cyl(0.05,0.05,k.h-0.6,BF.ram,
+          M4.mul(M4.translation(bx+ut*0.35,r.railZ,k.y+0.3),
+                 M4.rotX(Math.PI/2)),8);
+      }
+      if(r.sackar){
+        /* Spånsäckarna staplade på pall — stall-inne-07. Ljusa säckar med
+           mörkblått tryck; här bara den ljusa tonen. */
+        const sa=r.sackar;
+        for(let rad=0;rad<sa.rader;rad++)
+          for(let i=0;i<3;i++)
+            bukt.lada(sa.djup,sa.hojd*0.9,(k.h-0.6)/3-0.12,"#DCD6C8",
+              M4.translation(bx+ut*(0.15+sa.djup/2+rad*(sa.djup+0.15)),
+                sa.hojd/2, k.y+0.3+((k.h-0.6)/3)*(i+0.5)));
+      }
+    }
     const b=new Bygge();
     v3dTextPanel(b,Math.min(k.h*0.8,2.6),0.5,
-      M4.mul(M4.translation(gx+(k.x<vx?0.09:-0.09),1.9,k.y+k.h/2),
+      M4.mul(M4.translation(r.oppen?(k.x<vx?k.x+0.22:k.x+k.w-0.22)
+                                   :gx+(k.x<vx?0.09:-0.09),
+               r.oppen?1.60:1.9, k.y+k.h/2),
         M4.rotY(k.x<vx?Math.PI/2:-Math.PI/2)));
     S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(r.label)});
   }
-  /* Tvärväggarna med dörrgap. */
-  for(const tv of S.tvarvaggar){
-    const gap=tv.gap;
-    rum.lada(vx-gap/2,2.8,0.16,"#FFFFFF",M4.translation((vx-gap/2)/2,1.4,tv.y));
-    rum.lada(S.bredd-vx-gap/2,2.8,0.16,"#FFFFFF",
-      M4.translation(vx+gap/2+(S.bredd-vx-gap/2)/2,1.4,tv.y));
+  lagg(bukt,null);
+
+  /* Servicedelens betonggolv, mätt i stall-inne-09. Marksten ligger redan i
+     gångytorna; det här är plattan under bommarna. */
+  if(S.serviceGolv){
+    const bg=new Bygge();
+    /* Betongen är en REMSA längs ytterväggen, inte hela bukten. Ritades den
+       över hela rektangeln blev den en stor ljus yta rakt framför spelaren
+       — bekräftat med magentatest — och fotot visar marksten i stråket. */
+    /* Betongremsan vetter uppåt och fångar mer ljus än väggarna: mätt genom
+       en ID-mask renderades den #C5B38D mot fotots #AEA28C, alltså 1,11 av
+       råvaran. Ett SKALÄRT avdrag räcker och klipper ingenting — till
+       skillnad från väggen, se auditens RENDERING LIMITATION. */
+    const SGOLV="#"+[1,3,5].map(i=>
+      Math.round(parseInt(S.serviceGolv.substr(i,2),16)/1.11)
+        .toString(16).padStart(2,"0")).join("");
+    for(const r of S.service){const k=r.rekt;
+      const bw=Math.min(S.serviceGolvBredd||k.w, k.w);
+      const bxm=k.x<vx ? k.x+bw/2 : k.x+k.w-bw/2;
+      bg.yta(bw,k.h,SGOLV,
+        M4.translation(bxm,0.022,k.y+k.h/2),4);}
+    lagg(bg,null);
   }
+
+  /* Rörstråket längs ytterväggarna i servicedelen. Både stall-inne-07 och
+     -09 visar galvade rörledningar och väggutrustning i ungefär brösthöjd
+     och uppe under taket — det är ett av de starkaste "arbetande stall"-
+     dragen i rummet, och det saknades helt. */
+  if(S.service.some(r=>r.oppen)){
+    const ror=new Bygge();
+    for(const r of S.service){
+      if(!r.oppen)continue;
+      const k=r.rekt, sidaX=k.x<vx?k.x+0.28:k.x+k.w-0.28;
+      for(const z of [2.15,2.55])
+        ror.cyl(0.045,0.045,k.h-0.4,BF.ram,
+          M4.mul(M4.translation(sidaX,z,k.y+0.2),M4.rotX(Math.PI/2)),8);
+      for(let i=0;i<3;i++)                      // konsoler ner mot väggen
+        ror.lada(0.10,0.10,0.10,BF.ram,
+          M4.translation(sidaX,2.35,k.y+0.8+i*(k.h-1.6)/2));
+    }
+    lagg(ror,null);
+  }
+
+  /* Gaveldörren i söder med dagsljus och grön utrymningsskylt. Utan den
+     läser rummet som en säck, och det var precis vad som underkändes. */
+  if(S.gaveloppning){
+    const G2=S.gaveloppning, gv=new Bygge();
+    gv.lada(G2.bredd,G2.hojd,0.10,"#EAF2F6",
+      M4.translation(G2.x+G2.bredd/2,G2.hojd/2,0.06));
+    gv.lada(G2.exitB,G2.exitH,0.06,"#1E7A3C",
+      M4.translation(G2.x+G2.bredd/2,G2.hojd+G2.exitOver,0.14));
+    S3.statiskt.push({nat:GL.nat(gv), platt:true});
+  }
+  /* Tvärväggarna med dörrgap. */
+  {for(const tv of S.tvarvaggar){
+     /* Hålen är gångarna PLUS väggens egna öppningar ur planen. Förut kom de
+        bara ur gångarna, och då blev väggen tät framför varje boxrad. */
+     const halOrd=[...Object.values(S.gangar),...(tv.oppningar||[])]
+       .sort((a,b)=>a.x0-b.x0);
+     const bitar=[]; let x=0;
+     for(const h of halOrd){ if(h.x0>x) bitar.push([x,h.x0]); x=Math.max(x,h.x1); }
+     bitar.push([x,S.bredd]);
+     for(const [x0,x1] of bitar){
+       if(x1-x0<0.05)continue;
+       rum.lada(x1-x0,2.8,0.16,"#FFFFFF",M4.translation((x0+x1)/2,1.4,tv.y));
+     }
+   }}
   lagg(rum,T.parlspont);
   /* Whiteboarden. */
   const wb=new Bygge();
@@ -863,10 +1142,28 @@ function v3dRidhus(lagg,opp){
   const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
   lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
     M4.translation(R.bredd/2,0.01,R.langd/2),8),T.grus);
-  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula
-     sand. Tonen tas ner på plats i stället för att göra en egen textur. */
-  lagg(new Bygge().yta(ba.w,ba.h,"#9C8663",
-    M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);
+  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula sand.
+
+     Tonen låg som ett LITERALT tal här ("#9C8663") och läste alltså inte
+     RIDHUSINNE.sandFarg alls. Samma dolda literal som gårdsplanen, silon och
+     sponsorskyltarna fällts på: ändrar man datan händer ingenting.
+
+     Mätt: literalen renderades #976930 mot fotots #6F5D4D (`-03`) — mycket
+     ljusare och kraftigt orangare, blått nedtryckt från 0x4D till 0x30. Det
+     är T.sand-texturens varma ton, inte ljuset.
+
+     Kompensationen är KANALVIS, och det är avsiktligt: det som sprängde
+     boxfronternas reglar och ridhusväggen var kanalvis invertering av
+     LJUSET på ytor med varierande infallsvinkel. Det här är en plan,
+     jämnt belyst golvyta där texturen är den varma faktorn — samma fall som
+     stallets marksten, där kanalvis kompensation konvergerade på några
+     enheter. Kvoterna är mätta, inte gissade. */
+  {const SK=[0.968,0.784,0.485];
+   const sandBas="#"+[1,3,5].map((i,k)=>
+     Math.min(255,Math.round(parseInt(R.sandFarg.substr(i,2),16)/SK[k]))
+       .toString(16).padStart(2,"0")).join("");
+   lagg(new Bygge().yta(ba.w,ba.h,sandBas,
+     M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);}
   /* Sargen med svart sockel — porten vid A lämnas öppen. */
   const sarg=new Bygge();
   const bit=(x0,z0,x1,z1)=>{
@@ -880,71 +1177,333 @@ function v3dRidhus(lagg,opp){
   };
   bit(ba.x,ba.y+ba.h,R.port.x0,ba.y+ba.h); bit(R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
   bit(ba.x,ba.y,ba.x+ba.w,ba.y);
-  bit(ba.x,ba.y,ba.x,ba.y+ba.h); bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
+  bit(ba.x,ba.y,ba.x,ba.y+ba.h);
+  /* Östra långsidan delad av grinden mot hästgången — utan den är gången
+     dekoration, för då kan man inte leda hästen mellan banan och gången. */
+  {const gr=R.sargGrind;
+   if(gr){ bit(ba.x+ba.w,ba.y,ba.x+ba.w,gr.y0);
+           bit(ba.x+ba.w,gr.y1,ba.x+ba.w,ba.y+ba.h); }
+   else bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);}
   lagg(sarg,null);
   /* Ytterväggar, sadeltak och limträstolar. */
   const hall=new Bygge();
-  hall.lada(R.bredd,R.tak,0.3,"#FFFFFF",M4.translation(R.bredd/2,R.tak/2,-0.15));
-  hall.lada(R.bredd,R.tak,0.3,"#FFFFFF",M4.translation(R.bredd/2,R.tak/2,R.langd+0.15));
-  hall.lada(0.3,R.tak,R.langd,"#FFFFFF",M4.translation(-0.15,R.tak/2,R.langd/2));
-  hall.lada(0.3,R.tak,R.langd,"#FFFFFF",M4.translation(R.bredd+0.15,R.tak/2,R.langd/2));
-  const halvS=R.bredd/2, resn=2.8;
+  hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,-0.15));
+  hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,R.langd+0.15));
+  hall.lada(0.3,R.tak,R.langd,R.hallvagg,M4.translation(-0.15,R.tak/2,R.langd/2));
+  hall.lada(0.3,R.tak,R.langd,R.hallvagg,M4.translation(R.bredd+0.15,R.tak/2,R.langd/2));
+  /* Takstommens mått står i RIDHUSINNE.takstomme, inte här — Roblox byggde
+     varken stomme eller undertak och kunde inte, eftersom talen bara fanns
+     i den här funktionen. */
+  const TS=R.takstomme, halvS=R.bredd/2, resn=TS.resning;
   const takL=Math.hypot(halvS,resn), takV=Math.atan2(resn,halvS);
   /* Takfallen lutar ned mot väggarna — samma teckenregel som utvändigt. */
   for(const s of [-1,1])
-    hall.lada(takL,0.18,R.langd+0.6,"#3A3E44",
+    hall.lada(takL,TS.platT,R.langd+0.6,R.takfarg.plat,
       M4.mul(M4.translation(R.bredd/2+s*halvS/2,R.tak+resn/2,R.langd/2),M4.rotZ(-s*takV)));
-  for(let z=1;z<R.langd;z+=6){
-    hall.lada(R.bredd,0.26,0.24,"#7A5C3E",M4.translation(R.bredd/2,R.tak-0.2,z));
-    hall.lada(0.22,2.7,0.22,"#7A5C3E",M4.translation(R.bredd/2,R.tak+1.3,z));
+  for(let z=TS.start;z<R.langd;z+=TS.delning){
+    hall.lada(R.bredd,TS.balkH,TS.balkD,R.takfarg.balk,
+      M4.translation(R.bredd/2,R.tak-0.2,z));
+    hall.lada(TS.kungB,TS.kungH,TS.kungB,R.takfarg.balk,
+      M4.translation(R.bredd/2,R.tak+TS.kungH/2-0.05,z));
   }
+  /* ── MOTSÄGELSE 2 ur DRIVE-SOURCE-INDEX ──────────────────────────
+     `IMG_0179` och `IMG_0183`: taket har stora träbalkar PLUS
+     stål-/metallprofiler, kabelstegar och ventilation. Spelet hade bara
+     limträbalkarna och lysrörsraderna, vilket gör taket för rent — ett
+     ridhustak i den här storleken är fullt av installationer, och det är
+     de som gör att man känner igen sig när man tittar upp.
+
+     Vad indexet säger finns: profiler i metall, kabelstegar och
+     ventilation. Vad det INTE säger: hur många, hur grova eller precis
+     var. Dimensionerna nedan är därför `[ASSUMPTION]`; det som är
+     verifierat är att de tre sakerna finns. ── */
+  {const st=new Bygge();
+   /* Stålprofilerna löper längs hallen, tvärs limträbalkarna, och sitter
+      strax under dem. Fyra stråk över 25 m bredd. */
+   {const P=IDENTITET.ridhus.takProfiler;
+    for(const a of P.andelar)
+      st.lada(P.b,P.h,R.langd-1,"#9AA0A6",
+        M4.translation(R.bredd*a,R.tak-P.underTak,R.langd/2));}
+   /* Kabelstegarna: två stråk med synliga stegpinnar. En kabelstege som
+      är en slät låda läser som en balk till; det är pinnarna som gör den
+      till en kabelstege. */
+   {const K=IDENTITET.ridhus.kabelstegar;
+    for(const a of K.andelar){
+      const x=R.bredd*a;
+      for(const d of [-K.bredd/2+0.01,K.bredd/2-0.01])
+        st.lada(0.05,0.16,R.langd-2,"#B4B9BE",
+          M4.translation(x+d,R.tak-K.underTak,R.langd/2));
+      for(let z=2;z<R.langd-2;z+=K.pinnDelning)
+        st.lada(K.bredd,0.03,0.05,"#B4B9BE",M4.translation(x,R.tak-K.underTak,z));
+    }}
+   /* Ventilationen: runda kanaler längs hallen med don ner mot banan. */
+   {const V=IDENTITET.ridhus.ventkanaler;
+    for(const a of V.andelar){
+      const x=R.bredd*a;
+      st.cyl(V.radie,V.radie,R.langd-3,"#C2C7CC",
+        M4.mul(M4.translation(x,R.tak-V.underTak,R.langd/2),M4.rotX(Math.PI/2)),12);
+      for(let z=5;z<R.langd-4;z+=V.donDelning)
+        st.cyl(0.16,0.16,0.42,"#C2C7CC",M4.translation(x,R.tak-V.underTak-0.47,z),8);
+    }}
+   lagg(st,null);}
   for(let z=4;z<R.langd;z+=7)
     for(const x of [R.bredd*0.3,R.bredd*0.7])
       hall.lada(1.3,0.10,0.26,"#F6F2E4",M4.translation(x,R.tak-0.35,z));
   lagg(hall,null);
+
+  /* ── MOTSÄGELSE 1: långsidans övre väggyta ────────────────────────
+     `IMG_0183`: mörkröd/maroon ovanför sargen, med horisontella
+     detaljer. Spelet hade en vit vägg här och brun panel bara i den
+     enkla vandringsvyn. Ytan går från sargens överkant upp till
+     fönsterbandet, och de vita läkten är de horisontella detaljerna. ── */
+  {const pan=new Bygge();
+   const O=IDENTITET.ridhus.ovreVagg;
+   const y0=R.sargH+O.overSarg, y1=R.tak-O.underTak, mitt=(y0+y1)/2;
+   /* Bara EN långsida och bara över sitt stycke — se IDENTITET.ridhus.ovreVagg.
+      Förut målades båda långsidorna i hela sin längd, vilket fotot motsäger. */
+   {const x=(O.sida==="W") ? 0.16 : R.bredd-0.16, vand=(O.sida==="W")?1:-1;
+    const L=O.y1-O.y0, Lm=(O.y0+O.y1)/2;
+    pan.lada(O.tjocklek,y1-y0,L,R.panel,M4.translation(x,mitt,Lm));
+    for(let i=0;i<O.listar;i++){
+      const yy=y0+0.25+(y1-y0-0.5)*(O.listar>1?i/(O.listar-1):0.5);
+      pan.lada(0.10,0.07,L,R.panelList,M4.translation(x+vand*0.02,yy,Lm));
+    }
+   }
+   /* FÖNSTERBANDET mellan panelen och takfoten. Det löper längs HELA
+      långsidan, inte bara över panelens stycke — i ridhus-inne-02
+      fortsätter ljusbandet in på den ljusa delen av samma vägg. */
+   const FB=IDENTITET.ridhus.fonsterband;
+   if(FB){
+     const fx=(O.sida==="W") ? 0.16 : R.bredd-0.16;
+     const fy=R.tak-FB.underTak-FB.h/2;
+     const inat=(O.sida==="W")?1:-1;
+     /* Mörk reveal bakom glaset ger bandet djup; utan den läser det som en
+        slät ljus remsa, vilket är precis vad som underkändes. */
+     pan.lada(0.08,FB.h-0.10,R.langd-1.0,"#2A2E33",
+       M4.translation(fx+inat*0.26,fy,R.langd/2));
+     pan.lada(FB.tjocklek,FB.h,R.langd-1.0,FB.glas,
+       M4.translation(fx,fy,R.langd/2));
+     /* Poster och karmar står UT ur glaslivet, annars syns de inte. */
+     for(let z=0.8;z<R.langd-0.8;z+=FB.postDelning)
+       pan.lada(FB.tjocklek+0.16,FB.h,0.13,FB.karm,
+         M4.translation(fx-inat*0.06,fy,z));
+     for(const dy of [-FB.h/2,FB.h/2])
+       pan.lada(FB.tjocklek+0.16,0.13,R.langd-1.0,FB.karm,
+         M4.translation(fx-inat*0.06,fy+dy,R.langd/2));
+   }
+   lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */
   /* Läktaren är en trästomme: fyrkantsstolpar, balkar och plankbänkar i
      ljus furu — inte gjutna trappsteg. Under den finns ett mörkt utrymme
      där bommar och stöd förvaras, och på översta bänken ligger elons
      svarta dynor. Allt ur interiörfotona. */
-  const lak=new Bygge(), L=R.laktare, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
-  for(let i=0;i<L.steg;i++){
-    const x=L.x0+i*L.stegD+L.stegD/2, y=L.stegH*(i+1);
-    lak.lada(L.stegD-0.04,0.07,LL,"#D8C7A4",M4.translation(x,y,Lm));      // sittplankan
-    lak.lada(L.stegD-0.04,0.06,LL,"#C4B08C",M4.translation(x,y-0.20,Lm)); // fotplankan
-    for(let z=L.y0;z<=L.y1;z+=2.5)                                        // stommen
-      lak.lada(0.10,y,0.10,"#A98F68",M4.translation(x-L.stegD/2+0.08,y/2,z));
-  }
-  {const xt=L.x0+L.steg*L.stegD;                    // översta däcket och räckesbalk
-   lak.lada(0.9,0.09,LL,"#D8C7A4",M4.translation(xt+0.4,L.steg*L.stegH,Lm));
-   for(let z=L.y0;z<=L.y1;z+=2.5)
-     lak.lada(0.12,L.steg*L.stegH,0.12,"#A98F68",
-       M4.translation(xt+0.8,L.steg*L.stegH/2,z));}
+  const lak=new Bygge();
+  /* Läktaren byggs i sektioner: hästgången går igenom den centralt, och ett
+     obrutet block här murar igen gången. */
+  for(const sek of laktarSektioner(R.laktare)){
+  const L={...R.laktare, y0:sek.y0, y1:sek.y1}, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
+  /* PLANT DÄCK, inte trappsteg — se noten i site.js. Fotonas förgrund är
+     ett brett plankdäck med en solid mörk front och en ljus kappregel. */
+  {const D2=L.x0+L.dackDjup;
+   lak.lada(L.dackDjup,0.10,LL,"#C9BCA4",
+     M4.translation(L.x0+L.dackDjup/2,L.dackZ,Lm));            // plankdäcket
+   for(let z=L.y0;z<=L.y1;z+=2.5)                              // stomme under däcket
+     lak.lada(0.12,L.dackZ,0.12,"#A98F68",M4.translation(D2-0.2,L.dackZ/2,z));
+   /* Fronten mot banan: solid, mörkbetsad liggande panel upp till
+      kappregeln. Båda interiörfotona är tagna från däcket och visar just
+      den här väggen i förgrunden. */
+   const F=IDENTITET.ridhus.laktarfront;
+   for(let y=0;y<L.frontTopp-0.01;y+=F.brada){
+     const h=Math.min(F.brada,L.frontTopp-y);
+     lak.lada(F.tjocklek,h*0.94,LL,F.farg,
+       M4.translation(L.x0-F.tjocklek/2,y+h/2,Lm));
+   }
+   lak.lada(F.tjocklek+0.10,L.kappH,LL,"#C9BCA4",             // ljus kappregel
+     M4.translation(L.x0-F.tjocklek/2,L.frontTopp+L.kappH/2,Lm));}
   for(let i=0;i<(R.dynor||0);i++){                  // elon-dynorna
     const z=L.y0+2.0+i*((LL-4)/Math.max(1,R.dynor-1));
     lak.lada(0.44,0.06,0.34,"#26282C",
-      M4.translation(L.x0+(L.steg-1)*L.stegD+L.stegD/2,L.stegH*L.steg+0.06,z));
+      M4.translation(L.x0+L.dackDjup*0.55,L.dackZ+0.11,z));
   }
   for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
-    const x=L.x0+L.steg*L.stegD+0.4;
-    lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.steg*L.stegH,z));
-    lak.lada(0.42,0.46,0.06,"#D4551E",M4.translation(x,0.68+L.steg*L.stegH,z-0.18));
+    const x=L.x0+L.dackDjup*0.8;
+    lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.dackZ,z));
+    lak.lada(0.42,0.46,0.06,"#D4551E",M4.translation(x,0.68+L.dackZ,z-0.18));
     for(const d of [-0.16,0.16])
-      lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.steg*L.stegH,z));
+      lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.dackZ,z));
   }
-  {const L2=R.laktare;                              // räcket längs läktarens framkant
+  {const L2=L;                                      // räcket längs läktarens framkant
    for(const y of [0.62,1.02])
      lak.lada(0.09,0.09,L2.y1-L2.y0,"#8A6A44",
        M4.translation(L2.x0-0.10,y+L2.steg*L2.stegH,(L2.y0+L2.y1)/2));
    for(let z=L2.y0;z<=L2.y1;z+=2.4)
      lak.lada(0.09,1.05,0.09,"#8A6A44",
        M4.translation(L2.x0-0.10,0.52+L2.steg*L2.stegH,z));}
-  lak.lada(1.9,2.2,1.9,"#FFFFFF",M4.translation(R.domarbas.x,1.1,R.domarbas.y));
-  lak.lada(2.1,0.14,2.1,"#C8BCA8",M4.translation(R.domarbas.x,2.25,R.domarbas.y));
+  }  /* slut på läktarsektionerna */
+  /* ── MOTSÄGELSE 4: båset vid E ────────────────────────────────────
+     `IMG_0198`: vid dressyrbokstaven E leder en trappa MED TRÄRÄCKEN upp
+     till ett litet MÖRKT TRÄBYGGT bås, med en exit-skylt vid öppningen.
+     Spelet hade ett vitt bås på annan plats, utan trappa och utan skylt.
+
+     Båset ligger nu vid E (husets y = 32, se DRESSYRBOKSTAVER). Måtten är
+     `[ASSUMPTION]`; det verifierade är att båset är mörkt trä, att det
+     står upphöjt, att trappan har träräcken och att skylten finns. ── */
+  /* `golv` LÄSER R.laktare direkt. Det stod `L.dackZ`, men `L` deklareras
+     inne i sektionsloopen ovan och är slut här — det kastade
+     `ReferenceError: L is not defined`, som fångades och loggades som en
+     varning ("3D-vandring misslyckades"). Följden var att ALLT efter
+     båsblocket i v3dRidhus aldrig byggdes: kortändans block, glasbandet och
+     klockan. Det förklarar hela punkt 3 och 4 i reviewn. */
+  {const D=R.domarbas, dy=D.y, golv=R.laktare.dackZ;
+   /* Den låga upphöjda nivån båset står på — indexet kallar den en låg,
+      upphöjd trä-/läktarnivå, och sittstegen fortsätter åt sidan. */
+   lak.lada(D.b+1.6,golv,D.b+1.2,"#8A6A44",M4.translation(D.x,golv/2,dy));
+   /* Själva båset i mörkt trä. */
+   lak.lada(D.b,D.h,D.b,"#4A3524",M4.translation(D.x,golv+D.h/2,dy));
+   /* Sadeltak med utskjutande takfot — silhuetten man känner igen båset på. */
+   {const BT=R.basTak||{resning:0.42,utsprang:0.18};
+    const bb=D.b+BT.utsprang*2, lut=Math.atan2(BT.resning,bb/2);
+    const sl=Math.hypot(bb/2,BT.resning);
+    for(const sida of [-1,1])
+      lak.lada(sl,0.09,bb,"#3A2A1C",
+        M4.mul(M4.translation(D.x+sida*bb/4,golv+D.h+BT.resning/2,dy),
+               M4.rotZ(-sida*lut)));}
+   /* Öppningen mot banan, så att båset inte blir en sluten låda. */
+   lak.lada(0.06,D.h*0.62,D.b*0.62,"#1C1A18",
+     M4.translation(D.x-D.b/2-0.02,golv+D.h*0.52,dy));
+   if(D.trappa){
+     /* Trappan upp, med räcke på båda sidor — räckena är det man ser
+        först i fotot, inte trappstegen. */
+     const st=5, sh=golv/st, sd=0.30, z0=dy+D.b/2+0.35;
+     for(let i=0;i<st;i++)
+       lak.lada(1.0,sh,sd,"#A98F68",
+         M4.translation(D.x,sh*i+sh/2,z0+sd*i));
+     for(const sx of [-0.52,0.52]){
+       lak.lada(0.07,0.07,sd*st,"#8A6A44",
+         M4.mul(M4.translation(D.x+sx,golv*0.62+0.42,z0+sd*st/2),
+           M4.rotX(-Math.atan2(golv,sd*st))));
+       for(let i=0;i<st;i+=2)
+         lak.lada(0.07,golv*0.55+0.32,0.07,"#8A6A44",
+           M4.translation(D.x+sx,(sh*i)/2+golv*0.28+0.16,z0+sd*i));
+     }
+   }}
   for(let i=0;i<8;i++)                                  // trappan upp till caféet
     lak.lada(1.2,0.19,0.30,"#FFFFFF",
       M4.translation(R.trappa.x,0.19*i+0.10,R.trappa.y+0.30*i));
   lagg(lak,T.tra);
+
+  /* Exit-skylten över båsets öppning, och klockan vid den centrala
+     passagen — MOTSÄGELSE 4 respektive 3. Båda ligger utanför trä-
+     texturen: en grön skylt och en vit urtavla ska inte ha ådring. */
+  {const sk=new Bygge(), D=R.domarbas, golv=R.laktare.dackZ;
+   if(D.exit){
+     sk.lada(0.05,0.26,0.72,"#1E7A3C",
+       M4.translation(D.x-D.b/2-0.05,golv+D.h+0.30,D.y));
+     sk.lada(0.02,0.13,0.30,"#EAF6EC",
+       M4.translation(D.x-D.b/2-0.08,golv+D.h+0.30,D.y));
+   }
+   const K=R.klocka;
+   if(K){
+     sk.cyl(K.r,K.r,0.09,"#2A2A2C",
+       M4.mul(M4.translation(K.x,K.z,K.y),M4.rotZ(Math.PI/2)),18);
+     sk.cyl(K.r*0.86,K.r*0.86,0.04,"#F4F1E8",
+       M4.mul(M4.translation(K.x-0.06,K.z,K.y),M4.rotZ(Math.PI/2)),18);
+     sk.lada(0.03,0.05,K.r*0.62,"#26282C",
+       M4.translation(K.x-0.09,K.z+0.04,K.y-K.r*0.28));
+     sk.lada(0.03,K.r*0.46,0.05,"#26282C",
+       M4.translation(K.x-0.09,K.z+K.r*0.21,K.y));
+   }
+   lagg(sk,null);}
+
+  /* ── MOTSÄGELSE 5: glasade rum bakom sargen ───────────────────────
+     `IMG_0179`: bakom sargen finns upphöjda träbänkar i nivåer OCH flera
+     glasade rum/fönsterpartier. Läktarens nivåer fanns redan; de glasade
+     partierna gjorde det inte. De sitter längst bak, ovanför översta
+     däcket, med ram och mittpost. Antal och längder är `[ASSUMPTION]` —
+     indexet säger "flera", inte hur många. ── */
+  /* KORTÄNDANS LÄKTARE med sina två trappor och glasbandet ovanför —
+     ridhus-inne-01. Stegen löper längs kortsidan och stiger mot väggen. */
+  {const K=R.kortanda;
+   if(K){
+    const gl=new Bygge(), br=K.x1-K.x0, xm=(K.x0+K.x1)/2;
+    const SO=K.sockelH||0;
+    if(SO>0)                                    // sockeln blocket står på
+      gl.lada(br,SO,K.y1-K.y0,"#B9A886",
+        M4.translation(xm,SO/2,(K.y0+K.y1)/2));
+    for(let i=0;i<K.steg;i++){
+      const z=K.y1-i*K.stegD-K.stegD/2, y=SO+K.stegH*(i+1);
+      gl.lada(br,0.08,K.stegD-0.05,K.bank,M4.translation(xm,y,z));   // sittplanka
+      gl.lada(br,K.stegH,0.06,K.bankSatt,
+        M4.translation(xm,y-K.stegH/2,z+K.stegD/2));                    // sättsteg
+    }
+    /* De två trapporna upp, med mörka träräcken. */
+    const H=SO+K.steg*K.stegH;
+    for(const tx of K.trappor){
+      for(let i=0;i<K.steg;i++)
+        gl.lada(K.trappB,0.08,K.stegD-0.05,"#CDBB98",
+          M4.translation(tx,SO+K.stegH*(i+1),K.y1-i*K.stegD-K.stegD/2));
+      for(const dx of [-K.trappB/2,K.trappB/2])
+        gl.lada(0.08,0.85,K.steg*K.stegD,"#5A4232",
+          M4.mul(M4.translation(tx+dx,H*0.55+0.42,(K.y0+K.y1)/2),
+                 M4.rotX(Math.atan2(H,K.steg*K.stegD))));
+    }
+    /* Glasbandet ovanför blocket: mörka träkarmar, ljus ruta. */
+    const gz=H+K.glasOver;
+    /* Bandet BRYTS av trapporna — se noten i site.js. Segmenten räknas ur
+       samma `trappor`-tal som trapporna byggs av, så de inte kan glida
+       isär. Mellan dem står den vita väggen med klockan. */
+    const brytn=[...(K.trappor||[])].sort((a,b)=>a-b);
+    const seg=[]; let sx=K.x0;
+    for(const t of brytn){
+      if(t-K.trappB/2-sx>0.3) seg.push([sx,t-K.trappB/2]);
+      sx=Math.max(sx,t+K.trappB/2);
+    }
+    if(K.x1-sx>0.3) seg.push([sx,K.x1]);
+    /* Bandet ska läsa som RUM bakom glas, inte som en platt mörk remsa.
+       Tre saker gör skillnaden, alla synliga i `-01`: en mörk reveal en bit
+       BAKOM glaset så rutan får djup, poster och karmar som står PROUD av
+       glaset, och att rummen bakom är olika ljusa — några upplysta, några
+       mörka. */
+    for(const [a,bx] of seg){
+      const w=bx-a, m=(a+bx)/2;
+      const n=Math.max(1,Math.round(w/(K.glasPost||1.9)));
+      /* Mörk reveal 0,45 m bakom glaslivet = rummets djup. */
+      gl.lada(w,K.glasH,0.10,"#22262B",M4.translation(m,gz+K.glasH/2,K.y0-0.45));
+      /* Rutorna, varannan upplyst. */
+      for(let i=0;i<n;i++){
+        const rw=w/n, rx=a+rw*(i+0.5);
+        const lyst=(i%2===0);
+        gl.lada(rw-0.13,K.glasH-0.16,0.05,lyst?"#E8EFE6":"#7E8E96",
+          M4.translation(rx,gz+K.glasH/2,K.y0-0.30));
+      }
+      gl.panel(w,K.glasH,"#C6D8E0",M4.translation(m,gz+K.glasH/2,K.y0));
+      /* Karmar och poster står ut ur glaslivet. */
+      for(const yy of [gz,gz+K.glasH])
+        gl.lada(w,0.15,0.22,K.glasKarm,M4.translation(m,yy,K.y0+0.05));
+      for(let i=0;i<=n;i++)
+        gl.lada(0.14,K.glasH,0.22,K.glasKarm,
+          M4.translation(a+w*i/n,gz+K.glasH/2,K.y0+0.05));
+    }
+    /* KOMPASSROSEN på den vita väggen, vänster om vänstra trappan — `-01`.
+       Linjeritad, inte fylld: fyra korsade tunna stavar ger de åtta uddarna
+       och läser som en ritad stjärna på det här avståndet. */
+    /* Både stjärnan och klockan mäts FRÅN blockets ovankant (H), på den vita
+       väggen mellan bänkarna och glaset. Att mäta dem från glasbandet lade
+       stjärnan inne i glaset. */
+    if(K.stjarna){const ST=K.stjarna, sy=H+ST.overBlock;
+      for(let i=0;i<4;i++){
+        const v=i*Math.PI/4, lang=(i%2===0)?ST.r*2:ST.r*1.45;
+        gl.lada(lang,ST.tjocklek,0.04,ST.farg,
+          M4.mul(M4.translation(ST.x,sy,K.y1+0.05),M4.rotZ(v)));
+      }}
+    /* Klockan vid kortändan, mellan trapporna — `-01`. */
+    if(K.klocka){const KL=K.klocka, ky=H+KL.overBlock;
+      gl.cyl(KL.r,KL.r,0.07,"#2A2A2C",
+        M4.mul(M4.translation(KL.x,ky,K.y1+0.05),M4.rotX(Math.PI/2)),18);
+      gl.cyl(KL.r*0.84,KL.r*0.84,0.03,"#F4F1E8",
+        M4.mul(M4.translation(KL.x,ky,K.y1+0.09),M4.rotX(Math.PI/2)),18);}
+    lagg(gl,null);
+   }}
   /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.
      Utrymningsplanen visar en
      djup del med två trapphus, hiss och rum — inte en tre meter grund
@@ -1050,12 +1609,17 @@ function v3dRidhus(lagg,opp){
   lagg(hind,null);
   /* Sponsorväggen med speglar och banderoller. */
   const panel=new Bygge();
+  /* Speglarna hänger på PANELVÄGGEN, inte alltid på banans västkant — annars
+     blir de kvar på fel sida vid en spegling. `spegelSida` härleds ur
+     RIDHUSINNE.sidor. */
+  const spX=(R.spegelSida==="E") ? ba.x+ba.w+0.22 : ba.x-0.22;
+  const spD=(R.spegelSida==="E") ? 0.02 : -0.02;
   for(const sp of R.speglar){                       // speglar i träram
-    panel.lada(0.08,1.9,sp.b,"#8E969E",M4.translation(ba.x-0.22,2.25,sp.y));
-    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(ba.x-0.24,3.27,sp.y));
-    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(ba.x-0.24,1.23,sp.y));
+    panel.lada(0.08,1.9,sp.b,"#8E969E",M4.translation(spX,2.25,sp.y));
+    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(spX+spD,3.27,sp.y));
+    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(spX+spD,1.23,sp.y));
     for(const d of [-1,1])
-      panel.lada(0.11,2.18,0.12,"#7A5636",M4.translation(ba.x-0.24,2.25,sp.y+d*(sp.b/2+0.06)));
+      panel.lada(0.11,2.18,0.12,"#7A5636",M4.translation(spX+spD,2.25,sp.y+d*(sp.b/2+0.06)));
     panel.lada(0.06,1.9,0.05,"#7A5636",M4.translation(ba.x-0.26,2.25,sp.y));
   }
   panel.lada(0.12,0.9,R.langd*0.8,"#6B4A34",M4.translation(ba.x-0.24,3.7,R.langd/2));
@@ -1067,11 +1631,18 @@ function v3dRidhus(lagg,opp){
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.skyltar||[])[R.skyltar.indexOf(s)]
       ||v3dEtikettTex(s.text)});
   }
-  /* Dressyrbokstäverna på sargen. Banans A ska stå vid sargporten,
-     som nu sitter i norra kortsidan — hela bokstavsringen vrids
-     därför 180° (en vridning bevarar varvriktningen A-K-V-E-...). */
+  /* Dressyrbokstäverna på sargen, rakt ur DRESSYRBOKSTAVER.
+
+     Här låg tidigare en 180°-vridning, `lx=20-bo.x`, med motiveringen att
+     A ska stå vid sargporten. Motiveringen var riktig men låg på fel
+     ställe: bokstävernas placering är ett faktum om banan, inte om hur
+     den ritas, och en vridning i renderaren syns inte för
+     kollisionen, kartan eller den som läser tabellen. Vridningen ligger
+     nu i tabellen (`src/data.js`), och renderaren läser den som den är.
+     Var den låg på två ställen samtidigt hamnade E på västra långsidan,
+     där det bara finns 0,6 m bakom sargen — se motsägelse 4. */
   for(const bo of DRESSYRBOKSTAVER){
-    const lx=20-bo.x, ly=60-bo.y;
+    const lx=bo.x, ly=bo.y;
     const bx=ba.x+lx, bz=ba.y+ly;
     let mat;
     if(lx===0)      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));
@@ -1520,15 +2091,15 @@ function ritaVandring3D(){
         v3dFigur({x:p.x,z:p.y,rikt:p.rikt===undefined?2.1:p.rikt,
           fas:(VD.tid*0.5+p.x*0.3)%1,jacka:p.farg,hjalm:false});
     }else if(G.scen==="stallinne"){
-      const S=STALLINNE, vx=S.bredd/2;
-      for(const sida of["W","E"]){                 // hästhuvuden över boxdörrarna
-        const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
+      const S=STALLINNE;
+      for(const rad2 of S.rader){                  // hästhuvuden över boxdörrarna
+        const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2);
         for(let i=0;i<rad.length;i++){
-          const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
-          if(y1>S.klubbY)break;
+          const my=boxY(i);
+          if(my+S.boxB/2>S.klubbY)break;
           const h=boxHast(rad[i]); if(!h)continue;
-          const my=(y0+y1)/2, ut=sida==="W"?-1:1;
-          const nick=Math.sin(VD.tid*0.9+i*1.7+(sida==="E"?2:0))*0.06;
+          const ut=rad2.vetter;
+          const nick=Math.sin(VD.tid*0.9+i*1.7+(ut>0?2:0))*0.06;
           const m=M4.mul(M4.mul(M4.translation(fx+ut*0.22,1.62+nick*0.4,my),
             M4.rotY(ut>0?-Math.PI/2:Math.PI/2)),M4.rotZ(-0.55));
           GL.rita(S3.del.huvud,m,{ton:h.farg});
@@ -1549,10 +2120,10 @@ function ritaVandring3D(){
         v3dFigur({x:S.ridlarare.pos[0],z:S.ridlarare.pos[1],rikt:Math.PI,
           fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
       for(const f of stallFolk()){
-        const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
-        if(fy>S.klubbY-1)continue;
-        const fx2=f.sida==="W"?vx-S.ganghalva+0.6:vx+S.ganghalva-0.6;
-        v3dFigur({x:fx2,z:fy,rikt:f.sida==="W"?-Math.PI/2:Math.PI/2,
+        const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix);
+        if(!rad||fy>S.klubbY-1)continue;
+        const fx2=boxFrontX(rad)+rad.vetter*0.6;
+        v3dFigur({x:fx2,z:fy,rikt:rad.vetter>0?Math.PI/2:-Math.PI/2,
           fas:(VD.tid*0.4+f.ix)%1,rorlig:false,jacka:f.farg,hjalm:false});
       }
     }

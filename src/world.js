@@ -275,10 +275,21 @@ function vandringKollision(nx,ny,r){
     [nx,ny]=kollideraSeg(nx,ny,r,R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x+ba.w,ba.y);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x,ba.y+ba.h);
-    [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
-    // läktaren och domarbåset är solida
-    [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:R.laktare.y0,
-      w:R.bredd-R.laktare.x0,h:R.laktare.y1-R.laktare.y0});
+    /* Östra långsidan i två stycken: grinden mot hästgången är gapet.
+       Utan den går det inte att leda hästen mellan banan och gången, och
+       vägsökningen hittar ingen väg dit — det var precis vad den sa. */
+    {const gr=R.sargGrind;
+     if(gr){
+       [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,gr.y0);
+       [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,gr.y1,ba.x+ba.w,ba.y+ba.h);
+     }else{
+       [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
+     }}
+    // läktaren och domarbåset är solida. Läktaren i sektioner: hästgången
+    // går igenom den, och ett obrutet block här stänger gången.
+    for(const sek of laktarSektioner(R.laktare))
+      [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
+        w:R.bredd-R.laktare.x0,h:sek.y1-sek.y0});
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
     /* Entréhallens möbler och skiljeväggar. De ritades men gick att gå
@@ -286,18 +297,32 @@ function vandringKollision(nx,ny,r){
        som var rum och vad som var utsmyckning. */
     for(const m of (R.hallMobler||[])) [nx,ny]=kollideraRekt(nx,ny,r,m.rekt);
   }else{ // stallinne
-    const S=STALLINNE, vx=S.bredd/2;
+    /* Dubbelstallet går inte att uttrycka som ett intervall. Förut kläm-
+       des spelaren in mellan två boxfronter, vilket bara fungerar när det
+       finns exakt en gång. Nu frågas listan över gångytor: ett steg gäller
+       om det landar i någon av dem, annars provas axlarna var för sig så
+       att man glider längs en boxfront i stället för att fastna i den. */
+    const S=STALLINNE;
     nx=clamp(nx,0.5,S.bredd-0.5); ny=clamp(ny,0.5,S.langd-0.5);
-    if(ny>S.serviceY&&ny<S.klubbY-1.4){         // stallgången mellan boxfronterna
-      nx=clamp(nx,vx-S.ganghalva+r,vx+S.ganghalva-r);
-    }else{
-      for(const rum of S.rum)     [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
-      for(const rum of S.service) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
+    let bast=null, bastD=Infinity;
+    for(const g of S.gangytor){
+      /* En gång smalare än figuren skulle annars bli oframkomlig; då
+         klamras hon till mitten i stället för att spärras ute. */
+      const kx=clamp(nx, Math.min(g.x+r, g.x+g.w/2), Math.max(g.x+g.w-r, g.x+g.w/2));
+      const ky=clamp(ny, Math.min(g.y+r, g.y+g.h/2), Math.max(g.y+g.h-r, g.y+g.h/2));
+      const d=(kx-nx)*(kx-nx)+(ky-ny)*(ky-ny);
+      if(d<bastD){ bastD=d; bast=[kx,ky]; }
     }
-    for(const tv of S.tvarvaggar){               // tvärväggar med dörrgap
-      [nx,ny]=kollideraSeg(nx,ny,r,0,tv.y,vx-tv.gap/2,tv.y);
-      [nx,ny]=kollideraSeg(nx,ny,r,vx+tv.gap/2,tv.y,S.bredd,tv.y);
-    }
+    /* Ligger steget redan i en gångyta är avståndet noll och punkten
+       lämnas orörd. Annars glider den till närmaste yta — vilket både ger
+       en mjuk glidning längs en boxfront och säger rätt sak till
+       vägsökningens rutnät, som frågar samma funktion. */
+    if(bast) [nx,ny]=bast;
+    /* Tvärväggarna vid klubb- och servicedelen: solida utom där en gång
+       passerar. Gångytorna släpper redan igenom där, så det räcker att
+       hålla kvar spelaren i dem. */
+    for(const rum of S.rum)     [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
+    for(const rum of S.service) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
   }
   return [nx,ny];
 }
@@ -605,14 +630,27 @@ function interagera(){
   if(e&&!VD.ePrev&&bast&&!overlayUppe()) bast.gor();
   VD.ePrev=e;
 }
+/* Boxarnas mitt-y, med tvärkorridoren inhoppad. Boxarna i en länga är
+   inte en obruten rad längre: korridoren mitt på bryter dem, så plats i
+   och plats efter korridoren skiljer sig med korridorens djup. */
+function boxY(i){
+  const S=STALLINNE, fore=Math.floor((S.tvarGang.y0-S.boxStartY)/S.boxB);
+  const y0=S.boxStartY+i*S.boxB+(i>=fore?(S.tvarGang.y1-S.tvarGang.y0):0);
+  return y0+S.boxB/2;
+}
+/* Boxfrontens x för en länga: radens kant mot sin gång. */
+function boxFrontX(rad){
+  /* Radens djup kommer ur planens uppmätta andel och skiljer sig mellan
+     längorna — de yttre är djupare än de två i mitten. */
+  return rad.vetter>0 ? rad.x0+rad.djup : rad.x0;
+}
 function hittaBox(hastId){
   const S=STALLINNE;
-  for(const sida of ["W","E"]){
-    const rad=S.boxar[sida];
-    for(let i=0;i<rad.length;i++) if(rad[i]===hastId){
-      const y=S.boxStartY+i*S.boxB+S.boxB/2;
-      const x=sida==="W"?S.bredd/2-S.ganghalva:S.bredd/2+S.ganghalva;
-      return {sida,i,y,dorr:[x,y]};
+  for(const rad of S.rader){
+    const lista=S.boxar[rad.id]||[];
+    for(let i=0;i<lista.length;i++) if(lista[i]===hastId){
+      const y=boxY(i);
+      return {sida:rad.id, rad, i, y, dorr:[boxFrontX(rad), y]};
     }
   }
   return null;
@@ -919,6 +957,15 @@ function ritaProp3D(k,p){
         cx.strokeStyle="#B9B7B0";cx.lineWidth=1;
         cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.45,sz*0.34,sz*0.28,0,0,Math.PI*2);cx.stroke();}
       break;}
+    case "torvbalar":{ // vitplastade torvpaket, staplade tre högt
+      for(let i=0;i<2;i++)for(let k2=0;k2<3;k2++){
+        const B=billboard(k,x+i*1.30,y+0.39,0.62+k2*0.62); if(!B)continue;
+        const {s,sz}=B;
+        cx.fillStyle="#EDEBE6";
+        cx.fillRect(s[0]-sz*0.5,s[1]-sz*0.5,sz*1.0,sz*0.5);
+        cx.fillStyle="#B03028";
+        cx.fillRect(s[0]-sz*0.5,s[1]-sz*0.34,sz*1.0,sz*0.16);}
+      break;}
     case "grushog":{ const B=billboard(k,x,y,1.4); if(!B)return;
       const {s,sz}=B; cx.fillStyle="#7C7870";
       cx.beginPath();cx.moveTo(s[0]-sz*0.8,s[1]);cx.quadraticCurveTo(s[0],s[1]-sz*1.0,s[0]+sz*0.8,s[1]);
@@ -1128,7 +1175,7 @@ function ritaGard3D(){
   }
   for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++){
     const a=st.p[i], c=st.p[i+1];
-    items.push({d:-avst2([(a[0]+c[0])/2,(a[1]+c[1])/2]), rita(){ritaStaket3D(k,a,c,st.typ);}});
+    items.push({d:-avst2([(a[0]+c[0])/2,(a[1]+c[1])/2]), rita(){ritaStaket3D(k,a,c,st.typ,st.sandkant);}});
   }
   for(const t of ANL.trad) items.push({d:-avst2(t), rita(){ritaTrad3D(k,t);}});
   for(const p of ANL.props) items.push({d:-avst2(p.pos), rita(){ritaProp3D(k,p);}});
@@ -1168,10 +1215,10 @@ function ritaRegn(){
   }
   cx.stroke();
 }
-function ritaStaket3D(k,a,c,typ){
+function ritaStaket3D(k,a,c,typ,sandkant){
   const L=Math.hypot(c[0]-a[0],c[1]-a[1]); if(L<0.01)return;
-  const n=Math.max(1,Math.round(L/2.6));
-  const hj=typ==="tra"?1.25:typ==="rail"?0.85:1.0;
+  const n=Math.max(1,Math.round(L/BANOMRADE.staket.stolpDelning));
+  const hj=typ==="tra"?BANOMRADE.staket.stolpH:typ==="rail"?0.85:1.0;
   const farg=typ==="tra"?VCOL.staketTra:typ==="rail"?VCOL.staketRail:VCOL.staketEl;
   for(let i=0;i<=n;i++){
     const t=i/n, px=a[0]+(c[0]-a[0])*t, py=a[1]+(c[1]-a[1])*t;
@@ -1181,8 +1228,18 @@ function ritaStaket3D(k,a,c,typ){
     cx.strokeStyle=farg; cx.lineWidth=Math.max(1,k.f*0.06/p0.d);
     cx.beginPath();cx.moveTo(s0[0],s0[1]);cx.lineTo(s1[0],s1[1]);cx.stroke();
   }
-  ritaLinje3D(k,[a[0],a[1],hj],[c[0],c[1],hj],farg,typ==="el"?1:2.2);
-  if(typ!=="el")ritaLinje3D(k,[a[0],a[1],hj*0.55],[c[0],c[1],hj*0.55],farg,typ==="rail"?1.6:2);
+  if(typ==="tra"){
+    /* Toppregel, eltråd och (vid sand) syllen — samma sanning som 3D-vyn. */
+    const S=BANOMRADE.staket;
+    ritaLinje3D(k,[a[0],a[1],S.toppregel.z],[c[0],c[1],S.toppregel.z],farg,2.4);
+    for(const y of S.tradar)
+      ritaLinje3D(k,[a[0],a[1],y],[c[0],c[1],y],"#3A362E",1);
+    if(sandkant)
+      ritaLinje3D(k,[a[0],a[1],S.sandsyll.z],[c[0],c[1],S.sandsyll.z],"#9C8A6E",3);
+  }else{
+    ritaLinje3D(k,[a[0],a[1],hj],[c[0],c[1],hj],farg,typ==="el"?1:2.2);
+    if(typ!=="el")ritaLinje3D(k,[a[0],a[1],hj*0.55],[c[0],c[1],hj*0.55],farg,1.6);
+  }
 }
 function ritaTrad3D(k,t){
   const p=tillKam(k,t[0],t[1],0); if(p.d<K3.nara)return;
@@ -1394,32 +1451,45 @@ function ritaStall2D(){
   cx.fillStyle="#14171B";cx.fillRect(0,0,CW,CH);
   const[fa,fb]=ss(0,S.langd);
   cx.fillStyle=S.golv;cx.fillRect(fa,fb,S.bredd*s,S.langd*s);
-  const vx=S.bredd/2;
-  const[ga]=ss(vx-S.ganghalva,0);
+  /* Gångytorna i ljusare golv: två gångar, tvärkorridoren och hallarna. */
   cx.fillStyle=S.gangGolv;
-  cx.fillRect(ga,fb,S.ganghalva*2*s,S.langd*s);
-  for(const tv of S.tvarvaggar){
-    const[a,b]=ss(0,tv.y);
-    cx.strokeStyle="#4A4438";cx.lineWidth=2;
-    cx.beginPath();cx.moveTo(a,b);cx.lineTo(a+(vx-tv.gap/2)*s,b);
-    cx.moveTo(a+(vx+tv.gap/2)*s,b);cx.lineTo(a+S.bredd*s,b);cx.stroke();
+  for(const g of S.gangytor){
+    const[a,b]=ss(g.x,g.y+g.h);
+    cx.fillRect(a,b,g.w*s,g.h*s);
   }
-  for(const sida of["W","E"]){
-    const rad=S.boxar[sida];
-    for(let i=0;i<rad.length;i++){
-      const y0=S.boxStartY+i*S.boxB;
+  /* Tvärväggarna är solida utom där en gång går igenom. */
+  for(const tv of S.tvarvaggar){
+    cx.strokeStyle="#4A4438";cx.lineWidth=2;
+    let x=0;
+    const hal=Object.values(S.gangar).sort((p,q)=>p.x0-q.x0);
+    for(const h of hal){
+      const[a,b]=ss(x,tv.y), [a2]=ss(h.x0,tv.y);
+      cx.beginPath();cx.moveTo(a,b);cx.lineTo(a2,b);cx.stroke();
+      x=h.x1;
+    }
+    const[a,b]=ss(x,tv.y), [a2]=ss(S.bredd,tv.y);
+    cx.beginPath();cx.moveTo(a,b);cx.lineTo(a2,b);cx.stroke();
+  }
+  for(const rad of S.rader){
+    const lista=S.boxar[rad.id]||[];
+    for(let i=0;i<lista.length;i++){
+      const yc=boxY(i), y0=yc-S.boxB/2;
       if(y0+S.boxB>S.klubbY)break;
-      const bx=sida==="W"?vx-S.ganghalva-S.boxDjup:vx+S.ganghalva;
-      const[a,b]=ss(bx,y0+S.boxB);
+      const[a,b]=ss(rad.x0,y0+S.boxB);
       cx.strokeStyle="#4A4438";cx.lineWidth=1.5;
-      cx.strokeRect(a,b,S.boxDjup*s,S.boxB*s);
-      const h=boxHast(rad[i]);
+      cx.strokeRect(a,b,rad.djup*s,S.boxB*s);
+      const h=boxHast(lista[i]);
       if(h){cx.fillStyle=h.farg;
-        cx.beginPath();cx.ellipse(a+S.boxDjup*s/2,b+S.boxB*s/2,s*1.1,s*0.5,sida==="W"?0.4:-0.4,0,Math.PI*2);cx.fill();
+        cx.beginPath();
+        cx.ellipse(a+rad.djup*s/2,b+S.boxB*s/2,s*1.1,s*0.5,
+          rad.vetter>0?0.4:-0.4,0,Math.PI*2);cx.fill();
         if(s>6){cx.fillStyle=h.spelbar?"#E6E4DE":"#8E877A";
           cx.font=`500 ${Math.max(8,s*0.6)}px "IBM Plex Mono",monospace`;
-          cx.textAlign=sida==="W"?"right":"left";
-          cx.fillText(h.namn,sida==="W"?a-6:a+S.boxDjup*s+6,b+S.boxB*s/2+3);}}
+          /* Namnet skrivs ut mot gången, alltså åt det håll boxdörren
+             öppnar — annars hamnar det inne i grannboxen. */
+          cx.textAlign=rad.vetter>0?"left":"right";
+          cx.fillText(h.namn,
+            rad.vetter>0?a+rad.djup*s+6:a-6, b+S.boxB*s/2+3);}}
     }
   }
   for(const grupp of [S.rum,S.service]) for(const r of grupp){
@@ -1443,9 +1513,9 @@ function ritaStall2D(){
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
   for(const f of stallFolk()){
-    const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
-    if(fy>S.klubbY-1)continue;
-    const fx2=f.sida==="W"?S.bredd/2-S.ganghalva+0.55:S.bredd/2+S.ganghalva-0.55;
+    const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix);
+    if(!rad||fy>S.klubbY-1)continue;
+    const fx2=boxFrontX(rad)+rad.vetter*0.55;
     const[a,b]=ss(fx2,fy);
     cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.35),0,Math.PI*2);cx.fill();
   }
@@ -1462,11 +1532,12 @@ function ritaStall3D(){
   const items=[];
   // gångens marksten
   items.push({d:-1e9, rita(){
-    ritaPoly3D(k,[[vx-S.ganghalva,0,0.01],[vx+S.ganghalva,0,0.01],
-      [vx+S.ganghalva,S.langd,0.01],[vx-S.ganghalva,S.langd,0.01]],
-      S.gangGolv,null);
-    for(let y=2;y<S.langd;y+=2)
-      ritaLinje3D(k,[vx-S.ganghalva,y,0.02],[vx+S.ganghalva,y,0.02],"rgba(0,0,0,.10)",1);
+    for(const g of S.gangytor){
+      ritaPoly3D(k,[[g.x,g.y,0.01],[g.x+g.w,g.y,0.01],
+        [g.x+g.w,g.y+g.h,0.01],[g.x,g.y+g.h,0.01]],S.gangGolv,null);
+      for(let y=g.y+2;y<g.y+g.h;y+=2)
+        ritaLinje3D(k,[g.x,y,0.02],[g.x+g.w,y,0.02],"rgba(0,0,0,.10)",1);
+    }
   }});
   // ytterväggar (klubbdelen pärlspont, resten stallvitt)
   const vagg=(p0,p1,farg)=>({d:-avst2([(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]), rita(){
@@ -1481,28 +1552,37 @@ function ritaStall3D(){
   for(const dy of[0,S.langd]) items.push({d:-avst2([vx,dy]), rita(){
     ritaPoly3D(k,[[vx-1.4,dy,0],[vx+1.4,dy,0],[vx+1.4,dy,2.8],[vx-1.4,dy,2.8]],
       "#5A626D",VCOL.knut);}});
-  // tvärväggar med dörrgap (branddörren mot klubbdelen)
+  /* Tvärväggar med en dörröppning per gång. Med två gångar blir väggen
+     tre stycken i stället för två. */
+  const halOrd=Object.values(S.gangar).sort((a,b)=>a.x0-b.x0);
   for(const tv of S.tvarvaggar){
-    for(const [x0,x1] of [[0,vx-tv.gap/2],[vx+tv.gap/2,S.bredd]]){
+    const bitar=[]; let x=0;
+    for(const h of halOrd){ bitar.push([x,h.x0]); x=h.x1; }
+    bitar.push([x,S.bredd]);
+    for(const [x0,x1] of bitar){
+      if(x1-x0<0.05)continue;
       items.push({d:-avst2([(x0+x1)/2,tv.y]), rita(){
         ritaPoly3D(k,[[x0,tv.y,0],[x1,tv.y,0],[x1,tv.y,S.tak],[x0,tv.y,S.tak]],
           fargSkala(tv.brand?VCOL.parlspont:S.vagg,0.88),null);}});
     }
-    items.push({d:-avst2([vx,tv.y]), rita(){
-      // dörrkarm + öppen grå branddörr
-      ritaPoly3D(k,[[vx-tv.gap/2,tv.y,2.5],[vx+tv.gap/2,tv.y,2.5],
-        [vx+tv.gap/2,tv.y,S.tak],[vx-tv.gap/2,tv.y,S.tak]],
-        fargSkala(tv.brand?VCOL.parlspont:S.vagg,0.85),null);
-      if(tv.brand)ritaText3D(k,vx,tv.y,2.75,"STALLET",1.4,"#8E877A");
-    }});
+    for(const h of halOrd){
+      const hm=(h.x0+h.x1)/2;
+      items.push({d:-avst2([hm,tv.y]), rita(){
+        // dörrkarm + öppen grå branddörr över öppningen
+        ritaPoly3D(k,[[h.x0,tv.y,2.5],[h.x1,tv.y,2.5],
+          [h.x1,tv.y,S.tak],[h.x0,tv.y,S.tak]],
+          fargSkala(tv.brand?VCOL.parlspont:S.vagg,0.85),null);
+        if(tv.brand&&h===halOrd[0])ritaText3D(k,hm,tv.y,2.75,"STALLET",1.4,"#8E877A");
+      }});
+    }
   }
   // boxfronter
-  for(const sida of["W","E"]){
-    const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
+  for(const rad2 of S.rader){
+    const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
     for(let i=0;i<rad.length;i++){
-      const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
+      const my=boxY(i), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
-      const h=boxHast(rad[i]), my=(y0+y1)/2;
+      const h=boxHast(rad[i]);
       items.push({d:-avst2([fx,my]), rita(){
         // antracit komposit nedtill, galvad ram
         ritaPoly3D(k,[[fx,y0,0],[fx,y1,0],[fx,y1,1.35],[fx,y0,1.35]],
@@ -1593,9 +1673,9 @@ function ritaStall3D(){
   }
   // elever som sköter sina hästar i gången
   for(const f of stallFolk()){
-    const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
-    if(fy>S.klubbY-1)continue;
-    const fx2=f.sida==="W"?vx-S.ganghalva+0.55:vx+S.ganghalva-0.55;
+    const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix);
+    if(!rad||fy>S.klubbY-1)continue;
+    const fx2=boxFrontX(rad)+rad.vetter*0.55;
     items.push({d:-avst2([fx2,fy]), rita(){ritaPerson3D(k,fx2,fy,{farg:f.farg,fasel:f.ix,rorlig:true});}});
   }
   if(G.leder) items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
@@ -1628,8 +1708,9 @@ function ritaPerson3D(k,x,y,opts){
 function stallFolk(){
   const s=((G.seed||1)*29+7)>>>0;
   const farger=["#5C4A6E","#7A3E36","#3E5C74","#6B5E3C"];
-  return [{sida:"W", ix:(s%7)+1, farg:farger[s%4]},
-          {sida:"E", ix:((s>>3)%6)+2, farg:farger[(s+1)%4]}];
+  /* Eleverna står i den gång spelets hästar bor i, alltså gång A. */
+  return [{rad:"W",  ix:(s%7)+1,     farg:farger[s%4]},
+          {rad:"MA", ix:((s>>3)%6)+2, farg:farger[(s+1)%4]}];
 }
 function gardsFolk(){
   const t=VD.tid*0.55, span=42;
@@ -1662,8 +1743,11 @@ function ritaRidhus2D(){
   cx.beginPath();cx.moveTo(pa,py);cx.lineTo(pb,py);cx.stroke();
   // läktaren
   cx.fillStyle="#7A6248";
+  for(const sek of laktarSektioner(R.laktare)){
+    const[sa,sb]=ss(R.laktare.x0,sek.y1);
+    cx.fillRect(sa,sb,(R.bredd-R.laktare.x0)*s,(sek.y1-sek.y0)*s);
+  }
   const[la,lb]=ss(R.laktare.x0,R.laktare.y1);
-  cx.fillRect(la,lb,(R.bredd-R.laktare.x0)*s,(R.laktare.y1-R.laktare.y0)*s);
   if(s>4){cx.save();cx.translate(la+(R.bredd-R.laktare.x0)*s/2,lb+(R.laktare.y1-R.laktare.y0)*s/2);
     cx.rotate(-Math.PI/2);cx.fillStyle="#2A241C";
     cx.font=`500 ${Math.max(9,s*1.6)}px "IBM Plex Mono",monospace`;cx.textAlign="center";
@@ -1721,7 +1805,11 @@ function ritaRidhus3D(){
   sarg(R.port.x1,ba.y+ba.h, ba.x+ba.w,ba.y+ba.h);
   sarg(ba.x,ba.y, ba.x+ba.w,ba.y);
   sarg(ba.x,ba.y, ba.x,ba.y+ba.h);
-  sarg(ba.x+ba.w,ba.y, ba.x+ba.w,ba.y+ba.h);
+  /* Östra långsidan delad av grinden mot hästgången. */
+  {const gr=R.sargGrind;
+   if(gr){ sarg(ba.x+ba.w,ba.y, ba.x+ba.w,gr.y0);
+           sarg(ba.x+ba.w,gr.y1, ba.x+ba.w,ba.y+ba.h); }
+   else sarg(ba.x+ba.w,ba.y, ba.x+ba.w,ba.y+ba.h);}
   // ytterväggar: vit panel med lodräta läkt
   const yttervagg=(p0,p1,ljus)=>{
     items.push({d:-avst2([(p0[0]+p1[0])/2,(p0[1]+p1[1])/2])-2e6, rita(){
@@ -1762,12 +1850,13 @@ function ritaRidhus3D(){
   }});
   // läktaren i öster: tre trappsteg i plywood
   const lk=R.laktare;
+  for(const sek of laktarSektioner(lk))
   for(let i2=0;i2<lk.steg;i2++){
-    const x0=lk.x0+i2*lk.stegD, z1=(i2+1)*lk.stegH;
+    const x0=lk.x0+i2*lk.stegD, z1=(i2+1)*lk.stegH, y0=sek.y0, y1=sek.y1;
     items.push({d:-avst2([x0,VD.py])-5e5+i2, rita(){
-      ritaPoly3D(k,[[x0,lk.y0,z1-lk.stegH],[x0,lk.y1,z1-lk.stegH],[x0,lk.y1,z1],[x0,lk.y0,z1]],
+      ritaPoly3D(k,[[x0,y0,z1-lk.stegH],[x0,y1,z1-lk.stegH],[x0,y1,z1],[x0,y0,z1]],
         fargSkala("#8A6F50",0.85),null);   // sättsteg
-      ritaPoly3D(k,[[x0,lk.y0,z1],[x0,lk.y1,z1],[x0+lk.stegD,lk.y1,z1],[x0+lk.stegD,lk.y0,z1]],
+      ritaPoly3D(k,[[x0,y0,z1],[x0,y1,z1],[x0+lk.stegD,y1,z1],[x0+lk.stegD,y0,z1]],
         "#9A7C58",null);                   // planet
     }});
   }
@@ -1882,7 +1971,7 @@ function ritaVandring(){
            :"Påskhoppet rids i ridhuset — in genom durkplåtdörrarna.")
          :"Dressyren rids på uteridbanan i väster. Domaren sitter i kuren."]
     : [`Led ${HORSES[G.hastId].namn} till lektionen`,
-       G.scen==="stallinne"?"Ut genom stalldörren och över gräsgården."
+       G.scen==="stallinne"?"Ut genom stalldörren och över gården."
        :G.scen==="ridhusinne"?"Fram till sargporten vid A — sitt upp där."
        :"Ridhuset genom durkplåtdörrarna — eller uteridbanan bortom hagarna. Skogsstigen (uteritt) börjar vid åkerkanten i nordväst."];
   visaUppgift(mål[0],mål[1]);
