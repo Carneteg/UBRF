@@ -410,8 +410,17 @@ do
 	--[[ C-ändans identitet i Roblox. Webben har haft vit vägg, klocka och
 		kompassros sedan cfdb89a; Roblox byggde bara steg, trappor och glas.
 		Klockan mäts som RELATION — mellan trapporna — inte mot ett tal. ]]
-	check("kortändans vita vägg byggdes mellan bänkar och glas",
-		raknaNamn("Kortändans vita vägg") == 1)
+	do
+		local vv = forstaNamn("Kortändans vita vägg")
+		check("kortändans vita vägg byggdes mellan bänkar och glas",
+			vv ~= nil and sammaFarg(vv.Color, UBRFKomplex.ridhus.hallvagg),
+			vv and string.format("del rgb(%d,%d,%d) mot data rgb(%d,%d,%d)", vv.Color.R*255, vv.Color.G*255, vv.Color.B*255, UBRFKomplex.ridhus.hallvagg.R*255, UBRFKomplex.ridhus.hallvagg.G*255, UBRFKomplex.ridhus.hallvagg.B*255) or "SAKNAS")
+		local bk = forstaNamn("Kortändans steg")
+		check("bänkarna läser den mätta bankfärgen, inte en egen",
+			bk ~= nil and sammaFarg(bk.Color, K.bank),
+			bk and string.format("rgb(%d,%d,%d)", bk.Color.R*255, bk.Color.G*255,
+				bk.Color.B*255) or "saknas")
+	end
 	check("kortändans klocka byggdes", raknaNamn("Kortändans klocka") == 1)
 	check("kompassrosen byggdes som linjeritad stjärna",
 		raknaNamn("Kompassros") == 4, raknaNamn("Kompassros") .. " stavar")

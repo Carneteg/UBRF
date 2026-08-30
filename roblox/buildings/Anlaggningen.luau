@@ -786,11 +786,15 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			BK.box(model, base, "Kortändans sockel", o.x + K.x0, 0, o.y + K.y0,
 				br, SO, K.y1 - K.y0, INRE.laktare, Enum.Material.WoodPlanks)
 		end
+		--[[ Bänkarna läser den MÄTTA `K.bank` (#86715B ur -01), inte
+			INRE.laktare. Webben hade #D8C7A4, ljus furu, vilket fotot
+			motsäger — och Roblox hade sin egen ton. Två sanningar om samma
+			bänk; nu delar de en. ]]
 		for i = 1, K.steg do
 			BK.box(model, base, "Kortändans steg " .. i,
 				o.x + K.x0, SO + (i - 1) * K.stegH,
 				o.y + K.y1 - i * K.stegD, br, K.stegH * i + 0.1, K.stegD,
-				INRE.laktare, Enum.Material.WoodPlanks)
+				K.bank or INRE.laktare, Enum.Material.WoodPlanks)
 		end
 		for i, tx in ipairs(K.trappor) do
 			BK.box(model, base, "Kortändans trappa " .. i,
@@ -811,7 +815,8 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			glaset uppåt räcker inte om gapet exponerar fel yta. ]]
 		BK.box(model, base, "Kortändans vita vägg", o.x + K.x0, H,
 			o.y + K.y0 - 0.16, br, K.glasOver, 0.14,
-			INRE.vagg, Enum.Material.Plaster).CanCollide = false
+			R.hallvagg or INRE.vagg,
+			Enum.Material.Plaster).CanCollide = false
 
 		-- Klockan MELLAN trapporna, och kompassrosen till vänster om dem.
 		if K.klocka then

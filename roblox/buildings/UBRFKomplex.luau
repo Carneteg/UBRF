@@ -1917,6 +1917,8 @@ return {
 			glasOver = 1.6,
 			glasPost = 1.9,
 			glasKarm = Color3.fromRGB(74, 59, 46),
+			bank = Color3.fromRGB(134, 113, 91),
+			bankSatt = Color3.fromRGB(111, 92, 73),
 			klocka = {
 				overBlock = 1.05,
 				r = 0.34,
@@ -2009,6 +2011,11 @@ return {
 		panel = Color3.fromRGB(118, 91, 89),
 		panelList = Color3.fromRGB(232, 223, 206),
 		sandFarg = Color3.fromRGB(111, 93, 77),
+		hallvagg = Color3.fromRGB(172, 169, 157),
+		takfarg = {
+			balk = Color3.fromRGB(92, 76, 69),
+			plat = Color3.fromRGB(94, 91, 94),
+		},
 		dorrar = {
 			{
 				id = "ut_o",

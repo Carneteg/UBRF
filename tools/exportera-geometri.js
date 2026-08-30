@@ -153,7 +153,8 @@ const ut = {
     klocka: RIDHUSINNE.klocka, skyltar: RIDHUSINNE.skyltar,
     basTak: RIDHUSINNE.basTak, sidor: RIDHUSINNE.sidor,
     panel: RIDHUSINNE.panel, panelList: RIDHUSINNE.panelList,
-    sandFarg: RIDHUSINNE.sandFarg,
+    sandFarg: RIDHUSINNE.sandFarg, hallvagg: RIDHUSINNE.hallvagg,
+    takfarg: RIDHUSINNE.takfarg,
     dorrar: RIDHUSINNE.dorrar,
   },
 };

@@ -1157,6 +1157,24 @@ const RIDHUSINNE = {
   bredd:RIDHUS_BREDD, langd:RIDHUS_LANGD, tak:6.2, entre:13,
   bana:{x:0.6, y:2, w:20, h:60}, sargH:1.35,
   vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#6F5D4D", gangFarg:"#8C8880",
+  /* HALLENS EGNA YTOR, alla MÄTTA i `ridhus-inne-01` och alla tidigare
+     literaler i renderaren — samma dolda-literal-mönster som sanden, silon
+     och sponsorskyltarna.
+
+       hallvagg   #ACA99D   den vita väggen vid kortändan (sd 27)
+       takfarg.balk #5C4C45 takstolarna
+       takfarg.plat #5E5B5E undertakets plåt (517 kpx)
+
+     VIKTIGT om taket: ridhusets takstolar är INTE varma som stallets
+     limträ. En värmemask på hela takzonen fann bara 35 kpx varma pixlar mot
+     517 kpx neutrala — balkarna läser mörkt gråbruna, nästan neutrala.
+     Spelet hade `#7A5C3E`, en varm mellanbrun, och undertaket `#3A3E44`,
+     en mörk blågrå. Båda drog åt fel håll.
+
+     Väggarna låg på rent `#FFFFFF` och renderades utfrätta. Vit är inte ett
+     mätt värde — samma sak som stallets väggar. */
+  hallvagg:"#ACA99D",
+  takfarg:{balk:"#5C4C45", plat:"#5E5B5E"},
   /* MOTSÄGELSE 1 ur DRIVE-SOURCE-INDEX (`IMG_0183`): långsidans övre
      väggyta är MÖRKRÖD/MAROON med horisontella detaljer, inte brun
      träpanel. Rättad 2026-08-30. Listen är den horisontella detaljen. */
@@ -1313,6 +1331,9 @@ const RIDHUSINNE = {
                1,6 m är `DERIVED` ur bildens proportioner. */
             trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:1.6,
             glasPost:1.9, glasKarm:"#4A3B2E",
+            /* Bänkarna MÄTTA i `-01`: #86715B, en varm mellanbrun. Spelet
+               hade #D8C7A4 — ljus furu, vilket fotot motsäger. */
+            bank:"#86715B", bankSatt:"#6F5C49",
             /* Klockan vid kortändan, MELLAN de två trapporna — x härleds ur
                `trappor` längre ner så att den följer dem. `-01` visar den på
                den vita väggen ovanför blocket. */

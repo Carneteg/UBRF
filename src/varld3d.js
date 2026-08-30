@@ -1187,19 +1187,19 @@ function v3dRidhus(lagg,opp){
   lagg(sarg,null);
   /* Ytterväggar, sadeltak och limträstolar. */
   const hall=new Bygge();
-  hall.lada(R.bredd,R.tak,0.3,"#FFFFFF",M4.translation(R.bredd/2,R.tak/2,-0.15));
-  hall.lada(R.bredd,R.tak,0.3,"#FFFFFF",M4.translation(R.bredd/2,R.tak/2,R.langd+0.15));
-  hall.lada(0.3,R.tak,R.langd,"#FFFFFF",M4.translation(-0.15,R.tak/2,R.langd/2));
-  hall.lada(0.3,R.tak,R.langd,"#FFFFFF",M4.translation(R.bredd+0.15,R.tak/2,R.langd/2));
+  hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,-0.15));
+  hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,R.langd+0.15));
+  hall.lada(0.3,R.tak,R.langd,R.hallvagg,M4.translation(-0.15,R.tak/2,R.langd/2));
+  hall.lada(0.3,R.tak,R.langd,R.hallvagg,M4.translation(R.bredd+0.15,R.tak/2,R.langd/2));
   const halvS=R.bredd/2, resn=2.8;
   const takL=Math.hypot(halvS,resn), takV=Math.atan2(resn,halvS);
   /* Takfallen lutar ned mot väggarna — samma teckenregel som utvändigt. */
   for(const s of [-1,1])
-    hall.lada(takL,0.18,R.langd+0.6,"#3A3E44",
+    hall.lada(takL,0.18,R.langd+0.6,R.takfarg.plat,
       M4.mul(M4.translation(R.bredd/2+s*halvS/2,R.tak+resn/2,R.langd/2),M4.rotZ(-s*takV)));
   for(let z=1;z<R.langd;z+=6){
-    hall.lada(R.bredd,0.26,0.24,"#7A5C3E",M4.translation(R.bredd/2,R.tak-0.2,z));
-    hall.lada(0.22,2.7,0.22,"#7A5C3E",M4.translation(R.bredd/2,R.tak+1.3,z));
+    hall.lada(R.bredd,0.26,0.24,R.takfarg.balk,M4.translation(R.bredd/2,R.tak-0.2,z));
+    hall.lada(0.22,2.7,0.22,R.takfarg.balk,M4.translation(R.bredd/2,R.tak+1.3,z));
   }
   /* ── MOTSÄGELSE 2 ur DRIVE-SOURCE-INDEX ──────────────────────────
      `IMG_0179` och `IMG_0183`: taket har stora träbalkar PLUS
@@ -1427,8 +1427,8 @@ function v3dRidhus(lagg,opp){
         M4.translation(xm,SO/2,(K.y0+K.y1)/2));
     for(let i=0;i<K.steg;i++){
       const z=K.y1-i*K.stegD-K.stegD/2, y=SO+K.stegH*(i+1);
-      gl.lada(br,0.08,K.stegD-0.05,"#D8C7A4",M4.translation(xm,y,z));   // sittplanka
-      gl.lada(br,K.stegH,0.06,"#C0AC88",
+      gl.lada(br,0.08,K.stegD-0.05,K.bank,M4.translation(xm,y,z));   // sittplanka
+      gl.lada(br,K.stegH,0.06,K.bankSatt,
         M4.translation(xm,y-K.stegH/2,z+K.stegD/2));                    // sättsteg
     }
     /* De två trapporna upp, med mörka träräcken. */

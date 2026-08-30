@@ -459,3 +459,39 @@ tidigare, och det här var dess dyraste form.
 De mäter nu relationer mot delad data: en sida, bara sitt stycke, rätt sida
 enligt `sidor.panel`, skyltarna innanför stycket, klockan mellan trapporna,
 rosen vänster om trapporna. Alla falsifierade genom att återinföra felet.
+
+---
+
+# Punkt 7, andra passet: hallens egna ytor
+
+Alla fyra var LITERALER i renderaren och lästes aldrig ur datan — samma
+mönster som sanden, silon, gårdsplanen och sponsorskyltarna.
+
+| yta | spelet hade | mätt i `-01` | render efter |
+|---|---|---|---|
+| hallens väggar | `"#FFFFFF"` | `#ACA99D` (sd 27) | `#B5AA8A` |
+| takstolarna | `"#7A5C3E"` varm mellanbrun | `#5C4C45` | — |
+| undertakets plåt | `"#3A3E44"` mörk blågrå | `#5E5B5E` (517 kpx) | `#634B45` (takzon) |
+| kortändans bänkar | `"#D8C7A4"` ljus furu | `#86715B` | `#775C3F` |
+
+## Ridhusets tak är INTE stallets
+
+En värmemask över hela takzonen i `-01` fann **35 kpx varma mot 517 kpx
+neutrala**. Ridhusets takstolar läser mörkt gråbruna, nästan neutrala — till
+skillnad från stallets limträ, som är tydligt varmt. Spelet hade en varm
+mellanbrun balk och en mörk blågrå plåt; båda drog åt fel håll, åt var sitt.
+
+Att jag mätte stallets tak först och fann varmt limträ gjorde det lätt att
+anta samma sak här. Masken sa något annat.
+
+## Kvarstående, redovisat som karaktär och inte som fel
+
+De tre ytorna renderas fortfarande **varmare än fotot**, med blått nedtryckt
+15–25 enheter i alla tre. Det är samma signatur på hela scenen, inte tre
+separata fel, och det hör till webbrenderarens inomhusljus tillsammans med
+trätexturen.
+
+Jag jagar det INTE per yta med kanalvisa hack. Det står som en
+`RENDERING LIMITATION` av samma slag som stallets vägg: ytorna ligger på sina
+mätta värden och avviker hellre åt ett känt håll än att förfalskas var för
+sig.
