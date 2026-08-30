@@ -4,17 +4,32 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
-      "HorseCore": { "$path": "src/shared/HorseCore" }
+      "HorseCore": {
+        "$path": "src/shared/HorseCore"
+      },
+      "UBRFSpel": {
+        "$path": "game/UBRFSpel.luau"
+      },
+      "Stallet": {
+        "$path": "game/Stallet.luau"
+      },
+      "UBRFKomplex": {
+        "$path": "buildings/UBRFKomplex.luau"
+      }
     },
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "Horse": { "$path": "src/server" }
+      "Horse": {
+        "$path": "src/server"
+      }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "Horse": { "$path": "src/client" }
+        "Horse": {
+          "$path": "src/client"
+        }
       }
     }
   }

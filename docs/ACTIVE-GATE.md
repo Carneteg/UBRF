@@ -1,6 +1,22 @@
 # Active Gate
 
-Current gate: **Gate F01 — UBRF Fidelity**
+Current gate: **Gate G01 — First Playable Horse Loop** (`docs/GATE-G01-FIRST-PLAYABLE.md`)
+
+## Gate F01 — UBRF Fidelity: `WAITING_FOR_HUMAN_STUDIO_VISUAL_ACCEPTANCE`
+
+Koden är accepterad som baslinje (`fdf5174`). Det som återstår är den manuella
+Studio-genomgången, och den kan bara en människa göra: `roblox/docs/STUDIO-QA.md`.
+
+**Ingen byggnadspolering medan G01 är aktiv**, om inte Studio rapporterar ett
+faktiskt fel. Vi nådde avtagande avkastning utan Studio.
+
+Öppna REFERENCE GAP-poster står kvar och ska inte uppfinnas: hallens
+orientering, gavelförskjutningens storlek, och motsägelsen sarg mot
+läktarfront.
+
+---
+
+## Bakgrund — Gate F01
 
 Canonical implementation brief:
 

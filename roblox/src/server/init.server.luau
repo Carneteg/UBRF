@@ -5,6 +5,8 @@
 ]]
 
 local HorseService = require(script.HorseService)
+local StallService = require(script.StallService)
 
 HorseService.start()
+StallService.start()
 print("[Horse] Servern igång")
