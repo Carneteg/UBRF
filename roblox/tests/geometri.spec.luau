@@ -252,8 +252,17 @@ end
 
 do
 	local fack = Geometri.boxfack(S)
-	check("boxfacken hoppar över tvärkorridoren", #fack > 0 and #fack < 11,
-		#fack .. " fack per rad")
+	-- Antalet fack ska vara precis så många som planen säger. Testet hade
+	-- "#fack < 11" hårdkodat, en gräns skriven för den gamla nioboxplanen;
+	-- när längden mättes till 69,95 m och boxantalet blev 12 föll den utan
+	-- att något var fel. En gräns som inte läser datan mäter inte datan.
+	check("lika många fack som planen har boxar", #fack == S.antalBoxar,
+		#fack .. " fack mot " .. S.antalBoxar .. " i planen")
+	check("facken ryms mellan service och klubbdel",
+		#fack > 0 and fack[1].y0 >= S.boxStartY - 0.001
+			and fack[#fack].y1 <= S.klubbY + 0.001,
+		#fack > 0 and string.format("%.2f..%.2f mot %.2f..%.2f",
+			fack[1].y0, fack[#fack].y1, S.boxStartY, S.klubbY) or "inga fack")
 	for _, f in ipairs(fack) do
 		local mitt = (f.y0 + f.y1) / 2
 		if mitt > S.tvarGang.y0 and mitt < S.tvarGang.y1 then
@@ -417,6 +426,52 @@ do
 					r.x, r.x + r.w, r.y, r.y + r.h) or nil)
 		end
 	end
+end
+
+do
+	-- Gångytorna är spelarens enda framkomliga mängd i stallet. Två ytor som
+	-- bara TANGERAR varandra räcker inte: kollisionsradien klämmer punkten in
+	-- i den ena eller den andra och lämnar ett dödband emellan. Vid
+	-- brandväggen gav det ingen väg alls mellan stallgången och klubbhallen —
+	-- den som gick in genom entrén blev stående i klubbdelen.
+	--
+	-- Testet kräver därför att ytorna hänger ihop med RIKTIGT överlapp, och
+	-- att alla ytor når varandra. Ett tangerande hörn räknas inte.
+	local ytor = UBRFKomplex.stall.gangytor
+	check("det finns gångytor att mäta på", #ytor >= 2, #ytor .. " ytor")
+
+	local MARGINAL = 0.2
+	local function overlappar(a, b)
+		local x = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)
+		local y = math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y)
+		return x > MARGINAL and y > MARGINAL
+	end
+
+	-- Sammanhängande? Flodfyll från första ytan.
+	local natt = { [1] = true }
+	local andrad = true
+	while andrad do
+		andrad = false
+		for i = 1, #ytor do
+			if not natt[i] then
+				for j = 1, #ytor do
+					if natt[j] and overlappar(ytor[i], ytor[j]) then
+						natt[i] = true; andrad = true; break
+					end
+				end
+			end
+		end
+	end
+	local onadda = {}
+	for i = 1, #ytor do
+		if not natt[i] then
+			table.insert(onadda, string.format("#%d (%.1f,%.1f %.1fx%.1f)",
+				i, ytor[i].x, ytor[i].y, ytor[i].w, ytor[i].h))
+		end
+	end
+	check("alla gångytor hänger ihop med varandra", #onadda == 0,
+		#onadda == 0 and (#ytor .. " ytor i ett stycke")
+			or ("onådda: " .. table.concat(onadda, ", ")))
 end
 
 if fails > 0 then

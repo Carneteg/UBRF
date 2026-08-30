@@ -24,8 +24,16 @@
    från NORRA gaveln, på östra från den södra. Stallets foton och kort
    beskriver allt som avstånd från klubbgaveln — den mot grusplanen,
    alltså den norra — så på västra långsidan är u avståndet självt och
-   på den östra räknas det om. Stallet är 54 m långt. */
+   på den östra räknas det om. Stallet är 69,95 m långt (VERIFIED,
+   PO-satellitmätning 2026-08-30 — se references/site/MATLISTA-SATELLIT.md). */
 const sV = s => s;
+
+/* Stallets längd och boxantal används både av fasadhjälparen nedan (som körs
+   när ANL byggs) och av STALLINNE (som deklareras långt senare). De ligger
+   därför HÄR, ovanför båda. Att låta fasadhjälparen läsa STALLINNE gav en
+   temporal dead zone: ANL byggs först, och STALLINNE fanns inte än. */
+const STALL_LANGD = 69.95;   // `VERIFIED` PO-satellitmätning 2026-08-30
+const STALL_BOXAR = 12;      // `DERIVED` ur utrymningsplanen vid den längden
 
 /* Stallets långsidor har ett valvbågat fönster per box, i samma takt som
    boxarna innanför (STALLINNE: boxarna börjar 10,4 m in och är 3,5 m
@@ -33,9 +41,9 @@ const sV = s => s;
    den fram ur samma tal i stället för att skrivas av för hand. */
 function stallFonster(sida){
   const ut=[];
-  for(let i=0;i<10;i++){
+  for(let i=0;i<STALL_BOXAR;i++){
     const s=10.4+3.5*i+1.75;                    // avstånd från klubbgaveln i norr
-    ut.push({sida, u:sida==="W"?sV(s):54-s, b:1.15, h:1.55, z0:1.55, typ:"valv"});
+    ut.push({sida, u:sida==="W"?sV(s):STALL_LANGD-s, b:1.15, h:1.55, z0:1.55, typ:"valv"});
   }
   return ut;
 }
@@ -54,7 +62,7 @@ const ANL = {
     {typ:"grus",  rekt:{x:144, y:119, w:36,  h:16}},   // planen framför stallets klubbgavel
     {typ:"grus",  rekt:{x:112, y:20,  w:6,   h:101}},  // grusvägen längs västra långsidan
     {typ:"grus",  rekt:{x:144, y:10,  w:62,  h:8}},    // infartsvägen från Husbyvägen i sydost
-    {typ:"grus",  rekt:{x:148, y:40,  w:44,  h:24}},   // gårdsplanen vid stallets södra gavel
+    {typ:"grus",  rekt:{x:148, y:40,  w:44,  h:9}},    // gårdsplanen vid stallets södra gavel (kortad: huset når nu y=49,05)
     {typ:"grus",  rekt:{x:186, y:16,  w:8,   h:28}},   // väggrenen upp från infarten
     {typ:"grus",  rekt:{x:175, y:64,  w:3,   h:57}},   // gången öster om stallet mot hagarna
 
@@ -84,7 +92,19 @@ const ANL = {
            fönster, balkong och utvändig ståltrappa (norra gavelns u
            räknas moturs, från östra hörnet)
        Banan 20×60 därinne; UBRF-skylten mitt på västra långsidan. */
-    {id:"ridhus", rekt:{x:118, y:44, w:25, h:75}, hV:6.2, hN:9.2, nock:"NS",
+    /* Längden 77,18 m är `VERIFIED` — Product Owner satellitmätning
+       2026-08-30, linje längs långsidan mellan motsvarande yttre gavlar.
+       Tidigare 75 m var `[ASSUMPTION]`; skillnaden är 2,18 m.
+
+       Liksom stallet ligger NORRA gaveln still (y = 119): det är gaveln
+       mot parkeringen med caféet, entrén och ståltrappan, och den är
+       fotoverifierad. Huset växer söderut, y 44 → 41,82.
+
+       Ridhusets INRE bana (20 × 60) skalas INTE med skalet — den är en
+       egen dimension, och MATLISTA säger uttryckligen att den inte får
+       följa med automatiskt. De 2,18 m blir alltså mer marginal i södra
+       änden, inte en längre bana. */
+    {id:"ridhus", rekt:{x:118, y:119-77.18, w:25, h:77.18}, hV:6.2, hN:9.2, nock:"NS",
      fargV:"#872F40", fargT:"#202022", svart:"#202022", plat:true,
      list:4.10, takfot:true, detalj:"ridhus", label:"RIDHUSET",
      oppningar:[
@@ -111,7 +131,7 @@ const ANL = {
        {sida:"E", u:5,  b:3.4, h:2.9, z0:0, typ:"portplat"},
        /* HÄSTGÅNGEN till stallet, mitt på östfasaden. u mäts från södra
           gaveln: gången ligger på y 89,3–92,8, alltså 45,3–48,8 lokalt. */
-       {sida:"E", u:45.85, b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
+       {sida:"E", u:35.58, b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
        {sida:"S", u:8,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten [antagande]
      ]},
     /* Stallet. Måtten och färgerna kommer ur byggnadskortet
@@ -135,7 +155,7 @@ const ANL = {
        Ytan mellan husen är INTE en verifierad obruten gräsgård: husen är
        sammanbyggda (Tobias på plats), och gården är det som blir kvar
        mellan förbindelserna. Se hastgang nedan. */
-    {id:"stall", rekt:{x:154, y:65, w:21, h:54}, hV:4.4, hN:10.0, nock:"NS",
+    {id:"stall", rekt:{x:154, y:119-STALL_LANGD, w:21, h:STALL_LANGD}, hV:4.4, hN:10.0, nock:"NS",
      fargV:"#6E2F44", fargT:"#5E646C", svart:"#26292E", takfot:"#EEECE4",
      detalj:"stall", sockel:0.35, label:"STALLET",
      oppningar:[
@@ -147,7 +167,7 @@ const ANL = {
        {sida:"W", u:sV(8.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
        /* HÄSTGÅNGEN mot ridhuset. På W mäts u från NORRA gaveln söderut,
           så tvärkorridorens mitt (lokalt y 26,05) ligger på u 26,75. */
-       {sida:"W", u:sV(26.75), b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
+       {sida:"W", u:sV(39.2), b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
        ...stallFonster("W"), ...stallFonster("E"),
        /* Norra gaveln — klubbgaveln mot grusplanen, den höga, med
           balkongen och spiraltrappan (stall-fasad-04/05). */
@@ -207,7 +227,14 @@ const ANL = {
 
        Måtten är däremot fortfarande antagna. Satellitbilden ger topologi,
        inte meter. [ASSUMPTION: bredd, höjder, taklutning] */
-    {id:"hastgang", rekt:{x:143, y:89.3, w:11, h:3.5}, hV:3.2, hN:4.0, nock:"EW",
+    /* Hästgången ligger där stallets tvärkorridor mynnar. Den låg på
+       y = 89,3, avläst ur satellit UTAN skala. När stallets längd mättes
+       till 69,95 m hamnade korridoren på världens 76,85–80,35, och gången
+       måste följa med — annars mynnar den i en boxrad. Gångens eget läge
+       är fortfarande omätt (MATLISTA punkt 4); det här är det läge som
+       följer av ett verifierat längdmått plus planens proportioner, vilket
+       väger tyngre än en oskalad satellitavläsning. `[DERIVED]` */
+    {id:"hastgang", rekt:{x:143, y:76.85, w:11, h:3.5}, hV:3.2, hN:4.0, nock:"EW",
      fargV:"#7C2A24", fargT:"#5E646C", label:"HÄSTGÅNGEN",
      oppningar:[
        {sida:"N", u:4.6, b:1.2, h:1.4, z0:1.3, typ:"fonster"},
@@ -218,7 +245,14 @@ const ANL = {
        det inte. Läge, mått, taklutning och den enda dörren är alla
        antagna, och den ska inte läsas som en verifierad förbindelse bara
        för att den råkar heta länga. [ASSUMPTION] */
-    {id:"langa", rekt:{x:147, y:59, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
+    /* Låg y 59..65, alltså i liv med stallets dåvarande södra gavel. När
+       gaveln flyttade till 49,05 hamnade längan mitt i gräsgården i
+       stället för i dess södra ände, och gjorde inte längre det den finns
+       till för. Flyttad till y 43..49 så att den fortsatt sluter gården
+       söderut. Läget är fortfarande `[ASSUMPTION]`, precis som förut —
+       den är flyttad för att behålla sin ROLL, inte för att någon källa
+       säger var den står. */
+    {id:"langa", rekt:{x:147, y:43, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
      fargV:"#7C2A24", fargT:"#7E8288", label:"",
      oppningar:[{sida:"N", u:4.4, b:1.1, h:2.0, z0:0, typ:"dorrmork"}]},
     /* Röda stugan vid infarten från Björklidsvägen (förråd/sekretariat). */
@@ -295,9 +329,13 @@ const ANL = {
        ovanifrån. `references/buildings/stall/stall-gavel-06-silon.jpg`
        (Byggnaden, IMG_0076) visar den från marknivå: silon står TÄTT MOT
        gaveln, ungefär i dess mitt, och når drygt halva gavelhöjden.
-       Radien är 1,5 m i v3d, så y = 63,4 lägger mantelns kant på 64,9. */
-    {typ:"silo",      pos:[164.6,63.4]},
-    {typ:"balar",     pos:[157,56]},                     // ensilagebalarna
+
+       Gaveln flyttade från y = 65 till y = 49,05 när längden mättes, och
+       silon följde med — den låg annars inne i huset. Radien är 1,5 m, så
+       y = 47,5 lägger mantelns kant på 49,0 mot gavelns 49,05. Balarna
+       bredvid följde av samma skäl. */
+    {typ:"silo",      pos:[164.6,47.5]},
+    {typ:"balar",     pos:[158,44.5]},                   // ensilagebalarna
     {typ:"grushog",   pos:[122,131]},                    // grushögen på grusplanen (Street View)
     {typ:"transport", pos:[133,125], rikt:0.5},          // hästtransporten på grusplanen
     {typ:"bord",      pos:[150,74]},                     // picknickborden på gården (de syns i stall-fasad-01)
@@ -537,33 +575,66 @@ const STALL_BAND = [
 ];
 
 const STALLINNE = {
-  bredd:21, /* [ASSUMPTION] arbetsvärde i intervallet 15–23 m, se KORT.md */
-  langd:54, /* [ASSUMPTION] satellitavläsning */
+  bredd:21, /* [ASSUMPTION] arbetsvärde, se KORT.md — men se även noten nedan:
+               utrymningsplanens proportioner STÖDER numera 21 m, eftersom
+               längden är mätt. */
+  /* `VERIFIED` 69,95 m — Product Owner satellitmätning 2026-08-30, linje
+     längs långsidan parallellt med nocken, båda ändpunkter på samma
+     byggnads ytterkontur. Se references/site/MATLISTA-SATELLIT.md.
+
+     Spelet hade 54 m, en oskalad satellitavläsning. Felet var 16 m, 30 %,
+     och det slog igenom hela innerplanen.
+
+     NORRA GAVELN LIGGER STILL. Den är klubbgaveln med förstukvisten,
+     balkongen, spiraltrappan och entrén mellan de två runda fönstren — den
+     mest fotoverifierade delen av hela anläggningen, och den spelaren
+     anländer till. Huset växer i stället söderut, in på gårdsplanen, från
+     y = 65 till y = 49,05. Att växa norrut hade lagt huset i parkeringen. */
+  langd:STALL_LANGD,
   vagg:"#CFC8BC", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
-  klubbY:43, boxStartY:6.8, serviceY:6.5,
-  boxB:3.5, antalBoxar:9,
-  tvarGang:{y0:24.3, y1:27.8},
+  /* Zonerna följer utrymningsplanens EGNA proportioner, inte en blind
+     sträckning. Mätt på references/plans/stall-plan1-utrymning-rak.jpg:
+     de genomgående tvärväggarna mellan klubbdel och boxhall ligger på
+     0,72–0,755 av längden från södra gaveln, alltså 50,4–52,9 m. klubbY
+     sätts till 52,85.
+
+     Boxantalet följer av samma plan: partierna i mittraden räknas till
+     ungefär TOLV per rad, inte nio. 12/9 = 1,33 mot längdkvoten
+     69,95/54 = 1,30 — planen och det mätta måttet pekar åt samma håll,
+     och nio boxar var en följd av det för korta huset.
+
+     Kontroll: 6,8 + 12 × 3,5 + 3,5 (tvärgång) = 52,3 ≤ 52,85. */
+  klubbY:52.85, boxStartY:6.8, serviceY:6.5,
+  boxB:3.5, antalBoxar:STALL_BOXAR,
+  /* Tvärgången mitt i boxhallen. Mätt på planen ligger den på ~50 % av
+     boxhallen räknat från klubbänden; 6,8 + 6 × 3,5 ger sex boxar på var
+     sida. Det är också den här korridoren hästgången mynnar i. */
+  tvarGang:{y0:27.8, y1:31.3},
   /* Fylls ur STALL_BAND nedan: rader med x0/boxDjup, gångar med x0/x1. */
   rader:[], gangar:{},
   /* Spelets sjutton hästar står i gång A, den man kommer in i från
      förstukvisten. Gång B:s boxar ritas men får ingen häst: spelet har
      sjutton namn och fler får inte hittas på. */
   boxar:{
-    W: [ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky" ],
-    MA:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null ],
-    MB:[ null,null,null,null,null,null,null,null,null ],
-    E: [ null,null,null,null,null,null,null,null,null ],
+    W: [ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky",
+         null,null,null ],
+    MA:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null,
+         null,null,null ],
+    MB:[ null,null,null,null,null,null,null,null,null,null,null,null ],
+    E: [ null,null,null,null,null,null,null,null,null,null,null,null ],
   },
   rum:[
-    {id:"uppehallsrum", rekt:{x:0,    y:50.5, w:7.0, h:3.5}, label:"UPPEHÅLLSRUM"},
-    {id:"teorisal",     rekt:{x:14.0, y:50.5, w:7.0, h:3.5}, label:"TEORISAL · WC"},
-    {id:"sadelkammare", rekt:{x:0,    y:46.6, w:3.2, h:3.9}, label:"SADELKAMMARE"},
+    /* Klubbrummen behåller sitt avstånd till NORRA gaveln (+15,95 m i
+       lokala tal), eftersom det är gaveln som ligger still. */
+    {id:"uppehallsrum", rekt:{x:0,    y:66.45, w:7.0, h:3.5}, label:"UPPEHÅLLSRUM"},
+    {id:"teorisal",     rekt:{x:14.0, y:66.45, w:7.0, h:3.5}, label:"TEORISAL · WC"},
+    {id:"sadelkammare", rekt:{x:0,    y:62.55, w:3.2, h:3.9}, label:"SADELKAMMARE"},
   ],
   service:[
     {id:"spolspilta",   rekt:{x:0,    y:0, w:4.5, h:6.5}, label:"SPOLSPILTA"},
     {id:"spanforrad",   rekt:{x:16.5, y:0, w:4.5, h:6.5}, label:"SPÅNFÖRRÅD"},
   ],
-  tvarvaggar:[ {y:43, brand:true}, {y:6.5, brand:false} ],
+  tvarvaggar:[ {y:52.85, brand:true}, {y:6.5, brand:false} ],
   /* Dörrarna beskrivs EN gång. `pos` är innerläget, `spawn` ytterläget,
      `inrikt` vilket håll man tittar när man kliver in och `uttext` vad
      markören på gården säger. ANL.dorrar byggs ur den här listan längre
@@ -571,22 +642,22 @@ const STALLINNE = {
      när planformen ändrades följde bara den ena med. Då hamnade utgången
      mot gräsgården inne i en boxrad. */
   dorrar:[
-    {id:"ut_n", pos:[1.6,48.4], text:"Ut genom entrén", mot:"gard", inrikt:0,
+    {id:"ut_n", pos:[1.6,64.35], text:"Ut genom entrén", mot:"gard", inrikt:0,
      uttext:"Gå in i stallet (Entré)",
      spawn:{x:152.6,y:113.4,rikt:Math.PI}},
-    {id:"ut_n2",pos:[10.5,50.0], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
+    {id:"ut_n2",pos:[10.5,65.95], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (klubbdörren)",
      spawn:{x:164.5,y:120.6,rikt:Math.PI/2}},
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
      uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
-     spawn:{x:159.6,y:63.4,rikt:-Math.PI/2}},
+     spawn:{x:159.6,y:47.45,rikt:-Math.PI/2}},
     /* HÄSTGÅNGEN till ridhuset. Den här dörren går inte ut på gården utan
        rakt in i ridhusets entréhall — det är hela poängen med att husen är
        sammanbyggda: hästen leds inomhus. Ingen markör läggs på gården för
        den, eftersom den inte finns där. */
-    {id:"hastgang", pos:[0.9,26.05], text:"Hästgången — in i ridhuset",
+    {id:"hastgang", pos:[0.9,29.55], text:"Hästgången — in i ridhuset",
      mot:"ridhusinne", inrikt:Math.PI, inne:true,
-     spawn:{x:23.6,y:47.05,rikt:Math.PI}},
+     spawn:{x:23.6,y:36.78,rikt:Math.PI}},
   ],
   ridlarare:{pos:[0,34], namn:"Ridläraren"},
   whiteboard:{pos:[0,7.2]},
@@ -625,17 +696,46 @@ for(const d of STALLINNE.dorrar){
 
 STALLINNE.gangytor = (()=>{
   const S=STALLINNE, g=[];
+  /* Gångytorna är spelarens enda framkomliga mängd i stallet — man får
+     stå i en gångyta, ingen annanstans. Två ytor som bara TANGERAR
+     varandra räcker då inte: kollisionsradien klämmer punkten in i den
+     ena eller den andra, och mellan dem blir ett dödband på drygt en
+     meter där ingen punkt är fri.
+
+     Det var precis vad som hände vid brandväggen. Gång A slutade på
+     klubbY och klubbhallen började på klubbY, och `navVag` hittade
+     INGEN väg mellan dem. Den som gick in genom entrén hamnade i
+     klubbhallen och kunde inte ta sig ner i stallgången.
+
+     Mätt: felet fanns redan vid den gamla längden 54 m, så det är inte
+     en följd av omskalningen — det hittades av att omskalningen tvingade
+     fram en mätning som ingen gjort förut.
+
+     Gångarna sträcks därför DORRGAP meter in i klubbhallen och in i
+     servicepassagen. Det är dörröppningen i tvärväggen, uttryckt som
+     överlapp, och det ger vägsökningen en sammanhängande korridor. */
+  const DORRGAP = 1.5;
   for(const k of ["A","B"]){
     const a=S.gangar[k];
-    g.push({x:a.x0, y:S.serviceY, w:a.x1-a.x0, h:S.klubbY-S.serviceY});
+    g.push({x:a.x0, y:S.serviceY-DORRGAP, w:a.x1-a.x0,
+            h:(S.klubbY+DORRGAP)-(S.serviceY-DORRGAP)});
   }
   /* Tvärkorridoren går hela vägen ut till båda långsidorna: planen har
      utrymningsvägar där, och en korridor som slutar vid gång B når dem
      inte. Den bryter boxlängorna på ett ställe, vilket är precis vad en
      genomgående korridor gör. */
   g.push({x:0.4, y:S.tvarGang.y0, w:S.bredd-0.8, h:S.tvarGang.y1-S.tvarGang.y0});
-  g.push({x:0.4, y:S.klubbY,   w:S.bredd-0.8, h:50.5-S.klubbY});   // klubbhallen
-  g.push({x:3.4, y:50.5,       w:7.2,         h:3.1});             // hallen mot gaveldörren
+  /* Klubbhallen går från branddörrsväggen upp till klubbrummen. Gränsen
+     LÄSES UR RUMMEN i stället för att skrivas som ett tal: 50,5 stod här
+     hårdkodat, och när klubbY flyttades från 43 till 52,85 blev hallens
+     höjd negativ. Byggbänken fällde det direkt — en box hamnade i en
+     gångyta — men felet hade inte behövt uppstå. */
+  const rumY = S.rum[0].rekt.y;
+  g.push({x:0.4, y:S.klubbY, w:S.bredd-0.8, h:rumY-S.klubbY});     // klubbhallen
+  /* Hallen mot gaveldörren. Den TANGERADE klubbhallen på rumY och var
+     därför avskuren på samma sätt som gångarna var — 0,05 m glapp räckte.
+     Den sträcks ner i klubbhallen med samma DORRGAP. */
+  g.push({x:3.4, y:rumY-DORRGAP, w:7.2, h:3.1+DORRGAP});           // hallen mot gaveldörren
   g.push({x:4.5, y:0.4,        w:12.0,        h:S.serviceY-0.4});  // servicepassagen
   return g;
 })();
@@ -670,7 +770,22 @@ function laktarSektioner(L){
 }
 
 const RIDHUSINNE = {
-  bredd:25, langd:75, tak:6.2, entre:13,
+  /* langd följer fotavtrycket — exportörens validering kräver att de är
+     lika, och den fällde just den här när skalet växte till 77,18 utan att
+     insidan följde med.
+
+     De 2,18 extra metrarna hamnar i NORRA änden av insidan, alltså i
+     entréhallen mot caféet, vars djup ändå är `[ASSUMPTION]`. Insidans
+     övriga lokala mått lämnas orörda: de är satta mot interiörfoton, och
+     att flytta ett tjugotal tal för 2,9 % vore fler tillfällen att göra
+     fel än det vore värt. Följden är att de ligger 2,18 m längre söderut i
+     världen än förut — inom osäkerheten för en insida som i sin helhet är
+     ett antagande.
+
+     Undantaget är allt som möter hästgången. Det måste sitta på RÄTT
+     världsläge, inte bara rätt lokalt, och räknas därför om nedan mot
+     origo y = 41,82. */
+  bredd:25, langd:77.18, tak:6.2, entre:13,
   bana:{x:0.6, y:2, w:20, h:60}, sargH:1.35,
   vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#5E4A36", gangFarg:"#8C8880",
   /* MOTSÄGELSE 1 ur DRIVE-SOURCE-INDEX (`IMG_0183`): långsidans övre
@@ -686,11 +801,13 @@ const RIDHUSINNE = {
      Exakt hur bred öppningen är i verkligheten vet jag inte; 5,0 m är valt
      för att en häst ska gå igenom med marginal. [ASSUMPTION] */
   laktare:{x0:21.0, y0:9, y1:59, steg:4, stegH:0.28, stegD:0.85,
-           gap:{y0:44.5, y1:49.5}},
+           gap:{y0:34.78, y1:39.98}},
   /* MOTSÄGELSE 5 (`IMG_0179`): bakom sargen finns flera glasade rum /
      fönsterpartier ovanför de nivåindelade träbänkarna. Måtten är
      `[ASSUMPTION]` — indexet beskriver att de finns, inte hur stora. */
-  glasrum:[ {y0:12, y1:22}, {y0:26, y1:36}, {y0:44, y1:56} ],
+  /* Det mellersta glasrummet slutade på y = 36 och hamnade därmed inne i
+     läktargapet när gången flyttades. Kortat till gapets kant. */
+  glasrum:[ {y0:12, y1:22}, {y0:26, y1:34.5}, {y0:44, y1:56} ],
   /* MOTSÄGELSE 4 (`IMG_0198`): båset ligger vid dressyrbokstaven E, är
      mörkt trä, och nås av en trappa med träräcken. Över öppningen sitter
      en grön exit-skylt. E ligger vid husets y = 32 sedan bokstäverna
@@ -728,7 +845,7 @@ const RIDHUSINNE = {
 
      Läget följer läktargapet, alltså hästgången. Bredden är vald, inte mätt.
      [ASSUMPTION] */
-  sargGrind:{y0:45.4, y1:48.6},
+  sargGrind:{y0:35.18, y1:38.38},
   /* Möblerna i entréhallen, som solida rektanglar. Utan dem gick man
      rakt genom disken och bänkarna — de syntes men fanns inte.
      Koordinaterna är hallens, alltså husets: hallen ligger i norr,
@@ -748,8 +865,8 @@ const RIDHUSINNE = {
      spawn:{x:144.6,y:49,rikt:0}},
     /* HÄSTGÅNGEN till stallet: leder in i stallets klubbdel utan att man
        behöver gå ut på gården. Husen är sammanbyggda. */
-    {id:"hastgang", pos:[23.6,47.05], text:"Hästgången — in i stallet",
-     mot:"stallinne", spawn:{x:1.6,y:26.05,rikt:0}},
+    {id:"hastgang", pos:[23.6,36.78], text:"Hästgången — in i stallet",
+     mot:"stallinne", spawn:{x:1.6,y:29.55,rikt:0}},
     {id:"ut_n", pos:[21.9,74.2], text:"Ut mot parkeringen (entrén)", mot:"gard",
      spawn:{x:139.9,y:120.6,rikt:Math.PI/2}},
   ],

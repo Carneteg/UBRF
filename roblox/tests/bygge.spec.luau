@@ -198,9 +198,19 @@ do
 		and math.abs(bana.w - 20) < 0.01 and math.abs(bana.h - 60) < 0.01,
 		bana and string.format("%.1f × %.1f m vid (%.1f, %.1f)",
 			bana.w, bana.h, bana.x, bana.y) or "hittades inte")
-	check("banan ligger inne i ridhuset", bana ~= nil
-		and bana.x >= 118 and bana.x + bana.w <= 143
-		and bana.y >= 44 and bana.y + bana.h <= 119)
+	-- Gränserna LÄSES UR fotavtrycket. De stod som 118/143/44/119, och när
+	-- ridhusets verifierade längd flyttade södra gaveln från y = 44 till
+	-- 41,82 föll testet fast banan låg precis där den skulle. En gräns som
+	-- inte läser datan mäter inte datan.
+	local rh
+	for _, b in ipairs(UBRFKomplex.byggnader) do
+		if b.id == "ridhus" then rh = b.rekt end
+	end
+	check("banan ligger inne i ridhuset", bana ~= nil and rh ~= nil
+		and bana.x >= rh.x - 0.01 and bana.x + bana.w <= rh.x + rh.w + 0.01
+		and bana.y >= rh.y - 0.01 and bana.y + bana.h <= rh.y + rh.h + 0.01,
+		bana and rh and string.format("banan y %.2f..%.2f i huset %.2f..%.2f",
+			bana.y, bana.y + bana.h, rh.y, rh.y + rh.h) or nil)
 end
 
 check("sargen byggdes med en port i norr",

@@ -106,7 +106,7 @@ return {
 				x = 148,
 				y = 40,
 				w = 44,
-				h = 24,
+				h = 9,
 			},
 		},
 		{
@@ -160,9 +160,9 @@ return {
 			id = "ridhus",
 			rekt = {
 				x = 118,
-				y = 44,
+				y = 41.82,
 				w = 25,
-				h = 75,
+				h = 77.18,
 			},
 			hV = 6.2,
 			hN = 9.2,
@@ -292,7 +292,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 45.85,
+					u = 35.58,
 					b = 2.4,
 					h = 2.6,
 					z0 = 0,
@@ -313,9 +313,9 @@ return {
 			id = "stall",
 			rekt = {
 				x = 154,
-				y = 65,
+				y = 49.05,
 				w = 21,
-				h = 54,
+				h = 69.95,
 			},
 			hV = 4.4,
 			hN = 10,
@@ -370,7 +370,7 @@ return {
 				},
 				{
 					sida = "W",
-					u = 26.75,
+					u = 39.2,
 					b = 2.4,
 					h = 2.6,
 					z0 = 0,
@@ -458,8 +458,16 @@ return {
 					typ = "valv",
 				},
 				{
-					sida = "E",
-					u = 41.85,
+					sida = "W",
+					u = 47.15,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
+				},
+				{
+					sida = "W",
+					u = 50.65,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -467,7 +475,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 38.35,
+					u = 57.8,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -475,7 +483,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 34.85,
+					u = 54.3,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -483,7 +491,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 31.35,
+					u = 50.8,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -491,7 +499,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 27.85,
+					u = 47.3,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -499,7 +507,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 24.35,
+					u = 43.8,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -507,7 +515,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 20.85,
+					u = 40.3,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -515,7 +523,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 17.35,
+					u = 36.8,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -523,7 +531,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 13.85,
+					u = 33.3,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -531,7 +539,31 @@ return {
 				},
 				{
 					sida = "E",
-					u = 10.35,
+					u = 29.8,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
+				},
+				{
+					sida = "E",
+					u = 26.3,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
+				},
+				{
+					sida = "E",
+					u = 22.8,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
+				},
+				{
+					sida = "E",
+					u = 19.3,
 					b = 1.15,
 					h = 1.55,
 					z0 = 1.55,
@@ -650,7 +682,7 @@ return {
 			id = "hastgang",
 			rekt = {
 				x = 143,
-				y = 89.3,
+				y = 76.85,
 				w = 11,
 				h = 3.5,
 			},
@@ -683,7 +715,7 @@ return {
 			id = "langa",
 			rekt = {
 				x = 147,
-				y = 59,
+				y = 43,
 				w = 7,
 				h = 6,
 			},
@@ -853,7 +885,7 @@ return {
 			mot = "stallinne",
 			spawn = {
 				x = 1.6,
-				y = 48.4,
+				y = 64.35,
 				rikt = 0,
 			},
 		},
@@ -867,7 +899,7 @@ return {
 			mot = "stallinne",
 			spawn = {
 				x = 10.5,
-				y = 50,
+				y = 65.95,
 				rikt = -1.570796,
 			},
 		},
@@ -875,7 +907,7 @@ return {
 			id = "stall_s",
 			pos = {
 				159.6,
-				63.4,
+				47.45,
 			},
 			text = "Gå in i stallet (gaveldörren vid gårdsplanen)",
 			mot = "stallinne",
@@ -896,7 +928,7 @@ return {
 			auto = true,
 			spawn = {
 				x = 16.35,
-				y = 73.4,
+				y = 75.58,
 				rikt = -1.570796,
 			},
 		},
@@ -911,7 +943,7 @@ return {
 			auto = true,
 			spawn = {
 				x = 1.6,
-				y = 65,
+				y = 67.18,
 				rikt = 0,
 			},
 		},
@@ -926,7 +958,7 @@ return {
 			auto = true,
 			spawn = {
 				x = 1.6,
-				y = 34.45,
+				y = 36.63,
 				rikt = 0,
 			},
 		},
@@ -934,7 +966,7 @@ return {
 			id = "ridhus_S_8",
 			pos = {
 				128,
-				42.9,
+				40.72,
 			},
 			text = "In i ridhuset",
 			mot = "ridhusinne",
@@ -949,7 +981,7 @@ return {
 			id = "stall_S_13",
 			pos = {
 				167.075,
-				63.9,
+				47.95,
 			},
 			text = "Gå in i stallet",
 			mot = "stallinne",
@@ -963,15 +995,15 @@ return {
 	},
 	stall = {
 		bredd = 21,
-		langd = 54,
+		langd = 69.95,
 		tak = 3.4,
 		boxB = 3.5,
-		antalBoxar = 9,
+		antalBoxar = 12,
 		boxStartY = 6.8,
-		klubbY = 43,
+		klubbY = 52.85,
 		tvarGang = {
-			y0 = 24.3,
-			y1 = 27.8,
+			y0 = 27.8,
+			y1 = 31.3,
 		},
 		band = {
 			{
@@ -1064,33 +1096,33 @@ return {
 		gangytor = {
 			{
 				x = 4.389,
-				y = 6.5,
+				y = 5,
 				w = 2.604,
-				h = 36.5,
+				h = 49.35,
 			},
 			{
 				x = 14.427,
-				y = 6.5,
+				y = 5,
 				w = 2.583,
-				h = 36.5,
+				h = 49.35,
 			},
 			{
 				x = 0.4,
-				y = 24.3,
+				y = 27.8,
 				w = 20.2,
 				h = 3.5,
 			},
 			{
 				x = 0.4,
-				y = 43,
+				y = 52.85,
 				w = 20.2,
-				h = 7.5,
+				h = 13.6,
 			},
 			{
 				x = 3.4,
-				y = 50.5,
+				y = 64.95,
 				w = 7.2,
-				h = 3.1,
+				h = 4.6,
 			},
 			{
 				x = 4.5,
@@ -1104,7 +1136,7 @@ return {
 				id = "uppehallsrum",
 				rekt = {
 					x = 0,
-					y = 50.5,
+					y = 66.45,
 					w = 7,
 					h = 3.5,
 				},
@@ -1114,7 +1146,7 @@ return {
 				id = "teorisal",
 				rekt = {
 					x = 14,
-					y = 50.5,
+					y = 66.45,
 					w = 7,
 					h = 3.5,
 				},
@@ -1124,7 +1156,7 @@ return {
 				id = "sadelkammare",
 				rekt = {
 					x = 0,
-					y = 46.6,
+					y = 62.55,
 					w = 3.2,
 					h = 3.9,
 				},
@@ -1155,7 +1187,7 @@ return {
 		},
 		tvarvaggar = {
 			{
-				y = 43,
+				y = 52.85,
 				brand = true,
 			},
 			{
@@ -1168,7 +1200,7 @@ return {
 				id = "ut_n",
 				pos = {
 					1.6,
-					48.4,
+					64.35,
 				},
 				text = "Ut genom entrén",
 				mot = "gard",
@@ -1184,7 +1216,7 @@ return {
 				id = "ut_n2",
 				pos = {
 					10.5,
-					50,
+					65.95,
 				},
 				text = "Ut till grusplanen (klubbdörren)",
 				mot = "gard",
@@ -1208,7 +1240,7 @@ return {
 				uttext = "Gå in i stallet (gaveldörren vid gårdsplanen)",
 				spawn = {
 					x = 159.6,
-					y = 63.4,
+					y = 47.45,
 					rikt = -1.570796,
 				},
 			},
@@ -1216,7 +1248,7 @@ return {
 				id = "hastgang",
 				pos = {
 					0.9,
-					26.05,
+					29.55,
 				},
 				text = "Hästgången — in i ridhuset",
 				mot = "ridhusinne",
@@ -1224,7 +1256,7 @@ return {
 				inne = true,
 				spawn = {
 					x = 23.6,
-					y = 47.05,
+					y = 36.78,
 					rikt = 3.141593,
 				},
 			},
@@ -1239,14 +1271,14 @@ return {
 				auto = true,
 				spawn = {
 					x = 167.075,
-					y = 63.9,
+					y = 47.95,
 					rikt = -1.570796,
 				},
 			},
 		},
 		origo = {
 			x = 154,
-			y = 65,
+			y = 49.05,
 		},
 	},
 	identitet = {
@@ -1510,14 +1542,14 @@ return {
 			typ = "silo",
 			pos = {
 				164.6,
-				63.4,
+				47.5,
 			},
 		},
 		{
 			typ = "balar",
 			pos = {
-				157,
-				56,
+				158,
+				44.5,
 			},
 		},
 		{
@@ -1709,7 +1741,7 @@ return {
 	},
 	ridhus = {
 		bredd = 25,
-		langd = 75,
+		langd = 77.18,
 		tak = 6.2,
 		entre = 13,
 		bana = {
@@ -1724,8 +1756,8 @@ return {
 			x1 = 11.6,
 		},
 		sargGrind = {
-			y0 = 45.4,
-			y1 = 48.6,
+			y0 = 35.18,
+			y1 = 38.38,
 		},
 		laktare = {
 			x0 = 21,
@@ -1735,8 +1767,8 @@ return {
 			stegH = 0.28,
 			stegD = 0.85,
 			gap = {
-				y0 = 44.5,
-				y1 = 49.5,
+				y0 = 34.78,
+				y1 = 39.98,
 			},
 		},
 		glasrum = {
@@ -1746,7 +1778,7 @@ return {
 			},
 			{
 				y0 = 26,
-				y1 = 36,
+				y1 = 34.5,
 			},
 			{
 				y0 = 44,
@@ -1790,13 +1822,13 @@ return {
 				id = "hastgang",
 				pos = {
 					23.6,
-					47.05,
+					36.78,
 				},
 				text = "Hästgången — in i stallet",
 				mot = "stallinne",
 				spawn = {
 					x = 1.6,
-					y = 26.05,
+					y = 29.55,
 					rikt = 0,
 				},
 			},
@@ -1818,7 +1850,7 @@ return {
 				id = "ut_ridhus_N_8",
 				pos = {
 					16.35,
-					73.4,
+					75.58,
 				},
 				text = "Ut",
 				mot = "gard",
@@ -1833,7 +1865,7 @@ return {
 				id = "ut_ridhus_W_9",
 				pos = {
 					1.6,
-					65,
+					67.18,
 				},
 				text = "Ut",
 				mot = "gard",
@@ -1848,7 +1880,7 @@ return {
 				id = "ut_ridhus_W_40",
 				pos = {
 					1.6,
-					34.45,
+					36.63,
 				},
 				text = "Ut",
 				mot = "gard",
@@ -1870,14 +1902,14 @@ return {
 				auto = true,
 				spawn = {
 					x = 128,
-					y = 42.9,
+					y = 40.72,
 					rikt = -1.570796,
 				},
 			},
 		},
 		origo = {
 			x = 118,
-			y = 44,
+			y = 41.82,
 		},
 	},
 }
