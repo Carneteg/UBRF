@@ -9,7 +9,7 @@
 
 local Preparation = {}
 
-Preparation.ORDER = {
+Preparation.ORDER: { string } = {
 	"approach",
 	"check",
 	"groom",
@@ -17,28 +17,28 @@ Preparation.ORDER = {
 	"ready_to_mount",
 }
 
-Preparation.ACTION_FOR_PHASE = {
+Preparation.ACTION_FOR_PHASE: { [string]: string } = {
 	approach = "approach",
 	check = "check",
 	groom = "groom",
 	tack = "tack",
 }
 
-Preparation.NEXT_PHASE = {
+Preparation.NEXT_PHASE: { [string]: string } = {
 	approach = "check",
 	check = "groom",
 	groom = "tack",
 	tack = "ready_to_mount",
 }
 
-Preparation.ACTION_TEXT = {
+Preparation.ACTION_TEXT: { [string]: string } = {
 	approach = "Hälsa lugnt",
 	check = "Visitera",
 	groom = "Rykta",
 	tack = "Gör i ordning",
 }
 
-Preparation.OBJECTIVE = {
+Preparation.OBJECTIVE: { [string]: string } = {
 	waiting_horse = "Väntar på en ledig häst.",
 	approach = "Gå fram lugnt till din häst. Låt hästen se och höra dig.",
 	check = "Gör en snabb visitering: titta på ben, kropp och hur hästen verkar må.",
@@ -48,7 +48,7 @@ Preparation.OBJECTIVE = {
 	mounted = "Bra förberett. Rid mjukt och känn skillnaden mellan gångarterna.",
 }
 
-Preparation.FEEDBACK = {
+Preparation.FEEDBACK: { [string]: string } = {
 	approach = "Bra. En häst ska inte överraskas från en blind vinkel.",
 	check = "Bra. En snabb kontroll före ridning kan upptäcka att något inte känns som vanligt.",
 	groom = "Bra. Smuts under sadel eller gjord kan skava och göra hästen obekväm.",
