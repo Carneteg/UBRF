@@ -196,3 +196,70 @@ som speglar vet vad som återstår.
    tagit bort ett korrekt drag.
 3. `IMG_0191.MOV` är `[DRIVE-ONLY]` och kan inte prövas härifrån.
 4. Roblox Studio är **inte** körd.
+
+---
+
+# Bevispaket: källa → implementation, per huvudvy
+
+Reviewn kräver en jämförelse från närmast praktiska referenskamera för var
+och en av de tre huvudvyerna, med varje synligt drag klassat. Bilderna ligger
+i `audits/bilder/ridhus-jf-01..03.png`.
+
+## Vy 1 — `-01` glasrummen, från läktaren mot C-kortändan
+
+`audits/bilder/ridhus-jf-01.png`
+
+| synligt drag | klass |
+|---|---|
+| Läktardäck i förgrunden, mot kortändan | `RESOLVED` |
+| C-kortändan med band ovanför | `RESOLVED` |
+| Trappa vid kortändan | `RESOLVED` |
+| Rostbrun panel med vita band på motstående långvägg | `RESOLVED` |
+| Bokstaven C på sargen framför blocket | `RESOLVED` |
+| Limträstomme och lysrörsrader i taket | `RESOLVED` |
+| **Trappstegsblocket vid kortändan syns inte i vyn** | `KNOWN MISMATCH` |
+| **Runda vita klockan på kortändans vägg** | `KNOWN MISMATCH` |
+| **Glasbandet läser som en mörk remsa, inte som fönster med bruna karmar in i upplysta rum** | `KNOWN MISMATCH` |
+| Vit stående brädvägg med stjärndekor | `[REFERENCE GAP]` — dekoren ritas inte |
+| Ventilationens spiralkanaler | `ASSUMPTION` — byggs, men syns inte i just den här vyn |
+
+## Vy 2 — `-02` långsidan, från läktaren mot sponsorväggen
+
+`audits/bilder/ridhus-jf-02.png`
+
+| synligt drag | klass |
+|---|---|
+| Rostbrun panel på DEL av EN långsida | `RESOLVED` |
+| Vita horisontella band på panelen | `RESOLVED` |
+| Sponsorskyltar på panelen, i fotots ordning | `RESOLVED` |
+| Fönsterband ovanför panelen | `RESOLVED` |
+| Vit sarg med mörkt sockelband | `RESOLVED` |
+| Resten av väggen ljus | `RESOLVED` |
+| **Fönsterbandet läser som en slät ljus remsa — posterna syns knappt** | `KNOWN MISMATCH` |
+| Speglarna i träram | `ASSUMPTION` — läge inte kopplat till panelen |
+| Sanden och hindren | `ASSUMPTION` |
+
+## Vy 3 — `-03` båset vid E, från banan mot båset
+
+`audits/bilder/ridhus-jf-03.png`
+
+| synligt drag | klass |
+|---|---|
+| Båset i mörkt trä, upphöjt | `RESOLVED` |
+| Sadeltak med utskjutande takfot | `RESOLVED` |
+| Trappa med räcke på båda sidor | `RESOLVED` |
+| Grön exit-skylt | `RESOLVED` |
+| Vit sarg med mörkt sockelband | `RESOLVED` |
+| Bokstaven E på sargen | `RESOLVED` |
+| **Elefantbilden bredvid E** | `[REFERENCE GAP]` — ritas inte |
+| **Sittande publik på läktaren bakom båset** | `[REFERENCE GAP]` — inga NPC:er där |
+| Läktarens trappstegskaraktär bakom båset | se den öppna motsägelsen sarg/läktarfront |
+
+## Sammanräkning
+
+`RESOLVED` 19 · `KNOWN MISMATCH` 4 · `[REFERENCE GAP]` 4 · `ASSUMPTION` 3
+
+De fyra kvarstående `KNOWN MISMATCH` är alla i samma familj: **band som
+läser som släta remsor i stället för som fönster och trappsteg**. Det hör
+till punkt 6 och 7 i arbetsordern och är nästa steg — inte till geometrin,
+som nu stämmer.
