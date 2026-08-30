@@ -52,7 +52,9 @@ den vita väggen.
 
 ## 6. Taket
 
-- [ ] Limträbalkar i varmt trä.
+- [ ] Takstolar i **mörkt gråbrunt, nästan neutralt** trä — INTE varmt
+      limträ som stallets. En värmemask på `ridhus-inne-01` gav 35 kpx varma
+      mot 517 kpx neutrala. Ser taket varmbrunt ut är det fel.
 - [ ] Stålprofiler tvärs balkarna.
 - [ ] Kabelstegar **med stegpinnar** — de syns i `ridhus-inne-01` och ska
       finnas. En slät låda läser som ännu en balk.
@@ -61,7 +63,7 @@ den vita väggen.
 ## 7. Banan och sargen
 
 - [ ] 20 × 60, sarg i vitt/gräddvitt med mörkt sockelband.
-- [ ] Sanden är dovt brungrå, inte orange.
+- [ ] Sanden är dovt brungrå (`#6F5D4D`), inte ljus beige eller orange.
 - [ ] Porten vid A och grinden mot hästgången är öppningar, inte väggar.
 
 ## Vad som INTE går att kvittera här

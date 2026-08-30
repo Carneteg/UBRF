@@ -2016,6 +2016,16 @@ return {
 			balk = Color3.fromRGB(92, 76, 69),
 			plat = Color3.fromRGB(94, 91, 94),
 		},
+		takstomme = {
+			resning = 2.8,
+			delning = 6,
+			start = 1,
+			balkH = 0.26,
+			balkD = 0.24,
+			kungB = 0.22,
+			kungH = 2.7,
+			platT = 0.18,
+		},
 		dorrar = {
 			{
 				id = "ut_o",

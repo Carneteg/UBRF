@@ -250,6 +250,48 @@ local function byggRidhusIdentitet(model: Model, base: CFrame)
 		skylt:SetAttribute("Text", sk.text)
 	end
 
+	--[[ TAKSTOMMEN OCH UNDERTAKET.
+
+		Roblox byggde stål, kabelstegar och ventilation men varken trästomme
+		eller undertak — de talen fanns bara som literaler inne i webbens
+		v3dRidhus. Review 10 har rätt i att en andra geometrisanning inte ska
+		handkopieras hit: fakta ligger nu i `R.takstomme` och `R.takfarg`, och
+		båda ytorna läser dem.
+
+		Färgerna är MÄTTA: ridhusets takstolar är mörkt gråbruna och nästan
+		neutrala, INTE varmt limträ som stallets. ]]
+	local TS, TF = R.takstomme, R.takfarg
+	if TS and TF then
+		local halvS = R.bredd / 2
+		local takL = math.sqrt(halvS ^ 2 + TS.resning ^ 2)
+		local takV = math.atan2(TS.resning, halvS)
+		for _, sida in ipairs({ -1, 1 }) do
+			local fall = Instance.new("Part")
+			fall.Name = "Ridhus takfall"; fall.Anchored = true
+			fall.CanCollide = false
+			fall.Color = TF.plat; fall.Material = Enum.Material.CorrugatedMetal
+			fall.Size = Vector3.new(BK.M * takL, BK.M * TS.platT,
+				BK.M * (R.langd + 0.6))
+			fall.CFrame = base
+				* CFrame.new(BK.M * (o.x + halvS + sida * halvS / 2),
+					BK.M * (R.tak + TS.resning / 2),
+					BK.M * (o.y + R.langd / 2))
+				* CFrame.Angles(0, 0, -sida * takV)
+			fall.Parent = model
+		end
+		local z = TS.start
+		while z < R.langd do
+			BK.box(model, base, "Ridhus takbalk", o.x, R.tak - 0.2 - TS.balkH / 2,
+				o.y + z - TS.balkD / 2, R.bredd, TS.balkH, TS.balkD,
+				TF.balk, Enum.Material.Wood).CanCollide = false
+			BK.box(model, base, "Ridhus kungstolpe",
+				o.x + halvS - TS.kungB / 2, R.tak - 0.05,
+				o.y + z - TS.kungB / 2, TS.kungB, TS.kungH, TS.kungB,
+				TF.balk, Enum.Material.Wood).CanCollide = false
+			z += TS.delning
+		end
+	end
+
 	-- MOTSÄGELSE 3: takets stål, kabelstegar och ventilation.
 	local P = I.takProfiler
 	for i, a in ipairs(P.andelar) do
@@ -712,8 +754,12 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	local b = R.bana
 
 	-- Ridbanan, 20 × 60.
+	--[[ Sanden läser den delade, MÄTTA `R.sandFarg` (#6F5D4D ur -03), inte
+		INRE.sand. Den ljusa beigen här var en Roblox-only sanning som stod
+		kvar när webben rättades. ]]
 	local sand = BK.box(model, base, "Ridbanan 20x60",
-		o.x + b.x, 0, o.y + b.y, b.w, 0.06, b.h, INRE.sand, Enum.Material.Sand)
+		o.x + b.x, 0, o.y + b.y, b.w, 0.06, b.h,
+		R.sandFarg or INRE.sand, Enum.Material.Sand)
 	sand.CanCollide = false
 	sand:SetAttribute("Matt", "20x60")
 

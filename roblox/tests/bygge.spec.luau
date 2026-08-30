@@ -450,6 +450,38 @@ end
 	räcken och tak sedan Review 03 — en Roblox-only brist på just det som gör
 	båset igenkännbart i ridhus-inne-03. Testet mäter delarna, inte att något
 	som heter "Domarbås" finns. ]]
+--[[ Review 10:s två paritetsblockerare. Båda var Roblox-only sanningar som
+	stod kvar när webben rättades: sanden i gammal ljus beige, och taket helt
+	obyggt medan webben hade stomme och undertak. Testerna läser den DELADE
+	datan, så en ny divergens fäller dem. ]]
+do
+	local R2 = UBRFKomplex.ridhus
+	local sd = forstaNamn("Ridbanan")
+	check("bansanden läser den delade mätta sandFarg",
+		sd ~= nil and sammaFarg(sd.Color, R2.sandFarg),
+		sd and string.format("rgb(%d,%d,%d) mot data rgb(%d,%d,%d)",
+			sd.Color.R*255, sd.Color.G*255, sd.Color.B*255,
+			R2.sandFarg.R*255, R2.sandFarg.G*255, R2.sandFarg.B*255) or "saknas")
+
+	local tb = forstaNamn("Ridhus takbalk")
+	local tf = forstaNamn("Ridhus takfall")
+	check("ridhusets takstomme och undertak byggs i Roblox",
+		tb ~= nil and tf ~= nil and raknaNamn("Ridhus takfall") == 2,
+		string.format("%d balkar, %d takfall", raknaNamn("Ridhus takbalk"),
+			raknaNamn("Ridhus takfall")))
+	check("takstommen läser den mätta balkfärgen, inte varmt limträ",
+		tb ~= nil and sammaFarg(tb.Color, R2.takfarg.balk),
+		tb and string.format("rgb(%d,%d,%d)", tb.Color.R*255, tb.Color.G*255,
+			tb.Color.B*255) or "saknas")
+	check("undertaket läser den mätta plåtfärgen",
+		tf ~= nil and sammaFarg(tf.Color, R2.takfarg.plat))
+	-- Balkantalet följer delningen, inte ett tal skrivet här.
+	local vantade = math.ceil((R2.langd - R2.takstomme.start) / R2.takstomme.delning)
+	check("antalet takbalkar följer takstomme.delning",
+		raknaNamn("Ridhus takbalk") == vantade,
+		raknaNamn("Ridhus takbalk") .. " av " .. vantade)
+end
+
 check("domarbåset byggdes med nivå, tak, trappa och räcken",
 	raknaNamn("Domarbåsets nivå") == 1 and raknaNamn("Domarbåsets tak") == 2
 		and raknaNamn("Domarbåsets trappsteg") > 0

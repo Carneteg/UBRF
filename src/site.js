@@ -1174,7 +1174,19 @@ const RIDHUSINNE = {
      Väggarna låg på rent `#FFFFFF` och renderades utfrätta. Vit är inte ett
      mätt värde — samma sak som stallets väggar. */
   hallvagg:"#ACA99D",
+  /* TAKSTOMMEN. Låg som literaler inne i v3dRidhus (resning 2,8, balkdelning
+     6 m, dimensioner) och fanns därför bara i webben — Roblox byggde stål,
+     kabelstegar och ventilation men varken trästomme eller undertak.
+
+     Review 10 säger rätt sak: en andra geometrisanning ska inte handkopieras
+     in i Anlaggningen.luau. Fakta flyttas hit och båda ytorna läser dem.
+
+     `DERIVED`: resningen och balkdelningen är spelets tidigare tal, inte
+     mätta. `MEASURED`: färgerna, se noten ovan. */
   takfarg:{balk:"#5C4C45", plat:"#5E5B5E"},
+  takstomme:{resning:2.8, delning:6.0, start:1.0,
+             balkH:0.26, balkD:0.24, kungB:0.22, kungH:2.7,
+             platT:0.18},
   /* MOTSÄGELSE 1 ur DRIVE-SOURCE-INDEX (`IMG_0183`): långsidans övre
      väggyta är MÖRKRÖD/MAROON med horisontella detaljer, inte brun
      träpanel. Rättad 2026-08-30. Listen är den horisontella detaljen. */

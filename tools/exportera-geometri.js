@@ -154,7 +154,7 @@ const ut = {
     basTak: RIDHUSINNE.basTak, sidor: RIDHUSINNE.sidor,
     panel: RIDHUSINNE.panel, panelList: RIDHUSINNE.panelList,
     sandFarg: RIDHUSINNE.sandFarg, hallvagg: RIDHUSINNE.hallvagg,
-    takfarg: RIDHUSINNE.takfarg,
+    takfarg: RIDHUSINNE.takfarg, takstomme: RIDHUSINNE.takstomme,
     dorrar: RIDHUSINNE.dorrar,
   },
 };

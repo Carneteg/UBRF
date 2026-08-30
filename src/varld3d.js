@@ -1191,15 +1191,20 @@ function v3dRidhus(lagg,opp){
   hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,R.langd+0.15));
   hall.lada(0.3,R.tak,R.langd,R.hallvagg,M4.translation(-0.15,R.tak/2,R.langd/2));
   hall.lada(0.3,R.tak,R.langd,R.hallvagg,M4.translation(R.bredd+0.15,R.tak/2,R.langd/2));
-  const halvS=R.bredd/2, resn=2.8;
+  /* Takstommens mått står i RIDHUSINNE.takstomme, inte här — Roblox byggde
+     varken stomme eller undertak och kunde inte, eftersom talen bara fanns
+     i den här funktionen. */
+  const TS=R.takstomme, halvS=R.bredd/2, resn=TS.resning;
   const takL=Math.hypot(halvS,resn), takV=Math.atan2(resn,halvS);
   /* Takfallen lutar ned mot väggarna — samma teckenregel som utvändigt. */
   for(const s of [-1,1])
-    hall.lada(takL,0.18,R.langd+0.6,R.takfarg.plat,
+    hall.lada(takL,TS.platT,R.langd+0.6,R.takfarg.plat,
       M4.mul(M4.translation(R.bredd/2+s*halvS/2,R.tak+resn/2,R.langd/2),M4.rotZ(-s*takV)));
-  for(let z=1;z<R.langd;z+=6){
-    hall.lada(R.bredd,0.26,0.24,R.takfarg.balk,M4.translation(R.bredd/2,R.tak-0.2,z));
-    hall.lada(0.22,2.7,0.22,R.takfarg.balk,M4.translation(R.bredd/2,R.tak+1.3,z));
+  for(let z=TS.start;z<R.langd;z+=TS.delning){
+    hall.lada(R.bredd,TS.balkH,TS.balkD,R.takfarg.balk,
+      M4.translation(R.bredd/2,R.tak-0.2,z));
+    hall.lada(TS.kungB,TS.kungH,TS.kungB,R.takfarg.balk,
+      M4.translation(R.bredd/2,R.tak+TS.kungH/2-0.05,z));
   }
   /* ── MOTSÄGELSE 2 ur DRIVE-SOURCE-INDEX ──────────────────────────
      `IMG_0179` och `IMG_0183`: taket har stora träbalkar PLUS
