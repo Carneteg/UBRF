@@ -784,47 +784,6 @@ function v3dStall(lagg,opp){
      hela gången — och en ljus spånremsa längs boxfronterna på båda
      sidor. Remsan är det första ögat läser i filmen; utan den blir
      gången en enfärgad korridor. */
-  /* YTTERVÄGGARNA OCH GOLVET.
-
-     `KNOWN MISMATCH`, hittad när den underkända spelarvyn reproducerades:
-     stallscenen byggde ALDRIG några ytterväggar och inget golv. Allt utanför
-     boxraderna var utomhusmarken som lyste igenom. Spelaren stod i ett stall
-     utan väggar, och den ljusa ytan som lästes som "krämfärgad korridor" var
-     till stor del gårdsplanen.
-
-     Väggfärgen är mätt ur stall-inne-09. Södra gaveln byggs i bitar runt
-     gaveldörren, så att dagsljuset syns. */
-  const skal=new Bygge();
-  /* Väggen står på sitt MÄTTA värde, utan kompensation.
-
-     Jag försökte kompensera den kanalvis (0,826/0,775/0,660) och mätte
-     resultatet: väggen renderades #EAEFDC, alltså nästan vit — långt ljusare
-     än fotots #C1C0C3. Det är EXAKT samma överkorrigering som jag redan
-     förkastat en gång i det här passet, på boxfronternas reglar. En kanalvis
-     invertering av en belyst yta spränger den. Kompensationen är borttagen;
-     ytan ligger på det mätta värdet och avviker hellre nedåt. */
-  const VAGG=S.vagg;
-  /* Golvet ligger strax över 0 så att det inte delar plan med utomhusmarken.
-     (Det var INTE förklaringen till den ljusa ytan i entrévyn — den
-     hypotesen föll. Ett magentatest visade att ytan var servicedelens egen
-     betongplatta. Lyftet står kvar för att det är rätt ändå.) */
-  skal.yta(S.bredd,S.langd,S.golv,M4.translation(vx,0.012,S.langd/2),12);
-  /* Fodret ligger INNANFÖR fotavtrycket, inte på det. Lades det på x=0 och
-     x=bredd hamnade det i samma plan som husets ytterväggar från
-     exteriörmodellen, och då vann panelen utifrån — spelarvyn visade
-     liggande fasadpanel INIFRÅN stallet. Det var det som lästes som
-     "krämfärgad korridor", inte servicerummen. */
-  const VT=0.20, VH=S.tak, INS=0.06;
-  for(const sida of [INS,S.bredd-INS])                // långsidorna
-    skal.lada(VT,VH,S.langd,VAGG,M4.translation(sida,VH/2,S.langd/2));
-  skal.lada(S.bredd,VH,VT,VAGG,M4.translation(vx,VH/2,S.langd-INS));
-  {const G2=S.gaveloppning;
-   const bitar=G2?[[0,G2.x],[G2.x+G2.bredd,S.bredd]]:[[0,S.bredd]];
-   for(const [x0,x1] of bitar) if(x1-x0>0.05)
-     skal.lada(x1-x0,VH,VT,VAGG,M4.translation((x0+x1)/2,VH/2,INS));
-   if(G2) skal.lada(G2.bredd,VH-G2.hojd,VT,VAGG,
-     M4.translation(G2.x+G2.bredd/2,G2.hojd+(VH-G2.hojd)/2,INS));}
-  lagg(skal,null);
 
   const sten=new Bygge(), remsa=new Bygge();
   /* Golvfärgerna är MÄTTA och står i site.js. Här ligger bara den uppmätta
@@ -858,16 +817,46 @@ function v3dStall(lagg,opp){
     }
   }
   lagg(span,T.span);
-  lagg(new Bygge().yta(S.bredd,S.langd,"#FFFFFF",
+  /* Golvplattan låg på ren vit botten under betongtexturen. Vit är inte ett
+     mätt värde, och tillsammans med texturen blev plattan en av de ljusa
+     ytorna i den underkända vyn. Den läser nu STALLINNE.golv. */
+  lagg(new Bygge().yta(S.bredd,S.langd,S.golv,
     M4.translation(vx,0.005,S.langd/2),14),T.betong);
 
-  /* Ytterväggar och tak. */
+  /* YTTERVÄGGARNA.
+
+     De här fanns hela tiden — jag påstod i ett tidigare pass att stallscenen
+     saknade ytterväggar och byggde en egen uppsättning ovanpå dem. Fel, och
+     dubbletten är borttagen. Det som var fel var FÄRGEN: väggarna låg på ren
+     vit botten under pärlspontstexturen. Vit är inte ett mätt värde, och en
+     vit botten under en ljus textur är precis den krämfärgade korridor som
+     underkändes.
+
+     En ID-rendering med unik platt färg per yta avgjorde det: de stora ljusa
+     väggarna i spelarvyn hade INGEN av mina färger, alltså kom de varken från
+     mina nya väggar eller från STALLINNE.vagg. De kom härifrån.
+
+     Väggen läser nu det MÄTTA `#C1C0C3` ur stall-inne-09, och södra gaveln
+     byggs i bitar runt gaveldörren så att dagsljuset syns. */
   const vagg=new Bygge();
-  vagg.lada(S.bredd+0.4,S.tak,0.25,"#FFFFFF",M4.translation(vx,S.tak/2,-0.1));
-  vagg.lada(S.bredd+0.4,S.tak,0.25,"#FFFFFF",M4.translation(vx,S.tak/2,S.langd+0.1));
-  vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(-0.1,S.tak/2,S.langd/2));
-  vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
-  lagg(vagg,T.parlspont);
+  vagg.lada(S.bredd+0.4,S.tak,0.25,S.vagg,M4.translation(vx,S.tak/2,S.langd+0.1));
+  vagg.lada(0.25,S.tak,S.langd,S.vagg,M4.translation(-0.1,S.tak/2,S.langd/2));
+  vagg.lada(0.25,S.tak,S.langd,S.vagg,M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
+  {const G2=S.gaveloppning;
+   const bitar=G2?[[-0.2,G2.x],[G2.x+G2.bredd,S.bredd+0.2]]:[[-0.2,S.bredd+0.2]];
+   for(const [x0,x1] of bitar) if(x1-x0>0.05)
+     vagg.lada(x1-x0,S.tak,0.25,S.vagg,M4.translation((x0+x1)/2,S.tak/2,-0.1));
+   if(G2) vagg.lada(G2.bredd,S.tak-G2.hojd,0.25,S.vagg,
+     M4.translation(G2.x+G2.bredd/2,G2.hojd+(S.tak-G2.hojd)/2,-0.1));}
+  /* OBETEXTURERAD. Väggen låg under `T.parlspont` — en varm träpaneltextur —
+     och det var den, inte ljuset, som gjorde ytan gulaktig: renderad #B9AE93
+     mot fotots kalla #C1C0C3. Skillnaden satt nästan helt i blått.
+
+     stall-inne-09 och -07 visar en SLÄT MÅLAD vägg, inte träpanel. Texturen
+     var alltså fel material från början, och att kompensera för den hade
+     varit att laga ett materialfel med en färgjustering. Den tas bort i
+     stället, och väggen ligger på sitt mätta värde. */
+  lagg(vagg,null);
   /* Taket. Formen — sadeltak med korrugerad plåt som undertak, balkar var
      fjärde meter, takfönster i västra fallet och galvade dragstag ner till
      boxarna — kommer ur IMG_0249/0250 och stämmer mot
@@ -1033,9 +1022,9 @@ function v3dStall(lagg,opp){
     const gx=k.x<vx?k.x+k.w:k.x;                    // väggen mot gången
     const ut=k.x<vx?1:-1;                           // in mot gången
     if(!r.oppen){
-      rum.lada(0.16,2.6,k.h,VAGG,M4.translation(gx,1.3,k.y+k.h/2));
-      rum.lada(k.w,2.6,0.16,VAGG,M4.translation(k.x+k.w/2,1.3,k.y));
-      rum.lada(k.w,2.6,0.16,VAGG,M4.translation(k.x+k.w/2,1.3,k.y+k.h));
+      rum.lada(0.16,2.6,k.h,S.vagg,M4.translation(gx,1.3,k.y+k.h/2));
+      rum.lada(k.w,2.6,0.16,S.vagg,M4.translation(k.x+k.w/2,1.3,k.y));
+      rum.lada(k.w,2.6,0.16,S.vagg,M4.translation(k.x+k.w/2,1.3,k.y+k.h));
     }else{
       /* Buktens RYGG mot ytterväggen, i samma mörka panel som boxfronterna
          — stall-inne-09 visar att det är samma produkt. Ingen vägg mot
@@ -1082,10 +1071,17 @@ function v3dStall(lagg,opp){
     /* Betongen är en REMSA längs ytterväggen, inte hela bukten. Ritades den
        över hela rektangeln blev den en stor ljus yta rakt framför spelaren
        — bekräftat med magentatest — och fotot visar marksten i stråket. */
+    /* Betongremsan vetter uppåt och fångar mer ljus än väggarna: mätt genom
+       en ID-mask renderades den #C5B38D mot fotots #AEA28C, alltså 1,11 av
+       råvaran. Ett SKALÄRT avdrag räcker och klipper ingenting — till
+       skillnad från väggen, se auditens RENDERING LIMITATION. */
+    const SGOLV="#"+[1,3,5].map(i=>
+      Math.round(parseInt(S.serviceGolv.substr(i,2),16)/1.11)
+        .toString(16).padStart(2,"0")).join("");
     for(const r of S.service){const k=r.rekt;
       const bw=Math.min(S.serviceGolvBredd||k.w, k.w);
       const bxm=k.x<vx ? k.x+bw/2 : k.x+k.w-bw/2;
-      bg.yta(bw,k.h,S.serviceGolv,
+      bg.yta(bw,k.h,SGOLV,
         M4.translation(bxm,0.022,k.y+k.h/2),4);}
     lagg(bg,null);
   }

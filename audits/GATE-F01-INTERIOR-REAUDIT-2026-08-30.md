@@ -311,3 +311,77 @@ smal remsa längs väggen med marksten i stråket bredvid. Plattan är nu
 
 Tre hypoteser, två falsifierade, en bekräftad med mätning. Det är metoden;
 gissningen hade varit att måla om väggen.
+
+---
+
+# Kalibreringspasset på servicezonen
+
+Reviewens sista blockerare: zonen läste ljusare än `stall-inne-09`. Regeln var
+att identifiera VILKA ytor som orsakade det, inte att mörka ner scenen.
+
+## Metod: ID-rendering
+
+Jag slutade gissa på provrutor och renderade en **ID-bild** där varje
+kandidatyta fick en unik platt färg. Masken ur den bilden lades sedan på den
+riktiga renderingen, så varje yta mättes exakt där den faktiskt syns.
+
+Det avgjorde på en gång vad tre tidigare hypoteser missat.
+
+## Vad som faktiskt orsakade ljusheten
+
+**1. Ytterväggarna låg på ren vit botten.** `v3dStall` byggde
+`vagg.lada(..., "#FFFFFF", ...)` under pärlspontstexturen. Vit är inte ett
+mätt värde, och en vit botten under en ljus textur ÄR den krämfärgade
+korridoren. Väggen läser nu det mätta `#C1C0C3`.
+
+**2. Golvplattan låg också på vit botten**, under betongtexturen. Läser nu
+`STALLINNE.golv`.
+
+**3. Väggen hade fel MATERIAL, inte fel ljus.** Renderad `#B9AE93` mot fotots
+kalla `#C1C0C3` — skillnaden satt nästan helt i blått. Orsaken var
+`T.parlspont`, en varm träpaneltextur, på en vägg som i i09 och i07 är slät
+och målad. Att kompensera färgen hade varit att laga ett materialfel med en
+färgjustering. Texturen är borttagen i stället.
+
+**4. Betongremsan var 1,11 gånger för ljus** — den vetter uppåt och fångar mer
+ljus än väggarna. Ett skalärt avdrag i renderaren räcker och klipper
+ingenting.
+
+## RÄTTELSE: jag byggde en dubblett
+
+I föregående pass skrev jag att stallscenen "byggde varken ytterväggar eller
+golv". **Det var fel.** Båda fanns sedan tidigare, på rad 81–90 i `v3dStall`.
+Jag byggde en andra uppsättning ovanpå dem. Dubbletten är borttagen, och
+felet står här därför att det förklarar varför min första färgändring inte
+gav något utslag: jag ändrade väggar som låg bakom de riktiga.
+
+Det är tredje gången i det här arbetet som en gissad diagnos kostat ett varv,
+och andra gången ID-/magentatestet var det som avgjorde. Mät ytan först.
+
+## RENDERING LIMITATION — väggen
+
+Mätt genom ID-masken efter rättningarna:
+
+| yta | render | foto | utfall |
+|---|---|---|---|
+| yttervägg | `#8E887E` | `#C1C0C3` | **RENDERING LIMITATION** |
+| betongremsa | `#AFA189` | `#AEA28C` | `RESOLVED` |
+| golvplatta | `#655B48` | ingen direkt motsvarighet | — |
+
+Väggen renderas nu **mörkare** än fotot, inte ljusare. Den vetter inåt, bort
+från armaturerna, och får nästan bara ambient: renderat/råvara är
+0,74 / 0,71 / 0,65. För att nå fotots `#C1C0C3` skulle råvaran behöva ligga
+kring rgb(262, 271, 302) — **utanför 8 bitar**. Det går inte att korrigera
+utan att förfalska det mätta värdet, och en kanalvis invertering har redan
+sprängt två ytor i det här arbetet.
+
+Väggen ligger därför kvar på sitt mätta `#C1C0C3` och avvikelsen redovisas
+som `RENDERING LIMITATION` enligt reviewens punkt 7. Den hör till
+webbrenderarens inomhusljus, inte till byggnaden, och ska inte lösas med
+geometri.
+
+## Bevis
+
+`audits/bilder/stall-entre-fore-efter.png`, `stall-service-fore-efter.png`
+och `stall-service-mot-kalla.png`. Samma kamera i före och efter. Sex specar
+gröna, export i synk, inga konsolfel.
