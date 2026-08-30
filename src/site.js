@@ -664,8 +664,65 @@ const IDENTITET = {
        den på. De hör därför hemma här och inte i en renderare.
 
        Roblox bygger ännu inte stallets tak, bara golv, boxrader och
-       tvärväggar. När det byggs ska det läsa de här värdena. */
-    stallgang:{limtra:"#C39575", takplat:"#878783"},
+       tvärväggar. När det byggs ska det läsa de här värdena.
+
+       OMMÄTNING (den här gången mot BÅDA bildrutorna, inte en):
+       #C39575 och #878783 kom ur EN bildruta med ljust tak. Med samma
+       värmemask körd på båda bildrutorna, och maskerna visuellt
+       kontrollerade som röd/cyan overlay innan medianen togs:
+
+         limträ    #987B65 (i05, skuggat tak)  /  #C2987B (i06, ljust tak)
+         takplåt   #6B6C68 (i05)               /  #767574 (i06)
+
+       De två bildrutorna skiljer sig mycket på limträet — taket är belyst
+       helt olika. Medelvärdet är det ärliga enskilda värdet, och spridningen
+       står här så att ingen tror att siffran är exaktare än den är.
+       `MEASURED`, spridning ±0,15 i ljushet mellan bildrutorna. */
+    stallgang:{limtra:"#AD8A70", takplat:"#70716E"},
+    /* BOXFRONTERNA — färger MÄTTA, form läst ur samma två bildrutor.
+
+       Bildrutor: `stall-inne-05-stallgangen.jpg` (fronterna utifrån gången)
+       och `stall-inne-06-boxen-inifran.jpg` (samma konstruktion inifrån en
+       box). Två oberoende vinklar, olika ljus.
+
+       Metod: leta upp ytan, beskär den, TITTA på beskärningen, och mät
+       först därefter. Ett första försök med rena tröskelvärden (mörka
+       neutrala pixlar = panel) gav #48/#41 beroende på var tröskeln sattes
+       — det mätte tröskeln, inte panelen. De beskurna proven nedan är
+       visuellt kontrollerade mot rätt yta innan medianen togs.
+
+         mörk heldel   #454B53 (sd 20, 131 kpx)  /  #43474A (sd 10, 43 kpx)
+         galvat        #9A998F (sd 20,  24 kpx)  /  #999C97 (sd 37,  8 kpx)
+
+       `KNOWN MISMATCH` som det här åtgärdar: Roblox byggde fronter och
+       mellanväggar i BRUNT TRÄ (Color3.fromRGB(126,96,66), WoodPlanks)
+       medan fotona visar mörk antracitpanel i galvad stålram, och medan
+       webben redan ritade dem grå. Två sanningar om samma yta, och den
+       bruna fanns bara i Roblox-filen. Färgerna hör därför hemma här.
+
+       FORM, `VERIFIED` i båda bildrutorna:
+       - nedre delen är en tät panel med LODRÄTA spår (skivprofil), mörk
+         antracit, med en vågrät stålskarv en bit upp,
+       - ovanpå panelen ligger en bred galvad kapp-/hyllregel,
+       - däröver sitter VÅGRÄTA runda galvade reglar mellan lodräta
+         ändstolpar — jag räknar fem i den breda fasta sektionen,
+       - stolparna går upp till ramens överliggare.
+
+       `KNOWN MISMATCH` nummer två: webben ritade sju LODRÄTA spjälor per
+       box och inga vågräta alls. Det är fel läsning av samma bild.
+
+       `[REFERENCE GAP]`: dörrbladet är ett rutnät (vågrätt OCH lodrätt)
+       och sitter i en smalare sektion av fronten, men vilken del av varje
+       box som är dörr går inte att läsa ur bilderna för alla boxar. Det
+       modelleras därför inte per box.
+
+       `heldel` = den täta panelen, `ram` = kappregel, ändstolpar och
+       reglar. Måtten är DERIVED: panelens överkant och ramens överliggare
+       är de mått spelet redan hade, och de fem reglarna delar spannet
+       däremellan jämnt. */
+    boxfront:{heldel:"#454A4F", ram:"#9A9B93",
+              heldelH:1.35, ramZ:1.38, stolpH:2.15, toppregelZ:2.20,
+              reglar:5, regelD:0.04},
     /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
        Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
     balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
@@ -798,6 +855,28 @@ const STALLINNE = {
      y = 65 till y = 49,05. Att växa norrut hade lagt huset i parkeringen. */
   langd:STALL_LANGD,
   vagg:"#CFC8BC", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
+  /* Gångens två golvytor, MÄTTA ur stall-inne-05 med samma
+     beskär-titta-mät-metod som boxfronterna.
+
+       marksten   #867D6C  (sd 17)  — varmgrå marksten i löpförband
+       spånremsa  #A79679  (sd 49)  — spånet som ligger ut från boxarna
+
+     De låg som lokala tal i src/varld3d.js: markstenen som ren vit
+     bottenfärg under en textur, spånremsan som #D8C9A4. Roblox har i sin tur
+     en egen INRE.gang. Tre tal för samma golv, och ingen av dem mätt.
+
+     Spånremsan är INTE ett fel: fotot visar tydligt spån som ligger ut i
+     gången längs boxfronterna. Den var bara för gul och för ljus. */
+  gangSten:"#867D6C", gangSpan:"#A79679",
+  /* Takresningen från takfot till nock inne i boxhallen. Låg som ett
+     lokalt tal (RESN=2.1) i src/varld3d.js, alltså som en byggnadsfakta
+     inuti en renderare — och Roblox hade därför ingen. Nu läser båda
+     ytorna den härifrån.
+     `DERIVED`: fotona visar en flack sadel över boxhallen, men vinkeln går
+     inte att mäta ur dem. 2,1 m på 21 m bredd är den resning spelet redan
+     hade och som stämmer med bildernas intryck. Ändras STALL_BREDD ska den
+     räknas om. */
+  takresning:2.1,
   /* Zonerna följer utrymningsplanens EGNA proportioner, inte en blind
      sträckning. Mätt på references/plans/stall-plan1-utrymning-rak.jpg:
      de genomgående tvärväggarna mellan klubbdel och boxhall ligger på

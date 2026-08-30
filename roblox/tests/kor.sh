@@ -6,9 +6,23 @@
 # En krasch såg alltså ut som grönt. Nu krävs TRE saker: att luau avslutar med
 # kod 0, att inga FEL skrevs, och att specen nådde sin slutrad. Exitkoden är
 # den enda av dem som inte går att lura genom att skriva rätt text.
+#
+# ANDRA HÅLET, tätat i efterhand: den här körde bara de FÄRDIGBYGGDA specarna
+# och byggde dem aldrig. Den rapporterade alltså om .build/ — inte om koden på
+# disk. Under ett falsifieringspass gav det både falskt rött och falskt grönt,
+# beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
+# körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
+SPECAR="geometri bygge movement camera rider touch"
+byggargs=""
+for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
+if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
+  echo "BYGGET AV SPECARNA MISSLYCKADES"
+  printf '%s\n' "$bygglogg" | tail -10
+  exit 1
+fi
 status=0
-for f in geometri bygge movement camera rider touch; do
+for f in $SPECAR; do
   ut=$(luau "tests/.build/$f.spec.luau" 2>&1)
   kod=$?
   fel=$(printf '%s\n' "$ut" | grep -cE '^[[:space:]]*FEL')

@@ -95,6 +95,72 @@ check("två gångar och tvärkorridoren fick golv",
 	raknaNamn("Stallgång") == #UBRFKomplex.stall.gangytor,
 	raknaNamn("Stallgång") .. " gångytor")
 
+--[[ De här fyra testerna finns för att KNOWN MISMATCH-en ska smälla om den
+	kommer tillbaka. Roblox byggde fronterna i brunt trä medan fotona och
+	webben visade mörk antracit i galvad ram, och ingen spec märkte det —
+	specen mätte att fronter FANNS, inte vad de var gjorda av.
+
+	Alla fyra läser det delade G.identitet, inte avskrivna tal. Ett test som
+	skriver av färgen mäter ett minne av datan i stället för datan. ]]
+local function forstaNamn(monster)
+	for _, d in ipairs(delar) do
+		if string.find(d.Name, monster, 1, true) then return d end
+	end
+	return nil
+end
+local function sammaFarg(a, b)
+	return a ~= nil and b ~= nil
+		and math.abs(a.R - b.R) < 0.01 and math.abs(a.G - b.G) < 0.01
+		and math.abs(a.B - b.B) < 0.01
+end
+
+local BFI = UBRFKomplex.identitet.stall.boxfront
+local SGI = UBRFKomplex.identitet.stall.stallgang
+
+do
+	local f = forstaNamn("Boxfront W")
+	check("boxfronten har den mätta panelfärgen, inte en egen",
+		sammaFarg(f and f.Color, BFI.heldel),
+		f and string.format("rgb(%d,%d,%d)", f.Color.R * 255, f.Color.G * 255,
+			f.Color.B * 255) or "hittades inte")
+end
+
+do
+	local r = forstaNamn("Frontregel")
+	check("fronten har vågräta reglar med luft emellan, inte en tät skiva",
+		r ~= nil and math.abs(r.Size.Z / M - (UBRFKomplex.stall.boxB - 0.30)) < 0.01
+			and math.abs(r.Size.Y / M - BFI.regelD) < 0.01,
+		r and string.format("%.2f x %.2f m", r.Size.Y / M, r.Size.Z / M) or "saknas")
+	check("antalet reglar per box följer datan",
+		raknaNamn("Frontregel") == raknaNamn("Boxfront ") * BFI.reglar,
+		raknaNamn("Frontregel") .. " reglar på " .. raknaNamn("Boxfront ") .. " fronter")
+end
+
+do
+	local b = forstaNamn("Limträbalk")
+	local pl = forstaNamn("Stalltak plåt")
+	check("limträstommen byggdes i den mätta tonen",
+		sammaFarg(b and b.Color, SGI.limtra),
+		b and "finns" or "SAKNAS — taket är stallgångens tydligaste drag")
+	check("takplåten byggdes i den mätta tonen",
+		sammaFarg(pl and pl.Color, SGI.takplat), pl and "finns" or "SAKNAS")
+end
+
+check("pendelarmaturerna över gångarna byggdes",
+	raknaNamn("Stallarmatur") > 0,
+	raknaNamn("Stallarmatur") .. " st — de gör undertaket läsbart i i05")
+
+do
+	local gy = forstaNamn("Stallgång")
+	check("gången har den mätta markstensfärgen, inte en egen",
+		sammaFarg(gy and gy.Color, UBRFKomplex.stall.gangSten),
+		gy and string.format("rgb(%d,%d,%d)", gy.Color.R * 255, gy.Color.G * 255,
+			gy.Color.B * 255) or "hittades inte")
+end
+
+check("stallklockan byggdes", raknaNamn("Stallklocka") == 1,
+	raknaNamn("Stallklocka") .. " st")
+
 check("de namngivna rummen byggdes",
 	raknaNamn("UPPEHÅLLSRUM") == 1 and raknaNamn("SADELKAMMARE") == 1
 		and raknaNamn("SPOLSPILTA") == 1)

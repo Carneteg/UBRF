@@ -102,3 +102,107 @@ Inget av det nedan går att lösa från befintligt material:
   bilder i stället för på en beskrivning.
 - Nyckelbildrutor ur ridhusfilmerna (`IMG_0191.MOV` m.fl.), som fortfarande
   är `[DRIVE-ONLY]`.
+
+---
+
+# Interiör-P0, steg 1–2: stallet
+
+Nuläge efter passet. Inte historik — den står ovanför.
+
+## Vad som faktiskt var fel
+
+**1. Roblox hade en egen sanning om boxfronterna.** `INRE.box` byggde
+fronter och mellanväggar i brunt trä (`rgb(126,96,66)`, `WoodPlanks`) medan
+fotona visar mörk antracitpanel i galvad stålram och webben redan ritade dem
+grå. Färgen fanns bara i `Anlaggningen.luau`.
+
+**2. Exporten kunde inte bära färger den inte kände igen vid namn.**
+`ARFARG` var en handskriven lista över NYCKELNAMN. Varje ny färgnyckel i
+`site.js` exporterades tyst som en sträng, och Roblox fick ingen färg. Det är
+mekanismen som gör att en separat Roblox-sanning uppstår, inte ett symptom.
+Nu känns färger igen på VÄRDET: `^#RRGGBB$`. Exportdiffen visade fem nycklar
+som tyst varit strängar (`takfot`, `limtra`, `takplat`, `heldel`, `ram`,
+`fogFarg`) och ingenting annat.
+
+**3. Gallret var en tät skiva.** Roblox byggde `DiamondPlate` som en solid
+platta. Fotona visar vågräta runda reglar med luft emellan — man ser in i
+boxen. Webben hade i sin tur sju LODRÄTA spjälor och inga vågräta alls. Båda
+var felläsningar av samma bild.
+
+**4. Taket över boxhallen fanns inte i Roblox.** `gableRoof` lägger ett
+yttertak i fasadkortets kulör, och undersidan blev den kulören. Limträstommen
+och den galvade plåten — stallgångens tydligaste inre drag — saknades helt.
+Armaturerna och klockan likaså.
+
+**5. Byggnadsfakta låg i renderaren.** Takresningen var `RESN=2.1` inne i
+`varld3d.js`; gångens golvfärger var lokala tal där. Roblox kunde inte läsa
+något av det.
+
+**6. `kor.sh` byggde inte specarna.** Den körde `.build/` och rapporterade om
+den, inte om koden på disk. Under ett falsifieringspass gav det både falskt
+rött och falskt grönt beroende på vilken mutation som råkade ligga kvar.
+Bygget görs nu i körningen.
+
+## Mätmetod, och varför den ändrades
+
+Färgerna är mätta genom att ytan **lokaliseras, beskärs, tittas på, och mäts
+först därefter**. Rena tröskelvärden gav `#48`…`#41` för samma panel beroende
+på var tröskeln sattes — de mätte tröskeln. Beskärningarna är visuellt
+kontrollerade mot rätt yta innan medianen togs; två prov som såg ut att sitta
+på en stolpe men mest fångade bakgrund förkastades.
+
+Varje färg är mätt i **två oberoende bildrutor** (i05 och i06, olika ljus,
+olika riktning). Spridningen redovisas i `site.js` där den är stor.
+
+| yta | i05 | i06 | satt värde |
+|---|---|---|---|
+| panel | `#43474A` | `#454B53` | `#454A4F` |
+| galvad ram | `#999C97` | `#9A998F` | `#9A9B93` |
+| limträ | `#987B65` | `#C2987B` | `#AD8A70` |
+| takplåt | `#6B6C68` | `#767574` | `#70716E` |
+| marksten | `#867D6C` | — | `#867D6C` |
+| spånremsa | `#A79679` | — | `#A79679` |
+
+## Korrektionspassen mot webben
+
+Mätta värden räcker inte: renderaren ändrar dem. Två pass, mätta på
+skärmdump, inte bedömda.
+
+| yta | före | efter | mål |
+|---|---|---|---|
+| panel | `#303130` | `#4B4D4B` | `#44494E` |
+| limträ | `#C6926E` | `#AF876B` | `#AD8A70` |
+| takplåt | `#868682` | `#6F706D` | `#70716E` |
+| marksten | `#A79E89` | `#877E6C` | `#867D6C` |
+| spånremsa | `#CBA962` | `#A7977F` | `#A79679` |
+
+**Första försöket förkastades.** Att invertera dämpningen per kanal, på både
+panel och ram, konvergerade enligt medianen — men skärmdumpen visade att
+reglarna sköt i vitt och panelen drog i blått. Runda reglar fångar mycket mer
+ljus än en plan panel, och en kanalvis invertering förstärker ljusets
+färgstick i stället för att ta bort det. Kvar blev ett skalärt ljushetslyft,
+bara på panelen. Medianen sa grönt; ögat sa nej, och ögat hade rätt.
+
+De mätta värdena står i `site.js`. Kompensationen står i `varld3d.js`, som
+LYFT redan gjorde — den är en egenskap hos renderarens ljus, inte hos
+byggnaden. **Ändras `src/ljus.js` eller texturerna måste de mätas om.**
+
+## Bevis
+
+- `roblox/tests/kor.sh` — sex specar gröna, byggda från disk i samma körning.
+- Åtta nya tester i `bygge.spec.luau`, **alla falsifierade**: varje test
+  körts röd genom att mutera byggaren (brunt trä tillbaka, reglarna till en
+  tät skiva, fel antal reglar, taket borta, limträ i egen kulör, armaturerna
+  borta, gången i egen färg, klockan borta) och sedan grön igen.
+- `node tools/exportera-geometri.js --kontrollera` — i synk.
+- Webben utan konsolfel, skärmdumpar av gången mätta mot i05.
+
+## Vad som INTE är verifierat
+
+- **Roblox Studio är inte körd.** Utseende, material, ljus och prestanda i
+  Roblox är overifierade. Testbänken mäter vad byggaren producerar, inte hur
+  det ser ut.
+- Limträets delning var 4:e meter är `ASSUMPTION` och tar för mycket av
+  taket i webben.
+- Reglarnas grovlek är stiliserad, inte mätt.
+- Ridhusets interiör är inte påbörjad — det är nästa steg i ordern.

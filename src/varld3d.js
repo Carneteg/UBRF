@@ -778,12 +778,24 @@ function v3dStall(lagg,opp){
      sidor. Remsan är det första ögat läser i filmen; utan den blir
      gången en enfärgad korridor. */
   const sten=new Bygge(), remsa=new Bygge();
+  /* Golvfärgerna är MÄTTA och står i site.js. Här ligger bara den uppmätta
+     dämpningen från textur och ljus, så att det som FAKTISKT hamnar på
+     skärmen blir de mätta värdena — samma princip som LYFT och PANELLYFT.
+     Mätt på skärmdump: vit botten under T.marksten renderades #A79E89
+     (0,655/0,620/0,537) och #D8C9A4 under T.span renderades #CBA962
+     (0,940/0,841/0,598). Ändras texturerna eller src/ljus.js måste de
+     mätas om. */
+  const golvKomp=(hex,dam)=>"#"+[1,3,5].map((i,k)=>
+    Math.min(255,Math.round(parseInt(hex.substr(i,2),16)/dam[k]))
+      .toString(16).padStart(2,"0")).join("");
+  const STEN=golvKomp(S.gangSten,[0.655,0.620,0.537]);
+  const SPAN=golvKomp(S.gangSpan,[0.940,0.841,0.598]);
   for(const g of S.gangytor){
     const gangSten=Math.max(g.w*0.72, g.w-1.4), rb=(g.w-gangSten)/2;
-    sten.yta(gangSten,g.h,"#FFFFFF",
+    sten.yta(gangSten,g.h,STEN,
       M4.translation(g.x+g.w/2,0.02,g.y+g.h/2),10);
     if(rb>0.05) for(const sida of [-1,1])
-      remsa.yta(rb,g.h,"#D8C9A4",
+      remsa.yta(rb,g.h,SPAN,
         M4.translation(g.x+g.w/2+sida*(gangSten/2+rb/2),0.025,g.y+g.h/2),4);
   }
   lagg(sten,T.marksten);
@@ -828,7 +840,7 @@ function v3dStall(lagg,opp){
   const SG=IDENTITET.stall.stallgang, LYFT=1.05;
   const damp=(h)=>"#"+[1,3,5].map(i=>
     Math.round(parseInt(h.substr(i,2),16)/LYFT).toString(16).padStart(2,"0")).join("");
-  const RESN=2.1, NOCK=S.tak+RESN, halvB=S.bredd/2;
+  const RESN=S.takresning, NOCK=S.tak+RESN, halvB=S.bredd/2;
   const takL=Math.hypot(halvB,RESN), takV=Math.atan2(RESN,halvB);
   const tak=new Bygge();
   for(const sida of [-1,1])                         // takfallen i galvad plåt
@@ -900,25 +912,60 @@ function v3dStall(lagg,opp){
       M4.mul(M4.translation(K.x+0.06,K.z,K.y),M4.rotZ(Math.PI/2)),14);
     lagg(kl,null);}
 
-  /* Boxfronterna: komposit, galvad ram, galler och namnskylt. */
+  /* Boxfronterna: komposit, galvad ram, vågräta reglar och namnskylt.
+     Färger och form ur IDENTITET.stall.boxfront — samma data som Roblox
+     läser, så att fronterna inte kan glida isär mellan ytorna. */
+  const BF=IDENTITET.stall.boxfront;
+  /* Samma sorts renderarkompensation som LYFT gör för taket, fast åt andra
+     hållet, och bara för den täta panelen.
+
+     Mätning på skärmdump av stallgången: den mätta panelen #454A4F
+     renderades #2E2F2E, alltså 0,63 av råvaran. Panelen är en lodrät yta
+     som vetter bort från armaturerna och får nästan bara ambient.
+
+     FÖRSTA FÖRSÖKET, förkastat: invertera dämpningen per kanal, och göra
+     det för ramen också. Medianen sa att det konvergerade — men
+     skärmdumpen visade att reglarna sköt i vitt och panelen drog i blått.
+     De runda reglarna fångar mycket mer ljus än den plana panelen, så en
+     kompensation som passar panelen spränger reglarna, och en kanalvis
+     invertering förstärker ljusets färgstick i stället för att ta bort det.
+     Det är därför bara ett skalärt ljushetslyft här, och bara på panelen.
+
+     Ramen står kvar på sitt mätta värde: den renderades #8F8A74 mot fotots
+     #9A9B93, vilket ligger inom spridningen mellan de två bildrutorna.
+
+     Lyftet är en egenskap hos webbrenderarens ljus, inte hos byggnaden, och
+     hör därför hemma här och inte i site.js. Ändras src/ljus.js måste det
+     mätas om — det står i auditen. */
+  const PANELLYFT=1.58;
+  const BF_HELDEL="#"+[1,3,5].map(i=>
+    Math.min(255,Math.round(parseInt(BF.heldel.substr(i,2),16)*PANELLYFT))
+      .toString(16).padStart(2,"0")).join("");
+  const BF_RAM=BF.ram;
   const front=new Bygge(), galler=new Bygge();
   for(const rad2 of S.rader){
     const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
     for(let i=0;i<rad.length;i++){
       const my=boxY(i), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
-      front.lada(0.12,1.35,S.boxB-0.04,"#4A4D50",M4.translation(fx,0.675,my));
-      front.lada(0.16,0.10,S.boxB,"#B4B8BB",M4.translation(fx,1.38,my));
+      front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_HELDEL,
+        M4.translation(fx,BF.heldelH/2,my));
+      front.lada(0.16,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.ramZ,my));
       for(const dy of [y0,y1])
-        galler.lada(0.14,2.15,0.14,"#B4B8BB",M4.translation(fx,1.07,dy));
-      for(let g=1;g<8;g++)
-        galler.cyl(0.022,0.022,0.78,"#989CA0",
-          M4.translation(fx,1.43,y0+(y1-y0)*g/8),6);
-      galler.lada(0.14,0.10,S.boxB,"#B4B8BB",M4.translation(fx,2.20,my));
+        galler.lada(0.14,BF.stolpH,0.14,BF_RAM,
+          M4.translation(fx,BF.stolpH/2,dy));
+      /* VÅGRÄTA reglar, inte lodräta spjälor: de delar spannet mellan
+         kappregeln och överliggaren jämnt. Fotona visar fem. */
+      for(let g=1;g<=BF.reglar;g++)
+        galler.cyl(BF.regelD/2,BF.regelD/2,S.boxB-0.14,BF_RAM,
+          M4.mul(M4.translation(fx,
+                   BF.ramZ+(BF.toppregelZ-BF.ramZ)*g/(BF.reglar+1), y0+0.07),
+                 M4.rotX(Math.PI/2)),8);
+      galler.lada(0.14,0.10,S.boxB,BF_RAM,M4.translation(fx,BF.toppregelZ,my));
       /* Skiljeväggar mellan boxarna. */
       const ut=sida==="W"?-1:1;
-      front.lada(rad2.djup,1.35,0.10,"#4A4D50",
-        M4.translation(fx+ut*rad2.djup/2,0.675,y0));
+      front.lada(rad2.djup,BF.heldelH,0.10,BF_HELDEL,
+        M4.translation(fx+ut*rad2.djup/2,BF.heldelH/2,y0));
       const h=boxHast(rad[i]);
       const b=new Bygge();
       v3dTextPanel(b,0.85,0.22,

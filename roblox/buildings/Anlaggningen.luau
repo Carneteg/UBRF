@@ -434,30 +434,67 @@ local function byggStallInre(model: Model, base: CFrame)
 	-- ser var man kan gå — det är cirkulationen gaten frågar efter.
 	for i, g in ipairs(S.gangytor) do
 		local p = BK.box(model, base, "Stallgång " .. i,
-			o.x + g.x, 0.02, o.y + g.y, g.w, 0.04, g.h, INRE.gang, Enum.Material.Concrete)
+			o.x + g.x, 0.02, o.y + g.y, g.w, 0.04, g.h, S.gangSten,
+			Enum.Material.Pavement)
 		p.CanCollide = false
 	end
 
-	-- Boxraderna. Varje rad är en länga av boxar med mellanväggar och en front
-	-- mot sin gång; tvärkorridoren lämnas öppen rakt igenom.
+	--[[ Boxraderna.
+
+		SENIOR INTERIOR FIDELITY, rättad KNOWN MISMATCH: fronterna och
+		mellanväggarna byggdes här i BRUNT TRÄ (rgb 126,96,66, WoodPlanks)
+		medan fotona visar mörk antracitpanel i galvad stålram — och medan
+		webben redan ritade dem grå. Det var två sanningar om samma yta, och
+		den bruna fanns bara i den här filen. Färgerna är nu MÄTTA ur
+		stall-inne-05 och stall-inne-06 och står i det delade
+		G.identitet.stall.boxfront, som båda ytorna läser.
+
+		Andra rättade felläsningen: gallret var en TÄT skiva i DiamondPlate.
+		Fotona visar VÅGRÄTA runda reglar mellan lodräta ändstolpar, med
+		luft emellan — man ser in i boxen. Höjderna (panel 1,35, kappregel
+		1,38, stolpe 2,15, överliggare 2,20) kommer ur samma delade data och
+		räknas inte om här.
+
+		Facken kommer ur Geometri, som specen mäter. Räknar man ut dem här
+		mäter specen inte längre det som byggs. ]]
+	local BF = G.identitet.stall.boxfront
 	for _, rad in ipairs(S.rader) do
 		local x0 = o.x + rad.x0
-		-- Facken kommer ur Geometri, som specen mäter. Räknar man ut dem här
-		-- mäter specen inte längre det som byggs.
 		for i, f in ipairs(GEO.boxfack(S)) do
-			-- Skiljevägg i fackets bortre ände.
-			BK.box(model, base, "Boxvägg " .. rad.id .. " " .. i,
-				x0, 0, o.y + f.y0, rad.djup, h * 0.62, 0.08, INRE.box, Enum.Material.WoodPlanks)
-			-- Fronten mot gången, med galler upptill.
+			local namn = rad.id .. " " .. i
+			-- Skiljeväggar i fackets båda ändar, i panelens ton och höjd.
+			for _, par in ipairs({ { "", f.y0 }, { "b", f.y1 } }) do
+				BK.box(model, base, "Boxvägg " .. namn .. par[1],
+					x0, 0, o.y + par[2], rad.djup, BF.heldelH, 0.08,
+					BF.heldel, Enum.Material.Metal)
+			end
+			-- Den täta panelen mot gången, och kappregeln ovanpå den.
 			local fx = if rad.vetter > 0 then x0 + rad.djup - 0.06 else x0
-			BK.box(model, base, "Boxfront " .. rad.id .. " " .. i,
-				fx, 0, o.y + f.y0 + 0.08, 0.06, h * 0.34, S.boxB - 0.16,
-				INRE.box, Enum.Material.WoodPlanks)
-			BK.box(model, base, "Boxgaller " .. rad.id .. " " .. i,
-				fx, h * 0.42, o.y + f.y0 + 0.08, 0.06, h * 0.20, S.boxB - 0.16,
-				INRE.front, Enum.Material.DiamondPlate)
-			BK.box(model, base, "Boxvägg " .. rad.id .. " " .. i .. "b",
-				x0, 0, o.y + f.y1, rad.djup, h * 0.62, 0.08, INRE.box, Enum.Material.WoodPlanks)
+			BK.box(model, base, "Boxfront " .. namn,
+				fx, 0, o.y + f.y0 + 0.08, 0.06, BF.heldelH, S.boxB - 0.16,
+				BF.heldel, Enum.Material.Metal)
+			BK.box(model, base, "Kappregel " .. namn,
+				fx - 0.02, BF.ramZ, o.y + f.y0 + 0.08, 0.10, 0.10, S.boxB - 0.16,
+				BF.ram, Enum.Material.Metal)
+			-- Ändstolparna, upp till överliggaren.
+			for _, zy in ipairs({ f.y0 + 0.08, f.y1 - 0.08 }) do
+				local st = BK.box(model, base, "Frontstolpe " .. namn,
+					fx - 0.04, 0, o.y + zy - 0.07, 0.14, BF.stolpH, 0.14,
+					BF.ram, Enum.Material.Metal)
+				st.CanCollide = false
+			end
+			-- De vågräta reglarna, jämnt fördelade mellan kappregel och
+			-- överliggare. Antalet står i datan, inte här.
+			for g = 1, BF.reglar do
+				local z = BF.ramZ + (BF.toppregelZ - BF.ramZ) * g / (BF.reglar + 1)
+				local r = BK.box(model, base, "Frontregel " .. namn .. ":" .. g,
+					fx - 0.01, z, o.y + f.y0 + 0.15, BF.regelD, BF.regelD,
+					S.boxB - 0.30, BF.ram, Enum.Material.Metal)
+				r.CanCollide = false
+			end
+			BK.box(model, base, "Överliggare " .. namn,
+				fx - 0.04, BF.toppregelZ, o.y + f.y0 + 0.08, 0.14, 0.10,
+				S.boxB - 0.16, BF.ram, Enum.Material.Metal)
 		end
 	end
 
@@ -470,6 +507,87 @@ local function byggStallInre(model: Model, base: CFrame)
 				o.x + bit.x0, 0, o.y + v.y, bit.x1 - bit.x0, h, 0.2, INRE.vagg,
 				if v.brand then Enum.Material.Concrete else Enum.Material.Plaster)
 		end
+	end
+
+	--[[ Taket över boxhallen: limträstomme och galvad plåt.
+
+		Det som avgör om någon känner igen stallgången inifrån är inte
+		golvet utan TAKET — de varma limträbalkarna mot den grå korrugerade
+		plåten, i varje bildruta av gången. Roblox byggde ingenting av det:
+		gableRoof lägger ett yttertak i fasadkortets kulör, och undersidan
+		blev den kulören. Det var inte en utsmyckning som saknades, det var
+		husets tydligaste inre drag.
+
+		Färgerna är MÄTTA ur stall-inne-05 och stall-inne-06 och står i det
+		delade G.identitet.stall.stallgang. Resningen står i
+		G.stall.takresning — den låg som ett lokalt tal i webbens renderare
+		och fanns därför inte här alls. ]]
+	local SG = G.identitet.stall.stallgang
+	local resn = S.takresning
+	local halvB, langd = S.bredd / 2, S.langd
+	local takL = math.sqrt(halvB * halvB + resn * resn)
+	local takV = math.atan2(resn, halvB)
+	local mx = o.x + halvB
+	for _, sida in ipairs({ -1, 1 }) do
+		local p = Instance.new("Part")
+		p.Name = "Stalltak plåt"; p.Anchored = true; p.CanCollide = false
+		p.Color = SG.takplat; p.Material = Enum.Material.CorrugatedMetal
+		p.Size = Vector3.new(BK.M * takL, BK.M * 0.12, BK.M * langd)
+		p.CFrame = base
+			* CFrame.new(BK.M * (mx + sida * halvB / 2), BK.M * (h + resn / 2),
+				BK.M * (o.y + langd / 2))
+			* CFrame.Angles(0, 0, -sida * takV)
+		p.Parent = model
+	end
+	-- Tvärbalkar var fjärde meter, plus nockbalken. Samma delning som webben.
+	for z = 2, langd - 1, 4 do
+		BK.box(model, base, "Limträbalk", o.x, h - 0.13, o.y + z - 0.11,
+			S.bredd, 0.26, 0.22, SG.limtra, Enum.Material.Wood).CanCollide = false
+		for _, sida in ipairs({ -1, 1 }) do
+			local p = Instance.new("Part")
+			p.Name = "Limträstag"; p.Anchored = true; p.CanCollide = false
+			p.Color = SG.limtra; p.Material = Enum.Material.Wood
+			p.Size = Vector3.new(BK.M * takL * 0.9, BK.M * 0.16, BK.M * 0.14)
+			p.CFrame = base
+				* CFrame.new(BK.M * (mx + sida * halvB * 0.45),
+					BK.M * (h + resn * 0.45), BK.M * (o.y + z))
+				* CFrame.Angles(0, 0, -sida * takV)
+			p.Parent = model
+		end
+	end
+	BK.box(model, base, "Nockbalk", mx - 0.10, h + resn - 0.20, o.y,
+		0.20, 0.24, langd, SG.limtra, Enum.Material.Wood).CanCollide = false
+
+	--[[ Pendelarmaturerna över de två gångarna.
+
+		`KNOWN MISMATCH` som rättas här: webben har haft dem sedan Review 05,
+		Roblox inte alls — och det är armaturerna som gör att undertaket läses
+		som ljus galvplåt hela vägen upp i nocken i i05. Samma delning (4,5 m)
+		och samma lägen som webben, ur S.gangar. Antal och typ är
+		`[REFERENCE GAP]`; att de hänger i rad över gångarna är `VERIFIED`. ]]
+	for z = 3, langd - 1, 4.5 do
+		for _, g in ipairs({ S.gangar.A, S.gangar.B }) do
+			local ax = o.x + (g.x0 + g.x1) / 2
+			local upp = BK.box(model, base, "Armaturpendel",
+				ax - 0.012, h - 0.16, o.y + z - 0.012, 0.024, 0.16, 0.024,
+				Color3.fromRGB(142, 147, 155), Enum.Material.Metal)
+			upp.CanCollide = false
+			local lampa = BK.box(model, base, "Stallarmatur",
+				ax - 0.20, h - 0.23, o.y + z - 0.20, 0.40, 0.09, 0.40,
+				Color3.fromRGB(251, 246, 228), Enum.Material.Neon)
+			lampa.CanCollide = false
+		end
+	end
+
+	-- Klockan i gångens bortre ände. `VERIFIED` i två oberoende bildrutor
+	-- (IMG_0160 och stall-inne-05) och byggd i webben sedan Review 05 —
+	-- men inte här. Läget står i G.stall.klocka.
+	if S.klocka then
+		local K = S.klocka
+		local ur = BK.box(model, base, "Stallklocka",
+			o.x + K.x, K.z - K.r, o.y + K.y - K.r, 0.09, K.r * 2, K.r * 2,
+			Color3.fromRGB(238, 236, 228), Enum.Material.SmoothPlastic)
+		ur.CanCollide = false
 	end
 
 	-- Namngivna rum och servicedelar. Låga volymer med sitt namn som attribut —

@@ -60,8 +60,12 @@ function farg(hex) {
   return `Color3.fromRGB(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 }
 
-const ARFARG = new Set(["fargV", "fargT", "svart", "plat", "list", "farg", "vagg", "golv",
-                        "gangGolv", "tak", "sandFarg", "gangFarg", "panel", "panelList"]);
+/* Färger kändes förut igen på NYCKELNS namn, ur en handskriven lista. Varje
+   ny färgnyckel i site.js exporterades då tyst som en sträng, och Roblox fick
+   ingen färg — vilket är precis så en separat Roblox-sanning uppstår.
+   Nu känns de igen på VÄRDET: en sträng som är exakt "#RRGGBB" eller "#RGB"
+   är en färg, oavsett vad nyckeln heter. */
+const ARFARG = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 
 function luau(v, indent, nyckel) {
   const pad = "\t".repeat(indent);
@@ -69,7 +73,7 @@ function luau(v, indent, nyckel) {
   if (typeof v === "number") return tal(v);
   if (typeof v === "boolean") return v ? "true" : "false";
   if (typeof v === "string") {
-    return ARFARG.has(nyckel) && /^#[0-9A-Fa-f]{3,6}$/.test(v) ? farg(v) : strang(v);
+    return ARFARG.test(v) ? farg(v) : strang(v);
   }
   if (Array.isArray(v)) {
     if (v.length === 0) return "{}";
@@ -105,6 +109,8 @@ const ut = {
   dorrar: ANL.dorrar,
   stall: {
     bredd: STALLINNE.bredd, langd: STALLINNE.langd, tak: STALLINNE.tak,
+    takresning: STALLINNE.takresning, klocka: STALLINNE.klocka,
+    gangSten: STALLINNE.gangSten, gangSpan: STALLINNE.gangSpan,
     boxB: STALLINNE.boxB, antalBoxar: STALLINNE.antalBoxar,
     boxStartY: STALLINNE.boxStartY, klubbY: STALLINNE.klubbY,
     tvarGang: STALLINNE.tvarGang,
