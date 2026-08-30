@@ -2,17 +2,24 @@
 
 Current gate: **Gate G01 — First Playable Horse Loop** (`docs/GATE-G01-FIRST-PLAYABLE.md`)
 
-## Gate F01 — UBRF Fidelity: `WAITING_FOR_HUMAN_STUDIO_VISUAL_ACCEPTANCE`
+## Gate F01 — UBRF Fidelity: `HUMAN_STUDIO_ACCEPTED / CLOSED`
 
-Koden är accepterad som baslinje (`fdf5174`). Det som återstår är den manuella
-Studio-genomgången, och den kan bara en människa göra: `roblox/docs/STUDIO-QA.md`.
+**Tobias genomförde den manuella Studio-genomgången 2026-08-30: 11/11 QA-vyer
+PASS, gångvägen PASS.** Gaten är stängd som **FIDELITY READY WITH DOCUMENTED
+GAPS** — aldrig som `100 % IDENTICAL`, eftersom luckorna nedan står kvar.
 
-**Ingen byggnadspolering medan G01 är aktiv**, om inte Studio rapporterar ett
-faktiskt fel. Vi nådde avtagande avkastning utan Studio.
+Beslutet är Tobias, inte mitt. Bevisen och observationerna står i
+`audits/GATE-F01-UBRF-FIDELITY-RESULT.md`.
 
-Öppna REFERENCE GAP-poster står kvar och ska inte uppfinnas: hallens
-orientering, gavelförskjutningens storlek, och motsägelsen sarg mot
-läktarfront.
+**Öppna inte brett byggnadsfidelity-arbete igen.** En stängd gate öppnas av ett
+konkret fel, inte av att något kan bli snyggare.
+
+Kvarvarande, dokumenterat och **inte uppfunnet**: hallens orientering,
+gavelförskjutningens storlek, motsägelsen sarg mot läktarfront.
+
+Lågprioriterad polish, noterad vid acceptansen: **stallets interiör känns lite
+mörk.** Icke-blockerande. Rättas i ljussättningen — aldrig genom att flytta ett
+mått eller ändra en mätt yta. Se § 14.0 i resultatauditen.
 
 ---
 

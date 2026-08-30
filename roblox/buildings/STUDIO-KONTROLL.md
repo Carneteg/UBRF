@@ -140,9 +140,13 @@ förskjutningen är `REFERENCE GAP`** och står just nu på ett arbetsvärde. En
 tidigare version av den här filen bad dig kvittera "gavlarna i liv" — det var ett
 påstående modellen inte längre gör, och inte heller ett underlaget bär.
 
-## Om allt är grönt
+## Utfallet
 
-Då kan Gate F01 stängas som **FIDELITY READY WITH DOCUMENTED GAPS** — aldrig som
-`100 % IDENTICAL`, så länge de dokumenterade luckorna finns kvar. De står i
-`audits/GATE-F01-UBRF-FIDELITY-RESULT.md` § 12 och § 13, och de största är
-**orienteringen** och **motsägelsen sarg kontra läktarfront**.
+**Genomförd 2026-08-30: 11/11 vyer PASS, gångvägen PASS.** Gate F01 är stängd
+som **FIDELITY READY WITH DOCUMENTED GAPS** — aldrig som `100 % IDENTICAL`, för
+luckorna står kvar. De är listade i `audits/GATE-F01-UBRF-FIDELITY-RESULT.md`
+§ 12 och § 13; de största är **orienteringen** och **motsägelsen sarg kontra
+läktarfront**.
+
+En observation noterad: stallets interiör känns lite mörk. Icke-blockerande
+polish, § 14.0 — rättas i ljussättningen, aldrig genom att flytta ett mått.

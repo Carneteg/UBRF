@@ -4,17 +4,44 @@ Struktur enligt `docs/GATE-F01-UBRF-FIDELITY.md`.
 
 Datum: 2026-08-30 (uppdaterad efter Senior Fidelity Review 01)
 Implementation: Claude Code
-Status efter Senior Fidelity Review 03 (`2f0e662`): **PASS FOR IMPLEMENTATION
-REVIEW** → **FIDELITY READY WITH DOCUMENTED GAPS — PRODUCT OWNER STUDIO VISUAL
-ACCEPTANCE REQUIRED**.
+## Status: HUMAN_STUDIO_ACCEPTED / CLOSED
 
-Gaten stängs inte av mig och inte av reviewen. Det som återstår kan bara en
-människa avgöra: om komplexet känns igen som UBRF. Checklistan för den
-kontrollen ligger i `roblox/buildings/STUDIO-KONTROLL.md`, och paketet att
+**Tobias har genomfört den manuella Roblox Studio-genomgången 2026-08-30.**
+
+- **11/11 QA-vyer: PASS** (`roblox/docs/STUDIO-QA.md`)
+- **Gångvägen: PASS** — ankomsten → stallet → hästgången → ridhuset → banan
+  → tillbaka
+- **Observation:** stallets interiör känns lite mörk
+
+Gaten stängs som **FIDELITY READY WITH DOCUMENTED GAPS**, aldrig som
+`100 % IDENTICAL`: de `ASSUMPTION` och `REFERENCE GAP` som listas nedan står
+kvar och är inte upplösta av att bygget ser rätt ut.
+
+Observationen om mörkret är klassad som **icke-blockerande visuell polish**,
+inte ett fidelity- eller framkomlighetsfel. QA-kriterierna undantar uttryckligen
+avancerad ljussättning från acceptansen om den inte hindrar bedömning eller
+användning, och det gjorde den inte — alla elva vyerna gick att kvittera.
+Noteringen står som lågprioriterad polish i § 14 och öppnar **inte** något nytt
+byggnadsfidelity-arbete.
+
+Det här är Tobias produktbeslut, inte min bedömning. Jag stänger inte gaten
+själv; jag för in beslutet och bevisen.
+
+### Vad som föregick acceptansen
+
+Studio-körningen avbröts först av ett riktigt byggfel: `Enum.Material.CorrugatedMetal`
+finns inte i Roblox, och bygget dog i `byggStallInre`. Rättat i `a9ab93c`, med
+en allowlist som nu fäller samma klass av fel i fyra led innan paketet lämnas
+ifrån sig. Acceptansen ovan gäller körningen efter den rättningen.
+
+---
+
+Status efter Senior Fidelity Review 03 (`2f0e662`) var: **PASS FOR
+IMPLEMENTATION REVIEW** → **FIDELITY READY WITH DOCUMENTED GAPS — PRODUCT OWNER
+STUDIO VISUAL ACCEPTANCE REQUIRED**. Den acceptansen är nu given.
+
+Checklistan för kontrollen ligger i `roblox/docs/STUDIO-QA.md`, och paketet att
 klistra in byggs med `python3 tools/studio-paket.py`.
-
-Reviewen var uttrycklig: *"Do not start another speculative geometry pass before
-that visual acceptance."* Inget mer byggs innan Tobias har tittat.
 
 Sedan Review 01 har fem saker hänt: utrymningsplanerna ligger i repot och är
 mätta, stallets bredd är nedgraderad från slutsats till antagande med intervall,
@@ -23,7 +50,7 @@ byggda ihop** efter Tobias besked att de sitter ihop och att det som binder dem
 är en hästgång, och Roblox-spåret har fått anläggningens geometri genererad ur
 webbkoden i stället för ingen geometri alls.
 
-Gaten stängs inte av mig, och UBRF kallas inte "100 % identiskt": båda byggnaderna
+UBRF kallas inte "100 % identiskt": båda byggnaderna
 har kvarvarande `ASSUMPTION` och `REFERENCE GAP` som är listade nedan. Väntat
 utfall om alla kända motsägelser är lösta men luckor kvarstår är
 `FIDELITY READY WITH DOCUMENTED GAPS`, inte `IDENTICAL`.
@@ -758,22 +785,33 @@ Inga nya gameplay-features. Ridkänslan är orörd.
 
 ## 14 · Kända begränsningar
 
+**0. LÅGPRIORITERAD POLISH: stallets interiör känns lite mörk.**
+Tobias observation vid Studio-acceptansen 2026-08-30. Klassad som
+icke-blockerande visuell polish — den hindrade varken bedömning eller
+användning, och alla elva vyerna kvitterades. Ljussättningen ligger i
+Studios/renderarens ljusinställningar, inte i mätt geometri eller mätta
+färger: **den rättas i ljuset, aldrig genom att flytta ett mått eller ändra
+en mätt yta.** Öppnar inget nytt byggnadsfidelity-arbete.
+
 1. **Jag har inte sett Drive-bilderna.** Ridhusets interiör är byggd ur ChatGPTs
    verifierade index. Det är ett led längre från verkligheten än stallet, och en
    review bör granska just de raderna hårdast.
 2. **Utrymningsplanerna ligger nu i repot** (`references/plans/`, `0d91f8e`) och
    är mätta där. Men de saknar skalstock, så de fastställer proportioner, inte
    meter — stallets absoluta mått vilar fortfarande på antaganden, se § 6.
-3. **Roblox-pariteten är strukturell, inte visuell.** Geometrin är genererad ur
-   webbkoden, insidorna byggs, och 90 kontroller mäter både datan och den körda
-   modellen — men ingen har kört bygget i Studio, och det går inte att göra
-   härifrån. Gate F01 är därför inte parity-ready — se § 9.
+3. **Roblox-pariteten är nu också visuell.** Geometrin är genererad ur
+   webbkoden, insidorna byggs, och kontrollerna mäter både datan och den körda
+   modellen. Studio-körningen är genomförd av Tobias 2026-08-30: 11/11 vyer
+   PASS och gångvägen PASS. Punkten stod tidigare som "ingen har kört bygget i
+   Studio" — det stämmer inte längre.
 4. **Interiörernas möblering är inte komplett.** Sakerna på boxfronterna och porten
    med klockan i stallgångens fond är kända men obyggda.
-5. **Ingen mänsklig igenkänningskontroll.** Att någon som varit på UBRF känner igen
-   sig kan bara Tobias avgöra. Hästgången är det första exemplet på att det
-   fungerar: den fanns i verkligheten men i ingen av mina källor, och kom in i
-   modellen först när Tobias sa att den finns.
+5. **Igenkänningskontrollen är gjord.** Tobias gick igenom de elva vyerna och
+   gångvägen i Studio 2026-08-30, allt PASS. Att någon som varit på UBRF känner
+   igen sig kunde bara han avgöra, och nu har han gjort det. Hästgången var det
+   första exemplet på att den kontrollen behövs: den fanns i verkligheten men i
+   ingen av mina källor, och kom in i modellen först när Tobias sa att den
+   finns.
 6. **Hästgångens mått är fortfarande gissade.** Att den finns och att den
    ligger centralt är verifierat — Tobias på plats och en satellitbild. Men
    bredd, längd, höjder, taklutning och allt inne i gången är antaget, liksom
@@ -808,7 +846,8 @@ Review 01:s fyra blockerare är hanterade:
 Plus evidensomärkningen: ridhusets "visuella jämförelser" är omklassade till
 *implementation jämförd med verifierat textderivat*, § 10.
 
-**Gaten kallas inte parity-ready.** Blocker D:s egen villkorsmening gäller: den
-visuella pariteten är uppskjuten till någon har kört bygget i Studio. Punkt 3–8 (exteriörernas
-regressionstest, den gemensamma matrisen, paritetsredovisningen, byggets
-funktion och att inga nya features smugit in) är redovisade ovan.
+**Blocker D är uppfylld.** Villkorsmeningen var att den visuella pariteten
+sköts upp tills någon kört bygget i Studio. Det är gjort: Tobias 2026-08-30,
+11/11 vyer PASS och gångvägen PASS. Punkt 3–8 (exteriörernas regressionstest,
+den gemensamma matrisen, paritetsredovisningen, byggets funktion och att inga
+nya features smugit in) är redovisade ovan.

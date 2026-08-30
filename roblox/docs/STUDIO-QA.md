@@ -1,5 +1,11 @@
 # UBRF — Studio QA
 
+> **Genomförd 2026-08-30: 11/11 vyer PASS, gångvägen PASS.**
+> Gate F01 är `HUMAN_STUDIO_ACCEPTED / CLOSED`. En observation noterad —
+> stallets interiör känns lite mörk — klassad som icke-blockerande polish.
+>
+> Listan står kvar och används igen efter varje ändring som rör byggnaderna.
+
 **Det här är det enda dokument du behöver öppna för den visuella granskningen.**
 Du behöver inte kunna kodbasen. Du behöver Roblox Studio och en halvtimme.
 
