@@ -111,6 +111,8 @@ const ut = {
     bredd: STALLINNE.bredd, langd: STALLINNE.langd, tak: STALLINNE.tak,
     takresning: STALLINNE.takresning, klocka: STALLINNE.klocka,
     gangSten: STALLINNE.gangSten, gangSpan: STALLINNE.gangSpan,
+    serviceGolv: STALLINNE.serviceGolv, gaveloppning: STALLINNE.gaveloppning,
+    vagg: STALLINNE.vagg,
     boxB: STALLINNE.boxB, antalBoxar: STALLINNE.antalBoxar,
     boxStartY: STALLINNE.boxStartY, klubbY: STALLINNE.klubbY,
     tvarGang: STALLINNE.tvarGang,

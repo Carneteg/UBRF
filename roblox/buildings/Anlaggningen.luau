@@ -594,12 +594,81 @@ local function byggStallInre(model: Model, base: CFrame)
 	-- namnen är fidelity-fakta ur utrymningsplanen, inredningen är det inte.
 	for _, lista in ipairs({ S.rum, S.service }) do
 		for _, r in ipairs(lista) do
+			if r.oppen then continue end
 			local p = BK.box(model, base, r.label,
 				o.x + r.rekt.x, 0, o.y + r.rekt.y, r.rekt.w, h * 0.9, r.rekt.h,
 				INRE.rum, Enum.Material.Plaster)
 			p.Transparency = 0.45
 			p:SetAttribute("Rum", r.id)
 		end
+	end
+
+	--[[ SERVICEBUKTARNA — samma rättelse som webben fick.
+
+		`KNOWN MISMATCH`, underkänd i webbens spelarvy och lika fel här:
+		spolspiltan och spånförrådet byggdes som slutna volymer. stall-inne-07
+		och -09 visar öppna bukter — fristående galvade spolbommar, spånsäckar
+		på pall, mörk antracitpanel mot ytterväggen och rörstråk längs den
+		vita väggen. `oppen` i den delade datan avgör vilket som byggs, så
+		ytorna inte kan glida isär igen.
+
+		Panelen läser boxfronternas MÄTTA färg: i09 ger #4A4B44 mot
+		fronternas #454A4F — samma produkt, olika ljus. ]]
+	local mitt = S.bredd / 2
+	for _, r in ipairs(S.service) do
+		if not r.oppen then continue end
+		local k = r.rekt
+		local innerX = if k.x < mitt then k.x + 0.10 else k.x + k.w - 0.20
+		local ut = if k.x < mitt then 1 else -1
+		BK.box(model, base, "Buktpanel " .. r.id,
+			o.x + innerX, 0, o.y + k.y + 0.15, 0.10, r.panelH, k.h - 0.3,
+			BF.heldel, Enum.Material.Metal).CanCollide = false
+		if r.bommar then
+			for i = 1, r.bommar do
+				local bz = k.y + k.h * (i - 0.2) / (r.bommar + 0.6)
+				BK.box(model, base, "Spolbom " .. r.id .. " " .. i,
+					o.x + innerX + ut * (k.w * 0.55), 0, o.y + bz,
+					0.13, 2.0, 0.13, BF.ram, Enum.Material.Metal)
+			end
+			BK.box(model, base, "Bomrail " .. r.id,
+				o.x + innerX + ut * 0.30, r.railZ, o.y + k.y + 0.3,
+				0.10, 0.10, k.h - 0.6, BF.ram,
+				Enum.Material.Metal).CanCollide = false
+		end
+		if r.sackar then
+			local sa = r.sackar
+			for rad = 0, sa.rader - 1 do
+				for i = 0, 2 do
+					local sp = BK.box(model, base, "Spånsäckar " .. r.id,
+						o.x + innerX + ut * (0.15 + rad * (sa.djup + 0.15)), 0,
+						o.y + k.y + 0.3 + ((k.h - 0.6) / 3) * i,
+						sa.djup, sa.hojd, (k.h - 0.6) / 3 - 0.12,
+						Color3.fromRGB(220, 214, 200), Enum.Material.Fabric)
+					sp.CanCollide = false
+				end
+			end
+		end
+		-- Rörstråket längs ytterväggen, i07 och i09.
+		for _, z in ipairs({ 2.15, 2.55 }) do
+			BK.box(model, base, "Servicerör " .. r.id,
+				o.x + innerX + ut * 0.18, z, o.y + k.y + 0.2,
+				0.09, 0.09, k.h - 0.4, BF.ram,
+				Enum.Material.Metal).CanCollide = false
+		end
+	end
+
+	--[[ Gaveldörren i söder: ljust parti med grön utrymningsskylt över.
+		`VERIFIED` i i07 och i09 — i båda ser man gräset utanför. ]]
+	if S.gaveloppning then
+		local G2 = S.gaveloppning
+		BK.box(model, base, "Gaveldagsljus",
+			o.x + G2.x, 0, o.y - 0.02, G2.bredd, G2.hojd, 0.10,
+			Color3.fromRGB(234, 242, 246),
+			Enum.Material.SmoothPlastic).CanCollide = false
+		BK.box(model, base, "Exitskylt syd",
+			o.x + G2.x + G2.bredd / 2 - G2.exitB / 2, G2.hojd + G2.exitOver,
+			o.y + 0.06, G2.exitB, G2.exitH, 0.06,
+			Color3.fromRGB(30, 122, 60), Enum.Material.Neon).CanCollide = false
 	end
 end
 

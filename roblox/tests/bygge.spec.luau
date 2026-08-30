@@ -161,9 +161,53 @@ end
 check("stallklockan byggdes", raknaNamn("Stallklocka") == 1,
 	raknaNamn("Stallklocka") .. " st")
 
-check("de namngivna rummen byggdes",
+--[[ KLUBBRUMMEN är rum: brandplanen ritar dem som rum och stall-inne-01..04
+	visar slutna rum. SERVICEBUKTARNA är det inte — det testet krävde förut
+	att SPOLSPILTA byggdes som en namngiven volym, alltså precis den täta låda
+	som underkändes i spelarvyn. Ett test kan låsa fast ett fel, och det här
+	gjorde det. Nu mäts det som källorna visar. ]]
+check("klubbrummen byggdes som rum",
 	raknaNamn("UPPEHÅLLSRUM") == 1 and raknaNamn("SADELKAMMARE") == 1
-		and raknaNamn("SPOLSPILTA") == 1)
+		and raknaNamn("TEORISAL") == 1)
+
+do
+	local oppna = 0
+	for _, r in ipairs(UBRFKomplex.stall.service) do
+		if r.oppen then oppna += 1 end
+	end
+	check("servicebuktarna byggdes som ÖPPNA bukter, inte som täta lådor",
+		oppna > 0 and raknaNamn("SPOLSPILTA") == 0
+			and raknaNamn("SPÅNFÖRRÅD") == 0
+			and raknaNamn("Buktpanel") == oppna,
+		string.format("%d öppna, %d buktpaneler, %d täta volymer",
+			oppna, raknaNamn("Buktpanel"),
+			raknaNamn("SPOLSPILTA") + raknaNamn("SPÅNFÖRRÅD")))
+
+	check("spolbommarna står fristående i bukten",
+		raknaNamn("Spolbom") > 0, raknaNamn("Spolbom") .. " st")
+	check("spånsäckarna byggdes", raknaNamn("Spånsäckar") > 0,
+		raknaNamn("Spånsäckar") .. " st")
+	check("rörstråket längs serviceväggen byggdes",
+		raknaNamn("Servicerör") == oppna * 2,
+		raknaNamn("Servicerör") .. " rör")
+	check("gaveldörrens dagsljus och exit-skylt byggdes",
+		raknaNamn("Gaveldagsljus") == 1 and raknaNamn("Exitskylt syd") == 1)
+end
+
+--[[ Den blanka återvändsgränden: väggen mot servicedelen fick sina hål ur
+	gångarnas lägen och blev tät framför varje boxrad. Testet mäter att
+	planens egna öppningar faktiskt bryter väggen. ]]
+do
+	local vagg = nil
+	for _, v in ipairs(UBRFKomplex.stall.tvarvaggar) do
+		if v.oppningar ~= nil then vagg = v end
+	end
+	local utan = #Geometri.tvarvaggBitar(UBRFKomplex.stall)
+	local med = if vagg then #Geometri.tvarvaggBitar(UBRFKomplex.stall, vagg) else utan
+	check("tvärväggen öppnas av planens öppningar, inte bara av gångarna",
+		vagg ~= nil and med > utan,
+		string.format("%d bitar utan planens öppningar, %d med", utan, med))
+end
 
 --[[ Review 02: "no overlapping solid geometry blocks the intended
      circulation" och "major entrances/passages are usable". Två mätningar,
