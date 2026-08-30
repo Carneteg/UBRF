@@ -242,7 +242,12 @@ material som ska korsrefereras innan en placering låses. Den är inte genomgån
 frame för frame ännu.
 
 ## Placering (från SITEPLAN.md)
-- Position: sydvästra hörnet i (118, 44), fotavtryck 25 × 75 m
+- Position: sydvästra hörnet i (118, 44), fotavtryck **25 × 75 m** `[DERIVED,
+  stärkt 2026-08-30]` — utrymningsplanens omslutande rektangel mäter 3,022 : 1
+  mot 3,00 för 25 × 75, alltså under en procents skillnad. En längd på 65 m är
+  **utesluten**: entrédelen tar 15,1 % av längden, och kvar blir då 55 m för en
+  bana som är verifierat 60 m. Se `references/plans/RIDHUS-PLANMATNING-2026-08-30.md`
+- **Banan 20 × 60 m** `[VERIFIED]` — måttsatt plan, `RIDHUS-MATTSATT-PLAN-2026-08-30.md`
 - Rotation: nocken i nord–sydlig riktning, cafégaveln mot parkeringen i norr
   (rättat 2026-08-29 — grusplanen ligger vid husets nordvästra ände)
 - **Sammanbyggt med stallet.** Tobias 2026-08-30: *"husen är sammanbyggda, jag
