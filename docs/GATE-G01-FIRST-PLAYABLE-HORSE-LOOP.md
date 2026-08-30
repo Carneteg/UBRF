@@ -51,20 +51,33 @@ The web implementation already contains richer loop concepts that can be used as
 
 ### Data
 
-- Supabase migrations already contain riding-school and horse data structures.
+- Supabase contains real UBRF horse records (`hastar`) and player horse-memory data (`hastminne`).
 - GitHub remains the implementation source of truth. Google Drive is not a build dependency.
+
+### Open asset prerequisite — Roblox horse rig
+
+Repository + Supabase review on **2026-08-30** found the following:
+
+- the Roblox code contains the horse rig contract (`roblox/docs/HORSE-MODEL-SPEC.md`), but no production horse model/rig is versioned in the repository;
+- Supabase Storage currently has no buckets, so there is no FBX/GLB/RBXM horse asset there to consume;
+- Supabase `hastar` contains real UBRF horse identities, facts and source image links, but those are data/reference images, not a Roblox rig.
+
+Therefore G01 must **not** manufacture a block horse and call it production. A valid rigged horse asset that satisfies `HORSE-MODEL-SPEC.md` is a hard prerequisite for human Roblox Studio play acceptance.
+
+A development-only test rig may be used to falsify code paths, but it must be unmistakably non-production and must never replace the real horse asset milestone.
 
 ## Missing systems for a complete G01
 
-1. A server-authoritative player/horse session and assignment flow.
-2. A pre-ride preparation state that gates mounting.
-3. Ground handling / leading.
-4. Location-aware transition from stable to riding hall.
-5. One simple riding exercise with measurable completion.
-6. Dismount/return flow.
-7. Basic aftercare.
-8. End-of-loop feedback connecting care, horse state and riding result.
-9. Cross-platform acceptance tests for the same learning/gameplay rules.
+1. A production-quality Roblox horse rig/asset available to the implementation pipeline.
+2. A server-authoritative player/horse session and assignment flow.
+3. A pre-ride preparation state that gates mounting.
+4. Ground handling / leading.
+5. Location-aware transition from stable to riding hall.
+6. One simple riding exercise with measurable completion.
+7. Dismount/return flow.
+8. Basic aftercare.
+9. End-of-loop feedback connecting care, horse state and riding result.
+10. Cross-platform acceptance tests for the same learning/gameplay rules.
 
 ## Slice G01.1 — Assigned horse + preparation gate
 
