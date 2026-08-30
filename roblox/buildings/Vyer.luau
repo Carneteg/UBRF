@@ -203,8 +203,7 @@ local ORDNING = { "Komplexet", "Ridhuset inne", "Stallet inne" }
 function Vyer.lista()
 	print(string.format("Vyer för Gate F01 · Studio-kontroll enligt Review 11 · %d vyer",
 		#Vyer.vyer))
-	print("Checklistor: roblox/docs/RIDHUS-STUDIO-CHECKLISTA.md (ridhuset inne)")
-	print("             roblox/buildings/STUDIO-KONTROLL.md (komplexet och stallet)")
+	print("Checklista: roblox/docs/STUDIO-QA.md")
 	for _, grupp in ipairs(ORDNING) do
 		print("\n  " .. grupp)
 		for _, v in ipairs(Vyer.vyer) do

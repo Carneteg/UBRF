@@ -33,6 +33,13 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
+# QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
+# att stalla kameran mot, och Vyer for att veta vilka vyerna ar.
+QA = BYGGE + [
+    ("Vyer",    "buildings/Vyer.luau"),
+    ("QAPanel", "buildings/QAPanel.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -62,7 +69,9 @@ def inlina(kalla: str) -> str:
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
-    if "bygge" in spec_rel:
+    if "qa" in spec_rel:
+        moduler, stubbar = QA, "tests/stubs-bygge.luau"
+    elif "bygge" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     elif "geometri" in spec_rel:
         moduler, stubbar = GEOMETRI, "tests/stubs.luau"
