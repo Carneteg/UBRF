@@ -1253,13 +1253,20 @@ function v3dRidhus(lagg,opp){
    if(FB){
      const fx=(O.sida==="W") ? 0.16 : R.bredd-0.16;
      const fy=R.tak-FB.underTak-FB.h/2;
+     const inat=(O.sida==="W")?1:-1;
+     /* Mörk reveal bakom glaset ger bandet djup; utan den läser det som en
+        slät ljus remsa, vilket är precis vad som underkändes. */
+     pan.lada(0.08,FB.h-0.10,R.langd-1.0,"#2A2E33",
+       M4.translation(fx+inat*0.26,fy,R.langd/2));
      pan.lada(FB.tjocklek,FB.h,R.langd-1.0,FB.glas,
        M4.translation(fx,fy,R.langd/2));
-     for(let z=0.8;z<R.langd-0.8;z+=FB.postDelning)      // karmposter
-       pan.lada(FB.tjocklek+0.03,FB.h,0.09,FB.karm,M4.translation(fx,fy,z));
-     for(const dy of [-FB.h/2,FB.h/2])                   // över- och underkarm
-       pan.lada(FB.tjocklek+0.03,0.08,R.langd-1.0,FB.karm,
-         M4.translation(fx,fy+dy,R.langd/2));
+     /* Poster och karmar står UT ur glaslivet, annars syns de inte. */
+     for(let z=0.8;z<R.langd-0.8;z+=FB.postDelning)
+       pan.lada(FB.tjocklek+0.16,FB.h,0.13,FB.karm,
+         M4.translation(fx-inat*0.06,fy,z));
+     for(const dy of [-FB.h/2,FB.h/2])
+       pan.lada(FB.tjocklek+0.16,0.13,R.langd-1.0,FB.karm,
+         M4.translation(fx-inat*0.06,fy+dy,R.langd/2));
    }
    lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */
@@ -1390,18 +1397,22 @@ function v3dRidhus(lagg,opp){
   {const K=R.kortanda;
    if(K){
     const gl=new Bygge(), br=K.x1-K.x0, xm=(K.x0+K.x1)/2;
+    const SO=K.sockelH||0;
+    if(SO>0)                                    // sockeln blocket står på
+      gl.lada(br,SO,K.y1-K.y0,"#B9A886",
+        M4.translation(xm,SO/2,(K.y0+K.y1)/2));
     for(let i=0;i<K.steg;i++){
-      const z=K.y1-i*K.stegD-K.stegD/2, y=K.stegH*(i+1);
+      const z=K.y1-i*K.stegD-K.stegD/2, y=SO+K.stegH*(i+1);
       gl.lada(br,0.08,K.stegD-0.05,"#D8C7A4",M4.translation(xm,y,z));   // sittplanka
       gl.lada(br,K.stegH,0.06,"#C0AC88",
         M4.translation(xm,y-K.stegH/2,z+K.stegD/2));                    // sättsteg
     }
     /* De två trapporna upp, med mörka träräcken. */
-    const H=K.steg*K.stegH;
+    const H=SO+K.steg*K.stegH;
     for(const tx of K.trappor){
       for(let i=0;i<K.steg;i++)
         gl.lada(K.trappB,0.08,K.stegD-0.05,"#CDBB98",
-          M4.translation(tx,K.stegH*(i+1),K.y1-i*K.stegD-K.stegD/2));
+          M4.translation(tx,SO+K.stegH*(i+1),K.y1-i*K.stegD-K.stegD/2));
       for(const dx of [-K.trappB/2,K.trappB/2])
         gl.lada(0.08,0.85,K.steg*K.stegD,"#5A4232",
           M4.mul(M4.translation(tx+dx,H*0.55+0.42,(K.y0+K.y1)/2),
@@ -1419,16 +1430,39 @@ function v3dRidhus(lagg,opp){
       sx=Math.max(sx,t+K.trappB/2);
     }
     if(K.x1-sx>0.3) seg.push([sx,K.x1]);
+    /* Bandet ska läsa som RUM bakom glas, inte som en platt mörk remsa.
+       Tre saker gör skillnaden, alla synliga i `-01`: en mörk reveal en bit
+       BAKOM glaset så rutan får djup, poster och karmar som står PROUD av
+       glaset, och att rummen bakom är olika ljusa — några upplysta, några
+       mörka. */
     for(const [a,bx] of seg){
       const w=bx-a, m=(a+bx)/2;
-      gl.panel(w,K.glasH,"#C6D8E0",M4.translation(m,gz+K.glasH/2,K.y0));
-      for(const yy of [gz,gz+K.glasH])
-        gl.lada(w,0.12,0.12,K.glasKarm,M4.translation(m,yy,K.y0));
       const n=Math.max(1,Math.round(w/(K.glasPost||1.9)));
+      /* Mörk reveal 0,45 m bakom glaslivet = rummets djup. */
+      gl.lada(w,K.glasH,0.10,"#22262B",M4.translation(m,gz+K.glasH/2,K.y0-0.45));
+      /* Rutorna, varannan upplyst. */
+      for(let i=0;i<n;i++){
+        const rw=w/n, rx=a+rw*(i+0.5);
+        const lyst=(i%2===0);
+        gl.lada(rw-0.13,K.glasH-0.16,0.05,lyst?"#E8EFE6":"#7E8E96",
+          M4.translation(rx,gz+K.glasH/2,K.y0-0.30));
+      }
+      gl.panel(w,K.glasH,"#C6D8E0",M4.translation(m,gz+K.glasH/2,K.y0));
+      /* Karmar och poster står ut ur glaslivet. */
+      for(const yy of [gz,gz+K.glasH])
+        gl.lada(w,0.15,0.22,K.glasKarm,M4.translation(m,yy,K.y0+0.05));
       for(let i=0;i<=n;i++)
-        gl.lada(0.11,K.glasH,0.12,K.glasKarm,
-          M4.translation(a+w*i/n,gz+K.glasH/2,K.y0));
+        gl.lada(0.14,K.glasH,0.22,K.glasKarm,
+          M4.translation(a+w*i/n,gz+K.glasH/2,K.y0+0.05));
     }
+    /* Klockan vid kortändan, mellan trapporna — `-01`. */
+    if(K.klocka){const KL=K.klocka;
+      gl.cyl(KL.r,KL.r,0.07,"#F2F0E8",
+        M4.mul(M4.translation(KL.x,gz+K.glasH+KL.z-1.4,K.y1+0.06),
+               M4.rotX(Math.PI/2)),16);
+      gl.cyl(KL.r*0.80,KL.r*0.80,0.02,"#2E2E2C",
+        M4.mul(M4.translation(KL.x,gz+K.glasH+KL.z-1.4,K.y1+0.10),
+               M4.rotX(Math.PI/2)),16);}
     lagg(gl,null);
    }}
   /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.
@@ -1536,12 +1570,17 @@ function v3dRidhus(lagg,opp){
   lagg(hind,null);
   /* Sponsorväggen med speglar och banderoller. */
   const panel=new Bygge();
+  /* Speglarna hänger på PANELVÄGGEN, inte alltid på banans västkant — annars
+     blir de kvar på fel sida vid en spegling. `spegelSida` härleds ur
+     RIDHUSINNE.sidor. */
+  const spX=(R.spegelSida==="E") ? ba.x+ba.w+0.22 : ba.x-0.22;
+  const spD=(R.spegelSida==="E") ? 0.02 : -0.02;
   for(const sp of R.speglar){                       // speglar i träram
-    panel.lada(0.08,1.9,sp.b,"#8E969E",M4.translation(ba.x-0.22,2.25,sp.y));
-    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(ba.x-0.24,3.27,sp.y));
-    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(ba.x-0.24,1.23,sp.y));
+    panel.lada(0.08,1.9,sp.b,"#8E969E",M4.translation(spX,2.25,sp.y));
+    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(spX+spD,3.27,sp.y));
+    panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(spX+spD,1.23,sp.y));
     for(const d of [-1,1])
-      panel.lada(0.11,2.18,0.12,"#7A5636",M4.translation(ba.x-0.24,2.25,sp.y+d*(sp.b/2+0.06)));
+      panel.lada(0.11,2.18,0.12,"#7A5636",M4.translation(spX+spD,2.25,sp.y+d*(sp.b/2+0.06)));
     panel.lada(0.06,1.9,0.05,"#7A5636",M4.translation(ba.x-0.26,2.25,sp.y));
   }
   panel.lada(0.12,0.9,R.langd*0.8,"#6B4A34",M4.translation(ba.x-0.24,3.7,R.langd/2));

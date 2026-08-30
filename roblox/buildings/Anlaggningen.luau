@@ -749,16 +749,24 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	local K = R.kortanda
 	if K then
 		local br = K.x1 - K.x0
+		--[[ Blocket står på en SOCKEL. Utan den steg raderna bort från banan
+			och bara den översta kom över sargen — 0,25 m på fjorton meters
+			håll. `-01` visar flera rader över sargkrönet. ]]
+		local SO = K.sockelH or 0
+		if SO > 0 then
+			BK.box(model, base, "Kortändans sockel", o.x + K.x0, 0, o.y + K.y0,
+				br, SO, K.y1 - K.y0, INRE.laktare, Enum.Material.WoodPlanks)
+		end
 		for i = 1, K.steg do
 			BK.box(model, base, "Kortändans steg " .. i,
-				o.x + K.x0, (i - 1) * K.stegH,
+				o.x + K.x0, SO + (i - 1) * K.stegH,
 				o.y + K.y1 - i * K.stegD, br, K.stegH * i + 0.1, K.stegD,
 				INRE.laktare, Enum.Material.WoodPlanks)
 		end
 		for i, tx in ipairs(K.trappor) do
 			BK.box(model, base, "Kortändans trappa " .. i,
 				o.x + tx - K.trappB / 2, 0, o.y + K.y0,
-				K.trappB, K.steg * K.stegH, K.y1 - K.y0,
+				K.trappB, (K.sockelH or 0) + K.steg * K.stegH, K.y1 - K.y0,
 				INRE.laktare, Enum.Material.WoodPlanks)
 		end
 		--[[ Glasbandet är INTE en obruten remsa. `ridhus-inne-01` visar att
@@ -766,7 +774,7 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			skjuter upp genom bandet, och mellan dem står den vita väggen
 			med klockan. Segmenten räknas ur samma `trappor`-tal som
 			trapporna byggs av, så de inte kan glida isär. ]]
-		local gz = K.steg * K.stegH + K.glasOver
+		local gz = (K.sockelH or 0) + K.steg * K.stegH + K.glasOver
 		local brytn = {}
 		for _, t in ipairs(K.trappor or {}) do table.insert(brytn, t) end
 		table.sort(brytn)

@@ -263,3 +263,61 @@ De fyra kvarstående `KNOWN MISMATCH` är alla i samma familj: **band som
 läser som släta remsor i stället för som fönster och trappsteg**. Det hör
 till punkt 6 och 7 i arbetsordern och är nästa steg — inte till geometrin,
 som nu stämmer.
+
+---
+
+# Pass mot de fyra synliga mismatcharna
+
+## Punkt 3 · kortändans block — DIAGNOS, delvis åtgärdad, KVARSTÅR
+
+Reviewn bad om diagnos före åtgärd. Den gav två fynd, det andra viktigare
+än det första.
+
+**Fynd 1 — ocklusion, mätbar i datan.** Blocket var 4 steg à 0,30 = 1,20 m
+och sargen är 1,35. Hela blocket stod under sargkrönet. Dessutom stiger
+raderna BORT från banan, så även efter en höjning till 5 × 0,32 = 1,60 kom
+bara den översta raden över sargen — 0,25 m på fjorton meters håll.
+`-01` visar flera rader över sargkrönet, så blocket står nu på en **sockel**
+på 0,80 m: totalt 2,40 m, tre rader över sargen. `DERIVED` ur fotot.
+
+**Fynd 2 — blocket renderas inte där datan säger.** Sockeln räckte inte.
+Ett magentatest på blockets egna delar hittade bara **810 pixlar uppe i
+bildens vänstra hörn**, inte den yta blocket borde täcka rakt fram. En
+rakt-på-vy från banans mitt mot kortändan (`k-mitt`) visar sarg, panelvägg
+och hinderbommar — **inget block, inget glasband, ingen klocka**.
+
+Blockets data säger hall-y 0,4–4,8, x 1,8–23,2. Kameran stod mitt för det.
+Geometrin hamnar alltså någon annanstans än datan anger. **Det är ett
+renderingsfel, inte ett synlighetsproblem**, och det förklarar varför både
+höjningen och sockeln var verkningslösa.
+
+`KNOWN MISMATCH` — kvarstår. Nästa steg är att spåra transformen för
+`kortanda`-blocket, inte att ändra fler mått.
+
+**Sidofynd, oavgjort:** kortändan vid hall-y ≈ 2 renderar bokstaven **A** på
+sargen, medan `DRESSYRBOKSTAVER` lägger A på ban-lokal (10, 60) och C på
+(10, 0) — alltså C i den låga änden. Bokstäverna och blocket pekar åt olika
+håll. Det kan vara samma fel som ovan eller ett eget. `KNOWN MISMATCH`.
+
+## Punkt 4 · klockan — byggd, men syns inte än
+
+Klockan i datan (`RIDHUSINNE.klocka`, y 63,6) är **cafeklockan i norra
+änden**, inte den `-01` visar. Kortändans klocka fanns alltså inte alls.
+Den är nu tillagd som `kortanda.klocka` med x härlett ur mittpunkten mellan
+de två trapporna, alltså geometriskt fäst i kortändans struktur som reviewn
+kräver. Den syns inte i vyn av samma skäl som blocket. `KNOWN MISMATCH`
+tills renderingsfelet är spårat.
+
+## Punkt 1 och 2 · glasbanden — djup tillagt
+
+Båda banden fick det som skiljer ett fönster från en remsa, allt synligt i
+`-01`/`-02`: en **mörk reveal bakom glaset** som ger rummet djup, **karmar
+och poster som står proud** av glaslivet, och för kortändan **omväxlande
+upplysta och mörka rutor**. Långsidans band går att bedöma i vyn
+(`m-panel`); kortändans delar blockets renderingsfel.
+
+## Orienteringsdatan är städad
+
+Speglarna hänger nu på panelväggen via `spegelSida`, och cafeklockan och
+trätrappan följer läktarsidan. Inget av dem är kvar som literaler. En
+spegling är därmed en dataändring även för väggdekoren.

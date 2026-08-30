@@ -1255,7 +1255,28 @@ const RIDHUSINNE = {
      lägen och glasbandets höjd är valda så att topologin blir rätt. Det är
      precis vad Review 05 ber om — exakta mått får vara gap, känd topologi
      får inte förbli fel. */
-  /* GLASBANDET är INTE en obruten remsa. `ridhus-inne-01`, beskuren över
+  /* `KNOWN MISMATCH` 3, DIAGNOS FÖRE ÅTGÄRD: blocket syntes inte alls från
+     referenskameran. Orsaken var varken kamera, kontrast eller byggordning
+     utan ren OCKLUSION, mätbar i datan: fyra steg à 0,30 m gav 1,20 m, och
+     sargen är 1,35. Hela blocket stod under sargkrönet.
+
+     `-01` visar tvärtom flera bänkrader ÖVER sargen, med folk sittande på
+     dem.
+
+     Att bara höja stegen räckte inte: raderna stiger BORT från banan, så
+     bara den översta kom över sargen — 0,25 m på fjorton meters håll, en
+     strimma. Blocket står i stället på en SOCKEL, som i fotot: 0,80 m sockel
+     plus 5 × 0,32 = 2,40 m totalt, vilket lägger tre rader över sargkrönet.
+     Det är den bild `-01` ger.
+
+     Talen är `DERIVED`; kravet som testas är RELATIONEN — blocket måste
+     sticka upp så pass över sargen att flera rader syns, annars är det
+     osynligt oavsett kamera.
+
+     Jag flyttade inte blocket för att blidka kameran, vilket vore att lösa
+     ett byggfel med en vy.
+
+     GLASBANDET är INTE en obruten remsa. `ridhus-inne-01`, beskuren över
      kortändan: glaset går i BÅS med mörka träkarmar och poster, och det
      BRYTS av de två trapporna — deras vita snedställda barriärer skjuter
      upp genom bandet, och mellan dem sitter den vita väggen med
@@ -1268,9 +1289,14 @@ const RIDHUSINNE = {
 
      `VERIFIED`: att glaset går i bås med mörka karmar, och att trapporna
      bryter bandet. `[REFERENCE GAP]`: båsens exakta delning. */
-  kortanda:{y0:0.4, y1:4.8, x0:1.8, x1:23.2, steg:4, stegH:0.30, stegD:1.05,
+  kortanda:{y0:0.4, y1:4.8, x0:1.8, x1:23.2, steg:5, stegH:0.32, stegD:1.05,
+            sockelH:0.80,
             trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:0.35,
-            glasPost:1.9, glasKarm:"#4A3B2E"},
+            glasPost:1.9, glasKarm:"#4A3B2E",
+            /* Klockan vid kortändan, MELLAN de två trapporna — x härleds ur
+               `trappor` längre ner så att den följer dem. `-01` visar den på
+               den vita väggen ovanför blocket. */
+            klocka:{z:2.55, r:0.34}},
   /* MOTSÄGELSE 4 (`IMG_0198`): båset ligger vid dressyrbokstaven E, är
      mörkt trä, och nås av en trappa med träräcken. Över öppningen sitter
      en grön exit-skylt. E ligger vid husets y = 32 sedan bokstäverna
@@ -1476,11 +1502,20 @@ STALLINNE.info=[
   if(R.domarbas) R.domarbas.x = R.laktare.x0+D*0.65;
 })();
 
-/* KÄND LUCKA i speglingen, medvetet redovisad och inte gömd:
-   `RIDHUSINNE.speglar` ritas mot banans västra kant (`ba.x`) i renderaren
-   och följer alltså INTE `sidor.panel`. Detsamma gäller `klocka.x`, som är
-   ett literalt tal. Speglas huset blir de kvar på fel sida.
-
-   De är väggdekor, inte bärande struktur, och att tråda sidan genom dem nu
-   vore att bygga om för en spegling som ännu inte är beslutad. Luckan står
-   här så att den som speglar vet vad som återstår. */
+/* Väggdekoren följer också med speglingen nu. Den låg kvar som känd lucka i
+   ett pass, och reviewn hade rätt i att en arkitektur som medvetet gjorts
+   vändbar inte ska ha gömd stale geometri kvar i sig. */
+(()=>{
+  const R=RIDHUSINNE, S=R.sidor;
+  if(!S)return;
+  /* Speglarna hänger på panelväggen, alltså mitt emot läktaren. */
+  R.spegelSida = S.panel;
+  /* Cafeklockan och trätrappan sitter i norra änden, på läktarsidan. */
+  const inatL = (S.laktare==="E") ? -1 : 1;
+  if(R.klocka)  R.klocka.x  = R.laktare.x0 + inatL*(-1.0);
+  if(R.trappa)  R.trappa.x  = R.laktare.x0 + inatL*(-1.0);
+  /* Kortändans klocka sitter MELLAN de två trapporna. */
+  const K=R.kortanda;
+  if(K&&K.klocka&&K.trappor&&K.trappor.length>=2)
+    K.klocka.x=(K.trappor[0]+K.trappor[1])/2;
+})();

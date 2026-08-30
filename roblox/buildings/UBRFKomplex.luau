@@ -1904,9 +1904,10 @@ return {
 			y1 = 4.8,
 			x0 = 1.8,
 			x1 = 23.2,
-			steg = 4,
-			stegH = 0.3,
+			steg = 5,
+			stegH = 0.32,
 			stegD = 1.05,
+			sockelH = 0.8,
 			trappor = {
 				7,
 				15.5,
@@ -1916,6 +1917,11 @@ return {
 			glasOver = 0.35,
 			glasPost = 1.9,
 			glasKarm = Color3.fromRGB(74, 59, 46),
+			klocka = {
+				z = 2.55,
+				r = 0.34,
+				x = 11.25,
+			},
 		},
 		domarbas = {
 			x = 23.21,
