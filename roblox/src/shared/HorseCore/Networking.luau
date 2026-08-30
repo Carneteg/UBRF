@@ -7,9 +7,9 @@
 	dem; klienten väntar in dem.
 
 	Regeln för vad som får skickas: klienten skickar *avsikt* och sin egen
-	simulerade position. Servern skickar *sanning* om ägarskap, uppsittning
-	och uthållighet. Klienten får aldrig sätta ett värde som andra spelare
-	påverkas av.
+	simulerade position. Servern skickar *sanning* om ägarskap, uppsittning,
+	förberedelse och uthållighet. Klienten får aldrig sätta ett värde som
+	andra spelare påverkas av.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,12 +20,15 @@ local Networking = {}
 local FOLDER_NAME = "HorseRemotes"
 
 local DEFINITIONS = {
-	MountRequest = "RemoteFunction",    -- klient → server: får jag sitta upp?
+	MountRequest = "RemoteFunction",
 	DismountRequest = "RemoteFunction",
-	MountChanged = "RemoteEvent",       -- server → alla: vem rider vad
-	StateSync = "RemoteEvent",          -- klient → server: tempo och gångart
-	StaminaSync = "RemoteEvent",        -- server → ägaren: uthållighet
-	HorseReaction = "RemoteEvent",      -- server → alla: gnägg, stegring, reaktion
+	MountChanged = "RemoteEvent",
+	StateSync = "RemoteEvent",
+	StaminaSync = "RemoteEvent",
+	HorseReaction = "RemoteEvent",
+	G01GetState = "RemoteFunction",
+	G01Action = "RemoteFunction",
+	G01StateChanged = "RemoteEvent",
 }
 
 local cache: { [string]: Instance } = {}
@@ -45,9 +48,7 @@ local function folder(): Folder
 end
 
 function Networking.get(name: string): any
-	if cache[name] then
-		return cache[name]
-	end
+	if cache[name] then return cache[name] end
 	local class = DEFINITIONS[name]
 	assert(class, ("[Horse] Okänt fjärrobjekt %q"):format(name))
 
@@ -64,8 +65,6 @@ function Networking.get(name: string): any
 	return existing
 end
 
---[[ Servern kallar den här en gång vid start så att allt finns innan
-     första klienten frågar efter det. ]]
 function Networking.init()
 	assert(RunService:IsServer(), "Networking.init körs bara på servern")
 	for name in DEFINITIONS do
