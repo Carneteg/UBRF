@@ -29,8 +29,8 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/site.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE})", ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -125,6 +125,11 @@ const ut = {
      Roblox, så primärplattformen saknade uteridbanans staket och
      belysningsmaster helt. Nu läser båda ytorna samma tal. */
   banomrade: BANOMRADE,
+  /* Banornas rektanglar exporteras med namn. Utan dem tvingas både testerna
+     och Roblox skriva av koordinaterna, och då mäter testet ett minne av
+     datan i stället för datan — vilket har fällt fyra gånger i den här
+     sviten redan. */
+  banor: { uteridbanan: UTEBANA, paddock: PADDOCK },
   staket: ANL.staket,
   props: ANL.props,
   ridhus: {

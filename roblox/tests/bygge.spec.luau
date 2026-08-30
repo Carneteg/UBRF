@@ -71,9 +71,17 @@ do
 	for _, d in ipairs(delar) do
 		if d.Name == "hastgang vast" then hg = fot(d) end
 	end
+	-- Läget LÄSES UR ridhusets fotavtryck. 143 stod hårdkodat här och föll när
+	-- ridhusets mätta bredd flyttade östväggen till 144,57 — fast gången satt
+	-- precis rätt. Tredje testet i sviten med samma sjuka.
+	local rh
+	for _, b in ipairs(UBRFKomplex.byggnader) do
+		if b.id == "ridhus" then rh = b.rekt end
+	end
 	check("hästgångens västvägg står vid ridhusets östvägg",
-		hg ~= nil and math.abs(hg.x - 143) < 0.05,
-		hg and string.format("x = %.2f", hg.x) or "hittades inte")
+		hg ~= nil and rh ~= nil and math.abs(hg.x - (rh.x + rh.w)) < 0.05,
+		hg and rh and string.format("gången x = %.2f, ridhusets östvägg x = %.2f",
+			hg.x, rh.x + rh.w) or "hittades inte")
 end
 
 print("\nStallets insida")
@@ -389,12 +397,17 @@ do
 	-- Uteridbanans västra långsida går x=176 från y=119 till y=159.
 	-- Räkna det liggande virket längs den linjen och kontrollera att det
 	-- är EN toppregel, EN sandsyll och eltrådarna — inte en stapel reglar.
+	-- Banans rektangel LÄSES ur den exporterade geometrin. Koordinaterna stod
+	-- avskrivna här (x = 176, y 119–159) och föll när banans MÄTTA kortsida
+	-- flyttade den — fast staketet satt precis rätt. Fjärde stället i den här
+	-- sviten med samma sjuka; därför exporteras banorna nu med namn.
+	local B = UBRFKomplex.banor.uteridbanan
 	local function langsVastraLangsidan(namn)
 		local ut = {}
 		for _, d in ipairs(delar) do
 			if d.Name == namn then
 				local f = fot(d)
-				if math.abs(f.x + f.w / 2 - 176) < 0.2 and f.h > 20 then
+				if math.abs(f.x + f.w / 2 - B.x) < 0.2 and f.h > B.h * 0.5 then
 					table.insert(ut, f.z0 + (f.z1 - f.z0) / 2)
 				end
 			end
@@ -422,7 +435,13 @@ do
 	for _, d in ipairs(delar) do
 		if d.Name == "Sandsyll" then
 			local f = fot(d)
-			if math.abs(f.x + f.w / 2 - 178) < 0.2 then hagsyll += 1 end
+			local mx, my = f.x + f.w / 2, f.y + f.h / 2
+			local vid = false
+			for _, r in pairs(UBRFKomplex.banor) do
+				if mx >= r.x - 1 and mx <= r.x + r.w + 1
+					and my >= r.y - 1 and my <= r.y + r.h + 1 then vid = true end
+			end
+			if not vid then hagsyll += 1 end
 		end
 	end
 	check("hagarna har ingen sandsyll", hagsyll == 0, hagsyll .. " funna")
@@ -448,7 +467,8 @@ do
 		armaturer .. " armaturer på " .. master .. " master")
 
 	-- Hörnen på uteridbanan (x 176..196, y 119..159).
-	local horn = { { 176, 119 }, { 196, 119 }, { 176, 159 }, { 196, 159 } }
+		local horn = { { B.x, B.y }, { B.x + B.w, B.y },
+		               { B.x, B.y + B.h }, { B.x + B.w, B.y + B.h } }
 	local traffar = 0
 	for _, h in ipairs(horn) do
 		for _, d in ipairs(delar) do
