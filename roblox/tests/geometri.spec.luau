@@ -61,6 +61,34 @@ check("hästgången sitter ihop med stallet",
 check("ridhus och stall möts inte direkt — hästgången är det som binder dem",
 	not Geometri.sitterIhop(ridhus.rekt, stall.rekt))
 
+do
+	--[[ Satellitbilden visar EN tvärgående förbindelse och ger inte stöd för
+	     två. Alltså får ingen annan byggnad binda ihop båda husen — den låga
+	     längan i söder allra minst, den är overifierad. Räknas här i stället
+	     för att kommenteras: en framtida ändring som råkar låta längan nudda
+	     båda husen ska falla direkt. ]]
+	local forbindelser = {}
+	for _, b in ipairs(UBRFKomplex.byggnader) do
+		if b.id ~= "ridhus" and b.id ~= "stall"
+			and Geometri.sitterIhop(b.rekt, ridhus.rekt)
+			and Geometri.sitterIhop(b.rekt, stall.rekt) then
+			table.insert(forbindelser, b.id)
+		end
+	end
+	check("exakt en byggnad binder ihop husen", #forbindelser == 1,
+		table.concat(forbindelser, ", "))
+	check("och det är hästgången", forbindelser[1] == "hastgang",
+		tostring(forbindelser[1]))
+
+	-- Den låga längan i söder är overifierad och får inte vara en förbindelse.
+	local langa = hus("langa")
+	if langa then
+		check("den låga längan i söder binder inte ihop husen",
+			not (Geometri.sitterIhop(langa.rekt, ridhus.rekt)
+				and Geometri.sitterIhop(langa.rekt, stall.rekt)))
+	end
+end
+
 check("hästgången ligger inom båda husens längd",
 	hastgang.rekt.y >= math.max(ridhus.rekt.y, stall.rekt.y)
 		and hastgang.rekt.y + hastgang.rekt.h

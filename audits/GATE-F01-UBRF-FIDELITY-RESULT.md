@@ -99,7 +99,8 @@ anläggningen, och därför att det är gatens tredje P0.
 | Gapet i ridhusets läktare, 5,0 m | **A** | Påtvingat av den verifierade topologin — läktaren kan inte vara obruten där gången kommer in. Bredden är vald, inte mätt |
 | Var man kommer ut på ridhussidan | **A** | Följer av läget: genom läktargapet, ut på banan |
 | Antalet förbindelser — en, inte flera | **V** | Satellitbilden visar en tydlig tvärgående takvolym och ger inte stöd för två |
-| Den låga längan i söder, 7 × 6 m vid (147, 59) | **A** | Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna |
+| Den låga längan i söder, 7 × 6 m vid (147, 59) | **A** | Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. **Den binder inte ihop husen** — den nuddar varken ridhuset eller stallet, och satellitbilden ger inte stöd för en andra förbindelse. Mätt i geometrispecen |
+| Den tidigare placeringen i norra änden | **KNOWN MISMATCH** | Underkänd av satellitbilden. Står kvar i § 6b som historik, inte som alternativ |
 | Gården mellan husen | **D** | Det som blir kvar mellan förbindelserna, inte en verifierad obruten gräsgård |
 | Foto på marknivå som visar förbindelsen | **G** | Repots bilder ser bara husens norra ändar, se § 6b. Satellitbilden visar den uppifrån |
 
@@ -413,7 +414,7 @@ läst i Street View, står kvar.
 
 Att stänga gårdens norra ände fick konsekvenser som testerna fångade:
 
-- **Förbindelselängan i söder** smalnades från 10 till 7 m (x 144 → 147). Med
+- **Den låga längan i söder** smalnades från 10 till 7 m (x 144 → 147). Med
   hästgången i norr och den breda längan i söder blev gräsgården helt innesluten
   och stalldörren mot gräsgården fick ingen väg ut till gårdsplanen.
 - **Ridhusets durkplåtsdörrar** flyttades ur läktarstommen, se fynd 9.
