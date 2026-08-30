@@ -25,6 +25,7 @@ gissningar `[antagande]`. Kortet är facit för byggfunktionen i `src/varld3d.js
 | `stall-entre-01.jpg` | Under förstukvistens tak | Runt fönster, valvfönster, den vita ribbräcket, liggande panel |
 | `stall-entre-03.jpg` | Vid räcket, mot dörren | Ockragul dörr, runt fönster, räckets ribbor |
 | `stall-entre-06.jpg` | Rakt på dörren | Dörrens solfjäderfönster, "Entré"-skylten, mässingsplakett, vägglampa, betongsockel |
+| `stall-entre-15-dorren.jpg` | Rakt på entrédörren, närbild | **Migrerad ur Drive/Stallhuset 2026-08-30** (`IMG_0132.HEIC`, fil-ID `1Ooy6szpBI0Kd0q1SXkNPG9GlZxwCTcUd`). Ockragul dörr med solfjäderfönster, "Entré"-skylt, två mässingsplaketter, kodlås, **runt vitt fönster på BÅDA sidor**, liggande faluröd panel, betongsockel |
 | `stall-entre-12.jpg` | Inne i klubbdelen | Branddörren mot stallgången, pärlspont — hör till `STALLINNE` |
 
 ## Volym
