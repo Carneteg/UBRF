@@ -54,11 +54,54 @@ Det är mätt i webbversionen (vägsökning hittar fram åt båda håll, två st
 i Studio ska det också gå att **gå** där — inget osynligt hinder, ingen del som
 sticker in i passagen.
 
-## Vad du INTE ska leta efter
+## Det visuella är också ditt att bedöma
 
-Möblering, ljussättning och materialkänsla. Det som byggs är Gate F01:s
-**struktur**: planform, förbindelser, cirkulation och de igenkänningsdrag som
-redan är verifierade. Att stallgången saknar spånremsa är inte ett fynd.
+Gate F01:s källhierarki säger att **foton och film är facit för visuella och
+interiöra detaljer** — material, färger, konstruktion, öppningar, skyltar.
+Struktur och utseende hör alltså båda till den här kontrollen.
+
+En tidigare version av den här checklistan sade att du inte skulle bedöma
+materialkänsla. **Det var fel**, och det är rättat.
+
+### Byggt i Roblox — bedöm i Studio
+
+| Var | Vad |
+|---|---|
+| Ridhuset ute | Vinröd korrugerad fasad, svart list, takfärg, café-/annexgaveln, de kända öppningarna |
+| Stallet ute | Mörkröd liggande panel, blågrått tak, **valvfönstrens rytm**, den ockragula entrédörren, portarna |
+| Ridhuset inne | Banan 20 × 60, sargen med porten vid A och grinden mot hästgången, läktaren, **de glasade rummen**, **domarbåset vid E med exit-skylten**, **klockan** |
+| Stallet inne | Dubbelstallet — fyra boxrader, två gångar, tvärkorridoren tvärs huset — boxfronternas identitet, gångytornas läsbarhet, de namngivna rummen |
+| Komplexet | Hästgången, de två gårdsytorna, gavlarna i liv |
+
+### Finns bara i webbversionen — bedöm där, inte i Studio
+
+Roblox-byggaren bygger **strukturen och de färger och öppningar som ligger i den
+exporterade geometrin**. Följande igenkänningsdrag är byggda i webbens renderare
+(`src/varld3d.js`) men **inte** i Roblox:
+
+| Var | Vad som saknas i Studio |
+|---|---|
+| Stallet ute | Takhuvarna på nocken, snörasskyddet, förstukvisten, spiraltrappan och balkongen på klubbgaveln |
+| Ridhuset inne | Den mörkröda övre långväggen med vita läkt, takets stålprofiler, kabelstegar och ventilationskanaler, den centrala trappan, båsets trappa och räcken |
+
+**Leta inte efter dem i Studio — de är inte byggda där.** Att spiraltrappan
+saknas är alltså inte ett verklighetsfel utan en känd gräns i Roblox-spåret, och
+den står som en öppen fråga i svaret på Review 03: de här dragen sitter i
+webbens renderare som handskrivna former, inte i den exporterade geometrin, så
+att porta dem kräver ett beslut om hur — inte ett gissningspass.
+
+Vill du bedöma dem, gör det i webbversionen:
+
+```bash
+python3 tools/build.py && python3 -m http.server 8931
+# öppna http://localhost:8931/dist/ridskolan.html
+```
+
+### Vad som fortfarande INTE är ett fynd
+
+Osourcad möblering, kosmetisk polish och avancerad ljussättning. Att
+stallgången saknar spånremsa, att det inte finns namnskyltar på boxarna eller
+att ljuset är platt — inget av det är vad gaten mäter.
 
 ## Om något ser fel ut
 
