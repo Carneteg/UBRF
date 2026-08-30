@@ -2,10 +2,16 @@
 
 **Status:** ÖPPEN. Skiva 1 av 6 levererad.
 
-Gate F01 är **`HUMAN_STUDIO_ACCEPTED / CLOSED`** sedan 2026-08-30: Tobias körde
-Studio-genomgången med 11/11 vyer PASS och gångvägen PASS. Ingen
-byggnadspolering görs medan G01 är aktiv. En stängd gate öppnas av ett konkret
-fel, inte av att något kan bli snyggare.
+Gate F01 är **`HUMAN_STUDIO_ACCEPTED / CLOSED`** sedan **2026-08-30**:
+
+- 11 / 11 QA-vyer PASS
+- gångvägen `ankomsten → stallet → hästgången → ridhuset → banan` PASS
+- observation: stallet upplevs lite mörkt — **icke-blockerande polish**
+
+Ingen bred byggnadspolering görs medan G01 är aktiv. En stängd gate öppnas av
+ett konkret fel, inte av att något kan bli snyggare. Endast konkreta Studio-fel
+eller en senare avgränsad lighting-/game-feel-polish får öppna riktade
+ändringar — och ljuset rättas i ljuset, aldrig genom att flytta ett mått.
 
 ## Målet
 
