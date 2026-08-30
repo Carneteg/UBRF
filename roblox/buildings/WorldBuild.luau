@@ -90,14 +90,15 @@ local function findExistingDoor(BK, GEO, model: Model, base: CFrame, b, o, used)
 	local wantedName = (o.label or o.typ) .. (if o.intern then " (intern)" else "")
 	local wanted = expectedOpeningPosition(BK, GEO, base, b, o)
 	local best: BasePart? = nil
-	local bestDist = math.huge
+	local bestDist2 = math.huge
 	for _, inst in ipairs(model:GetDescendants()) do
 		if inst.ClassName == "Part" and inst.Name == wantedName and not used[inst] then
 			local part = inst :: Part
-			local d = (part.CFrame.Position - wanted).Magnitude
-			if d < bestDist then
+			local d = part.CFrame.Position - wanted
+			local dist2 = d.X * d.X + d.Y * d.Y + d.Z * d.Z
+			if dist2 < bestDist2 then
 				best = part
-				bestDist = d
+				bestDist2 = dist2
 			end
 		end
 	end
