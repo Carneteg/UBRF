@@ -13,7 +13,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri bygge movement camera rider touch"
+SPECAR="geometri bygge movement camera rider touch preparation"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
@@ -28,20 +28,20 @@ for f in $SPECAR; do
   fel=$(printf '%s\n' "$ut" | grep -cE '^[[:space:]]*FEL')
   slut=$(printf '%s\n' "$ut" | grep -cE 'alla gröna|Alla mätningar gick igenom')
   if [ "$kod" -ne 0 ]; then
-    printf '%-10s LUAU AVSLUTADE MED KOD %s\n' "$f" "$kod"
-    printf '%s\n' "$ut" | tail -4 | sed 's/^/           /'
+    printf '%-12s LUAU AVSLUTADE MED KOD %s\n' "$f" "$kod"
+    printf '%s\n' "$ut" | tail -4 | sed 's/^/             /'
     status=1
     continue
   fi
   if [ "$fel" -eq 0 ] && [ "$slut" -ge 1 ]; then
-    printf '%-10s OK\n' "$f"
+    printf '%-12s OK\n' "$f"
   elif [ "$slut" -eq 0 ]; then
-    printf '%-10s KRASCH — specen nådde aldrig sin slutrad\n' "$f"
-    printf '%s\n' "$ut" | tail -4 | sed 's/^/           /'
+    printf '%-12s KRASCH — specen nådde aldrig sin slutrad\n' "$f"
+    printf '%s\n' "$ut" | tail -4 | sed 's/^/             /'
     status=1
   else
-    printf '%-10s %s FEL\n' "$f" "$fel"
-    printf '%s\n' "$ut" | grep -E '^[[:space:]]*FEL' | head -6 | sed 's/^/           /'
+    printf '%-12s %s FEL\n' "$f" "$fel"
+    printf '%s\n' "$ut" | grep -E '^[[:space:]]*FEL' | head -6 | sed 's/^/             /'
     status=1
   fi
 done
