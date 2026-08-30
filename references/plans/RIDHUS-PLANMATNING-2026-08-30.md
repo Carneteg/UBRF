@@ -1,14 +1,28 @@
-# Ridhuset — den måttsatta planen prövad mot utrymningsplanen
+# Ridhuset — mätt i utrymningsplanen
 
-Datum: 2026-08-30
-Anledning: `RIDHUS-MATTSATT-PLAN-2026-08-30.md` (`7c70d67`) låser banan till
-**20 × 60 m** och nämner **5 m sidozoner**, och begär att fotavtrycket
-25 × 75 m omauditeras eftersom det är härlett.
+Datum: 2026-08-30 · reviderad samma dag efter källrättelse
+Källa: **`references/plans/ridhus-entreplan-utrymning.jpg`**, som ligger i repot.
+Mätt i bildpunkter med tröskling på planytans gula färg och på väggstreckens
+mörka pixlar.
 
-**Den måttsatta planbilden ligger inte i repot** — bara textderivatet. Alltså
-kunde jag inte läsa av den. Det jag däremot kunde göra är att pröva slutsatsen
-mot den ridhusplan som **redan finns** i repot,
-`references/plans/ridhus-entreplan-utrymning.jpg`, mätt i bildpunkter.
+## Rättelse: vad den här filen INTE vilar på
+
+Filen skrevs först som en prövning av `RIDHUS-MATTSATT-PLAN-2026-08-30.md`
+(`7c70d67`). **Den referensen är återkallad** — bilden var ingen måttsatt
+ritning utan en satellitbild med en mätlinje i Google Maps, och dess
+meteretiketter hör till mätverktyget, inte till byggnaden. Den ersattes av
+`references/site/SATELLIT-MATNING-2026-08-30.md` (`0d4116c`).
+
+**Mätningarna nedan berörs inte av det.** De gjordes aldrig på den bilden — jag
+har aldrig haft den — utan på utrymningsplanen i repot. Det som däremot faller
+är den ram jag satte dem i:
+
+| Påstående | Status |
+|---|---|
+| Banan 20 × 60 m är `VERIFIED` **enligt en måttsatt plan** | **SUPERSEDED.** Banan är fortfarande `VERIFIED`, men på Tobias tidigare bekräftelse (`SITEPLAN.md`, ridhuskortet) — inte på den bilden |
+| Läktarbandet jämfört med en **5 m sidozon** | **SUPERSEDED.** De 5 metrarna kom ur den återkallade referensen. Jämförelsen stryks |
+| Fotavtrycket 25 × 75 stärkt av **planförhållandet 3,022 : 1** | **Står kvar** — mätt i utrymningsplanen, oberoende av den återkallade bilden |
+| En längd på 65 m är utesluten | **Står kvar** — bygger på utrymningsplanen plus den bekräftade 60 m-banan |
 
 ## Mätningarna
 
@@ -34,9 +48,8 @@ för banan blir **55,2 m**. Banan är verifierat **60 m**. Det går inte ihop.
 Vid 75 m blir entrédelen 11,4 m och kvar 63,6 m — vilket rymmer en 60 m bana
 med marginal. **Fotavtrycket står kvar.**
 
-Det betyder också att de 5 m-zoner den måttsatta planen nämner **inte** kan
-läsas som "60 + 5 = husets längd". Derivatet varnar självt för just det:
-*"Do not infer a total building footprint merely by adding dimensions."*
+Det är en slutsats ur planen och den bekräftade banan, inte ur någon
+meteretikett.
 
 ### 3 · Sidozonen är läktarens band
 
@@ -44,10 +57,8 @@ De fem parallella linjerna i tvärsnittet är läktartrappstegen. Bandet är
 **14,5 % av bredden ≈ 3,6 m** vid 25 m. Spelet bygger läktaren 21 → 25, alltså
 4 m. Nära, och inom avläsningsfelet.
 
-Den måttsatta planens **5 m** är alltså något större än vad utrymningsplanen
-visar. Skillnaden är ~1 m och två olika ritningar; ingen av dem är fel nog att
-välja bort den andra. Spelet behåller 4 m tills den måttsatta bilden går att
-läsa av.
+Jämförelsen med en "5 m sidozon" som stod här är struken: de 5 metrarna kom ur
+den återkallade referensen.
 
 ### 4 · Entrédelen
 
@@ -59,14 +70,17 @@ den här grunden.
 
 | Fakta | Före | Efter |
 |---|---|---|
-| Banan 20 × 60 m | `[antagande]` bekräftat av Tobias | **VERIFIED** — måttsatt plan |
+| Banan 20 × 60 m | `[antagande]` | **VERIFIED** — Tobias bekräftelse, se `SITEPLAN.md`. **Inte** den återkallade bilden |
 | Fotavtryck 25 × 75 m | `DERIVED` ur perspektivkorrigering | **DERIVED, stärkt** — två oberoende avläsningar, 3,00 mot 3,022 |
 | Längd 65 m | föreslagen som möjlig | **UTESLUTEN** — ryms inte med en 60 m bana |
-| Läktarbandets bredd 4 m | `ASSUMPTION` | `DERIVED` — 14,5 % av bredden i planen |
+| Läktarbandets bredd 4 m | `ASSUMPTION` | `DERIVED` — 14,5 % av bredden mätt i utrymningsplanen |
 | Entrédelen 13 m | `ASSUMPTION` | `ASSUMPTION`, mätt till 11,4 m — inom felmarginal |
 
 ## Kvar
 
-`[REFERENCE GAP]` **Den måttsatta planbilden.** Den ligger inte i repot, och
-utan den går 5 m-zonernas exakta läge inte att spåra mot plangeometrin — vilket
-derivatet självt kräver innan fotavtrycket ändras.
+`[REFERENCE GAP]` **En måttsatt ritning på ridhuset.** Någon sådan finns inte i
+repot. Utrymningsplanen saknar skalstock, så allt ovan är proportioner — det som
+låser dem i meter är den bekräftade 20 × 60-banan.
+
+`[REFERENCE GAP]` **Ridhusplanen rakt framifrån.** Den i repot är fotograferad
+snett, vilket är felkällan bakom entrédelens 11,4 m mot spelets 13.

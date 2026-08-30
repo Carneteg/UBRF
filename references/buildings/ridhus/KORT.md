@@ -247,7 +247,10 @@ frame för frame ännu.
   mot 3,00 för 25 × 75, alltså under en procents skillnad. En längd på 65 m är
   **utesluten**: entrédelen tar 15,1 % av längden, och kvar blir då 55 m för en
   bana som är verifierat 60 m. Se `references/plans/RIDHUS-PLANMATNING-2026-08-30.md`
-- **Banan 20 × 60 m** `[VERIFIED]` — måttsatt plan, `RIDHUS-MATTSATT-PLAN-2026-08-30.md`
+- **Banan 20 × 60 m** `[VERIFIED]` — Tobias bekräftelse, se `SITEPLAN.md`.
+  (Stod en kort stund som verifierad av en "måttsatt plan"; den referensen är
+  återkallad — bilden var en satellitbild med en mätlinje i Google Maps, se
+  `references/site/SATELLIT-MATNING-2026-08-30.md`.)
 - Rotation: nocken i nord–sydlig riktning, cafégaveln mot parkeringen i norr
   (rättat 2026-08-29 — grusplanen ligger vid husets nordvästra ände)
 - **Sammanbyggt med stallet.** Tobias 2026-08-30: *"husen är sammanbyggda, jag
