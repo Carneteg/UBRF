@@ -217,9 +217,12 @@ const ANL = {
     {typ:"grus",  rekt:{x:144, y:119, w:36,  h:16}},   // planen framför stallets klubbgavel
     {typ:"grus",  rekt:{x:112, y:20,  w:6,   h:101}},  // grusvägen längs västra långsidan
     {typ:"grus",  rekt:{x:144, y:10,  w:62,  h:8}},    // infartsvägen från Husbyvägen i sydost
-    {typ:"grus",  rekt:{x:148, y:40,  w:44,  h:9}},    // gårdsplanen vid stallets södra gavel (kortad: huset når nu y=49,05)
+    /* Gårdsplanen ska MÖTA stallets södra gavel, inte sluta en bit ifrån
+       den. Höjden räknas därför fram; med ett fast tal blev det ett
+       gräsband mellan grus och vägg varje gång gaveln flyttade. */
+    {typ:"grus",  rekt:{x:148, y:40,  w:44,  h:STALL_Y-40}},  // gårdsplanen vid stallets södra gavel
     {typ:"grus",  rekt:{x:186, y:16,  w:8,   h:28}},   // väggrenen upp från infarten
-    {typ:"grus",  rekt:{x:STALL_X+STALL_BREDD, y:64, w:3, h:57}}, // gången öster om stallet mot hagarna
+    {typ:"grus",  rekt:{x:STALL_X+STALL_BREDD, y:STALL_Y+6, w:3, h:STALL_LANGD-8}}, // gången öster om stallet mot hagarna
 
     {typ:"sand",  rekt:UTEBANA},                          // uteridbanan
     {typ:"sand",  rekt:PADDOCK},                       // grusbanan/paddocken bredvid
@@ -285,8 +288,9 @@ const ANL = {
           landningspunkten hamnade inuti en solid läktarstomme och gick inte
           att använda. Flyttad till u = 5, söder om läktaren. */
        {sida:"E", u:5,  b:3.4, h:2.9, z0:0, typ:"portplat"},
-       /* HÄSTGÅNGEN till stallet, mitt på östfasaden. u mäts från södra
-          gaveln: gången ligger på y 89,3–92,8, alltså 45,3–48,8 lokalt. */
+       /* HÄSTGÅNGEN till stallet. u mäts från södra gaveln och räknas ur
+          GANG_FASTE, så den följer med när gången flyttar. Talen 89,3–92,8
+          som stod här var två flyttar gamla. */
        {sida:"E", u:(GANG_FASTE+0.55)-RIDHUS_Y, b:2.4, h:2.6,
         z0:0, typ:"portbla", intern:true},
        {sida:"S", u:8,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten [antagande]
@@ -377,24 +381,19 @@ const ANL = {
        Den låg tidigare i norra änden (y 106–112). Det var ett antagande
        härlett ur var husen hade gångbar insida, och satellitbilden
        underkände det. Placeringen här är inte gissad utan mätt in mellan två
-       källor som pekar på samma ställe:
+       argument som byggde på ett 54 m långt hus. Det resonemanget — husens
+       gemensamma mitt på y 92,0 och korridoren på y 89,3–92,8 — gällde en
+       geometri som inte finns längre, och är struket. Det stod kvar i två
+       flyttar och sade emot den aktiva koden hela tiden.
 
-         · husens gemensamma längd är y 65–119, alltså mitten y 92,0
-         · stallets egen tvärkorridor, mätt i utrymningsplanen, ligger på
-           y 89,3–92,8 med mitten y 91,05
+       Gången ligger där stallets tvärkorridor mynnar. Läget räknas ur
+       GANG_FASTE och följer därför automatiskt med när gaveln flyttar; se
+       konstanten längst upp. Det är den enda plats gången KAN mynna utan
+       att gå in i en boxrad.
 
-       Under en meter isär. Gången läggs därför i liv med tvärkorridoren: den
-       mynnar i den korridor som planen redan visar når båda långsidorna, och
-       ingen ny öppning behöver uppfinnas i stallet.
-
-       Måtten är däremot fortfarande antagna. Satellitbilden ger topologi,
-       inte meter. [ASSUMPTION: bredd, höjder, taklutning] */
-    /* Hästgången ligger där stallets tvärkorridor mynnar. Den låg på
-       y = 89,3, avläst ur satellit UTAN skala. När stallets längd mättes
-       till 69,95 m hamnade korridoren på världens 76,85–80,35, och gången
-       måste följa med — annars mynnar den i en boxrad. Gångens eget läge
-       är fortfarande omätt (MATLISTA punkt 4); det här är det läge som
-       följer av ett verifierat längdmått plus planens proportioner, vilket
+       Gångens eget läge är fortfarande omätt (MATLISTA punkt 4); det här är
+       det läge som följer av ett verifierat längdmått plus planens
+       proportioner, vilket
        väger tyngre än en oskalad satellitavläsning. `[DERIVED]` */
     {id:"hastgang", rekt:{x:RIDHUS_X+RIDHUS_BREDD, y:GANG_FASTE,
       w:GARDSGAP, h:GANG_DJUP}, hV:3.2, hN:4.0, nock:"EW",
@@ -508,12 +507,17 @@ const ANL = {
        (Byggnaden, IMG_0076) visar den från marknivå: silon står TÄTT MOT
        gaveln, ungefär i dess mitt, och når drygt halva gavelhöjden.
 
-       Gaveln flyttade från y = 65 till y = 49,05 när längden mättes, och
-       silon följde med — den låg annars inne i huset. Radien är 1,5 m, så
-       y = 47,5 lägger mantelns kant på 49,0 mot gavelns 49,05. Balarna
-       bredvid följde av samma skäl. */
-    {typ:"silo",      pos:[164.6,47.5]},
-    {typ:"balar",     pos:[158,44.5]},                   // ensilagebalarna
+       ANDRA GÅNGEN. Gaveln flyttade först från y = 65 till 49,05 när längden
+       mättes, och silon följde med — som ett TAL. När gavelförskjutningens
+       tecken sedan vändes flyttade gaveln till 55,05 och talet stod kvar, så
+       silon lämnades 6 m ut på gården trots att källan säger att den står
+       tätt mot väggen. Review 08 fällde det.
+
+       Läget räknas därför ur gaveln i stället för att skrivas. Radien är
+       1,5 m i v3dRekvisita, så mantelns kant hamnar 0,05 m från väggen
+       oavsett var gaveln hamnar härnäst. Samma sak för balarna. */
+    {typ:"silo",      pos:[STALL_X+STALL_BREDD/2, STALL_Y-1.55]},
+    {typ:"balar",     pos:[STALL_X+2.5, STALL_Y-4.6]},   // ensilagebalarna, väster om silon
     {typ:"grushog",   pos:[122,131]},                    // grushögen på grusplanen (Street View)
     {typ:"transport", pos:[133,125], rikt:0.5},          // hästtransporten på grusplanen
     {typ:"bord",      pos:[150,74]},                     // picknickborden på gården (de syns i stall-fasad-01)

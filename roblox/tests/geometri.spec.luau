@@ -555,6 +555,46 @@ do
 	end
 end
 
+do
+	-- Silon står TÄTT MOT stallets södra gavel — det är vad
+	-- references/buildings/stall/stall-gavel-06-silon.jpg visar.
+	--
+	-- Testet finns för att just det här har glidit TVÅ gånger. Silons läge
+	-- var skrivet som ett tal; när gaveln flyttade (först vid längdmätningen,
+	-- sedan vid gavelförskjutningens teckenvändning) stod talet kvar och
+	-- silon lämnades ute på gården. Läget räknas nu ur gaveln, och det här
+	-- testet ser till att det förblir så.
+	local silo
+	for _, p in ipairs(UBRFKomplex.props) do
+		if p.typ == "silo" then silo = p end
+	end
+	check("silon finns i rekvisitan", silo ~= nil)
+	if silo and stall then
+		local RADIE = 1.5                      -- samma som v3dRekvisita bygger
+		local avstand = stall.rekt.y - (silo.pos[2] + RADIE)
+		check("silon står tätt mot stallets södra gavel",
+			avstand >= -0.2 and avstand <= 0.3,
+			string.format("mantelkant y = %.2f, gavel y = %.2f (%.2f m glapp)",
+				silo.pos[2] + RADIE, stall.rekt.y, avstand))
+		check("silon står mitt för gaveln",
+			math.abs(silo.pos[1] - (stall.rekt.x + stall.rekt.w / 2)) < 0.5,
+			string.format("silon x = %.2f, gavelns mitt x = %.2f",
+				silo.pos[1], stall.rekt.x + stall.rekt.w / 2))
+	end
+
+	-- Gårdsplanen ska MÖTA gaveln, inte sluta en bit ifrån den.
+	local gard
+	for _, m in ipairs(UBRFKomplex.mark) do
+		if m.typ == "grus" and math.abs(m.rekt.x - 148) < 0.01 then gard = m end
+	end
+	if gard and stall then
+		check("gårdsplanen når fram till stallets gavel",
+			math.abs((gard.rekt.y + gard.rekt.h) - stall.rekt.y) < 0.3,
+			string.format("grusets norra kant y = %.2f, gavel y = %.2f",
+				gard.rekt.y + gard.rekt.h, stall.rekt.y))
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("geometri.spec: " .. fails .. " fel")
