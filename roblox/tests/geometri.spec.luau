@@ -316,6 +316,44 @@ do
 	check("läktaren tränger inte in på banan",
 		Geometri.overlapp(laktare, bana) < 0.01,
 		string.format("%.2f m²", Geometri.overlapp(laktare, bana)))
+
+--[[ Sponsorskyltarna ska hänga PÅ den rostbruna panelen, inte på den ljusa
+	väggen. Läget låg förut som literaler som råkade ligga rätt; flyttades
+	panelen följde de inte med. Testet läser BÅDA ur datan, så det mäter
+	relationen och inte ett minne av talen. Samma sjuka som fällt silon och
+	gårdsplanen i det här arbetet. ]]
+do
+	local O = UBRFKomplex.identitet.ridhus.ovreVagg
+	local utanfor, n = 0, 0
+	for _, sk in ipairs(UBRFKomplex.ridhus.skyltar) do
+		n += 1
+		if sk.y - sk.b / 2 < O.y0 - 0.01 or sk.y + sk.b / 2 > O.y1 + 0.01 then
+			utanfor += 1
+		end
+	end
+	check("alla sponsorskyltar hänger innanför den rostbruna panelen",
+		n > 0 and utanfor == 0,
+		string.format("%d av %d utanför stycket y %.1f–%.1f", utanfor, n, O.y0, O.y1))
+
+	--[[ Det räcker inte. Testet ovan passerar för VILKA literaler som helst
+		som råkar hamna innanför ett brett stycke — jag prövade det genom att
+		frikoppla skyltarna och ge dem tal i intervallet 8–12, och det
+		förblev grönt. Det mätte alltså inte kopplingen, bara att de låg
+		innanför.
+
+		Det här testet mäter KOPPLINGEN: varje skylts y ska vara exakt det
+		som andelen ger ur panelens stycke. Ersätter någon härledningen med
+		tal faller det, även om talen ligger rätt just då. ]]
+	local losa = 0
+	for _, sk in ipairs(UBRFKomplex.ridhus.skyltar) do
+		if sk.andel ~= nil then
+			local vantat = O.y0 + (O.y1 - O.y0) * sk.andel
+			if math.abs(sk.y - vantat) > 0.01 then losa += 1 end
+		end
+	end
+	check("skyltarnas läge är HÄRLETT ur panelen, inte skrivet som tal",
+		losa == 0, losa .. " skyltar följer inte sin andel")
+end
 	check("läktaren ligger öster om banan", R.laktare.x0 >= R.bana.x + R.bana.w - 0.01)
 end
 

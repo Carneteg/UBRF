@@ -62,7 +62,9 @@ De två strukturerna hade blandats ihop.
 |---|---|---|---|
 | Rostbrun/mörkröd panel på DEL av EN långsida | `VERIFIED` | r02 | `ovreVagg.sida:"W"`, y 6–40 |
 | Vita horisontella band på panelen | `VERIFIED` | r02 | `panelList` |
-| **Fönsterband ovanför panelen** | `VERIFIED` | r02 | **`KNOWN MISMATCH` — saknas** |
+| **Fönsterband ovanför panelen** | `VERIFIED` | r02 | rättat — `fonsterband` |
+| Bandet löper förbi panelens stycke | `VERIFIED` | r02 | byggs i full längd |
+| Bandets höjd och postdelning | `[REFERENCE GAP]` | — | valda |
 | Resten av samma vägg är ljus | `VERIFIED` | r02 | byggs |
 | Panelens exakta utbredning | `[antagande]` | — | y0/y1 |
 
@@ -72,7 +74,7 @@ De två strukturerna hade blandats ihop.
 |---|---|---|---|
 | Skyltar hänger på den rostbruna panelen | `VERIFIED` | r02 | **kopplingen saknas** |
 | Agria, Hästsportbutik, RS Mustang, Svenskt Stallströ | `VERIFIED` | r02 | — |
-| Skyltarnas läge relativt panelen | `KNOWN MISMATCH` | — | inte kopplat i koden |
+| Skyltarnas läge relativt panelen | rättat | — | `andel` av panelens stycke, härlett |
 
 ## 6. Taket
 
@@ -92,6 +94,15 @@ De två strukturerna hade blandats ihop.
 | Mörkt trä, upphöjt, trappa med räcken | `VERIFIED` | r03 | byggs |
 | Grön exit-skylt | `VERIFIED` | r03 | byggs |
 | Sitter på läktarnivå | `DERIVED` | r03 | följer `dackZ` |
+
+## Rättat i det här passet
+
+- **A** läktaren: plant däck med solid front i stället för fyra trappsteg.
+- **B** fönsterbandet ovanför panelen byggs nu.
+- **C** skyltarnas läge HÄRLEDS ur panelens stycke i stället för att stå som
+  tal. Ett första test på detta var för svagt — det passerade för vilka tal
+  som helst som råkade ligga innanför stycket, vilket jag prövade genom att
+  frikoppla dem. Testet mäter nu själva kopplingen.
 
 ## Öppna motsägelser
 

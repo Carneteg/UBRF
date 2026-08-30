@@ -744,6 +744,19 @@ const IDENTITET = {
        stycke där skyltarna sitter, ungefär 44 % av husets längd. */
     ovreVagg:{overSarg:0.1, underTak:1.6, tjocklek:0.08, listar:3,
               sida:"W", y0:6, y1:40},
+    /* FÖNSTERBANDET ovanför panelen — `KNOWN MISMATCH B`, andra halvan.
+
+       `ridhus-inne-02-langsidan.jpg` visar tydligt ett band av fönster
+       mellan panelens överkant och takfoten: ljusa fält med mörka karmar
+       och poster. Spelet hade bara tom vägg där, och det är en stor del av
+       varför långväggen läser som en enfärgad yta.
+
+       `VERIFIED`: att bandet finns, att det sitter mellan panelen och
+       takfoten, och att det löper vidare FÖRBI panelens stycke — i fotot
+       fortsätter ljusbandet in på den ljusa delen av samma vägg.
+       `[REFERENCE GAP]`: bandets höjd och postdelningen. */
+    fonsterband:{h:0.95, underTak:0.5, tjocklek:0.06, postDelning:2.4,
+                 glas:"#DCE6EC", karm:"#4A3B2E"},
     /* OM-AUDITENS PUNKT A: läktarens front mot banan.
 
        Spelet byggde läktaren som öppna ljusa furutrappsteg hela vägen ner.
@@ -1242,14 +1255,26 @@ const RIDHUSINNE = {
        och hamnade därmed delvis på den ljusa delen. Nu samlade innanför
        IDENTITET.ridhus.ovreVagg:s stycke (y 6–40), i den ordning
        `ridhus-inne-02-langsidan.jpg` visar dem från vänster. */
-    {y:36,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
-    {y:30,  b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
-    {y:25,  b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
-    {y:20.5,b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
-    {y:15,  b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
-    {y:10,  b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
+    /* `KNOWN MISMATCH C`: läget var inte KOPPLAT till panelen. Talen låg
+       innanför panelens stycke, men bara därför att någon räknat efter en
+       gång. Flyttas `ovreVagg.y0/y1` följer skyltarna inte med, och då
+       hänger de på den ljusa väggen igen — samma sorts stale följdgeometri
+       som silon och gårdsplanen fällts på i det här arbetet.
+
+       `andel` är läget som andel av panelens stycke, räknat från dess
+       södra ände. Ordningen är den `ridhus-inne-02-langsidan.jpg` visar
+       dem i från vänster. Talen nedan ger samma lägen som förut när
+       stycket är y 6–40 — men nu FÖLJER de panelen. */
+    {andel:0.88, b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
+    {andel:0.71, b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
+    {andel:0.56, b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
+    {andel:0.43, b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
+    {andel:0.26, b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
+    {andel:0.12, b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
   ],
   port:{x0:9.6, x1:11.6},                         // sargporten vid A (norra kortsidan)
+  /* y härleds ur IDENTITET.ridhus.ovreVagg längre ner — se noten vid
+     `skyltar`. Fältet finns här bara så att renderarna kan läsa ett tal. */
   /* GRINDEN mot hästgången, i sargens östra långsida. Den måste finnas: annars
      är hästgången dekoration. Man leder hästen in genom gången, och då ska man
      komma ut på banan — sargen kan inte vara obruten just där.
@@ -1364,4 +1389,15 @@ STALLINNE.info=[
         spawn:{x:utx, y:uty, rikt:Math.atan2(n[1],n[0])}});
     }
   }
+})();
+
+/* Sponsorskyltarnas y HÄRLEDS ur panelens stycke, så att de följer den om den
+   flyttas. Se noten vid RIDHUSINNE.skyltar. Skrivs som uttryck och inte som
+   tal av samma skäl som silon och gårdsplanen: varje gång ett ankare flyttats
+   i det här arbetet har nästa granskning hittat ett tal som skulle ha följt
+   med. */
+(()=>{
+  const O=IDENTITET.ridhus.ovreVagg;
+  for(const sk of RIDHUSINNE.skyltar)
+    if(sk.andel!==undefined) sk.y=O.y0+(O.y1-O.y0)*sk.andel;
 })();

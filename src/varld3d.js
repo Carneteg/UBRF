@@ -1246,6 +1246,21 @@ function v3dRidhus(lagg,opp){
       pan.lada(0.10,0.07,L,R.panelList,M4.translation(x+vand*0.02,yy,Lm));
     }
    }
+   /* FÖNSTERBANDET mellan panelen och takfoten. Det löper längs HELA
+      långsidan, inte bara över panelens stycke — i ridhus-inne-02
+      fortsätter ljusbandet in på den ljusa delen av samma vägg. */
+   const FB=IDENTITET.ridhus.fonsterband;
+   if(FB){
+     const fx=(O.sida==="W") ? 0.16 : R.bredd-0.16;
+     const fy=R.tak-FB.underTak-FB.h/2;
+     pan.lada(FB.tjocklek,FB.h,R.langd-1.0,FB.glas,
+       M4.translation(fx,fy,R.langd/2));
+     for(let z=0.8;z<R.langd-0.8;z+=FB.postDelning)      // karmposter
+       pan.lada(FB.tjocklek+0.03,FB.h,0.09,FB.karm,M4.translation(fx,fy,z));
+     for(const dy of [-FB.h/2,FB.h/2])                   // över- och underkarm
+       pan.lada(FB.tjocklek+0.03,0.08,R.langd-1.0,FB.karm,
+         M4.translation(fx,fy+dy,R.langd/2));
+   }
    lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */
   /* Läktaren är en trästomme: fyrkantsstolpar, balkar och plankbänkar i

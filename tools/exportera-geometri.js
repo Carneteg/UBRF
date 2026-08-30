@@ -150,7 +150,7 @@ const ut = {
     port: RIDHUSINNE.port, sargGrind: RIDHUSINNE.sargGrind,
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, trappa: RIDHUSINNE.trappa,
-    klocka: RIDHUSINNE.klocka,
+    klocka: RIDHUSINNE.klocka, skyltar: RIDHUSINNE.skyltar,
     dorrar: RIDHUSINNE.dorrar,
   },
 };
