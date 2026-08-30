@@ -629,8 +629,9 @@ function boxY(i){
 }
 /* Boxfrontens x för en länga: radens kant mot sin gång. */
 function boxFrontX(rad){
-  const S=STALLINNE;
-  return rad.vetter>0 ? rad.x0+S.boxDjup : rad.x0;
+  /* Radens djup kommer ur planens uppmätta andel och skiljer sig mellan
+     längorna — de yttre är djupare än de två i mitten. */
+  return rad.vetter>0 ? rad.x0+rad.djup : rad.x0;
 }
 function hittaBox(hastId){
   const S=STALLINNE;
@@ -1446,11 +1447,11 @@ function ritaStall2D(){
       if(y0+S.boxB>S.klubbY)break;
       const[a,b]=ss(rad.x0,y0+S.boxB);
       cx.strokeStyle="#4A4438";cx.lineWidth=1.5;
-      cx.strokeRect(a,b,S.boxDjup*s,S.boxB*s);
+      cx.strokeRect(a,b,rad.djup*s,S.boxB*s);
       const h=boxHast(lista[i]);
       if(h){cx.fillStyle=h.farg;
         cx.beginPath();
-        cx.ellipse(a+S.boxDjup*s/2,b+S.boxB*s/2,s*1.1,s*0.5,
+        cx.ellipse(a+rad.djup*s/2,b+S.boxB*s/2,s*1.1,s*0.5,
           rad.vetter>0?0.4:-0.4,0,Math.PI*2);cx.fill();
         if(s>6){cx.fillStyle=h.spelbar?"#E6E4DE":"#8E877A";
           cx.font=`500 ${Math.max(8,s*0.6)}px "IBM Plex Mono",monospace`;
@@ -1458,7 +1459,7 @@ function ritaStall2D(){
              öppnar — annars hamnar det inne i grannboxen. */
           cx.textAlign=rad.vetter>0?"left":"right";
           cx.fillText(h.namn,
-            rad.vetter>0?a+S.boxDjup*s+6:a-6, b+S.boxB*s/2+3);}}
+            rad.vetter>0?a+rad.djup*s+6:a-6, b+S.boxB*s/2+3);}}
     }
   }
   for(const grupp of [S.rum,S.service]) for(const r of grupp){

@@ -281,55 +281,61 @@ const ANL = {
       uppbindningsplatser, mot gårdsplanen.
       klubbY och serviceY är tvärväggarnas y; boxarna ligger emellan. ── */
 /* ── Stallet invändigt — DUBBELSTALL ────────────────────────────────
-   Utrymningsplanen (Presto AB, 2025-10-11) visar sex band tvärs huset:
+   Byggt mot utrymningsplanen (Presto AB 2025-10-11, "Plan 1"), som sedan
+   2026-08-30 finns i repot: `references/plans/stall-plan1-utrymning.jpg`.
+   Den är auktoritativ för planform och layout enligt Gate F01.
+
+   MÄTT I PLANEN, inte läst ur prosa. Ett lodrätt tvärsnitt genom
+   boxområdet vid tre olika x-lägen ger samma sex band, i samma ordning:
 
      boxrad — GÅNG A — boxrad · boxrad — GÅNG B — boxrad
 
-   De två mittersta raderna står rygg mot rygg mot en gemensam spine. De
-   yttre raderna ligger mot ytterväggarna och har valvfönstret i varje box,
-   vilket stämmer med fönsterrytmen utvändigt.
+   De två mittersta står rygg mot rygg mot en gemensam spine, som i planen
+   bär regelbundna ⊞-märken (vattenkoppar eller foderluckor). Bandens
+   inbördes andelar av byggnadens bredd, mätta i planen:
 
-   Spelet hade fram till 2026-08-30 en enda gång med två rader — en känd och
-   blockerande motsägelse mot planen. Se `references/buildings/stall/KORT.md`
-   för hur bredden 21 m härleds ur tre oberoende källor; kort: sex band à
-   3,5 m, samma 3,5 m som huvarna på nocken och fönstren på långsidan sitter
-   isär, och samma bredd som takfot 4,4 och nock 9,8 ger vid 28° resning.
+     boxrad W   169 px   20,9 %
+     gång A     100 px   12,4 %
+     boxrad MA  144 px   17,8 %
+     boxrad MB  142 px   17,6 %
+     gång B      99 px   12,3 %
+     boxrad E   153 px   19,0 %
 
-   Filmerna i `references/video/` visar EN gång med boxar på båda sidor.
-   Det stämmer med båda gångarna i den här planen; spelet lägger filmernas
-   gång som den västra, eftersom det är den man kommer in i från
-   förstukvisten. `[ASSUMPTION]`
+   ANDELARNA ÄR VERIFIERADE — de är oberoende av skala och lika i alla tre
+   snitten. Det viktigaste de säger är att GÅNGARNA ÄR SMALARE ÄN BOXARNA
+   ÄR DJUPA, ungefär två tredjedelar. Spelet antog tidigare att alla sex
+   banden var lika breda; det var fel.
 
-   Nio boxar per länga ger 36 totalt. Planen antyder "ett tiotal per länga",
-   men bilden är för sned för att räkna i. `[ASSUMPTION]` ── */
+   TOTALBREDDEN ÄR DÄREMOT INTE AVGJORD. `BREDD` nedan är ett antagande i
+   mitten av ett intervall som källorna inte är eniga om — se
+   `references/buildings/stall/KORT.md` under "Bredden". Ändra bara den
+   siffran; allt annat i planen följer andelarna. ── */
+const STALL_BAND = [
+  {id:"W",  typ:"rad",  andel:0.209, vetter:+1, gang:"A", yttervagg:true},
+  {id:"A",  typ:"gang", andel:0.124},
+  {id:"MA", typ:"rad",  andel:0.178, vetter:-1, gang:"A", yttervagg:false},
+  {id:"MB", typ:"rad",  andel:0.176, vetter:+1, gang:"B", yttervagg:false},
+  {id:"B",  typ:"gang", andel:0.123},
+  {id:"E",  typ:"rad",  andel:0.190, vetter:-1, gang:"B", yttervagg:true},
+];
+
 const STALLINNE = {
   bredd:21, langd:54,
   vagg:"#CFC8BC", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
   klubbY:43, boxStartY:6.8, serviceY:6.5,
-  boxB:3.5, boxDjup:3.5, gangB:3.5, antalBoxar:9,
-  /* Tvärkorridoren mitt på: planen visar en utskjutande korridor där, och
-     den binder ihop de två gångarna. Boxraderna bryts av den. */
+  boxB:3.5, antalBoxar:9,
   tvarGang:{y0:24.3, y1:27.8},
-  /* Varje länga: x0 är radens västra kant, `vetter` +1 om boxdörrarna
-     öppnar österut. `gang` säger vilken gång raden vetter mot. */
-  rader:[
-    {id:"W",  x0:0.0,  vetter:+1, gang:"A", yttervagg:true},
-    {id:"MA", x0:7.0,  vetter:-1, gang:"A", yttervagg:false},
-    {id:"MB", x0:10.5, vetter:+1, gang:"B", yttervagg:false},
-    {id:"E",  x0:17.5, vetter:-1, gang:"B", yttervagg:true},
-  ],
-  gangar:{ A:{x0:3.5, x1:7.0}, B:{x0:14.0, x1:17.5} },
-  /* Spelets hästar står i gång A, den man kommer in i. Gång B:s boxar är
-     andra uppstallades — de ritas som boxar men får ingen häst, eftersom
-     spelet har sjutton hästar och fler namn inte får hittas på. */
+  /* Fylls ur STALL_BAND nedan: rader med x0/boxDjup, gångar med x0/x1. */
+  rader:[], gangar:{},
+  /* Spelets sjutton hästar står i gång A, den man kommer in i från
+     förstukvisten. Gång B:s boxar ritas men får ingen häst: spelet har
+     sjutton namn och fler får inte hittas på. */
   boxar:{
     W: [ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky" ],
     MA:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null ],
     MB:[ null,null,null,null,null,null,null,null,null ],
     E: [ null,null,null,null,null,null,null,null,null ],
   },
-  /* Klubbdelen i norr. Hallen i mitten binder ihop entrédörren i
-     västväggen, klubbentrén i norra gaveln och båda gångarnas norra ände. */
   rum:[
     {id:"uppehallsrum", rekt:{x:0,    y:50.5, w:7.0, h:3.5}, label:"UPPEHÅLLSRUM"},
     {id:"teorisal",     rekt:{x:14.0, y:50.5, w:7.0, h:3.5}, label:"TEORISAL · WC"},
@@ -339,7 +345,6 @@ const STALLINNE = {
     {id:"spolspilta",   rekt:{x:0,    y:0, w:4.5, h:6.5}, label:"SPOLSPILTA"},
     {id:"spanforrad",   rekt:{x:16.5, y:0, w:4.5, h:6.5}, label:"SPÅNFÖRRÅD"},
   ],
-  /* Tvärväggar med en dörröppning per gång. */
   tvarvaggar:[ {y:43, brand:true}, {y:6.5, brand:false} ],
   dorrar:[
     {id:"ut_n", pos:[0.8,48.4], text:"Ut genom entrén", mot:"gard",
@@ -351,14 +356,25 @@ const STALLINNE = {
     {id:"ut_s", pos:[5.6,0.8],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard",
      spawn:{x:159.6,y:63.2,rikt:-Math.PI/2}},
   ],
-  ridlarare:{pos:[5.25,34], namn:"Ridläraren"},
-  whiteboard:{pos:[5.25,7.2]},    // veckoschemat vid spolspiltan (IMG_0154)
+  ridlarare:{pos:[0,34], namn:"Ridläraren"},
+  whiteboard:{pos:[0,7.2]},
 };
 
-/* Gångytorna: allt man kan gå på inne i stallet. Kollisionen frågar den
-   här listan i stället för att klämma spelaren in i en enda korridor —
-   med två gångar och en tvärkorridor går det inte att uttrycka som ett
-   intervall längre. */
+/* Banden läggs ut ur andelarna, från västra ytterväggen och österut. */
+(()=>{
+  const S=STALLINNE; let x=0;
+  for(const b of STALL_BAND){
+    const w=b.andel*S.bredd;
+    if(b.typ==="gang") S.gangar[b.id]={x0:x, x1:x+w};
+    else S.rader.push({id:b.id, x0:x, djup:w, vetter:b.vetter,
+                       gang:b.gang, yttervagg:b.yttervagg});
+    x+=w;
+  }
+  /* Ridläraren och whiteboarden mitt i gång A. */
+  const mA=(S.gangar.A.x0+S.gangar.A.x1)/2;
+  S.ridlarare.pos[0]=mA; S.whiteboard.pos[0]=mA;
+})();
+
 STALLINNE.gangytor = (()=>{
   const S=STALLINNE, g=[];
   for(const k of ["A","B"]){

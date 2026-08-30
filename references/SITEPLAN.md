@@ -40,6 +40,18 @@ utrymningsplanen, se ridhuskortet) blir det **4,4 bildpunkter per meter**. Stall
 236 bildpunkter ger då **54 m** — exakt det stallkortet antar ur boxantalet. Två
 oberoende vägar till samma tal.
 
+## Är husen sammanbyggda?
+
+Issue #21 lade 2026-08-30 till en regel om att ridhus och stall är ett
+sammanhängande byggnadskomplex. **Utrymningsplanernas egen situationsplan visar
+motsatsen**: två separata volymer med vit yta emellan, i båda planerna, med bara
+färgerna ombytta.
+
+Frågan är inte avgjord och avgörs inte av mig. Se
+`references/plans/OAVGJORT.md` för vad de två källorna säger och vad som skulle
+stänga frågan. Tills dess bygger spelet det planen visar: skilda hus med
+gräsgården emellan, och förbindelselängan som stänger gårdens södra ände.
+
 ## Placeringen i spelet
 
 Tabellen är avstämd mot `ANL` i `src/site.js` 2026-08-29 och läses ur koden,

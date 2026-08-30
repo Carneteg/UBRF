@@ -39,6 +39,49 @@ gissningar `[antagande]`. Kortet är facit för byggfunktionen i `src/varld3d.js
 - Byggnadsform: rak länga med sadeltak och **en utskjutande förstukvist** på
   västra långsidan, nära norra gaveln.
 
+### Bredden — oavgjord, se `references/plans/OAVGJORT.md`
+
+Kortet antog 15 m därför att `STALLINNE` hade en gång och två boxrader, och
+`STALLINNE` byggdes ur de 15 metrarna. Den cirkeln är bruten, men **bredden är
+inte fastställd** — den är ett antagande i mitten av ett intervall.
+
+Sedan 2026-08-30 finns utrymningsplanen i repot
+(`references/plans/stall-plan1-utrymning.jpg`) och är mätt direkt. Den avgör
+**planformen och bandens inbördes andelar**, men inte skalan: ritningen saknar
+skalstock, och de två vägarna till en skala pekar åt olika håll.
+
+| Om … | då blir … | rimligt? |
+|---|---|---|
+| längden 54 m | bredden 15,2 m, gångarna 1,9 m | nej, gången för smal |
+| boxfacket 3,5 m | längden ~83 m, bredden 23,3 m | nej, längre än ridhuset |
+| bredden 21 m | gångar 2,6 m, boxdjup 3,7–4,4 m | måtten inne rimliga, längden inte |
+
+**Spelet bygger 21 m som `[ASSUMPTION]`**, mitt i intervallet 15–23 m. Siffran
+ligger på ett enda ställe i koden (`STALLINNE.bredd`) och allt annat följer
+andelarna. Ett enda uppmätt mått på plats stänger frågan — se `OAVGJORT.md`.
+
+**Det som däremot ÄR mätt i planen och gäller:**
+
+| Band | Andel av bredden |
+|---|---|
+| boxrad mot västra ytterväggen | 20,9 % |
+| gång A | 12,4 % |
+| boxrad, mitt | 17,8 % |
+| boxrad, mitt | 17,6 % |
+| gång B | 12,3 % |
+| boxrad mot östra ytterväggen | 19,0 % |
+
+Samma sex band, i samma ordning, med samma andelar i tre olika tvärsnitt.
+**Gångarna är smalare än boxarna är djupa, ungefär två tredjedelar.** Spelet antog
+tidigare att alla sex banden var lika breda; det var fel, och det är rättat.
+
+Takgeometrin (takfot 4,4 m, nock 9,8 m mätt i bild 04) ger bredden 20,3 m vid 28°
+och 22,1 m vid 26°. Det stöder intervallets övre del, men 28° är självt ett
+antagande, så det kan inte låsa något.
+
+- Byggnadsform: rak länga med sadeltak och **en utskjutande förstukvist** på
+  västra långsidan, nära norra gaveln.
+
 ### Bredden — rättad 2026-08-30, från 15 m till 21 m
 
 Kortet antog tidigare 15 m därför att `STALLINNE` hade en gång och två boxrader.

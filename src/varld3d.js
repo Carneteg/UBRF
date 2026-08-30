@@ -738,8 +738,8 @@ function v3dStall(lagg,opp){
     for(let i=0;i<lista.length;i++){
       const my=boxY(i);
       if(my+S.boxB/2>S.klubbY)break;
-      span.yta(S.boxDjup,S.boxB-0.1,"#FFFFFF",
-        M4.translation(rad.x0+S.boxDjup/2,0.03,my),3);
+      span.yta(rad.djup,S.boxB-0.1,"#FFFFFF",
+        M4.translation(rad.x0+rad.djup/2,0.03,my),3);
     }
   }
   lagg(span,T.span);
@@ -820,8 +820,8 @@ function v3dStall(lagg,opp){
       galler.lada(0.14,0.10,S.boxB,"#B4B8BB",M4.translation(fx,2.20,my));
       /* Skiljeväggar mellan boxarna. */
       const ut=sida==="W"?-1:1;
-      front.lada(S.boxDjup,1.35,0.10,"#4A4D50",
-        M4.translation(fx+ut*S.boxDjup/2,0.675,y0));
+      front.lada(rad2.djup,1.35,0.10,"#4A4D50",
+        M4.translation(fx+ut*rad2.djup/2,0.675,y0));
       const h=boxHast(rad[i]);
       const b=new Bygge();
       v3dTextPanel(b,0.85,0.22,
