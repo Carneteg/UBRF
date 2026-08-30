@@ -247,15 +247,9 @@ const ANL = {
 
   /* Interaktionspunkter på gården. */
   dorrar: [
-    {id:"stallentre", pos:[152.9,113.4], text:"Gå in i stallet (Entré)",
-     mot:"stallinne", spawn:{x:1.8, y:46.4, rikt:0}},
-    {id:"stall_n",  pos:[161.5,119.8], text:"Gå in i stallet (klubbdörren)",
-     mot:"stallinne", spawn:{x:7.5, y:50.2, rikt:-Math.PI/2}},
-    {id:"stall_v",  pos:[153.4,89], text:"Gå in i stallet (hästporten mot gården)",
-     mot:"stallinne", spawn:{x:1.2, y:24, rikt:0}},
-    {id:"stall_s",  pos:[162,64.2], text:"Gå in i stallet (gaveldörren vid gårdsplanen)",
-     mot:"stallinne", spawn:{x:7.5, y:1.6, rikt:Math.PI/2}},
-    {id:"ridhus_o", pos:[143.4,66], text:"In i ridhuset (durkplåtdörrarna)",
+    /* 0,9 m ut från väggen, inte 0,4: kollisionsmarginalen mot en byggnad är
+       0,55 m, så en markör närmare än så går inte att stå på. */
+    {id:"ridhus_o", pos:[143.9,66], text:"In i ridhuset (durkplåtdörrarna)",
      mot:"ridhusinne", spawn:{x:23.4,y:22,rikt:Math.PI}},
     {id:"ridhus_n", pos:[139.9,119.8], text:"In i ridhuset (entrén)",
      mot:"ridhusinne", spawn:{x:21.9,y:73.4,rikt:-Math.PI/2}},
@@ -346,15 +340,25 @@ const STALLINNE = {
     {id:"spanforrad",   rekt:{x:16.5, y:0, w:4.5, h:6.5}, label:"SPÅNFÖRRÅD"},
   ],
   tvarvaggar:[ {y:43, brand:true}, {y:6.5, brand:false} ],
+  /* Dörrarna beskrivs EN gång. `pos` är innerläget, `spawn` ytterläget,
+     `inrikt` vilket håll man tittar när man kliver in och `uttext` vad
+     markören på gården säger. ANL.dorrar byggs ur den här listan längre
+     ner — förut fanns två listor med var sin uppsättning koordinater, och
+     när planformen ändrades följde bara den ena med. Då hamnade utgången
+     mot gräsgården inne i en boxrad. */
   dorrar:[
-    {id:"ut_n", pos:[0.8,48.4], text:"Ut genom entrén", mot:"gard",
+    {id:"ut_n", pos:[1.6,48.4], text:"Ut genom entrén", mot:"gard", inrikt:0,
+     uttext:"Gå in i stallet (Entré)",
      spawn:{x:152.6,y:113.4,rikt:Math.PI}},
-    {id:"ut_n2",pos:[10.5,51.2], text:"Ut till grusplanen (klubbdörren)", mot:"gard",
-     spawn:{x:164.5,y:120.4,rikt:Math.PI/2}},
-    {id:"ut_v", pos:[0.8,26.0],  text:"Ut till gräsgården — vägen till ridhuset", mot:"gard",
-     spawn:{x:152.4,y:91,rikt:Math.PI}},
-    {id:"ut_s", pos:[5.6,0.8],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard",
-     spawn:{x:159.6,y:63.2,rikt:-Math.PI/2}},
+    {id:"ut_n2",pos:[10.5,50.0], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
+     uttext:"Gå in i stallet (klubbdörren)",
+     spawn:{x:164.5,y:120.6,rikt:Math.PI/2}},
+    {id:"ut_v", pos:[1.6,26.0],  text:"Ut till gräsgården — vägen till ridhuset", mot:"gard", inrikt:0,
+     uttext:"Gå in i stallet (hästporten mot gården)",
+     spawn:{x:152.6,y:91,rikt:Math.PI}},
+    {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
+     uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
+     spawn:{x:159.6,y:63.4,rikt:-Math.PI/2}},
   ],
   ridlarare:{pos:[0,34], namn:"Ridläraren"},
   whiteboard:{pos:[0,7.2]},
@@ -374,6 +378,21 @@ const STALLINNE = {
   const mA=(S.gangar.A.x0+S.gangar.A.x1)/2;
   S.ridlarare.pos[0]=mA; S.whiteboard.pos[0]=mA;
 })();
+
+/* Stallets dörrmarkörer på gården härleds ur STALLINNE.dorrar, så att de
+   två sidorna av samma dörr aldrig kan glida isär. Före 2026-08-30 fanns
+   två handskrivna listor, och när planformen ändrades följde bara den ena
+   med: markören vid klubbgaveln pekade tre meter fel, och den som gick in
+   från gräsgården satte spelaren INNE i en boxrad. */
+for(const d of STALLINNE.dorrar){
+  ANL.dorrar.push({
+    id:"stall_"+d.id.replace(/^ut_/,""),
+    pos:[d.spawn.x, d.spawn.y],
+    text:d.uttext,
+    mot:"stallinne",
+    spawn:{x:d.pos[0], y:d.pos[1], rikt:d.inrikt},
+  });
+}
 
 STALLINNE.gangytor = (()=>{
   const S=STALLINNE, g=[];

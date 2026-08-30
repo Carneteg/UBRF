@@ -664,26 +664,45 @@ function v3dStallYttre(bg,d,opp){
   /* Kvistens gavelspets är röd panel med vita vindskivor, inte vit. */
   v3dPolygon(d,[[-hh,0],[hh,0],[0,br]],bg.fargV,F2(0,be,but+0.06));
   d.lada(bw+0.2,0.13,0.14,VIT,F2(0,be-0.03,but+0.12));   // fris under spetsen
-  for(let y=0.26;y<1.22;y+=0.125){                                // ribbräcket
-    d.lada(bw-0.34,0.072,0.042,VIT,F2(0,y+0.14,but-0.20));
-    for(const s of [-1,1])
+  /* Räcket av liggande ribbor — MED EN ÖPPNING MITT FÖR DÖRREN.
+     Det gick tidigare i ett obrutet stycke tvärs hela framsidan, så
+     verandan såg inlåst ut och man förstod inte att man kunde gå in.
+     Ett räcke utan öppning är inte heller ett riktigt hus: fotografen
+     bakom `stall-entre-03.jpg` står inne på verandan, alltså finns
+     ingången. Bredden på öppningen är `[ASSUMPTION]` — fotona visar
+     räcket inifrån och uppifrån, aldrig rakt på framsidan. */
+  const oppB=1.5, sido=(bw-0.34-oppB)/2, sidoM=(oppB+sido)/2;
+  for(let y=0.26;y<1.22;y+=0.125){
+    for(const s of [-1,1])                                        // ribborna, två stycken
+      d.lada(sido,0.072,0.042,VIT,F2(s*sidoM,y+0.14,but-0.20));
+    for(const s of [-1,1])                                        // och längs sidorna
       d.lada(0.042,0.072,but-0.75,VIT,F2(s*(hh-0.14),y+0.14,but/2+0.16));
   }
-  d.lada(bw-0.34,0.07,0.11,VIT,F2(0,1.46,but-0.20));              // handledaren
-  for(const s of [-1,1])
+  for(const s of [-1,1]){
+    d.lada(sido,0.07,0.11,VIT,F2(s*sidoM,1.46,but-0.20));         // handledaren
     d.lada(0.11,0.07,but-0.75,VIT,F2(s*(hh-0.14),1.46,but/2+0.16));
+    /* Stolpe i vardera kanten av öppningen, så att räcket får ett slut
+       i stället för att bara ta tvärt slut i luften. */
+    d.lada(0.11,1.42,0.11,VIT,F2(s*oppB/2,0.85,but-0.20));
+  }
+  /* Trappsteget upp till betonggolvet, mitt för öppningen. */
+  d.lada(oppB+0.5,0.09,0.34,"#C2BFB6",F2(0,0.045,but+0.17));
   d.lada(0.10,0.24,0.10,SVART,F2(0,2.52,0.09));                   // vägglampan
   d.cyl(0.17,0.11,0.13,"#E4E0D6",M4.mul(F2(0,2.40,0.20),M4.rotX(-Math.PI/2)),10);
 
   /* ── Norra gaveln — klubbgaveln: balkongen och spiraltrappan ── */
-  const bz=4.55;
-  d.lada(2.2,0.12,1.10,"#4A4E52",FN(7.5,bz-0.06,0.55));
+  /* Balkongen sitter mitt för sin dörr, och dörren ligger i gavelns
+     mitt. När huset blev 21 m brett flyttades öppningarna dit men den
+     här geometrin stod kvar på den gamla mitten 7,5 — balkongen hamnade
+     tre meter vid sidan av sin egen dörr. Den räknas nu ur bredden. */
+  const bz=4.55, gm=r.w/2, su=gm-2.3;
+  d.lada(2.2,0.12,1.10,"#4A4E52",FN(gm,bz-0.06,0.55));
   for(const y of [bz+0.42,bz+0.88]){
-    d.lada(2.2,0.05,0.05,SVART,FN(7.5,y,1.06));
-    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FN(7.5+s*1.08,y,0.55));
+    d.lada(2.2,0.05,0.05,SVART,FN(gm,y,1.06));
+    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FN(gm+s*1.08,y,0.55));
   }
-  for(let u=6.55;u<8.5;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FN(u,bz+0.46,1.06));
-  const sr=0.70, steg=18, sh=bz/steg, su=5.2, sut=0.62;
+  for(let u=gm-0.95;u<gm+0.95;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FN(u,bz+0.46,1.06));
+  const sr=0.70, steg=18, sh=bz/steg, sut=0.62;
   d.cyl(0.085,0.085,bz+0.50,SVART,FN(su,0,sut),8);
   for(let i=0;i<steg;i++){
     const m=M4.mul(FN(su,(i+1)*sh,sut),M4.rotY(i*0.40));
