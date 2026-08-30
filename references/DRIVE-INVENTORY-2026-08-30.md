@@ -4,10 +4,10 @@ Datum: 2026-08-30
 Metod: listad via Drive-API, **dedupliceras på titel + filstorlek**, och det
 som faktiskt granskats är visuellt öppnat — inte klassat på mappnamn.
 
-> **Status: PÅBÖRJAD, INTE KLAR.** Omnejd är helt genomgången, Ridhusets tre
-> nyckelbilder och sex av Stallhusets är sedda och migrerade. Byggnaden är
-> listad men inte visuellt granskad ännu. Raderna nedan säger uttryckligen
-> vilka jag har SETT och vilka jag bara har metadata om.
+> **Status: PÅBÖRJAD, INTE KLAR.** Omnejd är helt genomgången. Byggnaden är
+> granskad till 14 av 19. Ridhusets tre nyckelbilder och sex av Stallhusets är
+> sedda och migrerade. Raderna nedan säger uttryckligen vilka jag har SETT och
+> vilka jag bara har metadata om.
 
 ## Dubbletterna
 
@@ -95,16 +95,63 @@ inte ridhus.
 
 `[EJ GRANSKAT]` Resterande ~14 unika bilder i mappen.
 
-## Byggnaden — listad, inte granskad
+## Byggnaden — 14 av 19 granskade
 
-Mapp-ID `1cmyTQ_9AVjAaKlozWE2-lKsMxGRgVaPB`
+Mapp-ID `1cmyTQ_9AVjAaKlozWE2-lKsMxGRgVaPB`. 19 unika: `IMG_0064`–`0077`,
+`IMG_0126`–`0131`. Sedda: `0064`–`0074`, `0126`, `0129`, `0131`.
 
-19 unika: `IMG_0064`–`0077`, `IMG_0126`–`0131`.
+Trots mappnamnet handlar de flesta om **ridhusets utsida och omgivningen**,
+inte om förbindelsen mellan husen. Mappnamn är inte evidens, och det bekräftas
+här.
 
-`[EJ GRANSKAT]` Ingen av dem är öppnad ännu. Mappnamnet antyder att de rör
-byggnadskomplexet och kan bära på svaret om hästgången och de sammanbyggda
-volymerna, men **mappnamn är inte evidens** — de ska ses innan något byggs på
-dem.
+### Migrerat
+
+| I repot | Ur Drive | Vad (sett) |
+|---|---|---|
+| `buildings/ridhus/ridhus-gavel-04-statrappan.jpg` | `IMG_0064` | Ridhusets gavel med **rak utvändig ståltrappa** upp till en balkong och dörr på övre plan, valvfönster, och till vänster en lägre röd länga med **två entréer under vita skärmtak** |
+| `buildings/ridhus/ridhus-langsida-01-skylten.jpg` | `IMG_0070` | Långsidan med **UBRF-skylten** monterad på plåten, handikappskylt, skärmtak i ena änden, grusväg längs huset |
+| `buildings/ridhus/ridhus-langsida-02-trappan.jpg` | `IMG_0072` | Långsidan: **ljus betongsockel** i hela längden, mörk dörr med **utvändig ståltrappa och avsats**, vitt **ventilationsgaller** |
+| `omnejd/omnejd-01-roda-boden.jpg` | `IMG_0073` | Fristående **liten röd bod** med mörkt plåttak och två små fönster, vid grusvägen, med container bredvid |
+| `omnejd/omnejd-02-sandladan-trahastarna.jpg` | `IMG_0126` | **Sandlåda med två snidade trähästar**, kantad med gatsten, vid parkeringen |
+| `omnejd/omnejd-03-garden-mellan-husen.jpg` | `IMG_0129` | **Gården mellan husen**: gräs, picknickbord och bänkar, stallets långsida med valvfönster och **huvraden på nocken** |
+| `omnejd/omnejd-04-forstukvisten-och-spiraltrappan.jpg` | `IMG_0131` | Stallets västsida: **förstukvisten** med vitt ribbräcke och ockragul dörr, picknickbord på grus, och **spiraltrappan** på klubbgaveln i bakgrunden |
+
+### Vad de avgör
+
+**Ridhusets gavel har en RAK utvändig ståltrappa** upp till en dörr på övre
+plan, med balkong. Det är byggt i spelet (`v3dRidhusYttre`, "Den utvändiga
+ståltrappan"). `VERIFIED`
+
+**Spiraltrappan sitter på STALLETS klubbgavel**, inte på ridhusets. `IMG_0131`
+visar den igen, tillsammans med förstukvisten. Det är tredje oberoende bilden
+som visar den. `VERIFIED`
+
+Det löser sannolikt tvisten om "frontfasaden": **det finns en rak ståltrappa
+och en spiraltrappa på anläggningen, men på olika hus.** Beskrivningen i
+`GOOGLE-MAPS-FRONT-2026-08-30.md` — rak/diagonal metalltrappa, övre dörr,
+entréer under skärmtak — stämmer med **ridhusets gavel**, som är byggd så.
+
+**Stallets huvrad är separata huvar.** `IMG_0129` visar dem tydligt uppifrån
+gården: fristående fyrkantiga huvar med platta hattar, en rad längs nocken.
+`VERIFIED` — och det motsäger påståendet att de skulle vara en sammanhängande
+ventilationsrad.
+
+**Gården mellan husen är gräs med picknickbord och bänkar.** `VERIFIED` —
+spelet har picknickborden.
+
+**Ridhusets långsida har en ljus betongsockel** i hela längden, UBRF-skylten
+monterad på plåten, ett vitt ventilationsgaller och en utvändig ståltrappa med
+avsats till en dörr. `VERIFIED`
+
+### Nytt som spelet saknar
+
+| Vad | Var | Klass |
+|---|---|---|
+| **Sandlådan med två snidade trähästar**, kantad med gatsten | vid parkeringen | `VERIFIED` — finns inte i spelet |
+| Belysningsmasterna runt uteridbanan | se Omnejd | `VERIFIED` — finns inte i spelet |
+| Marknivåskillnaden upp till banan | se Omnejd | `KNOWN MISMATCH` |
+
+`[EJ GRANSKAT]` `IMG_0075`, `0076`, `0077`, `0127`, `0128`, `0130`.
 
 ## Vad som gäller härnäst
 
