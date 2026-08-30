@@ -178,31 +178,41 @@ local function render(state: any, feedback: string?)
 	attachPrompt(state)
 end
 
-local function refresh()
+local function refresh(): boolean
 	refreshSerial += 1
 	local mySerial = refreshSerial
 	local ok, state = pcall(function()
 		return Net.get("G01GetState"):InvokeServer()
 	end)
-	if mySerial ~= refreshSerial then return end
+	if mySerial ~= refreshSerial then return true end
 	if ok and state then
 		render(state, nil)
-	elseif feedbackLabel then
+		return true
+	end
+	if feedbackLabel then
 		feedbackLabel.Text = "Kunde inte läsa dagens hästuppgift."
+	end
+	return false
+end
+
+local function initialRefresh(attempt: number)
+	if refresh() then return end
+	if attempt < 4 then
+		task.delay(0.5, function()
+			initialRefresh(attempt + 1)
+		end)
 	end
 end
 
 function GameplayController.start()
 	ensureGui()
+	-- G01StateChanged är den enda live-källan för fas + pedagogisk feedback.
+	-- Att dessutom refresha på G01Phase-attributet raderade feedbacken i nästa
+	-- scheduler-varv, eftersom refreshen inte bär med sig föregående feedback.
 	Net.get("G01StateChanged").OnClientEvent:Connect(function(state, feedback)
 		render(state, feedback)
 	end)
-	player:GetAttributeChangedSignal("G01Phase"):Connect(function()
-		-- Mount/dismount kan flytta fasen via HorseService-gränsen. Hämta då
-		-- serverns hela snapshot så objektiv och prompt följer med.
-		task.defer(refresh)
-	end)
-	refresh()
+	initialRefresh(1)
 end
 
 return GameplayController
