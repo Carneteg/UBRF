@@ -13,6 +13,12 @@
 	    Vyer.lista()              -- skriver ut vad som finns
 	    Vyer.ga("kortandan")      -- ställer kameran
 
+	Vyerna är grupperade i komplexet, ridhuset inne och stallet inne.
+	ANTALET står avsiktligt inte skrivet här: lista() räknar tabellen och
+	skriver ut summan. En siffra i en kommentar hade blivit ännu en sanning
+	att hålla i synk — samma fel som redan fällt objektantalet i
+	STUDIO-KONTROLL.md.
+
 	Måtten i meter, samma koordinatsystem som resten: origo i sydväst,
 	+x öster, +y norr. BuildKit räknar om till studs.
 
@@ -195,7 +201,8 @@ Vyer.vyer = {
 local ORDNING = { "Komplexet", "Ridhuset inne", "Stallet inne" }
 
 function Vyer.lista()
-	print("Vyer för Gate F01 · Studio-kontroll enligt Review 11")
+	print(string.format("Vyer för Gate F01 · Studio-kontroll enligt Review 11 · %d vyer",
+		#Vyer.vyer))
 	print("Checklistor: roblox/docs/RIDHUS-STUDIO-CHECKLISTA.md (ridhuset inne)")
 	print("             roblox/buildings/STUDIO-KONTROLL.md (komplexet och stallet)")
 	for _, grupp in ipairs(ORDNING) do
