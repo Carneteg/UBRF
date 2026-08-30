@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Fogar ihop en enda fil att klistra in i Roblox Studio.
 
-Studio-kontrollen är det enda som återstår innan Gate F01 kan stängas, och den
-ska inte kräva att någon lägger fyra ModuleScripts i rätt ordning i
-ServerStorage. Det här skriptet gör en fil man klistrar in i ett
-`run_code`-anrop eller en Script i Studio, kör en gång, och är klar.
+Paketet bygger UBRF-anläggningen, gör fasadöppningarna spelbara och lägger
+UBRFSpawn vid den naturliga ankomsten. QA-panelen startas sist.
 
     python3 tools/studio-paket.py
 
@@ -23,14 +21,16 @@ ROT = pathlib.Path(__file__).resolve().parent.parent
 BYGG = ROT / "roblox" / "buildings"
 UT = BYGG / ".studio" / "UBRF-klistra-in.luau"
 
-# Ordningen är beroendeordningen. Anlaggningen sist: den är ett skript som körs
-# för sin verkan, inte en modul som returnerar något.
+# Ordningen är beroendeordningen. Anlaggningen körs först, WorldBuild
+# efterbehandlar sedan dess solida fasader till riktiga öppningar och spawn.
 MODULER = [
-    ("BuildKit",     "BuildKit.luau"),
-    ("Geometri",     "Geometri.luau"),
-    ("UBRFKomplex",  "UBRFKomplex.luau"),
-    ("Vyer",         "Vyer.luau"),
-    ("QAPanel",      "QAPanel.luau"),
+    ("BuildKit",       "BuildKit.luau"),
+    ("Geometri",       "Geometri.luau"),
+    ("WorldGeometry",  "WorldGeometry.luau"),
+    ("WorldBuild",     "WorldBuild.luau"),
+    ("UBRFKomplex",    "UBRFKomplex.luau"),
+    ("Vyer",           "Vyer.luau"),
+    ("QAPanel",        "QAPanel.luau"),
 ]
 SKRIPT = "Anlaggningen.luau"
 
@@ -46,9 +46,8 @@ def main() -> int:
         print("\nAvbryter: kör om exporten innan du bygger i Studio.")
         return 1
 
-    #[[ Materialnamnen. Ett ogiltigt Enum.Material avbryter bygget MITT I
-    #   Studio med "is not a valid member", och allt efter det blir foljdfel.
-    #   Battre att inte lamna ifran sig paketet alls. ]]
+    # Materialnamnen först: ett ogiltigt Enum.Material avbryter bygget mitt i
+    # Studio och allt efter det blir följdfel.
     mat = subprocess.run(
         [sys.executable, str(ROT / "tools" / "kolla-material.py")],
         capture_output=True, text=True)
@@ -64,24 +63,15 @@ def main() -> int:
      src/site.js (geometrin) eller i roblox/buildings/ (byggandet), och
      kör om skriptet.
 
-     Kör en gång. Sedan:
+     Paketet bygger nu även:
+       · verkliga hål bakom dörrar/portar
+       · ProximityPrompt-data för öppning/stängning
+       · UBRFSpawn vid den naturliga ankomsten
 
-         UBRF QA-panelen öppnas av sig själv i Studio: klicka Nästa,
-         titta, klicka PASS eller FEL. UBRFQA() öppnar den igen.
+     Runtime-dörrarna drivs av roblox/src/server/WorldService.luau.
 
-         Vyer.lista()             -- vyerna Studio-kontrollen kräver
-         Vyer.ga("kortandan")     -- ställ kameran för hand i stället
-
-     Kvitteringen sker i ETT dokument:
-
-         roblox/docs/STUDIO-QA.md                 <-- kanonisk QA-lista
-
-     Bakgrund och detaljunderlag:
-
-         roblox/buildings/STUDIO-KONTROLL.md      komplexet, stallet, vägarna
-         roblox/docs/RIDHUS-STUDIO-CHECKLISTA.md  ridhusets interiör
-
-     Baslinje: Review 11 (kodgate passerad, Studio återstår).
+     UBRF QA-panelen öppnas av sig själv i Studio: klicka Nästa,
+     titta, klicka PASS eller FEL. UBRFQA() öppnar den igen.
      ══════════════════════════════════════════════════════════════════ ]]
 
 """]
@@ -92,14 +82,15 @@ def main() -> int:
 
     delar.append(f"--[[ ══ {SKRIPT} ══ ]]\n"
                  + (BYGG / SKRIPT).read_text(encoding="utf-8") + "\n")
-    #[[ QA-panelen startas sist och bara i Studio. Den ligger med i PAKETET,
-    #   inte i roblox/src/client/, just for att den aldrig ska kunna folja med
-    #   ut i spelet. UBRFQA() finns kvar sa att den gar att oppna igen. ]]
-    #[[ _G ar skrivbart i Roblox men INTE i luau-CLI:t, dar paketet
-    #   verifieras. Utan pcall dor hela paketet pa sista raden med exitkod 1
-    #   — vilket det gjorde, och syntes bara pa exitkoden eftersom stderr och
-    #   stdout kom i olika ordning. Misslyckas den sager vi det i stallet for
-    #   att svalja det. ]]
+
+    # Efter byggandet: ersätt de gamla solida fasadpartsen med segment runt
+    # öppningarna, konfigurera dörrpanelerna och lägg den riktiga spawnen.
+    delar.append(
+        "\nlocal __worldOk = WorldBuild.apply(BuildKit, UBRFKomplex, Geometri, WorldGeometry)\n"
+        "assert(__worldOk, \"WorldBuild misslyckades — spelbar värld skapades inte\")\n")
+
+    # QA-panelen startas sist och bara i Studio. Den ligger med i paketet,
+    # inte i roblox/src/client/, så den följer aldrig med som spelar-UI.
     delar.append(
         "\nVyer.lista()\n"
         "QAPanel.start(Vyer)\n"
@@ -116,7 +107,7 @@ def main() -> int:
     rader = UT.read_text(encoding="utf-8").count("\n")
     print(f"{UT.relative_to(ROT)}: {rader} rader")
     print("Klistra in hela filen i Studio och kör den en gång.")
-    print("Checklistan: roblox/docs/STUDIO-QA.md")
+    print("Paketet ska skriva [WorldBuild] Spelbar värld: ... + UBRFSpawn")
     return 0
 
 
