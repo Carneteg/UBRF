@@ -433,6 +433,22 @@ const IDENTITET = {
        nocken ut från väggen, vitt ribbräcke, ockragul dörr. */
     forstukvist:{uFranNorr:5.6, bredd:5.2, djup:2.8,
                  takfot:2.95, resning:1.05, oppning:1.5},
+    /* Stallgångens två igenkänningsfärger, MÄTTA ur
+       references/buildings/stall/stall-inne-05-stallgangen.jpg.
+
+       Metod: leta upp ytorna på FÄRGEN i stället för på gissade koordinater
+       — de varma, mättade pixlarna i takzonen är limträbalkarna, de neutrala
+       är plåten. Ett första försök med handgissade provrutor gav bara
+       gråbruna medelvärden och missade balkarna helt.
+
+       De låg tidigare som lokala tal i src/varld3d.js: #9C4A32 (mörkt
+       tegelrött) och #D9DDE1 (nästan vit). Båda var fel, och båda avgör hur
+       stallgången läses inifrån — det är balkarna och plåten man känner igen
+       den på. De hör därför hemma här och inte i en renderare.
+
+       Roblox bygger ännu inte stallets tak, bara golv, boxrader och
+       tvärväggar. När det byggs ska det läsa de här värdena. */
+    stallgang:{limtra:"#C39575", takplat:"#878783"},
     /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
        Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
     balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},

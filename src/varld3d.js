@@ -809,18 +809,30 @@ function v3dStall(lagg,opp){
   vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(-0.1,S.tak/2,S.langd/2));
   vagg.lada(0.25,S.tak,S.langd,"#FFFFFF",M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
   lagg(vagg,T.parlspont);
-  /* Taket, efter IMG_0249 och IMG_0250. Det är inte ett platt vitt
-     innertak med limträbalkar utan ett SADELTAK: galvaniserad
-     korrugerad plåt som undertak, tvärgående balkar i tegelrött var
-     fjärde meter, en rad takfönster högt i västra takfallet, och
-     galvade dragstag som hänger ner från varje balk till boxarnas
-     överkant. Det är stagen och de röda balkarna man känner igen
-     stallet på inifrån. */
+  /* Taket. Formen — sadeltak med korrugerad plåt som undertak, balkar var
+     fjärde meter, takfönster i västra fallet och galvade dragstag ner till
+     boxarna — kommer ur IMG_0249/0250 och stämmer mot
+     references/buildings/stall/stall-inne-05-stallgangen.jpg.
+
+     FÄRGERNA var däremot fel, och det gick att mäta. Genom att leta upp
+     de varma, mättade pixlarna i fotots takzon på FÄRGEN i stället för på
+     gissade koordinater faller balkarna ut på **#C39575** — ett ljust,
+     varmt orangebrunt limträ — och plåten på **#878783**, en neutral
+     mellangrå. Koden hade #9C4A32 (mörkt tegelrött) och #D9DDE1 (nästan
+     vit). Balkarna lästes därför nästan svarta i gången, och taket som ett
+     platt vitt innertak — precis det kommentaren här sade att det INTE var.
+
+     Plåten ritas obelyst (platt:true), så dess ton sätts nära det mätta
+     värdet direkt. Balkarna är belysta, så råvaran ligger ljusare än fotot
+     och belysningen tar ner den — samma princip som ridhusets fasadfärg. */
+  const SG=IDENTITET.stall.stallgang, LYFT=1.05;
+  const damp=(h)=>"#"+[1,3,5].map(i=>
+    Math.round(parseInt(h.substr(i,2),16)/LYFT).toString(16).padStart(2,"0")).join("");
   const RESN=2.1, NOCK=S.tak+RESN, halvB=S.bredd/2;
   const takL=Math.hypot(halvB,RESN), takV=Math.atan2(RESN,halvB);
   const tak=new Bygge();
   for(const sida of [-1,1])                         // takfallen i galvad plåt
-    tak.lada(takL,0.14,S.langd+0.5,"#D9DDE1",
+    tak.lada(takL,0.14,S.langd+0.5,damp(SG.takplat),
       M4.mul(M4.translation(vx+sida*halvB/2,S.tak+RESN/2,S.langd/2),
              M4.rotZ(-sida*takV)));
   /* Undersidan av ett tak får bara ambient och blev nästan svart, fast
@@ -830,15 +842,36 @@ function v3dStall(lagg,opp){
   const stomme=new Bygge();
   for(let z=2;z<S.langd;z+=4){
     /* Tvärbalken i tegelrött, precis under takfoten. */
-    stomme.lada(S.bredd,0.26,0.22,"#9C4A32",M4.translation(vx,S.tak-0.13,z));
+    stomme.lada(S.bredd,0.26,0.22,damp(SG.limtra),M4.translation(vx,S.tak-0.13,z));
     /* Nockbalken och snedstagen upp mot nocken. */
     for(const sida of [-1,1])
-      stomme.lada(takL*0.9,0.16,0.14,"#9C4A32",
+      stomme.lada(takL*0.9,0.16,0.14,damp(SG.limtra),
         M4.mul(M4.translation(vx+sida*halvB*0.45,S.tak+RESN*0.45,z),
                M4.rotZ(-sida*takV)));
   }
-  stomme.lada(0.20,0.24,S.langd,"#9C4A32",M4.translation(vx,NOCK-0.2,S.langd/2));
-  lagg(stomme,T.tra);
+  stomme.lada(0.20,0.24,S.langd,damp(SG.limtra),M4.translation(vx,NOCK-0.2,S.langd/2));
+  /* Balkarna ritas OBELYSTA, av samma skäl som plåten intill dem. Mätning:
+     med belysning renderades de #6A472B mot fotots #C39575 — belysningen tar
+     ner den här ytan till ungefär halva värdet, och råvaran skulle behöva
+     ligga runt rgb(398,339,325) för att nå fram. Det går inte. Zonen under
+     ett tak får bara ambient, precis som kommentaren ovan säger, och lösningen
+     som redan valts för plåten gäller balkarna: rita dem obelysta och sätt
+     tonen till det mätta värdet.
+
+     Obelysta räckte inte heller: med trätexturen på renderades de #71492E.
+     Texturen multiplicerar ner ytan till ungefär 0,58/0,49/0,39, och råvaran
+     skulle behöva ligga runt rgb(336,304,300) för att nå fram — också omöjligt.
+     Balkarna ritas därför UTAN textur. Ådringen syns ändå inte på det
+     avståndet, och plåten intill dem hanteras likadant.
+
+     Sista kalibreringen: platt:true är inte helt 1:1 — renderingen lyfter
+     tonen ungefär 5 %. De mätta färgerna står i IDENTITET.stall.stallgang;
+     LYFT nedan tar bort renderarens överskott, så att det som FAKTISKT
+     hamnar på skärmen blir de mätta värdena. Lyftet är en egenskap hos
+     webbrenderaren, inte hos byggnaden, och hör därför hemma här och inte i
+     site.js. Kontrollerat genom att räkna de vanligaste tonerna i takzonen
+     på en skärmdump. */
+  S3.statiskt.push({nat:GL.nat(stomme), platt:true});
   const galv=new Bygge();
   for(let z=2;z<S.langd;z+=4)                       // dragstagen ner till boxarna
     for(const rad of S.rader)
@@ -854,8 +887,8 @@ function v3dStall(lagg,opp){
   for(let z=3;z<S.langd;z+=4.5)
     for(const g of [S.gangar.A,S.gangar.B]){
       const ax=(g.x0+g.x1)/2;
-      lykt.cyl(0.012,0.012,0.55,"#8E939B",M4.translation(ax,S.tak-0.55,z),5);
-      lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.62,z),10);
+      lykt.cyl(0.012,0.012,0.16,"#8E939B",M4.translation(ax,S.tak-0.16,z),5);
+      lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.23,z),10);
     }
   lagg(lykt,null);
 

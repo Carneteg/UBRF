@@ -1,7 +1,12 @@
 # Mätlista — vad som ska mätas på satellitbilden
 
 Datum: 2026-08-30
-Status: **ÖPPEN — väntar på Tobias**
+Status: **STÄNGD — drivs inte vidare**
+
+> Tobias avgjorde 2026-08-30 att den här mätningen inte ska drivas.
+> Listan står kvar som en förteckning över vad som ÄR omätt, så att ingen
+> senare tar de siffrorna för verifierade. Måtten nedan är alltså inte
+> uppgifter någon väntar på — de är en karta över kvarvarande osäkerhet.
 
 Tobias har visat att han kan dra mätlinjer i Google Maps och läsa av meter.
 Det är precis rätt verktyg för det som är blockerat, och den här listan säger

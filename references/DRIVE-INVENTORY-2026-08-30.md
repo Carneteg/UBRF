@@ -164,6 +164,19 @@ uppehållsrummet, i pentryt och i teorisalen. `VERIFIED`
 orangebruna limträbalkar, korrugerad plåt i taket — är samstämmigt över ett
 dussin bildrutor. `VERIFIED`
 
+Två av dem är nu **mätta** ur `stall-inne-05-stallgangen.jpg` och ligger i
+`IDENTITET.stall.stallgang`: limträ **#C39575** och takplåt **#878783**.
+Koden hade #9C4A32 och #D9DDE1 — balkarna lästes nästan svarta och taket som
+ett platt vitt innertak.
+
+`[REFERENCE GAP]` **Balkarnas täthet och dimension.** De byggs var fjärde
+meter med snedstag, avläst ur `IMG_0249`/`0250` — bilder som varken finns i
+repot eller är granskade av mig. Mot `stall-inne-05` läser de tyngre och
+plattare än verkligheten, där plåten dominerar och balkarna är smalare
+accenter. Färgen är rättad; **geometrin är inte rörd**, eftersom ett enda
+nytt foto inte räcker för att bygga om något som vilar på två bilder jag inte
+har sett.
+
 `[REFERENCE GAP]` **Den breda gången i `IMG_0156`/`0157`.** Den är bred och
 hög nog att leda en häst genom, och har en gallergrind i bortre änden. Den
 skulle kunna vara hästgången mot ridhuset — men bilden visar inte vad den

@@ -1272,6 +1272,10 @@ return {
 				resning = 1.05,
 				oppning = 1.5,
 			},
+			stallgang = {
+				limtra = "#C39575",
+				takplat = "#878783",
+			},
 			balkong = {
 				z = 4.55,
 				bredd = 2.2,
