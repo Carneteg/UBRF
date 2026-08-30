@@ -81,4 +81,61 @@ function Geometri.sitterIhop(a: Rekt, b: Rekt, marginal: number?): boolean
 	return false
 end
 
+--[[ Boxfacken i en rad, som lokala y-intervall.
+
+	Facken börjar vid boxStartY och är boxB djupa fram till klubbdelen. Facket
+	som tvärkorridoren går igenom hoppas över — korridoren når båda långsidorna
+	i planen, och en box där hade stängt den.
+
+	Ligger här och inte i byggskriptet därför att specen måste kunna mäta samma
+	fack som byggs. Skriver man logiken två gånger mäter man inte längre det man
+	bygger. ]]
+function Geometri.boxfack(stall): { { y0: number, y1: number } }
+	local fack = {}
+	local y = stall.boxStartY
+	while y + stall.boxB <= stall.klubbY + 0.001 do
+		local mitt = y + stall.boxB / 2
+		if not (mitt > stall.tvarGang.y0 and mitt < stall.tvarGang.y1) then
+			table.insert(fack, { y0 = y, y1 = y + stall.boxB })
+		end
+		y += stall.boxB
+	end
+	return fack
+end
+
+--[[ Tvärväggens bitar, som lokala x-intervall.
+
+	En tvärvägg går inte obruten över huset — den har ett dörrgap där varje
+	gång passerar, annars vore stallgången avstängd och klubbdelen oåtkomlig.
+	Webbversionen bygger den i bitar mellan gångarna; det här är samma regel,
+	så att Roblox inte murar igen en passage som är öppen i spelet.
+
+	Byggbänken hittade precis det felet första gången den kördes: en obruten
+	vägg vid y = 43 låg tvärs över klubbhallens gångyta.
+
+	Gångarna kommer som en tabell med id som nyckel, och nyckelordningen i Luau
+	är inte definierad — därför sorteras de på x0 innan bitarna räknas ut. ]]
+function Geometri.tvarvaggBitar(stall): { { x0: number, x1: number } }
+	local hal = {}
+	for _, g in pairs(stall.gangar) do table.insert(hal, g) end
+	table.sort(hal, function(a, b) return a.x0 < b.x0 end)
+
+	local bitar = {}
+	local x = 0
+	for _, h in ipairs(hal) do
+		if h.x0 - x > 0.05 then table.insert(bitar, { x0 = x, x1 = h.x0 }) end
+		x = h.x1
+	end
+	if stall.bredd - x > 0.05 then table.insert(bitar, { x0 = x, x1 = stall.bredd }) end
+	return bitar
+end
+
+-- Överlappets area mellan två rektanglar. 0 när de bara nuddar varandra.
+function Geometri.overlapp(a: Rekt, b: Rekt): number
+	local dx = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)
+	local dy = math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y)
+	if dx <= 0 or dy <= 0 then return 0 end
+	return dx * dy
+end
+
 return Geometri

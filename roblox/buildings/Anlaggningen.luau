@@ -119,6 +119,161 @@ local function byggDorrmarkorer(model: Model, base: CFrame)
 	end
 end
 
+--[[ ══ INSIDORNA ═════════════════════════════════════════════════════════
+
+	Review 02: att datan finns i den generade modulen räcker inte om byggaren
+	struntar i den. Fyra boxrader och två gångar ska gå att SE i Roblox, inte
+	bara stå i en tabell.
+
+	Det som byggs är Gate F01:s STRUKTUR — planformen, gångarna, tvärkorridoren,
+	de namngivna rummen, ridbanan, läktaren. Inte möblering: ingen spånremsa,
+	inga namnskyltar, inga hinder. Det är rendering och hör inte till en
+	fidelity-gate.
+
+	Interiörernas lokalkoordinater sitter i husets sydvästra hörn. Offseten
+	kommer ur exporten (G.stall.origo) och räknas inte om här. ]]
+
+local INRE = {
+	golv    = Color3.fromRGB(140, 136, 128),
+	gang    = Color3.fromRGB(154, 150, 142),
+	vagg    = Color3.fromRGB(207, 200, 188),
+	box     = Color3.fromRGB(126, 96, 66),
+	front   = Color3.fromRGB(150, 150, 155),
+	sand    = Color3.fromRGB(206, 186, 148),
+	sarg    = Color3.fromRGB(228, 226, 218),
+	laktare = Color3.fromRGB(112, 84, 60),
+	glas    = Color3.fromRGB(170, 205, 225),
+	rum     = Color3.fromRGB(186, 180, 170),
+}
+
+--[[ Stallet: fyra boxrader, två gångar, tvärkorridor, namngivna rum.
+
+	Raderna och gångarna kommer ur planens mätta andelar (G.stall.band), inte ur
+	någon delning gjord här. Ändras STALLINNE.bredd i src/site.js flyttar sig
+	allt med, på båda plattformarna samtidigt. ]]
+local function byggStallInre(model: Model, base: CFrame)
+	local S = G.stall
+	local o = S.origo
+	local h = S.tak
+
+	-- Gångytorna, inklusive tvärkorridoren. De ligger som eget golv så att man
+	-- ser var man kan gå — det är cirkulationen gaten frågar efter.
+	for i, g in ipairs(S.gangytor) do
+		local p = BK.box(model, base, "Stallgång " .. i,
+			o.x + g.x, 0.02, o.y + g.y, g.w, 0.04, g.h, INRE.gang, Enum.Material.Concrete)
+		p.CanCollide = false
+	end
+
+	-- Boxraderna. Varje rad är en länga av boxar med mellanväggar och en front
+	-- mot sin gång; tvärkorridoren lämnas öppen rakt igenom.
+	for _, rad in ipairs(S.rader) do
+		local x0 = o.x + rad.x0
+		-- Facken kommer ur Geometri, som specen mäter. Räknar man ut dem här
+		-- mäter specen inte längre det som byggs.
+		for i, f in ipairs(GEO.boxfack(S)) do
+			-- Skiljevägg i fackets bortre ände.
+			BK.box(model, base, "Boxvägg " .. rad.id .. " " .. i,
+				x0, 0, o.y + f.y0, rad.djup, h * 0.62, 0.08, INRE.box, Enum.Material.WoodPlanks)
+			-- Fronten mot gången, med galler upptill.
+			local fx = if rad.vetter > 0 then x0 + rad.djup - 0.06 else x0
+			BK.box(model, base, "Boxfront " .. rad.id .. " " .. i,
+				fx, 0, o.y + f.y0 + 0.08, 0.06, h * 0.34, S.boxB - 0.16,
+				INRE.box, Enum.Material.WoodPlanks)
+			BK.box(model, base, "Boxgaller " .. rad.id .. " " .. i,
+				fx, h * 0.42, o.y + f.y0 + 0.08, 0.06, h * 0.20, S.boxB - 0.16,
+				INRE.front, Enum.Material.DiamondPlate)
+			BK.box(model, base, "Boxvägg " .. rad.id .. " " .. i .. "b",
+				x0, 0, o.y + f.y1, rad.djup, h * 0.62, 0.08, INRE.box, Enum.Material.WoodPlanks)
+		end
+	end
+
+	-- Tvärväggarna ur planen, i bitar med dörrgap där gångarna passerar. Den
+	-- mot klubbdelen är en branddörrsvägg. En obruten vägg här stänger av
+	-- stallgången — byggbänken fällde precis det.
+	for i, v in ipairs(S.tvarvaggar) do
+		for j, bit in ipairs(GEO.tvarvaggBitar(S)) do
+			BK.box(model, base, "Tvärvägg " .. i .. ":" .. j,
+				o.x + bit.x0, 0, o.y + v.y, bit.x1 - bit.x0, h, 0.2, INRE.vagg,
+				if v.brand then Enum.Material.Concrete else Enum.Material.Plaster)
+		end
+	end
+
+	-- Namngivna rum och servicedelar. Låga volymer med sitt namn som attribut —
+	-- namnen är fidelity-fakta ur utrymningsplanen, inredningen är det inte.
+	for _, lista in ipairs({ S.rum, S.service }) do
+		for _, r in ipairs(lista) do
+			local p = BK.box(model, base, r.label,
+				o.x + r.rekt.x, 0, o.y + r.rekt.y, r.rekt.w, h * 0.9, r.rekt.h,
+				INRE.rum, Enum.Material.Plaster)
+			p.Transparency = 0.45
+			p:SetAttribute("Rum", r.id)
+		end
+	end
+end
+
+--[[ Ridhuset: banan, sargen med porten, läktaren, glasrummen, domarbåset.
+
+	20 × 60 kommer ur G.ridhus.bana och är bekräftad av Tobias. Läktaren,
+	glasrummen och båset är Gate F01:s rättade interiörfakta — de är byggda
+	därför att de avgör igenkänningen, inte för att de är utsmyckning. ]]
+local function byggRidhusInre(model: Model, base: CFrame)
+	local R = G.ridhus
+	local o = R.origo
+	local b = R.bana
+
+	-- Ridbanan, 20 × 60.
+	local sand = BK.box(model, base, "Ridbanan 20x60",
+		o.x + b.x, 0, o.y + b.y, b.w, 0.06, b.h, INRE.sand, Enum.Material.Sand)
+	sand.CanCollide = false
+	sand:SetAttribute("Matt", "20x60")
+
+	-- Sargen runt banan, med porten som en lucka i norra kortsidan.
+	local sh = R.sargH
+	BK.box(model, base, "Sarg väst", o.x + b.x - 0.1, 0, o.y + b.y, 0.1, sh, b.h, INRE.sarg)
+	BK.box(model, base, "Sarg öst",  o.x + b.x + b.w, 0, o.y + b.y, 0.1, sh, b.h, INRE.sarg)
+	BK.box(model, base, "Sarg syd",  o.x + b.x, 0, o.y + b.y - 0.1, b.w, sh, 0.1, INRE.sarg)
+	-- Norra kortsidan i två stycken: porten är gapet mellan dem, och det är
+	-- där A står — se docs/ och src/data.js.
+	BK.box(model, base, "Sarg norr väst", o.x + b.x, 0, o.y + b.y + b.h,
+		R.port.x0 - b.x, sh, 0.1, INRE.sarg)
+	BK.box(model, base, "Sarg norr öst", o.x + R.port.x1, 0, o.y + b.y + b.h,
+		b.x + b.w - R.port.x1, sh, 0.1, INRE.sarg)
+
+	-- Läktaren längs östra långsidan, som trappsteg.
+	local L = R.laktare
+	for i = 1, L.steg do
+		BK.box(model, base, "Läktarsteg " .. i,
+			o.x + L.x0 + (i - 1) * L.stegD, (i - 1) * L.stegH, o.y + L.y0,
+			L.stegD, L.stegH * i + 0.1, L.y1 - L.y0, INRE.laktare, Enum.Material.WoodPlanks)
+	end
+
+	-- Glasade rum bakom sargen, i läktarens liv.
+	for i, g in ipairs(R.glasrum) do
+		local p = BK.box(model, base, "Glasat rum " .. i,
+			o.x + L.x0 - 0.12, 1.0, o.y + g.y0, 0.12, 1.8, g.y1 - g.y0,
+			INRE.glas, Enum.Material.Glass)
+		p.Transparency = 0.55
+	end
+
+	-- Domarbåset vid E, med exit-skylten över öppningen.
+	local D = R.domarbas
+	BK.box(model, base, "Domarbås", o.x + D.x, 0, o.y + D.y - D.b / 2,
+		1.6, D.h, D.b, INRE.laktare, Enum.Material.WoodPlanks)
+	if D.exit then
+		local skylt = BK.box(model, base, "Exit-skylt", o.x + D.x - 0.1,
+			D.h - 0.35, o.y + D.y - 0.25, 0.06, 0.22, 0.5,
+			Color3.fromRGB(46, 160, 84), Enum.Material.Neon)
+		skylt.CanCollide = false
+	end
+
+	-- Klockan vid centrala trappan.
+	local K = R.klocka
+	local klocka = BK.box(model, base, "Klockan", o.x + K.x - K.r, K.z,
+		o.y + K.y - 0.06, K.r * 2, K.r * 2, 0.12,
+		Color3.fromRGB(238, 236, 228), Enum.Material.SmoothPlastic)
+	klocka.CanCollide = false
+end
+
 local model, base = BK.newBuilding("UBRF", Vector3.new(0, 0, 0), 0, {
 	Referens = "references/SITEPLAN.md",
 	Geometri = "roblox/buildings/UBRFKomplex.luau (genererad ur src/site.js)",
@@ -126,10 +281,13 @@ local model, base = BK.newBuilding("UBRF", Vector3.new(0, 0, 0), 0, {
 
 byggMark(model, base)
 for _, b in ipairs(G.byggnader) do byggHus(model, base, b) end
+byggStallInre(model, base)
+byggRidhusInre(model, base)
 byggDorrmarkorer(model, base)
 
-print(("OK UBRF byggd: %d byggnader, %d dörrar, %d objekt")
-	:format(#G.byggnader, #G.dorrar, #model:GetDescendants()))
+print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d objekt")
+	:format(#G.byggnader, #G.dorrar, #G.stall.rader, #G.stall.gangytor,
+		#model:GetDescendants()))
 
 -- Ankomstvyn: stå på grusplanen vid de norra gavlarna och titta söderut mot
 -- hästgången, samma vy som webbversionen verifieras mot. Husen ska läsa som

@@ -66,7 +66,7 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Byggnad/yta | Position (m, X/Y) | Rotation | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
 | Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, cafégaveln mot grusplanen i **norr** | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. Norra gaveln vid y = 119. |
-| Stallet | 154 / 65 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | **21 × 54** | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock **10,0 m**, 28° resning. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden. Bredden rättad 2026-08-30 från 15 m: dubbelstallets fyra boxlängor och två gångar ryms inte i 15 m, och takgeometrin ger 20–22 m. Västra långsidan står kvar där den var; huset växer österut. |
+| Stallet | 154 / 65 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | 21 × 54 `[ASSUMPTION]` | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 10,0 m, 28° resning — alla tre följer med bredden och är antaganden de också. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden `[VERIFIED]`. **Bredden är inte fastställd**: 21 m är arbetsvärdet i intervallet 15–23 m, se avsnittet om utrymningsplanerna. Västra långsidan, den fotograferade, står kvar där den var; ändras bredden växer huset österut. |
 | Gården mellan husen | 143–154, y 65–106 | — | 11 × 41 | Det som blir kvar mellan förbindelserna, inte en verifierad obruten gräsgård. Stängd i **norr** av hästgången och delvis i söder av längan; öppningen mot gårdsplanen i sydost är kvar. Skyltstolpen och picknickborden står i norra änden, som i `stall-fasad-01` |
 | Grusplanen / parkeringen | 106 / 121 | — | 48 × 34 | Vid norra gavlarna, mot Björklidsvägen. Hit kommer man. |
 | Planen framför klubbgaveln | 144 / 119 | — | 36 × 16 | Mellan grusplanen och stallets entrégavel |
@@ -119,11 +119,21 @@ Kort: **stallet är ett dubbelstall** med fyra boxlängor och två gångar, och
 **ridhuset har en djup entré- och trapphusdel i gaveln** med två trapphus och en
 hiss.
 
-Stallet är ombyggt efter sin plan 2026-08-30. Bredden gick inte att läsa ur
-ritningen, men den faller ut ur tre andra källor som pekar åt samma håll: sex band
-tvärs huset ryms inte i 15 m, huvarnas och fönstrens 3,5 m-rytm ger 21 m på sex
-band, och takfot 4,4 m med nock 9,8 m ger 20–22 m beroende på lutning. Se
-stallkortet för hela räkningen och för vad som fortfarande är antagande.
+Stallet är ombyggt efter sin plan 2026-08-30. **Bredden gick inte att läsa ur
+ritningen och är inte fastställd.** Planen ger bandens ordning och inbördes
+andelar — det är `VERIFIED` och skaloberoende — men den saknar skalstock, så
+skalan måste komma någon annanstans ifrån, och de vägar som finns pekar åt olika
+håll.
+
+Spelet bygger **21 m som arbetsantagande**, i intervallet 15–23 m. Det är inte en
+rättelse och inte en slutsats. Det undre gränsvärdet håller därför att sex band
+inte ryms i 15 m utan att bli 2,5 m vardera; takgeometrin stöder svagt intervallets
+övre del. Den tidigare beviskedjan genom huvarnas och fönstrens 3,5 m-rytm är
+**struken** — den är en mätning i byggnadens längdriktning och kan inte bevisa
+tvärgående band.
+
+Se stallkortet och `references/plans/OAVGJORT.md` fråga 2. Ett enda uppmätt mått
+på plats stänger frågan.
 
 Ridhuset är ombyggt efter sin plan. Ritningen saknar skalstock, men Tobias har
 bekräftat att banan är **20×60**, och två kända mått räcker för att räkna bort
@@ -148,7 +158,7 @@ vad som är antaget. `[antagande]` = härlett men inte sett; `[REFERENCE GAP]`
 | Stallets södra gavel | Street View, på avstånd | `[antagande]` — dörrarnas och trappans mått uppskattade |
 | Stallets östra långsida | Street View, på avstånd | `[antagande]` — spegling av västra sidan |
 | Stallgången invändigt | `video/IMG_0249.mov` + `IMG_0250.mov`, 37 bildrutor | Verifierat, se stallkortet |
-| Stallets planform (dubbelstall) | Utrymningsplanen | **Byggd 2026-08-30** — fyra boxlängor och två gångar på 21 m bredd; fördelningen box/gång är `[ASSUMPTION]`, se stallkortet |
+| Stallets planform (dubbelstall) | Utrymningsplanen | **Byggd 2026-08-30** — fyra boxlängor och två gångar. Bandens ordning och andelar är mätta i planen `[VERIFIED]`; totalbredden 21 m är ett arbetsantagande i intervallet 15–23 m, se stallkortet |
 | Hagar, banor, paddock | Satellitbild | Verifierat läge, mått ej mätta |
 | Skogsstigen i norr | — | `[REFERENCE GAP]` — sträckningen påhittad |
 | Åkern i väster | Satellitbild, förenklad | `[antagande]` |

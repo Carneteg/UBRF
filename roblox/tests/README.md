@@ -12,19 +12,33 @@ python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build
 python3 roblox/tests/build.py tests/rider.spec.luau && luau roblox/tests/.build/rider.spec.luau
 python3 roblox/tests/build.py tests/touch.spec.luau && luau roblox/tests/.build/touch.spec.luau
 python3 roblox/tests/build.py tests/geometri.spec.luau && luau roblox/tests/.build/geometri.spec.luau
+python3 roblox/tests/build.py tests/bygge.spec.luau    && luau roblox/tests/.build/bygge.spec.luau
 ```
 
-`geometri.spec.luau` mäter något annat än de fyra andra: inte rörelsen utan
-**anläggningen**. Den läser `roblox/buildings/UBRFKomplex.luau`, som genereras
-ur `src/site.js`, och kontrollerar att Roblox-sidan får ut samma UBRF som
-webben bygger — att husen sitter ihop, att interna öppningar vetter mot ett
-grannhus och inte ut i luften, och att en öppnings `u` räknas från rätt ände av
-rätt fasad. Den får därför sin egen modullista i `build.py`; hästsystemet har
-den inget att göra med.
+## De två som mäter anläggningen
 
-Den kan inte se om `src/site.js` ändrats utan att exporten körts om. Det gör
-`node tools/exportera-geometri.js --kontrollera`, och de två hör ihop: specen
-mäter innehållet, kontrollen mäter synken.
+`geometri.spec.luau` och `bygge.spec.luau` mäter något annat än de fyra andra:
+inte rörelsen utan **anläggningen**. De får därför sina egna modullistor i
+`build.py`; hästsystemet har de inget att göra med.
+
+- **`geometri.spec.luau`** läser `roblox/buildings/UBRFKomplex.luau` — filen som
+  genereras ur `src/site.js` — och kontrollerar *datan*: att husen sitter ihop,
+  att interna öppningar vetter mot ett grannhus och inte ut i luften, att en
+  öppnings `u` räknas från rätt ände av rätt fasad, att stallet får fyra rader
+  och två gångar, och att banan är 20 × 60 och får plats.
+- **`bygge.spec.luau`** kör `Anlaggningen.luau` på riktigt mot en fylligare
+  stubbuppsättning (`stubs-bygge.luau`) och mäter *delarna som kom ut*: antal,
+  läge, mått, och om något solitt står i vägen för cirkulationen. Skillnaden mot
+  att bara kompilera är hela poängen — den hittade en obruten tvärvägg som
+  murade igen stallgången första gången den kördes.
+
+Ingen av dem ersätter Studio. Utseende, material, ljus, prestanda och
+skärmdumpar finns inte här.
+
+Att den generade filen är i synk med `src/site.js` mäts inte av specarna utan av
+`node tools/exportera-geometri.js --kontrollera`. De tre hör ihop: exporten
+mäter synken, geometrispecen datan, byggbänken bygget.
+
 
 ## Varför en byggfil
 

@@ -26,6 +26,13 @@ GEOMETRI = [
     ("UBRFKomplex", "buildings/UBRFKomplex.luau"),
 ]
 
+# Byggbänken kör själva byggskriptet. Anlaggningen.luau är inte en modul utan
+# ett skript som körs för sin verkan, så det inlinas sist och returnerar inget.
+BYGGE = GEOMETRI + [
+    ("BuildKit",     "buildings/BuildKit.luau"),
+    ("Anlaggningen", "buildings/Anlaggningen.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -55,8 +62,13 @@ def inlina(kalla: str) -> str:
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
-    moduler = GEOMETRI if "geometri" in spec_rel else MODULER
-    delar = [las("tests/stubs.luau")]
+    if "bygge" in spec_rel:
+        moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
+    elif "geometri" in spec_rel:
+        moduler, stubbar = GEOMETRI, "tests/stubs.luau"
+    else:
+        moduler, stubbar = MODULER, "tests/stubs.luau"
+    delar = [las(stubbar)]
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")

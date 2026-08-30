@@ -350,7 +350,8 @@ const STALL_BAND = [
 ];
 
 const STALLINNE = {
-  bredd:21, langd:54,
+  bredd:21, /* [ASSUMPTION] arbetsvärde i intervallet 15–23 m, se KORT.md */
+  langd:54, /* [ASSUMPTION] satellitavläsning */
   vagg:"#CFC8BC", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
   klubbY:43, boxStartY:6.8, serviceY:6.5,
   boxB:3.5, antalBoxar:9,

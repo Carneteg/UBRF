@@ -162,6 +162,134 @@ for _, d in ipairs(UBRFKomplex.dorrar) do
 		inuti and ("ligger inne i " .. inuti) or nil)
 end
 
+--[[ ══ INSIDORNA ═════════════════════════════════════════════════════════
+	Review 02: datan i modulen räcker inte om byggaren struntar i den. Här mäts
+	att Roblox faktiskt får ut Gate F01:s planform — och att den går att gå i. ]]
+
+print("\nStallets insida")
+
+local S = UBRFKomplex.stall
+
+do
+	local rader, gangar = 0, 0
+	for _, b in ipairs(S.band) do
+		if b.typ == "rad" then rader += 1 else gangar += 1 end
+	end
+	check("planen ger fyra boxrader och två gångar", rader == 4 and gangar == 2,
+		string.format("%d rader, %d gångar", rader, gangar))
+end
+
+do
+	local summa = 0
+	for _, b in ipairs(S.band) do summa += b.andel end
+	check("bandens andelar summerar till hela bredden", nara(summa, 1, 0.005),
+		string.format("%.3f", summa))
+end
+
+check("interiören och fotavtrycket har samma mått",
+	nara(S.bredd, stall.rekt.w) and nara(S.langd, stall.rekt.h),
+	string.format("%g×%g mot %g×%g", S.bredd, S.langd, stall.rekt.w, stall.rekt.h))
+
+check("interiörens origo är husets sydvästra hörn",
+	nara(S.origo.x, stall.rekt.x) and nara(S.origo.y, stall.rekt.y))
+
+do
+	-- Tvärkorridoren ska nå BÅDA långsidorna. Planen har utrymningsvägar där,
+	-- och en korridor som tar slut halvvägs är ingen utrymningsväg.
+	local nadde = false
+	for _, g in ipairs(S.gangytor) do
+		if g.y >= S.tvarGang.y0 - 0.5 and g.y + g.h <= S.tvarGang.y1 + 0.5
+			and g.x < 1.0 and g.x + g.w > S.bredd - 1.0 then nadde = true end
+	end
+	check("tvärkorridoren når båda långsidorna", nadde)
+end
+
+do
+	-- Det Review 02 kallar "no overlapping solid geometry blocks the intended
+	-- circulation": inget byggt boxfack får ligga i en gångyta.
+	local varsta, var = 0, nil
+	for _, rad in ipairs(S.rader) do
+		for i, f in ipairs(Geometri.boxfack(S)) do
+			local fack = { x = rad.x0, y = f.y0, w = rad.djup, h = f.y1 - f.y0 }
+			for j, g in ipairs(S.gangytor) do
+				local a = Geometri.overlapp(fack, g)
+				if a > varsta then varsta, var = a, rad.id .. "/" .. i .. " mot gångyta " .. j end
+			end
+		end
+	end
+	check("inget boxfack ligger i en gångyta", varsta < 0.01,
+		if var then string.format("värst %.2f m² vid %s", varsta, var)
+		else "inget överlapp alls")
+end
+
+do
+	local fack = Geometri.boxfack(S)
+	check("boxfacken hoppar över tvärkorridoren", #fack > 0 and #fack < 11,
+		#fack .. " fack per rad")
+	for _, f in ipairs(fack) do
+		local mitt = (f.y0 + f.y1) / 2
+		if mitt > S.tvarGang.y0 and mitt < S.tvarGang.y1 then
+			check("inget fack mitt i tvärkorridoren", false,
+				string.format("fack %g–%g", f.y0, f.y1))
+		end
+	end
+end
+
+check("de namngivna rummen ur planen finns med", #S.rum >= 3,
+	#S.rum .. " rum, " .. #S.service .. " servicedelar")
+
+print("\nRidhusets insida")
+
+local R = UBRFKomplex.ridhus
+
+check("banan är 20 × 60", nara(R.bana.w, 20) and nara(R.bana.h, 60),
+	string.format("%g × %g", R.bana.w, R.bana.h))
+
+check("banan får plats i byggnaden",
+	R.bana.x >= 0 and R.bana.y >= 0
+		and R.bana.x + R.bana.w <= R.bredd and R.bana.y + R.bana.h <= R.langd,
+	string.format("banan x %g–%g av %g, y %g–%g av %g",
+		R.bana.x, R.bana.x + R.bana.w, R.bredd, R.bana.y, R.bana.y + R.bana.h, R.langd))
+
+check("interiören och fotavtrycket har samma mått",
+	nara(R.bredd, ridhus.rekt.w) and nara(R.langd, ridhus.rekt.h))
+
+check("interiörens origo är husets sydvästra hörn",
+	nara(R.origo.x, ridhus.rekt.x) and nara(R.origo.y, ridhus.rekt.y))
+
+do
+	-- Läktaren ligger öster om banan och får inte äta in i den.
+	local laktare = { x = R.laktare.x0, y = R.laktare.y0,
+		w = R.laktare.steg * R.laktare.stegD, h = R.laktare.y1 - R.laktare.y0 }
+	local bana = { x = R.bana.x, y = R.bana.y, w = R.bana.w, h = R.bana.h }
+	check("läktaren tränger inte in på banan",
+		Geometri.overlapp(laktare, bana) < 0.01,
+		string.format("%.2f m²", Geometri.overlapp(laktare, bana)))
+	check("läktaren ligger öster om banan", R.laktare.x0 >= R.bana.x + R.bana.w - 0.01)
+end
+
+do
+	-- Sargporten är gapet i norra kortsidan. Där rider man in, och där står A.
+	local bredd = R.port.x1 - R.port.x0
+	check("sargporten är en användbar öppning", bredd > 1.5 and bredd < 4,
+		string.format("%.1f m bred, vid x %g–%g", bredd, R.port.x0, R.port.x1))
+	check("porten ligger inom banans kortsida",
+		R.port.x0 >= R.bana.x and R.port.x1 <= R.bana.x + R.bana.w)
+end
+
+check("de tre glasade rummen finns med", #R.glasrum == 3, #R.glasrum .. " st")
+check("domarbåset har trappa och exit-skylt", R.domarbas.trappa and R.domarbas.exit)
+
+do
+	-- Insidorna får inte sticka ut ur sina hus i världskoordinater.
+	for _, par in ipairs({ { "stall", S, stall }, { "ridhus", R, ridhus } }) do
+		local namn, inre, hus = par[1], par[2], par[3]
+		check(namn .. "s insida ligger innanför sitt fotavtryck",
+			nara(inre.origo.x + inre.bredd, hus.rekt.x + hus.rekt.w)
+				and nara(inre.origo.y + inre.langd, hus.rekt.y + hus.rekt.h))
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("geometri.spec: " .. fails .. " fel")

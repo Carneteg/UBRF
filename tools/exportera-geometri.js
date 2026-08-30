@@ -86,10 +86,17 @@ function luau(v, indent, nyckel) {
 }
 
 /* ── Vad som exporteras ───────────────────────────────────────────────
-   Byggnadsmassan, marken under den och dörrarna som binder ihop husen — alltså
-   det Gate F01 handlar om. Inredning, hästar, staket och träd stannar i
-   webbkoden: de är inte fidelity-fakta om anläggningen, och en generad fil som
-   tar med allt blir omöjlig att läsa. */
+   Byggnadsmassan, marken under den, dörrarna som binder ihop husen, och
+   INSIDORNAS strukturella fakta — planformen, gångarna, de namngivna rummen,
+   ridbanan, läktaren. Alltså det Gate F01 handlar om.
+
+   Möblering, hästar, staket, träd, ljus och sprites stannar i webbkoden. De är
+   inte fidelity-fakta om anläggningen, och en generad fil som tar med allt blir
+   omöjlig att läsa.
+
+   Review 02 var tydlig med varför insidorna måste med: att datan finns i en
+   generad modul räcker inte om primärplattformens byggare struntar i den. Fyra
+   boxrader och två gångar ska gå att SE i Roblox, inte bara stå i en tabell. */
 const ut = {
   bredd: ANL.bredd,
   djup: ANL.djup,
@@ -97,15 +104,23 @@ const ut = {
   byggnader: ANL.byggnader,
   dorrar: ANL.dorrar,
   stall: {
-    bredd: STALLINNE.bredd, langd: STALLINNE.langd,
+    bredd: STALLINNE.bredd, langd: STALLINNE.langd, tak: STALLINNE.tak,
     boxB: STALLINNE.boxB, antalBoxar: STALLINNE.antalBoxar,
+    boxStartY: STALLINNE.boxStartY, klubbY: STALLINNE.klubbY,
     tvarGang: STALLINNE.tvarGang,
     band: STALL_BAND, rader: STALLINNE.rader, gangar: STALLINNE.gangar,
+    gangytor: STALLINNE.gangytor,
+    rum: STALLINNE.rum, service: STALLINNE.service,
+    tvarvaggar: STALLINNE.tvarvaggar,
     dorrar: STALLINNE.dorrar,
   },
   ridhus: {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,
+    port: RIDHUSINNE.port,
+    laktare: RIDHUSINNE.laktare, glasrum: RIDHUSINNE.glasrum,
+    domarbas: RIDHUSINNE.domarbas, trappa: RIDHUSINNE.trappa,
+    klocka: RIDHUSINNE.klocka,
     dorrar: RIDHUSINNE.dorrar,
   },
 };
@@ -128,6 +143,27 @@ const huvud = `--!strict
 -- litar på ett enskilt mått.
 
 return `;
+
+/* Insidornas lokalkoordinater sitter ihop med byggnadens fotavtryck: origo för
+   en interiör är husets sydvästra hörn, ingen vridning. Webbkoden visar det
+   genom att en dörr på lokala (5,6 · 1,6) i stallet spawnar på (159,6 · 63,4) i
+   världen, och 154 + 5,6 = 159,6. Relationen skrivs ut här i stället för att
+   Roblox-sidan ska räkna ut den på nytt — hårdkodar man den på två ställen
+   glider de isär den dag ett hus flyttas. */
+for (const [nyckel, husId] of [["stall", "stall"], ["ridhus", "ridhus"]]) {
+  const hus = ut.byggnader.find(b => b.id === husId);
+  if (!hus) throw new Error("hittar inte byggnaden " + husId);
+  ut[nyckel].origo = { x: hus.rekt.x, y: hus.rekt.y };
+  /* Interiörens mått ska stämma med fotavtrycket. Gör de inte det är någon av
+     dem ändrad utan den andra, och då bygger Roblox en insida som inte får
+     plats i sitt eget hus. */
+  const dx = Math.abs(ut[nyckel].bredd - hus.rekt.w);
+  const dy = Math.abs(ut[nyckel].langd - hus.rekt.h);
+  if (dx > 0.001 || dy > 0.001) {
+    throw new Error(`${husId}: interiören ${ut[nyckel].bredd}×${ut[nyckel].langd} ` +
+                    `matchar inte fotavtrycket ${hus.rekt.w}×${hus.rekt.h}`);
+  }
+}
 
 const MAL = path.join(ROT, "roblox/buildings/UBRFKomplex.luau");
 const innehall = huvud + luau(ut, 0, null) + "\n";

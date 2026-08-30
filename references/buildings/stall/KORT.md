@@ -86,55 +86,36 @@ antagande, så det kan inte låsa något.
 - Byggnadsform: rak länga med sadeltak och **en utskjutande förstukvist** på
   västra långsidan, nära norra gaveln.
 
-### Bredden — rättad 2026-08-30, från 15 m till 21 m
+<details>
+<summary><strong>ÖVERSPELAT 2026-08-30 — det gamla beviset för 21 m (öppna bara för historik)</strong></summary>
 
-Kortet antog tidigare 15 m därför att `STALLINNE` hade en gång och två boxrader.
-Det var en cirkel: bredden hämtades ur spelet, och spelet byggdes ur bredden. När
-utrymningsplanen visade fyra boxlängor och två gångar gick ekvationen inte ihop,
-och kortet skrev "något stämmer alltså inte, och jag gissar inte vilket".
+**Det här avsnittet gäller inte längre.** Det står kvar därför att det förklarar
+varför spelet bygger just 21 m, inte för att bevisa att 21 m är rätt. Läs
+avsnittet "Bredden — oavgjord" ovan; det är facit.
 
-Tre oberoende vägar ger samma svar, och ingen av dem går genom spelet.
+Senior Fidelity Review 01 underkände beviskedjan, och Review 02 krävde att den
+inte får ligga kvar som aktiv kanon bredvid den rättade klassningen. Skälet är
+konkret: en framtida agent som läser kortet före implementation kan annars låsa
+om samma underkända slutsats.
 
-**1. Planformen.** Utrymningsplanen visar sex band tvärs byggnaden: boxrad — gång
-— boxrad — boxrad — gång — boxrad. Vid 15 m blir varje band **2,50 m**. En häst
-kan inte stå i en box på 2,5 m djup och två hästar kan inte mötas i en 2,5 m gång.
-15 m är alltså inte bara osäkert utan fysiskt omöjligt givet planformen.
+Kedjan bestod av tre vägar. Så här föll de:
 
-**2. Rytmen på 3,5 m.** Huvarna på nocken sitter ~3,5 m isär, en per box, och
-valvfönstren på långsidan har samma delning — båda avlästa direkt i bild 03 och 04.
-Boxen är alltså 3,5 m bred. Är den också 3,5 m djup, och är gången lika bred som en
-box är djup, blir sex band à 3,5 m **exakt 21,0 m**.
+| Väg | Vad den sade | Status |
+|---|---|---|
+| Planformens sex band | vid 15 m blir varje band 2,50 m — fysiskt omöjligt för en häst | **Står kvar.** Den är ett undre gränsvärde, inte ett mått |
+| Huvarnas och fönstrens 3,5 m-rytm | sex band à 3,5 m = 21,0 m | **STRUKEN.** Rytmen mäts i byggnadens längdriktning och kan inte bevisa tvärgående band. Planen visade dessutom att gångarna är ~2/3 av boxdjupet, inte lika breda |
+| Takgeometrin | takfot 4,4 + nock 9,8 ger 20,3 m vid 28° | **Svagt stöd.** 28° är självt ett antagande; spannet 26–30° ger 18,7–22,1 m |
 
-**3. Takgeometrin.** Takfot 4,4 m och nock 9,8 m är båda mätta i bild 04 mot
-entrédörrens 2,05 m. Resningen är då 5,4 m, och bredden faller ut ur lutningen:
+Formuleringar som stod här och som inte ska återanvändas: att bredden är
+*"rättad"* eller *"fastställd"*, och att nockmätningen bevisade att *"bredden var
+för smal"*. Nockmätningen är förenlig med intervallet 15–23 m; den pekar inte ut
+en punkt i det.
 
-| Lutning | Bredd |
-|---|---|
-| 26° | 22,1 m |
-| 28° | 20,3 m |
-| 30° | 18,7 m |
-| 36° | 14,9 m |
+Fördelningen mellan box och gång som det här avsnittet antog — sex lika breda
+band à 3,5 m — är **också struken**. Planen mäter andelarna, och de är ojämna;
+se tabellen ovan.
 
-Gavelns takfall mäter 31° och 48° i bild 05 respektive 04, båda för branta
-eftersom gaveln står vriden; 28° var kortets flackaste rimliga tolkning. Vid 28°
-ger takhöjderna **20,3 m**. För att komma ner till 15 m krävs **35,8°**, alltså
-brantare än den brantaste rimliga avläsningen.
-
-Nockmätningen 9,8 m avfärdades tidigare som "för hög". Den var inte för hög —
-bredden var för smal. Med 21 m blir nocken 10,0 m och mätningen stämmer.
-
-**Kvarvarande invändning.** Kortet skrev att 20–26 m är "oförenligt med hur smal
-byggnaden ser ut i satellitbilden". Den invändningen är inte kvantifierad, och
-satellitbilden finns inte i repot — bara längdmätningen 236 px är citerad i
-SITEPLAN.md. Vid 4,4 px/m vore 21 m = 92 px, vilket fortfarande ger en långsmal
-länga på 2,6:1. `[REFERENCE GAP]` En sparad satellitbeskärning med både längd och
-bredd i bildpunkter skulle avgöra saken på en minut.
-
-**Vad som är svagast i kedjan.** Att boxen är lika djup som bred, och att gången är
-lika bred som boxen är djup. Totalen 21 m stöds av takgeometrin oberoende av hur
-den delas; **fördelningen 3,5 / 3,5 / 3,5 / 3,5 / 3,5 / 3,5 är `[ASSUMPTION]`**.
-Filmerna antyder en gång som är bredare än så, vilket i så fall gör boxarna
-grundare. En rak bild på Plan 1 avgör det.
+</details>
 
 ## Tak
 - Form: sadeltak

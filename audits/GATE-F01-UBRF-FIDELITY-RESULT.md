@@ -4,7 +4,7 @@ Struktur enligt `docs/GATE-F01-UBRF-FIDELITY.md`.
 
 Datum: 2026-08-30 (uppdaterad efter Senior Fidelity Review 01)
 Implementation: Claude Code
-Status: **lämnas till ChatGPT för Senior Fidelity Review 02.**
+Status: **lämnas till ChatGPT för Senior Fidelity Review 03.**
 
 Sedan Review 01 har fem saker hänt: utrymningsplanerna ligger i repot och är
 mätta, stallets bredd är nedgraderad från slutsats till antagande med intervall,
@@ -30,6 +30,8 @@ utfall om alla kända motsägelser är lösta men luckor kvarstår är
 | `2fa66dc` | Stallets entréer går att komma in genom igen (räcket, dörrlistorna, balkongen, markörmarginalen) | Stall ute |
 | `9b814d7` | Hästgången mellan husen; ridhusets durkplåtsdörrar ur läktarstommen; längan smalnad | Komplex |
 | `5998974` | Dokumentationen följer hästgången; Review 01:s tre första invändningar | Källa |
+| `ba0243e` | Fotona in i källkedjan; gården slutar kallas verifierad gräsgård | Källa |
+| *(denna)* | Review 02: källkedjan rensad, Roblox bygger insidorna, byggbänk | Källa + Roblox |
 
 Föregående gate (`aec77cd`, mergad) rörde ridkänslan, inte miljön.
 
@@ -202,33 +204,52 @@ Kvarvarande `A`/`G` enligt matrisen ovan är oförändrade och fortfarande marke
 
 ## 6 · Stall exteriör — bredden
 
-Kortet antog 15 m därför att `STALLINNE` hade en gång och två rader, och
-`STALLINNE` byggdes ur de 15 metrarna. Cirkeln bröts av tre oberoende vägar:
+**Bredden är inte fastställd.** Spelet bygger **21 m som arbetsantagande**, i
+intervallet **15–23 m**. Det är inte en rättelse och inte en slutsats.
 
-**1 · Planformen.** Sex band tvärs huset. Vid 15 m blir varje band 2,50 m. En häst
-kan inte stå i en box på 2,5 m djup, och två hästar kan inte mötas i en 2,5 m gång.
-15 m är inte bara osäkert utan fysiskt omöjligt givet planformen.
+Vad som gäller, och vad som inte gör det:
 
-**2 · Rytmen.** Huvarna på nocken sitter ~3,5 m isär, en per box, och valvfönstren
-har samma delning — båda avlästa i bild 03 och 04. Sex band à 3,5 m = **21,0 m**.
+| Påstående | Klass | Varför |
+|---|---|---|
+| Sex band tvärs huset, i ordningen boxrad–gång–boxrad–boxrad–gång–boxrad | **VERIFIED** | Utrymningsplanen, tre tvärsnitt |
+| Bandens inbördes andelar (20,9 · 12,4 · 17,8 · 17,6 · 12,3 · 19,0 %) | **VERIFIED** | Samma, och skaloberoende |
+| Gångarna är smalare än boxarna är djupa, ~2/3 | **VERIFIED** | Följer av andelarna |
+| Totalbredden 21 m | **ASSUMPTION** | Mitt i intervallet; ligger på ett enda ställe i koden (`STALLINNE.bredd`) |
+| Längden 54 m | **ASSUMPTION** | Satellit; går inte ihop med planens proportion |
+| Nocken 10,0 m, takfot 4,4 m, lutning 28° | **ASSUMPTION** | Räknas ur bredden, så de ärver dess osäkerhet |
 
-**3 · Takgeometrin.** Takfot 4,4 m och nock 9,8 m, båda mätta mot entrédörrens
-2,05 m i bild 04. Resningen 5,4 m ger:
+Det undre gränsvärdet håller: sex band ryms inte i 15 m utan att bli 2,50 m
+vardera, och varken en box på 2,5 m djup eller ett möte mellan två hästar i en
+2,5 m gång fungerar. Takgeometrin stöder svagt intervallets övre del —
+takfot 4,4 m och nock 9,8 m mätta mot entrédörrens 2,05 m i bild 04 ger 22,1 m
+vid 26°, 20,3 m vid 28° och 18,7 m vid 30° — men 28° är självt ett antagande, så
+den kan inte låsa något.
 
-| Lutning | Bredd |
-|---|---|
-| 26° | 22,1 m |
-| 28° | **20,3 m** |
-| 30° | 18,7 m |
-| 36° | 14,9 m |
+`[REFERENCE GAP]` **Ett enda uppmätt mått på plats stänger frågan.** Gångens
+bredd mellan två boxfronter räcker. Se `references/plans/OAVGJORT.md` fråga 2.
 
-Gavelns takfall mäter 31° och 48°, båda för branta eftersom gaveln står vriden;
-28° var den flackaste rimliga tolkningen. För 15 m krävs 35,8°.
+<details>
+<summary><strong>ÖVERSPELAT — den gamla beviskedjan för 21 m (historik)</strong></summary>
 
-**Nockmätningen 9,8 m avfärdades tidigare som "för hög". Den var inte för hög —
-bredden var för smal.** Med 21 m blir nocken 10,0 m.
+Auditen hävdade först att tre oberoende vägar gav 21 m. Review 01 underkände
+kedjan och Review 02 krävde att den inte får ligga kvar som aktiv kanon. Så här
+föll den:
 
-### Rättelse efter Review 01: 21 m är ett ANTAGANDE, inte en slutsats
+| Väg | Vad den sade | Status |
+|---|---|---|
+| Planformens sex band | 15 m ⇒ 2,50 m per band, fysiskt omöjligt | **Står kvar** som undre gränsvärde, inte som mått |
+| Huvarnas och fönstrens 3,5 m-rytm | sex band à 3,5 m = 21,0 m | **STRUKEN** — mäts i längdriktningen, används på tvären. Planen visade dessutom att banden är ojämna |
+| Takgeometrin | 20,3 m vid 28° | **Svagt stöd**, eftersom 28° är ett antagande |
+
+Formuleringar härifrån som inte ska återanvändas: att bredden är *"rättad"* eller
+*"fastställd"*, och att nockmätningen visade att *"bredden var för smal"*.
+Nockmätningen 9,8 m är förenlig med hela intervallet 15–23 m; den pekar inte ut
+en punkt i det. Även den likadelade fördelningen 3,5 × 6 som kedjan antog är
+struken — planen mäter andelarna, och de är ojämna.
+
+</details>
+
+### Hur nedgraderingen gick till
 
 Review 01 underkände låsningen med rätta: *"3,5 m fönster-/huvrytm är en
 mätning i längdriktningen och kan inte bevisa sex tvärgående band à 3,5 m."*
@@ -399,7 +420,10 @@ inte spåren likvärdiga — det gjorde bara att bara den ena ytan hade UBRF.
 | `roblox/buildings/UBRFKomplex.luau` | anläggningens mått, färger och öppningar | **genererad, aldrig för hand** |
 | `roblox/buildings/Geometri.luau` | ren geometri: öppningens läge i en fasad, taklutning, om två hus sitter ihop | handskriven, mätt |
 | `roblox/buildings/Anlaggningen.luau` | bygger hela komplexet i Studio ur de två ovan | handskriven |
-| `roblox/tests/geometri.spec.luau` | 36 mätningar på den exporterade geometrin | handskriven |
+| `roblox/buildings/Anlaggningen.luau` | bygger komplexet **inklusive insidorna** i Studio | handskriven |
+| `roblox/tests/geometri.spec.luau` | 56 mätningar på den exporterade geometrin | handskriven |
+| `roblox/tests/bygge.spec.luau` | 34 mätningar på den **körda** modellen | handskriven |
+| `roblox/tests/stubs-bygge.luau` | Roblox-stubbar som räcker för att köra byggskriptet | handskriven |
 
 Review 01 skrev: *"Do not create a second hand-maintained truth. Prefer one
 canonical geometry/data definition or a deterministic generation path consumed
@@ -449,13 +473,89 @@ hade kastat fel vid körning — exakt den fälla `roblox/buildings/README.md` r
 varnar för, en gång tidigare med `Källa`. Ingen hade byggt ett tak förrän
 `Anlaggningen.luau` skulle anropa funktionen. Attributet heter nu `GavelFarg`.
 
+### Insidorna, efter Review 02
+
+Review 02 underkände med rätta att Roblox bara byggde skalet: *"Data being
+present in a generated module is not enough if the primary-platform builder
+ignores that data."* Exporten bär nu också insidornas struktur, och byggaren
+konsumerar den.
+
+**Stallet.** Fyra boxrader och två gångar lagda ur planens mätta andelar, med
+boxfack, fronter och galler; tvärkorridoren går rakt igenom och facket där
+hoppas över; tvärväggarna byggs i bitar med dörrgap där gångarna passerar; de
+fem namngivna rummen ur utrymningsplanen står med sina namn som attribut.
+
+**Ridhuset.** Banan 20 × 60 med sarg runt om och porten som ett verkligt gap i
+norra kortsidan, läktaren i fyra steg längs östväggen, de tre glasade rummen
+bakom den, domarbåset vid E med exit-skylten, och klockan.
+
+Ingen möblering: ingen spånremsa, inga namnskyltar, inga hinder. Det är
+rendering och hör inte till en fidelity-gate — Review 02 var uttrycklig om att
+det inte ska bli ett konstprojekt.
+
+Interiörernas origo är husets sydvästra hörn, och **den relationen exporteras**
+i stället för att räknas om på Roblox-sidan. Exporten kastar dessutom om
+interiörens mått inte stämmer med fotavtrycket, så en insida som inte får plats
+i sitt eget hus stoppar bygget i stället för att byggas.
+
+### Byggbänken — skillnaden mellan "kompilerar" och "kör"
+
+Review 02: *"Compilation plus pure-Luau geometry tests are not sufficient proof
+that the generated environment actually builds correctly in Roblox."* Det är
+sant, och därför finns `bygge.spec.luau`: den kör `Anlaggningen.luau` mot
+Roblox-stubbar som räcker för Instance, CFrame och attribut, och mäter sedan
+**delarna som faktiskt kom ut** — 400 objekt, deras läge, mått och om något
+solitt står i vägen.
+
+**Den hittade ett verkligt fel första gången den kördes.** Tvärväggen vid y = 43
+byggdes obruten över hela husbredden och murade igen stallgången mot
+klubbdelen — 4,04 m² tvärs klubbhallens gångyta. Webbversionen bygger samma
+vägg i bitar med dörrgap där gångarna passerar; Roblox-sidan gjorde det inte.
+Regeln ligger nu i `Geometri.tvarvaggBitar` som båda läser.
+
+Bänken rättade också mig själv två gånger:
+
+1. Ett areamått mot gångytorna glider förbi en vägg som ligger *tvärs* en gång,
+   eftersom den bara nuddar ytans kant på djupet. Passagerna mäts nu direkt:
+   går varje gång igenom varje tvärvägg?
+2. Rummen — sadelkammare, uppehållsrum, teorisal — ligger med flit inuti
+   klubbhallens gångyta. Webbkoden behandlar gångytan som en grov gångbar
+   region och kolliderar sedan mot rummen var för sig. Att räkna dem som
+   hinder var att mäta fel sak; i stället mäts hur mycket golv som blir kvar.
+
 ### Vad som fortfarande inte är visat
 
-`[REFERENCE GAP i paritetsredovisningen]` **Ingen har kört skriptet i Studio.**
-Alla fyra Luau-filerna kompilerar (`luau-compile --binary`), geometrin är mätt
-utanför Studio, men att modellen faktiskt reser sig och ser rätt ut kan bara
-avgöras i Studio, av en människa. Två skärmdumpar från samma vinkel — webben och
-Roblox — är den bevisning som fattas, och den kräver Studio.
+`[BLOCKERAD]` **Ingen har kört skriptet i Roblox Studio.** Det går inte i den
+här miljön: Studio finns inte i containern och det finns ingen MCP-koppling till
+en Studio-instans. Jag kan alltså inte lämna den runtime- och skärmdumpsbevisning
+Review 02 kräver, och jag påstår inte att den finns.
+
+Vad som ÄR gjort i stället, och var gränsen går:
+
+| Review 02 kräver | Läge |
+|---|---|
+| modellen byggs utan runtime-fel | **Mätt** — byggbänken kör skriptet, 400 objekt, inga fel |
+| ridhus, hästgång och stall läser som ett komplex | **Mätt geometriskt**, inte visuellt |
+| hästgången möter båda volymerna | **Mätt** — västväggen ligger på x = 143,00 i den byggda modellen |
+| stallet har synligt fyra rader / två gångar | **Mätt** — 9 boxfronter per rad i alla fyra raderna, sex gångytor |
+| entréer och passager är användbara | **Mätt** — varje gång går igenom varje tvärvägg; sargporten är 2,00 m |
+| ingen solid geometri blockerar cirkulationen | **Mätt** — ingen box i någon gångyta; varje gångyta har golv kvar |
+| skärmdumpar, två exteriöra + en stallinteriör | **SAKNAS — kräver Studio** |
+
+Byggbänken ersätter inte Studio. Den säger ingenting om utseende, material,
+ljus eller prestanda. Men den flyttar bevisningen från *"koden kompilerar"* till
+*"koden kör och lägger delarna här"*, och den fällde ett verkligt fel som ingen
+kompilering hade hittat.
+
+**Så här körs det i Studio** (för Tobias eller den som har klienten):
+
+1. Lägg `BuildKit.luau`, `Geometri.luau` och `UBRFKomplex.luau` som
+   `ModuleScript` i `ServerStorage`, eller klistra in dem först i samma
+   `run_code`-anrop.
+2. Kör `Anlaggningen.luau`.
+3. Utskriften ska sluta med `OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader,
+   6 gångytor, 400 objekt`.
+4. Kameran: raden längst ned i skriptet ger ankomstvyn från grusplanen.
 
 Enligt Review 01: *"If full Roblox rendering is deliberately deferred, Gate F01
 must not be reported as parity-ready."* Det gäller. **Gate F01 är inte
@@ -500,7 +600,8 @@ enligt beskrivningen, inte vad jag har sett stämma.
 | Ridloopen (Gate 01) | 5 | alla gröna |
 | Ryttarens sekundärrörelse | 7 | alla gröna |
 | Fyra viewports, rörelse och touchmål | 4 | alla gröna |
-| **Roblox: anläggningens geometri** | **36** | **alla gröna** |
+| **Roblox: anläggningens geometri** | **56** | **alla gröna** |
+| **Roblox: den körda modellen (byggbänken)** | **34** | **alla gröna** |
 | Roblox: rörelse, kamera, ryttare, touch | 72 | alla gröna |
 
 Hästgångens sex egna kontroller: dörren finns i båda husen; stalländens
@@ -562,8 +663,9 @@ Inga nya gameplay-features. Ridkänslan är orörd.
    är mätta där. Men de saknar skalstock, så de fastställer proportioner, inte
    meter — stallets absoluta mått vilar fortfarande på antaganden, se § 6.
 3. **Roblox-pariteten är strukturell, inte visuell.** Geometrin är genererad ur
-   webbkoden och mätt med 36 kontroller, men ingen har kört bygget i Studio.
-   Gate F01 är därför inte parity-ready — se § 9.
+   webbkoden, insidorna byggs, och 90 kontroller mäter både datan och den körda
+   modellen — men ingen har kört bygget i Studio, och det går inte att göra
+   härifrån. Gate F01 är därför inte parity-ready — se § 9.
 4. **Interiörernas möblering är inte komplett.** Sakerna på boxfronterna och porten
    med klockan i stallgångens fond är kända men obyggda.
 5. **Ingen mänsklig igenkänningskontroll.** Att någon som varit på UBRF känner igen

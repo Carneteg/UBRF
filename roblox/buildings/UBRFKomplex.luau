@@ -986,8 +986,11 @@ return {
 	stall = {
 		bredd = 21,
 		langd = 54,
+		tak = 3.4,
 		boxB = 3.5,
 		antalBoxar = 9,
+		boxStartY = 6.8,
+		klubbY = 43,
 		tvarGang = {
 			y0 = 24.3,
 			y1 = 27.8,
@@ -1078,6 +1081,108 @@ return {
 			B = {
 				x0 = 14.427,
 				x1 = 17.01,
+			},
+		},
+		gangytor = {
+			{
+				x = 4.389,
+				y = 6.5,
+				w = 2.604,
+				h = 36.5,
+			},
+			{
+				x = 14.427,
+				y = 6.5,
+				w = 2.583,
+				h = 36.5,
+			},
+			{
+				x = 0.4,
+				y = 24.3,
+				w = 20.2,
+				h = 3.5,
+			},
+			{
+				x = 0.4,
+				y = 43,
+				w = 20.2,
+				h = 7.5,
+			},
+			{
+				x = 3.4,
+				y = 50.5,
+				w = 7.2,
+				h = 3.1,
+			},
+			{
+				x = 4.5,
+				y = 0.4,
+				w = 12,
+				h = 6.1,
+			},
+		},
+		rum = {
+			{
+				id = "uppehallsrum",
+				rekt = {
+					x = 0,
+					y = 50.5,
+					w = 7,
+					h = 3.5,
+				},
+				label = "UPPEHÅLLSRUM",
+			},
+			{
+				id = "teorisal",
+				rekt = {
+					x = 14,
+					y = 50.5,
+					w = 7,
+					h = 3.5,
+				},
+				label = "TEORISAL · WC",
+			},
+			{
+				id = "sadelkammare",
+				rekt = {
+					x = 0,
+					y = 46.6,
+					w = 3.2,
+					h = 3.9,
+				},
+				label = "SADELKAMMARE",
+			},
+		},
+		service = {
+			{
+				id = "spolspilta",
+				rekt = {
+					x = 0,
+					y = 0,
+					w = 4.5,
+					h = 6.5,
+				},
+				label = "SPOLSPILTA",
+			},
+			{
+				id = "spanforrad",
+				rekt = {
+					x = 16.5,
+					y = 0,
+					w = 4.5,
+					h = 6.5,
+				},
+				label = "SPÅNFÖRRÅD",
+			},
+		},
+		tvarvaggar = {
+			{
+				y = 43,
+				brand = true,
+			},
+			{
+				y = 6.5,
+				brand = false,
 			},
 		},
 		dorrar = {
@@ -1177,6 +1282,10 @@ return {
 				},
 			},
 		},
+		origo = {
+			x = 154,
+			y = 65,
+		},
 	},
 	ridhus = {
 		bredd = 25,
@@ -1190,6 +1299,50 @@ return {
 			h = 60,
 		},
 		sargH = 1.35,
+		port = {
+			x0 = 9.6,
+			x1 = 11.6,
+		},
+		laktare = {
+			x0 = 21,
+			y0 = 9,
+			y1 = 59,
+			steg = 4,
+			stegH = 0.28,
+			stegD = 0.85,
+		},
+		glasrum = {
+			{
+				y0 = 12,
+				y1 = 22,
+			},
+			{
+				y0 = 26,
+				y1 = 36,
+			},
+			{
+				y0 = 44,
+				y1 = 56,
+			},
+		},
+		domarbas = {
+			x = 23.2,
+			y = 32,
+			b = 2,
+			h = 2.3,
+			trappa = true,
+			exit = true,
+		},
+		trappa = {
+			x = 22,
+			y = 65.4,
+		},
+		klocka = {
+			x = 22,
+			y = 63.6,
+			z = 3.6,
+			r = 0.42,
+		},
 		dorrar = {
 			{
 				id = "ut_o",
@@ -1293,6 +1446,10 @@ return {
 					rikt = -1.570796,
 				},
 			},
+		},
+		origo = {
+			x = 118,
+			y = 44,
 		},
 	},
 }
