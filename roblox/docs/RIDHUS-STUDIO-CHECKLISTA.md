@@ -66,6 +66,45 @@ den vita väggen.
 - [ ] Sanden är dovt brungrå (`#6F5D4D`), inte ljus beige eller orange.
 - [ ] Porten vid A och grinden mot hästgången är öppningar, inte väggar.
 
+## 8. Genomträngningar, z-fighting och ljus
+
+Testbänken kontrollerar att läktardäcket inte överlappar banan och att
+domarbåset står på det däcket — båset hamnar alltså utanför banan via den
+kedjan, inte genom en egen kontroll. Den ser inte om två ytor ligger i exakt
+samma plan, om något sticker igenom något annat, eller hur ljuset faller.
+Titta särskilt på de ställen där tidigare fel faktiskt suttit:
+
+- [ ] Domarbåset vid E står **utanför** sargen. Det stod en gång inne i
+      ridbanan. Kedjan däck-mot-bana plus bås-på-däck fångar det i data;
+      att båsets VOLYM inte skjuter in över sargen syns bara här.
+- [ ] Läktardäcket skär inte in i banan, och sargen går inte genom däcket.
+- [ ] Kortändans trappstegsblock möter sargkrönet utan att gå igenom det.
+- [ ] Trapporna vid C bryter glasbandet — glaset fortsätter inte bakom dem.
+- [ ] Takfallen möter långsidesväggarna utan glipa och utan dubbla ytor.
+- [ ] Sponsorskyltarna ligger utanpå panelen, inte i panelens plan.
+- [ ] Inget flimmer när kameran rör sig: golv mot sand, panel mot vägg och
+      sockelband mot sarg är de ytor som ligger närmast varandra.
+
+Ljus och material:
+
+- [ ] Ingen yta är utfrätt vit eller helsvart i default-belysningen.
+- [ ] Taket läser som konstruktion, inte som en platt skiva.
+- [ ] Sanden läser som sand, inte som blank plast.
+
+Fel om: du ser en yta blinka mellan två färger när du panorerar — då ligger
+två plan i samma höjd och en av dem ska flyttas i BYGGAREN, inte i datan.
+
+**Flytta inget i `src/site.js` för att lösa något du ser här.** Måtten är
+mätta ur källorna. Ett renderingsfel rättas i byggaren; ett mätfel rättas
+först när en ny källa visar att mätningen var fel.
+
+## Hur resultatet rapporteras tillbaka
+
+Skärmbilder från de vinklar som motsvarar `ridhus-inne-01`, `-02` och `-03`,
+plus en bild per punkt som INTE kvitteras. Skriv för varje avvikelse vad du
+såg och var — inte vad du tror orsaken är. Kvitterade punkter behöver ingen
+bild.
+
 ## Vad som INTE går att kvittera här
 
 - **Orienteringen** är `REFERENCE GAP`. Läktarens absoluta öst/väst är inte
