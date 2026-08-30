@@ -579,9 +579,32 @@ const IDENTITET = {
     spiraltrappa:{franGavelmitt:2.3, radie:0.70, steg:18},
   },
   ridhus: {
-    /* MOTSÄGELSE 1 — IMG_0183: mörkröd övre långvägg ovanför sargen,
-       med vita läkt som horisontella detaljer. */
-    ovreVagg:{overSarg:0.1, underTak:1.6, tjocklek:0.08, listar:3},
+    /* MOTSÄGELSE 1 — IMG_0183: mörkröd övre långvägg ovanför sargen, med
+       vita läkt som horisontella detaljer.
+
+       OM-AUDITENS PUNKT B, nu åtgärdad: spelet målade BÅDA långsidorna i
+       hela sin längd. `ridhus-inne-02-langsidan.jpg` visar att den
+       rostbruna panelen täcker en DEL av EN långsida — resten av samma
+       vägg är ljus. Väggen ligger på västra långsidan, mitt emot läktaren,
+       och det är på den sponsorskyltarna hänger (punkt C).
+
+       `VERIFIED`: att den är partiell, att den sitter på en sida, och att
+       skyltarna hänger på just den ytan.
+       `[ASSUMPTION]`: var den börjar och slutar. y0/y1 nedan täcker det
+       stycke där skyltarna sitter, ungefär 44 % av husets längd. */
+    ovreVagg:{overSarg:0.1, underTak:1.6, tjocklek:0.08, listar:3,
+              sida:"W", y0:6, y1:40},
+    /* OM-AUDITENS PUNKT A: läktarens front mot banan.
+
+       Spelet byggde läktaren som öppna ljusa furutrappsteg hela vägen ner.
+       Båda interiörfotona är tagna FRÅN läktaren, och båda visar samma sak
+       i förgrunden: ovansidan är ett brett plankdäck, och framsidan mot
+       banan är en HÖG, SOLID, MÖRKBETSAD BRÄDVÄGG av liggande panel. Man
+       ser inte in under den från banan.
+
+       `VERIFIED` att fronten är solid, mörk och liggande panel.
+       `[ASSUMPTION]` brädhöjd och exakt ton. */
+    laktarfront:{brada:0.22, tjocklek:0.10, farg:"#4E3626", fogFarg:"#3E2B1E"},
     /* MOTSÄGELSE 3 — IMG_0179/0183: taket har stål, kabelstegar och
        ventilation, inte bara limträbalkar. Andelarna är av husets bredd. */
     takProfiler:{andelar:[0.18,0.40,0.60,0.82], b:0.14, h:0.30, underTak:0.62},
@@ -924,12 +947,17 @@ const RIDHUSINNE = {
   klocka:{x:22.0, y:63.6, z:3.6, r:0.42},
   speglar:[ {y:19,b:3.2},{y:37,b:4.2} ],           // på västra långsidan
   skyltar:[
-    {y:53,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
-    {y:46.5,b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
-    {y:31.5,b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
-    {y:26.5,b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
+    /* OM-AUDITENS PUNKT C: skyltarna hänger på den rostbruna panelen,
+       ovanför sargen — inte utspridda längs hela väggen. De låg på y 8–53
+       och hamnade därmed delvis på den ljusa delen. Nu samlade innanför
+       IDENTITET.ridhus.ovreVagg:s stycke (y 6–40), i den ordning
+       `ridhus-inne-02-langsidan.jpg` visar dem från vänster. */
+    {y:36,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
+    {y:30,  b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
+    {y:25,  b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
+    {y:20.5,b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
     {y:15,  b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
-    {y:8,   b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
+    {y:10,  b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
   ],
   port:{x0:9.6, x1:11.6},                         // sargporten vid A (norra kortsidan)
   /* GRINDEN mot hästgången, i sargens östra långsida. Den måste finnas: annars

@@ -1325,6 +1325,15 @@ return {
 				underTak = 1.6,
 				tjocklek = 0.08,
 				listar = 3,
+				sida = "W",
+				y0 = 6,
+				y1 = 40,
+			},
+			laktarfront = {
+				brada = 0.22,
+				tjocklek = 0.1,
+				farg = Color3.fromRGB(78, 54, 38),
+				fogFarg = "#3E2B1E",
 			},
 			takProfiler = {
 				andelar = {

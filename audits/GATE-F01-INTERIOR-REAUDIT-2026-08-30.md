@@ -86,10 +86,35 @@ men deras läge är inte kopplat till väggens utbredning.
 | **C har en cykel** | `-01`, bredvid C på sargen | Redan "ur foto" — **bekräftad igen** |
 | Sargen är vit/gräddvit med **svart sockelband** | alla tre | **VERIFIED** |
 
-## Vad som INTE är gjort
+## Vad som ÄR gjort sedan om-auditen skrevs
 
-Den här filen är **om-auditen**, alltså issue #23 punkt 5. Rättningarna av
-punkt A, B och C är **inte** gjorda: de ändrar läktarens och väggens geometri,
+`28a768f` och framåt:
+
+- **Punkt A — läktarens front.** Läktaren byggde öppna ljusa furutrappsteg
+  hela vägen ner. Båda interiörfotona är tagna FRÅN läktaren och visar samma
+  sak i förgrunden: ett brett plankdäck upptill och en **hög, solid,
+  mörkbetsad brädvägg av liggande panel** mot banan. Fronten finns nu i
+  `IDENTITET.ridhus.laktarfront` och byggs av webben. `VERIFIED` att den är
+  solid, mörk och liggande; `[ASSUMPTION]` brädhöjd och ton.
+
+- **Punkt B — den mörkröda väggens utbredning.** Spelet målade BÅDA
+  långsidorna i hela sin längd. Panelen ligger nu på **en** långsida (väster,
+  mitt emot läktaren) och över **ett stycke** av den,
+  `IDENTITET.ridhus.ovreVagg.sida/y0/y1`. `VERIFIED` att den är partiell och
+  sitter på en sida; `[ASSUMPTION]` var den börjar och slutar.
+
+- **Punkt C — sponsorskyltarna.** De låg utspridda på y 8–53 och hamnade
+  därmed delvis på den ljusa delen av väggen. Nu samlade innanför panelens
+  stycke, i den ordning `-02` visar dem.
+
+`[REFERENCE GAP]` Läktarens exakta utbredning längs långsidan, och
+trappblocket vid kortändan under glasrummen som `-01` visar, är inte
+måttsatta. Fronten är rättad; utbredningen är det inte.
+
+## Vad som fortfarande INTE är gjort
+
+Den här filen var från början **om-auditen**, alltså issue #23 punkt 5.
+Punkt A, B och C är nu åtgärdade — se avsnittet ovan. Kvar: de ändrar läktarens och väggens geometri,
 och den geometrin ligger i den delade datan som båda plattformarna läser.
 Att ändra den är ett eget arbete, och det ska göras med samma kedja som
 resten — `src/site.js` → webben och exporten → Roblox.

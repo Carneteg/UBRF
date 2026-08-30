@@ -1052,14 +1052,15 @@ function v3dRidhus(lagg,opp){
   {const pan=new Bygge();
    const O=IDENTITET.ridhus.ovreVagg;
    const y0=R.sargH+O.overSarg, y1=R.tak-O.underTak, mitt=(y0+y1)/2;
-   for(const [x,vand] of [[0.16,1],[R.bredd-0.16,-1]]){
-     pan.lada(O.tjocklek,y1-y0,R.langd-1,R.panel,
-       M4.translation(x,mitt,R.langd/2));
-     for(let i=0;i<O.listar;i++){
-       const yy=y0+0.25+(y1-y0-0.5)*(O.listar>1?i/(O.listar-1):0.5);
-       pan.lada(0.10,0.07,R.langd-1,R.panelList,
-         M4.translation(x+vand*0.02,yy,R.langd/2));
-     }
+   /* Bara EN långsida och bara över sitt stycke — se IDENTITET.ridhus.ovreVagg.
+      Förut målades båda långsidorna i hela sin längd, vilket fotot motsäger. */
+   {const x=(O.sida==="W") ? 0.16 : R.bredd-0.16, vand=(O.sida==="W")?1:-1;
+    const L=O.y1-O.y0, Lm=(O.y0+O.y1)/2;
+    pan.lada(O.tjocklek,y1-y0,L,R.panel,M4.translation(x,mitt,Lm));
+    for(let i=0;i<O.listar;i++){
+      const yy=y0+0.25+(y1-y0-0.5)*(O.listar>1?i/(O.listar-1):0.5);
+      pan.lada(0.10,0.07,L,R.panelList,M4.translation(x+vand*0.02,yy,Lm));
+    }
    }
    lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */
@@ -1079,6 +1080,17 @@ function v3dRidhus(lagg,opp){
     for(let z=L.y0;z<=L.y1;z+=2.5)                                        // stommen
       lak.lada(0.10,y,0.10,"#A98F68",M4.translation(x-L.stegD/2+0.08,y/2,z));
   }
+  /* Fronten mot banan: solid, mörkbetsad liggande panel upp till däcket.
+     Både interiörfotona är tagna från läktaren och visar just den här
+     väggen i förgrunden — inte öppna trappsteg. */
+  {const F=IDENTITET.ridhus.laktarfront, H=L.steg*L.stegH;
+   for(let y=0;y<H-0.01;y+=F.brada){
+     const h=Math.min(F.brada,H-y);
+     lak.lada(F.tjocklek,h*0.94,LL,F.farg,
+       M4.translation(L.x0-F.tjocklek/2,y+h/2,Lm));
+   }
+   lak.lada(F.tjocklek+0.06,0.07,LL,F.fogFarg,
+     M4.translation(L.x0-F.tjocklek/2,H,Lm));}
   {const xt=L.x0+L.steg*L.stegD;                    // översta däcket och räckesbalk
    lak.lada(0.9,0.09,LL,"#D8C7A4",M4.translation(xt+0.4,L.steg*L.stegH,Lm));
    for(let z=L.y0;z<=L.y1;z+=2.5)
