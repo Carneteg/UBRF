@@ -1156,11 +1156,24 @@ const RIDHUSINNE = {
      origo y = 41,82. */
   bredd:RIDHUS_BREDD, langd:RIDHUS_LANGD, tak:6.2, entre:13,
   bana:{x:0.6, y:2, w:20, h:60}, sargH:1.35,
-  vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#5E4A36", gangFarg:"#8C8880",
+  vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#6F5D4D", gangFarg:"#8C8880",
   /* MOTSÄGELSE 1 ur DRIVE-SOURCE-INDEX (`IMG_0183`): långsidans övre
      väggyta är MÖRKRÖD/MAROON med horisontella detaljer, inte brun
      träpanel. Rättad 2026-08-30. Listen är den horisontella detaljen. */
-  panel:"#5E2C33", panelList:"#E8DFCE",
+  /* PANELEN OMMÄTT ur `ridhus-inne-02` med färgsökning i det stycke där den
+     syns, och masken visuellt kontrollerad som grön overlay: den täcker
+     väggen mellan de vita banden och utesluter sponsorskyltarna.
+
+       mätt  #765B59   44 400 px
+
+     Stod som `#5E2C33`, ett mättat rödlila. Fotot visar en betydligt
+     dovare, gråbrun-mauve ton. Beskrivningen "mörkröd/maroon" i det gamla
+     textderivatet drog åt fel håll — bilden är facit, och den är dovare än
+     ordet.
+
+     Sanden ommätt i `-03`: #6F5D4D mot spelets #5E4A36, alltså ljusare och
+     gråare än spelet hade den. */
+  panel:"#765B59", panelList:"#E8DFCE",
   /* Läktaren längs östväggen. GAPET är påtvingat av verifierad topologi:
      satellitbilden lägger hästgången centralt, på lokala y 45,3–48,8, och
      där kan läktaren inte vara obruten — man ska kunna leda hästen igenom.

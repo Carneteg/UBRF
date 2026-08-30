@@ -377,3 +377,55 @@ spegling är därmed en dataändring även för väggdekoren.
    elefant är sämre än ingen fläck. Står som verifierat men inte byggt, inte
    som `REFERENCE GAP`: källan är tydlig, det är renderingsskalan som är
    gränsen.
+
+---
+
+# Punkt 7 · ljus- och materialkaraktär, första passet
+
+Ytorna mätta i fotona med beskär-titta-mät, och renderingen mätt mot dem.
+Fyra av sju första prov träffade fel yta och förkastades — värdena nedan är
+bara de visuellt kontrollerade.
+
+| yta | foto | render före | render efter | utfall |
+|---|---|---|---|---|
+| bansand | `#6F5D4D` (`-03`) | `#976930` | `#746049` | `RESOLVED` |
+| rostbrun panel | `#765B59` (`-02`, färgmask) | `#83512C`* | `#745348` | `RESOLVED` |
+| sargens vita bräda | `#E3E0D1` (`-03`) | — | — | spelet har `#E9E5DC`, inom mätfelet |
+| läktarfronten | `#4C3B2D` (`-01`) | — | — | spelet har `#4E3626`, inom mätfelet |
+| läktardäckets plank | `#A69279` (`-01`) | — | — | spelet har `#C9BCA4`, ljusare |
+
+\* kontaminerat av sanden i samma mask; panelens egna region gav `#745348`.
+
+## Två fynd
+
+**1. Panelen var för mättad.** Stod som `#5E2C33`, ett mättat rödlila, ur ett
+gammalt textderivat som kallade den "mörkröd/maroon". Färgmask på `-02`, med
+masken visuellt kontrollerad som grön overlay över just den väggen och
+utanför sponsorskyltarna, ger `#765B59` — en betydligt dovare gråbrun-mauve.
+**Bilden är facit, och den är dovare än ordet.**
+
+**2. Sanden lästes aldrig ur datan.** Banans underlag ritades med ett
+LITERALT `"#9C8663"` i renderaren och läste inte `RIDHUSINNE.sandFarg` alls.
+Samma dolda literal som gårdsplanen, silon och sponsorskyltarna fällts på:
+ändrar man datan händer ingenting. Den läser nu datan.
+
+## Om den kanalvisa kompensationen
+
+Sanden kompenseras KANALVIS, och det är avsiktligt trots att jag två gånger
+förkastat kanalvis kompensation i det här arbetet. Skillnaden:
+
+- det som sprängde boxfronternas reglar och ridhusväggen var kanalvis
+  invertering av LJUSET på ytor med varierande infallsvinkel — highlights
+  klipper och tonen spårar ur,
+- sanden är en plan, jämnt belyst golvyta där en varm TEXTUR är den
+  avvikande faktorn. Samma fall som stallets marksten, där kanalvis
+  kompensation konvergerade på några enheter.
+
+Kvoterna är mätta på skärmdump, inte gissade, och resultatet är verifierat:
+`#746049` mot målet `#6F5D4D`.
+
+## Kvar i punkt 7
+
+- Läktardäckets plank renderas ljusare än fotot; inte åtgärdat.
+- Kortändans bänkar är inte mätta — mina prov träffade sarg och sand.
+- Takets ljussättning är inte mätt alls.

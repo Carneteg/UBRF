@@ -1142,10 +1142,28 @@ function v3dRidhus(lagg,opp){
   const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
   lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
     M4.translation(R.bredd/2,0.01,R.langd/2),8),T.grus);
-  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula
-     sand. Tonen tas ner på plats i stället för att göra en egen textur. */
-  lagg(new Bygge().yta(ba.w,ba.h,"#9C8663",
-    M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);
+  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula sand.
+
+     Tonen låg som ett LITERALT tal här ("#9C8663") och läste alltså inte
+     RIDHUSINNE.sandFarg alls. Samma dolda literal som gårdsplanen, silon och
+     sponsorskyltarna fällts på: ändrar man datan händer ingenting.
+
+     Mätt: literalen renderades #976930 mot fotots #6F5D4D (`-03`) — mycket
+     ljusare och kraftigt orangare, blått nedtryckt från 0x4D till 0x30. Det
+     är T.sand-texturens varma ton, inte ljuset.
+
+     Kompensationen är KANALVIS, och det är avsiktligt: det som sprängde
+     boxfronternas reglar och ridhusväggen var kanalvis invertering av
+     LJUSET på ytor med varierande infallsvinkel. Det här är en plan,
+     jämnt belyst golvyta där texturen är den varma faktorn — samma fall som
+     stallets marksten, där kanalvis kompensation konvergerade på några
+     enheter. Kvoterna är mätta, inte gissade. */
+  {const SK=[0.968,0.784,0.485];
+   const sandBas="#"+[1,3,5].map((i,k)=>
+     Math.min(255,Math.round(parseInt(R.sandFarg.substr(i,2),16)/SK[k]))
+       .toString(16).padStart(2,"0")).join("");
+   lagg(new Bygge().yta(ba.w,ba.h,sandBas,
+     M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);}
   /* Sargen med svart sockel — porten vid A lämnas öppen. */
   const sarg=new Bygge();
   const bit=(x0,z0,x1,z1)=>{
