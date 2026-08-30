@@ -151,6 +151,7 @@ const ut = {
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, trappa: RIDHUSINNE.trappa,
     klocka: RIDHUSINNE.klocka, skyltar: RIDHUSINNE.skyltar,
+    basTak: RIDHUSINNE.basTak,
     dorrar: RIDHUSINNE.dorrar,
   },
 };

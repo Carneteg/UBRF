@@ -1225,12 +1225,30 @@ const RIDHUSINNE = {
      lägen och glasbandets höjd är valda så att topologin blir rätt. Det är
      precis vad Review 05 ber om — exakta mått får vara gap, känd topologi
      får inte förbli fel. */
+  /* GLASBANDET är INTE en obruten remsa. `ridhus-inne-01`, beskuren över
+     kortändan: glaset går i BÅS med mörka träkarmar och poster, och det
+     BRYTS av de två trapporna — deras vita snedställda barriärer skjuter
+     upp genom bandet, och mellan dem sitter den vita väggen med
+     stjärndekoren och klockan.
+
+     Att bygga bandet som en enda låda ger "generiska upprepade fönster",
+     vilket är precis vad ordern säger att det inte ska vara. Det byggs nu i
+     SEGMENT mellan trapporna, ur samma `trappor`-tal som trapporna själva
+     använder — så att de inte kan glida isär.
+
+     `VERIFIED`: att glaset går i bås med mörka karmar, och att trapporna
+     bryter bandet. `[REFERENCE GAP]`: båsens exakta delning. */
   kortanda:{y0:0.4, y1:4.8, x0:1.8, x1:23.2, steg:4, stegH:0.30, stegD:1.05,
-            trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:0.35},
+            trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:0.35,
+            glasPost:1.9, glasKarm:"#4A3B2E"},
   /* MOTSÄGELSE 4 (`IMG_0198`): båset ligger vid dressyrbokstaven E, är
      mörkt trä, och nås av en trappa med träräcken. Över öppningen sitter
      en grön exit-skylt. E ligger vid husets y = 32 sedan bokstäverna
      följer sargporten (se DRESSYRBOKSTAVER i data.js). */
+  /* Båsets SADELTAK med utskjutande takfot — `ridhus-inne-03` visar en liten
+     stuga med brutet tak, inte en låda med lock. Silhuetten är det man
+     känner igen båset på. `[ASSUMPTION]`: resningen. */
+  basTak:{resning:0.42, utsprang:0.18},
   domarbas:{x:23.2, y:32, b:2.0, h:2.3, trappa:true, exit:true},
   /* Hindren som står framme mellan lektionerna, ur interiörfotona:
      vita stöd, blå-vita och röd-vita bommar, en bom på marken och

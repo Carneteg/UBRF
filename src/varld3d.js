@@ -1324,8 +1324,14 @@ function v3dRidhus(lagg,opp){
    lak.lada(D.b+1.6,golv,D.b+1.2,"#8A6A44",M4.translation(D.x,golv/2,dy));
    /* Själva båset i mörkt trä. */
    lak.lada(D.b,D.h,D.b,"#4A3524",M4.translation(D.x,golv+D.h/2,dy));
-   lak.lada(D.b+0.24,0.13,D.b+0.24,"#3A2A1C",
-     M4.translation(D.x,golv+D.h+0.06,dy));
+   /* Sadeltak med utskjutande takfot — silhuetten man känner igen båset på. */
+   {const BT=R.basTak||{resning:0.42,utsprang:0.18};
+    const bb=D.b+BT.utsprang*2, lut=Math.atan2(BT.resning,bb/2);
+    const sl=Math.hypot(bb/2,BT.resning);
+    for(const sida of [-1,1])
+      lak.lada(sl,0.09,bb,"#3A2A1C",
+        M4.mul(M4.translation(D.x+sida*bb/4,golv+D.h+BT.resning/2,dy),
+               M4.rotZ(-sida*lut)));}
    /* Öppningen mot banan, så att båset inte blir en sluten låda. */
    lak.lada(0.06,D.h*0.62,D.b*0.62,"#1C1A18",
      M4.translation(D.x-D.b/2-0.02,golv+D.h*0.52,dy));
@@ -1403,12 +1409,26 @@ function v3dRidhus(lagg,opp){
     }
     /* Glasbandet ovanför blocket: mörka träkarmar, ljus ruta. */
     const gz=H+K.glasOver;
-    gl.panel(br,K.glasH,"#C6D8E0",M4.translation(xm,gz+K.glasH/2,K.y0));
-    for(const yy of [gz,gz+K.glasH])
-      gl.lada(br,0.12,0.12,"#5A4232",M4.translation(xm,yy,K.y0));
-    for(let i=0;i<=6;i++)
-      gl.lada(0.11,K.glasH,0.12,"#5A4232",
-        M4.translation(K.x0+br*i/6,gz+K.glasH/2,K.y0));
+    /* Bandet BRYTS av trapporna — se noten i site.js. Segmenten räknas ur
+       samma `trappor`-tal som trapporna byggs av, så de inte kan glida
+       isär. Mellan dem står den vita väggen med klockan. */
+    const brytn=[...(K.trappor||[])].sort((a,b)=>a-b);
+    const seg=[]; let sx=K.x0;
+    for(const t of brytn){
+      if(t-K.trappB/2-sx>0.3) seg.push([sx,t-K.trappB/2]);
+      sx=Math.max(sx,t+K.trappB/2);
+    }
+    if(K.x1-sx>0.3) seg.push([sx,K.x1]);
+    for(const [a,bx] of seg){
+      const w=bx-a, m=(a+bx)/2;
+      gl.panel(w,K.glasH,"#C6D8E0",M4.translation(m,gz+K.glasH/2,K.y0));
+      for(const yy of [gz,gz+K.glasH])
+        gl.lada(w,0.12,0.12,K.glasKarm,M4.translation(m,yy,K.y0));
+      const n=Math.max(1,Math.round(w/(K.glasPost||1.9)));
+      for(let i=0;i<=n;i++)
+        gl.lada(0.11,K.glasH,0.12,K.glasKarm,
+          M4.translation(a+w*i/n,gz+K.glasH/2,K.y0));
+    }
     lagg(gl,null);
    }}
   /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.

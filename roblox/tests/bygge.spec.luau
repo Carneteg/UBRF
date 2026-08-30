@@ -403,12 +403,31 @@ do
 	check("kortändan har två trappor upp",
 		raknaNamn("Kortändans trappa") == #K.trappor,
 		raknaNamn("Kortändans trappa") .. " trappor")
-	check("glasbandet ovanför blocket byggdes",
-		raknaNamn("Kortändans glasband") == 1)
+	--[[ Glasbandet BRYTS av trapporna — en obruten remsa är den "generiska
+		upprepade fönsterrad" som ordern uttryckligen inte vill ha. Antalet
+		segment räknas ur samma `trappor`-tal som bygget använder, så testet
+		mäter regeln och inte ett tal. ]]
+	local vantade = #K.trappor + 1
+	check("glasbandet byggdes i segment som bryts av trapporna",
+		raknaNamn("Kortändans glasband") == vantade
+			and raknaNamn("Glaspost") > 0,
+		string.format("%d segment (väntat %d), %d poster",
+			raknaNamn("Kortändans glasband"), vantade, raknaNamn("Glaspost")))
 end
 
-check("domarbåset och exit-skylten byggdes",
-	raknaNamn("Domarbås") == 1 and raknaNamn("Exit-skylt") == 1)
+--[[ Båset byggdes här som EN slät låda medan webben haft nivå, trappa,
+	räcken och tak sedan Review 03 — en Roblox-only brist på just det som gör
+	båset igenkännbart i ridhus-inne-03. Testet mäter delarna, inte att något
+	som heter "Domarbås" finns. ]]
+check("domarbåset byggdes med nivå, tak, trappa och räcken",
+	raknaNamn("Domarbåsets nivå") == 1 and raknaNamn("Domarbåsets tak") == 2
+		and raknaNamn("Domarbåsets trappsteg") > 0
+		and raknaNamn("Domarbåsets räcke") > 0
+		and raknaNamn("Exit-skylt") == 1,
+	string.format("nivå %d, takfall %d, steg %d, räcken %d, skylt %d",
+		raknaNamn("Domarbåsets nivå"), raknaNamn("Domarbåsets tak"),
+		raknaNamn("Domarbåsets trappsteg"), raknaNamn("Domarbåsets räcke"),
+		raknaNamn("Exit-skylt")))
 
 check("klockan byggdes", raknaNamn("Klockan") == 1)
 

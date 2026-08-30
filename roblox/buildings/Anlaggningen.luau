@@ -761,10 +761,39 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				K.trappB, K.steg * K.stegH, K.y1 - K.y0,
 				INRE.laktare, Enum.Material.WoodPlanks)
 		end
-		local glas = BK.box(model, base, "Kortändans glasband",
-			o.x + K.x0, K.steg * K.stegH + K.glasOver, o.y + K.y0 - 0.12,
-			br, K.glasH, 0.12, INRE.glas, Enum.Material.Glass)
-		glas.Transparency = 0.55
+		--[[ Glasbandet är INTE en obruten remsa. `ridhus-inne-01` visar att
+			de två trapporna bryter det: deras vita snedställda barriärer
+			skjuter upp genom bandet, och mellan dem står den vita väggen
+			med klockan. Segmenten räknas ur samma `trappor`-tal som
+			trapporna byggs av, så de inte kan glida isär. ]]
+		local gz = K.steg * K.stegH + K.glasOver
+		local brytn = {}
+		for _, t in ipairs(K.trappor or {}) do table.insert(brytn, t) end
+		table.sort(brytn)
+		local seg, sx = {}, K.x0
+		for _, t in ipairs(brytn) do
+			if t - K.trappB / 2 - sx > 0.3 then
+				table.insert(seg, { sx, t - K.trappB / 2 })
+			end
+			if t + K.trappB / 2 > sx then sx = t + K.trappB / 2 end
+		end
+		if K.x1 - sx > 0.3 then table.insert(seg, { sx, K.x1 }) end
+		for i, sg in ipairs(seg) do
+			local w = sg[2] - sg[1]
+			local glas = BK.box(model, base, "Kortändans glasband " .. i,
+				o.x + sg[1], gz, o.y + K.y0 - 0.12, w, K.glasH, 0.12,
+				INRE.glas, Enum.Material.Glass)
+			glas.Transparency = 0.55
+			glas.CanCollide = false
+			local n = math.max(1, math.round(w / (K.glasPost or 1.9)))
+			for j = 0, n do
+				BK.box(model, base, "Glaspost",
+					o.x + sg[1] + w * j / n - 0.055, gz, o.y + K.y0 - 0.14,
+					0.11, K.glasH, 0.14,
+					K.glasKarm or INRE.laktare,
+					Enum.Material.Wood).CanCollide = false
+			end
+		end
 	end
 
 	--[[ Fönsterbandet mellan panelen och takfoten, `KNOWN MISMATCH B`.
@@ -791,9 +820,65 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	end
 
 	-- Domarbåset vid E, med exit-skylten över öppningen.
+	--[[ Domarbåset vid E. Roblox byggde det som EN slät låda — ingen
+		upphöjd nivå, ingen trappa, inga räcken, inget tak. Webben har haft
+		allt det sedan Review 03, så det var en Roblox-only brist på just
+		det som gör båset igenkännbart. `ridhus-inne-03`, beskuren: en liten
+		mörk trästuga med SADELTAK och utskjutande takfot, på en upphöjd
+		nivå, med en trappa som har räcke på BÅDA sidor. ]]
 	local D = R.domarbas
-	BK.box(model, base, "Domarbås", o.x + D.x, L.dackZ, o.y + D.y - D.b / 2,
-		1.6, D.h, D.b, INRE.laktare, Enum.Material.WoodPlanks)
+	local golv = L.dackZ
+	BK.box(model, base, "Domarbåsets nivå", o.x + D.x - (D.b + 1.6) / 2, 0,
+		o.y + D.y - (D.b + 1.2) / 2, D.b + 1.6, golv, D.b + 1.2,
+		INRE.laktare, Enum.Material.WoodPlanks)
+	BK.box(model, base, "Domarbås", o.x + D.x - D.b / 2, golv,
+		o.y + D.y - D.b / 2, D.b, D.h, D.b,
+		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks)
+	-- Öppningen mot banan, så att båset inte blir en sluten låda.
+	BK.box(model, base, "Domarbåsets öppning", o.x + D.x - D.b / 2 - 0.06,
+		golv + D.h * 0.22, o.y + D.y - D.b * 0.31, 0.06, D.h * 0.62,
+		D.b * 0.62, Color3.fromRGB(28, 26, 24),
+		Enum.Material.SmoothPlastic).CanCollide = false
+	-- Sadeltaket, silhuetten man känner igen båset på.
+	local BT = R.basTak
+	if BT then
+		local bb = D.b + BT.utsprang * 2
+		for _, sida in ipairs({ -1, 1 }) do
+			local tak = Instance.new("Part")
+			tak.Name = "Domarbåsets tak"; tak.Anchored = true
+			tak.CanCollide = false
+			tak.Color = Color3.fromRGB(58, 42, 28)
+			tak.Material = Enum.Material.WoodPlanks
+			local sl = math.sqrt((bb / 2) ^ 2 + BT.resning ^ 2)
+			tak.Size = Vector3.new(BK.M * sl, BK.M * 0.09, BK.M * bb)
+			tak.CFrame = base
+				* CFrame.new(BK.M * (o.x + D.x + sida * bb / 4),
+					BK.M * (golv + D.h + BT.resning / 2),
+					BK.M * (o.y + D.y))
+				* CFrame.Angles(0, 0, -sida * math.atan2(BT.resning, bb / 2))
+			tak.Parent = model
+		end
+	end
+	-- Trappan upp, med räcke på BÅDA sidor.
+	if D.trappa then
+		local st, sd = 5, 0.30
+		local sh = golv / st
+		local z0 = D.y + D.b / 2 + 0.35
+		for i = 0, st - 1 do
+			BK.box(model, base, "Domarbåsets trappsteg",
+				o.x + D.x - 0.5, sh * i, o.y + z0 + sd * i, 1.0, sh + 0.02, sd,
+				INRE.laktare, Enum.Material.WoodPlanks)
+		end
+		for _, sx in ipairs({ -0.52, 0.52 }) do
+			for i = 0, st - 1, 2 do
+				BK.box(model, base, "Domarbåsets räcke",
+					o.x + D.x + sx - 0.035, sh * i, o.y + z0 + sd * i,
+					0.07, golv * 0.55 + 0.32, 0.07,
+					Color3.fromRGB(138, 106, 68),
+					Enum.Material.Wood).CanCollide = false
+			end
+		end
+	end
 	if D.exit then
 		local skylt = BK.box(model, base, "Exit-skylt", o.x + D.x - 0.1,
 			D.h - 0.35, o.y + D.y - 0.25, 0.06, 0.22, 0.5,

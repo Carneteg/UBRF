@@ -52,6 +52,9 @@ De två strukturerna hade blandats ihop.
 | Trappstegsblock i ljust trä | `VERIFIED` | r01 | `kortanda` |
 | Två trappor upp | `VERIFIED` | r01 | byggs |
 | Glasat band av rum ovanför, mörka karmar | `VERIFIED` | r01 | byggs |
+| Bandet BRYTS av de två trapporna | `VERIFIED` | r01, beskuren | rättat — segment ur `trappor` |
+| Glaset går i bås med poster, inte som en remsa | `VERIFIED` | r01 | `glasPost` |
+| Båsens exakta delning | `[REFERENCE GAP]` | — | 1,9 m vald |
 | Rund vit klocka på den vita väggen | `VERIFIED` | r01 | byggs |
 | Vit stående brädvägg med stjärndekor | `VERIFIED` | r01 | `[REFERENCE GAP]` — dekoren ritas inte |
 | Alla meter | `[REFERENCE GAP]` | — | topologi rätt, mått valda |
@@ -91,7 +94,11 @@ De två strukturerna hade blandats ihop.
 
 | fakta | klass | källa | spelet |
 |---|---|---|---|
-| Mörkt trä, upphöjt, trappa med räcken | `VERIFIED` | r03 | byggs |
+| Mörkt trä, upphöjt, trappa med räcken | `VERIFIED` | r03 | byggs, båda ytorna |
+| **Sadeltak med utskjutande takfot** | `VERIFIED` | r03, beskuren | rättat — `basTak` |
+| Räcke på BÅDA sidor av trappan | `VERIFIED` | r03 | byggs |
+| Roblox byggde bara en slät låda | rättat | — | nivå, tak, trappa, räcken |
+| Takets resning | `[ASSUMPTION]` | — | 0,42 m |
 | Grön exit-skylt | `VERIFIED` | r03 | byggs |
 | Sitter på läktarnivå | `DERIVED` | r03 | följer `dackZ` |
 

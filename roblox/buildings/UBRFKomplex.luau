@@ -1914,6 +1914,8 @@ return {
 			trappB = 1.2,
 			glasH = 2,
 			glasOver = 0.35,
+			glasPost = 1.9,
+			glasKarm = Color3.fromRGB(74, 59, 46),
 		},
 		domarbas = {
 			x = 23.2,
@@ -1982,6 +1984,10 @@ return {
 				bg = Color3.fromRGB(242, 237, 226),
 				y = 10.08,
 			},
+		},
+		basTak = {
+			resning = 0.42,
+			utsprang = 0.18,
 		},
 		dorrar = {
 			{
