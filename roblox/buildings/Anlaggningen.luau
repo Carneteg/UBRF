@@ -260,6 +260,128 @@ local function byggRidhusIdentitet(model: Model, base: CFrame)
 	end
 end
 
+-- Staketen runt banorna och hagarna. Sträckorna kommer ur G.staket, måtten
+-- ur G.banomrade.staket. Trästaketet har TRE reglar — mätt i
+-- references/omnejd/banan-03. Webben ritade tidigare två, och Roblox ritade
+-- inga alls: uteridbanan stod helt utan inhägnad på primärplattformen.
+--
+-- Alla sträckor i src/site.js är axelparallella, så box räcker. Skulle en
+-- diagonal sträcka läggas till måste den här funktionen byggas om.
+local STAKETFARG: { [string]: { regel: Color3, stolpe: Color3 } } = {
+	tra  = { regel = Color3.fromRGB(176, 161, 132), stolpe = Color3.fromRGB(138, 122, 94) },
+	rail = { regel = Color3.fromRGB(122, 46, 40),  stolpe = Color3.fromRGB(106, 40, 34) },
+	el   = { regel = Color3.fromRGB(140, 133, 120), stolpe = Color3.fromRGB(110, 106, 94) },
+}
+
+local function byggStaket(model: Model, base: CFrame)
+	local S = G.banomrade.staket
+	for _, st in ipairs(G.staket) do
+		local farg = STAKETFARG[st.typ] or STAKETFARG.tra
+		-- Trästaketet vid banan är inte en stapel likadana reglar: EN kraftig
+		-- toppregel, eltråd på svarta isolatorer under, och där staketet
+		-- omsluter sand en grov syll i marknivå som håller sanden. Mätt i
+		-- references/omnejd/banan-01. Rail och el är enklare.
+		local reglar, stolpH, delning, tj
+		if st.typ == "tra" then
+			reglar, stolpH, delning, tj = {}, S.stolpH, S.stolpDelning, S.stolpTvarsnitt
+		elseif st.typ == "rail" then
+			reglar, stolpH, delning, tj = { 0.38, 0.80 }, 0.85, 3.0, 0.12
+		else
+			reglar, stolpH, delning, tj = { 0.70, 1.05 }, 1.0, 6.0, 0.07
+		end
+
+		for i = 1, #st.p - 1 do
+			local a, b = st.p[i], st.p[i + 1]
+			local dx, dz = b[1] - a[1], b[2] - a[2]
+			local len = math.sqrt(dx * dx + dz * dz)
+			if len >= 0.01 then
+				local langsX = math.abs(dx) >= math.abs(dz)
+				local x0 = math.min(a[1], b[1])
+				local z0 = math.min(a[2], b[2])
+
+				-- Liggande virke: (namn, mitthöjd, höjd, djup, färg, material)
+				local liggande = {}
+				if st.typ == "tra" then
+					local T = S.toppregel
+					table.insert(liggande, { "Staketets toppregel", T.z, T.h, T.d,
+						farg.regel, Enum.Material.WoodPlanks })
+					if st.sandkant then
+						local Y = S.sandsyll
+						table.insert(liggande, { "Sandsyll", Y.z, Y.h, Y.d,
+							Color3.fromRGB(156, 138, 110), Enum.Material.Wood })
+					end
+					for _, y in ipairs(S.tradar) do
+						table.insert(liggande, { "Eltrad", y, S.tradTjocklek, S.tradTjocklek,
+							Color3.fromRGB(58, 54, 46), Enum.Material.Metal })
+					end
+				else
+					for _, y in ipairs(reglar) do
+						table.insert(liggande, { "Staketregel " .. st.typ, y, 0.10, 0.05,
+							farg.regel, Enum.Material.WoodPlanks })
+					end
+				end
+
+				for _, L in ipairs(liggande) do
+					local namn, y, hojd, djup = L[1], L[2], L[3], L[4]
+					local w = if langsX then len else djup
+					local d = if langsX then djup else len
+					local px = if langsX then x0 else x0 - djup / 2
+					local pz = if langsX then z0 - djup / 2 else z0
+					local r = BK.box(model, base, namn,
+						px, y - hojd / 2, pz, w, hojd, d, L[5], L[6])
+					r.CanCollide = false
+				end
+
+				local n = math.max(1, math.floor(len / delning + 0.5))
+				for k = 0, n do
+					local t = k / n
+					local sx = a[1] + dx * t - tj / 2
+					local sz = a[2] + dz * t - tj / 2
+					BK.box(model, base, "Staketstolpe " .. st.typ,
+						sx, 0, sz, tj, stolpH, tj,
+						farg.stolpe, Enum.Material.Wood)
+					-- De svarta isolatorerna som bär eltråden.
+					if st.typ == "tra" then
+						for _, y in ipairs(S.tradar) do
+							local iso = BK.box(model, base, "Isolator",
+								sx + (tj - S.isolatorB) / 2, y - S.isolatorH / 2,
+								sz + (tj - S.isolatorB) / 2,
+								S.isolatorB, S.isolatorH, S.isolatorB,
+								Color3.fromRGB(38, 36, 31), Enum.Material.SmoothPlastic)
+							iso.CanCollide = false
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+-- Belysningsmasterna runt uteridbanan. Dubbel armatur på en tvärarm — se den
+-- närmaste masten i references/omnejd/banan-03. Lägena står i G.props.
+local function byggMaster(model: Model, base: CFrame)
+	local MA = G.banomrade.mast
+	for _, p in ipairs(G.props) do
+		if p.typ == "mast" then
+			local x, z = p.pos[1], p.pos[2]
+			local d = MA.stamOver * 2
+			BK.box(model, base, "Belysningsmast", x - d / 2, 0, z - d / 2,
+				d, MA.hojd, d, Color3.fromRGB(140, 143, 146), Enum.Material.Metal)
+			local arm = BK.box(model, base, "Mastarm", x - MA.armB / 2, MA.hojd,
+				z - MA.armD / 2, MA.armB, MA.armH, MA.armD,
+				Color3.fromRGB(140, 143, 146), Enum.Material.Metal)
+			arm.CanCollide = false
+			for _, dx in ipairs({ -MA.lampDelning / 2, MA.lampDelning / 2 }) do
+				local lampa = BK.box(model, base, "Mastarmatur",
+					x + dx - MA.lampB / 2, MA.hojd + MA.armH - MA.lampH,
+					z - MA.lampD / 2, MA.lampB, MA.lampH, MA.lampD,
+					Color3.fromRGB(58, 61, 64), Enum.Material.Metal)
+				lampa.CanCollide = false
+			end
+		end
+	end
+end
+
 local function byggDorrmarkorer(model: Model, base: CFrame)
 	for _, d in ipairs(G.dorrar) do
 		local p = BK.box(model, base, "Dörr " .. d.id,
@@ -452,6 +574,8 @@ byggStallInre(model, base)
 byggRidhusInre(model, base)
 byggStallIdentitet(model, base)
 byggRidhusIdentitet(model, base)
+byggStaket(model, base)
+byggMaster(model, base)
 byggDorrmarkorer(model, base)
 
 print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d objekt")

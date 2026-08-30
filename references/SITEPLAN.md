@@ -77,15 +77,35 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Hage Ö2 | 178 / 97 | — | 28 × 20 | |
 | Uteridbanan (dressyr) | 176 / 119 | långsidan nord–syd | 20 × 40 | Norr om hagarna |
 | Paddocken bredvid | 156 / 135 | — | 18 × 22 | Norr om stallet |
-| Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
+| Domarkuren | 183,75 / 159,8 | — | 4,5 × 3,5 | **Utanför** banans norra kortsida, mot trädridån. Låg tidigare 184/148 — det är helt innanför banans staket. `[ASSUMPTION]` vilken kortsida |
 | Fodersilon | 166 / 60 | — | — | Vid stallets **södra** gavel, syns i satellitbilden |
 | **Hästgången** | **143 / 89,3** | nock öst–väst | **11 × 3,5** | Binder ihop ridhusets östvägg (x = 143) med stallets västvägg (x = 154). Takfot 3,2 m, nock 4,0 m. Scenövergång åt båda hållen: stallets tvärkorridor ↔ ridhusets bana genom läktargapet. **Den centrala placeringen är `[VERIFIED]`** — satellitbild, se `references/plans/SATELLIT-HASTGANG-2026-08-30.md`, och den ligger i liv med stallets tvärkorridor (mitt y 91,05 mot husens gemensamma mitt y 92,0). Måtten är `[ASSUMPTION]`: bilden ger topologi, inte meter. Låg tidigare på y 106 — det var ett antagande som satellitbilden underkände. |
 | Låga längan i söder | 147 / 59 | nock öst–väst | 7 × 6 | `[ASSUMPTION]` Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. Smalnad från 10 m till 7 m 2026-08-30 så att den södra gårdsytan fortfarande når gårdsplanen |
 | Röda stugan | 94 / 140 | nock öst–väst | 6,5 × 4,5 | Vid infarten från Björklidsvägen `[antagande]` |
 | Spelarens startpunkt | 146 / 136, blickriktning söder | — | — | På grusplanen: ridhuset till höger, stallet till vänster |
 
-Marknivå: plant över hela anläggningen. Den slänt upp mot banorna som fanns i den
-första versionen är borttagen — satellitbilden visar ingen höjdskillnad.
+Marknivå: plant över hela anläggningen.
+
+> `[KNOWN MISMATCH]` **Det stämmer inte, och slänten borde inte ha tagits bort.**
+>
+> En slänt upp mot banorna fanns i den första versionen och togs bort med
+> motiveringen att satellitbilden inte visade någon höjdskillnad. En
+> ovanifrånbild är fel instrument för att mäta höjd, och slutsatsen var
+> därför inte bärig.
+>
+> `references/omnejd/banan-01`, `-02` och `-03` visar alla tre samma sak från
+> marknivå: en **grässlänt** upp från grusvägen till banans nivå. Banans
+> sandyta ligger tydligt ovanför omgivande mark.
+>
+> Spelet bygger fortfarande tomten platt. Det är en medveten men **oavgjord**
+> avvikelse, inte ett beslut: höjden är inte mätt någonstans, och ingen av
+> bilderna har en skala som når. En höjdmodell är dessutom ett ingrepp i både
+> `src/world.js` (gång och kollision) och `src/varld3d.js` (mark ritas som
+> plana lager på 0,008 m isär) och i Roblox-byggaren, alltså långt utanför en
+> rekvisitaändring.
+>
+> Vad som behövs för att stänga den: **ett mätt höjdmått** mellan grusvägen
+> och banans yta, och Tobias beslut om terräng är värt ingreppet.
 
 Väderstreck i spelet: solens riktning ligger i `LJUS.dag.sol` i `src/ljus.js`.
 

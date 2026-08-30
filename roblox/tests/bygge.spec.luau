@@ -368,6 +368,101 @@ do
 	end
 end
 
+print("\nBanområdet — staket och belysning")
+
+-- Uteridbanan hade inget staket alls i Roblox: webben ritade två reglar, och
+-- primärplattformen ritade ingenting. Fotona i references/omnejd/banan-01..03
+-- visar TRE reglar. Mät att det faktiskt kom ut åt båda hållen.
+do
+	local S = UBRFKomplex.banomrade.staket
+
+	-- Uteridbanans västra långsida går x=176 från y=119 till y=159.
+	-- Räkna det liggande virket längs den linjen och kontrollera att det
+	-- är EN toppregel, EN sandsyll och eltrådarna — inte en stapel reglar.
+	local function langsVastraLangsidan(namn)
+		local ut = {}
+		for _, d in ipairs(delar) do
+			if d.Name == namn then
+				local f = fot(d)
+				if math.abs(f.x + f.w / 2 - 176) < 0.2 and f.h > 20 then
+					table.insert(ut, f.z0 + (f.z1 - f.z0) / 2)
+				end
+			end
+		end
+		return ut
+	end
+
+	local topp = langsVastraLangsidan("Staketets toppregel")
+	check("uteridbanan har en toppregel", #topp == 1, #topp .. " funna")
+	check("toppregeln sitter på rätt höjd",
+		#topp == 1 and math.abs(topp[1] - S.toppregel.z) < 0.02,
+		#topp == 1 and string.format("%.2f m", topp[1]) or "kunde inte mätas")
+
+	local syll = langsVastraLangsidan("Sandsyll")
+	check("uteridbanan har sandsyllen som håller sanden", #syll == 1,
+		#syll .. " funna")
+
+	local trad = langsVastraLangsidan("Eltrad")
+	check("eltrådarna följer BANOMRADE", #trad == #S.tradar,
+		#trad .. " trådar av " .. #S.tradar)
+
+	-- Hagarna omsluter gräs, inte sand, och ska INTE ha någon syll.
+	-- Hage Ö1 går x=178 från y=65 till y=93.
+	local hagsyll = 0
+	for _, d in ipairs(delar) do
+		if d.Name == "Sandsyll" then
+			local f = fot(d)
+			if math.abs(f.x + f.w / 2 - 178) < 0.2 then hagsyll += 1 end
+		end
+	end
+	check("hagarna har ingen sandsyll", hagsyll == 0, hagsyll .. " funna")
+
+	local stolpar = raknaNamn("Staketstolpe")
+	check("staketet fick stolpar", stolpar > 40, stolpar .. " stolpar")
+	check("isolatorerna sitter på stolparna",
+		raknaNamn("Isolator") > 0, raknaNamn("Isolator") .. " isolatorer")
+end
+
+-- Belysningsmasterna: dubbel armatur på tvärarm, en mast i vart och ett av
+-- uteridbanans fyra hörn.
+do
+	local MA = UBRFKomplex.banomrade.mast
+	local master, armaturer = raknaNamn("Belysningsmast"), raknaNamn("Mastarmatur")
+	local i_props = 0
+	for _, pr in ipairs(UBRFKomplex.props) do
+		if pr.typ == "mast" then i_props += 1 end
+	end
+	check("varje mast i datan blev en mast i modellen",
+		master == i_props, master .. " byggda av " .. i_props .. " i datan")
+	check("varje mast har två armaturer", armaturer == master * 2,
+		armaturer .. " armaturer på " .. master .. " master")
+
+	-- Hörnen på uteridbanan (x 176..196, y 119..159).
+	local horn = { { 176, 119 }, { 196, 119 }, { 176, 159 }, { 196, 159 } }
+	local traffar = 0
+	for _, h in ipairs(horn) do
+		for _, d in ipairs(delar) do
+			if d.Name == "Belysningsmast" then
+				local f = fot(d)
+				if math.abs(f.x + f.w / 2 - h[1]) < 0.5
+					and math.abs(f.y + f.h / 2 - h[2]) < 0.5 then
+					traffar += 1
+					break
+				end
+			end
+		end
+	end
+	check("uteridbanans fyra hörn har var sin mast", traffar == 4,
+		traffar .. " av 4 hörn")
+
+	local hojd = 0
+	for _, d in ipairs(delar) do
+		if d.Name == "Belysningsmast" then hojd = fot(d).z1 end
+	end
+	check("masten är lika hög som i datan",
+		math.abs(hojd - MA.hojd) < 0.05, string.format("%.2f m", hojd))
+end
+
 print("\nHela modellen")
 
 do

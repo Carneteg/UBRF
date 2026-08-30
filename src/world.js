@@ -957,6 +957,15 @@ function ritaProp3D(k,p){
         cx.strokeStyle="#B9B7B0";cx.lineWidth=1;
         cx.beginPath();cx.ellipse(s[0],s[1]-sz*0.45,sz*0.34,sz*0.28,0,0,Math.PI*2);cx.stroke();}
       break;}
+    case "torvbalar":{ // vitplastade torvpaket, staplade tre högt
+      for(let i=0;i<2;i++)for(let k2=0;k2<3;k2++){
+        const B=billboard(k,x+i*1.30,y+0.39,0.62+k2*0.62); if(!B)continue;
+        const {s,sz}=B;
+        cx.fillStyle="#EDEBE6";
+        cx.fillRect(s[0]-sz*0.5,s[1]-sz*0.5,sz*1.0,sz*0.5);
+        cx.fillStyle="#B03028";
+        cx.fillRect(s[0]-sz*0.5,s[1]-sz*0.34,sz*1.0,sz*0.16);}
+      break;}
     case "grushog":{ const B=billboard(k,x,y,1.4); if(!B)return;
       const {s,sz}=B; cx.fillStyle="#7C7870";
       cx.beginPath();cx.moveTo(s[0]-sz*0.8,s[1]);cx.quadraticCurveTo(s[0],s[1]-sz*1.0,s[0]+sz*0.8,s[1]);
@@ -1166,7 +1175,7 @@ function ritaGard3D(){
   }
   for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++){
     const a=st.p[i], c=st.p[i+1];
-    items.push({d:-avst2([(a[0]+c[0])/2,(a[1]+c[1])/2]), rita(){ritaStaket3D(k,a,c,st.typ);}});
+    items.push({d:-avst2([(a[0]+c[0])/2,(a[1]+c[1])/2]), rita(){ritaStaket3D(k,a,c,st.typ,st.sandkant);}});
   }
   for(const t of ANL.trad) items.push({d:-avst2(t), rita(){ritaTrad3D(k,t);}});
   for(const p of ANL.props) items.push({d:-avst2(p.pos), rita(){ritaProp3D(k,p);}});
@@ -1206,10 +1215,10 @@ function ritaRegn(){
   }
   cx.stroke();
 }
-function ritaStaket3D(k,a,c,typ){
+function ritaStaket3D(k,a,c,typ,sandkant){
   const L=Math.hypot(c[0]-a[0],c[1]-a[1]); if(L<0.01)return;
-  const n=Math.max(1,Math.round(L/2.6));
-  const hj=typ==="tra"?1.25:typ==="rail"?0.85:1.0;
+  const n=Math.max(1,Math.round(L/BANOMRADE.staket.stolpDelning));
+  const hj=typ==="tra"?BANOMRADE.staket.stolpH:typ==="rail"?0.85:1.0;
   const farg=typ==="tra"?VCOL.staketTra:typ==="rail"?VCOL.staketRail:VCOL.staketEl;
   for(let i=0;i<=n;i++){
     const t=i/n, px=a[0]+(c[0]-a[0])*t, py=a[1]+(c[1]-a[1])*t;
@@ -1219,8 +1228,18 @@ function ritaStaket3D(k,a,c,typ){
     cx.strokeStyle=farg; cx.lineWidth=Math.max(1,k.f*0.06/p0.d);
     cx.beginPath();cx.moveTo(s0[0],s0[1]);cx.lineTo(s1[0],s1[1]);cx.stroke();
   }
-  ritaLinje3D(k,[a[0],a[1],hj],[c[0],c[1],hj],farg,typ==="el"?1:2.2);
-  if(typ!=="el")ritaLinje3D(k,[a[0],a[1],hj*0.55],[c[0],c[1],hj*0.55],farg,typ==="rail"?1.6:2);
+  if(typ==="tra"){
+    /* Toppregel, eltråd och (vid sand) syllen — samma sanning som 3D-vyn. */
+    const S=BANOMRADE.staket;
+    ritaLinje3D(k,[a[0],a[1],S.toppregel.z],[c[0],c[1],S.toppregel.z],farg,2.4);
+    for(const y of S.tradar)
+      ritaLinje3D(k,[a[0],a[1],y],[c[0],c[1],y],"#3A362E",1);
+    if(sandkant)
+      ritaLinje3D(k,[a[0],a[1],S.sandsyll.z],[c[0],c[1],S.sandsyll.z],"#9C8A6E",3);
+  }else{
+    ritaLinje3D(k,[a[0],a[1],hj],[c[0],c[1],hj],farg,typ==="el"?1:2.2);
+    if(typ!=="el")ritaLinje3D(k,[a[0],a[1],hj*0.55],[c[0],c[1],hj*0.55],farg,1.6);
+  }
 }
 function ritaTrad3D(k,t){
   const p=tillKam(k,t[0],t[1],0); if(p.d<K3.nara)return;

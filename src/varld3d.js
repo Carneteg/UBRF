@@ -348,12 +348,29 @@ function v3dGard(lagg,opp){
       const vin=Math.atan2(dz,dx);
       const mitt=M4.mul(M4.translation((a[0]+b[0])/2,0,(a[1]+b[1])/2),M4.rotY(-vin));
       if(st.typ==="tra"){
-        for(const y of [0.62,1.14])
-          stak.lada(len,0.10,0.05,"#B0A184",M4.mul(mitt,M4.translation(0,y,0)));
-        const n=Math.max(1,Math.round(len/2.6));
-        for(let k=0;k<=n;k++)
-          stak.lada(0.11,1.30,0.11,"#8A7A5E",
-            M4.mul(mitt,M4.translation(-len/2+len*k/n,0.65,0)));
+        /* Toppregel + eltråd + sandsyll, mätt i references/omnejd/banan-01.
+           Måtten ligger i BANOMRADE.staket så Roblox läser samma sanning. */
+        const S=BANOMRADE.staket, T=S.toppregel;
+        stak.lada(len,T.h,T.d,"#B0A184",M4.mul(mitt,M4.translation(0,T.z,0)));
+        /* Eltråden: tunn och mörk, inte virke. */
+        for(const y of S.tradar)
+          stak.lada(len,S.tradTjocklek,S.tradTjocklek,"#3A362E",
+            M4.mul(mitt,M4.translation(0,y,0)));
+        /* Sandsyllen bara där staketet omsluter sand. */
+        if(st.sandkant){
+          const Y=S.sandsyll;
+          stak.lada(len,Y.h,Y.d,"#9C8A6E",M4.mul(mitt,M4.translation(0,Y.z,0)));
+        }
+        const n=Math.max(1,Math.round(len/S.stolpDelning));
+        for(let k=0;k<=n;k++){
+          const u=-len/2+len*k/n;
+          stak.lada(S.stolpTvarsnitt,S.stolpH,S.stolpTvarsnitt,"#8A7A5E",
+            M4.mul(mitt,M4.translation(u,S.stolpH/2,0)));
+          /* De svarta isolatorerna på stolpen — de syns på fotot. */
+          for(const y of S.tradar)
+            stak.lada(S.isolatorB,S.isolatorH,S.isolatorB,"#26241F",
+              M4.mul(mitt,M4.translation(u,y,S.stolpTvarsnitt/2)));
+        }
       }else if(st.typ==="el"){
         for(const y of [0.70,1.05])
           stak.lada(len,0.03,0.02,"#8C8578",M4.mul(mitt,M4.translation(0,y,0)));
@@ -405,6 +422,15 @@ function v3dGard(lagg,opp){
           pr.cyl(0.65,0.65,1.2,"#E4E2DA",
             M4.mul(M4.translation(x+i*1.4,0.65,z+j*1.5),M4.rotZ(Math.PI/2)),SEG(10,6));
         break;
+      case"torvbalar":
+        /* RS Mustang-torv, banan-03: fyrkantiga vitplastade paket med rött
+           tryck, staplade tre högt. Annat än ensilagebalarna vid stallet. */
+        for(let i=0;i<2;i++)for(let j=0;j<2;j++)for(let k=0;k<3;k++){
+          const bx=x+i*1.30, bz=z+j*0.78, by=0.31+k*0.62;
+          pr.lada(1.22,0.60,0.72,"#EDEBE6",M4.translation(bx,by,bz));
+          pr.lada(1.24,0.20,0.74,"#B03028",M4.translation(bx,by+0.10,bz));
+        }
+        break;
       case"grushog": pr.cyl(1.8,0.1,1.3,"#BCA179",M4.translation(x,0,z),SEG(12,6)); break;
       case"transport":{                       // hästtransporten
         const m=M4.mul(M4.translation(x,0,z),M4.rotY(-(p.rikt||0)));
@@ -433,10 +459,16 @@ function v3dGard(lagg,opp){
         pr.lada(0.46,0.06,0.46,"#8A7250",M4.translation(x,0.45,z));
         pr.lada(0.46,0.5,0.06,"#8A7250",M4.translation(x,0.70,z-0.20));
         break;
-      case"mast":
-        pr.cyl(0.13,0.09,7.5,"#8C8F92",M4.translation(x,0,z),8);
-        pr.lada(0.7,0.16,0.4,"#C8CBD0",M4.translation(x,7.55,z));
-        break;
+      case"mast":{
+        /* Dubbel armatur på en tvärarm — banan-03. Måtten i BANOMRADE.mast. */
+        const MA=BANOMRADE.mast;
+        pr.cyl(MA.stamOver,MA.stamUnder,MA.hojd,"#8C8F92",M4.translation(x,0,z),8);
+        pr.lada(MA.armB,MA.armH,MA.armD,"#8C8F92",
+          M4.translation(x,MA.hojd+MA.armH/2,z));
+        for(const dx of [-MA.lampDelning/2, MA.lampDelning/2])
+          pr.lada(MA.lampB,MA.lampH,MA.lampD,"#3A3D40",
+            M4.translation(x+dx,MA.hojd+MA.armH-MA.lampH/2,z));
+        break;}
       case"flagga":
         pr.cyl(0.09,0.06,7.0,"#E8E6E0",M4.translation(x,0,z),8);
         pr.panel(1.4,0.9,"#2F5C8F",M4.translation(x+0.72,6.2,z));

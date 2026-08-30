@@ -226,10 +226,24 @@ const ANL = {
      fargV:"#8A3A30", fargT:"#3A3E44", label:"",
      oppningar:[{sida:"E", u:1.2, b:1.6, h:0.9, z0:1.1, typ:"fonster"},
                 {sida:"S", u:1.6, b:1.4, h:0.9, z0:1.1, typ:"fonster"}]},
-    /* Domarkuren vid uteridbanan. */
-    {id:"domarkur", rekt:{x:184, y:148, w:4.5, h:3.5}, hV:2.3, hN:3.4, nock:"EW",
-     fargV:"#8A3A30", fargT:"#5A2B26", label:"",
-     oppningar:[{sida:"W", u:0.8, b:2.6, h:1.0, z0:1.0, typ:"fonster"}]},
+    /* Domarkuren vid uteridbanan.
+
+       `[KNOWN MISMATCH → RÄTTAD]` Kuren stod tidigare på x 184..188,5,
+       y 148..151,5 — alltså HELT INNANFÖR banans staket (x 176..196,
+       y 119..159). En byggnad mitt i ridbanan. Ingen källa säger det;
+       det var ett läge som aldrig kontrollerades mot staketrektangeln.
+
+       references/omnejd/banan-01 och -02 visar den röda boden UTANFÖR
+       banan, bortom staketet och upp mot trädridån, med rött tak och
+       öppen förstukvist.
+
+       `[ASSUMPTION]` VILKEN kortsida den står vid. Fotona visar bara att
+       den ligger bortom banan sett från vägen. Här står den centrerad
+       utanför den norra kortsidan (y = 159), mot trädridån — dressyrens
+       domarplats vid C. Rätt sida kan bara avgöras ur satellit. */
+    {id:"domarkur", rekt:{x:183.75, y:159.8, w:4.5, h:3.5}, hV:2.3, hN:3.4, nock:"EW",
+     fargV:"#8A3A30", fargT:"#8C3A2A", label:"",
+     oppningar:[{sida:"S", u:0.95, b:2.6, h:1.0, z0:1.0, typ:"fonster"}]},
     /* Boden vid södra gaveln (vid sopstationen). */
     {id:"bod", rekt:{x:184, y:44, w:5, h:4}, hV:2.3, hN:3.4, nock:"NS",
      fargV:"#8A3A30", fargT:"#3A3E44", label:"",
@@ -243,8 +257,11 @@ const ANL = {
      (banor och hagar), "el" = trådstängsel mot åkern, "rail" = låg
      falurödmålad trärail (parkering/lekhage). */
   staket: [
-    {typ:"tra", p:[[176,119],[196,119],[196,159],[176,159],[176,119]]},// uteridbanan
-    {typ:"tra", p:[[156,135],[174,135],[174,157],[156,157],[156,135]]},// paddocken bredvid
+    /* `sandkant` = staketet omsluter en sandyta och har därför den grova
+       syllen i marknivå som håller sanden på plats (banan-01). Hagarna
+       saknar den — där möter staketet gräs. */
+    {typ:"tra", sandkant:true, p:[[176,119],[196,119],[196,159],[176,159],[176,119]]},// uteridbanan
+    {typ:"tra", sandkant:true, p:[[156,135],[174,135],[174,157],[156,157],[156,135]]},// paddocken bredvid
     {typ:"tra", p:[[178,65],[206,65],[206,93],[178,93],[178,65]]},     // hage Ö1
     {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]]},   // hage Ö2
     {typ:"el",  p:[[112,20],[112,121]]},                               // trådstängsel mot åkern
@@ -289,9 +306,22 @@ const ANL = {
     {typ:"stenhast",  pos:[101.5,132]},
     {typ:"stenhast",  pos:[99.5,133]},
     {typ:"stenhast",  pos:[101,129]},
-    {typ:"mast",      pos:[176,159]},                    // belysningsmasterna vid banorna
+    /* Belysningsmasterna. `VERIFIED` att de finns och att de är flera:
+       banan-03 visar minst fyra runt uteridbanan. Att de sitter i banans
+       fyra hörn är `[DERIVED]` — fotona visar master längs båda långsidor,
+       och hörnplacering är den vanliga lösningen. Måtten i BANOMRADE.mast. */
+    {typ:"mast",      pos:[176,119]},
     {typ:"mast",      pos:[196,119]},
-    {typ:"mast",      pos:[156,157]},
+    {typ:"mast",      pos:[176,159]},
+    {typ:"mast",      pos:[196,159]},
+    {typ:"mast",      pos:[156,157]},                    // paddockens hörn
+    /* `VERIFIED` Torvbalarna (RS Mustang) står staplade utomhus vid banan,
+       banan-03. Annat än ensilagebalarna vid stallgaveln: fyrkantiga,
+       vitplastade med rött tryck. `[ASSUMPTION]` exakt läge — bilden visar
+       dem vid banans kant mot vägen, inte var längs kanten. Här står de
+       på grusytan strax väster om banans staket — utanför både banan och
+       paddocken, som fotot visar. */
+    {typ:"torvbalar", pos:[172.4,124.6]},
     {typ:"sopstation",pos:[150,56]},
     {typ:"ac",        pos:[143.4,80], norm:[1,0]},                   // värmepumparna mot gården
     {typ:"ac",        pos:[143.4,84], norm:[1,0]},
@@ -407,6 +437,67 @@ const IDENTITET = {
     kabelstegar:{andelar:[0.30,0.70], bredd:0.34, underTak:1.02, pinnDelning:0.55},
     ventkanaler:{andelar:[0.24,0.76], radie:0.30, underTak:0.95, donDelning:6.5},
   },
+};
+
+/* ══ BANOMRÅDET ════════════════════════════════════════════════════
+   Uteridbanans mätbara drag, avlästa ur references/omnejd/banan-01..03
+   (Drive-mappen Omnejd, IMG_0163–0165). De låg tidigare som lokala tal
+   inne i src/varld3d.js och src/world.js, alltså osynliga för Roblox —
+   samma dolda sanning som IDENTITET löste för husen.
+
+   Vad som är VERIFIED här är dragens EXISTENS och antal, inte deras
+   läge på tomten. Banans placering relativt husen kan bara komma ur
+   satellit — se references/site/SATELLIT-MATNING-2026-08-30.md — och
+   är alltså inte avgjord här.
+
+   Måtten i meter. ══ */
+const BANOMRADE = {
+  /* Staketet runt uteridbanan.
+
+     RÄTTELSE AV MIN EGEN AVLÄSNING. Först skrev jag här att staketet har
+     "tre liggande reglar", räknat i en nedskalad banan-03. En beskuren
+     högupplöst avläsning av banan-01 — samma spann, tre gånger så många
+     pixlar — visar att det är fel. Det jag tog för tre reglar är i själva
+     verket tre OLIKA saker, och de ska byggas olika:
+
+       1. `VERIFIED` EN kraftig liggande toppregel av trä, högst upp.
+       2. `VERIFIED` ELTRÅD på svarta isolatorer under den. Isolatorerna
+          syns på stolpen; trådarna är tunna mörka linjer, inte virke.
+       3. `VERIFIED` En GROV LIGGANDE SYLL i marknivå längs sandkanten,
+          som håller banans sand på plats. Den syns tydligt där sanden
+          möter gräset.
+
+     Läxan är densamma som med hästgången: en avläsning gjord på för få
+     pixlar blir ett påstående som ser mätt ut men inte är det.
+
+     Avgjord på den närmaste, bäst belysta stolpen i banan-01 (bildens
+     högra fjärdedel, uppförstorad 2,4x). Där syns TRE svarta isolatorer på
+     stolpen — en strax under toppregeln och två under den — plus två tunna
+     trådlinjer och syllen. En tidigare avläsning av banan-02 såg ut att
+     visa två liggande träreglar; det var det BORTRE staketets toppregel
+     sedd genom det närmaste.
+
+     `[ASSUMPTION]` de exakta höjderna. Skalade mot stolpen, vars topp till
+     grässkant antas vara 1,35 m: toppregel 1,30, trådar 0,75 och 0,34,
+     syllens mitt 0,13.
+
+     `[ASSUMPTION]` att hagarnas staket är byggda likadant. Inget foto
+     visar dem på nära håll. Sandsyllen byggs bara där staketet omsluter
+     sand — se `sandkant` på sträckorna i ANL.staket. */
+  staket:{
+    toppregel:{z:1.30, h:0.13, d:0.09},
+    sandsyll:{z:0.13, h:0.26, d:0.11},
+    tradar:[0.75, 0.34], tradTjocklek:0.025,
+    isolatorB:0.07, isolatorH:0.09,
+    stolpH:1.35, stolpDelning:2.6, stolpTvarsnitt:0.12,
+  },
+
+  /* `VERIFIED` Belysningsmasterna har DUBBEL armatur på en tvärarm, inte
+     ett enkelt huvud. Tydligast på den närmaste masten i banan-03.
+     Masthöjden är `[ASSUMPTION]` — ingen skala i bilderna når upp. */
+  mast:{hojd:7.5, stamOver:0.13, stamUnder:0.09,
+        armB:1.30, armH:0.10, armD:0.10,
+        lampB:0.44, lampH:0.20, lampD:0.30, lampDelning:0.92},
 };
 
 const STALL_BAND = [

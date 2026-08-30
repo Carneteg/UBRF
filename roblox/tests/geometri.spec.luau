@@ -375,6 +375,50 @@ do
 	end
 end
 
+do
+	-- Ingenting får stå INNE i en ridbana. Domarkuren gjorde det: den låg
+	-- på x 184..188,5 / y 148..151,5, alltså helt innanför uteridbanans
+	-- staket (x 176..196 / y 119..159) — en byggnad mitt i banan man rider
+	-- på. Ingen källa sade det; läget hade helt enkelt aldrig prövats mot
+	-- staketrektangeln. Det här testet ser till att det inte kan hända igen,
+	-- vare sig för kuren eller för något hus som läggs till senare.
+	--
+	-- En ridbana = en sluten "tra"-staketslinga vars insida är sandmark.
+	local banor = {}
+	for _, st in ipairs(UBRFKomplex.staket) do
+		if st.typ == "tra" and #st.p >= 5 then
+			local x0, y0 = math.huge, math.huge
+			local x1, y1 = -math.huge, -math.huge
+			for _, pt in ipairs(st.p) do
+				x0 = math.min(x0, pt[1]); x1 = math.max(x1, pt[1])
+				y0 = math.min(y0, pt[2]); y1 = math.max(y1, pt[2])
+			end
+			for _, m in ipairs(UBRFKomplex.mark) do
+				if m.typ == "sand"
+					and math.abs(m.rekt.x - x0) < 1 and math.abs(m.rekt.y - y0) < 1
+					and math.abs(m.rekt.w - (x1 - x0)) < 1
+					and math.abs(m.rekt.h - (y1 - y0)) < 1 then
+					table.insert(banor, { x0 = x0, y0 = y0, x1 = x1, y1 = y1 })
+					break
+				end
+			end
+		end
+	end
+	check("ridbanorna hittades ur staket + sandmark", #banor >= 1, #banor .. " banor")
+
+	for _, ban in ipairs(banor) do
+		for _, b in ipairs(UBRFKomplex.byggnader) do
+			local r = b.rekt
+			local overlappar = r.x < ban.x1 and r.x + r.w > ban.x0
+				and r.y < ban.y1 and r.y + r.h > ban.y0
+			check(("%s står inte i ridbanan %g,%g"):format(b.id, ban.x0, ban.y0),
+				not overlappar,
+				overlappar and ("%g..%g / %g..%g krockar"):format(
+					r.x, r.x + r.w, r.y, r.y + r.h) or nil)
+		end
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("geometri.spec: " .. fails .. " fel")

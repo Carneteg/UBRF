@@ -45,12 +45,35 @@ en nivåskillnad mellan grusvägen och banan, och den syns i varje bild.
 
 Övrigt som är direkt observerbart och **VERIFIED**:
 
-- **Staketet runt banan**: trästolpar med **tre liggande reglar**, mörkt
-  betsat/väderbitet virke.
-- **Belysningsmaster**: höga grå/silverfärgade stolpar med lampahuvuden,
-  flera runt banan. Spelet har inga.
-- **Röd bod vid banans bortre kant**, mörkt tak — spelets `domarkur` ligger
-  vid banans norra kortsida.
+- **Staketet runt banan** består av tre olika saker, inte tre likadana reglar:
+
+  1. EN kraftig liggande **toppregel** av trä.
+  2. **Eltråd** på svarta isolatorer under den — tunna mörka linjer, inte virke.
+  3. En grov liggande **syll i marknivå** längs sandkanten, som håller banans
+     sand på plats.
+
+  > **RÄTTELSE.** Först skrev jag här *"trästolpar med tre liggande reglar"*.
+  > Det var en avläsning gjord på en nedskalad bild, och den höll inte. En
+  > beskuren avläsning av den närmaste stolpen i `banan-01` (2,4x) visar tre
+  > svarta isolatorer på stolpen, två tunna trådlinjer och syllen. En avläsning
+  > av `banan-02` såg mittemellan ut att visa två träreglar — det var det
+  > bortre staketets toppregel sedd genom det närmaste.
+  >
+  > Läxan är densamma som med hästgången: ett påstående som ser mätt ut är
+  > inte mätt förrän det gjorts på tillräckligt många pixlar, och från mer än
+  > en vinkel.
+- **Belysningsmaster**: höga grå/silverfärgade stolpar, flera runt banan.
+  Armaturen sitter **dubbel på en tvärarm** — tydligast på den närmaste
+  masten i `banan-03`.
+
+  > **RÄTTELSE.** Den här raden sade först *"Spelet har inga."* Det var fel,
+  > och felet var mitt: jag skrev det utan att läsa `ANL.props`. Webben hade
+  > redan tre master (`{typ:"mast"}` i `src/site.js`), ritade som en 7,5 m
+  > stolpe med ett enkelt huvud. Det som verkligen saknades var dels den
+  > dubbla armaturen, dels master i Roblox över huvud taget. Den verkliga
+  > bristen var alltså en annan än den jag först påstod.
+
+- **Röd bod vid banans bortre kant**, rött tak och öppen förstukvist.
 - **Betongplattan/rampen** — spelet har redan `{typ:"betong", rekt:{x:170, y:100, w:6, h:5}}`
   "betongplattan vid uppgången". Den är alltså rätt sak på ungefär rätt plats.
 - **Torvbalar** (RS Mustang) staplade utomhus vid banan.
@@ -148,10 +171,44 @@ avsats till en dörr. `VERIFIED`
 | Vad | Var | Klass |
 |---|---|---|
 | **Sandlådan med två snidade trähästar**, kantad med gatsten | vid parkeringen | `VERIFIED` — finns inte i spelet |
-| Belysningsmasterna runt uteridbanan | se Omnejd | `VERIFIED` — finns inte i spelet |
-| Marknivåskillnaden upp till banan | se Omnejd | `KNOWN MISMATCH` |
+| Belysningsmasternas **dubbla armatur** | se `banan-03` | `VERIFIED` — **åtgärdad**, `BANOMRADE.mast` |
+| Staketets **uppbyggnad** (toppregel + eltråd + sandsyll) | se `banan-01` | `VERIFIED` — **åtgärdad**, `BANOMRADE.staket` |
+| Grinden in till uteridbanan | — | `REFERENCE GAP` — se nedan |
+| Torvbalarna vid banan | se `banan-03` | `VERIFIED` — **åtgärdad**, `{typ:"torvbalar"}` |
+| Staket och belysning **i Roblox** | — | **åtgärdad** — `byggStaket`/`byggMaster` |
+| Marknivåskillnaden upp till banan | se Omnejd | `KNOWN MISMATCH` — **kvarstår**, se nedan |
 
 `[EJ GRANSKAT]` `IMG_0075`, `0076`, `0077`, `0127`, `0128`, `0130`.
+
+### `[REFERENCE GAP]` Ingen grind syns till uteridbanan
+
+Staketet är en sluten kollisionsloop i `src/world.js`, och `navVag` hittar
+**ingen väg** från spelarens startpunkt in på uteridbanan. I dag spelar det
+ingen roll: uteridbanan är en egen scen (`G.plats === "utebana"`), så man
+byter scen i stället för att gå in. Men en ridbana har en grind i
+verkligheten, och ingen av de tre Omnejd-bilderna visar var den sitter.
+
+Den gissas inte fram. Om gångläget någon gång ska kunna leda en häst ut på
+banan behövs antingen ett foto som visar grinden eller Tobias besked om var
+den sitter. Samma sorts fynd som sargens grind i ridhuset — skillnaden är att
+den var en aktiv blockerare och den här ännu inte är det.
+
+### Domarkuren stod inne i ridbanan
+
+Ett fynd som inte kom ur Drive utan ur att banområdet mättes för första
+gången. `domarkur` låg på x 184..188,5 / y 148..151,5 — **helt innanför
+uteridbanans staket** (x 176..196 / y 119..159). En byggnad mitt i banan man
+rider på. Ingen källa har någonsin sagt det; läget hade bara aldrig prövats
+mot staketrektangeln.
+
+`banan-01` och `-02` visar boden **utanför** banan, bortom staketet och upp
+mot trädridån. Den är flyttad dit. `[ASSUMPTION]` vilken kortsida — fotona
+avgör bara att den ligger bortom banan sett från vägen.
+
+`roblox/tests/geometri.spec.luau` har nu ett test som räknar fram varje
+ridbana ur staket + sandmark och kontrollerar att ingen byggnad överlappar
+den. Det testet är kört mot det gamla läget och **föll** där, så det mäter
+verkligen det det påstår.
 
 ## Vad som gäller härnäst
 

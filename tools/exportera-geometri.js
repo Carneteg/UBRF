@@ -29,8 +29,8 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/site.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET})", ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -120,6 +120,13 @@ const ut = {
      Senior Fidelity Review 03:s tillägg öppnade det som en visual parity
      blocker; det här är dess källa. */
   identitet: IDENTITET,
+  /* Banområdet, staketen och rekvisitan. Samma skäl som identitet: måtten
+     låg i src/varld3d.js och src/world.js och var därför osynliga för
+     Roblox, så primärplattformen saknade uteridbanans staket och
+     belysningsmaster helt. Nu läser båda ytorna samma tal. */
+  banomrade: BANOMRADE,
+  staket: ANL.staket,
+  props: ANL.props,
   ridhus: {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,

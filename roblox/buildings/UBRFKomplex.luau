@@ -740,8 +740,8 @@ return {
 		{
 			id = "domarkur",
 			rekt = {
-				x = 184,
-				y = 148,
+				x = 183.75,
+				y = 159.8,
 				w = 4.5,
 				h = 3.5,
 			},
@@ -749,12 +749,12 @@ return {
 			hN = 3.4,
 			nock = "EW",
 			fargV = Color3.fromRGB(138, 58, 48),
-			fargT = Color3.fromRGB(90, 43, 38),
+			fargT = Color3.fromRGB(140, 58, 42),
 			label = "",
 			oppningar = {
 				{
-					sida = "W",
-					u = 0.8,
+					sida = "S",
+					u = 0.95,
 					b = 2.6,
 					h = 1,
 					z0 = 1,
@@ -1319,6 +1319,387 @@ return {
 				radie = 0.3,
 				underTak = 0.95,
 				donDelning = 6.5,
+			},
+		},
+	},
+	banomrade = {
+		staket = {
+			toppregel = {
+				z = 1.3,
+				h = 0.13,
+				d = 0.09,
+			},
+			sandsyll = {
+				z = 0.13,
+				h = 0.26,
+				d = 0.11,
+			},
+			tradar = {
+				0.75,
+				0.34,
+			},
+			tradTjocklek = 0.025,
+			isolatorB = 0.07,
+			isolatorH = 0.09,
+			stolpH = 1.35,
+			stolpDelning = 2.6,
+			stolpTvarsnitt = 0.12,
+		},
+		mast = {
+			hojd = 7.5,
+			stamOver = 0.13,
+			stamUnder = 0.09,
+			armB = 1.3,
+			armH = 0.1,
+			armD = 0.1,
+			lampB = 0.44,
+			lampH = 0.2,
+			lampD = 0.3,
+			lampDelning = 0.92,
+		},
+	},
+	staket = {
+		{
+			typ = "tra",
+			sandkant = true,
+			p = {
+				{
+					176,
+					119,
+				},
+				{
+					196,
+					119,
+				},
+				{
+					196,
+					159,
+				},
+				{
+					176,
+					159,
+				},
+				{
+					176,
+					119,
+				},
+			},
+		},
+		{
+			typ = "tra",
+			sandkant = true,
+			p = {
+				{
+					156,
+					135,
+				},
+				{
+					174,
+					135,
+				},
+				{
+					174,
+					157,
+				},
+				{
+					156,
+					157,
+				},
+				{
+					156,
+					135,
+				},
+			},
+		},
+		{
+			typ = "tra",
+			p = {
+				{
+					178,
+					65,
+				},
+				{
+					206,
+					65,
+				},
+				{
+					206,
+					93,
+				},
+				{
+					178,
+					93,
+				},
+				{
+					178,
+					65,
+				},
+			},
+		},
+		{
+			typ = "tra",
+			p = {
+				{
+					178,
+					97,
+				},
+				{
+					206,
+					97,
+				},
+				{
+					206,
+					117,
+				},
+				{
+					178,
+					117,
+				},
+				{
+					178,
+					97,
+				},
+			},
+		},
+		{
+			typ = "el",
+			p = {
+				{
+					112,
+					20,
+				},
+				{
+					112,
+					121,
+				},
+			},
+		},
+		{
+			typ = "rail",
+			p = {
+				{
+					155,
+					121.5,
+				},
+				{
+					168,
+					121.5,
+				},
+			},
+		},
+		{
+			typ = "rail",
+			p = {
+				{
+					96,
+					127,
+				},
+				{
+					96,
+					136,
+				},
+			},
+		},
+	},
+	props = {
+		{
+			typ = "silo",
+			pos = {
+				166,
+				60,
+			},
+		},
+		{
+			typ = "balar",
+			pos = {
+				157,
+				56,
+			},
+		},
+		{
+			typ = "grushog",
+			pos = {
+				122,
+				131,
+			},
+		},
+		{
+			typ = "transport",
+			pos = {
+				133,
+				125,
+			},
+			rikt = 0.5,
+		},
+		{
+			typ = "bord",
+			pos = {
+				150,
+				74,
+			},
+		},
+		{
+			typ = "bord",
+			pos = {
+				148,
+				86,
+			},
+		},
+		{
+			typ = "bank",
+			pos = {
+				146,
+				94,
+			},
+		},
+		{
+			typ = "stol",
+			pos = {
+				149,
+				102,
+			},
+		},
+		{
+			typ = "skylt",
+			pos = {
+				118,
+				82,
+			},
+			text = "UPPLANDS-BRO RYTTARFÖRENING",
+			norm = {
+				-1,
+				0,
+			},
+		},
+		{
+			typ = "cafeskylt",
+			pos = {
+				124.4,
+				119.8,
+			},
+			norm = {
+				0,
+				1,
+			},
+		},
+		{
+			typ = "flagga",
+			pos = {
+				123,
+				149,
+			},
+		},
+		{
+			typ = "vagvisare",
+			pos = {
+				172,
+				123,
+			},
+		},
+		{
+			typ = "stenhast",
+			pos = {
+				98.5,
+				129.5,
+			},
+		},
+		{
+			typ = "stenhast",
+			pos = {
+				101.5,
+				132,
+			},
+		},
+		{
+			typ = "stenhast",
+			pos = {
+				99.5,
+				133,
+			},
+		},
+		{
+			typ = "stenhast",
+			pos = {
+				101,
+				129,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				176,
+				119,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				196,
+				119,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				176,
+				159,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				196,
+				159,
+			},
+		},
+		{
+			typ = "mast",
+			pos = {
+				156,
+				157,
+			},
+		},
+		{
+			typ = "torvbalar",
+			pos = {
+				172.4,
+				124.6,
+			},
+		},
+		{
+			typ = "sopstation",
+			pos = {
+				150,
+				56,
+			},
+		},
+		{
+			typ = "ac",
+			pos = {
+				143.4,
+				80,
+			},
+			norm = {
+				1,
+				0,
+			},
+		},
+		{
+			typ = "ac",
+			pos = {
+				143.4,
+				84,
+			},
+			norm = {
+				1,
+				0,
+			},
+		},
+		{
+			typ = "busskylt",
+			pos = {
+				8.6,
+				88,
 			},
 		},
 	},
