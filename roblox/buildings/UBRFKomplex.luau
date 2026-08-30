@@ -1199,6 +1199,10 @@ return {
 					h = 6.5,
 				},
 				label = "SPOLSPILTA",
+				oppen = true,
+				bommar = 3,
+				panelH = 2.05,
+				railZ = 1.15,
 			},
 			{
 				id = "spanforrad",
@@ -1209,6 +1213,13 @@ return {
 					h = 6.5,
 				},
 				label = "SPÅNFÖRRÅD",
+				oppen = true,
+				sackar = {
+					rader = 2,
+					hojd = 1.15,
+					djup = 1.2,
+				},
+				panelH = 2.05,
 			},
 		},
 		tvarvaggar = {
@@ -1219,6 +1230,12 @@ return {
 			{
 				y = 6.5,
 				brand = false,
+				oppningar = {
+					{
+						x0 = 9,
+						x1 = 12,
+					},
+				},
 			},
 		},
 		dorrar = {

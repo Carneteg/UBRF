@@ -206,3 +206,65 @@ byggnaden. **Ändras `src/ljus.js` eller texturerna måste de mätas om.**
   taket i webben.
 - Reglarnas grovlek är stiliserad, inte mätt.
 - Ridhusets interiör är inte påbörjad — det är nästa steg i ordern.
+
+---
+
+# P0 VISUAL REJECTION — spelarvyn från servicedelen
+
+Underkännandet reproducerades först, från exakt samma dörr spelaren kommer
+in genom (`ut_s`, lokalt läge 5,6 / 1,6). Bilden stämde med beskrivningen.
+
+## Vad som faktiskt orsakade den underkända vyn
+
+**1. Väggen mot servicedelen fick sina hål ur GÅNGARNA, inte ur planen.**
+`tvarvaggBitar` öppnade väggen bara där gångarna gick. Står spelaren mitt
+för en boxrad — och det gör man när man kommer in genom södra gaveln — möts
+man av en tät vägg rakt fram. Det var den blanka återvändsgränden.
+Brandplanen ritar utrymningsvägen rakt igenom väggen och i09 visar ett
+sammanhängande rum. Väggen har nu egna öppningar ur planen, på båda ytorna.
+
+**2. Servicerummen var aldrig visuellt verifierade.** De byggdes som 2,6 m
+höga täta lådor på tre sidor. i07 och i09 visar öppna bukter: fristående
+spolbommar, spånsäckar på pall, mörk antracitpanel mot ytterväggen, rörstråk
+längs den vita väggen. Rektanglarna passade planen och navigeringen, och det
+räckte för att ingen skulle titta efter. `oppen:true` bygger nu innehållet i
+bukten i stället för dess väggar. Id, rekt och etikett är orörda, så
+navigering och interaktioner är oförändrade.
+
+**3. Stallscenen byggde varken ytterväggar eller golv.** Ingenting utanför
+boxraderna fanns; utomhusmarken lyste igenom. Nu finns golvplatta och fyra
+ytterväggar, med gaveldörrens öppning utsparad.
+
+## Två felspår, redovisade
+
+**Jag hävdade först att ytterväggarna saknades även i vyer där de finns.**
+Ett magentatest visade att de renderas korrekt när de är i bild; att de inte
+syntes i entrévyn var vanligt perspektiv. Diagnosen var fel och rättas här.
+
+**Jag upprepade överkorrigeringen jag redan förkastat.** Väggen
+kompenserades kanalvis (0,826/0,775/0,660) för renderarens dämpning.
+Mätning av resultatet: `#EAEFDC`, nästan vit, mot fotots `#C1C0C3`. Exakt
+samma sprängning som reglarna på boxfronten tidigare i samma pass.
+Kompensationen är borttagen; väggen ligger på sitt mätta värde och avviker
+hellre nedåt. En kanalvis invertering hör inte hemma på en belyst yta.
+
+## Bevis
+
+- Underkänd vy reproducerad, och samma kamera används för jämförelsen.
+- Efter: den centrala öppningen visar boxhallen bakom väggen — den blanka
+  återvändsgränden är borta.
+- Sex specar gröna, export i synk, webben utan konsolfel.
+
+## Vad som INTE är klart
+
+Vyn är **förbättrad men inte färdig**, och rapporteras inte som godkänd:
+
+- servicedelens väggar och golv läser ljusare än i09,
+- en sandfärgad yta med liggande linjer i entrévyn är **inte identifierad**;
+  den står som öppen fråga och inte som en gissning,
+- buktinnehållet syns dåligt från entrén eftersom panelen löper LÄNGS väggen
+  och därför ses på kant — det är geometriskt riktigt men ger vyn lite,
+- Roblox bygger ännu inte buktinnehållet, gaveldörren eller rörstråken; bara
+  väggöppningarna är portade,
+- Roblox Studio är inte körd,
+- ridhusets interiör är **inte påbörjad**, enligt stoppregeln.

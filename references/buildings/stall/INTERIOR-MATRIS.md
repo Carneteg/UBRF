@@ -106,6 +106,25 @@ gul och för ljus. Rätt åtgärd var att mäta den, inte att ta bort den.
 | Husen är sammanbyggda, hästen leds inomhus | `VERIFIED` | plan | båda |
 | Gångens utseende inifrån | `[REFERENCE GAP]` | — | — |
 
+### 8. Servicedelen och spelarvyn från södra gaveln
+
+Tillagd efter Product Owners visuella underkännande av spelarvyn.
+
+| fakta | klass | källa | spelet |
+|---|---|---|---|
+| Öppet genomgångsrum, inte slutna rum | `VERIFIED` | i07 + i09 | rättat, båda ytorna |
+| Vit yttervägg med rörstråk och väggutrustning | `VERIFIED` | i07 + i09 | rör byggda i webben |
+| Väggen `#C1C0C3` (kall neutral) | `MEASURED` | i09, sd 2,0 | `stall.vagg` |
+| Mörk antracitpanel — samma produkt som boxfronterna | `VERIFIED` | i09 `#4A4B44` mot fronternas `#454A4F` | delar `boxfront.heldel` |
+| Fristående galvade spolbommar i rad | `VERIFIED` | i09 | byggda |
+| Spånsäckar staplade på pall i öppen bukt | `VERIFIED` | i07 | byggda |
+| Slät ljus betong under bommarna, marksten i stråket | `VERIFIED` | i09 | `stall.serviceGolv` |
+| Betonggolvet `#AEA28C` | `MEASURED` | i09, sd 6,9 | `stall.serviceGolv` |
+| Gaveldörr med dagsljus och grön exit-skylt | `VERIFIED` | i07 + i09 | `stall.gaveloppning` |
+| Öppning i väggen mot boxhallen | `DERIVED` | brandplanens utrymningsväg går igenom | `tvarvaggar[1].oppningar` |
+| Öppningens exakta bredd | `[antagande]` | 3,0 m | — |
+| Ytterväggar och golv i stallscenen | rättat | — | fanns **inte alls** förut |
+
 ## Öppna punkter efter det här passet
 
 1. **Limträet läses fortfarande varmare och mer dominant** i webben än i i05.
@@ -116,6 +135,12 @@ gul och för ljus. Rätt åtgärd var att mäta den, inte att ta bort den.
 3. Husets bredd är fortfarande projektets äldsta öppna fråga.
 4. Rummens interiörer (i01–i04, i07) är inhämtade men inte omsatta.
 5. Dörrbladets rutnät och foderhon modelleras inte — `[REFERENCE GAP]`.
-6. Roblox Studio är **inte** körd. Allt Roblox-arbete här är verifierat mot
+6. **Servicedelens väggar och golv läser fortfarande ljusare** i webben än i
+   i09. Väggen står på sitt mätta `#C1C0C3` utan kompensation, se auditen.
+7. **En sandfärgad yta i entrévyn är inte identifierad.** Den har liggande
+   linjer som fasadpanel, men jag har inte kunnat visa vilken geometri den
+   är. Den står kvar som en öppen fråga, inte som en gissning.
+8. Spelarvyn från södra gaveln är **förbättrad men inte färdig**.
+9. Roblox Studio är **inte** körd. Allt Roblox-arbete här är verifierat mot
    testbänken och mot koden, inte mot en skärm. Utseende, material, ljus och
    prestanda i Roblox är därmed OVERIFIERADE.

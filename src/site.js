@@ -854,7 +854,15 @@ const STALLINNE = {
      anländer till. Huset växer i stället söderut, in på gårdsplanen, från
      y = 65 till y = 49,05. Att växa norrut hade lagt huset i parkeringen. */
   langd:STALL_LANGD,
-  vagg:"#CFC8BC", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
+  /* Väggen OMMÄTT ur stall-inne-09: #C1C0C3 (sd 2,0), en kall neutral vit.
+     Stod som #CFC8BC, varmare och ljusare — det är en del av varför
+     servicedelen läste som en krämfärgad korridor. */
+  vagg:"#C1C0C3", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
+  /* Servicedelens golv är en slät ljus BETONGPLATTA, inte marksten.
+     stall-inne-09 visar de två materialen sida vid sida med en rak gräns:
+     betong under spolbommarna, marksten i genomgångsstråket. `MEASURED`
+     #AEA28C (sd 6,9). */
+  serviceGolv:"#AEA28C",
   /* Gångens två golvytor, MÄTTA ur stall-inne-05 med samma
      beskär-titta-mät-metod som boxfronterna.
 
@@ -914,11 +922,63 @@ const STALLINNE = {
     {id:"teorisal",     rekt:{x:14.0, y:66.45, w:7.0, h:3.5}, label:"TEORISAL · WC"},
     {id:"sadelkammare", rekt:{x:0,    y:62.55, w:3.2, h:3.9}, label:"SADELKAMMARE"},
   ],
+  /* SERVICEDELEN — ombyggd efter Product Owners visuella underkännande.
+
+     `KNOWN MISMATCH`, underkänd i spelarvyn: de här två låg som slutna rum
+     och BYGGDES som 2,6 m höga täta kritvita lådor på tre sidor. Spelaren
+     kliver in genom södra gaveln rakt emellan dem och möttes av en steril
+     krämfärgad korridor med en blank återvändsgränd — inte ett stall.
+
+     Rektanglarna var aldrig visuellt verifierade. De passade planen och
+     navigeringen, och det räckte för att ingen skulle ifrågasätta dem. Det
+     är precis den kontrollen som saknades.
+
+     Vad källorna FAKTISKT visar (stall-inne-07 och -09, två vinklar på
+     samma rum, plus brandplanens dörröppningar):
+     - ett ÖPPET genomgångsrum, inte slutna rum,
+     - vit yttervägg med rörstråk och väggutrustning på ena sidan,
+     - mörk antracitpanel — samma produkt som boxfronterna — på den andra,
+     - fristående galvade spolbommar i rad, med tvärbindslen,
+     - spånsäckar staplade på pall i en öppen bukt, inte bakom en vägg,
+     - marksten i genomgångsstråket, slät ljus betong under bommarna,
+     - och en gaveldörr med DAGSLJUS och grön utrymningsskylt rakt fram.
+
+     `oppen:true` betyder: bygg buktens innehåll, inte dess väggar. Id, rekt
+     och etikett står kvar oförändrade, så navigering, interaktioner och
+     brandplanens planform är orörda — det är bara den visuella
+     tolkningen som var fel. */
   service:[
-    {id:"spolspilta",   rekt:{x:0,    y:0, w:4.5, h:6.5}, label:"SPOLSPILTA"},
-    {id:"spanforrad",   rekt:{x:16.5, y:0, w:4.5, h:6.5}, label:"SPÅNFÖRRÅD"},
+    {id:"spolspilta", rekt:{x:0, y:0, w:4.5, h:6.5}, label:"SPOLSPILTA",
+     oppen:true, bommar:3, panelH:2.05, railZ:1.15},
+    {id:"spanforrad", rekt:{x:16.5, y:0, w:4.5, h:6.5}, label:"SPÅNFÖRRÅD",
+     oppen:true, sackar:{rader:2, hojd:1.15, djup:1.2}, panelH:2.05},
   ],
-  tvarvaggar:[ {y:52.85, brand:true}, {y:6.5, brand:false} ],
+  /* Gaveldörren i söder, sedd inifrån: ett ljust öppet parti med grön
+     utrymningsskylt över. `VERIFIED` i både stall-inne-07 och -09 — i båda
+     ser man gräset utanför. Att spelaren SER dagsljus rakt fram är det som
+     gör att rummet läser som ett genomgångsrum och inte en säck. */
+  gaveloppning:{x:4.6, bredd:2.6, hojd:2.5, exitB:0.42, exitH:0.20,
+                exitOver:0.22},
+  /* TVÄRVÄGGARNA.
+
+     `KNOWN MISMATCH`, lokaliserad genom att reproducera den underkända
+     spelarvyn: väggen mot servicedelen (y 6,5) byggdes obruten över hela
+     bredden, med hål BARA där gångarna går. Står spelaren mitt för en
+     boxrad — och det gör man om man kommer in genom södra gaveln — möts man
+     av en tät vägg rakt fram. Det är den "blanka återvändsgränden" som
+     underkändes, och den fanns bara därför att väggen fick sina hål ur
+     gångarnas lägen i stället för ur planen.
+
+     Brandplanen ritar utrymningsvägen RAKT IGENOM den här väggen, och
+     stall-inne-09 visar ett sammanhängande rum utan avstängning.
+
+     `DERIVED`: att det finns en öppning mitt på är läsbart i planen. Exakt
+     bredd är det inte — 3,0 m är en dörrbredd för hästpassage och markeras
+     som antagande tills någon kan mäta den. */
+  tvarvaggar:[
+    {y:52.85, brand:true},
+    {y:6.5, brand:false, oppningar:[{x0:9.0, x1:12.0}]},
+  ],
   /* Dörrarna beskrivs EN gång. `pos` är innerläget, `spawn` ytterläget,
      `inrikt` vilket håll man tittar när man kliver in och `uttext` vad
      markören på gården säger. ANL.dorrar byggs ur den här listan längre

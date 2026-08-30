@@ -771,12 +771,57 @@ function v3dStallYttre(bg,d,opp){
 }
 
 /* ── Stallet invändigt ────────────────────────────────────────── */
+/* Uppmätt dämpning från renderarens ljus, inverterad. Mätta färger står i
+   site.js; den här hör till renderaren, precis som LYFT. */
+function golvKompStall(hex,dam){
+  return "#"+[1,3,5].map((i,k)=>
+    Math.min(255,Math.round(parseInt(hex.substr(i,2),16)/dam[k]))
+      .toString(16).padStart(2,"0")).join("");
+}
 function v3dStall(lagg,opp){
   const S=STALLINNE, T=S3.tex, vx=S.bredd/2;
   /* Golvet, efter IMG_0249: en markstensgång i mitten — smalare än
      hela gången — och en ljus spånremsa längs boxfronterna på båda
      sidor. Remsan är det första ögat läser i filmen; utan den blir
      gången en enfärgad korridor. */
+  /* YTTERVÄGGARNA OCH GOLVET.
+
+     `KNOWN MISMATCH`, hittad när den underkända spelarvyn reproducerades:
+     stallscenen byggde ALDRIG några ytterväggar och inget golv. Allt utanför
+     boxraderna var utomhusmarken som lyste igenom. Spelaren stod i ett stall
+     utan väggar, och den ljusa ytan som lästes som "krämfärgad korridor" var
+     till stor del gårdsplanen.
+
+     Väggfärgen är mätt ur stall-inne-09. Södra gaveln byggs i bitar runt
+     gaveldörren, så att dagsljuset syns. */
+  const skal=new Bygge();
+  /* Väggen står på sitt MÄTTA värde, utan kompensation.
+
+     Jag försökte kompensera den kanalvis (0,826/0,775/0,660) och mätte
+     resultatet: väggen renderades #EAEFDC, alltså nästan vit — långt ljusare
+     än fotots #C1C0C3. Det är EXAKT samma överkorrigering som jag redan
+     förkastat en gång i det här passet, på boxfronternas reglar. En kanalvis
+     invertering av en belyst yta spränger den. Kompensationen är borttagen;
+     ytan ligger på det mätta värdet och avviker hellre nedåt. */
+  const VAGG=S.vagg;
+  skal.yta(S.bredd,S.langd,S.golv,M4.translation(vx,0.0,S.langd/2),12);
+  /* Fodret ligger INNANFÖR fotavtrycket, inte på det. Lades det på x=0 och
+     x=bredd hamnade det i samma plan som husets ytterväggar från
+     exteriörmodellen, och då vann panelen utifrån — spelarvyn visade
+     liggande fasadpanel INIFRÅN stallet. Det var det som lästes som
+     "krämfärgad korridor", inte servicerummen. */
+  const VT=0.20, VH=S.tak, INS=0.06;
+  for(const sida of [INS,S.bredd-INS])                // långsidorna
+    skal.lada(VT,VH,S.langd,VAGG,M4.translation(sida,VH/2,S.langd/2));
+  skal.lada(S.bredd,VH,VT,VAGG,M4.translation(vx,VH/2,S.langd-INS));
+  {const G2=S.gaveloppning;
+   const bitar=G2?[[0,G2.x],[G2.x+G2.bredd,S.bredd]]:[[0,S.bredd]];
+   for(const [x0,x1] of bitar) if(x1-x0>0.05)
+     skal.lada(x1-x0,VH,VT,VAGG,M4.translation((x0+x1)/2,VH/2,INS));
+   if(G2) skal.lada(G2.bredd,VH-G2.hojd,VT,VAGG,
+     M4.translation(G2.x+G2.bredd/2,G2.hojd+(VH-G2.hojd)/2,INS));}
+  lagg(skal,null);
+
   const sten=new Bygge(), remsa=new Bygge();
   /* Golvfärgerna är MÄTTA och står i site.js. Här ligger bara den uppmätta
      dämpningen från textur och ljus, så att det som FAKTISKT hamnar på
@@ -785,9 +830,7 @@ function v3dStall(lagg,opp){
      (0,655/0,620/0,537) och #D8C9A4 under T.span renderades #CBA962
      (0,940/0,841/0,598). Ändras texturerna eller src/ljus.js måste de
      mätas om. */
-  const golvKomp=(hex,dam)=>"#"+[1,3,5].map((i,k)=>
-    Math.min(255,Math.round(parseInt(hex.substr(i,2),16)/dam[k]))
-      .toString(16).padStart(2,"0")).join("");
+  const golvKomp=golvKompStall;
   const STEN=golvKomp(S.gangSten,[0.655,0.620,0.537]);
   const SPAN=golvKomp(S.gangSpan,[0.940,0.841,0.598]);
   for(const g of S.gangytor){
@@ -977,23 +1020,104 @@ function v3dStall(lagg,opp){
 
   /* Rummen i klubbdelen och servicedelen. */
   const rum=new Bygge();
+  /* KLUBBRUMMEN har riktiga väggar: brandplanen ritar dem som rum, och
+     stall-inne-01..04 visar slutna rum. SERVICEBUKTARNA har det inte —
+     se den långa noten i site.js. `oppen` avgör vilket. */
+  const bukt=new Bygge();
   for(const grupp of [S.rum,S.service]) for(const r of grupp){
     const k=r.rekt;
     const gx=k.x<vx?k.x+k.w:k.x;                    // väggen mot gången
-    rum.lada(0.16,2.6,k.h,"#FFFFFF",M4.translation(gx,1.3,k.y+k.h/2));
-    rum.lada(k.w,2.6,0.16,"#FFFFFF",M4.translation(k.x+k.w/2,1.3,k.y));
-    rum.lada(k.w,2.6,0.16,"#FFFFFF",M4.translation(k.x+k.w/2,1.3,k.y+k.h));
+    const ut=k.x<vx?1:-1;                           // in mot gången
+    if(!r.oppen){
+      rum.lada(0.16,2.6,k.h,VAGG,M4.translation(gx,1.3,k.y+k.h/2));
+      rum.lada(k.w,2.6,0.16,VAGG,M4.translation(k.x+k.w/2,1.3,k.y));
+      rum.lada(k.w,2.6,0.16,VAGG,M4.translation(k.x+k.w/2,1.3,k.y+k.h));
+    }else{
+      /* Buktens RYGG mot ytterväggen, i samma mörka panel som boxfronterna
+         — stall-inne-09 visar att det är samma produkt. Ingen vägg mot
+         gången: det är hela poängen. */
+      const bx=k.x<vx?k.x+0.10:k.x+k.w-0.10;
+      bukt.lada(0.10,r.panelH,k.h-0.3,BF.heldel,
+        M4.translation(bx,r.panelH/2,k.y+k.h/2));
+      if(r.bommar){
+        /* Fristående galvade spolbommar i rad, med en vågrät rail bakom. */
+        for(let i=0;i<r.bommar;i++){
+          const bz=k.y+k.h*(i+0.8)/(r.bommar+0.6);
+          bukt.lada(0.13,2.0,0.13,BF.ram,
+            M4.translation(bx+ut*(k.w*0.55),1.0,bz));
+        }
+        bukt.cyl(0.05,0.05,k.h-0.6,BF.ram,
+          M4.mul(M4.translation(bx+ut*0.35,r.railZ,k.y+0.3),
+                 M4.rotX(Math.PI/2)),8);
+      }
+      if(r.sackar){
+        /* Spånsäckarna staplade på pall — stall-inne-07. Ljusa säckar med
+           mörkblått tryck; här bara den ljusa tonen. */
+        const sa=r.sackar;
+        for(let rad=0;rad<sa.rader;rad++)
+          for(let i=0;i<3;i++)
+            bukt.lada(sa.djup,sa.hojd*0.9,(k.h-0.6)/3-0.12,"#DCD6C8",
+              M4.translation(bx+ut*(0.15+sa.djup/2+rad*(sa.djup+0.15)),
+                sa.hojd/2, k.y+0.3+((k.h-0.6)/3)*(i+0.5)));
+      }
+    }
     const b=new Bygge();
     v3dTextPanel(b,Math.min(k.h*0.8,2.6),0.5,
-      M4.mul(M4.translation(gx+(k.x<vx?0.09:-0.09),1.9,k.y+k.h/2),
+      M4.mul(M4.translation(r.oppen?(k.x<vx?k.x+0.22:k.x+k.w-0.22)
+                                   :gx+(k.x<vx?0.09:-0.09),
+               r.oppen?1.60:1.9, k.y+k.h/2),
         M4.rotY(k.x<vx?Math.PI/2:-Math.PI/2)));
     S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(r.label)});
   }
+  lagg(bukt,null);
+
+  /* Servicedelens betonggolv, mätt i stall-inne-09. Marksten ligger redan i
+     gångytorna; det här är plattan under bommarna. */
+  if(S.serviceGolv){
+    const bg=new Bygge();
+    for(const r of S.service){const k=r.rekt;
+      bg.yta(k.w,k.h,S.serviceGolv,
+        M4.translation(k.x+k.w/2,0.03,k.y+k.h/2),4);}
+    lagg(bg,null);
+  }
+
+  /* Rörstråket längs ytterväggarna i servicedelen. Både stall-inne-07 och
+     -09 visar galvade rörledningar och väggutrustning i ungefär brösthöjd
+     och uppe under taket — det är ett av de starkaste "arbetande stall"-
+     dragen i rummet, och det saknades helt. */
+  if(S.service.some(r=>r.oppen)){
+    const ror=new Bygge();
+    for(const r of S.service){
+      if(!r.oppen)continue;
+      const k=r.rekt, sidaX=k.x<vx?k.x+0.28:k.x+k.w-0.28;
+      for(const z of [2.15,2.55])
+        ror.cyl(0.045,0.045,k.h-0.4,BF.ram,
+          M4.mul(M4.translation(sidaX,z,k.y+0.2),M4.rotX(Math.PI/2)),8);
+      for(let i=0;i<3;i++)                      // konsoler ner mot väggen
+        ror.lada(0.10,0.10,0.10,BF.ram,
+          M4.translation(sidaX,2.35,k.y+0.8+i*(k.h-1.6)/2));
+    }
+    lagg(ror,null);
+  }
+
+  /* Gaveldörren i söder med dagsljus och grön utrymningsskylt. Utan den
+     läser rummet som en säck, och det var precis vad som underkändes. */
+  if(S.gaveloppning){
+    const G2=S.gaveloppning, gv=new Bygge();
+    gv.lada(G2.bredd,G2.hojd,0.10,"#EAF2F6",
+      M4.translation(G2.x+G2.bredd/2,G2.hojd/2,0.06));
+    gv.lada(G2.exitB,G2.exitH,0.06,"#1E7A3C",
+      M4.translation(G2.x+G2.bredd/2,G2.hojd+G2.exitOver,0.14));
+    S3.statiskt.push({nat:GL.nat(gv), platt:true});
+  }
   /* Tvärväggarna med dörrgap. */
-  {const halOrd=Object.values(S.gangar).sort((a,b)=>a.x0-b.x0);
-   for(const tv of S.tvarvaggar){
+  {for(const tv of S.tvarvaggar){
+     /* Hålen är gångarna PLUS väggens egna öppningar ur planen. Förut kom de
+        bara ur gångarna, och då blev väggen tät framför varje boxrad. */
+     const halOrd=[...Object.values(S.gangar),...(tv.oppningar||[])]
+       .sort((a,b)=>a.x0-b.x0);
      const bitar=[]; let x=0;
-     for(const h of halOrd){ bitar.push([x,h.x0]); x=h.x1; }
+     for(const h of halOrd){ if(h.x0>x) bitar.push([x,h.x0]); x=Math.max(x,h.x1); }
      bitar.push([x,S.bredd]);
      for(const [x0,x1] of bitar){
        if(x1-x0<0.05)continue;

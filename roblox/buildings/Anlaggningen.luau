@@ -502,7 +502,7 @@ local function byggStallInre(model: Model, base: CFrame)
 	-- mot klubbdelen är en branddörrsvägg. En obruten vägg här stänger av
 	-- stallgången — byggbänken fällde precis det.
 	for i, v in ipairs(S.tvarvaggar) do
-		for j, bit in ipairs(GEO.tvarvaggBitar(S)) do
+		for j, bit in ipairs(GEO.tvarvaggBitar(S, v)) do
 			BK.box(model, base, "Tvärvägg " .. i .. ":" .. j,
 				o.x + bit.x0, 0, o.y + v.y, bit.x1 - bit.x0, h, 0.2, INRE.vagg,
 				if v.brand then Enum.Material.Concrete else Enum.Material.Plaster)

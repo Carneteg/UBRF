@@ -115,16 +115,26 @@ end
 
 	Gångarna kommer som en tabell med id som nyckel, och nyckelordningen i Luau
 	är inte definierad — därför sorteras de på x0 innan bitarna räknas ut. ]]
-function Geometri.tvarvaggBitar(stall): { { x0: number, x1: number } }
+--[[ Hålen i en tvärvägg: gångarna PLUS väggens egna öppningar ur brandplanen.
+
+	Tog förut bara gångarna. Väggen mot servicedelen blev då tät framför varje
+	boxrad, och spelaren som kom in genom södra gaveln möttes av en blank
+	återvändsgränd — det som underkändes i spelarvyn. Väggen får sina hål ur
+	planen nu, inte ur gångarnas lägen. `vagg` är valfri; utan den blir det
+	som förut. ]]
+function Geometri.tvarvaggBitar(stall, vagg): { { x0: number, x1: number } }
 	local hal = {}
 	for _, g in pairs(stall.gangar) do table.insert(hal, g) end
+	if vagg ~= nil and vagg.oppningar ~= nil then
+		for _, o in ipairs(vagg.oppningar) do table.insert(hal, o) end
+	end
 	table.sort(hal, function(a, b) return a.x0 < b.x0 end)
 
 	local bitar = {}
 	local x = 0
 	for _, h in ipairs(hal) do
 		if h.x0 - x > 0.05 then table.insert(bitar, { x0 = x, x1 = h.x0 }) end
-		x = h.x1
+		if h.x1 > x then x = h.x1 end
 	end
 	if stall.bredd - x > 0.05 then table.insert(bitar, { x0 = x, x1 = stall.bredd }) end
 	return bitar
