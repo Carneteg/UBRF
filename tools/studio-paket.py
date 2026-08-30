@@ -46,6 +46,17 @@ def main() -> int:
         print("\nAvbryter: kör om exporten innan du bygger i Studio.")
         return 1
 
+    #[[ Materialnamnen. Ett ogiltigt Enum.Material avbryter bygget MITT I
+    #   Studio med "is not a valid member", och allt efter det blir foljdfel.
+    #   Battre att inte lamna ifran sig paketet alls. ]]
+    mat = subprocess.run(
+        [sys.executable, str(ROT / "tools" / "kolla-material.py")],
+        capture_output=True, text=True)
+    if mat.returncode != 0:
+        print(mat.stdout + mat.stderr, end="")
+        print("\nAvbryter: Studio hade fallit pa det har.")
+        return 1
+
     delar = ["""--[[ ══════════════════════════════════════════════════════════════════
      UBRF — hela anläggningen, att klistra in i Roblox Studio.
 

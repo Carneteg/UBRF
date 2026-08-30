@@ -269,7 +269,7 @@ local function byggRidhusIdentitet(model: Model, base: CFrame)
 			local fall = Instance.new("Part")
 			fall.Name = "Ridhus takfall"; fall.Anchored = true
 			fall.CanCollide = false
-			fall.Color = TF.plat; fall.Material = Enum.Material.CorrugatedMetal
+			fall.Color = TF.plat; fall.Material = Enum.Material.Metal
 			fall.Size = Vector3.new(BK.M * takL, BK.M * TS.platT,
 				BK.M * (R.langd + 0.6))
 			fall.CFrame = base
@@ -602,7 +602,7 @@ local function byggStallInre(model: Model, base: CFrame)
 	for _, sida in ipairs({ -1, 1 }) do
 		local p = Instance.new("Part")
 		p.Name = "Stalltak plåt"; p.Anchored = true; p.CanCollide = false
-		p.Color = SG.takplat; p.Material = Enum.Material.CorrugatedMetal
+		p.Color = SG.takplat; p.Material = Enum.Material.Metal
 		p.Size = Vector3.new(BK.M * takL, BK.M * 0.12, BK.M * langd)
 		p.CFrame = base
 			* CFrame.new(BK.M * (mx + sida * halvB / 2), BK.M * (h + resn / 2),

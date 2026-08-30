@@ -1,3 +1,30 @@
+--[[ __MATERIAL injiceras har av build.py ]]
+local __MATERIAL = {}
+
+--[[ Ett strikt enum: svarar bara pa namn som finns i listan, och kastar
+	annars. __MATERIAL injiceras av roblox/tests/build.py ur
+	roblox/tests/roblox-material.txt.
+
+	Forsta versionen svarade pa ALLT, och da passerade
+	materialnamnet CorrugatedMetal — som inte finns i Roblox — hela sviten och
+	sprack forst nar en manniska korde bygget i Studio. En stubb som sager ja
+	till allt provar ingenting. ]]
+local function __striktEnum(vad, tillatna)
+	--[[ Tom lista betyder att filen INTE byggdes via build.py, alltsa att
+		injektionen uteblev. Utan den har vakten sag det ut som att VARJE
+		material var ogiltigt, och felmeddelandet pekade at helt fel hall. ]]
+	assert(#tillatna > 0,
+		"__MATERIAL ar tom: bygg specen med roblox/tests/build.py, eller kor "
+		.. "paketet med tools/kor-paket.py")
+	local m = {}
+	for _, n in ipairs(tillatna) do m[n] = n end
+	return setmetatable({}, { __index = function(_, k)
+		if m[k] then return k end
+		error(("%s is not a valid member of \"Enum.%s\" — se roblox/tests/roblox-material.txt")
+			:format(tostring(k), vad), 2)
+	end })
+end
+
 --!nostrict
 --[[
 	Roblox-stubbar för mätningarna utanför Studio.
@@ -92,7 +119,12 @@ Enum = {
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	NormalId = { Top = 1 },
-	Material = setmetatable({}, { __index = function(_, k) return k end }),
+	--[[ STRIKT. Forst svarade Material pa vilket namn som helst, och da
+	     passerade materialnamnet CorrugatedMetal — som inte finns i Roblox —
+	     hela sviten och sprack forst i Studio. Listan injiceras av
+	     build.py ur roblox/tests/roblox-material.txt, sa den finns pa ETT
+	     stalle. ]]
+	Material = __striktEnum("Material", __MATERIAL),
 }
 
 workspace = {

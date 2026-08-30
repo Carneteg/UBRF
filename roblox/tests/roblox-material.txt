@@ -1,0 +1,35 @@
+# Roblox Enum.Material — de värden UBRF får använda.
+#
+# EN sanning, läst av tre ställen: teststubbarna (som då kastar direkt när ett
+# ogiltigt namn används), tools/kolla-material.py (som skannar källan och det
+# genererade Studio-paketet) och därmed tools/studio-paket.py.
+#
+# Varför filen finns: Enum.Material i stubbarna svarade på VILKET NAMN SOM
+# HELST, så Enum.Material.CorrugatedMetal — som inte finns i Roblox — passerade
+# hela Linux-sviten och sprack först i Studio:
+#
+#     CorrugatedMetal is not a valid member of "Enum.Material"
+#
+# Lägg bara till namn som faktiskt finns i Roblox. Listan är avsiktligt
+# begränsad till det projektet använder; en komplett Roblox-lista hade blivit
+# en andra sanning att hålla i synk mot en API-referens vi ändå inte läser.
+Asphalt
+Cobblestone
+Concrete
+Fabric
+Glass
+Grass
+Ground
+LeafyGrass
+Metal
+Mud
+Neon
+Pavement
+Plaster
+Rock
+Sand
+Sandstone
+Slate
+SmoothPlastic
+Wood
+WoodPlanks

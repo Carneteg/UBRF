@@ -68,6 +68,19 @@ REQUIRE = re.compile(
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.HorseCore(?:\.(\w+))?'
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.(\w+))\s*\)')
 
+MATERIALLISTA = ROT / "tests" / "roblox-material.txt"
+
+
+def material() -> list:
+    """De Enum.Material-namn UBRF far anvanda, ur EN fil.
+
+    Stubbarnas Enum.Material svarade forr pa vilket namn som helst, sa
+    Enum.Material.CorrugatedMetal passerade hela sviten och sprack forst i
+    Studio. Listan injiceras nu i stubbarna i stallet for att skrivas av."""
+    rader = MATERIALLISTA.read_text(encoding="utf-8").splitlines()
+    return [r.strip() for r in rader if r.strip() and not r.startswith("#")]
+
+
 def las(rel: str) -> str:
     return (ROT / rel).read_text(encoding="utf-8")
 
@@ -92,7 +105,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = GEOMETRI, "tests/stubs.luau"
     else:
         moduler, stubbar = MODULER, "tests/stubs.luau"
-    delar = [las(stubbar)]
+    stubbtext = las(stubbar).replace(
+        "local __MATERIAL = {}",
+        "local __MATERIAL = { " + ", ".join(f'"{m}"' for m in material()) + " }",
+        1)
+    delar = [stubbtext]
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
