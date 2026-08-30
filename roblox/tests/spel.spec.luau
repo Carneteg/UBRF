@@ -168,6 +168,73 @@ do
 		d and (d.namn .. " i box " .. d.box.nummer .. " (rad " .. d.box.rad .. ")") or "nil")
 end
 
+--[[ ── Skötseln ───────────────────────────────────────────────────
+	Reglerna är hästkunskap, inte spelbalans. Provet vaktar just det som
+	skulle göra spelet lättare och sämre om någon justerade det slarvigt. ]]
+do
+	local R = UBRFSpel.rykt
+	check("ryktzonerna finns", R and #R.zoner > 0, R and #R.zoner .. " zoner")
+	check("redskapen finns", R and #R.redskap > 0, R and #R.redskap .. " st")
+
+	--[[ Varje zontyp måste ha ett krav, annars går zonen inte att bli klar
+		med och spelaren fastnar utan att förstå varför. ]]
+	local utanKrav = {}
+	local sedda = {}
+	for _, z in ipairs(R.zoner) do
+		if not sedda[z.typ] then
+			sedda[z.typ] = true
+			if not R.krav[z.typ] then table.insert(utanKrav, z.typ) end
+		end
+	end
+	check("varje zontyp har ett redskapskrav", #utanKrav == 0, table.concat(utanKrav, ", "))
+
+	--[[ Ett krav som nämner ett redskap som inte finns ger en zon som aldrig
+		blir ren, oavsett vad spelaren gör. ]]
+	local finns = {}
+	for _, r in ipairs(R.redskap) do finns[r.id] = true end
+	local okant = {}
+	for typ, lista in pairs(R.krav) do
+		for _, id in ipairs(lista) do
+			if not finns[id] then table.insert(okant, typ .. "=" .. id) end
+		end
+	end
+	check("alla krav pekar på ett redskap som finns", #okant == 0, table.concat(okant, ", "))
+
+	--[[ HÄSTKUNSKAP, inte balans: huvudet tål bara den mjuka borsten. Skrapa
+		och kardborste på ett huvud gör ont. Faller det här har någon gjort
+		spelet "smidigare" och tagit bort själva lärdomen. ]]
+	local huvud = R.krav.huvud
+	check("huvudet tål BARA den mjuka borsten",
+		huvud ~= nil and #huvud == 1 and huvud[1] == "mjuk",
+		huvud and table.concat(huvud, ", ") or "inget krav")
+
+	--[[ Benen tål inte gummiskrapan heller. ]]
+	local ben = R.krav.ben
+	local benHarSkrapa = false
+	for _, id in ipairs(ben or {}) do if id == "skrapa" then benHarSkrapa = true end end
+	check("benen ryktas inte med gummiskrapa", ben ~= nil and not benHarSkrapa,
+		ben and table.concat(ben, ", ") or "inget krav")
+
+	check("sadlingen har sina faser", #UBRFSpel.sadelfaser >= 4,
+		#UBRFSpel.sadelfaser .. " faser")
+
+	local V = UBRFSpel.visitation
+	check("visitpunkterna finns", V and #V.punkter > 0, V and #V.punkter .. " punkter")
+
+	--[[ En punkt utan fynd kan aldrig ge något att rapportera. ]]
+	local utanFynd = {}
+	for _, pkt in ipairs(V.punkter) do
+		if not V.fynd[pkt.id] then table.insert(utanFynd, pkt.id) end
+	end
+	check("varje visitpunkt har ett möjligt fynd", #utanFynd == 0, table.concat(utanFynd, ", "))
+
+	--[[ HÄSTKUNSKAP: eleven RAPPORTERAR ett fynd, hon diagnostiserar inte.
+		Exakt ett rätt svar. Två rätta upphäver hela lärdomen. ]]
+	local ratta = 0
+	for _, sv in ipairs(V.svar) do if sv.ratt then ratta += 1 end end
+	check("exakt ETT rätt svar vid ett fynd", ratta == 1, ratta .. " rätta")
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("spel.spec: " .. fails .. " fel")
