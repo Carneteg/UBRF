@@ -5,6 +5,9 @@
 	En ProximityPrompt per häst, skapad på klienten så att servern slipper
 	replikera dem. Prompten frågar servern om lov — klienten bestämmer
 	aldrig själv att den sitter upp.
+
+	G01-regeln ligger både här och på servern: klienten DÖLJER uppsittning
+	innan den är relevant, servern AVGÖR om den verkligen är tillåten.
 ]]
 
 local Players = game:GetService("Players")
@@ -14,9 +17,32 @@ local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Net, RigAdapter = Core.Networking, Core.RigAdapter
 
 local InteractionController = {}
+local player = Players.LocalPlayer
 
 local prompts: { [Model]: ProximityPrompt } = {}
 local onMount: ((Model) -> ())? = nil
+local interactionEnabled = true
+
+local function canOfferMount(model: Model): boolean
+	if player:GetAttribute("G01Enabled") == true then
+		return model:GetAttribute("AssignedUserId") == player.UserId
+			and player:GetAttribute("G01Phase") == "ready_to_mount"
+	end
+	return true
+end
+
+local function refreshPrompt(model: Model)
+	local prompt = prompts[model]
+	if prompt then
+		prompt.Enabled = interactionEnabled and canOfferMount(model)
+	end
+end
+
+local function refreshAll()
+	for model in prompts do
+		refreshPrompt(model)
+	end
+end
 
 local function addPrompt(model: Model)
 	if prompts[model] then return end
@@ -38,10 +64,16 @@ local function addPrompt(model: Model)
 			onMount(model)
 		elseif not ok then
 			warn("[Horse] Kunde inte sitta upp: " .. tostring(reason))
+			refreshPrompt(model)
 		end
 	end)
 
+	model:GetAttributeChangedSignal("AssignedUserId"):Connect(function()
+		refreshPrompt(model)
+	end)
+
 	prompts[model] = prompt
+	refreshPrompt(model)
 end
 
 local function removePrompt(model: Model)
@@ -63,12 +95,14 @@ function InteractionController.start(mountCallback: (Model) -> ())
 	CollectionService:GetInstanceRemovedSignal("Horse"):Connect(function(inst)
 		if inst:IsA("Model") then removePrompt(inst :: Model) end
 	end)
+	player:GetAttributeChangedSignal("G01Enabled"):Connect(refreshAll)
+	player:GetAttributeChangedSignal("G01Phase"):Connect(refreshAll)
+	refreshAll()
 end
 
 function InteractionController.setEnabled(enabled: boolean)
-	for _, prompt in prompts do
-		prompt.Enabled = enabled
-	end
+	interactionEnabled = enabled
+	refreshAll()
 end
 
 return InteractionController
