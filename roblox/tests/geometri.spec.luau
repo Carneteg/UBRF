@@ -474,6 +474,27 @@ do
 			or ("onådda: " .. table.concat(onadda, ", ")))
 end
 
+do
+	-- Ingen byggnad får överlappa en annan. Sviten hade inget sådant test alls,
+	-- och när de mätta bredderna gjorde stallet 8 m bredare fanns ingenting som
+	-- hade fångat en krock. Att det råkade gå bra är inte ett test.
+	local b = UBRFKomplex.byggnader
+	local krockar = {}
+	for i = 1, #b do
+		for j = i + 1, #b do
+			local p, q = b[i].rekt, b[j].rekt
+			local ox = math.min(p.x + p.w, q.x + q.w) - math.max(p.x, q.x)
+			local oy = math.min(p.y + p.h, q.y + q.h) - math.max(p.y, q.y)
+			if ox > 0.01 and oy > 0.01 then
+				table.insert(krockar, string.format("%s x %s (%.2f m²)",
+					b[i].id, b[j].id, ox * oy))
+			end
+		end
+	end
+	check("ingen byggnad överlappar en annan", #krockar == 0,
+		#krockar == 0 and (#b .. " byggnader") or table.concat(krockar, ", "))
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("geometri.spec: " .. fails .. " fel")

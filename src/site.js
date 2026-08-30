@@ -328,13 +328,16 @@ const ANL = {
        det inte. Läge, mått, taklutning och den enda dörren är alla
        antagna, och den ska inte läsas som en verifierad förbindelse bara
        för att den råkar heta länga. [ASSUMPTION] */
-    /* Låg y 59..65, alltså i liv med stallets dåvarande södra gavel. När
-       gaveln flyttade till 49,05 hamnade längan mitt i gräsgården i
-       stället för i dess södra ände, och gjorde inte längre det den finns
-       till för. Flyttad till y 43..49 så att den fortsatt sluter gården
-       söderut. Läget är fortfarande `[ASSUMPTION]`, precis som förut —
-       den är flyttad för att behålla sin ROLL, inte för att någon källa
-       säger var den står. */
+    /* `[ASSUMPTION]` — LÄGET ÄR INTE KÄNT. Längan låg y 59..65 och hamnade
+       inne i husens nya utbredning när måtten kom. Den ligger nu y 43..49.
+
+       RÄTTELSE AV MOTIVERINGEN. Jag skrev först att den flyttats "för att
+       behålla sin roll" som gårdens södra avslutning. Senior Site Fidelity
+       Review 04 underkänner det resonemanget, och med rätta: ett objekt vars
+       verkliga läge är okänt får inte flyttas för att bevara en roll man
+       själv har tilldelat det. Den är flyttad av EN anledning — den krockade
+       med verifierad geometri — och det nya läget är lika osourcat som det
+       gamla. Den styr ingenting annat och ska inte läsas som placerad. */
     {id:"langa", rekt:{x:147, y:43, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
      fargV:"#7C2A24", fargT:"#7E8288", label:"",
      oppningar:[{sida:"N", u:4.4, b:1.1, h:2.0, z0:0, typ:"dorrmork"}]},
