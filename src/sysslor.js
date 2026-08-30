@@ -9,26 +9,7 @@
 "use strict";
 
 /* Foderschema per häst: hö (kg), kraftfoder, och en rad ur verkligheten. */
-const FODERSCHEMA={
-  toblerone:{ho:2, kraft:"inget", notis:"Lättfödd fjording — inget kraftfoder, han blir rund av luft."},
-  cosmo:    {ho:3, kraft:"müsli", notis:"Stor kropp, stort jobb — full giva."},
-  air:      {ho:2, kraft:"betfor", notis:"Betfor blötläggs. Han sörplar."},
-  larry:    {ho:3, kraft:"müsli", notis:"Hoppar bäst med bränsle i tanken."},
-  hamilton: {ho:2, kraft:"müsli", notis:"Känslig mage — müslin ska vara blötlagd."},
-  conor:    {ho:2, kraft:"betfor", notis:"Lugn mat till en känslig häst."},
-  crokino:  {ho:3, kraft:"pellets", notis:"Stor häst, standardgiva."},
-  lydia:    {ho:2, kraft:"inget", notis:"Barnponny på dietlista sedan i våras."},
-  dexter:   {ho:2, kraft:"pellets", notis:"Mer fart än foder — snåla med pelletsen."},
-  lady:     {ho:2, kraft:"inget", notis:"Welsh cob på gräns till rund — höet räcker gott."},
-  chip:     {ho:1, kraft:"inget", notis:"Russ. Ge honom mer och han rullar till lektionen."},
-  tina:     {ho:2, kraft:"betfor", notis:"Blötlagd betfor — och stå på hennes vänstra sida."},
-  westside: {ho:3, kraft:"pellets", notis:"Stor kropp, standardgiva, inga konstigheter."},
-  makadu:   {ho:3, kraft:"betfor", notis:"Äter lugnt. Gjorda om honom EFTER fodringen."},
-  mara:     {ho:2, kraft:"müsli", notis:"Sur min vid krubban är normalläge. Ge och backa."},
-  husky:    {ho:3, kraft:"müsli", notis:"Bränner allt han får — full giva."},
-  kennedy:  {ho:2, kraft:"müsli", notis:"Unghäst under uppbyggnad — müslin blötläggs."},
-};
-const KRAFTVAL=["inget","müsli","betfor","pellets"];
+/* FODERSCHEMA och KRAFTVAL bor nu i src/spel/hastar.js. */
 
 /* ── Sadelkammaren ────────────────────────────────────────────────
    Varje ridskolehäst har sin egen sadel på egen bygel och sitt träns

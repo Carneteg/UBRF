@@ -1,5 +1,9 @@
 # Ridhuset i Studio — manuell slutkontroll
 
+> **Den visuella granskningen görs i `roblox/docs/STUDIO-QA.md`.**
+> Det är det kanoniska QA-dokumentet med de elva vyerna och PASS/FEL.
+> Den här filen är bakgrund och detaljunderlag.
+
 Testbänken mäter vad byggaren PRODUCERAR: antal, lägen, storlekar, färger och
 relationer. Den ser inte utseende, material, ljus eller prestanda. Den här
 listan är det som återstår och som bara går att avgöra i Studio.

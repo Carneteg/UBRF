@@ -30,6 +30,7 @@ MODULER = [
     ("Geometri",     "Geometri.luau"),
     ("UBRFKomplex",  "UBRFKomplex.luau"),
     ("Vyer",         "Vyer.luau"),
+    ("QAPanel",      "QAPanel.luau"),
 ]
 SKRIPT = "Anlaggningen.luau"
 
@@ -45,6 +46,17 @@ def main() -> int:
         print("\nAvbryter: kör om exporten innan du bygger i Studio.")
         return 1
 
+    #[[ Materialnamnen. Ett ogiltigt Enum.Material avbryter bygget MITT I
+    #   Studio med "is not a valid member", och allt efter det blir foljdfel.
+    #   Battre att inte lamna ifran sig paketet alls. ]]
+    mat = subprocess.run(
+        [sys.executable, str(ROT / "tools" / "kolla-material.py")],
+        capture_output=True, text=True)
+    if mat.returncode != 0:
+        print(mat.stdout + mat.stderr, end="")
+        print("\nAvbryter: Studio hade fallit pa det har.")
+        return 1
+
     delar = ["""--[[ ══════════════════════════════════════════════════════════════════
      UBRF — hela anläggningen, att klistra in i Roblox Studio.
 
@@ -54,10 +66,17 @@ def main() -> int:
 
      Kör en gång. Sedan:
 
-         Vyer.lista()             -- vyerna Studio-kontrollen kräver
-         Vyer.ga("kortandan")     -- ställ kameran, ta skärmdump
+         UBRF QA-panelen öppnas av sig själv i Studio: klicka Nästa,
+         titta, klicka PASS eller FEL. UBRFQA() öppnar den igen.
 
-     Två checklistor delar på arbetet:
+         Vyer.lista()             -- vyerna Studio-kontrollen kräver
+         Vyer.ga("kortandan")     -- ställ kameran för hand i stället
+
+     Kvitteringen sker i ETT dokument:
+
+         roblox/docs/STUDIO-QA.md                 <-- kanonisk QA-lista
+
+     Bakgrund och detaljunderlag:
 
          roblox/buildings/STUDIO-KONTROLL.md      komplexet, stallet, vägarna
          roblox/docs/RIDHUS-STUDIO-CHECKLISTA.md  ridhusets interiör
@@ -73,7 +92,23 @@ def main() -> int:
 
     delar.append(f"--[[ ══ {SKRIPT} ══ ]]\n"
                  + (BYGG / SKRIPT).read_text(encoding="utf-8") + "\n")
-    delar.append('\nVyer.lista()\n')
+    #[[ QA-panelen startas sist och bara i Studio. Den ligger med i PAKETET,
+    #   inte i roblox/src/client/, just for att den aldrig ska kunna folja med
+    #   ut i spelet. UBRFQA() finns kvar sa att den gar att oppna igen. ]]
+    #[[ _G ar skrivbart i Roblox men INTE i luau-CLI:t, dar paketet
+    #   verifieras. Utan pcall dor hela paketet pa sista raden med exitkod 1
+    #   — vilket det gjorde, och syntes bara pa exitkoden eftersom stderr och
+    #   stdout kom i olika ordning. Misslyckas den sager vi det i stallet for
+    #   att svalja det. ]]
+    delar.append(
+        "\nVyer.lista()\n"
+        "QAPanel.start(Vyer)\n"
+        "local __qaOk = pcall(function()\n"
+        "\t_G.UBRFQA = function() QAPanel.start(Vyer) end\n"
+        "end)\n"
+        "print(__qaOk\n"
+        "\tand \"Skriv UBRFQA() i Command Bar for att oppna panelen igen.\"\n"
+        "\tor \"UBRFQA() gick inte att registrera — kor om paketet for att oppna panelen.\")\n")
 
     UT.parent.mkdir(parents=True, exist_ok=True)
     UT.write_text("\n".join(delar), encoding="utf-8")
@@ -81,6 +116,7 @@ def main() -> int:
     rader = UT.read_text(encoding="utf-8").count("\n")
     print(f"{UT.relative_to(ROT)}: {rader} rader")
     print("Klistra in hela filen i Studio och kör den en gång.")
+    print("Checklistan: roblox/docs/STUDIO-QA.md")
     return 0
 
 

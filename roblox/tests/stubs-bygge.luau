@@ -1,3 +1,30 @@
+--[[ __MATERIAL injiceras har av build.py ]]
+local __MATERIAL = {}
+
+--[[ Ett strikt enum: svarar bara pa namn som finns i listan, och kastar
+	annars. __MATERIAL injiceras av roblox/tests/build.py ur
+	roblox/tests/roblox-material.txt.
+
+	Forsta versionen svarade pa ALLT, och da passerade
+	materialnamnet CorrugatedMetal — som inte finns i Roblox — hela sviten och
+	sprack forst nar en manniska korde bygget i Studio. En stubb som sager ja
+	till allt provar ingenting. ]]
+local function __striktEnum(vad, tillatna)
+	--[[ Tom lista betyder att filen INTE byggdes via build.py, alltsa att
+		injektionen uteblev. Utan den har vakten sag det ut som att VARJE
+		material var ogiltigt, och felmeddelandet pekade at helt fel hall. ]]
+	assert(#tillatna > 0,
+		"__MATERIAL ar tom: bygg specen med roblox/tests/build.py, eller kor "
+		.. "paketet med tools/kor-paket.py")
+	local m = {}
+	for _, n in ipairs(tillatna) do m[n] = n end
+	return setmetatable({}, { __index = function(_, k)
+		if m[k] then return k end
+		error(("%s is not a valid member of \"Enum.%s\" — se roblox/tests/roblox-material.txt")
+			:format(tostring(k), vad), 2)
+	end })
+end
+
 --!nostrict
 --[[
 	Roblox-stubbar för att FAKTISKT KÖRA byggskriptet utanför Studio.
@@ -64,16 +91,50 @@ CFrame = {
 	identity = cframe(),
 }
 
-Enum = {
-	Material = setmetatable({}, { __index = function(_, k) return k end }),
-	SurfaceType = setmetatable({}, { __index = function(_, k) return k end }),
-	CameraType = { Scriptable = 1 },
+--[[ Enum svarar pa vad som helst. Byggskriptet och QA-panelen slar upp en
+	handfull olika, och en handskriven lista hade bara blivit en till sak att
+	halla i synk — samma fel som redan fallit fargexporten och objektantalet.
+	Priset ar att ett FELSTAVAT enum-namn inte marks har; det star i README
+	som en av bankens granser. ]]
+local function __allt()
+	return setmetatable({}, { __index = function(_, k) return k end })
+end
+Enum = setmetatable({
+		CameraType = { Scriptable = 1, Custom = 2 },
+		--[[ Material ar STRIKT; ovriga enum svarar fortfarande pa allt.
+			Materialnamnen ar de som faktiskt faller bygget i Studio. ]]
+		Material = __striktEnum("Material", __MATERIAL),
+	},
+	{ __index = function(t, k) local v = __allt(); rawset(t, k, v); return v end })
+
+--[[ UDim/UDim2 baras bara vidare; panelen laser dem aldrig tillbaka. Racker
+	for att bevisa att den BYGGS, inte for att bevisa hur den ser ut. ]]
+UDim = { new = function(skala, offset) return { Scale = skala or 0, Offset = offset or 0 } end }
+UDim2 = {
+	new = function(xs, xo, ys, yo)
+		return { X = { Scale = xs or 0, Offset = xo or 0 },
+		         Y = { Scale = ys or 0, Offset = yo or 0 } }
+	end,
+	fromOffset = function(x, y)
+		return { X = { Scale = 0, Offset = x or 0 }, Y = { Scale = 0, Offset = y or 0 } }
+	end,
 }
 
 --[[ Instanser. Bara det BuildKit och byggskriptet rör: egenskaper, Parent som
      bygger trädet, attribut, GetDescendants och Destroy. Sätter någon en
      egenskap som inte finns i Roblox märks det inte här — det är en av
      gränserna, och den står i README. ]]
+--[[ En signal som MINNS sina lyssnare, sa att ett prov kan trycka pa
+	knapparna. Utan _fire gar det bara att bevisa att panelen byggs, inte att
+	den gor nagot nar man klickar. ]]
+local function signal()
+	local lyssnare = {}
+	return {
+		Connect = function(_, f) table.insert(lyssnare, f); return { Disconnect = function() end } end,
+		_fire = function(...) for _, f in ipairs(lyssnare) do f(...) end end,
+	}
+end
+
 local function instance(klass)
 	local barn = {}
 	local attr = {}
@@ -81,6 +142,11 @@ local function instance(klass)
 	i = {
 		ClassName = klass, Name = klass, Children = barn,
 		Size = vec(), CFrame = cframe(), Transparency = 0, CanCollide = true,
+		Enabled = true,
+		--[[ Knappsignalerna. Bara de tva panelen anvander; en generisk
+		     signalfabrik hade dolt en felstavning. ]]
+		Activated = signal(),
+		MouseButton1Click = signal(),
 		FindFirstChild = function(self, namn)
 			for _, b in ipairs(barn) do if b.Name == namn then return b end end
 			return nil
@@ -127,3 +193,37 @@ Instance = { new = function(klass) return instance(klass) end }
 workspace = instance("Workspace")
 workspace.Name = "Workspace"
 workspace.CurrentCamera = { CFrame = cframe(), CameraType = 1 }
+
+--[[ game:GetService, minimalt.
+
+	Byggskripten behöver det inte, men Studio-paketet gör det: QA-panelen
+	frågar RunService om den kör i Studio. Utan stubben kraschar hela paketet
+	på rad ett i stället för att bygga, och då går det inte att verifiera
+	härifrån att filen Tobias klistrar in faktiskt kör.
+
+	IsStudio är FALSKT här med flit. Panelen ska vägra starta utanför Studio,
+	och den regeln vill jag kunna prova, inte bara påstå. ]]
+--[[ warn saknades helt. Studio har den; luau-CLI:t inte. Utan stubben dog
+	paketet pa QA-panelens VAGRAN-gren — alltsa exakt den gren som ska fungera
+	utanfor Studio. ]]
+warn = function(...) print("[warn]", ...) end
+
+local __tjanster = {
+	RunService = { IsStudio = function() return false end,
+	               IsClient = function() return false end,
+	               IsServer = function() return true end },
+	Players = { LocalPlayer = nil },
+	CoreGui = instance("CoreGui"),
+	CollectionService = {
+		GetTagged = function() return {} end,
+		GetInstanceAddedSignal = function() return { Connect = function() end } end,
+		GetInstanceRemovedSignal = function() return { Connect = function() end } end,
+	},
+}
+game = {
+	GetService = function(_, namn)
+		local t = __tjanster[namn]
+		if not t then error("stubben saknar tjänsten " .. tostring(namn)) end
+		return t
+	end,
+}

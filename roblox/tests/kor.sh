@@ -13,7 +13,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri bygge movement camera rider touch"
+SPECAR="geometri spel bygge qa movement camera rider touch"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
@@ -21,6 +21,14 @@ if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
   printf '%s\n' "$bygglogg" | tail -10
   exit 1
 fi
+# Materialnamnen forst: ett ogiltigt Enum.Material faller bygget i Studio, och
+# stubbarna kan bara fanga de material som en spec faktiskt rakar bygga.
+# Skannern laser ALL Luau-kall.
+if ! python3 ../tools/kolla-material.py; then
+  echo "MATERIALKONTROLLEN MISSLYCKADES"
+  exit 1
+fi
+
 status=0
 for f in $SPECAR; do
   ut=$(luau "tests/.build/$f.spec.luau" 2>&1)

@@ -1,47 +1,64 @@
 # Active Gate
 
-Current gate: **Gate F01 — UBRF Fidelity**
+Current gate: **Gate G01 — First Playable Horse Loop** (`docs/GATE-G01-FIRST-PLAYABLE.md`)
 
-Canonical implementation brief:
+## Gate F01 — UBRF Fidelity: `ACCEPTED_IN_ROBLOX_STUDIO`
 
-- `docs/GATE-F01-UBRF-FIDELITY.md`
+Human Roblox Studio acceptance completed **2026-08-30** against the corrected
+Studio package from PR #26.
 
-## Focus decision
+Result:
 
-Tobias has explicitly reprioritized the project: **building/environment fidelity is now the active focus.**
+- **11 / 11 canonical QA views: PASS**
+- **walk path `ankomsten → stallet → hästgången → ridhuset → banan`: PASS**
+- non-blocking observation: **the stable interior feels a little dark**
 
-Gate 01 — Riding Feel is **PAUSED, not closed**. Its remaining Roblox-touch blocker from `audits/GATE-01-CHATGPT-REVIEW-02.md` must be preserved and resumed later. Do not spend implementation time on it while Gate F01 is active unless Tobias explicitly changes priority again.
+The lighting note is polish, not a fidelity blocker. It must not reopen broad
+environment work while G01 is active. A future lighting pass may address it as
+long as visibility and game feel improve without inventing unsupported UBRF
+facts.
 
-## Claude
+The real Studio run also exposed the invalid `Enum.Material` defect in the old
+package. PR #26 corrected it and added a strict material allowlist/regression
+gate so the same class of error cannot silently pass the Linux harness again.
 
-Before making building/world/fidelity changes, read in this order:
+Open `REFERENCE GAP` items remain open and must not be invented:
 
-1. `CLAUDE.md`
-2. `docs/PRODUCT-CANON.md`
-3. `docs/ASSET-SOURCE-OF-TRUTH.md`
-4. `docs/AI-COLLABORATION.md`
-5. `docs/GATE-F01-UBRF-FIDELITY.md`
-6. `references/SITEPLAN.md`
-7. the relevant building `KORT.md` files and all GitHub-hosted reference material they cite
+- hall orientation
+- exact size of the gable offset
+- documented contradiction between arena board and spectator-front references
 
-Do not use Google Drive as a build dependency. If a needed source is not available in GitHub/Supabase, mark `REFERENCE GAP`; do not invent the missing reality.
+F01 acceptance means the current environment is an accepted gameplay baseline;
+it does **not** claim every unresolved real-world detail is proven or that the
+site is literally 100% identical.
 
-Do not expand scope beyond Gate F01 while it is active unless Tobias explicitly requests it.
+---
 
-**Platform rule for this gate:** Roblox is the primary game platform and HTML/web is a real playable parallel distribution. Both must use the same fidelity facts about UBRF even when rendering/implementation differs.
+## Gate G01 focus
 
-After implementation, create:
+UBRF must now become a playable horse game. Build vertically around:
 
-`audits/GATE-F01-UBRF-FIDELITY-RESULT.md`
+`arrival → stable → assigned horse → preparation → lead out → riding hall → mount → simple exercise → return → aftercare → feedback`
 
-It must include the Fidelity Matrix, source chain, before/after contradictions, separate ridhus/stall exterior/interior sections, Roblox/web parity, visual comparison evidence, remaining assumptions/reference gaps and exact tested commit SHAs.
+Roblox is the primary game platform. HTML/web remains a real playable parallel
+implementation. GitHub + Supabase are the development source chain; Google
+Drive must not be required by implementation agents.
 
-Claude does not mark the gate closed and does not call the whole site `100% identical` while visible assumptions/reference gaps remain.
+## Roles
 
-## ChatGPT
+### Claude
 
-Review as Senior Game Developer / World & Environment Systems Reviewer. Verify the actual diff against the actual source chain, not only against summary documents. A model matching an assumption in `KORT.md` is not proof of real-world fidelity.
+Lead implementation engineer. Before G01 work, read `CLAUDE.md`, product canon,
+AI collaboration rules, the active G01 gate, existing HorseCore/riding code and
+relevant web gameplay modules. Reuse existing systems; do not create a second
+riding engine or a second competing horse-assignment authority.
 
-## Tobias
+### ChatGPT
 
-Product Owner. Final decision on whether the environment is acceptable and whether new source photos are needed to close remaining reference gaps.
+Senior Game Developer / Game Architect / Reviewer. Keep the slices vertical,
+server-authoritative and testable, and reconcile overlapping branches before
+merging them.
+
+### Product Owner
+
+Final Roblox Studio visual/play acceptance and product decisions.

@@ -1,5 +1,9 @@
 # Studio-kontrollen — komplexet, stallet och gångvägarna
 
+> **Den visuella granskningen görs i `roblox/docs/STUDIO-QA.md`.**
+> Det är det kanoniska QA-dokumentet med de elva vyerna och PASS/FEL.
+> Den här filen är bakgrund och detaljunderlag.
+
 Review 11 gav **CODE GATE PASSED** för ridhusets interiör och pekade ut Roblox
 Studio som enda återstående steg före acceptans. Allt som går att mäta utan
 Studio är mätt; det som återstår kan bara en människa avgöra: **känns
