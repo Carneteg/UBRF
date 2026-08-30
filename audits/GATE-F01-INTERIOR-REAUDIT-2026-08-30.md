@@ -268,3 +268,46 @@ Vyn är **förbättrad men inte färdig**, och rapporteras inte som godkänd:
   väggöppningarna är portade,
 - Roblox Studio är inte körd,
 - ridhusets interiör är **inte påbörjad**, enligt stoppregeln.
+
+---
+
+# Underkännandets punkter, en och en
+
+Reviewen bad om varje synlig avvikelse klassad som `RESOLVED`,
+`[REFERENCE GAP]` eller kvarstående `KNOWN MISMATCH`. Här är listan, mot
+Product Owners egen beskrivning av den underkända bilden.
+
+Bevis: `audits/bilder/stall-entre-fore-efter.png` och
+`stall-service-fore-efter.png` — samma kamera i före och efter (spelarens
+ingång genom södra gaveln, lokalt 5,6 / 1,6, och mitt i servicedelen).
+`stall-service-mot-kalla.png` ställer efterbilden mot `stall-inne-09`.
+
+| Underkännandets punkt | Utfall | Vad som gjordes |
+|---|---|---|
+| Stora täta kritvita `SPÅNFÖRRÅD`/`SPOLSPILTA`-väggar i full höjd | `RESOLVED` | Byggs som öppna bukter ur i07/i09. Väggarna finns inte kvar på någon yta. |
+| Visuellt blank återvändsgränd rakt fram | `RESOLVED` | Tvärväggen får sina öppningar ur brandplanen i stället för ur gångarnas lägen. Efterbilden visar boxhallen genom öppningen. |
+| Nästan inget av boxfronternas gråa formspråk syns | `RESOLVED` | Fronterna läser mörk antracit i galvad ram med vågräta reglar, delad data. |
+| Lite eller ingen övertygande metallreglar/galler | `RESOLVED` | Fem vågräta reglar per box, mätta ur i05. |
+| Överdimensionerade mörkbruna/röda tvärbalkar | `RESOLVED` | Limträet ommätt i två bildrutor: `#C39575` → `#AD8A70`. Balkarnas DELNING är fortfarande `ASSUMPTION`. |
+| Mestadels vit takvolym | `RESOLVED` | Undertaket är mätt galvplåt `#70716E` (var `#878783`). |
+| Blek randig/ljus golvyta | **delvis `KNOWN MISMATCH`** | Marksten och spån är mätta och rättade. Servicedelens betongplatta ritades först över hela bukten och var den stora ljusa ytan; den är nu en remsa längs väggen. Vänstra bildhalvan läser ändå ljusare än i09. |
+| Saknad överliggande stallinstallation | `RESOLVED` | Rörstråk längs serviceväggen och pendelarmaturer, båda ytorna. |
+| Ytterväggar och golv i stallscenen | `RESOLVED` | Fanns inte alls; byggs nu. |
+| Buktens panel syns dåligt från entrén | `[REFERENCE GAP]` som byggfråga | Panelen löper LÄNGS väggen och ses därför på kant. Det är geometriskt riktigt enligt i09; att den ger entrévyn lite är en följd av var dörren sitter, och byggnaden flyttas inte för en kameravinkel. |
+| Servicedelens ljushet totalt | `KNOWN MISMATCH` | Kvarstår. Väggen ligger på sitt mätta `#C1C0C3` utan kompensation efter att en kompensation sprängde den till `#EAEFDC`. |
+
+## Den oidentifierade ytan är identifierad
+
+Förra passet lämnade en "sandfärgad yta med liggande linjer" som öppen fråga.
+Två hypoteser prövades och FÖLL: att ytterväggarna saknades (magentatest
+visade att de renderas), och att golvet z-stred med utomhusmarken (lyftet
+ändrade ingenting).
+
+Ett tredje magentatest avgjorde det: **138 535 pixlar, hela vänstra
+bildhalvan — ytan var servicedelens egen betongplatta**, som jag själv lagt in
+i samma pass och ritat över hela buktens rektangel. `stall-inne-09` visar en
+smal remsa längs väggen med marksten i stråket bredvid. Plattan är nu
+`serviceGolvBredd` 2,2 m, `DERIVED`.
+
+Tre hypoteser, två falsifierade, en bekräftad med mätning. Det är metoden;
+gissningen hade varit att måla om väggen.

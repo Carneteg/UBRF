@@ -804,7 +804,11 @@ function v3dStall(lagg,opp){
      invertering av en belyst yta spränger den. Kompensationen är borttagen;
      ytan ligger på det mätta värdet och avviker hellre nedåt. */
   const VAGG=S.vagg;
-  skal.yta(S.bredd,S.langd,S.golv,M4.translation(vx,0.0,S.langd/2),12);
+  /* Golvet ligger strax över 0 så att det inte delar plan med utomhusmarken.
+     (Det var INTE förklaringen till den ljusa ytan i entrévyn — den
+     hypotesen föll. Ett magentatest visade att ytan var servicedelens egen
+     betongplatta. Lyftet står kvar för att det är rätt ändå.) */
+  skal.yta(S.bredd,S.langd,S.golv,M4.translation(vx,0.012,S.langd/2),12);
   /* Fodret ligger INNANFÖR fotavtrycket, inte på det. Lades det på x=0 och
      x=bredd hamnade det i samma plan som husets ytterväggar från
      exteriörmodellen, och då vann panelen utifrån — spelarvyn visade
@@ -1075,9 +1079,14 @@ function v3dStall(lagg,opp){
      gångytorna; det här är plattan under bommarna. */
   if(S.serviceGolv){
     const bg=new Bygge();
+    /* Betongen är en REMSA längs ytterväggen, inte hela bukten. Ritades den
+       över hela rektangeln blev den en stor ljus yta rakt framför spelaren
+       — bekräftat med magentatest — och fotot visar marksten i stråket. */
     for(const r of S.service){const k=r.rekt;
-      bg.yta(k.w,k.h,S.serviceGolv,
-        M4.translation(k.x+k.w/2,0.03,k.y+k.h/2),4);}
+      const bw=Math.min(S.serviceGolvBredd||k.w, k.w);
+      const bxm=k.x<vx ? k.x+bw/2 : k.x+k.w-bw/2;
+      bg.yta(bw,k.h,S.serviceGolv,
+        M4.translation(bxm,0.022,k.y+k.h/2),4);}
     lagg(bg,null);
   }
 

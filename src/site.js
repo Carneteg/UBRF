@@ -861,8 +861,16 @@ const STALLINNE = {
   /* Servicedelens golv är en slät ljus BETONGPLATTA, inte marksten.
      stall-inne-09 visar de två materialen sida vid sida med en rak gräns:
      betong under spolbommarna, marksten i genomgångsstråket. `MEASURED`
-     #AEA28C (sd 6,9). */
-  serviceGolv:"#AEA28C",
+     #AEA28C (sd 6,9).
+
+     `serviceGolvBredd` är hur långt betongen når ut från ytterväggen. Plattan
+     ritades först över HELA buktens rektangel (4,5 m), och då blev den en stor
+     ljus yta rakt framför spelaren som kom in genom gaveln — jag identifierade
+     den med ett magentatest: 138 535 pixlar, hela vänstra bildhalvan. Fotot
+     visar en SMAL remsa längs väggen med marksten i stråket bredvid, inte ett
+     betonggolv över hela bukten. `DERIVED`: 2,2 m är buktens djup fram till
+     bommarna; gränsens exakta läge går inte att mäta ur bilden. */
+  serviceGolv:"#AEA28C", serviceGolvBredd:2.2,
   /* Gångens två golvytor, MÄTTA ur stall-inne-05 med samma
      beskär-titta-mät-metod som boxfronterna.
 
