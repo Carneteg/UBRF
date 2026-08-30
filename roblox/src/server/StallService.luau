@@ -1,19 +1,15 @@
 --!strict
---[[ STALLSERVICE — din häst, och skylten vid hennes box.
+--[[ STALLSERVICE — en enda auktoritet för vilken UBRF-häst spelaren har.
 
-	Gate G01, första skivan. Före det här mötte en Roblox-spelare en
-	hästMODELL: HorseStats stod på "Namnlös" av rasen "Warmblood", medan de
-	sjutton riktiga UBRF-hästarna bara fanns i webbversionens JS.
+	Gate G01. Tjänsten äger IDENTITETEN och boxen:
+	  1. väljer en ledig hästidentitet deterministiskt,
+	  2. reserverar den så två aktiva spelare inte får samma häst,
+	  3. sätter boxprompten,
+	  4. publicerar tilldelningen till övriga serversystem och klienten.
 
-	Tjänsten gör tre saker och inget mer:
-	  1. tilldelar spelaren en häst vid ankomsten,
-	  2. sätter en ProximityPrompt vid hennes box,
-	  3. svarar på frågan "vilken är min häst" över nätet.
-
-	Reglerna ligger i ReplicatedStorage.Stallet, som är ren logik och provas
-	i roblox/tests/spel.spec.luau utan Studio. Den här filen är bara
-	instanserna. Den uppdelningen finns för att regler ska gå att falsifiera
-	härifrån; en ProximityPrompt går inte.
+	GameplayService får binda identiteten till en fysisk Horse-rigg och äga
+	förberedelseprogressionen, men får INTE välja en annan häst. Det håller
+	StallService som enda assignment authority.
 ]]
 
 local Players = game:GetService("Players")
@@ -23,16 +19,13 @@ local Stallet = require(ReplicatedStorage.Stallet)
 
 local StallService = {}
 
-local M = 3          -- studs per meter, samma som BuildKit.M
+local M = 3
 local ANLAGGNING = "Anläggning"
 
 local tilldelade: { [Player]: any } = {}
+local upptagna: { [string]: Player } = {}
 local markorer: { [Player]: Model } = {}
 
---[[ Anläggningens bas. Byggskriptet lägger allt relativt PrimaryPart, så
-	utan den vet vi inte var i världen stallet står. Saknas den är
-	anläggningen inte byggd — säg det rakt ut i stället för att lägga en
-	skylt i origo och låta någon leta. ]]
 local function bas(): CFrame?
 	local modell = workspace:FindFirstChild(ANLAGGNING)
 	local ubrf = modell and modell:FindFirstChild("UBRF")
@@ -47,8 +40,18 @@ local function taBortMarkor(player: Player)
 	end
 end
 
---[[ Skylten vid boxen. Osynlig och genomsläpplig — den är bara en bärare
-	för prompten, inte något att gå in i. ]]
+local function publicera(player: Player, dagens: any?)
+	if dagens then
+		player:SetAttribute("AssignedHorseId", dagens.id)
+		player:SetAttribute("AssignedHorseName", dagens.namn)
+		player:SetAttribute("AssignedHorseBox", dagens.box and dagens.box.nummer or 0)
+	else
+		player:SetAttribute("AssignedHorseId", "")
+		player:SetAttribute("AssignedHorseName", "")
+		player:SetAttribute("AssignedHorseBox", 0)
+	end
+end
+
 local function satMarkor(player: Player, dagens: any): Model?
 	local b = bas()
 	if not b then
@@ -80,8 +83,6 @@ local function satMarkor(player: Player, dagens: any): Model?
 
 	prompt.Triggered:Connect(function(spelare)
 		if spelare ~= player then return end
-		--[[ Ingen egen text hittas på: beskrivningen är ordagrann från
-			ubrf.se/hastar och foderraden kommer ur samma delade data. ]]
 		print(("[Stallet] %s — %s, %s. %s"):format(
 			dagens.namn, dagens.ras, dagens.typ, dagens.besk))
 		if dagens.foder then
@@ -95,13 +96,27 @@ local function satMarkor(player: Player, dagens: any): Model?
 	return modell
 end
 
+local function upptagenMangd(): { [string]: boolean }
+	local ut = {}
+	for id in upptagna do ut[id] = true end
+	return ut
+end
+
 function StallService.tilldela(player: Player)
-	local dagens = Stallet.dagensHast(player.UserId)
+	if player.Parent ~= Players then return nil end
+	local befintlig = tilldelade[player]
+	if befintlig then return befintlig end
+
+	local dagens = Stallet.dagensHast(player.UserId, upptagenMangd())
 	if not dagens then
-		warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name)
+		publicera(player, nil)
+		warn("[Stallet] Ingen ledig häst kunde tilldelas " .. player.Name)
 		return nil
 	end
+
 	tilldelade[player] = dagens
+	upptagna[dagens.id] = player
+	publicera(player, dagens)
 	taBortMarkor(player)
 	local m = satMarkor(player, dagens)
 	if m then markorer[player] = m end
@@ -115,13 +130,38 @@ function StallService.hastFor(player: Player)
 	return tilldelade[player]
 end
 
+function StallService.frigiv(player: Player)
+	local dagens = tilldelade[player]
+	if dagens and upptagna[dagens.id] == player then
+		upptagna[dagens.id] = nil
+	end
+	tilldelade[player] = nil
+	taBortMarkor(player)
+	publicera(player, nil)
+end
+
+local function erbjudVantande()
+	-- Direkt, inte task.defer: varje tilldelning reserverar identiteten innan
+	-- nästa spelare provas, så två väntande aldrig ser samma häst som ledig.
+	for _, player in Players:GetPlayers() do
+		if not tilldelade[player] then
+			StallService.tilldela(player)
+		end
+	end
+end
+
 function StallService.start()
-	local fraga = Instance.new("RemoteFunction")
-	fraga.Name = "MinHast"
-	fraga.Parent = ReplicatedStorage
+	local befintlig = ReplicatedStorage:FindFirstChild("MinHast")
+	local fraga: RemoteFunction
+	if befintlig and befintlig:IsA("RemoteFunction") then
+		fraga = befintlig
+	else
+		if befintlig then befintlig:Destroy() end
+		fraga = Instance.new("RemoteFunction")
+		fraga.Name = "MinHast"
+		fraga.Parent = ReplicatedStorage
+	end
 	fraga.OnServerInvoke = function(player)
-		--[[ Klienten får FRÅGA, aldrig bestämma. Samma regel som
-			uppsittningen redan följer. ]]
 		return tilldelade[player] or StallService.tilldela(player)
 	end
 
@@ -132,11 +172,11 @@ function StallService.start()
 		StallService.tilldela(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		taBortMarkor(player)
-		tilldelade[player] = nil
+		StallService.frigiv(player)
+		erbjudVantande()
 	end)
 
-	print("[Stallet] Igång")
+	print("[Stallet] Igång — unik hästidentitet per aktiv spelare")
 end
 
 return StallService
