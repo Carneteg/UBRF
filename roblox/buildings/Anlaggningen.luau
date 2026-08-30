@@ -206,19 +206,48 @@ local function byggRidhusIdentitet(model: Model, base: CFrame)
 	local R, I = G.ridhus, G.identitet.ridhus
 	local o = R.origo
 
-	-- MOTSÄGELSE 1: mörkröd övre långvägg med vita läkt, båda långsidorna.
+	--[[ DEN ROSTBRUNA ÖVRE LÅNGVÄGGEN.
+
+		`KNOWN MISMATCH`, rättad: Roblox byggde den på BÅDA långsidorna i
+		nästan hela hallens längd. Det verifierade är motsatsen —
+		`ridhus-inne-02` visar den på EN DEL av EN långsida, och resten av
+		samma vägg är ljus. Webben har läst `ovreVagg.sida/y0/y1` sedan
+		Review 03; Roblox gjorde det inte, och det var en av de tydligaste
+		Roblox-only sanningarna som fanns kvar.
+
+		Sidan kommer ur `sidor.panel` via `ovreVagg.sida`, så en framtida
+		spegling flyttar väggen på båda ytorna samtidigt.
+
+		Färgen läser den MÄTTA `R.panel` (#765B59 ur en färgmask på -02), inte
+		IDFARG.panel — den senare var det gamla mättade rödlila. ]]
 	local O = I.ovreVagg
 	local y0, y1 = R.sargH + O.overSarg, R.tak - O.underTak
-	for _, x in ipairs({ 0.16, R.bredd - 0.16 }) do
-		BK.box(model, base, "Övre långvägg", o.x + x - O.tjocklek / 2, y0,
-			o.y + 0.5, O.tjocklek, y1 - y0, R.langd - 1,
-			IDFARG.panel, Enum.Material.Metal)
-		for i = 1, O.listar do
-			local yy = y0 + 0.25 + (y1 - y0 - 0.5)
-				* (if O.listar > 1 then (i - 1) / (O.listar - 1) else 0.5)
-			BK.box(model, base, "Väggläkt", o.x + x - 0.05, yy, o.y + 0.5,
-				0.10, 0.07, R.langd - 1, IDFARG.list, Enum.Material.SmoothPlastic)
-		end
+	local px = if O.sida == "W" then 0.16 else R.bredd - 0.16
+	local pL = O.y1 - O.y0
+	BK.box(model, base, "Övre långvägg", o.x + px - O.tjocklek / 2, y0,
+		o.y + O.y0, O.tjocklek, y1 - y0, pL,
+		R.panel or IDFARG.panel, Enum.Material.Metal)
+	for i = 1, O.listar do
+		local yy = y0 + 0.25 + (y1 - y0 - 0.5)
+			* (if O.listar > 1 then (i - 1) / (O.listar - 1) else 0.5)
+		BK.box(model, base, "Väggläkt", o.x + px - 0.05, yy, o.y + O.y0,
+			0.10, 0.07, pL, R.panelList or IDFARG.list,
+			Enum.Material.SmoothPlastic)
+	end
+
+	--[[ FÖNSTERBANDET byggs redan i byggRidhusInre. SPONSORSKYLTARNA byggdes
+		INTE alls i Roblox — de fanns bara i webben. De hänger på panelen, i
+		den ordning ridhus-inne-02 visar dem, och deras läge härleds ur
+		panelens stycke i den delade datan. Förenklad grafik är i sin
+		ordning; fel antal eller fel ordning är det inte. ]]
+	local inat = if O.sida == "W" then 1 else -1
+	for i, sk in ipairs(R.skyltar or {}) do
+		local skylt = BK.box(model, base, "Sponsorskylt " .. i,
+			o.x + px + inat * 0.06, y0 + (y1 - y0) * 0.30,
+			o.y + sk.y - sk.b / 2, 0.05, 0.62, sk.b,
+			sk.bg or Color3.fromRGB(242, 237, 226), Enum.Material.SmoothPlastic)
+		skylt.CanCollide = false
+		skylt:SetAttribute("Text", sk.text)
 	end
 
 	-- MOTSÄGELSE 3: takets stål, kabelstegar och ventilation.
@@ -774,7 +803,42 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			skjuter upp genom bandet, och mellan dem står den vita väggen
 			med klockan. Segmenten räknas ur samma `trappor`-tal som
 			trapporna byggs av, så de inte kan glida isär. ]]
-		local gz = (K.sockelH or 0) + K.steg * K.stegH + K.glasOver
+		local H = (K.sockelH or 0) + K.steg * K.stegH
+		local gz = H + K.glasOver
+		--[[ DEN VITA VÄGGEN mellan bänkarna och glasbandet. Roblox byggde
+			bara steg, trappor och glas; gapet däremellan visade skalets
+			material, inte den vita väggen ridhus-inne-01 visar. Att flytta
+			glaset uppåt räcker inte om gapet exponerar fel yta. ]]
+		BK.box(model, base, "Kortändans vita vägg", o.x + K.x0, H,
+			o.y + K.y0 - 0.16, br, K.glasOver, 0.14,
+			INRE.vagg, Enum.Material.Plaster).CanCollide = false
+
+		-- Klockan MELLAN trapporna, och kompassrosen till vänster om dem.
+		if K.klocka then
+			local KL = K.klocka
+			BK.box(model, base, "Kortändans klocka",
+				o.x + KL.x - KL.r, H + KL.overBlock - KL.r, o.y + K.y0 - 0.22,
+				KL.r * 2, KL.r * 2, 0.08,
+				Color3.fromRGB(244, 241, 232),
+				Enum.Material.SmoothPlastic).CanCollide = false
+		end
+		if K.stjarna then
+			local ST = K.stjarna
+			for i = 0, 3 do
+				local lang = if i % 2 == 0 then ST.r * 2 else ST.r * 1.45
+				local stav = Instance.new("Part")
+				stav.Name = "Kompassros"; stav.Anchored = true
+				stav.CanCollide = false
+				stav.Color = ST.farg
+				stav.Material = Enum.Material.SmoothPlastic
+				stav.Size = Vector3.new(BK.M * lang, BK.M * ST.tjocklek, BK.M * 0.05)
+				stav.CFrame = base
+					* CFrame.new(BK.M * (o.x + ST.x),
+						BK.M * (H + ST.overBlock), BK.M * (o.y + K.y0 - 0.24))
+					* CFrame.Angles(0, 0, i * math.pi / 4)
+				stav.Parent = model
+			end
+		end
 		local brytn = {}
 		for _, t in ipairs(K.trappor or {}) do table.insert(brytn, t) end
 		table.sort(brytn)

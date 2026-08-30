@@ -62,7 +62,7 @@ De två strukturerna hade blandats ihop.
 | Bokstaven C har en CYKELbild, E en elefant | `VERIFIED` | r01 + r03 | ritas inte, se nedan |
 | Alla meter | `[REFERENCE GAP]` | — | topologi rätt, mått valda |
 
-## 4. Övre långväggen — `KNOWN MISMATCH B`, delvis
+## 4. Övre långväggen — `RESOLVED` på båda ytorna
 
 | fakta | klass | källa | spelet |
 |---|---|---|---|
@@ -74,11 +74,11 @@ De två strukturerna hade blandats ihop.
 | Resten av samma vägg är ljus | `VERIFIED` | r02 | byggs |
 | Panelens exakta utbredning | `[antagande]` | — | y0/y1 |
 
-## 5. Sponsorskyltar — `KNOWN MISMATCH C`
+## 5. Sponsorskyltar — `RESOLVED`
 
 | fakta | klass | källa | spelet |
 |---|---|---|---|
-| Skyltar hänger på den rostbruna panelen | `VERIFIED` | r02 | **kopplingen saknas** |
+| Skyltar hänger på den rostbruna panelen | `VERIFIED` | r02 | kopplad via `andel`, båda ytorna |
 | Agria, Hästsportbutik, RS Mustang, Svenskt Stallströ | `VERIFIED` | r02 | — |
 | Skyltarnas läge relativt panelen | rättat | — | `andel` av panelens stycke, härlett |
 
@@ -178,10 +178,8 @@ spegling utan att flytta banan la läktaren 170 m² inne på banan; och min
 första härledning av båsets x vände tecknet och la båset två meter utanför
 däcket. Båda rättade.
 
-**Känd lucka:** `speglar` ritas mot banans västra kant i renderaren och
-`klocka.x` är ett literalt tal — de följer INTE med en spegling. De är
-väggdekor, inte bärande struktur, och luckan står i `site.js` så att den
-som speglar vet vad som återstår.
+**Luckan är stängd.** `speglar` följer `spegelSida` och cafeklockan följer
+läktarsidan; inga literaler kvar. En spegling flyttar även väggdekoren.
 
 ## Öppna motsägelser
 
@@ -429,3 +427,35 @@ Kvoterna är mätta på skärmdump, inte gissade, och resultatet är verifierat:
 - Läktardäckets plank renderas ljusare än fotot; inte åtgärdat.
 - Kortändans bänkar är inte mätta — mina prov träffade sarg och sand.
 - Takets ljussättning är inte mätt alls.
+
+---
+
+# Roblox-pariteten efter Review 09
+
+Reviewn hittade att Roblox fortfarande byggde ridhusets GAMLA identitet
+medan webben var rättad, och att sex gröna specar samexisterade med
+spelarsynliga paritetsfel. Båda delarna stämde.
+
+| fynd | före | efter |
+|---|---|---|
+| Rostbrun panel | **båda långsidorna, nästan full längd** | en sida, bara sitt stycke, ur `ovreVagg.sida/y0/y1` |
+| Panelens färg | `IDFARG.panel`, gammalt mättat rödlila | delade, mätta `R.panel` `#765B59` |
+| Sponsorskyltar | **byggdes inte alls** | ur delad `skyltar`, rätt antal och ordning |
+| Kortändans vita vägg | gapet visade skalets material | egen vit vägg mellan bänkar och glas |
+| Kortändans klocka | fanns inte | byggd, testad som RELATION mellan trapporna |
+| Kompassrosen | fanns inte | fyra korsade stavar, vänster om vänstra trappan |
+
+## Varför testerna inte fångade det
+
+De två testerna för långväggen löd **"byggdes på BÅDA sidor"** och krävde
+`2 × listar` läkt. De kodade alltså in det fel fotot motsäger, och HÖLL DET
+PÅ PLATS: Roblox kunde bygga panelen på båda sidor i full längd med hela
+sviten grön.
+
+Ett test som skriver av bygget i stället för källan skyddar felet i stället
+för att hitta det. Det är samma sjuka som fällt sju tal i den här sviten
+tidigare, och det här var dess dyraste form.
+
+De mäter nu relationer mot delad data: en sida, bara sitt stycke, rätt sida
+enligt `sidor.panel`, skyltarna innanför stycket, klockan mellan trapporna,
+rosen vänster om trapporna. Alla falsifierade genom att återinföra felet.

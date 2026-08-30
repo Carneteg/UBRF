@@ -407,6 +407,28 @@ do
 		upprepade fönsterrad" som ordern uttryckligen inte vill ha. Antalet
 		segment räknas ur samma `trappor`-tal som bygget använder, så testet
 		mäter regeln och inte ett tal. ]]
+	--[[ C-ändans identitet i Roblox. Webben har haft vit vägg, klocka och
+		kompassros sedan cfdb89a; Roblox byggde bara steg, trappor och glas.
+		Klockan mäts som RELATION — mellan trapporna — inte mot ett tal. ]]
+	check("kortändans vita vägg byggdes mellan bänkar och glas",
+		raknaNamn("Kortändans vita vägg") == 1)
+	check("kortändans klocka byggdes", raknaNamn("Kortändans klocka") == 1)
+	check("kompassrosen byggdes som linjeritad stjärna",
+		raknaNamn("Kompassros") == 4, raknaNamn("Kompassros") .. " stavar")
+	if K.klocka and #K.trappor >= 2 then
+		local lo = math.min(K.trappor[1], K.trappor[2])
+		local hi = math.max(K.trappor[1], K.trappor[2])
+		check("klockan sitter MELLAN de två trapporna",
+			K.klocka.x > lo and K.klocka.x < hi,
+			string.format("klocka x %.2f, trappor %.1f och %.1f",
+				K.klocka.x, lo, hi))
+	end
+	if K.stjarna then
+		check("kompassrosen sitter vänster om vänstra trappan",
+			K.stjarna.x < math.min(K.trappor[1], K.trappor[2]),
+			string.format("stjärna x %.2f", K.stjarna.x))
+	end
+
 	local vantade = #K.trappor + 1
 	check("glasbandet byggdes i segment som bryts av trapporna",
 		raknaNamn("Kortändans glasband") == vantade
@@ -501,11 +523,63 @@ do
 			f and string.format("mitt x %.1f, gavelns mitt %.1f", f.x + f.w / 2, gm) or "saknas")
 	end
 
-	-- Ridhusets interiörfynd.
-	check("den mörkröda övre långväggen byggdes på båda sidor",
-		raknaNamn("Övre långvägg") == 2)
-	check("väggläkten byggdes", raknaNamn("Väggläkt") == 2 * I.ridhus.ovreVagg.listar,
-		raknaNamn("Väggläkt") .. " st")
+	--[[ Ridhusets interiörfynd.
+
+		De två testerna här löd förut "byggdes på BÅDA sidor" och krävde
+		2 × läkt. De kodade alltså in det fel som fotot motsäger — panelen
+		täcker EN DEL av EN långsida — och höll det på plats: Roblox byggde
+		den på båda sidor i full längd medan sviten var grön.
+
+		Ett test som skriver av bygget i stället för källan skyddar felet.
+		De mäter nu RELATIONERNA mot den delade datan. ]]
+	do
+		local O = I.ridhus.ovreVagg
+		local R2 = UBRFKomplex.ridhus
+		check("den rostbruna panelen byggdes på EN långsida",
+			raknaNamn("Övre långvägg") == 1,
+			raknaNamn("Övre långvägg") .. " väggar")
+		check("väggläkten följer panelen, inte båda sidor",
+			raknaNamn("Väggläkt") == O.listar,
+			raknaNamn("Väggläkt") .. " av " .. O.listar)
+
+		local v = forstaNamn("Övre långvägg")
+		local f = v and fot(v)
+		check("panelen täcker BARA sitt stycke, inte hela hallen",
+			f ~= nil and math.abs(f.h - (O.y1 - O.y0)) < 0.2
+				and f.h < R2.langd * 0.75,
+			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd) or "saknas")
+
+		--[[ LOKALA koordinater. Första versionen jämförde f.x (världsläge,
+			~118) mot bredd/2 (~12,5) och föll fast bygget var riktigt — samma
+			sjuka som testerna redan fällts på i den här sviten. ]]
+		local mitt = R2.bredd / 2
+		local lokalX = f and (f.x - R2.origo.x)
+		check("panelen ligger på den sida sidor.panel pekar ut",
+			lokalX ~= nil and (if O.sida == "W" then lokalX < mitt else lokalX > mitt),
+			f and string.format("sida %s, lokal x %.1f av %.1f",
+				O.sida, lokalX, R2.bredd) or "saknas")
+
+		--[[ Sponsorskyltarna fanns inte alls i Roblox. Antal OCH ordning
+			mäts: förenklad grafik är i sin ordning, fel antal eller fel
+			ordning är det inte. ]]
+		check("sponsorskyltarna byggdes, lika många som i datan",
+			raknaNamn("Sponsorskylt") == #R2.skyltar,
+			raknaNamn("Sponsorskylt") .. " av " .. #R2.skyltar)
+		do
+			local utanfor = 0
+			for _, d in ipairs(delar) do
+				if string.find(d.Name, "Sponsorskylt", 1, true) then
+					local sf = fot(d)
+					if sf.y < R2.origo.y + O.y0 - 0.5
+						or sf.y + sf.h > R2.origo.y + O.y1 + 0.5 then
+						utanfor += 1
+					end
+				end
+			end
+			check("alla sponsorskyltar sitter innanför panelens stycke",
+				utanfor == 0, utanfor .. " utanför")
+		end
+	end
 	check("takets stålprofiler byggdes",
 		raknaNamn("Stålprofil") == #I.ridhus.takProfiler.andelar,
 		raknaNamn("Stålprofil") .. " st")

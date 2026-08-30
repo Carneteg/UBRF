@@ -152,6 +152,8 @@ const ut = {
     domarbas: RIDHUSINNE.domarbas, trappa: RIDHUSINNE.trappa,
     klocka: RIDHUSINNE.klocka, skyltar: RIDHUSINNE.skyltar,
     basTak: RIDHUSINNE.basTak, sidor: RIDHUSINNE.sidor,
+    panel: RIDHUSINNE.panel, panelList: RIDHUSINNE.panelList,
+    sandFarg: RIDHUSINNE.sandFarg,
     dorrar: RIDHUSINNE.dorrar,
   },
 };

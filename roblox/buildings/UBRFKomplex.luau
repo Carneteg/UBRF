@@ -2006,6 +2006,9 @@ return {
 			laktare = "E",
 			panel = "W",
 		},
+		panel = Color3.fromRGB(118, 91, 89),
+		panelList = Color3.fromRGB(232, 223, 206),
+		sandFarg = Color3.fromRGB(111, 93, 77),
 		dorrar = {
 			{
 				id = "ut_o",
