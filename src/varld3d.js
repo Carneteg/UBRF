@@ -1325,7 +1325,13 @@ function v3dRidhus(lagg,opp){
      Båset ligger nu vid E (husets y = 32, se DRESSYRBOKSTAVER). Måtten är
      `[ASSUMPTION]`; det verifierade är att båset är mörkt trä, att det
      står upphöjt, att trappan har träräcken och att skylten finns. ── */
-  {const D=R.domarbas, dy=D.y, golv=L.dackZ;
+  /* `golv` LÄSER R.laktare direkt. Det stod `L.dackZ`, men `L` deklareras
+     inne i sektionsloopen ovan och är slut här — det kastade
+     `ReferenceError: L is not defined`, som fångades och loggades som en
+     varning ("3D-vandring misslyckades"). Följden var att ALLT efter
+     båsblocket i v3dRidhus aldrig byggdes: kortändans block, glasbandet och
+     klockan. Det förklarar hela punkt 3 och 4 i reviewn. */
+  {const D=R.domarbas, dy=D.y, golv=R.laktare.dackZ;
    /* Den låga upphöjda nivån båset står på — indexet kallar den en låg,
       upphöjd trä-/läktarnivå, och sittstegen fortsätter åt sidan. */
    lak.lada(D.b+1.6,golv,D.b+1.2,"#8A6A44",M4.translation(D.x,golv/2,dy));
@@ -1366,7 +1372,7 @@ function v3dRidhus(lagg,opp){
   /* Exit-skylten över båsets öppning, och klockan vid den centrala
      passagen — MOTSÄGELSE 4 respektive 3. Båda ligger utanför trä-
      texturen: en grön skylt och en vit urtavla ska inte ha ådring. */
-  {const sk=new Bygge(), D=R.domarbas, golv=L.dackZ;
+  {const sk=new Bygge(), D=R.domarbas, golv=R.laktare.dackZ;
    if(D.exit){
      sk.lada(0.05,0.26,0.72,"#1E7A3C",
        M4.translation(D.x-D.b/2-0.05,golv+D.h+0.30,D.y));

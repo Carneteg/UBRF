@@ -268,7 +268,50 @@ som nu stämmer.
 
 # Pass mot de fyra synliga mismatcharna
 
-## Punkt 3 · kortändans block — DIAGNOS, delvis åtgärdad, KVARSTÅR
+## Punkt 3 och 4 · ORSAKEN VAR MIN EGEN REGRESSION — RESOLVED
+
+Jag rapporterade först att blockets "geometri hamnar någon annanstans än
+datan anger". **Det var fel, och slutsatsen byggde på ett trasigt prov.**
+
+Magentaprovet som gav "810 pixlar uppe i vänstra hörnet" mätte inte min
+geometri — det mätte **den lila UPPGIFT-rutan i HUD:en**, vars ljusare
+partier råkar passera filtret r>150, b>150, g<110. Ett omtag med grönt
+mätte i stället **spelarens keps**. Två falska positiva i rad, och båda gav
+samma svar oavsett kameravinkel, vilket borde ha avslöjat dem direkt: en
+yta i världen kan inte ge exakt lika många pixlar åt två håll.
+
+Den riktiga orsaken hittades genom att logga ALLA konsolrader:
+
+```
+warning: 3D-vandring misslyckades: ReferenceError: L is not defined
+    at v3dRidhus (...)
+```
+
+`L` deklareras inne i läktarens sektionsloop. När jag byggde om läktaren
+till ett däck lät jag domarbåsets block läsa `L.dackZ` — men det ligger
+UTANFÖR loopen. Undantaget FÅNGAS av spelet och loggas som en varning, så
+allt efter båsblocket i `v3dRidhus` byggdes aldrig: kortändans block,
+glasbandet, kortändans klocka.
+
+Mätbart: `ridhusinne` byggde **6 statiska objekt med felet, 33 utan**.
+
+Regressionen kom med mitt eget läktarpass och stod kvar genom flera
+commits. Alla skärmdumpar jag tog av ridhuset däremellan visade en scen där
+en femtedel av geometrin fanns.
+
+**Åtgärdat.** `golv` läser `R.laktare.dackZ` direkt. Kortändans block med
+sockel, de två trapporna, det segmenterade glasbandet med karmar och djup,
+och kortändans klocka syns nu alla från referenskameran. `RESOLVED`.
+
+**Verktyget som saknades:** `tools/webbkoll.mjs`. Mina QA-skript lyssnade
+bara på `pageerror` och console-rader av typen "error"; ett fångat undantag
+loggas som VARNING och passerade som grönt. Den nya kollen räknar alla
+nivåer, kräver att varje scen bygger objekt alls, och är falsifierad genom
+att felet återinförts.
+
+## Punkt 3 · den ursprungliga ocklusionsdiagnosen står kvar
+
+
 
 Reviewn bad om diagnos före åtgärd. Den gav två fynd, det andra viktigare
 än det första.
@@ -280,19 +323,8 @@ bara den översta raden över sargen — 0,25 m på fjorton meters håll.
 `-01` visar flera rader över sargkrönet, så blocket står nu på en **sockel**
 på 0,80 m: totalt 2,40 m, tre rader över sargen. `DERIVED` ur fotot.
 
-**Fynd 2 — blocket renderas inte där datan säger.** Sockeln räckte inte.
-Ett magentatest på blockets egna delar hittade bara **810 pixlar uppe i
-bildens vänstra hörn**, inte den yta blocket borde täcka rakt fram. En
-rakt-på-vy från banans mitt mot kortändan (`k-mitt`) visar sarg, panelvägg
-och hinderbommar — **inget block, inget glasband, ingen klocka**.
-
-Blockets data säger hall-y 0,4–4,8, x 1,8–23,2. Kameran stod mitt för det.
-Geometrin hamnar alltså någon annanstans än datan anger. **Det är ett
-renderingsfel, inte ett synlighetsproblem**, och det förklarar varför både
-höjningen och sockeln var verkningslösa.
-
-`KNOWN MISMATCH` — kvarstår. Nästa steg är att spåra transformen för
-`kortanda`-blocket, inte att ändra fler mått.
+**Fynd 2 var däremot fel** och är rättat ovan: blocket syntes inte därför
+att det aldrig byggdes, inte därför att det låg fel.
 
 **Sidofynd, oavgjort:** kortändan vid hall-y ≈ 2 renderar bokstaven **A** på
 sargen, medan `DRESSYRBOKSTAVER` lägger A på ban-lokal (10, 60) och C på
