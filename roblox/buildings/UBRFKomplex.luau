@@ -1914,13 +1914,20 @@ return {
 			},
 			trappB = 1.2,
 			glasH = 2,
-			glasOver = 0.35,
+			glasOver = 1.6,
 			glasPost = 1.9,
 			glasKarm = Color3.fromRGB(74, 59, 46),
 			klocka = {
-				z = 2.55,
+				overBlock = 1.05,
 				r = 0.34,
 				x = 11.25,
+			},
+			stjarna = {
+				overBlock = 0.85,
+				r = 0.78,
+				tjocklek = 0.05,
+				farg = Color3.fromRGB(185, 179, 166),
+				x = 4.4,
 			},
 		},
 		domarbas = {

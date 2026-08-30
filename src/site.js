@@ -1291,12 +1291,26 @@ const RIDHUSINNE = {
      bryter bandet. `[REFERENCE GAP]`: båsens exakta delning. */
   kortanda:{y0:0.4, y1:4.8, x0:1.8, x1:23.2, steg:5, stegH:0.32, stegD:1.05,
             sockelH:0.80,
-            trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:0.35,
+            /* `glasOver` var 0,35 m, alltså glaset nästan direkt ovanpå
+               bänkraderna. `ridhus-inne-01` visar en HÖG vit vägg mellan
+               översta bänken och fönstrens underkant — ungefär mansehöjd —
+               och det är på den väggen kompassrosen och klockan sitter. Utan
+               den väggen finns det ingenstans att sätta dem, vilket var
+               varför stjärnan hamnade uppe i glaset vid första försöket.
+               1,6 m är `DERIVED` ur bildens proportioner. */
+            trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:1.6,
             glasPost:1.9, glasKarm:"#4A3B2E",
             /* Klockan vid kortändan, MELLAN de två trapporna — x härleds ur
                `trappor` längre ner så att den följer dem. `-01` visar den på
                den vita väggen ovanför blocket. */
-            klocka:{z:2.55, r:0.34}},
+            klocka:{overBlock:1.05, r:0.34},
+            /* KOMPASSROSEN på den vita väggen — `ridhus-inne-01`, beskuren.
+               En TUNN, linjeritad åttauddig stjärna, inte en fylld form.
+               Den sitter till VÄNSTER om den vänstra trappan, ovanför
+               bänkraderna. `VERIFIED` att den finns, var den sitter och att
+               den är linjeritad. `[ASSUMPTION]`: storleken.
+               x härleds ur `trappor` längre ner. */
+            stjarna:{overBlock:0.85, r:0.78, tjocklek:0.05, farg:"#B9B3A6"}},
   /* MOTSÄGELSE 4 (`IMG_0198`): båset ligger vid dressyrbokstaven E, är
      mörkt trä, och nås av en trappa med träräcken. Över öppningen sitter
      en grön exit-skylt. E ligger vid husets y = 32 sedan bokstäverna
@@ -1516,6 +1530,9 @@ STALLINNE.info=[
   if(R.trappa)  R.trappa.x  = R.laktare.x0 + inatL*(-1.0);
   /* Kortändans klocka sitter MELLAN de två trapporna. */
   const K=R.kortanda;
-  if(K&&K.klocka&&K.trappor&&K.trappor.length>=2)
-    K.klocka.x=(K.trappor[0]+K.trappor[1])/2;
+  if(K&&K.trappor&&K.trappor.length>=2){
+    if(K.klocka)  K.klocka.x=(K.trappor[0]+K.trappor[1])/2;
+    /* Stjärnan sitter till vänster om vänstra trappan. */
+    if(K.stjarna) K.stjarna.x=(K.x0+K.trappor[0])/2;
+  }
 })();

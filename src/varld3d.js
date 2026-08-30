@@ -1461,14 +1461,24 @@ function v3dRidhus(lagg,opp){
         gl.lada(0.14,K.glasH,0.22,K.glasKarm,
           M4.translation(a+w*i/n,gz+K.glasH/2,K.y0+0.05));
     }
+    /* KOMPASSROSEN på den vita väggen, vänster om vänstra trappan — `-01`.
+       Linjeritad, inte fylld: fyra korsade tunna stavar ger de åtta uddarna
+       och läser som en ritad stjärna på det här avståndet. */
+    /* Både stjärnan och klockan mäts FRÅN blockets ovankant (H), på den vita
+       väggen mellan bänkarna och glaset. Att mäta dem från glasbandet lade
+       stjärnan inne i glaset. */
+    if(K.stjarna){const ST=K.stjarna, sy=H+ST.overBlock;
+      for(let i=0;i<4;i++){
+        const v=i*Math.PI/4, lang=(i%2===0)?ST.r*2:ST.r*1.45;
+        gl.lada(lang,ST.tjocklek,0.04,ST.farg,
+          M4.mul(M4.translation(ST.x,sy,K.y1+0.05),M4.rotZ(v)));
+      }}
     /* Klockan vid kortändan, mellan trapporna — `-01`. */
-    if(K.klocka){const KL=K.klocka;
-      gl.cyl(KL.r,KL.r,0.07,"#F2F0E8",
-        M4.mul(M4.translation(KL.x,gz+K.glasH+KL.z-1.4,K.y1+0.06),
-               M4.rotX(Math.PI/2)),16);
-      gl.cyl(KL.r*0.80,KL.r*0.80,0.02,"#2E2E2C",
-        M4.mul(M4.translation(KL.x,gz+K.glasH+KL.z-1.4,K.y1+0.10),
-               M4.rotX(Math.PI/2)),16);}
+    if(K.klocka){const KL=K.klocka, ky=H+KL.overBlock;
+      gl.cyl(KL.r,KL.r,0.07,"#2A2A2C",
+        M4.mul(M4.translation(KL.x,ky,K.y1+0.05),M4.rotX(Math.PI/2)),18);
+      gl.cyl(KL.r*0.84,KL.r*0.84,0.03,"#F4F1E8",
+        M4.mul(M4.translation(KL.x,ky,K.y1+0.09),M4.rotX(Math.PI/2)),18);}
     lagg(gl,null);
    }}
   /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.

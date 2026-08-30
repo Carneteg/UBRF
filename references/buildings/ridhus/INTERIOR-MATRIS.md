@@ -57,7 +57,9 @@ De två strukturerna hade blandats ihop.
 | Glaset går i bås med poster, inte som en remsa | `VERIFIED` | r01 | `glasPost` |
 | Båsens exakta delning | `[REFERENCE GAP]` | — | 1,9 m vald |
 | Rund vit klocka på den vita väggen | `VERIFIED` | r01 | byggs |
-| Vit stående brädvägg med stjärndekor | `VERIFIED` | r01 | `[REFERENCE GAP]` — dekoren ritas inte |
+| Vit stående brädvägg mellan bänkar och glas | `VERIFIED` | r01 | rättad — `glasOver` 0,35 → 1,6 |
+| Kompassros, LINJERITAD, vänster om vänstra trappan | `VERIFIED` | r01, beskuren | byggd — `kortanda.stjarna` |
+| Bokstaven C har en CYKELbild, E en elefant | `VERIFIED` | r01 + r03 | ritas inte, se nedan |
 | Alla meter | `[REFERENCE GAP]` | — | topologi rätt, mått valda |
 
 ## 4. Övre långväggen — `KNOWN MISMATCH B`, delvis
@@ -353,3 +355,25 @@ upplysta och mörka rutor**. Långsidans band går att bedöma i vyn
 Speglarna hänger nu på panelväggen via `spegelSida`, och cafeklockan och
 trätrappan följer läktarsidan. Inget av dem är kvar som literaler. En
 spegling är därmed en dataändring även för väggdekoren.
+
+## Kompassrosen, den vita väggen och pictogrammen
+
+`ridhus-inne-01` beskuren över kortändan visar tre saker som spelet saknade:
+
+1. **En hög vit vägg** mellan översta bänkraden och fönstrens underkant,
+   ungefär mansehöjd. Spelet hade `glasOver:0.35` — glaset satt nästan
+   direkt på bänkarna, och det fanns därför ingenstans att sätta vare sig
+   klocka eller dekor. Det var det som gjorde att stjärnan hamnade inne i
+   glaset vid första försöket. Nu 1,6 m, `DERIVED` ur bildens proportioner.
+
+2. **Kompassrosen** — en TUNN, linjeritad åttauddig stjärna, inte en fylld
+   form. Byggd som fyra korsade smala stavar, vilket läser som en ritad
+   stjärna på det avståndet. Läget härleds ur `trappor` så att den följer
+   trapporna. `[ASSUMPTION]`: storleken.
+
+3. **Pictogrammen vid bokstäverna**: C har en CYKEL, E har en elefant. Båda
+   `VERIFIED`. De ritas INTE — vid den skala bokstäverna har på sargen blir
+   en cykel eller elefant några pixlar, och en fläck som ska föreställa en
+   elefant är sämre än ingen fläck. Står som verifierat men inte byggt, inte
+   som `REFERENCE GAP`: källan är tydlig, det är renderingsskalan som är
+   gränsen.
