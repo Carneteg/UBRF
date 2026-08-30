@@ -7,7 +7,7 @@ kärnupplevelse.
 
 Datum: 2026-08-29
 Implementation: Claude Code
-Status: **lämnas till ChatGPT för Senior Review 02.** Gaten stängs inte av mig, och
+Status: **lämnas till ChatGPT för Senior Review 03.** Gaten stängs inte av mig, och
 kan enligt addendumet inte stängas alls förrän Tobias har gjort en Roblox
 Studio-playtest — den kan inte utföras härifrån.
 
@@ -29,6 +29,8 @@ ingenting med ridkänslan att göra. ChatGPT fångade det som blocker C.
 | `62462d1` | 44 px touchgolv på menyknapparna | Webb |
 | `6cb5ed1` | Auditen uppdaterad efter portningen och ryttaren | — |
 | `53f874b` | **Review 01 blocker A och B:** riggens kurs, fasvarvets längd | Båda |
+| `9e4521c` | **Review 01 blocker C:** auditens commit-spårbarhet | — |
+| `497afc2` | **Review 02 blocker D:** pekkontroller kopplade till ridningen | Roblox |
 
 ---
 
@@ -46,9 +48,12 @@ ingenting med ridkänslan att göra. ChatGPT fångade det som blocker C.
 | `roblox/src/shared/HorseCore/RigAdapter.luau` | `setRiderLean` mot en sparad baspose, samma form som `setBodyTilt` |
 | `roblox/src/shared/HorseCore/Gaits.luau` | `cycleLength` — cykelns längd i meter, till den distansdrivna fasen |
 | `roblox/src/shared/HorseCore/Config.luau` | Kurvaturtak och tidskonstanter; lutningstaket sänkt 15° → 4,3° |
-| `roblox/tests/` | Mätbänken utökad med ryttarspec, ledstubb och `CFrame` som bär tre vinklar |
+| `roblox/src/client/TouchControls.luau` | **Ny.** Pekspak och knappar som anropar `Input`-kontraktet |
+| `roblox/src/client/Input.luau` | Pekskärmen fick eget axelpar som summeras med tangent och gamepad |
+| `roblox/src/client/init.client.luau` | Pekkontrollerna byggs vid uppsittning och rivs vid avsittning |
+| `roblox/tests/` | Mätbänken utökad med ryttar- och pekspec, ledstubb, `CFrame` som bär tre vinklar, rörlig rigg |
 
-En ny testfil. Inget nytt beroende, ingen fysikmotor, ingen WebGL-omskrivning, inget
+Två nya testfiler och en ny klientmodul. Inget nytt beroende, ingen fysikmotor, ingen WebGL-omskrivning, inget
 nytt lager i Roblox-arkitekturen — `RiderController` och `RigAdapter` fanns redan och
 behöll sina gränser.
 
@@ -201,12 +206,13 @@ stället för två likvärdiga.
 **produktionskoden ordagrant** mot stubbade Roblox-globaler. `build.py` fogar ihop
 stubbar och källfiler till en körbar fil — luau-CLI:t sandboxar varje modul, så
 stubbar går inte att injicera via `require`. Nitton mätningar på rörelsen, fem på
-kameran och sjutton på ryttaren, alla gröna:
+kameran, sjutton på ryttaren och tjugoen på pekkontrakten, alla gröna:
 
 ```
 python3 roblox/tests/build.py && luau roblox/tests/.build/movement.spec.luau
 python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build/camera.spec.luau
 python3 roblox/tests/build.py tests/rider.spec.luau && luau roblox/tests/.build/rider.spec.luau
+python3 roblox/tests/build.py tests/touch.spec.luau && luau roblox/tests/.build/touch.spec.luau
 ```
 
 Utöver det: `luau-compile` rent på samtliga filer under `roblox/src/`.
@@ -276,7 +282,7 @@ Vad som är samma regel på båda plattformarna, och var siffrorna skiljer sig.
 | Svarvheten sjunker per gångart | `Gaits.turn`: 1,00 / 0,82 / 0,62 / 0,42 | `GANGSVANG`: 1,00 / 0,82 / 0,52 | ✅ samma storhet; webben har fyra gångarter mot Roblox fem |
 | Snabbare gångart ger vidare sväng | kurvaturtak × `turn`; radie 4,1 → 5,4 → 7,9 m | kurvaturtak; radie 3,6 → 4,4 → 7,0 m | ✅ samma formulering sedan `58a8030`; talen skiljer med Roblox egna gångartstempon |
 | Acceleration olika upp och ned | `gait.accel` / `gait.retard` | modellens `stepRide` | ✅ |
-| Analog touchprecision | pekstöd finns, otestat i klient | expo-kurva + dödzon; 25/50/100 % → 61 / 19,6 / 4,4 m | ⚠️ webben verifierad, Roblox inte |
+| Analog touchprecision | `TouchControls` → `Input.setTouch`; 25/50/100 % → 0,0725 / 0,2261 / 1,0000 | expo-kurva + dödzon; 25/50/100 % → 61 / 19,6 / 4,4 m | ✅ samma kurva och tal sedan `497afc2`; gesterna otestade i klient |
 | Gångartsfas ur rörelsen | flyttad sträcka ÷ `Gaits.cycleLength` (`norm ÷ cycles`) | flyttad sträcka ÷ `Gait.steglangd` | ✅ samma term sedan `53f874b`; uppmätt 1,45 / 2,13 / 3,20 mot 1,41 / 1,94 / 3,08 m |
 | Vridningen har en ägare | roten skrivs av `MovementController`, `AutoRotate` av | `G.rikt` integreras av `stegaRitt`, riggen ritas ur den | ✅ sedan `53f874b`; mätt yaw = heading, 0,00e+00 rad |
 | Turn/body response | centripetal × 0,012, tak 0,075 rad | centripetal × 0,012, tak 0,075 rad | ✅ identiska tal sedan `58a8030` |
@@ -399,6 +405,74 @@ galopp — exakt de faktorer `CYKELSTEG` bar.
 webbimplementationen. Den riktiga är `33559d9`. Hela listan är omgjord till en
 spårbar tabell överst i det här dokumentet.
 
+## 7g · Review 02: blocker D — pekkontrollerna
+
+ChatGPT lämnade `audits/GATE-01-CHATGPT-REVIEW-02.md` på head `9e4521c`. Blocker
+A, B och C godkändes; en ny blocker D. Åtgärdad i `497afc2`. Ingenting annat lades
+till.
+
+### Vad var fel
+
+`Input.setTouch`, `Input.touchGait` och `Input.touchJump` fanns, men en sökning i
+repot hittade inga anropare utanför `Input.luau` självt. `init.client.luau` band
+bara tangent och gamepad, `ContextActionService:BindAction` anropades med `false`
+för touch-knappar, och gamepad-avläsningen läser `Thumbstick1` — vilket en telefon
+inte har.
+
+Auditen skrev "pekstöd finns, otestat i klient". Det var för generöst: en
+Roblox-spelare på telefon eller platta kunde inte styra hästen alls. Reviewen har
+rätt i att detta inte var en gul dokumentationsrad utan en blocker, och att en
+plattformsparitetsgrind är precis vad som ska fånga det.
+
+### Pekarkitekturen
+
+`TouchControls.luau` är den saknade anroparen och ingenting mer. Spaken översätter
+fingrets läge till samma normaliserade avsikter som W/A/S/D och gamepaden skriver,
+och går genom samma `Input.consume()` in i `MovementController` — ingen ny
+rörelsearkitektur, ingen egen avsiktsmodell, ingen väg förbi kontraktet. Kurvan är
+portad från webbens verifierade tal (expo 0,35, dödzon 0,07 på styraxeln och 0,12
+framåt), så touch känns likadant på båda plattformarna. GUI:t byggs först vid
+uppsittning, bara på en pekenhet, och rivs i `dismount`.
+
+`Input` fick en rättning på köpet: pekskärmen skrev tidigare i tangenternas egna
+fält, så D plus spak åt vänster slog ut varandra beroende på ordning. Pekskärmen
+har nu ett eget axelpar som summeras precis som gamepadens.
+
+Roblox egna pekreglage stängs av under ritt och sätts på igen vid avsittning. De
+flyttar karaktären, och sitter hon i sadeln blir det två saker som drar i samma
+kropp — kravpunkt 6 i reviewen.
+
+### Mätt
+
+`roblox/tests/touch.spec.luau`, 21 mätningar, alla gröna. Spakens kurva är en ren
+funktion och `Input` en ren tillståndsmaskin, så allt under fingret går att mäta
+utan GUI.
+
+| Krav ur reviewen | Mätt |
+|---|---|
+| 25/50/100 % ger tre monotont skilda styrvärden | **0,0725 / 0,2261 / 1,0000** |
+| Vänster/höger-tecken korrekta | höger +1,000, vänster −1,000, exakt spegling |
+| Släpp nollar båda axlarna | forward och steer **0,000000** samma bildruta |
+| Gångart upp/ned flanktriggad, en per tryck | 1 bärande bildruta, **0** av de 30 följande |
+| Hopp tänds och släpps | ✅ |
+| Upp/avsittning slår på och av kontrollerna | `mount` bygger, `dismount` river; `unbind` nollar pekaxlarna |
+| Ingen tangent-/gamepadregression | W+D → 1,0/1,0; spak 0,5 → 0,5/0,5; oförändrade |
+
+Utöver reviewens lista: dödzonen sväljer 5 % darrning (0,000000), diagonalen har
+längd 0,619 och är alltså inte snabbare än rakt fram, summan av tangent + spak +
+pek klampas till −1..1, och orimliga pekvärden klampas redan vid ingången.
+
+Rättningen av axelkollisionen är också mätt: D plus spak −0,4 ger nu **0,600** i
+stället för att den ena skriver över den andra.
+
+### Vad som bara går att se i Studio
+
+Gesterna och layouten. Att spaken hamnar rätt på skärmen, att knapparna går att
+träffa med tummen, att inget skymmer hästen eller vägen framåt i porträtt och
+landskap, och att Roblox egna reglage verkligen slutar dra i karaktären när de
+stängs av. Reviewens enhetslista — liten korrigering, medelvolt, full styrning,
+gångartsbyten, hopp, avsittning — kräver en enhet eller Studios enhetsemulator.
+
 ## 8 · Kvarvarande begränsningar
 
 1. **Ryttarens sekundärrörelse är byggd men inte sedd i rörelse.** Trögheten och
@@ -450,7 +524,11 @@ så designen översätts i stället för att uppfinnas igen.
 | inga nya konsolfel | ✅ |
 | inga nya features utanför Gate 01 | ✅ |
 
-**Tretton av femton uppfyllda, en som kräver mänsklig bedömning, en kvar: kamerans stabilitet i volt och hörn kan bara avgöras av någon som rider.**
+| Roblox-touch kan faktiskt styra hästen genom `Input`-kontraktet | ✅ `TouchControls`, 25/50/100 % → 0,0725 / 0,2261 / 1,0000 |
+
+**Fjorton av sexton uppfyllda. Kvar: kamerans stabilitet i volt och hörn, som bara
+kan avgöras av någon som rider, och touchgesternas layout, som bara kan ses på en
+enhet.**
 
 ---
 
@@ -469,16 +547,19 @@ gaten vid review eller playtest.
    i Studio än i bänken. Blocker A visade dessutom hur ett fel av precis den sorten
    kan finnas utan att bänken märker något: den mätte vår egen bokföring, inte
    riggen.
-3. **Pariteten är nästan exakt, men inte helt.** Två av tolv rader i
-   paritetstabellen är gula: Roblox touch är overifierad, och pedagogiken finns bara
-   i webben. Sväng, fas, lutning och ryttarrörelse delar numera formulering och tal.
-   Det som är kvar av taldifferens är gångartstempona, som är ett produktbeslut, inte
-   en portningslucka.
+3. **Pariteten är nästan exakt, men inte helt.** En av tretton rader i
+   paritetstabellen är gul: pedagogiken — hjälper, utbildningsskala, ridlärare —
+   finns bara i webben, en känd mognadsskillnad. Sväng, fas, lutning, ryttarrörelse,
+   vridningens ägarskap och touchkurvan delar numera formulering och tal. Det som är
+   kvar av taldifferens är gångartstempona, som är ett produktbeslut, inte en
+   portningslucka.
 4. **Konstanterna är trimmade mot mätningar, inte mot playtest.** Alla tal i båda
    spåren är valda för att träffa rimliga siffror i tabellerna, inte för att någon
    ridit med dem.
-5. **Touch är overifierad i Roblox.** Webbens analoga touch är mätt med riktiga
-   pekhändelser; Roblox-klientens är det inte.
+5. **Roblox-touchens gester är overifierade.** Kurvan och `Input`-kontraktet är
+   mätta (`497afc2`), men att spaken hamnar rätt på skärmen, går att träffa med
+   tummen och inte skymmer vägen framåt kan bara ses på en enhet. Detsamma gäller att
+   Roblox egna pekreglage verkligen slutar dra i karaktären när de stängs av.
 6. **Gamepad är overifierad på båda.** Kontrakten tar emot analoga värden, ingen
    gamepad har testats.
 
