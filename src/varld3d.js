@@ -721,22 +721,25 @@ function v3dStall(lagg,opp){
      hela gången — och en ljus spånremsa längs boxfronterna på båda
      sidor. Remsan är det första ögat läser i filmen; utan den blir
      gången en enfärgad korridor. */
-  const gangSten=S.ganghalva*0.72;
-  lagg(new Bygge().yta(gangSten*2,S.langd,"#FFFFFF",
-    M4.translation(vx,0.02,S.langd/2),10),T.marksten);
-  {const remsa=new Bygge(), rb=S.ganghalva-gangSten;
-   for(const sida of [-1,1])
-     remsa.yta(rb,S.langd,"#D8C9A4",
-       M4.translation(vx+sida*(gangSten+rb/2),0.025,S.langd/2),4);
-   lagg(remsa,T.span);}
+  const sten=new Bygge(), remsa=new Bygge();
+  for(const g of S.gangytor){
+    const gangSten=Math.max(g.w*0.72, g.w-1.4), rb=(g.w-gangSten)/2;
+    sten.yta(gangSten,g.h,"#FFFFFF",
+      M4.translation(g.x+g.w/2,0.02,g.y+g.h/2),10);
+    if(rb>0.05) for(const sida of [-1,1])
+      remsa.yta(rb,g.h,"#D8C9A4",
+        M4.translation(g.x+g.w/2+sida*(gangSten/2+rb/2),0.025,g.y+g.h/2),4);
+  }
+  lagg(sten,T.marksten);
+  lagg(remsa,T.span);
   const span=new Bygge();
-  for(const sida of["W","E"]){
-    const rad=S.boxar[sida];
-    for(let i=0;i<rad.length;i++){
-      const y0=S.boxStartY+i*S.boxB;
-      if(y0+S.boxB>S.klubbY)break;
-      const x=sida==="W"?vx-S.ganghalva-S.boxDjup/2:vx+S.ganghalva+S.boxDjup/2;
-      span.yta(S.boxDjup,S.boxB-0.1,"#FFFFFF",M4.translation(x,0.03,y0+S.boxB/2),3);
+  for(const rad of S.rader){
+    const lista=S.boxar[rad.id]||[];
+    for(let i=0;i<lista.length;i++){
+      const my=boxY(i);
+      if(my+S.boxB/2>S.klubbY)break;
+      span.yta(S.boxDjup,S.boxB-0.1,"#FFFFFF",
+        M4.translation(rad.x0+S.boxDjup/2,0.03,my),3);
     }
   }
   lagg(span,T.span);
@@ -782,9 +785,9 @@ function v3dStall(lagg,opp){
   lagg(stomme,T.tra);
   const galv=new Bygge();
   for(let z=2;z<S.langd;z+=4)                       // dragstagen ner till boxarna
-    for(const sida of [-1,1])
+    for(const rad of S.rader)
       galv.cyl(0.035,0.035,S.tak-2.3,"#B4B9BE",
-        M4.translation(vx+sida*S.ganghalva,2.3,z),6);
+        M4.translation(boxFrontX(rad),2.3,z),6);
   lagg(galv,null);
   /* Takfönstren i västra takfallet — ljuset som gör gången läsbar. */
   const lykt=new Bygge();
@@ -793,8 +796,8 @@ function v3dStall(lagg,opp){
       M4.mul(M4.translation(vx-halvB*0.52,S.tak+RESN*0.52,z),M4.rotZ(takV)));
   /* Runda pendelarmaturer i rad över vardera boxraden. */
   for(let z=3;z<S.langd;z+=4.5)
-    for(const sida of [-1,1]){
-      const ax=vx+sida*S.ganghalva*0.62;
+    for(const g of [S.gangar.A,S.gangar.B]){
+      const ax=(g.x0+g.x1)/2;
       lykt.cyl(0.012,0.012,0.55,"#8E939B",M4.translation(ax,S.tak-0.55,z),5);
       lykt.cyl(0.20,0.20,0.09,"#FBF6E4",M4.translation(ax,S.tak-0.62,z),10);
     }
@@ -802,12 +805,11 @@ function v3dStall(lagg,opp){
 
   /* Boxfronterna: komposit, galvad ram, galler och namnskylt. */
   const front=new Bygge(), galler=new Bygge();
-  for(const sida of["W","E"]){
-    const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
+  for(const rad2 of S.rader){
+    const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
     for(let i=0;i<rad.length;i++){
-      const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
+      const my=boxY(i), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
-      const my=(y0+y1)/2;
       front.lada(0.12,1.35,S.boxB-0.04,"#4A4D50",M4.translation(fx,0.675,my));
       front.lada(0.16,0.10,S.boxB,"#B4B8BB",M4.translation(fx,1.38,my));
       for(const dy of [y0,y1])
@@ -844,12 +846,16 @@ function v3dStall(lagg,opp){
     S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(r.label)});
   }
   /* Tvärväggarna med dörrgap. */
-  for(const tv of S.tvarvaggar){
-    const gap=tv.gap;
-    rum.lada(vx-gap/2,2.8,0.16,"#FFFFFF",M4.translation((vx-gap/2)/2,1.4,tv.y));
-    rum.lada(S.bredd-vx-gap/2,2.8,0.16,"#FFFFFF",
-      M4.translation(vx+gap/2+(S.bredd-vx-gap/2)/2,1.4,tv.y));
-  }
+  {const halOrd=Object.values(S.gangar).sort((a,b)=>a.x0-b.x0);
+   for(const tv of S.tvarvaggar){
+     const bitar=[]; let x=0;
+     for(const h of halOrd){ bitar.push([x,h.x0]); x=h.x1; }
+     bitar.push([x,S.bredd]);
+     for(const [x0,x1] of bitar){
+       if(x1-x0<0.05)continue;
+       rum.lada(x1-x0,2.8,0.16,"#FFFFFF",M4.translation((x0+x1)/2,1.4,tv.y));
+     }
+   }}
   lagg(rum,T.parlspont);
   /* Whiteboarden. */
   const wb=new Bygge();
@@ -1520,15 +1526,15 @@ function ritaVandring3D(){
         v3dFigur({x:p.x,z:p.y,rikt:p.rikt===undefined?2.1:p.rikt,
           fas:(VD.tid*0.5+p.x*0.3)%1,jacka:p.farg,hjalm:false});
     }else if(G.scen==="stallinne"){
-      const S=STALLINNE, vx=S.bredd/2;
-      for(const sida of["W","E"]){                 // hästhuvuden över boxdörrarna
-        const rad=S.boxar[sida], fx=sida==="W"?vx-S.ganghalva:vx+S.ganghalva;
+      const S=STALLINNE;
+      for(const rad2 of S.rader){                  // hästhuvuden över boxdörrarna
+        const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2);
         for(let i=0;i<rad.length;i++){
-          const y0=S.boxStartY+i*S.boxB, y1=y0+S.boxB;
-          if(y1>S.klubbY)break;
+          const my=boxY(i);
+          if(my+S.boxB/2>S.klubbY)break;
           const h=boxHast(rad[i]); if(!h)continue;
-          const my=(y0+y1)/2, ut=sida==="W"?-1:1;
-          const nick=Math.sin(VD.tid*0.9+i*1.7+(sida==="E"?2:0))*0.06;
+          const ut=rad2.vetter;
+          const nick=Math.sin(VD.tid*0.9+i*1.7+(ut>0?2:0))*0.06;
           const m=M4.mul(M4.mul(M4.translation(fx+ut*0.22,1.62+nick*0.4,my),
             M4.rotY(ut>0?-Math.PI/2:Math.PI/2)),M4.rotZ(-0.55));
           GL.rita(S3.del.huvud,m,{ton:h.farg});
@@ -1549,10 +1555,10 @@ function ritaVandring3D(){
         v3dFigur({x:S.ridlarare.pos[0],z:S.ridlarare.pos[1],rikt:Math.PI,
           fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
       for(const f of stallFolk()){
-        const fy=S.boxStartY+f.ix*S.boxB+S.boxB/2;
-        if(fy>S.klubbY-1)continue;
-        const fx2=f.sida==="W"?vx-S.ganghalva+0.6:vx+S.ganghalva-0.6;
-        v3dFigur({x:fx2,z:fy,rikt:f.sida==="W"?-Math.PI/2:Math.PI/2,
+        const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix);
+        if(!rad||fy>S.klubbY-1)continue;
+        const fx2=boxFrontX(rad)+rad.vetter*0.6;
+        v3dFigur({x:fx2,z:fy,rikt:rad.vetter>0?Math.PI/2:-Math.PI/2,
           fas:(VD.tid*0.4+f.ix)%1,rorlig:false,jacka:f.farg,hjalm:false});
       }
     }

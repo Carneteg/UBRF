@@ -48,15 +48,15 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Byggnad/yta | Position (m, X/Y) | Rotation | Fotavtryck (m) | Kommentar |
 |---|---|---|---|---|
 | Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, cafégaveln mot grusplanen i **norr** | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. Norra gaveln vid y = 119. |
-| Stallet | 154 / 65 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | 15 × 54 | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock 8,4 m, 28° resning. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden. |
+| Stallet | 154 / 65 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | **21 × 54** | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock **10,0 m**, 28° resning. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden. Bredden rättad 2026-08-30 från 15 m: dubbelstallets fyra boxlängor och två gångar ryms inte i 15 m, och takgeometrin ger 20–22 m. Västra långsidan står kvar där den var; huset växer österut. |
 | Gräsgården mellan husen | 144–154, y 65–119 | — | 10 × 54 | Smal, precis som i satellitbilden; stängd i söder av längan |
 | Grusplanen / parkeringen | 106 / 121 | — | 48 × 34 | Vid norra gavlarna, mot Björklidsvägen. Hit kommer man. |
 | Planen framför klubbgaveln | 144 / 119 | — | 36 × 16 | Mellan grusplanen och stallets entrégavel |
 | Gårdsplanen i sydost | 148 / 40 | — | 44 × 24 | Vid stallets södra gavel; infart från Husbyvägen (144/10, 62 × 8) |
 | Grusvägen längs ridhuset | 112 / 20 | — | 6 × 101 | Mot åkern i väster |
-| Gången öster om stallet | 169 / 64 | — | 7 × 57 | Mot hagarna |
-| Hage Ö1 | 176 / 65 | — | 30 × 28 | Direkt öster om stallet; hämtgrinden vid 176/79 |
-| Hage Ö2 | 176 / 97 | — | 30 × 20 | |
+| Gången öster om stallet | 175 / 64 | — | 3 × 57 | Mot hagarna; smalnad när stallet blev 21 m brett |
+| Hage Ö1 | 178 / 65 | — | 28 × 28 | Direkt öster om stallet; hämtgrinden vid 178/79 |
+| Hage Ö2 | 178 / 97 | — | 28 × 20 | |
 | Uteridbanan (dressyr) | 176 / 119 | långsidan nord–syd | 20 × 40 | Norr om hagarna |
 | Paddocken bredvid | 156 / 135 | — | 18 × 22 | Norr om stallet |
 | Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
@@ -100,6 +100,12 @@ Kort: **stallet är ett dubbelstall** med fyra boxlängor och två gångar, och
 **ridhuset har en djup entré- och trapphusdel i gaveln** med två trapphus och en
 hiss.
 
+Stallet är ombyggt efter sin plan 2026-08-30. Bredden gick inte att läsa ur
+ritningen, men den faller ut ur tre andra källor som pekar åt samma håll: sex band
+tvärs huset ryms inte i 15 m, huvarnas och fönstrens 3,5 m-rytm ger 21 m på sex
+band, och takfot 4,4 m med nock 9,8 m ger 20–22 m beroende på lutning. Se
+stallkortet för hela räkningen och för vad som fortfarande är antagande.
+
 Ridhuset är ombyggt efter sin plan. Ritningen saknar skalstock, men Tobias har
 bekräftat att banan är **20×60**, och två kända mått räcker för att räkna bort
 perspektivet: byggnaden är **25 × 75 m**, inte 26 × 66 som gissades förut.
@@ -123,7 +129,7 @@ vad som är antaget. `[antagande]` = härlett men inte sett; `[REFERENCE GAP]`
 | Stallets södra gavel | Street View, på avstånd | `[antagande]` — dörrarnas och trappans mått uppskattade |
 | Stallets östra långsida | Street View, på avstånd | `[antagande]` — spegling av västra sidan |
 | Stallgången invändigt | `video/IMG_0249.mov` + `IMG_0250.mov`, 37 bildrutor | Verifierat, se stallkortet |
-| Stallets planform (dubbelstall) | Utrymningsplanen | **Känt fel i spelet** — en gång i stället för två, se stallkortet |
+| Stallets planform (dubbelstall) | Utrymningsplanen | **Byggd 2026-08-30** — fyra boxlängor och två gångar på 21 m bredd; fördelningen box/gång är `[ASSUMPTION]`, se stallkortet |
 | Hagar, banor, paddock | Satellitbild | Verifierat läge, mått ej mätta |
 | Skogsstigen i norr | — | `[REFERENCE GAP]` — sträckningen påhittad |
 | Åkern i väster | Satellitbild, förenklad | `[antagande]` |

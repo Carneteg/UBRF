@@ -56,7 +56,7 @@ const ANL = {
     {typ:"grus",  rekt:{x:144, y:10,  w:62,  h:8}},    // infartsvägen från Husbyvägen i sydost
     {typ:"grus",  rekt:{x:148, y:40,  w:44,  h:24}},   // gårdsplanen vid stallets södra gavel
     {typ:"grus",  rekt:{x:186, y:16,  w:8,   h:28}},   // väggrenen upp från infarten
-    {typ:"grus",  rekt:{x:169, y:64,  w:7,   h:57}},   // gången öster om stallet mot hagarna
+    {typ:"grus",  rekt:{x:175, y:64,  w:3,   h:57}},   // gången öster om stallet mot hagarna
 
     {typ:"sand",  rekt:{x:176, y:119, w:20,  h:40}},   // uteridbanan (dressyr 20×40)
     {typ:"sand",  rekt:{x:156, y:135, w:18,  h:22}},   // grusbanan/paddocken bredvid
@@ -126,7 +126,7 @@ const ANL = {
     /* Stallets NORRA gavel ligger i liv med ridhusets — det syns i
        satellitbilden: båda gavlarna vetter mot grusplanen i samma
        linje, med gräsgården emellan. */
-    {id:"stall", rekt:{x:154, y:65, w:15, h:54}, hV:4.4, hN:8.4, nock:"NS",
+    {id:"stall", rekt:{x:154, y:65, w:21, h:54}, hV:4.4, hN:10.0, nock:"NS",
      fargV:"#6E2F44", fargT:"#5E646C", svart:"#26292E", takfot:"#EEECE4",
      detalj:"stall", sockel:0.35, label:"STALLET",
      oppningar:[
@@ -139,24 +139,24 @@ const ANL = {
        ...stallFonster("W"), ...stallFonster("E"),
        /* Norra gaveln — klubbgaveln mot grusplanen, den höga, med
           balkongen och spiraltrappan (stall-fasad-04/05). */
-       {sida:"N", u:3.4,  b:1.15, h:1.55, z0:4.75, typ:"valv"},
-       {sida:"N", u:11.6, b:1.15, h:1.55, z0:4.75, typ:"valv"},
-       {sida:"N", u:5.4,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
-       {sida:"N", u:9.6,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
-       {sida:"N", u:7.5,  b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},     // balkongdörren
+       {sida:"N", u:6.4,  b:1.15, h:1.55, z0:4.75, typ:"valv"},
+       {sida:"N", u:14.6, b:1.15, h:1.55, z0:4.75, typ:"valv"},
+       {sida:"N", u:8.4,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
+       {sida:"N", u:12.6,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
+       {sida:"N", u:10.5,  b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},     // balkongdörren
        /* Klubbentrén i gavelns mitt, rakt under balkongen — den vetter
           mot grusplanen och leder in i klubbdelen. [enligt Tobias] */
-       {sida:"N", u:7.5,  b:1.15, h:2.05, z0:0,    typ:"dorrgul", skarm:1.7},
+       {sida:"N", u:10.5,  b:1.15, h:2.05, z0:0,    typ:"dorrgul", skarm:1.7},
        /* Stora skjutporten mitt på östra långsidan, mot hagarna. */
        {sida:"E", u:30, b:3.6, h:3.2, z0:0, typ:"portbla"},
        /* Södra gaveln mot gårdsplanen: servicedelens två entrédörrar
           under vita skärmtak, valvfönster och trappdörren uppe
           (Street View från infartsvägen). */
-       {sida:"S", u:2.6,  b:1.15, h:2.10, z0:0,    typ:"dorrvit", skarm:1.7},
-       {sida:"S", u:9.5,  b:1.15, h:2.10, z0:0,    typ:"dorrvit", skarm:1.7},
-       {sida:"S", u:5.2,  b:1.10, h:1.50, z0:1.60, typ:"valv"},
-       {sida:"S", u:7.4,  b:1.10, h:1.50, z0:1.60, typ:"valv"},
-       {sida:"S", u:6.2,  b:1.10, h:1.50, z0:4.60, typ:"valv"},
+       {sida:"S", u:5.6,  b:1.15, h:2.10, z0:0,    typ:"dorrvit", skarm:1.7},
+       {sida:"S", u:12.5,  b:1.15, h:2.10, z0:0,    typ:"dorrvit", skarm:1.7},
+       {sida:"S", u:8.2,  b:1.10, h:1.50, z0:1.60, typ:"valv"},
+       {sida:"S", u:10.4,  b:1.10, h:1.50, z0:1.60, typ:"valv"},
+       {sida:"S", u:9.2,  b:1.10, h:1.50, z0:4.60, typ:"valv"},
        {sida:"S", u:12.4, b:0.95, h:2.00, z0:4.35, typ:"dorrmork"},    // trappdörren
        /* Hästarnas väg ut. Den här porten leder till gräsgården och
           vidare till ridhuset — det är den man leder hästen genom före
@@ -192,15 +192,15 @@ const ANL = {
   staket: [
     {typ:"tra", p:[[176,119],[196,119],[196,159],[176,159],[176,119]]},// uteridbanan
     {typ:"tra", p:[[156,135],[174,135],[174,157],[156,157],[156,135]]},// paddocken bredvid
-    {typ:"tra", p:[[176,65],[206,65],[206,93],[176,93],[176,65]]},     // hage Ö1
-    {typ:"tra", p:[[176,97],[206,97],[206,117],[176,117],[176,97]]},   // hage Ö2
+    {typ:"tra", p:[[178,65],[206,65],[206,93],[178,93],[178,65]]},     // hage Ö1
+    {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]]},   // hage Ö2
     {typ:"el",  p:[[112,20],[112,121]]},                               // trådstängsel mot åkern
     {typ:"rail",p:[[155,121.5],[168,121.5]]},                          // rail framför klubbgaveln
     {typ:"rail",p:[[96,127],[96,136]]},                                // rail vid lekhagen
   ],
   hagar: [ // betande hästar (id ur HORSES) för liv i bilden
-    {rekt:{x:176,y:65,w:30,h:28}, hastar:["cosmo","air","mara"]},
-    {rekt:{x:176,y:97,w:30,h:20}, hastar:["larry","husky","westside","lydia"]},
+    {rekt:{x:178,y:65,w:28,h:28}, hastar:["cosmo","air","mara"]},
+    {rekt:{x:178,y:97,w:28,h:20}, hastar:["larry","husky","westside","lydia"]},
     {rekt:{x:156,y:135,w:18,h:22}, hastar:["toblerone","dexter","chip"]},
   ],
 
@@ -266,7 +266,7 @@ const ANL = {
      i verkligheten. Härifrån: ridhuset till höger, stallet till vänster. */
   spawn: {x:146, y:136, rikt:-Math.PI/2},
   /* Hagen där dagens häst hämtas: grinden på västra sidan av hage Ö1. */
-  hamtHage: {grind:[176,79], falt:[184,77]},
+  hamtHage: {grind:[178,79], falt:[186,77]},
   skylt: {pos:[120,150.5], text:"HUSBYVÄGEN 1A · UPPLANDS-BRO RYTTARFÖRENING"},
 };
 
@@ -280,48 +280,101 @@ const ANL = {
       Söder: servicedelen med spolspilta, spånförråd och
       uppbindningsplatser, mot gårdsplanen.
       klubbY och serviceY är tvärväggarnas y; boxarna ligger emellan. ── */
+/* ── Stallet invändigt — DUBBELSTALL ────────────────────────────────
+   Utrymningsplanen (Presto AB, 2025-10-11) visar sex band tvärs huset:
+
+     boxrad — GÅNG A — boxrad · boxrad — GÅNG B — boxrad
+
+   De två mittersta raderna står rygg mot rygg mot en gemensam spine. De
+   yttre raderna ligger mot ytterväggarna och har valvfönstret i varje box,
+   vilket stämmer med fönsterrytmen utvändigt.
+
+   Spelet hade fram till 2026-08-30 en enda gång med två rader — en känd och
+   blockerande motsägelse mot planen. Se `references/buildings/stall/KORT.md`
+   för hur bredden 21 m härleds ur tre oberoende källor; kort: sex band à
+   3,5 m, samma 3,5 m som huvarna på nocken och fönstren på långsidan sitter
+   isär, och samma bredd som takfot 4,4 och nock 9,8 ger vid 28° resning.
+
+   Filmerna i `references/video/` visar EN gång med boxar på båda sidor.
+   Det stämmer med båda gångarna i den här planen; spelet lägger filmernas
+   gång som den västra, eftersom det är den man kommer in i från
+   förstukvisten. `[ASSUMPTION]`
+
+   Nio boxar per länga ger 36 totalt. Planen antyder "ett tiotal per länga",
+   men bilden är för sned för att räkna i. `[ASSUMPTION]` ── */
 const STALLINNE = {
-  bredd:15, langd:52, ganghalva:2.6,
+  bredd:21, langd:54,
   vagg:"#CFC8BC", golv:"#8C8880", gangGolv:"#9A968E", tak:3.4,
-  klubbY:43, boxStartY:6.6, serviceY:6.5,
-  boxB:3.5, boxDjup:5.0,
-  /* Boxrader: HORSES-id för spelbara hästar, "#NAMN" för boxar med
-     riktiga namnskyltar ur fotona (LADY, WESTSIDE, MAKADU, KENNEDY,
-     TINA, MARA, HUSKY, CHIP), null = tom box. */
+  klubbY:43, boxStartY:6.8, serviceY:6.5,
+  boxB:3.5, boxDjup:3.5, gangB:3.5, antalBoxar:9,
+  /* Tvärkorridoren mitt på: planen visar en utskjutande korridor där, och
+     den binder ihop de två gångarna. Boxraderna bryts av den. */
+  tvarGang:{y0:24.3, y1:27.8},
+  /* Varje länga: x0 är radens västra kant, `vetter` +1 om boxdörrarna
+     öppnar österut. `gang` säger vilken gång raden vetter mot. */
+  rader:[
+    {id:"W",  x0:0.0,  vetter:+1, gang:"A", yttervagg:true},
+    {id:"MA", x0:7.0,  vetter:-1, gang:"A", yttervagg:false},
+    {id:"MB", x0:10.5, vetter:+1, gang:"B", yttervagg:false},
+    {id:"E",  x0:17.5, vetter:-1, gang:"B", yttervagg:true},
+  ],
+  gangar:{ A:{x0:3.5, x1:7.0}, B:{x0:14.0, x1:17.5} },
+  /* Spelets hästar står i gång A, den man kommer in i. Gång B:s boxar är
+     andra uppstallades — de ritas som boxar men får ingen häst, eftersom
+     spelet har sjutton hästar och fler namn inte får hittas på. */
   boxar:{
-    W:[ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky",null ],
-    E:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null,null ],
+    W: [ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky" ],
+    MA:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null ],
+    MB:[ null,null,null,null,null,null,null,null,null ],
+    E: [ null,null,null,null,null,null,null,null,null ],
   },
-  /* Klubbdelen i norr: uppehållsrummet mot entrén, sadelkammaren
-     innanför med de inre fönsterpartierna emellan (IMG_0141),
-     teorisalen i öster. */
-  /* Mellan sadelkammaren och uppehållsrummet går en smal hall från
-     entrédörren i västväggen in mot stallgången — annars landar man
-     inne i ett rum när man kliver in genom förstukvisten. */
+  /* Klubbdelen i norr. Hallen i mitten binder ihop entrédörren i
+     västväggen, klubbentrén i norra gaveln och båda gångarnas norra ände. */
   rum:[
-    {id:"uppehallsrum", rekt:{x:0,   y:47.0, w:6.0, h:5.0}, label:"UPPEHÅLLSRUM"},
-    {id:"sadelkammare", rekt:{x:0,   y:43.0, w:6.0, h:2.8}, label:"SADELKAMMARE"},
-    {id:"teorisal",     rekt:{x:9.0, y:43.0, w:6.0, h:9},   label:"TEORISAL · WC"},
+    {id:"uppehallsrum", rekt:{x:0,    y:50.5, w:7.0, h:3.5}, label:"UPPEHÅLLSRUM"},
+    {id:"teorisal",     rekt:{x:14.0, y:50.5, w:7.0, h:3.5}, label:"TEORISAL · WC"},
+    {id:"sadelkammare", rekt:{x:0,    y:46.6, w:3.2, h:3.9}, label:"SADELKAMMARE"},
   ],
   service:[
-    {id:"spolspilta",   rekt:{x:0,   y:0, w:6.0, h:6.5}, label:"SPOLSPILTA"},
-    {id:"spanforrad",   rekt:{x:9.0, y:0, w:6.0, h:6.5}, label:"SPÅNFÖRRÅD"},
+    {id:"spolspilta",   rekt:{x:0,    y:0, w:4.5, h:6.5}, label:"SPOLSPILTA"},
+    {id:"spanforrad",   rekt:{x:16.5, y:0, w:4.5, h:6.5}, label:"SPÅNFÖRRÅD"},
   ],
-  /* Tvärväggar med dörröppning i gångens bredd. */
-  tvarvaggar:[ {y:43, gap:2.8, brand:true}, {y:6.5, gap:2.8, brand:false} ],
+  /* Tvärväggar med en dörröppning per gång. */
+  tvarvaggar:[ {y:43, brand:true}, {y:6.5, brand:false} ],
   dorrar:[
-    {id:"ut_n", pos:[0.8,46.4], text:"Ut genom entrén", mot:"gard",
+    {id:"ut_n", pos:[0.8,48.4], text:"Ut genom entrén", mot:"gard",
      spawn:{x:152.6,y:113.4,rikt:Math.PI}},
-    {id:"ut_n2",pos:[7.5,51.2], text:"Ut till grusplanen (klubbdörren)", mot:"gard",
-     spawn:{x:161.5,y:120.4,rikt:Math.PI/2}},
-    {id:"ut_v", pos:[5.0,24],   text:"Ut till gräsgården — vägen till ridhuset", mot:"gard",
-     spawn:{x:152.4,y:89,rikt:Math.PI}},
-    {id:"ut_s", pos:[7.5,0.8],  text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard",
-     spawn:{x:162,y:63.2,rikt:-Math.PI/2}},
+    {id:"ut_n2",pos:[10.5,51.2], text:"Ut till grusplanen (klubbdörren)", mot:"gard",
+     spawn:{x:164.5,y:120.4,rikt:Math.PI/2}},
+    {id:"ut_v", pos:[0.8,26.0],  text:"Ut till gräsgården — vägen till ridhuset", mot:"gard",
+     spawn:{x:152.4,y:91,rikt:Math.PI}},
+    {id:"ut_s", pos:[5.6,0.8],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard",
+     spawn:{x:159.6,y:63.2,rikt:-Math.PI/2}},
   ],
-  ridlarare:{pos:[7.5,34], namn:"Ridläraren"},
-  whiteboard:{pos:[7.5,7.0]},    // veckoschemat vid spolspiltan (IMG_0154)
+  ridlarare:{pos:[5.25,34], namn:"Ridläraren"},
+  whiteboard:{pos:[5.25,7.2]},    // veckoschemat vid spolspiltan (IMG_0154)
 };
+
+/* Gångytorna: allt man kan gå på inne i stallet. Kollisionen frågar den
+   här listan i stället för att klämma spelaren in i en enda korridor —
+   med två gångar och en tvärkorridor går det inte att uttrycka som ett
+   intervall längre. */
+STALLINNE.gangytor = (()=>{
+  const S=STALLINNE, g=[];
+  for(const k of ["A","B"]){
+    const a=S.gangar[k];
+    g.push({x:a.x0, y:S.serviceY, w:a.x1-a.x0, h:S.klubbY-S.serviceY});
+  }
+  /* Tvärkorridoren går hela vägen ut till båda långsidorna: planen har
+     utrymningsvägar där, och en korridor som slutar vid gång B når dem
+     inte. Den bryter boxlängorna på ett ställe, vilket är precis vad en
+     genomgående korridor gör. */
+  g.push({x:0.4, y:S.tvarGang.y0, w:S.bredd-0.8, h:S.tvarGang.y1-S.tvarGang.y0});
+  g.push({x:0.4, y:S.klubbY,   w:S.bredd-0.8, h:50.5-S.klubbY});   // klubbhallen
+  g.push({x:3.4, y:50.5,       w:7.2,         h:3.1});             // hallen mot gaveldörren
+  g.push({x:4.5, y:0.4,        w:12.0,        h:S.serviceY-0.4});  // servicepassagen
+  return g;
+})();
 
 /* ── Ridhuset invändigt — lokala koordinater: origo i sydväst,
       +x öster (bredd 25), +y norr (längd 75). Banan 20×60 innanför
@@ -400,7 +453,7 @@ const RIDHUSINNE = {
      svar:"Hinderförrådet: bommar i blått, vitt och rött, kandelabrar, koner och cavaletti. ”HINDERSTÖD MED KLÄMHÅLLARE”, står det på lappen."},
   ],
 };
-/* Infopunkter i stallet (klubbdelen och servicedelen). */
+
 STALLINNE.info=[
   {pos:[6.2,49.6], text:"Klubbrummet — rosettväggen", klubb:true,
    svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
@@ -454,7 +507,8 @@ STALLINNE.info=[
          bara fungerar åt ena hållet. */
       if(bg.id==="stall"){
         const M=inne.matt;
-        if(Math.abs(ix-M.bredd/2)>=M.ganghalva&&iy>M.serviceY&&iy<M.klubbY)continue;
+        if(!M.gangytor.some(g=>ix>=g.x-0.4&&ix<=g.x+g.w+0.4
+                             &&iy>=g.y-0.4&&iy<=g.y+g.h+0.4))continue;
       }
       ANL.dorrar.push({
         id:bg.id+"_"+o.sida+"_"+Math.round(o.u), pos:[utx,uty],
