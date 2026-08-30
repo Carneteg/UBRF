@@ -23,8 +23,23 @@ local prompts: { [Model]: ProximityPrompt } = {}
 local onMount: ((Model) -> ())? = nil
 local interactionEnabled = true
 
+--[[ Tre lägen, inte två.
+
+	Förut var regeln "är G01 påslaget? annars visa allt". Attributet sätts av
+	servern i PlayerAdded och är alltså INTE replikerat de första bildrutorna
+	efter join — och i det fönstret erbjöd VARJE häst "Sitt upp", också
+	andras. Servern nekade förstås, men en knapp som syns och sedan nekar är
+	ett sämre spel än en knapp som håller sig borta.
+
+	nil betyder därför "vet inte ännu" och döljer. Ett uttryckligt false
+	betyder "G01 är avstängt" och visar, så att en värld utan GameplayService
+	fortfarande går att sitta upp i. ]]
 local function canOfferMount(model: Model): boolean
-	if player:GetAttribute("G01Enabled") == true then
+	local enabled = player:GetAttribute("G01Enabled")
+	if enabled == nil then
+		return false
+	end
+	if enabled == true then
 		return model:GetAttribute("AssignedUserId") == player.UserId
 			and player:GetAttribute("G01Phase") == "ready_to_mount"
 	end

@@ -18,6 +18,10 @@ local RigAdapter = Core.RigAdapter
 
 local GameplayService = {}
 
+--[[ Framåtdeklarerad: offerToWaiting behöver assign, och assign står först
+	längre ned för att hålla ordningen läsbar. ]]
+local assign
+
 local horseByPlayer: { [Player]: Model } = {}
 local playerByHorse: { [Model]: Player } = {}
 local horseService: any = nil
@@ -82,7 +86,7 @@ local function availableHorses(): { Model }
 	return horses
 end
 
-local function assign(player: Player)
+function assign(player: Player)
 	if player.Parent ~= Players then return end
 	local current = horseByPlayer[player]
 	if current and current.Parent then return end
@@ -101,6 +105,21 @@ local function assign(player: Player)
 	model:SetAttribute("AssignedUserId", player.UserId)
 	player:SetAttribute("G01HorseName", horseName(model))
 	setPhase(player, "approach", ("I dag tar du hand om %s."):format(horseName(model)))
+end
+
+--[[ Erbjud lediga hästar till dem som väntar.
+
+	Utan det här fastnade en väntande spelare för alltid: bara
+	GetInstanceAddedSignal väckte väntande, så en häst som blev ledig när
+	någon LÄMNADE servern erbjöds aldrig vidare. På en full server betydde
+	det att den som kom in efteråt stod kvar i "waiting_horse" hur många som
+	än loggade ut. ]]
+local function offerToWaiting()
+	for _, player in Players:GetPlayers() do
+		if horseByPlayer[player] == nil and phaseOf(player) == "waiting_horse" then
+			task.defer(assign, player)
+		end
+	end
 end
 
 local function setupPlayer(player: Player)
@@ -208,16 +227,13 @@ function GameplayService.start(service: any)
 	Players.PlayerAdded:Connect(setupPlayer)
 	Players.PlayerRemoving:Connect(function(player)
 		release(player)
+		offerToWaiting()
 	end)
 
 	CollectionService:GetInstanceAddedSignal("Horse"):Connect(function(inst)
 		if not inst:IsA("Model") then return end
 		inst:SetAttribute("AssignedUserId", 0)
-		for _, player in Players:GetPlayers() do
-			if phaseOf(player) == "waiting_horse" then
-				task.defer(assign, player)
-			end
-		end
+		offerToWaiting()
 	end)
 
 	CollectionService:GetInstanceRemovedSignal("Horse"):Connect(function(inst)

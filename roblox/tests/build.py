@@ -33,6 +33,23 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
+# Serverspåret: GameplayService korr mot sina egna stubbar. Preparation ar
+# den enda delade modulen den behover utover Networking/RigAdapter, som
+# stubbfilen bygger direkt in i __Core.
+GAMEPLAY = [
+    ("Preparation",     "src/shared/HorseCore/Preparation.luau"),
+    ("GameplayService", "src/server/GameplayService.luau"),
+]
+
+HUD = [
+    ("GameplayController", "src/client/GameplayController.luau"),
+]
+
+# Klientspåret för G01: InteractionController mot samma stubbar.
+INTERAKTION = [
+    ("InteractionController", "src/client/InteractionController.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -48,9 +65,14 @@ MODULER = [
 ]
 
 # require-formerna som förekommer i koden, till modulnamn.
+# GameplayService skriver require(ReplicatedStorage.HorseCore) med en LOKAL
+# alias i stallet for game:GetService(...) inline. Den formen matchades inte,
+# sa hela servertjansten gick inte att bygga in i en spec — vilket ar en av
+# anledningarna till att den aldrig provats.
 REQUIRE = re.compile(
     r'require\(\s*(?:script\.Parent\.(\w+)'
-    r'|game:GetService\("ReplicatedStorage"\)\.HorseCore(?:\.(\w+))?)\s*\)')
+    r'|(?:game:GetService\("ReplicatedStorage"\)|ReplicatedStorage|RS)'
+    r'\.HorseCore(?:\.(\w+))?)\s*\)')
 
 def las(rel: str) -> str:
     return (ROT / rel).read_text(encoding="utf-8")
@@ -63,7 +85,13 @@ def inlina(kalla: str) -> str:
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
-    if "bygge" in spec_rel:
+    if "hud" in spec_rel:
+        moduler, stubbar = HUD, "tests/stubs-gameplay.luau"
+    elif "interaktion" in spec_rel:
+        moduler, stubbar = INTERAKTION, "tests/stubs-gameplay.luau"
+    elif "gameplay" in spec_rel:
+        moduler, stubbar = GAMEPLAY, "tests/stubs-gameplay.luau"
+    elif "bygge" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     elif "geometri" in spec_rel:
         moduler, stubbar = GEOMETRI, "tests/stubs.luau"

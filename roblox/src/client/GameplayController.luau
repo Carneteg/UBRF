@@ -36,7 +36,11 @@ local function ensureGui()
 	panel.Name = "ObjectivePanel"
 	panel.AnchorPoint = Vector2.new(0, 0)
 	panel.Position = UDim2.fromOffset(12, 12)
-	panel.Size = UDim2.new(1, -24, 0, 132)
+	--[[ 132 räckte inte: feedbacken slutade på 120 medan den paddade
+		innehållsytan bara var 111 hög, och ClipsDescendants är falskt — texten
+		ritades alltså UTANFÖR den mörka bakgrunden, ovanpå 3D-scenen. Med två
+		rader feedback behövs 126 + 11 + 10. ]]
+	panel.Size = UDim2.new(1, -24, 0, 147)
 	panel.BackgroundColor3 = Color3.fromRGB(25, 27, 27)
 	panel.BackgroundTransparency = 0.12
 	panel.BorderSizePixel = 0
@@ -45,8 +49,8 @@ local function ensureGui()
 	-- Telefonen får nästan hela skärmbredden, surfplatta/dator stannar vid
 	-- 360 px. Samma panel ska alltså aldrig gå utanför en 320 px viewport.
 	local size = Instance.new("UISizeConstraint")
-	size.MinSize = Vector2.new(240, 132)
-	size.MaxSize = Vector2.new(360, 132)
+	size.MinSize = Vector2.new(240, 147)
+	size.MaxSize = Vector2.new(360, 147)
 	size.Parent = panel
 
 	local corner = Instance.new("UICorner")
@@ -103,7 +107,9 @@ local function ensureGui()
 	feedback.Name = "Feedback"
 	feedback.BackgroundTransparency = 1
 	feedback.Position = UDim2.fromOffset(0, 96)
-	feedback.Size = UDim2.new(1, 0, 0, 24)
+	-- Två rader: den längsta pedagogiska meningen är 81 tecken och ryms inte
+	-- på en rad i panelens invändiga bredd.
+	feedback.Size = UDim2.new(1, 0, 0, 30)
 	feedback.Font = Enum.Font.Gotham
 	feedback.Text = ""
 	feedback.TextWrapped = true
@@ -210,6 +216,12 @@ function GameplayController.start()
 	-- Att dessutom refresha på G01Phase-attributet raderade feedbacken i nästa
 	-- scheduler-varv, eftersom refreshen inte bär med sig föregående feedback.
 	Net.get("G01StateChanged").OnClientEvent:Connect(function(state, feedback)
+		--[[ Serien räknas upp HÄR också. Utan det kunde en långsam
+			initialRefresh svara EFTER den här händelsen, rendera om med
+			feedback = nil och torka bort meningen spelaren skulle ha läst.
+			Serienumret fanns redan men bumpades bara av refresh sig själv,
+			så det skyddade refresher mot varandra — inte mot servern. ]]
+		refreshSerial += 1
 		render(state, feedback)
 	end)
 	initialRefresh(1)

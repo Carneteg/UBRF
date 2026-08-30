@@ -9,7 +9,7 @@
 
 local Preparation = {}
 
-Preparation.ORDER: { string } = {
+local ORDER: { string } = {
 	"approach",
 	"check",
 	"groom",
@@ -17,28 +17,28 @@ Preparation.ORDER: { string } = {
 	"ready_to_mount",
 }
 
-Preparation.ACTION_FOR_PHASE: { [string]: string } = {
+local ACTION_FOR_PHASE: { [string]: string } = {
 	approach = "approach",
 	check = "check",
 	groom = "groom",
 	tack = "tack",
 }
 
-Preparation.NEXT_PHASE: { [string]: string } = {
+local NEXT_PHASE: { [string]: string } = {
 	approach = "check",
 	check = "groom",
 	groom = "tack",
 	tack = "ready_to_mount",
 }
 
-Preparation.ACTION_TEXT: { [string]: string } = {
+local ACTION_TEXT: { [string]: string } = {
 	approach = "Hälsa lugnt",
 	check = "Visitera",
 	groom = "Rykta",
 	tack = "Gör i ordning",
 }
 
-Preparation.OBJECTIVE: { [string]: string } = {
+local OBJECTIVE: { [string]: string } = {
 	waiting_horse = "Väntar på en ledig häst.",
 	approach = "Gå fram lugnt till din häst. Låt hästen se och höra dig.",
 	check = "Gör en snabb visitering: titta på ben, kropp och hur hästen verkar må.",
@@ -48,12 +48,23 @@ Preparation.OBJECTIVE: { [string]: string } = {
 	mounted = "Bra förberett. Rid mjukt och känn skillnaden mellan gångarterna.",
 }
 
-Preparation.FEEDBACK: { [string]: string } = {
+local FEEDBACK: { [string]: string } = {
 	approach = "Bra. En häst ska inte överraskas från en blind vinkel.",
 	check = "Bra. En snabb kontroll före ridning kan upptäcka att något inte känns som vanligt.",
 	groom = "Bra. Smuts under sadel eller gjord kan skava och göra hästen obekväm.",
 	tack = "Klart. Rätt utrustning och en väl förberedd häst hör ihop med bra ridning.",
 }
+
+--[[ Konstanterna deklareras som typade LOCALS och kopplas på modulen
+	här. Luau tillåter inte en typannotering på en fälttilldelning
+	(Preparation.ORDER: { string } = ...), vilket gjorde att hela filen
+	vägrade kompilera — och med den fem av sju specar. ]]
+Preparation.ORDER = ORDER
+Preparation.ACTION_FOR_PHASE = ACTION_FOR_PHASE
+Preparation.NEXT_PHASE = NEXT_PHASE
+Preparation.ACTION_TEXT = ACTION_TEXT
+Preparation.OBJECTIVE = OBJECTIVE
+Preparation.FEEDBACK = FEEDBACK
 
 function Preparation.expectedAction(phase: string): string?
 	return Preparation.ACTION_FOR_PHASE[phase]
