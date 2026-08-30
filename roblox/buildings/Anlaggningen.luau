@@ -536,12 +536,29 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		end
 	end
 
-	-- Glasade rum bakom sargen, i läktarens liv.
-	for i, g in ipairs(R.glasrum) do
-		local p = BK.box(model, base, "Glasat rum " .. i,
-			o.x + L.x0 - 0.12, 1.0, o.y + g.y0, 0.12, 1.8, g.y1 - g.y0,
-			INRE.glas, Enum.Material.Glass)
-		p.Transparency = 0.55
+	-- Kortändans läktare: trappstegsblock, två trappor och glasbandet ovanför.
+	-- De glasade rummen låg förut längs LÅNGSIDAN, i läktarens liv. Fotot
+	-- ridhus-inne-01 visar dem över ett trappstegsblock vid kortändan, och
+	-- bokstaven C framför blocket avgör saken: C ligger mitt på en kortsida.
+	local K = R.kortanda
+	if K then
+		local br = K.x1 - K.x0
+		for i = 1, K.steg do
+			BK.box(model, base, "Kortändans steg " .. i,
+				o.x + K.x0, (i - 1) * K.stegH,
+				o.y + K.y1 - i * K.stegD, br, K.stegH * i + 0.1, K.stegD,
+				INRE.laktare, Enum.Material.WoodPlanks)
+		end
+		for i, tx in ipairs(K.trappor) do
+			BK.box(model, base, "Kortändans trappa " .. i,
+				o.x + tx - K.trappB / 2, 0, o.y + K.y0,
+				K.trappB, K.steg * K.stegH, K.y1 - K.y0,
+				INRE.laktare, Enum.Material.WoodPlanks)
+		end
+		local glas = BK.box(model, base, "Kortändans glasband",
+			o.x + K.x0, K.steg * K.stegH + K.glasOver, o.y + K.y0 - 0.12,
+			br, K.glasH, 0.12, INRE.glas, Enum.Material.Glass)
+		glas.Transparency = 0.55
 	end
 
 	-- Domarbåset vid E, med exit-skylten över öppningen.

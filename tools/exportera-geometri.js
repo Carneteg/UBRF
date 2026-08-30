@@ -136,7 +136,7 @@ const ut = {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,
     port: RIDHUSINNE.port, sargGrind: RIDHUSINNE.sargGrind,
-    laktare: RIDHUSINNE.laktare, glasrum: RIDHUSINNE.glasrum,
+    laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, trappa: RIDHUSINNE.trappa,
     klocka: RIDHUSINNE.klocka,
     dorrar: RIDHUSINNE.dorrar,

@@ -793,6 +793,9 @@ const STALLINNE = {
      mot:"ridhusinne", inrikt:Math.PI, inne:true,
      spawn:{x:RIDHUS_BREDD-1.4, y:GANG_FASTE+GANG_DJUP/2-RIDHUS_Y, rikt:Math.PI}},
   ],
+  /* Klockan i gångens bortre ände, mot servicedelen. `VERIFIED` i två
+     oberoende bildrutor: IMG_0160 och stall-inne-05-stallgangen.jpg. */
+  klocka:{x:0.35, y:1.2, z:2.7, r:0.26},
   ridlarare:{pos:[0,34], namn:"Ridläraren"},
   whiteboard:{pos:[0,7.2]},
 };
@@ -936,12 +939,31 @@ const RIDHUSINNE = {
      för att en häst ska gå igenom med marginal. [ASSUMPTION] */
   laktare:{x0:21.0, y0:9, y1:59, steg:4, stegH:0.28, stegD:0.85,
            gap:{y0:GANG_FASTE-RIDHUS_Y-2.6, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+2.6}},
-  /* MOTSÄGELSE 5 (`IMG_0179`): bakom sargen finns flera glasade rum /
-     fönsterpartier ovanför de nivåindelade träbänkarna. Måtten är
-     `[ASSUMPTION]` — indexet beskriver att de finns, inte hur stora. */
-  /* Det mellersta glasrummet slutade på y = 36 och hamnade därmed inne i
-     läktargapet när gången flyttades. Kortat till gapets kant. */
-  glasrum:[ {y0:12, y1:22}, {y0:26, y1:34.5}, {y0:44, y1:56} ],
+  /* KORTÄNDANS LÄKTARE (`IMG_0179`), Review 05 blocker 3.
+
+     Spelet hade bara en läktare — den längs östra långsidan — och lade de
+     glasade rummen längs SAMMA långsida. Fotot visar något annat, och
+     bokstaven avgör var:
+
+       · `ridhus-inne-01-glasrummen.jpg` visar ett trappstegsblock i ljust
+         trä med TVÅ trappor upp, och ovanför det ett band av glasade rum
+         med mörka träkarmar, där man ser in i lokalerna bakom.
+       · Rakt framför blocket, på sargen, sitter bokstaven **C** med
+         cykelbilden. C ligger per definition mitt på en KORTSIDA — i
+         DRESSYRBOKSTAVER på banans (10, 0), alltså husets södra kortända.
+
+     Alltså: blocket och glasrummen hör till SÖDRA KORTÄNDAN, inte till
+     långsidan. Långsidans läktare finns kvar — den syns i `-02` och `-03`
+     som ett långt däck med mörk brädfront — men glasrummen flyttar hit.
+
+     `VERIFIED`: att blocket finns vid kortändan, att det har två trappor,
+     att glasrummen sitter ovanför det, och att C står framför det.
+     `[REFERENCE GAP]`: alla meter. Antal steg, blockets djup, trappornas
+     lägen och glasbandets höjd är valda så att topologin blir rätt. Det är
+     precis vad Review 05 ber om — exakta mått får vara gap, känd topologi
+     får inte förbli fel. */
+  kortanda:{y0:0.4, y1:4.8, x0:1.8, x1:23.2, steg:4, stegH:0.30, stegD:1.05,
+            trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:0.35},
   /* MOTSÄGELSE 4 (`IMG_0198`): båset ligger vid dressyrbokstaven E, är
      mörkt trä, och nås av en trappa med träräcken. Över öppningen sitter
      en grön exit-skylt. E ligger vid husets y = 32 sedan bokstäverna

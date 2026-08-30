@@ -1794,19 +1794,21 @@ return {
 				y1 = 41.13,
 			},
 		},
-		glasrum = {
-			{
-				y0 = 12,
-				y1 = 22,
+		kortanda = {
+			y0 = 0.4,
+			y1 = 4.8,
+			x0 = 1.8,
+			x1 = 23.2,
+			steg = 4,
+			stegH = 0.3,
+			stegD = 1.05,
+			trappor = {
+				7,
+				15.5,
 			},
-			{
-				y0 = 26,
-				y1 = 34.5,
-			},
-			{
-				y0 = 44,
-				y1 = 56,
-			},
+			trappB = 1.2,
+			glasH = 2,
+			glasOver = 0.35,
 		},
 		domarbas = {
 			x = 23.2,

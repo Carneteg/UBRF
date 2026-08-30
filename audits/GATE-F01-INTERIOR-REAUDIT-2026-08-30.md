@@ -119,5 +119,42 @@ och den geometrin ligger i den delade datan som båda plattformarna läser.
 Att ändra den är ett eget arbete, och det ska göras med samma kedja som
 resten — `src/site.js` → webben och exporten → Roblox.
 
-Stallinteriören (issue #23 punkt 2) är inte heller omgranskad ännu mot
-`IMG_0159–0162`.
+## Stallinteriören mot `IMG_0159–0162` — omgranskad
+
+Issue #23 punkt 2. Alla fyra bilderna är öppnade en och en, tillsammans med
+`IMG_0145–0149` och `0152` ur samma serie. De visar samma stallgång från
+olika punkter längs den.
+
+### Vad de BEKRÄFTAR i det som redan är byggt
+
+| Drag | Läge i koden | Status |
+|---|---|---|
+| Boxfronter: galvad ram, lodräta galler upptill, **mörk antracitfärgad heldel** nedtill | `v3dStall`, boxfronterna | `VERIFIED` |
+| **Genomgående topplist** i galvat stål ovanför fronterna | `galler.lada(...)` på z = 2,20 | `VERIFIED` — fanns redan |
+| **Orangebruna limträåsar** längs taket | `IDENTITET.stall.stallgang.limtra` | `VERIFIED`, färgen mätt |
+| **Korrugerad plåt** som undertak, följer takfallet | `IDENTITET.stall.stallgang.takplat` | `VERIFIED`, färgen mätt |
+| **Markstensgång i mitten** med ljusare kanter | golvet i `v3dStall` | `VERIFIED` |
+| Runda armaturer tätt under plåten | `lykt` | `VERIFIED` — kortade pendlar |
+| Boxar på BÅDA sidor hela vägen | `STALL_BAND` | `VERIFIED` |
+| Hönät och täcken hängande på fronterna | rekvisita | `VERIFIED` |
+
+Bilderna motsäger alltså ingenting i den byggda stallgången. Det är ett
+resultat värt att skriva ut: om-auditens syfte var att pröva, och prövningen
+föll ut till byggets fördel.
+
+### Vad de LÄGGER TILL
+
+- **Klockan i gångens bortre ände.** Syns i `IMG_0160` och i
+  `stall-inne-05-stallgangen.jpg`. Två oberoende bildrutor. Byggd.
+
+### Vad de INTE avgör
+
+`[REFERENCE GAP]` **Gångens bredd.** Ingen av bilderna har något av känd
+storlek att skala mot. Spelets 2,6 m kommer ur `STALL_BAND`:s andelar av den
+antagna bredden 21 m — och bredden är själv `[REFERENCE GAP]` efter
+återtaget. Gångbredden ärver alltså den osäkerheten och kan inte stängas
+härifrån.
+
+`[REFERENCE GAP]` **Antalet boxar.** Bilderna är tagna längs gången och visar
+aldrig hela längden i en ruta, så de kan varken bekräfta eller motsäga de
+tolv per rad som utrymningsplanen gav.

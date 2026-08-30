@@ -314,7 +314,23 @@ do
 		R.port.x0 >= R.bana.x and R.port.x1 <= R.bana.x + R.bana.w)
 end
 
-check("de tre glasade rummen finns med", #R.glasrum == 3, #R.glasrum .. " st")
+do
+	-- Kortändans läktare ligger vid bokstaven C, alltså mitt på en kortsida,
+	-- och glasbandet sitter ovanför den. Att den ligger vid RÄTT kortända är
+	-- poängen: läggs den vid fel ände hamnar den bakom A i stället för C.
+	local K = R.kortanda
+	check("kortändans läktare finns", K ~= nil)
+	if K then
+		check("den ligger vid södra kortändan, där C sitter",
+			K.y1 < R.bana.y + R.bana.h * 0.25,
+			string.format("blocket y %.2f–%.2f, banan y %.2f–%.2f",
+				K.y0, K.y1, R.bana.y, R.bana.y + R.bana.h))
+		check("den har två trappor upp", #K.trappor == 2, #K.trappor .. " st")
+		check("blocket spänner över större delen av kortsidan",
+			(K.x1 - K.x0) > R.bredd * 0.7,
+			string.format("%.1f m av husets %.1f", K.x1 - K.x0, R.bredd))
+	end
+end
 
 do
 	--[[ Grinden i sargens östra långsida. Utan den är hästgången dekoration:

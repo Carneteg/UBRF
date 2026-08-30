@@ -892,6 +892,14 @@ function v3dStall(lagg,opp){
     }
   lagg(lykt,null);
 
+  /* Klockan i gångens bortre ände — IMG_0160 och stall-inne-05. */
+  if(S.klocka){const K=S.klocka, kl=new Bygge();
+    kl.cyl(K.r,K.r,0.09,"#EEECE4",
+      M4.mul(M4.translation(K.x,K.z,K.y),M4.rotZ(Math.PI/2)),14);
+    kl.cyl(K.r*0.82,K.r*0.82,0.02,"#2E2E2C",
+      M4.mul(M4.translation(K.x+0.06,K.z,K.y),M4.rotZ(Math.PI/2)),14);
+    lagg(kl,null);}
+
   /* Boxfronterna: komposit, galvad ram, galler och namnskylt. */
   const front=new Bygge(), galler=new Bygge();
   for(const rad2 of S.rader){
@@ -1185,18 +1193,38 @@ function v3dRidhus(lagg,opp){
      partierna gjorde det inte. De sitter längst bak, ovanför översta
      däcket, med ram och mittpost. Antal och längder är `[ASSUMPTION]` —
      indexet säger "flera", inte hur många. ── */
-  {const gl=new Bygge(), xb=L.x0+L.steg*L.stegD+0.9;
-   const y0=L.steg*L.stegH, h=2.1;
-   for(const rum of (R.glasrum||[])){
-     const len=rum.y1-rum.y0, mitt=(rum.y0+rum.y1)/2;
-     gl.panel(len,h,"#C6D8E0",
-       M4.mul(M4.translation(xb,y0+h/2,mitt),M4.rotY(-Math.PI/2)));
-     for(const yy of [y0+0.05,y0+h-0.05])                 // ram upptill och nedtill
-       gl.lada(0.10,0.10,len,"#8E939B",M4.translation(xb,yy,mitt));
-     for(const zz of [rum.y0,mitt,rum.y1])                // stolpar och mittpost
-       gl.lada(0.10,h,0.10,"#8E939B",M4.translation(xb,y0+h/2,zz));
-   }
-   lagg(gl,null);}
+  /* KORTÄNDANS LÄKTARE med sina två trappor och glasbandet ovanför —
+     ridhus-inne-01. Stegen löper längs kortsidan och stiger mot väggen. */
+  {const K=R.kortanda;
+   if(K){
+    const gl=new Bygge(), br=K.x1-K.x0, xm=(K.x0+K.x1)/2;
+    for(let i=0;i<K.steg;i++){
+      const z=K.y1-i*K.stegD-K.stegD/2, y=K.stegH*(i+1);
+      gl.lada(br,0.08,K.stegD-0.05,"#D8C7A4",M4.translation(xm,y,z));   // sittplanka
+      gl.lada(br,K.stegH,0.06,"#C0AC88",
+        M4.translation(xm,y-K.stegH/2,z+K.stegD/2));                    // sättsteg
+    }
+    /* De två trapporna upp, med mörka träräcken. */
+    const H=K.steg*K.stegH;
+    for(const tx of K.trappor){
+      for(let i=0;i<K.steg;i++)
+        gl.lada(K.trappB,0.08,K.stegD-0.05,"#CDBB98",
+          M4.translation(tx,K.stegH*(i+1),K.y1-i*K.stegD-K.stegD/2));
+      for(const dx of [-K.trappB/2,K.trappB/2])
+        gl.lada(0.08,0.85,K.steg*K.stegD,"#5A4232",
+          M4.mul(M4.translation(tx+dx,H*0.55+0.42,(K.y0+K.y1)/2),
+                 M4.rotX(Math.atan2(H,K.steg*K.stegD))));
+    }
+    /* Glasbandet ovanför blocket: mörka träkarmar, ljus ruta. */
+    const gz=H+K.glasOver;
+    gl.panel(br,K.glasH,"#C6D8E0",M4.translation(xm,gz+K.glasH/2,K.y0));
+    for(const yy of [gz,gz+K.glasH])
+      gl.lada(br,0.12,0.12,"#5A4232",M4.translation(xm,yy,K.y0));
+    for(let i=0;i<=6;i++)
+      gl.lada(0.11,K.glasH,0.12,"#5A4232",
+        M4.translation(K.x0+br*i/6,gz+K.glasH/2,K.y0));
+    lagg(gl,null);
+   }}
   /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.
      Utrymningsplanen visar en
      djup del med två trapphus, hiss och rum — inte en tre meter grund

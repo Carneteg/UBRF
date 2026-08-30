@@ -263,8 +263,18 @@ do
 		ivagen .. " i vägen")
 end
 
-check("de tre glasade rummen byggdes",
-	raknaNamn("Glasat rum") == #UBRFKomplex.ridhus.glasrum)
+do
+	-- Kortändans läktare ersatte de glasade rummen längs långsidan.
+	local K = UBRFKomplex.ridhus.kortanda
+	check("kortändans trappstegsblock byggdes",
+		raknaNamn("Kortändans steg") == K.steg,
+		raknaNamn("Kortändans steg") .. " steg av " .. K.steg)
+	check("kortändan har två trappor upp",
+		raknaNamn("Kortändans trappa") == #K.trappor,
+		raknaNamn("Kortändans trappa") .. " trappor")
+	check("glasbandet ovanför blocket byggdes",
+		raknaNamn("Kortändans glasband") == 1)
+end
 
 check("domarbåset och exit-skylten byggdes",
 	raknaNamn("Domarbås") == 1 and raknaNamn("Exit-skylt") == 1)
@@ -455,6 +465,11 @@ end
 -- Belysningsmasterna: dubbel armatur på tvärarm, en mast i vart och ett av
 -- uteridbanans fyra hörn.
 do
+	-- B måste hämtas HÄR också: den var deklarerad i staketblocket ovanför och
+	-- syntes inte i det här. Specen kraschade därför på B.x — och min gamla
+	-- kontroll räknade rader som börjar med FEL, fick noll, och kallade det
+	-- grönt. roblox/tests/kor.sh kräver numera att specen NÅR sin slutrad.
+	local B = UBRFKomplex.banor.uteridbanan
 	local MA = UBRFKomplex.banomrade.mast
 	local master, armaturer = raknaNamn("Belysningsmast"), raknaNamn("Mastarmatur")
 	local i_props = 0
