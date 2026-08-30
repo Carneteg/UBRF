@@ -2,17 +2,9 @@
 --[[
 	Klientens start och den enda uppdateringsloopen.
 
-	En loop, inte en per delsystem. Det är skillnaden mellan tio hästar och
-	hundra: varje extra Heartbeat-koppling kostar även när den inte gör
-	något, och ordningen mellan delsystemen blir odefinierad om de har varsin.
-
-	Ordningen här är inte godtycklig:
-	  1. inmatning   — avsikten läses en gång per bildruta
-	  2. rörelse     — tillstånd och fart räknas fram
-	  3. animation   — läser tillståndet, skriver benen
-	  4. ryttare     — IK ovanpå benen
-	  5. ljud, damm  — läser fasen
-	  6. kamera      — sist, så den ser slutgiltig position
+	En loop, inte en per delsystem. Ordningen per bildruta är input → rörelse →
+	animation → ryttare → ljud/effekter → kamera. G01-HUD och interaktion är
+	händelsedrivna och skapar därför ingen extra RenderStepped-loop.
 ]]
 
 local Players = game:GetService("Players")
@@ -31,6 +23,7 @@ local SoundController = require(script.SoundController)
 local EffectsController = require(script.EffectsController)
 local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
+local GameplayController = require(script.GameplayController)
 local Debug = require(script.Debug)
 
 local player = Players.LocalPlayer
@@ -75,15 +68,9 @@ local function mount(model: Model)
 	}
 
 	local character = player.Character
-	if character then
-		ride.rider:attach(character)
-	end
+	if character then ride.rider:attach(character) end
 
 	Input.bind()
-	--[[ Pekkontrollerna byggs först här, och bara på en pekenhet: en
-	     spelare vid tangentbordet ska inte få en spak över bilden. De river
-	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
-	     häst man klivit av. ]]
 	TouchControls.mount(Input, { dismount = function()
 		Net.get("DismountRequest"):InvokeServer()
 		dismount()
@@ -98,15 +85,13 @@ local function mount(model: Model)
 	end
 end
 
+-- HUD först: join-racet ska hellre visa "väntar" än en felaktig uppsittningsknapp.
+GameplayController.start()
 InteractionController.start(mount)
 
---[[ Servern talar om när uppsittningen ändras — även när den ändras av
-     något annat än oss, som respawn eller att hästen tas bort. ]]
 Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Player?)
 	if rider == player then
-		if not ride or ride.model ~= model then
-			mount(model)
-		end
+		if not ride or ride.model ~= model then mount(model) end
 	elseif ride and ride.model == model then
 		dismount()
 	end
@@ -119,7 +104,6 @@ Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling)
 	end
 end)
 
---[[ Sitt av med E, och alltid om karaktären dör. ]]
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed or not ride then return end
 	if input.KeyCode == Enum.KeyCode.E then
@@ -148,9 +132,6 @@ RunService.RenderStepped:Connect(function(dt)
 	ride.camera:step(loco, dt)
 	Debug.step(loco)
 
-	--[[ Servern behöver inte 60 uppdateringar i sekunden för att validera
-	     en gångart. Tio räcker, och skillnaden märks direkt i bandbredd när
-	     flera spelare rider samtidigt. ]]
 	ride.syncTimer += dt
 	if ride.syncTimer >= 0.1 then
 		ride.syncTimer = 0
