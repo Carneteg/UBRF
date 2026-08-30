@@ -108,6 +108,158 @@ local function byggHus(model: Model, base: CFrame, b)
 		if b.nock == "NS" then "Z" else "X", 0.4, tak)
 end
 
+--[[ ══ IGENKÄNNINGSDRAGEN ═══════════════════════════════════════════
+
+	Review 03:s tillägg: verifierade identitetsdrag fanns bara i webbens
+	renderare, så primärplattformen saknade just det som avgör om någon
+	känner igen UBRF. Måtten ligger nu i G.identitet, exporterade ur
+	src/site.js — inte avskrivna hit.
+
+	Bara det som gör att man känner igen huset. Dekor utan källa hör inte
+	hemma här, och listar och skruvar hör inte till en fidelity-gate. ]]
+
+local IDFARG = {
+	huv     = Color3.fromRGB(78, 84, 92),
+	svart   = Color3.fromRGB(38, 41, 46),
+	vit     = Color3.fromRGB(238, 236, 228),
+	betong  = Color3.fromRGB(194, 191, 182),
+	stal    = Color3.fromRGB(154, 160, 166),
+	kabel   = Color3.fromRGB(180, 185, 190),
+	vent    = Color3.fromRGB(194, 199, 204),
+	panel   = Color3.fromRGB(94, 44, 51),
+	list    = Color3.fromRGB(238, 236, 228),
+	trappa  = Color3.fromRGB(58, 62, 68),
+}
+
+local function byggStallIdentitet(model: Model, base: CFrame)
+	local b = nil
+	for _, x in ipairs(G.byggnader) do if x.id == "stall" then b = x end end
+	if not b then return end
+	local r, I = b.rekt, G.identitet.stall
+	local cx = r.x + r.w / 2
+
+	-- Huvraden på nocken, en per box. Det tydligaste draget på håll.
+	local H = I.huvrad
+	for i = 1, H.antal do
+		local z = r.y + r.h - (H.forstaFranNorr + H.delning * (i - 1))
+		BK.box(model, base, "Takhuv " .. i, cx - H.sida / 2, b.hN + 0.28 - H.hojd / 2,
+			z - H.sida / 2, H.sida, H.hojd, H.sida, IDFARG.huv, Enum.Material.Metal)
+		BK.box(model, base, "Huvhatt " .. i, cx - H.hattB / 2, b.hN + 0.62,
+			z - H.hattB / 2, H.hattB, 0.09, H.hattB, IDFARG.huv, Enum.Material.Metal)
+	end
+
+	-- Snörasskyddet på båda takfallen, en tredjedel upp.
+	local N = I.snorasskydd
+	local halv, res = r.w / 2, b.hN - b.hV
+	for _, sida in ipairs({ -1, 1 }) do
+		local px = cx + sida * halv * N.andelUt
+		local py = b.hV + res * N.andelUpp
+		BK.box(model, base, "Snörasskydd " .. (if sida < 0 then "väst" else "öst"),
+			px - 0.03, py + 0.14, r.y + 0.6, 0.06, 0.06, r.h - 1.2,
+			IDFARG.svart, Enum.Material.Metal)
+	end
+
+	-- Förstukvisten på västra långsidan. u mäts från norra gaveln söderut.
+	local K = I.forstukvist
+	local kz = r.y + r.h - K.uFranNorr - K.bredd / 2
+	BK.box(model, base, "Förstukvist golv", r.x - K.djup, 0, kz - K.bredd / 2,
+		K.djup, 0.14, K.bredd, IDFARG.betong, Enum.Material.Concrete)
+	BK.box(model, base, "Förstukvist tak", r.x - K.djup - 0.2, K.takfot,
+		kz - K.bredd / 2 - 0.2, K.djup + 0.2, 0.12, K.bredd + 0.4,
+		b.fargT or IDFARG.huv, Enum.Material.Metal)
+	for _, sida in ipairs({ -1, 1 }) do
+		BK.box(model, base, "Förstukvist stolpe", r.x - K.djup + 0.1, 0,
+			kz + sida * (K.bredd / 2 - 0.2), 0.15, K.takfot, 0.15,
+			IDFARG.vit, Enum.Material.WoodPlanks)
+	end
+	-- Ribbräcket, med öppningen mitt för dörren.
+	local sido = (K.bredd - 0.34 - K.oppning) / 2
+	for _, sida in ipairs({ -1, 1 }) do
+		BK.box(model, base, "Förstukvist räcke", r.x - K.djup + 0.15, 0.26,
+			kz + sida * (K.oppning / 2 + sido / 2) - sido / 2,
+			0.06, 1.2, sido, IDFARG.vit, Enum.Material.WoodPlanks)
+	end
+
+	-- Balkongen och spiraltrappan på klubbgaveln i norr.
+	local BA, SP = I.balkong, I.spiraltrappa
+	local gm = r.x + r.w / 2
+	BK.box(model, base, "Balkong", gm - BA.bredd / 2, BA.z - 0.12,
+		r.y + r.h, BA.bredd, 0.12, BA.djup, IDFARG.trappa, Enum.Material.Metal)
+	BK.box(model, base, "Balkongräcke", gm - BA.bredd / 2, BA.z,
+		r.y + r.h + BA.djup - 0.06, BA.bredd, BA.rackeH, 0.06,
+		IDFARG.svart, Enum.Material.Metal)
+
+	local sx = gm + SP.franGavelmitt
+	BK.box(model, base, "Spiraltrappa spindel", sx - 0.09, 0, r.y + r.h + 0.53,
+		0.18, BA.z + 0.5, 0.18, IDFARG.svart, Enum.Material.Metal)
+	for i = 1, SP.steg do
+		local vinkel = (i - 1) * 0.40
+		BK.box(model, base, "Spiraltrappsteg " .. i,
+			sx + math.cos(vinkel) * SP.radie / 2 - SP.radie / 2,
+			BA.z * i / SP.steg,
+			r.y + r.h + 0.62 + math.sin(vinkel) * SP.radie / 2 - 0.15,
+			SP.radie, 0.05, 0.30, IDFARG.trappa, Enum.Material.Metal)
+	end
+end
+
+local function byggRidhusIdentitet(model: Model, base: CFrame)
+	local R, I = G.ridhus, G.identitet.ridhus
+	local o = R.origo
+
+	-- MOTSÄGELSE 1: mörkröd övre långvägg med vita läkt, båda långsidorna.
+	local O = I.ovreVagg
+	local y0, y1 = R.sargH + O.overSarg, R.tak - O.underTak
+	for _, x in ipairs({ 0.16, R.bredd - 0.16 }) do
+		BK.box(model, base, "Övre långvägg", o.x + x - O.tjocklek / 2, y0,
+			o.y + 0.5, O.tjocklek, y1 - y0, R.langd - 1,
+			IDFARG.panel, Enum.Material.Metal)
+		for i = 1, O.listar do
+			local yy = y0 + 0.25 + (y1 - y0 - 0.5)
+				* (if O.listar > 1 then (i - 1) / (O.listar - 1) else 0.5)
+			BK.box(model, base, "Väggläkt", o.x + x - 0.05, yy, o.y + 0.5,
+				0.10, 0.07, R.langd - 1, IDFARG.list, Enum.Material.SmoothPlastic)
+		end
+	end
+
+	-- MOTSÄGELSE 3: takets stål, kabelstegar och ventilation.
+	local P = I.takProfiler
+	for i, a in ipairs(P.andelar) do
+		BK.box(model, base, "Stålprofil " .. i, o.x + R.bredd * a - P.b / 2,
+			R.tak - P.underTak - P.h, o.y + 0.5, P.b, P.h, R.langd - 1,
+			IDFARG.stal, Enum.Material.Metal)
+	end
+
+	local K = I.kabelstegar
+	for i, a in ipairs(K.andelar) do
+		local x = o.x + R.bredd * a
+		for _, d in ipairs({ -K.bredd / 2, K.bredd / 2 - 0.05 }) do
+			BK.box(model, base, "Kabelstege " .. i, x + d, R.tak - K.underTak,
+				o.y + 1, 0.05, 0.16, R.langd - 2, IDFARG.kabel, Enum.Material.Metal)
+		end
+		-- Stegpinnarna. Utan dem läser stegen som ännu en balk.
+		local z = 2
+		while z < R.langd - 2 do
+			BK.box(model, base, "Stegpinne", x - K.bredd / 2, R.tak - K.underTak,
+				o.y + z, K.bredd, 0.03, 0.05, IDFARG.kabel, Enum.Material.Metal)
+			z += K.pinnDelning
+		end
+	end
+
+	local V = I.ventkanaler
+	for i, a in ipairs(V.andelar) do
+		local x = o.x + R.bredd * a
+		BK.box(model, base, "Ventkanal " .. i, x - V.radie, R.tak - V.underTak - V.radie,
+			o.y + 1.5, V.radie * 2, V.radie * 2, R.langd - 3,
+			IDFARG.vent, Enum.Material.Metal)
+		local z = 5
+		while z < R.langd - 4 do
+			BK.box(model, base, "Ventdon", x - 0.16, R.tak - V.underTak - 0.63,
+				o.y + z - 0.16, 0.32, 0.42, 0.32, IDFARG.vent, Enum.Material.Metal)
+			z += V.donDelning
+		end
+	end
+end
+
 local function byggDorrmarkorer(model: Model, base: CFrame)
 	for _, d in ipairs(G.dorrar) do
 		local p = BK.box(model, base, "Dörr " .. d.id,
@@ -298,6 +450,8 @@ byggMark(model, base)
 for _, b in ipairs(G.byggnader) do byggHus(model, base, b) end
 byggStallInre(model, base)
 byggRidhusInre(model, base)
+byggStallIdentitet(model, base)
+byggRidhusIdentitet(model, base)
 byggDorrmarkorer(model, base)
 
 print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d objekt")

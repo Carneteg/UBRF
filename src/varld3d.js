@@ -625,31 +625,34 @@ function v3dStallYttre(bg,d,opp){
   const FS=(u,z,ut)=>v3dFasadMat([r.x,r.y],1,0,u,z,ut);          // södra gaveln
   const FW=(u,z,ut)=>v3dFasadMat([r.x,r.y+r.h],0,-1,u,z,ut);     // västra långsidan
 
-  /* Huvraden. Boxarna börjar 10,4 m från klubbgaveln i norr och är
-     3,5 m breda (STALLINNE); en huv sitter mitt över varje box. */
-  for(let i=0;i<11;i++){
-    const z=r.y+r.h-(10.4+3.5*i+1.75);
-    d.lada(0.44,0.62,0.44,HUV,M4.translation(cx,hN+0.28,z));
-    d.lada(0.50,0.06,0.50,glMorka(GRA,0.7),M4.translation(cx,hN+0.58,z));
-    d.lada(0.66,0.09,0.66,HUV,M4.translation(cx,hN+0.66,z));
-  }
+  /* Huvraden, en huv per box. Måtten kommer ur IDENTITET.stall.huvrad —
+     samma tal som Roblox bygger av. */
+  {const H=IDENTITET.stall.huvrad;
+   for(let i=0;i<H.antal;i++){
+     const z=r.y+r.h-(H.forstaFranNorr+H.delning*i);
+     d.lada(H.sida,H.hojd,H.sida,HUV,M4.translation(cx,hN+0.28,z));
+     d.lada(H.sida*1.14,0.06,H.sida*1.14,glMorka(GRA,0.7),M4.translation(cx,hN+0.58,z));
+     d.lada(H.hattB,0.09,H.hattB,HUV,M4.translation(cx,hN+0.66,z));
+   }}
   /* Snörasskyddet på båda takfallen, en tredjedel upp, och hängrännan
      med stuprör i hörnen. */
+  {const N=IDENTITET.stall.snorasskydd;
   for(const s of [-1,1]){
-    const px=cx+s*halv*0.70, py=hV+res*0.30;
+    const px=cx+s*halv*N.andelUt, py=hV+res*N.andelUpp;
     d.cyl(0.035,0.035,r.h-1.2,SVART,
       M4.mul(M4.translation(px,py+0.17,r.y+0.6),M4.rotX(Math.PI/2)),6);
-    for(let z=r.y+1.4;z<r.y+r.h-1;z+=2.2)
+    for(let z=r.y+1.4;z<r.y+r.h-1;z+=N.stolpDelning)
       d.lada(0.06,0.24,0.05,SVART,M4.translation(px,py+0.08,z));
     d.lada(0.14,0.14,r.h+0.4,SVART,M4.translation(cx+s*(halv+0.17),hV-0.13,cz));
     for(const z of [r.y+0.9,r.y+r.h-0.9])
       d.cyl(0.055,0.055,hV-0.22,SVART,M4.translation(cx+s*(halv+0.15),0,z),6);
-  }
+  }}
 
   /* ── Förstukvisten, 5,6 m från klubbgaveln i norr ──
      Sadeltak med nocken ut från väggen, vita stolpar, och ett räcke av
      liggande ribbor — det är räcket man ser först när man går fram. */
-  const PU=5.6, bw=5.2, but=2.8, be=2.95, br=1.05;
+  const KV=IDENTITET.stall.forstukvist;
+  const PU=KV.uFranNorr, bw=KV.bredd, but=KV.djup, be=KV.takfot, br=KV.resning;
   const F2=(du,z,ut)=>FW(PU+du,z,ut);
   const hh=bw/2, hyp=Math.hypot(hh,br), pv=Math.atan2(br,hh);
   d.lada(bw+0.4,0.14,but+0.2,"#C2BFB6",F2(0,0.07,but/2));        // betonggolvet
@@ -671,7 +674,7 @@ function v3dStallYttre(bg,d,opp){
      bakom `stall-entre-03.jpg` står inne på verandan, alltså finns
      ingången. Bredden på öppningen är `[ASSUMPTION]` — fotona visar
      räcket inifrån och uppifrån, aldrig rakt på framsidan. */
-  const oppB=1.5, sido=(bw-0.34-oppB)/2, sidoM=(oppB+sido)/2;
+  const oppB=KV.oppning, sido=(bw-0.34-oppB)/2, sidoM=(oppB+sido)/2;
   for(let y=0.26;y<1.22;y+=0.125){
     for(const s of [-1,1])                                        // ribborna, två stycken
       d.lada(sido,0.072,0.042,VIT,F2(s*sidoM,y+0.14,but-0.20));
@@ -695,14 +698,16 @@ function v3dStallYttre(bg,d,opp){
      mitt. När huset blev 21 m brett flyttades öppningarna dit men den
      här geometrin stod kvar på den gamla mitten 7,5 — balkongen hamnade
      tre meter vid sidan av sin egen dörr. Den räknas nu ur bredden. */
-  const bz=4.55, gm=r.w/2, su=gm-2.3;
-  d.lada(2.2,0.12,1.10,"#4A4E52",FN(gm,bz-0.06,0.55));
+  const BA=IDENTITET.stall.balkong, SP=IDENTITET.stall.spiraltrappa;
+  const bz=BA.z, gm=r.w/2, su=gm-SP.franGavelmitt, bb=BA.bredd, bd=BA.djup;
+  d.lada(bb,0.12,bd,"#4A4E52",FN(gm,bz-0.06,bd/2));
   for(const y of [bz+0.42,bz+0.88]){
-    d.lada(2.2,0.05,0.05,SVART,FN(gm,y,1.06));
-    for(const s of [-1,1])d.lada(0.05,0.05,1.10,SVART,FN(gm+s*1.08,y,0.55));
+    d.lada(bb,0.05,0.05,SVART,FN(gm,y,bd-0.04));
+    for(const s of [-1,1])d.lada(0.05,0.05,bd,SVART,FN(gm+s*(bb/2-0.02),y,bd/2));
   }
-  for(let u=gm-0.95;u<gm+0.95;u+=0.24)d.lada(0.028,0.92,0.028,SVART,FN(u,bz+0.46,1.06));
-  const sr=0.70, steg=18, sh=bz/steg, sut=0.62;
+  for(let u=gm-bb/2+0.15;u<gm+bb/2-0.15;u+=0.24)
+    d.lada(0.028,BA.rackeH,0.028,SVART,FN(u,bz+0.46,bd-0.04));
+  const sr=SP.radie, steg=SP.steg, sh=bz/steg, sut=0.62;
   d.cyl(0.085,0.085,bz+0.50,SVART,FN(su,0,sut),8);
   for(let i=0;i<steg;i++){
     const m=M4.mul(FN(su,(i+1)*sh,sut),M4.rotY(i*0.40));
@@ -943,26 +948,31 @@ function v3dRidhus(lagg,opp){
   {const st=new Bygge();
    /* Stålprofilerna löper längs hallen, tvärs limträbalkarna, och sitter
       strax under dem. Fyra stråk över 25 m bredd. */
-   for(const x of [R.bredd*0.18,R.bredd*0.40,R.bredd*0.60,R.bredd*0.82])
-     st.lada(0.14,0.30,R.langd-1,"#9AA0A6",
-       M4.translation(x,R.tak-0.62,R.langd/2));
+   {const P=IDENTITET.ridhus.takProfiler;
+    for(const a of P.andelar)
+      st.lada(P.b,P.h,R.langd-1,"#9AA0A6",
+        M4.translation(R.bredd*a,R.tak-P.underTak,R.langd/2));}
    /* Kabelstegarna: två stråk med synliga stegpinnar. En kabelstege som
       är en slät låda läser som en balk till; det är pinnarna som gör den
       till en kabelstege. */
-   for(const x of [R.bredd*0.30,R.bredd*0.70]){
-     for(const d of [-0.16,0.16])
-       st.lada(0.05,0.16,R.langd-2,"#B4B9BE",
-         M4.translation(x+d,R.tak-1.02,R.langd/2));
-     for(let z=2;z<R.langd-2;z+=0.55)
-       st.lada(0.34,0.03,0.05,"#B4B9BE",M4.translation(x,R.tak-1.02,z));
-   }
+   {const K=IDENTITET.ridhus.kabelstegar;
+    for(const a of K.andelar){
+      const x=R.bredd*a;
+      for(const d of [-K.bredd/2+0.01,K.bredd/2-0.01])
+        st.lada(0.05,0.16,R.langd-2,"#B4B9BE",
+          M4.translation(x+d,R.tak-K.underTak,R.langd/2));
+      for(let z=2;z<R.langd-2;z+=K.pinnDelning)
+        st.lada(K.bredd,0.03,0.05,"#B4B9BE",M4.translation(x,R.tak-K.underTak,z));
+    }}
    /* Ventilationen: runda kanaler längs hallen med don ner mot banan. */
-   for(const x of [R.bredd*0.24,R.bredd*0.76]){
-     st.cyl(0.30,0.30,R.langd-3,"#C2C7CC",
-       M4.mul(M4.translation(x,R.tak-0.95,R.langd/2),M4.rotX(Math.PI/2)),12);
-     for(let z=5;z<R.langd-4;z+=6.5)
-       st.cyl(0.16,0.16,0.42,"#C2C7CC",M4.translation(x,R.tak-1.42,z),8);
-   }
+   {const V=IDENTITET.ridhus.ventkanaler;
+    for(const a of V.andelar){
+      const x=R.bredd*a;
+      st.cyl(V.radie,V.radie,R.langd-3,"#C2C7CC",
+        M4.mul(M4.translation(x,R.tak-V.underTak,R.langd/2),M4.rotX(Math.PI/2)),12);
+      for(let z=5;z<R.langd-4;z+=V.donDelning)
+        st.cyl(0.16,0.16,0.42,"#C2C7CC",M4.translation(x,R.tak-V.underTak-0.47,z),8);
+    }}
    lagg(st,null);}
   for(let z=4;z<R.langd;z+=7)
     for(const x of [R.bredd*0.3,R.bredd*0.7])
@@ -975,13 +985,16 @@ function v3dRidhus(lagg,opp){
      enkla vandringsvyn. Ytan går från sargens överkant upp till
      fönsterbandet, och de vita läkten är de horisontella detaljerna. ── */
   {const pan=new Bygge();
-   const y0=R.sargH+0.1, y1=R.tak-1.6, mitt=(y0+y1)/2;
+   const O=IDENTITET.ridhus.ovreVagg;
+   const y0=R.sargH+O.overSarg, y1=R.tak-O.underTak, mitt=(y0+y1)/2;
    for(const [x,vand] of [[0.16,1],[R.bredd-0.16,-1]]){
-     pan.lada(0.08,y1-y0,R.langd-1,R.panel,
+     pan.lada(O.tjocklek,y1-y0,R.langd-1,R.panel,
        M4.translation(x,mitt,R.langd/2));
-     for(const yy of [y0+0.25,mitt,y1-0.25])
+     for(let i=0;i<O.listar;i++){
+       const yy=y0+0.25+(y1-y0-0.5)*(O.listar>1?i/(O.listar-1):0.5);
        pan.lada(0.10,0.07,R.langd-1,R.panelList,
          M4.translation(x+vand*0.02,yy,R.langd/2));
+     }
    }
    lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */

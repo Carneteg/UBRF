@@ -265,6 +265,109 @@ do
 		string.format("%.2f m", gap))
 end
 
+print("\nIgenkänningsdragen — Review 03:s visual parity blocker")
+
+do
+	local I = UBRFKomplex.identitet
+	local stall = nil
+	for _, b in ipairs(UBRFKomplex.byggnader) do if b.id == "stall" then stall = b end end
+
+	-- Stallets exteriör.
+	check("takhuvarna byggdes, en per box", raknaNamn("Takhuv ") == I.stall.huvrad.antal,
+		raknaNamn("Takhuv ") .. " av " .. I.stall.huvrad.antal)
+
+	do
+		-- Huvarna ska sitta på NOCKEN, inte bredvid huset.
+		local cx, fel = stall.rekt.x + stall.rekt.w / 2, 0
+		local n = 0
+		for _, d in ipairs(delar) do
+			if string.find(d.Name, "Takhuv ", 1, true) then
+				n += 1
+				local f = fot(d)
+				if math.abs(f.x + f.w / 2 - cx) > 0.2 then fel += 1 end
+				if f.z0 < stall.hN - 0.5 then fel += 1 end
+			end
+		end
+		check("huvarna sitter på nocklinjen", n > 0 and fel == 0, fel .. " fel av " .. n)
+	end
+
+	check("snörasskyddet byggdes på båda takfallen", raknaNamn("Snörasskydd") == 2)
+	check("förstukvisten byggdes", raknaNamn("Förstukvist") >= 3,
+		raknaNamn("Förstukvist") .. " delar")
+	check("balkongen byggdes", raknaNamn("Balkong") == 2)
+	check("spiraltrappan byggdes", raknaNamn("Spiraltrappsteg") == I.stall.spiraltrappa.steg,
+		raknaNamn("Spiraltrappsteg") .. " steg")
+
+	do
+		-- Förstukvisten ska sitta på VÄSTRA långsidan, utanför väggen.
+		local f = nil
+		for _, d in ipairs(delar) do
+			if d.Name == "Förstukvist golv" then f = fot(d) end
+		end
+		check("förstukvisten skjuter ut ur västra långsidan",
+			f ~= nil and f.x < stall.rekt.x + 0.01 and f.x + f.w >= stall.rekt.x - 0.01,
+			f and string.format("x %.1f–%.1f, husets vägg %.1f",
+				f.x, f.x + f.w, stall.rekt.x) or "hittades inte")
+	end
+
+	do
+		-- Balkongen ska sitta på KLUBBGAVELN i norr, i gavelns mitt.
+		local f = nil
+		for _, d in ipairs(delar) do
+			if d.Name == "Balkong" then f = fot(d) end
+		end
+		local gm = stall.rekt.x + stall.rekt.w / 2
+		check("balkongen sitter mitt på klubbgaveln",
+			f ~= nil and math.abs(f.x + f.w / 2 - gm) < 0.2
+				and f.y >= stall.rekt.y + stall.rekt.h - 0.01,
+			f and string.format("mitt x %.1f, gavelns mitt %.1f", f.x + f.w / 2, gm) or "saknas")
+	end
+
+	-- Ridhusets interiörfynd.
+	check("den mörkröda övre långväggen byggdes på båda sidor",
+		raknaNamn("Övre långvägg") == 2)
+	check("väggläkten byggdes", raknaNamn("Väggläkt") == 2 * I.ridhus.ovreVagg.listar,
+		raknaNamn("Väggläkt") .. " st")
+	check("takets stålprofiler byggdes",
+		raknaNamn("Stålprofil") == #I.ridhus.takProfiler.andelar,
+		raknaNamn("Stålprofil") .. " st")
+	check("kabelstegarna byggdes med stegpinnar",
+		raknaNamn("Kabelstege") == 2 * #I.ridhus.kabelstegar.andelar
+			and raknaNamn("Stegpinne") > 20,
+		raknaNamn("Stegpinne") .. " pinnar")
+	check("ventilationskanalerna byggdes med don",
+		raknaNamn("Ventkanal") == #I.ridhus.ventkanaler.andelar
+			and raknaNamn("Ventdon") > 5,
+		raknaNamn("Ventdon") .. " don")
+
+	do
+		-- Allt i taket ska sitta i TAKET, inte i ögonhöjd.
+		local lagt = 0
+		for _, d in ipairs(delar) do
+			local n = d.Name
+			if string.find(n, "Stålprofil", 1, true) or string.find(n, "Kabelstege", 1, true)
+				or string.find(n, "Ventkanal", 1, true) then
+				if fot(d).z0 < UBRFKomplex.ridhus.tak - 2.5 then lagt += 1 end
+			end
+		end
+		check("takinstallationerna sitter uppe i taket", lagt == 0,
+			lagt .. " för lågt")
+	end
+
+	do
+		-- Den övre långväggen ska börja ovanför sargen och sluta under taket.
+		local R2 = UBRFKomplex.ridhus
+		local f = nil
+		for _, d in ipairs(delar) do
+			if d.Name == "Övre långvägg" then f = fot(d) end
+		end
+		check("övre långväggen sitter mellan sargen och taket",
+			f ~= nil and f.z0 >= R2.sargH - 0.01 and f.z1 <= R2.tak + 0.01,
+			f and string.format("z %.2f–%.2f, sarg %.2f, tak %.2f",
+				f.z0, f.z1, R2.sargH, R2.tak) or "saknas")
+	end
+end
+
 print("\nHela modellen")
 
 do

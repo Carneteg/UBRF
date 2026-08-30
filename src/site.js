@@ -357,6 +357,58 @@ const ANL = {
    mitten av ett intervall som källorna inte är eniga om — se
    `references/buildings/stall/KORT.md` under "Bredden". Ändra bara den
    siffran; allt annat i planen följer andelarna. ── */
+/* ══ IDENTITETSDRAGEN ══════════════════════════════════════════════
+   De fotoverifierade drag som gör att man KÄNNER IGEN husen — takhuvarna
+   på stallets nock, förstukvisten, spiraltrappan, ridhusets mörkröda övre
+   långvägg och takets installationer.
+
+   Måtten låg tidigare bara som lokala konstanter inne i src/varld3d.js.
+   Det var en dold sanning: webben ritade dem, men Roblox kunde inte läsa
+   dem, och primärplattformen saknade alltså just de drag som avgör
+   igenkänningen. Senior Fidelity Review 03:s tillägg öppnade det som en
+   visual parity blocker.
+
+   Här ligger de i stället en gång, och båda ytorna läser dem — webben
+   direkt, Roblox via tools/exportera-geometri.js.
+
+   VAD SOM ÄR VERIFIERAT är att dragen FINNS, och var i grova drag: det
+   står i byggnadskorten och i DRIVE-SOURCE-INDEX. De exakta måtten nedan
+   är avlästa ur foton eller valda så att formen blir rätt, och är
+   `[ASSUMPTION]` var för sig. Det är alltså inte en lista över sanningar
+   utan över drag vars existens är verifierad och vars mått är antagna.
+
+   Måtten i meter. Bara det som behövs för att känna igen huset — inte
+   varje list och skruv. Dekor utan källa hör inte hemma här. ══ */
+const IDENTITET = {
+  stall: {
+    /* Huvraden på nocken, en huv per box. Det tydligaste draget på håll:
+       stall-fasad-03 och -04. Boxarna börjar 10,4 m från klubbgaveln och
+       är 3,5 m breda, så första huven sitter mitt över första boxen. */
+    huvrad:{antal:11, forstaFranNorr:12.15, delning:3.5,
+            sida:0.44, hojd:0.62, hattB:0.66},
+    /* Snörasskyddet på båda takfallen, en tredjedel upp. */
+    snorasskydd:{andelUpp:0.30, andelUt:0.70, stolpDelning:2.2},
+    /* Förstukvisten på västra långsidan, nära klubbgaveln. Sadeltak med
+       nocken ut från väggen, vitt ribbräcke, ockragul dörr. */
+    forstukvist:{uFranNorr:5.6, bredd:5.2, djup:2.8,
+                 takfot:2.95, resning:1.05, oppning:1.5},
+    /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
+       Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
+    balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
+    spiraltrappa:{franGavelmitt:2.3, radie:0.70, steg:18},
+  },
+  ridhus: {
+    /* MOTSÄGELSE 1 — IMG_0183: mörkröd övre långvägg ovanför sargen,
+       med vita läkt som horisontella detaljer. */
+    ovreVagg:{overSarg:0.1, underTak:1.6, tjocklek:0.08, listar:3},
+    /* MOTSÄGELSE 3 — IMG_0179/0183: taket har stål, kabelstegar och
+       ventilation, inte bara limträbalkar. Andelarna är av husets bredd. */
+    takProfiler:{andelar:[0.18,0.40,0.60,0.82], b:0.14, h:0.30, underTak:0.62},
+    kabelstegar:{andelar:[0.30,0.70], bredd:0.34, underTak:1.02, pinnDelning:0.55},
+    ventkanaler:{andelar:[0.24,0.76], radie:0.30, underTak:0.95, donDelning:6.5},
+  },
+};
+
 const STALL_BAND = [
   {id:"W",  typ:"rad",  andel:0.209, vetter:+1, gang:"A", yttervagg:true},
   {id:"A",  typ:"gang", andel:0.124},

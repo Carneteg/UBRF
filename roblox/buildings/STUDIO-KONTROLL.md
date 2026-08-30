@@ -73,29 +73,25 @@ materialkänsla. **Det var fel**, och det är rättat.
 | Stallet inne | Dubbelstallet — fyra boxrader, två gångar, tvärkorridoren tvärs huset — boxfronternas identitet, gångytornas läsbarhet, de namngivna rummen |
 | Komplexet | Hästgången, de två gårdsytorna, gavlarna i liv |
 
-### Finns bara i webbversionen — bedöm där, inte i Studio
+### Igenkänningsdragen byggs nu också i Roblox
 
-Roblox-byggaren bygger **strukturen och de färger och öppningar som ligger i den
-exporterade geometrin**. Följande igenkänningsdrag är byggda i webbens renderare
-(`src/varld3d.js`) men **inte** i Roblox:
+Review 03:s tillägg öppnade en **visual parity blocker**: flera verifierade
+identitetsdrag fanns bara i webbens renderare, så primärplattformen saknade just
+det som avgör om någon känner igen UBRF. Det är åtgärdat — måtten ligger i
+`IDENTITET` i `src/site.js`, webben läser dem, exporten bär dem och
+`Anlaggningen.luau` bygger dem.
 
-| Var | Vad som saknas i Studio |
+Bedöm alltså även dessa i Studio:
+
+| Var | Vad |
 |---|---|
-| Stallet ute | Takhuvarna på nocken, snörasskyddet, förstukvisten, spiraltrappan och balkongen på klubbgaveln |
-| Ridhuset inne | Den mörkröda övre långväggen med vita läkt, takets stålprofiler, kabelstegar och ventilationskanaler, den centrala trappan, båsets trappa och räcken |
+| Stallet ute | **Takhuvarna** på nocken (en per box), **snörasskyddet** på båda takfallen, **förstukvisten** med ribbräcke och öppning mitt för dörren, **balkongen** och **spiraltrappan** på klubbgaveln |
+| Ridhuset inne | Den **mörkröda övre långväggen** med vita läkt, takets **stålprofiler**, **kabelstegar med stegpinnar** och **ventilationskanaler med don** |
 
-**Leta inte efter dem i Studio — de är inte byggda där.** Att spiraltrappan
-saknas är alltså inte ett verklighetsfel utan en känd gräns i Roblox-spåret, och
-den står som en öppen fråga i svaret på Review 03: de här dragen sitter i
-webbens renderare som handskrivna former, inte i den exporterade geometrin, så
-att porta dem kräver ett beslut om hur — inte ett gissningspass.
-
-Vill du bedöma dem, gör det i webbversionen:
-
-```bash
-python3 tools/build.py && python3 -m http.server 8931
-# öppna http://localhost:8931/dist/ridskolan.html
-```
+Måtten på dem är avlästa ur foton eller valda så att formen blir rätt — det
+**verifierade är att dragen finns**, inte deras exakta centimetrar. Ser något av
+dem uppenbart fel ut i proportion räcker ett besked, så rättas det på ett ställe
+och följer med till båda ytorna.
 
 ### Vad som fortfarande INTE är ett fynd
 

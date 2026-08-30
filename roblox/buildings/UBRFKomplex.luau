@@ -1249,6 +1249,79 @@ return {
 			y = 65,
 		},
 	},
+	identitet = {
+		stall = {
+			huvrad = {
+				antal = 11,
+				forstaFranNorr = 12.15,
+				delning = 3.5,
+				sida = 0.44,
+				hojd = 0.62,
+				hattB = 0.66,
+			},
+			snorasskydd = {
+				andelUpp = 0.3,
+				andelUt = 0.7,
+				stolpDelning = 2.2,
+			},
+			forstukvist = {
+				uFranNorr = 5.6,
+				bredd = 5.2,
+				djup = 2.8,
+				takfot = 2.95,
+				resning = 1.05,
+				oppning = 1.5,
+			},
+			balkong = {
+				z = 4.55,
+				bredd = 2.2,
+				djup = 1.1,
+				rackeH = 0.92,
+			},
+			spiraltrappa = {
+				franGavelmitt = 2.3,
+				radie = 0.7,
+				steg = 18,
+			},
+		},
+		ridhus = {
+			ovreVagg = {
+				overSarg = 0.1,
+				underTak = 1.6,
+				tjocklek = 0.08,
+				listar = 3,
+			},
+			takProfiler = {
+				andelar = {
+					0.18,
+					0.4,
+					0.6,
+					0.82,
+				},
+				b = 0.14,
+				h = 0.3,
+				underTak = 0.62,
+			},
+			kabelstegar = {
+				andelar = {
+					0.3,
+					0.7,
+				},
+				bredd = 0.34,
+				underTak = 1.02,
+				pinnDelning = 0.55,
+			},
+			ventkanaler = {
+				andelar = {
+					0.24,
+					0.76,
+				},
+				radie = 0.3,
+				underTak = 0.95,
+				donDelning = 6.5,
+			},
+		},
+	},
 	ridhus = {
 		bredd = 25,
 		langd = 75,

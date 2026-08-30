@@ -29,8 +29,8 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/site.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND})", ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -114,6 +114,12 @@ const ut = {
     tvarvaggar: STALLINNE.tvarvaggar,
     dorrar: STALLINNE.dorrar,
   },
+  /* Igenkänningsdragen. Låg tidigare bara i src/varld3d.js som lokala
+     konstanter — en dold sanning som Roblox inte kunde läsa, så
+     primärplattformen saknade just de drag som avgör igenkänningen.
+     Senior Fidelity Review 03:s tillägg öppnade det som en visual parity
+     blocker; det här är dess källa. */
+  identitet: IDENTITET,
   ridhus: {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,

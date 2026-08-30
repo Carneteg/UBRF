@@ -583,6 +583,40 @@ Bänken rättade också mig själv två gånger:
    region och kolliderar sedan mot rummen var för sig. Att räkna dem som
    hinder var att mäta fel sak; i stället mäts hur mycket golv som blir kvar.
 
+### Igenkänningsdragen — Review 03:s visual parity blocker
+
+Tillägget till Review 03 öppnade en blocker som `dcba566` blottade: flera
+**verifierade** identitetsdrag fanns bara i `src/varld3d.js` som lokala
+konstanter. Webben ritade dem, Roblox kunde inte läsa dem, och primärplattformen
+saknade alltså just det som avgör igenkänningen.
+
+Reviewen krävde väg 1 — utöka den kanoniska datamodellen, inte kopiera måtten —
+och det är vad som gjorts. `IDENTITET` i `src/site.js` bär nu:
+
+| Hus | Drag |
+|---|---|
+| Stall ute | takhuvarna på nocken, snörasskyddet, förstukvisten, balkongen, spiraltrappan |
+| Ridhus inne | mörkröda övre långväggen med läkt, takets stålprofiler, kabelstegar, ventilationskanaler |
+
+Kedjan är densamma som för geometrin: **`src/site.js` → `varld3d.js` och
+`exportera-geometri.js` → `UBRFKomplex.luau` → `Anlaggningen.luau`.** Webbens
+renderare läser `IDENTITET` i stället för sina gamla konstanter, så det finns
+ingen dold andra sanning kvar. Modellen gick från 400 till **755 objekt**.
+
+`bygge.spec.luau` bevisar att dragen finns *och sitter rätt* — inte bara att de
+byggs: huvarna ligger på nocklinjen och ovanför nockhöjden, förstukvisten skjuter
+ut ur västra långsidan, balkongen sitter i klubbgavelns mitt, takinstallationerna
+sitter uppe i taket och inte i ögonhöjd, och den övre långväggen ligger mellan
+sargens överkant och taket.
+
+**Vad som medvetet INTE portades:** dekor utan källa. Reviewen var uttrycklig om
+att målet inte är att porta varje kosmetisk webbprimitiv, och listar, skruvar och
+lampor hör inte till en fidelity-gate.
+
+`[ASSUMPTION]` Måtten i `IDENTITET` är avlästa ur foton eller valda så att formen
+blir rätt. Det verifierade är att **dragen finns** — det står i byggnadskorten
+och i `DRIVE-SOURCE-INDEX`. Centimetrarna gör det inte.
+
 ### Vad som fortfarande inte är visat
 
 `[BLOCKERAD]` **Ingen har kört skriptet i Roblox Studio.** Det går inte i den
@@ -667,7 +701,7 @@ enligt beskrivningen, inte vad jag har sett stämma.
 | Ryttarens sekundärrörelse | 7 | alla gröna |
 | Fyra viewports, rörelse och touchmål | 4 | alla gröna |
 | **Roblox: anläggningens geometri** | **68** | **alla gröna** |
-| **Roblox: den körda modellen (byggbänken)** | **37** | **alla gröna** |
+| **Roblox: den körda modellen (byggbänken)** | **52** | **alla gröna** |
 | **Hästgången åt båda håll (funktionstest)** | **11** | **alla gröna** |
 | Roblox: rörelse, kamera, ryttare, touch | 72 | alla gröna |
 
