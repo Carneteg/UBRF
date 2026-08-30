@@ -23,6 +23,11 @@ GEOMETRI = [
 # Spelbar-värld-specen provar den rena segmenteringen + spawnregeln.
 # Varldsspecen BYGGER numera ocksa. Den las forst bara geometrin, och kunde
 # darfor inte se var spawnen faktiskt HAMNADE — bara vad uttrycket raknade ut.
+# Dorrspecen kor WorldService mot en bank dar tween:en gar att halla pagaende.
+DORRAR = [
+    ("WorldService", "src/server/WorldService.luau"),
+]
+
 WORLD = GEOMETRI + [
     ("BuildKit",      "buildings/BuildKit.luau"),
     ("WorldGeometry", "buildings/WorldGeometry.luau"),
@@ -88,7 +93,9 @@ def inlina(kalla: str) -> str:
 
 
 def bygg(spec_rel: str) -> pathlib.Path:
-    if "world" in spec_rel:
+    if "dorrar" in spec_rel:
+        moduler, stubbar = DORRAR, "tests/stubs-world.luau"
+    elif "world" in spec_rel:
         moduler, stubbar = WORLD, "tests/stubs-bygge.luau"
     elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"

@@ -138,6 +138,41 @@ do
 	end
 end
 
+--[[ ── Att köra paketet TVÅ gånger ────────────────────────────────
+	Den som bygger om i Studio kör inte alltid i en tom värld. Ackumuleras en
+	andra DoorPrompt per dörr får spelaren dubbla "Öppna" på samma dörrblad,
+	och en andra UBRFSpawn gör startpunkten till ett lotteri. ]]
+do
+	local function rakna(rot, namn)
+		local n = 0
+		for _, b in ipairs(rot:GetDescendants()) do
+			if b.Name == namn then n += 1 end
+		end
+		return n
+	end
+
+	local modell = workspace:FindFirstChild("Anläggning")
+	local ubrf = modell and modell:FindFirstChild("UBRF")
+	check("det finns en UBRF-modell att bygga om i", ubrf ~= nil)
+
+	if ubrf then
+		local promptFore = rakna(ubrf, "DoorPrompt")
+		local spawnFore = rakna(ubrf, "UBRFSpawn")
+		check("första passet gav dörrprompter", promptFore > 0, promptFore .. " st")
+		check("första passet gav exakt en spawn", spawnFore == 1, spawnFore .. " st")
+
+		WorldBuild.apply(BuildKit, UBRFKomplex, Geometri, WorldGeometry)
+
+		local promptEfter = rakna(ubrf, "DoorPrompt")
+		local spawnEfter = rakna(ubrf, "UBRFSpawn")
+		check("andra passet ger INTE dubbla dörrprompter",
+			promptEfter == promptFore,
+			string.format("%d före, %d efter", promptFore, promptEfter))
+		check("andra passet ger INTE en andra spawn",
+			spawnEfter == 1, spawnEfter .. " st")
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("world.spec: " .. fails .. " fel")
