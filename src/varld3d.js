@@ -904,10 +904,61 @@ function v3dRidhus(lagg,opp){
     hall.lada(R.bredd,0.26,0.24,"#7A5C3E",M4.translation(R.bredd/2,R.tak-0.2,z));
     hall.lada(0.22,2.7,0.22,"#7A5C3E",M4.translation(R.bredd/2,R.tak+1.3,z));
   }
+  /* ── MOTSÄGELSE 2 ur DRIVE-SOURCE-INDEX ──────────────────────────
+     `IMG_0179` och `IMG_0183`: taket har stora träbalkar PLUS
+     stål-/metallprofiler, kabelstegar och ventilation. Spelet hade bara
+     limträbalkarna och lysrörsraderna, vilket gör taket för rent — ett
+     ridhustak i den här storleken är fullt av installationer, och det är
+     de som gör att man känner igen sig när man tittar upp.
+
+     Vad indexet säger finns: profiler i metall, kabelstegar och
+     ventilation. Vad det INTE säger: hur många, hur grova eller precis
+     var. Dimensionerna nedan är därför `[ASSUMPTION]`; det som är
+     verifierat är att de tre sakerna finns. ── */
+  {const st=new Bygge();
+   /* Stålprofilerna löper längs hallen, tvärs limträbalkarna, och sitter
+      strax under dem. Fyra stråk över 25 m bredd. */
+   for(const x of [R.bredd*0.18,R.bredd*0.40,R.bredd*0.60,R.bredd*0.82])
+     st.lada(0.14,0.30,R.langd-1,"#9AA0A6",
+       M4.translation(x,R.tak-0.62,R.langd/2));
+   /* Kabelstegarna: två stråk med synliga stegpinnar. En kabelstege som
+      är en slät låda läser som en balk till; det är pinnarna som gör den
+      till en kabelstege. */
+   for(const x of [R.bredd*0.30,R.bredd*0.70]){
+     for(const d of [-0.16,0.16])
+       st.lada(0.05,0.16,R.langd-2,"#B4B9BE",
+         M4.translation(x+d,R.tak-1.02,R.langd/2));
+     for(let z=2;z<R.langd-2;z+=0.55)
+       st.lada(0.34,0.03,0.05,"#B4B9BE",M4.translation(x,R.tak-1.02,z));
+   }
+   /* Ventilationen: runda kanaler längs hallen med don ner mot banan. */
+   for(const x of [R.bredd*0.24,R.bredd*0.76]){
+     st.cyl(0.30,0.30,R.langd-3,"#C2C7CC",
+       M4.mul(M4.translation(x,R.tak-0.95,R.langd/2),M4.rotX(Math.PI/2)),12);
+     for(let z=5;z<R.langd-4;z+=6.5)
+       st.cyl(0.16,0.16,0.42,"#C2C7CC",M4.translation(x,R.tak-1.42,z),8);
+   }
+   lagg(st,null);}
   for(let z=4;z<R.langd;z+=7)
     for(const x of [R.bredd*0.3,R.bredd*0.7])
       hall.lada(1.3,0.10,0.26,"#F6F2E4",M4.translation(x,R.tak-0.35,z));
   lagg(hall,null);
+
+  /* ── MOTSÄGELSE 1: långsidans övre väggyta ────────────────────────
+     `IMG_0183`: mörkröd/maroon ovanför sargen, med horisontella
+     detaljer. Spelet hade en vit vägg här och brun panel bara i den
+     enkla vandringsvyn. Ytan går från sargens överkant upp till
+     fönsterbandet, och de vita läkten är de horisontella detaljerna. ── */
+  {const pan=new Bygge();
+   const y0=R.sargH+0.1, y1=R.tak-1.6, mitt=(y0+y1)/2;
+   for(const [x,vand] of [[0.16,1],[R.bredd-0.16,-1]]){
+     pan.lada(0.08,y1-y0,R.langd-1,R.panel,
+       M4.translation(x,mitt,R.langd/2));
+     for(const yy of [y0+0.25,mitt,y1-0.25])
+       pan.lada(0.10,0.07,R.langd-1,R.panelList,
+         M4.translation(x+vand*0.02,yy,R.langd/2));
+   }
+   lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */
   /* Läktaren är en trästomme: fyrkantsstolpar, balkar och plankbänkar i
      ljus furu — inte gjutna trappsteg. Under den finns ett mörkt utrymme
@@ -945,12 +996,87 @@ function v3dRidhus(lagg,opp){
    for(let z=L2.y0;z<=L2.y1;z+=2.4)
      lak.lada(0.09,1.05,0.09,"#8A6A44",
        M4.translation(L2.x0-0.10,0.52+L2.steg*L2.stegH,z));}
-  lak.lada(1.9,2.2,1.9,"#FFFFFF",M4.translation(R.domarbas.x,1.1,R.domarbas.y));
-  lak.lada(2.1,0.14,2.1,"#C8BCA8",M4.translation(R.domarbas.x,2.25,R.domarbas.y));
+  /* ── MOTSÄGELSE 4: båset vid E ────────────────────────────────────
+     `IMG_0198`: vid dressyrbokstaven E leder en trappa MED TRÄRÄCKEN upp
+     till ett litet MÖRKT TRÄBYGGT bås, med en exit-skylt vid öppningen.
+     Spelet hade ett vitt bås på annan plats, utan trappa och utan skylt.
+
+     Båset ligger nu vid E (husets y = 32, se DRESSYRBOKSTAVER). Måtten är
+     `[ASSUMPTION]`; det verifierade är att båset är mörkt trä, att det
+     står upphöjt, att trappan har träräcken och att skylten finns. ── */
+  {const D=R.domarbas, dy=D.y, golv=L.steg*L.stegH*0.5;
+   /* Den låga upphöjda nivån båset står på — indexet kallar den en låg,
+      upphöjd trä-/läktarnivå, och sittstegen fortsätter åt sidan. */
+   lak.lada(D.b+1.6,golv,D.b+1.2,"#8A6A44",M4.translation(D.x,golv/2,dy));
+   /* Själva båset i mörkt trä. */
+   lak.lada(D.b,D.h,D.b,"#4A3524",M4.translation(D.x,golv+D.h/2,dy));
+   lak.lada(D.b+0.24,0.13,D.b+0.24,"#3A2A1C",
+     M4.translation(D.x,golv+D.h+0.06,dy));
+   /* Öppningen mot banan, så att båset inte blir en sluten låda. */
+   lak.lada(0.06,D.h*0.62,D.b*0.62,"#1C1A18",
+     M4.translation(D.x-D.b/2-0.02,golv+D.h*0.52,dy));
+   if(D.trappa){
+     /* Trappan upp, med räcke på båda sidor — räckena är det man ser
+        först i fotot, inte trappstegen. */
+     const st=5, sh=golv/st, sd=0.30, z0=dy+D.b/2+0.35;
+     for(let i=0;i<st;i++)
+       lak.lada(1.0,sh,sd,"#A98F68",
+         M4.translation(D.x,sh*i+sh/2,z0+sd*i));
+     for(const sx of [-0.52,0.52]){
+       lak.lada(0.07,0.07,sd*st,"#8A6A44",
+         M4.mul(M4.translation(D.x+sx,golv*0.62+0.42,z0+sd*st/2),
+           M4.rotX(-Math.atan2(golv,sd*st))));
+       for(let i=0;i<st;i+=2)
+         lak.lada(0.07,golv*0.55+0.32,0.07,"#8A6A44",
+           M4.translation(D.x+sx,(sh*i)/2+golv*0.28+0.16,z0+sd*i));
+     }
+   }}
   for(let i=0;i<8;i++)                                  // trappan upp till caféet
     lak.lada(1.2,0.19,0.30,"#FFFFFF",
       M4.translation(R.trappa.x,0.19*i+0.10,R.trappa.y+0.30*i));
   lagg(lak,T.tra);
+
+  /* Exit-skylten över båsets öppning, och klockan vid den centrala
+     passagen — MOTSÄGELSE 4 respektive 3. Båda ligger utanför trä-
+     texturen: en grön skylt och en vit urtavla ska inte ha ådring. */
+  {const sk=new Bygge(), D=R.domarbas, golv=L.steg*L.stegH*0.5;
+   if(D.exit){
+     sk.lada(0.05,0.26,0.72,"#1E7A3C",
+       M4.translation(D.x-D.b/2-0.05,golv+D.h+0.30,D.y));
+     sk.lada(0.02,0.13,0.30,"#EAF6EC",
+       M4.translation(D.x-D.b/2-0.08,golv+D.h+0.30,D.y));
+   }
+   const K=R.klocka;
+   if(K){
+     sk.cyl(K.r,K.r,0.09,"#2A2A2C",
+       M4.mul(M4.translation(K.x,K.z,K.y),M4.rotZ(Math.PI/2)),18);
+     sk.cyl(K.r*0.86,K.r*0.86,0.04,"#F4F1E8",
+       M4.mul(M4.translation(K.x-0.06,K.z,K.y),M4.rotZ(Math.PI/2)),18);
+     sk.lada(0.03,0.05,K.r*0.62,"#26282C",
+       M4.translation(K.x-0.09,K.z+0.04,K.y-K.r*0.28));
+     sk.lada(0.03,K.r*0.46,0.05,"#26282C",
+       M4.translation(K.x-0.09,K.z+K.r*0.21,K.y));
+   }
+   lagg(sk,null);}
+
+  /* ── MOTSÄGELSE 5: glasade rum bakom sargen ───────────────────────
+     `IMG_0179`: bakom sargen finns upphöjda träbänkar i nivåer OCH flera
+     glasade rum/fönsterpartier. Läktarens nivåer fanns redan; de glasade
+     partierna gjorde det inte. De sitter längst bak, ovanför översta
+     däcket, med ram och mittpost. Antal och längder är `[ASSUMPTION]` —
+     indexet säger "flera", inte hur många. ── */
+  {const gl=new Bygge(), xb=L.x0+L.steg*L.stegD+0.9;
+   const y0=L.steg*L.stegH, h=2.1;
+   for(const rum of (R.glasrum||[])){
+     const len=rum.y1-rum.y0, mitt=(rum.y0+rum.y1)/2;
+     gl.panel(len,h,"#C6D8E0",
+       M4.mul(M4.translation(xb,y0+h/2,mitt),M4.rotY(-Math.PI/2)));
+     for(const yy of [y0+0.05,y0+h-0.05])                 // ram upptill och nedtill
+       gl.lada(0.10,0.10,len,"#8E939B",M4.translation(xb,yy,mitt));
+     for(const zz of [rum.y0,mitt,rum.y1])                // stolpar och mittpost
+       gl.lada(0.10,h,0.10,"#8E939B",M4.translation(xb,y0+h/2,zz));
+   }
+   lagg(gl,null);}
   /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.
      Utrymningsplanen visar en
      djup del med två trapphus, hiss och rum — inte en tre meter grund
@@ -1073,11 +1199,18 @@ function v3dRidhus(lagg,opp){
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.skyltar||[])[R.skyltar.indexOf(s)]
       ||v3dEtikettTex(s.text)});
   }
-  /* Dressyrbokstäverna på sargen. Banans A ska stå vid sargporten,
-     som nu sitter i norra kortsidan — hela bokstavsringen vrids
-     därför 180° (en vridning bevarar varvriktningen A-K-V-E-...). */
+  /* Dressyrbokstäverna på sargen, rakt ur DRESSYRBOKSTAVER.
+
+     Här låg tidigare en 180°-vridning, `lx=20-bo.x`, med motiveringen att
+     A ska stå vid sargporten. Motiveringen var riktig men låg på fel
+     ställe: bokstävernas placering är ett faktum om banan, inte om hur
+     den ritas, och en vridning i renderaren syns inte för
+     kollisionen, kartan eller den som läser tabellen. Vridningen ligger
+     nu i tabellen (`src/data.js`), och renderaren läser den som den är.
+     Var den låg på två ställen samtidigt hamnade E på västra långsidan,
+     där det bara finns 0,6 m bakom sargen — se motsägelse 4. */
   for(const bo of DRESSYRBOKSTAVER){
-    const lx=20-bo.x, ly=60-bo.y;
+    const lx=bo.x, ly=bo.y;
     const bx=ba.x+lx, bz=ba.y+ly;
     let mat;
     if(lx===0)      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));

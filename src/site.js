@@ -398,9 +398,20 @@ const RIDHUSINNE = {
   bredd:25, langd:75, tak:6.2, entre:13,
   bana:{x:0.6, y:2, w:20, h:60}, sargH:1.35,
   vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#5E4A36", gangFarg:"#8C8880",
-  panel:"#6B4A34", panelList:"#EFE8D8",           // sponsorväggens bruna trä
+  /* MOTSÄGELSE 1 ur DRIVE-SOURCE-INDEX (`IMG_0183`): långsidans övre
+     väggyta är MÖRKRÖD/MAROON med horisontella detaljer, inte brun
+     träpanel. Rättad 2026-08-30. Listen är den horisontella detaljen. */
+  panel:"#5E2C33", panelList:"#E8DFCE",
   laktare:{x0:21.0, y0:9, y1:59, steg:4, stegH:0.28, stegD:0.85},
-  domarbas:{x:23.4, y:7, b:1.8, h:2.2},
+  /* MOTSÄGELSE 5 (`IMG_0179`): bakom sargen finns flera glasade rum /
+     fönsterpartier ovanför de nivåindelade träbänkarna. Måtten är
+     `[ASSUMPTION]` — indexet beskriver att de finns, inte hur stora. */
+  glasrum:[ {y0:12, y1:22}, {y0:26, y1:36}, {y0:44, y1:56} ],
+  /* MOTSÄGELSE 4 (`IMG_0198`): båset ligger vid dressyrbokstaven E, är
+     mörkt trä, och nås av en trappa med träräcken. Över öppningen sitter
+     en grön exit-skylt. E ligger vid husets y = 32 sedan bokstäverna
+     följer sargporten (se DRESSYRBOKSTAVER i data.js). */
+  domarbas:{x:23.2, y:32, b:2.0, h:2.3, trappa:true, exit:true},
   /* Hindren som står framme mellan lektionerna, ur interiörfotona:
      vita stöd, blå-vita och röd-vita bommar, en bom på marken och
      uppsittningspallen vid sargen. Koordinaterna är i banans system. */
@@ -414,6 +425,9 @@ const RIDHUSINNE = {
   dynor:12,                                        // elon-dynorna på översta bänken
   cafe:{djup:13.0, z0:2.55, z1:5.4},               // överbyggnaden i norr
   trappa:{x:22.0, y:65.4},                         // trätrappan upp till caféet
+  /* MOTSÄGELSE 3 (`IMG_0179`): en rund klocka vid den centrala
+     passagen/trappan. Höjden är `[ASSUMPTION]`. */
+  klocka:{x:22.0, y:63.6, z:3.6, r:0.42},
   speglar:[ {y:19,b:3.2},{y:37,b:4.2} ],           // på västra långsidan
   skyltar:[
     {y:53,  b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},

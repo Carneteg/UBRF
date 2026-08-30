@@ -204,18 +204,33 @@ fem originalbilder och en film ur Google Drive som visar ridhuset inifrån. Jag 
 inte Drive-åtkomst och har alltså inte sett dem själv; det som står här är hämtat
 ur indexet, med filnamnet angivet enligt referensregeln.
 
-**Observationerna motsäger spelet på fem punkter.** De är listade som avvikelser,
-inte åtgärdade: Gate 01 (`docs/ACTIVE-GATE.md`) är aktiv och interiörarbete ligger
-utanför dess scope. De ska rättas när gaten släpper, eller tidigare om Tobias
-begär det.
+**Observationerna motsade spelet på fem punkter. Alla fem är åtgärdade
+2026-08-30 under Gate F01.**
 
-| # | Drive-fil säger | Spelet har | Var |
+| # | Drive-fil säger | Spelet hade | Nu |
 |---|---|---|---|
-| 1 | Långsidan har **mörkröd/maroon** övre väggyta med horisontella detaljer (`IMG_0183.HEIC`) | Brun träpanel, `panel:"#6B4A34"` | `src/site.js` RIDHUSINNE |
-| 2 | Taket har stora träbalkar **plus stål-/metallprofiler, kabelstegar och ventilation** (`IMG_0179.HEIC`, `IMG_0183.HEIC`) | Bara limträbalkar och lysrörsrader | `v3dRidhus` i `src/varld3d.js` |
-| 3 | **Central passage/trappa med klocka** i närheten (`IMG_0179.HEIC`) | Trappa finns (`trappa:{x:22,y:65.4}`), ingen klocka | RIDHUSINNE |
-| 4 | Vid **dressyrbokstaven E**: trappa med träräcken upp till ett litet mörkt träbyggt bås med exit-skylt (`IMG_0198.HEIC`) | Domarbås finns men vid annan plats, utan trappa eller skylt | RIDHUSINNE `domarbas` |
-| 5 | Bakom sargen finns **flera glasade rum/fönsterpartier** och upphöjda träbänkar i nivåer (`IMG_0179.HEIC`) | Läktare i fyra steg, inga glasade rum | RIDHUSINNE `laktare` |
+| 1 | Långsidan har **mörkröd/maroon** övre väggyta med horisontella detaljer (`IMG_0183.HEIC`) | Brun träpanel, `panel:"#6B4A34"` | ✅ `panel:"#5E2C33"`, och ytan byggs nu även i `v3dRidhus` med tre vita läkt som horisontella detaljer — förut fanns den bara i den enkla vandringsvyn |
+| 2 | Taket har stora träbalkar **plus stål-/metallprofiler, kabelstegar och ventilation** (`IMG_0179.HEIC`, `IMG_0183.HEIC`) | Bara limträbalkar och lysrörsrader | ✅ fyra stålprofiler längs hallen, två kabelstegar med synliga stegpinnar, två ventilationskanaler med don. Antal och dimensioner `[ASSUMPTION]` |
+| 3 | **Central passage/trappa med klocka** i närheten (`IMG_0179.HEIC`) | Trappa finns, ingen klocka | ✅ `klocka:{x:22, y:63.6, z:3.6}` vid trappan. Höjden `[ASSUMPTION]` |
+| 4 | Vid **dressyrbokstaven E**: trappa med träräcken upp till ett litet mörkt träbyggt bås med exit-skylt (`IMG_0198.HEIC`) | Domarbås vid annan plats, vitt, utan trappa eller skylt | ✅ båset ligger vid E, är mörkt trä, står på en låg upphöjd träläktarnivå, nås av en trappa med räcken på båda sidor och har en grön exit-skylt över öppningen |
+| 5 | Bakom sargen finns **flera glasade rum/fönsterpartier** och upphöjda träbänkar i nivåer (`IMG_0179.HEIC`) | Läktare i fyra steg, inga glasade rum | ✅ tre glasade partier med ram och mittpost längst bak, ovanför översta däcket. Antal och längder `[ASSUMPTION]` — indexet säger "flera", inte hur många |
+
+### Bokstäverna fick flyttas först
+
+Motsägelse 4 gick inte att bygga där E låg. E satt på **västra** långsidan, och
+där finns bara 0,6 m mellan sargen och ytterväggen — ingen plats för en läktarnivå
+med trappa och bås. Utrymmet bakom sargen finns bara på läktarsidan i öster.
+
+Orsaken var att bokstäverna låg fel: **A ska stå där man rider in**, och
+sargporten sitter i banans norra kortsida. Med A i söder hamnade K-V-E-S-H i
+väster. Med A vid porten hamnar de i öster, mot läktaren — och då stämmer
+`IMG_0198`.
+
+Det fanns dessutom två sanningar. `v3dRidhus` vred hela bokstavsringen 180° i
+renderaren med just motiveringen "A ska stå vid sargporten", medan tabellen i
+`src/data.js` inte var vriden. Kartan i `src/render.js` läste tabellen rått och
+visade alltså A i söder samtidigt som 3D-vyn visade A i norr. Vridningen ligger nu
+i tabellen och renderarna läser den som den är.
 
 Det indexet **bekräftar** och som spelet redan har rätt: vit sarg med mörk
 nederkant, brun ridbaneyta, sponsorplåtar på långsidan ovanför sargen, höga smala
