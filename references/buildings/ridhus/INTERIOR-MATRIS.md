@@ -122,6 +122,41 @@ beskärning i full upplösning med känd referenslängd i bild.
   som helst som råkade ligga innanför stycket, vilket jag prövade genom att
   frikoppla dem. Testet mäter nu själva kopplingen.
 
+## Brandplanens orientering — öppen fråga, INTE åtgärdad
+
+Punkt 1 i arbetsordern (banans öppningar och grindar) förde mig till
+`ridhus-entreplan-utrymning.jpg`. Den läser så här, zoomad:
+
+- entré-/rumsdelen med trappor och "du är här" ligger i planens **övre** ände,
+- längs planens **vänstra** långsida går ett smalt band med fem parallella
+  linjer — läktaren sedd i plan, samma band `RIDHUS-PLANMATNING` mätte till
+  0–14,5 % av bredden,
+- **mitt på den bandade långsidan finns en grön utrymningsväg** med pil ut,
+- den högra långväggen har regelbundna små hack (pilastrar eller nischer).
+
+**Frågan:** om planens övre ände är husets norra, så är det bandade
+långsidan VÄSTRA — men spelet har läktaren i ÖSTER (`x0:21` av 25), och
+sponsorväggen i väster. Fotona stödjer spelets inbördes ordning: `-02` är
+tagen FRÅN läktaren och visar sponsorväggen mitt emot.
+
+**Vad som talar för att spelet ändå står rätt:** hästgången förbinder
+ridhuset med stallet, och stallet ligger ÖSTER om ridhuset
+(`STALL_X = RIDHUS_X + RIDHUS_BREDD + GARDSGAP`). Gången måste alltså gå in
+på ridhusets östra sida, och spelet lägger läktargapet just där för att
+hästen ska kunna ledas igenom. Planens utrymningsväg mitt på den bandade
+sidan ligger på ungefär samma relativa läge som det gapet. Det talar för att
+planens vänstra sida motsvarar spelets östra — alltså att planen inte är
+orienterad som jag först antog.
+
+**Det är en slutledning, inte ett bevis.** Planen har ingen norrpil, och
+orienteringen går inte att avgöra ur bilden. Jag har därför **inte** ändrat
+någon geometri. Att spegla en 50 m lång läktare på ett antagande om
+planens orientering vore precis den sortens uppfunna kompromiss som
+CLAUDE.md förbjuder.
+
+**Vad som skulle avgöra det:** en norrpil på planen, eller en bild som visar
+läktaren och hästgångens dörr i samma ruta.
+
 ## Öppna motsägelser
 
 1. **Sarg kontra läktarfront.** r01 och r02 visar den mörka brädväggen SOM
