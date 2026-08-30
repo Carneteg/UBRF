@@ -54,10 +54,15 @@ def main() -> int:
 
      Kör en gång. Sedan:
 
-         Vyer.lista()             -- de fem vyer Gate F01 kräver
-         Vyer.ga("ankomsten")     -- ställ kameran, ta skärmdump
+         Vyer.lista()             -- vyerna Studio-kontrollen kräver
+         Vyer.ga("kortandan")     -- ställ kameran, ta skärmdump
 
-     Checklistan står i roblox/buildings/STUDIO-KONTROLL.md.
+     Två checklistor delar på arbetet:
+
+         roblox/buildings/STUDIO-KONTROLL.md      komplexet, stallet, vägarna
+         roblox/docs/RIDHUS-STUDIO-CHECKLISTA.md  ridhusets interiör
+
+     Baslinje: Review 11 (kodgate passerad, Studio återstår).
      ══════════════════════════════════════════════════════════════════ ]]
 
 """]

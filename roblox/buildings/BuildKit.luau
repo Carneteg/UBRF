@@ -131,10 +131,13 @@ function BuildKit.fence(model: Model, base: CFrame, x1: number, z1: number, x2: 
 end
 
 -- Sätter Studio-kameran i ögonhöjd på ett sätt som matchar ett foto: stå på (x,z) i lokala meter, titta mot (tx,tz).
-function BuildKit.cameraLike(base: CFrame, x: number, z: number, tx: number, tz: number, eyeH: number?)
+--[[ Siktmalet lag forut fast pa 2.5 m. Det gor det omojligt att titta UPP,
+	och takstommen i ridhuset gar bara att bedoma underifran. aimH ar darfor
+	valbar; utan den beter sig anropet exakt som forut. ]]
+function BuildKit.cameraLike(base: CFrame, x: number, z: number, tx: number, tz: number, eyeH: number?, aimH: number?)
 	local cam = workspace.CurrentCamera
 	local from = base * CFrame.new(studs(x), studs(eyeH or 1.6), studs(z))
-	local to = base * CFrame.new(studs(tx), studs(2.5), studs(tz))
+	local to = base * CFrame.new(studs(tx), studs(aimH or 2.5), studs(tz))
 	cam.CameraType = Enum.CameraType.Scriptable
 	cam.CFrame = CFrame.lookAt(from.Position, to.Position)
 end
