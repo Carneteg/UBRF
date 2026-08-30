@@ -31,6 +31,7 @@ local SoundController = require(script.SoundController)
 local EffectsController = require(script.EffectsController)
 local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
+local GameplayController = require(script.GameplayController)
 local Debug = require(script.Debug)
 
 local player = Players.LocalPlayer
@@ -98,6 +99,9 @@ local function mount(model: Model)
 	end
 end
 
+-- G01-ytan startar före uppsittningsprompten så att spelaren först ser
+-- dagens häst och nästa ansvarsmoment. Båda läser serverns samma sanning.
+GameplayController.start()
 InteractionController.start(mount)
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
