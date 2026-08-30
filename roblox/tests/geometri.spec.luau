@@ -317,6 +317,41 @@ do
 		Geometri.overlapp(laktare, bana) < 0.01,
 		string.format("%.2f m²", Geometri.overlapp(laktare, bana)))
 
+--[[ ORIENTERINGEN är en öppen fråga (se noten vid RIDHUSINNE.sidor). Kravet
+	från reviewn är att en framtida SPEGLING ska vara en dataändring och inte
+	ett ombygge. Testet mäter att läktarens läge och panelens sida FÖLJER
+	`sidor` — skrivs de som tal igen går det sönder, och då är speglingen
+	inte längre en dataändring. ]]
+do
+	local R = UBRFKomplex.ridhus
+	local S = R.sidor
+	local D = R.laktare.dackDjup
+	--[[ Testet skrev förut av formeln för x0 och föll när härledningen
+		rättades — det mätte formeln, inte regeln. Regeln är: läktaren står
+		på den sida `sidor` pekar ut, och banan tätt mot den andra väggen. ]]
+	local ostS = S ~= nil and S.laktare == "E"
+	check("läktarens sida följer RIDHUSINNE.sidor",
+		S ~= nil and (if ostS then R.laktare.x0 > R.bredd / 2
+		              else R.laktare.x0 < R.bredd / 2),
+		string.format("sidor.laktare=%s, x0 %.2f av bredd %.2f",
+			tostring(S and S.laktare), R.laktare.x0, R.bredd))
+	check("panelens sida följer RIDHUSINNE.sidor",
+		S ~= nil and UBRFKomplex.identitet.ridhus.ovreVagg.sida == S.panel,
+		string.format("sidor.panel=%s, ovreVagg.sida=%s",
+			tostring(S and S.panel),
+			tostring(UBRFKomplex.identitet.ridhus.ovreVagg.sida)))
+	local Lk = R.laktare
+	check("domarbåset står PÅ läktardäcket, inte bredvid det",
+		R.domarbas ~= nil
+			and R.domarbas.x >= math.min(Lk.x0, Lk.x0 + Lk.dackDjup) - 0.01
+			and R.domarbas.x <= math.max(Lk.x0, Lk.x0 + Lk.dackDjup) + 0.01,
+		string.format("bås x %.2f, däck %.2f–%.2f", R.domarbas and R.domarbas.x or -1,
+			Lk.x0, Lk.x0 + Lk.dackDjup))
+	check("läktaren och panelen ligger på MOTSATTA långsidor",
+		S ~= nil and S.laktare ~= S.panel,
+		tostring(S and S.laktare) .. " mot " .. tostring(S and S.panel))
+end
+
 --[[ Sponsorskyltarna ska hänga PÅ den rostbruna panelen, inte på den ljusa
 	väggen. Läget låg förut som literaler som råkade ligga rätt; flyttades
 	panelen följde de inte med. Testet läser BÅDA ur datan, så det mäter
@@ -354,7 +389,17 @@ do
 	check("skyltarnas läge är HÄRLETT ur panelen, inte skrivet som tal",
 		losa == 0, losa .. " skyltar följer inte sin andel")
 end
-	check("läktaren ligger öster om banan", R.laktare.x0 >= R.bana.x + R.bana.w - 0.01)
+	--[[ Löd förut "läktaren ligger öster om banan" och mätte alltså ÖSTER,
+		inte relationen. Under ett speglingsprov föll den fast bygget var
+		riktigt — den mätte ett minne av datan. Nu: läktaren ska ligga
+		bredvid banan på den sida `sidor` pekar ut, aldrig inne på den. ]]
+	local ost = R.sidor == nil or R.sidor.laktare == "E"
+	check("läktaren ligger BREDVID banan, på den sida sidor pekar ut",
+		if ost then R.laktare.x0 >= R.bana.x + R.bana.w - 0.01
+		else R.laktare.x0 + R.laktare.dackDjup <= R.bana.x + 0.01,
+		string.format("läktare %.2f–%.2f, bana %.2f–%.2f",
+			R.laktare.x0, R.laktare.x0 + R.laktare.dackDjup,
+			R.bana.x, R.bana.x + R.bana.w))
 end
 
 do

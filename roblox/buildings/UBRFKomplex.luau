@@ -1918,7 +1918,7 @@ return {
 			glasKarm = Color3.fromRGB(74, 59, 46),
 		},
 		domarbas = {
-			x = 23.2,
+			x = 23.21,
 			y = 32,
 			b = 2,
 			h = 2.3,
@@ -1988,6 +1988,10 @@ return {
 		basTak = {
 			resning = 0.42,
 			utsprang = 0.18,
+		},
+		sidor = {
+			laktare = "E",
+			panel = "W",
 		},
 		dorrar = {
 			{

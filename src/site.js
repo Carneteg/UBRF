@@ -1199,6 +1199,36 @@ const RIDHUSINNE = {
      visar en vit sarg med sittplatser bakom, vid bokstaven E — som ligger
      på samma långsida. De två går inte att förena ur bilderna. Spelet
      bygger tills vidare båda, och motsägelsen står i auditen. */
+  /* ORIENTERINGEN — `REFERENCE GAP / arbetsorientering`.
+
+     Vilken absolut långsida läktaren ligger på är INTE bevisad. Bevisläget
+     efter att jag gått igenom repots material:
+
+     FÖR att spelet står rätt:
+     - hästgången förbinder ridhuset med stallet, och situationsplanen i
+       `ridhus-entreplan-utrymning.jpg` (insetrutan "SITUATIONSPLAN / SITE
+       PLAN") visar ridhuset som den ORANGE, enkla rektangeln till VÄNSTER
+       och stallet som den GRÅ, trappstegsformade till HÖGER, med
+       Björklidsvägen upptill. Stallet ligger alltså öster om ridhuset,
+       precis som spelet har det. Gången måste då gå in på ridhusets ÖSTRA
+       sida, och läktargapet ligger just där.
+
+     EMOT:
+     - i huvudplanen ligger entré-/trappdelen upptill, och om det är norr
+       är den bandade långsidan VÄSTRA. Spelet har läktaren i öster.
+
+     Bandets identitet är dessutom själv en slutledning från en tidigare
+     session ("fem parallella linjer = läktarens steg"). Bredden stämmer —
+     14,5 % av 25 m = 3,6 m mot däckets 3,4 — men det gör inte tolkningen
+     till ett bevis.
+
+     Ingen bild i repot visar läktaren och hästgångens dörr i samma ruta,
+     och planen har ingen norrpil. Frågan är därför ÖPPEN.
+
+     `sidor` nedan finns för att en framtida spegling ska vara en
+     DATAÄNDRING och inte ett ombygge: byt "E" mot "W" och tvärtom, så
+     följer läktare, sponsorvägg och fönsterband med på båda ytorna. */
+  sidor:{laktare:"E", panel:"W"},
   laktare:{x0:21.0, y0:9, y1:59,
            dackZ:0.80, dackDjup:3.4, frontTopp:1.45, kappH:0.09,
            gap:{y0:GANG_FASTE-RIDHUS_Y-2.6, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+2.6}},
@@ -1249,6 +1279,10 @@ const RIDHUSINNE = {
      stuga med brutet tak, inte en låda med lock. Silhuetten är det man
      känner igen båset på. `[ASSUMPTION]`: resningen. */
   basTak:{resning:0.42, utsprang:0.18},
+  /* Båsets x HÄRLEDS ur läktarsidan längre ner — det STÅR på däcket, och ett
+     literalt tal här hade lämnat det kvar på fel sida vid en spegling.
+     Precis den stale följdgeometri som fällt silon, gårdsplanen och
+     sponsorskyltarna i det här arbetet. Talet nedan skrivs över. */
   domarbas:{x:23.2, y:32, b:2.0, h:2.3, trappa:true, exit:true},
   /* Hindren som står framme mellan lektionerna, ur interiörfotona:
      vita stöd, blå-vita och röd-vita bommar, en bom på marken och
@@ -1419,3 +1453,34 @@ STALLINNE.info=[
   for(const sk of RIDHUSINNE.skyltar)
     if(sk.andel!==undefined) sk.y=O.y0+(O.y1-O.y0)*sk.andel;
 })();
+
+/* Läktarens och panelens SIDA härleds ur RIDHUSINNE.sidor, så att en framtida
+   spegling blir en dataändring och inte ett ombygge. Se noten vid `sidor`. */
+(()=>{
+  const R=RIDHUSINNE, S=R.sidor;
+  if(!S)return;
+  const D=R.laktare.dackDjup;
+  IDENTITET.ridhus.ovreVagg.sida = S.panel;
+  /* BANAN måste följa med sidan. Den ligger inte centrerad i hallen utan
+     tätt mot den vägg som INTE har läktare: 20 m bana i en 25 m hall
+     lämnar 4,4 m på läktarsidan och 0,6 m på den andra.
+
+     Speglingsprovet hittade det här: med `laktare:"W"` hamnade läktaren
+     INNE PÅ BANAN, 170 m² överlapp. En spegling är alltså inte en ren
+     sidoändring — banan måste flytta med, och det gör den nu. */
+  R.bana.x = (S.laktare==="E") ? 0.6 : R.bredd-0.6-R.bana.w;
+  R.laktare.x0 = (S.laktare==="E") ? R.bredd-D-0.6 : 0.6;
+  /* Båset står PÅ däcket och måste följa med sidan. Däcket löper alltid
+     FRÅN x0 i positiv x-led, åt båda hållen — mitt första försök vände
+     tecknet och la båset 2 m utanför däcket. Speglingsprovet fällde det. */
+  if(R.domarbas) R.domarbas.x = R.laktare.x0+D*0.65;
+})();
+
+/* KÄND LUCKA i speglingen, medvetet redovisad och inte gömd:
+   `RIDHUSINNE.speglar` ritas mot banans västra kant (`ba.x`) i renderaren
+   och följer alltså INTE `sidor.panel`. Detsamma gäller `klocka.x`, som är
+   ett literalt tal. Speglas huset blir de kvar på fel sida.
+
+   De är väggdekor, inte bärande struktur, och att tråda sidan genom dem nu
+   vore att bygga om för en spegling som ännu inte är beslutad. Luckan står
+   här så att den som speglar vet vad som återstår. */

@@ -154,8 +154,32 @@ någon geometri. Att spegla en 50 m lång läktare på ett antagande om
 planens orientering vore precis den sortens uppfunna kompromiss som
 CLAUDE.md förbjuder.
 
-**Vad som skulle avgöra det:** en norrpil på planen, eller en bild som visar
-läktaren och hästgångens dörr i samma ruta.
+**Situationsplanens insetruta avgör en del av det.** `SITUATIONSPLAN / SITE
+PLAN` uppe i planens hörn visar ridhuset som den ORANGE, enkla rektangeln
+till vänster och stallet som den GRÅ, trappstegsformade till höger, med
+Björklidsvägen upptill. **Stallet ligger alltså öster om ridhuset, precis
+som spelet har det.** Det bekräftar tomtens layout oberoende — men inte
+vilken långsida läktaren ligger på.
+
+**Vad som fortfarande skulle avgöra det:** en norrpil på huvudplanen, eller
+en bild som visar läktaren och hästgångens dörr i samma ruta. Ingen sådan
+bild finns i repot.
+
+**Speglingen är nu en DATAÄNDRING.** `RIDHUSINNE.sidor` styr läktarens sida,
+panelens sida, banans läge och båsets läge. Byt `{laktare:"E", panel:"W"}`
+mot `{laktare:"W", panel:"E"}` så följer allt med, på båda ytorna, med alla
+sex specar gröna. Provat i båda riktningarna.
+
+**Speglingsprovet hittade två riktiga fel** som ingen annan kontroll såg:
+banan ligger inte centrerad utan tätt mot väggen UTAN läktare, så en
+spegling utan att flytta banan la läktaren 170 m² inne på banan; och min
+första härledning av båsets x vände tecknet och la båset två meter utanför
+däcket. Båda rättade.
+
+**Känd lucka:** `speglar` ritas mot banans västra kant i renderaren och
+`klocka.x` är ett literalt tal — de följer INTE med en spegling. De är
+väggdekor, inte bärande struktur, och luckan står i `site.js` så att den
+som speglar vet vad som återstår.
 
 ## Öppna motsägelser
 
