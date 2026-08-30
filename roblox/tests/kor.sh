@@ -1,19 +1,10 @@
 #!/bin/sh
 # Kör specarna och säg ifrån ORDENTLIGT.
 #
-# Fanns inte förut, och det kostade: jag räknade rader som börjar med "FEL"
-# och fick noll — men specen hade KRASCHAT och aldrig hunnit skriva någon.
-# En krasch såg alltså ut som grönt. Nu krävs TRE saker: att luau avslutar med
-# kod 0, att inga FEL skrevs, och att specen nådde sin slutrad. Exitkoden är
-# den enda av dem som inte går att lura genom att skriva rätt text.
-#
-# ANDRA HÅLET, tätat i efterhand: den här körde bara de FÄRDIGBYGGDA specarna
-# och byggde dem aldrig. Den rapporterade alltså om .build/ — inte om koden på
-# disk. Under ett falsifieringspass gav det både falskt rött och falskt grönt,
-# beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
-# körningen och görs nu här, varje gång.
+# Kräver tre saker: luau exitkod 0, inga FEL-rader och att specen nådde sin
+# slutrad. Specarna byggs om varje gång så .build aldrig kan ge falskt grönt.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel bygge qa movement camera rider touch"
+SPECAR="geometri world spel bygge qa movement camera rider touch"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
@@ -21,9 +12,8 @@ if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
   printf '%s\n' "$bygglogg" | tail -10
   exit 1
 fi
-# Materialnamnen forst: ett ogiltigt Enum.Material faller bygget i Studio, och
-# stubbarna kan bara fanga de material som en spec faktiskt rakar bygga.
-# Skannern laser ALL Luau-kall.
+
+# Ett ogiltigt Enum.Material faller bygget i Studio. Skannern läser ALL Luau-käll.
 if ! python3 ../tools/kolla-material.py; then
   echo "MATERIALKONTROLLEN MISSLYCKADES"
   exit 1
