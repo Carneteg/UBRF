@@ -109,8 +109,9 @@ const ANL = {
           landningspunkten hamnade inuti en solid läktarstomme och gick inte
           att använda. Flyttad till u = 5, söder om läktaren. */
        {sida:"E", u:5,  b:3.4, h:2.9, z0:0, typ:"portplat"},
-       /* HÄSTGÅNGEN till stallet, i entréhallens höjd. */
-       {sida:"E", u:65, b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
+       /* HÄSTGÅNGEN till stallet, mitt på östfasaden. u mäts från södra
+          gaveln: gången ligger på y 89,3–92,8, alltså 45,3–48,8 lokalt. */
+       {sida:"E", u:45.85, b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
        {sida:"S", u:8,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten [antagande]
      ]},
     /* Stallet. Måtten och färgerna kommer ur byggnadskortet
@@ -144,8 +145,9 @@ const ANL = {
        {sida:"W", u:sV(7.2), b:0.66, h:0.66, z0:1.78, typ:"rund"},
        {sida:"W", u:sV(2.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},     // valvfönster kring kvisten
        {sida:"W", u:sV(8.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
-       /* HÄSTGÅNGEN mot ridhuset, 9 m från klubbgaveln. */
-       {sida:"W", u:sV(10.0), b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
+       /* HÄSTGÅNGEN mot ridhuset. På W mäts u från NORRA gaveln söderut,
+          så tvärkorridorens mitt (lokalt y 26,05) ligger på u 26,75. */
+       {sida:"W", u:sV(26.75), b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
        ...stallFonster("W"), ...stallFonster("E"),
        /* Norra gaveln — klubbgaveln mot grusplanen, den höga, med
           balkongen och spiraltrappan (stall-fasad-04/05). */
@@ -168,33 +170,48 @@ const ANL = {
        {sida:"S", u:10.4,  b:1.10, h:1.50, z0:1.60, typ:"valv"},
        {sida:"S", u:9.2,  b:1.10, h:1.50, z0:4.60, typ:"valv"},
        {sida:"S", u:12.4, b:0.95, h:2.00, z0:4.35, typ:"dorrmork"},    // trappdörren
-       /* Hästarnas väg ut på gården. Den vägen till ridhuset går över
-          gården och in genom durkplåtsdörrarna; inomhusvägen går genom
-          hästgången i norr. Porten ska vara en port och inte en dörr —
-          det är den man leder hästen genom. */
-       {sida:"W", u:30,   b:3.4,  h:3.2,  z0:0, typ:"portbla"},
+       /* HÄSTARNAS VÄG VÄSTERUT ÄR HÄSTGÅNGEN. Här satt tidigare en egen
+          port på u 30, uppfunnen för att spelaren skulle kunna leda ut
+          hästen på gården. Den låg i tvärkorridorens västra ände — exakt
+          där satellitbilden nu visar att hästgången går, och två portar i
+          samma vägg på samma ställe är en för mycket.
+
+          Den uppfunna porten är borta. Den verifierade förbindelsen står
+          kvar och gör samma jobb bättre: hästen leds inomhus, vilket är
+          hela poängen med att husen sitter ihop. Österut finns fortfarande
+          den stora skjutporten mot hagarna, som är läst i Street View. */
      ]},
     /* HÄSTGÅNGEN mellan ridhuset och stallet. Tobias har varit på plats:
        husen är sammanbyggda, och det som binder dem är en hästgång — man
        leder hästen inomhus mellan stallet och ridhuset i stället för att gå
        ut över gården.
 
-       Utrymningsplanernas situationsplan ritar husen som skilda volymer, men
-       den är en schematisk karta i frimärksstorlek och en låg förbindelse
-       behöver inte vara en egen brandcell. Product Owner på plats väger
-       tyngre — se references/plans/OAVGJORT.md.
+       LÄGET ÄR VERIFIERAT SEDAN 2026-08-30. Satellitbilden som Tobias lade
+       fram (references/plans/SATELLIT-HASTGANG-2026-08-30.md) visar en
+       taktäckt tvärgående förbindelse i den CENTRALA delen av husens
+       gemensamma längd — inte vid någon ände — och den delar mellanrummet i
+       två skilda gårdsytor.
 
-       LÄGET ÄR ETT ANTAGANDE. Den ligger här därför att det är det enda
-       stället där BÅDA husen har gångbar insida mot varandra: ridhusets
-       läktare upptar hela östväggen mellan y 53 och 103, och stallets
-       boxlängor upptar y 71–108. Kvar blir y 108–115, alltså stallets
-       klubbdel mot ridhusets entréhall. Var den verkligen går behöver ett
-       foto eller ett besked. [ASSUMPTION] */
-    {id:"hastgang", rekt:{x:143, y:106, w:11, h:6}, hV:3.2, hN:4.2, nock:"EW",
+       Den låg tidigare i norra änden (y 106–112). Det var ett antagande
+       härlett ur var husen hade gångbar insida, och satellitbilden
+       underkände det. Placeringen här är inte gissad utan mätt in mellan två
+       källor som pekar på samma ställe:
+
+         · husens gemensamma längd är y 65–119, alltså mitten y 92,0
+         · stallets egen tvärkorridor, mätt i utrymningsplanen, ligger på
+           y 89,3–92,8 med mitten y 91,05
+
+       Under en meter isär. Gången läggs därför i liv med tvärkorridoren: den
+       mynnar i den korridor som planen redan visar når båda långsidorna, och
+       ingen ny öppning behöver uppfinnas i stallet.
+
+       Måtten är däremot fortfarande antagna. Satellitbilden ger topologi,
+       inte meter. [ASSUMPTION: bredd, höjder, taklutning] */
+    {id:"hastgang", rekt:{x:143, y:89.3, w:11, h:3.5}, hV:3.2, hN:4.0, nock:"EW",
      fargV:"#7C2A24", fargT:"#5E646C", label:"HÄSTGÅNGEN",
      oppningar:[
-       {sida:"N", u:5.5, b:2.4, h:2.6, z0:0, typ:"portbla"},
-       {sida:"S", u:5.5, b:1.2, h:1.4, z0:1.3, typ:"fonster"},
+       {sida:"N", u:4.6, b:1.2, h:1.4, z0:1.3, typ:"fonster"},
+       {sida:"S", u:4.6, b:1.2, h:1.4, z0:1.3, typ:"fonster"},
      ]},
     /* Den låga byggnaden i gårdens södra ände. Att NÅGOT står mellan
        gavlarna i söder syns i Street View; att det ser ut just så här gör
@@ -390,9 +407,6 @@ const STALLINNE = {
     {id:"ut_n2",pos:[10.5,50.0], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (klubbdörren)",
      spawn:{x:164.5,y:120.6,rikt:Math.PI/2}},
-    {id:"ut_v", pos:[1.6,26.0],  text:"Ut på gården", mot:"gard", inrikt:0,
-     uttext:"Gå in i stallet (hästporten mot gården)",
-     spawn:{x:152.6,y:91,rikt:Math.PI}},
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
      uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
      spawn:{x:159.6,y:63.4,rikt:-Math.PI/2}},
@@ -400,9 +414,9 @@ const STALLINNE = {
        rakt in i ridhusets entréhall — det är hela poängen med att husen är
        sammanbyggda: hästen leds inomhus. Ingen markör läggs på gården för
        den, eftersom den inte finns där. */
-    {id:"hastgang", pos:[0.9,44.0], text:"Hästgången — in i ridhuset",
+    {id:"hastgang", pos:[0.9,26.05], text:"Hästgången — in i ridhuset",
      mot:"ridhusinne", inrikt:Math.PI, inne:true,
-     spawn:{x:24.0,y:65.0,rikt:Math.PI}},
+     spawn:{x:23.6,y:47.05,rikt:Math.PI}},
   ],
   ridlarare:{pos:[0,34], namn:"Ridläraren"},
   whiteboard:{pos:[0,7.2]},
@@ -474,6 +488,17 @@ STALLINNE.gangytor = (()=>{
    Gaveldelen i norr — mot parkeringen — är entré, trapphus och café.
    Går man in från parkeringen kommer man in i en hall, inte rakt ut
    på banan. entre är gaveldelens djup; den ligger i y > langd−entre. */
+/* Läktaren i hela stycken, med hästgångens öppning bortdragen. Alla som
+   ritar eller kolliderar mot läktaren läser den här listan i stället för
+   y0/y1 — annars murar någon av dem igen gången utan att märka det. */
+function laktarSektioner(L){
+  if(!L.gap) return [{y0:L.y0, y1:L.y1}];
+  const ut=[];
+  if(L.gap.y0-L.y0 > 0.2) ut.push({y0:L.y0, y1:L.gap.y0});
+  if(L.y1-L.gap.y1 > 0.2) ut.push({y0:L.gap.y1, y1:L.y1});
+  return ut;
+}
+
 const RIDHUSINNE = {
   bredd:25, langd:75, tak:6.2, entre:13,
   bana:{x:0.6, y:2, w:20, h:60}, sargH:1.35,
@@ -482,7 +507,16 @@ const RIDHUSINNE = {
      väggyta är MÖRKRÖD/MAROON med horisontella detaljer, inte brun
      träpanel. Rättad 2026-08-30. Listen är den horisontella detaljen. */
   panel:"#5E2C33", panelList:"#E8DFCE",
-  laktare:{x0:21.0, y0:9, y1:59, steg:4, stegH:0.28, stegD:0.85},
+  /* Läktaren längs östväggen. GAPET är påtvingat av verifierad topologi:
+     satellitbilden lägger hästgången centralt, på lokala y 45,3–48,8, och
+     där kan läktaren inte vara obruten — man ska kunna leda hästen igenom.
+
+     Läktarens utsträckning är själv ett Drive-textderivat (ASSUMPTION), och
+     satellitbilden är DIRECT VISUAL. Enligt källhierarkin viker läktaren.
+     Exakt hur bred öppningen är i verkligheten vet jag inte; 5,0 m är valt
+     för att en häst ska gå igenom med marginal. [ASSUMPTION] */
+  laktare:{x0:21.0, y0:9, y1:59, steg:4, stegH:0.28, stegD:0.85,
+           gap:{y0:44.5, y1:49.5}},
   /* MOTSÄGELSE 5 (`IMG_0179`): bakom sargen finns flera glasade rum /
      fönsterpartier ovanför de nivåindelade träbänkarna. Måtten är
      `[ASSUMPTION]` — indexet beskriver att de finns, inte hur stora. */
@@ -537,8 +571,8 @@ const RIDHUSINNE = {
      spawn:{x:144.6,y:49,rikt:0}},
     /* HÄSTGÅNGEN till stallet: leder in i stallets klubbdel utan att man
        behöver gå ut på gården. Husen är sammanbyggda. */
-    {id:"hastgang", pos:[24.0,65.0], text:"Hästgången — in i stallet",
-     mot:"stallinne", spawn:{x:1.6,y:44.0,rikt:0}},
+    {id:"hastgang", pos:[23.6,47.05], text:"Hästgången — in i stallet",
+     mot:"stallinne", spawn:{x:1.6,y:26.05,rikt:0}},
     {id:"ut_n", pos:[21.9,74.2], text:"Ut mot parkeringen (entrén)", mot:"gard",
      spawn:{x:139.9,y:120.6,rikt:Math.PI/2}},
   ],

@@ -983,7 +983,11 @@ function v3dRidhus(lagg,opp){
      ljus furu — inte gjutna trappsteg. Under den finns ett mörkt utrymme
      där bommar och stöd förvaras, och på översta bänken ligger elons
      svarta dynor. Allt ur interiörfotona. */
-  const lak=new Bygge(), L=R.laktare, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
+  const lak=new Bygge();
+  /* Läktaren byggs i sektioner: hästgången går igenom den centralt, och ett
+     obrutet block här murar igen gången. */
+  for(const sek of laktarSektioner(R.laktare)){
+  const L={...R.laktare, y0:sek.y0, y1:sek.y1}, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
   for(let i=0;i<L.steg;i++){
     const x=L.x0+i*L.stegD+L.stegD/2, y=L.stegH*(i+1);
     lak.lada(L.stegD-0.04,0.07,LL,"#D8C7A4",M4.translation(x,y,Lm));      // sittplankan
@@ -1008,13 +1012,14 @@ function v3dRidhus(lagg,opp){
     for(const d of [-0.16,0.16])
       lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.steg*L.stegH,z));
   }
-  {const L2=R.laktare;                              // räcket längs läktarens framkant
+  {const L2=L;                                      // räcket längs läktarens framkant
    for(const y of [0.62,1.02])
      lak.lada(0.09,0.09,L2.y1-L2.y0,"#8A6A44",
        M4.translation(L2.x0-0.10,y+L2.steg*L2.stegH,(L2.y0+L2.y1)/2));
    for(let z=L2.y0;z<=L2.y1;z+=2.4)
      lak.lada(0.09,1.05,0.09,"#8A6A44",
        M4.translation(L2.x0-0.10,0.52+L2.steg*L2.stegH,z));}
+  }  /* slut på läktarsektionerna */
   /* ── MOTSÄGELSE 4: båset vid E ────────────────────────────────────
      `IMG_0198`: vid dressyrbokstaven E leder en trappa MED TRÄRÄCKEN upp
      till ett litet MÖRKT TRÄBYGGT bås, med en exit-skylt vid öppningen.

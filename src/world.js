@@ -276,9 +276,11 @@ function vandringKollision(nx,ny,r){
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x+ba.w,ba.y);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x,ba.y+ba.h);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
-    // läktaren och domarbåset är solida
-    [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:R.laktare.y0,
-      w:R.bredd-R.laktare.x0,h:R.laktare.y1-R.laktare.y0});
+    // läktaren och domarbåset är solida. Läktaren i sektioner: hästgången
+    // går igenom den, och ett obrutet block här stänger gången.
+    for(const sek of laktarSektioner(R.laktare))
+      [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
+        w:R.bredd-R.laktare.x0,h:sek.y1-sek.y0});
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
     /* Entréhallens möbler och skiljeväggar. De ritades men gick att gå
@@ -1713,8 +1715,11 @@ function ritaRidhus2D(){
   cx.beginPath();cx.moveTo(pa,py);cx.lineTo(pb,py);cx.stroke();
   // läktaren
   cx.fillStyle="#7A6248";
+  for(const sek of laktarSektioner(R.laktare)){
+    const[sa,sb]=ss(R.laktare.x0,sek.y1);
+    cx.fillRect(sa,sb,(R.bredd-R.laktare.x0)*s,(sek.y1-sek.y0)*s);
+  }
   const[la,lb]=ss(R.laktare.x0,R.laktare.y1);
-  cx.fillRect(la,lb,(R.bredd-R.laktare.x0)*s,(R.laktare.y1-R.laktare.y0)*s);
   if(s>4){cx.save();cx.translate(la+(R.bredd-R.laktare.x0)*s/2,lb+(R.laktare.y1-R.laktare.y0)*s/2);
     cx.rotate(-Math.PI/2);cx.fillStyle="#2A241C";
     cx.font=`500 ${Math.max(9,s*1.6)}px "IBM Plex Mono",monospace`;cx.textAlign="center";
@@ -1813,12 +1818,13 @@ function ritaRidhus3D(){
   }});
   // läktaren i öster: tre trappsteg i plywood
   const lk=R.laktare;
+  for(const sek of laktarSektioner(lk))
   for(let i2=0;i2<lk.steg;i2++){
-    const x0=lk.x0+i2*lk.stegD, z1=(i2+1)*lk.stegH;
+    const x0=lk.x0+i2*lk.stegD, z1=(i2+1)*lk.stegH, y0=sek.y0, y1=sek.y1;
     items.push({d:-avst2([x0,VD.py])-5e5+i2, rita(){
-      ritaPoly3D(k,[[x0,lk.y0,z1-lk.stegH],[x0,lk.y1,z1-lk.stegH],[x0,lk.y1,z1],[x0,lk.y0,z1]],
+      ritaPoly3D(k,[[x0,y0,z1-lk.stegH],[x0,y1,z1-lk.stegH],[x0,y1,z1],[x0,y0,z1]],
         fargSkala("#8A6F50",0.85),null);   // sättsteg
-      ritaPoly3D(k,[[x0,lk.y0,z1],[x0,lk.y1,z1],[x0+lk.stegD,lk.y1,z1],[x0+lk.stegD,lk.y0,z1]],
+      ritaPoly3D(k,[[x0,y0,z1],[x0,y1,z1],[x0+lk.stegD,y1,z1],[x0+lk.stegD,y0,z1]],
         "#9A7C58",null);                   // planet
     }});
   }

@@ -239,12 +239,16 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	BK.box(model, base, "Sarg norr öst", o.x + R.port.x1, 0, o.y + b.y + b.h,
 		b.x + b.w - R.port.x1, sh, 0.1, INRE.sarg)
 
-	-- Läktaren längs östra långsidan, som trappsteg.
+	-- Läktaren längs östra långsidan, som trappsteg — i sektioner, med
+	-- hästgångens öppning bortdragen. Ett obrutet block murar igen gången.
 	local L = R.laktare
-	for i = 1, L.steg do
-		BK.box(model, base, "Läktarsteg " .. i,
-			o.x + L.x0 + (i - 1) * L.stegD, (i - 1) * L.stegH, o.y + L.y0,
-			L.stegD, L.stegH * i + 0.1, L.y1 - L.y0, INRE.laktare, Enum.Material.WoodPlanks)
+	for s, sek in ipairs(GEO.laktarSektioner(L)) do
+		for i = 1, L.steg do
+			BK.box(model, base, "Läktarsteg " .. s .. ":" .. i,
+				o.x + L.x0 + (i - 1) * L.stegD, (i - 1) * L.stegH, o.y + sek.y0,
+				L.stegD, L.stegH * i + 0.1, sek.y1 - sek.y0,
+				INRE.laktare, Enum.Material.WoodPlanks)
+		end
 	end
 
 	-- Glasade rum bakom sargen, i läktarens liv.

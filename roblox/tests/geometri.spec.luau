@@ -278,6 +278,43 @@ do
 end
 
 check("de tre glasade rummen finns med", #R.glasrum == 3, #R.glasrum .. " st")
+
+do
+	--[[ Satellitbilden (references/plans/SATELLIT-HASTGANG-2026-08-30.md):
+	     förbindelsen ligger CENTRALT i husens gemensamma längd, inte vid en
+	     ände, och delar mellanrummet i två skilda gårdsytor. Flyttar någon
+	     tillbaka den till en ände faller det här. ]]
+	local g0 = math.max(ridhus.rekt.y, stall.rekt.y)
+	local g1 = math.min(ridhus.rekt.y + ridhus.rekt.h, stall.rekt.y + stall.rekt.h)
+	local norr = g1 - (hastgang.rekt.y + hastgang.rekt.h)
+	local soder = hastgang.rekt.y - g0
+	check("hästgången ligger centralt, med gårdsyta kvar på båda sidor",
+		norr > 8 and soder > 8,
+		string.format("%.1f m norr om den, %.1f m söder", norr, soder))
+
+	-- Och den ska ligga i liv med stallets tvärkorridor, som planen visar når
+	-- båda långsidorna. Det är den ena av de två källorna som pekar hit.
+	local kMitt = S.origo.y + (S.tvarGang.y0 + S.tvarGang.y1) / 2
+	local hMitt = hastgang.rekt.y + hastgang.rekt.h / 2
+	check("gången möter stallets tvärkorridor", math.abs(kMitt - hMitt) < 1.5,
+		string.format("korridorens mitt y = %.2f, gångens y = %.2f", kMitt, hMitt))
+end
+
+do
+	-- Läktaren måste ha ett gap där gången kommer in, annars är den murad.
+	local L = R.laktare
+	check("läktaren har ett gap för hästgången", L.gap ~= nil)
+	if L.gap then
+		check("gapet är brett nog att leda en häst igenom", L.gap.y1 - L.gap.y0 >= 2.5,
+			string.format("%.1f m", L.gap.y1 - L.gap.y0))
+		local vartRi = R.origo.y + (L.gap.y0 + L.gap.y1) / 2
+		local hMitt = hastgang.rekt.y + hastgang.rekt.h / 2
+		check("gapet ligger mitt för hästgången", math.abs(vartRi - hMitt) < 1.5,
+			string.format("gapets mitt y = %.2f, gångens y = %.2f", vartRi, hMitt))
+		check("läktaren blir två sektioner", #Geometri.laktarSektioner(L) == 2,
+			#Geometri.laktarSektioner(L) .. " sektioner")
+	end
+end
 check("domarbåset har trappa och exit-skylt", R.domarbas.trappa and R.domarbas.exit)
 
 do

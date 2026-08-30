@@ -292,7 +292,7 @@ return {
 				},
 				{
 					sida = "E",
-					u = 65,
+					u = 45.85,
 					b = 2.4,
 					h = 2.6,
 					z0 = 0,
@@ -370,7 +370,7 @@ return {
 				},
 				{
 					sida = "W",
-					u = 10,
+					u = 26.75,
 					b = 2.4,
 					h = 2.6,
 					z0 = 0,
@@ -644,26 +644,18 @@ return {
 					z0 = 4.35,
 					typ = "dorrmork",
 				},
-				{
-					sida = "W",
-					u = 30,
-					b = 3.4,
-					h = 3.2,
-					z0 = 0,
-					typ = "portbla",
-				},
 			},
 		},
 		{
 			id = "hastgang",
 			rekt = {
 				x = 143,
-				y = 106,
+				y = 89.3,
 				w = 11,
-				h = 6,
+				h = 3.5,
 			},
 			hV = 3.2,
-			hN = 4.2,
+			hN = 4,
 			nock = "EW",
 			fargV = Color3.fromRGB(124, 42, 36),
 			fargT = Color3.fromRGB(94, 100, 108),
@@ -671,15 +663,15 @@ return {
 			oppningar = {
 				{
 					sida = "N",
-					u = 5.5,
-					b = 2.4,
-					h = 2.6,
-					z0 = 0,
-					typ = "portbla",
+					u = 4.6,
+					b = 1.2,
+					h = 1.4,
+					z0 = 1.3,
+					typ = "fonster",
 				},
 				{
 					sida = "S",
-					u = 5.5,
+					u = 4.6,
 					b = 1.2,
 					h = 1.4,
 					z0 = 1.3,
@@ -877,20 +869,6 @@ return {
 				x = 10.5,
 				y = 50,
 				rikt = -1.570796,
-			},
-		},
-		{
-			id = "stall_v",
-			pos = {
-				152.6,
-				91,
-			},
-			text = "Gå in i stallet (hästporten mot gården)",
-			mot = "stallinne",
-			spawn = {
-				x = 1.6,
-				y = 26,
-				rikt = 0,
 			},
 		},
 		{
@@ -1219,22 +1197,6 @@ return {
 				},
 			},
 			{
-				id = "ut_v",
-				pos = {
-					1.6,
-					26,
-				},
-				text = "Ut på gården",
-				mot = "gard",
-				inrikt = 0,
-				uttext = "Gå in i stallet (hästporten mot gården)",
-				spawn = {
-					x = 152.6,
-					y = 91,
-					rikt = 3.141593,
-				},
-			},
-			{
 				id = "ut_s",
 				pos = {
 					5.6,
@@ -1254,15 +1216,15 @@ return {
 				id = "hastgang",
 				pos = {
 					0.9,
-					44,
+					26.05,
 				},
 				text = "Hästgången — in i ridhuset",
 				mot = "ridhusinne",
 				inrikt = 3.141593,
 				inne = true,
 				spawn = {
-					x = 24,
-					y = 65,
+					x = 23.6,
+					y = 47.05,
 					rikt = 3.141593,
 				},
 			},
@@ -1310,6 +1272,10 @@ return {
 			steg = 4,
 			stegH = 0.28,
 			stegD = 0.85,
+			gap = {
+				y0 = 44.5,
+				y1 = 49.5,
+			},
 		},
 		glasrum = {
 			{
@@ -1361,14 +1327,14 @@ return {
 			{
 				id = "hastgang",
 				pos = {
-					24,
-					65,
+					23.6,
+					47.05,
 				},
 				text = "Hästgången — in i stallet",
 				mot = "stallinne",
 				spawn = {
 					x = 1.6,
-					y = 44,
+					y = 26.05,
 					rikt = 0,
 				},
 			},

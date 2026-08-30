@@ -31,7 +31,8 @@ utfall om alla kända motsägelser är lösta men luckor kvarstår är
 | `9b814d7` | Hästgången mellan husen; ridhusets durkplåtsdörrar ur läktarstommen; längan smalnad | Komplex |
 | `5998974` | Dokumentationen följer hästgången; Review 01:s tre första invändningar | Källa |
 | `ba0243e` | Fotona in i källkedjan; gården slutar kallas verifierad gräsgård | Källa |
-| *(denna)* | Review 02: källkedjan rensad, Roblox bygger insidorna, byggbänk | Källa + Roblox |
+| `9c62155` | Review 02: källkedjan rensad, Roblox bygger insidorna, byggbänk | Källa + Roblox |
+| *(denna)* | Hästgången flyttad till satellitbildens centrala läge | Komplex |
 
 Föregående gate (`aec77cd`, mergad) rörde ridkänslan, inte miljön.
 
@@ -91,13 +92,16 @@ anläggningen, och därför att det är gatens tredje P0.
 | **Förbindelsen är en hästgång** — man leder hästen inomhus mellan husen | **V** | Tobias: *"det är hästgång mellan byggnaderna"* |
 | Situationsplanen ritar husen som skilda volymer | **C** | Båda utrymningsplanerna. Avgjord till Product Owners fördel; planen skrivs inte om, se § 6b |
 | Norra gavlarna i liv | **V** | Satellitbilden |
-| Hästgångens läge (y 106–112, norra änden) | **A** | Uteslutning ur modellen: enda stället där båda husen har gångbar insida mot varandra. Ingen källa |
-| Hästgångens mått 11 × 6 m, takfot 3,2, nock 4,2 | **A** | Bredden ges av avståndet mellan husen; längd och höjder är valda så att en häst går igenom |
-| Var man kommer ut på ridhussidan (entréhallen) | **A** | Följer av läget |
-| Antalet förbindelser — en, inte flera | **A** | Minsta försvarbara geometri som bevarar den verifierade kopplingen |
+| **Hästgången ligger centralt, inte vid en ände** | **V** | Satellitbild 2026-08-30, DIRECT VISUAL / Product Owner. Ersätter det tidigare antagandet om norra änden |
+| **Mellanrummet är två skilda gårdsytor** | **V** | Samma bild |
+| Läget y 89,3–92,8, i liv med stallets tvärkorridor | **D** | Två källor pekar hit: husens gemensamma mitt y 92,0 och tvärkorridorens mitt y 91,05, mätt i utrymningsplanen |
+| Hästgångens mått 11 × 3,5 m, takfot 3,2, nock 4,0 | **A** | Bredden ges av avståndet mellan husen; djupet följer tvärkorridoren; höjderna är valda så att en häst går igenom. Satellitbilden ger topologi, inte meter |
+| Gapet i ridhusets läktare, 5,0 m | **A** | Påtvingat av den verifierade topologin — läktaren kan inte vara obruten där gången kommer in. Bredden är vald, inte mätt |
+| Var man kommer ut på ridhussidan | **A** | Följer av läget: genom läktargapet, ut på banan |
+| Antalet förbindelser — en, inte flera | **V** | Satellitbilden visar en tydlig tvärgående takvolym och ger inte stöd för två |
 | Den låga längan i söder, 7 × 6 m vid (147, 59) | **A** | Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna |
 | Gården mellan husen | **D** | Det som blir kvar mellan förbindelserna, inte en verifierad obruten gräsgård |
-| Foto som visar förbindelsen | **G** | Se § 6b — repots bilder visar inte gapet |
+| Foto på marknivå som visar förbindelsen | **G** | Repots bilder ser bara husens norra ändar, se § 6b. Satellitbilden visar den uppifrån |
 
 ### Stall — interiör
 
@@ -356,18 +360,54 @@ Det enda de tillför är en svag negativ avgränsning: allra längst i norr, i
 skyltstolpens och picknickbordets läge, är det utomhus. Spelets hästgång ligger
 söder om det, så den motsägs inte — men den stöds inte heller.
 
-### Läget är härlett, inte hämtat
+### Läget är verifierat sedan 2026-08-30 — och min första placering var fel
 
-`[ASSUMPTION]` Hästgången ligger i norra änden därför att det är **enda stället
-där båda husen har gångbar insida mot varandra**: ridhusets läktare upptar hela
-östväggen mellan y 53 och 103, och stallets boxlängor upptar y 71–108. Kvar
-blir y 108–115 — stallets klubbdel mot ridhusets entréhall. Det är ett
-uteslutningsargument ur den befintliga modellen, inte en källa.
+Jag lade först gången i **norra änden**, y 106–112, med motiveringen att det var
+enda stället där båda husen hade gångbar insida mot varandra. Det var ett
+uteslutningsargument ur den befintliga modellen, inte en källa, och det var
+märkt `[ASSUMPTION]`.
 
-`[REFERENCE GAP]` **Frågan till Tobias:** var går hästgången i verkligheten —
-norra änden (som spelet gissar), mitten eller söder? Och kommer man ut i
-ridhusets hall eller direkt i ridbanan? Ett foto inifrån gången, eller bara
-"norra/södra änden", byter ut antagandet mot verklighet.
+**Satellitbilden underkände det.** Tobias lade fram den
+(`references/plans/SATELLIT-HASTGANG-2026-08-30.md`, DIRECT VISUAL / Product
+Owner): förbindelsen ligger **centralt** i husens gemensamma längd, inte vid
+någon ände, och mellanrummet är därmed **två skilda gårdsytor**.
+
+Den nya placeringen är inte gissad utan inmätt mellan två oberoende källor som
+pekar på samma ställe:
+
+| Källa | Ger |
+|---|---|
+| Husens gemensamma längd, y 65–119 | mitten **y 92,0** |
+| Stallets tvärkorridor, mätt i utrymningsplanen | mitten **y 91,05** |
+
+Under en meter isär. Gången ligger därför på **y 89,3–92,8**, i liv med
+tvärkorridoren. Den mynnar alltså i den korridor planen redan visar når båda
+långsidorna — ingen ny öppning behövde uppfinnas i stallet, och den verifierade
+topologin och den verifierade planformen stödjer varandra i stället för att dra
+åt olika håll.
+
+**Vad som fortfarande är antaget:** bredd, längd, höjder, taklutning, dörrarnas
+exakta lägen och allt inne i gången. Satellitbilden ger topologi, inte meter,
+och det står så i dess egen fil.
+
+### Två följder av flytten, båda redovisade
+
+**1 · Ridhusets läktare fick ett gap.** Läktaren upptar östväggen mellan y 53
+och 103 och stod mitt i vägen. Den har nu en fem meter bred öppning där gången
+kommer in. Grunden är källhierarkin: läktarens utsträckning är ett
+Drive-textderivat (`ASSUMPTION`), satellitbilden är direkt visuell — läktaren
+viker. **Gapets bredd är däremot vald, inte mätt.** `[ASSUMPTION]`
+
+Regeln ligger i `laktarSektioner` (webb) och `Geometri.laktarSektioner`
+(Roblox), så att ingen renderare kan mura igen gången på egen hand. Båda
+specarna kontrollerar att inget läktarsteg står i öppningen.
+
+**2 · Stallets västra hästport togs bort.** Den satt på u 30, i tvärkorridorens
+västra ände — exakt där gången nu går. Två portar i samma vägg på samma ställe
+är en för mycket, och porten var dessutom uppfunnen för spelets skull; den
+finns inte i någon källa. Hästen leds inomhus i stället, vilket är hela poängen
+med att husen sitter ihop. Skjutporten på östra långsidan mot hagarna, som är
+läst i Street View, står kvar.
 
 ### Följdändringar
 
@@ -600,8 +640,8 @@ enligt beskrivningen, inte vad jag har sett stämma.
 | Ridloopen (Gate 01) | 5 | alla gröna |
 | Ryttarens sekundärrörelse | 7 | alla gröna |
 | Fyra viewports, rörelse och touchmål | 4 | alla gröna |
-| **Roblox: anläggningens geometri** | **56** | **alla gröna** |
-| **Roblox: den körda modellen (byggbänken)** | **34** | **alla gröna** |
+| **Roblox: anläggningens geometri** | **61** | **alla gröna** |
+| **Roblox: den körda modellen (byggbänken)** | **35** | **alla gröna** |
 | Roblox: rörelse, kamera, ryttare, touch | 72 | alla gröna |
 
 Hästgångens sex egna kontroller: dörren finns i båda husen; stalländens
@@ -639,8 +679,9 @@ Inga nya gameplay-features. Ridkänslan är orörd.
 1. **Ett mått på stallet.** En skalstock i ritningen, ett måttsatt rum, eller ett
    uppmätt avstånd på plats — gångens bredd mellan två boxfronter räcker. Planen
    finns nu i repot men saknar skala, så den kan inte stänga frågan ensam.
-1b. **Var hästgången går** — norra änden, mitten eller söder, och vad man kommer
-   ut i på ridhussidan. Ett foto inifrån gången, eller ett kort besked.
+1b. **Hästgångens MÅTT.** Var den går är stängt av satellitbilden — centralt.
+   Kvar: bredd, längd mellan fasaderna, höjder, taklutning, och bredden på
+   gapet i läktaren. Ett foto inifrån gången, eller ett enda uppmätt avstånd.
 2. **Samma på "Plan 2"** för övervåningen.
 3. **En sparad satellitbeskärning** med byggnadernas längd OCH bredd i bildpunkter.
    Kortets invändning att 20–26 m är "oförenligt med hur smal byggnaden ser ut i
@@ -672,10 +713,13 @@ Inga nya gameplay-features. Ridkänslan är orörd.
    sig kan bara Tobias avgöra. Hästgången är det första exemplet på att det
    fungerar: den fanns i verkligheten men i ingen av mina källor, och kom in i
    modellen först när Tobias sa att den finns.
-6. **Hästgången är byggd på ett besked, inte på en bild.** Att den finns är
-   avgjort. Var den går, hur bred den är och vad man kommer ut i är gissat ur
-   vad som är möjligt i modellen. Det är den enskilt svagast underbyggda
-   byggnaden i spelet just nu, och den bör granskas som sådan.
+6. **Hästgångens mått är fortfarande gissade.** Att den finns och att den
+   ligger centralt är verifierat — Tobias på plats och en satellitbild. Men
+   bredd, längd, höjder, taklutning och allt inne i gången är antaget, liksom
+   bredden på gapet i läktaren. Satellitbilden ger topologi, inte meter.
+7. **Min första placering var fel, och det tog en ny källa att visa det.** Ett
+   uteslutningsargument ur den egna modellen kändes starkt och var det inte.
+   Värt att minnas nästa gång ett `[ASSUMPTION]` känns självklart.
 
 ---
 

@@ -207,9 +207,26 @@ check("sargen byggdes med en port i norr",
 	raknaNamn("Sarg norr väst") == 1 and raknaNamn("Sarg norr öst") == 1
 		and raknaNamn("Sarg syd") == 1)
 
-check("läktaren byggdes i fyra steg",
-	raknaNamn("Läktarsteg") == UBRFKomplex.ridhus.laktare.steg,
-	raknaNamn("Läktarsteg") .. " steg")
+check("läktaren byggdes i två sektioner om fyra steg",
+	raknaNamn("Läktarsteg") == UBRFKomplex.ridhus.laktare.steg * 2,
+	raknaNamn("Läktarsteg") .. " stegdelar")
+
+do
+	-- Inget läktarsteg får stå i hästgångens öppning. Bygger man läktaren i
+	-- ett stycke muras gången igen, och det syns först när någon går där.
+	local R2 = UBRFKomplex.ridhus
+	local g = R2.laktare.gap
+	local y0, y1 = R2.origo.y + g.y0, R2.origo.y + g.y1
+	local ivagen = 0
+	for _, d in ipairs(delar) do
+		if string.find(d.Name, "Läktarsteg", 1, true) then
+			local f = fot(d)
+			if f.y < y1 - 0.1 and f.y + f.h > y0 + 0.1 then ivagen += 1 end
+		end
+	end
+	check("inget läktarsteg står i hästgångens öppning", ivagen == 0,
+		ivagen .. " i vägen")
+end
 
 check("de tre glasade rummen byggdes",
 	raknaNamn("Glasat rum") == #UBRFKomplex.ridhus.glasrum)

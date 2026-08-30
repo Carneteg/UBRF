@@ -130,6 +130,25 @@ function Geometri.tvarvaggBitar(stall): { { x0: number, x1: number } }
 	return bitar
 end
 
+--[[ Läktaren i hela stycken, med hästgångens öppning bortdragen.
+
+	Satellitbilden lägger hästgången centralt, och där kan läktaren inte vara
+	obruten — man ska kunna leda hästen igenom. Samma regel som
+	`laktarSektioner` i src/site.js; bygger man läktaren i ett stycke muras
+	gången igen, och det syns inte förrän någon försöker gå där. ]]
+function Geometri.laktarSektioner(laktare): { { y0: number, y1: number } }
+	local g = laktare.gap
+	if not g then return { { y0 = laktare.y0, y1 = laktare.y1 } } end
+	local ut = {}
+	if g.y0 - laktare.y0 > 0.2 then
+		table.insert(ut, { y0 = laktare.y0, y1 = g.y0 })
+	end
+	if laktare.y1 - g.y1 > 0.2 then
+		table.insert(ut, { y0 = g.y1, y1 = laktare.y1 })
+	end
+	return ut
+end
+
 -- Överlappets area mellan två rektanglar. 0 när de bara nuddar varandra.
 function Geometri.overlapp(a: Rekt, b: Rekt): number
 	local dx = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)

@@ -307,10 +307,16 @@ fonden.
   inomhus mellan husen. Utrymningsplanernas situationsplan ritar husen som
   skilda volymer — det är en CONTRADICTION som avgjorts till Product Owners
   fördel; se `references/plans/OAVGJORT.md` fråga 1.
-- `[ASSUMPTION]` **Var** hästgången ansluter. Spelet lägger den i norra änden,
-  mot klubbdelen, därför att det är enda stället där båda husen har gångbar
-  insida mot varandra. Öppningen i stallets västvägg sitter 10 m från
-  klubbgaveln.
+- **Var hästgången ansluter är verifierat.** Satellitbilden
+  (`references/plans/SATELLIT-HASTGANG-2026-08-30.md`) visar förbindelsen
+  centralt i husens gemensamma längd. Den ligger i liv med **stallets egen
+  tvärkorridor** — korridorens mitt ligger på y 91,05 och husens gemensamma
+  mitt på y 92,0. Öppningen i västväggen sitter därför 26,75 m från
+  klubbgaveln, mitt för korridoren, och ingen ny öppning behövde uppfinnas.
+- Den västra hästporten på u 30 är **borttagen**. Den var uppfunnen för spelets
+  skull och låg i tvärkorridorens västra ände, alltså där gången nu går.
+  Skjutporten på östra långsidan mot hagarna står kvar — den är läst i
+  Street View.
 - Förstukvisten på västra långsidan, ~6 m från norra gaveln
 - Marknivå: plant
 

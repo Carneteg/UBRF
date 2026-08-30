@@ -43,45 +43,73 @@ förbindelse — den gör den inte.
 
 ### Vad spelet bygger
 
-Byggnaden `hastgang` i `src/site.js`, 11 × 6 m mellan ridhusets östvägg
-(x = 143) och stallets västvägg (x = 154), med scenövergång åt båda hållen.
+Byggnaden `hastgang` i `src/site.js`, 11 × 3,5 m mellan ridhusets östvägg
+(x = 143) och stallets västvägg (x = 154), centralt på y 89,3–92,8, med
+scenövergång åt båda hållen.
 Fasadöppningarna mot grannhuset är märkta `intern` och STALLINNE-dörren `inne`,
 så att förbindelsen inte får någon markör ute på gården — den finns inte där.
 
-`[ASSUMPTION]` **Läget är härlett, inte hämtat ur en källa.** Hästgången ligger
-där den ligger därför att det är det enda stället där båda husen har gångbar
-insida mot varandra: ridhusets läktare upptar hela östväggen mellan y 53 och
-103, och stallets boxlängor upptar y 71–108. Kvar blir y 108–115, alltså
-stallets klubbdel mot ridhusets entréhall.
+**Läget är verifierat sedan 2026-08-30** — se nästa avsnitt. Det var tidigare
+ett antagande (norra änden, härlett ur var husen hade gångbar insida), och det
+antagandet är underkänt av satellitbilden.
 
-### Fotona lades till källkedjan — och avgjorde inte heller
+### Satellitbilden stängde också VAR den går — 2026-08-30
 
-Uppföljningen på issue #21 gjorde foton auktoritativa för *"visible connector
-geometry/details"*. Alltså granskades de bilder som ser mellan husen:
-`stall-fasad-01`, `-02` och `ridhus-gavel-01`, alla från grusplanen vid de
-norra gavlarna, ur samma videosvep.
+Tobias lade fram en satellitbild (`references/plans/SATELLIT-HASTGANG-2026-08-30.md`,
+evidensklass DIRECT VISUAL / PRODUCT OWNER SUPPLIED). Den visar en taktäckt
+tvärgående förbindelse i den **centrala** delen av husens gemensamma längd —
+inte vid någon ände — och att mellanrummet därmed är **två skilda gårdsytor**,
+en på var sida om gången.
 
-Stallets långsida löper in mot ridhusets hörn och de två volymerna **överlappar
-i projektionen** — ingen genomsikt till landskapet bakom. Men stallet ligger
-längre bort och ridhuset närmare, så de skulle överlappa även med luft emellan.
-Det är occlusion, inte bevis på kontakt.
+**Min tidigare placering i norra änden var fel.** Den var ett antagande härlett
+ur var husen hade gångbar insida, och den är nu underkänd av en direkt visuell
+källa. Placeringen är flyttad.
 
-I gapet står **skyltstolpen med åtta armar och ett picknickbord på gräs**. Där
-är alltså utomhus — men det är vid husens norra ändar, framför fasadlivet. En
-förbindelse sju meter längre in syns inte därifrån.
+Den nya placeringen är inte gissad utan inmätt mellan två källor som pekar på
+samma ställe:
 
-Fotona ger alltså bara en svag negativ avgränsning: allra längst i norr, där
-skylten står, är det utomhus. Spelets hästgång ligger söder om det och motsägs
-inte — men stöds inte heller.
+| Källa | Ger |
+|---|---|
+| Husens gemensamma längd, y 65–119 | mitten ligger på **y 92,0** |
+| Stallets tvärkorridor, mätt i utrymningsplanen | mitten ligger på **y 91,05** |
 
-`[REFERENCE GAP]` En bild tagen **inne i gapet**, vänd söderut mellan husen.
-Ingen sådan finns i repot.
+Under en meter isär. Gången ligger därför i liv med tvärkorridoren, på
+y 89,3–92,8: den mynnar i den korridor som planen redan visar når båda
+långsidorna, och ingen ny öppning behöver uppfinnas i stallet.
 
-`[REFERENCE GAP]` **Frågan till Tobias:** var går hästgången i verkligheten?
-Vid norra änden (klubbdelen mot entréhallen, som spelet nu gissar), på mitten,
-eller i söder? Och kommer man ut i ridhusets hall eller direkt i ridbanan? Ett
-foto inifrån gången, eller bara "den ligger i norra/södra änden", räcker för att
-byta ut antagandet mot verklighet.
+**Vad som blev en följd av flytten.** Ridhusets läktare upptar östväggen mellan
+y 53 och 103 och stod alltså i vägen. Läktaren har nu ett fem meter brett gap
+där gången kommer in. Läktarens utsträckning är själv ett Drive-textderivat
+(`ASSUMPTION`) och satellitbilden är direkt visuell, så enligt källhierarkin
+viker läktaren — men **gapets bredd är antagen**, vald för att en häst ska gå
+igenom med marginal.
+
+Stallets västra hästport på u 30 är borttagen. Den var uppfunnen för spelets
+skull och låg i tvärkorridorens västra ände — exakt där gången nu går, och två
+portar i samma vägg på samma ställe är en för mycket. Hästen leds inomhus i
+stället, vilket är hela poängen med att husen sitter ihop.
+
+### Vad som fortfarande inte är avgjort
+
+Satellitbilden ger topologi, inte meter. Kvar som `[ASSUMPTION]`:
+
+- gångens bredd och längd mellan fasaderna,
+- takfot, nock och taklutning,
+- dörrarnas exakta lägen,
+- vilken inre rumsdel den mynnar i på ridhussidan,
+- läktargapets bredd,
+- allt inne i gången.
+
+`[REFERENCE GAP]` Ett foto inifrån gången, eller ett mått på den.
+
+### Vad repots FOTON säger (avgjorde inte, men står kvar)
+
+Bilderna från grusplanen — `stall-fasad-01`, `-02`, `ridhus-gavel-01` — ser bara
+husens norra ändar. Stallets långsida löper in mot ridhusets hörn och volymerna
+överlappar i projektionen, men stallet ligger längre bort och ridhuset närmare:
+occlusion, inte kontakt. I gapet står skyltstolpen med åtta armar och ett
+picknickbord på gräs, alltså utomhus — vilket nu stämmer, eftersom gången ligger
+trettio meter längre söderut och den norra gårdsytan är just en gårdsyta.
 
 ---
 

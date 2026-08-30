@@ -246,13 +246,20 @@ frame för frame ännu.
 - Rotation: nocken i nord–sydlig riktning, cafégaveln mot parkeringen i norr
   (rättat 2026-08-29 — grusplanen ligger vid husets nordvästra ände)
 - **Sammanbyggt med stallet.** Tobias 2026-08-30: *"husen är sammanbyggda, jag
-  har varit där"*, *"det är hästgång mellan byggnaderna"*. Hästgången (11 × 6 m)
-  går från ridhusets östvägg till stallets västvägg, med öppningen i östfasaden
-  65 m från södra gaveln — alltså i entréhallens höjd, norr om läktaren.
-  Utrymningsplanernas situationsplan ritar husen som skilda volymer; det är en
-  CONTRADICTION avgjord till Product Owners fördel, se
-  `references/plans/OAVGJORT.md` fråga 1. **Var** gången ansluter är
-  `[ASSUMPTION]`.
+  har varit där"*, *"det är hästgång mellan byggnaderna"*. Hästgången
+  (11 × 3,5 m) går från ridhusets östvägg till stallets västvägg, med öppningen
+  i östfasaden **45,85 m från södra gaveln** — centralt, inte vid en ände.
+  Satellitbilden (`references/plans/SATELLIT-HASTGANG-2026-08-30.md`) visar den
+  tvärgående förbindelsen i husens gemensamma mitt, och den ligger i liv med
+  stallets tvärkorridor. Utrymningsplanernas situationsplan ritar husen som
+  skilda volymer; det är en CONTRADICTION avgjord till Product Owners fördel,
+  se `references/plans/OAVGJORT.md` fråga 1.
+- **Läktaren har ett gap på 5,0 m** (lokalt y 44,5–49,5) där hästgången kommer
+  in. Det är påtvingat av den verifierade topologin: läktaren kan inte vara
+  obruten där man leder hästen igenom. Läktarens utsträckning är själv ett
+  Drive-textderivat och satellitbilden är direkt visuell, så läktaren viker.
+  **Gapets bredd är `[ASSUMPTION]`** — vald för att en häst ska gå igenom med
+  marginal, inte mätt.
 - Durkplåtsdörrarna i östfasaden sitter 5 m från södra gaveln. Låg tidigare vid
   22 m, alltså rakt bakom läktaren (som upptar lokala y 9–59) — både markören
   och landningspunkten hamnade inuti en solid läktarstomme. Rättat 2026-08-30.
