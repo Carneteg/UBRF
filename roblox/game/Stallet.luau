@@ -8,9 +8,9 @@
 	byggnaden byggs av. Ingen koordinat är skriven här.
 
 	VILKEN häst som står i VILKEN box är däremot [antagande]. Det finns inget
-	verifierat underlag för UBRF:s faktiska boxfördelning, och jag hittar inte
-	på en. Fördelningen här är spelmekanik: stabil, jämnt spridd över
-	stallets fyra rader, och utbytbar den dag verkligheten säger något annat.
+	verifierat underlag för UBRF:s faktiska boxfördelning, och vi hittar inte
+	på en. Fördelningen här är spelmekanik: stabil, jämnt spridd över stallets
+	fyra rader, och utbytbar den dag verkligheten säger något annat.
 ]]
 
 local Stallet = {}
@@ -21,14 +21,10 @@ local G = require(RS.UBRFKomplex)
 
 local S = G.stall
 
---[[ Boxrutnätet härleds ur stalldatan i stället för att räknas upp:
-	fyra rader × antalBoxar per rad. Ändras stallet följer boxarna med. ]]
 function Stallet.boxantal(): number
 	return #S.rader * S.antalBoxar
 end
 
---[[ Box nummer n (1-baserat) → rad, plats i raden, och mittpunkt i
-	VÄRLDSKOORDINATER. Ordningen är rad för rad, norrut i varje rad. ]]
 function Stallet.box(n: number)
 	local antal = Stallet.boxantal()
 	if n < 1 or n > antal then return nil end
@@ -36,9 +32,6 @@ function Stallet.box(n: number)
 	local radIndex = math.floor((n - 1) / S.antalBoxar) + 1
 	local plats = (n - 1) % S.antalBoxar + 1
 	local rad = S.rader[radIndex]
-
-	--[[ Boxens djup mäts från radens x0 och åt det håll raden vetter.
-		vetter = 1 betyder att boxen ligger i positiv x från x0. ]]
 	local x0 = rad.x0
 	local xMitt = x0 + rad.vetter * rad.djup / 2
 	local yMitt = S.boxStartY + (plats - 0.5) * S.boxB
@@ -53,9 +46,6 @@ function Stallet.box(n: number)
 	}
 end
 
---[[ Hästarnas boxar sprids över raderna i stället för att fylla en rad i
-	taget. Annars står alla sjutton i rad W och stallets andra halva är tom,
-	vilket ser ut som ett fel även om det inte är ett. ]]
 function Stallet.boxNummerFor(hastId: string): number?
 	local index = nil
 	for k, id in ipairs(Spel.ordning) do
@@ -64,8 +54,8 @@ function Stallet.boxNummerFor(hastId: string): number?
 	if not index then return nil end
 
 	local rader = #S.rader
-	local rad = (index - 1) % rader                    -- 0-baserad rad
-	local plats = math.floor((index - 1) / rader)      -- 0-baserad plats
+	local rad = (index - 1) % rader
+	local plats = math.floor((index - 1) / rader)
 	if plats >= S.antalBoxar then return nil end
 	return rad * S.antalBoxar + plats + 1
 end
@@ -75,24 +65,39 @@ function Stallet.boxFor(hastId: string)
 	return n and Stallet.box(n) or nil
 end
 
---[[ Tilldelningen ska vara STABIL: samma spelare ska möta samma häst när hon
-	kommer tillbaka, annars finns det inget förhållande att bygga. Den ska
-	också vara förutsägbar i prov, alltså ingen slump.
-
-	Här stod först math.abs(userId), med kommentaren att det skyddade mot de
-	negativa UserId Studio ger i Play Solo. Falsifieringen visade att provet
-	INTE föll när abs togs bort: Luas modulo följer divisorns tecken, så
-	-12345 % 17 är 14, inte -14. Skyddet var alltså dött och kommentaren
-	påstod något den inte gjorde. Provet står kvar — att negativa id fungerar
-	är fortfarande värt att hålla fast — men koden låtsas inte längre. ]]
+-- Stabil preferens för en spelare. Den här funktionen ensam garanterar inte
+-- samtidighetsunikhet; StallService använder tilldelaLedig när flera spelare
+-- finns i samma server.
 function Stallet.tilldela(userId: number): string
 	local n = #Spel.ordning
+	assert(n > 0, "hästordningen är tom")
 	return Spel.ordning[(userId % n) + 1]
 end
 
---[[ Allt en spelare behöver veta vid ankomsten, i ett svar. ]]
-function Stallet.dagensHast(userId: number)
-	local id = Stallet.tilldela(userId)
+--[[ Stabil preferens + serverunikhet.
+
+	Spelarens normala häst provas först. Är hon redan upptagen i den aktuella
+	servern går vi deterministiskt vidare genom rosterordningen tills en ledig
+	häst hittas. När ingen är ledig returneras nil i stället för att två spelare
+	får samma fysiska häst.
+
+	`upptagna` är en mängd med häst-id som nycklar. Ren data in, ren data ut. ]]
+function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: any }): string?
+	local n = #Spel.ordning
+	if n == 0 then return nil end
+	local start = (userId % n) + 1
+	for steg = 0, n - 1 do
+		local index = ((start - 1 + steg) % n) + 1
+		local id = Spel.ordning[index]
+		if not upptagna[id] then
+			return id
+		end
+	end
+	return nil
+end
+
+local function paket(id: string?)
+	if not id then return nil end
 	local hast = Spel.hastar[id]
 	if not hast then return nil end
 	return {
@@ -104,6 +109,15 @@ function Stallet.dagensHast(userId: number)
 		foder = Spel.foder[id],
 		box = Stallet.boxFor(id),
 	}
+end
+
+function Stallet.hast(hastId: string)
+	return paket(hastId)
+end
+
+function Stallet.dagensHast(userId: number, upptagna: { [string]: any }?)
+	local id = if upptagna then Stallet.tilldelaLedig(userId, upptagna) else Stallet.tilldela(userId)
+	return paket(id)
 end
 
 return Stallet
