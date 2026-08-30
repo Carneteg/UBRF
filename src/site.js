@@ -104,7 +104,13 @@ const ANL = {
        {sida:"W", u:14, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
        {sida:"W", u:22, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
        {sida:"W", u:30, b:0.9, h:0.7, z0:4.90, typ:"fonster"},
-       {sida:"E", u:22, b:3.4, h:2.9, z0:0, typ:"portplat"}, // durkplåtdörrarna mot gården
+       /* Durkplåtdörrarna mot gården. Låg tidigare vid u = 22, alltså rakt
+          bakom läktaren (som upptar lokala y 9–59): både dörrmarkören och
+          landningspunkten hamnade inuti en solid läktarstomme och gick inte
+          att använda. Flyttad till u = 5, söder om läktaren. */
+       {sida:"E", u:5,  b:3.4, h:2.9, z0:0, typ:"portplat"},
+       /* HÄSTGÅNGEN till stallet, i entréhallens höjd. */
+       {sida:"E", u:65, b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
        {sida:"S", u:8,  b:4.0, h:3.6, z0:0, typ:"portsilver"},// stora silverporten [antagande]
      ]},
     /* Stallet. Måtten och färgerna kommer ur byggnadskortet
@@ -136,6 +142,8 @@ const ANL = {
        {sida:"W", u:sV(7.2), b:0.66, h:0.66, z0:1.78, typ:"rund"},
        {sida:"W", u:sV(2.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},     // valvfönster kring kvisten
        {sida:"W", u:sV(8.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
+       /* HÄSTGÅNGEN mot ridhuset, 9 m från klubbgaveln. */
+       {sida:"W", u:sV(10.0), b:2.4, h:2.6, z0:0, typ:"portbla", intern:true},
        ...stallFonster("W"), ...stallFonster("E"),
        /* Norra gaveln — klubbgaveln mot grusplanen, den höga, med
           balkongen och spiraltrappan (stall-fasad-04/05). */
@@ -163,9 +171,31 @@ const ANL = {
           lektionen, så den ska vara en port och inte en dörr. */
        {sida:"W", u:30,   b:3.4,  h:3.2,  z0:0, typ:"portbla"},
      ]},
+    /* HÄSTGÅNGEN mellan ridhuset och stallet. Tobias har varit på plats:
+       husen är sammanbyggda, och det som binder dem är en hästgång — man
+       leder hästen inomhus mellan stallet och ridhuset i stället för att gå
+       ut över gården.
+
+       Utrymningsplanernas situationsplan ritar husen som skilda volymer, men
+       den är en schematisk karta i frimärksstorlek och en låg förbindelse
+       behöver inte vara en egen brandcell. Product Owner på plats väger
+       tyngre — se references/plans/OAVGJORT.md.
+
+       LÄGET ÄR ETT ANTAGANDE. Den ligger här därför att det är det enda
+       stället där BÅDA husen har gångbar insida mot varandra: ridhusets
+       läktare upptar hela östväggen mellan y 53 och 103, och stallets
+       boxlängor upptar y 71–108. Kvar blir y 108–115, alltså stallets
+       klubbdel mot ridhusets entréhall. Var den verkligen går behöver ett
+       foto eller ett besked. [ASSUMPTION] */
+    {id:"hastgang", rekt:{x:143, y:106, w:11, h:6}, hV:3.2, hN:4.2, nock:"EW",
+     fargV:"#7C2A24", fargT:"#5E646C", label:"HÄSTGÅNGEN",
+     oppningar:[
+       {sida:"N", u:5.5, b:2.4, h:2.6, z0:0, typ:"portbla"},
+       {sida:"S", u:5.5, b:1.2, h:1.4, z0:1.3, typ:"fonster"},
+     ]},
     /* Förbindelselängan som stänger gårdens södra ände — den låga
        byggnaden man ser mellan gavlarna från grusplanen (Street View). */
-    {id:"langa", rekt:{x:144, y:59, w:10, h:6}, hV:3.0, hN:4.4, nock:"EW",
+    {id:"langa", rekt:{x:147, y:59, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
      fargV:"#7C2A24", fargT:"#7E8288", label:"",
      oppningar:[{sida:"N", u:4.4, b:1.1, h:2.0, z0:0, typ:"dorrmork"}]},
     /* Röda stugan vid infarten från Björklidsvägen (förråd/sekretariat). */
@@ -249,8 +279,8 @@ const ANL = {
   dorrar: [
     /* 0,9 m ut från väggen, inte 0,4: kollisionsmarginalen mot en byggnad är
        0,55 m, så en markör närmare än så går inte att stå på. */
-    {id:"ridhus_o", pos:[143.9,66], text:"In i ridhuset (durkplåtdörrarna)",
-     mot:"ridhusinne", spawn:{x:23.4,y:22,rikt:Math.PI}},
+    {id:"ridhus_o", pos:[143.9,49], text:"In i ridhuset (durkplåtdörrarna)",
+     mot:"ridhusinne", spawn:{x:23.4,y:5,rikt:Math.PI}},
     {id:"ridhus_n", pos:[139.9,119.8], text:"In i ridhuset (entrén)",
      mot:"ridhusinne", spawn:{x:21.9,y:73.4,rikt:-Math.PI/2}},
     {id:"cafe", pos:[124.4,120.2], text:"Café Krubban (trappan upp)", mot:"info",
@@ -359,6 +389,13 @@ const STALLINNE = {
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
      uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
      spawn:{x:159.6,y:63.4,rikt:-Math.PI/2}},
+    /* HÄSTGÅNGEN till ridhuset. Den här dörren går inte ut på gården utan
+       rakt in i ridhusets entréhall — det är hela poängen med att husen är
+       sammanbyggda: hästen leds inomhus. Ingen markör läggs på gården för
+       den, eftersom den inte finns där. */
+    {id:"hastgang", pos:[0.9,44.0], text:"Hästgången — in i ridhuset",
+     mot:"ridhusinne", inrikt:Math.PI, inne:true,
+     spawn:{x:24.0,y:65.0,rikt:Math.PI}},
   ],
   ridlarare:{pos:[0,34], namn:"Ridläraren"},
   whiteboard:{pos:[0,7.2]},
@@ -385,6 +422,7 @@ const STALLINNE = {
    med: markören vid klubbgaveln pekade tre meter fel, och den som gick in
    från gräsgården satte spelaren INNE i en boxrad. */
 for(const d of STALLINNE.dorrar){
+  if(d.inne) continue;                 // hästgången går inte ut på gården
   ANL.dorrar.push({
     id:"stall_"+d.id.replace(/^ut_/,""),
     pos:[d.spawn.x, d.spawn.y],
@@ -488,8 +526,12 @@ const RIDHUSINNE = {
     {id:"trapphus", rekt:{x:19.0, y:66.6, w:1.4, h:2.8}},
   ],
   dorrar:[
-    {id:"ut_o", pos:[24.2,22],   text:"Ut till gräsgården", mot:"gard",
-     spawn:{x:144.6,y:66,rikt:0}},
+    {id:"ut_o", pos:[24.2,5],    text:"Ut till gräsgården", mot:"gard",
+     spawn:{x:144.6,y:49,rikt:0}},
+    /* HÄSTGÅNGEN till stallet: leder in i stallets klubbdel utan att man
+       behöver gå ut på gården. Husen är sammanbyggda. */
+    {id:"hastgang", pos:[24.0,65.0], text:"Hästgången — in i stallet",
+     mot:"stallinne", spawn:{x:1.6,y:44.0,rikt:0}},
     {id:"ut_n", pos:[21.9,74.2], text:"Ut mot parkeringen (entrén)", mot:"gard",
      spawn:{x:139.9,y:120.6,rikt:Math.PI/2}},
   ],
@@ -542,6 +584,8 @@ STALLINNE.info=[
     const inne=INNE[bg.id]; if(!inne)continue;
     for(const o of (bg.oppningar||[])){
       if(!DORR.test(o.typ)||o.z0>0.2)continue;
+      /* Öppningar mot en sammanbyggd granne leder inte ut på gården. */
+      if(o.intern)continue;
       const [p0,p1]=vagg(bg.rekt,o.sida);
       const L=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]);
       const ux=(p1[0]-p0[0])/L, uy=(p1[1]-p0[1])/L, u=o.u+o.b/2;
