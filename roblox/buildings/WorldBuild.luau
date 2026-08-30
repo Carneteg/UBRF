@@ -61,17 +61,18 @@ end
 local function replaceFacade(BK, WG, model: Model, base: CFrame, b, sida: string)
 	local oldName = b.id .. " " .. SIDE_NAME[sida]
 	local old = model:FindFirstChild(oldName)
-	if not (old and old:IsA("BasePart")) then
+	if not (old and old.ClassName == "Part") then
 		warn("[WorldBuild] Hittar inte fasaden " .. oldName)
 		return
 	end
 
-	local color = old.Color
-	local material = old.Material
-	old.Transparency = 1
-	old.CanCollide = false
-	old.CanQuery = false
-	old.CanTouch = false
+	local wall = old :: Part
+	local color = wall.Color
+	local material = wall.Material
+	wall.Transparency = 1
+	wall.CanCollide = false
+	wall.CanQuery = false
+	wall.CanTouch = false
 
 	local openings = openingsForSide(b, sida)
 	local segments = WG.fasadBitar(facadeLength(b.rekt, sida), b.hV, openings)
@@ -91,10 +92,11 @@ local function findExistingDoor(BK, GEO, model: Model, base: CFrame, b, o, used)
 	local best: BasePart? = nil
 	local bestDist = math.huge
 	for _, inst in ipairs(model:GetDescendants()) do
-		if inst:IsA("BasePart") and inst.Name == wantedName and not used[inst] then
-			local d = (inst.Position - wanted).Magnitude
+		if inst.ClassName == "Part" and inst.Name == wantedName and not used[inst] then
+			local part = inst :: Part
+			local d = (part.CFrame.Position - wanted).Magnitude
 			if d < bestDist then
-				best = inst
+				best = part
 				bestDist = d
 			end
 		end
@@ -148,16 +150,17 @@ local function configureDoor(BK, GEO, model: Model, base: CFrame, b, o, used)
 	door:SetAttribute("OpeningType", o.typ)
 
 	local prompt = door:FindFirstChild("DoorPrompt")
-	if not (prompt and prompt:IsA("ProximityPrompt")) then
+	if not (prompt and prompt.ClassName == "ProximityPrompt") then
 		prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "DoorPrompt"
 		prompt.Parent = door
 	end
-	(prompt :: ProximityPrompt).ActionText = "Öppna"
-	(prompt :: ProximityPrompt).ObjectText = o.label or (if mode == "slide" then "Port" else "Dörr")
-	(prompt :: ProximityPrompt).HoldDuration = 0
-	(prompt :: ProximityPrompt).MaxActivationDistance = 10
-	(prompt :: ProximityPrompt).RequiresLineOfSight = false
+	local doorPrompt = prompt :: ProximityPrompt
+	doorPrompt.ActionText = "Öppna"
+	doorPrompt.ObjectText = o.label or (if mode == "slide" then "Port" else "Dörr")
+	doorPrompt.HoldDuration = 0
+	doorPrompt.MaxActivationDistance = 10
+	doorPrompt.RequiresLineOfSight = false
 end
 
 local function buildSpawn(BK, WG, model: Model, base: CFrame, G)
@@ -186,15 +189,16 @@ end
 function WorldBuild.apply(BK, G, GEO, WG)
 	local folder = workspace:FindFirstChild("Anläggning")
 	local model = folder and folder:FindFirstChild("UBRF")
-	if not (model and model:IsA("Model") and model.PrimaryPart) then
+	if not (model and model.ClassName == "Model" and model.PrimaryPart) then
 		warn("[WorldBuild] UBRF-modellen saknas — kör Anlaggningen först.")
 		return false
 	end
-	local base = model.PrimaryPart.CFrame
+	local worldModel = model :: Model
+	local base = (worldModel.PrimaryPart :: BasePart).CFrame
 
 	for _, b in ipairs(G.byggnader) do
 		for _, sida in ipairs({ "S", "N", "W", "E" }) do
-			replaceFacade(BK, WG, model, base, b, sida)
+			replaceFacade(BK, WG, worldModel, base, b, sida)
 		end
 	end
 
@@ -203,13 +207,13 @@ function WorldBuild.apply(BK, G, GEO, WG)
 	for _, b in ipairs(G.byggnader) do
 		for _, o in ipairs(b.oppningar or {}) do
 			if not arFonster(o.typ) then
-				configureDoor(BK, GEO, model, base, b, o, used)
+				configureDoor(BK, GEO, worldModel, base, b, o, used)
 				doorCount += 1
 			end
 		end
 	end
 
-	buildSpawn(BK, WG, model, base, G)
+	buildSpawn(BK, WG, worldModel, base, G)
 	print(string.format("[WorldBuild] Spelbar värld: %d dörr-/portöppningar + UBRFSpawn", doorCount))
 	return true
 end
