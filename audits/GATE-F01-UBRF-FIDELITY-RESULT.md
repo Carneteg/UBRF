@@ -6,11 +6,12 @@ Datum: 2026-08-30 (uppdaterad efter Senior Fidelity Review 01)
 Implementation: Claude Code
 Status: **lämnas till ChatGPT för Senior Fidelity Review 02.**
 
-Sedan Review 01 har fyra saker hänt: utrymningsplanerna ligger i repot och är
+Sedan Review 01 har fem saker hänt: utrymningsplanerna ligger i repot och är
 mätta, stallets bredd är nedgraderad från slutsats till antagande med intervall,
 ridhusets evidensklass är omärkt till vad den faktiskt är, och **husen är
 byggda ihop** efter Tobias besked att de sitter ihop och att det som binder dem
-är en hästgång.
+är en hästgång, och Roblox-spåret har fått anläggningens geometri genererad ur
+webbkoden i stället för ingen geometri alls.
 
 Gaten stängs inte av mig, och UBRF kallas inte "100 % identiskt": båda byggnaderna
 har kvarvarande `ASSUMPTION` och `REFERENCE GAP` som är listade nedan. Väntat
@@ -28,6 +29,7 @@ utfall om alla kända motsägelser är lösta men luckor kvarstår är
 | `0d91f8e` | Utrymningsplanerna in i repot; stallets band mätta i planen i stället för likadelade | Källa + stall inne |
 | `2fa66dc` | Stallets entréer går att komma in genom igen (räcket, dörrlistorna, balkongen, markörmarginalen) | Stall ute |
 | `9b814d7` | Hästgången mellan husen; ridhusets durkplåtsdörrar ur läktarstommen; längan smalnad | Komplex |
+| `5998974` | Dokumentationen följer hästgången; Review 01:s tre första invändningar | Källa |
 
 Föregående gate (`aec77cd`, mergad) rörde ridkänslan, inte miljön.
 
@@ -334,27 +336,80 @@ placeringar som det inte anger är `ASSUMPTION` i byggnadskortet.
 
 ## 9 · Roblox / webb-paritet
 
-**Roblox har ingen UBRF-geometri byggd.** `roblox/buildings/` innehåller
-`BuildKit.luau`, `_exempel.luau` och en README — inga byggnadsskript. En sökning
-efter `ridhus`/`stall` i `roblox/src` och `roblox/buildings` ger bara README:n och
-exemplet.
+**Omskriven efter Review 01.** Blocker D hade rätt: *"ingen Roblox-geometri är
+inte parity"*. Att det inte fanns någon motsägande Roblox-implementation gjorde
+inte spåren likvärdiga — det gjorde bara att bara den ena ytan hade UBRF.
 
-Pariteten för den här gaten är därför att **fidelity-fakta ligger i de delade
-källdokumenten**, inte i två implementationer:
+### Vad som finns nu
 
-| Fakta | Var det står | Läses av |
+| Fil | Vad | Underhåll |
 |---|---|---|
-| Stallets planform och 21 m bredd | `references/buildings/stall/KORT.md` | Webben nu; Roblox när byggnaden byggs (issue #16) |
-| Ridhusets fem interiördrag | `references/buildings/ridhus/KORT.md` | Samma |
-| Placering, orientering, gavlar i liv | `references/SITEPLAN.md` | Samma |
-| Namn på rum och områden | Byggnadskorten | Samma |
+| `tools/exportera-geometri.js` | kör `src/site.js` och skriver ut geometrin som Luau | — |
+| `roblox/buildings/UBRFKomplex.luau` | anläggningens mått, färger och öppningar | **genererad, aldrig för hand** |
+| `roblox/buildings/Geometri.luau` | ren geometri: öppningens läge i en fasad, taklutning, om två hus sitter ihop | handskriven, mätt |
+| `roblox/buildings/Anlaggningen.luau` | bygger hela komplexet i Studio ur de två ovan | handskriven |
+| `roblox/tests/geometri.spec.luau` | 36 mätningar på den exporterade geometrin | handskriven |
 
-Det finns alltså **ingen risk att en rättad webb-UBRF står mot en gammal
-motsägelsefull Roblox-UBRF**, eftersom Roblox-UBRF inte finns än. När den byggs ska
-den läsa korten, inte spelets JS.
+Review 01 skrev: *"Do not create a second hand-maintained truth. Prefer one
+canonical geometry/data definition or a deterministic generation path consumed
+by both surfaces."* Det är den vägen som är byggd. `src/site.js` är den enda
+sanningen; Roblox-modulen är dess utdata, inte dess kopia.
 
-`[REFERENCE GAP i paritetsredovisningen]` Pariteten kan inte visas med två
-skärmdumpar förrän Roblox-byggnaderna finns.
+Exporten är **deterministisk** — ingen tidsstämpel, inget versionsnummer, allt
+avrundat till sex decimaler — så att den går att kontrollera:
+
+```
+node tools/exportera-geometri.js --kontrollera
+```
+
+Den faller om `src/site.js` ändrats utan att exporten körts om. Verifierat åt
+båda hållen: ett provisoriskt ändrat mått i `src/site.js` gav exit 1, och samma
+mått tillbaka gav exit 0 igen.
+
+### Vad specen mäter
+
+36 kontroller, alla gröna, körda på den genererade filen — alltså på de tal
+Roblox faktiskt skulle bygga av:
+
+- **Komplexet.** Hästgången möter ridhusets östvägg (x = 143) och stallets
+  västvägg (x = 154); ridhus och stall möts inte direkt, utan just via
+  hästgången; hästgången ligger inom båda husens längd; de norra gavlarna
+  ligger i liv. Flyttar någon ett hus i `src/site.js` utan att flytta
+  hästgången faller de här på båda plattformarna samtidigt.
+- **Interna öppningar.** En halvmeter utanför varje `intern`-öppning ska ligga
+  inuti ett annat hus. Båda två gör det — de är dörrar in i grannen, inte
+  dörrar ut i luften.
+- **Fasadkonventionen.** `u` mäts från fasadens p0, och p0 → p1 går medurs sett
+  utifrån, alltså mot *minskande* koordinat på N och W. Fyra kontroller på en
+  provrektangel låser det. Får man det bakvänt hamnar varje dörr i fel ände av
+  sitt hus, och en rundvandring märker det inte, för husen är symmetriska nog
+  att se rimliga ut ändå.
+- **Taken.** Lutningen anges inte utan räknas ur takfot och nock, så att en
+  ändrad nockhöjd inte kan lämna ett tak med gammal lutning efter sig. Alla
+  åtta husen får en byggbar lutning, och **stallet ger 28,1°** — samma tal som
+  byggnadskortet och § 6 räknar med, nu uträknat oberoende ur måtten.
+- **Dörrmarkörerna.** Ingen av de tolv står inuti ett hus.
+
+### En bugg som bygget blottade
+
+`BuildKit.gableRoof` läste `model:GetAttribute("GavelFärg")` och `_exempel.luau`
+satte samma namn. Roblox tillåter bara `[A-Za-z0-9_]` i attributnamn, så det
+hade kastat fel vid körning — exakt den fälla `roblox/buildings/README.md` redan
+varnar för, en gång tidigare med `Källa`. Ingen hade byggt ett tak förrän
+`Anlaggningen.luau` skulle anropa funktionen. Attributet heter nu `GavelFarg`.
+
+### Vad som fortfarande inte är visat
+
+`[REFERENCE GAP i paritetsredovisningen]` **Ingen har kört skriptet i Studio.**
+Alla fyra Luau-filerna kompilerar (`luau-compile --binary`), geometrin är mätt
+utanför Studio, men att modellen faktiskt reser sig och ser rätt ut kan bara
+avgöras i Studio, av en människa. Två skärmdumpar från samma vinkel — webben och
+Roblox — är den bevisning som fattas, och den kräver Studio.
+
+Enligt Review 01: *"If full Roblox rendering is deliberately deferred, Gate F01
+must not be reported as parity-ready."* Det gäller. **Gate F01 är inte
+parity-ready.** Den strukturella pariteten är byggd och mätt; den visuella är
+det inte.
 
 ---
 
@@ -394,6 +449,8 @@ enligt beskrivningen, inte vad jag har sett stämma.
 | Ridloopen (Gate 01) | 5 | alla gröna |
 | Ryttarens sekundärrörelse | 7 | alla gröna |
 | Fyra viewports, rörelse och touchmål | 4 | alla gröna |
+| **Roblox: anläggningens geometri** | **36** | **alla gröna** |
+| Roblox: rörelse, kamera, ryttare, touch | 72 | alla gröna |
 
 Hästgångens sex egna kontroller: dörren finns i båda husen; stalländens
 landningspunkt hamnar i en gångyta och inte i en boxrad; ridhusändens
@@ -453,7 +510,9 @@ Inga nya gameplay-features. Ridkänslan är orörd.
 2. **Utrymningsplanerna ligger nu i repot** (`references/plans/`, `0d91f8e`) och
    är mätta där. Men de saknar skalstock, så de fastställer proportioner, inte
    meter — stallets absoluta mått vilar fortfarande på antaganden, se § 6.
-3. **Roblox-pariteten är inte visad**, bara förberedd — se § 9.
+3. **Roblox-pariteten är strukturell, inte visuell.** Geometrin är genererad ur
+   webbkoden och mätt med 36 kontroller, men ingen har kört bygget i Studio.
+   Gate F01 är därför inte parity-ready — se § 9.
 4. **Interiörernas möblering är inte komplett.** Sakerna på boxfronterna och porten
    med klockan i stallgångens fond är kända men obyggda.
 5. **Ingen mänsklig igenkänningskontroll.** Att någon som varit på UBRF känner igen
@@ -479,8 +538,19 @@ stallets felaktiga en-gångsplan och connected-complex-regeln — är åtgärdad
 Den tredje var villkorad och kunde inte avgöras ur källorna; den avgjordes av
 Tobias och är byggd som hästgången, § 6b.
 
-Review 01:s tre invändningar är hanterade: bredden är nedgraderad till antagande
-med intervall (§ 6), ridhusets evidensklass är omärkt till textderivat (§ 10),
-och planerna ligger i repot (§ 14.2). Punkt 3–8 (exteriörernas
+Review 01:s fyra blockerare är hanterade:
+
+| # | Blocker | Vad som gjordes |
+|---|---|---|
+| A | Connected-complex saknas | Hästgången byggd, § 6b. Avgjord av Tobias, inte av mig |
+| B | Planen används inte direkt | Planerna ligger i repot och är mätta, § 14.2 |
+| C | 21 m är överlåst | Nedgraderad till `ASSUMPTION` 15–23 m, beviskedjan rättad, § 6 |
+| D | Ingen Roblox-geometri är inte paritet | Deterministisk export ur `src/site.js`, 36 mätningar, § 9 |
+
+Plus evidensomärkningen: ridhusets "visuella jämförelser" är omklassade till
+*implementation jämförd med verifierat textderivat*, § 10.
+
+**Gaten kallas inte parity-ready.** Blocker D:s egen villkorsmening gäller: den
+visuella pariteten är uppskjuten till någon har kört bygget i Studio. Punkt 3–8 (exteriörernas
 regressionstest, den gemensamma matrisen, paritetsredovisningen, byggets
 funktion och att inga nya features smugit in) är redovisade ovan.

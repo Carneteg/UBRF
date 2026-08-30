@@ -50,6 +50,14 @@ function vec(x, y, z)
 end
 Vector3 = { new = vec, yAxis = vec(0, 1, 0), zero = vec(0, 0, 0) }
 
+-- Färger. Geometrispecen läser den genererade UBRFKomplex.luau, och där står
+-- fasadfärgerna som Color3.fromRGB — de behöver inte göra något, bara finnas,
+-- annars går filen inte att ladda utanför Studio.
+Color3 = {
+	fromRGB = function(r, g, b) return { R = (r or 0) / 255, G = (g or 0) / 255, B = (b or 0) / 255 } end,
+	new = function(r, g, b) return { R = r or 0, G = g or 0, B = b or 0 } end,
+}
+
 local function cframe(pos, look, yaw, pitch, roll)
 	local c = { Position = pos or vec(), LookVector = look or vec(0, 0, 1),
 		Yaw = yaw or 0, Pitch = pitch or 0, Roll = roll or 0 }

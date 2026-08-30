@@ -11,7 +11,20 @@ python3 roblox/tests/build.py && luau roblox/tests/.build/movement.spec.luau
 python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build/camera.spec.luau
 python3 roblox/tests/build.py tests/rider.spec.luau && luau roblox/tests/.build/rider.spec.luau
 python3 roblox/tests/build.py tests/touch.spec.luau && luau roblox/tests/.build/touch.spec.luau
+python3 roblox/tests/build.py tests/geometri.spec.luau && luau roblox/tests/.build/geometri.spec.luau
 ```
+
+`geometri.spec.luau` mäter något annat än de fyra andra: inte rörelsen utan
+**anläggningen**. Den läser `roblox/buildings/UBRFKomplex.luau`, som genereras
+ur `src/site.js`, och kontrollerar att Roblox-sidan får ut samma UBRF som
+webben bygger — att husen sitter ihop, att interna öppningar vetter mot ett
+grannhus och inte ut i luften, och att en öppnings `u` räknas från rätt ände av
+rätt fasad. Den får därför sin egen modullista i `build.py`; hästsystemet har
+den inget att göra med.
+
+Den kan inte se om `src/site.js` ändrats utan att exporten körts om. Det gör
+`node tools/exportera-geometri.js --kontrollera`, och de två hör ihop: specen
+mäter innehållet, kontrollen mäter synken.
 
 ## Varför en byggfil
 

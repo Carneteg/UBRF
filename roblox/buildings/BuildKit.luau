@@ -98,7 +98,7 @@ function BuildKit.gableRoof(model: Model, base: CFrame, x: number, z: number, w:
 		for _, s in ipairs({ -1, 1 }) do
 			local wdg = Instance.new("WedgePart")
 			wdg.Name = "Gavelspets"; wdg.Anchored = true
-			wdg.Color = model:GetAttribute("GavelFärg") or color
+			wdg.Color = model:GetAttribute("GavelFarg") or color
 			wdg.Material = Enum.Material.SmoothPlastic
 			wdg.Size = Vector3.new(studs(0.2), studs(rise - overhang * math.tan(math.rad(pitchDeg))), studs(span/2))
 			local yaw = (ridgeAlong == "X") and (s > 0 and 0 or math.rad(180)) or (s > 0 and math.rad(90) or math.rad(-90))

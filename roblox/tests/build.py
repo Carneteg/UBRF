@@ -16,6 +16,16 @@ ROT = pathlib.Path(__file__).resolve().parent.parent      # roblox/
 UT = ROT / "tests" / ".build"
 
 # Ordningen är beroendeordningen: en modul får bara referera det som står över.
+#
+# Geometrispecen mäter en annan del av spåret — anläggningen, inte hästen — och
+# behöver därför inte hästsystemets moduler. Den får sin egen lista; att foga
+# ihop hela hästsystemet för att kontrollera var en dörr sitter vore bara
+# långsamt och skulle koppla ihop två spår som inte har med varandra att göra.
+GEOMETRI = [
+    ("Geometri",    "buildings/Geometri.luau"),
+    ("UBRFKomplex", "buildings/UBRFKomplex.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -45,8 +55,9 @@ def inlina(kalla: str) -> str:
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
+    moduler = GEOMETRI if "geometri" in spec_rel else MODULER
     delar = [las("tests/stubs.luau")]
-    for namn, rel in MODULER:
+    for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
         if namn in ("Config", "Gaits", "StateMachine", "RigAdapter"):
