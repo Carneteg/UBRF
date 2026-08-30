@@ -101,6 +101,17 @@ end
 	Fyra meter är gameplay-marginal framför den nordligaste gaveln, inte ett
 	påstående om en verklig skylt eller exakt verklig startpunkt.
 ]]
+--[[ Avståndet från nordligaste gaveln till spawnpunkten.
+
+	EN sanning. Talet stod förut på tre ställen: som default här, som en
+	literal i WorldBuild:s anrop, och som en tredje kopia i world.spec — som
+	provet dessutom jämförde MOT. Provet kunde alltså aldrig fånga att de två
+	andra gled: att flytta spawnen från 4 till 40 m passerade grönt.
+
+	Det är ett spelval, inte mätt UBRF-geometri. Nära nog att man ser
+	byggnaderna direkt, långt nog att man inte står inne i en vägg. ]]
+WorldGeometry.SPAWN_MARGIN = 4
+
 function WorldGeometry.ankomstSpawn(buildings, margin: number?): (number, number, number, number)
 	local ridhus = findBuilding(buildings, "ridhus")
 	local stall = findBuilding(buildings, "stall")
@@ -113,7 +124,7 @@ function WorldGeometry.ankomstSpawn(buildings, margin: number?): (number, number
 		ridhus.rekt.y + ridhus.rekt.h,
 		stall.rekt.y + stall.rekt.h
 	)
-	local z = north + (margin or 4)
+	local z = north + (margin or WorldGeometry.SPAWN_MARGIN)
 
 	-- Titta in mot mitten mellan de två huvudvolymerna.
 	local targetZ = math.min(

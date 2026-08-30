@@ -168,7 +168,8 @@ local function buildSpawn(BK, WG, model: Model, base: CFrame, G)
 	local old = model:FindFirstChild("UBRFSpawn")
 	if old then old:Destroy() end
 
-	local sx, sz, tx, tz = WG.ankomstSpawn(G.byggnader, 4)
+	-- Ingen literal här: marginalen ligger i WorldGeometry.SPAWN_MARGIN.
+	local sx, sz, tx, tz = WG.ankomstSpawn(G.byggnader)
 	local from = base * CFrame.new(BK.M * sx, 0.2, BK.M * sz)
 	local target = base * CFrame.new(BK.M * tx, 0.2, BK.M * tz)
 

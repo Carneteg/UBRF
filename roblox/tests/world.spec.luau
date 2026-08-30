@@ -69,15 +69,73 @@ do
 		if b.id == "ridhus" then ridhus = b end
 		if b.id == "stall" then stall = b end
 	end
-	local x, z, tx, tz = WorldGeometry.ankomstSpawn(UBRFKomplex.byggnader, 4)
+	--[[ INGEN marginal skickas in. Provet skickade förut in 4 själv och
+		jämförde mot sin egen fyra, alltså mot en tredje kopia av talet — och
+		bevisade bara att aritmetiken stämmer. Att flytta spelets spawn från
+		4 till 40 m passerade grönt. Nu prövas vägen spelet faktiskt tar. ]]
+	local x, z, tx, tz = WorldGeometry.ankomstSpawn(UBRFKomplex.byggnader)
 	local east = ridhus.rekt.x + ridhus.rekt.w
 	local west = stall.rekt.x
 	local north = math.max(ridhus.rekt.y + ridhus.rekt.h, stall.rekt.y + stall.rekt.h)
 	check("spawn ligger mellan ridhus och stall", x > east and x < west,
 		string.format("x=%.2f mellan %.2f och %.2f", x, east, west))
-	check("spawn ligger exakt 4 m framför nordligaste gaveln",
-		math.abs(z - (north + 4)) < 0.001, string.format("z=%.2f", z))
+	check("spawn ligger SPAWN_MARGIN framför nordligaste gaveln",
+		math.abs(z - (north + WorldGeometry.SPAWN_MARGIN)) < 0.001,
+		string.format("z=%.2f, marginal %.2f", z, WorldGeometry.SPAWN_MARGIN))
+
+	--[[ En oberoende gräns på vad "vid ankomsten" betyder. Utan den kan
+		konstanten sättas till 40 och provet ovan går ändå grönt — det jämför
+		ju mot konstanten. Hela poängen med hotfixen var att spelaren inte
+		ska starta långt ute på tomten. ]]
+	check("spawn står NÄRA gaveln, inte ute på tomten",
+		WorldGeometry.SPAWN_MARGIN > 0 and WorldGeometry.SPAWN_MARGIN <= 10,
+		string.format("%.2f m", WorldGeometry.SPAWN_MARGIN))
+
+	--[[ Och den får inte hamna inne i ett hus. ]]
+	check("spawn ligger utanför båda byggnaderna", z > north,
+		string.format("z=%.2f, nordligaste gavel %.2f", z, north))
 	check("spawn tittar in mot anläggningen", tx == x and tz < z)
+end
+
+--[[ ── Den BYGGDA spawnen ──────────────────────────────────────────
+	Allt ovanför prövar uttrycket. Det här prövar vad WorldBuild faktiskt
+	lade i världen — det enda som spelaren möter.
+
+	Varför det behövs: marginalen låg förut som en literal även i WorldBuild:s
+	eget anrop, alltså en andra kopia som ingen assertion kunde se. Kopian är
+	borttagen, men utan det här provet skulle nästa kopia kunna smyga tillbaka
+	utan att något går rött. ]]
+do
+	WorldBuild.apply(BuildKit, UBRFKomplex, Geometri, WorldGeometry)
+
+	local modell = workspace:FindFirstChild("Anläggning")
+	local ubrf = modell and modell:FindFirstChild("UBRF")
+	local spawn = ubrf and ubrf:FindFirstChild("UBRFSpawn")
+	check("WorldBuild la en UBRFSpawn i världen", spawn ~= nil)
+
+	--[[ Ingen tyst if-vakt här. Första versionen hoppade över hela
+		jämförelsen när PrimaryPart saknades, och då skrevs ingenting ut alls
+		— vilket ser ut som grönt. Nu FALLER den i stället. ]]
+	check("modellen har en PrimaryPart att mäta mot",
+		ubrf ~= nil and ubrf.PrimaryPart ~= nil,
+		ubrf and tostring(ubrf.PrimaryPart) or "ingen UBRF-modell")
+
+	if spawn and ubrf and ubrf.PrimaryPart then
+		--[[ Jämförelsen görs FRAMÅT, inte genom att invertera basen: vi räknar
+			ut var härledningen SKULLE lägga spawnen och mäter avståndet till
+			den byggda. Första versionen inverterade basen och kraschade på en
+			metod stubben saknar — och en krasch är inte ett grönt prov, vilket
+			exitkoden visade. ]]
+		local bas = ubrf.PrimaryPart.CFrame
+		local sx, sz = WorldGeometry.ankomstSpawn(UBRFKomplex.byggnader)
+		local vantad = bas * CFrame.new(BuildKit.M * sx, 0.2, BuildKit.M * sz)
+
+		local a, b = spawn.CFrame.Position, vantad.Position
+		local dx, dz = a.X - b.X, a.Z - b.Z
+		check("den byggda spawnen står där härledningen säger",
+			math.abs(dx) < 0.2 and math.abs(dz) < 0.2,
+			string.format("avvikelse (%.3f, %.3f) studs", dx, dz))
+	end
 end
 
 if fails > 0 then

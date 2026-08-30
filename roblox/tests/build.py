@@ -21,9 +21,13 @@ GEOMETRI = [
 ]
 
 # Spelbar-värld-specen provar den rena segmenteringen + spawnregeln.
-WORLD = [
+# Varldsspecen BYGGER numera ocksa. Den las forst bara geometrin, och kunde
+# darfor inte se var spawnen faktiskt HAMNADE — bara vad uttrycket raknade ut.
+WORLD = GEOMETRI + [
+    ("BuildKit",      "buildings/BuildKit.luau"),
     ("WorldGeometry", "buildings/WorldGeometry.luau"),
-    ("UBRFKomplex",   "buildings/UBRFKomplex.luau"),
+    ("WorldBuild",    "buildings/WorldBuild.luau"),
+    ("Anlaggningen",  "buildings/Anlaggningen.luau"),
 ]
 
 # Byggbänken kör själva byggskriptet. Anlaggningen.luau är inte en modul utan
@@ -85,7 +89,7 @@ def inlina(kalla: str) -> str:
 
 def bygg(spec_rel: str) -> pathlib.Path:
     if "world" in spec_rel:
-        moduler, stubbar = WORLD, "tests/stubs.luau"
+        moduler, stubbar = WORLD, "tests/stubs-bygge.luau"
     elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
     elif "qa" in spec_rel:
