@@ -70,13 +70,32 @@ längre från verkligheten än stallet, där jag har fotona.
 | Snörasskydd, hängränna, vit fascia och undertak | **V** | Bild 03, 04 |
 | Spiraltrappa och balkong på norra gaveln | **V** | Bild 04, 05 |
 | Takfot 4,4 m | **D** | Entrédörrens 2,05 m i bild 04 |
-| Nock 10,0 m | **D** | Takfot + 28° över 21 m; direkt mätning ger 9,8 m |
-| **Bredd 21 m** | **D** | Tre oberoende vägar, se § 6 |
-| Längd 54 m | **D** | Satellit 236 px vid 4,4 px/m; stämmer med boxantalet |
+| Nock 10,0 m | **A** | Takfot + 28° över den antagna bredden 21 m; direkt mätning i bild 04 ger 9,8 m, vilket är det som håller talet uppe |
+| **Bredd 21 m** | **A** | Intervall 15–23 m. Nedgraderad från D efter Review 01: rytmen mäts i längdriktningen och kan inte bevisa tvärgående band, se § 6 |
+| Längd 54 m | **A** | Satellit 236 px vid 4,4 px/m; stämmer med boxantalet, men planens proportion går inte ihop med det, se § 6 |
 | Taklutning 28° | **A** | Flackaste rimliga avläsning; gaveln står vriden i båda bilderna |
 | Södra gavelns dörrar och trappa | **A** | Street View på avstånd |
 | Östra långsidan | **A** | Speglad från västra; Street View på avstånd |
 | Takytan uppifrån | **G** | Inget foto |
+
+### Byggnadskomplexet — hur husen sitter ihop
+
+Egen sektion, därför att det här inte är en egenskap hos en byggnad utan hos
+anläggningen, och därför att det är gatens tredje P0.
+
+| Komponent | Status | Källa |
+|---|---|---|
+| **Ridhus och stall är fysiskt sammanbyggda** | **V** | Tobias på plats 2026-08-30: *"husen är sammanbyggda, jag har varit där"* |
+| **Förbindelsen är en hästgång** — man leder hästen inomhus mellan husen | **V** | Tobias: *"det är hästgång mellan byggnaderna"* |
+| Situationsplanen ritar husen som skilda volymer | **C** | Båda utrymningsplanerna. Avgjord till Product Owners fördel; planen skrivs inte om, se § 6b |
+| Norra gavlarna i liv | **V** | Satellitbilden |
+| Hästgångens läge (y 106–112, norra änden) | **A** | Uteslutning ur modellen: enda stället där båda husen har gångbar insida mot varandra. Ingen källa |
+| Hästgångens mått 11 × 6 m, takfot 3,2, nock 4,2 | **A** | Bredden ges av avståndet mellan husen; längd och höjder är valda så att en häst går igenom |
+| Var man kommer ut på ridhussidan (entréhallen) | **A** | Följer av läget |
+| Antalet förbindelser — en, inte flera | **A** | Minsta försvarbara geometri som bevarar den verifierade kopplingen |
+| Den låga längan i söder, 7 × 6 m vid (147, 59) | **A** | Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna |
+| Gården mellan husen | **D** | Det som blir kvar mellan förbindelserna, inte en verifierad obruten gräsgård |
+| Foto som visar förbindelsen | **G** | Se § 6b — repots bilder visar inte gapet |
 
 ### Stall — interiör
 
@@ -283,6 +302,38 @@ hållen — så att gången faktiskt går att använda, inte bara ses.
 `inne` gör detsamma för STALLINNE-dörren i generatorn som annars speglar varje
 stalldörr till anläggningen. Utan dem hade förbindelsen fått spökmarkörer i
 väggen och ute på gräset.
+
+### Vad repots foton faktiskt visar om gapet
+
+Review 01:s uppföljning satte foton som auktoritativa för *"visible connector
+geometry/details"*. Alltså gick jag igenom de bilder som ser mellan husen —
+`stall-fasad-01`, `-02` och `ridhus-gavel-01`, alla tagna från grusplanen vid
+de norra gavlarna, samma videosvep.
+
+**De avgör inte frågan, och jag redovisar dem som just det.**
+
+Vad de visar:
+
+- Stallets faluröda långsida med huvraden och valvfönstren löper in mot
+  ridhusets mörkröda korrugerade hörn. **De två volymerna överlappar i
+  projektionen** — ingen himmel, ingen genomsikt till landskapet bakom.
+- Framför stallväggen i gapet står **skyltstolpen med åtta armar** (Café,
+  Framridning, Karantänsstall, Ridhus, Sekretariat, Toaletter, Solarium,
+  Elrum) och ett **picknickbord** på gräs. Där är alltså utomhus.
+- Ridhusets norra ände har två entréer under vita skärmtak och ett valvfönster.
+
+Vad de **inte** visar: någon förbindande volym, och heller inte att det saknas
+en. Stallet ligger längre bort och ridhuset närmare, så de skulle överlappa i
+bild även med luft emellan — occlusion, inte kontakt. Och den öppna marken med
+skylten ligger vid husens *norra ändar*, framför fasadlivet; en förbindelse sju
+meter längre in skulle inte synas härifrån.
+
+`[REFERENCE GAP]` Det som skulle avgöra: en bild tagen **inne i gapet**, vänd
+söderut mellan husen. Ingen sådan finns i repot.
+
+Det enda de tillför är en svag negativ avgränsning: allra längst i norr, i
+skyltstolpens och picknickbordets läge, är det utomhus. Spelets hästgång ligger
+söder om det, så den motsägs inte — men den stöds inte heller.
 
 ### Läget är härlett, inte hämtat
 

@@ -1119,7 +1119,7 @@ return {
 					1.6,
 					26,
 				},
-				text = "Ut till gräsgården — vägen till ridhuset",
+				text = "Ut på gården",
 				mot = "gard",
 				inrikt = 0,
 				uttext = "Gå in i stallet (hästporten mot gården)",
@@ -1197,7 +1197,7 @@ return {
 					24.2,
 					5,
 				},
-				text = "Ut till gräsgården",
+				text = "Ut på gården",
 				mot = "gard",
 				spawn = {
 					x = 144.6,

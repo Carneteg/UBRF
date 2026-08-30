@@ -28,7 +28,11 @@ gissningar `[antagande]`. Kortet är facit för byggfunktionen i `src/varld3d.js
 | `stall-entre-12.jpg` | Inne i klubbdelen | Branddörren mot stallgången, pärlspont — hör till `STALLINNE` |
 
 ## Volym
-- Fotavtryck (L × B): **21 × 54 m** `[DERIVED 2026-08-30 — se "Bredden" nedan]`.
+- Fotavtryck (L × B): **21 × 54 m** `[ASSUMPTION 2026-08-30 — bredden i
+  intervallet 15–23 m, se "Bredden" nedan och references/plans/OAVGJORT.md
+  fråga 2. Nedgraderad från DERIVED efter Senior Fidelity Review 01: rytmen
+  som bar talet är en mätning i längdriktningen och kan inte bevisa sex
+  tvärgående band.]`.
   Längden går inte att mäta ur bilderna — ingen visar båda gavlarna samtidigt —
   men huvraden och fönsterrytmen stämmer med 54 m, och satellitbildens 236 px vid
   4,4 px/m ger samma tal (SITEPLAN.md).

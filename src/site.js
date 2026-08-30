@@ -5,7 +5,7 @@
    Street View-bilder över Husbyvägen 1A (se references/SITEPLAN.md):
    ridhuset i mörkröd korrugerad plåt med svarta detaljer, caféet med
    balkong och yttertrappa på gaveln mot grusplanen, UBRF-skylten och
-   den långa entrékvisten på västra långsidan mot vägen, gräsgården
+   den långa entrékvisten på västra långsidan mot vägen, gården
    mellan ridhus och stall, stallets faluröda träpanel med huvraden på
    nocken och ett valvfönster per box, förstukvisten på västra
    långsidan, fodersilon vid södra gaveln, hagarna öster om stallet och
@@ -130,8 +130,10 @@ const ANL = {
          · södra gaveln mot gårdsplanen (Street View): två entrédörrar
            under vita skärmtak och en rak ståltrappa till övervåningen */
     /* Stallets NORRA gavel ligger i liv med ridhusets — det syns i
-       satellitbilden: båda gavlarna vetter mot grusplanen i samma
-       linje, med gräsgården emellan. */
+       satellitbilden: båda gavlarna vetter mot grusplanen i samma linje.
+       Ytan mellan husen är INTE en verifierad obruten gräsgård: husen är
+       sammanbyggda (Tobias på plats), och gården är det som blir kvar
+       mellan förbindelserna. Se hastgang nedan. */
     {id:"stall", rekt:{x:154, y:65, w:21, h:54}, hV:4.4, hN:10.0, nock:"NS",
      fargV:"#6E2F44", fargT:"#5E646C", svart:"#26292E", takfot:"#EEECE4",
      detalj:"stall", sockel:0.35, label:"STALLET",
@@ -166,9 +168,10 @@ const ANL = {
        {sida:"S", u:10.4,  b:1.10, h:1.50, z0:1.60, typ:"valv"},
        {sida:"S", u:9.2,  b:1.10, h:1.50, z0:4.60, typ:"valv"},
        {sida:"S", u:12.4, b:0.95, h:2.00, z0:4.35, typ:"dorrmork"},    // trappdörren
-       /* Hästarnas väg ut. Den här porten leder till gräsgården och
-          vidare till ridhuset — det är den man leder hästen genom före
-          lektionen, så den ska vara en port och inte en dörr. */
+       /* Hästarnas väg ut på gården. Den vägen till ridhuset går över
+          gården och in genom durkplåtsdörrarna; inomhusvägen går genom
+          hästgången i norr. Porten ska vara en port och inte en dörr —
+          det är den man leder hästen genom. */
        {sida:"W", u:30,   b:3.4,  h:3.2,  z0:0, typ:"portbla"},
      ]},
     /* HÄSTGÅNGEN mellan ridhuset och stallet. Tobias har varit på plats:
@@ -193,8 +196,11 @@ const ANL = {
        {sida:"N", u:5.5, b:2.4, h:2.6, z0:0, typ:"portbla"},
        {sida:"S", u:5.5, b:1.2, h:1.4, z0:1.3, typ:"fonster"},
      ]},
-    /* Förbindelselängan som stänger gårdens södra ände — den låga
-       byggnaden man ser mellan gavlarna från grusplanen (Street View). */
+    /* Den låga byggnaden i gårdens södra ände. Att NÅGOT står mellan
+       gavlarna i söder syns i Street View; att det ser ut just så här gör
+       det inte. Läge, mått, taklutning och den enda dörren är alla
+       antagna, och den ska inte läsas som en verifierad förbindelse bara
+       för att den råkar heta länga. [ASSUMPTION] */
     {id:"langa", rekt:{x:147, y:59, w:7, h:6}, hV:3.0, hN:4.4, nock:"EW",
      fargV:"#7C2A24", fargT:"#7E8288", label:"",
      oppningar:[{sida:"N", u:4.4, b:1.1, h:2.0, z0:0, typ:"dorrmork"}]},
@@ -254,7 +260,7 @@ const ANL = {
     {typ:"balar",     pos:[157,56]},                     // ensilagebalarna
     {typ:"grushog",   pos:[122,131]},                    // grushögen på grusplanen (Street View)
     {typ:"transport", pos:[133,125], rikt:0.5},          // hästtransporten på grusplanen
-    {typ:"bord",      pos:[150,74]},                     // picknickborden på gräsgården
+    {typ:"bord",      pos:[150,74]},                     // picknickborden på gården (de syns i stall-fasad-01)
     {typ:"bord",      pos:[148,86]},
     {typ:"bank",      pos:[146,94]},
     {typ:"stol",      pos:[149,102]},
@@ -383,7 +389,7 @@ const STALLINNE = {
     {id:"ut_n2",pos:[10.5,50.0], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (klubbdörren)",
      spawn:{x:164.5,y:120.6,rikt:Math.PI/2}},
-    {id:"ut_v", pos:[1.6,26.0],  text:"Ut till gräsgården — vägen till ridhuset", mot:"gard", inrikt:0,
+    {id:"ut_v", pos:[1.6,26.0],  text:"Ut på gården", mot:"gard", inrikt:0,
      uttext:"Gå in i stallet (hästporten mot gården)",
      spawn:{x:152.6,y:91,rikt:Math.PI}},
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
@@ -526,7 +532,7 @@ const RIDHUSINNE = {
     {id:"trapphus", rekt:{x:19.0, y:66.6, w:1.4, h:2.8}},
   ],
   dorrar:[
-    {id:"ut_o", pos:[24.2,5],    text:"Ut till gräsgården", mot:"gard",
+    {id:"ut_o", pos:[24.2,5],    text:"Ut på gården", mot:"gard",
      spawn:{x:144.6,y:49,rikt:0}},
     /* HÄSTGÅNGEN till stallet: leder in i stallets klubbdel utan att man
        behöver gå ut på gården. Husen är sammanbyggda. */

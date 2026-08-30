@@ -67,7 +67,7 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 |---|---|---|---|---|
 | Ridhuset | 118 / 44 (sydvästra hörnet) | nock nord–syd, cafégaveln mot grusplanen i **norr** | 25 × 75 | Byggd efter `buildings/ridhus/KORT.md`. Takfot 6,2 m, nock 9,2 m, 13° resning. Norra gaveln vid y = 119. |
 | Stallet | 154 / 65 (sydvästra hörnet) | nock nord–syd, klubbgaveln (spiraltrappan) mot grusplanen i **norr** | **21 × 54** | Byggd efter `buildings/stall/KORT.md`. Takfot 4,4 m, nock **10,0 m**, 28° resning. Norra gaveln vid y = 119 — **i liv med ridhusets**, som i satellitbilden. Bredden rättad 2026-08-30 från 15 m: dubbelstallets fyra boxlängor och två gångar ryms inte i 15 m, och takgeometrin ger 20–22 m. Västra långsidan står kvar där den var; huset växer österut. |
-| Gräsgården mellan husen | 143–154, y 65–106 | — | 11 × 41 | Smal, precis som i satellitbilden. Stängd i **norr** av hästgången och delvis i söder av längan; öppningen mot gårdsplanen i sydost är kvar |
+| Gården mellan husen | 143–154, y 65–106 | — | 11 × 41 | Det som blir kvar mellan förbindelserna, inte en verifierad obruten gräsgård. Stängd i **norr** av hästgången och delvis i söder av längan; öppningen mot gårdsplanen i sydost är kvar. Skyltstolpen och picknickborden står i norra änden, som i `stall-fasad-01` |
 | Grusplanen / parkeringen | 106 / 121 | — | 48 × 34 | Vid norra gavlarna, mot Björklidsvägen. Hit kommer man. |
 | Planen framför klubbgaveln | 144 / 119 | — | 36 × 16 | Mellan grusplanen och stallets entrégavel |
 | Gårdsplanen i sydost | 148 / 40 | — | 44 × 24 | Vid stallets södra gavel; infart från Husbyvägen (144/10, 62 × 8) |
@@ -80,7 +80,7 @@ inte ur minnet — siffrorna nedan är de som faktiskt byggs.
 | Domarkuren | 184 / 148 | — | 4,5 × 3,5 | Vid banans norra kortsida |
 | Fodersilon | 166 / 60 | — | — | Vid stallets **södra** gavel, syns i satellitbilden |
 | **Hästgången** | **143 / 106** | nock öst–väst | **11 × 6** | Binder ihop ridhusets östvägg (x = 143) med stallets västvägg (x = 154). Takfot 3,2 m, nock 4,2 m. Scenövergång åt båda hållen: stallets klubbdel ↔ ridhusets entréhall. **Läget är `[ASSUMPTION]`** — enda stället där båda husen har gångbar insida mot varandra (ridhusets läktare upptar y 53–103, stallets boxlängor y 71–108). |
-| Förbindelselängan | 147 / 59 | nock öst–väst | 7 × 6 | Stänger gårdens södra ände; syns mellan gavlarna i Street View. Smalnad från 10 m 2026-08-30 så att gräsgården fortfarande når gårdsplanen sedan hästgången stängt norra änden |
+| Låga längan i söder | 147 / 59 | nock öst–väst | 7 × 6 | `[ASSUMPTION]` Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. Smalnad från 10 m 2026-08-30 så att gården fortfarande når gårdsplanen sedan hästgången stängt norra änden |
 | Röda stugan | 94 / 140 | nock öst–väst | 6,5 × 4,5 | Vid infarten från Björklidsvägen `[antagande]` |
 | Spelarens startpunkt | 146 / 136, blickriktning söder | — | — | På grusplanen: ridhuset till höger, stallet till vänster |
 

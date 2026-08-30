@@ -1933,7 +1933,7 @@ function ritaVandring(){
            :"Påskhoppet rids i ridhuset — in genom durkplåtdörrarna.")
          :"Dressyren rids på uteridbanan i väster. Domaren sitter i kuren."]
     : [`Led ${HORSES[G.hastId].namn} till lektionen`,
-       G.scen==="stallinne"?"Ut genom stalldörren och över gräsgården."
+       G.scen==="stallinne"?"Ut genom stalldörren och över gården."
        :G.scen==="ridhusinne"?"Fram till sargporten vid A — sitt upp där."
        :"Ridhuset genom durkplåtdörrarna — eller uteridbanan bortom hagarna. Skogsstigen (uteritt) börjar vid åkerkanten i nordväst."];
   visaUppgift(mål[0],mål[1]);

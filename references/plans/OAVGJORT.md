@@ -54,6 +54,29 @@ insida mot varandra: ridhusets läktare upptar hela östväggen mellan y 53 och
 103, och stallets boxlängor upptar y 71–108. Kvar blir y 108–115, alltså
 stallets klubbdel mot ridhusets entréhall.
 
+### Fotona lades till källkedjan — och avgjorde inte heller
+
+Uppföljningen på issue #21 gjorde foton auktoritativa för *"visible connector
+geometry/details"*. Alltså granskades de bilder som ser mellan husen:
+`stall-fasad-01`, `-02` och `ridhus-gavel-01`, alla från grusplanen vid de
+norra gavlarna, ur samma videosvep.
+
+Stallets långsida löper in mot ridhusets hörn och de två volymerna **överlappar
+i projektionen** — ingen genomsikt till landskapet bakom. Men stallet ligger
+längre bort och ridhuset närmare, så de skulle överlappa även med luft emellan.
+Det är occlusion, inte bevis på kontakt.
+
+I gapet står **skyltstolpen med åtta armar och ett picknickbord på gräs**. Där
+är alltså utomhus — men det är vid husens norra ändar, framför fasadlivet. En
+förbindelse sju meter längre in syns inte därifrån.
+
+Fotona ger alltså bara en svag negativ avgränsning: allra längst i norr, där
+skylten står, är det utomhus. Spelets hästgång ligger söder om det och motsägs
+inte — men stöds inte heller.
+
+`[REFERENCE GAP]` En bild tagen **inne i gapet**, vänd söderut mellan husen.
+Ingen sådan finns i repot.
+
 `[REFERENCE GAP]` **Frågan till Tobias:** var går hästgången i verkligheten?
 Vid norra änden (klubbdelen mot entréhallen, som spelet nu gissar), på mitten,
 eller i söder? Och kommer man ut i ridhusets hall eller direkt i ridbanan? Ett
