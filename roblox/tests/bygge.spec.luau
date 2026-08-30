@@ -166,6 +166,10 @@ check("stallklockan byggdes", raknaNamn("Stallklocka") == 1,
 	att SPOLSPILTA byggdes som en namngiven volym, alltså precis den täta låda
 	som underkändes i spelarvyn. Ett test kan låsa fast ett fel, och det här
 	gjorde det. Nu mäts det som källorna visar. ]]
+check("ridhusets fönsterband byggdes ovanför panelen",
+	raknaNamn("Ridhus fönsterband") == 1 and raknaNamn("Fönsterpost") > 0,
+	raknaNamn("Fönsterpost") .. " poster")
+
 check("klubbrummen byggdes som rum",
 	raknaNamn("UPPEHÅLLSRUM") == 1 and raknaNamn("SADELKAMMARE") == 1
 		and raknaNamn("TEORISAL") == 1)

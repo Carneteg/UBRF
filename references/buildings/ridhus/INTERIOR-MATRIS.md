@@ -85,7 +85,7 @@ De två strukturerna hade blandats ihop.
 | Långa lysrörsarmaturer i rader | `VERIFIED` | r01 + r02 | byggs |
 | Stora runda spiralkanaler (vent) | `VERIFIED` | r01 | byggs |
 | Högtalare | `VERIFIED` | r01 | `[REFERENCE GAP]` |
-| **Kabelstegar** | **motsägs** | syns INTE i r01/r02 | byggs — bör prövas |
+| Kabelstegar | `VERIFIED` | r01, beskuren och zoomad | byggs |
 
 ## 7. Domarbåset vid E
 
@@ -110,6 +110,12 @@ De två strukturerna hade blandats ihop.
    bangräns på däckets sida, utan vit sarg framför. r03 visar en vit sarg
    med sittplatser bakom, vid bokstaven E — på samma långsida. De går inte
    att förena ur bilderna. Spelet bygger tills vidare båda.
-2. **Kabelstegarna** finns i spelet men syns inte i något foto.
+2. ~~Kabelstegarna syns inte i något foto.~~ **PRÖVAT OCH FALSKT.** Både
+   en tidigare review och mitt eget första utkast av den här matrisen skrev
+   att kabelstegarna inte syns. Jag beskar och zoomade takzonen i r01 innan
+   jag tog bort dem: den perforerade rännan med regelbundna stegpinnar under
+   stålbalken, med en kopplingsdosa mitt på, ÄR en kabelstege. Detaljen är
+   riktig och står kvar. Hade jag följt reviewn utan att titta hade jag
+   tagit bort ett korrekt drag.
 3. `IMG_0191.MOV` är `[DRIVE-ONLY]` och kan inte prövas härifrån.
 4. Roblox Studio är **inte** körd.

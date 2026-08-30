@@ -767,6 +767,29 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		glas.Transparency = 0.55
 	end
 
+	--[[ Fönsterbandet mellan panelen och takfoten, `KNOWN MISMATCH B`.
+		ridhus-inne-02 visar ljusa fält med mörka karmar där spelet hade tom
+		vägg. Bandet löper i HELA långsidans längd — i fotot fortsätter det
+		förbi panelens stycke, in på den ljusa delen av samma vägg. ]]
+	local FB = G.identitet.ridhus.fonsterband
+	local OV = G.identitet.ridhus.ovreVagg
+	if FB and OV then
+		local fx = if OV.sida == "W" then 0.16 else R.bredd - 0.16
+		local fy = R.tak - FB.underTak - FB.h
+		local glas = BK.box(model, base, "Ridhus fönsterband",
+			o.x + fx, fy, o.y + 0.5, FB.tjocklek, FB.h, R.langd - 1.0,
+			FB.glas, Enum.Material.Glass)
+		glas.Transparency = 0.35
+		glas.CanCollide = false
+		local z = 0.8
+		while z < R.langd - 0.8 do
+			BK.box(model, base, "Fönsterpost", o.x + fx - 0.02, fy,
+				o.y + z, FB.tjocklek + 0.03, FB.h, 0.09,
+				FB.karm, Enum.Material.Wood).CanCollide = false
+			z += FB.postDelning
+		end
+	end
+
 	-- Domarbåset vid E, med exit-skylten över öppningen.
 	local D = R.domarbas
 	BK.box(model, base, "Domarbås", o.x + D.x, L.dackZ, o.y + D.y - D.b / 2,
