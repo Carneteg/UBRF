@@ -39,6 +39,7 @@ MODULER = [
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
     ("MovementController", "src/client/MovementController.luau"),
     ("CameraController",   "src/client/CameraController.luau"),
     ("RiderController",    "src/client/RiderController.luau"),
@@ -72,7 +73,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
-        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter"):
+        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter", "Preparation"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)
