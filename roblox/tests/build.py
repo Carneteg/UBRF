@@ -15,15 +15,15 @@ import re, sys, pathlib
 ROT = pathlib.Path(__file__).resolve().parent.parent      # roblox/
 UT = ROT / "tests" / ".build"
 
-# Ordningen är beroendeordningen: en modul får bara referera det som står över.
-#
-# Geometrispecen mäter en annan del av spåret — anläggningen, inte hästen — och
-# behöver därför inte hästsystemets moduler. Den får sin egen lista; att foga
-# ihop hela hästsystemet för att kontrollera var en dörr sitter vore bara
-# långsamt och skulle koppla ihop två spår som inte har med varandra att göra.
 GEOMETRI = [
     ("Geometri",    "buildings/Geometri.luau"),
     ("UBRFKomplex", "buildings/UBRFKomplex.luau"),
+]
+
+# Spelbar-värld-specen provar den rena segmenteringen + spawnregeln.
+WORLD = [
+    ("WorldGeometry", "buildings/WorldGeometry.luau"),
+    ("UBRFKomplex",   "buildings/UBRFKomplex.luau"),
 ]
 
 # Byggbänken kör själva byggskriptet. Anlaggningen.luau är inte en modul utan
@@ -33,14 +33,12 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
-# Speldatan: stallet behover bade hastarna och den matta stallgeometrin.
+# Speldatan: stallet behöver både hästarna och den mätta stallgeometrin.
 SPEL = GEOMETRI + [
     ("UBRFSpel", "game/UBRFSpel.luau"),
     ("Stallet",  "game/Stallet.luau"),
 ]
 
-# QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
-# att stalla kameran mot, och Vyer for att veta vilka vyerna ar.
 QA = BYGGE + [
     ("Vyer",    "buildings/Vyer.luau"),
     ("QAPanel", "buildings/QAPanel.luau"),
@@ -59,10 +57,6 @@ MODULER = [
     ("TouchControls",      "src/client/TouchControls.luau"),
 ]
 
-# require-formerna som förekommer i koden, till modulnamn.
-# HorseCore star kvar sarskilt: utan barn blir det __Core, tabellen stubbfilen
-# bygger. Sista alternativet tar de ovriga ReplicatedStorage-modulerna
-# (UBRFSpel, Stallet, UBRFKomplex) — de heter samma sak i tradet som har.
 REQUIRE = re.compile(
     r'require\(\s*(?:script\.Parent\.(\w+)'
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.HorseCore(?:\.(\w+))?'
@@ -72,11 +66,6 @@ MATERIALLISTA = ROT / "tests" / "roblox-material.txt"
 
 
 def material() -> list:
-    """De Enum.Material-namn UBRF far anvanda, ur EN fil.
-
-    Stubbarnas Enum.Material svarade forr pa vilket namn som helst, sa
-    Enum.Material.CorrugatedMetal passerade hela sviten och sprack forst i
-    Studio. Listan injiceras nu i stubbarna i stallet for att skrivas av."""
     rader = MATERIALLISTA.read_text(encoding="utf-8").splitlines()
     return [r.strip() for r in rader if r.strip() and not r.startswith("#")]
 
@@ -84,9 +73,8 @@ def material() -> list:
 def las(rel: str) -> str:
     return (ROT / rel).read_text(encoding="utf-8")
 
+
 def inlina(kalla: str) -> str:
-    """Byter require-anrop mot modulnamn. HorseCore utan barn blir __Core,
-    tabellen som stubbfilen bygger av de redan laddade modulerna."""
     def byt(m):
         if m.group(1): return m.group(1)
         if m.group(2): return m.group(2)
@@ -94,8 +82,11 @@ def inlina(kalla: str) -> str:
         return "__Core"
     return REQUIRE.sub(byt, kalla)
 
+
 def bygg(spec_rel: str) -> pathlib.Path:
-    if "spel" in spec_rel:
+    if "world" in spec_rel:
+        moduler, stubbar = WORLD, "tests/stubs.luau"
+    elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
     elif "qa" in spec_rel:
         moduler, stubbar = QA, "tests/stubs-bygge.luau"
@@ -120,6 +111,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
     mal = UT / (pathlib.Path(spec_rel).stem + ".luau")
     mal.write_text("\n".join(delar), encoding="utf-8")
     return mal
+
 
 if __name__ == "__main__":
     specar = sys.argv[1:] or ["tests/movement.spec.luau"]
