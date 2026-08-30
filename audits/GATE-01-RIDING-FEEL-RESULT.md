@@ -1,0 +1,573 @@
+# Gate 01 — Riding Feel: resultat
+
+Struktur enligt `docs/GATE-01-PLATFORM-ADDENDUM.md`, som gör Gate 01 till ett
+plattformsparitetsarbete: Roblox är primär spelplattform och primär subjektiv
+playtest, HTML/webb är en parallell spelbar distribution som ska hålla samma
+kärnupplevelse.
+
+Datum: 2026-08-29
+Implementation: Claude Code
+Status: **lämnas till ChatGPT för Senior Review 03.** Gaten stängs inte av mig, och
+kan enligt addendumet inte stängas alls förrän Tobias har gjort en Roblox
+Studio-playtest — den kan inte utföras härifrån.
+
+### Commit-spårbarhet
+
+Varje bevisrad nedan går tillbaka till en av dessa. Listan var fel i den förra
+versionen: `61d503d` är `Gör lektionshandledningen byggbar utan Drive` och har
+ingenting med ridkänslan att göra. ChatGPT fångade det som blocker C.
+
+| Commit | Vad | Plattform |
+|---|---|---|
+| `df8904b` | Rampat styrutslag, krypningen borta, kamera med egen kurs | Roblox |
+| `9e8c76f` | Mätbänken: gångartsbyten och lågfartsprecision | Roblox |
+| `33559d9` | Ridinputkontrakt, sväng som kurvatur, fas låst till marken | Webb |
+| `f93c909` | Auditrapportens första version | — |
+| `6e37a8a` | Auditen omstrukturerad efter plattformsaddendumet | — |
+| `58a8030` | Kurvaturmodell, distansdriven fas och lutningstak portade | Roblox |
+| `eed6178` | Ryttarens sekundärrörelse | Båda |
+| `62462d1` | 44 px touchgolv på menyknapparna | Webb |
+| `6cb5ed1` | Auditen uppdaterad efter portningen och ryttaren | — |
+| `53f874b` | **Review 01 blocker A och B:** riggens kurs, fasvarvets längd | Båda |
+| `9e4521c` | **Review 01 blocker C:** auditens commit-spårbarhet | — |
+| `497afc2` | **Review 02 blocker D:** pekkontroller kopplade till ridningen | Roblox |
+
+---
+
+## 1 · Ändrade filer
+
+| Fil | Vad |
+|---|---|
+| `src/game.js` | Ridinputkontraktet (`RIDIN`, `ridAvsiktTillHjalp`), svängen som kurvatur, **gångartsfas ur sträcka delad med cykellängden**, kroppens svänglutning, dt-baserad väggrespons |
+| `src/model.js` | Termen CYKELLÄNGD definierad där `Gait.steglangd` räknas |
+| `src/mobil.js` | Joysticken matar ridinputen kontinuerligt i stället för syntetiska W/A/S/D; expo-kurva och dödzon |
+| `src/scen3d.js` | Kamerans egen kurs, mjukad boom, separata svar för position och blickpunkt; hästkroppens lutning som egen rotation |
+| `src/scenes.js` | Nollställer kurvatur, sträcka, fas och ryttarsignaler när ett pass börjar om |
+| `roblox/src/client/MovementController.luau` | Svängen som kurvatur med vändning på stället, gångartsfas ur flyttad sträcka, **kursen skrivs på riggen i alla lägen** |
+| `roblox/src/client/RiderController.luau` | Ryttarens tröghet och balans ovanpå sitsen |
+| `roblox/src/shared/HorseCore/RigAdapter.luau` | `setRiderLean` mot en sparad baspose, samma form som `setBodyTilt` |
+| `roblox/src/shared/HorseCore/Gaits.luau` | `cycleLength` — cykelns längd i meter, till den distansdrivna fasen |
+| `roblox/src/shared/HorseCore/Config.luau` | Kurvaturtak och tidskonstanter; lutningstaket sänkt 15° → 4,3° |
+| `roblox/src/client/TouchControls.luau` | **Ny.** Pekspak och knappar som anropar `Input`-kontraktet |
+| `roblox/src/client/Input.luau` | Pekskärmen fick eget axelpar som summeras med tangent och gamepad |
+| `roblox/src/client/init.client.luau` | Pekkontrollerna byggs vid uppsittning och rivs vid avsittning |
+| `roblox/tests/` | Mätbänken utökad med ryttar- och pekspec, ledstubb, `CFrame` som bär tre vinklar, rörlig rigg |
+
+Två nya testfiler och en ny klientmodul. Inget nytt beroende, ingen fysikmotor, ingen WebGL-omskrivning, inget
+nytt lager i Roblox-arkitekturen — `RiderController` och `RigAdapter` fanns redan och
+behöll sina gränser.
+
+---
+
+## 2 · Root causes som faktiskt löstes
+
+**P0 — touchjoysticken var inte analog i ridningen.** `IN.joy` fanns men lästes
+aldrig av ridningen. `joyLage` skickade i stället syntetiska tangenthändelser när
+axlarna passerade trösklar (`dy<-0.28`, `dx>0.32`), så spaken var visuellt analog
+men ridmodellen fick tre lägen.
+
+**P0 — vridhastigheten växte med farten.** `omega = styrning × clamp(0.5 + tempo×0.22, 0.4, 2.2)`.
+I galopp gav full styrning 2,2 rad/s, alltså 126°/s. Det gör att man viker hästen
+genom en sväng i stället för att rida en båge, och det är kärnan i fordonskänslan.
+
+**P0 — fasen var tidsdriven, inte distansdriven.** `gaitFas += stegFrek × dt × (0.6 + tempo×0.12)`.
+Nära rätt, men samma sträcka kunde ge olika många hovnedslag beroende på hur tempot
+varierade på vägen.
+
+**P1 — kroppen svarade inte på svängen.** `s3RitaHast` hade bob och galoppvaggning
+men ingen rullning ur den faktiska rörelsen.
+
+**P1 — kameran kopierade hästens kurs.** Boom och blick byggdes båda direkt ur
+`G.rikt` med en gemensam utjämningsfaktor, och boomens väggsökning gav diskreta
+längdhopp.
+
+**P1 — väggresponsen var bildfrekvensberoende.** `lerpAngle(..., 0.06)` per bildruta.
+
+---
+
+## 3 · Före och efter
+
+| | Före | Efter |
+|---|---|---|
+| Touch 25/50/100 % | samma sväng (tröskel passerad = full input) | 61 m / 19,6 m / 4,4 m radie |
+| Full styrning, skritt | 1,77 m radie, 0,82 rad/s | 3,63 m radie, 0,40 rad/s |
+| Full styrning, galopp | 3,9 m radie, **2,2 rad/s (126°/s)** | 6,97 m radie, 0,80 rad/s (46°/s) |
+| Radie mot fart | krympte relativt (yaw växte snabbare än tempot) | **ökar**: 3,6 → 4,4 → 7,0 m |
+| Gångartsfas | tid × tempo | sträcka ÷ cykellängd |
+| Kroppens lutning i sväng | ingen | 0° halt, 0,4° skritt, 1,7° trav, 3,2° galopp |
+| Väggkurs vid 30 vs 144 Hz | olika (fast faktor per ruta) | identisk |
+| Kamerans kurs | hästens, direkt | egen, 0,16 s fördröjning |
+
+---
+
+## 4 · Hur analog touch verifierades
+
+Playwright i 390×844 med touch. Joysticken dras med riktiga `PointerEvent` till
+25, 50 och 100 procent av sin radie, och `RIDIN.styr` och den resulterande
+kurvaturen läses ur körande spel:
+
+| Spakutslag | `RIDIN.styr` | Kurvatur (1/m) | Svängradie |
+|---|---|---|---|
+| 25 % | 0,072 | 0,0164 | 61,1 m |
+| 50 % | 0,226 | 0,0511 | 19,6 m |
+| 100 % | 1,000 | 0,2255 | 4,4 m |
+| släppt | 0 | — | — |
+
+Tre tydligt olika resultat: en linjekorrigering, en 20 m volt och en snäv volt.
+
+Kurvan är expo (35 % rak, resten kubisk) med dödzon 0,07. En rent kvadratisk kurva
+provades först och föll: 25 % gav 2 % styrning, alltså 203 m radie — i praktiken
+rakt fram, vilket inte är tre användbara nivåer.
+
+---
+
+## 5 · Styrrespons per gångart och nivå
+
+Mätt i körande spel med tempot låst vid gångartens norm, hästen fryst mitt på banan
+så att väggarna inte kommer in i mätningen. Häst: Lydia (känslighet 0,5-klassen).
+
+| Gångart | Tempo | Styrning | Kurvatur (1/m) | Radie | Vridhastighet |
+|---|---|---|---|---|---|
+| Skritt | 1,45 | 0,25 | 0,0689 | 14,5 m | 5,7°/s |
+| Skritt | 1,45 | 0,50 | 0,1379 | 7,3 m | 11,5°/s |
+| Skritt | 1,45 | 1,00 | 0,2758 | 3,6 m | 22,9°/s |
+| Trav | 3,20 | 0,25 | 0,0565 | 17,7 m | 10,4°/s |
+| Trav | 3,20 | 0,50 | 0,1131 | 8,8 m | 20,7°/s |
+| Trav | 3,20 | 1,00 | 0,2261 | 4,4 m | 41,5°/s |
+| Galopp | 5,60 | 0,25 | 0,0359 | 27,9 m | 11,5°/s |
+| Galopp | 5,60 | 0,50 | 0,0717 | 14,0 m | 23,0°/s |
+| Galopp | 5,60 | 1,00 | 0,1434 | 7,0 m | 46,0°/s |
+
+Kurvaturen är linjär i styrningen (0,25 → 0,50 → 1,00 ger exakt 1×, 2×, 4× av
+kvartsvärdet), och radien ökar monotont med gångarten vid varje nivå.
+
+En 20 m volt behöver 10 m radie: i trav rids den på ungefär 0,45 styrning, alltså
+delvis utslag — precis vad Target feel punkt 4 efterfrågar.
+
+---
+
+## 6 · Test desktop / mobil / surfplatta
+
+**Hela kedjan spelad med tangenttryck och riktiga tryck**, från start till
+resultatskärm: Rid direkt → gården → stallentrén → ridläraren → hästen i hagen →
+tillbaka in → boxen → sadelkammaren → skötseln → led ut → ridhuset → sargporten →
+lektion → resultat.
+
+- Desktop 1280×800: alla fjorton stegen OK, noll konsolfel.
+- Mobil 390×844 touch: alla fjorton stegen OK, noll konsolfel.
+
+**Layout på tolv viewports** (320×568, 375×667, 390×844, 430×932, 844×390 liggande,
+768×1024, 820×1180, 1024×1366, 1180×820 liggande, 1280×720, 1440×900, 1920×1080):
+inga överlapp, ingen sidled-scroll, inget utanför bild, alla touchmål ≥ 44 px.
+
+---
+
+## 7 · 30 vs 60 vs 144 Hz
+
+Samma manöver, tre bildfrekvenser, tre sekunder trav med styrning 0,6:
+
+| | 30 Hz | 60 Hz | 144 Hz |
+|---|---|---|---|
+| Kurvatur (1/m) | 0,1357 | 0,1357 | 0,1357 |
+| Kurs (rad) | 0,337 | 0,321 | 0,323 |
+| Gångartsfas | 0,567 | 0,521 | 0,495 |
+
+Kurvaturen är **exakt identisk** — den är ett dt-baserat filter mot ett mål som
+inte beror på bildrutan. Kursen skiljer 0,014 rad (0,8°) över tre sekunder, vilket
+är integrationsfel i Eulersteget och inte en beteendeskillnad.
+
+Väggresponsen, rakt in i sargen i tre sekunder: kursen blir **−1,561 rad vid alla
+tre frekvenser**. Före ändringen var den bildfrekvensberoende.
+
+Fasen skiljer 0,072 av ett varv (26°) mellan 30 och 144 Hz. Det följer av att
+sträckan skiljer några centimeter av samma integrationsfel; det syns inte i
+animationen, men det är den siffra som är känsligast av de mätta.
+
+---
+
+## 7b · Roblox implementation & Studio evidence
+
+Roblox-spåret fick först tre riktade ändringar samma dag, innan addendumet gjorde
+det till primärt Gate 01-target. De löser samma tre feel-fel som webbsidan, i den
+motoroberoende delen av modellen. Därefter portades webbens verifierade modell hit
+i två steg (`58a8030`, `eed6178`), så att pariteten blev en delad formulering i
+stället för två likvärdiga.
+
+| Ändring | Fil | Mätt |
+|---|---|---|
+| Styrutslaget rampas innan det används; en tangent har annars tre lägen | `roblox/src/client/MovementController.luau` (`_steer`), `Config.MOVEMENT.SteerTauPress/Release` | Tid tillbaka till nära noll 0,09 → **0,38 s**; tid till halva svängen står kvar på **0,09 s** |
+| Låg fart: krypningen borta. `WalkSpeed 0.35` ersatt av att roten vrids direkt | `MovementController.luau` | WalkSpeed 0,350 → **0,000** medan hästen fortfarande vänder sig (0,45 rad) |
+| Kameran har egen kurs i stället för att läsa hästens rått | `roblox/src/client/CameraController.luau`, `Config.CAMERA.YawTau` | 0,88 rad kvar efter en bildruta, ifatt inom 0,5 s, största kurssteg 0,02 rad vid nollpassage |
+| Svängen räknas som kurvatur, inte vridhastighet; fasen drivs av flyttad sträcka; lutningstaket sänkt 15° → 4,3° | `MovementController.luau`, `Gaits.cycleLength`, `Config.MOVEMENT` | Radien ökar med gångarten: **4,07 → 5,38 → 7,94 m**; lågfartsprecisionen 0,343 → **0,141 rad** |
+| Ryttaren får tröghet och balans ovanpå sitsen | `roblox/src/client/RiderController.luau`, `RigAdapter.setRiderLean` | Acceleration −2,14°, inbromsning 3,15°, taket nås exakt vid ihållande inbromsning, 0,00 % spridning över 30/60/144 fps |
+| **Kursen skrivs på riggen i alla lägen, inte bara vid vändning på stället** (review 01, blocker A) | `MovementController.luau` | Riggens yaw följer `loco.heading` med **0,00e+00 rad** avvikelse i alla tre gångarter; ingen drift utan styrutslag |
+
+**Verifiering utanför Studio.** `roblox/tests/` innehåller en mätbänk som kör
+**produktionskoden ordagrant** mot stubbade Roblox-globaler. `build.py` fogar ihop
+stubbar och källfiler till en körbar fil — luau-CLI:t sandboxar varje modul, så
+stubbar går inte att injicera via `require`. Nitton mätningar på rörelsen, fem på
+kameran, sjutton på ryttaren och tjugoen på pekkontrakten, alla gröna:
+
+```
+python3 roblox/tests/build.py && luau roblox/tests/.build/movement.spec.luau
+python3 roblox/tests/build.py tests/camera.spec.luau && luau roblox/tests/.build/camera.spec.luau
+python3 roblox/tests/build.py tests/rider.spec.luau && luau roblox/tests/.build/rider.spec.luau
+python3 roblox/tests/build.py tests/touch.spec.luau && luau roblox/tests/.build/touch.spec.luau
+```
+
+Utöver det: `luau-compile` rent på samtliga filer under `roblox/src/`.
+
+**Vad bänken inte kunde se, och nu kan.** Rörelsemätningarna körde tidigare mot en
+rigg som stod still: ingen Humanoid flyttade den. Det räckte för styrning och
+gångarter, men inte för något som beror på verklig förflyttning — och blocker A och
+B handlade båda om just det. `runMoving` gör nu det Roblox `Humanoid` gör: tar
+riktningen och farten koden själv skrev och integrerar positionen med samma `dt`.
+Det är fortfarande ingen fysik, men det är skillnaden mellan att mäta vår egen
+bokföring och att mäta vad som står skrivet på riggen.
+
+**Det mätbänken visade som inte behövde lagas:** gångartsbytena är redan rena
+(fyra byten upp, fyra ned, inget flimmer vid bandgränserna — hysteresen i `Gaits`
+gör sitt jobb). Ingenting ändrades där.
+
+**Och två saker den fångade som annars hade gått igenom.** Kurvaturportningen tog
+bort hästens förmåga att vända på stället, eftersom kurvatur × tempo är noll vid
+stillastående — bänken fällde det direkt, och `TurnInPlaceRate` blandas nu in under
+0,55 m/s. Ryttarmätningen visade att ett tvärstopp på en bildruta bara ger 0,43° av
+tillåtna 3,15°: utjämningen dämpar krockspiken av sig själv, och taket bits först av
+en ihållande hård inbromsning. Det var mitt eget antagande som var fel, inte koden.
+
+### Vad som INTE kan verifieras utanför Roblox Studio
+
+Detta är listan addendumet ber om, och den är lång med flit:
+
+- **All subjektiv känsla.** Siffrorna säger att svängen släpper fyra gånger mjukare, inte om det känns rätt.
+- **Humanoid-samspelet.** Marken, sluttningar, kanter och trappor sköts av `Humanoid`; stubben ger plan mark och kan inte säga hur `AutoRotate` beter sig mot vår egen rotation vid noll fart.
+- **Att vrida roten direkt** (krypningsfixen) mot fysikmotorn och nätverksägarskapet — bänken har ingen fysik.
+- **Animationsblending**, `AnimationTrack`-övergångar och procedurell påbyggnad.
+- **Kameran mot verklig geometri**: väggkontrollens strålkastning finns inte i stubben.
+- **Frame-rate-känsla i praktiken**, gamepad, och touch i Roblox-klienten.
+- **Hela kärnloopen i Studio**: uppsittning, uthållighet, ljud, damm.
+
+## 7c · HTML/web implementation & browser evidence
+
+Se avsnitt 1–7 ovan. Sammanfattat: ridinputkontraktet (`RIDIN`), svängen som
+kurvatur med gångartstak, gångartsfas ur markförflyttning, kroppens svänglutning ur
+centripetalkraft, ryttarens tröghet och balans ovanpå sitsen, dt-baserad väggrespons
+och kamera med egen kurs.
+
+Bevisen är körda i Chromium via Playwright mot `dist/ridskolan.html`: hela
+lektionskedjan från start till resultatskärm på 1280×800 och 390×844 touch utan
+konsolfel, tolv viewports utan layoutfel, styrtabellen per gångart och nivå,
+touchmätningen med riktiga `PointerEvent`, och 30/60/144 Hz-jämförelsen.
+
+Ryttarens sekundärrörelse är mätt på ridloopen med fast dt: stillastående 0,000°,
+acceleration 3,22 m/s² → −2,58° pitch, inbromsning −3,86 m/s² → 3,10°, och i galopp
+lutar hästen 4,06° medan ryttaren följer med 1,38° inåt. Taken hålls, och balansen
+är exakt 0,34 av hästens lutning.
+
+Mätningen fångade också att 44 px-golvet bara gällt `#viewToggle`: sju knappar i
+menyerna låg på 26–39 px på 390×844 och 820×1180 med riktig pekskärm. Det är rättat
+under `.pek`, och rörelsemätningen på fyra viewports är grön efteråt — testläget
+synligt, hästen rör sig, inga konsolfel, inga mål under 44 px.
+
+Webbversionen är direkt spelbar och bruten av ingenting i det här arbetet.
+
+## 7d · Parity table
+
+Vad som är samma regel på båda plattformarna, och var siffrorna skiljer sig.
+
+| Regel | Roblox | HTML/webb | Paritet |
+|---|---|---|---|
+| Styrutslaget rampas före användning | `SteerTauPress 0,11` / `Release 0,17` | `kappaTau 0,13` upp / `0,19` ned | ✅ samma princip, tal i samma storleksordning |
+| Svarvheten sjunker per gångart | `Gaits.turn`: 1,00 / 0,82 / 0,62 / 0,42 | `GANGSVANG`: 1,00 / 0,82 / 0,52 | ✅ samma storhet; webben har fyra gångarter mot Roblox fem |
+| Snabbare gångart ger vidare sväng | kurvaturtak × `turn`; radie 4,1 → 5,4 → 7,9 m | kurvaturtak; radie 3,6 → 4,4 → 7,0 m | ✅ samma formulering sedan `58a8030`; talen skiljer med Roblox egna gångartstempon |
+| Acceleration olika upp och ned | `gait.accel` / `gait.retard` | modellens `stepRide` | ✅ |
+| Analog touchprecision | `TouchControls` → `Input.setTouch`; 25/50/100 % → 0,0725 / 0,2261 / 1,0000 | expo-kurva + dödzon; 25/50/100 % → 61 / 19,6 / 4,4 m | ✅ samma kurva och tal sedan `497afc2`; gesterna otestade i klient |
+| Gångartsfas ur rörelsen | flyttad sträcka ÷ `Gaits.cycleLength` (`norm ÷ cycles`) | flyttad sträcka ÷ `Gait.steglangd` | ✅ samma term sedan `53f874b`; uppmätt 1,45 / 2,13 / 3,20 mot 1,41 / 1,94 / 3,08 m |
+| Vridningen har en ägare | roten skrivs av `MovementController`, `AutoRotate` av | `G.rikt` integreras av `stegaRitt`, riggen ritas ur den | ✅ sedan `53f874b`; mätt yaw = heading, 0,00e+00 rad |
+| Turn/body response | centripetal × 0,012, tak 0,075 rad | centripetal × 0,012, tak 0,075 rad | ✅ identiska tal sedan `58a8030` |
+| Kamera med egen kurs | `CAMERA.YawTau 0,13` | `KAM_YAW_TAU 0,16` | ✅ |
+| Ingen krypning vid låg fart | roten vrids direkt, `WalkSpeed 0` | omega = kurvatur × tempo, noll vid stillastående | ✅ olika mekanism, samma utfall |
+| Frame-rate-oberoende | `dt`-baserade filter, mätt över 30/60/144 i bänken | mätt: kurvatur identisk, väggkurs identisk | ✅ |
+| Ryttarens sekundärrörelse | tröghet 0,014/rad, tak 0,055; balans 0,34, tak 0,030 | samma tal | ✅ identiska tal sedan `eed6178` |
+| Utbildningsmässiga ridregler | gångart väljs, aldrig exakt tempo | hjälper (skänkel/tygel/sits) + utbildningsskalan | ⚠️ webben bär pedagogiken — se skillnad 3 |
+
+## 7e · Intentional platform differences
+
+1. **Kvarvarande taldifferens i svängen.** Sedan `58a8030` räknar båda
+   plattformarna kurvatur (1/m) och får vridhastigheten som kurvatur × tempo, med
+   samma gångartsfaktorer. Radierna skiljer ändå — 4,1 / 5,4 / 7,9 m i Roblox mot
+   3,6 / 4,4 / 7,0 m i webben — därför att Roblox gångarter går i andra tempon
+   (1,45 / 3,20 / 5,60 m/s). Skillnaden följer alltså av gångartsdefinitionen, inte
+   av svängmodellen, och bör ligga kvar tills en playtest säger vilken uppsättning
+   tempon som är rätt.
+2. **Roblox behöver dessutom vändning på stället.** Kurvatur × tempo är noll när
+   hästen står still — det är precis det som tar bort krypningen — men i Roblox ska
+   hästen kunna vridas på stället. `TurnInPlaceRate` blandas därför in under
+   0,55 m/s. Webben har inte det behovet: där vrids ryttaren i gå-läget, inte
+   hästen.
+3. **Pedagogiken finns bara i webben.** Hjälper, utbildningsskala, ridlärare och
+   lektionsmoment är JS-sidans, och Roblox-spåret har inte den lagren än. Det är en
+   känd skillnad i mognad, inte ett designval.
+4. **Fyra mot fem gångarter.** Webben har halt/skritt/trav/galopp; Roblox har
+   dessutom fyrsprång. Webbens `galopp` motsvarar Roblox `canter`.
+
+## 7f · Review 01: blocker A, B och C
+
+ChatGPT lämnade `audits/GATE-01-CHATGPT-REVIEW-01.md` med **CHANGES REQUIRED** på
+head `6cb5ed1`. Tre blockers, alla tre bekräftade mot koden innan de rättades, alla
+tre rättade i `53f874b`. Ingenting annat lades till.
+
+### Blocker A — riggens vridning hade ingen ägare
+
+**Vad var fel.** `roblox/src/server/HorseService.luau` rad 76 sätter
+`hum.AutoRotate = false`, med kommentaren att spelet äger vridningen.
+`MovementController` räknade fram `loco.heading`, skrev kommentaren "AutoRotate
+vrider mot den" — och lämnade över till en AutoRotate som var avstängd. Den enda
+rad som faktiskt skrev kursen på roten låg inne i grenen för vändning på stället.
+
+**Vad spelaren hade sett.** Under ritt böjer rörelsevektorn av medan riggen står
+kvar och pekar rakt fram. En häst som åker i sidled genom svängen, med kamera och
+benanimation ur fas med färdriktningen. Bänken kunde inte se det: den mätte
+`loco.heading`, alltså vår egen bokföring, inte vad som stod skrivet på riggen.
+
+**Vad som ändrades.** Kursen skrivs nu på roten varje bildruta, utanför alla
+grenar — en rad, en ägare. Positionen lämnas orörd (`Humanoid:Move` sköter
+förflyttningen, fysiken höjden) och roten hålls upprätt, eftersom kroppens lutning
+och sluttningens pitch ligger i `rootJoint.C0`. Att slå på AutoRotate igen vore att
+lämna vridtakten till Roblox, vilket är precis den fordonskänsla gaten ska bort
+ifrån.
+
+**Mätt.** Bänken fick en rigg som faktiskt förflyttar sig: `runMoving` gör det
+Roblox `Humanoid` gör — tar riktningen och farten koden själv skrev och integrerar
+positionen med samma `dt`. Ingen fysik, ingen friktion, bara den förflyttning koden
+begärt.
+
+| Mätning | Resultat |
+|---|---|
+| Riggens yaw mot `loco.heading` i skritt/trav/galopp | avvikelse **0,00e+00 rad** |
+| Kursdrift utan styrutslag, 5 s i trav | **0,00e+00 rad** |
+| Vänster → höger genom neutralt | passeras; största kurssteg **0,0147 rad/bildruta** |
+| Vändning på stället | vrider riggen **1,188 rad** |
+| Övergång vändning → ritt | största kurssteg **0,0133 rad/bildruta**, ingen diskontinuitet |
+
+### Blocker B — fasvarvet var 2–4 gånger för långt i webben
+
+**Vad var fel.** `Gait.steglangd` är redan sträckan för ett helt gångartsvarv:
+3,50 m bas gånger gångartens steg-faktor ger 1,61 / 2,21 / 3,50 m vid neutral häst.
+Det är samma storhet som Roblox `norm ÷ cycles` (1,45 / 2,13 / 3,20). Jag
+multiplicerade den ändå med antalet hovnedslag — `CYKELSTEG` 4 / 2 / 3.
+
+**Varför det var fel.** `S3FAS` i `src/scen3d.js` lägger alla fyra ben inuti samma
+fasvarv med var sin förskjutning (vf 0, hf 0,25, vb 0,50, hb 0,75 i skritt), så ett
+ben hinner precis en stance och en sving per varv. Antalet hovnedslag är redan
+inbakat i förskjutningarna och får inte multipliceras in en gång till.
+
+**Vad spelaren hade sett.** Hovarna gled fortfarande mot marken, bara långsammare
+än före `33559d9`. Det bryter direkt mot gatens hovkontaktskriterium — den
+"marklåsta" fasen var markstyrd men fel skalad.
+
+**Vad som ändrades.** `cykelLangd = G.ride.steglangd`, utan multiplikator, och
+termen skriven ut på båda ställen den definieras: `Gait.steglangd` i `model.js` och
+fasräkningen i `game.js`. **CYKELLÄNGD = sträckan under ett helt normaliserat
+fasvarv, fas 0 → 1.** Ingenting annat.
+
+**Delad tabell, jämförbara tal.**
+
+| Gångart | Webb: `SPRANG × steg` | Webb uppmätt | Roblox: `norm ÷ cycles` | Roblox uppmätt | Skillnad |
+|---|---|---|---|---|---|
+| Skritt / walk | 1,61 m | **1,413 m** | 1,450 m | **1,450 m** | −2,6 % |
+| Trav / trot | 2,21 m | **1,940 m** | 2,133 m | **2,133 m** | −9,1 % |
+| Galopp / canter | 3,50 m | **3,082 m** | 3,200 m | **3,200 m** | −3,7 % |
+
+De uppmätta webbtalen ligger under de nominella därför att `Gait.steglangd` bär
+hästens schvung och spänning: testhästen står inte på exakt neutral skala. Det är
+avsiktligt — en häst med mer schvung tar längre steg — och det är samma storhet på
+båda plattformarna, vilket var kravet.
+
+**Mätt.**
+
+| Mätning | Roblox | Webb |
+|---|---|---|
+| Sträcka per fasvarv mot tabellvärde | **0,000 % avvikelse** | 1,413 / 1,940 / 3,082 m mot steglängd 1,418 / 1,942 / 3,082 |
+| 10 m rak linje i trav | 4,71 fasvarv | 5,19 fasvarv |
+| 20 m rak linje i trav | 9,38 fasvarv | 10,33 fasvarv |
+| Kvot 20 m / 10 m | **1,9940** | **1,9895** |
+| Blockerad häst, 3 s mot vägg | fasen rörde sig **0,00e+00** | begärt 9,60 m, faktiskt 0,28 m → 0,154 fasvarv (väntat 0,146) |
+| Stillastående häst | fasen står still | fasen står still |
+
+Före rättningen var webbens fasvarv 4× för långt i skritt, 2× i trav och 3× i
+galopp — exakt de faktorer `CYKELSTEG` bar.
+
+### Blocker C — auditens commit-lista var fel
+
+`61d503d` är `Gör lektionshandledningen byggbar utan Drive`, inte
+webbimplementationen. Den riktiga är `33559d9`. Hela listan är omgjord till en
+spårbar tabell överst i det här dokumentet.
+
+## 7g · Review 02: blocker D — pekkontrollerna
+
+ChatGPT lämnade `audits/GATE-01-CHATGPT-REVIEW-02.md` på head `9e4521c`. Blocker
+A, B och C godkändes; en ny blocker D. Åtgärdad i `497afc2`. Ingenting annat lades
+till.
+
+### Vad var fel
+
+`Input.setTouch`, `Input.touchGait` och `Input.touchJump` fanns, men en sökning i
+repot hittade inga anropare utanför `Input.luau` självt. `init.client.luau` band
+bara tangent och gamepad, `ContextActionService:BindAction` anropades med `false`
+för touch-knappar, och gamepad-avläsningen läser `Thumbstick1` — vilket en telefon
+inte har.
+
+Auditen skrev "pekstöd finns, otestat i klient". Det var för generöst: en
+Roblox-spelare på telefon eller platta kunde inte styra hästen alls. Reviewen har
+rätt i att detta inte var en gul dokumentationsrad utan en blocker, och att en
+plattformsparitetsgrind är precis vad som ska fånga det.
+
+### Pekarkitekturen
+
+`TouchControls.luau` är den saknade anroparen och ingenting mer. Spaken översätter
+fingrets läge till samma normaliserade avsikter som W/A/S/D och gamepaden skriver,
+och går genom samma `Input.consume()` in i `MovementController` — ingen ny
+rörelsearkitektur, ingen egen avsiktsmodell, ingen väg förbi kontraktet. Kurvan är
+portad från webbens verifierade tal (expo 0,35, dödzon 0,07 på styraxeln och 0,12
+framåt), så touch känns likadant på båda plattformarna. GUI:t byggs först vid
+uppsittning, bara på en pekenhet, och rivs i `dismount`.
+
+`Input` fick en rättning på köpet: pekskärmen skrev tidigare i tangenternas egna
+fält, så D plus spak åt vänster slog ut varandra beroende på ordning. Pekskärmen
+har nu ett eget axelpar som summeras precis som gamepadens.
+
+Roblox egna pekreglage stängs av under ritt och sätts på igen vid avsittning. De
+flyttar karaktären, och sitter hon i sadeln blir det två saker som drar i samma
+kropp — kravpunkt 6 i reviewen.
+
+### Mätt
+
+`roblox/tests/touch.spec.luau`, 21 mätningar, alla gröna. Spakens kurva är en ren
+funktion och `Input` en ren tillståndsmaskin, så allt under fingret går att mäta
+utan GUI.
+
+| Krav ur reviewen | Mätt |
+|---|---|
+| 25/50/100 % ger tre monotont skilda styrvärden | **0,0725 / 0,2261 / 1,0000** |
+| Vänster/höger-tecken korrekta | höger +1,000, vänster −1,000, exakt spegling |
+| Släpp nollar båda axlarna | forward och steer **0,000000** samma bildruta |
+| Gångart upp/ned flanktriggad, en per tryck | 1 bärande bildruta, **0** av de 30 följande |
+| Hopp tänds och släpps | ✅ |
+| Upp/avsittning slår på och av kontrollerna | `mount` bygger, `dismount` river; `unbind` nollar pekaxlarna |
+| Ingen tangent-/gamepadregression | W+D → 1,0/1,0; spak 0,5 → 0,5/0,5; oförändrade |
+
+Utöver reviewens lista: dödzonen sväljer 5 % darrning (0,000000), diagonalen har
+längd 0,619 och är alltså inte snabbare än rakt fram, summan av tangent + spak +
+pek klampas till −1..1, och orimliga pekvärden klampas redan vid ingången.
+
+Rättningen av axelkollisionen är också mätt: D plus spak −0,4 ger nu **0,600** i
+stället för att den ena skriver över den andra.
+
+### Vad som bara går att se i Studio
+
+Gesterna och layouten. Att spaken hamnar rätt på skärmen, att knapparna går att
+träffa med tummen, att inget skymmer hästen eller vägen framåt i porträtt och
+landskap, och att Roblox egna reglage verkligen slutar dra i karaktären när de
+stängs av. Reviewens enhetslista — liten korrigering, medelvolt, full styrning,
+gångartsbyten, hopp, avsittning — kräver en enhet eller Studios enhetsemulator.
+
+## 8 · Kvarvarande begränsningar
+
+1. **Ryttarens sekundärrörelse är byggd men inte sedd i rörelse.** Trögheten och
+   balansen är mätta som tal på båda plattformarna (`eed6178`), och den pedagogiska
+   sitslogiken är orörd. Om ±3,2° och ±1,7° läser som en människa eller som en
+   darrning syns först när någon tittar på den.
+2. **Känslan är inte bedömd.** Alla siffror ovan säger vad modellen gör, inte om
+   den känns rätt. Att en 20 m volt rids på 0,45 styrning är en mätning; om det
+   känns lagom avgörs av en människa som rider.
+3. **Konstanterna är trimmade mot mätningar, inte mot playtest.** `KAPPA_MAX` 0,42,
+   gångartsfaktorerna, expo 0,35, dödzon 0,07, lutningens 0,012-skalning och
+   kamerans 0,16 s — alla är valda för att träffa rimliga tal i tabellerna ovan.
+   De är avsedda att justeras efter Studio-/webbplaytest.
+4. **Mätningarna fryser hästen mitt på banan** för att hålla väggarna utanför.
+   Samspelet mellan sväng och sarg i ett verkligt hörn är alltså inte mätt, bara
+   observerat som att kursen blir bildfrekvensoberoende.
+5. **Gamepad är inte provad.** Kontraktet tar emot analoga värden, men ingen
+   gamepad har testats i den här miljön.
+
+---
+
+## 9 · Roblox-portabilitet
+
+Modellen är avsiktligt motoroberoende: styrkurvan, gångartens kurvaturtak,
+kurvaturens tidskonstanter, faslagen och lutningens centripetalsignal är rena tal
+och regler utan WebGL-beroende. Gångartsfaktorerna (`skritt 1,00 / trav 0,82 /
+galopp 0,52`) är samma storhet som `turn` i `roblox/src/shared/HorseCore/Gaits.luau`,
+så designen översätts i stället för att uppfinnas igen.
+
+---
+
+## 10 · Acceptanskriterier
+
+| Kriterium | Status |
+|---|---|
+| `IN.joy` eller motsvarande analog data används kontinuerligt i ridinputen på touch | ✅ |
+| 25/50/100 % joystick ger mätbart och visuellt olika styrrespons | ✅ 61 / 19,6 / 4,4 m |
+| keyboard och touch går genom samma normaliserade ridinputkontrakt | ✅ `RIDIN` |
+| svängradien ökar i praktiken med fart/gångart vid jämförbar input | ✅ 3,6 → 4,4 → 7,0 m |
+| inga synliga pivots/powerslides i trav eller galopp | ✅ vridhastigheten sjönk från 126 till 46°/s; kurvatur × tempo kan inte ge pivot |
+| gångartsfas är kopplad till faktisk förflyttning/effektiv steglängd | ✅ |
+| hästen har smoothed visuell turn lean från faktisk rörelse | ✅ centripetal, 0–3,2° |
+| ryttaren följer hästen subtilt utan att pedagogisk sitslogik försvinner | ✅ tröghet ±3,2°, balans ±1,7°, sitslogiken orörd |
+| kamera känns stabil i raksträcka, volt och hörn | ⚠️ egen kurs, mjuk boom, separata svar — men "känns" är inte mätt |
+| kameran hoppar inte synligt vid väggundvikande | ✅ boomen utjämnad i stället för diskreta steg |
+| väggkollision/steering correction är frame-rate independent | ✅ identisk kurs vid 30/60/144 Hz |
+| 30 och 60 FPS ger jämförbar styrkänsla | ✅ kurvaturen identisk |
+| befintlig första lektion går att spela från start till resultat | ✅ desktop och mobil |
+| inga nya konsolfel | ✅ |
+| inga nya features utanför Gate 01 | ✅ |
+
+| Roblox-touch kan faktiskt styra hästen genom `Input`-kontraktet | ✅ `TouchControls`, 25/50/100 % → 0,0725 / 0,2261 / 1,0000 |
+
+**Fjorton av sexton uppfyllda. Kvar: kamerans stabilitet i volt och hörn, som bara
+kan avgöras av någon som rider, och touchgesternas layout, som bara kan ses på en
+enhet.**
+
+---
+
+## 10b · Remaining risks
+
+Riskerna, som addendumet kräver dem — sorterade efter vad som mest sannolikt sänker
+gaten vid review eller playtest.
+
+1. **Ingen Roblox Studio-playtest har skett.** Addendumet säger uttryckligen att
+   Gate 01 inte kan stängas utan den, och den kan inte göras härifrån. Det här är
+   den enda risk som ensam blockerar gaten.
+2. **Roblox-ändringarna är mätta i en stubbad miljö.** Kursen skrivs nu på roten
+   varje bildruta med `AutoRotate` av. Hur det samspelar med fysiken, med
+   nätverksägarskapet och med `Humanoid` när hästen står i en sluttning eller trycker
+   mot en vägg är oprövat, och är den ändring som mest sannolikt beter sig annorlunda
+   i Studio än i bänken. Blocker A visade dessutom hur ett fel av precis den sorten
+   kan finnas utan att bänken märker något: den mätte vår egen bokföring, inte
+   riggen.
+3. **Pariteten är nästan exakt, men inte helt.** En av tretton rader i
+   paritetstabellen är gul: pedagogiken — hjälper, utbildningsskala, ridlärare —
+   finns bara i webben, en känd mognadsskillnad. Sväng, fas, lutning, ryttarrörelse,
+   vridningens ägarskap och touchkurvan delar numera formulering och tal. Det som är
+   kvar av taldifferens är gångartstempona, som är ett produktbeslut, inte en
+   portningslucka.
+4. **Konstanterna är trimmade mot mätningar, inte mot playtest.** Alla tal i båda
+   spåren är valda för att träffa rimliga siffror i tabellerna, inte för att någon
+   ridit med dem.
+5. **Roblox-touchens gester är overifierade.** Kurvan och `Input`-kontraktet är
+   mätta (`497afc2`), men att spaken hamnar rätt på skärmen, går att träffa med
+   tummen och inte skymmer vägen framåt kan bara ses på en enhet. Detsamma gäller att
+   Roblox egna pekreglage verkligen slutar dra i karaktären när de stängs av.
+6. **Gamepad är overifierad på båda.** Kontrakten tar emot analoga värden, ingen
+   gamepad har testats.
+
+## 11 · Överlämning
+
+Enligt `docs/GATE-01-RIDING-FEEL.md` stänger jag inte gaten. Arbetet lämnas till
+ChatGPT för senior gameplay review av diff, mätresultat och Product Canon-följsamhet,
+och till Tobias för avgörandet om känslan räcker.
+
+Om känslan inte sitter trots de gröna raderna ovan ska gaten inte stängas —
+dokumentets egen regel, och den rätta.

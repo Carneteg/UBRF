@@ -10,9 +10,15 @@
 
 	  1. Tempot dras mot gångartens hemtempo, inte mot en knapp. Släpper man
 	     W stannar hästen inte — den rullar ned i skritt.
-	  2. Svarvheten sjunker med farten. I fyrsprång svänger man vidsträckt.
-	  3. Svängen tar tag gradvis (TurnAccel), så inget snäpper till 90 grader.
+	  2. Styraxeln ber om en KURVATUR, inte om en vridhastighet. Radien
+	     blir 1/kurvatur oavsett fart, så en snabbare gångart ger en
+	     vidare båge av sig själv i stället för genom en motkraft.
+	  3. Svängen tar tag gradvis, så inget snäpper till 90 grader.
 	  4. Accelerationen är olika uppåt och nedåt, och tyngre hästar är trögare.
+	  5. Styrutslaget rampas innan det används. En tangent är av eller på,
+	     och utan rampen finns bara tre lägen: helt vänster, rakt, helt
+	     höger. Med den doserar man svängen genom hur länge man håller, och
+	     en gamepadspak som redan står halvvägs rampas mot just halvvägs.
 
 	Marken sköts av Humanoid. Det är medvetet: Roblox löser sluttningar,
 	kanter och trappor bättre än en egen strålkastning gör, och det som
@@ -61,7 +67,22 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	} :: Types.Locomotion
 
 	self.slopePitch = 0
+	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
+	self.curvature = 0         -- aktuell kurvatur, 1/m
+	self.lastPos = nil         -- förra bildrutans läge, driver fasen
 	return self
+end
+
+--[[ Styrutslaget mellan tangent och sväng. Tar snabbare än det släpper:
+     att börja svänga ska kännas omedelbart, att sluta svänga ska kännas
+     som att hästen rätar upp sig — inte som att någon släpper ett reglage. ]]
+function MovementController:_steer(raw: number, dt: number): number
+	local M = Config.MOVEMENT
+	local tau = if math.abs(raw) > math.abs(self.steerInput)
+		then M.SteerTauPress else M.SteerTauRelease
+	self.steerInput = smooth(self.steerInput, raw, tau, dt)
+	if math.abs(self.steerInput) < 0.004 then self.steerInput = 0 end
+	return self.steerInput
 end
 
 --[[ Vilken gångart spelaren begär. W från stillastående startar skritt,
@@ -113,16 +134,38 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	loco.speed = approach(loco.speed, target, up, down, dt)
 
 	--[[ ── Sväng ──────────────────────────────────────────────────────
-	     Grundsvarvheten stiger med farten, men gångartens turn-faktor drar
-	     ned den mer, så nettoresultatet är vidare svängar i högre fart.
-	     Svängen tar tag gradvis — utan det snäpper hästen runt hörn. ]]
+	     Kurvaturen är det spelaren styr: hur snävt hästen böjer sig, i
+	     1/meter. Gångartens turn-faktor sätter taket — en häst i fyrsprång
+	     böjer sig inte som en häst i skritt — och vridhastigheten faller
+	     ut som kurvatur × tempo. Radien blir därmed 1/kurvatur oavsett
+	     fart, alltså vidare bågar i högre gångart utan att någon motkraft
+	     behöver räknas fram.
+
+	     Kurvaturen tar tag snabbare än den släpper: att lägga sig i en
+	     båge går fortare än att räta upp sig ur den, både i verkligheten
+	     och i känslan. ]]
 	local speedAbs = math.abs(loco.speed)
-	local base = math.clamp(M.TurnRateBase + M.TurnRateGain * speedAbs, M.TurnRateMin, M.TurnRateMax)
-	local wanted = intent.steer * base * gait.turn * (0.70 + 0.60 * stats.Agility)
+	local steer = self:_steer(intent.steer, dt)
+	local kappaCeiling = M.CurvatureMax * gait.turn * (0.70 + 0.60 * stats.Agility)
+	local kappaWanted = steer * kappaCeiling
 	if loco.speed < -0.05 then
-		wanted = -wanted                              -- backar man styr man spegelvänt
+		kappaWanted = -kappaWanted                    -- backar man styr man spegelvänt
 	end
-	loco.turnRate = approach(loco.turnRate, wanted, M.TurnAccel, M.TurnAccel * 1.4, dt)
+	local kappaTau = if math.abs(kappaWanted) > math.abs(self.curvature)
+		then M.CurvatureTauPress else M.CurvatureTauRelease
+	self.curvature = smooth(self.curvature, kappaWanted, kappaTau, dt)
+	if math.abs(self.curvature) < 0.0015 then self.curvature = 0 end
+	loco.turnRate = self.curvature * loco.speed
+	--[[ Vändning på stället läggs till där farten är låg. Utan den kan en
+	     stående häst inte vrida sig alls, eftersom omega är kurvatur
+	     gånger tempo — och tillståndsmaskinen har ett eget läge för just
+	     att vända på stället. Termen tonas ut linjärt och är helt borta
+	     när hästen går, så den kan aldrig ge en pivot under ritt. ]]
+	if speedAbs < M.TurnInPlaceBelow then
+		local andel = 1 - speedAbs / M.TurnInPlaceBelow
+		loco.turnRate += steer * M.TurnInPlaceRate
+			* (0.70 + 0.60 * stats.Agility) * andel
+	end
 	loco.heading = (loco.heading + loco.turnRate * dt) % (2 * math.pi)
 
 	--[[ ── Lutning ─────────────────────────────────────────────────────
@@ -173,20 +216,53 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		jumpFired = jumpFired,
 	}, dt)
 	loco.gait = self.machine.gait
-	loco.phase = (loco.phase + Gaits.beatRate(loco.gait, speedAbs) * dt) % 1
+
+	--[[ ── Fasen följer MARKEN ────────────────────────────────────────
+	     Förut drevs fasen av beatRate × dt, alltså av den fart vi BEGÄRT.
+	     Nu mäts hur långt hästen faktiskt kom sedan förra bildrutan, och
+	     fasen är den sträckan delad med gångartens cykellängd. Krockar
+	     hästen med något eller bromsas av terrängen slutar hovarna att
+	     trampa i luften, och stillastående häst går inte på stället.
+
+	     Rootens läge är i studs; cykellängden i meter. ]]
+	local pos = rig.root.Position
+	local moved = if self.lastPos then (pos - self.lastPos).Magnitude else 0
+	self.lastPos = pos
+	local cycle = Gaits.cycleLength(loco.gait)
+	if cycle > 0 then
+		loco.phase = (loco.phase + (moved / Config.STUDS_PER_METRE) / cycle) % 1
+	end
 
 	--[[ ── Ut i världen ───────────────────────────────────────────────
-	     Humanoid får riktningen som VI har räknat fram, inte spelarens råa
-	     input. AutoRotate vrider mot den, och eftersom riktningen bara
-	     ändras i vår egen svängtakt syns aldrig Humanoids snärt.
+	     VRIDNINGEN HAR EN ÄGARE, OCH DET ÄR DEN HÄR RADEN.
 
-	     Golvet på 0,35 studs/s finns för att AutoRotate slutar vrida vid
-	     noll fart. Hästen kryper omärkligt medan den vänder på stället —
-	     vilket för övrigt är precis vad en häst gör. ]]
+	     `HorseService` sätter `AutoRotate = false` med motiveringen att
+	     spelet äger vridningen. Den här modulen räknade fram `loco.heading`
+	     och lämnade sedan över till en AutoRotate som inte fanns — så bara
+	     vändning på stället vred faktiskt riggen. Under ritt kunde
+	     rörelsevektorn böja av medan hästen fortsatte peka rakt fram: en
+	     häst som åker i sidled genom svängen.
+
+	     Nu skrivs kursen på roten varje bildruta, i alla lägen. Positionen
+	     lämnas orörd — `Humanoid:Move` sköter förflyttningen, fysiken sköter
+	     höjden — och roten hålls upprätt: kroppens lutning och sluttningens
+	     pitch ligger i `rootJoint.C0`, inte här. Skriver man dem på samma
+	     ställe går den ena inte att trimma utan att den andra ändras.
+
+	     `loco.heading` är redan utjämnad genom kurvaturens tidskonstanter,
+	     så det finns ingen snärt att dämpa här. Att i stället slå på
+	     AutoRotate igen vore att lämna vridtakten till Roblox, och det är
+	     precis den fordonskänsla gaten ska bort ifrån. ]]
+	local root = rig.root
+	root.CFrame = CFrame.new(root.CFrame.Position) * CFrame.Angles(0, loco.heading, 0)
+
 	if hum then
+		--[[ Vändning på stället: farten noll, men kursen ändras ändå av
+		     raden ovan. Golvet på 0,35 studs/s som fanns förut gav en
+		     synlig sidledsglidning i alla stillastående lägen. ]]
 		local studs = Config.toStuds(math.abs(loco.speed))
 		local turningInPlace = math.abs(loco.turnRate) > 0.05 and studs < 0.35
-		hum.WalkSpeed = if turningInPlace then 0.35 else studs
+		hum.WalkSpeed = if turningInPlace then 0 else studs
 		local dir = if loco.speed < -0.05 then -forwardVector else forwardVector
 		hum:Move(dir, false)
 	end
@@ -199,6 +275,9 @@ function MovementController:setCeiling(gait: string)
 end
 
 function MovementController:release()
+	self.steerInput = 0
+	self.curvature = 0
+	self.lastPos = nil
 	local hum = self.rig.humanoid
 	if hum then
 		hum.WalkSpeed = 0

@@ -78,17 +78,52 @@ function RiderController:attach(character: Model)
 	end
 end
 
---[[ Liten reaktion i sadeln: ryttaren följer med i lutningen. Vikten på
-     IK sänks i fyrsprång så att armarna får ge efter i stället för att stå
-     stelt fast i tyglarna. ]]
+--[[ ── Sekundärrörelsen ────────────────────────────────────────────
+     De ofrivilliga rörelser en kropp gör när den sitter på en annan
+     kropp som rör sig. Läggs OVANPÅ sitsen, aldrig i stället för den.
+
+       · TRÖGHETEN — accelererar hästen hamnar ryttaren efter och lutar
+         bakåt en aning; bromsar hästen kommer hon före. Signalen är
+         tempoderivatan, hårt utjämnad: rå derivata hackar, och en
+         ryttare som ryckte per bildruta skulle läsa som ragdoll.
+       · BALANSEN — i en sväng söker hon sig inåt, men bara en tredjedel
+         av hästens lutning. Kroppen ska följa hästen, inte tävla med den.
+
+     Talen är desamma som webbversionens, så att en spelare som byter
+     plattform känner igen sig: ±0,055 rad (3,2°) tröghet och ±0,030
+     (1,7°) balans. Utan taken blir en hård inbromsning en kullerbytta.
+
+     Rotationen läggs på HumanoidRootPart via en egen Motor6D-offset om
+     riggen har en; saknas den händer ingenting, vilket är rätt sorts
+     degradering — samma regel som resten av modulen. ]]
+local INERTIA_GAIN = 0.014
+local INERTIA_MAX = 0.055
+local BALANCE_SHARE = 0.34
+local BALANCE_MAX = 0.030
+local ACCEL_TAU = 0.18
+
 function RiderController:step(loco: Types.Locomotion, dt: number)
 	local give = 1 - math.clamp(math.abs(loco.speed) / 14, 0, 0.35)
 	for _, control in self.controls do
 		control.Weight = 0.85 * give
 	end
+
+	--[[ Tempoderivatan, utjämnad. Klampningen på ±6 m/s² finns för att
+	     ett gångartsbyte eller en kollision annars ger en spik. ]]
+	local prev = self.lastSpeed or loco.speed
+	self.lastSpeed = loco.speed
+	local raw = math.clamp((loco.speed - prev) / math.max(dt, 1e-4), -6, 6)
+	self.accel = (self.accel or 0) + (raw - (self.accel or 0))
+		* (1 - math.exp(-dt / ACCEL_TAU))
+
+	self.pitch = math.clamp(-(self.accel) * INERTIA_GAIN, -INERTIA_MAX, INERTIA_MAX)
+	self.roll = math.clamp(loco.lean * BALANCE_SHARE, -BALANCE_MAX, BALANCE_MAX)
+	RigAdapter.setRiderLean(self.rig, self.roll, self.pitch)
 end
 
 function RiderController:release()
+	self.accel, self.pitch, self.roll, self.lastSpeed = 0, 0, 0, nil
+	RigAdapter.setRiderLean(self.rig, 0, 0)
 	for _, control in self.controls do
 		control:Destroy()
 	end

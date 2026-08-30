@@ -23,6 +23,7 @@ local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Config, RigAdapter, Net = Core.Config, Core.RigAdapter, Core.Networking
 
 local Input = require(script.Input)
+local TouchControls = require(script.TouchControls)
 local MovementController = require(script.MovementController)
 local AnimationController = require(script.AnimationController)
 local CameraController = require(script.CameraController)
@@ -38,6 +39,7 @@ local ride: { [string]: any }? = nil
 local function dismount()
 	if not ride then return end
 	Input.unbind()
+	TouchControls.unmount()
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -78,6 +80,14 @@ local function mount(model: Model)
 	end
 
 	Input.bind()
+	--[[ Pekkontrollerna byggs först här, och bara på en pekenhet: en
+	     spelare vid tangentbordet ska inte få en spak över bilden. De river
+	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
+	     häst man klivit av. ]]
+	TouchControls.mount(Input, { dismount = function()
+		Net.get("DismountRequest"):InvokeServer()
+		dismount()
+	end })
 	InteractionController.setEnabled(false)
 	Debug.attach(rig, stats)
 

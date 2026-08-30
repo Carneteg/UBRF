@@ -10,3 +10,6 @@ package-lock.json
 scratch_*.mjs
 scratch_*.js
 .[a-z]*.js
+
+# Byggda testfiler
+roblox/tests/.build/

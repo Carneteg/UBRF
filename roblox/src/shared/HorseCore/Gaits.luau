@@ -119,6 +119,22 @@ function Gaits.playbackRate(name: string, speed: number): number
 	return math.clamp(speed / g.norm, 0.72, 1.32)
 end
 
+--[[ Hur långt hästen går på en hel rörelsecykel, i meter.
+
+     Fasen ska följa MARKEN, inte klockan: samma sträcka i samma gångart
+     ska ge samma antal hovnedslag oavsett hur tempot råkade variera på
+     vägen. Cykellängden räknas ur gångartens hemtempo delat med dess
+     cykelfrekvens — det bevarar dagens takt vid normtempo och gör den
+     distanslåst över resten av bandet.
+
+     stride-fältet är enskild steglängd och används av animationslagret;
+     det är inte samma sak som cykellängd, för en cykel är flera steg. ]]
+function Gaits.cycleLength(name: string): number
+	local g = Gaits.get(name)
+	if g.cycles <= 0 or g.norm <= 0 then return 0 end
+	return g.norm / g.cycles
+end
+
 --[[ Hovnedslag per sekund — driver ljud och damm. ]]
 function Gaits.beatRate(name: string, speed: number): number
 	local g = Gaits.get(name)

@@ -9,6 +9,12 @@
 
 	Ingen skakning. Skakning läser som skada, inte som fart, och gör folk
 	åksjuka i förstapersonsnära vinklar.
+
+	Kameran har en EGEN kurs som följer hästens med en kort fördröjning.
+	Läser den hästens kurs rakt av sitter den stelt fastskruvad i nacken,
+	och varje styrutslag rycker hela bilden — det är den vanligaste
+	orsaken till att en tredjepersonskamera känns instabil. Med en egen
+	kurs svänger hästen först och bilden hinner ifatt.
 ]]
 
 local RunService = game:GetService("RunService")
@@ -26,6 +32,16 @@ local function smooth(current: number, target: number, tau: number, dt: number):
 	return current + (target - current) * (1 - math.exp(-dt / tau))
 end
 
+--[[ Samma utjämning för en vinkel. Skillnaden räknas via den korta vägen
+     runt cirkeln, annars snurrar kameran ett helt varv varje gång hästens
+     kurs passerar noll. ]]
+local TWO_PI = 2 * math.pi
+local function smoothAngle(current: number, target: number, tau: number, dt: number): number
+	local delta = (target - current + math.pi) % TWO_PI - math.pi
+	if tau <= 0 then return target end
+	return current + delta * (1 - math.exp(-dt / tau))
+end
+
 function CameraController.new(rig: Types.Rig)
 	local self = setmetatable({}, CameraController)
 	self.rig = rig
@@ -33,6 +49,7 @@ function CameraController.new(rig: Types.Rig)
 	self.dist = Config.CAMERA.BaseFov and 15 or 15
 	self.height = 5.2
 	self.fov = Config.CAMERA.BaseFov
+	self.yaw = math.atan2(rig.root.CFrame.LookVector.X, rig.root.CFrame.LookVector.Z)
 	self.previousType = self.camera.CameraType
 	self.previousFov = self.camera.FieldOfView
 	self.camera.CameraType = Enum.CameraType.Scriptable
@@ -48,7 +65,11 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 	self.fov = smooth(self.fov, math.min(C.BaseFov + gait.camera.fov, C.MaxFov), C.Tau, dt)
 
 	local root = self.rig.root
-	local heading = loco.heading
+	--[[ Kamerans egen kurs, inte hästens. Fördröjningen är kort nog att
+	     man aldrig tappar bort vart man är på väg, och lång nog att
+	     styrutslag inte rycker i bilden. ]]
+	self.yaw = smoothAngle(self.yaw, loco.heading, C.YawTau, dt)
+	local heading = self.yaw
 	local back = Vector3.new(-math.sin(heading), 0, -math.cos(heading))
 	local right = Vector3.new(math.cos(heading), 0, -math.sin(heading))
 

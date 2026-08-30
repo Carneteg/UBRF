@@ -28,6 +28,13 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
      pekskärm i stället för att alla enheter få desktopens mått. */
   .pek #viewToggle button{min-height:44px; min-width:64px; font-size:12px;
     padding:0 16px; display:flex; align-items:center; justify-content:center}
+  /* Samma golv för menyernas knappar. Höjden sätts som min-height och inte
+     som padding, eftersom flera av de små spökknapparna bär sin padding
+     inline — min-height vinner utan att någon inline-regel behöver rivas,
+     och inline-flex centrerar texten i den nya höjden. Bredden rörs inte:
+     knapparna är redan bredare än 44 px och ska inte tvingas isär. */
+  .pek .btn{min-height:44px; min-width:44px;
+    display:inline-flex; align-items:center; justify-content:center}
   @supports(padding:max(0px)){        /* hakens och hemknappens säkra zon */
     .pek #viewToggle{top:max(8px,env(safe-area-inset-top))}
     .pek #pekUI{padding-bottom:env(safe-area-inset-bottom)}
@@ -108,21 +115,47 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     const dy=(e.clientY-(r.top+r.height/2))/(r.height/2);
     const l=Math.hypot(dx,dy), k=l>1?1/l:1;
     knopp.style.transform=`translate(calc(-50% + ${dx*k*36}px), calc(-50% + ${dy*k*36}px))`;
-    /* Analogt: hur långt man drar styr farten, inte bara riktningen.
-       Halvvägs ut är skritt, ytterläget är jogg — samma spann som
-       tangentbordets Shift, fast steglöst. Dödzonen finns för att
-       tummen alltid darrar en aning. */
+    /* Analogt: hur långt man drar styr styrkan, inte bara riktningen.
+       Dödzonen finns för att tummen alltid darrar en aning. */
     const langd=Math.min(l,1);
     IN.joy=langd>0.14?{x:dx*k, y:dy*k, styrka:(langd-0.14)/0.86}:null;
-    tangent("KeyW", dy<-0.28);
-    tangent("KeyS", dy> 0.45);
-    tangent("KeyA", dx<-0.32);
-    tangent("KeyD", dx> 0.32);
+
+    /* RIDNINGEN får spakens värden rakt, inte som syntetiska tangenter.
+       Förut passerade joysticken trösklar och skickade W/A/S/D, så
+       spaken såg analog ut medan hästen fick tre lägen: 25, 50 och 100
+       procents utslag gav samma sväng. Nu går utslaget in i samma
+       normaliserade ridinputlager som tangentbordet skriver till, och
+       hästen svarar på hur mycket man ber om.
+
+       Kurvan ger precision nära mitten utan att äta upp de små utslagen.
+       En rent kvadratisk kurva gjorde det: ett kvarts spakutslag blev två
+       procents styrning, alltså rakt fram i praktiken, och de tre nivåerna
+       25/50/100 gav inte tre användbara svängar. Den här formen —
+       andelen EXPO rak, resten kubisk — ger ungefär 10, 26 och 100
+       procent, vilket är en linjekorrigering, en mjuk båge och en full
+       volt. Samma form som radiosändare för modellflyg använder, av
+       samma skäl: tummen är inte exakt nära mitten. */
+    const EXPO=0.35;
+    const kurva=v=>{const a=Math.abs(v);
+      return Math.sign(v)*a*(EXPO+(1-EXPO)*a*a);};
+    const dodzon=(v,d)=>Math.abs(v)<=d?0:Math.sign(v)*(Math.abs(v)-d)/(1-d);
+    if(typeof RIDIN!=="undefined"){
+      RIDIN.styr=kurva(dodzon(dx*k,0.07));
+      RIDIN.skankel=kurva(dodzon(-dy*k,0.12));
+      RIDIN.pek=true;
+    }
+
+    /* GÅ-LÄGET läser IN.joy direkt (se stegaVandring), så de syntetiska
+       tangenterna behövs inte längre för rörelsen. Kvar är bara knappar
+       som VY och BOK, som fortfarande är riktiga tryck. */
   }
   function joySlapp(){
     joyPek=null; IN.joy=null;
     knopp.style.transform="translate(-50%,-50%)";
     for(const c of ["KeyW","KeyS","KeyA","KeyD"]) tangent(c,false);
+    if(typeof RIDIN!=="undefined"&&RIDIN.pek){
+      RIDIN.styr=0; RIDIN.skankel=0;
+    }
   }
   joy.addEventListener("pointerdown",e=>{joyPek=e.pointerId;
     try{joy.setPointerCapture(e.pointerId);}catch(_){}
@@ -139,6 +172,9 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     for(const ev of ["pointerup","pointercancel","pointerleave"])
       b.addEventListener(ev,()=>{b.classList.remove("ner"); tangent(code,false);});
   }
+  /* Håll-knapparna skickar tangenthändelser, och tangentlyssnaren i
+     game.js skriver dem till ridinputlagret — TYGEL, LÄTT och DJUP
+     hamnar alltså i samma kontrakt som spaken utan egen kod här. */
   for(const b of ui.querySelectorAll("[data-tap]")){
     const code=b.dataset.tap;
     b.addEventListener("pointerdown",e=>{b.classList.add("ner");

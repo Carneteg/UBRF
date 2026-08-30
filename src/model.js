@@ -45,6 +45,12 @@ const Gait={
   forTempo(t,nuv){const h=this.HYST,k=nuv&&this.G[nuv];
     if(k&&t>=k.min-h&&t<=k.max+h)return nuv;
     if(t<0.25)return"halt"; if(t<2.20)return"skritt"; if(t<4.45)return"trav"; return"galopp";},
+  /* CYKELLÄNGD: sträckan hästen färdas under ETT helt fasvarv (fas 0→1),
+     alltså ett helt gångartsvarv — inte ett enskilt hovnedslag. Samma
+     storhet som Gaits.cycleLength i Roblox (norm ÷ cycles). Vid normtempo
+     och neutral häst: skritt 1,61 m, trav 2,21 m, galopp 3,50 m, mot
+     Roblox 1,45 / 2,13 / 3,20. Den som driver gångartsfasen ska dela
+     sträckan med DEN HÄR siffran och ingenting annat. */
   steglangd(kat,g,schvung,spanning){const bas=this.SPRANG[kat]||3.5,gg=this.G[g];
     if(!gg||gg.steg===0)return 0;
     return bas*gg.steg*clamp(1+0.22*(schvung-0.5)-0.18*spanning,0.72,1.28);},

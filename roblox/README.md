@@ -103,6 +103,8 @@ Byggt och kompilerar (`luau-compile` rent på alla filer):
 - Uthållighet som sänker gångartstaket i stället för att tvinga fram stopp
 - Raser och lynnen som ren data
 - Felsökningsruta på F8
+- Mätbänk för rörelse och kamera utanför Studio (`tests/`), som kör
+  produktionskoden mot stubbade Roblox-globaler
 
 Inte byggt, medvetet:
 
