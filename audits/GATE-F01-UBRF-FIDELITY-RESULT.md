@@ -97,6 +97,7 @@ anläggningen, och därför att det är gatens tredje P0.
 | Läget y 89,3–92,8, i liv med stallets tvärkorridor | **D** | Två källor pekar hit: husens gemensamma mitt y 92,0 och tvärkorridorens mitt y 91,05, mätt i utrymningsplanen |
 | Hästgångens mått 11 × 3,5 m, takfot 3,2, nock 4,0 | **A** | Bredden ges av avståndet mellan husen; djupet följer tvärkorridoren; höjderna är valda så att en häst går igenom. Satellitbilden ger topologi, inte meter |
 | Gapet i ridhusets läktare, 5,0 m | **A** | Påtvingat av den verifierade topologin — läktaren kan inte vara obruten där gången kommer in. Bredden är vald, inte mätt |
+| Grinden i sargens östra långsida, 3,2 m | **A** | Måste finnas för att gången ska vara en väg och inte dekoration — vägsökningen fann annars ingen väg från banan. Bredden är vald |
 | Var man kommer ut på ridhussidan | **A** | Följer av läget: genom läktargapet, ut på banan |
 | Antalet förbindelser — en, inte flera | **V** | Satellitbilden visar en tydlig tvärgående takvolym och ger inte stöd för två |
 | Den låga längan i söder, 7 × 6 m vid (147, 59) | **A** | Att *något* står mellan gavlarna i söder syns i Street View; läge, mått, tak och dörr är antagna. **Den binder inte ihop husen** — den nuddar varken ridhuset eller stallet, och satellitbilden ger inte stöd för en andra förbindelse. Mätt i geometrispecen |
@@ -403,7 +404,15 @@ Regeln ligger i `laktarSektioner` (webb) och `Geometri.laktarSektioner`
 (Roblox), så att ingen renderare kan mura igen gången på egen hand. Båda
 specarna kontrollerar att inget läktarsteg står i öppningen.
 
-**2 · Stallets västra hästport togs bort.** Den satt på u 30, i tvärkorridorens
+**2 · Ridhusets sarg fick en grind.** Läktargapet räckte inte: sargen står
+mellan banan och gången, så man kom in i ridhuset men inte ut på banan.
+Vägsökningen sa det rakt ut — **noll steg** från banan till gångdörren. Utan
+grind är hästgången dekoration, och den ska vara en väg för hästen.
+
+Grinden ligger i sargens östra långsida, i liv med läktargapet och gången.
+Bredden 3,2 m är vald, inte mätt. `[ASSUMPTION]`
+
+**3 · Stallets västra hästport togs bort.** Den satt på u 30, i tvärkorridorens
 västra ände — exakt där gången nu går. Två portar i samma vägg på samma ställe
 är en för mycket, och porten var dessutom uppfunnen för spelets skull; den
 finns inte i någon källa. Hästen leds inomhus i stället, vilket är hela poängen
@@ -641,8 +650,9 @@ enligt beskrivningen, inte vad jag har sett stämma.
 | Ridloopen (Gate 01) | 5 | alla gröna |
 | Ryttarens sekundärrörelse | 7 | alla gröna |
 | Fyra viewports, rörelse och touchmål | 4 | alla gröna |
-| **Roblox: anläggningens geometri** | **61** | **alla gröna** |
-| **Roblox: den körda modellen (byggbänken)** | **35** | **alla gröna** |
+| **Roblox: anläggningens geometri** | **68** | **alla gröna** |
+| **Roblox: den körda modellen (byggbänken)** | **37** | **alla gröna** |
+| **Hästgången åt båda håll (funktionstest)** | **11** | **alla gröna** |
 | Roblox: rörelse, kamera, ryttare, touch | 72 | alla gröna |
 
 Hästgångens sex egna kontroller: dörren finns i båda husen; stalländens
