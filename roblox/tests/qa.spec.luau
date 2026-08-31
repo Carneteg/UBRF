@@ -136,6 +136,80 @@ do
 		#Vyer.vyer .. " vyer")
 end
 
+--[[ ── Kamerafel får inte flytta panelen ───────────────────────────────
+	Studio 2026-08-31: panelen sa "2/11 ankomsten" medan viewporten låg kvar
+	i förra vyn — kameraflytten hade fallit i en pcall och panelen stegade
+	fram ändå. En panel som påstår en vy kameran aldrig nådde får en
+	människa att bedöma FEL BILD. Regeln är fail-closed: går kameran inte
+	att flytta stannar panelen kvar och säger det. ]]
+do
+	local gammal = hittaGui()
+	if gammal then gammal:Destroy() end
+
+	local fejk = {
+		vyer = {
+			{ id = "alfa", text = "Alfa", krav = "" },
+			{ id = "trasig", text = "Trasig", krav = "" },
+			{ id = "beta", text = "Beta", krav = "" },
+		},
+		ga = function(id)
+			if id == "trasig" then error("kameran gick sönder med flit") end
+		end,
+	}
+	QAPanel.start(fejk)
+	local g2 = hittaGui()
+	check("panelen startar mot den fejkade vylistan", g2 ~= nil)
+
+	local knapp2, namn2, status2 = {}, nil, nil
+	if g2 then
+		for _, b in ipairs(g2:GetDescendants()) do
+			if b.ClassName == "TextButton" then knapp2[b.Text] = b end
+			if b.ClassName == "TextLabel" and b.Text == "alfa" then namn2 = b end
+		end
+	end
+	check("panelen står på alfa", namn2 ~= nil)
+
+	if namn2 and knapp2["▶"] then
+		knapp2["▶"].Activated._fire()
+		check("ett kamerafel flyttar INTE panelen till den trasiga vyn",
+			namn2.Text == "alfa", tostring(namn2.Text))
+
+		if g2 then
+			for _, b in ipairs(g2:GetDescendants()) do
+				if b.ClassName == "TextLabel" and type(b.Text) == "string"
+					and string.find(b.Text, "KAMERAFEL", 1, true) then
+					status2 = b
+				end
+			end
+		end
+		check("och felet syns i panelen, inte bara i Output",
+			status2 ~= nil, status2 and status2.Text or "ingen KAMERAFEL-etikett")
+
+		--[[ Panelen får inte fastna: baklänges runt den trasiga vyn ska gå. ]]
+		knapp2["◀"].Activated._fire()
+		check("panelen kan fortfarande gå åt andra hållet",
+			namn2.Text == "beta", tostring(namn2.Text))
+	end
+end
+
+--[[ ── cameraLike vägrar i stället för att gissa ──────────────────────
+	Kameran ska flyttas rätt eller kasta ett fel med talen i. ]]
+do
+	local bas = CFrame.new(0, 0, 0)
+
+	local ok1 = pcall(BuildKit.cameraLike, bas, 5, 5, 30, 30)
+	check("en riktig kameraflytt går igenom", ok1 == true)
+
+	-- från == mot, exakt: lookAt är odefinierad då.
+	local ok2, fel2 = pcall(BuildKit.cameraLike, bas, 5, 5, 5, 5, 2, 2)
+	check("sammanfallande från/mot kastas", ok2 == false,
+		tostring(fel2))
+
+	local nan = 0 / 0
+	local ok3, fel3 = pcall(BuildKit.cameraLike, bas, nan, 5, 30, 30)
+	check("icke-finit position kastas", ok3 == false, tostring(fel3))
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("qa.spec: " .. fails .. " fel")

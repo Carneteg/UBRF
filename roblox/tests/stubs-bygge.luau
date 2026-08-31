@@ -157,6 +157,7 @@ local function instance(klass)
 					if b == self then table.remove(self.__parent.Children, k) break end
 				end
 			end
+			rawset(self, "__parent", nil)
 		end,
 		SetAttribute = function(_, k, v)
 			assert(string.match(k, "^[A-Za-z0-9_]+$"),
@@ -177,7 +178,14 @@ local function instance(klass)
 		end,
 	}
 	return setmetatable(i, {
-		__index = function(_, k) return rawget(i, k) end,
+		--[[ Parent laser tillbaka __parent, och Destroy nollar den. Utan det
+		     sag en forstord instans fortfarande "levande" ut for den som
+		     fragade efter .Parent — och QA-panelens aterstart gick da inte
+		     att prova har. ]]
+		__index = function(_, k)
+			if k == "Parent" then return rawget(i, "__parent") end
+			return rawget(i, k)
+		end,
 		__newindex = function(t, k, v)
 			if k == "Parent" then
 				rawset(t, "__parent", v)

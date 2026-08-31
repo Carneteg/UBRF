@@ -99,11 +99,20 @@ function QAPanel.start(vyModul: any)
 		warn("[UBRF QA] Hittar inga vyer — kor bygget forst.")
 		return
 	end
-	if gui then
+	--[[ Parent-kollen: gui-variabeln överlever att någon raderar själva
+	     ScreenGui:n i Explorer. Utan den gjorde UBRFQA() då ingenting alls —
+	     panelen "fanns" för koden men inte för människan. ]]
+	if gui and gui.Parent then
 		gui.Enabled = true
 		uppdatera()
 		return
 	end
+	gui = nil
+	--[[ En NY panel börjar på vy 1. i är modul-lokal och överlever panelen;
+	     lämnas den kvar kan den peka utanför en kortare vylista, och panelen
+	     öppnar mitt i sviten som om inget hänt. Omdömena behålls — de är
+	     satta per vy-id och ska inte försvinna för att panelen byggs om. ]]
+	i = 1
 
 	local spelare = game:GetService("Players").LocalPlayer
 	local mal = spelare and spelare:FindFirstChildOfClass("PlayerGui")
@@ -182,10 +191,26 @@ function QAPanel.start(vyModul: any)
 		end
 	end
 
+	--[[ FAIL-CLOSED. Förut stegade panelen fram FÖRST och pcall:ade kameran
+	     sedan — gick kameraflytten fel stod panelen ändå och sa "2/11
+	     ankomsten" medan viewporten låg kvar i föregående vy. Precis det
+	     hände i Studio 2026-08-31: vyn såg tom ut, ViewCube sa Top, och
+	     panelen påstod ankomsten. En panel som påstår en vy kameran aldrig
+	     nådde är värre än ett rakt fel: den får en människa att bedöma FEL
+	     BILD. Nu flyttas kameran först; går det inte stannar panelen kvar och
+	     skriver felet både i panelen och i Output. ]]
 	local function ga(steg: number)
-		i = ((i - 1 + steg) % #Vyer.vyer) + 1
-		local ok, err = pcall(function() Vyer.ga(Vyer.vyer[i].id) end)
-		if not ok then warn("[UBRF QA] " .. tostring(err)) end
+		local nytt = ((i - 1 + steg) % #Vyer.vyer) + 1
+		local ok, err = pcall(function() Vyer.ga(Vyer.vyer[nytt].id) end)
+		if not ok then
+			warn("[UBRF QA] Kameran kom ALDRIG till '" .. Vyer.vyer[nytt].id
+				.. "' — panelen stannar kvar. Fel: " .. tostring(err))
+			uppdatera()
+			status.Text = "KAMERAFEL: " .. Vyer.vyer[nytt].id .. " gick inte att visa"
+			status.TextColor3 = FARG.fel
+			return
+		end
+		i = nytt
 		uppdatera()
 	end
 

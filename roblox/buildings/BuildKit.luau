@@ -140,12 +140,41 @@ end
 --[[ Siktmalet lag forut fast pa 2.5 m. Det gor det omojligt att titta UPP,
 	och takstommen i ridhuset gar bara att bedoma underifran. aimH ar darfor
 	valbar; utan den beter sig anropet exakt som forut. ]]
+--[[ Flytta kameran, eller SÄG att det inte gick — flytta den aldrig halvvägs.
+
+     I Studio 2026-08-31 stod QA-panelen och påstod en vy medan viewporten låg
+     kvar i den förra. Kamerafel ska därför vara fel som hörs, inte tystnad:
+     saknas kameran, eller är någon punkt icke-finit, eller sammanfaller
+     från och mot (lookAt är odefinierad då), kastas ett fel med de faktiska
+     talen i, så att nästa rapport innehåller siffrorna i stället för "tom vy". ]]
 function BuildKit.cameraLike(base: CFrame, x: number, z: number, tx: number, tz: number, eyeH: number?, aimH: number?)
 	local cam = workspace.CurrentCamera
-	local from = base * CFrame.new(studs(x), studs(eyeH or 1.6), studs(z))
-	local to = base * CFrame.new(studs(tx), studs(aimH or 2.5), studs(tz))
+	if not cam then
+		error("cameraLike: ingen workspace.CurrentCamera — kameran kan inte flyttas")
+	end
+	local from = (base * CFrame.new(studs(x), studs(eyeH or 1.6), studs(z))).Position
+	local to = (base * CFrame.new(studs(tx), studs(aimH or 2.5), studs(tz))).Position
+
+	local function andlig(p): boolean
+		-- NaN är olikt sig självt; oändligheter fångas av jämförelsen mot huge.
+		return p.X == p.X and p.Y == p.Y and p.Z == p.Z
+			and math.abs(p.X) < math.huge and math.abs(p.Y) < math.huge and math.abs(p.Z) < math.huge
+	end
+	local beskrivning = string.format(
+		"från (%.1f, %.1f, %.1f) mot (%.1f, %.1f, %.1f), bas (%.1f, %.1f, %.1f)",
+		from.X, from.Y, from.Z, to.X, to.Y, to.Z,
+		base.Position.X, base.Position.Y, base.Position.Z)
+	if not (andlig(from) and andlig(to)) then
+		error("cameraLike: icke-finit kameraposition — " .. beskrivning)
+	end
+	local dx, dy, dz = to.X - from.X, to.Y - from.Y, to.Z - from.Z
+	if dx * dx + dy * dy + dz * dz < 0.0001 then
+		error("cameraLike: från och mot sammanfaller, lookAt är odefinierad — " .. beskrivning)
+	end
+
+	print("[Kamera] " .. beskrivning)
 	cam.CameraType = Enum.CameraType.Scriptable
-	cam.CFrame = CFrame.lookAt(from.Position, to.Position)
+	cam.CFrame = CFrame.lookAt(from, to)
 end
 
 return BuildKit
