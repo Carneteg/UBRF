@@ -6,6 +6,12 @@
 local BuildKit = {}
 BuildKit.M = 3 -- studs per meter
 
+--[[ Hur tjock en dörr-/fönsterpanel är. Den låg som en literal inne i
+     opening(), men WorldBuild behöver samma tal för att kunna räkna ut var det
+     stängda dörrbladet ska stå. Två kopior av det hade betytt att bladet en dag
+     hamnar bredvid sitt eget hål. ]]
+BuildKit.OPPNINGSDJUP = 0.06
+
 local function studs(m: number): number return m * BuildKit.M end
 
 local function newPart(model: Model, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
@@ -54,7 +60,7 @@ end
 -- Hål i vägg (fönster/dörr) görs enklast genom att lägga en Part med annan färg "utanpå" väggen: tydligt i tecknad stil.
 -- x,z = position längs väggen (m), sill = höjd över mark, w,h = storlek, depth = hur mycket den sticker ut.
 function BuildKit.opening(model: Model, base: CFrame, name: string, x: number, z: number, sill: number, w: number, h: number, along: "X"|"Z", side: number, color: Color3, material: Enum.Material?): Part
-	local depth = 0.06
+	local depth = BuildKit.OPPNINGSDJUP
 	if along == "X" then
 		return BuildKit.box(model, base, name, x, sill, z + (side > 0 and 0 or -depth), w, h, depth, color, material or Enum.Material.Glass)
 	else

@@ -67,7 +67,12 @@ local function byggMark(model: Model, base: CFrame)
 	end
 end
 
-local function byggOppning(model: Model, base: CFrame, b, o)
+--[[ index är öppningens plats i byggnadens egen oppningar-lista. Panelen får
+     det som attribut redan här, så att den som senare ska hitta EXAKT den här
+     panelen kan slå upp den i stället för att leta efter den närmaste med rätt
+     namn. Två öppningar på samma fasad kan ha samma typ, och därmed samma
+     namn — då avgör namnet ingenting. ]]
+local function byggOppning(model: Model, base: CFrame, b, o, index: number)
 	-- Var öppningen sitter är geometri och ligger därför i Geometri.luau, som
 	-- är mätt mot webbkoden. Hur den tecknas är rendering och ligger här.
 	local x, z, along, side = GEO.oppningsHorn(b.rekt, o.sida, o.u, o.b)
@@ -78,8 +83,10 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 			Color3.fromRGB(238, 236, 228))
 	else
 		local f = OPPNINGSFARG[o.typ] or Color3.fromRGB(200, 200, 200)
-		BK.opening(model, base, namn, x, z, o.z0, o.b, o.h, along, side, f,
+		local panel = BK.opening(model, base, namn, x, z, o.z0, o.b, o.h, along, side, f,
 			Enum.Material.SmoothPlastic)
+		panel:SetAttribute("BuildingId", b.id)
+		panel:SetAttribute("OpeningId", index)
 	end
 end
 
@@ -96,8 +103,8 @@ local function byggHus(model: Model, base: CFrame, b)
 	BK.wall(model, base, b.id .. " vast", r.x, r.y, r.h, b.hV, VAGGT, "Z", fasad)
 	BK.wall(model, base, b.id .. " ost",  r.x + r.w - VAGGT, r.y, r.h, b.hV, VAGGT, "Z", fasad)
 
-	for _, o in ipairs(b.oppningar or {}) do
-		byggOppning(model, base, b, o)
+	for index, o in ipairs(b.oppningar or {}) do
+		byggOppning(model, base, b, o, index)
 	end
 
 	-- gableRoof vill ha nocken som "X" eller "Z". Spelets nock "NS" löper längs

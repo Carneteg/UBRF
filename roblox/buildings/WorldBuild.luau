@@ -97,29 +97,43 @@ local function replaceFacade(BK, WG, model: Model, base: CFrame, b, sida: string
 	end
 end
 
-local function expectedOpeningPosition(BK, GEO, base: CFrame, b, o): Vector3
-	local mx, mz = GEO.oppningsMitt(b.rekt, o.sida, o.u, o.b)
-	return (base * CFrame.new(BK.M * mx, BK.M * (o.z0 + o.h / 2), BK.M * mz)).Position
-end
+--[[ Panelen slås upp på IDENTITET, inte på närhet.
 
-local function findExistingDoor(BK, GEO, model: Model, base: CFrame, b, o, used): BasePart?
-	local wantedName = (o.label or o.typ) .. (if o.intern then " (intern)" else "")
-	local wanted = expectedOpeningPosition(BK, GEO, base, b, o)
-	local best: BasePart? = nil
-	local bestDist2 = math.huge
+     Förut letade den här efter den närmaste Parten med rätt namn, utan någon
+     avståndsgräns. Det gav rätt svar i dagens data, men namnet är typen —
+     och två öppningar på samma fasad kan ha samma typ. Då avgör namnet
+     ingenting, och närmast-vinner kan para ihop dem åt fel håll utan att
+     någonting säger ifrån. Anlaggningen sätter BuildingId och OpeningId på
+     panelen när den byggs; här läses bara de. ]]
+local function findExistingDoor(model: Model, b, index: number): BasePart?
 	for _, inst in ipairs(model:GetDescendants()) do
-		if inst.ClassName == "Part" and inst.Name == wantedName and not used[inst] then
-			local part = inst :: Part
-			local d = part.CFrame.Position - wanted
-			local dist2 = d.X * d.X + d.Y * d.Y + d.Z * d.Z
-			if dist2 < bestDist2 then
-				best = part
-				bestDist2 = dist2
-			end
+		if inst.ClassName == "Part"
+			and inst:GetAttribute("BuildingId") == b.id
+			and inst:GetAttribute("OpeningId") == index
+		then
+			return inst :: BasePart
 		end
 	end
-	if best then used[best] = true end
-	return best
+	return nil
+end
+
+--[[ Dörrbladets stängda läge, räknat UR öppningen — samma källa som hålet i
+     fasaden. Panelen flyttas dit i stället för att bladet ska definiera sitt
+     eget läge; hål och blad kan då inte glida isär.
+
+     Djupet är BuildKit.opening:s: en tunn skiva vid fasadlivet, på den sida
+     `side` pekar ut. ]]
+local function stangdCFrame(BK, GEO, base: CFrame, b, o): CFrame
+	local mx, mz = GEO.oppningsMitt(b.rekt, o.sida, o.u, o.b)
+	local _, _, along, side = GEO.oppningsHorn(b.rekt, o.sida, o.u, o.b)
+	local halvDjup = BK.OPPNINGSDJUP / 2
+	local ut = if side > 0 then halvDjup else -halvDjup
+	local dx = if along == "X" then 0 else ut
+	local dz = if along == "X" then ut else 0
+	return base * CFrame.new(
+		BK.M * (mx + dx),
+		BK.M * (o.z0 + o.h / 2),
+		BK.M * (mz + dz))
 end
 
 --[[ Returnerar true bara när panelen faktiskt hittades och konfigurerades.
@@ -127,17 +141,23 @@ end
      räknaren visade antalet öppningar i datan — inte antalet dörrar som blev
      dörrar. Ett bygge där varenda panel saknades skrev alltså samma rad som
      ett bygge där allt gick rätt. ]]
-local function configureDoor(BK, GEO, WG, model: Model, base: CFrame, b, o, used): boolean
+local function configureDoor(BK, GEO, WG, model: Model, base: CFrame, b, o, index: number): boolean
 	if WG.arFonster(o.typ) then return false end
-	local door = findExistingDoor(BK, GEO, model, base, b, o, used)
+	local door = findExistingDoor(model, b, index)
 	if not door then
-		warn(string.format("[WorldBuild] Hittar inte dörrpanelen %s/%s/%s",
-			b.id, tostring(o.sida), tostring(o.typ)))
+		warn(string.format("[WorldBuild] Hittar inte dörrpanelen %s/#%d/%s",
+			b.id, index, tostring(o.typ)))
 		return false
 	end
 
 	local _, _, along, side = GEO.oppningsHorn(b.rekt, o.sida, o.u, o.b)
-	local closed = door.CFrame
+
+	--[[ Bladet flyttas till det läge öppningen säger, i stället för att dess
+	     eget nuvarande läge blir sanningen. Hål och blad delar därmed EN
+	     transformkälla: byggnadens oppningar-post. ]]
+	local closed = stangdCFrame(BK, GEO, base, b, o)
+	door.CFrame = closed
+
 	local mode = if string.sub(o.typ, 1, 4) == "port" then "slide" else "swing"
 	local opened: CFrame
 
@@ -169,6 +189,7 @@ local function configureDoor(BK, GEO, WG, model: Model, base: CFrame, b, o, used
 	door:SetAttribute("DoorOpenCFrame", opened)
 	door:SetAttribute("DoorOpen", false)
 	door:SetAttribute("BuildingId", b.id)
+	door:SetAttribute("OpeningId", index)
 	door:SetAttribute("OpeningType", o.typ)
 
 	local prompt = door:FindFirstChild("DoorPrompt")
@@ -226,13 +247,12 @@ function WorldBuild.apply(BK, G, GEO, WG)
 		end
 	end
 
-	local used = {}
 	local vantade, byggda = 0, 0
 	for _, b in ipairs(G.byggnader) do
-		for _, o in ipairs(b.oppningar or {}) do
+		for index, o in ipairs(b.oppningar or {}) do
 			if not WG.arFonster(o.typ) then
 				vantade += 1
-				if configureDoor(BK, GEO, WG, worldModel, base, b, o, used) then
+				if configureDoor(BK, GEO, WG, worldModel, base, b, o, index) then
 					byggda += 1
 				end
 			end

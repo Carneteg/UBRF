@@ -207,6 +207,54 @@ do
 		check("första passet gav dörrprompter", promptFore > 0, promptFore .. " st")
 		check("första passet gav exakt en spawn", spawnFore == 1, spawnFore .. " st")
 
+		--[[ Varje dörrblad ska stå i SIN EGEN öppning.
+
+			Panelen slogs förut upp som "närmaste Part med rätt namn", utan
+			avståndsgräns. Namnet är typen, och två öppningar på samma fasad kan
+			ha samma typ — då avgör namnet ingenting och de kan byta panel med
+			varandra utan att något säger ifrån. Nu bär panelen BuildingId och
+			OpeningId från bygget, och läget räknas ur öppningen.
+
+			Provet mäter varje byggd dörr mot det läge dess ÄGANDE öppning ger. ]]
+		local M, DJUP = BuildKit.M, BuildKit.OPPNINGSDJUP
+		local matta, varsta, varstNamn = 0, 0, "—"
+		local utanId = 0
+		for _, b in ipairs(UBRFKomplex.byggnader) do
+			for index, o in ipairs(b.oppningar or {}) do
+				if not WorldGeometry.arFonster(o.typ) then
+					local panel
+					for _, i in ipairs(ubrf:GetDescendants()) do
+						if i:GetAttribute("BuildingId") == b.id
+							and i:GetAttribute("OpeningId") == index
+							and i:GetAttribute("UBRFDoor") == true then
+							panel = i break
+						end
+					end
+					if not panel then
+						utanId += 1
+					else
+						local mx, mz = Geometri.oppningsMitt(b.rekt, o.sida, o.u, o.b)
+						local _, _, along, side = Geometri.oppningsHorn(b.rekt, o.sida, o.u, o.b)
+						local ut = if side > 0 then DJUP / 2 else -DJUP / 2
+						local vx = M * (mx + (if along == "X" then 0 else ut))
+						local vy = M * (o.z0 + o.h / 2)
+						local vz = M * (mz + (if along == "X" then ut else 0))
+						local p = panel.CFrame.Position
+						local d = math.max(math.abs(p.X - vx), math.abs(p.Y - vy), math.abs(p.Z - vz))
+						matta += 1
+						if d > varsta then
+							varsta = d
+							varstNamn = string.format("%s #%d %s", b.id, index, o.typ)
+						end
+					end
+				end
+			end
+		end
+		check("varje dörr hittades på sin egen identitet", utanId == 0, utanId .. " utan")
+		check("alla 17 dörrar mättes", matta == 17, matta .. " st")
+		check("varje blad står i sin ägande öppning", varsta < 0.001,
+			string.format("värst %.4f studs (%s)", varsta, varstNamn))
+
 		--[[ Segmenten ska ligga på VÄGGENS djup, inte på ett eget tal. Stod som
 			0.3 i WorldBuild och som VAGGT = 0.3 i Anlaggningen; ändras den ena
 			sitter fasaden plötsligt framför eller bakom dörrbladen. Nu läses
