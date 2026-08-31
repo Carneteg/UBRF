@@ -85,59 +85,100 @@ local function sammanfatta()
 		end
 	end
 
-	--[[ GAP RÄKNAS ALDRIG SOM PASS och ligger aldrig i nämnaren. En vy vars
-	     underlag saknas kan inte godkännas, och att låta den tysta in i
-	     "N av M godkända" hade gjort en källucka till en delseger. Nämnaren
-	     är därför de BEDÖMBARA vyerna. ]]
-	local bedombara = #vyer - gap
-	print(("  %d PASS, %d FEL, %d kvar av %d bedömbara"):format(pass, fel, kvar, bedombara))
-	if gap > 0 then
-		print(("  %d vyer är EJ BEDÖMBARA (REFERENCE GAP) och ingår inte i nämnaren."):format(gap))
+	--[[ NÄMNAREN KOMMER UR KÄLLAN, INTE UR KLICKEN. Förut räknades
+	     bedömbara som "alla minus de GAP någon HUNNIT klicka", så en vy som
+	     panelen samtidigt sa var obedömbar låg kvar i nämnaren tills Tobias
+	     kvitterat den. Nämnaren rörde sig alltså medan han arbetade.
+
+	     Nu är `ejBedombar` sanningen: en vy utan underlag ligger utanför
+	     nämnaren från början. Kvitteringen redovisas separat. ]]
+	local r = QAPanel.rakna(vyer, resultat)
+	print(("  %d PASS, %d FEL, %d kvar av %d bedömbara"):format(
+		r.pass, r.fel, r.kvar, r.bedombara))
+	if r.ejBedombara > 0 then
+		print(("  %d vyer är EJ BEDÖMBARA (REFERENCE GAP) och ligger utanför nämnaren."):format(
+			r.ejBedombara))
+		if r.gapKvar > 0 then
+			print(("  %d av dem är inte kvitterade än (GAP kvar att kvittera)."):format(r.gapKvar))
+		end
 	end
 	if fel > 0 then
 		print("  Skriv for varje FEL vad du SAG och VAR — inte gissad orsak.")
 	end
-	return { pass = pass, fel = fel, gap = gap, kvar = kvar, bedombara = bedombara }
+	return r
 end
 
---[[ Knapparnas rektanglar, som data. Utan GAP är layouten exakt F01:s —
-     samma tal som förut, så F01-panelen ser likadan ut på pixeln. Med GAP
-     blir det tre lika breda kolumner på samma rad. ]]
+--[[ HELA den klickbara layouten, som data.
+
+     Första försöket beskrev bara PASS, FEL och GAP och prövade dem mot
+     varandra. Provet blev grönt medan F02:s PASS låg rakt över ◀ och ▶ —
+     de satt kvar på samma rad och ingick inte i prövningen. Ett prov som
+     bara ser en del av ytan godkänner resten osett, och det är samma fel
+     som allt annat i den här gaten finns till för att fånga.
+
+     Nu ligger navigering, bedömning och kameraåterställning i samma
+     tabell, och ramhöjden följer med så att ingen knapp hamnar utanför.
+
+     UTAN GAP är varje tal exakt F01:s. F02 får en egen rad för bedömningen
+     och en högre ram. ]]
 function QAPanel.knapplayout(harGap: boolean)
 	if not harGap then
 		return {
-			pass = { x = 0.38, b = 0.28, y = 122, h = 28 },
-			fel = { x = 0.67, b = 0.30, y = 122, h = 28 },
-			gap = nil,
+			ramhojd = 188,
+			knappar = {
+				forra = { x = 0.03, b = 0.16, y = 122, h = 28 },
+				nasta = { x = 0.20, b = 0.16, y = 122, h = 28 },
+				pass = { x = 0.38, b = 0.28, y = 122, h = 28 },
+				fel = { x = 0.67, b = 0.30, y = 122, h = 28 },
+				aterstall = { x = 0.03, b = 0.94, y = 154, h = 26 },
+			},
 		}
 	end
 	return {
-		pass = { x = 0.03, b = 0.30, y = 122, h = 28 },
-		fel = { x = 0.35, b = 0.30, y = 122, h = 28 },
-		gap = { x = 0.67, b = 0.30, y = 122, h = 28 },
+		ramhojd = 222,
+		knappar = {
+			forra = { x = 0.03, b = 0.16, y = 122, h = 28 },
+			nasta = { x = 0.20, b = 0.16, y = 122, h = 28 },
+			pass = { x = 0.03, b = 0.30, y = 156, h = 28 },
+			fel = { x = 0.35, b = 0.30, y = 156, h = 28 },
+			gap = { x = 0.67, b = 0.30, y = 156, h = 28 },
+			aterstall = { x = 0.03, b = 0.94, y = 188, h = 26 },
+		},
 	}
 end
 
---[[ Prövar layouten i stället för att lita på ögonmåttet: inga överlapp,
-     inget utanför panelen. Returnerar antalet fel och en beskrivning. ]]
+--[[ Prövar HELA layouten: ingen kontroll får överlappa en annan, och ingen
+     får ligga utanför ramen. Överlapp räknas som rektanglar — både x och y
+     måste skära. ]]
 function QAPanel.layoutfel(L): (number, string)
 	local rutor = {}
-	for namn, r in pairs(L) do
+	for namn, r in pairs(L.knappar) do
 		if r then table.insert(rutor, { namn = namn, r = r }) end
 	end
-	table.sort(rutor, function(a, b) return a.r.x < b.r.x end)
+	table.sort(rutor, function(a, b)
+		if a.r.y ~= b.r.y then return a.r.y < b.r.y end
+		return a.r.x < b.r.x
+	end)
 	local fel, text = 0, {}
 	for _, e in ipairs(rutor) do
 		if e.r.x < 0 or e.r.x + e.r.b > 1.0 then
 			fel += 1
-			table.insert(text, e.namn .. " ligger utanför panelen")
+			table.insert(text, e.namn .. " ligger utanför panelens bredd")
+		end
+		if e.r.y < 0 or e.r.y + e.r.h > L.ramhojd then
+			fel += 1
+			table.insert(text, e.namn .. " ligger utanför panelens höjd")
 		end
 	end
-	for i = 1, #rutor - 1 do
-		local a, b = rutor[i], rutor[i + 1]
-		if a.r.y == b.r.y and a.r.x + a.r.b > b.r.x then
-			fel += 1
-			table.insert(text, a.namn .. " överlappar " .. b.namn)
+	for i = 1, #rutor do
+		for j = i + 1, #rutor do
+			local a, b = rutor[i].r, rutor[j].r
+			local xkross = a.x < b.x + b.b and b.x < a.x + a.b
+			local ykross = a.y < b.y + b.h and b.y < a.y + a.h
+			if xkross and ykross then
+				fel += 1
+				table.insert(text, rutor[i].namn .. " överlappar " .. rutor[j].namn)
+			end
 		end
 	end
 	return fel, table.concat(text, "; ")
@@ -158,6 +199,18 @@ function QAPanel.start(vyModul: any)
 	--[[ Parent-kollen: gui-variabeln överlever att någon raderar själva
 	     ScreenGui:n i Explorer. Utan den gjorde UBRFQA() då ingenting alls —
 	     panelen "fanns" för koden men inte för människan. ]]
+	--[[ Panelen får inte återanvändas över lägesbyte. Öppnades F01 först och
+	     F02 sedan, i samma Studio-session, saknade F02 sin GAP-knapp — den
+	     byggs bara när ett NYTT gui skapas. Omvänt kunde F01 ärva en
+	     GAP-knapp den inte får ha. Läget är därför en del av identiteten:
+	     skiljer det sig rivs panelen och byggs om. ]]
+	local nyttLage = vyModul.gapKnapp == true
+	if gui and gui.Parent and gui:GetAttribute("F02Lage") ~= nyttLage then
+		gui:Destroy()
+		gui = nil
+		i = 1
+	end
+
 	if gui and gui.Parent then
 		gui.Enabled = true
 		uppdatera()
@@ -179,9 +232,11 @@ function QAPanel.start(vyModul: any)
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	})
 
+	gui:SetAttribute("F02Lage", nyttLage)
+	local L = QAPanel.knapplayout(nyttLage)
 	local ram = ny("Frame", gui :: any, {
 		BackgroundColor3 = FARG.bak, BorderSizePixel = 0,
-		Position = UDim2.new(0, 16, 0, 16), Size = UDim2.new(0, 300, 0, 188),
+		Position = UDim2.new(0, 16, 0, 16), Size = UDim2.new(0, 300, 0, L.ramhojd),
 	})
 	ny("UICorner", ram, { CornerRadius = UDim.new(0, 8) })
 	ny("UIStroke", ram, { Color = FARG.ram, Thickness = 1 })
@@ -222,20 +277,21 @@ function QAPanel.start(vyModul: any)
 		Position = UDim2.new(0, 12, 0, 100), Size = UDim2.new(1, -24, 0, 16),
 	})
 
-	local forra = knapp(ram, "◀", 0.03, 0.16, 122, 28, FARG.knapp)
-	local nasta = knapp(ram, "▶", 0.20, 0.16, 122, 28, FARG.knapp)
+	local K = L.knappar
+	local forra = knapp(ram, "◀", K.forra.x, K.forra.b, K.forra.y, K.forra.h, FARG.knapp)
+	local nasta = knapp(ram, "▶", K.nasta.x, K.nasta.b, K.nasta.y, K.nasta.h, FARG.knapp)
 	--[[ Layouten kommer ur en ren funktion, inte ur tre lösa tal på tre
 	     rader. GAP lades först på x = 0,38 med bredden 0,62 — samma rad och
 	     samma yta som PASS och FEL, och skapad efter dem, så den la sig
 	     ÖVER de två knappar Tobias behöver för human gate. Ett ögonmått
 	     räcker inte till det här; rektanglarna prövas nu. ]]
-	local L = QAPanel.knapplayout(vyModul.gapKnapp == true)
-	local pass = knapp(ram, "PASS", L.pass.x, L.pass.b, L.pass.y, L.pass.h, FARG.pass)
-	local fel = knapp(ram, "FEL", L.fel.x, L.fel.b, L.fel.y, L.fel.h, FARG.fel)
-	local gapKnapp = if L.gap
-		then knapp(ram, "GAP", L.gap.x, L.gap.b, L.gap.y, L.gap.h, FARG.knapp)
+	local pass = knapp(ram, "PASS", K.pass.x, K.pass.b, K.pass.y, K.pass.h, FARG.pass)
+	local fel = knapp(ram, "FEL", K.fel.x, K.fel.b, K.fel.y, K.fel.h, FARG.fel)
+	local gapKnapp = if K.gap
+		then knapp(ram, "GAP", K.gap.x, K.gap.b, K.gap.y, K.gap.h, FARG.knapp)
 		else nil
-	local aterstall = knapp(ram, "Återställ kameran", 0.03, 0.94, 154, 26, FARG.knapp)
+	local aterstall = knapp(ram, "Återställ kameran",
+		K.aterstall.x, K.aterstall.b, K.aterstall.y, K.aterstall.h, FARG.knapp)
 
 	uppdatera = function()
 		local v = Vyer.vyer[i]
@@ -264,6 +320,7 @@ function QAPanel.start(vyModul: any)
 		     bedom() vägrar dessutom — synligt OCH i logiken, så att en
 		     framtida UI-ändring inte tyst öppnar dörren igen. ]]
 		pass.Visible = not v.ejBedombar
+		if gapKnapp then gapKnapp.Visible = v.ejBedombar == true end
 	end
 
 	--[[ FAIL-CLOSED. Förut stegade panelen fram FÖRST och pcall:ade kameran
@@ -292,9 +349,14 @@ function QAPanel.start(vyModul: any)
 	local function bedom(varde: string)
 		local v = Vyer.vyer[i]
 		if not v then return end
-		if v.ejBedombar and varde == "PASS" then
-			warn("[UBRF QA] '" .. v.id .. "' är EJ BEDÖMBAR (REFERENCE GAP) "
-				.. "och kan inte godkännas. Använd GAP.")
+		if not QAPanel.farBedomas(v, varde) then
+			if v.ejBedombar then
+				warn("[UBRF QA] '" .. v.id .. "' är EJ BEDÖMBAR (REFERENCE GAP) "
+					.. "och kan inte godkännas. Använd GAP.")
+			else
+				warn("[UBRF QA] '" .. v.id .. "' ÄR bedömbar och kan inte "
+					.. "kvitteras som GAP. Använd PASS eller FEL.")
+			end
 			return
 		end
 		resultat[v.id] = varde
@@ -325,21 +387,34 @@ QAPanel.sammanfatta = sammanfatta
 
 --[[ För provbänken: rena funktioner utan GUI. ]]
 function QAPanel.rakna(vyer, res)
-	local pass, fel, gap, kvar = 0, 0, 0, 0
+	local pass, fel, gap, kvar, ejBedombara, gapKvar = 0, 0, 0, 0, 0, 0
 	for _, v in ipairs(vyer) do
 		local r = res[v.id]
-		if r == "PASS" then pass += 1
+		if v.ejBedombar then
+			ejBedombara += 1
+			if r == "GAP" then gap += 1 else gapKvar += 1 end
+		elseif r == "PASS" then pass += 1
 		elseif r == "FEL" then fel += 1
-		elseif r == "GAP" then gap += 1
+		elseif r == "GAP" then
+			--[[ Ska inte kunna hända: farBedomas vägrar. Räknas som kvar,
+			     aldrig som något som minskar nämnaren. ]]
+			kvar += 1
 		else kvar += 1 end
 	end
 	return { pass = pass, fel = fel, gap = gap, kvar = kvar,
-		bedombara = #vyer - gap }
+		ejBedombara = ejBedombara, gapKvar = gapKvar,
+		bedombara = #vyer - ejBedombara }
 end
 
+--[[ GAP är till för uttömda källuckor, inte för att slippa bedöma. En
+     vanlig vy får därför INTE kvitteras bort som GAP: hade den kunnat det
+     hade vem som helst kunnat lyfta ut en granskbar yta ur acceptansen med
+     ett klick. ]]
 function QAPanel.farBedomas(vy, varde: string): boolean
-	if vy.ejBedombar and varde == "PASS" then return false end
-	return true
+	if vy.ejBedombar then
+		return varde ~= "PASS"
+	end
+	return varde ~= "GAP"
 end
 
 return QAPanel

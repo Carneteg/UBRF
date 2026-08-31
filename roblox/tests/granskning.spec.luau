@@ -436,34 +436,62 @@ do
 	end
 end
 
-print("\n── Knapplayouten: rektanglar som inte får överlappa ──")
+print("\n── Knapplayouten: HELA den klickbara ytan ──")
 do
-	--[[ GAP lades först på samma rad och samma yta som PASS och FEL, och
-	     skapades efter dem — den la sig alltså ÖVER de två knappar Tobias
-	     behöver för human gate. Ett ögonmått hade inte fångat det. ]]
+	--[[ Första provet såg bara PASS, FEL och GAP och blev grönt medan F02:s
+	     PASS låg rakt över navigeringsknapparna ◀ och ▶ — de satt kvar på
+	     samma rad och ingick inte i prövningen. Ett prov som bara ser en del
+	     av ytan godkänner resten osett. Nu prövas alla kontroller. ]]
 	for _, harGap in ipairs({ false, true }) do
 		local L = QAPanel.knapplayout(harGap)
 		local fel, vad = QAPanel.layoutfel(L)
-		check("layouten håller " .. (if harGap then "med" else "utan") .. " GAP",
+		check("hela layouten håller " .. (if harGap then "med" else "utan") .. " GAP",
 			fel == 0, if fel == 0 then "inga överlapp" else vad)
+		local antal = 0
+		for _ in pairs(L.knappar) do antal += 1 end
+		check("navigering, bedömning och kamera ingår " .. (if harGap then "(F02)" else "(F01)"),
+			antal == (if harGap then 6 else 5)
+			and L.knappar.forra ~= nil and L.knappar.nasta ~= nil
+			and L.knappar.aterstall ~= nil,
+			antal .. " kontroller")
 	end
 	check("GAP-knappen finns bara när den efterfrågas",
-		QAPanel.knapplayout(false).gap == nil
-		and QAPanel.knapplayout(true).gap ~= nil)
-	--[[ F01:s layout ska vara PIXELIDENTISK med före ändringen. ]]
+		QAPanel.knapplayout(false).knappar.gap == nil
+		and QAPanel.knapplayout(true).knappar.gap ~= nil)
+
+	--[[ F01 ska vara PIXELIDENTISK med före ändringen — alla fem talen. ]]
 	local f01 = QAPanel.knapplayout(false)
 	check("F01-layouten är oförändrad",
-		f01.pass.x == 0.38 and f01.pass.b == 0.28
-		and f01.fel.x == 0.67 and f01.fel.b == 0.30)
-	--[[ Provet måste kunna bli rött: en medvetet överlappande layout. ]]
-	local trasig = {
+		f01.ramhojd == 188
+		and f01.knappar.forra.x == 0.03 and f01.knappar.forra.b == 0.16
+		and f01.knappar.nasta.x == 0.20 and f01.knappar.nasta.b == 0.16
+		and f01.knappar.pass.x == 0.38 and f01.knappar.pass.b == 0.28
+		and f01.knappar.fel.x == 0.67 and f01.knappar.fel.b == 0.30
+		and f01.knappar.aterstall.y == 154)
+
+	--[[ Provet måste kunna bli rött. Två gamla fel matas in: den första
+	     överlappande GAP-layouten, och den andra där PASS låg över ◀/▶. ]]
+	local trasig1 = { ramhojd = 188, knappar = {
+		forra = { x = 0.03, b = 0.16, y = 122, h = 28 },
+		nasta = { x = 0.20, b = 0.16, y = 122, h = 28 },
 		pass = { x = 0.38, b = 0.28, y = 122, h = 28 },
 		fel = { x = 0.67, b = 0.30, y = 122, h = 28 },
 		gap = { x = 0.38, b = 0.62, y = 122, h = 28 },
-	}
-	local felTrasig = QAPanel.layoutfel(trasig)
-	check("provet fäller den gamla överlappande layouten", felTrasig > 0,
-		felTrasig .. " fel")
+		aterstall = { x = 0.03, b = 0.94, y = 154, h = 26 } } }
+	check("provet fäller den första GAP-överlappningen",
+		QAPanel.layoutfel(trasig1) > 0)
+	local trasig2 = { ramhojd = 188, knappar = {
+		forra = { x = 0.03, b = 0.16, y = 122, h = 28 },
+		nasta = { x = 0.20, b = 0.16, y = 122, h = 28 },
+		pass = { x = 0.03, b = 0.30, y = 122, h = 28 },
+		fel = { x = 0.35, b = 0.30, y = 122, h = 28 },
+		gap = { x = 0.67, b = 0.30, y = 122, h = 28 },
+		aterstall = { x = 0.03, b = 0.94, y = 154, h = 26 } } }
+	local fel2, vad2 = QAPanel.layoutfel(trasig2)
+	check("provet fäller PASS över navigeringen", fel2 > 0, vad2)
+	local trasig3 = { ramhojd = 188, knappar = {
+		pass = { x = 0.03, b = 0.30, y = 300, h = 28 } } }
+	check("provet fäller en knapp utanför ramen", QAPanel.layoutfel(trasig3) > 0)
 end
 
 print("\n── Av- och påslag får inte mutera modellen ──")
@@ -541,27 +569,71 @@ do
 	end
 end
 
-print("\n── Panelens tredje utfall: GAP är aldrig PASS ──")
+print("\n── GAP: bara för uttömda källuckor, och nämnaren ur källan ──")
 do
 	local vyer = {
 		{ id = "a" }, { id = "b" }, { id = "c", ejBedombar = true },
 		{ id = "d", ejBedombar = true },
 	}
 	local r = QAPanel.rakna(vyer, { a = "PASS", b = "FEL", c = "GAP" })
-	check("PASS, FEL, GAP och kvar räknas var för sig",
-		r.pass == 1 and r.fel == 1 and r.gap == 1 and r.kvar == 1,
-		string.format("%d/%d/%d/%d", r.pass, r.fel, r.gap, r.kvar))
-	--[[ GAP får ALDRIG ligga i nämnaren: en källucka ska inte kunna se ut
-	     som en delseger i "N av M godkända". ]]
-	check("GAP ligger utanför nämnaren", r.bedombara == #vyer - r.gap,
+	check("PASS, FEL och GAP räknas var för sig",
+		r.pass == 1 and r.fel == 1 and r.gap == 1,
+		string.format("%d/%d/%d", r.pass, r.fel, r.gap))
+
+	--[[ NÄMNAREN KOMMER UR KÄLLAN. Förut var den "alla minus klickade GAP",
+	     så en vy panelen samtidigt kallade obedömbar låg kvar i nämnaren
+	     tills någon kvitterat den — nämnaren rörde sig medan Tobias
+	     arbetade. Här är d ejBedombar men OKVITTERAD, och nämnaren ska
+	     ändå vara 2. ]]
+	check("okvitterad ejBedombar blåser inte upp nämnaren", r.bedombara == 2,
 		r.bedombara .. " bedömbara av " .. #vyer)
-	check("en GAP-markering räknas inte som PASS", r.pass == 1)
-	check("en ej bedömbar vy kan inte PASS:as",
+	check("kvittering ändrar inte nämnaren",
+		QAPanel.rakna(vyer, {}).bedombara == 2
+		and QAPanel.rakna(vyer, { c = "GAP", d = "GAP" }).bedombara == 2)
+	check("okvitterade källuckor redovisas för sig", r.gapKvar == 1,
+		r.gapKvar .. " kvar att kvittera")
+	check("alla källuckor räknas", r.ejBedombara == 2)
+
+	--[[ En vanlig vy får inte kunna lyftas ur acceptansen med ett klick. ]]
+	check("en bedömbar vy kan INTE kvitteras som GAP",
+		QAPanel.farBedomas(vyer[1], "GAP") == false)
+	check("en ej bedömbar vy kan INTE godkännas",
 		QAPanel.farBedomas(vyer[3], "PASS") == false)
 	check("en ej bedömbar vy kan markeras GAP",
 		QAPanel.farBedomas(vyer[3], "GAP") == true)
-	check("en vanlig vy kan fortfarande PASS:as",
-		QAPanel.farBedomas(vyer[1], "PASS") == true)
+	check("en vanlig vy kan fortfarande PASS:as och FEL:as",
+		QAPanel.farBedomas(vyer[1], "PASS") == true
+		and QAPanel.farBedomas(vyer[1], "FEL") == true)
+	check("en ej bedömbar vy kan fortfarande FEL:as",
+		QAPanel.farBedomas(vyer[3], "FEL") == true)
+
+	--[[ Även om ett GAP mot alla odds hamnar på en bedömbar vy får det inte
+	     minska nämnaren. ]]
+	local smutsig = QAPanel.rakna(vyer, { a = "GAP" })
+	check("ett GAP på en bedömbar vy minskar inte nämnaren",
+		smutsig.bedombara == 2 and smutsig.pass == 0,
+		smutsig.bedombara .. " bedömbara")
+end
+
+print("\n── Panelens läge är en del av dess identitet ──")
+do
+	--[[ F01 → F02 → F01 i samma session. Panelen byggde GAP-knappen bara
+	     när ett NYTT gui skapades, så ett återanvänt F01-gui gav F02 ingen
+	     GAP-knapp — och tvärtom kunde F01 ärva en knapp den inte får ha. ]]
+	local f01 = QAPanel.knapplayout(false)
+	local f02 = QAPanel.knapplayout(true)
+	check("lägena har olika layoutkontrakt",
+		f01.ramhojd ~= f02.ramhojd
+		and (f01.knappar.gap == nil) ~= (f02.knappar.gap == nil))
+	check("lägesbytet går att upptäcka utan att titta på gui:t",
+		QAPanel.knapplayout(true).knappar.gap ~= nil
+		and QAPanel.knapplayout(false).knappar.gap == nil)
+	--[[ Det som gör ombyggnaden möjlig är att läget är EN flagga med ett
+	     entydigt värde, och att båda lägenas kontrakt håller var för sig. ]]
+	for _, lage in ipairs({ false, true }) do
+		check("kontraktet håller i läge " .. tostring(lage),
+			QAPanel.layoutfel(QAPanel.knapplayout(lage)) == 0)
+	end
 end
 
 if fails > 0 then
