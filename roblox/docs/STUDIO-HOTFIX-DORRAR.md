@@ -6,7 +6,23 @@ kanoniska fidelity-granskningen med de elva vyerna.
 
 **F01-acceptansen 2026-08-30 gäller inte den här ändringen.** Den kördes på
 paketet från PR #26, innan fasaderna byggdes om i segment och innan dörrarna
-fick runtime. Allt nedan är okvitterat tills du har kört det.
+fick runtime.
+
+## Status
+
+| | |
+|---|---|
+| **Runtime — dörrar och spawn** | **PASS 2026-08-31** |
+| Visuell regression, de elva vyerna | **återstår** |
+
+Den rena körningen 2026-08-31 gav förkontroll utan främmande skript, bygget
+`8 byggnader, 12 dörrar, 4 boxrader, 6 gångytor`, `[WorldBuild] 17/17`,
+`WorldService` under `ServerScriptService > Horse`, ingen förorening och ingen
+`CorrugatedMetal`. Dörrarna fungerar i Play.
+
+Kvar är **bara avsnitt 6** — de elva vyerna, med den enda frågan om
+fasadombyggnaden gjorde någon av dem sämre. Stanna i samma rena place; den är
+redan uppsatt.
 
 ## Varför det behövs en server den här gången
 
