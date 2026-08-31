@@ -74,6 +74,37 @@ def main() -> int:
      titta, klicka PASS eller FEL. UBRFQA() öppnar den igen.
      ══════════════════════════════════════════════════════════════════ ]]
 
+""",
+    # Förkontroll. En Studio-place som använts till annat kan innehålla
+    # skript som kör vid Play parallellt med UBRF. Värst är ett GAMMALT
+    # inklistrat bygge som ligger kvar som Workspace.Script: det river den
+    # värld det här paketet just byggt och bygger om den utan dörrdata, så
+    # prompten försvinner och dörrarna "fungerar inte" — utan att något i
+    # UBRF-koden är fel. Det syntes inte förrän man stod framför dörren.
+    """local __ARSKRIPT = { Script = true, LocalScript = true, ModuleScript = true }
+local __smuts = {}
+for _, __i in ipairs(workspace:GetChildren()) do
+\tif __ARSKRIPT[__i.ClassName] then
+\t\ttable.insert(__smuts, "Workspace." .. __i.Name .. " (" .. __i.ClassName .. ")")
+\tend
+end
+for _, __i in ipairs(game:GetService("ServerScriptService"):GetChildren()) do
+\t-- Horse ar Rojo-rotens namn enligt roblox/default.project.json.
+\tif __i.Name ~= "Horse" then
+\t\ttable.insert(__smuts, "ServerScriptService." .. __i.Name .. " (" .. __i.ClassName .. ")")
+\tend
+end
+if #__smuts > 0 then
+\twarn(("FORKONTROLL: platsen innehaller %d skript som inte hor till UBRF:"):format(#__smuts))
+\tfor _, __n in ipairs(__smuts) do warn("   " .. __n) end
+\twarn("Ta bort dem, eller borja om i en TOM place. Ett gammalt inklistrat "
+\t\t.. "bygge kor om vid Play, river varlden det har paketet bygger och "
+\t\t.. "bygger om den UTAN dorrdata — da gor prompten ingenting fast "
+\t\t.. "UBRF-koden ar hel.")
+else
+\tprint("Forkontroll: inga frammande skript i Workspace eller ServerScriptService.")
+end
+
 """]
 
     for namn, fil in MODULER:

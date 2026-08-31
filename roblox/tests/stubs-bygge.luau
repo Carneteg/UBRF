@@ -164,6 +164,7 @@ local function instance(klass)
 			attr[k] = v
 		end,
 		GetAttribute = function(_, k) return attr[k] end,
+		GetChildren = function(self) return self.Children end,
 		GetDescendants = function(self)
 			local ut = {}
 			local function ner(nod)

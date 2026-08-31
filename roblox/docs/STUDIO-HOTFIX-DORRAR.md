@@ -19,6 +19,46 @@ Klistrar du bara in paketet får du en prompt som inte gör någonting.
 
 Därför: paketet bygger världen, Rojo ger servern, Play kör den.
 
+## Börja i en TOM place
+
+Det här steget står först för att en körning 2026-08-31 föll på det.
+
+Output visade `[Session] Session manager started`, `[ShadeAI]`, `[Dread]` och
+ett dussin rader till från **Nightfall Hollow** — ett annat projekt. Ingen av
+dem finns i det här repot. De låg kvar i Studio-placen och kördes parallellt
+med UBRF.
+
+Samma körning innehöll dessutom:
+
+```
+CorrugatedMetal is not a valid member of "Enum.Material"
+Script 'Workspace.Script', Line 3569 - function byggStallInre
+```
+
+Det materialet är borta ur UBRF sedan PR #26 och kan inte komma ur aktuell
+kod. `Workspace.Script` var alltså **ett gammalt inklistrat bygge** som låg
+kvar i placen.
+
+Och det är inte bara oljud. Ett gammalt bygge kör om vid Play, **river den
+värld det här paketet just byggt och bygger om den utan dörrdata**. Då försvinner
+`UBRFDoor`-attributen och prompten, och dörrarna "fungerar inte" — fast
+UBRF-koden är hel. Ett kontaminerat test kan varken godkänna eller underkänna
+dörrarna.
+
+**Så: File → New, en tom Baseplate.** Eller ta bort varje icke-UBRF-skript ur
+placen först. Placen ska innehålla exakt två saker: det Rojo synkar, och det du
+klistrar in.
+
+Paketet kontrollerar det själv och skriver antingen
+
+```
+Forkontroll: inga frammande skript i Workspace eller ServerScriptService.
+```
+
+eller en varning som räknar upp vartenda främmande skript med namn. **Kommer
+varningen: sluta här.** Städa placen och kör om. Allt nedanför är meningslöst
+innan förkontrollen är ren.
+
 ## Så här kör du
 
 ### 1. Generera paketet från aktuell head
@@ -80,6 +120,21 @@ Vid start ska Output visa:
 Siffran ska vara densamma som bygget rapporterade. Kommer raden inte alls är
 servern inte inkopplad. Säger den `0`, eller färre än bygget, följer en varning
 som pekar ut vilket av de två stegen som gick fel.
+
+## Fyra rader innan du bedömer en enda dörr
+
+Går någon av dem fel är dörrarna inte det som ska felsökas. Läs dem i ordning:
+
+| # | Raden | Om den fattas |
+|---|---|---|
+| 1 | `Forkontroll: inga frammande skript …` | placen är smutsig — städa, börja om |
+| 2 | `[WorldBuild] Spelbar värld: 17/17 …` | bygget hittade inte alla paneler |
+| 3 | `Serverkoden finns.` | Rojo är inte inkopplat |
+| 4 | `[World] Dörrar bundna: 17 — UBRFSpawn hittad` | servern band inga dörrar |
+
+Inga `Nightfall`-rader, ingen `CorrugatedMetal`, inget `Workspace.Script` kvar
+efter bygget. **Först när alla fyra stämmer** betyder en dörr som inte rör sig
+att dörren är trasig.
 
 ## Vad du ska kontrollera
 
@@ -178,6 +233,8 @@ lägena ser olika ut:
 
 | Vad du ser | Var felet ligger |
 |---|---|
+| förkontrollen räknar upp skript | placen, inte UBRF |
+| `Nightfall`, `ShadeAI`, `CorrugatedMetal` | placen, inte UBRF |
 | ingen `[World]`-rad alls | servern kördes aldrig — Rojo |
 | `Dörrar bundna: 0` | panelerna saknar attributen — bygget |
 | `bundna` < `17/17` | bygget och servern är inte överens |
