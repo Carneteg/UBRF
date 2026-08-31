@@ -9,10 +9,14 @@
 	Tre saker gör att det ser dyrt ut i stället för billigt:
 
 	  1. Övertoning mellan spår. Ett spår stannar aldrig tvärt.
-	  2. Uppspelningshastigheten följer farten, så hovarna landar där marken
-	     är. Utan det ser hästen ut att åka skridskor.
-	  3. Klippet sträcks bara inom ±30 %. Räcker inte det ska gångarten
-	     byta i stället — det är därför gångartsbanden överlappar.
+	  2. De cykliska gångarterna spolas av `loco.phase`, alltså av
+	     tillryggalagd sträcka, inte av en klocka. Hovarna landar därmed där
+	     marken är även när bildfrekvensen svajar. Utan det ser hästen ut att
+	     åka skridskor.
+	  3. Händelseklippen (hopp, landning, stopp, vändning) spelas av sin egen
+	     klocka med farten som fart, klampad till [0,72 ; 1,32]. Räcker inte
+	     bandet ska gångarten byta i stället — det är därför gångartsbanden
+	     överlappar.
 ]]
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
@@ -125,9 +129,42 @@ function AnimationController:step(loco: Types.Locomotion, dt: number)
 		self.current = key
 	end
 
+	--[[ ── VEM SPOLAR KLIPPET ───────────────────────────────────────────
+	     Förut stod det bara `AdjustSpeed(playbackRate)` här, alltså:
+	     klippet spelas av Roblox egen klocka, och vi justerar farten.
+
+	     Det gav TVÅ klockor i samma häst. `loco.phase` räknas distanslåst i
+	     `MovementController` — tillryggalagd sträcka delat med gångartens
+	     cykellängd — och `SoundController` lägger hovljuden på just den
+	     fasen. Benen följde en annan tid än ljudet.
+
+	     De gled isär precis när det syns mest. `playbackRate` är klampad
+	     till [0,72 ; 1,32]: utanför bandet går benen med fel takt medan
+	     fasen fortsatte rätt. Och `AdjustSpeed` är en ÖNSKAN — blir
+	     bildrutan lång, hästen krockar eller terrängen bromsar, så fortsatte
+	     klippet ändå medan hästen stod still. Hovljudet tystnade, benen
+	     trampade vidare i luften.
+
+	     Nu spolas de cykliska gångarterna av fasen i stället. `TimePosition`
+	     är inte en önskan utan ett läge, och samma sträcka ger samma
+	     benställning oavsett vad bildfrekvensen gjorde på vägen. Ljud, damm
+	     och ben läser därmed EN klocka, och den klockan är marken.
+
+	     `AdjustSpeed(0)` är nödvändig och inte prydnad: utan den skulle
+	     Roblox egen framdrivning ligga kvar ovanpå vår spolning och lägga
+	     till en halv bildruta i taget — samma glid som vi just tog bort.
+
+	     `Length` är 0 innan klippet hämtats från servern. Då faller vi
+	     tillbaka på klockan: hellre en häst som går något fel de första
+	     bildrutorna än en häst som står fastfrusen i ruta ett. ]]
 	local track = self.tracks[key]
 	if track and track.IsPlaying then
-		track:AdjustSpeed(Gaits.playbackRate(loco.gait, math.abs(loco.speed)))
+		if entry.phase and track.Length > 0 then
+			track:AdjustSpeed(0)
+			track.TimePosition = (loco.phase % 1) * track.Length
+		else
+			track:AdjustSpeed(Gaits.playbackRate(loco.gait, math.abs(loco.speed)))
+		end
 	end
 
 	self:_stepIdleVariation(loco, dt)

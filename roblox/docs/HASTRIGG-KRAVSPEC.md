@@ -177,13 +177,18 @@ acceptanskriteriet *"animation timing must match the movement norms closely enou
 to prevent obvious hoof sliding"* omöjligt att uppfylla i delar av tempobandet,
 hur bra klippen än är.
 
-**Fasen är distanslåst. Animationen är klocklåst.**
+**ÅTGÄRDAT 2026-08-31 (issue #44, väg A nedan).** Avsnittet står kvar i sin
+ursprungliga form därför att analysen är det som motiverar åtgärden, och därför
+att den som läser kravspecen ska kunna se vad felet var och varför det inte
+räckte att vidga klampen. Nuläget står i rutan sist i avsnittet.
+
+**Fasen var distanslåst. Animationen var klocklåst.**
 
 | konsument | drivs av | var |
 |---|---|---|
 | hovljud | `loco.phase`, distanslåst | `SoundController.luau` rad 74 |
 | hovdamm | `loco.phase`, distanslåst | `EffectsController.luau` rad 50 |
-| **animationen** | `track:AdjustSpeed(Gaits.playbackRate(...))`, klocklåst | `AnimationController.luau` rad 130 |
+| **animationen** | `track.TimePosition = loco.phase × Length`, distanslåst sedan #44 | `AnimationController.luau` rad 164 |
 
 `Gaits.playbackRate` klampar kvoten `fart / norm` till `[0,72 ; 1,32]`. Utanför
 klampen fortsätter fasen följa marken medan animationen är fartbegränsad. Då
@@ -221,6 +226,28 @@ ljudet och bilden har fortfarande olika klockor.
 Jag rekommenderar **väg A**, och den bör vara en egen issue som blockerar
 acceptans av issue #31:s punkt om hovglidning — inte en ändring som smygs in i en
 tillgångs-PR.
+
+## Nuläge: väg A är genomförd
+
+Issue #44, 2026-08-31. De fyra cykliska gångarterna spolas av `loco.phase`.
+`AdjustSpeed(0)` stänger av Roblox egen framdrivning så att den inte lägger sig
+ovanpå spolningen. Händelseklippen — hopp, landning, stopp, vändning på stället —
+spelas fortfarande av sin egen klocka, därför att de ska ta lika lång tid varje
+gång och en fas som slutar ticka när hästen står still skulle frysa dem i första
+bildrutan. `BackingUp` är också kvar på klockan, därför att fasen bara växer med
+tillryggalagd längd utan tecken: baklänges ser ut som framåt.
+
+Klampen `[0,72 ; 1,32]` finns kvar i `Gaits.playbackRate` och gäller nu bara
+händelseklippen. Tabellen ovan över var klampen slår beskriver därmed inte längre
+gångarterna.
+
+**Det som gjorde att felet kunde ligga kvar var inte klampen utan att
+`AnimationController` aldrig hade ett enda prov.** Riggstubben lämnade
+`animator = nil`, så modulen gick inte att konstruera i en spec. Stubbarna finns
+nu, och sju mätningar i `movement.spec.luau` täcker kontraktet. De är
+falsifierade: den gamla koden fäller fyra av dem, en glömd multiplikation med
+klipplängden fäller två, en borttagen `AdjustSpeed(0)` fäller en, ett fasdrivet
+händelseklipp fäller en, och ett borttaget längdvillkor fäller en.
 
 Notera också att `HORSE-MODEL-SPEC.md` skriver att klampen är **±30 %**. Koden
 klampar `[0,72 ; 1,32]`, alltså −28 % och +32 %. Dokumentationen är avrundad åt
@@ -470,10 +497,17 @@ punkt 6 en åsikt.
 
 **Prov 10 — hovglidning, mätt.** Rid i skritt vid `0,90 m/s`, gångartens nedre
 bandgräns, och film hoven i kontakt. Glider den bakåt relativt marken är provet
-underkänt. **Med dagens klocklåsta animation kommer provet att underkännas oavsett
-hur bra klippen är** — se § 3. Det är därför § 3 måste åtgärdas innan punkt 6 kan
-godkännas, och därför provet ska skrivas nu och inte efter att någon har lagt två
-veckor på klipp.
+underkänt.
+
+Provet skrevs innan § 3 var åtgärdat, och då var det omöjligt att klara oavsett
+hur bra klippen var. **Sedan issue #44 är hindret borta:** benen läser samma fas
+som hovljudet, så glidning kan bara komma från klippet självt eller från en
+felaktig cykellängd i klippet — vilket är precis vad provet ska mäta.
+
+Provet är fortfarande ett mänskligt Studio-prov och kan inte ersättas av
+`movement.spec.luau`. Specen mäter att koden läser fasen rätt. Den kan inte veta
+om klippet i sin tur är gjort för rätt cykellängd, och det är den frågan prov 10
+avgör.
 
 ---
 
