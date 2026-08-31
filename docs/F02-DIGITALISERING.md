@@ -131,9 +131,40 @@ Granskningsläget ritar utöver planrummen även de befintliga byggda zonerna:
 **34 zonplattor**, **136 väggsegment**, **3 trappmarkeringar**, **91 vyer**
 (två per zon plus tre våningsöversikter).
 
-**Öppningar: 0 ritade.** Dörr- och fönsterlägen i planerna är läsbara som
-symboler men inte mätbara i djupled på ridhusplanen, och på stallplanen har jag
-inte digitaliserat dem — de står som olöst, inte som noll.
+## Öppningarna
+
+Fyra ytterdörrar är digitaliserade ur stallplanen, två av dem med läge.
+
+Källan är **de gröna utrymningsbanden**: där ett band korsar ytterväggen finns
+en dörr. Det är den enda dörrmarkeringen i planen som går att läsa utan att
+gissa — väggluckorna inne i huset är för många och för lika ritbrus.
+`tools/planoppningar.py` tröskar fram den gula husytan och de gröna banden och
+rapporterar vilka band som rör huset. Fyra gör det.
+
+**Förekomsten är säkrare än läget.** Att ett band ligger på västväggen är en
+topologisk avläsning. Var på väggen det sitter beror på var husets gavlar
+anses börja, och gavlarna är inte entydiga i fotot. Läget mättes därför med
+**tre oberoende definitioner** av husets utsträckning, och spridningen mellan
+dem avgör:
+
+| Öppning | Vägg | Spridning | Utfall |
+|---|---|---|---|
+| `s_opp_ost_service` | öst | **0,62 %** | läge satt, `PLAN` |
+| `s_opp_vast_mitt` | väst | **1,34 %** | läge satt, `PLAN` |
+| `s_opp_vast_klubb` | väst | 2,08 % | **`REFERENCE GAP`** — bara sidan är läst |
+| `s_opp_norr_gavel` | norr | 2,71 % | **`REFERENCE GAP`** — bara sidan är läst |
+
+Gränsen 2 % sattes innan utfallet lästes. Att skriva ut ett läge för de två
+sista hade låtit en avläsning som spretar 2,7 % se ut som ett mått.
+
+**Ett avsteg att ta upp i Steg A:** planen lägger västöppningen på 50,2 % av
+längden; modellens tvärkorridor ligger på 42,3 %. Skillnaden ≈ 5,5 m är
+obedömd och ska tas upp, inte rättas i tysthet åt något håll.
+
+**Ridhuset: noll öppningar.** Planen är inte rätbar, så ingen andel längs
+någon vägg är mätbar. `REFERENCE GAP`.
+
+**Innerdörrar: noll, som `REFERENCE GAP`** — inte som noll.
 
 ### De sex ridhusrummen efter rektifiering
 

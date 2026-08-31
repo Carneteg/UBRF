@@ -20,6 +20,34 @@ I Fas 1 bedöms **bara** rumsgränser, cirkulation, dörr-/trapp-/WC-lägen och
 öppningar. En röd platta är en dokumenterad lucka — den bedöms som lucka,
 inte som slarv.
 
+### Tre utfall, inte två
+
+Panelen har `PASS`, `FEL` och **`GAP`**. En zon vars underlag är uttömt är
+varken godkänd eller underkänd, och att tvinga in den i något av de två hade
+betytt att antingen godkänna geometri som inte finns eller underkänna
+någon för en källucka.
+
+- **`GAP` räknas aldrig som `PASS`** och ligger **aldrig i nämnaren**.
+  Sammanfattningen skriver `N PASS, M FEL, K kvar av B bedömbara`, där
+  `B = alla − GAP`.
+- En vy märkt `ejBedombar` **kan inte** godkännas: PASS-knappen släcks och
+  logiken vägrar. En källucka ska inte kunna bli en delseger.
+- Zoner utan mått får **ingen egen kamera**. De visas på våningsöversikten
+  med texten `EJ GEOMETRISKT BEDÖMBAR — REFERENCE GAP`. En kamera som pekar
+  någonstans är ett påstående om ett läge, hur texten än lyder.
+
+### Spöklagret har fyra sorter
+
+| Sort | Byggs ur | Betyder |
+|---|---|---|
+| `SKILJEVAGG` | enskilda planrum, **deduplicerade** | en rumsgräns läst ur planen |
+| `ZONGRANS` | sammanfattande QA-zoner | golvmarkering — **aldrig** vägg |
+| `TRAPPA` | zoner med trappa | fotavtryck |
+| `OPPNING` | `Planoppning`, bara mätta lägen | dörrläge |
+
+En sammanfattande zon som boxhallen eller banan får **inte** väggar: källan
+bär ingen vägg där, och en kontur som ser ut som en vägg påstår en.
+
 ---
 
 **Status:** Fas 1-granskningsläget byggt, väntar på #32-merge och därefter

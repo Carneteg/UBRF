@@ -41,13 +41,21 @@ export type Zon = {
 	rekt: { x: number, y: number, w: number, h: number }?,
 	-- 2 = stallets övervåning; plattan ritas på övervåningshöjd.
 	niva: number?,
+	--[[ "planrum" = en enskild rumsgräns läst ur planen. "aggregat" = en
+	     sammanfattande QA-zon (boxhallen, banan, läktarbandet …). Bara
+	     planrum får spökväggar; ett aggregat är inte en fysisk vägg och
+	     får inte se ut som en. ]]
+	ursprung: string?,
 }
 
 function Granskning.zoner(K, Planrum): { Zon }
 	local S = K.stall
 	local R = K.ridhus
 	local ut: { Zon } = {}
-	local function zon(z: Zon) table.insert(ut, z) end
+	local function zon(z: Zon)
+		z.ursprung = z.ursprung or "aggregat"
+		table.insert(ut, z)
+	end
 
 	-- ── STALLET ──────────────────────────────────────────────────────
 	zon({ id = "stall_boxhall", namn = "Boxhallen", hus = "stall",
@@ -134,6 +142,7 @@ function Granskning.zoner(K, Planrum): { Zon }
 			local rekt, skalklass = Planrum.meter(r)
 			zon({ id = r.id, namn = r.namn, hus = r.hus, klass = r.klass,
 				byggd = false, niva = r.niva, rekt = rekt,
+				ursprung = "planrum",
 				kalla = r.kalla .. " · " .. skalklass })
 		end
 	end
@@ -203,7 +212,52 @@ end
 
 local VAGGMAPP = "F02ReviewGeometry"
 
-function Granskning.byggVaggar(BK, K, Planrum, model: Model, base: CFrame)
+--[[ Spöklagret. FYRA SKILDA SORTER, för de betyder olika saker:
+
+       · SKILJEVAGG  — en rumsgräns läst ur planen. Bara planrum får sådana.
+       · ZONGRANS    — en sammanfattande QA-zon (boxhallen, banan, läktaren).
+                       Får golvmarkering, ALDRIG vägg: källan bär ingen vägg
+                       där, och en vägg som ser ut som en vägg påstår en.
+       · TRAPPA      — fotavtryck, inte kontur.
+       · OPPNING     — dörrläge ur Planoppning, bara där läget är mätt.
+
+     Skiljeväggarna DEDUPLICERAS. Två rum som delar en gräns ritade förut var
+     sin vägg på samma ställe, och räkningen såg dubbelt så stor ut som
+     underlaget. Nyckeln är (hus, nivå, riktning, fast koordinat, från, till)
+     avrundad till 5 cm.
+]]
+function Granskning.skiljevaggar(K, Planrum)
+	local segment: { [string]: any } = {}
+	local ordning: { string } = {}
+	local function lagg(hus, niva, riktning, fast, a0, a1, klass, romid)
+		if a1 - a0 < 0.05 then return end
+		local nyckel = string.format("%s|%d|%s|%.2f|%.2f|%.2f",
+			hus, niva, riktning, fast, a0, a1)
+		if segment[nyckel] then
+			table.insert(segment[nyckel].rum, romid)
+			return
+		end
+		segment[nyckel] = { hus = hus, niva = niva, riktning = riktning,
+			fast = fast, a0 = a0, a1 = a1, klass = klass, rum = { romid } }
+		table.insert(ordning, nyckel)
+	end
+
+	for _, z in ipairs(Granskning.zoner(K, Planrum)) do
+		if z.rekt and z.ursprung == "planrum" then
+			local r, n = z.rekt, z.niva or 1
+			lagg(z.hus, n, "x", r.y, r.x, r.x + r.w, z.klass, z.id)
+			lagg(z.hus, n, "x", r.y + r.h, r.x, r.x + r.w, z.klass, z.id)
+			lagg(z.hus, n, "y", r.x, r.y, r.y + r.h, z.klass, z.id)
+			lagg(z.hus, n, "y", r.x + r.w, r.y, r.y + r.h, z.klass, z.id)
+		end
+	end
+
+	local ut = {}
+	for _, nyckel in ipairs(ordning) do table.insert(ut, segment[nyckel]) end
+	return ut
+end
+
+function Granskning.byggVaggar(BK, K, Planrum, model: Model, base: CFrame, Planoppning)
 	local gammal = model:FindFirstChild(VAGGMAPP)
 	if gammal then gammal:Destroy() end
 	local mapp = Instance.new("Folder")
@@ -211,54 +265,96 @@ function Granskning.byggVaggar(BK, K, Planrum, model: Model, base: CFrame)
 	mapp.Parent = model
 
 	local T, H = 0.12, 1.9   -- konturtjocklek och höjd, båda granskningsvärden
-	local vaggar, trappor = 0, 0
+	local vaggar, zongranser, trappor, oppningar = 0, 0, 0, 0
 
+	local function golvhojd(hus, niva)
+		return if (niva or 1) >= 2 then (K[hus].tak or 3.4) + 0.4 else 0.15
+	end
+
+	-- ── SKILJEVAGG: bara planrum, deduplicerade ──────────────────────
+	for i, seg in ipairs(Granskning.skiljevaggar(K, Planrum)) do
+		local o = K[seg.hus].origo
+		local g = golvhojd(seg.hus, seg.niva)
+		local f = KLASSFARG[seg.klass] or KLASSFARG.GAP
+		local x, z, sx, sz
+		if seg.riktning == "x" then
+			x, z, sx, sz = seg.a0, seg.fast - T / 2, seg.a1 - seg.a0, T
+		else
+			x, z, sx, sz = seg.fast - T / 2, seg.a0, T, seg.a1 - seg.a0
+		end
+		local p = BK.box(mapp :: any, base,
+			string.format("F02skiljevagg %d", i),
+			o.x + x, g, o.y + z, sx, H, sz, f, Enum.Material.SmoothPlastic)
+		p.CanCollide = false
+		p.Transparency = 0.35
+		p:SetAttribute("F02Review", true)
+		p:SetAttribute("F02Sort", "SKILJEVAGG")
+		p:SetAttribute("EvidenceClass", seg.klass)
+		p:SetAttribute("RoomId", seg.rum[1])
+		p:SetAttribute("DelasAv", #seg.rum)
+		vaggar += 1
+	end
+
+	-- ── ZONGRANS: aggregat får golv, aldrig vägg ─────────────────────
 	for _, z in ipairs(Granskning.zoner(K, Planrum)) do
-		if z.rekt then
+		if z.rekt and z.ursprung ~= "planrum" then
 			local o = K[z.hus].origo
-			local golv = if (z.niva or 1) >= 2 then (K[z.hus].tak or 3.4) + 0.4 else 0.15
-			local f = KLASSFARG[z.klass] or KLASSFARG.GAP
-			local r = z.rekt
-			--[[ Fyra sidor. Långsidorna går hela vägen, kortsidorna dras in så
-			     att hörnen inte överlappar och blir dubbelt så mörka. ]]
-			local sidor = {
-				{ r.x, r.y, r.w, T },
-				{ r.x, r.y + r.h - T, r.w, T },
-				{ r.x, r.y + T, T, r.h - 2 * T },
-				{ r.x + r.w - T, r.y + T, T, r.h - 2 * T },
-			}
-			for i, s in ipairs(sidor) do
-				local p = BK.box(mapp :: any, base,
-					string.format("F02vagg %s %d", z.id, i),
-					o.x + s[1], golv, o.y + s[2], s[3], H, s[4], f,
-					Enum.Material.SmoothPlastic)
-				p.CanCollide = false
-				p.Transparency = 0.35
-				p:SetAttribute("RoomId", z.id)
-				p:SetAttribute("EvidenceClass", z.klass)
-				p:SetAttribute("F02Review", true)
-				vaggar += 1
-			end
+			local p = BK.box(mapp :: any, base, "F02zongrans " .. z.id,
+				o.x + z.rekt.x, golvhojd(z.hus, z.niva) - 0.05, o.y + z.rekt.y,
+				z.rekt.w, 0.04, z.rekt.h,
+				KLASSFARG[z.klass] or KLASSFARG.GAP, Enum.Material.SmoothPlastic)
+			p.CanCollide = false
+			p.Transparency = 0.82
+			p:SetAttribute("F02Review", true)
+			p:SetAttribute("F02Sort", "ZONGRANS")
+			p:SetAttribute("RoomId", z.id)
+			zongranser += 1
+		end
 
-			--[[ Trappor får en egen markering: en konturvägg säger inte att
-			     man ska kunna gå UPP där. ]]
-			if string.find(z.id, "trapp") then
-				local p = BK.box(mapp :: any, base, "F02trappa " .. z.id,
-					o.x + r.x + T, golv, o.y + r.y + T,
-					r.w - 2 * T, 0.05, r.h - 2 * T,
-					Color3.fromRGB(240, 240, 240), Enum.Material.Neon)
+		-- ── TRAPPA: fotavtryck, inte kontur ──────────────────────────
+		if z.rekt and string.find(z.id, "trapp") then
+			local o = K[z.hus].origo
+			local p = BK.box(mapp :: any, base, "F02trappa " .. z.id,
+				o.x + z.rekt.x + T, golvhojd(z.hus, z.niva), o.y + z.rekt.y + T,
+				z.rekt.w - 2 * T, 0.05, z.rekt.h - 2 * T,
+				Color3.fromRGB(240, 240, 240), Enum.Material.Neon)
+			p.CanCollide = false
+			p.Transparency = 0.4
+			p:SetAttribute("F02Review", true)
+			p:SetAttribute("F02Sort", "TRAPPA")
+			p:SetAttribute("RoomId", z.id)
+			trappor += 1
+		end
+	end
+
+	-- ── OPPNING: bara där läget faktiskt är mätt ─────────────────────
+	if Planoppning then
+		for _, op in ipairs(Planoppning.lista) do
+			local langs = Planoppning.meter(op, Planrum and Planrum.SKALA)
+			local K2 = K[op.hus]
+			if langs and K2 then
+				local o = K2.origo
+				local vx = if op.vagg == "V" then 0 else K2.bredd
+				local p = BK.box(mapp :: any, base, "F02oppning " .. op.id,
+					o.x + vx - 0.3, golvhojd(op.hus, 1), o.y + langs - 0.6,
+					0.6, 2.1, 1.2,
+					Color3.fromRGB(255, 255, 255), Enum.Material.Neon)
 				p.CanCollide = false
-				p.Transparency = 0.4
-				p:SetAttribute("RoomId", z.id)
+				p.Transparency = 0.45
 				p:SetAttribute("F02Review", true)
-				trappor += 1
+				p:SetAttribute("F02Sort", "OPPNING")
+				p:SetAttribute("OpeningId", op.id)
+				p:SetAttribute("EvidenceClass", op.klass)
+				oppningar += 1
 			end
 		end
 	end
 
-	print(string.format("[F02] %d granskningsväggar, %d trappmarkeringar i %s "
-		.. "(CanCollide=false, aldrig spelgeometri)", vaggar, trappor, VAGGMAPP))
-	return vaggar, trappor
+	print(string.format("[F02] spöklager: %d skiljeväggar (unika, deduplicerade), "
+		.. "%d zongränser, %d trappor, %d öppningar i %s "
+		.. "(CanCollide=false, aldrig spelgeometri)",
+		vaggar, zongranser, trappor, oppningar, VAGGMAPP))
+	return vaggar, trappor, zongranser, oppningar
 end
 
 function Granskning.visaVaggar(model: Model, pa: boolean): number
@@ -315,7 +411,7 @@ end
 	klubb-/gaveldelens kamera och GAP-texten — de ska bedömas som luckor,
 	inte glömmas för att de inte går att stå i. ]]
 
-function Granskning.vyModul(BK, K, Planrum)
+function Granskning.vyModul(BK, K, Planrum, Planoppning)
 	local vyer = {}
 
 	--[[ Översikt per våningsplan FÖRST: alla RoomId-plattor i bild samtidigt,
@@ -350,29 +446,108 @@ function Granskning.vyModul(BK, K, Planrum)
 		local o = K[z.hus].origo
 		local etikett = string.format("[%s%s] %s", z.klass,
 			if z.byggd then "" else " · OBYGGD", z.kalla)
-		local r = z.rekt or { x = 0, y = K[z.hus].langd - 10, w = K[z.hus].bredd, h = 10 }
-		local cx, cy = o.x + r.x + r.w / 2, o.y + r.y + r.h / 2
 
-		table.insert(vyer, {
-			id = z.id .. "_uppifran",
-			grupp = z.hus,
-			text = z.namn .. " — uppifrån. " .. etikett,
-			krav = "Bedöm gränser och läge mot planen, inte ytfinish.",
-			fran = { x = cx, y = cy - 0.1, h = math.max(r.w, r.h) + 8 },
-			mot = { x = cx, y = cy },
-			aim = 0,
-		})
-		table.insert(vyer, {
-			id = z.id .. "_ogonhojd",
-			grupp = z.hus,
-			text = z.namn .. " — i ögonhöjd. " .. etikett,
-			krav = "Cirkulation och dörrlägen: kommer man dit man ska?",
-			fran = { x = cx, y = o.y + r.y - 2, h = 1.7 },
-			mot = { x = cx, y = cy },
-		})
+		if not z.rekt then
+			--[[ INGEN PÅHITTAD RESERVREKTANGEL. Förut fick varje zon utan
+			     mått två kameror riktade mot en godtycklig 10-metersremsa
+			     vid gaveln. Texten sa GAP medan bilden pekade ut ett läge och
+			     en utsträckning som ingen källa bär — och en kamera som
+			     pekar någonstans är ett påstående, hur texten än lyder.
+
+			     Zonen får i stället EN vy: våningsöversikten den hör till,
+			     uttryckligen märkt som obedömbar. Panelen vägrar PASS på
+			     den (ejBedombar). ]]
+			local ov = if z.hus == "stall"
+				then (if (z.niva or 1) >= 2 then "oversikt_stall_plan2" else "oversikt_stall_plan1")
+				else "oversikt_ridhus_entre"
+			local kalla_vy
+			for _, kandidat in ipairs(vyer) do
+				if kandidat.id == ov then kalla_vy = kandidat break end
+			end
+			table.insert(vyer, {
+				id = z.id .. "_kallgap",
+				grupp = z.hus,
+				ejBedombar = true,
+				text = z.namn .. " — EJ GEOMETRISKT BEDÖMBAR — REFERENCE GAP. "
+					.. etikett .. " Kameran visar våningen, inte rummet: "
+					.. "källan bär ingen utsträckning att peka på.",
+				krav = "Kvittera som GAP. Godkänn ingen geometri som inte finns.",
+				fran = kalla_vy and kalla_vy.fran or { x = o.x, y = o.y, h = 60 },
+				mot = kalla_vy and kalla_vy.mot or { x = o.x, y = o.y },
+				aim = 0,
+			})
+		else
+			local r = z.rekt
+			local cx, cy = o.x + r.x + r.w / 2, o.y + r.y + r.h / 2
+			--[[ Plan 2:s plattor ritas på övervåningshöjd. En ögonhöjdskamera
+			     på 1,7 hade stått på marken och tittat på undersidan av
+			     våningen. Golvet läggs därför till. ]]
+			local golv = if (z.niva or 1) >= 2 then (K[z.hus].tak or 3.4) + 0.4 else 0.0
+
+			table.insert(vyer, {
+				id = z.id .. "_uppifran",
+				grupp = z.hus,
+				text = z.namn .. " — uppifrån. " .. etikett,
+				krav = "Bedöm gränser och läge mot planen, inte ytfinish.",
+				fran = { x = cx, y = cy - 0.1, h = golv + math.max(r.w, r.h) + 8 },
+				mot = { x = cx, y = cy },
+				aim = golv,
+			})
+			table.insert(vyer, {
+				id = z.id .. "_ogonhojd",
+				grupp = z.hus,
+				text = z.namn .. " — i ögonhöjd. " .. etikett,
+				krav = "Cirkulation och dörrlägen: kommer man dit man ska?",
+				fran = { x = cx, y = o.y + r.y - 2, h = golv + 1.7 },
+				mot = { x = cx, y = cy },
+				aim = golv + 1.5,
+			})
+		end
 	end
 
-	local modul = { vyer = vyer }
+	--[[ Öppningarna får egna vyer. En dörr som inte går att peka på i
+	     granskningen kan inte bedömas, och Acceptance Contract säger
+	     uttryckligen dörrlägen. ]]
+	if Planoppning then
+		for _, op in ipairs(Planoppning.lista) do
+			local K2 = K[op.hus]
+			local langs = Planoppning.meter(op, Planrum and Planrum.SKALA)
+			if K2 then
+				local o = K2.origo
+				if langs then
+					local vx = if op.vagg == "V" then 0 else K2.bredd
+					table.insert(vyer, {
+						id = op.id,
+						grupp = op.hus,
+						text = "Öppning " .. op.id .. " — [" .. op.klass .. "] "
+							.. op.kalla,
+						krav = "Sitter dörren på rätt vägg och rätt ställe längs den?",
+						fran = { x = o.x + vx + (if op.vagg == "V" then -8 else 8),
+							y = o.y + langs, h = 2.0 },
+						mot = { x = o.x + K2.bredd / 2, y = o.y + langs },
+						aim = 1.5,
+					})
+				else
+					table.insert(vyer, {
+						id = op.id,
+						grupp = op.hus,
+						ejBedombar = true,
+						text = "Öppning " .. op.id
+							.. " — EJ GEOMETRISKT BEDÖMBAR — REFERENCE GAP. "
+							.. op.kalla,
+						krav = "Kvittera som GAP. Väggsidan är läst, läget är det inte.",
+						fran = { x = o.x + K2.bredd / 2, y = o.y + K2.langd / 2 - 0.1,
+							h = K2.langd + 10 },
+						mot = { x = o.x + K2.bredd / 2, y = o.y + K2.langd / 2 },
+						aim = 0,
+					})
+				end
+			end
+		end
+	end
+
+	--[[ Tredje utfallet slås PÅ för F02. F01-panelen rör vi inte. ]]
+	local modul = { vyer = vyer, gapKnapp = true }
 	function modul.ga(id: string)
 		for _, v in ipairs(vyer) do
 			if v.id == id then
@@ -393,11 +568,11 @@ end
 
 --[[ ── Start ─────────────────────────────────────────────────────────────── ]]
 
-function Granskning.start(BK, K, QAPanel, Planrum, model: Model, base: CFrame)
+function Granskning.start(BK, K, QAPanel, Planrum, Planoppning, model: Model, base: CFrame)
 	Granskning.byggZoner(BK, K, Planrum, model, base)
-	Granskning.byggVaggar(BK, K, Planrum, model, base)
+	Granskning.byggVaggar(BK, K, Planrum, model, base, Planoppning)
 	Granskning.dollhouse(model, true)
-	QAPanel.start(Granskning.vyModul(BK, K, Planrum))
+	QAPanel.start(Granskning.vyModul(BK, K, Planrum, Planoppning))
 	print("[F02] Granskningsläge: dollhouse PÅ, zonplattor ute, panelen öppen.")
 	print("[F02] UBRFDollhouse(false) sätter tillbaka taken, "
 		.. "UBRFVaggar(false) gömmer granskningsväggarna.")

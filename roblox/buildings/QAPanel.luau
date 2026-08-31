@@ -61,7 +61,7 @@ end
 	att någon behöver minnas vad som var vad. ]]
 local function sammanfatta()
 	local vyer = Vyer.vyer
-	local pass, fel, kvar = 0, 0, 0
+	local pass, fel, gap, kvar = 0, 0, 0, 0
 	--[[ Raderna inleds med en bock, inte med ordet. roblox/tests/kor.sh
 		letar efter ^\s*FEL for att hitta misslyckade prov, och en rad som
 		BORJAR med FEL har fick hela qa-specen att se rod ut fast den var
@@ -76,15 +76,28 @@ local function sammanfatta()
 		elseif r == "FEL" then
 			fel += 1
 			print(("  ✗ FEL   %s   → skärmdump: qa-%s-FEL.png"):format(v.id, v.id))
+		elseif r == "GAP" then
+			gap += 1
+			print(("  ◌ GAP   %s   (ej bedömbar — REFERENCE GAP)"):format(v.id))
 		else
 			kvar += 1
 			print(("  · —     %s   (inte bedömd)"):format(v.id))
 		end
 	end
-	print(("  %d PASS, %d FEL, %d kvar av %d"):format(pass, fel, kvar, #vyer))
+
+	--[[ GAP RÄKNAS ALDRIG SOM PASS och ligger aldrig i nämnaren. En vy vars
+	     underlag saknas kan inte godkännas, och att låta den tysta in i
+	     "N av M godkända" hade gjort en källucka till en delseger. Nämnaren
+	     är därför de BEDÖMBARA vyerna. ]]
+	local bedombara = #vyer - gap
+	print(("  %d PASS, %d FEL, %d kvar av %d bedömbara"):format(pass, fel, kvar, bedombara))
+	if gap > 0 then
+		print(("  %d vyer är EJ BEDÖMBARA (REFERENCE GAP) och ingår inte i nämnaren."):format(gap))
+	end
 	if fel > 0 then
 		print("  Skriv for varje FEL vad du SAG och VAR — inte gissad orsak.")
 	end
+	return { pass = pass, fel = fel, gap = gap, kvar = kvar, bedombara = bedombara }
 end
 
 local uppdatera: () -> ()
@@ -170,6 +183,12 @@ function QAPanel.start(vyModul: any)
 	local nasta = knapp(ram, "▶", 0.20, 0.16, 122, 28, FARG.knapp)
 	local pass = knapp(ram, "PASS", 0.38, 0.28, 122, 28, FARG.pass)
 	local fel = knapp(ram, "FEL", 0.67, 0.30, 122, 28, FARG.fel)
+	--[[ Tredje utfallet finns bara när vymodulen ber om det. F01-panelens
+	     semantik ändras inte: utan flaggan finns knappen inte, och
+	     sammanfattningen ser likadan ut som förut. ]]
+	local gapKnapp = if vyModul.gapKnapp
+		then knapp(ram, "GAP", 0.38, 0.62, 122, 28, FARG.knapp)
+		else nil
 	local aterstall = knapp(ram, "Återställ kameran", 0.03, 0.94, 154, 26, FARG.knapp)
 
 	uppdatera = function()
@@ -185,10 +204,20 @@ function QAPanel.start(vyModul: any)
 		elseif r == "FEL" then
 			status.Text = "FEL — spara qa-" .. v.id .. "-FEL.png"
 			status.TextColor3 = FARG.fel
+		elseif r == "GAP" then
+			status.Text = "GAP — EJ BEDÖMBAR (REFERENCE GAP)"
+			status.TextColor3 = FARG.svag
+		elseif v.ejBedombar then
+			status.Text = "EJ GEOMETRISKT BEDÖMBAR — REFERENCE GAP"
+			status.TextColor3 = FARG.svag
 		else
 			status.Text = "inte bedömd"
 			status.TextColor3 = FARG.svag
 		end
+		--[[ En vy utan underlag får inte kunna PASS:as. Knappen släcks, och
+		     bedom() vägrar dessutom — synligt OCH i logiken, så att en
+		     framtida UI-ändring inte tyst öppnar dörren igen. ]]
+		pass.Visible = not v.ejBedombar
 	end
 
 	--[[ FAIL-CLOSED. Förut stegade panelen fram FÖRST och pcall:ade kameran
@@ -217,6 +246,11 @@ function QAPanel.start(vyModul: any)
 	local function bedom(varde: string)
 		local v = Vyer.vyer[i]
 		if not v then return end
+		if v.ejBedombar and varde == "PASS" then
+			warn("[UBRF QA] '" .. v.id .. "' är EJ BEDÖMBAR (REFERENCE GAP) "
+				.. "och kan inte godkännas. Använd GAP.")
+			return
+		end
 		resultat[v.id] = varde
 		uppdatera()
 		sammanfatta()
@@ -227,6 +261,7 @@ function QAPanel.start(vyModul: any)
 	nasta.Activated:Connect(function() ga(1) end)
 	pass.Activated:Connect(function() bedom("PASS") end)
 	fel.Activated:Connect(function() bedom("FEL") end)
+	if gapKnapp then gapKnapp.Activated:Connect(function() bedom("GAP") end) end
 	aterstall.Activated:Connect(function()
 		local kam = workspace.CurrentCamera
 		if kam then kam.CameraType = Enum.CameraType.Custom end
@@ -241,5 +276,24 @@ function QAPanel.dolj()
 end
 
 QAPanel.sammanfatta = sammanfatta
+
+--[[ För provbänken: rena funktioner utan GUI. ]]
+function QAPanel.rakna(vyer, res)
+	local pass, fel, gap, kvar = 0, 0, 0, 0
+	for _, v in ipairs(vyer) do
+		local r = res[v.id]
+		if r == "PASS" then pass += 1
+		elseif r == "FEL" then fel += 1
+		elseif r == "GAP" then gap += 1
+		else kvar += 1 end
+	end
+	return { pass = pass, fel = fel, gap = gap, kvar = kvar,
+		bedombara = #vyer - gap }
+end
+
+function QAPanel.farBedomas(vy, varde: string): boolean
+	if vy.ejBedombar and varde == "PASS" then return false end
+	return true
+end
 
 return QAPanel

@@ -119,11 +119,80 @@ do
 	end
 end
 
-print("\n── Vymodulen: två kameror per zon, och fel som hörs ──")
+print("\n── Vymodulen: ritbara zoner får kameror, olösta får inte ──")
 do
-	local modul = Granskning.vyModul(BuildKit, UBRFKomplex, Planrum)
-	check("två vyer per zon plus tre översikter", #modul.vyer == #zoner * 2 + 3,
-		#modul.vyer .. " för " .. #zoner .. " zoner")
+	local modul = Granskning.vyModul(BuildKit, UBRFKomplex, Planrum, Planoppning)
+	local ritbara, olosta = 0, 0
+	for _, z in ipairs(zoner) do
+		if z.rekt then ritbara += 1 else olosta += 1 end
+	end
+	local mattaOpp, olostaOpp = 0, 0
+	for _, o in ipairs(Planoppning.lista) do
+		if o.nandel then mattaOpp += 1 else olostaOpp += 1 end
+	end
+	--[[ Ritbar zon: uppifrån + ögonhöjd. Olöst zon: EN vy, och den är
+	     våningsöversikten — ingen egen kamera mot en påhittad rektangel.
+	     Öppningar: en vy var. Plus tre våningsöversikter. ]]
+	local vantat = ritbara * 2 + olosta + mattaOpp + olostaOpp + 3
+	check("kameror bara där källan bär geometri", #modul.vyer == vantat,
+		#modul.vyer .. " vyer: " .. ritbara .. " ritbara, " .. olosta
+		.. " olösta, " .. (mattaOpp + olostaOpp) .. " öppningar")
+
+	check("panelen får tredje utfallet i F02", modul.gapKnapp == true)
+
+	--[[ DET HÄR ÄR REGRESSIONEN SOM SKA FÅNGAS. Förut fick varje zon utan
+	     mått två kameror riktade mot en godtycklig 10-metersremsa vid
+	     gaveln, så bilden pekade ut ett läge källan inte bär. Nu ska varje
+	     olöst zon ha exakt en vy, märkt ejBedombar, och den vyns kamera
+	     ska vara IDENTISK med våningsöversiktens. ]]
+	local oversikt = {}
+	for _, v in ipairs(modul.vyer) do
+		if string.sub(v.id, 1, 9) == "oversikt_" then oversikt[v.id] = v end
+	end
+	local utanRektUtanFlagga, egenKamera, gapVyer = 0, 0, 0
+	for _, z in ipairs(zoner) do
+		if not z.rekt then
+			local hittad
+			for _, v in ipairs(modul.vyer) do
+				if v.id == z.id .. "_kallgap" then hittad = v end
+				if v.id == z.id .. "_uppifran" or v.id == z.id .. "_ogonhojd" then
+					egenKamera += 1
+				end
+			end
+			if hittad then
+				gapVyer += 1
+				if not hittad.ejBedombar then utanRektUtanFlagga += 1 end
+				local ov = if z.hus == "stall"
+					then (if (z.niva or 1) >= 2 then "oversikt_stall_plan2" else "oversikt_stall_plan1")
+					else "oversikt_ridhus_entre"
+				local o = oversikt[ov]
+				if o and (hittad.fran.x ~= o.fran.x or hittad.fran.y ~= o.fran.y
+					or hittad.fran.h ~= o.fran.h) then
+					utanRektUtanFlagga += 1
+				end
+			end
+		end
+	end
+	check("varje olöst zon har en GAP-vy", gapVyer == olosta, gapVyer .. "/" .. olosta)
+	check("ingen olöst zon fick egen kamera mot påhittad rektangel", egenKamera == 0,
+		egenKamera .. " st")
+	check("GAP-vyerna är märkta och pekar på våningsöversikten",
+		utanRektUtanFlagga == 0, utanRektUtanFlagga .. " avvikande")
+
+	--[[ Plan 2:s ögonhöjdskamera ska stå PÅ övervåningen, inte på marken
+	     och titta upp i undersidan. ]]
+	local plan2Lagt = 0
+	for _, z in ipairs(zoner) do
+		if z.rekt and (z.niva or 1) >= 2 then
+			for _, v in ipairs(modul.vyer) do
+				if v.id == z.id .. "_ogonhojd" and v.fran.h < 3.0 then
+					plan2Lagt += 1
+				end
+			end
+		end
+	end
+	check("plan 2:s ögonhöjdskamera ligger över övervåningsgolvet",
+		plan2Lagt == 0, plan2Lagt .. " för lågt")
 
 	local ok = pcall(modul.ga, "finns_inte")
 	check("okänd vy kastas i stället för att tigas bort", ok == false)
@@ -246,15 +315,101 @@ do
 	local mapp = workspace:FindFirstChild("Anläggning")
 	local ubrf = mapp and mapp:FindFirstChild("UBRF")
 	if ubrf then
-		local vaggar, trappor = Granskning.byggVaggar(
-			BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame)
-		local ritbara = 0
+		local vaggar, trappor, zongranser, oppningar = Granskning.byggVaggar(
+			BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame, Planoppning)
+
+		--[[ SKILJEVÄGGAR BARA UR PLANRUM. Förut ritades fyra sidor runt VARJE
+		     ritbar zon, aggregaten inräknade — boxhallen, banan, läktarbandet.
+		     Talet såg då ut som fyra gånger antalet zoner och lästes som
+		     "belagda väggsegment". Nu byggs de bara ur enskilda rumsgränser
+		     ur planen, och delade gränser räknas EN gång. ]]
+		local planrumMedRekt, aggregatMedRekt = 0, 0
 		for _, z in ipairs(zoner) do
-			if z.rekt then ritbara += 1 end
+			if z.rekt then
+				if z.ursprung == "planrum" then planrumMedRekt += 1
+				else aggregatMedRekt += 1 end
+			end
 		end
-		check("fyra konturväggar per ritbar zon", vaggar == ritbara * 4,
-			vaggar .. " för " .. ritbara .. " zoner")
+		check("skiljeväggar byggs bara ur planrum, inte ur aggregat",
+			vaggar <= planrumMedRekt * 4,
+			vaggar .. " segment ur " .. planrumMedRekt .. " planrum")
+		check("delade gränser räknas en gång", vaggar < planrumMedRekt * 4,
+			vaggar .. " < " .. (planrumMedRekt * 4) .. " odeduplicerat")
+		check("aggregaten får zongräns, aldrig vägg", zongranser == aggregatMedRekt,
+			zongranser .. " för " .. aggregatMedRekt .. " aggregat")
 		check("trapporna fick egen markering", trappor >= 3, trappor .. " st")
+
+		--[[ ÖPPNINGARNA. Acceptance Contract säger dörrlägen; en öppning som
+		     försvinner eller dubbleras ska fälla provet, inte tystna.
+
+		     FÖRVÄNTAN SKRIVS UT HÄR, inte hämtas ur modulen. Ett prov som
+		     räknar modulens egen lista mot sig själv följer med när listan
+		     krymper och säger OK medan en dörr just försvann — det upptäcktes
+		     genom att faktiskt ta bort en och se provet förbli grönt. ]]
+		local VANTADE_OPPNINGAR = {
+			s_opp_ost_service = "PLAN",
+			s_opp_vast_mitt = "PLAN",
+			s_opp_vast_klubb = "GAP",
+			s_opp_norr_gavel = "GAP",
+		}
+		local vantadeMatta = 0
+		for _, k in pairs(VANTADE_OPPNINGAR) do
+			if k == "PLAN" then vantadeMatta += 1 end
+		end
+		local finns, felKlass = {}, 0
+		for _, o in ipairs(Planoppning.lista) do
+			finns[o.id] = o
+			local v = VANTADE_OPPNINGAR[o.id]
+			if not v then
+				felKlass += 1
+			elseif (v == "PLAN") ~= (o.nandel ~= nil) or o.klass ~= v then
+				felKlass += 1
+			end
+		end
+		local borta = 0
+		for id in pairs(VANTADE_OPPNINGAR) do
+			if not finns[id] then borta += 1 end
+		end
+		check("alla kända öppningar finns kvar i datan", borta == 0, borta .. " borta")
+		check("ingen öppning bytte klass eller tillkom utan prov", felKlass == 0,
+			felKlass .. " avvikande")
+
+		local matta = vantadeMatta
+		check("varje mätt öppning är byggd", oppningar == matta,
+			oppningar .. " av " .. matta)
+		local vmapp0 = ubrf:FindFirstChild("F02ReviewGeometry")
+		local sedda = {}
+		local dubbletter = 0
+		if vmapp0 then
+			for _, i in ipairs(vmapp0:GetDescendants()) do
+				local oid = i:GetAttribute("OpeningId")
+				if oid then
+					if sedda[oid] then dubbletter += 1 end
+					sedda[oid] = true
+				end
+			end
+		end
+		check("ingen öppning dubblerades", dubbletter == 0, dubbletter .. " st")
+		local saknade = 0
+		for id, k in pairs(VANTADE_OPPNINGAR) do
+			if k == "PLAN" and not sedda[id] then saknade += 1 end
+		end
+		check("ingen mätt öppning försvann ur bygget", saknade == 0, saknade .. " st")
+
+		--[[ Sorterna ska gå att skilja åt. Ett aggregat som ser ut som en
+		     vägg är precis det granskningen inte får påstå. ]]
+		local sorter = {}
+		if vmapp0 then
+			for _, i in ipairs(vmapp0:GetDescendants()) do
+				local s2 = i:GetAttribute("F02Sort")
+				if s2 then sorter[s2] = (sorter[s2] or 0) + 1 end
+			end
+		end
+		check("fyra skilda sorter i spöklagret",
+			sorter.SKILJEVAGG and sorter.ZONGRANS and sorter.TRAPPA and sorter.OPPNING,
+			string.format("%s skiljevägg, %s zongräns, %s trappa, %s öppning",
+				tostring(sorter.SKILJEVAGG), tostring(sorter.ZONGRANS),
+				tostring(sorter.TRAPPA), tostring(sorter.OPPNING)))
 
 		--[[ Det farliga vore att de här smyger in i spelet. Ingen av dem får
 			kollidera, och alla ska bära F02Review. ]]
@@ -271,7 +426,7 @@ do
 		check("alla bär F02Review", utanFlagga == 0, utanFlagga .. " utan")
 
 		local vaggar2 = Granskning.byggVaggar(
-			BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame)
+			BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame, Planoppning)
 		check("andra passet dubblar inte väggarna", vaggar2 == vaggar,
 			vaggar .. " → " .. vaggar2)
 
@@ -279,6 +434,29 @@ do
 		check("de går att gömma", av > 0, av .. " delar")
 		Granskning.visaVaggar(ubrf, true)
 	end
+end
+
+print("\n── Panelens tredje utfall: GAP är aldrig PASS ──")
+do
+	local vyer = {
+		{ id = "a" }, { id = "b" }, { id = "c", ejBedombar = true },
+		{ id = "d", ejBedombar = true },
+	}
+	local r = QAPanel.rakna(vyer, { a = "PASS", b = "FEL", c = "GAP" })
+	check("PASS, FEL, GAP och kvar räknas var för sig",
+		r.pass == 1 and r.fel == 1 and r.gap == 1 and r.kvar == 1,
+		string.format("%d/%d/%d/%d", r.pass, r.fel, r.gap, r.kvar))
+	--[[ GAP får ALDRIG ligga i nämnaren: en källucka ska inte kunna se ut
+	     som en delseger i "N av M godkända". ]]
+	check("GAP ligger utanför nämnaren", r.bedombara == #vyer - r.gap,
+		r.bedombara .. " bedömbara av " .. #vyer)
+	check("en GAP-markering räknas inte som PASS", r.pass == 1)
+	check("en ej bedömbar vy kan inte PASS:as",
+		QAPanel.farBedomas(vyer[3], "PASS") == false)
+	check("en ej bedömbar vy kan markeras GAP",
+		QAPanel.farBedomas(vyer[3], "GAP") == true)
+	check("en vanlig vy kan fortfarande PASS:as",
+		QAPanel.farBedomas(vyer[1], "PASS") == true)
 end
 
 if fails > 0 then

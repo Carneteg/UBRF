@@ -32,6 +32,7 @@ MODULER = [
     ("Vyer",           "Vyer.luau"),
     ("QAPanel",        "QAPanel.luau"),
     ("Planrum",        "Planrum.luau"),
+    ("Planoppning",    "Planoppning.luau"),
     ("Granskning",     "Granskning.luau"),
 ]
 SKRIPT = "Anlaggningen.luau"
@@ -163,7 +164,7 @@ end
         "\t\tlocal __m = workspace:FindFirstChild(\"Anläggning\")\n"
         "\t\tlocal __u = __m and __m:FindFirstChild(\"UBRF\")\n"
         "\t\tassert(__u and __u.PrimaryPart, \"bygg Anlaggningen forst\")\n"
-        "\t\tGranskning.start(BuildKit, UBRFKomplex, QAPanel, Planrum, __u, __u.PrimaryPart.CFrame)\n"
+        "\t\tGranskning.start(BuildKit, UBRFKomplex, QAPanel, Planrum, Planoppning, __u, __u.PrimaryPart.CFrame)\n"
         "\tend\n"
         "\t_G.UBRFVaggar = function(pa)\n"
         "\t\tlocal __m = workspace:FindFirstChild(\"Anläggning\")\n"
