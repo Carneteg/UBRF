@@ -49,6 +49,28 @@ avvikelsen från den ideala rektangeln redovisas.
 hamnar utanför utsnittet. Kontrollpunkterna omsluter alltså inte byggnadens
 fyra hörn.
 
+### Andra försöket: flyktpunkter ur parallella väggriktningar
+
+Invändningen att man ska pröva **parallella väggriktningar** i stället för hörn
+är riktig — en plan yta går att räta ur två flyktpunkter utan att ett enda hörn
+behöver hittas. `tools/analysera-planlinjer.py` gör det: Sobel-kanter inne i
+planytan (ramen och legenden får inte rösta), Hough, och toppar sökta i två
+skilda vinkelband — annars äter långsidorna hela listan, de är tre gånger så
+långa som tvärväggarna.
+
+| Familj | Linjer | Flyktpunkt (px) | **Medelresidual** |
+|---|---|---|---|
+| långsidor | 14 | (118, −2368) | **178 px** |
+| tvärväggar | 14 | (2712, 870) | **382 px** |
+
+Bilden är 900 × 2502 px. Konvergerar en familj mot en äkta flyktpunkt ligger
+residualen nära noll; 178 och 382 px betyder att familjerna **inte** skär i en
+punkt. De är förorenade — läktarbanden har egen lutning, tvärväggarna är korta
+segment, och symboler röstar med.
+
+En homografi byggd på de punkterna hade rätat bilden **fel utan att någonting
+sagt ifrån**. Därför används den inte.
+
 ### Vilka kontrollpunkter som saknas, konkret
 
 Den gula planytan går **inte** att använda som fyrhörning i den här bilden:
@@ -69,6 +91,29 @@ Det som skulle låsa upp de sex rummen:
 
 Tills dess står de sex rummen utan `nrekt`. Verktyget och siffrorna finns kvar
 i repot så att nästa försök börjar där det här slutade, inte om från noll.
+
+## Räkning per plan
+
+| Plan | Rum | Ritbara | Väggsegment | Trappor | Olösta |
+|---|---|---|---|---|---|
+| ridhusets entréplan | 12 | 6 | 24 | 2 | **6** |
+| stallets plan 1 | 7 | 7 | 28 | 1 | 0 |
+| stallets plan 2 | 8 | 7 | 28 | 1 | **1** |
+| **planrum totalt** | **27** | **20** | **80** | **4** | **7** |
+
+Granskningsläget ritar utöver planrummen även de befintliga byggda zonerna:
+**34 zonplattor**, **136 väggsegment**, **3 trappmarkeringar**, **91 vyer**
+(två per zon plus tre våningsöversikter).
+
+**Öppningar: 0 ritade.** Dörr- och fönsterlägen i planerna är läsbara som
+symboler men inte mätbara i djupled på ridhusplanen, och på stallplanen har jag
+inte digitaliserat dem — de står som olöst, inte som noll.
+
+### De sex ridhusrummen efter rektifiering
+
+**Inget av dem återvanns.** Båda metoderna mätte sig själva och underkändes:
+hörnmetoden på 4,89 % kantresidual mot kravet 3 %, flyktpunktsmetoden på
+178/382 px. De sex står kvar utan mått.
 
 ## Avläsningens osäkerhet, per källa
 
