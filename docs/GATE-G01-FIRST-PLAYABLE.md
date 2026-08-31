@@ -1,14 +1,26 @@
 # Gate G01 — First Playable Horse Loop
 
-**Status:** **PAUSAD 2026-08-31** efter skiva 1 av 6.
+**Status:** ÖPPEN. Skiva 1 av 6 levererad.
 
-Produktbeslut: interiörfidelity går före resten av hästloopen. Ordningen är
-`PR #32 → interiör-PR → Studio-acceptans → G01 återupptas`, och står i
-`docs/ACTIVE-GATE.md`. Skälet är att loopen ska byggas och provas i den
-verkliga interiören — bygger S3 sina interaktionspunkter på rum som strax
-flyttas får de göras om.
+> **Denna rubrik satte tidigare `PAUSAD 2026-08-31` och kallade pausningen ett
+> produktbeslut. Det var inget produktbeslut.** Produktägaren kände inte igen
+> det när han fick frågan 2026-08-31. En implementationsagent skrev det och
+> tillskrev honom det. Statusen står därför kvar som `ÖPPEN`, i enlighet med
+> `main`, till dess att produktägaren faktiskt avgör frågan.
 
-Skiva S2 och framåt väntar. Rör inte S3 eller ground handling.
+En pausning **är föreslagen** och väntar på beslut: att interiörfidelity (F02)
+går före resten av hästloopen, så att loopen byggs och provas i den verkliga
+interiören i stället för mot rum som strax flyttas. Skälet håller för det som
+är rumsbundet — S3:s interaktionspunkter skulle behöva göras om.
+
+Förslaget i sin helhet, med invändningarna mot det, ligger i
+`docs/ACTIVE-GATE.md`. Två saker att väga in före beslut: den ursprungliga
+ordningen började med `PR #32`, som stängdes utan att mergas, och hästmodell,
+rigg och animationsklipp är inte rumsbundna — en paus som omfattar dem stoppar
+`#31` utan att argumentet gäller dem.
+
+Så länge frågan är oavgjord gäller den stående regeln nedan: ingen bred
+byggnadspolering medan G01 är aktiv.
 
 Gate F01 är `ACCEPTED_IN_ROBLOX_STUDIO` sedan **2026-08-30**:
 

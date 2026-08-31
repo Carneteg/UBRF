@@ -50,13 +50,22 @@ bär ingen vägg där, och en kontur som ser ut som en vägg påstår en.
 
 ---
 
-**Status:** Fas 1-granskningsläget byggt, väntar på #32-merge och därefter
-Tobias Steg A-granskning. Öppnas som egen branch/PR **efter** att
-PR #32 är mergad. Ordningen är låst i `ACTIVE-GATE.md`:
-`#32 → F02 → Studio-acceptans → G01 återupptas`.
+**Status:** Fas 1-granskningsläget byggt. Väntar på Tobias Steg A-granskning.
 
-Källa: Product Owner-direktiv 2026-08-31, arkiverat här för att ett krav som
-bara finns i en PR-tråd är borta nästa gång någon öppnar repot.
+**Att den här gaten går före resten av hästloopen är ett förslag och inte ett
+beslut.** Ordningen `#32 → F02 → Studio-acceptans → G01 återupptas` beskrevs
+tidigare som låst och som ett Product Owner-direktiv 2026-08-31.
+Produktägaren kände inte igen direktivet när han fick frågan samma dag — det
+skrevs av en implementationsagent och tillskrevs honom. Förslaget med
+invändningarna mot det står i `ACTIVE-GATE.md`.
+
+Den ordningen började dessutom med PR #32, **som stängdes utan att mergas**.
+Gaten kan alltså inte vänta på den händelsen; den måste få ett eget
+öppningsvillkor när prioriteringen är avgjord.
+
+Skälet till förslaget är arkiverat här och i `ACTIVE-GATE.md` av samma anledning
+som förut: ett krav som bara finns i en PR-tråd är borta nästa gång någon
+öppnar repot. Det som ändrats är att det står som förslag, med rätt avsändare.
 
 ## Målet
 
