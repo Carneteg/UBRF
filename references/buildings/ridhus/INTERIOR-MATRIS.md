@@ -310,34 +310,86 @@ bokstaven **B** står på sargen i samma bildruta. B är en långsidesbokstav.
 Filmrutorna är tagna i vinkel mot hörnet, vilket är samma perspektivkompression
 som fällde väggmodellen första gången. **Frågan stryks som öppen.**
 
+## Skyltraden hårdkodas — beslut 2026-08-31
+
+Produktägaren: skyltnamnen **kan hårdkodas**. Ingen datadriven lista behövs nu.
+
+Bindande uppsättning är den från `ridhus-inne-31-langsidan-med-sponsorskyltar.jpg`,
+för det är den enda bildrutan som fångar hela långsidan från hörn till hörn.
+`ridhus-inne-02-langsidan.jpg` stämmer med den i det parti där de överlappar:
+Agria längst till vänster, därefter mindre skyltar och två blå foder-/ströskyltar.
+
+Inventeringens läsning *"Stigeberga Gård, RS Mustang"* i `-02` är alltså inte en
+annan uppsättning utan de små skyltarna mellan Agria och foderskyltarna, lästa på
+närmare håll. **Ingen skyltbytesfråga kvarstår.**
+
+## Men `-02` öppnar väggfrågan igen, och jag säger det hellre än att låta det ligga
+
+`ridhus-inne-02-langsidan.jpg`, tagen från läktaren längs sponsorlångsidan, visar
+den mörka rödbruna panelen på vänstra delen av väggen — och längre bort **byter
+väggytan till ljus vitmålad skivpanel med en spegel och en mörk dörr.**
+
+Det är i sak samma påstående som den gamla matrisen gjorde och som jag underkände
+i § 4 på grundval av `-31`: *panel på del av väggen, resten ljus.*
+
+Två läsningar står öppna, och jag kan inte avgöra mellan dem:
+
+| läsning | följd |
+|---|---|
+| Det ljusa partiet är **kortsidan vid A**, sedd nästan i kant på grund av avståndet, och panelen täcker hela sponsorlångsidan | § 4 står sig, spegeln i `-02` är den i vita hallen (`-42`) och alltså en **annan** spegel än den vid B |
+| Det ljusa partiet ligger på **samma vägg** som panelen, som alltså slutar före hörnet | § 4 är fel, och spegeln i `-02` kan vara samma som vid B |
+
+**Jag har haft fel på just den här väggen två gånger nu** — först genom att lita
+på den gamla matrisen, sedan genom att läsa väggmodellen som plural. Därför
+klassar jag inte om något. Panelens **utbredning inom** sponsorlångsidan är
+`[REFERENCE GAP]`, och det är en fråga till produktägaren.
+
+Frågan har ett enkelt svar på plats: **slutar den bruna panelen i hörnet, eller
+före hörnet?**
+
+
 ---
 
-# 5. Läktarlångsidan — en fråga till produktägaren
+# 5. Läktarlångsidan — avgjord av produktägaren 2026-08-31
 
-Produktägarens rättade väggmodell 2026-08-31 lyder: *"Långsidorna: mörk rödbrun
-horisontell panel med vita hyllister."* Plural.
+Produktägarens rättade väggmodell löd *"Långsidorna: mörk rödbrun horisontell
+panel med vita hyllister"*, plural. Underlaget visade att de två långsidorna
+inte är lika, och jag lade frågan tillbaka i stället för att välja själv.
 
-Underlaget visar att **de två långsidorna inte är lika**:
+**Svar: panelen sitter på sponsorsidan.** Alternativ 1 av tre. Väggmodellen
+gäller alltså inte båda långsidorna.
 
-| långsida | vägg ovanför sargen | källa |
-|---|---|---|
-| sponsorlångsidan (B) | mörk rödbrun panel, hela längden | `ridhus-inne-31` |
-| läktarlångsidan (E, H) | **ljus stående skivpanel** med mörka pelare | `ridhus-inne-14` |
+| långsida | vägg ovanför sargen | klass | källa |
+|---|---|---|---|
+| sponsorlångsidan (B) | mörk rödbrun liggande panel, hela längden, vita hyllister | `VERIFIED` | `ridhus-inne-31` + produktägaruppgift |
+| läktarlångsidan (E, H) | **ljus stående skivpanel** med mörka pelare | `VERIFIED` | `ridhus-inne-14` + produktägaruppgift |
 
-`ridhus-inne-14-laktaren.jpg` är tagen från banan rakt mot läktarlångsidan, i
-hela dess längd, i en bildruta. Det är inte en vinkel mot ett hörn och alltså
-inte samma perspektivfel som tidigare.
+## Vad beslutet betyder för bygget
 
-**Jag ändrar inte modellen på detta.** Produktägaren har rättat mig en gång på
-just den här väggen, och den rättelsen var korrekt. Tre möjligheter står öppna:
+Materialgränsen går **inte** bara i hörnet vid A. Ridhusets fyra väggar har tre
+olika ytor:
 
-1. Panelen sitter bara på sponsorlångsidan, och "långsidorna" var ett
-   plural-slarv.
-2. Panelen sitter på läktarlångsidan också, men bakom eller under bänkraderna
-   där den inte syns från banan.
-3. Något i min läsning av `-14` är fel.
+| vägg | yta |
+|---|---|
+| sponsorlångsidan | mörk rödbrun liggande panel |
+| läktarlångsidan | ljus stående skivpanel, mörka pelare |
+| kortsidan vid A | ljus vitmålad skivpanel |
+| kortändan vid C | vitmålad läktar- och kafédel, se § 3 |
 
-**Detta är en fråga, inte en slutsats.** Se § *Öppna frågor*.
+Den rättade modellen från igår sa *"materialgränsen ligger i hörnet — inte längs
+en långsida"*. Det står sig fortfarande: gränsen ligger i hörn, men det är
+**flera** hörn, inte ett. Panelen börjar och slutar i sponsorlångsidans två hörn.
+
+**En modell som klär båda långsidorna i rödbrun panel blir fel på halva hallen.**
+Det är den enskilt största geometriska konsekvensen av hela ombyggnaden, och den
+är nu avgjord.
+
+## En kvarstående osäkerhet, mindre men verklig
+
+Beslutet säger var panelen sitter. Det säger inte om läktarlångsidans ljusa
+skivpanel fortsätter **bakom** bänkraderna ner till golvet, eller om något annat
+finns där bakom. Ingen bild ser bakom raderna. Klassad `[REFERENCE GAP]` — men
+den påverkar bara det som ändå är osynligt i spelet.
 
 ---
 
@@ -632,6 +684,8 @@ Grinden ersätter inte granskning. Den gör synligt var granskning saknas.
 15. **Klubbdelens rumslista** — 16 rum där matrisen hade noll.
 16. **Välkomst- och Elon-skyltens vägg** — långsidan, tidigare flaggad öppen.
 17. **Antalet bänkrader** — tre, i tre oberoende bilder.
+19. **Panelens utbredning mellan de två långsidorna** — bara sponsorsidan,
+    avgjort av produktägaren. Se § 5.
 18. **Kaféets entré** — egen utvändig ståltrappa på fasaden, med CAFÉ-skylt.
 
 ## Gaps som står kvar, med motivering
@@ -651,7 +705,8 @@ Grinden ersätter inte granskning. Den gör synligt var granskning saknas.
 
 # Öppna frågor till produktägaren
 
-1. **Läktarlångsidans material.** Din rättade modell säger att långsidorna är
+1. ~~**Läktarlångsidans material.**~~ **AVGJORD 2026-08-31: panelen sitter på
+   sponsorsidan.** Se § 5. Ursprunglig fråga: Din rättade modell säger att långsidorna är
    mörk rödbrun panel. `ridhus-inne-14-laktaren.jpg`, tagen från banan längs
    hela läktarsidan, visar ljus stående skivpanel med mörka pelare där.
    Sitter panelen bara på sponsorlångsidan, eller sitter den bakom bänkraderna
@@ -660,10 +715,14 @@ Grinden ersätter inte granskning. Den gör synligt var granskning saknas.
    löstagbara sektioner?
 4. **Motstående kortsidans material** — kvarstår sedan igår, avgörs på plats.
 5. **Omklädningsdelens våning** i förhållande till kaféet.
-6. **Ska jag lägga in en grind som räknar bildfiler mot inventeringsrader?**
+6. **Slutar den bruna panelen i sponsorlångsidans hörn, eller före hörnet?**
+   `ridhus-inne-02` visar ett ljust parti med spegel längre bort på samma vägglinje.
+   Antingen är det kortsidan vid A sedd i kant, eller så slutar panelen tidigare.
+   Se § 4. **Jag klassar inte om detta själv.**
+7. **Ska jag lägga in en grind som räknar bildfiler mot inventeringsrader?**
    Elva bilder låg oinventerade, och en av dem svarade på en fråga jag i stället
    ställde till dig. Grinden är triviell att skriva.
-7. **De tio övriga oinventerade bilderna** — ska de inventeras i samma format
+8. **De tio övriga oinventerade bilderna** — ska de inventeras i samma format
    som de 93, eller räcker tabellen i § 9?
 
 # Motsägelser som lämnas oavgjorda
