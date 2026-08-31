@@ -119,6 +119,7 @@ Enum = {
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	NormalId = { Top = 1 },
+	AnimationPriority = { Core = 1, Idle = 2, Movement = 3, Action = 4 },
 	--[[ STRIKT. Forst svarade Material pa vilket namn som helst, och da
 	     passerade materialnamnet CorrugatedMetal — som inte finns i Roblox —
 	     hela sviten och sprack forst i Studio. Listan injiceras av
@@ -212,6 +213,68 @@ function __makeRig()
 	}
 	return { model = { Name = "Horse" }, root = root, humanoid = hum,
 		bones = {}, attachments = {}, animator = nil }
+end
+
+--[[ `Instance.new` fanns inte här alls, bara i bygg-stubbarna. Den behövs
+     för att `AnimationController:_load` skapar `Animation`-objekt. Minimal
+     med flit: bara namn, klass och id, alltså precis det modulen rör. ]]
+Instance = {
+	new = function(klass)
+		return { ClassName = klass, Name = "", AnimationId = "" }
+	end,
+}
+
+--[[ ── Animationsstubbar ───────────────────────────────────────────────
+     `__makeRig` lämnar `animator = nil`, och därför har `AnimationController`
+     ALDRIG kunnat konstrueras i en spec — modulen har varit helt omätt. Det
+     är inte en detalj: felet som fasändringen rättar kunde ligga kvar just
+     därför att ingen grind nådde raden.
+
+     Spåret speglar de få egenskaper modulen rör, och det räknar anropen så
+     att en spec kan mäta SKILLNADEN mellan att spola och att justera fart.
+     `Length` är satt till ett tal som inte är 1, annars skulle en spec inte
+     kunna se om koden glömt multiplicera med längden. ]]
+function __makeTrack(length)
+	local t = {
+		Length = length or 0.86,
+		TimePosition = 0,
+		IsPlaying = false,
+		Looped = false,
+		Priority = nil,
+		Speed = 1,
+		_speedCalls = {},
+		_plays = 0,
+		_stops = 0,
+	}
+	function t:Play(fade) self.IsPlaying = true; self._plays += 1; self._fade = fade end
+	function t:Stop(fade) self.IsPlaying = false; self._stops += 1; self._fade = fade end
+	function t:AdjustSpeed(s) self.Speed = s; table.insert(self._speedCalls, s) end
+	function t:AdjustWeight(w) self.Weight = w end
+	return t
+end
+
+--[[ En rigg med animator och AnimationConfig. Alla nycklar i
+     `Config.ANIMATION_KEYS` får ett id, så att inget spår hoppas över tyst
+     och specen mäter det avsedda fallet och inte reservfallet. ]]
+function __makeAnimRig(length)
+	local rig = __makeRig()
+	local spar = {}
+	local cfg = { _attr = {} }
+	function cfg:GetAttribute(k) return self._attr[k] end
+	function cfg:SetAttribute(k, v) self._attr[k] = v end
+	for _, key in __Core.Config.ANIMATION_KEYS do
+		cfg._attr[key] = "rbxassetid://1"
+	end
+	rig.animConfig = cfg
+	rig.animator = {
+		LoadAnimation = function(_, anim)
+			local t = __makeTrack(length)
+			spar[anim.Name] = t
+			return t
+		end,
+	}
+	rig._tracks = spar
+	return rig
 end
 
 --[[ En led med attribut och C0 — det setBodyTilt och setRiderLean rör.
