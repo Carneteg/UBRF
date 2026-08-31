@@ -19,6 +19,13 @@ if ! python3 ../tools/kolla-material.py; then
   exit 1
 fi
 
+# Rojo-startaren är PowerShell och går inte att köra här, men dess antaganden
+# om repot går att pröva. Glider de isär märks det annars först i Studio.
+if ! python3 ../tools/kolla-rojo.py; then
+  echo "ROJO-KONTROLLEN MISSLYCKADES"
+  exit 1
+fi
+
 status=0
 for f in $SPECAR; do
   ut=$(luau "tests/.build/$f.spec.luau" 2>&1)

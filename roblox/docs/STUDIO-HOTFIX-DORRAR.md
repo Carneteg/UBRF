@@ -70,17 +70,43 @@ python3 tools/studio-paket.py
 Filen hamnar i `roblox/buildings/.studio/UBRF-klistra-in.luau`. Den är avsiktligt
 inte committad — generera alltid om, klistra aldrig in en gammal.
 
-### 2. Koppla in källkoden med Rojo
+### 2. Koppla in källkoden med Rojo — via startaren
 
-```bash
-rojo serve roblox/
+```powershell
+.\tools\start-ubrf-rojo.ps1
 ```
 
-I Studio: Rojo-pluginen → **Connect**. Då dyker `ServerScriptService.Horse` upp
-med `WorldService`, `HorseService` och `StallService`.
+Kör den **inte** som `rojo serve` för hand. Rojo-pluginen minns vad den var
+kopplad till sist, och ett annat projekt kan ligga kvar på standardporten
+34872. Klickar man Connect av gammal vana synkas fel spel in i placen — och då
+börjar felsökningen i UBRF-koden fast felet är en uppkoppling.
 
-`init.server.luau` startar `WorldService` **först**. Så även om något senare i
-startordningen klagar är dörrarna redan igång.
+Startaren gör tre saker som handpåläggning inte gör:
+
+- pekar ut `roblox/default.project.json` **explicit**, aldrig via katalogsökning
+- kör på **port 34873**, UBRF:s egen, inte Rojos vanliga
+- **vägrar starta** om projektfilen inte heter `UBRF-Horse`
+
+Är porten upptagen rapporterar den PID och processnamn och slutar. Den dödar
+ingenting åt dig — det är din process att stänga, inte skriptets att gissa på.
+
+Banderollen ska lyda:
+
+```
+  UBRF-Horse Rojo -> localhost:34873
+```
+
+I Studio: Rojo-pluginen → **Connect**, och kontrollera att den säger
+**`UBRF-Horse`** och **34873**. Står det något annat projektnamn — `shade`,
+Nightfall, vad som helst — **avbryt**. Anslut inte "för att se".
+
+Då dyker `ServerScriptService.Horse` upp med `WorldService`, `HorseService` och
+`StallService`. `init.server.luau` startar `WorldService` **först**, så även om
+något senare i startordningen klagar är dörrarna redan igång.
+
+Har du inte PowerShell är motsvarande kommando
+`rojo serve roblox/default.project.json --port 34873` — men då gör du
+namnkontrollen själv i pluginen.
 
 ### 3. Bygg världen
 
@@ -233,6 +259,7 @@ lägena ser olika ut:
 
 | Vad du ser | Var felet ligger |
 |---|---|
+| pluginen säger ett annat projektnamn | uppkopplingen, inte UBRF |
 | förkontrollen räknar upp skript | placen, inte UBRF |
 | `Nightfall`, `ShadeAI`, `CorrugatedMetal` | placen, inte UBRF |
 | ingen `[World]`-rad alls | servern kördes aldrig — Rojo |
