@@ -18,40 +18,83 @@ bortsorterade på namn och storlek. Bildserien är `IMG_0078`–`IMG_0125` och
 `IMG_0171`–`IMG_0199`. Bilderna är omskalade till 2000 px enligt
 `tools/convert-photos.sh` (snitt 549 kB, samma spann som repots befintliga).
 
-## Det inventeringen avgjorde: det är EN bana, inte två
+## Väggarna: en bana, och varje vägg har ett material
 
-Granskningen väckte frågan om ridhuset är två hallar, eftersom bilderna visar
-två tydligt olika väggkaraktärer: **mörk rödbrun liggande panel med vita
-hyllister och sponsorskyltar** respektive **ljus vitmålad skivpanel med speglar**.
+Materialet visar två tydligt olika väggkaraktärer — **mörk rödbrun liggande panel
+med vita hyllister och sponsorskyltar** respektive **ljus vitmålad skivpanel**.
+Det väckte frågan om ridhuset är två hallar.
 
-Frågan är avgjord till **en bana**, och avgörandet kunde bara göras genom att
-korsreferera stillbilder mot filmrutor:
+Svaret är **en bana**, och de två karaktärerna är **olika väggar i den banan** —
+inte ett materialbyte längs en och samma vägg. Bekräftat av Tobias 2026-08-31.
 
-- `ridhus-inne-02-langsidan.jpg` (`IMG_0183`) visar hur väggen **byter** från
-  mörkbrun panel med sponsorskyltar till ljus vitmålad skivpanel med spegel och
-  mörk dörr — inom samma långsida, i samma vy.
-- `IMG_0189-f05` visar spegeln sitta vid dressyrbokstaven **B**, alltså på en
-  långsida, direkt ovanför sargen och intill den mörkbruna panelen.
-- `IMG_0192-f06` visar spegel, mörkt fält med gul lucka och mörkbrun panel med
-  Agria-skylt **i rad på samma vägg**.
+### Bevisen
 
-Slutsats: ridhusets långsida är **inte homogen**. Den skyltbärande delen är
-mörk rödbrun panel; mot kortsidan övergår den i ljus skivpanel med spegel.
-Ett Roblox-bygge som klär hela långsidan i ett material blir fel oavsett vilket
-av de två som väljs.
+| Bild | Vad den visar |
+|---|---|
+| `IMG_0189-f01` | hörnet mellan långsida och kortsida: mörk rödbrun panel till vänster, **slät vit gavelvägg** till höger. Materialgränsen ligger i hörnet. |
+| `IMG_0185-f04` | ordagrant: *kortsideväggen är vit ovanför sargen ... medan långsidan till vänster har mörk rödbrun liggande panel* |
+| `ridhus-inne-11-ridbanan.jpg` (`IMG_0095`) | ordagrant: *mörkbrun liggande träpanel med vita horisontella lister **längs långsidorna*** |
+| `ridhus-inne-23-kortsidan-vid-a.jpg`, `-36-vita-kortsidan.jpg`, `-38` | tre oberoende bilder sätter **vit skivpanel på kortsidan vid bokstaven A** |
+| `ridhus-inne-40-domartornet-pa-laktaren.jpg` | ordagrant: *i bakgrunden den **vita ridhusgaveln*** |
 
-### Dressyrbokstäverna pinnar orienteringen
+### Vad som gäller för bygget
 
-Bokstäver som är läsbara i materialet: **A** på en kortsida
-(`IMG_0109`, dubbeldörr med två grå plåtfyllningar i mitten), **C** på sargen
-vid läktarsidan (`IMG_0185-f01`, `IMG_0192-f01`), **B** på en långsida vid
-spegeln (`IMG_0105`, `IMG_0106`, `IMG_0189-f05`), **H** på en långsida
-(`IMG_0114`), och **E** i den redan migrerade `ridhus-inne-03-baset-vid-E.jpg`.
+- **Långsidorna:** mörk rödbrun liggande panel, vita horisontella hyllister,
+  sponsorskyltar, glasparti, speglar monterade på panelen.
+- **Kortsidan vid A:** ljus vitmålad skivpanel med synliga lodräta reglar,
+  dubbeldörr med två grå plåtfyllningar, två speglar i träram, fönsterparti med nät.
+- **Materialgränsen ligger i hörnet**, inte mitt på en vägg. En vägg klär man i
+  ett material.
+- **Speglar är objekt på väggen, inte ett materialbyte.** Spegeln vid bokstaven B
+  (`IMG_0189-f05`) sitter på den mörkbruna panelen.
 
-A och C på kortsidorna med B och E på långsidornas mitt är standard för en
-dressyrbana. Det ger en yttre kontroll av hallens inre orientering som inte fanns
-tidigare: banans axel går A→C, och skyltlångsidan respektive läktarsidan kan nu
-knytas till bokstäver i stället för till fotografens gissade väderstreck.
+### Rättelse — så här fel läste jag det först
+
+Första versionen av det här dokumentet påstod att långsidan **byter** material
+från mörkbrun panel till ljus skivpanel någonstans på sin längd, och att ett
+bygge som klär hela långsidan i ett material blir fel.
+
+**Det var fel, och det var fel på ett farligt sätt** — det hade lett till ett
+bygge med en söm mitt på en vägg som inte finns i verkligheten.
+
+Felet: `ridhus-inne-02-langsidan.jpg` (`IMG_0183`) är tagen längs långsidan
+**mot den bortre kortsidan**, och granskaren skrev att väggen *"längre bort byter
+till ljus vitmålad skivpanel"*. Det som ligger längre bort är kortsidan. I den
+vinkeln trycker perspektivet ihop de två väggarna så att de läses som en enda.
+Jag tog formuleringen ordagrant i stället för att läsa vinkeln, trots att
+`ridhus-inne-13-elonskylten-narbild.jpg` (`IMG_0097`) beskriver exakt samma sak
+korrekt: *"Bakom skymtar **bortre kortsidan** med vit skivklädd vägg"*.
+
+Lärdomen är inte att granskarna hade fel — 34 av 34 nyckelbeskrivningar godkändes
+utan anmärkning. Lärdomen är att **en slutsats som binder ihop flera bilder inte
+får dras ur enskilda bildbeskrivningar utan att kamerans läge kontrolleras.**
+Det gäller varje kommande slutsats i F02.
+
+### Öppet: den andra kortsidans material
+
+Kortsidan vid A är avgjord. **Den motsatta kortsidan — läktar- och
+glasrumsänden — är inte avgjord.** Beskrivningarna motsäger varandra:
+
+- `IMG_0192-f04` och `IMG_0196-f01` lägger välkomstskylten och Elon-tavlan på
+  **mörk rödbrun panel på kortsidan**, med en ljus vägg intill.
+- `ridhus-inne-01-glasrummen.jpg` (`IMG_0179`) beskriver väggen under glasrummen
+  vid samma ände som **vit**.
+
+Båda granskarna flaggade just detta i `Osäkert`. Ingen av dem gissade. Frågan
+lämnas öppen och ska besvaras innan kortsidorna byggs — den avgörs enklast av
+Tobias på plats, inte av fler bilder.
+
+### Dressyrbokstäverna pinnar banan
+
+Läsbara i materialet: **A** på den vita kortsidan
+(`ridhus-inne-23`, `-36`, `-38`), **C** vid läktar- och glasrumsänden
+(`IMG_0185-f01`, `IMG_0192-f01`, `IMG_0179`), **B** på långsidan vid spegeln och
+Elon-skylten (`ridhus-inne-19`, `-20`, `IMG_0189-f05`), **H** på långsidan med
+läktaren (`ridhus-inne-28`), **E** (`ridhus-inne-03-baset-vid-E.jpg`).
+
+A och C på kortsidorna är standard på en dressyrbana, och B och E ligger midt på
+motstående långsidor. Det ger banans axel **A→C** och binder varje vägg till en
+bokstav i stället för till fotografens läge.
 
 ### Nytt som inte var känt
 
@@ -67,6 +110,14 @@ knytas till bokstäver i stället för till fotografens gissade väderstreck.
   avgöra ur bilderna om de är dörrar eller nedtagbara sektioner.
 
 ## Ridbanan — inne i ridhuset
+
+Beskrivningarna nedan är granskarnas ordagranna observationer och är **inte
+redigerade i efterhand**. Två rader — `ridhus-inne-02-langsidan.jpg` och
+`ridhus-inne-35-foderskyltarna.jpg` — säger att väggen *"byter"* till ljus
+skivpanel. Läs det som **hörnet mot kortsidan**, inte som ett materialbyte mitt på
+långsidan; se § *Rättelse* ovan. Båda granskarna flaggade själva att de inte kunde
+placera övergången i planen.
+
 
 | Fil i repot | Källa | Drive-id | Nyckel | Vad som syns | Osäkert |
 |---|---|---|---|---|---|
