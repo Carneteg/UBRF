@@ -137,30 +137,70 @@ def main() -> int:
         return 2
 
     if a.ladda_upp:
-        lyckade = 0
+        lyckade, verifierade = 0, 0
         for f in filer:
             vag = f"/storage/v1/object/{HINK}/{f['lagringsvag']}"
-            kod, svar = be("POST", vag, n, f["lokal"].read_bytes(),
-                           MIME.get(f["lokal"].suffix.lower(), "application/octet-stream"))
-            if kod in (200, 201):
-                lyckade += 1
-            elif kod == 409:  # finns redan
-                kod, svar = be("PUT", vag, n, f["lokal"].read_bytes(),
-                               MIME.get(f["lokal"].suffix.lower(), "application/octet-stream"))
-                lyckade += 1 if kod in (200, 201) else 0
-            else:
+            typ = MIME.get(f["lokal"].suffix.lower(), "application/octet-stream")
+            kropp = f["lokal"].read_bytes()
+            kod, svar = be("POST", vag, n, kropp, typ)
+            if kod == 409:  # finns redan
+                kod, svar = be("PUT", vag, n, kropp, typ)
+            if kod not in (200, 201):
                 print(f"FEL  {f['lagringsvag']}  HTTP {kod}  {svar[:200]!r}")
-        print(f"{lyckade}/{len(filer)} objekt uppladdade")
-        return 0 if lyckade == len(filer) else 1
+                continue
+            lyckade += 1
 
-    # --kontrollera: jämför manifest mot verkligt innehåll i hinken.
+            #[[ VERIFIERINGEN LÄSER TILLBAKA OBJEKTET. Att hasha den lokala
+            #   filen och kalla resultatet verifierat vore att intyga något
+            #   som aldrig lämnade maskinen: en trunkerad uppladdning, en
+            #   omkodning i tjänsten eller ett fel i sökvägen hade sett
+            #   likadant ut. Manifestet får bara sin sha256 och sin
+            #   storage_verified_at ur det som faktiskt kom tillbaka. ]]
+            kod2, hamtat = be("GET", vag, n)
+            if kod2 != 200:
+                print(f"FEL  {f['lagringsvag']} gick inte att läsa tillbaka: HTTP {kod2}")
+                continue
+            sha_ute = hashlib.sha256(hamtat).hexdigest()
+            if sha_ute != f["sha256"] or len(hamtat) != f["bytes"]:
+                print(f"FEL  {f['lagringsvag']} skiljer sig efter uppladdning: "
+                      f"{len(hamtat)} byte / {sha_ute[:12]}… mot "
+                      f"{f['bytes']} byte / {f['sha256'][:12]}…")
+                continue
+            verifierade += 1
+            f["verifierad_sha256"] = sha_ute
+            f["verifierad_bytes"] = len(hamtat)
+
+        print(f"{lyckade}/{len(filer)} objekt uppladdade, "
+              f"{verifierade} verifierade genom att läsas tillbaka")
+        if verifierade:
+            print("\nManifestrader att skriva — BARA de verifierade. Sökväg och")
+            print("storage_verified_at hör ihop; schemats check-villkor tillåter")
+            print("inte det ena utan det andra.")
+            for f in filer:
+                if "verifierad_sha256" in f:
+                    print(f"  {f['id']}  {HINK}/{f['lagringsvag']}  "
+                          f"{f['verifierad_bytes']} byte")
+        return 0 if verifierade == len(filer) else 1
+
+    #[[ --kontrollera: jämför manifestet mot verkligheten, åt båda hållen.
+    #   En lista som bara läses uppifrån och ner missar precis det fall den
+    #   finns till för — ett objekt i hinken som ingen rad känns vid. ]]
     kod, svar = be("POST", f"/storage/v1/object/list/{HINK}", n,
                    json.dumps({"prefix": "", "limit": 1000}).encode(), "application/json")
     if kod != 200:
         print(f"FEL  kunde inte lista hinken: HTTP {kod} {svar[:200]!r}")
         return 1
-    print(json.dumps(json.loads(svar), ensure_ascii=False)[:2000])
-    return 0
+    i_hinken = {o.get("name") for o in json.loads(svar) if isinstance(o, dict)}
+    vantade = {f["lagringsvag"] for f in filer}
+    saknas = sorted(vantade - i_hinken)
+    foraldralosa = sorted(i_hinken - vantade)
+    for v in saknas:
+        print(f"FEL  {v} finns i repot men inte i hinken")
+    for v in foraldralosa:
+        print(f"FEL  {v} ligger i hinken utan motsvarande fil i repot")
+    print(f"\n{len(i_hinken)} objekt i hinken, {len(vantade)} filer i repot, "
+          f"{len(saknas)} saknas, {len(foraldralosa)} föräldralösa")
+    return 1 if (saknas or foraldralosa) else 0
 
 
 if __name__ == "__main__":

@@ -54,11 +54,31 @@ så nästa agent inte kan sätta en sökväg "så länge" och glömma bort det.
 Falsifierad: ett försök att sätta `supabase_storage_path` utan
 `storage_verified_at` avvisas, och räkningen står kvar på 0 rader.
 
+## Verifieringen läser tillbaka objektet
+
+`--ladda-upp` hashar **inte** den lokala filen och kallar resultatet
+verifierat. Den laddar upp, **hämtar tillbaka objektet**, och jämför sha256
+och byteantal mot repots fil. Först då sätts `sha256` och
+`storage_verified_at`.
+
+Skälet är att en lokal hash intygar något som aldrig lämnade maskinen: en
+trunkerad uppladdning, en omkodning i tjänsten eller ett fel i sökvägen hade
+sett likadant ut i loggen. Ett `verified` som bara betyder "jag läste filen
+jag just skickade" är ingen verifiering.
+
+Ett objekt som inte kan läsas tillbaka, eller som skiljer sig, får **ingen**
+manifestrad med sökväg. Schemats check-villkor tillåter ändå inte sökväg utan
+`storage_verified_at`, så de två spärrarna säger samma sak på två ställen.
+
 ## Vad som ska bevisas när spegeln fylls
 
 - objektantal per typ mot `--lista`,
-- sha256 per objekt mot GitHub-sidan,
+- sha256 per objekt mätt på det **återlästa** objektet, inte på källfilen,
 - att varje icke-tom `supabase_storage_path` pekar på ett objekt som finns,
-- att inget objekt ligger i hinken utan manifestrad,
+- att inget objekt ligger i hinken utan motsvarande fil i repot,
 
 och allt det **utan** att nyckeln syns någonstans i utdata.
+
+`--kontrollera` jämför åt **båda hållen**: filer i repot som saknas i hinken,
+och objekt i hinken som ingen fil känns vid. En lista som bara läses uppifrån
+och ner missar precis det fall den finns till för.
