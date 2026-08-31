@@ -1,497 +1,685 @@
 # Ridhusets interiör — reference matrix
 
-Steg 2 i interiör-P0. En rad per zon: plan-fakta, foto-fakta, `REFERENCE GAP`.
-Beskriver **nuläget**, inte historiken.
+Byggd 2026-08-31 på **103 bilder**. Den tidigare versionen av det här
+dokumentet var byggd på **3**.
 
-## Källor
+Det här är dokumentet ridhusets interiör byggs ur. Varje rad ska kunna spåras
+till en namngiven bild som någon faktiskt har tittat på.
 
-| kort | fil |
+- Bildregister med beskrivning per bild:
+  `references/RIDHUS-INVENTERING-2026-08-31.md`
+- Granskarnas underlag, ett avsnitt per fil: `granskning-2026-08-31/`
+- Den gamla revisionsberättelsen, ordagrant bevarad:
+  `INTERIOR-MATRIS-HISTORIK.md`
+
+## Underlag
+
+| källa | omfattning |
 |---|---|
-| r01 | `references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg` (IMG_0179) |
-| r02 | `references/buildings/ridhus/ridhus-inne-02-langsidan.jpg` (IMG_0183) |
-| r03 | `references/buildings/ridhus/ridhus-inne-03-baset-vid-E.jpg` (IMG_0198) |
-| plan | `references/plans/ridhus-entreplan-utrymning.jpg` |
-| mätning | `references/plans/RIDHUS-PLANMATNING-2026-08-30.md` |
+| `references/buildings/ridhus/*.jpg` | 76 foton, interiör och gavlar |
+| `references/video/ridhus-nyckelrutor/*.jpg` | 27 filmrutor ur fem klipp |
+| `references/plans/ridhus-entreplan-utrymning.jpg` | brandplan, entréplan |
+| `references/plans/RIDHUS-PLANMATNING-2026-08-30.md` | planmätning |
 
-`IMG_0191.MOV` finns **inte** i repot — `[DRIVE-ONLY]`. Inget nedan vilar på den.
+`IMG_0191.MOV` finns inte i repot — `[DRIVE-ONLY]`. Inget nedan vilar på den.
 
-## 1. Banan och sargen
+## Klasser
 
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| Banan 20 × 60 m | `VERIFIED` | Tobias bekräftelse, `SITEPLAN.md` | `bana` |
-| Sargen vit/gräddvit med svart sockelband | `VERIFIED` | r01 + r03 | `vagg`/`sockel` |
-| Sarghöjd 1,35 m | `DERIVED` | — | `sargH` |
-| Sockelbandets andel av sarghöjden | **prövat, ej ändrat** | r03 | 0,26 av 1,35 = 19 % |
-| Dressyrbokstäver på sargen | `VERIFIED` | C i r01, E i r03 | byggs |
-| E har en elefantbild | `VERIFIED` | r03 | `[REFERENCE GAP]` — ritas inte |
+| klass | betyder |
+|---|---|
+| `VERIFIED` | syns i en bild produktägaren granskat, och granskaren har tittat på den |
+| `FOTO, EJ GRANSKAD` | syns i bild, men bilden är inte bland de 34 produktägaren granskat |
+| `DERIVED` | räknat ur något verifierat |
+| `ASSUMPTION` | valt tal, inget stöd |
+| `[REFERENCE GAP]` | underlag saknas i de 103 bilderna |
+| `[DRIVE-ONLY]` | underlag finns i Drive men inte i repot |
+| `KNOWN MISMATCH` | spelet och verkligheten skiljer sig, felet är känt |
+| `MOTSÄGELSE` | två bilder säger olika, ingen vinner utan mer info |
 
-**Not:** en tidigare referens som påstods vara en måttsatt ritning är
-**återkallad** (se `RIDHUS-PLANMATNING-2026-08-30.md`). Banans 20 × 60 står
-kvar på Tobias bekräftelse, inte på den bilden. Påståendet om "5 m
-sidozoner" kom ur den återkallade källan och används inte.
+De 34 granskade bilderna är märkta `nyckelbild = ja` i inventeringen.
 
-## 2. Långsidans läktare — `KNOWN MISMATCH A`, rättad
+## Två regler som gäller hela dokumentet
 
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| **Plant plankdäck**, inga trappsteg | `VERIFIED` | r01 förgrund, beskuren | rättat |
-| Solid mörkbetsad brädfront mot banan | `VERIFIED` | r01 + r02 | rättat |
-| Ljus kappregel överst på fronten | `VERIFIED` | r01 | rättat |
-| Däckets höjd 0,80 m | `DERIVED` ur r03 | sittande huvuden ~0,7 m över sargkrönet | `dackZ` |
-| Frontens topp 1,45 m | `DERIVED` | strax över sargkrönet | `frontTopp` |
-| Exakta mått | `[REFERENCE GAP]` | — | testas som relation |
+**1. Kameraläget kontrolleras innan flera bilder binds ihop.** Det här arbetet
+har gjort det felet två gånger. Först lästes en bild tagen längs en långsida mot
+den bortre kortsidan som om båda väggarna var samma vägg. Sedan lästes en
+beskuren förgrund som om den beskrev hela läktaren. Båda felen låg i
+synteslagret, inte hos granskarna — och syntesen var det ingen som granskade.
+Varje slutsats nedan som binder ihop flera bilder anger varifrån kameran tittar.
 
-Spelet byggde **fyra trappsteg i ljus furu** längs hela långsidan. Fotona
-visar ett plant däck. Trappstegen finns — vid KORTÄNDAN, under glasrummen.
-De två strukturerna hade blandats ihop.
-
-## 3. Kortändan vid C
-
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| Trappstegsblock i ljust trä | `VERIFIED` | r01 | `kortanda` |
-| Två trappor upp | `VERIFIED` | r01 | byggs |
-| Glasat band av rum ovanför, mörka karmar | `VERIFIED` | r01 | byggs |
-| Bandet BRYTS av de två trapporna | `VERIFIED` | r01, beskuren | rättat — segment ur `trappor` |
-| Glaset går i bås med poster, inte som en remsa | `VERIFIED` | r01 | `glasPost` |
-| Båsens exakta delning | `[REFERENCE GAP]` | — | 1,9 m vald |
-| Rund vit klocka på den vita väggen | `VERIFIED` | r01 | byggs |
-| Vit stående brädvägg mellan bänkar och glas | `VERIFIED` | r01 | rättad — `glasOver` 0,35 → 1,6 |
-| Kompassros, LINJERITAD, vänster om vänstra trappan | `VERIFIED` | r01, beskuren | byggd — `kortanda.stjarna` |
-| Bokstaven C har en CYKELbild, E en elefant | `VERIFIED` | r01 + r03 | ritas inte, se nedan |
-| Alla meter | `[REFERENCE GAP]` | — | topologi rätt, mått valda |
-
-## 4. Övre långväggen — `RESOLVED` på båda ytorna
-
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| Rostbrun/mörkröd panel på DEL av EN långsida | `VERIFIED` | r02 | `ovreVagg.sida:"W"`, y 6–40 |
-| Vita horisontella band på panelen | `VERIFIED` | r02 | `panelList` |
-| **Fönsterband ovanför panelen** | `VERIFIED` | r02 | rättat — `fonsterband` |
-| Bandet löper förbi panelens stycke | `VERIFIED` | r02 | byggs i full längd |
-| Bandets höjd och postdelning | `[REFERENCE GAP]` | — | valda |
-| Resten av samma vägg är ljus | `VERIFIED` | r02 | byggs |
-| Panelens exakta utbredning | `[antagande]` | — | y0/y1 |
-
-## 5. Sponsorskyltar — `RESOLVED`
-
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| Skyltar hänger på den rostbruna panelen | `VERIFIED` | r02 | kopplad via `andel`, båda ytorna |
-| Agria, Hästsportbutik, RS Mustang, Svenskt Stallströ | `VERIFIED` | r02 | — |
-| Skyltarnas läge relativt panelen | rättat | — | `andel` av panelens stycke, härlett |
-
-## 6. Taket
-
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| Mörka limträbalkar | `VERIFIED` | r01 + r02 | byggs |
-| Korrugerad plåt som undertak | `VERIFIED` | r01 + r02 | byggs |
-| Långa lysrörsarmaturer i rader | `VERIFIED` | r01 + r02 | byggs |
-| Stora runda spiralkanaler (vent) | `VERIFIED` | r01 | byggs |
-| Högtalare | `VERIFIED` | r01 | `[REFERENCE GAP]` |
-| Kabelstegar | `VERIFIED` | r01, beskuren och zoomad | byggs |
-
-## 7. Domarbåset vid E
-
-| fakta | klass | källa | spelet |
-|---|---|---|---|
-| Mörkt trä, upphöjt, trappa med räcken | `VERIFIED` | r03 | byggs, båda ytorna |
-| **Sadeltak med utskjutande takfot** | `VERIFIED` | r03, beskuren | rättat — `basTak` |
-| Räcke på BÅDA sidor av trappan | `VERIFIED` | r03 | byggs |
-| Roblox byggde bara en slät låda | rättat | — | nivå, tak, trappa, räcken |
-| Takets resning | `[ASSUMPTION]` | — | 0,42 m |
-| Grön exit-skylt | `VERIFIED` | r03 | byggs |
-| Sitter på läktarnivå | `DERIVED` | r03 | följer `dackZ` |
-
-## Prövat men INTE ändrat
-
-**Sockelbandets höjd.** Spelet har 0,26 m av 1,35 (19 %). Ett ögonmått på en
-nedskalad beskärning av r03 gav snarare ~28 %. Jag ändrade INTE värdet: mitt
-mått är taget på en skalad bild utan tydliga kanter, och det är inte
-precisare än det tal som redan står där. Att flytta ett rimligt värde på ett
-osäkert ögonmått är samma fel som att mäta tröskeln i stället för ytan — det
-har kostat två varv i det här arbetet redan. Behövs det, mät på en
-beskärning i full upplösning med känd referenslängd i bild.
-
-## Rättat i det här passet
-
-- **A** läktaren: plant däck med solid front i stället för fyra trappsteg.
-- **B** fönsterbandet ovanför panelen byggs nu.
-- **C** skyltarnas läge HÄRLEDS ur panelens stycke i stället för att stå som
-  tal. Ett första test på detta var för svagt — det passerade för vilka tal
-  som helst som råkade ligga innanför stycket, vilket jag prövade genom att
-  frikoppla dem. Testet mäter nu själva kopplingen.
-
-## Brandplanens orientering — öppen fråga, INTE åtgärdad
-
-Punkt 1 i arbetsordern (banans öppningar och grindar) förde mig till
-`ridhus-entreplan-utrymning.jpg`. Den läser så här, zoomad:
-
-- entré-/rumsdelen med trappor och "du är här" ligger i planens **övre** ände,
-- längs planens **vänstra** långsida går ett smalt band med fem parallella
-  linjer — läktaren sedd i plan, samma band `RIDHUS-PLANMATNING` mätte till
-  0–14,5 % av bredden,
-- **mitt på den bandade långsidan finns en grön utrymningsväg** med pil ut,
-- den högra långväggen har regelbundna små hack (pilastrar eller nischer).
-
-**Frågan:** om planens övre ände är husets norra, så är det bandade
-långsidan VÄSTRA — men spelet har läktaren i ÖSTER (`x0:21` av 25), och
-sponsorväggen i väster. Fotona stödjer spelets inbördes ordning: `-02` är
-tagen FRÅN läktaren och visar sponsorväggen mitt emot.
-
-**Vad som talar för att spelet ändå står rätt:** hästgången förbinder
-ridhuset med stallet, och stallet ligger ÖSTER om ridhuset
-(`STALL_X = RIDHUS_X + RIDHUS_BREDD + GARDSGAP`). Gången måste alltså gå in
-på ridhusets östra sida, och spelet lägger läktargapet just där för att
-hästen ska kunna ledas igenom. Planens utrymningsväg mitt på den bandade
-sidan ligger på ungefär samma relativa läge som det gapet. Det talar för att
-planens vänstra sida motsvarar spelets östra — alltså att planen inte är
-orienterad som jag först antog.
-
-**Det är en slutledning, inte ett bevis.** Planen har ingen norrpil, och
-orienteringen går inte att avgöra ur bilden. Jag har därför **inte** ändrat
-någon geometri. Att spegla en 50 m lång läktare på ett antagande om
-planens orientering vore precis den sortens uppfunna kompromiss som
-CLAUDE.md förbjuder.
-
-**Situationsplanens insetruta avgör en del av det.** `SITUATIONSPLAN / SITE
-PLAN` uppe i planens hörn visar ridhuset som den ORANGE, enkla rektangeln
-till vänster och stallet som den GRÅ, trappstegsformade till höger, med
-Björklidsvägen upptill. **Stallet ligger alltså öster om ridhuset, precis
-som spelet har det.** Det bekräftar tomtens layout oberoende — men inte
-vilken långsida läktaren ligger på.
-
-**Vad som fortfarande skulle avgöra det:** en norrpil på huvudplanen, eller
-en bild som visar läktaren och hästgångens dörr i samma ruta. Ingen sådan
-bild finns i repot.
-
-**Speglingen är nu en DATAÄNDRING.** `RIDHUSINNE.sidor` styr läktarens sida,
-panelens sida, banans läge och båsets läge. Byt `{laktare:"E", panel:"W"}`
-mot `{laktare:"W", panel:"E"}` så följer allt med, på båda ytorna, med alla
-sex specar gröna. Provat i båda riktningarna.
-
-**Speglingsprovet hittade två riktiga fel** som ingen annan kontroll såg:
-banan ligger inte centrerad utan tätt mot väggen UTAN läktare, så en
-spegling utan att flytta banan la läktaren 170 m² inne på banan; och min
-första härledning av båsets x vände tecknet och la båset två meter utanför
-däcket. Båda rättade.
-
-**Luckan är stängd.** `speglar` följer `spegelSida` och cafeklockan följer
-läktarsidan; inga literaler kvar. En spegling flyttar även väggdekoren.
-
-## Öppna motsägelser
-
-1. **Sarg kontra läktarfront.** r01 och r02 visar den mörka brädväggen SOM
-   bangräns på däckets sida, utan vit sarg framför. r03 visar en vit sarg
-   med sittplatser bakom, vid bokstaven E — på samma långsida. De går inte
-   att förena ur bilderna. Spelet bygger tills vidare båda.
-2. ~~Kabelstegarna syns inte i något foto.~~ **PRÖVAT OCH FALSKT.** Både
-   en tidigare review och mitt eget första utkast av den här matrisen skrev
-   att kabelstegarna inte syns. Jag beskar och zoomade takzonen i r01 innan
-   jag tog bort dem: den perforerade rännan med regelbundna stegpinnar under
-   stålbalken, med en kopplingsdosa mitt på, ÄR en kabelstege. Detaljen är
-   riktig och står kvar. Hade jag följt reviewn utan att titta hade jag
-   tagit bort ett korrekt drag.
-3. `IMG_0191.MOV` är `[DRIVE-ONLY]` och kan inte prövas härifrån.
-4. Roblox Studio är **inte** körd.
+**2. Struktur och funktion hålls isär.** En okänd funktion får aldrig fyllas med
+en trolig gissning. Se `docs/DELIVERY-PROTOCOL.md`.
 
 ---
 
-# Bevispaket: källa → implementation, per huvudvy
+# 1. Banan och sargen
 
-Reviewn kräver en jämförelse från närmast praktiska referenskamera för var
-och en av de tre huvudvyerna, med varje synligt drag klassat. Bilderna ligger
-i `audits/bilder/ridhus-jf-01..03.png`.
+Underlag: `granskning-2026-08-31/A-banan-och-sargen.md`, 16 bilder.
 
-## Vy 1 — `-01` glasrummen, från läktaren mot C-kortändan
-
-`audits/bilder/ridhus-jf-01.png`
-
-| synligt drag | klass |
-|---|---|
-| Läktardäck i förgrunden, mot kortändan | `RESOLVED` |
-| C-kortändan med band ovanför | `RESOLVED` |
-| Trappa vid kortändan | `RESOLVED` |
-| Rostbrun panel med vita band på motstående långvägg | `RESOLVED` |
-| Bokstaven C på sargen framför blocket | `RESOLVED` |
-| Limträstomme och lysrörsrader i taket | `RESOLVED` |
-| **Trappstegsblocket vid kortändan syns inte i vyn** | `KNOWN MISMATCH` |
-| **Runda vita klockan på kortändans vägg** | `KNOWN MISMATCH` |
-| **Glasbandet läser som en mörk remsa, inte som fönster med bruna karmar in i upplysta rum** | `KNOWN MISMATCH` |
-| Vit stående brädvägg med stjärndekor | `[REFERENCE GAP]` — dekoren ritas inte |
-| Ventilationens spiralkanaler | `ASSUMPTION` — byggs, men syns inte i just den här vyn |
-
-## Vy 2 — `-02` långsidan, från läktaren mot sponsorväggen
-
-`audits/bilder/ridhus-jf-02.png`
-
-| synligt drag | klass |
-|---|---|
-| Rostbrun panel på DEL av EN långsida | `RESOLVED` |
-| Vita horisontella band på panelen | `RESOLVED` |
-| Sponsorskyltar på panelen, i fotots ordning | `RESOLVED` |
-| Fönsterband ovanför panelen | `RESOLVED` |
-| Vit sarg med mörkt sockelband | `RESOLVED` |
-| Resten av väggen ljus | `RESOLVED` |
-| **Fönsterbandet läser som en slät ljus remsa — posterna syns knappt** | `KNOWN MISMATCH` |
-| Speglarna i träram | `ASSUMPTION` — läge inte kopplat till panelen |
-| Sanden och hindren | `ASSUMPTION` |
-
-## Vy 3 — `-03` båset vid E, från banan mot båset
-
-`audits/bilder/ridhus-jf-03.png`
-
-| synligt drag | klass |
-|---|---|
-| Båset i mörkt trä, upphöjt | `RESOLVED` |
-| Sadeltak med utskjutande takfot | `RESOLVED` |
-| Trappa med räcke på båda sidor | `RESOLVED` |
-| Grön exit-skylt | `RESOLVED` |
-| Vit sarg med mörkt sockelband | `RESOLVED` |
-| Bokstaven E på sargen | `RESOLVED` |
-| **Elefantbilden bredvid E** | `[REFERENCE GAP]` — ritas inte |
-| **Sittande publik på läktaren bakom båset** | `[REFERENCE GAP]` — inga NPC:er där |
-| Läktarens trappstegskaraktär bakom båset | se den öppna motsägelsen sarg/läktarfront |
-
-## Sammanräkning
-
-`RESOLVED` 19 · `KNOWN MISMATCH` 4 · `[REFERENCE GAP]` 4 · `ASSUMPTION` 3
-
-De fyra kvarstående `KNOWN MISMATCH` är alla i samma familj: **band som
-läser som släta remsor i stället för som fönster och trappsteg**. Det hör
-till punkt 6 och 7 i arbetsordern och är nästa steg — inte till geometrin,
-som nu stämmer.
-
----
-
-# Pass mot de fyra synliga mismatcharna
-
-## Punkt 3 och 4 · ORSAKEN VAR MIN EGEN REGRESSION — RESOLVED
-
-Jag rapporterade först att blockets "geometri hamnar någon annanstans än
-datan anger". **Det var fel, och slutsatsen byggde på ett trasigt prov.**
-
-Magentaprovet som gav "810 pixlar uppe i vänstra hörnet" mätte inte min
-geometri — det mätte **den lila UPPGIFT-rutan i HUD:en**, vars ljusare
-partier råkar passera filtret r>150, b>150, g<110. Ett omtag med grönt
-mätte i stället **spelarens keps**. Två falska positiva i rad, och båda gav
-samma svar oavsett kameravinkel, vilket borde ha avslöjat dem direkt: en
-yta i världen kan inte ge exakt lika många pixlar åt två håll.
-
-Den riktiga orsaken hittades genom att logga ALLA konsolrader:
-
-```
-warning: 3D-vandring misslyckades: ReferenceError: L is not defined
-    at v3dRidhus (...)
-```
-
-`L` deklareras inne i läktarens sektionsloop. När jag byggde om läktaren
-till ett däck lät jag domarbåsets block läsa `L.dackZ` — men det ligger
-UTANFÖR loopen. Undantaget FÅNGAS av spelet och loggas som en varning, så
-allt efter båsblocket i `v3dRidhus` byggdes aldrig: kortändans block,
-glasbandet, kortändans klocka.
-
-Mätbart: `ridhusinne` byggde **6 statiska objekt med felet, 33 utan**.
-
-Regressionen kom med mitt eget läktarpass och stod kvar genom flera
-commits. Alla skärmdumpar jag tog av ridhuset däremellan visade en scen där
-en femtedel av geometrin fanns.
-
-**Åtgärdat.** `golv` läser `R.laktare.dackZ` direkt. Kortändans block med
-sockel, de två trapporna, det segmenterade glasbandet med karmar och djup,
-och kortändans klocka syns nu alla från referenskameran. `RESOLVED`.
-
-**Verktyget som saknades:** `tools/webbkoll.mjs`. Mina QA-skript lyssnade
-bara på `pageerror` och console-rader av typen "error"; ett fångat undantag
-loggas som VARNING och passerade som grönt. Den nya kollen räknar alla
-nivåer, kräver att varje scen bygger objekt alls, och är falsifierad genom
-att felet återinförts.
-
-## Punkt 3 · den ursprungliga ocklusionsdiagnosen står kvar
-
-
-
-Reviewn bad om diagnos före åtgärd. Den gav två fynd, det andra viktigare
-än det första.
-
-**Fynd 1 — ocklusion, mätbar i datan.** Blocket var 4 steg à 0,30 = 1,20 m
-och sargen är 1,35. Hela blocket stod under sargkrönet. Dessutom stiger
-raderna BORT från banan, så även efter en höjning till 5 × 0,32 = 1,60 kom
-bara den översta raden över sargen — 0,25 m på fjorton meters håll.
-`-01` visar flera rader över sargkrönet, så blocket står nu på en **sockel**
-på 0,80 m: totalt 2,40 m, tre rader över sargen. `DERIVED` ur fotot.
-
-**Fynd 2 var däremot fel** och är rättat ovan: blocket syntes inte därför
-att det aldrig byggdes, inte därför att det låg fel.
-
-**Sidofynd, oavgjort:** kortändan vid hall-y ≈ 2 renderar bokstaven **A** på
-sargen, medan `DRESSYRBOKSTAVER` lägger A på ban-lokal (10, 60) och C på
-(10, 0) — alltså C i den låga änden. Bokstäverna och blocket pekar åt olika
-håll. Det kan vara samma fel som ovan eller ett eget. `KNOWN MISMATCH`.
-
-## Punkt 4 · klockan — byggd, men syns inte än
-
-Klockan i datan (`RIDHUSINNE.klocka`, y 63,6) är **cafeklockan i norra
-änden**, inte den `-01` visar. Kortändans klocka fanns alltså inte alls.
-Den är nu tillagd som `kortanda.klocka` med x härlett ur mittpunkten mellan
-de två trapporna, alltså geometriskt fäst i kortändans struktur som reviewn
-kräver. Den syns inte i vyn av samma skäl som blocket. `KNOWN MISMATCH`
-tills renderingsfelet är spårat.
-
-## Punkt 1 och 2 · glasbanden — djup tillagt
-
-Båda banden fick det som skiljer ett fönster från en remsa, allt synligt i
-`-01`/`-02`: en **mörk reveal bakom glaset** som ger rummet djup, **karmar
-och poster som står proud** av glaslivet, och för kortändan **omväxlande
-upplysta och mörka rutor**. Långsidans band går att bedöma i vyn
-(`m-panel`); kortändans delar blockets renderingsfel.
-
-## Orienteringsdatan är städad
-
-Speglarna hänger nu på panelväggen via `spegelSida`, och cafeklockan och
-trätrappan följer läktarsidan. Inget av dem är kvar som literaler. En
-spegling är därmed en dataändring även för väggdekoren.
-
-## Kompassrosen, den vita väggen och pictogrammen
-
-`ridhus-inne-01` beskuren över kortändan visar tre saker som spelet saknade:
-
-1. **En hög vit vägg** mellan översta bänkraden och fönstrens underkant,
-   ungefär mansehöjd. Spelet hade `glasOver:0.35` — glaset satt nästan
-   direkt på bänkarna, och det fanns därför ingenstans att sätta vare sig
-   klocka eller dekor. Det var det som gjorde att stjärnan hamnade inne i
-   glaset vid första försöket. Nu 1,6 m, `DERIVED` ur bildens proportioner.
-
-2. **Kompassrosen** — en TUNN, linjeritad åttauddig stjärna, inte en fylld
-   form. Byggd som fyra korsade smala stavar, vilket läser som en ritad
-   stjärna på det avståndet. Läget härleds ur `trappor` så att den följer
-   trapporna. `[ASSUMPTION]`: storleken.
-
-3. **Pictogrammen vid bokstäverna**: C har en CYKEL, E har en elefant. Båda
-   `VERIFIED`. De ritas INTE — vid den skala bokstäverna har på sargen blir
-   en cykel eller elefant några pixlar, och en fläck som ska föreställa en
-   elefant är sämre än ingen fläck. Står som verifierat men inte byggt, inte
-   som `REFERENCE GAP`: källan är tydlig, det är renderingsskalan som är
-   gränsen.
-
----
-
-# Punkt 7 · ljus- och materialkaraktär, första passet
-
-Ytorna mätta i fotona med beskär-titta-mät, och renderingen mätt mot dem.
-Fyra av sju första prov träffade fel yta och förkastades — värdena nedan är
-bara de visuellt kontrollerade.
-
-| yta | foto | render före | render efter | utfall |
-|---|---|---|---|---|
-| bansand | `#6F5D4D` (`-03`) | `#976930` | `#746049` | `RESOLVED` |
-| rostbrun panel | `#765B59` (`-02`, färgmask) | `#83512C`* | `#745348` | `RESOLVED` |
-| sargens vita bräda | `#E3E0D1` (`-03`) | — | — | spelet har `#E9E5DC`, inom mätfelet |
-| läktarfronten | `#4C3B2D` (`-01`) | — | — | spelet har `#4E3626`, inom mätfelet |
-| läktardäckets plank | `#A69279` (`-01`) | — | — | spelet har `#C9BCA4`, ljusare |
-
-\* kontaminerat av sanden i samma mask; panelens egna region gav `#745348`.
-
-## Två fynd
-
-**1. Panelen var för mättad.** Stod som `#5E2C33`, ett mättat rödlila, ur ett
-gammalt textderivat som kallade den "mörkröd/maroon". Färgmask på `-02`, med
-masken visuellt kontrollerad som grön overlay över just den väggen och
-utanför sponsorskyltarna, ger `#765B59` — en betydligt dovare gråbrun-mauve.
-**Bilden är facit, och den är dovare än ordet.**
-
-**2. Sanden lästes aldrig ur datan.** Banans underlag ritades med ett
-LITERALT `"#9C8663"` i renderaren och läste inte `RIDHUSINNE.sandFarg` alls.
-Samma dolda literal som gårdsplanen, silon och sponsorskyltarna fällts på:
-ändrar man datan händer ingenting. Den läser nu datan.
-
-## Om den kanalvisa kompensationen
-
-Sanden kompenseras KANALVIS, och det är avsiktligt trots att jag två gånger
-förkastat kanalvis kompensation i det här arbetet. Skillnaden:
-
-- det som sprängde boxfronternas reglar och ridhusväggen var kanalvis
-  invertering av LJUSET på ytor med varierande infallsvinkel — highlights
-  klipper och tonen spårar ur,
-- sanden är en plan, jämnt belyst golvyta där en varm TEXTUR är den
-  avvikande faktorn. Samma fall som stallets marksten, där kanalvis
-  kompensation konvergerade på några enheter.
-
-Kvoterna är mätta på skärmdump, inte gissade, och resultatet är verifierat:
-`#746049` mot målet `#6F5D4D`.
-
-## Kvar i punkt 7
-
-- Läktardäckets plank renderas ljusare än fotot; inte åtgärdat.
-- Kortändans bänkar är inte mätta — mina prov träffade sarg och sand.
-- Takets ljussättning är inte mätt alls.
-
----
-
-# Roblox-pariteten efter Review 09
-
-Reviewn hittade att Roblox fortfarande byggde ridhusets GAMLA identitet
-medan webben var rättad, och att sex gröna specar samexisterade med
-spelarsynliga paritetsfel. Båda delarna stämde.
-
-| fynd | före | efter |
+| fakta | klass | källa |
 |---|---|---|
-| Rostbrun panel | **båda långsidorna, nästan full längd** | en sida, bara sitt stycke, ur `ovreVagg.sida/y0/y1` |
-| Panelens färg | `IDFARG.panel`, gammalt mättat rödlila | delade, mätta `R.panel` `#765B59` |
-| Sponsorskyltar | **byggdes inte alls** | ur delad `skyltar`, rätt antal och ordning |
-| Kortändans vita vägg | gapet visade skalets material | egen vit vägg mellan bänkar och glas |
-| Kortändans klocka | fanns inte | byggd, testad som RELATION mellan trapporna |
-| Kompassrosen | fanns inte | fyra korsade stavar, vänster om vänstra trappan |
+| Banan 20 × 60 m | `VERIFIED` | produktägaren, `SITEPLAN.md` |
+| **En** bana, som inte byter material | `VERIFIED` | produktägaren 2026-08-31 |
+| Sargen vitmålad liggande panel med svart sockelband | `VERIFIED` | `ridhus-inne-14-laktaren.jpg`, `-43-laktaren-vid-h.jpg`, `-31-langsidan-med-sponsorskyltar.jpg` |
+| Sockelbandet är slitet och ojämnt, inte en ren list | `FOTO, EJ GRANSKAD` | `ridhus-inne-43-laktaren-vid-h.jpg` |
+| Sarghöjd 1,35 m | `DERIVED` | — |
+| Sockelbandets andel av sarghöjden | **prövat, ej ändrat** | 0,26 av 1,35 = 19 % |
+| Underlaget är brun sand-/flisblandning med hovspår och harvspår | `VERIFIED` | `ridhus-inne-11-ridbanan.jpg`, `-43` |
+| Dressyrbokstäverna sitter som vita skyltar på sargen, med djur-/symbolbild | `VERIFIED` | H med hästbild i `ridhus-inne-43`, B i `-31`, C och E tidigare |
+| Bokstavsplacering A, B, C, E, H | `VERIFIED` | se § *Bokstäverna* nedan |
+| Löst bokstavsställ med F, R, H, V, C, K, M, A bakom sargen | `FOTO, EJ GRANSKAD` | `ridhus-inne-21-hinderupplaget-och-bokstavsstall.jpg` |
+| Sargluckor med svarta beslag, 2–3 horisontella springor | `VERIFIED` | `ridhus-inne-19-glaspartiet-och-skyltraden.jpg` |
+| Minst en lucka är en öppningsbar dörr med gångjärn, ner till en trappa | `FOTO, EJ GRANSKAD` | `ridhus-inne-37-rampdorren.jpg` |
+| Fönsterparti med nät i sargväggen vid A-hörnet | `FOTO, EJ GRANSKAD` | `ridhus-inne-36-vita-kortsidan.jpg`, `-38-vita-hallen-variant.jpg` |
+| Hinderupplag bakom sargen: bommar i regnbågsfärger, stöd, koner, hinkar | `FOTO, EJ GRANSKAD` | `ridhus-inne-21`, `-44-klubbhornet-med-bommar.jpg` |
+| Lösa bommar och koner står framme **på** banan under ridning | `VERIFIED` | `ridhus-inne-11`, `-38`, `IMG_0185-f01-laktarsidan.jpg` |
+| Sargens exakta luckplacering i meter | `[REFERENCE GAP]` | — |
 
-## Varför testerna inte fångade det
+## Bokstäverna
 
-De två testerna för långväggen löd **"byggdes på BÅDA sidor"** och krävde
-`2 × listar` läkt. De kodade alltså in det fel fotot motsäger, och HÖLL DET
-PÅ PLATS: Roblox kunde bygga panelen på båda sidor i full längd med hela
-sviten grön.
+Axeln är A→C. Läst i bild:
 
-Ett test som skriver av bygget i stället för källan skyddar felet i stället
-för att hitta det. Det är samma sjuka som fällt sju tal i den här sviten
-tidigare, och det här var dess dyraste form.
+| bokstav | läge | källa |
+|---|---|---|
+| A | den vita kortsidan | `ridhus-inne-23-kortsidan-vid-a.jpg`, `-36`, `-38` |
+| C | kortändan vid läktare/kafé | `IMG_0185-f01`, `IMG_0192-f01`, `IMG_0179` |
+| B | sponsorlångsidan, framför spegeln | `ridhus-inne-31-langsidan-med-sponsorskyltar.jpg`, `-19`, `-20` |
+| E | läktarlångsidan, vid domarbåset | `ridhus-inne-03-baset-vid-E.jpg` |
+| H | läktarlångsidan | `ridhus-inne-43-laktaren-vid-h.jpg`, `-14`, `-28` |
 
-De mäter nu relationer mot delad data: en sida, bara sitt stycke, rätt sida
-enligt `sidor.panel`, skyltarna innanför stycket, klockan mellan trapporna,
-rosen vänster om trapporna. Alla falsifierade genom att återinföra felet.
+**E och H ligger på samma långsida.** Det är den sida läktaren står på. Det är
+konsistent med en 20 × 60-bana där K, E, H ligger på en långsida och F, B, M på
+den andra, och det bekräftar att domarbåset "vid E" står på läktaren.
+
+Att bokstavsstället bakom sargen har åtta bokstäver medan bara fem sitter fasta
+betyder att banan kan sättas med full bokstavssättning. Spelet bör kunna göra
+båda.
 
 ---
 
-# Punkt 7, andra passet: hallens egna ytor
+# 2. Läktaren — matrisen hade RÄTTAT BORT en korrekt egenskap
 
-Alla fyra var LITERALER i renderaren och lästes aldrig ur datan — samma
-mönster som sanden, silon, gårdsplanen och sponsorskyltarna.
+Underlag: `granskning-2026-08-31/B-laktaren.md`, 16 bilder, plus egen
+kontrollgranskning av fyra bilder.
 
-| yta | spelet hade | mätt i `-01` | render efter |
-|---|---|---|---|
-| hallens väggar | `"#FFFFFF"` | `#ACA99D` (sd 27) | `#B5AA8A` |
-| takstolarna | `"#7A5C3E"` varm mellanbrun | `#5C4C45` | — |
-| undertakets plåt | `"#3A3E44"` mörk blågrå | `#5E5B5E` (517 kpx) | `#634B45` (takzon) |
-| kortändans bänkar | `"#D8C7A4"` ljus furu | `#86715B` | `#775C3F` |
+## Vad som var fel
 
-## Ridhusets tak är INTE stallets
+Den gamla matrisen påstod, klassat `VERIFIED`:
 
-En värmemask över hela takzonen i `-01` fann **35 kpx varma mot 517 kpx
-neutrala**. Ridhusets takstolar läser mörkt gråbruna, nästan neutrala — till
-skillnad från stallets limträ, som är tydligt varmt. Spelet hade en varm
-mellanbrun balk och en mörk blågrå plåt; båda drog åt fel håll, åt var sitt.
+> **Plant plankdäck**, inga trappsteg — r01 förgrund, beskuren
+>
+> Spelet byggde **fyra trappsteg i ljus furu** längs hela långsidan. Fotona
+> visar ett plant däck. Trappstegen finns — vid KORTÄNDAN, under glasrummen.
 
-Att jag mätte stallets tak först och fann varmt limträ gjorde det lätt att
-anta samma sak här. Masken sa något annat.
+**Detta är fel, och felet gick i spelets disfavör.** Spelet hade byggt stegade
+bänkrader i ljus furu. Matrisen tog bort dem som ett fel. Bilderna visar att de
+skulle ha varit kvar.
 
-## Kvarstående, redovisat som karaktär och inte som fel
+| bild | kameraläge | vad den visar |
+|---|---|---|
+| `ridhus-inne-07-laktartrappstegen.jpg` | på läktaren, längs raderna mot stjärnväggen | **tre stegade bänkrader i ljus furu**, med sittdynor på |
+| `ridhus-inne-43-laktaren-vid-h.jpg` | i banan vid H, mot läktaren | stegade rader i ljust trä, fyra personer sittande |
+| `ridhus-inne-14-laktaren.jpg` | i banan, längs hela läktarlångsidan | stegade rader **i hela långsidans längd** |
+| `ridhus-inne-04-sargen-mot-laktaren.jpg` | på läktarens gångbräda vid ena änden | plan gångbräda i mörkt trä **framför** raderna |
 
-De tre ytorna renderas fortfarande **varmare än fotot**, med blått nedtryckt
-15–25 enheter i alla tre. Det är samma signatur på hela scenen, inte tre
-separata fel, och det hör till webbrenderarens inomhusljus tillsammans med
-trätexturen.
+Den gamla slutsatsen kom ur en beskuren förgrund av `ridhus-inne-01`. Det som
+är plant i den beskärningen är **gångbrädan längst fram**, inte läktaren.
+Läktaren består av tre saker, inte ett:
 
-Jag jagar det INTE per yta med kanalvisa hack. Det står som en
-`RENDERING LIMITATION` av samma slag som stallets vägg: ytorna ligger på sina
-mätta värden och avviker hellre åt ett känt håll än att förfalskas var för
-sig.
+1. sargen mot banan,
+2. en plan gångbräda i mörkt trä bakom sargkrönet,
+3. stegade bänkrader i ljus furu som reser sig därifrån.
+
+Den gamla matrisen slog ihop 2 och 3 och kallade dem ett plant däck.
+
+## Vad som gäller
+
+| fakta | klass | källa |
+|---|---|---|
+| Stegade bänkrader i ljus furu längs läktarlångsidan | `VERIFIED` | `ridhus-inne-07`, `-14`, `-43` |
+| **Tre** bänkrader | `FOTO, EJ GRANSKAD` | `ridhus-inne-32-hornet-mot-laktaren.jpg` ("tre rader träbänkar"), `-41-banan-fran-laktaren.jpg` ("tre bänkrader"), `-07` (tre synliga) |
+| Plan gångbräda i mörkt trä mellan sargen och raderna | `VERIFIED` | `ridhus-inne-04` |
+| Raderna löper i hela långsidans längd | `VERIFIED` | `ridhus-inne-14` (en bildruta, hela sidan) |
+| Lösa sittdynor på raderna, svarta och blå, en märkt Elon | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` |
+| Räcke i metall vid uppgången | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` |
+| Väggen ovanför läktaren är **ljus stående skivpanel** med synliga mörka pelare | `VERIFIED` | `ridhus-inne-14` |
+| Solid mörkbetsad brädfront mot banan | **återkallad** | var byggd på samma beskärning som felet ovan |
+| Ljus kappregel överst på fronten | **nedgraderad** till `[REFERENCE GAP]` | kan inte reproduceras i `-01`, `-02` eller `-04` |
+| Däckets höjd 0,80 m | `DERIVED` | sittande huvuden ~0,7 m över sargkrönet i `-43` |
+| Radernas stighöjd och djup | `[REFERENCE GAP]` | — |
+| Gång bakom läktaren, sliten plywood, galvaniserad ventilationskanal upp genom takfoten | `FOTO, EJ GRANSKAD` | `ridhus-inne-39-gangen-bakom-laktaren.jpg` |
+| Läktaren delas av en mellanvägg med stjärndekor, trappa på båda sidor | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` |
+| Returtunna för burkar står på läktaren | `FOTO, EJ GRANSKAD` | `ridhus-inne-43` |
+
+## Varför det här är den viktigaste raden i dokumentet
+
+Ett fel som säger "bygg detta" kostar arbete. Ett fel som säger "riv detta" kostar
+arbete **och** tar bort något som var rätt. Den gamla matrisen gjorde det andra,
+med dokumentets starkaste klass, på en beskuren bild.
+
+Regeln som följer: **en `VERIFIED` som vilar på en beskärning ska ange vad
+beskärningen utesluter.** En beskärning är ett kamerabyte.
+
+---
+
+# 3. Kortändan vid C, trapporna och kaféet
+
+Underlag: `granskning-2026-08-31/C-kortandan-och-kafeet.md`, 16 bilder.
+
+Produktägaren har fastställt 2026-08-31: **den glasade våningen är ett kafé**,
+med fönstervägg mot ridbanan.
+
+| fakta | klass | källa |
+|---|---|---|
+| Trappstegsblock vid kortändan, **två trappor** upp | `VERIFIED` | `ridhus-inne-01-glasrummen.jpg` |
+| Trapporna är i **mörkt/mörkbetsat** trä, inte samma ljusa furu som bänkraderna | `FOTO, EJ GRANSKAD` | `ridhus-inne-07`, `-08-laktartrappan.jpg` |
+| Glasat band av rum ovanför, mörkbruna karmar | `VERIFIED` | `ridhus-inne-01`, `-07` |
+| Bandet bryts av de två trapporna | `VERIFIED` | `ridhus-inne-01`, beskuren |
+| Glaset går i bås med poster, inte som en remsa | `VERIFIED` | `ridhus-inne-01`, `-07` |
+| Båsens delning 1,9 m | `ASSUMPTION` | — |
+| **Exakt en** rund vit klocka vid kortändan, på den vita väggen mellan trapporna | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` (klockan och stjärnan i samma bildruta) |
+| Vit stående brädvägg mellan bänkar och glas | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` |
+| Stjärna med sju–åtta spetsar, tunna linjer, på den vita väggen | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` |
+| Högtalare monterad på den vita väggen vid klockan | `FOTO, EJ GRANSKAD` | `ridhus-inne-07` |
+| Kaféets funktion | `VERIFIED` | produktägaren 2026-08-31 |
+| Handskriven svart tavla, "Välkomna till Ca…" | `FOTO, EJ GRANSKAD` | `ridhus-klubb-07-cafeet-genom-glaset.jpg` |
+| Kaférummet sett från banan: fönsterband med lysrör och inredning bakom glas | `VERIFIED` | `ridhus-inne-01` |
+| Kaférummet sett inifrån: vita bord, grå perforerade metallstolar, runda pelarbord, panelinnertak med ljusslinga | `VERIFIED` | `ridhus-klubb-09-cafesalen.jpg` |
+| Ridbanan synlig genom glaset **inifrån** kaféplanet | `VERIFIED` | `ridhus-klubb-10-overvaningens-gang.jpg` |
+| Alla meter vid kortändan | `[REFERENCE GAP]` | topologi rätt, mått valda |
+
+## Kaféet är en gameplay-yta, inte en textur
+
+Kaférummet är belagt **åt båda hållen**: från banan syns rummet genom glaset,
+och från rummet syns banan. Det är alltså inte ett dekorativt glasband utan ett
+rum spelaren kan stå i och titta ut ur medan andra rider.
+
+Det gör den gamla `KNOWN MISMATCH` — *"glasbandet läser som en mörk remsa, inte
+som fönster med bruna karmar in i upplysta rum"* — till en rumsfråga, inte en
+materialfråga.
+
+## Stjärnan: ordstriden är avgjord
+
+Den gamla matrisen skrev "kompassros, LINJERITAD". Inventeringen skrev "målad
+stjärna". `ridhus-inne-07` visar saken i närbild: en sjuspetsig stjärna i tunna
+ljusa linjer på den vita väggen. **Samma objekt, två ordval.** Ingen motsägelse.
+Den är dekor och byggs inte, men den är ett bra läsbart landmärke för att
+identifiera kortändan i andra bilder.
+
+## Klockhypotesen: avgjord mot den gamla matrisen
+
+Den gamla matrisen påstod att kaféklockan sitter i norra änden och att
+kortändans klocka *"fanns alltså inte alls"*, och lade till `kortanda.klocka`
+som ett separat objekt.
+
+`ridhus-inne-07` visar **en** rund vit klocka, på den vita väggen vid
+kortändan, i samma bildruta som stjärnan. Ingen bild i underlaget visar två
+klockor. Påståendet att kortändans klocka inte fanns är alltså motsagt.
+
+**Men:** att det är samma klocka som datans `RIDHUSINNE.klocka` är fortfarande
+inte bevisat, för det kräver att koordinatmodellen läses, inte att en bild
+tittas på. `MOTSÄGELSE` tills geometrin är kontrollerad. Jag drar den inte
+längre än så — det var precis den formen båda tidigare felen hade.
+
+## En tredje uppgång som inte hör hit
+
+Vid H-hörnet finns en **fristående vit lutande trappa** upp till ett annat
+glasparti (`ridhus-inne-14`, `-15-hornet-mot-glasrummen.jpg`,
+`-10-glasrumsvaggen.jpg`, alla med H synlig på sargen i samma bildruta). Det är
+inte C-trapporna och ska inte läsas in i kortändans geometri.
+
+---
+
+# 4. Sponsorlångsidan
+
+Underlag: `granskning-2026-08-31/D-langvaggen.md`, 22 bilder, plus egen
+kontrollgranskning av `ridhus-inne-31`.
+
+## Vad som var fel
+
+Den gamla matrisen påstod, klassat `VERIFIED`: *"Rostbrun/mörkröd panel på DEL
+av EN långsida"* och *"resten av samma vägg är ljus"*.
+
+**Panelen täcker hela långsidan.** Det ljusa är inte samma väggs fortsättning —
+det är den vita sargen under panelen och fönsterbandet över den. Väggen har tre
+våningar i höjd, och den gamla matrisen läste dem som tre stycken i längd.
+
+`ridhus-inne-31-langsidan-med-sponsorskyltar.jpg` avgör frågan: kameran står på
+läktaren och tittar rakt över banan på hela den motstående långsidan i en
+bildruta. Panelen är obruten från hörn till hörn.
+
+| fakta | klass | källa |
+|---|---|---|
+| Mörk rödbrun liggande panel i **hela** långsidans längd | `VERIFIED` | `ridhus-inne-31`, `-11-ridbanan.jpg` |
+| Vita/ljusa horisontella hyllister på panelen | `VERIFIED` | `ridhus-inne-31` |
+| Panelen delas i fält av mörka pilastrar | `VERIFIED` | `ridhus-inne-31` |
+| Fönsterband ovanför panelen, som **separata** öppningar per fält | `VERIFIED` | `ridhus-inne-31`, `-17`, `-24`, `-26` |
+| Vit sarg med svart sockelband under panelen | `VERIFIED` | `ridhus-inne-31` |
+| Sponsorskyltarna hänger på panelen | `VERIFIED` | `ridhus-inne-31` |
+| **En** spegel, delad i två rutor, i brun ram, vid bokstaven B | `VERIFIED` | `ridhus-inne-31`, `-19`, `-20` |
+| Svart panelsektion till höger om spegeln | `VERIFIED` | `ridhus-inne-31` |
+| Ljus trädörr i panelväggen till höger om den svarta sektionen | `VERIFIED` | `ridhus-inne-31` |
+| Trälucka/trappa intill spegeln | `FOTO, EJ GRANSKAD` | `ridhus-inne-37` |
+| Panelens höjd i meter | `[REFERENCE GAP]` | — |
+| Fönsterbandets höjd och postdelning | `[REFERENCE GAP]` | — |
+
+## Skyltarna, i ordning från vänster
+
+Läst i `ridhus-inne-31-langsidan-med-sponsorskyltar.jpg`:
+
+1. **VÄLKOMMEN TILL UPPLANDS BRO RYTTARFÖRENING** — vit skylt med logotyp
+2. **HUVUDSPONSOR ELON BARKARBY** — svart skylt, med en lista i vänsterkant:
+   KÖKET, BADRUMMET, TVÄTTSTUGAN, STRÖKRUBBAN, ELMATERIEL, BELYSNING,
+   LUFTVÄRMEPUMPAR, och till höger "Till din tjänst" med tre pictogram
+3. **"Vi tror på dig!"** — röd/vit skylt
+4. spegeln (två rutor, brun ram) — bokstaven **B** står på sargen framför
+5. svart panelsektion
+6. ljus trädörr
+7. **Agria Djurförsäkring** — blå skylt
+8. **Hästsportbutik** — vit skylt med grön logotyp
+9. **två blå skyltar med hästmotiv**, foder/strö
+
+Den gamla matrisen hade fyra skyltar. Underlaget visar minst nio objekt i rad.
+
+**Men skyltuppsättningen är inte konstant.** Inventeringen läser i
+`ridhus-inne-02-langsidan.jpg` namnen *Agria, Stigeberga Gård, RS Mustang* —
+alltså **Stigeberga Gård** där `-31` har Hästsportbutik och foderskyltarna, och
+**RS Mustang** som inte syns i `-31` alls. Antingen är det två olika partier av
+samma vägg, eller så är bilderna tagna vid olika tidpunkter och skyltarna har
+bytts.
+
+Sponsorskyltar byts när avtal löper ut. **Spelet ska därför inte hårdkoda
+skyltnamn.** Skyltarna bör vara en datadriven lista med ett givet antal platser
+på panelen, så att en ändring är en datarad och inte en ombyggnad. Det är en
+arkitekturkonsekvens, inte en referensfråga.
+
+## En flaggad öppen fråga som nu är avgjord
+
+Inventeringen hade en öppen fråga: sitter välkomstskylten och Elon-skylten på
+en **kortsida** eller på långsidan? `IMG_0192-f04` och `IMG_0196-f01` läste dem
+som kortsida.
+
+`ridhus-inne-31` avgör det. Båda skyltarna sitter på **långsidan**, och
+bokstaven **B** står på sargen i samma bildruta. B är en långsidesbokstav.
+Filmrutorna är tagna i vinkel mot hörnet, vilket är samma perspektivkompression
+som fällde väggmodellen första gången. **Frågan stryks som öppen.**
+
+---
+
+# 5. Läktarlångsidan — en fråga till produktägaren
+
+Produktägarens rättade väggmodell 2026-08-31 lyder: *"Långsidorna: mörk rödbrun
+horisontell panel med vita hyllister."* Plural.
+
+Underlaget visar att **de två långsidorna inte är lika**:
+
+| långsida | vägg ovanför sargen | källa |
+|---|---|---|
+| sponsorlångsidan (B) | mörk rödbrun panel, hela längden | `ridhus-inne-31` |
+| läktarlångsidan (E, H) | **ljus stående skivpanel** med mörka pelare | `ridhus-inne-14` |
+
+`ridhus-inne-14-laktaren.jpg` är tagen från banan rakt mot läktarlångsidan, i
+hela dess längd, i en bildruta. Det är inte en vinkel mot ett hörn och alltså
+inte samma perspektivfel som tidigare.
+
+**Jag ändrar inte modellen på detta.** Produktägaren har rättat mig en gång på
+just den här väggen, och den rättelsen var korrekt. Tre möjligheter står öppna:
+
+1. Panelen sitter bara på sponsorlångsidan, och "långsidorna" var ett
+   plural-slarv.
+2. Panelen sitter på läktarlångsidan också, men bakom eller under bänkraderna
+   där den inte syns från banan.
+3. Något i min läsning av `-14` är fel.
+
+**Detta är en fråga, inte en slutsats.** Se § *Öppna frågor*.
+
+---
+
+# 6. Taket och installationerna
+
+Underlag: `granskning-2026-08-31/E-taket.md`, 15 bilder.
+
+| fakta | klass | källa |
+|---|---|---|
+| Symmetriskt sadeltak | `VERIFIED` | nock i `ridhus-inne-16-sargen-mot-lang-sida.jpg`, utifrån i `ridhus-gavel-01..04` |
+| Balkarna går **tvärs** hallen, lysrören **längs** | `VERIFIED` | `ridhus-inne-14`, `-31` |
+| Balkarna är mörkt gråbruna, nästan neutrala — **inte** varma som stallets limträ | `VERIFIED` | färgmätning, se `INTERIOR-MATRIS-HISTORIK.md` |
+| Korrugerad plåt som undertak | `VERIFIED` | `ridhus-inne-07`, `-14`, `-31` |
+| Långa lysrörsarmaturer i rader | `VERIFIED` | `ridhus-inne-14`, `-31` |
+| Bärande träpelare med synliga stålskor i betong | `VERIFIED` | `ridhus-inne-05-ridbanan-sponsorvaggen.jpg`, `-04` |
+| Diagonala snedsträvor mellan pelare och balk | `VERIFIED` | `ridhus-inne-05`, `-07` |
+| Ljusinsläpp som stående fönsterband under takfoten, **inte** i takytan | `VERIFIED` | `ridhus-inne-02`, `-11`, `-42-vita-hallen.jpg` |
+| Riktade spotlights monterade på balkarna | `VERIFIED` | `ridhus-inne-28-langsidan-vid-h.jpg`, `-32-hornet-mot-laktaren.jpg` |
+| Hornhögtalare under takfoten | `VERIFIED` | `ridhus-inne-14` |
+| Minst **tre** olika ventilationskanaltyper | `VERIFIED` | se nedan |
+| Kabelstegar och hängande kablar | `VERIFIED` | `ridhus-inne-14`, `-31` |
+| Antal balkfält | `[REFERENCE GAP]` | ingen bild fångar hela längden utan perspektivkompression |
+| Träslag i balkarna | `[REFERENCE GAP]` | färg avgör inte material |
+| Takresning och balkdelning | `DERIVED` | spelets tidigare tal, 2,8 / 6,0 m — ej mätta |
+
+## Ventilationen är tre saker, inte en
+
+Den gamla matrisen hade en rad: *"stora runda spiralkanaler"*. Underlaget visar
+tre olika dragningar, och en modell som bygger en av dem bygger fel:
+
+1. **Isolerad flexkanal** i silverfolie, dragen längs undertaket
+   (`ridhus-inne-04-sargen-mot-laktaren.jpg`).
+2. **Galvaniserad kanal upp genom takfoten** i gången bakom läktaren
+   (`ridhus-inne-39-gangen-bakom-laktaren.jpg`).
+3. **Lodrät grå kanal ner längs väggen** (`ridhus-inne-14`, `-30`, `-44`).
+
+## Lysrörstätheten skiljer sig mellan hallens delar
+
+Den vita hallen vid kortändan A har synbart tätare lysrörsrader än den
+brunpanelade delen (`ridhus-inne-42-vita-hallen.jpg` mot `ridhus-inne-11`).
+`FOTO, EJ GRANSKAD`. Om det står sig är det en ljussättningsskillnad spelet bör
+ha, inte ett fotoartefakt — men det är inte avgjort.
+
+## Gavelbilderna
+
+`ridhus-gavel-01.jpg` till `-04-statrappan.jpg` visar takformen utifrån från
+fyra vinklar: rent symmetriskt sadeltak, mörk vindskiva, röd korrugerad
+plåtfasad. **De beskrivs inte i inventeringen**, som bara täcker interiören, och
+har därför ingen `nyckelbild`-markering. `FOTO, EJ GRANSKAD` — men otvetydiga.
+
+Att de saknas i inventeringen är en lucka i inventeringen, inte i materialet.
+
+---
+
+# 7. Domarbåset
+
+Underlag: `granskning-2026-08-31/F-baset-och-domartornet.md`, plus egen
+kontrollgranskning av `ridhus-inne-14`.
+
+## "Båset vid E" och "domartornet på läktaren" är samma struktur
+
+Detta var avsnittets huvudfråga, och den är avgjord genom att jämföra
+kameraläge i fyra bilder:
+
+| bild | kameraläge | vad den visar |
+|---|---|---|
+| `ridhus-inne-03-baset-vid-E.jpg` | i banan vid E, underifrån | sadeltak, utskjutande takfot, trappa, grön skylt |
+| `ridhus-inne-40-domartornet-pa-laktaren.jpg` | på läktardäcket, i sidled | samma bod, brunt trä, räcke, trappa |
+| `ridhus-inne-16-sargen-mot-lang-sida.jpg` | i banan, långt avstånd | samma bod på läktaren |
+| `ridhus-inne-14-laktaren.jpg` | i banan, hela läktarlångsidan | boden står **på** läktaren, mitt på långsidan, med trappa och grön skylt |
+
+Samma sadeltak, samma träfärg, samma gröna skylt, samma läge i alla fyra. Det är
+en bod, inte två.
+
+Det stämmer också geometriskt: E och H ligger på samma långsida, och det är
+läktarens sida. En bod mellan E och H står på läktaren. De två namnen var två
+kameravinklar.
+
+| fakta | klass | källa |
+|---|---|---|
+| Bod i brunt/mörkt trä, upphöjd på läktaren | `VERIFIED` | `ridhus-inne-14`, `-03` |
+| Sadeltak med utskjutande takfot | `FOTO, EJ GRANSKAD` | `ridhus-inne-03`, beskuren |
+| Trappa upp, räcke | `VERIFIED` | `ridhus-inne-14`, `-40` |
+| Räcke på **båda** sidor av trappan | `FOTO, EJ GRANSKAD` | `ridhus-inne-03` |
+| Grön utrymningsskylt | `VERIFIED` | `ridhus-inne-14`, `-03`, `-40` |
+| Står mitt på läktarlångsidan, mellan E och H | `VERIFIED` | `ridhus-inne-14` |
+| Bord och stolar bakom boden på läktardäcket | `FOTO, EJ GRANSKAD` | `ridhus-inne-40` |
+| Takets resning 0,42 m | `ASSUMPTION` | — |
+| Bodens insida: fönster, stolar, ljudutrustning | `[REFERENCE GAP]` | ingen bild visar insidan |
+
+Den gamla matrisen klassade sina bås-rader `VERIFIED` på `r03`, som **inte** är
+bland de 34 granskade bilderna. Klasserna ovan är justerade efter det.
+
+---
+
+# 8. Klubbdelen — nytt avsnitt
+
+Underlag: `granskning-2026-08-31/G-klubbdelen.md`, 20 bilder.
+
+Den gamla matrisen hade **inte en rad** om klubbdelen, trots att repot har 28
+bilder av den. Det här avsnittet är därför ett nybygge, inte en prövning.
+
+## Rum som kan beläggas i bild
+
+| rum | källa | klass |
+|---|---|---|
+| Skåpkorridoren — skåp i grått/rött/mörkgrått, bröstningsvägg med fyra glaspartier, röda trästolar, valvfönster i ena änden | `ridhus-klubb-01-omkladningsgangen.jpg`, `-02-glasrummen.jpg`, `IMG_0169-f02-skapkorridoren.jpg` | `VERIFIED` |
+| Entréparti — glasad dubbeldörr med sidoljus, grön nödutgångsskylt | `IMG_0169-f05-korridoren-mot-entren.jpg` | `FOTO, EJ GRANSKAD` |
+| Smal korridor med tre vita innerdörrar | `ridhus-klubb-03-korridordorrarna.jpg` | `FOTO, EJ GRANSKAD` — dörrarnas mål **okänd funktion** |
+| Kaférummet | `ridhus-klubb-07`, `-08`, `-09-cafesalen.jpg` | `FOTO, EJ GRANSKAD`, funktion från produktägaren |
+| Gången på övre plan — glasrum till vänster, ridbanans sarg till höger utan mellanvägg | `ridhus-klubb-10-overvaningens-gang.jpg` | `VERIFIED` |
+| Hinderförråd — bommar, hinderstöd på krysstativ, betonggolv | `ridhus-klubb-11-trappan-till-hinderforradet.jpg`, `-12-hinderforradet.jpg` | `FOTO, EJ GRANSKAD` — ensam källa |
+| Stora toaletten — helkaklad, golvstående wc med stödhandtag | `ridhus-klubb-04-stora-toaletten.jpg` | `FOTO, EJ GRANSKAD` — ensam källa |
+| Lilla toaletten — mycket smal, hörntvättställ | `ridhus-klubb-05-lilla-toaletten.jpg` | `FOTO, EJ GRANSKAD` — ensam källa |
+| Dusch och wc — vägghängd duschblandare, golvbrunn | `ridhus-klubb-17-dusch-och-wc.jpg` | `FOTO, EJ GRANSKAD` — ensam källa |
+| Skåprummet med pelaren — bärande fyrkantpelare, skåp i mörkblått/grått/vitt | `ridhus-klubb-16-skaprummet-med-pelaren.jpg` | `VERIFIED` — rummet innanför dörren **okänd funktion** |
+| Omklädningen med valvfönstret — sju höga skåp, valvfönster mot grusad parkering och röd byggnad | `ridhus-klubb-14-omkladningen-med-valvfonstret.jpg` | `VERIFIED` |
+| Korridoren mot glasrummen — skåp i grått/svart/rött/blått, glaspartier med skjutbara rutor | `ridhus-klubb-15-korridoren-mot-glasrummen.jpg` | `VERIFIED` |
+| Korridor med toalettbås och en låst dörr | `ridhus-klubb-19-dorrarna-till-omkladningen.jpg` | `FOTO, EJ GRANSKAD` — låsta dörrens mål **okänd funktion** |
+| Gröna skåpraden — fyra sektioner i två våningar | `ridhus-klubb-20-grona-skapen.jpg`, `-21-grona-skapen-vinkel.jpg` | `FOTO, EJ GRANSKAD` — rummet bakom underexponerat, **okänd funktion** |
+| Hörn med svart utåtgående dörr, skjutfönster med gardin | `ridhus-klubb-06-svarta-dorren.jpg` | `FOTO, EJ GRANSKAD` |
+| Hörn med svart enkeldörr och städredskap i hållare | `ridhus-klubb-13-svarta-utgangsdorren.jpg` | `FOTO, EJ GRANSKAD` — samma dörr som `-06`? oavgjort |
+| Omklädningen med fåtöljerna — plåtskåp i rött/grått/mörkblått, tre vitmålade fåtöljer, tvåsits soffa med röda dynor | `ridhus-klubb-22-omkladningsrummet.jpg` | `VERIFIED` — placering i byggnaden okänd |
+
+**Sexton rum kan beläggas. Inget av dem har ett mått.**
+
+## Våningarna
+
+| fakta | klass | källa |
+|---|---|---|
+| Gången på övre plan ligger i nivå med ridbanans sargkrön, banans golv klart lägre | `VERIFIED` | `ridhus-klubb-10` |
+| Kaférummet ligger på samma våning som den gången — inga trappsteg mellan dem | `DERIVED` | `ridhus-klubb-07`–`-10` i serie |
+| Hinderförrådet ligger på en **lägre** nivå — trappa ner från gången | `FOTO, EJ GRANSKAD` | `ridhus-klubb-10`, `-11` |
+| Omklädningsdelens våning i förhållande till kaféet | `[REFERENCE GAP]` | ingen bild binder ihop dem |
+
+Att omklädningsdelen inte kan placeras i höjd är en riktig lucka. Den lämnas
+öppen i stället för att antas ligga på entréplan.
+
+## Vad som saknas för att kunna bygga klubbdelen
+
+- **Alla mått.** Det finns inte ett enda mått för klubbdelen i underlaget.
+- **Planlösningen.** Sexton rum, men ingen bild som visar hur de sitter ihop.
+  Brandplanen (`references/plans/ridhus-entreplan-utrymning.jpg`) täcker
+  entréplan och kan sannolikt lösa en del av detta — det är inte prövat här.
+- **Kaféets pentry/köksdel** syns delvis men inte i sin helhet.
+- **Trappan mellan planen** — bara sedd uppifrån och nedifrån, aldrig hel.
+
+---
+
+# 9. Elva bilder som låg i repot utan att stå i inventeringen
+
+Mappen har **103** bildfiler. Inventeringen beskriver **93**. Skillnaden är inte
+slarv i räkningen utan elva filer som aldrig blev inventerade, för de låg i
+repot redan innan de 93 importerades och ingen räknade om:
+
+| fil | vad den visar |
+|---|---|
+| `ridhus-trappan-05-cafeskylten.jpg` | **kaféets yttre trappa och CAFÉ-skylten** — se nedan |
+| `ridhus-gavel-01.jpg` … `-04-statrappan.jpg` | takformen utifrån, fyra vinklar |
+| `ridhus-langsida-01-skylten.jpg` | långsidan utifrån med skylt |
+| `ridhus-langsida-02-trappan.jpg` | långsidan utifrån med trappa |
+| `ridhus-langsida-03-dubbeldorren.jpg` | dubbeldörren utifrån |
+| `ridhus-skylten-06-narbild.jpg` | skylten i närbild |
+| `ridhus-durkplatdorrarna-07.jpg` | durkplåtsdörrar |
+| `ridhus-inne-03-baset-vid-E.jpg` | domarbåset — **den gamla matrisens `r03`** |
+
+Omvänt står `IMG_0185-f01.jpg` i inventeringen men finns inte på disk; filen
+heter `IMG_0185-f01-laktarsidan.jpg`. Ett namnfel i registret, inte en saknad
+bild.
+
+## Att `r03` inte var inventerad är värt att stanna vid
+
+`ridhus-inne-03-baset-vid-E.jpg` är en av den gamla matrisens **tre** källbilder,
+och den finns inte i inventeringen. Den har alltså aldrig fått en
+`nyckelbild`-markering, och kunde inte ha fått en. Varje rad i den gamla
+matrisens § 7 stod som `VERIFIED` på en bild som låg utanför registret.
+
+## Kaféet hade en egen entré, och beviset låg i repot
+
+`ridhus-trappan-05-cafeskylten.jpg`, committad **2026-08-30** — dagen innan
+kafé­frågan ens ställdes — visar utifrån:
+
+- ridhusets fasad i **röd korrugerad plåt**,
+- en **galvaniserad utvändig trappa** upp längs fasaden till ett vilplan,
+- ett **räcke med en blå skylt: CAFÉ**,
+- grusplan, cykelställ, parkerade bilar, en grind och ett staket.
+
+Det ger tre saker matrisen inte hade:
+
+| fakta | klass | följd för bygget |
+|---|---|---|
+| Kaféet har en **egen utvändig entré** via en ståltrappa på fasaden | `FOTO, EJ GRANSKAD` | kaféet nås utifrån utan att gå genom stallet eller ridhuset — en egen ingång i spelet |
+| Kaféet ligger på **övre plan**, bekräftat utifrån | `FOTO, EJ GRANSKAD` | stämmer med `ridhus-klubb-10` inifrån |
+| Fasaden är röd korrugerad plåt | `FOTO, EJ GRANSKAD` | stämmer med gavelbilderna |
+
+**Funktionen var alltså fotograferad i klartext i repot, i en fil ingen hade
+inventerat.** Jag frågade produktägaren om något materialet redan svarade på.
+Det är inte hans fel och inte granskarnas — de fick 93 filer att granska och
+granskade 93.
+
+**Felet är att ingen räknade filerna i mappen mot raderna i registret.** Det är
+en kontroll som tar en rad kod och som borde ha funnits från början:
+
+```
+antal filer i references/buildings/ridhus + references/video/ridhus-nyckelrutor
+  ==  antal bildrader i RIDHUS-INVENTERING-2026-08-31.md
+```
+
+Det bör bli en grind i CI, inte en vana. Se § *Öppna frågor*, punkt 6.
+
+---
+
+# 10. Grinden som saknades, och vad den fällde i det här dokumentet
+
+`tools/kolla-nyckelbilder.py`, kopplad till CI i det här passet, kontrollerar
+två saker:
+
+1. **Varje tabellrad klassad `VERIFIED` måste citera minst en bild som är
+   märkt `nyckelbild = ja` i inventeringen.** Rader som inte citerar någon bild
+   alls hoppas över — de vilar på produktägaruppgift eller härledning.
+2. **Antalet bildfiler i mapparna jämförs med antalet bildrader i
+   inventeringen**, och varje oinventerad fil listas.
+
+## Den fällde 13 rader i den här matrisen, skrivna av mig samma dag
+
+Första körningen underkände tretton rader jag själv nyss hade klassat
+`VERIFIED`. Samtliga är nedgraderade till `FOTO, EJ GRANSKAD`:
+
+| avsnitt | rad | vilade på |
+|---|---|---|
+| 1 | sockelbandet slitet och ojämnt | `ridhus-inne-43` |
+| 1 | fönsterparti med nät vid A-hörnet | `ridhus-inne-36`, `-38` |
+| 2 | tre bänkrader | `ridhus-inne-32`, `-41`, `-07` |
+| 2 | mellanvägg med stjärndekor | `ridhus-inne-07` |
+| 3 | trapporna i mörkbetsat trä | `ridhus-inne-07`, `-08` |
+| 3 | exakt en klocka vid kortändan | `ridhus-inne-07` |
+| 3 | vit stående brädvägg mellan bänkar och glas | `ridhus-inne-07` |
+| 3 | stjärnan med sju–åtta spetsar | `ridhus-inne-07` |
+| 7 | sadeltak med utskjutande takfot | `ridhus-inne-03` |
+| 8 | entrépartiet | `IMG_0169-f05` |
+| 8 | smal korridor med tre dörrar | `ridhus-klubb-03` |
+| 8 | kaférummet | `ridhus-klubb-07`, `-08` |
+| 8 | korridor med toalettbås | `ridhus-klubb-19` |
+
+**`ridhus-inne-07-laktartrappstegen.jpg` bär fem av de tretton.** Det är den
+bild som avgjorde läktarfrågan — den enda som visar bänkraderna, klockan,
+stjärnan och brädväggen i en och samma ruta. Och den är inte granskad.
+
+Det är inte ett argument för att strunta i klassen. Det är ett argument för att
+`ridhus-inne-07` bör granskas härnäst, tillsammans med `-32`, `-41`, `-43` och
+`-08`. Fem bilder som skulle flytta tretton rader.
+
+## Varför den här grinden är värd mer än de tretton raderna
+
+Båda de fel som ombyggnaden hittade i den gamla matrisen — väggmodellen och
+läktaren — hade samma form: en `VERIFIED` som vilade på en bild eller en
+beskärning som ingen hade granskat. Grinden hade inte förhindrat felen, för den
+mäter inte om en slutsats är riktig. Men den hade satt en tydlig lapp på båda:
+*detta står som säkrast möjliga klass på ett obekräftat underlag.*
+
+Grinden ersätter inte granskning. Den gör synligt var granskning saknas.
+
+---
+
+# Vad ombyggnaden gav
+
+| | gamla matrisen | ny |
+|---|---|---|
+| källbilder | 3 | 103 |
+| `[REFERENCE GAP]` | 13 | se nedan |
+| avsnitt | 7 | 8 |
+| rader om klubbdelen | 0 | 20 |
+
+## Gaps som stängdes
+
+1. **Sargluckans funktion** — minst en är en öppningsbar dörr med gångjärn ner
+   till en trappa (`ridhus-inne-37`).
+2. **Läktarens konstruktion** — stegade bänkrader i ljus furu, inte plant däck.
+3. **Vägen upp på läktaren** — två trappor vid kortändan, en tredje vid H.
+4. **Bokstavsplaceringen** — A, B, C, E, H alla belagda med namngiven bild, och
+   axeln E/H på samma långsida bekräftad.
+5. **Panelens utbredning** — hela sponsorlångsidan, inte ett delstycke.
+6. **Fönsterbandets karaktär** — separata öppningar per fält, inte ett band.
+7. **Skyltinventeringen** — nio objekt i ordning i stället för fyra namn.
+8. **Spegelns antal och läge** — en spegel, två rutor, vid B.
+9. **Klockan vid kortändan** — exakt en, mellan trapporna.
+10. **Kaféfunktionen fotobelagd** — tavlan "Välkomna till Ca…" plus möblemang.
+11. **Ventilationens dragning** — tre skilda kanaltyper.
+12. **Ljusinsläppet** — under takfoten, inte i takytan.
+13. **Takformen utifrån** — fyra gavelbilder.
+14. **Domarbåset = domartornet** — en struktur, inte två.
+15. **Klubbdelens rumslista** — 16 rum där matrisen hade noll.
+16. **Välkomst- och Elon-skyltens vägg** — långsidan, tidigare flaggad öppen.
+17. **Antalet bänkrader** — tre, i tre oberoende bilder.
+18. **Kaféets entré** — egen utvändig ståltrappa på fasaden, med CAFÉ-skylt.
+
+## Gaps som står kvar, med motivering
+
+| gap | varför den inte kan stängas på foto |
+|---|---|
+| Alla mått i hallen | ingen bild har en känd referenslängd i bild |
+| Alla mått i klubbdelen | samma, och ingen planritning för övre plan |
+| Antal balkfält | perspektivkompression längs hallen |
+| Läktarfrontens topplist | ingen närbild finns |
+| Domarbodens insida | ingen bild in i boden |
+| Klubbdelens planlösning | ingen bild binder rummen samman |
+| Motstående kortsidans material | avgörs på plats, inte med fler foton |
+| Träslag i takbalkarna | färg avgör inte material |
+
+---
+
+# Öppna frågor till produktägaren
+
+1. **Läktarlångsidans material.** Din rättade modell säger att långsidorna är
+   mörk rödbrun panel. `ridhus-inne-14-laktaren.jpg`, tagen från banan längs
+   hela läktarsidan, visar ljus stående skivpanel med mörka pelare där.
+   Sitter panelen bara på sponsorlångsidan, eller sitter den bakom bänkraderna
+   där den inte syns? Se § 5.
+3. **Sargluckorna.** Minst en är en dörr. Är de övriga dörrar, ventiler, eller
+   löstagbara sektioner?
+4. **Motstående kortsidans material** — kvarstår sedan igår, avgörs på plats.
+5. **Omklädningsdelens våning** i förhållande till kaféet.
+6. **Ska jag lägga in en grind som räknar bildfiler mot inventeringsrader?**
+   Elva bilder låg oinventerade, och en av dem svarade på en fråga jag i stället
+   ställde till dig. Grinden är triviell att skriva.
+7. **De tio övriga oinventerade bilderna** — ska de inventeras i samma format
+   som de 93, eller räcker tabellen i § 9?
+
+# Motsägelser som lämnas oavgjorda
+
+1. **Klockan i datan.** `RIDHUSINNE.klocka` mot `kortanda.klocka` — bilderna
+   visar en klocka, men vilken av datans två den är kräver att
+   koordinatmodellen läses. § 3.
+2. **Svarta dörren** i `ridhus-klubb-06` och `-13` — samma dörr eller två?
+3. **Kaférummets identitet** i `ridhus-klubb-02` mot `-09` — samma rum?
+4. **Lysrörstätheten** mellan den vita hallen och den brunpanelade delen — verklig
+   skillnad eller exponering? Inventeringen skriver "mycket tätt sittande rader"
+   för `ridhus-inne-42` och "tätt sittande" för `-32` och `-41`, vilket lutar mot
+   verklig skillnad, men ordval är inte en mätning.
+5. **Sarg kontra läktarfront** — en tredje sargtyp, mörk obehandlad bräda, syns
+   vid C och passar ingen av de två kända.
+
+# Vad som inte är prövat i den här ombyggnaden
+
+- **Geometridatan.** Ingen rad ovan har jämförts mot `src/site.js`,
+  `UBRFKomplex.luau` eller `RIDHUSINNE`. Ombyggnaden prövade matrisen mot
+  **bilderna**, inte spelet mot matrisen. Nästa steg är en jämförelse mot
+  datan, och den kommer att hitta fler `KNOWN MISMATCH` än de som står här.
+- **Brandplanen.** `ridhus-entreplan-utrymning.jpg` kan sannolikt lösa
+  klubbdelens planlösning och hallens orientering. Inte gjort här.
+- **Stallet och övriga byggnader.** Bara ridhuset.
