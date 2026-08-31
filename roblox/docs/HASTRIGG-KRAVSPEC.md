@@ -228,36 +228,77 @@ fel håll i nedre änden. Liten sak, men specen är ett kontrakt.
 
 ---
 
-# 4. `stride`-fältet är död data som beskrivs som levande
+# 4. `stride`-fältet var en trasig portering, inte bara död data
 
-`Gaits.BY_NAME` har ett `stride`-fält per gångart, och kommentaren i filen säger:
+**Rättelse.** Den första versionen av det här avsnittet påstod att `stride` var
+död data med värden som inte gick att förklara. Halva påståendet höll. Fältet var
+död data — men värdena går att förklara, och förklaringen är allvarligare än
+slumpmässiga siffror.
 
-> `stride`-fältet är enskild steglängd och används av animationslagret
+Fältet är borta ur `Gaits.luau` sedan den här specen skrevs. Skälet dokumenteras
+här därför att samma fel kan göras igen.
 
-**Fältet läses inte någonstans i kodbasen.** Kontrollerat med sökning över alla
-`.luau`-filer: `stride` förekommer bara i sin egen typdeklaration, sina egna
-värden och den kommentar som påstår att det används.
+## Vad värdena var
 
-Värre: värdena stämmer inte med det de utger sig för att vara. Cykellängd delad
-med antal nedslag ger steglängden, och den jämförelsen ser ut så här:
+Kommentaren i `Gaits.luau` sa att fältet var **enskild steglängd i meter** och att
+**animationslagret använde det.** Ingen av uppgifterna var sann.
 
-| gångart | cykel / nedslag (m) | `stride`-fältet | avvikelse |
+Värdena 0,46 / 0,63 / 1,00 / 1,28 är webbmodellens `steg`-fält i `src/model.js`.
+Där är de **dimensionslösa faktorer**, inte meter. Webben räknar:
+
+```
+steglangd = SPRANG[kategori] × steg × modulering        // SPRANG.hast = 3,50 m
+```
+
+Vid porteringen till Luau följde faktorerna med, men **multiplikatorn lämnades
+kvar.** En faktor utan sin bas ser ut som ett mått, och gör det tystare desto mer
+rimlig storleksordningen råkar vara. 0,46 m i skritt är fullt trovärdigt som
+steglängd. Det är därför felet överlevde en granskning.
+
+## Vad det hade kostat
+
+En artist som följde kommentaren och lade hovavtrycken på 0,63 m i trav, mot en
+verklig cykellängd på 2,133 m, hade byggt in **41 % glidning** — exakt det
+acceptanskriteriet för riggen förbjuder.
+
+## Det verkliga fyndet: plattformarna är inte överens om cykellängden
+
+Webbmodellens egen kommentar redovisar avvikelsen öppet, men ingen grind mäter
+den. Vid normtempo och neutral häst:
+
+| gångart | webb | Roblox | avvikelse |
 |---|---|---|---|
-| Skritt | 0,362 | 0,46 | +27 % |
-| Trav | 1,067 | 0,63 | −41 % |
-| Galopp | 1,067 | 1,00 | −6 % |
-| Fyrsprång | 1,049 | 1,28 | +22 % |
+| Skritt | 1,610 m | 1,450 m | **+11,03 %** |
+| Trav | 2,205 m | 2,133 m | +3,36 % |
+| Galopp | 3,500 m | 3,200 m | **+9,38 %** |
 
-**En artist som läser kommentaren och lägger hovavtrycken på 0,63 m i trav bygger
-in 41 % glidning från början.** Det är precis det acceptanskriteriet förbjuder, och
-det står inbjudande i en fil som annars är noggrann.
+Och skillnaderna är strukturella, inte bara numeriska:
 
-Åtgärd: antingen tas fältet bort, eller så räknas det om till `cycleLength / steps`
-och får en verklig konsument. Tills det är avgjort ska **ingen artist använda
-`stride` till någonting.** Cykellängden i § 2 är det bindande måttet.
+- **Webben skalar med hästkategori.** `SPRANG` ger `hast` 3,50 och `B` 2,75, så en
+  B-ponny i skritt har cykellängd 1,265 m mot en hästs 1,610 m — 27 % isär.
+  **Roblox ger 1,450 m för alla nio raser**, trots att `Config.BREEDS` har
+  mankhöjder från 1,02 till 1,66 m.
+- **Webben modulerar dynamiskt** med schvung och spänning, `±28 %`. Roblox
+  modulerar inte alls.
+- Webben har **tre** gångarter, Roblox har **fyra**. Webbens `galopp` har norm
+  5,60 m/s, vilket är Roblox' `Canter`. Fyrsprång finns inte på webben.
 
----
+Det innebär att en elev som lär sig hästens rörelse i webbversionen och sedan
+rider i Roblox möter en häst som tar **11 % kortare steg i skritt**, och som inte
+längre skiljer på en ponny och ett varmblod. För ett spel vars syfte är att lära ut
+hästkunskap är det senare det tyngre felet.
 
+**Det ska inte lösas i den här specen.** Vilken plattform som har rätt är en
+produktfråga: webbens kategoriskalning är pedagogiskt riktigare, Roblox' enkelhet
+är billigare att animera. Men avvikelsen bör ha en egen issue och en grind som
+mäter den, annars glider de två modellerna längre ifrån varandra för varje ändring.
+
+## Vad som gäller nu
+
+**Cykellängden — `Gaits.cycleLength`, alltså `norm / cycles` — är det enda
+bindande måttet för riggen.** Den räknas i § 2 med klipplängder i sekunder och
+bildrutor. Inget annat fält i `Gaits.luau` beskriver en sträcka en artist ska
+bygga mot.
 # 5. Roblox' hårda gränser
 
 Verifierade mot Roblox' egen dokumentation, inte mot minnet.
