@@ -17,3 +17,7 @@ roblox/tests/.build/
 # Studio-paketet är en hopfogning av filer som redan ligger i repot.
 roblox/buildings/.studio/
 __pycache__/
+
+# Underkanda rektifieringsutfall — bevisen star i docs/F02-REKTIFIERING-KRAV.md,
+# bilden behover inte ligga i repot och far inte forvaxlas med kallmaterial.
+audits/f02-rektifiering-*.jpg

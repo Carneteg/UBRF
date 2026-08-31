@@ -44,6 +44,7 @@ avvikelsen från den ideala rektangeln redovisas.
 |---|---|---|---|
 | automatiska, extrempunkter i gul yta | **8,11 %** | 1,56 % | < 3 % |
 | anpassade väggliner, y 948–2824 | **4,89 %** | 2,00 % | < 3 % |
+| dokumentets tryck, tredje försöket | **14,31 %** | — | < 3 % |
 
 **Ingen av dem konvergerar.** Och den rätade bilden visar varför: entrézonen
 hamnar utanför utsnittet. Kontrollpunkterna omsluter alltså inte byggnadens
@@ -70,6 +71,31 @@ segment, och symboler röstar med.
 
 En homografi byggd på de punkterna hade rätat bilden **fel utan att någonting
 sagt ifrån**. Därför används den inte.
+
+### Tredje försöket: flyktpunkter ur dokumentets eget tryck
+
+Senior review bad om ett sista försök på **planbladets fyra hörn** i stället
+för den gula ytan. Två av bladets hörn visade sig aldrig ha fotograferats —
+skylten är beskuren i överkant — så hörnen räknades i stället fram som
+skärningar mellan fyra fotograferade kanter (`tools/dokumentlinjer.py`).
+
+Anpassningen använde bara dokumentets tryck; valideringen skedde på byggnadens
+väggar, som inte ingick i anpassningen.
+
+| Mått | Utfall | Krav |
+|---|---|---|
+| kantresidual, gula ytan | **14,31 %** | ≤ 3 % |
+| parallellitet, långsidor | **5,25°** | ≤ 1,0° |
+| parallellitet, tvärväggar | **5,25°** | ≤ 1,0° |
+
+Kravet var **förhandsdeklarerat och committat innan försöket kördes** —
+`docs/F02-REKTIFIERING-KRAV.md`, commit `483ce4e`. Utfallet är sämre än båda de
+tidigare försöken. Orsaken är mätt: av sex anpassade linjer är bara en en
+verklig skarp kant (0,39 px spridning); de övriga ligger på 3,3–3,5 px, vilket
+är sökfönstret som vandrar snarare än en kant. Familj B har därmed en pålitlig
+linje och en opålitlig, och kan inte kontrolleras mot sig själv.
+
+**Stopp.** Det var det sista beräkningsförsöket på den här källan.
 
 ### Vilka kontrollpunkter som saknas, konkret
 
@@ -111,9 +137,13 @@ inte digitaliserat dem — de står som olöst, inte som noll.
 
 ### De sex ridhusrummen efter rektifiering
 
-**Inget av dem återvanns.** Båda metoderna mätte sig själva och underkändes:
-hörnmetoden på 4,89 % kantresidual mot kravet 3 %, flyktpunktsmetoden på
-178/382 px. De sex står kvar utan mått.
+**Inget av dem återvanns.** Tre metoder mätte sig själva och underkändes:
+hörnmetoden på 4,89 % kantresidual mot kravet 3 %, väggflyktpunkterna på
+178/382 px, och dokumentflyktpunkterna på 14,31 % med 5,25° spridning inom
+väggfamiljerna. De sex står kvar utan mått.
+
+Det var det **sista** beräkningsförsöket på den här källan. Det som återstår är
+ett omfotograferat plan där hela bladet ryms i bild, eller ett mått på plats.
 
 ## Avläsningens osäkerhet, per källa
 
