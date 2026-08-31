@@ -6,6 +6,12 @@ dokumentet var byggd på **3**.
 Det här är dokumentet ridhusets interiör byggs ur. Varje rad ska kunna spåras
 till en namngiven bild som någon faktiskt har tittat på.
 
+**Kaféet** (PR #40, produktägaruppgift 2026-08-31): den glasade våningen i
+ridhuset är ett kafé. Behandlas i § 3 och — med fotobelägg för en egen utvändig
+entré — i § 9. Klockfrågan som PR #40 lämnade öppen är prövad i § 3.
+
+## Källor
+
 - Bildregister med beskrivning per bild:
   `references/RIDHUS-INVENTERING-2026-08-31.md`
 - Granskarnas underlag, ett avsnitt per fil: `granskning-2026-08-31/`
