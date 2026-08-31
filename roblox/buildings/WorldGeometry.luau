@@ -134,4 +134,29 @@ function WorldGeometry.ankomstSpawn(buildings, margin: number?): (number, number
 	return x, z, x, targetZ
 end
 
+--[[ Fönstertyperna. Ett fönster är en öppning man ser genom, inte går genom.
+
+     Låg som en egen kopia i WorldBuild. Nu finns listan på ett ställe, för det
+     är samma lista som avgör både vad som blir hål i väggen och vad som får en
+     ProximityPrompt — och de två får aldrig svara olika. ]]
+local FONSTER = { fonster = true, rund = true, valv = true }
+
+function WorldGeometry.arFonster(typ: string): boolean
+	return FONSTER[typ] == true
+end
+
+--[[ Öppningarna som ska bli RIKTIGA HÅL i fasaden: passagerna, inte fönstren.
+
+     Första versionen punkterade allt. Det gav ingen spelvinst — man går inte
+     genom ett fönster — men gjorde varje valv till ett genomgående hål i en
+     tjock vägg med en tunn ruta vid yttre livet, och ändrade hur fasaderna såg
+     ut i den F01-granskning som redan var godkänd. ]]
+function WorldGeometry.passager(openings: { any }): { any }
+	local ut = {}
+	for _, o in ipairs(openings) do
+		if not WorldGeometry.arFonster(o.typ) then table.insert(ut, o) end
+	end
+	return ut
+end
+
 return WorldGeometry

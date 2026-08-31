@@ -13,7 +13,14 @@ fick runtime.
 | | |
 |---|---|
 | **Runtime — dörrar och spawn** | **PASS 2026-08-31** |
-| Visuell regression, de elva vyerna | **återstår** |
+| Visuell regression, 10 av 11 vyer | **PASS 2026-08-31** |
+| `ankomsten` | **FEL 2026-08-31 — fix inlagd, ny kontroll behövs** |
+
+**Felet i `ankomsten`:** fasadombyggnaden punkterade från början *varje* öppning,
+fönster med. Man går inte genom ett fönster, så det gav ingen spelvinst — men
+varje valv blev ett genomgående hål i en tjock vägg med en tunn ruta vid yttre
+livet. De två norra gavlarna, som är precis det `ankomsten` visar rakt
+framifrån, bär **nio valv av fjorton öppningar**. Nu punkteras bara passager.
 
 Den rena körningen 2026-08-31 gav förkontroll utan främmande skript, bygget
 `8 byggnader, 12 dörrar, 4 boxrader, 6 gångytor`, `[WorldBuild] 17/17`,

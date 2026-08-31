@@ -19,9 +19,9 @@ local SIDE_NAME = {
 	E = "ost",
 }
 
-local function arFonster(typ: string): boolean
-	return typ == "fonster" or typ == "rund" or typ == "valv"
-end
+--[[ Fönsterlistan bor i WorldGeometry — den avgör både vad som blir hål och vad
+     som får en prompt, och två kopior hade en dag svarat olika. Den skickas
+     därför med dit den behövs i stället för att finnas här också. ]]
 
 local function openingsForSide(building, sida: string)
 	local out = {}
@@ -35,11 +35,10 @@ local function facadeLength(r, sida: string): number
 	return if sida == "S" or sida == "N" then r.w else r.h
 end
 
-local function segmentBox(BK, model: Model, base: CFrame, b, sida: string, seg, color: Color3, material: Enum.Material)
+local function segmentBox(BK, model: Model, base: CFrame, b, sida: string, seg, color: Color3, material: Enum.Material, t: number)
 	local r = b.rekt
 	local len = seg.s1 - seg.s0
 	local h = seg.y1 - seg.y0
-	local t = 0.3
 	local name = string.format("%s %s fasad %.2f-%.2f %.2f-%.2f",
 		b.id, SIDE_NAME[sida], seg.s0, seg.s1, seg.y0, seg.y1)
 
@@ -74,10 +73,27 @@ local function replaceFacade(BK, WG, model: Model, base: CFrame, b, sida: string
 	wall.CanQuery = false
 	wall.CanTouch = false
 
-	local openings = openingsForSide(b, sida)
-	local segments = WG.fasadBitar(facadeLength(b.rekt, sida), b.hV, openings)
+	--[[ Tjockleken läses UR väggen som ersätts, inte ur en egen literal.
+	     Den stod som 0.3 här och som VAGGT = 0.3 i Anlaggningen — två kopior av
+	     samma tal, alltså en dag då den ena ändras och segmenten hamnar på ett
+	     annat djup än väggen de ersätter. ]]
+	local tjocklek = (if sida == "S" or sida == "N" then wall.Size.Z else wall.Size.X) / BK.M
+
+	--[[ Bara passager blir riktiga hål. Fönster får INTE bli det.
+
+	     Först punkterades varje öppning, fönster med. Det gav ingen spelvinst
+	     — man går inte genom ett fönster — men gjorde varje valv till ett
+	     genomgående hål i en 0,3 m tjock vägg med en tunn glasruta vid yttre
+	     livet. På de norra gavlarna, som är just det `ankomsten` visar rakt
+	     framifrån, sitter nio av fjorton öppningar och är valv. Fasaden i den
+	     vyn slutade alltså se ut som den gjorde när F01 godkändes.
+
+	     Dörrar och portar behöver hålet; det är hela poängen med PR:en. ]]
+	local passager = WG.passager(openingsForSide(b, sida))
+
+	local segments = WG.fasadBitar(facadeLength(b.rekt, sida), b.hV, passager)
 	for _, seg in ipairs(segments) do
-		segmentBox(BK, model, base, b, sida, seg, color, material)
+		segmentBox(BK, model, base, b, sida, seg, color, material, tjocklek)
 	end
 end
 
@@ -111,8 +127,8 @@ end
      räknaren visade antalet öppningar i datan — inte antalet dörrar som blev
      dörrar. Ett bygge där varenda panel saknades skrev alltså samma rad som
      ett bygge där allt gick rätt. ]]
-local function configureDoor(BK, GEO, model: Model, base: CFrame, b, o, used): boolean
-	if arFonster(o.typ) then return false end
+local function configureDoor(BK, GEO, WG, model: Model, base: CFrame, b, o, used): boolean
+	if WG.arFonster(o.typ) then return false end
 	local door = findExistingDoor(BK, GEO, model, base, b, o, used)
 	if not door then
 		warn(string.format("[WorldBuild] Hittar inte dörrpanelen %s/%s/%s",
@@ -214,9 +230,9 @@ function WorldBuild.apply(BK, G, GEO, WG)
 	local vantade, byggda = 0, 0
 	for _, b in ipairs(G.byggnader) do
 		for _, o in ipairs(b.oppningar or {}) do
-			if not arFonster(o.typ) then
+			if not WG.arFonster(o.typ) then
 				vantade += 1
-				if configureDoor(BK, GEO, worldModel, base, b, o, used) then
+				if configureDoor(BK, GEO, WG, worldModel, base, b, o, used) then
 					byggda += 1
 				end
 			end

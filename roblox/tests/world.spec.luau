@@ -32,7 +32,53 @@ do
 		if covers(seg, 6.5, 1.5) then windowBlocked = true end
 	end
 	check("markdörrens mitt är ett hål", not doorBlocked)
-	check("fönstrets mitt är ett hål", not windowBlocked)
+	--[[ fasadBitar är generisk: den punkterar vad den än får. Den andra
+		öppningen här sitter en meter upp, och provar att hålet hamnar rätt i
+		HÖJDLED — inte att fönster ska punkteras. Vilka öppningar som ens
+		skickas in avgörs av WorldGeometry.passager, som prövas nedan. ]]
+	check("en högt sittande öppnings mitt är ett hål", not windowBlocked)
+end
+
+print("\n── Fönster blir INTE hål, passager blir det ──")
+do
+	--[[ Först punkterades varje öppning, fönster med. Man går inte genom ett
+		fönster, så det gav ingen spelvinst — men varje valv blev ett
+		genomgående hål i en tjock vägg, och fasaderna slutade se ut som i den
+		godkända F01-granskningen. Värst i `ankomsten`: de två norra gavlarna
+		bär nio valv av fjorton öppningar. ]]
+	for _, typ in ipairs({ "fonster", "rund", "valv" }) do
+		check(typ .. " räknas som fönster", WorldGeometry.arFonster(typ))
+	end
+	for _, typ in ipairs({ "dorr", "dorrvit", "dorrgul", "dorrmork", "portbla", "portsilver", "portplat" }) do
+		check(typ .. " räknas INTE som fönster", not WorldGeometry.arFonster(typ))
+	end
+
+	local kvar = WorldGeometry.passager({
+		{ typ = "valv" }, { typ = "dorrvit" }, { typ = "fonster" },
+		{ typ = "portbla" }, { typ = "rund" },
+	})
+	check("bara passagerna blir kvar", #kvar == 2, #kvar .. " st")
+	check("och det är rätt två",
+		kvar[1] and kvar[1].typ == "dorrvit" and kvar[2] and kvar[2].typ == "portbla",
+		tostring(kvar[1] and kvar[1].typ) .. " + " .. tostring(kvar[2] and kvar[2].typ))
+
+	--[[ Den skarpa räkningen: de två norra gavlarna i `ankomsten`. Punkteras
+		fönstren igen faller den här. ]]
+	local valv, passager = 0, 0
+	for _, b in ipairs(UBRFKomplex.byggnader) do
+		if b.id == "ridhus" or b.id == "stall" then
+			local norr = {}
+			for _, o in ipairs(b.oppningar or {}) do
+				if o.sida == "N" then
+					table.insert(norr, o)
+					if WorldGeometry.arFonster(o.typ) then valv += 1 end
+				end
+			end
+			passager += #WorldGeometry.passager(norr)
+		end
+	end
+	check("de norra gavlarna bär nio fönster som INTE punkteras", valv == 9, valv .. " st")
+	check("och fem passager som gör det", passager == 5, passager .. " st")
 end
 
 print("\n── Alla exporterade markdörrar är passagehål ──")
@@ -160,6 +206,25 @@ do
 		local spawnFore = rakna(ubrf, "UBRFSpawn")
 		check("första passet gav dörrprompter", promptFore > 0, promptFore .. " st")
 		check("första passet gav exakt en spawn", spawnFore == 1, spawnFore .. " st")
+
+		--[[ Segmenten ska ligga på VÄGGENS djup, inte på ett eget tal. Stod som
+			0.3 i WorldBuild och som VAGGT = 0.3 i Anlaggningen; ändras den ena
+			sitter fasaden plötsligt framför eller bakom dörrbladen. Nu läses
+			den ur väggen, och det här mäter att den gjorde det. ]]
+		local vagg, segment
+		for _, i in ipairs(ubrf:GetDescendants()) do
+			if i.Name == "ridhus norr" then vagg = i end
+			if not segment and string.find(i.Name, "ridhus norr fasad", 1, true) then
+				segment = i
+			end
+		end
+		check("den gamla norrväggen finns kvar att mäta mot", vagg ~= nil)
+		check("ett norrsegment byggdes", segment ~= nil)
+		if vagg and segment then
+			check("segmentet har väggens tjocklek",
+				math.abs(segment.Size.Z - vagg.Size.Z) < 0.001,
+				string.format("segment %.3f, vägg %.3f", segment.Size.Z, vagg.Size.Z))
+		end
 
 		WorldBuild.apply(BuildKit, UBRFKomplex, Geometri, WorldGeometry)
 
