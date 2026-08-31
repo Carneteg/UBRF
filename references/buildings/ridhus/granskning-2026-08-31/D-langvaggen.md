@@ -3,6 +3,16 @@
 Avsnitt av INTERIOR-MATRIS.md: §4 "Övre långväggen" och §5 "Sponsorskyltar".
 Prövat mot hela underlaget (103 bilder/filmrutor), inte bara `r02`.
 
+> **RÄTTAT 2026-08-31 av `H-panelgransen.md`.** Två rader i § 4 nedan klassades
+> `VERIFIED` men är fel: panelen löper INTE längs hela långsidan, och
+> materialgränsen ligger INTE i hörnet. Panelen är ett mittstycke som slutar
+> före hörnet i båda ändar, och samma vägg fortsätter ljus. Felet uppstod genom
+> att detta dokument läste bildbeskrivningarna i inventeringen i stället för
+> bilderna, och genom att använda "båda material i samma bildruta" som kriterium
+> — vilket inte säger något om huruvida materialen ligger i samma plan. De
+> berörda raderna är märkta `ÅTERKALLAD` nedan. Allt om skyltar, speglar,
+> pilastrar och fönster står kvar oförändrat.
+
 ## Bilder jag tittat på
 
 | Bild | Kameraläge / vad kameran ser |
@@ -35,10 +45,10 @@ Prövat mot hela underlaget (103 bilder/filmrutor), inte bara `r02`.
 
 | fakta | klass | källa (namngiven bild) | ändring mot matrisen |
 |---|---|---|---|
-| Panelen löper längs **HELA** den mörkbruna långsidan, inte bara ett delstycke | `VERIFIED` | `ridhus-inne-11-ridbanan.jpg`, `ridhus-inne-31-langsidan-med-sponsorskyltar.jpg` — hela väggen syns i en enda bildruta, panel från ena hörnet till det andra | **Fel i matrisen.** Matrisen skriver `ovreVagg.sida:"W"`, y 6–40 — ett DELSTYCKE av väggen. Underlaget visar panelen obruten hela vägen mellan de två hörnen. |
+| ~~Panelen löper längs **HELA** den mörkbruna långsidan, inte bara ett delstycke~~ | `ÅTERKALLAD` — se `H-panelgransen.md`. Panelen är ett delstycke; matrisens ursprungliga modell var rätt i sak. Tidigare klass var `VERIFIED`. | `ridhus-inne-11-ridbanan.jpg`, `ridhus-inne-31-langsidan-med-sponsorskyltar.jpg` — hela väggen syns i en enda bildruta, panel från ena hörnet till det andra | **Fel i matrisen.** Matrisen skriver `ovreVagg.sida:"W"`, y 6–40 — ett DELSTYCKE av väggen. Underlaget visar panelen obruten hela vägen mellan de två hörnen. |
 | Panelen är mörk rödbrun liggande skivpanel med vita horisontella hyllister | `VERIFIED` | `ridhus-inne-26-panelvaggen-narbild.jpg`, `IMG_0189-f02-sponsorvaggen.jpg` | Bekräftat, ingen ändring. |
 | Panelen delas i lodräta fält av bruna stolpar/pilastrar, ca 3 skivor i höjd per fält | `VERIFIED` | `ridhus-inne-24-skyltvaggen-vid-f.jpg`, `ridhus-inne-26-panelvaggen-narbild.jpg` | Ny detalj, fanns inte i matrisen. |
-| Materialgränsen ligger i HÖRNET — panelen slutar skarpt och möts av en helt slät VIT skivvägg | `VERIFIED` | `IMG_0189-f01-gavelhornet.jpg`, `IMG_0192-f08-sponsorvaggen-med-fonsterband.jpg`, `ridhus-inne-16-sargen-mot-lang-sida.jpg`, `ridhus-inne-17-reklamvaggen-mot-hornet.jpg` — samtliga visar båda materialen i SAMMA bildruta | **Motsäger matrisens rad "Resten av samma vägg är ljus".** Det finns inget ljust stycke MITT PÅ eller i FORTSÄTTNINGEN av panelväggen — panelen tar slut exakt i hörnet. "Resten av väggen" som matrisen ser är nästa vägg (kortsidan), inte samma vägg. Detta är precis det perspektivfel briefen varnar för. |
+| ~~Materialgränsen ligger i HÖRNET~~ — panelen slutar skarpt och möts av en helt slät ljus skivvägg, men gränsen ligger **före** hörnet, på samma väggplan | `ÅTERKALLAD` — se `H-panelgransen.md`. Sargens överkantslist och fönsterbandet löper obrutet förbi gränsen i just de bilder som citeras här, inklusive `IMG_0189-f01`. Tidigare klass var `VERIFIED`. | `IMG_0189-f01-gavelhornet.jpg`, `IMG_0192-f08-sponsorvaggen-med-fonsterband.jpg`, `ridhus-inne-16-sargen-mot-lang-sida.jpg`, `ridhus-inne-17-reklamvaggen-mot-hornet.jpg` — samtliga visar båda materialen i SAMMA bildruta | **Motsäger matrisens rad "Resten av samma vägg är ljus".** Det finns inget ljust stycke MITT PÅ eller i FORTSÄTTNINGEN av panelväggen — panelen tar slut exakt i hörnet. "Resten av väggen" som matrisen ser är nästa vägg (kortsidan), inte samma vägg. Detta är precis det perspektivfel briefen varnar för. |
 | Fönsterband ovanför panelen finns | `VERIFIED` | `ridhus-inne-17-reklamvaggen-mot-hornet.jpg`, `ridhus-inne-24-skyltvaggen-vid-f.jpg`, `IMG_0192-f07/f08` | Bekräftat. |
 | Fönsterbandet är INTE ett kontinuerligt löpande band, utan diskreta liggande fönster placerade MELLAN stolparna/pilastrarna, ett fönster per fält | `VERIFIED` | `ridhus-inne-17-reklamvaggen-mot-hornet.jpg`, `ridhus-inne-24-skyltvaggen-vid-f.jpg` — fönstren har synliga mellanrum av panel/pilaster mellan sig | **Ändring/nyansering.** Matrisen skriver "Bandet löper förbi panelens stycke" och "byggs i full längd" — det ger intryck av ett obrutet band. Bilderna visar snarare regelbundna fönsteröppningar, en per vägg-fält, avskilda av bärande pilastrar. Stämmer med brandplanens "regelbundna små hack" på den långsida planen kallar högra. |
 | Fönstren sitter enbart ovanför panelväggen, dvs den ena långsidan (den utan läktare) | `VERIFIED` | samtliga panelbilder ovan | Bekräftat — inget tecken på fönsterband på läktarsidans vägg i det underlag jag sett. |
@@ -54,7 +64,7 @@ Prövat mot hela underlaget (103 bilder/filmrutor), inte bara `r02`.
 
 1. **"Rostbrun/mörkröd panel på DEL av EN långsida (`ovreVagg.sida:"W"`, y 6–40)"** — fel. Panelen är inte ett delstycke; den täcker hela långsidans längd mellan de två hörnen. Se `ridhus-inne-11-ridbanan.jpg`, som visar samma vägg från ena kortsidan (A) hela vägen till den andra i en enda bildruta, panel obruten hela sträckan.
 
-2. **"Resten av samma vägg är ljus"** — det centrala felet i detta avsnitt, och matrisen klassar det ändå `VERIFIED`. Det finns inget ljust stycke i FORTSÄTTNINGEN av panelväggen. Vad som är ljust är NÄSTA vägg, i hörnet — precis det fel briefen och `RIDHUS-INVENTERING-2026-08-31.md` (§ *Rättelse*) redan dokumenterat för `r02`/`IMG_0183`: "väggen … byter till ljus vitmålad skivpanel" är en beskrivning av kortsidan sedd i perspektiv, inte av samma väggs fortsättning. `IMG_0189-f01-gavelhornet.jpg` och `IMG_0192-f08` visar materialgränsen ligga exakt i hörnet, med båda material i en och samma bildruta utan perspektivkompression — det utesluter tolkningen att det är samma vägg.
+2. **"Resten av samma vägg är ljus"** — ~~det centrala felet i detta avsnitt~~ **denna punkt är ÅTERKALLAD, se `H-panelgransen.md`: matrisen hade rätt, resten av samma vägg ÄR ljus.** Ursprunglig text nedan står kvar för spårbarhet, men dess slutsats gäller inte. Det centrala felet i detta avsnitt, och matrisen klassar det ändå `VERIFIED`. Det finns inget ljust stycke i FORTSÄTTNINGEN av panelväggen. Vad som är ljust är NÄSTA vägg, i hörnet — precis det fel briefen och `RIDHUS-INVENTERING-2026-08-31.md` (§ *Rättelse*) redan dokumenterat för `r02`/`IMG_0183`: "väggen … byter till ljus vitmålad skivpanel" är en beskrivning av kortsidan sedd i perspektiv, inte av samma väggs fortsättning. `IMG_0189-f01-gavelhornet.jpg` och `IMG_0192-f08` visar materialgränsen ligga exakt i hörnet, med båda material i en och samma bildruta utan perspektivkompression — det utesluter tolkningen att det är samma vägg.
 
 3. **"Bandet löper förbi panelens stycke" / "byggs i full längd"** — missvisande i sin nuvarande formulering, eftersom "panelens stycke" i sig är fel (se punkt 1). Fönsterraden löper längs HELA panelväggen, ja, men den är inte ett kontinuerligt band — det är separata fönsteröppningar en per vägg-fält (`ridhus-inne-17`, `-24`, `-26`).
 

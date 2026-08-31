@@ -347,6 +347,36 @@ klassar jag inte om något. Panelens **utbredning inom** sponsorlångsidan är
 Frågan har ett enkelt svar på plats: **slutar den bruna panelen i hörnet, eller
 före hörnet?**
 
+### AVGJORD 2026-08-31 — panelen slutar FÖRE hörnet
+
+Frågan behövde inte gå till produktägaren. Den avgjordes ur befintligt underlag i
+`granskning-2026-08-31/H-panelgransen.md`, med 227 filmrutor plus en omprövning av
+de två nyckelbilder som § 4 i `D-langvaggen.md` byggde på.
+
+**Läsning 2 gäller: det ljusa partiet ligger på SAMMA vägg som panelen.** Panelen
+är ett mittstycke av sponsorlångsidan och slutar före hörnet i **båda** ändar.
+`VERIFIED`.
+
+Avgörande belägg är inte väggens utseende utan tre strukturer som löper vågrätt
+genom bilden: **sargens överkantslist**, **fönsterbandet** och **raden av spön och
+redskapskrokar**. Alla tre löper obrutet förbi materialgränsen, vilket bara är
+möjligt om materialen ligger i samma plan. Kontrollprov på hur ett verkligt hörn
+ser ut i samma filmmaterial: `IMG_0195-f44-hornets-rundade-sarg.jpg`, där sargen
+bryter riktning i en tydlig rundning. Ingen sådan brytning finns vid panelens
+ändar.
+
+Panelen har dessutom en **egen brun lodrät avslutningslist** i änden
+(`IMG_0188-f37-panelens-slut-obruten-sarg.jpg`), vilket en panel som möter ett
+hörn inte behöver.
+
+Följden för denna matris: **`ovreVagg` som ett delstycke med ljus vägg i
+fortsättningen var rätt i sak.** Vad som kvarstår som `[REFERENCE GAP]` är enbart
+**måttet** — hur långt från hörnet panelen slutar. Ingen bild ger en skalreferens.
+
+Spegeln i `-02` är därmed inte avgjord av detta: både den vid B och den på
+kortsidan vid A finns (`IMG_0195-f57-kortsidan-vid-a.jpg` visar en spegel på den
+helt ljusa kortsidan), så `-02` kan visa endera.
+
 
 ---
 
