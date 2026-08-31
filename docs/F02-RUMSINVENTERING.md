@@ -12,7 +12,11 @@ Källor, i gällande ordning: `references/plans/` (topologi) → foton →
 
 Båda utrymningsplanerna är **fotografier av anslagna planer**. De löser
 **struktur**: väggar, rumsindelning, trappor, utrymningsvägar, korridorer.
-De löser **inte rumsetiketter** — ingen text i rummen är läsbar i bilderna.
+De löser **inte rumsetiketter**: ingen text i planerna är läsbar. En rättelse
+till en tidigare formulering — det stod att ingen rumsetikett alls är läsbar i
+något foto, och det är fel. `stall-entre-13.jpg` visar en dörrskylt med texten
+`Stall`. Den namnger dock rummet **bakom** dörren, alltså en passage, och ger
+inget av de 27 planrummen ett namn. Se `docs/F02-BEVISINDEX.md`.
 Ett rums *existens* kan alltså vara `PLAN` medan dess *funktion* är
 `FOTO`, `DERIVED` eller `REFERENCE GAP`. Den skillnaden bärs genom hela
 inventeringen.
@@ -39,7 +43,7 @@ Byggt i dag: `uppehallsrum`, `teorisal` (TEORISAL · WC), `sadelkammare`.
 | Post | Klass | Kommentar |
 |---|---|---|
 | att klubbdelen är rumsindelad | `PLAN` | väggtäthet vid norra änden |
-| den raka trappan i klubbdelen | `PLAN` | **inte byggd** — bara spiraltrappan utanpå finns |
+| den raka trappan i klubbdelen | `PLAN` + `FILM` | syns **underifrån** i `stall-entre-07…09` / `IMG_0248`. **Inte byggd** — bara spiraltrappan utanpå finns |
 | de tre byggda rummens gränser | `DERIVED` | satta före F02; ska kvitteras mot planens rumsgränser i granskningsläget |
 | rummens funktioner (teorisal, WC, sadelkammare) | `INTERIOR-MATRIS`/foto där täckt, annars `ASSUMPTION` | etiketter går inte att läsa i planen |
 | ytterligare rum planen antyder utöver de tre | `REFERENCE GAP` | räknas först i granskningsläget mot planbilden, inte ur minnet |
@@ -132,8 +136,9 @@ därför läge men inte mått — de står som poster **utan rektangel**, för e
 rektangel är värre än ingen. Det som låser upp dem är en rektifierad bild av
 ridhusplanen, motsvarande stallets `-rak`, eller mått på plats.
 
-**Inga påhittade funktioner.** Ingen rumsetikett är läsbar i något av fotona,
-så alla id:n är neutrala — `rum`, `korridor`, `trapphus`, `schakt`. Aldrig
+**Inga påhittade funktioner.** Ingen rumsetikett namnger något av planrummen —
+den enda läsbara skylten, `Stall` på branddörren i `stall-entre-13.jpg`, pekar
+ut en passage, inte ett rum — så alla id:n är neutrala — `rum`, `korridor`, `trapphus`, `schakt`. Aldrig
 `wc` eller `kontor` förrän en källa säger det. Provet faller om någon smyger
 in ett semantiskt namn.
 
@@ -157,6 +162,17 @@ möbler**:
    F01-panelens fail-closed-navigering.
 4. **Det Tobias avgör i Fas 1:** rumsgränser, cirkulation, dörrlägen,
    trapplägen, WC-lägen, öppningar. Ingenting möbleras före det beskedet.
+
+## Efter råfilmspasset
+
+`docs/F02-BEVISINDEX.md` prövar varje zon mot alla fem filmerna. Tre gap står
+kvar **efter uttömt bevis** — ingen av filmerna går in i dem alls:
+
+- stallets plan 2 invändigt,
+- ridhusets entréblock invändigt (samma sex rum som saknar mått),
+- Café Krubban invändigt.
+
+De är alltså gap om anläggningen, inte om urvalet.
 
 ## Öppna frågor som INTE får lösas av mig
 

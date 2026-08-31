@@ -37,6 +37,27 @@ GitHub är den primära utvecklingssanningen för:
 
 `references/` ska innehålla det material Claude faktiskt behöver för att bygga mot verkligheten: utvalda bilder/frames, mått, byggnadskort, siteplan, licenser och tydliga reference gaps.
 
+### Källordning — råfilmerna är källa, inte proveniens
+
+Ett `REFERENCE GAP` som satts för att något inte syns i de **utvalda**
+stillbilderna är ett påstående om urvalet, inte om anläggningen. Ordningen
+en detalj ska sökas i är därför:
+
+1. **råmaterialet** — stillbilderna i `references/buildings/` **och råfilmerna
+   i `references/video/`**,
+2. plan- och utrymningsritningar i `references/plans/`,
+3. verifierade derivat: byggnadskort `KORT.md`, `INTERIOR-MATRIS.md`,
+4. aktuell implementation,
+5. antaganden — först när steg 1–4 är uttömda och det syns att de är det.
+
+**Ett gap får inte sättas förrän filmerna är genomsökta.** Sök med
+`tools/videobevis.py`, som packar upp filmerna helt i stället för att gissa en
+cadence, och skriv in vilken film och vilket bildruteintervall som granskats i
+`docs/F02-BEVISINDEX.md`. Ett gap utan den noteringen är ogranskat.
+
+sha256 för allt speglingsbart referensmedia står i `references/CHECKSUMS.sha256`
+(`sha256sum -c references/CHECKSUMS.sha256`).
+
 ## Supabase
 
 UBRF-projektet i Supabase innehåller runtime-/speldata. Tabellen `public.reference_assets` är asset-manifestet.
@@ -51,6 +72,30 @@ Varje relevant referenspost kan ange:
 - om materialet är build-kritiskt
 
 RLS är aktiverad. Manifestet ska inte göras publikt bara för att förenkla utveckling.
+
+### Lagringshinken `reference-assets`
+
+En **privat** hink finns i UBRF-projektet: `reference-assets`, 64 MB per fil,
+mime-typerna jpeg/png/quicktime/mp4. Ingen anon- eller authenticated-policy är
+lagd på den. Det är avsiktligt: uppladdning kräver en hemlig nyckel som går
+förbi RLS, och att lägga in en anon-insert-policy för att komma runt det hade
+gjort råfilmerna från anläggningen skrivbara för var och en som har den
+publika nyckeln.
+
+**Läget just nu: hinken är tom.** 82 manifestrader finns, **noll** har
+`supabase_storage_path` satt, och noll objekt ligger i hinken. Det är ärligt
+redovisat och inte en glömska — se `docs/F02-BEVISINDEX.md` och
+`tools/spegla-referenser.py`.
+
+Regeln är låst i schemat, inte bara här:
+
+```sql
+check (supabase_storage_path is null or storage_verified_at is not null)
+```
+
+En rad kan alltså inte påstå att en fil är speglad utan att någon verifierat
+objektet. Ett manifest som ljuger om spegeln är värre än ett tomt manifest —
+det får nästa agent att sluta leta.
 
 ## Plattformskanon
 

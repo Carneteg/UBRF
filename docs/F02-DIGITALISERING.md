@@ -128,9 +128,11 @@ hörnmetoden på 4,89 % kantresidual mot kravet 3 %, flyktpunktsmetoden på
 Se `docs/F02-RUMSINVENTERING.md` för listan och `roblox/buildings/Planrum.luau`
 för koordinaterna. Varje post bär `kalla` med vad i planen den lästes ur.
 
-Id:na är **neutrala** — `rum`, `korridor`, `trapphus`, `schakt`. Ingen
-rumsetikett är läsbar i något av fotona, så funktionen är `REFERENCE GAP` även
-där gränsen är `PLAN`. `granskning.spec` faller om någon smyger in ett
+Id:na är **neutrala** — `rum`, `korridor`, `trapphus`, `schakt`. Ingen läsbar
+skylt namnger något av planrummen, så funktionen är `REFERENCE GAP` även där
+gränsen är `PLAN`. (Rättelse: här stod tidigare att ingen rumsetikett alls är
+läsbar i något foto. `stall-entre-13.jpg` visar skylten `Stall` på en
+branddörr — men den namnger passagen, inte ett planrum. `docs/F02-BEVISINDEX.md`.) `granskning.spec` faller om någon smyger in ett
 semantiskt namn som `wc` eller `kontor`.
 
 ## Granskningsgeometrin

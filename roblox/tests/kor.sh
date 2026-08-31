@@ -33,6 +33,15 @@ if ! python3 ../tools/kolla-dorrfarg.py; then
   exit 1
 fi
 
+# Referensbilderna är facit för hela fidelity-arbetet. Åtta av dem låg upp och
+# ner utan att något sa ifrån, och en läsbar dörrskylt blev därmed oläslig.
+# Checksummorna fångar nästa gång en referensfil ändras, tillkommer eller
+# försvinner tyst.
+if ! python3 ../tools/kolla-referenser.py; then
+  echo "REFERENSKONTROLLEN MISSLYCKADES"
+  exit 1
+fi
+
 status=0
 for f in $SPECAR; do
   ut=$(luau "tests/.build/$f.spec.luau" 2>&1)

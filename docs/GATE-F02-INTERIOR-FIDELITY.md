@@ -58,14 +58,20 @@ eller väggar:
 
 Varje rum/zon härleds ur källorna i den här ordningen:
 
-1. `references/plans/` — rumtopologi, cirkulation, WC, trappor, öppningar
-2. foton i `references/buildings/`
-3. `KORT.md`-byggnadskorten
+1. **råmaterialet** — foton i `references/buildings/` **och råfilmerna i
+   `references/video/`**. Filmerna är facit, inte proveniens: stillbilderna är
+   utplock ur dem och urvalet kan ha missat det du letar efter
+2. `references/plans/` — rumtopologi, cirkulation, WC, trappor, öppningar
+3. verifierade derivat: `KORT.md`-byggnadskorten, `INTERIOR-MATRIS.md`
 4. befintlig implementation
-5. `ASSUMPTION` endast där källorna faktiskt inte avgör
+5. `ASSUMPTION` endast där steg 1–4 är uttömda och det syns att de är det
 
 Regler:
 
+- **inget `REFERENCE GAP` sätts innan råfilmerna är genomsökta.** Kör
+  `tools/videobevis.py` och skriv in film + bildruteintervall i
+  `docs/F02-BEVISINDEX.md`. Ett gap utan den noteringen är ogranskat, inte
+  belagt,
 - varje rum får stabilt `RoomId`/`InteriorId`,
 - **inga generiska rum** för att en ridanläggning "borde" ha dem,
 - olösta ytor står kvar synligt märkta `REFERENCE GAP`/`ASSUMPTION`,
