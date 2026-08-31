@@ -73,29 +73,27 @@ Varje relevant referenspost kan ange:
 
 RLS är aktiverad. Manifestet ska inte göras publikt bara för att förenkla utveckling.
 
-### Lagringshinken `reference-assets`
+### Lagringshinken `reference-assets` — egen infrastruktur-PR
 
-En **privat** hink finns i UBRF-projektet: `reference-assets`, 64 MB per fil,
-mime-typerna jpeg/png/quicktime/mp4. Ingen anon- eller authenticated-policy är
-lagd på den. Det är avsiktligt: uppladdning kräver en hemlig nyckel som går
-förbi RLS, och att lägga in en anon-insert-policy för att komma runt det hade
-gjort råfilmerna från anläggningen skrivbara för var och en som har den
-publika nyckeln.
+Binärspegeln till Supabase Storage hör inte till fidelity-arbetet och
+följer därför en **separat PR**, inte F02. Skälet är att de kanoniska
+fotona, filmerna och planerna redan är build-åtkomliga i GitHub och
+checksumverifierade via `references/CHECKSUMS.sha256`
+(`python3 tools/kolla-referenser.py`) — spegeln är redundans, inte en
+förutsättning för att bedöma interiörtopologi.
 
-**Läget just nu: hinken är tom.** 82 manifestrader finns, **noll** har
-`supabase_storage_path` satt, och noll objekt ligger i hinken. Det är ärligt
-redovisat och inte en glömska — se `docs/F02-BEVISINDEX.md` och
-`tools/spegla-referenser.py`.
+**Läget just nu: hinken är privat och tom.** Manifestrader finns, **noll**
+har `supabase_storage_path` satt, och noll objekt ligger i hinken. Det är
+redovisat, inte glömt.
 
-Regeln är låst i schemat, inte bara här:
+Två regler gäller oavsett vilken PR som fyller den:
 
-```sql
-check (supabase_storage_path is null or storage_verified_at is not null)
-```
-
-En rad kan alltså inte påstå att en fil är speglad utan att någon verifierat
-objektet. Ett manifest som ljuger om spegeln är värre än ett tomt manifest —
-det får nästa agent att sluta leta.
+- **RLS försvagas inte** för att komma runt en saknad privilegierad nyckel.
+  En anon-insert-policy hade gjort råfilmerna skrivbara för var och en som
+  har den publika nyckeln.
+- En manifestrad får inte påstå att en fil är speglad utan att objektet
+  verifierats. Regeln ligger i schemat:
+  `check (supabase_storage_path is null or storage_verified_at is not null)`.
 
 ## Plattformskanon
 

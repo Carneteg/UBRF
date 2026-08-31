@@ -1,6 +1,6 @@
-# sha256 for allt referensmedia som ska speglas till Supabase Storage.
-# Skapad av tools/spegla-referenser.py --lista --json.
-# Kontroll:  sha256sum -c references/CHECKSUMS.sha256
+# sha256 for allt referensmedia i references/.
+# Skapad av tools/kolla-referenser.py --skriv.
+# Kontroll:  python3 tools/kolla-referenser.py
 5ee63a8fab9a7dd1ac36c8dcd095ca4acae337be0d3d45554b9a82391260bc34  references/buildings/ridhus/ridhus-durkplatdorrarna-07.jpg
 e8ae79603280c96afd5a62f668c910a8b379f2d54667efcec376602c3d6cda43  references/buildings/ridhus/ridhus-gavel-01.jpg
 0fd01f9e3be3186e9ef325a73fef29db9e1cbfaade23740fe4ad89ec8ce40128  references/buildings/ridhus/ridhus-gavel-02.jpg

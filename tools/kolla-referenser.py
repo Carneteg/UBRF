@@ -12,9 +12,12 @@ Tre saker kan gå sönder tyst i `references/`, och alla tre har hänt:
 jämför listan mot verkligheten åt BÅDA hållen — en lista som bara kollas
 uppifrån och ner missar exakt det fall den finns till för.
 
-    python3 tools/kolla-referenser.py
+    python3 tools/kolla-referenser.py          # kontrollera
+    python3 tools/kolla-referenser.py --skriv  # skriv om listan efter en
+                                               # avsiktlig ändring
 """
 
+import argparse
 import hashlib
 import pathlib
 import sys
@@ -36,7 +39,42 @@ def summa(p: pathlib.Path) -> str:
     return h.hexdigest()
 
 
+def skriv_lista(pa_disk: set[str]) -> None:
+    """Skriv om CHECKSUMS.sha256 från vad som faktiskt ligger på disk.
+
+    Bara att köra efter en AVSIKTLIG ändring. Kör man det för att bli av med
+    ett fel har man tystat larmet, inte åtgärdat det."""
+    rader = [f"{summa(ROT / v)}  {v}" for v in sorted(pa_disk)]
+    LISTA.write_text(
+        "# sha256 for allt referensmedia i references/.\n"
+        "# Skapad av tools/kolla-referenser.py --skriv.\n"
+        "# Kontroll:  python3 tools/kolla-referenser.py\n"
+        + "\n".join(rader) + "\n", encoding="utf-8")
+    print(f"OK   {len(rader)} filer skrivna till {LISTA.relative_to(ROT)}")
+
+
+def samla_disk() -> set[str]:
+    pa_disk: set[str] = set()
+    for katalog, monster in KALLOR:
+        bas = ROT / katalog
+        if not bas.is_dir():
+            continue
+        for m in monster:
+            for f in bas.rglob(m):
+                pa_disk.add(f.relative_to(ROT).as_posix())
+    return pa_disk
+
+
 def main() -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--skriv", action="store_true",
+                   help="skriv om listan från disken efter en avsiktlig ändring")
+    a = p.parse_args()
+
+    if a.skriv:
+        skriv_lista(samla_disk())
+        return 0
+
     if not LISTA.exists():
         print(f"FEL  {LISTA.relative_to(ROT)} saknas")
         return 1
@@ -48,14 +86,7 @@ def main() -> int:
         sha, _, vag = rad.partition("  ")
         listad[vag.strip()] = sha.strip()
 
-    pa_disk: set[str] = set()
-    for katalog, monster in KALLOR:
-        bas = ROT / katalog
-        if not bas.is_dir():
-            continue
-        for m in monster:
-            for f in bas.rglob(m):
-                pa_disk.add(f.relative_to(ROT).as_posix())
+    pa_disk = samla_disk()
 
     fel = 0
 
@@ -77,8 +108,8 @@ def main() -> int:
             andrade += 1
 
     if fel:
-        print(f"\n{fel} fel. Kor 'python3 tools/spegla-referenser.py --lista --json' "
-              "och skriv om listan om andringen ar avsiktlig.")
+        print(f"\n{fel} fel. Ar andringen avsiktlig: "
+              "python3 tools/kolla-referenser.py --skriv")
         return 1
 
     print(f"OK   {len(listad)} referensfiler, checksummor stammer at bada hallen")
