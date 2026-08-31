@@ -67,6 +67,7 @@ MODULER = [
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
     ("MovementController", "src/client/MovementController.luau"),
+    ("AnimationController", "src/client/AnimationController.luau"),
     ("CameraController",   "src/client/CameraController.luau"),
     ("RiderController",    "src/client/RiderController.luau"),
     ("Input",              "src/client/Input.luau"),

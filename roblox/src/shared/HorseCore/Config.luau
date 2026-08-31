@@ -149,12 +149,22 @@ Config.ANIMATION_KEYS = {
 --[[ Vilket klipp ett tillstånd spelar, och hur lång övertoningen är.
      Övertoningarna är olika långa med flit: uppåt i gångart går snabbt
      (hästen tar i), nedåt går mjukare (den rullar ut). ]]
+--[[ `phase = true` betyder att klippet INTE spelas av sin egen klocka utan
+     spolas av `loco.phase`, alltså av tillryggalagd sträcka. Se
+     `AnimationController:step` för varför, och `HASTRIGG-KRAVSPEC.md` § 4.
+
+     Bara de fyra cykliska gångarterna är fasdrivna. `Jump`, `Landing`,
+     `Stopping` och `TurningInPlace` är händelser: de ska ta lika lång tid
+     varje gång oavsett hur långt hästen kom under dem, och en fas som
+     inte tickar när hästen står still skulle låsa dem i första bildrutan.
+     `BackingUp` lämnas på klockan därför att fasen bara växer med
+     `moved`, som är en längd utan tecken — baklänges ser ut som framåt. ]]
 Config.STATE_ANIMATION = {
 	Idle           = { key = "Idle",      fade = 0.35, looped = true },
-	Walk           = { key = "Walk",      fade = 0.30, looped = true },
-	Trot           = { key = "Trot",      fade = 0.22, looped = true },
-	Canter         = { key = "Canter",    fade = 0.20, looped = true },
-	Gallop         = { key = "Gallop",    fade = 0.18, looped = true },
+	Walk           = { key = "Walk",      fade = 0.30, looped = true, phase = true },
+	Trot           = { key = "Trot",      fade = 0.22, looped = true, phase = true },
+	Canter         = { key = "Canter",    fade = 0.20, looped = true, phase = true },
+	Gallop         = { key = "Gallop",    fade = 0.18, looped = true, phase = true },
 	Jump           = { key = "JumpAir",   fade = 0.12, looped = true },
 	Landing        = { key = "JumpLand",  fade = 0.10, looped = false },
 	Stopping       = { key = "Stop",      fade = 0.16, looped = false },
