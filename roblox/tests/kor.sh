@@ -4,7 +4,7 @@
 # Kräver tre saker: luau exitkod 0, inga FEL-rader och att specen nådde sin
 # slutrad. Specarna byggs om varje gång så .build aldrig kan ge falskt grönt.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri world dorrar spel bygge qa movement camera rider touch"
+SPECAR="geometri world dorrar spel bygge qa granskning movement camera rider touch"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then

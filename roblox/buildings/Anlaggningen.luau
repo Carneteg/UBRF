@@ -165,10 +165,14 @@ local function byggStallIdentitet(model: Model, base: CFrame)
 	local H = I.huvrad
 	for i = 1, H.antal do
 		local z = r.y + r.h - (H.forstaFranNorr + H.delning * (i - 1))
+		-- Huvarna sitter på nocken och ska följa taket i F02:s dollhouse —
+		-- annars svävar de kvar när takfallen göms.
 		BK.box(model, base, "Takhuv " .. i, cx - H.sida / 2, b.hN + 0.28 - H.hojd / 2,
 			z - H.sida / 2, H.sida, H.hojd, H.sida, IDFARG.huv, Enum.Material.Metal)
+			:SetAttribute("TakDel", true)
 		BK.box(model, base, "Huvhatt " .. i, cx - H.hattB / 2, b.hN + 0.62,
 			z - H.hattB / 2, H.hattB, 0.09, H.hattB, IDFARG.huv, Enum.Material.Metal)
+			:SetAttribute("TakDel", true)
 	end
 
 	-- Snörasskyddet på båda takfallen, en tredjedel upp.
@@ -291,6 +295,7 @@ local function byggRidhusIdentitet(model: Model, base: CFrame)
 		for _, sida in ipairs({ -1, 1 }) do
 			local fall = Instance.new("Part")
 			fall.Name = "Ridhus takfall"; fall.Anchored = true
+			fall:SetAttribute("TakDel", true)
 			fall.CanCollide = false
 			fall.Color = TF.plat; fall.Material = Enum.Material.Metal
 			fall.Size = Vector3.new(BK.M * takL, BK.M * TS.platT,
@@ -625,6 +630,7 @@ local function byggStallInre(model: Model, base: CFrame)
 	for _, sida in ipairs({ -1, 1 }) do
 		local p = Instance.new("Part")
 		p.Name = "Stalltak plåt"; p.Anchored = true; p.CanCollide = false
+		p:SetAttribute("TakDel", true)
 		p.Color = SG.takplat; p.Material = Enum.Material.Metal
 		p.Size = Vector3.new(BK.M * takL, BK.M * 0.12, BK.M * langd)
 		p.CFrame = base

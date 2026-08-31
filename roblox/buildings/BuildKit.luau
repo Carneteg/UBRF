@@ -90,6 +90,9 @@ function BuildKit.gableRoof(model: Model, base: CFrame, x: number, z: number, w:
 	for _, s in ipairs({ -1, 1 }) do
 		local p = Instance.new("Part")
 		p.Name = "Takfall"; p.Anchored = true
+		-- Identiteten sätts när delen byggs, aldrig gissad på namn efteråt.
+		-- F02:s dollhouse gömmer allt med TakDel.
+		p:SetAttribute("TakDel", true)
 		p.Color = color; p.Material = material or Enum.Material.SmoothPlastic
 		p.Size = Vector3.new(studs(len + 2*overhang), studs(thick), studs(slope))
 		local rot = (ridgeAlong == "X") and CFrame.Angles(math.rad(pitchDeg) * -s, 0, 0)

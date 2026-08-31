@@ -53,6 +53,11 @@ QA = BYGGE + [
     ("QAPanel", "buildings/QAPanel.luau"),
 ]
 
+# F02:s granskningslage bygger pa QA-uppsattningen plus modulen sjalv.
+GRANSKNING = QA + [
+    ("Granskning", "buildings/Granskning.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -99,6 +104,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = WORLD, "tests/stubs-bygge.luau"
     elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
+    elif "granskning" in spec_rel:
+        moduler, stubbar = GRANSKNING, "tests/stubs-bygge.luau"
     elif "qa" in spec_rel:
         moduler, stubbar = QA, "tests/stubs-bygge.luau"
     elif "bygge" in spec_rel:

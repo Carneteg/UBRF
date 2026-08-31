@@ -1,6 +1,29 @@
 # Gate F02 — UBRF Interior Fidelity
 
-**Status:** SPECIFICERAD, inte påbörjad. Öppnas som egen branch/PR **efter** att
+## Så kör du Fas 1-granskningsläget
+
+Samma paket som F01-QA:n: `python3 tools/studio-paket.py`, klistra in i en
+**ren** place (förkontrollen säger till annars). F01-panelen öppnas som
+vanligt. Skriv sedan i Command Bar:
+
+```
+UBRFF02()
+```
+
+Då byggs zonplattorna (gult = `PLAN`, grönt = `FOTO`, blått = `DERIVED`,
+rött = `REFERENCE GAP`; **byggda ytor är nedtonade, obyggda lyser**), taken
+göms, och panelen byter till interiörvyerna — två kameror per zon, uppifrån
+och i ögonhöjd, med källklassen i vytexten. `UBRFDollhouse(false)` sätter
+tillbaka taken; `UBRFDollhouse(true)` tar av dem igen.
+
+I Fas 1 bedöms **bara** rumsgränser, cirkulation, dörr-/trapp-/WC-lägen och
+öppningar. En röd platta är en dokumenterad lucka — den bedöms som lucka,
+inte som slarv.
+
+---
+
+**Status:** Fas 1-granskningsläget byggt, väntar på #32-merge och därefter
+Tobias Steg A-granskning. Öppnas som egen branch/PR **efter** att
 PR #32 är mergad. Ordningen är låst i `ACTIVE-GATE.md`:
 `#32 → F02 → Studio-acceptans → G01 återupptas`.
 

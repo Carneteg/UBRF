@@ -31,6 +31,7 @@ MODULER = [
     ("UBRFKomplex",    "UBRFKomplex.luau"),
     ("Vyer",           "Vyer.luau"),
     ("QAPanel",        "QAPanel.luau"),
+    ("Granskning",     "Granskning.luau"),
 ]
 SKRIPT = "Anlaggningen.luau"
 
@@ -151,6 +152,28 @@ end
         "print(__qaOk\n"
         "\tand \"Skriv UBRFQA() i Command Bar for att oppna panelen igen.\"\n"
         "\tor \"UBRFQA() gick inte att registrera — kor om paketet for att oppna panelen.\")\n")
+
+    # F02-granskningslaget startas ALDRIG av sig sjalvt — F01-panelen ar
+    # fortfarande standard. Det oppnas med UBRFF02() nar Tobias vill granska
+    # interioren, och UBRFDollhouse(true/false) styr taken separat.
+    delar.append(
+        "\nlocal __f02Ok = pcall(function()\n"
+        "\t_G.UBRFF02 = function()\n"
+        "\t\tlocal __m = workspace:FindFirstChild(\"Anläggning\")\n"
+        "\t\tlocal __u = __m and __m:FindFirstChild(\"UBRF\")\n"
+        "\t\tassert(__u and __u.PrimaryPart, \"bygg Anlaggningen forst\")\n"
+        "\t\tGranskning.start(BuildKit, UBRFKomplex, QAPanel, __u, __u.PrimaryPart.CFrame)\n"
+        "\tend\n"
+        "\t_G.UBRFDollhouse = function(av)\n"
+        "\t\tlocal __m = workspace:FindFirstChild(\"Anläggning\")\n"
+        "\t\tlocal __u = __m and __m:FindFirstChild(\"UBRF\")\n"
+        "\t\tassert(__u, \"bygg Anlaggningen forst\")\n"
+        "\t\tGranskning.dollhouse(__u, av ~= false)\n"
+        "\tend\n"
+        "end)\n"
+        "print(__f02Ok\n"
+        "\tand \"F02: UBRFF02() oppnar granskningslaget, UBRFDollhouse(false) satter tillbaka taken.\"\n"
+        "\tor \"F02-kommandona gick inte att registrera.\")\n")
 
     UT.parent.mkdir(parents=True, exist_ok=True)
     UT.write_text("\n".join(delar), encoding="utf-8")
