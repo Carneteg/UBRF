@@ -1,5 +1,10 @@
 # Vad hästmodellen måste innehålla
 
+> **Ska du bygga eller köpa riggen?** Läs `HASTRIGG-KRAVSPEC.md` först. Den ger
+> omräkningen meter till studs, måtten per ras, de exakta klipplängderna i
+> sekunder och rutor, Roblox' hårda gränser och licensvägarna — alltså de siffror
+> du behöver innan du kan tillämpa det här dokumentet.
+
 Systemet bygger aldrig en häst. Det tar emot en färdig riggad modell och kör den.
 Det här dokumentet är kontraktet mellan modellen och koden.
 
@@ -74,7 +79,10 @@ Så här:
 | `RiderSeat` | false | true | true | 1 |
 
 `BodyCollider` ska vara ett enkelt block, ungefär bålens mått — cirka
-`6 × 4 × 2.5` studs för en varmblodshäst. Gör den inte hästformad. En enkel låda
+`6 × 4 × 2.5` studs för en varmblodshäst. **Den siffran gäller ett varmblod och
+måste skalas med rasens mankhöjd**; en Shetlandsponny är 3,06 studs hög och blir
+lägre än en collider på 4 studs. Tabellen per ras står i § 1 i
+`HASTRIGG-KRAVSPEC.md`. Gör den inte hästformad. En enkel låda
 glider mjukare längs väggar och trappor, och ingen ser den ändå.
 
 `GroundProbe` behövs inte som del. Systemet skjuter en stråle rakt ned från
@@ -192,10 +200,10 @@ Obligatoriska, i den meningen att tillståndet blir stelt utan dem:
 | Attribut | Loopar | Gjord för |
 |---|---|---|
 | `Idle` | ja | stillastående |
-| `Walk` | ja | **1,45 m/s** |
-| `Trot` | ja | **3,20 m/s** |
-| `Canter` | ja | **5,60 m/s** |
-| `Gallop` | ja | **8,60 m/s** |
+| `Walk` | ja | **1,45 m/s** — klipplängd **1,000 s**, 60 rutor @ 60 fps |
+| `Trot` | ja | **3,20 m/s** — klipplängd **0,667 s**, 40 rutor |
+| `Canter` | ja | **5,60 m/s** — klipplängd **0,571 s**, 34 rutor |
+| `Gallop` | ja | **8,60 m/s** — klipplängd **0,488 s**, 29 rutor |
 | `JumpAir` | ja | i luften |
 | `JumpLand` | nej | nedslag |
 | `Stop` | nej | inbromsning |
@@ -210,7 +218,10 @@ Plus `RiderSeated` — ryttarens pose, spelad på spelarens egen `Animator`.
 ### Farten i tabellen är inte dekoration
 
 Systemet skalar uppspelningshastigheten med `fart / gångartens norm-tempo`, och
-klampar den till **±30 %**. Är ditt trav-klipp gjort för 2 m/s kommer det att
+klampar den till **`[0,72 ; 1,32]`**, alltså −28 % och +32 %. (Stod tidigare som
+±30 %, vilket är avrundat åt fel håll i nedre änden.) Klampen slår innanför
+skrittens och travens egna tempoband — se § 3 i `HASTRIGG-KRAVSPEC.md`, det är ett
+arkitekturfel och inte något du kan animera bort. Är ditt trav-klipp gjort för 2 m/s kommer det att
 spelas 60 % för snabbt vid 3,2 m/s, slå i klampen och hovarna glider.
 
 Gör klippet för tempot i tabellen, eller ändra `norm` i `Gaits.luau` till det
