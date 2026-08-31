@@ -96,6 +96,55 @@ A och C på kortsidorna är standard på en dressyrbana, och B och E ligger midt
 motstående långsidor. Det ger banans axel **A→C** och binder varje vägg till en
 bokstav i stället för till fotografens läge.
 
+## Funktion: den glasade våningen är ett kafé
+
+Fastställt av Tobias 2026-08-31: **den glasade våningen i ridhuset är ett kafé.**
+Klassas `VERIFIED` på Tobias uppgift.
+
+Det är en funktionsuppgift, inte en mätning, och den kunde inte utläsas ur
+bilderna. `docs/DELIVERY-PROTOCOL.md` § *Struktur och funktion hålls isär*
+förbjuder att fylla en okänd funktion med en trolig gissning — därför stod raden
+av glasade rum kvar som enbart geometri i granskningen, trots att
+`ridhus-klubb-09-cafesalen.jpg` visar bord och stolar bakom glaset.
+
+### Vad bilderna visar när funktionen är känd
+
+- `ridhus-klubb-09-cafesalen.jpg` (`IMG_0092`) — kaférummet inifrån korridoren
+  genom glaspartiet: vita fyrkantiga bord, grå perforerade metallstolar, runda
+  vita bord på pelarfot, vitmålat panelinnertak med synliga balkar och ljusslinga.
+- `ridhus-inne-01-glasrummen.jpg` (`IMG_0179`) — **samma rumsrad sett från banan**:
+  fönsterbandet högt upp över läktaren, med lysrör och inredning bakom glaset.
+- `ridhus-klubb-10-overvaningens-gang.jpg` (`IMG_0094`) — gången på övre plan
+  längs kaféets glasparti, med ridbanan öppen till höger.
+
+### Konsekvens för bygget
+
+Kaféet har **fönstervägg mot ridbanan**. Det är inte ett dekorativt glasband utan
+ett rum man ser in i, och ut ur. Ett bygge där glasbandet är en mörk remsa saknar
+alltså inte bara djup — det saknar rummets funktion.
+
+`references/buildings/ridhus/INTERIOR-MATRIS.md` har redan just det som
+`KNOWN MISMATCH`: *"Glasbandet läser som en mörk remsa, inte som fönster med bruna
+karmar in i upplysta rum"*. Uppgiften höjer felets vikt från en materialfråga till
+en rumsfråga.
+
+### En motsägelse som nu måste prövas
+
+`INTERIOR-MATRIS.md` § *Punkt 4 · klockan* placerar **cafeklockan i norra änden**
+och säger uttryckligen att den klocka `-01` visar på kortändan *"fanns alltså inte
+alls"* — och lägger till den som `kortanda.klocka`. Modellen har alltså **två
+klockor**, en i kaféet i norr och en på kortändans vägg.
+
+Men `-01` fotograferar kortändan, och det är över kortändans läktare det glasade
+bandet ligger. Om kaféet ligger vid kortändan kan de två klockorna vara **samma
+klocka**, och `cafeklockan i norra änden` en felplacering som `kortanda.klocka`
+sedan kompenserade för i stället för att ersätta.
+
+**Detta är en hypotes, inte en slutsats.** Den ska prövas mot planen och mot
+`RIDHUSINNE.klocka`-datan innan något byggs om. Skälet till försiktigheten står i
+§ *Rättelse* ovan: förra gången jag band ihop flera bilder till en snygg slutsats
+utan att kontrollera kameraläget blev det fel.
+
 ### Nytt som inte var känt
 
 - **Domartorn** i brunt trä med räcke och trappa, på en upphöjd yta bakom
