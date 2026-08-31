@@ -26,6 +26,13 @@ if ! python3 ../tools/kolla-rojo.py; then
   exit 1
 fi
 
+# Samma dörr målades svart på webben och nästan vit i Roblox. Ingen märkte det
+# förrän en människa stod framför den i Studio.
+if ! python3 ../tools/kolla-dorrfarg.py; then
+  echo "DÖRRFÄRGSKONTROLLEN MISSLYCKADES"
+  exit 1
+fi
+
 status=0
 for f in $SPECAR; do
   ut=$(luau "tests/.build/$f.spec.luau" 2>&1)

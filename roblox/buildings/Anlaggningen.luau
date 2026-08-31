@@ -43,14 +43,30 @@ local MARKMATERIAL: { [string]: Enum.Material } = {
 -- Öppningarnas färger. Namnen kommer ur src/site.js och beskriver vad man ser:
 -- portbla = de blågrå skjutportarna, portplat = durkplåtsdörrarna, dorrgul =
 -- den ockragula stalldörren under förstukvisten.
+--[[ Två av dem är avlästa ur byggnadskorten; resten är valda så att typerna
+     går att skilja åt och är märkta som sådana.
+
+     `dorr` stod på (228, 226, 218) — nästan vit. Men det är ridhusets
+     GAVELDÖRR, och både src/site.js ("svarta dörren") och ridhusets kort
+     säger svart. Webben målade den redan #1A1A1C. Roblox målade den vit, mitt
+     i den vy som heter `ankomsten`. Det var alltså ingen smaksak utan en
+     paritetsspricka mellan ytorna.
+
+     `dorrgul` stod på (206, 158, 62) — en mättad gul. Kortet mäter den
+     ockragula entrédörren till (168, 118, 80), "ockragul furu", och webben
+     hade redan det värdet. ]]
 local OPPNINGSFARG: { [string]: Color3 } = {
-	portbla    = Color3.fromRGB(94, 108, 122),
-	portplat   = Color3.fromRGB(150, 152, 156),
-	portsilver = Color3.fromRGB(196, 198, 202),
-	dorrgul    = Color3.fromRGB(206, 158, 62),
-	dorrvit    = Color3.fromRGB(238, 236, 228),
-	dorrmork   = Color3.fromRGB(58, 48, 44),
-	dorr       = Color3.fromRGB(228, 226, 218),
+	-- VERIFIED: references/buildings/ridhus/KORT.md rad 76
+	dorr       = Color3.fromRGB(24, 24, 26),
+	-- VERIFIED: references/buildings/stall/KORT.md rad 159
+	dorrgul    = Color3.fromRGB(168, 118, 80),
+	-- [REFERENCE GAP] korten ger inget mätt värde för de här; tonerna är valda
+	-- så att typerna går att skilja åt och matchar webbens.
+	portbla    = Color3.fromRGB(126, 147, 166),
+	portplat   = Color3.fromRGB(180, 183, 185),
+	portsilver = Color3.fromRGB(196, 199, 201),
+	dorrvit    = Color3.fromRGB(232, 226, 212),
+	dorrmork   = Color3.fromRGB(70, 63, 56),
 }
 
 local function arFonster(typ: string): boolean
