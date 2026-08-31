@@ -1,6 +1,14 @@
 # Gate G01 — First Playable Horse Loop
 
-**Status:** ÖPPEN. Skiva 1 av 6 levererad.
+**Status:** **PAUSAD 2026-08-31** efter skiva 1 av 6.
+
+Produktbeslut: interiörfidelity går före resten av hästloopen. Ordningen är
+`PR #32 → interiör-PR → Studio-acceptans → G01 återupptas`, och står i
+`docs/ACTIVE-GATE.md`. Skälet är att loopen ska byggas och provas i den
+verkliga interiören — bygger S3 sina interaktionspunkter på rum som strax
+flyttas får de göras om.
+
+Skiva S2 och framåt väntar. Rör inte S3 eller ground handling.
 
 Gate F01 är `ACCEPTED_IN_ROBLOX_STUDIO` sedan **2026-08-30**:
 
