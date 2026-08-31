@@ -436,6 +436,111 @@ do
 	end
 end
 
+print("\n── Knapplayouten: rektanglar som inte får överlappa ──")
+do
+	--[[ GAP lades först på samma rad och samma yta som PASS och FEL, och
+	     skapades efter dem — den la sig alltså ÖVER de två knappar Tobias
+	     behöver för human gate. Ett ögonmått hade inte fångat det. ]]
+	for _, harGap in ipairs({ false, true }) do
+		local L = QAPanel.knapplayout(harGap)
+		local fel, vad = QAPanel.layoutfel(L)
+		check("layouten håller " .. (if harGap then "med" else "utan") .. " GAP",
+			fel == 0, if fel == 0 then "inga överlapp" else vad)
+	end
+	check("GAP-knappen finns bara när den efterfrågas",
+		QAPanel.knapplayout(false).gap == nil
+		and QAPanel.knapplayout(true).gap ~= nil)
+	--[[ F01:s layout ska vara PIXELIDENTISK med före ändringen. ]]
+	local f01 = QAPanel.knapplayout(false)
+	check("F01-layouten är oförändrad",
+		f01.pass.x == 0.38 and f01.pass.b == 0.28
+		and f01.fel.x == 0.67 and f01.fel.b == 0.30)
+	--[[ Provet måste kunna bli rött: en medvetet överlappande layout. ]]
+	local trasig = {
+		pass = { x = 0.38, b = 0.28, y = 122, h = 28 },
+		fel = { x = 0.67, b = 0.30, y = 122, h = 28 },
+		gap = { x = 0.38, b = 0.62, y = 122, h = 28 },
+	}
+	local felTrasig = QAPanel.layoutfel(trasig)
+	check("provet fäller den gamla överlappande layouten", felTrasig > 0,
+		felTrasig .. " fel")
+end
+
+print("\n── Av- och påslag får inte mutera modellen ──")
+do
+	local mapp = workspace:FindFirstChild("Anläggning")
+	local ubrf = mapp and mapp:FindFirstChild("UBRF")
+	if ubrf then
+		--[[ DOLLHOUSE: en takdel som medvetet var genomsläpplig innan F02
+		     måste vara det efteråt också. Förut sattes CanCollide = true rakt
+		     av vid återställning, så granskningsläget ändrade den riktiga
+		     modellen. ]]
+		local provdel
+		for _, i in ipairs(ubrf:GetDescendants()) do
+			if i:GetAttribute("TakDel") == true then provdel = i break end
+		end
+		check("hittade en takdel att pröva på", provdel ~= nil)
+		if provdel then
+			provdel.CanCollide = false
+			local urspTrans = provdel.Transparency
+			Granskning.dollhouse(ubrf, true)
+			Granskning.dollhouse(ubrf, false)
+			check("takdelens CanCollide återställs, inte gissas till true",
+				provdel.CanCollide == false, tostring(provdel.CanCollide))
+			check("takdelens genomskinlighet återställs exakt",
+				provdel.Transparency == urspTrans,
+				urspTrans .. " → " .. provdel.Transparency)
+
+			provdel.CanCollide = true
+			Granskning.dollhouse(ubrf, true)
+			Granskning.dollhouse(ubrf, false)
+			check("en kolliderande takdel förblir kolliderande",
+				provdel.CanCollide == true)
+			Granskning.dollhouse(ubrf, true)
+		end
+
+		--[[ GRANSKNINGSLAGRET: sorterna har olika genomskinlighet med flit.
+		     Förut satte varje PÅ 0,35 på allt, så ett aggregats golv såg ut
+		     som en vägg efter första av/på. ]]
+		Granskning.byggVaggar(BuildKit, UBRFKomplex, Planrum, ubrf,
+			ubrf.PrimaryPart.CFrame, Planoppning)
+		local vmapp = ubrf:FindFirstChild("F02ReviewGeometry")
+		local fore = {}
+		if vmapp then
+			for _, i in ipairs(vmapp:GetDescendants()) do
+				if i:GetAttribute("F02Review") == true then
+					fore[i] = i.Transparency
+				end
+			end
+		end
+		local sorterFore = {}
+		if vmapp then
+			for i in pairs(fore) do
+				local s2 = i:GetAttribute("F02Sort")
+				if s2 then sorterFore[s2] = i.Transparency end
+			end
+		end
+		Granskning.visaVaggar(ubrf, false)
+		Granskning.visaVaggar(ubrf, true)
+		local avvikande = 0
+		for i, t in pairs(fore) do
+			if i.Transparency ~= t then avvikande += 1 end
+		end
+		check("av och på återställer varje dels EGEN genomskinlighet",
+			avvikande == 0, avvikande .. " ändrade")
+		--[[ Och de fyra sorterna ska fortfarande skilja sig åt — annars ser
+		     en zongräns ut som en vägg. ]]
+		local skilda = {}
+		for _, s2 in ipairs({ "SKILJEVAGG", "ZONGRANS", "TRAPPA", "OPPNING" }) do
+			if sorterFore[s2] then skilda[sorterFore[s2]] = true end
+		end
+		local antalNivaer = 0
+		for _ in pairs(skilda) do antalNivaer += 1 end
+		check("de fyra sorterna har skilda genomskinligheter efter av/på",
+			antalNivaer >= 4, antalNivaer .. " nivåer")
+	end
+end
+
 print("\n── Panelens tredje utfall: GAP är aldrig PASS ──")
 do
 	local vyer = {

@@ -363,7 +363,22 @@ function Granskning.visaVaggar(model: Model, pa: boolean): number
 	local n = 0
 	for _, i in ipairs(mapp:GetDescendants()) do
 		if i:GetAttribute("F02Review") == true then
-			i.Transparency = if pa then 0.35 else 1
+			--[[ Sorterna har OLIKA genomskinlighet med flit: en zongräns på
+			     0,82 är ett golv, en skiljevägg på 0,35 är en vägg. Förut
+			     satte det här 0,35 på allt vid varje PÅ, så ett aggregats
+			     golv såg ut som en vägg efter första av/på — och då påstår
+			     granskningen en vägg källan inte bär.
+
+			     Varje del bär därför sin egen ursprungliga genomskinlighet. ]]
+			if i:GetAttribute("F02Genomskinlighet") == nil then
+				i:SetAttribute("F02Genomskinlighet", i.Transparency)
+			end
+			if pa then
+				local t = i:GetAttribute("F02Genomskinlighet")
+				i.Transparency = if typeof(t) == "number" then t else 0.35
+			else
+				i.Transparency = 1
+			end
 			n += 1
 		end
 	end
@@ -384,8 +399,14 @@ function Granskning.dollhouse(model: Model, av: boolean): number
 	for _, i in ipairs(model:GetDescendants()) do
 		if i:GetAttribute("TakDel") == true then
 			if av then
+				--[[ BÅDA värdena sparas. Förut sparades bara Transparency,
+				     och återställningen satte CanCollide = true rakt av. En
+				     takdel som medvetet var genomsläpplig innan F02 blev
+				     alltså kolliderande efteråt: granskningsläget muterade
+				     den riktiga modellen. ]]
 				if i:GetAttribute("F02Transparens") == nil then
 					i:SetAttribute("F02Transparens", i.Transparency)
+					i:SetAttribute("F02Kollision", i.CanCollide)
 				end
 				i.Transparency = 1
 				i.CanCollide = false
@@ -395,7 +416,11 @@ function Granskning.dollhouse(model: Model, av: boolean): number
 					i.Transparency = t
 					i:SetAttribute("F02Transparens", nil)
 				end
-				i.CanCollide = true
+				local k = i:GetAttribute("F02Kollision")
+				if typeof(k) == "boolean" then
+					i.CanCollide = k
+					i:SetAttribute("F02Kollision", nil)
+				end
 			end
 			antal += 1
 		end

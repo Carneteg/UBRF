@@ -100,6 +100,49 @@ local function sammanfatta()
 	return { pass = pass, fel = fel, gap = gap, kvar = kvar, bedombara = bedombara }
 end
 
+--[[ Knapparnas rektanglar, som data. Utan GAP är layouten exakt F01:s —
+     samma tal som förut, så F01-panelen ser likadan ut på pixeln. Med GAP
+     blir det tre lika breda kolumner på samma rad. ]]
+function QAPanel.knapplayout(harGap: boolean)
+	if not harGap then
+		return {
+			pass = { x = 0.38, b = 0.28, y = 122, h = 28 },
+			fel = { x = 0.67, b = 0.30, y = 122, h = 28 },
+			gap = nil,
+		}
+	end
+	return {
+		pass = { x = 0.03, b = 0.30, y = 122, h = 28 },
+		fel = { x = 0.35, b = 0.30, y = 122, h = 28 },
+		gap = { x = 0.67, b = 0.30, y = 122, h = 28 },
+	}
+end
+
+--[[ Prövar layouten i stället för att lita på ögonmåttet: inga överlapp,
+     inget utanför panelen. Returnerar antalet fel och en beskrivning. ]]
+function QAPanel.layoutfel(L): (number, string)
+	local rutor = {}
+	for namn, r in pairs(L) do
+		if r then table.insert(rutor, { namn = namn, r = r }) end
+	end
+	table.sort(rutor, function(a, b) return a.r.x < b.r.x end)
+	local fel, text = 0, {}
+	for _, e in ipairs(rutor) do
+		if e.r.x < 0 or e.r.x + e.r.b > 1.0 then
+			fel += 1
+			table.insert(text, e.namn .. " ligger utanför panelen")
+		end
+	end
+	for i = 1, #rutor - 1 do
+		local a, b = rutor[i], rutor[i + 1]
+		if a.r.y == b.r.y and a.r.x + a.r.b > b.r.x then
+			fel += 1
+			table.insert(text, a.namn .. " överlappar " .. b.namn)
+		end
+	end
+	return fel, table.concat(text, "; ")
+end
+
 local uppdatera: () -> ()
 
 function QAPanel.start(vyModul: any)
@@ -181,13 +224,16 @@ function QAPanel.start(vyModul: any)
 
 	local forra = knapp(ram, "◀", 0.03, 0.16, 122, 28, FARG.knapp)
 	local nasta = knapp(ram, "▶", 0.20, 0.16, 122, 28, FARG.knapp)
-	local pass = knapp(ram, "PASS", 0.38, 0.28, 122, 28, FARG.pass)
-	local fel = knapp(ram, "FEL", 0.67, 0.30, 122, 28, FARG.fel)
-	--[[ Tredje utfallet finns bara när vymodulen ber om det. F01-panelens
-	     semantik ändras inte: utan flaggan finns knappen inte, och
-	     sammanfattningen ser likadan ut som förut. ]]
-	local gapKnapp = if vyModul.gapKnapp
-		then knapp(ram, "GAP", 0.38, 0.62, 122, 28, FARG.knapp)
+	--[[ Layouten kommer ur en ren funktion, inte ur tre lösa tal på tre
+	     rader. GAP lades först på x = 0,38 med bredden 0,62 — samma rad och
+	     samma yta som PASS och FEL, och skapad efter dem, så den la sig
+	     ÖVER de två knappar Tobias behöver för human gate. Ett ögonmått
+	     räcker inte till det här; rektanglarna prövas nu. ]]
+	local L = QAPanel.knapplayout(vyModul.gapKnapp == true)
+	local pass = knapp(ram, "PASS", L.pass.x, L.pass.b, L.pass.y, L.pass.h, FARG.pass)
+	local fel = knapp(ram, "FEL", L.fel.x, L.fel.b, L.fel.y, L.fel.h, FARG.fel)
+	local gapKnapp = if L.gap
+		then knapp(ram, "GAP", L.gap.x, L.gap.b, L.gap.y, L.gap.h, FARG.knapp)
 		else nil
 	local aterstall = knapp(ram, "Återställ kameran", 0.03, 0.94, 154, 26, FARG.knapp)
 
