@@ -39,16 +39,26 @@ def summa(p: pathlib.Path) -> str:
     return h.hexdigest()
 
 
+#[[ Sokvagarna ar relativa REFERENCES/, inte repo-roten. Det ar sa
+#   `sha256sum -c` forvantar sig dem nar det kors i katalogen dar filerna
+#   ligger, och sa CI-grinden i .github/workflows/grindar.yml kor det.
+#   Repo-rot-relativa sokvagar fungerade i mitt eget verktyg men foll i CI —
+#   tva konventioner for samma lista ar en konvention for mycket. ]]
+def kort(vag: str) -> str:
+    return vag[len("references/"):] if vag.startswith("references/") else vag
+
+
 def skriv_lista(pa_disk: set[str]) -> None:
     """Skriv om CHECKSUMS.sha256 från vad som faktiskt ligger på disk.
 
     Bara att köra efter en AVSIKTLIG ändring. Kör man det för att bli av med
     ett fel har man tystat larmet, inte åtgärdat det."""
-    rader = [f"{summa(ROT / v)}  {v}" for v in sorted(pa_disk)]
+    rader = [f"{summa(ROT / v)}  {kort(v)}" for v in sorted(pa_disk)]
     LISTA.write_text(
         "# sha256 for allt referensmedia i references/.\n"
-        "# Skapad av tools/kolla-referenser.py --skriv.\n"
-        "# Kontroll:  python3 tools/kolla-referenser.py\n"
+        "# Sokvagarna ar relativa den har katalogen, sa listan gar att kora\n"
+        "# med:  cd references && sha256sum -c CHECKSUMS.sha256\n"
+        "# Skriv om den med:  python3 tools/kolla-referenser.py --skriv\n"
         + "\n".join(rader) + "\n", encoding="utf-8")
     print(f"OK   {len(rader)} filer skrivna till {LISTA.relative_to(ROT)}")
 
@@ -84,7 +94,7 @@ def main() -> int:
         if not rad.strip() or rad.lstrip().startswith("#"):
             continue
         sha, _, vag = rad.partition("  ")
-        listad[vag.strip()] = sha.strip()
+        listad["references/" + vag.strip()] = sha.strip()
 
     pa_disk = samla_disk()
 
