@@ -19,7 +19,7 @@ local Gaits = {}
 export type Gait = {
 	name: string, label: string,
 	min: number, max: number, norm: number,
-	stride: number, cycles: number, steps: number,
+	cycles: number, steps: number,
 	accel: number, retard: number, turn: number, stamina: number,
 	camera: { dist: number, height: number, fov: number },
 }
@@ -34,31 +34,31 @@ Gaits.ORDER = { "halt", "walk", "trot", "canter", "gallop" }
 Gaits.BY_NAME = ({
 	halt = {
 		name = "halt", label = "Halt", min = 0.00, max = 0.20,
-		norm = 0.00, stride = 0.00, cycles = 0.00, steps = 0,
+		norm = 0.00, cycles = 0.00, steps = 0,
 		accel = 3.2, retard = 5.5, turn = 1.00, stamina = -3.0,
 		camera = { dist = 14, height = 5.0, fov = 0 },
 	},
 	walk = {
 		name = "walk", label = "Skritt", min = 0.90, max = 2.00,
-		norm = 1.45, stride = 0.46, cycles = 1.00, steps = 4,
+		norm = 1.45, cycles = 1.00, steps = 4,
 		accel = 2.6, retard = 3.4, turn = 1.00, stamina = 0.0,
 		camera = { dist = 15, height = 5.2, fov = 0 },
 	},
 	trot = {
 		name = "trot", label = "Trav", min = 2.40, max = 4.30,
-		norm = 3.20, stride = 0.63, cycles = 1.50, steps = 2,
+		norm = 3.20, cycles = 1.50, steps = 2,
 		accel = 2.9, retard = 3.6, turn = 0.82, stamina = 0.4,
 		camera = { dist = 17, height = 5.6, fov = 1 },
 	},
 	canter = {
 		name = "canter", label = "Galopp", min = 4.60, max = 7.00,
-		norm = 5.60, stride = 1.00, cycles = 1.75, steps = 3,
+		norm = 5.60, cycles = 1.75, steps = 3,
 		accel = 3.4, retard = 3.2, turn = 0.62, stamina = 2.2,
 		camera = { dist = 19, height = 6.0, fov = 4 },
 	},
 	gallop = {
 		name = "gallop", label = "Fyrsprång", min = 7.20, max = 11.0,
-		norm = 8.60, stride = 1.28, cycles = 2.05, steps = 4,
+		norm = 8.60, cycles = 2.05, steps = 4,
 		accel = 3.0, retard = 2.6, turn = 0.42, stamina = 5.5,
 		camera = { dist = 23, height = 6.4, fov = 8 },
 	},
@@ -127,8 +127,26 @@ end
      cykelfrekvens — det bevarar dagens takt vid normtempo och gör den
      distanslåst över resten av bandet.
 
-     stride-fältet är enskild steglängd och används av animationslagret;
-     det är inte samma sak som cykellängd, för en cykel är flera steg. ]]
+     DET FANNS ETT stride-FÄLT HÄR. Det är borta, och skälet bör stå kvar.
+
+     Fältet bar värdena 0,46 / 0,63 / 1,00 / 1,28 och en kommentar som sa att
+     animationslagret använde dem som enskild steglängd i meter. Ingen av de två
+     uppgifterna var sann. Fältet lästes inte av någon modul, och värdena var
+     inte meter.
+
+     Värdena är webbmodellens `steg`-fält i `src/model.js`, och där är de
+     DIMENSIONSLÖSA FAKTORER. Webben räknar
+     `SPRANG[kategori] × steg × modulering`, med `SPRANG.hast = 3,50 m`.
+     Vid porteringen till Luau följde faktorerna med men multiplikatorn
+     lämnades kvar. En faktor utan sin bas ser ut som ett mått och är det inte.
+
+     Konsekvensen om någon hade trott på kommentaren: hovavtryck lagda på
+     0,63 m i trav mot en verklig cykellängd på 2,13 m är 41 % fel, alltså
+     precis den hovglidning som är förbjuden i acceptanskraven för riggen.
+
+     Cykellängden är `Gaits.cycleLength`, och den är det enda bindande måttet.
+     Webben och Roblox är dock inte överens om den — se `HASTRIGG-KRAVSPEC.md`
+     § 4 och issue om plattformsavvikelsen. ]]
 function Gaits.cycleLength(name: string): number
 	local g = Gaits.get(name)
 	if g.cycles <= 0 or g.norm <= 0 then return 0 end
