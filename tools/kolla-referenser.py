@@ -24,10 +24,16 @@ import sys
 
 ROT = pathlib.Path(__file__).resolve().parent.parent
 LISTA = ROT / "references" / "CHECKSUMS.sha256"
+#[[ BILD galler i ALLA tre katalogerna. `references/video` listade en gang
+#   bara filmbehallarna, och da lag de 27 nyckelrutorna i
+#   references/video/ridhus-nyckelrutor/ helt utanfor kontrollen: listan var
+#   gron for att den inte tittade dar, inte for att rutorna stamde. Samma fel
+#   som en enkelriktad lista, en katalog djupare. ]]
+BILD = ("*.jpg", "*.jpeg", "*.png")
 KALLOR = [
-    ("references/buildings", ("*.jpg", "*.jpeg", "*.png")),
-    ("references/plans",     ("*.jpg", "*.jpeg", "*.png")),
-    ("references/video",     ("*.mov", "*.mp4")),
+    ("references/buildings", BILD),
+    ("references/plans",     BILD),
+    ("references/video",     BILD + ("*.mov", "*.mp4")),
 ]
 
 

@@ -95,7 +95,7 @@ function Granskning.zoner(K, Planrum): { Zon }
 	for _, r in ipairs(S.service) do
 		zon({ id = "stall_service_" .. r.id, namn = r.label, hus = "stall",
 			klass = "FOTO", byggd = true,
-			kalla = "stall-gang-*.jpg, INTERIOR-MATRIS.md",
+			kalla = "stall-gang-*.jpg, stall/INTERIOR-MATRIS.md",
 			rekt = { x = r.rekt.x, y = r.rekt.y, w = r.rekt.w, h = r.rekt.h } })
 	end
 
@@ -127,9 +127,16 @@ function Granskning.zoner(K, Planrum): { Zon }
 		kalla = "RIDHUS-PLANMATNING: 15,1 % av längden, full av rum, minst två trappor. INTE byggd",
 		rekt = { x = 0, y = R.langd - R.entre, w = R.bredd, h = R.entre } })
 
-	zon({ id = "ridhus_cafe_krubban", namn = "Café Krubban — annexets interiör", hus = "ridhus",
-		klass = "GAP", byggd = false,
-		kalla = "ridhus-gavel-*.jpg, KORT.md: tvåvåningsannex. Interiören obyggd" })
+	--[[ Var GAP tills #41 skrev om ridhusets matris. Interiören är sedan dess
+	     fotograferad inifrån och funktionen fastställd av produktägaren (#40),
+	     så källuckan gäller inte längre utseendet. Det som fortfarande saknas
+	     är MÅTTEN: matrisens § 3 säger "Alla meter vid kortändan — REFERENCE
+	     GAP". Därför FOTO utan rekt: rummet är sett, dess utsträckning är det
+	     inte, och zonen förblir geometriskt obedömbar. ]]
+	zon({ id = "ridhus_cafe_krubban", namn = "Café Krubban — kaférummet", hus = "ridhus",
+		klass = "FOTO", byggd = false,
+		kalla = "ridhus-klubb-09-cafesalen.jpg, ridhus-klubb-10-overvaningens-gang.jpg, "
+			.. "ridhus/INTERIOR-MATRIS.md § 3. Måtten är GAP. Interiören obyggd" })
 
 	--[[ De digitaliserade planrummen. Gräns = PLAN, funktion = GAP; inget av
 	     dem är byggt, så alla lyser. Rum utan rekt (perspektivolösta) följer

@@ -60,6 +60,35 @@ do
 	check("entrédelen har entre-djupet ur datan",
 		entredel and entredel.rekt and math.abs(entredel.rekt.h - UBRFKomplex.ridhus.entre) < 0.001,
 		entredel and entredel.rekt and tostring(entredel.rekt.h) or "saknas")
+
+	--[[ Kaférummet stod som GAP tills #41 skrev om ridhusets matris. Det gör
+	     det inte längre: interiören är fotograferad inifrån och funktionen
+	     fastställd av produktägaren. Provet låser fast BÅDA halvorna av
+	     rättelsen, för de kan regrediera åt var sitt håll:
+
+	     1. klassen får inte falla tillbaka till GAP — då påstår panelen att
+	        källan är uttömd när den inte är det, och Tobias slipper granska en
+	        yta som faktiskt går att granska,
+	     2. zonen får inte plötsligt få en rekt — MÅTTEN är fortfarande
+	        REFERENCE GAP (matrisens § 3), så en rektangel här vore ett
+	        påhittat mått som ser belagt ut.
+
+	     Klassen ensam räcker alltså inte som prov. ]]
+	local cafe
+	for _, z in ipairs(zoner) do
+		if z.id == "ridhus_cafe_krubban" then cafe = z end
+	end
+	check("kaférummet är fotobelagt, inte en källucka",
+		cafe ~= nil and cafe.klass == "FOTO",
+		cafe and cafe.klass or "saknas")
+	check("kaférummet har ändå inget mått — måtten är GAP",
+		cafe ~= nil and cafe.rekt == nil,
+		cafe and cafe.rekt and "har rekt" or "utan rekt")
+	check("kaférummet pekar på bilderna som visar det inifrån",
+		cafe ~= nil
+			and string.find(cafe.kalla, "ridhus-klubb-09-cafesalen.jpg", 1, true) ~= nil
+			and string.find(cafe.kalla, "ridhus-klubb-10-overvaningens-gang.jpg", 1, true) ~= nil,
+		cafe and cafe.kalla or "saknas")
 end
 
 print("\n── Zonplattorna byggs med identitet ──")
