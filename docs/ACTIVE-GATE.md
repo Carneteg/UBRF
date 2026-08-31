@@ -1,7 +1,8 @@
 # Active Gate
 
-Current gate: **Gate F02 — UBRF Interior Fidelity** (not yet opened; see the
-locked order below). **G01 is PAUSED after slice S1.**
+Current gate: **Gate F02 — UBRF Interior Fidelity**
+(`docs/GATE-F02-INTERIOR-FIDELITY.md`; opens after PR #32 merges).
+**G01 is PAUSED after slice S1.**
 
 ## Locked order — Product Owner decision 2026-08-31
 
