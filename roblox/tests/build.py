@@ -55,6 +55,7 @@ QA = BYGGE + [
 
 # F02:s granskningslage bygger pa QA-uppsattningen plus modulen sjalv.
 GRANSKNING = QA + [
+    ("Planrum",    "buildings/Planrum.luau"),
     ("Granskning", "buildings/Granskning.luau"),
 ]
 

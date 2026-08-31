@@ -39,9 +39,11 @@ export type Zon = {
 	-- Lokal rekt i husets interiörkoordinater. nil = zonen har ingen
 	-- ritbar yta (t.ex. en hel obyggd våning) och finns bara i panelen.
 	rekt: { x: number, y: number, w: number, h: number }?,
+	-- 2 = stallets övervåning; plattan ritas på övervåningshöjd.
+	niva: number?,
 }
 
-function Granskning.zoner(K): { Zon }
+function Granskning.zoner(K, Planrum): { Zon }
 	local S = K.stall
 	local R = K.ridhus
 	local ut: { Zon } = {}
@@ -121,6 +123,16 @@ function Granskning.zoner(K): { Zon }
 		klass = "GAP", byggd = false,
 		kalla = "ridhus-gavel-*.jpg, KORT.md: tvåvåningsannex. Interiören obyggd" })
 
+	--[[ De digitaliserade planrummen. Gräns = PLAN, funktion = GAP; inget av
+	     dem är byggt, så alla lyser. Rum utan rekt (perspektivolösta) följer
+	     med som poster utan platta. ]]
+	if Planrum then
+		for _, r in ipairs(Planrum.lista) do
+			zon({ id = r.id, namn = r.namn, hus = r.hus, klass = r.klass,
+				byggd = false, kalla = r.kalla, rekt = r.rekt, niva = r.niva })
+		end
+	end
+
 	return ut
 end
 
@@ -128,7 +140,7 @@ end
 
 local MAPPNAMN = "F02Zoner"
 
-function Granskning.byggZoner(BK, K, model: Model, base: CFrame)
+function Granskning.byggZoner(BK, K, Planrum, model: Model, base: CFrame)
 	local gammal = model:FindFirstChild(MAPPNAMN)
 	if gammal then gammal:Destroy() end
 	local mapp = Instance.new("Folder")
@@ -136,11 +148,14 @@ function Granskning.byggZoner(BK, K, model: Model, base: CFrame)
 	mapp.Parent = model
 
 	local antal = 0
-	for _, z in ipairs(Granskning.zoner(K)) do
+	for _, z in ipairs(Granskning.zoner(K, Planrum)) do
 		if z.rekt then
 			local o = K[z.hus].origo
+			-- Övervåningens plattor ritas strax över stallets takhöjd så att
+			-- plan 1 och plan 2 går att skilja åt i dollhouse-läget.
+			local hojd = if (z.niva or 1) >= 2 then (K[z.hus].tak or 3.4) + 0.4 else 0.12
 			local p = BK.box(mapp :: any, base, "F02 " .. z.id,
-				o.x + z.rekt.x, 0.12, o.y + z.rekt.y,
+				o.x + z.rekt.x, hojd, o.y + z.rekt.y,
 				z.rekt.w, 0.06, z.rekt.h,
 				KLASSFARG[z.klass] or KLASSFARG.GAP, Enum.Material.Neon)
 			p.CanCollide = false
@@ -148,6 +163,21 @@ function Granskning.byggZoner(BK, K, model: Model, base: CFrame)
 			p:SetAttribute("RoomId", z.id)
 			p:SetAttribute("EvidenceClass", z.klass)
 			p:SetAttribute("Byggd", z.byggd)
+			p:SetAttribute("Niva", z.niva or 1)
+
+			-- RoomId ska gå att läsa i översiktsvyn utan att klicka.
+			local gui = Instance.new("SurfaceGui")
+			gui.Name = "F02Etikett"
+			gui.Face = Enum.NormalId.Top
+			gui.Parent = p
+			local text = Instance.new("TextLabel")
+			text.Size = UDim2.new(1, 0, 1, 0)
+			text.BackgroundTransparency = 1
+			text.TextScaled = true
+			text.Text = z.id
+			text.TextColor3 = Color3.fromRGB(20, 20, 20)
+			text.Parent = gui
+
 			antal += 1
 		end
 	end
@@ -195,9 +225,38 @@ end
 	klubb-/gaveldelens kamera och GAP-texten — de ska bedömas som luckor,
 	inte glömmas för att de inte går att stå i. ]]
 
-function Granskning.vyModul(BK, K)
+function Granskning.vyModul(BK, K, Planrum)
 	local vyer = {}
-	for _, z in ipairs(Granskning.zoner(K)) do
+
+	--[[ Översikt per våningsplan FÖRST: alla RoomId-plattor i bild samtidigt,
+	     så att topologin kan jämföras mot planen innan rum-för-rum-stegningen. ]]
+	local oversikter = {
+		{ id = "oversikt_ridhus_entre", hus = "ridhus",
+			text = "ÖVERSIKT — ridhusets entrédel, alla RoomId samtidigt",
+			cx = K.ridhus.bredd / 2, cy = K.ridhus.langd - K.ridhus.entre / 2,
+			spann = K.ridhus.bredd + 6 },
+		{ id = "oversikt_stall_plan1", hus = "stall",
+			text = "ÖVERSIKT — stallets plan 1, alla RoomId samtidigt",
+			cx = K.stall.bredd / 2, cy = K.stall.langd / 2,
+			spann = K.stall.langd + 8 },
+		{ id = "oversikt_stall_plan2", hus = "stall",
+			text = "ÖVERSIKT — stallets plan 2 (plattorna på övervåningshöjd)",
+			cx = K.stall.bredd / 2, cy = K.stall.klubbY + (K.stall.langd - K.stall.klubbY) / 2,
+			spann = (K.stall.langd - K.stall.klubbY) * 2 + 10 },
+	}
+	for _, ov in ipairs(oversikter) do
+		local o = K[ov.hus].origo
+		table.insert(vyer, {
+			id = ov.id, grupp = ov.hus,
+			text = ov.text .. ". [PLAN] Jämför topologin mot planfotot.",
+			krav = "Stämmer rumsindelningen som helhet? Peka sedan rum för rum.",
+			fran = { x = o.x + ov.cx, y = o.y + ov.cy - 0.1, h = ov.spann },
+			mot = { x = o.x + ov.cx, y = o.y + ov.cy },
+			aim = 0,
+		})
+	end
+
+	for _, z in ipairs(Granskning.zoner(K, Planrum)) do
 		local o = K[z.hus].origo
 		local etikett = string.format("[%s%s] %s", z.klass,
 			if z.byggd then "" else " · OBYGGD", z.kalla)
@@ -244,10 +303,10 @@ end
 
 --[[ ── Start ─────────────────────────────────────────────────────────────── ]]
 
-function Granskning.start(BK, K, QAPanel, model: Model, base: CFrame)
-	Granskning.byggZoner(BK, K, model, base)
+function Granskning.start(BK, K, QAPanel, Planrum, model: Model, base: CFrame)
+	Granskning.byggZoner(BK, K, Planrum, model, base)
 	Granskning.dollhouse(model, true)
-	QAPanel.start(Granskning.vyModul(BK, K))
+	QAPanel.start(Granskning.vyModul(BK, K, Planrum))
 	print("[F02] Granskningsläge: dollhouse PÅ, zonplattor ute, panelen öppen.")
 	print("[F02] UBRFDollhouse(false) sätter tillbaka taken.")
 end

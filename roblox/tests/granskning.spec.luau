@@ -23,9 +23,11 @@ end
 local TILLATNA = { PLAN = true, FOTO = true, DERIVED = true, GAP = true }
 
 print("\n── Zonerna härleds ur datan ──")
-local zoner = Granskning.zoner(UBRFKomplex)
+local zoner = Granskning.zoner(UBRFKomplex, Planrum)
 do
 	check("det finns zoner att granska", #zoner >= 12, #zoner .. " st")
+	check("planrummen följde med", #zoner >= 12 + #Planrum.lista,
+		#zoner .. " varav " .. #Planrum.lista .. " planrum")
 
 	local utanforHus, feltyp, obyggdaPlan, gap = 0, 0, 0, 0
 	for _, z in ipairs(zoner) do
@@ -66,7 +68,7 @@ do
 	local ubrf = mapp and mapp:FindFirstChild("UBRF")
 	check("det finns en byggd värld att lägga plattor i", ubrf ~= nil)
 	if ubrf then
-		local antal = Granskning.byggZoner(BuildKit, UBRFKomplex, ubrf, ubrf.PrimaryPart.CFrame)
+		local antal = Granskning.byggZoner(BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame)
 		local ritbara = 0
 		for _, z in ipairs(zoner) do
 			if z.rekt then ritbara += 1 end
@@ -82,7 +84,7 @@ do
 
 		--[[ Andra passet får inte ackumulera plattor — samma regel som
 			dörrprompterna och spawnen. ]]
-		local antal2 = Granskning.byggZoner(BuildKit, UBRFKomplex, ubrf, ubrf.PrimaryPart.CFrame)
+		local antal2 = Granskning.byggZoner(BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame)
 		check("andra passet dubblar inte plattorna", antal2 == antal,
 			antal .. " → " .. antal2)
 	end
@@ -119,8 +121,8 @@ end
 
 print("\n── Vymodulen: två kameror per zon, och fel som hörs ──")
 do
-	local modul = Granskning.vyModul(BuildKit, UBRFKomplex)
-	check("två vyer per zon", #modul.vyer == #zoner * 2,
+	local modul = Granskning.vyModul(BuildKit, UBRFKomplex, Planrum)
+	check("två vyer per zon plus tre översikter", #modul.vyer == #zoner * 2 + 3,
 		#modul.vyer .. " för " .. #zoner .. " zoner")
 
 	local ok = pcall(modul.ga, "finns_inte")
@@ -140,6 +142,46 @@ do
 		end
 	end
 	check("varje vytext bär sin källklass", utanKlass == 0, utanKlass .. " utan")
+end
+
+print("\n── Planrummen: nivåer, etiketter och det olösta ──")
+do
+	local plan2, utanRekt, etiketter = 0, 0, 0
+	for _, r in ipairs(Planrum.lista) do
+		if r.niva == 2 then plan2 += 1 end
+		if not r.rekt then utanRekt += 1 end
+	end
+	check("övervåningen har rum", plan2 >= 5, plan2 .. " st")
+	check("perspektivolösta rum finns som poster, inte som gissade rektanglar",
+		utanRekt >= 5, utanRekt .. " utan rekt")
+
+	--[[ Inga påhittade funktioner: neutrala id:n, aldrig wc/kontor/omkl. ]]
+	local semantiska = 0
+	for _, r in ipairs(Planrum.lista) do
+		if string.find(r.id, "wc") or string.find(r.id, "kontor")
+			or string.find(r.id, "omkl") or string.find(r.id, "cafe_rum") then
+			semantiska += 1
+			print("       semantiskt id: " .. r.id)
+		end
+	end
+	check("inga påhittade funktionsnamn i id:na", semantiska == 0, semantiska .. " st")
+
+	local mapp = workspace:FindFirstChild("Anläggning")
+	local ubrf = mapp and mapp:FindFirstChild("UBRF")
+	if ubrf then
+		local hoga, medEtikett = 0, 0
+		for _, i in ipairs(ubrf:GetDescendants()) do
+			if i:GetAttribute("Niva") == 2 then hoga += 1 end
+			if i.Name == "F02Etikett" then etiketter += 1 end
+			if i:GetAttribute("RoomId") and i:FindFirstChild("F02Etikett") then
+				medEtikett += 1
+			end
+		end
+		check("plan 2-plattorna ligger på övervåningsnivå", hoga == plan2 - 1,
+			hoga .. " (en plan 2-post saknar rekt)")
+		check("varje platta bär en läsbar RoomId-etikett", medEtikett > 0 and etiketter >= medEtikett,
+			medEtikett .. " plattor, " .. etiketter .. " etiketter")
+	end
 end
 
 if fails > 0 then

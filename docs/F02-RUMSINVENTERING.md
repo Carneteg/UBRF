@@ -109,6 +109,38 @@ byggda rum. Gapet är alltså större än rapporterat, inte mindre.
 
 ---
 
+---
+
+## Digitaliseringen — `roblox/buildings/Planrum.luau`
+
+Efter första granskningsomgången: de grova zonerna räckte inte. En hel våning
+som en enda röd platta går bara att underkänna i klump. Varje rums-, korridor-
+och trappgräns som går att läsa ur planen är därför nu ett eget rum med eget
+`RoomId`.
+
+| Plan | Rum totalt | Ritade | Endast poster |
+|---|---|---|---|
+| Ridhusets entréplan | 12 | 6 | 6 |
+| Stallets plan 1 (klubbdelen) | 7 | 7 | 0 |
+| Stallets plan 2 | 8 | 7 | 1 |
+| **Summa** | **27** | **20** | **7** |
+
+**Toleranser, öppet redovisade.** Stallets plan är fotad rakt framifrån och
+läses med ~±0,5 m. Ridhusets är ett perspektivfoto: tvärled håller ±0,5 m, men
+**djupled trycks ihop mot bildens överkant**. Rummen i ridhusets mittblock har
+därför läge men inte mått — de står som poster **utan rektangel**, för en fel
+rektangel är värre än ingen. Det som låser upp dem är en rektifierad bild av
+ridhusplanen, motsvarande stallets `-rak`, eller mått på plats.
+
+**Inga påhittade funktioner.** Ingen rumsetikett är läsbar i något av fotona,
+så alla id:n är neutrala — `rum`, `korridor`, `trapphus`, `schakt`. Aldrig
+`wc` eller `kontor` förrän en källa säger det. Provet faller om någon smyger
+in ett semantiskt namn.
+
+**Ett fynd på vägen:** planen visar utrymningspilar genom **båda** långsidorna
+vid klubbgränsen — en tvärpassage som inte fanns i modellen alls. Den ligger
+nu som `s_tvarpassage_klubb`.
+
 ## Vad Fas 1-granskningsmodellen ska visa
 
 Ur inventeringen följer granskningslägets innehåll — **skal och gränser, inga
