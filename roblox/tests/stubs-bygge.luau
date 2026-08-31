@@ -214,6 +214,10 @@ local __tjanster = {
 	               IsServer = function() return true end },
 	Players = { LocalPlayer = nil },
 	CoreGui = instance("CoreGui"),
+	--[[ Tom med flit. Bänken HAR ingen serverkod inlagd, precis som en Studio
+	     utan Rojo kopplad. Paketets servervarning ska alltså slå här — det är
+	     den grenen som är intressant att kunna prova. ]]
+	ServerScriptService = instance("ServerScriptService"),
 	CollectionService = {
 		GetTagged = function() return {} end,
 		GetInstanceAddedSignal = function() return { Connect = function() end } end,

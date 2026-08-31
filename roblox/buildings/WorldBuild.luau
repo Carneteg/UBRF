@@ -106,13 +106,18 @@ local function findExistingDoor(BK, GEO, model: Model, base: CFrame, b, o, used)
 	return best
 end
 
-local function configureDoor(BK, GEO, model: Model, base: CFrame, b, o, used)
-	if arFonster(o.typ) then return end
+--[[ Returnerar true bara när panelen faktiskt hittades och konfigurerades.
+     Förut returnerade den ingenting och anroparen räknade upp ändå, så
+     räknaren visade antalet öppningar i datan — inte antalet dörrar som blev
+     dörrar. Ett bygge där varenda panel saknades skrev alltså samma rad som
+     ett bygge där allt gick rätt. ]]
+local function configureDoor(BK, GEO, model: Model, base: CFrame, b, o, used): boolean
+	if arFonster(o.typ) then return false end
 	local door = findExistingDoor(BK, GEO, model, base, b, o, used)
 	if not door then
 		warn(string.format("[WorldBuild] Hittar inte dörrpanelen %s/%s/%s",
 			b.id, tostring(o.sida), tostring(o.typ)))
-		return
+		return false
 	end
 
 	local _, _, along, side = GEO.oppningsHorn(b.rekt, o.sida, o.u, o.b)
@@ -162,6 +167,7 @@ local function configureDoor(BK, GEO, model: Model, base: CFrame, b, o, used)
 	doorPrompt.HoldDuration = 0
 	doorPrompt.MaxActivationDistance = 10
 	doorPrompt.RequiresLineOfSight = false
+	return true
 end
 
 local function buildSpawn(BK, WG, model: Model, base: CFrame, G)
@@ -205,18 +211,32 @@ function WorldBuild.apply(BK, G, GEO, WG)
 	end
 
 	local used = {}
-	local doorCount = 0
+	local vantade, byggda = 0, 0
 	for _, b in ipairs(G.byggnader) do
 		for _, o in ipairs(b.oppningar or {}) do
 			if not arFonster(o.typ) then
-				configureDoor(BK, GEO, worldModel, base, b, o, used)
-				doorCount += 1
+				vantade += 1
+				if configureDoor(BK, GEO, worldModel, base, b, o, used) then
+					byggda += 1
+				end
 			end
 		end
 	end
 
 	buildSpawn(BK, WG, worldModel, base, G)
-	print(string.format("[WorldBuild] Spelbar värld: %d dörr-/portöppningar + UBRFSpawn", doorCount))
+
+	--[[ Servern jämför mot det här i stället för mot en siffra den själv
+	     hittar på. Skiljer sig bundna dörrar från byggda vet man direkt att
+	     felet ligger mellan bygget och servern, inte i någondera. ]]
+	worldModel:SetAttribute("DoorsBuilt", byggda)
+
+	print(string.format("[WorldBuild] Spelbar värld: %d/%d dörr-/portöppningar + UBRFSpawn",
+		byggda, vantade))
+	if byggda < vantade then
+		warn(string.format(
+			"[WorldBuild] %d dörrpaneler hittades INTE och blev aldrig dörrar. "
+			.. "Se raderna ovan för vilka.", vantade - byggda))
+	end
 	return true
 end
 

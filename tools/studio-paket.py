@@ -89,6 +89,26 @@ def main() -> int:
         "\nlocal __worldOk = WorldBuild.apply(BuildKit, UBRFKomplex, Geometri, WorldGeometry)\n"
         "assert(__worldOk, \"WorldBuild misslyckades — spelbar värld skapades inte\")\n")
 
+    # Paketet bygger dörrpanelerna och sätter prompten, men SERVERN äger
+    # öppnandet. Utan roblox/src/server inlagt får den som testar en prompt som
+    # inte gör någonting — och rapporterar rimligen "dörrarna fungerar inte" om
+    # en uppsättning som aldrig kördes. Det gick inte att se förrän man stod
+    # framför dörren. Nu syns det direkt efter bygget, innan Play.
+    delar.append(
+        "\nlocal __serverFinns = false\n"
+        "for _, __i in ipairs(game:GetService(\"ServerScriptService\"):GetDescendants()) do\n"
+        "\tif __i.Name == \"WorldService\" then __serverFinns = true break end\n"
+        "end\n"
+        "if __serverFinns then\n"
+        "\tprint(\"Serverkoden finns. Tryck Play — Output ska visa \"\n"
+        "\t\t.. \"[World] Dorrar bundna: N\")\n"
+        "else\n"
+        "\twarn(\"DORRARNA KOMMER INTE ATT FUNGERA: ServerScriptService \"\n"
+        "\t\t.. \"innehaller ingen WorldService. Prompten kommer att synas och \"\n"
+        "\t\t.. \"inte gora nagonting. Kor 'rojo serve roblox/' och Connect i \"\n"
+        "\t\t.. \"Rojo-pluginen, kor sedan om paketet.\")\n"
+        "end\n")
+
     # QA-panelen startas sist och bara i Studio. Den ligger med i paketet,
     # inte i roblox/src/client/, så den följer aldrig med som spelar-UI.
     delar.append(

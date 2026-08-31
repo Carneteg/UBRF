@@ -89,6 +89,38 @@ do
 	check("den stängdes", hel:GetAttribute("DoorOpen") == false)
 end
 
+print("\n── Startraden ska avslöja en trasig uppsättning ──")
+do
+	--[[ Tre dörrar skapades, men bara EN av dem är hel. Räknaren ska visa den
+		bundna, inte de skapade — annars är den samma sorts lögn som
+		WorldBuild:s gamla dörrsiffra, som räknade öppningar i datan i stället
+		för dörrar som blev dörrar. ]]
+	check("bara den hela dörren är bunden", WorldService.boundCount() == 1,
+		WorldService.boundCount() .. " st")
+
+	--[[ Utan Anläggning/UBRF i workspace finns ingenting att jämföra mot, och
+		då ska den säga nil — inte gissa en nolla, som hade läst som "bygget
+		gjorde noll dörrar" och skickat felsökningen åt fel håll. ]]
+	check("byggda dörrar är okänt utan modellen", WorldService.builtCount() == nil,
+		tostring(WorldService.builtCount()))
+
+	local rad, varning = WorldService.startupReport(0, nil, false)
+	check("noll bundna dörrar ger en varning", varning ~= nil)
+	check("och raden säger att spawnen saknas",
+		string.find(rad, "SAKNAS") ~= nil, rad)
+
+	local _, varning2 = WorldService.startupReport(3, 17, true)
+	check("färre bundna än byggda ger en varning", varning2 ~= nil)
+	check("varningen namnger båda talen",
+		varning2 ~= nil and string.find(varning2, "14 av 17") ~= nil,
+		tostring(varning2))
+
+	local rad3, varning3 = WorldService.startupReport(17, 17, true)
+	check("allt stämmer ger INGEN varning", varning3 == nil, tostring(varning3))
+	check("och raden säger att spawnen hittades",
+		string.find(rad3, "hittad") ~= nil, rad3)
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("dorrar.spec: " .. fails .. " fel")

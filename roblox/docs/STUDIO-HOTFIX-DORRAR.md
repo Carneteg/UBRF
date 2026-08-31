@@ -47,26 +47,39 @@ startordningen klagar är dörrarna redan igång.
 Klistra in **hela** `UBRF-klistra-in.luau` i Command Bar och kör den **en gång**.
 Den river en tidigare modell och bygger om från grunden.
 
-Utskriften ska innehålla båda de här raderna:
+Utskriften ska innehålla de här raderna:
 
 ```
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 6 gångytor, N objekt
-[WorldBuild] Spelbar värld: 17 dörr-/portöppningar + UBRFSpawn
+[WorldBuild] Spelbar värld: 17/17 dörr-/portöppningar + UBRFSpawn
+Serverkoden finns. Tryck Play — Output ska visa [World] Dorrar bundna: N
 ```
 
-De fyra första talen och de 17 ska stämma exakt. `N` varierar med bygget och är
-**inget godkännandekriterium**.
+De fyra första talen ska stämma exakt, och dörrsiffran ska vara **17/17**.
+Vänstertalet är dörrar som *blev* dörrar; högertalet är dörrar som *skulle*
+bli det. Står det `14/17` hittade bygget inte tre paneler, och raderna ovanför
+säger vilka. `N` i byggraden varierar och är **inget godkännandekriterium**.
+
+Står det i stället:
+
+```
+DORRARNA KOMMER INTE ATT FUNGERA: ServerScriptService innehaller ingen WorldService.
+```
+
+då är Rojo inte inkopplat. Prompten kommer att synas och inte göra någonting.
+Gå tillbaka till steg 2 och kör om paketet — allt nedan är meningslöst utan det.
 
 ### 4. Play
 
 Vid start ska Output visa:
 
 ```
-[World] Dörrar + UBRFSpawn igång
+[World] Dörrar bundna: 17 — UBRFSpawn hittad
 ```
 
-Saknas den raden är servern inte inkopplad — gå tillbaka till steg 2. Ingen av
-dörrkontrollerna nedan går att göra utan den.
+Siffran ska vara densamma som bygget rapporterade. Kommer raden inte alls är
+servern inte inkopplad. Säger den `0`, eller färre än bygget, följer en varning
+som pekar ut vilket av de två stegen som gick fel.
 
 ## Vad du ska kontrollera
 
@@ -159,7 +172,18 @@ kvar som polish.
 
 ## Om något är fel
 
-Skriv vad du **såg** och **var** — vilken byggnad, vilken sida, vilken dörr.
+**Klistra in de tre raderna först** — byggraden, `[WorldBuild]`-raden och
+`[World]`-raden. Tillsammans säger de var i kedjan det gick sönder, och de tre
+lägena ser olika ut:
+
+| Vad du ser | Var felet ligger |
+|---|---|
+| ingen `[World]`-rad alls | servern kördes aldrig — Rojo |
+| `Dörrar bundna: 0` | panelerna saknar attributen — bygget |
+| `bundna` < `17/17` | bygget och servern är inte överens |
+| allt stämmer, men bladet rör sig inte | då är det en riktig dörrbugg |
+
+Skriv sedan vad du **såg** och **var** — vilken byggnad, vilken sida, vilken dörr.
 Skärmdump vid visuella fel. Skriv inte gissad orsak; det öppnar en riktad fix på
 fel ställe.
 
