@@ -1,0 +1,116 @@
+name: Grindar
+
+# Gaterna fanns redan i repot — de var bara frivilliga. Den här workflowen gör
+# Lager B i docs/DELIVERY-PROTOCOL.md automatiskt och obligatoriskt: ingen kan
+# längre säga "testerna är gröna" utan att exitkoden finns här att läsa.
+#
+# Varje steg är villkorat på att filen existerar. Det är avsiktligt: olika
+# brancher har olika många kontroller, och en PR ska inte falla för att den
+# ännu inte har en kontroll som en annan branch har infört.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  grindar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Hämta luau
+        run: |
+          set -euo pipefail
+          curl -sSfL -o /tmp/luau.zip \
+            https://github.com/luau-lang/luau/releases/latest/download/luau-ubuntu.zip
+          unzip -o -q /tmp/luau.zip -d /tmp/luau
+          sudo install -m 0755 /tmp/luau/luau /usr/local/bin/luau
+          luau --help >/dev/null && echo "luau installerad"
+
+      - name: Materialkontroll — ogiltigt Enum.Material fäller Studio
+        run: |
+          if [ -f tools/kolla-material.py ]; then python3 tools/kolla-material.py
+          else echo "hoppar: tools/kolla-material.py finns inte i denna branch"; fi
+
+      - name: Speldata i synk — src/spel/ mot UBRFSpel.luau
+        run: |
+          if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera
+          else echo "hoppar: tools/exportera-spel.js finns inte i denna branch"; fi
+
+      - name: Geometri i synk — src/site.js mot UBRFKomplex.luau
+        run: |
+          if [ -f tools/exportera-geometri.js ]; then node tools/exportera-geometri.js --kontrollera
+          else echo "hoppar: tools/exportera-geometri.js finns inte i denna branch"; fi
+
+      - name: Dörrfärgsparitet webb/Roblox
+        run: |
+          if [ -f tools/kolla-dorrfarg.py ]; then python3 tools/kolla-dorrfarg.py
+          else echo "hoppar: tools/kolla-dorrfarg.py finns inte i denna branch"; fi
+
+      - name: Rojo-projektkontroll
+        run: |
+          if [ -f tools/kolla-rojo.py ]; then python3 tools/kolla-rojo.py
+          else echo "hoppar: tools/kolla-rojo.py finns inte i denna branch"; fi
+
+      - name: Luau-specarna
+        run: |
+          if [ -f roblox/tests/kor.sh ]; then bash roblox/tests/kor.sh
+          else echo "hoppar: roblox/tests/kor.sh finns inte i denna branch"; fi
+
+      - name: Referenschecksummor
+        run: |
+          if [ -f references/CHECKSUMS.sha256 ]; then
+            cd references && sha256sum -c --quiet CHECKSUMS.sha256
+          else echo "hoppar: references/CHECKSUMS.sha256 finns inte i denna branch"; fi
+
+      - name: Webbygget
+        run: |
+          if [ -f tools/build.py ]; then python3 tools/build.py
+          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+
+      - name: Studio-paketet ska gå att bygga
+        run: |
+          if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
+          else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
+
+  dubbel-sanning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Genererade filer får inte handredigeras
+        run: |
+          set -euo pipefail
+          # Genererade Luau-filer bär en varningsrad. Om en PR ändrar en sådan
+          # fil utan att också ändra sin generator är det en handredigering, och
+          # då är sanningen dubbel igen — precis det som --kontrollera finns för.
+          git fetch origin "${GITHUB_BASE_REF:-main}" --depth=1 || true
+          bas="origin/${GITHUB_BASE_REF:-main}"
+          git rev-parse --verify "$bas" >/dev/null 2>&1 || { echo "ingen bas att jämföra mot"; exit 0; }
+          andrade=$(git diff --name-only "$bas"...HEAD || true)
+          fel=0
+          for genererad in roblox/game/UBRFSpel.luau roblox/buildings/UBRFKomplex.luau; do
+            printf '%s\n' "$andrade" | grep -qx "$genererad" || continue
+            case "$genererad" in
+              roblox/game/UBRFSpel.luau)        gen="tools/exportera-spel.js";;
+              roblox/buildings/UBRFKomplex.luau) gen="tools/exportera-geometri.js";;
+            esac
+            kalla=$(printf '%s\n' "$andrade" | grep -E '^(src/|tools/)' || true)
+            if [ -z "$kalla" ]; then
+              echo "FEL  $genererad ändrad utan någon ändring i src/ eller tools/ — genererad fil handredigerad?"
+              echo "     generatorn är $gen"
+              fel=1
+            fi
+          done
+          [ "$fel" -eq 0 ] && echo "OK   inga handredigerade genererade filer"
+          exit $fel
