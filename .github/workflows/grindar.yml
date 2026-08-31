@@ -63,6 +63,11 @@ jobs:
           if [ -f tools/kolla-rojo.py ]; then python3 tools/kolla-rojo.py
           else echo "hoppar: tools/kolla-rojo.py finns inte i denna branch"; fi
 
+      - name: VERIFIED kräver granskad nyckelbild
+        run: |
+          if [ -f tools/kolla-nyckelbilder.py ]; then python3 tools/kolla-nyckelbilder.py
+          else echo "hoppar: tools/kolla-nyckelbilder.py finns inte i denna branch"; fi
+
       - name: Luau-specarna
         run: |
           if [ -f roblox/tests/kor.sh ]; then bash roblox/tests/kor.sh
