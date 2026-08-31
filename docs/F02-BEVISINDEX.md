@@ -39,7 +39,19 @@ löser alltså en **passage**, inte en rumsfunktion. Inget av de 27 rummen i
 `roblox/buildings/Planrum.luau` får ett namn av den. Den korrigerade
 formuleringen står i båda dokumenten.
 
-### 3. Hashgallringen tappade långsamma panoreringar
+### 3. `IMG_NNNN` räcker inte längre som nyckel
+
+#46 dokumenterar en nummerkollision: repots `IMG_0246.mov`–`IMG_0250.mov` delar
+nummer med helt andra filer i den nya Drive-uppladdningen — `IMG_0246`–`0248`
+som HEIC i *Stallhuset*, `IMG_0249` och `0250` i *Omnejd* och *Ridhuset*.
+Samma nyckel, olika innehåll.
+
+Varje filmhänvisning i det här dokumentet betyder därför **filen i
+`references/video/`** och skrivs ut med `.mov`. Elva hänvisningar stod tidigare
+nakna som `IMG_0249` och pekade efter #46 på två filer samtidigt. Ett bevisindex
+vars nycklar är tvetydiga är inte ett bevisindex.
+
+### 4. Hashgallringen tappade långsamma panoreringar
 
 `references/video/README.md` beskrev en gallring på medelvärdeshash med
 tröskel 8. Den metoden behöll **3 av 132** bildrutor ur `IMG_0246.mov` — en
@@ -65,7 +77,7 @@ ytter­trappan uppe på väggen, och panoreringen vidare mot stallet.
 ### Vad passet INTE hittade
 
 Ingen ny byggd eller obyggd yta. Tre bildrutor jag först tog för nya vinklar
-ur `IMG_0250` visade sig vara identiska med `stall-gang-20`, `-21` och `-22`
+ur `IMG_0250.mov` visade sig vara identiska med `stall-gang-20`, `-21` och `-22`
 som redan låg i repot. De togs bort igen. Samlingen var alltså inte så tunn
 som filmlängden antydde — den var felsorterad.
 
@@ -77,12 +89,12 @@ som filmlängden antydde — den var felsorterad.
 
 | Zon | Plan | Stillbilder | Råfilm (bildrutor) | Klass |
 |---|---|---|---|---|
-| stallets boxhall, banden | `stall-plan1-utrymning-rak` | `stall-gang-01…19` | `IMG_0249` 1–399, `IMG_0250` 1–83 | `PLAN` + `FILM` |
-| stallets sidoöppning mot servicedelen | plan 1 | `stall-gang-20…22` | `IMG_0250` 84–155 | `FILM` — geometri belagd, **funktion olöst** |
-| stallets entrévestibul, klubbänden | plan 1 | `stall-entre-07…14` | `IMG_0248` 1–78 | `FILM` — rak trappa syns **underifrån**, dörrpar, skylt `Stall` |
-| stallets förstukvist utifrån | — | `stall-entre-01…06`, `-15`, `-16` | `IMG_0247` 1–61 | `FOTO` + `FILM` |
-| mässingsplaketterna vid entrédörren | — | `stall-entre-15-dorren` | `IMG_0247` 50–61 | **finns**, men texten är `REFERENCE GAP` — oläslig i alla bildrutor |
-| ridhusets långsida + yttertrappan | — | `ridhus-gavel-04-statrappan` | `IMG_0246` 30–75 | `FOTO` + `FILM` |
+| stallets boxhall, banden | `stall-plan1-utrymning-rak` | `stall-gang-01…19` | `IMG_0249.mov` 1–399, `IMG_0250.mov` 1–83 | `PLAN` + `FILM` |
+| stallets sidoöppning mot servicedelen | plan 1 | `stall-gang-20…22` | `IMG_0250.mov` 84–155 | `FILM` — geometri belagd, **funktion olöst** |
+| stallets entrévestibul, klubbänden | plan 1 | `stall-entre-07…14` | `IMG_0248.mov` 1–78 | `FILM` — rak trappa syns **underifrån**, dörrpar, skylt `Stall` |
+| stallets förstukvist utifrån | — | `stall-entre-01…06`, `-15`, `-16` | `IMG_0247.mov` 1–61 | `FOTO` + `FILM` |
+| mässingsplaketterna vid entrédörren | — | `stall-entre-15-dorren` | `IMG_0247.mov` 50–61 | **finns**, men texten är `REFERENCE GAP` — oläslig i alla bildrutor |
+| ridhusets långsida + yttertrappan | — | `ridhus-gavel-04-statrappan` | `IMG_0246.mov` 30–75 | `FOTO` + `FILM` |
 | ridhusets banhall | — | `ridhus-inne-01…03` | ingen film | `FOTO` |
 | **stallets plan 2, invändigt** | plan 2 | inga | **ingen av de fem filmerna** | **GAP EFTER UTTÖMT BEVIS** |
 | **ridhusets entréblock, invändigt** | `ridhus-entreplan-utrymning` | inga | **ingen av de fem filmerna** | **GAP EFTER UTTÖMT BEVIS** |
@@ -95,12 +107,27 @@ film går in i ridhuset.
 ## Vad filmerna kan och inte kan
 
 Filmerna är handhållna och gående. Skärpan mätt som Laplace-varians toppar
-kring **83** i `IMG_0250` och **42** i `IMG_0248`; resten är rörelseoskärpa.
+kring **83** i `IMG_0250.mov` och **42** i `IMG_0248.mov`; resten är rörelseoskärpa.
 
 De duger till **topologi, förekomst och färgläge**. De duger **inte** till
 mått: ingen skalstock finns i bild, och rörelseoskärpan gör kanterna
 osäkra på flera pixlar. Ett mått taget ur en filmbildruta vore ett antagande
 med en bild bakom sig, vilket är sämre än ett öppet antagande.
+
+### Vilka filmer passet omfattar
+
+De **fem** filmerna i `references/video/`. #46 lade till 169 nyckelrutor ur
+tolv **ytterligare** filmer, men de filmerna ligger inte i repot (327 MB) —
+bara rutorna. Passet ovan kan alltså inte köras på dem.
+
+Enligt #46:s egen redovisning visar elva av de tolv utsidan eller klubbhuset,
+och den tolfte (`IMG_0275`) panorerar ridhusets läktarsida bakom kondens på
+objektivet. **Ingen av dem visar stallets Plan 2 eller ridhusets entréblock**,
+som är de två `REFERENCE GAP` det här passet uttömde. De två luckorna står
+alltså kvar av samma skäl som förut, inte av förbiseende.
+
+Klubbhusets insida är däremot nytt material utan matris eller inventering.
+Det ligger utanför F02:s topologisteg och hör till ett eget pass.
 
 ## Så körs passet om
 

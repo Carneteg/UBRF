@@ -43,7 +43,7 @@ Byggt i dag: `uppehallsrum`, `teorisal` (TEORISAL · WC), `sadelkammare`.
 | Post | Klass | Kommentar |
 |---|---|---|
 | att klubbdelen är rumsindelad | `PLAN` | väggtäthet vid norra änden |
-| den raka trappan i klubbdelen | `PLAN` + `FILM` | syns **underifrån** i `stall-entre-07…09` / `IMG_0248`. **Inte byggd** — bara spiraltrappan utanpå finns |
+| den raka trappan i klubbdelen | `PLAN` + `FILM` | syns **underifrån** i `stall-entre-07…09` / `IMG_0248.mov`. **Inte byggd** — bara spiraltrappan utanpå finns |
 | de tre byggda rummens gränser | `DERIVED` | satta före F02; ska kvitteras mot planens rumsgränser i granskningsläget |
 | rummens funktioner (teorisal, WC, sadelkammare) | `INTERIOR-MATRIS`/foto där täckt, annars `ASSUMPTION` | etiketter går inte att läsa i planen |
 | ytterligare rum planen antyder utöver de tre | `REFERENCE GAP` | räknas först i granskningsläget mot planbilden, inte ur minnet |
