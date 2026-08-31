@@ -128,8 +128,13 @@ function Granskning.zoner(K, Planrum): { Zon }
 	     med som poster utan platta. ]]
 	if Planrum then
 		for _, r in ipairs(Planrum.lista) do
+			--[[ Meter räknas fram ur normaliserade planandelar, och klassen
+			     följer med: ASSUMED_SCALE, inte PLAN. Planens proportioner är
+			     belagda; dess meterskala är det inte. ]]
+			local rekt, skalklass = Planrum.meter(r)
 			zon({ id = r.id, namn = r.namn, hus = r.hus, klass = r.klass,
-				byggd = false, kalla = r.kalla, rekt = r.rekt, niva = r.niva })
+				byggd = false, niva = r.niva, rekt = rekt,
+				kalla = r.kalla .. " · " .. skalklass })
 		end
 	end
 
@@ -183,6 +188,91 @@ function Granskning.byggZoner(BK, K, Planrum, model: Model, base: CFrame)
 	end
 	print(string.format("[F02] %d zonplattor byggda i %s", antal, MAPPNAMN))
 	return antal
+end
+
+--[[ ── Granskningsväggar ──────────────────────────────────────────────────
+
+	Zonplattor visar VAR ett rum ligger men inte att det har väggar. Tobias
+	ska kunna säga "den här väggen sitter fel", och det går inte mot en platt
+	färgruta. Varje ritbar zon får därför en tunn kontur — fyra liggande
+	balkar runt rektangeln — i zonens källfärg.
+
+	Det här är ANNOTERING, inte byggnad. Allt hamnar i F02ReviewGeometry,
+	allt är CanCollide = false, och ingenting befordras till spelgeometri
+	förrän Tobias accepterat topologin. ]]
+
+local VAGGMAPP = "F02ReviewGeometry"
+
+function Granskning.byggVaggar(BK, K, Planrum, model: Model, base: CFrame)
+	local gammal = model:FindFirstChild(VAGGMAPP)
+	if gammal then gammal:Destroy() end
+	local mapp = Instance.new("Folder")
+	mapp.Name = VAGGMAPP
+	mapp.Parent = model
+
+	local T, H = 0.12, 1.9   -- konturtjocklek och höjd, båda granskningsvärden
+	local vaggar, trappor = 0, 0
+
+	for _, z in ipairs(Granskning.zoner(K, Planrum)) do
+		if z.rekt then
+			local o = K[z.hus].origo
+			local golv = if (z.niva or 1) >= 2 then (K[z.hus].tak or 3.4) + 0.4 else 0.15
+			local f = KLASSFARG[z.klass] or KLASSFARG.GAP
+			local r = z.rekt
+			--[[ Fyra sidor. Långsidorna går hela vägen, kortsidorna dras in så
+			     att hörnen inte överlappar och blir dubbelt så mörka. ]]
+			local sidor = {
+				{ r.x, r.y, r.w, T },
+				{ r.x, r.y + r.h - T, r.w, T },
+				{ r.x, r.y + T, T, r.h - 2 * T },
+				{ r.x + r.w - T, r.y + T, T, r.h - 2 * T },
+			}
+			for i, s in ipairs(sidor) do
+				local p = BK.box(mapp :: any, base,
+					string.format("F02vagg %s %d", z.id, i),
+					o.x + s[1], golv, o.y + s[2], s[3], H, s[4], f,
+					Enum.Material.SmoothPlastic)
+				p.CanCollide = false
+				p.Transparency = 0.35
+				p:SetAttribute("RoomId", z.id)
+				p:SetAttribute("EvidenceClass", z.klass)
+				p:SetAttribute("F02Review", true)
+				vaggar += 1
+			end
+
+			--[[ Trappor får en egen markering: en konturvägg säger inte att
+			     man ska kunna gå UPP där. ]]
+			if string.find(z.id, "trapp") then
+				local p = BK.box(mapp :: any, base, "F02trappa " .. z.id,
+					o.x + r.x + T, golv, o.y + r.y + T,
+					r.w - 2 * T, 0.05, r.h - 2 * T,
+					Color3.fromRGB(240, 240, 240), Enum.Material.Neon)
+				p.CanCollide = false
+				p.Transparency = 0.4
+				p:SetAttribute("RoomId", z.id)
+				p:SetAttribute("F02Review", true)
+				trappor += 1
+			end
+		end
+	end
+
+	print(string.format("[F02] %d granskningsväggar, %d trappmarkeringar i %s "
+		.. "(CanCollide=false, aldrig spelgeometri)", vaggar, trappor, VAGGMAPP))
+	return vaggar, trappor
+end
+
+function Granskning.visaVaggar(model: Model, pa: boolean): number
+	local mapp = model:FindFirstChild(VAGGMAPP)
+	if not mapp then return 0 end
+	local n = 0
+	for _, i in ipairs(mapp:GetDescendants()) do
+		if i:GetAttribute("F02Review") == true then
+			i.Transparency = if pa then 0.35 else 1
+			n += 1
+		end
+	end
+	print(string.format("[F02] Granskningsväggar %s: %d delar", if pa then "PÅ" else "AV", n))
+	return n
 end
 
 --[[ ── Dollhouse ───────────────────────────────────────────────────────────
@@ -305,10 +395,12 @@ end
 
 function Granskning.start(BK, K, QAPanel, Planrum, model: Model, base: CFrame)
 	Granskning.byggZoner(BK, K, Planrum, model, base)
+	Granskning.byggVaggar(BK, K, Planrum, model, base)
 	Granskning.dollhouse(model, true)
 	QAPanel.start(Granskning.vyModul(BK, K, Planrum))
 	print("[F02] Granskningsläge: dollhouse PÅ, zonplattor ute, panelen öppen.")
-	print("[F02] UBRFDollhouse(false) sätter tillbaka taken.")
+	print("[F02] UBRFDollhouse(false) sätter tillbaka taken, "
+		.. "UBRFVaggar(false) gömmer granskningsväggarna.")
 end
 
 return Granskning

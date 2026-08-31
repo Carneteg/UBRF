@@ -184,6 +184,103 @@ do
 	end
 end
 
+print("\n── Normaliserat är källan, meter är ett antagande ──")
+do
+	--[[ PLAN1-OMMATNING säger att planerna saknar skalstock och att stallets
+		bredd är olöst 15–23 m. Meterrektanglar räknade på 21 m får därför
+		inte klassas som PLAN — då blir ett arbetsvärde kanon bakvägen. ]]
+	local utanN = 0
+	for _, r in ipairs(Planrum.lista) do
+		if r.rekt ~= nil then utanN += 1 end
+	end
+	check("inga meterrektanglar ligger kvar i källdatan", utanN == 0, utanN .. " st")
+
+	local n01 = 0
+	for _, r in ipairs(Planrum.lista) do
+		if r.nrekt then
+			local b = r.nrekt
+			if b.x >= -0.001 and b.y >= -0.001
+				and b.x + b.w <= 1.001 and b.y + b.h <= 1.001 then
+				n01 += 1
+			else
+				print("       utanför 0–1: " .. r.id)
+			end
+		end
+	end
+	check("varje normaliserad rekt ligger inom 0–1", n01 == 20, n01 .. " av 20")
+
+	for _, hus in ipairs({ "stall", "ridhus" }) do
+		check(hus .. "s skala är märkt ASSUMED_SCALE",
+			Planrum.SKALA[hus].klass == "ASSUMED_SCALE", Planrum.SKALA[hus].klass)
+	end
+
+	--[[ meter() ska bära klassen vidare, inte tappa den. ]]
+	local forsta
+	for _, r in ipairs(Planrum.lista) do
+		if r.nrekt and not forsta then forsta = r end
+	end
+	local m, klass = Planrum.meter(forsta)
+	check("meter() ger en rektangel", m ~= nil)
+	check("och märker den ASSUMED_SCALE", klass == "ASSUMED_SCALE", tostring(klass))
+	local utanRekt
+	for _, r in ipairs(Planrum.lista) do
+		if not r.nrekt and not utanRekt then utanRekt = r end
+	end
+	local m2, klass2 = Planrum.meter(utanRekt)
+	check("ett rum utan planmått ger nil och GAP", m2 == nil and klass2 == "GAP",
+		tostring(m2) .. "/" .. tostring(klass2))
+
+	--[[ Skalklassen ska synas i QA-texten. Tystnar den där är hela poängen
+		borta: den som granskar tror att metertalen är mätta. ]]
+	local modul = Granskning.vyModul(BuildKit, UBRFKomplex, Planrum)
+	local medSkalklass = 0
+	for _, v in ipairs(modul.vyer) do
+		if string.find(v.text, "ASSUMED_SCALE", 1, true) then medSkalklass += 1 end
+	end
+	check("planrummens vytexter bär ASSUMED_SCALE", medSkalklass >= 40,
+		medSkalklass .. " vyer")
+end
+
+print("\n── Granskningsväggarna: annotering, aldrig spelgeometri ──")
+do
+	local mapp = workspace:FindFirstChild("Anläggning")
+	local ubrf = mapp and mapp:FindFirstChild("UBRF")
+	if ubrf then
+		local vaggar, trappor = Granskning.byggVaggar(
+			BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame)
+		local ritbara = 0
+		for _, z in ipairs(zoner) do
+			if z.rekt then ritbara += 1 end
+		end
+		check("fyra konturväggar per ritbar zon", vaggar == ritbara * 4,
+			vaggar .. " för " .. ritbara .. " zoner")
+		check("trapporna fick egen markering", trappor >= 3, trappor .. " st")
+
+		--[[ Det farliga vore att de här smyger in i spelet. Ingen av dem får
+			kollidera, och alla ska bära F02Review. ]]
+		local kolliderar, utanFlagga = 0, 0
+		local vmapp = ubrf:FindFirstChild("F02ReviewGeometry")
+		check("de ligger i en egen mapp", vmapp ~= nil)
+		if vmapp then
+			for _, i in ipairs(vmapp:GetDescendants()) do
+				if i.CanCollide == true then kolliderar += 1 end
+				if i:GetAttribute("F02Review") ~= true then utanFlagga += 1 end
+			end
+		end
+		check("ingen granskningsvägg kolliderar", kolliderar == 0, kolliderar .. " st")
+		check("alla bär F02Review", utanFlagga == 0, utanFlagga .. " utan")
+
+		local vaggar2 = Granskning.byggVaggar(
+			BuildKit, UBRFKomplex, Planrum, ubrf, ubrf.PrimaryPart.CFrame)
+		check("andra passet dubblar inte väggarna", vaggar2 == vaggar,
+			vaggar .. " → " .. vaggar2)
+
+		local av = Granskning.visaVaggar(ubrf, false)
+		check("de går att gömma", av > 0, av .. " delar")
+		Granskning.visaVaggar(ubrf, true)
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("granskning.spec: " .. fails .. " fel")
