@@ -3,6 +3,27 @@
 Steg 2 i interiör-P0. En rad per zon: plan-fakta, foto-fakta, `REFERENCE GAP`.
 Beskriver **nuläget**, inte historiken.
 
+## Funktion fastställd 2026-08-31: glasbandet är ett kafé
+
+Tobias: **den glasade våningen i ridhuset är ett kafé.** `VERIFIED` på hans
+uppgift. Det ändrar två saker i den här matrisen.
+
+1. `KNOWN MISMATCH` på glasbandet (*"läser som en mörk remsa, inte som fönster
+   med bruna karmar in i upplysta rum"*, § Vy 1) är inte en materialfråga utan en
+   rumsfråga. Kaféet har fönstervägg mot ridbanan.
+2. § *Punkt 4 · klockan* placerar cafeklockan i norra änden och lägger separat
+   till `kortanda.klocka`. Om kaféet ligger vid kortändan kan de två vara samma
+   klocka. **Ej avgjort — ska prövas mot planen innan något byggs om.**
+
+Matrisen vilar på **3 källbilder**. Sedan 2026-08-31 finns **103** i repot; se
+`references/RIDHUS-INVENTERING-2026-08-31.md`. Matrisen ska byggas om på hela
+underlaget, och tills det är gjort får dess `[REFERENCE GAP]`-rader inte läsas som
+att underlag saknas — bara att den här matrisen inte sett det.
+
+Väggmodellen är också rättad sedan matrisen skrevs: långsidorna är mörk rödbrun
+panel med vita hyllister, kortsidan vid A är ljus vitmålad skivpanel, och
+materialgränsen ligger i hörnet — inte längs en långsida.
+
 ## Källor
 
 | kort | fil |
