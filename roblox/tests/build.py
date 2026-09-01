@@ -42,10 +42,13 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
-# Speldatan: stallet behöver både hästarna och den mätta stallgeometrin.
+# Speldatan: hästdata och skötseldata genereras var för sig. UBRFSpel är den
+# tunna runtime-fasaden som fogar ihop dem innan Stallet läser kontraktet.
 SPEL = GEOMETRI + [
-    ("UBRFSpel", "game/UBRFSpel.luau"),
-    ("Stallet",  "game/Stallet.luau"),
+    ("UBRFSpelData", "game/UBRFSpelData.luau"),
+    ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
+    ("UBRFSpel",     "game/UBRFSpel.luau"),
+    ("Stallet",      "game/Stallet.luau"),
 ]
 
 QA = BYGGE + [
@@ -74,6 +77,10 @@ MODULER = [
     ("TouchControls",      "src/client/TouchControls.luau"),
 ]
 
+# require-formerna som förekommer i koden, till modulnamn.
+# HorseCore star kvar sarskilt: utan barn blir det __Core, tabellen stubbfilen
+# bygger. Sista alternativet tar de ovriga ReplicatedStorage-modulerna
+# (UBRFSpelData, UBRFSkotsel, UBRFSpel, Stallet, UBRFKomplex).
 REQUIRE = re.compile(
     r'require\(\s*(?:script\.Parent\.(\w+)'
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.HorseCore(?:\.(\w+))?'
@@ -89,8 +96,6 @@ def material() -> list:
 
 def las(rel: str) -> str:
     return (ROT / rel).read_text(encoding="utf-8")
-
-
 def inlina(kalla: str) -> str:
     def byt(m):
         if m.group(1): return m.group(1)

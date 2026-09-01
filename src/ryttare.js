@@ -14,18 +14,34 @@ const GRUPPSTEGE=["ledlektion","knatte","minior","grupp1","grupp2","grupp3","gru
 const GRUPPNAMN={ledlektion:"Ledlektion",knatte:"Knattegruppen",minior:"Miniorgruppen",
   grupp1:"Grupp 1",grupp2:"Grupp 2",grupp3:"Grupp 3",grupp4:"Grupp 4",grupp5:"Grupp 5",
   hoppgrupp:"Hoppgruppen"};
-/* Från vilket steg varje häst anförtros — de förlåtande först,
-   de känsliga som belöning. */
-const HAST_MINGRUPP={toblerone:0, lydia:0, lady:0, chip:1, tina:2, cosmo:3, air:3,
-  westside:3, husky:4, mara:4, larry:5, dexter:5, makadu:5,
-  hamilton:6, crokino:6, conor:7, kennedy:7};
+/* Från vilket steg varje TUNAD häst anförtros. Det här är gameplay, inte
+   verklighetsfakta. S2c neutraliserar Lady, Westside och Kennedy eftersom
+   deras gamla profiler hörde till felaktig identitetsdata; nya hästar är
+   också UNTUNED. De ska därför inte smygas in i en elevgrupp förrän en
+   separat tuning-slice har bestämt deras gameplayroll. */
+const HAST_MINGRUPP={toblerone:0, lydia:0, cosmo:3, air:3, larry:5, dexter:5,
+  hamilton:6, crokino:6, conor:7};
 const UPPFLYTT_KRAV=2;   // godkända pass för uppflyttning
 
 const SPAR_NYCKEL="ubrf-ridskolan-v1";
+const HASTKANON_VERSION="2026-09-01";
+/* Dessa id:n bar före S2c antingen helt påhittade hästar eller felaktig
+   identitetsdata. Ett gammalt förtroende, en skada eller en rosett får
+   därför aldrig tyst flyttas över till den korrigerade verkliga hästen. */
+const OGILTIGA_HASTMINNEN=new Set(["lady","westside","kennedy","chip","tina","makadu","mara","husky"]);
 let SPAR=null;
 
 function nyProfil(){
-  return {grupp:"ledlektion", poang:0, pass:0, fortroende:{}, historik:[], rosetter:[]};
+  return {grupp:"ledlektion", poang:0, pass:0, fortroende:{}, historik:[], rosetter:[],
+    hastkanonVersion:HASTKANON_VERSION};
+}
+function migreraHastkanon(profil){
+  if(!profil||profil.hastkanonVersion===HASTKANON_VERSION)return profil;
+  for(const id of OGILTIGA_HASTMINNEN)delete profil.fortroende[id];
+  profil.historik=profil.historik.filter(r=>!r||!OGILTIGA_HASTMINNEN.has(r.hast));
+  profil.rosetter=profil.rosetter.filter(r=>!r||!OGILTIGA_HASTMINNEN.has(r.hast));
+  profil.hastkanonVersion=HASTKANON_VERSION;
+  return profil;
 }
 function laddaRyttare(){
   SPAR=nyProfil();
@@ -44,9 +60,11 @@ function laddaRyttare(){
         SPAR={...nyProfil(),...d, fortroende:obj(d.fortroende),
           historik:arr(d.historik), rosetter:arr(d.rosetter),
           fardighet:obj(d.fardighet), jag:obj(d.jag),
+          hastkanonVersion:d.hastkanonVersion===HASTKANON_VERSION?HASTKANON_VERSION:null,
           poang:+d.poang||0, pass:+d.pass||0};
     }
   }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
+  SPAR=migreraHastkanon(SPAR);
   G.grupp=SPAR.grupp;
 }
 function sparaRyttare(){
@@ -76,11 +94,12 @@ function dagensHandelser(){
       ut[id]={typ:"skada", text:`vila — ${m.skada.namn} (${m.skada.passKvar} pass kvar)`}; }
   return ut;
 }
-/* Hästpoolen för en grupp: alla hästar som anförtros på den nivån
-   och som är i tjänst i dag. */
+/* Hästpoolen för en grupp: bara hästar som både finns i den aktuella kanonen,
+   har en avsiktlig gameplay-tröskel och är i tjänst i dag. */
 function hastpool(grupp){
   const idx=GRUPPSTEGE.indexOf(grupp);
-  const enligtGrupp=Object.keys(HAST_MINGRUPP).filter(id=>HAST_MINGRUPP[id]<=idx);
+  const enligtGrupp=Object.keys(HAST_MINGRUPP)
+    .filter(id=>HORSES[id]&&HAST_MINGRUPP[id]<=idx);
   const borta=dagensHandelser();
   const pool=enligtGrupp.filter(id=>!borta[id]);
   return pool.length?pool:(enligtGrupp.length?enligtGrupp:["toblerone"]);
