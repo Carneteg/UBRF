@@ -132,6 +132,41 @@ function kontrolleraSkotsel() {
   }
 }
 
+/* Lektionsrotationen låg kvar på den gamla 17-hästarslistan när S2c bytte
+   kanon till 33. Då kunde webben välja t.ex. `chip` trots att HORSES.chip
+   inte längre finns. Grinden läser den lilla gameplaytabellen statiskt:
+   varje id måste finnas i kanonen och vara medvetet tunat. UNTUNED hästar
+   får finnas i kanonen men kommer inte in i lektion förrän de har en egen
+   tuning-slice. */
+function kontrolleraRotation() {
+  const src = las("src/ryttare.js");
+  const block = src.match(/const\s+HAST_MINGRUPP\s*=\s*\{([\s\S]*?)\};/);
+  if (!block) {
+    console.error("FEL  hittar inte HAST_MINGRUPP i src/ryttare.js");
+    process.exit(2);
+  }
+  const par = [...block[1].matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(\d+)/g)]
+    .map(m => ({id: m[1], steg: Number(m[2])}));
+  if (!par.length) {
+    console.error("FEL  HAST_MINGRUPP är tom eller kunde inte tolkas");
+    process.exit(2);
+  }
+  const ids = par.map(p => p.id);
+  const dubbla = ids.filter((id, i) => ids.indexOf(id) !== i);
+  const okanda = par.filter(p => !HORSES[p.id]).map(p => p.id);
+  const otunade = par.filter(p => HORSES[p.id] && HORSES[p.id].gameplayStatus !== "LEGACY_TUNED")
+    .map(p => p.id);
+  const felSteg = par.filter(p => p.steg < 0 || p.steg > 8).map(p => `${p.id}=${p.steg}`);
+  if (dubbla.length || okanda.length || otunade.length || felSteg.length) {
+    console.error("FEL  lektionsrotationen avviker från hästkanonen");
+    if (dubbla.length) console.error("  dubbla id: " + [...new Set(dubbla)].join(", "));
+    if (okanda.length) console.error("  id som inte finns i HORSES: " + okanda.join(", "));
+    if (otunade.length) console.error("  hästar utan avsiktlig tuning: " + otunade.join(", "));
+    if (felSteg.length) console.error("  ogiltiga gruppsteg: " + felSteg.join(", "));
+    process.exit(2);
+  }
+}
+
 function tal(v) {
   const r = Math.round(v * 1e6) / 1e6;
   return Object.is(r, -0) ? "0" : String(r);
@@ -177,6 +212,7 @@ function luauPretty(v, indent = 0) {
 
 kontrolleraFakta();
 kontrolleraSkotsel();
+kontrolleraRotation();
 
 for (const id of Object.keys(HORSES)) {
   if (!IDENT.test(id)) {
@@ -293,7 +329,7 @@ if (kontrollerar) {
     console.error("     kör: node tools/exportera-spel.js");
     process.exit(1);
   }
-  console.log(`OK   Roblox-speldatan är i synk; ${ordning.length} hästar matchar snapshot och skötselkanonen`);
+  console.log(`OK   Roblox-speldatan är i synk; ${ordning.length} hästar matchar snapshot, skötselkanon och rotation`);
   process.exit(0);
 }
 
