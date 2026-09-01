@@ -33,10 +33,13 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
-# Speldatan: stallet behover bade hastarna och den matta stallgeometrin.
+# Speldatan: hästdata och skötseldata genereras var för sig. UBRFSpel är den
+# tunna runtime-fasaden som fogar ihop dem innan Stallet läser kontraktet.
 SPEL = GEOMETRI + [
-    ("UBRFSpel", "game/UBRFSpel.luau"),
-    ("Stallet",  "game/Stallet.luau"),
+    ("UBRFSpelData", "game/UBRFSpelData.luau"),
+    ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
+    ("UBRFSpel",     "game/UBRFSpel.luau"),
+    ("Stallet",      "game/Stallet.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
@@ -63,7 +66,7 @@ MODULER = [
 # require-formerna som förekommer i koden, till modulnamn.
 # HorseCore star kvar sarskilt: utan barn blir det __Core, tabellen stubbfilen
 # bygger. Sista alternativet tar de ovriga ReplicatedStorage-modulerna
-# (UBRFSpel, Stallet, UBRFKomplex) — de heter samma sak i tradet som har.
+# (UBRFSpelData, UBRFSkotsel, UBRFSpel, Stallet, UBRFKomplex).
 REQUIRE = re.compile(
     r'require\(\s*(?:script\.Parent\.(\w+)'
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.HorseCore(?:\.(\w+))?'
@@ -84,7 +87,6 @@ def material() -> list:
 
 def las(rel: str) -> str:
     return (ROT / rel).read_text(encoding="utf-8")
-
 def inlina(kalla: str) -> str:
     """Byter require-anrop mot modulnamn. HorseCore utan barn blir __Core,
     tabellen som stubbfilen bygger av de redan laddade modulerna."""
