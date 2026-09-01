@@ -118,6 +118,20 @@ if (okantRedskap.length) {
   process.exit(2);
 }
 
+/* Säkerhets-/kunskapsinvariant: huvudet ryktas BARA med mjuk borste och
+   benen aldrig med gummiskrapa. Dessa regler ska fälla exporten även om
+   någon regenererar Luau efter en felaktig ändring i källan. */
+const huvudKrav = RYKTKRAV.huvud;
+if (!Array.isArray(huvudKrav) || huvudKrav.length !== 1 || huvudKrav[0] !== "mjuk") {
+  console.error("RYKTKRAV.huvud måste vara exakt [mjuk].");
+  process.exit(2);
+}
+const benKrav = RYKTKRAV.ben;
+if (!Array.isArray(benKrav) || benKrav.includes("skrapa")) {
+  console.error("RYKTKRAV.ben får inte innehålla skrapa.");
+  process.exit(2);
+}
+
 /* Exakt ETT rätt svar vid ett fynd. Poängen är att eleven RAPPORTERAR i
    stället för att diagnostisera; två rätta svar upphäver den lärdomen. */
 const rattaSvar = VISITSVAR.filter(s => s.ratt).length;
@@ -139,25 +153,25 @@ const ut = `--!strict
      ut som på webben. ]]
 
 return {
-	hastar = ${luau(HORSES, 1)},
-	foder = ${luau(FODERSCHEMA, 1)},
-	kraftval = ${luau(KRAFTVAL, 1)},
-	ordning = ${luau(ordning, 1)},
+\thastar = ${luau(HORSES, 1)},
+\tfoder = ${luau(FODERSCHEMA, 1)},
+\tkraftval = ${luau(KRAFTVAL, 1)},
+\tordning = ${luau(ordning, 1)},
 
-	--[[ Skötseln. Reglerna är hästkunskap, inte spelbalans: huvudet tål bara
-	     den mjuka borsten, gjorden dras i tre tag med paus, och eleven
-	     RAPPORTERAR ett fynd i stället för att diagnostisera det. ]]
-	rykt = {
-		zoner = ${luau(RYKTZON, 2)},
-		redskap = ${luau(RYKTREDSKAP, 2)},
-		krav = ${luau(RYKTKRAV, 2)},
-	},
-	sadelfaser = ${luau(SADELFAS, 1)},
-	visitation = {
-		punkter = ${luau(VISITPUNKT, 2)},
-		fynd = ${luau(VISITFYND, 2)},
-		svar = ${luau(VISITSVAR, 2)},
-	},
+\t--[[ Skötseln. Reglerna är hästkunskap, inte spelbalans: huvudet tål bara
+\t     den mjuka borsten, gjorden dras i tre tag med paus, och eleven
+\t     RAPPORTERAR ett fynd i stället för att diagnostisera det. ]]
+\trykt = {
+\t\tzoner = ${luau(RYKTZON, 2)},
+\t\tredskap = ${luau(RYKTREDSKAP, 2)},
+\t\tkrav = ${luau(RYKTKRAV, 2)},
+\t},
+\tsadelfaser = ${luau(SADELFAS, 1)},
+\tvisitation = {
+\t\tpunkter = ${luau(VISITPUNKT, 2)},
+\t\tfynd = ${luau(VISITFYND, 2)},
+\t\tsvar = ${luau(VISITSVAR, 2)},
+\t},
 }
 `;
 
