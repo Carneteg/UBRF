@@ -13,5 +13,6 @@ return {
 	Gaits = require(script.Gaits),
 	StateMachine = require(script.StateMachine),
 	RigAdapter = require(script.RigAdapter),
+	RigContract = require(script.RigContract),
 	Networking = require(script.Networking),
 }

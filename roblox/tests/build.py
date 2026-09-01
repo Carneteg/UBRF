@@ -51,6 +51,7 @@ MODULER = [
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("RigContract",  "src/shared/HorseCore/RigContract.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
     ("MovementController", "src/client/MovementController.luau"),
     ("AnimationController", "src/client/AnimationController.luau"),

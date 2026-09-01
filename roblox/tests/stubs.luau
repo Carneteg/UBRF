@@ -170,6 +170,7 @@ local __services = {
 	Debris = { AddItem = function() end },
 	CollectionService = {
 		GetTagged = function() return {} end,
+		HasTag = function(_, _, _) return false end,
 		GetInstanceAddedSignal = function()
 			return { Connect = function() return { Disconnect = function() end } end }
 		end,

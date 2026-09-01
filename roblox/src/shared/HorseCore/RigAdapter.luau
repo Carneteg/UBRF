@@ -52,6 +52,16 @@ local function findByName(model: Model, key: string): Instance?
 	return model:FindFirstChild(mapped(model, key), true)
 end
 
+--[[ Samma uppslag, exporterat. RigContract MÅSTE använda det här och inte
+     leta på standardnamnen själv: en köpt modell där delarna heter något
+     annat pekas ut med `Map_<nyckel>`, och en kontroll som inte följer den
+     omdöpningen skulle fälla en helt korrekt rigg. Två uppslagsvägar för
+     samma namn är en väg för mycket — de glider isär, och då provar
+     kontrollen en annan rigg än den spelet laddar. ]]
+function RigAdapter.hittaDel(model: Model, key: string): Instance?
+	return findByName(model, key)
+end
+
 --[[ Kroppens kollisionsdel. Aldrig nätet självt: ett skinnat nät har en
      hölje-hitbox som ändrar form med animationen, och då studsar hästen
      mot marken när benen rör sig. ]]
