@@ -91,24 +91,17 @@ function farg(hex) {
   const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
   return `Color3.fromRGB(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 }
-function luau(v, indent) {
-  const pad = "\t".repeat(indent);
-  const padIn = "\t".repeat(indent + 1);
+function luau(v) {
   if (v === null || v === undefined) return "nil";
   if (typeof v === "number") return tal(v);
   if (typeof v === "boolean") return String(v);
   if (typeof v === "string") return ARFARG.test(v) ? farg(v) : strang(v);
-  if (Array.isArray(v)) {
-    if (v.length === 0) return "{}";
-    return "{\n" + v.map(x => padIn + luau(x, indent + 1)).join(",\n") + ",\n" + pad + "}";
-  }
+  if (Array.isArray(v)) return "{" + v.map(luau).join(",") + "}";
   const nycklar = Object.keys(v);
-  if (nycklar.length === 0) return "{}";
-  const rader = nycklar.map(k => {
+  return "{" + nycklar.map(k => {
     const namn = IDENT.test(k) ? k : "[" + strang(k) + "]";
-    return padIn + namn + " = " + luau(v[k], indent + 1);
-  });
-  return "{\n" + rader.join(",\n") + ",\n" + pad + "}";
+    return namn + "=" + luau(v[k]);
+  }).join(",") + "}";
 }
 
 kontrolleraFakta();
@@ -135,20 +128,66 @@ if (utanFoder.length || utanHast.length || oklassatFoder.length) {
 
 const ordning = Object.keys(HORSES);
 
+/* Roblox behöver faktan och spelvärdena, men inte build-evidensfälten.
+   Standardvärden serialiseras en gång och varje häst bär bara avvikelser.
+   Det håller den genererade modulen liten utan att skapa en andra sanning. */
+const BAS_RUNTIME = {
+  kanslighet: .50, framatbjudning: .50, forlatande: .60, skygghet: .20,
+  hoppkapacitet: .60, hopplust: .60, tyngd: .40, utbildning: .60, maxhojd: .80,
+  farg: "#72533B", man: "#2F2118",
+};
+const FAKTA_RUNTIME = ["namn","typ","fodd","ras","mankhojd","import","kategori","besk"];
+const GAME_RUNTIME = Object.keys(BAS_RUNTIME);
+const sparseHorses = {};
+for (const [id, h] of Object.entries(HORSES)) {
+  const o = {};
+  for (const k of FAKTA_RUNTIME) o[k] = h[k];
+  for (const k of GAME_RUNTIME) if (h[k] !== BAS_RUNTIME[k]) o[k] = h[k];
+  if (h.fjader !== undefined) o.fjader = h.fjader;
+  if (h.tecken !== undefined) o.tecken = h.tecken;
+  if (h.flaggor && Object.keys(h.flaggor).length) o.flaggor = h.flaggor;
+  sparseHorses[id] = o;
+}
+const foderOverrides = {};
+for (const [id, f] of Object.entries(FODERSCHEMA)) {
+  if (f.ho !== 2 || f.kraft !== "inget") foderOverrides[id] = {ho:f.ho,kraft:f.kraft};
+}
+const foderNotis = "Övningsvärde i spelet — verklig UBRF-giva är inte verifierad.";
+
 const ut = `--!strict
 --[[ GENERERAD av tools/exportera-spel.js ur src/spel/hastar.js.
      Ändra inte här — ändra i källan och kör om exporten.
+     Verklighetsfakta är grindade mot ${SNAPSHOT}. ]]
 
-     Verklighetsfakta är grindade mot ${SNAPSHOT}.
-     Spelparametrar och visuella värden är separat klassade i källan.
+local bas = ${luau(BAS_RUNTIME)}
+local raw = ${luau(sparseHorses)}
+local hastar = {}
+for id, h in pairs(raw) do
+\tlocal v = {}
+\tfor k, x in pairs(bas) do v[k] = x end
+\tfor k, x in pairs(h) do v[k] = x end
+\tif v.flaggor == nil then v.flaggor = {} end
+\thastar[id] = v
+end
 
-     ordning[] finns för att pairs() i Lua inte har någon ordning. ]]
+local ordning = ${luau(ordning)}
+local foder = {}
+local foderOverrides = ${luau(foderOverrides)}
+for _, id in ipairs(ordning) do
+\tlocal o = foderOverrides[id]
+\tfoder[id] = {
+\t\tho = if o then o.ho else 2,
+\t\tkraft = if o then o.kraft else "inget",
+\t\tstatus = "ASSUMPTION",
+\t\tnotis = ${strang(foderNotis)},
+\t}
+end
 
 return {
-\thastar = ${luau(HORSES, 1)},
-\tfoder = ${luau(FODERSCHEMA, 1)},
-\tkraftval = ${luau(KRAFTVAL, 1)},
-\tordning = ${luau(ordning, 1)},
+\thastar = hastar,
+\tfoder = foder,
+\tkraftval = ${luau(KRAFTVAL)},
+\tordning = ordning,
 }
 `;
 
