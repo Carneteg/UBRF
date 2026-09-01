@@ -24,10 +24,24 @@ const HAST_MINGRUPP={toblerone:0, lydia:0, cosmo:3, air:3, larry:5, dexter:5,
 const UPPFLYTT_KRAV=2;   // godkända pass för uppflyttning
 
 const SPAR_NYCKEL="ubrf-ridskolan-v1";
+const HASTKANON_VERSION="2026-09-01";
+/* Dessa id:n bar före S2c antingen helt påhittade hästar eller felaktig
+   identitetsdata. Ett gammalt förtroende, en skada eller en rosett får
+   därför aldrig tyst flyttas över till den korrigerade verkliga hästen. */
+const OGILTIGA_HASTMINNEN=new Set(["lady","westside","kennedy","chip","tina","makadu","mara","husky"]);
 let SPAR=null;
 
 function nyProfil(){
-  return {grupp:"ledlektion", poang:0, pass:0, fortroende:{}, historik:[], rosetter:[]};
+  return {grupp:"ledlektion", poang:0, pass:0, fortroende:{}, historik:[], rosetter:[],
+    hastkanonVersion:HASTKANON_VERSION};
+}
+function migreraHastkanon(profil){
+  if(!profil||profil.hastkanonVersion===HASTKANON_VERSION)return profil;
+  for(const id of OGILTIGA_HASTMINNEN)delete profil.fortroende[id];
+  profil.historik=profil.historik.filter(r=>!r||!OGILTIGA_HASTMINNEN.has(r.hast));
+  profil.rosetter=profil.rosetter.filter(r=>!r||!OGILTIGA_HASTMINNEN.has(r.hast));
+  profil.hastkanonVersion=HASTKANON_VERSION;
+  return profil;
 }
 function laddaRyttare(){
   SPAR=nyProfil();
@@ -49,6 +63,7 @@ function laddaRyttare(){
           poang:+d.poang||0, pass:+d.pass||0};
     }
   }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
+  SPAR=migreraHastkanon(SPAR);
   G.grupp=SPAR.grupp;
 }
 function sparaRyttare(){
