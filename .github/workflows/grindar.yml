@@ -68,6 +68,11 @@ jobs:
           if [ -f tools/kolla-nyckelbilder.py ]; then python3 tools/kolla-nyckelbilder.py
           else echo "hoppar: tools/kolla-nyckelbilder.py finns inte i denna branch"; fi
 
+      - name: Speglingsverktygets prov
+        run: |
+          if [ -f tools/prov-spegla.py ]; then python3 tools/prov-spegla.py
+          else echo "hoppar: tools/prov-spegla.py finns inte i denna branch"; fi
+
       - name: Luau-specarna
         run: |
           if [ -f roblox/tests/kor.sh ]; then bash roblox/tests/kor.sh

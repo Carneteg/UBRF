@@ -70,6 +70,29 @@ Ett objekt som inte kan läsas tillbaka, eller som skiljer sig, får **ingen**
 manifestrad med sökväg. Schemats check-villkor tillåter ändå inte sökväg utan
 `storage_verified_at`, så de två spärrarna säger samma sak på två ställen.
 
+### Rättelse 2026-09-01: skrivningen fanns inte
+
+Det här avsnittet beskrev länge något som inte hände. `--ladda-upp` laddade
+upp, läste tillbaka, jämförde — och **skrev sedan ut** raderna i stället för
+att skriva dem. Ingenting nådde `public.reference_assets`. Manifestet hade
+alltså förblivit tomt efter en fullt genomförd spegling, medan både det här
+dokumentet och PR-texten påstod att fälten sattes.
+
+Detsamma gällde `--kontrollera`: den gjorde **en** listning med prefix `""`
+och jämförde svaret mot nästlade nycklar som `buildings/stall/…`. Supabase
+list är inte rekursiv — den svarar med det som ligger direkt under sökvägen,
+och mappar kommer tillbaka utan `id`. Kontrollen såg alltså `buildings`,
+`plans`, `video` och kunde aldrig få en träff. Felet var fail-closed: den
+rapporterade varje fil som saknad i stället för att godkänna en trasig spegel.
+Men den kunde heller aldrig gå igenom, inte ens när spegeln var korrekt.
+
+Båda är rättade. Den strukturella orsaken var att **ingen av de två vägarna
+gick att prova**: båda kräver en hemlig nyckel, så ingen grind nådde dem.
+HTTP-gränsen är därför utbruten (`TRANSPORT`), och `tools/prov-spegla.py`
+kör `main()` mot en fejkad Supabase — utan nyckel, utan nätverk. Fejken
+listar **icke-rekursivt**, precis som tjänsten; en fejk som listade rekursivt
+hade provat en tjänst som inte finns och släppt igenom samma fel igen.
+
 ## Vad som ska bevisas när spegeln fylls
 
 - objektantal per typ mot `--lista`,
@@ -79,6 +102,8 @@ manifestrad med sökväg. Schemats check-villkor tillåter ändå inte sökväg 
 
 och allt det **utan** att nyckeln syns någonstans i utdata.
 
-`--kontrollera` jämför åt **båda hållen**: filer i repot som saknas i hinken,
-och objekt i hinken som ingen fil känns vid. En lista som bara läses uppifrån
-och ner missar precis det fall den finns till för.
+`--kontrollera` jämför åt **tre** håll: filer i repot som saknas i hinken,
+objekt i hinken som ingen fil känns vid, och **manifestrader som pekar på
+objekt som inte finns**. Det tredje hållet är det som schemats check-villkor
+inte kan fånga: villkoret ser bara att båda fälten är satta, aldrig om
+sökvägen leder någonstans.
