@@ -498,6 +498,139 @@ do
 		math.abs(mch.loco.phase - fasH) < 1e-9)
 end
 
+print("\n── Animationen följer marken, inte klockan (#44) ──")
+do
+	--[[ Fasen räknades distanslåst redan, och hovljuden låg på den. Men
+	     BENEN spelades av Roblox egen klocka via `AdjustSpeed`, alltså av en
+	     annan tid än ljudet. Mätningarna nedan är skrivna för att falla på
+	     den gamla koden och hålla på den nya.
+
+	     `AnimationController` har aldrig förr nåtts av en spec — riggstubben
+	     lämnade `animator = nil`, så modulen gick inte ens att konstruera.
+	     Därför kunde felet ligga kvar. ]]
+	local function anim(length)
+		local rig = __makeAnimRig(length)
+		return AnimationController.new(rig, STATS), rig
+	end
+
+	local function loco(o)
+		return { state = o.state or "Trot", gait = o.gait or "trot",
+			speed = o.speed or 4.0, phase = o.phase or 0,
+			turnRate = 0, grounded = true, airborne = false, heading = 0 }
+	end
+
+	--[[ 1. Läget ska vara fasen gånger klipplängden. Längden är med flit inte
+	     1 i stubben, så ett glömt multiplicerande syns. ]]
+	local ac, rig = anim(0.86)
+	ac:step(loco({ phase = 0.25 }), 1 / 60)
+	local tr = rig._tracks.Trot
+	check("läget i klippet är fasen gånger klipplängden",
+		tr ~= nil and math.abs(tr.TimePosition - 0.25 * 0.86) < 1e-9,
+		tr and string.format("(TimePosition %.4f, väntade %.4f)",
+			tr.TimePosition, 0.25 * 0.86) or "(spåret Trot laddades inte)")
+
+	--[[ 2. Roblox egen framdrivning måste vara avstängd. Lämnas den på lägger
+	     den till en halv bildruta i taget ovanpå vår spolning — samma glid vi
+	     just tog bort, men långsammare och svårare att se. ]]
+	check("klippets egen klocka är avstängd i gångart",
+		tr ~= nil and tr.Speed == 0,
+		tr and string.format("(Speed %.3f)", tr.Speed) or "")
+
+	--[[ 3. LÄGET I KLIPPET SKA FÖLJA UPPMÄTT STRÄCKA, inte förfluten tid.
+
+	     Provet räknar förväntat läge ur den sträcka hästen FAKTISKT kom och
+	     ur `Gaits.cycleLength` — två vägar som inte är samma kod som den
+	     provade raden. Gångarten hålls konstant hela mätningen, annars
+	     blandas två cykellängder i samma summa.
+
+	     Det körs vid 60 och 20 bilder/s med samma krav på båda. Målgruppen
+	     sitter på skolutrustning: en klockdriven animation glider ifrån
+	     marken just när bildrutan svajar, och då landar hovljudet på ett
+	     ställe medan hoven syns på ett annat. ]]
+	local function lagePerStracka(dt)
+		local a, r = anim(0.86)
+		local mc = MovementController.new(r, STATS)
+		local function flytta()
+			local hum = r.humanoid
+			local dir = hum._moves[#hum._moves]
+			if dir then
+				local ny = r.root.Position + dir * (hum.WalkSpeed * dt)
+				r.root.Position = ny
+				r.root.CFrame = CFrame.new(ny) * CFrame.Angles(0, mc.loco.heading, 0)
+				return (dir * (hum.WalkSpeed * dt)).Magnitude
+			end
+			return 0
+		end
+		-- Upp i trav och låt farten sätta sig, utan att mäta sträckan än.
+		for i = 1, math.floor(6.0 / dt + 0.5) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1 or i == math.floor(1.5 / dt)) }), dt)
+			flytta()
+			a:step(mc.loco, dt)
+		end
+		if mc.loco.state ~= "Trot" then return nil, mc.loco.state end
+		-- Nu mäts: fas och sträcka från samma nollpunkt, konstant gångart.
+		local fas0 = mc.loco.phase
+		local strackaStuds = 0
+		for _ = 1, math.floor(4.0 / dt + 0.5) do
+			mc:step(intent({ forward = 1 }), dt)
+			strackaStuds += flytta()
+			a:step(mc.loco, dt)
+			if mc.loco.state ~= "Trot" then return nil, mc.loco.state end
+		end
+		local meter = strackaStuds / Config.STUDS_PER_METRE
+		local varv = meter / Gaits.cycleLength("trot")
+		local vantat = ((fas0 + varv) % 1) * 0.86
+		local faktiskt = r._tracks.Trot.TimePosition
+		-- En bildrutas förflyttning, uttryckt i klipptid.
+		local marginal = ((mc.rig.humanoid.WalkSpeed * dt) / Config.STUDS_PER_METRE)
+			/ Gaits.cycleLength("trot") * 0.86 + 1e-6
+		return math.abs(faktiskt - vantat), marginal, meter, mc.loco.state
+	end
+	for _, dt in { 1 / 60, 1 / 20 } do
+		local avvikelse, marginal, meter, tillstand = lagePerStracka(dt)
+		check(string.format("läget följer uppmätt sträcka vid %d bilder/s",
+			math.floor(1 / dt + 0.5)),
+			avvikelse ~= nil and avvikelse <= marginal,
+			avvikelse and string.format("(avvikelse %.5f s, marginal %.5f s, %.1f m i %s)",
+				avvikelse, marginal, meter, tostring(tillstand))
+				or string.format("(gångarten bytte till %s under mätningen)",
+					tostring(marginal)))
+	end
+
+	--[[ 4. Krock mot vägg. Fasen står still, alltså ska benen också göra det.
+	     Förut fortsatte klippet av sig självt och hästen trampade i luften
+	     med tysta hovar, eftersom ljudet låg på fasen och benen inte. ]]
+	local ab, rb = anim(0.86)
+	local l = loco({ phase = 0.4 })
+	ab:step(l, 1 / 60)
+	local fore = rb._tracks.Trot.TimePosition
+	for _ = 1, 180 do ab:step(l, 1 / 60) end   -- fasen rörs inte: väggen
+	check("blockerad häst trampar inte i luften med benen heller",
+		math.abs(rb._tracks.Trot.TimePosition - fore) < 1e-9,
+		string.format("(läget rörde sig %.2e på 3 s mot vägg)",
+			math.abs(rb._tracks.Trot.TimePosition - fore)))
+
+	--[[ 5. HÄNDELSEKLIPPEN ska INTE spolas av fasen. Ett stopp ska ta lika
+	     lång tid varje gång, och en fas som slutar ticka när hästen står
+	     still skulle frysa klippet i sin första bildruta. ]]
+	local ah, rh = anim(0.86)
+	ah:step(loco({ state = "Stopping", gait = "halt", speed = 0.5 }), 1 / 60)
+	local stopp = rh._tracks.Stop
+	check("händelseklipp spelas av sin egen klocka",
+		stopp ~= nil and stopp.Speed ~= 0,
+		stopp and string.format("(Speed %.3f)", stopp.Speed) or "(Stop laddades inte)")
+
+	--[[ 6. Reservfallet. `Length` är 0 innan klippet hämtats från servern.
+	     Då ska klockan användas — hellre något fel de första bildrutorna än
+	     en häst fastfrusen i ruta ett. ]]
+	local a0, r0 = anim(0)
+	a0:step(loco({ phase = 0.3 }), 1 / 60)
+	local t0 = r0._tracks.Trot
+	check("oläst klipplängd faller tillbaka på klockan i stället för att frysa",
+		t0 ~= nil and t0.Speed ~= 0 and t0.TimePosition == 0,
+		t0 and string.format("(Speed %.3f, läge %.3f)", t0.Speed, t0.TimePosition) or "")
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

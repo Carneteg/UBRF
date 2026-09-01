@@ -5,10 +5,13 @@ Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, 
 ## Läsordning före arbete
 
 1. `docs/PRODUCT-CANON.md`
-2. `docs/ASSET-SOURCE-OF-TRUTH.md`
-3. `docs/AI-COLLABORATION.md`
-4. `docs/ACTIVE-GATE.md`
-5. relevant implementation-/referensdokumentation
+2. `docs/DELIVERY-PROTOCOL.md`
+3. `docs/ASSET-SOURCE-OF-TRUTH.md`
+4. `docs/AI-COLLABORATION.md`
+5. `docs/ACTIVE-GATE.md`
+6. relevant implementation-/referensdokumentation
+
+`docs/DELIVERY-PROTOCOL.md` är bindande för status, evidens, falsifiering, review, human acceptance och merge. Om äldre dokument antyder att implementerande agent själv kan slutgodkänna sitt arbete gäller leveransprotokollet.
 
 ## Låst produktkärna
 
@@ -70,6 +73,21 @@ Vid konflikt gäller denna ordning:
 
 Ingen agent får både införa en större förändring och ensam slutgodkänna den.
 
+## Leveransauktoritet — hårda regler
+
+**CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS.**
+
+- Claude får aldrig själv sätta slutstatus `APPROVED`, `ACCEPTED`, `DONE`, `CLOSED` eller `FINAL` på sin egen större leverans.
+- Claudes högsta normala status är `READY_FOR_CHATGPT_REVIEW`.
+- ChatGPT kan efter oberoende review sätta `READY_FOR_PRODUCT_ACCEPTANCE`.
+- Endast Tobias får sätta `PRODUCT_ACCEPTED` när human acceptance krävs.
+- Merge, grön CI eller grön lokal testsvit är **inte** i sig produktacceptans.
+- Varje icke-trivial leverans ska ha Acceptance Contract enligt `docs/DELIVERY-PROTOCOL.md` innan implementationen expanderar.
+- Claude ska aktivt falsifiera centrala tester; ett test som aldrig visats kunna bli rött är otillräcklig evidens för en kritisk gate.
+- Claude ska uttryckligen redovisa `Not tested`; frånvaro av tillgång till Studio/runtime får aldrig omskrivas till PASS.
+- ChatGPT-review ska utgå från faktisk diff och relevanta källor, inte Claudes summary.
+- Visuell fidelity, game feel och målmiljöflöden kräver Tobias uttryckliga PASS där Acceptance Contract säger det.
+
 ## Plattformskontrakt
 
 ### Roblox — primär spelplattform
@@ -128,13 +146,14 @@ Förbättra befintlig arkitektur innan du uppfinner en ny.
 
 1. Öppna relevant repo-referens innan implementation.
 2. Kontrollera alla tillgängliga verifierade vinklar, inte en enda bild.
-3. Uppdatera byggnadskort/SITEPLAN först när ny evidens ändrar facit.
-4. Koden följer kortet; kortet följer verifierat originalmaterial.
-5. Verifiera visuellt från motsvarande vinkel innan "klart".
-6. Stiliserat betyder förenklat — inte påhittat.
-7. Saknas evidens: märk `[REFERENCE GAP]`.
-8. Placering på tomten styrs av verifierad `references/SITEPLAN.md`.
-9. Flytta inte byggnader/dörrar/fönster/möbler för att lösa UI-/kamera-problem.
+3. Kontrollera relevant råfilm i `references/video/` innan en visuell/interiör detalj deklareras `REFERENCE GAP`; en panorering kan innehålla evidens som saknas i extraherade stillbilder.
+4. Uppdatera byggnadskort/SITEPLAN först när ny evidens ändrar facit.
+5. Koden följer kortet; kortet följer verifierat originalmaterial.
+6. Verifiera visuellt från motsvarande vinkel innan "klart" — och rapportera då `READY_FOR_PRODUCT_ACCEPTANCE`, inte egen acceptans.
+7. Stiliserat betyder förenklat — inte påhittat.
+8. Saknas evidens efter full källkontroll: märk `[REFERENCE GAP]`.
+9. Placering på tomten styrs av verifierad `references/SITEPLAN.md`.
+10. Flytta inte byggnader/dörrar/fönster/möbler för att lösa UI-/kamera-problem.
 
 **Bilder och filmer är specifikation, inte inspiration.** Finns visuell evidens får arkitektur, interiör, färg, proportioner, öppningar, möblering eller placering inte hittas på.
 
@@ -143,7 +162,7 @@ Förbättra befintlig arkitektur innan du uppfinner en ny.
 Drive-mappen `UBRF` är endast insamlings-/originalyta. När nytt material läggs där ska relevant material migreras eller härledas till GitHub/Supabase innan Claude blir beroende av det.
 
 Använd:
-- `references/` för verifierade bilder/frames, kort, siteplan och licenser,
+- `references/` för verifierade bilder/frames, råfilmer, kort, siteplan och licenser,
 - `docs/ASSET-SOURCE-OF-TRUTH.md` för källpolicy,
 - Supabase `public.reference_assets` för sökbart manifest.
 
@@ -159,5 +178,6 @@ Claude ska aldrig instrueras att "gå till Drive" som enda väg till en build-kr
 - beskrivande commitmeddelanden på svenska,
 - ett tydligt ansvar per PR,
 - undvik parallella PR:er som ändrar samma kärnfiler,
-- dokumentera vad som testats och vad som inte kunnat verifieras,
-- merge först efter review och relevanta regressionskontroller.
+- dokumentera vad som testats **och vad som inte har kunnat verifieras**,
+- fyll Acceptance Contract, testbevis, falsifieringsbevis, kvarstående risk och human-gate-status enligt `docs/DELIVERY-PROTOCOL.md`,
+- merge först efter oberoende review, relevanta regressionskontroller och eventuell uttrycklig human acceptance.
