@@ -11,7 +11,7 @@
    i källan; C används därför bara som tydligt märkt spelantagande.
 
    0–1-parametrar, hinderhöjd och färger är spelvärden/presentation, inte
-   fakta om de verkliga djuren. Tolv befintliga id:n behåller sina äldre
+   fakta om de verkliga djuren. Nio befintliga id:n behåller sina äldre
    värden för game-feel/savestabilitet. Nya hästar börjar neutralt UNTUNED.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -65,14 +65,11 @@ const LEGACY_GAMEPLAY={
   crokino:{kanslighet:.78,framatbjudning:.52,forlatande:.55,skygghet:.42,hoppkapacitet:.68,hopplust:.62,tyngd:.38,utbildning:.72,maxhojd:.85,farg:"#3B2E24",man:"#1C1510",flaggor:{radd_for_spo:true}},
   lydia:{kanslighet:.30,framatbjudning:.45,forlatande:.95,skygghet:.06,hoppkapacitet:.72,hopplust:.82,tyngd:.42,utbildning:.80,maxhojd:.75,farg:"#A9A29A",man:"#D9D4CC",fjader:true,tecken:{blas:false,strumpor:[1,1,0,0]}},
   dexter:{kanslighet:.60,framatbjudning:.90,forlatande:.52,skygghet:.22,hoppkapacitet:.88,hopplust:.90,tyngd:.18,utbildning:.62,maxhojd:1.00,farg:"#2E2A26",man:"#151311",tecken:{blas:false,strumpor:[1,0,1,0]}},
-  lady:{kanslighet:.32,framatbjudning:.40,forlatande:.92,skygghet:.08,hoppkapacitet:.58,hopplust:.60,tyngd:.55,utbildning:.72,maxhojd:.70,farg:"#B0693A",man:"#7A4526",fjader:true,tecken:{blas:true,strumpor:[1,0,1,1]}},
-  westside:{kanslighet:.50,framatbjudning:.55,forlatande:.68,skygghet:.22,hoppkapacitet:.70,hopplust:.72,tyngd:.38,utbildning:.66,maxhojd:.85,farg:"#5E4531",man:"#2E2015",tecken:{blas:true,strumpor:[0,0,1,0]}},
-  kennedy:{kanslighet:.70,framatbjudning:.58,forlatande:.45,skygghet:.38,hoppkapacitet:.75,hopplust:.78,tyngd:.30,utbildning:.55,maxhojd:.90,farg:"#3F3126",man:"#1D1611",tecken:{blas:true,strumpor:[1,1,1,1]}},
 };
 
 const SOURCE_GAMEPLAY={
-  // Beskrivningen säger uttryckligen att Bing inte hoppar.
-  bing:{hoppkapacitet:0,hopplust:0,flaggor:{hoppar_inte:true}},
+  // Källan säger att Bing inte hoppar. Den säger inget om hans motivation.
+  bing:{hoppkapacitet:0,flaggor:{hoppar_inte:true}},
 };
 
 const HORSES={};
