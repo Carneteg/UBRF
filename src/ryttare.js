@@ -60,6 +60,7 @@ function laddaRyttare(){
         SPAR={...nyProfil(),...d, fortroende:obj(d.fortroende),
           historik:arr(d.historik), rosetter:arr(d.rosetter),
           fardighet:obj(d.fardighet), jag:obj(d.jag),
+          hastkanonVersion:d.hastkanonVersion===HASTKANON_VERSION?HASTKANON_VERSION:null,
           poang:+d.poang||0, pass:+d.pass||0};
     }
   }catch(_){/* privat läge eller blockerad lagring — spela från noll */}
