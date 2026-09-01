@@ -7,6 +7,12 @@
       "HorseCore": {
         "$path": "src/shared/HorseCore"
       },
+      "UBRFSpelData": {
+        "$path": "game/UBRFSpelData.luau"
+      },
+      "UBRFSkotsel": {
+        "$path": "game/UBRFSkotsel.luau"
+      },
       "UBRFSpel": {
         "$path": "game/UBRFSpel.luau"
       },

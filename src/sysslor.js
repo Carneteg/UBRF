@@ -3,13 +3,16 @@
    Vid hästens box väljer du: mocka, fodra och vattna, eller göra
    i ordning för lektion. Sysslorna påverkar stallron, och stallron
    påverkar både skötselresultatet och hästen under ridningen —
-   samma kedja som på en riktig ridskola. Foderschemat sitter i
-   plastfickan på boxdörren, precis som på fotona.
+   samma kedja som på en riktig ridskola.
+
+   VIKTIGT: spelets individuella fodermängder är ÖVNINGSVÄRDEN tills ett
+   aktuellt UBRF-foderschema finns som verifierad källa. UI:t måste därför
+   aldrig presentera dem som den verkliga givan på UBRF.
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
-/* Foderschema per häst: hö (kg), kraftfoder, och en rad ur verkligheten. */
-/* FODERSCHEMA och KRAFTVAL bor nu i src/spel/hastar.js. */
+/* FODERSCHEMA och KRAFTVAL bor i src/spel/hastar.js. Varje rad bär
+   evidensstatus; ASSUMPTION får bara visas som övningsdata. */
 
 /* ── Sadelkammaren ────────────────────────────────────────────────
    Varje ridskolehäst har sin egen sadel på egen bygel och sitt träns
@@ -71,9 +74,6 @@ function visaSadelkammare(){
       const fel=[val.sadel!==G.hastId?"sadeln":null,val.trans!==G.hastId?"tränset":null]
         .filter(Boolean).join(" och ");
       st.className="note bad";st.style.fontSize="13px";
-      /* Varför det spelar roll, inte bara att det är fel. En elev som
-         bara får "fel" lär sig leta efter rätt namn; en som får skälet
-         lär sig varför namnskylten finns. */
       const varfor=val.sadel!==G.hastId
         ? `En sadel är formad efter en bestämd rygg. På fel häst trycker den
            antingen på manken eller på njurarna, och då kan ${h.namn} inte gå
@@ -91,11 +91,7 @@ function visaSadelkammare(){
   };
 }
 
-/* ── Spolspiltan ──────────────────────────────────────────────────
-   Hästar som stått i hagen kommer in leriga, särskilt när det regnat.
-   Leran spolas av innan skötseln — genom lera går det varken att
-   visitera eller borsta, och lera under sadelgjorden ger skav.
-   ── */
+/* ── Spolspiltan ────────────────────────────────────────────────── */
 const SP={zoner:[],slang:false,cv:null,cx:null,sista:null};
 const SPOLZONER=[[0.44,0.72],[0.49,0.74],[0.68,0.74],[0.735,0.72],
                  [0.46,0.85],[0.70,0.85],[0.57,0.66],[0.62,0.63]];
@@ -148,30 +144,25 @@ function uppdSpol(){
 function ritaSpolning(){
   const c=SP.cx,W=SP.cv.clientWidth,H=SP.cv.clientHeight,h=HORSES[G.hastId];
   c.clearRect(0,0,W,H);
-  // spiltan: kompositplank i galvade ramar, gummimatta på golvet
   const gr=c.createLinearGradient(0,0,0,H);
   gr.addColorStop(0,"#3E4247");gr.addColorStop(0.70,"#4A4E53");
   gr.addColorStop(0.71,"#37383A");gr.addColorStop(1,"#2E2F31");
   c.fillStyle=gr;c.fillRect(0,0,W,H);
   c.strokeStyle="rgba(255,255,255,.05)";c.lineWidth=1;
   for(let i=1;i<7;i++){c.beginPath();c.moveTo(0,H*0.10*i);c.lineTo(W,H*0.10*i);c.stroke();}
-  // slangvinda och blandare på väggen
   c.strokeStyle="#8E939B";c.lineWidth=3;
   c.beginPath();c.arc(W*0.09,H*0.15,W*0.035,0,Math.PI*2);c.stroke();
   c.strokeStyle="#C4622E";c.lineWidth=4;
   c.beginPath();c.moveTo(W*0.09,H*0.19);
   c.quadraticCurveTo(W*0.12,H*0.62,W*0.30,H*0.84);c.stroke();
-  c.fillStyle="#8E939B";                                   // strålmunstycket
+  c.fillStyle="#8E939B";
   c.beginPath();c.ellipse(W*0.305,H*0.845,W*0.012,H*0.02,0.7,0,Math.PI*2);c.fill();
   ritaHastSida(c,W*0.55,H*0.88,H*0.52,-1,h.farg,h.man,{pose:"sta"});
-  // leran och det avspolade
   for(let i=0;i<SPOLZONER.length;i++){
     const[zx,zy]=SPOLZONER[i], v=SP.zoner[i];
-    c.fillStyle=v>=0.99?"rgba(127,180,137,.40)"
-      :`rgba(92,74,52,${0.72-0.55*v})`;
+    c.fillStyle=v>=0.99?"rgba(127,180,137,.40)":`rgba(92,74,52,${0.72-0.55*v})`;
     c.beginPath();c.arc(W*zx,H*zy,W*0.036,0,Math.PI*2);c.fill();
   }
-  // vattenpöl på mattan
   c.fillStyle="rgba(120,150,170,.16)";
   const blott=SP.zoner.reduce((a,b)=>a+b,0)/SP.zoner.length;
   c.beginPath();c.ellipse(W*0.56,H*0.93,W*0.20*blott+W*0.04,H*0.035,0,0,Math.PI*2);c.fill();
@@ -181,13 +172,15 @@ function ritaSpolning(){
 function visaBoxmeny(){
   const h=HORSES[G.hastId];
   const s=G.sysslor||(G.sysslor={mockat:0,fodrat:0});
+  const schema=FODERSCHEMA[G.hastId];
+  const foderRubrik=schema&&schema.status==="VERIFIED"?"foderschema":"övningsschema · verklig giva ej verifierad";
   const bock=v=>v>=0.99?'<span class="grn">✓ klart</span>'
     :v>0?`<span class="gold">${Math.round(v*100)} %</span>`:'<span class="dim">—</span>';
   overlay(true,`
-  <span class="lbl">${h.namn}s box · foderschemat sitter på dörren</span>
+  <span class="lbl">${h.namn}s box · ${foderRubrik}</span>
   <h1 style="margin-top:8px">Boxen först, sadeln sen</h1>
-  <p class="dim" style="font-size:13.5px">Stallro byggs i boxen: en mockad box och rätt
-  foder ger en lugnare häst på lektionen. Ridläraren ser om du slarvar.</p>
+  <p class="dim" style="font-size:13.5px">Här övar du på stallrutinen: mocka, läs ett schema,
+  väg rätt mängd och fyll vatten. När verklig UBRF-giva saknas är mängderna tydligt märkta som spelvärden.</p>
   <div style="display:grid;gap:10px;margin-top:14px">
     ${G.tackePa?`<button class="btn ghost" id="bTacke" style="justify-content:space-between;width:100%">
       <span>0 · Ta av täcket och häng upp det</span><span class="gold">täcket är på</span></button>`:""}
@@ -236,11 +229,11 @@ function visaSchema(){
     ${v.tacke?rad(G.hamtad&&!G.tackePa,"Ta av täcket och häng upp det"):""}
     ${rad(!!G.utrustning,"Hämta sadel och träns i sadelkammaren")}
     ${rad(s.mockat>=0.99,"Mocka boxen och strö nytt spån")}
-    ${rad(s.fodrat>=0.99,"Fodra och vattna efter schemat")}
+    ${rad(s.fodrat>=0.99,"Fodra och vattna efter övningsschemat")}
     ${rad(!!G.skotselRes,"Visitera, rykta, kratsa och sadla")}
     ${rad(false,"Lektion — sitt upp vid sargporten i ridhuset")}
   </ul>
-  ${(()=>{ // hörnet av tavlan: hästar som inte går i dag
+  ${(()=>{
     const hand=(typeof dagensHandelser==="function")?dagensHandelser():{};
     const rader=Object.entries(hand)
       .map(([id,e])=>`<li><b style="color:var(--ink)">${HORSES[id]?HORSES[id].namn:id}</b> — ${e.text}</li>`);
@@ -268,7 +261,6 @@ function visaMockning(){
     <button class="btn ghost" id="bStro" disabled>Strö nytt spån</button>
     <button class="btn" id="bMockKlar">Tillbaka till boxen</button>
   </div>`);
-  // 7 högar, deterministiskt utspridda per häst
   let seed=0;for(const c of G.hastId)seed=seed*31+c.charCodeAt(0);
   MO.hogar=[];MO.strott=false;
   for(let i=0;i<7;i++){
@@ -295,8 +287,7 @@ function visaMockning(){
 }
 function uppdMock(){
   document.getElementById("mockStatus").textContent=
-    MO.kvar>0?`${7-MO.kvar} / 7 högar i kärran`
-    :MO.strott?"Rent och nystrött. Fint.":"Rent! Strö nytt spån.";
+    MO.kvar>0?`${7-MO.kvar} / 7 högar i kärran`:MO.strott?"Rent och nystrött. Fint.":"Rent! Strö nytt spån.";
   document.getElementById("bStro").disabled=MO.kvar>0||MO.strott;
 }
 function sparaMock(){
@@ -306,18 +297,14 @@ function sparaMock(){
 function ritaMock(){
   const c=MO.cx,W=MO.cv.clientWidth,H=MO.cv.clientHeight;
   c.clearRect(0,0,W,H);
-  // boxen: väggar och spån
-  c.fillStyle="#4A4D50";c.fillRect(0,0,W,H*0.28);            // boxvägg (komposit)
-  c.fillStyle="#9CA0A4";c.fillRect(0,H*0.27,W,H*0.015);      // galvad överliggare
-  c.fillStyle=MO.strott?"#E4D8B8":"#D6C9A4";                 // spånbädd
+  c.fillStyle="#4A4D50";c.fillRect(0,0,W,H*0.28);
+  c.fillStyle="#9CA0A4";c.fillRect(0,H*0.27,W,H*0.015);
+  c.fillStyle=MO.strott?"#E4D8B8":"#D6C9A4";
   c.fillRect(0,H*0.285,W,H*0.715);
   c.fillStyle="rgba(0,0,0,.05)";
-  for(let i=0;i<24;i++){const a=(i*97)%W,b2=H*0.3+((i*53)%(H*0.65));
-    c.fillRect(a,b2,14,3);}
-  // krubba och hink i hörnet
+  for(let i=0;i<24;i++){const a=(i*97)%W,b2=H*0.3+((i*53)%(H*0.65));c.fillRect(a,b2,14,3);}
   c.fillStyle="#3E6E4E";c.fillRect(W*0.02,H*0.30,W*0.10,H*0.10);
   c.fillStyle="#2F5C8F";c.beginPath();c.arc(W*0.965,H*0.36,W*0.028,0,Math.PI*2);c.fill();
-  // högarna
   for(const hog of MO.hogar){
     if(hog.tag)continue;
     c.fillStyle="#5A4A34";
@@ -325,7 +312,6 @@ function ritaMock(){
     c.fillStyle="#4A3C2A";
     c.beginPath();c.ellipse(hog.x*W-W*0.008,hog.y*H-H*0.02,W*0.018,H*0.025,0,0,Math.PI*2);c.fill();
   }
-  // skottkärran
   c.fillStyle="#6E7276";
   c.beginPath();c.moveTo(W*0.86,H*0.86);c.lineTo(W*0.985,H*0.86);
   c.lineTo(W*0.965,H*0.96);c.lineTo(W*0.885,H*0.96);c.closePath();c.fill();
@@ -336,10 +322,11 @@ function ritaMock(){
     c.beginPath(),c.ellipse(W*(0.885+i*0.014),H*0.85,W*0.010,H*0.014,0,0,Math.PI*2),c.fill();
 }
 
-/* ── Fodringen — läs schemat på dörren, ge rätt ──────────────── */
+/* ── Fodringen — öva på att läsa och följa ett schema ────────── */
 const FO={ho:null,kraft:null,vatten:false};
 function visaFodring(){
-  const h=HORSES[G.hastId], schema=FODERSCHEMA[G.hastId]||{ho:2,kraft:"inget",notis:""};
+  const h=HORSES[G.hastId], schema=FODERSCHEMA[G.hastId]||{ho:2,kraft:"inget",status:"ASSUMPTION",notis:"Övningsvärde i spelet — verklig UBRF-giva är inte verifierad."};
+  const verifierad=schema.status==="VERIFIED";
   FO.ho=null;FO.kraft=null;FO.vatten=false;
   const val=(id,txt,grupp)=>`<button class="btn ghost fo-val" data-g="${grupp}" data-v="${id}"
     style="padding:8px 14px">${txt}</button>`;
@@ -347,9 +334,10 @@ function visaFodring(){
   <span class="lbl">Fodra och vattna · ${h.namn}</span>
   <h1 style="margin-top:6px">Läs schemat — sedan händerna</h1>
   <div class="note" style="font-size:13.5px">
-    <b class="lbl" style="display:block;margin-bottom:4px;color:var(--gold-2)">Foderschemat på boxdörren</b>
+    <b class="lbl" style="display:block;margin-bottom:4px;color:var(--gold-2)">${verifierad?"Verifierat foderschema":"Övningsschema · ANTANGANDE"}</b>
     ${h.namn}: <b>${schema.ho} kg hö</b> · kraftfoder: <b>${schema.kraft}</b> · vatten: fyll hinken<br>
-    <span class="dim" style="font-style:italic">”${schema.notis}”</span>
+    <span class="dim" style="font-style:italic">${schema.notis}</span>
+    ${verifierad?"":`<br><span class="dim">I verkligheten följer du alltid stallets aktuella foderschema — inte spelets övningsvärden.</span>`}
   </div>
   <div style="margin-top:14px">
     <div class="lbl" style="margin-bottom:6px">Hö</div>
@@ -379,16 +367,16 @@ function visaFodring(){
     document.head.appendChild(st);
   }
   document.getElementById("bFodraKlar").onclick=()=>{
-    const schema2=FODERSCHEMA[G.hastId]||{ho:2,kraft:"inget"};
+    const schema2=FODERSCHEMA[G.hastId]||{ho:2,kraft:"inget",status:"ASSUMPTION"};
     let poang=0;
     if(FO.ho===schema2.ho)poang+=0.4;
     if(FO.kraft===schema2.kraft)poang+=0.4;
     if(FO.vatten)poang+=0.2;
     const s=G.sysslor||(G.sysslor={mockat:0,fodrat:0});
     s.fodrat=Math.max(s.fodrat,poang);
-    saga(poang>=0.99?`${h.namn} kastar sig över höet. Rätt giva.`
+    saga(poang>=0.99?(schema2.status==="VERIFIED"?`${h.namn} kastar sig över höet. Rätt giva.`:"Rätt enligt övningsschemat — kom ihåg att verklig UBRF-giva inte är verifierad.")
       :poang>=0.6?"Nästan rätt — läs schemat en gång till nästa gång."
-      :"Fel foder. Ridläraren byter ut det innan hästen hinner smaka.",3.5);
+      :"Fel enligt schemat. Ridläraren stoppar fodret innan hästen hinner smaka.",3.5);
     visaBoxmeny();
   };
   document.getElementById("bFodraAvbryt").onclick=visaBoxmeny;
