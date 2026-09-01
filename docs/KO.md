@@ -52,50 +52,69 @@ i Drive.
 
 ### G01-S2a — skötseln som delad kanonisk data
 
-Ägare: Claude (PR #29)
-Äger filerna: `src/spel/skotsel.js`, `tools/exportera-spel.js`,
-`roblox/game/UBRFSpel.luau`
+Ägare: ChatGPT **endast genom Product Owners uttryckliga undantag** (PR #52).
+Normal ägare för implementation är Claude; separat extern review krävs eftersom
+ChatGPT genomförde denna avgränsade städ-/synkslice.
+Äger filerna: `index.html`, `src/moment.js`, `src/spel/skotsel.js`,
+`tools/exportera-spel.js`, `roblox/game/UBRFSpel.luau`,
+`roblox/tests/spel.spec.luau`
 Beroende av: inget
-Klar när: `node tools/exportera-spel.js --kontrollera` exit 0 på en branch
-rebasad mot `main`, och PR:n har ett acceptance contract enligt protokollet.
+Klar när: PR #52 är separat granskad, CI/grindar är gröna på exakt head och
+`node tools/exportera-spel.js --kontrollera` exit 0. PR #52 är
+`READY_FOR_EXTERNAL_REVIEW`, inte accepterad eller mergad.
+
+Historik: gamla Claude-PR #29 är stängd och ersatt av den scope-renare #52.
+Ingen får återuppliva #29 eller bygga vidare på dess gamla branch som om den vore
+aktiv S2a.
 
 ### G01-S2b — Roblox preparation läser skötseln ur exporten
 
-Ägare: Claude (PR #30)
+Ägare: Claude (PR #30 ska rebasas/omarbetas efter att S2a-källan är landad)
 Äger filerna: `roblox/src/shared/HorseCore/Preparation.luau`,
-`roblox/src/server/GameplayService*`, HUD- och controller-filerna i PR #30,
-`docs/G01-HORSE-IDENTITY-CONTRACT.md`
-Beroende av: **G01-S2a måste in först**
+`roblox/src/server/GameplayService*`, HUD- och controller-filerna i PR #30.
+`docs/G01-HORSE-IDENTITY-CONTRACT.md` finns redan i `main` och får inte återinföras
+som en konkurrerande kopia från den gamla PR-basen.
+Beroende av: **G01-S2a / PR #52 måste in först.** Om S2c / PR #53 landar före
+S2b ska S2b rebasas mot den nya separerade exportstrukturen (`UBRFSpelData` /
+`UBRFSkotsel`) i stället för att återföra monolitisk genererad data.
 Klar när: `Preparation.luau` hämtar faser, ordning och texter ur den exporterade
-skötseldatan i stället för egna literaler, och `--kontrollera` fäller om
-Roblox-förberedelsen och `skotsel.js` inte har samma faser.
+skötseldatan i stället för egna literaler, servern håller progressionen
+authoritative, tilldelad `HorseId` är samma identitet som får bindas/mountas, och
+`--kontrollera` fäller om Roblox-förberedelsen och `skotsel.js` inte har samma
+faser. Alla relevanta specs och package/webb-grindar ska vara gröna på den
+rebased PR-headen.
 
 Beslut (Tobias, 2026-08-31): **JS är källan, Roblox läser.** Det omvända — att
 göra `Preparation.luau` till källa och exportera till webben — är avvisat.
 Webben har hela loopen och det pedagogiska innehållet ligger där.
 
 Behåll server-auktoritativ progression, mount-gaten, HUD:en, hästidentitets-
-kontraktet och de sex nya specarna. Arkitekturen är rätt; den läser från fel
-källa.
+kontraktet och de relevanta specarna. Arkitekturen är rätt; den gamla #30-basen
+läser från fel källa och är inte mergebar mot nuvarande main.
 
 ### G01-S2c — hästkanon utökas till hela stallet
 
-Ägare: Claude
-Äger filerna: `src/spel/hastar.js`, `tools/hastar-till-sql.py`,
-`supabase/migrations/`
-Beroende av: G01-S2a (samma exportkedja)
-Klar när: `src/spel/hastar.js` har alla aktiva UBRF-hästar med namn, ras,
-födelseår och ordagrann beskrivning från `ubrf.se`, `--kontrollera` är i synk,
-och specarna passerar med den större rostern.
+Ägare: ChatGPT **endast genom Product Owners uttryckliga undantag** (PR #53),
+med separat extern review före merge.
+Äger filerna: de filer som deklareras av PR #53:s acceptance contract, inklusive
+`src/spel/hastar.js`, versionssnapshoten under `references/data/`, exportkedjan,
+genererad Roblox-hästdata och berörda specs. `tools/hastar-till-sql.py` tas bort
+för att gameplaymodellvärden inte ska kunna skrivas tillbaka som databasfakta.
+Beroende av: **PR #52**; #53 är stackad ovanpå S2a.
+Klar när: PR #53 är separat granskad; exakt 33 aktiva UBRF-hästar/ponnyer finns i
+kanonen (18 hästar + 15 ponnyer), källfakta matchar snapshot/live-underlag,
+`UNTUNED` används där spelprofil inte är beslutad, lektionsrotationen innehåller
+bara giltiga tunade ids och alla deklarerade export-/Luau-/CI-grindar är gröna på
+exakt head. PR #53 är `READY_FOR_EXTERNAL_REVIEW`, inte accepterad eller mergad.
 
 Beslut (Tobias, 2026-08-31): **33, hemsidan stämmer.** Supabase `public.hastar`
-har 33 aktiva — 18 hästar och 15 ponnyer — mot spelets 17. Databasen är
-**upstream, inte kanon**: den får uppdatera JS-filen, men varken webben eller
-Roblox läser den direkt.
+har 33 aktiva — 18 hästar och 15 ponnyer. Databasen är **upstream, inte kanon**:
+den får uppdatera JS-filen via verifierad snapshot/synk, men varken webben eller
+Roblox läser den direkt som gameplay authority.
 
-Spelparametrarna 0–1 är game feel och sätts av den som bygger. Namn, ras,
-födelseår och beskrivning är verklighet och får inte skrivas om för att låta
-bättre.
+Spelparametrarna 0–1 är game feel och ska hållas skilda från verklighetsfakta.
+Namn, ras, födelseår och beskrivning är verklighet och får inte skrivas om för
+att låta bättre.
 
 ### G01-blockerare — hästriggen byggs
 
@@ -107,7 +126,8 @@ importera i Studio och driva från befintlig movement-kod.
 
 Beslut (Tobias, 2026-08-31): **vi bygger den.** Detta är den enda posten i
 projektet som varken Claude eller integrationsledaren kan lösa — det är
-3D-arbete. Behöver en kravspec innan modellering börjar, inte efter.
+3D-arbete. Kravspecen finns och ska följas före modellering/import, inte skrivas
+i efterhand.
 
 ### SEC-01 — gästläget dokumenteras som avsiktligt
 
@@ -131,4 +151,5 @@ Fört hit så att frågan inte kommer tillbaka var tredje vecka.
 | `Preparation.luau` som källa, export till webben | webben har hela loopen och den pedagogiska texten; Roblox hade fyra fasetiketter utan innehåll | 2026-08-31 |
 | Merga #32 "först för säkerhets skull" | #33 innehåller alla dess commits, bekräftat med `git merge-base --is-ancestor` | 2026-08-31 |
 | Återuppliva #9 | 105 commits bakom `main`; temana levererades av Gate 01 | 2026-08-31 |
+| Återuppliva #29 som S2a | ersatt av scope-ren PR #52 | 2026-09-01 |
 | Kurerat urval hästar i stället för hela stallet | hemsidan stämmer — spelet ska visa det riktiga stallet | 2026-08-31 |

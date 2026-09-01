@@ -2,29 +2,43 @@
 
 Gate G01 separates **who the horse is** from **how the horse is rendered**.
 
-> **Status: target contract, not current behaviour.** Everything under
-> "Canonical identity" is already true in `main`. The binding rules are not:
-> `GameplayService` does not exist yet, and `HorseService` today binds on
-> proximity rather than on identity. See "Current state in `main`" at the bottom
-> for exactly what holds and what does not. The document is written as the
-> contract implementations must satisfy, and the gap section is what makes it
-> checkable.
+> **Status: target contract, not full current behaviour.** The canonical identity
+> data described below is implemented by G01 S2c. The rig-binding rules are not:
+> `GameplayService` does not exist yet, and `HorseService` still binds on
+> proximity rather than on identity. The gap section remains authoritative for
+> what is not yet implemented.
 
 ## Canonical identity
 
-`src/spel/hastar.js` is the gameplay-data source and exports the same ids to
-`roblox/game/UBRFSpel.luau`. Seventeen horses are defined, and the id sets are
-identical on both sides — enforced by `node tools/exportera-spel.js
---kontrollera`, which runs in CI and fails if the export drifts from the source.
+`src/spel/hastar.js` is the gameplay-data source. It contains the **33 active
+UBRF horses/ponies** in the versioned source snapshot
+`references/data/ubrf-hastar-2026-09-01.json`, taken from `public.hastar`
+(upstream `ubrf.se/hastar`). The factual fields are checked against that snapshot
+by `node tools/exportera-spel.js --kontrollera`.
+
+Roblox receives the same ids through generated `roblox/game/UBRFSpelData.luau`.
+`roblox/game/UBRFSkotsel.luau` carries the separately generated care canon, and
+the thin `roblox/game/UBRFSpel.luau` wrapper exposes both through the existing
+`ReplicatedStorage.UBRFSpel` contract. CI fails if either generated module drifts
+from its JS source.
 
 Examples:
 
 - `toblerone` → Toblerone
 - `cosmo` → Cosmo M Z
 - `air` → Air Italia
+- `bing` → Bing
 
-The id is the stable machine key. The display name may contain spaces or change
-formatting; the id must not silently change with it.
+The id is the stable machine key. `kallaId` links a gameplay id to the source
+snapshot id. Display names may contain spaces or punctuation; ids must not
+silently change with formatting.
+
+Real-world fields and gameplay fields are deliberately separate. Name, type,
+birth year, breed, height/import where present, source pony category and
+source description are source-backed. 0–1 riding parameters, visual colours and
+unverified individual feeding values are gameplay/presentation values and must
+not be presented as measured facts. Dante's source pony category is missing, so
+the current size category is explicitly an `ASSUMPTION`, not verified UBRF data.
 
 ## Required on every G01 production horse rig
 
@@ -57,8 +71,8 @@ HorseService            owns mount/dismount/rider/riding state
 ```
 
 There must never be a second code path that independently chooses another horse
-model for the same player. **Such a path exists in `main` today** — see the gap
-section.
+model for the same player. **Such a path still exists in the current runtime** —
+see the gap section.
 
 ## Missing rig behavior
 
@@ -76,50 +90,42 @@ A clearly marked development-only test rig may satisfy this contract for code
 falsification. Human production play acceptance still requires a real rigged
 horse asset that satisfies `HORSE-MODEL-SPEC.md`.
 
-## Current state in `main`
+## Current implementation state after S2c
 
-Verified against `21c4d91` on 2026-08-31. This section exists so the contract can
-be checked rather than assumed, and so nobody reads the present tense above as a
-description of what the code does.
-
-| claim | holds in `main`? |
+| claim | state |
 |---|---|
-| `src/spel/hastar.js` defines the ids | **yes** — 17 horses |
-| `roblox/game/UBRFSpel.luau` exports the same ids | **yes** — id sets are identical, and `node tools/exportera-spel.js --kontrollera` gates it in CI |
+| `src/spel/hastar.js` defines the active roster | **yes — 33 active horses/ponies** |
+| source-backed factual fields are versioned and checked | **yes — against `references/data/ubrf-hastar-2026-09-01.json`** |
+| Roblox exposes the same roster via `UBRFSpel` | **yes — generated `UBRFSpelData` + thin wrapper** |
+| care data remains available through the same `UBRFSpel` facade | **yes — generated `UBRFSkotsel` + wrapper** |
 | `roblox/docs/HORSE-MODEL-SPEC.md` exists | **yes** |
-| `CollectionService` tag `Horse` is in real use | **yes** — `HorseService:38`, `InteractionController:57` |
-| `StallService` assigns a horse per player | **yes** — `StallService.tilldela` |
+| `CollectionService` tag `Horse` is in real use | **yes — `HorseService`, `InteractionController`** |
+| `StallService` assigns a horse per player | **yes — `Stallet.tilldela`** |
 | `HorseService` owns mount/dismount | **yes** |
-| `GameplayService` exists | **no** — named only in docs |
-| any code reads the `HorseId` attribute | **no** |
+| `GameplayService` exists | **no — named only in docs until later G01 slice** |
+| runtime enforces the `HorseId` assignment | **no** |
 | `G01Phase` / `waiting_model` exists | **no** |
 
 ### The gap that matters
 
-`HorseService.tryMount(player, model)` accepts **any** model tagged `Horse`
-within `MountRange` (default 14) and checks only that the session exists, that
-the horse is free, and that the player is not already riding. It never consults
-the assignment made by `StallService`.
+`HorseService.tryMount(player, model)` accepts any model tagged `Horse` within
+`MountRange` and does not yet consult the identity assignment from `Stallet`.
+The attributes it reads concern riding state, not canonical identity.
 
-The attributes it does read are `Gait` and `GaitCeiling`. It reads no identity at
-all.
-
-So the "second code path" this contract forbids is not hypothetical: today a
-player assigned `air` can mount `toblerone` by standing next to it. Nothing
-breaks, because nothing yet connects assignment to rig — which is precisely why
-the connection has to be specified before it is written rather than after.
+So the second code path this contract forbids is still possible until the later
+binding slice: a player assigned one horse identity could mount another tagged
+horse model by proximity. S2c fixes **who the horses are**; it does not pretend
+to have implemented the later rig arbitration.
 
 ### What this contract does not settle
 
-The contract fixes **the key**, not the **arbitration**. Two questions are still
-open and should be answered when `GameplayService` is implemented:
+The contract fixes **the key**, not the **arbitration**. Two questions remain for
+when `GameplayService` is implemented:
 
-1. **Shared rigs.** If two players are assigned `air` in the same server and
-   only one `HorseId = "air"` rig exists, who gets it? Options are per-player
-   rig instances, a queue, or reporting `waiting_model` to the loser. The
-   contract's `waiting_model` state describes a missing rig, not a contested
-   one.
-2. **Mounting someone else's horse.** Binding on identity does not by itself say
-   whether `tryMount` should refuse a rig bound to another player. Refusing is
-   the likely answer for a teaching game, but it is a design decision and is not
-   implied by this document.
+1. **Shared rigs.** If two players are assigned the same horse identity in one
+   server and only one matching rig exists, the implementation needs an explicit
+   arbitration rule: per-player instances, queue, or a waiting state.
+2. **Mounting someone else's horse.** Identity binding does not alone define
+   whether a player may mount a rig already bound to another player. That is a
+   separate product/gameplay decision and must not be smuggled in as a data
+   assumption.
