@@ -84,6 +84,11 @@ jobs:
           if [ -f tools/build.py ]; then python3 tools/build.py
           else echo "hoppar: tools/build.py finns inte i denna branch"; fi
 
+      - name: Hästkanon-save migreras utan identitetsläckage
+        run: |
+          if [ -f tools/testa-hastkanon-save.mjs ]; then node tools/testa-hastkanon-save.mjs
+          else echo "hoppar: tools/testa-hastkanon-save.mjs finns inte i denna branch"; fi
+
       - name: Studio-paketet ska gå att bygga
         run: |
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
