@@ -18,7 +18,8 @@ function ladda(saved) {
   };
   vm.createContext(context);
   vm.runInContext(source, context, { filename: "src/ryttare.js" });
-  return vm.runInContext("JSON.parse(JSON.stringify(SPAR))", context);
+  const json = vm.runInContext("JSON.stringify(SPAR)", context);
+  return JSON.parse(json);
 }
 
 const gamla = ladda({
