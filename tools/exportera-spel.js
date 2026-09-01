@@ -31,9 +31,12 @@ const MAL = path.join(ROT, "roblox/game/UBRFSpel.luau");
 
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
-vm.runInContext(las("src/spel/hastar.js"), ctx);
-const { HORSES, FODERSCHEMA, KRAFTVAL } =
-  vm.runInContext("({HORSES, FODERSCHEMA, KRAFTVAL})", ctx);
+vm.runInContext(las("src/spel/hastar.js") + "\n" + las("src/spel/skotsel.js"), ctx);
+const { HORSES, FODERSCHEMA, KRAFTVAL,
+        RYKTZON, RYKTREDSKAP, RYKTKRAV, SADELFAS,
+        VISITPUNKT, VISITFYND, VISITSVAR } =
+  vm.runInContext("({HORSES, FODERSCHEMA, KRAFTVAL, RYKTZON, RYKTREDSKAP,"
+                + " RYKTKRAV, SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR})", ctx);
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ARFARG = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
@@ -92,6 +95,51 @@ if (utanFoder.length || utanHast.length) {
   process.exit(2);
 }
 
+/* Varje ryktzons TYP måste ha ett redskapskrav, annars går zonen inte att
+   rykta färdigt och spelaren fastnar utan att förstå varför. Samma sak för
+   visitpunkterna: en punkt utan fynd kan aldrig ge något att rapportera. */
+const zonTyper = [...new Set(RYKTZON.map(z => z.typ))];
+const utanKrav = zonTyper.filter(t => !RYKTKRAV[t]);
+const utanFynd = VISITPUNKT.map(v => v.id).filter(id => !VISITFYND[id]);
+if (utanKrav.length || utanFynd.length) {
+  console.error("Skötselreglerna hänger inte ihop.");
+  if (utanKrav.length) console.error("  zontyp utan redskapskrav: " + utanKrav.join(", "));
+  if (utanFynd.length) console.error("  visitpunkt utan fynd: " + utanFynd.join(", "));
+  process.exit(2);
+}
+
+/* Redskapen i kraven måste finnas bland redskapen. Ett stavfel här ger en
+   zon som aldrig blir ren, oavsett vad spelaren gör. */
+const redskapsId = new Set(RYKTREDSKAP.map(r => r.id));
+const okantRedskap = Object.entries(RYKTKRAV)
+  .flatMap(([typ, lista]) => lista.filter(r => !redskapsId.has(r)).map(r => typ + "=" + r));
+if (okantRedskap.length) {
+  console.error("Okänt redskap i RYKTKRAV: " + okantRedskap.join(", "));
+  process.exit(2);
+}
+
+/* Säkerhets-/kunskapsinvariant: huvudet ryktas BARA med mjuk borste och
+   benen aldrig med gummiskrapa. Dessa regler ska fälla exporten även om
+   någon regenererar Luau efter en felaktig ändring i källan. */
+const huvudKrav = RYKTKRAV.huvud;
+if (!Array.isArray(huvudKrav) || huvudKrav.length !== 1 || huvudKrav[0] !== "mjuk") {
+  console.error("RYKTKRAV.huvud måste vara exakt [mjuk].");
+  process.exit(2);
+}
+const benKrav = RYKTKRAV.ben;
+if (!Array.isArray(benKrav) || benKrav.includes("skrapa")) {
+  console.error("RYKTKRAV.ben får inte innehålla skrapa.");
+  process.exit(2);
+}
+
+/* Exakt ETT rätt svar vid ett fynd. Poängen är att eleven RAPPORTERAR i
+   stället för att diagnostisera; två rätta svar upphäver den lärdomen. */
+const rattaSvar = VISITSVAR.filter(s => s.ratt).length;
+if (rattaSvar !== 1) {
+  console.error(`VISITSVAR har ${rattaSvar} rätta svar, ska ha exakt 1.`);
+  process.exit(2);
+}
+
 const ordning = Object.keys(HORSES);
 
 const ut = `--!strict
@@ -105,24 +153,41 @@ const ut = `--!strict
      ut som på webben. ]]
 
 return {
-	hastar = ${luau(HORSES, 1)},
-	foder = ${luau(FODERSCHEMA, 1)},
-	kraftval = ${luau(KRAFTVAL, 1)},
-	ordning = ${luau(ordning, 1)},
+\thastar = ${luau(HORSES, 1)},
+\tfoder = ${luau(FODERSCHEMA, 1)},
+\tkraftval = ${luau(KRAFTVAL, 1)},
+\tordning = ${luau(ordning, 1)},
+
+\t--[[ Skötseln. Reglerna är hästkunskap, inte spelbalans: huvudet tål bara
+\t     den mjuka borsten, gjorden dras i tre tag med paus, och eleven
+\t     RAPPORTERAR ett fynd i stället för att diagnostisera det. ]]
+\trykt = {
+\t\tzoner = ${luau(RYKTZON, 2)},
+\t\tredskap = ${luau(RYKTREDSKAP, 2)},
+\t\tkrav = ${luau(RYKTKRAV, 2)},
+\t},
+\tsadelfaser = ${luau(SADELFAS, 1)},
+\tvisitation = {
+\t\tpunkter = ${luau(VISITPUNKT, 2)},
+\t\tfynd = ${luau(VISITFYND, 2)},
+\t\tsvar = ${luau(VISITSVAR, 2)},
+\t},
 }
 `;
 
 if (process.argv.includes("--kontrollera")) {
   const fanns = fs.existsSync(MAL) ? fs.readFileSync(MAL, "utf8") : "";
   if (fanns !== ut) {
-    console.error("FEL  UBRFSpel.luau är UR SYNK med src/spel/hastar.js");
+    console.error("FEL  UBRFSpel.luau är UR SYNK med src/spel/");
     console.error("     kör: node tools/exportera-spel.js");
     process.exit(1);
   }
-  console.log("OK   UBRFSpel.luau är i synk med src/spel/hastar.js");
+  console.log("OK   UBRFSpel.luau är i synk med src/spel/");
   process.exit(0);
 }
 
 fs.mkdirSync(path.dirname(MAL), { recursive: true });
 fs.writeFileSync(MAL, ut);
-console.log(`roblox/game/UBRFSpel.luau: ${ordning.length} hästar, ${ut.split("\n").length} rader`);
+console.log(`roblox/game/UBRFSpel.luau: ${ordning.length} hästar, `
+  + `${RYKTZON.length} ryktzoner, ${VISITPUNKT.length} visitpunkter, `
+  + `${ut.split("\n").length} rader`);
