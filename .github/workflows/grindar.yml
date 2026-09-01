@@ -43,7 +43,7 @@ jobs:
           if [ -f tools/kolla-material.py ]; then python3 tools/kolla-material.py
           else echo "hoppar: tools/kolla-material.py finns inte i denna branch"; fi
 
-      - name: Speldata i synk — src/spel/ mot UBRFSpel.luau
+      - name: Speldata i synk — src/spel/ mot Roblox-modulerna
         run: |
           if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera
           else echo "hoppar: tools/exportera-spel.js finns inte i denna branch"; fi
@@ -105,10 +105,11 @@ jobs:
           git rev-parse --verify "$bas" >/dev/null 2>&1 || { echo "ingen bas att jämföra mot"; exit 0; }
           andrade=$(git diff --name-only "$bas"...HEAD || true)
           fel=0
-          for genererad in roblox/game/UBRFSpel.luau roblox/buildings/UBRFKomplex.luau; do
+          for genererad in roblox/game/UBRFSpelData.luau roblox/game/UBRFSkotsel.luau roblox/buildings/UBRFKomplex.luau; do
             printf '%s\n' "$andrade" | grep -qx "$genererad" || continue
             case "$genererad" in
-              roblox/game/UBRFSpel.luau)        gen="tools/exportera-spel.js";;
+              roblox/game/UBRFSpelData.luau)      gen="tools/exportera-spel.js";;
+              roblox/game/UBRFSkotsel.luau)       gen="tools/exportera-spel.js";;
               roblox/buildings/UBRFKomplex.luau) gen="tools/exportera-geometri.js";;
             esac
             kalla=$(printf '%s\n' "$andrade" | grep -E '^(src/|tools/)' || true)
