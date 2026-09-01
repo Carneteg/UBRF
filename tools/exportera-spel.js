@@ -1,25 +1,11 @@
 #!/usr/bin/env node
 /* ══════════════════════════════════════════════════════════════════
-   Skriver roblox/game/UBRFSpel.luau ur src/spel/*.js.
+   Skriver roblox/game/UBRFSpel.luau ur src/spel/hastar.js.
 
-   Samma mönster som tools/exportera-geometri.js, av samma skäl: hästarna
-   ska inte finnas i två versioner. Roblox hade tidigare ingen roster alls
-   och webben hade allt, vilket i praktiken betydde att Roblox-spelaren mötte
-   "Namnlös" av rasen "Warmblood".
-
-   Kör:  node tools/exportera-spel.js
-         node tools/exportera-spel.js --kontrollera   (fäller om ur synk)
-
-   Två fällor som redan slagit till i det här repot och som är tätade här:
-
-   1. Luau-identifierare och Roblox-attributnamn tål bara [A-Za-z0-9_].
-      Nycklar som inte är rena ASCII-identifierare skrivs i hakparentes.
-      Svenska i STRÄNGVÄRDEN är helt i sin ordning — beskrivningarna ska
-      vara ordagranna.
-
-   2. Färger kändes förut igen på NYCKELNS namn, ur en handskriven lista.
-      Varje ny färgnyckel exporterades då tyst som en sträng och Roblox fick
-      ingen färg. Här känns de igen på VÄRDET.
+   Verklighetsfakta i spelkanonen måste samtidigt motsvara den
+   versionssparade snapshoten references/data/ubrf-hastar-2026-09-01.json.
+   Snapshoten är hämtad från Supabase public.hastar (upstream ubrf.se).
+   Supabase är upstream för fakta; JS-filen är spelets kanoniska data.
    ══════════════════════════════════════════════════════════════════ */
 const fs = require("fs");
 const path = require("path");
@@ -28,8 +14,9 @@ const vm = require("vm");
 const ROT = path.resolve(__dirname, "..");
 const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const MAL = path.join(ROT, "roblox/game/UBRFSpel.luau");
+const SNAPSHOT = "references/data/ubrf-hastar-2026-09-01.json";
 
-const ctx = { console, Math, JSON, window: {} };
+const ctx = { console, Math, JSON, Object, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/spel/hastar.js"), ctx);
 const { HORSES, FODERSCHEMA, KRAFTVAL } =
@@ -37,6 +24,60 @@ const { HORSES, FODERSCHEMA, KRAFTVAL } =
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ARFARG = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+
+function lika(a, b) {
+  return a === b || (a == null && b == null);
+}
+
+function kontrolleraFakta() {
+  const snap = JSON.parse(las(SNAPSHOT));
+  if (snap.active_count !== snap.rows.length) {
+    console.error(`FEL  snapshot active_count ${snap.active_count} men ${snap.rows.length} rader`);
+    process.exit(2);
+  }
+  const ix = Object.fromEntries(snap.fields.map((f, i) => [f, i]));
+  const radPerId = new Map(snap.rows.map(r => [r[ix.id], r]));
+  const kallaIdn = Object.values(HORSES).map(h => h.kallaId);
+  const dubbla = kallaIdn.filter((id, i) => kallaIdn.indexOf(id) !== i);
+  if (dubbla.length) {
+    console.error("FEL  dubbla kallaId: " + [...new Set(dubbla)].join(", "));
+    process.exit(2);
+  }
+  const saknas = [...radPerId.keys()].filter(id => !kallaIdn.includes(id));
+  const extra = kallaIdn.filter(id => !radPerId.has(id));
+  if (saknas.length || extra.length || Object.keys(HORSES).length !== snap.active_count) {
+    console.error(`FEL  hästkanonen avviker från snapshoten (${Object.keys(HORSES).length}/${snap.active_count})`);
+    if (saknas.length) console.error("  saknas i spelet: " + saknas.join(", "));
+    if (extra.length) console.error("  saknas i snapshot: " + extra.join(", "));
+    process.exit(2);
+  }
+
+  const falt = [
+    ["namn", "namn"],
+    ["fodd", "fodd"],
+    ["ras", "ras"],
+    ["mankhojd", "mankhojd"],
+    ["import", "import"],
+    ["kategoriKalla", "kategori"],
+    ["besk", "beskrivning"],
+  ];
+  const fel = [];
+  for (const [gameId, h] of Object.entries(HORSES)) {
+    const r = radPerId.get(h.kallaId);
+    const sourceTyp = r[ix.typ] === "häst" ? "hast" : r[ix.typ];
+    if (!lika(h.typ, sourceTyp)) fel.push(`${gameId}.typ`);
+    for (const [hk, sk] of falt) {
+      if (!lika(h[hk], r[ix[sk]])) fel.push(`${gameId}.${hk}`);
+    }
+    if (h.typ === "ponny" && h.kategoriKalla == null && h.kategoriStatus !== "ASSUMPTION") {
+      fel.push(`${gameId}.kategoriStatus`);
+    }
+  }
+  if (fel.length) {
+    console.error("FEL  verklighetsfakta avviker från snapshot: " + fel.join(", "));
+    process.exit(2);
+  }
+}
 
 function tal(v) {
   const r = Math.round(v * 1e6) / 1e6;
@@ -50,7 +91,6 @@ function farg(hex) {
   const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
   return `Color3.fromRGB(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 }
-
 function luau(v, indent) {
   const pad = "\t".repeat(indent);
   const padIn = "\t".repeat(indent + 1);
@@ -71,9 +111,8 @@ function luau(v, indent) {
   return "{\n" + rader.join(",\n") + ",\n" + pad + "}";
 }
 
-/* Hästarnas id blir Roblox-attribut och måste alltså vara rena. Faller
-   exporten här är det för att någon döpt en häst till något med å/ä/ö —
-   säg det HÖGT i stället för att tyst skriva något Roblox inte kan läsa. */
+kontrolleraFakta();
+
 for (const id of Object.keys(HORSES)) {
   if (!IDENT.test(id)) {
     console.error(`Hästens id "${id}" duger inte som Roblox-attribut ([A-Za-z0-9_]).`);
@@ -81,14 +120,16 @@ for (const id of Object.keys(HORSES)) {
   }
 }
 
-/* Foder och häst ska vara samma mängd. Ett glapp här betyder att någon lagt
-   till en häst utan giva, och det märks annars först som en tom krubba. */
 const utanFoder = Object.keys(HORSES).filter(k => !FODERSCHEMA[k]);
 const utanHast = Object.keys(FODERSCHEMA).filter(k => !HORSES[k]);
-if (utanFoder.length || utanHast.length) {
-  console.error("Foderschemat och hästarna går isär.");
+const oklassatFoder = Object.entries(FODERSCHEMA)
+  .filter(([, v]) => v.status !== "ASSUMPTION" && v.status !== "VERIFIED")
+  .map(([k]) => k);
+if (utanFoder.length || utanHast.length || oklassatFoder.length) {
+  console.error("FEL  foderdatan och hästarna går isär eller saknar evidensklass.");
   if (utanFoder.length) console.error("  häst utan foder: " + utanFoder.join(", "));
   if (utanHast.length) console.error("  foder utan häst: " + utanHast.join(", "));
+  if (oklassatFoder.length) console.error("  foder utan status: " + oklassatFoder.join(", "));
   process.exit(2);
 }
 
@@ -98,17 +139,16 @@ const ut = `--!strict
 --[[ GENERERAD av tools/exportera-spel.js ur src/spel/hastar.js.
      Ändra inte här — ändra i källan och kör om exporten.
 
-     Beskrivningarna är ordagranna från ubrf.se/hastar.
+     Verklighetsfakta är grindade mot ${SNAPSHOT}.
+     Spelparametrar och visuella värden är separat klassade i källan.
 
-     ordning[] finns för att pairs() i Lua inte har någon ordning. Vill man
-     visa hästarna i en lista ska den se likadan ut varje gång och likadant
-     ut som på webben. ]]
+     ordning[] finns för att pairs() i Lua inte har någon ordning. ]]
 
 return {
-	hastar = ${luau(HORSES, 1)},
-	foder = ${luau(FODERSCHEMA, 1)},
-	kraftval = ${luau(KRAFTVAL, 1)},
-	ordning = ${luau(ordning, 1)},
+\thastar = ${luau(HORSES, 1)},
+\tfoder = ${luau(FODERSCHEMA, 1)},
+\tkraftval = ${luau(KRAFTVAL, 1)},
+\tordning = ${luau(ordning, 1)},
 }
 `;
 
@@ -119,7 +159,7 @@ if (process.argv.includes("--kontrollera")) {
     console.error("     kör: node tools/exportera-spel.js");
     process.exit(1);
   }
-  console.log("OK   UBRFSpel.luau är i synk med src/spel/hastar.js");
+  console.log(`OK   UBRFSpel.luau är i synk; ${ordning.length} hästar matchar snapshot`);
   process.exit(0);
 }
 
