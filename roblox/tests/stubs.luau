@@ -470,4 +470,12 @@ function __key(kod, nere)
 		{ KeyCode = kod })
 end
 
-task = { delay = function(_, fn) __senasteDelay = fn end }
+--[[ `spawn` kör SYNKRONT i bänken. Det är med flit: provet ska kunna mäta
+     vad som hänt när `start()` returnerat, och en riktig trådväxling hade
+     gjort ordningsprovet nedan tidsberoende i stället för deterministiskt.
+     Det som provas är ordningen mellan anslutning och anrop, inte att Roblox
+     schemalägger. ]]
+task = {
+	delay = function(_, fn) __senasteDelay = fn end,
+	spawn = function(fn, ...) fn(...) end,
+}

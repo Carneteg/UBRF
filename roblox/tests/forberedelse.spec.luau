@@ -448,6 +448,59 @@ do
 		PreparationController.hastId() == "cosmo" and PreparationController.redo() == true)
 end
 
+--[[ ── start(): listenern FÖRE handskakningen ──────────────────────
+	Den sista biten oprovad wiring. `PreparationController.start()` ansluter
+	`PreparationSync` och anropar sedan `PreparationHello`. Ordningen ÄR
+	kontraktet: en RemoteEvent som avfyras innan någon lyssnar är borta för
+	alltid, så anropas handskakningen först kan serverns svar — och varje
+	sync som hinner emellan — gå förlorat.
+
+	Provet kör riktiga `start()` och mäter hur många lyssnare som fanns på
+	`PreparationSync` i det ögonblick handskakningen anropades. Byts de två
+	raderna i produktionen blir siffran 0. ]]
+do
+	game:GetService("RunService")._server = true
+	local sync = Networking.get("PreparationSync")
+	local hello = Networking.get("PreparationHello")
+
+	local lyssnareVidAnrop = -1
+	local anropad = false
+	hello.InvokeServer = function()
+		anropad = true
+		lyssnareVidAnrop = #sync.OnClientEvent._lyssnare
+		local st = Preparation.nyState("cosmo")
+		for _, f in ipairs(Preparation.stegFaser()) do
+			Preparation.utfor(st, f.id, "cosmo")
+		end
+		return Preparation.vy(st, Preparation.STATUS.REDO, 99)
+	end
+
+	PreparationController.start()
+
+	check("start() anropar handskakningen", anropad)
+	check("listenern var ansluten INNAN handskakningen anropades",
+		lyssnareVidAnrop >= 1, lyssnareVidAnrop .. " lyssnare vid anropet")
+
+	--[[ Och snapshoten ska faktiskt ha tagits emot, inte bara hämtats. ]]
+	check("snapshoten från start() är mottagen",
+		PreparationController.hastId() == "cosmo" and PreparationController.redo() == true)
+
+	--[[ En sync som kommer efter med LÄGRE revision får inte backa läget —
+		det är den vägen som finns i produktionen, via listenern. ]]
+	sync.OnClientEvent:Fire(Preparation.vy(Preparation.nyState("air"),
+		Preparation.STATUS.FORBEREDER, 5))
+	check("en äldre sync via den riktiga listenern backar inte läget",
+		PreparationController.hastId() == "cosmo" and PreparationController.redo() == true)
+
+	--[[ ...men en NYARE ska gå igenom hela vägen. ]]
+	sync.OnClientEvent:Fire(Preparation.vy(Preparation.nyState("air"),
+		Preparation.STATUS.FORBEREDER, 100))
+	check("en nyare sync via den riktiga listenern går igenom",
+		PreparationController.hastId() == "air" and PreparationController.redo() == false)
+
+	game:GetService("RunService")._server = false
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("forberedelse.spec: " .. fails .. " fel")
