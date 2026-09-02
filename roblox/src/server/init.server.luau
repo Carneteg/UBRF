@@ -6,7 +6,12 @@
 
 local HorseService = require(script.HorseService)
 local StallService = require(script.StallService)
+local GameplayService = require(script.GameplayService)
 
+--[[ Ordningen är ett beroende, inte en smaksak: GameplayService registrerar
+     sin uppsittningsgrind i HorseService och läser tilldelad HorseId ur
+     StallService, så båda måste vara igång först. ]]
 HorseService.start()
 StallService.start()
+GameplayService.start()
 print("[Horse] Servern igång")

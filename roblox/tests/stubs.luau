@@ -126,7 +126,38 @@ Enum = {
 	     build.py ur roblox/tests/roblox-material.txt, sa den finns pa ETT
 	     stalle. ]]
 	Material = __striktEnum("Material", __MATERIAL),
+	--[[ De UI-enum HUD:en rör. Medvetet uppräknade och inte en __index som
+	     svarar på allt: samma skäl som Material — en enum-mock som svarar ja
+	     på vad som helst gör att ett stavfel passerar bänken och spricker
+	     först i Studio. ]]
+	ZIndexBehavior = { Sibling = 1, Global = 2 },
+	Font = { Gotham = 1, GothamBold = 2, SourceSans = 3, SourceSansBold = 4 },
+	TextXAlignment = { Left = 1, Center = 2, Right = 3 },
+	TextYAlignment = { Top = 1, Center = 2, Bottom = 3 },
+	SizeConstraint = { RelativeXY = 1, RelativeXX = 2, RelativeYY = 3 },
+	FillDirection = { Horizontal = 1, Vertical = 2 },
+	SortOrder = { Name = 1, Custom = 2, LayoutOrder = 3 },
+	AutomaticSize = { None = 0, X = 1, Y = 2, XY = 3 },
 }
+
+--[[ UI-typerna. HUD:en bara skapar dem och läser dem aldrig isär, så de
+     lagras som vad de är — inga beräkningar, ingen låtsad Roblox-matematik. ]]
+function UDim2_new(xs, xo, ys, yo)
+	return { _typ = "UDim2", XScale = xs, XOffset = xo, YScale = ys, YOffset = yo }
+end
+UDim2 = { new = UDim2_new, fromScale = function(x, y) return UDim2_new(x, 0, y, 0) end,
+	fromOffset = function(x, y) return UDim2_new(0, x, 0, y) end }
+UDim = { new = function(sc, off) return { _typ = "UDim", Scale = sc, Offset = off } end }
+Vector2 = { new = function(x, y) return { _typ = "Vector2", X = x, Y = y } end }
+
+--[[ `warn` fanns inte i bänken. Produktionskoden använder den på sina
+     nil-vägar — t.ex. när anläggningen inte är byggd — så utan den kraschade
+     just den gren som skulle bevisas fungera. Samlas i stället för att
+     skrivas ut, så att ett prov kan läsa vad som varnades. ]]
+__varningar = {}
+function warn(...)
+	table.insert(__varningar, table.concat({ ... }, " "))
+end
 
 workspace = {
 	Raycast = function(_, origin, dir)
@@ -136,6 +167,15 @@ workspace = {
 			Instance = { Name = "Baseplate" }, Material = Enum.Material.Grass }
 	end,
 	CurrentCamera = { CFrame = cframe(), FieldOfView = 70, CameraType = 2 },
+	--[[ Ingen anläggning byggd i bänken. StallService frågar efter den för
+	     att kunna sätta en boxmarkör, och SKA då varna och hoppa över
+	     markören i stället för att krascha — det är produktionens egen
+	     nil-väg, och den provas nu på riktigt. ]]
+	_barn = {},
+	FindFirstChild = function(self, namn)
+		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
+		return nil
+	end,
 }
 
 local __services = {
@@ -144,14 +184,31 @@ local __services = {
 	RunService = {
 		Heartbeat = { Connect = function() return { Disconnect = function() end } end },
 		RenderStepped = { Connect = function() return { Disconnect = function() end } end },
-		IsClient = function() return true end,
-		IsServer = function() return false end,
+		--[[ `_server` lades till för S2b: GameplayService är serverkod och
+		     Networking väljer väg på IsServer. Standard är oförändrad (klient),
+		     så alla äldre specar mäter exakt samma sak som förut. ]]
+		_server = false,
+		IsClient = function(self) return not self._server end,
+		IsServer = function(self) return self._server == true end,
 	},
-	Players = { LocalPlayer = {
-		Character = { Name = "Spelare" },
-		FindFirstChild = function() return nil end,
-		FindFirstChildOfClass = function() return nil end,
-	} },
+	Players = {
+		LocalPlayer = {
+			Name = "Spelare", UserId = 1,
+			Character = { Name = "Spelare" },
+			FindFirstChild = function() return nil end,
+			FindFirstChildOfClass = function() return nil end,
+			--[[ HUD:en parentas hit. Utan den gick PreparationController inte
+			     att köra alls i bänken. ]]
+			WaitForChild = function(self, namn)
+				self._gui = self._gui or { Name = namn, _barn = {} }
+				return self._gui
+			end,
+		},
+		_spelare = {},
+		GetPlayers = function(self) return self._spelare end,
+		PlayerAdded = { Connect = function() return { Disconnect = function() end } end },
+		PlayerRemoving = { Connect = function() return { Disconnect = function() end } end },
+	},
 	--[[ Spaken sätts av testet när gamepad ska mätas. TouchEnabled är falskt:
 	     bänken mäter kontraktet, inte gesterna — GUI:t byggs bara i Studio. ]]
 	UserInputService = {
@@ -168,10 +225,32 @@ local __services = {
 	},
 	TweenService = { Create = function() return { Play = function() end } end },
 	Debris = { AddItem = function() end },
+	--[[ Taggregistret var förut tomt och osättbart, och då gick ingen
+	     bindningsregel att prova: `GetTagged` svarade alltid {} och varje
+	     "hittade ingen modell"-gren blev grön av fel skäl. `__taggade`
+	     fylls av provet. ]]
 	CollectionService = {
-		GetTagged = function() return {} end,
-		HasTag = function(_, _, _) return false end,
+		_taggade = {},
+		GetTagged = function(self, tagg) return self._taggade[tagg] or {} end,
+		AddTag = function(self, inst, tagg)
+			self._taggade[tagg] = self._taggade[tagg] or {}
+			table.insert(self._taggade[tagg], inst)
+		end,
+		--[[ Union-lost efter att S2b landade i main. `HasTag` kom fran
+		     riggkontraktet och svarade hardkodat `false`; nu svarar den mot
+		     samma register som `GetTagged`. Ingen produktionskod anropar den
+		     -- RigContract tar `harTagg` som injicerad funktion -- men en
+		     stubb som ljuger ar en fella som vantar pa forsta anroparen. ]]
+		HasTag = function(self, inst, tagg)
+			for _, i in ipairs(self._taggade[tagg] or {}) do
+				if i == inst then return true end
+			end
+			return false
+		end,
 		GetInstanceAddedSignal = function()
+			return { Connect = function() return { Disconnect = function() end } end }
+		end,
+		GetInstanceRemovedSignal = function()
 			return { Connect = function() return { Disconnect = function() end } end }
 		end,
 	},
@@ -189,13 +268,29 @@ __Core = {
 	},
 }
 
+--[[ ReplicatedStorage returnerade förut en NY tabell vid varje anrop. Det
+     dög så länge bara `.HorseCore` lästes, men attribut skrivna av en modul
+     försvann då ur nästa modul — och `G01Enabled` hade sett osatt ut oavsett
+     vad servern gjorde. En stabil tabell, med attribut. ]]
+local __rs = { HorseCore = __Core, _attr = {}, _barn = {} }
+function __rs:GetAttribute(k) return self._attr[k] end
+function __rs:SetAttribute(k, v) self._attr[k] = v end
+function __rs:FindFirstChild(namn)
+	local direkt = rawget(self, namn)
+	if direkt then return direkt end
+	for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
+	return nil
+end
+function __rs:WaitForChild(namn) return self:FindFirstChild(namn) end
+
 game = {
 	GetService = function(_, name)
-		if name == "ReplicatedStorage" then return { HorseCore = __Core } end
+		if name == "ReplicatedStorage" then return __rs end
 		return assert(__services[name], "ingen stub för tjänsten " .. name)
 	end,
 	Players = __services.Players,
 }
+__ReplicatedStorage = __rs
 script = { Parent = __Core }
 
 --[[ En riggstub: det MovementController rör och inget mer. ]]
@@ -219,11 +314,92 @@ end
 --[[ `Instance.new` fanns inte här alls, bara i bygg-stubbarna. Den behövs
      för att `AnimationController:_load` skapar `Animation`-objekt. Minimal
      med flit: bara namn, klass och id, alltså precis det modulen rör. ]]
-Instance = {
-	new = function(klass)
-		return { ClassName = klass, Name = "", AnimationId = "" }
-	end,
-}
+--[[ `Instance.new` gav förut bara { ClassName, Name, AnimationId }. Det räckte
+     för AnimationController, men inte för att köra serverkod eller bygga en
+     HUD: utan Parent, barn och signaler gick varken `Networking.folder()`
+     eller `PreparationController` att prova, och då kunde produktionens
+     UPPKOPPLING vara trasig medan varje regel var grön. Senior review runda 2
+     fällde exakt det.
+
+     Mocken är avsiktligt trubbig men inte magisk: den svarar bara på det
+     riktiga instanser faktiskt gör här — sätta egenskaper, sätta Parent,
+     hitta barn, kopplas ur, och (för knappar) ett Activated att ansluta. ]]
+local function __signal()
+	local sig = { _lyssnare = {} }
+	function sig:Connect(fn)
+		table.insert(self._lyssnare, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		for _, fn in ipairs(self._lyssnare) do fn(...) end
+	end
+	return sig
+end
+__signal_ny = __signal
+
+local function __nyInstans(klass)
+	local inst = {
+		ClassName = klass, Name = "", AnimationId = "",
+		_barn = {}, _attr = {}, Parent = nil,
+	}
+	function inst:GetAttribute(k) return self._attr[k] end
+	function inst:SetAttribute(k, v) self._attr[k] = v end
+	function inst:FindFirstChild(namn)
+		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
+		return nil
+	end
+	--[[ `IsA` svarar bara på den egna klassen och de få basklasser koden
+	     faktiskt frågar efter. Ingen full arvshierarki: en mock som svarar
+	     ja på allt hade gjort varje IsA-grind meningslös. ]]
+	function inst:IsA(klassnamn)
+		if klassnamn == self.ClassName then return true end
+		if klassnamn == "BasePart" then
+			return self.ClassName == "Part" or self.ClassName == "Seat"
+				or self.ClassName == "MeshPart"
+		end
+		if klassnamn == "GuiObject" then
+			return self.ClassName == "Frame" or self.ClassName == "TextLabel"
+				or self.ClassName == "TextButton"
+		end
+		return false
+	end
+	function inst:Destroy()
+		local far = rawget(self, "Parent")
+		if far and far._barn then
+			for i, b in ipairs(far._barn) do
+				if b == self then table.remove(far._barn, i) break end
+			end
+		end
+	end
+	if klass == "TextButton" then inst.Activated = __signal() end
+	if klass == "RemoteEvent" then
+		inst.OnClientEvent = __signal()
+		inst.OnServerEvent = __signal()
+		inst._skickat = {}
+		function inst:FireClient(spelare, ...) table.insert(self._skickat, { spelare, ... }) end
+		function inst:FireAllClients(...) table.insert(self._skickat, { ... }) end
+	end
+	if klass == "RemoteFunction" then
+		inst.OnServerInvoke = nil
+	end
+	--[[ Parent sätts via metatabell så att barnlistan hålls i takt; koden
+	     skriver `x.Parent = y` och förväntar sig att y ser x. ]]
+	return setmetatable(inst, {
+		__newindex = function(t, k, v)
+			if k == "Parent" then
+				rawset(t, "Parent", v)
+				if v and type(v) == "table" then
+					v._barn = v._barn or {}
+					table.insert(v._barn, t)
+				end
+			else
+				rawset(t, k, v)
+			end
+		end,
+	})
+end
+
+Instance = { new = __nyInstans }
 
 --[[ ── Animationsstubbar ───────────────────────────────────────────────
      `__makeRig` lämnar `animator = nil`, och därför har `AnimationController`
@@ -305,4 +481,12 @@ function __key(kod, nere)
 		{ KeyCode = kod })
 end
 
-task = { delay = function(_, fn) __senasteDelay = fn end }
+--[[ `spawn` kör SYNKRONT i bänken. Det är med flit: provet ska kunna mäta
+     vad som hänt när `start()` returnerat, och en riktig trådväxling hade
+     gjort ordningsprovet nedan tidsberoende i stället för deterministiskt.
+     Det som provas är ordningen mellan anslutning och anrop, inte att Roblox
+     schemalägger. ]]
+task = {
+	delay = function(_, fn) __senasteDelay = fn end,
+	spawn = function(fn, ...) fn(...) end,
+}
