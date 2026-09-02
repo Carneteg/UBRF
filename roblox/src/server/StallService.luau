@@ -95,10 +95,30 @@ local function satMarkor(player: Player, dagens: any): Model?
 	return modell
 end
 
+--[[ Vilka identiteter som redan är utdelade till någon som är inne.
+
+	Nyckeln är hästens id, inte spelaren: frågan reservationen ställer är
+	"står någon redan i den här boxen", inte "har den här spelaren en häst". ]]
+local function upptagnaHastar(utom: Player?): { [string]: boolean }
+	local ut = {}
+	for player, dagens in pairs(tilldelade) do
+		if player ~= utom and dagens and dagens.id then
+			ut[dagens.id] = true
+		end
+	end
+	return ut
+end
+
 function StallService.tilldela(player: Player)
-	local dagens = Stallet.dagensHast(player.UserId)
+	--[[ Reservationen görs HÄR och inte i Stallet: modulen äger regeln, den
+		här filen äger vem som faktiskt är inloggad. Skickas ingen upptagen-
+		lista får två spelare med UserId som skiljer 33 samma häst. ]]
+	local dagens = Stallet.dagensHast(player.UserId, upptagnaHastar(player))
 	if not dagens then
-		warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name)
+		warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name
+			.. " — hela stallet är upptaget. Spelaren får vänta.")
+		tilldelade[player] = nil
+		taBortMarkor(player)
 		return nil
 	end
 	tilldelade[player] = dagens
@@ -113,6 +133,13 @@ end
 
 function StallService.hastFor(player: Player)
 	return tilldelade[player]
+end
+
+--[[ Den kanoniska identiteten, och inget annat. GameplayService binder på
+	det här id:t — aldrig på namn, box eller närmaste modell. ]]
+function StallService.hastIdFor(player: Player): string?
+	local dagens = tilldelade[player]
+	return dagens and dagens.id or nil
 end
 
 function StallService.start()

@@ -31,6 +31,7 @@ local SoundController = require(script.SoundController)
 local EffectsController = require(script.EffectsController)
 local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
+local PreparationController = require(script.PreparationController)
 local Debug = require(script.Debug)
 
 local player = Players.LocalPlayer
@@ -99,6 +100,25 @@ local function mount(model: Model)
 end
 
 InteractionController.start(mount)
+
+--[[ Förberedelsen. Prompten "Sitt upp" får bara finnas på den häst servern
+     säger att spelaren är klar med — och `redo` läses ur den senast
+     mottagna `PreparationSync`, aldrig ur något klienten räknat ut själv. ]]
+InteractionController.setReadyCheck(function(model: Model): boolean
+	local id = PreparationController.hastId()
+	if not id then return false end
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return PreparationController.redo()
+end)
+--[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
+     RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
+     runda 2: handskakningens svar kommer inte som en `PreparationSync`, så
+     en andra listener på det eventet missade det helt och en sent
+     initierad klient fick aldrig sin "Sitt upp"-prompt. ]]
+PreparationController.vidNyVy(function()
+	InteractionController.uppdatera()
+end)
+PreparationController.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]

@@ -15,6 +15,42 @@
    spelet lättare — det är själva poängen med gaten.
    ══════════════════════════════════════════════════════════════════ */
 
+/* ── FASERNA ────────────────────────────────────────────────────────
+   Ordningen man gör i ordning en häst i, som DATA.
+
+   Fanns inte förut någonstans. Webben kunde sekvensen implicit — sysslor.js
+   skriver "Visitera, rykta, kratsa och sadla" i en fritext och moment.js
+   har kameran per moment — men ingen fil sa vilken ordningen VAR. Roblox
+   hade sin egen lista med fyra etiketter. Två sanningar igen, och den här
+   gången utan innehåll i någon av dem.
+
+   Ordningen är inte godtycklig och får inte kastas om för att korta ner
+   loopen:
+     · man hälsar innan man tar på — en häst som inte sett dig komma
+       skräms av en hand bakifrån,
+     · man visiterar INNAN man ryktar, för ett fynd på gjordläget ska
+       upptäckas medan det fortfarande går att avbryta,
+     · man ryktar innan sadeln läggs på, annars gnids grus in under
+       underlägget,
+     · och man sitter upp SIST. Att sitta upp är inte steg fem av fem
+       moment — det är belöningen för att de fyra andra är gjorda.
+
+   `krav = false` betyder att fasen inte har något eget delmoment ännu;
+   den kvitteras genom att spelaren utför den vid rätt häst. `sitt` märker
+   den avslutande fasen: den utförs inte, den LÅSER UPP uppsittningen. */
+const FASER=[
+  {id:"halsa",   namn:"Hälsa lugnt",   krav:false, sitt:false,
+   text:"Gå fram från sidan där hon ser dig och säg till innan du rör henne. Aldrig rakt bakifrån."},
+  {id:"visitera",namn:"Visitera",      krav:true,  sitt:false,
+   text:"Ögon, mungipor, sadelläge, gjordläge och ben. Hittar du något: säg till ridläraren."},
+  {id:"rykta",   namn:"Rykta",         krav:true,  sitt:false,
+   text:"Skrapa, kardborste, mjuk borste. Huvudet bara med den mjuka."},
+  {id:"iordning",namn:"Gör i ordning", krav:true,  sitt:false,
+   text:"Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag."},
+  {id:"sittupp", namn:"Sitt upp",      krav:false, sitt:true,
+   text:"Först nu. Kontrollera gjorden en sista gång och sitt upp från vänster."},
+];
+
 const RYKTZON=[
   {x:0.44,y:0.31,typ:"kropp"},{x:0.45,y:0.46,typ:"kropp"},
   {x:0.55,y:0.39,typ:"kropp"},{x:0.55,y:0.54,typ:"kropp"},
