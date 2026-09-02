@@ -31,6 +31,7 @@ local SoundController = require(script.SoundController)
 local EffectsController = require(script.EffectsController)
 local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
+local PreparationController = require(script.PreparationController)
 local Debug = require(script.Debug)
 
 local player = Players.LocalPlayer
@@ -99,6 +100,20 @@ local function mount(model: Model)
 end
 
 InteractionController.start(mount)
+
+--[[ Förberedelsen. Prompten "Sitt upp" får bara finnas på den häst servern
+     säger att spelaren är klar med — och `redo` läses ur den senast
+     mottagna `PreparationSync`, aldrig ur något klienten räknat ut själv. ]]
+InteractionController.setReadyCheck(function(model: Model): boolean
+	local id = PreparationController.hastId()
+	if not id then return false end
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return PreparationController.redo()
+end)
+PreparationController.start()
+Net.get("PreparationSync").OnClientEvent:Connect(function()
+	InteractionController.uppdatera()
+end)
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]

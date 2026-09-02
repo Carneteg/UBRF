@@ -49,6 +49,13 @@ QA = BYGGE + [
     ("QAPanel", "buildings/QAPanel.luau"),
 ]
 
+# Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
+# exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
+# rorelsemoduler behovs inte -- Preparation ror dem inte.
+FORBEREDELSE = SPEL + [
+    ("Preparation", "src/shared/HorseCore/Preparation.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -98,7 +105,11 @@ def inlina(kalla: str) -> str:
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
-    if "spel" in spec_rel:
+    # Ordningen ar viktig: "forberedelse" far inte falla igenom till MODULER,
+    # dar varken UBRFSkotsel eller Stallet finns. Testas forst av det skalet.
+    if "forberedelse" in spec_rel:
+        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+    elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
     elif "qa" in spec_rel:
         moduler, stubbar = QA, "tests/stubs-bygge.luau"

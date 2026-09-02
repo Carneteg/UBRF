@@ -144,14 +144,24 @@ local __services = {
 	RunService = {
 		Heartbeat = { Connect = function() return { Disconnect = function() end } end },
 		RenderStepped = { Connect = function() return { Disconnect = function() end } end },
-		IsClient = function() return true end,
-		IsServer = function() return false end,
+		--[[ `_server` lades till för S2b: GameplayService är serverkod och
+		     Networking väljer väg på IsServer. Standard är oförändrad (klient),
+		     så alla äldre specar mäter exakt samma sak som förut. ]]
+		_server = false,
+		IsClient = function(self) return not self._server end,
+		IsServer = function(self) return self._server == true end,
 	},
-	Players = { LocalPlayer = {
-		Character = { Name = "Spelare" },
-		FindFirstChild = function() return nil end,
-		FindFirstChildOfClass = function() return nil end,
-	} },
+	Players = {
+		LocalPlayer = {
+			Character = { Name = "Spelare" },
+			FindFirstChild = function() return nil end,
+			FindFirstChildOfClass = function() return nil end,
+		},
+		_spelare = {},
+		GetPlayers = function(self) return self._spelare end,
+		PlayerAdded = { Connect = function() return { Disconnect = function() end } end },
+		PlayerRemoving = { Connect = function() return { Disconnect = function() end } end },
+	},
 	--[[ Spaken sätts av testet när gamepad ska mätas. TouchEnabled är falskt:
 	     bänken mäter kontraktet, inte gesterna — GUI:t byggs bara i Studio. ]]
 	UserInputService = {
@@ -168,9 +178,21 @@ local __services = {
 	},
 	TweenService = { Create = function() return { Play = function() end } end },
 	Debris = { AddItem = function() end },
+	--[[ Taggregistret var förut tomt och osättbart, och då gick ingen
+	     bindningsregel att prova: `GetTagged` svarade alltid {} och varje
+	     "hittade ingen modell"-gren blev grön av fel skäl. `__taggade`
+	     fylls av provet. ]]
 	CollectionService = {
-		GetTagged = function() return {} end,
+		_taggade = {},
+		GetTagged = function(self, tagg) return self._taggade[tagg] or {} end,
+		AddTag = function(self, inst, tagg)
+			self._taggade[tagg] = self._taggade[tagg] or {}
+			table.insert(self._taggade[tagg], inst)
+		end,
 		GetInstanceAddedSignal = function()
+			return { Connect = function() return { Disconnect = function() end } end }
+		end,
+		GetInstanceRemovedSignal = function()
 			return { Connect = function() return { Disconnect = function() end } end }
 		end,
 	},
@@ -188,13 +210,23 @@ __Core = {
 	},
 }
 
+--[[ ReplicatedStorage returnerade förut en NY tabell vid varje anrop. Det
+     dög så länge bara `.HorseCore` lästes, men attribut skrivna av en modul
+     försvann då ur nästa modul — och `G01Enabled` hade sett osatt ut oavsett
+     vad servern gjorde. En stabil tabell, med attribut. ]]
+local __rs = { HorseCore = __Core, _attr = {} }
+function __rs:GetAttribute(k) return self._attr[k] end
+function __rs:SetAttribute(k, v) self._attr[k] = v end
+function __rs:FindFirstChild(namn) return rawget(self, namn) end
+
 game = {
 	GetService = function(_, name)
-		if name == "ReplicatedStorage" then return { HorseCore = __Core } end
+		if name == "ReplicatedStorage" then return __rs end
 		return assert(__services[name], "ingen stub för tjänsten " .. name)
 	end,
 	Players = __services.Players,
 }
+__ReplicatedStorage = __rs
 script = { Parent = __Core }
 
 --[[ En riggstub: det MovementController rör och inget mer. ]]

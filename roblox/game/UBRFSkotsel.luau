@@ -173,4 +173,41 @@ return {
 			},
 		},
 	},
+	faser = {
+		{
+			id = "halsa",
+			namn = "Hälsa lugnt",
+			krav = false,
+			sitt = false,
+			text = "Gå fram från sidan där hon ser dig och säg till innan du rör henne. Aldrig rakt bakifrån.",
+		},
+		{
+			id = "visitera",
+			namn = "Visitera",
+			krav = true,
+			sitt = false,
+			text = "Ögon, mungipor, sadelläge, gjordläge och ben. Hittar du något: säg till ridläraren.",
+		},
+		{
+			id = "rykta",
+			namn = "Rykta",
+			krav = true,
+			sitt = false,
+			text = "Skrapa, kardborste, mjuk borste. Huvudet bara med den mjuka.",
+		},
+		{
+			id = "iordning",
+			namn = "Gör i ordning",
+			krav = true,
+			sitt = false,
+			text = "Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag.",
+		},
+		{
+			id = "sittupp",
+			namn = "Sitt upp",
+			krav = false,
+			sitt = true,
+			text = "Först nu. Kontrollera gjorden en sista gång och sitt upp från vänster.",
+		},
+	},
 }

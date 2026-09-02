@@ -27,10 +27,10 @@ vm.runInContext(las("src/spel/hastar.js") + "\n" + las("src/spel/skotsel.js"), c
 const {
   HORSES, FODERSCHEMA, KRAFTVAL,
   RYKTZON, RYKTREDSKAP, RYKTKRAV, SADELFAS,
-  VISITPUNKT, VISITFYND, VISITSVAR,
+  VISITPUNKT, VISITFYND, VISITSVAR, FASER,
 } = vm.runInContext(
   "({HORSES, FODERSCHEMA, KRAFTVAL, RYKTZON, RYKTREDSKAP, RYKTKRAV, " +
-  "SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR})",
+  "SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR, FASER})",
   ctx,
 );
 
@@ -128,6 +128,31 @@ function kontrolleraSkotsel() {
   }
   if (SADELFAS.length < 4) {
     console.error(`FEL  SADELFAS har bara ${SADELFAS.length} faser.`);
+    process.exit(2);
+  }
+
+  /* Fasordningen är pedagogik, inte layout. Grinden vaktar de tre saker som
+     tyst skulle förstöra den: att uppsittningen glider någon annanstans än
+     sist, att visitationen hamnar efter ryktningen (då upptäcks ett fynd
+     först när gruset redan är inarbetat), och att fler än en fas märks som
+     den avslutande. Ingen av dem syns som ett fel när spelet körs — loopen
+     går igenom, den lär bara ut fel sak. */
+  const fasId = FASER.map(f => f.id);
+  const sittFaser = FASER.filter(f => f.sitt);
+  if (sittFaser.length !== 1) {
+    console.error(`FEL  FASER har ${sittFaser.length} faser märkta sitt, ska ha exakt 1.`);
+    process.exit(2);
+  }
+  if (FASER[FASER.length - 1] !== sittFaser[0]) {
+    console.error("FEL  den sitt-märkta fasen måste ligga SIST i FASER.");
+    process.exit(2);
+  }
+  if (fasId.indexOf("visitera") > fasId.indexOf("rykta")) {
+    console.error("FEL  visitationen måste komma före ryktningen.");
+    process.exit(2);
+  }
+  if (new Set(fasId).size !== fasId.length) {
+    console.error("FEL  FASER har dubbla id: " + fasId.join(", "));
     process.exit(2);
   }
 }
@@ -302,6 +327,7 @@ const skotselRuntime = {
   rykt: {zoner: RYKTZON, redskap: RYKTREDSKAP, krav: RYKTKRAV},
   sadelfaser: SADELFAS,
   visitation: {punkter: VISITPUNKT, fynd: VISITFYND, svar: VISITSVAR},
+  faser: FASER,
 };
 const skotselUt = `--!strict
 --[[ GENERERAD av tools/exportera-spel.js ur src/spel/skotsel.js.
