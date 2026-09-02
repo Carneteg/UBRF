@@ -373,31 +373,31 @@ do
 		check("södra änden har en utgång österut", sydUt,
 			if sydUt then "finns" else "saknas")
 
-		--[[ Två HANDSKRIVNA öppningar får inte dela vägg.
+		--[[ INGA två öppningar får dela vägg.
 
 			Korridorens östra dörr låg först mitt på det mätta läget och
-			överlappade då boxfönstret bredvid med 0,215 m — två hål i samma
-			vägg på samma yta. Jag hittade det genom att lista och sortera
-			öppningarna, inte genom att titta, och det fanns inget prov som
-			hade fångat det.
+			överlappade boxfönstret bredvid med 0,215 m. Jag hittade det genom
+			att lista och sortera öppningarna, inte genom att titta.
 
-			`auto` skiljer den mekaniska fönsterrytmen från det som är skrivet
-			för hand ur planen. Avgränsningen går på KÄLLA, inte på utfall:
-			krockar två handskrivna öppningar har jag gjort fel, medan rytmen
-			och den stora östporten ligger på varandra sedan tidigare — ett
-			redovisat fynd i matrisen som rör den låsta fasaden och inte får
-			rättas i den här slicen. ]]
+			Första versionen av det här provet jämförde bara HANDSKRIVET mot
+			HANDSKRIVET, för att slippa smälla på att den mekaniska
+			fönsterrytmen sedan tidigare låg inuti den stora östporten. Då
+			fångade det inte buggen det skrevs för — dörr mot genererat
+			fönster är precis den kombination som undantogs. Falsifieringen
+			visade det: krocken återinfördes och provet förblev grönt.
+
+			Villkoret gäller nu ALLA öppningar. Det som gör det möjligt är att
+			`rensaKrockandeFonster` i src/site.js låter rytmen vika för det
+			handskrivna, så att grundfelet är borta i stället för undantaget. ]]
 		local krockar = {}
 		for _, bg in ipairs(UBRFKomplex.byggnader) do
-			local handskrivna = {}
+			local opp = {}
 			for _, op in ipairs(bg.oppningar or {}) do
-				if not op.auto and not op.intern then
-					table.insert(handskrivna, op)
-				end
+				if not op.intern then table.insert(opp, op) end
 			end
-			for i = 1, #handskrivna do
-				for j = i + 1, #handskrivna do
-					local a, b = handskrivna[i], handskrivna[j]
+			for i = 1, #opp do
+				for j = i + 1, #opp do
+					local a, b = opp[i], opp[j]
 					if a.sida == b.sida
 						and a.u < b.u + b.b - 0.001 and b.u < a.u + a.b - 0.001
 						and a.z0 < b.z0 + b.h - 0.001 and b.z0 < a.z0 + a.h - 0.001 then
@@ -407,7 +407,7 @@ do
 				end
 			end
 		end
-		check("inga två handskrivna öppningar delar vägg",
+		check("inga två öppningar delar vägg",
 			#krockar == 0,
 			if #krockar == 0 then "0 krockar" else table.concat(krockar, " · "))
 		--[[ Korridorens två dörrar ska ligga på SAMMA linje. De mäts i olika

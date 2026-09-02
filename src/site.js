@@ -1607,6 +1607,32 @@ STALLINNE.info=[
    svar:"Spånförrådet: Mustang kutterspån på pall i galvad bur. Härifrån hämtas spånet du strör med när boxen är mockad."},
 ];
 
+/* ── Fönsterrytmen får inte lägga ett fönster inuti en dörr ─────────
+   `stallFonster` räknar fram valvfönstren mekaniskt ur boxdelningen och vet
+   inte att det står en port eller dörr i vägen. Två hål i samma vägg på
+   samma yta blir det: den stora östporten (u 34,35–37,95) delar läge med
+   två genererade fönster, och F02-A:s korridordörr höll på att göra samma
+   sak med ett tredje.
+
+   Rytmen viker för det handskrivna, aldrig tvärtom. Det handskrivna är läst
+   ur planen eller ur foto; rytmen är en formel.
+
+   NOT: detta tar bort två fönster ur östra långsidans rytm, alltså en
+   synlig ändring i den låsta fasaden. De fönstren är i dag ritade INUTI
+   skjutporten — det är trasig geometri som rättas, inte en omgjord
+   komposition. Skulle låset ändå anses täcka det, är detta filter det som
+   ska tas bort, och då kommer krocken tillbaka. */
+(function rensaKrockandeFonster(){
+  for(const b of ANL.byggnader){
+    const opp=b.oppningar; if(!opp) continue;
+    const fasta=opp.filter(o=>!o.auto);
+    b.oppningar=opp.filter(o=>!o.auto || !fasta.some(f=>
+      f.sida===o.sida &&
+      f.u < o.u+o.b-0.001 && o.u < f.u+f.b-0.001 &&
+      f.z0 < o.z0+o.h-0.001 && o.z0 < f.z0+f.h-0.001));
+  }
+})();
+
 /* ── Varje ritad dörr ska gå att gå in genom ────────────────────────
    Dörrlistan ovan var handskriven, och husen ritade fler dörrar än den
    kände till — man stod framför en dörr, tryckte E och ingenting hände.
