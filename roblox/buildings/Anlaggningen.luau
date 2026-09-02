@@ -197,24 +197,34 @@ local function byggStallIdentitet(model: Model, base: CFrame)
 	end
 
 	-- Förstukvisten på västra långsidan. u mäts från norra gaveln söderut.
+	--[[ Förstukvisten sitter på NORRA GAVELN och skjuter ut mot grusplanen.
+
+		Den låg på västra långsidan till 2026-09-02, då produktägaren bytte
+		plats på verandan och gavelns enkla skärmtaksdörr. Spegelvänt mot
+		förut: den sträcker sig nu längs x och skjuter ut i +z, i stället för
+		tvärtom. `uFranOst` mäts från östra gavelhörnet, samma konvention som
+		öppningarnas u på N-sidan. ]]
 	local K = I.forstukvist
-	local kz = r.y + r.h - K.uFranNorr - K.bredd / 2
-	BK.box(model, base, "Förstukvist golv", r.x - K.djup, 0, kz - K.bredd / 2,
-		K.djup, 0.14, K.bredd, IDFARG.betong, Enum.Material.Concrete)
-	BK.box(model, base, "Förstukvist tak", r.x - K.djup - 0.2, K.takfot,
-		kz - K.bredd / 2 - 0.2, K.djup + 0.2, 0.12, K.bredd + 0.4,
+	local kx = r.x + r.w - K.uFranOst          -- verandans mitt längs gaveln
+	local kn = r.y + r.h                       -- gavelns yttervägg
+	BK.box(model, base, "Förstukvist golv", kx - K.bredd / 2, 0, kn,
+		K.bredd, 0.14, K.djup, IDFARG.betong, Enum.Material.Concrete)
+	BK.box(model, base, "Förstukvist tak", kx - K.bredd / 2 - 0.2, K.takfot, kn,
+		K.bredd + 0.4, 0.12, K.djup + 0.2,
 		b.fargT or IDFARG.huv, Enum.Material.Metal)
 	for _, sida in ipairs({ -1, 1 }) do
-		BK.box(model, base, "Förstukvist stolpe", r.x - K.djup + 0.1, 0,
-			kz + sida * (K.bredd / 2 - 0.2), 0.15, K.takfot, 0.15,
-			IDFARG.vit, Enum.Material.WoodPlanks)
+		BK.box(model, base, "Förstukvist stolpe",
+			kx + sida * (K.bredd / 2 - 0.2), 0, kn + K.djup - 0.25,
+			0.15, K.takfot, 0.15, IDFARG.vit, Enum.Material.WoodPlanks)
 	end
-	-- Ribbräcket, med öppningen mitt för dörren.
+	-- Ribbräcket, med öppningen mitt för dörren. Spegelvänt med verandan:
+	-- löper längs x vid gavelns yttre kant i stället för längs z.
 	local sido = (K.bredd - 0.34 - K.oppning) / 2
 	for _, sida in ipairs({ -1, 1 }) do
-		BK.box(model, base, "Förstukvist räcke", r.x - K.djup + 0.15, 0.26,
-			kz + sida * (K.oppning / 2 + sido / 2) - sido / 2,
-			0.06, 1.2, sido, IDFARG.vit, Enum.Material.WoodPlanks)
+		BK.box(model, base, "Förstukvist räcke",
+			kx + sida * (K.oppning / 2 + sido / 2) - sido / 2, 0.26,
+			kn + K.djup - 0.21,
+			sido, 1.2, 0.06, IDFARG.vit, Enum.Material.WoodPlanks)
 	end
 
 	-- Balkongen och spiraltrappan på klubbgaveln i norr.

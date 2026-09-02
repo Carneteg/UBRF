@@ -540,15 +540,26 @@ do
 		raknaNamn("Spiraltrappsteg") .. " steg")
 
 	do
-		-- Förstukvisten ska sitta på VÄSTRA långsidan, utanför väggen.
+		--[[ Förstukvisten ska sitta på NORRA GAVELN, utanför väggen, mot
+			grusplanen. Provet vaktade fram till 2026-09-02 att den satt på
+			VÄSTRA långsidan — det var rätt då och fångade riktigt när
+			produktägaren bytte plats på verandan och gavelns enkla
+			skärmtaksdörr. Villkoret är flyttat, inte borttaget. ]]
 		local f = nil
 		for _, d in ipairs(delar) do
 			if d.Name == "Förstukvist golv" then f = fot(d) end
 		end
-		check("förstukvisten skjuter ut ur västra långsidan",
-			f ~= nil and f.x < stall.rekt.x + 0.01 and f.x + f.w >= stall.rekt.x - 0.01,
-			f and string.format("x %.1f–%.1f, husets vägg %.1f",
-				f.x, f.x + f.w, stall.rekt.x) or "hittades inte")
+		local norr = stall.rekt.y + stall.rekt.h
+		check("förstukvisten skjuter ut ur norra gaveln",
+			f ~= nil and f.y + f.h > norr + 0.01 and f.y <= norr + 0.01,
+			f and string.format("y %.1f–%.1f, gavelns vägg %.1f",
+				f.y, f.y + f.h, norr) or "hittades inte")
+		--[[ ...och den ska ligga i gavelns bredd, inte hänga utanför hörnet. ]]
+		check("förstukvisten ryms innanför gavelns hörn",
+			f ~= nil and f.x >= stall.rekt.x - 0.01
+				and f.x + f.w <= stall.rekt.x + stall.rekt.w + 0.01,
+			f and string.format("x %.1f–%.1f, gaveln %.1f–%.1f", f.x, f.x + f.w,
+				stall.rekt.x, stall.rekt.x + stall.rekt.w) or "hittades inte")
 	end
 
 	do
@@ -822,17 +833,40 @@ do
 	check("varje skärmtak står på två konsoler", konsoler == medSkarm * 2,
 		konsoler .. " konsoler mot " .. (medSkarm * 2) .. " väntade")
 
-	--[[ Stallets klubbdörr mot grusplanen är den som avgör om entrén LÄSER
-		som en entré från ankomsten. Den ska ha ett skärmtak. ]]
+	--[[ Stallets två entrédörrar, efter att produktägaren bytte plats på
+		verandan och den enkla skärmtaksdörren 2026-09-02:
+
+		  · gaveln mot grusplanen har entrédörren UNDER FÖRSTUKVISTEN, och
+		    ska därför INTE ha ett eget skärmtak — verandan är dess tak,
+		  · långsidan har den enkla dörren, och den SKA ha skärmtaket.
+
+		Provet vaktar bytet åt båda håll. Skrivs bara den ena finns inget
+		som hindrar att båda får skärmtak, eller ingen. ]]
 	local stall = nil
 	for _, bg in ipairs(UBRFKomplex.byggnader) do
 		if bg.id == "stall" then stall = bg end
 	end
-	local klubbdorr = false
+	local gavelSkarm, langsidaSkarm = false, false
 	for _, o in ipairs(stall and stall.oppningar or {}) do
-		if o.sida == "N" and o.typ == "dorrgul" and o.skarm then klubbdorr = true end
+		if o.typ == "dorrgul" and o.z0 == 0 then
+			if o.sida == "N" and o.skarm then gavelSkarm = true end
+			if o.sida == "W" and o.skarm then langsidaSkarm = true end
+		end
 	end
-	check("stallets klubbdörr mot grusplanen bär skärmtak", klubbdorr)
+	check("gavelns entrédörr har INGET eget skärmtak — verandan är dess tak",
+		not gavelSkarm)
+	check("långsidans enkla dörr bär skärmtaket", langsidaSkarm)
+
+	--[[ Förstukvisten ska stå på gaveln, inte på långsidan. `uFranOst` är
+		gavelkonventionen; fanns `uFranNorr` kvar låg den på långsidan. ]]
+	local K = UBRFKomplex.identitet.stall.forstukvist
+	check("förstukvisten är placerad på gaveln", K.uFranOst ~= nil,
+		"uFranOst = " .. tostring(K.uFranOst))
+	check("verandan står fri från spiraltrappan",
+		UBRFKomplex.identitet.stall.spiraltrappa.franGavelmitt
+			> K.bredd / 2 + UBRFKomplex.identitet.stall.spiraltrappa.radie / 2,
+		"trappa " .. UBRFKomplex.identitet.stall.spiraltrappa.franGavelmitt
+			.. " m mot verandans kant " .. (K.bredd / 2))
 end
 
 if fails > 0 then

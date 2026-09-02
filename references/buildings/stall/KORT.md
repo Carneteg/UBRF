@@ -154,26 +154,42 @@ Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 | Gavel S (mot gårdsplanen från Husbyvägen) | samma (Street View) | samma | valvfönster i två plan | **två entrédörrar under vita spetsiga skärmtak** | **rak ståltrappa** med avsats upp till en dörr i övervåningen `[läst ur Street View på avstånd]` |
 | Långsida Ö | `[saknas foto]` | | | | |
 
-### Stallet har TVÅ ytterdörrar i norra änden
+### Stallet har TVÅ ytterdörrar i norra änden — och de bytte plats 2026-09-02
 
-Frågan ställdes 2026-09-02 sedan produktägaren rapporterat att entrén i spelet
-läste som riktad mot ridhuset. Svaret: **båda finns**, och de ska hållas isär.
+Frågan ställdes sedan produktägaren rapporterat att entrén i spelet läste som
+riktad mot ridhuset. Först bekräftades att **båda dörrarna finns**. Därefter
+såg produktägaren bygget och beslutade att de två entrépartierna ska **byta
+plats**.
 
-| Dörr | Var | Klass | Underlag |
+| Parti | Låg | Ligger nu | Klass |
 |---|---|---|---|
-| Förstukvistens ockragula dörr | **Långsida V**, 5,6 m från norra gaveln | `VERIFIED` | `stall-fasad-03/04/05`, `stall-entre-01/03/06/15`. Förstukvistens egen sadeltakskvist, vitt ribbräcke, runt fönster på båda sidor, skylten "Entré". Detta är klubbdelens huvudentré. |
-| Klubbdörren i marknivå | **Gavel N**, mot grusplanen | `[enligt Tobias]` | Ingen bild i repot visar den. `stall-fasad-04` och `-05` är båda tagna från grusplanen, och på dem upptas gavelns marknivå av en betongsockel/mur; dörren ligger utanför det som syns. Produktägaren har bekräftat att den finns. |
+| Förstukvisten — veranda med sadeltak, vitt ribbräcke, runda fönster, ockragul "Entré"-dörr | Långsida V, 5,6 m från norra gaveln | **Norra gaveln**, centrerad, ut mot grusplanen | `[PRODUKTBESLUT]` — se varningen nedan |
+| Enkel ockragul dörr under litet skärmtak | Norra gaveln | **Långsida V**, 5,6 m från norra gaveln | `[enligt Tobias]` |
 
-**Vad som INTE följer av detta.** Förstukvisten flyttas inte. En tidigare
-formulering om att huvudentrén skulle sitta på kortsidan i stället för
-långsidan är **inte** införd, eftersom två fotografier visar motsatsen och
-`docs/CLAUDE.md` säger att bilder är specifikation. De två dörrarna
-konkurrerar inte — de är olika dörrar.
+Spiraltrappan flyttades samtidigt ut från 2,3 till **3,4 m** från gavelmitten.
+Verandan är 5,2 m bred och nådde ut till 2,6 m; trappan stod mitt i den. 3,4 m
+ger 0,45 m fritt. Arbetsvärde, inte mätning.
 
-`REFERENCE GAP`: klubbdörrens **exakta läge, bredd och omfattning på gaveln**.
-Spelet placerar den 10,5 m från östra gavelhörnet med ett skärmtak, vilket är
-ett arbetsvärde, inte en mätning. Ett foto rakt på norra gaveln från
-grusplanen skulle stänga luckan.
+#### ⚠️ Placeringen följer INTE fotografierna
+
+Det här är den enda punkten i kortet där implementationen medvetet avviker från
+verifierat bildmaterial, och det ska inte kunna läsas bort:
+
+- `stall-fasad-03`, `-04` och `-05` visar alla förstukvisten på **långsidan**,
+  omedelbart söder om gavelhörnet. `-04` och `-05` är tagna från grusplanen.
+- `stall-entre-01/03/06/15` är tagna under den verandan.
+- På `-04` och `-05` upptas gavelns marknivå av en betongsockel/mur. Ingen bild
+  visar en veranda där.
+
+`docs/CLAUDE.md` säger att bilder är specifikation och att placering inte får
+hittas på. Undantaget här vilar på **Tobias uttryckliga produktbeslut**, som
+står över byggnadskortet i källordningen — inte på nytt bildunderlag. Den som
+senare hittar motsägelsen mellan kortet och fotona har alltså hittat rätt: den
+är känd, och den är ett beslut.
+
+`REFERENCE GAP` kvarstår för gavelpartiets **exakta läge, bredd och
+utsträckning**. Ett foto rakt på norra gaveln från grusplanen skulle avgöra
+både var verandan sitter och hur spiraltrappan förhåller sig till den.
 
 Detaljfärger:
 - Knutar, fönsterfoder, fascia, undertak, räcke: **(238, 236, 228)** "vit"
