@@ -1232,6 +1232,17 @@ return {
 					},
 				},
 			},
+			{
+				y = 56.97,
+				brand = false,
+				foljGangar = false,
+				oppningar = {
+					{
+						x0 = 0,
+						x1 = 8.97,
+					},
+				},
+			},
 		},
 		dorrar = {
 			{

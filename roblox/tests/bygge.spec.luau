@@ -202,9 +202,15 @@ end
 	gångarnas lägen och blev tät framför varje boxrad. Testet mäter att
 	planens egna öppningar faktiskt bryter väggen. ]]
 do
+	--[[ Väggen provet handlar om är den mot SERVICEDELEN — den som ska få hål
+		av planen UTÖVER gångarnas. F02-A la till en vägg i klubbdelen som
+		också har `oppningar` men som inte följer gångarna, och den plockades
+		upp här i stället: 1 bit mot 3, alltså rött. Provet valde "sista
+		väggen med öppningar", vilket råkade vara rätt så länge det bara fanns
+		en. Villkoret är skärpt, inte lättat. ]]
 	local vagg = nil
 	for _, v in ipairs(UBRFKomplex.stall.tvarvaggar) do
-		if v.oppningar ~= nil then vagg = v end
+		if v.oppningar ~= nil and v.foljGangar ~= false then vagg = v end
 	end
 	local utan = #Geometri.tvarvaggBitar(UBRFKomplex.stall)
 	local med = if vagg then #Geometri.tvarvaggBitar(UBRFKomplex.stall, vagg) else utan
@@ -243,7 +249,48 @@ do
 	check("tvärväggarna byggdes", antalVaggar == #S.tvarvaggar,
 		antalVaggar .. " vägglinjer")
 
+	--[[ Kravet gäller de väggar GÅNGARNA FAKTISKT NÅR.
+
+		Gångarna löper i boxhallen, alltså söder om `klubbY`. En vägg norr om
+		den ligger i klubbdelen, där det inte finns några gångar att mura igen
+		— att kräva gånghål där vore att kopiera ett läge från en annan del av
+		huset. F02-A:s vägg på y 56,97 föll på precis det, och villkoret är
+		därför avgränsat geometriskt: mot `klubbY`, inte mot en flagga.
+
+		Att avgränsa mot flaggan `foljGangar` hade gjort provet cirkulärt —
+		det hade provat exakt de väggar som fått besked om att ha hål. Därför
+		kontrolleras nedan också att flaggan inte kan användas för att tysta
+		vaktposten på en vägg som ligger i boxhallen. ]]
+	local klubbY = S.origo.y + S.klubbY
+	for _, v in ipairs(S.tvarvaggar) do
+		check(string.format("foljGangar=false används bara i klubbdelen (y %.2f)", v.y),
+			v.foljGangar ~= false or v.y > S.klubbY,
+			string.format("väggen y %.2f, klubbdelen börjar %.2f", v.y, S.klubbY))
+	end
+
+	--[[ Klubbdelen får inte muras av tvärs.
+
+		Gånghålsprovet ovan gäller inte här — gångarna når inte klubbdelen —
+		och utan det här villkoret finns inget som märker om en klubbdelsvägg
+		görs heltäckande. Då skulle spelaren som kommer in genom klubbentrén
+		i norra gaveln stå i ett rum utan väg vidare till boxhallen, och allt
+		annat vara grönt.
+
+		Mätt, inte kopierat: villkoret räknar ihop väggbitarnas bredd i varje
+		klubbdelsvägg och kräver att något är kvar. Flyttas väggens öppning
+		eller ändras dess bredd följer provet med; muras hålet igen faller det. ]]
 	for nyckel, bitar in pairs(vaggY) do
+		if tonumber(nyckel) == nil or tonumber(nyckel) <= klubbY then continue end
+		local murat = 0
+		for _, b in ipairs(bitar) do murat += b.w end
+		check(string.format("klubbdelens vägg vid y = %s lämnar en väg vidare", nyckel),
+			murat < S.bredd - 0.5,
+			string.format("%.2f m murat av %.2f m bredd, %.2f m öppet",
+				murat, S.bredd, S.bredd - murat))
+	end
+
+	for nyckel, bitar in pairs(vaggY) do
+		if tonumber(nyckel) ~= nil and tonumber(nyckel) > klubbY then continue end
 		for id, g in pairs(S.gangar) do
 			local x0, x1 = S.origo.x + g.x0, S.origo.x + g.x1
 			-- Täcker någon vägbit gångens mitt? Då är passagen murad.

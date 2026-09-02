@@ -1123,8 +1123,14 @@ function v3dStall(lagg,opp){
   /* Tvärväggarna med dörrgap. */
   {for(const tv of S.tvarvaggar){
      /* Hålen är gångarna PLUS väggens egna öppningar ur planen. Förut kom de
-        bara ur gångarna, och då blev väggen tät framför varje boxrad. */
-     const halOrd=[...Object.values(S.gangar),...(tv.oppningar||[])]
+        bara ur gångarna, och då blev väggen tät framför varje boxrad.
+
+        `foljGangar:false` stänger av gångdelen. Gångarna finns bara i
+        boxhallen; en vägg i klubbdelen ligger norr om dem och skulle annars
+        få två hål på lägen som hör hemma i en annan del av huset. Samma
+        regel i Geometri.tvarvaggBitar, som Roblox bygger ur. */
+     const halOrd=[...(tv.foljGangar===false?[]:Object.values(S.gangar)),
+                   ...(tv.oppningar||[])]
        .sort((a,b)=>a.x0-b.x0);
      const bitar=[]; let x=0;
      for(const h of halOrd){ if(h.x0>x) bitar.push([x,h.x0]); x=Math.max(x,h.x1); }

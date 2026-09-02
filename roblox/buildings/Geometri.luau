@@ -122,9 +122,17 @@ end
 	återvändsgränd — det som underkändes i spelarvyn. Väggen får sina hål ur
 	planen nu, inte ur gångarnas lägen. `vagg` är valfri; utan den blir det
 	som förut. ]]
+--[[ `foljGangar = false` säger att väggen INTE ska få hål där gångarna går.
+
+	Gångarna finns bara i boxhallen. En vägg i klubbdelen ligger norr om dem,
+	och att stansa gånghål i den vore att kopiera ett läge från en helt annan
+	del av huset — väggen hade fått två öppningar där planen ritar massiv vägg.
+	Fältet utelämnas för väggarna i boxhallen, som ska följa gångarna. ]]
 function Geometri.tvarvaggBitar(stall, vagg): { { x0: number, x1: number } }
 	local hal = {}
-	for _, g in pairs(stall.gangar) do table.insert(hal, g) end
+	if vagg == nil or vagg.foljGangar ~= false then
+		for _, g in pairs(stall.gangar) do table.insert(hal, g) end
+	end
 	if vagg ~= nil and vagg.oppningar ~= nil then
 		for _, o in ipairs(vagg.oppningar) do table.insert(hal, o) end
 	end

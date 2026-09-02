@@ -1025,6 +1025,30 @@ const STALLINNE = {
   tvarvaggar:[
     {y:52.85, brand:true},
     {y:6.5, brand:false, oppningar:[{x0:9.0, x1:12.0}]},
+    /* KLUBBDELENS GENOMGÅENDE VÄGG — F02-A, ur utrymningsplanen.
+
+       `tools/f02-planmatning.py` mäter en genomgående mörk linje på andelen
+       0,1855 av längden från norra gaveln, med 0,61 av husbredden mörk. Det
+       är ett av de starkaste utslagen i hela planen och kan inte vara en
+       boxvägg: boxhallen börjar först på 0,2396.
+
+       0,1855 × 69,95 = 12,98 m från norra gaveln, alltså y = 56,97.
+       `PLAN` i längdled. Klass i tvärled: se nedan.
+
+       Väggen går INTE tvärs hela huset. I planen börjar den en bit in från
+       västra ytterväggen och löper därifrån till den östra — den västra
+       delen är öppen, och det är där trapphuset och den västra zonen ligger.
+       Öppningen är därför skriven som ett hål 0 → 8,97:
+
+         bildpunkt 720 av husets 535–968 → (720−535)/433 × 21 = 8,97 m.
+
+       `DERIVED` `ASSUMED_SCALE` i tvärled: andelen 0,427 av bredden är mätt,
+       men metertalet vilar på bredden 21 m som själv är olöst 15–23 m. Ändras
+       STALL_BREDD ska talet räknas om ur andelen, inte behållas.
+
+       `foljGangar:false`: gångarna ligger i boxhallen, söder om klubbdelen.
+       Utan flaggan hade väggen fått två hål på lägen som hör hemma 40 m bort. */
+    {y:56.97, brand:false, foljGangar:false, oppningar:[{x0:0, x1:8.97}]},
   ],
   /* Dörrarna beskrivs EN gång. `pos` är innerläget, `spawn` ytterläget,
      `inrikt` vilket håll man tittar när man kliver in och `uttext` vad
