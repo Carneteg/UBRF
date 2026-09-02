@@ -181,14 +181,41 @@ local function rad(steg: any, ordning: number)
 	end
 end
 
+--[[ Observatörer som körs EFTER att en ny vy tagits emot och skrivits ned.
+	Uppsittningsprompten hänger här. ]]
+local lyssnare: { (any) -> () } = {}
+
+function PreparationController.vidNyVy(fn: (any) -> ())
+	table.insert(lyssnare, fn)
+end
+
 --[[ Enda vägen in till HUD:en. Allt som kommer utifrån — spontan sync eller
 	svar på handskakningen — går genom den här, och den släpper bara igenom
-	en NYARE vy. Utan det kunde handskakningens svar landa efter en nyare
-	sync och backa HUD:en till ett äldre läge (krav 10). ]]
+	en NYARE vy (krav 10).
+
+	Den anropar också observatörerna, och det är en RÄTTELSE: förut låg
+	prompt-uppdateringen i en EGEN `PreparationSync`-listener i init.client.
+	Handskakningens svar går inte genom den listenern, så en klient som
+	initierades sent när servern redan stod på `ready_to_mount` fick rätt
+	HUD men ALDRIG någon "Sitt upp"-prompt — det kom ingen ny sync att
+	väcka den. Fälldes av senior review, runda 2.
+
+	Att lägga det här i stället för i en andra listener tar dessutom bort
+	beroendet av i vilken ordning två listeners på samma RemoteEvent råkar
+	köra: observatören kan inte köra före den vy den beskriver. ]]
 local function ritaOmNyare(vy: any)
 	if not Preparation.farRita(senasteRev, vy) then return end
 	senasteRev = vy.rev
 	rita(vy)
+	for _, fn in ipairs(lyssnare) do
+		fn(vy)
+	end
+end
+
+--[[ Exporterad för provet: samma väg in som nätet använder. Provet ska driva
+	den riktiga funktionen, inte en kopia av regeln. ]]
+function PreparationController.tillampa(vy: any)
+	ritaOmNyare(vy)
 end
 
 function rita(vy: any)

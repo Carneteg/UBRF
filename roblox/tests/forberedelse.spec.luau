@@ -325,6 +325,129 @@ do
 		not ok4 and skal4 == "Hästen är inte registrerad", tostring(skal4))
 end
 
+--[[ ── Produktionens UPPKOPPLING, inte bara dess regler ────────────
+	Senior review runda 2 fällde tre saker som alla var samma sak: specen
+	provade regler och lät wiringen vara oprovad. Ett prov som registrerar
+	sin EGEN grind bevisar att kroken fungerar — inte att GameplayService
+	använder den.
+
+	Här körs riktiga `GameplayService.start()`. Faller något av proven nedan
+	är det produktionens uppkoppling som gått sönder, inte en regel. ]]
+do
+	--[[ Serverläge: Networking väljer väg på IsServer, och utan det här
+		väntar den på en mapp som ingen skapar. ]]
+	game:GetService("RunService")._server = true
+
+	local spelare = { Name = "Prov", UserId = 4242 }
+	game:GetService("Players")._spelare = { spelare }
+
+	--[[ Riggen står i världen med rätt identitet. `tilldela` körs av
+		StallService.start(); vi läser vilken häst spelaren fick och taggar
+		en modell med exakt det id:t. ]]
+	StallService.start()
+	local hastId = StallService.hastIdFor(spelare)
+	check("StallService äger tilldelad HorseId", hastId ~= nil, tostring(hastId))
+
+	local modell = Instance.new("Model")
+	modell.Name = "Hast"
+	modell:SetAttribute("HorseId", hastId)
+	modell.PrimaryPart = nil
+	game:GetService("CollectionService"):AddTag(modell, "Horse")
+
+	GameplayService.start()
+
+	--[[ KRAV: en mutation som tar bort
+		`HorseService.setMountGate(GameplayService.farSittaUpp)` ur start()
+		ska fälla det här. Utan registrering svarar tryMount med
+		"Hästen är inte registrerad" i stället för förberedelsens skäl. ]]
+	local ok, skal = HorseService.tryMount(spelare, modell)
+	check("start() registrerar den riktiga grinden i HorseService",
+		not ok and skal ~= "Hästen är inte registrerad",
+		"tryMount svarade: " .. tostring(skal))
+
+	--[[ G01-flaggan sätts av servern, inte av klienten. ]]
+	check("start() sätter G01Enabled",
+		game:GetService("ReplicatedStorage"):GetAttribute("G01Enabled") == true)
+
+	--[[ KRAV: handskakningen ska faktiskt vara registrerad server-side.
+		En mutation som tar bort `PreparationHello`-wiringen fäller det här. ]]
+	local hello = Networking.get("PreparationHello")
+	check("PreparationHello är registrerad server-side",
+		type(hello.OnServerInvoke) == "function")
+
+	local snapshot = hello.OnServerInvoke(spelare)
+	check("handskakningen ger hela nuläget",
+		type(snapshot) == "table" and snapshot.hastId == hastId
+			and #snapshot.steg == 4 and type(snapshot.rev) == "number",
+		"hastId=" .. tostring(snapshot and snapshot.hastId))
+
+	--[[ Steg hela vägen till redo. Avståndet kan inte prövas i bänken (ingen
+		karaktär), så regeln körs direkt på tillståndet — samma
+		`Preparation.utfor` som servern anropar. ]]
+	local st = GameplayService.stateFor(spelare)
+	check("GameplayService håller ett tillstånd för spelaren", st ~= nil)
+	for _, f in ipairs(Preparation.stegFaser()) do
+		Preparation.utfor(st, f.id, hastId)
+	end
+
+	--[[ Produktionsregeln `bunden[player] == modell`: en ANNAN modell med
+		samma id som tjänsten inte bundit får inte släppas igenom.
+
+		Provet ligger EFTER att förberedelsen är klar med flit. Låg det före
+		blev det grönt av fel skäl — då avvisades dubbletten för att stegen
+		återstod, inte för att den var obunden, och regeln kunde tas bort
+		utan att något blev rött. Därför krävs det exakta skälet. ]]
+	local dubblett = Instance.new("Model")
+	dubblett.Name = "Kopia"
+	dubblett:SetAttribute("HorseId", hastId)
+	local okD, skalD = GameplayService.farSittaUpp(spelare, dubblett)
+	check("en obunden modell med samma id avvisas ÄVEN när allt är gjort",
+		not okD and skalD == "Det är inte din häst", tostring(skalD))
+	local ok2, skal2 = HorseService.tryMount(spelare, modell)
+	check("färdig förberedelse släpps igenom av den RIKTIGA grinden",
+		not ok2 and skal2 == "Hästen är inte registrerad",
+		"grinden passerade; mount-logiken svarade: " .. tostring(skal2))
+
+	game:GetService("RunService")._server = false
+end
+
+--[[ ── Sen klient-init: snapshot ska väcka prompten ─────────────────
+	Senior review runda 2, blockerare 3. Prompt-uppdateringen låg i en EGEN
+	`PreparationSync`-listener. Handskakningens svar går inte genom den, så
+	en klient som initierades sent när servern redan stod på ready_to_mount
+	fick rätt HUD men aldrig någon "Sitt upp"-prompt.
+
+	Provet driver den riktiga `PreparationController.tillampa` — samma väg
+	som nätet — och kräver att observatören körs UTAN att någon
+	`PreparationSync` följer efter. ]]
+do
+	local vackt = 0
+	PreparationController.vidNyVy(function() vackt += 1 end)
+
+	local st = Preparation.nyState("cosmo")
+	for _, f in ipairs(Preparation.stegFaser()) do
+		Preparation.utfor(st, f.id, "cosmo")
+	end
+	local snapshot = Preparation.vy(st, Preparation.STATUS.REDO, 1)
+	check("snapshoten är redo", snapshot.redo == true)
+
+	PreparationController.tillampa(snapshot)
+	check("en accepterad snapshot väcker prompt-uppdateringen", vackt == 1,
+		vackt .. " anrop — utan efterföljande PreparationSync")
+	check("klienten läser redo ur snapshoten", PreparationController.redo() == true)
+	check("klienten läser hästId ur snapshoten",
+		PreparationController.hastId() == "cosmo")
+
+	--[[ En äldre vy får varken ritas eller väcka observatören — annars kan
+		en sen snapshot backa både HUD och prompt. ]]
+	local gammal = Preparation.vy(Preparation.nyState("air"),
+		Preparation.STATUS.FORBEREDER, 0)
+	PreparationController.tillampa(gammal)
+	check("en äldre vy väcker inte observatören", vackt == 1, vackt .. " anrop")
+	check("en äldre vy ändrar inte klientens läge",
+		PreparationController.hastId() == "cosmo" and PreparationController.redo() == true)
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("forberedelse.spec: " .. fails .. " fel")

@@ -61,9 +61,16 @@ FORBEREDELSE = SPEL + [
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("HorseService", "src/server/HorseService.luau"),
+    ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("PreparationController", "src/client/PreparationController.luau"),
+    # GameplayService laddas SIST och ar poangen med hela listan: utan den
+    # bevisade specen bara att HorseService-kroken fungerar, inte att
+    # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
+    ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
 MODULER = [
@@ -84,10 +91,13 @@ MODULER = [
 # HorseCore star kvar sarskilt: utan barn blir det __Core, tabellen stubbfilen
 # bygger. Sista alternativet tar de ovriga ReplicatedStorage-modulerna
 # (UBRFSpelData, UBRFSkotsel, UBRFSpel, Stallet, UBRFKomplex).
+# Lokalnamnet for ReplicatedStorage varierar i repot: `RS` i vissa filer,
+# `ReplicatedStorage` i andra (StallService, GameplayService). Bada maste
+# kannas igen -- annars lamnas require:t orort och luau far en nil-sokvag.
 REQUIRE = re.compile(
     r'require\(\s*(?:script\.Parent\.(\w+)'
-    r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.HorseCore(?:\.(\w+))?'
-    r'|(?:game:GetService\("ReplicatedStorage"\)|RS)\.(\w+))\s*\)')
+    r'|(?:game:GetService\("ReplicatedStorage"\)|RS|ReplicatedStorage)\.HorseCore(?:\.(\w+))?'
+    r'|(?:game:GetService\("ReplicatedStorage"\)|RS|ReplicatedStorage)\.(\w+))\s*\)')
 
 MATERIALLISTA = ROT / "tests" / "roblox-material.txt"
 
@@ -137,7 +147,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
-        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter"):
+        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter", "Networking"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)

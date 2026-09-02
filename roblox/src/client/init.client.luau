@@ -110,13 +110,15 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	if model:GetAttribute("HorseId") ~= id then return false end
 	return PreparationController.redo()
 end)
---[[ `start()` ansluter HUD:ens listener och gör sedan handskakningen, i den
-     ordningen. Prompt-uppdateringen hänger på samma händelse. ]]
-PreparationController.start()
-Net.get("PreparationSync").OnClientEvent:Connect(function()
+--[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
+     RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
+     runda 2: handskakningens svar kommer inte som en `PreparationSync`, så
+     en andra listener på det eventet missade det helt och en sent
+     initierad klient fick aldrig sin "Sitt upp"-prompt. ]]
+PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
-InteractionController.uppdatera()
+PreparationController.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]
