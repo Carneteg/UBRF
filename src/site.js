@@ -324,11 +324,12 @@ const ANL = {
      fargV:"#6E2F44", fargT:"#5E646C", svart:"#26292E", takfot:"#EEECE4",
      detalj:"stall", sockel:0.35, label:"STALLET",
      oppningar:[
-       /* Förstukvisten på västra långsidan. */
-       {sida:"W", u:sV(5.6), b:1.15, h:2.10, z0:0,    typ:"dorrgul"},  // ockragula entrédörren
-       {sida:"W", u:sV(4.0), b:0.66, h:0.66, z0:1.78, typ:"rund"},     // runda fönstren vid dörren
-       {sida:"W", u:sV(7.2), b:0.66, h:0.66, z0:1.78, typ:"rund"},
-       {sida:"W", u:sV(2.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},     // valvfönster kring kvisten
+       /* Långsidans dörr. Här satt förstukvisten med sina runda fönster
+          fram till 2026-09-02; produktägaren flyttade verandan till gaveln
+          (se KORT.md). Kvar blir en enkel ockragul dörr under ett skärmtak
+          — den som tidigare satt på gaveln. De två har bytt plats. */
+       {sida:"W", u:sV(5.6), b:1.15, h:2.10, z0:0,    typ:"dorrgul", skarm:1.7},
+       {sida:"W", u:sV(2.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
        {sida:"W", u:sV(8.6), b:1.15, h:1.55, z0:1.55, typ:"valv"},
        /* HÄSTGÅNGEN mot ridhuset. På W mäts u från NORRA gaveln söderut,
           så tvärkorridorens mitt (lokalt y 26,05) ligger på u 26,75. */
@@ -341,10 +342,21 @@ const ANL = {
        {sida:"N", u:14.6, b:1.15, h:1.55, z0:4.75, typ:"valv"},
        {sida:"N", u:8.4,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
        {sida:"N", u:12.6,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
-       {sida:"N", u:10.5,  b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},     // balkongdörren
-       /* Klubbentrén i gavelns mitt, rakt under balkongen — den vetter
-          mot grusplanen och leder in i klubbdelen. [enligt Tobias] */
-       {sida:"N", u:10.5,  b:1.15, h:2.05, z0:0,    typ:"dorrgul", skarm:1.7},
+       /* Balkongdörren och klubbentrén ligger nu BÅDA med sin mitt i
+          gavelmitten (u = 10,5). Talen stod förut på u 10,5 som HÖRN, vilket
+          la mitten 0,5–0,6 m öster om gaveln mitt — kommentaren sa "i
+          gavelns mitt" men koden gjorde något annat. Balkongen har alltid
+          centrerats, så de låg heller inte i liv med varandra. */
+       {sida:"N", u:10.5-0.95/2, b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},  // balkongdörren
+       /* KLUBBENTRÉN, nu under förstukvisten. Inget eget skärmtak: verandan
+          är dess tak. Skärmtaket följde med den enkla dörren till
+          långsidan. */
+       {sida:"N", u:10.5-1.15/2, b:1.15, h:2.05, z0:0, typ:"dorrgul"},
+       /* De runda fönstren flankerar entrédörren och hör till förstukvisten
+          — de följde med den hit från långsidan. ±1,6 m från dörrens mitt,
+          samma avstånd som de hade där. */
+       {sida:"N", u:10.5-1.6-0.66/2, b:0.66, h:0.66, z0:1.78, typ:"rund"},
+       {sida:"N", u:10.5+1.6-0.66/2, b:0.66, h:0.66, z0:1.78, typ:"rund"},
        /* Stora skjutporten mitt på östra långsidan, mot hagarna. */
        {sida:"E", u:34.35, b:3.6, h:3.2, z0:0, typ:"portbla"},
        /* Södra gaveln mot gårdsplanen: servicedelens två entrédörrar
@@ -648,7 +660,16 @@ const IDENTITET = {
     snorasskydd:{andelUpp:0.30, andelUt:0.70, stolpDelning:2.2},
     /* Förstukvisten på västra långsidan, nära klubbgaveln. Sadeltak med
        nocken ut från väggen, vitt ribbräcke, ockragul dörr. */
-    forstukvist:{uFranNorr:5.6, bredd:5.2, djup:2.8,
+    /* FÖRSTUKVISTEN sitter på NORRA GAVELN, centrerad i gavelmitten och
+       utskjutande mot grusplanen.
+
+       Den satt fram till 2026-09-02 på västra långsidan, 5,6 m från norra
+       gaveln, vilket är vad `stall-fasad-03/04/05` visar. Produktägaren har
+       efter att ha sett bygget beslutat att verandan och gavelns enkla
+       skärmtaksdörr ska BYTA PLATS. Placeringen här följer det beslutet och
+       INTE fotografierna; se noten i references/buildings/stall/KORT.md så
+       att ingen läser den som fotoverifierad. */
+    forstukvist:{uFranOst:10.5, bredd:5.2, djup:2.8,
                  takfot:2.95, resning:1.05, oppning:1.5},
     /* Stallgångens två igenkänningsfärger, MÄTTA ur
        references/buildings/stall/stall-inne-05-stallgangen.jpg.
@@ -726,7 +747,12 @@ const IDENTITET = {
     /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
        Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
     balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
-    spiraltrappa:{franGavelmitt:2.3, radie:0.70, steg:18},
+    /* Spiraltrappan flyttad ut från 2,3 till 3,4 m från gavelmitten. När
+       förstukvisten (5,2 m bred) kom till gaveln nådde verandan ut till 2,6
+       m och trappan stod mitt i den. 3,4 m ger trappans innerkant 0,45 m fri
+       från verandans kant. Talet är ett arbetsvärde [enligt Tobias], inte
+       en mätning. */
+    spiraltrappa:{franGavelmitt:3.4, radie:0.70, steg:18},
   },
   ridhus: {
     /* MOTSÄGELSE 1 — IMG_0183: mörkröd övre långvägg ovanför sargen, med
@@ -1007,12 +1033,29 @@ const STALLINNE = {
      när planformen ändrades följde bara den ena med. Då hamnade utgången
      mot gräsgården inne i en boxrad. */
   dorrar:[
-    {id:"ut_n", pos:[1.6,64.35], text:"Ut genom entrén", mot:"gard", inrikt:0,
-     uttext:"Gå in i stallet (Entré)",
-     spawn:{x:STALL_X-1.5,y:113.4,rikt:Math.PI}},
-    {id:"ut_n2",pos:[10.5,65.95], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
-     uttext:"Gå in i stallet (klubbdörren)",
-     spawn:{x:STALL_X+STALL_BREDD*0.55,y:STALL_NORR+1.6,rikt:Math.PI/2}},
+    /* Utgångarnas UTELÄGEN härleds ur fasadöppningarna i stället för att
+       skrivas av. Båda stod tidigare på handskrivna tal som glidit isär från
+       de dörrar de hör till:
+
+         · "Entré" låg på y 113,4 medan förstukvistens dörr sitter på 118,8 —
+           5,4 m fel, alltså i blank vägg mellan två valvfönster. Felet var
+           dessutom precis över autogeneratorns dedup-gräns på 4 m, så den
+           lade en ANDRA markör vid den riktiga dörren. Två markörer, en dörr.
+         · klubbdörren låg 1,6 m öster om sin öppning.
+
+       u mäts från NORRA hörnet på W-sidan och från ÖSTRA på N-sidan — samma
+       konvention som väggarnas p0→p1 i autoDorrar och i world.js. Räknat på
+       öppningens MITT (u + b/2), inte dess kant. */
+    /* De två har bytt ROLL i och med att förstukvisten flyttade till
+       gaveln: entrén under verandan ligger nu mot grusplanen, och
+       långsidans dörr är den enkla. Texterna följer med dörrarna, annars
+       skickas spelaren till fel sida av huset. */
+    {id:"ut_n", pos:[10.5,65.95], text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
+     uttext:"Gå in i stallet (Entré, under verandan)",
+     spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},
+    {id:"ut_n2",pos:[1.6,64.35], text:"Ut på gårdssidan", mot:"gard", inrikt:0,
+     uttext:"Gå in i stallet (dörren på gårdssidan)",
+     spawn:{x:STALL_X-1.5, y:STALL_NORR-(5.6+1.15/2), rikt:Math.PI}},
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
      uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
      spawn:{x:STALL_X+5.6,y:STALL_Y-1.6,rikt:-Math.PI/2}},

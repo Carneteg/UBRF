@@ -150,9 +150,46 @@ Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 | Sida | Material | Färg RGB / namn | Fönster | Dörrar/portar | Övrigt |
 |---|---|---|---|---|---|
 | Långsida V (mot gården) | **liggande träpanel** | **(80, 35, 47)** "mörk falurött" | **Rad av valvbågade, flerrutiga fönster med vit karm, ett per box (~3,5 m)** | förstukvistens ockragula dörr | Vita knutbrädor, vit foder runt varje fönster, ljusgrå betongsockel |
-| Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong** | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
+| Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong**; **klubbdörr i marknivå** `[enligt Tobias]` — se noten nedan | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
 | Gavel S (mot gårdsplanen från Husbyvägen) | samma (Street View) | samma | valvfönster i två plan | **två entrédörrar under vita spetsiga skärmtak** | **rak ståltrappa** med avsats upp till en dörr i övervåningen `[läst ur Street View på avstånd]` |
 | Långsida Ö | `[saknas foto]` | | | | |
+
+### Stallet har TVÅ ytterdörrar i norra änden — och de bytte plats 2026-09-02
+
+Frågan ställdes sedan produktägaren rapporterat att entrén i spelet läste som
+riktad mot ridhuset. Först bekräftades att **båda dörrarna finns**. Därefter
+såg produktägaren bygget och beslutade att de två entrépartierna ska **byta
+plats**.
+
+| Parti | Låg | Ligger nu | Klass |
+|---|---|---|---|
+| Förstukvisten — veranda med sadeltak, vitt ribbräcke, runda fönster, ockragul "Entré"-dörr | Långsida V, 5,6 m från norra gaveln | **Norra gaveln**, centrerad, ut mot grusplanen | `[PRODUKTBESLUT]` — se varningen nedan |
+| Enkel ockragul dörr under litet skärmtak | Norra gaveln | **Långsida V**, 5,6 m från norra gaveln | `[enligt Tobias]` |
+
+Spiraltrappan flyttades samtidigt ut från 2,3 till **3,4 m** från gavelmitten.
+Verandan är 5,2 m bred och nådde ut till 2,6 m; trappan stod mitt i den. 3,4 m
+ger 0,45 m fritt. Arbetsvärde, inte mätning.
+
+#### ⚠️ Placeringen följer INTE fotografierna
+
+Det här är den enda punkten i kortet där implementationen medvetet avviker från
+verifierat bildmaterial, och det ska inte kunna läsas bort:
+
+- `stall-fasad-03`, `-04` och `-05` visar alla förstukvisten på **långsidan**,
+  omedelbart söder om gavelhörnet. `-04` och `-05` är tagna från grusplanen.
+- `stall-entre-01/03/06/15` är tagna under den verandan.
+- På `-04` och `-05` upptas gavelns marknivå av en betongsockel/mur. Ingen bild
+  visar en veranda där.
+
+`docs/CLAUDE.md` säger att bilder är specifikation och att placering inte får
+hittas på. Undantaget här vilar på **Tobias uttryckliga produktbeslut**, som
+står över byggnadskortet i källordningen — inte på nytt bildunderlag. Den som
+senare hittar motsägelsen mellan kortet och fotona har alltså hittat rätt: den
+är känd, och den är ett beslut.
+
+`REFERENCE GAP` kvarstår för gavelpartiets **exakta läge, bredd och
+utsträckning**. Ett foto rakt på norra gaveln från grusplanen skulle avgöra
+både var verandan sitter och hur spiraltrappan förhåller sig till den.
 
 Detaljfärger:
 - Knutar, fönsterfoder, fascia, undertak, räcke: **(238, 236, 228)** "vit"

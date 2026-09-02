@@ -680,12 +680,17 @@ function v3dStallYttre(bg,d,opp){
       d.cyl(0.055,0.055,hV-0.22,SVART,M4.translation(cx+s*(halv+0.15),0,z),6);
   }}
 
-  /* ── Förstukvisten, 5,6 m från klubbgaveln i norr ──
+  /* ── Förstukvisten på NORRA GAVELN, mot grusplanen ──
      Sadeltak med nocken ut från väggen, vita stolpar, och ett räcke av
-     liggande ribbor — det är räcket man ser först när man går fram. */
+     liggande ribbor — det är räcket man ser först när man går fram.
+
+     Låg på västra långsidan till 2026-09-02. Produktägaren bytte plats på
+     verandan och gavelns enkla skärmtaksdörr. Själva kroppen nedan är
+     oförändrad: den är skriven i ett väggslokalt system, så det räcker att
+     byta ramfunktion från FW (långsidan) till FN (gaveln). */
   const KV=IDENTITET.stall.forstukvist;
-  const PU=KV.uFranNorr, bw=KV.bredd, but=KV.djup, be=KV.takfot, br=KV.resning;
-  const F2=(du,z,ut)=>FW(PU+du,z,ut);
+  const PU=KV.uFranOst, bw=KV.bredd, but=KV.djup, be=KV.takfot, br=KV.resning;
+  const F2=(du,z,ut)=>FN(PU+du,z,ut);
   const hh=bw/2, hyp=Math.hypot(hh,br), pv=Math.atan2(br,hh);
   d.lada(bw+0.4,0.14,but+0.2,"#C2BFB6",F2(0,0.07,but/2));        // betonggolvet
   for(const s of [-1,1]){
