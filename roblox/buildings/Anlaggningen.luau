@@ -227,16 +227,23 @@ local function byggStallIdentitet(model: Model, base: CFrame)
 			sido, 1.2, 0.06, IDFARG.vit, Enum.Material.WoodPlanks)
 	end
 
-	-- Balkongen och spiraltrappan på klubbgaveln i norr.
+	--[[ Balkongen och spiraltrappan på klubbgaveln i norr, ute mot östra
+		hörnet. Båda ankras på `uFranOst` — samma konvention som gavelns
+		öppningar och förstukvisten, och samma tal som webben bygger av.
+
+		Här räknades förut gavelmitten fram lokalt och balkongen las där,
+		medan trappan mättes som ett avstånd från mitten. Två system för två
+		delar som ska sitta ihop: flyttades gruppen följde bara den ena med.
+		Nu kommer båda ur datan, och en flytt är ett tal, inte två. ]]
 	local BA, SP = I.balkong, I.spiraltrappa
-	local gm = r.x + r.w / 2
-	BK.box(model, base, "Balkong", gm - BA.bredd / 2, BA.z - 0.12,
+	local bx = r.x + r.w - BA.uFranOst         -- plattformens mitt längs gaveln
+	BK.box(model, base, "Balkong", bx - BA.bredd / 2, BA.z - 0.12,
 		r.y + r.h, BA.bredd, 0.12, BA.djup, IDFARG.trappa, Enum.Material.Metal)
-	BK.box(model, base, "Balkongräcke", gm - BA.bredd / 2, BA.z,
+	BK.box(model, base, "Balkongräcke", bx - BA.bredd / 2, BA.z,
 		r.y + r.h + BA.djup - 0.06, BA.bredd, BA.rackeH, 0.06,
 		IDFARG.svart, Enum.Material.Metal)
 
-	local sx = gm + SP.franGavelmitt
+	local sx = r.x + r.w - SP.uFranOst         -- spindeln, i plattformens östra kant
 	BK.box(model, base, "Spiraltrappa spindel", sx - 0.09, 0, r.y + r.h + 0.53,
 		0.18, BA.z + 0.5, 0.18, IDFARG.svart, Enum.Material.Metal)
 	for i = 1, SP.steg do

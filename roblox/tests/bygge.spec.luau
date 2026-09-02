@@ -563,16 +563,28 @@ do
 	end
 
 	do
-		-- Balkongen ska sitta på KLUBBGAVELN i norr, i gavelns mitt.
+		--[[ Balkongen ska sitta på KLUBBGAVELN i norr, på det läge datan
+			anger. Villkoret löd fram till 2026-09-02 "i gavelns mitt", och
+			det var rätt då: balkongen hade drivit tre meter från sin egen
+			dörr och provet skrevs för att hålla den på plats.
+
+			Men "mitten" var ett hårdkodat tal, och när Tobias flyttade hela
+			den övre gruppen ut mot östra hörnet blev provet rött för att
+			datan ändrats — inte för att bygget var fel. Villkoret är
+			därför FLYTTAT, inte borttaget: det jämför nu bygget mot
+			`identitet.stall.balkong.uFranOst` i stället för mot ett tal här.
+			Det som var provets egentliga poäng — att balkongen sitter i liv
+			med sin dörr — provas i gruppblocket längre ned. ]]
 		local f = nil
 		for _, d in ipairs(delar) do
 			if d.Name == "Balkong" then f = fot(d) end
 		end
-		local gm = stall.rekt.x + stall.rekt.w / 2
-		check("balkongen sitter mitt på klubbgaveln",
-			f ~= nil and math.abs(f.x + f.w / 2 - gm) < 0.2
+		local vantad = stall.rekt.x + stall.rekt.w - I.stall.balkong.uFranOst
+		check("balkongen sitter på klubbgaveln, på datans läge",
+			f ~= nil and math.abs(f.x + f.w / 2 - vantad) < 0.2
 				and f.y >= stall.rekt.y + stall.rekt.h - 0.01,
-			f and string.format("mitt x %.1f, gavelns mitt %.1f", f.x + f.w / 2, gm) or "saknas")
+			f and string.format("mitt x %.1f, datan säger %.1f (uFranOst %.2f)",
+				f.x + f.w / 2, vantad, I.stall.balkong.uFranOst) or "saknas")
 	end
 
 	--[[ Ridhusets interiörfynd.
@@ -862,23 +874,78 @@ do
 	local K = UBRFKomplex.identitet.stall.forstukvist
 	check("förstukvisten är placerad på gaveln", K.uFranOst ~= nil,
 		"uFranOst = " .. tostring(K.uFranOst))
-	--[[ Verandan får inte skäras av spiraltrappan. Formeln räknade först med
-		`radie / 2` och `K.bredd / 2`, och båda termerna var för små:
+	--[[ ── DEN ÖVRE GRUPPEN PÅ GAVELN ────────────────────────────────
+		Plattform, balkongdörr och spiraltrappa ska sitta IHOP, ute mot
+		östra gavelhörnet, och fri från verandan.
 
-		  · trappsteget är en låda med LÄNGDEN `radie` som skjuts ut `radie/2`
-		    från spindeln, så det når en HEL radie ut — inte en halv,
-		  · verandans bredaste del är inte golvet utan TAKET, `bredd + 0,4`.
+		Historiken bakom varje villkor, så att ingen sänker något av dem
+		för att få grönt:
 
-		Med de rätta talen visade sig 3,4 m vara en verklig kollision: steg 12
-		ligger på höjd 3,03 m och takskivan på 2,95–3,07 m, och i sidled gick
-		steget 0,10 m in i taket. Provet var grönt hela tiden. Det är hela
-		poängen med att skriva ut marginalen i meddelandet. ]]
+		  · Trappan mättes förut som `franGavelmitt`, ett avstånd, medan
+		    balkongen las i en gavelmitt som renderarna räknade fram var
+		    för sig. När gruppen flyttade följde bara den ena med och
+		    trappan blev stående utan plattform — inget prov såg det, för
+		    inget prov frågade efter relationen. Nu ankras båda på
+		    `uFranOst` och relationen provas.
+		  · Frihetsvillkoret räknade med `radie / 2` och `bredd / 2`. Båda
+		    termerna var för små: trappsteget är en låda med LÄNGDEN
+		    `radie` som skjuts ut `radie/2` från spindeln och når alltså en
+		    HEL radie ut, och verandans bredaste del är inte golvet utan
+		    TAKET, `bredd + 0,4`. Med de rätta talen var 3,4 m en verklig
+		    kollision — steg 12 på höjd 3,03 m mot takskivan 2,95–3,07 m,
+		    0,10 m in i taket — och provet var grönt hela tiden. ]]
 	local SP = UBRFKomplex.identitet.stall.spiraltrappa
+	local BA = UBRFKomplex.identitet.stall.balkong
+
+	check("plattformen och trappan ankras i samma system",
+		BA.uFranOst ~= nil and SP.uFranOst ~= nil,
+		"balkong " .. tostring(BA.uFranOst) .. ", trappa " .. tostring(SP.uFranOst))
+
 	local kravFri = K.bredd / 2 + 0.2 + SP.radie
+	local avstand = math.abs(K.uFranOst - SP.uFranOst)
 	check("verandan står fri från spiraltrappan",
-		SP.franGavelmitt > kravFri,
-		string.format("trappa %.2f m, takets kant + steglängd %.2f m, luft %.2f m",
-			SP.franGavelmitt, kravFri, SP.franGavelmitt - kravFri))
+		avstand > kravFri,
+		string.format("trappa %.2f m från verandans mitt, takets kant + steglängd %.2f m, luft %.2f m",
+			avstand, kravFri, avstand - kravFri))
+
+	--[[ Trappan ska MÖTA sin plattform. Stegen sveper `radie` ut från
+		spindeln; plattformen är `bredd` bred kring sin mitt. Överlappet
+		mellan de två u-intervallen är det som gör att översta steget har
+		något att landa på. Utan det här villkoret är en trappa som slutar
+		i luften fullt godkänd. ]]
+	local tLo, tHi = SP.uFranOst - SP.radie, SP.uFranOst + SP.radie
+	local pLo, pHi = BA.uFranOst - BA.bredd / 2, BA.uFranOst + BA.bredd / 2
+	local moter = math.min(tHi, pHi) - math.max(tLo, pLo)
+	check("spiraltrappan möter sin plattform",
+		moter >= 0.30,
+		string.format("trappan u %.2f–%.2f, plattformen u %.2f–%.2f, överlapp %.2f m",
+			tLo, tHi, pLo, pHi, moter))
+
+	--[[ Balkongdörren ska ligga PÅ plattformen, inte bredvid den. Den är
+		den enda N-öppningen av typ `dorrvit`. ]]
+	local bd = nil
+	for _, o in ipairs(stall and stall.oppningar or {}) do
+		if o.sida == "N" and o.typ == "dorrvit" then bd = o end
+	end
+	check("balkongdörren mynnar ut på plattformen",
+		bd ~= nil and bd.u >= pLo - 0.01 and bd.u + bd.b <= pHi + 0.01,
+		bd and string.format("dörren u %.2f–%.2f, plattformen u %.2f–%.2f",
+			bd.u, bd.u + bd.b, pLo, pHi) or "hittades inte")
+
+	--[[ ...och den ska rymmas UNDER TAKFALLET. Det var den här gränsen som
+		gjorde att gruppen inte kunde flyttas till långsidan alls: där
+		ligger takfoten på 4,4 m och plattformen på 4,55. På gaveln avtar
+		höjden mot hörnet, h(u) = hV + (hN − hV) × (1 − |u − w/2| / (w/2)),
+		och dörrens överkant på 6,65 m sätter hur långt ut gruppen får gå.
+		Provet räknar på dörrens ÖSTRA kant, den lägsta punkten. ]]
+	local hV, hN, halv = stall.hV, stall.hN, stall.rekt.w / 2
+	local dOst = bd and math.abs(bd.u - halv) or 0
+	local takOverDorr = hV + (hN - hV) * (1 - dOst / halv)
+	local dorrTopp = bd and (bd.z0 + bd.h) or 0
+	check("balkongdörren ryms under gavelns takfall",
+		bd ~= nil and takOverDorr - dorrTopp >= 0.25,
+		string.format("dörrens överkant %.2f m, gaveln %.2f m vid u %.2f, luft %.2f m",
+			dorrTopp, takOverDorr, bd and bd.u or 0, takOverDorr - dorrTopp))
 end
 
 if fails > 0 then

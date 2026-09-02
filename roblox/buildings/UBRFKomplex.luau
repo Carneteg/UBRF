@@ -590,7 +590,7 @@ return {
 				},
 				{
 					sida = "N",
-					u = 10.025,
+					u = 4.975,
 					b = 0.95,
 					h = 2.05,
 					z0 = 4.6,
@@ -1357,13 +1357,14 @@ return {
 				regelD = 0.04,
 			},
 			balkong = {
+				uFranOst = 5.05,
 				z = 4.55,
 				bredd = 2.2,
 				djup = 1.1,
 				rackeH = 0.92,
 			},
 			spiraltrappa = {
-				franGavelmitt = 3.9,
+				uFranOst = 3.95,
 				radie = 0.7,
 				steg = 18,
 			},

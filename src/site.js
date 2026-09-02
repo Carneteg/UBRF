@@ -85,6 +85,46 @@ const STALL_BREDD  = 21;     // `[REFERENCE GAP]` — se noten om återtaget
 const RIDHUS_LANGD = 77.18;  // `VERIFIED`
 const RIDHUS_BREDD = 25;     // `[REFERENCE GAP]` — se noten om återtaget
 const GARDSGAP     = 8.10;   // `VERIFIED LOCAL` i södra tvärsnittet
+
+/* ══ STALLETS ÖVRE GRUPP PÅ KLUBBGAVELN ══════════════════════════════
+   Plattformen, balkongdörren och spiraltrappan. u mäts från ÖSTRA
+   gavelhörnet — samma konvention som gavelns öppningar och förstukvisten.
+
+   De ligger här uppe därför att BÅDA behöver dem: fasadöppningarna i
+   `ANL` (balkongdörren) och `IDENTITET.stall` (plattformen och trappan
+   som geometri). Skrivs de på två ställen glider de isär, och en
+   balkongdörr som inte sitter över sin balkong är precis den sortens fel
+   som redan har inträffat en gång i den här fasaden.
+
+   FLYTTEN 2026-09-02, Tobias alternativ 1. Gruppen satt hopklumpad kring
+   gavelmitten: plattformen centrerad på u 10,5, trappan 3,4 m därifrån.
+   När verandan tog mitten stod trappan först i den, sedan bredvid den —
+   utan att nå sin egen plattform. Nu flyttar HELA gruppen ut mot östra
+   gavelhörnet, dit `stall-fasad-05` visar trappan, och trappan möter
+   plattformen igen.
+
+   Att den skulle till LÅNGSIDAN gick inte: långsidans takfot ligger på
+   4,4 m och plattformen på 4,55 — den hade svävat ovanför takfallet och
+   balkongdörren mynnat inne i taket. Se noten på PR #67.
+
+   ── Vad talen är klämda mellan ──────────────────────────────────────
+   Gavelns höjd avtar mot hörnet: h(u) = 4,4 + 5,6 × (1 − |u−10,5|/10,5).
+
+     · ÖSTERUT begränsar TAKFALLET. Balkongdörrens överkant ligger på
+       4,60 + 2,05 = 6,65. Vid dörrens östra kant (u 4,975) är gaveln
+       7,05 hög — 0,40 m luft. Går gruppen längre ut skär dörren taket.
+     · VÄSTERUT begränsar VALVFÖNSTRET på u 6,4–7,55 (z 4,75–6,30), som
+       ligger i samma höjdband som dörren. Plattformens västra kant
+       stannar på 6,15 och dörrens på 5,925 — 0,25 respektive 0,475 m.
+
+   Dörren sitter därför 0,40 m väster om plattformens mitt i stället för
+   mitt på den: man kliver upp i plattformens östra ände, går längs den
+   och in. Det är också så fotot ser ut.
+
+   `[enligt Tobias]` — talen är arbetsvärden, inte mätningar. */
+const BALKONG_U     = 5.05;  // plattformens MITT
+const TRAPPA_U      = 3.95;  // spindeln = plattformens ÖSTRA kant
+const BALKONGDORR_U = 5.45;  // balkongdörrens MITT
 /* Ridhusets norra gavel. Referenslinjen som allt annat mäts från, eftersom
    det är den gaveln som är mest fotoverifierad — caféet, ståltrappan och
    parkeringen framför. */
@@ -337,17 +377,20 @@ const ANL = {
         z0:0, typ:"portbla", intern:true},
        ...stallFonster("W"), ...stallFonster("E"),
        /* Norra gaveln — klubbgaveln mot grusplanen, den höga, med
-          balkongen och spiraltrappan (stall-fasad-04/05). */
+          balkongen och spiraltrappan (stall-fasad-04/05). Sedan
+          2026-09-02 sitter verandan i mitten och den övre gruppen ute
+          mot östra hörnet; se BALKONG_U. */
        {sida:"N", u:6.4,  b:1.15, h:1.55, z0:4.75, typ:"valv"},
        {sida:"N", u:14.6, b:1.15, h:1.55, z0:4.75, typ:"valv"},
        {sida:"N", u:8.4,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
        {sida:"N", u:12.6,  b:1.10, h:1.50, z0:2.60, typ:"valv"},
-       /* Balkongdörren och klubbentrén ligger nu BÅDA med sin mitt i
-          gavelmitten (u = 10,5). Talen stod förut på u 10,5 som HÖRN, vilket
-          la mitten 0,5–0,6 m öster om gaveln mitt — kommentaren sa "i
-          gavelns mitt" men koden gjorde något annat. Balkongen har alltid
-          centrerats, så de låg heller inte i liv med varandra. */
-       {sida:"N", u:10.5-0.95/2, b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},  // balkongdörren
+       /* BALKONGDÖRREN följer sin plattform. Den låg i gavelmitten så
+          länge plattformen gjorde det; nu ligger båda ute mot östra
+          hörnet — se noten vid BALKONGDORR_U för vad talet är klämt
+          mellan. Talet stod dessförinnan på u 10,5 som HÖRN, vilket la
+          mitten en halvmeter öster om gavelmitten: kommentaren sa "i
+          gavelns mitt" men koden gjorde något annat. */
+       {sida:"N", u:BALKONGDORR_U-0.95/2, b:0.95, h:2.05, z0:4.60, typ:"dorrvit"},
        /* KLUBBENTRÉN, nu under förstukvisten. Inget eget skärmtak: verandan
           är dess tak. Skärmtaket följde med den enkla dörren till
           långsidan. */
@@ -744,23 +787,21 @@ const IDENTITET = {
     boxfront:{heldel:"#454A4F", ram:"#9A9B93",
               heldelH:1.35, ramZ:1.38, stolpH:2.15, toppregelZ:2.20,
               reglar:5, regelD:0.04},
-    /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
-       Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
-    balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
-    /* Spiraltrappan flyttad ut från 2,3 till 3,9 m från gavelmitten. När
-       förstukvisten kom till gaveln stod trappan mitt i den.
+    /* PLATTFORMEN OCH SPIRALTRAPPAN på klubbgaveln — stall-fasad-04/05.
 
-       3,4 var mitt första försök och räckte INTE. Trappstegen sträcker sig
-       en HEL radie (0,70) ut från spindeln — inte en halv — och verandans
-       bredaste del är taket, `bredd + 0,4`, alltså 2,8 m från mitten. Kravet
-       är därför 2,8 + 0,70 = 3,50 m bara för att sluta överlappa. Vid 3,4 m
-       skar steg 12 (höjd 3,03 m) rakt in i takskivan (2,95–3,07 m); provet
-       missade det för att formeln räknade med `radie / 2`. Båda är rättade.
+       Båda ankras på `uFranOst`, samma konvention som gavelns öppningar
+       och förstukvisten. Förut räknade renderarna själva fram gavelmitten
+       och la balkongen där, medan trappan mättes som ett AVSTÅND från
+       mitten — två olika system för två delar som ska sitta ihop. Det var
+       en del av varför trappan kunde glida loss från sin plattform utan
+       att något prov märkte det.
 
-       3,9 ger 0,40 m verklig luft. Talet är ett arbetsvärde [enligt Tobias],
-       inte en mätning: `stall-fasad-05` visar trappan tydligt längre ut än
-       så, men den vyn är sned och duger inte till att mäta ur. */
-    spiraltrappa:{franGavelmitt:3.9, radie:0.70, steg:18},
+       Trappans spindel ligger i plattformens ÖSTRA kant
+       (`TRAPPA_U` = `BALKONG_U` − `bredd`/2), så att stegen når in över
+       plattformen och översta steget landar på den. Talen och det de är
+       klämda mellan står vid BALKONG_U. */
+    balkong:{uFranOst:BALKONG_U, z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
+    spiraltrappa:{uFranOst:TRAPPA_U, radie:0.70, steg:18},
   },
   ridhus: {
     /* MOTSÄGELSE 1 — IMG_0183: mörkröd övre långvägg ovanför sargen, med

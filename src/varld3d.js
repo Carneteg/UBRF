@@ -731,18 +731,24 @@ function v3dStallYttre(bg,d,opp){
   d.cyl(0.17,0.11,0.13,"#E4E0D6",M4.mul(F2(0,2.40,0.20),M4.rotX(-Math.PI/2)),10);
 
   /* ── Norra gaveln — klubbgaveln: balkongen och spiraltrappan ── */
-  /* Balkongen sitter mitt för sin dörr, och dörren ligger i gavelns
-     mitt. När huset blev 21 m brett flyttades öppningarna dit men den
-     här geometrin stod kvar på den gamla mitten 7,5 — balkongen hamnade
-     tre meter vid sidan av sin egen dörr. Den räknas nu ur bredden. */
+  /* Plattformens och trappans lägen kommer nu BÅDA ur `uFranOst` i
+     IDENTITET, i samma system som gavelns öppningar. Den här koden räknade
+     förut fram gavelmitten själv (`gm = r.w/2`) och la balkongen där,
+     medan trappan mättes som ett avstånd därifrån. Två system för två
+     delar som ska sitta ihop: när gruppen flyttade följde bara den ena
+     med, och trappan blev stående utan plattform.
+
+     Dessförinnan stod geometrin kvar på den gamla mitten 7,5 sedan huset
+     blev 21 m brett, så balkongen hamnade tre meter vid sidan av sin egen
+     dörr. Det är samma fel en gång till, och `uFranOst` stänger båda. */
   const BA=IDENTITET.stall.balkong, SP=IDENTITET.stall.spiraltrappa;
-  const bz=BA.z, gm=r.w/2, su=gm-SP.franGavelmitt, bb=BA.bredd, bd=BA.djup;
-  d.lada(bb,0.12,bd,"#4A4E52",FN(gm,bz-0.06,bd/2));
+  const bz=BA.z, bu=BA.uFranOst, su=SP.uFranOst, bb=BA.bredd, bd=BA.djup;
+  d.lada(bb,0.12,bd,"#4A4E52",FN(bu,bz-0.06,bd/2));
   for(const y of [bz+0.42,bz+0.88]){
-    d.lada(bb,0.05,0.05,SVART,FN(gm,y,bd-0.04));
-    for(const s of [-1,1])d.lada(0.05,0.05,bd,SVART,FN(gm+s*(bb/2-0.02),y,bd/2));
+    d.lada(bb,0.05,0.05,SVART,FN(bu,y,bd-0.04));
+    for(const s of [-1,1])d.lada(0.05,0.05,bd,SVART,FN(bu+s*(bb/2-0.02),y,bd/2));
   }
-  for(let u=gm-bb/2+0.15;u<gm+bb/2-0.15;u+=0.24)
+  for(let u=bu-bb/2+0.15;u<bu+bb/2-0.15;u+=0.24)
     d.lada(0.028,BA.rackeH,0.028,SVART,FN(u,bz+0.46,bd-0.04));
   const sr=SP.radie, steg=SP.steg, sh=bz/steg, sut=0.62;
   d.cyl(0.085,0.085,bz+0.50,SVART,FN(su,0,sut),8);

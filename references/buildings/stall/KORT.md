@@ -166,9 +166,47 @@ plats**.
 | Förstukvisten — veranda med sadeltak, vitt ribbräcke, runda fönster, ockragul "Entré"-dörr | Långsida V, 5,6 m från norra gaveln | **Norra gaveln**, centrerad, ut mot grusplanen | `[PRODUKTBESLUT]` — se varningen nedan |
 | Enkel ockragul dörr under litet skärmtak | Norra gaveln | **Långsida V**, 5,6 m från norra gaveln | `[enligt Tobias]` |
 
-Spiraltrappan flyttades samtidigt ut från 2,3 till **3,4 m** från gavelmitten.
-Verandan är 5,2 m bred och nådde ut till 2,6 m; trappan stod mitt i den. 3,4 m
-ger 0,45 m fritt. Arbetsvärde, inte mätning.
+#### Den övre gruppen flyttade också — i tre steg
+
+Spiraltrappan, plattformen och balkongdörren hör ihop: trappan leder upp till
+plattformen och plattformen har dörren. Det tog tre försök att få dem dit de
+skulle, och mellanlägena finns kvar här för att ingen ska återinföra dem.
+
+1. **Trappan ut från 2,3 till 3,4 m** från gavelmitten, när verandan tog mitten.
+   Det räckte inte: trappstegen når en **hel** radie (0,70 m) ut från spindeln,
+   och verandans bredaste del är taket (`bredd + 0,4` = 2,8 m från mitten). Steg
+   12 på höjd 3,03 m skar 0,10 m in i takskivan (2,95–3,07 m). Regressionsprovet
+   var grönt, för villkoret räknade med `radie / 2`.
+2. **Trappan till 3,9 m**, vilket löste kollisionen — men plattformen stod kvar
+   centrerad i gavelmitten, bakom verandan. Trappan ledde ingenstans.
+3. **Hela gruppen ut mot östra gavelhörnet**, Tobias alternativ 1, 2026-09-02.
+   Plattformens mitt `uFranOst` **5,05**, trappans spindel **3,95** (= plattformens
+   östra kant, så att översta steget landar på den), balkongdörrens mitt **5,45**.
+
+| Del | Låg | Ligger nu |
+|---|---|---|
+| Övre plattform (balkong) | gavelmitten, `u` 10,5 | `uFranOst` **5,05** |
+| Spiraltrappa | 2,3 → 3,4 → 3,9 m från gavelmitten | `uFranOst` **3,95** |
+| Balkongdörr | gavelmitten, `u` 10,5 | `uFranOst` **5,45** |
+
+**Att gruppen skulle till långsidan gick inte.** Långsidans takfot ligger på
+4,4 m och plattformen på 4,55; balkongdörrens överkant på 6,65. Plattformen hade
+svävat ovanför takfallet och dörren mynnat inne i taket. Fotona säger detsamma:
+långsidan är en våning med valvfönster i rad, gaveln är den höga änden med
+övervåningen. Lilla dörren (2,10 m) kunde flytta; plattformen kan inte.
+
+Talen är klämda mellan två gränser, och båda står i provet:
+
+- **österut** gavelns takfall — h(u) = 4,4 + 5,6 × (1 − |u−10,5| / 10,5). Vid
+  dörrens östra kant (u 4,975) är gaveln 7,05 m; dörrens överkant 6,65 ger
+  **0,40 m** luft. Längre ut skär dörren taket.
+- **västerut** valvfönstret på `u` 6,4–7,55 (z 4,75–6,30), i samma höjdband.
+  Plattformens västra kant stannar på 6,15 och dörrens på 5,925 — **0,25**
+  respektive **0,475 m**.
+
+Dörren sitter därför 0,40 m väster om plattformens mitt: man kliver upp i
+plattformens östra ände, går längs den och in. Alla tal är arbetsvärden
+`[enligt Tobias]`, inte mätningar.
 
 #### ⚠️ Placeringen följer INTE fotografierna
 
@@ -180,6 +218,11 @@ verifierat bildmaterial, och det ska inte kunna läsas bort:
 - `stall-entre-01/03/06/15` är tagna under den verandan.
 - På `-04` och `-05` upptas gavelns marknivå av en betongsockel/mur. Ingen bild
   visar en veranda där.
+- Den övre gruppens **avstånd från gavelmitten** är också ett beslut. Riktningen
+  stämmer med `-05` — trappan ligger öster om mitten, alltså till vänster sett
+  från grusplanen — och att den flyttades längre ut går mot fotot, som visar den
+  ännu närmare hörnet. Men `uFranOst` 3,95 är räknat mot takfall och valvfönster,
+  inte mätt ur bilden. Den vyn är sned och duger inte att mäta ur.
 
 `docs/CLAUDE.md` säger att bilder är specifikation och att placering inte får
 hittas på. Undantaget här vilar på **Tobias uttryckliga produktbeslut**, som
