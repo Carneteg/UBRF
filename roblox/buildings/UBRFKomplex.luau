@@ -371,6 +371,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -379,6 +380,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -387,6 +389,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -395,6 +398,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -403,6 +407,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -411,6 +416,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -419,6 +425,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -427,6 +434,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -435,6 +443,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -443,6 +452,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -451,6 +461,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "W",
@@ -459,6 +470,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -467,6 +479,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -475,6 +488,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -483,6 +497,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -491,6 +506,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -499,6 +515,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -507,6 +524,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -515,6 +533,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -523,6 +542,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -531,6 +551,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -539,6 +560,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -547,6 +569,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "E",
@@ -555,6 +578,7 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
+					auto = true,
 				},
 				{
 					sida = "N",
@@ -646,8 +670,16 @@ return {
 				},
 				{
 					sida = "E",
-					u = 51.735,
+					u = 51.95,
 					b = 1.15,
+					h = 2.1,
+					z0 = 0,
+					typ = "dorrvit",
+				},
+				{
+					sida = "E",
+					u = 9.97,
+					b = 1.7,
 					h = 2.1,
 					z0 = 0,
 					typ = "dorrvit",
@@ -1019,6 +1051,21 @@ return {
 			},
 		},
 		{
+			id = "stall_E_52",
+			pos = {
+				173.2,
+				107.575,
+			},
+			text = "Gå in i stallet",
+			mot = "stallinne",
+			auto = true,
+			spawn = {
+				x = 19.4,
+				y = 52.525,
+				rikt = -3.141593,
+			},
+		},
+		{
 			id = "stall_S_13",
 			pos = {
 				164.175,
@@ -1368,6 +1415,21 @@ return {
 				spawn = {
 					x = 173.2,
 					y = 114.55,
+					rikt = 0,
+				},
+			},
+			{
+				id = "ut_stall_E_52",
+				pos = {
+					19.4,
+					52.525,
+				},
+				text = "Ut",
+				mot = "gard",
+				auto = true,
+				spawn = {
+					x = 173.2,
+					y = 107.575,
 					rikt = 0,
 				},
 			},

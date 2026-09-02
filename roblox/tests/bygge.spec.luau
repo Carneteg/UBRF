@@ -353,23 +353,78 @@ do
 		for _, bg in ipairs(UBRFKomplex.byggnader) do
 			if bg.id == "stall" then stallB = bg end
 		end
-		local ostUt, vastKorr, ostKorr = false, nil, nil
+		--[[ Samla ALLA östliga dörrar i stället för att låta den sista vinna.
+			Första versionen skrev över variabeln i loopen, så när södra
+			ändens utgång kom till blev den "tvärkorridorens" dörr och provet
+			jämförde y 52,31 mot y 10,82. Rött av rätt skäl, fel orsak. ]]
+		local ostDorrar, vastKorr, ostUt, sydUt = {}, nil, false, false
 		for _, op in ipairs(stallB and stallB.oppningar or {}) do
 			local mitt = op.u + op.b / 2
 			if op.sida == "E" and op.typ == "dorrvit" then
-				if mitt > S.klubbY then ostUt = true else ostKorr = mitt end
+				table.insert(ostDorrar, mitt)
+				if mitt > S.klubbY then ostUt = true end
+				if mitt < S.boxStartY + 6 then sydUt = true end
 			elseif op.sida == "W" and op.typ == "dorrvit" then
 				vastKorr = S.langd - mitt
 			end
 		end
 		check("klubbdelen har en utgång österut", ostUt,
 			if ostUt then "finns" else "saknas")
+		check("södra änden har en utgång österut", sydUt,
+			if sydUt then "finns" else "saknas")
+
+		--[[ Två HANDSKRIVNA öppningar får inte dela vägg.
+
+			Korridorens östra dörr låg först mitt på det mätta läget och
+			överlappade då boxfönstret bredvid med 0,215 m — två hål i samma
+			vägg på samma yta. Jag hittade det genom att lista och sortera
+			öppningarna, inte genom att titta, och det fanns inget prov som
+			hade fångat det.
+
+			`auto` skiljer den mekaniska fönsterrytmen från det som är skrivet
+			för hand ur planen. Avgränsningen går på KÄLLA, inte på utfall:
+			krockar två handskrivna öppningar har jag gjort fel, medan rytmen
+			och den stora östporten ligger på varandra sedan tidigare — ett
+			redovisat fynd i matrisen som rör den låsta fasaden och inte får
+			rättas i den här slicen. ]]
+		local krockar = {}
+		for _, bg in ipairs(UBRFKomplex.byggnader) do
+			local handskrivna = {}
+			for _, op in ipairs(bg.oppningar or {}) do
+				if not op.auto and not op.intern then
+					table.insert(handskrivna, op)
+				end
+			end
+			for i = 1, #handskrivna do
+				for j = i + 1, #handskrivna do
+					local a, b = handskrivna[i], handskrivna[j]
+					if a.sida == b.sida
+						and a.u < b.u + b.b - 0.001 and b.u < a.u + a.b - 0.001
+						and a.z0 < b.z0 + b.h - 0.001 and b.z0 < a.z0 + a.h - 0.001 then
+						table.insert(krockar, string.format("%s %s u %.2f–%.2f mot %.2f–%.2f",
+							bg.id, a.sida, a.u, a.u + a.b, b.u, b.u + b.b))
+					end
+				end
+			end
+		end
+		check("inga två handskrivna öppningar delar vägg",
+			#krockar == 0,
+			if #krockar == 0 then "0 krockar" else table.concat(krockar, " · "))
+		--[[ Korridorens två dörrar ska ligga på SAMMA linje. De mäts i olika
+			u-konventioner — W från norra hörnet, E från södra — så samma
+			linje ger två olika tal, och provet räknar om. Villkoret är att
+			NÅGON östlig dörr möter den västra, inte att en viss gör det. ]]
+		local narmast, avstand = nil, math.huge
+		for _, m in ipairs(ostDorrar) do
+			if vastKorr and math.abs(vastKorr - m) < avstand then
+				narmast, avstand = m, math.abs(vastKorr - m)
+			end
+		end
 		check("tvärkorridoren har dörr åt BÅDA hållen",
-			vastKorr ~= nil and ostKorr ~= nil
-				and math.abs(vastKorr - ostKorr) < 0.5,
-			string.format("väst y %s, öst y %s",
+			vastKorr ~= nil and narmast ~= nil and avstand < 0.5,
+			string.format("väst y %s, närmaste öst y %s, skillnad %.2f m",
 				tostring(vastKorr and string.format("%.2f", vastKorr)),
-				tostring(ostKorr and string.format("%.2f", ostKorr))))
+				tostring(narmast and string.format("%.2f", narmast)), avstand))
 	end
 
 	--[[ 2 · Står en BOX mitt i en gångyta?

@@ -198,7 +198,14 @@ function stallFonster(sida){
   const ut=[];
   for(let i=0;i<STALL_BOXAR;i++){
     const s=10.4+3.5*i+1.75;                    // avstånd från klubbgaveln i norr
-    ut.push({sida, u:sida==="W"?sV(s):STALL_LANGD-s, b:1.15, h:1.55, z0:1.55, typ:"valv"});
+    /* `auto:true` skiljer den MEKANISKA fönsterrytmen från de öppningar som
+       är skrivna för hand ur planen. Skillnaden behövs av ett prov: två
+       handskrivna öppningar som överlappar är ett fel jag har infört, medan
+       rytmen och en stor port kan hamna på varandra av gammal design. Det
+       första ska smälla, det andra är ett redovisat fynd som rör den låsta
+       fasaden och inte får rättas i den här slicen. */
+    ut.push({sida, u:sida==="W"?sV(s):STALL_LANGD-s, b:1.15, h:1.55, z0:1.55,
+             typ:"valv", auto:true});
   }
   return ut;
 }
@@ -388,7 +395,26 @@ const ANL = {
           E mäts från SÖDRA hörnet: u = 52,31. Samma dörr i planen, två
           konventioner — därför två tal som ser olika ut men är samma linje. */
        {sida:"W", u:sV(17.64-1.15/2), b:1.15, h:2.10, z0:0, typ:"dorrvit"},
-       {sida:"E", u:52.31-1.15/2, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
+       /* Den östra av de två låg först på u 51,735 — mitten rakt på det
+          mätta läget — och ÖVERLAPPADE då boxfönstret på u 50,80–51,95 med
+          0,215 m. Två hål i samma vägg som delar yta. Jag hittade det genom
+          att lista alla E-öppningar sorterade och leta krockar, inte genom
+          att titta; provet nedanför gör den kontrollen varje gång nu.
+          Flyttad till fönstrets kant. Mitten hamnar då på 52,53 i stället
+          för 52,31 — 0,2 m från det mätta, väl inom avläsningens osäkerhet
+          och fortfarande i liv med den västra dörren. */
+       {sida:"E", u:51.95, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
+       /* SÖDRA ÄNDENS UTGÅNG ÖSTERUT — F02-A, ur planen.
+
+          Grönt utrymningsband rakt genom östfasaden med högerpil.
+          Väggöppningen mäter bildpunkt 1459–1494, mitt 1476 → andel 0,8453
+          → y 10,82, bredd 35 px / 20,7 px per m = 1,7 m.
+
+          Längdledet är den riktning där skalan ÄR verifierad (69,95 m
+          PO-satellitmätning), så både läge och bredd är `PLAN` här — till
+          skillnad från allt i tvärled. Krockar inte med någon annan
+          E-öppning; kontrollerat. */
+       {sida:"E", u:9.97, b:1.70, h:2.10, z0:0, typ:"dorrvit"},
        /* Södra gaveln mot gårdsplanen: servicedelens två entrédörrar
           under vita skärmtak, valvfönster och trappdörren uppe
           (Street View från infartsvägen). */
