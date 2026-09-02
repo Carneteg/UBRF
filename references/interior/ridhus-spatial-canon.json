@@ -1,5 +1,5 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "status": "DRAFT_FOR_PRODUCT_OWNER_REVIEW",
   "building": "ridhus",
   "implementation_locked": true,
@@ -11,188 +11,72 @@
     "EXISTING_IMPLEMENTATION_COMPARISON_ONLY"
   ],
   "levels": [
-    {
-      "id": "R0",
-      "name": "arena_ground",
-      "class": "VERIFIED"
-    },
-    {
-      "id": "R1",
-      "name": "bleacher_spectator_level",
-      "class": "VERIFIED"
-    },
-    {
-      "id": "R2",
-      "name": "c_short_end_upper_glazed_level",
-      "class": "VERIFIED"
-    }
+    {"id":"R0","name":"arena_ground","class":"VERIFIED"},
+    {"id":"R1","name":"bleacher_spectator_level","class":"VERIFIED"},
+    {"id":"R2","name":"c_short_end_upper_glazed_level","class":"VERIFIED"},
+    {"id":"RC_UNKNOWN","name":"club_ground_or_internal_level_not_yet_mapped","class":"REFERENCE_GAP"}
   ],
   "nodes": [
-    {
-      "id": "arena",
-      "level": "R0",
-      "type": "arena",
-      "class": "VERIFIED",
-      "facts": ["20x60m"]
-    },
-    {
-      "id": "entrance_club_volume",
-      "level": "R0",
-      "type": "room_cluster",
-      "class": "PLAN",
-      "facts": ["deep_gable_volume", "not_direct_to_arena"],
-      "geometry_status": "REFERENCE_GAP"
-    },
-    {
-      "id": "horse_passage",
-      "level": "R0",
-      "type": "connection",
-      "class": "VERIFIED",
-      "geometry_status": "PARTIAL"
-    },
-    {
-      "id": "bleachers",
-      "level": "R1",
-      "type": "stepped_spectator_structure",
-      "class": "VERIFIED",
-      "facts": ["stepped_timber_rows", "walkable_upper_edge"]
-    },
-    {
-      "id": "behind_bleacher_walkway",
-      "level": "R1",
-      "type": "walkway",
-      "class": "VERIFIED",
-      "facts": ["plywood_floor", "railing_toward_arena"]
-    },
-    {
-      "id": "judge_booth",
-      "level": "R1",
-      "type": "fixed_structure",
-      "class": "VERIFIED"
-    },
-    {
-      "id": "c_left_stair",
-      "level": "R1_R2",
-      "type": "stair",
-      "class": "VERIFIED",
-      "facts": ["straight", "dark_timber", "rail_both_sides"]
-    },
-    {
-      "id": "c_right_stair",
-      "level": "R1_R2",
-      "type": "stair",
-      "class": "VERIFIED",
-      "facts": ["straight", "dark_timber", "rail_both_sides"]
-    },
-    {
-      "id": "c_center_wall",
-      "level": "R1_R2",
-      "type": "wall",
-      "class": "VERIFIED",
-      "facts": ["white", "clock_between_stairs", "line_star_left_of_left_stair"]
-    },
-    {
-      "id": "upper_corridor",
-      "level": "R2",
-      "type": "corridor",
-      "class": "VERIFIED",
-      "facts": ["arena_open_edge", "railing", "glazed_partitions_to_rooms"]
-    },
-    {
-      "id": "cafe_krubban",
-      "level": "R2",
-      "type": "cafe",
-      "class": "VERIFIED",
-      "facts": ["glazed_to_corridor", "pentry", "tables_chairs_sofa"]
-    },
-    {
-      "id": "h_corner_stair",
-      "level": "R1_R2",
-      "type": "stair",
-      "class": "VERIFIED",
-      "destination_class": "REFERENCE_GAP"
-    },
-    {
-      "id": "locker_corridor",
-      "level": "UNKNOWN_CLUB_LEVEL",
-      "type": "corridor",
-      "class": "VERIFIED",
-      "adjacency_status": "REFERENCE_GAP"
-    },
-    {
-      "id": "changing_rooms",
-      "level": "UNKNOWN_CLUB_LEVEL",
-      "type": "room_cluster",
-      "class": "VERIFIED",
-      "minimum_count": 3,
-      "adjacency_status": "REFERENCE_GAP"
-    },
-    {
-      "id": "hygiene_rooms",
-      "level": "UNKNOWN_CLUB_LEVEL",
-      "type": "room_cluster",
-      "class": "PHOTO_EVIDENCE",
-      "minimum_count": 3,
-      "adjacency_status": "REFERENCE_GAP"
-    }
+    {"id":"arena","level":"R0","type":"arena","class":"VERIFIED","facts":["20x60m"]},
+    {"id":"entrance_club_volume","level":"R0","type":"room_cluster","class":"PLAN","facts":["deep_gable_volume","public_entrance_does_not_discharge_directly_to_arena"],"geometry_status":"REFERENCE_GAP"},
+    {"id":"horse_passage","level":"R0","type":"connection","class":"VERIFIED","geometry_status":"PARTIAL"},
+
+    {"id":"bleachers","level":"R1","type":"stepped_spectator_structure","class":"VERIFIED","facts":["stepped_timber_rows","walkable_upper_edge"]},
+    {"id":"behind_bleacher_walkway","level":"R1","type":"walkway","class":"VERIFIED","facts":["plywood_floor","railing_toward_arena"]},
+    {"id":"judge_booth","level":"R1","type":"fixed_structure","class":"VERIFIED"},
+
+    {"id":"c_left_stair","level":"R1_R2","type":"stair","class":"VERIFIED","facts":["straight","dark_timber","rail_both_sides"]},
+    {"id":"c_right_stair","level":"R1_R2","type":"stair","class":"VERIFIED","facts":["straight","dark_timber","rail_both_sides"]},
+    {"id":"c_center_wall","level":"R1_R2","type":"wall","class":"VERIFIED","facts":["white","clock_between_stairs","line_star_left_of_left_stair"]},
+    {"id":"upper_corridor","level":"R2","type":"corridor","class":"VERIFIED","facts":["arena_open_edge","railing","glazed_partitions_to_rooms"]},
+    {"id":"cafe_krubban","level":"R2","type":"cafe","class":"VERIFIED","facts":["glazed_to_corridor","pentry","tables_chairs_sofa","arched_window"]},
+    {"id":"upper_white_door","level":"R2","type":"door","class":"VERIFIED","destination_class":"REFERENCE_GAP"},
+    {"id":"upper_down_stair","level":"R2_TO_UNKNOWN","type":"stair","class":"VERIFIED","facts":["dark_timber","descends_from_upper_corridor"]},
+    {"id":"obstacle_storage","level":"UNKNOWN_LOWER_RELATIVE_TO_R2","type":"storage","class":"PHOTO_EVIDENCE","facts":["concrete_floor","jump_poles","jump_standards","white_door_with_window"],"connection_confidence":"PHOTO_CHAIN_NOT_FULLY_HUMAN_VERIFIED"},
+    {"id":"h_corner_stair","level":"R1_R2","type":"stair","class":"VERIFIED","destination_class":"REFERENCE_GAP"},
+
+    {"id":"locker_corridor","level":"RC_UNKNOWN","type":"corridor","class":"VERIFIED","facts":["long_axis","locker_rows","repeated_red_chairs","glazed_internal_partitions"]},
+    {"id":"locker_corridor_glazed_entrance","level":"RC_UNKNOWN","type":"entrance_partition","class":"VERIFIED","facts":["glazed_door","sidelights","green_exit_sign"]},
+    {"id":"narrow_three_door_corridor","level":"RC_UNKNOWN","type":"corridor","class":"VERIFIED","facts":["three_white_inner_doors","glass_double_door_at_end"],"relation_to_locker_corridor":"REFERENCE_GAP"},
+    {"id":"changing_valv_window","level":"RC_UNKNOWN","type":"changing_room","class":"VERIFIED","facts":["seven_tall_lockers","arched_window","opening_to_adjacent_room"]},
+    {"id":"changing_pillar","level":"RC_UNKNOWN","type":"changing_room","class":"VERIFIED","facts":["structural_pillar","dark_and_white_lockers","open_door_to_small_room"]},
+    {"id":"changing_armchairs","level":"RC_UNKNOWN","type":"changing_room","class":"VERIFIED","facts":["red_gray_blue_lockers","armchairs","two_seat_sofa"]},
+    {"id":"green_locker_zone","level":"RC_UNKNOWN","type":"locker_zone","class":"VERIFIED","facts":["four_green_locker_sections","dark_room_beyond"],"room_membership":"REFERENCE_GAP"},
+    {"id":"large_wc","level":"RC_UNKNOWN","type":"wc","class":"PHOTO_EVIDENCE","adjacency_status":"REFERENCE_GAP"},
+    {"id":"small_wc","level":"RC_UNKNOWN","type":"wc","class":"PHOTO_EVIDENCE","adjacency_status":"REFERENCE_GAP"},
+    {"id":"shower_wc","level":"RC_UNKNOWN","type":"hygiene_room","class":"PHOTO_EVIDENCE","adjacency_status":"REFERENCE_GAP"},
+    {"id":"black_exit_corner_a","level":"RC_UNKNOWN","type":"exit_door_zone","class":"VERIFIED","facts":["black_door","exit_sign","window_with_curtain"],"exterior_side":"REFERENCE_GAP"},
+    {"id":"black_exit_corner_b","level":"RC_UNKNOWN","type":"exit_door_zone","class":"VERIFIED","facts":["black_door","cleaning_tools"],"same_as_corner_a":"CONTRADICTION_UNRESOLVED"}
   ],
   "edges": [
-    {
-      "from": "horse_passage",
-      "to": "arena",
-      "type": "walkable_connection",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED"
-    },
-    {
-      "from": "arena",
-      "to": "bleachers",
-      "type": "stair_or_stepped_access",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED_WITH_OPEN_DIMENSIONS"
-    },
-    {
-      "from": "bleachers",
-      "to": "c_left_stair",
-      "type": "walkable_connection",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED"
-    },
-    {
-      "from": "bleachers",
-      "to": "c_right_stair",
-      "type": "walkable_connection",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED"
-    },
-    {
-      "from": "c_left_stair",
-      "to": "upper_corridor",
-      "type": "vertical_connection",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED"
-    },
-    {
-      "from": "c_right_stair",
-      "to": "upper_corridor",
-      "type": "vertical_connection",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED"
-    },
-    {
-      "from": "upper_corridor",
-      "to": "cafe_krubban",
-      "type": "glazed_internal_access",
-      "class": "VERIFIED",
-      "implementation": "ALLOWED"
-    },
-    {
-      "from": "h_corner_stair",
-      "to": "UNKNOWN_UPPER_DESTINATION",
-      "type": "vertical_connection",
-      "class": "REFERENCE_GAP",
-      "implementation": "DEFER"
-    }
+    {"from":"horse_passage","to":"arena","type":"walkable_connection","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"arena","to":"bleachers","type":"stair_or_stepped_access","class":"VERIFIED","implementation":"ALLOWED_WITH_OPEN_DIMENSIONS"},
+    {"from":"bleachers","to":"behind_bleacher_walkway","type":"same_spectator_system","class":"VERIFIED","implementation":"ALLOWED_WITH_OPEN_DIMENSIONS"},
+    {"from":"bleachers","to":"judge_booth","type":"fixed_structure_on_spectator_system","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"bleachers","to":"c_left_stair","type":"walkable_connection","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"bleachers","to":"c_right_stair","type":"walkable_connection","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"c_left_stair","to":"upper_corridor","type":"vertical_connection","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"c_right_stair","to":"upper_corridor","type":"vertical_connection","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"upper_corridor","to":"cafe_krubban","type":"glazed_internal_access","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"upper_corridor","to":"upper_white_door","type":"direct_visible_adjacency","class":"VERIFIED","implementation":"ALLOW_DOOR_DEFER_DESTINATION"},
+    {"from":"upper_corridor","to":"upper_down_stair","type":"direct_visible_adjacency","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"upper_down_stair","to":"obstacle_storage","type":"photo_sequence_suggested_vertical_connection","class":"REFERENCE_GAP","implementation":"DEFER_EXACT_ADJACENCY"},
+    {"from":"h_corner_stair","to":"UNKNOWN_UPPER_DESTINATION","type":"vertical_connection","class":"REFERENCE_GAP","implementation":"DEFER"},
+
+    {"from":"locker_corridor","to":"locker_corridor_glazed_entrance","type":"corridor_terminates_at_entrance","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"locker_corridor","to":"UNKNOWN_GLAZED_ROOM_SUITE","type":"glazed_internal_adjacency","class":"VERIFIED","implementation":"ALLOW_PARTITION_DEFER_ROOM_IDENTITY"},
+    {"from":"changing_valv_window","to":"UNKNOWN_ADJACENT_ROOM_RED_CHAIRS","type":"open_connection","class":"VERIFIED","implementation":"ALLOW_OPENING_DEFER_DESTINATION_IDENTITY"},
+    {"from":"changing_pillar","to":"UNKNOWN_SMALL_ROOM","type":"door_connection","class":"VERIFIED","implementation":"ALLOW_DOOR_DEFER_DESTINATION_IDENTITY"}
+  ],
+  "open_relations": [
+    "LOCKER_CORRIDOR_TO_NARROW_THREE_DOOR_CORRIDOR",
+    "LOCKER_CORRIDOR_LEVEL_RELATIVE_TO_R0_R1_R2",
+    "CHANGING_ROOMS_ORDER_ALONG_CORRIDORS",
+    "WC_ROOMS_ADJACENCY",
+    "BLACK_EXIT_A_VS_BLACK_EXIT_B_SAME_OR_DIFFERENT",
+    "GREEN_LOCKER_ZONE_ROOM_MEMBERSHIP",
+    "UPPER_DOWN_STAIR_TO_OBSTACLE_STORAGE_EXACT_CHAIN",
+    "PUBLIC_ENTRANCE_TO_BLEACHER_ACCESS_EXACT_ROUTE"
   ],
   "invariants": [
     "C_SHORT_END_HAS_TWO_STAIRS_NOT_ONE",
@@ -200,12 +84,17 @@
     "BLEACHERS_ARE_STEPPED_NOT_FLAT",
     "UPPER_CORRIDOR_IS_ADJACENT_TO_ARENA",
     "CAFE_IS_ACCESSED_FROM_UPPER_CORRIDOR",
-    "H_CORNER_STAIR_IS_SEPARATE_FROM_C_PAIR"
+    "H_CORNER_STAIR_IS_SEPARATE_FROM_C_PAIR",
+    "LOCKER_CORRIDOR_TERMINATES_AT_GLAZED_ENTRANCE",
+    "EXISTENCE_OF_CHANGING_AND_WC_ROOMS_DOES_NOT_PROVE_THEIR_ORDER"
   ],
   "forbidden_interpretations": [
     "ADD_STANDALONE_STALLINNE_STAIR_FOR_CAFE_ACCESS",
     "COLLAPSE_C_PAIR_TO_ONE_GENERIC_STAIR",
     "INVENT_CLUB_ROOM_ADJACENCY",
+    "MERGE_DISTINCT_CORRIDORS_BECAUSE_BOTH_HAVE_GLAZED_EXIT_DOORS",
+    "MERGE_BLACK_EXIT_DOORS_WITHOUT_CONNECTING_EVIDENCE",
+    "USE_REPEATED_FURNITURE_AS_PROOF_OF_ROOM_ADJACENCY",
     "USE_EXISTING_COORDINATES_AS_SOURCE_EVIDENCE"
   ]
 }
