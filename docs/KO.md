@@ -4,153 +4,161 @@
 
 Syftet är en enda sak: **en slice är fördelad innan någon börjar bygga.**
 
-Regler: `docs/INTEGRATION.md` § Tilldelning före arbete, § Kollisionsregeln,
-§ En PR = ett gate-slice.
+Regler: `docs/INTEGRATION.md` § Tilldelning före arbete, § Kollisionsregeln och § En PR = ett gate-slice.
 
-## Så skrivs en köpost
+**Äger filerna** är bindande. Behöver en slice röra något utanför sin köpost ska ägarskapet utökas här först; ingen implementerande agent gör det i tysthet.
 
-    ### <gate>-<slice> — <en rad om vad som ska bli sant>
-    Ägare: Claude | ChatGPT | Tobias | Integrationsledare
-    Äger filerna: <exakta sökvägar eller mappar>
-    Beroende av: <slice eller PR som måste in först, eller "inget">
-    Klar när: <mätbart, med kommando eller mänsklig gate>
-
-**Äger filerna** är bindande. En PR som rör filer utanför sin köpost är inte
-färdig — den är ofördelad, och integrationsledaren skickar tillbaka den.
-
-Är en fil redan deklarerad i en annan öppen post eller PR gäller
-kollisionsregeln: den öppna posten äger filen.
+---
 
 ## Aktiv ordning — 2026-09-02
 
-1. **G01-S2b** — aktiv nästa gameplay-slice. Claude bygger enligt issue #58.
-2. **G01 hästrigg / issue #31** — separat produktionsblockerare som kan drivas parallellt men krävs för full spelbar ridloop.
-3. **F02** — fortsätter efter G01-S2b när spelvärdesloopen inte längre väntar på preparation.
-4. **SEC-01 / Supabase-infra** — säkerhets- och redundansarbete får inte tränga undan den spelbara hästloopen.
+1. **F02-A — interiörens rum/topologi/fasta arkitektur — ACTIVE P0.** Claude bygger enligt issue #71.
+2. **F02-B — möbler/utrustning/fixtures.** Väntar på ChatGPT PASS på F02-A.
+3. **F02-C — visuell review/polish.** Väntar på F02-B och Tobias visuella feedback.
+4. **G01 hästrigg / issue #31.** Separat produktionsblockerare; får inte tränga undan aktiv F02-A utan nytt Product Owner-beslut.
+5. **SEC-01 / Supabase-infra.** Separat säkerhets-/redundansarbete, inte del av F02.
 
-## Beslutade slices
+### Låst produktbaseline
 
-### G01-S2a — skötseln som delad kanonisk data — KLAR
+Tobias har visuellt godkänt nuvarande byggnad/exteriör på produktion efter #66.
 
-Ägare: ChatGPT genom Product Owners uttryckliga undantag.
-Levererad via scope-ren ersättare och mergad till `main` genom PR #55.
+**Exteriören är låst under F02-A/B/C.** Ingen fasad, entré, veranda, spiraltrappa, takrelation eller situationsplan får ändras utan ett nytt konkret Product Owner-fynd.
+
+Accepterad exteriörbas som F02-A-branchen skapades från: `7253d864ce808b56288c6950503304daa05d0893`.
+
+---
+
+## ACTIVE: F02-A — interiörens rum/topologi/fasta arkitektur
+
+Ägare: **Claude**
+
+Arbetsorder: **issue #71**  
+Parent/audit: issue #65  
+Branch: `claude/f02-a-interior-topology`
+
+### Äger filerna
+
+Primärt:
+- `src/site.js`
+- `src/varld3d.js`
+- `roblox/buildings/`
+- `roblox/tests/bygge.spec.luau`
+- nya F02-specar under `roblox/tests/` om de behövs
+- `docs/F02-*`
+- interior-matris/inventeringsmetadata under `references/buildings/stall/` och `references/buildings/ridhus/`
+
+Referensmedia får **läsas**, men råfoto/video ska inte modifieras i denna slice.
+
+Om implementationen kräver en annan befintlig fil: stoppa och begär köutökning i #71 innan filen ändras.
+
+### Beroende av
+
+Inget kvarstående. Exteriören är visuellt accepterad och låst.
+
+### Källordning
+
+1. Tobias uttryckliga korrigeringar.
+2. Planer/utrymningsplaner för topologi, väggar, öppningar, trappor och cirkulation.
+3. Repo-foton och råvideo/nyckelrutor för synlig verklighet. Relevant rå `.mov` granskas innan ett relevant fynd lämnas som `REFERENCE GAP`.
+4. Byggnadskort/interiörmatriser som index/hjälp.
+5. Befintlig implementation endast som kodbas — aldrig som bevis.
+
+Varje spatialt faktum klassas `VERIFIED`, `DERIVED`, `ASSUMPTION`, `REFERENCE GAP` eller `CONTRADICTION`.
+
+### Klar när
+
+- varje representerad åtkomlig zon finns i Interior Fidelity Matrix med källa + klass;
+- verifierade rumsrelationer, innerväggar, öppningar, korridorer, trappor och cirkulation är implementerade;
+- inga semantiska rum, exakta mått, dörrar eller symmetrier har hittats på för att fylla luckor;
+- webben och Roblox använder samma spatiala fakta, inte parallella handskrivna layouter;
+- exteriören är oförändrad relativt accepterad baseline;
+- topology/parity-tester är gröna och relevanta falsifieringar redovisas;
+- PR:n innehåller source → fact mapping, remaining gaps och `Not tested`;
+- Claude stoppar vid `READY_FOR_CHATGPT_REVIEW` och anger exakt head SHA.
+
+**Ingen möblering i F02-A utöver fasta built-ins som krävs för att definiera rummet.**
+
+---
+
+## F02-B — möbler/utrustning/fixtures — WAITING
+
+Ägare: **Claude efter ChatGPT PASS på F02-A**.
+
+Beroende av: F02-A reviewad och accepterad som tillräcklig topologibas.
+
+Kommer att omfatta foto-/videostödda soffor, bord, stolar, bänkar, skåp, toalettinredning, sadelkammarutrustning, café/social/admin-möbler, stallutrustning, lampor, skyltar och andra verifierade fixtures.
+
+Ingen generisk Roblox-furniture dressing. Saknas stöd för exakt placering = `REFERENCE GAP`.
+
+---
+
+## F02-C — visuell review/polish — WAITING
+
+Ägare: Claude bygger reviewstödet; ChatGPT granskar; Tobias accepterar visuellt.
+
+Beroende av: F02-B.
+
+Mål: snabb rum-för-rum review med jämförbar kamera där källa finns och enkel rapportering av fel placering, fel objekt eller saknad geometri.
+
+---
+
+## G01-status
+
+### G01-S2a — KLAR
+Mergad via #55. `src/spel/skotsel.js` är pedagogisk källa och Roblox konsumerar exporterad skötseldata.
+
+### G01-S2b — KLAR / MERGAD
+
+Tidigare kötext som kallade S2b "aktiv" är **föråldrad och ersatt av denna filversion**.
+
+PR #61 är mergad till `main` som `15358bc25a5230ff61cd010a3672a6ae332d68ed`.
 
 Kanoniskt resultat:
-- `src/spel/skotsel.js` är pedagogisk källa.
-- Webben och Roblox delar samma regler via export.
-- Roblox har separat genererad `UBRFSkotsel`-modul.
-- Huvud = endast mjuk borste; ben = ingen gummiskrapa; visitation har exakt ett rätt svar.
+- server-authoritative preparation;
+- exakt `HorseId`-bindning;
+- `waiting_model` när rätt rigg saknas;
+- mount-gate före `ready_to_mount`;
+- klienten presenterar serverns state/revision.
 
-Gamla #29 är stängd och får inte återupplivas.
+Studio/game-feel acceptance är en separat mänsklig kontroll och gör inte S2b till aktiv implementeringsslice igen.
 
-### G01-S2b — Roblox preparation läser skötseln ur exporten — AKTIV
+### G01-S2c — KLAR
+Mergad via #57. 33 aktiva hästar/ponnyer finns i kanonen.
 
-Ägare: **Claude**.
-Arbetsorder: **issue #58**.
-Gamla PR #30 är stängd som **SUPERSEDED — DO NOT MERGE** och får endast användas som referens/salvage.
+### G01 hästrigg / issue #31
 
-Äger filerna i den rena slicen:
-- `roblox/game/Stallet.luau`
-- `roblox/src/client/GameplayController.luau`
-- `roblox/src/client/InteractionController.luau`
-- `roblox/src/client/init.client.luau`
-- `roblox/src/server/GameplayService.luau`
-- `roblox/src/server/StallService.luau`
-- `roblox/src/server/init.server.luau`
-- `roblox/src/shared/HorseCore/Networking.luau`
-- `roblox/src/shared/HorseCore/Preparation.luau`
-- `roblox/src/shared/HorseCore/init.luau`
-- `roblox/tests/build.py`
-- `roblox/tests/gameplay.spec.luau`
-- `roblox/tests/hud.spec.luau`
-- `roblox/tests/interaktion.spec.luau`
-- `roblox/tests/kor.sh`
-- `roblox/tests/preparation.spec.luau`
-- `roblox/tests/spel-assignment.spec.luau`
-- `roblox/tests/stubs-gameplay.luau`
+Separat blockerare. Öppen PR #51 är endast ett riggkontrakt/prov och **inte** en riktig produktionsrigg. PR #51 är inte aktiv eller mergeklar förrän köägarskapet beslutas separat.
 
-Får **inte** återinföra `roblox/docs/G01-HORSE-IDENTITY-CONTRACT.md` som konkurrerande kopia; kontraktet finns redan i `main`.
+---
 
-Beroende av: **inget kvarstående**. S2a (#55) och S2c (#57) är mergade.
+## Separata infra-/säkerhetsspår
 
-Klar när:
-- kedjan `Hälsa lugnt → Visitera → Rykta → Gör i ordning → Sitt upp` är server-authoritative;
-- `Preparation.luau` hämtar faser/ordning/text ur exporterade `UBRFSkotsel`, inte egna literaler;
-- `StallService` äger tilldelad kanonisk `HorseId`;
-- `GameplayService` binder endast exakt matchande Horse-taggad rigg med samma `HorseId`;
-- saknas matchande rigg blir läget `waiting_model`, aldrig närmaste/fel häst;
-- `HorseService` är fortsatt enda mount/dismount/riding-authority;
-- två spelare får aldrig samma aktiva hästidentitet;
-- mount före `ready_to_mount`, på fel häst eller på annan spelares häst avvisas server-side;
-- HUD fungerar vid 320 px samt på mobil/iPad/dator;
-- sen init/refresh kan inte skriva över nyare serverfeedback;
-- acceptance- och falsifieringsfallen i issue #58 är körda;
-- relevanta Luau-, export-, webb-, Rojo-, material- och package-grindar är gröna på exakt PR-head.
+### SEC-01
 
-Beslut (Tobias): **JS är källan, Roblox läser.** Det omvända är avvisat.
+Gästläget är avsiktligt. Säkerhetsarbete får inte råka ta bort guest mode. Separat från F02.
 
-### G01-S2c — hästkanon utökad till hela stallet — KLAR
+### Supabase-referensspegel / PR #35
 
-Ägare: ChatGPT genom Product Owners uttryckliga undantag.
-Mergad till `main` genom PR #57.
+Separat infra. Ingen Supabase-migration eller hemlighetshantering får blandas in i F02-A/B/C.
 
-Kanoniskt resultat:
-- exakt 33 aktiva UBRF-hästar/ponnyer: 18 hästar + 15 ponnyer;
-- verklighetsfakta matchar versionssnapshot/live-underlag;
-- `UNTUNED` används där gameplayprofil inte är beslutad;
-- lektionsrotationen innehåller endast giltiga tunade id:n;
-- `UBRFSpelData` och `UBRFSkotsel` är separerade;
-- gamla felidentiteter/save-minnen migreras utan att relationer flyttas till fel verklig häst;
-- individuella fodergivor är uttryckligen övningsdata/`ASSUMPTION` tills verkliga givor verifierats.
+---
 
-Databasen är upstream för fakta, inte direkt gameplay-authority.
+## Avvisat / superseded / reference-only
 
-### G01-blockerare — hästriggen byggs
+| Post | Status |
+|---|---|
+| PR #33 | **CLOSED — SUPERSEDED / REFERENCE ONLY**. Fynd och bevisindex får konsulteras, men grenen är inte mergebas och får inte cherry-pickas som färdig interiörsanning. |
+| PR #50 | **CLOSED — SUPERSEDED / EVIDENCE ONLY**. Panelfyndet får återverifieras mot råkällan inom #71; gamla branchen ska inte mergas. |
+| PR #30 | **SUPERSEDED — DO NOT MERGE** av S2b/#58/#61. |
+| PR #29 | superseded av landad S2a/#55. |
+| PR #67 | stängd; får inte ändra visuellt accepterad exteriör. |
+| `Preparation.luau` som webbkällan | avvisat; JS/webb är pedagogisk källa. |
+| Generisk/påhittad interiör eller möblering | avvisat; verkligheten är specifikationen och luckor märks `REFERENCE GAP`. |
 
-Ägare: Tobias (produktion), ChatGPT (kravspec).
-Äger: issue #31 och `roblox/` riggmapp när riktig produktionsrigg finns.
-Beroende av: inget, men full G01 efter S2 vilar på den.
+---
 
-Klar när en riggad hästmodell med minst skritt, trav och galopp går att importera i Studio och driva från befintlig movement-kod enligt hästriggskravspecen.
+## Leveransprotokoll
 
-Öppen PR #51 är ett riggkontrakt/prov, inte själva riggen. Den är inte automatiskt aktiv eller mergeklar bara för att S2b startar.
+**CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
 
-### F02-underlag — ridhusets referenser och interior review
-
-Ägare: Integrationsledaren / separat F02-kö.
-
-Källordning:
-- `references/buildings/ridhus/`
-- `references/video/`
-- `references/DRIVE-INVENTORY-2026-08-30.md`
-- `references/DRIVE-SOURCE-INDEX.md`
-
-Råfilm ska granskas innan relevant detalj får lämnas som `REFERENCE GAP`.
-De sex rummen i ridhusets entréblock och stallets Plan 2 får fortsätta vara `REFERENCE GAP` när beviset verkligen är uttömt; Tobias kan inte förväntas fotografera om materialet.
-
-PR #33 kräver mänsklig Studio-gate och får inte beskrivas som accepterad bara för att automatiska tester är gröna.
-
-### SEC-01 — gästläget dokumenteras som avsiktligt
-
-Ägare: Integrationsledaren.
-Äger: `supabase/migrations/` och relevanta säkerhetsavsnitt i docs.
-Beroende av: inget.
-
-Klar när `public.ny_ryttare()` har dokumenterad motivering och spärr mot massanrop, samt kvarstående advisor-varningar är kvitterade.
-
-Beslut (Tobias): gästläget är avsiktligt just nu; säkerhetsarbetet får inte råka ta bort guest mode.
-
-### Supabase-referensspegel
-
-PR #35 äger sin migration/infrastruktur. Den privata hinken och manifestreglerna finns, men binärspegeln är fortfarande operativt separat från G01. Ingen får lägga Supabase-migrationsarbete i S2b för att "passa på".
-
-## Avvisat / superseded
-
-| Förslag | Status / varför | När |
-|---|---|---|
-| `Preparation.luau` som källa, export till webben | avvisat — webben/JS är pedagogisk källa | 2026-08-31 |
-| Merga gamla PR #30 | **SUPERSEDED** av issue #58; gammal bas och gammal exportarkitektur | 2026-09-02 |
-| Återuppliva #29 som S2a | superseded; S2a landad genom #55 | 2026-09-01 |
-| Kurerat urval i kanonen i stället för hela stallet | avvisat; 33 aktiva ska finnas i kanonen | 2026-08-31 |
-| Återuppliva #9 | gammal och ersatt av senare Gate 01-arbete | 2026-08-31 |
-| Merga #32 "för säkerhets skull" | #33 innehåller dess arbete enligt tidigare integrationskontroll | 2026-08-31 |
+Aktuell enda implementeringsorder: **#71 / F02-A**.
