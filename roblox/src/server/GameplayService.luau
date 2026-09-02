@@ -38,12 +38,28 @@ local GameplayService = {}
 local TAG = "Horse"
 
 --[[ Så nära man måste stå för att få göra ett steg. Servern äger talet;
-	klienten får inte skicka med sitt eget avstånd. Lite rundare än
-	`MountRange` (14) med flit — man ryktar närmare än man sitter upp. ]]
-local STEG_RACKVIDD = 16
+	klienten får inte skicka med sitt eget avstånd.
+
+	Stod först på 16 med kommentaren att man ryktar NÄRMARE än man sitter upp
+	— men `MountRange` är 14, så talet sa raka motsatsen till kommentaren.
+	Senior review fällde motsägelsen på #61.
+
+	12 studs är valt: faktiskt närmare än uppsittningens 14, och samma tal som
+	den tidigare S2-specen använde. Game feel avgörs i Studio, inte här. ]]
+local STEG_RACKVIDD = 12
 
 local state: { [Player]: Preparation.State } = {}
 local bunden: { [Player]: Model } = {}
+
+--[[ Ett strikt växande serienummer per spelare. Varje vy servern skickar —
+	spontan sync eller svar på handskakningen — bär sitt nummer, så att
+	klienten kan kasta en gammal vy som råkar komma sist. Krav 10. ]]
+local revision: { [Player]: number } = {}
+
+local function nastaRev(player: Player): number
+	revision[player] = (revision[player] or 0) + 1
+	return revision[player]
+end
 
 --[[ ── Bindningen ──────────────────────────────────────────────────── ]]
 
@@ -78,8 +94,17 @@ local function status(player: Player): string
 	return if Preparation.redo(s) then Preparation.STATUS.REDO else Preparation.STATUS.FORBEREDER
 end
 
+local function vyFor(player: Player)
+	return Preparation.vy(state[player], status(player), nastaRev(player))
+end
+
+--[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte
+	anslutit sin listener — en RemoteEvent köas inte åt en framtida
+	lyssnare — och det är precis därför `PreparationHello` finns. Att bara
+	FireClient härifrån var felet senior review fällde: en klient som
+	anslöt sent startade utan hästId, steg och ready-state. ]]
 local function skicka(player: Player)
-	Net.get("PreparationSync"):FireClient(player, Preparation.vy(state[player], status(player)))
+	Net.get("PreparationSync"):FireClient(player, vyFor(player))
 end
 
 --[[ Försök binda identiteten till en modell. Anropas vid ankomst och varje
@@ -164,6 +189,7 @@ end
 local function glom(player: Player)
 	state[player] = nil
 	bunden[player] = nil
+	revision[player] = nil
 end
 
 function GameplayService.start()
@@ -171,6 +197,19 @@ function GameplayService.start()
 
 	Net.get("PreparationStep").OnServerInvoke = function(player, fasId)
 		return GameplayService.utfor(player, fasId)
+	end
+
+	--[[ Handskakningen. Klienten anropar den FÖRST efter att den anslutit sin
+		`PreparationSync`-listener, och får hela nuläget i retur. Det gör
+		starttillståndet deterministiskt oavsett vem som hann först.
+
+		Svaret bär samma revision som en spontan sync, så om en nyare sync
+		hinner före svaret kastar klienten svaret i stället för att backa. ]]
+	Net.get("PreparationHello").OnServerInvoke = function(player)
+		if not state[player] then
+			GameplayService.bind(player)
+		end
+		return vyFor(player)
 	end
 
 	--[[ Flaggan är serverns svar på "är loopen igång". Klienten läser den

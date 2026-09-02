@@ -52,8 +52,18 @@ QA = BYGGE + [
 # Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
 # exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
 # rorelsemoduler behovs inte -- Preparation ror dem inte.
+# HorseService ar med for att uppsittningsgrindens INKOPPLING ska ga att prova,
+# inte bara dess regel: specen registrerar en grind och kor riktiga tryMount.
+# Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
-    ("Preparation", "src/shared/HorseCore/Preparation.luau"),
+    ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Config",       "src/shared/HorseCore/Config.luau"),
+    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    ("HorseService", "src/server/HorseService.luau"),
+    # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
+    ("InteractionController", "src/client/InteractionController.luau"),
 ]
 
 MODULER = [

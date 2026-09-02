@@ -225,6 +225,106 @@ do
 		tom.status == "waiting_model" and #tom.steg == 0 and tom.redo == false)
 end
 
+--[[ ── Krav 8: uppsittningsprompten fail-closed ────────────────────
+	Fälldes av senior review på #61. Den första versionen prövade riktigt
+	`G01Enabled == true`, men använde svaret som `if not g01Pa() then return
+	true` — så `nil` gick rakt in i legacy-grenen och VISADE prompten. Precis
+	det join-race kravet finns till för, bakom en kommentar som påstod rätt
+	beteende. Beslutet är därför utflyttat ur en lokal funktion och provas
+	här. ]]
+do
+	local P = InteractionController.promptSynlig
+
+	--[[ Det här är provet som saknades. Faller det är loopen fail-open igen. ]]
+	check("nil (klienten hann före servern) gömmer prompten",
+		P(nil, false) == false and P(nil, true) == false,
+		"nil → aldrig synlig, oavsett ready-check")
+
+	check("true + inte redo gömmer prompten", P(true, false) == false)
+	check("true + redo visar prompten", P(true, true) == true)
+
+	--[[ nil och false får INTE ge samma svar. Slås de ihop till en boolean är
+		buggen tillbaka utan att något annat prov märker det. ]]
+	check("false (loopen avstängd) är legacy och visar prompten",
+		P(false, false) == true)
+	check("nil och false ger olika svar",
+		P(nil, false) ~= P(false, false), "nil=false, false=true")
+end
+
+--[[ ── Krav 10: en äldre vy får aldrig skriva över en nyare ──────────
+	Handskakningens svar och en spontan sync kan komma i vilken ordning som
+	helst. Utan serienummer backar HUD:en till ett äldre läge. ]]
+do
+	local F = Preparation.farRita
+
+	check("första vyn ritas alltid", F(nil, { rev = 1 }) == true)
+	check("nyare vy ritas", F(3, { rev = 4 }) == true)
+	check("äldre vy kastas", F(4, { rev = 3 }) == false)
+	check("samma revision ritas inte om", F(4, { rev = 4 }) == false)
+
+	--[[ Skräp över nätet ska inte kunna nolla HUD:en. ]]
+	check("vy utan revision kastas", F(1, {}) == false)
+	check("icke-tabell kastas", F(1, "hej") == false)
+
+	--[[ Revisionen måste finnas i det servern faktiskt skickar, annars är
+		regeln ovan verkningslös. ]]
+	local st = Preparation.nyState("cosmo")
+	local vy = Preparation.vy(st, Preparation.STATUS.FORBEREDER, 7)
+	check("servervyn bär sin revision", vy.rev == 7, tostring(vy.rev))
+	local tomVy = Preparation.vy(nil, Preparation.STATUS.VANTAR_MODELL, 2)
+	check("även den tomma vyn bär revision", tomVy.rev == 2)
+end
+
+--[[ ── Krav 6: grindens INKOPPLING, inte bara dess regel ─────────────
+	Senior review accepterade placeringen (först i `HorseService.tryMount`
+	i stället för före anropet) men krävde bevis för att den faktiskt körs
+	före sessions-/seat-/mount-logiken.
+
+	Beviset ligger i VILKET fel som kommer tillbaka. Modellen nedan är
+	oregistrerad, så mount-logiken skulle svara "Hästen är inte registrerad".
+	Får vi i stället grindens eget skäl har grinden kört FÖRST. Får vi
+	registreringsfelet har grinden släppt igenom — och då är det beviset att
+	den passerade, inte att den saknas. ]]
+do
+	local cosmoModell = { HorseId = "cosmo" }
+	function cosmoModell:GetAttribute(k) return (self :: any)[k] end
+	local airModell = { HorseId = "air" }
+	function airModell:GetAttribute(k) return (self :: any)[k] end
+
+	local spelare = { Name = "Prov", UserId = 1 }
+	local st = Preparation.nyState("cosmo")
+
+	--[[ Samma funktion som GameplayService registrerar. ]]
+	HorseService.setMountGate(function(_, modell)
+		return Preparation.provaModell(st, modell:GetAttribute("HorseId"))
+	end)
+
+	local ok, skal = HorseService.tryMount(spelare, cosmoModell)
+	check("oförberedd spelare stoppas av grinden", not ok, tostring(skal))
+	check("...och stoppas FÖRE mount-logiken",
+		skal ~= nil and skal ~= "Hästen är inte registrerad",
+		"fick: " .. tostring(skal))
+
+	local ok2, skal2 = HorseService.tryMount(spelare, airModell)
+	check("annans häst stoppas av grinden", not ok2 and skal2 == "Det är inte din häst",
+		tostring(skal2))
+
+	for _, f in ipairs(Preparation.stegFaser()) do
+		Preparation.utfor(st, f.id, "cosmo")
+	end
+	local ok3, skal3 = HorseService.tryMount(spelare, cosmoModell)
+	check("färdig förberedelse SLÄPPS IGENOM till mount-logiken",
+		not ok3 and skal3 == "Hästen är inte registrerad",
+		"grinden passerade; mount-logiken svarade: " .. tostring(skal3))
+
+	--[[ Utan registrerad grind ska hästsystemet bete sig precis som före den
+		här skivan, annars kan movement-specarna inte köra det ensamt. ]]
+	HorseService.setMountGate(nil)
+	local ok4, skal4 = HorseService.tryMount(spelare, cosmoModell)
+	check("utan grind är beteendet oförändrat",
+		not ok4 and skal4 == "Hästen är inte registrerad", tostring(skal4))
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("forberedelse.spec: " .. fails .. " fel")

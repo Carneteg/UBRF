@@ -28,6 +28,7 @@ local DEFINITIONS = {
 	HorseReaction = "RemoteEvent",      -- server → alla: gnägg, stegring, reaktion
 	PreparationStep = "RemoteFunction",  -- klient → server: jag vill göra det här steget
 	PreparationSync = "RemoteEvent",     -- server → ägaren: hela förberedelsens sanning
+	PreparationHello = "RemoteFunction", -- klient → server: listenern är ansluten, ge mig nuläget
 }
 
 local cache: { [string]: Instance } = {}

@@ -15,6 +15,7 @@
 local Players = game:GetService("Players")
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
+local Preparation = require(game:GetService("ReplicatedStorage").HorseCore.Preparation)
 local Net = Core.Networking
 
 local PreparationController = {}
@@ -27,6 +28,9 @@ local rubrik: TextLabel? = nil
 local hjalp: TextLabel? = nil
 local rader: { [string]: { ram: Frame, bock: TextLabel, namn: TextLabel } } = {}
 local senasteVy: any = nil
+--[[ Revisionen på det som faktiskt ritats. `nil` = ingenting ritat än. ]]
+local senasteRev: number? = nil
+local rita
 
 --[[ Steg-id:t klienten senast bad om, och när. Används bara för att gråa ut
 	knappen medan svaret är på väg — inte för att gissa utfallet. ]]
@@ -177,7 +181,17 @@ local function rad(steg: any, ordning: number)
 	end
 end
 
-local function rita(vy: any)
+--[[ Enda vägen in till HUD:en. Allt som kommer utifrån — spontan sync eller
+	svar på handskakningen — går genom den här, och den släpper bara igenom
+	en NYARE vy. Utan det kunde handskakningens svar landa efter en nyare
+	sync och backa HUD:en till ett äldre läge (krav 10). ]]
+local function ritaOmNyare(vy: any)
+	if not Preparation.farRita(senasteRev, vy) then return end
+	senasteRev = vy.rev
+	rita(vy)
+end
+
+function rita(vy: any)
 	bygg()
 	senasteVy = vy
 	for i, steg in ipairs(vy.steg or {}) do
@@ -229,7 +243,22 @@ function PreparationController.hastId(): string?
 end
 
 function PreparationController.start()
-	Net.get("PreparationSync").OnClientEvent:Connect(rita)
+	--[[ ORDNINGEN ÄR KONTRAKTET: listenern ansluts FÖRST, handskakningen
+		anropas sedan. Servern skickar sin första vy från `bind()` vid
+		PlayerAdded, och en RemoteEvent som avfyras innan någon lyssnar är
+		borta för alltid — den köas inte. Utan handskakningen startade
+		klienten därför utan hästId, steg och ready-state, utan någon
+		deterministisk ny sync att vänta på. ]]
+	Net.get("PreparationSync").OnClientEvent:Connect(ritaOmNyare)
+
+	task.spawn(function()
+		local ok, vy = pcall(function()
+			return Net.get("PreparationHello"):InvokeServer()
+		end)
+		if ok and vy then
+			ritaOmNyare(vy)
+		end
+	end)
 end
 
 return PreparationController

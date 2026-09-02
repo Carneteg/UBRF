@@ -110,10 +110,13 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	if model:GetAttribute("HorseId") ~= id then return false end
 	return PreparationController.redo()
 end)
+--[[ `start()` ansluter HUD:ens listener och gör sedan handskakningen, i den
+     ordningen. Prompt-uppdateringen hänger på samma händelse. ]]
 PreparationController.start()
 Net.get("PreparationSync").OnClientEvent:Connect(function()
 	InteractionController.uppdatera()
 end)
+InteractionController.uppdatera()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]

@@ -134,6 +134,18 @@ function Preparation.provaUppsittning(state: State, hastId: string): (boolean, s
 	return true, nil
 end
 
+--[[ Får klienten rita `ny` när den redan ritat revisionen `senasteRev`?
+
+	Regeln är ett enda `>`, men den bor här och inte i klienten av samma skäl
+	som allt annat i modulen: den ska gå att fälla utan Studio. Utan den kan
+	handskakningens svar landa efter en nyare spontan sync och backa HUD:en
+	till ett äldre läge — krav 10. ]]
+function Preparation.farRita(senasteRev: number?, ny): boolean
+	if type(ny) ~= "table" or type(ny.rev) ~= "number" then return false end
+	if senasteRev == nil then return true end
+	return ny.rev > senasteRev
+end
+
 --[[ ── Bindningen ──────────────────────────────────────────────────
 
 	Valet av modell är också en REGEL, inte instanshantering, så den bor
@@ -179,10 +191,16 @@ function Preparation.provaModell(state: State?, modellHastId): (boolean, string?
 end
 
 --[[ Det klienten ska visa. Servern skickar hela den här tabellen; klienten
-	räknar inte ut någon del av den själv. ]]
-function Preparation.vy(state: State?, status: string)
+	räknar inte ut någon del av den själv.
+
+	`rev` är ett strikt växande serienummer per spelare. Det finns för krav
+	10: handskakningens svar och en spontan `PreparationSync` kan komma i
+	vilken ordning som helst över nätet, och utan serienummer kan det äldre
+	svaret skriva över det nyare. ]]
+function Preparation.vy(state: State?, status: string, rev: number?)
 	if not state then
-		return { status = status, hastId = nil, steg = {}, nasta = nil, redo = false }
+		return { status = status, hastId = nil, steg = {}, nasta = nil,
+			redo = false, rev = rev or 0 }
 	end
 	local steg = {}
 	for _, f in ipairs(Preparation.stegFaser()) do
@@ -200,6 +218,7 @@ function Preparation.vy(state: State?, status: string)
 		steg = steg,
 		nasta = nasta and nasta.id or nil,
 		redo = nasta == nil,
+		rev = rev or 0,
 	}
 end
 
