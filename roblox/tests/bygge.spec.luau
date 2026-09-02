@@ -289,6 +289,31 @@ do
 				murat, S.bredd, S.bredd - murat))
 	end
 
+	--[[ ...och en `foljGangar=false`-vägg ska ha PRECIS sina egna hål.
+
+		Provet ovan kräver bara att NÅGOT är öppet. En falsifiering visade vad
+		det släpper igenom: görs regeln i Geometri.tvarvaggBitar villkorslös —
+		så att flaggan slutar betyda något och väggen får gångarnas hål ändå —
+		blir allt grönt. Väggen står då med tre hål i stället för ett, varav
+		två på lägen som hör hemma 40 m söderut, och inget märker det.
+
+		Här mäts därför den öppna bredden mot SUMMAN av väggens egna deklarerade
+		öppningar. Fler hål än planen anger faller; färre likaså. ]]
+	for _, v in ipairs(S.tvarvaggar) do
+		if v.foljGangar ~= false then continue end
+		local bitar = vaggY[string.format("%.1f", S.origo.y + v.y)]
+		if bitar == nil then continue end
+		local murat = 0
+		for _, b in ipairs(bitar) do murat += b.w end
+		local vantatHal = 0
+		for _, o in ipairs(v.oppningar or {}) do
+			vantatHal += math.min(o.x1, S.bredd) - math.max(o.x0, 0)
+		end
+		check(string.format("väggen y %.2f har bara planens egna hål", v.y),
+			math.abs((S.bredd - murat) - vantatHal) < 0.15,
+			string.format("%.2f m öppet, planen anger %.2f m", S.bredd - murat, vantatHal))
+	end
+
 	for nyckel, bitar in pairs(vaggY) do
 		if tonumber(nyckel) ~= nil and tonumber(nyckel) > klubbY then continue end
 		for id, g in pairs(S.gangar) do
@@ -304,49 +329,16 @@ do
 		end
 	end
 
-	--[[ F02-A: klubbdelens trappa, östra utgång och tvärkorridorens dörrar.
+	--[[ Ingen trappa i Stallhuset.
 
-		Alla tre är hämtade ur utrymningsplanen och fanns inte i spelet. Utan
-		egna villkor kan de tas bort igen utan att något märker det — och den
-		här slicen handlar just om att topologin ska följa planen. ]]
-	do
-		local T = S.trappa
-		check("klubbdelens trappa byggdes med planens stegantal",
-			raknaNamn("Trappsteg") == T.steg,
-			raknaNamn("Trappsteg") .. " steg mot " .. T.steg .. " i datan")
-		check("trapphuset fick sina två sidoväggar",
-			raknaNamn("Trapphusvägg") == 2,
-			raknaNamn("Trapphusvägg") .. " väggar")
+		Planens trappsymbol lästes en gång som en egen trappa upp i klubbdelen.
+		Det var fel: Tobias känner anläggningen och trappan man faktiskt går är
+		ridhusets kortändstrappor upp till läktarplanet och den glasade gången
+		(`RIDHUSINNE.kortanda.trappor`). Rått foto/film slår en symboltolkning.
 
-		--[[ Trappan ska NÅ upp. Ett trapplopp som slutar halvvägs är precis
-			den sortens fel som ser rätt ut i en planvy och inte alls i spelet
-			— samma familj som spiraltrappan utan plattform. ]]
-		local hogst = 0
-		for _, d in ipairs(delar) do
-			if string.find(d.Name, "Trappsteg", 1, true) then
-				hogst = math.max(hogst, fot(d).z1)
-			end
-		end
-		check("trappan når upp till bjälklaget",
-			hogst > S.tak - 0.25,
-			string.format("översta steget %.2f m, taket %.2f m", hogst, S.tak))
-
-		--[[ ...och stegen ska gå att GÅ I.
-
-			Villkoret ovan räcker inte, och det visade en falsifiering: halveras
-			stegantalet blir provet grönt ändå, för geometrin är parametriserad
-			att alltid dela höjden i `steg` delar. Trappan når taket — med
-			38 cm höga steg. Ett prov som är grönt av fel skäl.
-
-			Stighöjden mäts därför ur det BYGGDA: översta stegets höjd delat på
-			antalet byggda steg. 0,13–0,22 m är spannet för en trappa man kan
-			gå i; utanför det är loppet fel, oavsett vad datan påstår. ]]
-		local antalSteg = raknaNamn("Trappsteg")
-		local stighojd = if antalSteg > 0 then hogst / antalSteg else 0
-		check("trappans stighöjd går att gå i",
-			stighojd > 0.13 and stighojd < 0.22,
-			string.format("%.3f m per steg på %d steg", stighojd, antalSteg))
-	end
+		Villkoren för den påhittade trappan är därför borta, inte omskrivna. Om
+		någon vill bygga en trappa i Stallhuset igen krävs verifierat underlag
+		för att den finns — inte bara en symbol i utrymningsplanen. ]]
 
 	--[[ 2 · Står en BOX mitt i en gångyta?
 

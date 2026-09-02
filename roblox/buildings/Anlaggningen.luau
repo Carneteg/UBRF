@@ -708,26 +708,6 @@ local function byggStallInre(model: Model, base: CFrame)
 		ur.CanCollide = false
 	end
 
-	--[[ KLUBBDELENS TRAPPA till Plan 2, ur utrymningsplanen. Måtten kommer ur
-		S.trappa i den delade geometrin — samma tal som webben bygger av, inga
-		handskrivna Roblox-koordinater. Trapphusets två sidoväggar plus stegen;
-		vilplan och Plan 2 ligger utanför F02-A. ]]
-	do
-		local T = S.trappa
-		local br, lg = T.x1 - T.x0, T.y1 - T.y0
-		for i, x in ipairs({ T.x0, T.x1 }) do
-			BK.box(model, base, "Trapphusvägg " .. i, o.x + x - 0.08, 0, o.y + T.y0,
-				0.16, h, lg, INRE.vagg, Enum.Material.Plaster)
-		end
-		for i = 1, T.steg do
-			BK.box(model, base, "Trappsteg " .. i,
-				o.x + T.x0 + 0.08, h * i / T.steg - 0.06,
-				o.y + T.y0 + lg * (i - 1) / T.steg,
-				br - 0.16, 0.06, lg / T.steg + 0.02,
-				IDFARG.betong, Enum.Material.Concrete)
-		end
-	end
-
 	-- Namngivna rum och servicedelar. Låga volymer med sitt namn som attribut —
 	-- namnen är fidelity-fakta ur utrymningsplanen, inredningen är det inte.
 	for _, lista in ipairs({ S.rum, S.service }) do

@@ -76,7 +76,7 @@ Boxavdelarnas delning: 15 linjer mellan 0,2396 och 0,8284 ger **0,0421 per fack*
 | Zon | Planstöd | Spelet i dag | Klass | Not |
 |---|---|---|---|---|
 | Klubbdelens NV-rum, med brandlarmscentral `BC` på väggen | ja, tydlig rektangel | — | `PLAN` | grön utrymningspil norrut genom gaveln, alltså klubbentrén |
-| **Intern rak trappa till Plan 2** | ja, trappsymbol med tydliga steg i eget trapphus | **finns inte** | `PLAN` | utrymningspilar leder till den både norr- och söderifrån |
+| **Trappsymbol i klubbdelen** | ja, trappsymbol med steg i eget trapphus | **byggs inte** | `CONTRADICTION` | symbolen finns, men den lästes fel som en egen stalltrappa — se § Trappan nedan |
 | Litet rum, grått i planen | ja | — | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
 | Klubbdelens östra rum, med utgång **österut** | ja, grön pil genom östfasaden | — | `PLAN` | spelet har ingen östlig utgång i klubbdelen |
 | Tvärkorridor mellan klubbdel och boxhall, utgång åt **både** väster och öster | ja, gröna band på båda sidor | delvis | `PLAN` | |
@@ -131,7 +131,7 @@ spiraltrappans symbol.
 | Faktum | Klass | Spelet |
 |---|---|---|
 | Plan 2 finns och är utrymningsritad | `PLAN` | **finns inte alls** |
-| Trappa upp från klubbdelen | `PLAN` | finns inte |
+| Trappa upp från klubbdelen | `CONTRADICTION` | byggs inte — se § Trappan |
 | Spiraltrappan leder till Plan 2 | `PLAN` + `FOTO` | exteriört byggd, leder ingenstans invändigt |
 | Rumsindelning på Plan 2 | delvis läsbar, bilden är beskuren | `REFERENCE GAP` |
 
@@ -173,9 +173,58 @@ implementerade i den här slicen:
 | Byggt | Läge | Klass |
 |---|---|---|
 | 1. Klubbdelens genomgående vägg | andel 0,1855 → y 56,97, öppen 0 → 8,97 m i väster | `PLAN` / tvärled `ASSUMED_SCALE` |
-| 2. Klubbdelens trapphus och trappa | x 5,82–7,67, y 58,45–64,25, 18 steg | `PLAN` / tvärled `ASSUMED_SCALE` |
 
-Båda ligger **helt innanför ytterväggarna** och rör inte fasaden.
+Den ligger **helt innanför ytterväggarna** och rör inte fasaden.
+
+Raden om ett trapphus i klubbdelen stod här en runda och är **återtagen** —
+se § Trappan nedan.
+
+### Trappan — planens symbol lästes fel, och rättades av Product Owner
+
+Utrymningsplanen visar en trappsymbol i klubbdelens västra zon. Den lästes som
+en **egen, ny trappa i Stallhuset**, från markplan upp till Plan 2, och byggdes
+som `STALLINNE.trappa` (x 5,82–7,67, y 58,45–64,25, 18 steg) med egna villkor i
+`roblox/tests/bygge.spec.luau`.
+
+Det var fel. Tobias, som känner anläggningen, rättade läsningen: trappan man
+faktiskt går upp finns, men den nås via **ridhusets läktarplan** — inte som en
+fristående uppgång ur klubbdelen på markplan.
+
+**Rättad källa-till-faktum-koppling:**
+
+| Faktum | Källa | Klass |
+|---|---|---|
+| Det finns en trappsymbol i klubbdelen på Plan 1 | `references/plans/stall-plan1-utrymning-rak.jpg` | `PLAN` |
+| Symbolen betyder en egen stalltrappa från markplan | — | **återtaget**, motsagt av `[enligt Tobias]` |
+| Uppgången till den glasade övervåningen går via läktarplanet | `references/buildings/ridhus/granskning-2026-08-31/C-kortandan-och-kafeet.md`, `ridhus-klubb-10-overvaningens-gang.jpg`, `ridhus-inne-39-gangen-bakom-laktaren.jpg` | `VERIFIED` |
+| Två raka trappor vid ridhusets C-kortända, mörkt trä, flankerar den vita mellanväggen | `ridhus-inne-01-glasrummen.jpg`, `IMG_0192-f01`, `IMG_0192-f02` | `VERIFIED` |
+| Glasbandet ovanför är kafé/korridor och bryts av trapporna | `ridhus-klubb-07-cafeet-genom-glaset.jpg`, `ridhus-klubb-09-cafesalen.jpg` | `VERIFIED` |
+
+**Vad som togs bort:** `STALLINNE.trappa` i `src/site.js`, dess fält i
+`tools/exportera-geometri.js`, `UBRFKomplex.stall.trappa`, renderingen i
+`src/varld3d.js` och `roblox/buildings/Anlaggningen.luau`, och de fyra villkoren
+i `bygge.spec.luau` som bara fanns för den. Den genomgående väggen på y 56,97
+står kvar — den vilar på sin egen mätta linje (andel 0,1855) och berörs inte av
+rättelsen.
+
+**Åtkomstkedjan som finns byggd i båda ytorna**, ur samma data
+(`RIDHUSINNE.kortanda`, `trappor:[7.0, 15.5]`):
+
+| Led | Webb `src/varld3d.js` | Roblox `Anlaggningen.luau` |
+|---|---|---|
+| Läktarens trappstegsblock | rad ~1437 | rad ~871 |
+| C-kortändans två trappor | rad ~1452, ur `K.trappor` | rad ~892, ur `K.trappor` |
+| Glasbandet, brutet av trapporna | rad ~1466, segment ur `K.trappor` | rad ~941, segment ur `K.trappor` |
+
+Kedjan **ridhus → läktarplan → C-trapporna → glasat band/kafé** finns alltså som
+geometri på båda ytorna och byggs ur samma tal.
+
+`[REFERENCE GAP]` **Kedjan är inte gångbar.** I webben är läktaren solid i
+`src/world.js` (`kollideraRekt` över `laktarSektioner`), så spelaren kan inte gå
+upp. Om trapporna går att gå i Roblox är **Not tested** — ingen Studio-runtime i
+den här miljön. Måtten på själva förbindelsen mellan glasgången och klubbdelen
+saknar underlag och **hittas inte på**. Att göra kedjan gångbar är inte F02-A:s
+scope.
 
 ### `DEFERRED BY EXTERIOR LOCK` — faktum fastställt, implementation väntar
 

@@ -962,24 +962,6 @@ const STALLINNE = {
     MB:[ null,null,null,null,null,null,null,null,null,null,null ],
     E: [ null,null,null,null,null,null,null,null,null,null,null ],
   },
-  /* KLUBBDELENS INTERNA TRAPPA till Plan 2 — F02-A, ur utrymningsplanen.
-
-     Planen ritar en rak trappa med tydliga steg i ett eget trapphus, och
-     utrymningspilarna leder till den både norr- och söderifrån. Den är ett
-     av de starkaste dragen i klubbdelen och fanns inte alls i spelet.
-
-     Läget avläst i `stall-plan1-utrymning-rak.jpg`:
-       x: bildpunkt 655–693 av husets 535–968 → 5,82–7,67 m från västra
-          ytterväggen, alltså 0,277–0,365 av bredden,
-       y: andel 0,0815–0,1644 från norra gaveln → y 58,45–64,25.
-
-     Klass: `PLAN` i längdled — andelarna är mätta. `ASSUMED_SCALE` i
-     tvärled, som allt annat i tvärled, eftersom bredden 21 m är olöst
-     15–23 m. Ändras STALL_BREDD ska x räknas om ur andelarna.
-
-     5,8 m löplängd för 3,4 m takhöjd ger en flack men fullt normal trappa.
-     Stegantalet är `DERIVED` ur höjd delat i steg om ~0,19 m. */
-  trappa:{x0:5.82, x1:7.67, y0:58.45, y1:64.25, steg:18, upp:"N"},
   rum:[
     /* Klubbrummen behåller sitt avstånd till NORRA gaveln (+15,95 m i
        lokala tal), eftersom det är gaveln som ligger still. */
