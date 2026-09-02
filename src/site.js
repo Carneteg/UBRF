@@ -747,12 +747,20 @@ const IDENTITET = {
     /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
        Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
     balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
-    /* Spiraltrappan flyttad ut från 2,3 till 3,4 m från gavelmitten. När
-       förstukvisten (5,2 m bred) kom till gaveln nådde verandan ut till 2,6
-       m och trappan stod mitt i den. 3,4 m ger trappans innerkant 0,45 m fri
-       från verandans kant. Talet är ett arbetsvärde [enligt Tobias], inte
-       en mätning. */
-    spiraltrappa:{franGavelmitt:3.4, radie:0.70, steg:18},
+    /* Spiraltrappan flyttad ut från 2,3 till 3,9 m från gavelmitten. När
+       förstukvisten kom till gaveln stod trappan mitt i den.
+
+       3,4 var mitt första försök och räckte INTE. Trappstegen sträcker sig
+       en HEL radie (0,70) ut från spindeln — inte en halv — och verandans
+       bredaste del är taket, `bredd + 0,4`, alltså 2,8 m från mitten. Kravet
+       är därför 2,8 + 0,70 = 3,50 m bara för att sluta överlappa. Vid 3,4 m
+       skar steg 12 (höjd 3,03 m) rakt in i takskivan (2,95–3,07 m); provet
+       missade det för att formeln räknade med `radie / 2`. Båda är rättade.
+
+       3,9 ger 0,40 m verklig luft. Talet är ett arbetsvärde [enligt Tobias],
+       inte en mätning: `stall-fasad-05` visar trappan tydligt längre ut än
+       så, men den vyn är sned och duger inte till att mäta ur. */
+    spiraltrappa:{franGavelmitt:3.9, radie:0.70, steg:18},
   },
   ridhus: {
     /* MOTSÄGELSE 1 — IMG_0183: mörkröd övre långvägg ovanför sargen, med

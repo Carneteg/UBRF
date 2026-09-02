@@ -1363,7 +1363,7 @@ return {
 				rackeH = 0.92,
 			},
 			spiraltrappa = {
-				franGavelmitt = 3.4,
+				franGavelmitt = 3.9,
 				radie = 0.7,
 				steg = 18,
 			},

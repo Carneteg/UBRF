@@ -862,11 +862,23 @@ do
 	local K = UBRFKomplex.identitet.stall.forstukvist
 	check("förstukvisten är placerad på gaveln", K.uFranOst ~= nil,
 		"uFranOst = " .. tostring(K.uFranOst))
+	--[[ Verandan får inte skäras av spiraltrappan. Formeln räknade först med
+		`radie / 2` och `K.bredd / 2`, och båda termerna var för små:
+
+		  · trappsteget är en låda med LÄNGDEN `radie` som skjuts ut `radie/2`
+		    från spindeln, så det når en HEL radie ut — inte en halv,
+		  · verandans bredaste del är inte golvet utan TAKET, `bredd + 0,4`.
+
+		Med de rätta talen visade sig 3,4 m vara en verklig kollision: steg 12
+		ligger på höjd 3,03 m och takskivan på 2,95–3,07 m, och i sidled gick
+		steget 0,10 m in i taket. Provet var grönt hela tiden. Det är hela
+		poängen med att skriva ut marginalen i meddelandet. ]]
+	local SP = UBRFKomplex.identitet.stall.spiraltrappa
+	local kravFri = K.bredd / 2 + 0.2 + SP.radie
 	check("verandan står fri från spiraltrappan",
-		UBRFKomplex.identitet.stall.spiraltrappa.franGavelmitt
-			> K.bredd / 2 + UBRFKomplex.identitet.stall.spiraltrappa.radie / 2,
-		"trappa " .. UBRFKomplex.identitet.stall.spiraltrappa.franGavelmitt
-			.. " m mot verandans kant " .. (K.bredd / 2))
+		SP.franGavelmitt > kravFri,
+		string.format("trappa %.2f m, takets kant + steglängd %.2f m, luft %.2f m",
+			SP.franGavelmitt, kravFri, SP.franGavelmitt - kravFri))
 end
 
 if fails > 0 then
