@@ -1,0 +1,88 @@
+{
+  "version":"0.1",
+  "status":"DRAFT_FOR_PRODUCT_OWNER_REVIEW",
+  "building":"stallhus",
+  "implementation_locked":true,
+  "levels":[
+    {"id":"S0","name":"plan1_ground","class":"VERIFIED"},
+    {"id":"S1","name":"upper_club_level","class":"REFERENCE_GAP"}
+  ],
+  "nodes":[
+    {"id":"club_entrance","level":"S0","type":"entrance","class":"VERIFIED_PRODUCT_BASELINE"},
+    {"id":"club_volume","level":"S0","type":"room_cluster","class":"PLAN_PHOTO_SUPPORTED","adjacency_status":"REFERENCE_GAP"},
+    {"id":"uppehallsrum","level":"S0","type":"room","class":"VERIFIED","adjacency_status":"REFERENCE_GAP"},
+    {"id":"pentry","level":"S0","type":"room","class":"VERIFIED","adjacency_status":"REFERENCE_GAP"},
+    {"id":"sadelkammare","level":"S0","type":"room","class":"VERIFIED","adjacency_status":"REFERENCE_GAP"},
+    {"id":"teorisal","level":"S0","type":"room","class":"VERIFIED","adjacency_status":"REFERENCE_GAP"},
+    {"id":"club_toilets","level":"S0","type":"room_cluster","class":"VERIFIED","minimum_count":2,"adjacency_status":"REFERENCE_GAP"},
+
+    {"id":"outer_box_row_a","level":"S0","type":"box_row","class":"VERIFIED"},
+    {"id":"aisle_a","level":"S0","type":"stall_aisle","class":"VERIFIED"},
+    {"id":"inner_box_row_a","level":"S0","type":"box_row","class":"VERIFIED"},
+    {"id":"inner_box_row_b","level":"S0","type":"box_row","class":"VERIFIED"},
+    {"id":"aisle_b","level":"S0","type":"stall_aisle","class":"VERIFIED"},
+    {"id":"outer_box_row_b","level":"S0","type":"box_row","class":"VERIFIED"},
+    {"id":"central_spine","level":"S0","type":"back_to_back_spine","class":"VERIFIED"},
+    {"id":"transverse_corridor","level":"S0","type":"cross_circulation","class":"MEASURED_PLAN"},
+    {"id":"horse_passage","level":"S0","type":"connection","class":"VERIFIED","visual_identity":"PARTIAL_REFERENCE_GAP"},
+
+    {"id":"service_opening","level":"S0","type":"opening","class":"DERIVED_PLAN_PHOTO"},
+    {"id":"service_through_zone","level":"S0","type":"open_service_zone","class":"VERIFIED"},
+    {"id":"spolspilta","level":"S0","type":"wash_stall","class":"VERIFIED","boundary_status":"PARTIAL_REFERENCE_GAP"},
+    {"id":"bedding_open_bay","level":"S0","type":"open_storage_bay","class":"VERIFIED"},
+    {"id":"service_gable_exit","level":"S0","type":"exit","class":"VERIFIED"},
+    {"id":"wide_high_gated_corridor","level":"S0","type":"corridor","class":"VERIFIED","destination_class":"REFERENCE_GAP"},
+
+    {"id":"upper_club_shell","level":"S1","type":"level_shell","class":"REFERENCE_GAP","facts":["upper_door_presence_supported","exterior_spiral_stair_exists"]},
+    {"id":"stall_exterior_spiral_stair","level":"EXTERIOR_S0_S1","type":"stair","class":"VERIFIED_PRODUCT_BASELINE","facts":["external","separate_from_ridhus_cafe_stairs"]}
+  ],
+  "edges":[
+    {"from":"club_entrance","to":"club_volume","type":"walkable_connection","class":"VERIFIED_PLAN_PHOTO","implementation":"ALLOWED"},
+
+    {"from":"outer_box_row_a","to":"aisle_a","type":"faces","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"aisle_a","to":"inner_box_row_a","type":"faces","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"inner_box_row_a","to":"central_spine","type":"backs_onto","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"central_spine","to":"inner_box_row_b","type":"backs_onto","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"inner_box_row_b","to":"aisle_b","type":"faces","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"aisle_b","to":"outer_box_row_b","type":"faces","class":"VERIFIED","implementation":"ALLOWED"},
+
+    {"from":"aisle_a","to":"transverse_corridor","type":"crosses","class":"PLAN","implementation":"ALLOWED"},
+    {"from":"aisle_b","to":"transverse_corridor","type":"crosses","class":"PLAN","implementation":"ALLOWED"},
+    {"from":"transverse_corridor","to":"horse_passage","type":"facility_connection","class":"VERIFIED_TOPOLOGY","implementation":"ALLOWED_WITH_OPEN_VISUAL_IDENTITY"},
+    {"from":"horse_passage","to":"RIDHUS_ARENA_SYSTEM","type":"indoor_horse_connection","class":"VERIFIED","implementation":"ALLOWED"},
+
+    {"from":"service_opening","to":"service_through_zone","type":"walkable_connection","class":"DERIVED_PLAN_PHOTO","implementation":"ALLOWED"},
+    {"from":"service_through_zone","to":"service_gable_exit","type":"through_circulation","class":"VERIFIED","implementation":"ALLOWED"},
+    {"from":"service_through_zone","to":"spolspilta","type":"service_zone_relation","class":"PARTIAL_REFERENCE_GAP","implementation":"ALLOW_EXISTENCE_DEFER_EXACT_BOUNDARY"},
+    {"from":"service_through_zone","to":"bedding_open_bay","type":"open_bay_relation","class":"VERIFIED","implementation":"ALLOWED"}
+  ],
+  "open_relations":[
+    "CLUB_ROOM_ORDER",
+    "CLUB_ROOM_DOOR_GRAPH",
+    "PENTRY_EXACT_PLAN_POSITION",
+    "PLAN2_ROOM_GRAPH",
+    "PLAN2_INTERNAL_ACCESS",
+    "STRAIGHT_STAIR_SYMBOL_IDENTITY",
+    "WIDE_HIGH_GATED_CORRIDOR_DESTINATION",
+    "HORSE_PASSAGE_EXACT_INTERIOR_VISUAL_IDENTITY"
+  ],
+  "invariants":[
+    "FOUR_BOX_ROWS_TWO_LONGITUDINAL_AISLES",
+    "INNER_ROWS_BACK_TO_BACK_ON_CENTRAL_SPINE",
+    "TRANSVERSE_MIDDLE_CIRCULATION_EXISTS",
+    "INDOOR_HORSE_CONNECTION_TO_RIDHUS_EXISTS",
+    "SERVICE_END_IS_OPEN_THROUGH_SERVICE_ZONE",
+    "SERVICE_GABLE_EXIT_REMAINS_CONNECTED",
+    "CLUB_ROOMS_EXIST_BUT_ORDER_IS_NOT_PROVEN",
+    "NO_FREESTANDING_STALLINNE_STAIR_FROM_DISPUTED_PLAN_SYMBOL",
+    "STALL_EXTERIOR_SPIRAL_STAIR_IS_SEPARATE_FROM_RIDHUS_CAFE_STAIRS",
+    "PLAN2_MUST_NOT_BE_INVENTED"
+  ],
+  "forbidden_interpretations":[
+    "IDENTIFY_WIDE_GATED_CORRIDOR_AS_HORSE_PASSAGE_WITHOUT_CONNECTING_EVIDENCE",
+    "INVENT_CLUB_ROOM_ADJACENCY",
+    "INVENT_PLAN2_LAYOUT",
+    "ADD_INTERNAL_STRAIGHT_STAIR_FROM_PLAN_SYMBOL_ONLY",
+    "CHANGE_LOCKED_EXTERIOR"
+  ]
+}
