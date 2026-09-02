@@ -331,6 +331,22 @@ do
 			hogst > S.tak - 0.25,
 			string.format("översta steget %.2f m, taket %.2f m", hogst, S.tak))
 
+		--[[ ...och stegen ska gå att GÅ I.
+
+			Villkoret ovan räcker inte, och det visade en falsifiering: halveras
+			stegantalet blir provet grönt ändå, för geometrin är parametriserad
+			att alltid dela höjden i `steg` delar. Trappan når taket — med
+			38 cm höga steg. Ett prov som är grönt av fel skäl.
+
+			Stighöjden mäts därför ur det BYGGDA: översta stegets höjd delat på
+			antalet byggda steg. 0,13–0,22 m är spannet för en trappa man kan
+			gå i; utanför det är loppet fel, oavsett vad datan påstår. ]]
+		local antalSteg = raknaNamn("Trappsteg")
+		local stighojd = if antalSteg > 0 then hogst / antalSteg else 0
+		check("trappans stighöjd går att gå i",
+			stighojd > 0.13 and stighojd < 0.22,
+			string.format("%.3f m per steg på %d steg", stighojd, antalSteg))
+
 		--[[ Klubbdelen ligger norr om klubbY. På E-sidan mäts u från SÖDRA
 			hörnet, alltså är u + b/2 direkt spelets y. ]]
 		local stallB = nil
