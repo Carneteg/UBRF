@@ -304,6 +304,58 @@ do
 		end
 	end
 
+	--[[ F02-A: klubbdelens trappa, östra utgång och tvärkorridorens dörrar.
+
+		Alla tre är hämtade ur utrymningsplanen och fanns inte i spelet. Utan
+		egna villkor kan de tas bort igen utan att något märker det — och den
+		här slicen handlar just om att topologin ska följa planen. ]]
+	do
+		local T = S.trappa
+		check("klubbdelens trappa byggdes med planens stegantal",
+			raknaNamn("Trappsteg") == T.steg,
+			raknaNamn("Trappsteg") .. " steg mot " .. T.steg .. " i datan")
+		check("trapphuset fick sina två sidoväggar",
+			raknaNamn("Trapphusvägg") == 2,
+			raknaNamn("Trapphusvägg") .. " väggar")
+
+		--[[ Trappan ska NÅ upp. Ett trapplopp som slutar halvvägs är precis
+			den sortens fel som ser rätt ut i en planvy och inte alls i spelet
+			— samma familj som spiraltrappan utan plattform. ]]
+		local hogst = 0
+		for _, d in ipairs(delar) do
+			if string.find(d.Name, "Trappsteg", 1, true) then
+				hogst = math.max(hogst, fot(d).z1)
+			end
+		end
+		check("trappan når upp till bjälklaget",
+			hogst > S.tak - 0.25,
+			string.format("översta steget %.2f m, taket %.2f m", hogst, S.tak))
+
+		--[[ Klubbdelen ligger norr om klubbY. På E-sidan mäts u från SÖDRA
+			hörnet, alltså är u + b/2 direkt spelets y. ]]
+		local stallB = nil
+		for _, bg in ipairs(UBRFKomplex.byggnader) do
+			if bg.id == "stall" then stallB = bg end
+		end
+		local ostUt, vastKorr, ostKorr = false, nil, nil
+		for _, op in ipairs(stallB and stallB.oppningar or {}) do
+			local mitt = op.u + op.b / 2
+			if op.sida == "E" and op.typ == "dorrvit" then
+				if mitt > S.klubbY then ostUt = true else ostKorr = mitt end
+			elseif op.sida == "W" and op.typ == "dorrvit" then
+				vastKorr = S.langd - mitt
+			end
+		end
+		check("klubbdelen har en utgång österut", ostUt,
+			if ostUt then "finns" else "saknas")
+		check("tvärkorridoren har dörr åt BÅDA hållen",
+			vastKorr ~= nil and ostKorr ~= nil
+				and math.abs(vastKorr - ostKorr) < 0.5,
+			string.format("väst y %s, öst y %s",
+				tostring(vastKorr and string.format("%.2f", vastKorr)),
+				tostring(ostKorr and string.format("%.2f", ostKorr))))
+	end
+
 	--[[ 2 · Står en BOX mitt i en gångyta?
 
 	     Bara boxarna mäts här. Rummen — sadelkammare, uppehållsrum, teorisal,

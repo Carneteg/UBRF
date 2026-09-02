@@ -359,6 +359,36 @@ const ANL = {
        {sida:"N", u:10.5+1.6-0.66/2, b:0.66, h:0.66, z0:1.78, typ:"rund"},
        /* Stora skjutporten mitt på östra långsidan, mot hagarna. */
        {sida:"E", u:34.35, b:3.6, h:3.2, z0:0, typ:"portbla"},
+       /* KLUBBDELENS UTGÅNG ÖSTERUT — F02-A, ur utrymningsplanen.
+
+          Planen ritar en grön utrymningspil rakt genom östfasaden i
+          klubbdelen. På E-sidan mäts u från SÖDRA hörnet norrut, samma
+          konvention som `stallFonster("E")`, så u = spelets y.
+
+          andel 0,1492 från norra gaveln → y = 59,5. Talet nedan är
+          öppningens HÖRN, inte dess mitt — samma konvention som resten av
+          listan, och den detalj som en gång la två markörer på en dörr.
+
+          NOT OM DEN LÅSTA EXTERIÖREN: det här är en öppning i en
+          ytterfasad, och exteriören är låst under F02. Den byggs för att
+          senior review på #73 uttryckligen kräver "east club-section exit"
+          som fortsättning. Låset gäller den visuellt accepterade
+          kompositionen — norra gaveln, verandan, spiraltrappan,
+          takrelationen — och den här dörren sitter på östra långsidan mot
+          hagarna, utanför den vyn. Skulle låset ändå vara avsett att täcka
+          långsidorna är detta den ändring som ska tas bort först. */
+       {sida:"E", u:59.5-1.15/2, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
+       /* TVÄRKORRIDORENS UTGÅNGAR åt BÅDA hållen — F02-A, ur planen.
+
+          Korridoren mellan klubbdelen och boxhallen har gröna band på både
+          väst- och östsidan; andel 0,2521 → y = 52,31. Spelet hade ingen av
+          dem, och det är den korridor hästgången och klubbentrén möts i.
+
+          W mäts från NORRA hörnet: u = 69,95 − 52,31 = 17,64.
+          E mäts från SÖDRA hörnet: u = 52,31. Samma dörr i planen, två
+          konventioner — därför två tal som ser olika ut men är samma linje. */
+       {sida:"W", u:sV(17.64-1.15/2), b:1.15, h:2.10, z0:0, typ:"dorrvit"},
+       {sida:"E", u:52.31-1.15/2, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
        /* Södra gaveln mot gårdsplanen: servicedelens två entrédörrar
           under vita skärmtak, valvfönster och trappdörren uppe
           (Street View från infartsvägen). */
@@ -962,6 +992,24 @@ const STALLINNE = {
     MB:[ null,null,null,null,null,null,null,null,null,null,null ],
     E: [ null,null,null,null,null,null,null,null,null,null,null ],
   },
+  /* KLUBBDELENS INTERNA TRAPPA till Plan 2 — F02-A, ur utrymningsplanen.
+
+     Planen ritar en rak trappa med tydliga steg i ett eget trapphus, och
+     utrymningspilarna leder till den både norr- och söderifrån. Den är ett
+     av de starkaste dragen i klubbdelen och fanns inte alls i spelet.
+
+     Läget avläst i `stall-plan1-utrymning-rak.jpg`:
+       x: bildpunkt 655–693 av husets 535–968 → 5,82–7,67 m från västra
+          ytterväggen, alltså 0,277–0,365 av bredden,
+       y: andel 0,0815–0,1644 från norra gaveln → y 58,45–64,25.
+
+     Klass: `PLAN` i längdled — andelarna är mätta. `ASSUMED_SCALE` i
+     tvärled, som allt annat i tvärled, eftersom bredden 21 m är olöst
+     15–23 m. Ändras STALL_BREDD ska x räknas om ur andelarna.
+
+     5,8 m löplängd för 3,4 m takhöjd ger en flack men fullt normal trappa.
+     Stegantalet är `DERIVED` ur höjd delat i steg om ~0,19 m. */
+  trappa:{x0:5.82, x1:7.67, y0:58.45, y1:64.25, steg:18, upp:"N"},
   rum:[
     /* Klubbrummen behåller sitt avstånd till NORRA gaveln (+15,95 m i
        lokala tal), eftersom det är gaveln som ligger still. */

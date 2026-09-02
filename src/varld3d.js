@@ -1021,6 +1021,17 @@ function v3dStall(lagg,opp){
   /* KLUBBRUMMEN har riktiga väggar: brandplanen ritar dem som rum, och
      stall-inne-01..04 visar slutna rum. SERVICEBUKTARNA har det inte —
      se den långa noten i site.js. `oppen` avgör vilket. */
+  /* KLUBBDELENS TRAPPA till Plan 2. Måtten kommer ur S.trappa, alltså ur
+     den delade geometrin — Roblox bygger den ur samma tal. Trapphusets två
+     sidoväggar plus stegen; vilplan och Plan 2 hör inte till F02-A. */
+  {const T2=S.trappa, br=T2.x1-T2.x0, lg=T2.y1-T2.y0, h=S.tak;
+   for(const x of [T2.x0,T2.x1])
+     rum.lada(0.16,h,lg,S.vagg,M4.translation(x,h/2,T2.y0+lg/2));
+   for(let i=0;i<T2.steg;i++){
+     const y=T2.y0+lg*(i+0.5)/T2.steg, z=h*(i+1)/T2.steg;
+     rum.lada(br-0.16,0.06,lg/T2.steg+0.02,"#C6C2B8",
+       M4.translation((T2.x0+T2.x1)/2,z,y));
+   }}
   const bukt=new Bygge();
   for(const grupp of [S.rum,S.service]) for(const r of grupp){
     const k=r.rekt;

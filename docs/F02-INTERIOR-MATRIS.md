@@ -167,11 +167,22 @@ stängda som reference only och är inte mergekälla.
 
 ## Vad F02-A bygger, och vad den inte bygger
 
-**Bygger** — där planen är entydig och spelet saknar något:
-1. klubbdelens genomgående vägg på andel 0,1855,
-2. klubbdelens interna trapphus och trappa,
-3. klubbdelens östra utgång,
-4. tvärkorridorens utgångar åt båda hållen.
+**Byggt** — där planen är entydig och spelet saknade något. Alla fyra är
+implementerade i den här slicen:
+
+| Byggt | Läge | Klass |
+|---|---|---|
+| 1. Klubbdelens genomgående vägg | andel 0,1855 → y 56,97, öppen 0 → 8,97 m i väster | `PLAN` / tvärled `ASSUMED_SCALE` |
+| 2. Klubbdelens trapphus och trappa | x 5,82–7,67, y 58,45–64,25, 18 steg | `PLAN` / tvärled `ASSUMED_SCALE` |
+| 3. Klubbdelens östra utgång | andel 0,1492 → y 59,5, östra långsidan | `PLAN` |
+| 4. Tvärkorridorens utgångar åt båda hållen | andel 0,2521 → y 52,31, väst och öst | `PLAN` |
+
+Punkt 3 och 4 sätter **öppningar i ytterfasaderna**, och exteriören är låst
+under F02. De byggs för att senior review på #73 uttryckligen kräver dem som
+fortsättning. Låset skyddar den visuellt accepterade kompositionen — norra
+gaveln, verandan, spiraltrappan, takrelationen — och de här dörrarna sitter på
+långsidorna, utanför den vyn. Skulle låset ändå vara avsett att täcka
+långsidorna är det de tre öppningarna som ska tas bort först.
 
 **Bygger inte** — och varför:
 

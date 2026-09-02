@@ -629,6 +629,30 @@ return {
 					typ = "portbla",
 				},
 				{
+					sida = "E",
+					u = 58.925,
+					b = 1.15,
+					h = 2.1,
+					z0 = 0,
+					typ = "dorrvit",
+				},
+				{
+					sida = "W",
+					u = 17.065,
+					b = 1.15,
+					h = 2.1,
+					z0 = 0,
+					typ = "dorrvit",
+				},
+				{
+					sida = "E",
+					u = 51.735,
+					b = 1.15,
+					h = 2.1,
+					z0 = 0,
+					typ = "dorrvit",
+				},
+				{
 					sida = "S",
 					u = 5.6,
 					b = 1.15,
@@ -980,6 +1004,21 @@ return {
 			},
 		},
 		{
+			id = "stall_E_59",
+			pos = {
+				173.2,
+				114.55,
+			},
+			text = "Gå in i stallet",
+			mot = "stallinne",
+			auto = true,
+			spawn = {
+				x = 19.4,
+				y = 59.5,
+				rikt = -3.141593,
+			},
+		},
+		{
 			id = "stall_S_13",
 			pos = {
 				164.175,
@@ -1244,6 +1283,14 @@ return {
 				},
 			},
 		},
+		trappa = {
+			x0 = 5.82,
+			x1 = 7.67,
+			y0 = 58.45,
+			y1 = 64.25,
+			steg = 18,
+			upp = "N",
+		},
 		dorrar = {
 			{
 				id = "ut_n",
@@ -1307,6 +1354,21 @@ return {
 					x = 23.6,
 					y = 42.78,
 					rikt = 3.141593,
+				},
+			},
+			{
+				id = "ut_stall_E_59",
+				pos = {
+					19.4,
+					59.5,
+				},
+				text = "Ut",
+				mot = "gard",
+				auto = true,
+				spawn = {
+					x = 173.2,
+					y = 114.55,
+					rikt = 0,
 				},
 			},
 			{

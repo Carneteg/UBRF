@@ -119,7 +119,7 @@ const ut = {
     band: STALL_BAND, rader: STALLINNE.rader, gangar: STALLINNE.gangar,
     gangytor: STALLINNE.gangytor,
     rum: STALLINNE.rum, service: STALLINNE.service,
-    tvarvaggar: STALLINNE.tvarvaggar,
+    tvarvaggar: STALLINNE.tvarvaggar, trappa: STALLINNE.trappa,
     dorrar: STALLINNE.dorrar,
   },
   /* Igenkänningsdragen. Låg tidigare bara i src/varld3d.js som lokala
