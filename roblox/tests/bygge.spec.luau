@@ -410,6 +410,26 @@ do
 		check("inga två öppningar delar vägg",
 			#krockar == 0,
 			if #krockar == 0 then "0 krockar" else table.concat(krockar, " · "))
+
+		--[[ ...och filtret får inte bli ett sätt att dölja slarv.
+
+			När rytmen viker för det handskrivna krockar en felplacerad dörr
+			inte längre — den äter tyst ett fönster, och provet ovan förblir
+			grönt. Det hände i falsifieringen: dörren flyttad tillbaka till
+			sitt felaktiga läge gav fortfarande 0 krockar.
+
+			Antalet offrade fönster är därför själv ett villkor. TRE är vad
+			basen kostar, mätt genom att köra exportören utan F02-A:s dörrar:
+			två fönster inuti den stora östporten och ett inuti hästgångens
+			port. Ett fjärde betyder att någon satt en handskriven öppning
+			ovanpå rytmen — vilket hände direkt: klubbdelens östra utgång
+			nuddade ett boxfönster med 0,025 m och räknaren gick till 4. ]]
+		local offer = 0
+		for _, bg in ipairs(UBRFKomplex.byggnader) do
+			offer += bg.fonsterOffer or 0
+		end
+		check("fönsterrytmen offrar bara det östporten kostar",
+			offer <= 3, offer .. " fönster borttagna av krockfiltret (basen kostar 3)")
 		--[[ Korridorens två dörrar ska ligga på SAMMA linje. De mäts i olika
 			u-konventioner — W från norra hörnet, E från södra — så samma
 			linje ger två olika tal, och provet räknar om. Villkoret är att

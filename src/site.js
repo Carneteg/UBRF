@@ -384,7 +384,12 @@ const ANL = {
           takrelationen — och den här dörren sitter på östra långsidan mot
           hagarna, utanför den vyn. Skulle låset ändå vara avsett att täcka
           långsidorna är detta den ändring som ska tas bort först. */
-       {sida:"E", u:59.5-1.15/2, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
+       /* u 58,925 — mitten rakt på det mätta — nuddade boxfönstret på
+          57,80–58,95 med 0,025 m. En hårsmån, men krockfiltret svarar på
+          den genom att radera fönstret, och offerräknaren gick från 3 till
+          4. Lagd på fönstrets kant i stället; mitten hamnar 0,025 m från
+          det mätta. */
+       {sida:"E", u:58.95, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
        /* TVÄRKORRIDORENS UTGÅNGAR åt BÅDA hållen — F02-A, ur planen.
 
           Korridoren mellan klubbdelen och boxhallen har gröna band på både
@@ -1630,6 +1635,15 @@ STALLINNE.info=[
       f.sida===o.sida &&
       f.u < o.u+o.b-0.001 && o.u < f.u+f.b-0.001 &&
       f.z0 < o.z0+o.h-0.001 && o.z0 < f.z0+f.h-0.001));
+    /* Hur många fönster rytmen fick offra. Talet är en VAKTPOST, inte
+       statistik: utan det blir filtret ett sätt att dölja slarv. En
+       handskriven dörr som sätts på fel ställe krockar inte längre — den
+       äter tyst ett fönster i stället, och krockprovet förblir grönt. Det
+       hände mig direkt: dörren flyttad tillbaka till sitt felaktiga läge gav
+       fortfarande grönt, för filtret tog fönstret. Provet kräver därför att
+       antalet offer stannar på det som den stora östporten oundvikligen
+       kostar. */
+    b.fonsterOffer=opp.length-b.oppningar.length;
   }
 })();
 
