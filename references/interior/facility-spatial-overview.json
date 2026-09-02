@@ -1,0 +1,101 @@
+{
+  "version": "0.1",
+  "status": "DRAFT_FOR_PRODUCT_OWNER_REVIEW",
+  "implementation_locked": true,
+  "scope": ["stallhus", "ridhus", "shared_interfaces"],
+  "shared_interfaces": [
+    {
+      "id": "STALL_TO_RIDHUS_HORSE_PASSAGE",
+      "class": "VERIFIED_TOPOLOGY",
+      "geometry_status": "PARTIAL_REFERENCE_GAP",
+      "endpoints": ["stallhus:horse_passage", "ridhus:horse_passage"],
+      "single_identity_required": true,
+      "implementation": "ALLOWED_AFTER_PO_APPROVAL"
+    }
+  ],
+  "routes": [
+    {
+      "id": "STALL_PUBLIC_TO_BOXHALL",
+      "class": "DERIVED_PLAN_CIRCULATION",
+      "nodes": ["stallhus:club_entrance", "stallhus:club_circulation_zone", "stallhus:box_hall_access", "stallhus:aisle_a_or_b"],
+      "implementation": "ALLOWED_AFTER_PO_APPROVAL",
+      "geometry_status": "PARTIAL_REFERENCE_GAP"
+    },
+    {
+      "id": "STALL_TO_RIDHUS_HORSE_ROUTE",
+      "class": "VERIFIED_TOPOLOGY",
+      "nodes": ["stallhus:transverse_corridor", "stallhus:horse_passage", "ridhus:horse_passage", "ridhus:arena"],
+      "implementation": "ALLOWED_AFTER_PO_APPROVAL",
+      "geometry_status": "PARTIAL_REFERENCE_GAP"
+    },
+    {
+      "id": "STALL_SERVICE_EXIT_ROUTE",
+      "class": "VERIFIED_DERIVED",
+      "nodes": ["stallhus:box_hall", "stallhus:service_opening", "stallhus:service_through_zone", "stallhus:service_gable_exit", "EXTERIOR"],
+      "implementation": "ALLOWED_AFTER_PO_APPROVAL"
+    },
+    {
+      "id": "RIDHUS_SPECTATOR_TO_CAFE",
+      "class": "VERIFIED",
+      "nodes": ["ridhus:arena", "ridhus:bleachers", "ridhus:c_left_or_right_stair", "ridhus:upper_corridor", "ridhus:cafe_krubban"],
+      "implementation": "ALLOWED_AFTER_PO_APPROVAL",
+      "geometry_status": "PARTIAL_REFERENCE_GAP"
+    },
+    {
+      "id": "RIDHUS_PUBLIC_ENTRANCE_INWARD",
+      "class": "REFERENCE_GAP",
+      "nodes": ["EXTERIOR", "ridhus:entrance_club_volume", "UNKNOWN_INTERNAL_ROUTE"],
+      "implementation": "DEFER"
+    }
+  ],
+  "allowed_topology": [
+    "STALL_CLUB_ZONE_CONTINUES_TO_BOX_HALL",
+    "STALL_FOUR_BOX_ROWS_TWO_AISLES_CENTRAL_SPINE",
+    "STALL_TRANSVERSE_CIRCULATION_EXISTS",
+    "STALL_OPEN_SERVICE_CHAIN_TO_GABLE_EXIT",
+    "ONE_SHARED_STALL_TO_RIDHUS_HORSE_PASSAGE",
+    "RIDHUS_ARENA_TO_SPECTATOR_SYSTEM",
+    "RIDHUS_STEPPED_BLEACHERS",
+    "RIDHUS_BEHIND_BLEACHER_WALKWAY",
+    "RIDHUS_C_LEFT_AND_C_RIGHT_STAIRS",
+    "RIDHUS_UPPER_CORRIDOR",
+    "RIDHUS_CAFE_KRUBBAN_FROM_UPPER_CORRIDOR",
+    "RIDHUS_LOCKER_CORRIDOR_TO_GLAZED_ENTRANCE",
+    "RIDHUS_LOCKER_CORRIDOR_TO_UNKNOWN_GLAZED_SUITE",
+    "RIDHUS_ARCHED_WINDOW_CHANGING_TO_UNKNOWN_RED_CHAIR_ROOM",
+    "RIDHUS_PILLAR_CHANGING_TO_UNKNOWN_SMALL_ROOM"
+  ],
+  "deferred_relations": [
+    "STALL_NAMED_CLUB_ROOM_ORDER",
+    "STALL_NAMED_CLUB_DOOR_GRAPH",
+    "STALL_PLAN1_STRAIGHT_STAIR_ACCESS_AND_DESTINATION",
+    "STALL_PLAN2_ROOM_GRAPH",
+    "STALL_WIDE_GATED_CORRIDOR_DESTINATION",
+    "SHARED_HORSE_PASSAGE_EXACT_WIDTH_AND_VISUAL_IDENTITY",
+    "RIDHUS_PUBLIC_ENTRANCE_INWARD_ROUTE",
+    "RIDHUS_CHANGING_ROOM_ORDER",
+    "RIDHUS_WC_ORDER_AND_ADJACENCY",
+    "RIDHUS_LOCKER_TO_NARROW_THREE_DOOR_CORRIDOR_RELATION",
+    "RIDHUS_H_CORNER_STAIR_DESTINATION",
+    "RIDHUS_UPPER_DOWN_STAIR_FINAL_DESTINATION",
+    "RIDHUS_BLACK_EXIT_A_VS_B_IDENTITY"
+  ],
+  "forbidden": [
+    "CHANGE_LOCKED_EXTERIOR",
+    "INVENT_MISSING_ROOM_ORDER",
+    "CREATE_SECOND_HORSE_PASSAGE_FOR_PATHFINDING",
+    "HANDWRITE_SEPARATE_ROBLOX_ROOM_GRAPH",
+    "PROMOTE_CURRENT_IMPLEMENTATION_COORDINATES_TO_EVIDENCE",
+    "MOVE_RIDHUS_CLUBHOUSE_EVIDENCE_INTO_STALLHUSET",
+    "REUSE_RIDHUS_C_STAIRS_AS_STALLHUSET_STAIR",
+    "ADD_F02_B_FURNITURE_IN_F02_A"
+  ],
+  "implementation_flow": [
+    "source_backed_canon",
+    "src/site.js",
+    "tools/exportera-geometri.js",
+    "roblox/buildings/UBRFKomplex.luau",
+    "web_and_roblox_consumers",
+    "tests"
+  ]
+}
