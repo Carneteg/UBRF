@@ -1,0 +1,26 @@
+{
+  "version": "0.1",
+  "status": "DRAFT_FOR_PRODUCT_OWNER_REVIEW",
+  "interfaces": [
+    {
+      "id": "STALL_TO_RIDHUS_HORSE_PASSAGE",
+      "class": "VERIFIED_TOPOLOGY",
+      "source": {"building": "stallhus", "node": "horse_passage"},
+      "target": {"building": "ridhus", "node": "horse_passage"},
+      "walkable": true,
+      "horse_walkable": true,
+      "geometry_status": "PARTIAL_REFERENCE_GAP",
+      "visual_identity_status": "PARTIAL_REFERENCE_GAP",
+      "invariants": [
+        "ONE_SHARED_CONNECTION_NOT_TWO_PARALLEL_HANDWRITTEN_CONNECTIONS",
+        "STALL_AND_RIDHUS_CONSUMERS_REFERENCE_THE_SAME_INTERFACE_ID",
+        "WIDE_HIGH_GATED_STALL_CORRIDOR_IS_NOT_AUTO_IDENTIFIED_AS_THIS_INTERFACE"
+      ]
+    }
+  ],
+  "forbidden_interpretations": [
+    "CREATE_SEPARATE_WEB_AND_ROBLOX_HORSE_PASSAGE_TRUTHS",
+    "CREATE_A_SECOND_STALL_RIDHUS_CONNECTION_TO_PATCH_NAVIGATION",
+    "USE_IMPLEMENTATION_COORDINATES_AS_EVIDENCE_FOR_INTERFACE_GEOMETRY"
+  ]
+}
