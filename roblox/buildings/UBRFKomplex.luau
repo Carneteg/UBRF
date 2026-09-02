@@ -310,7 +310,6 @@ return {
 					typ = "portsilver",
 				},
 			},
-			fonsterOffer = 0,
 		},
 		{
 			id = "stall",
@@ -372,7 +371,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -381,7 +379,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -390,7 +387,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -399,7 +395,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -408,7 +403,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -417,7 +411,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -426,7 +419,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -435,7 +427,14 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
+				},
+				{
+					sida = "W",
+					u = 40.15,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
 				},
 				{
 					sida = "W",
@@ -444,7 +443,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -453,7 +451,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "W",
@@ -462,7 +459,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -471,7 +467,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -480,7 +475,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -489,7 +483,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -498,7 +491,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -507,7 +499,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -516,7 +507,22 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
+				},
+				{
+					sida = "E",
+					u = 36.8,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
+				},
+				{
+					sida = "E",
+					u = 33.3,
+					b = 1.15,
+					h = 1.55,
+					z0 = 1.55,
+					typ = "valv",
 				},
 				{
 					sida = "E",
@@ -525,7 +531,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -534,7 +539,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -543,7 +547,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "E",
@@ -552,7 +555,6 @@ return {
 					h = 1.55,
 					z0 = 1.55,
 					typ = "valv",
-					auto = true,
 				},
 				{
 					sida = "N",
@@ -627,38 +629,6 @@ return {
 					typ = "portbla",
 				},
 				{
-					sida = "E",
-					u = 58.95,
-					b = 1.15,
-					h = 2.1,
-					z0 = 0,
-					typ = "dorrvit",
-				},
-				{
-					sida = "W",
-					u = 17.065,
-					b = 1.15,
-					h = 2.1,
-					z0 = 0,
-					typ = "dorrvit",
-				},
-				{
-					sida = "E",
-					u = 51.95,
-					b = 1.15,
-					h = 2.1,
-					z0 = 0,
-					typ = "dorrvit",
-				},
-				{
-					sida = "E",
-					u = 9.97,
-					b = 1.7,
-					h = 2.1,
-					z0 = 0,
-					typ = "dorrvit",
-				},
-				{
 					sida = "S",
 					u = 5.6,
 					b = 1.15,
@@ -709,7 +679,6 @@ return {
 					typ = "dorrmork",
 				},
 			},
-			fonsterOffer = 3,
 		},
 		{
 			id = "hastgang",
@@ -743,7 +712,6 @@ return {
 					typ = "fonster",
 				},
 			},
-			fonsterOffer = 0,
 		},
 		{
 			id = "langa",
@@ -769,7 +737,6 @@ return {
 					typ = "dorrmork",
 				},
 			},
-			fonsterOffer = 0,
 		},
 		{
 			id = "stuga",
@@ -803,7 +770,6 @@ return {
 					typ = "fonster",
 				},
 			},
-			fonsterOffer = 0,
 		},
 		{
 			id = "domarkur",
@@ -829,7 +795,6 @@ return {
 					typ = "fonster",
 				},
 			},
-			fonsterOffer = 0,
 		},
 		{
 			id = "bod",
@@ -855,7 +820,6 @@ return {
 					typ = "fonster",
 				},
 			},
-			fonsterOffer = 0,
 		},
 		{
 			id = "elbod",
@@ -872,7 +836,6 @@ return {
 			fargT = Color3.fromRGB(58, 62, 68),
 			label = "",
 			oppningar = {},
-			fonsterOffer = 0,
 		},
 	},
 	dorrar = {
@@ -1014,36 +977,6 @@ return {
 				x = 10,
 				y = 1.6,
 				rikt = 1.570796,
-			},
-		},
-		{
-			id = "stall_E_59",
-			pos = {
-				173.2,
-				114.575,
-			},
-			text = "Gå in i stallet",
-			mot = "stallinne",
-			auto = true,
-			spawn = {
-				x = 19.4,
-				y = 59.525,
-				rikt = -3.141593,
-			},
-		},
-		{
-			id = "stall_E_52",
-			pos = {
-				173.2,
-				107.575,
-			},
-			text = "Gå in i stallet",
-			mot = "stallinne",
-			auto = true,
-			spawn = {
-				x = 19.4,
-				y = 52.525,
-				rikt = -3.141593,
 			},
 		},
 		{
@@ -1382,36 +1315,6 @@ return {
 					x = 23.6,
 					y = 42.78,
 					rikt = 3.141593,
-				},
-			},
-			{
-				id = "ut_stall_E_59",
-				pos = {
-					19.4,
-					59.525,
-				},
-				text = "Ut",
-				mot = "gard",
-				auto = true,
-				spawn = {
-					x = 173.2,
-					y = 114.575,
-					rikt = 0,
-				},
-			},
-			{
-				id = "ut_stall_E_52",
-				pos = {
-					19.4,
-					52.525,
-				},
-				text = "Ut",
-				mot = "gard",
-				auto = true,
-				spawn = {
-					x = 173.2,
-					y = 107.575,
-					rikt = 0,
 				},
 			},
 			{

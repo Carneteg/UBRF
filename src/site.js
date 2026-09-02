@@ -198,14 +198,7 @@ function stallFonster(sida){
   const ut=[];
   for(let i=0;i<STALL_BOXAR;i++){
     const s=10.4+3.5*i+1.75;                    // avstånd från klubbgaveln i norr
-    /* `auto:true` skiljer den MEKANISKA fönsterrytmen från de öppningar som
-       är skrivna för hand ur planen. Skillnaden behövs av ett prov: två
-       handskrivna öppningar som överlappar är ett fel jag har infört, medan
-       rytmen och en stor port kan hamna på varandra av gammal design. Det
-       första ska smälla, det andra är ett redovisat fynd som rör den låsta
-       fasaden och inte får rättas i den här slicen. */
-    ut.push({sida, u:sida==="W"?sV(s):STALL_LANGD-s, b:1.15, h:1.55, z0:1.55,
-             typ:"valv", auto:true});
+    ut.push({sida, u:sida==="W"?sV(s):STALL_LANGD-s, b:1.15, h:1.55, z0:1.55, typ:"valv"});
   }
   return ut;
 }
@@ -366,60 +359,6 @@ const ANL = {
        {sida:"N", u:10.5+1.6-0.66/2, b:0.66, h:0.66, z0:1.78, typ:"rund"},
        /* Stora skjutporten mitt på östra långsidan, mot hagarna. */
        {sida:"E", u:34.35, b:3.6, h:3.2, z0:0, typ:"portbla"},
-       /* KLUBBDELENS UTGÅNG ÖSTERUT — F02-A, ur utrymningsplanen.
-
-          Planen ritar en grön utrymningspil rakt genom östfasaden i
-          klubbdelen. På E-sidan mäts u från SÖDRA hörnet norrut, samma
-          konvention som `stallFonster("E")`, så u = spelets y.
-
-          andel 0,1492 från norra gaveln → y = 59,5. Talet nedan är
-          öppningens HÖRN, inte dess mitt — samma konvention som resten av
-          listan, och den detalj som en gång la två markörer på en dörr.
-
-          NOT OM DEN LÅSTA EXTERIÖREN: det här är en öppning i en
-          ytterfasad, och exteriören är låst under F02. Den byggs för att
-          senior review på #73 uttryckligen kräver "east club-section exit"
-          som fortsättning. Låset gäller den visuellt accepterade
-          kompositionen — norra gaveln, verandan, spiraltrappan,
-          takrelationen — och den här dörren sitter på östra långsidan mot
-          hagarna, utanför den vyn. Skulle låset ändå vara avsett att täcka
-          långsidorna är detta den ändring som ska tas bort först. */
-       /* u 58,925 — mitten rakt på det mätta — nuddade boxfönstret på
-          57,80–58,95 med 0,025 m. En hårsmån, men krockfiltret svarar på
-          den genom att radera fönstret, och offerräknaren gick från 3 till
-          4. Lagd på fönstrets kant i stället; mitten hamnar 0,025 m från
-          det mätta. */
-       {sida:"E", u:58.95, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
-       /* TVÄRKORRIDORENS UTGÅNGAR åt BÅDA hållen — F02-A, ur planen.
-
-          Korridoren mellan klubbdelen och boxhallen har gröna band på både
-          väst- och östsidan; andel 0,2521 → y = 52,31. Spelet hade ingen av
-          dem, och det är den korridor hästgången och klubbentrén möts i.
-
-          W mäts från NORRA hörnet: u = 69,95 − 52,31 = 17,64.
-          E mäts från SÖDRA hörnet: u = 52,31. Samma dörr i planen, två
-          konventioner — därför två tal som ser olika ut men är samma linje. */
-       {sida:"W", u:sV(17.64-1.15/2), b:1.15, h:2.10, z0:0, typ:"dorrvit"},
-       /* Den östra av de två låg först på u 51,735 — mitten rakt på det
-          mätta läget — och ÖVERLAPPADE då boxfönstret på u 50,80–51,95 med
-          0,215 m. Två hål i samma vägg som delar yta. Jag hittade det genom
-          att lista alla E-öppningar sorterade och leta krockar, inte genom
-          att titta; provet nedanför gör den kontrollen varje gång nu.
-          Flyttad till fönstrets kant. Mitten hamnar då på 52,53 i stället
-          för 52,31 — 0,2 m från det mätta, väl inom avläsningens osäkerhet
-          och fortfarande i liv med den västra dörren. */
-       {sida:"E", u:51.95, b:1.15, h:2.10, z0:0, typ:"dorrvit"},
-       /* SÖDRA ÄNDENS UTGÅNG ÖSTERUT — F02-A, ur planen.
-
-          Grönt utrymningsband rakt genom östfasaden med högerpil.
-          Väggöppningen mäter bildpunkt 1459–1494, mitt 1476 → andel 0,8453
-          → y 10,82, bredd 35 px / 20,7 px per m = 1,7 m.
-
-          Längdledet är den riktning där skalan ÄR verifierad (69,95 m
-          PO-satellitmätning), så både läge och bredd är `PLAN` här — till
-          skillnad från allt i tvärled. Krockar inte med någon annan
-          E-öppning; kontrollerat. */
-       {sida:"E", u:9.97, b:1.70, h:2.10, z0:0, typ:"dorrvit"},
        /* Södra gaveln mot gårdsplanen: servicedelens två entrédörrar
           under vita skärmtak, valvfönster och trappdörren uppe
           (Street View från infartsvägen). */
@@ -1611,41 +1550,6 @@ STALLINNE.info=[
   {pos:[8.8,5.8],  text:"Spånförrådet",
    svar:"Spånförrådet: Mustang kutterspån på pall i galvad bur. Härifrån hämtas spånet du strör med när boxen är mockad."},
 ];
-
-/* ── Fönsterrytmen får inte lägga ett fönster inuti en dörr ─────────
-   `stallFonster` räknar fram valvfönstren mekaniskt ur boxdelningen och vet
-   inte att det står en port eller dörr i vägen. Två hål i samma vägg på
-   samma yta blir det: den stora östporten (u 34,35–37,95) delar läge med
-   två genererade fönster, och F02-A:s korridordörr höll på att göra samma
-   sak med ett tredje.
-
-   Rytmen viker för det handskrivna, aldrig tvärtom. Det handskrivna är läst
-   ur planen eller ur foto; rytmen är en formel.
-
-   NOT: detta tar bort två fönster ur östra långsidans rytm, alltså en
-   synlig ändring i den låsta fasaden. De fönstren är i dag ritade INUTI
-   skjutporten — det är trasig geometri som rättas, inte en omgjord
-   komposition. Skulle låset ändå anses täcka det, är detta filter det som
-   ska tas bort, och då kommer krocken tillbaka. */
-(function rensaKrockandeFonster(){
-  for(const b of ANL.byggnader){
-    const opp=b.oppningar; if(!opp) continue;
-    const fasta=opp.filter(o=>!o.auto);
-    b.oppningar=opp.filter(o=>!o.auto || !fasta.some(f=>
-      f.sida===o.sida &&
-      f.u < o.u+o.b-0.001 && o.u < f.u+f.b-0.001 &&
-      f.z0 < o.z0+o.h-0.001 && o.z0 < f.z0+f.h-0.001));
-    /* Hur många fönster rytmen fick offra. Talet är en VAKTPOST, inte
-       statistik: utan det blir filtret ett sätt att dölja slarv. En
-       handskriven dörr som sätts på fel ställe krockar inte längre — den
-       äter tyst ett fönster i stället, och krockprovet förblir grönt. Det
-       hände mig direkt: dörren flyttad tillbaka till sitt felaktiga läge gav
-       fortfarande grönt, för filtret tog fönstret. Provet kräver därför att
-       antalet offer stannar på det som den stora östporten oundvikligen
-       kostar. */
-    b.fonsterOffer=opp.length-b.oppningar.length;
-  }
-})();
 
 /* ── Varje ritad dörr ska gå att gå in genom ────────────────────────
    Dörrlistan ovan var handskriven, och husen ritade fler dörrar än den

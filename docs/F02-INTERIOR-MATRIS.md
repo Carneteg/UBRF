@@ -174,11 +174,33 @@ implementerade i den här slicen:
 |---|---|---|
 | 1. Klubbdelens genomgående vägg | andel 0,1855 → y 56,97, öppen 0 → 8,97 m i väster | `PLAN` / tvärled `ASSUMED_SCALE` |
 | 2. Klubbdelens trapphus och trappa | x 5,82–7,67, y 58,45–64,25, 18 steg | `PLAN` / tvärled `ASSUMED_SCALE` |
-| 3. Klubbdelens östra utgång | andel 0,1492 → y 59,5, östra långsidan | `PLAN` |
-| 4. Tvärkorridorens utgångar åt båda hållen | andel 0,2521 → y 52,31 väst, 52,53 öst | `PLAN` |
-| 5. Södra ändens utgång österut | andel 0,8453 → y 10,82, bredd 1,7 m | `PLAN` |
 
-### Två fynd vid kontrollmätningen
+Båda ligger **helt innanför ytterväggarna** och rör inte fasaden.
+
+### `DEFERRED BY EXTERIOR LOCK` — faktum fastställt, implementation väntar
+
+Följande öppningar är **lästa ur planen och står som fakta**, men får inte
+byggas i F02-A: var och en skulle skära ett nytt hål i en ytterfasad, och
+exteriören är låst av issue #71 sedan Product Owners visuella acceptans.
+
+| Öppning | Läge ur planen | Klass | Implementation |
+|---|---|---|---|
+| Klubbdelens utgång österut | andel 0,1492 → y 59,5 | `PLAN` | `DEFERRED BY EXTERIOR LOCK` |
+| Tvärkorridorens utgång västerut | andel 0,2521 → y 52,31 | `PLAN` | `DEFERRED BY EXTERIOR LOCK` |
+| Tvärkorridorens utgång österut | andel 0,2521 → y 52,31 | `PLAN` | `DEFERRED BY EXTERIOR LOCK` |
+| Södra ändens utgång österut | andel 0,8453 → y 10,82, bredd 1,7 m | `PLAN` | `DEFERRED BY EXTERIOR LOCK` **och** ligger i den `CONTRADICTION`-märkta södra änden |
+
+De byggdes en runda och är **återtagna**. Skälet är värt att skriva ut, för
+det är inte att bevisen var svaga: senior review bad om dem som fortsättning,
+och den instruktionen stod i konflikt med exteriörlåset i #71. Låset vinner.
+Ett godkännande av byggnadens utsida är ett godkännande av utsidan, inte av
+en kameravinkel — mitt eget resonemang om att långsidorna låg "utanför den
+accepterade vyn" höll inte.
+
+**Låser upp:** ett uttryckligt Product Owner-beslut. Då byggs de fyra ur de
+tal som redan står här.
+
+### Ett fynd vid kontrollmätningen
 
 **Tvärgången mitt i boxhallen är INTE en saknad utgång.** Matrisen listade
 tidigare "utgång västerut" som obyggd. Planens gröna band där ligger på andel
@@ -186,18 +208,13 @@ tidigare "utgång västerut" som obyggd. Planens gröna band där ligger på and
 2,4 m. De överlappar. Utrymningsvägen västerut mitt i huset **är** hästgången
 till ridhuset, och den är byggd sedan tidigare. Att lägga en dörr till hade
 gett två öppningar för en passage — samma fel som en gång la två markörer på
-förstukvistens dörr. Posten är därmed avförd, inte glömd.
+förstukvistens dörr. Posten är avförd, inte glömd, och den skulle ha varit
+felaktig oavsett låset.
 
-**Korridorens östra dörr krockade med ett boxfönster.** Den låg först mitt på
-det mätta läget, u 51,735, och överlappade fönstret på u 50,80–51,95 med
-0,215 m — två hål i samma vägg på samma yta. Flyttad till fönstrets kant,
-u 51,95; mitten hamnar 0,2 m från det mätta, inom avläsningens osäkerhet.
-Ett prov gör den kontrollen varje gång nu.
+### `CONTRADICTION` i den låsta fasaden — redovisad, inte rättad
 
-### `CONTRADICTION` som inte rättas här: fönsterrytmen mot östporten
-
-Samma kontroll visade att den **genererade** fönsterrytmen på östra långsidan
-överlappar den stora skjutporten:
+Vid samma kontroll syntes att den **genererade** fönsterrytmen på östra
+långsidan ligger inuti den stora skjutporten:
 
 | Öppning | u-span |
 |---|---|
@@ -205,28 +222,28 @@ Samma kontroll visade att den **genererade** fönsterrytmen på östra långsida
 | genererat valvfönster | 33,30 – 34,45 |
 | genererat valvfönster | 36,80 – 37,95 |
 
-Rytmen är mekanisk — den räknar fram fönster ur boxdelningen utan att veta att
-det står en port där. Det är ett verkligt fel, men det ligger i **den låsta
-fasaden** och är inte infört av F02-A. Det rättas inte i den här slicen.
-Rättningen, när den får göras, är att låta fönstergeneratorn hoppa över lägen
-som krockar med en handskriven öppning.
+Ett tredje fönster ligger på samma sätt inuti hästgångens port på västra
+långsidan.
 
-Provet `"inga två handskrivna öppningar delar vägg"` avgränsas därför på
-**källa**, inte på utfall: handskrivet mot handskrivet ska smälla, den
-mekaniska rytmen mot en port är ett redovisat fynd.
+Rytmen är mekanisk: den räknar fram fönster ur boxdelningen utan att veta att
+det står en port där. Det är ett verkligt fel — men det ligger i den **låsta
+fasaden**, det fanns före F02-A, och det rättas inte här.
 
-Punkt 3 och 4 sätter **öppningar i ytterfasaderna**, och exteriören är låst
-under F02. De byggs för att senior review på #73 uttryckligen kräver dem som
-fortsättning. Låset skyddar den visuellt accepterade kompositionen — norra
-gaveln, verandan, spiraltrappan, takrelationen — och de här dörrarna sitter på
-långsidorna, utanför den vyn. Skulle låset ändå vara avsett att täcka
-långsidorna är det de tre öppningarna som ska tas bort först.
+Ett filter som lät rytmen vika för de handskrivna öppningarna byggdes och är
+**återtaget** tillsammans med resten av fasadarbetet. Det tog bort tre
+befintliga fönster, vilket är en ändring av den accepterade utsidan oavsett
+att geometrin under är trasig. Rättningen, när den får göras, är just det
+filtret.
+
+
 
 **Bygger inte** — och varför:
 
 | Inte | Skäl |
 |---|---|
-| södra änden | `CONTRADICTION` plan mot foto, prioriterad av Product Owner till fotots fördel |
+| södra änden | `CONTRADICTION` plan mot foto, prioriterad av Product Owner till fotots fördel. En utgång österut byggdes här en runda och är återtagen: den låg både i den låsta fasaden och i den uppskjutna zonen |
+| fasadöppningar ur planen | `DEFERRED BY EXTERIOR LOCK` — se tabellen ovan |
+| fönsterrytmens krock med portarna | ligger i den låsta fasaden, fanns före F02-A |
 | `boxB` 3,5 → 2,94 | två mätningar säger olika, ingen avgör |
 | ridhusets sex mittrum | rektifieringen underkänd och mätt |
 | Plan 2 | utanför slice |
