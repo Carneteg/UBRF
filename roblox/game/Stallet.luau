@@ -90,9 +90,36 @@ function Stallet.tilldela(userId: number): string
 	return Spel.ordning[(userId % n) + 1]
 end
 
+--[[ Tilldelning när någon annan redan står i boxen.
+
+	`tilldela` ovan är ren modulo, och med 33 hästar betyder det att spelare
+	vars UserId skiljer sig med 33 får SAMMA häst. På en ensam server syns
+	det aldrig; med två spelare inne blir samma individ ledd ut ur boxen
+	två gånger. G01-S2b:s acceptanskrav 3 förbjuder det.
+
+	Regeln: börja på den häst spelaren skulle fått ändå och gå framåt tills
+	en är ledig. Det bevarar stabiliteten — är din häst inte upptagen får du
+	henne, varje gång — och ger ett förutsägbart andrahandsval i stället för
+	slump.
+
+	Är hela stallet upptaget returneras nil. Det är MENINGEN: hellre "vänta,
+	det finns ingen häst åt dig just nu" än två ryttare på samma häst. ]]
+function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: boolean }?): string?
+	local n = #Spel.ordning
+	if n == 0 then return nil end
+	local taget = upptagna or {}
+	local start = userId % n
+	for steg = 0, n - 1 do
+		local id = Spel.ordning[(start + steg) % n + 1]
+		if not taget[id] then return id end
+	end
+	return nil
+end
+
 --[[ Allt en spelare behöver veta vid ankomsten, i ett svar. ]]
-function Stallet.dagensHast(userId: number)
-	local id = Stallet.tilldela(userId)
+function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?)
+	local id = Stallet.tilldelaLedig(userId, upptagna)
+	if not id then return nil end
 	local hast = Spel.hastar[id]
 	if not hast then return nil end
 	return {

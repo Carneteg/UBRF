@@ -138,7 +138,31 @@ local function setRider(session: Session, player: Player?)
 	Net.get("MountChanged"):FireAllClients(session.rig.model, player)
 end
 
+--[[ Förberedelsegrinden.
+
+	`HorseService` är fortfarande ENDA uppsittningsauktoritet — den här kroken
+	flyttar inte beslutet, den låter `GameplayService` lägga till ett villkor
+	framför det. Skälet att den ligger här och inte i fjärranropet: allt som
+	monterar en ryttare går genom `tryMount`, och en grind som bara satt på
+	`MountRequest` hade gått att gå runt genom vilken annan väg som helst in
+	i den här filen.
+
+	Ingen grind registrerad = ingen förändring. Hästsystemet ska gå att köra
+	utan G01-loopen, annars kan movement-specarna inte prova det ensamt. ]]
+local mountGate: ((Player, Model) -> (boolean, string?))? = nil
+
+function HorseService.setMountGate(gate: ((Player, Model) -> (boolean, string?))?)
+	mountGate = gate
+end
+
 function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
+	if mountGate then
+		local tillaten, skal = mountGate(player, model)
+		if not tillaten then
+			return false, skal or "Hästen är inte färdig att sitta upp på"
+		end
+	end
+
 	local session = sessions[model]
 	if not session then
 		return false, "Hästen är inte registrerad"
