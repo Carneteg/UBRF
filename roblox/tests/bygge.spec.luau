@@ -794,6 +794,47 @@ do
 		"stubben fäller å/ä/ö och skriptet kom igenom")
 end
 
+--[[ ── Skärmtaken över entrédörrarna ──────────────────────────────
+	`skarm` låg i den delade geometrin och ritades av webben, men
+	Anlaggningen.luau läste aldrig fältet — dörrarna stod som nakna luckor i
+	Roblox medan de på webben bar ett vitt skärmtak. Ingen grind märkte det,
+	för ingen frågade efter delarna.
+
+	Provet räknar mot GEOMETRIN i stället för mot ett fast tal: fäller någon
+	bort byggandet blir det noll, och läggs en dörr till i datan följer
+	kravet med av sig självt. ]]
+do
+	local medSkarm = 0
+	for _, bg in ipairs(UBRFKomplex.byggnader) do
+		for _, o in ipairs(bg.oppningar or {}) do
+			if o.skarm then medSkarm += 1 end
+		end
+	end
+	check("geometrin har dörrar med skärmtak", medSkarm > 0, medSkarm .. " st")
+
+	--[[ `raknaNamn` matchar PLAIN (string.find med plain=true), inte mönster.
+		Första versionen av det här provet skickade "^Skärmtak$" och fick noll
+		— inte för att delarna saknades, utan för att ankarna lästes som
+		bokstäver. ]]
+	local tak, konsoler = raknaNamn("Skärmtak"), raknaNamn("Skärmkonsol")
+	check("varje skärmtaksdörr har fått sin platta", tak == medSkarm,
+		tak .. " plattor mot " .. medSkarm .. " dörrar")
+	check("varje skärmtak står på två konsoler", konsoler == medSkarm * 2,
+		konsoler .. " konsoler mot " .. (medSkarm * 2) .. " väntade")
+
+	--[[ Stallets klubbdörr mot grusplanen är den som avgör om entrén LÄSER
+		som en entré från ankomsten. Den ska ha ett skärmtak. ]]
+	local stall = nil
+	for _, bg in ipairs(UBRFKomplex.byggnader) do
+		if bg.id == "stall" then stall = bg end
+	end
+	local klubbdorr = false
+	for _, o in ipairs(stall and stall.oppningar or {}) do
+		if o.sida == "N" and o.typ == "dorrgul" and o.skarm then klubbdorr = true end
+	end
+	check("stallets klubbdörr mot grusplanen bär skärmtak", klubbdorr)
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("bygge.spec: " .. fails .. " fel")

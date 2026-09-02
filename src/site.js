@@ -1007,12 +1007,25 @@ const STALLINNE = {
      när planformen ändrades följde bara den ena med. Då hamnade utgången
      mot gräsgården inne i en boxrad. */
   dorrar:[
+    /* Utgångarnas UTELÄGEN härleds ur fasadöppningarna i stället för att
+       skrivas av. Båda stod tidigare på handskrivna tal som glidit isär från
+       de dörrar de hör till:
+
+         · "Entré" låg på y 113,4 medan förstukvistens dörr sitter på 118,8 —
+           5,4 m fel, alltså i blank vägg mellan två valvfönster. Felet var
+           dessutom precis över autogeneratorns dedup-gräns på 4 m, så den
+           lade en ANDRA markör vid den riktiga dörren. Två markörer, en dörr.
+         · klubbdörren låg 1,6 m öster om sin öppning.
+
+       u mäts från NORRA hörnet på W-sidan och från ÖSTRA på N-sidan — samma
+       konvention som väggarnas p0→p1 i autoDorrar och i world.js. Räknat på
+       öppningens MITT (u + b/2), inte dess kant. */
     {id:"ut_n", pos:[1.6,64.35], text:"Ut genom entrén", mot:"gard", inrikt:0,
      uttext:"Gå in i stallet (Entré)",
-     spawn:{x:STALL_X-1.5,y:113.4,rikt:Math.PI}},
+     spawn:{x:STALL_X-1.5, y:STALL_NORR-(5.6+1.15/2), rikt:Math.PI}},
     {id:"ut_n2",pos:[10.5,65.95], text:"Ut till grusplanen (klubbdörren)", mot:"gard", inrikt:-Math.PI/2,
-     uttext:"Gå in i stallet (klubbdörren)",
-     spawn:{x:STALL_X+STALL_BREDD*0.55,y:STALL_NORR+1.6,rikt:Math.PI/2}},
+     uttext:"Gå in i stallet (klubbdörren mot grusplanen)",
+     spawn:{x:STALL_X+STALL_BREDD-(10.5+1.15/2), y:STALL_NORR+1.6, rikt:Math.PI/2}},
     {id:"ut_s", pos:[5.6,1.6],   text:"Ut till gårdsplanen — mot Husbyvägen", mot:"gard", inrikt:Math.PI/2,
      uttext:"Gå in i stallet (gaveldörren vid gårdsplanen)",
      spawn:{x:STALL_X+5.6,y:STALL_Y-1.6,rikt:-Math.PI/2}},

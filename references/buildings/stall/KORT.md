@@ -150,9 +150,30 @@ Avstånd mellan huvarna: **~3,5 m**, alltså en per box.
 | Sida | Material | Färg RGB / namn | Fönster | Dörrar/portar | Övrigt |
 |---|---|---|---|---|---|
 | Långsida V (mot gården) | **liggande träpanel** | **(80, 35, 47)** "mörk falurött" | **Rad av valvbågade, flerrutiga fönster med vit karm, ett per box (~3,5 m)** | förstukvistens ockragula dörr | Vita knutbrädor, vit foder runt varje fönster, ljusgrå betongsockel |
-| Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong** | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
+| Gavel N (klubbgaveln mot grusplanen, den höga, närmast förstukvisten) | samma | samma | 2 valvfönster högt, 2 lägre | **vit dörr till en liten balkong**; **klubbdörr i marknivå** `[enligt Tobias]` — se noten nedan | **Svart spiraltrappa** upp till balkongen; **rund gul lampa** bredvid dörren; vit knut i båda hörnen |
 | Gavel S (mot gårdsplanen från Husbyvägen) | samma (Street View) | samma | valvfönster i två plan | **två entrédörrar under vita spetsiga skärmtak** | **rak ståltrappa** med avsats upp till en dörr i övervåningen `[läst ur Street View på avstånd]` |
 | Långsida Ö | `[saknas foto]` | | | | |
+
+### Stallet har TVÅ ytterdörrar i norra änden
+
+Frågan ställdes 2026-09-02 sedan produktägaren rapporterat att entrén i spelet
+läste som riktad mot ridhuset. Svaret: **båda finns**, och de ska hållas isär.
+
+| Dörr | Var | Klass | Underlag |
+|---|---|---|---|
+| Förstukvistens ockragula dörr | **Långsida V**, 5,6 m från norra gaveln | `VERIFIED` | `stall-fasad-03/04/05`, `stall-entre-01/03/06/15`. Förstukvistens egen sadeltakskvist, vitt ribbräcke, runt fönster på båda sidor, skylten "Entré". Detta är klubbdelens huvudentré. |
+| Klubbdörren i marknivå | **Gavel N**, mot grusplanen | `[enligt Tobias]` | Ingen bild i repot visar den. `stall-fasad-04` och `-05` är båda tagna från grusplanen, och på dem upptas gavelns marknivå av en betongsockel/mur; dörren ligger utanför det som syns. Produktägaren har bekräftat att den finns. |
+
+**Vad som INTE följer av detta.** Förstukvisten flyttas inte. En tidigare
+formulering om att huvudentrén skulle sitta på kortsidan i stället för
+långsidan är **inte** införd, eftersom två fotografier visar motsatsen och
+`docs/CLAUDE.md` säger att bilder är specifikation. De två dörrarna
+konkurrerar inte — de är olika dörrar.
+
+`REFERENCE GAP`: klubbdörrens **exakta läge, bredd och omfattning på gaveln**.
+Spelet placerar den 10,5 m från östra gavelhörnet med ett skärmtak, vilket är
+ett arbetsvärde, inte en mätning. Ett foto rakt på norra gaveln från
+grusplanen skulle stänga luckan.
 
 Detaljfärger:
 - Knutar, fönsterfoder, fascia, undertak, räcke: **(238, 236, 228)** "vit"

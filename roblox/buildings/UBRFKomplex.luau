@@ -881,7 +881,7 @@ return {
 			id = "stall_n",
 			pos = {
 				149.6,
-				113.4,
+				118.825,
 			},
 			text = "Gå in i stallet (Entré)",
 			mot = "stallinne",
@@ -894,10 +894,10 @@ return {
 		{
 			id = "stall_n2",
 			pos = {
-				162.65,
+				161.025,
 				126.6,
 			},
-			text = "Gå in i stallet (klubbdörren)",
+			text = "Gå in i stallet (klubbdörren mot grusplanen)",
 			mot = "stallinne",
 			spawn = {
 				x = 10.5,
@@ -977,21 +977,6 @@ return {
 				x = 10,
 				y = 1.6,
 				rikt = 1.570796,
-			},
-		},
-		{
-			id = "stall_W_6",
-			pos = {
-				150,
-				118.825,
-			},
-			text = "Gå in i stallet",
-			mot = "stallinne",
-			auto = true,
-			spawn = {
-				x = 1.6,
-				y = 63.775,
-				rikt = 0,
 			},
 		},
 		{
@@ -1261,7 +1246,7 @@ return {
 				uttext = "Gå in i stallet (Entré)",
 				spawn = {
 					x = 149.6,
-					y = 113.4,
+					y = 118.825,
 					rikt = 3.141593,
 				},
 			},
@@ -1274,9 +1259,9 @@ return {
 				text = "Ut till grusplanen (klubbdörren)",
 				mot = "gard",
 				inrikt = -1.570796,
-				uttext = "Gå in i stallet (klubbdörren)",
+				uttext = "Gå in i stallet (klubbdörren mot grusplanen)",
 				spawn = {
-					x = 162.65,
+					x = 161.025,
 					y = 126.6,
 					rikt = 1.570796,
 				},
@@ -1310,21 +1295,6 @@ return {
 				spawn = {
 					x = 23.6,
 					y = 42.78,
-					rikt = 3.141593,
-				},
-			},
-			{
-				id = "ut_stall_W_6",
-				pos = {
-					1.6,
-					63.775,
-				},
-				text = "Ut",
-				mot = "gard",
-				auto = true,
-				spawn = {
-					x = 150,
-					y = 118.825,
 					rikt = 3.141593,
 				},
 			},

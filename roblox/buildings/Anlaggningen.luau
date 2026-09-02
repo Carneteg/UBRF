@@ -81,6 +81,43 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 		BK.opening(model, base, namn, x, z, o.z0, o.b, o.h, along, side, f,
 			Enum.Material.SmoothPlastic)
 	end
+
+	--[[ Skärmtaket över en entrédörr.
+
+		`skarm` fanns i den delade geometrin och ritades av webben, men den
+		här filen läste aldrig fältet — så varje dörr som på webben bar ett
+		vitt skärmtak stod i Roblox som en naken lucka i väggen. Det är just
+		det som avgör om något LÄSER som en entré på håll, och stallets
+		klubbdörr mot grusplanen är en av dem.
+
+		Förenklat mot webbens `v3dSkarmtak`: där är taket en gavelform med
+		två sneda sidobalkar; här är det en platta med två konsoler. Samma
+		mått och samma läge — stiliserat betyder förenklat, inte påhittat. ]]
+	if o.skarm then
+		local UT, TJOCK, OVER = 0.80, 0.13, 0.30
+		local V = Color3.fromRGB(238, 236, 228)
+		local y = o.z0 + o.h + OVER
+		--[[ `side` är +1/-1 och pekar ut från fasaden längs den axel väggen
+			INTE löper i. Plattan skjuter ut åt det hållet. ]]
+		local ut = if side > 0 then 0 else -UT
+		if along == "X" then
+			BK.box(model, base, "Skärmtak", x + (o.b - o.skarm) / 2, y, z + ut,
+				o.skarm, TJOCK, UT, V, Enum.Material.SmoothPlastic)
+			for _, s in ipairs({ 0, 1 }) do
+				BK.box(model, base, "Skärmkonsol",
+					x + (o.b - o.skarm) / 2 + s * (o.skarm - 0.11), y - 0.62, z + ut,
+					0.11, 0.62, 0.11, V, Enum.Material.SmoothPlastic)
+			end
+		else
+			BK.box(model, base, "Skärmtak", x + ut, y, z + (o.b - o.skarm) / 2,
+				UT, TJOCK, o.skarm, V, Enum.Material.SmoothPlastic)
+			for _, s in ipairs({ 0, 1 }) do
+				BK.box(model, base, "Skärmkonsol", x + ut, y - 0.62,
+					z + (o.b - o.skarm) / 2 + s * (o.skarm - 0.11),
+					0.11, 0.62, 0.11, V, Enum.Material.SmoothPlastic)
+			end
+		end
+	end
 end
 
 local function byggHus(model: Model, base: CFrame, b)
