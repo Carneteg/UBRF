@@ -1016,9 +1016,10 @@ const STALLINNE = {
        · lobbyn x 4,0–5,8 N 9,8–12,5 med planens gröna pil ner genom
        · den INRE ENTRÉN: dörr i den genomgående väggen x 4,1–5,0 — rakt
          nedanför gaveldörren och rakt ovanför gång A (4,1–6,7)
-       · Ö-toaletten x 5,8–7,3 N 11,3–12,5, under trappan
-       · trapphuset x 5,9–7,3 N 4,9–11,3 — planens trappsymbol, byggs som
-         sluten volym, se noten vid `trapphus`
+       · Ö-toaletten x 5,8–7,3 N 11,3–12,5
+       · en SLUTEN VOLYM x 5,9–7,3 N 4,9–11,3 — planen ritar en symbol i
+         rutan som ingen oberoende källa förklarar; funktionen är
+         `REFERENCE GAP`, se noten vid `sluten_volym`
        · passagen x 5,9–11,2 N 0–5,6, öster om uppehållsrummet, med ett
          litet slutet rum x 9,0–11,2 N 0–2,2 (grå ruta = utanför
          utrymningsytan; funktion oläsbar)
@@ -1031,8 +1032,8 @@ const STALLINNE = {
          planens utgång österut vid N 9,9 — `DEFERRED BY EXTERIOR LOCK`
        · den GENOMGÅENDE VÄGGEN vid N 12,5 (y 57,45) tvärs hela huset, med
          de två dörrarna ovan. Förra rundan lästes den som öppen 0–8,97 m i
-         väster; det var fel — den mörka andelen 0,61 var trapphusets och
-         dörrarnas linjer, inte ett hål. Ersatt.
+         väster; det var fel — den mörka andelen 0,61 var den slutna volymens
+         och dörrarnas linjer, inte ett hål. Ersatt.
 
      MOTSÄGELSER som INTE löses här (fasaden är låst, se KORT.md):
        · planens gaveldörr sitter x 3,6–5,5; den låsta fasadens entré sitter
@@ -1059,10 +1060,10 @@ const STALLINNE = {
       {id:"wc_v_n",      typ:"tvar",  y:60.15, x0:0, x1:4.0},
       {id:"wc_v_o",      typ:"langs", x:4.0, y0:57.45, y1:60.15,
        oppningar:[{id:"wc_v_dorr", y0:58.45, y1:59.5}]},
-      {id:"trapphus_v",  typ:"langs", x:5.9, y0:57.45, y1:65.05},
-      {id:"trapphus_o",  typ:"langs", x:7.3, y0:57.45, y1:65.05},
-      {id:"trapphus_n",  typ:"tvar",  y:65.05, x0:5.9, x1:7.3},
-      {id:"trapphus_s",  typ:"tvar",  y:58.65, x0:5.9, x1:7.3},
+      {id:"volym_v",     typ:"langs", x:5.9, y0:57.45, y1:65.05},
+      {id:"volym_o",     typ:"langs", x:7.3, y0:57.45, y1:65.05},
+      {id:"volym_n",     typ:"tvar",  y:65.05, x0:5.9, x1:7.3},
+      {id:"volym_s",     typ:"tvar",  y:58.65, x0:5.9, x1:7.3},
       {id:"litet_v",     typ:"langs", x:9.0, y0:67.75, y1:69.95},
       {id:"litet_s",     typ:"tvar",  y:67.75, x0:9.0, x1:11.2},
       {id:"teorisal_v",  typ:"langs", x:11.2, y0:64.35, y1:69.95,
@@ -1080,12 +1081,15 @@ const STALLINNE = {
       /* Ö-toaletten: en dörr går inte att läsa i planen och hittas inte på.
          `stangt`: byggs som sluten volym tills dörren är belagd. */
       {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.2},  label:"WC", stangt:true},
-      /* TRAPPHUSET. Planens trappsymbol — inte ridhusets kortändstrappor,
-         inte en ny trappa i spelet. Vart den leder, var man går in och hur
-         den ser ut är `REFERENCE GAP`; kanonen säger EVIDENCE_ONLY. Den
-         byggs därför som en sluten volym med planens fotavtryck, så att
-         rummen runt den får rätt form, och inget mer. */
-      {id:"trapphus",     rekt:{x:5.9,  y:58.65, w:1.4, h:6.4},  label:"TRAPPHUS", stangt:true},
+      /* SLUTEN VOLYM UTAN NAMN. Planen ritar en symbol i den här rutan.
+         Vad rutan ÄR finns det ingen oberoende källa för — ingen bild, ingen
+         film, inget produktägarbeslut — så funktionen är `REFERENCE GAP`
+         och den får inget namn och ingen etikett i spelet. Geometrin är
+         `PLAN`: fotavtrycket byggs som en sluten volym så att rummen runt
+         den får rätt form, och inget mer. Den enda kanoniska vägen upp i
+         anläggningen är ridhusets: läktarplanet → C-kortändans trappor →
+         övre gången/caféet (`RIDHUSINNE.kortanda.trappor`). */
+      {id:"sluten_volym", rekt:{x:5.9,  y:58.65, w:1.4, h:6.4},  label:"", stangt:true},
       {id:"passage",      rekt:{x:5.9,  y:64.35, w:5.3, h:5.6},  label:""},
       {id:"litet_rum",    rekt:{x:9.0,  y:67.75, w:2.2, h:2.2},  label:"", stangt:true},
       {id:"teorisal",     rekt:{x:11.2, y:64.35, w:6.1, h:5.6},  label:"TEORISAL"},
@@ -1152,7 +1156,7 @@ const STALLINNE = {
     {y:6.5, brand:false, oppningar:[{x0:9.0, x1:12.0}]},
     /* Klubbdelens genomgående vägg stod här en runda som `y:56.97` med ett
        hål 0 → 8,97 m i väster. Läsningen var fel: det som såg ut som ett
-       hål var trapphusets och dörrarnas linjer. Väggen är nu `klubb.vaggar`
+       hål var den slutna volymens och dörrarnas linjer. Väggen är nu `klubb.vaggar`
        ovan, på y 57,45, tvärs hela huset med planens två dörrar. */
   ],
   /* Dörrarna beskrivs EN gång. `pos` är innerläget, `spawn` ytterläget,
@@ -1329,7 +1333,8 @@ STALLINNE.gangytor = (()=>{
      bredd  20 m bana + 4,4 m läktarband  = 25 m
      längd  60 m bana + 13 m gaveldel     = 75 m
 
-   Gaveldelen i norr — mot parkeringen — är entré, trapphus och café.
+   Gaveldelen i norr — mot parkeringen — är entré och, en trappa upp via
+   C-kortändans trappor från läktarplanet, café.
    Går man in från parkeringen kommer man in i en hall, inte rakt ut
    på banan. entre är gaveldelens djup; den ligger i y > langd−entre. */
 /* Läktaren i hela stycken, med hästgångens öppning bortdragen. Alla som
@@ -1398,7 +1403,8 @@ const RIDHUSINNE = {
          hade det vid södra kortändan, en slutledning ur var bokstaven C
          antogs sitta. C sitter alltså i norr och A i söder.
        · MITTEN av C-blockets översta rad bär två trappor på 12,4–15,2 och
-         16,4–18,9 m från väster. Hissen (kryssad ruta) 2,6–4,4 × 7,0–8,8 m.
+         16,4–18,9 m från väster. Den kryssade rutan 2,6–4,4 × 7,0–8,8 m
+         är `schakt` i datan — funktion oläst, inget namn.
        · HUVUDENTRÉN sitter i VÄSTRA väggen 2,2–2,7 m från norra gaveln, in
          i en korridor längs västväggen. Norr om entrén två mycket smala
          toaletter (Tobias: "två toaletter till vänster om entrén"; fotot
@@ -1516,7 +1522,7 @@ const RIDHUSINNE = {
        och stallet som den GRÅ, trappstegsformade till HÖGER, med
        Björklidsvägen upptill. Stallet ligger alltså öster om ridhuset,
        precis som spelet har det. Gången måste då gå in på ridhusets ÖSTRA
-       sida, och läktargapet ligger just där.
+       sida, och hästgångens grind i sargen ligger just där.
 
      EMOT:
      - i huvudplanen ligger entré-/trappdelen upptill, och om det är norr
@@ -1731,7 +1737,9 @@ const RIDHUSINNE = {
      är hästgången dekoration. Man leder hästen in genom gången, och då ska man
      komma ut på banan — sargen kan inte vara obruten just där.
 
-     Läget följer läktargapet, alltså hästgången. Bredden är vald, inte mätt.
+     Läget härleds ur hästgångens fäste i ridhusets östra långsida
+     (GANG_FASTE, GANG_DJUP) — läktaren står på västra sidan och har inget
+     gap; det gamla "läktargapet" finns inte. Bredden är vald, inte mätt.
      [ASSUMPTION] */
   sargGrind:{y0:GANG_FASTE-RIDHUS_Y-0.15, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+0.15},
   /* ENTRÉDELEN ur planen. `hallMobler` — disk, bänkar, kansli, omklädning,
@@ -1777,7 +1785,7 @@ const RIDHUSINNE = {
       {id:"cell_4", typ:"tvar", y:67.35, x0:2.2, x1:3.1},
       /* Hallens tvärvägg N 4,3 i två stycken med en dörr, och rummen mot
          nordöstra hörnet. Funktioner olästa. Rummet innanför (x 5,7–10,5,
-         N 4,3–7,2) sluts söderut av en vägg N 7,2 från hissen till
+         N 4,3–7,2) sluts söderut av en vägg N 7,2 från schaktet till
          `hall_mitt`; mätt om 2026-09-03 i förstoring, den saknades. */
       {id:"hall_n_v",  typ:"tvar",  y:72.9, x0:5.7, x1:10.6,
        oppningar:[{id:"dorr", x0:7.7, x1:9.6}]},

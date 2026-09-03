@@ -257,10 +257,10 @@ do
 	--[[ 4 · Rummens inbördes lägen, som Tobias gav dem. "Vänster" är gående
 		riktning söderut från parkeringen, alltså öster. ]]
 	local U, T, SK = rum("uppehallsrum"), rum("teorisal"), rum("sadelkammare")
-	local W1, W2, TR = rum("wc_v"), rum("wc_o"), rum("trapphus")
+	local W1, W2, SV = rum("wc_v"), rum("wc_o"), rum("sluten_volym")
 	check("planens klubbrum finns i datan",
-		U and T and SK and W1 and W2 and TR)
-	if U and T and SK and W1 and W2 and TR and inre then
+		U and T and SK and W1 and W2 and SV)
+	if U and T and SK and W1 and W2 and SV and inre then
 		check("teorisalen ligger till vänster om uppehållsrummet (öster)",
 			T.rekt.x >= U.rekt.x + U.rekt.w - 0.01,
 			string.format("teorisal x %.1f, uppehållsrummets östkant %.1f", T.rekt.x, U.rekt.x + U.rekt.w))
@@ -271,14 +271,45 @@ do
 				and W1.rekt.y < K.y0 + 0.01 and W2.rekt.y < K.y0 + 0.01,
 			string.format("WC x %.1f–%.1f | dörr %.1f–%.1f | WC x %.1f–%.1f",
 				W1.rekt.x, W1.rekt.x + W1.rekt.w, inre.x0, inre.x1, W2.rekt.x, W2.rekt.x + W2.rekt.w))
-		check("trapphuset är en sluten volym — ingen trappa byggs i Stallhuset",
-			TR.stangt == true and raknaNamn("Slutet rum trapphus") == 1
+		check("planens symbolruta byggs som namnlös sluten volym — inget trapphus, ingen trappa i Stallhuset",
+			SV.stangt == true and (SV.label == nil or SV.label == "")
+				and raknaNamn("Slutet rum sluten_volym") == 1
+				and rum("trapphus") == nil and raknaNamn("Slutet rum trapphus") == 0
 				and raknaNamn("Trappsteg") == 0,
-			string.format("%d slutna trapphus, %d trappsteg",
+			string.format("label %q, %d slutna volymer, %d trapphus, %d trappsteg",
+				tostring(SV.label), raknaNamn("Slutet rum sluten_volym"),
 				raknaNamn("Slutet rum trapphus"), raknaNamn("Trappsteg")))
-		check("toaletten under trappan är sluten tills dess dörr är belagd",
+		check("Ö-toaletten är sluten tills dess dörr är belagd",
 			W2.stangt == true and raknaNamn("Slutet rum wc_o") == 1)
 	end
+end
+
+--[[ Etikettplattor bara för rum som har ett namn. Rum med `label = ""` är
+	avsiktligt namnlösa (funktion REFERENCE GAP): webben ritar ingen text för
+	dem, och Roblox får inte bygga en tom "Rumsetikett "-platta — det vore
+	Roblox-egen geometri i rum som ska vara tomma. Tom sträng är sann i Luau,
+	så bygget måste pröva längden, inte bara att fältet finns. ]]
+do
+	local S2, R3 = UBRFKomplex.stall, UBRFKomplex.ridhus
+	local vantade, namnlosa = 0, 0
+	for _, block in ipairs({ S2.klubb, R3.entrehall }) do
+		for _, r in ipairs(block.rum or {}) do
+			if not r.stangt then
+				if r.label ~= nil and r.label ~= "" then vantade += 1 else namnlosa += 1 end
+			end
+		end
+	end
+	local tomma, byggda = 0, 0
+	for _, d in ipairs(delar) do
+		if d.Name == "Rumsetikett " or d.Name == "Rumsetikett" then tomma += 1 end
+		if string.find(d.Name, "Rumsetikett", 1, true) == 1 then byggda += 1 end
+	end
+	check("namnlösa öppna rum får ingen tom etikettplatta i Roblox",
+		namnlosa > 0 and tomma == 0,
+		string.format("%d namnlösa öppna rum, %d tomma plattor", namnlosa, tomma))
+	check("etikettplattor byggs för exakt de namngivna öppna rummen",
+		byggda == vantade and vantade > 0,
+		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
 end
 
 --[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:
@@ -418,16 +449,18 @@ do
 		end
 	end
 
-	--[[ Ingen trappa i Stallhuset.
+	--[[ Ingen trappa och inget trapphus i Stallhuset.
 
-		Planens trappsymbol lästes en gång som en egen trappa upp i klubbdelen.
-		Det var fel: Tobias känner anläggningen och trappan man faktiskt går är
-		ridhusets kortändstrappor upp till läktarplanet och den glasade gången
+		Planens symbol i klubbdelens ruta lästes en gång som en egen trappa upp,
+		och en runda senare som ett "trapphus". Ingen av läsningarna har en
+		oberoende källa. Den vertikala förbindelse som är belagd är ridhusets:
+		läktarplanet, C-kortändans trappor och den glasade gången
 		(`RIDHUSINNE.kortanda.trappor`). Rått foto/film slår en symboltolkning.
 
-		Villkoren för den påhittade trappan är därför borta, inte omskrivna. Om
-		någon vill bygga en trappa i Stallhuset igen krävs verifierat underlag
-		för att den finns — inte bara en symbol i utrymningsplanen. ]]
+		Villkoren för den påhittade trappan är därför borta, inte omskrivna, och
+		rutan bär varken namn eller skylt (`sluten_volym`, funktion REFERENCE
+		GAP). Om någon vill ge den en funktion igen krävs verifierat underlag —
+		inte bara en symbol i utrymningsplanen. ]]
 
 	--[[ 2 · Står en BOX mitt i en gångyta?
 

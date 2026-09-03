@@ -100,8 +100,8 @@ vänstra = väster), och båda läsningarna stämmer med planen.
 | **Toalett väster om inre entrén** | x 0–4,0, N 9,8–12,5; dörr mot lobbyn N 10,45–11,5 | `wc_v` | `PLAN` + `[enligt Tobias]` | "två toaletter, en på var sida"; dörrläget `ASSUMPTION` bland två läsbara luckor |
 | Lobby / inre entré | x 4,0–5,8, N 9,8–12,5; planens gröna pil ner genom | `lobby` | `PLAN` | |
 | **Inre entrén till stallet** | dörr x 4,1–5,0 i den genomgående väggen | `oppningar.inre_entre` | `PLAN` + `[enligt Tobias]` | "rakt fram leder in i stallgång A" — gång A ligger x 4,4–7,0 |
-| **Toalett öster om inre entrén** | x 5,8–7,3, N 11,3–12,5, under trappan | `wc_o`, `stangt` | `PLAN` + `[enligt Tobias]` | dörr oläsbar → sluten volym |
-| Trapphuset (planens trappsymbol) | x 5,9–7,3, N 4,9–11,3 | `trapphus`, `stangt` | `PLAN`, anslutning `REFERENCE GAP` | se § Trappan; inte ridhusets kortändstrappor |
+| **Toalett öster om inre entrén** | x 5,8–7,3, N 11,3–12,5 | `wc_o`, `stangt` | `PLAN` + `[enligt Tobias]` | dörr oläsbar → sluten volym |
+| Sluten volym utan namn (planens symbolruta) | x 5,9–7,3, N 4,9–11,3 | `sluten_volym`, `stangt`, `label:""` | geometri `PLAN`; funktion `REFERENCE GAP` | se § Symbolrutan; ingen etikett, inget funktionsnamn |
 | Passagen öster om uppehållsrummet | x 5,9–11,2, N 0–5,6 | `passage` | `PLAN` | vägen "vänster" från uppehållsrummet |
 | Litet rum med grå ruta | x 9,0–11,2, N 0–2,2 | `litet_rum`, `stangt` | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
 | **Teorisal** | x 11,2–17,3, N 0–5,6; öppning i västväggen N 3,0–5,6 | `teorisal` | `PLAN` + `[enligt Tobias]` | "teorisalen till vänster om uppehållsrummet" |
@@ -118,10 +118,11 @@ som nu är ersatta, inte omtolkade:
 
 | Tidigare | Ersatt av | Varför |
 |---|---|---|
-| Genomgående väggen "öppen 0 → 8,97 m i väster" | tvärs hela huset, dörrar 4,1–5,0 och 7,7–8,8 | den mörka andelen 0,61 var trapphusets och dörrarnas linjer, inte ett hål |
+| Genomgående väggen "öppen 0 → 8,97 m i väster" | tvärs hela huset, dörrar 4,1–5,0 och 7,7–8,8 | den mörka andelen 0,61 var den slutna volymens och dörrarnas linjer, inte ett hål |
 | `tvarGang` 27,8–31,3 tvärs alla fyra rader, sex boxar på var sida | brott i västra raden enbart | mittraderna är obrutna i planen; Tobias: "bryter boxraden" |
 | `rum`: tre solida lådor (uppehållsrum V, teorisal Ö, sadelkammare hörn) | planens rum som gångbara regioner med väggar | inget av de tre var läst ur planen; Product Owner underkände |
-| `STALLINNE.trappa` (18 steg upp från klubbdelen) | trapphuset som sluten volym | Tobias: trappan man går nås via ridhusets läktare |
+| `STALLINNE.trappa` (18 steg upp från klubbdelen) | `sluten_volym` — namnlös sluten volym | Tobias: trappan man går nås via ridhusets läktare |
+| Rummet `trapphus` med etiketten `TRAPPHUS` (runda 928e090) | `sluten_volym`, `label:""`; väggarna `volym_*` | ChatGPT-review: "trapphus" var en ny funktionstolkning av samma symbol utan oberoende källa |
 | Tolv boxar per rad | tretton, västra raden tolv | tolv var en följd av tvärgången |
 
 **`CONTRADICTION` mot den låsta fasaden**, redovisade och inte rättade:
@@ -183,13 +184,13 @@ spiraltrappans symbol.
 | Faktum | Klass | Spelet |
 |---|---|---|
 | Plan 2 finns och är utrymningsritad | `PLAN` | **finns inte alls** |
-| Trappa upp från klubbdelen | `CONTRADICTION` | byggs inte — se § Trappan |
+| Trappa upp från klubbdelen | `CONTRADICTION` | byggs inte — se § Symbolrutan |
 | Spiraltrappan leder till Plan 2 | `PLAN` + `FOTO` | exteriört byggd, leder ingenstans invändigt |
 | Rumsindelning på Plan 2 | delvis läsbar, bilden är beskuren | `REFERENCE GAP` |
 
 Plan 2 är **utanför F02-A:s leverans** — men det står här därför att den
-förklarar två saker i Plan 1 som annars ser omotiverade ut: trapphuset och
-balkongdörren.
+förklarar två saker i Plan 1 som annars ser omotiverade ut: symbolrutan och
+balkongdörren — utan att därför ge rutan en funktion.
 
 ---
 
@@ -289,12 +290,13 @@ befintlig implementation bara som jämförelse.
 |---|---|---|
 | Klubbdelens genomgående vägg med två dörrar | y 57,45; dörrar x 4,1–5,0 (inre entrén) och 7,7–8,8 (sadelkammaren) | `PLAN` / tvärled `ASSUMED_SCALE` |
 | Klubbdelens rum som gångbara regioner med väggar | se tabellen § Rum och zoner | `PLAN` + `[enligt Tobias]` |
-| Trapphuset, Ö-toaletten och det lilla rummet som slutna volymer | dito | `PLAN`; dörr/anslutning `REFERENCE GAP` |
+| Den namnlösa volymen (`sluten_volym`), Ö-toaletten och det lilla rummet som slutna volymer | dito | geometri `PLAN`; funktion/dörr `REFERENCE GAP` |
 | Hästförbindelsens brott i västra boxraden | y 28,35–30,75, läst ur fasaddörren | `PLAN` + `[enligt Tobias]` |
 | Tretton boxar per obruten rad, tolv i västra | räknas ur måtten | `PLAN` |
 
-Raden om ett trapphus med trappa stod här en runda och är **återtagen** —
-se § Trappan nedan. Tvärgången tvärs huset är borttagen — se § Superseded.
+Raden om ett trapphus med trappa stod här en runda och är **återtagen**, och
+rundan därpå stod rummet som `trapphus` med etiketten `TRAPPHUS` — också
+**återtaget** — se § Symbolrutan nedan. Tvärgången tvärs huset är borttagen — se § Superseded.
 
 **Byggt i Ridhuset** — ur `RIDHUSINNE` i `src/site.js`, samma schema
 (`vaggar` med `oppningar`, `rum` med `stangt`) och samma byggare som stallets
@@ -315,16 +317,24 @@ klubbdel på båda ytorna (`klubbVaggBitar` / `Geometri.vaggBitar`):
 Exteriören är orörd: inga fasader, entréöppningar, fönster, tak, spiraltrappa
 eller tomtrelationer ändras. Ingen möblering (F02-B).
 
-### Trappan — planens symbol lästes fel, och rättades av Product Owner
+### Symbolrutan — planens symbol lästes fel två gånger
 
-Utrymningsplanen visar en trappsymbol i klubbdelens västra zon. Den lästes som
-en **egen, ny trappa i Stallhuset**, från markplan upp till Plan 2, och byggdes
-som `STALLINNE.trappa` (x 5,82–7,67, y 58,45–64,25, 18 steg) med egna villkor i
-`roblox/tests/bygge.spec.luau`.
+Utrymningsplanen ritar en symbol i klubbdelens ruta x 5,9–7,3, N 4,9–11,3.
+Den lästes först som en **egen, ny trappa i Stallhuset**, från markplan upp
+till Plan 2, och byggdes som `STALLINNE.trappa` (x 5,82–7,67, y 58,45–64,25,
+18 steg) med egna villkor i `roblox/tests/bygge.spec.luau`.
 
 Det var fel. Tobias, som känner anläggningen, rättade läsningen: trappan man
 faktiskt går upp finns, men den nås via **ridhusets läktarplan** — inte som en
 fristående uppgång ur klubbdelen på markplan.
+
+Rundan därpå byggdes rutan som sluten volym men med id `trapphus` och den
+spelarsynliga etiketten `TRAPPHUS`. Det var samma fel i mindre format: en
+funktionstolkning av symbolen utan oberoende källa (ChatGPT-review på 928e090).
+Nu heter rutan `sluten_volym`, har ingen etikett, väggarna heter `volym_*`, och
+matrisen klassar **geometrin `PLAN`** (fotavtrycket) och **funktionen
+`REFERENCE GAP`**. Den enda kanoniska vertikala förbindelsen i anläggningen är
+ridhusets: läktarplanet → C-kortändans trappor → övre gången/caféet.
 
 **Rättad källa-till-faktum-koppling:**
 
@@ -332,6 +342,7 @@ fristående uppgång ur klubbdelen på markplan.
 |---|---|---|
 | Det finns en trappsymbol i klubbdelen på Plan 1 | `references/plans/stall-plan1-utrymning-rak.jpg` | `PLAN` |
 | Symbolen betyder en egen stalltrappa från markplan | — | **återtaget**, motsagt av `[enligt Tobias]` |
+| Symbolen betyder ett trapphus (sluten volym med namnet `TRAPPHUS`) | — | **återtaget**; ingen oberoende källa; funktion `REFERENCE GAP` |
 | Uppgången till den glasade övervåningen går via läktarplanet | `references/buildings/ridhus/granskning-2026-08-31/C-kortandan-och-kafeet.md`, `ridhus-klubb-10-overvaningens-gang.jpg`, `ridhus-inne-39-gangen-bakom-laktaren.jpg` | `VERIFIED` |
 | Två raka trappor vid ridhusets C-kortända, mörkt trä, flankerar den vita mellanväggen | `ridhus-inne-01-glasrummen.jpg`, `IMG_0192-f01`, `IMG_0192-f02` | `VERIFIED` |
 | Glasbandet ovanför är kafé/korridor och bryts av trapporna | `ridhus-klubb-07-cafeet-genom-glaset.jpg`, `ridhus-klubb-09-cafesalen.jpg` | `VERIFIED` |
@@ -450,8 +461,8 @@ filtret.
    celler, rummet innanför hallens tvärvägg, rummen mot nordöstra hörnet, och
    vad den kryssade rutan är (den heter `schakt` i datan, utan etikett, och
    får inte kallas hiss förrän belägg eller produktägarbeslut finns).
-5. **Dörrar** som planen inte visar: Ö-toaletten under trappan, det lilla
-   rummet, trapphusets ingång; ridhusets två toaletter och hissen; om
+5. **Dörrar** som planen inte visar: Ö-toaletten, det lilla rummet, den
+   namnlösa volymens ingång; ridhusets två toaletter och schaktet; om
    entréöppningen mot cellraden är glas eller dörr; var skåpkorridoren slutar
    vid N 16.
 6. **Plan 2:s rumsindelning** — bilden beskuren. Ridhusets **övre plan**

@@ -127,7 +127,6 @@ Fyra saker kommer att se ut som att *någon* har valt dem, för det har någon:
 |---|---|---|
 | Hästgångens bredd | 8,10 m | härledd ur det **mätta** lokala gårdsgapet i södra tvärsnittet |
 | Hästgångens djup och höjder | 3,5 m djup, takfot 3,2, nock 4,0 | `[antagande]` |
-| Läktargapet | 8,70 m | `[antagande]` — gapet finns i fotot, bredden är vald |
 | Sargens grind | 3,80 m | `[antagande]` |
 
 Satellitbilden verifierar att gången finns och var den ligger, inte hur djup den

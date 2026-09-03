@@ -218,7 +218,7 @@ Vyer.vyer = {
 		text = "Innanför entrén: uppehållsrummet, med toaletterna och den inre entrén rakt fram",
 		fran = { x = So.x + 4.55, y = So.y + 68.5, h = 1.7 },
 		mot = { x = So.x + 4.55, y = So.y + S.klubb.y0 },
-		krav = "Planens rum: uppehållsrummet först, trapphuset som sluten volym till vänster (öster), två toaletter i bortre änden med den inre entrén emellan, och genom den stallgång A rakt fram.",
+		krav = "Planens rum: uppehållsrummet först, en sluten volym utan namn eller skylt till vänster (öster; funktion REFERENCE GAP), två toaletter i bortre änden med den inre entrén emellan, och genom den stallgång A rakt fram.",
 	},
 	-- F02-B: inredningen, från ungefär samma håll som referensbilderna.
 	{
