@@ -377,15 +377,72 @@ do
 			end
 			check("WC-V:s dörr sitter i östväggen mot lobbyn", dorr ~= nil and dorr.y0 > 57.45 and dorr.y1 < 59.95)
 		end
-		local liten = nil
-		for _, s in ipairs(slutna) do if s.id == "sluten_volym_v" then liten = s end end
-		check("den dubbellinjeritade rutan är en sluten volym 1,0 × 4,4 m utan namn, ingen tjock vägg",
-			liten ~= nil and math.abs(liten.rekt.w - 1.0) < 0.05 and math.abs(liten.rekt.h - 4.4) < 0.05
-				and (liten.label == nil or liten.label == ""),
-			liten and string.format("%.1f × %.1f", liten.rekt.w, liten.rekt.h) or "saknas")
 		local spar = false
 		for _, v in ipairs(K.vaggar) do if v.id == "spar" then spar = true end end
 		check("den gamla tjocka väggen `spar` är borta", not spar)
+	end
+
+	--[[ SPATIAL CANON v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json).
+		SCV2-01: ingen runtime-vägg och ingen sluten volym skär det inre av
+		stall_uppehall_open; PO-2026-09-03-STALL-OPEN-01 återkallade
+		sluten_volym_v. SCV2-02: varje vägg/sluten volym i klubbdelen bär
+		primitiv/canon_id/source_id/confidence. SCV2-04: confidence ur den
+		tillåtna mängden — ett rumsnamn är inget belägg. ]]
+	do
+		local oppna = K.oppna or {}
+		local zon = nil
+		for _, z in ipairs(oppna) do if z.id == "stall_uppehall_open" then zon = z end end
+		check("OPEN_AREA stall_uppehall_open finns i datan med PO-källa",
+			zon ~= nil and zon.typ == "OPEN_AREA" and zon.confidence == "PRODUCT_OWNER_VERIFIED" and #zon.rekt >= 2)
+		local ingen = nil
+		for _, z in ipairs(K.ingaVaggar or {}) do if z.tacker == "stall_uppehall_open" then ingen = z end end
+		check("NO_WALL_ZONE täcker uppehållsrummet", ingen ~= nil and ingen.typ == "NO_WALL_ZONE")
+		local function skarInre(r)
+			if not zon then return false end
+			for _, q in ipairs(zon.rekt) do
+				local ox = math.min(r.x + r.w, q.x + q.w) - math.max(r.x, q.x)
+				local oy = math.min(r.y + r.h, q.y + q.h) - math.max(r.y, q.y)
+				-- tröskeln är större än en halv väggtjocklek (0,08): en vägg PÅ ytans
+				-- gräns räknas inte, en vägg INNE i ytan gör det
+				if ox > 0.12 and oy > 0.12 then return true end
+			end
+			return false
+		end
+		local intrang = {}
+		for _, v in ipairs(K.vaggar) do
+			local t = (v.tjock or 0.16) / 2
+			for _, bit in ipairs(Geometri.vaggBitar(v)) do
+				local r = if v.typ == "tvar" then { x = bit.a0, y = v.y - t, w = bit.a1 - bit.a0, h = 2 * t }
+					else { x = v.x - t, y = bit.a0, w = 2 * t, h = bit.a1 - bit.a0 }
+				if skarInre(r) then table.insert(intrang, v.id) end
+			end
+		end
+		for _, r in ipairs(K.rum) do
+			if r.stangt and skarInre(r.rekt) then table.insert(intrang, r.id) end
+		end
+		check("SCV2-01: ingen vägg eller sluten volym skär uppehållsrummets öppna yta",
+			#intrang == 0, #intrang > 0 and table.concat(intrang, ", ") or "ytan är öppen")
+		local aterkallade = { sluten_volym_v = true, litet_rum = true, vindfang_v = true, vindfang_o = true, vindfang_fot = true, litet_v = true, litet_s = true, spar = true }
+		local kvar = {}
+		for _, v in ipairs(K.vaggar) do if aterkallade[v.id] then table.insert(kvar, v.id) end end
+		for _, r in ipairs(K.rum) do if r.stangt and aterkallade[r.id] then table.insert(kvar, r.id) end end
+		check("återkallad geometri är borta (sluten_volym_v, vindfångets stumpar, det lilla rummet)",
+			#kvar == 0, #kvar > 0 and table.concat(kvar, ", ") or "borta")
+		local tillat = { PRODUCT_OWNER_VERIFIED = true, VERIFIED_PLAN_OR_PHOTO = true }
+		local utan, felTillit = {}, {}
+		local function prova(o, id)
+			if not (o.primitiv == "WALL" or o.primitiv == "GLASS") or not o.canon_id or not o.source_id or not o.confidence then
+				table.insert(utan, id)
+			elseif not tillat[o.confidence] then
+				table.insert(felTillit, id)
+			end
+		end
+		for _, v in ipairs(K.vaggar) do prova(v, v.id) end
+		for _, r in ipairs(K.rum) do if r.stangt then prova(r, r.id) end end
+		check("SCV2-02: varje vägg och sluten volym i klubbdelen bär primitiv, canon_id, source_id och confidence",
+			#utan == 0, #utan > 0 and table.concat(utan, ", ") or "alla har provenance")
+		check("SCV2-04: ingen partition i klubbdelen vilar på lägre belägg än plan/foto eller PO",
+			#felTillit == 0, #felTillit > 0 and table.concat(felTillit, ", ") or "ok")
 	end
 	-- Alla rum ligger norr om den genomgående väggen, inuti huset.
 	local utanfor = nil

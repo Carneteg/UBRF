@@ -1087,45 +1087,86 @@ const STALLINNE = {
      `vaggar` är segment med öppningar; `rum` är REGIONER. Ett rum utan
      `stangt` är golv man går på — väggarna gör allt spärrande. Roblox
      bygger samma lista genom Geometri.vaggBitar. */
+  /* SPATIAL CANON v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json,
+     ACTIVE_OVERRIDE): i den omtvistade klubbdelen får bara WALL och GLASS
+     med källa skapa partitioner. Varje vägg bär `primitiv`, `canon_id`,
+     `source_id`, `confidence`; en vägg utan dem är ett testfel
+     (SCV2-02). Rumsnamn skapar aldrig geometri. Uppehållsrummet är
+     OPEN_AREA `stall_uppehall_open` (`oppna` nedan) och NO_WALL_ZONE — den
+     tidigare `sluten_volym_v` är ÅTERKALLAD av Product Owner
+     (PO-2026-09-03-STALL-OPEN-01: "I stallet finns inte denna väggen i
+     uppehållsrummet; det är en öppen yta"). Borttaget enligt samma regel:
+       · vindfångets två stumpar (planens linjer x 3,6/5,5, N 0–2) — de
+         ligger inne i den öppna ytan; en tidigare läsning byggde dem som
+         väggar. Planen ritar dem, inget foto belägger en vägg där, och
+         kanonen säger att en osäker partition inte byggs. REFERENCE GAP.
+       · det lilla rummet x 9,0–11,2, N 0–2,2 (grå ruta) — en plancell
+         utan foto och utan funktion; en cell är inte väggbevis. REFERENCE
+         GAP; ytan är öppen. */
   klubb:{
     y0:57.45,
     vaggar:[
       {id:"genomgaende", typ:"tvar", y:57.45, x0:0, x1:STALL_BREDD, brand:true,
        oppningar:[{id:"inre_entre", x0:4.1, x1:5.0},
-                  {id:"sadelkammare", x0:7.7, x1:8.8}]},
-      {id:"vindfang_v",  typ:"langs", x:3.6, y0:67.95, y1:69.95},
-      {id:"vindfang_o",  typ:"langs", x:5.5, y0:67.95, y1:69.95},
-      {id:"vindfang_fot",typ:"tvar",  y:67.95, x0:5.5, x1:6.0},
+                  {id:"sadelkammare", x0:7.7, x1:8.8}],
+       primitiv:"WALL", canon_id:"stall_wall_genomgaende", source_id:"PLAN:stall-plan1-utrymning-rak.jpg#tvarlinje-0.1855;PO-2026-09-03:inre-entren-mellan-toaletterna", confidence:"VERIFIED_PLAN_OR_PHOTO"},
       {id:"wc_v_n",      typ:"tvar",  y:59.95, x0:0, x1:3.0,
-       oppningar:[{id:"wc_v_lucka_n", x0:0, x1:0.87}]},
+       oppningar:[{id:"wc_v_lucka_n", x0:0, x1:0.87}],
+       primitiv:"WALL", canon_id:"stall_wall_wc_v_n", source_id:"PLAN:stall-plan1-utrymning.jpg#linje-N10.0-x0.9-3.0;PO-2026-09-03:tva-toaletter", confidence:"VERIFIED_PLAN_OR_PHOTO"},
       {id:"wc_v_o",      typ:"langs", x:3.0, y0:57.45, y1:59.95,
-       oppningar:[{id:"wc_v_dorr", y0:58.25, y1:59.15}]},
-      {id:"volym_v",     typ:"langs", x:5.9, y0:57.45, y1:65.05},
-      {id:"volym_o",     typ:"langs", x:7.3, y0:57.45, y1:65.05},
-      {id:"volym_n",     typ:"tvar",  y:65.05, x0:5.9, x1:7.3},
-      {id:"volym_s",     typ:"tvar",  y:59.25, x0:5.9, x1:7.3},
-      {id:"litet_v",     typ:"langs", x:9.0, y0:67.75, y1:69.95},
-      {id:"litet_s",     typ:"tvar",  y:67.75, x0:9.0, x1:11.2},
+       oppningar:[{id:"wc_v_dorr", y0:58.25, y1:59.15}],
+       primitiv:"WALL", canon_id:"stall_wall_wc_v_o", source_id:"PLAN:stall-plan1-utrymning.jpg#linje-x3.0-N10.0-12.5;PO-2026-09-03:tva-toaletter", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"volym_v",     typ:"langs", x:5.9, y0:57.45, y1:65.05,
+       primitiv:"WALL", canon_id:"stall_wall_symbolruta_v", source_id:"PLAN:stall-plan1-utrymning.jpg#symbolrutan-x5.9", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"volym_o",     typ:"langs", x:7.3, y0:57.45, y1:65.05,
+       primitiv:"WALL", canon_id:"stall_wall_symbolruta_o", source_id:"PLAN:stall-plan1-utrymning.jpg#symbolrutan-x7.3", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"volym_n",     typ:"tvar",  y:65.05, x0:5.9, x1:7.3,
+       primitiv:"WALL", canon_id:"stall_wall_symbolruta_n", source_id:"PLAN:stall-plan1-utrymning.jpg#symbolrutan-N4.9", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"volym_s",     typ:"tvar",  y:59.25, x0:5.9, x1:7.3,
+       primitiv:"WALL", canon_id:"stall_wall_symbolruta_s", source_id:"PLAN:stall-plan1-utrymning.jpg#symbolrutans-fot-N10.7", confidence:"VERIFIED_PLAN_OR_PHOTO"},
       {id:"teorisal_v",  typ:"langs", x:11.2, y0:64.35, y1:69.95,
-       oppningar:[{id:"teorisal_dorr", y0:64.35, y1:66.95}]},
-      {id:"teorisal_s",  typ:"tvar",  y:64.35, x0:8.8, x1:17.3},
-      {id:"teorisal_o",  typ:"langs", x:17.3, y0:64.35, y1:69.95},
-      {id:"sadelkammare_o", typ:"langs", x:15.5, y0:57.45, y1:64.35},
-      {id:"sadelkammare_mellan", typ:"tvar", y:60.85, x0:9.0, x1:12.2},
+       oppningar:[{id:"teorisal_dorr", y0:64.35, y1:66.95}],
+       primitiv:"WALL", canon_id:"stall_wall_teorisal_v", source_id:"PLAN:stall-plan1-utrymning-rak.jpg#linje-x11.2;PO-2026-09-03:teorisalen-till-vanster;FOTO:stall-inne-04-teorisalen.jpg", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"teorisal_s",  typ:"tvar",  y:64.35, x0:8.8, x1:17.3,
+       primitiv:"WALL", canon_id:"stall_wall_teorisal_s", source_id:"PLAN:stall-plan1-utrymning-rak.jpg#linje-N5.6;PO-2026-09-03:sadelkammaren-vanster-sedan-hoger", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"teorisal_o",  typ:"langs", x:17.3, y0:64.35, y1:69.95,
+       primitiv:"WALL", canon_id:"stall_wall_teorisal_o", source_id:"PLAN:stall-plan1-utrymning-rak.jpg#linje-x17.3", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"sadelkammare_o", typ:"langs", x:15.5, y0:57.45, y1:64.35,
+       primitiv:"WALL", canon_id:"stall_wall_sadelkammare_o", source_id:"PLAN:stall-plan1-utrymning-rak.jpg#linje-x15.5", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"sadelkammare_mellan", typ:"tvar", y:60.85, x0:9.0, x1:12.2,
+       primitiv:"WALL", canon_id:"stall_wall_sadelkammare_mellan", source_id:"PLAN:stall-plan1-utrymning-rak.jpg#halvvagg-N9.1", confidence:"VERIFIED_PLAN_OR_PHOTO"},
+    ],
+    /* OPEN_AREA och NO_WALL_ZONE ur kanonen. Ytan är kanonens två rektanglar
+       (x 0–5,9 × N 0–10 och x 5,9–11,2 × N 0–5,6) utom det 0,7 × 1,4 m stora
+       hörn där planens symbolruta (`sluten_volym`, N 4,9–10,7) står — den
+       är PLAN-geometri som kanonen inte återkallar. Testet SCV2-01 mäter
+       att ingen väggbit och ingen sluten volym skär ytans inre. */
+    oppna:[
+      {id:"stall_uppehall_open", typ:"OPEN_AREA", canon_id:"stall_uppehall_open",
+       confidence:"PRODUCT_OWNER_VERIFIED", source_id:"PO-2026-09-03-STALL-OPEN-01",
+       rekt:[{x:0,   y:59.95, w:5.9, h:10.0},
+             {x:7.3, y:64.35, w:3.9, h:5.6},
+             {x:5.9, y:65.05, w:1.4, h:4.9}]},
+    ],
+    ingaVaggar:[
+      {id:"stall_uppehall_no_internal_wall", typ:"NO_WALL_ZONE", tacker:"stall_uppehall_open",
+       canon_id:"stall_uppehall_no_internal_wall", aterkallat:["sluten_volym_v","vindfang_v","vindfang_o","vindfang_fot","litet_v","litet_s","litet_rum"]},
     ],
     rum:[
+      /* Entrén: bara en region med etikett — vindfångets stumpar byggs inte
+         (Spatial Canon v2, se noten ovan). */
       {id:"vindfang",     rekt:{x:3.6,  y:67.95, w:1.9, h:2.0},  label:"ENTRÉ"},
       /* UPPEHÅLLSRUMMET är L-format: västdelen här och östdelen
-         `uppehallsrum_o` nedan, utan vägg emellan (`del` pekar hit). */
+         `uppehallsrum_o` nedan, utan vägg emellan (`del` pekar hit).
+         Den dubbellinjeritade rutan x 2,0–3,0 som en tidigare runda byggde
+         som sluten volym är ÅTERKALLAD av Product Owner (kanon v2). */
       {id:"uppehallsrum", rekt:{x:0,    y:59.95, w:5.9, h:10.0}, label:"UPPEHÅLLSRUM"},
-      /* Den dubbellinjeritade rutan i västdelen: 1,0 × 4,4 m, funktion
-         oläsbar (`REFERENCE GAP`). Byggs som sluten volym utan namn. */
-      {id:"sluten_volym_v", rekt:{x:2.0, y:59.95, w:1.0, h:4.4}, label:"", stangt:true},
       {id:"wc_v",         rekt:{x:0,    y:57.45, w:3.0, h:2.5},  label:"WC"},
       {id:"lobby",        rekt:{x:3.0,  y:57.45, w:2.9, h:2.5},  label:""},
       /* Ö-toaletten: en dörr går inte att läsa i planen och hittas inte på.
          `stangt`: byggs som sluten volym tills dörren är belagd. */
-      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.8},  label:"WC", stangt:true},
+      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.8},  label:"WC", stangt:true,
+       primitiv:"WALL", canon_id:"stall_volume_wc_o", source_id:"PLAN:stall-plan1-utrymning.jpg#cell-x5.9-7.3-N10.7-12.5;PO-2026-09-03:tva-toaletter", confidence:"VERIFIED_PLAN_OR_PHOTO"},
       /* SLUTEN VOLYM UTAN NAMN. Planen ritar en symbol i den här rutan.
          Vad rutan ÄR finns det ingen oberoende källa för — ingen bild, ingen
          film, inget produktägarbeslut — så funktionen är `REFERENCE GAP`
@@ -1134,13 +1175,13 @@ const STALLINNE = {
          den får rätt form, och inget mer. Den enda kanoniska vägen upp i
          anläggningen är ridhusets: läktarplanet → C-kortändans trappor →
          övre gången/caféet (`RIDHUSINNE.kortanda.trappor`). */
-      {id:"sluten_volym", rekt:{x:5.9,  y:59.25, w:1.4, h:5.8},  label:"", stangt:true},
+      {id:"sluten_volym", rekt:{x:5.9,  y:59.25, w:1.4, h:5.8},  label:"", stangt:true,
+       primitiv:"WALL", canon_id:"stall_volume_symbolruta", source_id:"PLAN:stall-plan1-utrymning.jpg#symbolrutan", confidence:"VERIFIED_PLAN_OR_PHOTO"},
       /* Uppehållsrummets ÖSTDEL, öster om entrén och norr om volymen.
          En tidigare runda kallade den "passage"; planen har ingen vägg mot
          västdelen, och pentryt/soffhörnet hör till samma rum. Ingen egen
          etikett — namnet står en gång, i västdelen. */
       {id:"uppehallsrum_o", rekt:{x:5.9, y:64.35, w:5.3, h:5.6}, label:"", del:"uppehallsrum"},
-      {id:"litet_rum",    rekt:{x:9.0,  y:67.75, w:2.2, h:2.2},  label:"", stangt:true},
       {id:"teorisal",     rekt:{x:11.2, y:64.35, w:6.1, h:5.6},  label:"TEORISAL"},
       {id:"sadelkammare", rekt:{x:7.3,  y:57.45, w:8.2, h:6.9},  label:"SADELKAMMARE"},
       {id:"ostrum",       rekt:{x:15.5, y:57.45, w:5.5, h:6.9},  label:""},

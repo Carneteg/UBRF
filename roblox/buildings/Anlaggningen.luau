@@ -555,23 +555,53 @@ local INRE = {
 	namnlösa — funktion REFERENCE GAP — och får ingen platta alls; webben
 	ritar heller ingen text för dem. Tom sträng är sann i Luau, därför
 	prövas längden uttryckligen. ]]
+--[[ Spatial Canon v2 — provenance på varje vägg/glas/sluten volym i de
+	omtvistade ytorna: Primitiv (WALL/GLASS), CanonId, SourceId, Confidence.
+	Samma fält som webben läser ur src/site.js; bygge.spec kräver att de
+	finns (SCV2-02) och att de matchar datan (SCV2-05). ]]
+local function kanonAttribut(p, v)
+	if v.primitiv then p:SetAttribute("Primitiv", v.primitiv) end
+	if v.canon_id then p:SetAttribute("CanonId", v.canon_id) end
+	if v.source_id then p:SetAttribute("SourceId", v.source_id) end
+	if v.confidence then p:SetAttribute("Confidence", v.confidence) end
+end
+
 local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, prefix: string, farg: Color3)
 	for _, v in ipairs(K.vaggar) do
 		local t = v.tjock or 0.16
 		local mat = if v.brand then Enum.Material.Concrete else Enum.Material.Plaster
 		for j, bit in ipairs(GEO.vaggBitar(v)) do
 			local namn = prefix .. " " .. v.id .. ":" .. j
+			--[[ Spatial Canon v2: GLASS är en låg bröstning med en glasruta
+			     över; WALL är hel. Båda bär provenance-attributen. ]]
+			local glas = v.primitiv == "GLASS"
+			local bh = if glas then (v.brostning or 0.95) else h
 			local p
 			if v.typ == "tvar" then
 				p = BK.box(model, base, namn,
-					o.x + bit.a0, 0, o.y + v.y - t / 2, bit.a1 - bit.a0, h, t, farg, mat)
+					o.x + bit.a0, 0, o.y + v.y - t / 2, bit.a1 - bit.a0, bh, t, farg, mat)
 			else
 				p = BK.box(model, base, namn,
-					o.x + v.x - t / 2, 0, o.y + bit.a0, t, h, bit.a1 - bit.a0, farg, mat)
+					o.x + v.x - t / 2, 0, o.y + bit.a0, t, bh, bit.a1 - bit.a0, farg, mat)
 			end
 			--[[ Inomhusläsbarhet: klientens Genomsikt tonar den här biten när
 			     den står mellan kameran och karaktären. Samma regel som webben. ]]
 			p:SetAttribute("Genomsiktlig", true)
+			kanonAttribut(p, v)
+			if glas then
+				local g
+				if v.typ == "tvar" then
+					g = BK.box(model, base, namn .. " glas",
+						o.x + bit.a0, bh, o.y + v.y - 0.02, bit.a1 - bit.a0, h - bh, 0.04,
+						Color3.fromRGB(191, 211, 220), Enum.Material.Glass)
+				else
+					g = BK.box(model, base, namn .. " glas",
+						o.x + v.x - 0.02, bh, o.y + bit.a0, 0.04, h - bh, bit.a1 - bit.a0,
+						Color3.fromRGB(191, 211, 220), Enum.Material.Glass)
+				end
+				g.Transparency = 0.55
+				kanonAttribut(g, v)
+			end
 		end
 	end
 	for _, r in ipairs(K.rum or {}) do
@@ -582,6 +612,7 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 			p.Transparency = 0.45
 			p:SetAttribute("Rum", r.id)
 			p:SetAttribute("Genomsiktlig", true)
+			kanonAttribut(p, r)
 		elseif r.label ~= nil and r.label ~= "" then
 			local p = BK.box(model, base, "Rumsetikett " .. r.label,
 				o.x + q.x, 0.03, o.y + q.y, q.w, 0.02, q.h, INRE.rum, Enum.Material.SmoothPlastic)

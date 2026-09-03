@@ -799,10 +799,24 @@ function v3dVaggarOchRum(K,vaggFarg,hojd,lagg,tex){
     for(const [a0,a1] of klubbVaggBitar(v)){
       const b=new Bygge();
       let tona;
-      if(v.typ==="tvar"){ b.lada(a1-a0,hojd,t,vaggFarg,M4.translation((a0+a1)/2,hojd/2,v.y));
-        tona={x:a0,y:v.y-t/2,w:a1-a0,h:t}; }
-      else{ b.lada(t,hojd,a1-a0,vaggFarg,M4.translation(v.x,hojd/2,(a0+a1)/2));
-        tona={x:v.x-t/2,y:a0,w:t,h:a1-a0}; }
+      const L=a1-a0, mx=v.typ==="tvar"?(a0+a1)/2:v.x, mz=v.typ==="tvar"?v.y:(a0+a1)/2;
+      const lada=(h0,h1,farg)=>{
+        if(v.typ==="tvar") b.lada(L,h1-h0,t,farg,M4.translation(mx,(h0+h1)/2,mz));
+        else               b.lada(t,h1-h0,L,farg,M4.translation(mx,(h0+h1)/2,mz));
+      };
+      if(v.primitiv==="GLASS"){
+        /* GLASS (Spatial Canon v2): en låg bröstning och en glasruta över
+           den — ridhus-klubb-01/-15 visar receptionens avgränsning så.
+           Bröstningens höjd är ur fotot [uppskattning]. */
+        const bh=v.brostning||0.95;
+        lada(0,bh,vaggFarg);
+        const g=new Bygge();
+        if(v.typ==="tvar") g.lada(L,hojd-bh,0.04,"#BFD3DC",M4.translation(mx,(bh+hojd)/2,mz));
+        else               g.lada(0.04,hojd-bh,L,"#BFD3DC",M4.translation(mx,(bh+hojd)/2,mz));
+        S3.statiskt.push({nat:GL.nat(g),tex:null,alfa:0.32,glas:true});
+      }else lada(0,hojd,vaggFarg);
+      if(v.typ==="tvar") tona={x:a0,y:v.y-t/2,w:a1-a0,h:t};
+      else               tona={x:v.x-t/2,y:a0,w:t,h:a1-a0};
       S3.statiskt.push({nat:GL.nat(b),tex,tona});
     }
   }
@@ -2160,12 +2174,14 @@ function ritaVandring3D(){
     gl.depthMask(true);
     /* Två pass: allt som inte skymmer först, sedan det som står mellan
        kameran och spelaren, halvgenomskinligt och utan djupskrivning. */
-    const tonade=[];
+    const tonade=[], glas=[];
     for(const s of S3.statiskt){
+      if(s.glas){glas.push(s);continue;}
       if(s.tona&&v3dTonas(s,k.x,k.z,VD.px,VD.py)){tonade.push(s);continue;}
       GL.rita(s.nat,M4.ny(),{tex:s.tex,baksidor:s.baksidor,platt:s.platt});
     }
     V3D.tonade=tonade.length;
+    for(const s of glas)GL.rita(s.nat,M4.ny(),{alfa:s.alfa,baksidor:true});
     for(const s of tonade)GL.rita(s.nat,M4.ny(),{tex:s.tex,alfa:TONING});
     if(V3D.oppningar)GL.rita(V3D.oppningar.nat,M4.ny(),{baksidor:true});
     /* Levande figurer och hästar. */

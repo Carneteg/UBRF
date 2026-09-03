@@ -94,15 +94,15 @@ vänstra = väster), och båda läsningarna stämmer med planen.
 
 | Rum | Planen (N = m från norra gaveln, x från västra väggen) | Spelet nu (`klubb.rum`) | Klass | Källa → faktum |
 |---|---|---|---|---|
-| Gaveldörr och vindfång | dörr x 3,6–5,5, två stumpar N 0–2,0 | `vindfang` 3,6–5,5 × y 67,95–69,95 | `PLAN` | planen; grön utrymningspil ut genom gaveln |
+| Gaveldörr och vindfång | dörr x 3,6–5,5, två stumpar N 0–2,0 | region `vindfang` med etikett; **stumparna byggs inte** (Spatial Canon v2: de ligger inne i OPEN_AREA `stall_uppehall_open`; inget foto belägger en vägg) | `PLAN` för dörren; stumparna `REFERENCE GAP` | planen; grön utrymningspil ut genom gaveln |
 | **Uppehållsrum / väntrum** — L-format | västdelen x 0–5,9, N 0–10,0 **och** östdelen x 5,9–11,2, N 0–5,6, utan vägg emellan | `uppehallsrum` + `uppehallsrum_o` (`del:"uppehallsrum"`) | `PLAN` + `[enligt Tobias]` | "man kommer först in i uppehållsrummet"; PO 2026-09-03: "uppehållsrummet är för litet" → östdelen (f.d. "passage") hör till rummet; golvyta ≈ 79 m² (grind ≥ 75) |
-| Sluten volym i uppehållsrummets västdel | x 2,0–3,0, N 5,6–10,0, ritad med dubbla linjer (vägg med tjocklek) | `sluten_volym_v`, `stangt`, `label:""` | geometri `PLAN` (originalbilden 4032 px); funktion `REFERENCE GAP` | ersätter den tjocka väggen `spar` — se § Superseded och § Planläsning i förstoring |
+| Dubbellinjeritad ruta i uppehållsrummets västdel | x 2,0–3,0, N 5,6–10,0 i planen | **byggs inte** — ÅTERKALLAD av Product Owner (PO-2026-09-03-STALL-OPEN-01: "I stallet finns inte denna väggen i uppehållsrummet; det är en öppen yta") | `SUPERSEDED`; NO_WALL_ZONE `stall_uppehall_no_internal_wall` | Spatial Canon v2; planens ruta kvarstår som `REFERENCE GAP` (vad den ritar), inte som geometri |
 | **Toalett väster om inre entrén** | x 0–3,0, N 10,0–12,5; dörr i ÖSTVÄGGEN mot lobbyn N 10,8–11,7; lucka x 0–0,9 i nordväggen | `wc_v`, `wc_v_o.oppningar.wc_v_dorr`, `wc_v_n.oppningar.wc_v_lucka_n` | `PLAN` + `[enligt Tobias]` | "två toaletter, en på var sida"; nordluckan är planens linje som börjar 0,9 m från västväggen — dörr eller ritningsglapp: `REFERENCE GAP` |
 | Lobby / inre entré | x 3,0–5,9, N 10,0–12,5; planens gröna pil ner genom | `lobby` | `PLAN` | |
 | **Inre entrén till stallet** | dörr x 4,1–5,0 i den genomgående väggen | `oppningar.inre_entre` | `PLAN` + `[enligt Tobias]` | "rakt fram leder in i stallgång A" — gång A ligger x 4,4–7,0 |
 | **Toalett öster om inre entrén** | x 5,9–7,3, N 10,7–12,5 (cellen vid symbolrutans fot) | `wc_o`, `stangt` | `PLAN` + `[enligt Tobias]` | dörr oläsbar → sluten volym |
 | Sluten volym utan namn (planens symbolruta) | x 5,9–7,3, N 4,9–10,7 | `sluten_volym`, `stangt`, `label:""` | geometri `PLAN`; funktion `REFERENCE GAP` | se § Symbolrutan; ingen etikett, inget funktionsnamn |
-| Litet rum med grå ruta | x 9,0–11,2, N 0–2,2 | `litet_rum`, `stangt` | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
+| Litet rum med grå ruta | x 9,0–11,2, N 0–2,2 | **byggs inte** — plancellen ligger inne i OPEN_AREA `stall_uppehall_open`; en cell utan foto är inte väggbevis (Spatial Canon v2) | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
 | **Teorisal** | x 11,2–17,3, N 0–5,6; öppning i västväggen N 3,0–5,6 | `teorisal` | `PLAN` + `[enligt Tobias]` | "teorisalen till vänster om uppehållsrummet" |
 | **Sadelkammare** | x 7,3–15,5, N 5,6–12,5; in från passagen x 7,3–8,8; egen dörr söderut x 7,7–8,8 | `sadelkammare` | `PLAN` + `[enligt Tobias]` | "vänster och sedan höger" = öster, sedan söder |
 | Halvvägg i sadelkammaren | x 9,0–12,2 vid N 9,1 | `sadelkammare_mellan` | `PLAN`, funktion `REFERENCE GAP` | |
@@ -124,6 +124,8 @@ som nu är ersatta, inte omtolkade:
 | Rummet `trapphus` med etiketten `TRAPPHUS` (runda 928e090) | `sluten_volym`, `label:""`; väggarna `volym_*` | ChatGPT-review: "trapphus" var en ny funktionstolkning av samma symbol utan oberoende källa |
 | Tolv boxar per rad | tretton, västra raden tolv | tolv var en följd av tvärgången |
 | `uppehallsrum` x 0–5,9 × N 0–9,8 och `passage` som eget rum | L-format uppehållsrum: `uppehallsrum` + `uppehallsrum_o` | Product Owner 2026-09-03: "för litet"; planen har ingen vägg mellan delarna; pentryt sitter i västdelens NV-hörn |
+| `sluten_volym_v` 1,0 × 4,4 m i uppehållsrummet (runda 5387324) | ingen — OPEN_AREA | Product Owner 2026-09-03 (Spatial Canon v2): "denna väggen finns inte; det är en öppen yta" |
+| `vindfang_v/_o/_fot` och `litet_rum` med väggar | inga — OPEN_AREA | Spatial Canon v2: partitioner inne i den öppna ytan utan fotobelägg byggs inte |
 | Tjocka väggen `spar` x 2,8–3,5, N 5,5–9,8 | sluten volym `sluten_volym_v` x 2,0–3,0, N 5,6–10,0 | omläst i originalbilden (4032 px): dubbla linjer = vägg med tjocklek runt en ruta, inte en fristående tjock vägg |
 | WC-V x 0–4,0 med dörr N 10,45–11,5 | WC-V x 0–3,0 med dörr i östväggen N 10,8–11,7 + lucka x 0–0,9 i norr | omläst i originalbilden: väggen x 3,0 har ett 0,9 m hål N 10,8–11,7; linjen N 10,0 börjar 0,9 m från västväggen |
 | Ö-toaletten N 11,3–12,5, symbolrutan N 4,9–11,3 | N 10,7–12,5 respektive N 4,9–10,7 | omläst i originalbilden: symbolens fot och cellens tvärlinje ligger på N 10,7 |
@@ -331,6 +333,31 @@ välkommet.
 | Tretton boxar per obruten rad, tolv i västra | räknas ur måtten | `PLAN` |
 | Uppehållsrummet L-format med östdelen, WC-V 3,0 m, den slutna 1,0 × 4,4-volymen | § Rum och zoner | `PLAN` (originalbilden) + `[enligt Tobias]` |
 | Inomhusläsbarhet: väggbitar och slutna volymer mellan kameran och spelaren tonas; kameran ut ur slutna volymer och upp när den kläms mot ytterväggen | `src/varld3d.js` (`v3dTonas`, `v3dKamera`); Roblox `Genomsiktlig`-attribut + `src/client/Genomsikt.luau` | **spelmekanik, inte fidelity** — inga rum flyttas |
+
+### Spatial Canon v2 — bindande primitivmodell (ACTIVE_OVERRIDE)
+
+`references/spatial/UBRF-SPATIAL-CANON-v2.json` (PR #79, mergad i denna
+gren) sätter en hård modell för de omtvistade interiörerna: fysisk
+geometri är bara `WALL`, `OPENING`, `GLASS`, `OPEN_AREA`, `NO_WALL_ZONE`;
+rumsnamn är metadata och skapar aldrig väggar; en osäker yta får ingen
+vägg. I `src/site.js` bär därför varje vägg och sluten volym i klubbdelen
+(och entrédelen) fälten `primitiv`, `canon_id`, `source_id`, `confidence`,
+och blocken har `oppna` (OPEN_AREA) och `ingaVaggar` (NO_WALL_ZONE).
+Exporten tar med dem; Roblox skriver dem som attributen `Primitiv`,
+`CanonId`, `SourceId`, `Confidence` på varje del. GLASS byggs som låg
+bröstning + glasruta på båda ytorna.
+
+**Stallhuset (klubbdelen):**
+
+| Kanon | I datan | Följd |
+|---|---|---|
+| `stall_uppehall_open` OPEN_AREA, PRODUCT_OWNER_VERIFIED | `klubb.oppna[0]`: x 0–5,9 × N 0–10 ∪ x 5,9–11,2 × N 0–5,6, utom det 0,7 × 1,4 m hörn där planens symbolruta står (PLAN-geometri som kanonen inte återkallar) | grind SCV2-01: ingen vägg/volym skär ytans inre (tröskel > halv väggtjocklek) |
+| `stall_uppehall_no_internal_wall` NO_WALL_ZONE | `klubb.ingaVaggar[0]` med listan över återkallat: `sluten_volym_v`, `vindfang_*`, `litet_*`, `litet_rum` | borttagna ur datan, båda ytorna |
+| SCV2-02/04 provenance | alla 13 väggar + 2 slutna volymer: `WALL`, källa PLAN (+PO/FOTO), `VERIFIED_PLAN_OR_PHOTO` | grind: fält saknas → rött; confidence utanför {PO, PLAN/FOTO} → rött |
+
+Kvar i klubbdelen: genomgående väggen, WC-V:s två väggar, symbolrutans
+fyra väggar, teorisalens tre, sadelkammarens östvägg och halvvägg; slutna
+volymer: Ö-toaletten och symbolrutan. Borttaget: se NO_WALL_ZONE.
 
 ### Planläsning i förstoring — uppehållsrummet, 2026-09-03
 

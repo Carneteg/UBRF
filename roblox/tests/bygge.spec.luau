@@ -350,6 +350,46 @@ do
 		utan == 0 and med > 20, string.format("%d med, %d utan", med, utan))
 end
 
+--[[ SPATIAL CANON v2 i bygget: varje Klubbvägg-bit och slutet rum bär
+	CanonId/SourceId/Confidence/Primitiv (SCV2-02, SCV2-05), ingen del står i
+	uppehållsrummets öppna yta (SCV2-01), och den återkallade volymen är
+	inte byggd. ]]
+do
+	local S3 = UBRFKomplex.stall
+	local o = S3.origo
+	local zon = nil
+	for _, z in ipairs(S3.klubb.oppna or {}) do if z.id == "stall_uppehall_open" then zon = z end end
+	local utan, i_ytan, med = {}, {}, 0
+	for _, d in ipairs(delar) do
+		local n = d.Name
+		if n:find("Klubbvägg", 1, true) == 1 or n:find("Slutet rum", 1, true) == 1 then
+			local f = fot(d)
+			-- bara stallets delar: klubbväggarna heter Klubbvägg, entrédelens Entrévägg
+			local iStall = f.x >= o.x - 1 and f.x <= o.x + S3.bredd + 1 and f.y >= o.y - 1 and f.y <= o.y + S3.langd + 1
+			if iStall then
+				if d:GetAttribute("CanonId") and d:GetAttribute("SourceId") and d:GetAttribute("Confidence") and d:GetAttribute("Primitiv") then
+					med += 1
+				else
+					table.insert(utan, n)
+				end
+				if zon then
+					for _, q in ipairs(zon.rekt) do
+						local ox = math.min(f.x + f.w, o.x + q.x + q.w) - math.max(f.x, o.x + q.x)
+						local oy = math.min(f.y + f.h, o.y + q.y + q.h) - math.max(f.y, o.y + q.y)
+						if ox > 0.12 and oy > 0.12 then table.insert(i_ytan, n) end
+					end
+				end
+			end
+		end
+	end
+	check("SCV2-02/05: alla klubbväggar och slutna volymer i stallet bär kanon-attribut i Roblox",
+		#utan == 0 and med > 10, #utan > 0 and table.concat(utan, ", ") or (med .. " delar med provenance"))
+	check("SCV2-01: ingen byggd vägg eller volym står i uppehållsrummets öppna yta",
+		#i_ytan == 0, #i_ytan > 0 and table.concat(i_ytan, ", ") or "ytan är fri")
+	check("den återkallade volymen och det lilla rummet är inte byggda",
+		raknaExakt("Slutet rum sluten_volym_v") == 0 and raknaExakt("Slutet rum litet_rum") == 0)
+end
+
 --[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:
 	"hästförbindelsen bryter boxraden ungefär på mitten". Planen visar
 	mittraderna och östra raden obrutna förbi samma höjd. Spelet hade en

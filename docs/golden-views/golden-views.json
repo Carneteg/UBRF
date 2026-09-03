@@ -1,0 +1,74 @@
+{
+  "STALL-V1": {
+    "id": "STALL-V1",
+    "scen": "stallinne",
+    "x": 4.55,
+    "y": 68.4,
+    "rikt": -1.5707963267948966,
+    "text": "Parkeringens entré → in i uppehållsrummet: EN öppen L-formad yta, ingen inre vägg",
+    "kamera": [
+      4.55,
+      3.1,
+      69.35
+    ],
+    "spelare": [
+      4.55,
+      68.4
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V1": {
+    "id": "RIDHUS-V1",
+    "scen": "ridhusinne",
+    "x": 1.4,
+    "y": 74,
+    "rikt": 0,
+    "text": "Huvudentrén → in över entré/reception: öppen hall, ingen korridor av rumslådor",
+    "kamera": [
+      0.6,
+      3.31,
+      74
+    ],
+    "spelare": [
+      1.4,
+      74
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V2": {
+    "id": "RIDHUS-V2",
+    "scen": "ridhusinne",
+    "x": 5,
+    "y": 70.5,
+    "rikt": -1.5707963267948966,
+    "text": "Öppna entréhallen → ridbanan: vägen in till ridhuset syns och går att gå",
+    "kamera": [
+      5,
+      2.25,
+      73.83
+    ],
+    "spelare": [
+      5,
+      70.5
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V3": {
+    "id": "RIDHUS-V3",
+    "scen": "ridhusinne",
+    "x": 5,
+    "y": 74.5,
+    "rikt": 3.141592653589793,
+    "text": "Receptionens avgränsning: glas där den kan beläggas, inte en solid rumslåda",
+    "kamera": [
+      8.33,
+      2.25,
+      74.5
+    ],
+    "spelare": [
+      5,
+      74.5
+    ],
+    "tonade": 1
+  }
+}
