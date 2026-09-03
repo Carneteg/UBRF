@@ -557,12 +557,19 @@ print("\nRidhusets insida")
 do
 	local bana = nil
 	for _, d in ipairs(delar) do
-		if d.Name == "Ridbanan 20x60" then bana = fot(d) end
+		if d.Name == "Ridbanan" then bana = fot(d) end
 	end
-	check("banan byggdes 20 × 60 m", bana ~= nil
-		and math.abs(bana.w - 20) < 0.01 and math.abs(bana.h - 60) < 0.01,
+	local R0 = UBRFKomplex.ridhus
+	check("banan byggdes som den fysiska ridytan sarg till sarg, inte 60 m", bana ~= nil
+		and math.abs(bana.w - R0.bana.w) < 0.01 and math.abs(bana.h - R0.bana.h) < 0.01
+		and bana.h > 60,
 		bana and string.format("%.1f × %.1f m vid (%.1f, %.1f)",
 			bana.w, bana.h, bana.x, bana.y) or "hittades inte")
+	check("A-sargen står mot A-gaveln i bygget — ingen flermeterszon bakom (ridhus-inne-23)",
+		bana ~= nil and (bana.y - R0.origo.y) <= 0.5 and (bana.y - R0.origo.y) >= -0.01,
+		bana and string.format("gap %.2f m", bana.y - R0.origo.y) or "saknas")
+	check("dressyrlayouten 20 × 60 byggdes som osynlig markör med förankring A",
+		raknaNamn("Dressyrlayout 20x60") == 1)
 	-- Gränserna LÄSES UR fotavtrycket. De stod som 118/143/44/119, och när
 	-- ridhusets verifierade längd flyttade södra gaveln från y = 44 till
 	-- 41,82 föll testet fast banan låg precis där den skulle. En gräns som

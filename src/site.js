@@ -1371,7 +1371,14 @@ STALLINNE.gangytor = (()=>{
    mått ger skalan i båda led och resten faller ut.
 
      bredd  20 m bana + 4,4 m läktarband  = 25 m
-     längd  60 m bana + 13 m gaveldel     = 75 m
+     längd  60 m bana + 13 m gaveldel     = 75 m   (den gamla läsningen)
+
+   SENIOR REVIEW 2026-09-03 (blocker på e879784): 20 × 60 är DRESSYR-
+   LAYOUTEN, inte hallens fysiska sarg-till-sarg-mått. Att låta banan vara
+   60 m tvingade fram en 5,68 m zon bakom A-sargen som `ridhus-inne-23`
+   motsäger. Nu: `bana` är den fysiska ridytan (A-sargen mot gaveln →
+   entrédelens vägg, ur planen + fotot) och `dressyr` är 20 × 60-layouten
+   med bokstäverna, förankrad i A. Se noten vid `bana`.
 
    Gaveldelen i norr — mot parkeringen — är entré och, en trappa upp via
    C-kortändans trappor från läktarplanet, café.
@@ -1461,9 +1468,32 @@ const RIDHUSINNE = {
      Resten av klustrets väggar byggs där planen ritar dem, utan namn —
      `REFERENCE GAP` tills urklippen ligger i references/plans/. */
   bredd:RIDHUS_BREDD, langd:RIDHUS_LANGD, tak:6.2, entre:11.5,
-  /* Banan: x följer läktarsidan (härleds nedan ur `sidor`), y ur planen —
-     entrédelen 11,5 m i norr lämnar 5,7 m i söder. `PLAN`. */
-  bana:{x:0.6, y:RIDHUS_LANGD-11.5-60, w:20, h:60}, sargH:1.35,
+  /* BANAN — den FYSISKA ridytan mellan sargarna, inte dressyrlayouten.
+
+     `ridhus-inne-23-kortsidan-vid-a.jpg`: A-skylten sitter på sargen och
+     den vita A-gaveln står omedelbart bakom den (dubbel glasdörr i
+     väggen, speglar direkt ovanför sargen). Utrymningsplanen ritar
+     hallen som en obruten yta från entrédelens gräns till södra gaveln.
+     Alltså: södra sargen mot gaveln, norra sargen vid entrédelens gräns
+     (`entre`, planen N 11,4 ≈ 11,5). y och h härleds nedan ur de två:
+       y = SARG_MOT_GAVEL (sargens tjocklek mot gavelns innerliv, 0,15
+           [uppskattning ur -23: ingen synlig spalt])
+       h = langd − entre − y  ≈ 65,5 m
+     x följer läktarsidan (härleds ur `sidor`). Klass: `PLAN` + `FOTO`;
+     h är DERIVED ur de två, inte ett skrivet tal.
+
+     20 × 60 var här en ASSUMPTION (dressyrens standardmått) som fick
+     spela fysisk bana och lämnade 5,68 m bakom A. Layouten ligger nu i
+     `dressyr` nedan. */
+  bana:{x:0.6, y:0, w:20, h:0}, sargH:1.35,
+  /* DRESSYRLAYOUTEN 20 × 60 med bokstäverna (DRESSYRBOKSTAVER i banans
+     lokala system: A på (10, 0), C på (10, 60)). Förankrad i A: fotot -23
+     visar A på södra sargen, så layouten börjar där och bokstäverna
+     K/V/E/S/H och F/P/B/R/M står 6 → 54 m från A. `VERIFIED` 20 × 60
+     (Tobias, SITEPLAN.md); förankringen `FOTO`. C-skylten: se
+     DRESSYRBOKSTAVER — fotot visar den på norra sargen framför C-blocket,
+     5,5 m bortom layoutens 60-m-linje. x/y härleds nedan. */
+  dressyr:{x:0, y:0, w:20, h:60, forankring:"A"},
   vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#6F5D4D", gangFarg:"#8C8880",
   /* HALLENS EGNA YTOR, alla MÄTTA i `ridhus-inne-01` och alla tidigare
      literaler i renderaren — samma dolda-literal-mönster som sanden, silon
@@ -1713,8 +1743,9 @@ const RIDHUSINNE = {
      literalt tal här hade lämnat det kvar på fel sida vid en spegling.
      Precis den stale följdgeometri som fällt silon, gårdsplanen och
      sponsorskyltarna i det här arbetet. Talet nedan skrivs över. */
-  /* y härleds nedan: E sitter mitt på långsidan, alltså banans halva
-     längd. Skrivet som tal följde det inte med när banan flyttade. */
+  /* y härleds nedan: båset står vid E, dressyrlayoutens halva längd
+     (30 m från A) — inte den fysiska banans halva längd. Skrivet som tal
+     följde det inte med när banan flyttade. */
   domarbas:{x:23.2, y:0, b:2.0, h:2.3, trappa:true, exit:true},
   /* Hindren som står framme mellan lektionerna, ur interiörfotona:
      vita stöd, blå-vita och röd-vita bommar, en bom på marken och
@@ -2024,6 +2055,13 @@ const SPELABSTRAKTIONER = {
      INNE PÅ BANAN, 170 m² överlapp. En spegling är alltså inte en ren
      sidoändring — banan måste flytta med, och det gör den nu. */
   R.bana.x = (S.laktare==="E") ? 0.6 : R.bredd-0.6-R.bana.w;
+  /* Den fysiska banan: södra sargen mot A-gaveln (ridhus-inne-23), norra
+     vid entrédelens gräns (planen). Ett härlett mått, inte 60. */
+  const SARG_MOT_GAVEL=0.15;
+  R.bana.y = SARG_MOT_GAVEL;
+  R.bana.h = R.langd-R.entre-R.bana.y;
+  /* Dressyrlayouten 20 × 60 förankrad i A på södra sargen. */
+  R.dressyr.x = R.bana.x; R.dressyr.y = R.bana.y;
   R.laktare.x0 = (S.laktare==="E") ? R.bredd-D-0.6 : 0.6;
   /* Läktaren löper längs hela banan i planen. */
   R.laktare.y0 = R.bana.y; R.laktare.y1 = R.bana.y+R.bana.h;
@@ -2032,8 +2070,8 @@ const SPELABSTRAKTIONER = {
      tecknet och la båset 2 m utanför däcket. Speglingsprovet fällde det. */
   if(R.domarbas){
     R.domarbas.x = R.laktare.x0+D*0.65;
-    /* E sitter mitt på långsidan: banans halva längd. */
-    R.domarbas.y = R.bana.y+R.bana.h/2;
+    /* Båset vid E: dressyrlayoutens mitt, 30 m från A. */
+    R.domarbas.y = R.dressyr.y+R.dressyr.h/2;
   }
   /* SPELABSTRAKTIONEN sargport följer banan (banans nordvästra hörn, väster
      om C-blocket, där planens pilar går). Den är inte fidelity — se

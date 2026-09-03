@@ -673,6 +673,19 @@ function antalFack(radId){ return (STALLINNE.fack[radId]||[]).length; }
 /* En klubbdelsvägg i bitar, öppningarna bortdragna. Samma regel som
    Geometri.vaggBitar i Roblox: `tvar` löper i x, `langs` i y, och bitarna
    ges i den koordinat väggen löper i. */
+/* Var en dressyrbokstav hänger i husets koordinater. Layouten 20 × 60
+   (`R.dressyr`) är förankrad i A på södra sargen; långsidesbokstäverna
+   sitter på sargen vid sin layout-y. C är undantaget: fotot visar den på
+   NORRA SARGEN framför C-blocket (`paSarg:"N"`), och den fysiska banan är
+   längre än 60 m — då hänger skylten där fotot visar den, inte 5,5 m ut
+   på sanden. `sida` säger vilken sarg (W/E/S/N) skylten sitter på. */
+function bokstavLage(R,B){
+  const dr=R.dressyr, ba=R.bana;
+  let x=dr.x+B.x, y=dr.y+B.y, sida=B.x===0?"W":B.x===dr.w?"E":B.y===0?"S":"N";
+  if(B.paSarg==="N"){ y=ba.y+ba.h; sida="N"; }
+  else if(B.paSarg==="S"){ y=ba.y; sida="S"; }
+  return {x,y,sida};
+}
 function klubbVaggBitar(v){
   const tvar=v.typ==="tvar";
   const a0=tvar?v.x0:v.y0, a1=tvar?v.x1:v.y1;
@@ -1893,12 +1906,12 @@ function ritaRidhus2D(){
   /* Speglarna och all annan inredning ur INREDNING — samma lista som
      kollisionen och Roblox läser. */
   ritaInredning2D(ss,s,"ridhusinne");
-  // bokstäverna, rakt ur DRESSYRBOKSTAVER — A i söder, C i norr
+  // bokstäverna ur DRESSYRBOKSTAVER via bokstavLage — A i söder, C i norr
   cx.fillStyle="#C9BFA6";cx.font=`600 ${Math.max(9,s*1.3)}px Petrona,serif`;cx.textAlign="center";
-  for(const{b,x,y}of DRESSYRBOKSTAVER){
-    const lx=x, ly=y;
-    const[a,c]=ss(ba.x+lx+(lx===0?-1:lx===20?1:0), ba.y+ly+(ly===0?-1.4:ly===60?1.4:0));
-    cx.fillText(b,a,c+4);}
+  for(const B of DRESSYRBOKSTAVER){
+    const L=bokstavLage(R,B);
+    const[a,c]=ss(L.x+(L.sida==="W"?-1:L.sida==="E"?1:0), L.y+(L.sida==="S"?-1.4:L.sida==="N"?1.4:0));
+    cx.fillText(B.b,a,c+4);}
   for(const d of R.dorrar){const[a,b]=ss(d.pos[0],d.pos[1]);
     cx.fillStyle="rgba(214,174,60,.9)";cx.beginPath();cx.arc(a,b,3.5,0,Math.PI*2);cx.fill();}
   for(const i of R.info){const[a,b]=ss(i.pos[0],i.pos[1]);
@@ -2069,14 +2082,13 @@ function ritaRidhus3D(){
     ritaPoly3D(k,[[R.bredd/2-0.5,3,R.tak-0.4],[R.bredd/2+0.5,3,R.tak-0.4],
       [R.bredd/2+0.5,R.langd-3,R.tak-0.4],[R.bredd/2-0.5,R.langd-3,R.tak-0.4]],"#B9BDC0",null);
   }});
-  /* Dressyrbokstäverna på sargen, rakt ur DRESSYRBOKSTAVER. Här låg en
-     180°-vridning kvar ("så att A står vid porten i norr") efter att
-     vridningen flyttats in i tabellen i src/data.js — A stod då i norr här
-     och i söder i WebGL-ritaren och på kartan. F02-B tar bort dubbletten. */
+  /* Dressyrbokstäverna på sargen, samma läge som 3D-vyn och kartan
+     (bokstavLage). Här låg en 180°-vridning kvar; F02-B tog bort
+     dubbletten, F02-A skilde layouten från den fysiska banan. */
   for(const B of DRESSYRBOKSTAVER){
-    const lx=B.x, ly=B.y;
-    const wx=ba.x+lx, wy=ba.y+ly;
-    const ux=lx===0?-0.35:lx===20?0.35:0, uy=ly===0?-0.35:ly===60?0.35:0;
+    const L=bokstavLage(R,B);
+    const wx=L.x, wy=L.y;
+    const ux=L.sida==="W"?-0.35:L.sida==="E"?0.35:0, uy=L.sida==="S"?-0.35:L.sida==="N"?0.35:0;
     items.push({d:-avst2([wx,wy])+1e4, rita(){
       ritaText3D(k,wx+ux,wy+uy,1.15,B.b,2.4,"#6E6450","Petrona,serif");
     }});

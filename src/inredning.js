@@ -187,7 +187,7 @@ const INREDNING = (() => {
        VERIFIED. Vid A: TVÅ speglar i träram på den vita kortsidan, en på
        var sida om dubbeldörren (ridhus-inne-23) — VERIFIED, lägena DERIVED
        ur bilden (ungefär en fjärdedel in från vardera hörnet). */
-    {id:"spegel_B", rum:"bana", typ:"spegel", pos:[panelX + (lE ? -0.06 : 0.06), ba.y + Bok.y], rikt:lE ? E : W,
+    {id:"spegel_B", rum:"bana", typ:"spegel", pos:[panelX + (lE ? -0.06 : 0.06), R.dressyr.y + Bok.y], rikt:lE ? E : W,
      matt:{b:3.2, d:0.06, h:1.6}, z0:R.sargH, antal:2, farg:"#7A5A3A",
      kalla:"ridhus-inne-34, -19, -31, IMG_0189-f05", klass:"VERIFIED", lage:"VERIFIED"},
     {id:"spegel_A_v", rum:"sydzon", typ:"spegel", pos:[sydDorrX - 5.2, 0.06], rikt:N,
@@ -217,7 +217,7 @@ const INREDNING = (() => {
        orange plastskalstolarna bakom domarboden (ridhus-inne-40). De tre
        orange stolarna som stod utspridda på däcket utan källa är borta;
        de här står där bilderna sätter dem. */
-    {id:"laktare_returtunna", rum:"laktare", typ:"tunna", pos:[dackMitt, ba.y + Hok.y + 1.6], rikt:E,
+    {id:"laktare_returtunna", rum:"laktare", typ:"tunna", pos:[dackMitt, R.dressyr.y + Hok.y + 1.6], rikt:E,
      matt:{b:0.5, d:0.5, h:1.1}, z0:L.dackZ, farg:"#8E9196", farg2:"#C0392B",
      kalla:"ridhus-inne-43", klass:"FOTO", lage:"DERIVED"},
     {id:"laktare_stol_1", rum:"laktare", typ:"stol", pos:[dackMitt, R.domarbas.y + 2.2], rikt:lE ? W : E,

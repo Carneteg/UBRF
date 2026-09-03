@@ -151,6 +151,7 @@ const ut = {
   ridhus: {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,
+    dressyr: RIDHUSINNE.dressyr,   // 20 × 60-layouten, skild från den fysiska banan (senior review 2026-09-03)
     sargGrind: RIDHUSINNE.sargGrind,
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, cafe: RIDHUSINNE.cafe,

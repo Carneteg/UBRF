@@ -86,7 +86,7 @@ const SITE={
    stod A i norr och E i öster; det var en följd av att läktaren låg fel. */
 const DRESSYRBOKSTAVER=[
   {b:"A",x:10,y:0,  bild:"ananas"},   // [antagande] — södra kortsidan
-  {b:"C",x:10,y:60, bild:"cykel"},    // ur foto — framför C-blocket i norr
+  {b:"C",x:10,y:60, bild:"cykel", paSarg:"N"}, // ur foto — på NORRA SARGEN framför C-blocket; layoutens 60-m-linje ligger 5,5 m söder om sargen, skylten hänger där fotot visar den (bokstavLage)
   {b:"K",x:0, y:6,  bild:"katt"},     // [antagande] — vänster sida sedd från A = väster
   {b:"V",x:0, y:18, bild:"vante"},    // [antagande]
   {b:"E",x:0, y:30, bild:"elefant"},  // [antagande] — mot läktaren, IMG_0198

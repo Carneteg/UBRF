@@ -35,10 +35,12 @@ djup zon mellan sargen och gaveln (`bana.y` = 5,68) därför att hallens
 verifierade längd 77,18 m = 11,5 m entrédel + 60 m bana + 5,68 m rest.
 Fotot säger att resten inte ligger vid A. Antingen är banan längre än 60 m
 mellan sargarna, eller så är entrédelen/C-blocket djupare än planen lästes.
-**`CONTRADICTION` — rättas inte utan svar.** Fråga till Tobias: *hur långt
-är det mellan A-sargen och C-sargen — 60 m eller närmare 66 m?* Ett
-stegat svar på plats räcker. (F02-B:s strukturella fynd 3, "sydgaveln vid A
-mot sargen", är samma sak.)
+**Löst i nästa commit (senior review på `e879784`):** 60 m var
+dressyrlayoutens mått, inte hallens fysiska sarg-till-sarg. `bana` är nu
+den fysiska ridytan (A-sargen mot gaveln → entrédelens gräns, h ≈ 65,5 m
+DERIVED ur planen + fotot) och `dressyr` är 20 × 60-layouten förankrad i A.
+(F02-B:s strukturella fynd 3, "sydgaveln vid A mot sargen", är samma sak
+och löses av samma ändring.)
 
 ---
 

@@ -2328,18 +2328,25 @@ return {
 		entre = 11.5,
 		bana = {
 			x = 4.4,
-			y = 5.68,
+			y = 0.15,
 			w = 20,
-			h = 60,
+			h = 65.53,
 		},
 		sargH = 1.35,
+		dressyr = {
+			x = 4.4,
+			y = 0.15,
+			w = 20,
+			h = 60,
+			forankring = "A",
+		},
 		sargGrind = {
 			y0 = 40.88,
 			y1 = 44.68,
 		},
 		laktare = {
 			x0 = 0.6,
-			y0 = 5.68,
+			y0 = 0.15,
 			y1 = 65.68,
 			dackZ = 0.8,
 			dackDjup = 3.4,
@@ -2392,7 +2399,7 @@ return {
 		},
 		domarbas = {
 			x = 2.81,
-			y = 35.68,
+			y = 30.15,
 			b = 2,
 			h = 2.3,
 			trappa = true,
@@ -3666,7 +3673,7 @@ return {
 				typ = "spegel",
 				pos = {
 					24.46,
-					35.68,
+					30.15,
 				},
 				rikt = 3.141593,
 				matt = {
@@ -3729,7 +3736,7 @@ return {
 				typ = "bommar",
 				pos = {
 					2.3,
-					8.28,
+					2.75,
 				},
 				rikt = 1.570796,
 				matt = {
@@ -3756,7 +3763,7 @@ return {
 				typ = "hinderstod",
 				pos = {
 					2.3,
-					10.88,
+					5.35,
 				},
 				rikt = 1.570796,
 				matt = {
@@ -3777,7 +3784,7 @@ return {
 				typ = "bokstavsstall",
 				pos = {
 					2.3,
-					13.28,
+					7.75,
 				},
 				rikt = 1.570796,
 				matt = {
@@ -3799,7 +3806,7 @@ return {
 				typ = "tunna",
 				pos = {
 					2.3,
-					61.28,
+					55.75,
 				},
 				rikt = 0,
 				matt = {
@@ -3820,7 +3827,7 @@ return {
 				typ = "stol",
 				pos = {
 					2.3,
-					37.88,
+					32.35,
 				},
 				rikt = 0,
 				matt = {
@@ -3841,7 +3848,7 @@ return {
 				typ = "stol",
 				pos = {
 					2.3,
-					38.58,
+					33.05,
 				},
 				rikt = 0,
 				matt = {

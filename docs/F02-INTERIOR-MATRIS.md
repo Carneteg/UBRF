@@ -246,14 +246,15 @@ befintlig implementation bara som jämförelse.
 | Östra korridoren | x 21,7–25, N 0,2–11,4 | `ostkorridor`, utan namn | `PLAN` | leder mot hästgången |
 | **Hästgången** (Bild 7) | östra långsidan, sammanbyggd med stallet | dörren `hastgang` + `sargGrind` | `[enligt Tobias]` + `PLAN` | ett gränssnitt: `stallhus:horse_passage ↔ ridhus:horse_passage`; bryter stallets västra boxrad, inte läktaren |
 | Svarta gaveldörren | N-gaveln, 16,1–16,7 m från väster | `ut_ridhus_N_8` (fasadens `u:8.1`) | `PLAN` = fasad | den handskrivna `ut_n` i nordöstra hörnet är borttagen |
-| **Ridbanan** (Bild 6) | "till höger om klustret" = söder om det; hallens västra gräns N 11,4 | `bana` y 5,68–65,68, x 4,4–24,4; `entre` 11,5 | `PLAN` + `FOTO` | |
+| **Ridbanan** (Bild 6) — den fysiska ridytan | "till höger om klustret" = söder om det; hallen är en obruten yta från entrédelens gräns N 11,4 till södra gaveln; `ridhus-inne-23`: A-sargen mot gaveln | `bana` y 0,15–65,68 (h 65,53 DERIVED), x 4,4–24,4; `entre` 11,5 | `PLAN` + `FOTO` | senior review 2026-09-03: 60 m var dressyrlayouten, inte sarg-till-sarg |
+| **Dressyrlayouten 20 × 60** | — | `dressyr` x = banans, y = banans (förankrad i A), h 60; bokstäverna via `bokstavLage`; C-skylten på norra sargen (`paSarg:"N"`) | 20 × 60 `VERIFIED` (Tobias, SITEPLAN.md); förankringen `FOTO` (-23) | C: fotot visar skylten på sargen, 5,5 m bortom layoutens 60-m-linje — skylten hänger där fotot visar den |
 | **Läktaren** | remsa längs västväggen, hela banans längd, däckfront ≈ x 3,9 | `laktare` x 0,6–4,0, utan gap | `PLAN` + `FOTO` | förut öster med gap för hästgången |
 | **C-blocket** (bleachers → två trappor) | bänkblock vid banans norra kant x 8,6–21,6, N 7,05–11,5; tre trappsymboler | `kortanda`, `vand:"S"`, `trappor` 13,8 och 17,65 | `PLAN` + `FOTO` + `[enligt Tobias]` | trappornas riktning `REFERENCE GAP` |
 | **Övre plan: korridor → Café Krubban** | ingen plan; Tobias: bleachers → två trappor → övre korridor → caféet | `cafe` som eget lager, golv `z0` = glasbandets underkant | `[enligt Tobias]` + `FOTO` | **inte** plattat in i entréplanet; rumsindelningen `REFERENCE GAP` |
 | Sargporten för folk till fots | ingen symbol; planens pilar går här | **borttagen ur fidelity-datan** (`RIDHUSINNE.port` finns inte); spelets gap ligger i `SPELABSTRAKTIONER.ridhus.sargport`, x följer banan, bredd 2,2 vald | `REFERENCE GAP` i fidelity; `SPELABSTRAKTION` | Senior Re-review 2026-09-03 (blocker 2): en ruttslutsats får inte bli anläggningsgeometri. Roblox bygger gapet med en märkt, genomskinlig markör; testerna mäter märkningen, inte läget som verklighet |
 | Domarbåset | — | `domarbas` på däcket, följer sidan | `FOTO` | |
 | Västdörren `u:40` (svarta dörren vid skylten) | i läktarens långsida | `ut_ridhus_W_40`, innerpunkt vid däckets fot på sanden | spelabstraktion | däcket är solitt i kollisionen; annars spawn inne i läktaren (regression vid vändningen, fångad av gångprovet) |
-| Södra zonen bakom sargen (y 0–5,68) | — | onåbar till fots | **`CONTRADICTION`** | `ridhus-inne-23` visar A-gaveln DIREKT bakom sargen (A-skylten, dubbel glasdörr, speglar ovanför sargen): ingen zon. Se § Omgranskning nedan |
+| Södra zonen bakom sargen | — | **borta** — A-sargen står 0,15 m från gaveln | `FOTO` (-23) | var `CONTRADICTION` t.o.m. `e879784`; löst genom att skilja fysisk bana från dressyrlayout |
 | **Läktarlångsidans vägg** | — | `IDENTITET.ridhus.laktarVagg`: ljus skivpanel (`hallvagg`) med mörka pelare där takstolarna landar, skivskarvar | `VERIFIED` (`ridhus-inne-14`, PO 2026-08-31) / pelarrytm `DERIVED` (`takstomme`) / skarvar [uppskattning] | omgranskning 2026-09-03 rad 2: väggen var en slät yta i samma ton som alla andra |
 | **Sponsorpanelen hörn till hörn** | — | `ovreVagg.y0/y1` härledda till 0 → langd − entre (65,68); pilastrar på fältgränserna | `VERIFIED` (`ridhus-inne-31`, `-17`) | omgranskning rad 3: täckte 44 % (y 6–40) |
 | **Fönstren ovanför panelen** | — | `fonsterband.perFalt`: ett fönster per väggfält (`ridhusFalt`), bredd 3,0 m | `VERIFIED` att de är separata (`-31`, `-17`, `-24`); bredd [uppskattning]; höjd `REFERENCE GAP` | omgranskning rad 5: var ett löpande band |
@@ -285,18 +286,21 @@ källhänvisning. Redan rättat i F02-B (#76): tre stegade bänkrader, mörk
 gångbräda, en delad spegel vid B. Kvar som F02-B/`REFERENCE GAP`:
 entrédelens dörrblad, glaspartier och skåp; caféets möbler.
 
-**Nytt `CONTRADICTION` — A-gaveln står direkt bakom sargen.**
-`ridhus-inne-23-kortsidan-vid-a.jpg`: A-skylten sitter på sargen, den vita
-gaveln med dubbel glasdörr står omedelbart bakom, speglarna hänger på
-gaveln direkt ovanför sargen, bomförrådet i hörnet. Spelet har 5,68 m
-mellan sargen och gaveln, därför att 77,18 m (`VERIFIED`) − 11,5 m entrédel
-(`PLAN`) − 60 m bana (`ASSUMPTION`: standardmått) = 5,68 m som lades i
-söder. Fotot säger att resten inte ligger där. Två läsningar: banan är
-≈ 66 m lång mellan sargarna (bokstäverna på ett 20 × 60-utsnitt), eller
-entrédelen/C-blocket är djupare än planen lästes. **Inte rättat** — att
-flytta banan flyttar hästgångens grind, västdörrens innerpunkt och
-C-blocket. Fråga till Tobias: *hur långt är det från A-sargen till
-C-sargen — 60 m eller närmare 66 m?*
+**A-gaveln direkt bakom sargen — löst 2026-09-03 (senior review på
+`e879784`).** `ridhus-inne-23-kortsidan-vid-a.jpg`: A-skylten sitter på
+sargen, den vita gaveln med dubbel glasdörr står omedelbart bakom. Spelet
+hade 5,68 m mellan sargen och gaveln därför att 77,18 m (`VERIFIED`) −
+11,5 m entrédel (`PLAN`) − 60 m bana lades i söder — men 60 m är
+**dressyrlayoutens** mått, inte hallens fysiska sarg-till-sarg-mått. De två
+är nu skilda åt i datan: `bana` = den fysiska ridytan från A-sargen mot
+gaveln (0,15 m, [uppskattning] ur -23) till entrédelens gräns (planen),
+h ≈ 65,5 m DERIVED; `dressyr` = 20 × 60 förankrad i A. Domarbåset står
+vid layoutens E; hästgångens grind, sargporten och C-blocket vilar på
+norra kanten som inte flyttade. Kvar som notering: C-skylten hänger enligt
+foto på norra sargen, 5,5 m bortom layoutens 60-m-linje — den ritas där
+fotot visar den (`paSarg:"N"`). Frågan till Tobias om banans längd är
+därmed besvarad av planen + fotot; ett stegat mått på plats vore ändå
+välkommet.
 
 **`CONTRADICTION`**, redovisade och inte rättade:
 
