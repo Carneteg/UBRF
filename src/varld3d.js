@@ -1723,13 +1723,13 @@ function v3dRidhus(lagg,opp){
      Var den låg på två ställen samtidigt hamnade E på västra långsidan,
      där det bara finns 0,6 m bakom sargen — se motsägelse 4. */
   for(const bo of DRESSYRBOKSTAVER){
-    const lx=bo.x, ly=bo.y;
-    const bx=ba.x+lx, bz=ba.y+ly;
+    const L=bokstavLage(R,bo);
+    const bx=L.x, bz=L.y;
     let mat;
-    if(lx===0)      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));
-    else if(lx===20)mat=M4.mul(M4.translation(bx-0.12,1.05,bz),M4.rotY(-Math.PI/2));
-    else if(ly===0) mat=M4.mul(M4.translation(bx,1.05,bz+0.12),M4.ny());
-    else            mat=M4.mul(M4.translation(bx,1.05,bz-0.12),M4.rotY(Math.PI));
+    if(L.sida==="W")      mat=M4.mul(M4.translation(bx+0.12,1.05,bz),M4.rotY(Math.PI/2));
+    else if(L.sida==="E") mat=M4.mul(M4.translation(bx-0.12,1.05,bz),M4.rotY(-Math.PI/2));
+    else if(L.sida==="S") mat=M4.mul(M4.translation(bx,1.05,bz+0.12),M4.ny());
+    else                  mat=M4.mul(M4.translation(bx,1.05,bz-0.12),M4.rotY(Math.PI));
     const b=new Bygge(); v3dTextPanel(b,0.62,0.31,mat);
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.bokstav||{})[bo.b]});
   }

@@ -402,8 +402,24 @@ print("\nRidhusets insida")
 
 local R = UBRFKomplex.ridhus
 
-check("banan är 20 × 60", nara(R.bana.w, 20) and nara(R.bana.h, 60),
-	string.format("%g × %g", R.bana.w, R.bana.h))
+--[[ Senior review 2026-09-03: den FYSISKA banan (sarg till sarg) och
+	DRESSYRLAYOUTEN (20 × 60) är två saker. Banan går från A-sargen mot
+	gaveln (ridhus-inne-23) till entrédelens gräns (planen); layouten är 60 m
+	oavsett hallens längd och förankrad i A. ]]
+check("dressyrlayouten är 20 × 60", R.dressyr ~= nil and nara(R.dressyr.w, 20) and nara(R.dressyr.h, 60),
+	R.dressyr and string.format("%g × %g", R.dressyr.w, R.dressyr.h) or "saknas")
+check("A-sargen står mot A-gaveln — ingen flermeterszon bakom den (ridhus-inne-23)",
+	R.bana.y >= 0 and R.bana.y <= 0.5,
+	string.format("bana y0 %.2f (gap till gaveln)", R.bana.y))
+check("den fysiska banan når entrédelens gräns och är längre än layouten",
+	nara(R.bana.y + R.bana.h, R.langd - R.entre) and R.bana.h > 60 and nara(R.bana.w, 20),
+	string.format("bana y %.2f–%.2f (h %.2f), entrédelen börjar %.2f", R.bana.y, R.bana.y + R.bana.h, R.bana.h, R.langd - R.entre))
+check("dressyrlayouten ligger inne på banan, förankrad i A på södra sargen",
+	R.dressyr ~= nil and nara(R.dressyr.x, R.bana.x) and nara(R.dressyr.y, R.bana.y)
+		and R.dressyr.y + R.dressyr.h <= R.bana.y + R.bana.h + 0.01 and R.dressyr.forankring == "A")
+check("domarbåset står vid E — layoutens mitt, inte banans",
+	R.domarbas ~= nil and R.dressyr ~= nil and nara(R.domarbas.y, R.dressyr.y + R.dressyr.h / 2),
+	R.domarbas and string.format("bås y %.2f, E %.2f", R.domarbas.y, R.dressyr.y + R.dressyr.h / 2) or "saknas")
 
 check("banan får plats i byggnaden",
 	R.bana.x >= 0 and R.bana.y >= 0
@@ -643,9 +659,9 @@ do
 	check("läktaren löper längs hela banan",
 		L.y0 <= R.bana.y + 0.05 and L.y1 >= R.bana.y + R.bana.h - 0.05,
 		string.format("läktare y %.1f–%.1f, bana y %.1f–%.1f", L.y0, L.y1, R.bana.y, R.bana.y + R.bana.h))
-	check("entrédelen är planens 11,5 m och banan börjar 5,7 m från söder",
-		math.abs(R.entre - 11.5) < 0.01 and math.abs(R.bana.y - (R.langd - 11.5 - 60)) < 0.01,
-		string.format("entre %.1f, bana y0 %.2f", R.entre, R.bana.y))
+	check("entrédelen är planens 11,5 m och banans norra sarg ligger vid dess gräns",
+		math.abs(R.entre - 11.5) < 0.01 and math.abs(R.bana.y + R.bana.h - (R.langd - 11.5)) < 0.01,
+		string.format("entre %.1f, bana y1 %.2f", R.entre, R.bana.y + R.bana.h))
 end
 
 do

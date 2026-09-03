@@ -867,15 +867,26 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	local o = R.origo
 	local b = R.bana
 
-	-- Ridbanan, 20 × 60.
-	--[[ Sanden läser den delade, MÄTTA `R.sandFarg` (#6F5D4D ur -03), inte
-		INRE.sand. Den ljusa beigen här var en Roblox-only sanning som stod
-		kvar när webben rättades. ]]
-	local sand = BK.box(model, base, "Ridbanan 20x60",
+	--[[ Ridbanan — den FYSISKA ridytan sarg till sarg (södra sargen mot
+		A-gaveln, ridhus-inne-23; norra vid entrédelens gräns), inte
+		dressyrens 20 × 60. Layouten ligger i R.dressyr och skrivs som
+		attribut så att Studio kan visa båda. Sanden läser den delade, MÄTTA
+		`R.sandFarg` (#6F5D4D ur -03), inte INRE.sand. ]]
+	local sand = BK.box(model, base, "Ridbanan",
 		o.x + b.x, 0, o.y + b.y, b.w, 0.06, b.h,
 		R.sandFarg or INRE.sand, Enum.Material.Sand)
 	sand.CanCollide = false
-	sand:SetAttribute("Matt", "20x60")
+	sand:SetAttribute("Matt", string.format("%.0fx%.1f", b.w, b.h))
+	if R.dressyr then
+		local dr = R.dressyr
+		sand:SetAttribute("Dressyr", string.format("%.0fx%.0f", dr.w, dr.h))
+		local layout = BK.box(model, base, "Dressyrlayout 20x60",
+			o.x + dr.x, 0.03, o.y + dr.y, dr.w, 0.02, dr.h,
+			R.sandFarg or INRE.sand, Enum.Material.Sand)
+		layout.CanCollide = false
+		layout.Transparency = 1
+		layout:SetAttribute("Forankring", dr.forankring or "A")
+	end
 
 	-- Sargen runt banan, med porten som en lucka i norra kortsidan.
 	local sh = R.sargH

@@ -2334,18 +2334,25 @@ return {
 		entre = 11.5,
 		bana = {
 			x = 4.4,
-			y = 5.68,
+			y = 0.15,
 			w = 20,
-			h = 60,
+			h = 65.53,
 		},
 		sargH = 1.35,
+		dressyr = {
+			x = 4.4,
+			y = 0.15,
+			w = 20,
+			h = 60,
+			forankring = "A",
+		},
 		sargGrind = {
 			y0 = 40.88,
 			y1 = 44.68,
 		},
 		laktare = {
 			x0 = 0.6,
-			y0 = 5.68,
+			y0 = 0.15,
 			y1 = 65.68,
 			dackZ = 0.8,
 			dackDjup = 3.4,
@@ -2388,7 +2395,7 @@ return {
 		},
 		domarbas = {
 			x = 2.81,
-			y = 35.68,
+			y = 30.15,
 			b = 2,
 			h = 2.3,
 			trappa = true,
