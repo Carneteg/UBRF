@@ -297,7 +297,7 @@ function vandringKollision(nx,ny,r){
     /* C-blocket vid norra änden är ett bänkblock man inte går igenom. */
     {const K=R.kortanda; if(K) [nx,ny]=kollideraRekt(nx,ny,r,{x:K.x0,y:K.y0,w:K.x1-K.x0,h:K.y1-K.y0});}
     /* Entrédelen ur planen: väggarna segment för segment med planens
-       luckor, och de slutna rummen (toaletterna, hissen) som lådor. Samma
+       luckor, och de slutna rummen (toaletterna, schaktet) som lådor. Samma
        regel som stallets klubbdel. */
     if(R.entrehall){
       for(const v of R.entrehall.vaggar){
@@ -338,8 +338,8 @@ function vandringKollision(nx,ny,r){
     for(const rum of S.service) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
     /* KLUBBDELEN: golvet är EN gångyta, och det är väggarna som spärrar —
        segment för segment, med planens dörrar som luckor. Samma bitar som
-       Roblox bygger ur Geometri.vaggBitar. De slutna rummen (trapphuset,
-       toaletten under trappan, det lilla rummet) är hela lådor. */
+       Roblox bygger ur Geometri.vaggBitar. De slutna rummen (den namnlösa
+       volymen, Ö-toaletten, det lilla rummet) är hela lådor. */
     for(const v of S.klubb.vaggar){
       const t=(v.tjock||0.16)/2;
       for(const [a0,a1] of klubbVaggBitar(v)){

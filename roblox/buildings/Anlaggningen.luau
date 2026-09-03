@@ -679,7 +679,7 @@ local function byggStallInre(model: Model, base: CFrame)
 		Förut tre svävande lådor med rumsnamn i en öppen hall. Nu planens
 		väggar, segment för segment med dörrarna som luckor, ur samma lista
 		som webben kolliderar mot. Rummen är golv man går på; bara de som är
-		`stangt` (trapphuset, toaletten under trappan, det lilla rummet utan
+		`stangt` (den namnlösa volymen, Ö-toaletten, det lilla rummet utan
 		läsbar dörr) byggs som hela volymer. Rumsnamnen står som attribut på
 		en tunn golvplatta så att Studio kan visa vad som är vad utan att
 		något solitt tillkommer. ]]

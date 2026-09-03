@@ -299,6 +299,28 @@ do
 	check("klubbdelens rum ur planen finns med",
 		namn.uppehallsrum and namn.teorisal and namn.sadelkammare and namn.wc_v and namn.wc_o,
 		#K.rum .. " rum, " .. #K.vaggar .. " väggar, " .. #S.service .. " servicedelar")
+	--[[ Planens symbolruta x 5,9–7,3 är plan-belagd som fotavtryck; vad den
+		är finns ingen oberoende källa för. Datan får inte kalla den trapphus
+		eller hiss och inte sätta någon spelarsynlig etikett på den — samma
+		regel som för ridhusets `schakt`. Geometrin PLAN, funktionen
+		REFERENCE GAP. ]]
+	do
+		local sv, funktionsnamn = nil, nil
+		for _, r in ipairs(K.rum) do
+			if r.id == "sluten_volym" then sv = r end
+			if r.id == "trapphus" or r.id == "hiss" then funktionsnamn = r.id end
+			local et = (r.label or ""):upper()
+			if et:find("TRAPP", 1, true) or et:find("HISS", 1, true) then funktionsnamn = r.id .. ":" .. r.label end
+		end
+		check("planens symbolruta är en namnlös sluten volym: inget `trapphus`/`hiss`, ingen etikett",
+			sv ~= nil and sv.stangt == true and (sv.label == nil or sv.label == "") and funktionsnamn == nil,
+			funktionsnamn or (sv and "sluten_volym utan etikett" or "sluten_volym saknas"))
+		local ok = sv ~= nil
+		for _, v in ipairs(K.vaggar) do
+			if v.id:find("trapphus", 1, true) then ok = false end
+		end
+		check("inga väggar i klubbdelen bär trapphusnamn", ok)
+	end
 	-- Alla rum ligger norr om den genomgående väggen, inuti huset.
 	local utanfor = nil
 	for _, r in ipairs(K.rum) do
