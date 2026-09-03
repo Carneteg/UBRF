@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="white"/>
+  <text x="55" y="60" font-family="Arial, sans-serif" font-size="34" font-weight="700">UBRF Spatial Canon v2 — Ridhuset</text>
+  <text x="55" y="100" font-family="Arial, sans-serif" font-size="20">Topologisk modell — ej metrisk. Exakta glas/vägglinjer ska källspåras innan implementation.</text>
+
+  <rect x="70" y="170" width="760" height="390" fill="#f4f4ef" stroke="#222" stroke-width="4"/>
+  <text x="450" y="325" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700">OPEN ENTRANCE HALL</text>
+  <text x="450" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="24">NO ROOM-BOX WALLS</text>
+  <text x="450" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="20">Funktionsetiketter skapar inte väggar</text>
+
+  <rect x="155" y="260" width="220" height="125" fill="#e8f4f7" stroke="#26708a" stroke-width="6"/>
+  <text x="265" y="315" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700">GLASS</text>
+  <text x="265" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="22">RECEPTION</text>
+
+  <rect x="865" y="170" width="280" height="390" fill="#f2eadf" stroke="#222" stroke-width="4"/>
+  <text x="1005" y="325" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700">PHYSICAL</text>
+  <text x="1005" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700">RIDING AREA</text>
+
+  <text x="105" y="515" font-family="Arial, sans-serif" font-size="21" font-weight="700">MAIN ENTRANCE</text>
+  <text x="700" y="515" font-family="Arial, sans-serif" font-size="21" font-weight="700">ARENA ACCESS</text>
+
+  <line x1="170" y1="485" x2="710" y2="485" stroke="#246" stroke-width="8" marker-end="url(#arrow)"/>
+  <line x1="790" y1="485" x2="930" y2="485" stroke="#246" stroke-width="8" marker-end="url(#arrow)"/>
+  <text x="530" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="23" font-weight="700">MUST CONNECT</text>
+  <text x="530" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="21">main entrance → open hall → arena access → physical riding area</text>
+
+  <g transform="translate(880,105)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="700">REVOKED AS BLANKET TRUTH</text>
+    <text x="0" y="30" font-family="Arial, sans-serif" font-size="18">RIDHUSINNE.entrehall.vaggar</text>
+    <text x="0" y="58" font-family="Arial, sans-serif" font-size="18">Varje segment måste återbeläggas.</text>
+  </g>
+
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#246"/>
+    </marker>
+  </defs>
+</svg>
