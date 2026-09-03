@@ -236,6 +236,17 @@ local __services = {
 			self._taggade[tagg] = self._taggade[tagg] or {}
 			table.insert(self._taggade[tagg], inst)
 		end,
+		--[[ Union-lost efter att S2b landade i main. `HasTag` kom fran
+		     riggkontraktet och svarade hardkodat `false`; nu svarar den mot
+		     samma register som `GetTagged`. Ingen produktionskod anropar den
+		     -- RigContract tar `harTagg` som injicerad funktion -- men en
+		     stubb som ljuger ar en fella som vantar pa forsta anroparen. ]]
+		HasTag = function(self, inst, tagg)
+			for _, i in ipairs(self._taggade[tagg] or {}) do
+				if i == inst then return true end
+			end
+			return false
+		end,
 		GetInstanceAddedSignal = function()
 			return { Connect = function() return { Disconnect = function() end } end }
 		end,
