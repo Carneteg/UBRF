@@ -198,7 +198,8 @@ balkongdörren.
 | Zon | Planstöd | Spelet | Klass |
 |---|---|---|---|
 | Entréplanets rum | `ridhus-entreplan-utrymning.jpg` | planens väggar och rum, namn bara där Tobias ord ger dem | `PLAN` + `[enligt Tobias]` |
-| Banan, sarg, sargport | foto + plan | ja | `FOTO` + `PLAN`; porten `DERIVED` |
+| Banan, sarg | foto + plan | ja | `FOTO` + `PLAN` |
+| Sargport för folk till fots | ingen källa visar en grind; bredden vald | **inte fidelity** — spelets `SPELABSTRAKTIONER.ridhus.sargport`, märkt | `REFERENCE GAP` i fidelity; `SPELABSTRAKTION` i spelet |
 | Läktare, kortända (C-blocket) | foto + plan | ja, **vänd** — se § Superseded | `FOTO` + `PLAN` |
 | Café/överbyggnad i norr | foto + Tobias | ja, eget lager ovanpå entrédelen | `FOTO` + `[enligt Tobias]` |
 | Domarbås | foto | ja | `FOTO` |
@@ -235,7 +236,7 @@ befintlig implementation bara som jämförelse.
 | Öppningen entré → cellraden | i väggen x 2,2, N 2,4–3,8 | `korridor_o.glasparti` | `PLAN`; glas eller dörr `REFERENCE GAP` | |
 | Cellraden, fyra celler | x 2,2–4,2; tvärväggar N 3,9 · 6,4 · 7,9 · 9,8 (halv, x 2,2–3,1); luckor mot skåpkorridoren N 1,1–3,1 · 4,6–5,4 · 6,8–7,6 · 9,8–11,6 | `cell_1`–`cell_4`, `skap_v.a`–`d`; region `cellrad` utan namn | `PLAN`; funktion `REFERENCE GAP` | Bild 2–5 (reception, skåpförvaring, ombytesrum med dusch, HWC) hör hit men urklippen saknas i repot → **inte namngivna, inte placerade** |
 | **Skåpkorridoren** | x 4,2–5,7, N 1,6–16; luckor österut N 3,2–4,1 · 5,8–6,5 · 7,6–8,4 · 9,7–10,9 | `skapkorridor`, etikett SKÅPKORRIDOREN | `PLAN` + `FOTO` (`ridhus-klubb-01`) | fortsätter 4,5 m förbi hallens gräns, längs banans nordvästra hörn |
-| Hissen / schaktet | kryssad ruta x 5,75–7,6, N 7,3–9,0, tätt öster om skåpväggen | `hiss`, `stangt` | `PLAN`; "hiss" `[antagande]` | rättad i förstoring 2026-09-03 — låg 3 m fel, i cellraden |
+| Den kryssade rutan (schaktet) | kryssad ruta x 5,75–7,6, N 7,3–9,0, tätt öster om skåpväggen | `schakt`, `stangt`, **ingen etikett** | fotavtrycket `PLAN`; funktionen `REFERENCE GAP` | rättad i förstoring 2026-09-03 — låg 3 m fel, i cellraden. Hette `hiss`/`HISS` t.o.m. `a21d6ab`; **superseded** efter Senior Re-review 2026-09-03 (blocker 1): en okänd funktion får inte kanoniseras som hiss |
 | Rummet innanför hallens tvärvägg | x 5,7–10,5, N 4,3–7,2; dörr norrut x 7,7–9,6; lucka västerut N 5,8–6,5 | `hall_n_v`, `hall_mitt`, `hall_nv_s`; ingen egen region | `PLAN`; funktion `REFERENCE GAP` | södra väggen N 7,2 saknades i första läsningen |
 | Rummen mot nordöstra hörnet | vägg N 4,3 x 15,3–18,4; x 18,4 N 1,3–7,1; N 5,9 x 18,4–21,7 | `hall_n_o`, `hall_no`, `hall_no_s` | `PLAN`; funktion `REFERENCE GAP` | |
 | Östra korridoren | x 21,7–25, N 0,2–11,4 | `ostkorridor`, utan namn | `PLAN` | leder mot hästgången |
@@ -245,7 +246,7 @@ befintlig implementation bara som jämförelse.
 | **Läktaren** | remsa längs västväggen, hela banans längd, däckfront ≈ x 3,9 | `laktare` x 0,6–4,0, utan gap | `PLAN` + `FOTO` | förut öster med gap för hästgången |
 | **C-blocket** (bleachers → två trappor) | bänkblock vid banans norra kant x 8,6–21,6, N 7,05–11,5; tre trappsymboler | `kortanda`, `vand:"S"`, `trappor` 13,8 och 17,65 | `PLAN` + `FOTO` + `[enligt Tobias]` | trappornas riktning `REFERENCE GAP` |
 | **Övre plan: korridor → Café Krubban** | ingen plan; Tobias: bleachers → två trappor → övre korridor → caféet | `cafe` som eget lager, golv `z0` = glasbandets underkant | `[enligt Tobias]` + `FOTO` | **inte** plattat in i entréplanet; rumsindelningen `REFERENCE GAP` |
-| Sargporten för folk till fots | ingen symbol; planens pilar går här | `port` x 4,7–6,9, härledd ur banan | `DERIVED` | bredden vald |
+| Sargporten för folk till fots | ingen symbol; planens pilar går här | **borttagen ur fidelity-datan** (`RIDHUSINNE.port` finns inte); spelets gap ligger i `SPELABSTRAKTIONER.ridhus.sargport`, x följer banan, bredd 2,2 vald | `REFERENCE GAP` i fidelity; `SPELABSTRAKTION` | Senior Re-review 2026-09-03 (blocker 2): en ruttslutsats får inte bli anläggningsgeometri. Roblox bygger gapet med en märkt, genomskinlig markör; testerna mäter märkningen, inte läget som verklighet |
 | Domarbåset | — | `domarbas` på däcket, följer sidan | `FOTO` | |
 | Västdörren `u:40` (svarta dörren vid skylten) | i läktarens långsida | `ut_ridhus_W_40`, innerpunkt vid däckets fot på sanden | spelabstraktion | däcket är solitt i kollisionen; annars spawn inne i läktaren (regression vid vändningen, fångad av gångprovet) |
 | Södra zonen bakom sargen (y 0–5,68) | — | onåbar till fots | `REFERENCE GAP` | ingen öppning i södra sargen är belagd; var onåbar även i basen |
@@ -305,8 +306,9 @@ klubbdel på båda ytorna (`klubbVaggBitar` / `Geometri.vaggBitar`):
 | C-blocket i norr, vänt mot banan, två trappor, glasband, vit vägg, klocka | y 65,68–70,13, x 8,6–21,6 | `PLAN` + `FOTO` + `[enligt Tobias]` |
 | Caféet som eget lager ovanpå entrédelen | z0 ur blockets glasband | `[enligt Tobias]` + `FOTO` |
 | Entrédelens väggar segment för segment med planens luckor | `entrehall.vaggar`, 17 väggar | `PLAN` (±0,5 m) |
-| Entrén, två toaletter, hissen, skåpkorridoren med namn/slutna | `entrehall.rum` | `PLAN` + `[enligt Tobias]`; hiss `[antagande]` |
-| Sargporten väster om C-blocket; grinden mot hästgången | härledda ur banan resp. hästgången | `DERIVED` / `[ASSUMPTION]` |
+| Entrén, två toaletter, skåpkorridoren med namn; den kryssade rutan som namnlöst slutet `schakt` | `entrehall.rum` | `PLAN` + `[enligt Tobias]`; schaktets funktion `REFERENCE GAP` |
+| Grinden mot hästgången | härledd ur hästgången | `[ASSUMPTION]` (bredd) |
+| Sargporten väster om C-blocket | **inte fidelity** — `SPELABSTRAKTIONER.ridhus.sargport` | `SPELABSTRAKTION`; `REFERENCE GAP` i fidelity |
 | Dressyrbokstäverna vända (A söder, C norr) | `DRESSYRBOKSTAVER` | `DERIVED` |
 | Västdörren `u:40`: innerpunkt vid däckets fot | härledd | spelabstraktion |
 
@@ -446,7 +448,8 @@ filtret.
 4. **Rumsfunktioner** som ingen källa ger: stallets lilla rum, östra rummet,
    väggspåret och halvväggen; var pentryt ligger. I ridhuset: cellradens fyra
    celler, rummet innanför hallens tvärvägg, rummen mot nordöstra hörnet, och
-   om den kryssade rutan är en hiss.
+   vad den kryssade rutan är (den heter `schakt` i datan, utan etikett, och
+   får inte kallas hiss förrän belägg eller produktägarbeslut finns).
 5. **Dörrar** som planen inte visar: Ö-toaletten under trappan, det lilla
    rummet, trapphusets ingång; ridhusets två toaletter och hissen; om
    entréöppningen mot cellraden är glas eller dörr; var skåpkorridoren slutar
@@ -462,7 +465,11 @@ filtret.
 9. **C-blockets trappor** — vilket håll de går; planen visar tre trappsymboler,
    fotona två trappor.
 10. **Sargporten för folk till fots** — ingen källa visar grinden i sargen;
-    läget följer planens pilar. **Södra sargen** — ingen öppning belagd,
-    zonen bakom är onåbar till fots.
+    läget följer planens pilar. Den finns därför INTE i fidelity-datan utan
+    bara som spelets `SPELABSTRAKTIONER.ridhus.sargport`, märkt
+    `SPELABSTRAKTION` i data, i Roblox-bygget (gul genomskinlig markör med
+    attribut) och i testerna, som mäter märkningen och inte läget som
+    verklighet. **Södra sargen** — ingen öppning belagd, zonen bakom är
+    onåbar till fots.
 
 Inget av dessa fylls med en rimlig gissning.

@@ -32,8 +32,8 @@ vm.createContext(ctx);
    möblerna i STALLINNE/RIDHUSINNE) — samma ordning som index.html. */
 vm.runInContext(las("src/model.js") + "\n" + las("src/data.js") + "\n" + las("src/site.js")
   + "\n" + las("src/inredning.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING})", ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -151,7 +151,7 @@ const ut = {
   ridhus: {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,
-    port: RIDHUSINNE.port, sargGrind: RIDHUSINNE.sargGrind,
+    sargGrind: RIDHUSINNE.sargGrind,
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, cafe: RIDHUSINNE.cafe,
     entrehall: RIDHUSINNE.entrehall, skyltar: RIDHUSINNE.skyltar,
@@ -165,6 +165,11 @@ const ut = {
     hinder: RIDHUSINNE.hinder, koner: RIDHUSINNE.koner, pall: RIDHUSINNE.pall,
     dynor: RIDHUSINNE.dynor, lysror: RIDHUSINNE.lysror, spegelSida: RIDHUSINNE.spegelSida,
   },
+  /* SPELABSTRAKTIONER ligger UTANFÖR `ridhus`/`stall` med flit: de är
+     spelets traversal, inte fidelity-fakta om UBRF. Roblox bygger dem
+     märkta med klass, och fidelity-testerna får inte läsa dem som
+     verklighet. Se noten i src/site.js. */
+  spelabstraktioner: SPELABSTRAKTIONER,
   /* F02-B: inredningen — en lista per hus, varje post med källa och klass.
      Huvudkommentaren i src/inredning.js säger varför den delas: en soffa
      som finns i spelet ska finnas i Roblox, och en som saknar källa ska

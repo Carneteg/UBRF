@@ -1719,14 +1719,12 @@ const RIDHUSINNE = {
     {andel:0.26, b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
     {andel:0.12, b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
   ],
-  /* SARGPORTEN för folk till fots. Stod mitt på norra kortsidan "vid A".
-     Med C-blocket i norr finns ingen plats där, och A står i söder. Planens
-     utrymningspilar går längs västra långsidan från banzonen upp till
-     entrén; porten läggs därför i banans NORDVÄSTRA hörn, väster om
-     bänkblocket, där hallens västra del möter banan. Läget härleds nedan
-     ur banan. Bredden är vald. `DERIVED` — ingen källa visar själva
-     grinden i sargen; att folk går den vägen gör planens pilar. */
-  port:{x0:0, x1:0},
+  /* SARGPORTEN för folk till fots finns INTE här längre (Senior Re-review
+     2026-09-03, blocker 2). Ingen källa visar en grind i sargen och bredden
+     var vald — då är den ingen fidelity-sanning. Spelet behöver ändå en väg
+     från entrédelen ut på banan; den ligger som uttrycklig SPELABSTRAKTION i
+     `SPELABSTRAKTIONER.ridhus.sargport` nedan, utanför RIDHUSINNE, exporten
+     `ridhus` och fidelity-testerna. I fidelity-sanningen: `REFERENCE GAP`. */
   /* y härleds ur IDENTITET.ridhus.ovreVagg längre ner — se noten vid
      `skyltar`. Fältet finns här bara så att renderarna kan läsa ett tal. */
   /* GRINDEN mot hästgången, i sargens östra långsida. Den måste finnas: annars
@@ -1797,11 +1795,15 @@ const RIDHUSINNE = {
       {id:"wc_n1",        rekt:{x:0,    y:75.8, w:1.7,  h:1.1},  label:"WC", stangt:true},
       {id:"wc_n2",        rekt:{x:0,    y:74.8, w:1.7,  h:1.0},  label:"WC", stangt:true},
       {id:"cellrad",      rekt:{x:2.2,  y:64.2, w:2.0,  h:12.8}, label:""},
-      /* Den kryssade rutan (hiss/schakt) står tätt ÖSTER om skåpkorridorens
-         östvägg, x 5,75–7,6, N 7,3–9,0 — inte i cellraden, dit en tidigare
-         läsning satte den 3 m fel. Rättad i förstoring 2026-09-03. Att det
-         är en hiss är symbolens gängse betydelse, inte belagt: `[antagande]`. */
-      {id:"hiss",         rekt:{x:5.78, y:68.2, w:1.82, h:1.7},  label:"HISS", stangt:true},
+      /* Den kryssade rutan står tätt ÖSTER om skåpkorridorens östvägg,
+         x 5,75–7,6, N 7,3–9,0 — inte i cellraden, dit en tidigare läsning
+         satte den 3 m fel. Rättad i förstoring 2026-09-03. Fotavtrycket är
+         `PLAN`; FUNKTIONEN är okänd — att det vore en hiss är symbolens
+         gängse betydelse, inte belagt, och hette ändå `hiss`/`HISS` i datan
+         tills Senior Re-review 2026-09-03 (blocker 1). Nu neutralt id utan
+         spelarsynlig etikett, sluten volym tills belägg eller
+         produktägarbeslut ger den ett namn. `REFERENCE GAP`. */
+      {id:"schakt",       rekt:{x:5.78, y:68.2, w:1.82, h:1.7},  label:"", stangt:true},
       {id:"skapkorridor", rekt:{x:4.2,  y:61.2, w:1.5,  h:14.9}, label:"SKÅPKORRIDOREN"},
       {id:"hall",         rekt:{x:5.7,  y:65.7, w:16.0, h:11.3}, label:""},
       {id:"ostkorridor",  rekt:{x:21.7, y:65.7, w:3.3,  h:11.3}, label:""},
@@ -1924,6 +1926,29 @@ STALLINNE.info=[
     if(sk.andel!==undefined) sk.y=O.y0+(O.y1-O.y0)*sk.andel;
 })();
 
+/* ── SPELABSTRAKTIONER — traversal som spelet behöver men ingen källa visar.
+
+   Det här är INTE fidelity-fakta om UBRF. RIDHUSINNE, STALLINNE och exporten
+   `ridhus`/`stall` är den kanoniska sanningen om anläggningen; det som står
+   här är spelets egna genvägar för att spelaren ska kunna ta sig fram, och
+   varje post bär `klass:"SPELABSTRAKTION"` och sin fidelity-status så att
+   ingen läsare, byggare eller test tar dem för verklighet.
+
+   `sargport`: en öppning i ridbanans norra sarg för folk till fots, väster
+   om C-blocket, där brandplanens utrymningspilar går från banzonen upp till
+   entrén. Ingen bild visar en grind i sargen; bredden är vald. Läget följer
+   banan (härleds nedan). I Roblox byggs sargen med samma gap och en
+   genomskinlig markör märkt SPELABSTRAKTION; i webben är det gapet
+   kollisionen släpper igenom. Fidelity-testerna får inte mäta den som
+   verklighet — de får bara mäta att den är MÄRKT som abstraktion.
+   (Senior Re-review 2026-09-03, blocker 2.) */
+const SPELABSTRAKTIONER = {
+  ridhus: {
+    sargport:{x0:0, x1:0, y:0, bredd:2.2, klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
+              motiv:"planens utrymningspilar; ingen bild visar grinden; bredden vald"},
+  },
+};
+
 /* Läktarens och panelens SIDA härleds ur RIDHUSINNE.sidor, så att en framtida
    spegling blir en dataändring och inte ett ombygge. Se noten vid `sidor`. */
 (()=>{
@@ -1950,9 +1975,11 @@ STALLINNE.info=[
     /* E sitter mitt på långsidan: banans halva längd. */
     R.domarbas.y = R.bana.y+R.bana.h/2;
   }
-  /* Sargporten för folk till fots: banans nordvästra hörn, väster om
-     C-blocket, där hallens västra del möter banan — se noten vid `port`. */
-  R.port.x0 = R.bana.x+0.3; R.port.x1 = R.bana.x+2.5;
+  /* SPELABSTRAKTIONEN sargport följer banan (banans nordvästra hörn, väster
+     om C-blocket, där planens pilar går). Den är inte fidelity — se
+     SPELABSTRAKTIONER — men den måste flytta med banan vid en spegling. */
+  {const sp=SPELABSTRAKTIONER.ridhus.sargport;
+   sp.x0 = R.bana.x+0.3; sp.x1 = sp.x0+sp.bredd; sp.y = R.bana.y+R.bana.h;}
   /* Fasadens dörrar i läktarens långsida (svarta dörren vid skylten, u 40)
      öppnar i verkligheten ut på läktardäcket. Spelet har inget gående på
      däcksnivå — däcket är solitt i kollisionen — så autogeneratorns

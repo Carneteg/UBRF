@@ -270,9 +270,11 @@ function vandringKollision(nx,ny,r){
   }else if(G.scen==="ridhusinne"){
     const R=RIDHUSINNE, ba=R.bana;
     nx=clamp(nx,0.5,R.bredd-0.5); ny=clamp(ny,0.5,R.langd-0.5);
-    // sargen som väggar — porten vid A (norra kortsidan) lämnas öppen
-    [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,R.port.x0,ba.y+ba.h);
-    [nx,ny]=kollideraSeg(nx,ny,r,R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    /* Sargen som väggar. Gapet i norra sargen är SPELABSTRAKTIONEN sargport
+       (src/site.js) — inte fidelity; ingen bild visar en grind där. */
+    const sp=SPELABSTRAKTIONER.ridhus.sargport;
+    [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,sp.x0,ba.y+ba.h);
+    [nx,ny]=kollideraSeg(nx,ny,r,sp.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x+ba.w,ba.y);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x,ba.y+ba.h);
     /* Östra långsidan i två stycken: grinden mot hästgången är gapet.
@@ -592,7 +594,7 @@ function interaktioner(){
     for(const d of R.dorrar) L.push({pos:d.pos, text:d.text,
       gor(){gaTill(d.mot,d.spawn);}});
     for(const i of R.info) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
-    const portX=(R.port.x0+R.port.x1)/2;
+    const sp=SPELABSTRAKTIONER.ridhus.sargport, portX=(sp.x0+sp.x1)/2;
     L.push({pos:[portX,R.bana.y+R.bana.h], text:G.leder
         ? (G.tavling&&G.tavling.typ==="hoppning"
           ? `Sitt upp — Påskhoppet, ${G.tavling.klass.namn}`
@@ -1847,8 +1849,9 @@ function ritaRidhus2D(){
   cx.fillStyle=R.sandFarg;cx.fillRect(bx,by,ba.w*s,ba.h*s);
   cx.strokeStyle=R.vagg;cx.lineWidth=Math.max(2.5,s*0.5);
   cx.strokeRect(bx,by,ba.w*s,ba.h*s);
-  // porten vid A (norra kortsidan)
-  const[pa]=ss(R.port.x0,0),[pb]=ss(R.port.x1,0),[,py]=ss(0,ba.y+ba.h);
+  // spelets sargport (SPELABSTRAKTION, inte fidelity) i norra sargen
+  const sp=SPELABSTRAKTIONER.ridhus.sargport;
+  const[pa]=ss(sp.x0,0),[pb]=ss(sp.x1,0),[,py]=ss(0,ba.y+ba.h);
   cx.strokeStyle=R.sandFarg;cx.lineWidth=Math.max(3,s*0.6);
   cx.beginPath();cx.moveTo(pa,py);cx.lineTo(pb,py);cx.stroke();
   // läktaren, på den sida `sidor` pekar ut, däckets djup bred
@@ -1929,8 +1932,9 @@ function ritaRidhus3D(){
       ritaLinje3D(k,[x0,y0,R.sargH],[x1,y1,R.sargH],"#FFFFFF",1.5);
     }});
   };
-  sarg(ba.x,ba.y+ba.h, R.port.x0,ba.y+ba.h);
-  sarg(R.port.x1,ba.y+ba.h, ba.x+ba.w,ba.y+ba.h);
+  {const sp=SPELABSTRAKTIONER.ridhus.sargport;   // gapet är spelabstraktion, inte fidelity
+   sarg(ba.x,ba.y+ba.h, sp.x0,ba.y+ba.h);
+   sarg(sp.x1,ba.y+ba.h, ba.x+ba.w,ba.y+ba.h);}
   sarg(ba.x,ba.y, ba.x+ba.w,ba.y);
   sarg(ba.x,ba.y, ba.x,ba.y+ba.h);
   /* Östra långsidan delad av grinden mot hästgången. */
@@ -2080,8 +2084,9 @@ function ritaRidhus3D(){
   for(const d of R.dorrar) items.push({d:-avst2(d.pos), rita(){ritaMarkor3D(k,d.pos);}});
   if(G.leder){
     items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
-    items.push({d:-avst2([(R.port.x0+R.port.x1)/2,ba.y+ba.h]),
-      rita(){ritaMarkor3D(k,[(R.port.x0+R.port.x1)/2,ba.y+ba.h]);}});
+    const sp=SPELABSTRAKTIONER.ridhus.sargport;
+    items.push({d:-avst2([(sp.x0+sp.x1)/2,ba.y+ba.h]),
+      rita(){ritaMarkor3D(k,[(sp.x0+sp.x1)/2,ba.y+ba.h]);}});
   }
   items.sort((a,b)=>a.d-b.d);
   for(const o of items)o.rita();

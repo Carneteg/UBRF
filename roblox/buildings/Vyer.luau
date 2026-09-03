@@ -131,7 +131,7 @@ Vyer.vyer = {
 		fran = { x = Ro.x + banMittX, y = Ro.y + banNorr - 2, h = 1.7 },
 		mot = { x = Ro.x + banMittX, y = Ro.y + banSyd + B.h * 0.25 },
 		aim = 1.1,
-		krav = "Sanden dovt brungrå, inte ljus beige eller orange. Sargen ljus med mörkt sockelband. Porten för folk är ett GAP i norra sargens västra ände, väster om C-blocket.",
+		krav = "Sanden dovt brungrå, inte ljus beige eller orange. Sargen ljus med mörkt sockelband. Gapet i norra sargens västra ände är SPELETS sargport — en SPELABSTRAKTION med gul genomskinlig markör, INTE verifierad UBRF-geometri (ingen bild visar en grind där; REFERENCE GAP). Bedöm sargen, inte gapet.",
 	},
 	{
 		id = "sponsorvaggen",
@@ -191,7 +191,7 @@ Vyer.vyer = {
 		text = "Innanför huvudentrén: korridoren längs västväggen, toaletterna norr om dörren, glaspartiet in i hallen",
 		fran = { x = Ro.x + 1.1, y = Ro.y + 74.2, h = 1.7 },
 		mot = { x = Ro.x + 1.1, y = Ro.y + 65.0 },
-		krav = "Planens entrédel: en korridor längs västväggen söderut mot banan, två smala toaletter norr om entrén, glasparti in i hallen, skåpkorridorens två parallella väggar, hissen som sluten volym. Inga uppfunna möbler.",
+		krav = "Planens entrédel: en korridor längs västväggen söderut mot banan, två smala toaletter norr om entrén, glasparti in i hallen, skåpkorridorens två parallella väggar, den kryssade rutan (`schakt`) som sluten volym UTAN namn — funktionen är okänd (REFERENCE GAP), den får inte heta hiss. Inga uppfunna möbler.",
 	},
 
 	--[[ ── Stallet inne ── servicevyn är den som tidigare underkändes. ]]

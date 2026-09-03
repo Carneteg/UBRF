@@ -993,12 +993,24 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		BK.box(model, base, "Sarg öst", o.x + b.x + b.w, 0, o.y + b.y, 0.1, sh, b.h, INRE.sarg)
 	end
 	BK.box(model, base, "Sarg syd",  o.x + b.x, 0, o.y + b.y - 0.1, b.w, sh, 0.1, INRE.sarg)
-	-- Norra kortsidan i två stycken: porten är gapet mellan dem, och det är
-	-- där A står — se docs/ och src/data.js.
+	--[[ Norra kortsidan i två stycken. Gapet mellan dem är SPELABSTRAKTIONEN
+		sargport (G.spelabstraktioner, src/site.js): ingen bild visar en
+		grind i sargen och bredden är vald, så den är inte fidelity-geometri
+		utan spelets väg från entrédelen ut på banan. Den byggs som ett gap
+		plus en genomskinlig, okolliderande markör med klass som attribut,
+		så att Studio visar VAD den är. (Senior Re-review 2026-09-03.) ]]
+	local sp = G.spelabstraktioner.ridhus.sargport
 	BK.box(model, base, "Sarg norr väst", o.x + b.x, 0, o.y + b.y + b.h,
-		R.port.x0 - b.x, sh, 0.1, INRE.sarg)
-	BK.box(model, base, "Sarg norr öst", o.x + R.port.x1, 0, o.y + b.y + b.h,
-		b.x + b.w - R.port.x1, sh, 0.1, INRE.sarg)
+		sp.x0 - b.x, sh, 0.1, INRE.sarg)
+	BK.box(model, base, "Sarg norr öst", o.x + sp.x1, 0, o.y + b.y + b.h,
+		b.x + b.w - sp.x1, sh, 0.1, INRE.sarg)
+	local markor = BK.box(model, base, "Spelabstraktion sargport", o.x + sp.x0, 0, o.y + b.y + b.h - 0.05,
+		sp.x1 - sp.x0, sh, 0.2, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
+	markor.CanCollide = false
+	markor.Transparency = 0.7
+	markor:SetAttribute("Klass", sp.klass)
+	markor:SetAttribute("Fidelity", sp.fidelity)
+	markor:SetAttribute("Motiv", sp.motiv)
 
 	--[[ Läktaren längs östra långsidan.
 
