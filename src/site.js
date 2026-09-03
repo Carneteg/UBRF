@@ -1514,7 +1514,7 @@ const RIDHUSINNE = {
        och stallet som den GRÅ, trappstegsformade till HÖGER, med
        Björklidsvägen upptill. Stallet ligger alltså öster om ridhuset,
        precis som spelet har det. Gången måste då gå in på ridhusets ÖSTRA
-       sida, och läktargapet ligger just där.
+       sida, och hästgångens grind i sargen ligger just där.
 
      EMOT:
      - i huvudplanen ligger entré-/trappdelen upptill, och om det är norr
@@ -1706,7 +1706,9 @@ const RIDHUSINNE = {
      är hästgången dekoration. Man leder hästen in genom gången, och då ska man
      komma ut på banan — sargen kan inte vara obruten just där.
 
-     Läget följer läktargapet, alltså hästgången. Bredden är vald, inte mätt.
+     Läget härleds ur hästgångens fäste i ridhusets östra långsida
+     (GANG_FASTE, GANG_DJUP) — läktaren står på västra sidan och har inget
+     gap; det gamla "läktargapet" finns inte. Bredden är vald, inte mätt.
      [ASSUMPTION] */
   sargGrind:{y0:GANG_FASTE-RIDHUS_Y-0.15, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+0.15},
   /* ENTRÉDELEN ur planen. `hallMobler` — disk, bänkar, kansli, omklädning,

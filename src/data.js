@@ -57,19 +57,21 @@ const SITE={
    K-V-E-S-H på ena långsidan och F-P-B-R-M på den andra, med sex meter
    till första bokstaven och tolv meter mellan resten.
 
-   VILKEN LÅNGSIDA SOM ÄR VILKEN avgörs av var A ligger, och A ligger där
-   man rider in. Sargporten sitter i banans NORRA kortsida (SPELABSTRAKTIONER.ridhus.sargport, en spelabstraktion
-   och sargen i v3dRidhus), alltså är den kortsidan A. Rider man in vid A
-   och tittar mot C har man östra långsidan till vänster — och på vänster
-   sida sitter K-V-E-S-H.
+   VILKEN LÅNGSIDA SOM ÄR VILKEN avgörs av var A och C ligger, och det
+   avgörs av utrymningsplanen och fotona — inte av var spelet släpper in
+   folk. A ligger i SÖDER och C i NORR (se noten nedan). Sargöppningen i
+   banans norra kortsida (`SPELABSTRAKTIONER.ridhus.sargport`) är en
+   spelabstraktion för folk till fots och säger ingenting om A; hästen
+   kommer in via hästgången och grinden i sargens ÖSTRA långsida
+   (`RIDHUSINNE.sargGrind`). Står man vid A och tittar mot C har man
+   västra långsidan till vänster — och på vänster sida sitter K-V-E-S-H.
 
-   Det spelade roll. Fram till 2026-08-30 låg A vid södra kortsidan medan
-   porten låg i norr, så bokstäverna hamnade spegelvända: E låg mot
-   sponsorväggen i väster, där det bara finns 0,6 m bakom sargen. Verifierat
-   Drive-material (`IMG_0198`, se DRIVE-SOURCE-INDEX) visar E med en låg
-   upphöjd träläktarnivå bakom sargen och en trappa upp till ett litet bås.
-   Det utrymmet finns bara på läktarsidan i öster. Med A vid porten hamnar E
-   där, och fotot och planen säger samma sak.
+   Fotobeviset för E: `IMG_0198` (se DRIVE-SOURCE-INDEX) visar E med en låg
+   upphöjd träläktarnivå bakom sargen och en trappa upp till ett litet bås —
+   E står alltså på läktarsidan. Med läktaren i väster enligt planen och A i
+   söder hamnar E i väster, och fotot och planen säger samma sak. (Samma
+   bild lästes 2026-08-30 med läktaren i öster och A i norr; det var fel —
+   se noten nedan.)
 
    Och bildgåtorna. På UBRF sitter en liten bildskylt till vänster om
    varje bokstav — banan vid B, morot vid M, cykel vid C. Barnen lär sig

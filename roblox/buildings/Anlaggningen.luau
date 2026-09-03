@@ -551,7 +551,10 @@ local INRE = {
 	halvgenomskinliga volymer: man ska se att de finns men inte gå in.
 	Namngivna gångbara rum får en tunn, okolliderande etikettplatta med
 	namnet som attribut, så att Studio kan visa vad som är vad utan att
-	något solitt tillkommer. ]]
+	något solitt tillkommer. Rum med tom etikett (`label = ""`) är avsiktligt
+	namnlösa — funktion REFERENCE GAP — och får ingen platta alls; webben
+	ritar heller ingen text för dem. Tom sträng är sann i Luau, därför
+	prövas längden uttryckligen. ]]
 local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, prefix: string, farg: Color3)
 	for _, v in ipairs(K.vaggar) do
 		local t = v.tjock or 0.16
@@ -574,7 +577,7 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 				o.x + q.x, 0, o.y + q.y, q.w, h * 0.9, q.h, INRE.rum, Enum.Material.Plaster)
 			p.Transparency = 0.45
 			p:SetAttribute("Rum", r.id)
-		elseif r.label then
+		elseif r.label ~= nil and r.label ~= "" then
 			local p = BK.box(model, base, "Rumsetikett " .. r.label,
 				o.x + q.x, 0.03, o.y + q.y, q.w, 0.02, q.h, INRE.rum, Enum.Material.SmoothPlastic)
 			p.CanCollide = false

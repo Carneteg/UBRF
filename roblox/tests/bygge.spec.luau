@@ -284,6 +284,34 @@ do
 	end
 end
 
+--[[ Etikettplattor bara för rum som har ett namn. Rum med `label = ""` är
+	avsiktligt namnlösa (funktion REFERENCE GAP): webben ritar ingen text för
+	dem, och Roblox får inte bygga en tom "Rumsetikett "-platta — det vore
+	Roblox-egen geometri i rum som ska vara tomma. Tom sträng är sann i Luau,
+	så bygget måste pröva längden, inte bara att fältet finns. ]]
+do
+	local S2, R3 = UBRFKomplex.stall, UBRFKomplex.ridhus
+	local vantade, namnlosa = 0, 0
+	for _, block in ipairs({ S2.klubb, R3.entrehall }) do
+		for _, r in ipairs(block.rum or {}) do
+			if not r.stangt then
+				if r.label ~= nil and r.label ~= "" then vantade += 1 else namnlosa += 1 end
+			end
+		end
+	end
+	local tomma, byggda = 0, 0
+	for _, d in ipairs(delar) do
+		if d.Name == "Rumsetikett " or d.Name == "Rumsetikett" then tomma += 1 end
+		if string.find(d.Name, "Rumsetikett", 1, true) == 1 then byggda += 1 end
+	end
+	check("namnlösa öppna rum får ingen tom etikettplatta i Roblox",
+		namnlosa > 0 and tomma == 0,
+		string.format("%d namnlösa öppna rum, %d tomma plattor", namnlosa, tomma))
+	check("etikettplattor byggs för exakt de namngivna öppna rummen",
+		byggda == vantade and vantade > 0,
+		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
+end
+
 --[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:
 	"hästförbindelsen bryter boxraden ungefär på mitten". Planen visar
 	mittraderna och östra raden obrutna förbi samma höjd. Spelet hade en
