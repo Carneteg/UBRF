@@ -285,17 +285,28 @@ function vandringKollision(nx,ny,r){
      }else{
        [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
      }}
-    // läktaren och domarbåset är solida. Läktaren i sektioner: hästgången
-    // går igenom den, och ett obrutet block här stänger gången.
+    // läktaren och domarbåset är solida. Läktaren läses i sektioner ifall
+    // den någon gång får ett gap igen; utan gap är den ett stycke.
     for(const sek of laktarSektioner(R.laktare))
       [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
-        w:R.bredd-R.laktare.x0,h:sek.y1-sek.y0});
+        w:R.laktare.dackDjup,h:sek.y1-sek.y0});
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
-    /* Entréhallens möbler och skiljeväggar. De ritades men gick att gå
-       rakt igenom, vilket gjorde hallen svårläst: man visste inte vad
-       som var rum och vad som var utsmyckning. */
-    for(const m of (R.hallMobler||[])) [nx,ny]=kollideraRekt(nx,ny,r,m.rekt);
+    /* C-blocket vid norra änden är ett bänkblock man inte går igenom. */
+    {const K=R.kortanda; if(K) [nx,ny]=kollideraRekt(nx,ny,r,{x:K.x0,y:K.y0,w:K.x1-K.x0,h:K.y1-K.y0});}
+    /* Entrédelen ur planen: väggarna segment för segment med planens
+       luckor, och de slutna rummen (toaletterna, hissen) som lådor. Samma
+       regel som stallets klubbdel. */
+    if(R.entrehall){
+      for(const v of R.entrehall.vaggar){
+        const t=(v.tjock||0.16)/2;
+        for(const [a0,a1] of klubbVaggBitar(v)){
+          if(v.typ==="tvar") [nx,ny]=kollideraRekt(nx,ny,r,{x:a0,y:v.y-t,w:a1-a0,h:2*t});
+          else               [nx,ny]=kollideraRekt(nx,ny,r,{x:v.x-t,y:a0,w:2*t,h:a1-a0});
+        }
+      }
+      for(const rum of R.entrehall.rum) if(rum.stangt) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
+    }
   }else{ // stallinne
     /* Dubbelstallet går inte att uttrycka som ett intervall. Förut kläm-
        des spelaren in mellan två boxfronter, vilket bara fungerar när det
@@ -581,9 +592,9 @@ function interaktioner(){
         ? (G.tavling&&G.tavling.typ==="hoppning"
           ? `Sitt upp — Påskhoppet, ${G.tavling.klass.namn}`
           : `Sitt upp på ${HORSES[G.hastId].namn} — lektionen börjar`)
-        : "Sargporten vid A",
+        : "Sargporten",
       gor(){ if(G.leder)sittUpp("ridhus");
-             else saga("Genom sargporten släpps ekipagen in på banan. Din häst väntar i stallet.",3.5); }});
+             else saga("Genom sargporten går man ut på banan. Hästarna kommer in genom hästgången från stallet.",3.5); }});
   }else{
     const S=STALLINNE;
     for(const d of S.dorrar) L.push({pos:d.pos,
@@ -1807,31 +1818,48 @@ function ritaRidhus2D(){
   const[pa]=ss(R.port.x0,0),[pb]=ss(R.port.x1,0),[,py]=ss(0,ba.y+ba.h);
   cx.strokeStyle=R.sandFarg;cx.lineWidth=Math.max(3,s*0.6);
   cx.beginPath();cx.moveTo(pa,py);cx.lineTo(pb,py);cx.stroke();
-  // läktaren
+  // läktaren, på den sida `sidor` pekar ut, däckets djup bred
   cx.fillStyle="#7A6248";
   for(const sek of laktarSektioner(R.laktare)){
     const[sa,sb]=ss(R.laktare.x0,sek.y1);
-    cx.fillRect(sa,sb,(R.bredd-R.laktare.x0)*s,(sek.y1-sek.y0)*s);
+    cx.fillRect(sa,sb,R.laktare.dackDjup*s,(sek.y1-sek.y0)*s);
   }
   const[la,lb]=ss(R.laktare.x0,R.laktare.y1);
-  if(s>4){cx.save();cx.translate(la+(R.bredd-R.laktare.x0)*s/2,lb+(R.laktare.y1-R.laktare.y0)*s/2);
+  if(s>4){cx.save();cx.translate(la+R.laktare.dackDjup*s/2,lb+(R.laktare.y1-R.laktare.y0)*s/2);
     cx.rotate(-Math.PI/2);cx.fillStyle="#2A241C";
     cx.font=`500 ${Math.max(9,s*1.6)}px "IBM Plex Mono",monospace`;cx.textAlign="center";
     cx.fillText("LÄKTAREN",0,3);cx.restore();}
-  // entré- och caféöverbyggnaden i norr
+  // C-blocket vid norra änden, och caféet ovanpå entrédelen
+  {const K=R.kortanda; if(K){const[ka,kb]=ss(K.x0,K.y1);
+    cx.fillStyle="#8A6F50";cx.fillRect(ka,kb,(K.x1-K.x0)*s,(K.y1-K.y0)*s);
+    if(s>4){cx.fillStyle="#2A241C";cx.font=`500 ${Math.max(8,s*1.2)}px "IBM Plex Mono",monospace`;
+      cx.textAlign="center";cx.fillText("C-BLOCKET · CAFÉ OVANPÅ",ka+(K.x1-K.x0)*s/2,kb+(K.y1-K.y0)*s/2+3);}}}
   const[ca,cb]=ss(0,R.langd);
-  cx.fillStyle="rgba(233,229,220,.35)";cx.fillRect(ca,cb,R.bredd*s,R.cafe.djup*s);
-  if(s>4){cx.fillStyle="#8E877A";cx.font=`500 ${Math.max(8,s*1.2)}px "IBM Plex Mono",monospace`;
-    cx.textAlign="center";cx.fillText("CAFÉ KRUBBAN (OVANPÅ)",ca+R.bredd*s/2,cb+R.cafe.djup*s/2+3);}
-  // speglar och skyltar på västra långsidan
-  for(const sp of R.speglar){const[a,b]=ss(0.4,sp.y+sp.b/2);
-    cx.fillStyle="#93A9BC";cx.fillRect(a,b,s*0.5,sp.b*s);}
-  for(const sk of R.skyltar){const[a,b]=ss(0.4,sk.y+sk.b/2);
-    cx.fillStyle=sk.bg;cx.fillRect(a,b,s*0.4,sk.b*s);}
-  // bokstäverna
+  cx.fillStyle="rgba(233,229,220,.20)";cx.fillRect(ca,cb,R.bredd*s,R.cafe.djup*s);
+  // entrédelens väggar ur planen, med luckorna, och de slutna rummen
+  if(R.entrehall){
+    cx.strokeStyle="#4A4438";cx.lineWidth=2;
+    for(const v of R.entrehall.vaggar) for(const [a0,a1] of klubbVaggBitar(v)){
+      const p=v.typ==="tvar"?ss(a0,v.y):ss(v.x,a0), q=v.typ==="tvar"?ss(a1,v.y):ss(v.x,a1);
+      cx.beginPath();cx.moveTo(p[0],p[1]);cx.lineTo(q[0],q[1]);cx.stroke();
+    }
+    for(const rm of R.entrehall.rum){
+      const[a,b]=ss(rm.rekt.x,rm.rekt.y+rm.rekt.h);
+      if(rm.stangt){cx.fillStyle="rgba(74,68,56,.35)";cx.fillRect(a,b,rm.rekt.w*s,rm.rekt.h*s);}
+      if(rm.label&&s>4){cx.fillStyle="#8E877A";cx.font=`500 ${Math.max(7,s*0.45)}px "IBM Plex Mono",monospace`;
+        cx.textAlign="center";cx.fillText(rm.label,a+rm.rekt.w*s/2,b+rm.rekt.h*s/2);}
+    }
+  }
+  // speglar och skyltar på panelens långsida
+  {const px=(R.spegelSida==="E")?R.bredd-0.9:0.4;
+   for(const sp of R.speglar){const[a,b]=ss(px,sp.y+sp.b/2);
+     cx.fillStyle="#93A9BC";cx.fillRect(a,b,s*0.5,sp.b*s);}
+   for(const sk of R.skyltar){const[a,b]=ss(px,sk.y+sk.b/2);
+     cx.fillStyle=sk.bg;cx.fillRect(a,b,s*0.4,sk.b*s);}}
+  // bokstäverna, rakt ur DRESSYRBOKSTAVER — A i söder, C i norr
   cx.fillStyle="#C9BFA6";cx.font=`600 ${Math.max(9,s*1.3)}px Petrona,serif`;cx.textAlign="center";
   for(const{b,x,y}of DRESSYRBOKSTAVER){
-    const lx=20-x, ly=60-y;   // A vid porten i norr — ringen vriden 180°
+    const lx=x, ly=y;
     const[a,c]=ss(ba.x+lx+(lx===0?-1:lx===20?1:0), ba.y+ly+(ly===0?-1.4:ly===60?1.4:0));
     cx.fillText(b,a,c+4);}
   for(const d of R.dorrar){const[a,b]=ss(d.pos[0],d.pos[1]);
@@ -1891,53 +1919,55 @@ function ritaRidhus3D(){
   yttervagg([R.bredd,0],[R.bredd,R.langd],0.80);
   yttervagg([0,R.langd],[R.bredd,R.langd],0.92);
   yttervagg([0,0],[R.bredd,0],0.92);
-  // sponsorväggen i väster: brun panel med vita lister, skyltar, speglar, fönsterband
-  items.push({d:-avst2([0,VD.py])-1e6, rita(){
-    ritaPoly3D(k,[[0.05,4,1.35],[0.05,R.langd-2,1.35],[0.05,R.langd-2,3.7],[0.05,4,3.7]],
+  // sponsorväggen på panelens långsida: brun panel med vita lister, skyltar, speglar, fönsterband
+  {const pE=(R.spegelSida==="E"), px=pE?R.bredd-0.05:0.05, pin=pE?-1:1;
+  items.push({d:-avst2([px,VD.py])-1e6, rita(){
+    ritaPoly3D(k,[[px,4,1.35],[px,R.langd-2,1.35],[px,R.langd-2,3.7],[px,4,3.7]],
       fargSkala(R.panel,0.9),null);
     for(const z of [1.9,2.5,3.1])
-      ritaLinje3D(k,[0.06,4,z],[0.06,R.langd-2,z],R.panelList,1.5);
+      ritaLinje3D(k,[px+pin*0.01,4,z],[px+pin*0.01,R.langd-2,z],R.panelList,1.5);
     // högt fönsterband som släpper in kvällsljus
-    ritaPoly3D(k,[[0.05,4,4.6],[0.05,R.langd-2,4.6],[0.05,R.langd-2,5.4],[0.05,4,5.4]],
+    ritaPoly3D(k,[[px,4,4.6],[px,R.langd-2,4.6],[px,R.langd-2,5.4],[px,4,5.4]],
       "#E8D9AE",null);
     for(const sk of R.skyltar){
-      ritaPoly3D(k,[[0.1,sk.y,2.0],[0.1,sk.y+sk.b,2.0],[0.1,sk.y+sk.b,3.0],[0.1,sk.y,3.0]],
+      const x=px+pin*0.05;
+      ritaPoly3D(k,[[x,sk.y,2.0],[x,sk.y+sk.b,2.0],[x,sk.y+sk.b,3.0],[x,sk.y,3.0]],
         sk.bg,"#8A857A");
-      ritaText3D(k,0.12,sk.y+sk.b/2,2.55,sk.text,1.7,sk.fg);
+      ritaText3D(k,x+pin*0.02,sk.y+sk.b/2,2.55,sk.text,1.7,sk.fg);
     }
     for(const sp of R.speglar){
-      ritaPoly3D(k,[[0.1,sp.y-0.15,1.5],[0.1,sp.y+sp.b+0.15,1.5],
-        [0.1,sp.y+sp.b+0.15,3.35],[0.1,sp.y-0.15,3.35]],"#5A4634",null);
-      ritaPoly3D(k,[[0.12,sp.y,1.6],[0.12,sp.y+sp.b,1.6],
-        [0.12,sp.y+sp.b,3.25],[0.12,sp.y,3.25]],"#9FB3C4",null);
-      ritaPoly3D(k,[[0.13,sp.y+0.2,1.7],[0.13,sp.y+sp.b*0.45,1.7],
-        [0.13,sp.y+sp.b*0.35,3.1],[0.13,sp.y+0.1,3.1]],"rgba(240,244,248,.45)",null);
+      const x=px+pin*0.05;
+      ritaPoly3D(k,[[x,sp.y-0.15,1.5],[x,sp.y+sp.b+0.15,1.5],
+        [x,sp.y+sp.b+0.15,3.35],[x,sp.y-0.15,3.35]],"#5A4634",null);
+      ritaPoly3D(k,[[x+pin*0.02,sp.y,1.6],[x+pin*0.02,sp.y+sp.b,1.6],
+        [x+pin*0.02,sp.y+sp.b,3.25],[x+pin*0.02,sp.y,3.25]],"#9FB3C4",null);
     }
-  }});
-  // läktaren i öster: tre trappsteg i plywood
-  const lk=R.laktare;
-  for(const sek of laktarSektioner(lk))
-  for(let i2=0;i2<lk.steg;i2++){
-    const x0=lk.x0+i2*lk.stegD, z1=(i2+1)*lk.stegH, y0=sek.y0, y1=sek.y1;
-    items.push({d:-avst2([x0,VD.py])-5e5+i2, rita(){
-      ritaPoly3D(k,[[x0,y0,z1-lk.stegH],[x0,y1,z1-lk.stegH],[x0,y1,z1],[x0,y0,z1]],
-        fargSkala("#8A6F50",0.85),null);   // sättsteg
-      ritaPoly3D(k,[[x0,y0,z1],[x0,y1,z1],[x0+lk.stegD,y1,z1],[x0+lk.stegD,y0,z1]],
-        "#9A7C58",null);                   // planet
-    }});
-  }
-  // domarbåset — trälåda med öppen front
-  const db=R.domarbas;
+  }});}
+  // läktaren: plant däck med solid front mot banan, på den sida `sidor` pekar ut
+  {const lk=R.laktare, lE=(R.sidor&&R.sidor.laktare==="E");
+   const fx=lE?lk.x0:lk.x0+lk.dackDjup;        // fronten står mot banan
+   const bx=lE?lk.x0+lk.dackDjup:lk.x0;        // bakkanten mot väggen
+   for(const sek of laktarSektioner(lk)){
+     const y0=sek.y0, y1=sek.y1;
+     items.push({d:-avst2([fx,VD.py])-5e5, rita(){
+       ritaPoly3D(k,[[fx,y0,0],[fx,y1,0],[fx,y1,lk.frontTopp],[fx,y0,lk.frontTopp]],
+         fargSkala("#5A4634",0.9),null);                       // fronten
+       ritaPoly3D(k,[[fx,y0,lk.dackZ],[fx,y1,lk.dackZ],[bx,y1,lk.dackZ],[bx,y0,lk.dackZ]],
+         "#9A7C58",null);                                       // däcket
+     }});
+   }}
+  // domarbåset — trälåda med öppen front mot banan
+  {const db=R.domarbas, dE=(R.sidor&&R.sidor.laktare==="E"), fs=dE?-1:1;
   items.push({d:-avst2([db.x,db.y]), rita(){
-    const b2=db.b/2;
-    ritaPoly3D(k,[[db.x-b2,db.y-b2,0.3],[db.x-b2,db.y+b2,0.3],
-      [db.x-b2,db.y+b2,0.3+db.h],[db.x-b2,db.y-b2,0.3+db.h]],"#7A5C3E","#4A3826");
+    const b2=db.b/2, fxx=db.x+fs*b2;
+    ritaPoly3D(k,[[fxx,db.y-b2,0.3],[fxx,db.y+b2,0.3],
+      [fxx,db.y+b2,0.3+db.h],[fxx,db.y-b2,0.3+db.h]],"#7A5C3E","#4A3826");
     ritaPoly3D(k,[[db.x-b2,db.y-b2,0.3],[db.x+b2,db.y-b2,0.3],
       [db.x+b2,db.y-b2,0.3+db.h],[db.x-b2,db.y-b2,0.3+db.h]],fargSkala("#7A5C3E",0.85),null);
-    ritaPoly3D(k,[[db.x-b2,db.y-b2,1.1],[db.x-b2,db.y+b2,1.1],
-      [db.x-b2,db.y+b2,1.9],[db.x-b2,db.y-b2,1.9]],"#3A4A5C",null); // rutan
-    ritaText3D(k,db.x-b2-0.05,db.y,2.5,"DOMARE",1.4,"#5C554A");
-  }});
+    ritaPoly3D(k,[[fxx,db.y-b2,1.1],[fxx,db.y+b2,1.1],
+      [fxx,db.y+b2,1.9],[fxx,db.y-b2,1.9]],"#3A4A5C",null); // rutan
+    ritaText3D(k,fxx+fs*0.05,db.y,2.5,"DOMARE",1.4,"#5C554A");
+  }});}
   // entré- och caféöverbyggnaden i norr: golvplatta, fönsterband mot banan, trappan
   items.push({d:-avst2([R.bredd/2,R.langd])-1.5e6, rita(){
     const dj=R.langd-R.cafe.djup;   // väggen mot banan
@@ -1953,13 +1983,41 @@ function ritaRidhus3D(){
       [R.bredd,R.langd,R.cafe.z0],[0,R.langd,R.cafe.z0]],"#C9C4B8",null);
     ritaText3D(k,R.bredd/2-2,dj+0.05,R.cafe.z1-0.25,"CAFÉ KRUBBAN",1.8,"#5C554A");
   }});
-  // trätrappan upp till caféet
-  items.push({d:-avst2([R.trappa.x,R.trappa.y]), rita(){
-    for(let i2=0;i2<8;i2++){const t=i2/8;
-      ritaLinje3D(k,[R.trappa.x-1.1,R.trappa.y+t*2.2,0.1+t*R.cafe.z0],
-        [R.trappa.x+0.1,R.trappa.y+t*2.2,0.1+t*R.cafe.z0],"#8A6F50",3);}
-    ritaLinje3D(k,[R.trappa.x-1.1,R.trappa.y,0.9],[R.trappa.x-1.1,R.trappa.y+2.2,R.cafe.z0+0.9],"#5A4634",2);
-  }});
+  // C-blocket vid norra änden: bänkblocket som en låda med steg antydda,
+  // sett från banan. Trapporna upp till caféet går härifrån.
+  {const K=R.kortanda; if(K){
+    const H=(K.sockelH||0)+K.steg*K.stegH, front=K.vand==="S"?K.y0:K.y1;
+    items.push({d:-avst2([(K.x0+K.x1)/2,front]), rita(){
+      ritaPoly3D(k,[[K.x0,front,0],[K.x1,front,0],[K.x1,front,H],[K.x0,front,H]],"#86715B","#6F5C49");
+      for(let i=1;i<K.steg;i++){const z=(K.sockelH||0)+K.stegH*i, d=K.vand==="S"?K.stegD*i:-K.stegD*i;
+        ritaLinje3D(k,[K.x0,front+d,z],[K.x1,front+d,z],"#6F5C49",1);}
+      ritaText3D(k,(K.x0+K.x1)/2,front+(K.vand==="S"?0.3:-0.3),H+0.6,"C-BLOCKET · CAFÉ KRUBBAN OVANPÅ",1.5,"#5C554A");
+    }});
+  }}
+  // entrédelens väggar ur planen, bit för bit med luckorna, och de slutna rummen
+  if(R.entrehall){
+    for(const v of R.entrehall.vaggar){
+      const t=(v.tjock||0.16)/2;
+      for(const [a0,a1] of klubbVaggBitar(v)){
+        const tvar=v.typ==="tvar";
+        const p0=tvar?[a0,v.y]:[v.x,a0], p1=tvar?[a1,v.y]:[v.x,a1];
+        items.push({d:-avst2([(p0[0]+p1[0])/2,(p0[1]+p1[1])/2]), rita(){
+          ritaPoly3D(k,[[p0[0],p0[1],0],[p1[0],p1[1],0],[p1[0],p1[1],R.cafe.z0],[p0[0],p0[1],R.cafe.z0]],
+            fargSkala(R.vagg,tvar?0.88:0.95),"#B9B4A9");
+        }});
+      }
+    }
+    for(const rm of R.entrehall.rum){
+      const q=rm.rekt, cxm=q.x+q.w/2, cym=q.y+q.h/2;
+      if(rm.stangt){
+        for(const [x0,y0,x1,y1] of [[q.x,q.y,q.x+q.w,q.y],[q.x+q.w,q.y,q.x+q.w,q.y+q.h],
+                                     [q.x+q.w,q.y+q.h,q.x,q.y+q.h],[q.x,q.y+q.h,q.x,q.y]])
+          items.push({d:-avst2([(x0+x1)/2,(y0+y1)/2]), rita(){
+            ritaPoly3D(k,[[x0,y0,0],[x1,y1,0],[x1,y1,R.cafe.z0],[x0,y0,R.cafe.z0]],fargSkala(R.vagg,0.82),"#B9B4A9");}});
+      }
+      if(rm.label) items.push({d:-avst2([cxm,cym]), rita(){ritaText3D(k,cxm,cym,2.1,rm.label,1.3,"#7C756A");}});
+    }
+  }
   // hinderförrådet i söder: färgade bommar och koner
   items.push({d:-avst2([R.bredd/2,0])-1e5, rita(){
     const fargor=["#3A6EA5","#C0392B","#E8E4DA","#C9A23C"];

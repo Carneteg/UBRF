@@ -783,6 +783,33 @@ function golvKompStall(hex,dam){
     Math.min(255,Math.round(parseInt(hex.substr(i,2),16)/dam[k]))
       .toString(16).padStart(2,"0")).join("");
 }
+/* Väggar med öppningar och rum som regioner — planens topologi, byggd på
+   samma sätt i stallets klubbdel och ridhusets entrédel. Bitarna kommer ur
+   klubbVaggBitar (world.js), samma regel som Roblox Geometri.vaggBitar och
+   samma bitar kollisionen använder. Slutna rum blir hela volymer; namngivna
+   gångbara rum får sitt namn på västväggens insida. */
+function v3dVaggarOchRum(K,vaggFarg,hojd,lagg,tex){
+  const kl=new Bygge();
+  for(const v of K.vaggar){
+    const t=v.tjock||0.16;
+    for(const [a0,a1] of klubbVaggBitar(v)){
+      if(v.typ==="tvar") kl.lada(a1-a0,hojd,t,vaggFarg,M4.translation((a0+a1)/2,hojd/2,v.y));
+      else               kl.lada(t,hojd,a1-a0,vaggFarg,M4.translation(v.x,hojd/2,(a0+a1)/2));
+    }
+  }
+  for(const r of K.rum){
+    const q=r.rekt;
+    if(r.stangt) kl.lada(q.w,hojd,q.h,"#F2F0EA",M4.translation(q.x+q.w/2,hojd/2,q.y+q.h/2));
+    if(r.label){
+      const b=new Bygge();
+      v3dTextPanel(b,Math.min(q.h*0.8,2.6),0.5,
+        M4.mul(M4.translation(q.x+(r.stangt?-0.09:0.09),Math.min(1.9,hojd-0.4),q.y+q.h/2),
+               M4.rotY(r.stangt?-Math.PI/2:Math.PI/2)));
+      S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(r.label)});
+    }
+  }
+  lagg(kl,tex);
+}
 function v3dStall(lagg,opp){
   const S=STALLINNE, T=S3.tex, vx=S.bredd/2;
   /* Golvet, efter IMG_0249: en markstensgång i mitten — smalare än
@@ -1138,28 +1165,9 @@ function v3dStall(lagg,opp){
    }}
   /* KLUBBDELEN ur planen: väggarna segment för segment med dörrarna som
      luckor — samma bitar som world.js kolliderar mot och Roblox bygger ur
-     Geometri.vaggBitar — och de slutna rummen som hela volymer. Rumsnamnen
-     står på västväggens insida i varje namngivet rum. */
-  {const kl=new Bygge();
-   for(const v of S.klubb.vaggar){
-     const t=v.tjock||0.16;
-     for(const [a0,a1] of klubbVaggBitar(v)){
-       if(v.typ==="tvar") kl.lada(a1-a0,2.8,t,"#FFFFFF",M4.translation((a0+a1)/2,1.4,v.y));
-       else               kl.lada(t,2.8,a1-a0,"#FFFFFF",M4.translation(v.x,1.4,(a0+a1)/2));
-     }
-   }
-   for(const r of S.klubb.rum){
-     const q=r.rekt;
-     if(r.stangt) kl.lada(q.w,2.8,q.h,"#F2F0EA",M4.translation(q.x+q.w/2,1.4,q.y+q.h/2));
-     if(r.label){
-       const b=new Bygge();
-       v3dTextPanel(b,Math.min(q.h*0.8,2.6),0.5,
-         M4.mul(M4.translation(q.x+(r.stangt?-0.09:0.09),1.9,q.y+q.h/2),
-                M4.rotY(r.stangt?-Math.PI/2:Math.PI/2)));
-       S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(r.label)});
-     }
-   }
-   lagg(kl,T.parlspont);}
+     Geometri.vaggBitar — och de slutna rummen som hela volymer. Samma
+     byggare som ridhusets entrédel. */
+  v3dVaggarOchRum(S.klubb,"#FFFFFF",2.8,lagg,T.parlspont);
   lagg(rum,T.parlspont);
   /* Whiteboarden. */
   const wb=new Bygge();
@@ -1335,11 +1343,16 @@ function v3dRidhus(lagg,opp){
   const L={...R.laktare, y0:sek.y0, y1:sek.y1}, LL=L.y1-L.y0, Lm=(L.y0+L.y1)/2;
   /* PLANT DÄCK, inte trappsteg — se noten i site.js. Fotonas förgrund är
      ett brett plankdäck med en solid mörk front och en ljus kappregel. */
-  {const D2=L.x0+L.dackDjup;
-   lak.lada(L.dackDjup,0.10,LL,"#C9BCA4",
+  /* Fronten står mot BANAN, bakkanten mot väggen. Däcket löper alltid från
+     x0 i positiv x-led (se site.js), så med läktaren i väster är fronten
+     x0+dackDjup — skrivet som "x0" låg den mot ytterväggen efter
+     speglingen. `lE` avgör. */
+  const lE=(R.sidor&&R.sidor.laktare==="E");
+  const frontX=lE?L.x0:L.x0+L.dackDjup, bakX=lE?L.x0+L.dackDjup:L.x0, inat=lE?-1:1;
+  {lak.lada(L.dackDjup,0.10,LL,"#C9BCA4",
      M4.translation(L.x0+L.dackDjup/2,L.dackZ,Lm));            // plankdäcket
    for(let z=L.y0;z<=L.y1;z+=2.5)                              // stomme under däcket
-     lak.lada(0.12,L.dackZ,0.12,"#A98F68",M4.translation(D2-0.2,L.dackZ/2,z));
+     lak.lada(0.12,L.dackZ,0.12,"#A98F68",M4.translation(bakX-inat*0.2,L.dackZ/2,z));
    /* Fronten mot banan: solid, mörkbetsad liggande panel upp till
       kappregeln. Båda interiörfotona är tagna från däcket och visar just
       den här väggen i förgrunden. */
@@ -1347,29 +1360,29 @@ function v3dRidhus(lagg,opp){
    for(let y=0;y<L.frontTopp-0.01;y+=F.brada){
      const h=Math.min(F.brada,L.frontTopp-y);
      lak.lada(F.tjocklek,h*0.94,LL,F.farg,
-       M4.translation(L.x0-F.tjocklek/2,y+h/2,Lm));
+       M4.translation(frontX+inat*F.tjocklek/2,y+h/2,Lm));
    }
    lak.lada(F.tjocklek+0.10,L.kappH,LL,"#C9BCA4",             // ljus kappregel
-     M4.translation(L.x0-F.tjocklek/2,L.frontTopp+L.kappH/2,Lm));}
+     M4.translation(frontX+inat*F.tjocklek/2,L.frontTopp+L.kappH/2,Lm));}
   for(let i=0;i<(R.dynor||0);i++){                  // elon-dynorna
     const z=L.y0+2.0+i*((LL-4)/Math.max(1,R.dynor-1));
     lak.lada(0.44,0.06,0.34,"#26282C",
-      M4.translation(L.x0+L.dackDjup*0.55,L.dackZ+0.11,z));
+      M4.translation(frontX+inat*L.dackDjup*0.45,L.dackZ+0.11,z));
   }
   for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
-    const x=L.x0+L.dackDjup*0.8;
+    const x=frontX+inat*L.dackDjup*0.2;
     lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.dackZ,z));
     lak.lada(0.42,0.46,0.06,"#D4551E",M4.translation(x,0.68+L.dackZ,z-0.18));
     for(const d of [-0.16,0.16])
       lak.lada(0.04,0.45,0.04,"#8C8F92",M4.translation(x+d,0.22+L.dackZ,z));
   }
-  {const L2=L;                                      // räcket längs läktarens framkant
+  {const L2=L, rx=frontX+inat*0.10;                 // räcket längs läktarens framkant
    for(const y of [0.62,1.02])
      lak.lada(0.09,0.09,L2.y1-L2.y0,"#8A6A44",
-       M4.translation(L2.x0-0.10,y+L2.steg*L2.stegH,(L2.y0+L2.y1)/2));
+       M4.translation(rx,y+L2.dackZ,(L2.y0+L2.y1)/2));
    for(let z=L2.y0;z<=L2.y1;z+=2.4)
      lak.lada(0.09,1.05,0.09,"#8A6A44",
-       M4.translation(L2.x0-0.10,0.52+L2.steg*L2.stegH,z));}
+       M4.translation(rx,0.52+L2.dackZ,z));}
   }  /* slut på läktarsektionerna */
   /* ── MOTSÄGELSE 4: båset vid E ────────────────────────────────────
      `IMG_0198`: vid dressyrbokstaven E leder en trappa MED TRÄRÄCKEN upp
@@ -1399,9 +1412,11 @@ function v3dRidhus(lagg,opp){
       lak.lada(sl,0.09,bb,"#3A2A1C",
         M4.mul(M4.translation(D.x+sida*bb/4,golv+D.h+BT.resning/2,dy),
                M4.rotZ(-sida*lut)));}
-   /* Öppningen mot banan, så att båset inte blir en sluten låda. */
+   /* Öppningen mot banan, så att båset inte blir en sluten låda. Banan
+      ligger på den sida läktaren INTE står — `dIn` pekar dit. */
+   const dIn=(R.sidor&&R.sidor.laktare==="E")?-1:1;
    lak.lada(0.06,D.h*0.62,D.b*0.62,"#1C1A18",
-     M4.translation(D.x-D.b/2-0.02,golv+D.h*0.52,dy));
+     M4.translation(D.x+dIn*(D.b/2+0.02),golv+D.h*0.52,dy));
    if(D.trappa){
      /* Trappan upp, med räcke på båda sidor — räckena är det man ser
         först i fotot, inte trappstegen. */
@@ -1418,31 +1433,20 @@ function v3dRidhus(lagg,opp){
            M4.translation(D.x+sx,(sh*i)/2+golv*0.28+0.16,z0+sd*i));
      }
    }}
-  for(let i=0;i<8;i++)                                  // trappan upp till caféet
-    lak.lada(1.2,0.19,0.30,"#FFFFFF",
-      M4.translation(R.trappa.x,0.19*i+0.10,R.trappa.y+0.30*i));
+  /* Den separata trätrappan till caféet och den andra klockan är borta:
+     caféet nås via C-blockets två trappor, och klockan sitter mellan dem.
+     Se noten vid RIDHUSINNE.cafe. */
   lagg(lak,T.tra);
 
-  /* Exit-skylten över båsets öppning, och klockan vid den centrala
-     passagen — MOTSÄGELSE 4 respektive 3. Båda ligger utanför trä-
-     texturen: en grön skylt och en vit urtavla ska inte ha ådring. */
+  /* Exit-skylten över båsets öppning — MOTSÄGELSE 4. Utanför trä-
+     texturen: en grön skylt ska inte ha ådring. */
   {const sk=new Bygge(), D=R.domarbas, golv=R.laktare.dackZ;
+   const dIn=(R.sidor&&R.sidor.laktare==="E")?-1:1;
    if(D.exit){
      sk.lada(0.05,0.26,0.72,"#1E7A3C",
-       M4.translation(D.x-D.b/2-0.05,golv+D.h+0.30,D.y));
+       M4.translation(D.x+dIn*(D.b/2+0.05),golv+D.h+0.30,D.y));
      sk.lada(0.02,0.13,0.30,"#EAF6EC",
-       M4.translation(D.x-D.b/2-0.08,golv+D.h+0.30,D.y));
-   }
-   const K=R.klocka;
-   if(K){
-     sk.cyl(K.r,K.r,0.09,"#2A2A2C",
-       M4.mul(M4.translation(K.x,K.z,K.y),M4.rotZ(Math.PI/2)),18);
-     sk.cyl(K.r*0.86,K.r*0.86,0.04,"#F4F1E8",
-       M4.mul(M4.translation(K.x-0.06,K.z,K.y),M4.rotZ(Math.PI/2)),18);
-     sk.lada(0.03,0.05,K.r*0.62,"#26282C",
-       M4.translation(K.x-0.09,K.z+0.04,K.y-K.r*0.28));
-     sk.lada(0.03,K.r*0.46,0.05,"#26282C",
-       M4.translation(K.x-0.09,K.z+K.r*0.21,K.y));
+       M4.translation(D.x+dIn*(D.b/2+0.08),golv+D.h+0.30,D.y));
    }
    lagg(sk,null);}
 
@@ -1457,27 +1461,38 @@ function v3dRidhus(lagg,opp){
   {const K=R.kortanda;
    if(K){
     const gl=new Bygge(), br=K.x1-K.x0, xm=(K.x0+K.x1)/2;
+    /* `vand` säger var BANAN ligger. "S": blocket står i norra änden och
+       stegen stiger norrut från bankanten y0 mot gavelväggen y1, där den
+       vita väggen och glasbandet står. `ut` pekar från banan mot väggen.
+       Förut låg blocket i söder med väggen vid y0 och talen skrivna för
+       just det; nu räknas allt ur `bank` och `vagg`. */
+    const mS=(K.vand==="S"), bank=mS?K.y0:K.y1, vagg=mS?K.y1:K.y0, ut=mS?1:-1;
     const SO=K.sockelH||0;
     if(SO>0)                                    // sockeln blocket står på
       gl.lada(br,SO,K.y1-K.y0,"#B9A886",
         M4.translation(xm,SO/2,(K.y0+K.y1)/2));
     for(let i=0;i<K.steg;i++){
-      const z=K.y1-i*K.stegD-K.stegD/2, y=SO+K.stegH*(i+1);
+      const z=bank+ut*(i*K.stegD+K.stegD/2), y=SO+K.stegH*(i+1);
       gl.lada(br,0.08,K.stegD-0.05,K.bank,M4.translation(xm,y,z));   // sittplanka
       gl.lada(br,K.stegH,0.06,K.bankSatt,
-        M4.translation(xm,y-K.stegH/2,z+K.stegD/2));                    // sättsteg
+        M4.translation(xm,y-K.stegH/2,z-ut*K.stegD/2));                 // sättsteg mot banan
     }
     /* De två trapporna upp, med mörka träräcken. */
     const H=SO+K.steg*K.stegH;
     for(const tx of K.trappor){
       for(let i=0;i<K.steg;i++)
         gl.lada(K.trappB,0.08,K.stegD-0.05,"#CDBB98",
-          M4.translation(tx,SO+K.stegH*(i+1),K.y1-i*K.stegD-K.stegD/2));
+          M4.translation(tx,SO+K.stegH*(i+1),bank+ut*(i*K.stegD+K.stegD/2)));
       for(const dx of [-K.trappB/2,K.trappB/2])
         gl.lada(0.08,0.85,K.steg*K.stegD,"#5A4232",
           M4.mul(M4.translation(tx+dx,H*0.55+0.42,(K.y0+K.y1)/2),
-                 M4.rotX(Math.atan2(H,K.steg*K.stegD))));
+                 M4.rotX(-ut*Math.atan2(H,K.steg*K.stegD))));
     }
+    /* DEN VITA VÄGGEN mellan bänkarnas ovankant och glasbandet, vid
+       väggsidan — där klockan och kompassrosen sitter. Roblox byggde den
+       redan; webben hade lämnat gapet öppet. */
+    gl.lada(br,K.glasOver,0.14,R.hallvagg||"#ACA99D",
+      M4.translation(xm,H+K.glasOver/2,vagg-ut*0.07));
     /* Glasbandet ovanför blocket: mörka träkarmar, ljus ruta. */
     const gz=H+K.glasOver;
     /* Bandet BRYTS av trapporna — se noten i site.js. Segmenten räknas ur
@@ -1499,21 +1514,21 @@ function v3dRidhus(lagg,opp){
       const w=bx-a, m=(a+bx)/2;
       const n=Math.max(1,Math.round(w/(K.glasPost||1.9)));
       /* Mörk reveal 0,45 m bakom glaslivet = rummets djup. */
-      gl.lada(w,K.glasH,0.10,"#22262B",M4.translation(m,gz+K.glasH/2,K.y0-0.45));
+      gl.lada(w,K.glasH,0.10,"#22262B",M4.translation(m,gz+K.glasH/2,vagg+ut*0.45));
       /* Rutorna, varannan upplyst. */
       for(let i=0;i<n;i++){
         const rw=w/n, rx=a+rw*(i+0.5);
         const lyst=(i%2===0);
         gl.lada(rw-0.13,K.glasH-0.16,0.05,lyst?"#E8EFE6":"#7E8E96",
-          M4.translation(rx,gz+K.glasH/2,K.y0-0.30));
+          M4.translation(rx,gz+K.glasH/2,vagg+ut*0.30));
       }
-      gl.panel(w,K.glasH,"#C6D8E0",M4.translation(m,gz+K.glasH/2,K.y0));
+      gl.panel(w,K.glasH,"#C6D8E0",M4.translation(m,gz+K.glasH/2,vagg));
       /* Karmar och poster står ut ur glaslivet. */
       for(const yy of [gz,gz+K.glasH])
-        gl.lada(w,0.15,0.22,K.glasKarm,M4.translation(m,yy,K.y0+0.05));
+        gl.lada(w,0.15,0.22,K.glasKarm,M4.translation(m,yy,vagg-ut*0.05));
       for(let i=0;i<=n;i++)
         gl.lada(0.14,K.glasH,0.22,K.glasKarm,
-          M4.translation(a+w*i/n,gz+K.glasH/2,K.y0+0.05));
+          M4.translation(a+w*i/n,gz+K.glasH/2,vagg-ut*0.05));
     }
     /* KOMPASSROSEN på den vita väggen, vänster om vänstra trappan — `-01`.
        Linjeritad, inte fylld: fyra korsade tunna stavar ger de åtta uddarna
@@ -1525,92 +1540,41 @@ function v3dRidhus(lagg,opp){
       for(let i=0;i<4;i++){
         const v=i*Math.PI/4, lang=(i%2===0)?ST.r*2:ST.r*1.45;
         gl.lada(lang,ST.tjocklek,0.04,ST.farg,
-          M4.mul(M4.translation(ST.x,sy,K.y1+0.05),M4.rotZ(v)));
+          M4.mul(M4.translation(ST.x,sy,vagg-ut*0.17),M4.rotZ(v)));
       }}
     /* Klockan vid kortändan, mellan trapporna — `-01`. */
     if(K.klocka){const KL=K.klocka, ky=H+KL.overBlock;
       gl.cyl(KL.r,KL.r,0.07,"#2A2A2C",
-        M4.mul(M4.translation(KL.x,ky,K.y1+0.05),M4.rotX(Math.PI/2)),18);
+        M4.mul(M4.translation(KL.x,ky,vagg-ut*0.17),M4.rotX(Math.PI/2)),18);
       gl.cyl(KL.r*0.84,KL.r*0.84,0.03,"#F4F1E8",
-        M4.mul(M4.translation(KL.x,ky,K.y1+0.09),M4.rotX(Math.PI/2)),18);}
+        M4.mul(M4.translation(KL.x,ky,vagg-ut*0.21),M4.rotX(Math.PI/2)),18);}
     lagg(gl,null);
    }}
-  /* Entré- och trapphusdelen i norra gaveln, mot parkeringen.
-     Utrymningsplanen visar en
-     djup del med två trapphus, hiss och rum — inte en tre meter grund
-     överbyggnad. Kommer man in från parkeringen står man i en hall och
-     ser banan genom öppningen, i stället för att kliva rakt ut på den. */
-  /* Hela entré-delen är byggd i gavelns lokala ände z∈[0,E] och vrids
-     180° runt husets mitt, så att den hamnar i den NORRA gaveln och
-     speglingen stämmer med utsidans dörrar (entrén i öster, caféets
-     trappa i väster). En rotation, inte en spegling — normalerna
-     behåller sin riktning. */
-  const RT=m=>M4.mul(M4.mul(M4.translation(R.bredd/2,0,R.langd/2),M4.rotY(Math.PI)),
-    M4.mul(M4.translation(-R.bredd/2,0,-R.langd/2),m));
-  const RTt=(x,y,z)=>RT(M4.translation(x,y,z));   // som M4.translation, fast vriden
-  const cafe=new Bygge(), E=R.entre||R.cafe.djup;
-  cafe.lada(R.bredd,0.26,E,"#CFC8BC",                   // caféets golv, banans tak
-    RTt(R.bredd/2,R.cafe.z0,E/2));
-  cafe.lada(R.bredd,R.cafe.z1-R.cafe.z0-0.26,0.16,"#E9E5DC",
-    RTt(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,E));
-  for(let x=2;x<R.bredd-1;x+=3.2)                       // fönsterbandet mot banan
-    cafe.panel(2.4,1.1,"#3A4A5C",RTt(x,R.cafe.z0+1.3,E+0.10));
-  /* Skiljeväggen mot banan. Öppningen är bred och går ända upp — man
-     ska se banan från dörren, annars blir hallen en återvändsgränd. */
-  {/* Öppningen anges i det ovridna systemet så att den efter
-      180°-vridningen hamnar mitt för sargporten. */
-   const op0=R.bredd-R.port.x1-2.6, op1=R.bredd-R.port.x0+2.6;
-   cafe.lada(op0,R.cafe.z0,0.18,"#EFEBE2",RTt(op0/2,R.cafe.z0/2,E));
-   cafe.lada(R.bredd-op1,R.cafe.z0,0.18,"#EFEBE2",
-     RTt((op1+R.bredd)/2,R.cafe.z0/2,E));
-   cafe.lada(op1-op0,0.22,0.22,"#8A6A44",RTt((op0+op1)/2,R.cafe.z0-0.11,E));}
-  /* Rummen: kansliet till vänster, omklädningen till höger, trapphusen
-     i bortre hörnen. Väggarna är antydda, inte ritade rum för rum —
-     planen går inte att läsa så noga. */
-  cafe.lada(0.16,2.6,E-3.4,"#EFEBE2",RTt(6.4,1.3,E/2-0.2));
-  cafe.lada(5.2,2.6,0.16,"#EFEBE2",RTt(3.8,1.3,E-3.4));
-  cafe.lada(0.16,2.6,4.4,"#EFEBE2",RTt(18.6,1.3,E-2.4));
-  for(let i=0;i<9;i++)                                   // andra trapphuset
-    cafe.lada(1.3,0.17,0.30,"#D8CFC0",RTt(19.6,0.17*i+0.09,E-4.4+0.30*i));
-  lagg(cafe,null);
-
-  /* ── Hallen möblerad ──────────────────────────────────────────────
-     En tom hall med lågt tak läser som en tunnel. Det som gör den till
-     en entré är ljuset i taket, ett golv som skiljer sig från banan,
-     och saker man känner igen: disken, bänkarna, anslagstavlan och
-     hyllan med hjälmar. ── */
+  /* ── ENTRÉDELEN i norra gaveln, ur utrymningsplanen ──────────────
+     Förut byggdes en 180°-vriden hall med antydda väggar, receptionsdisk,
+     bänkar, hjälmhylla, anslagstavla och ett andra trapphus — allt
+     uppfunnet. Nu byggs planens väggar med planens luckor och de slutna
+     rummen, ur `entrehall`, med samma byggare som stallets klubbdel.
+     Möbleringen är F02-B. Caféet ovanpå: golvplattan ligger där
+     C-blockets glasband börjar (härlett i site.js). ── */
+  const E=R.entre||R.cafe.djup, EY=R.langd-E;
+  {const cafe=new Bygge();
+   cafe.lada(R.bredd,0.26,E,"#CFC8BC",                  // caféets golv, hallens tak
+     M4.translation(R.bredd/2,R.cafe.z0,EY+E/2));
+   /* Caféets vägg mot banan ovanför C-blockets glasband: bandet sitter i
+      blocket, resten upp till taket är vägg. */
+   cafe.lada(R.bredd,Math.max(0.2,R.cafe.z1-R.cafe.z0),0.16,"#E9E5DC",
+     M4.translation(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,EY));
+   lagg(cafe,null);}
+  /* Hallens golv, ljusare än banan, och takarmaturer under caféplattan. */
   lagg(new Bygge().yta(R.bredd-0.4,E-0.4,"#FFFFFF",
-    RTt(R.bredd/2,0.02,E/2),6),T.marksten);
-  const mob=new Bygge();
-  for(let x=3;x<R.bredd-1;x+=4.4)                        // takarmaturerna
-    for(let z=2.2;z<E-1;z+=4.0)
-      mob.lada(1.5,0.09,0.34,"#FBF6E6",RTt(x,R.cafe.z0-0.16,z));
-  /* Receptionsdisken innanför dörren. */
-  mob.lada(3.2,1.08,0.70,"#8A6A44",RTt(9.8,0.54,3.4));
-  mob.lada(3.4,0.09,0.86,"#C4A87E",RTt(9.8,1.12,3.4));
-  /* Bänkar längs väggen, och hyllan med hjälmar ovanför. */
-  for(const z of [5.4,7.6,9.8]){
-    mob.lada(0.44,0.07,1.70,"#C4A87E",RTt(1.1,0.46,z));
-    for(const d of [-0.7,0.7])
-      mob.lada(0.09,0.46,0.09,"#8A6A44",RTt(1.1,0.23,z+d));
-    mob.lada(0.50,0.07,1.70,"#C4A87E",RTt(1.2,1.62,z));
-    for(let i=0;i<3;i++)
-      mob.klot(0.14,"#3A4A5C",M4.mul(RTt(1.2,1.78,z-0.6+i*0.6),
-        M4.skala(1,0.72,1)),8);
-  }
-  /* Anslagstavlan och en pokalhylla mot kansliväggen. */
-  mob.lada(0.10,1.10,2.40,"#6B4A34",RTt(6.28,1.55,E/2-0.2));
-  mob.lada(0.09,0.90,2.20,"#F2EDE2",RTt(6.22,1.55,E/2-0.2));
-  mob.lada(0.34,0.07,2.00,"#C4A87E",RTt(6.55,2.15,E/2-2.6));
-  for(let i=0;i<5;i++)
-    mob.cyl(0.07,0.05,0.22,"#D6AE3C",RTt(6.55,2.22,E/2-3.4+i*0.42),8);
-  lagg(mob,T.tra);
-  /* Glaspartiet mot parkeringen, så att hallen får dager norrifrån. */
-  const glas=new Bygge();
-  for(const x of [3.1,4.4])
-    glas.panel(1.1,2.2,"#BFD4DE",M4.mul(RTt(x,1.15,0.14),M4.ny()));
-  glas.panel(1.5,1.5,"#BFD4DE",M4.mul(RTt(3.4,3.6,0.14),M4.ny()));
-  S3.statiskt.push({nat:GL.nat(glas), tex:null, baksidor:true});
+    M4.translation(R.bredd/2,0.02,EY+E/2),6),T.marksten);
+  {const arm=new Bygge();
+   for(let x=3;x<R.bredd-1;x+=4.4)
+     for(let z=EY+2.2;z<R.langd-1;z+=4.0)
+       arm.lada(1.5,0.09,0.34,"#FBF6E6",M4.translation(x,R.cafe.z0-0.16,z));
+   lagg(arm,T.tra);}
+  if(R.entrehall) v3dVaggarOchRum(R.entrehall,R.hallvagg||"#ACA99D",R.cafe.z0-0.3,lagg,T.parlspont);
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
      står i ridhuset mellan lektionerna och gör det till en arbetsplats
@@ -1651,14 +1615,16 @@ function v3dRidhus(lagg,opp){
     panel.lada(0.11,0.14,sp.b+0.24,"#7A5636",M4.translation(spX+spD,1.23,sp.y));
     for(const d of [-1,1])
       panel.lada(0.11,2.18,0.12,"#7A5636",M4.translation(spX+spD,2.25,sp.y+d*(sp.b/2+0.06)));
-    panel.lada(0.06,1.9,0.05,"#7A5636",M4.translation(ba.x-0.26,2.25,sp.y));
+    panel.lada(0.06,1.9,0.05,"#7A5636",M4.translation(spX+spD*2,2.25,sp.y));
   }
-  panel.lada(0.12,0.9,R.langd*0.8,"#6B4A34",M4.translation(ba.x-0.24,3.7,R.langd/2));
+  /* Banderollskenan och skyltarna hänger på panelsidan, som speglarna. */
+  const pX=(R.spegelSida==="E") ? ba.x+ba.w+0.24 : ba.x-0.24, pIn=(R.spegelSida==="E")?-1:1;
+  panel.lada(0.12,0.9,R.langd*0.8,"#6B4A34",M4.translation(pX,3.7,R.langd/2));
   lagg(panel,null);
   for(const s of R.skyltar){
     const b=new Bygge();
     v3dTextPanel(b,s.b,s.b*0.25,
-      M4.mul(M4.translation(ba.x-0.30,2.6,s.y),M4.rotY(Math.PI/2)));
+      M4.mul(M4.translation(pX-pIn*0.06,2.6,s.y),M4.rotY(pIn*Math.PI/2)));
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.skyltar||[])[R.skyltar.indexOf(s)]
       ||v3dEtikettTex(s.text)});
   }

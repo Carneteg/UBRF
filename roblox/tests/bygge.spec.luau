@@ -531,12 +531,30 @@ end
 --[[ Läktaren är ett PLANT DÄCK med solid front, inte trappsteg. Testets gamla
 	lydelse ("två sektioner om fyra steg") mätte den struktur som fotona
 	motsäger; den är utbytt tillsammans med bygget. ]]
-check("läktaren byggdes som plant däck i två sektioner",
-	raknaNamn("Läktardäck") == 2 and raknaNamn("Läktarfront") == 2
+check("läktaren byggdes som ETT plant däck, utan gap",
+	raknaNamn("Läktardäck") == 1 and raknaNamn("Läktarfront") == 1
 		and raknaNamn("Läktarsteg") == 0,
 	string.format("%d däck, %d fronter, %d gamla stegdelar",
 		raknaNamn("Läktardäck"), raknaNamn("Läktarfront"),
 		raknaNamn("Läktarsteg")))
+
+--[[ Fronten ska stå mot BANAN. Efter speglingen till väster låg den mot
+	ytterväggen i ett första försök — däcket löper från x0 i positiv x-led
+	på båda sidor, och "x0 − 0,10" är bara fronten när läktaren står i öster.
+	Mätt: fronten ska ligga på banans sida av däcket. ]]
+do
+	local R2 = UBRFKomplex.ridhus
+	local dack, front = forstaNamn("Läktardäck"), forstaNamn("Läktarfront")
+	if dack and front then
+		local fd, ff = fot(dack), fot(front)
+		local banX = R2.origo.x + R2.bana.x + R2.bana.w / 2
+		local dackMitt = fd.x + fd.w / 2
+		local frontMot = if banX > dackMitt then ff.x >= fd.x + fd.w - 0.2 else ff.x + ff.w <= fd.x + 0.2
+		check("läktarfronten står på banans sida av däcket", frontMot,
+			string.format("däck x %.2f–%.2f, front x %.2f, banans mitt %.2f",
+				fd.x, fd.x + fd.w, ff.x, banX))
+	end
+end
 
 --[[ Topologin fotona kräver, mätt som RELATION och inte mot talen: man ska
 	från däcket se över fronten ner i banan. Ändras höjderna i site.js ska
@@ -549,21 +567,51 @@ do
 		string.format("däck %.2f, fronttopp %.2f", L.dackZ, L.frontTopp))
 end
 
+--[[ ENTRÉDELEN ur planen, byggd med samma byggare som stallets klubbdel.
+	Provas som väggbitar mot deklarerade luckor, slutna rum som volymer och
+	en fri rutt: från huvudentrén i västväggen, söderut genom korridoren,
+	väster om C-blocket och genom sargporten ut på banan. ]]
 do
-	-- Inget läktarsteg får stå i hästgångens öppning. Bygger man läktaren i
-	-- ett stycke muras gången igen, och det syns först när någon går där.
 	local R2 = UBRFKomplex.ridhus
-	local g = R2.laktare.gap
-	local y0, y1 = R2.origo.y + g.y0, R2.origo.y + g.y1
-	local ivagen = 0
-	for _, d in ipairs(delar) do
-		if string.find(d.Name, "Läktarsteg", 1, true) then
-			local f = fot(d)
-			if f.y < y1 - 0.1 and f.y + f.h > y0 + 0.1 then ivagen += 1 end
+	local E = R2.entrehall
+	if E then
+		for _, v in ipairs(E.vaggar) do
+			local bitar = Geometri.vaggBitar(v)
+			local byggda = raknaNamn("Entrévägg " .. v.id .. ":")
+			check(string.format("entréväggen %s byggdes i planens bitar", v.id),
+				byggda == #bitar, string.format("%d byggda mot %d i datan", byggda, #bitar))
 		end
+		check("toaletterna och hissen byggdes som slutna volymer",
+			raknaNamn("Slutet rum wc_n1") == 1 and raknaNamn("Slutet rum wc_n2") == 1
+				and raknaNamn("Slutet rum hiss") == 1)
+		check("C-blocket står som ett solitt bänkblock i hallens södra kant",
+			raknaNamn("Kortändans steg") == R2.kortanda.steg
+				and raknaNamn("Kortändans sockel") == 1)
+		--[[ Rutten. Provpunkterna följer planens gröna pilar: in i korridoren,
+			söderut längs västväggen, ut väster om bänkblocket och genom porten. ]]
+		local o = R2.origo
+		local px0 = R2.port.x0 + 0.3
+		local rutt = {
+			{ 1.1, 74.2 }, { 1.1, 70.0 }, { 1.1, 66.0 }, { 1.1, 64.6 },
+			{ 3.2, 66.5 }, { px0 + 0.6, 66.5 }, { px0 + 0.6, R2.bana.y + R2.bana.h - 1.5 },
+			{ px0 + 0.6, R2.bana.y + R2.bana.h - 4.0 },
+		}
+		local blockerad = nil
+		for _, p in ipairs(rutt) do
+			local wx, wy = o.x + p[1], o.y + p[2]
+			for _, d in ipairs(delar) do
+				if d.CanCollide then
+					local f = fot(d)
+					local sparrar = f.z1 - f.z0 > 0.3 and f.z1 > 0.6 and f.z0 < 1.7
+					if sparrar and wx > f.x and wx < f.x + f.w and wy > f.y and wy < f.y + f.h then
+						blockerad = blockerad or string.format("%s vid (%.1f, %.1f)", d.Name, p[1], p[2])
+					end
+				end
+			end
+		end
+		check("rutten entré → korridoren → väster om C-blocket → sargporten → banan är fri",
+			blockerad == nil, blockerad or (#rutt .. " provpunkter fria"))
 	end
-	check("inget läktarsteg står i hästgångens öppning", ivagen == 0,
-		ivagen .. " i vägen")
 end
 
 do
@@ -664,7 +712,12 @@ check("domarbåset byggdes med nivå, tak, trappa och räcken",
 		raknaNamn("Domarbåsets trappsteg"), raknaNamn("Domarbåsets räcke"),
 		raknaNamn("Exit-skylt")))
 
-check("klockan byggdes", raknaNamn("Klockan") == 1)
+--[[ "Klockan byggdes" provade den andra klockan vid en trätrappa i hallen.
+	Den var en dubblett av C-blockets klocka och är borta; C-blockets provas
+	ovan. Här mäts i stället att ingen dubblett smugit sig in igen. ]]
+check("bara C-blockets klocka finns — ingen andra klocka i hallen",
+	raknaNamn("Kortändans klocka") == 1 and raknaNamn("Klockan") == 0,
+	string.format("%d C-klockor, %d andra", raknaNamn("Kortändans klocka"), raknaNamn("Klockan")))
 
 do
 	-- Sargen får inte stänga porten man rider in genom.

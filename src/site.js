@@ -1364,8 +1364,52 @@ const RIDHUSINNE = {
      Undantaget är allt som möter hästgången. Det måste sitta på RÄTT
      världsläge, inte bara rätt lokalt, och räknas därför om nedan mot
      origo y = 41,82. */
-  bredd:RIDHUS_BREDD, langd:RIDHUS_LANGD, tak:6.2, entre:13,
-  bana:{x:0.6, y:2, w:20, h:60}, sargH:1.35,
+  /* ═══ RIDHUSET EFTER UTRYMNINGSPLANEN — Product Owner-godkänd 2026-09-03 ═══
+
+     `references/plans/ridhus-entreplan-utrymning.jpg`, fotograferad liggande
+     och rätad upp (skyltens rubrik läses då rakt). Orienteringen är låst av
+     tre saker som inte kan tolkas om: entrén vetter mot parkeringen i norr
+     (låst exteriör), stallet ligger öster om ridhuset (situationsplanen,
+     satellit) och den svarta dörren i norra gaveln sitter 16,1–16,7 m från
+     västra väggen i planen mot fasadens 15,8–16,9 (`u:8.1`). Med den
+     nyckeln blir planens överkant VÄSTER och dess högra ände NORR.
+
+     Det planen då säger, mätt i bildpunkter (`tools/f02-planmatning.py`
+     hjälpte inte här — ridhusplanen mättes med samma metod direkt):
+
+       · LÄKTAREN, fem parallella linjer, löper längs VÄSTRA långsidan från
+         södra änden ända upp till entrédelen. Spelet hade den i öster med
+         ett gap för hästgången. Det var fel: hästgången kommer in från
+         öster, på sidan MITT EMOT läktaren, och bryter ingen läktare.
+       · ENTRÉDELEN är 11,5 m djup (bänkblockets kant 11,5 m från norra
+         gaveln; 15,1 % av längden mätt redan 2026-08-30). Banan börjar
+         alltså 5,7 m från södra gaveln, inte 2.
+       · C-BLOCKET — bänkblocket med de två trapporna och glasbandet — står
+         vid NORRA änden, 7,05–11,5 m från gaveln, och upptar den östra
+         delen av bredden, 8,6–21,6 m från västra väggen. Fyra steg. Spelet
+         hade det vid södra kortändan, en slutledning ur var bokstaven C
+         antogs sitta. C sitter alltså i norr och A i söder.
+       · MITTEN av C-blockets översta rad bär två trappor på 12,4–15,2 och
+         16,4–18,9 m från väster. Hissen (kryssad ruta) 2,6–4,4 × 7,0–8,8 m.
+       · HUVUDENTRÉN sitter i VÄSTRA väggen 2,2–2,7 m från norra gaveln, in
+         i en korridor längs västväggen. Norr om entrén två mycket smala
+         toaletter (Tobias: "två toaletter till vänster om entrén"; fotot
+         `ridhus-klubb-05-lilla-toaletten`). Fasadens dubbeldörr sitter 9 m
+         från gaveln — `CONTRADICTION`, fasaden låst, se nedan.
+       · Två parallella väggar 4,2 och 5,7 m från väster, 1,6–16 m från
+         gaveln: SKÅPKORRIDOREN (`ridhus-klubb-01`), som fortsätter söderut
+         förbi bänkblockets västra ände.
+
+     Tobias rumsidentiteter för entréklustret (reception, skåpförvaring,
+     ombytesrum med dusch, HWC) är knutna till markerade planurklipp,
+     Bild 1–7, som INTE finns i repot. Bara det som hans ord ensamma
+     fastställer byggs med namn: entrén, de två toaletterna, hästgången.
+     Resten av klustrets väggar byggs där planen ritar dem, utan namn —
+     `REFERENCE GAP` tills urklippen ligger i references/plans/. */
+  bredd:RIDHUS_BREDD, langd:RIDHUS_LANGD, tak:6.2, entre:11.5,
+  /* Banan: x följer läktarsidan (härleds nedan ur `sidor`), y ur planen —
+     entrédelen 11,5 m i norr lämnar 5,7 m i söder. `PLAN`. */
+  bana:{x:0.6, y:RIDHUS_LANGD-11.5-60, w:20, h:60}, sargH:1.35,
   vagg:"#E9E5DC", sockel:"#2E2E2C", sandFarg:"#6F5D4D", gangFarg:"#8C8880",
   /* HALLENS EGNA YTOR, alla MÄTTA i `ridhus-inne-01` och alla tidigare
      literaler i renderaren — samma dolda-literal-mönster som sanden, silon
@@ -1481,10 +1525,16 @@ const RIDHUSINNE = {
      `sidor` nedan finns för att en framtida spegling ska vara en
      DATAÄNDRING och inte ett ombygge: byt "E" mot "W" och tvärtom, så
      följer läktare, sponsorvägg och fönsterband med på båda ytorna. */
-  sidor:{laktare:"E", panel:"W"},
-  laktare:{x0:21.0, y0:9, y1:59,
-           dackZ:0.80, dackDjup:3.4, frontTopp:1.45, kappH:0.09,
-           gap:{y0:GANG_FASTE-RIDHUS_Y-2.6, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+2.6}},
+  /* SPEGLAD 2026-09-03 ur planen: läktaren i VÄSTER, panelen i öster.
+     Frågan som stod öppen här är stängd av den svarta gaveldörren — se
+     noten överst. Speglingen är precis den dataändring `sidor` fanns för. */
+  sidor:{laktare:"W", panel:"E"},
+  /* Läktaren löper i planen längs hela banan, från södra änden upp till
+     entrédelen. Utan gap: hästgången kommer in på motsatt långsida.
+     y0/y1 följer banan (härleds nedan). `PLAN` för sida och utbredning;
+     däckets höjd och djup är som förut `DERIVED` ur -03. */
+  laktare:{x0:0.6, y0:0, y1:0,
+           dackZ:0.80, dackDjup:3.4, frontTopp:1.45, kappH:0.09},
   /* KORTÄNDANS LÄKTARE (`IMG_0179`), Review 05 blocker 3.
 
      Spelet hade bara en läktare — den längs östra långsidan — och lade de
@@ -1542,7 +1592,16 @@ const RIDHUSINNE = {
 
      `VERIFIED`: att glaset går i bås med mörka karmar, och att trapporna
      bryter bandet. `[REFERENCE GAP]`: båsens exakta delning. */
-  kortanda:{y0:0.4, y1:4.8, x0:1.8, x1:23.2, steg:5, stegH:0.32, stegD:1.05,
+  /* FLYTTAD TILL NORRA ÄNDEN 2026-09-03. Planen ritar bänkblockets fyra
+     steg 7,05–11,5 m från norra gaveln, 8,6–21,6 m från väster. Blocket
+     VÄNDER sig mot banan i söder (`vand:"S"`): stegen stiger norrut från
+     y0 mot gavelväggen, glasbandet och den vita väggen står vid y1. Att
+     blocket låg i söder var en slutledning ur var C antogs sitta; C står
+     alltså i norr, framför entrédelen, och caféet ligger ovanpå den.
+     Bredden 13 m är `PLAN` (spelet hade nästan hela kortsidan); stegens
+     antal och djup `PLAN`; sockel och steghöjd `DERIVED` som förut. */
+  kortanda:{y0:RIDHUS_LANGD-11.5, y1:RIDHUS_LANGD-7.05, x0:8.6, x1:21.6,
+            vand:"S", steg:4, stegH:0.32, stegD:1.1,
             sockelH:0.80,
             /* `glasOver` var 0,35 m, alltså glaset nästan direkt ovanpå
                bänkraderna. `ridhus-inne-01` visar en HÖG vit vägg mellan
@@ -1551,7 +1610,12 @@ const RIDHUSINNE = {
                den väggen finns det ingenstans att sätta dem, vilket var
                varför stjärnan hamnade uppe i glaset vid första försöket.
                1,6 m är `DERIVED` ur bildens proportioner. */
-            trappor:[7.0, 15.5], trappB:1.2, glasH:2.0, glasOver:1.6,
+            /* Trappornas lägen ur planen: 12,4–15,2 och 16,4–18,9 m från
+               väster, alltså mitt 13,8 och 17,65. Planens streckning
+               antyder att loppen går längs gaveln (öst–väst), inte mot
+               den som här; fotot är auktoritet för formen, planen för
+               läget, och den frågan står som `REFERENCE GAP`. */
+            trappor:[13.8, 17.65], trappB:1.2, glasH:2.0, glasOver:1.6,
             glasPost:1.9, glasKarm:"#4A3B2E",
             /* Bänkarna MÄTTA i `-01`: #86715B, en varm mellanbrun. Spelet
                hade #D8C7A4 — ljus furu, vilket fotot motsäger. */
@@ -1579,7 +1643,9 @@ const RIDHUSINNE = {
      literalt tal här hade lämnat det kvar på fel sida vid en spegling.
      Precis den stale följdgeometri som fällt silon, gårdsplanen och
      sponsorskyltarna i det här arbetet. Talet nedan skrivs över. */
-  domarbas:{x:23.2, y:32, b:2.0, h:2.3, trappa:true, exit:true},
+  /* y härleds nedan: E sitter mitt på långsidan, alltså banans halva
+     längd. Skrivet som tal följde det inte med när banan flyttade. */
+  domarbas:{x:23.2, y:0, b:2.0, h:2.3, trappa:true, exit:true},
   /* Hindren som står framme mellan lektionerna, ur interiörfotona:
      vita stöd, blå-vita och röd-vita bommar, en bom på marken och
      uppsittningspallen vid sargen. Koordinaterna är i banans system. */
@@ -1591,11 +1657,13 @@ const RIDHUSINNE = {
   koner:[[4.0,17],[16.6,44],[11.0,58]],
   pall:{x:18.9, y:20},
   dynor:12,                                        // elon-dynorna på översta bänken
-  cafe:{djup:13.0, z0:2.55, z1:5.4},               // överbyggnaden i norr
-  trappa:{x:22.0, y:65.4},                         // trätrappan upp till caféet
-  /* MOTSÄGELSE 3 (`IMG_0179`): en rund klocka vid den centrala
-     passagen/trappan. Höjden är `[ASSUMPTION]`. */
-  klocka:{x:22.0, y:63.6, z:3.6, r:0.42},
+  /* Caféet ligger OVANPÅ entrédelen, i norr, och nås via C-blockets två
+     trappor från läktarnivån (Tobias; `ridhus-klubb-10`). Golvet ligger
+     därför där glasbandet börjar — härleds nedan ur kortändan. Den
+     separata trätrappan (`trappa`) och den andra klockan (`klocka`) som
+     stod här var dubbletter av C-blockets: granskningen 2026-08-31 såg
+     en enda klocka i alla bilder av C-blocket och ingen annan. Borta. */
+  cafe:{djup:11.5, z0:0, z1:5.9},
   speglar:[ {y:19,b:3.2},{y:37,b:4.2} ],           // på västra långsidan
   skyltar:[
     /* OM-AUDITENS PUNKT C: skyltarna hänger på den rostbruna panelen,
@@ -1620,7 +1688,14 @@ const RIDHUSINNE = {
     {andel:0.26, b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
     {andel:0.12, b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
   ],
-  port:{x0:9.6, x1:11.6},                         // sargporten vid A (norra kortsidan)
+  /* SARGPORTEN för folk till fots. Stod mitt på norra kortsidan "vid A".
+     Med C-blocket i norr finns ingen plats där, och A står i söder. Planens
+     utrymningspilar går längs västra långsidan från banzonen upp till
+     entrén; porten läggs därför i banans NORDVÄSTRA hörn, väster om
+     bänkblocket, där hallens västra del möter banan. Läget härleds nedan
+     ur banan. Bredden är vald. `DERIVED` — ingen källa visar själva
+     grinden i sargen; att folk går den vägen gör planens pilar. */
+  port:{x0:0, x1:0},
   /* y härleds ur IDENTITET.ridhus.ovreVagg längre ner — se noten vid
      `skyltar`. Fältet finns här bara så att renderarna kan läsa ett tal. */
   /* GRINDEN mot hästgången, i sargens östra långsida. Den måste finnas: annars
@@ -1630,20 +1705,77 @@ const RIDHUSINNE = {
      Läget följer läktargapet, alltså hästgången. Bredden är vald, inte mätt.
      [ASSUMPTION] */
   sargGrind:{y0:GANG_FASTE-RIDHUS_Y-0.15, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+0.15},
-  /* Möblerna i entréhallen, som solida rektanglar. Utan dem gick man
-     rakt genom disken och bänkarna — de syntes men fanns inte.
-     Koordinaterna är hallens, alltså husets: hallen ligger i norr,
-     y från langd−entre och uppåt. gang är fri passage mot sargporten
-     så att vägen in aldrig blockeras av en möbel. */
-  hallMobler:[
-    {id:"disk",     rekt:{x:8.2, y:68.2, w:3.4, h:0.9}},
-    {id:"bank1",    rekt:{x:0.8, y:64.2, w:0.7, h:1.8}},
-    {id:"bank2",    rekt:{x:0.8, y:66.4, w:0.7, h:1.8}},
-    {id:"bank3",    rekt:{x:0.8, y:68.6, w:0.7, h:1.8}},
-    {id:"kansli",   rekt:{x:6.3, y:62.4, w:0.3, h:9.4}},
-    {id:"omkl",     rekt:{x:18.5, y:68.4, w:0.3, h:4.4}},
-    {id:"trapphus", rekt:{x:19.0, y:66.6, w:1.4, h:2.8}},
-  ],
+  /* ENTRÉDELEN ur planen. `hallMobler` — disk, bänkar, kansli, omklädning,
+     trapphus som handritade rektanglar — var uppfunna; borta. Samma schema
+     som stallets `klubb`: väggar med öppningar, rum som regioner, slutna
+     rum som volymer. Roblox bygger ur Geometri.vaggBitar, webben ur
+     klubbVaggBitar. N = m från norra gaveln, x från västra väggen;
+     y = 77,18 − N. Måtten är tagna i en sned planbild: ±0,5 m.
+
+     Det som har namn vilar på Tobias ord eller foto; det som saknar namn
+     är planens väggar utan känd funktion — `REFERENCE GAP` tills de
+     markerade urklippen (Bild 1–7) finns i repot. */
+  entrehall:{
+    y0:RIDHUS_LANGD-11.5,
+    vaggar:[
+      /* Korridoren längs västväggen, N 0,3–13, med glaspartiet in i
+         hallen vid entrén (N 2,4–3,8; planens 2,2 klipps vid toalettväggen
+         så att entrén slutar där toaletten börjar). Planens gröna pilar
+         löper här. */
+      {id:"korridor_o", typ:"langs", x:2.2, y0:64.2, y1:76.9,
+       oppningar:[{id:"glasparti", y0:73.4, y1:74.8}]},
+      /* De två smala toaletterna norr om entrén, N 0,3–1,1 och 1,6–2,4. */
+      {id:"wc_n_s",     typ:"tvar",  y:74.8, x0:0, x1:1.7},
+      {id:"wc_n_mellan",typ:"tvar",  y:75.8, x0:0, x1:1.7},
+      {id:"wc_n_o",     typ:"langs", x:1.7, y0:74.8, y1:76.9},
+      /* Skåpkorridorens två väggar, 4,2 och 5,7 m från väster, N 1,1–16
+         respektive 1,6–16, med de luckor planen visar. */
+      {id:"skap_v", typ:"langs", x:4.2, y0:61.2, y1:76.1,
+       oppningar:[{id:"a", y0:74.2, y1:76.1},{id:"b", y0:71.7, y1:72.6},
+                  {id:"c", y0:69.6, y1:70.4},{id:"d", y0:65.6, y1:67.4}]},
+      {id:"skap_o", typ:"langs", x:5.7, y0:61.2, y1:75.6,
+       oppningar:[{id:"a", y0:73.1, y1:74.0},{id:"b", y0:70.7, y1:71.4},
+                  {id:"c", y0:68.8, y1:69.6},{id:"d", y0:66.3, y1:67.5}]},
+      /* Cellraden mellan västkorridoren och skåpkorridoren, x 2,2–4,2, är
+         inte en remsa utan FYRA celler: planen drar tvärväggar från
+         korridorväggen till skåpväggen vid N 3,9, 6,4 och 7,9, och en
+         halv vid N 9,8 (x 2,2–3,1). Varje cell nås från skåpkorridoren
+         genom sin egen lucka i `skap_v`. Funktionerna är olästa —
+         Tobias Bild 2–5 hör hit men finns inte i repot. */
+      {id:"cell_1", typ:"tvar", y:73.3,  x0:2.2, x1:4.2},
+      {id:"cell_2", typ:"tvar", y:70.8,  x0:2.2, x1:4.2},
+      {id:"cell_3", typ:"tvar", y:69.3,  x0:2.2, x1:4.2},
+      {id:"cell_4", typ:"tvar", y:67.35, x0:2.2, x1:3.1},
+      /* Hallens tvärvägg N 4,3 i två stycken med en dörr, och rummen mot
+         nordöstra hörnet. Funktioner olästa. Rummet innanför (x 5,7–10,5,
+         N 4,3–7,2) sluts söderut av en vägg N 7,2 från hissen till
+         `hall_mitt`; mätt om 2026-09-03 i förstoring, den saknades. */
+      {id:"hall_n_v",  typ:"tvar",  y:72.9, x0:5.7, x1:10.6,
+       oppningar:[{id:"dorr", x0:7.7, x1:9.6}]},
+      {id:"hall_n_o",  typ:"tvar",  y:72.9, x0:15.3, x1:18.4},
+      {id:"hall_nv_s", typ:"tvar",  y:70.0, x0:7.6, x1:10.5},
+      {id:"hall_mitt", typ:"langs", x:10.5, y0:70.0, y1:72.9},
+      {id:"hall_no",   typ:"langs", x:18.4, y0:70.1, y1:75.9},
+      {id:"hall_no_s", typ:"tvar",  y:71.3, x0:18.4, x1:21.7},
+      /* Östra korridorens västvägg, N 0,2–11,4. */
+      {id:"ostkorridor_v", typ:"langs", x:21.7, y0:65.7, y1:77.0},
+    ],
+    rum:[
+      {id:"entre",        rekt:{x:0,    y:73.4, w:2.2,  h:1.4},  label:"ENTRÉ"},
+      {id:"vastkorridor", rekt:{x:0,    y:64.2, w:2.2,  h:9.2},  label:""},
+      {id:"wc_n1",        rekt:{x:0,    y:75.8, w:1.7,  h:1.1},  label:"WC", stangt:true},
+      {id:"wc_n2",        rekt:{x:0,    y:74.8, w:1.7,  h:1.0},  label:"WC", stangt:true},
+      {id:"cellrad",      rekt:{x:2.2,  y:64.2, w:2.0,  h:12.8}, label:""},
+      /* Den kryssade rutan (hiss/schakt) står tätt ÖSTER om skåpkorridorens
+         östvägg, x 5,75–7,6, N 7,3–9,0 — inte i cellraden, dit en tidigare
+         läsning satte den 3 m fel. Rättad i förstoring 2026-09-03. Att det
+         är en hiss är symbolens gängse betydelse, inte belagt: `[antagande]`. */
+      {id:"hiss",         rekt:{x:5.78, y:68.2, w:1.82, h:1.7},  label:"HISS", stangt:true},
+      {id:"skapkorridor", rekt:{x:4.2,  y:61.2, w:1.5,  h:14.9}, label:"SKÅPKORRIDOREN"},
+      {id:"hall",         rekt:{x:5.7,  y:65.7, w:16.0, h:11.3}, label:""},
+      {id:"ostkorridor",  rekt:{x:21.7, y:65.7, w:3.3,  h:11.3}, label:""},
+    ],
+  },
   dorrar:[
     {id:"ut_o", pos:[24.2,5],    text:"Ut på gården", mot:"gard",
      spawn:{x:144.6,y:49,rikt:0}},
@@ -1652,13 +1784,22 @@ const RIDHUSINNE = {
     {id:"hastgang", pos:[RIDHUS_BREDD-1.4, GANG_FASTE+GANG_DJUP/2-RIDHUS_Y],
      text:"Hästgången — in i stallet",
      mot:"stallinne", spawn:{x:1.6, y:GANG_FASTE+GANG_DJUP/2-STALL_Y, rikt:0}},
-    {id:"ut_n", pos:[21.9,74.2], text:"Ut mot parkeringen (entrén)", mot:"gard",
-     spawn:{x:139.9,y:120.6,rikt:Math.PI/2}},
+    /* Den svarta dörren i norra gaveln: planens utgång 16,1–16,7 m från
+       väster, fasadens `u:8.1` → x 15,8–16,9. Enda dörren där plan och
+       låst fasad säger samma sak. Den får sin innerdörr av autogeneratorn
+       nedan (`ut_ridhus_N_8`) — den handskrivna `ut_n` som stod här pekade
+       på en dörr i nordöstra hörnet som varken plan eller fasad har, och
+       en dubblett vid den svarta dörren vore två markörer för en dörr.
+       Huvudentrén (dubbeldörren under kvisten, västra långsidan) får också
+       sin innerdörr av autogeneratorn; planen sätter den 2,2–2,7 m från
+       gaveln, fasaden 9 m — `CONTRADICTION`, fasaden låst. */
   ],
   info:[
-    {pos:[22.2,65.1], text:"Trappan till Café Krubban",
-     svar:"Café Krubban har stängt för kvällen. Genom fönsterbanden ser man hela banan från borden där uppe."},
-    {pos:[23.6,7],  text:"Domarbåset",
+    /* Lägena härleds nedan: cafétrappornas markör framför C-blocket,
+       domarbåsets vid båset. */
+    {pos:[0,0], text:"Trapporna till Café Krubban", cafe:true,
+     svar:"Café Krubban ligger ovanpå, bakom glasbandet. Trapporna går upp från läktarnivån — genom fönsterbanden ser man hela banan från borden där uppe."},
+    {pos:[0,0], text:"Domarbåset", domarbas:true,
      svar:"Domarbåset — härifrån döms hoppklasserna på Påskhoppet. En trappa, en pall och bästa utsikten i huset."},
     {pos:[10.6,0.8],text:"Hinderförrådet",
      svar:"Hinderförrådet: bommar i blått, vitt och rött, kandelabrar, koner och cavaletti. ”HINDERSTÖD MED KLÄMHÅLLARE”, står det på lappen."},
@@ -1768,10 +1909,32 @@ STALLINNE.info=[
      sidoändring — banan måste flytta med, och det gör den nu. */
   R.bana.x = (S.laktare==="E") ? 0.6 : R.bredd-0.6-R.bana.w;
   R.laktare.x0 = (S.laktare==="E") ? R.bredd-D-0.6 : 0.6;
+  /* Läktaren löper längs hela banan i planen. */
+  R.laktare.y0 = R.bana.y; R.laktare.y1 = R.bana.y+R.bana.h;
   /* Båset står PÅ däcket och måste följa med sidan. Däcket löper alltid
      FRÅN x0 i positiv x-led, åt båda hållen — mitt första försök vände
      tecknet och la båset 2 m utanför däcket. Speglingsprovet fällde det. */
-  if(R.domarbas) R.domarbas.x = R.laktare.x0+D*0.65;
+  if(R.domarbas){
+    R.domarbas.x = R.laktare.x0+D*0.65;
+    /* E sitter mitt på långsidan: banans halva längd. */
+    R.domarbas.y = R.bana.y+R.bana.h/2;
+  }
+  /* Sargporten för folk till fots: banans nordvästra hörn, väster om
+     C-blocket, där hallens västra del möter banan — se noten vid `port`. */
+  R.port.x0 = R.bana.x+0.3; R.port.x1 = R.bana.x+2.5;
+  /* Fasadens dörrar i läktarens långsida (svarta dörren vid skylten, u 40)
+     öppnar i verkligheten ut på läktardäcket. Spelet har inget gående på
+     däcksnivå — däcket är solitt i kollisionen — så autogeneratorns
+     innerpunkt hamnade INNE I läktaren när sidan vändes: spawn i en
+     kolliderare, dörren obrukbar. Punkten flyttas till däckets fot på
+     sandsidan: man kommer in genom dörren, över däcket och ner på banan.
+     Spelabstraktion, inte ett faktapåstående om dörren; själva dörren
+     sitter kvar där fasaden har den. */
+  const lakt={x0:R.laktare.x0, x1:R.laktare.x0+D, y0:R.laktare.y0, y1:R.laktare.y1};
+  const iLakt=(x,y)=>x>lakt.x0-0.5&&x<lakt.x1+0.5&&y>lakt.y0&&y<lakt.y1;
+  const fot=(S.laktare==="E") ? R.bana.x+R.bana.w-0.8 : R.bana.x+0.8;
+  for(const d of R.dorrar) if(d.auto&&iLakt(d.pos[0],d.pos[1])) d.pos[0]=fot;
+  for(const d of ANL.dorrar) if(d.auto&&d.mot==="ridhusinne"&&iLakt(d.spawn.x,d.spawn.y)) d.spawn.x=fot;
 })();
 
 /* Väggdekoren följer också med speglingen nu. Den låg kvar som känd lucka i
@@ -1782,15 +1945,20 @@ STALLINNE.info=[
   if(!S)return;
   /* Speglarna hänger på panelväggen, alltså mitt emot läktaren. */
   R.spegelSida = S.panel;
-  /* Cafeklockan och trätrappan sitter i norra änden, på läktarsidan. */
-  const inatL = (S.laktare==="E") ? -1 : 1;
-  if(R.klocka)  R.klocka.x  = R.laktare.x0 + inatL*(-1.0);
-  if(R.trappa)  R.trappa.x  = R.laktare.x0 + inatL*(-1.0);
   /* Kortändans klocka sitter MELLAN de två trapporna. */
   const K=R.kortanda;
   if(K&&K.trappor&&K.trappor.length>=2){
     if(K.klocka)  K.klocka.x=(K.trappor[0]+K.trappor[1])/2;
     /* Stjärnan sitter till vänster om vänstra trappan. */
     if(K.stjarna) K.stjarna.x=(K.x0+K.trappor[0])/2;
+  }
+  /* Caféets golv ligger där C-blockets glasband börjar: det är samma
+     våning, nådd via blockets trappor. Ett tal här hade glidit isär från
+     blocket vid nästa ändring. */
+  if(K&&R.cafe) R.cafe.z0 = (K.sockelH||0)+K.steg*K.stegH+K.glasOver;
+  /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */
+  for(const i of R.info||[]){
+    if(i.cafe&&K){ i.pos[0]=(K.trappor[0]+K.trappor[1])/2; i.pos[1]=(K.vand==="S"?K.y0:K.y1)-0.8; }
+    if(i.domarbas&&R.domarbas){ i.pos[0]=R.domarbas.x+(S.laktare==="E"?-1:1)*(R.domarbas.b/2+0.6); i.pos[1]=R.domarbas.y; }
   }
 })();

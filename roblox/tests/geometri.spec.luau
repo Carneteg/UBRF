@@ -439,14 +439,25 @@ do
 	local K = R.kortanda
 	check("kortändans läktare finns", K ~= nil)
 	if K then
-		check("den ligger vid södra kortändan, där C sitter",
-			K.y1 < R.bana.y + R.bana.h * 0.25,
-			string.format("blocket y %.2f–%.2f, banan y %.2f–%.2f",
-				K.y0, K.y1, R.bana.y, R.bana.y + R.bana.h))
+		--[[ Planen (ridhus-entreplan-utrymning.jpg) lägger bänkblocket vid
+			NORRA änden, 7,05–11,5 m från gaveln, mellan banan och entrédelen.
+			C står alltså i norr. Förut låg det i söder — en slutledning ur var
+			C antogs sitta — och testet mätte den slutledningen. ]]
+		check("C-blocket ligger vid norra änden, mot banans norra kant",
+			K.vand == "S" and math.abs(K.y0 - (R.bana.y + R.bana.h)) < 0.05,
+			string.format("blocket y %.2f–%.2f, banans norra kant %.2f",
+				K.y0, K.y1, R.bana.y + R.bana.h))
+		check("blocket lämnar entrédelens rum bakom sig",
+			K.y1 <= R.langd - 5 and K.y1 > R.langd - R.entre,
+			string.format("blocket slutar %.2f, huset %.2f, entrédelen %.1f djup", K.y1, R.langd, R.entre))
 		check("den har två trappor upp", #K.trappor == 2, #K.trappor .. " st")
-		check("blocket spänner över större delen av kortsidan",
-			(K.x1 - K.x0) > R.bredd * 0.7,
-			string.format("%.1f m av husets %.1f", K.x1 - K.x0, R.bredd))
+		check("blocket upptar den östra delen av bredden, som planen ritar det",
+			(K.x1 - K.x0) > R.bredd * 0.45 and K.x1 > R.bredd * 0.8 and K.x0 > R.bredd * 0.25,
+			string.format("x %.1f–%.1f av husets %.1f", K.x0, K.x1, R.bredd))
+		check("trapporna står inne i blocket, med luft emellan för klockan",
+			K.trappor[1] > K.x0 + K.trappB and K.trappor[2] < K.x1 - K.trappB
+				and math.abs(K.trappor[2] - K.trappor[1]) > K.trappB + 0.5,
+			string.format("trappor %.1f och %.1f i block %.1f–%.1f", K.trappor[1], K.trappor[2], K.x0, K.x1))
 	end
 end
 
@@ -459,10 +470,12 @@ do
 	if gr then
 		check("grinden är bred nog att leda en häst igenom", gr.y1 - gr.y0 >= 2.5,
 			string.format("%.1f m", gr.y1 - gr.y0))
-		check("grinden ligger inom läktargapet",
-			gr.y0 >= R.laktare.gap.y0 - 0.01 and gr.y1 <= R.laktare.gap.y1 + 0.01,
-			string.format("grind %g–%g, gap %g–%g",
-				gr.y0, gr.y1, R.laktare.gap.y0, R.laktare.gap.y1))
+		--[[ Grinden sitter i sargens ÖSTRA långsida, mot stallet. Läktaren
+			står i väster enligt planen: gången bryter alltså ingen läktare,
+			och sidan mitt emot grinden ska vara läktarens. ]]
+		check("grinden sitter på sidan mitt emot läktaren",
+			R.sidor ~= nil and R.sidor.laktare == "W",
+			"läktaren på " .. tostring(R.sidor and R.sidor.laktare))
 		local gMitt = R.origo.y + (gr.y0 + gr.y1) / 2
 		local hMitt = hastgang.rekt.y + hastgang.rekt.h / 2
 		check("grinden ligger mitt för hästgången", math.abs(gMitt - hMitt) < 1.5,
@@ -492,18 +505,54 @@ do
 end
 
 do
-	-- Läktaren måste ha ett gap där gången kommer in, annars är den murad.
+	--[[ Läktaren är OBRUTEN och löper längs hela banan: planens fem
+		parallella linjer går från södra änden upp till entrédelen, på
+		västra långsidan. Gapet för hästgången är borta — gången kommer in
+		på den andra sidan. ]]
 	local L = R.laktare
-	check("läktaren har ett gap för hästgången", L.gap ~= nil)
-	if L.gap then
-		check("gapet är brett nog att leda en häst igenom", L.gap.y1 - L.gap.y0 >= 2.5,
-			string.format("%.1f m", L.gap.y1 - L.gap.y0))
-		local vartRi = R.origo.y + (L.gap.y0 + L.gap.y1) / 2
-		local hMitt = hastgang.rekt.y + hastgang.rekt.h / 2
-		check("gapet ligger mitt för hästgången", math.abs(vartRi - hMitt) < 1.5,
-			string.format("gapets mitt y = %.2f, gångens y = %.2f", vartRi, hMitt))
-		check("läktaren blir två sektioner", #Geometri.laktarSektioner(L) == 2,
-			#Geometri.laktarSektioner(L) .. " sektioner")
+	check("läktaren har inget gap: hästgången bryter den inte", L.gap == nil)
+	check("läktaren är ett stycke", #Geometri.laktarSektioner(L) == 1,
+		#Geometri.laktarSektioner(L) .. " sektioner")
+	check("läktaren löper längs hela banan",
+		L.y0 <= R.bana.y + 0.05 and L.y1 >= R.bana.y + R.bana.h - 0.05,
+		string.format("läktare y %.1f–%.1f, bana y %.1f–%.1f", L.y0, L.y1, R.bana.y, R.bana.y + R.bana.h))
+	check("entrédelen är planens 11,5 m och banan börjar 5,7 m från söder",
+		math.abs(R.entre - 11.5) < 0.01 and math.abs(R.bana.y - (R.langd - 11.5 - 60)) < 0.01,
+		string.format("entre %.1f, bana y0 %.2f", R.entre, R.bana.y))
+end
+
+do
+	--[[ ENTRÉDELEN ur planen. Bara det som finns i datan provas här; bygget
+		provas i bygge.spec. Rummen med namn vilar på Tobias ord (entrén, de
+		två toaletterna) eller foto (skåpkorridoren). ]]
+	local E = R.entrehall
+	check("entrédelen finns i datan", E ~= nil)
+	if E then
+		local namn = {}
+		for _, r in ipairs(E.rum) do namn[r.id] = r end
+		check("entrén, de två toaletterna, hissen och skåpkorridoren finns",
+			namn.entre and namn.wc_n1 and namn.wc_n2 and namn.hiss and namn.skapkorridor)
+		if namn.entre and namn.wc_n1 and namn.wc_n2 then
+			check("toaletterna ligger norr om entrén, längs västväggen",
+				namn.wc_n1.rekt.y >= namn.entre.rekt.y + namn.entre.rekt.h - 0.01
+					and namn.wc_n2.rekt.y >= namn.entre.rekt.y + namn.entre.rekt.h - 0.01
+					and namn.wc_n1.rekt.x < 0.01 and namn.wc_n2.rekt.x < 0.01,
+				string.format("entré y %.1f–%.1f, WC y %.1f och %.1f",
+					namn.entre.rekt.y, namn.entre.rekt.y + namn.entre.rekt.h,
+					namn.wc_n1.rekt.y, namn.wc_n2.rekt.y))
+			check("toaletterna och hissen är slutna tills dörrarna är belagda",
+				namn.wc_n1.stangt and namn.wc_n2.stangt and namn.hiss.stangt)
+		end
+		local utanfor = nil
+		for _, r in ipairs(E.rum) do
+			local k = r.rekt
+			if k.x < -0.01 or k.x + k.w > R.bredd + 0.01 or k.y + k.h > R.langd + 0.01 then utanfor = r.id end
+		end
+		check("entrédelens rum ligger i huset", utanfor == nil, utanfor or "alla innanför")
+		-- Porten för folk ligger väster om C-blocket, i banans norra kant.
+		check("sargporten ligger väster om C-blocket",
+			R.port.x1 <= R.kortanda.x0 + 0.01 and R.port.x0 >= R.bana.x - 0.01,
+			string.format("port x %.1f–%.1f, block från %.1f", R.port.x0, R.port.x1, R.kortanda.x0))
 	end
 end
 check("domarbåset har trappa och exit-skylt", R.domarbas.trappa and R.domarbas.exit)

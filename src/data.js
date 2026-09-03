@@ -76,17 +76,23 @@ const SITE={
    banan på bilderna innan de lär sig bokstäverna, och det är bilderna
    man känner igen sargen på. Fyra av dem går att läsa i fotona; de
    övriga är märkta [antagande] i ridhuskortet och behöver en bild. */
+/* Vända 2026-09-03: utrymningsplanen lägger C-blocket (bänkarna med de två
+   trapporna, `ridhus-inne-01`) vid NORRA änden och läktaren längs VÄSTRA
+   långsidan. C står alltså i norr och A i söder, och sedd från A är vänster
+   sida (K–V–E–S–H) den västra — där läktaren står, precis som `IMG_0198`
+   visar E mot läktaren och `-14`/`-15` visar H vid läktarens hörn. Förut
+   stod A i norr och E i öster; det var en följd av att läktaren låg fel. */
 const DRESSYRBOKSTAVER=[
-  {b:"A",x:10,y:60, bild:"ananas"},   // [antagande] — vid sargporten i norr
-  {b:"C",x:10,y:0,  bild:"cykel"},    // ur foto
-  {b:"K",x:20,y:54, bild:"katt"},     // [antagande] — vänster sida sedd från A
-  {b:"V",x:20,y:42, bild:"vante"},    // [antagande]
-  {b:"E",x:20,y:30, bild:"elefant"},  // [antagande] — mot läktaren, IMG_0198
-  {b:"S",x:20,y:18, bild:"sol"},      // [antagande]
-  {b:"H",x:20,y:6,  bild:"hus"},      // [antagande]
-  {b:"F",x:0, y:54, bild:"fisk"},     // ur foto
-  {b:"P",x:0, y:42, bild:"paron"},    // [antagande]
-  {b:"B",x:0, y:30, bild:"banan"},    // ur foto
-  {b:"R",x:0, y:18, bild:"ros"},      // [antagande]
-  {b:"M",x:0, y:6,  bild:"morot"},    // ur foto
+  {b:"A",x:10,y:0,  bild:"ananas"},   // [antagande] — södra kortsidan
+  {b:"C",x:10,y:60, bild:"cykel"},    // ur foto — framför C-blocket i norr
+  {b:"K",x:0, y:6,  bild:"katt"},     // [antagande] — vänster sida sedd från A = väster
+  {b:"V",x:0, y:18, bild:"vante"},    // [antagande]
+  {b:"E",x:0, y:30, bild:"elefant"},  // [antagande] — mot läktaren, IMG_0198
+  {b:"S",x:0, y:42, bild:"sol"},      // [antagande]
+  {b:"H",x:0, y:54, bild:"hus"},      // [antagande] — vid läktarens hörn, ridhus-inne-14/15
+  {b:"F",x:20,y:6,  bild:"fisk"},     // ur foto
+  {b:"P",x:20,y:18, bild:"paron"},    // [antagande]
+  {b:"B",x:20,y:30, bild:"banan"},    // ur foto
+  {b:"R",x:20,y:42, bild:"ros"},      // [antagande]
+  {b:"M",x:20,y:54, bild:"morot"},    // ur foto
 ];

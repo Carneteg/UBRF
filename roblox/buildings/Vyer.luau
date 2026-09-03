@@ -75,6 +75,8 @@ local banSyd, banNorr = B.y, B.y + B.h
 local K = R.kortanda
 local kortandaMittX = (K.x0 + K.x1) / 2
 local kortandaKlockH = K.sockelH + K.steg * K.stegH + K.klocka.overBlock
+-- Blockets kant mot banan: y0 när det vänder sig söderut, annars y1.
+local kortandaBanKant = if K.vand == "S" then K.y0 else K.y1
 
 -- Panelens stycke: sponsorerna hänger i det, så vyn siktar på dess mitt.
 local OV = G.identitet.ridhus.ovreVagg
@@ -125,11 +127,11 @@ Vyer.vyer = {
 	{
 		id = "banan",
 		grupp = "Ridhuset inne",
-		text = "Banan söderut — sand, sarg och porten vid A",
-		fran = { x = Ro.x + banMittX, y = Ro.y + banNorr + 2, h = 1.7 },
+		text = "Banan söderut från C-blocket — sand, sarg och A i söder",
+		fran = { x = Ro.x + banMittX, y = Ro.y + banNorr - 2, h = 1.7 },
 		mot = { x = Ro.x + banMittX, y = Ro.y + banSyd + B.h * 0.25 },
 		aim = 1.1,
-		krav = "Sanden dovt brungrå, inte ljus beige eller orange. Sargen ljus med mörkt sockelband, och porten vid A ska vara ett GAP i norra kortsidan — inte en vägg.",
+		krav = "Sanden dovt brungrå, inte ljus beige eller orange. Sargen ljus med mörkt sockelband. Porten för folk är ett GAP i norra sargens västra ände, väster om C-blocket.",
 	},
 	{
 		id = "sponsorvaggen",
@@ -143,9 +145,9 @@ Vyer.vyer = {
 	{
 		id = "kortandan",
 		grupp = "Ridhuset inne",
-		text = "Kortändan vid C — trappstegsblock, glasband, klocka och kompassros",
-		fran = { x = Ro.x + banMittX, y = Ro.y + K.y1 + 16, h = 1.7 },
-		mot = { x = Ro.x + kortandaMittX, y = Ro.y + K.y0 },
+		text = "C-blocket vid norra änden — trappstegsblock, glasband, klocka och kompassros",
+		fran = { x = Ro.x + kortandaMittX, y = Ro.y + kortandaBanKant - 16, h = 1.7 },
+		mot = { x = Ro.x + kortandaMittX, y = Ro.y + kortandaBanKant },
 		aim = kortandaKlockH,
 		krav = "Block på sockel, två trappor med räcken, glasbandet BRUTET av trapporna, vit vägg mellan bänkarnas ovankant och glasets underkant, klockan mellan trapporna och kompassrosen vänster om den vänstra.",
 	},
@@ -170,12 +172,26 @@ Vyer.vyer = {
 	{
 		id = "laktaren",
 		grupp = "Ridhuset inne",
-		text = "Läktaren och gapet med grinden mot hästgången",
-		fran = { x = Ro.x + laktareBetraktare,
-			y = Ro.y + (R.laktare.gap.y0 + R.laktare.gap.y1) / 2, h = 1.7 },
-		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2,
-			y = Ro.y + (R.laktare.gap.y0 + R.laktare.gap.y1) / 2 },
-		krav = "Läktaren ska ha ett GAP rakt fram, och sargen en GRIND i det gapet. Är sargen obruten går det inte att leda hästen ut på banan.",
+		text = "Läktaren längs västra långsidan, obruten, med domarbåset",
+		fran = { x = Ro.x + laktareBetraktare, y = Ro.y + R.domarbas.y, h = 1.7 },
+		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2, y = Ro.y + R.domarbas.y },
+		krav = "Läktaren på VÄSTRA långsidan, ett plant däck med solid front mot banan, utan gap. Domarbåset står på däcket med öppningen mot banan.",
+	},
+	{
+		id = "grinden",
+		grupp = "Ridhuset inne",
+		text = "Grinden mot hästgången i östra sargen — mitt emot läktaren",
+		fran = { x = Ro.x + B.x + B.w - 8, y = Ro.y + (R.sargGrind.y0 + R.sargGrind.y1) / 2, h = 1.7 },
+		mot = { x = Ro.x + B.x + B.w, y = Ro.y + (R.sargGrind.y0 + R.sargGrind.y1) / 2 },
+		krav = "Sargen ska ha en GRIND rakt fram, på sidan MITT EMOT läktaren. Är sargen obruten går det inte att leda hästen ut på banan.",
+	},
+	{
+		id = "entrehallen",
+		grupp = "Ridhuset inne",
+		text = "Innanför huvudentrén: korridoren längs västväggen, toaletterna norr om dörren, glaspartiet in i hallen",
+		fran = { x = Ro.x + 1.1, y = Ro.y + 74.2, h = 1.7 },
+		mot = { x = Ro.x + 1.1, y = Ro.y + 65.0 },
+		krav = "Planens entrédel: en korridor längs västväggen söderut mot banan, två smala toaletter norr om entrén, glasparti in i hallen, skåpkorridorens två parallella väggar, hissen som sluten volym. Inga uppfunna möbler.",
 	},
 
 	--[[ ── Stallet inne ── servicevyn är den som tidigare underkändes. ]]
