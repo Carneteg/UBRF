@@ -50,6 +50,15 @@ local function raknaNamn(monster)
 	end
 	return n
 end
+-- Exakt namn, inte delsträng: "Slutet rum sluten_volym" får inte räkna
+-- "Slutet rum sluten_volym_v" som en träff.
+local function raknaExakt(namn)
+	local n = 0
+	for _, d in ipairs(delar) do
+		if d.Name == namn then n += 1 end
+	end
+	return n
+end
 
 print("\nByggnadsmassan")
 
@@ -166,9 +175,21 @@ check("stallklockan byggdes", raknaNamn("Stallklocka") == 1,
 	att SPOLSPILTA byggdes som en namngiven volym, alltså precis den täta låda
 	som underkändes i spelarvyn. Ett test kan låsa fast ett fel, och det här
 	gjorde det. Nu mäts det som källorna visar. ]]
-check("ridhusets fönsterband byggdes ovanför panelen",
-	raknaNamn("Ridhus fönsterband") == 1 and raknaNamn("Fönsterpost") > 0,
-	raknaNamn("Fönsterpost") .. " poster")
+--[[ Omgranskat 2026-09-03: separata fönster per väggfält, inte ett band. ]]
+do
+	local falt = Geometri.ridhusFalt(UBRFKomplex.ridhus)
+	local vantade = 0
+	for _, f in ipairs(falt) do
+		if math.min(UBRFKomplex.identitet.ridhus.fonsterband.faltBredd or 3.0, (f[2] - f[1]) - 1.0) >= 0.8 then vantade += 1 end
+	end
+	check("ridhusets fönster byggdes ett per väggfält, inget löpande band",
+		raknaNamn("Ridhus fönster ") == vantade and vantade > 5 and raknaNamn("Ridhus fönsterband") == 0,
+		string.format("%d fönster mot %d fält", raknaNamn("Ridhus fönster "), vantade))
+	check("väggpelarna står på fältgränserna på båda långsidorna",
+		raknaNamn("Väggpelare W") == raknaNamn("Väggpelare E") and raknaNamn("Väggpelare W") >= #falt - 1
+			and raknaNamn("Väggpelare W") > 5,
+		string.format("%d W, %d E, %d fält", raknaNamn("Väggpelare W"), raknaNamn("Väggpelare E"), #falt))
+end
 
 --[[ KLUBBDELEN ur utrymningsplanen, rättad av Product Owner 2026-09-03.
 
@@ -232,7 +253,7 @@ do
 		Ingen kolliderande del under mankhöjd får stå på någon provpunkt. Muras
 		en dörr igen, eller byggs ett rum som låda, faller det här. ]]
 	local rutt = {
-		{ 4.55, 69.0 }, { 4.55, 66.5 }, { 2.0, 63.0 }, { 4.9, 61.0 }, { 4.9, 58.5 },
+		{ 4.55, 69.0 }, { 4.55, 66.5 }, { 4.5, 63.0 }, { 4.5, 61.0 }, { 4.9, 58.5 },
 		{ 4.55, 57.45 }, { 4.9, 56.0 }, { 5.5, 53.5 }, { 5.5, 50.0 },
 	}
 	local blockerad = nil
@@ -273,11 +294,11 @@ do
 				W1.rekt.x, W1.rekt.x + W1.rekt.w, inre.x0, inre.x1, W2.rekt.x, W2.rekt.x + W2.rekt.w))
 		check("planens symbolruta byggs som namnlös sluten volym — inget trapphus, ingen trappa i Stallhuset",
 			SV.stangt == true and (SV.label == nil or SV.label == "")
-				and raknaNamn("Slutet rum sluten_volym") == 1
+				and raknaExakt("Slutet rum sluten_volym") == 1
 				and rum("trapphus") == nil and raknaNamn("Slutet rum trapphus") == 0
 				and raknaNamn("Trappsteg") == 0,
 			string.format("label %q, %d slutna volymer, %d trapphus, %d trappsteg",
-				tostring(SV.label), raknaNamn("Slutet rum sluten_volym"),
+				tostring(SV.label), raknaExakt("Slutet rum sluten_volym"),
 				raknaNamn("Slutet rum trapphus"), raknaNamn("Trappsteg")))
 		check("Ö-toaletten är sluten tills dess dörr är belagd",
 			W2.stangt == true and raknaNamn("Slutet rum wc_o") == 1)
@@ -310,6 +331,23 @@ do
 	check("etikettplattor byggs för exakt de namngivna öppna rummen",
 		byggda == vantade and vantade > 0,
 		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
+end
+
+--[[ Inomhusläsbarhet: varje inre väggbit och sluten volym ska bära
+	attributet `Genomsiktlig`, annars kan klientens Genomsikt inte tona den
+	när den står mellan kameran och karaktären — och då försvinner spelaren
+	bakom väggen igen (Product Owner 2026-09-03). ]]
+do
+	local med, utan = 0, 0
+	for _, d in ipairs(delar) do
+		local n = d.Name
+		if n:find("Klubbvägg", 1, true) == 1 or n:find("Entrévägg", 1, true) == 1
+			or n:find("Slutet rum", 1, true) == 1 then
+			if d:GetAttribute("Genomsiktlig") == true then med += 1 else utan += 1 end
+		end
+	end
+	check("inre väggbitar och slutna volymer bär attributet Genomsiktlig",
+		utan == 0 and med > 20, string.format("%d med, %d utan", med, utan))
 end
 
 --[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:
@@ -940,10 +978,12 @@ do
 
 		local v = forstaNamn("Övre långvägg")
 		local f = v and fot(v)
-		check("panelen täcker BARA sitt stycke, inte hela hallen",
+		--[[ Omgranskat 2026-09-03: panelen går hörn till hörn längs hela
+			hallens långsida (ridhus-inne-31, -17), fram till entrédelen. ]]
+		check("panelen täcker hallens hela långsida, A-gaveln → entrédelen",
 			f ~= nil and math.abs(f.h - (O.y1 - O.y0)) < 0.2
-				and f.h < R2.langd * 0.75,
-			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd) or "saknas")
+				and math.abs(f.h - (R2.langd - R2.entre)) < 0.2,
+			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd - R2.entre) or "saknas")
 
 		--[[ LOKALA koordinater. Första versionen jämförde f.x (världsläge,
 			~118) mot bredd/2 (~12,5) och föll fast bygget var riktigt — samma

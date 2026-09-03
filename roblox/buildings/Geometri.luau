@@ -236,4 +236,22 @@ function Geometri.overlapp(a: Rekt, b: Rekt): number
 	return dx * dy
 end
 
+--[[ Väggfälten längs ridhusets långsidor: mellan två takstolar, klippta
+     till hallens längd (A-gaveln → entrédelens vägg). Fönstren sitter ett
+     per fält och pelarna på fältgränserna. Samma regel som webbens
+     ridhusFalt i src/varld3d.js. ]]
+function Geometri.ridhusFalt(R): { { number } }
+	local TS, slut = R.takstomme, R.langd - R.entre
+	local ut = {}
+	local z = 0
+	local p = TS.start
+	while p < slut + 0.01 do
+		if p - z > 0.5 then table.insert(ut, { z, math.min(p, slut) }) end
+		z = p
+		p += TS.delning
+	end
+	if slut - z > 0.5 then table.insert(ut, { z, slut }) end
+	return ut
+end
+
 return Geometri

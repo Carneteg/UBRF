@@ -63,7 +63,18 @@ Roblox av två lådor. Läge, mått, färg, typ och källa är samma tal.
 | REFERENCE GAP | var i rummet kameran stod; vilket valvfönster gruppen står vid |
 | Paritet | webb 3D + karta + målarvy; Roblox `Inredning uppehall_*`; kollision på båda |
 
-### Stallhuset — pentryt: INTE placerat
+**Synk mot F02-A:s rättelsepass 2026-09-03 (`e879784`).** Uppehållsrummet
+är nu L-format (västdelen x 0–5,9 × N 0–10 + östdelen `uppehallsrum_o`,
+f.d. "passage") och har en sluten volym 1,0 × 4,4 m på x 2,0–3,0, N 5,6–10,0
+där den tjocka väggen `spar` stod. Tre objekt med `lage: ASSUMPTION` stod i
+eller framför den volymen och är flyttade inom samma rum, utan ny källa:
+`uppehall_soffa_s` → (2,6; 64,95) norr om volymen, `uppehall_bord_2` →
+(1,65; 62,5) mellan västsoffan och volymen, `uppehall_ponny` → (1,0; 65,8)
+vid västväggen (fotot visar den till höger om sofforna, mot valvfönstret).
+Kontrollerat maskinellt: inget uppehållsrumsobjekt skär den slutna volymen
+eller en vägg. Klasserna är oförändrade.
+
+### Stallhuset — pentryt: läge känt, möblering INTE byggd
 
 `stall-inne-02-pentryt.jpg` visar ett pentry (kubhylla, mikro, kyl, bord med
 två stolar) i ett hörn med **valvfönster och runt fönster**. I den låsta

@@ -95,20 +95,19 @@ vänstra = väster), och båda läsningarna stämmer med planen.
 | Rum | Planen (N = m från norra gaveln, x från västra väggen) | Spelet nu (`klubb.rum`) | Klass | Källa → faktum |
 |---|---|---|---|---|
 | Gaveldörr och vindfång | dörr x 3,6–5,5, två stumpar N 0–2,0 | `vindfang` 3,6–5,5 × y 67,95–69,95 | `PLAN` | planen; grön utrymningspil ut genom gaveln |
-| **Uppehållsrum / väntrum** | x 0–5,9, N 0–9,8 | `uppehallsrum` | `PLAN` + `[enligt Tobias]` | "man kommer först in i uppehållsrummet" |
-| Väggspår i uppehållsrummet | x 2,8–3,5, N 5,5–9,8, dubbel linje | `spar`, tjock 0,5 | `PLAN`, funktion `REFERENCE GAP` | |
-| **Toalett väster om inre entrén** | x 0–4,0, N 9,8–12,5; dörr mot lobbyn N 10,45–11,5 | `wc_v` | `PLAN` + `[enligt Tobias]` | "två toaletter, en på var sida"; dörrläget `ASSUMPTION` bland två läsbara luckor |
-| Lobby / inre entré | x 4,0–5,8, N 9,8–12,5; planens gröna pil ner genom | `lobby` | `PLAN` | |
+| **Uppehållsrum / väntrum** — L-format | västdelen x 0–5,9, N 0–10,0 **och** östdelen x 5,9–11,2, N 0–5,6, utan vägg emellan | `uppehallsrum` + `uppehallsrum_o` (`del:"uppehallsrum"`) | `PLAN` + `[enligt Tobias]` | "man kommer först in i uppehållsrummet"; PO 2026-09-03: "uppehållsrummet är för litet" → östdelen (f.d. "passage") hör till rummet; golvyta ≈ 79 m² (grind ≥ 75) |
+| Sluten volym i uppehållsrummets västdel | x 2,0–3,0, N 5,6–10,0, ritad med dubbla linjer (vägg med tjocklek) | `sluten_volym_v`, `stangt`, `label:""` | geometri `PLAN` (originalbilden 4032 px); funktion `REFERENCE GAP` | ersätter den tjocka väggen `spar` — se § Superseded och § Planläsning i förstoring |
+| **Toalett väster om inre entrén** | x 0–3,0, N 10,0–12,5; dörr i ÖSTVÄGGEN mot lobbyn N 10,8–11,7; lucka x 0–0,9 i nordväggen | `wc_v`, `wc_v_o.oppningar.wc_v_dorr`, `wc_v_n.oppningar.wc_v_lucka_n` | `PLAN` + `[enligt Tobias]` | "två toaletter, en på var sida"; nordluckan är planens linje som börjar 0,9 m från västväggen — dörr eller ritningsglapp: `REFERENCE GAP` |
+| Lobby / inre entré | x 3,0–5,9, N 10,0–12,5; planens gröna pil ner genom | `lobby` | `PLAN` | |
 | **Inre entrén till stallet** | dörr x 4,1–5,0 i den genomgående väggen | `oppningar.inre_entre` | `PLAN` + `[enligt Tobias]` | "rakt fram leder in i stallgång A" — gång A ligger x 4,4–7,0 |
-| **Toalett öster om inre entrén** | x 5,8–7,3, N 11,3–12,5 | `wc_o`, `stangt` | `PLAN` + `[enligt Tobias]` | dörr oläsbar → sluten volym |
-| Sluten volym utan namn (planens symbolruta) | x 5,9–7,3, N 4,9–11,3 | `sluten_volym`, `stangt`, `label:""` | geometri `PLAN`; funktion `REFERENCE GAP` | se § Symbolrutan; ingen etikett, inget funktionsnamn |
-| Passagen öster om uppehållsrummet | x 5,9–11,2, N 0–5,6 | `passage` | `PLAN` | vägen "vänster" från uppehållsrummet |
+| **Toalett öster om inre entrén** | x 5,9–7,3, N 10,7–12,5 (cellen vid symbolrutans fot) | `wc_o`, `stangt` | `PLAN` + `[enligt Tobias]` | dörr oläsbar → sluten volym |
+| Sluten volym utan namn (planens symbolruta) | x 5,9–7,3, N 4,9–10,7 | `sluten_volym`, `stangt`, `label:""` | geometri `PLAN`; funktion `REFERENCE GAP` | se § Symbolrutan; ingen etikett, inget funktionsnamn |
 | Litet rum med grå ruta | x 9,0–11,2, N 0–2,2 | `litet_rum`, `stangt` | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
 | **Teorisal** | x 11,2–17,3, N 0–5,6; öppning i västväggen N 3,0–5,6 | `teorisal` | `PLAN` + `[enligt Tobias]` | "teorisalen till vänster om uppehållsrummet" |
 | **Sadelkammare** | x 7,3–15,5, N 5,6–12,5; in från passagen x 7,3–8,8; egen dörr söderut x 7,7–8,8 | `sadelkammare` | `PLAN` + `[enligt Tobias]` | "vänster och sedan höger" = öster, sedan söder |
 | Halvvägg i sadelkammaren | x 9,0–12,2 vid N 9,1 | `sadelkammare_mellan` | `PLAN`, funktion `REFERENCE GAP` | |
 | Östra rummet | x 15,5–21 N 5,6–12,5 + x 17,3–21 N 0–5,6; utgång österut N 9,9 | `ostrum`, `ostrum_n`, utan namn | `PLAN`, funktion `REFERENCE GAP` | utgången: `DEFERRED BY EXTERIOR LOCK` |
-| Pentry (fotoverifierat: valv- och rundfönster, mikro, kyl, bord) | ingen etikett | **inte placerat** | `REFERENCE GAP` | kandidater: det lilla rummet eller östra rummet; ingen källa avgör |
+| Pentry (fotoverifierat: valv- och rundfönster, mikro, kyl, bord) | ingen etikett | uppehållsrummets NV-hörn, x 0–3,6 vid gaveln | `FOTO` + `DERIVED` | `stall-inne-02` visar valvfönster med runt fönster till HÖGER och ett hörn med tavla därefter; `stall-entre-01` visar samma par utifrån (runt fönster till vänster om valvfönstret = öster om det) och `stall-entre-15` runda fönster på BÅDA sidor om dörren → paret sitter väster om entrédörren, hörnet är vindfångets västra stump x 3,6. Möbleringen är F02-B |
 | Tvärkorridor mellan klubbdel och boxhall | N 12,5–16,4, utgångar åt båda långsidorna | gångyta y 52,85–57,45 | `PLAN` | utgångarna `DEFERRED BY EXTERIOR LOCK`; korta väggstumpar i zonen (x 4,5 · 10,9 · 14,2 · 16,5 · 19,1, N 13,6–15,8) är olästa och byggs inte |
 | Boxhallens sex band | ja | ja | `PLAN` | andelarna i `KORT.md`, ommätta 2026-08-30 |
 | Södra änden, ~5 rum | ja, tydliga partier | två **öppna** bukter | `CONTRADICTION` | se nedan |
@@ -124,6 +123,10 @@ som nu är ersatta, inte omtolkade:
 | `STALLINNE.trappa` (18 steg upp från klubbdelen) | `sluten_volym` — namnlös sluten volym | Tobias: trappan man går nås via ridhusets läktare |
 | Rummet `trapphus` med etiketten `TRAPPHUS` (runda 928e090) | `sluten_volym`, `label:""`; väggarna `volym_*` | ChatGPT-review: "trapphus" var en ny funktionstolkning av samma symbol utan oberoende källa |
 | Tolv boxar per rad | tretton, västra raden tolv | tolv var en följd av tvärgången |
+| `uppehallsrum` x 0–5,9 × N 0–9,8 och `passage` som eget rum | L-format uppehållsrum: `uppehallsrum` + `uppehallsrum_o` | Product Owner 2026-09-03: "för litet"; planen har ingen vägg mellan delarna; pentryt sitter i västdelens NV-hörn |
+| Tjocka väggen `spar` x 2,8–3,5, N 5,5–9,8 | sluten volym `sluten_volym_v` x 2,0–3,0, N 5,6–10,0 | omläst i originalbilden (4032 px): dubbla linjer = vägg med tjocklek runt en ruta, inte en fristående tjock vägg |
+| WC-V x 0–4,0 med dörr N 10,45–11,5 | WC-V x 0–3,0 med dörr i östväggen N 10,8–11,7 + lucka x 0–0,9 i norr | omläst i originalbilden: väggen x 3,0 har ett 0,9 m hål N 10,8–11,7; linjen N 10,0 börjar 0,9 m från västväggen |
+| Ö-toaletten N 11,3–12,5, symbolrutan N 4,9–11,3 | N 10,7–12,5 respektive N 4,9–10,7 | omläst i originalbilden: symbolens fot och cellens tvärlinje ligger på N 10,7 |
 
 **`CONTRADICTION` mot den låsta fasaden**, redovisade och inte rättade:
 
@@ -250,7 +253,11 @@ befintlig implementation bara som jämförelse.
 | Sargporten för folk till fots | ingen symbol; planens pilar går här | **borttagen ur fidelity-datan** (`RIDHUSINNE.port` finns inte); spelets gap ligger i `SPELABSTRAKTIONER.ridhus.sargport`, x följer banan, bredd 2,2 vald | `REFERENCE GAP` i fidelity; `SPELABSTRAKTION` | Senior Re-review 2026-09-03 (blocker 2): en ruttslutsats får inte bli anläggningsgeometri. Roblox bygger gapet med en märkt, genomskinlig markör; testerna mäter märkningen, inte läget som verklighet |
 | Domarbåset | — | `domarbas` på däcket, följer sidan | `FOTO` | |
 | Västdörren `u:40` (svarta dörren vid skylten) | i läktarens långsida | `ut_ridhus_W_40`, innerpunkt vid däckets fot på sanden | spelabstraktion | däcket är solitt i kollisionen; annars spawn inne i läktaren (regression vid vändningen, fångad av gångprovet) |
-| Södra zonen bakom sargen (y 0–5,68) | — | onåbar till fots | `REFERENCE GAP` | ingen öppning i södra sargen är belagd; var onåbar även i basen |
+| Södra zonen bakom sargen (y 0–5,68) | — | onåbar till fots | **`CONTRADICTION`** | `ridhus-inne-23` visar A-gaveln DIREKT bakom sargen (A-skylten, dubbel glasdörr, speglar ovanför sargen): ingen zon. Se § Omgranskning nedan |
+| **Läktarlångsidans vägg** | — | `IDENTITET.ridhus.laktarVagg`: ljus skivpanel (`hallvagg`) med mörka pelare där takstolarna landar, skivskarvar | `VERIFIED` (`ridhus-inne-14`, PO 2026-08-31) / pelarrytm `DERIVED` (`takstomme`) / skarvar [uppskattning] | omgranskning 2026-09-03 rad 2: väggen var en slät yta i samma ton som alla andra |
+| **Sponsorpanelen hörn till hörn** | — | `ovreVagg.y0/y1` härledda till 0 → langd − entre (65,68); pilastrar på fältgränserna | `VERIFIED` (`ridhus-inne-31`, `-17`) | omgranskning rad 3: täckte 44 % (y 6–40) |
+| **Fönstren ovanför panelen** | — | `fonsterband.perFalt`: ett fönster per väggfält (`ridhusFalt`), bredd 3,0 m | `VERIFIED` att de är separata (`-31`, `-17`, `-24`); bredd [uppskattning]; höjd `REFERENCE GAP` | omgranskning rad 5: var ett löpande band |
+| Skyltraden | — | ordning och andelar mot bokstäverna M/B/F | `VERIFIED` ordning (`-31`, `-17`), lägen `DERIVED` | omgranskning rad 8: två RS Mustang, Hästsportbutik söder om Agria |
 
 **Superseded** — läsningar som stod i koden och nu är ersatta, inte omtolkade:
 
@@ -265,6 +272,31 @@ befintlig implementation bara som jämförelse.
 | `ut_n` i nordöstra hörnet (21,9; 74,2) | fasadens `ut_ridhus_N_8` vid svarta gaveldörren | dörren fanns varken i plan eller fasad |
 | Dressyrbokstäverna med A i norr | A i söder, C i norr, E mot läktaren | C står framför C-blocket |
 | `hiss` i cellraden x 2,6–4,4 (första läsningen i denna gren) | x 5,75–7,6 öster om skåpväggen | förstoring |
+
+### Omgranskning 2026-09-03 — käll-för-käll, före rättelse
+
+Product Owner underkände den kombinerade previewn: "Ridhuset läser inte
+som det verkliga". Hela källmaterialet gicks igenom mot spelet innan något
+ändrades; rapporten med alla 18 rader, vad som stämmer, den rumsliga
+läsningen och referensluckorna står i **`docs/F02-RIDHUS-OMGRANSKNING.md`**.
+Rättat i F02-A: läktarlångsidans vägg (pelare + skivor), panelen hörn till
+hörn, separata fönster per fält, skyltordningen, läktarfrontens
+källhänvisning. Redan rättat i F02-B (#76): tre stegade bänkrader, mörk
+gångbräda, en delad spegel vid B. Kvar som F02-B/`REFERENCE GAP`:
+entrédelens dörrblad, glaspartier och skåp; caféets möbler.
+
+**Nytt `CONTRADICTION` — A-gaveln står direkt bakom sargen.**
+`ridhus-inne-23-kortsidan-vid-a.jpg`: A-skylten sitter på sargen, den vita
+gaveln med dubbel glasdörr står omedelbart bakom, speglarna hänger på
+gaveln direkt ovanför sargen, bomförrådet i hörnet. Spelet har 5,68 m
+mellan sargen och gaveln, därför att 77,18 m (`VERIFIED`) − 11,5 m entrédel
+(`PLAN`) − 60 m bana (`ASSUMPTION`: standardmått) = 5,68 m som lades i
+söder. Fotot säger att resten inte ligger där. Två läsningar: banan är
+≈ 66 m lång mellan sargarna (bokstäverna på ett 20 × 60-utsnitt), eller
+entrédelen/C-blocket är djupare än planen lästes. **Inte rättat** — att
+flytta banan flyttar hästgångens grind, västdörrens innerpunkt och
+C-blocket. Fråga till Tobias: *hur långt är det från A-sargen till
+C-sargen — 60 m eller närmare 66 m?*
 
 **`CONTRADICTION`**, redovisade och inte rättade:
 
@@ -293,6 +325,57 @@ befintlig implementation bara som jämförelse.
 | Den namnlösa volymen (`sluten_volym`), Ö-toaletten och det lilla rummet som slutna volymer | dito | geometri `PLAN`; funktion/dörr `REFERENCE GAP` |
 | Hästförbindelsens brott i västra boxraden | y 28,35–30,75, läst ur fasaddörren | `PLAN` + `[enligt Tobias]` |
 | Tretton boxar per obruten rad, tolv i västra | räknas ur måtten | `PLAN` |
+| Uppehållsrummet L-format med östdelen, WC-V 3,0 m, den slutna 1,0 × 4,4-volymen | § Rum och zoner | `PLAN` (originalbilden) + `[enligt Tobias]` |
+| Inomhusläsbarhet: väggbitar och slutna volymer mellan kameran och spelaren tonas; kameran ut ur slutna volymer och upp när den kläms mot ytterväggen | `src/varld3d.js` (`v3dTonas`, `v3dKamera`); Roblox `Genomsiktlig`-attribut + `src/client/Genomsikt.luau` | **spelmekanik, inte fidelity** — inga rum flyttas |
+
+### Planläsning i förstoring — uppehållsrummet, 2026-09-03
+
+Product Owner underkände den kombinerade previewn: "Stallhuset uppehållsrum
+är för litet". Klubbänden lästes då om i **originalfotot** av planen,
+`references/plans/stall-plan1-utrymning.jpg` (4032 × 3024 px), i stället för
+den rektifierade 1500 px-bilden. Reproducerbart: beskär (520, 1000)–(1360,
+2060), vrid 270° så att norr är upp, förstora 1,6×. I den bilden ligger
+västra ytterväggen vid x ≈ 165 px och symbolrutans väggar vid 570/680 px
+(→ 69 px/m i tvärled); norra ytterväggen vid y ≈ 55 px och den genomgående
+väggen vid 850 px (→ 63,6 px/m i längdled, N 12,5). Avlästa linjer:
+
+| Linje | px | m | Läsning |
+|---|---|---|---|
+| dubbellinjeritad ruta | x 300–375, y 410–690 | x 2,0–3,0, N 5,6–10,0 | sluten volym, inte tjock vägg |
+| tvärlinje N 10 | x 225–375 vid y 690 | x 0,9–3,0 | WC-V:s nordvägg; börjar 0,9 m från västväggen |
+| WC-V:s östvägg | x 375, y 690–740 och 800–850 | x 3,0; hål N 10,8–11,7 | dörren mot lobbyn |
+| symbolrutans fot | y 735 | N 10,7 | gräns mot cellen (Ö-toaletten) |
+| ingen linje x 5,9 mellan y 185 och 360 | — | N 2,0–4,8 | uppehållsrummet fortsätter österut |
+
+Tvärled vilar fortfarande på bredden 21 m (`ASSUMED_SCALE`); blir bredden
+en annan skalar allt i x med den. Uppehållsrummets storlek i spelet beror
+alltså på två saker: läsningen ovan (rättad) och husbredden (olöst).
+
+### Inomhusläsbarhet — kameran, inte rummen
+
+Product Owner 2026-09-03: "spelaren hamnar bakom väggar, man ser inte vart
+man går". Enligt `CLAUDE.md` får inga väggar, dörrar eller rum flyttas för
+att lösa ett kameraproblem, så det är bilden som ger vika:
+
+- **Toning.** Varje inre väggbit (`klubb.vaggar`, `entrehall.vaggar`) och
+  sluten volym byggs som ett eget nät med sitt fotavtryck. Den bit vars
+  fotavtryck (+0,30 m marginal) skär sträckan kamera → spelare ritas med
+  alfa 0,22 i ett andra pass (`v3dTonas`). Sträckan slutar 0,35 m före
+  spelaren så att väggen hon står intill inte tonas.
+- **Kameran** knuffas ut ur slutna volymer (toaletter, schakt, servicerum)
+  och lyfts när den kläms mot ytterväggen närmare än 2,0 m från spelaren —
+  vid entrén står hon 1,35 m innanför gaveln — så att man ser henne och
+  rummet framför henne uppifrån i stället för hennes nacke.
+- **Roblox:** samma regel. Anläggningsbygget sätter attributet
+  `Genomsiktlig` på varje inre väggbit och sluten volym; klientmodulen
+  `src/client/Genomsikt.luau` tonar (LocalTransparencyModifier 0,78) de
+  delar vars fotavtryck skär sträckan kamera → karaktär, med samma
+  marginaler. Beslutsfunktionen är ren och provas i
+  `tests/genomsikt.spec.luau`; att attributet finns på alla inre delar
+  provas i `bygge.spec`. `NOT TESTED IN ROBLOX STUDIO`.
+- Bevis (webb, Playwright/SwiftShader): lobbyn med blicken österut — WC-V:s
+  vägg tonad, spelaren synlig; teorisalen med kameran utanför sydväggen —
+  väggen tonad; entrén — kameran lyft, spelaren och vindfånget synliga.
 
 Raden om ett trapphus med trappa stod här en runda och är **återtagen**, och
 rundan därpå stod rummet som `trapphus` med etiketten `TRAPPHUS` — också
