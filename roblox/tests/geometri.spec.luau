@@ -236,14 +236,16 @@ check("interiörens origo är husets sydvästra hörn",
 	nara(S.origo.x, stall.rekt.x) and nara(S.origo.y, stall.rekt.y))
 
 do
-	-- Tvärkorridoren ska nå BÅDA långsidorna. Planen har utrymningsvägar där,
-	-- och en korridor som tar slut halvvägs är ingen utrymningsväg.
+	-- Tvärkorridoren mellan boxhallen och klubbdelen ska nå BÅDA långsidorna.
+	-- Planen har utrymningsvägar där (`DEFERRED BY EXTERIOR LOCK`), och en
+	-- korridor som tar slut halvvägs är ingen utrymningsväg. Korridoren mitt
+	-- i boxhallen som stod här förut finns inte i planen — se `brott`.
 	local nadde = false
 	for _, g in ipairs(S.gangytor) do
-		if g.y >= S.tvarGang.y0 - 0.5 and g.y + g.h <= S.tvarGang.y1 + 0.5
+		if g.y <= S.klubbY + 0.5 and g.y + g.h >= S.klubb.y0 - 0.5
 			and g.x < 1.0 and g.x + g.w > S.bredd - 1.0 then nadde = true end
 	end
-	check("tvärkorridoren når båda långsidorna", nadde)
+	check("tvärkorridoren mellan boxhall och klubbdel når båda långsidorna", nadde)
 end
 
 do
@@ -251,7 +253,7 @@ do
 	-- circulation": inget byggt boxfack får ligga i en gångyta.
 	local varsta, var = 0, nil
 	for _, rad in ipairs(S.rader) do
-		for i, f in ipairs(Geometri.boxfack(S)) do
+		for i, f in ipairs(Geometri.boxfack(S, rad)) do
 			local fack = { x = rad.x0, y = f.y0, w = rad.djup, h = f.y1 - f.y0 }
 			for j, g in ipairs(S.gangytor) do
 				local a = Geometri.overlapp(fack, g)
@@ -264,30 +266,49 @@ do
 		else "inget överlapp alls")
 end
 
-do
-	local fack = Geometri.boxfack(S)
-	-- Antalet fack ska vara precis så många som planen säger. Testet hade
-	-- "#fack < 11" hårdkodat, en gräns skriven för den gamla nioboxplanen;
-	-- när längden mättes till 69,95 m och boxantalet blev 12 föll den utan
-	-- att något var fel. En gräns som inte läser datan mäter inte datan.
-	check("lika många fack som planen har boxar", #fack == S.antalBoxar,
-		#fack .. " fack mot " .. S.antalBoxar .. " i planen")
-	check("facken ryms mellan service och klubbdel",
+for _, rad in ipairs(S.rader) do
+	local fack = Geometri.boxfack(S, rad)
+	-- Antalet fack per rad ska vara precis så många som planen säger, minus
+	-- de brott hästförbindelsen gör i just den raden. Testet hade "#fack < 11"
+	-- hårdkodat en gång; en gräns som inte läser datan mäter inte datan.
+	local brott = 0
+	for _, b in ipairs(S.brott or {}) do if b.rad == rad.id then brott += 1 end end
+	check(string.format("rad %s: lika många fack som planen har boxar, minus radens brott", rad.id),
+		#fack == S.antalBoxar - brott,
+		string.format("%d fack mot %d − %d", #fack, S.antalBoxar, brott))
+	check(string.format("rad %s: facken ryms mellan service och klubbdel", rad.id),
 		#fack > 0 and fack[1].y0 >= S.boxStartY - 0.001
 			and fack[#fack].y1 <= S.klubbY + 0.001,
 		#fack > 0 and string.format("%.2f..%.2f mot %.2f..%.2f",
 			fack[1].y0, fack[#fack].y1, S.boxStartY, S.klubbY) or "inga fack")
-	for _, f in ipairs(fack) do
-		local mitt = (f.y0 + f.y1) / 2
-		if mitt > S.tvarGang.y0 and mitt < S.tvarGang.y1 then
-			check("inget fack mitt i tvärkorridoren", false,
-				string.format("fack %g–%g", f.y0, f.y1))
+	for _, b in ipairs(S.brott or {}) do
+		if b.rad ~= rad.id then continue end
+		for _, f in ipairs(fack) do
+			if f.y1 > b.y0 + 0.01 and f.y0 < b.y1 - 0.01 then
+				check("inget fack i hästförbindelsens brott", false,
+					string.format("rad %s fack %g–%g mot brott %g–%g", rad.id, f.y0, f.y1, b.y0, b.y1))
+			end
 		end
 	end
 end
 
-check("de namngivna rummen ur planen finns med", #S.rum >= 3,
-	#S.rum .. " rum, " .. #S.service .. " servicedelar")
+do
+	local K = S.klubb
+	local namn = {}
+	for _, r in ipairs(K.rum) do namn[r.id] = true end
+	check("klubbdelens rum ur planen finns med",
+		namn.uppehallsrum and namn.teorisal and namn.sadelkammare and namn.wc_v and namn.wc_o,
+		#K.rum .. " rum, " .. #K.vaggar .. " väggar, " .. #S.service .. " servicedelar")
+	-- Alla rum ligger norr om den genomgående väggen, inuti huset.
+	local utanfor = nil
+	for _, r in ipairs(K.rum) do
+		local k = r.rekt
+		if k.y < K.y0 - 0.01 or k.y + k.h > S.langd + 0.01 or k.x < -0.01 or k.x + k.w > S.bredd + 0.01 then
+			utanfor = r.id
+		end
+	end
+	check("klubbdelens rum ligger alla i klubbdelen", utanfor == nil, utanfor or "alla innanför")
+end
 
 print("\nRidhusets insida")
 
@@ -464,7 +485,7 @@ do
 
 	-- Och den ska ligga i liv med stallets tvärkorridor, som planen visar når
 	-- båda långsidorna. Det är den ena av de två källorna som pekar hit.
-	local kMitt = S.origo.y + (S.tvarGang.y0 + S.tvarGang.y1) / 2
+	local kMitt = S.origo.y + (S.brott[1].y0 + S.brott[1].y1) / 2
 	local hMitt = hastgang.rekt.y + hastgang.rekt.h / 2
 	check("gången möter stallets tvärkorridor", math.abs(kMitt - hMitt) < 1.5,
 		string.format("korridorens mitt y = %.2f, gångens y = %.2f", kMitt, hMitt))

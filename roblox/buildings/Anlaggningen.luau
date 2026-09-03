@@ -578,7 +578,7 @@ local function byggStallInre(model: Model, base: CFrame)
 	local BF = G.identitet.stall.boxfront
 	for _, rad in ipairs(S.rader) do
 		local x0 = o.x + rad.x0
-		for i, f in ipairs(GEO.boxfack(S)) do
+		for i, f in ipairs(GEO.boxfack(S, rad)) do
 			local namn = rad.id .. " " .. i
 			-- Skiljeväggar i fackets båda ändar, i panelens ton och höjd.
 			for _, par in ipairs({ { "", f.y0 }, { "b", f.y1 } }) do
@@ -624,6 +624,46 @@ local function byggStallInre(model: Model, base: CFrame)
 			BK.box(model, base, "Tvärvägg " .. i .. ":" .. j,
 				o.x + bit.x0, 0, o.y + v.y, bit.x1 - bit.x0, h, 0.2, INRE.vagg,
 				if v.brand then Enum.Material.Concrete else Enum.Material.Plaster)
+		end
+	end
+
+	--[[ KLUBBDELEN ur utrymningsplanen, rättad av Product Owner 2026-09-03.
+
+		Förut tre svävande lådor med rumsnamn i en öppen hall. Nu planens
+		väggar, segment för segment med dörrarna som luckor, ur samma lista
+		som webben kolliderar mot. Rummen är golv man går på; bara de som är
+		`stangt` (trapphuset, toaletten under trappan, det lilla rummet utan
+		läsbar dörr) byggs som hela volymer. Rumsnamnen står som attribut på
+		en tunn golvplatta så att Studio kan visa vad som är vad utan att
+		något solitt tillkommer. ]]
+	for _, v in ipairs(S.klubb.vaggar) do
+		local t = v.tjock or 0.16
+		for j, bit in ipairs(GEO.vaggBitar(v)) do
+			if v.typ == "tvar" then
+				BK.box(model, base, "Klubbvägg " .. v.id .. ":" .. j,
+					o.x + bit.a0, 0, o.y + v.y - t / 2, bit.a1 - bit.a0, h, t, INRE.vagg,
+					if v.brand then Enum.Material.Concrete else Enum.Material.Plaster)
+			else
+				BK.box(model, base, "Klubbvägg " .. v.id .. ":" .. j,
+					o.x + v.x - t / 2, 0, o.y + bit.a0, t, h, bit.a1 - bit.a0, INRE.vagg,
+					Enum.Material.Plaster)
+			end
+		end
+	end
+	for _, r in ipairs(S.klubb.rum) do
+		local k = r.rekt
+		if r.stangt then
+			local p = BK.box(model, base, "Slutet rum " .. r.id,
+				o.x + k.x, 0, o.y + k.y, k.w, h * 0.9, k.h, INRE.rum, Enum.Material.Plaster)
+			p.Transparency = 0.45
+			p:SetAttribute("Rum", r.id)
+		elseif r.label ~= "" then
+			local platta = BK.box(model, base, "Rumsetikett " .. r.label,
+				o.x + k.x + 0.2, 0.01, o.y + k.y + 0.2, k.w - 0.4, 0.02, k.h - 0.4,
+				INRE.rum, Enum.Material.SmoothPlastic)
+			platta.CanCollide = false
+			platta.Transparency = 0.6
+			platta:SetAttribute("Rum", r.id)
 		end
 	end
 

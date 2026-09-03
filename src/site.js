@@ -943,13 +943,38 @@ const STALLINNE = {
      69,95/54 = 1,30 — planen och det mätta måttet pekar åt samma håll,
      och nio boxar var en följd av det för korta huset.
 
-     Kontroll: 6,8 + 12 × 3,5 + 3,5 (tvärgång) = 52,3 ≤ 52,85. */
+     Kontroll: 6,8 + 13 × 3,5 = 52,3 ≤ 52,85.
+
+     TRETTON per rad, inte tolv. Tolv var en följd av tvärgången: en
+     korridor tvärs hela huset mitt i boxhallen, som tog en boxbredd ur
+     varje rad. Planen har ingen sådan korridor — se `brott` nedan — och
+     `references/plans/README.md` räknade redan "ungefär 13 boxfack per
+     länga". Antalet räknas ut ur måtten längre ner (`antalBoxar`), inte
+     skrivs. Fasadens fönsterrytm läser STALL_BOXAR och är låst; de två
+     talen är därför medvetet skilda åt. */
   klubbY:52.85, boxStartY:6.8, serviceY:6.5,
-  boxB:3.5, antalBoxar:STALL_BOXAR,
-  /* Tvärgången mitt i boxhallen. Mätt på planen ligger den på ~50 % av
-     boxhallen räknat från klubbänden; 6,8 + 6 × 3,5 ger sex boxar på var
-     sida. Det är också den här korridoren hästgången mynnar i. */
-  tvarGang:{y0:27.8, y1:31.3},
+  boxB:3.5,
+  /* HÄSTFÖRBINDELSEN BRYTER VÄSTRA BOXRADEN — inte hela huset.
+
+     Spelet hade en tvärgång tvärs hela bredden på y 27,8–31,3, med sex
+     boxar på var sida. Det var en läsning ur en sned bild av planen. I den
+     raka bilden (`stall-plan1-utrymning-rak.jpg`), mätt med
+     `tools/f02-planmatning.py`: de två mittraderna och östra raden fortsätter
+     obrutna förbi hästgångens höjd — boxskiljare på 38,3 och 41,3 m från
+     norra gaveln, och brandsläckarna står i gångarna, inte i en korridor.
+     Bara VÄSTRA ytterraden, den som vetter mot ridhuset, är bruten: väggpar
+     på 38,7 och 40,8 m från norr, alltså y 29,15–31,25 lokalt. Tobias
+     bekräftade läsningen på plats: hästförbindelsen bryter boxraden
+     ungefär på mitten.
+
+     Brottet läses ur SAMMA tal som fasadens hästgångsdörr (GANG_FASTE,
+     GANG_DJUP och dörrens 2,4 m i ANL), så att den inre öppningen och den
+     yttre inte kan glida isär: det är EN förbindelse, inte två. Fasaden är
+     låst; planens 29,15–31,25 ligger 0,8 m söder om dörrens 28,35–30,75,
+     inom planbildens skalfel. `PLAN` för läget, dörrbredden `ASSUMPTION`. */
+  brott:[{rad:"W", id:"hastgang",
+          y0:GANG_FASTE+GANG_DJUP-0.55-2.4-STALL_Y,
+          y1:GANG_FASTE+GANG_DJUP-0.55-STALL_Y}],
   /* Fylls ur STALL_BAND nedan: rader med x0/boxDjup, gångar med x0/x1. */
   rader:[], gangar:{},
   /* Spelets sjutton hästar står i gång A, den man kommer in i från
@@ -962,13 +987,118 @@ const STALLINNE = {
     MB:[ null,null,null,null,null,null,null,null,null,null,null ],
     E: [ null,null,null,null,null,null,null,null,null,null,null ],
   },
-  rum:[
-    /* Klubbrummen behåller sitt avstånd till NORRA gaveln (+15,95 m i
-       lokala tal), eftersom det är gaveln som ligger still. */
-    {id:"uppehallsrum", rekt:{x:0,    y:66.45, w:7.0, h:3.5}, label:"UPPEHÅLLSRUM"},
-    {id:"teorisal",     rekt:{x:14.0, y:66.45, w:7.0, h:3.5}, label:"TEORISAL · WC"},
-    {id:"sadelkammare", rekt:{x:0,    y:62.55, w:3.2, h:3.9}, label:"SADELKAMMARE"},
-  ],
+  /* `rum` var tre solida lådor som svävade i en "klubbhall": uppehållsrum
+     och teorisal på var sin långsida, sadelkammaren i ett hörn. Ingen av
+     rektanglarna var läst ur planen — de var `ASSUMPTION` och underkändes
+     av Product Owner 2026-09-03. Listan står kvar tom så att servicedelens
+     bukter kan läsas ur samma slinga som förut; klubbdelen är `klubb`. */
+  rum:[],
+  /* ═══ KLUBBDELEN — ur utrymningsplanen, rättad av Product Owner ═══
+
+     Källordning: 1 Tobias rättelse på plats · 2 `stall-plan1-utrymning-rak.jpg`
+     för geometri och orientering · 3 foton för utseende · 4 den gamla
+     implementationen bara som jämförelse.
+
+     Tobias, som har gått rundan: man kommer in från parkeringen (norra
+     gaveln), först in i UPPEHÅLLSRUMMET. TEORISALEN ligger till vänster om
+     det. SADELKAMMAREN når man genom att gå vänster och sedan höger. I
+     uppehållsrummets bortre ände sitter TVÅ TOALETTER, en på var sida, med
+     den inre entrén till stallet emellan. Rakt fram genom den kommer man in
+     i STALLGÅNG A. "Vänster" är gående riktning med ryggen mot parkeringen,
+     alltså ÖSTER — se docs/F02-INTERIOR-MATRIS.md.
+
+     Planen, mätt i bildpunkter (`tools/f02-planmatning.py`, klubbändens
+     vägglinjer): huset spänner rad 273–1657 i bilden för 69,95 m, kolumn
+     536–968 för bredden. N nedan är meter från norra gaveln; y = 69,95 − N.
+     Tvärled vilar på den olösta bredden 21 m (`ASSUMED_SCALE`), längdled på
+     den verifierade längden (`PLAN`).
+
+       · entré i norra gaveln x 3,6–5,5, vindfångets två stumpar N 0–2,0
+       · uppehållsrummet x 0–5,9, N 0–9,8, med en tjock väggspår x 2,8–3,5
+         N 5,5–9,8 vars funktion inte går att läsa
+       · W-toaletten x 0–4,0 N 9,8–12,5 (den större; foto finns på en
+         tillgänglighetsanpassad toalett, vilken av de två är `ASSUMPTION`)
+       · lobbyn x 4,0–5,8 N 9,8–12,5 med planens gröna pil ner genom
+       · den INRE ENTRÉN: dörr i den genomgående väggen x 4,1–5,0 — rakt
+         nedanför gaveldörren och rakt ovanför gång A (4,1–6,7)
+       · Ö-toaletten x 5,8–7,3 N 11,3–12,5, under trappan
+       · trapphuset x 5,9–7,3 N 4,9–11,3 — planens trappsymbol, byggs som
+         sluten volym, se noten vid `trapphus`
+       · passagen x 5,9–11,2 N 0–5,6, öster om uppehållsrummet, med ett
+         litet slutet rum x 9,0–11,2 N 0–2,2 (grå ruta = utanför
+         utrymningsytan; funktion oläsbar)
+       · TEORISALEN x 11,2–17,3 N 0–5,6, in genom en 2,6 m öppning i
+         västväggen N 3,0–5,6
+       · SADELKAMMAREN x 7,3–15,5 N 5,6–12,5, in från passagen genom
+         x 7,3–8,8 vid N 5,6; egen dörr söderut i den genomgående väggen
+         x 7,7–8,8; en halvvägg x 9,0–12,2 vid N 9,1 vars funktion är oläst
+       · ÖSTRA RUMMET x 15,5–21 N 5,6–12,5 plus x 17,3–21 N 0–5,6, med
+         planens utgång österut vid N 9,9 — `DEFERRED BY EXTERIOR LOCK`
+       · den GENOMGÅENDE VÄGGEN vid N 12,5 (y 57,45) tvärs hela huset, med
+         de två dörrarna ovan. Förra rundan lästes den som öppen 0–8,97 m i
+         väster; det var fel — den mörka andelen 0,61 var trapphusets och
+         dörrarnas linjer, inte ett hål. Ersatt.
+
+     MOTSÄGELSER som INTE löses här (fasaden är låst, se KORT.md):
+       · planens gaveldörr sitter x 3,6–5,5; den låsta fasadens entré sitter
+         mitt på gaveln (10,5). `ut_n` nedan pekar in i planens vindfång,
+         fasadmarkören står kvar vid den låsta dörren.
+       · den låsta långsidesdörren 5,6 m från gaveln (`ut_n2`) finns inte i
+         planen; den mynnar i uppehållsrummet och behålls.
+       · gavelns runda fönster (x 8,2 och 11,4 i fasaden) hamnar i passagen
+         och teorisalen, inte i uppehållsrummet som fotona ger runda fönster.
+
+     `vaggar` är segment med öppningar; `rum` är REGIONER. Ett rum utan
+     `stangt` är golv man går på — väggarna gör allt spärrande. Roblox
+     bygger samma lista genom Geometri.vaggBitar. */
+  klubb:{
+    y0:57.45,
+    vaggar:[
+      {id:"genomgaende", typ:"tvar", y:57.45, x0:0, x1:STALL_BREDD, brand:true,
+       oppningar:[{id:"inre_entre", x0:4.1, x1:5.0},
+                  {id:"sadelkammare", x0:7.7, x1:8.8}]},
+      {id:"vindfang_v",  typ:"langs", x:3.6, y0:67.95, y1:69.95},
+      {id:"vindfang_o",  typ:"langs", x:5.5, y0:67.95, y1:69.95},
+      {id:"vindfang_fot",typ:"tvar",  y:67.95, x0:5.5, x1:6.0},
+      {id:"spar",        typ:"langs", x:3.15, y0:60.15, y1:64.45, tjock:0.5},
+      {id:"wc_v_n",      typ:"tvar",  y:60.15, x0:0, x1:4.0},
+      {id:"wc_v_o",      typ:"langs", x:4.0, y0:57.45, y1:60.15,
+       oppningar:[{id:"wc_v_dorr", y0:58.45, y1:59.5}]},
+      {id:"trapphus_v",  typ:"langs", x:5.9, y0:57.45, y1:65.05},
+      {id:"trapphus_o",  typ:"langs", x:7.3, y0:57.45, y1:65.05},
+      {id:"trapphus_n",  typ:"tvar",  y:65.05, x0:5.9, x1:7.3},
+      {id:"trapphus_s",  typ:"tvar",  y:58.65, x0:5.9, x1:7.3},
+      {id:"litet_v",     typ:"langs", x:9.0, y0:67.75, y1:69.95},
+      {id:"litet_s",     typ:"tvar",  y:67.75, x0:9.0, x1:11.2},
+      {id:"teorisal_v",  typ:"langs", x:11.2, y0:64.35, y1:69.95,
+       oppningar:[{id:"teorisal_dorr", y0:64.35, y1:66.95}]},
+      {id:"teorisal_s",  typ:"tvar",  y:64.35, x0:8.8, x1:17.3},
+      {id:"teorisal_o",  typ:"langs", x:17.3, y0:64.35, y1:69.95},
+      {id:"sadelkammare_o", typ:"langs", x:15.5, y0:57.45, y1:64.35},
+      {id:"sadelkammare_mellan", typ:"tvar", y:60.85, x0:9.0, x1:12.2},
+    ],
+    rum:[
+      {id:"vindfang",     rekt:{x:3.6,  y:67.95, w:1.9, h:2.0},  label:"ENTRÉ"},
+      {id:"uppehallsrum", rekt:{x:0,    y:60.15, w:5.9, h:9.8},  label:"UPPEHÅLLSRUM"},
+      {id:"wc_v",         rekt:{x:0,    y:57.45, w:4.0, h:2.7},  label:"WC"},
+      {id:"lobby",        rekt:{x:4.0,  y:57.45, w:1.9, h:2.7},  label:""},
+      /* Ö-toaletten: en dörr går inte att läsa i planen och hittas inte på.
+         `stangt`: byggs som sluten volym tills dörren är belagd. */
+      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.2},  label:"WC", stangt:true},
+      /* TRAPPHUSET. Planens trappsymbol — inte ridhusets kortändstrappor,
+         inte en ny trappa i spelet. Vart den leder, var man går in och hur
+         den ser ut är `REFERENCE GAP`; kanonen säger EVIDENCE_ONLY. Den
+         byggs därför som en sluten volym med planens fotavtryck, så att
+         rummen runt den får rätt form, och inget mer. */
+      {id:"trapphus",     rekt:{x:5.9,  y:58.65, w:1.4, h:6.4},  label:"TRAPPHUS", stangt:true},
+      {id:"passage",      rekt:{x:5.9,  y:64.35, w:5.3, h:5.6},  label:""},
+      {id:"litet_rum",    rekt:{x:9.0,  y:67.75, w:2.2, h:2.2},  label:"", stangt:true},
+      {id:"teorisal",     rekt:{x:11.2, y:64.35, w:6.1, h:5.6},  label:"TEORISAL"},
+      {id:"sadelkammare", rekt:{x:7.3,  y:57.45, w:8.2, h:6.9},  label:"SADELKAMMARE"},
+      {id:"ostrum",       rekt:{x:15.5, y:57.45, w:5.5, h:6.9},  label:""},
+      {id:"ostrum_n",     rekt:{x:17.3, y:64.35, w:3.7, h:5.6},  label:""},
+    ],
+  },
   /* SERVICEDELEN — ombyggd efter Product Owners visuella underkännande.
 
      `KNOWN MISMATCH`, underkänd i spelarvyn: de här två låg som slutna rum
@@ -1025,30 +1155,10 @@ const STALLINNE = {
   tvarvaggar:[
     {y:52.85, brand:true},
     {y:6.5, brand:false, oppningar:[{x0:9.0, x1:12.0}]},
-    /* KLUBBDELENS GENOMGÅENDE VÄGG — F02-A, ur utrymningsplanen.
-
-       `tools/f02-planmatning.py` mäter en genomgående mörk linje på andelen
-       0,1855 av längden från norra gaveln, med 0,61 av husbredden mörk. Det
-       är ett av de starkaste utslagen i hela planen och kan inte vara en
-       boxvägg: boxhallen börjar först på 0,2396.
-
-       0,1855 × 69,95 = 12,98 m från norra gaveln, alltså y = 56,97.
-       `PLAN` i längdled. Klass i tvärled: se nedan.
-
-       Väggen går INTE tvärs hela huset. I planen börjar den en bit in från
-       västra ytterväggen och löper därifrån till den östra — den västra
-       delen är öppen, och det är där trapphuset och den västra zonen ligger.
-       Öppningen är därför skriven som ett hål 0 → 8,97:
-
-         bildpunkt 720 av husets 535–968 → (720−535)/433 × 21 = 8,97 m.
-
-       `DERIVED` `ASSUMED_SCALE` i tvärled: andelen 0,427 av bredden är mätt,
-       men metertalet vilar på bredden 21 m som själv är olöst 15–23 m. Ändras
-       STALL_BREDD ska talet räknas om ur andelen, inte behållas.
-
-       `foljGangar:false`: gångarna ligger i boxhallen, söder om klubbdelen.
-       Utan flaggan hade väggen fått två hål på lägen som hör hemma 40 m bort. */
-    {y:56.97, brand:false, foljGangar:false, oppningar:[{x0:0, x1:8.97}]},
+    /* Klubbdelens genomgående vägg stod här en runda som `y:56.97` med ett
+       hål 0 → 8,97 m i väster. Läsningen var fel: det som såg ut som ett
+       hål var trapphusets och dörrarnas linjer. Väggen är nu `klubb.vaggar`
+       ovan, på y 57,45, tvärs hela huset med planens två dörrar. */
   ],
   /* Dörrarna beskrivs EN gång. `pos` är innerläget, `spawn` ytterläget,
      `inrikt` vilket håll man tittar när man kliver in och `uttext` vad
@@ -1074,7 +1184,13 @@ const STALLINNE = {
        gaveln: entrén under verandan ligger nu mot grusplanen, och
        långsidans dörr är den enkla. Texterna följer med dörrarna, annars
        skickas spelaren till fel sida av huset. */
-    {id:"ut_n", pos:[10.5,65.95], text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
+    /* INNERLÄGET ligger i planens vindfång (x 3,6–5,5 i gaveln), inte mitt
+       på gaveln där den låsta fasadens dörr står. De två stämmer inte
+       överens — `CONTRADICTION`, se noten vid `klubb` — och fasaden får
+       inte röras. Spelaren som går in genom fasaddörren står därför inne i
+       vindfånget, 5,9 m väster om dörren. Ytterläget (`spawn`) följer
+       fasaden som förut. */
+    {id:"ut_n", pos:[4.55,69.0], text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (Entré, under verandan)",
      spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},
     {id:"ut_n2",pos:[1.6,64.35], text:"Ut på gårdssidan", mot:"gard", inrikt:0,
@@ -1113,6 +1229,29 @@ const STALLINNE = {
   const mA=(S.gangar.A.x0+S.gangar.A.x1)/2;
   S.ridlarare.pos[0]=mA; S.whiteboard.pos[0]=mA;
 })();
+
+/* BOXFACKEN per rad, som y-intervall. Samma regel som Geometri.boxfack i
+   Roblox: facken börjar vid boxStartY, är boxB djupa och slutar vid klubbY;
+   ett fack som skär ett `brott` i sin rad finns inte — där går
+   hästförbindelsen. Listan räknas EN gång här och läses av alla som ritar,
+   kolliderar eller räknar boxar, så att webben inte kan rita tolv där Roblox
+   bygger tretton (vilket den gjorde: boxslingorna följde namnlistornas
+   längd, elva, medan Roblox byggde alla tolv fack). */
+STALLINNE.fack = (()=>{
+  const S=STALLINNE, ut={};
+  for(const rad of S.rader){
+    const lista=[];
+    for(let y=S.boxStartY; y+S.boxB<=S.klubbY+0.001; y+=S.boxB){
+      const f={y0:y, y1:y+S.boxB};
+      const bruten=(S.brott||[]).some(b=>b.rad===rad.id && f.y1>b.y0+0.01 && f.y0<b.y1-0.01);
+      if(!bruten) lista.push(f);
+    }
+    ut[rad.id]=lista;
+  }
+  return ut;
+})();
+/* Boxar per obruten rad — tretton vid 69,95 m. Räknas, inte skrivs. */
+STALLINNE.antalBoxar = Math.floor((STALLINNE.klubbY-STALLINNE.boxStartY)/STALLINNE.boxB+0.001);
 
 /* Stallets dörrmarkörer på gården härleds ur STALLINNE.dorrar, så att de
    två sidorna av samma dörr aldrig kan glida isär. Före 2026-08-30 fanns
@@ -1156,22 +1295,26 @@ STALLINNE.gangytor = (()=>{
     g.push({x:a.x0, y:S.serviceY-DORRGAP, w:a.x1-a.x0,
             h:(S.klubbY+DORRGAP)-(S.serviceY-DORRGAP)});
   }
-  /* Tvärkorridoren går hela vägen ut till båda långsidorna: planen har
-     utrymningsvägar där, och en korridor som slutar vid gång B når dem
-     inte. Den bryter boxlängorna på ett ställe, vilket är precis vad en
-     genomgående korridor gör. */
-  g.push({x:0.4, y:S.tvarGang.y0, w:S.bredd-0.8, h:S.tvarGang.y1-S.tvarGang.y0});
-  /* Klubbhallen går från branddörrsväggen upp till klubbrummen. Gränsen
-     LÄSES UR RUMMEN i stället för att skrivas som ett tal: 50,5 stod här
-     hårdkodat, och när klubbY flyttades från 43 till 52,85 blev hallens
-     höjd negativ. Byggbänken fällde det direkt — en box hamnade i en
-     gångyta — men felet hade inte behövt uppstå. */
-  const rumY = S.rum[0].rekt.y;
-  g.push({x:0.4, y:S.klubbY, w:S.bredd-0.8, h:rumY-S.klubbY});     // klubbhallen
-  /* Hallen mot gaveldörren. Den TANGERADE klubbhallen på rumY och var
-     därför avskuren på samma sätt som gångarna var — 0,05 m glapp räckte.
-     Den sträcks ner i klubbhallen med samma DORRGAP. */
-  g.push({x:3.4, y:rumY-DORRGAP, w:7.2, h:3.1+DORRGAP});           // hallen mot gaveldörren
+  /* HÄSTFÖRBINDELSENS passage genom västra boxraden: från fasaddörren in
+     i gång A. Den ersätter tvärkorridoren tvärs hela huset — planen har
+     ingen sådan, bara det här brottet. Sträcks DORRGAP in i gång A av samma
+     skäl som gångarna sträcks in i hallarna. */
+  for(const b of S.brott){
+    const rad=S.rader.find(r=>r.id===b.rad);
+    const x0=rad.vetter>0 ? 0.4 : rad.x0-DORRGAP;
+    const x1=rad.vetter>0 ? rad.x0+rad.djup+DORRGAP : S.bredd-0.4;
+    g.push({x:x0, y:b.y0, w:x1-x0, h:b.y1-b.y0});
+  }
+  /* TVÄRKORRIDOREN mellan boxhallen och klubbdelen: från brandväggen vid
+     klubbY upp till den genomgående väggen. Planen ritar utrymningsvägar
+     ut genom båda långsidorna härifrån (`DEFERRED BY EXTERIOR LOCK`). */
+  g.push({x:0.4, y:S.klubbY, w:S.bredd-0.8, h:S.klubb.y0-S.klubbY+DORRGAP});
+  /* KLUBBDELENS GOLV som EN yta: väggarna i `klubb.vaggar` och de slutna
+     rummen gör allt spärrande, i `vandringKollision`. Förut var det tre
+     svävande lådor i en hall; nu är det planens rum med planens dörrar.
+     Ytan sträcks DORRGAP ner i tvärkorridoren så att de två dörrarna i den
+     genomgående väggen inte hamnar i ett dödband. */
+  g.push({x:0.4, y:S.klubb.y0-DORRGAP, w:S.bredd-0.8, h:S.langd-0.4-(S.klubb.y0-DORRGAP)});
   g.push({x:4.5, y:0.4,        w:12.0,        h:S.serviceY-0.4});  // servicepassagen
   return g;
 })();
@@ -1523,10 +1666,12 @@ const RIDHUSINNE = {
 };
 
 STALLINNE.info=[
-  {pos:[6.2,49.6], text:"Klubbrummet — rosettväggen", klubb:true,
+  /* Markörerna står inne i planens rum (`klubb.rum`), inte på gamla
+     hall-koordinater söder om brandväggen som förut. */
+  {pos:[1.6,63.0], text:"Klubbrummet — rosettväggen", klubb:true,
    svar:"Uppehållsrummet: svarta soffor, hästfoton på pärlsponten och en rosa träponny med riktig sadel. Här väntar man in sin lektion."},
-  {pos:[6.2,44.4], text:"Sadelkammaren", sadelkammare:true, svar:""},
-  {pos:[8.8,47.5], text:"Teorilektion i teorisalen", teori:true,
+  {pos:[9.8,62.6], text:"Sadelkammaren", sadelkammare:true, svar:""},
+  {pos:[14.2,67.0], text:"Teorilektion i teorisalen", teori:true,
    svar:""},
   {pos:[6.2,5.8],  text:"Spolspiltan", spolspilta:true, svar:""},
   {pos:[8.8,5.8],  text:"Spånförrådet",

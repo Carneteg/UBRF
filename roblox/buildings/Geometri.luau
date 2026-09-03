@@ -81,26 +81,62 @@ function Geometri.sitterIhop(a: Rekt, b: Rekt, marginal: number?): boolean
 	return false
 end
 
---[[ Boxfacken i en rad, som lokala y-intervall.
+--[[ Boxfacken i EN rad, som lokala y-intervall.
 
-	Facken börjar vid boxStartY och är boxB djupa fram till klubbdelen. Facket
-	som tvärkorridoren går igenom hoppas över — korridoren når båda långsidorna
-	i planen, och en box där hade stängt den.
+	Facken börjar vid boxStartY och är boxB djupa fram till klubbdelen. Ett
+	fack som skär ett `brott` i sin rad finns inte — där går hästförbindelsen
+	genom raden. Förut hoppades ett fack över i ALLA rader för en tvärkorridor
+	tvärs huset; planen har ingen sådan, bara brottet i västra raden.
+
+	Samma regel som STALLINNE.fack i src/site.js, och det exporterade `fack`
+	bär webbens lista så att specen kan jämföra de två.
 
 	Ligger här och inte i byggskriptet därför att specen måste kunna mäta samma
 	fack som byggs. Skriver man logiken två gånger mäter man inte längre det man
 	bygger. ]]
-function Geometri.boxfack(stall): { { y0: number, y1: number } }
+function Geometri.boxfack(stall, rad): { { y0: number, y1: number } }
 	local fack = {}
 	local y = stall.boxStartY
 	while y + stall.boxB <= stall.klubbY + 0.001 do
-		local mitt = y + stall.boxB / 2
-		if not (mitt > stall.tvarGang.y0 and mitt < stall.tvarGang.y1) then
-			table.insert(fack, { y0 = y, y1 = y + stall.boxB })
+		local y1 = y + stall.boxB
+		local bruten = false
+		for _, b in ipairs(stall.brott or {}) do
+			if rad ~= nil and b.rad == rad.id and y1 > b.y0 + 0.01 and y < b.y1 - 0.01 then
+				bruten = true
+			end
 		end
-		y += stall.boxB
+		if not bruten then table.insert(fack, { y0 = y, y1 = y1 }) end
+		y = y1
 	end
 	return fack
+end
+
+--[[ En klubbdelsvägg i bitar, med sina öppningar bortdragna.
+
+	`typ = "tvar"` löper i x på ett fast y och har öppningar som x-intervall;
+	`typ = "langs"` löper i y på ett fast x och har öppningar som y-intervall.
+	Bitarna kommer i samma koordinat som väggen löper i. Webben (src/world.js,
+	src/varld3d.js) bygger ur samma regel: en dörr som finns i spelet finns i
+	Roblox, och en som saknas saknas på båda ställena. ]]
+function Geometri.vaggBitar(vagg): { { a0: number, a1: number } }
+	local a0 = if vagg.typ == "tvar" then vagg.x0 else vagg.y0
+	local a1 = if vagg.typ == "tvar" then vagg.x1 else vagg.y1
+	local hal = {}
+	for _, o in ipairs(vagg.oppningar or {}) do
+		table.insert(hal, {
+			a0 = if vagg.typ == "tvar" then o.x0 else o.y0,
+			a1 = if vagg.typ == "tvar" then o.x1 else o.y1,
+		})
+	end
+	table.sort(hal, function(p, q) return p.a0 < q.a0 end)
+	local bitar = {}
+	local a = a0
+	for _, h in ipairs(hal) do
+		if h.a0 - a > 0.05 then table.insert(bitar, { a0 = a, a1 = h.a0 }) end
+		if h.a1 > a then a = h.a1 end
+	end
+	if a1 - a > 0.05 then table.insert(bitar, { a0 = a, a1 = a1 }) end
+	return bitar
 end
 
 --[[ Tvärväggens bitar, som lokala x-intervall.
@@ -122,17 +158,12 @@ end
 	återvändsgränd — det som underkändes i spelarvyn. Väggen får sina hål ur
 	planen nu, inte ur gångarnas lägen. `vagg` är valfri; utan den blir det
 	som förut. ]]
---[[ `foljGangar = false` säger att väggen INTE ska få hål där gångarna går.
-
-	Gångarna finns bara i boxhallen. En vägg i klubbdelen ligger norr om dem,
-	och att stansa gånghål i den vore att kopiera ett läge från en helt annan
-	del av huset — väggen hade fått två öppningar där planen ritar massiv vägg.
-	Fältet utelämnas för väggarna i boxhallen, som ska följa gångarna. ]]
+--[[ Väggarna i den här listan ligger alla i boxhallen och följer gångarna.
+	Klubbdelens väggar, som inte gör det, ligger i `stall.klubb.vaggar` och
+	byggs genom Geometri.vaggBitar. ]]
 function Geometri.tvarvaggBitar(stall, vagg): { { x0: number, x1: number } }
 	local hal = {}
-	if vagg == nil or vagg.foljGangar ~= false then
-		for _, g in pairs(stall.gangar) do table.insert(hal, g) end
-	end
+	for _, g in pairs(stall.gangar) do table.insert(hal, g) end
 	if vagg ~= nil and vagg.oppningar ~= nil then
 		for _, o in ipairs(vagg.oppningar) do table.insert(hal, o) end
 	end

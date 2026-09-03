@@ -63,29 +63,81 @@ Boxavdelarnas delning: 15 linjer mellan 0,2396 och 0,8284 ger **0,0421 per fack*
 
 ### Zonjämförelse — plan mot implementation
 
-| Zon | Planen | Spelet i dag | Avvikelse | Klass |
+**Skalan ommätt 2026-09-03.** Tabellen ovan räknar `andel` mot bildens
+omslutande ruta (rad 252–1700). Husets verkliga ytterväggar ligger på rad
+**273** (norra) och **1657** (södra), alltså 1384 bildpunkter för 69,95 m —
+0,0505 m per bildpunkt, mot 0,0483 i den första körningen. Skillnaden är
+4,6 % i skala och en meter i nollpunkt; den genomgående väggen ligger
+därför på **12,5 m från norra gaveln (y 57,45)**, inte 12,98 (y 56,97).
+Klubbdelens alla mått nedan är tagna med den rättade skalan.
+
+| Zon | Planen | Spelet nu | Avvikelse | Klass |
 |---|---|---|---|---|
-| Klubbdel, norra änden | andel 0 → 0,2396 | `klubbY` 52,85 → 69,95, dvs andel 0 → 0,2445 | 0,5 % — **stämmer** | `PLAN` |
-| Genomgående vägg inne i klubbdelen | andel 0,1855 | finns inte | **saknas helt** | `PLAN` |
+| Klubbdel, norra änden | N 0 → 16,4 (boxhallens gräns, rad 598) | `klubbY` 52,85 → 69,95, dvs N 0 → 17,1 | 0,65 m — `klubbY` rörs inte, boxarna räknas från den | `PLAN` |
+| Genomgående vägg inne i klubbdelen | N 12,5, tvärs hela huset, två dörrar | `klubb.vaggar.genomgaende` y 57,45 med dörrar x 4,1–5,0 och 7,7–8,8 | **stämmer** | `PLAN` / tvärled `ASSUMED_SCALE` |
 | Boxhallens södra gräns | andel 0,860 | `boxStartY` 6,8, dvs andel 0,903 | **≈ 3 m** | `CONTRADICTION` |
 | Boxfackens delning | 0,0421 av längden ≈ 2,94 m `ASSUMED_SCALE` | `boxB` 3,5 m | **0,56 m per fack** | `CONTRADICTION` |
 | Sex band tvärs huset | boxrad–gång–boxrad–boxrad–gång–boxrad | samma sex band, samma ordning | stämmer | `PLAN` |
+| Boxar per rad | ~13 (`references/plans/README.md`) | 13, västra raden 12 | stämmer | `PLAN` |
+| Tvärgång tvärs huset mitt i boxhallen | **finns inte** — mittraderna och östra raden är obrutna förbi hästgångens höjd (skiljare 38,3 och 41,3 m från norr) | `tvarGang` 27,8–31,3 **borttagen** | rättat | `PLAN` |
+| Hästförbindelsens brott i västra raden | väggpar 38,7 och 40,8 m från norr → y 29,15–31,25 | `brott` y 28,35–30,75, läst ur fasaddörren | 0,8 m, inom planbildens skalfel | `PLAN` + `[enligt Tobias]` |
 
-### Rum och zoner
+### Rum och zoner — klubbdelen, rättad läsning 2026-09-03
 
-| Zon | Planstöd | Spelet i dag | Klass | Not |
+Källordning för raderna nedan: **Tobias rättelse på plats** (rumsidentitet och
+faktisk användning) · **planen** (geometri och orientering) · foton (utseende).
+"Vänster" i Tobias beskrivning är gående riktning söderut från parkeringen,
+alltså **öster**; det är den enda läsningen där teorisalen, sadelkammaren och
+toaletterna alla får plats där planen ritar rum. Hästförbindelsen beskrev han
+däremot i planbildens riktning ("vänster sida av boxsystemet" = bildens
+vänstra = väster), och båda läsningarna stämmer med planen.
+
+| Rum | Planen (N = m från norra gaveln, x från västra väggen) | Spelet nu (`klubb.rum`) | Klass | Källa → faktum |
 |---|---|---|---|---|
-| Klubbdelens NV-rum, med brandlarmscentral `BC` på väggen | ja, tydlig rektangel | — | `PLAN` | grön utrymningspil norrut genom gaveln, alltså klubbentrén |
-| **Trappsymbol i klubbdelen** | ja, trappsymbol med steg i eget trapphus | **byggs inte** | `CONTRADICTION` | symbolen finns, men den lästes fel som en egen stalltrappa — se § Trappan nedan |
-| Litet rum, grått i planen | ja | — | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
-| Klubbdelens östra rum, med utgång **österut** | ja, grön pil genom östfasaden | — | `PLAN` | spelet har ingen östlig utgång i klubbdelen |
-| Tvärkorridor mellan klubbdel och boxhall, utgång åt **både** väster och öster | ja, gröna band på båda sidor | delvis | `PLAN` | |
-| `UPPEHÅLLSRUM` | ingen etikett i planen | rekt 7,0 × 3,5 | `ASSUMPTION` | funktionen är antagen, inte läst |
-| `TEORISAL · WC` | ingen etikett i planen | rekt 7,0 × 3,5 | `ASSUMPTION` | dito |
-| `SADELKAMMARE` | ingen etikett i planen | rekt 3,2 × 3,9 | `ASSUMPTION` | dito |
+| Gaveldörr och vindfång | dörr x 3,6–5,5, två stumpar N 0–2,0 | `vindfang` 3,6–5,5 × y 67,95–69,95 | `PLAN` | planen; grön utrymningspil ut genom gaveln |
+| **Uppehållsrum / väntrum** | x 0–5,9, N 0–9,8 | `uppehallsrum` | `PLAN` + `[enligt Tobias]` | "man kommer först in i uppehållsrummet" |
+| Väggspår i uppehållsrummet | x 2,8–3,5, N 5,5–9,8, dubbel linje | `spar`, tjock 0,5 | `PLAN`, funktion `REFERENCE GAP` | |
+| **Toalett väster om inre entrén** | x 0–4,0, N 9,8–12,5; dörr mot lobbyn N 10,45–11,5 | `wc_v` | `PLAN` + `[enligt Tobias]` | "två toaletter, en på var sida"; dörrläget `ASSUMPTION` bland två läsbara luckor |
+| Lobby / inre entré | x 4,0–5,8, N 9,8–12,5; planens gröna pil ner genom | `lobby` | `PLAN` | |
+| **Inre entrén till stallet** | dörr x 4,1–5,0 i den genomgående väggen | `oppningar.inre_entre` | `PLAN` + `[enligt Tobias]` | "rakt fram leder in i stallgång A" — gång A ligger x 4,4–7,0 |
+| **Toalett öster om inre entrén** | x 5,8–7,3, N 11,3–12,5, under trappan | `wc_o`, `stangt` | `PLAN` + `[enligt Tobias]` | dörr oläsbar → sluten volym |
+| Trapphuset (planens trappsymbol) | x 5,9–7,3, N 4,9–11,3 | `trapphus`, `stangt` | `PLAN`, anslutning `REFERENCE GAP` | se § Trappan; inte ridhusets kortändstrappor |
+| Passagen öster om uppehållsrummet | x 5,9–11,2, N 0–5,6 | `passage` | `PLAN` | vägen "vänster" från uppehållsrummet |
+| Litet rum med grå ruta | x 9,0–11,2, N 0–2,2 | `litet_rum`, `stangt` | `REFERENCE GAP` | grått = utanför utrymningsytan; funktion oläsbar |
+| **Teorisal** | x 11,2–17,3, N 0–5,6; öppning i västväggen N 3,0–5,6 | `teorisal` | `PLAN` + `[enligt Tobias]` | "teorisalen till vänster om uppehållsrummet" |
+| **Sadelkammare** | x 7,3–15,5, N 5,6–12,5; in från passagen x 7,3–8,8; egen dörr söderut x 7,7–8,8 | `sadelkammare` | `PLAN` + `[enligt Tobias]` | "vänster och sedan höger" = öster, sedan söder |
+| Halvvägg i sadelkammaren | x 9,0–12,2 vid N 9,1 | `sadelkammare_mellan` | `PLAN`, funktion `REFERENCE GAP` | |
+| Östra rummet | x 15,5–21 N 5,6–12,5 + x 17,3–21 N 0–5,6; utgång österut N 9,9 | `ostrum`, `ostrum_n`, utan namn | `PLAN`, funktion `REFERENCE GAP` | utgången: `DEFERRED BY EXTERIOR LOCK` |
+| Pentry (fotoverifierat: valv- och rundfönster, mikro, kyl, bord) | ingen etikett | **inte placerat** | `REFERENCE GAP` | kandidater: det lilla rummet eller östra rummet; ingen källa avgör |
+| Tvärkorridor mellan klubbdel och boxhall | N 12,5–16,4, utgångar åt båda långsidorna | gångyta y 52,85–57,45 | `PLAN` | utgångarna `DEFERRED BY EXTERIOR LOCK`; korta väggstumpar i zonen (x 4,5 · 10,9 · 14,2 · 16,5 · 19,1, N 13,6–15,8) är olästa och byggs inte |
 | Boxhallens sex band | ja | ja | `PLAN` | andelarna i `KORT.md`, ommätta 2026-08-30 |
-| Tvärgång mitt i boxhallen, utgång **västerut** | ja | `tvarGang` 27,8–31,3 | `PLAN` | läget i längdled behöver kontrollmätas mot linjelistan |
 | Södra änden, ~5 rum | ja, tydliga partier | två **öppna** bukter | `CONTRADICTION` | se nedan |
+
+**Superseded** — läsningar som stod i det här dokumentet eller i koden och
+som nu är ersatta, inte omtolkade:
+
+| Tidigare | Ersatt av | Varför |
+|---|---|---|
+| Genomgående väggen "öppen 0 → 8,97 m i väster" | tvärs hela huset, dörrar 4,1–5,0 och 7,7–8,8 | den mörka andelen 0,61 var trapphusets och dörrarnas linjer, inte ett hål |
+| `tvarGang` 27,8–31,3 tvärs alla fyra rader, sex boxar på var sida | brott i västra raden enbart | mittraderna är obrutna i planen; Tobias: "bryter boxraden" |
+| `rum`: tre solida lådor (uppehållsrum V, teorisal Ö, sadelkammare hörn) | planens rum som gångbara regioner med väggar | inget av de tre var läst ur planen; Product Owner underkände |
+| `STALLINNE.trappa` (18 steg upp från klubbdelen) | trapphuset som sluten volym | Tobias: trappan man går nås via ridhusets läktare |
+| Tolv boxar per rad | tretton, västra raden tolv | tolv var en följd av tvärgången |
+
+**`CONTRADICTION` mot den låsta fasaden**, redovisade och inte rättade:
+
+- planens gaveldörr sitter x 3,6–5,5; fasadens entré (`[PRODUKTBESLUT]`
+  i `KORT.md`) sitter mitt på gaveln, x 10,5. Spelets `ut_n` pekar in i
+  planens vindfång; fasadmarkören står kvar. Avståndet är 5,9 m.
+- fasadens långsidesdörr 5,6 m från gaveln (`ut_n2`, `[enligt Tobias]`)
+  finns inte i planen; den mynnar i uppehållsrummet och behålls.
+- gavelns två runda fönster (x 8,2 och 11,4) hamnar i passagen och
+  teorisalen; fotona ger uppehållsrummet både valv- och rundfönster.
+
+**Nytt om bredden.** Den raka planbilden mäter huset **432 × 1384**
+bildpunkter, förhållandet 3,20 : 1. Vid 69,95 m ger det **21,9 m** —
+inne i intervallet 15–23 och en oberoende avläsning som pekar nära
+arbetsvärdet 21. `DERIVED`; `STALL_BREDD` ändras inte på en enda bild.
 | Södra gavelns skjutdörr | ja, dörrsymbol med dubbelpil | `gaveloppning` | `FOTO` + `PLAN` | |
 | Utgång österut i södra änden | ja, grönt band | — | `PLAN` | saknas i spelet |
 | Fristående volym söder om gaveln, med cirkel | ja, utanför den gula ytan | — | `REFERENCE GAP` | sannolikt tank/behållare; ingen bild visar den |
@@ -167,17 +219,19 @@ stängda som reference only och är inte mergekälla.
 
 ## Vad F02-A bygger, och vad den inte bygger
 
-**Byggt** — där planen är entydig och spelet saknade något. Alla fyra är
-implementerade i den här slicen:
+**Byggt i Stallhuset** — allt innanför ytterväggarna, ur `klubb` och
+`brott` i `src/site.js`, genom exportören till båda ytorna:
 
 | Byggt | Läge | Klass |
 |---|---|---|
-| 1. Klubbdelens genomgående vägg | andel 0,1855 → y 56,97, öppen 0 → 8,97 m i väster | `PLAN` / tvärled `ASSUMED_SCALE` |
+| Klubbdelens genomgående vägg med två dörrar | y 57,45; dörrar x 4,1–5,0 (inre entrén) och 7,7–8,8 (sadelkammaren) | `PLAN` / tvärled `ASSUMED_SCALE` |
+| Klubbdelens rum som gångbara regioner med väggar | se tabellen § Rum och zoner | `PLAN` + `[enligt Tobias]` |
+| Trapphuset, Ö-toaletten och det lilla rummet som slutna volymer | dito | `PLAN`; dörr/anslutning `REFERENCE GAP` |
+| Hästförbindelsens brott i västra boxraden | y 28,35–30,75, läst ur fasaddörren | `PLAN` + `[enligt Tobias]` |
+| Tretton boxar per obruten rad, tolv i västra | räknas ur måtten | `PLAN` |
 
-Den ligger **helt innanför ytterväggarna** och rör inte fasaden.
-
-Raden om ett trapphus i klubbdelen stod här en runda och är **återtagen** —
-se § Trappan nedan.
+Raden om ett trapphus med trappa stod här en runda och är **återtagen** —
+se § Trappan nedan. Tvärgången tvärs huset är borttagen — se § Superseded.
 
 ### Trappan — planens symbol lästes fel, och rättades av Product Owner
 
@@ -305,10 +359,18 @@ filtret.
 ## Kvarstående `REFERENCE GAP` — samlat
 
 1. **Stallets bredd**, 15–23 m. Ett uppmätt avstånd på plats stänger den.
+   Den raka planbilden ger 21,9 m som en ny, oberoende avläsning.
 2. **Boxfackets längd**, 2,94 mot 3,5 m.
 3. **Ridhusets entréplan i djupled** — rektifiering underkänd.
-4. **Rumsfunktioner** i båda husen — ingen etikett läsbar.
-5. **Plan 2:s rumsindelning** — bilden beskuren.
-6. **Volymen söder om stallets gavel** — ingen bild.
+4. **Rumsfunktioner** som ingen källa ger: stallets lilla rum, östra rummet,
+   väggspåret och halvväggen; var pentryt ligger.
+5. **Dörrar** som planen inte visar: Ö-toaletten under trappan, det lilla
+   rummet, trapphusets ingång.
+6. **Plan 2:s rumsindelning** — bilden beskuren.
+7. **Volymen söder om stallets gavel** — ingen bild.
+8. **Tobias markerade planurklipp (Bild 1–7)** finns inte i repot. Ridhusets
+   rumsidentiteter vilar därför på hans verbala beskrivning plus min läsning
+   av planen; urklippen bör läggas i `references/plans/` så att kopplingen
+   går att kontrollera av någon annan.
 
 Inget av dessa fylls med en rimlig gissning.

@@ -886,8 +886,8 @@ return {
 			text = "Gå in i stallet (Entré, under verandan)",
 			mot = "stallinne",
 			spawn = {
-				x = 10.5,
-				y = 65.95,
+				x = 4.55,
+				y = 69,
 				rikt = -1.570796,
 			},
 		},
@@ -1019,12 +1019,230 @@ return {
 		},
 		vagg = Color3.fromRGB(193, 192, 195),
 		boxB = 3.5,
-		antalBoxar = 12,
+		antalBoxar = 13,
 		boxStartY = 6.8,
 		klubbY = 52.85,
-		tvarGang = {
-			y0 = 27.8,
-			y1 = 31.3,
+		brott = {
+			{
+				rad = "W",
+				id = "hastgang",
+				y0 = 28.35,
+				y1 = 30.75,
+			},
+		},
+		fack = {
+			W = {
+				{
+					y0 = 6.8,
+					y1 = 10.3,
+				},
+				{
+					y0 = 10.3,
+					y1 = 13.8,
+				},
+				{
+					y0 = 13.8,
+					y1 = 17.3,
+				},
+				{
+					y0 = 17.3,
+					y1 = 20.8,
+				},
+				{
+					y0 = 20.8,
+					y1 = 24.3,
+				},
+				{
+					y0 = 24.3,
+					y1 = 27.8,
+				},
+				{
+					y0 = 31.3,
+					y1 = 34.8,
+				},
+				{
+					y0 = 34.8,
+					y1 = 38.3,
+				},
+				{
+					y0 = 38.3,
+					y1 = 41.8,
+				},
+				{
+					y0 = 41.8,
+					y1 = 45.3,
+				},
+				{
+					y0 = 45.3,
+					y1 = 48.8,
+				},
+				{
+					y0 = 48.8,
+					y1 = 52.3,
+				},
+			},
+			MA = {
+				{
+					y0 = 6.8,
+					y1 = 10.3,
+				},
+				{
+					y0 = 10.3,
+					y1 = 13.8,
+				},
+				{
+					y0 = 13.8,
+					y1 = 17.3,
+				},
+				{
+					y0 = 17.3,
+					y1 = 20.8,
+				},
+				{
+					y0 = 20.8,
+					y1 = 24.3,
+				},
+				{
+					y0 = 24.3,
+					y1 = 27.8,
+				},
+				{
+					y0 = 27.8,
+					y1 = 31.3,
+				},
+				{
+					y0 = 31.3,
+					y1 = 34.8,
+				},
+				{
+					y0 = 34.8,
+					y1 = 38.3,
+				},
+				{
+					y0 = 38.3,
+					y1 = 41.8,
+				},
+				{
+					y0 = 41.8,
+					y1 = 45.3,
+				},
+				{
+					y0 = 45.3,
+					y1 = 48.8,
+				},
+				{
+					y0 = 48.8,
+					y1 = 52.3,
+				},
+			},
+			MB = {
+				{
+					y0 = 6.8,
+					y1 = 10.3,
+				},
+				{
+					y0 = 10.3,
+					y1 = 13.8,
+				},
+				{
+					y0 = 13.8,
+					y1 = 17.3,
+				},
+				{
+					y0 = 17.3,
+					y1 = 20.8,
+				},
+				{
+					y0 = 20.8,
+					y1 = 24.3,
+				},
+				{
+					y0 = 24.3,
+					y1 = 27.8,
+				},
+				{
+					y0 = 27.8,
+					y1 = 31.3,
+				},
+				{
+					y0 = 31.3,
+					y1 = 34.8,
+				},
+				{
+					y0 = 34.8,
+					y1 = 38.3,
+				},
+				{
+					y0 = 38.3,
+					y1 = 41.8,
+				},
+				{
+					y0 = 41.8,
+					y1 = 45.3,
+				},
+				{
+					y0 = 45.3,
+					y1 = 48.8,
+				},
+				{
+					y0 = 48.8,
+					y1 = 52.3,
+				},
+			},
+			E = {
+				{
+					y0 = 6.8,
+					y1 = 10.3,
+				},
+				{
+					y0 = 10.3,
+					y1 = 13.8,
+				},
+				{
+					y0 = 13.8,
+					y1 = 17.3,
+				},
+				{
+					y0 = 17.3,
+					y1 = 20.8,
+				},
+				{
+					y0 = 20.8,
+					y1 = 24.3,
+				},
+				{
+					y0 = 24.3,
+					y1 = 27.8,
+				},
+				{
+					y0 = 27.8,
+					y1 = 31.3,
+				},
+				{
+					y0 = 31.3,
+					y1 = 34.8,
+				},
+				{
+					y0 = 34.8,
+					y1 = 38.3,
+				},
+				{
+					y0 = 38.3,
+					y1 = 41.8,
+				},
+				{
+					y0 = 41.8,
+					y1 = 45.3,
+				},
+				{
+					y0 = 45.3,
+					y1 = 48.8,
+				},
+				{
+					y0 = 48.8,
+					y1 = 52.3,
+				},
+			},
 		},
 		band = {
 			{
@@ -1129,21 +1347,21 @@ return {
 			},
 			{
 				x = 0.4,
-				y = 27.8,
-				w = 20.2,
-				h = 3.5,
+				y = 28.35,
+				w = 5.489,
+				h = 2.4,
 			},
 			{
 				x = 0.4,
 				y = 52.85,
 				w = 20.2,
-				h = 13.6,
+				h = 6.1,
 			},
 			{
-				x = 3.4,
-				y = 64.95,
-				w = 7.2,
-				h = 4.6,
+				x = 0.4,
+				y = 55.95,
+				w = 20.2,
+				h = 13.6,
 			},
 			{
 				x = 4.5,
@@ -1152,38 +1370,7 @@ return {
 				h = 6.1,
 			},
 		},
-		rum = {
-			{
-				id = "uppehallsrum",
-				rekt = {
-					x = 0,
-					y = 66.45,
-					w = 7,
-					h = 3.5,
-				},
-				label = "UPPEHÅLLSRUM",
-			},
-			{
-				id = "teorisal",
-				rekt = {
-					x = 14,
-					y = 66.45,
-					w = 7,
-					h = 3.5,
-				},
-				label = "TEORISAL · WC",
-			},
-			{
-				id = "sadelkammare",
-				rekt = {
-					x = 0,
-					y = 62.55,
-					w = 3.2,
-					h = 3.9,
-				},
-				label = "SADELKAMMARE",
-			},
-		},
+		rum = {},
 		service = {
 			{
 				id = "spolspilta",
@@ -1217,6 +1404,290 @@ return {
 				panelH = 2.05,
 			},
 		},
+		klubb = {
+			y0 = 57.45,
+			vaggar = {
+				{
+					id = "genomgaende",
+					typ = "tvar",
+					y = 57.45,
+					x0 = 0,
+					x1 = 21,
+					brand = true,
+					oppningar = {
+						{
+							id = "inre_entre",
+							x0 = 4.1,
+							x1 = 5,
+						},
+						{
+							id = "sadelkammare",
+							x0 = 7.7,
+							x1 = 8.8,
+						},
+					},
+				},
+				{
+					id = "vindfang_v",
+					typ = "langs",
+					x = 3.6,
+					y0 = 67.95,
+					y1 = 69.95,
+				},
+				{
+					id = "vindfang_o",
+					typ = "langs",
+					x = 5.5,
+					y0 = 67.95,
+					y1 = 69.95,
+				},
+				{
+					id = "vindfang_fot",
+					typ = "tvar",
+					y = 67.95,
+					x0 = 5.5,
+					x1 = 6,
+				},
+				{
+					id = "spar",
+					typ = "langs",
+					x = 3.15,
+					y0 = 60.15,
+					y1 = 64.45,
+					tjock = 0.5,
+				},
+				{
+					id = "wc_v_n",
+					typ = "tvar",
+					y = 60.15,
+					x0 = 0,
+					x1 = 4,
+				},
+				{
+					id = "wc_v_o",
+					typ = "langs",
+					x = 4,
+					y0 = 57.45,
+					y1 = 60.15,
+					oppningar = {
+						{
+							id = "wc_v_dorr",
+							y0 = 58.45,
+							y1 = 59.5,
+						},
+					},
+				},
+				{
+					id = "trapphus_v",
+					typ = "langs",
+					x = 5.9,
+					y0 = 57.45,
+					y1 = 65.05,
+				},
+				{
+					id = "trapphus_o",
+					typ = "langs",
+					x = 7.3,
+					y0 = 57.45,
+					y1 = 65.05,
+				},
+				{
+					id = "trapphus_n",
+					typ = "tvar",
+					y = 65.05,
+					x0 = 5.9,
+					x1 = 7.3,
+				},
+				{
+					id = "trapphus_s",
+					typ = "tvar",
+					y = 58.65,
+					x0 = 5.9,
+					x1 = 7.3,
+				},
+				{
+					id = "litet_v",
+					typ = "langs",
+					x = 9,
+					y0 = 67.75,
+					y1 = 69.95,
+				},
+				{
+					id = "litet_s",
+					typ = "tvar",
+					y = 67.75,
+					x0 = 9,
+					x1 = 11.2,
+				},
+				{
+					id = "teorisal_v",
+					typ = "langs",
+					x = 11.2,
+					y0 = 64.35,
+					y1 = 69.95,
+					oppningar = {
+						{
+							id = "teorisal_dorr",
+							y0 = 64.35,
+							y1 = 66.95,
+						},
+					},
+				},
+				{
+					id = "teorisal_s",
+					typ = "tvar",
+					y = 64.35,
+					x0 = 8.8,
+					x1 = 17.3,
+				},
+				{
+					id = "teorisal_o",
+					typ = "langs",
+					x = 17.3,
+					y0 = 64.35,
+					y1 = 69.95,
+				},
+				{
+					id = "sadelkammare_o",
+					typ = "langs",
+					x = 15.5,
+					y0 = 57.45,
+					y1 = 64.35,
+				},
+				{
+					id = "sadelkammare_mellan",
+					typ = "tvar",
+					y = 60.85,
+					x0 = 9,
+					x1 = 12.2,
+				},
+			},
+			rum = {
+				{
+					id = "vindfang",
+					rekt = {
+						x = 3.6,
+						y = 67.95,
+						w = 1.9,
+						h = 2,
+					},
+					label = "ENTRÉ",
+				},
+				{
+					id = "uppehallsrum",
+					rekt = {
+						x = 0,
+						y = 60.15,
+						w = 5.9,
+						h = 9.8,
+					},
+					label = "UPPEHÅLLSRUM",
+				},
+				{
+					id = "wc_v",
+					rekt = {
+						x = 0,
+						y = 57.45,
+						w = 4,
+						h = 2.7,
+					},
+					label = "WC",
+				},
+				{
+					id = "lobby",
+					rekt = {
+						x = 4,
+						y = 57.45,
+						w = 1.9,
+						h = 2.7,
+					},
+					label = "",
+				},
+				{
+					id = "wc_o",
+					rekt = {
+						x = 5.9,
+						y = 57.45,
+						w = 1.4,
+						h = 1.2,
+					},
+					label = "WC",
+					stangt = true,
+				},
+				{
+					id = "trapphus",
+					rekt = {
+						x = 5.9,
+						y = 58.65,
+						w = 1.4,
+						h = 6.4,
+					},
+					label = "TRAPPHUS",
+					stangt = true,
+				},
+				{
+					id = "passage",
+					rekt = {
+						x = 5.9,
+						y = 64.35,
+						w = 5.3,
+						h = 5.6,
+					},
+					label = "",
+				},
+				{
+					id = "litet_rum",
+					rekt = {
+						x = 9,
+						y = 67.75,
+						w = 2.2,
+						h = 2.2,
+					},
+					label = "",
+					stangt = true,
+				},
+				{
+					id = "teorisal",
+					rekt = {
+						x = 11.2,
+						y = 64.35,
+						w = 6.1,
+						h = 5.6,
+					},
+					label = "TEORISAL",
+				},
+				{
+					id = "sadelkammare",
+					rekt = {
+						x = 7.3,
+						y = 57.45,
+						w = 8.2,
+						h = 6.9,
+					},
+					label = "SADELKAMMARE",
+				},
+				{
+					id = "ostrum",
+					rekt = {
+						x = 15.5,
+						y = 57.45,
+						w = 5.5,
+						h = 6.9,
+					},
+					label = "",
+				},
+				{
+					id = "ostrum_n",
+					rekt = {
+						x = 17.3,
+						y = 64.35,
+						w = 3.7,
+						h = 5.6,
+					},
+					label = "",
+				},
+			},
+		},
 		tvarvaggar = {
 			{
 				y = 52.85,
@@ -1232,24 +1703,13 @@ return {
 					},
 				},
 			},
-			{
-				y = 56.97,
-				brand = false,
-				foljGangar = false,
-				oppningar = {
-					{
-						x0 = 0,
-						x1 = 8.97,
-					},
-				},
-			},
 		},
 		dorrar = {
 			{
 				id = "ut_n",
 				pos = {
-					10.5,
-					65.95,
+					4.55,
+					69,
 				},
 				text = "Ut genom entrén — mot grusplanen",
 				mot = "gard",

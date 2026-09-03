@@ -813,9 +813,8 @@ function v3dStall(lagg,opp){
   lagg(remsa,T.span);
   const span=new Bygge();
   for(const rad of S.rader){
-    const lista=S.boxar[rad.id]||[];
-    for(let i=0;i<lista.length;i++){
-      const my=boxY(i);
+    for(let i=0;i<antalFack(rad.id);i++){
+      const my=boxY(i, rad.id);
       if(my+S.boxB/2>S.klubbY)break;
       span.yta(rad.djup,S.boxB-0.1,"#FFFFFF",
         M4.translation(rad.x0+rad.djup/2,0.03,my),3);
@@ -986,8 +985,8 @@ function v3dStall(lagg,opp){
   const front=new Bygge(), galler=new Bygge();
   for(const rad2 of S.rader){
     const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2), sida=rad2.vetter>0?"W":"E";
-    for(let i=0;i<rad.length;i++){
-      const my=boxY(i), y0=my-S.boxB/2, y1=my+S.boxB/2;
+    for(let i=0;i<antalFack(rad2.id);i++){
+      const my=boxY(i, rad2.id), y0=my-S.boxB/2, y1=my+S.boxB/2;
       if(y1>S.klubbY)break;
       front.lada(0.12,BF.heldelH,S.boxB-0.04,BF_HELDEL,
         M4.translation(fx,BF.heldelH/2,my));
@@ -1123,14 +1122,11 @@ function v3dStall(lagg,opp){
   /* Tvärväggarna med dörrgap. */
   {for(const tv of S.tvarvaggar){
      /* Hålen är gångarna PLUS väggens egna öppningar ur planen. Förut kom de
-        bara ur gångarna, och då blev väggen tät framför varje boxrad.
-
-        `foljGangar:false` stänger av gångdelen. Gångarna finns bara i
-        boxhallen; en vägg i klubbdelen ligger norr om dem och skulle annars
-        få två hål på lägen som hör hemma i en annan del av huset. Samma
-        regel i Geometri.tvarvaggBitar, som Roblox bygger ur. */
-     const halOrd=[...(tv.foljGangar===false?[]:Object.values(S.gangar)),
-                   ...(tv.oppningar||[])]
+        bara ur gångarna, och då blev väggen tät framför varje boxrad. Alla
+        väggar i den här listan ligger i boxhallen; klubbdelens väggar, som
+        inte följer gångarna, byggs ur `klubb.vaggar` nedan. Samma regel i
+        Geometri.tvarvaggBitar, som Roblox bygger ur. */
+     const halOrd=[...Object.values(S.gangar), ...(tv.oppningar||[])]
        .sort((a,b)=>a.x0-b.x0);
      const bitar=[]; let x=0;
      for(const h of halOrd){ if(h.x0>x) bitar.push([x,h.x0]); x=Math.max(x,h.x1); }
@@ -1140,6 +1136,30 @@ function v3dStall(lagg,opp){
        rum.lada(x1-x0,2.8,0.16,"#FFFFFF",M4.translation((x0+x1)/2,1.4,tv.y));
      }
    }}
+  /* KLUBBDELEN ur planen: väggarna segment för segment med dörrarna som
+     luckor — samma bitar som world.js kolliderar mot och Roblox bygger ur
+     Geometri.vaggBitar — och de slutna rummen som hela volymer. Rumsnamnen
+     står på västväggens insida i varje namngivet rum. */
+  {const kl=new Bygge();
+   for(const v of S.klubb.vaggar){
+     const t=v.tjock||0.16;
+     for(const [a0,a1] of klubbVaggBitar(v)){
+       if(v.typ==="tvar") kl.lada(a1-a0,2.8,t,"#FFFFFF",M4.translation((a0+a1)/2,1.4,v.y));
+       else               kl.lada(t,2.8,a1-a0,"#FFFFFF",M4.translation(v.x,1.4,(a0+a1)/2));
+     }
+   }
+   for(const r of S.klubb.rum){
+     const q=r.rekt;
+     if(r.stangt) kl.lada(q.w,2.8,q.h,"#F2F0EA",M4.translation(q.x+q.w/2,1.4,q.y+q.h/2));
+     if(r.label){
+       const b=new Bygge();
+       v3dTextPanel(b,Math.min(q.h*0.8,2.6),0.5,
+         M4.mul(M4.translation(q.x+(r.stangt?-0.09:0.09),1.9,q.y+q.h/2),
+                M4.rotY(r.stangt?-Math.PI/2:Math.PI/2)));
+       S3.statiskt.push({nat:GL.nat(b), tex:v3dEtikettTex(r.label)});
+     }
+   }
+   lagg(kl,T.parlspont);}
   lagg(rum,T.parlspont);
   /* Whiteboarden. */
   const wb=new Bygge();
@@ -2105,8 +2125,8 @@ function ritaVandring3D(){
       const S=STALLINNE;
       for(const rad2 of S.rader){                  // hästhuvuden över boxdörrarna
         const rad=S.boxar[rad2.id]||[], fx=boxFrontX(rad2);
-        for(let i=0;i<rad.length;i++){
-          const my=boxY(i);
+        for(let i=0;i<antalFack(rad2.id);i++){
+          const my=boxY(i, rad2.id);
           if(my+S.boxB/2>S.klubbY)break;
           const h=boxHast(rad[i]); if(!h)continue;
           const ut=rad2.vetter;
@@ -2131,7 +2151,7 @@ function ritaVandring3D(){
         v3dFigur({x:S.ridlarare.pos[0],z:S.ridlarare.pos[1],rikt:Math.PI,
           fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
       for(const f of stallFolk()){
-        const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix);
+        const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix, f.rad);
         if(!rad||fy>S.klubbY-1)continue;
         const fx2=boxFrontX(rad)+rad.vetter*0.6;
         v3dFigur({x:fx2,z:fy,rikt:rad.vetter>0?Math.PI/2:-Math.PI/2,

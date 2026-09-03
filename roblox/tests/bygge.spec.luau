@@ -170,9 +170,159 @@ check("ridhusets fönsterband byggdes ovanför panelen",
 	raknaNamn("Ridhus fönsterband") == 1 and raknaNamn("Fönsterpost") > 0,
 	raknaNamn("Fönsterpost") .. " poster")
 
-check("klubbrummen byggdes som rum",
-	raknaNamn("UPPEHÅLLSRUM") == 1 and raknaNamn("SADELKAMMARE") == 1
-		and raknaNamn("TEORISAL") == 1)
+--[[ KLUBBDELEN ur utrymningsplanen, rättad av Product Owner 2026-09-03.
+
+	Provet hette "klubbrummen byggdes som rum" och räknade tre lådor med
+	rätt namn. Det låste fast fel sak: rummen är golv man går på, och det
+	som ska stämma är väggarna, dörrarna, rutten och rummens inbördes lägen
+	— det Tobias beskrev från sin egen runda. ]]
+do
+	local S = UBRFKomplex.stall
+	local K = S.klubb
+	local function rum(id)
+		for _, r in ipairs(K.rum) do if r.id == id then return r end end
+		return nil
+	end
+	local function vagg(id)
+		for _, v in ipairs(K.vaggar) do if v.id == id then return v end end
+		return nil
+	end
+
+	-- 1 · Varje vägg byggdes i precis så många bitar som dess öppningar ger.
+	for _, v in ipairs(K.vaggar) do
+		local bitar = Geometri.vaggBitar(v)
+		local byggda = raknaNamn("Klubbvägg " .. v.id .. ":")
+		check(string.format("klubbväggen %s byggdes i planens bitar", v.id),
+			byggda == #bitar, string.format("%d byggda mot %d i datan", byggda, #bitar))
+	end
+
+	--[[ 2 · Den genomgående väggen har BARA planens två dörrar. Samma prov
+		som fällde `foljGangar` förra rundan, nu på rätt vägg: öppen bredd i det
+		BYGGDA mot summan av de deklarerade öppningarna. Fler hål faller,
+		färre likaså. ]]
+	local genom = vagg("genomgaende")
+	check("den genomgående väggen finns i datan", genom ~= nil)
+	local inre = nil
+	if genom then
+		local murat = 0
+		for _, d in ipairs(delar) do
+			if string.find(d.Name, "Klubbvägg genomgaende:", 1, true) then murat += fot(d).w end
+		end
+		local hal = 0
+		for _, o in ipairs(genom.oppningar) do
+			hal += math.min(o.x1, S.bredd) - math.max(o.x0, 0)
+			if o.id == "inre_entre" then inre = o end
+		end
+		check("den genomgående väggen har bara planens två dörrar",
+			#genom.oppningar == 2 and math.abs((S.bredd - murat) - hal) < 0.15,
+			string.format("%.2f m öppet, planen anger %.2f m i %d dörrar",
+				S.bredd - murat, hal, #genom.oppningar))
+		--[[ Tobias: "rakt fram genom den inre entrén kommer man in i
+			stallgång A". Dörren måste alltså överlappa gång A:s x-intervall,
+			inte en boxrad. Mätt mot samma `gangar` som bygget använder. ]]
+		local A = S.gangar.A
+		check("den inre entrén mynnar rakt i stallgång A",
+			inre ~= nil and inre.x1 > A.x0 + 0.05 and inre.x0 < A.x1 - 0.05,
+			inre and string.format("dörren x %.1f–%.1f, gång A x %.2f–%.2f",
+				inre.x0, inre.x1, A.x0, A.x1) or "ingen inre entré i datan")
+	end
+
+	--[[ 3 · RUTTEN Tobias beskrev, provad mot det BYGGDA: entrén i gaveln →
+		uppehållsrummet → lobbyn mellan toaletterna → den inre entrén → gång A.
+		Ingen kolliderande del under mankhöjd får stå på någon provpunkt. Muras
+		en dörr igen, eller byggs ett rum som låda, faller det här. ]]
+	local rutt = {
+		{ 4.55, 69.0 }, { 4.55, 66.5 }, { 2.0, 63.0 }, { 4.9, 61.0 }, { 4.9, 58.5 },
+		{ 4.55, 57.45 }, { 4.9, 56.0 }, { 5.5, 53.5 }, { 5.5, 50.0 },
+	}
+	local blockerad = nil
+	for _, p in ipairs(rutt) do
+		local px, py = S.origo.x + p[1], S.origo.y + p[2]
+		for _, d in ipairs(delar) do
+			if d.CanCollide then
+				local f = fot(d)
+				--[[ Golvplattor och trösklar räknas inte: något man snubblar
+					på är inte en vägg. Det som spärrar en rutt är delar som når
+					över knähöjd och är mer än en platta tjocka. ]]
+				local sparrar = f.z1 - f.z0 > 0.3 and f.z1 > 0.6 and f.z0 < 1.7
+				if sparrar and px > f.x and px < f.x + f.w and py > f.y and py < f.y + f.h then
+					blockerad = blockerad or string.format("%s vid (%.1f, %.1f)", d.Name, p[1], p[2])
+				end
+			end
+		end
+	end
+	check("rutten entré → uppehållsrum → inre entré → gång A är fri från solitt",
+		blockerad == nil, blockerad or (#rutt .. " provpunkter fria"))
+
+	--[[ 4 · Rummens inbördes lägen, som Tobias gav dem. "Vänster" är gående
+		riktning söderut från parkeringen, alltså öster. ]]
+	local U, T, SK = rum("uppehallsrum"), rum("teorisal"), rum("sadelkammare")
+	local W1, W2, TR = rum("wc_v"), rum("wc_o"), rum("trapphus")
+	check("planens klubbrum finns i datan",
+		U and T and SK and W1 and W2 and TR)
+	if U and T and SK and W1 and W2 and TR and inre then
+		check("teorisalen ligger till vänster om uppehållsrummet (öster)",
+			T.rekt.x >= U.rekt.x + U.rekt.w - 0.01,
+			string.format("teorisal x %.1f, uppehållsrummets östkant %.1f", T.rekt.x, U.rekt.x + U.rekt.w))
+		check("sadelkammaren nås vänster och sedan höger: öster om uppehållsrummet, söder om teorisalen",
+			SK.rekt.x >= U.rekt.x + U.rekt.w - 0.01 and SK.rekt.y + SK.rekt.h <= T.rekt.y + 0.01)
+		check("toaletterna sitter en på var sida om den inre entrén",
+			W1.rekt.x + W1.rekt.w <= inre.x0 + 0.01 and W2.rekt.x >= inre.x1 - 0.01
+				and W1.rekt.y < K.y0 + 0.01 and W2.rekt.y < K.y0 + 0.01,
+			string.format("WC x %.1f–%.1f | dörr %.1f–%.1f | WC x %.1f–%.1f",
+				W1.rekt.x, W1.rekt.x + W1.rekt.w, inre.x0, inre.x1, W2.rekt.x, W2.rekt.x + W2.rekt.w))
+		check("trapphuset är en sluten volym — ingen trappa byggs i Stallhuset",
+			TR.stangt == true and raknaNamn("Slutet rum trapphus") == 1
+				and raknaNamn("Trappsteg") == 0,
+			string.format("%d slutna trapphus, %d trappsteg",
+				raknaNamn("Slutet rum trapphus"), raknaNamn("Trappsteg")))
+		check("toaletten under trappan är sluten tills dess dörr är belagd",
+			W2.stangt == true and raknaNamn("Slutet rum wc_o") == 1)
+	end
+end
+
+--[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:
+	"hästförbindelsen bryter boxraden ungefär på mitten". Planen visar
+	mittraderna och östra raden obrutna förbi samma höjd. Spelet hade en
+	tvärgång genom alla fyra rader; den är borta. ]]
+do
+	local S = UBRFKomplex.stall
+	local b = S.brott and S.brott[1]
+	check("brottet finns och ligger i västra raden", b ~= nil and b.rad == "W")
+	if b then
+		local rader = {}
+		for _, r in ipairs(S.rader) do rader[r.id] = r end
+		local nW, nMA = #Geometri.boxfack(S, rader.W), #Geometri.boxfack(S, rader.MA)
+		check("västra raden har ett fack färre än mittraden",
+			nW == nMA - 1, string.format("W %d, MA %d", nW, nMA))
+		check("mittraderna och östra raden är obrutna, lika många fack som planen",
+			nMA == S.antalBoxar and #Geometri.boxfack(S, rader.MB) == S.antalBoxar
+				and #Geometri.boxfack(S, rader.E) == S.antalBoxar,
+			string.format("MA %d, MB %d, E %d mot %d", nMA,
+				#Geometri.boxfack(S, rader.MB), #Geometri.boxfack(S, rader.E), S.antalBoxar))
+		--[[ Mätt i det byggda: ingen boxfront i W-raden står i brottet, och
+			minst en boxfront i mittraden gör det — annars är raden inte obruten. ]]
+		local iW, iMA = 0, 0
+		for _, d in ipairs(delar) do
+			local f = fot(d)
+			local overlappar = f.y < S.origo.y + b.y1 - 0.05 and f.y + f.h > S.origo.y + b.y0 + 0.05
+			if overlappar and string.find(d.Name, "Boxfront W", 1, true) then iW += 1 end
+			if overlappar and string.find(d.Name, "Boxfront MA", 1, true) then iMA += 1 end
+		end
+		check("ingen boxfront står i hästförbindelsens brott i västra raden", iW == 0, iW .. " fronter")
+		check("mittraden fortsätter obruten förbi brottet", iMA >= 1, iMA .. " fronter")
+		--[[ Brottet och fasadens hästgångsdörr är EN förbindelse: dörren in
+			till stallet (`dorrar.hastgang`) står inne i brottet. ]]
+		local hd = nil
+		for _, d in ipairs(S.dorrar) do if d.id == "hastgang" then hd = d end end
+		check("hästgångens dörr står i brottet",
+			hd ~= nil and hd.pos[2] > b.y0 and hd.pos[2] < b.y1,
+			hd and string.format("dörr y %.2f, brott %.2f–%.2f", hd.pos[2], b.y0, b.y1) or "ingen dörr")
+		check("webbens facklista och Roblox regel ger samma fack",
+			S.fack ~= nil and #S.fack.W == nW and #S.fack.MA == nMA,
+			S.fack and string.format("webb W %d MA %d", #S.fack.W, #S.fack.MA) or "inget fack-fält")
+	end
+end
 
 do
 	local oppna = 0
@@ -210,7 +360,7 @@ do
 		en. Villkoret är skärpt, inte lättat. ]]
 	local vagg = nil
 	for _, v in ipairs(UBRFKomplex.stall.tvarvaggar) do
-		if v.oppningar ~= nil and v.foljGangar ~= false then vagg = v end
+		if v.oppningar ~= nil then vagg = v end
 	end
 	local utan = #Geometri.tvarvaggBitar(UBRFKomplex.stall)
 	local med = if vagg then #Geometri.tvarvaggBitar(UBRFKomplex.stall, vagg) else utan
@@ -249,73 +399,12 @@ do
 	check("tvärväggarna byggdes", antalVaggar == #S.tvarvaggar,
 		antalVaggar .. " vägglinjer")
 
-	--[[ Kravet gäller de väggar GÅNGARNA FAKTISKT NÅR.
-
-		Gångarna löper i boxhallen, alltså söder om `klubbY`. En vägg norr om
-		den ligger i klubbdelen, där det inte finns några gångar att mura igen
-		— att kräva gånghål där vore att kopiera ett läge från en annan del av
-		huset. F02-A:s vägg på y 56,97 föll på precis det, och villkoret är
-		därför avgränsat geometriskt: mot `klubbY`, inte mot en flagga.
-
-		Att avgränsa mot flaggan `foljGangar` hade gjort provet cirkulärt —
-		det hade provat exakt de väggar som fått besked om att ha hål. Därför
-		kontrolleras nedan också att flaggan inte kan användas för att tysta
-		vaktposten på en vägg som ligger i boxhallen. ]]
-	local klubbY = S.origo.y + S.klubbY
-	for _, v in ipairs(S.tvarvaggar) do
-		check(string.format("foljGangar=false används bara i klubbdelen (y %.2f)", v.y),
-			v.foljGangar ~= false or v.y > S.klubbY,
-			string.format("väggen y %.2f, klubbdelen börjar %.2f", v.y, S.klubbY))
-	end
-
-	--[[ Klubbdelen får inte muras av tvärs.
-
-		Gånghålsprovet ovan gäller inte här — gångarna når inte klubbdelen —
-		och utan det här villkoret finns inget som märker om en klubbdelsvägg
-		görs heltäckande. Då skulle spelaren som kommer in genom klubbentrén
-		i norra gaveln stå i ett rum utan väg vidare till boxhallen, och allt
-		annat vara grönt.
-
-		Mätt, inte kopierat: villkoret räknar ihop väggbitarnas bredd i varje
-		klubbdelsvägg och kräver att något är kvar. Flyttas väggens öppning
-		eller ändras dess bredd följer provet med; muras hålet igen faller det. ]]
+	--[[ Tvärväggarna i den här listan ligger alla i boxhallen och ska ha ett
+		hål där varje gång passerar. Klubbdelens väggar, som inte följer
+		gångarna, ligger i `klubb.vaggar` och provas för sig ovan — det är
+		därför flaggan `foljGangar` och dess prov är borta: ingen vägg i den här
+		listan behöver undantaget längre. ]]
 	for nyckel, bitar in pairs(vaggY) do
-		if tonumber(nyckel) == nil or tonumber(nyckel) <= klubbY then continue end
-		local murat = 0
-		for _, b in ipairs(bitar) do murat += b.w end
-		check(string.format("klubbdelens vägg vid y = %s lämnar en väg vidare", nyckel),
-			murat < S.bredd - 0.5,
-			string.format("%.2f m murat av %.2f m bredd, %.2f m öppet",
-				murat, S.bredd, S.bredd - murat))
-	end
-
-	--[[ ...och en `foljGangar=false`-vägg ska ha PRECIS sina egna hål.
-
-		Provet ovan kräver bara att NÅGOT är öppet. En falsifiering visade vad
-		det släpper igenom: görs regeln i Geometri.tvarvaggBitar villkorslös —
-		så att flaggan slutar betyda något och väggen får gångarnas hål ändå —
-		blir allt grönt. Väggen står då med tre hål i stället för ett, varav
-		två på lägen som hör hemma 40 m söderut, och inget märker det.
-
-		Här mäts därför den öppna bredden mot SUMMAN av väggens egna deklarerade
-		öppningar. Fler hål än planen anger faller; färre likaså. ]]
-	for _, v in ipairs(S.tvarvaggar) do
-		if v.foljGangar ~= false then continue end
-		local bitar = vaggY[string.format("%.1f", S.origo.y + v.y)]
-		if bitar == nil then continue end
-		local murat = 0
-		for _, b in ipairs(bitar) do murat += b.w end
-		local vantatHal = 0
-		for _, o in ipairs(v.oppningar or {}) do
-			vantatHal += math.min(o.x1, S.bredd) - math.max(o.x0, 0)
-		end
-		check(string.format("väggen y %.2f har bara planens egna hål", v.y),
-			math.abs((S.bredd - murat) - vantatHal) < 0.15,
-			string.format("%.2f m öppet, planen anger %.2f m", S.bredd - murat, vantatHal))
-	end
-
-	for nyckel, bitar in pairs(vaggY) do
-		if tonumber(nyckel) ~= nil and tonumber(nyckel) > klubbY then continue end
 		for id, g in pairs(S.gangar) do
 			local x0, x1 = S.origo.x + g.x0, S.origo.x + g.x1
 			-- Täcker någon vägbit gångens mitt? Då är passagen murad.

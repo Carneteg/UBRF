@@ -191,10 +191,18 @@ Vyer.vyer = {
 	{
 		id = "stallgangen",
 		grupp = "Stallet inne",
-		text = "Inne i gång A, mot tvärkorridoren",
+		text = "Inne i gång A, mot hästförbindelsens brott i västra raden",
 		fran = { x = So.x + gangAx, y = So.y + S.boxStartY + 2, h = 1.7 },
-		mot = { x = So.x + gangAx, y = So.y + (S.tvarGang.y0 + S.tvarGang.y1) / 2 },
-		krav = "Boxar på båda sidor, boxfronterna antracit med galvad ram och FEM liggande reglar. Tvärkorridoren ska synas hela vägen tvärs huset.",
+		mot = { x = So.x + gangAx, y = So.y + (S.brott[1].y0 + S.brott[1].y1) / 2 },
+		krav = "Boxar på båda sidor, boxfronterna antracit med galvad ram och FEM liggande reglar. Västra raden ska ha ETT brott på hästgångens höjd; mittraderna fortsätter obrutna — ingen korridor tvärs huset.",
+	},
+	{
+		id = "klubbdelen",
+		grupp = "Stallet inne",
+		text = "Innanför entrén: uppehållsrummet, med toaletterna och den inre entrén rakt fram",
+		fran = { x = So.x + 4.55, y = So.y + 68.5, h = 1.7 },
+		mot = { x = So.x + 4.55, y = So.y + S.klubb.y0 },
+		krav = "Planens rum: uppehållsrummet först, trapphuset som sluten volym till vänster (öster), två toaletter i bortre änden med den inre entrén emellan, och genom den stallgång A rakt fram.",
 	},
 }
 
