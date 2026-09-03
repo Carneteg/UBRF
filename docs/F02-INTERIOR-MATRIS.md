@@ -253,7 +253,11 @@ befintlig implementation bara som jämförelse.
 | Sargporten för folk till fots | ingen symbol; planens pilar går här | **borttagen ur fidelity-datan** (`RIDHUSINNE.port` finns inte); spelets gap ligger i `SPELABSTRAKTIONER.ridhus.sargport`, x följer banan, bredd 2,2 vald | `REFERENCE GAP` i fidelity; `SPELABSTRAKTION` | Senior Re-review 2026-09-03 (blocker 2): en ruttslutsats får inte bli anläggningsgeometri. Roblox bygger gapet med en märkt, genomskinlig markör; testerna mäter märkningen, inte läget som verklighet |
 | Domarbåset | — | `domarbas` på däcket, följer sidan | `FOTO` | |
 | Västdörren `u:40` (svarta dörren vid skylten) | i läktarens långsida | `ut_ridhus_W_40`, innerpunkt vid däckets fot på sanden | spelabstraktion | däcket är solitt i kollisionen; annars spawn inne i läktaren (regression vid vändningen, fångad av gångprovet) |
-| Södra zonen bakom sargen (y 0–5,68) | — | onåbar till fots | `REFERENCE GAP` | ingen öppning i södra sargen är belagd; var onåbar även i basen |
+| Södra zonen bakom sargen (y 0–5,68) | — | onåbar till fots | **`CONTRADICTION`** | `ridhus-inne-23` visar A-gaveln DIREKT bakom sargen (A-skylten, dubbel glasdörr, speglar ovanför sargen): ingen zon. Se § Omgranskning nedan |
+| **Läktarlångsidans vägg** | — | `IDENTITET.ridhus.laktarVagg`: ljus skivpanel (`hallvagg`) med mörka pelare där takstolarna landar, skivskarvar | `VERIFIED` (`ridhus-inne-14`, PO 2026-08-31) / pelarrytm `DERIVED` (`takstomme`) / skarvar [uppskattning] | omgranskning 2026-09-03 rad 2: väggen var en slät yta i samma ton som alla andra |
+| **Sponsorpanelen hörn till hörn** | — | `ovreVagg.y0/y1` härledda till 0 → langd − entre (65,68); pilastrar på fältgränserna | `VERIFIED` (`ridhus-inne-31`, `-17`) | omgranskning rad 3: täckte 44 % (y 6–40) |
+| **Fönstren ovanför panelen** | — | `fonsterband.perFalt`: ett fönster per väggfält (`ridhusFalt`), bredd 3,0 m | `VERIFIED` att de är separata (`-31`, `-17`, `-24`); bredd [uppskattning]; höjd `REFERENCE GAP` | omgranskning rad 5: var ett löpande band |
+| Skyltraden | — | ordning och andelar mot bokstäverna M/B/F | `VERIFIED` ordning (`-31`, `-17`), lägen `DERIVED` | omgranskning rad 8: två RS Mustang, Hästsportbutik söder om Agria |
 
 **Superseded** — läsningar som stod i koden och nu är ersatta, inte omtolkade:
 
@@ -268,6 +272,31 @@ befintlig implementation bara som jämförelse.
 | `ut_n` i nordöstra hörnet (21,9; 74,2) | fasadens `ut_ridhus_N_8` vid svarta gaveldörren | dörren fanns varken i plan eller fasad |
 | Dressyrbokstäverna med A i norr | A i söder, C i norr, E mot läktaren | C står framför C-blocket |
 | `hiss` i cellraden x 2,6–4,4 (första läsningen i denna gren) | x 5,75–7,6 öster om skåpväggen | förstoring |
+
+### Omgranskning 2026-09-03 — käll-för-käll, före rättelse
+
+Product Owner underkände den kombinerade previewn: "Ridhuset läser inte
+som det verkliga". Hela källmaterialet gicks igenom mot spelet innan något
+ändrades; rapporten med alla 18 rader, vad som stämmer, den rumsliga
+läsningen och referensluckorna står i **`docs/F02-RIDHUS-OMGRANSKNING.md`**.
+Rättat i F02-A: läktarlångsidans vägg (pelare + skivor), panelen hörn till
+hörn, separata fönster per fält, skyltordningen, läktarfrontens
+källhänvisning. Redan rättat i F02-B (#76): tre stegade bänkrader, mörk
+gångbräda, en delad spegel vid B. Kvar som F02-B/`REFERENCE GAP`:
+entrédelens dörrblad, glaspartier och skåp; caféets möbler.
+
+**Nytt `CONTRADICTION` — A-gaveln står direkt bakom sargen.**
+`ridhus-inne-23-kortsidan-vid-a.jpg`: A-skylten sitter på sargen, den vita
+gaveln med dubbel glasdörr står omedelbart bakom, speglarna hänger på
+gaveln direkt ovanför sargen, bomförrådet i hörnet. Spelet har 5,68 m
+mellan sargen och gaveln, därför att 77,18 m (`VERIFIED`) − 11,5 m entrédel
+(`PLAN`) − 60 m bana (`ASSUMPTION`: standardmått) = 5,68 m som lades i
+söder. Fotot säger att resten inte ligger där. Två läsningar: banan är
+≈ 66 m lång mellan sargarna (bokstäverna på ett 20 × 60-utsnitt), eller
+entrédelen/C-blocket är djupare än planen lästes. **Inte rättat** — att
+flytta banan flyttar hästgångens grind, västdörrens innerpunkt och
+C-blocket. Fråga till Tobias: *hur långt är det från A-sargen till
+C-sargen — 60 m eller närmare 66 m?*
 
 **`CONTRADICTION`**, redovisade och inte rättade:
 

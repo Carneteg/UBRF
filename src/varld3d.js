@@ -1228,6 +1228,16 @@ function v3dStall(lagg,opp){
 }
 
 /* ── Ridhuset invändigt ───────────────────────────────────────── */
+/* Väggfälten längs hallen: mellan två takstolar, klippta till hallens
+   längd (A-gaveln → entrédelens vägg). Samma regel som Roblox
+   Geometri.ridhusFalt. */
+function ridhusFalt(R){
+  const TS=R.takstomme, slut=R.langd-R.entre, ut=[];
+  let z=0;
+  for(let p=TS.start;p<slut+0.01;p+=TS.delning){ if(p-z>0.5)ut.push([z,Math.min(p,slut)]); z=p; }
+  if(slut-z>0.5)ut.push([z,slut]);
+  return ut;
+}
 function v3dRidhus(lagg,opp){
   const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
   lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
@@ -1370,19 +1380,40 @@ function v3dRidhus(lagg,opp){
      const fx=(O.sida==="W") ? 0.16 : R.bredd-0.16;
      const fy=R.tak-FB.underTak-FB.h/2;
      const inat=(O.sida==="W")?1:-1;
-     /* Mörk reveal bakom glaset ger bandet djup; utan den läser det som en
-        slät ljus remsa, vilket är precis vad som underkändes. */
-     pan.lada(0.08,FB.h-0.10,R.langd-1.0,"#2A2E33",
-       M4.translation(fx+inat*0.26,fy,R.langd/2));
-     pan.lada(FB.tjocklek,FB.h,R.langd-1.0,FB.glas,
-       M4.translation(fx,fy,R.langd/2));
-     /* Poster och karmar står UT ur glaslivet, annars syns de inte. */
-     for(let z=0.8;z<R.langd-0.8;z+=FB.postDelning)
-       pan.lada(FB.tjocklek+0.16,FB.h,0.13,FB.karm,
-         M4.translation(fx-inat*0.06,fy,z));
-     for(const dy of [-FB.h/2,FB.h/2])
-       pan.lada(FB.tjocklek+0.16,0.13,R.langd-1.0,FB.karm,
-         M4.translation(fx-inat*0.06,fy+dy,R.langd/2));
+     /* SEPARATA fönster, ett per väggfält mellan pilastrarna — inte ett
+        löpande band (`ridhus-inne-31`, `-17`, `-24`). Fälten följer
+        takstolarnas rytm (ridhusFalt). Mörk reveal bakom glaset ger
+        djup; utan den läser fönstret som en slät ljus remsa. */
+     for(const [z0,z1] of ridhusFalt(R)){
+       const b=Math.min(FB.faltBredd||3.0,(z1-z0)-1.0), zm=(z0+z1)/2;
+       if(b<0.8)continue;
+       pan.lada(0.08,FB.h-0.10,b,"#2A2E33",M4.translation(fx+inat*0.26,fy,zm));
+       pan.lada(FB.tjocklek,FB.h,b,FB.glas,M4.translation(fx,fy,zm));
+       /* Poster och karmar står UT ur glaslivet, annars syns de inte. */
+       for(let z=zm-b/2;z<=zm+b/2+0.01;z+=FB.postDelning)
+         pan.lada(FB.tjocklek+0.16,FB.h,0.13,FB.karm,M4.translation(fx-inat*0.06,fy,Math.min(z,zm+b/2)));
+       for(const dy of [-FB.h/2,FB.h/2])
+         pan.lada(FB.tjocklek+0.16,0.13,b,FB.karm,M4.translation(fx-inat*0.06,fy+dy,zm));
+     }
+   }
+   /* PELARNA — mörka träpelare där takstolarna landar, på BÅDA
+      långsidorna: pilastrarna som delar panelen i fält (`-31`) och
+      läktarsidans pelare i den ljusa skivpanelen (`-14`). På läktarsidan
+      dessutom skivornas skarvar, så att väggen läser som stående skivor
+      och inte som en slät yta. */
+   const LV=IDENTITET.ridhus.laktarVagg;
+   if(LV){
+     const TS=R.takstomme, hallSlut=R.langd-R.entre;
+     for(let z=TS.start;z<hallSlut;z+=TS.delning){
+       for(const sida of ["W","E"]){
+         const x=sida==="W"?0.16+LV.pelareB/2:R.bredd-0.16-LV.pelareB/2;
+         const z0=(sida===O.sida)?R.sargH+O.overSarg:0;
+         pan.lada(LV.pelareB,R.tak-z0,LV.pelareB,LV.pelareFarg,M4.translation(x,(z0+R.tak)/2,z));
+       }
+     }
+     const lx=(O.sida==="W")?R.bredd-0.16-LV.skarvB/2:0.16+LV.skarvB/2;
+     for(let z=LV.skarvDelning;z<hallSlut;z+=LV.skarvDelning)
+       pan.lada(LV.skarvB,R.tak-R.sargH,0.05,LV.skarvFarg,M4.translation(lx,(R.sargH+R.tak)/2,z));
    }
    lagg(pan,null);}
   /* Läktaren, domarbåset, cafeterian och trappan. */

@@ -175,9 +175,21 @@ check("stallklockan byggdes", raknaNamn("Stallklocka") == 1,
 	att SPOLSPILTA byggdes som en namngiven volym, alltså precis den täta låda
 	som underkändes i spelarvyn. Ett test kan låsa fast ett fel, och det här
 	gjorde det. Nu mäts det som källorna visar. ]]
-check("ridhusets fönsterband byggdes ovanför panelen",
-	raknaNamn("Ridhus fönsterband") == 1 and raknaNamn("Fönsterpost") > 0,
-	raknaNamn("Fönsterpost") .. " poster")
+--[[ Omgranskat 2026-09-03: separata fönster per väggfält, inte ett band. ]]
+do
+	local falt = Geometri.ridhusFalt(UBRFKomplex.ridhus)
+	local vantade = 0
+	for _, f in ipairs(falt) do
+		if math.min(UBRFKomplex.identitet.ridhus.fonsterband.faltBredd or 3.0, (f[2] - f[1]) - 1.0) >= 0.8 then vantade += 1 end
+	end
+	check("ridhusets fönster byggdes ett per väggfält, inget löpande band",
+		raknaNamn("Ridhus fönster ") == vantade and vantade > 5 and raknaNamn("Ridhus fönsterband") == 0,
+		string.format("%d fönster mot %d fält", raknaNamn("Ridhus fönster "), vantade))
+	check("väggpelarna står på fältgränserna på båda långsidorna",
+		raknaNamn("Väggpelare W") == raknaNamn("Väggpelare E") and raknaNamn("Väggpelare W") >= #falt - 1
+			and raknaNamn("Väggpelare W") > 5,
+		string.format("%d W, %d E, %d fält", raknaNamn("Väggpelare W"), raknaNamn("Väggpelare E"), #falt))
+end
 
 --[[ KLUBBDELEN ur utrymningsplanen, rättad av Product Owner 2026-09-03.
 
@@ -897,10 +909,12 @@ do
 
 		local v = forstaNamn("Övre långvägg")
 		local f = v and fot(v)
-		check("panelen täcker BARA sitt stycke, inte hela hallen",
+		--[[ Omgranskat 2026-09-03: panelen går hörn till hörn längs hela
+			hallens långsida (ridhus-inne-31, -17), fram till entrédelen. ]]
+		check("panelen täcker hallens hela långsida, A-gaveln → entrédelen",
 			f ~= nil and math.abs(f.h - (O.y1 - O.y0)) < 0.2
-				and f.h < R2.langd * 0.75,
-			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd) or "saknas")
+				and math.abs(f.h - (R2.langd - R2.entre)) < 0.2,
+			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd - R2.entre) or "saknas")
 
 		--[[ LOKALA koordinater. Första versionen jämförde f.x (världsläge,
 			~118) mot bredd/2 (~12,5) och föll fast bygget var riktigt — samma

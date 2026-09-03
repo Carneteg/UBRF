@@ -764,12 +764,17 @@ const IDENTITET = {
        vägg är ljus. Väggen ligger på västra långsidan, mitt emot läktaren,
        och det är på den sponsorskyltarna hänger (punkt C).
 
-       `VERIFIED`: att den är partiell, att den sitter på en sida, och att
-       skyltarna hänger på just den ytan.
-       `[ASSUMPTION]`: var den börjar och slutar. y0/y1 nedan täcker det
-       stycke där skyltarna sitter, ungefär 44 % av husets längd. */
+       OMGRANSKAD 2026-09-03 (docs/F02-RIDHUS-OMGRANSKNING.md, rad 3):
+       panelen är INTE partiell. `ridhus-inne-31` fångar hela långsidan i
+       en bildruta från läktaren och panelen är obruten hörn till hörn;
+       `ridhus-inne-17` visar den gå ända in i hörnet mot den vita
+       A-gaveln. references/buildings/ridhus/INTERIOR-MATRIS.md § 4:
+       "Panelen täcker hela långsidan" — `VERIFIED`. Det "ljusa" som en
+       gång lästes som resten av väggen var sargen under och fönstren över.
+       y0/y1 härleds därför nedan till hallens hela längd (0 → langd −
+       entre); talen här är platshållare. */
     ovreVagg:{overSarg:0.1, underTak:1.6, tjocklek:0.08, listar:3,
-              sida:"W", y0:6, y1:40},
+              sida:"W", y0:0, y1:0},
     /* FÖNSTERBANDET ovanför panelen — `KNOWN MISMATCH B`, andra halvan.
 
        `ridhus-inne-02-langsidan.jpg` visar tydligt ett band av fönster
@@ -777,12 +782,26 @@ const IDENTITET = {
        och poster. Spelet hade bara tom vägg där, och det är en stor del av
        varför långväggen läser som en enfärgad yta.
 
-       `VERIFIED`: att bandet finns, att det sitter mellan panelen och
-       takfoten, och att det löper vidare FÖRBI panelens stycke — i fotot
-       fortsätter ljusbandet in på den ljusa delen av samma vägg.
-       `[REFERENCE GAP]`: bandets höjd och postdelningen. */
+       OMGRANSKAD 2026-09-03: fönstren är INTE ett löpande band utan
+       SEPARATA öppningar, en per väggfält mellan de mörka pilastrarna —
+       `ridhus-inne-31`, `-17`, `-24` (INTERIOR-MATRIS § 4, `VERIFIED`).
+       Fälten följer takstolarna (`takstomme.delning`, DERIVED); varje
+       fönster sitter centrerat i sitt fält, `faltBredd` är
+       [uppskattning] ur -17 (ungefär halva fältet).
+       `[REFERENCE GAP]`: fönstrens höjd och exakta bredd. */
     fonsterband:{h:0.95, underTak:0.5, tjocklek:0.06, postDelning:2.4,
+                 perFalt:true, faltBredd:3.0,
                  glas:"#DCE6EC", karm:"#4A3B2E"},
+    /* LÄKTARLÅNGSIDANS VÄGG — `VERIFIED` `ridhus-inne-14` + produktägaren
+       2026-08-31 (INTERIOR-MATRIS § 5): ljus stående skivpanel med MÖRKA
+       PELARE, en egen yta skild från sponsorväggens panel. Spelet målade
+       den i samma platta ton som alla andra väggar. Pelarna står där
+       takstolarna landar (`takstomme.start/delning`, DERIVED — samma
+       rytm som pilastrarna på panelsidan i `-31`); skivornas skarvar är
+       [uppskattning]. Färgen på skivorna är `hallvagg` (mätt), pelarnas
+       mörkbruna ton är läst ur -14 [uppskattning]. */
+    laktarVagg:{pelareB:0.24, pelareFarg:"#4A3A2C", skarvDelning:1.2,
+                skarvFarg:"#C9C6BC", skarvB:0.03},
     /* OM-AUDITENS PUNKT A: läktarens front mot banan.
 
        Spelet byggde läktaren som öppna ljusa furutrappsteg hela vägen ner.
@@ -791,8 +810,12 @@ const IDENTITET = {
        banan är en HÖG, SOLID, MÖRKBETSAD BRÄDVÄGG av liggande panel. Man
        ser inte in under den från banan.
 
-       `VERIFIED` att fronten är solid, mörk och liggande panel.
-       `[ASSUMPTION]` brädhöjd och exakt ton. */
+       OMGRANSKAD 2026-09-03: läsningen ovan vilar på en BESKUREN
+       `ridhus-inne-01`, samma bild som fällde läktarraderna; INTERIOR-
+       MATRIS § 2 har återkallat "solid mörkbetsad brädfront" och satt
+       kappregeln till `[REFERENCE GAP]`. Fältet står kvar tills F02-B:s
+       läktarrader (tre stegade bänkrader, `-07`/`-14`/`-43`) tar över;
+       klassen är `[REFERENCE GAP]`, inte VERIFIED. */
     laktarfront:{brada:0.22, tjocklek:0.10, farg:"#4E3626", fogFarg:"#3E2B1E"},
     /* MOTSÄGELSE 3 — IMG_0179/0183: taket har stål, kabelstegar och
        ventilation, inte bara limträbalkar. Andelarna är av husets bredd. */
@@ -1705,15 +1728,24 @@ const RIDHUSINNE = {
        som silon och gårdsplanen fällts på i det här arbetet.
 
        `andel` är läget som andel av panelens stycke, räknat från dess
-       södra ände. Ordningen är den `ridhus-inne-02-langsidan.jpg` visar
-       dem i från vänster. Talen nedan ger samma lägen som förut när
-       stycket är y 6–40 — men nu FÖLJER de panelen. */
-    {andel:0.88, b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
+       södra ände — och stycket är nu HELA långsidan (0 → langd − entre).
+
+       OMGRANSKAD 2026-09-03 mot `ridhus-inne-31` (hela långsidan i en
+       bildruta, sedd från läktaren: vänster = norr) och `-17` (södra
+       delen mot A-hörnet). Ordning från norr: VÄLKOMMEN strax söder om M,
+       ELON, "Vi tror på dig!", spegeln vid B (F02-B), svart panelsektion
+       och trädörr, AGRIA, HÄSTSPORTBUTIK rakt ovanför F, två separata
+       RS MUSTANG-skyltar, en blå foderskylt närmast A-hörnet. Andelarna
+       är lästa mot bokstäverna (M y 54, B y 30, F y 6) — DERIVED, inte
+       mätta. */
+    {andel:0.80, b:5.0, text:"VÄLKOMMEN TILL UPPLANDS-BRO RYTTARFÖRENING", fg:"#3A3E44", bg:"#F2EDE2"},
     {andel:0.71, b:4.0, text:"HUVUDSPONSOR ELON BARKARBY", fg:"#F0EADC", bg:"#1C1C1E"},
-    {andel:0.56, b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
-    {andel:0.43, b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
-    {andel:0.26, b:3.4, text:"RS Mustang · Stallströ och foder", fg:"#F0EADC", bg:"#2F5C8F"},
-    {andel:0.12, b:3.6, text:"Stigsbergs Gård · Hästsportbutik", fg:"#3A3E44", bg:"#F2EDE2"},
+    {andel:0.62, b:3.6, text:"Vi tror på dig! · Sparbanken i Enköping", fg:"#C0392B", bg:"#F7F2E8"},
+    {andel:0.19, b:3.0, text:"Agria Djurförsäkring", fg:"#F0EADC", bg:"#2F5C8F"},
+    {andel:0.14, b:2.6, text:"Hästsportbutik · Stigeberga Gård", fg:"#3A3E44", bg:"#F2EDE2"},
+    {andel:0.10, b:2.2, text:"RS Mustang · Stallströ · Foder", fg:"#F0EADC", bg:"#2F5C8F"},
+    {andel:0.064, b:2.2, text:"RS Mustang · Stallströ · Foder", fg:"#F0EADC", bg:"#2F5C8F"},
+    {andel:0.03, b:2.0, text:"Svensk kvalitetsfoder", fg:"#F0EADC", bg:"#2F5C8F"},
   ],
   /* SARGPORTEN för folk till fots finns INTE här längre (Senior Re-review
      2026-09-03, blocker 2). Ingen källa visar en grind i sargen och bredden
@@ -1920,6 +1952,9 @@ STALLINNE.info=[
    med. */
 (()=>{
   const O=IDENTITET.ridhus.ovreVagg;
+  /* Panelen täcker hela hallens långsida: från A-gaveln till entrédelens
+     vägg (`ridhus-inne-31`, `-17`; INTERIOR-MATRIS § 4). */
+  O.y0=0; O.y1=RIDHUSINNE.langd-RIDHUSINNE.entre;
   for(const sk of RIDHUSINNE.skyltar)
     if(sk.andel!==undefined) sk.y=O.y0+(O.y1-O.y0)*sk.andel;
 })();

@@ -1066,26 +1066,50 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		end
 	end
 
-	--[[ Fönsterbandet mellan panelen och takfoten, `KNOWN MISMATCH B`.
-		ridhus-inne-02 visar ljusa fält med mörka karmar där spelet hade tom
-		vägg. Bandet löper i HELA långsidans längd — i fotot fortsätter det
-		förbi panelens stycke, in på den ljusa delen av samma vägg. ]]
+	--[[ Fönstren ovanför panelen — OMGRANSKADE 2026-09-03: SEPARATA
+		öppningar, en per väggfält mellan pilastrarna (ridhus-inne-31, -17,
+		-24), inte ett löpande band. Fälten kommer ur Geometri.ridhusFalt,
+		samma regel som webben. ]]
 	local FB = G.identitet.ridhus.fonsterband
 	local OV = G.identitet.ridhus.ovreVagg
 	if FB and OV then
 		local fx = if OV.sida == "W" then 0.16 else R.bredd - 0.16
 		local fy = R.tak - FB.underTak - FB.h
-		local glas = BK.box(model, base, "Ridhus fönsterband",
-			o.x + fx, fy, o.y + 0.5, FB.tjocklek, FB.h, R.langd - 1.0,
-			FB.glas, Enum.Material.Glass)
-		glas.Transparency = 0.35
-		glas.CanCollide = false
-		local z = 0.8
-		while z < R.langd - 0.8 do
-			BK.box(model, base, "Fönsterpost", o.x + fx - 0.02, fy,
-				o.y + z, FB.tjocklek + 0.03, FB.h, 0.09,
-				FB.karm, Enum.Material.Wood).CanCollide = false
-			z += FB.postDelning
+		for i, falt in ipairs(GEO.ridhusFalt(R)) do
+			local b = math.min(FB.faltBredd or 3.0, (falt[2] - falt[1]) - 1.0)
+			if b >= 0.8 then
+				local zm = (falt[1] + falt[2]) / 2
+				local glas = BK.box(model, base, "Ridhus fönster " .. i,
+					o.x + fx, fy, o.y + zm - b / 2, FB.tjocklek, FB.h, b,
+					FB.glas, Enum.Material.Glass)
+				glas.Transparency = 0.35
+				glas.CanCollide = false
+				for _, z in ipairs({ zm - b / 2, zm + b / 2 - 0.09 }) do
+					BK.box(model, base, "Fönsterpost", o.x + fx - 0.02, fy,
+						o.y + z, FB.tjocklek + 0.03, FB.h, 0.09,
+						FB.karm, Enum.Material.Wood).CanCollide = false
+				end
+			end
+		end
+	end
+
+	--[[ PELARNA på båda långsidorna där takstolarna landar: pilastrarna som
+		delar panelen i fält (ridhus-inne-31) och läktarsidans mörka pelare i
+		den ljusa skivpanelen (ridhus-inne-14, INTERIOR-MATRIS § 5). Utan dem
+		är läktarväggen en slät yta i samma ton som alla andra väggar. ]]
+	local LV = G.identitet.ridhus.laktarVagg
+	if LV and OV then
+		for _, falt in ipairs(GEO.ridhusFalt(R)) do
+			local z = falt[2]
+			if z < R.langd - R.entre - 0.01 then
+				for _, sida in ipairs({ "W", "E" }) do
+					local x = if sida == "W" then 0.16 else R.bredd - 0.16 - LV.pelareB
+					local z0 = if sida == OV.sida then R.sargH + OV.overSarg else 0
+					BK.box(model, base, "Väggpelare " .. sida, o.x + x, z0,
+						o.y + z - LV.pelareB / 2, LV.pelareB, R.tak - z0, LV.pelareB,
+						LV.pelareFarg, Enum.Material.Wood).CanCollide = false
+				end
+			end
 		end
 	end
 

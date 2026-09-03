@@ -497,6 +497,33 @@ do
 	end
 	check("skyltarnas läge är HÄRLETT ur panelen, inte skrivet som tal",
 		losa == 0, losa .. " skyltar följer inte sin andel")
+
+	--[[ Omgranskning 2026-09-03 (docs/F02-RIDHUS-OMGRANSKNING.md):
+		panelen går hörn till hörn (rad 3), fönstren är ett per fält (rad 5),
+		läktarsidan har egen väggtyp med pelare (rad 2), och skyltordningen
+		följer ridhus-inne-31/-17 (rad 8): VÄLKOMMEN längst norrut, två
+		RS Mustang längst söderut, Hästsportbutik söder om Agria. ]]
+	local R = UBRFKomplex.ridhus
+	check("panelen täcker hallens hela långsida i datan",
+		math.abs(O.y0) < 0.01 and math.abs(O.y1 - (R.langd - R.entre)) < 0.01,
+		string.format("y %.1f–%.1f, hallen 0–%.1f", O.y0, O.y1, R.langd - R.entre))
+	check("fönstren är separata per väggfält", UBRFKomplex.identitet.ridhus.fonsterband.perFalt == true)
+	local LV = UBRFKomplex.identitet.ridhus.laktarVagg
+	check("läktarlångsidan har en egen väggtyp med mörka pelare", LV ~= nil and LV.pelareB > 0 and LV.pelareFarg ~= nil)
+	local S = R.skyltar
+	local valk, mustang, agria, hast = nil, {}, nil, nil
+	for _, sk in ipairs(S) do
+		if sk.text:find("VÄLKOMMEN", 1, true) then valk = sk end
+		if sk.text:find("RS Mustang", 1, true) then table.insert(mustang, sk) end
+		if sk.text:find("Agria", 1, true) then agria = sk end
+		if sk.text:find("Hästsportbutik", 1, true) then hast = sk end
+	end
+	local nordligast = true
+	for _, sk in ipairs(S) do if valk and sk.y > valk.y + 0.01 then nordligast = false end end
+	check("VÄLKOMMEN-skylten hänger längst norrut, som i ridhus-inne-31", valk ~= nil and nordligast)
+	check("två separata RS Mustang-skyltar, söder om Agria och Hästsportbutik (ridhus-inne-17)",
+		#mustang == 2 and agria and hast and hast.y < agria.y
+			and mustang[1].y < hast.y and mustang[2].y < hast.y)
 end
 	--[[ Löd förut "läktaren ligger öster om banan" och mätte alltså ÖSTER,
 		inte relationen. Under ett speglingsprov föll den fast bygget var
