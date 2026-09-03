@@ -748,6 +748,86 @@ do
 	end
 end
 
+--[[ F02-B — LÄKTARENS RADER I DATAN. Sarg + gångbräda + stegade bänkrader
+	(INTERIOR-MATRIS § 2). Regeln mäts, inte talen: raderna stiger inåt,
+	ryms på däcket, och den återkallade fronten finns inte i datan. ]]
+do
+	local L = R.laktare
+	local rader = Geometri.laktarRader(L)
+	check("läktaren har gångbräda och bänkrader i datan", L.gangbrada ~= nil and L.rader ~= nil and #rader == 3,
+		#rader .. " rader")
+	local stiger, inuti = true, true
+	for i, rad in ipairs(rader) do
+		if i > 1 and rad.z <= rader[i - 1].z then stiger = false end
+		if rad.in0 < (L.gangbrada and L.gangbrada.djup or 0) - 0.01 or rad.in1 > L.dackDjup + 0.01 then inuti = false end
+	end
+	check("raderna stiger inåt från gångbrädan", stiger and #rader > 0)
+	check("gångbrädan och raderna ryms på däckdjupet", inuti,
+		string.format("däck %.2f, sista raden till %.2f", L.dackDjup, rader[#rader] and rader[#rader].in1 or -1))
+	check("den återkallade solida fronten finns inte längre i datan",
+		L.frontTopp == nil and L.kappH == nil and UBRFKomplex.identitet.ridhus.laktarfront == nil)
+	check("de sourcelösa speglarna på y 19/37 finns inte längre i datan", R.speglar == nil)
+end
+
+--[[ F02-B — INREDNINGEN. Varje objekt bär källa och klass, har ett unikt
+	id, står i sitt rum och har rimliga mått. Regeln "aldrig hitta på" mäts
+	som: inga objekt utan källa, inga klasser utanför vokabulären. ]]
+do
+	local I = UBRFKomplex.inredning
+	check("inredningslistan finns för båda husen", I ~= nil and I.stall ~= nil and I.ridhus ~= nil
+		and #I.stall > 0 and #I.ridhus > 0)
+	if I then
+		local klasser = { VERIFIED = true, FOTO = true, DERIVED = true, ASSUMPTION = true }
+		local rumRekt = {}
+		for _, r in ipairs(UBRFKomplex.stall.klubb.rum) do rumRekt["stall:" .. r.id] = r.rekt end
+		for _, r in ipairs(R.entrehall.rum) do rumRekt["ridhus:" .. r.id] = r.rekt end
+		rumRekt["ridhus:laktare"] = { x = R.laktare.x0, y = R.laktare.y0, w = R.laktare.dackDjup, h = R.laktare.y1 - R.laktare.y0 }
+		rumRekt["ridhus:bana"] = { x = 0, y = R.bana.y, w = R.bredd, h = R.bana.h }
+		rumRekt["ridhus:sydzon"] = { x = 0, y = 0, w = R.bredd, h = R.bana.y }
+		rumRekt["stall:gangA"] = { x = 0, y = 0, w = UBRFKomplex.stall.bredd, h = UBRFKomplex.stall.klubb.y0 }
+		local ids, dubbla, utanfor, felKlass, utanKalla, orimliga = {}, {}, {}, {}, {}, {}
+		for _, hus in ipairs({ { "stall", I.stall }, { "ridhus", I.ridhus } }) do
+			for _, ob in ipairs(hus[2]) do
+				if ids[ob.id] then table.insert(dubbla, ob.id) end
+				ids[ob.id] = true
+				if not klasser[ob.klass] or (ob.lage and not klasser[ob.lage]) then table.insert(felKlass, ob.id) end
+				if not ob.kalla or ob.kalla == "" then table.insert(utanKalla, ob.id) end
+				local q = Geometri.inredningRekt(ob)
+				local rr = rumRekt[hus[1] .. ":" .. ob.rum]
+				if not rr or q.x < rr.x - 0.3 or q.x + q.w > rr.x + rr.w + 0.3 or q.y < rr.y - 0.3 or q.y + q.h > rr.y + rr.h + 0.3 then
+					table.insert(utanfor, ob.id .. " (" .. tostring(ob.rum) .. ")")
+				end
+				local m = ob.matt
+				if m.b <= 0 or m.d <= 0 or m.h <= 0 or m.b > 8 or m.d > 3 or m.h > 3 or (ob.z0 or 0) + m.h > 6.5 then
+					table.insert(orimliga, ob.id)
+				end
+			end
+		end
+		check("inredningens id är unika", #dubbla == 0, table.concat(dubbla, ", "))
+		check("inredningens klasser hör till vokabulären", #felKlass == 0, table.concat(felKlass, ", "))
+		check("varje inredningsobjekt anger sin källa", #utanKalla == 0, table.concat(utanKalla, ", "))
+		check("varje inredningsobjekt står i sitt rum", #utanfor == 0, table.concat(utanfor, ", "))
+		check("inredningens mått är rimliga för möbler", #orimliga == 0, table.concat(orimliga, ", "))
+		--[[ Det som bilderna kräver ska finnas — och det som saknar bild får
+			inte finnas. Pentryt (stall-inne-02) är fotograferat men INTE
+			placerbart (runt fönster + valvfönster i ett hörn som fasaden
+			inte har i uppehållsrummet): ingen post får heta pentry. ]]
+		local krav = { "uppehall_soffa_v", "uppehall_ponny", "teori_whiteboard_1", "sadel_stovelhylla",
+			"spegel_B", "spegel_A_v", "laktare_bommar", "skap_v_1", "entre_bank" }
+		local saknas = {}
+		for _, id in ipairs(krav) do if not ids[id] then table.insert(saknas, id) end end
+		check("de belagda objekten finns i listan", #saknas == 0, "saknas: " .. table.concat(saknas, ", "))
+		local forbjudna = {}
+		for id in pairs(ids) do
+			if string.find(id, "pentry", 1, true) or string.find(id, "cafe_", 1, true) or string.find(id, "reception", 1, true) then
+				table.insert(forbjudna, id)
+			end
+		end
+		check("rum utan placerbart belägg har ingen inredning (pentry, café, reception)", #forbjudna == 0,
+			table.concat(forbjudna, ", "))
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("geometri.spec: " .. fails .. " fel")

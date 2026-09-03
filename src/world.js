@@ -307,6 +307,9 @@ function vandringKollision(nx,ny,r){
       }
       for(const rum of R.entrehall.rum) if(rum.stangt) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
     }
+    /* Inredningen (F02-B): det som är `kolliderar` går man inte igenom —
+       skåpraden, stolarna, bänken. Samma lista som Roblox bygger ur. */
+    for(const o of INREDNING.ridhus) if(o.kolliderar) [nx,ny]=kollideraRekt(nx,ny,r,inredningRekt(o));
   }else{ // stallinne
     /* Dubbelstallet går inte att uttrycka som ett intervall. Förut kläm-
        des spelaren in mellan två boxfronter, vilket bara fungerar när det
@@ -346,6 +349,8 @@ function vandringKollision(nx,ny,r){
       }
     }
     for(const rum of S.klubb.rum) if(rum.stangt) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
+    /* Inredningen (F02-B): sofforna, borden, stolarna, stövelhyllan. */
+    for(const o of INREDNING.stall) if(o.kolliderar) [nx,ny]=kollideraRekt(nx,ny,r,inredningRekt(o));
   }
   return [nx,ny];
 }
@@ -1474,6 +1479,35 @@ function ritaSpelare2D(pos,rikt,s){
 }
 
 /* ── Stallet invändigt: 2D ────────────────────────────────────── */
+/* ── Inredningen på kartan och i målarvyn (F02-B) ────────────────
+   Ritar ur INREDNING (src/inredning.js): samma lista som kollisionen och
+   Roblox. Kartan visar fotavtrycket; målarvyn (reservläget utan WebGL)
+   visar en enkel låda i objektets färg. Ingen av dem hittar på något som
+   inte står i listan. */
+function ritaInredning2D(ss,s,scen){
+  for(const o of inredningFor(scen)){
+    const q=inredningRekt(o);
+    const[a,b]=ss(q.x,q.y+q.h);
+    cx.fillStyle=o.typ==="spegel"?"#93A9BC":o.typ==="lysror"?"#F6F2E4":o.farg;
+    cx.globalAlpha=o.z0&&o.z0>1.5?0.5:0.9;
+    cx.fillRect(a,b,Math.max(1,q.w*s),Math.max(1,q.h*s));
+    cx.globalAlpha=1;
+  }
+}
+function ritaInredning3Dfallback(k,items,scen){
+  for(const o of inredningFor(scen)){
+    const q=inredningRekt(o), z0=o.z0||0, z1=z0+o.matt.h;
+    items.push({d:-avst2(o.pos), rita(){
+      const c=o.farg;
+      ritaPoly3D(k,[[q.x,q.y,z1],[q.x+q.w,q.y,z1],[q.x+q.w,q.y+q.h,z1],[q.x,q.y+q.h,z1]],c,null);
+      ritaPoly3D(k,[[q.x,q.y,z0],[q.x+q.w,q.y,z0],[q.x+q.w,q.y,z1],[q.x,q.y,z1]],c,"rgba(0,0,0,.25)");
+      ritaPoly3D(k,[[q.x,q.y+q.h,z0],[q.x+q.w,q.y+q.h,z0],[q.x+q.w,q.y+q.h,z1],[q.x,q.y+q.h,z1]],c,"rgba(0,0,0,.25)");
+      ritaPoly3D(k,[[q.x,q.y,z0],[q.x,q.y+q.h,z0],[q.x,q.y+q.h,z1],[q.x,q.y,z1]],c,"rgba(0,0,0,.25)");
+      ritaPoly3D(k,[[q.x+q.w,q.y,z0],[q.x+q.w,q.y+q.h,z0],[q.x+q.w,q.y+q.h,z1],[q.x+q.w,q.y,z1]],c,"rgba(0,0,0,.25)");
+    }});
+  }
+}
+
 function ritaStall2D(){
   const S=STALLINNE, m=30;
   /* Avdraget lämnar plats åt HUD-rutorna på en bred skärm. På en telefon
@@ -1569,6 +1603,8 @@ function ritaStall2D(){
     const[a,b]=ss(fx2,fy);
     cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.35),0,Math.PI*2);cx.fill();
   }
+  /* Inredningen ur INREDNING.stall (F02-B), ovanpå golv och väggar. */
+  ritaInredning2D(ss,s,"stallinne");
   ritaMal2D(ss);
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
@@ -1667,10 +1703,14 @@ function ritaStall3D(){
         ritaLinje3D(k,[fx,y0,0],[fx,y0,2.15],VCOL.boxRam,2);
         ritaLinje3D(k,[fx,y1,0],[fx,y1,2.15],VCOL.boxRam,2);
         ritaLinje3D(k,[fx,y0,2.15],[fx,y1,2.15],VCOL.boxRam,2);
-        const gN=9;
-        for(let g2=1;g2<gN;g2++){
-          const gy=y0+(y1-y0)*g2/gN;
-          ritaLinje3D(k,[fx,gy,1.35],[fx,gy,2.15],VCOL.galler,1);
+        /* Fem VÅGRÄTA runda reglar med luft emellan (stall-inne-05,
+           INTERIOR-MATRIS § 2) — inte nio lodräta spjälor som stod här
+           kvar efter att webbens WebGL-ritare rättats. Samma tal som
+           IDENTITET.stall.boxfront. */
+        const BFr=IDENTITET.stall.boxfront;
+        for(let g2=0;g2<BFr.reglar;g2++){
+          const gz=BFr.heldelH+(BFr.stolpH-BFr.heldelH)*(g2+0.5)/BFr.reglar;
+          ritaLinje3D(k,[fx,y0,gz],[fx,y1,gz],VCOL.galler,1);
         }
         // hästhuvud över boxdörren
         if(h){
@@ -1732,17 +1772,10 @@ function ritaStall3D(){
   items.push({d:-1e8, rita(){ // lanterninerna: ljusband längs nocken
     ritaPoly3D(k,[[vx-0.5,2,S.tak+0.01],[vx+0.5,2,S.tak+0.01],
       [vx+0.5,S.langd-2,S.tak+0.01],[vx-0.5,S.langd-2,S.tak+0.01]],"#707B86",null);}});
-  // props: storsäck, brandsläckare, hjärtstartare
-  items.push({d:-avst2([vx-1.9,22]), rita(){
-    const B=billboard(k,vx-1.9,22,1.1); if(!B)return;
-    const {s,sz}=B;
-    cx.fillStyle="#E4E2DC";
-    cx.beginPath();cx.moveTo(s[0]-sz*0.5,s[1]);cx.lineTo(s[0]-sz*0.42,s[1]-sz*0.9);
-    cx.lineTo(s[0]+sz*0.42,s[1]-sz*0.9);cx.lineTo(s[0]+sz*0.5,s[1]);cx.closePath();cx.fill();}});
-  items.push({d:-avst2([vx+1.9,30]), rita(){
-    const B=billboard(k,vx+1.9,30,0.9); if(!B)return;
-    const {s,sz}=B;
-    cx.fillStyle="#C0392B";cx.fillRect(s[0]-sz*0.09,s[1]-sz*0.6,sz*0.18,sz*0.5);}});
+  /* Storsäcken och brandsläckaren mitt i gången är BORTA (F02-B): de stod
+     på handskrivna koordinater utan någon bild bakom. Inredning ritas ur
+     INREDNING (src/inredning.js), som pekar på sin källa per objekt. */
+  ritaInredning3Dfallback(k,items,"stallinne");
   // ridläraren
   if(!G.hastId){
     const rl=S.ridlarare;
@@ -1852,10 +1885,11 @@ function ritaRidhus2D(){
   }
   // speglar och skyltar på panelens långsida
   {const px=(R.spegelSida==="E")?R.bredd-0.9:0.4;
-   for(const sp of R.speglar){const[a,b]=ss(px,sp.y+sp.b/2);
-     cx.fillStyle="#93A9BC";cx.fillRect(a,b,s*0.5,sp.b*s);}
    for(const sk of R.skyltar){const[a,b]=ss(px,sk.y+sk.b/2);
      cx.fillStyle=sk.bg;cx.fillRect(a,b,s*0.4,sk.b*s);}}
+  /* Speglarna och all annan inredning ur INREDNING — samma lista som
+     kollisionen och Roblox läser. */
+  ritaInredning2D(ss,s,"ridhusinne");
   // bokstäverna, rakt ur DRESSYRBOKSTAVER — A i söder, C i norr
   cx.fillStyle="#C9BFA6";cx.font=`600 ${Math.max(9,s*1.3)}px Petrona,serif`;cx.textAlign="center";
   for(const{b,x,y}of DRESSYRBOKSTAVER){
@@ -1935,14 +1969,9 @@ function ritaRidhus3D(){
         sk.bg,"#8A857A");
       ritaText3D(k,x+pin*0.02,sk.y+sk.b/2,2.55,sk.text,1.7,sk.fg);
     }
-    for(const sp of R.speglar){
-      const x=px+pin*0.05;
-      ritaPoly3D(k,[[x,sp.y-0.15,1.5],[x,sp.y+sp.b+0.15,1.5],
-        [x,sp.y+sp.b+0.15,3.35],[x,sp.y-0.15,3.35]],"#5A4634",null);
-      ritaPoly3D(k,[[x+pin*0.02,sp.y,1.6],[x+pin*0.02,sp.y+sp.b,1.6],
-        [x+pin*0.02,sp.y+sp.b,3.25],[x+pin*0.02,sp.y,3.25]],"#9FB3C4",null);
-    }
   }});}
+  /* Speglarna kommer ur INREDNING, som resten av inredningen. */
+  ritaInredning3Dfallback(k,items,"ridhusinne");
   // läktaren: plant däck med solid front mot banan, på den sida `sidor` pekar ut
   {const lk=R.laktare, lE=(R.sidor&&R.sidor.laktare==="E");
    const fx=lE?lk.x0:lk.x0+lk.dackDjup;        // fronten står mot banan
@@ -2018,19 +2047,10 @@ function ritaRidhus3D(){
       if(rm.label) items.push({d:-avst2([cxm,cym]), rita(){ritaText3D(k,cxm,cym,2.1,rm.label,1.3,"#7C756A");}});
     }
   }
-  // hinderförrådet i söder: färgade bommar och koner
-  items.push({d:-avst2([R.bredd/2,0])-1e5, rita(){
-    const fargor=["#3A6EA5","#C0392B","#E8E4DA","#C9A23C"];
-    for(let i2=0;i2<7;i2++){
-      ritaLinje3D(k,[4+i2*2.4,0.3,0.15],[6+i2*2.4,0.4,1.7],
-        fargor[i2%fargor.length],3);}
-    for(let i2=0;i2<4;i2++){
-      const K2=billboard(k,7+i2*3,1.2,0.45); if(!K2)continue;
-      cx.fillStyle="#E8E4DA";
-      cx.beginPath();cx.moveTo(K2.s[0]-K2.sz*0.4,K2.s[1]);
-      cx.lineTo(K2.s[0],K2.s[1]-K2.sz);cx.lineTo(K2.s[0]+K2.sz*0.4,K2.s[1]);
-      cx.closePath();cx.fill();}
-  }});
+  /* "Hinderförrådet i söder" — sju bommar och fyra koner på handskrivna
+     koordinater vid södra gaveln — är BORTA (F02-B). Bilderna (ridhus-
+     inne-21, -23) sätter hinderupplaget på läktardäckets södra ände, och
+     det ligger nu i INREDNING som `laktare_bommar` m.fl. */
   // limträbalkar, lysrörsrader och ventilationstrumman
   for(let y=6;y<R.langd-2;y+=6){
     items.push({d:-avst2([R.bredd/2,y])-3e6, rita(){
@@ -2045,9 +2065,12 @@ function ritaRidhus3D(){
     ritaPoly3D(k,[[R.bredd/2-0.5,3,R.tak-0.4],[R.bredd/2+0.5,3,R.tak-0.4],
       [R.bredd/2+0.5,R.langd-3,R.tak-0.4],[R.bredd/2-0.5,R.langd-3,R.tak-0.4]],"#B9BDC0",null);
   }});
-  // dressyrbokstäverna på sargen — ringen vriden 180° så att A står vid porten i norr
+  /* Dressyrbokstäverna på sargen, rakt ur DRESSYRBOKSTAVER. Här låg en
+     180°-vridning kvar ("så att A står vid porten i norr") efter att
+     vridningen flyttats in i tabellen i src/data.js — A stod då i norr här
+     och i söder i WebGL-ritaren och på kartan. F02-B tar bort dubbletten. */
   for(const B of DRESSYRBOKSTAVER){
-    const lx=20-B.x, ly=60-B.y;
+    const lx=B.x, ly=B.y;
     const wx=ba.x+lx, wy=ba.y+ly;
     const ux=lx===0?-0.35:lx===20?0.35:0, uy=ly===0?-0.35:ly===60?0.35:0;
     items.push({d:-avst2([wx,wy])+1e4, rita(){

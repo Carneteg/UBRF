@@ -585,6 +585,111 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 	end
 end
 
+--[[ INREDNINGEN (F02-B) ur G.inredning — samma lista som webben ritar och
+	kolliderar mot (src/inredning.js). Varje post bär källa och klass, och
+	de följer med som attribut så att Studio kan visa varifrån en soffa
+	kommer. Byggt som lådor i objektets färg plus det som gör typen
+	igenkännbar; renderingen får vara enklare än webbens, men VAR något
+	står och hur stort det är är samma tal. Allt i listan är axelparallellt
+	(rikt i kvartsvarv), så BK.box räcker. ]]
+local function byggInredning(model: Model, base: CFrame, o, lista, prefix: string)
+	for _, ob in ipairs(lista or {}) do
+		local q = GEO.inredningRekt(ob)
+		local z0 = ob.z0 or 0
+		local namn = prefix .. " " .. ob.id
+		local function del(suffix: string, x, y, z, w, h, d, farg, mat, kollid: boolean?)
+			local p = BK.box(model, base, namn .. suffix, x, y, z, w, h, d, farg, mat)
+			p.CanCollide = if kollid == nil then (ob.kolliderar == true) else kollid
+			p:SetAttribute("Inredning", ob.id)
+			p:SetAttribute("Rum", ob.rum)
+			p:SetAttribute("Klass", ob.klass)
+			p:SetAttribute("Kalla", ob.kalla)
+			return p
+		end
+		local f, f2 = ob.farg, ob.farg2 or Color3.fromRGB(107, 107, 107)
+		local X, Y, W, H = o.x + q.x, o.y + q.y, q.w, q.h
+		local typ = ob.typ
+		if typ == "soffa" or typ == "fatolj" then
+			del("", X, z0, Y, W, 0.42, H, f, Enum.Material.Fabric)
+			-- ryggen ligger på baksidan: motsatt `rikt`
+			local dx = -math.cos(ob.rikt) * (q.w / 2 - 0.11) * (if math.abs(math.cos(ob.rikt)) > 0.5 then 1 else 0)
+			local dy = -math.sin(ob.rikt) * (q.h / 2 - 0.11) * (if math.abs(math.sin(ob.rikt)) > 0.5 then 1 else 0)
+			local rw = if math.abs(math.cos(ob.rikt)) > 0.5 then 0.22 else W
+			local rh = if math.abs(math.cos(ob.rikt)) > 0.5 then H else 0.22
+			del(" rygg", X + W / 2 + dx - rw / 2, z0 + 0.42, Y + H / 2 + dy - rh / 2, rw, ob.matt.h - 0.42, rh, f, Enum.Material.Fabric)
+		elseif typ == "bord" then
+			del(" skiva", X, z0 + ob.matt.h - 0.05, Y, W, 0.05, H, f, Enum.Material.Wood)
+			del(" ben", X + W / 2 - 0.03, z0, Y + H / 2 - 0.03, 0.06, ob.matt.h - 0.05, 0.06, f, Enum.Material.Wood, false)
+		elseif typ == "stol" then
+			del(" sits", X, z0 + 0.45, Y, W, 0.05, H, f, Enum.Material.SmoothPlastic)
+			del(" ben", X + W / 2 - 0.02, z0, Y + H / 2 - 0.02, 0.04, 0.45, 0.04, f2, Enum.Material.Metal, false)
+			del(" rygg", X, z0 + 0.5, Y, W, ob.matt.h - 0.5, 0.06, f, Enum.Material.SmoothPlastic)
+		elseif typ == "ponny" then
+			del(" kropp", X + W / 2 - 0.21, z0 + 0.8, Y + H / 2 - 0.5, 0.42, 0.45, 1.0, f, Enum.Material.SmoothPlastic)
+			del(" hals", X + W / 2 - 0.10, z0 + 1.0, Y + H / 2 + 0.35, 0.20, 0.55, 0.32, f, Enum.Material.SmoothPlastic)
+			del(" sadel", X + W / 2 - 0.20, z0 + 1.25, Y + H / 2 - 0.25, 0.40, 0.12, 0.42, f2, Enum.Material.Fabric, false)
+			del(" ben", X + W / 2 - 0.04, z0, Y + H / 2 - 0.04, 0.08, 0.8, 0.08, f, Enum.Material.SmoothPlastic, false)
+		elseif typ == "klocka" then
+			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.SmoothPlastic, false)
+		elseif typ == "vaxt" then
+			del(" kruka", X + W / 2 - 0.2, z0, Y + H / 2 - 0.2, 0.4, 0.35, 0.4, f2, Enum.Material.SmoothPlastic)
+			del(" krona", X, z0 + ob.matt.h * 0.45, Y, W, ob.matt.h * 0.55, H, f, Enum.Material.Grass, false)
+		elseif typ == "tavlor" or typ == "whiteboard" or typ == "exitskylt" or typ == "lysror" then
+			del("", X, z0, Y, W, ob.matt.h, H, f,
+				if typ == "lysror" or typ == "exitskylt" then Enum.Material.Neon else Enum.Material.SmoothPlastic, false)
+		elseif typ == "spegel" then
+			del(" ram", X, z0 - 0.06, Y, W, ob.matt.h + 0.12, H, f, Enum.Material.Wood, false)
+			local gp = del(" glas", X, z0, Y, W, ob.matt.h, H, Color3.fromRGB(159, 179, 196), Enum.Material.Glass, false)
+			gp.Reflectance = 0.6
+		elseif typ == "ventkanal" then
+			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal, false)
+		elseif typ == "krokrad" then
+			del(" skena", X, z0 + ob.matt.h - 0.05, Y, W, 0.05, H, f, Enum.Material.Metal, false)
+			del(" vastar", X, z0, Y, W, ob.matt.h - 0.15, H, f2, Enum.Material.Fabric, false)
+		elseif typ == "skapbank" then
+			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal)
+			local fargor = ob.fargor or { f }
+			local n = math.max(1, math.round(ob.matt.b / 0.4))
+			for i = 0, n - 1 do
+				local c = fargor[(i % #fargor) + 1]
+				if math.abs(math.cos(ob.rikt)) > 0.5 then
+					local fx = if math.cos(ob.rikt) > 0 then X + W else X - 0.01
+					del(" dorr " .. (i + 1), fx, z0 + 0.1, Y + (H / n) * i + 0.01, 0.01, ob.matt.h - 0.16, H / n - 0.02, c, Enum.Material.Metal, false)
+				else
+					local fy = if math.sin(ob.rikt) > 0 then Y + H else Y - 0.01
+					del(" dorr " .. (i + 1), X + (W / n) * i + 0.01, z0 + 0.1, fy, W / n - 0.02, ob.matt.h - 0.16, 0.01, c, Enum.Material.Metal, false)
+				end
+			end
+		elseif typ == "bommar" then
+			local fargor = ob.fargor or { f }
+			local n = ob.antal or 5
+			for i = 0, n - 1 do
+				local c = fargor[(i % #fargor) + 1]
+				if math.abs(math.cos(ob.rikt)) > 0.5 then
+					del(" bom " .. (i + 1), X + W / 2 - 0.04, z0, Y + (H / n) * (i + 0.5) - 0.04, 0.08, 1.9, 0.08, c, Enum.Material.SmoothPlastic, false)
+				else
+					del(" bom " .. (i + 1), X + (W / n) * (i + 0.5) - 0.04, z0, Y + H / 2 - 0.04, 0.08, 1.9, 0.08, c, Enum.Material.SmoothPlastic, false)
+				end
+			end
+		elseif typ == "hinderstod" then
+			local n = ob.antal or 3
+			for i = 0, n - 1 do
+				del(" stod " .. (i + 1), X + (W / n) * (i + 0.5) - 0.05, z0, Y + H / 2 - 0.05, 0.10, ob.matt.h, 0.10, f, Enum.Material.SmoothPlastic, false)
+			end
+		elseif typ == "bokstavsstall" then
+			del(" hylla", X, z0 + 0.6, Y, W, 0.04, H, Color3.fromRGB(169, 143, 104), Enum.Material.Wood, false)
+			del(" bokstaver", X, z0 + 0.64, Y, W, 0.28, H, f, Enum.Material.SmoothPlastic, false)
+		elseif typ == "tunna" then
+			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal)
+			del(" band", X - 0.005, z0 + ob.matt.h * 0.55, Y - 0.005, W + 0.01, 0.12, H + 0.01, f2, Enum.Material.SmoothPlastic, false)
+		else
+			-- skap, kartong, bank, stovelhylla och allt annat: en låda i färgen
+			del("", X, z0, Y, W, ob.matt.h, H, f,
+				if typ == "stovelhylla" or typ == "skap" or typ == "bank" then Enum.Material.Wood else Enum.Material.SmoothPlastic)
+		end
+	end
+end
+
 --[[ Stallet: fyra boxrader, två gångar, tvärkorridor, namngivna rum.
 
 	Raderna och gångarna kommer ur planens mätta andelar (G.stall.band), inte ur
@@ -846,6 +951,10 @@ local function byggStallInre(model: Model, base: CFrame)
 			o.y + 0.06, G2.exitB, G2.exitH, 0.06,
 			Color3.fromRGB(30, 122, 60), Enum.Material.Neon).CanCollide = false
 	end
+
+	-- Inredningen ur G.inredning.stall (F02-B): uppehållsrummet, teorisalen,
+	-- sadelkammaren och exitskylten vid gång A:s norra ände.
+	byggInredning(model, base, o, G.inredning and G.inredning.stall, "Inredning")
 end
 
 --[[ Ridhuset: banan, sargen med porten, läktaren, glasrummen, domarbåset.
@@ -902,31 +1011,58 @@ local function byggRidhusInre(model: Model, base: CFrame)
 
 		Höjderna kommer ur den delade datan och är härledda ur `-03`; se
 		noten i src/site.js. ]]
+	--[[ F02-B: kommentaren ovan är ÖVERSPELAD. Matrisen (references/
+		buildings/ridhus/INTERIOR-MATRIS.md § 2) återkallar den solida
+		mörka fronten och kappregeln — de var lästa ur en beskuren
+		förgrund — och slår fast att läktaren är sarg + plan GÅNGBRÄDA i
+		mörkt trä + STEGADE BÄNKRADER i ljus furu längs hela långsidan
+		(ridhus-inne-04, -07, -14, -43). Raderna kommer ur
+		Geometri.laktarRader, samma regel som webbens laktarRader. ]]
 	local L = R.laktare
-	local FR = G.identitet.ridhus.laktarfront and G.identitet.ridhus.laktarfront.farg
-	--[[ Fronten står mot BANAN. Däcket löper från x0 i positiv x-led på
-		båda sidor (se site.js), så med läktaren i väster är fronten vid
-		x0 + dackDjup. Skrivet som "x0 − 0,10" stod den mot ytterväggen efter
-		speglingen 2026-09-03. ]]
 	local lE = R.sidor and R.sidor.laktare == "E"
-	local frontX = if lE then L.x0 else L.x0 + L.dackDjup
-	local bakX = if lE then L.x0 + L.dackDjup else L.x0
+	local bankant = if lE then L.x0 else L.x0 + L.dackDjup   -- däckets kant mot banan
+	local inat = if lE then 1 else -1                          -- riktning in från banan
+	local g, rr = L.gangbrada, L.rader
+	local bankFarg = if rr then rr.farg else INRE.laktare
+	local kantFarg = if rr then rr.kantFarg else INRE.laktare
 	for s, sek in ipairs(GEO.laktarSektioner(L)) do
 		local dj = sek.y1 - sek.y0
-		BK.box(model, base, "Läktardäck " .. s,
-			o.x + L.x0, L.dackZ, o.y + sek.y0, L.dackDjup, 0.10, dj,
-			INRE.laktare, Enum.Material.WoodPlanks)
-		-- Solid front mot banan, upp till kappregeln.
-		BK.box(model, base, "Läktarfront " .. s,
-			o.x + (if lE then frontX - 0.10 else frontX), 0, o.y + sek.y0, 0.10, L.frontTopp, dj,
-			FR or INRE.laktare, Enum.Material.WoodPlanks)
-		BK.box(model, base, "Läktarkapp " .. s,
-			o.x + (if lE then frontX - 0.14 else frontX - 0.04), L.frontTopp, o.y + sek.y0, 0.18, L.kappH, dj,
-			Color3.fromRGB(201, 188, 164), Enum.Material.WoodPlanks)
+		local gX = if inat > 0 then bankant else bankant - g.djup
+		BK.box(model, base, "Läktargångbräda " .. s,
+			o.x + gX, L.dackZ - 0.10, o.y + sek.y0, g.djup, 0.10, dj,
+			g.farg, Enum.Material.WoodPlanks)
+		for i, rad in ipairs(GEO.laktarRader(L)) do
+			local x0 = if inat > 0 then bankant + rad.in0 else bankant - rad.in1
+			local dju = rad.in1 - rad.in0
+			BK.box(model, base, "Läktarrad " .. s .. ":" .. i,
+				o.x + x0, rad.z - rr.sittTjock, o.y + sek.y0, dju, rr.sittTjock, dj,
+				bankFarg, Enum.Material.WoodPlanks)
+			-- sättsteget ner mot banan och den röda kantlisten (-04)
+			local sX = if inat > 0 then bankant + rad.in0 else bankant - rad.in0 - 0.04
+			BK.box(model, base, "Läktarsättsteg " .. s .. ":" .. i,
+				o.x + sX, L.dackZ, o.y + sek.y0, 0.04, rad.z - L.dackZ - rr.sittTjock, dj,
+				bankFarg, Enum.Material.WoodPlanks)
+			BK.box(model, base, "Läktarkantlist " .. s .. ":" .. i,
+				o.x + sX, rad.z, o.y + sek.y0, 0.06, 0.04, dj,
+				kantFarg, Enum.Material.SmoothPlastic).CanCollide = false
+		end
 		-- Stomme under däcket, så att det inte svävar.
+		local stX = if inat > 0 then bankant + L.dackDjup - 0.3 else bankant - L.dackDjup + 0.18
 		BK.box(model, base, "Läktarstomme " .. s,
-			o.x + (if lE then bakX - 0.3 else bakX + 0.18), 0, o.y + sek.y0, 0.12, L.dackZ, dj,
+			o.x + stX, 0, o.y + sek.y0, 0.12, L.dackZ, dj,
 			INRE.laktare, Enum.Material.Wood).CanCollide = false
+		-- Elon-dynorna på översta raden (-07); förut bara i webben.
+		local rader = GEO.laktarRader(L)
+		local topp = rader[#rader]
+		if topp and R.dynor then
+			for i = 0, R.dynor - 1 do
+				local z = sek.y0 + 2.0 + i * ((dj - 4) / math.max(1, R.dynor - 1))
+				local dX = if inat > 0 then bankant + (topp.in0 + topp.in1) / 2 else bankant - (topp.in0 + topp.in1) / 2
+				BK.box(model, base, "Läktardyna " .. (i + 1),
+					o.x + dX - 0.17, topp.z, o.y + z - 0.22, 0.34, 0.06, 0.44,
+					Color3.fromRGB(38, 40, 44), Enum.Material.Fabric).CanCollide = false
+			end
+		end
 	end
 
 	-- Kortändans läktare: trappstegsblock, två trappor och glasbandet ovanför.
@@ -1149,6 +1285,53 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	if R.entrehall then
 		byggVaggarOchRum(model, base, o, R.tak, R.entrehall, "Entrévägg", INRE.vagg)
 	end
+
+	--[[ F02-B: det som stod framme på banan fanns bara i webben — hindren,
+		konerna och uppsittningspallen (RIDHUSINNE.hinder/koner/pall, ur
+		interiörfotona; lägena är ASSUMPTION). Nu samma tal här. ]]
+	for i, h in ipairs(R.hinder or {}) do
+		local bx, bz = o.x + R.bana.x + h.x, o.y + R.bana.y + h.y
+		local bomFarg = if h.farg == "bla" then Color3.fromRGB(58, 110, 165) else Color3.fromRGB(192, 57, 43)
+		for _, s in ipairs({ -1, 1 }) do
+			BK.box(model, base, "Hinderstöd " .. i .. (if s < 0 then " V" else " H"),
+				bx + s * h.b / 2 - 0.05, 0, bz - 0.05, 0.10, 1.5, 0.10,
+				Color3.fromRGB(240, 237, 230), Enum.Material.SmoothPlastic)
+		end
+		BK.box(model, base, "Hinderbom " .. i,
+			bx - h.b / 2, math.max(0.02, h.h), bz - 0.045, h.b, 0.09, 0.09,
+			bomFarg, Enum.Material.SmoothPlastic).CanCollide = false
+	end
+	for i, k in ipairs(R.koner or {}) do
+		BK.box(model, base, "Kon " .. i,
+			o.x + R.bana.x + k[1] - 0.15, 0, o.y + R.bana.y + k[2] - 0.15, 0.30, 0.45, 0.30,
+			Color3.fromRGB(232, 228, 218), Enum.Material.SmoothPlastic).CanCollide = false
+	end
+	if R.pall then
+		BK.box(model, base, "Uppsittningspall",
+			o.x + R.bana.x + R.pall.x - 0.45, 0, o.y + R.bana.y + R.pall.y - 0.5, 0.9, 0.57, 1.0,
+			Color3.fromRGB(196, 168, 126), Enum.Material.Wood)
+	end
+	--[[ Lysrörsraderna längs hallen (RIDHUSINNE.lysror): VERIFIED att de
+		finns och löper längs; delningen är ASSUMPTION. Delat tal nu. ]]
+	if R.lysror then
+		local ly = R.lysror
+		local n = 0
+		for _, andel in ipairs(ly.andelar) do
+			local x = R.bredd * andel
+			local y = 4
+			while y < R.langd - 2 do
+				n += 1
+				BK.box(model, base, "Lysrör " .. n,
+					o.x + x - ly.bredd / 2, R.tak - ly.underTak, o.y + y - ly.langd / 2, ly.bredd, 0.08, ly.langd,
+					ly.farg, Enum.Material.Neon).CanCollide = false
+				y += ly.delning
+			end
+		end
+	end
+
+	-- Inredningen ur G.inredning.ridhus (F02-B): speglarna, hinderupplaget på
+	-- läktardäcket, skåpkorridorens skåp och stolar, entréns bänk.
+	byggInredning(model, base, o, G.inredning and G.inredning.ridhus, "Inredning")
 end
 
 local model, base = BK.newBuilding("UBRF", Vector3.new(0, 0, 0), 0, {

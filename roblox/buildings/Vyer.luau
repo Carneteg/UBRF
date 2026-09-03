@@ -220,6 +220,55 @@ Vyer.vyer = {
 		mot = { x = So.x + 4.55, y = So.y + S.klubb.y0 },
 		krav = "Planens rum: uppehållsrummet först, trapphuset som sluten volym till vänster (öster), två toaletter i bortre änden med den inre entrén emellan, och genom den stallgång A rakt fram.",
 	},
+	-- F02-B: inredningen, från ungefär samma håll som referensbilderna.
+	{
+		id = "uppehallsrummet",
+		grupp = "Stallet inne",
+		text = "Uppehållsrummet mot västväggen (stall-inne-01)",
+		fran = { x = So.x + 5.0, y = So.y + 66.5, h = 1.6 },
+		mot = { x = So.x + 1.5, y = So.y + 62.0 },
+		krav = "Två svarta skinnsoffor i vinkel kring två låga svarta bord, rosa träponny med mörk sadel, rund klocka och inramade hästfoton på pärlsponten, krukväxt. INGET pentry — det går inte att placera (matrisen).",
+	},
+	{
+		id = "teorisalen",
+		grupp = "Stallet inne",
+		text = "Teorisalen från dörren i västväggen (stall-inne-04)",
+		fran = { x = So.x + 11.7, y = So.y + 66.0, h = 1.6 },
+		mot = { x = So.x + 17.0, y = So.y + 67.5 },
+		krav = "Bordsblock i ljust trä med vita stolar, två whiteboards på östväggen, skåp med mikro i sydöstra hörnet, anatomiplanscher och kartonger längs sydväggen, två lysrör och ventilationskanalen i taket.",
+	},
+	{
+		id = "sadelkammaren",
+		grupp = "Stallet inne",
+		text = "Sadelkammaren från dörren i brandväggen (stall-inne-03)",
+		fran = { x = So.x + 8.3, y = So.y + 59.0, h = 1.6 },
+		mot = { x = So.x + 8.6, y = So.y + 64.0 },
+		krav = "Säkerhetsvästar på krokrad längs västväggen till vänster, vit stövelhylla full av stövlar till höger, smal passage emellan. Dörren till teorisalen rakt fram finns INTE i F02-A:s topologi — rapporterad separat.",
+	},
+	{
+		id = "laktarraderna",
+		grupp = "Ridhuset inne",
+		text = "Läktaren från banan vid H (ridhus-inne-43, -14)",
+		fran = { x = Ro.x + banMittX, y = Ro.y + B.y + 50, h = 1.6 },
+		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2, y = Ro.y + B.y + 52 },
+		krav = "Bakom den vita sargen: mörk gångbräda i däckhöjd, sedan TRE stegade bänkrader i ljus furu med röda kantlister, svarta dynor på översta raden. INGEN mörk brädfront, ingen kappregel, inget räcke, inga orange stolar utspridda. Returtunnan vid H, två orange stolar bakom domarboden.",
+	},
+	{
+		id = "hinderupplaget",
+		grupp = "Ridhuset inne",
+		text = "Läktardäckets södra ände från banan (ridhus-inne-21)",
+		fran = { x = Ro.x + banMittX - 4, y = Ro.y + B.y + 12, h = 1.6 },
+		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2, y = Ro.y + B.y + 4 },
+		krav = "På däcket bakom sargen: lutade bommar i färg, vita hinderstöd och bokstavsstället med F R H V C K M A. På kortsidan vid A: två speglar i träram, en på var sida om dubbeldörren.",
+	},
+	{
+		id = "skapkorridoren",
+		grupp = "Ridhuset inne",
+		text = "Skåpkorridoren norrut mot valvfönstret (ridhus-klubb-01)",
+		fran = { x = Ro.x + 4.95, y = Ro.y + 63.0, h = 1.6 },
+		mot = { x = Ro.x + 4.95, y = Ro.y + 76.0 },
+		krav = "Höga grå plåtskåp med enstaka röda och mörka dörrar längs västväggen, två vita stolar med rött tyg vid ett litet bord mitt i gången, bänk med stövlar under fönstret i norra änden. Östsidans öppningar är F02-A:s — glaspartierna i bilden är en strukturell anmärkning, inte inredning.",
+	},
 }
 
 local ORDNING = { "Komplexet", "Ridhuset inne", "Stallet inne" }

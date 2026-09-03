@@ -783,17 +783,12 @@ const IDENTITET = {
        `[REFERENCE GAP]`: bandets höjd och postdelningen. */
     fonsterband:{h:0.95, underTak:0.5, tjocklek:0.06, postDelning:2.4,
                  glas:"#DCE6EC", karm:"#4A3B2E"},
-    /* OM-AUDITENS PUNKT A: läktarens front mot banan.
-
-       Spelet byggde läktaren som öppna ljusa furutrappsteg hela vägen ner.
-       Båda interiörfotona är tagna FRÅN läktaren, och båda visar samma sak
-       i förgrunden: ovansidan är ett brett plankdäck, och framsidan mot
-       banan är en HÖG, SOLID, MÖRKBETSAD BRÄDVÄGG av liggande panel. Man
-       ser inte in under den från banan.
-
-       `VERIFIED` att fronten är solid, mörk och liggande panel.
-       `[ASSUMPTION]` brädhöjd och exakt ton. */
-    laktarfront:{brada:0.22, tjocklek:0.10, farg:"#4E3626", fogFarg:"#3E2B1E"},
+    /* OM-AUDITENS PUNKT A, `laktarfront`, är BORTA (F02-B). Den "höga
+       solida mörkbetsade brädväggen" var läst ur en beskuren förgrund av
+       ridhus-inne-01; references/buildings/ridhus/INTERIOR-MATRIS.md § 2
+       återkallar den och nedgraderar kappregeln till `[REFERENCE GAP]`.
+       Det som står mot banan är sargen; bakom den gångbrädan och de
+       stegade bänkraderna — se RIDHUSINNE.laktare. */
     /* MOTSÄGELSE 3 — IMG_0179/0183: taket har stål, kabelstegar och
        ventilation, inte bara limträbalkar. Andelarna är av husets bredd. */
     takProfiler:{andelar:[0.18,0.40,0.60,0.82], b:0.14, h:0.30, underTak:0.62},
@@ -1340,6 +1335,19 @@ STALLINNE.gangytor = (()=>{
 /* Läktaren i hela stycken, med hästgångens öppning bortdragen. Alla som
    ritar eller kolliderar mot läktaren läser den här listan i stället för
    y0/y1 — annars murar någon av dem igen gången utan att märka det. */
+/* Läktarens bänkrader ur datan — SAMMA regel som Geometri.laktarRader i
+   Roblox. Gångbrädan ligger på däckhöjd närmast banan; rad i har sitsen på
+   dackZ + (i+1)·stegH och börjar gangbrada.djup + i·rader.djup in från
+   däckets bankant. Returnerar rader räknade från banan, med `in0`/`in1`
+   som avstånd in från däckets bankant och `z` som sitsens överkant. */
+function laktarRader(L){
+  const r=L.rader, g=L.gangbrada;
+  if(!r||!g)return [];
+  const ut=[];
+  for(let i=0;i<r.antal;i++)
+    ut.push({in0:g.djup+i*r.djup, in1:g.djup+(i+1)*r.djup, z:L.dackZ+(i+1)*r.stegH});
+  return ut;
+}
 function laktarSektioner(L){
   if(!L.gap) return [{y0:L.y0, y1:L.y1}];
   const ut=[];
@@ -1533,8 +1541,24 @@ const RIDHUSINNE = {
      entrédelen. Utan gap: hästgången kommer in på motsatt långsida.
      y0/y1 följer banan (härleds nedan). `PLAN` för sida och utbredning;
      däckets höjd och djup är som förut `DERIVED` ur -03. */
+  /* F02-B: läktaren är TRE saker, inte ett plant däck (ridhus-inne-04, -07,
+     -14, -43; references/buildings/ridhus/INTERIOR-MATRIS.md § 2):
+       1. sargen mot banan (sargH ovan),
+       2. en plan GÅNGBRÄDA i mörkt trä bakom sargkrönet, `VERIFIED`,
+       3. STEGADE BÄNKRADER i ljus furu som reser sig därifrån, `VERIFIED`
+          att de finns och löper hela långsidan; TRE rader `FOTO`.
+     Den solida mörkbetsade fronten och den ljusa kappregeln som stod här
+     är ÅTERKALLADE av matrisen (byggda på en beskuren förgrund) och borta.
+     Däckhöjden 0,80 är `DERIVED` (-43). Radernas stighöjd och djup är
+     `[REFERENCE GAP]` — talen nedan är valda så att tre rader ryms på
+     däckdjupet och så att översta radens sittande huvuden hamnar ungefär
+     0,7 m över sargkrönet som i -43; de är ASSUMPTION och står så i
+     docs/F02-B-INREDNINGSMATRIS.md. Röda kantlister på stegen: -04. */
   laktare:{x0:0.6, y0:0, y1:0,
-           dackZ:0.80, dackDjup:3.4, frontTopp:1.45, kappH:0.09},
+           dackZ:0.80, dackDjup:3.4,
+           gangbrada:{djup:0.9, farg:"#5A4634"},
+           rader:{antal:3, djup:0.8, stegH:0.30, sittTjock:0.06,
+                  farg:"#C9B58C", kantFarg:"#B24A3A"}},
   /* KORTÄNDANS LÄKTARE (`IMG_0179`), Review 05 blocker 3.
 
      Spelet hade bara en läktare — den längs östra långsidan — och lade de
@@ -1664,7 +1688,14 @@ const RIDHUSINNE = {
      stod här var dubbletter av C-blockets: granskningen 2026-08-31 såg
      en enda klocka i alla bilder av C-blocket och ingen annan. Borta. */
   cafe:{djup:11.5, z0:0, z1:5.9},
-  speglar:[ {y:19,b:3.2},{y:37,b:4.2} ],           // på västra långsidan
+  /* `speglar` (två speglar på y 19 och 37 utan källa) är BORTA — F02-B.
+     Speglarna är inredning och ligger i src/inredning.js med källa per
+     spegel: EN vid B på panelsidan, TVÅ på kortsidan vid A. */
+  /* Lysrörsraderna längs hallen: två långa rader, `VERIFIED` (ridhus-inne-11,
+     -14, -31: "balkarna tvärs, lysrören längs"). Antal och delning är
+     `[REFERENCE GAP]` — andelarna och delningen nedan är ASSUMPTION. Låg
+     förut som literaler i webbritaren; nu delad så att Roblox får dem. */
+  lysror:{andelar:[0.3,0.7], delning:7, langd:1.5, bredd:0.18, underTak:0.35, farg:"#F6F2E4"},
   skyltar:[
     /* OM-AUDITENS PUNKT C: skyltarna hänger på den rostbruna panelen,
        ovanför sargen — inte utspridda längs hela väggen. De låg på y 8–53
