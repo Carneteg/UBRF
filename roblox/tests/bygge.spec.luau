@@ -507,9 +507,20 @@ do
 			bana.y, bana.y + bana.h, rh.y, rh.y + rh.h) or nil)
 end
 
-check("sargen byggdes med en port i norr",
+--[[ Norra sargen i två stycken med spelets gap emellan. Gapet är en
+	SPELABSTRAKTION (ingen bild visar en grind; bredden vald) och ska
+	byggas MÄRKT som sådan: en markördel med klass och fidelity som
+	attribut, okolliderande. Testet mäter märkningen, inte verkligheten. ]]
+check("sargen byggdes i två stycken i norr, med spelets gap emellan",
 	raknaNamn("Sarg norr väst") == 1 and raknaNamn("Sarg norr öst") == 1
 		and raknaNamn("Sarg syd") == 1)
+do
+	local m = forstaNamn("Spelabstraktion sargport")
+	check("spelets sargport är byggd som märkt SPELABSTRAKTION, inte som fidelity",
+		m ~= nil and m.CanCollide == false and m:GetAttribute("Klass") == "SPELABSTRAKTION"
+			and m:GetAttribute("Fidelity") == "REFERENCE GAP",
+		m and tostring(m:GetAttribute("Klass")) or "markör saknas")
+end
 
 check("östra sargen byggdes i två delar, med grinden emellan",
 	raknaNamn("Sarg öst syd") == 1 and raknaNamn("Sarg öst norr") == 1
@@ -581,16 +592,22 @@ do
 			check(string.format("entréväggen %s byggdes i planens bitar", v.id),
 				byggda == #bitar, string.format("%d byggda mot %d i datan", byggda, #bitar))
 		end
-		check("toaletterna och hissen byggdes som slutna volymer",
+		check("toaletterna och schaktet byggdes som slutna volymer",
 			raknaNamn("Slutet rum wc_n1") == 1 and raknaNamn("Slutet rum wc_n2") == 1
-				and raknaNamn("Slutet rum hiss") == 1)
+				and raknaNamn("Slutet rum schakt") == 1)
+		--[[ Blocker 1: den kryssade rutan får inte byggas som "hiss" och får
+			ingen etikettplatta — funktionen är okänd. ]]
+		check("inget byggs som hiss, och schaktet har ingen rumsetikett",
+			raknaNamn("hiss") == 0 and raknaNamn("HISS") == 0 and raknaNamn("Rumsetikett HISS") == 0)
 		check("C-blocket står som ett solitt bänkblock i hallens södra kant",
 			raknaNamn("Kortändans steg") == R2.kortanda.steg
 				and raknaNamn("Kortändans sockel") == 1)
 		--[[ Rutten. Provpunkterna följer planens gröna pilar: in i korridoren,
 			söderut längs västväggen, ut väster om bänkblocket och genom porten. ]]
 		local o = R2.origo
-		local px0 = R2.port.x0 + 0.3
+		-- rutten går genom SPELETS sargport (spelabstraktion), inte en fidelity-port
+		local sp = UBRFKomplex.spelabstraktioner.ridhus.sargport
+		local px0 = sp.x0 + 0.3
 		local rutt = {
 			{ 1.1, 74.2 }, { 1.1, 70.0 }, { 1.1, 66.0 }, { 1.1, 64.6 },
 			{ 3.2, 66.5 }, { px0 + 0.6, 66.5 }, { px0 + 0.6, R2.bana.y + R2.bana.h - 1.5 },

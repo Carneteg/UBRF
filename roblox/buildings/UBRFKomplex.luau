@@ -2319,10 +2319,6 @@ return {
 			h = 60,
 		},
 		sargH = 1.35,
-		port = {
-			x0 = 4.7,
-			x1 = 6.9,
-		},
 		sargGrind = {
 			y0 = 40.88,
 			y1 = 44.68,
@@ -2618,14 +2614,14 @@ return {
 					label = "",
 				},
 				{
-					id = "hiss",
+					id = "schakt",
 					rekt = {
 						x = 5.78,
 						y = 68.2,
 						w = 1.82,
 						h = 1.7,
 					},
-					label = "HISS",
+					label = "",
 					stangt = true,
 				},
 				{
@@ -2829,6 +2825,19 @@ return {
 		origo = {
 			x = 118,
 			y = 41.82,
+		},
+	},
+	spelabstraktioner = {
+		ridhus = {
+			sargport = {
+				x0 = 4.7,
+				x1 = 6.9,
+				y = 65.68,
+				bredd = 2.2,
+				klass = "SPELABSTRAKTION",
+				fidelity = "REFERENCE GAP",
+				motiv = "planens utrymningspilar; ingen bild visar grinden; bredden vald",
+			},
 		},
 	},
 }

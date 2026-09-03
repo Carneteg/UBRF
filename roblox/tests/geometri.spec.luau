@@ -423,13 +423,25 @@ end
 			R.bana.x, R.bana.x + R.bana.w))
 end
 
+--[[ SPELABSTRAKTIONER (Senior Re-review 2026-09-03, blocker 2). Sargporten
+	för folk till fots är INTE fidelity: ingen bild visar en grind i sargen
+	och bredden är vald. Den får därför inte ligga i `ridhus` (fidelity-
+	datan) utan i `spelabstraktioner`, märkt som sådan. Testet mäter
+	MÄRKNINGEN och att spelet kan använda öppningen — inte att den är
+	verklighet. ]]
 do
-	-- Sargporten är gapet i norra kortsidan. Där rider man in, och där står A.
-	local bredd = R.port.x1 - R.port.x0
-	check("sargporten är en användbar öppning", bredd > 1.5 and bredd < 4,
-		string.format("%.1f m bred, vid x %g–%g", bredd, R.port.x0, R.port.x1))
-	check("porten ligger inom banans kortsida",
-		R.port.x0 >= R.bana.x and R.port.x1 <= R.bana.x + R.bana.w)
+	check("sargporten finns INTE i fidelity-datan `ridhus`", R.port == nil)
+	local SA = UBRFKomplex.spelabstraktioner
+	local sp = SA and SA.ridhus and SA.ridhus.sargport
+	check("sargporten ligger i spelabstraktioner, märkt SPELABSTRAKTION med REFERENCE GAP i fidelity",
+		sp ~= nil and sp.klass == "SPELABSTRAKTION" and sp.fidelity == "REFERENCE GAP" and sp.motiv ~= nil)
+	if sp then
+		local bredd = sp.x1 - sp.x0
+		check("spelets sargport är bred nog att gå igenom (spelkrav, inte fidelity)", bredd > 1.5 and bredd < 4,
+			string.format("%.1f m bred, vid x %g–%g", bredd, sp.x0, sp.x1))
+		check("spelets sargport ligger i banans norra sarg", sp.x0 >= R.bana.x and sp.x1 <= R.bana.x + R.bana.w
+			and math.abs(sp.y - (R.bana.y + R.bana.h)) < 0.01)
+	end
 end
 
 do
@@ -530,8 +542,13 @@ do
 	if E then
 		local namn = {}
 		for _, r in ipairs(E.rum) do namn[r.id] = r end
-		check("entrén, de två toaletterna, hissen och skåpkorridoren finns",
-			namn.entre and namn.wc_n1 and namn.wc_n2 and namn.hiss and namn.skapkorridor)
+		check("entrén, de två toaletterna, den kryssade rutan (schakt) och skåpkorridoren finns",
+			namn.entre and namn.wc_n1 and namn.wc_n2 and namn.schakt and namn.skapkorridor)
+		--[[ Blocker 1: rutan är plan-belagd som fotavtryck, funktionen är
+			okänd. Datan får inte kalla den hiss och inte sätta någon
+			spelarsynlig etikett — regeln "hitta inte på rumsidentitet". ]]
+		check("den kryssade rutan är neutral: inget `hiss`-id, ingen etikett",
+			namn.hiss == nil and namn.schakt ~= nil and (namn.schakt.label == nil or namn.schakt.label == ""))
 		if namn.entre and namn.wc_n1 and namn.wc_n2 then
 			check("toaletterna ligger norr om entrén, längs västväggen",
 				namn.wc_n1.rekt.y >= namn.entre.rekt.y + namn.entre.rekt.h - 0.01
@@ -540,8 +557,8 @@ do
 				string.format("entré y %.1f–%.1f, WC y %.1f och %.1f",
 					namn.entre.rekt.y, namn.entre.rekt.y + namn.entre.rekt.h,
 					namn.wc_n1.rekt.y, namn.wc_n2.rekt.y))
-			check("toaletterna och hissen är slutna tills dörrarna är belagda",
-				namn.wc_n1.stangt and namn.wc_n2.stangt and namn.hiss.stangt)
+			check("toaletterna och schaktet är slutna tills dörrar/funktion är belagda",
+				namn.wc_n1.stangt and namn.wc_n2.stangt and namn.schakt.stangt)
 		end
 		local utanfor = nil
 		for _, r in ipairs(E.rum) do
@@ -549,10 +566,13 @@ do
 			if k.x < -0.01 or k.x + k.w > R.bredd + 0.01 or k.y + k.h > R.langd + 0.01 then utanfor = r.id end
 		end
 		check("entrédelens rum ligger i huset", utanfor == nil, utanfor or "alla innanför")
-		-- Porten för folk ligger väster om C-blocket, i banans norra kant.
-		check("sargporten ligger väster om C-blocket",
-			R.port.x1 <= R.kortanda.x0 + 0.01 and R.port.x0 >= R.bana.x - 0.01,
-			string.format("port x %.1f–%.1f, block från %.1f", R.port.x0, R.port.x1, R.kortanda.x0))
+		--[[ Spelets sargport (SPELABSTRAKTION, inte fidelity) måste hamna
+			väster om C-blocket för att rutten entré → bana ska finnas; det
+			är ett SPELKRAV på abstraktionen, inte ett påstående om UBRF. ]]
+		local sp = UBRFKomplex.spelabstraktioner and UBRFKomplex.spelabstraktioner.ridhus.sargport
+		check("spelets sargport (abstraktion) ligger väster om C-blocket så att rutten finns",
+			sp ~= nil and sp.x1 <= R.kortanda.x0 + 0.01 and sp.x0 >= R.bana.x - 0.01,
+			sp and string.format("port x %.1f–%.1f, block från %.1f", sp.x0, sp.x1, R.kortanda.x0) or "saknas")
 	end
 end
 check("domarbåset har trappa och exit-skylt", R.domarbas.trappa and R.domarbas.exit)

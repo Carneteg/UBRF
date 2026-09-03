@@ -79,7 +79,7 @@ PASS / FEL · vid fel: `qa-ankomsten-FEL.png`
 
 PASS / FEL · vid fel: `qa-gardarna-FEL.png`
 
-### 4. `banan` — sand, sarg och porten vid A
+### 4. `banan` — sand, sarg och spelets sargport (spelabstraktion)
 
 **Ska synas:** ridbanan söderut från norra kortsidan.
 **Referens:** `references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg`.
@@ -87,7 +87,10 @@ PASS / FEL · vid fel: `qa-gardarna-FEL.png`
 - banans proportioner läser som 20 × 60
 - sanden **dovt brungrå**, inte ljus beige och inte orange
 - sargen ljus med mörkt sockelband
-- porten vid A är ett **gap** i norra kortsidan, inte en vägg
+- gapet i norra sargens västra ände är SPELETS sargport — en `SPELABSTRAKTION`
+  med gul genomskinlig markör (attribut `Klass`/`Fidelity`), **inte** verifierad
+  UBRF-geometri: ingen bild visar en grind där, bredden är vald. Bedöm sargen,
+  inte gapet
 - inget flimmer mellan sand och sarg när du panorerar
 
 PASS / FEL · vid fel: `qa-banan-FEL.png`

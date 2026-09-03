@@ -58,7 +58,7 @@ const SITE={
    till första bokstaven och tolv meter mellan resten.
 
    VILKEN LÅNGSIDA SOM ÄR VILKEN avgörs av var A ligger, och A ligger där
-   man rider in. Sargporten sitter i banans NORRA kortsida (RIDHUSINNE.port
+   man rider in. Sargporten sitter i banans NORRA kortsida (SPELABSTRAKTIONER.ridhus.sargport, en spelabstraktion
    och sargen i v3dRidhus), alltså är den kortsidan A. Rider man in vid A
    och tittar mot C har man östra långsidan till vänster — och på vänster
    sida sitter K-V-E-S-H.

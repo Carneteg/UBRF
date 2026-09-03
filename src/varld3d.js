@@ -1214,7 +1214,10 @@ function v3dRidhus(lagg,opp){
     sarg.lada(len,R.sargH-0.26,0.14,"#E9E5DC",M4.mul(m,M4.translation(0,0.26+(R.sargH-0.26)/2,0)));
     sarg.lada(len,0.07,0.18,"#CFC8BC",M4.mul(m,M4.translation(0,R.sargH+0.03,0)));
   };
-  bit(ba.x,ba.y+ba.h,R.port.x0,ba.y+ba.h); bit(R.port.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+  /* Gapet i norra sargen är SPELABSTRAKTIONEN sargport (src/site.js), inte
+     fidelity: ingen bild visar en grind där, bredden är vald. */
+  {const sp=SPELABSTRAKTIONER.ridhus.sargport;
+   bit(ba.x,ba.y+ba.h,sp.x0,ba.y+ba.h); bit(sp.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);}
   bit(ba.x,ba.y,ba.x+ba.w,ba.y);
   bit(ba.x,ba.y,ba.x,ba.y+ba.h);
   /* Östra långsidan delad av grinden mot hästgången — utan den är gången
@@ -1569,11 +1572,10 @@ function v3dRidhus(lagg,opp){
   /* Hallens golv, ljusare än banan, och takarmaturer under caféplattan. */
   lagg(new Bygge().yta(R.bredd-0.4,E-0.4,"#FFFFFF",
     M4.translation(R.bredd/2,0.02,EY+E/2),6),T.marksten);
-  {const arm=new Bygge();
-   for(let x=3;x<R.bredd-1;x+=4.4)
-     for(let z=EY+2.2;z<R.langd-1;z+=4.0)
-       arm.lada(1.5,0.09,0.34,"#FBF6E6",M4.translation(x,R.cafe.z0-0.16,z));
-   lagg(arm,T.tra);}
+  /* Takarmaturerna i entrédelen — ett jämnt rutnät 4,4 × 4,0 m — är BORTA
+     (Senior Re-review 2026-09-03): ingen källa bar delningen. Belagda
+     armaturer (skåpkorridorens lysrörsrader, ridhus-klubb-01) hör till
+     F02-B och byggs där ur bild, inte ur ett rutnät. */
   if(R.entrehall) v3dVaggarOchRum(R.entrehall,R.hallvagg||"#ACA99D",R.cafe.z0-0.3,lagg,T.parlspont);
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
