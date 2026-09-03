@@ -236,16 +236,16 @@ befintlig implementation bara som jämförelse.
 
 | Rum / passage | Planen | Spelet (`RIDHUSINNE.entrehall` m.fl.) | Klass | Källa → faktum |
 |---|---|---|---|---|
-| **Huvudentrén** (Bild 1) | cell x 0–2,2 × N 2,4–3,8 innanför västväggen; grön pil ut genom väggen | `entre`, etikett ENTRÉ; fasaddörren `ut_ridhus_W_9` | `PLAN` + `[enligt Tobias]` | "Main entrance = Bild 1"; dörrläget `CONTRADICTION`, se nedan |
-| **Två toaletter till vänster om entrén** | x 0–1,7; N 0,3–1,1 och 1,6–2,4 | `wc_n1`, `wc_n2`, `stangt` | `PLAN` + `[enligt Tobias]` | "two toilets left of entrance"; vänster = norr när man går in österut; dörrar olästa → slutna |
-| Västkorridoren | x 0–2,2, N 0,3–13; planens gröna stråk | `vastkorridor`, utan namn | `PLAN` | pilarna löper söderut mot läktarremsan |
-| Öppningen entré → cellraden | i väggen x 2,2, N 2,4–3,8 | `korridor_o.glasparti` | `PLAN`; glas eller dörr `REFERENCE GAP` | |
-| Cellraden, fyra celler | x 2,2–4,2; tvärväggar N 3,9 · 6,4 · 7,9 · 9,8 (halv, x 2,2–3,1); luckor mot skåpkorridoren N 1,1–3,1 · 4,6–5,4 · 6,8–7,6 · 9,8–11,6 | `cell_1`–`cell_4`, `skap_v.a`–`d`; region `cellrad` utan namn | `PLAN`; funktion `REFERENCE GAP` | Bild 2–5 (reception, skåpförvaring, ombytesrum med dusch, HWC) hör hit men urklippen saknas i repot → **inte namngivna, inte placerade** |
-| **Skåpkorridoren** | x 4,2–5,7, N 1,6–16; luckor österut N 3,2–4,1 · 5,8–6,5 · 7,6–8,4 · 9,7–10,9 | `skapkorridor`, etikett SKÅPKORRIDOREN | `PLAN` + `FOTO` (`ridhus-klubb-01`) | fortsätter 4,5 m förbi hallens gräns, längs banans nordvästra hörn |
-| Den kryssade rutan (schaktet) | kryssad ruta x 5,75–7,6, N 7,3–9,0, tätt öster om skåpväggen | `schakt`, `stangt`, **ingen etikett** | fotavtrycket `PLAN`; funktionen `REFERENCE GAP` | rättad i förstoring 2026-09-03 — låg 3 m fel, i cellraden. Hette `hiss`/`HISS` t.o.m. `a21d6ab`; **superseded** efter Senior Re-review 2026-09-03 (blocker 1): en okänd funktion får inte kanoniseras som hiss |
-| Rummet innanför hallens tvärvägg | x 5,7–10,5, N 4,3–7,2; dörr norrut x 7,7–9,6; lucka västerut N 5,8–6,5 | `hall_n_v`, `hall_mitt`, `hall_nv_s`; ingen egen region | `PLAN`; funktion `REFERENCE GAP` | södra väggen N 7,2 saknades i första läsningen |
-| Rummen mot nordöstra hörnet | vägg N 4,3 x 15,3–18,4; x 18,4 N 1,3–7,1; N 5,9 x 18,4–21,7 | `hall_n_o`, `hall_no`, `hall_no_s` | `PLAN`; funktion `REFERENCE GAP` | |
-| Östra korridoren | x 21,7–25, N 0,2–11,4 | `ostkorridor`, utan namn | `PLAN` | leder mot hästgången |
+| **Huvudentrén** (Bild 1) | planens cell x 0–2,2 × N 2,4–3,8; grön pil ut genom västväggen; planens "här är du"-linje pekar mot norra gaveln (audit 2026-09-03) | region `entre` med etikett ENTRÉ vid **fasadens låsta dörr** (`u:9`, N 9–11, innerpunkt (1,6, 67,18)); ingen geometri | `CONTRADICTION` — exteriörlåset vinner | tre lägen i källorna (plan 2,2–3,8; "här är du" norra gaveln; fasad 9 m); spelet följer fasaden |
+| **Två toaletter till vänster om entrén** | x 0–1,7; N 0,3–1,1 och 1,6–2,4; tre sidor mätbara som streck i förstoringen | `wc_n_s`, `wc_n_mellan`, `wc_n_o` WALL `ridhus_wc_n_enclosure`; `wc_n1`, `wc_n2` `stangt` | `PLAN` + `[enligt Tobias]`, VERIFIED_PLAN_OR_PHOTO | dörrar olästa → slutna; vilket fotorum (-04/-05/-17) som är vilket: `REFERENCE GAP` |
+| Västkorridoren, öppningen entré → cellraden (`korridor_o`, `glasparti`) | planen bär bara x 2,2, N 4,6–8,3 (3,7 m) — inte N 0,3–13 | **borttagen** (Spatial Canon v2, PO-2026-09-03-RIDHUS-OPEN-01); sträckan N 4,6–8,3 är receptionens glas | `SUPERSEDED` | fotona (`ridhus-klubb-01/-15`, `IMG_0169`) visar EN öppen gång med skåp som möbler, ingen vägg |
+| Cellraden, fyra celler (`cell_1`–`cell_4`) | < 10 % täckning vid koordinaterna N 3,9 · 6,4 · 7,9 · 9,8 | **borttagna** | `SUPERSEDED`; funktionerna (Bild 2–5: reception, skåpförvaring, ombyte med dusch, HWC) `REFERENCE GAP` | en plancell utan streck är inte väggbevis; HWC får ingen vägg av sin funktion |
+| **Receptionen** (Bild 2) | Tobias: glasad; foto: låg bröstning + fyra fasta glaspartier + hylla mot gången; planens 3,7 m-linje x 2,2, N 4,6–8,3 | `reception_glas` **GLASS** `ridhus_reception_glass` (bröstning 0,95 + glas), region `reception` med etikett | PO-2026-09-03-RIDHUS-GLASS-01 + `FOTO` + `PLAN`; väderstreck och rummets övriga avgränsning `REFERENCE GAP` | inga ersättningsväggar runt receptionen (kanonens GEOMETRY_REFERENCE_GAP) |
+| Skåpkorridorens två väggar (`skap_v`, `skap_o`) | inga sammanhängande streck vid x 4,2 / 5,7 | **borttagna**; etiketten SKÅPKORRIDOREN borta | `SUPERSEDED` | skåpen är fristående möbler (F02-B), inte väggar |
+| Den kryssade rutan (schaktet) | x 5,75–7,6, N 7,3–9,0; oberoende ommätt 5,58–7,42 / 7,15–9,04 | `schakt`, `stangt`, WALL `ridhus_schakt_box`, **ingen etikett** | fotavtrycket `PLAN`; funktionen `REFERENCE GAP` | hette `hiss` t.o.m. `a21d6ab`; står utanför vägen entré → bana |
+| Rummet innanför hallens tvärvägg, rummen mot nordöstra hörnet (`hall_n_v`, `hall_n_o`, `hall_nv_s`, `hall_mitt`, `hall_no`, `hall_no_s`) | inga egna streck; `hall_nv_s` = C-blockets framkant; SITEPLAN: "otydlig i mitten, [antagande]" | **borttagna** — `hall_n_v` var väggen som spärrade vägen entré → bana | `SUPERSEDED`; funktion `REFERENCE GAP` | OPEN_AREA `ridhus_open_entrance_hall` |
+| Östra korridoren (`ostkorridor_v`) | två korta körningar i takstolsmarkeringarnas rytm | **borttagen** | `SUPERSEDED` | |
+| **Kedjan huvudentré → öppen hall → sargport → bana** | planens gröna pilar löper från entréklustret rakt in i hallen; `ridhus-inne-39`: glasad dubbeldörr vid NV-hörnet mellan hall och bana | OPEN_AREA + sargporten (SPELABSTRAKTION x 4,7–6,9); grind SCV2-03 i `bygge.spec` (spelarradie 0,35, ingen opak vägg inom 1,0 m) och `tools/gangtest.mjs` (webben går kedjan) | PO-2026-09-03-RIDHUS-ROUTE-01 | portens exakta läge/bredd `REFERENCE GAP` (abstraktion, ej fidelity) |
 | **Hästgången** (Bild 7) | östra långsidan, sammanbyggd med stallet | dörren `hastgang` + `sargGrind` | `[enligt Tobias]` + `PLAN` | ett gränssnitt: `stallhus:horse_passage ↔ ridhus:horse_passage`; bryter stallets västra boxrad, inte läktaren |
 | Svarta gaveldörren | N-gaveln, 16,1–16,7 m från väster | `ut_ridhus_N_8` (fasadens `u:8.1`) | `PLAN` = fasad | den handskrivna `ut_n` i nordöstra hörnet är borttagen |
 | **Ridbanan** (Bild 6) — den fysiska ridytan | "till höger om klustret" = söder om det; hallen är en obruten yta från entrédelens gräns N 11,4 till södra gaveln; `ridhus-inne-23`: A-sargen mot gaveln | `bana` y 0,15–65,68 (h 65,53 DERIVED), x 4,4–24,4; `entre` 11,5 | `PLAN` + `FOTO` | senior review 2026-09-03: 60 m var dressyrlayouten, inte sarg-till-sarg |
@@ -421,8 +421,8 @@ klubbdel på båda ytorna (`klubbVaggBitar` / `Geometri.vaggBitar`):
 | Läktaren på västra långsidan, ett stycke utan gap | x 0,6–4,0, y 5,68–65,68; banan x 4,4–24,4 | `PLAN` + `FOTO` |
 | C-blocket i norr, vänt mot banan, två trappor, glasband, vit vägg, klocka | y 65,68–70,13, x 8,6–21,6 | `PLAN` + `FOTO` + `[enligt Tobias]` |
 | Caféet som eget lager ovanpå entrédelen | z0 ur blockets glasband | `[enligt Tobias]` + `FOTO` |
-| Entrédelens väggar segment för segment med planens luckor | `entrehall.vaggar`, 17 väggar | `PLAN` (±0,5 m) |
-| Entrén, två toaletter, skåpkorridoren med namn; den kryssade rutan som namnlöst slutet `schakt` | `entrehall.rum` | `PLAN` + `[enligt Tobias]`; schaktets funktion `REFERENCE GAP` |
+| Entrédelens väggar segment för segment — bara källspårade | `entrehall.vaggar`: 3 WALL (toaletterna) + 1 GLASS (receptionen); 14 segment återkallade i `ingaVaggar` | `PLAN` + `FOTO` + PO (Spatial Canon v2); docs/F02-RIDHUS-ENTRE-AUDIT.md |
+| Entrén, receptionen, två toaletter med namn; den kryssade rutan som namnlöst slutet `schakt`; OPEN_AREA `ridhus_open_entrance_hall` | `entrehall.rum`, `entrehall.oppna`, `entrehall.ingaVaggar` | `PLAN` + `[enligt Tobias]` + PO; schaktets funktion `REFERENCE GAP` |
 | Grinden mot hästgången | härledd ur hästgången | `[ASSUMPTION]` (bredd) |
 | Sargporten väster om C-blocket | **inte fidelity** — `SPELABSTRAKTIONER.ridhus.sargport` | `SPELABSTRAKTION`; `REFERENCE GAP` i fidelity |
 | Dressyrbokstäverna vända (A söder, C norr) | `DRESSYRBOKSTAVER` | `DERIVED` |
@@ -571,14 +571,16 @@ filtret.
 3. **Ridhusets entréplan i djupled** — rektifiering underkänd, omfotografering
    utesluten; talen är ±0,5 m ur ett rutnät på den sneda bilden.
 4. **Rumsfunktioner** som ingen källa ger: stallets lilla rum, östra rummet,
-   väggspåret och halvväggen; var pentryt ligger. I ridhuset: cellradens fyra
-   celler, rummet innanför hallens tvärvägg, rummen mot nordöstra hörnet, och
-   vad den kryssade rutan är (den heter `schakt` i datan, utan etikett, och
-   får inte kallas hiss förrän belägg eller produktägarbeslut finns).
+   väggspåret och halvväggen; var pentryt ligger. I ridhuset: vad som finns
+   bakom receptionens glas, var HWC:n och ombytet (Bild 3–5) ligger — de
+   byggs INTE som rum (Spatial Canon v2: en funktion är inget väggbevis),
+   och vad den kryssade rutan är (den heter `schakt` i datan, utan etikett,
+   och får inte kallas hiss förrän belägg eller produktägarbeslut finns).
 5. **Dörrar** som planen inte visar: Ö-toaletten, det lilla rummet, den
-   namnlösa volymens ingång; ridhusets två toaletter och schaktet; om
-   entréöppningen mot cellraden är glas eller dörr; var skåpkorridoren slutar
-   vid N 16.
+   namnlösa volymens ingång; ridhusets två toaletter och schaktet.
+   Receptionsglasets exakta väderstreck och rummets övriga avgränsning
+   (`ridhus_reception_glass`: GEOMETRY_REFERENCE_GAP); huvudentréns läge —
+   plan 2,2–3,8, "här är du" mot norra gaveln, fasad 9 m (CONTRADICTION).
 6. **Plan 2:s rumsindelning** — bilden beskuren. Ridhusets **övre plan**
    (övre korridoren, Café Krubban) saknar plan helt.
 7. **Volymen söder om stallets gavel** — ingen bild.

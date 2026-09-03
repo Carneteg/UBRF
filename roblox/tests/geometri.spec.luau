@@ -722,16 +722,17 @@ do
 end
 
 do
-	--[[ ENTRÉDELEN ur planen. Bara det som finns i datan provas här; bygget
-		provas i bygge.spec. Rummen med namn vilar på Tobias ord (entrén, de
-		två toaletterna) eller foto (skåpkorridoren). ]]
+	--[[ ENTRÉDELEN — Spatial Canon v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json
+		§ buildings.ridhus). Den gamla vägglistan är återkallad; bara
+		källspårade WALL/GLASS får finnas, resten är OPEN_AREA. Bara datan
+		provas här; bygget och rutten provas i bygge.spec. ]]
 	local E = R.entrehall
 	check("entrédelen finns i datan", E ~= nil)
 	if E then
 		local namn = {}
 		for _, r in ipairs(E.rum) do namn[r.id] = r end
-		check("entrén, de två toaletterna, den kryssade rutan (schakt) och skåpkorridoren finns",
-			namn.entre and namn.wc_n1 and namn.wc_n2 and namn.schakt and namn.skapkorridor)
+		check("entrén, receptionen, de två toaletterna och den kryssade rutan (schakt) finns som regioner",
+			namn.entre and namn.reception and namn.wc_n1 and namn.wc_n2 and namn.schakt)
 		--[[ Blocker 1: rutan är plan-belagd som fotavtryck, funktionen är
 			okänd. Datan får inte kalla den hiss och inte sätta någon
 			spelarsynlig etikett — regeln "hitta inte på rumsidentitet". ]]
@@ -748,12 +749,92 @@ do
 			check("toaletterna och schaktet är slutna tills dörrar/funktion är belagda",
 				namn.wc_n1.stangt and namn.wc_n2.stangt and namn.schakt.stangt)
 		end
+		-- Kanonen § 3: rumsmetadata är passiv. Receptionen och entrén är regioner, inte volymer.
+		check("SCV2-04: receptionen och entrén är passiva regioner — inget `stangt` ur en etikett",
+			namn.reception ~= nil and not namn.reception.stangt and namn.entre ~= nil and not namn.entre.stangt)
 		local utanfor = nil
 		for _, r in ipairs(E.rum) do
 			local k = r.rekt
 			if k.x < -0.01 or k.x + k.w > R.bredd + 0.01 or k.y + k.h > R.langd + 0.01 then utanfor = r.id end
 		end
 		check("entrédelens rum ligger i huset", utanfor == nil, utanfor or "alla innanför")
+
+		--[[ SCV2 — OPEN_AREA ridhus_open_entrance_hall och NO_WALL_ZONE
+			ridhus_open_hall_no_room_boxes finns; ingen WALL/GLASS och ingen
+			sluten volym skär den öppna ytans inre (SCV2-01-analogen för
+			ridhuset); de 14 återkallade segmenten är borta. ]]
+		local zon = nil
+		for _, z in ipairs(E.oppna or {}) do if z.id == "ridhus_open_entrance_hall" then zon = z end end
+		check("OPEN_AREA ridhus_open_entrance_hall finns i datan med PO-källa",
+			zon ~= nil and zon.typ == "OPEN_AREA" and zon.source_id ~= nil
+				and string.find(zon.source_id, "PO-2026-09-03-RIDHUS-OPEN-01", 1, true) ~= nil and #zon.rekt >= 3)
+		local ingen = nil
+		for _, z in ipairs(E.ingaVaggar or {}) do if z.tacker == "ridhus_open_entrance_hall" then ingen = z end end
+		check("NO_WALL_ZONE täcker den öppna entréhallen och listar det återkallade",
+			ingen ~= nil and ingen.typ == "NO_WALL_ZONE" and #ingen.aterkallat >= 14)
+		local function skarInre(r)
+			if not zon then return false end
+			for _, q in ipairs(zon.rekt) do
+				local ox = math.min(r.x + r.w, q.x + q.w) - math.max(r.x, q.x)
+				local oy = math.min(r.y + r.h, q.y + q.h) - math.max(r.y, q.y)
+				if ox > 0.12 and oy > 0.12 then return true end
+			end
+			return false
+		end
+		local intrang = {}
+		for _, v in ipairs(E.vaggar) do
+			local t = (v.tjock or 0.16) / 2
+			for _, bit in ipairs(Geometri.vaggBitar(v)) do
+				local r = if v.typ == "tvar" then { x = bit.a0, y = v.y - t, w = bit.a1 - bit.a0, h = 2 * t }
+					else { x = v.x - t, y = bit.a0, w = 2 * t, h = bit.a1 - bit.a0 }
+				if skarInre(r) then table.insert(intrang, v.id) end
+			end
+		end
+		for _, r in ipairs(E.rum) do
+			if r.stangt and skarInre(r.rekt) then table.insert(intrang, r.id) end
+		end
+		check("SCV2-01 (ridhus): ingen vägg, inget glas och ingen sluten volym skär den öppna entréhallen",
+			#intrang == 0, #intrang > 0 and table.concat(intrang, ", ") or "hallen är öppen")
+		local aterkallade = {}
+		if ingen then for _, id in ipairs(ingen.aterkallat) do aterkallade[id] = true end end
+		for _, id in ipairs({ "korridor_o", "skap_v", "skap_o", "cell_1", "cell_2", "cell_3", "cell_4",
+			"hall_n_v", "hall_n_o", "hall_nv_s", "hall_mitt", "hall_no", "hall_no_s", "ostkorridor_v" }) do
+			aterkallade[id] = true
+		end
+		local kvar = {}
+		for _, v in ipairs(E.vaggar) do if aterkallade[v.id] then table.insert(kvar, v.id) end end
+		check("den återkallade vägglistan är borta (korridor_o, skåpkorridorens väggar, cellraden, hallens rumslådor, östkorridoren)",
+			#kvar == 0, #kvar > 0 and table.concat(kvar, ", ") or "borta")
+		-- SCV2-02/04: provenance på varje WALL/GLASS och sluten volym; tillåten confidence.
+		local tillat = { PRODUCT_OWNER_VERIFIED = true, VERIFIED_PLAN_OR_PHOTO = true }
+		local utan, felTillit = {}, {}
+		local function prova(o, id)
+			if not (o.primitiv == "WALL" or o.primitiv == "GLASS") or not o.canon_id or not o.source_id or not o.confidence then
+				table.insert(utan, id)
+			elseif not tillat[o.confidence] then
+				table.insert(felTillit, id)
+			end
+		end
+		for _, v in ipairs(E.vaggar) do prova(v, v.id) end
+		for _, r in ipairs(E.rum) do if r.stangt then prova(r, r.id) end end
+		check("SCV2-02: varje vägg/glas och sluten volym i entrédelen bär primitiv, canon_id, source_id och confidence",
+			#utan == 0, #utan > 0 and table.concat(utan, ", ") or "alla har provenance")
+		check("SCV2-04: ingen partition i entrédelen vilar på lägre belägg än plan/foto eller PO",
+			#felTillit == 0, #felTillit > 0 and table.concat(felTillit, ", ") or "ok")
+		-- Receptionen är GLASS (PO-2026-09-03-RIDHUS-GLASS-01), aldrig en opak vägg.
+		local glas, opakRec = nil, {}
+		for _, v in ipairs(E.vaggar) do
+			if v.canon_id == "ridhus_reception_glass" then
+				if v.primitiv == "GLASS" then glas = v else table.insert(opakRec, v.id) end
+			end
+		end
+		for _, r in ipairs(E.rum) do
+			if r.id == "reception" and r.stangt then table.insert(opakRec, "reception(stangt)") end
+		end
+		check("receptionens avgränsning är GLASS med PO- och fotokälla, inte en opak vägg",
+			glas ~= nil and #opakRec == 0 and string.find(glas.source_id, "RIDHUS-GLASS-01", 1, true) ~= nil
+				and (glas.y1 - glas.y0) >= 3.0,
+			#opakRec > 0 and ("opakt: " .. table.concat(opakRec, ", ")) or (glas and string.format("glas %.1f m", glas.y1 - glas.y0) or "saknas"))
 		--[[ Spelets sargport (SPELABSTRAKTION, inte fidelity) måste hamna
 			väster om C-blocket för att rutten entré → bana ska finnas; det
 			är ett SPELKRAV på abstraktionen, inte ett påstående om UBRF. ]]
@@ -761,6 +842,40 @@ do
 		check("spelets sargport (abstraktion) ligger väster om C-blocket så att rutten finns",
 			sp ~= nil and sp.x1 <= R.kortanda.x0 + 0.01 and sp.x0 >= R.bana.x - 0.01,
 			sp and string.format("port x %.1f–%.1f, block från %.1f", sp.x0, sp.x1, R.kortanda.x0) or "saknas")
+		--[[ SCV2-03 i datan: kedjan main_entrance → open_entrance_hall →
+			arena_access → physical_riding_area. Huvudentréns innerpunkt
+			(fasadens dörr) ligger i OPEN_AREA, sargporten öppnar ur samma
+			OPEN_AREA, och ingen vägg/volym i datan står mellan dem. ]]
+		local dorr = nil
+		for _, d in ipairs(R.dorrar or {}) do if d.id == "ut_ridhus_W_9" then dorr = d end end
+		local function iZon(x, y)
+			if not zon then return false end
+			for _, q in ipairs(zon.rekt) do
+				if x >= q.x - 0.01 and x <= q.x + q.w + 0.01 and y >= q.y - 0.01 and y <= q.y + q.h + 0.01 then return true end
+			end
+			return false
+		end
+		local kedja = dorr ~= nil and sp ~= nil and iZon(dorr.pos[1], dorr.pos[2]) and iZon((sp.x0 + sp.x1) / 2, sp.y + 0.2)
+		local spar = nil
+		if kedja then
+			local x0, x1 = math.min(dorr.pos[1], (sp.x0 + sp.x1) / 2) - 0.35, math.max(dorr.pos[1], (sp.x0 + sp.x1) / 2) + 0.35
+			local y0, y1 = sp.y, dorr.pos[2]
+			local function skar(r)
+				return r.x < x1 and r.x + r.w > x0 and r.y < y1 and r.y + r.h > y0
+			end
+			for _, v in ipairs(E.vaggar) do
+				local t = (v.tjock or 0.16) / 2
+				for _, bit in ipairs(Geometri.vaggBitar(v)) do
+					local r = if v.typ == "tvar" then { x = bit.a0, y = v.y - t, w = bit.a1 - bit.a0, h = 2 * t }
+						else { x = v.x - t, y = bit.a0, w = 2 * t, h = bit.a1 - bit.a0 }
+					if skar(r) then spar = spar or v.id end
+				end
+			end
+			for _, r in ipairs(E.rum) do if r.stangt and skar(r.rekt) then spar = spar or r.id end end
+		end
+		check("SCV2-03 (data): huvudentrén och sargporten ligger i den öppna hallen och inget står emellan",
+			kedja and spar == nil,
+			not kedja and "kedjan bruten: dörr eller port utanför OPEN_AREA" or (spar or "fri"))
 	end
 end
 check("domarbåset har trappa och exit-skylt", R.domarbas.trappa and R.domarbas.exit)

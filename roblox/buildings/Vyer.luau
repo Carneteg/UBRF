@@ -188,10 +188,18 @@ Vyer.vyer = {
 	{
 		id = "entrehallen",
 		grupp = "Ridhuset inne",
-		text = "Innanför huvudentrén: korridoren längs västväggen, toaletterna norr om dörren, glaspartiet in i hallen",
-		fran = { x = Ro.x + 1.1, y = Ro.y + 74.2, h = 1.7 },
-		mot = { x = Ro.x + 1.1, y = Ro.y + 65.0 },
-		krav = "Planens entrédel: en korridor längs västväggen söderut mot banan, två smala toaletter norr om entrén, glasparti in i hallen, skåpkorridorens två parallella väggar, den kryssade rutan (`schakt`) som sluten volym UTAN namn — funktionen är okänd (REFERENCE GAP), den får inte heta hiss. Inga uppfunna möbler.",
+		text = "Innanför huvudentrén (fasadens dörr under kvisten): den öppna entréhallen norrut, receptionens glas till höger, toaletterna i bortre hörnet",
+		fran = { x = Ro.x + 1.3, y = Ro.y + 67.0, h = 1.7 },
+		mot = { x = Ro.x + 1.3, y = Ro.y + 76.5 },
+		krav = "Spatial Canon v2 (RIDHUS-V1/V3): entrédelen är EN öppen yta — ingen korridor av rumslådor, inga skåpkorridorväggar, ingen cellrad, inga rum mot nordöstra hörnet. Det enda som står är två smala toaletter i NV-hörnet (WALL, plan + PO), den kryssade rutan `schakt` som sluten volym UTAN namn (funktion REFERENCE GAP, får inte heta hiss) och receptionens GLASS-parti (låg bröstning + glas, ridhus-klubb-01/-02) — aldrig en opak låda. Varje vägg/glas bär CanonId/SourceId/Confidence. Inga uppfunna möbler.",
+	},
+	{
+		id = "entrehallen_mot_banan",
+		grupp = "Ridhuset inne",
+		text = "Från den öppna entréhallen söderut mot sargporten och banan",
+		fran = { x = Ro.x + 2.0, y = Ro.y + 70.0, h = 1.7 },
+		mot = { x = Ro.x + 2.0, y = Ro.y + 62.0 },
+		krav = "Spatial Canon v2 (RIDHUS-V2, SCV2-03): kedjan huvudentré → öppen hall → sargport (SPELABSTRAKTION) → banan ska SYNAS som en öppen förbindelse och gå att gå utan att klippa, teleportera eller passera en fidelity-vägg. Ingen vägg och ingen möbel får skapa en smal korridor på vägen.",
 	},
 
 	--[[ ── Stallet inne ── servicevyn är den som tidigare underkändes. ]]

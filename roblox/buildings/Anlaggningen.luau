@@ -600,6 +600,8 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 						Color3.fromRGB(191, 211, 220), Enum.Material.Glass)
 				end
 				g.Transparency = 0.55
+				-- glaset tonas som en väggbit när det står mellan kamera och karaktär
+				g:SetAttribute("Genomsiktlig", true)
 				kanonAttribut(g, v)
 			end
 		end

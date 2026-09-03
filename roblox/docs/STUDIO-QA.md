@@ -231,6 +231,32 @@ saknar attributet `Genomsiktlig` (välj den i Explorer och titta under
 Attributes). Rör aldrig väggarna för att lösa det — det är
 `Genomsikt.luau` som ska rättas.
 
+## Ridhusets entrédel — Spatial Canon v2 (SCV2-03, RIDHUS-V1..V3)
+
+Gå in genom huvudentrén (dubbeldörren under kvisten på västra långsidan)
+till fots.
+
+**Ska synas:** EN öppen hall — inga korridorer av rumslådor, inga
+skåpkorridorväggar, ingen cellrad. Det enda som står i entrédelen är två
+smala toaletter i nordvästra hörnet, den kryssade rutan (`schakt`, sluten
+volym utan namn) och receptionens låga bröstning med glas ovanpå (Material
+Glass, delen heter `Entrévägg reception_glas:1 glas`). Vyerna
+`entrehallen` och `entrehallen_mot_banan` i Vyer.luau visar exakt vad som
+förväntas.
+
+**Ska gå att göra:** gå från dörren rakt ut i hallen, tvärs över den, och
+söderut genom sargporten (markerad SPELABSTRAKTION) ut på banan — utan att
+klippa, hoppa eller passera genom en vägg. Passagen får aldrig kännas som en
+smal korridor.
+
+**Fynd:** en vägg eller volym i entrédelen som saknar attributen
+`CanonId`/`SourceId`/`Confidence`/`Primitiv`; en opak vägg med `CanonId`
+`ridhus_reception_glass`; något som blockerar vägen dörr → hall → sargport;
+en byggd del med något av de återkallade id:na (korridor_o, skap_v, skap_o,
+cell_1–4, hall_n_v, hall_n_o, hall_nv_s, hall_mitt, hall_no, hall_no_s,
+ostkorridor_v). Rör aldrig geometrin för att lösa det — det är datan i
+`src/site.js` (`RIDHUSINNE.entrehall`) och kanonen som styr.
+
 ## Vad som INTE är ett fynd
 
 Osourcad möblering, kosmetisk polish och avancerad ljussättning. Att

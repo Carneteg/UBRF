@@ -26,12 +26,15 @@ const PORT = 8790;
 export const VYER = [
   { id: "STALL-V1",  scen: "stallinne",  x: 4.55, y: 68.4, rikt: -Math.PI / 2,
     text: "Parkeringens entré → in i uppehållsrummet: EN öppen L-formad yta, ingen inre vägg" },
-  { id: "RIDHUS-V1", scen: "ridhusinne", x: 1.4,  y: 74.0, rikt: 0,
-    text: "Huvudentrén → in över entré/reception: öppen hall, ingen korridor av rumslådor" },
+  /* Ridhuset: huvudentrén är fasadens låsta dörr under kvisten (N 9–11,
+     innerpunkt (1,6, 67,18)); vyerna utgår därifrån, inte från planens
+     entrécell (CONTRADICTION, exteriörlåset vinner). */
+  { id: "RIDHUS-V1", scen: "ridhusinne", x: 1.3,  y: 67.0, rikt: Math.PI / 2,
+    text: "Huvudentrén → norrut över entré/reception: öppen hall, ingen korridor av rumslådor; receptionens glas till höger" },
   { id: "RIDHUS-V2", scen: "ridhusinne", x: 5.0,  y: 70.5, rikt: -Math.PI / 2,
-    text: "Öppna entréhallen → ridbanan: vägen in till ridhuset syns och går att gå" },
-  { id: "RIDHUS-V3", scen: "ridhusinne", x: 5.0,  y: 74.5, rikt: Math.PI,
-    text: "Receptionens avgränsning: glas där den kan beläggas, inte en solid rumslåda" },
+    text: "Öppna entréhallen → ridbanan: sargporten (spelabstraktion, x 4,7–6,9) och banan rakt fram, C-blocket till vänster" },
+  { id: "RIDHUS-V3", scen: "ridhusinne", x: 3.9,  y: 70.7, rikt: Math.PI,
+    text: "Receptionens avgränsning sedd inifrån receptionen: låg bröstning med glas (GLASS) och den öppna hallen bakom — ingen solid rumslåda" },
 ];
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json" };

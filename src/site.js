@@ -1836,79 +1836,123 @@ const RIDHUSINNE = {
      gap; det gamla "läktargapet" finns inte. Bredden är vald, inte mätt.
      [ASSUMPTION] */
   sargGrind:{y0:GANG_FASTE-RIDHUS_Y-0.15, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+0.15},
-  /* ENTRÉDELEN ur planen. `hallMobler` — disk, bänkar, kansli, omklädning,
-     trapphus som handritade rektanglar — var uppfunna; borta. Samma schema
-     som stallets `klubb`: väggar med öppningar, rum som regioner, slutna
-     rum som volymer. Roblox bygger ur Geometri.vaggBitar, webben ur
-     klubbVaggBitar. N = m från norra gaveln, x från västra väggen;
-     y = 77,18 − N. Måtten är tagna i en sned planbild: ±0,5 m.
+  /* ENTRÉDELEN — Spatial Canon v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json
+     § buildings.ridhus; docs/SPATIAL-CANON-V2-IMPLEMENTATION-ORDER.md).
 
-     Det som har namn vilar på Tobias ord eller foto; det som saknar namn
-     är planens väggar utan känd funktion — `REFERENCE GAP` tills de
-     markerade urklippen (Bild 1–7) finns i repot. */
+     Den gamla vägglistan (17 segment lästa ur utrymningsplanens celler) är
+     ÅTERKALLAD som betrodd sanning: PO-2026-09-03-RIDHUS-OPEN-01 ("för
+     många väggar; entré/reception är i huvudsak öppen"). Varje segment har
+     prövats om mot planens faktiska streck (pixelavsökning i förstoring),
+     fotona och Product Owner-besluten — docs/F02-RIDHUS-ENTRE-AUDIT.md.
+     Bara det som har egen källa byggs; en planruta, ett rumsnamn eller en
+     funktionsetikett skapar ingen vägg. Resten är OPEN_AREA.
+
+     Samma schema som stallets `klubb`: väggar med öppningar, rum som
+     regioner, slutna rum som volymer, `oppna`/`ingaVaggar` som kanonens
+     OPEN_AREA/NO_WALL_ZONE. Roblox bygger ur Geometri.vaggBitar, webben ur
+     klubbVaggBitar. N = m från norra gaveln, x från västra väggen;
+     y = 77,18 − N. Planmåtten är tagna i en sned bild: ±0,5 m.
+
+     Huvudentrén i spelet är fasadens låsta dubbeldörr under kvisten
+     (`u:9`, b 2,0 → N 9–11, y 66,18–68,18; innerpunkt (1,6, 67,18)).
+     Planens entrécell 2,2–3,8 m från gaveln och planens "här är du"-linje
+     mot norra gaveln säger annat — `CONTRADICTION`, exteriörlåset vinner
+     (docs/F02-RIDHUS-OMGRANSKNING.md rad 10). */
   entrehall:{
     y0:RIDHUS_LANGD-11.5,
     vaggar:[
-      /* Korridoren längs västväggen, N 0,3–13, med glaspartiet in i
-         hallen vid entrén (N 2,4–3,8; planens 2,2 klipps vid toalettväggen
-         så att entrén slutar där toaletten börjar). Planens gröna pilar
-         löper här. */
-      {id:"korridor_o", typ:"langs", x:2.2, y0:64.2, y1:76.9,
-       oppningar:[{id:"glasparti", y0:73.4, y1:74.8}]},
-      /* De två smala toaletterna norr om entrén, N 0,3–1,1 och 1,6–2,4. */
-      {id:"wc_n_s",     typ:"tvar",  y:74.8, x0:0, x1:1.7},
-      {id:"wc_n_mellan",typ:"tvar",  y:75.8, x0:0, x1:1.7},
-      {id:"wc_n_o",     typ:"langs", x:1.7, y0:74.8, y1:76.9},
-      /* Skåpkorridorens två väggar, 4,2 och 5,7 m från väster, N 1,1–16
-         respektive 1,6–16, med de luckor planen visar. */
-      {id:"skap_v", typ:"langs", x:4.2, y0:61.2, y1:76.1,
-       oppningar:[{id:"a", y0:74.2, y1:76.1},{id:"b", y0:71.7, y1:72.6},
-                  {id:"c", y0:69.6, y1:70.4},{id:"d", y0:65.6, y1:67.4}]},
-      {id:"skap_o", typ:"langs", x:5.7, y0:61.2, y1:75.6,
-       oppningar:[{id:"a", y0:73.1, y1:74.0},{id:"b", y0:70.7, y1:71.4},
-                  {id:"c", y0:68.8, y1:69.6},{id:"d", y0:66.3, y1:67.5}]},
-      /* Cellraden mellan västkorridoren och skåpkorridoren, x 2,2–4,2, är
-         inte en remsa utan FYRA celler: planen drar tvärväggar från
-         korridorväggen till skåpväggen vid N 3,9, 6,4 och 7,9, och en
-         halv vid N 9,8 (x 2,2–3,1). Varje cell nås från skåpkorridoren
-         genom sin egen lucka i `skap_v`. Funktionerna är olästa —
-         Tobias Bild 2–5 hör hit men finns inte i repot. */
-      {id:"cell_1", typ:"tvar", y:73.3,  x0:2.2, x1:4.2},
-      {id:"cell_2", typ:"tvar", y:70.8,  x0:2.2, x1:4.2},
-      {id:"cell_3", typ:"tvar", y:69.3,  x0:2.2, x1:4.2},
-      {id:"cell_4", typ:"tvar", y:67.35, x0:2.2, x1:3.1},
-      /* Hallens tvärvägg N 4,3 i två stycken med en dörr, och rummen mot
-         nordöstra hörnet. Funktioner olästa. Rummet innanför (x 5,7–10,5,
-         N 4,3–7,2) sluts söderut av en vägg N 7,2 från schaktet till
-         `hall_mitt`; mätt om 2026-09-03 i förstoring, den saknades. */
-      {id:"hall_n_v",  typ:"tvar",  y:72.9, x0:5.7, x1:10.6,
-       oppningar:[{id:"dorr", x0:7.7, x1:9.6}]},
-      {id:"hall_n_o",  typ:"tvar",  y:72.9, x0:15.3, x1:18.4},
-      {id:"hall_nv_s", typ:"tvar",  y:70.0, x0:7.6, x1:10.5},
-      {id:"hall_mitt", typ:"langs", x:10.5, y0:70.0, y1:72.9},
-      {id:"hall_no",   typ:"langs", x:18.4, y0:70.1, y1:75.9},
-      {id:"hall_no_s", typ:"tvar",  y:71.3, x0:18.4, x1:21.7},
-      /* Östra korridorens västvägg, N 0,2–11,4. */
-      {id:"ostkorridor_v", typ:"langs", x:21.7, y0:65.7, y1:77.0},
+      /* De två smala toaletterna i nordvästra hörnet, N 0,3–1,1 och
+         1,6–2,4 innanför västväggen. Planen bär dem som en verklig liten
+         sluten volym (tre sidor mörka streck i förstoringen), och Tobias:
+         "två toaletter till vänster om entrén". Dörrar olästa → slutna.
+         Vilket av fotorummen -04/-05/-17 som är vilket: REFERENCE GAP. */
+      {id:"wc_n_s",     typ:"tvar",  y:74.8, x0:0, x1:1.7,
+       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
+       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"wc_n_mellan",typ:"tvar",  y:75.8, x0:0, x1:1.7,
+       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
+       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"wc_n_o",     typ:"langs", x:1.7, y0:74.8, y1:76.9,
+       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
+       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      /* RECEPTIONEN är glasad (PO-2026-09-03-RIDHUS-GLASS-01): en låg
+         bröstning med fyra fasta glaspartier och en avställningshylla mot
+         gången, `ridhus-klubb-01`, `-02`, `-15`. Den enda plansträcka i
+         entrédelen som mäts som sammanhängande linje utöver toaletterna
+         och schaktet är x 2,2, N 4,6–8,3 (3,7 m ≈ fyra fönster) — och
+         Tobias Bild 2 (reception) hör enligt matrisen till just remsan
+         x 2,2–4,2. Glaset läggs där, som GLASS, aldrig som opak vägg.
+         Exakt väderstreck och rummets övriga avgränsning: REFERENCE GAP
+         (kanonens GEOMETRY_REFERENCE_GAP) — inga ersättningsväggar. */
+      {id:"reception_glas", typ:"langs", x:2.2, y0:68.88, y1:72.58,
+       primitiv:"GLASS", canon_id:"ridhus_reception_glass",
+       source_id:"PO-2026-09-03-RIDHUS-GLASS-01;FOTO:ridhus-klubb-01,ridhus-klubb-02,ridhus-klubb-15;PLAN:ridhus-entreplan-utrymning.jpg#x2.2-N4.6-8.3",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      /* ÅTERKALLAT (docs/F02-RIDHUS-ENTRE-AUDIT.md § 3), byggs inte:
+         korridor_o (x 2,2 N 0,3–13: planen bär bara 3,7 m av 13; fotona
+         visar EN öppen gång), skap_v/skap_o (x 4,2/5,7: inga
+         sammanhängande streck; skåpen är fristående möbler i en öppen
+         gång), cell_1–4 (< 10 % täckning vid koordinaterna), hall_n_v,
+         hall_n_o, hall_nv_s (= C-blockets egen framkant), hall_mitt,
+         hall_no, hall_no_s (SITEPLAN: "otydlig i mitten, [antagande]"),
+         ostkorridor_v (takstolsmarkeringar). Listan står i `ingaVaggar`. */
+    ],
+    /* OPEN_AREA ridhus_open_entrance_hall: entrédelens golv utom
+       toaletternas volym, schaktet och receptionens remsa. C-blocket
+       (kortändans läktare, fotoverifierat) står i ytans södra kant som
+       möbel/bänkblock, inte som vägg. */
+    oppna:[
+      {id:"ridhus_open_entrance_hall", typ:"OPEN_AREA",
+       canon_id:"ridhus_open_entrance_hall",
+       confidence:"PRODUCT_OWNER_VERIFIED_TOPOLOGY",
+       source_id:"PO-2026-09-03-RIDHUS-OPEN-01;PLAN:ridhus-entreplan-utrymning.jpg",
+       rekt:[
+         {x:0,    y:65.68, w:25.0, h:2.47},   // södra bandet, y 65,68–68,15
+         {x:0,    y:68.15, w:2.2,  h:6.65},   // längs västväggen upp till toaletterna
+         {x:4.2,  y:68.15, w:1.55, h:1.8},    // mellan receptionen och schaktet
+         {x:7.6,  y:68.15, w:17.4, h:1.8},    // öster om schaktet
+         {x:4.2,  y:69.95, w:20.8, h:2.65},   // norr om schaktet, öster om receptionen
+         {x:0,    y:72.6,  w:25.0, h:2.2},    // hela bredden söder om toaletterna
+         {x:1.7,  y:74.8,  w:23.3, h:2.38},   // norra bandet öster om toaletterna
+       ]},
+    ],
+    ingaVaggar:[
+      {id:"ridhus_open_hall_no_room_boxes", typ:"NO_WALL_ZONE",
+       tacker:"ridhus_open_entrance_hall",
+       canon_id:"ridhus_open_hall_no_room_boxes",
+       undantag:["ridhus_reception_glass","ridhus_wc_n_enclosure"],
+       aterkallat:["korridor_o","skap_v","skap_o","cell_1","cell_2","cell_3","cell_4",
+                   "hall_n_v","hall_n_o","hall_nv_s","hall_mitt","hall_no","hall_no_s",
+                   "ostkorridor_v"]},
     ],
     rum:[
-      {id:"entre",        rekt:{x:0,    y:73.4, w:2.2,  h:1.4},  label:"ENTRÉ"},
-      {id:"vastkorridor", rekt:{x:0,    y:64.2, w:2.2,  h:9.2},  label:""},
-      {id:"wc_n1",        rekt:{x:0,    y:75.8, w:1.7,  h:1.1},  label:"WC", stangt:true},
-      {id:"wc_n2",        rekt:{x:0,    y:74.8, w:1.7,  h:1.0},  label:"WC", stangt:true},
-      {id:"cellrad",      rekt:{x:2.2,  y:64.2, w:2.0,  h:12.8}, label:""},
-      /* Den kryssade rutan står tätt ÖSTER om skåpkorridorens östvägg,
-         x 5,75–7,6, N 7,3–9,0 — inte i cellraden, dit en tidigare läsning
-         satte den 3 m fel. Rättad i förstoring 2026-09-03. Fotavtrycket är
-         `PLAN`; FUNKTIONEN är okänd — att det vore en hiss är symbolens
-         gängse betydelse, inte belagt, och hette ändå `hiss`/`HISS` i datan
-         tills Senior Re-review 2026-09-03 (blocker 1). Nu neutralt id utan
-         spelarsynlig etikett, sluten volym tills belägg eller
-         produktägarbeslut ger den ett namn. `REFERENCE GAP`. */
-      {id:"schakt",       rekt:{x:5.78, y:68.2, w:1.82, h:1.7},  label:"", stangt:true},
-      {id:"skapkorridor", rekt:{x:4.2,  y:61.2, w:1.5,  h:14.9}, label:"SKÅPKORRIDOREN"},
-      {id:"hall",         rekt:{x:5.7,  y:65.7, w:16.0, h:11.3}, label:""},
-      {id:"ostkorridor",  rekt:{x:21.7, y:65.7, w:3.3,  h:11.3}, label:""},
+      /* Regioner med namn är PASSIVA (kanonen § 3): de skapar ingen
+         geometri. `stangt` bygger en volym bara där väggarna ovan redan
+         belägger en — toaletterna och schaktet. */
+      {id:"entre",     rekt:{x:0,   y:66.18, w:2.2, h:2.0}, label:"ENTRÉ"},
+      {id:"reception", rekt:{x:2.2, y:68.88, w:2.0, h:3.7}, label:"RECEPTION"},
+      {id:"wc_n1",     rekt:{x:0,   y:75.8,  w:1.7, h:1.1}, label:"WC", stangt:true,
+       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
+       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"wc_n2",     rekt:{x:0,   y:74.8,  w:1.7, h:1.0}, label:"WC", stangt:true,
+       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
+       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      /* Den kryssade rutan x 5,75–7,6, N 7,3–9,0: planens tydligaste
+         symbol i entrédelen (heldraget kryss i en box, mätt om 2026-09-03
+         och oberoende i auditen: x 5,58–7,42, N 7,15–9,04). Fotavtrycket
+         är PLAN; FUNKTIONEN är okänd — den hette `hiss` tills Senior
+         Re-review 2026-09-03 (blocker 1). Neutralt id, ingen etikett,
+         sluten volym. Den står utanför vägen entré → bana. */
+      {id:"schakt",    rekt:{x:5.78, y:68.2, w:1.82, h:1.7}, label:"", stangt:true,
+       primitiv:"WALL", canon_id:"ridhus_schakt_box",
+       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#kryssad-ruta-x5.75-7.6-N7.3-9.0",
+       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      {id:"hall",      rekt:{x:0, y:65.68, w:25.0, h:11.5}, label:""},
     ],
   },
   dorrar:[
