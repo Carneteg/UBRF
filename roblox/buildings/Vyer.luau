@@ -194,6 +194,22 @@ Vyer.vyer = {
 		krav = "Spatial Canon v2 (RIDHUS-V1/V3): entrédelen är EN öppen yta — ingen korridor av rumslådor, inga skåpkorridorväggar, ingen cellrad, inga rum mot nordöstra hörnet. Det enda som står är två smala toaletter i NV-hörnet (WALL, plan + PO), den kryssade rutan `schakt` som sluten volym UTAN namn (funktion REFERENCE GAP, får inte heta hiss) och receptionens GLASS-parti (låg bröstning + glas, ridhus-klubb-01/-02) — aldrig en opak låda. Varje vägg/glas bär CanonId/SourceId/Confidence. Inga uppfunna möbler.",
 	},
 	{
+		id = "c_trapporna_fran_foten",
+		grupp = "Ridhuset inne",
+		text = "På översta bänkraden vid klockväggen: vänstra C-trappan stiger västerut längs gaveln upp till övre gången",
+		fran = { x = Ro.x + 15.6, y = Ro.y + 69.6, h = (R.kortanda.sockelH or 0) + R.kortanda.steg * R.kortanda.stegH + 1.7 },
+		mot = { x = Ro.x + 12.0, y = Ro.y + 69.6 },
+		krav = "Product Owner 2026-09-03 (senior review 17:18): C-ändans TVÅ raka trappor med träräcke (ridhus-inne-01, IMG_0192-f01/-f02, ridhus-inne-07) — loppen går LÄNGS gaveln, foten vid klockväggen, stigande utåt (vänstra mot väster, högra mot öster) från översta bänkraden till caféplanet, med vitt snedställt sidostycke mot banan. Båda ska gå att KLIVA i Studio: bänkradsstegen vid blockets västra ände (Trappa bankrad_upp), raderna, trappan (Trappa c_trappa_v/o steg 1–9) och in i övre gången (Övre gångens golv). Inget steg över 0,19 m. Ingen osynlig ramp.",
+	},
+	{
+		id = "c_trapporna_fran_toppen",
+		grupp = "Ridhuset inne",
+		text = "I övre gången ovanför vänstra trappans topp: ner över loppet, bänkraderna och banan",
+		fran = { x = Ro.x + 12.8, y = Ro.y + 71.2, h = R.cafe.z0 + 1.7 },
+		mot = { x = Ro.x + 13.5, y = Ro.y + 66.0 },
+		krav = "Samma trappor sedda uppifrån (ridhus-klubb-10: trappan ner, banan öppen): övre gången har golv på caféplanet norr om glasbandet, glasbandet är BRUTET där loppen står, och man kan gå ner för trappan till bänkraderna utan att fastna. Rummen innanför (Café Krubban) är REFERENCE GAP och ska inte vara byggda.",
+	},
+	{
 		id = "entrehallen_mot_banan",
 		grupp = "Ridhuset inne",
 		text = "Från den öppna entréhallen söderut mot sargporten och banan",

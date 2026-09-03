@@ -9,7 +9,7 @@
 
 const GA={fart:1.8, jogg:3.4, svangMax:5.5, accel:8, broms:13, radie:0.35};
 const VD={
-  px:0, py:0, rikt:0, fart:0, fas:0, tid:0,
+  px:0, py:0, pz:0, rikt:0, fart:0, fas:0, tid:0,
   spår:[], hastX:0, hastY:0, hastRikt:0,
   prompt:null, ePrev:false, _ov:null,
   /* Klickmålet på kartan: {x, y, namn} eller null. Se GÅ HIT nedan. */
@@ -233,8 +233,8 @@ function stegaVandring(dt){
 
   let nx=VD.px+Math.cos(VD.rikt)*VD.fart*dt;
   let ny=VD.py+Math.sin(VD.rikt)*VD.fart*dt;
-  [nx,ny]=vandringKollision(nx,ny,GA.radie);
-  VD.px=nx; VD.py=ny;
+  [nx,ny]=vandringKollision(nx,ny,GA.radie,VD.px,VD.py);
+  VD.px=nx; VD.py=ny; VD.pz=nivaHojd(nx,ny,VD.pz);
   if(VD.fart>0.05){
     ljudFotsteg(VD.fart*dt,G.scen==="stallinne"?"sten":"grus");
     VD.fas=(VD.fas+VD.fart*dt*1.9)%1;
@@ -261,7 +261,50 @@ function vandringYaw(){
 /* Scenens väggar, i ETT anrop. Både gåendet och vägsökningen frågar den
    här funktionen, så att en väg aldrig kan gå genom något gåendet stoppas
    av — två beskrivningar av samma hus blir förr eller senare oense. */
-function vandringKollision(nx,ny,r){
+/* ── NIVÅER i ridhuset ────────────────────────────────────────────
+   Golvets höjd i en punkt: läktardäcket (0,8), kortändans bänkrader,
+   trapporna (linjärt längs stigningen) och övre gången (caféplanet).
+   Allt annat är 0. Gåendet får bara ta steg där nivån ändras mindre än
+   NIVA_STEG — så blir däckets kant, sargen och övre gångens kant
+   spärrar av sig själva, och trapporna det enda sättet upp. Ingen
+   osynlig vägg, ingen teleport: vägen upp ÄR trappan. */
+const NIVA_STEG=0.36;
+/* Nivåerna som finns i en punkt. Basen är golvet (0), däcket eller
+   C-blockets bänkrad; en trappa ERSÄTTER basen med sin lutning där den
+   står. Övre gången ligger OVANPÅ basen — under den finns entréhallens
+   golv — så där finns två nivåer, och den man står närmast gäller. */
+function ridhusNivaer(x,y){
+  const R=RIDHUSINNE;
+  let bas=0;
+  {const K=R.kortanda;
+   if(K&&x>=K.x0&&x<=K.x1&&y>=K.y0&&y<=K.y1){
+     const mS=(K.vand==="S"), bank=mS?K.y0:K.y1, SO=K.sockelH||0;
+     const d=Math.abs(y-bank), i=Math.min(K.steg,Math.floor(d/K.stegD)+1);
+     bas=SO+K.stegH*i;
+   }else{
+     const L=R.laktare;
+     for(const sek of laktarSektioner(L))
+       if(x>=L.x0&&x<=L.x0+L.dackDjup&&y>=sek.y0&&y<=sek.y1) bas=L.dackZ;
+   }}
+  for(const t of R.trappor||[])
+    if(x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1) bas=trappNiva(t,x,y);
+  const ut=[bas];
+  {const G=R.ovreGang;
+   if(G&&x>=G.x0&&x<=G.x1&&y>=G.y0&&y<=G.y1&&G.z-bas>NIVA_STEG) ut.push(G.z);}
+  return ut;
+}
+/* Nivån i en punkt, sedd från nivån `ref`: den av punktens nivåer som
+   ligger närmast. */
+function ridhusNiva(x,y,ref){
+  let bast=0, bd=Infinity;
+  for(const z of ridhusNivaer(x,y)){ const d=Math.abs(z-(ref||0)); if(d<bd){bd=d;bast=z;} }
+  return bast;
+}
+function nivaHojd(x,y,ref){ return G.scen==="ridhusinne" ? ridhusNiva(x,y,ref||0) : 0; }
+
+/* `fx,fy` är var steget tas ifrån. Utan dem (vägsökningen provar punkter,
+   inte steg) räknas de upphöjda ytorna som solida, precis som förut. */
+function vandringKollision(nx,ny,r,fx,fy){
   if(G.scen==="gard"){
     for(const b of ANL.byggnader) [nx,ny]=kollideraRekt(nx,ny,r+0.2,b.rekt);
     for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++)
@@ -287,19 +330,26 @@ function vandringKollision(nx,ny,r){
      }else{
        [nx,ny]=kollideraSeg(nx,ny,r,ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);
      }}
-    // läktaren och domarbåset är solida. Läktaren läses i sektioner ifall
-    // den någon gång får ett gap igen; utan gap är den ett stycke.
-    for(const sek of laktarSektioner(R.laktare))
-      [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
-        w:R.laktare.dackDjup,h:sek.y1-sek.y0});
+    /* Domarbåset är solitt. Läktardäcket och C-blockets bänkrader är
+       NIVÅER, inte hinder: man går på dem, och når dem bara via trapporna
+       (nivåregeln nedan). Vägsökningen, som saknar utgångspunkt, ser dem
+       som solida som förut. */
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
-    /* C-blocket vid norra änden är ett bänkblock man inte går igenom. */
-    {const K=R.kortanda; if(K) [nx,ny]=kollideraRekt(nx,ny,r,{x:K.x0,y:K.y0,w:K.x1-K.x0,h:K.y1-K.y0});}
+    if(fx===undefined){
+      for(const sek of laktarSektioner(R.laktare))
+        [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
+          w:R.laktare.dackDjup,h:sek.y1-sek.y0});
+      {const K=R.kortanda; if(K) [nx,ny]=kollideraRekt(nx,ny,r,{x:K.x0,y:K.y0,w:K.x1-K.x0,h:K.y1-K.y0});}
+    }
     /* Entrédelen ur planen: väggarna segment för segment med planens
        luckor, och de slutna rummen (toaletterna, schaktet) som lådor. Samma
        regel som stallets klubbdel. */
-    if(R.entrehall){
+    /* Uppe på övre gången (caféplanet) står entrédelens väggar under
+       golvet — de spärrar inte där. Vägsökningen (utan utgångspunkt)
+       räknar dem alltid. */
+    const uppe=(fx!==undefined)&&(VD.pz||0)>2.5;
+    if(R.entrehall&&!uppe){
       for(const v of R.entrehall.vaggar){
         const t=(v.tjock||0.16)/2;
         for(const [a0,a1] of klubbVaggBitar(v)){
@@ -308,6 +358,18 @@ function vandringKollision(nx,ny,r){
         }
       }
       for(const rum of R.entrehall.rum) if(rum.stangt) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
+    }
+    /* NIVÅREGELN: ett steg som ändrar golvnivån mer än NIVA_STEG tas
+       inte. Axlarna provas var för sig så att man glider längs en kant
+       i stället för att fastna mot den. Trappornas lutning ger små
+       nivåskillnader per steg — de går att gå. */
+    if(fx!==undefined){
+      const z0=VD.pz||0;
+      if(Math.abs(ridhusNiva(nx,ny,z0)-z0)>NIVA_STEG){
+        if(Math.abs(ridhusNiva(nx,fy,z0)-z0)<=NIVA_STEG) ny=fy;
+        else if(Math.abs(ridhusNiva(fx,ny,z0)-z0)<=NIVA_STEG) nx=fx;
+        else { nx=fx; ny=fy; }
+      }
     }
   }else{ // stallinne
     /* Dubbelstallet går inte att uttrycka som ett intervall. Förut kläm-
@@ -730,7 +792,7 @@ function kameraNollstall(){
 }
 function gaTill(scen,spawn){
   G.scen=scen;
-  if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;VD.fart=0;}
+  if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;VD.fart=0;VD.pz=nivaHojd(VD.px,VD.py,spawn.z||0);}
   slutaGa();                       // ett mål i förra scenen betyder inget här
   /* Rutnätet byggs vid dörren, inte vid första klicket. Gården kostar
      69 ms att rasta, och den pausen hör hemma i scenbytet — där det redan

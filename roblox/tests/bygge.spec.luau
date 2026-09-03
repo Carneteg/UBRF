@@ -698,6 +698,98 @@ do
 		string.format("däck %.2f, fronttopp %.2f", L.dackZ, L.frontTopp))
 end
 
+--[[ TRAPPORNA i bygget (Product Owner 2026-09-03 17:16; senior review
+	17:18): C-trappornas steg är byggda som solida klossar ur
+	Geometri.trappsteg, övre gångens golv ligger på caféplanet, och kedjan
+	entréhall → bänkradsstegen → bänkraderna → C-trappa → övre gången går
+	att KLIVA: golvet under varje provpunkt (högsta solida ovansida i
+	punkten) stiger aldrig mer än 0,36 m mellan två punkter. Ingen
+	teleport, ingen osynlig ramp. Båda trapporna provas var för sig. ]]
+do
+	local R2 = UBRFKomplex.ridhus
+	local o = R2.origo
+	local function golvVid(wx, wy, tak)
+		local z = 0
+		for _, d in ipairs(delar) do
+			if d.CanCollide then
+				local f = fot(d)
+				if wx >= f.x and wx <= f.x + f.w and wy >= f.y and wy <= f.y + f.h and f.z1 <= tak and f.z1 > z then
+					z = f.z1
+				end
+			end
+		end
+		return z
+	end
+	local function mittpunkter(t)
+		local T = Geometri.trappsteg(t)
+		local ut = {}
+		for _, st in ipairs(T.steg) do
+			local c = (st.a0 + st.a1) / 2
+			if T.axel == "x" then table.insert(ut, { c, (t.y0 + t.y1) / 2 }) else table.insert(ut, { (t.x0 + t.x1) / 2, c }) end
+		end
+		return T, ut
+	end
+	for _, t in ipairs(R2.trappor or {}) do
+		local T, pts = mittpunkter(t)
+		local byggda = raknaNamn("Trappa " .. t.id .. " steg ")
+		check(string.format("trappan %s byggdes med alla %d steg", t.id, T.n), byggda == T.n, byggda .. " steg")
+		local med = 0
+		for _, d in ipairs(delar) do
+			if d.Name:find("Trappa " .. t.id .. " steg ", 1, true) == 1 and d.CanCollide
+				and d:GetAttribute("CanonId") == t.canon_id and d:GetAttribute("Primitiv") == "STAIR" then med += 1 end
+		end
+		check(string.format("trappan %s: stegen är solida och bär provenance", t.id), med == T.n, med .. " av " .. T.n)
+		local forra, ok, hogst = t.z0, true, 0
+		for _, p in ipairs(pts) do
+			local z = golvVid(o.x + p[1], o.y + p[2], math.max(t.z0, t.z1) + 0.3)
+			if z - forra > 0.36 or z < forra - 0.05 then ok = false end
+			forra = z
+			hogst = math.max(hogst, z)
+		end
+		check(string.format("trappan %s går att kliva upp för (max 0,36 m per steg) till %.2f m", t.id, math.max(t.z0, t.z1)),
+			ok and math.abs(hogst - math.max(t.z0, t.z1)) < 0.05, string.format("högsta steg %.2f", hogst))
+	end
+	local G2 = R2.ovreGang
+	check("övre gångens golv byggdes på caféplanet", G2 ~= nil and raknaExakt("Övre gångens golv") == 1)
+	check("övre gången har räcke mot banan utanför C-blocket", raknaNamn("Övre gångens räcke") >= 1)
+	-- kedjan för var och en av C-trapporna
+	local K = R2.kortanda
+	local tr = {}
+	for _, t in ipairs(R2.trappor or {}) do tr[t.id] = t end
+	check("bänkradsstegen och båda C-trapporna finns i den byggda datan",
+		tr.bankrad_upp ~= nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil)
+	if K and tr.bankrad_upp and tr.c_trappa_v and tr.c_trappa_o and G2 then
+		local bank = tr.bankrad_upp
+		local mS = K.vand == "S"
+		for _, ct in ipairs({ tr.c_trappa_v, tr.c_trappa_o }) do
+			local rutt = { { bank.x0 - 0.6, (bank.y0 + bank.y1) / 2, 0.5 } }
+			local _, p1 = mittpunkter(bank)
+			for _, p in ipairs(p1) do table.insert(rutt, { p[1], p[2], 1.5 }) end
+			-- upp för bänkraderna till översta raden, i trappans x-mitt
+			local xm = (ct.x0 + ct.x1) / 2
+			for i = 1, K.steg do
+				local yc = if mS then K.y0 + (i - 0.5) * K.stegD else K.y1 - (i - 0.5) * K.stegD
+				table.insert(rutt, { xm, yc, (K.sockelH or 0) + K.stegH * i + 0.3 })
+			end
+			-- trappans foten-till-toppen
+			local _, p2 = mittpunkter(ct)
+			for _, p in ipairs(p2) do table.insert(rutt, { p[1], p[2], R2.cafe.z0 + 0.3 }) end
+			-- in i övre gången
+			local xt = if ct.stiger == "W" then ct.x0 + 0.4 else ct.x1 - 0.4
+			table.insert(rutt, { xt, G2.y0 + 0.8, R2.cafe.z0 + 0.3 })
+			table.insert(rutt, { (G2.x0 + G2.x1) / 2, G2.y0 + 1.0, R2.cafe.z0 + 0.3 })
+			local forra, brott = 0, nil
+			for i, p in ipairs(rutt) do
+				local z = golvVid(o.x + p[1], o.y + p[2], p[3])
+				if math.abs(z - forra) > 0.36 then brott = brott or string.format("steg %d vid (%.1f, %.1f): %.2f → %.2f", i, p[1], p[2], forra, z) end
+				forra = z
+			end
+			check(string.format("kedjan entréhall → bänkradsstegen → raderna → %s → övre gången går att kliva (max 0,36 m per steg)", ct.id),
+				brott == nil and math.abs(forra - R2.cafe.z0) < 0.05, brott or string.format("slutnivå %.2f", forra))
+		end
+	end
+end
+
 --[[ ENTRÉDELEN — Spatial Canon v2. Byggd med samma byggare som stallets
 	klubbdel: väggbitar mot deklarerade luckor, GLASS som bröstning + glas,
 	slutna rum som volymer. Provas: (1) varje segment byggdes i planens bitar,
@@ -857,9 +949,10 @@ do
 	check("kortändans trappstegsblock byggdes",
 		raknaNamn("Kortändans steg") == K.steg,
 		raknaNamn("Kortändans steg") .. " steg av " .. K.steg)
-	check("kortändan har två trappor upp",
-		raknaNamn("Kortändans trappa") == #K.trappor,
-		raknaNamn("Kortändans trappa") .. " trappor")
+	check("kortändan har två trappor upp (byggda som gångbara steg ur R.trappor)",
+		raknaNamn("Trappa c_trappa_v steg ") >= 1 and raknaNamn("Trappa c_trappa_o steg ") >= 1
+			and raknaNamn("Kortändans trappa") == 0,
+		raknaNamn("Trappa c_trappa_v steg ") .. " + " .. raknaNamn("Trappa c_trappa_o steg ") .. " steg")
 	--[[ Glasbandet BRYTS av trapporna — en obruten remsa är den "generiska
 		upprepade fönsterrad" som ordern uttryckligen inte vill ha. Antalet
 		segment räknas ur samma `trappor`-tal som bygget använder, så testet
@@ -882,8 +975,8 @@ do
 	check("kompassrosen byggdes som linjeritad stjärna",
 		raknaNamn("Kompassros") == 4, raknaNamn("Kompassros") .. " stavar")
 	if K.klocka and #K.trappor >= 2 then
-		local lo = math.min(K.trappor[1], K.trappor[2])
-		local hi = math.max(K.trappor[1], K.trappor[2])
+		local lo = math.min(K.trappor[1].x1, K.trappor[2].x1)
+		local hi = math.max(K.trappor[1].x0, K.trappor[2].x0)
 		check("klockan sitter MELLAN de två trapporna",
 			K.klocka.x > lo and K.klocka.x < hi,
 			string.format("klocka x %.2f, trappor %.1f och %.1f",
@@ -891,7 +984,7 @@ do
 	end
 	if K.stjarna then
 		check("kompassrosen sitter vänster om vänstra trappan",
-			K.stjarna.x < math.min(K.trappor[1], K.trappor[2]),
+			K.stjarna.x < math.min(K.trappor[1].x0, K.trappor[2].x0),
 			string.format("stjärna x %.2f", K.stjarna.x))
 	end
 

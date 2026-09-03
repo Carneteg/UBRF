@@ -994,6 +994,97 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			INRE.laktare, Enum.Material.Wood).CanCollide = false
 	end
 
+	--[[ TRAPPORNA (R.trappor, Product Owner 2026-09-03): läktargångens
+		trappa upp till övre gången och stegen från entréhallen upp på
+		däcket. Stegen ur den delade regeln Geometri.trappsteg — samma
+		steg som webbens nivåregel läser — som klossar karaktären kliver
+		upp för (steghöjd < 0,19 m = 0,57 studs). Sträng och räcke på den
+		fria sidan, utan kollision. Provenance som väggarna. ]]
+	for _, t in ipairs(R.trappor or {}) do
+		local T = GEO.trappsteg(t)
+		local langsX = T.axel == "x"
+		local b = if langsX then t.y1 - t.y0 else t.x1 - t.x0
+		for i, st in ipairs(T.steg) do
+			local tj = math.max(0.06, math.abs(T.stig))
+			local p
+			if langsX then
+				p = BK.box(model, base, "Trappa " .. t.id .. " steg " .. i,
+					o.x + st.a0, st.z - tj, o.y + t.y0, st.a1 - st.a0, tj, b,
+					Color3.fromRGB(90, 66, 50), Enum.Material.WoodPlanks)
+			else
+				p = BK.box(model, base, "Trappa " .. t.id .. " steg " .. i,
+					o.x + t.x0, st.z - tj, o.y + st.a0, b, tj, st.a1 - st.a0,
+					Color3.fromRGB(90, 66, 50), Enum.Material.WoodPlanks)
+			end
+			p:SetAttribute("Genomsiktlig", true)
+			kanonAttribut(p, t)
+		end
+		local a0 = if langsX then t.x0 else t.y0
+		local a1 = if langsX then t.x1 else t.y1
+		local lang = a1 - a0
+		local bakat = (t.stiger == "S" or t.stiger == "W")
+		local lut = math.atan2(t.z1 - t.z0, lang) * (if bakat then -1 else 1)
+		local L = math.sqrt(lang * lang + (t.z1 - t.z0) * (t.z1 - t.z0))
+		-- handledare (och för gavelloppen det vita snedställda sidostycket) på bansidan
+		local sidor = if langsX then { t.y0 + 0.05 } elseif t.x0 < 1.0 then { t.x1 - 0.05 } else { t.x0 + 0.05, t.x1 - 0.05 }
+		for _, sx in ipairs(sidor) do
+			for i = 1, T.n, 3 do
+				local st = T.steg[i]
+				local c = (st.a0 + st.a1) / 2
+				local px = if langsX then c else sx
+				local pz = if langsX then sx else c
+				BK.box(model, base, "Trappa " .. t.id .. " räckesstolpe " .. i,
+					o.x + px - 0.03, st.z, o.y + pz - 0.03, 0.06, 0.95, 0.06,
+					Color3.fromRGB(138, 106, 68), Enum.Material.Wood).CanCollide = false
+			end
+			local am, zm = (a0 + a1) / 2, (t.z0 + t.z1) / 2
+			local function sned(namn, h, dz, farg, mat)
+				local d = BK.box(model, base, namn, 0, 0, 0, 0.06, h, 0.06, farg, mat)
+				d.CanCollide = false
+				if langsX then
+					d.Size = Vector3.new(BK.M * L, BK.M * h, BK.M * 0.05)
+					d.CFrame = base * CFrame.new(BK.M * (o.x + am), BK.M * (zm + dz), BK.M * (o.y + sx)) * CFrame.Angles(0, 0, lut)
+				else
+					d.Size = Vector3.new(BK.M * 0.06, BK.M * h, BK.M * L)
+					d.CFrame = base * CFrame.new(BK.M * (o.x + sx), BK.M * (zm + dz), BK.M * (o.y + am)) * CFrame.Angles(-lut, 0, 0)
+				end
+			end
+			sned("Trappa " .. t.id .. " handledare", 0.06, 0.95, Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
+			if langsX then
+				sned("Trappa " .. t.id .. " sidostycke", 0.90, 0.45, Color3.fromRGB(233, 229, 220), Enum.Material.Plaster)
+			end
+		end
+	end
+	--[[ ÖVRE GÅNGEN (R.ovreGang): golvet på caféplanet längs banans kant som
+		läktargångens trappa landar i (`ridhus-klubb-10`), och ett räcke mot
+		banan där C-blockets glasband inte står — utom i trappans mynning.
+		Caféets rum innanför är REFERENCE GAP och byggs inte. ]]
+	if R.ovreGang then
+		local G2 = R.ovreGang
+		local golv = BK.box(model, base, "Övre gångens golv",
+			o.x + G2.x0, G2.z - 0.26, o.y + G2.y0, G2.x1 - G2.x0, 0.26, G2.y1 - G2.y0,
+			Color3.fromRGB(207, 200, 188), Enum.Material.WoodPlanks)
+		golv:SetAttribute("Genomsiktlig", true)
+		local trappa = nil
+		for _, t in ipairs(R.trappor or {}) do if t.id == "laktargang_upp" then trappa = t end end
+		local K2 = R.kortanda
+		local fri = { { G2.x0, K2 and K2.x0 or G2.x1 }, { K2 and K2.x1 or G2.x1, G2.x1 } }
+		for _, seg in ipairs(fri) do
+			local a, b2 = seg[1], seg[2]
+			local bitar = { { a, b2 } }
+			if trappa and trappa.x0 < b2 and trappa.x1 > a then
+				bitar = { { a, trappa.x0 }, { trappa.x1, b2 } }
+			end
+			for j, bit in ipairs(bitar) do
+				if bit[2] - bit[1] > 0.05 then
+					BK.box(model, base, "Övre gångens räcke " .. j,
+						o.x + bit[1], G2.z, o.y + G2.y0 - 0.06, bit[2] - bit[1], 1.0, 0.06,
+						Color3.fromRGB(233, 229, 220), Enum.Material.Plaster)
+				end
+			end
+		end
+	end
+
 	-- Kortändans läktare: trappstegsblock, två trappor och glasbandet ovanför.
 	-- De glasade rummen låg förut längs LÅNGSIDAN, i läktarens liv. Fotot
 	-- ridhus-inne-01 visar dem över ett trappstegsblock vid kortändan, och
@@ -1023,19 +1114,18 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		local vagg = if mS then K.y1 else K.y0
 		local ut = if mS then 1 else -1
 		for i = 1, K.steg do
-			-- steg i täcker stegD från bankanten inåt, i:te plankan
+			--[[ steg i täcker stegD från bankanten inåt; klossen står på
+				sockeln och når radens sitthöjd SO + i × stegH (+ plankan).
+				Förut stod basen på SO + (i−1) × stegH med samma höjd, så
+				raderna steg 0,64 m i stället för 0,32 — det syntes först
+				när kedjan upp till C-trapporna provades (2026-09-03). ]]
 			local z0 = if mS then bank + (i - 1) * K.stegD else bank - i * K.stegD
 			BK.box(model, base, "Kortändans steg " .. i,
-				o.x + K.x0, SO + (i - 1) * K.stegH,
+				o.x + K.x0, SO,
 				o.y + z0, br, K.stegH * i + 0.1, K.stegD,
 				K.bank or INRE.laktare, Enum.Material.WoodPlanks)
 		end
-		for i, tx in ipairs(K.trappor) do
-			BK.box(model, base, "Kortändans trappa " .. i,
-				o.x + tx - K.trappB / 2, 0, o.y + K.y0,
-				K.trappB, (K.sockelH or 0) + K.steg * K.stegH, K.y1 - K.y0,
-				INRE.laktare, Enum.Material.WoodPlanks)
-		end
+		-- De två trapporna byggs som gångbara STAIR-primitiver ur R.trappor ovan.
 		--[[ Glasbandet är INTE en obruten remsa. `ridhus-inne-01` visar att
 			de två trapporna bryter det: deras vita snedställda barriärer
 			skjuter upp genom bandet, och mellan dem står den vita väggen
@@ -1083,13 +1173,11 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		end
 		local brytn = {}
 		for _, t in ipairs(K.trappor or {}) do table.insert(brytn, t) end
-		table.sort(brytn)
+		table.sort(brytn, function(a, b2) return a.x0 < b2.x0 end)
 		local seg, sx = {}, K.x0
 		for _, t in ipairs(brytn) do
-			if t - K.trappB / 2 - sx > 0.3 then
-				table.insert(seg, { sx, t - K.trappB / 2 })
-			end
-			if t + K.trappB / 2 > sx then sx = t + K.trappB / 2 end
+			if t.x0 - sx > 0.3 then table.insert(seg, { sx, t.x0 }) end
+			if t.x1 > sx then sx = t.x1 end
 		end
 		if K.x1 - sx > 0.3 then table.insert(seg, { sx, K.x1 }) end
 		for i, sg in ipairs(seg) do

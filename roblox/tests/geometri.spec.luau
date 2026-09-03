@@ -654,10 +654,17 @@ do
 		check("blocket upptar den östra delen av bredden, som planen ritar det",
 			(K.x1 - K.x0) > R.bredd * 0.45 and K.x1 > R.bredd * 0.8 and K.x0 > R.bredd * 0.25,
 			string.format("x %.1f–%.1f av husets %.1f", K.x0, K.x1, R.bredd))
+		--[[ Loppen går LÄNGS gaveln (`ridhus-inne-01`, `IMG_0192-f01/-f02`):
+			planens 12,4–15,2 och 16,4–18,9 m från väster, med luft emellan
+			för klockväggen, och foten vid mitten — det vänstra stiger mot
+			väster, det högra mot öster. ]]
+		local tv, to = K.trappor[1], K.trappor[2]
+		if tv.x0 > to.x0 then tv, to = to, tv end
 		check("trapporna står inne i blocket, med luft emellan för klockan",
-			K.trappor[1] > K.x0 + K.trappB and K.trappor[2] < K.x1 - K.trappB
-				and math.abs(K.trappor[2] - K.trappor[1]) > K.trappB + 0.5,
-			string.format("trappor %.1f och %.1f i block %.1f–%.1f", K.trappor[1], K.trappor[2], K.x0, K.x1))
+			tv.x0 > K.x0 + 0.5 and to.x1 < K.x1 - 0.5 and to.x0 - tv.x1 > 0.8,
+			string.format("lopp %.1f–%.1f och %.1f–%.1f i block %.1f–%.1f", tv.x0, tv.x1, to.x0, to.x1, K.x0, K.x1))
+		check("trapporna stiger utåt från klockväggen: vänstra foten i öster, högra foten i väster",
+			tv.fot == "E" and to.fot == "W")
 	end
 end
 
@@ -719,6 +726,62 @@ do
 	check("entrédelen är planens 11,5 m och banans norra sarg ligger vid dess gräns",
 		math.abs(R.entre - 11.5) < 0.01 and math.abs(R.bana.y + R.bana.h - (R.langd - 11.5)) < 0.01,
 		string.format("entre %.1f, bana y1 %.2f", R.entre, R.bana.y + R.bana.h))
+end
+
+do
+	--[[ TRAPPORNA (Product Owner 2026-09-03 17:16; senior review 17:18: de
+		två C-trapporna ur C-kortandan-och-kafeet.md). Datan provas här:
+		båda C-trapporna finns som STAIR-primitiver härledda ur
+		kortanda.trappor, går längs gaveln från översta bänkraden (sockel +
+		steg × stegH) till caféplanet, stiger utåt från klockväggen;
+		bänkradsstegen från hallgolvet till nedersta raden finns; stegen
+		(Geometri.trappsteg) är under 0,2 m och sammanhängande; övre gången
+		ligger på caféplanet norr om vägglinjen; allt bär provenance. ]]
+	local trappor = {}
+	for _, t in ipairs(R.trappor or {}) do trappor[t.id] = t end
+	local cv, co, bank = trappor.c_trappa_v, trappor.c_trappa_o, trappor.bankrad_upp
+	local K = R.kortanda
+	check("båda C-trapporna finns i datan som STAIR-primitiver", cv ~= nil and co ~= nil)
+	check("bänkradsstegen (hallgolvet → nedersta raden) finns", bank ~= nil)
+	if cv and co and K then
+		local topp = (K.sockelH or 0) + K.steg * K.stegH
+		for _, t in ipairs({ cv, co }) do
+			check(string.format("%s går längs gaveln från översta bänkraden (%.2f) till caféplanet (%.2f)", t.id, topp, R.cafe.z0),
+				t.axel == "x" and math.abs(t.z0 - topp) < 0.01 and math.abs(t.z1 - R.cafe.z0) < 0.01
+					and t.y1 - t.y0 >= 1.0 and math.abs(t.y1 - K.y1) < 0.01,
+				string.format("axel %s, z %.2f → %.2f, y %.2f–%.2f", tostring(t.axel), t.z0, t.z1, t.y0, t.y1))
+		end
+		check("vänstra trappan stiger mot väster, högra mot öster — foten vid klockväggen",
+			cv.stiger == "W" and co.stiger == "E" and cv.x1 < co.x0
+				and K.klocka ~= nil and K.klocka.x > cv.x1 and K.klocka.x < co.x0,
+			string.format("v %.1f–%.1f (%s), o %.1f–%.1f (%s), klocka %.1f", cv.x0, cv.x1, tostring(cv.stiger), co.x0, co.x1, tostring(co.stiger), K.klocka and K.klocka.x or -1))
+		check("trapporna följer planens lägen (12,4–15,2 och 16,4–18,9 m från väster, ±0,3)",
+			math.abs(cv.x0 - 12.4) < 0.3 and math.abs(cv.x1 - 15.2) < 0.3 and math.abs(co.x0 - 16.4) < 0.3 and math.abs(co.x1 - 18.9) < 0.3)
+	end
+	if bank and K then
+		check("bänkradsstegen går från golvet (0) upp till nedersta raden vid blockets västra ände",
+			bank.z0 == 0 and math.abs(bank.z1 - ((K.sockelH or 0) + K.stegH)) < 0.01 and bank.axel == "x"
+				and math.abs(bank.x1 - K.x0) < 0.01 and bank.stiger == "E"
+				and bank.y0 >= K.y0 - 0.01 and bank.y1 <= K.y1 + 0.01,
+			string.format("z %.2f → %.2f, x %.1f–%.1f, y %.1f–%.1f", bank.z0, bank.z1, bank.x0, bank.x1, bank.y0, bank.y1))
+	end
+	for id, t in pairs(trappor) do
+		local T = Geometri.trappsteg(t)
+		local ok, forra = true, t.z0
+		for _, st in ipairs(T.steg) do
+			if math.abs(st.z - forra) > 0.2 + 1e-6 or st.a1 - st.a0 < 0.2 then ok = false end
+			forra = st.z
+		end
+		check(string.format("trappan %s har %d steg under 0,2 m som når toppen", id, T.n),
+			ok and math.abs(forra - t.z1) < 1e-6, string.format("stig %.3f, djup %.2f", T.stig, T.djup))
+		check(string.format("trappan %s bär primitiv STAIR, canon_id, source_id och confidence", id),
+			t.primitiv == "STAIR" and t.canon_id ~= nil and t.source_id ~= nil and t.confidence ~= nil)
+	end
+	local G2 = R.ovreGang
+	check("övre gången ligger på caféplanet norr om C-blockets vägglinje och är minst 2 m bred",
+		G2 ~= nil and K ~= nil and math.abs(G2.z - R.cafe.z0) < 0.01 and math.abs(G2.y0 - K.y1) < 0.01
+			and G2.y1 - G2.y0 >= 2.0 and (cv == nil or (G2.x0 <= cv.x0 and G2.x1 >= co.x1)),
+		G2 and string.format("z %.2f, y %.1f–%.1f, x %.1f–%.1f", G2.z, G2.y0, G2.y1, G2.x0, G2.x1) or "saknas")
 end
 
 do

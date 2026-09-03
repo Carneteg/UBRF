@@ -35,6 +35,15 @@ export const VYER = [
     text: "Öppna entréhallen → ridbanan: sargporten (spelabstraktion, x 4,7–6,9) och banan rakt fram, C-blocket till vänster" },
   { id: "RIDHUS-V3", scen: "ridhusinne", x: 3.9,  y: 70.7, rikt: Math.PI,
     text: "Receptionens avgränsning sedd inifrån receptionen: låg bröstning med glas (GLASS) och den öppna hallen bakom — ingen solid rumslåda" },
+  /* C-trapporna (Product Owner 2026-09-03 17:16; senior review 17:18):
+     V4 från foten — översta bänkraden vid klockväggen, blicken västerut
+     längs vänstra loppet; V5 från toppen — i övre gången ovanför vänstra
+     trappans topp, blicken söderut ner över trappan, raderna och banan.
+     `z` sätter figurens nivå. */
+  { id: "RIDHUS-V4", scen: "ridhusinne", x: 15.8, y: 66.3, rikt: Math.PI / 2, z: 1.12,
+    text: "C-ändan från nedersta bänkraden (som ridhus-inne-01): raderna, de två loppen med vita sidostycken och räcken, klockväggen, glasbandet brutet i tre fält" },
+  { id: "RIDHUS-V5", scen: "ridhusinne", x: 18.6, y: 69.6, rikt: Math.PI, z: 3.6,
+    text: "C-trapporna från toppen: på högra loppets översta steg, västerut ner mot foten vid klockväggen och vidare upp för vänstra loppet" },
 ];
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json" };
@@ -59,11 +68,11 @@ await page.waitForTimeout(800);
 fs.mkdirSync(UT, { recursive: true });
 const logg = {};
 for (const v of VYER) {
-  await page.evaluate(({ scen, x, y, rikt }) => gaTill(scen, { x, y, rikt }), v);
+  await page.evaluate(({ scen, x, y, rikt, z }) => gaTill(scen, { x, y, rikt, z: z || 0 }), v);
   await page.waitForTimeout(1500);
   const info = await page.evaluate(() => ({
     kamera: [V3D.kam.x, V3D.kam.y, V3D.kam.z].map(n => +n.toFixed(2)),
-    spelare: [VD.px, VD.py].map(n => +n.toFixed(2)),
+    spelare: [VD.px, VD.py, VD.pz || 0].map(n => +n.toFixed(2)),
     tonade: V3D.tonade,
   }));
   await page.screenshot({ path: path.join(UT, `${v.id}.png`) });

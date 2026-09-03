@@ -1468,6 +1468,42 @@ function v3dRidhus(lagg,opp){
     lak.lada(0.44,0.06,0.34,"#26282C",
       M4.translation(frontX+inat*L.dackDjup*0.45,L.dackZ+0.11,z));
   }
+  /* TRAPPORNA (RIDHUSINNE.trappor): stegen ur den delade regeln
+     `trappsteg`, mörkt trä som `ridhus-inne-07`/`IMG_0192`, längs den
+     axel loppet har (`axel` "x": längs gaveln), med ett vitt snedställt
+     sidostycke mot banan och en handledare i trä. Samma steg som
+     gåendets nivåregel läser. */
+  for(const t of R.trappor||[]){
+    const T=trappsteg(t), langsX=(T.axel==="x");
+    const b=langsX ? t.y1-t.y0 : t.x1-t.x0;            // loppets bredd tvärs
+    const mitt=langsX ? (t.y0+t.y1)/2 : (t.x0+t.x1)/2;
+    for(const st of T.steg){
+      const tj=Math.max(0.06,Math.abs(T.stig)), am=(st.a0+st.a1)/2, d=st.a1-st.a0;
+      if(langsX) lak.lada(d,tj,b,"#5A4232",M4.translation(am,st.z-tj/2,mitt));
+      else       lak.lada(b,tj,d,"#5A4232",M4.translation(mitt,st.z-tj/2,am));
+    }
+    const a0=langsX?t.x0:t.y0, a1=langsX?t.x1:t.y1, lang=a1-a0;
+    const bakat=(t.stiger==="S"||t.stiger==="W");
+    const lut=Math.atan2(t.z1-t.z0,lang)*(bakat?-1:1), zm=(t.z0+t.z1)/2, am=(a0+a1)/2;
+    const L=Math.hypot(lang,t.z1-t.z0);
+    /* handledare + stolpar på loppets bansida (låg tvärkoordinat) och,
+       för ett lopp mot en vägg, bara den sidan */
+    const sidor=langsX ? [t.y0+0.05] : (t.x0<1.0?[t.x1-0.05]:[t.x0+0.05,t.x1-0.05]);
+    for(const sx of sidor){
+      if(langsX){
+        lak.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+0.95,sx),M4.rotZ(lut)));
+        /* det vita snedställda sidostycket som bryter glasbandet (`-01`) */
+        lak.lada(L,0.90,0.05,"#E9E5DC",M4.mul(M4.translation(am,zm+0.45,sx-0.04),M4.rotZ(lut)));
+      }else{
+        lak.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx,zm+0.95,am),M4.rotX(-lut)));
+      }
+      for(let i=0;i<T.n;i+=3){
+        const st=T.steg[i], c=(st.a0+st.a1)/2;
+        if(langsX) lak.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(c,st.z+0.95/2,sx));
+        else       lak.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(sx,st.z+0.95/2,c));
+      }
+    }
+  }
   for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
     const x=frontX+inat*L.dackDjup*0.2;
     lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.dackZ,z));
@@ -1576,17 +1612,9 @@ function v3dRidhus(lagg,opp){
       gl.lada(br,K.stegH,0.06,K.bankSatt,
         M4.translation(xm,y-K.stegH/2,z-ut*K.stegD/2));                 // sättsteg mot banan
     }
-    /* De två trapporna upp, med mörka träräcken. */
+    /* De två trapporna byggs som gångbara STAIR-primitiver ur
+       RIDHUSINNE.trappor (härledda ur K.trappor) i läktarblocket ovan. */
     const H=SO+K.steg*K.stegH;
-    for(const tx of K.trappor){
-      for(let i=0;i<K.steg;i++)
-        gl.lada(K.trappB,0.08,K.stegD-0.05,"#CDBB98",
-          M4.translation(tx,SO+K.stegH*(i+1),bank+ut*(i*K.stegD+K.stegD/2)));
-      for(const dx of [-K.trappB/2,K.trappB/2])
-        gl.lada(0.08,0.85,K.steg*K.stegD,"#5A4232",
-          M4.mul(M4.translation(tx+dx,H*0.55+0.42,(K.y0+K.y1)/2),
-                 M4.rotX(-ut*Math.atan2(H,K.steg*K.stegD))));
-    }
     /* DEN VITA VÄGGEN mellan bänkarnas ovankant och glasbandet, vid
        väggsidan — där klockan och kompassrosen sitter. Roblox byggde den
        redan; webben hade lämnat gapet öppet. */
@@ -1597,11 +1625,11 @@ function v3dRidhus(lagg,opp){
     /* Bandet BRYTS av trapporna — se noten i site.js. Segmenten räknas ur
        samma `trappor`-tal som trapporna byggs av, så de inte kan glida
        isär. Mellan dem står den vita väggen med klockan. */
-    const brytn=[...(K.trappor||[])].sort((a,b)=>a-b);
+    const brytn=[...(K.trappor||[])].sort((a,b)=>a.x0-b.x0);
     const seg=[]; let sx=K.x0;
     for(const t of brytn){
-      if(t-K.trappB/2-sx>0.3) seg.push([sx,t-K.trappB/2]);
-      sx=Math.max(sx,t+K.trappB/2);
+      if(t.x0-sx>0.3) seg.push([sx,t.x0]);
+      sx=Math.max(sx,t.x1);
     }
     if(K.x1-sx>0.3) seg.push([sx,K.x1]);
     /* Bandet ska läsa som RUM bakom glas, inte som en platt mörk remsa.
@@ -1657,13 +1685,22 @@ function v3dRidhus(lagg,opp){
      Möbleringen är F02-B. Caféet ovanpå: golvplattan ligger där
      C-blockets glasband börjar (härlett i site.js). ── */
   const E=R.entre||R.cafe.djup, EY=R.langd-E;
+  /* Caféplanet börjar vid C-blockets vägglinje (glasbandet), inte vid
+     entrédelens gräns: över bänkraderna är det öppet upp till taket
+     (`ridhus-inne-01`, `-07`). Övre gången (`ovreGang`) ligger på plattan
+     innanför bandet. */
+  const KY1=(R.kortanda&&R.kortanda.vand==="S")?R.kortanda.y1:EY, ED=R.langd-KY1;
   {const cafe=new Bygge();
-   cafe.lada(R.bredd,0.26,E,"#CFC8BC",                  // caféets golv, hallens tak
-     M4.translation(R.bredd/2,R.cafe.z0,EY+E/2));
+   cafe.lada(R.bredd,0.26,ED,"#CFC8BC",                  // caféets golv
+     M4.translation(R.bredd/2,R.cafe.z0,KY1+ED/2));
    /* Caféets vägg mot banan ovanför C-blockets glasband: bandet sitter i
       blocket, resten upp till taket är vägg. */
-   cafe.lada(R.bredd,Math.max(0.2,R.cafe.z1-R.cafe.z0),0.16,"#E9E5DC",
-     M4.translation(R.bredd/2,(R.cafe.z0+R.cafe.z1)/2,EY));
+   /* Frontväggen mot banan i vägglinjen, UTANFÖR C-blockets bredd — inom
+      blocket står glasbandet och den vita väggen (`-01`). */
+   {const h=Math.max(0.2,R.cafe.z1-R.cafe.z0), zc=(R.cafe.z0+R.cafe.z1)/2, K=R.kortanda;
+    const delar=K ? [[0,K.x0],[K.x1,R.bredd]] : [[0,R.bredd]];
+    for(const [a,b] of delar) if(b-a>0.05)
+      cafe.lada(b-a,h,0.16,"#E9E5DC",M4.translation((a+b)/2,zc,KY1));}
    lagg(cafe,null);}
   /* Hallens golv, ljusare än banan, och takarmaturer under caféplattan. */
   lagg(new Bygge().yta(R.bredd-0.4,E-0.4,"#FFFFFF",
@@ -1809,12 +1846,16 @@ function v3dKamera(dt){
   /* Blickpunkten ligger 2,6 m framför spelaren — men lyfts kameran dras
      den in mot henne, annars hamnar hon i bildens underkant. */
   const framfor=2.6-Math.min(2.0,(hojdIn-hojd)*1.4);
+  /* Nivån: på däcket, i en trappa eller på övre gången följer kameran
+     figurens golv (VD.pz), annars står den kvar nere och ser henne
+     försvinna upp genom taket. */
+  const pz=VD.pz||0;
   const k=V3D.kam;
-  if(!k.satt){k.x=mx;k.y=hojd;k.z=mz;k.tx=VD.px;k.ty=1.3;k.tz=VD.py;k.satt=true;}
+  if(!k.satt){k.x=mx;k.y=hojd+pz;k.z=mz;k.tx=VD.px;k.ty=1.3+pz;k.tz=VD.py;k.satt=true;}
   const f=1-Math.pow(0.0015,Math.min(dt,0.05));
-  k.x+=(mx-k.x)*f; k.y+=(hojdIn-k.y)*f; k.z+=(mz-k.z)*f;
+  k.x+=(mx-k.x)*f; k.y+=(hojdIn+pz-k.y)*f; k.z+=(mz-k.z)*f;
   k.tx+=((VD.px+fram[0]*framfor)-k.tx)*f;
-  k.ty+=(1.35-k.ty)*f;
+  k.ty+=(1.35+pz-k.ty)*f;
   k.tz+=((VD.py+fram[2]*framfor)-k.tz)*f;
   return k;
 }
@@ -1958,7 +1999,7 @@ function v3dBygFigur(){
     return b;})());
 }
 function v3dRitaSpelare(){
-  v3dFigur({x:VD.px,z:VD.py,rikt:VD.rikt,fas:VD.fas,jacka:"#3E5F7A",hjalm:true});
+  v3dFigur({x:VD.px,y:VD.pz||0,z:VD.py,rikt:VD.rikt,fas:VD.fas,jacka:"#3E5F7A",hjalm:true});
 }
 
 /* En figur till fots — spelaren och stallets folk ritas likadant, med
@@ -2092,7 +2133,7 @@ function v3dFigur(o){
   if(STIL==="kloss")return v3dFigurKloss(o);
   v3dBygFigur();
   const D=S3.del;
-  const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));
+  const bas=M4.mul(M4.translation(o.x,o.y||0,o.z),M4.rotY(-o.rikt));
   const fas=o.fas||0, rr=o.rorlig===false?0:1;
   const g=Math.sin(fas*Math.PI*2)*rr, g2=Math.cos(fas*Math.PI*2)*rr;
   const gung=0.018*Math.abs(Math.sin(fas*Math.PI*2))*rr;

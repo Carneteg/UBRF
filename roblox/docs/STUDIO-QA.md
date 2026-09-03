@@ -257,6 +257,31 @@ cell_1–4, hall_n_v, hall_n_o, hall_nv_s, hall_mitt, hall_no, hall_no_s,
 ostkorridor_v). Rör aldrig geometrin för att lösa det — det är datan i
 `src/site.js` (`RIDHUSINNE.entrehall`) och kanonen som styr.
 
+## Ridhusets C-trappor — gångbara nivåer (Product Owner 2026-09-03 17:16)
+
+Gå in genom huvudentrén och fram till C-blockets västra ände (bänkblocket
+under glasbandet, med stjärnan och klockan).
+
+**Ska gå att göra:** kliva upp för bänkradsstegen (`Trappa bankrad_upp steg
+1–6`) till nedersta raden, upp för de fyra raderna, och från översta raden
+vid klockväggen upp för VÄNSTRA trappan västerut (`Trappa c_trappa_v steg
+1–9`) eller HÖGRA trappan österut (`Trappa c_trappa_o steg 1–9`) till övre
+gången (`Övre gångens golv`, caféplanet 3,68 m) — utan hopp, utan att fastna
+och utan att falla ner på banan. Vyerna `c_trapporna_fran_foten` och
+`c_trapporna_fran_toppen` i Vyer.luau visar utgångslägena.
+
+**Ska synas:** två raka lopp i mörkt trä LÄNGS gaveln med foten vid
+klockväggen, vita snedställda sidostycken mot banan som bryter glasbandet
+i tre fält (ridhus-inne-01), träräcken.
+
+**Fynd:** ett steg karaktären inte kliver upp för; ett hål eller en
+osynlig spärr i kedjan; att man kan komma upp i övre gången någon annanstans
+än via trapporna; att övre gången saknar golv; ett trappsteg som saknar
+attributen `CanonId`/`SourceId`/`Confidence`/`Primitiv` (= STAIR). Rör aldrig
+trapporna för hand — datan är `RIDHUSINNE.kortanda.trappor` (loppen) →
+`RIDHUSINNE.trappor` (härledda STAIR-primitiver) i src/site.js, och stegen
+räknas av `Geometri.trappsteg`.
+
 ## Vad som INTE är ett fynd
 
 Osourcad möblering, kosmetisk polish och avancerad ljussättning. Att

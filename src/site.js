@@ -1445,6 +1445,33 @@ function laktarSektioner(L){
   return ut;
 }
 
+/* En trappas steg ur dess data — DELAD regel (Roblox: Geometri.trappsteg).
+   `t` har fotavtryck x0–x1 × y0–y1, nivåerna z0 → z1 och `stiger`: "N" om
+   z växer med y, "S" om z växer när y minskar. Steghöjden hålls under
+   0,19 m (bostadstrappa) så att både webbens nivåregel (max 0,36 m per
+   steg) och Roblox-karaktären (StepHeight) klarar den. Varje steg är
+   en platta med plan ovansida; sista steget ligger i nivå med z1. */
+function trappsteg(t){
+  const ax=t.axel||"y", a0=ax==="x"?t.x0:t.y0, a1=ax==="x"?t.x1:t.y1;
+  const stig=t.z1-t.z0, n=Math.max(1,Math.ceil(Math.abs(stig)/(t.stegMax||0.19)));
+  const djup=(a1-a0)/n, steg=[];
+  /* `stiger` "N"/"E": z växer med koordinaten; "S"/"W": z växer när den minskar. */
+  const bakat=(t.stiger==="S"||t.stiger==="W");
+  for(let i=0;i<n;i++){
+    const z=t.z0+stig*(i+1)/n;
+    const b0=bakat ? a1-djup*(i+1) : a0+djup*i;
+    steg.push({a0:b0, a1:b0+djup, z});
+  }
+  return {n, stig:stig/n, djup, axel:ax, steg};
+}
+/* Golvnivån i en punkt på en trappa: linjärt mellan z0 och z1 längs
+   stigningen, så att en gående figur glider upp i stället för att hoppa. */
+function trappNiva(t,x,y){
+  const ax=t.axel||"y", a=ax==="x"?x:y, a0=ax==="x"?t.x0:t.y0, a1=ax==="x"?t.x1:t.y1;
+  const u=clamp((a-a0)/(a1-a0),0,1);
+  return (t.stiger==="S"||t.stiger==="W") ? t.z1+(t.z0-t.z1)*u : t.z0+(t.z1-t.z0)*u;
+}
+
 const RIDHUSINNE = {
   /* langd följer fotavtrycket — exportörens validering kräver att de är
      lika, och den fällde just den här när skalet växte till 77,18 utan att
@@ -1731,12 +1758,24 @@ const RIDHUSINNE = {
                den väggen finns det ingenstans att sätta dem, vilket var
                varför stjärnan hamnade uppe i glaset vid första försöket.
                1,6 m är `DERIVED` ur bildens proportioner. */
-            /* Trappornas lägen ur planen: 12,4–15,2 och 16,4–18,9 m från
-               väster, alltså mitt 13,8 och 17,65. Planens streckning
-               antyder att loppen går längs gaveln (öst–väst), inte mot
-               den som här; fotot är auktoritet för formen, planen för
-               läget, och den frågan står som `REFERENCE GAP`. */
-            trappor:[13.8, 17.65], trappB:1.2, glasH:2.0, glasOver:1.6,
+            /* DE TVÅ TRAPPORNA (Product Owner 2026-09-03 17:16; senior
+               review: "två raka trappor med träräcke från läktarplanet
+               in i övre gången mot Café Krubban"). `ridhus-inne-01`,
+               `IMG_0192-f01/-f02`, `ridhus-inne-07`: två raka lopp i
+               mörkt trä LÄNGS GAVELN, med foten vid den vita mittväggen
+               (klockan) och stigande UTÅT — det vänstra mot väster, det
+               högra mot öster — från översta bänkraden upp till
+               glasbandets nivå (caféplanet), var sitt vitt snedställt
+               sidostycke mot banan och ett träräcke. Planens streckning
+               12,4–15,2 och 16,4–18,9 m från väster är loppens utbredning
+               (`PLAN`), fotot ger formen och riktningen (`VERIFIED`).
+               `fot` säger vilken ände som är nedre. Loppen står på
+               översta radens remsa (`trappB` = radens djup). De byggs som
+               gångbara STAIR-primitiver i `RIDHUSINNE.trappor` (härleds
+               nedan ur just de här talen), på webb och Roblox. */
+            trappor:[{id:"c_trappa_v", x0:12.4, x1:15.2, fot:"E"},
+                     {id:"c_trappa_o", x0:16.4, x1:18.9, fot:"W"}],
+            trappB:1.1, glasH:2.0, glasOver:1.6,
             glasPost:1.9, glasKarm:"#4A3B2E",
             /* Bänkarna MÄTTA i `-01`: #86715B, en varm mellanbrun. Spelet
                hade #D8C7A4 — ljus furu, vilket fotot motsäger. */
@@ -1786,6 +1825,43 @@ const RIDHUSINNE = {
      stod här var dubbletter av C-blockets: granskningen 2026-08-31 såg
      en enda klocka i alla bilder av C-blocket och ingen annan. Borta. */
   cafe:{djup:11.5, z0:0, z1:5.9},
+  /* TRAPPOR — vertikala förbindelser i ridhuset (Product Owner
+     2026-09-03 17:16; senior review 17:18: "reconstruct BOTH source-backed
+     C-end stairs from the existing evidence"). Byggs ur samma data på
+     webb och Roblox (`trappsteg`), gångbara: webben håller figurens nivå
+     (`VD.pz`) och släpper bara steg under 0,36 m; Roblox bygger stegen
+     som klossar karaktären kliver upp för.
+
+     `c_trappa_v` och `c_trappa_o` HÄRLEDS ur `kortanda.trappor` nedan
+     (samma tal som klockan, stjärnan och glasbandets brott räknas ur):
+     foten på översta bänkraden (sockel + 4 × 0,32 = 2,08), toppen på
+     caféplanet (`cafe.z0`), loppen längs gaveln, stigande utåt från
+     klockväggen. Källor: `references/buildings/ridhus/granskning-2026-08-31/
+     C-kortandan-och-kafeet.md`, `ridhus-inne-01`, `IMG_0192-f01/-f02`,
+     `ridhus-inne-07`, `ridhus-klubb-10` (uppifrån, i övre gången).
+
+     `bankrad_upp`: stegen från entréhallens golv upp till nedersta
+     bänkraden vid blockets västra ände — den anslutning som gör
+     läktarplanet nåbart alls i spelet. Att publiken går upp på raderna
+     från hallsidan följer av planen (blocket står i entrédelen) och av
+     att trapporna går UPPÅT från raderna (`-01`); exakt läge och form
+     är `[uppskattning]`, märkt PRODUCT_OWNER_VERIFIED-topologi och
+     REFERENCE GAP-geometri. Läktargångens tredje trappa vid H-hörnet
+     (`ridhus-inne-14/-15/-10`) hör inte till den här ordern och byggs
+     inte. */
+  trappor:[
+    {id:"bankrad_upp", primitiv:"STAIR", canon_id:"ridhus_stand_access_stair",
+     axel:"x", x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, stiger:"E", stegMax:0.19,
+     source_id:"PO-2026-09-03-RIDHUS-STAIRS-01;PLAN:ridhus-entreplan-utrymning.jpg#c-blocket-i-entredelen;FOTO:ridhus-inne-01",
+     confidence:"PRODUCT_OWNER_VERIFIED"},
+  ],
+  /* ÖVRE GÅNGEN — gången på övre plan innanför glasbandet, som C-trapporna
+     landar i: `ridhus-klubb-10` (glasrummen på ena sidan, banan på den
+     andra, trappan ner), `-07`–`-09` (caféet genom glaset). Golvet är
+     caféplanet (`cafe.z0`); den ligger norr om C-blockets vägglinje
+     (`kortanda.y1`), bredden [uppskattning] 2,5 m. Rummen innanför (Café
+     Krubban) är fortsatt REFERENCE GAP och byggs inte. */
+  ovreGang:{x0:0.6, x1:0, y0:0, y1:0, z:0, bredd:2.5},
   speglar:[ {y:19,b:3.2},{y:37,b:4.2} ],           // på västra långsidan
   skyltar:[
     /* OM-AUDITENS PUNKT C: skyltarna hänger på den rostbruna panelen,
@@ -2162,17 +2238,43 @@ const SPELABSTRAKTIONER = {
   /* Kortändans klocka sitter MELLAN de två trapporna. */
   const K=R.kortanda;
   if(K&&K.trappor&&K.trappor.length>=2){
-    if(K.klocka)  K.klocka.x=(K.trappor[0]+K.trappor[1])/2;
+    const [tv,to]=[...K.trappor].sort((a,b)=>a.x0-b.x0);
+    if(K.klocka)  K.klocka.x=(tv.x1+to.x0)/2;
     /* Stjärnan sitter till vänster om vänstra trappan. */
-    if(K.stjarna) K.stjarna.x=(K.x0+K.trappor[0])/2;
+    if(K.stjarna) K.stjarna.x=(K.x0+tv.x0)/2;
   }
   /* Caféets golv ligger där C-blockets glasband börjar: det är samma
      våning, nådd via blockets trappor. Ett tal här hade glidit isär från
      blocket vid nästa ändring. */
   if(K&&R.cafe) R.cafe.z0 = (K.sockelH||0)+K.steg*K.stegH+K.glasOver;
+  /* C-trapporna härleds ur kortändans data: loppen längs gaveln på
+     översta radens remsa, foten (2,08) vid klockväggen, toppen på
+     caféplanet. Bänkradsstegen vid blockets västra ände. Övre gången
+     norr om vägglinjen. Inga literaler som kan glida. */
+  if(K&&K.trappor){
+    const mS=(K.vand==="S"), vagg=mS?K.y1:K.y0, bank=mS?K.y0:K.y1;
+    const SO=K.sockelH||0, topp=SO+K.steg*K.stegH;
+    const rem0=mS?vagg-K.trappB:vagg, rem1=mS?vagg:vagg+K.trappB;
+    const cs=K.trappor.map(t=>({
+      id:t.id, primitiv:"STAIR", canon_id:"ridhus_c_end_stair_"+(t.fot==="E"?"west":"east"),
+      axel:"x", x0:t.x0, x1:t.x1, y0:rem0, y1:rem1, z0:topp, z1:R.cafe.z0,
+      stiger:t.fot==="E"?"W":"E", stegMax:0.19,
+      source_id:"PO-2026-09-03-RIDHUS-STAIRS-01;FOTO:ridhus-inne-01,IMG_0192-f01,IMG_0192-f02,ridhus-inne-07,ridhus-klubb-10;PLAN:ridhus-entreplan-utrymning.jpg#trappor-12.4-15.2-16.4-18.9",
+      confidence:"VERIFIED_PLAN_OR_PHOTO"}));
+    R.trappor=[...cs, ...R.trappor.filter(t=>t.id!=="c_trappa_v"&&t.id!=="c_trappa_o")];
+    for(const t of R.trappor){
+      if(t.id==="bankrad_upp"){
+        /* från hallgolvet vid blockets västra ände, österut upp till
+           nedersta raden (sockel + ett steg), i radens egen remsa */
+        t.x0=K.x0-1.6; t.x1=K.x0; t.y0=mS?bank:bank-K.stegD; t.y1=mS?bank+K.stegD:bank;
+        t.z0=0; t.z1=SO+K.stegH; t.stiger="E";
+      }
+    }
+    if(R.ovreGang){ const G=R.ovreGang; G.x1=R.bredd-0.6; G.y0=mS?vagg:vagg-G.bredd; G.y1=G.y0+G.bredd; G.z=R.cafe.z0; }
+  }
   /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */
   for(const i of R.info||[]){
-    if(i.cafe&&K){ i.pos[0]=(K.trappor[0]+K.trappor[1])/2; i.pos[1]=(K.vand==="S"?K.y0:K.y1)-0.8; }
+    if(i.cafe&&K){ i.pos[0]=K.klocka?K.klocka.x:(K.x0+K.x1)/2; i.pos[1]=(K.vand==="S"?K.y0:K.y1)-0.8; }
     if(i.domarbas&&R.domarbas){ i.pos[0]=R.domarbas.x+(S.laktare==="E"?-1:1)*(R.domarbas.b/2+0.6); i.pos[1]=R.domarbas.y; }
   }
 })();
