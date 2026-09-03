@@ -321,6 +321,72 @@ do
 		end
 		check("inga väggar i klubbdelen bär trapphusnamn", ok)
 	end
+	--[[ Uppehållsrummet — Product Owner 2026-09-03: "för litet". Läst om i
+		originalplanen (4032 px): rummet är L-format, västdelen x 0–5,9 ×
+		N 0–10 och östdelen x 5,9–11,2 × N 0–5,6 utan vägg emellan; WC-V är
+		3,0 m bred med dörr mot lobbyn; den dubbellinjeritade rutan är en
+		sluten volym 1,0 × 4,4 m, inte en tjock vägg. Grinden mäter det som
+		går att mäta: att delarna finns, hänger ihop och att golvytan inte
+		krymper tillbaka. ]]
+	do
+		local U, Uo, W, L = nil, nil, nil, nil
+		local slutna = {}
+		for _, r in ipairs(K.rum) do
+			if r.id == "uppehallsrum" then U = r end
+			if r.id == "uppehallsrum_o" then Uo = r end
+			if r.id == "wc_v" then W = r end
+			if r.id == "lobby" then L = r end
+			if r.stangt then table.insert(slutna, r) end
+		end
+		check("uppehållsrummet har en västdel och en östdel som hör ihop",
+			U ~= nil and Uo ~= nil and Uo.del == "uppehallsrum" and (Uo.label == nil or Uo.label == ""))
+		if U and Uo then
+			-- ingen vägg får skilja delarna längs x 5,9 mellan vindfånget och volymen
+			local skiljer = nil
+			for _, v in ipairs(K.vaggar) do
+				if v.typ == "langs" and math.abs(v.x - 5.9) < 0.05 then
+					local y0, y1 = v.y0, v.y1
+					if y1 > 65.1 and y0 < 67.9 and not (v.oppningar and #v.oppningar > 0) then skiljer = v.id end
+				end
+			end
+			check("ingen vägg skiljer uppehållsrummets väst- och östdel", skiljer == nil, skiljer or "öppet x 5,9 mellan volymen och vindfånget")
+			-- golvyta: delarna minus de slutna volymer som står i dem
+			local function area(r) return r.rekt.w * r.rekt.h end
+			local yta = area(U) + area(Uo)
+			for _, s in ipairs(slutna) do
+				for _, del in ipairs({ U, Uo }) do
+					local a, b = s.rekt, del.rekt
+					local ox = math.max(0, math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x))
+					local oy = math.max(0, math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y))
+					yta -= ox * oy
+				end
+			end
+			check("uppehållsrummets golvyta är minst 75 m² (PO: rummet var för litet)",
+				yta >= 75, string.format("%.1f m²", yta))
+			check("uppehållsrummets västdel når hela vägen till WC-väggen N 10,0",
+				math.abs(U.rekt.y - 59.95) < 0.05 and math.abs(U.rekt.y + U.rekt.h - S.langd) < 0.05,
+				string.format("y %.2f–%.2f", U.rekt.y, U.rekt.y + U.rekt.h))
+		end
+		if W and L then
+			check("WC-V är 3,0 m bred och lobbyn tar resten fram till volymen",
+				math.abs(W.rekt.w - 3.0) < 0.05 and math.abs(L.rekt.x - 3.0) < 0.05 and math.abs(L.rekt.x + L.rekt.w - 5.9) < 0.05,
+				string.format("WC x %.1f–%.1f, lobby x %.1f–%.1f", W.rekt.x, W.rekt.x + W.rekt.w, L.rekt.x, L.rekt.x + L.rekt.w))
+			local dorr = nil
+			for _, v in ipairs(K.vaggar) do
+				if v.id == "wc_v_o" then for _, o in ipairs(v.oppningar or {}) do dorr = o end end
+			end
+			check("WC-V:s dörr sitter i östväggen mot lobbyn", dorr ~= nil and dorr.y0 > 57.45 and dorr.y1 < 59.95)
+		end
+		local liten = nil
+		for _, s in ipairs(slutna) do if s.id == "sluten_volym_v" then liten = s end end
+		check("den dubbellinjeritade rutan är en sluten volym 1,0 × 4,4 m utan namn, ingen tjock vägg",
+			liten ~= nil and math.abs(liten.rekt.w - 1.0) < 0.05 and math.abs(liten.rekt.h - 4.4) < 0.05
+				and (liten.label == nil or liten.label == ""),
+			liten and string.format("%.1f × %.1f", liten.rekt.w, liten.rekt.h) or "saknas")
+		local spar = false
+		for _, v in ipairs(K.vaggar) do if v.id == "spar" then spar = true end end
+		check("den gamla tjocka väggen `spar` är borta", not spar)
+	end
 	-- Alla rum ligger norr om den genomgående väggen, inuti huset.
 	local utanfor = nil
 	for _, r in ipairs(K.rum) do

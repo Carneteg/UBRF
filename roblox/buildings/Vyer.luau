@@ -218,7 +218,7 @@ Vyer.vyer = {
 		text = "Innanför entrén: uppehållsrummet, med toaletterna och den inre entrén rakt fram",
 		fran = { x = So.x + 4.55, y = So.y + 68.5, h = 1.7 },
 		mot = { x = So.x + 4.55, y = So.y + S.klubb.y0 },
-		krav = "Planens rum: uppehållsrummet först, en sluten volym utan namn eller skylt till vänster (öster; funktion REFERENCE GAP), två toaletter i bortre änden med den inre entrén emellan, och genom den stallgång A rakt fram.",
+		krav = "Planens rum: uppehållsrummet först — L-format, västdelen med den slutna 1,0 × 4,4-volymen och östdelen öster om entrén utan vägg emellan — en sluten volym utan namn eller skylt till vänster (öster; funktion REFERENCE GAP), två toaletter i bortre änden (WC-V 3,0 m bred med dörr mot lobbyn) med den inre entrén emellan, och genom den stallgång A rakt fram. Väggar mellan kameran och karaktären ska tona.",
 	},
 }
 

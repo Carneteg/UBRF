@@ -1014,20 +1014,32 @@ const STALLINNE = {
      den verifierade längden (`PLAN`).
 
        · entré i norra gaveln x 3,6–5,5, vindfångets två stumpar N 0–2,0
-       · uppehållsrummet x 0–5,9, N 0–9,8, med en tjock väggspår x 2,8–3,5
-         N 5,5–9,8 vars funktion inte går att läsa
-       · W-toaletten x 0–4,0 N 9,8–12,5 (den större; foto finns på en
-         tillgänglighetsanpassad toalett, vilken av de två är `ASSUMPTION`)
-       · lobbyn x 4,0–5,8 N 9,8–12,5 med planens gröna pil ner genom
+       · UPPEHÅLLSRUMMET — L-format och större än en tidigare läsning:
+         västdelen x 0–5,9, N 0–10,0, och östdelen x 5,9–11,2, N 0–5,6
+         (öster om entrén, norr om den slutna volymen) utan vägg emellan.
+         Product Owner 2026-09-03: "uppehållsrummet är för litet" — den
+         förra läsningen stannade vid x 5,9 och kallade östdelen "passage".
+         Pentryt (stall-inne-02: valvfönster + runt fönster, hörn med
+         tavla) sitter i NV-hörnet väster om entrédörren; stall-entre-01
+         visar samma fönsterpar utifrån, väster om dörren.
+       · i västdelen en SLUTEN VOLYM x 2,0–3,0 N 5,6–10,0, ritad med
+         dubbla linjer (vägg med tjocklek) — funktion oläsbar. Läst i
+         originalbilden `stall-plan1-utrymning.jpg` (4032 px, klubbänden
+         beskuren och vriden norr upp); en tidigare läsning i den
+         rektifierade 1500 px-bilden såg den som en tjock vägg x 2,8–3,5.
+       · W-toaletten x 0–3,0 N 10,0–12,5 med dörr i ÖSTVÄGGEN N 10,8–11,7
+         mot lobbyn, och en lucka x 0–0,9 i nordväggen (planens linje
+         börjar 0,9 m från västväggen). Foto finns på en
+         tillgänglighetsanpassad toalett; vilken av de två är `ASSUMPTION`.
+       · lobbyn x 3,0–5,9 N 10,0–12,5 med planens gröna pil ner genom
        · den INRE ENTRÉN: dörr i den genomgående väggen x 4,1–5,0 — rakt
          nedanför gaveldörren och rakt ovanför gång A (4,1–6,7)
-       · Ö-toaletten x 5,8–7,3 N 11,3–12,5
-       · en SLUTEN VOLYM x 5,9–7,3 N 4,9–11,3 — planen ritar en symbol i
+       · Ö-toaletten x 5,9–7,3 N 10,7–12,5 (cellen vid symbolrutans fot)
+       · en SLUTEN VOLYM x 5,9–7,3 N 4,9–10,7 — planen ritar en symbol i
          rutan som ingen oberoende källa förklarar; funktionen är
          `REFERENCE GAP`, se noten vid `sluten_volym`
-       · passagen x 5,9–11,2 N 0–5,6, öster om uppehållsrummet, med ett
-         litet slutet rum x 9,0–11,2 N 0–2,2 (grå ruta = utanför
-         utrymningsytan; funktion oläsbar)
+       · i uppehållsrummets östdel ett litet slutet rum x 9,0–11,2
+         N 0–2,2 (grå ruta = utanför utrymningsytan; funktion oläsbar)
        · TEORISALEN x 11,2–17,3 N 0–5,6, in genom en 2,6 m öppning i
          västväggen N 3,0–5,6
        · SADELKAMMAREN x 7,3–15,5 N 5,6–12,5, in från passagen genom
@@ -1061,14 +1073,14 @@ const STALLINNE = {
       {id:"vindfang_v",  typ:"langs", x:3.6, y0:67.95, y1:69.95},
       {id:"vindfang_o",  typ:"langs", x:5.5, y0:67.95, y1:69.95},
       {id:"vindfang_fot",typ:"tvar",  y:67.95, x0:5.5, x1:6.0},
-      {id:"spar",        typ:"langs", x:3.15, y0:60.15, y1:64.45, tjock:0.5},
-      {id:"wc_v_n",      typ:"tvar",  y:60.15, x0:0, x1:4.0},
-      {id:"wc_v_o",      typ:"langs", x:4.0, y0:57.45, y1:60.15,
-       oppningar:[{id:"wc_v_dorr", y0:58.45, y1:59.5}]},
+      {id:"wc_v_n",      typ:"tvar",  y:59.95, x0:0, x1:3.0,
+       oppningar:[{id:"wc_v_lucka_n", x0:0, x1:0.87}]},
+      {id:"wc_v_o",      typ:"langs", x:3.0, y0:57.45, y1:59.95,
+       oppningar:[{id:"wc_v_dorr", y0:58.25, y1:59.15}]},
       {id:"volym_v",     typ:"langs", x:5.9, y0:57.45, y1:65.05},
       {id:"volym_o",     typ:"langs", x:7.3, y0:57.45, y1:65.05},
       {id:"volym_n",     typ:"tvar",  y:65.05, x0:5.9, x1:7.3},
-      {id:"volym_s",     typ:"tvar",  y:58.65, x0:5.9, x1:7.3},
+      {id:"volym_s",     typ:"tvar",  y:59.25, x0:5.9, x1:7.3},
       {id:"litet_v",     typ:"langs", x:9.0, y0:67.75, y1:69.95},
       {id:"litet_s",     typ:"tvar",  y:67.75, x0:9.0, x1:11.2},
       {id:"teorisal_v",  typ:"langs", x:11.2, y0:64.35, y1:69.95,
@@ -1080,12 +1092,17 @@ const STALLINNE = {
     ],
     rum:[
       {id:"vindfang",     rekt:{x:3.6,  y:67.95, w:1.9, h:2.0},  label:"ENTRÉ"},
-      {id:"uppehallsrum", rekt:{x:0,    y:60.15, w:5.9, h:9.8},  label:"UPPEHÅLLSRUM"},
-      {id:"wc_v",         rekt:{x:0,    y:57.45, w:4.0, h:2.7},  label:"WC"},
-      {id:"lobby",        rekt:{x:4.0,  y:57.45, w:1.9, h:2.7},  label:""},
+      /* UPPEHÅLLSRUMMET är L-format: västdelen här och östdelen
+         `uppehallsrum_o` nedan, utan vägg emellan (`del` pekar hit). */
+      {id:"uppehallsrum", rekt:{x:0,    y:59.95, w:5.9, h:10.0}, label:"UPPEHÅLLSRUM"},
+      /* Den dubbellinjeritade rutan i västdelen: 1,0 × 4,4 m, funktion
+         oläsbar (`REFERENCE GAP`). Byggs som sluten volym utan namn. */
+      {id:"sluten_volym_v", rekt:{x:2.0, y:59.95, w:1.0, h:4.4}, label:"", stangt:true},
+      {id:"wc_v",         rekt:{x:0,    y:57.45, w:3.0, h:2.5},  label:"WC"},
+      {id:"lobby",        rekt:{x:3.0,  y:57.45, w:2.9, h:2.5},  label:""},
       /* Ö-toaletten: en dörr går inte att läsa i planen och hittas inte på.
          `stangt`: byggs som sluten volym tills dörren är belagd. */
-      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.2},  label:"WC", stangt:true},
+      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.8},  label:"WC", stangt:true},
       /* SLUTEN VOLYM UTAN NAMN. Planen ritar en symbol i den här rutan.
          Vad rutan ÄR finns det ingen oberoende källa för — ingen bild, ingen
          film, inget produktägarbeslut — så funktionen är `REFERENCE GAP`
@@ -1094,8 +1111,12 @@ const STALLINNE = {
          den får rätt form, och inget mer. Den enda kanoniska vägen upp i
          anläggningen är ridhusets: läktarplanet → C-kortändans trappor →
          övre gången/caféet (`RIDHUSINNE.kortanda.trappor`). */
-      {id:"sluten_volym", rekt:{x:5.9,  y:58.65, w:1.4, h:6.4},  label:"", stangt:true},
-      {id:"passage",      rekt:{x:5.9,  y:64.35, w:5.3, h:5.6},  label:""},
+      {id:"sluten_volym", rekt:{x:5.9,  y:59.25, w:1.4, h:5.8},  label:"", stangt:true},
+      /* Uppehållsrummets ÖSTDEL, öster om entrén och norr om volymen.
+         En tidigare runda kallade den "passage"; planen har ingen vägg mot
+         västdelen, och pentryt/soffhörnet hör till samma rum. Ingen egen
+         etikett — namnet står en gång, i västdelen. */
+      {id:"uppehallsrum_o", rekt:{x:5.9, y:64.35, w:5.3, h:5.6}, label:"", del:"uppehallsrum"},
       {id:"litet_rum",    rekt:{x:9.0,  y:67.75, w:2.2, h:2.2},  label:"", stangt:true},
       {id:"teorisal",     rekt:{x:11.2, y:64.35, w:6.1, h:5.6},  label:"TEORISAL"},
       {id:"sadelkammare", rekt:{x:7.3,  y:57.45, w:8.2, h:6.9},  label:"SADELKAMMARE"},

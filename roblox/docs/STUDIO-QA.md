@@ -215,6 +215,22 @@ PASS / FEL · vid fel: `qa-gangvagen-FEL.png`
 
 ---
 
+## Inomhusläsbarhet — väggarna ska tona, inte rummen flytta
+
+Gå in i stallets klubbdel och ridhusets entrédel till fots och vrid kameran
+så att en vägg hamnar mellan kameran och karaktären.
+
+**Ska synas:** väggbiten (eller den slutna volymen) blir halvgenomskinlig
+medan den står i vägen och blir solid igen när kameran flyttas. Karaktären
+ska aldrig försvinna helt bakom en inre vägg. Väggen karaktären själv står
+intill ska INTE tona.
+
+**Fynd:** en vägg som förblir solid med karaktären dold bakom den; en vägg
+som tonar fast den inte står mellan kameran och karaktären; en vägg som
+saknar attributet `Genomsiktlig` (välj den i Explorer och titta under
+Attributes). Rör aldrig väggarna för att lösa det — det är
+`Genomsikt.luau` som ska rättas.
+
 ## Vad som INTE är ett fynd
 
 Osourcad möblering, kosmetisk polish och avancerad ljussättning. Att

@@ -50,6 +50,15 @@ local function raknaNamn(monster)
 	end
 	return n
 end
+-- Exakt namn, inte delsträng: "Slutet rum sluten_volym" får inte räkna
+-- "Slutet rum sluten_volym_v" som en träff.
+local function raknaExakt(namn)
+	local n = 0
+	for _, d in ipairs(delar) do
+		if d.Name == namn then n += 1 end
+	end
+	return n
+end
 
 print("\nByggnadsmassan")
 
@@ -232,7 +241,7 @@ do
 		Ingen kolliderande del under mankhöjd får stå på någon provpunkt. Muras
 		en dörr igen, eller byggs ett rum som låda, faller det här. ]]
 	local rutt = {
-		{ 4.55, 69.0 }, { 4.55, 66.5 }, { 2.0, 63.0 }, { 4.9, 61.0 }, { 4.9, 58.5 },
+		{ 4.55, 69.0 }, { 4.55, 66.5 }, { 4.5, 63.0 }, { 4.5, 61.0 }, { 4.9, 58.5 },
 		{ 4.55, 57.45 }, { 4.9, 56.0 }, { 5.5, 53.5 }, { 5.5, 50.0 },
 	}
 	local blockerad = nil
@@ -273,11 +282,11 @@ do
 				W1.rekt.x, W1.rekt.x + W1.rekt.w, inre.x0, inre.x1, W2.rekt.x, W2.rekt.x + W2.rekt.w))
 		check("planens symbolruta byggs som namnlös sluten volym — inget trapphus, ingen trappa i Stallhuset",
 			SV.stangt == true and (SV.label == nil or SV.label == "")
-				and raknaNamn("Slutet rum sluten_volym") == 1
+				and raknaExakt("Slutet rum sluten_volym") == 1
 				and rum("trapphus") == nil and raknaNamn("Slutet rum trapphus") == 0
 				and raknaNamn("Trappsteg") == 0,
 			string.format("label %q, %d slutna volymer, %d trapphus, %d trappsteg",
-				tostring(SV.label), raknaNamn("Slutet rum sluten_volym"),
+				tostring(SV.label), raknaExakt("Slutet rum sluten_volym"),
 				raknaNamn("Slutet rum trapphus"), raknaNamn("Trappsteg")))
 		check("Ö-toaletten är sluten tills dess dörr är belagd",
 			W2.stangt == true and raknaNamn("Slutet rum wc_o") == 1)
@@ -310,6 +319,23 @@ do
 	check("etikettplattor byggs för exakt de namngivna öppna rummen",
 		byggda == vantade and vantade > 0,
 		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
+end
+
+--[[ Inomhusläsbarhet: varje inre väggbit och sluten volym ska bära
+	attributet `Genomsiktlig`, annars kan klientens Genomsikt inte tona den
+	när den står mellan kameran och karaktären — och då försvinner spelaren
+	bakom väggen igen (Product Owner 2026-09-03). ]]
+do
+	local med, utan = 0, 0
+	for _, d in ipairs(delar) do
+		local n = d.Name
+		if n:find("Klubbvägg", 1, true) == 1 or n:find("Entrévägg", 1, true) == 1
+			or n:find("Slutet rum", 1, true) == 1 then
+			if d:GetAttribute("Genomsiktlig") == true then med += 1 else utan += 1 end
+		end
+	end
+	check("inre väggbitar och slutna volymer bär attributet Genomsiktlig",
+		utan == 0 and med > 20, string.format("%d med, %d utan", med, utan))
 end
 
 --[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:

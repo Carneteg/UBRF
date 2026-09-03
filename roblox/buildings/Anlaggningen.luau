@@ -561,13 +561,17 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 		local mat = if v.brand then Enum.Material.Concrete else Enum.Material.Plaster
 		for j, bit in ipairs(GEO.vaggBitar(v)) do
 			local namn = prefix .. " " .. v.id .. ":" .. j
+			local p
 			if v.typ == "tvar" then
-				BK.box(model, base, namn,
+				p = BK.box(model, base, namn,
 					o.x + bit.a0, 0, o.y + v.y - t / 2, bit.a1 - bit.a0, h, t, farg, mat)
 			else
-				BK.box(model, base, namn,
+				p = BK.box(model, base, namn,
 					o.x + v.x - t / 2, 0, o.y + bit.a0, t, h, bit.a1 - bit.a0, farg, mat)
 			end
+			--[[ Inomhusläsbarhet: klientens Genomsikt tonar den här biten när
+			     den står mellan kameran och karaktären. Samma regel som webben. ]]
+			p:SetAttribute("Genomsiktlig", true)
 		end
 	end
 	for _, r in ipairs(K.rum or {}) do
@@ -577,6 +581,7 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 				o.x + q.x, 0, o.y + q.y, q.w, h * 0.9, q.h, INRE.rum, Enum.Material.Plaster)
 			p.Transparency = 0.45
 			p:SetAttribute("Rum", r.id)
+			p:SetAttribute("Genomsiktlig", true)
 		elseif r.label ~= nil and r.label ~= "" then
 			local p = BK.box(model, base, "Rumsetikett " .. r.label,
 				o.x + q.x, 0.03, o.y + q.y, q.w, 0.02, q.h, INRE.rum, Enum.Material.SmoothPlastic)
@@ -779,6 +784,7 @@ local function byggStallInre(model: Model, base: CFrame)
 				INRE.rum, Enum.Material.Plaster)
 			p.Transparency = 0.45
 			p:SetAttribute("Rum", r.id)
+			p:SetAttribute("Genomsiktlig", true)
 		end
 	end
 
