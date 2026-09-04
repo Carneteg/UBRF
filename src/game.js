@@ -361,6 +361,13 @@ function stegaRitt(dt){
         fryser mitt i ett steg. */
      G.gaitFas=(G.gaitFas+G.ride.tempo*dt*0.5)%1;
    }}
+  /* G02-A: gångarten följs av övergångskontraktet och telemetrin läggs
+     på G.telemetri, så att G02-B/C har en enda avläsningspunkt. Ren
+     avläsning — inget här får påverka ridkänslan. */
+  if(typeof ridFoljGangart==="function"&&G.ride){
+    ridFoljGangart(G.ride.gangart);
+    G.telemetri=ridTelemetri(G.ride,G.aids,{kappa:G.kappa,fas:G.gaitFas});
+  }
   ljudRittSteg(G.gaitFas,G.ride.gangart,
     G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;

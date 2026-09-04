@@ -96,10 +96,12 @@ function sittUpp(plats){
       return;
     }
     G.plats=plats;
-    visaSekretariat(()=>{G.leder=false;hudLage("ritt");startaLektion();});
+    visaSekretariat(()=>{G.leder=false;hudLage("ritt");startaLektion();
+      ridSittUpp(G.hastId,plats);});   // G02-A: samma tillstånd på tävlingsvägen
     return;
   }
   G.leder=false;G.plats=plats;hudLage("ritt");startaLektion();
+  ridSittUpp(G.hastId,plats);          // G02-A: uppsutten som tillstånd, inte bara scen
 }
 
 /* ── Sekretariatet: startordningen ropas upp ──────────────────── */

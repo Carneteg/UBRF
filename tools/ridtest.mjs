@@ -108,6 +108,36 @@ prova("uppsittning/avsittning är ett tillstånd, inte bara en scen",
   mount.a.uppsutten === true && mount.a.hast === "bandit" && mount.b.uppsutten === false,
   `upp: ${mount.a.uppsutten}/${mount.a.hast} → av: ${mount.b.uppsutten}`);
 
+/* 7. LIVE I SPELET: kopplingen ska vara verklig, inte ett bibliotek ingen
+   anropar. Startar en riktig ritt och läser tillstånd + telemetri ur den
+   körande loopen. */
+const live = await page.evaluate(async () => {
+  /* Sätt uppsutten FÖRST, annars kan avsittningssteget aldrig bli rött:
+     ett tillstånd som redan är false bevisar inget om startaVandring(). */
+  ridSittUpp("bandit", "ridhus");
+  const forevandring = RID_TILLSTAND.uppsutten;           // ska vara true
+  startaVandring();
+  await new Promise(r => setTimeout(r, 400));
+  const eftervandring = RID_TILLSTAND.uppsutten;          // ska vara false
+  /* Förutsättningarna som skötselflödet normalt sätter innan man rider:
+     vald häst och ett RideModel-tillstånd. Det som TESTAS är att den
+     körande ridloopen följer gångarten och fyller G.telemetri. */
+  G.hastId = G.hastId || Object.keys(HORSES)[0];
+  G.hamtad = true;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  sittUpp("ridhus");
+  await new Promise(r => setTimeout(r, 1200));
+  return { forevandring, eftervandring, uppsutten: RID_TILLSTAND.uppsutten, hast: RID_TILLSTAND.hast,
+    telemetri: G.telemetri ? { gangart: G.telemetri.gangart, fart: G.telemetri.fart,
+      harledda: G.telemetri._harledda, harHjalper: !!G.telemetri.hjalper } : null };
+});
+prova("live i spelet: vandring ⇒ avsutten, uppsittning ⇒ uppsutten med häst",
+  live.forevandring === true && live.eftervandring === false && live.uppsutten === true && !!live.hast,
+  `före ${live.forevandring} → vandring ${live.eftervandring} → ritt ${live.uppsutten}/${live.hast}`);
+prova("live i spelet: G.telemetri fylls av den körande ridloopen",
+  !!live.telemetri && typeof live.telemetri.fart === "number" && live.telemetri.harHjalper,
+  live.telemetri ? `gångart ${live.telemetri.gangart}, fart ${live.telemetri.fart.toFixed(2)}, härledda ${JSON.stringify(live.telemetri.harledda)}` : "G.telemetri saknas");
+
 await browser.close(); srv.close();
 const fel = resultat.filter(r => !r.ok).length;
 console.log(fel ? `${fel} FEL` : "ALLA OK");
