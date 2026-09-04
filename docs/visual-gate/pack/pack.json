@@ -1,7 +1,7 @@
 {
-  "head": "92de2e18f8dca5fa2fe1948840139609a6a3045e",
+  "head": "263bd95aac140b44ad1ad836078ccfa723dffdd6",
   "smutsigt": false,
-  "renderad": "2026-09-04T09:35:56.872Z",
+  "renderad": "2026-09-04T12:09:48.185Z",
   "kameror": {
     "STALL-ANKOMST": {
       "id": "STALL-ANKOMST",
@@ -13,7 +13,7 @@
         "y": 131,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 4
+        "bild0": 3
       },
       "kamera": [
         160.1,
@@ -96,7 +96,7 @@
         "y": 66.95,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 13
+        "bild0": 12
       },
       "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
       "referenser": [
@@ -222,7 +222,7 @@
         "y": 67.2,
         "z": 0,
         "rikt": 2.356194490192345,
-        "bild0": 32
+        "bild0": 31
       },
       "text": "Fotots vinkel (stall-inne-01): från rummets sydöstra del snett mot nordvästra hörnet — soffan mot västväggen under fotoväggen, valvfönstret norr om den med ponnyn under, klockan och växten söder om fotoväggen, den andra soffan i vinkel i förgrunden. Explicit kamera; figuren till vänster om blicklinjen.",
       "referenser": [
@@ -282,7 +282,7 @@
         "y": 66.2,
         "z": 0,
         "rikt": 0,
-        "bild0": 43
+        "bild0": 41
       },
       "text": "Fotots vinkel (stall-inne-04): från rummets västra del österut — valvfönstren till vänster, whiteboardväggen rakt fram, bordsblocket med vita stolar, skåpet med mikron i sydöstra hörnet, planscherna på sydväggen, lysrören och spiralkanalen under det platta innertaket. Explicit kamera.",
       "referenser": [
@@ -340,7 +340,7 @@
         "y": 62.5,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 53
+        "bild0": 50
       },
       "text": "Fotots vinkel (stall-inne-03): från rummets södra del norrut — säkerhetsvästarna på krokrader längs västväggen till vänster, den täta vita stövelhyllan till höger, den grå ståldörren med fönster mot teorisalen rakt fram. Explicit kamera.",
       "referenser": [
@@ -401,7 +401,7 @@
         "y": 12.8,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 63
+        "bild0": 58
       },
       "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
       "referenser": [
@@ -461,7 +461,7 @@
         "y": 29.549999999999997,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 72
+        "bild0": 68
       },
       "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
       "referenser": [
@@ -521,7 +521,7 @@
         "y": 69.58000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 81
+        "bild0": 77
       },
       "text": "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1). Explicit kamera i hallen — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen.",
       "referenser": [
@@ -592,7 +592,7 @@
         "y": 69.6,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 90
+        "bild0": 87
       },
       "text": "Den långa skåpgången (ridhus-klubb-01/-15) från gångens södra ände i ögonhöjd, blicken norrut: skåpraden till höger i hela längden, receptionens glasdisk till vänster längst upp, bordet med de två stolarna mitt för glaset, gavelns valvfönster med stövelbänken i fonden. Explicit kamera.",
       "referenser": [
@@ -667,7 +667,7 @@
         "y": 6.15,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 101
+        "bild0": 97
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -725,7 +725,7 @@
         "y": 57.68000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 110
+        "bild0": 107
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -790,7 +790,7 @@
         "y": 38.915000000000006,
         "z": 0.8,
         "rikt": -1.5707963267948966,
-        "bild0": 120
+        "bild0": 116
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -860,7 +860,7 @@
         "y": 66.28,
         "z": 1.12,
         "rikt": 1.5707963267948966,
-        "bild0": 128
+        "bild0": 125
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
@@ -931,7 +931,7 @@
         "y": 73.6,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 138
+        "bild0": 135
       },
       "text": "I skåpgången i ögonhöjd, blicken snett mot receptionens glasade bröstning i nordvästra hörnet — samma relation som ridhus-klubb-02/-15: disken med glasrutorna på ena sidan, skåpraden mitt emot. Explicit kamera; figuren till vänster om blicklinjen.",
       "referenser": [
@@ -1002,7 +1002,7 @@
         "y": 68.7,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 149
+        "bild0": 143
       },
       "text": "Inne i hallen i ögonhöjd, blicken västerut mot den låsta fasadens entrédörr (dorrvit u 9): dörren ska läsas som en dörr inifrån — vit glasad dubbeldörr med karm och utrymningsskylt (IMG_0169-f05, ridhus-klubb-03). Explicit kamera.",
       "referenser": [
@@ -1058,6 +1058,82 @@
         }
       }
     },
+    "RIDHUS-SKAPRUM": {
+      "id": "RIDHUS-SKAPRUM",
+      "namn": "Skåpförvaringen",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 2,
+        "y": 71.9,
+        "z": 0,
+        "rikt": 2.356194490192345,
+        "bild0": 152
+      },
+      "text": "Product Owner 2026-09-04 11:56 (\"Saknas skåp\"): skåpförvaringen ur ridhus-klubb-16/-18/-20/-21 som tre fristående grupper i entrédelens öppna västra remsa (x 0–2,2 söder om receptionen) — gröna tvåvåningsskåp på ben, höga grå/mörkblå skåp, vit tvåvåningsbank. Explicit kamera från gångens södra ände snett mot nordväst.",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-18-skapraden-narbild.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-20-grona-skapen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-21-grona-skapen-vinkel.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "rummen skåpen står i (Bild 2–5: skåpförvaring, ombyte med dusch) är inte placerade — grupperna står i öppen yta där planens cellrad bär funktionen [antagande]; lägena ASSUMPTION",
+        "antal luckor förenklat: vita banken 3 × 2 mot bildens 5 × 2; pelaren i -16 byggs inte (ingen bärande stomme belagd där)"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Tre skåpgrupper i öppen yta: gröna tvåvåningsskåp i vita ramar på svarta ben närmast kameran, höga grå + mörkblå skåp i vita profilramar längs västväggen, vit tvåvåningsbank under receptionens sydvägg; gången x 2,2–4,2 fri; inga nya väggar eller rumslådor.",
+      "kamera": [
+        3,
+        1.55,
+        68.4
+      ],
+      "mal": {
+        "x": "0.8",
+        "y": "71.9",
+        "h": "1.1"
+      },
+      "spelare": [
+        2,
+        71.78,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
     "RIDHUS-LAKTARTRAPPA": {
       "id": "RIDHUS-LAKTARTRAPPA",
       "namn": "Trappan vid läktarens norra ände (H)",
@@ -1068,7 +1144,7 @@
         "y": 67.4,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 158
+        "bild0": 161
       },
       "text": "Från hallens sydvästra hörn i ögonhöjd, blicken sydväst mot läktarens norra ände: trappan längs västväggen från hallgolvet upp mot övre plan (ridhus-inne-39, -11), läktardäckets ände (ridhus-inne-15/-14). Explicit kamera.",
       "referenser": [
@@ -1139,7 +1215,7 @@
         "y": 56.35,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 167
+        "bild0": 171
       },
       "text": "I gång A i ögonhöjd, blicken norrut mot den genomgående väggen: inre entrén (x 4,1–5,0) och sadelkammarens dörr (x 7,7–8,8) ska läsas som dörrar — vit karm, mörk smyg, överstycke — inte som slitsar från golv till tak (stall-inne-03, ridhus-klubb-03/-19 för karmarnas utseende). Explicit kamera.",
       "referenser": [
