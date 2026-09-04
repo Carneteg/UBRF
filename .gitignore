@@ -17,3 +17,6 @@ roblox/tests/.build/
 # Studio-paketet är en hopfogning av filer som redan ligger i repot.
 roblox/buildings/.studio/
 __pycache__/
+
+# Screenshot-pack (Visual Fidelity Gate, #80) är CI-artifact, aldrig incheckat här
+qa/screenshot-pack/
