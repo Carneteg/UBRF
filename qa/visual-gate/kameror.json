@@ -43,10 +43,10 @@
       "gap": [],
       "ram": "Verandans sadeltak (röd gavelspets, vita vindskivor) på vita stolpar, det vita ribbräcket, den ockragula entrédörren med solfjäderfönster och vit karm rakt fram, ett runt fönster på var sida, lampan över dörren, spiraltrappan och balkongen till vänster. Det är den dörr interaktionen leder in genom (ankaret stall_entre_samma_dorr; innerpunkten ut_n vid samma dörr)",
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS: verandan med sadeltak, vita stolpar/ribbräcke, ockragul dörr, runda fönster, lampa, spiraltrappa/balkong läser som källserien; stall_entre_samma_dorr bevisar samma dörr inne/ute. Dörrdetaljernas förenkling är polish, inte grind."
       }
     },
     {
@@ -69,10 +69,10 @@
         "planens vindfångscell (x 3,6–5,5) mot fasadens entré (x 10,5): dokumenterad motsägelse, fasaden vinner; cellen står kvar utan etikett"
       ],
       "granskning": {
-        "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Interiörvyn bevisar inte den exteriöra entrén Tobias rapporterade, och interaktionen ledde till en annan punkt än dörren i bild. Rättat: ut_n ligger nu i fasadens dörr (F02-A a102bb9), exteriörkameran STALL-ANKOMST tillagd, ankaret stall_entre_samma_dorr vaktar. Väntar på ny review."
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "Entré-/interaktionsblockern STÄNGD för F02-A (06:57): innerpunkten ut_n och gårdens markör är samma låsta fasaddörr. 'Remaining door-detail simplification is polish, not a gate blocker.'"
       },
       "ram": "Gavelväggen med fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram, det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång x 3,6–5,5 mot fasadens entré x 10,5, DEFERRED BY EXTERIOR LOCK)",
       "kamera": {
@@ -106,9 +106,9 @@
       ],
       "granskning": {
         "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Förblir MISMATCH tills F02-B (#76) integrerats — möbler är utanför F02-A. Inget PASS fejkas här."
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "Avsiktligt MISMATCH: rummets saknade visuella identitet är F02-B-möblering (#76), inte ett F02-A-topologifel. Inget PASS fejkas; #80 omprövar när #76 integrerats."
       },
       "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort"
     },
@@ -323,10 +323,10 @@
         "Café Krubbans rum bakom glaset byggs inte (REFERENCE GAP)"
       ],
       "granskning": {
-        "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Sidostyckena lästes som två jättelika lutande skivor (bow-tie) som slukade glasbandet. Rättat i F02-A (a102bb9): trapets med vågrät underkant i blockets krön och överkant längs räcket; klockväggen fri; glasbandet synligt. Väntar på ny review."
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS: sidostyckena läser som trappkantsväggar, räckena läsbara, klockväggen fri, glasbandet synligt. Topologin får inte öppnas igen."
       },
       "ram": "C-blocket över norra sargen: bänkraderna, klockväggen mellan de två loppen, vita sidostycken, glasbandet i tre fält, övre gången bakom"
     },
@@ -382,10 +382,10 @@
         "övre gångens bredd [uppskattning]"
       ],
       "granskning": {
-        "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Samma som ARENA-C (bow-tie). Rättat i F02-A (a102bb9): trapetsformade sidostycken, mörkt räcke ovanpå kanten, klockväggen fri. Väntar på ny review."
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS (samma bedömning som ARENA-C på a102bb9:s trapetsform)."
       },
       "ram": "Från nedersta raden: raderna uppåt, båda loppen stigande utåt från klockväggen, räcken, glasbandet ovanför, övre gångens golv/räcke; spelets bänkradssteg (gul markör) till vänster som SPELABSTRAKTION"
     }
