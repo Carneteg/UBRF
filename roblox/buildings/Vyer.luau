@@ -398,7 +398,7 @@ Vyer.reviewkameror = {
 		fran = { x = So.x + 4.7, y = So.y + 62.9, h = 1.6 },
 		mot = { x = So.x + 0.9, y = So.y + 66.3 },
 		aim = 1.0,
-		figur = { x = So.x + 3.1, y = So.y + 63.2, z = 0 },
+		figur = { x = So.x + 2.4, y = So.y + 67.2, z = 0 },   -- höger om ponnyn, utanför soffgruppen
 		krav = "Två svarta soffor i vinkel kring låga bord, rosa träponny med sadel, klocka, växt, fotovägg på pärlsponten, valvfönstret i västväggen. Gruppens läge mot fönstret är ASSUMPTION (F02-B).",
 	},
 	--[[ Review 2026-09-04 07:54 (Tobias): dörrläsbarhet — explicit kamera i
@@ -419,7 +419,7 @@ Vyer.reviewkameror = {
 		fran = { x = So.x + 11.7, y = So.y + 67.6, h = 1.6 },
 		mot = { x = So.x + 17.3, y = So.y + 67.0 },
 		aim = 1.2,
-		figur = { x = So.x + 12.8, y = So.y + 66.4, z = 0 },
+		figur = { x = So.x + 15.9, y = So.y + 66.2, z = 0 },   -- längre in, mellan stolraden och planschväggen
 		krav = "Whiteboardväggen rakt fram, bordsblocket med vita stolar, planscherna på sydväggen, skåpet med mikron, lysrören och spiralkanalen under det platta innertaket; ingen etikettplatta.",
 	},
 	{
@@ -428,7 +428,7 @@ Vyer.reviewkameror = {
 		fran = { x = So.x + 8.7, y = So.y + 58.4, h = 1.6 },
 		mot = { x = So.x + 8.7, y = So.y + 64.3 },
 		aim = 1.2,
-		figur = { x = So.x + 9.1, y = So.y + 60.2, z = 0 },
+		figur = { x = So.x + 8.15, y = So.y + 62.5, z = 0 },   -- vänster om dörren, framför västarna
 		krav = "Västarna på krokrader till vänster, den vita stövelhyllan till höger, den grå dörren med fönster rakt fram (ritad på väggen, ingen passage), platt innertak; ingen etikettplatta.",
 	},
 	bakom(VG, "STALL-GANG-A", "Gång A norrut mot klubbdelen",
@@ -491,10 +491,10 @@ Vyer.reviewkameror = {
 	{
 		id = "RIDHUS-SKAPKORRIDOR", grupp = VG,
 		text = "Den långa skåpgången (ridhus-klubb-01/-15) från södra änden norrut: skåpraden höger, receptionens glasdisk vänster längst upp, bordet med stolarna, gavelns valvfönster i fonden",
-		fran = { x = Ro.x + 3.2, y = Ro.y + 66.7, h = 1.65 },
-		mot = { x = Ro.x + 3.1, y = Ro.y + 76.2 },
+		fran = { x = Ro.x + 3.4, y = Ro.y + 66.7, h = 1.65 },
+		mot = { x = Ro.x + 2.6, y = Ro.y + 76.0 },
 		aim = 1.0,
-		figur = { x = Ro.x + 2.7, y = Ro.y + 69.6, z = 0 },
+		figur = { x = Ro.x + 2.9, y = Ro.y + 69.6, z = 0 },
 		krav = "Lång obruten skåprad till höger, receptionens bröstning + glas till vänster mitt emot, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken; inga korridorväggar.",
 	},
 	bakom(VG, "ARENA-A", "Banan nära A, söderut mot kortsidan",

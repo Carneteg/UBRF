@@ -1101,7 +1101,13 @@ function v3dInredning(scen,lagg){
         break;
       case"kartong": box(b,h,d,f,0,0,0); break;
       case"lysror": box(b,h,d,f,0,0,0,glas); break;
-      case"ventkanal": cyl(d/2,b,f,0,0,0,M4.rotZ(Math.PI/2)); break;
+      case"ventkanal":
+        /* Liggande spiralkanal längs objektets bredd: cyl() lyfter kroppen
+           halva LÄNGDEN innan den läggs ner, så den hamnade 2,8 m över
+           taket och syntes aldrig (checkpoint A). Här läggs den på sin
+           radie. */
+        alla.cyl(d/2,d/2,b,f,M4.mul(M4.mul(mat,M4.translation(b/2,d/2,0)),M4.rotZ(Math.PI/2)),10);  // rotZ(+90°) lägger lokala +y längs −x: starta vid +b/2
+        break;
       case"krokrad":{
         box(b,0.05,0.05,f,0,h-0.05,0);
         const n=o.antal||5, w=b/n, fargor=[f2,"#1E1E1E",f2,"#D4508C",f2,"#1E1E1E",f2];
@@ -1419,7 +1425,11 @@ function v3dStall(lagg,opp){
      på en skärmdump. */
   S3.statiskt.push({nat:GL.nat(stomme), platt:true});
   const galv=new Bygge();
-  for(let z=2;z<S.langd;z+=4)                       // dragstagen ner till boxarna
+  /* Dragstagen hör till boxhallens öppna takstol; i klubbdelen (platt
+     innertak) hängde de som lösa rör under taket — bara söder om den
+     genomgående väggen (review 2026-09-04 08:50, blocker A). */
+  const klubbGrans=(S.klubb.vaggar.find(v=>v.id==="genomgaende")||{y:S.klubbY}).y;
+  for(let z=2;z<klubbGrans;z+=4)                    // dragstagen ner till boxarna
     for(const rad of S.rader)
       galv.cyl(0.035,0.035,S.tak-2.3,"#B4B9BE",
         M4.translation(boxFrontX(rad),2.3,z),6);
@@ -1429,8 +1439,10 @@ function v3dStall(lagg,opp){
   for(let z=5;z<S.langd-3;z+=4.5)
     lykt.lada(1.5,0.10,0.85,"#F8F5E8",
       M4.mul(M4.translation(vx-halvB*0.52,S.tak+RESN*0.52,z),M4.rotZ(takV)));
-  /* Runda pendelarmaturer i rad över vardera boxraden. */
-  for(let z=3;z<S.langd;z+=4.5)
+  /* Runda pendelarmaturer i rad över vardera boxraden — bara i boxhallen:
+     klubbdelen norr om den genomgående väggen har platt innertak med
+     infälld rund armatur (stall-inne-01), inga pendlar. */
+  for(let z=3;z<klubbGrans;z+=4.5)
     for(const g of [S.gangar.A,S.gangar.B]){
       const ax=(g.x0+g.x1)/2;
       lykt.cyl(0.012,0.012,0.16,"#8E939B",M4.translation(ax,S.tak-0.16,z),5);
@@ -1642,9 +1654,34 @@ function v3dStall(lagg,opp){
      genomgående väggen; tona3d så att den tonas om kameran hamnar över den. */
   {const ky=S.klubb.vaggar.find(v=>v.id==="genomgaende"), y0=ky?ky.y:S.klubbY;
    const tak=new Bygge();
-   tak.lada(S.bredd,0.10,S.langd-y0,"#F4F2EC",M4.translation(S.bredd/2,2.85,(y0+S.langd)/2));
+   tak.lada(S.bredd,0.10,S.langd-y0,"#E4E1DA",M4.translation(S.bredd/2,2.85,(y0+S.langd)/2));
    tak.lada(S.bredd,0.06,0.06,"#E6E2D8",M4.translation(S.bredd/2,2.77,y0+0.03));
-   S3.statiskt.push({nat:GL.nat(tak),tex:null,tona3d:v3dBox(tak)});}
+   /* Undersidan får bara ambient och renderades gråbrun (checkpoint A,
+      7a5c60d) fast fotona visar ett VITT tak — samma sak som takplåten
+      över boxhallen: ritas obelyst med sin egen ton (platt:true). */
+   S3.statiskt.push({nat:GL.nat(tak),tex:null,platt:true,tona3d:v3dBox(tak)});}
+  /* VÄSTVÄGGENS VALVFÖNSTER INIFRÅN (review 2026-09-04 08:50, blocker A):
+     stall-inne-01 läser soffa–fönster–fotovägg–växt–ponny, och fönstret är
+     det rundbågiga valvfönstret i västväggen. Den låsta fasaden har två
+     valv på W (u 2,6 och 8,6 från norra gaveln), båda i uppehållsrummet;
+     insidan ritar SAMMA öppningar på SAMMA ställen, som gaveln ovan.
+     Fasadens valv står z 1,55–3,10, men innertaket ligger på 2,8 (fotot:
+     fönstrets båge slutar en bit under taklisten) — insidans ruta klipps
+     därför under taket. Höjdskillnaden är en dokumenterad motsägelse
+     (exteriören är låst); insidans fönsterhöjd är [antagande]. */
+  {const ky=S.klubb.vaggar.find(v=>v.id==="genomgaende"), ky0=ky?ky.y:S.klubbY;
+   const stallHus2=ANL.byggnader.find(b=>b.id==="stall");
+   const g=new Bygge(), FW=(u,z,ut)=>v3dFasadMat([0,0],0,1,u,z,ut);
+   for(const o of ((stallHus2&&stallHus2.oppningar)||[])){
+     if(o.sida!=="W"||o.typ!=="valv"||o.z0>=3)continue;
+     const cy=S.langd-o.u-o.b/2; if(cy<ky0)continue;      // u på W räknas från norra gaveln
+     const h=Math.min(o.h, 2.80-0.15-o.z0);
+     v3dPolygon(g,v3dValvKontur(o.b+0.20,h+0.20),"#EEEEE8",FW(cy,o.z0+h/2+0.06,OPPDJUP.karm));
+     v3dPolygon(g,v3dValvKontur(o.b,h),"#C8D6DE",FW(cy,o.z0+h/2,OPPDJUP.ruta));
+     v3dSprojs(g,o.b*0.9,h*0.72,FW(cy,o.z0+h*0.36,OPPDJUP.sprojs),3,2);
+     g.lada(o.b+0.30,0.04,0.22,"#EEEEE8",FW(cy,o.z0-0.02,0.14));   // fönsterbrädan
+   }
+   lagg(g,null);}
   lagg(rum,T.parlspont);
   /* Whiteboarden. */
   const wb=new Bygge();

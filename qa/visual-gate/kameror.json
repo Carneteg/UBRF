@@ -118,8 +118,8 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "3.1",
-        "y": "63.2",
+        "x": "2.4",
+        "y": "67.2",
         "rikt": "Math.PI*0.75"
       },
       "text": "Fotots vinkel (stall-inne-01): från rummets sydöstra del snett mot nordvästra hörnet — soffan mot västväggen under fotoväggen, valvfönstret norr om den med ponnyn under, klockan och växten söder om fotoväggen, den andra soffan i vinkel i förgrunden. Explicit kamera; figuren till vänster om blicklinjen.",
@@ -153,8 +153,8 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "12.8",
-        "y": "66.4",
+        "x": "15.9",
+        "y": "66.2",
         "rikt": "0"
       },
       "text": "Fotots vinkel (stall-inne-04): från rummets västra del österut — valvfönstren till vänster, whiteboardväggen rakt fram, bordsblocket med vita stolar, skåpet med mikron i sydöstra hörnet, planscherna på sydväggen, lysrören och spiralkanalen under det platta innertaket. Explicit kamera.",
@@ -186,8 +186,8 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "9.1",
-        "y": "60.2",
+        "x": "8.15",
+        "y": "62.5",
         "rikt": "Math.PI/2"
       },
       "text": "Fotots vinkel (stall-inne-03): från rummets södra del norrut — säkerhetsvästarna på krokrader längs västväggen till vänster, den täta vita stövelhyllan till höger, den grå ståldörren med fönster mot teorisalen rakt fram. Explicit kamera.",
@@ -321,7 +321,7 @@
       "hus": "ridhus",
       "scen": "ridhusinne",
       "lage": {
-        "x": "2.7",
+        "x": "2.9",
         "y": "69.6",
         "rikt": "Math.PI/2"
       },
@@ -343,13 +343,13 @@
       },
       "ram": "Lång obruten skåprad till höger (grå plåtskåp med enstaka röda/mörkgrå dörrar), receptionens låga bröstning + glasrutor till vänster mitt emot, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken — inga korridorväggar",
       "kamera": {
-        "x": "3.2",
+        "x": "3.4",
         "y": "66.7",
         "h": "1.65"
       },
       "mal": {
-        "x": "3.1",
-        "y": "76.2",
+        "x": "2.6",
+        "y": "76.0",
         "h": "1.0"
       }
     },

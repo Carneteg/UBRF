@@ -75,6 +75,25 @@ vid västväggen (fotot visar den till höger om sofforna, mot valvfönstret).
 Kontrollerat maskinellt: inget uppehållsrumsobjekt skär den slutna volymen
 eller en vägg. Klasserna är oförändrade.
 
+**Review 2026-09-04 08:50 (ChatGPT, blocker A) — checkpoint A/B på #76.**
+Etiketten "UPPEHÅLLSRUM" är borta (alla spelarvända rumsetiketter i de
+granskade interiörerna: uppehållsrum, WC, teorisal, sadelkammare).
+Klubbdelen har fått ett **platt vitt innertak** på 2,8 m norr om den
+genomgående väggen (stall-inne-01/-02/-03/-04 visar slät takskiva med
+taklist, inte boxhallens takstolar); boxhallens dragstag och pendlar slutar
+vid samma vägg. Soffgruppen ligger nu vid det **norra** valvfönstret
+(y 67,35) som `DERIVED`: bildens ordning klocka · växt · fotovägg ·
+fönster · ponny går bara ihop där, eftersom soffan vid det södra fönstret
+inte får plats söder om det. Fotoväggen på x 0,02 · N 65,75; fönstret
+norr om den; ponnyn (1,1; 67,55) under fönstret; västsoffan mot
+västväggen under fotona; sydsoffan i vinkel. Konsekvens: gruppen delar hörn
+med pentryt i `stall-inne-02` (pentrymöbler byggs fortfarande inte).
+Valvfönstren ritas nu **inifrån** (karm, spröjs, fönsterbräda) som
+gavelns fönster; fasadens valv står z 1,55–3,10 men innertaket på 2,8 —
+rutan klipps under taket (`[antagande]`, exteriören låst; dokumenterad
+motsägelse). Kamera `STALL-UPPEHALL-SOFFA`: (4,7; 62,9) → (0,9; 66,3),
+figuren höger om ponnyn.
+
 ### Stallhuset — pentryt: läge känt, möblering INTE byggd
 
 `stall-inne-02-pentryt.jpg` visar ett pentry (kubhylla, mikro, kyl, bord med
@@ -98,6 +117,7 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 | Läge | `DERIVED`: rummets enda yttervägg i planen är norra gaveln → fönstren där → kameran tittar österut → whiteboards på östväggen, planscher och kartonger på sydväggen, skåpet i sydöstra hörnet |
 | REFERENCE GAP | exakt antal stolar och bord (bilden beskär blocket); den svarta kontorsstolen och det hopfällda bordet byggs inte; gaveln har i fasaden valvfönster med hög bröstning (z0 2,6) — bildens låga valvfönster stämmer inte med fasaden: `CONTRADICTION`, fasaden låst, rapporterad |
 | Paritet | båda ytorna; borden, stolarna, skåpet och kartongerna kolliderar |
+| **Review 08:50 (blocker B)** | etiketten borta; whiteboards och planscher stod 0,03 från vägglinjen och låg INNE i den 0,16 m tjocka innerväggen — nu 0,10 (syns); spiralkanalen låg 2,8 m över taket (cyl-origo) — nu liggande på sin radie under innertaket; explicit kamera `STALL-TEORISAL` (11,7; 67,6) → (17,3; 67,0) i bildens vinkel |
 
 ### Stallhuset — sadelkammaren
 
@@ -109,7 +129,8 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 | Ändrat | `sadel_vastkrokar` (västväggen), `sadel_stovelhylla` (fristående mitt emot, så att bildens smala passage uppstår) |
 | Läge | `DERIVED` ur bilden + dörren från gång A i brandväggen (x 7,7–8,8): västväggen till vänster när man går in |
 | REFERENCE GAP | sadlar, träns och övrig utrustning som ordern räknar upp syns inte i bilden och byggs inte; rummets östra del (x > 10) är tom |
-| **Strukturell anmärkning (rapporterad, inte rättad)** | dörren "Teorisal" rakt fram leder norrut in i teorisalen. F02-A:s `teorisal_s` (y 64,35) har ingen öppning. F02-B rör inte topologin; dörren byggs inte |
+| **Strukturell anmärkning (rapporterad, inte rättad)** | dörren "Teorisal" rakt fram leder norrut in i teorisalen. F02-A:s `teorisal_s` (y 64,35) har ingen öppning. F02-B rör inte topologin; passagen byggs inte |
+| **Review 08:50 (blocker C)** | etiketten borta; `sadel_vastkrokar` (10 västar) på västväggen till vänster, `sadel_stovelhylla` tät vit hylla till höger, och `sadel_dorr_teori`: ett **ritat, stängt** grått dörrblad med fönster och vit karm på nordväggen (x 8,3–9,3) — läsbar dörr utan passage, tills F02-A belägger `teorisal_s`. Läget längs väggen `[antagande]`. Inga sadlar. Kamera `STALL-SADELKAMMARE` (8,7; 58,4) norrut |
 
 ### Stallhuset — gång A:s norra ände
 
@@ -163,6 +184,14 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 | Läsning att avgöra i F02-A (rapporterad) | i `ridhus-klubb-01/-15` vetter receptionens glas mot gången med skåpen. Med glaset på planens linje x 2,2 ligger gången alltså x 2,2–4,2 och receptionens insida **väster** om glaset (x 0–2,2) — F02-A:s passiva etikett RECEPTION står öster om glaset och SCV2-03-rutten går längs x 1,1. Möblerna följer glaset som det står; ingen topologi rörd |
 | **Strukturell anmärkning (rapporterad, inte rättad)** | bildens högra sida är en bröstningsvägg med **fyra glaspartier** in mot rummet innanför. F02-A läste `skap_o`:s fyra luckor som gångbara öppningar. Bilden talar för fönster, inte dörrar. Topologin rörs inte här |
 | REFERENCE GAP | omklädningsrummen (röda/svarta, gräddvita, gröna skåp; `ridhus-klubb-16/-18/-20/-21`), toaletterna, duschen med grönt draperi: rummen är fotograferade men **inte placerade** (Bild 2–5 saknas i repot, `F02-INTERIOR-MATRIS.md`). Inredning där byggs inte. Entréns vindfång (x 0–2,2 vid dörren) har inget belagt objekt kvar |
+
+**Review 08:50 (blocker D).** Skåpen är **en sammanhängande rad**
+`skap_v_*` x 4,45, N 68,3–75,0 (fronten mot väster) i stället för tre
+bankar med luckor; receptionens glas + låga vita disk mitt emot (x 2,2,
+N 73,5–77,0); bordet med stolarna (x 3,4) i gången norr om raden; rutten
+entré → hall går x 2,6–2,8 (glas 2,2, stolar 3,15–3,65). Explicit kamera
+`RIDHUS-SKAPKORRIDOR` (3,4; 66,7) → (2,6; 76,0): skåpraden höger, glaset
+och disken vänster, bordet, gavelns valvfönster och stövelbänken i fonden.
 
 ### Ridhuset — receptionen (PO 2026-09-04 07:54)
 
@@ -224,6 +253,10 @@ RECEPTION är borta.
 - Falsifierat (mutation → röd → återställt via cp): objekt hoppat över i
   byggaren; `laktarRader` tom; soffa flyttad ut ur rummet; soffa utan
   kollision; den gamla fronten återinförd. Alla fem gav rött.
+- Review 08:50: `bygge.spec` kräver noll etikettplattor när inga öppna rum
+  är namngivna, två valvfönster inifrån klubbdelen (karm + glas) med
+  överkant under innertaket 2,8. Falsifierat: klippningen bort (rutan når
+  3,10) → rött; ett fönster hoppat över → rött; återställt → grönt.
 - Webben: Playwright-render av tio vyer från ungefär referensbildernas håll
   (scratchpad `render-f02b.mjs`), kollisionsprov mot soffa, stövelhylla, bord,
   skåprad och stol: alla spärrar.

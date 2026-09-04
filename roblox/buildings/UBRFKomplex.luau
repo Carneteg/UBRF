@@ -3166,7 +3166,7 @@ return {
 				rum = "teorisal",
 				typ = "whiteboard",
 				pos = {
-					17.27,
+					17.2,
 					68.55,
 				},
 				rikt = 3.141593,
@@ -3186,7 +3186,7 @@ return {
 				rum = "teorisal",
 				typ = "whiteboard",
 				pos = {
-					17.27,
+					17.2,
 					66.95,
 				},
 				rikt = 3.141593,
@@ -3498,7 +3498,7 @@ return {
 				typ = "tavlor",
 				pos = {
 					15.9,
-					64.37,
+					64.45,
 				},
 				rikt = 1.570796,
 				matt = {
@@ -3520,7 +3520,7 @@ return {
 				typ = "tavlor",
 				pos = {
 					14.6,
-					64.37,
+					64.45,
 				},
 				rikt = 1.570796,
 				matt = {

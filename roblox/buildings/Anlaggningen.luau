@@ -1126,6 +1126,32 @@ local function byggStallInre(model: Model, base: CFrame)
 				end
 			end
 		end
+		--[[ Västväggens valvfönster inifrån (review 2026-09-04 08:50, blocker A):
+			stall-inne-01 läser soffa–fönster–fotovägg–växt–ponny; fönstret är
+			västväggens rundbågiga valv. Fasadens två W-valv (u från norra
+			gaveln) ligger båda i uppehållsrummet. Fasadens valv står z 1,55–3,10
+			men innertaket på 2,8 (fotot: bågen slutar under taklisten) — rutan
+			klipps under taket; höjden inifrån är [antagande], exteriören låst.
+			Samma tecknare som webben (v3dStall). ]]
+		local gy0 = S.klubbY
+		for _, v in ipairs(S.klubb.vaggar) do if v.id == "genomgaende" then gy0 = v.y end end
+		for _, op in ipairs((hus and hus.oppningar) or {}) do
+			if op.sida == "W" and op.typ == "valv" and op.z0 < 3 then
+				local cy = S.langd - op.u - op.b / 2
+				if cy >= gy0 then
+					local h = math.min(op.h, 2.80 - 0.15 - op.z0)
+					local z0 = o.y + cy - op.b / 2
+					BK.box(model, base, "Valvfönster inifrån, karm", o.x + 0.03, op.z0 - 0.10, z0 - 0.10,
+						0.06, h + 0.20, op.b + 0.20, V, Enum.Material.SmoothPlastic).CanCollide = false
+					local g = BK.box(model, base, "Valvfönster inifrån, glas", o.x + 0.10, op.z0, z0,
+						0.03, h, op.b, Color3.fromRGB(200, 214, 222), Enum.Material.Glass)
+					g.CanCollide = false
+					g.Transparency = 0.3
+					BK.box(model, base, "Valvfönster inifrån, fönsterbräda", o.x + 0.03, op.z0 - 0.04, z0 - 0.15,
+						0.22, 0.04, op.b + 0.30, V, Enum.Material.SmoothPlastic).CanCollide = false
+				end
+			end
+		end
 	end
 end
 

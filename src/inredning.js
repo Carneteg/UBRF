@@ -95,10 +95,14 @@ const INREDNING = (() => {
        (x 17,3), anatomiplanscherna på SYDVÄGGEN, skåpet med mikron i
        sydöstra hörnet, kartongerna längs sydväggen. DERIVED ur foto + plan.
        Bordsblocket står längs fönstersidan, stolarna runt det. */
-    {id:"teori_whiteboard_1", rum:"teorisal", typ:"whiteboard", pos:[T.x+T.w-0.03, 68.55], rikt:W,
+    /* Innerväggarna är 0,16 m tjocka kring sin linje (v3dVaggarOchRum), så
+       väggfasta ting måste stå 0,10 från linjen — 0,03 hamnade INNE i
+       väggen och syntes inte (checkpoint A, 7a5c60d). Fasadens innersida
+       ligger däremot 0,025 innanför sin linje (fotoväggen på x 0,02). */
+    {id:"teori_whiteboard_1", rum:"teorisal", typ:"whiteboard", pos:[T.x+T.w-0.10, 68.55], rikt:W,
      matt:{b:1.5, d:0.03, h:1.0}, z0:0.95, farg:"#F7F7F5",
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
-    {id:"teori_whiteboard_2", rum:"teorisal", typ:"whiteboard", pos:[T.x+T.w-0.03, 66.95], rikt:W,
+    {id:"teori_whiteboard_2", rum:"teorisal", typ:"whiteboard", pos:[T.x+T.w-0.10, 66.95], rikt:W,
      matt:{b:1.5, d:0.03, h:1.0}, z0:0.95, farg:"#F7F7F5",
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     {id:"teori_bord_1", rum:"teorisal", typ:"bord", pos:[13.2, 68.4], rikt:N,
@@ -118,10 +122,10 @@ const INREDNING = (() => {
     {id:"teori_skap_mikro", rum:"teorisal", typ:"skap", pos:[T.x+T.w-0.45, T.y+0.5], rikt:W,
      matt:{b:0.8, d:0.45, h:1.0}, farg:"#B8925C", mikro:true, kolliderar:true,
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
-    {id:"teori_plansch_1", rum:"teorisal", typ:"tavlor", pos:[15.9, T.y+0.02], rikt:N,
+    {id:"teori_plansch_1", rum:"teorisal", typ:"tavlor", pos:[15.9, T.y+0.10], rikt:N,
      matt:{b:1.0, d:0.03, h:0.75}, z0:1.25, antal:1, farg:"#B8925C", farg2:"#E8DDD0",
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
-    {id:"teori_plansch_2", rum:"teorisal", typ:"tavlor", pos:[14.6, T.y+0.02], rikt:N,
+    {id:"teori_plansch_2", rum:"teorisal", typ:"tavlor", pos:[14.6, T.y+0.10], rikt:N,
      matt:{b:1.0, d:0.03, h:0.75}, z0:1.25, antal:1, farg:"#B8925C", farg2:"#E8DDD0",
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     ...[15.3,14.6,13.9].map((x,i)=>(

@@ -338,6 +338,21 @@ do
 		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
 end
 
+--[[ Västväggens valvfönster inifrån (review 2026-09-04 08:50, blocker A):
+	stall-inne-01:s komposition soffa–fönster–fotovägg kräver att fasadens
+	W-valv syns på insidan av uppehållsrummet. Fasaden har två (u 2,6 och
+	8,6 från norra gaveln), och rutan klipps under innertaket på 2,8. ]]
+do
+	local karm, glas = raknaNamn("Valvfönster inifrån, karm"), raknaNamn("Valvfönster inifrån, glas")
+	check("västväggens två valvfönster byggs inifrån klubbdelen (karm + glas)",
+		karm == 2 and glas == 2, string.format("%d karmar, %d glas", karm, glas))
+	local under = true
+	for _, d in ipairs(delar) do
+		if d.Name == "Valvfönster inifrån, glas" and fot(d).z1 > 2.8 then under = false end
+	end
+	check("valvfönstrens insida slutar under innertaket (2,8 m)", under)
+end
+
 --[[ Inomhusläsbarhet: varje inre väggbit och sluten volym ska bära
 	attributet `Genomsiktlig`, annars kan klientens Genomsikt inte tona den
 	när den står mellan kameran och karaktären — och då försvinner spelaren
