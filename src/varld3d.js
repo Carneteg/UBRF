@@ -1473,6 +1473,20 @@ function v3dRidhus(lagg,opp){
      axel loppet har (`axel` "x": längs gaveln), med ett vitt snedställt
      sidostycke mot banan och en handledare i trä. Samma steg som
      gåendets nivåregel läser. */
+  /* Spelets bänkradssteg (SPELABSTRAKTION, se site.js) ritas med samma
+     stegregel men i neutral färg och med en gul genomskinlig markör, så
+     att en granskare ser att de inte är fidelity-geometri. */
+  const SA=SPELABSTRAKTIONER.ridhus.bankradSteg;
+  if(SA&&SA.x1>SA.x0){
+    const T=trappsteg(SA), b=SA.y1-SA.y0, mitt=(SA.y0+SA.y1)/2;
+    for(const st of T.steg){
+      const tj=Math.max(0.06,Math.abs(T.stig));
+      lak.lada(st.a1-st.a0,tj,b,"#B9A886",M4.translation((st.a0+st.a1)/2,st.z-tj/2,mitt));
+    }
+    const m=new Bygge();
+    m.lada(SA.x1-SA.x0,0.12,b,"#D6AE3C",M4.translation((SA.x0+SA.x1)/2,SA.z1+0.3,mitt));
+    S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true});
+  }
   for(const t of R.trappor||[]){
     const T=trappsteg(t), langsX=(T.axel==="x");
     const b=langsX ? t.y1-t.y0 : t.x1-t.x0;            // loppets bredd tvärs

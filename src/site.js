@@ -1840,21 +1840,14 @@ const RIDHUSINNE = {
      C-kortandan-och-kafeet.md`, `ridhus-inne-01`, `IMG_0192-f01/-f02`,
      `ridhus-inne-07`, `ridhus-klubb-10` (uppifrån, i övre gången).
 
-     `bankrad_upp`: stegen från entréhallens golv upp till nedersta
-     bänkraden vid blockets västra ände — den anslutning som gör
-     läktarplanet nåbart alls i spelet. Att publiken går upp på raderna
-     från hallsidan följer av planen (blocket står i entrédelen) och av
-     att trapporna går UPPÅT från raderna (`-01`); exakt läge och form
-     är `[uppskattning]`, märkt PRODUCT_OWNER_VERIFIED-topologi och
-     REFERENCE GAP-geometri. Läktargångens tredje trappa vid H-hörnet
-     (`ridhus-inne-14/-15/-10`) hör inte till den här ordern och byggs
-     inte. */
-  trappor:[
-    {id:"bankrad_upp", primitiv:"STAIR", canon_id:"ridhus_stand_access_stair",
-     axel:"x", x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, stiger:"E", stegMax:0.19,
-     source_id:"PO-2026-09-03-RIDHUS-STAIRS-01;PLAN:ridhus-entreplan-utrymning.jpg#c-blocket-i-entredelen;FOTO:ridhus-inne-01",
-     confidence:"PRODUCT_OWNER_VERIFIED"},
-  ],
+     Hur publiken kommer från entréhallens golv upp på bänkraderna visar
+     inget foto: den anslutningen är `REFERENCE GAP` i fidelity-datan och
+     finns BARA som spelets egen genväg `SPELABSTRAKTIONER.ridhus.bankradSteg`
+     (senior review 2026-09-04 04:08, blocker 1) — utanför den här listan,
+     utan provenance, märkt SPELABSTRAKTION på båda ytorna. Läktargångens
+     tredje trappa vid H-hörnet (`ridhus-inne-14/-15/-10`) hör inte till
+     ordern och byggs inte. */
+  trappor:[],   // fylls nedan ur kortanda.trappor — bara källbelagda lopp
   /* ÖVRE GÅNGEN — gången på övre plan innanför glasbandet, som C-trapporna
      landar i: `ridhus-klubb-10` (glasrummen på ena sidan, banan på den
      andra, trappan ner), `-07`–`-09` (caféet genom glaset). Golvet är
@@ -2171,6 +2164,17 @@ const SPELABSTRAKTIONER = {
   ridhus: {
     sargport:{x0:0, x1:0, y:0, bredd:2.2, klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
               motiv:"planens utrymningspilar; ingen bild visar grinden; bredden vald"},
+    /* `bankradSteg`: spelets steg från entréhallens golv upp till C-blockets
+       nedersta bänkrad vid blockets västra ände, så att läktarplanet och
+       de källbelagda C-trapporna går att nå till fots. INGET foto visar hur
+       publiken kommer upp på raderna; läge, form och antal steg är valda.
+       Därför är den inte en STAIR i RIDHUSINNE.trappor (fidelity) utan en
+       SPELABSTRAKTION här — utan canon_id/source_id/confidence, byggd
+       märkt på båda ytorna, och den räknas inte in i något F02-PASS.
+       (Senior review 2026-09-04 04:08, blocker 1.) Läget härleds nedan. */
+    bankradSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"x", stiger:"E", stegMax:0.19,
+                 klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
+                 motiv:"spelets väg från hallgolvet upp på bänkraderna; inget foto visar stegen; läge och form valda"},
   },
 };
 
@@ -2262,14 +2266,11 @@ const SPELABSTRAKTIONER = {
       source_id:"PO-2026-09-03-RIDHUS-STAIRS-01;FOTO:ridhus-inne-01,IMG_0192-f01,IMG_0192-f02,ridhus-inne-07,ridhus-klubb-10;PLAN:ridhus-entreplan-utrymning.jpg#trappor-12.4-15.2-16.4-18.9",
       confidence:"VERIFIED_PLAN_OR_PHOTO"}));
     R.trappor=[...cs, ...R.trappor.filter(t=>t.id!=="c_trappa_v"&&t.id!=="c_trappa_o")];
-    for(const t of R.trappor){
-      if(t.id==="bankrad_upp"){
-        /* från hallgolvet vid blockets västra ände, österut upp till
-           nedersta raden (sockel + ett steg), i radens egen remsa */
-        t.x0=K.x0-1.6; t.x1=K.x0; t.y0=mS?bank:bank-K.stegD; t.y1=mS?bank+K.stegD:bank;
-        t.z0=0; t.z1=SO+K.stegH; t.stiger="E";
-      }
-    }
+    /* Spelets genväg upp på raderna — SPELABSTRAKTION, inte fidelity (se
+       SPELABSTRAKTIONER). Följer blockets västra ände och nedersta raden. */
+    {const bs=SPELABSTRAKTIONER.ridhus.bankradSteg;
+     bs.x0=K.x0-1.6; bs.x1=K.x0; bs.y0=mS?bank:bank-K.stegD; bs.y1=mS?bank+K.stegD:bank;
+     bs.z0=0; bs.z1=SO+K.stegH; bs.axel="x"; bs.stiger="E";}
     if(R.ovreGang){ const G=R.ovreGang; G.x1=R.bredd-0.6; G.y0=mS?vagg:vagg-G.bredd; G.y1=G.y0+G.bredd; G.z=R.cafe.z0; }
   }
   /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */

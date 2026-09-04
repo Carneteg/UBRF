@@ -286,7 +286,11 @@ function ridhusNivaer(x,y){
      for(const sek of laktarSektioner(L))
        if(x>=L.x0&&x<=L.x0+L.dackDjup&&y>=sek.y0&&y<=sek.y1) bas=L.dackZ;
    }}
-  for(const t of R.trappor||[])
+  /* De källbelagda trapporna (fidelity) och spelets bänkradssteg
+     (SPELABSTRAKTION) läses lika för gåendet — det är bara sanningsvärdet
+     som skiljer dem, inte hur figuren kliver. */
+  const SA=(typeof SPELABSTRAKTIONER!=="undefined")&&SPELABSTRAKTIONER.ridhus.bankradSteg;
+  for(const t of (SA?[...(R.trappor||[]),SA]:(R.trappor||[])))
     if(x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1) bas=trappNiva(t,x,y);
   const ut=[bas];
   {const G=R.ovreGang;

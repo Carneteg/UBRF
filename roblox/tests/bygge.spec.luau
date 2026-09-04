@@ -700,11 +700,17 @@ end
 
 --[[ TRAPPORNA i bygget (Product Owner 2026-09-03 17:16; senior review
 	17:18): C-trappornas steg är byggda som solida klossar ur
-	Geometri.trappsteg, övre gångens golv ligger på caféplanet, och kedjan
-	entréhall → bänkradsstegen → bänkraderna → C-trappa → övre gången går
-	att KLIVA: golvet under varje provpunkt (högsta solida ovansida i
-	punkten) stiger aldrig mer än 0,36 m mellan två punkter. Ingen
-	teleport, ingen osynlig ramp. Båda trapporna provas var för sig. ]]
+	Geometri.trappsteg, övre gångens golv ligger på caféplanet, och
+	FIDELITY-kedjan översta bänkraden → C-trappa → övre gången går att
+	KLIVA: golvet under varje provpunkt (högsta solida ovansida i punkten)
+	stiger aldrig mer än 0,36 m mellan två punkter. Ingen teleport, ingen
+	osynlig ramp. Båda trapporna provas var för sig.
+
+	Senior review 2026-09-04 04:08 (blocker 1): anslutningen hallgolvet →
+	nedersta raden är INTE fidelity (inget foto). Den byggs bara som märkt
+	spelabstraktion ("Spelabstraktion bankradsteg …", Klass/Fidelity/Motiv,
+	ingen CanonId) och provas separat som SPELKRAV — den räknas inte in i
+	F02 och fidelity-kedjan ovan får inte bero på den. ]]
 do
 	local R2 = UBRFKomplex.ridhus
 	local o = R2.origo
@@ -756,18 +762,21 @@ do
 	local K = R2.kortanda
 	local tr = {}
 	for _, t in ipairs(R2.trappor or {}) do tr[t.id] = t end
-	check("bänkradsstegen och båda C-trapporna finns i den byggda datan",
-		tr.bankrad_upp ~= nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil)
-	if K and tr.bankrad_upp and tr.c_trappa_v and tr.c_trappa_o and G2 then
-		local bank = tr.bankrad_upp
+	check("båda C-trapporna finns i den byggda fidelity-datan, och inga bänkradssteg gör det",
+		tr.bankrad_upp == nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil and #(R2.trappor or {}) == 2)
+	for _, d in ipairs(delar) do
+		if d.Name:find("Trappa ", 1, true) == 1 and d:GetAttribute("Primitiv") == "STAIR" then
+			check("fidelity-trappsteget " .. d.Name .. " bär inte SPELABSTRAKTION-märkning",
+				d:GetAttribute("Klass") == nil and d:GetAttribute("Confidence") == "VERIFIED_PLAN_OR_PHOTO")
+		end
+	end
+	if K and tr.c_trappa_v and tr.c_trappa_o and G2 then
 		local mS = K.vand == "S"
 		for _, ct in ipairs({ tr.c_trappa_v, tr.c_trappa_o }) do
-			local rutt = { { bank.x0 - 0.6, (bank.y0 + bank.y1) / 2, 0.5 } }
-			local _, p1 = mittpunkter(bank)
-			for _, p in ipairs(p1) do table.insert(rutt, { p[1], p[2], 1.5 }) end
-			-- upp för bänkraderna till översta raden, i trappans x-mitt
+			-- fidelity-kedjan börjar på ÖVERSTA bänkraden (foto: foten vid klockväggen)
 			local xm = (ct.x0 + ct.x1) / 2
-			for i = 1, K.steg do
+			local rutt = {}
+			for i = K.steg - 1, K.steg do
 				local yc = if mS then K.y0 + (i - 0.5) * K.stegD else K.y1 - (i - 0.5) * K.stegD
 				table.insert(rutt, { xm, yc, (K.sockelH or 0) + K.stegH * i + 0.3 })
 			end
@@ -778,15 +787,58 @@ do
 			local xt = if ct.stiger == "W" then ct.x0 + 0.4 else ct.x1 - 0.4
 			table.insert(rutt, { xt, G2.y0 + 0.8, R2.cafe.z0 + 0.3 })
 			table.insert(rutt, { (G2.x0 + G2.x1) / 2, G2.y0 + 1.0, R2.cafe.z0 + 0.3 })
-			local forra, brott = 0, nil
+			local forra, brott = golvVid(o.x + rutt[1][1], o.y + rutt[1][2], rutt[1][3]), nil
+			check(string.format("fidelity-kedjan för %s startar på översta bänkraden (%.2f m)", ct.id, (K.sockelH or 0) + K.stegH * (K.steg - 1)),
+				math.abs(forra - ((K.sockelH or 0) + K.stegH * (K.steg - 1))) < 0.15, string.format("golv %.2f", forra))
 			for i, p in ipairs(rutt) do
 				local z = golvVid(o.x + p[1], o.y + p[2], p[3])
 				if math.abs(z - forra) > 0.36 then brott = brott or string.format("steg %d vid (%.1f, %.1f): %.2f → %.2f", i, p[1], p[2], forra, z) end
 				forra = z
 			end
-			check(string.format("kedjan entréhall → bänkradsstegen → raderna → %s → övre gången går att kliva (max 0,36 m per steg)", ct.id),
+			check(string.format("fidelity-kedjan översta raden → %s → övre gången går att kliva (max 0,36 m per steg)", ct.id),
 				brott == nil and math.abs(forra - R2.cafe.z0) < 0.05, brott or string.format("slutnivå %.2f", forra))
 		end
+	end
+
+	--[[ SPELKRAV (inte fidelity, räknas inte i F02): spelets bänkradssteg
+		är byggda som märkt SPELABSTRAKTION och tar spelaren från hallgolvet
+		upp på nedersta raden — så att fidelity-kedjan ovan är nåbar i spelet
+		utan att någon påhittad geometri kallas verklighet. ]]
+	local bs = UBRFKomplex.spelabstraktioner and UBRFKomplex.spelabstraktioner.ridhus
+		and UBRFKomplex.spelabstraktioner.ridhus.bankradSteg
+	check("spelets bänkradssteg finns som spelabstraktion i den byggda datan", bs ~= nil)
+	if bs and K then
+		local T, pts = mittpunkter(bs)
+		local byggda = raknaNamn("Spelabstraktion bankradsteg steg ")
+		check(string.format("spelkrav: bänkradsstegen byggdes med alla %d steg", T.n), byggda == T.n, byggda .. " steg")
+		local markta, omarkta = 0, 0
+		for _, d in ipairs(delar) do
+			if d.Name:find("Spelabstraktion bankradsteg", 1, true) == 1 then
+				if d:GetAttribute("Klass") == "SPELABSTRAKTION" and d:GetAttribute("Fidelity") == "REFERENCE GAP"
+					and d:GetAttribute("CanonId") == nil and d:GetAttribute("SourceId") == nil
+					and d:GetAttribute("Confidence") == nil and d:GetAttribute("Primitiv") == nil then markta += 1 else omarkta += 1 end
+			end
+		end
+		check("spelkrav: varje bänkradsstegs-del är märkt Klass/Fidelity och bär INGEN kanonprovenance",
+			markta == T.n + 1 and omarkta == 0, string.format("%d märkta, %d omärkta", markta, omarkta))
+		local m = nil
+		for _, d in ipairs(delar) do if d.Name == "Spelabstraktion bankradsteg" then m = d end end
+		check("spelkrav: bänkradsstegen har en synlig, icke-kolliderande markör som sargporten",
+			m ~= nil and m.CanCollide == false and m.Transparency > 0.5)
+		-- rutten hallgolvet → stegen → nedersta raden
+		local rutt = { { bs.x0 - 0.6, (bs.y0 + bs.y1) / 2, 0.5 } }
+		for _, p in ipairs(pts) do table.insert(rutt, { p[1], p[2], 1.5 }) end
+		local mS = K.vand == "S"
+		local yc = if mS then K.y0 + 0.5 * K.stegD else K.y1 - 0.5 * K.stegD
+		table.insert(rutt, { bs.x1 + 0.4, yc, (K.sockelH or 0) + K.stegH + 0.3 })
+		local forra, brott = 0, nil
+		for i, p in ipairs(rutt) do
+			local z = golvVid(o.x + p[1], o.y + p[2], p[3])
+			if math.abs(z - forra) > 0.36 then brott = brott or string.format("steg %d vid (%.1f, %.1f): %.2f → %.2f", i, p[1], p[2], forra, z) end
+			forra = z
+		end
+		check("spelkrav: hallgolvet → spelets bänkradssteg → nedersta raden går att kliva (max 0,36 m per steg)",
+			brott == nil and math.abs(forra - ((K.sockelH or 0) + K.stegH)) < 0.15, brott or string.format("slutnivå %.2f", forra))
 	end
 end
 

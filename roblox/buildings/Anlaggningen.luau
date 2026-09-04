@@ -1055,6 +1055,34 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			end
 		end
 	end
+	--[[ SPELETS BÄNKRADSSTEG (G.spelabstraktioner.ridhus.bankradSteg): inte
+		fidelity — inget foto visar hur publiken kommer upp på raderna. Byggs
+		som kliv-bara klossar MÄRKTA med Klass/Fidelity/Motiv som attribut
+		(ingen CanonId/SourceId/Confidence), i neutral färg, med en gul
+		genomskinlig markör som sargporten. Räknas inte in i något F02-PASS. ]]
+	do
+		local bs = G.spelabstraktioner and G.spelabstraktioner.ridhus and G.spelabstraktioner.ridhus.bankradSteg
+		if bs and bs.x1 > bs.x0 then
+			local T = GEO.trappsteg(bs)
+			local b = bs.y1 - bs.y0
+			for i, st in ipairs(T.steg) do
+				local tj = math.max(0.06, math.abs(T.stig))
+				local p = BK.box(model, base, "Spelabstraktion bankradsteg steg " .. i,
+					o.x + st.a0, st.z - tj, o.y + bs.y0, st.a1 - st.a0, tj, b,
+					Color3.fromRGB(185, 168, 134), Enum.Material.WoodPlanks)
+				p:SetAttribute("Klass", bs.klass)
+				p:SetAttribute("Fidelity", bs.fidelity)
+				p:SetAttribute("Motiv", bs.motiv)
+			end
+			local markor = BK.box(model, base, "Spelabstraktion bankradsteg", o.x + bs.x0, bs.z1 + 0.3, o.y + bs.y0,
+				bs.x1 - bs.x0, 0.12, b, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
+			markor.CanCollide = false
+			markor.Transparency = 0.7
+			markor:SetAttribute("Klass", bs.klass)
+			markor:SetAttribute("Fidelity", bs.fidelity)
+			markor:SetAttribute("Motiv", bs.motiv)
+		end
+	end
 	--[[ ÖVRE GÅNGEN (R.ovreGang): golvet på caféplanet längs banans kant som
 		läktargångens trappa landar i (`ridhus-klubb-10`), och ett räcke mot
 		banan där C-blockets glasband inte står — utom i trappans mynning.

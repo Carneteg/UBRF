@@ -733,16 +733,47 @@ do
 		två C-trapporna ur C-kortandan-och-kafeet.md). Datan provas här:
 		båda C-trapporna finns som STAIR-primitiver härledda ur
 		kortanda.trappor, går längs gaveln från översta bänkraden (sockel +
-		steg × stegH) till caféplanet, stiger utåt från klockväggen;
-		bänkradsstegen från hallgolvet till nedersta raden finns; stegen
+		steg × stegH) till caféplanet, stiger utåt från klockväggen; stegen
 		(Geometri.trappsteg) är under 0,2 m och sammanhängande; övre gången
-		ligger på caféplanet norr om vägglinjen; allt bär provenance. ]]
+		ligger på caféplanet norr om vägglinjen; allt bär provenance med FOTO
+		som källa och VERIFIED_PLAN_OR_PHOTO som confidence.
+
+		Senior review 2026-09-04 04:08 (blocker 1): vägen hallgolvet → nedersta
+		bänkraden har INGET foto och får inte ligga i fidelity-datan. Den
+		finns bara som spelabstraktion (SPELABSTRAKTIONER.ridhus.bankradSteg),
+		utan canon_id/source_id/confidence, och räknas inte in i F02. ]]
 	local trappor = {}
 	for _, t in ipairs(R.trappor or {}) do trappor[t.id] = t end
-	local cv, co, bank = trappor.c_trappa_v, trappor.c_trappa_o, trappor.bankrad_upp
+	local cv, co = trappor.c_trappa_v, trappor.c_trappa_o
 	local K = R.kortanda
 	check("båda C-trapporna finns i datan som STAIR-primitiver", cv ~= nil and co ~= nil)
-	check("bänkradsstegen (hallgolvet → nedersta raden) finns", bank ~= nil)
+	check("fidelity-datan innehåller BARA de två fotobelagda C-trapporna (inga bänkradssteg)",
+		#(R.trappor or {}) == 2 and trappor.bankrad_upp == nil, #(R.trappor or {}) .. " trappor")
+	for id, t in pairs(trappor) do
+		check(string.format("trappan %s bär confidence VERIFIED_PLAN_OR_PHOTO och en FOTO-källa (ingen PO-verifierad fidelity utan bild)", id),
+			t.confidence == "VERIFIED_PLAN_OR_PHOTO" and type(t.source_id) == "string" and t.source_id:find("FOTO:", 1, true) ~= nil
+				and t.klass == nil,
+			tostring(t.confidence) .. " / " .. tostring(t.source_id))
+	end
+	local SA = UBRFKomplex.spelabstraktioner
+	local bs = SA and SA.ridhus and SA.ridhus.bankradSteg
+	check("spelets bänkradssteg ligger i spelabstraktioner, märkta SPELABSTRAKTION med REFERENCE GAP i fidelity",
+		bs ~= nil and bs.klass == "SPELABSTRAKTION" and bs.fidelity == "REFERENCE GAP" and type(bs.motiv) == "string" and #bs.motiv > 10)
+	check("spelets bänkradssteg bär INGEN kanonprovenance (ingen canon_id/source_id/confidence/primitiv)",
+		bs ~= nil and bs.canon_id == nil and bs.source_id == nil and bs.confidence == nil and bs.primitiv == nil)
+	if bs and K then
+		-- spelkrav (inte fidelity): stegen måste faktiskt ansluta golvet till nedersta raden
+		local T = Geometri.trappsteg(bs)
+		local ok, forra = true, bs.z0
+		for _, st in ipairs(T.steg) do
+			if math.abs(st.z - forra) > 0.2 + 1e-6 or st.a1 - st.a0 < 0.2 then ok = false end
+			forra = st.z
+		end
+		check("spelkrav: bänkradsstegen går från golvet (0) till nedersta raden i steg under 0,2 m (inte fidelity)",
+			bs.z0 == 0 and math.abs(bs.z1 - ((K.sockelH or 0) + K.stegH)) < 0.01 and ok and math.abs(forra - bs.z1) < 1e-6
+				and bs.y0 >= K.y0 - 0.01 and bs.y1 <= K.y1 + 0.01,
+			string.format("z %.2f → %.2f, %d steg", bs.z0, bs.z1, T.n))
+	end
 	if cv and co and K then
 		local topp = (K.sockelH or 0) + K.steg * K.stegH
 		for _, t in ipairs({ cv, co }) do
@@ -757,13 +788,6 @@ do
 			string.format("v %.1f–%.1f (%s), o %.1f–%.1f (%s), klocka %.1f", cv.x0, cv.x1, tostring(cv.stiger), co.x0, co.x1, tostring(co.stiger), K.klocka and K.klocka.x or -1))
 		check("trapporna följer planens lägen (12,4–15,2 och 16,4–18,9 m från väster, ±0,3)",
 			math.abs(cv.x0 - 12.4) < 0.3 and math.abs(cv.x1 - 15.2) < 0.3 and math.abs(co.x0 - 16.4) < 0.3 and math.abs(co.x1 - 18.9) < 0.3)
-	end
-	if bank and K then
-		check("bänkradsstegen går från golvet (0) upp till nedersta raden vid blockets västra ände",
-			bank.z0 == 0 and math.abs(bank.z1 - ((K.sockelH or 0) + K.stegH)) < 0.01 and bank.axel == "x"
-				and math.abs(bank.x1 - K.x0) < 0.01 and bank.stiger == "E"
-				and bank.y0 >= K.y0 - 0.01 and bank.y1 <= K.y1 + 0.01,
-			string.format("z %.2f → %.2f, x %.1f–%.1f, y %.1f–%.1f", bank.z0, bank.z1, bank.x0, bank.x1, bank.y0, bank.y1))
 	end
 	for id, t in pairs(trappor) do
 		local T = Geometri.trappsteg(t)

@@ -109,14 +109,17 @@ prova("toalettvolymen stoppar (WC-väggen N 2,4 är kollision)", p.y < 74.8, `fr
 const niv = await page.evaluate(() => {
   const R = RIDHUSINNE, K = R.kortanda, f = id => R.trappor.find(t => t.id === id);
   return { cafe: R.cafe.z0, topp: (K.sockelH || 0) + K.steg * K.stegH, K: { x0: K.x0, x1: K.x1, y0: K.y0, y1: K.y1, steg: K.steg, stegD: K.stegD },
-    bank: f("bankrad_upp"), cv: f("c_trappa_v"), co: f("c_trappa_o"), G: R.ovreGang };
+    bank: SPELABSTRAKTIONER.ridhus.bankradSteg, cv: f("c_trappa_v"), co: f("c_trappa_o"), G: R.ovreGang };
 });
 const ym = (t) => (t.y0 + t.y1) / 2;
 /* 6. entréhallen → bänkradsstegen (österut) → nedersta bänkraden. */
 let q = await gaZ("ridhusinne", niv.bank.x0 - 0.6, ym(niv.bank), "O", r => r.x > niv.bank.x1 + 0.3, 12000);
-prova("entréhallen → bankrad_upp → nedersta bänkraden", q.x > niv.bank.x1 + 0.3 && q.z > niv.bank.z1 - 0.02, `till (${q.x}, ${q.y}) z ${q.z} (rad 1 = ${niv.bank.z1.toFixed(2)})`);
+prova("SPELKRAV (inte fidelity): entréhallen → spelets bänkradssteg (SPELABSTRAKTION) → nedersta bänkraden", q.x > niv.bank.x1 + 0.3 && q.z > niv.bank.z1 - 0.02, `till (${q.x}, ${q.y}) z ${q.z} (rad 1 = ${niv.bank.z1.toFixed(2)})`);
 /* 7. upp för bänkraderna (norrut) till översta raden, i vänstra trappans x. */
-q = await gaZ("ridhusinne", (niv.cv.x0 + niv.cv.x1) / 2, niv.K.y0 + 0.5, "N", r => r.y > niv.K.y1 - niv.K.stegD - 0.2, 12000, niv.bank.z1);
+/* Stoppvillkoret är NIVÅN, inte ett y som ligger inne i rad 3 (pollningen
+   var 200 ms stannade figuren 13 cm före rad 4). Riserns spärr (trappan
+   stiger 0,8 m i flyktens mitt) stoppar den strax efter. */
+q = await gaZ("ridhusinne", (niv.cv.x0 + niv.cv.x1) / 2, niv.K.y0 + 0.5, "N", r => r.z > niv.topp - 0.02 || r.y > niv.K.y1 - 0.5, 12000, niv.bank.z1);
 prova("bänkraderna går att gå upp för till översta raden", Math.abs(q.z - niv.topp) < 0.02, `till y ${q.y}, z ${q.z} (översta raden ${niv.topp.toFixed(2)})`);
 /* 8a. vänstra C-trappan: från foten vid klockväggen västerut upp till caféplanet. */
 q = await gaZ("ridhusinne", niv.cv.x1 - 0.2, ym(niv.cv), "V", r => r.z >= niv.cafe - 0.02, 20000, niv.topp);

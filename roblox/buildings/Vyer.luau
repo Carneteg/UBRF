@@ -199,7 +199,7 @@ Vyer.vyer = {
 		text = "På översta bänkraden vid klockväggen: vänstra C-trappan stiger västerut längs gaveln upp till övre gången",
 		fran = { x = Ro.x + 15.6, y = Ro.y + 69.6, h = (R.kortanda.sockelH or 0) + R.kortanda.steg * R.kortanda.stegH + 1.7 },
 		mot = { x = Ro.x + 12.0, y = Ro.y + 69.6 },
-		krav = "Product Owner 2026-09-03 (senior review 17:18): C-ändans TVÅ raka trappor med träräcke (ridhus-inne-01, IMG_0192-f01/-f02, ridhus-inne-07) — loppen går LÄNGS gaveln, foten vid klockväggen, stigande utåt (vänstra mot väster, högra mot öster) från översta bänkraden till caféplanet, med vitt snedställt sidostycke mot banan. Båda ska gå att KLIVA i Studio: bänkradsstegen vid blockets västra ände (Trappa bankrad_upp), raderna, trappan (Trappa c_trappa_v/o steg 1–9) och in i övre gången (Övre gångens golv). Inget steg över 0,19 m. Ingen osynlig ramp.",
+		krav = "Product Owner 2026-09-03 (senior review 17:18): C-ändans TVÅ raka trappor med träräcke (ridhus-inne-01, IMG_0192-f01/-f02, ridhus-inne-07) — loppen går LÄNGS gaveln, foten vid klockväggen, stigande utåt (vänstra mot väster, högra mot öster) från översta bänkraden till caféplanet, med vitt snedställt sidostycke mot banan. Båda ska gå att KLIVA i Studio: spelets bänkradssteg vid blockets västra ände (Spelabstraktion bankradsteg — märkt spelabstraktion, inte fidelity), raderna, trappan (Trappa c_trappa_v/o steg 1–9) och in i övre gången (Övre gångens golv). Inget steg över 0,19 m. Ingen osynlig ramp.",
 	},
 	{
 		id = "c_trapporna_fran_toppen",

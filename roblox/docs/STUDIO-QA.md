@@ -262,8 +262,10 @@ ostkorridor_v). Rör aldrig geometrin för att lösa det — det är datan i
 Gå in genom huvudentrén och fram till C-blockets västra ände (bänkblocket
 under glasbandet, med stjärnan och klockan).
 
-**Ska gå att göra:** kliva upp för bänkradsstegen (`Trappa bankrad_upp steg
-1–6`) till nedersta raden, upp för de fyra raderna, och från översta raden
+**Ska gå att göra:** kliva upp för SPELETS bänkradssteg (`Spelabstraktion
+bankradsteg steg 1–6` — märkta klossar med gul markör; inte fidelity, inget
+foto visar hur publiken kommer upp, senior review 2026-09-04 04:08) till
+nedersta raden, upp för de fyra raderna, och från översta raden
 vid klockväggen upp för VÄNSTRA trappan västerut (`Trappa c_trappa_v steg
 1–9`) eller HÖGRA trappan österut (`Trappa c_trappa_o steg 1–9`) till övre
 gången (`Övre gångens golv`, caféplanet 3,68 m) — utan hopp, utan att fastna
@@ -277,7 +279,9 @@ i tre fält (ridhus-inne-01), träräcken.
 **Fynd:** ett steg karaktären inte kliver upp för; ett hål eller en
 osynlig spärr i kedjan; att man kan komma upp i övre gången någon annanstans
 än via trapporna; att övre gången saknar golv; ett trappsteg som saknar
-attributen `CanonId`/`SourceId`/`Confidence`/`Primitiv` (= STAIR). Rör aldrig
+attributen `CanonId`/`SourceId`/`Confidence`/`Primitiv` (= STAIR); en
+`Spelabstraktion bankradsteg`-del som bär `CanonId` eller saknar
+`Klass`/`Fidelity` (abstraktionen får aldrig se ut som verklighet). Rör aldrig
 trapporna för hand — datan är `RIDHUSINNE.kortanda.trappor` (loppen) →
 `RIDHUSINNE.trappor` (härledda STAIR-primitiver) i src/site.js, och stegen
 räknas av `Geometri.trappsteg`.
