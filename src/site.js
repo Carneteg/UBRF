@@ -2224,7 +2224,7 @@ const SPELABSTRAKTIONER = {
        Läget härleds ur läktaren. */
     laktarSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
                 klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
-                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda"},
+                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Spänner däckets brukbara norra gavel (x 1,6–4,0) sedan P0 #81: en smalare remsa med 0,2 m godtycklig marginal gjorde läktaren oåtkomlig i den riktiga webbruntimen"},
   },
 };
 
@@ -2351,9 +2351,26 @@ const SPELABSTRAKTIONER = {
          source_id:"FOTO:ridhus-klubb-10,ridhus-inne-39", confidence:"VERIFIED_PLAN_OR_PHOTO"};
        /* Spelets steg från hallgolvet upp på däcket vid läktarens norra
           ände — SPELABSTRAKTION (se SPELABSTRAKTIONER.ridhus.laktarSteg):
-          -39 visar en nivåskillnad vid däckets ände, inte stegen. */
+          -39 visar en nivåskillnad vid däckets ände, inte stegen.
+
+          P0 #81: stegen började på `L.x0+bredd+0.2` = 1,8. Mätt i den
+          riktiga 3D-runtimen (tools/laktartest.mjs) kom bara 4 av 8
+          angreppspunkter längs däckets norra ände upp, och den som klev in
+          genom huvudentrén (dörren står på x 1,6) och gick rakt fram
+          stannade död på (1,60; 65,69) z 0 mot däckets kant. I en 25 m bred
+          hall ledde alltså ett par meter osynlig remsa upp — det är felet
+          PO rapporterade.
+
+          De 0,2 m var godtyckliga och tas bort: stegen börjar där däcket
+          FAKTISKT blir gångbart. Läktartrappan vid H upptar däckets
+          nordvästra hörn (x 0,6–1,6, y 62,82–65,68) och ligger på z 1,7 →
+          3,68 — den nås från översta raden, inte från däcket. Väster om
+          x 1,6 finns därför ingen däcksnivå att kliva ut på, och stegen
+          spänner nu exakt den brukbara änden: x 1,6 → 4,0. Ingen ny
+          geometri, samma abstraktion, inget källbelagt flyttat. Däckets
+          långsida spärrar fortfarande — man går upp vid gaveln. */
        const ls=SPELABSTRAKTIONER.ridhus.laktarSteg;
-       ls.x0=L.x0+bredd+0.2; ls.x1=L.x0+L.dackDjup; ls.y0=L.y1; ls.y1=L.y1+1.2;
+       ls.x0=L.x0+bredd; ls.x1=L.x0+L.dackDjup; ls.y0=L.y1; ls.y1=L.y1+1.2;
        ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
      }}
   }

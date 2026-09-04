@@ -2981,7 +2981,7 @@ return {
 				motiv = "spelets väg från hallgolvet upp på bänkraderna; inget foto visar stegen; läge och form valda",
 			},
 			laktarSteg = {
-				x0 = 1.8,
+				x0 = 1.6,
 				x1 = 4,
 				y0 = 65.68,
 				y1 = 66.88,
@@ -2992,7 +2992,7 @@ return {
 				stegMax = 0.19,
 				klass = "SPELABSTRAKTION",
 				fidelity = "REFERENCE GAP",
-				motiv = "spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda",
+				motiv = "spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Spänner däckets brukbara norra gavel (x 1,6–4,0) sedan P0 #81: en smalare remsa med 0,2 m godtycklig marginal gjorde läktaren oåtkomlig i den riktiga webbruntimen",
 			},
 		},
 	},
