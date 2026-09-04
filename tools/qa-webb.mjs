@@ -64,8 +64,13 @@ export async function oppnaWebb({ port = 8792, siktprov = false, bredd = 1280, h
 }
 
 /* Räknar ut ett läge ur uttrycken och teleporterar dit; kameran snappar
-   bakom figuren i blickriktningen (kameraNollstall), som vid ett scenbyte. */
-export async function stallKamera(page, kamera, vantaMs = 1500) {
+   bakom figuren i blickriktningen (kameraNollstall), som vid ett scenbyte.
+
+   Väntar sedan på att scenen är den begärda OCH att minst två bildrutor
+   ritats efter teleporten (V3D.bild) — inte en fast tid. En fast väntan
+   höll lokalt men inte på CI-runnern, där kameran fortfarande stod kvar
+   vid förra kameran när provet togs (run 33841003442). */
+export async function stallKamera(page, kamera, vantaMs = 300) {
   const lage = await page.evaluate(({ scen, lage, kam, mal }) => {
     const S = STALLINNE, R = RIDHUSINNE, SA = SPELABSTRAKTIONER;
     const f = e => (e === undefined || e === null) ? 0 : (typeof e === "number" ? e : Function("S", "R", "SA", "Math", `return (${e})`)(S, R, SA, Math));
@@ -76,8 +81,11 @@ export async function stallKamera(page, kamera, vantaMs = 1500) {
        hinner inte stå i ögonhöjd i trånga lägen (ett brott i en boxrad),
        så reviewkameran ställs själv — deterministiskt ur samma data. */
     if (kam && mal) V3D.fast = { x: f(kam.x), y: f(kam.h), z: f(kam.y), tx: f(mal.x), ty: f(mal.h), tz: f(mal.y) };
+    p.bild0 = V3D.bild || 0;
     return p;
   }, { scen: kamera.scen, lage: kamera.lage, kam: kamera.kamera || null, mal: kamera.mal || null });
+  await page.waitForFunction(({ b0, scen }) => V3D.plats === scen && (V3D.bild || 0) >= b0 + 2 && V3D.kam.satt === true,
+    { b0: lage.bild0, scen: kamera.scen }, { timeout: 60000, polling: 50 });
   await page.waitForTimeout(vantaMs);
   return lage;
 }

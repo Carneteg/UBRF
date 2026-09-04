@@ -2360,6 +2360,7 @@ function ritaVandring3D(){
     const L=s3Ljus(inne?"ridhus":"ute");
     GL.start(CW,CH,DPR,L);
     const k=v3dKamera(dt);
+    V3D.bild=(V3D.bild||0)+1;                     // bildrutor ritade — QA-harnessen väntar på dem
     GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.05);
     const gl=GL.gl;
     GL.himmel(L);                                 // gradient och sol

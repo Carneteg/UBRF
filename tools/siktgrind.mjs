@@ -76,7 +76,7 @@ async function kor(sabotage) {
   if (sabotage) await w.page.evaluate(() => { window.__tonasOrig = v3dTonas; v3dTonas = () => false; });
   const ut = [];
   for (const p of prov) {
-    await stallKamera(w.page, p, 350);
+    await stallKamera(w.page, p, 100);
     /* En ruttpunkt som hamnar INNE i ett hinder (en stolpe, ett räcke)
        är teleportens artefakt — dit går man inte i spelet. Hoppas över,
        räknas. */

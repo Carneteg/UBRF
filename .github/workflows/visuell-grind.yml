@@ -65,10 +65,14 @@ jobs:
       - name: Siktgrinden (med negativ kontroll)
         run: node tools/siktgrind.mjs
 
+      # Paketet renderas även när siktgrinden fallit: bilderna är evidensen
+      # som visar VAD som föll. Jobbet blir ändå rött av steget ovan.
       - name: Screenshot-pack från PR-headen
+        if: always()
         run: node tools/screenshot-pack.mjs --ut qa/screenshot-pack --forvantad-head "${{ github.event.pull_request.head.sha || github.sha }}"
 
       - name: Head-identitet — pack.json bär PR-headen
+        if: always()
         run: |
           set -euo pipefail
           vantad="${{ github.event.pull_request.head.sha || github.sha }}"
@@ -84,7 +88,7 @@ jobs:
         with:
           name: screenshot-pack-${{ github.event.pull_request.head.sha || github.sha }}
           path: qa/screenshot-pack
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Head-SHA + preview + paket i PR-kommentaren
