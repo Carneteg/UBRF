@@ -935,7 +935,26 @@ function v3dStall(lagg,opp){
      Väggen läser nu det MÄTTA `#C1C0C3` ur stall-inne-09, och södra gaveln
      byggs i bitar runt gaveldörren så att dagsljuset syns. */
   const vagg=new Bygge();
-  vagg.lada(S.bredd+0.4,S.tak,0.25,S.vagg,M4.translation(vx,S.tak/2,S.langd+0.1));
+  /* NORRA GAVELN INIFRÅN — klubbgaveln. Den låsta fasaden (ANL.byggnader
+     stall, sida N) har entrédörren mitt på gaveln med ett runt fönster på
+     var sida (stall-entre-15). Insidan visar SAMMA öppningar på SAMMA
+     ställen — det är gavelns identitet: väggen skärs runt dörren,
+     dörrbladet står i öppningen (ockragult med solfjäderfönster och vit
+     karm; färgen inifrån är [antagande], samma som utsidan) och de runda
+     fönstren ritas på insidan som utsidan ritar dem. Planens vindfång
+     (x 3,6–5,5) och `ut_n` står kvar där de står — dokumenterad
+     motsägelse, DEFERRED BY EXTERIOR LOCK (noten vid STALLINNE.klubb).
+     Senior visual review 2026-09-04 05:51 (STALL-ENTRE MISMATCH). */
+  const stallHus=ANL.byggnader.find(b=>b.id==="stall");
+  const NO=((stallHus&&stallHus.oppningar)||[])
+    .filter(o=>o.sida==="N"&&o.z0<3&&(o.typ==="dorrgul"||o.typ==="rund"))
+    .map(o=>({...o, x0:S.bredd-o.u-o.b}));          // u räknas från östra hörnet
+  {const dorr=NO.find(o=>o.typ==="dorrgul");
+   const bitar=dorr?[[-0.2,dorr.x0],[dorr.x0+dorr.b,S.bredd+0.2]]:[[-0.2,S.bredd+0.2]];
+   for(const [x0,x1] of bitar) if(x1-x0>0.05)
+     vagg.lada(x1-x0,S.tak,0.25,S.vagg,M4.translation((x0+x1)/2,S.tak/2,S.langd+0.1));
+   if(dorr) vagg.lada(dorr.b,S.tak-dorr.h,0.25,S.vagg,
+     M4.translation(dorr.x0+dorr.b/2,dorr.h+(S.tak-dorr.h)/2,S.langd+0.1));}
   vagg.lada(0.25,S.tak,S.langd,S.vagg,M4.translation(-0.1,S.tak/2,S.langd/2));
   vagg.lada(0.25,S.tak,S.langd,S.vagg,M4.translation(S.bredd+0.1,S.tak/2,S.langd/2));
   {const G2=S.gaveloppning;
@@ -953,6 +972,23 @@ function v3dStall(lagg,opp){
      varit att laga ett materialfel med en färgjustering. Den tas bort i
      stället, och väggen ligger på sitt mätta värde. */
   lagg(vagg,null);
+  /* Gavelöppningarna inifrån (se noten ovan): samma tecknare som fasaden. */
+  {const g=new Bygge(), FI=(u,z,ut)=>v3dFasadMat([0,S.langd],1,0,u,z,ut);
+   for(const o of NO){
+     const cx=o.x0+o.b/2;
+     if(o.typ==="dorrgul"){
+       g.lada(o.b,o.h,0.06,"#A87650",M4.translation(cx,o.h/2,S.langd+0.1));  // bladet i öppningen
+       const tj=0.12;
+       g.lada(o.b+2*tj,tj,0.07,"#EEEEE8",FI(cx,o.h+tj/2,OPPDJUP.karm));
+       for(const sd of [-1,1]) g.lada(tj,o.h+tj,0.07,"#EEEEE8",FI(cx+sd*(o.b+tj)/2,(o.h+tj)/2,OPPDJUP.karm));
+       v3dPolygon(g,v3dValvKontur(o.b*0.74,o.h*0.30),"#C8D6DE",FI(cx,o.h*0.79,OPPDJUP.sprojs));
+     }else{
+       v3dPolygon(g,v3dRundKontur(o.b+0.26,16),"#EEEEE8",FI(cx,o.z0+o.h/2,OPPDJUP.karm));
+       v3dPolygon(g,v3dRundKontur(o.b,16),"#B8CCD8",FI(cx,o.z0+o.h/2,OPPDJUP.ruta));
+       v3dSprojs(g,o.b*0.68,o.b*0.68,FI(cx,o.z0+o.h/2,OPPDJUP.sprojs),2,2);
+     }
+   }
+   if(NO.length) lagg(g,null);}
   /* Taket. Formen — sadeltak med korrugerad plåt som undertak, balkar var
      fjärde meter, takfönster i västra fallet och galvade dragstag ner till
      boxarna — kommer ur IMG_0249/0250 och stämmer mot
@@ -1487,6 +1523,10 @@ function v3dRidhus(lagg,opp){
     m.lada(SA.x1-SA.x0,0.12,b,"#D6AE3C",M4.translation((SA.x0+SA.x1)/2,SA.z1+0.3,mitt));
     S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true});
   }
+  /* Sidostyckena ritas i ett EGET, otexturerat nät: i `lak` ligger
+     träreliefen (T.tra) över allt, och den gjorde de vita skivorna till
+     mörkbruna ramper — det var det senior visual review såg. */
+  const sido=new Bygge();
   for(const t of R.trappor||[]){
     const T=trappsteg(t), langsX=(T.axel==="x");
     const b=langsX ? t.y1-t.y0 : t.x1-t.x0;            // loppets bredd tvärs
@@ -1505,9 +1545,16 @@ function v3dRidhus(lagg,opp){
     const sidor=langsX ? [t.y0+0.05] : (t.x0<1.0?[t.x1-0.05]:[t.x0+0.05,t.x1-0.05]);
     for(const sx of sidor){
       if(langsX){
-        lak.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+0.95,sx),M4.rotZ(lut)));
-        /* det vita snedställda sidostycket som bryter glasbandet (`-01`) */
-        lak.lada(L,0.90,0.05,"#E9E5DC",M4.mul(M4.translation(am,zm+0.45,sx-0.04),M4.rotZ(lut)));
+        /* Det vita snedställda sidostycket som bryter glasbandet (`-01`).
+           Från banan är det DET man ser av trappan: en vit sluttande
+           skiva i liv med den vita väggen, med det mörka träräcket
+           ovanpå — inte loppets mörka steg. Skivan täcker därför hela
+           loppets sida, från under stegen upp till räcket (senior visual
+           review 2026-09-04 05:51: loppen lästes som mörka träramper). */
+        sido.lada(L,1.6,0.05,"#E9E5DC",M4.mul(M4.translation(am,zm+0.30,sx-0.10),M4.rotZ(lut)));
+        /* Handledaren ligger ovanpå sidostyckets överkant — den mörka
+           linjen längs den vita skivan i fotot. */
+        lak.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+1.13,sx-0.10),M4.rotZ(lut)));
       }else{
         lak.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx,zm+0.95,am),M4.rotX(-lut)));
       }
@@ -1518,6 +1565,7 @@ function v3dRidhus(lagg,opp){
       }
     }
   }
+  if(R.trappor&&R.trappor.length) lagg(sido,null);
   for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
     const x=frontX+inat*L.dackDjup*0.2;
     lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.dackZ,z));
