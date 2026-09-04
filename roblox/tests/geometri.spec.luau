@@ -747,8 +747,31 @@ do
 	local cv, co = trappor.c_trappa_v, trappor.c_trappa_o
 	local K = R.kortanda
 	check("båda C-trapporna finns i datan som STAIR-primitiver", cv ~= nil and co ~= nil)
-	check("fidelity-datan innehåller BARA de två fotobelagda C-trapporna (inga bänkradssteg)",
-		#(R.trappor or {}) == 2 and trappor.bankrad_upp == nil, #(R.trappor or {}) .. " trappor")
+	check("fidelity-datan innehåller de två fotobelagda C-trapporna och läktartrappan vid H (inga bänkradssteg)",
+		#(R.trappor or {}) == 3 and trappor.bankrad_upp == nil and trappor.laktar_trappa_h ~= nil, #(R.trappor or {}) .. " trappor")
+	--[[ Läktartrappan vid H (PO 2026-09-04 07:54, blocker 3): längs västväggen i
+		läktarens västra meter, foten på översta radens nivå, toppen på
+		caféplanet vid läktarens norra ände; landgången (ovreGangV) därifrån
+		till övre gången. Bredd/längd [uppskattning] står i `osakert`. ]]
+	do
+		local lt, L, G2 = trappor.laktar_trappa_h, R.laktare, R.ovreGang
+		local topp = L and L.rader and (L.dackZ + L.rader.antal * L.rader.stegH) or -1
+		check("läktartrappan ligger i läktarens västra meter vid dess norra ände, stiger norrut från översta raden till caféplanet",
+			lt ~= nil and lt.axel == "y" and lt.stiger == "N" and math.abs(lt.x0 - L.x0) < 0.01 and lt.x1 - lt.x0 <= 1.2
+				and math.abs(lt.y1 - L.y1) < 0.01 and lt.y0 > L.y0 and math.abs(lt.z0 - topp) < 0.01 and math.abs(lt.z1 - R.cafe.z0) < 0.01
+				and type(lt.osakert) == "string",
+			lt and string.format("x %.1f–%.1f y %.1f–%.1f z %.2f→%.2f", lt.x0, lt.x1, lt.y0, lt.y1, lt.z0, lt.z1) or "saknas")
+		local V = R.ovreGangV
+		check("övre gångens västarm förbinder läktartrappans topp med övre gången på caféplanet",
+			V ~= nil and G2 ~= nil and math.abs(V.y0 - L.y1) < 0.01 and math.abs(V.y1 - G2.y0) < 0.01 and math.abs(V.z - G2.z) < 0.01
+				and math.abs(V.x0 - L.x0) < 0.01,
+			V and string.format("y %.1f–%.1f z %.2f", V.y0, V.y1, V.z) or "saknas")
+		local ls = UBRFKomplex.spelabstraktioner and UBRFKomplex.spelabstraktioner.ridhus and UBRFKomplex.spelabstraktioner.ridhus.laktarSteg
+		check("spelets läktarsteg (hallgolv → däck) är SPELABSTRAKTION utan kanonprovenance, vid däckets norra ände",
+			ls ~= nil and ls.klass == "SPELABSTRAKTION" and ls.fidelity == "REFERENCE GAP" and ls.canon_id == nil and ls.source_id == nil
+				and ls.confidence == nil and math.abs(ls.y0 - L.y1) < 0.01 and ls.z0 == 0 and math.abs(ls.z1 - L.dackZ) < 0.01,
+			ls and string.format("x %.1f–%.1f y %.1f–%.1f", ls.x0, ls.x1, ls.y0, ls.y1) or "saknas")
+	end
 	for id, t in pairs(trappor) do
 		check(string.format("trappan %s bär confidence VERIFIED_PLAN_OR_PHOTO och en FOTO-källa (ingen PO-verifierad fidelity utan bild)", id),
 			t.confidence == "VERIFIED_PLAN_OR_PHOTO" and type(t.source_id) == "string" and t.source_id:find("FOTO:", 1, true) ~= nil
@@ -818,8 +841,8 @@ do
 	if E then
 		local namn = {}
 		for _, r in ipairs(E.rum) do namn[r.id] = r end
-		check("entrén, receptionen, de två toaletterna och den kryssade rutan (schakt) finns som regioner",
-			namn.entre and namn.reception and namn.wc_n1 and namn.wc_n2 and namn.schakt)
+		check("entrén, receptionen och den kryssade rutan (schakt) finns som regioner; toaletterna INTE (PO 2026-09-04 07:54)",
+			namn.entre and namn.reception and namn.schakt and not namn.wc_n1 and not namn.wc_n2)
 		--[[ Blocker 1: rutan är plan-belagd som fotavtryck, funktionen är
 			okänd. Datan får inte kalla den hiss och inte sätta någon
 			spelarsynlig etikett — regeln "hitta inte på rumsidentitet". ]]
@@ -1155,6 +1178,88 @@ do
 			math.abs((gard.rekt.y + gard.rekt.h) - stall.rekt.y) < 0.3,
 			string.format("grusets norra kant y = %.2f, gavel y = %.2f",
 				gard.rekt.y + gard.rekt.h, stall.rekt.y))
+	end
+end
+
+--[[ F02-B — LÄKTARENS RADER I DATAN. Sarg + gångbräda + stegade bänkrader
+	(INTERIOR-MATRIS § 2). Regeln mäts, inte talen: raderna stiger inåt,
+	ryms på däcket, och den återkallade fronten finns inte i datan. ]]
+do
+	local L = R.laktare
+	local rader = Geometri.laktarRader(L)
+	check("läktaren har gångbräda och bänkrader i datan", L.gangbrada ~= nil and L.rader ~= nil and #rader == 3,
+		#rader .. " rader")
+	local stiger, inuti = true, true
+	for i, rad in ipairs(rader) do
+		if i > 1 and rad.z <= rader[i - 1].z then stiger = false end
+		if rad.in0 < (L.gangbrada and L.gangbrada.djup or 0) - 0.01 or rad.in1 > L.dackDjup + 0.01 then inuti = false end
+	end
+	check("raderna stiger inåt från gångbrädan", stiger and #rader > 0)
+	check("gångbrädan och raderna ryms på däckdjupet", inuti,
+		string.format("däck %.2f, sista raden till %.2f", L.dackDjup, rader[#rader] and rader[#rader].in1 or -1))
+	check("den återkallade solida fronten finns inte längre i datan",
+		L.frontTopp == nil and L.kappH == nil and UBRFKomplex.identitet.ridhus.laktarfront == nil)
+	check("de sourcelösa speglarna på y 19/37 finns inte längre i datan", R.speglar == nil)
+end
+
+--[[ F02-B — INREDNINGEN. Varje objekt bär källa och klass, har ett unikt
+	id, står i sitt rum och har rimliga mått. Regeln "aldrig hitta på" mäts
+	som: inga objekt utan källa, inga klasser utanför vokabulären. ]]
+do
+	local I = UBRFKomplex.inredning
+	check("inredningslistan finns för båda husen", I ~= nil and I.stall ~= nil and I.ridhus ~= nil
+		and #I.stall > 0 and #I.ridhus > 0)
+	if I then
+		local klasser = { VERIFIED = true, FOTO = true, DERIVED = true, ASSUMPTION = true }
+		local rumRekt = {}
+		for _, r in ipairs(UBRFKomplex.stall.klubb.rum) do rumRekt["stall:" .. r.id] = r.rekt end
+		for _, r in ipairs(R.entrehall.rum) do rumRekt["ridhus:" .. r.id] = r.rekt end
+		rumRekt["ridhus:laktare"] = { x = R.laktare.x0, y = R.laktare.y0, w = R.laktare.dackDjup, h = R.laktare.y1 - R.laktare.y0 }
+		rumRekt["ridhus:bana"] = { x = 0, y = R.bana.y, w = R.bredd, h = R.bana.h }
+		rumRekt["ridhus:sydzon"] = { x = 0, y = 0, w = R.bredd, h = R.bana.y }
+		rumRekt["stall:gangA"] = { x = 0, y = 0, w = UBRFKomplex.stall.bredd, h = UBRFKomplex.stall.klubb.y0 }
+		local ids, dubbla, utanfor, felKlass, utanKalla, orimliga = {}, {}, {}, {}, {}, {}
+		for _, hus in ipairs({ { "stall", I.stall }, { "ridhus", I.ridhus } }) do
+			for _, ob in ipairs(hus[2]) do
+				if ids[ob.id] then table.insert(dubbla, ob.id) end
+				ids[ob.id] = true
+				if not klasser[ob.klass] or (ob.lage and not klasser[ob.lage]) then table.insert(felKlass, ob.id) end
+				if not ob.kalla or ob.kalla == "" then table.insert(utanKalla, ob.id) end
+				local q = Geometri.inredningRekt(ob)
+				local rr = rumRekt[hus[1] .. ":" .. ob.rum]
+				if not rr or q.x < rr.x - 0.3 or q.x + q.w > rr.x + rr.w + 0.3 or q.y < rr.y - 0.3 or q.y + q.h > rr.y + rr.h + 0.3 then
+					table.insert(utanfor, ob.id .. " (" .. tostring(ob.rum) .. ")")
+				end
+				local m = ob.matt
+				if m.b <= 0 or m.d <= 0 or m.h <= 0 or m.b > 8 or m.d > 3 or m.h > 3 or (ob.z0 or 0) + m.h > 6.5 then
+					table.insert(orimliga, ob.id)
+				end
+			end
+		end
+		check("inredningens id är unika", #dubbla == 0, table.concat(dubbla, ", "))
+		check("inredningens klasser hör till vokabulären", #felKlass == 0, table.concat(felKlass, ", "))
+		check("varje inredningsobjekt anger sin källa", #utanKalla == 0, table.concat(utanKalla, ", "))
+		check("varje inredningsobjekt står i sitt rum", #utanfor == 0, table.concat(utanfor, ", "))
+		check("inredningens mått är rimliga för möbler", #orimliga == 0, table.concat(orimliga, ", "))
+		--[[ Det som bilderna kräver ska finnas — och det som saknar bild får
+			inte finnas. Pentryt (stall-inne-02) är fotograferat men INTE
+			placerbart (runt fönster + valvfönster i ett hörn som fasaden
+			inte har i uppehållsrummet): ingen post får heta pentry. ]]
+		local krav = { "uppehall_soffa_v", "uppehall_ponny", "teori_whiteboard_1", "sadel_stovelhylla",
+			"spegel_B", "spegel_A_v", "laktare_bommar", "skap_v_1", "skap_stovelbank",
+			"skap_grona", "skap_hoga_v", "skap_vita_2v",     -- PO 2026-09-04 11:56: skåpförvaringen
+			"zon_vask", "zon_racke", "zon_klocka", "boxfront_brandslackare" }   -- PO 15:15: zonen efter pausrummet
+		local saknas = {}
+		for _, id in ipairs(krav) do if not ids[id] then table.insert(saknas, id) end end
+		check("de belagda objekten finns i listan", #saknas == 0, "saknas: " .. table.concat(saknas, ", "))
+		local forbjudna = {}
+		for id in pairs(ids) do
+			if string.find(id, "pentry", 1, true) or string.find(id, "cafe_", 1, true) then
+				table.insert(forbjudna, id)
+			end
+		end
+		check("rum utan placerbart belägg har ingen inredning (pentry, café)", #forbjudna == 0,
+			table.concat(forbjudna, ", "))
 	end
 end
 

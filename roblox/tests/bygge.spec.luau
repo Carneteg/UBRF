@@ -100,9 +100,15 @@ check("fyra boxrader byggdes", raknaNamn("Boxfront W") > 0 and raknaNamn("Boxfro
 	string.format("W %d, MA %d, MB %d, E %d fronter", raknaNamn("Boxfront W"),
 		raknaNamn("Boxfront MA"), raknaNamn("Boxfront MB"), raknaNamn("Boxfront E")))
 
-check("två gångar och tvärkorridoren fick golv",
-	raknaNamn("Stallgång") == #UBRFKomplex.stall.gangytor,
-	raknaNamn("Stallgång") .. " gångytor")
+--[[ Tvärkorridoren (`tvar`) byggs som ett stråk per gång (PO-referens
+	stall-efter-pausrum-po-v1), inte som en platta: den räknas som två. ]]
+do
+	local vantade = 0
+	for _, g in ipairs(UBRFKomplex.stall.gangytor) do vantade += (if g.tvar then 2 else 1) end
+	check("två gångar och tvärkorridoren fick golv",
+		raknaNamn("Stallgång") == vantade,
+		raknaNamn("Stallgång") .. " gångytor mot " .. vantade .. " väntade")
+end
 
 --[[ De här fyra testerna finns för att KNOWN MISMATCH-en ska smälla om den
 	kommer tillbaka. Roblox byggde fronterna i brunt trä medan fotona och
@@ -330,9 +336,27 @@ do
 	check("namnlösa öppna rum får ingen tom etikettplatta i Roblox",
 		namnlosa > 0 and tomma == 0,
 		string.format("%d namnlösa öppna rum, %d tomma plattor", namnlosa, tomma))
+	--[[ Efter review 2026-09-04 08:50 (ChatGPT: "Remove player-facing room
+		labels in reviewed interiors") har klubbdelen och entrédelen inga
+		namngivna öppna rum alls — då ska antalet plattor vara exakt noll. ]]
 	check("etikettplattor byggs för exakt de namngivna öppna rummen",
-		byggda == vantade and vantade > 0,
+		byggda == vantade,
 		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
+end
+
+--[[ Västväggens valvfönster inifrån (review 2026-09-04 08:50, blocker A):
+	stall-inne-01:s komposition soffa–fönster–fotovägg kräver att fasadens
+	W-valv syns på insidan av uppehållsrummet. Fasaden har två (u 2,6 och
+	8,6 från norra gaveln), och rutan klipps under innertaket på 2,8. ]]
+do
+	local karm, glas = raknaNamn("Valvfönster inifrån, karm"), raknaNamn("Valvfönster inifrån, glas")
+	check("västväggens två valvfönster byggs inifrån klubbdelen (karm + glas)",
+		karm == 2 and glas == 2, string.format("%d karmar, %d glas", karm, glas))
+	local under = true
+	for _, d in ipairs(delar) do
+		if d.Name == "Valvfönster inifrån, glas" and fot(d).z1 > 2.8 then under = false end
+	end
+	check("valvfönstrens insida slutar under innertaket (2,8 m)", under)
 end
 
 --[[ Inomhusläsbarhet: varje inre väggbit och sluten volym ska bära
@@ -455,8 +479,17 @@ do
 	check("rörstråket längs serviceväggen byggdes",
 		raknaNamn("Servicerör") == oppna * 2,
 		raknaNamn("Servicerör") .. " rör")
-	check("gaveldörrens dagsljus och exit-skylt byggdes",
-		raknaNamn("Gaveldagsljus") == 1 and raknaNamn("Exitskylt syd") == 1)
+	--[[ PO-referens stall-efter-pausrum-po-v1 § Bortre ände: grå dubbeldörr
+		(två blad med var sin ljus ruta) + skylt, och gavelns valvfönster
+		inifrån med galler. ]]
+	check("gaveldörrens två grå blad, rutorna och exit-skylten byggdes",
+		raknaNamn("Gaveldörr blad") == 2 and raknaNamn("Gaveldagsljus") == 2 and raknaNamn("Exitskylt syd") == 1,
+		string.format("%d blad, %d rutor, %d skylt", raknaNamn("Gaveldörr blad"), raknaNamn("Gaveldagsljus"), raknaNamn("Exitskylt syd")))
+	check("södra gavelns valvfönster byggs inifrån med galler",
+		raknaNamn("Gavelfönster inifrån, glas") == 2 and raknaNamn("Gavelfönster inifrån, galler") == 10,
+		string.format("%d glas, %d gallerstänger", raknaNamn("Gavelfönster inifrån, glas"), raknaNamn("Gavelfönster inifrån, galler")))
+	check("tvärkorridorens golv är gångarnas stråk, inte en heltäckande platta",
+		raknaNamn("stråk A") == 1 and raknaNamn("stråk B") == 1)
 end
 
 --[[ Den blanka återvändsgränden: väggen mot servicedelen fick sina hål ur
@@ -659,43 +692,128 @@ do
 		string.format("%.2f m", gap))
 end
 
---[[ Läktaren är ett PLANT DÄCK med solid front, inte trappsteg. Testets gamla
-	lydelse ("två sektioner om fyra steg") mätte den struktur som fotona
-	motsäger; den är utbytt tillsammans med bygget. ]]
-check("läktaren byggdes som ETT plant däck, utan gap",
-	raknaNamn("Läktardäck") == 1 and raknaNamn("Läktarfront") == 1
-		and raknaNamn("Läktarsteg") == 0,
-	string.format("%d däck, %d fronter, %d gamla stegdelar",
-		raknaNamn("Läktardäck"), raknaNamn("Läktarfront"),
-		raknaNamn("Läktarsteg")))
-
---[[ Fronten ska stå mot BANAN. Efter speglingen till väster låg den mot
-	ytterväggen i ett första försök — däcket löper från x0 i positiv x-led
-	på båda sidor, och "x0 − 0,10" är bara fronten när läktaren står i öster.
-	Mätt: fronten ska ligga på banans sida av däcket. ]]
+--[[ F02-B: läktaren är sarg + GÅNGBRÄDA + STEGADE BÄNKRADER (ridhus-inne-04,
+	-07, -14, -43; INTERIOR-MATRIS § 2). Det gamla testet ("ETT plant däck
+	med solid front") mätte den struktur matrisen återkallat; det är utbytt
+	tillsammans med bygget. Raderna räknas ur samma Geometri.laktarRader som
+	bygget, så testet mäter regeln och inte ett tal. ]]
 do
 	local R2 = UBRFKomplex.ridhus
-	local dack, front = forstaNamn("Läktardäck"), forstaNamn("Läktarfront")
-	if dack and front then
-		local fd, ff = fot(dack), fot(front)
+	local L = R2.laktare
+	local rader = Geometri.laktarRader(L)
+	local sektioner = #Geometri.laktarSektioner(L)
+	check("läktaren har bänkrader i datan (tre enligt -07/-32/-41)",
+		#rader == 3 and L.rader ~= nil and L.gangbrada ~= nil, #rader .. " rader")
+	check("gångbrädan och raderna ryms på däckdjupet",
+		#rader > 0 and rader[#rader].in1 <= L.dackDjup + 0.01,
+		string.format("sista raden slutar %.2f in, däcket är %.2f", rader[#rader] and rader[#rader].in1 or -1, L.dackDjup))
+	-- Norra 4 m av sista sektionen byggs som egna Genomsiktlig-delar
+	-- (siktgrinden #78), så den sektionen ger två bitar per rad.
+	local sekt = Geometri.laktarSektioner(L)
+	local sista = sekt[#sekt]
+	local bitar = sektioner + ((sista and math.abs(sista.y1 - L.y1) < 0.01 and (sista.y1 - sista.y0) > 6) and 1 or 0)
+	check("varje rad byggdes, en per sektion (norra änden i egen bit)",
+		raknaNamn("Läktarrad ") == #rader * bitar and raknaNamn("Läktargångbräda") == bitar,
+		string.format("%d radplankor, %d gångbrädor", raknaNamn("Läktarrad "), raknaNamn("Läktargångbräda")))
+	do
+		local gs, ej = 0, 0
+		for _, d in ipairs(delar) do
+			if d.Name:find("Läktarrad ", 1, true) == 1 then
+				if d:GetAttribute("Genomsiktlig") == true then gs += 1 else ej += 1 end
+			end
+		end
+		check("läktarens norra ände tonas (Genomsiktlig), resten av raderna inte",
+			(bitar > sektioner and gs == #rader and ej == #rader * sektioner) or (bitar == sektioner and gs == 0),
+			string.format("%d rader Genomsiktlig, %d inte", gs, ej))
+	end
+	check("den solida fronten, kappregeln och det plana däcket är BORTA",
+		raknaNamn("Läktarfront") == 0 and raknaNamn("Läktarkapp") == 0
+			and raknaNamn("Läktardäck") == 0 and raknaNamn("Läktarsteg") == 0,
+		string.format("%d fronter, %d kappor, %d däck", raknaNamn("Läktarfront"), raknaNamn("Läktarkapp"), raknaNamn("Läktardäck")))
+	--[[ Raderna stiger BORT från banan: rad 1 närmast banan lägst, sista
+		raden vid väggen högst — mätt på de byggda delarna, som relation. ]]
+	local rad1, radN = forstaNamn("Läktarrad 1:1"), forstaNamn("Läktarrad 1:" .. #rader)
+	if rad1 and radN then
+		local f1, fN = fot(rad1), fot(radN)
 		local banX = R2.origo.x + R2.bana.x + R2.bana.w / 2
-		local dackMitt = fd.x + fd.w / 2
-		local frontMot = if banX > dackMitt then ff.x >= fd.x + fd.w - 0.2 else ff.x + ff.w <= fd.x + 0.2
-		check("läktarfronten står på banans sida av däcket", frontMot,
-			string.format("däck x %.2f–%.2f, front x %.2f, banans mitt %.2f",
-				fd.x, fd.x + fd.w, ff.x, banX))
+		local narmare = math.abs(f1.x + f1.w / 2 - banX) < math.abs(fN.x + fN.w / 2 - banX)
+		check("raderna stiger bort från banan", narmare and fN.z0 > f1.z0 + 0.2,
+			string.format("rad 1 x %.2f z %.2f, rad %d x %.2f z %.2f, banans mitt %.2f",
+				f1.x + f1.w / 2, f1.z0, #rader, fN.x + fN.w / 2, fN.z0, banX))
+		check("man sitter på översta raden med huvudet över sargkrönet",
+			fN.z1 + 0.9 > R2.sargH and fN.z1 < R2.sargH + 1.0,
+			string.format("översta sitsen %.2f, sargen %.2f", fN.z1, R2.sargH))
+	end
+	check("elon-dynorna ligger på översta raden, i Roblox också",
+		raknaNamn("Läktardyna") == (R2.dynor or 0) and (R2.dynor or 0) > 0,
+		raknaNamn("Läktardyna") .. " dynor av " .. tostring(R2.dynor))
+end
+
+--[[ INREDNINGEN (F02-B): allt i G.inredning ska finnas som delar med
+	objektets id i namnet, och inget som saknar källa får finnas. Parity:
+	det som kolliderar i webben kolliderar här; det som står i ett rum står
+	i rummets rektangel (mätt på de byggda delarna, inte på datan). ]]
+do
+	local I = UBRFKomplex.inredning
+	check("inredningslistan exporteras till Roblox", I ~= nil and I.stall ~= nil and I.ridhus ~= nil)
+	if I then
+		local saknade, utanfor, okollid, utanKalla = {}, {}, {}, {}
+		local rumRekt = {}
+		for _, r in ipairs(UBRFKomplex.stall.klubb.rum) do rumRekt["stall:" .. r.id] = r.rekt end
+		for _, r in ipairs(UBRFKomplex.ridhus.entrehall.rum) do rumRekt["ridhus:" .. r.id] = r.rekt end
+		local Rh = UBRFKomplex.ridhus
+		rumRekt["ridhus:laktare"] = { x = Rh.laktare.x0, y = Rh.laktare.y0, w = Rh.laktare.dackDjup, h = Rh.laktare.y1 - Rh.laktare.y0 }
+		rumRekt["ridhus:bana"] = { x = 0, y = Rh.bana.y, w = Rh.bredd, h = Rh.bana.h }
+		rumRekt["ridhus:sydzon"] = { x = 0, y = 0, w = Rh.bredd, h = Rh.bana.y }
+		-- gång A fram till brandväggen (klubb.y0): exitskylten sitter på den väggen
+		rumRekt["stall:gangA"] = { x = 0, y = 0, w = UBRFKomplex.stall.bredd, h = UBRFKomplex.stall.klubb.y0 }
+		for _, hus in ipairs({ { "stall", I.stall, UBRFKomplex.stall.origo }, { "ridhus", I.ridhus, Rh.origo } }) do
+			local namn, lista, o = hus[1], hus[2], hus[3]
+			for _, ob in ipairs(lista) do
+				local delarAv = 0
+				local q = rumRekt[namn .. ":" .. ob.rum]
+				for _, d in ipairs(delar) do
+					if d.Name == "Inredning " .. ob.id or string.find(d.Name, "Inredning " .. ob.id .. " ", 1, true) then
+						delarAv += 1
+						local f = fot(d)
+						if q and (f.x < o.x + q.x - 0.3 or f.x + f.w > o.x + q.x + q.w + 0.3
+							or f.y < o.y + q.y - 0.3 or f.y + f.h > o.y + q.y + q.h + 0.3) then
+							table.insert(utanfor, ob.id)
+						end
+						if ob.kolliderar and d.CanCollide ~= true and not string.find(d.Name, " ben", 1, true)
+							and not string.find(d.Name, " dorr", 1, true) and not string.find(d.Name, " sadel", 1, true)
+							and not string.find(d.Name, " krona", 1, true) and not string.find(d.Name, " band", 1, true)
+							and not string.find(d.Name, " rygg", 1, true) then
+							-- huvuddelen ska kollidera; detaljer får vara fria
+						end
+					end
+				end
+				if delarAv == 0 then table.insert(saknade, ob.id) end
+				if not ob.kalla or ob.kalla == "" or not ob.klass then table.insert(utanKalla, ob.id) end
+				if ob.kolliderar then
+					local huvud = forstaNamn("Inredning " .. ob.id)
+					if huvud and huvud.CanCollide ~= true then table.insert(okollid, ob.id) end
+				end
+			end
+		end
+		check("varje inredningsobjekt byggdes", #saknade == 0, "saknas: " .. table.concat(saknade, ", "))
+		check("varje inredningsobjekt står i sitt rum", #utanfor == 0, "utanför: " .. table.concat(utanfor, ", "))
+		check("det som kolliderar i webben kolliderar i Roblox", #okollid == 0, "fria: " .. table.concat(okollid, ", "))
+		check("varje inredningsobjekt bär källa och klass", #utanKalla == 0, "utan: " .. table.concat(utanKalla, ", "))
+		check("de sourcelösa objekten är borta: speglar på y 19/37, banderollskena, tre orange stolar, räcke",
+			Rh.speglar == nil and raknaNamn("Banderoll") == 0 and raknaNamn("Läktarräcke") == 0)
 	end
 end
 
---[[ Topologin fotona kräver, mätt som RELATION och inte mot talen: man ska
-	från däcket se över fronten ner i banan. Ändras höjderna i site.js ska
-	det här testet fortsätta gälla — annars är höjderna fel. ]]
+--[[ Det som stod framme på banan fanns bara i webben. ]]
 do
-	local L = UBRFKomplex.ridhus.laktare
-	check("man ser från däcket över fronten ner i banan",
-		L.dackZ < L.frontTopp and L.frontTopp > 0
-			and L.dackZ + 1.25 > L.frontTopp,
-		string.format("däck %.2f, fronttopp %.2f", L.dackZ, L.frontTopp))
+	local R2 = UBRFKomplex.ridhus
+	check("hindren, konerna och pallen byggs i Roblox ur samma tal som webben",
+		raknaNamn("Hinderbom") == #(R2.hinder or {}) and raknaNamn("Kon ") == #(R2.koner or {})
+			and (R2.pall == nil or raknaNamn("Uppsittningspall") == 1) and #(R2.hinder or {}) > 0,
+		string.format("%d bommar, %d koner", raknaNamn("Hinderbom"), raknaNamn("Kon ")))
+	check("lysrörsraderna byggs ur RIDHUSINNE.lysror", R2.lysror ~= nil and raknaNamn("Lysrör") >= 2 * #(R2.lysror and R2.lysror.andelar or {}),
+		raknaNamn("Lysrör") .. " lysrör")
 end
 
 --[[ TRAPPORNA i bygget (Product Owner 2026-09-03 17:16; senior review
@@ -762,8 +880,15 @@ do
 	local K = R2.kortanda
 	local tr = {}
 	for _, t in ipairs(R2.trappor or {}) do tr[t.id] = t end
-	check("båda C-trapporna finns i den byggda fidelity-datan, och inga bänkradssteg gör det",
-		tr.bankrad_upp == nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil and #(R2.trappor or {}) == 2)
+	check("båda C-trapporna och läktartrappan vid H finns i den byggda fidelity-datan, och inga bänkradssteg gör det",
+		tr.bankrad_upp == nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil and tr.laktar_trappa_h ~= nil and #(R2.trappor or {}) == 3)
+	check("läktartrappan vid H byggdes som klossar med sidostycke och handledare, och landgången på övre plan med räcke",
+		raknaNamn("Trappa laktar_trappa_h steg ") >= 8 and raknaNamn("Trappa laktar_trappa_h sidostycke") >= 1
+			and raknaNamn("Trappa laktar_trappa_h handledare") >= 1 and raknaExakt("Övre gångens västarm golv") == 1
+			and raknaExakt("Övre gångens västarm räcke") == 1,
+		raknaNamn("Trappa laktar_trappa_h steg ") .. " steg")
+	check("spelets läktarsteg byggdes märkta SPELABSTRAKTION med gul markör (hallgolv → däck)",
+		raknaNamn("Spelabstraktion laktarsteg steg ") >= 3 and raknaExakt("Spelabstraktion laktarsteg") == 1)
 	for _, d in ipairs(delar) do
 		if d.Name:find("Trappa ", 1, true) == 1 and d:GetAttribute("Primitiv") == "STAIR" then
 			check("fidelity-trappsteget " .. d.Name .. " bär inte SPELABSTRAKTION-märkning",
@@ -863,8 +988,8 @@ do
 			check(string.format("entréväggen %s byggdes i planens bitar", v.id),
 				byggda == vantat, string.format("%d byggda mot %d i datan", byggda, vantat))
 		end
-		check("toaletterna och schaktet byggdes som slutna volymer",
-			raknaExakt("Slutet rum wc_n1") == 1 and raknaExakt("Slutet rum wc_n2") == 1
+		check("schaktet byggdes som sluten volym; toaletterna INTE (PO 2026-09-04 07:54: receptionen ligger där)",
+			raknaExakt("Slutet rum wc_n1") == 0 and raknaExakt("Slutet rum wc_n2") == 0
 				and raknaExakt("Slutet rum schakt") == 1)
 		--[[ Blocker 1: den kryssade rutan får inte byggas som "hiss" och får
 			ingen etikettplatta — funktionen är okänd. ]]
@@ -937,8 +1062,8 @@ do
 			end
 			return n
 		end
-		check("bara entrén och receptionen har etikettplattor i entrédelen (slutna volymer får ingen platta)",
-			plattorIEntre("ENTRÉ") == 1 and plattorIEntre("RECEPTION") == 1
+		check("inga etikettplattor i entrédelen (PO 2026-09-04 07:54: entrén läses på dörren, receptionen på glaset)",
+			plattorIEntre("ENTRÉ") == 0 and plattorIEntre("RECEPTION") == 0
 				and plattorIEntre("SKÅPKORRIDOREN") == 0,
 			string.format("ENTRÉ %d, RECEPTION %d, WC %d, SKÅPKORRIDOREN %d",
 				plattorIEntre("ENTRÉ"), plattorIEntre("RECEPTION"), plattorIEntre("WC"), plattorIEntre("SKÅPKORRIDOREN")))
@@ -960,7 +1085,7 @@ do
 		local dx, dy = dorr and dorr.pos[1] or 1.6, dorr and dorr.pos[2] or 67.18
 		local rutt = {
 			-- main_entrance → open_entrance_hall
-			{ dx, dy }, { 1.1, dy + 1.5 }, { 1.1, 70.5 }, { 1.1, 72.0 }, { 3.0, 73.5 }, { 5.0, 73.5 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
+			{ dx, dy }, { 2.2, dy + 1.3 }, { 2.6, 70.5 }, { 2.6, 71.4 }, { 2.8, 75.7 }, { 5.2, 75.7 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
 			-- open_entrance_hall → arena_access
 			{ dx, dy }, { px, dy - 0.6 }, { px, sp.y + 0.4 },
 			-- arena_access → physical_riding_area

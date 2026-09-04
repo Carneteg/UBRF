@@ -207,6 +207,42 @@ PR:n ska innehålla:
 
 Om en ändring kräver mänsklig acceptans ska PR:n vara draft eller explicit markerad som väntande tills den är utförd.
 
+### 8.1 Kontinuerlig push / senaste preview-regeln
+
+Tobias produktbeslut 2026-09-04 (PR #76): **allt meningsfullt
+implementationsframsteg ska pushas löpande så att Tobias alltid ser den
+senaste versionen i PR:ns live-preview.** Det är en del av
+leveranskontraktet, inte processpolish.
+
+1. Arbete får ske lokalt, men **ingen meningsfull checkpoint får förbli
+   lokal** när den är granskningsbar.
+2. Efter varje sammanhängande rättelse/pass som ändrar det Tobias kan se
+   eller testa: committa, pusha till den aktiva feature-branchen, invänta
+   att PR-previewn/deployen uppdaterats, kontrollera att previewn är byggd
+   från PR:ns aktuella head, och posta **exakt head-SHA + previewlänk** i
+   PR:n.
+3. Säg aldrig till Tobias eller ChatGPT att något är "klart", "fixat",
+   "redo" eller "tillgängligt" om koden inte är pushad och synlig i den
+   senaste previewn.
+4. Är previewn föråldrad, trasig eller byggd från en annan SHA är status
+   **NOT READY FOR REVIEW** tills det är rättat.
+5. Den användarvända previewn ska alltid motsvara branchens senaste
+   pushade granskningsbara läge.
+6. Samla inte flera visuellt viktiga fixar lokalt under lång tid: pusha i
+   små sammanhängande checkpoints så att Tobias kan följa arbetet.
+7. GitHub är utvecklingens source of truth; previewn är den användarvända
+   vyn av branchen.
+
+**Definition of Done för regeln:**
+
+- senaste granskningsbara arbete är pushat,
+- PR:ns head-SHA är uttryckligt angiven,
+- previewn är bekräftad mot den SHA:n (deploykommentarens "Latest commit"
+  eller `pack.json.head` = head),
+- inga lokala visuella fixar presenteras som klara,
+- `READY_FOR_CHATGPT_REVIEW` och `READY_FOR_PRODUCT_ACCEPTANCE` är
+  **förbjudna** om preview ≠ aktuell head.
+
 ---
 
 ## 9. Stop-the-line triggers

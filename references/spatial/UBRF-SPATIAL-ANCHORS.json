@@ -7,7 +7,7 @@
     "`prov` är ett uttryck som räknas ut i src/site.js-kontexten (tools/kolla-ankare.mjs): ett tal",
     "jämförs med `varde` ± `tolerans`, en boolean måste vara sann. Relationer utan mätt värde är",
     "märkta konfidens RELATION/DERIVED och asserterar ingen gissad siffra.",
-    "Toalettrummet NV (wc_n1/wc_n2) har INGET ankare ännu: matrisen (N 0,3–1,1 / 1,6–2,4), auditen (N 1,2–2,4) och datan (N 0,28–1,38 / 1,38–2,38) säger olika — flaggat 2026-09-04 för F02-A-reviewn, inte löst här."
+    "Toalettrummet NV (wc_n1/wc_n2) finns inte längre i datan: PO 2026-09-04 07:54 (review #76) — receptionen ligger i hörnet; var toaletterna (ridhus-klubb-04/-05/-17) ligger är REFERENCE GAP (ankaret ridhus_reception_room)."
   ],
   "ankare": [
     {
@@ -94,11 +94,11 @@
     },
     {
       "id": "ridhus_reception_glass",
-      "vad": "Receptionens glas: x 2,2, N 4,6–8,3 (3,7 m), som GLASS",
+      "vad": "Receptionens glas: låg bröstning + fyra glasrutor mot skåpgången på x 2,2, y 73,5–77,0 (N 0,18–3,68) i nordvästra hörnet, som GLASS med hylla; receptionsrummet väster om glaset",
       "varde": true,
-      "kalla": "Spatial Canon v2 PO-2026-09-03-RIDHUS-GLASS-01; PLAN x2.2-N4.6-8.3; FOTO ridhus-klubb-01/-02/-15",
-      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
-      "prov": "(() => { const g=RIDHUSINNE.entrehall.vaggar.find(v=>v.id==='reception_glas'), L=RIDHUSINNE.langd; return !!g && g.primitiv==='GLASS' && Math.abs(g.x-2.2)<0.01 && Math.abs(g.y0-(L-8.3))<0.05 && Math.abs(g.y1-(L-4.6))<0.05; })()"
+      "kalla": "PO 2026-09-04 07:54 (review #76 blocker 1: receptionen där toaletterna stod); Spatial Canon v2 PO-2026-09-03-RIDHUS-GLASS-01; FOTO ridhus-klubb-01/-02/-15; PLAN nv-cellerna x 0–1,7",
+      "konfidens": "PRODUCT_OWNER_VERIFIED",
+      "prov": "(() => { const g=RIDHUSINNE.entrehall.vaggar.find(v=>v.id==='reception_glas'), r=RIDHUSINNE.entrehall.rum.find(r=>r.id==='reception'); return !!g && !!r && g.primitiv==='GLASS' && Math.abs(g.x-2.2)<0.01 && Math.abs(g.y0-73.5)<0.05 && Math.abs(g.y1-77.0)<0.05 && (g.hylla||0)>0.2 && r.rekt.x===0 && Math.abs(r.rekt.x+r.rekt.w-2.2)<0.01 && r.rekt.y<=73.5 && Math.abs(r.rekt.y+r.rekt.h-RIDHUSINNE.langd)<0.05; })()"
     },
     {
       "id": "ridhus_c_trappor_plan",
@@ -163,6 +163,22 @@
       "kalla": "references/buildings/stall/KORT.md (PRODUKTBESLUT 2026-09-02: förstukvisten med entrédörren mitt på norra gaveln); stall-entre-15; senior visual review 2026-09-04 06:33 (#80)",
       "konfidens": "RELATION",
       "prov": "(() => { const hus=ANL.byggnader.find(b=>b.id==='stall'); const o=hus.oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); const x0=STALLINNE.bredd-o.u-o.b, x1=STALLINNE.bredd-o.u; const inne=STALLINNE.dorrar.find(d=>d.id==='ut_n'); const ute=ANL.dorrar.find(d=>d.id==='stall_n'); return !!inne && !!ute && inne.pos[0]>=x0 && inne.pos[0]<=x1 && inne.pos[1]>=STALLINNE.langd-1.5 && Math.abs(ute.pos[0]-(hus.rekt.x+(x0+x1)/2))<0.6 && Math.abs(ute.spawn.x-inne.pos[0])<0.01 && Math.abs(ute.spawn.y-inne.pos[1])<0.01; })()"
+    },
+    {
+      "id": "ridhus_reception_room",
+      "vad": "Receptionen är ett rum i nordvästra hörnet (x 0–2,2 från y 72,6 till gaveln) med sydvägg, dörr vid glasväggens södra ände och INGA toalettvolymer (wc_n_*) i entrédelen; västra bandet är inte längre en korridor norr om y 72,6",
+      "varde": true,
+      "kalla": "PO 2026-09-04 07:54 (review #76 blocker 1); FOTO ridhus-klubb-01/-02/-15 (glas mot gången, träskåp och tavlor bakom, dagsljus i rummets ände); PLAN nv-cellerna + cellen söder om dem",
+      "konfidens": "PRODUCT_OWNER_VERIFIED",
+      "prov": "(() => { const E=RIDHUSINNE.entrehall, v=id=>E.vaggar.find(w=>w.id===id); const s=v('reception_s'), d=v('reception_dorrvagg'); return !!s && s.primitiv==='WALL' && Math.abs(s.y-72.6)<0.01 && s.x0===0 && Math.abs(s.x1-2.2)<0.01 && !!d && (d.oppningar||[]).some(o=>o.id==='reception_dorr') && !v('wc_n_s') && !v('wc_n_mellan') && !v('wc_n_o') && !E.rum.some(r=>r.id==='wc_n1'||r.id==='wc_n2') && E.ingaVaggar[0].aterkallat.includes('wc_n_o'); })()"
+    },
+    {
+      "id": "ridhus_laktar_trappa_h",
+      "vad": "Läktartrappan vid H: en STAIR längs västväggen i läktarens västra meter vid dess norra ände, från översta radens nivå upp till caféplanet, med landgången ovreGangV vidare till övre gången; spelets läktarsteg (hallgolv → däck) är SPELABSTRAKTION",
+      "varde": true,
+      "kalla": "PO 2026-09-04 07:54 (review #76 blocker 3); FOTO ridhus-inne-39, ridhus-klubb-11, ridhus-inne-15/-14/-20, ridhus-klubb-10; PLAN trappsymbolen vid läktarens norra ände (västra bandet)",
+      "konfidens": "RELATION",
+      "prov": "(() => { const R=RIDHUSINNE, L=R.laktare, t=R.trappor.find(t=>t.id==='laktar_trappa_h'), V=R.ovreGangV, ls=SPELABSTRAKTIONER.ridhus.laktarSteg; const topp=L.dackZ+L.rader.antal*L.rader.stegH; return !!t && t.primitiv==='STAIR' && t.axel==='y' && t.stiger==='N' && Math.abs(t.x0-L.x0)<0.01 && Math.abs(t.y1-L.y1)<0.01 && Math.abs(t.z0-topp)<0.01 && Math.abs(t.z1-R.cafe.z0)<0.01 && /FOTO:/.test(t.source_id) && /PLAN:/.test(t.source_id) && !!V && Math.abs(V.y0-L.y1)<0.01 && Math.abs(V.y1-R.ovreGang.y0)<0.01 && ls.klass==='SPELABSTRAKTION' && ls.canon_id===undefined && Math.abs(ls.y0-L.y1)<0.01; })()"
     }
   ]
 }

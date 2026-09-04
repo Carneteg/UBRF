@@ -34,7 +34,7 @@ const RUTTER = [
   { id: "stall: gång A söderut till servicedelen", scen: "stallinne", steg: 1.5, punkter: [
     { x: "(S.gangar.A.x0+S.gangar.A.x1)/2", y: "S.klubbY - 1" }, { x: "(S.gangar.A.x0+S.gangar.A.x1)/2", y: "S.serviceY + 1" } ] },
   { id: "ridhus: huvudentrén → hallen → sargporten → banan", scen: "ridhusinne", steg: 1.0, punkter: [
-    { x: "1.3", y: "67.0" }, { x: "1.3", y: "73.0" }, { x: "(SA.ridhus.sargport.x0+SA.ridhus.sargport.x1)/2", y: "71.0" },
+    { x: "1.3", y: "67.0" }, { x: "2.6", y: "69.5" }, { x: "2.8", y: "75.7" }, { x: "5.2", y: "75.7" }, { x: "(SA.ridhus.sargport.x0+SA.ridhus.sargport.x1)/2", y: "71.0" },
     { x: "(SA.ridhus.sargport.x0+SA.ridhus.sargport.x1)/2", y: "SA.ridhus.sargport.y - 3" } ] },
   { id: "ridhus: hallen → bänkradssteg → raderna → c_trappa_v → övre gången", scen: "ridhusinne", steg: 0.8, punkter: [
     { x: "SA.ridhus.bankradSteg.x0 - 0.6", y: "(SA.ridhus.bankradSteg.y0+SA.ridhus.bankradSteg.y1)/2" },
@@ -45,6 +45,12 @@ const RUTTER = [
     { x: "R.trappor[0].x0 + 0.3", y: "(R.trappor[0].y0+R.trappor[0].y1)/2", z: "R.trappor[0].z1" },
     { x: "R.trappor[0].x0 + 0.3", y: "R.ovreGang.y0 + 1.2", z: "R.ovreGang.z" },
     { x: "R.ovreGang.x1 - 4", y: "R.ovreGang.y0 + 1.2", z: "R.ovreGang.z" } ] },
+  { id: "ridhus: hallen → läktarsteg → däcket → läktartrappan vid H → övre gångens västarm", scen: "ridhusinne", steg: 0.8, punkter: [
+    { x: "R.laktare.x0 + R.laktare.dackDjup - 0.5", y: "R.laktare.y1 + 1.8" },
+    { x: "R.laktare.x0 + R.laktare.dackDjup - 0.5", y: "R.laktare.y1 - 0.6", z: "R.laktare.dackZ" },
+    { x: "R.laktare.x0 + 0.5", y: "R.laktare.y1 - 0.6", z: "R.laktare.dackZ + R.laktare.rader.antal*R.laktare.rader.stegH" },
+    { x: "R.laktare.x0 + 0.5", y: "R.laktare.y1 + 0.4", z: "R.cafe.z0" },
+    { x: "R.laktare.x0 + 0.5", y: "R.ovreGang.y0 + 0.6", z: "R.cafe.z0" } ] },
   { id: "ridhus: läktardäcket", scen: "ridhusinne", steg: 4.0, punkter: [
     { x: "R.laktare.x0 + R.laktare.dackDjup/2", y: "R.laktare.y0 + 3", z: "R.laktare.dackZ" },
     { x: "R.laktare.x0 + R.laktare.dackDjup/2", y: "R.laktare.y1 - 3", z: "R.laktare.dackZ" } ] },

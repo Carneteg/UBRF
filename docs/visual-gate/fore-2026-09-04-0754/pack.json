@@ -1,0 +1,1180 @@
+{
+  "head": "be437fff09baedb6b26bbaea8862fac09874f81e",
+  "smutsigt": true,
+  "renderad": "2026-09-04T08:08:57.088Z",
+  "kameror": {
+    "STALL-ANKOMST": {
+      "id": "STALL-ANKOMST",
+      "namn": "Stallhuset entré från gården (exteriör)",
+      "hus": "stall",
+      "scen": "gard",
+      "lage": {
+        "x": 161.6,
+        "y": 131,
+        "z": 0,
+        "rikt": -1.5707963267948966,
+        "bild0": 3
+      },
+      "kamera": [
+        160.1,
+        1.7,
+        132.5
+      ],
+      "mal": {
+        "x": "(()=>{const h=A.byggnader.find(b=>b.id==='stall'); const o=h.oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return h.rekt.x + S.bredd-o.u-o.b/2;})()",
+        "y": "A.byggnader.find(b=>b.id==='stall').rekt.y + A.byggnader.find(b=>b.id==='stall').rekt.h",
+        "h": "1.6"
+      },
+      "text": "Grusplanen norr om stallet, samma ansats som spelaren kommer från: blicken söderut mot klubbgaveln med förstukvisten och entrédörren",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-fasad-04.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-entre-01.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-entre-03.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-entre-06.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-entre-15-dorren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-entre-16-runda-fonstren.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [],
+      "ram": "Verandans sadeltak (röd gavelspets, vita vindskivor) på vita stolpar, det vita ribbräcket, den ockragula entrédörren med solfjäderfönster och vit karm rakt fram, ett runt fönster på var sida, lampan över dörren, spiraltrappan och balkongen till vänster. Det är den dörr interaktionen leder in genom (ankaret stall_entre_samma_dorr; innerpunkten ut_n vid samma dörr)",
+      "granskning": {
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS: verandan med sadeltak, vita stolpar/ribbräcke, ockragul dörr, runda fönster, lampa, spiraltrappa/balkong läser som källserien; stall_entre_samma_dorr bevisar samma dörr inne/ute. Dörrdetaljernas förenkling är polish, inte grind."
+      },
+      "spelare": [
+        161.6,
+        131,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-ENTRE": {
+      "id": "STALL-ENTRE",
+      "namn": "Stallhuset entré",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 8.3,
+        "y": 66.95,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 12
+      },
+      "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-entre-15-dorren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-entre-16-runda-fonstren.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "ingen interiörbild av gavelns insida: dörrbladets färg inifrån [antagande]",
+        "planens vindfångscell (x 3,6–5,5) mot fasadens entré (x 10,5): dokumenterad motsägelse, fasaden vinner; cellen står kvar utan etikett"
+      ],
+      "granskning": {
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "Entré-/interaktionsblockern STÄNGD för F02-A (06:57): innerpunkten ut_n och gårdens markör är samma låsta fasaddörr. 'Remaining door-detail simplification is polish, not a gate blocker.'"
+      },
+      "ram": "Gavelväggen med fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram, det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång x 3,6–5,5 mot fasadens entré x 10,5, DEFERRED BY EXTERIOR LOCK)",
+      "kamera": [
+        10.1,
+        1.7,
+        64.55
+      ],
+      "mal": {
+        "x": "(()=>{const o=A.byggnader.find(b=>b.id==='stall').oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return S.bredd-o.u-o.b/2;})()",
+        "y": "S.langd",
+        "h": "1.2"
+      },
+      "spelare": [
+        8.3,
+        66.95,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-UPPEHALL": {
+      "id": "STALL-UPPEHALL",
+      "namn": "Uppehållsrum",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 4,
+        "y": 61.550000000000004,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 21
+      },
+      "text": "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-01-uppehallsrummet.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-inne-02-pentryt.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "var i rummet soffgruppen står (vilket valvfönster): ASSUMPTION i F02-B, förankrad i det södra valvfönstret; bildens dörr till vänster/fönster till höger avgör inte entydigt"
+      ],
+      "granskning": {
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "Avsiktligt MISMATCH: rummets saknade visuella identitet är F02-B-möblering (#76), inte ett F02-A-topologifel. Inget PASS fejkas; #80 omprövar när #76 integrerats."
+      },
+      "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort",
+      "kamera": [
+        4,
+        2.25,
+        58.22
+      ],
+      "spelare": [
+        4,
+        61.55,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-UPPEHALL-SOFFA": {
+      "id": "STALL-UPPEHALL-SOFFA",
+      "namn": "Uppehållsrummets soffhörna",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 4,
+        "y": 62.900000000000006,
+        "z": 0,
+        "rikt": 2.356194490192345,
+        "bild0": 30
+      },
+      "text": "Fotots vinkel (stall-inne-01): från rummets östra del snett mot sydvästra hörnet — soffgruppen vid västväggen, träponnyn, klockan, växten, fotoväggen. Explicit kamera; figuren till vänster om blicklinjen.",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-01-uppehallsrummet.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "var i rummet gruppen står och vid vilket valvfönster: ASSUMPTION (F02-B) — fotots ordning dörr till vänster / klocka / växt / fotovägg / valvfönster till höger / ponny går inte att lägga entydigt mot den låsta fasadens två valvfönster (y 61,35 och 67,35) och rummets sydvägg y 60,15; se F02-B-INREDNINGSMATRIS § Uppehållsrummet"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Två svarta skinnsoffor i vinkel kring två låga svarta bord, den rosa träponnyn med sadel, rund klocka, krukväxt och inramade foton på pärlsponten, valvfönstret i västväggen — samma objekt som stall-inne-01; hur gruppen sitter i förhållande till fönstret är den öppna frågan",
+      "kamera": [
+        4.7,
+        1.6,
+        65
+      ],
+      "mal": {
+        "x": "1.2",
+        "y": "S.klubb.rum.find(r=>r.id==='uppehallsrum').rekt.y + 2.1",
+        "h": "0.9"
+      },
+      "spelare": [
+        4,
+        62.9,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-TEORISAL": {
+      "id": "STALL-TEORISAL",
+      "namn": "Teorisal",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 12.5,
+        "y": 65.64999999999999,
+        "z": 0,
+        "rikt": 0,
+        "bild0": 40
+      },
+      "text": "Innanför teorisalens dörr (västväggen), blicken österut genom salen",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-04-teorisalen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Salens tre väggar (x 11,2 / 17,3, N 5,6) och dörröppningen i västväggen; rummets djup 6,1 m österut",
+      "kamera": [
+        9.17,
+        2.25,
+        65.65
+      ],
+      "spelare": [
+        12.5,
+        65.65,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-SADELKAMMARE": {
+      "id": "STALL-SADELKAMMARE",
+      "namn": "Sadelkammare",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 11.5,
+        "y": 60.95,
+        "z": 0,
+        "rikt": 0,
+        "bild0": 49
+      },
+      "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-03-sadelkammaren.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Rummets östra hälft i ögonhöjd: östväggen (x 15,5), halvväggen i söder (N 9,1), norrväggen mot teorisalen; inga möbler ännu",
+      "kamera": [
+        8.17,
+        2.25,
+        61.28
+      ],
+      "spelare": [
+        11.5,
+        61.28,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-GANG-A": {
+      "id": "STALL-GANG-A",
+      "namn": "Stallgång A",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 5.691000000000001,
+        "y": 12.8,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 59
+      },
+      "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-05-stallgangen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-inne-08-breda-gangen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "vilken av gångarna varje foto visar är inte belagt (INTERIOR-MATRIS i05/i08)"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Gång A i ögonhöjd med boxfronter (antracit, galvad ram, fem reglar) på båda sidor, markstensgången, klubbdelens tvärvägg långt fram",
+      "kamera": [
+        5.69,
+        2.25,
+        9.47
+      ],
+      "spelare": [
+        5.69,
+        12.8,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "HASTPASSAGE": {
+      "id": "HASTPASSAGE",
+      "namn": "Hästpassage",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 4.989,
+        "y": 29.549999999999997,
+        "z": 0,
+        "rikt": 3.141592653589793,
+        "bild0": 67
+      },
+      "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
+      "referenser": [
+        {
+          "id": "references/plans/SATELLIT-HASTGANG-2026-08-30.md",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "passagens insida: ingen bild; läget längs husen är härlett (SITEPLAN)"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "kamera": [
+        6.79,
+        1.7,
+        30.45
+      ],
+      "mal": {
+        "x": "0.9",
+        "y": "S.dorrar.find(d=>d.id==='hastgang').pos[1]",
+        "h": "1.2"
+      },
+      "ram": "Brottet i västra boxraden (ett enda, på hästgångens höjd) med dörrmarkören, boxfronterna på båda sidor om brottet, figuren i gångens västra kant; ingen tvärkorridor genom huset",
+      "spelare": [
+        4.99,
+        29.55,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-ENTRE": {
+      "id": "RIDHUS-ENTRE",
+      "namn": "Ridhuset entré",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 1.3999999999999944,
+        "y": 69.58000000000001,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 77
+      },
+      "text": "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1). Explicit kamera i hallen — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen.",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-02-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "receptionsglasets väderstreck (GEOMETRY_REFERENCE_GAP)",
+        "huvudentréns läge: CONTRADICTION plan/fasad, fasaden vinner"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Öppen hall utan rumslådor norrut från huvudentrén, ENTRÉ-plattan, receptionens låga bröstning + glas till höger, toaletternas volym i bortre hörnet; skåpraden (F02-B) bortom glaset",
+      "kamera": [
+        1.2,
+        1.7,
+        66.68
+      ],
+      "mal": {
+        "x": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[0] + 0.6",
+        "y": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[1] + 6.0",
+        "h": "1.1"
+      },
+      "spelare": [
+        1.4,
+        69.58,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-SKAPKORRIDOR": {
+      "id": "RIDHUS-SKAPKORRIDOR",
+      "namn": "Skåpkorridor",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 3.2,
+        "y": 67.98,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 86
+      },
+      "text": "Gången mellan receptionsglaset (x 2,2) och skåpraden i planens skåpremsa (x 4,2–5,7), blicken norrut mot valvfönstret med stövelbänken (= ridhus-klubb-01 fast åt andra hållet)",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-18-skapraden-narbild.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-20-grona-skapen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-21-grona-skapen-vinkel.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "skåpradens början/slut: planens fyra luckor olästa — bankarnas y-lägen är ASSUMPTION (F02-B); vilken sida av glaset receptionen ligger på är F02-A:s GEOMETRY_REFERENCE_GAP"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Fri sikt norrut i gången utan korridorväggar: receptionens bröstning + glas till vänster, skåpbankarna (F02-B) till höger med fronten mot gången, bordet med de två stolarna i gången, stövelbänken under gavelns valvfönster längst bort; schaktvolymen bakom skåpen",
+      "kamera": [
+        3.2,
+        2.25,
+        64.65
+      ],
+      "spelare": [
+        3.2,
+        67.98,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "ARENA-A": {
+      "id": "ARENA-A",
+      "namn": "Arena A-sida",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 14.399999999999999,
+        "y": 6.15,
+        "z": 0,
+        "rikt": -1.5707963267948966,
+        "bild0": 96
+      },
+      "text": "På banan nära A, blicken söderut mot kortsidan vid A",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-23-kortsidan-vid-a.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-11-ridbanan.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Kortsidan vid A: vit sarg med mörk sockel, A-skylten, sanden, väggen ovanför sargen",
+      "kamera": [
+        14.4,
+        2.25,
+        9.48
+      ],
+      "spelare": [
+        14.4,
+        6.15,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "ARENA-C": {
+      "id": "ARENA-C",
+      "namn": "Arena C-sida",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 14.399999999999999,
+        "y": 57.68000000000001,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 107
+      },
+      "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-06-laktaren-och-glasrummet.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-27-glasrummet-inifran-banan.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "Café Krubbans rum bakom glaset byggs inte (REFERENCE GAP)"
+      ],
+      "granskning": {
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS: sidostyckena läser som trappkantsväggar, räckena läsbara, klockväggen fri, glasbandet synligt. Topologin får inte öppnas igen."
+      },
+      "ram": "C-blocket över norra sargen: bänkraderna, klockväggen mellan de två loppen, vita sidostycken, glasbandet i tre fält, övre gången bakom",
+      "kamera": [
+        14.4,
+        2.25,
+        54.35
+      ],
+      "spelare": [
+        14.4,
+        57.68,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "LAKTARE": {
+      "id": "LAKTARE",
+      "namn": "Läktare",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 2.3,
+        "y": 38.915000000000006,
+        "z": 0.8,
+        "rikt": -1.5707963267948966,
+        "bild0": 117
+      },
+      "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-14-laktaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-41-banan-fran-laktaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-40-domartornet-pa-laktaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-43-laktaren-vid-h.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "läktargångens tredje trappa vid H byggs inte (utanför F02-A)"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Plankdäcket, den mörka fronten med ljus kappregel och räcket till vänster, banan bortom, domarbåset på däcket, läktarväggen till höger",
+      "kamera": [
+        2.3,
+        3.65,
+        42.24
+      ],
+      "spelare": [
+        2.3,
+        38.92,
+        1.4
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "C-BLOCK-OVRE": {
+      "id": "C-BLOCK-OVRE",
+      "namn": "C-block / övre relation",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 15.799999999999999,
+        "y": 66.28,
+        "z": 1.12,
+        "rikt": 1.5707963267948966,
+        "bild0": 126
+      },
+      "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-07-laktartrappstegen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-10-overvaningens-gang.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/granskning-2026-08-31/C-kortandan-och-kafeet.md",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "hall → nedersta raden: inget foto (spelets bänkradssteg är SPELABSTRAKTION, gul markör)",
+        "övre gångens bredd [uppskattning]"
+      ],
+      "granskning": {
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS (samma bedömning som ARENA-C på a102bb9:s trapetsform)."
+      },
+      "ram": "Från nedersta raden: raderna uppåt, båda loppen stigande utåt från klockväggen, räcken, glasbandet ovanför, övre gångens golv/räcke; spelets bänkradssteg (gul markör) till vänster som SPELABSTRAKTION",
+      "kamera": [
+        15.8,
+        3.37,
+        62.95
+      ],
+      "spelare": [
+        15.8,
+        66.28,
+        1.12
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-RECEPTION": {
+      "id": "RIDHUS-RECEPTION",
+      "namn": "Receptionen från gången",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 3,
+        "y": 72.4,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 137
+      },
+      "text": "I skåpgången i ögonhöjd, blicken snett mot receptionens glasade bröstning i nordvästra hörnet — samma relation som ridhus-klubb-02/-15: disken med glasrutorna på ena sidan, skåpraden mitt emot. Explicit kamera; figuren till vänster om blicklinjen.",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-02-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "receptionens dörr: bilden visar en karm i glasväggens ena ände — vilken ände är [antagande]",
+        "receptionens djup och möblering bakom glaset: träskåp, tavlor (ridhus-klubb-02) i DERIVED-lägen"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Receptionens låga bröstning med fyra glasrutor och avställningshyllan mot gången, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot på gångens andra sida, gavelns valvfönster längst bort. Inga toalettboxar i hörnet.",
+      "kamera": [
+        4,
+        1.6,
+        71.6
+      ],
+      "mal": {
+        "x": "1.0",
+        "y": "75.6",
+        "h": "1.0"
+      },
+      "spelare": [
+        3,
+        72.4,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-ENTRE-INNE": {
+      "id": "RIDHUS-ENTRE-INNE",
+      "namn": "Huvudentrén inifrån",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 2.6,
+        "y": 67.7,
+        "z": 0,
+        "rikt": 3.141592653589793,
+        "bild0": 146
+      },
+      "text": "Inne i hallen i ögonhöjd, blicken västerut mot den låsta fasadens entrédörr (dorrvit u 9): dörren ska läsas som en dörr inifrån — vit glasad dubbeldörr med karm och utrymningsskylt (IMG_0169-f05, ridhus-klubb-03). Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/video/ridhus-nyckelrutor/IMG_0169-f05-korridoren-mot-entren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-03-korridordorrarna.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "dörrbladets utseende inifrån följer fasadens dorrvit-tecknare [antagande: samma som utsidan]",
+        "planens tre entrélägen mot fasadens: dokumenterad CONTRADICTION (F02-A), fasaden vinner"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Entrédörren i västväggen rakt fram: vit glasad dubbeldörr med vita karmar och grön utrymningsskylt ovanför, dörrmarkören vid samma dörr; öppen hall runt figuren utan rumslådor.",
+      "kamera": [
+        5.4,
+        1.6,
+        68.6
+      ],
+      "mal": {
+        "x": "0.0",
+        "y": "67.18",
+        "h": "1.1"
+      },
+      "spelare": [
+        2.6,
+        67.7,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-LAKTARTRAPPA": {
+      "id": "RIDHUS-LAKTARTRAPPA",
+      "namn": "Trappan vid läktarens norra ände (H)",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 2.4,
+        "y": 67.4,
+        "z": 0,
+        "rikt": -1.5707963267948966,
+        "bild0": 155
+      },
+      "text": "Från hallens sydvästra hörn i ögonhöjd, blicken sydväst mot läktarens norra ände: trappan längs västväggen från hallgolvet upp mot övre plan (ridhus-inne-39, -11), läktardäckets ände (ridhus-inne-15/-14). Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-39-gangen-bakom-laktaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-11-trappan-till-hinderforradet.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-15-hornet-mot-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "trappans bredd, steghöjd och exakta fot: [uppskattning] — planen visar bara symbolen vid läktarens norra ände",
+        "däckets anslutning till hallgolvet: ridhus-inne-39 visar en nivåskillnad vid däckets ände, inte stegen"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "En trappa i mörkt trä med handledare längs västväggen vid läktarens norra ände som når övre plan; läktardäckets ände med bänkraderna; figuren kan gå från hallgolvet upp på däcket och vidare upp.",
+      "kamera": [
+        4.3,
+        1.7,
+        69.9
+      ],
+      "mal": {
+        "x": "1.1",
+        "y": "65.4",
+        "h": "1.6"
+      },
+      "spelare": [
+        2.4,
+        67.4,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-KLUBBDORRAR": {
+      "id": "STALL-KLUBBDORRAR",
+      "namn": "Klubbdelens dörrar från lobbyn",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 8.6,
+        "y": 62.3,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 163
+      },
+      "text": "I klubbdelens lobby i ögonhöjd, blicken mot teorisalens dörr i västväggen och sadelkammarens dörr: dörröppningar ska läsas som dörrar (karm, överstycke, kontrast), inte som slitsar från golv till tak (stall-inne-03/-04). Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-03-sadelkammaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-inne-04-teorisalen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "dörrbladens färg och beslag i klubbdelen: bara delvis i bild — karmarna vita som i stall-inne-03 [antagande för övriga]"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Minst två dörröppningar i bild med vit karm och överstycke som skiljer dem från väggen; figuren i lobbyn; ingen etikett behövs för att förstå var dörrarna är.",
+      "kamera": [
+        7.2,
+        1.6,
+        59.6
+      ],
+      "mal": {
+        "x": "11.2",
+        "y": "65.8",
+        "h": "1.2"
+      },
+      "spelare": [
+        8.6,
+        62.3,
+        0
+      ],
+      "tonade": 3,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 3,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    }
+  }
+}

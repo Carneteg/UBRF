@@ -244,6 +244,55 @@ Vyer.vyer = {
 		mot = { x = So.x + 4.55, y = So.y + S.klubb.y0 },
 		krav = "Spatial Canon v2: uppehållsrummet är EN öppen L-formad yta (västdelen + östdelen öster om entrén) utan någon inre vägg eller sluten volym — den tidigare 1,0 × 4,4-volymen är återkallad av Product Owner. Planens symbolruta står som sluten volym utan namn till vänster (öster; funktion REFERENCE GAP), två toaletter i bortre änden (WC-V 3,0 m bred med dörr mot lobbyn) med den inre entrén emellan, och genom den stallgång A rakt fram. Varje vägg bär CanonId/SourceId/Confidence. Väggar mellan kameran och karaktären ska tona.",
 	},
+	-- F02-B: inredningen, från ungefär samma håll som referensbilderna.
+	{
+		id = "uppehallsrummet",
+		grupp = "Stallet inne",
+		text = "Uppehållsrummet mot västväggen (stall-inne-01)",
+		fran = { x = So.x + 5.0, y = So.y + 66.5, h = 1.6 },
+		mot = { x = So.x + 1.5, y = So.y + 62.0 },
+		krav = "Två svarta skinnsoffor i vinkel kring två låga svarta bord, rosa träponny med mörk sadel, rund klocka och inramade hästfoton på pärlsponten, krukväxt. INGET pentry — det går inte att placera (matrisen).",
+	},
+	{
+		id = "teorisalen",
+		grupp = "Stallet inne",
+		text = "Teorisalen från dörren i västväggen (stall-inne-04)",
+		fran = { x = So.x + 11.7, y = So.y + 66.0, h = 1.6 },
+		mot = { x = So.x + 17.0, y = So.y + 67.5 },
+		krav = "Bordsblock i ljust trä med vita stolar, två whiteboards på östväggen, skåp med mikro i sydöstra hörnet, anatomiplanscher och kartonger längs sydväggen, två lysrör och ventilationskanalen i taket.",
+	},
+	{
+		id = "sadelkammaren",
+		grupp = "Stallet inne",
+		text = "Sadelkammaren från dörren i brandväggen (stall-inne-03)",
+		fran = { x = So.x + 8.3, y = So.y + 59.0, h = 1.6 },
+		mot = { x = So.x + 8.6, y = So.y + 64.0 },
+		krav = "Säkerhetsvästar på krokrad längs västväggen till vänster, vit stövelhylla full av stövlar till höger, smal passage emellan. Dörren till teorisalen rakt fram finns INTE i F02-A:s topologi — rapporterad separat.",
+	},
+	{
+		id = "laktarraderna",
+		grupp = "Ridhuset inne",
+		text = "Läktaren från banan vid H (ridhus-inne-43, -14)",
+		fran = { x = Ro.x + banMittX, y = Ro.y + B.y + 50, h = 1.6 },
+		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2, y = Ro.y + B.y + 52 },
+		krav = "Bakom den vita sargen: mörk gångbräda i däckhöjd, sedan TRE stegade bänkrader i ljus furu med röda kantlister, svarta dynor på översta raden. INGEN mörk brädfront, ingen kappregel, inget räcke, inga orange stolar utspridda. Returtunnan vid H, två orange stolar bakom domarboden.",
+	},
+	{
+		id = "hinderupplaget",
+		grupp = "Ridhuset inne",
+		text = "Läktardäckets södra ände från banan (ridhus-inne-21)",
+		fran = { x = Ro.x + banMittX - 4, y = Ro.y + B.y + 12, h = 1.6 },
+		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2, y = Ro.y + B.y + 4 },
+		krav = "På däcket bakom sargen: lutade bommar i färg, vita hinderstöd och bokstavsstället med F R H V C K M A. På kortsidan vid A: två speglar i träram, en på var sida om dubbeldörren.",
+	},
+	{
+		id = "skapkorridoren",
+		grupp = "Ridhuset inne",
+		text = "Skåpkorridoren norrut mot valvfönstret (ridhus-klubb-01)",
+		fran = { x = Ro.x + 4.95, y = Ro.y + 63.0, h = 1.6 },
+		mot = { x = Ro.x + 4.95, y = Ro.y + 76.0 },
+		krav = "Höga grå plåtskåp med enstaka röda och mörka dörrar längs västväggen, två vita stolar med rött tyg vid ett litet bord mitt i gången, bänk med stövlar under fönstret i norra änden. Östsidans öppningar är F02-A:s — glaspartierna i bilden är en strukturell anmärkning, inte inredning.",
+	},
 }
 
 
@@ -340,13 +389,68 @@ Vyer.reviewkameror = {
 	end)(),
 	bakom(VG, "STALL-UPPEHALL", "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
 		S, So.x, So.y, 4.0, rum("uppehallsrum").y + 1.6, 0, math.pi / 2,
-		"Rummets hela längd i ögonhöjd: västväggen till vänster, öppningen mot östdelen till höger UTAN vägg (Spatial Canon v2 stall_uppehall_open), planens symbolruta till höger, gaveln med entrén längst bort. Möbler (F02-B) saknas ännu."),
-	bakom(VG, "STALL-TEORISAL", "Teorisalen innanför dörren i västväggen, österut",
-		S, So.x, So.y, rum("teorisal").x + 1.3, rum("teorisal").y + 1.3, 0, 0,
-		"Salens tre väggar med CanonId; dörröppningen i västväggen. Möbler saknas ännu."),
-	bakom(VG, "STALL-SADELKAMMARE", "Inne i sadelkammaren, österut genom rummet mot östväggen",
-		S, So.x, So.y, rum("sadelkammare").x + 4.2, rum("sadelkammare").y + 3.5, 0, 0,
-		"Rummets östra hälft i ögonhöjd: östväggen (x 15,5), halvväggen i söder, norrväggen mot teorisalen. Inredning saknas ännu."),
+		"Rummets hela längd i ögonhöjd: västväggen till vänster, öppningen mot östdelen till höger UTAN vägg (Spatial Canon v2 stall_uppehall_open), planens symbolruta till höger, gaveln med entrén längst bort. Möblerna ur stall-inne-01 (F02-B): två svarta soffor i vinkel, låga bord, rosa träponny, klocka, växt, fotovägg."),
+	--[[ Fotots vinkel (stall-inne-01): explicit kamera i rummets östra del,
+		snett mot sydvästra hörnet där F02-B ställer soffgruppen. ]]
+	{
+		id = "STALL-UPPEHALL-SOFFA", grupp = VG,
+		text = "Uppehållsrummets soffhörna — från rummets östra del snett mot sydvästra hörnet (stall-inne-01)",
+		fran = { x = So.x + 4.7, y = So.y + 62.9, h = 1.6 },
+		mot = { x = So.x + 0.9, y = So.y + 66.3 },
+		aim = 1.0,
+		figur = { x = So.x + 2.4, y = So.y + 67.2, z = 0 },   -- höger om ponnyn, utanför soffgruppen
+		krav = "Två svarta soffor i vinkel kring låga bord, rosa träponny med sadel, klocka, växt, fotovägg på pärlsponten, valvfönstret i västväggen. Gruppens läge mot fönstret är ASSUMPTION (F02-B).",
+	},
+	--[[ Review 2026-09-04 07:54 (Tobias): dörrläsbarhet — explicit kamera i
+		klubbdelens lobby mot teorisalens och sadelkammarens dörrar. ]]
+	{
+		id = "STALL-KLUBBDORRAR", grupp = VG,
+		text = "Klubbdelens inre entré från gång A — den genomgående väggens dörrar (inre entrén, sadelkammarens dörr)",
+		fran = { x = So.x + 5.2, y = So.y + S.klubbY + 1.6, h = 1.6 },
+		mot = { x = So.x + 4.55, y = So.y + S.klubbY + 5.2 },
+		aim = 1.15,
+		figur = { x = So.x + 3.9, y = So.y + S.klubbY + 3.5, z = 0 },
+		krav = "Den genomgående väggens två dörröppningar med vit karm, mörk smyg och överstycke som skiljer dem från väggen; ingen etikett behövs för att förstå var dörrarna är.",
+	},
+	--[[ Explicita kameror i fotonas vinklar (review 2026-09-04 08:50, blocker B/C). ]]
+	{
+		id = "STALL-TEORISAL", grupp = VG,
+		text = "Teorisalen i stall-inne-04:s vinkel — från västra delen österut mot whiteboardväggen",
+		fran = { x = So.x + 11.7, y = So.y + 67.6, h = 1.6 },
+		mot = { x = So.x + 17.3, y = So.y + 67.0 },
+		aim = 1.2,
+		figur = { x = So.x + 15.9, y = So.y + 66.2, z = 0 },   -- längre in, mellan stolraden och planschväggen
+		krav = "Whiteboardväggen rakt fram, bordsblocket med vita stolar, planscherna på sydväggen, skåpet med mikron, lysrören och spiralkanalen under det platta innertaket; ingen etikettplatta.",
+	},
+	{
+		id = "STALL-SADELKAMMARE", grupp = VG,
+		text = "Sadelkammaren i stall-inne-03:s vinkel — från södra delen norrut: västar vänster, stövelhylla höger, dörren mot teorisalen rakt fram",
+		fran = { x = So.x + 8.7, y = So.y + 58.4, h = 1.6 },
+		mot = { x = So.x + 8.7, y = So.y + 64.3 },
+		aim = 1.2,
+		figur = { x = So.x + 8.15, y = So.y + 62.5, z = 0 },   -- vänster om dörren, framför västarna
+		krav = "Västarna på krokrader till vänster, den vita stövelhyllan till höger, den grå dörren med fönster rakt fram (ritad på väggen, ingen passage), platt innertak; ingen etikettplatta.",
+	},
+	--[[ PO 2026-09-04 15:15 (references/spatial/stall-efter-pausrum-po-v1.md):
+		zonen efter pausrummet — två fasta vyer för side-by-side mot PO:s foton. ]]
+	{
+		id = "STALL-EFTER-PAUSRUM-V1", grupp = VG,
+		text = "Från pausrummets riktning (inre entrén) ut i service-/tvättzonen och ner i stallgången",
+		fran = { x = So.x + (S.klubb.vaggar[1].oppningar[1].x0 + S.klubb.vaggar[1].oppningar[1].x1) / 2, y = So.y + S.klubb.y0 - 0.55, h = 1.65 },
+		mot = { x = So.x + 8.4, y = So.y + S.klubbY - 0.55 },
+		aim = 1.0,
+		figur = { x = So.x + 7.2, y = So.y + S.klubbY + 1.35, z = 0 },
+		krav = "Öppen zon utan nya väggar: vit servicevägg bakom kameran, den låga avskärmningen, hyllan med backar, blå bin och pall i mittzonen till vänster, det mörka gångstråket rakt fram genom brandväggens öppning ner i gång A mot boxfronterna med anslagstavlor och brandsläckare; högt plåttak med balkar.",
+	},
+	{
+		id = "STALL-EFTER-PAUSRUM-V2", grupp = VG,
+		text = "Från stallgången tillbaka mot tvätt-/serviceväggen och utgångsrelationen (inre entrén med skylt och klocka)",
+		fran = { x = So.x + 6.0, y = So.y + S.klubbY - 0.25, h = 1.6 },
+		mot = { x = So.x + 7.6, y = So.y + S.klubb.y0 },
+		aim = 1.3,
+		figur = { x = So.x + 6.6, y = So.y + S.klubbY + 2.95, z = 0 },   -- mellan inre entrén och sadelkammardörren, skymmer ingen av dem
+		krav = "Den vita serviceväggen med rör-/kabelstråket, den grå dörren (inre entrén) med kodlås, klocka, utrymningsskylt, brandsläckare och grön säkerhetsutrustning, den rostfria tvättstationen med korg och krokar, den grå sadelkammardörren; fri passage genom brandväggens öppning.",
+	},
 	bakom(VG, "STALL-GANG-A", "Gång A norrut mot klubbdelen",
 		S, So.x, So.y, gangA, S.boxStartY + 6, 0, math.pi / 2,
 		"Boxfronter i antracit med galvad ram på båda sidor, markstensgång, klubbdelens tvärvägg långt fram."),
@@ -362,12 +466,69 @@ Vyer.reviewkameror = {
 		figur = { x = So.x + S.gangar.A.x0 + 0.6, y = So.y + dorr(S, "hastgang").pos[2], z = 0 },
 		krav = "ETT brott i västra boxraden på hästgångens höjd med dörrmarkören, boxfronter på båda sidor om brottet, figuren i gångens västra kant. Ingen tvärkorridor genom huset. Passagens insida är REFERENCE GAP.",
 	},
-	bakom(VG, "RIDHUS-ENTRE", "Huvudentrén norrut över entré/reception",
-		R, Ro.x, Ro.y, dorr(R, "ut_ridhus_W_9").pos[1] - 0.3, dorr(R, "ut_ridhus_W_9").pos[2] - 0.2, 0, math.pi / 2,
-		"Öppen hall utan rumslådor, receptionens glas (GLASS) till höger, toaletterna i bortre hörnet."),
-	bakom(VG, "RIDHUS-SKAPKORRIDOR", "Den öppna gången där skåpen står, norrut",
-		R, Ro.x, Ro.y, 4.95, R.entrehall.y0 + 2.3, 0, math.pi / 2,
-		"Ingen korridorvägg (återkallade skap_v/skap_o). Skåpen är möbler (F02-B) och saknas ännu."),
+	--[[ Explicit kamera (som i kameror.json): följkameran bakom en figur vid
+		innerdörren hamnar söder om hallen, uppe på läktarens bänkrader
+		(F02-B) — reviewkameran står därför själv i hallen vid dörren i
+		ögonhöjd och ser norrut, figuren några meter in i hallen. ]]
+	{
+		id = "RIDHUS-ENTRE", grupp = VG,
+		text = "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd",
+		fran = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] - 0.4, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] - 0.5, h = 1.7 },
+		mot = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] + 0.6, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] + 6.0 },
+		aim = 1.1,
+		figur = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] - 0.2, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] + 2.4, z = 0 },
+		krav = "Öppen hall utan rumslådor, ENTRÉ-plattan, receptionens glas (GLASS) till höger, toaletterna i bortre hörnet; skåpraden (F02-B) bortom glaset.",
+	},
+	--[[ Review 2026-09-04 07:54 (Tobias): receptionen, entrén inifrån och
+		läktartrappan — explicita kameror (samma lägen som kameror.json). ]]
+	{
+		id = "RIDHUS-RECEPTION", grupp = VG,
+		text = "Receptionen från skåpgången — glasad bröstning i nordvästra hörnet, skåpraden mitt emot (ridhus-klubb-02/-15)",
+		fran = { x = Ro.x + 4.0, y = Ro.y + 71.6, h = 1.6 },
+		mot = { x = Ro.x + 1.0, y = Ro.y + 75.6 },
+		aim = 1.0,
+		figur = { x = Ro.x + 3.4, y = Ro.y + 73.6, z = 0 },
+		krav = "Receptionens låga bröstning med fyra glasrutor och hylla mot gången, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot, gavelns valvfönster längst bort. Inga toalettboxar i hörnet.",
+	},
+	{
+		id = "RIDHUS-ENTRE-INNE", grupp = VG,
+		text = "Huvudentrén inifrån — västerut mot fasadens entrédörr (dorrvit u 9) från hallen",
+		fran = { x = Ro.x + 5.4, y = Ro.y + 68.6, h = 1.6 },
+		mot = { x = Ro.x + 0.0, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] },
+		aim = 1.1,
+		figur = { x = Ro.x + 3.0, y = Ro.y + 68.7, z = 0 },
+		krav = "Entrédörren i västväggen rakt fram: vit glasad dubbeldörr med vita karmar och grön utrymningsskylt ovanför, dörrmarkören vid samma dörr; öppen hall runt figuren.",
+	},
+	--[[ Product Owner 2026-09-04 11:56 ("Saknas skåp"): skåpförvaringen ur
+		ridhus-klubb-16/-18/-20/-21 som fristående grupper i entrédelens
+		västra remsa. Explicit kamera från gångens södra ände snett mot NV. ]]
+	{
+		id = "RIDHUS-SKAPRUM", grupp = VG,
+		text = "Skåpförvaringen i entrédelens västra remsa (ridhus-klubb-16/-18/-20/-21) — från gångens södra ände snett mot nordväst",
+		fran = { x = Ro.x + 3.0, y = Ro.y + 68.4, h = 1.55 },
+		mot = { x = Ro.x + 0.8, y = Ro.y + 71.9 },
+		aim = 1.1,
+		figur = { x = Ro.x + 2.0, y = Ro.y + 71.9, z = 0 },
+		krav = "Tre skåpgrupper i öppen yta utan nya väggar: de gröna tvåvåningsskåpen på svarta ben närmast, de höga grå/mörkblå skåpen längs västväggen, den vita tvåvåningsbanken under receptionens sydvägg; gången x 2,2–4,2 fri; inga rumslådor.",
+	},
+	{
+		id = "RIDHUS-LAKTARTRAPPA", grupp = VG,
+		text = "Trappan vid läktarens norra ände (H) — från hallens sydvästra hörn mot västväggen (ridhus-inne-39, ridhus-klubb-11)",
+		fran = { x = Ro.x + 4.3, y = Ro.y + 69.9, h = 1.7 },
+		mot = { x = Ro.x + 1.1, y = Ro.y + 65.4 },
+		aim = 1.6,
+		figur = { x = Ro.x + 2.4, y = Ro.y + 67.4, z = 0 },
+		krav = "En trappa i mörkt trä med handledare längs västväggen vid läktarens norra ände som når övre plan; läktardäckets ände; figuren kan gå från hallgolvet upp på däcket och vidare upp.",
+	},
+	{
+		id = "RIDHUS-SKAPKORRIDOR", grupp = VG,
+		text = "Den långa skåpgången (ridhus-klubb-01/-15) från södra änden norrut: skåpraden höger, receptionens glasdisk vänster längst upp, bordet med stolarna, gavelns valvfönster i fonden",
+		fran = { x = Ro.x + 3.4, y = Ro.y + 66.7, h = 1.65 },
+		mot = { x = Ro.x + 2.6, y = Ro.y + 76.0 },
+		aim = 1.0,
+		figur = { x = Ro.x + 2.9, y = Ro.y + 69.6, z = 0 },
+		krav = "Lång obruten skåprad till höger, receptionens bröstning + glas till vänster mitt emot, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken; inga korridorväggar.",
+	},
 	bakom(VG, "ARENA-A", "Banan nära A, söderut mot kortsidan",
 		R, Ro.x, Ro.y, R.bana.x + R.bana.w / 2, R.bana.y + 6, 0, -math.pi / 2,
 		"Vit sarg med mörk sockel, A-skylten på sargen, sanden dovt brungrå."),

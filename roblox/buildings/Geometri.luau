@@ -219,6 +219,36 @@ function Geometri.laktarSektioner(laktare): { { y0: number, y1: number } }
 	return ut
 end
 
+--[[ Läktarens bänkrader ur datan — SAMMA regel som laktarRader i src/site.js.
+	Gångbrädan ligger på däckhöjd närmast banan; rad i har sitsen på
+	dackZ + (i+1)·stegH och börjar gangbrada.djup + i·rader.djup in från
+	däckets bankant. `in0`/`in1` är avstånd in från bankanten, `z` sitsens
+	överkant. Utan `rader`/`gangbrada` i datan finns inga rader — inte fyra
+	påhittade. ]]
+function Geometri.laktarRader(L): { { in0: number, in1: number, z: number } }
+	local r, g = L.rader, L.gangbrada
+	if not r or not g then return {} end
+	local ut = {}
+	for i = 0, r.antal - 1 do
+		table.insert(ut, {
+			in0 = g.djup + i * r.djup,
+			in1 = g.djup + (i + 1) * r.djup,
+			z = L.dackZ + (i + 1) * r.stegH,
+		})
+	end
+	return ut
+end
+
+--[[ Ett inredningsobjekts fotavtryck som axelparallell rektangel i husets
+	lokala meter — samma regel som inredningRekt i src/inredning.js. Vänd
+	norr/söder ligger bredden längs x, vänd öster/väster längs y. ]]
+function Geometri.inredningRekt(o): Rekt
+	local q = math.abs(math.cos(o.rikt)) < 0.5
+	local w = if q then o.matt.b else o.matt.d
+	local h = if q then o.matt.d else o.matt.b
+	return { x = o.pos[1] - w / 2, y = o.pos[2] - h / 2, w = w, h = h }
+end
+
 -- Överlappets area mellan två rektanglar. 0 när de bara nuddar varandra.
 function Geometri.overlapp(a: Rekt, b: Rekt): number
 	local dx = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)

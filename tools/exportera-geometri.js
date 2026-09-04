@@ -28,9 +28,12 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 /* model.js först: site.js använder clamp därifrån. */
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
-vm.runInContext(las("src/model.js") + "\n" + las("src/site.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, SPELABSTRAKTIONER } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, SPELABSTRAKTIONER})", ctx);
+/* data.js före site.js (bokstäverna), inredning.js efter (den förankrar
+   möblerna i STALLINNE/RIDHUSINNE) — samma ordning som index.html. */
+vm.runInContext(las("src/model.js") + "\n" + las("src/data.js") + "\n" + las("src/site.js")
+  + "\n" + las("src/inredning.js"), ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -153,18 +156,29 @@ const ut = {
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, cafe: RIDHUSINNE.cafe,
     trappor: RIDHUSINNE.trappor, ovreGang: RIDHUSINNE.ovreGang,   // vertikala förbindelser (PO 2026-09-03)
+    ovreGangV: RIDHUSINNE.ovreGangV,                                 // landgången från läktartrappan vid H (PO 2026-09-04)
     entrehall: RIDHUSINNE.entrehall, skyltar: RIDHUSINNE.skyltar,
     basTak: RIDHUSINNE.basTak, sidor: RIDHUSINNE.sidor,
     panel: RIDHUSINNE.panel, panelList: RIDHUSINNE.panelList,
     sandFarg: RIDHUSINNE.sandFarg, hallvagg: RIDHUSINNE.hallvagg,
     takfarg: RIDHUSINNE.takfarg, takstomme: RIDHUSINNE.takstomme,
     dorrar: RIDHUSINNE.dorrar,
+    /* F02-B: det som stod framme på banan och på läktaren fanns bara i
+       webben. Roblox får samma tal. */
+    hinder: RIDHUSINNE.hinder, koner: RIDHUSINNE.koner, pall: RIDHUSINNE.pall,
+    dynor: RIDHUSINNE.dynor, lysror: RIDHUSINNE.lysror, spegelSida: RIDHUSINNE.spegelSida,
   },
   /* SPELABSTRAKTIONER ligger UTANFÖR `ridhus`/`stall` med flit: de är
      spelets traversal, inte fidelity-fakta om UBRF. Roblox bygger dem
      märkta med klass, och fidelity-testerna får inte läsa dem som
      verklighet. Se noten i src/site.js. */
   spelabstraktioner: SPELABSTRAKTIONER,
+  /* F02-B: inredningen — en lista per hus, varje post med källa och klass.
+     Huvudkommentaren i src/inredning.js säger varför den delas: en soffa
+     som finns i spelet ska finnas i Roblox, och en som saknar källa ska
+     saknas på båda ställena. Kommentaren ovan om att "möblering stannar i
+     webbkoden" gällde tills det fanns verifierad inredning att dela. */
+  inredning: INREDNING,
 };
 
 const huvud = `--!strict

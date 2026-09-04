@@ -1,0 +1,330 @@
+# F02-B — Inredningsmatris: verifierad inredning, utrustning och material
+
+Status: `READY_FOR_CHATGPT_REVIEW`. Bas `a21d6ab` (F02-A). Branch
+`claude/f02-b-interior-furnishing`.
+
+F02-A:s topologi är **orörd**. Rumsgränser, väggar, öppningar, entréer,
+läktarens läge och djup, C-blocket, domarbåset och exteriören står som i
+`a21d6ab`. Det som F02-B ändrar är vad som står, hänger och lyser inne i de
+rummen — och det som stod där utan källa.
+
+Klasser: `VERIFIED` (i granskad bild/film) · `FOTO` (i bild som inte granskats
+av produktägaren) · `DERIVED` (läget följer av bild + plan) · `ASSUMPTION`
+(läget inom rummet är valt; att objektet finns är belagt) · `REFERENCE GAP` ·
+`CONTRADICTION`. Per objekt står klassen för *att det finns* i `klass` och
+för *var det står* i `lage` i `src/inredning.js`.
+
+## Delad sanning
+
+`src/inredning.js` är den enda listan. Varje post: `id`, `rum`, `typ`, `pos`,
+`rikt`, `matt`, `farg`, `kalla`, `klass`, `lage`, `kolliderar`. Webben ritar
+den (`v3dInredning` i `src/varld3d.js`, kartan och målarvyn i `src/world.js`)
+och kolliderar mot den (`vandringKollision`); `tools/exportera-geometri.js`
+skriver den till `UBRFKomplex.luau`, och Roblox bygger den
+(`byggInredning` i `roblox/buildings/Anlaggningen.luau`) med källa och klass
+som attribut på varje del. Fotavtrycket räknas med samma regel på båda
+ytorna (`inredningRekt` ↔ `Geometri.inredningRekt`); läktarens rader med
+samma regel (`laktarRader` ↔ `Geometri.laktarRader`).
+
+Renderingen skiljer sig: webben bygger en soffa av sits, rygg och armstöd,
+Roblox av två lådor. Läge, mått, färg, typ och källa är samma tal.
+
+## Fas 1–2: audit av det som fanns, och vad som togs bort
+
+| objekt | var | klass efter audit | åtgärd |
+|---|---|---|---|
+| Läktarens solida mörkbetsade brädfront + ljus kappregel | webb + Roblox | **återkallad** av `references/buildings/ridhus/INTERIOR-MATRIS.md` § 2 (byggd på en beskuren förgrund av -01); kappregeln `REFERENCE GAP` | **borttagen** på båda ytorna; `IDENTITET.ridhus.laktarfront`, `laktare.frontTopp/kappH` borta ur datan |
+| Läktarens plana plankdäck | webb + Roblox | matrisen § 2: däcket är gångbräda + stegade rader, inte ett plant däck | **ersatt** av gångbräda + tre bänkrader |
+| Räcke längs läktarens framkant | webb | ingen källa; -14 visar inget räcke | **borttaget** |
+| Tre orange stolar utspridda på däcket | webb | ingen källa för lägena; -40 visar två orange skalstolar *bakom domarboden* | **borttagna**; två stolar bakom boden ur -40 (`FOTO`, `DERIVED`) |
+| Två speglar på y 19 och 37, panelsidan | webb (`RIDHUSINNE.speglar`) | ingen källa för antal eller läge; bilderna visar EN spegel vid B och två på kortsidan vid A | **borttagna**; ersatta av `spegel_B`, `spegel_A_v`, `spegel_A_o` |
+| Banderollskena längs 80 % av panelväggen | webb | ingen källa | **borttagen** |
+| "Hinderförrådet" — sju bommar och fyra koner vid södra gaveln | webb (målarvyn) | handskrivna koordinater; bilderna sätter upplaget på läktardäckets södra ände | **borttaget**; ersatt av `laktare_bommar`, `laktare_hinderstod`, `laktare_bokstavsstall` |
+| Storsäck + brandsläckare mitt i stallgången | webb (målarvyn) | handskrivna koordinater, ingen bild | **borttagna** |
+| Nio LODRÄTA spjälor per boxfront | webb (målarvyn) | motsäger den rättade läsningen (fem vågräta reglar, stall-inne-05) | **rättat** till fem vågräta ur `IDENTITET.stall.boxfront` |
+| 180°-vridning av dressyrbokstäverna | webb (målarvyn) | dubblett — vridningen ligger i tabellen sedan tidigare; A stod i norr här och i söder i WebGL | **rättat**; bokstäverna läses rakt ur tabellen |
+| Lysrörsrader i ridhuset | webb-literal | `VERIFIED` att de finns (-11, -14, -31); delning `REFERENCE GAP` | flyttade till `RIDHUSINNE.lysror` och byggda i Roblox också |
+| Hinder, koner, uppsittningspall på banan | webb-only | "står framme mellan lektionerna" ur interiörfotona; lägena `ASSUMPTION` (oförändrat) | exporterade och byggda i Roblox för paritet; lägena är inte ändrade och står som `ASSUMPTION` |
+| Elon-dynorna | webb-only | -07: lösa dynor på översta raden (`FOTO`) | flyttade till översta bänkraden, byggda i Roblox också |
+| Whiteboarden i gång A | webb | ingen bild av en whiteboard i gången; den är ett spelelement (schemat) | **oförändrad** — spelmekanik utanför F02-B; noterad som `ASSUMPTION` |
+| Namnskyltar, hästhuvuden, rosetter på boxarna | webb | spelelement (hästarna som individer) | **oförändrade** — utanför F02-B |
+
+## Fas 3–5: det som byggts, per zon
+
+### Stallhuset — uppehållsrummet
+
+| | |
+|---|---|
+| Källor | `stall-inne-01-uppehallsrummet.jpg` (IMG_0134); `DRIVE-INVENTORY-2026-08-30.md` |
+| Bilden bevisar | två svarta skinnsoffor i vinkel kring två låga svarta bord, rosa träponny med riktig mörk sadel, rund väggklocka, krukväxt, sex inramade hästfoton på pärlspont, valvfönster mot en röd fasad, grå betonggolv |
+| Förut | rummet var tomt (F02-A byggde bara väggar och etikett) |
+| Ändrat | `uppehall_soffa_v/_s`, `uppehall_bord_1/2`, `uppehall_ponny`, `uppehall_klocka`, `uppehall_vaxt`, `uppehall_fotovagg` |
+| Läge | valvfönstren i västväggen sitter i fasaden 2,6 och 8,6 m från gaveln (y 67,35 och 61,35); soffgruppen läggs vid det södra. Att möblerna finns: `VERIFIED`. Var i rummet: `ASSUMPTION` |
+| REFERENCE GAP | var i rummet kameran stod; vilket valvfönster gruppen står vid |
+| **Öppen fråga (synk 2026-09-04, kamera `STALL-UPPEHALL-SOFFA`)** | fotots ordning längs väggen är dörr (vänster) · klocka · växt · fotovägg · valvfönster (höger) · ponny under fönstret. Mot den låsta fasadens valvfönster (y 61,35 / 67,35) och rummets sydvägg (y 60,15) går den inte att lägga entydigt: vid det södra fönstret får soffan inte plats söder om fönstret; vid det norra hamnar gruppen i det hörn matrisen ger pentryt (`stall-inne-02`). Gruppen ligger kvar vid det södra fönstret som `ASSUMPTION`; avgörs av review, inte här |
+| Paritet | webb 3D + karta + målarvy; Roblox `Inredning uppehall_*`; kollision på båda |
+
+**Synk mot F02-A:s rättelsepass 2026-09-03 (`e879784`).** Uppehållsrummet
+är nu L-format (västdelen x 0–5,9 × N 0–10 + östdelen `uppehallsrum_o`,
+f.d. "passage") och har en sluten volym 1,0 × 4,4 m på x 2,0–3,0, N 5,6–10,0
+där den tjocka väggen `spar` stod. Tre objekt med `lage: ASSUMPTION` stod i
+eller framför den volymen och är flyttade inom samma rum, utan ny källa:
+`uppehall_soffa_s` → (2,6; 64,95) norr om volymen, `uppehall_bord_2` →
+(1,65; 62,5) mellan västsoffan och volymen, `uppehall_ponny` → (1,0; 65,8)
+vid västväggen (fotot visar den till höger om sofforna, mot valvfönstret).
+Kontrollerat maskinellt: inget uppehållsrumsobjekt skär den slutna volymen
+eller en vägg. Klasserna är oförändrade.
+
+**Review 2026-09-04 08:50 (ChatGPT, blocker A) — checkpoint A/B på #76.**
+Etiketten "UPPEHÅLLSRUM" är borta (alla spelarvända rumsetiketter i de
+granskade interiörerna: uppehållsrum, WC, teorisal, sadelkammare).
+Klubbdelen har fått ett **platt vitt innertak** på 2,8 m norr om den
+genomgående väggen (stall-inne-01/-02/-03/-04 visar slät takskiva med
+taklist, inte boxhallens takstolar); boxhallens dragstag och pendlar slutar
+vid samma vägg. Soffgruppen ligger nu vid det **norra** valvfönstret
+(y 67,35) som `DERIVED`: bildens ordning klocka · växt · fotovägg ·
+fönster · ponny går bara ihop där, eftersom soffan vid det södra fönstret
+inte får plats söder om det. Fotoväggen på x 0,02 · N 65,75; fönstret
+norr om den; ponnyn (1,1; 67,55) under fönstret; västsoffan mot
+västväggen under fotona; sydsoffan i vinkel. Konsekvens: gruppen delar hörn
+med pentryt i `stall-inne-02` (pentrymöbler byggs fortfarande inte).
+Valvfönstren ritas nu **inifrån** (karm, spröjs, fönsterbräda) som
+gavelns fönster; fasadens valv står z 1,55–3,10 men innertaket på 2,8 —
+rutan klipps under taket (`[antagande]`, exteriören låst; dokumenterad
+motsägelse). Kamera `STALL-UPPEHALL-SOFFA`: (4,7; 62,9) → (0,9; 66,3),
+figuren höger om ponnyn.
+
+### Stallhuset — pentryt: läge känt, möblering INTE byggd
+
+`stall-inne-02-pentryt.jpg` visar ett pentry (kubhylla, mikro, kyl, bord med
+två stolar) i ett hörn med **valvfönster och runt fönster**. I den låsta
+fasaden sitter de runda fönstren på norra gaveln 9,8 och 13,0 m från
+västväggen — i F02-A:s plan ligger det i passagen/teorisalen, inte i
+uppehållsrummet, och inget hörn i planen har både ett valvfönster och ett
+runt fönster. `references/buildings/stall/INTERIOR-MATRIS.md` säger redan
+"inte placerat". **`REFERENCE GAP` + `CONTRADICTION` (fasad mot plan) —
+pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
+`pentry`-objekt tills det kan placeras.
+
+### Stallhuset — teorisalen
+
+| | |
+|---|---|
+| Källor | `stall-inne-04-teorisalen.jpg` (IMG_0138) |
+| Bilden bevisar | bordsblock i björk med vita stolar på träben, två whiteboards på fondväggen, svart kontorsstol, träskåp med mikro, kartonger med utrustning, två inramade anatomiplanscher, valvfönster på ena långväggen, två långa lysrörsarmaturer, perforerad spiralkanal och grått rör i taket, pärlspont, betonggolv |
+| Förut | tomt |
+| Ändrat | `teori_whiteboard_1/2`, `teori_bord_1..3`, `teori_stol_1..10`, `teori_skap_mikro`, `teori_plansch_1/2`, `teori_kartong_1..3`, `teori_lysror_1/2`, `teori_ventkanal` |
+| Läge | `DERIVED`: rummets enda yttervägg i planen är norra gaveln → fönstren där → kameran tittar österut → whiteboards på östväggen, planscher och kartonger på sydväggen, skåpet i sydöstra hörnet |
+| REFERENCE GAP | exakt antal stolar och bord (bilden beskär blocket); den svarta kontorsstolen och det hopfällda bordet byggs inte; gaveln har i fasaden valvfönster med hög bröstning (z0 2,6) — bildens låga valvfönster stämmer inte med fasaden: `CONTRADICTION`, fasaden låst, rapporterad |
+| Paritet | båda ytorna; borden, stolarna, skåpet och kartongerna kolliderar |
+| **Review 08:50 (blocker B)** | etiketten borta; whiteboards och planscher stod 0,03 från vägglinjen och låg INNE i den 0,16 m tjocka innerväggen — nu 0,10 (syns); spiralkanalen låg 2,8 m över taket (cyl-origo) — nu liggande på sin radie under innertaket; explicit kamera `STALL-TEORISAL` (11,7; 67,6) → (17,3; 67,0) i bildens vinkel |
+
+### Stallhuset — sadelkammaren
+
+| | |
+|---|---|
+| Källor | `stall-inne-03-sadelkammaren.jpg` (IMG_0137) |
+| Bilden bevisar | **inga sadelbockar i bild**: säkerhetsvästar (marin, svart, rosa) på krokrader längs vänstra väggen, vit öppen hylla full av ridstövlar och gummistövlar till höger, grå ståldörr med fönster och skylten "Teorisal" rakt fram, pärlspont, betonggolv |
+| Förut | tomt |
+| Ändrat | `sadel_vastkrokar` (västväggen), `sadel_stovelhylla` (fristående mitt emot, så att bildens smala passage uppstår) |
+| Läge | `DERIVED` ur bilden + dörren från gång A i brandväggen (x 7,7–8,8): västväggen till vänster när man går in |
+| REFERENCE GAP | sadlar, träns och övrig utrustning som ordern räknar upp syns inte i bilden och byggs inte; rummets östra del (x > 10) är tom |
+| **Strukturell anmärkning (rapporterad, inte rättad)** | dörren "Teorisal" rakt fram leder norrut in i teorisalen. F02-A:s `teorisal_s` (y 64,35) har ingen öppning. F02-B rör inte topologin; passagen byggs inte |
+| **Review 08:50 (blocker C)** | etiketten borta; `sadel_vastkrokar` (10 västar) på västväggen till vänster, `sadel_stovelhylla` tät vit hylla till höger, och `sadel_dorr_teori`: ett **ritat, stängt** grått dörrblad med fönster och vit karm på nordväggen (x 8,3–9,3) — läsbar dörr utan passage, tills F02-A belägger `teorisal_s`. Läget längs väggen `[antagande]`. Inga sadlar. Kamera `STALL-SADELKAMMARE` (8,7; 58,4) norrut |
+
+### Stallhuset — zonen efter pausrummet (PO 2026-09-04 15:15)
+
+| | |
+|---|---|
+| Källor | `references/spatial/stall-efter-pausrum-po-v1.md` (PO-godkänd sammanfogning av Tobias nya foton 2026-09-04 — fotona är `[DRIVE-ONLY]`); `stall-inne-05`, `stall-gang-05`, KORT.md § Gångens ändar |
+| Referensen bevisar | flödet PAUSRUM → ÖPPEN SERVICE-/TVÄTTZON → STALLGÅNG → BOXFRONTER; vit servicevägg med rör/kablar, grå teknikdörr med kodlås, klocka, säkerhetsutrustning, rostfri tvättstation, korg/krokar, ytterligare grå dörr; mittzon med låg mörkgrå metallavskärmning, arbetshylla med backar/flaskor, blå bin, låg pall; mörk rektangulär gångyta mot ljusare betong; mörkgrå boxfronter med anslagstavlor och brandsläckare; bortre grå dubbeldörr med grön skylt och välvt fönster med galler; högt plåttak med balkar, stolpar och lampor |
+| Läsning mot Spatial Canon | zonen är **tvärkorridoren** y 52,85–57,45 mellan brandväggen (klubbY) och den genomgående väggen: den vita serviceväggen = genomgående väggens sydsida med inre entrén (den grå teknikdörren) och sadelkammarens dörr (den andra grå dörren); stallgången = gång A; boxfronterna = västra radens front; bortre änden = södra gaveln (gaveldörren + fasadens S-valv). Inga nya rum, inga väggar — `OPEN_AREA`-läsning av en yta som redan var öppen |
+| Ändrat | `zon_ror`, `zon_ror_ned`, `zon_dorrblad_entre` (uppställt blad), `zon_knappsats`, `zon_klocka`, `zon_brandslackare`, `zon_forsta_hjalpen`, `zon_vask`, `zon_korg`, `zon_krokar`, `zon_racke`, `zon_hylla`, `zon_back_1/2`, `zon_bin`, `zon_pall`, `boxfront_tavla_1/2`, `boxfront_brandslackare`; tvärkorridorens golv som gångarnas mörka stråk på ljus betong (`gangytor[].tvar`); gaveldörren som två grå blad med ljus ruta (i07/i09 visade den öppen — ett tillstånd, inte arkitektur); södra gavelns valvfönster inifrån med galler. Nya typer på båda ytorna: `ror`, `brandslackare`, `vask`, `krokar`, `racke` |
+| Läge | att tingen finns: `VERIFIED` (PO-referensen); mått och lägen: `ASSUMPTION` — referensen är omåttsatt (`REFERENCE GAP`); vilken gång fotona visar `[antagande]` gång A |
+| Fri passage | inre entrén (x 4,1–5,0) → gång A och sadelkammarens dörr fria; avskärmning och hylla står mellan gång A och gång B; kontrollerat av siktgrindens stallrutt och `bygge.spec` |
+| REFERENCE GAP | exakta mått; funktionen bakom den andra grå dörren namnges inte; taket rörs inte (redan byggt ur filmerna) |
+| Paritet | samma inredningslista, samma `gangytor`-flagga, samma gavelkod på webb (`v3dStall`) och Roblox (`byggStall`) |
+
+### Stallhuset — gång A:s norra ände
+
+| | |
+|---|---|
+| Källor | `stall-gang-05.jpg` m.fl. (IMG_0249/0250), `stall/KORT.md` § Gångens ändar |
+| Bilden bevisar | grå metallport i vit vägg, rund klocka ovanför, grön utrymningsskylt bredvid |
+| Förut | klockan byggd; skylten saknades |
+| Ändrat | `gangA_exitskylt` vid brandväggens dörr mot klubbdelen (`DERIVED`) |
+| REFERENCE GAP | sakerna som hänger på boxfronterna (sadlar, täcken, grimmor — `VERIFIED` att de finns, okänt per box) och foderhon: byggs inte |
+
+### Ridhuset — läktaren
+
+| | |
+|---|---|
+| Källor | `ridhus-inne-04` (nyckelbild), `-07`, `-14` (nyckelbild), `-43`, `-32`, `-41`; `INTERIOR-MATRIS.md` § 2 |
+| Bilderna bevisar | sarg → plan gångbräda i mörkt trä bakom sargkrönet (`VERIFIED`) → stegade bänkrader i ljus furu i hela långsidans längd (`VERIFIED`); tre rader (`FOTO`); röda kantlister (-04); lösa svarta/blå dynor, en Elon (-07); ljus stående skivpanel bakom (`VERIFIED`, § 5) |
+| Förut | plant plankdäck + solid mörk front + kappregel + räcke + tre orange stolar |
+| Ändrat | `laktare.gangbrada` + `laktare.rader` i `src/site.js`; byggt ur `laktarRader` på båda ytorna; dynorna på översta raden; fronten, kappan, räcket och stolarna borta |
+| Klass på talen | däckhöjd 0,80 `DERIVED` (-43); radernas stighöjd 0,30 och djup 0,80 `ASSUMPTION` — matrisen: `REFERENCE GAP` |
+| REFERENCE GAP | stighöjd/djup; om raderna är tre eller fyra; vad som finns bakom raderna; gången bakom läktaren (-39) byggs inte |
+| Paritet | båda ytorna, samma regel; test i `geometri.spec` (data) och `bygge.spec` (byggda delar, relationen "stiger bort från banan") |
+
+### Ridhuset — hinderupplaget, returtunnan, stolarna bakom boden
+
+| | |
+|---|---|
+| Källor | `ridhus-inne-21` (upplaget och bokstavsstället), `-23` (poler i högerkanten vid A), `-43` (returtunnan vid H), `-40` (två orange skalstolar bakom domarboden); granskning A § "hinderupplag i hörn" |
+| Ändrat | `laktare_bommar` (7, regnbågsfärger), `laktare_hinderstod` (3), `laktare_bokstavsstall` (F R H V C K M A), `laktare_returtunna`, `laktare_stol_1/2` |
+| Läge | på läktardäcket bakom sargen; upplaget vid södra änden (A/K-hörnet) `DERIVED` ur -21 + -23; tunnan vid H `DERIVED` ur -43; stolarna bakom boden `DERIVED` ur -40 |
+| REFERENCE GAP | ett andra upplag i "klubbhörnet" vid C (-44) byggs inte — bilden är för nära för att placera; bordsraden bakom boden (-40) byggs inte |
+
+### Ridhuset — speglarna
+
+| | |
+|---|---|
+| Källor | vid B: `-34`, `-19` (nyckelbild), `-31` (nyckelbild), `IMG_0189-f05` (nyckelbild); vid A: `-23` (nyckelbild) |
+| Bilderna bevisar | EN spegel i två rutor, brun träram, direkt ovanpå sargen vid B (`VERIFIED`); TVÅ speglar i träram på den vita kortsidan vid A, en på var sida om dubbeldörren (`VERIFIED`) |
+| Förut | två speglar på y 19 och 37 utan källa; inga i Roblox |
+| Ändrat | `spegel_B` på panelsidan vid B (läget `VERIFIED`), `spegel_A_v/_o` på sydgaveln ±5,2 m från dörren (`DERIVED` ur -23) |
+| **CONTRADICTION** | -23 visar A-väggens speglar direkt ovanför sargen; i F02-A ligger sydgaveln 5,7 m söder om banans sarg (`entre 11,5 → bana y 5,68`). Speglarna hänger på gaveln, alltså 5,7 m bakom sargen. Rapporterad; topologin rörs inte |
+| Paritet | båda ytorna (Roblox: glas med reflektans i träram) |
+
+### Ridhuset — skåpkorridoren och entrén
+
+| | |
+|---|---|
+| Källor | `ridhus-klubb-01` (nyckelbild), `IMG_0169-f02/f03` (nyckelbilder), `IMG_0268-r03/r05/r12/r15`, `ridhus-klubb-14` |
+| Bilderna bevisar | höga smala plåtskåp i grått med enstaka röda och mörkgrå dörrar längs den vägg man har till vänster på väg mot valvfönstret (västväggen); vita trästolar med rött mönstrat tyg kring ett litet bord mitt i gången; bänk med ridstövlar under valvfönstret; i entrén en bänk/låda under fönstret mot parkeringen, full av jackor och stövlar |
+| Ändrat (synk mot accepterad F02-A 2026-09-04) | Spatial Canon v2 återkallade `skap_v`/`skap_o`: entrédelen är OPEN_AREA och skåpen **fristående möbler**. `skap_v_1..3` står i planens skåpremsa x 4,2–5,7 med **fronten mot receptionsglaset (x 2,2)** och gången emellan — `ridhus-klubb-01/-15` visar glasbröstningen på ena sidan och skåpraden mitt emot. Radens början/slut är `ASSUMPTION` (planens "fyra luckor" olästa); luckan y 72,6–74,3 lämnar rutten entré → bana fri. `skap_bord`, `skap_stol_1/2` i gången (x 3,3). `skap_stovelbank` under gavelns låga valvfönster (x ≈ 4,4, läst ur fasaddatan). **`entre_bank` borttagen**: `IMG_0268-r03/-r05` och `ridhus-klubb-14` visar SAMMA bänk under SAMMA valvfönster som `-01` har i förgrunden — en bänk, inte två; den låsta fasaden har inget fönster vid entrédörren (u 9, b 2 fyller entréns bredd) |
+| Läsning att avgöra i F02-A (rapporterad) | i `ridhus-klubb-01/-15` vetter receptionens glas mot gången med skåpen. Med glaset på planens linje x 2,2 ligger gången alltså x 2,2–4,2 och receptionens insida **väster** om glaset (x 0–2,2) — F02-A:s passiva etikett RECEPTION står öster om glaset och SCV2-03-rutten går längs x 1,1. Möblerna följer glaset som det står; ingen topologi rörd |
+| **Strukturell anmärkning (rapporterad, inte rättad)** | bildens högra sida är en bröstningsvägg med **fyra glaspartier** in mot rummet innanför. F02-A läste `skap_o`:s fyra luckor som gångbara öppningar. Bilden talar för fönster, inte dörrar. Topologin rörs inte här |
+| REFERENCE GAP | omklädningsrummen (röda/svarta, gräddvita, gröna skåp; `ridhus-klubb-16/-18/-20/-21`), toaletterna, duschen med grönt draperi: rummen är fotograferade men **inte placerade** (Bild 2–5 saknas i repot, `F02-INTERIOR-MATRIS.md`). Inredning där byggs inte. Entréns vindfång (x 0–2,2 vid dörren) har inget belagt objekt kvar |
+
+**Review 08:50 (blocker D).** Skåpen är **en sammanhängande rad**
+`skap_v_*` x 4,45, N 68,3–75,0 (fronten mot väster) i stället för tre
+bankar med luckor; receptionens glas + låga vita disk mitt emot (x 2,2,
+N 73,5–77,0); bordet med stolarna (x 3,4) i gången norr om raden; rutten
+entré → hall går x 2,6–2,8 (glas 2,2, stolar 3,15–3,65). Explicit kamera
+`RIDHUS-SKAPKORRIDOR` (3,4; 66,7) → (2,6; 76,0): skåpraden höger, glaset
+och disken vänster, bordet, gavelns valvfönster och stövelbänken i fonden.
+
+**Product Owner 2026-09-04 11:56 — "Saknas skåp" (enda korrigeringen i
+rundan; receptionen och stallets sidodörr/passage godkända, rörs inte).**
+Skåpförvaringen ur `ridhus-klubb-16` (höga mörkblå/grå skåp, tio halvhöga
+vita i två våningar, pelare, öppen dörr till ett litet rum), `-18` (tre grå +
+tre svarta luckor i vita profilramar), `-20/-21` (fyra gröna dubbelluckor på
+svarta ben, gul skogräns) byggs som **tre fristående grupper i entrédelens
+öppna västra remsa** x 0–2,2 söder om receptionen: `skap_grona` (x 0,3–0,8 ·
+N 68,5–70,1, front öster, två våningar, ben), `skap_hoga_v` (x 0,3–0,8 ·
+N 70,5–72,5, front öster, 3 grå + 2 mörkblå), `skap_vita_2v` (under
+receptionens sydvägg, x 0,85–2,05, front söder, 3 × 2 luckor). Inga nya rum
+eller väggar; gången x 2,2–4,2, entréns vindfång och rutten entré → bana
+fria (SCV2-03, gångtest). Att skåpen finns: `VERIFIED`; lägena:
+`ASSUMPTION` — planens cellrad bär funktionerna skåpförvaring/ombyte där
+`[antagande]`; rummen själva (Bild 2–5) är fortfarande inte placerade
+(`REFERENCE GAP` nedan kvarstår för rummen, inte för skåpen). Förenklat:
+vita banken 3 × 2 mot bildens 5 × 2; pelaren i -16 byggs inte. `skapbank`
+har fått `vaningar` och `ben` på båda ytorna. Kamera `RIDHUS-SKAPRUM`
+(19:e) från gångens södra ände snett mot nordväst.
+
+### Ridhuset — receptionen (PO 2026-09-04 07:54)
+
+| | |
+|---|---|
+| Källor | `ridhus-klubb-02` (genom glaset), `-01`, `-15` |
+| Bilden bevisar | låga träskåp/hyllor längs bakväggen, inramade tavlor ovanför, en vit stol med rött tyg innanför disken, dagsljus i rummets bortre ände |
+| Ändrat | `reception_skap`, `reception_tavlor`, `reception_stol` (`VERIFIED` att de finns; `DERIVED` mot bakväggen). Disken och hyllan mot gången är F02-A:s GLASS (`hylla`), karmposterna delar glaset i fyra rutor |
+| REFERENCE GAP | lampan, datorn och pärmarna på disken; rummets övriga möblering |
+
+### Dörrläsbarhet (PO 2026-09-04 07:54, blocker 4)
+
+Alla öppningar i klubbdelens och entrédelens väggar ritas nu med **överstycke**
+(vägg ovanför dörrhöjden 2,1 m), **vit karm** med mörk smyg och tröskel — på
+webben i `v3dVaggarOchRum`, i Roblox i `byggVaggarOchRum` (`Dörrkarm …`,
+`Överstycke …`, `Genomsiktlig`). Fasadens dörrar ritas på insidan av väggen
+(`v3dDorrarInifran` / `Fasaddörr inifrån …`) med grön utrymningsskylt. Dörrblad
+i innerväggarna byggs inte (öppningarna är passager i datan); karmarnas
+utseende ur `ridhus-klubb-03/-19`, `stall-inne-03`. Etiketterna ENTRÉ och
+RECEPTION är borta.
+
+### Ridhuset — banan, C-blocket, domarbåset, caféet
+
+| zon | läge |
+|---|---|
+| Banan: sarg, panel, skyltar, fönsterband, tak, installationer | oförändrade från F02-A/F01 (`VERIFIED`/`ASSUMPTION` som förut). Lysrören delade. Hinder/koner/pall exporterade till Roblox |
+| C-blocket: bänkar, två trappor, glasband, klocka, stjärna | oförändrade (`VERIFIED`, byggda i F01/F02-A) |
+| Domarbåset | oförändrat; insidan `REFERENCE GAP`; bordsraden bakom (-40) byggs inte |
+| Café Krubban | `ridhus-klubb-09` (nyckelbild) bevisar vita kvadratiska bord, grå perforerade plåtstolar, två runda pelarbord, värmepump, soffa. **Inget mått, ingen plan för övre plan** (`INTERIOR-MATRIS.md` § 8). Caféet är i webben en golvplatta bakom glasbandet, inte gångbart. **Byggs inte — `REFERENCE GAP`** (placeringen vore påhittad). Testet förbjuder `cafe_`-objekt |
+| Reception, skåpförvaring, ombytesrum, HWC | `REFERENCE GAP` (F02-A: Bild 2–5 saknas) |
+
+## Strukturella fynd att rapportera separat (F02-A-topologi, INTE rättade här)
+
+1. **Sadelkammaren → teorisalen**: `stall-inne-03` visar en dörr "Teorisal" i
+   sadelkammarens norra vägg; F02-A:s `teorisal_s` saknar öppning.
+2. **Receptionsglasets sida** (ersätter den tidigare punkten om `skap_o`,
+   som F02-A återkallat): `ridhus-klubb-01/-15` visar glasbröstningen mot
+   gången med skåpraden. Med glaset på x 2,2 (accepterat) ligger
+   receptionen väster om glaset, inte öster som etiketten står.
+3. **Sydgaveln vid A**: `ridhus-inne-23` visar väggen med speglarna direkt
+   bakom sargen; F02-A har 5,7 m mellan sargen och gaveln.
+4. **Teorisalens fönster**: bildens låga valvfönster mot fasadens
+   valvfönster med 2,6 m bröstning på norra gaveln (fasaden låst).
+5. **Pentryts fönsterpar** (runt + valv i ett hörn) finns inte i något hörn i
+   plan + fasad.
+
+## Tester (maskinkontrollerbart, inte visuell fidelity)
+
+- `roblox/tests/geometri.spec.luau`: läktarens rader i datan (tre, stiger
+  inåt, ryms på däcket), fronten och de sourcelösa speglarna borta ur datan;
+  inredningens id unika, klasser i vokabulären, källa per objekt, varje objekt
+  i sitt rum, rimliga mått, belagda objekt finns, förbjudna (pentry, café,
+  reception) finns inte.
+- `roblox/tests/bygge.spec.luau`: raderna byggda per sektion, fronten/kappan/
+  däcket borta, raderna stiger bort från banan (relation på byggda delar),
+  översta sitsen mot sargkrönet, dynorna i Roblox; varje inredningsobjekt
+  byggt, i sitt rum, kollisionsparitet, källa och klass; hinder/koner/pall
+  och lysrör i Roblox.
+- Falsifierat (mutation → röd → återställt via cp): objekt hoppat över i
+  byggaren; `laktarRader` tom; soffa flyttad ut ur rummet; soffa utan
+  kollision; den gamla fronten återinförd. Alla fem gav rött.
+- PO 15:20 (blockerare "läktaren är inte spelbar", mobil/webb): gå-hit
+  (pekskärmens/kartvyns primära styrning) hittade ingen väg upp — rutnätet
+  räknade läktaren som solid, var för försiktigt inomhus (ingen fri ruta
+  mellan skåpraden och schaktet eller vid bordet i gången) och
+  fastnadsvakten mätte mot slutmålet så att omvägen till stegen avbröts.
+  `world.js`: vägsökningen räknar nivåerna kant för kant (samma nivådata
+  och NIVA_STEG som gåendet; `NAV.nivafri`), genvägar bara på samma nivå,
+  delmål i trappor nås inom 0,45 m, rutnätets provradie inomhus en
+  fjärdedels ruta, fastnadsvakten mot delmålet. Tangent-/spakgåendet
+  klättrade redan (mätt i 2D och 3D, även med pekskärmens spak i
+  porträttläge). `gangtest.mjs` T1–T4: gå-hit från entrén, från hallen
+  öster om skåpen, från banan (via sargporten) och bredvid däcket — alla
+  via stegen. Falsifierat: läktaren solid igen för vägsökningen → figuren
+  stannar bredvid däcket (z 0) → rött; återställt → grönt. Roblox: samma
+  läktarsteg/rader/trappa som fysiska delar; humanoiden klättrar 0,19 m-
+  steg och PathfindingService räknar nivåer själv — ingen webb-only
+  geometri, bara webbens egen vägsökning som nu läser den delade nivådatan.
+- PO 15:15: `geometri.spec` kräver `zon_vask`, `zon_racke`, `zon_klocka`,
+  `boxfront_brandslackare`; `bygge.spec` kräver gaveldörrens två blad + två
+  rutor, gavelfönstren inifrån med 10 gallerstänger, tvärkorridorens stråk A/B;
+  21 kameror. Falsifierat: `zon_vask` bortkommenterad → rött (geometri);
+  fyra gallerstänger i stället för fem i Roblox → rött (bygge); återställt → grönt.
+- PO 11:56: `geometri.spec` kräver `skap_grona`, `skap_hoga_v`, `skap_vita_2v`
+  i listan; `sikt.spec`/`kolla-visuell-grind` kräver 19 kameror inkl.
+  `RIDHUS-SKAPRUM`. Falsifierat: `skap_grona` bortkommenterad → rött;
+  kameran bort ur `Vyer.luau` → rött; återställt → grönt.
+- Review 08:50: `bygge.spec` kräver noll etikettplattor när inga öppna rum
+  är namngivna, två valvfönster inifrån klubbdelen (karm + glas) med
+  överkant under innertaket 2,8. Falsifierat: klippningen bort (rutan når
+  3,10) → rött; ett fönster hoppat över → rött; återställt → grönt.
+- Webben: Playwright-render av tio vyer från ungefär referensbildernas håll
+  (scratchpad `render-f02b.mjs`), kollisionsprov mot soffa, stövelhylla, bord,
+  skåprad och stol: alla spärrar.
+
+Testerna bevisar placering, paritet och att inget sourcelöst finns kvar. De
+bevisar **inte** att rummen ser ut som UBRF — det avgör Tobias i
+webbpreviewn och i Roblox Studio.
+
+## Not tested
+
+`NOT TESTED IN ROBLOX STUDIO`. Roblox-bygget är verifierat mot testbänken
+(luau + stubbar) och mot koden, inte mot en skärm: material, ljus, glasets
+reflektans och prestanda i Studio är overifierade.

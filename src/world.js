@@ -74,7 +74,7 @@ function satMal(x,y){
     if(d){x=d.pos[0]; y=d.pos[1];}
   }
   VD.mal={x, y, namn};
-  VD.malT=0;
+  VD.malT=0; VD.malDel=null;
   VD.malAvst=Math.hypot(x-VD.px, y-VD.py);
   /* Vägen räknas ut EN gång, vid klicket. Går ingen väg att hitta får
      den raka linjen försöka ändå — då fångar fastnadsvakten det, och
@@ -198,8 +198,16 @@ function stegaVandring(dt){
   if(VD.mal){
     /* Nästa punkt på vägen, inte målet självt — det är skillnaden
        mellan att gå runt ridhuset och att gå in i det. */
-    while(VD.vag&&VD.vag.length>1&&
-      Math.hypot(VD.vag[0][0]-VD.px,VD.vag[0][1]-VD.py)<1.1)VD.vag.shift();
+    /* Delmål i en trappa eller på ett steg måste nås nära (0,45 m): tas
+       nästa delmål 1,1 m i förväg rundar figuren stegen och går rakt in
+       i däckets kant, som nivåregeln spärrar. */
+    while(VD.vag&&VD.vag.length>1){
+      const v0=VD.vag[0], v1=VD.vag[1];
+      const nivaSkifte=(v0.length>2&&v1.length>2&&Math.abs(v1[2]-v0[2])>0.02)
+        ||(v0.length>2&&Math.abs(v0[2]-(VD.pz||0))>0.02);
+      if(Math.hypot(v0[0]-VD.px,v0[1]-VD.py)>=(nivaSkifte?0.45:1.1))break;
+      VD.vag.shift();
+    }
     const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
     const avst=Math.hypot(VD.mal.x-VD.px, VD.mal.y-VD.py);
     if(ix||iy||avst<0.9){
@@ -209,11 +217,16 @@ function stegaVandring(dt){
       malFart=GA.fart;
       /* Fastnar man bakom ett hörn ska gåendet SLUTA, inte stå och
          trycka mot en vägg. Kommer man inte 0,2 m närmare på två
-         sekunder är vägen inte fri, och då får spelaren styra själv. */
+         sekunder är vägen inte fri, och då får spelaren styra själv.
+         Närmare DELMÅLET, inte slutmålet: vägen upp på läktaren går
+         först bort från målet (runt till stegen), och mätt mot
+         slutmålet avbröts den som "kommer inte fram" mitt i omvägen. */
+      const delAvst=Math.hypot(delmal[0]-VD.px, delmal[1]-VD.py);
+      if(VD.malDel!==delmal){ VD.malDel=delmal; VD.malT=0; VD.malAvst=delAvst; }
       VD.malT+=dt;
       if(VD.malT>2){
-        if(VD.malAvst-avst<0.2){ slutaGa(); saga("Du kommer inte fram den vägen.",2.6); }
-        VD.malT=0; VD.malAvst=avst;
+        if(VD.malAvst-delAvst<0.2){ slutaGa(); saga("Du kommer inte fram den vägen.",2.6); }
+        VD.malT=0; VD.malAvst=delAvst;
       }
     }
   }
@@ -282,19 +295,29 @@ function ridhusNivaer(x,y){
      const d=Math.abs(y-bank), i=Math.min(K.steg,Math.floor(d/K.stegD)+1);
      bas=SO+K.stegH*i;
    }else{
+     /* Läktaren: gångbrädan på dackZ och de stegade bänkraderna (F02-B,
+        laktarRader — samma regel som Roblox bygger klossarna ur) som
+        nivåer, så att figuren står PÅ raderna och inte i dem. */
      const L=R.laktare;
      for(const sek of laktarSektioner(L))
-       if(x>=L.x0&&x<=L.x0+L.dackDjup&&y>=sek.y0&&y<=sek.y1) bas=L.dackZ;
+       if(x>=L.x0&&x<=L.x0+L.dackDjup&&y>=sek.y0&&y<=sek.y1){
+         bas=L.dackZ;
+         if(L.rader&&typeof laktarRader==="function"){
+           const lE=(R.sidor&&R.sidor.laktare==="E"), inn=lE?x-L.x0:(L.x0+L.dackDjup)-x;
+           for(const rad of laktarRader(L)) if(inn>=rad.in0&&inn<=rad.in1) bas=rad.z;
+         }
+       }
    }}
   /* De källbelagda trapporna (fidelity) och spelets bänkradssteg
      (SPELABSTRAKTION) läses lika för gåendet — det är bara sanningsvärdet
      som skiljer dem, inte hur figuren kliver. */
-  const SA=(typeof SPELABSTRAKTIONER!=="undefined")&&SPELABSTRAKTIONER.ridhus.bankradSteg;
-  for(const t of (SA?[...(R.trappor||[]),SA]:(R.trappor||[])))
+  const SAr=(typeof SPELABSTRAKTIONER!=="undefined")?SPELABSTRAKTIONER.ridhus:null;
+  const abstr=SAr?[SAr.bankradSteg,SAr.laktarSteg].filter(t=>t&&t.x1>t.x0):[];
+  for(const t of [...(R.trappor||[]),...abstr])
     if(x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1) bas=trappNiva(t,x,y);
   const ut=[bas];
-  {const G=R.ovreGang;
-   if(G&&x>=G.x0&&x<=G.x1&&y>=G.y0&&y<=G.y1&&G.z-bas>NIVA_STEG) ut.push(G.z);}
+  for(const G of [R.ovreGang,R.ovreGangV])
+    if(G&&x>=G.x0&&x<=G.x1&&y>=G.y0&&y<=G.y1&&G.z-bas>NIVA_STEG) ut.push(G.z);
   return ut;
 }
 /* Nivån i en punkt, sedd från nivån `ref`: den av punktens nivåer som
@@ -308,6 +331,12 @@ function nivaHojd(x,y,ref){ return G.scen==="ridhusinne" ? ridhusNiva(x,y,ref||0
 
 /* `fx,fy` är var steget tas ifrån. Utan dem (vägsökningen provar punkter,
    inte steg) räknas de upphöjda ytorna som solida, precis som förut. */
+/* Ett inredningsobjekt spärrar bara om spelarens golvnivå (VD.pz) skär
+   objektets höjdintervall — samma sak som Roblox fysik ger gratis. */
+function inredningPaNiva(o){
+  const z=VD.pz||0, z0=o.z0||0;
+  return z < z0+o.matt.h-0.05 && z+1.6 > z0;
+}
 function vandringKollision(nx,ny,r,fx,fy){
   if(G.scen==="gard"){
     for(const b of ANL.byggnader) [nx,ny]=kollideraRekt(nx,ny,r+0.2,b.rekt);
@@ -340,7 +369,7 @@ function vandringKollision(nx,ny,r,fx,fy){
        som solida som förut. */
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
-    if(fx===undefined){
+    if(fx===undefined&&!NAV.nivafri){
       for(const sek of laktarSektioner(R.laktare))
         [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
           w:R.laktare.dackDjup,h:sek.y1-sek.y0});
@@ -363,6 +392,11 @@ function vandringKollision(nx,ny,r,fx,fy){
       }
       for(const rum of R.entrehall.rum) if(rum.stangt) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
     }
+    /* Inredningen (F02-B): det som är `kolliderar` går man inte igenom —
+       skåpraden, stolarna, bänken. Samma lista som Roblox bygger ur. */
+    /* Bara möbler på spelarens NIVÅ stoppar: skåpen på hallgolvet får
+       inte spärra övre gången 3,7 m ovanför dem (F02-A:s nivåer, VD.pz). */
+    for(const o of INREDNING.ridhus) if(o.kolliderar&&inredningPaNiva(o)) [nx,ny]=kollideraRekt(nx,ny,r,inredningRekt(o));
     /* NIVÅREGELN: ett steg som ändrar golvnivån mer än NIVA_STEG tas
        inte. Axlarna provas var för sig så att man glider längs en kant
        i stället för att fastna mot den. Trappornas lutning ger små
@@ -414,6 +448,8 @@ function vandringKollision(nx,ny,r,fx,fy){
       }
     }
     for(const rum of S.klubb.rum) if(rum.stangt) [nx,ny]=kollideraRekt(nx,ny,r,rum.rekt);
+    /* Inredningen (F02-B): sofforna, borden, stolarna, stövelhyllan. */
+    for(const o of INREDNING.stall) if(o.kolliderar&&inredningPaNiva(o)) [nx,ny]=kollideraRekt(nx,ny,r,inredningRekt(o));
   }
   return [nx,ny];
 }
@@ -431,7 +467,13 @@ function vandringKollision(nx,ny,r,fx,fy){
 
    210 × 170 m med 1,6-metersrutor blir 131 × 106 = knappt 14 000 rutor.
    A* över det tar under en millisekund och körs en gång per klick. */
-const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null};
+/* `nivafri`: under rutnätsbygget och siktprovet räknas läktardäcket,
+   bänkraderna och trapporna som GÅNGBARA nivåer (som för gåendet), inte
+   som solida — vägsökningen tar sig då upp via stegen/trapporna, med
+   samma nivåregel (NIVA_STEG) som figuren själv följer. Product Owner
+   2026-09-04 15:20: "spelaren kan inte gå upp på läktaren" — gå-hit-
+   vägen (pekskärmens/kartvyns primära styrning) slutade bredvid däcket. */
+const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null, nivafri:false};
 
 function navBygg(){
   const matt=G.scen==="gard" ? [ANL.bredd,ANL.djup]
@@ -446,12 +488,21 @@ function navBygg(){
      sedan still mot ett räcke vid y=42,0 som inga prov hade sett.
      Rutnätet får hellre vara för försiktigt än för optimistiskt — en väg
      som inte finns är värre än en väg som går en meter från väggen. */
-  const r=GA.radie+NAV.cell*0.71;
-  for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
-    const x=(i+0.5)*NAV.cell, y=(j+0.5)*NAV.cell;
-    const [kx,ky]=vandringKollision(x,y,r);
-    NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
-  }
+  /* Inomhus räcker en fjärdedels ruta utöver figurens radie: väggarna
+     är minst 0,16 m tjocka och rutorna 0,6 m — ingen vägg kan glida
+     mellan två rutmitter. Med 0,71 (hela rutan) var ingen ruta fri
+     mellan skåpraden och schaktet (1,08 m) eller vid bordet i gången,
+     så gå-hit fann ingen väg till läktaren från halva entrédelen. Ute
+     står staketen som linjer, där behövs hela rutan. */
+  const r=GA.radie+NAV.cell*(G.scen==="gard"?0.71:0.25);
+  NAV.nivafri=true;
+  try{
+    for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
+      const x=(i+0.5)*NAV.cell, y=(j+0.5)*NAV.cell;
+      const [kx,ky]=vandringKollision(x,y,r);
+      NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
+    }
+  }finally{NAV.nivafri=false;}
   NAV.scen=G.scen;
 }
 function navRedo(){ if(NAV.scen!==G.scen)navBygg(); }
@@ -483,16 +534,41 @@ function navNarmasteFri(x,y){
 
 /* Fri sikt mellan två punkter? Används för att räta ut trapporna som
    ett rutnät alltid ger. */
-function navFriSikt(ax,ay,bx,by){
+/* Nivån längs sträckan a → b, från nivån z0: samma regel som gåendet —
+   inget delsteg får ändra golvnivån mer än NIVA_STEG. Returnerar nivån
+   vid b, eller null om sträckan inte går att gå (däckets kant, sargen,
+   övre gångens kant). Utanför ridhuset är nivån alltid 0. */
+function navNivaOK(ax,ay,bx,by,z0){
+  if(G.scen!=="ridhusinne")return 0;
+  const d=Math.hypot(bx-ax,by-ay), steg=Math.max(1,Math.ceil(d/0.2));
+  let z=z0||0;
+  for(let k=1;k<=steg;k++){
+    const t=k/steg, zn=ridhusNiva(ax+(bx-ax)*t,ay+(by-ay)*t,z);
+    if(Math.abs(zn-z)>NIVA_STEG)return null;
+    z=zn;
+  }
+  return z;
+}
+function navFriSikt(ax,ay,bx,by,z0){
   /* Mot de RIKTIGA väggarna, inte mot rutnätet. Rutnätet är avsiktligt
      försiktigt (se ovan) och skulle annars vägra den sista metern fram
-     till en dörr, som per definition ligger i en vägg. */
+     till en dörr, som per definition ligger i en vägg. Nivåerna räknas
+     som gångbara här också (nivafri) — men sträckan måste klara
+     nivåregeln, annars är den ingen genväg. */
+  /* Genvägar bara på SAMMA nivå: en genväg som skulle klättra kan
+     skära däckets kant i stället för stegen när gåendet rundar hörnet
+     (mätt: figuren fastnade på x 4,0 bredvid däcket). Trappor och steg
+     går rutnätet i sina egna punkter. */
+  if(z0!==undefined){const zn=navNivaOK(ax,ay,bx,by,z0); if(zn===null||Math.abs(zn-z0)>0.02)return false;}
   const d=Math.hypot(bx-ax,by-ay), steg=Math.max(1,Math.ceil(d/0.25));
-  for(let k=1;k<steg;k++){
-    const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
-    const [kx,ky]=vandringKollision(x,y,GA.radie);
-    if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
-  }
+  NAV.nivafri=(z0!==undefined);
+  try{
+    for(let k=1;k<steg;k++){
+      const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
+      const [kx,ky]=vandringKollision(x,y,GA.radie);
+      if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
+    }
+  }finally{NAV.nivafri=false;}
   return true;
 }
 
@@ -505,6 +581,9 @@ function navVag(sx,sy,mx,my){
   if(si===mi)return [[mx,my]];
   const g=new Float32Array(N).fill(Infinity), fr=new Int32Array(N).fill(-1);
   const stangd=new Uint8Array(N);
+  /* Nivån figuren har när hon når rutan — så att däcket bara nås via
+     stegen och övre gången bara via trapporna (nivåregeln kant för kant). */
+  const zAt=new Float32Array(N); zAt[si]=nivaHojd(sx,sy,VD.pz||0);
   const h=(i)=>{const a=i%NAV.nx,b=(i/NAV.nx)|0;
     const dx=Math.abs(a-mal[0]),dy=Math.abs(b-mal[1]);
     return (dx+dy)+(Math.SQRT2-2)*Math.min(dx,dy);};
@@ -536,7 +615,12 @@ function navVag(sx,sy,mx,my){
       /* Ingen genväg diagonalt förbi ett hörn. */
       if(di&&dj&&(!NAV.fri[b*NAV.nx+na]||!NAV.fri[nb*NAV.nx+a]))continue;
       const ny2=g[cur]+((di&&dj)?Math.SQRT2:1);
-      if(ny2<g[ni]){ g[ni]=ny2; fr[ni]=cur; putt([ny2+h(ni),ni]); }
+      if(ny2<g[ni]){
+        const [ax2,ay2]=navPunkt(a,b), [bx2,by2]=navPunkt(na,nb);
+        const zn=navNivaOK(ax2,ay2,bx2,by2,zAt[cur]);
+        if(zn===null)continue;
+        g[ni]=ny2; fr[ni]=cur; zAt[ni]=zn; putt([ny2+h(ni),ni]);
+      }
     }
   }
   if(fr[mi]<0&&si!==mi)return null;
@@ -544,12 +628,15 @@ function navVag(sx,sy,mx,my){
   rutor.reverse();
   const pkt=rutor.map(i=>navPunkt(i%NAV.nx,(i/NAV.nx)|0));
   pkt.push([mx,my]);
-  /* Räta ut: hoppa så långt fram fri sikt räcker. */
-  const ut=[]; let i=0;
+  /* Räta ut: hoppa så långt fram fri sikt räcker — och nivåregeln håller
+     längs genvägen (annars skär den däckets kant i stället för stegen). */
+  const ut=[]; let i=0, z=zAt[si];
   while(i<pkt.length-1){
     let j=pkt.length-1;
-    while(j>i+1&&!navFriSikt(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1]))j--;
-    ut.push(pkt[j]); i=j;
+    while(j>i+1&&!navFriSikt(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1],z))j--;
+    const zn=navNivaOK(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1],z);
+    z=(zn===null)?z:zn;
+    ut.push([pkt[j][0],pkt[j][1],z]); i=j;      // punkten bär sin nivå (delmålstoleransen)
   }
   return ut;
 }
@@ -1551,6 +1638,35 @@ function ritaSpelare2D(pos,rikt,s){
 }
 
 /* ── Stallet invändigt: 2D ────────────────────────────────────── */
+/* ── Inredningen på kartan och i målarvyn (F02-B) ────────────────
+   Ritar ur INREDNING (src/inredning.js): samma lista som kollisionen och
+   Roblox. Kartan visar fotavtrycket; målarvyn (reservläget utan WebGL)
+   visar en enkel låda i objektets färg. Ingen av dem hittar på något som
+   inte står i listan. */
+function ritaInredning2D(ss,s,scen){
+  for(const o of inredningFor(scen)){
+    const q=inredningRekt(o);
+    const[a,b]=ss(q.x,q.y+q.h);
+    cx.fillStyle=o.typ==="spegel"?"#93A9BC":o.typ==="lysror"?"#F6F2E4":o.farg;
+    cx.globalAlpha=o.z0&&o.z0>1.5?0.5:0.9;
+    cx.fillRect(a,b,Math.max(1,q.w*s),Math.max(1,q.h*s));
+    cx.globalAlpha=1;
+  }
+}
+function ritaInredning3Dfallback(k,items,scen){
+  for(const o of inredningFor(scen)){
+    const q=inredningRekt(o), z0=o.z0||0, z1=z0+o.matt.h;
+    items.push({d:-avst2(o.pos), rita(){
+      const c=o.farg;
+      ritaPoly3D(k,[[q.x,q.y,z1],[q.x+q.w,q.y,z1],[q.x+q.w,q.y+q.h,z1],[q.x,q.y+q.h,z1]],c,null);
+      ritaPoly3D(k,[[q.x,q.y,z0],[q.x+q.w,q.y,z0],[q.x+q.w,q.y,z1],[q.x,q.y,z1]],c,"rgba(0,0,0,.25)");
+      ritaPoly3D(k,[[q.x,q.y+q.h,z0],[q.x+q.w,q.y+q.h,z0],[q.x+q.w,q.y+q.h,z1],[q.x,q.y+q.h,z1]],c,"rgba(0,0,0,.25)");
+      ritaPoly3D(k,[[q.x,q.y,z0],[q.x,q.y+q.h,z0],[q.x,q.y+q.h,z1],[q.x,q.y,z1]],c,"rgba(0,0,0,.25)");
+      ritaPoly3D(k,[[q.x+q.w,q.y,z0],[q.x+q.w,q.y+q.h,z0],[q.x+q.w,q.y+q.h,z1],[q.x+q.w,q.y,z1]],c,"rgba(0,0,0,.25)");
+    }});
+  }
+}
+
 function ritaStall2D(){
   const S=STALLINNE, m=30;
   /* Avdraget lämnar plats åt HUD-rutorna på en bred skärm. På en telefon
@@ -1646,6 +1762,8 @@ function ritaStall2D(){
     const[a,b]=ss(fx2,fy);
     cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.35),0,Math.PI*2);cx.fill();
   }
+  /* Inredningen ur INREDNING.stall (F02-B), ovanpå golv och väggar. */
+  ritaInredning2D(ss,s,"stallinne");
   ritaMal2D(ss);
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
@@ -1744,10 +1862,14 @@ function ritaStall3D(){
         ritaLinje3D(k,[fx,y0,0],[fx,y0,2.15],VCOL.boxRam,2);
         ritaLinje3D(k,[fx,y1,0],[fx,y1,2.15],VCOL.boxRam,2);
         ritaLinje3D(k,[fx,y0,2.15],[fx,y1,2.15],VCOL.boxRam,2);
-        const gN=9;
-        for(let g2=1;g2<gN;g2++){
-          const gy=y0+(y1-y0)*g2/gN;
-          ritaLinje3D(k,[fx,gy,1.35],[fx,gy,2.15],VCOL.galler,1);
+        /* Fem VÅGRÄTA runda reglar med luft emellan (stall-inne-05,
+           INTERIOR-MATRIS § 2) — inte nio lodräta spjälor som stod här
+           kvar efter att webbens WebGL-ritare rättats. Samma tal som
+           IDENTITET.stall.boxfront. */
+        const BFr=IDENTITET.stall.boxfront;
+        for(let g2=0;g2<BFr.reglar;g2++){
+          const gz=BFr.heldelH+(BFr.stolpH-BFr.heldelH)*(g2+0.5)/BFr.reglar;
+          ritaLinje3D(k,[fx,y0,gz],[fx,y1,gz],VCOL.galler,1);
         }
         // hästhuvud över boxdörren
         if(h){
@@ -1809,17 +1931,10 @@ function ritaStall3D(){
   items.push({d:-1e8, rita(){ // lanterninerna: ljusband längs nocken
     ritaPoly3D(k,[[vx-0.5,2,S.tak+0.01],[vx+0.5,2,S.tak+0.01],
       [vx+0.5,S.langd-2,S.tak+0.01],[vx-0.5,S.langd-2,S.tak+0.01]],"#707B86",null);}});
-  // props: storsäck, brandsläckare, hjärtstartare
-  items.push({d:-avst2([vx-1.9,22]), rita(){
-    const B=billboard(k,vx-1.9,22,1.1); if(!B)return;
-    const {s,sz}=B;
-    cx.fillStyle="#E4E2DC";
-    cx.beginPath();cx.moveTo(s[0]-sz*0.5,s[1]);cx.lineTo(s[0]-sz*0.42,s[1]-sz*0.9);
-    cx.lineTo(s[0]+sz*0.42,s[1]-sz*0.9);cx.lineTo(s[0]+sz*0.5,s[1]);cx.closePath();cx.fill();}});
-  items.push({d:-avst2([vx+1.9,30]), rita(){
-    const B=billboard(k,vx+1.9,30,0.9); if(!B)return;
-    const {s,sz}=B;
-    cx.fillStyle="#C0392B";cx.fillRect(s[0]-sz*0.09,s[1]-sz*0.6,sz*0.18,sz*0.5);}});
+  /* Storsäcken och brandsläckaren mitt i gången är BORTA (F02-B): de stod
+     på handskrivna koordinater utan någon bild bakom. Inredning ritas ur
+     INREDNING (src/inredning.js), som pekar på sin källa per objekt. */
+  ritaInredning3Dfallback(k,items,"stallinne");
   // ridläraren
   if(!G.hastId){
     const rl=S.ridlarare;
@@ -1927,10 +2042,11 @@ function ritaRidhus2D(){
   }
   // speglar och skyltar på panelens långsida
   {const px=(R.spegelSida==="E")?R.bredd-0.9:0.4;
-   for(const sp of R.speglar){const[a,b]=ss(px,sp.y+sp.b/2);
-     cx.fillStyle="#93A9BC";cx.fillRect(a,b,s*0.5,sp.b*s);}
    for(const sk of R.skyltar){const[a,b]=ss(px,sk.y+sk.b/2);
      cx.fillStyle=sk.bg;cx.fillRect(a,b,s*0.4,sk.b*s);}}
+  /* Speglarna och all annan inredning ur INREDNING — samma lista som
+     kollisionen och Roblox läser. */
+  ritaInredning2D(ss,s,"ridhusinne");
   // bokstäverna ur DRESSYRBOKSTAVER via bokstavLage — A i söder, C i norr
   cx.fillStyle="#C9BFA6";cx.font=`600 ${Math.max(9,s*1.3)}px Petrona,serif`;cx.textAlign="center";
   for(const B of DRESSYRBOKSTAVER){
@@ -2011,14 +2127,9 @@ function ritaRidhus3D(){
         sk.bg,"#8A857A");
       ritaText3D(k,x+pin*0.02,sk.y+sk.b/2,2.55,sk.text,1.7,sk.fg);
     }
-    for(const sp of R.speglar){
-      const x=px+pin*0.05;
-      ritaPoly3D(k,[[x,sp.y-0.15,1.5],[x,sp.y+sp.b+0.15,1.5],
-        [x,sp.y+sp.b+0.15,3.35],[x,sp.y-0.15,3.35]],"#5A4634",null);
-      ritaPoly3D(k,[[x+pin*0.02,sp.y,1.6],[x+pin*0.02,sp.y+sp.b,1.6],
-        [x+pin*0.02,sp.y+sp.b,3.25],[x+pin*0.02,sp.y,3.25]],"#9FB3C4",null);
-    }
   }});}
+  /* Speglarna kommer ur INREDNING, som resten av inredningen. */
+  ritaInredning3Dfallback(k,items,"ridhusinne");
   // läktaren: plant däck med solid front mot banan, på den sida `sidor` pekar ut
   {const lk=R.laktare, lE=(R.sidor&&R.sidor.laktare==="E");
    const fx=lE?lk.x0:lk.x0+lk.dackDjup;        // fronten står mot banan
@@ -2094,19 +2205,10 @@ function ritaRidhus3D(){
       if(rm.label) items.push({d:-avst2([cxm,cym]), rita(){ritaText3D(k,cxm,cym,2.1,rm.label,1.3,"#7C756A");}});
     }
   }
-  // hinderförrådet i söder: färgade bommar och koner
-  items.push({d:-avst2([R.bredd/2,0])-1e5, rita(){
-    const fargor=["#3A6EA5","#C0392B","#E8E4DA","#C9A23C"];
-    for(let i2=0;i2<7;i2++){
-      ritaLinje3D(k,[4+i2*2.4,0.3,0.15],[6+i2*2.4,0.4,1.7],
-        fargor[i2%fargor.length],3);}
-    for(let i2=0;i2<4;i2++){
-      const K2=billboard(k,7+i2*3,1.2,0.45); if(!K2)continue;
-      cx.fillStyle="#E8E4DA";
-      cx.beginPath();cx.moveTo(K2.s[0]-K2.sz*0.4,K2.s[1]);
-      cx.lineTo(K2.s[0],K2.s[1]-K2.sz);cx.lineTo(K2.s[0]+K2.sz*0.4,K2.s[1]);
-      cx.closePath();cx.fill();}
-  }});
+  /* "Hinderförrådet i söder" — sju bommar och fyra koner på handskrivna
+     koordinater vid södra gaveln — är BORTA (F02-B). Bilderna (ridhus-
+     inne-21, -23) sätter hinderupplaget på läktardäckets södra ände, och
+     det ligger nu i INREDNING som `laktare_bommar` m.fl. */
   // limträbalkar, lysrörsrader och ventilationstrumman
   for(let y=6;y<R.langd-2;y+=6){
     items.push({d:-avst2([R.bredd/2,y])-3e6, rita(){
@@ -2121,7 +2223,9 @@ function ritaRidhus3D(){
     ritaPoly3D(k,[[R.bredd/2-0.5,3,R.tak-0.4],[R.bredd/2+0.5,3,R.tak-0.4],
       [R.bredd/2+0.5,R.langd-3,R.tak-0.4],[R.bredd/2-0.5,R.langd-3,R.tak-0.4]],"#B9BDC0",null);
   }});
-  // dressyrbokstäverna på sargen, samma läge som 3D-vyn (bokstavLage)
+  /* Dressyrbokstäverna på sargen, samma läge som 3D-vyn och kartan
+     (bokstavLage). Här låg en 180°-vridning kvar; F02-B tog bort
+     dubbletten, F02-A skilde layouten från den fysiska banan. */
   for(const B of DRESSYRBOKSTAVER){
     const L=bokstavLage(R,B);
     const wx=L.x, wy=L.y;
