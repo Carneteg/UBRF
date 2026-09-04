@@ -1,7 +1,7 @@
 {
-  "head": "2b31fa5a2edbb5f51d6e2d0247c2ffef29b4d551",
+  "head": "d25c0bcf5d310775b75082e6b1ed3371d54a9560",
   "smutsigt": false,
-  "renderad": "2026-09-04T05:41:06.694Z",
+  "renderad": "2026-09-04T06:16:25.460Z",
   "kameror": {
     "STALL-ENTRE": {
       "id": "STALL-ENTRE",
@@ -9,13 +9,13 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": 4.55,
-        "y": 63.95,
+        "x": 8.3,
+        "y": 66.95,
         "z": 0,
         "rikt": 1.5707963267948966,
         "bild0": 3
       },
-      "text": "Inne i uppehållsrummet 6 m från norra gaveln, blicken norrut mot entrén: vindfånget, dörren, gavelväggen",
+      "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
       "referenser": [
         {
           "id": "references/buildings/stall/stall-entre-15-dorren.jpg",
@@ -29,30 +29,36 @@
         }
       ],
       "gap": [
-        "vindfångets insida: ingen interiörbild"
+        "ingen interiörbild av gavelns insida: dörrbladets färg inifrån [antagande]",
+        "planens vindfång mot fasadens entré: dokumenterad motsägelse"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Gaveln lästes som blank grå vägg med en liten öppning; källan stall-entre-15 visar den stora ockragula entrédörren och de runda fönstren. Rättat i F02-A (6df46af): gavelns insida visar fasadens öppningar; kameran vänd mot dörren. Väntar på ny review."
       },
-      "ram": "Gavelväggen med entrédörren och vindfångets region rakt fram i ögonhöjd; uppehållsrummets öppna yta fram till gaveln; ingen inre vägg mellan figuren och entrén",
+      "ram": "Gavelväggen med fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram, det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång x 3,6–5,5 mot fasadens entré x 10,5, DEFERRED BY EXTERIOR LOCK)",
       "kamera": [
-        4.55,
-        2.25,
-        60.62
+        10.1,
+        1.7,
+        64.55
       ],
+      "mal": {
+        "x": "(()=>{const o=A.byggnader.find(b=>b.id==='stall').oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return S.bredd-o.u-o.b/2;})()",
+        "y": "S.langd",
+        "h": "1.2"
+      },
       "spelare": [
-        4.55,
-        63.95,
+        8.3,
+        66.95,
         0
       ],
-      "tonade": 0,
+      "tonade": 1,
       "sikt": {
         "dold": false,
         "delvis": false,
-        "tonade": 0,
+        "tonade": 1,
         "skymmande": 0,
         "blockerade": {
           "hoft": false,
@@ -73,7 +79,7 @@
         "y": 61.550000000000004,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 12
+        "bild0": 13
       },
       "text": "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
       "referenser": [
@@ -92,10 +98,10 @@
         "möbler (F02-B) saknas ännu — inte ett fel i F02-A"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Ramen duger, men rummet liknar inte stall-inne-01 tillräckligt för produktacceptans — möbler är F02-B. Förblir MISMATCH tills F02-B (#76) integrerats och granskats."
       },
       "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort",
       "kamera": [
@@ -188,7 +194,7 @@
         "y": 60.95,
         "z": 0,
         "rikt": 0,
-        "bild0": 31
+        "bild0": 32
       },
       "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
       "referenser": [
@@ -363,7 +369,7 @@
         "y": 66.98,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 61
+        "bild0": 58
       },
       "text": "Huvudentrén → norrut över entré/reception: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1)",
       "referenser": [
@@ -429,7 +435,7 @@
         "y": 67.98,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 70
+        "bild0": 67
       },
       "text": "Den öppna gången där skåpen står (planens x 4,2–5,7), blicken norrut mot toaletterna",
       "referenser": [
@@ -499,7 +505,7 @@
         "y": 6.15,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 79
+        "bild0": 77
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -557,7 +563,7 @@
         "y": 57.68000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 89
+        "bild0": 87
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -581,10 +587,10 @@
         "Café Krubbans rum bakom glaset byggs inte (REFERENCE GAP)"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Loppen lästes som dominerande mörkbruna träramper; ridhus-inne-01 visar vita snedställda sidostycken i liv med väggen med mörkt räcke. Rättat i F02-A (6df46af): sidostyckena i eget otexturerat nät, utanför loppet, full höjd. Väntar på ny review."
       },
       "ram": "C-blocket över norra sargen: bänkraderna, klockväggen mellan de två loppen, vita sidostycken, glasbandet i tre fält, övre gången bakom",
       "kamera": [
@@ -622,7 +628,7 @@
         "y": 38.915000000000006,
         "z": 0.8,
         "rikt": -1.5707963267948966,
-        "bild0": 99
+        "bild0": 96
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -692,7 +698,7 @@
         "y": 66.28,
         "z": 1.12,
         "rikt": 1.5707963267948966,
-        "bild0": 107
+        "bild0": 105
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
@@ -722,10 +728,10 @@
         "övre gångens bredd [uppskattning]"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Samma som ARENA-C: loppens byggda form/material/sidostycke-relation stämde inte med källan. Rättat i F02-A (6df46af). Väntar på ny review."
       },
       "ram": "Från nedersta raden: raderna uppåt, båda loppen stigande utåt från klockväggen, räcken, glasbandet ovanför, övre gångens golv/räcke; spelets bänkradssteg (gul markör) till vänster som SPELABSTRAKTION",
       "kamera": [
