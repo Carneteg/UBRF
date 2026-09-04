@@ -1,0 +1,119 @@
+name: Visuell grind
+
+# Issue #78 — Visual Fidelity Gate. Körs på varje PR och bygger reviewpaketet
+# från EXAKT PR-headen: kameralistan och Roblox-vyerna kontrolleras,
+# spatiala ankare provas mot datan, siktgrinden mäter att figuren syns
+# (med sin negativa kontroll), och screenshot-packet laddas upp som artifact.
+# Sedan skrivs EN kommentar på PR:n med head-SHA, Netlify-preview och länk
+# till paketet — aldrig en main-länk för en omergad ändring.
+#
+# Grön här betyder INTE visual fidelity. Paketet finns för att ChatGPT ska
+# kunna göra senior visual QA innan Tobias ser något. Se
+# docs/VISUAL-FIDELITY-GATE.md.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  visuell-grind:
+    runs-on: ubuntu-latest
+    steps:
+      # EXAKT PR-head, inte den syntetiska merge-committen som pull_request
+      # annars checkar ut: bilderna ska vara evidens för just den SHA som
+      # står i PR:n. Steget "Head-identitet" nedan faller om de skiljer sig.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Head-identitet — utcheckad kod är PR-headen
+        run: |
+          set -euo pipefail
+          vantad="${{ github.event.pull_request.head.sha || github.sha }}"
+          faktisk="$(git rev-parse HEAD)"
+          echo "väntad $vantad · utcheckad $faktisk"
+          [ "$vantad" = "$faktisk" ] || { echo "FEL: utcheckad kod är inte PR-headen"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Playwright + Chromium
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: Webbygget
+        run: python3 tools/build.py
+
+      - name: Kameralistan och Roblox-vyerna
+        run: node tools/kolla-visuell-grind.mjs
+
+      - name: Spatiala ankare
+        run: node tools/kolla-ankare.mjs
+
+      - name: Siktgrinden (med negativ kontroll)
+        run: node tools/siktgrind.mjs
+
+      # Paketet renderas även när siktgrinden fallit: bilderna är evidensen
+      # som visar VAD som föll. Jobbet blir ändå rött av steget ovan.
+      - name: Screenshot-pack från PR-headen
+        if: always()
+        run: node tools/screenshot-pack.mjs --ut qa/screenshot-pack --forvantad-head "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Head-identitet — pack.json bär PR-headen
+        if: always()
+        run: |
+          set -euo pipefail
+          vantad="${{ github.event.pull_request.head.sha || github.sha }}"
+          faktisk="$(node -e "process.stdout.write(require('./qa/screenshot-pack/pack.json').head)")"
+          smutsigt="$(node -e "process.stdout.write(String(require('./qa/screenshot-pack/pack.json').smutsigt))")"
+          echo "pack.json head $faktisk (smutsigt: $smutsigt) · väntad $vantad"
+          [ "$vantad" = "$faktisk" ] || { echo "FEL: paketet är inte renderat från PR-headen"; exit 1; }
+          [ "$smutsigt" = "false" ] || { echo "FEL: paketet renderades från ett smutsigt arbetsträd"; exit 1; }
+
+      - name: Ladda upp paketet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-pack-${{ github.event.pull_request.head.sha || github.sha }}
+          path: qa/screenshot-pack
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Head-SHA + preview + paket i PR-kommentaren
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.payload.pull_request.head.sha;
+            const nr = context.payload.pull_request.number;
+            const status = '${{ job.status }}';
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const preview = `https://deploy-preview-${nr}--ubrf-game.netlify.app`;
+            const marke = '<!-- visuell-grind -->';
+            const body = [
+              marke,
+              '## Visuell grind — reviewpaket från PR-headen',
+              '',
+              `**Head:** \`${sha}\``,
+              `**Preview (byggd från denna PR, aldrig main):** ${preview}`,
+              `**Screenshot-pack:** artifact \`screenshot-pack-${sha}\` på ${run}`,
+              `**Automatik:** ${status === 'success' ? 'AUTOMATED_GREEN — kameralista, ankare, siktgrind (inkl. negativ kontroll) och paket' : 'RÖD — se körningen'}`,
+              '',
+              'Status i kedjan: som mest **VISUAL_PACK_READY**. Ingen automation sätter en visuell status; `CHATGPT_VISUAL_PASS` sätts av ChatGPT efter side-by-side-review av paketet, `PRODUCT_ACCEPTED` bara av Tobias. Grön CI är inte visual fidelity. Se `docs/VISUAL-FIDELITY-GATE.md`.',
+            ].join('\n');
+            const { data: kommentarer } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: nr, per_page: 100 });
+            const egen = kommentarer.find(c => c.body && c.body.startsWith(marke));
+            if (egen) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: egen.id, body });
+            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: nr, body });

@@ -61,6 +61,7 @@ Roblox av två lådor. Läge, mått, färg, typ och källa är samma tal.
 | Ändrat | `uppehall_soffa_v/_s`, `uppehall_bord_1/2`, `uppehall_ponny`, `uppehall_klocka`, `uppehall_vaxt`, `uppehall_fotovagg` |
 | Läge | valvfönstren i västväggen sitter i fasaden 2,6 och 8,6 m från gaveln (y 67,35 och 61,35); soffgruppen läggs vid det södra. Att möblerna finns: `VERIFIED`. Var i rummet: `ASSUMPTION` |
 | REFERENCE GAP | var i rummet kameran stod; vilket valvfönster gruppen står vid |
+| **Öppen fråga (synk 2026-09-04, kamera `STALL-UPPEHALL-SOFFA`)** | fotots ordning längs väggen är dörr (vänster) · klocka · växt · fotovägg · valvfönster (höger) · ponny under fönstret. Mot den låsta fasadens valvfönster (y 61,35 / 67,35) och rummets sydvägg (y 60,15) går den inte att lägga entydigt: vid det södra fönstret får soffan inte plats söder om fönstret; vid det norra hamnar gruppen i det hörn matrisen ger pentryt (`stall-inne-02`). Gruppen ligger kvar vid det södra fönstret som `ASSUMPTION`; avgörs av review, inte här |
 | Paritet | webb 3D + karta + målarvy; Roblox `Inredning uppehall_*`; kollision på båda |
 
 **Synk mot F02-A:s rättelsepass 2026-09-03 (`e879784`).** Uppehållsrummet
@@ -158,9 +159,10 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 |---|---|
 | Källor | `ridhus-klubb-01` (nyckelbild), `IMG_0169-f02/f03` (nyckelbilder), `IMG_0268-r03/r05/r12/r15`, `ridhus-klubb-14` |
 | Bilderna bevisar | höga smala plåtskåp i grått med enstaka röda och mörkgrå dörrar längs den vägg man har till vänster på väg mot valvfönstret (västväggen); vita trästolar med rött mönstrat tyg kring ett litet bord mitt i gången; bänk med ridstövlar under valvfönstret; i entrén en bänk/låda under fönstret mot parkeringen, full av jackor och stövlar |
-| Ändrat | `skap_v_1..n` — skåpbankar som fyller **västväggens slutna bitar** mellan F02-A:s öppningar (`DERIVED` ur samma vägglista som kollisionen); `skap_bord`, `skap_stol_1/2` (`ASSUMPTION` mitt i gången); `skap_stovelbank` under fönstret i norr; `entre_bank` under entréfönstret |
+| Ändrat (synk mot accepterad F02-A 2026-09-04) | Spatial Canon v2 återkallade `skap_v`/`skap_o`: entrédelen är OPEN_AREA och skåpen **fristående möbler**. `skap_v_1..3` står i planens skåpremsa x 4,2–5,7 med **fronten mot receptionsglaset (x 2,2)** och gången emellan — `ridhus-klubb-01/-15` visar glasbröstningen på ena sidan och skåpraden mitt emot. Radens början/slut är `ASSUMPTION` (planens "fyra luckor" olästa); luckan y 72,6–74,3 lämnar rutten entré → bana fri. `skap_bord`, `skap_stol_1/2` i gången (x 3,3). `skap_stovelbank` under gavelns låga valvfönster (x ≈ 4,4, läst ur fasaddatan). **`entre_bank` borttagen**: `IMG_0268-r03/-r05` och `ridhus-klubb-14` visar SAMMA bänk under SAMMA valvfönster som `-01` har i förgrunden — en bänk, inte två; den låsta fasaden har inget fönster vid entrédörren (u 9, b 2 fyller entréns bredd) |
+| Läsning att avgöra i F02-A (rapporterad) | i `ridhus-klubb-01/-15` vetter receptionens glas mot gången med skåpen. Med glaset på planens linje x 2,2 ligger gången alltså x 2,2–4,2 och receptionens insida **väster** om glaset (x 0–2,2) — F02-A:s passiva etikett RECEPTION står öster om glaset och SCV2-03-rutten går längs x 1,1. Möblerna följer glaset som det står; ingen topologi rörd |
 | **Strukturell anmärkning (rapporterad, inte rättad)** | bildens högra sida är en bröstningsvägg med **fyra glaspartier** in mot rummet innanför. F02-A läste `skap_o`:s fyra luckor som gångbara öppningar. Bilden talar för fönster, inte dörrar. Topologin rörs inte här |
-| REFERENCE GAP | omklädningsrummen (röda/svarta, gräddvita, gröna skåp), toaletterna, duschen med grönt draperi: rummen är fotograferade men **inte placerade** (Bild 2–5 saknas i repot, `F02-INTERIOR-MATRIS.md`). Inredning där byggs inte. Klädhängarnas vägg i entrén syns inte i bild — bara bänken byggs |
+| REFERENCE GAP | omklädningsrummen (röda/svarta, gräddvita, gröna skåp; `ridhus-klubb-16/-18/-20/-21`), toaletterna, duschen med grönt draperi: rummen är fotograferade men **inte placerade** (Bild 2–5 saknas i repot, `F02-INTERIOR-MATRIS.md`). Inredning där byggs inte. Entréns vindfång (x 0–2,2 vid dörren) har inget belagt objekt kvar |
 
 ### Ridhuset — banan, C-blocket, domarbåset, caféet
 
@@ -176,8 +178,10 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 
 1. **Sadelkammaren → teorisalen**: `stall-inne-03` visar en dörr "Teorisal" i
    sadelkammarens norra vägg; F02-A:s `teorisal_s` saknar öppning.
-2. **Skåpkorridorens östvägg**: `ridhus-klubb-01` visar fyra glaspartier
-   med bröstning där F02-A har fyra gångbara öppningar i `skap_o`.
+2. **Receptionsglasets sida** (ersätter den tidigare punkten om `skap_o`,
+   som F02-A återkallat): `ridhus-klubb-01/-15` visar glasbröstningen mot
+   gången med skåpraden. Med glaset på x 2,2 (accepterat) ligger
+   receptionen väster om glaset, inte öster som etiketten står.
 3. **Sydgaveln vid A**: `ridhus-inne-23` visar väggen med speglarna direkt
    bakom sargen; F02-A har 5,7 m mellan sargen och gaveln.
 4. **Teorisalens fönster**: bildens låga valvfönster mot fasadens

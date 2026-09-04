@@ -231,6 +231,86 @@ saknar attributet `Genomsiktlig` (välj den i Explorer och titta under
 Attributes). Rör aldrig väggarna för att lösa det — det är
 `Genomsikt.luau` som ska rättas.
 
+## Ridhusets entrédel — Spatial Canon v2 (SCV2-03, RIDHUS-V1..V3)
+
+Gå in genom huvudentrén (dubbeldörren under kvisten på västra långsidan)
+till fots.
+
+**Ska synas:** EN öppen hall — inga korridorer av rumslådor, inga
+skåpkorridorväggar, ingen cellrad. Det enda som står i entrédelen är två
+smala toaletter i nordvästra hörnet, den kryssade rutan (`schakt`, sluten
+volym utan namn) och receptionens låga bröstning med glas ovanpå (Material
+Glass, delen heter `Entrévägg reception_glas:1 glas`). Vyerna
+`entrehallen` och `entrehallen_mot_banan` i Vyer.luau visar exakt vad som
+förväntas.
+
+**Ska gå att göra:** gå från dörren rakt ut i hallen, tvärs över den, och
+söderut genom sargporten (markerad SPELABSTRAKTION) ut på banan — utan att
+klippa, hoppa eller passera genom en vägg. Passagen får aldrig kännas som en
+smal korridor.
+
+**Fynd:** en vägg eller volym i entrédelen som saknar attributen
+`CanonId`/`SourceId`/`Confidence`/`Primitiv`; en opak vägg med `CanonId`
+`ridhus_reception_glass`; något som blockerar vägen dörr → hall → sargport;
+en byggd del med något av de återkallade id:na (korridor_o, skap_v, skap_o,
+cell_1–4, hall_n_v, hall_n_o, hall_nv_s, hall_mitt, hall_no, hall_no_s,
+ostkorridor_v). Rör aldrig geometrin för att lösa det — det är datan i
+`src/site.js` (`RIDHUSINNE.entrehall`) och kanonen som styr.
+
+## Ridhusets C-trappor — gångbara nivåer (Product Owner 2026-09-03 17:16)
+
+Gå in genom huvudentrén och fram till C-blockets västra ände (bänkblocket
+under glasbandet, med stjärnan och klockan).
+
+**Ska gå att göra:** kliva upp för SPELETS bänkradssteg (`Spelabstraktion
+bankradsteg steg 1–6` — märkta klossar med gul markör; inte fidelity, inget
+foto visar hur publiken kommer upp, senior review 2026-09-04 04:08) till
+nedersta raden, upp för de fyra raderna, och från översta raden
+vid klockväggen upp för VÄNSTRA trappan västerut (`Trappa c_trappa_v steg
+1–9`) eller HÖGRA trappan österut (`Trappa c_trappa_o steg 1–9`) till övre
+gången (`Övre gångens golv`, caféplanet 3,68 m) — utan hopp, utan att fastna
+och utan att falla ner på banan. Vyerna `c_trapporna_fran_foten` och
+`c_trapporna_fran_toppen` i Vyer.luau visar utgångslägena.
+
+**Ska synas:** två raka lopp i mörkt trä LÄNGS gaveln med foten vid
+klockväggen, vita snedställda sidostycken mot banan som bryter glasbandet
+i tre fält (ridhus-inne-01), träräcken.
+
+**Fynd:** ett steg karaktären inte kliver upp för; ett hål eller en
+osynlig spärr i kedjan; att man kan komma upp i övre gången någon annanstans
+än via trapporna; att övre gången saknar golv; ett trappsteg som saknar
+attributen `CanonId`/`SourceId`/`Confidence`/`Primitiv` (= STAIR); en
+`Spelabstraktion bankradsteg`-del som bär `CanonId` eller saknar
+`Klass`/`Fidelity` (abstraktionen får aldrig se ut som verklighet). Rör aldrig
+trapporna för hand — datan är `RIDHUSINNE.kortanda.trappor` (loppen) →
+`RIDHUSINNE.trappor` (härledda STAIR-primitiver) i src/site.js, och stegen
+räknas av `Geometri.trappsteg`.
+
+## Visuell grind — reviewkamerorna (issue #78)
+
+Samma fjorton vyer som webbens screenshot-pack (`qa/visual-gate/kameror.json`),
+gruppen **Visuell grind** i `Vyer.lista()`: `STALL-ANKOMST` (exteriör, från gården), `STALL-ENTRE`, `STALL-UPPEHALL`, `STALL-UPPEHALL-SOFFA` (F02-B),
+`STALL-TEORISAL`, `STALL-SADELKAMMARE`, `STALL-GANG-A`, `HASTPASSAGE`,
+`RIDHUS-ENTRE`, `RIDHUS-SKAPKORRIDOR`, `ARENA-A`, `ARENA-C`, `LAKTARE`,
+`C-BLOCK-OVRE`. Kameran står som spelets tredjepersonskamera: 3,6 m bakom
+figuren, 2,25 m över hennes golv (lyft när den kläms mot en vägg).
+
+**Ska gå att göra:** `Vyer.ga("<ID>")` för var och en, och jämföra mot
+referenserna som kameran listar i `kameror.json`. Varje kamera har ett
+ramkontrakt (`ram` i `kameror.json`, `krav` i vyn): det som MÅSTE synas —
+syns det inte är kameran fel ställd, inte bilden klar. Ta en skärmdump per ID med
+samma namn som webbens — det är Roblox-halvan av reviewpaketet.
+
+**Ska synas:** figuren (eller platsen hon står på, `figur` i vyn) ska vara
+synlig från varje reviewkamera; det som står emellan ska tona
+(`Genomsiktlig`). `tests/sikt.spec.luau` mäter samma sak mot bygget.
+
+**Fynd:** figuren dold bakom något som inte tonar; en vy som inte matchar
+webbens bild av samma ID (olika geometri = datan har glidit isär, kör
+`tools/exportera-geometri.js`); en referens kameran pekar på som inte
+stämmer med det byggda → skriv `MISMATCH` med vad i review-kommentaren.
+Ingen visuell status sätts här av automatik; Studio-passet är Tobias.
+
 ## Vad som INTE är ett fynd
 
 Osourcad möblering, kosmetisk polish och avancerad ljussättning. Att

@@ -163,23 +163,30 @@ const INREDNING = (() => {
   const panelX = lE ? ba.x : ba.x + ba.w;               // långsidan mitt emot läktaren
   const Bok = DRESSYRBOKSTAVER.find(b => b.b === "B");
   const Hok = DRESSYRBOKSTAVER.find(b => b.b === "H");
-  const SKP = rum(R.entrehall, "skapkorridor");         // x 4,2–5,7 · y 61,2–76,1
-  const ENT = rum(R.entrehall, "entre");
-  const skapV = R.entrehall.vaggar.find(v => v.id === "skap_v");
   const sydDorr = (R.dorrar || []).find(d => d.id === "ut_ridhus_S_8");
   const sydDorrX = sydDorr ? sydDorr.pos[0] : R.bredd / 2;
+  const H = rum(R.entrehall, "hall");                 // hela entrédelen, x 0–25 · y 65,68–77,18
+  const hus = ANL.byggnader.find(b => b.id === "ridhus");
+  /* Det låga valvfönstret mot parkeringen (IMG_0268-r03, ridhus-klubb-14,
+     -01 förgrunden): fasadens `valv` på norra gaveln med z0 1,35, det västra
+     av de två (u räknas från östra hörnet). Bänken står under det. */
+  const valvN = (hus.oppningar || []).filter(o => o.sida === "N" && o.typ === "valv" && o.z0 < 2)
+    .map(o => ({ x: R.bredd - o.u - o.b / 2, b: o.b })).sort((a, b) => b.x - a.x)[0] || { x: 4.375, b: 1.05 };
 
-  /* Skåpen i skåpkorridoren fyller västväggens SLUTNA bitar mellan planens
-     öppningar (ridhus-klubb-01: skåpraden till vänster på väg mot valv-
-     fönstret, alltså på västsidan). Bitarna räknas ur samma vägglista som
-     kollisionen — flyttas en öppning i F02-A följer skåpen med. */
-  const skapBitar = (() => {
-    const hal = (skapV.oppningar || []).map(o => [o.y0, o.y1]).sort((a, b) => a[0] - b[0]);
-    const ut = []; let a = skapV.y0;
-    for (const [h0, h1] of hal) { if (h0 - a > 0.6) ut.push([a, h0]); a = Math.max(a, h1); }
-    if (skapV.y1 - a > 0.6) ut.push([a, skapV.y1]);
-    return ut;
-  })();
+  /* SKÅPEN — Spatial Canon v2 (F02-A, accepterad 2026-09-04): korridorväggarna
+     `skap_v`/`skap_o` är ÅTERKALLADE; entrédelen är en OPEN_AREA och skåpen
+     är fristående möbler i den (docs/F02-RIDHUS-ENTRE-AUDIT.md § 3). Läsning
+     av `ridhus-klubb-01`/`-15`: man går längs en gång med receptionens
+     bröstning + glas på ena sidan och skåpraden mitt emot, mot valvfönstret
+     med stövelbänken i gångens ände. F02-A:s glas står på x 2,2 (planens
+     linje) och planens skåpremsa på x 4,2–5,7 — skåpbankarna ställs alltså
+     i remsan med FRONTEN mot glaset (väster), gången emellan. Var raden
+     börjar och slutar visar ingen bild (planens "fyra luckor" är olästa) —
+     ASSUMPTION; luckan vid y 72,6–74,3 lämnar SCV2-03-rutten entré → bana
+     fri. Ingen bank står där väggen stod som en ersättningsvägg: de är
+     0,5 m djupa möbler i öppen yta, inte en linje från gavel till gavel. */
+  const skapBitar = [[68.3, 69.9], [70.0, 72.5], [74.3, 76.2]];
+  const skapX = 4.2 + 0.25;                              // fronten i remsans västkant
 
   const ridhus = [
     /* SPEGLARNA. Vid B: EN spegel delad i två rutor i brun träram, monterad
@@ -227,37 +234,40 @@ const INREDNING = (() => {
      matt:{b:0.45, d:0.45, h:0.8}, z0:L.dackZ, farg:"#D4551E", farg2:"#8C8F92",
      kalla:"ridhus-inne-40", klass:"FOTO", lage:"DERIVED"},
 
-    /* SKÅPKORRIDOREN — ridhus-klubb-01 (nyckelbild), IMG_0169-f02/f03,
+    /* SKÅPKORRIDOREN — ridhus-klubb-01 (nyckelbild), -15, IMG_0169-f02/f03,
        IMG_0268-r12/r15. Höga smala plåtskåp i grått med enstaka röda och
-       mörkgrå dörrar längs västväggen; vita trästolar med rött mönstrat
-       tyg kring ett litet bord mitt i gången; en bänk med ridstövlar
-       under valvfönstret i norra änden. Glaspartierna på östsidan är
-       F02-A:s öppningar i `skap_o` — se den strukturella anmärkningen i
-       matrisen; de rörs inte här. */
+       mörkgrå dörrar i en rad; vita trästolar med rött mönstrat tyg kring
+       ett litet bord mitt i gången; en bänk med ridstövlar under
+       valvfönstret i gångens ände. Att raden, gruppen och bänken FINNS är
+       VERIFIED; lägena är ASSUMPTION i den öppna ytan (se skapBitar). */
     ...skapBitar.map(([y0, y1], i) => (
-      {id:"skap_v_"+(i+1), rum:"skapkorridor", typ:"skapbank", pos:[SKP.x+0.25, (y0+y1)/2], rikt:E,
+      {id:"skap_v_"+(i+1), rum:"hall", typ:"skapbank", pos:[skapX, (y0+y1)/2], rikt:W,
        matt:{b:y1-y0-0.1, d:0.5, h:1.9}, farg:"#C9CBCB", fargor:["#C9CBCB","#C9CBCB","#3A3C40","#C9CBCB","#B8322E"],
        kolliderar:true,
-       kalla:"ridhus-klubb-01, IMG_0169-f02, IMG_0268-r12", klass:"VERIFIED", lage:"DERIVED"})),
-    {id:"skap_bord", rum:"skapkorridor", typ:"bord", pos:[SKP.x+SKP.w/2, 68.6], rikt:E,
+       kalla:"ridhus-klubb-01, -15, IMG_0169-f02, IMG_0268-r12", klass:"VERIFIED", lage:"ASSUMPTION"})),
+    /* Bordet med de två stolarna står i gången mellan glaset och skåpen
+       (-01, -15); ungefär mitt för receptionsglaset. Planens etikett
+       RECEPTION på samma remsa är passiv (F02-A); vilken sida av glaset som
+       är receptionens insida är F02-A:s GEOMETRY_REFERENCE_GAP. */
+    {id:"skap_bord", rum:"hall", typ:"bord", pos:[3.3, 70.7], rikt:E,
      matt:{b:0.6, d:0.6, h:0.72}, farg:"#F2EFE8", kolliderar:true,
-     kalla:"ridhus-klubb-01, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stol_1", rum:"skapkorridor", typ:"stol", pos:[SKP.x+SKP.w/2, 69.3], rikt:Sy,
+     kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"skap_stol_1", rum:"hall", typ:"stol", pos:[3.3, 71.4], rikt:Sy,
      matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
-     kalla:"ridhus-klubb-01, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stol_2", rum:"skapkorridor", typ:"stol", pos:[SKP.x+SKP.w/2, 67.9], rikt:N,
+     kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"skap_stol_2", rum:"hall", typ:"stol", pos:[3.3, 70.0], rikt:N,
      matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
-     kalla:"ridhus-klubb-01, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stovelbank", rum:"skapkorridor", typ:"bank", pos:[SKP.x+SKP.w/2, SKP.y+SKP.h-0.35], rikt:Sy,
+     kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
+    /* STÖVELBÄNKEN under valvfönstret mot parkeringen: ridhus-klubb-14 och
+       IMG_0268-r03/-r05 visar SAMMA bänk (jackor, hjälmväska, stövlar) som
+       -01 har i förgrunden — det är en bänk under ett fönster, inte två.
+       Fönstret är fasadens låga valvfönster på norra gaveln (x ≈ 4,4);
+       bänken står under det, mot gaveln. Den tidigare `entre_bank` "under
+       entréfönstret" i västväggen är borttagen: den låsta fasaden har inget
+       fönster vid entrédörren (u 9, b 2 fyller entréns hela bredd). */
+    {id:"skap_stovelbank", rum:"hall", typ:"bank", pos:[valvN.x, H.y+H.h-0.32], rikt:Sy,
      matt:{b:1.2, d:0.4, h:0.45}, farg:"#C9A87C", farg2:"#1E1E1E", kolliderar:true,
-     kalla:"ridhus-klubb-01, ridhus-klubb-14", klass:"VERIFIED", lage:"DERIVED"},
-
-    /* ENTRÉN — IMG_0268-r03/r05: valvfönstret mot parkeringen med en
-       bänk/låda under fönsterbrädan, full av jackor, hjälmväska och
-       stövlar. Fönstret sitter i västväggen; bänken står under det. */
-    {id:"entre_bank", rum:"entre", typ:"bank", pos:[ENT.x+0.3, ENT.y+ENT.h/2], rikt:E,
-     matt:{b:1.1, d:0.45, h:0.5}, farg:"#F0EDE6", farg2:"#3A3634", kolliderar:true,
-     kalla:"IMG_0268-r03, -r05", klass:"FOTO", lage:"DERIVED"},
+     kalla:"ridhus-klubb-01, ridhus-klubb-14, IMG_0268-r03, -r05", klass:"VERIFIED", lage:"DERIVED"},
   ];
 
   return { stall, ridhus };

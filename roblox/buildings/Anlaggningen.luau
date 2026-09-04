@@ -555,23 +555,55 @@ local INRE = {
 	namnlösa — funktion REFERENCE GAP — och får ingen platta alls; webben
 	ritar heller ingen text för dem. Tom sträng är sann i Luau, därför
 	prövas längden uttryckligen. ]]
+--[[ Spatial Canon v2 — provenance på varje vägg/glas/sluten volym i de
+	omtvistade ytorna: Primitiv (WALL/GLASS), CanonId, SourceId, Confidence.
+	Samma fält som webben läser ur src/site.js; bygge.spec kräver att de
+	finns (SCV2-02) och att de matchar datan (SCV2-05). ]]
+local function kanonAttribut(p, v)
+	if v.primitiv then p:SetAttribute("Primitiv", v.primitiv) end
+	if v.canon_id then p:SetAttribute("CanonId", v.canon_id) end
+	if v.source_id then p:SetAttribute("SourceId", v.source_id) end
+	if v.confidence then p:SetAttribute("Confidence", v.confidence) end
+end
+
 local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, prefix: string, farg: Color3)
 	for _, v in ipairs(K.vaggar) do
 		local t = v.tjock or 0.16
 		local mat = if v.brand then Enum.Material.Concrete else Enum.Material.Plaster
 		for j, bit in ipairs(GEO.vaggBitar(v)) do
 			local namn = prefix .. " " .. v.id .. ":" .. j
+			--[[ Spatial Canon v2: GLASS är en låg bröstning med en glasruta
+			     över; WALL är hel. Båda bär provenance-attributen. ]]
+			local glas = v.primitiv == "GLASS"
+			local bh = if glas then (v.brostning or 0.95) else h
 			local p
 			if v.typ == "tvar" then
 				p = BK.box(model, base, namn,
-					o.x + bit.a0, 0, o.y + v.y - t / 2, bit.a1 - bit.a0, h, t, farg, mat)
+					o.x + bit.a0, 0, o.y + v.y - t / 2, bit.a1 - bit.a0, bh, t, farg, mat)
 			else
 				p = BK.box(model, base, namn,
-					o.x + v.x - t / 2, 0, o.y + bit.a0, t, h, bit.a1 - bit.a0, farg, mat)
+					o.x + v.x - t / 2, 0, o.y + bit.a0, t, bh, bit.a1 - bit.a0, farg, mat)
 			end
 			--[[ Inomhusläsbarhet: klientens Genomsikt tonar den här biten när
 			     den står mellan kameran och karaktären. Samma regel som webben. ]]
 			p:SetAttribute("Genomsiktlig", true)
+			kanonAttribut(p, v)
+			if glas then
+				local g
+				if v.typ == "tvar" then
+					g = BK.box(model, base, namn .. " glas",
+						o.x + bit.a0, bh, o.y + v.y - 0.02, bit.a1 - bit.a0, h - bh, 0.04,
+						Color3.fromRGB(191, 211, 220), Enum.Material.Glass)
+				else
+					g = BK.box(model, base, namn .. " glas",
+						o.x + v.x - 0.02, bh, o.y + bit.a0, 0.04, h - bh, bit.a1 - bit.a0,
+						Color3.fromRGB(191, 211, 220), Enum.Material.Glass)
+				end
+				g.Transparency = 0.55
+				-- glaset tonas som en väggbit när det står mellan kamera och karaktär
+				g:SetAttribute("Genomsiktlig", true)
+				kanonAttribut(g, v)
+			end
 		end
 	end
 	for _, r in ipairs(K.rum or {}) do
@@ -582,6 +614,7 @@ local function byggVaggarOchRum(model: Model, base: CFrame, o, h: number, K, pre
 			p.Transparency = 0.45
 			p:SetAttribute("Rum", r.id)
 			p:SetAttribute("Genomsiktlig", true)
+			kanonAttribut(p, r)
 		elseif r.label ~= nil and r.label ~= "" then
 			local p = BK.box(model, base, "Rumsetikett " .. r.label,
 				o.x + q.x, 0.03, o.y + q.y, q.w, 0.02, q.h, INRE.rum, Enum.Material.SmoothPlastic)
@@ -605,9 +638,14 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 		local q = GEO.inredningRekt(ob)
 		local z0 = ob.z0 or 0
 		local namn = prefix .. " " .. ob.id
+		-- Hög, opak inredning skymmer figuren som en vägg: Genomsiktlig (tonas
+		-- av Genomsikt på klienten) — samma regel som webbens inredningHog.
+		local hog = not (ob.typ == "lysror" or ob.typ == "exitskylt" or ob.typ == "ventkanal" or ob.typ == "spegel")
+			and (z0 + ob.matt.h) >= 1.4 and ob.matt.d >= 0.3
 		local function del(suffix: string, x, y, z, w, h, d, farg, mat, kollid: boolean?)
 			local p = BK.box(model, base, namn .. suffix, x, y, z, w, h, d, farg, mat)
 			p.CanCollide = if kollid == nil then (ob.kolliderar == true) else kollid
+			if hog then p:SetAttribute("Genomsiktlig", true) end
 			p:SetAttribute("Inredning", ob.id)
 			p:SetAttribute("Rum", ob.rum)
 			p:SetAttribute("Klass", ob.klass)
@@ -964,6 +1002,44 @@ local function byggStallInre(model: Model, base: CFrame)
 	-- Inredningen ur G.inredning.stall (F02-B): uppehållsrummet, teorisalen,
 	-- sadelkammaren och exitskylten vid gång A:s norra ände.
 	byggInredning(model, base, o, G.inredning and G.inredning.stall, "Inredning")
+	--[[ Norra gaveln inifrån (klubbgaveln): samma öppningar som den låsta
+		fasaden — entrédörren mitt på gaveln med ett runt fönster på var sida
+		(stall-entre-15). Dörrbladet som en del i väggen (färgen inifrån är
+		[antagande], samma som utsidan), vit karm, solfjäderfönstret som ljus
+		ruta; de runda fönstren som karm + glas (fyrkantig stilisering, samma
+		som fasadens `rund` i BK.window). u räknas från östra hörnet. Planens
+		vindfång och `ut_n` rörs inte — dokumenterad motsägelse
+		(STALLINNE.klubb-noten). Samma tecknare som webben (v3dStall). ]]
+	do
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		local V = Color3.fromRGB(238, 236, 228)
+		for _, op in ipairs((hus and hus.oppningar) or {}) do
+			if op.sida == "N" and op.z0 < 3 and (op.typ == "dorrgul" or op.typ == "rund") then
+				local x0 = o.x + S.bredd - op.u - op.b
+				local zIn = o.y + S.langd
+				if op.typ == "dorrgul" then
+					BK.box(model, base, "Klubbentrén inifrån", x0, 0, zIn - 0.09, op.b, op.h, 0.06,
+						Color3.fromRGB(168, 118, 80), Enum.Material.Wood).CanCollide = false
+					BK.box(model, base, "Klubbentréns karm", x0 - 0.12, op.h, zIn - 0.10,
+						op.b + 0.24, 0.12, 0.07, V, Enum.Material.SmoothPlastic).CanCollide = false
+					for _, sx in ipairs({ x0 - 0.12, x0 + op.b }) do
+						BK.box(model, base, "Klubbentréns karm", sx, 0, zIn - 0.10,
+							0.12, op.h + 0.12, 0.07, V, Enum.Material.SmoothPlastic).CanCollide = false
+					end
+					BK.box(model, base, "Klubbentréns solfjäderfönster", x0 + op.b * 0.13, op.h * 0.64, zIn - 0.13,
+						op.b * 0.74, op.h * 0.30, 0.03, Color3.fromRGB(200, 214, 222), Enum.Material.Glass).CanCollide = false
+				else
+					BK.box(model, base, "Runt fönster inifrån, karm", x0 - 0.08, op.z0 - 0.08, zIn - 0.10,
+						op.b + 0.16, op.h + 0.16, 0.06, V, Enum.Material.SmoothPlastic).CanCollide = false
+					local g = BK.box(model, base, "Runt fönster inifrån, glas", x0, op.z0, zIn - 0.13,
+						op.b, op.h, 0.03, Color3.fromRGB(184, 204, 216), Enum.Material.Glass)
+					g.CanCollide = false
+					g.Transparency = 0.3
+				end
+			end
+		end
+	end
 end
 
 --[[ Ridhuset: banan, sargen med porten, läktaren, glasrummen, domarbåset.
@@ -1057,32 +1133,45 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	local g, rr = L.gangbrada, L.rader
 	local bankFarg = if rr then rr.farg else INRE.laktare
 	local kantFarg = if rr then rr.kantFarg else INRE.laktare
+	-- Läktarens NORRA 4 m (LAKTARE_TONAD_ANDE, delad med webben) byggs som
+	-- egna delar med Genomsiktlig: står figuren i entréhallen bakom dem
+	-- döljer raderna henne annars (siktgrinden #78). Resten tonas aldrig,
+	-- så däcket man går på förblir synligt.
+	local LAKTARE_TONAD_ANDE = 4.0
 	for s, sek in ipairs(GEO.laktarSektioner(L)) do
-		local dj = sek.y1 - sek.y0
+	  local bitar = if math.abs(sek.y1 - L.y1) < 0.01 and (sek.y1 - sek.y0) > 6
+	    then { { y0 = sek.y0, y1 = sek.y1 - LAKTARE_TONAD_ANDE, gs = false }, { y0 = sek.y1 - LAKTARE_TONAD_ANDE, y1 = sek.y1, gs = true } }
+	    else { { y0 = sek.y0, y1 = sek.y1, gs = false } }
+	  for _, bit in ipairs(bitar) do
+		local dj = bit.y1 - bit.y0
+		local function gs(p) if bit.gs then p:SetAttribute("Genomsiktlig", true) end return p end
 		local gX = if inat > 0 then bankant else bankant - g.djup
-		BK.box(model, base, "Läktargångbräda " .. s,
-			o.x + gX, L.dackZ - 0.10, o.y + sek.y0, g.djup, 0.10, dj,
-			g.farg, Enum.Material.WoodPlanks)
+		gs(BK.box(model, base, "Läktargångbräda " .. s,
+			o.x + gX, L.dackZ - 0.10, o.y + bit.y0, g.djup, 0.10, dj,
+			g.farg, Enum.Material.WoodPlanks))
 		for i, rad in ipairs(GEO.laktarRader(L)) do
 			local x0 = if inat > 0 then bankant + rad.in0 else bankant - rad.in1
 			local dju = rad.in1 - rad.in0
-			BK.box(model, base, "Läktarrad " .. s .. ":" .. i,
-				o.x + x0, rad.z - rr.sittTjock, o.y + sek.y0, dju, rr.sittTjock, dj,
-				bankFarg, Enum.Material.WoodPlanks)
+			gs(BK.box(model, base, "Läktarrad " .. s .. ":" .. i,
+				o.x + x0, rad.z - rr.sittTjock, o.y + bit.y0, dju, rr.sittTjock, dj,
+				bankFarg, Enum.Material.WoodPlanks))
 			-- sättsteget ner mot banan och den röda kantlisten (-04)
 			local sX = if inat > 0 then bankant + rad.in0 else bankant - rad.in0 - 0.04
-			BK.box(model, base, "Läktarsättsteg " .. s .. ":" .. i,
-				o.x + sX, L.dackZ, o.y + sek.y0, 0.04, rad.z - L.dackZ - rr.sittTjock, dj,
-				bankFarg, Enum.Material.WoodPlanks)
-			BK.box(model, base, "Läktarkantlist " .. s .. ":" .. i,
-				o.x + sX, rad.z, o.y + sek.y0, 0.06, 0.04, dj,
-				kantFarg, Enum.Material.SmoothPlastic).CanCollide = false
+			gs(BK.box(model, base, "Läktarsättsteg " .. s .. ":" .. i,
+				o.x + sX, L.dackZ, o.y + bit.y0, 0.04, rad.z - L.dackZ - rr.sittTjock, dj,
+				bankFarg, Enum.Material.WoodPlanks))
+			gs(BK.box(model, base, "Läktarkantlist " .. s .. ":" .. i,
+				o.x + sX, rad.z, o.y + bit.y0, 0.06, 0.04, dj,
+				kantFarg, Enum.Material.SmoothPlastic)).CanCollide = false
 		end
 		-- Stomme under däcket, så att det inte svävar.
 		local stX = if inat > 0 then bankant + L.dackDjup - 0.3 else bankant - L.dackDjup + 0.18
-		BK.box(model, base, "Läktarstomme " .. s,
-			o.x + stX, 0, o.y + sek.y0, 0.12, L.dackZ, dj,
-			INRE.laktare, Enum.Material.Wood).CanCollide = false
+		gs(BK.box(model, base, "Läktarstomme " .. s,
+			o.x + stX, 0, o.y + bit.y0, 0.12, L.dackZ, dj,
+			INRE.laktare, Enum.Material.Wood)).CanCollide = false
+	  end
+	  do
+		local dj = sek.y1 - sek.y0
 		-- Elon-dynorna på översta raden (-07); förut bara i webben.
 		local rader = GEO.laktarRader(L)
 		local topp = rader[#rader]
@@ -1093,6 +1182,145 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				BK.box(model, base, "Läktardyna " .. (i + 1),
 					o.x + dX - 0.17, topp.z, o.y + z - 0.22, 0.34, 0.06, 0.44,
 					Color3.fromRGB(38, 40, 44), Enum.Material.Fabric).CanCollide = false
+			end
+		end
+	  end
+	end
+
+	--[[ TRAPPORNA (R.trappor, Product Owner 2026-09-03): läktargångens
+		trappa upp till övre gången och stegen från entréhallen upp på
+		däcket. Stegen ur den delade regeln Geometri.trappsteg — samma
+		steg som webbens nivåregel läser — som klossar karaktären kliver
+		upp för (steghöjd < 0,19 m = 0,57 studs). Sträng och räcke på den
+		fria sidan, utan kollision. Provenance som väggarna. ]]
+	for _, t in ipairs(R.trappor or {}) do
+		local T = GEO.trappsteg(t)
+		local langsX = T.axel == "x"
+		local b = if langsX then t.y1 - t.y0 else t.x1 - t.x0
+		for i, st in ipairs(T.steg) do
+			local tj = math.max(0.06, math.abs(T.stig))
+			local p
+			if langsX then
+				p = BK.box(model, base, "Trappa " .. t.id .. " steg " .. i,
+					o.x + st.a0, st.z - tj, o.y + t.y0, st.a1 - st.a0, tj, b,
+					Color3.fromRGB(90, 66, 50), Enum.Material.WoodPlanks)
+			else
+				p = BK.box(model, base, "Trappa " .. t.id .. " steg " .. i,
+					o.x + t.x0, st.z - tj, o.y + st.a0, b, tj, st.a1 - st.a0,
+					Color3.fromRGB(90, 66, 50), Enum.Material.WoodPlanks)
+			end
+			p:SetAttribute("Genomsiktlig", true)
+			kanonAttribut(p, t)
+		end
+		local a0 = if langsX then t.x0 else t.y0
+		local a1 = if langsX then t.x1 else t.y1
+		local lang = a1 - a0
+		local bakat = (t.stiger == "S" or t.stiger == "W")
+		local lut = math.atan2(t.z1 - t.z0, lang) * (if bakat then -1 else 1)
+		local L = math.sqrt(lang * lang + (t.z1 - t.z0) * (t.z1 - t.z0))
+		-- handledare (och för gavelloppen det vita snedställda sidostycket) på bansidan
+		local sidor = if langsX then { t.y0 + 0.05 } elseif t.x0 < 1.0 then { t.x1 - 0.05 } else { t.x0 + 0.05, t.x1 - 0.05 }
+		for _, sx in ipairs(sidor) do
+			for i = 1, T.n, 3 do
+				local st = T.steg[i]
+				local c = (st.a0 + st.a1) / 2
+				local px = if langsX then c else sx
+				local pz = if langsX then sx else c
+				local stolpe = BK.box(model, base, "Trappa " .. t.id .. " räckesstolpe " .. i,
+					o.x + px - 0.03, st.z, o.y + pz - 0.03, 0.06, 0.95, 0.06,
+					Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
+				stolpe.CanCollide = false
+				stolpe:SetAttribute("Genomsiktlig", true)   -- tonas när de skymmer (som webben)
+			end
+			local am, zm = (a0 + a1) / 2, (t.z0 + t.z1) / 2
+			local function sned(namn, h, dz, farg, mat, ds)
+				local d = BK.box(model, base, namn, 0, 0, 0, 0.06, h, 0.06, farg, mat)
+				d.CanCollide = false
+				d:SetAttribute("Genomsiktlig", true)   -- sidostycke/handledare tonas när de skymmer
+				if langsX then
+					d.Size = Vector3.new(BK.M * L, BK.M * h, BK.M * 0.05)
+					d.CFrame = base * CFrame.new(BK.M * (o.x + am), BK.M * (zm + dz), BK.M * (o.y + sx + (ds or 0))) * CFrame.Angles(0, 0, lut)
+				else
+					d.Size = Vector3.new(BK.M * 0.06, BK.M * h, BK.M * L)
+					d.CFrame = base * CFrame.new(BK.M * (o.x + sx), BK.M * (zm + dz), BK.M * (o.y + am)) * CFrame.Angles(-lut, 0, 0)
+				end
+			end
+			if langsX then
+				-- Från banan är det vita sidostycket det man ser av loppet (ridhus-inne-01):
+				-- ett trapets med vågrät underkant i blockets krön och överkanten längs
+				-- räcket 0,9 m över stegen. Byggt som en lutande skiva över stegen plus
+				-- en vit fyllnad per steg ner till blockets krön; räcket ovanpå kanten.
+				local V = Color3.fromRGB(233, 229, 220)
+				sned("Trappa " .. t.id .. " sidostycke", 0.90, 0.45, V, Enum.Material.Plaster, -0.10)
+				local bas = math.min(t.z0, t.z1)
+				for i, st in ipairs(T.steg) do
+					if st.z - bas > 0.02 then
+						local f = BK.box(model, base, "Trappa " .. t.id .. " sidostycke fyllnad " .. i,
+							o.x + st.a0, bas, o.y + sx - 0.125, st.a1 - st.a0, st.z - bas, 0.05, V, Enum.Material.Plaster)
+						f.CanCollide = false
+						f:SetAttribute("Genomsiktlig", true)
+					end
+				end
+				sned("Trappa " .. t.id .. " handledare", 0.06, 0.93, Color3.fromRGB(138, 106, 68), Enum.Material.Wood, -0.10)
+			else
+				sned("Trappa " .. t.id .. " handledare", 0.06, 0.95, Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
+			end
+		end
+	end
+	--[[ SPELETS BÄNKRADSSTEG (G.spelabstraktioner.ridhus.bankradSteg): inte
+		fidelity — inget foto visar hur publiken kommer upp på raderna. Byggs
+		som kliv-bara klossar MÄRKTA med Klass/Fidelity/Motiv som attribut
+		(ingen CanonId/SourceId/Confidence), i neutral färg, med en gul
+		genomskinlig markör som sargporten. Räknas inte in i något F02-PASS. ]]
+	do
+		local bs = G.spelabstraktioner and G.spelabstraktioner.ridhus and G.spelabstraktioner.ridhus.bankradSteg
+		if bs and bs.x1 > bs.x0 then
+			local T = GEO.trappsteg(bs)
+			local b = bs.y1 - bs.y0
+			for i, st in ipairs(T.steg) do
+				local tj = math.max(0.06, math.abs(T.stig))
+				local p = BK.box(model, base, "Spelabstraktion bankradsteg steg " .. i,
+					o.x + st.a0, st.z - tj, o.y + bs.y0, st.a1 - st.a0, tj, b,
+					Color3.fromRGB(185, 168, 134), Enum.Material.WoodPlanks)
+				p:SetAttribute("Klass", bs.klass)
+				p:SetAttribute("Fidelity", bs.fidelity)
+				p:SetAttribute("Motiv", bs.motiv)
+			end
+			local markor = BK.box(model, base, "Spelabstraktion bankradsteg", o.x + bs.x0, bs.z1 + 0.3, o.y + bs.y0,
+				bs.x1 - bs.x0, 0.12, b, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
+			markor.CanCollide = false
+			markor.Transparency = 0.7
+			markor:SetAttribute("Klass", bs.klass)
+			markor:SetAttribute("Fidelity", bs.fidelity)
+			markor:SetAttribute("Motiv", bs.motiv)
+		end
+	end
+	--[[ ÖVRE GÅNGEN (R.ovreGang): golvet på caféplanet längs banans kant som
+		läktargångens trappa landar i (`ridhus-klubb-10`), och ett räcke mot
+		banan där C-blockets glasband inte står — utom i trappans mynning.
+		Caféets rum innanför är REFERENCE GAP och byggs inte. ]]
+	if R.ovreGang then
+		local G2 = R.ovreGang
+		local golv = BK.box(model, base, "Övre gångens golv",
+			o.x + G2.x0, G2.z - 0.26, o.y + G2.y0, G2.x1 - G2.x0, 0.26, G2.y1 - G2.y0,
+			Color3.fromRGB(207, 200, 188), Enum.Material.WoodPlanks)
+		golv:SetAttribute("Genomsiktlig", true)
+		local trappa = nil
+		for _, t in ipairs(R.trappor or {}) do if t.id == "laktargang_upp" then trappa = t end end
+		local K2 = R.kortanda
+		local fri = { { G2.x0, K2 and K2.x0 or G2.x1 }, { K2 and K2.x1 or G2.x1, G2.x1 } }
+		for _, seg in ipairs(fri) do
+			local a, b2 = seg[1], seg[2]
+			local bitar = { { a, b2 } }
+			if trappa and trappa.x0 < b2 and trappa.x1 > a then
+				bitar = { { a, trappa.x0 }, { trappa.x1, b2 } }
+			end
+			for j, bit in ipairs(bitar) do
+				if bit[2] - bit[1] > 0.05 then
+					BK.box(model, base, "Övre gångens räcke " .. j,
+						o.x + bit[1], G2.z, o.y + G2.y0 - 0.06, bit[2] - bit[1], 1.0, 0.06,
+						Color3.fromRGB(233, 229, 220), Enum.Material.Plaster)
+				end
 			end
 		end
 	end
@@ -1126,19 +1354,18 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		local vagg = if mS then K.y1 else K.y0
 		local ut = if mS then 1 else -1
 		for i = 1, K.steg do
-			-- steg i täcker stegD från bankanten inåt, i:te plankan
+			--[[ steg i täcker stegD från bankanten inåt; klossen står på
+				sockeln och når radens sitthöjd SO + i × stegH (+ plankan).
+				Förut stod basen på SO + (i−1) × stegH med samma höjd, så
+				raderna steg 0,64 m i stället för 0,32 — det syntes först
+				när kedjan upp till C-trapporna provades (2026-09-03). ]]
 			local z0 = if mS then bank + (i - 1) * K.stegD else bank - i * K.stegD
 			BK.box(model, base, "Kortändans steg " .. i,
-				o.x + K.x0, SO + (i - 1) * K.stegH,
+				o.x + K.x0, SO,
 				o.y + z0, br, K.stegH * i + 0.1, K.stegD,
 				K.bank or INRE.laktare, Enum.Material.WoodPlanks)
 		end
-		for i, tx in ipairs(K.trappor) do
-			BK.box(model, base, "Kortändans trappa " .. i,
-				o.x + tx - K.trappB / 2, 0, o.y + K.y0,
-				K.trappB, (K.sockelH or 0) + K.steg * K.stegH, K.y1 - K.y0,
-				INRE.laktare, Enum.Material.WoodPlanks)
-		end
+		-- De två trapporna byggs som gångbara STAIR-primitiver ur R.trappor ovan.
 		--[[ Glasbandet är INTE en obruten remsa. `ridhus-inne-01` visar att
 			de två trapporna bryter det: deras vita snedställda barriärer
 			skjuter upp genom bandet, och mellan dem står den vita väggen
@@ -1186,13 +1413,11 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		end
 		local brytn = {}
 		for _, t in ipairs(K.trappor or {}) do table.insert(brytn, t) end
-		table.sort(brytn)
+		table.sort(brytn, function(a, b2) return a.x0 < b2.x0 end)
 		local seg, sx = {}, K.x0
 		for _, t in ipairs(brytn) do
-			if t - K.trappB / 2 - sx > 0.3 then
-				table.insert(seg, { sx, t - K.trappB / 2 })
-			end
-			if t + K.trappB / 2 > sx then sx = t + K.trappB / 2 end
+			if t.x0 - sx > 0.3 then table.insert(seg, { sx, t.x0 }) end
+			if t.x1 > sx then sx = t.x1 end
 		end
 		if K.x1 - sx > 0.3 then table.insert(seg, { sx, K.x1 }) end
 		for i, sg in ipairs(seg) do
@@ -1272,9 +1497,11 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	BK.box(model, base, "Domarbåsets nivå", o.x + D.x - (D.b + 1.6) / 2, 0,
 		o.y + D.y - (D.b + 1.2) / 2, D.b + 1.6, golv, D.b + 1.2,
 		INRE.laktare, Enum.Material.WoodPlanks)
+	-- Tonas när det står mellan kameran och spelaren (webben: eget nät med
+	-- toningsfotavtryck), som klubbdelens väggar.
 	BK.box(model, base, "Domarbås", o.x + D.x - D.b / 2, golv,
 		o.y + D.y - D.b / 2, D.b, D.h, D.b,
-		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks)
+		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks):SetAttribute("Genomsiktlig", true)
 	-- Öppningen mot banan, så att båset inte blir en sluten låda. Banan
 	-- ligger på den sida läktaren inte står.
 	local dIn = if lE then -1 else 1

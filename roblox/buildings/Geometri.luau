@@ -185,6 +185,27 @@ end
 	obruten — man ska kunna leda hästen igenom. Samma regel som
 	`laktarSektioner` i src/site.js; bygger man läktaren i ett stycke muras
 	gången igen, och det syns inte förrän någon försöker gå där. ]]
+--[[ En trappas steg ur dess data — DELAD regel med webben (`trappsteg` i
+	src/site.js). `t` har fotavtryck x0–x1 × y0–y1, nivåerna z0 → z1 och
+	`stiger`: "N" om z växer med y, "S" om z växer när y minskar. Steghöjden
+	hålls under stegMax (0,19 m) så att karaktären kliver upp för den. ]]
+function Geometri.trappsteg(t): { n: number, stig: number, djup: number, axel: string, steg: { { a0: number, a1: number, z: number } } }
+	local ax = t.axel or "y"
+	local a0 = if ax == "x" then t.x0 else t.y0
+	local a1 = if ax == "x" then t.x1 else t.y1
+	local stig = t.z1 - t.z0
+	local n = math.max(1, math.ceil(math.abs(stig) / (t.stegMax or 0.19)))
+	local djup = (a1 - a0) / n
+	local bakat = (t.stiger == "S" or t.stiger == "W")
+	local steg = {}
+	for i = 0, n - 1 do
+		local z = t.z0 + stig * (i + 1) / n
+		local b0 = if bakat then a1 - djup * (i + 1) else a0 + djup * i
+		table.insert(steg, { a0 = b0, a1 = b0 + djup, z = z })
+	end
+	return { n = n, stig = stig / n, djup = djup, axel = ax, steg = steg }
+end
+
 function Geometri.laktarSektioner(laktare): { { y0: number, y1: number } }
 	local g = laktare.gap
 	if not g then return { { y0 = laktare.y0, y1 = laktare.y1 } } end

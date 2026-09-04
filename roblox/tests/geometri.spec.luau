@@ -377,15 +377,72 @@ do
 			end
 			check("WC-V:s dörr sitter i östväggen mot lobbyn", dorr ~= nil and dorr.y0 > 57.45 and dorr.y1 < 59.95)
 		end
-		local liten = nil
-		for _, s in ipairs(slutna) do if s.id == "sluten_volym_v" then liten = s end end
-		check("den dubbellinjeritade rutan är en sluten volym 1,0 × 4,4 m utan namn, ingen tjock vägg",
-			liten ~= nil and math.abs(liten.rekt.w - 1.0) < 0.05 and math.abs(liten.rekt.h - 4.4) < 0.05
-				and (liten.label == nil or liten.label == ""),
-			liten and string.format("%.1f × %.1f", liten.rekt.w, liten.rekt.h) or "saknas")
 		local spar = false
 		for _, v in ipairs(K.vaggar) do if v.id == "spar" then spar = true end end
 		check("den gamla tjocka väggen `spar` är borta", not spar)
+	end
+
+	--[[ SPATIAL CANON v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json).
+		SCV2-01: ingen runtime-vägg och ingen sluten volym skär det inre av
+		stall_uppehall_open; PO-2026-09-03-STALL-OPEN-01 återkallade
+		sluten_volym_v. SCV2-02: varje vägg/sluten volym i klubbdelen bär
+		primitiv/canon_id/source_id/confidence. SCV2-04: confidence ur den
+		tillåtna mängden — ett rumsnamn är inget belägg. ]]
+	do
+		local oppna = K.oppna or {}
+		local zon = nil
+		for _, z in ipairs(oppna) do if z.id == "stall_uppehall_open" then zon = z end end
+		check("OPEN_AREA stall_uppehall_open finns i datan med PO-källa",
+			zon ~= nil and zon.typ == "OPEN_AREA" and zon.confidence == "PRODUCT_OWNER_VERIFIED" and #zon.rekt >= 2)
+		local ingen = nil
+		for _, z in ipairs(K.ingaVaggar or {}) do if z.tacker == "stall_uppehall_open" then ingen = z end end
+		check("NO_WALL_ZONE täcker uppehållsrummet", ingen ~= nil and ingen.typ == "NO_WALL_ZONE")
+		local function skarInre(r)
+			if not zon then return false end
+			for _, q in ipairs(zon.rekt) do
+				local ox = math.min(r.x + r.w, q.x + q.w) - math.max(r.x, q.x)
+				local oy = math.min(r.y + r.h, q.y + q.h) - math.max(r.y, q.y)
+				-- tröskeln är större än en halv väggtjocklek (0,08): en vägg PÅ ytans
+				-- gräns räknas inte, en vägg INNE i ytan gör det
+				if ox > 0.12 and oy > 0.12 then return true end
+			end
+			return false
+		end
+		local intrang = {}
+		for _, v in ipairs(K.vaggar) do
+			local t = (v.tjock or 0.16) / 2
+			for _, bit in ipairs(Geometri.vaggBitar(v)) do
+				local r = if v.typ == "tvar" then { x = bit.a0, y = v.y - t, w = bit.a1 - bit.a0, h = 2 * t }
+					else { x = v.x - t, y = bit.a0, w = 2 * t, h = bit.a1 - bit.a0 }
+				if skarInre(r) then table.insert(intrang, v.id) end
+			end
+		end
+		for _, r in ipairs(K.rum) do
+			if r.stangt and skarInre(r.rekt) then table.insert(intrang, r.id) end
+		end
+		check("SCV2-01: ingen vägg eller sluten volym skär uppehållsrummets öppna yta",
+			#intrang == 0, #intrang > 0 and table.concat(intrang, ", ") or "ytan är öppen")
+		local aterkallade = { sluten_volym_v = true, litet_rum = true, vindfang_v = true, vindfang_o = true, vindfang_fot = true, litet_v = true, litet_s = true, spar = true }
+		local kvar = {}
+		for _, v in ipairs(K.vaggar) do if aterkallade[v.id] then table.insert(kvar, v.id) end end
+		for _, r in ipairs(K.rum) do if r.stangt and aterkallade[r.id] then table.insert(kvar, r.id) end end
+		check("återkallad geometri är borta (sluten_volym_v, vindfångets stumpar, det lilla rummet)",
+			#kvar == 0, #kvar > 0 and table.concat(kvar, ", ") or "borta")
+		local tillat = { PRODUCT_OWNER_VERIFIED = true, VERIFIED_PLAN_OR_PHOTO = true }
+		local utan, felTillit = {}, {}
+		local function prova(o, id)
+			if not (o.primitiv == "WALL" or o.primitiv == "GLASS") or not o.canon_id or not o.source_id or not o.confidence then
+				table.insert(utan, id)
+			elseif not tillat[o.confidence] then
+				table.insert(felTillit, id)
+			end
+		end
+		for _, v in ipairs(K.vaggar) do prova(v, v.id) end
+		for _, r in ipairs(K.rum) do if r.stangt then prova(r, r.id) end end
+		check("SCV2-02: varje vägg och sluten volym i klubbdelen bär primitiv, canon_id, source_id och confidence",
+			#utan == 0, #utan > 0 and table.concat(utan, ", ") or "alla har provenance")
+		check("SCV2-04: ingen partition i klubbdelen vilar på lägre belägg än plan/foto eller PO",
+			#felTillit == 0, #felTillit > 0 and table.concat(felTillit, ", ") or "ok")
 	end
 	-- Alla rum ligger norr om den genomgående väggen, inuti huset.
 	local utanfor = nil
@@ -597,10 +654,17 @@ do
 		check("blocket upptar den östra delen av bredden, som planen ritar det",
 			(K.x1 - K.x0) > R.bredd * 0.45 and K.x1 > R.bredd * 0.8 and K.x0 > R.bredd * 0.25,
 			string.format("x %.1f–%.1f av husets %.1f", K.x0, K.x1, R.bredd))
+		--[[ Loppen går LÄNGS gaveln (`ridhus-inne-01`, `IMG_0192-f01/-f02`):
+			planens 12,4–15,2 och 16,4–18,9 m från väster, med luft emellan
+			för klockväggen, och foten vid mitten — det vänstra stiger mot
+			väster, det högra mot öster. ]]
+		local tv, to = K.trappor[1], K.trappor[2]
+		if tv.x0 > to.x0 then tv, to = to, tv end
 		check("trapporna står inne i blocket, med luft emellan för klockan",
-			K.trappor[1] > K.x0 + K.trappB and K.trappor[2] < K.x1 - K.trappB
-				and math.abs(K.trappor[2] - K.trappor[1]) > K.trappB + 0.5,
-			string.format("trappor %.1f och %.1f i block %.1f–%.1f", K.trappor[1], K.trappor[2], K.x0, K.x1))
+			tv.x0 > K.x0 + 0.5 and to.x1 < K.x1 - 0.5 and to.x0 - tv.x1 > 0.8,
+			string.format("lopp %.1f–%.1f och %.1f–%.1f i block %.1f–%.1f", tv.x0, tv.x1, to.x0, to.x1, K.x0, K.x1))
+		check("trapporna stiger utåt från klockväggen: vänstra foten i öster, högra foten i väster",
+			tv.fot == "E" and to.fot == "W")
 	end
 end
 
@@ -665,16 +729,97 @@ do
 end
 
 do
-	--[[ ENTRÉDELEN ur planen. Bara det som finns i datan provas här; bygget
-		provas i bygge.spec. Rummen med namn vilar på Tobias ord (entrén, de
-		två toaletterna) eller foto (skåpkorridoren). ]]
+	--[[ TRAPPORNA (Product Owner 2026-09-03 17:16; senior review 17:18: de
+		två C-trapporna ur C-kortandan-och-kafeet.md). Datan provas här:
+		båda C-trapporna finns som STAIR-primitiver härledda ur
+		kortanda.trappor, går längs gaveln från översta bänkraden (sockel +
+		steg × stegH) till caféplanet, stiger utåt från klockväggen; stegen
+		(Geometri.trappsteg) är under 0,2 m och sammanhängande; övre gången
+		ligger på caféplanet norr om vägglinjen; allt bär provenance med FOTO
+		som källa och VERIFIED_PLAN_OR_PHOTO som confidence.
+
+		Senior review 2026-09-04 04:08 (blocker 1): vägen hallgolvet → nedersta
+		bänkraden har INGET foto och får inte ligga i fidelity-datan. Den
+		finns bara som spelabstraktion (SPELABSTRAKTIONER.ridhus.bankradSteg),
+		utan canon_id/source_id/confidence, och räknas inte in i F02. ]]
+	local trappor = {}
+	for _, t in ipairs(R.trappor or {}) do trappor[t.id] = t end
+	local cv, co = trappor.c_trappa_v, trappor.c_trappa_o
+	local K = R.kortanda
+	check("båda C-trapporna finns i datan som STAIR-primitiver", cv ~= nil and co ~= nil)
+	check("fidelity-datan innehåller BARA de två fotobelagda C-trapporna (inga bänkradssteg)",
+		#(R.trappor or {}) == 2 and trappor.bankrad_upp == nil, #(R.trappor or {}) .. " trappor")
+	for id, t in pairs(trappor) do
+		check(string.format("trappan %s bär confidence VERIFIED_PLAN_OR_PHOTO och en FOTO-källa (ingen PO-verifierad fidelity utan bild)", id),
+			t.confidence == "VERIFIED_PLAN_OR_PHOTO" and type(t.source_id) == "string" and t.source_id:find("FOTO:", 1, true) ~= nil
+				and t.klass == nil,
+			tostring(t.confidence) .. " / " .. tostring(t.source_id))
+	end
+	local SA = UBRFKomplex.spelabstraktioner
+	local bs = SA and SA.ridhus and SA.ridhus.bankradSteg
+	check("spelets bänkradssteg ligger i spelabstraktioner, märkta SPELABSTRAKTION med REFERENCE GAP i fidelity",
+		bs ~= nil and bs.klass == "SPELABSTRAKTION" and bs.fidelity == "REFERENCE GAP" and type(bs.motiv) == "string" and #bs.motiv > 10)
+	check("spelets bänkradssteg bär INGEN kanonprovenance (ingen canon_id/source_id/confidence/primitiv)",
+		bs ~= nil and bs.canon_id == nil and bs.source_id == nil and bs.confidence == nil and bs.primitiv == nil)
+	if bs and K then
+		-- spelkrav (inte fidelity): stegen måste faktiskt ansluta golvet till nedersta raden
+		local T = Geometri.trappsteg(bs)
+		local ok, forra = true, bs.z0
+		for _, st in ipairs(T.steg) do
+			if math.abs(st.z - forra) > 0.2 + 1e-6 or st.a1 - st.a0 < 0.2 then ok = false end
+			forra = st.z
+		end
+		check("spelkrav: bänkradsstegen går från golvet (0) till nedersta raden i steg under 0,2 m (inte fidelity)",
+			bs.z0 == 0 and math.abs(bs.z1 - ((K.sockelH or 0) + K.stegH)) < 0.01 and ok and math.abs(forra - bs.z1) < 1e-6
+				and bs.y0 >= K.y0 - 0.01 and bs.y1 <= K.y1 + 0.01,
+			string.format("z %.2f → %.2f, %d steg", bs.z0, bs.z1, T.n))
+	end
+	if cv and co and K then
+		local topp = (K.sockelH or 0) + K.steg * K.stegH
+		for _, t in ipairs({ cv, co }) do
+			check(string.format("%s går längs gaveln från översta bänkraden (%.2f) till caféplanet (%.2f)", t.id, topp, R.cafe.z0),
+				t.axel == "x" and math.abs(t.z0 - topp) < 0.01 and math.abs(t.z1 - R.cafe.z0) < 0.01
+					and t.y1 - t.y0 >= 1.0 and math.abs(t.y1 - K.y1) < 0.01,
+				string.format("axel %s, z %.2f → %.2f, y %.2f–%.2f", tostring(t.axel), t.z0, t.z1, t.y0, t.y1))
+		end
+		check("vänstra trappan stiger mot väster, högra mot öster — foten vid klockväggen",
+			cv.stiger == "W" and co.stiger == "E" and cv.x1 < co.x0
+				and K.klocka ~= nil and K.klocka.x > cv.x1 and K.klocka.x < co.x0,
+			string.format("v %.1f–%.1f (%s), o %.1f–%.1f (%s), klocka %.1f", cv.x0, cv.x1, tostring(cv.stiger), co.x0, co.x1, tostring(co.stiger), K.klocka and K.klocka.x or -1))
+		check("trapporna följer planens lägen (12,4–15,2 och 16,4–18,9 m från väster, ±0,3)",
+			math.abs(cv.x0 - 12.4) < 0.3 and math.abs(cv.x1 - 15.2) < 0.3 and math.abs(co.x0 - 16.4) < 0.3 and math.abs(co.x1 - 18.9) < 0.3)
+	end
+	for id, t in pairs(trappor) do
+		local T = Geometri.trappsteg(t)
+		local ok, forra = true, t.z0
+		for _, st in ipairs(T.steg) do
+			if math.abs(st.z - forra) > 0.2 + 1e-6 or st.a1 - st.a0 < 0.2 then ok = false end
+			forra = st.z
+		end
+		check(string.format("trappan %s har %d steg under 0,2 m som når toppen", id, T.n),
+			ok and math.abs(forra - t.z1) < 1e-6, string.format("stig %.3f, djup %.2f", T.stig, T.djup))
+		check(string.format("trappan %s bär primitiv STAIR, canon_id, source_id och confidence", id),
+			t.primitiv == "STAIR" and t.canon_id ~= nil and t.source_id ~= nil and t.confidence ~= nil)
+	end
+	local G2 = R.ovreGang
+	check("övre gången ligger på caféplanet norr om C-blockets vägglinje och är minst 2 m bred",
+		G2 ~= nil and K ~= nil and math.abs(G2.z - R.cafe.z0) < 0.01 and math.abs(G2.y0 - K.y1) < 0.01
+			and G2.y1 - G2.y0 >= 2.0 and (cv == nil or (G2.x0 <= cv.x0 and G2.x1 >= co.x1)),
+		G2 and string.format("z %.2f, y %.1f–%.1f, x %.1f–%.1f", G2.z, G2.y0, G2.y1, G2.x0, G2.x1) or "saknas")
+end
+
+do
+	--[[ ENTRÉDELEN — Spatial Canon v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json
+		§ buildings.ridhus). Den gamla vägglistan är återkallad; bara
+		källspårade WALL/GLASS får finnas, resten är OPEN_AREA. Bara datan
+		provas här; bygget och rutten provas i bygge.spec. ]]
 	local E = R.entrehall
 	check("entrédelen finns i datan", E ~= nil)
 	if E then
 		local namn = {}
 		for _, r in ipairs(E.rum) do namn[r.id] = r end
-		check("entrén, de två toaletterna, den kryssade rutan (schakt) och skåpkorridoren finns",
-			namn.entre and namn.wc_n1 and namn.wc_n2 and namn.schakt and namn.skapkorridor)
+		check("entrén, receptionen, de två toaletterna och den kryssade rutan (schakt) finns som regioner",
+			namn.entre and namn.reception and namn.wc_n1 and namn.wc_n2 and namn.schakt)
 		--[[ Blocker 1: rutan är plan-belagd som fotavtryck, funktionen är
 			okänd. Datan får inte kalla den hiss och inte sätta någon
 			spelarsynlig etikett — regeln "hitta inte på rumsidentitet". ]]
@@ -691,12 +836,92 @@ do
 			check("toaletterna och schaktet är slutna tills dörrar/funktion är belagda",
 				namn.wc_n1.stangt and namn.wc_n2.stangt and namn.schakt.stangt)
 		end
+		-- Kanonen § 3: rumsmetadata är passiv. Receptionen och entrén är regioner, inte volymer.
+		check("SCV2-04: receptionen och entrén är passiva regioner — inget `stangt` ur en etikett",
+			namn.reception ~= nil and not namn.reception.stangt and namn.entre ~= nil and not namn.entre.stangt)
 		local utanfor = nil
 		for _, r in ipairs(E.rum) do
 			local k = r.rekt
 			if k.x < -0.01 or k.x + k.w > R.bredd + 0.01 or k.y + k.h > R.langd + 0.01 then utanfor = r.id end
 		end
 		check("entrédelens rum ligger i huset", utanfor == nil, utanfor or "alla innanför")
+
+		--[[ SCV2 — OPEN_AREA ridhus_open_entrance_hall och NO_WALL_ZONE
+			ridhus_open_hall_no_room_boxes finns; ingen WALL/GLASS och ingen
+			sluten volym skär den öppna ytans inre (SCV2-01-analogen för
+			ridhuset); de 14 återkallade segmenten är borta. ]]
+		local zon = nil
+		for _, z in ipairs(E.oppna or {}) do if z.id == "ridhus_open_entrance_hall" then zon = z end end
+		check("OPEN_AREA ridhus_open_entrance_hall finns i datan med PO-källa",
+			zon ~= nil and zon.typ == "OPEN_AREA" and zon.source_id ~= nil
+				and string.find(zon.source_id, "PO-2026-09-03-RIDHUS-OPEN-01", 1, true) ~= nil and #zon.rekt >= 3)
+		local ingen = nil
+		for _, z in ipairs(E.ingaVaggar or {}) do if z.tacker == "ridhus_open_entrance_hall" then ingen = z end end
+		check("NO_WALL_ZONE täcker den öppna entréhallen och listar det återkallade",
+			ingen ~= nil and ingen.typ == "NO_WALL_ZONE" and #ingen.aterkallat >= 14)
+		local function skarInre(r)
+			if not zon then return false end
+			for _, q in ipairs(zon.rekt) do
+				local ox = math.min(r.x + r.w, q.x + q.w) - math.max(r.x, q.x)
+				local oy = math.min(r.y + r.h, q.y + q.h) - math.max(r.y, q.y)
+				if ox > 0.12 and oy > 0.12 then return true end
+			end
+			return false
+		end
+		local intrang = {}
+		for _, v in ipairs(E.vaggar) do
+			local t = (v.tjock or 0.16) / 2
+			for _, bit in ipairs(Geometri.vaggBitar(v)) do
+				local r = if v.typ == "tvar" then { x = bit.a0, y = v.y - t, w = bit.a1 - bit.a0, h = 2 * t }
+					else { x = v.x - t, y = bit.a0, w = 2 * t, h = bit.a1 - bit.a0 }
+				if skarInre(r) then table.insert(intrang, v.id) end
+			end
+		end
+		for _, r in ipairs(E.rum) do
+			if r.stangt and skarInre(r.rekt) then table.insert(intrang, r.id) end
+		end
+		check("SCV2-01 (ridhus): ingen vägg, inget glas och ingen sluten volym skär den öppna entréhallen",
+			#intrang == 0, #intrang > 0 and table.concat(intrang, ", ") or "hallen är öppen")
+		local aterkallade = {}
+		if ingen then for _, id in ipairs(ingen.aterkallat) do aterkallade[id] = true end end
+		for _, id in ipairs({ "korridor_o", "skap_v", "skap_o", "cell_1", "cell_2", "cell_3", "cell_4",
+			"hall_n_v", "hall_n_o", "hall_nv_s", "hall_mitt", "hall_no", "hall_no_s", "ostkorridor_v" }) do
+			aterkallade[id] = true
+		end
+		local kvar = {}
+		for _, v in ipairs(E.vaggar) do if aterkallade[v.id] then table.insert(kvar, v.id) end end
+		check("den återkallade vägglistan är borta (korridor_o, skåpkorridorens väggar, cellraden, hallens rumslådor, östkorridoren)",
+			#kvar == 0, #kvar > 0 and table.concat(kvar, ", ") or "borta")
+		-- SCV2-02/04: provenance på varje WALL/GLASS och sluten volym; tillåten confidence.
+		local tillat = { PRODUCT_OWNER_VERIFIED = true, VERIFIED_PLAN_OR_PHOTO = true }
+		local utan, felTillit = {}, {}
+		local function prova(o, id)
+			if not (o.primitiv == "WALL" or o.primitiv == "GLASS") or not o.canon_id or not o.source_id or not o.confidence then
+				table.insert(utan, id)
+			elseif not tillat[o.confidence] then
+				table.insert(felTillit, id)
+			end
+		end
+		for _, v in ipairs(E.vaggar) do prova(v, v.id) end
+		for _, r in ipairs(E.rum) do if r.stangt then prova(r, r.id) end end
+		check("SCV2-02: varje vägg/glas och sluten volym i entrédelen bär primitiv, canon_id, source_id och confidence",
+			#utan == 0, #utan > 0 and table.concat(utan, ", ") or "alla har provenance")
+		check("SCV2-04: ingen partition i entrédelen vilar på lägre belägg än plan/foto eller PO",
+			#felTillit == 0, #felTillit > 0 and table.concat(felTillit, ", ") or "ok")
+		-- Receptionen är GLASS (PO-2026-09-03-RIDHUS-GLASS-01), aldrig en opak vägg.
+		local glas, opakRec = nil, {}
+		for _, v in ipairs(E.vaggar) do
+			if v.canon_id == "ridhus_reception_glass" then
+				if v.primitiv == "GLASS" then glas = v else table.insert(opakRec, v.id) end
+			end
+		end
+		for _, r in ipairs(E.rum) do
+			if r.id == "reception" and r.stangt then table.insert(opakRec, "reception(stangt)") end
+		end
+		check("receptionens avgränsning är GLASS med PO- och fotokälla, inte en opak vägg",
+			glas ~= nil and #opakRec == 0 and string.find(glas.source_id, "RIDHUS-GLASS-01", 1, true) ~= nil
+				and (glas.y1 - glas.y0) >= 3.0,
+			#opakRec > 0 and ("opakt: " .. table.concat(opakRec, ", ")) or (glas and string.format("glas %.1f m", glas.y1 - glas.y0) or "saknas"))
 		--[[ Spelets sargport (SPELABSTRAKTION, inte fidelity) måste hamna
 			väster om C-blocket för att rutten entré → bana ska finnas; det
 			är ett SPELKRAV på abstraktionen, inte ett påstående om UBRF. ]]
@@ -704,6 +929,40 @@ do
 		check("spelets sargport (abstraktion) ligger väster om C-blocket så att rutten finns",
 			sp ~= nil and sp.x1 <= R.kortanda.x0 + 0.01 and sp.x0 >= R.bana.x - 0.01,
 			sp and string.format("port x %.1f–%.1f, block från %.1f", sp.x0, sp.x1, R.kortanda.x0) or "saknas")
+		--[[ SCV2-03 i datan: kedjan main_entrance → open_entrance_hall →
+			arena_access → physical_riding_area. Huvudentréns innerpunkt
+			(fasadens dörr) ligger i OPEN_AREA, sargporten öppnar ur samma
+			OPEN_AREA, och ingen vägg/volym i datan står mellan dem. ]]
+		local dorr = nil
+		for _, d in ipairs(R.dorrar or {}) do if d.id == "ut_ridhus_W_9" then dorr = d end end
+		local function iZon(x, y)
+			if not zon then return false end
+			for _, q in ipairs(zon.rekt) do
+				if x >= q.x - 0.01 and x <= q.x + q.w + 0.01 and y >= q.y - 0.01 and y <= q.y + q.h + 0.01 then return true end
+			end
+			return false
+		end
+		local kedja = dorr ~= nil and sp ~= nil and iZon(dorr.pos[1], dorr.pos[2]) and iZon((sp.x0 + sp.x1) / 2, sp.y + 0.2)
+		local spar = nil
+		if kedja then
+			local x0, x1 = math.min(dorr.pos[1], (sp.x0 + sp.x1) / 2) - 0.35, math.max(dorr.pos[1], (sp.x0 + sp.x1) / 2) + 0.35
+			local y0, y1 = sp.y, dorr.pos[2]
+			local function skar(r)
+				return r.x < x1 and r.x + r.w > x0 and r.y < y1 and r.y + r.h > y0
+			end
+			for _, v in ipairs(E.vaggar) do
+				local t = (v.tjock or 0.16) / 2
+				for _, bit in ipairs(Geometri.vaggBitar(v)) do
+					local r = if v.typ == "tvar" then { x = bit.a0, y = v.y - t, w = bit.a1 - bit.a0, h = 2 * t }
+						else { x = v.x - t, y = bit.a0, w = 2 * t, h = bit.a1 - bit.a0 }
+					if skar(r) then spar = spar or v.id end
+				end
+			end
+			for _, r in ipairs(E.rum) do if r.stangt and skar(r.rekt) then spar = spar or r.id end end
+		end
+		check("SCV2-03 (data): huvudentrén och sargporten ligger i den öppna hallen och inget står emellan",
+			kedja and spar == nil,
+			not kedja and "kedjan bruten: dörr eller port utanför OPEN_AREA" or (spar or "fri"))
 	end
 end
 check("domarbåset har trappa och exit-skylt", R.domarbas.trappa and R.domarbas.exit)
@@ -964,7 +1223,7 @@ do
 			placerbart (runt fönster + valvfönster i ett hörn som fasaden
 			inte har i uppehållsrummet): ingen post får heta pentry. ]]
 		local krav = { "uppehall_soffa_v", "uppehall_ponny", "teori_whiteboard_1", "sadel_stovelhylla",
-			"spegel_B", "spegel_A_v", "laktare_bommar", "skap_v_1", "entre_bank" }
+			"spegel_B", "spegel_A_v", "laktare_bommar", "skap_v_1", "skap_stovelbank" }
 		local saknas = {}
 		for _, id in ipairs(krav) do if not ids[id] then table.insert(saknas, id) end end
 		check("de belagda objekten finns i listan", #saknas == 0, "saknas: " .. table.concat(saknas, ", "))
