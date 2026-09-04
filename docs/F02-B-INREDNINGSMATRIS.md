@@ -285,6 +285,23 @@ RECEPTION är borta.
 - Falsifierat (mutation → röd → återställt via cp): objekt hoppat över i
   byggaren; `laktarRader` tom; soffa flyttad ut ur rummet; soffa utan
   kollision; den gamla fronten återinförd. Alla fem gav rött.
+- PO 15:20 (blockerare "läktaren är inte spelbar", mobil/webb): gå-hit
+  (pekskärmens/kartvyns primära styrning) hittade ingen väg upp — rutnätet
+  räknade läktaren som solid, var för försiktigt inomhus (ingen fri ruta
+  mellan skåpraden och schaktet eller vid bordet i gången) och
+  fastnadsvakten mätte mot slutmålet så att omvägen till stegen avbröts.
+  `world.js`: vägsökningen räknar nivåerna kant för kant (samma nivådata
+  och NIVA_STEG som gåendet; `NAV.nivafri`), genvägar bara på samma nivå,
+  delmål i trappor nås inom 0,45 m, rutnätets provradie inomhus en
+  fjärdedels ruta, fastnadsvakten mot delmålet. Tangent-/spakgåendet
+  klättrade redan (mätt i 2D och 3D, även med pekskärmens spak i
+  porträttläge). `gangtest.mjs` T1–T4: gå-hit från entrén, från hallen
+  öster om skåpen, från banan (via sargporten) och bredvid däcket — alla
+  via stegen. Falsifierat: läktaren solid igen för vägsökningen → figuren
+  stannar bredvid däcket (z 0) → rött; återställt → grönt. Roblox: samma
+  läktarsteg/rader/trappa som fysiska delar; humanoiden klättrar 0,19 m-
+  steg och PathfindingService räknar nivåer själv — ingen webb-only
+  geometri, bara webbens egen vägsökning som nu läser den delade nivådatan.
 - PO 15:15: `geometri.spec` kräver `zon_vask`, `zon_racke`, `zon_klocka`,
   `boxfront_brandslackare`; `bygge.spec` kräver gaveldörrens två blad + två
   rutor, gavelfönstren inifrån med 10 gallerstänger, tvärkorridorens stråk A/B;

@@ -137,7 +137,7 @@ prova("c_trappa_o → övre gången", q.y > niv.G.y0 + 0.8 && Math.abs(q.z - niv
    läktarsteg (SPELABSTRAKTION) → gångbrädan → raderna → översta raden →
    läktartrappan (STAIR) → landgången på övre plan → övre gången. */
 const lak = await page.evaluate(() => { const R = RIDHUSINNE, L = R.laktare;
-  return { L: { x0: L.x0, dackDjup: L.dackDjup, dackZ: L.dackZ, y1: L.y1, topp: L.dackZ + L.rader.antal * L.rader.stegH },
+  return { L: { x0: L.x0, dackDjup: L.dackDjup, dackZ: L.dackZ, y1: L.y1, topp: L.dackZ + L.rader.antal * L.rader.stegH, stegH: L.rader.stegH },
     steg: SPELABSTRAKTIONER.ridhus.laktarSteg, t: R.trappor.find(t => t.id === "laktar_trappa_h"), V: R.ovreGangV, G: R.ovreGang }; });
 q = await gaZ("ridhusinne", (lak.steg.x0 + lak.steg.x1) / 2, lak.steg.y1 + 0.6, "S", r => r.z > lak.L.dackZ - 0.02 && r.y < lak.L.y1 - 0.3, 10000, 0);
 prova("SPELKRAV (inte fidelity): hallgolvet → spelets läktarsteg (SPELABSTRAKTION) → läktardäcket", q.z >= lak.L.dackZ - 0.02 && q.y < lak.L.y1 - 0.3, `till (${q.x}, ${q.y}) z ${q.z} (däck ${lak.L.dackZ.toFixed(2)})`);
@@ -158,6 +158,40 @@ prova("klockväggen mellan trapporna: ingen osynlig väg upp till övre gången"
 /* 12. NEGATIVT: från hallgolvet rakt in i bänkblocket utan stegen — nivåregeln stoppar. */
 q = await gaZ("ridhusinne", niv.K.x0 + 3.0, niv.K.y1 + 0.8, "S", r => r.y < niv.K.y1 - 0.5, 5000);
 prova("bänkblockets baksida utan trappa stoppar (ingen osynlig ramp)", !(q.y < niv.K.y1 - 0.5 && q.z > 0.5), `till (${q.x}, ${q.y}) z ${q.z}`);
+
+/* ── GÅ-HIT UPP PÅ LÄKTAREN (Product Owner 2026-09-04 15:20: "spelaren kan
+   inte gå upp på läktaren", upptäckt i mobil/webb). Pekskärmens och
+   kartvyns primära styrning är gå-hit: ett tryck på läktaren ska ge en väg
+   via stegen och figuren ska komma upp — inte stanna bredvid däcket.
+   Vägsökningen räknar nu nivåerna (NAV.nivafri + nivåregeln kant för
+   kant), rutnätet är mindre försiktigt inomhus (skåpraden/schaktet,
+   bordet i gången) och fastnadsvakten mäter mot delmålet. */
+async function tapp(fx, fy, fz, tx, ty, maxMs) {
+  await page.evaluate(({ fx, fy, fz }) => { slutaGa(); gaTill("ridhusinne", { x: fx, y: fy, rikt: 0, z: fz }); }, { fx, fy, fz });
+  await page.waitForTimeout(300);
+  const vag = await page.evaluate(({ tx, ty }) => { satMal(tx, ty); return VD.vag; }, { tx, ty });
+  const t0 = Date.now(); let p;
+  do { await page.waitForTimeout(300); p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2), z: +(VD.pz || 0).toFixed(2), mal: !!VD.mal })); }
+  while (p.mal && Date.now() - t0 < maxMs);
+  return { ...p, vag };
+}
+const viaSteg = (vag) => !!(vag && vag.some(v => v[0] >= lak.steg.x0 - 0.3 && v[0] <= lak.steg.x1 + 0.3 && v[1] >= lak.steg.y0 - 0.3 && v[1] <= lak.steg.y1 + 0.9));
+const dackX = lak.L.x0 + lak.L.dackDjup - 0.6;
+/* T1. från huvudentrén: tryck på däcket 3 m in. */
+q = await tapp(dx, dy, 0, dackX, lak.L.y1 - 3.0, 30000);
+prova("GÅ-HIT: från entrén upp på läktardäcket (vägen via stegen)", q.z >= lak.L.dackZ - 0.02 && Math.hypot(q.x - dackX, q.y - (lak.L.y1 - 3.0)) < 1.0 && viaSteg(q.vag), `till (${q.x}, ${q.y}) z ${q.z}, väg ${JSON.stringify(q.vag && q.vag.map(v => v.slice(0, 2).map(n => +n.toFixed(1))))}`);
+/* T2. från hallen öster om skåpraden: tryck på läktargången 20 m söderut. */
+q = await tapp(4.8, 72.0, 0, dackX, lak.L.y1 - 20.0, 70000);
+prova("GÅ-HIT: från hallen (öster om skåpen) längs läktargången 20 m söderut", q.z >= lak.L.dackZ - 0.02 && Math.abs(q.y - (lak.L.y1 - 20.0)) < 1.0 && viaSteg(q.vag), `till (${q.x}, ${q.y}) z ${q.z}, väg ${q.vag ? q.vag.length + " punkter" : "null"}`);
+/* T3. från banan: tryck på översta raden — runt genom sargporten, upp för stegen, över raderna. */
+q = await tapp(6.0, 40.0, 0, lak.L.x0 + 0.6, lak.L.y1 - 12.0, 90000);
+/* Gå-hit stannar 0,9 m före målet (spelets ankomsttolerans), så figuren kan
+   stå på näst översta raden när målet ligger på den översta. */
+prova("GÅ-HIT: från banan upp på läktarens rader (via sargporten och stegen; minst näst översta raden)", q.z >= lak.L.topp - lak.L.stegH - 0.02 && Math.abs(q.y - (lak.L.y1 - 12.0)) < 1.2 && viaSteg(q.vag), `till (${q.x}, ${q.y}) z ${q.z} (översta raden ${lak.L.topp.toFixed(2)}), väg ${q.vag ? q.vag.length + " punkter" : "null"}`);
+/* T4. NEGATIVT: vägen får inte gå rakt in i däckets kant — ett tryck på däcket
+   från banans sida ska ändå gå via stegen. */
+q = await tapp(5.0, 60.0, 0, dackX, 60.0, 40000);
+prova("GÅ-HIT: från banans sida bredvid däcket — vägen går via stegen, inte in i kanten", viaSteg(q.vag) && q.z >= lak.L.dackZ - 0.02, `till (${q.x}, ${q.y}) z ${q.z}, via stegen: ${viaSteg(q.vag)}`);
 
 await browser.close(); srv.close();
 const fel = resultat.filter(r => !r.ok).length;

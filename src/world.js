@@ -74,7 +74,7 @@ function satMal(x,y){
     if(d){x=d.pos[0]; y=d.pos[1];}
   }
   VD.mal={x, y, namn};
-  VD.malT=0;
+  VD.malT=0; VD.malDel=null;
   VD.malAvst=Math.hypot(x-VD.px, y-VD.py);
   /* Vägen räknas ut EN gång, vid klicket. Går ingen väg att hitta får
      den raka linjen försöka ändå — då fångar fastnadsvakten det, och
@@ -198,8 +198,16 @@ function stegaVandring(dt){
   if(VD.mal){
     /* Nästa punkt på vägen, inte målet självt — det är skillnaden
        mellan att gå runt ridhuset och att gå in i det. */
-    while(VD.vag&&VD.vag.length>1&&
-      Math.hypot(VD.vag[0][0]-VD.px,VD.vag[0][1]-VD.py)<1.1)VD.vag.shift();
+    /* Delmål i en trappa eller på ett steg måste nås nära (0,45 m): tas
+       nästa delmål 1,1 m i förväg rundar figuren stegen och går rakt in
+       i däckets kant, som nivåregeln spärrar. */
+    while(VD.vag&&VD.vag.length>1){
+      const v0=VD.vag[0], v1=VD.vag[1];
+      const nivaSkifte=(v0.length>2&&v1.length>2&&Math.abs(v1[2]-v0[2])>0.02)
+        ||(v0.length>2&&Math.abs(v0[2]-(VD.pz||0))>0.02);
+      if(Math.hypot(v0[0]-VD.px,v0[1]-VD.py)>=(nivaSkifte?0.45:1.1))break;
+      VD.vag.shift();
+    }
     const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
     const avst=Math.hypot(VD.mal.x-VD.px, VD.mal.y-VD.py);
     if(ix||iy||avst<0.9){
@@ -209,11 +217,16 @@ function stegaVandring(dt){
       malFart=GA.fart;
       /* Fastnar man bakom ett hörn ska gåendet SLUTA, inte stå och
          trycka mot en vägg. Kommer man inte 0,2 m närmare på två
-         sekunder är vägen inte fri, och då får spelaren styra själv. */
+         sekunder är vägen inte fri, och då får spelaren styra själv.
+         Närmare DELMÅLET, inte slutmålet: vägen upp på läktaren går
+         först bort från målet (runt till stegen), och mätt mot
+         slutmålet avbröts den som "kommer inte fram" mitt i omvägen. */
+      const delAvst=Math.hypot(delmal[0]-VD.px, delmal[1]-VD.py);
+      if(VD.malDel!==delmal){ VD.malDel=delmal; VD.malT=0; VD.malAvst=delAvst; }
       VD.malT+=dt;
       if(VD.malT>2){
-        if(VD.malAvst-avst<0.2){ slutaGa(); saga("Du kommer inte fram den vägen.",2.6); }
-        VD.malT=0; VD.malAvst=avst;
+        if(VD.malAvst-delAvst<0.2){ slutaGa(); saga("Du kommer inte fram den vägen.",2.6); }
+        VD.malT=0; VD.malAvst=delAvst;
       }
     }
   }
@@ -356,7 +369,7 @@ function vandringKollision(nx,ny,r,fx,fy){
        som solida som förut. */
     [nx,ny]=kollideraRekt(nx,ny,r,{x:R.domarbas.x-R.domarbas.b/2,y:R.domarbas.y-R.domarbas.b/2,
       w:R.domarbas.b,h:R.domarbas.b});
-    if(fx===undefined){
+    if(fx===undefined&&!NAV.nivafri){
       for(const sek of laktarSektioner(R.laktare))
         [nx,ny]=kollideraRekt(nx,ny,r,{x:R.laktare.x0,y:sek.y0,
           w:R.laktare.dackDjup,h:sek.y1-sek.y0});
@@ -454,7 +467,13 @@ function vandringKollision(nx,ny,r,fx,fy){
 
    210 × 170 m med 1,6-metersrutor blir 131 × 106 = knappt 14 000 rutor.
    A* över det tar under en millisekund och körs en gång per klick. */
-const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null};
+/* `nivafri`: under rutnätsbygget och siktprovet räknas läktardäcket,
+   bänkraderna och trapporna som GÅNGBARA nivåer (som för gåendet), inte
+   som solida — vägsökningen tar sig då upp via stegen/trapporna, med
+   samma nivåregel (NIVA_STEG) som figuren själv följer. Product Owner
+   2026-09-04 15:20: "spelaren kan inte gå upp på läktaren" — gå-hit-
+   vägen (pekskärmens/kartvyns primära styrning) slutade bredvid däcket. */
+const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null, nivafri:false};
 
 function navBygg(){
   const matt=G.scen==="gard" ? [ANL.bredd,ANL.djup]
@@ -469,12 +488,21 @@ function navBygg(){
      sedan still mot ett räcke vid y=42,0 som inga prov hade sett.
      Rutnätet får hellre vara för försiktigt än för optimistiskt — en väg
      som inte finns är värre än en väg som går en meter från väggen. */
-  const r=GA.radie+NAV.cell*0.71;
-  for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
-    const x=(i+0.5)*NAV.cell, y=(j+0.5)*NAV.cell;
-    const [kx,ky]=vandringKollision(x,y,r);
-    NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
-  }
+  /* Inomhus räcker en fjärdedels ruta utöver figurens radie: väggarna
+     är minst 0,16 m tjocka och rutorna 0,6 m — ingen vägg kan glida
+     mellan två rutmitter. Med 0,71 (hela rutan) var ingen ruta fri
+     mellan skåpraden och schaktet (1,08 m) eller vid bordet i gången,
+     så gå-hit fann ingen väg till läktaren från halva entrédelen. Ute
+     står staketen som linjer, där behövs hela rutan. */
+  const r=GA.radie+NAV.cell*(G.scen==="gard"?0.71:0.25);
+  NAV.nivafri=true;
+  try{
+    for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
+      const x=(i+0.5)*NAV.cell, y=(j+0.5)*NAV.cell;
+      const [kx,ky]=vandringKollision(x,y,r);
+      NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
+    }
+  }finally{NAV.nivafri=false;}
   NAV.scen=G.scen;
 }
 function navRedo(){ if(NAV.scen!==G.scen)navBygg(); }
@@ -506,16 +534,41 @@ function navNarmasteFri(x,y){
 
 /* Fri sikt mellan två punkter? Används för att räta ut trapporna som
    ett rutnät alltid ger. */
-function navFriSikt(ax,ay,bx,by){
+/* Nivån längs sträckan a → b, från nivån z0: samma regel som gåendet —
+   inget delsteg får ändra golvnivån mer än NIVA_STEG. Returnerar nivån
+   vid b, eller null om sträckan inte går att gå (däckets kant, sargen,
+   övre gångens kant). Utanför ridhuset är nivån alltid 0. */
+function navNivaOK(ax,ay,bx,by,z0){
+  if(G.scen!=="ridhusinne")return 0;
+  const d=Math.hypot(bx-ax,by-ay), steg=Math.max(1,Math.ceil(d/0.2));
+  let z=z0||0;
+  for(let k=1;k<=steg;k++){
+    const t=k/steg, zn=ridhusNiva(ax+(bx-ax)*t,ay+(by-ay)*t,z);
+    if(Math.abs(zn-z)>NIVA_STEG)return null;
+    z=zn;
+  }
+  return z;
+}
+function navFriSikt(ax,ay,bx,by,z0){
   /* Mot de RIKTIGA väggarna, inte mot rutnätet. Rutnätet är avsiktligt
      försiktigt (se ovan) och skulle annars vägra den sista metern fram
-     till en dörr, som per definition ligger i en vägg. */
+     till en dörr, som per definition ligger i en vägg. Nivåerna räknas
+     som gångbara här också (nivafri) — men sträckan måste klara
+     nivåregeln, annars är den ingen genväg. */
+  /* Genvägar bara på SAMMA nivå: en genväg som skulle klättra kan
+     skära däckets kant i stället för stegen när gåendet rundar hörnet
+     (mätt: figuren fastnade på x 4,0 bredvid däcket). Trappor och steg
+     går rutnätet i sina egna punkter. */
+  if(z0!==undefined){const zn=navNivaOK(ax,ay,bx,by,z0); if(zn===null||Math.abs(zn-z0)>0.02)return false;}
   const d=Math.hypot(bx-ax,by-ay), steg=Math.max(1,Math.ceil(d/0.25));
-  for(let k=1;k<steg;k++){
-    const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
-    const [kx,ky]=vandringKollision(x,y,GA.radie);
-    if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
-  }
+  NAV.nivafri=(z0!==undefined);
+  try{
+    for(let k=1;k<steg;k++){
+      const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
+      const [kx,ky]=vandringKollision(x,y,GA.radie);
+      if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
+    }
+  }finally{NAV.nivafri=false;}
   return true;
 }
 
@@ -528,6 +581,9 @@ function navVag(sx,sy,mx,my){
   if(si===mi)return [[mx,my]];
   const g=new Float32Array(N).fill(Infinity), fr=new Int32Array(N).fill(-1);
   const stangd=new Uint8Array(N);
+  /* Nivån figuren har när hon når rutan — så att däcket bara nås via
+     stegen och övre gången bara via trapporna (nivåregeln kant för kant). */
+  const zAt=new Float32Array(N); zAt[si]=nivaHojd(sx,sy,VD.pz||0);
   const h=(i)=>{const a=i%NAV.nx,b=(i/NAV.nx)|0;
     const dx=Math.abs(a-mal[0]),dy=Math.abs(b-mal[1]);
     return (dx+dy)+(Math.SQRT2-2)*Math.min(dx,dy);};
@@ -559,7 +615,12 @@ function navVag(sx,sy,mx,my){
       /* Ingen genväg diagonalt förbi ett hörn. */
       if(di&&dj&&(!NAV.fri[b*NAV.nx+na]||!NAV.fri[nb*NAV.nx+a]))continue;
       const ny2=g[cur]+((di&&dj)?Math.SQRT2:1);
-      if(ny2<g[ni]){ g[ni]=ny2; fr[ni]=cur; putt([ny2+h(ni),ni]); }
+      if(ny2<g[ni]){
+        const [ax2,ay2]=navPunkt(a,b), [bx2,by2]=navPunkt(na,nb);
+        const zn=navNivaOK(ax2,ay2,bx2,by2,zAt[cur]);
+        if(zn===null)continue;
+        g[ni]=ny2; fr[ni]=cur; zAt[ni]=zn; putt([ny2+h(ni),ni]);
+      }
     }
   }
   if(fr[mi]<0&&si!==mi)return null;
@@ -567,12 +628,15 @@ function navVag(sx,sy,mx,my){
   rutor.reverse();
   const pkt=rutor.map(i=>navPunkt(i%NAV.nx,(i/NAV.nx)|0));
   pkt.push([mx,my]);
-  /* Räta ut: hoppa så långt fram fri sikt räcker. */
-  const ut=[]; let i=0;
+  /* Räta ut: hoppa så långt fram fri sikt räcker — och nivåregeln håller
+     längs genvägen (annars skär den däckets kant i stället för stegen). */
+  const ut=[]; let i=0, z=zAt[si];
   while(i<pkt.length-1){
     let j=pkt.length-1;
-    while(j>i+1&&!navFriSikt(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1]))j--;
-    ut.push(pkt[j]); i=j;
+    while(j>i+1&&!navFriSikt(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1],z))j--;
+    const zn=navNivaOK(pkt[i][0],pkt[i][1],pkt[j][0],pkt[j][1],z);
+    z=(zn===null)?z:zn;
+    ut.push([pkt[j][0],pkt[j][1],z]); i=j;      // punkten bär sin nivå (delmålstoleransen)
   }
   return ut;
 }
