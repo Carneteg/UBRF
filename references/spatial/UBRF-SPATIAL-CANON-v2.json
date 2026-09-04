@@ -1,0 +1,198 @@
+{
+  "version": "2.0.0",
+  "status": "ACTIVE_OVERRIDE",
+  "owner": "Tobias / UBRF Product Owner",
+  "purpose": "Bindande spatial sanning för omtvistade interiörytor. Modellen beskriver fysisk geometri, inte rumsnamn.",
+  "authority": {
+    "order": [
+      "PRODUCT_OWNER_EXPLICIT_CORRECTION",
+      "SPATIAL_CANON_V2",
+      "VERIFIED_PLAN_OR_PHOTO",
+      "DERIVED_GEOMETRY",
+      "CURRENT_IMPLEMENTATION"
+    ],
+    "rule": "Current implementation is never evidence. A room/function label never creates a wall."
+  },
+  "primitives": ["WALL", "OPENING", "GLASS", "OPEN_AREA", "NO_WALL_ZONE"],
+  "global_rules": [
+    "Only WALL and GLASS primitives may create visible vertical partitions.",
+    "OPEN_AREA and NO_WALL_ZONE forbid inferred partitions.",
+    "A semantic room label must never auto-generate geometry.",
+    "UNKNOWN or REFERENCE_GAP areas default to no new wall, not a plausible wall.",
+    "Gameplay collision or camera helpers must be separate from fidelity geometry.",
+    "Every runtime wall in contested areas must carry a canon/source id.",
+    "Any wall without a canon/source id in a contested area is a failing build."
+  ],
+  "buildings": {
+    "stallhus": {
+      "contested_area": "club_end",
+      "source_decisions": [
+        {
+          "id": "PO-2026-09-03-STALL-OPEN-01",
+          "decision": "Uppehållsrummet is an open area. The wall/closed volume visible in the rejected preview does not exist and must be removed."
+        }
+      ],
+      "open_areas": [
+        {
+          "id": "stall_uppehall_open",
+          "type": "OPEN_AREA",
+          "geometry": {
+            "kind": "union_rects",
+            "coordinate_system": "STALLINNE local metres; N measured from north/club gable",
+            "rects": [
+              {"x0": 0.0, "x1": 5.9, "n0": 0.0, "n1": 10.0},
+              {"x0": 5.9, "x1": 11.2, "n0": 0.0, "n1": 5.6}
+            ]
+          },
+          "confidence": "PRODUCT_OWNER_VERIFIED",
+          "rules": [
+            "No opaque internal partition may subdivide this open area unless a later Product Owner correction explicitly adds it.",
+            "The previously interpreted sluten_volym_v inside this area is revoked.",
+            "Furniture may occupy the area but may not imply walls."
+          ]
+        }
+      ],
+      "no_wall_zones": [
+        {
+          "id": "stall_uppehall_no_internal_wall",
+          "type": "NO_WALL_ZONE",
+          "covers": "stall_uppehall_open",
+          "revoked_runtime_refs": [
+            "STALLINNE.klubb.sluten_volym_v",
+            "any wall generated solely from the former closed-volume interpretation inside uppehållsrummet"
+          ]
+        }
+      ],
+      "topology": {
+        "must_connect": [
+          ["parking_side_entry", "stall_uppehall_open"],
+          ["stall_uppehall_open", "inner_stable_entry"],
+          ["inner_stable_entry", "stallgang_A"]
+        ],
+        "must_not_require_narrow_corridor": ["parking_side_entry -> stall_uppehall_open"]
+      }
+    },
+    "ridhus": {
+      "contested_area": "entrance_and_reception_to_arena",
+      "source_decisions": [
+        {
+          "id": "PO-2026-09-03-RIDHUS-OPEN-01",
+          "decision": "The rejected preview contains too many walls. The entrance/reception area is substantially open and must not be reconstructed as a set of opaque rooms."
+        },
+        {
+          "id": "PO-2026-09-03-RIDHUS-GLASS-01",
+          "decision": "Reception is glazed. Glass enclosure is allowed where source-supported; opaque room-box walls are not a substitute."
+        },
+        {
+          "id": "PO-2026-09-03-RIDHUS-ROUTE-01",
+          "decision": "The player must be able to walk from the entrance/reception area into the riding hall. The current blocked route is invalid."
+        }
+      ],
+      "open_areas": [
+        {
+          "id": "ridhus_open_entrance_hall",
+          "type": "OPEN_AREA",
+          "geometry": {
+            "kind": "source_traced_area",
+            "source": "references/plans/ridhus-entreplan-utrymning.jpg + Product Owner visual corrections 2026-09-03",
+            "runtime_scope": "RIDHUSINNE.entrehall"
+          },
+          "confidence": "PRODUCT_OWNER_VERIFIED_TOPOLOGY",
+          "rules": [
+            "Default state is open floor, not opaque partitions.",
+            "Current RIDHUSINNE.entrehall.vaggar are revoked as a trusted set and must be re-admitted one segment at a time from evidence.",
+            "A functional label such as reception, entrance, changing area or HWC does not itself authorize a wall."
+          ]
+        }
+      ],
+      "glass": [
+        {
+          "id": "ridhus_reception_glass",
+          "type": "GLASS",
+          "source": "Product Owner: reception is glazed",
+          "geometry": "TRACE_FROM_APPROVED_PLAN/PHOTO",
+          "confidence": "PRODUCT_OWNER_VERIFIED_MATERIAL; GEOMETRY_REFERENCE_GAP",
+          "rules": [
+            "Use transparent/glazed partition where evidence shows reception enclosure.",
+            "Do not replace missing glass geometry with opaque walls."
+          ]
+        }
+      ],
+      "no_wall_zones": [
+        {
+          "id": "ridhus_open_hall_no_room_boxes",
+          "type": "NO_WALL_ZONE",
+          "covers": "ridhus_open_entrance_hall",
+          "exceptions": [
+            "ridhus_reception_glass",
+            "independently source-verified sanitary enclosure walls"
+          ],
+          "revoked_runtime_refs": [
+            "RIDHUSINNE.entrehall.vaggar as a blanket source of truth",
+            "opaque partitions introduced only because a plan cell was interpreted as a room"
+          ]
+        }
+      ],
+      "topology": {
+        "nodes": [
+          "main_entrance",
+          "open_entrance_hall",
+          "reception",
+          "arena_access",
+          "physical_riding_area"
+        ],
+        "must_connect": [
+          ["main_entrance", "open_entrance_hall"],
+          ["open_entrance_hall", "arena_access"],
+          ["arena_access", "physical_riding_area"]
+        ],
+        "acceptance": [
+          "No wall may block the entrance-to-arena path.",
+          "The route must read visually as an open connection, not a narrow service corridor.",
+          "Camera helpers may fade geometry but may not compensate for wrong partitions."
+        ]
+      },
+      "uncertain_functions": [
+        {
+          "id": "hwc_geometry",
+          "function": "HWC / accessible toilet",
+          "status": "FUNCTION_KNOWN_GEOMETRY_NOT_AUTHORIZED_BY_LABEL",
+          "rule": "Preserve only walls independently proven by plan/photo. Do not infer enclosure from the HWC label alone."
+        },
+        {
+          "id": "other_entrance_cells",
+          "status": "REFERENCE_GAP",
+          "rule": "Do not turn plan cells into opaque rooms without evidence."
+        }
+      ]
+    }
+  },
+  "acceptance_tests": [
+    {
+      "id": "SCV2-01",
+      "test": "No runtime WALL intersects stall_uppehall_no_internal_wall except exterior/boundary walls explicitly outside the open interior union."
+    },
+    {
+      "id": "SCV2-02",
+      "test": "Every contested-area runtime wall/glass object has canon_id and source_id attributes."
+    },
+    {
+      "id": "SCV2-03",
+      "test": "Ridhus main_entrance -> physical_riding_area path is walkable without clipping, teleporting or passing through a fidelity wall."
+    },
+    {
+      "id": "SCV2-04",
+      "test": "No opaque ridhus partition exists solely because of a semantic room label."
+    },
+    {
+      "id": "SCV2-05",
+      "test": "Web and Roblox consume the same canon ids and topology decisions."
+    }
+  ],
+  "visual_gates": [
+    "STALL-V1: from parking-side entry, uppehållsrummet reads as one open area.",
+    "RIDHUS-V1: entrance/reception view contains no artificial corridor of opaque room boxes.",
+    "RIDHUS-V2: player can visually see and physically reach the riding hall from the entrance area.",
+    "RIDHUS-V3: reception reads as glass where enclosed, not as a solid-walled room."
+  ]
+}

@@ -79,7 +79,7 @@ PASS / FEL · vid fel: `qa-ankomsten-FEL.png`
 
 PASS / FEL · vid fel: `qa-gardarna-FEL.png`
 
-### 4. `banan` — sand, sarg och porten vid A
+### 4. `banan` — sand, sarg och spelets sargport (spelabstraktion)
 
 **Ska synas:** ridbanan söderut från norra kortsidan.
 **Referens:** `references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg`.
@@ -87,7 +87,10 @@ PASS / FEL · vid fel: `qa-gardarna-FEL.png`
 - banans proportioner läser som 20 × 60
 - sanden **dovt brungrå**, inte ljus beige och inte orange
 - sargen ljus med mörkt sockelband
-- porten vid A är ett **gap** i norra kortsidan, inte en vägg
+- gapet i norra sargens västra ände är SPELETS sargport — en `SPELABSTRAKTION`
+  med gul genomskinlig markör (attribut `Klass`/`Fidelity`), **inte** verifierad
+  UBRF-geometri: ingen bild visar en grind där, bredden är vald. Bedöm sargen,
+  inte gapet
 - inget flimmer mellan sand och sarg när du panorerar
 
 PASS / FEL · vid fel: `qa-banan-FEL.png`
@@ -211,6 +214,77 @@ Vyerna är stillbilder. Det här är det enda som prövar att anläggningen går
 PASS / FEL · vid fel: `qa-gangvagen-FEL.png`
 
 ---
+
+## Inomhusläsbarhet — väggarna ska tona, inte rummen flytta
+
+Gå in i stallets klubbdel och ridhusets entrédel till fots och vrid kameran
+så att en vägg hamnar mellan kameran och karaktären.
+
+**Ska synas:** väggbiten (eller den slutna volymen) blir halvgenomskinlig
+medan den står i vägen och blir solid igen när kameran flyttas. Karaktären
+ska aldrig försvinna helt bakom en inre vägg. Väggen karaktären själv står
+intill ska INTE tona.
+
+**Fynd:** en vägg som förblir solid med karaktären dold bakom den; en vägg
+som tonar fast den inte står mellan kameran och karaktären; en vägg som
+saknar attributet `Genomsiktlig` (välj den i Explorer och titta under
+Attributes). Rör aldrig väggarna för att lösa det — det är
+`Genomsikt.luau` som ska rättas.
+
+## Ridhusets entrédel — Spatial Canon v2 (SCV2-03, RIDHUS-V1..V3)
+
+Gå in genom huvudentrén (dubbeldörren under kvisten på västra långsidan)
+till fots.
+
+**Ska synas:** EN öppen hall — inga korridorer av rumslådor, inga
+skåpkorridorväggar, ingen cellrad. Det enda som står i entrédelen är två
+smala toaletter i nordvästra hörnet, den kryssade rutan (`schakt`, sluten
+volym utan namn) och receptionens låga bröstning med glas ovanpå (Material
+Glass, delen heter `Entrévägg reception_glas:1 glas`). Vyerna
+`entrehallen` och `entrehallen_mot_banan` i Vyer.luau visar exakt vad som
+förväntas.
+
+**Ska gå att göra:** gå från dörren rakt ut i hallen, tvärs över den, och
+söderut genom sargporten (markerad SPELABSTRAKTION) ut på banan — utan att
+klippa, hoppa eller passera genom en vägg. Passagen får aldrig kännas som en
+smal korridor.
+
+**Fynd:** en vägg eller volym i entrédelen som saknar attributen
+`CanonId`/`SourceId`/`Confidence`/`Primitiv`; en opak vägg med `CanonId`
+`ridhus_reception_glass`; något som blockerar vägen dörr → hall → sargport;
+en byggd del med något av de återkallade id:na (korridor_o, skap_v, skap_o,
+cell_1–4, hall_n_v, hall_n_o, hall_nv_s, hall_mitt, hall_no, hall_no_s,
+ostkorridor_v). Rör aldrig geometrin för att lösa det — det är datan i
+`src/site.js` (`RIDHUSINNE.entrehall`) och kanonen som styr.
+
+## Ridhusets C-trappor — gångbara nivåer (Product Owner 2026-09-03 17:16)
+
+Gå in genom huvudentrén och fram till C-blockets västra ände (bänkblocket
+under glasbandet, med stjärnan och klockan).
+
+**Ska gå att göra:** kliva upp för SPELETS bänkradssteg (`Spelabstraktion
+bankradsteg steg 1–6` — märkta klossar med gul markör; inte fidelity, inget
+foto visar hur publiken kommer upp, senior review 2026-09-04 04:08) till
+nedersta raden, upp för de fyra raderna, och från översta raden
+vid klockväggen upp för VÄNSTRA trappan västerut (`Trappa c_trappa_v steg
+1–9`) eller HÖGRA trappan österut (`Trappa c_trappa_o steg 1–9`) till övre
+gången (`Övre gångens golv`, caféplanet 3,68 m) — utan hopp, utan att fastna
+och utan att falla ner på banan. Vyerna `c_trapporna_fran_foten` och
+`c_trapporna_fran_toppen` i Vyer.luau visar utgångslägena.
+
+**Ska synas:** två raka lopp i mörkt trä LÄNGS gaveln med foten vid
+klockväggen, vita snedställda sidostycken mot banan som bryter glasbandet
+i tre fält (ridhus-inne-01), träräcken.
+
+**Fynd:** ett steg karaktären inte kliver upp för; ett hål eller en
+osynlig spärr i kedjan; att man kan komma upp i övre gången någon annanstans
+än via trapporna; att övre gången saknar golv; ett trappsteg som saknar
+attributen `CanonId`/`SourceId`/`Confidence`/`Primitiv` (= STAIR); en
+`Spelabstraktion bankradsteg`-del som bär `CanonId` eller saknar
+`Klass`/`Fidelity` (abstraktionen får aldrig se ut som verklighet). Rör aldrig
+trapporna för hand — datan är `RIDHUSINNE.kortanda.trappor` (loppen) →
+`RIDHUSINNE.trappor` (härledda STAIR-primitiver) i src/site.js, och stegen
+räknas av `Geometri.trappsteg`.
 
 ## Vad som INTE är ett fynd
 

@@ -29,8 +29,8 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/site.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR})", ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, SPELABSTRAKTIONER } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, SPELABSTRAKTIONER})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -115,10 +115,11 @@ const ut = {
     vagg: STALLINNE.vagg,
     boxB: STALLINNE.boxB, antalBoxar: STALLINNE.antalBoxar,
     boxStartY: STALLINNE.boxStartY, klubbY: STALLINNE.klubbY,
-    tvarGang: STALLINNE.tvarGang,
+    brott: STALLINNE.brott, fack: STALLINNE.fack,
     band: STALL_BAND, rader: STALLINNE.rader, gangar: STALLINNE.gangar,
     gangytor: STALLINNE.gangytor,
     rum: STALLINNE.rum, service: STALLINNE.service,
+    klubb: STALLINNE.klubb,
     tvarvaggar: STALLINNE.tvarvaggar,
     dorrar: STALLINNE.dorrar,
   },
@@ -147,16 +148,23 @@ const ut = {
   ridhus: {
     bredd: RIDHUSINNE.bredd, langd: RIDHUSINNE.langd, tak: RIDHUSINNE.tak,
     entre: RIDHUSINNE.entre, bana: RIDHUSINNE.bana, sargH: RIDHUSINNE.sargH,
-    port: RIDHUSINNE.port, sargGrind: RIDHUSINNE.sargGrind,
+    dressyr: RIDHUSINNE.dressyr,   // 20 × 60-layouten, skild från den fysiska banan (senior review 2026-09-03)
+    sargGrind: RIDHUSINNE.sargGrind,
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
-    domarbas: RIDHUSINNE.domarbas, trappa: RIDHUSINNE.trappa,
-    klocka: RIDHUSINNE.klocka, skyltar: RIDHUSINNE.skyltar,
+    domarbas: RIDHUSINNE.domarbas, cafe: RIDHUSINNE.cafe,
+    trappor: RIDHUSINNE.trappor, ovreGang: RIDHUSINNE.ovreGang,   // vertikala förbindelser (PO 2026-09-03)
+    entrehall: RIDHUSINNE.entrehall, skyltar: RIDHUSINNE.skyltar,
     basTak: RIDHUSINNE.basTak, sidor: RIDHUSINNE.sidor,
     panel: RIDHUSINNE.panel, panelList: RIDHUSINNE.panelList,
     sandFarg: RIDHUSINNE.sandFarg, hallvagg: RIDHUSINNE.hallvagg,
     takfarg: RIDHUSINNE.takfarg, takstomme: RIDHUSINNE.takstomme,
     dorrar: RIDHUSINNE.dorrar,
   },
+  /* SPELABSTRAKTIONER ligger UTANFÖR `ridhus`/`stall` med flit: de är
+     spelets traversal, inte fidelity-fakta om UBRF. Roblox bygger dem
+     märkta med klass, och fidelity-testerna får inte läsa dem som
+     verklighet. Se noten i src/site.js. */
+  spelabstraktioner: SPELABSTRAKTIONER,
 };
 
 const huvud = `--!strict

@@ -1,0 +1,118 @@
+{
+  "STALL-V1": {
+    "id": "STALL-V1",
+    "scen": "stallinne",
+    "x": 4.55,
+    "y": 68.4,
+    "rikt": -1.5707963267948966,
+    "text": "Parkeringens entré → in i uppehållsrummet: EN öppen L-formad yta, ingen inre vägg",
+    "kamera": [
+      4.55,
+      3.1,
+      69.35
+    ],
+    "spelare": [
+      4.55,
+      68.4,
+      0
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V1": {
+    "id": "RIDHUS-V1",
+    "scen": "ridhusinne",
+    "x": 1.3,
+    "y": 67,
+    "rikt": 1.5707963267948966,
+    "text": "Huvudentrén → norrut över entré/reception: öppen hall, ingen korridor av rumslådor; receptionens glas till höger",
+    "kamera": [
+      1.3,
+      2.25,
+      63.67
+    ],
+    "spelare": [
+      1.3,
+      67,
+      0
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V2": {
+    "id": "RIDHUS-V2",
+    "scen": "ridhusinne",
+    "x": 5,
+    "y": 70.5,
+    "rikt": -1.5707963267948966,
+    "text": "Öppna entréhallen → ridbanan: sargporten (spelabstraktion, x 4,7–6,9) och banan rakt fram, C-blocket till vänster",
+    "kamera": [
+      5,
+      2.25,
+      73.83
+    ],
+    "spelare": [
+      5,
+      70.5,
+      0
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V3": {
+    "id": "RIDHUS-V3",
+    "scen": "ridhusinne",
+    "x": 3.9,
+    "y": 70.7,
+    "rikt": 3.141592653589793,
+    "text": "Receptionens avgränsning sedd inifrån receptionen: låg bröstning med glas (GLASS) och den öppna hallen bakom — ingen solid rumslåda",
+    "kamera": [
+      7.23,
+      2.25,
+      70.7
+    ],
+    "spelare": [
+      3.9,
+      70.7,
+      0
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V4": {
+    "id": "RIDHUS-V4",
+    "scen": "ridhusinne",
+    "x": 15.8,
+    "y": 66.3,
+    "rikt": 1.5707963267948966,
+    "z": 1.12,
+    "text": "C-ändan från nedersta bänkraden (som ridhus-inne-01): raderna, de två loppen med vita sidostycken och räcken, klockväggen, glasbandet brutet i tre fält",
+    "kamera": [
+      15.8,
+      3.37,
+      62.97
+    ],
+    "spelare": [
+      15.8,
+      66.3,
+      1.12
+    ],
+    "tonade": 0
+  },
+  "RIDHUS-V5": {
+    "id": "RIDHUS-V5",
+    "scen": "ridhusinne",
+    "x": 18.6,
+    "y": 69.6,
+    "rikt": 3.141592653589793,
+    "z": 3.6,
+    "text": "C-trapporna från toppen: på högra loppets översta steg, västerut ner mot foten vid klockväggen och vidare upp för vänstra loppet",
+    "kamera": [
+      21.93,
+      5.74,
+      69.6
+    ],
+    "spelare": [
+      18.6,
+      69.6,
+      3.49
+    ],
+    "tonade": 0
+  }
+}

@@ -81,26 +81,62 @@ function Geometri.sitterIhop(a: Rekt, b: Rekt, marginal: number?): boolean
 	return false
 end
 
---[[ Boxfacken i en rad, som lokala y-intervall.
+--[[ Boxfacken i EN rad, som lokala y-intervall.
 
-	Facken börjar vid boxStartY och är boxB djupa fram till klubbdelen. Facket
-	som tvärkorridoren går igenom hoppas över — korridoren når båda långsidorna
-	i planen, och en box där hade stängt den.
+	Facken börjar vid boxStartY och är boxB djupa fram till klubbdelen. Ett
+	fack som skär ett `brott` i sin rad finns inte — där går hästförbindelsen
+	genom raden. Förut hoppades ett fack över i ALLA rader för en tvärkorridor
+	tvärs huset; planen har ingen sådan, bara brottet i västra raden.
+
+	Samma regel som STALLINNE.fack i src/site.js, och det exporterade `fack`
+	bär webbens lista så att specen kan jämföra de två.
 
 	Ligger här och inte i byggskriptet därför att specen måste kunna mäta samma
 	fack som byggs. Skriver man logiken två gånger mäter man inte längre det man
 	bygger. ]]
-function Geometri.boxfack(stall): { { y0: number, y1: number } }
+function Geometri.boxfack(stall, rad): { { y0: number, y1: number } }
 	local fack = {}
 	local y = stall.boxStartY
 	while y + stall.boxB <= stall.klubbY + 0.001 do
-		local mitt = y + stall.boxB / 2
-		if not (mitt > stall.tvarGang.y0 and mitt < stall.tvarGang.y1) then
-			table.insert(fack, { y0 = y, y1 = y + stall.boxB })
+		local y1 = y + stall.boxB
+		local bruten = false
+		for _, b in ipairs(stall.brott or {}) do
+			if rad ~= nil and b.rad == rad.id and y1 > b.y0 + 0.01 and y < b.y1 - 0.01 then
+				bruten = true
+			end
 		end
-		y += stall.boxB
+		if not bruten then table.insert(fack, { y0 = y, y1 = y1 }) end
+		y = y1
 	end
 	return fack
+end
+
+--[[ En klubbdelsvägg i bitar, med sina öppningar bortdragna.
+
+	`typ = "tvar"` löper i x på ett fast y och har öppningar som x-intervall;
+	`typ = "langs"` löper i y på ett fast x och har öppningar som y-intervall.
+	Bitarna kommer i samma koordinat som väggen löper i. Webben (src/world.js,
+	src/varld3d.js) bygger ur samma regel: en dörr som finns i spelet finns i
+	Roblox, och en som saknas saknas på båda ställena. ]]
+function Geometri.vaggBitar(vagg): { { a0: number, a1: number } }
+	local a0 = if vagg.typ == "tvar" then vagg.x0 else vagg.y0
+	local a1 = if vagg.typ == "tvar" then vagg.x1 else vagg.y1
+	local hal = {}
+	for _, o in ipairs(vagg.oppningar or {}) do
+		table.insert(hal, {
+			a0 = if vagg.typ == "tvar" then o.x0 else o.y0,
+			a1 = if vagg.typ == "tvar" then o.x1 else o.y1,
+		})
+	end
+	table.sort(hal, function(p, q) return p.a0 < q.a0 end)
+	local bitar = {}
+	local a = a0
+	for _, h in ipairs(hal) do
+		if h.a0 - a > 0.05 then table.insert(bitar, { a0 = a, a1 = h.a0 }) end
+		if h.a1 > a then a = h.a1 end
+	end
+	if a1 - a > 0.05 then table.insert(bitar, { a0 = a, a1 = a1 }) end
+	return bitar
 end
 
 --[[ Tvärväggens bitar, som lokala x-intervall.
@@ -122,6 +158,9 @@ end
 	återvändsgränd — det som underkändes i spelarvyn. Väggen får sina hål ur
 	planen nu, inte ur gångarnas lägen. `vagg` är valfri; utan den blir det
 	som förut. ]]
+--[[ Väggarna i den här listan ligger alla i boxhallen och följer gångarna.
+	Klubbdelens väggar, som inte gör det, ligger i `stall.klubb.vaggar` och
+	byggs genom Geometri.vaggBitar. ]]
 function Geometri.tvarvaggBitar(stall, vagg): { { x0: number, x1: number } }
 	local hal = {}
 	for _, g in pairs(stall.gangar) do table.insert(hal, g) end
@@ -146,6 +185,27 @@ end
 	obruten — man ska kunna leda hästen igenom. Samma regel som
 	`laktarSektioner` i src/site.js; bygger man läktaren i ett stycke muras
 	gången igen, och det syns inte förrän någon försöker gå där. ]]
+--[[ En trappas steg ur dess data — DELAD regel med webben (`trappsteg` i
+	src/site.js). `t` har fotavtryck x0–x1 × y0–y1, nivåerna z0 → z1 och
+	`stiger`: "N" om z växer med y, "S" om z växer när y minskar. Steghöjden
+	hålls under stegMax (0,19 m) så att karaktären kliver upp för den. ]]
+function Geometri.trappsteg(t): { n: number, stig: number, djup: number, axel: string, steg: { { a0: number, a1: number, z: number } } }
+	local ax = t.axel or "y"
+	local a0 = if ax == "x" then t.x0 else t.y0
+	local a1 = if ax == "x" then t.x1 else t.y1
+	local stig = t.z1 - t.z0
+	local n = math.max(1, math.ceil(math.abs(stig) / (t.stegMax or 0.19)))
+	local djup = (a1 - a0) / n
+	local bakat = (t.stiger == "S" or t.stiger == "W")
+	local steg = {}
+	for i = 0, n - 1 do
+		local z = t.z0 + stig * (i + 1) / n
+		local b0 = if bakat then a1 - djup * (i + 1) else a0 + djup * i
+		table.insert(steg, { a0 = b0, a1 = b0 + djup, z = z })
+	end
+	return { n = n, stig = stig / n, djup = djup, axel = ax, steg = steg }
+end
+
 function Geometri.laktarSektioner(laktare): { { y0: number, y1: number } }
 	local g = laktare.gap
 	if not g then return { { y0 = laktare.y0, y1 = laktare.y1 } } end
@@ -165,6 +225,24 @@ function Geometri.overlapp(a: Rekt, b: Rekt): number
 	local dy = math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y)
 	if dx <= 0 or dy <= 0 then return 0 end
 	return dx * dy
+end
+
+--[[ Väggfälten längs ridhusets långsidor: mellan två takstolar, klippta
+     till hallens längd (A-gaveln → entrédelens vägg). Fönstren sitter ett
+     per fält och pelarna på fältgränserna. Samma regel som webbens
+     ridhusFalt i src/varld3d.js. ]]
+function Geometri.ridhusFalt(R): { { number } }
+	local TS, slut = R.takstomme, R.langd - R.entre
+	local ut = {}
+	local z = 0
+	local p = TS.start
+	while p < slut + 0.01 do
+		if p - z > 0.5 then table.insert(ut, { z, math.min(p, slut) }) end
+		z = p
+		p += TS.delning
+	end
+	if slut - z > 0.5 then table.insert(ut, { z, slut }) end
+	return ut
 end
 
 return Geometri

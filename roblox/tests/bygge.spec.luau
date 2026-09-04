@@ -50,6 +50,15 @@ local function raknaNamn(monster)
 	end
 	return n
 end
+-- Exakt namn, inte delsträng: "Slutet rum sluten_volym" får inte räkna
+-- "Slutet rum sluten_volym_v" som en träff.
+local function raknaExakt(namn)
+	local n = 0
+	for _, d in ipairs(delar) do
+		if d.Name == namn then n += 1 end
+	end
+	return n
+end
 
 print("\nByggnadsmassan")
 
@@ -166,13 +175,265 @@ check("stallklockan byggdes", raknaNamn("Stallklocka") == 1,
 	att SPOLSPILTA byggdes som en namngiven volym, alltså precis den täta låda
 	som underkändes i spelarvyn. Ett test kan låsa fast ett fel, och det här
 	gjorde det. Nu mäts det som källorna visar. ]]
-check("ridhusets fönsterband byggdes ovanför panelen",
-	raknaNamn("Ridhus fönsterband") == 1 and raknaNamn("Fönsterpost") > 0,
-	raknaNamn("Fönsterpost") .. " poster")
+--[[ Omgranskat 2026-09-03: separata fönster per väggfält, inte ett band. ]]
+do
+	local falt = Geometri.ridhusFalt(UBRFKomplex.ridhus)
+	local vantade = 0
+	for _, f in ipairs(falt) do
+		if math.min(UBRFKomplex.identitet.ridhus.fonsterband.faltBredd or 3.0, (f[2] - f[1]) - 1.0) >= 0.8 then vantade += 1 end
+	end
+	check("ridhusets fönster byggdes ett per väggfält, inget löpande band",
+		raknaNamn("Ridhus fönster ") == vantade and vantade > 5 and raknaNamn("Ridhus fönsterband") == 0,
+		string.format("%d fönster mot %d fält", raknaNamn("Ridhus fönster "), vantade))
+	check("väggpelarna står på fältgränserna på båda långsidorna",
+		raknaNamn("Väggpelare W") == raknaNamn("Väggpelare E") and raknaNamn("Väggpelare W") >= #falt - 1
+			and raknaNamn("Väggpelare W") > 5,
+		string.format("%d W, %d E, %d fält", raknaNamn("Väggpelare W"), raknaNamn("Väggpelare E"), #falt))
+end
 
-check("klubbrummen byggdes som rum",
-	raknaNamn("UPPEHÅLLSRUM") == 1 and raknaNamn("SADELKAMMARE") == 1
-		and raknaNamn("TEORISAL") == 1)
+--[[ KLUBBDELEN ur utrymningsplanen, rättad av Product Owner 2026-09-03.
+
+	Provet hette "klubbrummen byggdes som rum" och räknade tre lådor med
+	rätt namn. Det låste fast fel sak: rummen är golv man går på, och det
+	som ska stämma är väggarna, dörrarna, rutten och rummens inbördes lägen
+	— det Tobias beskrev från sin egen runda. ]]
+do
+	local S = UBRFKomplex.stall
+	local K = S.klubb
+	local function rum(id)
+		for _, r in ipairs(K.rum) do if r.id == id then return r end end
+		return nil
+	end
+	local function vagg(id)
+		for _, v in ipairs(K.vaggar) do if v.id == id then return v end end
+		return nil
+	end
+
+	-- 1 · Varje vägg byggdes i precis så många bitar som dess öppningar ger.
+	for _, v in ipairs(K.vaggar) do
+		local bitar = Geometri.vaggBitar(v)
+		local byggda = raknaNamn("Klubbvägg " .. v.id .. ":")
+		-- GLASS bygger två delar per bit: bröstningen och glaset över den
+		local vantat = #bitar * (if v.primitiv == "GLASS" then 2 else 1)
+		check(string.format("klubbväggen %s byggdes i planens bitar", v.id),
+			byggda == vantat, string.format("%d byggda mot %d i datan", byggda, vantat))
+	end
+
+	--[[ 2 · Den genomgående väggen har BARA planens två dörrar. Samma prov
+		som fällde `foljGangar` förra rundan, nu på rätt vägg: öppen bredd i det
+		BYGGDA mot summan av de deklarerade öppningarna. Fler hål faller,
+		färre likaså. ]]
+	local genom = vagg("genomgaende")
+	check("den genomgående väggen finns i datan", genom ~= nil)
+	local inre = nil
+	if genom then
+		local murat = 0
+		for _, d in ipairs(delar) do
+			if string.find(d.Name, "Klubbvägg genomgaende:", 1, true) then murat += fot(d).w end
+		end
+		local hal = 0
+		for _, o in ipairs(genom.oppningar) do
+			hal += math.min(o.x1, S.bredd) - math.max(o.x0, 0)
+			if o.id == "inre_entre" then inre = o end
+		end
+		check("den genomgående väggen har bara planens två dörrar",
+			#genom.oppningar == 2 and math.abs((S.bredd - murat) - hal) < 0.15,
+			string.format("%.2f m öppet, planen anger %.2f m i %d dörrar",
+				S.bredd - murat, hal, #genom.oppningar))
+		--[[ Tobias: "rakt fram genom den inre entrén kommer man in i
+			stallgång A". Dörren måste alltså överlappa gång A:s x-intervall,
+			inte en boxrad. Mätt mot samma `gangar` som bygget använder. ]]
+		local A = S.gangar.A
+		check("den inre entrén mynnar rakt i stallgång A",
+			inre ~= nil and inre.x1 > A.x0 + 0.05 and inre.x0 < A.x1 - 0.05,
+			inre and string.format("dörren x %.1f–%.1f, gång A x %.2f–%.2f",
+				inre.x0, inre.x1, A.x0, A.x1) or "ingen inre entré i datan")
+	end
+
+	--[[ 3 · RUTTEN Tobias beskrev, provad mot det BYGGDA: entrén i gaveln →
+		uppehållsrummet → lobbyn mellan toaletterna → den inre entrén → gång A.
+		Ingen kolliderande del under mankhöjd får stå på någon provpunkt. Muras
+		en dörr igen, eller byggs ett rum som låda, faller det här. ]]
+	local rutt = {
+		{ 4.55, 69.0 }, { 4.55, 66.5 }, { 4.5, 63.0 }, { 4.5, 61.0 }, { 4.9, 58.5 },
+		{ 4.55, 57.45 }, { 4.9, 56.0 }, { 5.5, 53.5 }, { 5.5, 50.0 },
+	}
+	local blockerad = nil
+	for _, p in ipairs(rutt) do
+		local px, py = S.origo.x + p[1], S.origo.y + p[2]
+		for _, d in ipairs(delar) do
+			if d.CanCollide then
+				local f = fot(d)
+				--[[ Golvplattor och trösklar räknas inte: något man snubblar
+					på är inte en vägg. Det som spärrar en rutt är delar som når
+					över knähöjd och är mer än en platta tjocka. ]]
+				local sparrar = f.z1 - f.z0 > 0.3 and f.z1 > 0.6 and f.z0 < 1.7
+				if sparrar and px > f.x and px < f.x + f.w and py > f.y and py < f.y + f.h then
+					blockerad = blockerad or string.format("%s vid (%.1f, %.1f)", d.Name, p[1], p[2])
+				end
+			end
+		end
+	end
+	check("rutten entré → uppehållsrum → inre entré → gång A är fri från solitt",
+		blockerad == nil, blockerad or (#rutt .. " provpunkter fria"))
+
+	--[[ 4 · Rummens inbördes lägen, som Tobias gav dem. "Vänster" är gående
+		riktning söderut från parkeringen, alltså öster. ]]
+	local U, T, SK = rum("uppehallsrum"), rum("teorisal"), rum("sadelkammare")
+	local W1, W2, SV = rum("wc_v"), rum("wc_o"), rum("sluten_volym")
+	check("planens klubbrum finns i datan",
+		U and T and SK and W1 and W2 and SV)
+	if U and T and SK and W1 and W2 and SV and inre then
+		check("teorisalen ligger till vänster om uppehållsrummet (öster)",
+			T.rekt.x >= U.rekt.x + U.rekt.w - 0.01,
+			string.format("teorisal x %.1f, uppehållsrummets östkant %.1f", T.rekt.x, U.rekt.x + U.rekt.w))
+		check("sadelkammaren nås vänster och sedan höger: öster om uppehållsrummet, söder om teorisalen",
+			SK.rekt.x >= U.rekt.x + U.rekt.w - 0.01 and SK.rekt.y + SK.rekt.h <= T.rekt.y + 0.01)
+		check("toaletterna sitter en på var sida om den inre entrén",
+			W1.rekt.x + W1.rekt.w <= inre.x0 + 0.01 and W2.rekt.x >= inre.x1 - 0.01
+				and W1.rekt.y < K.y0 + 0.01 and W2.rekt.y < K.y0 + 0.01,
+			string.format("WC x %.1f–%.1f | dörr %.1f–%.1f | WC x %.1f–%.1f",
+				W1.rekt.x, W1.rekt.x + W1.rekt.w, inre.x0, inre.x1, W2.rekt.x, W2.rekt.x + W2.rekt.w))
+		check("planens symbolruta byggs som namnlös sluten volym — inget trapphus, ingen trappa i Stallhuset",
+			SV.stangt == true and (SV.label == nil or SV.label == "")
+				and raknaExakt("Slutet rum sluten_volym") == 1
+				and rum("trapphus") == nil and raknaNamn("Slutet rum trapphus") == 0
+				and raknaNamn("Trappsteg") == 0,
+			string.format("label %q, %d slutna volymer, %d trapphus, %d trappsteg",
+				tostring(SV.label), raknaExakt("Slutet rum sluten_volym"),
+				raknaNamn("Slutet rum trapphus"), raknaNamn("Trappsteg")))
+		check("Ö-toaletten är sluten tills dess dörr är belagd",
+			W2.stangt == true and raknaNamn("Slutet rum wc_o") == 1)
+	end
+end
+
+--[[ Etikettplattor bara för rum som har ett namn. Rum med `label = ""` är
+	avsiktligt namnlösa (funktion REFERENCE GAP): webben ritar ingen text för
+	dem, och Roblox får inte bygga en tom "Rumsetikett "-platta — det vore
+	Roblox-egen geometri i rum som ska vara tomma. Tom sträng är sann i Luau,
+	så bygget måste pröva längden, inte bara att fältet finns. ]]
+do
+	local S2, R3 = UBRFKomplex.stall, UBRFKomplex.ridhus
+	local vantade, namnlosa = 0, 0
+	for _, block in ipairs({ S2.klubb, R3.entrehall }) do
+		for _, r in ipairs(block.rum or {}) do
+			if not r.stangt then
+				if r.label ~= nil and r.label ~= "" then vantade += 1 else namnlosa += 1 end
+			end
+		end
+	end
+	local tomma, byggda = 0, 0
+	for _, d in ipairs(delar) do
+		if d.Name == "Rumsetikett " or d.Name == "Rumsetikett" then tomma += 1 end
+		if string.find(d.Name, "Rumsetikett", 1, true) == 1 then byggda += 1 end
+	end
+	check("namnlösa öppna rum får ingen tom etikettplatta i Roblox",
+		namnlosa > 0 and tomma == 0,
+		string.format("%d namnlösa öppna rum, %d tomma plattor", namnlosa, tomma))
+	check("etikettplattor byggs för exakt de namngivna öppna rummen",
+		byggda == vantade and vantade > 0,
+		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
+end
+
+--[[ Inomhusläsbarhet: varje inre väggbit och sluten volym ska bära
+	attributet `Genomsiktlig`, annars kan klientens Genomsikt inte tona den
+	när den står mellan kameran och karaktären — och då försvinner spelaren
+	bakom väggen igen (Product Owner 2026-09-03). ]]
+do
+	local med, utan = 0, 0
+	for _, d in ipairs(delar) do
+		local n = d.Name
+		if n:find("Klubbvägg", 1, true) == 1 or n:find("Entrévägg", 1, true) == 1
+			or n:find("Slutet rum", 1, true) == 1 then
+			if d:GetAttribute("Genomsiktlig") == true then med += 1 else utan += 1 end
+		end
+	end
+	check("inre väggbitar och slutna volymer bär attributet Genomsiktlig",
+		utan == 0 and med > 20, string.format("%d med, %d utan", med, utan))
+end
+
+--[[ SPATIAL CANON v2 i bygget: varje Klubbvägg-bit och slutet rum bär
+	CanonId/SourceId/Confidence/Primitiv (SCV2-02, SCV2-05), ingen del står i
+	uppehållsrummets öppna yta (SCV2-01), och den återkallade volymen är
+	inte byggd. ]]
+do
+	local S3 = UBRFKomplex.stall
+	local o = S3.origo
+	local zon = nil
+	for _, z in ipairs(S3.klubb.oppna or {}) do if z.id == "stall_uppehall_open" then zon = z end end
+	local utan, i_ytan, med = {}, {}, 0
+	for _, d in ipairs(delar) do
+		local n = d.Name
+		if n:find("Klubbvägg", 1, true) == 1 or n:find("Slutet rum", 1, true) == 1 then
+			local f = fot(d)
+			-- bara stallets delar: klubbväggarna heter Klubbvägg, entrédelens Entrévägg
+			local iStall = f.x >= o.x - 1 and f.x <= o.x + S3.bredd + 1 and f.y >= o.y - 1 and f.y <= o.y + S3.langd + 1
+			if iStall then
+				if d:GetAttribute("CanonId") and d:GetAttribute("SourceId") and d:GetAttribute("Confidence") and d:GetAttribute("Primitiv") then
+					med += 1
+				else
+					table.insert(utan, n)
+				end
+				if zon then
+					for _, q in ipairs(zon.rekt) do
+						local ox = math.min(f.x + f.w, o.x + q.x + q.w) - math.max(f.x, o.x + q.x)
+						local oy = math.min(f.y + f.h, o.y + q.y + q.h) - math.max(f.y, o.y + q.y)
+						if ox > 0.12 and oy > 0.12 then table.insert(i_ytan, n) end
+					end
+				end
+			end
+		end
+	end
+	check("SCV2-02/05: alla klubbväggar och slutna volymer i stallet bär kanon-attribut i Roblox",
+		#utan == 0 and med > 10, #utan > 0 and table.concat(utan, ", ") or (med .. " delar med provenance"))
+	check("SCV2-01: ingen byggd vägg eller volym står i uppehållsrummets öppna yta",
+		#i_ytan == 0, #i_ytan > 0 and table.concat(i_ytan, ", ") or "ytan är fri")
+	check("den återkallade volymen och det lilla rummet är inte byggda",
+		raknaExakt("Slutet rum sluten_volym_v") == 0 and raknaExakt("Slutet rum litet_rum") == 0)
+end
+
+--[[ HÄSTFÖRBINDELSEN bryter BARA västra boxraden — Product Owner 2026-09-03:
+	"hästförbindelsen bryter boxraden ungefär på mitten". Planen visar
+	mittraderna och östra raden obrutna förbi samma höjd. Spelet hade en
+	tvärgång genom alla fyra rader; den är borta. ]]
+do
+	local S = UBRFKomplex.stall
+	local b = S.brott and S.brott[1]
+	check("brottet finns och ligger i västra raden", b ~= nil and b.rad == "W")
+	if b then
+		local rader = {}
+		for _, r in ipairs(S.rader) do rader[r.id] = r end
+		local nW, nMA = #Geometri.boxfack(S, rader.W), #Geometri.boxfack(S, rader.MA)
+		check("västra raden har ett fack färre än mittraden",
+			nW == nMA - 1, string.format("W %d, MA %d", nW, nMA))
+		check("mittraderna och östra raden är obrutna, lika många fack som planen",
+			nMA == S.antalBoxar and #Geometri.boxfack(S, rader.MB) == S.antalBoxar
+				and #Geometri.boxfack(S, rader.E) == S.antalBoxar,
+			string.format("MA %d, MB %d, E %d mot %d", nMA,
+				#Geometri.boxfack(S, rader.MB), #Geometri.boxfack(S, rader.E), S.antalBoxar))
+		--[[ Mätt i det byggda: ingen boxfront i W-raden står i brottet, och
+			minst en boxfront i mittraden gör det — annars är raden inte obruten. ]]
+		local iW, iMA = 0, 0
+		for _, d in ipairs(delar) do
+			local f = fot(d)
+			local overlappar = f.y < S.origo.y + b.y1 - 0.05 and f.y + f.h > S.origo.y + b.y0 + 0.05
+			if overlappar and string.find(d.Name, "Boxfront W", 1, true) then iW += 1 end
+			if overlappar and string.find(d.Name, "Boxfront MA", 1, true) then iMA += 1 end
+		end
+		check("ingen boxfront står i hästförbindelsens brott i västra raden", iW == 0, iW .. " fronter")
+		check("mittraden fortsätter obruten förbi brottet", iMA >= 1, iMA .. " fronter")
+		--[[ Brottet och fasadens hästgångsdörr är EN förbindelse: dörren in
+			till stallet (`dorrar.hastgang`) står inne i brottet. ]]
+		local hd = nil
+		for _, d in ipairs(S.dorrar) do if d.id == "hastgang" then hd = d end end
+		check("hästgångens dörr står i brottet",
+			hd ~= nil and hd.pos[2] > b.y0 and hd.pos[2] < b.y1,
+			hd and string.format("dörr y %.2f, brott %.2f–%.2f", hd.pos[2], b.y0, b.y1) or "ingen dörr")
+		check("webbens facklista och Roblox regel ger samma fack",
+			S.fack ~= nil and #S.fack.W == nW and #S.fack.MA == nMA,
+			S.fack and string.format("webb W %d MA %d", #S.fack.W, #S.fack.MA) or "inget fack-fält")
+	end
+end
 
 do
 	local oppna = 0
@@ -202,6 +463,12 @@ end
 	gångarnas lägen och blev tät framför varje boxrad. Testet mäter att
 	planens egna öppningar faktiskt bryter väggen. ]]
 do
+	--[[ Väggen provet handlar om är den mot SERVICEDELEN — den som ska få hål
+		av planen UTÖVER gångarnas. F02-A la till en vägg i klubbdelen som
+		också har `oppningar` men som inte följer gångarna, och den plockades
+		upp här i stället: 1 bit mot 3, alltså rött. Provet valde "sista
+		väggen med öppningar", vilket råkade vara rätt så länge det bara fanns
+		en. Villkoret är skärpt, inte lättat. ]]
 	local vagg = nil
 	for _, v in ipairs(UBRFKomplex.stall.tvarvaggar) do
 		if v.oppningar ~= nil then vagg = v end
@@ -243,6 +510,11 @@ do
 	check("tvärväggarna byggdes", antalVaggar == #S.tvarvaggar,
 		antalVaggar .. " vägglinjer")
 
+	--[[ Tvärväggarna i den här listan ligger alla i boxhallen och ska ha ett
+		hål där varje gång passerar. Klubbdelens väggar, som inte följer
+		gångarna, ligger i `klubb.vaggar` och provas för sig ovan — det är
+		därför flaggan `foljGangar` och dess prov är borta: ingen vägg i den här
+		listan behöver undantaget längre. ]]
 	for nyckel, bitar in pairs(vaggY) do
 		for id, g in pairs(S.gangar) do
 			local x0, x1 = S.origo.x + g.x0, S.origo.x + g.x1
@@ -256,6 +528,19 @@ do
 				not murad, string.format("gången x %.1f–%.1f", x0, x1))
 		end
 	end
+
+	--[[ Ingen trappa och inget trapphus i Stallhuset.
+
+		Planens symbol i klubbdelens ruta lästes en gång som en egen trappa upp,
+		och en runda senare som ett "trapphus". Ingen av läsningarna har en
+		oberoende källa. Den vertikala förbindelse som är belagd är ridhusets:
+		läktarplanet, C-kortändans trappor och den glasade gången
+		(`RIDHUSINNE.kortanda.trappor`). Rått foto/film slår en symboltolkning.
+
+		Villkoren för den påhittade trappan är därför borta, inte omskrivna, och
+		rutan bär varken namn eller skylt (`sluten_volym`, funktion REFERENCE
+		GAP). Om någon vill ge den en funktion igen krävs verifierat underlag —
+		inte bara en symbol i utrymningsplanen. ]]
 
 	--[[ 2 · Står en BOX mitt i en gångyta?
 
@@ -314,12 +599,19 @@ print("\nRidhusets insida")
 do
 	local bana = nil
 	for _, d in ipairs(delar) do
-		if d.Name == "Ridbanan 20x60" then bana = fot(d) end
+		if d.Name == "Ridbanan" then bana = fot(d) end
 	end
-	check("banan byggdes 20 × 60 m", bana ~= nil
-		and math.abs(bana.w - 20) < 0.01 and math.abs(bana.h - 60) < 0.01,
+	local R0 = UBRFKomplex.ridhus
+	check("banan byggdes som den fysiska ridytan sarg till sarg, inte 60 m", bana ~= nil
+		and math.abs(bana.w - R0.bana.w) < 0.01 and math.abs(bana.h - R0.bana.h) < 0.01
+		and bana.h > 60,
 		bana and string.format("%.1f × %.1f m vid (%.1f, %.1f)",
 			bana.w, bana.h, bana.x, bana.y) or "hittades inte")
+	check("A-sargen står mot A-gaveln i bygget — ingen flermeterszon bakom (ridhus-inne-23)",
+		bana ~= nil and (bana.y - R0.origo.y) <= 0.5 and (bana.y - R0.origo.y) >= -0.01,
+		bana and string.format("gap %.2f m", bana.y - R0.origo.y) or "saknas")
+	check("dressyrlayouten 20 × 60 byggdes som osynlig markör med förankring A",
+		raknaNamn("Dressyrlayout 20x60") == 1)
 	-- Gränserna LÄSES UR fotavtrycket. De stod som 118/143/44/119, och när
 	-- ridhusets verifierade längd flyttade södra gaveln från y = 44 till
 	-- 41,82 föll testet fast banan låg precis där den skulle. En gräns som
@@ -335,9 +627,20 @@ do
 			bana.y, bana.y + bana.h, rh.y, rh.y + rh.h) or nil)
 end
 
-check("sargen byggdes med en port i norr",
+--[[ Norra sargen i två stycken med spelets gap emellan. Gapet är en
+	SPELABSTRAKTION (ingen bild visar en grind; bredden vald) och ska
+	byggas MÄRKT som sådan: en markördel med klass och fidelity som
+	attribut, okolliderande. Testet mäter märkningen, inte verkligheten. ]]
+check("sargen byggdes i två stycken i norr, med spelets gap emellan",
 	raknaNamn("Sarg norr väst") == 1 and raknaNamn("Sarg norr öst") == 1
 		and raknaNamn("Sarg syd") == 1)
+do
+	local m = forstaNamn("Spelabstraktion sargport")
+	check("spelets sargport är byggd som märkt SPELABSTRAKTION, inte som fidelity",
+		m ~= nil and m.CanCollide == false and m:GetAttribute("Klass") == "SPELABSTRAKTION"
+			and m:GetAttribute("Fidelity") == "REFERENCE GAP",
+		m and tostring(m:GetAttribute("Klass")) or "markör saknas")
+end
 
 check("östra sargen byggdes i två delar, med grinden emellan",
 	raknaNamn("Sarg öst syd") == 1 and raknaNamn("Sarg öst norr") == 1
@@ -359,12 +662,30 @@ end
 --[[ Läktaren är ett PLANT DÄCK med solid front, inte trappsteg. Testets gamla
 	lydelse ("två sektioner om fyra steg") mätte den struktur som fotona
 	motsäger; den är utbytt tillsammans med bygget. ]]
-check("läktaren byggdes som plant däck i två sektioner",
-	raknaNamn("Läktardäck") == 2 and raknaNamn("Läktarfront") == 2
+check("läktaren byggdes som ETT plant däck, utan gap",
+	raknaNamn("Läktardäck") == 1 and raknaNamn("Läktarfront") == 1
 		and raknaNamn("Läktarsteg") == 0,
 	string.format("%d däck, %d fronter, %d gamla stegdelar",
 		raknaNamn("Läktardäck"), raknaNamn("Läktarfront"),
 		raknaNamn("Läktarsteg")))
+
+--[[ Fronten ska stå mot BANAN. Efter speglingen till väster låg den mot
+	ytterväggen i ett första försök — däcket löper från x0 i positiv x-led
+	på båda sidor, och "x0 − 0,10" är bara fronten när läktaren står i öster.
+	Mätt: fronten ska ligga på banans sida av däcket. ]]
+do
+	local R2 = UBRFKomplex.ridhus
+	local dack, front = forstaNamn("Läktardäck"), forstaNamn("Läktarfront")
+	if dack and front then
+		local fd, ff = fot(dack), fot(front)
+		local banX = R2.origo.x + R2.bana.x + R2.bana.w / 2
+		local dackMitt = fd.x + fd.w / 2
+		local frontMot = if banX > dackMitt then ff.x >= fd.x + fd.w - 0.2 else ff.x + ff.w <= fd.x + 0.2
+		check("läktarfronten står på banans sida av däcket", frontMot,
+			string.format("däck x %.2f–%.2f, front x %.2f, banans mitt %.2f",
+				fd.x, fd.x + fd.w, ff.x, banX))
+	end
+end
 
 --[[ Topologin fotona kräver, mätt som RELATION och inte mot talen: man ska
 	från däcket se över fronten ner i banan. Ändras höjderna i site.js ska
@@ -377,21 +698,301 @@ do
 		string.format("däck %.2f, fronttopp %.2f", L.dackZ, L.frontTopp))
 end
 
+--[[ TRAPPORNA i bygget (Product Owner 2026-09-03 17:16; senior review
+	17:18): C-trappornas steg är byggda som solida klossar ur
+	Geometri.trappsteg, övre gångens golv ligger på caféplanet, och
+	FIDELITY-kedjan översta bänkraden → C-trappa → övre gången går att
+	KLIVA: golvet under varje provpunkt (högsta solida ovansida i punkten)
+	stiger aldrig mer än 0,36 m mellan två punkter. Ingen teleport, ingen
+	osynlig ramp. Båda trapporna provas var för sig.
+
+	Senior review 2026-09-04 04:08 (blocker 1): anslutningen hallgolvet →
+	nedersta raden är INTE fidelity (inget foto). Den byggs bara som märkt
+	spelabstraktion ("Spelabstraktion bankradsteg …", Klass/Fidelity/Motiv,
+	ingen CanonId) och provas separat som SPELKRAV — den räknas inte in i
+	F02 och fidelity-kedjan ovan får inte bero på den. ]]
 do
-	-- Inget läktarsteg får stå i hästgångens öppning. Bygger man läktaren i
-	-- ett stycke muras gången igen, och det syns först när någon går där.
 	local R2 = UBRFKomplex.ridhus
-	local g = R2.laktare.gap
-	local y0, y1 = R2.origo.y + g.y0, R2.origo.y + g.y1
-	local ivagen = 0
+	local o = R2.origo
+	local function golvVid(wx, wy, tak)
+		local z = 0
+		for _, d in ipairs(delar) do
+			if d.CanCollide then
+				local f = fot(d)
+				if wx >= f.x and wx <= f.x + f.w and wy >= f.y and wy <= f.y + f.h and f.z1 <= tak and f.z1 > z then
+					z = f.z1
+				end
+			end
+		end
+		return z
+	end
+	local function mittpunkter(t)
+		local T = Geometri.trappsteg(t)
+		local ut = {}
+		for _, st in ipairs(T.steg) do
+			local c = (st.a0 + st.a1) / 2
+			if T.axel == "x" then table.insert(ut, { c, (t.y0 + t.y1) / 2 }) else table.insert(ut, { (t.x0 + t.x1) / 2, c }) end
+		end
+		return T, ut
+	end
+	for _, t in ipairs(R2.trappor or {}) do
+		local T, pts = mittpunkter(t)
+		local byggda = raknaNamn("Trappa " .. t.id .. " steg ")
+		check(string.format("trappan %s byggdes med alla %d steg", t.id, T.n), byggda == T.n, byggda .. " steg")
+		local med = 0
+		for _, d in ipairs(delar) do
+			if d.Name:find("Trappa " .. t.id .. " steg ", 1, true) == 1 and d.CanCollide
+				and d:GetAttribute("CanonId") == t.canon_id and d:GetAttribute("Primitiv") == "STAIR" then med += 1 end
+		end
+		check(string.format("trappan %s: stegen är solida och bär provenance", t.id), med == T.n, med .. " av " .. T.n)
+		local forra, ok, hogst = t.z0, true, 0
+		for _, p in ipairs(pts) do
+			local z = golvVid(o.x + p[1], o.y + p[2], math.max(t.z0, t.z1) + 0.3)
+			if z - forra > 0.36 or z < forra - 0.05 then ok = false end
+			forra = z
+			hogst = math.max(hogst, z)
+		end
+		check(string.format("trappan %s går att kliva upp för (max 0,36 m per steg) till %.2f m", t.id, math.max(t.z0, t.z1)),
+			ok and math.abs(hogst - math.max(t.z0, t.z1)) < 0.05, string.format("högsta steg %.2f", hogst))
+	end
+	local G2 = R2.ovreGang
+	check("övre gångens golv byggdes på caféplanet", G2 ~= nil and raknaExakt("Övre gångens golv") == 1)
+	check("övre gången har räcke mot banan utanför C-blocket", raknaNamn("Övre gångens räcke") >= 1)
+	-- kedjan för var och en av C-trapporna
+	local K = R2.kortanda
+	local tr = {}
+	for _, t in ipairs(R2.trappor or {}) do tr[t.id] = t end
+	check("båda C-trapporna finns i den byggda fidelity-datan, och inga bänkradssteg gör det",
+		tr.bankrad_upp == nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil and #(R2.trappor or {}) == 2)
 	for _, d in ipairs(delar) do
-		if string.find(d.Name, "Läktarsteg", 1, true) then
-			local f = fot(d)
-			if f.y < y1 - 0.1 and f.y + f.h > y0 + 0.1 then ivagen += 1 end
+		if d.Name:find("Trappa ", 1, true) == 1 and d:GetAttribute("Primitiv") == "STAIR" then
+			check("fidelity-trappsteget " .. d.Name .. " bär inte SPELABSTRAKTION-märkning",
+				d:GetAttribute("Klass") == nil and d:GetAttribute("Confidence") == "VERIFIED_PLAN_OR_PHOTO")
 		end
 	end
-	check("inget läktarsteg står i hästgångens öppning", ivagen == 0,
-		ivagen .. " i vägen")
+	if K and tr.c_trappa_v and tr.c_trappa_o and G2 then
+		local mS = K.vand == "S"
+		for _, ct in ipairs({ tr.c_trappa_v, tr.c_trappa_o }) do
+			-- fidelity-kedjan börjar på ÖVERSTA bänkraden (foto: foten vid klockväggen)
+			local xm = (ct.x0 + ct.x1) / 2
+			local rutt = {}
+			for i = K.steg - 1, K.steg do
+				local yc = if mS then K.y0 + (i - 0.5) * K.stegD else K.y1 - (i - 0.5) * K.stegD
+				table.insert(rutt, { xm, yc, (K.sockelH or 0) + K.stegH * i + 0.3 })
+			end
+			-- trappans foten-till-toppen
+			local _, p2 = mittpunkter(ct)
+			for _, p in ipairs(p2) do table.insert(rutt, { p[1], p[2], R2.cafe.z0 + 0.3 }) end
+			-- in i övre gången
+			local xt = if ct.stiger == "W" then ct.x0 + 0.4 else ct.x1 - 0.4
+			table.insert(rutt, { xt, G2.y0 + 0.8, R2.cafe.z0 + 0.3 })
+			table.insert(rutt, { (G2.x0 + G2.x1) / 2, G2.y0 + 1.0, R2.cafe.z0 + 0.3 })
+			local forra, brott = golvVid(o.x + rutt[1][1], o.y + rutt[1][2], rutt[1][3]), nil
+			check(string.format("fidelity-kedjan för %s startar på översta bänkraden (%.2f m)", ct.id, (K.sockelH or 0) + K.stegH * (K.steg - 1)),
+				math.abs(forra - ((K.sockelH or 0) + K.stegH * (K.steg - 1))) < 0.15, string.format("golv %.2f", forra))
+			for i, p in ipairs(rutt) do
+				local z = golvVid(o.x + p[1], o.y + p[2], p[3])
+				if math.abs(z - forra) > 0.36 then brott = brott or string.format("steg %d vid (%.1f, %.1f): %.2f → %.2f", i, p[1], p[2], forra, z) end
+				forra = z
+			end
+			check(string.format("fidelity-kedjan översta raden → %s → övre gången går att kliva (max 0,36 m per steg)", ct.id),
+				brott == nil and math.abs(forra - R2.cafe.z0) < 0.05, brott or string.format("slutnivå %.2f", forra))
+		end
+	end
+
+	--[[ SPELKRAV (inte fidelity, räknas inte i F02): spelets bänkradssteg
+		är byggda som märkt SPELABSTRAKTION och tar spelaren från hallgolvet
+		upp på nedersta raden — så att fidelity-kedjan ovan är nåbar i spelet
+		utan att någon påhittad geometri kallas verklighet. ]]
+	local bs = UBRFKomplex.spelabstraktioner and UBRFKomplex.spelabstraktioner.ridhus
+		and UBRFKomplex.spelabstraktioner.ridhus.bankradSteg
+	check("spelets bänkradssteg finns som spelabstraktion i den byggda datan", bs ~= nil)
+	if bs and K then
+		local T, pts = mittpunkter(bs)
+		local byggda = raknaNamn("Spelabstraktion bankradsteg steg ")
+		check(string.format("spelkrav: bänkradsstegen byggdes med alla %d steg", T.n), byggda == T.n, byggda .. " steg")
+		local markta, omarkta = 0, 0
+		for _, d in ipairs(delar) do
+			if d.Name:find("Spelabstraktion bankradsteg", 1, true) == 1 then
+				if d:GetAttribute("Klass") == "SPELABSTRAKTION" and d:GetAttribute("Fidelity") == "REFERENCE GAP"
+					and d:GetAttribute("CanonId") == nil and d:GetAttribute("SourceId") == nil
+					and d:GetAttribute("Confidence") == nil and d:GetAttribute("Primitiv") == nil then markta += 1 else omarkta += 1 end
+			end
+		end
+		check("spelkrav: varje bänkradsstegs-del är märkt Klass/Fidelity och bär INGEN kanonprovenance",
+			markta == T.n + 1 and omarkta == 0, string.format("%d märkta, %d omärkta", markta, omarkta))
+		local m = nil
+		for _, d in ipairs(delar) do if d.Name == "Spelabstraktion bankradsteg" then m = d end end
+		check("spelkrav: bänkradsstegen har en synlig, icke-kolliderande markör som sargporten",
+			m ~= nil and m.CanCollide == false and m.Transparency > 0.5)
+		-- rutten hallgolvet → stegen → nedersta raden
+		local rutt = { { bs.x0 - 0.6, (bs.y0 + bs.y1) / 2, 0.5 } }
+		for _, p in ipairs(pts) do table.insert(rutt, { p[1], p[2], 1.5 }) end
+		local mS = K.vand == "S"
+		local yc = if mS then K.y0 + 0.5 * K.stegD else K.y1 - 0.5 * K.stegD
+		table.insert(rutt, { bs.x1 + 0.4, yc, (K.sockelH or 0) + K.stegH + 0.3 })
+		local forra, brott = 0, nil
+		for i, p in ipairs(rutt) do
+			local z = golvVid(o.x + p[1], o.y + p[2], p[3])
+			if math.abs(z - forra) > 0.36 then brott = brott or string.format("steg %d vid (%.1f, %.1f): %.2f → %.2f", i, p[1], p[2], forra, z) end
+			forra = z
+		end
+		check("spelkrav: hallgolvet → spelets bänkradssteg → nedersta raden går att kliva (max 0,36 m per steg)",
+			brott == nil and math.abs(forra - ((K.sockelH or 0) + K.stegH)) < 0.15, brott or string.format("slutnivå %.2f", forra))
+	end
+end
+
+--[[ ENTRÉDELEN — Spatial Canon v2. Byggd med samma byggare som stallets
+	klubbdel: väggbitar mot deklarerade luckor, GLASS som bröstning + glas,
+	slutna rum som volymer. Provas: (1) varje segment byggdes i planens bitar,
+	(2) toaletterna och schaktet är slutna volymer, (3) SCV2-02/05: varje
+	Entrévägg och sluten volym bär kanon-attribut, (4) SCV2-01: ingen byggd
+	vägg/volym står i den öppna entréhallen, (5) receptionen är byggd som glas,
+	inte som opak låda, (6) den återkallade vägglistan är inte byggd, och
+	(7) SCV2-03: kedjan huvudentré → öppen hall → sargport → banan är gångbar
+	för spelarens faktiska kollisionsradie och är ingen smal korridor. ]]
+do
+	local R2 = UBRFKomplex.ridhus
+	local E = R2.entrehall
+	if E then
+		for _, v in ipairs(E.vaggar) do
+			local bitar = Geometri.vaggBitar(v)
+			local byggda = raknaNamn("Entrévägg " .. v.id .. ":")
+			-- GLASS bygger två delar per bit: bröstningen och glaset över den
+			local vantat = #bitar * (if v.primitiv == "GLASS" then 2 else 1)
+			check(string.format("entréväggen %s byggdes i planens bitar", v.id),
+				byggda == vantat, string.format("%d byggda mot %d i datan", byggda, vantat))
+		end
+		check("toaletterna och schaktet byggdes som slutna volymer",
+			raknaExakt("Slutet rum wc_n1") == 1 and raknaExakt("Slutet rum wc_n2") == 1
+				and raknaExakt("Slutet rum schakt") == 1)
+		--[[ Blocker 1: den kryssade rutan får inte byggas som "hiss" och får
+			ingen etikettplatta — funktionen är okänd. ]]
+		check("inget byggs som hiss, och schaktet har ingen rumsetikett",
+			raknaNamn("hiss") == 0 and raknaNamn("HISS") == 0 and raknaNamn("Rumsetikett HISS") == 0)
+		check("C-blocket står som ett solitt bänkblock i hallens södra kant",
+			raknaNamn("Kortändans steg") == R2.kortanda.steg
+				and raknaNamn("Kortändans sockel") == 1)
+
+		local o = R2.origo
+		local zon = nil
+		for _, z in ipairs(E.oppna or {}) do if z.id == "ridhus_open_entrance_hall" then zon = z end end
+		check("OPEN_AREA ridhus_open_entrance_hall nådde Roblox-datan", zon ~= nil)
+		-- Entrédelens delar: Entrévägg-bitar och slutna rum norr om hallgränsen i ridhuset.
+		local function iEntre(f)
+			return f.x >= o.x - 1 and f.x <= o.x + R2.bredd + 1 and f.y >= o.y + E.y0 - 0.5 and f.y <= o.y + R2.langd + 1
+		end
+		local utan, i_ytan, med, glasDelar, opakRec = {}, {}, 0, 0, {}
+		local aterkallade = {}
+		for _, z in ipairs(E.ingaVaggar or {}) do for _, id in ipairs(z.aterkallat or {}) do aterkallade[id] = true end end
+		local byggtAterkallat = {}
+		for _, d in ipairs(delar) do
+			local n = d.Name
+			local arVagg = n:find("Entrévägg", 1, true) == 1
+			local arRum = n:find("Slutet rum", 1, true) == 1
+			if arVagg or arRum then
+				local f = fot(d)
+				if iEntre(f) then
+					if d:GetAttribute("CanonId") and d:GetAttribute("SourceId") and d:GetAttribute("Confidence") and d:GetAttribute("Primitiv") then
+						med += 1
+					else
+						table.insert(utan, n)
+					end
+					if d:GetAttribute("CanonId") == "ridhus_reception_glass" then
+						if d:GetAttribute("Primitiv") == "GLASS" and (d.Material == Enum.Material.Glass or n:find("glas", 1, true)) then
+							glasDelar += 1
+						elseif f.z1 - f.z0 > 1.2 then
+							-- en hög opak del med receptionens id är en ersättningsvägg
+							table.insert(opakRec, n)
+						end
+					end
+					if zon and d.CanCollide then
+						for _, q in ipairs(zon.rekt) do
+							local ox = math.min(f.x + f.w, o.x + q.x + q.w) - math.max(f.x, o.x + q.x)
+							local oy = math.min(f.y + f.h, o.y + q.y + q.h) - math.max(f.y, o.y + q.y)
+							if ox > 0.12 and oy > 0.12 then table.insert(i_ytan, n) end
+						end
+					end
+					for id in pairs(aterkallade) do
+						if n:find("Entrévägg " .. id .. ":", 1, true) == 1 or n == "Slutet rum " .. id then
+							table.insert(byggtAterkallat, n)
+						end
+					end
+				end
+			end
+		end
+		check("SCV2-02/05: alla entréväggar och slutna volymer i entrédelen bär kanon-attribut i Roblox",
+			#utan == 0 and med > 3, #utan > 0 and table.concat(utan, ", ") or (med .. " delar med provenance"))
+		check("SCV2-01 (ridhus): ingen byggd vägg eller volym står i den öppna entréhallen",
+			#i_ytan == 0, #i_ytan > 0 and table.concat(i_ytan, ", ") or "hallen är fri")
+		check("receptionen är byggd som GLASS (glasdel i Roblox), inte som en opak låda",
+			glasDelar >= 1 and #opakRec == 0,
+			#opakRec > 0 and ("opakt: " .. table.concat(opakRec, ", ")) or (glasDelar .. " glasdelar"))
+		check("den återkallade vägglistan (korridor_o, skåpkorridoren, cellraden, hallens rumslådor, östkorridoren) är inte byggd",
+			#byggtAterkallat == 0, #byggtAterkallat > 0 and table.concat(byggtAterkallat, ", ") or "inget av det byggt")
+		local function plattorIEntre(text)
+			local n = 0
+			for _, d in ipairs(delar) do
+				if d.Name == "Rumsetikett " .. text and iEntre(fot(d)) then n += 1 end
+			end
+			return n
+		end
+		check("bara entrén och receptionen har etikettplattor i entrédelen (slutna volymer får ingen platta)",
+			plattorIEntre("ENTRÉ") == 1 and plattorIEntre("RECEPTION") == 1
+				and plattorIEntre("SKÅPKORRIDOREN") == 0,
+			string.format("ENTRÉ %d, RECEPTION %d, WC %d, SKÅPKORRIDOREN %d",
+				plattorIEntre("ENTRÉ"), plattorIEntre("RECEPTION"), plattorIEntre("WC"), plattorIEntre("SKÅPKORRIDOREN")))
+
+		--[[ SCV2-03: kedjan main_entrance → open_entrance_hall → arena_access →
+			physical_riding_area, provad mot BYGGDA solida delar med spelarens
+			kollisionsradie (0,35 m — webbens GA.radie; Roblox-karaktären är
+			smalare). Rutten går genom SPELETS sargport (spelabstraktion), inte
+			en fidelity-port. Dessutom: ingen OPAK entrévägg/volym inom 1,0 m
+			från någon ruttpunkt — vägen får inte vara en smal korridor av
+			osourcade väggar (kanonens topology.acceptance). Receptionens
+			GLASS räknas inte: det är källspårat, genomsiktligt och står
+			1,1 m från gångens mitt precis som i ridhus-klubb-01. ]]
+		local sp = UBRFKomplex.spelabstraktioner.ridhus.sargport
+		local dorr = nil
+		for _, d in ipairs(R2.dorrar or {}) do if d.id == "ut_ridhus_W_9" then dorr = d end end
+		check("huvudentréns innerdörr (fasadens dörr under kvisten) finns i datan", dorr ~= nil)
+		local px = (sp.x0 + sp.x1) / 2
+		local dx, dy = dorr and dorr.pos[1] or 1.6, dorr and dorr.pos[2] or 67.18
+		local rutt = {
+			-- main_entrance → open_entrance_hall
+			{ dx, dy }, { 1.1, dy + 1.5 }, { 1.1, 70.5 }, { 1.1, 72.0 }, { 3.0, 73.5 }, { 5.0, 73.5 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
+			-- open_entrance_hall → arena_access
+			{ dx, dy }, { px, dy - 0.6 }, { px, sp.y + 0.4 },
+			-- arena_access → physical_riding_area
+			{ px, sp.y - 0.4 }, { px, R2.bana.y + R2.bana.h - 1.5 }, { px, R2.bana.y + R2.bana.h - 4.0 },
+		}
+		local RADIE, KORRIDOR = 0.35, 1.0
+		local blockerad, trangt = nil, nil
+		for _, p in ipairs(rutt) do
+			local wx, wy = o.x + p[1], o.y + p[2]
+			for _, d in ipairs(delar) do
+				if d.CanCollide then
+					local f = fot(d)
+					local sparrar = f.z1 - f.z0 > 0.3 and f.z1 > 0.6 and f.z0 < 1.7
+					if sparrar then
+						if wx + RADIE > f.x and wx - RADIE < f.x + f.w and wy + RADIE > f.y and wy - RADIE < f.y + f.h then
+							blockerad = blockerad or string.format("%s vid (%.1f, %.1f)", d.Name, p[1], p[2])
+						end
+						local n = d.Name
+						if (n:find("Entrévägg", 1, true) == 1 or n:find("Slutet rum", 1, true) == 1)
+							and d:GetAttribute("Primitiv") ~= "GLASS"
+							and wx + KORRIDOR > f.x and wx - KORRIDOR < f.x + f.w and wy + KORRIDOR > f.y and wy - KORRIDOR < f.y + f.h then
+							trangt = trangt or string.format("%s inom %.1f m av (%.1f, %.1f)", n, KORRIDOR, p[1], p[2])
+						end
+					end
+				end
+			end
+		end
+		check("SCV2-03: huvudentré → öppen hall → sargport → banan är fri för spelarens radie 0,35 m",
+			blockerad == nil, blockerad or (#rutt .. " provpunkter fria"))
+		check("SCV2-03: vägen är ingen smal korridor — ingen opak entrévägg/volym inom 1,0 m från rutten",
+			trangt == nil, trangt or "öppet runt hela rutten")
+	end
 end
 
 do
@@ -400,9 +1001,10 @@ do
 	check("kortändans trappstegsblock byggdes",
 		raknaNamn("Kortändans steg") == K.steg,
 		raknaNamn("Kortändans steg") .. " steg av " .. K.steg)
-	check("kortändan har två trappor upp",
-		raknaNamn("Kortändans trappa") == #K.trappor,
-		raknaNamn("Kortändans trappa") .. " trappor")
+	check("kortändan har två trappor upp (byggda som gångbara steg ur R.trappor)",
+		raknaNamn("Trappa c_trappa_v steg ") >= 1 and raknaNamn("Trappa c_trappa_o steg ") >= 1
+			and raknaNamn("Kortändans trappa") == 0,
+		raknaNamn("Trappa c_trappa_v steg ") .. " + " .. raknaNamn("Trappa c_trappa_o steg ") .. " steg")
 	--[[ Glasbandet BRYTS av trapporna — en obruten remsa är den "generiska
 		upprepade fönsterrad" som ordern uttryckligen inte vill ha. Antalet
 		segment räknas ur samma `trappor`-tal som bygget använder, så testet
@@ -425,8 +1027,8 @@ do
 	check("kompassrosen byggdes som linjeritad stjärna",
 		raknaNamn("Kompassros") == 4, raknaNamn("Kompassros") .. " stavar")
 	if K.klocka and #K.trappor >= 2 then
-		local lo = math.min(K.trappor[1], K.trappor[2])
-		local hi = math.max(K.trappor[1], K.trappor[2])
+		local lo = math.min(K.trappor[1].x1, K.trappor[2].x1)
+		local hi = math.max(K.trappor[1].x0, K.trappor[2].x0)
 		check("klockan sitter MELLAN de två trapporna",
 			K.klocka.x > lo and K.klocka.x < hi,
 			string.format("klocka x %.2f, trappor %.1f och %.1f",
@@ -434,7 +1036,7 @@ do
 	end
 	if K.stjarna then
 		check("kompassrosen sitter vänster om vänstra trappan",
-			K.stjarna.x < math.min(K.trappor[1], K.trappor[2]),
+			K.stjarna.x < math.min(K.trappor[1].x0, K.trappor[2].x0),
 			string.format("stjärna x %.2f", K.stjarna.x))
 	end
 
@@ -492,7 +1094,12 @@ check("domarbåset byggdes med nivå, tak, trappa och räcken",
 		raknaNamn("Domarbåsets trappsteg"), raknaNamn("Domarbåsets räcke"),
 		raknaNamn("Exit-skylt")))
 
-check("klockan byggdes", raknaNamn("Klockan") == 1)
+--[[ "Klockan byggdes" provade den andra klockan vid en trätrappa i hallen.
+	Den var en dubblett av C-blockets klocka och är borta; C-blockets provas
+	ovan. Här mäts i stället att ingen dubblett smugit sig in igen. ]]
+check("bara C-blockets klocka finns — ingen andra klocka i hallen",
+	raknaNamn("Kortändans klocka") == 1 and raknaNamn("Klockan") == 0,
+	string.format("%d C-klockor, %d andra", raknaNamn("Kortändans klocka"), raknaNamn("Klockan")))
 
 do
 	-- Sargen får inte stänga porten man rider in genom.
@@ -596,10 +1203,12 @@ do
 
 		local v = forstaNamn("Övre långvägg")
 		local f = v and fot(v)
-		check("panelen täcker BARA sitt stycke, inte hela hallen",
+		--[[ Omgranskat 2026-09-03: panelen går hörn till hörn längs hela
+			hallens långsida (ridhus-inne-31, -17), fram till entrédelen. ]]
+		check("panelen täcker hallens hela långsida, A-gaveln → entrédelen",
 			f ~= nil and math.abs(f.h - (O.y1 - O.y0)) < 0.2
-				and f.h < R2.langd * 0.75,
-			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd) or "saknas")
+				and math.abs(f.h - (R2.langd - R2.entre)) < 0.2,
+			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd - R2.entre) or "saknas")
 
 		--[[ LOKALA koordinater. Första versionen jämförde f.x (världsläge,
 			~118) mot bredd/2 (~12,5) och föll fast bygget var riktigt — samma

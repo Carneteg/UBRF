@@ -33,6 +33,7 @@ local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local Debug = require(script.Debug)
+local Genomsikt = require(script.Genomsikt)
 
 local player = Players.LocalPlayer
 local ride: { [string]: any }? = nil
@@ -98,6 +99,10 @@ local function mount(model: Model)
 			:format(#missing, table.concat(missing, ", ")))
 	end
 end
+
+--[[ Inomhusläsbarhet, till fots och till häst: väggar mellan kameran och
+     karaktären tonas på den här klienten. ]]
+Genomsikt.start()
 
 InteractionController.start(mount)
 

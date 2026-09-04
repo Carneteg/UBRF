@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+/* Golden views — Spatial Canon v2 (docs/SPATIAL-CANON-V2.md § Golden-view-process).
+
+   Fyra fasta kameravyer som renderas exakt likadant varje gång, så att
+   Product Owner kan jämföra en build mot den förra utan att navigera.
+   Vyerna är regressionsbevis, inte ersättning för produktacceptans.
+
+   Kör: python3 tools/build.py && node tools/golden-views.mjs
+   Skriver docs/golden-views/<ID>.png (+ en JSON med kameraläge och
+   antalet tonade väggar, så att en ändrad vy syns i diffen).
+
+   Kräver Playwright + Chromium (samma harness som QA-renderingarna). */
+import { chromium } from "playwright";
+import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+
+const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const DIST = path.join(ROT, "dist");
+const UT = path.join(ROT, "docs", "golden-views");
+const PORT = 8790;
+
+/* Kameralägen i husens lokala meter (x från väster, y från söder), som
+   gaTill() tar dem. Ändra dem bara med ett dokumenterat skäl — då byts
+   regressionsbasen. */
+export const VYER = [
+  { id: "STALL-V1",  scen: "stallinne",  x: 4.55, y: 68.4, rikt: -Math.PI / 2,
+    text: "Parkeringens entré → in i uppehållsrummet: EN öppen L-formad yta, ingen inre vägg" },
+  /* Ridhuset: huvudentrén är fasadens låsta dörr under kvisten (N 9–11,
+     innerpunkt (1,6, 67,18)); vyerna utgår därifrån, inte från planens
+     entrécell (CONTRADICTION, exteriörlåset vinner). */
+  { id: "RIDHUS-V1", scen: "ridhusinne", x: 1.3,  y: 67.0, rikt: Math.PI / 2,
+    text: "Huvudentrén → norrut över entré/reception: öppen hall, ingen korridor av rumslådor; receptionens glas till höger" },
+  { id: "RIDHUS-V2", scen: "ridhusinne", x: 5.0,  y: 70.5, rikt: -Math.PI / 2,
+    text: "Öppna entréhallen → ridbanan: sargporten (spelabstraktion, x 4,7–6,9) och banan rakt fram, C-blocket till vänster" },
+  { id: "RIDHUS-V3", scen: "ridhusinne", x: 3.9,  y: 70.7, rikt: Math.PI,
+    text: "Receptionens avgränsning sedd inifrån receptionen: låg bröstning med glas (GLASS) och den öppna hallen bakom — ingen solid rumslåda" },
+  /* C-trapporna (Product Owner 2026-09-03 17:16; senior review 17:18):
+     V4 från foten — översta bänkraden vid klockväggen, blicken västerut
+     längs vänstra loppet; V5 från toppen — i övre gången ovanför vänstra
+     trappans topp, blicken söderut ner över trappan, raderna och banan.
+     `z` sätter figurens nivå. */
+  { id: "RIDHUS-V4", scen: "ridhusinne", x: 15.8, y: 66.3, rikt: Math.PI / 2, z: 1.12,
+    text: "C-ändan från nedersta bänkraden (som ridhus-inne-01): raderna, de två loppen med vita sidostycken och räcken, klockväggen, glasbandet brutet i tre fält" },
+  { id: "RIDHUS-V5", scen: "ridhusinne", x: 18.6, y: 69.6, rikt: Math.PI, z: 3.6,
+    text: "C-trapporna från toppen: på högra loppets översta steg, västerut ner mot foten vid klockväggen och vidare upp för vänstra loppet" },
+];
+
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json" };
+const srv = http.createServer((req, res) => {
+  const p = path.join(DIST, decodeURIComponent(req.url.split("?")[0] === "/" ? "/index.html" : req.url.split("?")[0]));
+  if (!fs.existsSync(p)) { res.writeHead(404); res.end(); return; }
+  res.writeHead(200, { "content-type": MIME[path.extname(p)] || "application/octet-stream" });
+  res.end(fs.readFileSync(p));
+}).listen(PORT);
+
+const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const browser = await chromium.launch({
+  executablePath: fs.existsSync(exe) ? exe : undefined,
+  args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"],
+});
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+page.on("pageerror", e => console.log("PAGEERROR", e.message));
+await page.goto(`http://localhost:${PORT}/ridskolan.html`, { waitUntil: "load" });
+await page.waitForTimeout(1500);
+await page.evaluate(() => { try { startaVandring(); } catch (e) { console.log("startaVandring:", e.message); } });
+await page.waitForTimeout(800);
+fs.mkdirSync(UT, { recursive: true });
+const logg = {};
+for (const v of VYER) {
+  await page.evaluate(({ scen, x, y, rikt, z }) => gaTill(scen, { x, y, rikt, z: z || 0 }), v);
+  await page.waitForTimeout(1500);
+  const info = await page.evaluate(() => ({
+    kamera: [V3D.kam.x, V3D.kam.y, V3D.kam.z].map(n => +n.toFixed(2)),
+    spelare: [VD.px, VD.py, VD.pz || 0].map(n => +n.toFixed(2)),
+    tonade: V3D.tonade,
+  }));
+  await page.screenshot({ path: path.join(UT, `${v.id}.png`) });
+  logg[v.id] = { ...v, ...info };
+  console.log(v.id, JSON.stringify(info), "—", v.text);
+}
+fs.writeFileSync(path.join(UT, "golden-views.json"), JSON.stringify(logg, null, 2) + "\n");
+await browser.close();
+srv.close();

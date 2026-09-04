@@ -75,6 +75,8 @@ local banSyd, banNorr = B.y, B.y + B.h
 local K = R.kortanda
 local kortandaMittX = (K.x0 + K.x1) / 2
 local kortandaKlockH = K.sockelH + K.steg * K.stegH + K.klocka.overBlock
+-- Blockets kant mot banan: y0 när det vänder sig söderut, annars y1.
+local kortandaBanKant = if K.vand == "S" then K.y0 else K.y1
 
 -- Panelens stycke: sponsorerna hänger i det, så vyn siktar på dess mitt.
 local OV = G.identitet.ridhus.ovreVagg
@@ -125,11 +127,11 @@ Vyer.vyer = {
 	{
 		id = "banan",
 		grupp = "Ridhuset inne",
-		text = "Banan söderut — sand, sarg och porten vid A",
-		fran = { x = Ro.x + banMittX, y = Ro.y + banNorr + 2, h = 1.7 },
+		text = "Banan söderut från C-blocket — sand, sarg och A i söder",
+		fran = { x = Ro.x + banMittX, y = Ro.y + banNorr - 2, h = 1.7 },
 		mot = { x = Ro.x + banMittX, y = Ro.y + banSyd + B.h * 0.25 },
 		aim = 1.1,
-		krav = "Sanden dovt brungrå, inte ljus beige eller orange. Sargen ljus med mörkt sockelband, och porten vid A ska vara ett GAP i norra kortsidan — inte en vägg.",
+		krav = "Sanden dovt brungrå, inte ljus beige eller orange. Sargen ljus med mörkt sockelband. Gapet i norra sargens västra ände är SPELETS sargport — en SPELABSTRAKTION med gul genomskinlig markör, INTE verifierad UBRF-geometri (ingen bild visar en grind där; REFERENCE GAP). Bedöm sargen, inte gapet.",
 	},
 	{
 		id = "sponsorvaggen",
@@ -143,9 +145,9 @@ Vyer.vyer = {
 	{
 		id = "kortandan",
 		grupp = "Ridhuset inne",
-		text = "Kortändan vid C — trappstegsblock, glasband, klocka och kompassros",
-		fran = { x = Ro.x + banMittX, y = Ro.y + K.y1 + 16, h = 1.7 },
-		mot = { x = Ro.x + kortandaMittX, y = Ro.y + K.y0 },
+		text = "C-blocket vid norra änden — trappstegsblock, glasband, klocka och kompassros",
+		fran = { x = Ro.x + kortandaMittX, y = Ro.y + kortandaBanKant - 16, h = 1.7 },
+		mot = { x = Ro.x + kortandaMittX, y = Ro.y + kortandaBanKant },
 		aim = kortandaKlockH,
 		krav = "Block på sockel, två trappor med räcken, glasbandet BRUTET av trapporna, vit vägg mellan bänkarnas ovankant och glasets underkant, klockan mellan trapporna och kompassrosen vänster om den vänstra.",
 	},
@@ -170,12 +172,50 @@ Vyer.vyer = {
 	{
 		id = "laktaren",
 		grupp = "Ridhuset inne",
-		text = "Läktaren och gapet med grinden mot hästgången",
-		fran = { x = Ro.x + laktareBetraktare,
-			y = Ro.y + (R.laktare.gap.y0 + R.laktare.gap.y1) / 2, h = 1.7 },
-		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2,
-			y = Ro.y + (R.laktare.gap.y0 + R.laktare.gap.y1) / 2 },
-		krav = "Läktaren ska ha ett GAP rakt fram, och sargen en GRIND i det gapet. Är sargen obruten går det inte att leda hästen ut på banan.",
+		text = "Läktaren längs västra långsidan, obruten, med domarbåset",
+		fran = { x = Ro.x + laktareBetraktare, y = Ro.y + R.domarbas.y, h = 1.7 },
+		mot = { x = Ro.x + R.laktare.x0 + R.laktare.dackDjup / 2, y = Ro.y + R.domarbas.y },
+		krav = "Läktaren på VÄSTRA långsidan, ett plant däck med solid front mot banan, utan gap. Domarbåset står på däcket med öppningen mot banan.",
+	},
+	{
+		id = "grinden",
+		grupp = "Ridhuset inne",
+		text = "Grinden mot hästgången i östra sargen — mitt emot läktaren",
+		fran = { x = Ro.x + B.x + B.w - 8, y = Ro.y + (R.sargGrind.y0 + R.sargGrind.y1) / 2, h = 1.7 },
+		mot = { x = Ro.x + B.x + B.w, y = Ro.y + (R.sargGrind.y0 + R.sargGrind.y1) / 2 },
+		krav = "Sargen ska ha en GRIND rakt fram, på sidan MITT EMOT läktaren. Är sargen obruten går det inte att leda hästen ut på banan.",
+	},
+	{
+		id = "entrehallen",
+		grupp = "Ridhuset inne",
+		text = "Innanför huvudentrén (fasadens dörr under kvisten): den öppna entréhallen norrut, receptionens glas till höger, toaletterna i bortre hörnet",
+		fran = { x = Ro.x + 1.3, y = Ro.y + 67.0, h = 1.7 },
+		mot = { x = Ro.x + 1.3, y = Ro.y + 76.5 },
+		krav = "Spatial Canon v2 (RIDHUS-V1/V3): entrédelen är EN öppen yta — ingen korridor av rumslådor, inga skåpkorridorväggar, ingen cellrad, inga rum mot nordöstra hörnet. Det enda som står är två smala toaletter i NV-hörnet (WALL, plan + PO), den kryssade rutan `schakt` som sluten volym UTAN namn (funktion REFERENCE GAP, får inte heta hiss) och receptionens GLASS-parti (låg bröstning + glas, ridhus-klubb-01/-02) — aldrig en opak låda. Varje vägg/glas bär CanonId/SourceId/Confidence. Inga uppfunna möbler.",
+	},
+	{
+		id = "c_trapporna_fran_foten",
+		grupp = "Ridhuset inne",
+		text = "På översta bänkraden vid klockväggen: vänstra C-trappan stiger västerut längs gaveln upp till övre gången",
+		fran = { x = Ro.x + 15.6, y = Ro.y + 69.6, h = (R.kortanda.sockelH or 0) + R.kortanda.steg * R.kortanda.stegH + 1.7 },
+		mot = { x = Ro.x + 12.0, y = Ro.y + 69.6 },
+		krav = "Product Owner 2026-09-03 (senior review 17:18): C-ändans TVÅ raka trappor med träräcke (ridhus-inne-01, IMG_0192-f01/-f02, ridhus-inne-07) — loppen går LÄNGS gaveln, foten vid klockväggen, stigande utåt (vänstra mot väster, högra mot öster) från översta bänkraden till caféplanet, med vitt snedställt sidostycke mot banan. Båda ska gå att KLIVA i Studio: spelets bänkradssteg vid blockets västra ände (Spelabstraktion bankradsteg — märkt spelabstraktion, inte fidelity), raderna, trappan (Trappa c_trappa_v/o steg 1–9) och in i övre gången (Övre gångens golv). Inget steg över 0,19 m. Ingen osynlig ramp.",
+	},
+	{
+		id = "c_trapporna_fran_toppen",
+		grupp = "Ridhuset inne",
+		text = "I övre gången ovanför vänstra trappans topp: ner över loppet, bänkraderna och banan",
+		fran = { x = Ro.x + 12.8, y = Ro.y + 71.2, h = R.cafe.z0 + 1.7 },
+		mot = { x = Ro.x + 13.5, y = Ro.y + 66.0 },
+		krav = "Samma trappor sedda uppifrån (ridhus-klubb-10: trappan ner, banan öppen): övre gången har golv på caféplanet norr om glasbandet, glasbandet är BRUTET där loppen står, och man kan gå ner för trappan till bänkraderna utan att fastna. Rummen innanför (Café Krubban) är REFERENCE GAP och ska inte vara byggda.",
+	},
+	{
+		id = "entrehallen_mot_banan",
+		grupp = "Ridhuset inne",
+		text = "Från den öppna entréhallen söderut mot sargporten och banan",
+		fran = { x = Ro.x + 2.0, y = Ro.y + 70.0, h = 1.7 },
+		mot = { x = Ro.x + 2.0, y = Ro.y + 62.0 },
+		krav = "Spatial Canon v2 (RIDHUS-V2, SCV2-03): kedjan huvudentré → öppen hall → sargport (SPELABSTRAKTION) → banan ska SYNAS som en öppen förbindelse och gå att gå utan att klippa, teleportera eller passera en fidelity-vägg. Ingen vägg och ingen möbel får skapa en smal korridor på vägen.",
 	},
 
 	--[[ ── Stallet inne ── servicevyn är den som tidigare underkändes. ]]
@@ -191,10 +231,18 @@ Vyer.vyer = {
 	{
 		id = "stallgangen",
 		grupp = "Stallet inne",
-		text = "Inne i gång A, mot tvärkorridoren",
+		text = "Inne i gång A, mot hästförbindelsens brott i västra raden",
 		fran = { x = So.x + gangAx, y = So.y + S.boxStartY + 2, h = 1.7 },
-		mot = { x = So.x + gangAx, y = So.y + (S.tvarGang.y0 + S.tvarGang.y1) / 2 },
-		krav = "Boxar på båda sidor, boxfronterna antracit med galvad ram och FEM liggande reglar. Tvärkorridoren ska synas hela vägen tvärs huset.",
+		mot = { x = So.x + gangAx, y = So.y + (S.brott[1].y0 + S.brott[1].y1) / 2 },
+		krav = "Boxar på båda sidor, boxfronterna antracit med galvad ram och FEM liggande reglar. Västra raden ska ha ETT brott på hästgångens höjd; mittraderna fortsätter obrutna — ingen korridor tvärs huset.",
+	},
+	{
+		id = "klubbdelen",
+		grupp = "Stallet inne",
+		text = "Innanför entrén: uppehållsrummet, med toaletterna och den inre entrén rakt fram",
+		fran = { x = So.x + 4.55, y = So.y + 68.5, h = 1.7 },
+		mot = { x = So.x + 4.55, y = So.y + S.klubb.y0 },
+		krav = "Spatial Canon v2: uppehållsrummet är EN öppen L-formad yta (västdelen + östdelen öster om entrén) utan någon inre vägg eller sluten volym — den tidigare 1,0 × 4,4-volymen är återkallad av Product Owner. Planens symbolruta står som sluten volym utan namn till vänster (öster; funktion REFERENCE GAP), två toaletter i bortre änden (WC-V 3,0 m bred med dörr mot lobbyn) med den inre entrén emellan, och genom den stallgång A rakt fram. Varje vägg bär CanonId/SourceId/Confidence. Väggar mellan kameran och karaktären ska tona.",
 	},
 }
 
