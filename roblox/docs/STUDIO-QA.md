@@ -289,7 +289,7 @@ räknas av `Geometri.trappsteg`.
 ## Visuell grind — de tolv reviewkamerorna (issue #78)
 
 Samma tolv vyer som webbens screenshot-pack (`qa/visual-gate/kameror.json`),
-gruppen **Visuell grind** i `Vyer.lista()`: `STALL-ENTRE`, `STALL-UPPEHALL`,
+gruppen **Visuell grind** i `Vyer.lista()`: `STALL-ANKOMST` (exteriör, från gården), `STALL-ENTRE`, `STALL-UPPEHALL`,
 `STALL-TEORISAL`, `STALL-SADELKAMMARE`, `STALL-GANG-A`, `HASTPASSAGE`,
 `RIDHUS-ENTRE`, `RIDHUS-SKAPKORRIDOR`, `ARENA-A`, `ARENA-C`, `LAKTARE`,
 `C-BLOCK-OVRE`. Kameran står som spelets tredjepersonskamera: 3,6 m bakom

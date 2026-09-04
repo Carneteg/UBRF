@@ -155,6 +155,14 @@
       "kalla": "PLAN stall-plan1-utrymning.jpg; SITEPLAN (gången ligger där stallets tvärkorridor mynnar)",
       "konfidens": "VERIFIED_PLAN_OR_PHOTO",
       "prov": "(() => { const S=STALLINNE, b=S.brott&&S.brott[0], d=S.dorrar.find(x=>x.id==='hastgang'); return !!b && b.rad==='W' && S.brott.length===1 && d.pos[1]>=b.y0-0.01 && d.pos[1]<=b.y1+0.01; })()"
+    },
+    {
+      "id": "stall_entre_samma_dorr",
+      "vad": "Stallets entré är SAMMA fysiska dörr inne som ute: innerpunkten ut_n ligger i den låsta fasadens entrédörr (norra gaveln, dorrgul) och gårdens markör stall_n står vid samma dörr med spawn = ut_n",
+      "varde": true,
+      "kalla": "references/buildings/stall/KORT.md (PRODUKTBESLUT 2026-09-02: förstukvisten med entrédörren mitt på norra gaveln); stall-entre-15; senior visual review 2026-09-04 06:33 (#80)",
+      "konfidens": "RELATION",
+      "prov": "(() => { const hus=ANL.byggnader.find(b=>b.id==='stall'); const o=hus.oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); const x0=STALLINNE.bredd-o.u-o.b, x1=STALLINNE.bredd-o.u; const inne=STALLINNE.dorrar.find(d=>d.id==='ut_n'); const ute=ANL.dorrar.find(d=>d.id==='stall_n'); return !!inne && !!ute && inne.pos[0]>=x0 && inne.pos[0]<=x1 && inne.pos[1]>=STALLINNE.langd-1.5 && Math.abs(ute.pos[0]-(hus.rekt.x+(x0+x1)/2))<0.6 && Math.abs(ute.spawn.x-inne.pos[0])<0.01 && Math.abs(ute.spawn.y-inne.pos[1])<0.01; })()"
     }
   ]
 }

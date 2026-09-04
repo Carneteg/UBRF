@@ -1,6 +1,6 @@
 {
   "$kommentar": [
-    "Issue #78 — Visual Fidelity Gate. De fasta reviewkamerorna. Samma ID renderas i varje PR",
+    "Issue #78 — Visual Fidelity Gate. De fasta reviewkamerorna (tolv ur #78 + STALL-ANKOMST, exteriör, ur runda 3). Samma ID renderas i varje PR",
     "(tools/screenshot-pack.mjs) och finns som Studio-vy med samma ID i roblox/buildings/Vyer.luau",
     "(gruppen 'Visuell grind'). Lägen är UTTRYCK i husets egen data (S = STALLINNE, R = RIDHUSINNE,",
     "SA = SPELABSTRAKTIONER) så att kameran följer geometrin om datan ändras; ett handskrivet tal här",
@@ -11,6 +11,44 @@
     "EJ_GRANSKAD, MISMATCH, CHATGPT_VISUAL_PASS. Automation får aldrig skriva VISUALLY_ACCEPTED."
   ],
   "kameror": [
+    {
+      "id": "STALL-ANKOMST",
+      "namn": "Stallhuset entré från gården (exteriör)",
+      "hus": "stall",
+      "scen": "gard",
+      "lage": {
+        "x": "(()=>{const h=A.byggnader.find(b=>b.id==='stall'); const o=h.oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return h.rekt.x + S.bredd-o.u-o.b/2;})()",
+        "y": "A.byggnader.find(b=>b.id==='stall').rekt.y + A.byggnader.find(b=>b.id==='stall').rekt.h + 6.0",
+        "rikt": "-Math.PI/2"
+      },
+      "kamera": {
+        "x": "(()=>{const h=A.byggnader.find(b=>b.id==='stall'); const o=h.oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return h.rekt.x + S.bredd-o.u-o.b/2;})() - 1.5",
+        "y": "A.byggnader.find(b=>b.id==='stall').rekt.y + A.byggnader.find(b=>b.id==='stall').rekt.h + 7.5",
+        "h": "1.7"
+      },
+      "mal": {
+        "x": "(()=>{const h=A.byggnader.find(b=>b.id==='stall'); const o=h.oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return h.rekt.x + S.bredd-o.u-o.b/2;})()",
+        "y": "A.byggnader.find(b=>b.id==='stall').rekt.y + A.byggnader.find(b=>b.id==='stall').rekt.h",
+        "h": "1.6"
+      },
+      "text": "Grusplanen norr om stallet, samma ansats som spelaren kommer från: blicken söderut mot klubbgaveln med förstukvisten och entrédörren",
+      "referenser": [
+        "references/buildings/stall/stall-fasad-04.jpg",
+        "references/buildings/stall/stall-entre-01.jpg",
+        "references/buildings/stall/stall-entre-03.jpg",
+        "references/buildings/stall/stall-entre-06.jpg",
+        "references/buildings/stall/stall-entre-15-dorren.jpg",
+        "references/buildings/stall/stall-entre-16-runda-fonstren.jpg"
+      ],
+      "gap": [],
+      "ram": "Verandans sadeltak (röd gavelspets, vita vindskivor) på vita stolpar, det vita ribbräcket, den ockragula entrédörren med solfjäderfönster och vit karm rakt fram, ett runt fönster på var sida, lampan över dörren, spiraltrappan och balkongen till vänster. Det är den dörr interaktionen leder in genom (ankaret stall_entre_samma_dorr; innerpunkten ut_n vid samma dörr)",
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      }
+    },
     {
       "id": "STALL-ENTRE",
       "namn": "Stallhuset entré",
@@ -28,13 +66,13 @@
       ],
       "gap": [
         "ingen interiörbild av gavelns insida: dörrbladets färg inifrån [antagande]",
-        "planens vindfång mot fasadens entré: dokumenterad motsägelse"
+        "planens vindfångscell (x 3,6–5,5) mot fasadens entré (x 10,5): dokumenterad motsägelse, fasaden vinner; cellen står kvar utan etikett"
       ],
       "granskning": {
         "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 05:51",
-        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
-        "mismatch": "Gaveln lästes som blank grå vägg med en liten öppning; källan stall-entre-15 visar den stora ockragula entrédörren och de runda fönstren. Rättat i F02-A (6df46af): gavelns insida visar fasadens öppningar; kameran vänd mot dörren. Väntar på ny review."
+        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
+        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
+        "mismatch": "Interiörvyn bevisar inte den exteriöra entrén Tobias rapporterade, och interaktionen ledde till en annan punkt än dörren i bild. Rättat: ut_n ligger nu i fasadens dörr (F02-A a102bb9), exteriörkameran STALL-ANKOMST tillagd, ankaret stall_entre_samma_dorr vaktar. Väntar på ny review."
       },
       "ram": "Gavelväggen med fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram, det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång x 3,6–5,5 mot fasadens entré x 10,5, DEFERRED BY EXTERIOR LOCK)",
       "kamera": {
@@ -68,9 +106,9 @@
       ],
       "granskning": {
         "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 05:51",
-        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
-        "mismatch": "Ramen duger, men rummet liknar inte stall-inne-01 tillräckligt för produktacceptans — möbler är F02-B. Förblir MISMATCH tills F02-B (#76) integrerats och granskats."
+        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
+        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
+        "mismatch": "Förblir MISMATCH tills F02-B (#76) integrerats — möbler är utanför F02-A. Inget PASS fejkas här."
       },
       "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort"
     },
@@ -286,9 +324,9 @@
       ],
       "granskning": {
         "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 05:51",
-        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
-        "mismatch": "Loppen lästes som dominerande mörkbruna träramper; ridhus-inne-01 visar vita snedställda sidostycken i liv med väggen med mörkt räcke. Rättat i F02-A (6df46af): sidostyckena i eget otexturerat nät, utanför loppet, full höjd. Väntar på ny review."
+        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
+        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
+        "mismatch": "Sidostyckena lästes som två jättelika lutande skivor (bow-tie) som slukade glasbandet. Rättat i F02-A (a102bb9): trapets med vågrät underkant i blockets krön och överkant längs räcket; klockväggen fri; glasbandet synligt. Väntar på ny review."
       },
       "ram": "C-blocket över norra sargen: bänkraderna, klockväggen mellan de två loppen, vita sidostycken, glasbandet i tre fält, övre gången bakom"
     },
@@ -345,9 +383,9 @@
       ],
       "granskning": {
         "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 05:51",
-        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
-        "mismatch": "Samma som ARENA-C: loppens byggda form/material/sidostycke-relation stämde inte med källan. Rättat i F02-A (6df46af). Väntar på ny review."
+        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
+        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
+        "mismatch": "Samma som ARENA-C (bow-tie). Rättat i F02-A (a102bb9): trapetsformade sidostycken, mörkt räcke ovanpå kanten, klockväggen fri. Väntar på ny review."
       },
       "ram": "Från nedersta raden: raderna uppåt, båda loppen stigande utåt från klockväggen, räcken, glasbandet ovanför, övre gångens golv/räcke; spelets bänkradssteg (gul markör) till vänster som SPELABSTRAKTION"
     }

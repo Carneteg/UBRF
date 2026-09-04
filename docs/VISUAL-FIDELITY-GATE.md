@@ -34,12 +34,13 @@ falsifiering, evidens, human gate).
 
 ## 1. Fasta reviewkameror
 
-`qa/visual-gate/kameror.json` är listan. Tolv kameror, samma ID på webb och
-Roblox:
+`qa/visual-gate/kameror.json` är listan. Tolv kameror ur #78 plus den
+exteriöra `STALL-ANKOMST`, samma ID på webb och Roblox:
 
 | ID | Var |
 |---|---|
-| `STALL-ENTRE` | Stallhuset entré |
+| `STALL-ANKOMST` | Stallhuset entré från gården (exteriör, spelarens ansats; runda 3) |
+| `STALL-ENTRE` | Stallhuset entré inifrån |
 | `STALL-UPPEHALL` | Uppehållsrum |
 | `STALL-TEORISAL` | Teorisal |
 | `STALL-SADELKAMMARE` | Sadelkammare |

@@ -298,6 +298,27 @@ local gangA = (S.gangar.A.x0 + S.gangar.A.x1) / 2
 local K = R.kortanda
 local sadelO = oppning("genomgaende", "sadelkammare")
 Vyer.reviewkameror = {
+	--[[ STALL-ANKOMST (runda 3): exteriör, samma ansats som spelaren kommer
+		från — grusplanen norr om klubbgaveln, mot förstukvisten och
+		entrédörren. Dörrens läge läses ur fasaddatan. ]]
+	(function()
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		local dorrX = hus.rekt.x + S.bredd / 2
+		for _, op in ipairs(hus.oppningar or {}) do
+			if op.sida == "N" and op.typ == "dorrgul" then dorrX = hus.rekt.x + S.bredd - op.u - op.b / 2 end
+		end
+		local gavelY = hus.rekt.y + hus.rekt.h
+		return {
+			id = "STALL-ANKOMST", grupp = VG,
+			text = "Stallhuset entré från gården — grusplanen norr om klubbgaveln, söderut mot förstukvisten och entrédörren",
+			fran = { x = dorrX - 1.5, y = gavelY + 7.5, h = 1.7 },
+			mot = { x = dorrX, y = gavelY },
+			aim = 1.6,
+			figur = { x = dorrX, y = gavelY + 6.0, z = 0 },
+			krav = "Verandans sadeltak med röd gavelspets och vita vindskivor på vita stolpar, det vita ribbräcket, den ockragula entrédörren med solfjäderfönster och vit karm, ett runt fönster på var sida, lampan, spiraltrappan och balkongen till vänster (stall-fasad-04, stall-entre-01/-03/-15). Dörrmarkören står vid samma dörr som innerpunkten ut_n.",
+		}
+	end)(),
 	--[[ Explicit kamera mot den låsta fasadens entrédörr (mitt på gaveln, läst ur
 		G.byggnader stall, sida N, typ dorrgul) — samma som kameror.json. ]]
 	(function()

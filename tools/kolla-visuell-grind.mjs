@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
-const KRAVDA = ["STALL-ENTRE", "STALL-UPPEHALL", "STALL-TEORISAL", "STALL-SADELKAMMARE", "STALL-GANG-A", "HASTPASSAGE",
+const KRAVDA = ["STALL-ANKOMST", "STALL-ENTRE", "STALL-UPPEHALL", "STALL-TEORISAL", "STALL-SADELKAMMARE", "STALL-GANG-A", "HASTPASSAGE",
   "RIDHUS-ENTRE", "RIDHUS-SKAPKORRIDOR", "ARENA-A", "ARENA-C", "LAKTARE", "C-BLOCK-OVRE"];
 const TILLATNA = new Set(["EJ_GRANSKAD", "MISMATCH", "CHATGPT_VISUAL_PASS"]);
 let fel = 0;
@@ -25,10 +25,10 @@ const saga = (ok, t) => { if (!ok) fel++; console.log(`  ${ok ? "OK  " : "FEL "}
 
 const k = JSON.parse(fs.readFileSync(path.join(ROT, "qa/visual-gate/kameror.json"), "utf8"));
 const ids = k.kameror.map(c => c.id);
-saga(KRAVDA.every(id => ids.includes(id)) && ids.length === KRAVDA.length, `de tolv kamerorna i #78 finns, inga fler (${ids.length})`);
+saga(KRAVDA.every(id => ids.includes(id)) && ids.length === KRAVDA.length, `de tolv kamerorna i #78 + STALL-ANKOMST finns, inga fler (${ids.length})`);
 saga(new Set(ids).size === ids.length, "kamera-ID är unika");
 for (const c of k.kameror) {
-  saga(["stallinne", "ridhusinne"].includes(c.scen) && c.lage && c.lage.x !== undefined && c.lage.y !== undefined && c.lage.rikt !== undefined,
+  saga(["gard", "stallinne", "ridhusinne"].includes(c.scen) && c.lage && c.lage.x !== undefined && c.lage.y !== undefined && c.lage.rikt !== undefined,
     `${c.id}: scen och läge (x, y, rikt)`);
   saga(TILLATNA.has(c.granskning && c.granskning.status), `${c.id}: granskning.status ${c.granskning && c.granskning.status} är tillåten`);
   saga(c.granskning.status === "EJ_GRANSKAD" || (c.granskning.av && c.granskning.head),
