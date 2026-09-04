@@ -1090,10 +1090,19 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			end
 			if langsX then
 				-- Från banan är det vita sidostycket det man ser av loppet (ridhus-inne-01):
-				-- det står UTANFÖR loppets sida och täcker den från under stegen upp till
-				-- räcket, som ligger ovanpå skivans överkant — den mörka linjen i fotot.
-				sned("Trappa " .. t.id .. " sidostycke", 1.6, 0.30, Color3.fromRGB(233, 229, 220), Enum.Material.Plaster, -0.10)
-				sned("Trappa " .. t.id .. " handledare", 0.06, 1.13, Color3.fromRGB(138, 106, 68), Enum.Material.Wood, -0.10)
+				-- ett trapets med vågrät underkant i blockets krön och överkanten längs
+				-- räcket 0,9 m över stegen. Byggt som en lutande skiva över stegen plus
+				-- en vit fyllnad per steg ner till blockets krön; räcket ovanpå kanten.
+				local V = Color3.fromRGB(233, 229, 220)
+				sned("Trappa " .. t.id .. " sidostycke", 0.90, 0.45, V, Enum.Material.Plaster, -0.10)
+				local bas = math.min(t.z0, t.z1)
+				for i, st in ipairs(T.steg) do
+					if st.z - bas > 0.02 then
+						BK.box(model, base, "Trappa " .. t.id .. " sidostycke fyllnad " .. i,
+							o.x + st.a0, bas, o.y + sx - 0.125, st.a1 - st.a0, st.z - bas, 0.05, V, Enum.Material.Plaster).CanCollide = false
+					end
+				end
+				sned("Trappa " .. t.id .. " handledare", 0.06, 0.93, Color3.fromRGB(138, 106, 68), Enum.Material.Wood, -0.10)
 			else
 				sned("Trappa " .. t.id .. " handledare", 0.06, 0.95, Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
 			end
