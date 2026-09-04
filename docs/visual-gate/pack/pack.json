@@ -1,7 +1,7 @@
 {
-  "head": "119bc3331ea873db8dc37f3b78e5d0dbf23c2bbb",
+  "head": "5e1ce5f040fb29bab0be048fc4d914e5aaf84a4d",
   "smutsigt": false,
-  "renderad": "2026-09-04T07:41:50.402Z",
+  "renderad": "2026-09-04T08:37:16.913Z",
   "kameror": {
     "STALL-ANKOMST": {
       "id": "STALL-ANKOMST",
@@ -13,7 +13,7 @@
         "y": 131,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 4
+        "bild0": 3
       },
       "kamera": [
         160.1,
@@ -96,7 +96,7 @@
         "y": 66.95,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 13
+        "bild0": 11
       },
       "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
       "referenser": [
@@ -222,7 +222,7 @@
         "y": 62.900000000000006,
         "z": 0,
         "rikt": 2.356194490192345,
-        "bild0": 32
+        "bild0": 31
       },
       "text": "Fotots vinkel (stall-inne-01): från rummets östra del snett mot sydvästra hörnet — soffgruppen vid västväggen, träponnyn, klockan, växten, fotoväggen. Explicit kamera; figuren till vänster om blicklinjen.",
       "referenser": [
@@ -282,7 +282,7 @@
         "y": 65.64999999999999,
         "z": 0,
         "rikt": 0,
-        "bild0": 41
+        "bild0": 42
       },
       "text": "Innanför teorisalens dörr (västväggen), blicken österut genom salen",
       "referenser": [
@@ -310,11 +310,11 @@
         65.65,
         0
       ],
-      "tonade": 0,
+      "tonade": 2,
       "sikt": {
         "dold": false,
         "delvis": false,
-        "tonade": 0,
+        "tonade": 2,
         "skymmande": 0,
         "blockerade": {
           "hoft": false,
@@ -335,7 +335,7 @@
         "y": 60.95,
         "z": 0,
         "rikt": 0,
-        "bild0": 51
+        "bild0": 52
       },
       "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
       "referenser": [
@@ -388,7 +388,7 @@
         "y": 12.8,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 60
+        "bild0": 61
       },
       "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
       "referenser": [
@@ -448,7 +448,7 @@
         "y": 29.549999999999997,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 70
+        "bild0": 71
       },
       "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
       "referenser": [
@@ -508,7 +508,7 @@
         "y": 69.58000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 79
+        "bild0": 80
       },
       "text": "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1). Explicit kamera i hallen — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen.",
       "referenser": [
@@ -579,7 +579,7 @@
         "y": 67.98,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 87
+        "bild0": 90
       },
       "text": "Gången mellan receptionsglaset (x 2,2) och skåpraden i planens skåpremsa (x 4,2–5,7), blicken norrut mot valvfönstret med stövelbänken (= ridhus-klubb-01 fast åt andra hållet)",
       "referenser": [
@@ -649,7 +649,7 @@
         "y": 6.15,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 96
+        "bild0": 98
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -707,7 +707,7 @@
         "y": 57.68000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 107
+        "bild0": 108
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -772,7 +772,7 @@
         "y": 38.915000000000006,
         "z": 0.8,
         "rikt": -1.5707963267948966,
-        "bild0": 116
+        "bild0": 117
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -842,7 +842,7 @@
         "y": 66.28,
         "z": 1.12,
         "rikt": 1.5707963267948966,
-        "bild0": 126
+        "bild0": 127
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
@@ -887,6 +887,279 @@
         15.8,
         66.28,
         1.12
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-RECEPTION": {
+      "id": "RIDHUS-RECEPTION",
+      "namn": "Receptionen från gången",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 3.4,
+        "y": 73.6,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 137
+      },
+      "text": "I skåpgången i ögonhöjd, blicken snett mot receptionens glasade bröstning i nordvästra hörnet — samma relation som ridhus-klubb-02/-15: disken med glasrutorna på ena sidan, skåpraden mitt emot. Explicit kamera; figuren till vänster om blicklinjen.",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-02-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "receptionens dörr: bilden visar en karm i glasväggens ena ände — vilken ände är [antagande]",
+        "receptionens djup och möblering bakom glaset: träskåp, tavlor (ridhus-klubb-02) i DERIVED-lägen"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Receptionens låga bröstning med fyra glasrutor och avställningshyllan mot gången, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot på gångens andra sida, gavelns valvfönster längst bort. Inga toalettboxar i hörnet.",
+      "kamera": [
+        4,
+        1.6,
+        71.6
+      ],
+      "mal": {
+        "x": "1.0",
+        "y": "75.6",
+        "h": "1.0"
+      },
+      "spelare": [
+        3.4,
+        73.6,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-ENTRE-INNE": {
+      "id": "RIDHUS-ENTRE-INNE",
+      "namn": "Huvudentrén inifrån",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 3,
+        "y": 68.7,
+        "z": 0,
+        "rikt": 3.141592653589793,
+        "bild0": 146
+      },
+      "text": "Inne i hallen i ögonhöjd, blicken västerut mot den låsta fasadens entrédörr (dorrvit u 9): dörren ska läsas som en dörr inifrån — vit glasad dubbeldörr med karm och utrymningsskylt (IMG_0169-f05, ridhus-klubb-03). Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/video/ridhus-nyckelrutor/IMG_0169-f05-korridoren-mot-entren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-03-korridordorrarna.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "dörrbladets utseende inifrån följer fasadens dorrvit-tecknare [antagande: samma som utsidan]",
+        "planens tre entrélägen mot fasadens: dokumenterad CONTRADICTION (F02-A), fasaden vinner"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Entrédörren i västväggen rakt fram: vit glasad dubbeldörr med vita karmar och grön utrymningsskylt ovanför, dörrmarkören vid samma dörr; öppen hall runt figuren utan rumslådor.",
+      "kamera": [
+        5.4,
+        1.6,
+        68.6
+      ],
+      "mal": {
+        "x": "0.0",
+        "y": "67.18",
+        "h": "1.1"
+      },
+      "spelare": [
+        3,
+        68.7,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "RIDHUS-LAKTARTRAPPA": {
+      "id": "RIDHUS-LAKTARTRAPPA",
+      "namn": "Trappan vid läktarens norra ände (H)",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": 2.4,
+        "y": 67.4,
+        "z": 0,
+        "rikt": -1.5707963267948966,
+        "bild0": 155
+      },
+      "text": "Från hallens sydvästra hörn i ögonhöjd, blicken sydväst mot läktarens norra ände: trappan längs västväggen från hallgolvet upp mot övre plan (ridhus-inne-39, -11), läktardäckets ände (ridhus-inne-15/-14). Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-39-gangen-bakom-laktaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-11-trappan-till-hinderforradet.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-inne-15-hornet-mot-glasrummen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "trappans bredd, steghöjd och exakta fot: [uppskattning] — planen visar bara symbolen vid läktarens norra ände",
+        "däckets anslutning till hallgolvet: ridhus-inne-39 visar en nivåskillnad vid däckets ände, inte stegen"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "En trappa i mörkt trä med handledare längs västväggen vid läktarens norra ände som når övre plan; läktardäckets ände med bänkraderna; figuren kan gå från hallgolvet upp på däcket och vidare upp.",
+      "kamera": [
+        4.3,
+        1.7,
+        69.9
+      ],
+      "mal": {
+        "x": "1.1",
+        "y": "65.4",
+        "h": "1.6"
+      },
+      "spelare": [
+        2.4,
+        67.4,
+        0
+      ],
+      "tonade": 1,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 1,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-KLUBBDORRAR": {
+      "id": "STALL-KLUBBDORRAR",
+      "namn": "Klubbdelens inre entré från gång A",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 3.9,
+        "y": 56.35,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 163
+      },
+      "text": "I gång A i ögonhöjd, blicken norrut mot den genomgående väggen: inre entrén (x 4,1–5,0) och sadelkammarens dörr (x 7,7–8,8) ska läsas som dörrar — vit karm, mörk smyg, överstycke — inte som slitsar från golv till tak (stall-inne-03, ridhus-klubb-03/-19 för karmarnas utseende). Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-03-sadelkammaren.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/ridhus/ridhus-klubb-19-dorrarna-till-omkladningen.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "dörrbladens färg och beslag i klubbdelen: bara delvis i bild — karmarna vita som i stall-inne-03 [antagande för övriga]"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Den genomgående väggens två dörröppningar (inre entrén rakt fram, sadelkammarens dörr till höger) med vit karm, mörk smyg och överstycke som skiljer dem från väggen; figuren i gången till vänster om inre entrén; ingen etikett behövs för att förstå var dörrarna är.",
+      "kamera": [
+        5.2,
+        1.6,
+        54.45
+      ],
+      "mal": {
+        "x": "4.55",
+        "y": "S.klubbY + 5.2",
+        "h": "1.15"
+      },
+      "spelare": [
+        3.9,
+        56.35,
+        0
       ],
       "tonade": 0,
       "sikt": {
