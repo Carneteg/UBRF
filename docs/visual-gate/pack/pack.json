@@ -1,7 +1,7 @@
 {
-  "head": "432ffcc5b1b7649d3f0d4a6e2e4f0d382128a910",
+  "head": "7a95f0a8cf15b2c17dcf3267739114f27423b205",
   "smutsigt": false,
-  "renderad": "2026-09-04T06:46:40.500Z",
+  "renderad": "2026-09-04T06:58:49.822Z",
   "kameror": {
     "STALL-ANKOMST": {
       "id": "STALL-ANKOMST",
@@ -61,10 +61,10 @@
       "gap": [],
       "ram": "Verandans sadeltak (röd gavelspets, vita vindskivor) på vita stolpar, det vita ribbräcket, den ockragula entrédörren med solfjäderfönster och vit karm rakt fram, ett runt fönster på var sida, lampan över dörren, spiraltrappan och balkongen till vänster. Det är den dörr interaktionen leder in genom (ankaret stall_entre_samma_dorr; innerpunkten ut_n vid samma dörr)",
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS: verandan med sadeltak, vita stolpar/ribbräcke, ockragul dörr, runda fönster, lampa, spiraltrappa/balkong läser som källserien; stall_entre_samma_dorr bevisar samma dörr inne/ute. Dörrdetaljernas förenkling är polish, inte grind."
       },
       "spelare": [
         161.6,
@@ -96,7 +96,7 @@
         "y": 66.95,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 13
+        "bild0": 11
       },
       "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
       "referenser": [
@@ -116,10 +116,10 @@
         "planens vindfångscell (x 3,6–5,5) mot fasadens entré (x 10,5): dokumenterad motsägelse, fasaden vinner; cellen står kvar utan etikett"
       ],
       "granskning": {
-        "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Interiörvyn bevisar inte den exteriöra entrén Tobias rapporterade, och interaktionen ledde till en annan punkt än dörren i bild. Rättat: ut_n ligger nu i fasadens dörr (F02-A a102bb9), exteriörkameran STALL-ANKOMST tillagd, ankaret stall_entre_samma_dorr vaktar. Väntar på ny review."
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "Entré-/interaktionsblockern STÄNGD för F02-A (06:57): innerpunkten ut_n och gårdens markör är samma låsta fasaddörr. 'Remaining door-detail simplification is polish, not a gate blocker.'"
       },
       "ram": "Gavelväggen med fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram, det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång x 3,6–5,5 mot fasadens entré x 10,5, DEFERRED BY EXTERIOR LOCK)",
       "kamera": [
@@ -162,7 +162,7 @@
         "y": 61.550000000000004,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 23
+        "bild0": 21
       },
       "text": "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
       "referenser": [
@@ -182,9 +182,9 @@
       ],
       "granskning": {
         "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Förblir MISMATCH tills F02-B (#76) integrerats — möbler är utanför F02-A. Inget PASS fejkas här."
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "Avsiktligt MISMATCH: rummets saknade visuella identitet är F02-B-möblering (#76), inte ett F02-A-topologifel. Inget PASS fejkas; #80 omprövar när #76 integrerats."
       },
       "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort",
       "kamera": [
@@ -222,7 +222,7 @@
         "y": 65.64999999999999,
         "z": 0,
         "rikt": 0,
-        "bild0": 33
+        "bild0": 31
       },
       "text": "Innanför teorisalens dörr (västväggen), blicken österut genom salen",
       "referenser": [
@@ -277,7 +277,7 @@
         "y": 60.95,
         "z": 0,
         "rikt": 0,
-        "bild0": 43
+        "bild0": 40
       },
       "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
       "referenser": [
@@ -332,7 +332,7 @@
         "y": 12.8,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 54
+        "bild0": 49
       },
       "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
       "referenser": [
@@ -392,7 +392,7 @@
         "y": 29.549999999999997,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 66
+        "bild0": 58
       },
       "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
       "referenser": [
@@ -452,7 +452,7 @@
         "y": 66.98,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 75
+        "bild0": 68
       },
       "text": "Huvudentrén → norrut över entré/reception: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1)",
       "referenser": [
@@ -518,7 +518,7 @@
         "y": 67.98,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 83
+        "bild0": 77
       },
       "text": "Den öppna gången där skåpen står (planens x 4,2–5,7), blicken norrut mot toaletterna",
       "referenser": [
@@ -588,7 +588,7 @@
         "y": 6.15,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 92
+        "bild0": 87
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -646,7 +646,7 @@
         "y": 57.68000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 102
+        "bild0": 97
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -670,10 +670,10 @@
         "Café Krubbans rum bakom glaset byggs inte (REFERENCE GAP)"
       ],
       "granskning": {
-        "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Sidostyckena lästes som två jättelika lutande skivor (bow-tie) som slukade glasbandet. Rättat i F02-A (a102bb9): trapets med vågrät underkant i blockets krön och överkant längs räcket; klockväggen fri; glasbandet synligt. Väntar på ny review."
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS: sidostyckena läser som trappkantsväggar, räckena läsbara, klockväggen fri, glasbandet synligt. Topologin får inte öppnas igen."
       },
       "ram": "C-blocket över norra sargen: bänkraderna, klockväggen mellan de två loppen, vita sidostycken, glasbandet i tre fält, övre gången bakom",
       "kamera": [
@@ -711,7 +711,7 @@
         "y": 38.915000000000006,
         "z": 0.8,
         "rikt": -1.5707963267948966,
-        "bild0": 111
+        "bild0": 107
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -781,7 +781,7 @@
         "y": 66.28,
         "z": 1.12,
         "rikt": 1.5707963267948966,
-        "bild0": 122
+        "bild0": 117
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
@@ -811,10 +811,10 @@
         "övre gångens bredd [uppskattning]"
       ],
       "granskning": {
-        "status": "MISMATCH",
-        "av": "ChatGPT senior visual review 2026-09-04 06:33 (runda 3)",
-        "head": "dd1902f3cc79d5aff8953af54a44d7ef2ff27e0a",
-        "mismatch": "Samma som ARENA-C (bow-tie). Rättat i F02-A (a102bb9): trapetsformade sidostycken, mörkt räcke ovanpå kanten, klockväggen fri. Väntar på ny review."
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual review 2026-09-04 06:57 (runda 4)",
+        "head": "588359194009f0722244830577d48a4201898f28",
+        "mismatch": "PASS (samma bedömning som ARENA-C på a102bb9:s trapetsform)."
       },
       "ram": "Från nedersta raden: raderna uppåt, båda loppen stigande utåt från klockväggen, räcken, glasbandet ovanför, övre gångens golv/räcke; spelets bänkradssteg (gul markör) till vänster som SPELABSTRAKTION",
       "kamera": [
