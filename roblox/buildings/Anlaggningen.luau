@@ -888,6 +888,45 @@ local function byggStallInre(model: Model, base: CFrame)
 			o.y + 0.06, G2.exitB, G2.exitH, 0.06,
 			Color3.fromRGB(30, 122, 60), Enum.Material.Neon).CanCollide = false
 	end
+
+	--[[ Norra gaveln inifrån (klubbgaveln): samma öppningar som den låsta
+		fasaden — entrédörren mitt på gaveln med ett runt fönster på var sida
+		(stall-entre-15). Dörrbladet som en del i väggen (färgen inifrån är
+		[antagande], samma som utsidan), vit karm, solfjäderfönstret som ljus
+		ruta; de runda fönstren som karm + glas (fyrkantig stilisering, samma
+		som fasadens `rund` i BK.window). u räknas från östra hörnet. Planens
+		vindfång och `ut_n` rörs inte — dokumenterad motsägelse
+		(STALLINNE.klubb-noten). Samma tecknare som webben (v3dStall). ]]
+	do
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		local V = Color3.fromRGB(238, 236, 228)
+		for _, op in ipairs((hus and hus.oppningar) or {}) do
+			if op.sida == "N" and op.z0 < 3 and (op.typ == "dorrgul" or op.typ == "rund") then
+				local x0 = o.x + S.bredd - op.u - op.b
+				local zIn = o.y + S.langd
+				if op.typ == "dorrgul" then
+					BK.box(model, base, "Klubbentrén inifrån", x0, 0, zIn - 0.09, op.b, op.h, 0.06,
+						Color3.fromRGB(168, 118, 80), Enum.Material.Wood).CanCollide = false
+					BK.box(model, base, "Klubbentréns karm", x0 - 0.12, op.h, zIn - 0.10,
+						op.b + 0.24, 0.12, 0.07, V, Enum.Material.SmoothPlastic).CanCollide = false
+					for _, sx in ipairs({ x0 - 0.12, x0 + op.b }) do
+						BK.box(model, base, "Klubbentréns karm", sx, 0, zIn - 0.10,
+							0.12, op.h + 0.12, 0.07, V, Enum.Material.SmoothPlastic).CanCollide = false
+					end
+					BK.box(model, base, "Klubbentréns solfjäderfönster", x0 + op.b * 0.13, op.h * 0.64, zIn - 0.13,
+						op.b * 0.74, op.h * 0.30, 0.03, Color3.fromRGB(200, 214, 222), Enum.Material.Glass).CanCollide = false
+				else
+					BK.box(model, base, "Runt fönster inifrån, karm", x0 - 0.08, op.z0 - 0.08, zIn - 0.10,
+						op.b + 0.16, op.h + 0.16, 0.06, V, Enum.Material.SmoothPlastic).CanCollide = false
+					local g = BK.box(model, base, "Runt fönster inifrån, glas", x0, op.z0, zIn - 0.13,
+						op.b, op.h, 0.03, Color3.fromRGB(184, 204, 216), Enum.Material.Glass)
+					g.CanCollide = false
+					g.Transparency = 0.3
+				end
+			end
+		end
+	end
 end
 
 --[[ Ridhuset: banan, sargen med porten, läktaren, glasrummen, domarbåset.
@@ -1038,20 +1077,25 @@ local function byggRidhusInre(model: Model, base: CFrame)
 					Color3.fromRGB(138, 106, 68), Enum.Material.Wood).CanCollide = false
 			end
 			local am, zm = (a0 + a1) / 2, (t.z0 + t.z1) / 2
-			local function sned(namn, h, dz, farg, mat)
+			local function sned(namn, h, dz, farg, mat, ds)
 				local d = BK.box(model, base, namn, 0, 0, 0, 0.06, h, 0.06, farg, mat)
 				d.CanCollide = false
 				if langsX then
 					d.Size = Vector3.new(BK.M * L, BK.M * h, BK.M * 0.05)
-					d.CFrame = base * CFrame.new(BK.M * (o.x + am), BK.M * (zm + dz), BK.M * (o.y + sx)) * CFrame.Angles(0, 0, lut)
+					d.CFrame = base * CFrame.new(BK.M * (o.x + am), BK.M * (zm + dz), BK.M * (o.y + sx + (ds or 0))) * CFrame.Angles(0, 0, lut)
 				else
 					d.Size = Vector3.new(BK.M * 0.06, BK.M * h, BK.M * L)
 					d.CFrame = base * CFrame.new(BK.M * (o.x + sx), BK.M * (zm + dz), BK.M * (o.y + am)) * CFrame.Angles(-lut, 0, 0)
 				end
 			end
-			sned("Trappa " .. t.id .. " handledare", 0.06, 0.95, Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
 			if langsX then
-				sned("Trappa " .. t.id .. " sidostycke", 0.90, 0.45, Color3.fromRGB(233, 229, 220), Enum.Material.Plaster)
+				-- Från banan är det vita sidostycket det man ser av loppet (ridhus-inne-01):
+				-- det står UTANFÖR loppets sida och täcker den från under stegen upp till
+				-- räcket, som ligger ovanpå skivans överkant — den mörka linjen i fotot.
+				sned("Trappa " .. t.id .. " sidostycke", 1.6, 0.30, Color3.fromRGB(233, 229, 220), Enum.Material.Plaster, -0.10)
+				sned("Trappa " .. t.id .. " handledare", 0.06, 1.13, Color3.fromRGB(138, 106, 68), Enum.Material.Wood, -0.10)
+			else
+				sned("Trappa " .. t.id .. " handledare", 0.06, 0.95, Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
 			end
 		end
 	end
