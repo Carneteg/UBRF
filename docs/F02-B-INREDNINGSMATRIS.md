@@ -164,6 +164,26 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 | **Strukturell anmärkning (rapporterad, inte rättad)** | bildens högra sida är en bröstningsvägg med **fyra glaspartier** in mot rummet innanför. F02-A läste `skap_o`:s fyra luckor som gångbara öppningar. Bilden talar för fönster, inte dörrar. Topologin rörs inte här |
 | REFERENCE GAP | omklädningsrummen (röda/svarta, gräddvita, gröna skåp; `ridhus-klubb-16/-18/-20/-21`), toaletterna, duschen med grönt draperi: rummen är fotograferade men **inte placerade** (Bild 2–5 saknas i repot, `F02-INTERIOR-MATRIS.md`). Inredning där byggs inte. Entréns vindfång (x 0–2,2 vid dörren) har inget belagt objekt kvar |
 
+### Ridhuset — receptionen (PO 2026-09-04 07:54)
+
+| | |
+|---|---|
+| Källor | `ridhus-klubb-02` (genom glaset), `-01`, `-15` |
+| Bilden bevisar | låga träskåp/hyllor längs bakväggen, inramade tavlor ovanför, en vit stol med rött tyg innanför disken, dagsljus i rummets bortre ände |
+| Ändrat | `reception_skap`, `reception_tavlor`, `reception_stol` (`VERIFIED` att de finns; `DERIVED` mot bakväggen). Disken och hyllan mot gången är F02-A:s GLASS (`hylla`), karmposterna delar glaset i fyra rutor |
+| REFERENCE GAP | lampan, datorn och pärmarna på disken; rummets övriga möblering |
+
+### Dörrläsbarhet (PO 2026-09-04 07:54, blocker 4)
+
+Alla öppningar i klubbdelens och entrédelens väggar ritas nu med **överstycke**
+(vägg ovanför dörrhöjden 2,1 m), **vit karm** med mörk smyg och tröskel — på
+webben i `v3dVaggarOchRum`, i Roblox i `byggVaggarOchRum` (`Dörrkarm …`,
+`Överstycke …`, `Genomsiktlig`). Fasadens dörrar ritas på insidan av väggen
+(`v3dDorrarInifran` / `Fasaddörr inifrån …`) med grön utrymningsskylt. Dörrblad
+i innerväggarna byggs inte (öppningarna är passager i datan); karmarnas
+utseende ur `ridhus-klubb-03/-19`, `stall-inne-03`. Etiketterna ENTRÉ och
+RECEPTION är borta.
+
 ### Ridhuset — banan, C-blocket, domarbåset, caféet
 
 | zon | läge |

@@ -401,6 +401,17 @@ Vyer.reviewkameror = {
 		figur = { x = So.x + 4.0, y = So.y + rum("uppehallsrum").y + 2.95, z = 0 },
 		krav = "Två svarta soffor i vinkel kring låga bord, rosa träponny med sadel, klocka, växt, fotovägg på pärlsponten, valvfönstret i västväggen. Gruppens läge mot fönstret är ASSUMPTION (F02-B).",
 	},
+	--[[ Review 2026-09-04 07:54 (Tobias): dörrläsbarhet — explicit kamera i
+		klubbdelens lobby mot teorisalens och sadelkammarens dörrar. ]]
+	{
+		id = "STALL-KLUBBDORRAR", grupp = VG,
+		text = "Klubbdelens inre entré från gång A — den genomgående väggens dörrar (inre entrén, sadelkammarens dörr)",
+		fran = { x = So.x + 5.2, y = So.y + S.klubbY + 1.6, h = 1.6 },
+		mot = { x = So.x + 4.55, y = So.y + S.klubbY + 5.2 },
+		aim = 1.15,
+		figur = { x = So.x + 3.9, y = So.y + S.klubbY + 3.5, z = 0 },
+		krav = "Den genomgående väggens två dörröppningar med vit karm, mörk smyg och överstycke som skiljer dem från väggen; ingen etikett behövs för att förstå var dörrarna är.",
+	},
 	bakom(VG, "STALL-TEORISAL", "Teorisalen innanför dörren i västväggen, österut",
 		S, So.x, So.y, rum("teorisal").x + 1.3, rum("teorisal").y + 1.3, 0, 0,
 		"Salens tre väggar med CanonId; dörröppningen i västväggen. Inredning ur stall-inne-04 (F02-B): bordsblock med vita stolar, whiteboards, skåp med mikro, planscher, lysrör."),
@@ -434,6 +445,35 @@ Vyer.reviewkameror = {
 		aim = 1.1,
 		figur = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] - 0.2, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] + 2.4, z = 0 },
 		krav = "Öppen hall utan rumslådor, ENTRÉ-plattan, receptionens glas (GLASS) till höger, toaletterna i bortre hörnet; skåpraden (F02-B) bortom glaset.",
+	},
+	--[[ Review 2026-09-04 07:54 (Tobias): receptionen, entrén inifrån och
+		läktartrappan — explicita kameror (samma lägen som kameror.json). ]]
+	{
+		id = "RIDHUS-RECEPTION", grupp = VG,
+		text = "Receptionen från skåpgången — glasad bröstning i nordvästra hörnet, skåpraden mitt emot (ridhus-klubb-02/-15)",
+		fran = { x = Ro.x + 4.0, y = Ro.y + 71.6, h = 1.6 },
+		mot = { x = Ro.x + 1.0, y = Ro.y + 75.6 },
+		aim = 1.0,
+		figur = { x = Ro.x + 3.4, y = Ro.y + 73.6, z = 0 },
+		krav = "Receptionens låga bröstning med fyra glasrutor och hylla mot gången, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot, gavelns valvfönster längst bort. Inga toalettboxar i hörnet.",
+	},
+	{
+		id = "RIDHUS-ENTRE-INNE", grupp = VG,
+		text = "Huvudentrén inifrån — västerut mot fasadens entrédörr (dorrvit u 9) från hallen",
+		fran = { x = Ro.x + 5.4, y = Ro.y + 68.6, h = 1.6 },
+		mot = { x = Ro.x + 0.0, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] },
+		aim = 1.1,
+		figur = { x = Ro.x + 3.0, y = Ro.y + 68.7, z = 0 },
+		krav = "Entrédörren i västväggen rakt fram: vit glasad dubbeldörr med vita karmar och grön utrymningsskylt ovanför, dörrmarkören vid samma dörr; öppen hall runt figuren.",
+	},
+	{
+		id = "RIDHUS-LAKTARTRAPPA", grupp = VG,
+		text = "Trappan vid läktarens norra ände (H) — från hallens sydvästra hörn mot västväggen (ridhus-inne-39, ridhus-klubb-11)",
+		fran = { x = Ro.x + 4.3, y = Ro.y + 69.9, h = 1.7 },
+		mot = { x = Ro.x + 1.1, y = Ro.y + 65.4 },
+		aim = 1.6,
+		figur = { x = Ro.x + 2.4, y = Ro.y + 67.4, z = 0 },
+		krav = "En trappa i mörkt trä med handledare längs västväggen vid läktarens norra ände som når övre plan; läktardäckets ände; figuren kan gå från hallgolvet upp på däcket och vidare upp.",
 	},
 	bakom(VG, "RIDHUS-SKAPKORRIDOR", "Gången mellan receptionsglaset och skåpraden, norrut mot valvfönstret",
 		R, Ro.x, Ro.y, 3.2, R.entrehall.y0 + 2.3, 0, math.pi / 2,

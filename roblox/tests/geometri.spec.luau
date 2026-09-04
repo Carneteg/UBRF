@@ -747,8 +747,31 @@ do
 	local cv, co = trappor.c_trappa_v, trappor.c_trappa_o
 	local K = R.kortanda
 	check("båda C-trapporna finns i datan som STAIR-primitiver", cv ~= nil and co ~= nil)
-	check("fidelity-datan innehåller BARA de två fotobelagda C-trapporna (inga bänkradssteg)",
-		#(R.trappor or {}) == 2 and trappor.bankrad_upp == nil, #(R.trappor or {}) .. " trappor")
+	check("fidelity-datan innehåller de två fotobelagda C-trapporna och läktartrappan vid H (inga bänkradssteg)",
+		#(R.trappor or {}) == 3 and trappor.bankrad_upp == nil and trappor.laktar_trappa_h ~= nil, #(R.trappor or {}) .. " trappor")
+	--[[ Läktartrappan vid H (PO 2026-09-04 07:54, blocker 3): längs västväggen i
+		läktarens västra meter, foten på översta radens nivå, toppen på
+		caféplanet vid läktarens norra ände; landgången (ovreGangV) därifrån
+		till övre gången. Bredd/längd [uppskattning] står i `osakert`. ]]
+	do
+		local lt, L, G2 = trappor.laktar_trappa_h, R.laktare, R.ovreGang
+		local topp = L and L.rader and (L.dackZ + L.rader.antal * L.rader.stegH) or -1
+		check("läktartrappan ligger i läktarens västra meter vid dess norra ände, stiger norrut från översta raden till caféplanet",
+			lt ~= nil and lt.axel == "y" and lt.stiger == "N" and math.abs(lt.x0 - L.x0) < 0.01 and lt.x1 - lt.x0 <= 1.2
+				and math.abs(lt.y1 - L.y1) < 0.01 and lt.y0 > L.y0 and math.abs(lt.z0 - topp) < 0.01 and math.abs(lt.z1 - R.cafe.z0) < 0.01
+				and type(lt.osakert) == "string",
+			lt and string.format("x %.1f–%.1f y %.1f–%.1f z %.2f→%.2f", lt.x0, lt.x1, lt.y0, lt.y1, lt.z0, lt.z1) or "saknas")
+		local V = R.ovreGangV
+		check("övre gångens västarm förbinder läktartrappans topp med övre gången på caféplanet",
+			V ~= nil and G2 ~= nil and math.abs(V.y0 - L.y1) < 0.01 and math.abs(V.y1 - G2.y0) < 0.01 and math.abs(V.z - G2.z) < 0.01
+				and math.abs(V.x0 - L.x0) < 0.01,
+			V and string.format("y %.1f–%.1f z %.2f", V.y0, V.y1, V.z) or "saknas")
+		local ls = UBRFKomplex.spelabstraktioner and UBRFKomplex.spelabstraktioner.ridhus and UBRFKomplex.spelabstraktioner.ridhus.laktarSteg
+		check("spelets läktarsteg (hallgolv → däck) är SPELABSTRAKTION utan kanonprovenance, vid däckets norra ände",
+			ls ~= nil and ls.klass == "SPELABSTRAKTION" and ls.fidelity == "REFERENCE GAP" and ls.canon_id == nil and ls.source_id == nil
+				and ls.confidence == nil and math.abs(ls.y0 - L.y1) < 0.01 and ls.z0 == 0 and math.abs(ls.z1 - L.dackZ) < 0.01,
+			ls and string.format("x %.1f–%.1f y %.1f–%.1f", ls.x0, ls.x1, ls.y0, ls.y1) or "saknas")
+	end
 	for id, t in pairs(trappor) do
 		check(string.format("trappan %s bär confidence VERIFIED_PLAN_OR_PHOTO och en FOTO-källa (ingen PO-verifierad fidelity utan bild)", id),
 			t.confidence == "VERIFIED_PLAN_OR_PHOTO" and type(t.source_id) == "string" and t.source_id:find("FOTO:", 1, true) ~= nil
@@ -818,8 +841,8 @@ do
 	if E then
 		local namn = {}
 		for _, r in ipairs(E.rum) do namn[r.id] = r end
-		check("entrén, receptionen, de två toaletterna och den kryssade rutan (schakt) finns som regioner",
-			namn.entre and namn.reception and namn.wc_n1 and namn.wc_n2 and namn.schakt)
+		check("entrén, receptionen och den kryssade rutan (schakt) finns som regioner; toaletterna INTE (PO 2026-09-04 07:54)",
+			namn.entre and namn.reception and namn.schakt and not namn.wc_n1 and not namn.wc_n2)
 		--[[ Blocker 1: rutan är plan-belagd som fotavtryck, funktionen är
 			okänd. Datan får inte kalla den hiss och inte sätta någon
 			spelarsynlig etikett — regeln "hitta inte på rumsidentitet". ]]
@@ -1229,11 +1252,11 @@ do
 		check("de belagda objekten finns i listan", #saknas == 0, "saknas: " .. table.concat(saknas, ", "))
 		local forbjudna = {}
 		for id in pairs(ids) do
-			if string.find(id, "pentry", 1, true) or string.find(id, "cafe_", 1, true) or string.find(id, "reception", 1, true) then
+			if string.find(id, "pentry", 1, true) or string.find(id, "cafe_", 1, true) then
 				table.insert(forbjudna, id)
 			end
 		end
-		check("rum utan placerbart belägg har ingen inredning (pentry, café, reception)", #forbjudna == 0,
+		check("rum utan placerbart belägg har ingen inredning (pentry, café)", #forbjudna == 0,
 			table.concat(forbjudna, ", "))
 	end
 end

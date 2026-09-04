@@ -1966,36 +1966,37 @@ const RIDHUSINNE = {
   entrehall:{
     y0:RIDHUS_LANGD-11.5,
     vaggar:[
-      /* De två smala toaletterna i nordvästra hörnet, N 0,3–1,1 och
-         1,6–2,4 innanför västväggen. Planen bär dem som en verklig liten
-         sluten volym (tre sidor mörka streck i förstoringen), och Tobias:
-         "två toaletter till vänster om entrén". Dörrar olästa → slutna.
-         Vilket av fotorummen -04/-05/-17 som är vilket: REFERENCE GAP. */
-      {id:"wc_n_s",     typ:"tvar",  y:74.8, x0:0, x1:1.7,
-       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
-       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
-       confidence:"VERIFIED_PLAN_OR_PHOTO"},
-      {id:"wc_n_mellan",typ:"tvar",  y:75.8, x0:0, x1:1.7,
-       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
-       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
-       confidence:"VERIFIED_PLAN_OR_PHOTO"},
-      {id:"wc_n_o",     typ:"langs", x:1.7, y0:74.8, y1:76.9,
-       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
-       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
-       confidence:"VERIFIED_PLAN_OR_PHOTO"},
-      /* RECEPTIONEN är glasad (PO-2026-09-03-RIDHUS-GLASS-01): en låg
-         bröstning med fyra fasta glaspartier och en avställningshylla mot
-         gången, `ridhus-klubb-01`, `-02`, `-15`. Den enda plansträcka i
-         entrédelen som mäts som sammanhängande linje utöver toaletterna
-         och schaktet är x 2,2, N 4,6–8,3 (3,7 m ≈ fyra fönster) — och
-         Tobias Bild 2 (reception) hör enligt matrisen till just remsan
-         x 2,2–4,2. Glaset läggs där, som GLASS, aldrig som opak vägg.
-         Exakt väderstreck och rummets övriga avgränsning: REFERENCE GAP
-         (kanonens GEOMETRY_REFERENCE_GAP) — inga ersättningsväggar. */
-      {id:"reception_glas", typ:"langs", x:2.2, y0:68.88, y1:72.58,
-       primitiv:"GLASS", canon_id:"ridhus_reception_glass",
-       source_id:"PO-2026-09-03-RIDHUS-GLASS-01;FOTO:ridhus-klubb-01,ridhus-klubb-02,ridhus-klubb-15;PLAN:ridhus-entreplan-utrymning.jpg#x2.2-N4.6-8.3",
-       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      /* RECEPTIONEN — Product Owner 2026-09-04 07:54 (review på #76,
+         blocker 1): "two toilets where the reception should be". Receptionen
+         ligger i NORDVÄSTRA hörnet, där planens två små celler (x 0–1,7,
+         N 0,3–2,4) tidigare lästes som toaletter. Fotona ridhus-klubb-01/
+         -02/-15: låg bröstning med fyra fasta glasrutor och en hylla mot
+         skåpgången, rummet bakom med träskåp, tavlor och en stol, och i
+         rummets bortre ände dagsljus — gavelns låga valvfönster (x 0,4).
+         Utsträckning: planens hörnceller plus cellen söder om dem (sydvägg
+         vid N ≈ 4,5 i beskärningen 2026-09-04) → x 0–2,2, y 72,6–77,18.
+         Glaset ligger på x 2,2 (F02-A:s glaslinje; planens cellvägg på
+         x 1,7 — 0,5 m är [antagande]), 3,5 m ≈ fyra rutor à 0,8 + karmar,
+         med dörren i glasväggens södra ände [antagande: -02 visar en karm i
+         glasväggens ena ände]. Planens mellanvägg N 1,1–1,6: CONTRADICTION
+         mot fotots sammanhängande rum — byggs inte. Planens 3,7 m-linje
+         x 2,2, N 4,6–8,3 (F02-A:s förra glasläge) är därmed en annan vägg —
+         REFERENCE GAP, återkallad ur datan (ingaVaggar). Toaletterna
+         (-04/-05/-17): var de ligger är REFERENCE GAP; inga toalettvolymer
+         i entrédelen. */
+      {id:"reception_s",   typ:"tvar",  y:72.6, x0:0, x1:2.2,
+       primitiv:"WALL", canon_id:"ridhus_reception_room",
+       source_id:"PO-2026-09-04-RECEPTION-01;PLAN:ridhus-entreplan-utrymning.jpg#nv-celler-sydvagg-N4.5;FOTO:ridhus-klubb-01,ridhus-klubb-02,ridhus-klubb-15",
+       confidence:"PRODUCT_OWNER_VERIFIED"},
+      {id:"reception_dorrvagg", typ:"langs", x:2.2, y0:72.6, y1:73.5,
+       oppningar:[{id:"reception_dorr", y0:72.62, y1:73.48, h:2.1}],
+       primitiv:"WALL", canon_id:"ridhus_reception_room",
+       source_id:"PO-2026-09-04-RECEPTION-01;FOTO:ridhus-klubb-02#karm-i-glasvaggens-ande",
+       confidence:"PRODUCT_OWNER_VERIFIED"},
+      {id:"reception_glas", typ:"langs", x:2.2, y0:73.5, y1:77.0,
+       primitiv:"GLASS", brostning:0.95, hylla:0.32, canon_id:"ridhus_reception_glass",
+       source_id:"PO-2026-09-03-RIDHUS-GLASS-01;PO-2026-09-04-RECEPTION-01;FOTO:ridhus-klubb-01,ridhus-klubb-02,ridhus-klubb-15;PLAN:ridhus-entreplan-utrymning.jpg#nv-celler-x1.7-2.2",
+       confidence:"PRODUCT_OWNER_VERIFIED"},
       /* ÅTERKALLAT (docs/F02-RIDHUS-ENTRE-AUDIT.md § 3), byggs inte:
          korridor_o (x 2,2 N 0,3–13: planen bär bara 3,7 m av 13; fotona
          visar EN öppen gång), skap_v/skap_o (x 4,2/5,7: inga
@@ -2016,37 +2017,37 @@ const RIDHUSINNE = {
        source_id:"PO-2026-09-03-RIDHUS-OPEN-01;PLAN:ridhus-entreplan-utrymning.jpg",
        rekt:[
          {x:0,    y:65.68, w:25.0, h:2.47},   // södra bandet, y 65,68–68,15
-         {x:0,    y:68.15, w:2.2,  h:6.65},   // längs västväggen upp till toaletterna
-         {x:4.2,  y:68.15, w:1.55, h:1.8},    // mellan receptionen och schaktet
+         {x:0,    y:68.15, w:4.2,  h:4.45},   // västra bandet + skåpgången fram till receptionens sydvägg
+         {x:4.2,  y:68.15, w:1.55, h:1.8},    // skåpremsan mellan gången och schaktet
          {x:7.6,  y:68.15, w:17.4, h:1.8},    // öster om schaktet
-         {x:4.2,  y:69.95, w:20.8, h:2.65},   // norr om schaktet, öster om receptionen
-         {x:0,    y:72.6,  w:25.0, h:2.2},    // hela bredden söder om toaletterna
-         {x:1.7,  y:74.8,  w:23.3, h:2.38},   // norra bandet öster om toaletterna
+         {x:4.2,  y:69.95, w:20.8, h:2.65},   // norr om schaktet
+         {x:2.2,  y:72.6,  w:22.8, h:4.58},   // hela bredden öster om receptionen upp till gaveln
        ]},
     ],
     ingaVaggar:[
       {id:"ridhus_open_hall_no_room_boxes", typ:"NO_WALL_ZONE",
        tacker:"ridhus_open_entrance_hall",
        canon_id:"ridhus_open_hall_no_room_boxes",
-       undantag:["ridhus_reception_glass","ridhus_wc_n_enclosure"],
+       undantag:["ridhus_reception_glass","ridhus_reception_room"],
        aterkallat:["korridor_o","skap_v","skap_o","cell_1","cell_2","cell_3","cell_4",
                    "hall_n_v","hall_n_o","hall_nv_s","hall_mitt","hall_no","hall_no_s",
-                   "ostkorridor_v"]},
+                   "ostkorridor_v",
+                   /* 2026-09-04 07:54: toalettfunktionen i NV-hörnet och glaslinjen
+                      x 2,2 N 4,6–8,3 — receptionen ligger i hörnet (PO). */
+                   "wc_n_s","wc_n_mellan","wc_n_o","reception_glas@x2.2-N4.6-8.3"]},
     ],
     rum:[
       /* Regioner med namn är PASSIVA (kanonen § 3): de skapar ingen
          geometri. `stangt` bygger en volym bara där väggarna ovan redan
          belägger en — toaletterna och schaktet. */
-      {id:"entre",     rekt:{x:0,   y:66.18, w:2.2, h:2.0}, label:"ENTRÉ"},
-      {id:"reception", rekt:{x:2.2, y:68.88, w:2.0, h:3.7}, label:"RECEPTION"},
-      {id:"wc_n1",     rekt:{x:0,   y:75.8,  w:1.7, h:1.1}, label:"WC", stangt:true,
-       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
-       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
-       confidence:"VERIFIED_PLAN_OR_PHOTO"},
-      {id:"wc_n2",     rekt:{x:0,   y:74.8,  w:1.7, h:1.0}, label:"WC", stangt:true,
-       primitiv:"WALL", canon_id:"ridhus_wc_n_enclosure",
-       source_id:"PLAN:ridhus-entreplan-utrymning.jpg#nv-toalettrum;PO:two-toilets-left-of-entrance",
-       confidence:"VERIFIED_PLAN_OR_PHOTO"},
+      /* Etiketterna ENTRÉ/RECEPTION är borta (PO 2026-09-04 07:54: "do not
+         solve this with floating labels") — entrén läses på dörren inifrån,
+         receptionen på glaset och disken. Regionerna är kvar, passiva. */
+      {id:"entre",     rekt:{x:0,   y:66.18, w:2.2, h:2.0}, label:""},
+      {id:"reception", rekt:{x:0,   y:72.6,  w:2.2, h:4.58}, label:"",
+       canon_id:"ridhus_reception_room",
+       source_id:"PO-2026-09-04-RECEPTION-01;FOTO:ridhus-klubb-01,ridhus-klubb-02,ridhus-klubb-15",
+       confidence:"PRODUCT_OWNER_VERIFIED"},
       /* Den kryssade rutan x 5,75–7,6, N 7,3–9,0: planens tydligaste
          symbol i entrédelen (heldraget kryss i en box, mätt om 2026-09-03
          och oberoende i auditen: x 5,58–7,42, N 7,15–9,04). Fotavtrycket
@@ -2211,6 +2212,15 @@ const SPELABSTRAKTIONER = {
     bankradSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"x", stiger:"E", stegMax:0.19,
                  klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
                  motiv:"spelets väg från hallgolvet upp på bänkraderna; inget foto visar stegen; läge och form valda"},
+    /* `laktarSteg`: spelets steg från entréhallens golv upp på läktardäcket
+       vid däckets norra ände (review 2026-09-04 07:54, blocker 3). Den
+       källbelagda trappan där (`laktar_trappa_h`) går från däcket UPP till
+       övre plan; att däcket möter hallgolvet med en nivåskillnad syns i
+       ridhus-inne-39, men inte hur — därför spelabstraktion, inte STAIR.
+       Läget härleds ur läktaren. */
+    laktarSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
+                klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
+                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda"},
   },
 };
 
@@ -2308,6 +2318,40 @@ const SPELABSTRAKTIONER = {
      bs.x0=K.x0-1.6; bs.x1=K.x0; bs.y0=mS?bank:bank-K.stegD; bs.y1=mS?bank+K.stegD:bank;
      bs.z0=0; bs.z1=SO+K.stegH; bs.axel="x"; bs.stiger="E";}
     if(R.ovreGang){ const G=R.ovreGang; G.x1=R.bredd-0.6; G.y0=mS?vagg:vagg-G.bredd; G.y1=G.y0+G.bredd; G.z=R.cafe.z0; }
+    /* LÄKTARTRAPPAN VID H — Product Owner 2026-09-04 07:54 (review på #76,
+       blocker 3: "stair to the spectator area is missing"). Källorna:
+       `ridhus-inne-39` (från läktardäcket norrut: däcket löper fram till en
+       trappa i mörkt trä som stiger norrut längs västväggen upp till de
+       glasade rummens plan), `ridhus-klubb-11` (från toppen nedåt: raderna
+       till vänster = öster, stegen i furu), `ridhus-inne-15/-14/-20` (från
+       banan: den vita snedställda sidan vid H-hörnet upp till glasrummet),
+       `ridhus-klubb-10` (övre gången löper fram till trappan ner) och
+       planens trappsymbol vid läktarens norra ände i västra bandet. Loppet
+       ligger i läktarens västra meter (översta radens plats), foten på
+       översta radens nivå, toppen på caféplanet vid läktarens norra ände;
+       därifrån en landgång på övre plan (`ovreGangV`) norrut till övre
+       gången (-10, -39). Bredd 1,0 m och loppets längd är [uppskattning]
+       (0,19 m steg, 0,26 m plansteg); allt annat är relation ur bild + plan. */
+    {const L=R.laktare;
+     if(L&&L.rader&&R.ovreGang&&L.y1>L.y0){
+       const G=R.ovreGang, topp=L.dackZ+L.rader.antal*L.rader.stegH, bredd=1.0;
+       const lopp=Math.ceil((R.cafe.z0-topp)/0.19)*0.26;
+       R.trappor.push({id:"laktar_trappa_h", primitiv:"STAIR", canon_id:"ridhus_laktar_stair_h",
+         axel:"y", x0:L.x0, x1:L.x0+bredd, y0:L.y1-lopp, y1:L.y1, z0:topp, z1:R.cafe.z0,
+         stiger:"N", stegMax:0.19,
+         osakert:"bredd 1,0 m och loppets längd [uppskattning]; foten på översta radens nivå (ridhus-inne-39)",
+         source_id:"PO-2026-09-04-LAKTARTRAPPA-01;FOTO:ridhus-inne-39,ridhus-inne-15,ridhus-inne-14,ridhus-inne-20,ridhus-klubb-11,ridhus-klubb-10;PLAN:ridhus-entreplan-utrymning.jpg#trappsymbol-laktarens-norra-ande",
+         confidence:"VERIFIED_PLAN_OR_PHOTO"});
+       R.ovreGangV={x0:L.x0, x1:L.x0+bredd, y0:L.y1, y1:G.y0, z:G.z, bredd,
+         canon_id:"ridhus_upper_walkway_west", primitiv:"OPEN_AREA",
+         source_id:"FOTO:ridhus-klubb-10,ridhus-inne-39", confidence:"VERIFIED_PLAN_OR_PHOTO"};
+       /* Spelets steg från hallgolvet upp på däcket vid läktarens norra
+          ände — SPELABSTRAKTION (se SPELABSTRAKTIONER.ridhus.laktarSteg):
+          -39 visar en nivåskillnad vid däckets ände, inte stegen. */
+       const ls=SPELABSTRAKTIONER.ridhus.laktarSteg;
+       ls.x0=L.x0+bredd+0.2; ls.x1=L.x0+L.dackDjup; ls.y0=L.y1; ls.y1=L.y1+1.2;
+       ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
+     }}
   }
   /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */
   for(const i of R.info||[]){

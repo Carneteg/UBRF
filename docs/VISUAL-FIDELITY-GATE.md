@@ -43,6 +43,10 @@ exteriöra `STALL-ANKOMST`, samma ID på webb och Roblox:
 | `STALL-ENTRE` | Stallhuset entré inifrån |
 | `STALL-UPPEHALL` | Uppehållsrum |
 | `STALL-UPPEHALL-SOFFA` | Uppehållsrummets soffhörna i fotots vinkel (stall-inne-01); explicit kamera, tillkom med F02-B (#76) |
+| `STALL-KLUBBDORRAR` | Klubbdelens inre entré från gång A — dörrläsbarhet (review 2026-09-04 07:54 blocker 4); explicit kamera |
+| `RIDHUS-RECEPTION` | Receptionen från skåpgången — glasdisken i NV-hörnet mot skåpraden (blocker 1); explicit kamera |
+| `RIDHUS-ENTRE-INNE` | Huvudentrén inifrån — fasadens dörr ritad på väggens insida (blocker 2); explicit kamera |
+| `RIDHUS-LAKTARTRAPPA` | Läktartrappan vid H från hallens sydvästra hörn (blocker 3); explicit kamera |
 | `STALL-TEORISAL` | Teorisal |
 | `STALL-SADELKAMMARE` | Sadelkammare |
 | `STALL-GANG-A` | Stallgång A |

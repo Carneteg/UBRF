@@ -847,8 +847,15 @@ do
 	local K = R2.kortanda
 	local tr = {}
 	for _, t in ipairs(R2.trappor or {}) do tr[t.id] = t end
-	check("båda C-trapporna finns i den byggda fidelity-datan, och inga bänkradssteg gör det",
-		tr.bankrad_upp == nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil and #(R2.trappor or {}) == 2)
+	check("båda C-trapporna och läktartrappan vid H finns i den byggda fidelity-datan, och inga bänkradssteg gör det",
+		tr.bankrad_upp == nil and tr.c_trappa_v ~= nil and tr.c_trappa_o ~= nil and tr.laktar_trappa_h ~= nil and #(R2.trappor or {}) == 3)
+	check("läktartrappan vid H byggdes som klossar med sidostycke och handledare, och landgången på övre plan med räcke",
+		raknaNamn("Trappa laktar_trappa_h steg ") >= 8 and raknaNamn("Trappa laktar_trappa_h sidostycke") >= 1
+			and raknaNamn("Trappa laktar_trappa_h handledare") >= 1 and raknaExakt("Övre gångens västarm golv") == 1
+			and raknaExakt("Övre gångens västarm räcke") == 1,
+		raknaNamn("Trappa laktar_trappa_h steg ") .. " steg")
+	check("spelets läktarsteg byggdes märkta SPELABSTRAKTION med gul markör (hallgolv → däck)",
+		raknaNamn("Spelabstraktion laktarsteg steg ") >= 3 and raknaExakt("Spelabstraktion laktarsteg") == 1)
 	for _, d in ipairs(delar) do
 		if d.Name:find("Trappa ", 1, true) == 1 and d:GetAttribute("Primitiv") == "STAIR" then
 			check("fidelity-trappsteget " .. d.Name .. " bär inte SPELABSTRAKTION-märkning",
@@ -948,8 +955,8 @@ do
 			check(string.format("entréväggen %s byggdes i planens bitar", v.id),
 				byggda == vantat, string.format("%d byggda mot %d i datan", byggda, vantat))
 		end
-		check("toaletterna och schaktet byggdes som slutna volymer",
-			raknaExakt("Slutet rum wc_n1") == 1 and raknaExakt("Slutet rum wc_n2") == 1
+		check("schaktet byggdes som sluten volym; toaletterna INTE (PO 2026-09-04 07:54: receptionen ligger där)",
+			raknaExakt("Slutet rum wc_n1") == 0 and raknaExakt("Slutet rum wc_n2") == 0
 				and raknaExakt("Slutet rum schakt") == 1)
 		--[[ Blocker 1: den kryssade rutan får inte byggas som "hiss" och får
 			ingen etikettplatta — funktionen är okänd. ]]
@@ -1022,8 +1029,8 @@ do
 			end
 			return n
 		end
-		check("bara entrén och receptionen har etikettplattor i entrédelen (slutna volymer får ingen platta)",
-			plattorIEntre("ENTRÉ") == 1 and plattorIEntre("RECEPTION") == 1
+		check("inga etikettplattor i entrédelen (PO 2026-09-04 07:54: entrén läses på dörren, receptionen på glaset)",
+			plattorIEntre("ENTRÉ") == 0 and plattorIEntre("RECEPTION") == 0
 				and plattorIEntre("SKÅPKORRIDOREN") == 0,
 			string.format("ENTRÉ %d, RECEPTION %d, WC %d, SKÅPKORRIDOREN %d",
 				plattorIEntre("ENTRÉ"), plattorIEntre("RECEPTION"), plattorIEntre("WC"), plattorIEntre("SKÅPKORRIDOREN")))
@@ -1045,7 +1052,7 @@ do
 		local dx, dy = dorr and dorr.pos[1] or 1.6, dorr and dorr.pos[2] or 67.18
 		local rutt = {
 			-- main_entrance → open_entrance_hall
-			{ dx, dy }, { 1.1, dy + 1.5 }, { 1.1, 70.5 }, { 1.1, 72.0 }, { 3.0, 73.5 }, { 5.0, 73.5 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
+			{ dx, dy }, { 2.2, dy + 1.3 }, { 2.8, 70.5 }, { 2.8, 71.4 }, { 3.3, 73.5 }, { 5.0, 73.5 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
 			-- open_entrance_hall → arena_access
 			{ dx, dy }, { px, dy - 0.6 }, { px, sp.y + 0.4 },
 			-- arena_access → physical_riding_area

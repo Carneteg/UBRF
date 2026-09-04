@@ -105,7 +105,7 @@ local function prov(v, ignoreraGenomsiktlig)
 end
 
 print("\nSiktgrinden — reviewkamerorna i Vyer.luau")
-check("Vyer har reviewkamerorna", Vyer.reviewkameror ~= nil and #Vyer.reviewkameror == 14,
+check("Vyer har reviewkamerorna", Vyer.reviewkameror ~= nil and #Vyer.reviewkameror == 18,
 	Vyer.reviewkameror and (#Vyer.reviewkameror .. " st") or "saknas")
 
 local negDolda = 0

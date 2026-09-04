@@ -74,14 +74,14 @@ const px = (info.sargport.x0 + info.sargport.x1) / 2;
 const resultat = [];
 function prova(namn, ok, detalj) { resultat.push({ namn, ok, detalj }); console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); }
 
-/* 1. main_entrance → open_entrance_hall: från dörren norrut längs västväggen
-   genom hallen ända fram till toaletternas verifierade volym (N 2,4 = y 74,8;
-   spelaren stannar vid 74,8 − 0,08 − 0,35 ≈ 74,37). 7 m utan någon vägg. */
-let p = await ga("ridhusinne", dx, dy, "N", q => q.y > 74.0, 20000);
-prova("huvudentrén → norrut genom den öppna hallen fram till toaletterna (7 m utan vägg)", p.y > 74.0, `från y ${dy} till ${p.y} (WC-väggen vid 74,8)`);
-/* 2. tvärs över hallen österut, norr om receptionens glas och söder om toaletterna. */
-p = await ga("ridhusinne", 1.0, 73.5, "O", q => q.x > 12.0, 24000);
-prova("tvärs över hallen österut (11 m utan rumslådor)", p.x > 12.0, `från x 1,0 till ${p.x}`);
+/* 1. main_entrance → open_entrance_hall: från dörren österut in i skåpgången
+   och norrut genom hallen ända fram till gaveln (receptionen stänger västra
+   bandets norra del sedan 2026-09-04 07:54; gången x 2,2–4,2 är fri). */
+let p = await ga("ridhusinne", 2.8, dy + 1.4, "N", q => q.y > 76.0, 20000);
+prova("skåpgången norrut genom den öppna hallen fram till gaveln (8 m utan vägg)", p.y > 76.0, `från y ${(dy + 1.4).toFixed(2)} till ${p.y} (gaveln vid 77,18)`);
+/* 2. tvärs över hallen österut, norr om receptionens sydvägg. */
+p = await ga("ridhusinne", 2.6, 73.5, "O", q => q.x > 12.0, 24000);
+prova("tvärs över hallen österut (10 m utan rumslådor)", p.x > 12.0, `från x 2,6 till ${p.x}`);
 /* 3. open_entrance_hall → arena_access → physical_riding_area: från dörrens
    höjd, i sargportens x, söderut genom porten ut på banan. */
 p = await ga("ridhusinne", px, dy, "S", q => q.y < info.banaTopp - 3.0, 16000);
@@ -96,12 +96,13 @@ prova("huvudentrén → sargporten → ut på banan (söderut förbi sargen)", p
   prova("från dörren österut och söderut genom sargporten, på golvnivå", p2.y < info.sargport.y - 0.4 && iPort && p2.z < 0.05,
     `till (${p2.x}, ${p2.y}) z ${p2.z}, port x ${info.sargport.x0.toFixed(1)}–${info.sargport.x1.toFixed(1)}`);
 }
-/* 4. receptionens glas är kollision (som en vägg) — man går inte igenom det. */
-p = await ga("ridhusinne", 1.0, 70.7, "O", q => q.x > 2.2, 5000);
-prova("receptionens glas stoppar (GLASS är kollision, inte hål)", p.x < 2.2, `från x 1,0 till ${p.x} (glas vid x 2,2)`);
-/* 5. toaletterna är slutna volymer. */
-p = await ga("ridhusinne", 0.8, 73.5, "N", q => q.y > 74.8, 5000);
-prova("toalettvolymen stoppar (WC-väggen N 2,4 är kollision)", p.y < 74.8, `från y 73,5 till ${p.y} (vägg vid 74,8)`);
+/* 4. receptionens glas är kollision (som en vägg) — man går inte igenom det
+   västerut från gången in i receptionen. */
+p = await ga("ridhusinne", 3.4, 75.2, "V", q => q.x < 2.2, 5000);
+prova("receptionens glas stoppar (GLASS är kollision, inte hål)", p.x > 2.2, `från x 3,4 till ${p.x} (glas vid x 2,2)`);
+/* 5. receptionens sydvägg är kollision: norrut i västra bandet stannar man vid y 72,6. */
+p = await ga("ridhusinne", 1.0, 71.0, "N", q => q.y > 72.6, 5000);
+prova("receptionens sydvägg stoppar (WALL vid y 72,6; toaletterna finns inte längre i entrédelen)", p.y < 72.6, `från y 71,0 till ${p.y} (vägg vid 72,6)`);
 
 /* ── TRAPPORNA (Product Owner 2026-09-03 17:16): nivåerna ska hänga ihop ──
    Figuren har en golvnivå (VD.pz). Ett steg som ändrar nivån mer än 0,36 m
@@ -132,6 +133,22 @@ q = await gaZ("ridhusinne", niv.co.x0 + 0.2, ym(niv.co), "O", r => r.z >= niv.ca
 prova("c_trappa_o: från foten vid klockan österut upp till caféplanet", q.z >= niv.cafe - 0.02 && q.x > niv.co.x1 - 0.5, `till (${q.x}, ${q.y}) z ${q.z}`);
 q = await gaZ("ridhusinne", niv.co.x1 - 0.3, ym(niv.co), "N", r => r.y > niv.G.y0 + 0.8, 8000, niv.cafe);
 prova("c_trappa_o → övre gången", q.y > niv.G.y0 + 0.8 && Math.abs(q.z - niv.cafe) < 0.02, `till (${q.x}, ${q.y}) z ${q.z}`);
+/* 9c. LÄKTARTRAPPAN VID H (PO 2026-09-04 07:54, blocker 3): hallgolvet → spelets
+   läktarsteg (SPELABSTRAKTION) → gångbrädan → raderna → översta raden →
+   läktartrappan (STAIR) → landgången på övre plan → övre gången. */
+const lak = await page.evaluate(() => { const R = RIDHUSINNE, L = R.laktare;
+  return { L: { x0: L.x0, dackDjup: L.dackDjup, dackZ: L.dackZ, y1: L.y1, topp: L.dackZ + L.rader.antal * L.rader.stegH },
+    steg: SPELABSTRAKTIONER.ridhus.laktarSteg, t: R.trappor.find(t => t.id === "laktar_trappa_h"), V: R.ovreGangV, G: R.ovreGang }; });
+q = await gaZ("ridhusinne", (lak.steg.x0 + lak.steg.x1) / 2, lak.steg.y1 + 0.6, "S", r => r.z > lak.L.dackZ - 0.02 && r.y < lak.L.y1 - 0.3, 10000, 0);
+prova("SPELKRAV (inte fidelity): hallgolvet → spelets läktarsteg (SPELABSTRAKTION) → läktardäcket", q.z >= lak.L.dackZ - 0.02 && q.y < lak.L.y1 - 0.3, `till (${q.x}, ${q.y}) z ${q.z} (däck ${lak.L.dackZ.toFixed(2)})`);
+/* Tvärs över raderna SÖDER om trappans fot: i trappans fotavtryck (läktarens
+   västra meter, y ≥ t.y0) ersätter loppet översta raden som nivå. */
+q = await gaZ("ridhusinne", lak.L.x0 + lak.L.dackDjup - 0.5, lak.t.y0 - 0.6, "V", r => r.z > lak.L.topp - 0.02 || r.x < lak.L.x0 + 0.8, 10000, lak.L.dackZ);
+prova("gångbrädan → raderna → översta raden (0,3 m steg)", Math.abs(q.z - lak.L.topp) < 0.02, `till (${q.x}, ${q.y}) z ${q.z} (översta raden ${lak.L.topp.toFixed(2)})`);
+q = await gaZ("ridhusinne", (lak.t.x0 + lak.t.x1) / 2, lak.t.y0 - 0.3, "N", r => r.z >= lak.t.z1 - 0.02, 20000, lak.L.topp);
+prova("läktartrappan vid H: från översta raden norrut upp till caféplanet", q.z >= lak.t.z1 - 0.02 && q.y > lak.t.y1 - 0.5, `till (${q.x}, ${q.y}) z ${q.z} (café ${lak.t.z1.toFixed(2)})`);
+q = await gaZ("ridhusinne", (lak.V.x0 + lak.V.x1) / 2, lak.V.y0 + 0.3, "N", r => r.y > lak.G.y0 + 0.8, 10000, lak.V.z);
+prova("landgången på övre plan → övre gången", q.y > lak.G.y0 + 0.8 && Math.abs(q.z - lak.V.z) < 0.02, `till (${q.x}, ${q.y}) z ${q.z}`);
 /* 10. övre gången är gångbar längs hela bredden. */
 q = await gaZ("ridhusinne", 2.0, niv.G.y0 + 1.2, "O", r => r.x > 20.0, 30000, niv.cafe);
 prova("övre gången är gångbar österut (18 m)", q.x > 20.0 && Math.abs(q.z - niv.cafe) < 0.02, `till x ${q.x}, z ${q.z}`);

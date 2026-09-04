@@ -810,6 +810,21 @@ function v3dVaggarOchRum(K,vaggFarg,hojd,lagg,tex){
            Bröstningens höjd är ur fotot [uppskattning]. */
         const bh=v.brostning||0.95;
         lada(0,bh,vaggFarg);
+        /* Avställningshyllan ovanpå disken mot gången (ridhus-klubb-02) och
+           vita karmposter som delar glaset i rutor à ~0,8 m (fyra rutor). */
+        if(v.hylla){
+          const hd=v.hylla;
+          if(v.typ==="tvar") b.lada(L,0.05,hd+t,"#F2F0EA",M4.translation(mx,bh+0.025,mz+(hd+t)/2-t/2));
+          else               b.lada(hd+t,0.05,L,"#F2F0EA",M4.translation(mx+(hd+t)/2-t/2,bh+0.025,mz));
+          const n=Math.max(1,Math.round(L/0.85));
+          for(let i=0;i<=n;i++){
+            const a=a0+(L*i)/n;
+            if(v.typ==="tvar") b.lada(0.08,hojd-bh,t+0.02,"#EEEEE8",M4.translation(Math.min(Math.max(a,a0+0.04),a1-0.04),(bh+hojd)/2,mz));
+            else               b.lada(t+0.02,hojd-bh,0.08,"#EEEEE8",M4.translation(mx,(bh+hojd)/2,Math.min(Math.max(a,a0+0.04),a1-0.04)));
+          }
+          if(v.typ==="tvar") b.lada(L,0.08,t+0.02,"#EEEEE8",M4.translation(mx,hojd-0.04,mz));
+          else               b.lada(t+0.02,0.08,L,"#EEEEE8",M4.translation(mx,hojd-0.04,mz));
+        }
         const g=new Bygge();
         if(v.typ==="tvar") g.lada(L,hojd-bh,0.04,"#BFD3DC",M4.translation(mx,(bh+hojd)/2,mz));
         else               g.lada(0.04,hojd-bh,L,"#BFD3DC",M4.translation(mx,(bh+hojd)/2,mz));
@@ -818,6 +833,39 @@ function v3dVaggarOchRum(K,vaggFarg,hojd,lagg,tex){
       if(v.typ==="tvar") tona={x:a0,y:v.y-t/2,w:a1-a0,h:t};
       else               tona={x:v.x-t/2,y:a0,w:t,h:a1-a0};
       S3.statiskt.push({nat:GL.nat(b),tex,tona});
+    }
+    /* DÖRRARNA (Product Owner 2026-09-04 07:54, blocker 4: "doors are too
+       difficult to read indoors"). En öppning i datan ritades som en slits
+       från golv till tak. Nu får varje öppning ett ÖVERSTYCKE (vägg ovanför
+       dörrhöjden) och en vit KARM med mörk smyg — det man ser i
+       ridhus-klubb-03/-19 och stall-inne-03: vita karmar och dörrar mot
+       ljusa väggar. Dörrblad ritas inte (öppningarna är passager i datan);
+       dörrhöjd 2,1 m om öppningen inte anger `h`. Överstycket är ett eget
+       tonbart nät som väggbitarna. */
+    for(const op of (v.oppningar||[])){
+      const q0=v.typ==="tvar"?op.x0:op.y0, q1=v.typ==="tvar"?op.x1:op.y1, dh=op.h||2.1;
+      if(q1-q0<0.3||dh>=hojd-0.05)continue;
+      const Lo=q1-q0, mo=(q0+q1)/2, mx2=v.typ==="tvar"?mo:v.x, mz2=v.typ==="tvar"?v.y:mo;
+      const ov=new Bygge();
+      if(v.typ==="tvar") ov.lada(Lo,hojd-dh,t,vaggFarg,M4.translation(mx2,(dh+hojd)/2,mz2));
+      else               ov.lada(t,hojd-dh,Lo,vaggFarg,M4.translation(mx2,(dh+hojd)/2,mz2));
+      S3.statiskt.push({nat:GL.nat(ov),tex,
+        tona: v.typ==="tvar"?{x:q0,y:v.y-t/2,w:Lo,h:t}:{x:v.x-t/2,y:q0,w:t,h:Lo}});
+      const karm=new Bygge(), K1="#EEEEE8", K2="#8C877B", tj=0.10, dj=t+0.06;
+      const post=(a,w,h0,h1,farg,djup)=>{
+        if(v.typ==="tvar") karm.lada(w,h1-h0,djup,farg,M4.translation(a,(h0+h1)/2,mz2));
+        else               karm.lada(djup,h1-h0,w,farg,M4.translation(mx2,(h0+h1)/2,a));
+      };
+      post(q0-tj/2,tj,0,dh+tj,K1,dj); post(q1+tj/2,tj,0,dh+tj,K1,dj);        // foder
+      if(v.typ==="tvar") karm.lada(Lo+2*tj,tj,dj,K1,M4.translation(mo,dh+tj/2,mz2));
+      else               karm.lada(dj,tj,Lo+2*tj,K1,M4.translation(mx2,dh+tj/2,mo));
+      post(q0+0.015,0.03,0,dh,K2,t-0.01); post(q1-0.015,0.03,0,dh,K2,t-0.01); // mörk smyg
+      if(v.typ==="tvar") karm.lada(Lo,0.03,t-0.01,K2,M4.translation(mo,dh-0.015,mz2));
+      else               karm.lada(t-0.01,0.03,Lo,K2,M4.translation(mx2,dh-0.015,mo));
+      if(v.typ==="tvar") karm.lada(Lo,0.02,dj,"#5A5650",M4.translation(mo,0.01,mz2));      // tröskel
+      else               karm.lada(dj,0.02,Lo,"#5A5650",M4.translation(mx2,0.01,mo));
+      S3.statiskt.push({nat:GL.nat(karm),tex:null,
+        tona: v.typ==="tvar"?{x:q0-tj,y:v.y-t/2,w:Lo+2*tj,h:t}:{x:v.x-t/2,y:q0-tj,w:t,h:Lo+2*tj}});
     }
   }
   for(const r of K.rum){
@@ -938,6 +986,43 @@ function v3dTonas(s,kx,kz,px,pz){
     if(x>=x0&&x<=x1&&z>=y0&&z<=y1)return true;
   }
   return false;
+}
+/* ── Fasadens dörrar sedda inifrån ─────────────────────────────────
+   Product Owner 2026-09-04 07:54 (blocker 2: "no understandable entrance").
+   Insidan av ett hus ritade en slät vägg där fasaden har sin dörr; den
+   som stod inne visste inte var hon kommit in. Samma tecknare som
+   fasaden (v3dRidhusYttre m.fl.), på väggens INSIDA: dörrbladet i
+   öppningens läge, vitt foder, glasrutorna i dubbeldörren (dorrvit), grön
+   utrymningsskylt ovanför (IMG_0169-f05, ridhus-klubb-03/-19). u räknas
+   som i ANL.byggnader: moturs runt huset (W från norra hörnet, N från
+   östra, S från västra, E från södra). `ut` är avståndet in från
+   ytterväggens liv. */
+function v3dDorrarInifran(bygge,hus,bredd,langd,ut){
+  const FARG={dorr:"#1A1A1C", dorrgul:"#A87650", dorrvit:"#E8E2D4", dorrgra:"#A2A4A6", dorrmork:"#463F38"};
+  for(const o of (hus.oppningar||[])){
+    if(!FARG[o.typ]||(o.z0||0)>0.5)continue;
+    /* Lokal ram på insidan: riktning längs väggen så att v3dFasadMats
+       normal (uy,-ux) pekar IN i huset. */
+    let P0,ux,uy,u;
+    if(o.sida==="W"){P0=[0,0];          ux=0; uy=1;  u=langd-o.u-o.b/2;}
+    else if(o.sida==="N"){P0=[0,langd]; ux=1; uy=0;  u=bredd-o.u-o.b/2;}
+    else if(o.sida==="S"){P0=[bredd,0]; ux=-1;uy=0;  u=bredd-(o.u+o.b/2);}
+    else {P0=[bredd,langd];             ux=0; uy=-1; u=langd-(o.u+o.b/2);}
+    const F=(du,z,d)=>v3dFasadMat(P0,ux,uy,u+du,z,ut+d);
+    bygge.panel(o.b,o.h,FARG[o.typ],F(0,o.h/2,0.02));                 // dörrbladet
+    const tj=0.12;
+    bygge.lada(o.b+2*tj,tj,0.07,"#EEEEE8",F(0,o.h+tj/2,0.04));          // foder
+    for(const sd of [-1,1]) bygge.lada(tj,o.h+tj,0.07,"#EEEEE8",F(sd*(o.b+tj)/2,(o.h+tj)/2,0.04));
+    if(o.typ==="dorrvit"){                                              // glasade rutor + mittpost
+      for(const sd of [-1,1]) bygge.panel(o.b*0.30,o.h*0.22,"#3A4A5C",F(sd*o.b*0.24,o.h*0.72,0.05));
+      bygge.lada(0.05,o.h*0.92,0.05,"#EEEEE8",F(0,o.h/2,0.05));
+      bygge.lada(0.05,0.30,0.04,"#C4C7C9",F(o.b*0.07,1.05,0.06));       // handtag
+    }else bygge.lada(0.05,0.16,0.05,"#C4C7C9",F(o.b*0.34,1.05,0.06));
+    /* Grön utrymningsskylt ovanför dörren — den finns över entrédörrarna
+       i IMG_0169-f05 och ridhus-klubb-03/-19. */
+    bygge.lada(0.32,0.16,0.03,"#1E9A4A",F(0,o.h+tj+0.22,0.05));
+    bygge.panel(0.20,0.10,"#E8F5EC",F(0,o.h+tj+0.22,0.07));
+  }
 }
 /* ── Inredningen (F02-B) ────────────────────────────────────────
    Bygger ur INREDNING (src/inredning.js) — samma lista som kollisionen i
@@ -1803,6 +1888,17 @@ function v3dRidhus(lagg,opp){
   /* Spelets bänkradssteg (SPELABSTRAKTION, se site.js) ritas med samma
      stegregel men i neutral färg och med en gul genomskinlig markör, så
      att en granskare ser att de inte är fidelity-geometri. */
+  {const LS=SPELABSTRAKTIONER.ridhus.laktarSteg;
+   if(LS&&LS.x1>LS.x0){
+     const T=trappsteg(LS), b=LS.x1-LS.x0, mitt=(LS.x0+LS.x1)/2;
+     for(const st of T.steg){
+       const tj=Math.max(0.06,Math.abs(T.stig));
+       lak.lada(b,tj,st.a1-st.a0,"#B9A886",M4.translation(mitt,st.z-tj/2,(st.a0+st.a1)/2));
+     }
+     const m=new Bygge();
+     m.lada(b,0.12,LS.y1-LS.y0,"#D6AE3C",M4.translation(mitt,LS.z1+0.3,(LS.y0+LS.y1)/2));
+     S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true});
+   }}
   const SA=SPELABSTRAKTIONER.ridhus.bankradSteg;
   if(SA&&SA.x1>SA.x0){
     const T=trappsteg(SA), b=SA.y1-SA.y0, mitt=(SA.y0+SA.y1)/2;
@@ -1862,7 +1958,14 @@ function v3dRidhus(lagg,opp){
            längs den vita skivan i fotot. */
         sido.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+0.93,sx-0.10),M4.rotZ(lut)));
       }else{
-        sido.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx,zm+0.95,am),M4.rotX(-lut)));
+        /* Loppet längs y (läktartrappan vid H): den vita snedställda sidan
+           mot banan/raderna (ridhus-inne-15/-14/-20), ett trapets som för
+           C-trapporna, vänd mot +x (öster); handledaren ovanpå kanten. */
+        {const bakat2=(t.stiger==="S"), fot=bakat2?a1:a0, topp=bakat2?a0:a1, bas=Math.min(t.z0,t.z1);
+         const pts=[[fot,bas],[topp,bas],[topp,Math.max(t.z0,t.z1)+0.90],[fot,Math.min(t.z0,t.z1)+0.90]];
+         if(bakat2) pts.reverse();
+         v3dPolygon(sido,pts,"#E9E5DC",v3dFasadMat([sx+0.10,0],0,1,0,0,0));}
+        sido.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx+0.10,zm+0.93,am),M4.rotX(-lut)));
       }
       for(let i=0;i<T.n;i+=3){
         const st=T.steg[i], c=(st.a0+st.a1)/2;
@@ -2060,7 +2163,12 @@ function v3dRidhus(lagg,opp){
    /* Frontväggen mot banan i vägglinjen, UTANFÖR C-blockets bredd — inom
       blocket står glasbandet och den vita väggen (`-01`). */
    {const h=Math.max(0.2,R.cafe.z1-R.cafe.z0), zc=(R.cafe.z0+R.cafe.z1)/2, K=R.kortanda;
-    const delar=K ? [[0,K.x0],[K.x1,R.bredd]] : [[0,R.bredd]];
+    /* Landgången från läktartrappan (ovreGangV) går genom vägglinjen i
+       läktarens västra meter — där lämnas frontväggen öppen (ridhus-klubb-10:
+       övre gången löper fram till trappan). */
+    const V=R.ovreGangV;
+    const delar=(K ? [[0,K.x0],[K.x1,R.bredd]] : [[0,R.bredd]])
+      .flatMap(([a,b])=>(V&&V.x0<b&&V.x1>a)?[[a,V.x0],[V.x1,b]]:[[a,b]]);
     for(const [a,b] of delar) if(b-a>0.05)
       cafe.lada(b-a,h,0.16,"#E9E5DC",M4.translation((a+b)/2,zc,KY1));}
    lagg(cafe,null);}
@@ -2072,6 +2180,19 @@ function v3dRidhus(lagg,opp){
      armaturer (skåpkorridorens lysrörsrader, ridhus-klubb-01) hör till
      F02-B och byggs där ur bild, inte ur ett rutnät. */
   if(R.entrehall) v3dVaggarOchRum(R.entrehall,R.hallvagg||"#ACA99D",R.cafe.z0-0.3,lagg,T.parlspont);
+  /* Fasadens dörrar inifrån (PO 2026-09-04 07:54, blocker 2): huvudentrén i
+     västväggen (dorrvit u 9), norra gavelns två dörrar, södra gavelns dörr. */
+  {const hus=ANL.byggnader.find(b=>b.id==="ridhus"), d=new Bygge();
+   if(hus){ v3dDorrarInifran(d,hus,R.bredd,R.langd,0.14); lagg(d,null); }}
+  /* Landgången på övre plan från läktartrappan vid H till övre gången
+     (ovreGangV, ridhus-klubb-10/-39): golv på caféplanet i läktarens
+     västra meter norr om däcket, räcke mot hallen på östra sidan. */
+  if(R.ovreGangV){
+    const V=R.ovreGangV, g=new Bygge(), w=V.x1-V.x0, l=V.y1-V.y0;
+    g.lada(w,0.26,l,"#CFC8BC",M4.translation((V.x0+V.x1)/2,V.z,(V.y0+V.y1)/2));
+    g.lada(0.06,1.0,l,"#E9E5DC",M4.translation(V.x1-0.03,V.z+0.5+0.13,(V.y0+V.y1)/2));
+    S3.statiskt.push({nat:GL.nat(g),tex:null});
+  }
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
      står i ridhuset mellan lektionerna och gör det till en arbetsplats

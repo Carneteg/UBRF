@@ -249,15 +249,30 @@ const INREDNING = (() => {
        (-01, -15); ungefär mitt för receptionsglaset. Planens etikett
        RECEPTION på samma remsa är passiv (F02-A); vilken sida av glaset som
        är receptionens insida är F02-A:s GEOMETRY_REFERENCE_GAP. */
-    {id:"skap_bord", rum:"hall", typ:"bord", pos:[3.3, 70.7], rikt:E,
+    {id:"skap_bord", rum:"hall", typ:"bord", pos:[3.65, 70.7], rikt:E,
      matt:{b:0.6, d:0.6, h:0.72}, farg:"#F2EFE8", kolliderar:true,
      kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stol_1", rum:"hall", typ:"stol", pos:[3.3, 71.4], rikt:Sy,
+    {id:"skap_stol_1", rum:"hall", typ:"stol", pos:[3.65, 71.4], rikt:Sy,
      matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
      kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stol_2", rum:"hall", typ:"stol", pos:[3.3, 70.0], rikt:N,
+    {id:"skap_stol_2", rum:"hall", typ:"stol", pos:[3.65, 70.0], rikt:N,
      matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
      kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
+    /* RECEPTIONEN — Product Owner 2026-09-04 07:54 placerade rummet i
+       nordvästra hörnet (site.js `reception_*`). Genom glaset i
+       ridhus-klubb-02: låga träskåp/hyllor längs bakväggen, inramade
+       tavlor ovanför, en vit stol med rött tyg innanför disken. Att de
+       finns: VERIFIED; lägena i rummet: DERIVED (mot bakväggen). Rummet är
+       personalens — spelaren ser det genom glaset. */
+    {id:"reception_skap", rum:"reception", typ:"skap", pos:[0.33, 75.3], rikt:E,
+     matt:{b:2.4, d:0.55, h:1.15}, farg:"#C9A87C", kolliderar:true,
+     kalla:"ridhus-klubb-02", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"reception_tavlor", rum:"reception", typ:"tavlor", pos:[0.03, 75.3], rikt:E,
+     matt:{b:1.6, d:0.03, h:0.5}, z0:1.5, antal:3, farg:"#2A2622", farg2:"#8C8A7A",
+     kalla:"ridhus-klubb-02", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"reception_stol", rum:"reception", typ:"stol", pos:[1.3, 74.3], rikt:E,
+     matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
+     kalla:"ridhus-klubb-02", klass:"VERIFIED", lage:"DERIVED"},
     /* STÖVELBÄNKEN under valvfönstret mot parkeringen: ridhus-klubb-14 och
        IMG_0268-r03/-r05 visar SAMMA bänk (jackor, hjälmväska, stövlar) som
        -01 har i förgrunden — det är en bänk under ett fönster, inte två.

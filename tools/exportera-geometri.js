@@ -156,6 +156,7 @@ const ut = {
     laktare: RIDHUSINNE.laktare, kortanda: RIDHUSINNE.kortanda,
     domarbas: RIDHUSINNE.domarbas, cafe: RIDHUSINNE.cafe,
     trappor: RIDHUSINNE.trappor, ovreGang: RIDHUSINNE.ovreGang,   // vertikala förbindelser (PO 2026-09-03)
+    ovreGangV: RIDHUSINNE.ovreGangV,                                 // landgången från läktartrappan vid H (PO 2026-09-04)
     entrehall: RIDHUSINNE.entrehall, skyltar: RIDHUSINNE.skyltar,
     basTak: RIDHUSINNE.basTak, sidor: RIDHUSINNE.sidor,
     panel: RIDHUSINNE.panel, panelList: RIDHUSINNE.panelList,
