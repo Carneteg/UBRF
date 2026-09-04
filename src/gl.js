@@ -418,9 +418,15 @@ const GL={
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
     const idx=bygge.antal>65535?new Uint32Array(bygge.i):new Uint16Array(bygge.i);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idx,gl.STATIC_DRAW);
-    return {p:gor(new Float32Array(bygge.p)), n:gor(new Float32Array(bygge.n)),
+    const nat={p:gor(new Float32Array(bygge.p)), n:gor(new Float32Array(bygge.n)),
       c:gor(new Float32Array(bygge.c)), u:gor(new Float32Array(bygge.u)),
       i:ib, antal:bygge.i.length, stor:bygge.antal>65535};
+    /* Siktprovet (tools/siktgrind.mjs) behöver trianglarna på CPU-sidan
+       för att avgöra om något står mellan kameran och spelaren. Kopian
+       hålls bara när QA-harnessen satt SIKTPROV innan scenen byggdes —
+       i spelet finns ingen anledning att bära nätet två gånger. */
+    if(typeof SIKTPROV!=="undefined"&&SIKTPROV){nat.pos=bygge.p;nat.idx=bygge.i;}
+    return nat;
   },
   fritt(nat){
     if(!nat)return;const gl=this.gl;

@@ -1285,9 +1285,11 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	BK.box(model, base, "Domarbåsets nivå", o.x + D.x - (D.b + 1.6) / 2, 0,
 		o.y + D.y - (D.b + 1.2) / 2, D.b + 1.6, golv, D.b + 1.2,
 		INRE.laktare, Enum.Material.WoodPlanks)
+	-- Tonas när det står mellan kameran och spelaren (webben: eget nät med
+	-- toningsfotavtryck), som klubbdelens väggar.
 	BK.box(model, base, "Domarbås", o.x + D.x - D.b / 2, golv,
 		o.y + D.y - D.b / 2, D.b, D.h, D.b,
-		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks)
+		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks):SetAttribute("Genomsiktlig", true)
 	-- Öppningen mot banan, så att båset inte blir en sluten låda. Banan
 	-- ligger på den sida läktaren inte står.
 	local dIn = if lE then -1 else 1

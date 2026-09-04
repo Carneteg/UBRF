@@ -17,3 +17,4 @@ roblox/tests/.build/
 # Studio-paketet är en hopfogning av filer som redan ligger i repot.
 roblox/buildings/.studio/
 __pycache__/
+qa/screenshot-pack/

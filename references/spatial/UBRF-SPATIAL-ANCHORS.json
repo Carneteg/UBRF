@@ -1,0 +1,160 @@
+{
+  "$kommentar": [
+    "Issue #78 § 4 — Spatial anchor checks. EN lista med verifierade ankarmått och relationer som CI",
+    "kontrollerar mot den delade spatialdatan (src/site.js → UBRFKomplex.luau). Varje ankare bär källa",
+    "och konfidens; värden får BARA komma från plan, verifierat underlag eller Tobias. Ett ankare som",
+    "inte stämmer rättas i datan eller i källan — aldrig genom att ändra ankaret för att få grönt.",
+    "`prov` är ett uttryck som räknas ut i src/site.js-kontexten (tools/kolla-ankare.mjs): ett tal",
+    "jämförs med `varde` ± `tolerans`, en boolean måste vara sann. Relationer utan mätt värde är",
+    "märkta konfidens RELATION/DERIVED och asserterar ingen gissad siffra.",
+    "Toalettrummet NV (wc_n1/wc_n2) har INGET ankare ännu: matrisen (N 0,3–1,1 / 1,6–2,4), auditen (N 1,2–2,4) och datan (N 0,28–1,38 / 1,38–2,38) säger olika — flaggat 2026-09-04 för F02-A-reviewn, inte löst här."
+  ],
+  "ankare": [
+    {
+      "id": "ridhus_langd",
+      "vad": "Ridhusets längd längs nocken",
+      "varde": 77.18,
+      "tolerans": 0.01,
+      "enhet": "m",
+      "kalla": "references/SITEPLAN.md (Product Owner satellitmätning 2026-08-30)",
+      "konfidens": "MEASURED",
+      "prov": "RIDHUSINNE.langd"
+    },
+    {
+      "id": "stall_langd",
+      "vad": "Stallets längd längs nocken",
+      "varde": 69.95,
+      "tolerans": 0.01,
+      "enhet": "m",
+      "kalla": "references/SITEPLAN.md; references/site/MATLISTA-SATELLIT.md",
+      "konfidens": "MEASURED",
+      "prov": "STALLINNE.langd"
+    },
+    {
+      "id": "gardsgap_syd",
+      "vad": "Gapet mellan ridhusets östvägg och stallets västvägg",
+      "varde": 8.1,
+      "tolerans": 0.01,
+      "enhet": "m",
+      "kalla": "references/SITEPLAN.md (mätt lokalt gap i södra tvärsnittet)",
+      "konfidens": "MEASURED_LOCAL",
+      "prov": "ANL.byggnader.find(b=>b.id==='stall').rekt.x - (ANL.byggnader.find(b=>b.id==='ridhus').rekt.x + ANL.byggnader.find(b=>b.id==='ridhus').rekt.w)"
+    },
+    {
+      "id": "hastgang_langd",
+      "vad": "Hästgången spänner hela gapet mellan husen",
+      "varde": 8.1,
+      "tolerans": 0.01,
+      "enhet": "m",
+      "kalla": "references/SITEPLAN.md (hästgången 8,10 × 3,5; bredden är det mätta gapet)",
+      "konfidens": "MEASURED_LOCAL",
+      "prov": "ANL.byggnader.find(b=>b.id==='hastgang').rekt.w"
+    },
+    {
+      "id": "hastgang_interface",
+      "vad": "Hästgångens dörr i stallets västvägg och i ridhusets östvägg ligger på samma världs-y (ett gränssnitt, inte två)",
+      "varde": true,
+      "kalla": "src/site.js STALLINNE.dorrar.hastgang ↔ RIDHUSINNE.dorrar.hastgang; läget längs husen är härlett (SITEPLAN REFERENCE GAP)",
+      "konfidens": "RELATION",
+      "prov": "(() => { const s=STALLINNE.dorrar.find(d=>d.id==='hastgang'), r=RIDHUSINNE.dorrar.find(d=>d.id==='hastgang'); const S=ANL.byggnader.find(b=>b.id==='stall').rekt, R=ANL.byggnader.find(b=>b.id==='ridhus').rekt; return Math.abs((S.y+s.pos[1])-(R.y+r.pos[1]))<0.01 && s.pos[0]<2 && r.pos[0]>RIDHUSINNE.bredd-2; })()"
+    },
+    {
+      "id": "dressyr_20x60",
+      "vad": "Dressyrlayouten är 20 × 60 m",
+      "varde": true,
+      "kalla": "Tobias bekräftelse (references/SITEPLAN.md, buildings/ridhus/KORT.md)",
+      "konfidens": "VERIFIED",
+      "prov": "Math.abs(RIDHUSINNE.dressyr.w-20)<0.01 && Math.abs(RIDHUSINNE.dressyr.h-60)<0.01"
+    },
+    {
+      "id": "dressyr_inuti_banan",
+      "vad": "Dressyrlayouten ligger helt innanför den fysiska banans sarg",
+      "varde": true,
+      "kalla": "references/buildings/ridhus/KORT.md (banan 20×60 ryms i hallen); senior review 2026-09-03 (fysisk bana ≠ layout)",
+      "konfidens": "RELATION",
+      "prov": "(() => { const b=RIDHUSINNE.bana, d=RIDHUSINNE.dressyr; return d.x>=b.x-0.01 && d.x+d.w<=b.x+b.w+0.01 && d.y>=b.y-0.01 && d.y+d.h<=b.y+b.h+0.01; })()"
+    },
+    {
+      "id": "ridhus_entredel",
+      "vad": "Entrédelens djup från norra gaveln",
+      "varde": 11.5,
+      "tolerans": 0.01,
+      "enhet": "m",
+      "kalla": "references/plans/ridhus-entreplan-utrymning.jpg (planens 11,5 m; geometri.spec)",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "RIDHUSINNE.entre"
+    },
+    {
+      "id": "ridhus_bana_mot_entredelen",
+      "vad": "Banans norra sarg ligger vid entrédelens gräns",
+      "varde": true,
+      "kalla": "references/plans/ridhus-entreplan-utrymning.jpg",
+      "konfidens": "RELATION",
+      "prov": "Math.abs(RIDHUSINNE.bana.y+RIDHUSINNE.bana.h-(RIDHUSINNE.langd-RIDHUSINNE.entre))<0.01"
+    },
+    {
+      "id": "ridhus_reception_glass",
+      "vad": "Receptionens glas: x 2,2, N 4,6–8,3 (3,7 m), som GLASS",
+      "varde": true,
+      "kalla": "Spatial Canon v2 PO-2026-09-03-RIDHUS-GLASS-01; PLAN x2.2-N4.6-8.3; FOTO ridhus-klubb-01/-02/-15",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "(() => { const g=RIDHUSINNE.entrehall.vaggar.find(v=>v.id==='reception_glas'), L=RIDHUSINNE.langd; return !!g && g.primitiv==='GLASS' && Math.abs(g.x-2.2)<0.01 && Math.abs(g.y0-(L-8.3))<0.05 && Math.abs(g.y1-(L-4.6))<0.05; })()"
+    },
+    {
+      "id": "ridhus_c_trappor_plan",
+      "vad": "C-ändans två trappor: 12,4–15,2 och 16,4–18,9 m från väster",
+      "varde": true,
+      "kalla": "PLAN ridhus-entreplan-utrymning.jpg#trappor; FOTO ridhus-inne-01, IMG_0192-f01/-f02, ridhus-inne-07 (existens/riktning)",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "(() => { const t=id=>RIDHUSINNE.trappor.find(x=>x.id===id); const v=t('c_trappa_v'), o=t('c_trappa_o'); const n=(a,b)=>Math.abs(a-b)<0.3; return !!v&&!!o&&n(v.x0,12.4)&&n(v.x1,15.2)&&n(o.x0,16.4)&&n(o.x1,18.9)&&v.stiger==='W'&&o.stiger==='E'; })()"
+    },
+    {
+      "id": "ridhus_c_block_bredd",
+      "vad": "C-blocket (bänkraderna) står 8,6–21,6 m från västra väggen",
+      "varde": true,
+      "kalla": "PLAN ridhus-entreplan-utrymning.jpg (src/site.js RIDHUSINNE.kortanda-noten)",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "Math.abs(RIDHUSINNE.kortanda.x0-8.6)<0.01 && Math.abs(RIDHUSINNE.kortanda.x1-21.6)<0.01"
+    },
+    {
+      "id": "laktare_vast_hela_banan",
+      "vad": "Läktaren ligger på västra långsidan och löper obruten längs hela banan",
+      "varde": true,
+      "kalla": "PLAN (fem parallella linjer på västra långsidan); Review 05 (obruten)",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "(() => { const L=RIDHUSINNE.laktare, b=RIDHUSINNE.bana; return RIDHUSINNE.sidor.laktare==='W' && L.gap==null && L.y0<=b.y+0.05 && L.y1>=b.y+b.h-0.05; })()"
+    },
+    {
+      "id": "stall_uppehall_open",
+      "vad": "Uppehållsrummet är en öppen L-yta: x 0–5,9 × N 0–10 och x 5,9–11,2 × N 0–5,6 (utom planens symbolruta)",
+      "varde": true,
+      "kalla": "references/spatial/UBRF-SPATIAL-CANON-v2.json stall_uppehall_open (PO-2026-09-03-STALL-OPEN-01)",
+      "konfidens": "PRODUCT_OWNER_VERIFIED",
+      "prov": "(() => { const S=STALLINNE, L=S.langd; const z=S.klubb.oppna.find(o=>o.id==='stall_uppehall_open'); if(!z) return false; const vol=S.klubb.rum.find(r=>r.id==='sluten_volym').rekt; const inne=(q,x,y)=>x>q.x+1e-6&&x<q.x+q.w-1e-6&&y>q.y+1e-6&&y<q.y+q.h-1e-6; const kanon=[{x0:0,x1:5.9,n0:0,n1:10},{x0:5.9,x1:11.2,n0:0,n1:5.6}]; for(const k of kanon) for(let x=k.x0+0.1;x<k.x1;x+=0.2) for(let n=k.n0+0.1;n<k.n1;n+=0.2){ const y=L-n; if(inne(vol,x,y)) continue; if(!z.rekt.some(q=>x>=q.x-1e-6&&x<=q.x+q.w+1e-6&&y>=q.y-1e-6&&y<=q.y+q.h+1e-6)) return false; } return true; })()"
+    },
+    {
+      "id": "stall_inre_entre",
+      "vad": "Den inre entrén är en öppning i den genomgående väggen, x 4,1–5,0, mellan toaletterna",
+      "varde": true,
+      "kalla": "PLAN stall-plan1-utrymning-rak.jpg; PO-2026-09-03 inre-entren-mellan-toaletterna",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "(() => { const w=STALLINNE.klubb.vaggar.find(v=>v.id==='genomgaende'); const o=w&&w.oppningar.find(o=>o.id==='inre_entre'); return !!o && Math.abs(o.x0-4.1)<0.01 && Math.abs(o.x1-5.0)<0.01 && Math.abs(w.y-STALLINNE.klubb.y0)<0.01 && w.canon_id==='stall_wall_genomgaende'; })()"
+    },
+    {
+      "id": "stall_band_andelar",
+      "vad": "Stallets bandindelning W/A/MA/MB/B/E följer planens andelar och fyller bredden",
+      "varde": true,
+      "kalla": "references/buildings/stall/KORT.md (andelarna mätta i planen, VERIFIED; totalbredden REFERENCE GAP)",
+      "konfidens": "VERIFIED_PROPORTION",
+      "prov": "(() => { const S=STALLINNE; const sum=STALL_BAND.reduce((a,b)=>a+b.andel,0); const A=STALL_BAND.find(b=>b.id==='A').andel, B=STALL_BAND.find(b=>b.id==='B').andel; return Math.abs(sum-1)<0.001 && Math.abs((S.gangar.A.x1-S.gangar.A.x0)-A*S.bredd)<0.01 && Math.abs((S.gangar.B.x1-S.gangar.B.x0)-B*S.bredd)<0.01; })()"
+    },
+    {
+      "id": "stall_brott_hastgang",
+      "vad": "Hästförbindelsen bryter bara västra boxraden (inte hela huset), på hästgångens höjd",
+      "varde": true,
+      "kalla": "PLAN stall-plan1-utrymning.jpg; SITEPLAN (gången ligger där stallets tvärkorridor mynnar)",
+      "konfidens": "VERIFIED_PLAN_OR_PHOTO",
+      "prov": "(() => { const S=STALLINNE, b=S.brott&&S.brott[0], d=S.dorrar.find(x=>x.id==='hastgang'); return !!b && b.rad==='W' && S.brott.length===1 && d.pos[1]>=b.y0-0.01 && d.pos[1]<=b.y1+0.01; })()"
+    }
+  ]
+}

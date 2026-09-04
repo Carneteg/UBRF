@@ -286,6 +286,29 @@ trapporna för hand — datan är `RIDHUSINNE.kortanda.trappor` (loppen) →
 `RIDHUSINNE.trappor` (härledda STAIR-primitiver) i src/site.js, och stegen
 räknas av `Geometri.trappsteg`.
 
+## Visuell grind — de tolv reviewkamerorna (issue #78)
+
+Samma tolv vyer som webbens screenshot-pack (`qa/visual-gate/kameror.json`),
+gruppen **Visuell grind** i `Vyer.lista()`: `STALL-ENTRE`, `STALL-UPPEHALL`,
+`STALL-TEORISAL`, `STALL-SADELKAMMARE`, `STALL-GANG-A`, `HASTPASSAGE`,
+`RIDHUS-ENTRE`, `RIDHUS-SKAPKORRIDOR`, `ARENA-A`, `ARENA-C`, `LAKTARE`,
+`C-BLOCK-OVRE`. Kameran står som spelets tredjepersonskamera: 3,6 m bakom
+figuren, 2,25 m över hennes golv (lyft när den kläms mot en vägg).
+
+**Ska gå att göra:** `Vyer.ga("<ID>")` för var och en, och jämföra mot
+referenserna som kameran listar i `kameror.json`. Ta en skärmdump per ID med
+samma namn som webbens — det är Roblox-halvan av reviewpaketet.
+
+**Ska synas:** figuren (eller platsen hon står på, `figur` i vyn) ska vara
+synlig från varje reviewkamera; det som står emellan ska tona
+(`Genomsiktlig`). `tests/sikt.spec.luau` mäter samma sak mot bygget.
+
+**Fynd:** figuren dold bakom något som inte tonar; en vy som inte matchar
+webbens bild av samma ID (olika geometri = datan har glidit isär, kör
+`tools/exportera-geometri.js`); en referens kameran pekar på som inte
+stämmer med det byggda → skriv `MISMATCH` med vad i review-kommentaren.
+Ingen visuell status sätts här av automatik; Studio-passet är Tobias.
+
 ## Vad som INTE är ett fynd
 
 Osourcad möblering, kosmetisk polish och avancerad ljussättning. Att
