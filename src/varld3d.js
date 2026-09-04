@@ -1685,10 +1685,20 @@ function v3dRidhus(lagg,opp){
            ovanpå — inte loppets mörka steg. Skivan täcker därför hela
            loppets sida, från under stegen upp till räcket (senior visual
            review 2026-09-04 05:51: loppen lästes som mörka träramper). */
-        sido.lada(L,1.6,0.05,"#E9E5DC",M4.mul(M4.translation(am,zm+0.30,sx-0.10),M4.rotZ(lut)));
-        /* Handledaren ligger ovanpå sidostyckets överkant — den mörka
-           linjen längs den vita skivan i fotot. */
-        sido.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+1.13,sx-0.10),M4.rotZ(lut)));
+        /* Skivans form ur `ridhus-inne-01`: underkanten VÅGRÄT i blockets
+           krön (loppets fot, t.z0), överkanten längs räcket 0,9 m över
+           stegen — ett trapets som är lågt vid klockväggen och högt vid
+           toppen, inte en lutande skiva som skjuter ner under blocket
+           (senior visual review 2026-09-04 06:33: "bow-tie"). Ritas som en
+           plan polygon vänd mot banan; från trappsidan är den osynlig så
+           att stegen syns därifrån. */
+        {const fot=bakat?a1:a0, topp=bakat?a0:a1, bas=Math.min(t.z0,t.z1);
+         const pts=[[fot,bas],[topp,bas],[topp,Math.max(t.z0,t.z1)+0.90],[fot,Math.min(t.z0,t.z1)+0.90]];
+         if(bakat) pts.reverse();
+         v3dPolygon(sido,pts,"#E9E5DC",v3dFasadMat([0,sx-0.10],1,0,0,0,0));}
+        /* Handledaren ligger ovanpå skivans överkant — den mörka linjen
+           längs den vita skivan i fotot. */
+        sido.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+0.93,sx-0.10),M4.rotZ(lut)));
       }else{
         sido.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx,zm+0.95,am),M4.rotX(-lut)));
       }

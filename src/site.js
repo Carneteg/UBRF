@@ -1155,7 +1155,7 @@ const STALLINNE = {
     rum:[
       /* Entrén: bara en region med etikett — vindfångets stumpar byggs inte
          (Spatial Canon v2, se noten ovan). */
-      {id:"vindfang",     rekt:{x:3.6,  y:67.95, w:1.9, h:2.0},  label:"ENTRÉ"},
+      {id:"vindfang",     rekt:{x:3.6,  y:67.95, w:1.9, h:2.0},  label:""},   // planens cell; dörren sitter vid fasadens entré (se ut_n)
       /* UPPEHÅLLSRUMMET är L-format: västdelen här och östdelen
          `uppehallsrum_o` nedan, utan vägg emellan (`del` pekar hit).
          Den dubbellinjeritade rutan x 2,0–3,0 som en tidigare runda byggde
@@ -1279,7 +1279,16 @@ const STALLINNE = {
        inte röras. Spelaren som går in genom fasaddörren står därför inne i
        vindfånget, 5,9 m väster om dörren. Ytterläget (`spawn`) följer
        fasaden som förut. */
-    {id:"ut_n", pos:[4.55,69.0], text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
+    /* SAMMA FYSISKA DÖRR inne som ute (senior visual review 2026-09-04
+       06:33, #80 runda 3): innerpunkten ligger vid den låsta fasadens
+       entrédörr (ANL.byggnader stall, sida N, typ dorrgul — u från östra
+       hörnet), inte i planens vindfång 5,9 m västerut. Den som går in
+       genom dörren under verandan står innanför just den dörren. Planens
+       vindfångscell (x 3,6–5,5) står kvar som region utan etikett —
+       motsägelsen plan/fasad är dokumenterad ovan, fasaden vinner. */
+    {id:"ut_n", pos:[(()=>{const o=ANL.byggnader.find(b=>b.id==="stall").oppningar.find(o=>o.sida==="N"&&o.typ==="dorrgul");
+                          return STALL_BREDD-o.u-o.b/2;})(), STALL_LANGD-1.0],
+     text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (Entré, under verandan)",
      spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},
     {id:"ut_n2",pos:[1.6,64.35], text:"Ut på gårdssidan", mot:"gard", inrikt:0,
