@@ -58,6 +58,8 @@ Regel:
 
 En merge får inte användas som bevis på produktacceptans. En PR kan vara tekniskt mergebar men fortfarande sakna Studio-/gameplay-/fidelity-pass.
 
+För F02 (interiörer) gäller dessutom den visuella kedjan i `docs/VISUAL-FIDELITY-GATE.md` (issue #78): `IMPLEMENTED → AUTOMATED_GREEN → VISUAL_PACK_READY → CHATGPT_VISUAL_PASS → READY_FOR_PRODUCT_ACCEPTANCE → PRODUCT_ACCEPTED`. Ingen F02-PR presenteras för Tobias före `CHATGPT_VISUAL_PASS`, och automation sätter aldrig en visuell status.
+
 ---
 
 ## 3. Evidence-first, aldrig summary-first

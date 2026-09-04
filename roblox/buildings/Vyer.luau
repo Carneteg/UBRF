@@ -246,7 +246,144 @@ Vyer.vyer = {
 	},
 }
 
-local ORDNING = { "Komplexet", "Ridhuset inne", "Stallet inne" }
+
+--[[ ── Visuell grind (issue #78) ── de tolv fasta reviewkamerorna, samma
+	ID som qa/visual-gate/kameror.json. Kameran står som spelets egen
+	tredjepersonskamera: 3,6 m bakom figuren, 2,25 m över hennes golv,
+	blickpunkten 2,6 m framför henne (src/varld3d.js v3dKamera). `figur`
+	är var karaktären står — tests/sikt.spec.luau skjuter sträckan kamera →
+	figur genom de byggda delarna och kräver att allt som skymmer bär
+	`Genomsiktlig` (tonas av Genomsikt på klienten). Lägena är uttryck i
+	datan, som allt annat här. ]]
+local function bakom(grupp: string, id: string, text: string, hus: any, ox: number, oy: number,
+	fx: number, fy: number, z: number, rikt: number, krav: string)
+	local cx, cy = math.cos(rikt), math.sin(rikt)
+	-- Kameran hålls innanför väggarna (0,6 m), och kläms den in mot figuren
+	-- lyfts den — samma regel som webbens v3dKamera.
+	local kx = math.clamp(fx - cx * 3.6, 0.6, hus.bredd - 0.6)
+	local ky = math.clamp(fy - cy * 3.6, 0.6, hus.langd - 0.6)
+	local nara = math.sqrt((kx - fx) ^ 2 + (ky - fy) ^ 2)
+	local h = 2.25 + (if nara < 2.0 then (2.0 - nara) * 0.9 else 0)
+	return {
+		id = id, grupp = grupp, text = text,
+		fran = { x = ox + kx, y = oy + ky, h = h + z },
+		mot = { x = ox + fx + cx * 2.6, y = oy + fy + cy * 2.6 },
+		aim = 1.3 + z,
+		figur = { x = ox + fx, y = oy + fy, z = z },
+		krav = krav,
+	}
+end
+local function rum(id: string)
+	for _, r in ipairs(S.klubb.rum) do if r.id == id then return r.rekt end end
+	error("hittar inte rummet " .. id)
+end
+local function dorr(hus: any, id: string)
+	for _, d in ipairs(hus.dorrar) do if d.id == id then return d end end
+	error("hittar inte dörren " .. id)
+end
+local function oppning(vaggId: string, id: string)
+	for _, v in ipairs(S.klubb.vaggar) do
+		if v.id == vaggId then
+			for _, o in ipairs(v.oppningar or {}) do if o.id == id then return o end end
+		end
+	end
+	error("hittar inte öppningen " .. id)
+end
+local function trappa(id: string)
+	for _, t in ipairs(R.trappor or {}) do if t.id == id then return t end end
+	error("hittar inte trappan " .. id)
+end
+local VG = "Visuell grind"
+local gangA = (S.gangar.A.x0 + S.gangar.A.x1) / 2
+local K = R.kortanda
+local sadelO = oppning("genomgaende", "sadelkammare")
+Vyer.reviewkameror = {
+	--[[ STALL-ANKOMST (runda 3): exteriör, samma ansats som spelaren kommer
+		från — grusplanen norr om klubbgaveln, mot förstukvisten och
+		entrédörren. Dörrens läge läses ur fasaddatan. ]]
+	(function()
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		local dorrX = hus.rekt.x + S.bredd / 2
+		for _, op in ipairs(hus.oppningar or {}) do
+			if op.sida == "N" and op.typ == "dorrgul" then dorrX = hus.rekt.x + S.bredd - op.u - op.b / 2 end
+		end
+		local gavelY = hus.rekt.y + hus.rekt.h
+		return {
+			id = "STALL-ANKOMST", grupp = VG,
+			text = "Stallhuset entré från gården — grusplanen norr om klubbgaveln, söderut mot förstukvisten och entrédörren",
+			fran = { x = dorrX - 1.5, y = gavelY + 7.5, h = 1.7 },
+			mot = { x = dorrX, y = gavelY },
+			aim = 1.6,
+			figur = { x = dorrX, y = gavelY + 6.0, z = 0 },
+			krav = "Verandans sadeltak med röd gavelspets och vita vindskivor på vita stolpar, det vita ribbräcket, den ockragula entrédörren med solfjäderfönster och vit karm, ett runt fönster på var sida, lampan, spiraltrappan och balkongen till vänster (stall-fasad-04, stall-entre-01/-03/-15). Dörrmarkören står vid samma dörr som innerpunkten ut_n.",
+		}
+	end)(),
+	--[[ Explicit kamera mot den låsta fasadens entrédörr (mitt på gaveln, läst ur
+		G.byggnader stall, sida N, typ dorrgul) — samma som kameror.json. ]]
+	(function()
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		local dorrX = S.bredd / 2
+		for _, op in ipairs((hus and hus.oppningar) or {}) do
+			if op.sida == "N" and op.typ == "dorrgul" then dorrX = S.bredd - op.u - op.b / 2 end
+		end
+		return {
+			id = "STALL-ENTRE", grupp = VG,
+			text = "Stallhuset entré — inne i uppehållsrummets östdel i ögonhöjd, norrut mot fasadens entrédörr mitt på gaveln",
+			fran = { x = So.x + dorrX - 0.4, y = So.y + S.langd - 5.4, h = 1.7 },
+			mot = { x = So.x + dorrX, y = So.y + S.langd },
+			aim = 1.2,
+			figur = { x = So.x + dorrX - 2.2, y = So.y + S.langd - 3.0, z = 0 },   -- till vänster om dörren, inte framför
+			krav = "Fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram med det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång mot fasadens entré). Dörrbladets färg inifrån är [antagande].",
+		}
+	end)(),
+	bakom(VG, "STALL-UPPEHALL", "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
+		S, So.x, So.y, 4.0, rum("uppehallsrum").y + 1.6, 0, math.pi / 2,
+		"Rummets hela längd i ögonhöjd: västväggen till vänster, öppningen mot östdelen till höger UTAN vägg (Spatial Canon v2 stall_uppehall_open), planens symbolruta till höger, gaveln med entrén längst bort. Möbler (F02-B) saknas ännu."),
+	bakom(VG, "STALL-TEORISAL", "Teorisalen innanför dörren i västväggen, österut",
+		S, So.x, So.y, rum("teorisal").x + 1.3, rum("teorisal").y + 1.3, 0, 0,
+		"Salens tre väggar med CanonId; dörröppningen i västväggen. Möbler saknas ännu."),
+	bakom(VG, "STALL-SADELKAMMARE", "Inne i sadelkammaren, österut genom rummet mot östväggen",
+		S, So.x, So.y, rum("sadelkammare").x + 4.2, rum("sadelkammare").y + 3.5, 0, 0,
+		"Rummets östra hälft i ögonhöjd: östväggen (x 15,5), halvväggen i söder, norrväggen mot teorisalen. Inredning saknas ännu."),
+	bakom(VG, "STALL-GANG-A", "Gång A norrut mot klubbdelen",
+		S, So.x, So.y, gangA, S.boxStartY + 6, 0, math.pi / 2,
+		"Boxfronter i antracit med galvad ram på båda sidor, markstensgång, klubbdelens tvärvägg långt fram."),
+	--[[ Explicit kamera (som i kameror.json): följkameran får inte plats i
+		gången utan att backa in i boxraden, så reviewkameran står själv vid
+		gång A:s östra kant i ögonhöjd och ser västerut genom brottet. ]]
+	{
+		id = "HASTPASSAGE", grupp = VG,
+		text = "Från gång A:s östra kant i ögonhöjd, västerut genom brottet i västra boxraden in i hästgången",
+		fran = { x = So.x + S.gangar.A.x1 - 0.2, y = So.y + dorr(S, "hastgang").pos[2] + 0.9, h = 1.7 },
+		mot = { x = So.x + 0.9, y = So.y + dorr(S, "hastgang").pos[2] },
+		aim = 1.2,
+		figur = { x = So.x + S.gangar.A.x0 + 0.6, y = So.y + dorr(S, "hastgang").pos[2], z = 0 },
+		krav = "ETT brott i västra boxraden på hästgångens höjd med dörrmarkören, boxfronter på båda sidor om brottet, figuren i gångens västra kant. Ingen tvärkorridor genom huset. Passagens insida är REFERENCE GAP.",
+	},
+	bakom(VG, "RIDHUS-ENTRE", "Huvudentrén norrut över entré/reception",
+		R, Ro.x, Ro.y, dorr(R, "ut_ridhus_W_9").pos[1] - 0.3, dorr(R, "ut_ridhus_W_9").pos[2] - 0.2, 0, math.pi / 2,
+		"Öppen hall utan rumslådor, receptionens glas (GLASS) till höger, toaletterna i bortre hörnet."),
+	bakom(VG, "RIDHUS-SKAPKORRIDOR", "Den öppna gången där skåpen står, norrut",
+		R, Ro.x, Ro.y, 4.95, R.entrehall.y0 + 2.3, 0, math.pi / 2,
+		"Ingen korridorvägg (återkallade skap_v/skap_o). Skåpen är möbler (F02-B) och saknas ännu."),
+	bakom(VG, "ARENA-A", "Banan nära A, söderut mot kortsidan",
+		R, Ro.x, Ro.y, R.bana.x + R.bana.w / 2, R.bana.y + 6, 0, -math.pi / 2,
+		"Vit sarg med mörk sockel, A-skylten på sargen, sanden dovt brungrå."),
+	bakom(VG, "ARENA-C", "Banan nära C, norrut mot C-blocket",
+		R, Ro.x, Ro.y, R.bana.x + R.bana.w / 2, R.bana.y + R.bana.h - 8, 0, math.pi / 2,
+		"C-blockets bänkrader, klockväggen, de två trapporna med vita sidostycken, glasbandet i tre fält."),
+	bakom(VG, "LAKTARE", "Läktardäcket söderut",
+		R, Ro.x, Ro.y, R.laktare.x0 + R.laktare.dackDjup / 2, (R.laktare.y0 + R.laktare.y1) / 2 + 6, R.laktare.dackZ, -math.pi / 2,
+		"Plankdäck, mörk front med ljus kappregel, räcket, banan till vänster. Domarbåset står på däcket."),
+	bakom(VG, "C-BLOCK-OVRE", "Från nedersta bänkraden vid klockan (som ridhus-inne-01)",
+		R, Ro.x, Ro.y, K.klocka.x, K.y0 + 0.6, (K.sockelH or 0) + K.stegH, math.pi / 2,
+		"Raderna, de två loppen stigande utåt, klockväggen, glasbandet, övre gången bakom. Spelets bänkradssteg (gul markör) är SPELABSTRAKTION."),
+}
+for _, v in ipairs(Vyer.reviewkameror) do table.insert(Vyer.vyer, v) end
+
+local ORDNING = { "Komplexet", "Ridhuset inne", "Stallet inne", VG }
 
 function Vyer.lista()
 	print(string.format("Vyer för Gate F01 · Studio-kontroll enligt Review 11 · %d vyer",

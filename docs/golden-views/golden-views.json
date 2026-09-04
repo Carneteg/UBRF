@@ -8,7 +8,7 @@
     "text": "Parkeringens entré → in i uppehållsrummet: EN öppen L-formad yta, ingen inre vägg",
     "kamera": [
       4.55,
-      3.1,
+      3.06,
       69.35
     ],
     "spelare": [
@@ -113,6 +113,6 @@
       69.6,
       3.49
     ],
-    "tonade": 0
+    "tonade": 1
   }
 }

@@ -49,6 +49,12 @@ QA = BYGGE + [
     ("QAPanel", "buildings/QAPanel.luau"),
 ]
 
+# Siktgrinden (issue #78) provar de fasta reviewkamerorna i Vyer mot det
+# byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
+SIKT = QA + [
+    ("Genomsikt", "src/client/Genomsikt.luau"),
+]
+
 # Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
 # exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
 # rorelsemoduler behovs inte -- Preparation ror dem inte.
@@ -132,6 +138,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
+    elif pathlib.Path(spec_rel).name == "sikt.spec.luau":
+        moduler, stubbar = SIKT, "tests/stubs-bygge.luau"
     elif "qa" in spec_rel:
         moduler, stubbar = QA, "tests/stubs-bygge.luau"
     elif "bygge" in spec_rel:

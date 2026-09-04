@@ -1072,14 +1072,17 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				local c = (st.a0 + st.a1) / 2
 				local px = if langsX then c else sx
 				local pz = if langsX then sx else c
-				BK.box(model, base, "Trappa " .. t.id .. " räckesstolpe " .. i,
+				local stolpe = BK.box(model, base, "Trappa " .. t.id .. " räckesstolpe " .. i,
 					o.x + px - 0.03, st.z, o.y + pz - 0.03, 0.06, 0.95, 0.06,
-					Color3.fromRGB(138, 106, 68), Enum.Material.Wood).CanCollide = false
+					Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
+				stolpe.CanCollide = false
+				stolpe:SetAttribute("Genomsiktlig", true)   -- tonas när de skymmer (som webben)
 			end
 			local am, zm = (a0 + a1) / 2, (t.z0 + t.z1) / 2
 			local function sned(namn, h, dz, farg, mat, ds)
 				local d = BK.box(model, base, namn, 0, 0, 0, 0.06, h, 0.06, farg, mat)
 				d.CanCollide = false
+				d:SetAttribute("Genomsiktlig", true)   -- sidostycke/handledare tonas när de skymmer
 				if langsX then
 					d.Size = Vector3.new(BK.M * L, BK.M * h, BK.M * 0.05)
 					d.CFrame = base * CFrame.new(BK.M * (o.x + am), BK.M * (zm + dz), BK.M * (o.y + sx + (ds or 0))) * CFrame.Angles(0, 0, lut)
@@ -1098,8 +1101,10 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				local bas = math.min(t.z0, t.z1)
 				for i, st in ipairs(T.steg) do
 					if st.z - bas > 0.02 then
-						BK.box(model, base, "Trappa " .. t.id .. " sidostycke fyllnad " .. i,
-							o.x + st.a0, bas, o.y + sx - 0.125, st.a1 - st.a0, st.z - bas, 0.05, V, Enum.Material.Plaster).CanCollide = false
+						local f = BK.box(model, base, "Trappa " .. t.id .. " sidostycke fyllnad " .. i,
+							o.x + st.a0, bas, o.y + sx - 0.125, st.a1 - st.a0, st.z - bas, 0.05, V, Enum.Material.Plaster)
+						f.CanCollide = false
+						f:SetAttribute("Genomsiktlig", true)
 					end
 				end
 				sned("Trappa " .. t.id .. " handledare", 0.06, 0.93, Color3.fromRGB(138, 106, 68), Enum.Material.Wood, -0.10)
@@ -1338,9 +1343,11 @@ local function byggRidhusInre(model: Model, base: CFrame)
 	BK.box(model, base, "Domarbåsets nivå", o.x + D.x - (D.b + 1.6) / 2, 0,
 		o.y + D.y - (D.b + 1.2) / 2, D.b + 1.6, golv, D.b + 1.2,
 		INRE.laktare, Enum.Material.WoodPlanks)
+	-- Tonas när det står mellan kameran och spelaren (webben: eget nät med
+	-- toningsfotavtryck), som klubbdelens väggar.
 	BK.box(model, base, "Domarbås", o.x + D.x - D.b / 2, golv,
 		o.y + D.y - D.b / 2, D.b, D.h, D.b,
-		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks)
+		Color3.fromRGB(74, 53, 36), Enum.Material.WoodPlanks):SetAttribute("Genomsiktlig", true)
 	-- Öppningen mot banan, så att båset inte blir en sluten låda. Banan
 	-- ligger på den sida läktaren inte står.
 	local dIn = if lE then -1 else 1
