@@ -1247,7 +1247,8 @@ do
 			inte har i uppehållsrummet): ingen post får heta pentry. ]]
 		local krav = { "uppehall_soffa_v", "uppehall_ponny", "teori_whiteboard_1", "sadel_stovelhylla",
 			"spegel_B", "spegel_A_v", "laktare_bommar", "skap_v_1", "skap_stovelbank",
-			"skap_grona", "skap_hoga_v", "skap_vita_2v" }   -- PO 2026-09-04 11:56: skåpförvaringen
+			"skap_grona", "skap_hoga_v", "skap_vita_2v",     -- PO 2026-09-04 11:56: skåpförvaringen
+			"zon_vask", "zon_racke", "zon_klocka", "boxfront_brandslackare" }   -- PO 15:15: zonen efter pausrummet
 		local saknas = {}
 		for _, id in ipairs(krav) do if not ids[id] then table.insert(saknas, id) end end
 		check("de belagda objekten finns i listan", #saknas == 0, "saknas: " .. table.concat(saknas, ", "))

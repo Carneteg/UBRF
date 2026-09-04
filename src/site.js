@@ -1397,7 +1397,11 @@ STALLINNE.gangytor = (()=>{
   /* TVÄRKORRIDOREN mellan boxhallen och klubbdelen: från brandväggen vid
      klubbY upp till den genomgående väggen. Planen ritar utrymningsvägar
      ut genom båda långsidorna härifrån (`DEFERRED BY EXTERIOR LOCK`). */
-  g.push({x:0.4, y:S.klubbY, w:S.bredd-0.8, h:S.klubb.y0-S.klubbY+DORRGAP});
+  /* `tvar:true`: golvet i tvärkorridoren ritas som ljus betong med
+     gångarnas mörka markstensstråk fortsatta fram till serviceväggen
+     (PO-referens stall-efter-pausrum-po-v1: "mörk rektangulär gångyta,
+     omgivande golv ljusare betong"). Navigeringen är oförändrad. */
+  g.push({x:0.4, y:S.klubbY, w:S.bredd-0.8, h:S.klubb.y0-S.klubbY+DORRGAP, tvar:true});
   /* KLUBBDELENS GOLV som EN yta: väggarna i `klubb.vaggar` och de slutna
      rummen gör allt spärrande, i `vandringKollision`. Förut var det tre
      svävande lådor i en hall; nu är det planens rum med planens dörrar.

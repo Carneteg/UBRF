@@ -818,6 +818,41 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 		elseif typ == "tunna" then
 			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal)
 			del(" band", X - 0.005, z0 + ob.matt.h * 0.55, Y - 0.005, W + 0.01, 0.12, H + 0.01, f2, Enum.Material.SmoothPlastic, false)
+		-- Zonen efter pausrummet (PO-referens stall-efter-pausrum-po-v1): samma tecknare som webben.
+		elseif typ == "ror" then
+			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal, false)
+		elseif typ == "brandslackare" then
+			del("", X, z0, Y, W, ob.matt.h * 0.78, H, f, Enum.Material.Metal, false)
+			del(" topp", X + W * 0.28, z0 + ob.matt.h * 0.78, Y + H * 0.28, W * 0.44, ob.matt.h * 0.22, H * 0.44, Color3.fromRGB(30, 30, 30), Enum.Material.Metal, false)
+		elseif typ == "vask" then
+			del("", X, z0, Y, W, ob.matt.h * 0.85, H, f, Enum.Material.Metal)
+			del(" bänk", X, z0 + ob.matt.h * 0.85, Y, W, 0.05, H, f2, Enum.Material.Metal, false)
+			del(" ho", X + W * 0.2, z0 + ob.matt.h * 0.85 + 0.05, Y + H * 0.2, W * 0.6, 0.02, H * 0.55, Color3.fromRGB(110, 114, 117), Enum.Material.Metal, false)
+			if math.abs(math.cos(ob.rikt)) > 0.5 then
+				del(" kran", X + (if math.cos(ob.rikt) > 0 then 0.06 else W - 0.10), z0 + ob.matt.h * 0.9, Y + H / 2 - 0.02, 0.04, 0.26, 0.04, f2, Enum.Material.Metal, false)
+			else
+				del(" kran", X + W / 2 - 0.02, z0 + ob.matt.h * 0.9, Y + (if math.sin(ob.rikt) > 0 then 0.06 else H - 0.10), 0.04, 0.26, 0.04, f2, Enum.Material.Metal, false)
+			end
+		elseif typ == "krokar" then
+			del(" skena", X, z0 + ob.matt.h - 0.04, Y, W, 0.04, H, f, Enum.Material.Metal, false)
+			del(" handduk", X + W * 0.6, z0, Y, 0.22, ob.matt.h - 0.12, H, f2, Enum.Material.Fabric, false)
+		elseif typ == "racke" then
+			local n = math.max(2, math.round(ob.matt.b / 1.3) + 1)
+			local langs = math.abs(math.cos(ob.rikt)) > 0.5
+			for i = 0, n - 1 do
+				if langs then
+					del(" stolpe " .. (i + 1), X + (W - 0.06) * i / (n - 1), z0, Y + H / 2 - 0.03, 0.06, ob.matt.h, 0.06, f, Enum.Material.Metal)
+				else
+					del(" stolpe " .. (i + 1), X + W / 2 - 0.03, z0, Y + (H - 0.06) * i / (n - 1), 0.06, ob.matt.h, 0.06, f, Enum.Material.Metal)
+				end
+			end
+			for _, hz in ipairs({ ob.matt.h * 0.55, ob.matt.h * 0.96 }) do
+				if langs then
+					del(" regel", X, z0 + hz - 0.02, Y + H / 2 - 0.02, W, 0.04, 0.04, f2, Enum.Material.Metal, false)
+				else
+					del(" regel", X + W / 2 - 0.02, z0 + hz - 0.02, Y, 0.04, 0.04, H, f2, Enum.Material.Metal, false)
+				end
+			end
 		else
 			-- skap, kartong, bank, stovelhylla och allt annat: en låda i färgen
 			del("", X, z0, Y, W, ob.matt.h, H, f,
@@ -839,10 +874,21 @@ local function byggStallInre(model: Model, base: CFrame)
 	-- Gångytorna, inklusive tvärkorridoren. De ligger som eget golv så att man
 	-- ser var man kan gå — det är cirkulationen gaten frågar efter.
 	for i, g in ipairs(S.gangytor) do
-		local p = BK.box(model, base, "Stallgång " .. i,
-			o.x + g.x, 0.02, o.y + g.y, g.w, 0.04, g.h, S.gangSten,
-			Enum.Material.Pavement)
-		p.CanCollide = false
+		if g.tvar then
+			-- Tvärkorridoren: ljus betong (bottenplattan) med gångarnas mörka stråk
+			-- fortsatta fram till serviceväggen (PO-referens stall-efter-pausrum-po-v1).
+			for id, gg in pairs(S.gangar) do
+				local p = BK.box(model, base, "Stallgång " .. i .. " stråk " .. id,
+					o.x + gg.x0, 0.02, o.y + S.klubbY, gg.x1 - gg.x0, 0.04, S.klubb.y0 - S.klubbY, S.gangSten,
+					Enum.Material.Pavement)
+				p.CanCollide = false
+			end
+		else
+			local p = BK.box(model, base, "Stallgång " .. i,
+				o.x + g.x, 0.02, o.y + g.y, g.w, 0.04, g.h, S.gangSten,
+				Enum.Material.Pavement)
+			p.CanCollide = false
+		end
 	end
 
 	--[[ Boxraderna.
@@ -1091,15 +1137,40 @@ local function byggStallInre(model: Model, base: CFrame)
 	--[[ Gaveldörren i söder: ljust parti med grön utrymningsskylt över.
 		`VERIFIED` i i07 och i09 — i båda ser man gräset utanför. ]]
 	if S.gaveloppning then
+		--[[ PO-referens stall-efter-pausrum-po-v1 § Bortre ände: grå dubbeldörr
+			med grön nödutgångsskylt. i07/i09 visade dörren ÖPPEN med dagsljus
+			(ett tillstånd); bladen byggs stängda, grå, med ljus ruta var. ]]
 		local G2 = S.gaveloppning
-		BK.box(model, base, "Gaveldagsljus",
-			o.x + G2.x, 0, o.y - 0.02, G2.bredd, G2.hojd, 0.10,
-			Color3.fromRGB(234, 242, 246),
-			Enum.Material.SmoothPlastic).CanCollide = false
+		local bb = G2.bredd / 2 - 0.02
+		for i, sd in ipairs({ -1, 1 }) do
+			local cx = o.x + G2.x + G2.bredd / 2 + sd * (bb / 2 + 0.01)
+			BK.box(model, base, "Gaveldörr blad " .. i, cx - bb / 2, 0, o.y + 0.04, bb, G2.hojd, 0.08,
+				Color3.fromRGB(140, 143, 146), Enum.Material.Metal).CanCollide = false
+			BK.box(model, base, "Gaveldagsljus", cx - bb * 0.25, G2.hojd * 0.50, o.y + 0.12, bb * 0.5, G2.hojd * 0.24, 0.02,
+				Color3.fromRGB(234, 242, 246), Enum.Material.SmoothPlastic).CanCollide = false
+		end
 		BK.box(model, base, "Exitskylt syd",
 			o.x + G2.x + G2.bredd / 2 - G2.exitB / 2, G2.hojd + G2.exitOver,
 			o.y + 0.06, G2.exitB, G2.exitH, 0.06,
 			Color3.fromRGB(30, 122, 60), Enum.Material.Neon).CanCollide = false
+		-- Valvfönstren i södra gaveln inifrån, med metallgaller (samma referens). u från västra hörnet.
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		for _, op in ipairs((hus and hus.oppningar) or {}) do
+			if op.sida == "S" and op.typ == "valv" and op.z0 < 3 then
+				local x0 = o.x + op.u
+				BK.box(model, base, "Gavelfönster inifrån, karm", x0 - 0.10, op.z0 - 0.10, o.y + 0.03,
+					op.b + 0.20, op.h + 0.20, 0.06, Color3.fromRGB(238, 236, 228), Enum.Material.SmoothPlastic).CanCollide = false
+				local g = BK.box(model, base, "Gavelfönster inifrån, glas", x0, op.z0, o.y + 0.10,
+					op.b, op.h, 0.03, Color3.fromRGB(200, 214, 222), Enum.Material.Glass)
+				g.CanCollide = false
+				g.Transparency = 0.3
+				for i = 0, 4 do
+					BK.box(model, base, "Gavelfönster inifrån, galler", x0 + op.b * (i + 0.5) / 5 - 0.01, op.z0 + op.h * 0.02, o.y + 0.19,
+						0.02, op.h * 0.92, 0.02, Color3.fromRGB(110, 114, 117), Enum.Material.Metal).CanCollide = false
+				end
+			end
+		end
 	end
 
 	-- Inredningen ur G.inredning.stall (F02-B): uppehållsrummet, teorisalen,

@@ -100,9 +100,15 @@ check("fyra boxrader byggdes", raknaNamn("Boxfront W") > 0 and raknaNamn("Boxfro
 	string.format("W %d, MA %d, MB %d, E %d fronter", raknaNamn("Boxfront W"),
 		raknaNamn("Boxfront MA"), raknaNamn("Boxfront MB"), raknaNamn("Boxfront E")))
 
-check("två gångar och tvärkorridoren fick golv",
-	raknaNamn("Stallgång") == #UBRFKomplex.stall.gangytor,
-	raknaNamn("Stallgång") .. " gångytor")
+--[[ Tvärkorridoren (`tvar`) byggs som ett stråk per gång (PO-referens
+	stall-efter-pausrum-po-v1), inte som en platta: den räknas som två. ]]
+do
+	local vantade = 0
+	for _, g in ipairs(UBRFKomplex.stall.gangytor) do vantade += (if g.tvar then 2 else 1) end
+	check("två gångar och tvärkorridoren fick golv",
+		raknaNamn("Stallgång") == vantade,
+		raknaNamn("Stallgång") .. " gångytor mot " .. vantade .. " väntade")
+end
 
 --[[ De här fyra testerna finns för att KNOWN MISMATCH-en ska smälla om den
 	kommer tillbaka. Roblox byggde fronterna i brunt trä medan fotona och
@@ -473,8 +479,17 @@ do
 	check("rörstråket längs serviceväggen byggdes",
 		raknaNamn("Servicerör") == oppna * 2,
 		raknaNamn("Servicerör") .. " rör")
-	check("gaveldörrens dagsljus och exit-skylt byggdes",
-		raknaNamn("Gaveldagsljus") == 1 and raknaNamn("Exitskylt syd") == 1)
+	--[[ PO-referens stall-efter-pausrum-po-v1 § Bortre ände: grå dubbeldörr
+		(två blad med var sin ljus ruta) + skylt, och gavelns valvfönster
+		inifrån med galler. ]]
+	check("gaveldörrens två grå blad, rutorna och exit-skylten byggdes",
+		raknaNamn("Gaveldörr blad") == 2 and raknaNamn("Gaveldagsljus") == 2 and raknaNamn("Exitskylt syd") == 1,
+		string.format("%d blad, %d rutor, %d skylt", raknaNamn("Gaveldörr blad"), raknaNamn("Gaveldagsljus"), raknaNamn("Exitskylt syd")))
+	check("södra gavelns valvfönster byggs inifrån med galler",
+		raknaNamn("Gavelfönster inifrån, glas") == 2 and raknaNamn("Gavelfönster inifrån, galler") == 10,
+		string.format("%d glas, %d gallerstänger", raknaNamn("Gavelfönster inifrån, glas"), raknaNamn("Gavelfönster inifrån, galler")))
+	check("tvärkorridorens golv är gångarnas stråk, inte en heltäckande platta",
+		raknaNamn("stråk A") == 1 and raknaNamn("stråk B") == 1)
 end
 
 --[[ Den blanka återvändsgränden: väggen mot servicedelen fick sina hål ur

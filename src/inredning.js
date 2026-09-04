@@ -29,7 +29,8 @@
    soffa, fatolj, bord, stol, ponny, klocka, vaxt, tavlor, whiteboard,
    skap, hylla, kartong, lysror, ventkanal, krokrad, stovelhylla,
    exitskylt, spegel, skapbank, bank, bommar, hinderstod, bokstavsstall,
-   tunna, dyna, lada. */
+   tunna, dyna, lada, dorr, ror, brandslackare, vask, krokar, racke —
+   okända typer ritas som en låda i färgen på båda ytorna. */
 
 const INREDNING = (() => {
   const S = STALLINNE, R = RIDHUSINNE;
@@ -42,6 +43,8 @@ const INREDNING = (() => {
   const SK = rum(S.klubb, "sadelkammare");    // x 7,3–15,5 · y 57,45–64,35
   const genom = S.klubb.vaggar.find(v => v.id === "genomgaende");
   const inreEntre = genom.oppningar.find(o => o.id === "inre_entre");
+  const radW = S.rader.find(r => r.id === "W");
+  const fxW = radW.x0 + radW.djup;                       // västra boxradens front mot gång A
 
   const stall = [
     /* UPPEHÅLLSRUMMET — stall-inne-01-uppehallsrummet.jpg (IMG_0134).
@@ -176,6 +179,84 @@ const INREDNING = (() => {
     {id:"gangA_exitskylt", rum:"gangA", typ:"exitskylt", pos:[inreEntre.x1+0.45, genom.y-0.09], rikt:Sy,
      matt:{b:0.32, d:0.03, h:0.16}, z0:2.15, farg:"#1E9A4A",
      kalla:"stall-gang-05, KORT.md § Gångens ändar", klass:"VERIFIED", lage:"DERIVED"},
+
+    /* ZONEN EFTER PAUSRUMMET — Product Owner 2026-09-04 15:15, referens
+       `references/spatial/stall-efter-pausrum-po-v1.md` (PO-godkänd
+       sammanfogning av Tobias nya foton 2026-09-04; fotona själva är
+       [DRIVE-ONLY]). Bindande flöde: PAUSRUM → ÖPPEN SERVICE-/TVÄTTZON →
+       STALLGÅNG → BOXFRONTER. Zonen är tvärkorridoren y 52,85–57,45 mellan
+       brandväggen vid klubbY och den genomgående väggen: ett ÖPPET rum,
+       inga nya väggar, inga rumslådor. Allt står så att inre entrén
+       (x 4,1–5,0) → gång A och sadelkammarens dörr är fria.
+       Att tingen finns: VERIFIED (PO-referensen). Mått och lägen:
+       ASSUMPTION — referensen är omåttsatt (`REFERENCE GAP`).
+       (`rikt` är fronten; `b` löper tvärs fronten — väggfasta ting på
+       den genomgående väggen har rikt Sy, ting på västra boxradens front
+       rikt E.) */
+    // Vit servicevägg = den genomgående väggens sydsida (y 57,45).
+    {id:"zon_ror", rum:"gangA", typ:"ror", pos:[9.15, genom.y-0.12], rikt:Sy,
+     matt:{b:7.9, d:0.08, h:0.08}, z0:2.35, farg:"#9EA3A7",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster / vit servicevägg", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_ror_ned", rum:"gangA", typ:"ror", pos:[11.6, genom.y-0.12], rikt:Sy, lodrat:true,
+     matt:{b:0.08, d:0.08, h:2.35}, farg:"#9EA3A7",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster / vit servicevägg", klass:"VERIFIED", lage:"ASSUMPTION"},
+    /* Den grå service-/teknikdörren är inre entrén (planens öppning, redan
+       passage med karm): dörrbladet ritas uppställt mot väggen väster om
+       öppningen, kodlåset/knappsatsen på karmens östra sida. */
+    {id:"zon_dorrblad_entre", rum:"gangA", typ:"dorr", pos:[inreEntre.x0-0.06, genom.y-0.55], rikt:W,
+     matt:{b:0.9, d:0.05, h:2.1}, farg:"#8C8F92", farg2:"#BFD3DC",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (grå dörr, metallhandtag); stall-gang-05", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_knappsats", rum:"gangA", typ:"knappsats", pos:[inreEntre.x1+0.22, genom.y-0.09], rikt:Sy,
+     matt:{b:0.10, d:0.04, h:0.16}, z0:1.2, farg:"#6E7275",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (kodlås/knappsats)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_klocka", rum:"gangA", typ:"klocka", pos:[(inreEntre.x0+inreEntre.x1)/2, genom.y-0.09], rikt:Sy,
+     matt:{b:0.5, d:0.05, h:0.5}, z0:2.32, farg:"#EEECE4",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (väggklocka vid dörrzonen); KORT.md § Gångens ändar", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_brandslackare", rum:"gangA", typ:"brandslackare", pos:[inreEntre.x0-0.7, genom.y-0.14], rikt:Sy,
+     matt:{b:0.18, d:0.18, h:0.55}, z0:0.85, farg:"#C8281E",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (säkerhetsutrustning rött)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_forsta_hjalpen", rum:"gangA", typ:"skylt", pos:[inreEntre.x0-0.7, genom.y-0.09], rikt:Sy,
+     matt:{b:0.30, d:0.06, h:0.30}, z0:1.6, farg:"#2E8B57",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (säkerhetsutrustning grönt)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    // Tvättplatsen öster om sadelkammarens dörr (x 7,7–8,8).
+    {id:"zon_vask", rum:"gangA", typ:"vask", pos:[10.6, genom.y-0.38], rikt:Sy,
+     matt:{b:1.1, d:0.6, h:0.9}, farg:"#8E9296", farg2:"#C9CDD0", kolliderar:true,
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (rostfri skölj-/tvättstation)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_korg", rum:"gangA", typ:"korg", pos:[10.6, genom.y-0.20], rikt:Sy,
+     matt:{b:0.8, d:0.28, h:0.25}, z0:1.45, farg:"#B9BDC0",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (väggmonterad hylla/korg)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_krokar", rum:"gangA", typ:"krokar", pos:[12.3, genom.y-0.10], rikt:Sy,
+     matt:{b:0.8, d:0.12, h:0.55}, z0:1.3, farg:"#8E9296", farg2:"#2F5D8A",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Vänster (krokar/handdukar)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    // Mittzonen: låg avskärmning och arbetshyllan — mellan gång A och gång B.
+    {id:"zon_racke", rum:"gangA", typ:"racke", pos:[12.6, S.klubbY+2.3], rikt:N,
+     matt:{b:2.6, d:0.06, h:1.0}, farg:"#3A3D40", farg2:"#A8ADB0", kolliderar:true,
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Mittzon (låg mörkgrå metallavskärmning)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_hylla", rum:"gangA", typ:"hylla", pos:[9.4, S.klubbY+2.1], rikt:Sy,
+     matt:{b:1.2, d:0.5, h:1.25}, farg:"#3A3D40", kolliderar:true,
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Mittzon (arbets-/förvaringshylla)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_back_1", rum:"gangA", typ:"kartong", pos:[9.1, S.klubbY+2.1], rikt:Sy,
+     matt:{b:0.4, d:0.3, h:0.28}, z0:1.25, farg:"#2E5FA8",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Mittzon (plastbackar)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_back_2", rum:"gangA", typ:"kartong", pos:[9.68, S.klubbY+2.1], rikt:Sy,
+     matt:{b:0.4, d:0.3, h:0.28}, z0:1.25, farg:"#9EA3A7",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Mittzon (plastbackar, flaskor)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_bin", rum:"gangA", typ:"tunna", pos:[10.55, S.klubbY+2.05], rikt:E,
+     matt:{b:0.6, d:0.6, h:0.95}, farg:"#2E5FA8", farg2:"#1E3F78", kolliderar:true,
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Mittzon (stor blå säck/bin)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"zon_pall", rum:"gangA", typ:"pall", pos:[8.2, S.klubbY+1.55], rikt:E,
+     matt:{b:0.5, d:0.4, h:0.35}, farg:"#2A2C2E", kolliderar:true,
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Mittzon (låg rull-/trappall)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    // Boxfronterna i gång A närmast zonen: anslagstavlor och brandsläckare.
+    {id:"boxfront_tavla_1", rum:"gangA", typ:"whiteboard", pos:[fxW+0.03, S.klubbY-1.4], rikt:E,
+     matt:{b:0.6, d:0.03, h:0.45}, z0:0.75, farg:"#FFFFFF",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Höger / boxfronter (vita anslagstavlor)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"boxfront_tavla_2", rum:"gangA", typ:"whiteboard", pos:[fxW+0.03, S.klubbY-4.2], rikt:E,
+     matt:{b:0.6, d:0.03, h:0.45}, z0:0.75, farg:"#FFFFFF",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Höger / boxfronter (vita anslagstavlor)", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"boxfront_brandslackare", rum:"gangA", typ:"brandslackare", pos:[fxW+0.12, S.klubbY-2.8], rikt:E,
+     matt:{b:0.18, d:0.18, h:0.55}, z0:0.5, farg:"#C8281E",
+     kalla:"references/spatial/stall-efter-pausrum-po-v1.md § Höger / boxfronter (brandsläckare mellan tavlorna)", klass:"VERIFIED", lage:"ASSUMPTION"},
   ];
 
   /* ── RIDHUSET ───────────────────────────────────────────────────── */

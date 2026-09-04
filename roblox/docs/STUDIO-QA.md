@@ -288,13 +288,14 @@ räknas av `Geometri.trappsteg`.
 
 ## Visuell grind — reviewkamerorna (issue #78)
 
-Samma nitton vyer som webbens screenshot-pack (`qa/visual-gate/kameror.json`),
+Samma tjugoen vyer som webbens screenshot-pack (`qa/visual-gate/kameror.json`),
 gruppen **Visuell grind** i `Vyer.lista()`: `STALL-ANKOMST` (exteriör, från gården), `STALL-ENTRE`, `STALL-UPPEHALL`, `STALL-UPPEHALL-SOFFA` (F02-B),
 `STALL-TEORISAL`, `STALL-SADELKAMMARE`, `STALL-GANG-A`, `HASTPASSAGE`,
 `RIDHUS-ENTRE`, `RIDHUS-SKAPKORRIDOR`, `ARENA-A`, `ARENA-C`, `LAKTARE`,
 `C-BLOCK-OVRE`, och ur reviewn 2026-09-04 07:54: `STALL-KLUBBDORRAR`,
 `RIDHUS-RECEPTION`, `RIDHUS-ENTRE-INNE`, `RIDHUS-LAKTARTRAPPA`, och ur
-Product Owner-reviewn 11:56: `RIDHUS-SKAPRUM`. Kameran står som spelets tredjepersonskamera: 3,6 m bakom
+Product Owner-reviewn 11:56: `RIDHUS-SKAPRUM`, och ur PO-ordern 15:15
+(zonen efter pausrummet): `STALL-EFTER-PAUSRUM-V1`, `STALL-EFTER-PAUSRUM-V2`. Kameran står som spelets tredjepersonskamera: 3,6 m bakom
 figuren, 2,25 m över hennes golv (lyft när den kläms mot en vägg).
 
 **Ska gå att göra:** `Vyer.ga("<ID>")` för var och en, och jämföra mot

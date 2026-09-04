@@ -431,6 +431,26 @@ Vyer.reviewkameror = {
 		figur = { x = So.x + 8.15, y = So.y + 62.5, z = 0 },   -- vänster om dörren, framför västarna
 		krav = "Västarna på krokrader till vänster, den vita stövelhyllan till höger, den grå dörren med fönster rakt fram (ritad på väggen, ingen passage), platt innertak; ingen etikettplatta.",
 	},
+	--[[ PO 2026-09-04 15:15 (references/spatial/stall-efter-pausrum-po-v1.md):
+		zonen efter pausrummet — två fasta vyer för side-by-side mot PO:s foton. ]]
+	{
+		id = "STALL-EFTER-PAUSRUM-V1", grupp = VG,
+		text = "Från pausrummets riktning (inre entrén) ut i service-/tvättzonen och ner i stallgången",
+		fran = { x = So.x + (S.klubb.vaggar[1].oppningar[1].x0 + S.klubb.vaggar[1].oppningar[1].x1) / 2, y = So.y + S.klubb.y0 - 0.55, h = 1.65 },
+		mot = { x = So.x + 8.4, y = So.y + S.klubbY - 0.55 },
+		aim = 1.0,
+		figur = { x = So.x + 7.2, y = So.y + S.klubbY + 1.35, z = 0 },
+		krav = "Öppen zon utan nya väggar: vit servicevägg bakom kameran, den låga avskärmningen, hyllan med backar, blå bin och pall i mittzonen till vänster, det mörka gångstråket rakt fram genom brandväggens öppning ner i gång A mot boxfronterna med anslagstavlor och brandsläckare; högt plåttak med balkar.",
+	},
+	{
+		id = "STALL-EFTER-PAUSRUM-V2", grupp = VG,
+		text = "Från stallgången tillbaka mot tvätt-/serviceväggen och utgångsrelationen (inre entrén med skylt och klocka)",
+		fran = { x = So.x + 6.0, y = So.y + S.klubbY - 0.25, h = 1.6 },
+		mot = { x = So.x + 7.6, y = So.y + S.klubb.y0 },
+		aim = 1.3,
+		figur = { x = So.x + 6.6, y = So.y + S.klubbY + 2.95, z = 0 },   -- mellan inre entrén och sadelkammardörren, skymmer ingen av dem
+		krav = "Den vita serviceväggen med rör-/kabelstråket, den grå dörren (inre entrén) med kodlås, klocka, utrymningsskylt, brandsläckare och grön säkerhetsutrustning, den rostfria tvättstationen med korg och krokar, den grå sadelkammardörren; fri passage genom brandväggens öppning.",
+	},
 	bakom(VG, "STALL-GANG-A", "Gång A norrut mot klubbdelen",
 		S, So.x, So.y, gangA, S.boxStartY + 6, 0, math.pi / 2,
 		"Boxfronter i antracit med galvad ram på båda sidor, markstensgång, klubbdelens tvärvägg långt fram."),

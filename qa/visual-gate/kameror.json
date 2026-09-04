@@ -217,6 +217,82 @@
       }
     },
     {
+      "id": "STALL-EFTER-PAUSRUM-V1",
+      "namn": "Efter pausrummet — ut i zonen",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": "7.2",
+        "y": "S.klubbY + 1.35",
+        "rikt": "-Math.PI/2"
+      },
+      "text": "PO 2026-09-04 15:15: från pausrummets riktning (inre entrén i den genomgående väggen) ut i den öppna service-/tvättzonen och ner i stallgången — PAUSRUM → ÖPPEN ZON → STALLGÅNG → BOXFRONTER. Explicit kamera.",
+      "referenser": [
+        "references/spatial/stall-efter-pausrum-po-v1.md",
+        "references/buildings/stall/stall-inne-05-stallgangen.jpg",
+        "references/buildings/stall/stall-gang-05.jpg"
+      ],
+      "gap": [
+        "PO-referensen är omåttsatt: alla lägen och mått i zonen är ASSUMPTION (REFERENCE GAP); Tobias nya foton 2026-09-04 är [DRIVE-ONLY], referensen är den repo-tillgängliga sammanfogningen",
+        "vilken av gångarna PO:s foton visar: spelet lägger zonen mot gång A (den man kommer in i från inre entrén) [antagande]"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Öppen zon utan nya väggar: låg mörkgrå avskärmning, arbetshylla med backar, blå bin och pall i mittzonen; det mörka gångstråket rakt fram genom brandväggens öppning ner i gång A med boxfronter, anslagstavlor och brandsläckare; högt plåttak med balkar, dragstag och pendlar — ingen etikettplatta",
+      "kamera": {
+        "x": "(()=>{const g=S.klubb.vaggar.find(v=>v.id==='genomgaende'); const o=g.oppningar.find(o=>o.id==='inre_entre'); return (o.x0+o.x1)/2;})()",
+        "y": "S.klubb.y0 - 0.55",
+        "h": "1.65"
+      },
+      "mal": {
+        "x": "8.4",
+        "y": "S.klubbY - 0.55",
+        "h": "1.0"
+      }
+    },
+    {
+      "id": "STALL-EFTER-PAUSRUM-V2",
+      "namn": "Efter pausrummet — tillbaka mot serviceväggen",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": "6.6",
+        "y": "S.klubbY + 2.95",
+        "rikt": "Math.PI/2"
+      },
+      "text": "PO 2026-09-04 15:15: från stallgången tillbaka mot tvätt-/serviceväggen och utgångsrelationen: den vita väggen med rör, den grå dörren (inre entrén) med kodlås, klocka och skylt, tvättstationen. Explicit kamera.",
+      "referenser": [
+        "references/spatial/stall-efter-pausrum-po-v1.md",
+        "references/buildings/stall/stall-inne-05-stallgangen.jpg",
+        "references/buildings/stall/stall-gang-05.jpg"
+      ],
+      "gap": [
+        "PO-referensen är omåttsatt: alla lägen och mått i zonen är ASSUMPTION (REFERENCE GAP); Tobias nya foton 2026-09-04 är [DRIVE-ONLY], referensen är den repo-tillgängliga sammanfogningen",
+        "vilken av gångarna PO:s foton visar: spelet lägger zonen mot gång A (den man kommer in i från inre entrén) [antagande]"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Vit servicevägg med rör-/kabelstråk, grå dörr (inre entrén) med kodlås, klocka ovanför, grön utrymningsskylt, brandsläckare + grön säkerhetsutrustning, rostfri tvättstation med korg och krokar, den grå sadelkammardörren; fri passage genom brandväggens öppning — inga nya väggar",
+      "kamera": {
+        "x": "6.0",
+        "y": "S.klubbY - 0.25",
+        "h": "1.6"
+      },
+      "mal": {
+        "x": "7.6",
+        "y": "S.klubb.y0",
+        "h": "1.3"
+      }
+    },
+    {
       "id": "STALL-GANG-A",
       "namn": "Stallgång A",
       "hus": "stall",

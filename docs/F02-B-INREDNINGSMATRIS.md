@@ -132,6 +132,19 @@ pentryt byggs inte.** Testet i `geometri.spec.luau` förbjuder ett
 | **Strukturell anmärkning (rapporterad, inte rättad)** | dörren "Teorisal" rakt fram leder norrut in i teorisalen. F02-A:s `teorisal_s` (y 64,35) har ingen öppning. F02-B rör inte topologin; passagen byggs inte |
 | **Review 08:50 (blocker C)** | etiketten borta; `sadel_vastkrokar` (10 västar) på västväggen till vänster, `sadel_stovelhylla` tät vit hylla till höger, och `sadel_dorr_teori`: ett **ritat, stängt** grått dörrblad med fönster och vit karm på nordväggen (x 8,3–9,3) — läsbar dörr utan passage, tills F02-A belägger `teorisal_s`. Läget längs väggen `[antagande]`. Inga sadlar. Kamera `STALL-SADELKAMMARE` (8,7; 58,4) norrut |
 
+### Stallhuset — zonen efter pausrummet (PO 2026-09-04 15:15)
+
+| | |
+|---|---|
+| Källor | `references/spatial/stall-efter-pausrum-po-v1.md` (PO-godkänd sammanfogning av Tobias nya foton 2026-09-04 — fotona är `[DRIVE-ONLY]`); `stall-inne-05`, `stall-gang-05`, KORT.md § Gångens ändar |
+| Referensen bevisar | flödet PAUSRUM → ÖPPEN SERVICE-/TVÄTTZON → STALLGÅNG → BOXFRONTER; vit servicevägg med rör/kablar, grå teknikdörr med kodlås, klocka, säkerhetsutrustning, rostfri tvättstation, korg/krokar, ytterligare grå dörr; mittzon med låg mörkgrå metallavskärmning, arbetshylla med backar/flaskor, blå bin, låg pall; mörk rektangulär gångyta mot ljusare betong; mörkgrå boxfronter med anslagstavlor och brandsläckare; bortre grå dubbeldörr med grön skylt och välvt fönster med galler; högt plåttak med balkar, stolpar och lampor |
+| Läsning mot Spatial Canon | zonen är **tvärkorridoren** y 52,85–57,45 mellan brandväggen (klubbY) och den genomgående väggen: den vita serviceväggen = genomgående väggens sydsida med inre entrén (den grå teknikdörren) och sadelkammarens dörr (den andra grå dörren); stallgången = gång A; boxfronterna = västra radens front; bortre änden = södra gaveln (gaveldörren + fasadens S-valv). Inga nya rum, inga väggar — `OPEN_AREA`-läsning av en yta som redan var öppen |
+| Ändrat | `zon_ror`, `zon_ror_ned`, `zon_dorrblad_entre` (uppställt blad), `zon_knappsats`, `zon_klocka`, `zon_brandslackare`, `zon_forsta_hjalpen`, `zon_vask`, `zon_korg`, `zon_krokar`, `zon_racke`, `zon_hylla`, `zon_back_1/2`, `zon_bin`, `zon_pall`, `boxfront_tavla_1/2`, `boxfront_brandslackare`; tvärkorridorens golv som gångarnas mörka stråk på ljus betong (`gangytor[].tvar`); gaveldörren som två grå blad med ljus ruta (i07/i09 visade den öppen — ett tillstånd, inte arkitektur); södra gavelns valvfönster inifrån med galler. Nya typer på båda ytorna: `ror`, `brandslackare`, `vask`, `krokar`, `racke` |
+| Läge | att tingen finns: `VERIFIED` (PO-referensen); mått och lägen: `ASSUMPTION` — referensen är omåttsatt (`REFERENCE GAP`); vilken gång fotona visar `[antagande]` gång A |
+| Fri passage | inre entrén (x 4,1–5,0) → gång A och sadelkammarens dörr fria; avskärmning och hylla står mellan gång A och gång B; kontrollerat av siktgrindens stallrutt och `bygge.spec` |
+| REFERENCE GAP | exakta mått; funktionen bakom den andra grå dörren namnges inte; taket rörs inte (redan byggt ur filmerna) |
+| Paritet | samma inredningslista, samma `gangytor`-flagga, samma gavelkod på webb (`v3dStall`) och Roblox (`byggStall`) |
+
 ### Stallhuset — gång A:s norra ände
 
 | | |
@@ -272,6 +285,11 @@ RECEPTION är borta.
 - Falsifierat (mutation → röd → återställt via cp): objekt hoppat över i
   byggaren; `laktarRader` tom; soffa flyttad ut ur rummet; soffa utan
   kollision; den gamla fronten återinförd. Alla fem gav rött.
+- PO 15:15: `geometri.spec` kräver `zon_vask`, `zon_racke`, `zon_klocka`,
+  `boxfront_brandslackare`; `bygge.spec` kräver gaveldörrens två blad + två
+  rutor, gavelfönstren inifrån med 10 gallerstänger, tvärkorridorens stråk A/B;
+  21 kameror. Falsifierat: `zon_vask` bortkommenterad → rött (geometri);
+  fyra gallerstänger i stället för fem i Roblox → rött (bygge); återställt → grönt.
 - PO 11:56: `geometri.spec` kräver `skap_grona`, `skap_hoga_v`, `skap_vita_2v`
   i listan; `sikt.spec`/`kolla-visuell-grind` kräver 19 kameror inkl.
   `RIDHUS-SKAPRUM`. Falsifierat: `skap_grona` bortkommenterad → rött;

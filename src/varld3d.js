@@ -1168,6 +1168,31 @@ function v3dInredning(scen,lagg){
         for(let i=0;i<n;i++) box(0.16,0.28,0.12,f,-b/2+w*(i+0.5),0.64,0);
         break;}
       case"tunna": cyl(b/2,h,f,0,0,0); cyl(b/2+0.005,0.12,f2,0,h*0.55,0); break;
+      /* Zonen efter pausrummet (PO-referens stall-efter-pausrum-po-v1). */
+      case"ror":                                                       // rör-/kabelstråk utanpå väggen
+        if(o.lodrat) cyl(d/2,h,f,0,0,0);
+        else alla.cyl(d/2,d/2,b,f,M4.mul(M4.mul(mat,M4.translation(b/2,d/2,0)),M4.rotZ(Math.PI/2)),8);
+        break;
+      case"brandslackare":
+        cyl(b/2,h*0.78,f,0,0,0); cyl(b*0.22,h*0.22,"#1E1E1E",0,h*0.78,0);
+        box(0.05,0.10,0.04,"#1E1E1E",0,h*0.82,-d/2-0.01);             // väggfästet
+        break;
+      case"vask":{                                                     // rostfri tvättstation
+        box(b,h*0.85,d,f,0,0,0); box(b,0.05,d,f2,0,h*0.85,0);
+        box(b*0.6,0.02,d*0.55,"#6E7275",0,h*0.85+0.05,d*0.05);        // hon
+        cyl(0.02,0.26,f2,0,h*0.9,-d/2+0.10); box(0.12,0.02,0.02,f2,0.05,h*0.9+0.24,-d/2+0.10);
+        break;}
+      case"krokar":{                                                   // krokskena med handduk
+        box(b,0.04,0.04,f,0,h-0.04,0);
+        for(let i=0;i<4;i++) box(0.03,0.10,0.06,f,-b/2+b*(i+0.5)/4,h-0.16,0.03);
+        box(0.22,h-0.12,0.03,f2,b*0.25,0,0.05);
+        break;}
+      case"racke":{                                                    // låg avskärmning: stolpar + två galvade reglar
+        const n=Math.max(2,Math.round(b/1.3)+1);
+        for(let i=0;i<n;i++) box(0.06,h,0.06,f,-b/2+b*i/(n-1),0,0);
+        for(const hz of [h*0.55,h*0.96])
+          alla.cyl(0.02,0.02,b,f2,M4.mul(M4.mul(mat,M4.translation(b/2,hz,0)),M4.rotZ(Math.PI/2)),8);
+        break;}
       default: box(b,h,d,f,0,0,0);
     }
     /* tona3d (strålprov mot objektets låda) i stället för väggarnas
@@ -1271,6 +1296,15 @@ function v3dStall(lagg,opp){
   const STEN=golvKomp(S.gangSten,[0.655,0.620,0.537]);
   const SPAN=golvKomp(S.gangSpan,[0.940,0.841,0.598]);
   for(const g of S.gangytor){
+    if(g.tvar){
+      /* Tvärkorridoren (zonen efter pausrummet): ljus betong (bottenplattan)
+         med gångarnas mörka stråk fortsatta fram till serviceväggen —
+         PO-referens stall-efter-pausrum-po-v1 § Stallgång. */
+      for(const gg of Object.values(S.gangar))
+        sten.yta(gg.x1-gg.x0,S.klubb.y0-S.klubbY,STEN,
+          M4.translation((gg.x0+gg.x1)/2,0.02,(S.klubbY+S.klubb.y0)/2),10);
+      continue;
+    }
     const gangSten=Math.max(g.w*0.72, g.w-1.4), rb=(g.w-gangSten)/2;
     sten.yta(gangSten,g.h,STEN,
       M4.translation(g.x+g.w/2,0.02,g.y+g.h/2),10);
@@ -1623,12 +1657,33 @@ function v3dStall(lagg,opp){
   /* Gaveldörren i söder med dagsljus och grön utrymningsskylt. Utan den
      läser rummet som en säck, och det var precis vad som underkändes. */
   if(S.gaveloppning){
-    const G2=S.gaveloppning, gv=new Bygge();
-    gv.lada(G2.bredd,G2.hojd,0.10,"#EAF2F6",
-      M4.translation(G2.x+G2.bredd/2,G2.hojd/2,0.06));
+    /* PO-referens stall-efter-pausrum-po-v1 § Bortre ände: "grå dubbeldörr
+       med grön nödutgångsskylt". stall-inne-07/-09 visade dörren ÖPPEN med
+       dagsljus (ett tillstånd, inte arkitektur); bladen ritas nu stängda,
+       grå, med ljus ruta i varje — dagsljuset i rutorna. */
+    const G2=S.gaveloppning, gv=new Bygge(), bb=G2.bredd/2-0.02;
+    for(const sd of [-1,1]){
+      const cx=G2.x+G2.bredd/2+sd*(bb/2+0.01);
+      gv.lada(bb,G2.hojd,0.08,"#8C8F92",M4.translation(cx,G2.hojd/2,0.08));
+      gv.lada(bb*0.5,G2.hojd*0.24,0.02,"#EAF2F6",M4.translation(cx,G2.hojd*0.62,0.13));
+      gv.lada(0.04,0.18,0.04,"#C4C7C9",M4.translation(cx-sd*bb*0.34,1.02,0.14));
+    }
     gv.lada(G2.exitB,G2.exitH,0.06,"#1E7A3C",
       M4.translation(G2.x+G2.bredd/2,G2.hojd+G2.exitOver,0.14));
     S3.statiskt.push({nat:GL.nat(gv), platt:true});
+    /* Valvfönstren i södra gaveln inifrån, med metallgaller (samma
+       PO-referens). Fasadens S-valv (u från västra hörnet), z0 1,6. */
+    const stallHusS=ANL.byggnader.find(b=>b.id==="stall");
+    const gf=new Bygge(), FS=(u,z,ut)=>v3dFasadMat([S.bredd,0],-1,0,u,z,ut);
+    for(const o of ((stallHusS&&stallHusS.oppningar)||[])){
+      if(o.sida!=="S"||o.typ!=="valv"||o.z0>=3)continue;
+      const cu=S.bredd-(o.u+o.b/2);
+      v3dPolygon(gf,v3dValvKontur(o.b+0.20,o.h+0.20),"#EEEEE8",FS(cu,o.z0+o.h/2+0.06,OPPDJUP.karm));
+      v3dPolygon(gf,v3dValvKontur(o.b,o.h),"#C8D6DE",FS(cu,o.z0+o.h/2,OPPDJUP.ruta));
+      v3dSprojs(gf,o.b*0.9,o.h*0.72,FS(cu,o.z0+o.h*0.36,OPPDJUP.sprojs),3,2);
+      for(let i=0;i<5;i++) gf.lada(0.02,o.h*0.92,0.02,"#6E7275",FS(cu-o.b/2+o.b*(i+0.5)/5,o.z0+o.h*0.48,0.20));
+    }
+    lagg(gf,null);
   }
   /* Tvärväggarna med dörrgap. */
   {for(const tv of S.tvarvaggar){
