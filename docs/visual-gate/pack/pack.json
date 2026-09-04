@@ -1,7 +1,7 @@
 {
-  "head": "a640159b3b209279b3832ba50287c9de2589ec8b",
+  "head": "2b31fa5a2edbb5f51d6e2d0247c2ffef29b4d551",
   "smutsigt": false,
-  "renderad": "2026-09-04T05:34:03.504Z",
+  "renderad": "2026-09-04T05:41:06.694Z",
   "kameror": {
     "STALL-ENTRE": {
       "id": "STALL-ENTRE",
@@ -12,7 +12,8 @@
         "x": 4.55,
         "y": 63.95,
         "z": 0,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 3
       },
       "text": "Inne i uppehållsrummet 6 m från norra gaveln, blicken norrut mot entrén: vindfånget, dörren, gavelväggen",
       "referenser": [
@@ -71,7 +72,8 @@
         "x": 4,
         "y": 61.550000000000004,
         "z": 0,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 12
       },
       "text": "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
       "referenser": [
@@ -130,7 +132,8 @@
         "x": 12.5,
         "y": 65.64999999999999,
         "z": 0,
-        "rikt": 0
+        "rikt": 0,
+        "bild0": 22
       },
       "text": "Innanför teorisalens dörr (västväggen), blicken österut genom salen",
       "referenser": [
@@ -184,7 +187,8 @@
         "x": 11.5,
         "y": 60.95,
         "z": 0,
-        "rikt": 0
+        "rikt": 0,
+        "bild0": 31
       },
       "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
       "referenser": [
@@ -238,7 +242,8 @@
         "x": 5.691000000000001,
         "y": 12.8,
         "z": 0,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 41
       },
       "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
       "referenser": [
@@ -297,7 +302,8 @@
         "x": 4.989,
         "y": 29.549999999999997,
         "z": 0,
-        "rikt": 3.141592653589793
+        "rikt": 3.141592653589793,
+        "bild0": 49
       },
       "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
       "referenser": [
@@ -356,7 +362,8 @@
         "x": 1.2999999999999943,
         "y": 66.98,
         "z": 0,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 61
       },
       "text": "Huvudentrén → norrut över entré/reception: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1)",
       "referenser": [
@@ -421,7 +428,8 @@
         "x": 4.95,
         "y": 67.98,
         "z": 0,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 70
       },
       "text": "Den öppna gången där skåpen står (planens x 4,2–5,7), blicken norrut mot toaletterna",
       "referenser": [
@@ -490,7 +498,8 @@
         "x": 14.399999999999999,
         "y": 6.15,
         "z": 0,
-        "rikt": -1.5707963267948966
+        "rikt": -1.5707963267948966,
+        "bild0": 79
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -547,7 +556,8 @@
         "x": 14.399999999999999,
         "y": 57.68000000000001,
         "z": 0,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 89
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -611,7 +621,8 @@
         "x": 2.3,
         "y": 38.915000000000006,
         "z": 0.8,
-        "rikt": -1.5707963267948966
+        "rikt": -1.5707963267948966,
+        "bild0": 99
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -680,7 +691,8 @@
         "x": 15.799999999999999,
         "y": 66.28,
         "z": 1.12,
-        "rikt": 1.5707963267948966
+        "rikt": 1.5707963267948966,
+        "bild0": 107
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
