@@ -1,7 +1,7 @@
 {
-  "head": "263bd95aac140b44ad1ad836078ccfa723dffdd6",
+  "head": "e793077841e415f410708ca04e06fd473f567880",
   "smutsigt": false,
-  "renderad": "2026-09-04T12:09:48.185Z",
+  "renderad": "2026-09-04T15:36:41.854Z",
   "kameror": {
     "STALL-ANKOMST": {
       "id": "STALL-ANKOMST",
@@ -222,7 +222,7 @@
         "y": 67.2,
         "z": 0,
         "rikt": 2.356194490192345,
-        "bild0": 31
+        "bild0": 32
       },
       "text": "Fotots vinkel (stall-inne-01): från rummets sydöstra del snett mot nordvästra hörnet — soffan mot västväggen under fotoväggen, valvfönstret norr om den med ponnyn under, klockan och växten söder om fotoväggen, den andra soffan i vinkel i förgrunden. Explicit kamera; figuren till vänster om blicklinjen.",
       "referenser": [
@@ -282,7 +282,7 @@
         "y": 66.2,
         "z": 0,
         "rikt": 0,
-        "bild0": 41
+        "bild0": 40
       },
       "text": "Fotots vinkel (stall-inne-04): från rummets västra del österut — valvfönstren till vänster, whiteboardväggen rakt fram, bordsblocket med vita stolar, skåpet med mikron i sydöstra hörnet, planscherna på sydväggen, lysrören och spiralkanalen under det platta innertaket. Explicit kamera.",
       "referenser": [
@@ -340,7 +340,7 @@
         "y": 62.5,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 50
+        "bild0": 49
       },
       "text": "Fotots vinkel (stall-inne-03): från rummets södra del norrut — säkerhetsvästarna på krokrader längs västväggen till vänster, den täta vita stövelhyllan till höger, den grå ståldörren med fönster mot teorisalen rakt fram. Explicit kamera.",
       "referenser": [
@@ -391,6 +391,148 @@
         }
       }
     },
+    "STALL-EFTER-PAUSRUM-V1": {
+      "id": "STALL-EFTER-PAUSRUM-V1",
+      "namn": "Efter pausrummet — ut i zonen",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 7.2,
+        "y": 54.2,
+        "z": 0,
+        "rikt": -1.5707963267948966,
+        "bild0": 60
+      },
+      "text": "PO 2026-09-04 15:15: från pausrummets riktning (inre entrén i den genomgående väggen) ut i den öppna service-/tvättzonen och ner i stallgången — PAUSRUM → ÖPPEN ZON → STALLGÅNG → BOXFRONTER. Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/spatial/stall-efter-pausrum-po-v1.md",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-inne-05-stallgangen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-gang-05.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "PO-referensen är omåttsatt: alla lägen och mått i zonen är ASSUMPTION (REFERENCE GAP); Tobias nya foton 2026-09-04 är [DRIVE-ONLY], referensen är den repo-tillgängliga sammanfogningen",
+        "vilken av gångarna PO:s foton visar: spelet lägger zonen mot gång A (den man kommer in i från inre entrén) [antagande]"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Öppen zon utan nya väggar: låg mörkgrå avskärmning, arbetshylla med backar, blå bin och pall i mittzonen; det mörka gångstråket rakt fram genom brandväggens öppning ner i gång A med boxfronter, anslagstavlor och brandsläckare; högt plåttak med balkar, dragstag och pendlar — ingen etikettplatta",
+      "kamera": [
+        4.55,
+        1.65,
+        56.9
+      ],
+      "mal": {
+        "x": "8.4",
+        "y": "S.klubbY - 0.55",
+        "h": "1.0"
+      },
+      "spelare": [
+        7.2,
+        54.2,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
+    "STALL-EFTER-PAUSRUM-V2": {
+      "id": "STALL-EFTER-PAUSRUM-V2",
+      "namn": "Efter pausrummet — tillbaka mot serviceväggen",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 6.6,
+        "y": 55.800000000000004,
+        "z": 0,
+        "rikt": 1.5707963267948966,
+        "bild0": 69
+      },
+      "text": "PO 2026-09-04 15:15: från stallgången tillbaka mot tvätt-/serviceväggen och utgångsrelationen: den vita väggen med rör, den grå dörren (inre entrén) med kodlås, klocka och skylt, tvättstationen. Explicit kamera.",
+      "referenser": [
+        {
+          "id": "references/spatial/stall-efter-pausrum-po-v1.md",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-inne-05-stallgangen.jpg",
+          "finns": true,
+          "kopia": null
+        },
+        {
+          "id": "references/buildings/stall/stall-gang-05.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "PO-referensen är omåttsatt: alla lägen och mått i zonen är ASSUMPTION (REFERENCE GAP); Tobias nya foton 2026-09-04 är [DRIVE-ONLY], referensen är den repo-tillgängliga sammanfogningen",
+        "vilken av gångarna PO:s foton visar: spelet lägger zonen mot gång A (den man kommer in i från inre entrén) [antagande]"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Vit servicevägg med rör-/kabelstråk, grå dörr (inre entrén) med kodlås, klocka ovanför, grön utrymningsskylt, brandsläckare + grön säkerhetsutrustning, rostfri tvättstation med korg och krokar, den grå sadelkammardörren; fri passage genom brandväggens öppning — inga nya väggar",
+      "kamera": [
+        6,
+        1.6,
+        52.6
+      ],
+      "mal": {
+        "x": "7.6",
+        "y": "S.klubb.y0",
+        "h": "1.3"
+      },
+      "spelare": [
+        6.6,
+        55.8,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
     "STALL-GANG-A": {
       "id": "STALL-GANG-A",
       "namn": "Stallgång A",
@@ -401,7 +543,7 @@
         "y": 12.8,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 58
+        "bild0": 77
       },
       "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
       "referenser": [
@@ -461,7 +603,7 @@
         "y": 29.549999999999997,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 68
+        "bild0": 86
       },
       "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
       "referenser": [
@@ -521,7 +663,7 @@
         "y": 69.58000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 77
+        "bild0": 96
       },
       "text": "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1). Explicit kamera i hallen — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen.",
       "referenser": [
@@ -592,7 +734,7 @@
         "y": 69.6,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 87
+        "bild0": 106
       },
       "text": "Den långa skåpgången (ridhus-klubb-01/-15) från gångens södra ände i ögonhöjd, blicken norrut: skåpraden till höger i hela längden, receptionens glasdisk till vänster längst upp, bordet med de två stolarna mitt för glaset, gavelns valvfönster med stövelbänken i fonden. Explicit kamera.",
       "referenser": [
@@ -667,7 +809,7 @@
         "y": 6.15,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 97
+        "bild0": 114
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -725,7 +867,7 @@
         "y": 57.68000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 107
+        "bild0": 126
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -790,7 +932,7 @@
         "y": 38.915000000000006,
         "z": 0.8,
         "rikt": -1.5707963267948966,
-        "bild0": 116
+        "bild0": 134
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -860,7 +1002,7 @@
         "y": 66.28,
         "z": 1.12,
         "rikt": 1.5707963267948966,
-        "bild0": 125
+        "bild0": 142
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
@@ -931,7 +1073,7 @@
         "y": 73.6,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 135
+        "bild0": 150
       },
       "text": "I skåpgången i ögonhöjd, blicken snett mot receptionens glasade bröstning i nordvästra hörnet — samma relation som ridhus-klubb-02/-15: disken med glasrutorna på ena sidan, skåpraden mitt emot. Explicit kamera; figuren till vänster om blicklinjen.",
       "referenser": [
@@ -1002,7 +1144,7 @@
         "y": 68.7,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 143
+        "bild0": 160
       },
       "text": "Inne i hallen i ögonhöjd, blicken västerut mot den låsta fasadens entrédörr (dorrvit u 9): dörren ska läsas som en dörr inifrån — vit glasad dubbeldörr med karm och utrymningsskylt (IMG_0169-f05, ridhus-klubb-03). Explicit kamera.",
       "referenser": [
@@ -1068,7 +1210,7 @@
         "y": 71.9,
         "z": 0,
         "rikt": 2.356194490192345,
-        "bild0": 152
+        "bild0": 168
       },
       "text": "Product Owner 2026-09-04 11:56 (\"Saknas skåp\"): skåpförvaringen ur ridhus-klubb-16/-18/-20/-21 som tre fristående grupper i entrédelens öppna västra remsa (x 0–2,2 söder om receptionen) — gröna tvåvåningsskåp på ben, höga grå/mörkblå skåp, vit tvåvåningsbank. Explicit kamera från gångens södra ände snett mot nordväst.",
       "referenser": [
@@ -1144,7 +1286,7 @@
         "y": 67.4,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 161
+        "bild0": 177
       },
       "text": "Från hallens sydvästra hörn i ögonhöjd, blicken sydväst mot läktarens norra ände: trappan längs västväggen från hallgolvet upp mot övre plan (ridhus-inne-39, -11), läktardäckets ände (ridhus-inne-15/-14). Explicit kamera.",
       "referenser": [
@@ -1215,7 +1357,7 @@
         "y": 56.35,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 171
+        "bild0": 186
       },
       "text": "I gång A i ögonhöjd, blicken norrut mot den genomgående väggen: inre entrén (x 4,1–5,0) och sadelkammarens dörr (x 7,7–8,8) ska läsas som dörrar — vit karm, mörk smyg, överstycke — inte som slitsar från golv till tak (stall-inne-03, ridhus-klubb-03/-19 för karmarnas utseende). Explicit kamera.",
       "referenser": [
