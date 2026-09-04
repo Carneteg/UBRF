@@ -110,7 +110,7 @@
         "head": "588359194009f0722244830577d48a4201898f28",
         "mismatch": "Avsiktligt MISMATCH: rummets saknade visuella identitet är F02-B-möblering (#76), inte ett F02-A-topologifel. Inget PASS fejkas; #80 omprövar när #76 integrerats."
       },
-      "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort"
+      "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort Platt vitt innertak (stall-inne-01), ingen etikettplatta."
     },
     {
       "id": "STALL-UPPEHALL-SOFFA",
@@ -118,16 +118,16 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "4.0",
-        "y": "S.klubb.rum.find(r=>r.id==='uppehallsrum').rekt.y + 2.95",
+        "x": "3.1",
+        "y": "63.2",
         "rikt": "Math.PI*0.75"
       },
-      "text": "Fotots vinkel (stall-inne-01): från rummets östra del snett mot sydvästra hörnet — soffgruppen vid västväggen, träponnyn, klockan, växten, fotoväggen. Explicit kamera; figuren till vänster om blicklinjen.",
+      "text": "Fotots vinkel (stall-inne-01): från rummets sydöstra del snett mot nordvästra hörnet — soffan mot västväggen under fotoväggen, valvfönstret norr om den med ponnyn under, klockan och växten söder om fotoväggen, den andra soffan i vinkel i förgrunden. Explicit kamera; figuren till vänster om blicklinjen.",
       "referenser": [
         "references/buildings/stall/stall-inne-01-uppehallsrummet.jpg"
       ],
       "gap": [
-        "var i rummet gruppen står och vid vilket valvfönster: ASSUMPTION (F02-B) — fotots ordning dörr till vänster / klocka / växt / fotovägg / valvfönster till höger / ponny går inte att lägga entydigt mot den låsta fasadens två valvfönster (y 61,35 och 67,35) och rummets sydvägg y 60,15; se F02-B-INREDNINGSMATRIS § Uppehållsrummet"
+        "läget är DERIVED ur bildens ordning klocka · växt · fotovägg · fönster · ponny (fönstret norr om fotoväggen ⇒ det norra valvfönstret, som också är pentryts i stall-inne-02); exakta avstånd [uppskattning]"
       ],
       "granskning": {
         "status": "EJ_GRANSKAD",
@@ -135,16 +135,16 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Två svarta skinnsoffor i vinkel kring två låga svarta bord, den rosa träponnyn med sadel, rund klocka, krukväxt och inramade foton på pärlsponten, valvfönstret i västväggen — samma objekt som stall-inne-01; hur gruppen sitter i förhållande till fönstret är den öppna frågan",
+      "ram": "Två svarta skinnsoffor i vinkel kring två låga svarta bord, den rosa träponnyn under valvfönstret, rund klocka, krukväxt och inramade foton på pärlsponten, platt vitt innertak — samma objekt och samma ordning som stall-inne-01; ingen etikettplatta",
       "kamera": {
         "x": "4.7",
-        "y": "S.klubb.rum.find(r=>r.id==='uppehallsrum').rekt.y + 5.05",
+        "y": "62.9",
         "h": "1.6"
       },
       "mal": {
-        "x": "1.2",
-        "y": "S.klubb.rum.find(r=>r.id==='uppehallsrum').rekt.y + 2.1",
-        "h": "0.9"
+        "x": "0.9",
+        "y": "66.3",
+        "h": "1.0"
       }
     },
     {
@@ -153,11 +153,11 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "S.klubb.rum.find(r=>r.id==='teorisal').rekt.x + 1.3",
-        "y": "S.klubb.rum.find(r=>r.id==='teorisal').rekt.y + 1.3",
+        "x": "12.8",
+        "y": "66.4",
         "rikt": "0"
       },
-      "text": "Innanför teorisalens dörr (västväggen), blicken österut genom salen",
+      "text": "Fotots vinkel (stall-inne-04): från rummets västra del österut — valvfönstren till vänster, whiteboardväggen rakt fram, bordsblocket med vita stolar, skåpet med mikron i sydöstra hörnet, planscherna på sydväggen, lysrören och spiralkanalen under det platta innertaket. Explicit kamera.",
       "referenser": [
         "references/buildings/stall/stall-inne-04-teorisalen.jpg"
       ],
@@ -168,7 +168,17 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Salens tre väggar (x 11,2 / 17,3, N 5,6) och dörröppningen i västväggen; rummets djup 6,1 m österut"
+      "ram": "Whiteboardväggen rakt fram, bordsblocket i björk med vita stolar, de två inramade anatomiplanscherna på sydväggen, träskåpet med mikron, kartongerna, två långa lysrörsarmaturer och spiralkanalen i taket, platt vitt innertak — ingen etikettplatta",
+      "kamera": {
+        "x": "11.7",
+        "y": "67.6",
+        "h": "1.6"
+      },
+      "mal": {
+        "x": "17.3",
+        "y": "67.0",
+        "h": "1.2"
+      }
     },
     {
       "id": "STALL-SADELKAMMARE",
@@ -176,22 +186,35 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "S.klubb.rum.find(r=>r.id==='sadelkammare').rekt.x + 4.2",
-        "y": "S.klubb.rum.find(r=>r.id==='sadelkammare').rekt.y + 3.5",
-        "rikt": "0"
+        "x": "9.1",
+        "y": "60.2",
+        "rikt": "Math.PI/2"
       },
-      "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
+      "text": "Fotots vinkel (stall-inne-03): från rummets södra del norrut — säkerhetsvästarna på krokrader längs västväggen till vänster, den täta vita stövelhyllan till höger, den grå ståldörren med fönster mot teorisalen rakt fram. Explicit kamera.",
       "referenser": [
         "references/buildings/stall/stall-inne-03-sadelkammaren.jpg"
       ],
-      "gap": [],
+      "gap": [
+        "dörren till teorisalen är ritad på väggen: F02-A:s teorisal_s saknar öppning (rapporterat); dörrens läge längs väggen [antagande]",
+        "rummets bredd (8,2 m i F02-A) mot bildens smala passage: hyllan står fristående 3 m från västarna"
+      ],
       "granskning": {
         "status": "EJ_GRANSKAD",
         "av": null,
         "head": null,
         "mismatch": ""
       },
-      "ram": "Rummets östra hälft i ögonhöjd: östväggen (x 15,5), halvväggen i söder (N 9,1), norrväggen mot teorisalen; inga möbler ännu"
+      "ram": "Västarna på krokrader till vänster, den vita hyllan full av ridstövlar till höger, den grå dörren med fönster och vit karm rakt fram i norrväggen (ritad dörr — ingen passage, F02-A:s topologi), platt vitt innertak, pärlspont — ingen etikettplatta",
+      "kamera": {
+        "x": "8.7",
+        "y": "58.4",
+        "h": "1.6"
+      },
+      "mal": {
+        "x": "8.7",
+        "y": "64.3",
+        "h": "1.2"
+      }
     },
     {
       "id": "STALL-GANG-A",
@@ -298,11 +321,11 @@
       "hus": "ridhus",
       "scen": "ridhusinne",
       "lage": {
-        "x": "3.2",
-        "y": "R.entrehall.y0 + 2.3",
+        "x": "2.7",
+        "y": "69.6",
         "rikt": "Math.PI/2"
       },
-      "text": "Gången mellan receptionsglaset (x 2,2) och skåpraden i planens skåpremsa (x 4,2–5,7), blicken norrut mot valvfönstret med stövelbänken (= ridhus-klubb-01 fast åt andra hållet)",
+      "text": "Den långa skåpgången (ridhus-klubb-01/-15) från gångens södra ände i ögonhöjd, blicken norrut: skåpraden till höger i hela längden, receptionens glasdisk till vänster längst upp, bordet med de två stolarna mitt för glaset, gavelns valvfönster med stövelbänken i fonden. Explicit kamera.",
       "referenser": [
         "references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg",
         "references/buildings/ridhus/ridhus-klubb-18-skapraden-narbild.jpg",
@@ -318,7 +341,17 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Fri sikt norrut i gången utan korridorväggar: receptionens bröstning + glas till vänster, skåpbankarna (F02-B) till höger med fronten mot gången, bordet med de två stolarna i gången, stövelbänken under gavelns valvfönster längst bort; schaktvolymen bakom skåpen"
+      "ram": "Lång obruten skåprad till höger (grå plåtskåp med enstaka röda/mörkgrå dörrar), receptionens låga bröstning + glasrutor till vänster mitt emot, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken — inga korridorväggar",
+      "kamera": {
+        "x": "3.2",
+        "y": "66.7",
+        "h": "1.65"
+      },
+      "mal": {
+        "x": "3.1",
+        "y": "76.2",
+        "h": "1.0"
+      }
     },
     {
       "id": "ARENA-A",

@@ -34,7 +34,7 @@ const RUTTER = [
   { id: "stall: gång A söderut till servicedelen", scen: "stallinne", steg: 1.5, punkter: [
     { x: "(S.gangar.A.x0+S.gangar.A.x1)/2", y: "S.klubbY - 1" }, { x: "(S.gangar.A.x0+S.gangar.A.x1)/2", y: "S.serviceY + 1" } ] },
   { id: "ridhus: huvudentrén → hallen → sargporten → banan", scen: "ridhusinne", steg: 1.0, punkter: [
-    { x: "1.3", y: "67.0" }, { x: "2.8", y: "69.5" }, { x: "2.8", y: "75.0" }, { x: "(SA.ridhus.sargport.x0+SA.ridhus.sargport.x1)/2", y: "71.0" },
+    { x: "1.3", y: "67.0" }, { x: "2.6", y: "69.5" }, { x: "2.8", y: "75.7" }, { x: "5.2", y: "75.7" }, { x: "(SA.ridhus.sargport.x0+SA.ridhus.sargport.x1)/2", y: "71.0" },
     { x: "(SA.ridhus.sargport.x0+SA.ridhus.sargport.x1)/2", y: "SA.ridhus.sargport.y - 3" } ] },
   { id: "ridhus: hallen → bänkradssteg → raderna → c_trappa_v → övre gången", scen: "ridhusinne", steg: 0.8, punkter: [
     { x: "SA.ridhus.bankradSteg.x0 - 0.6", y: "(SA.ridhus.bankradSteg.y0+SA.ridhus.bankradSteg.y1)/2" },

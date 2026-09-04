@@ -1639,7 +1639,7 @@ return {
 						w = 5.9,
 						h = 10,
 					},
-					label = "UPPEHÅLLSRUM",
+					label = "",
 				},
 				{
 					id = "wc_v",
@@ -1649,7 +1649,7 @@ return {
 						w = 3,
 						h = 2.5,
 					},
-					label = "WC",
+					label = "",
 				},
 				{
 					id = "lobby",
@@ -1669,7 +1669,7 @@ return {
 						w = 1.4,
 						h = 1.8,
 					},
-					label = "WC",
+					label = "",
 					stangt = true,
 					primitiv = "WALL",
 					canon_id = "stall_volume_wc_o",
@@ -1710,7 +1710,7 @@ return {
 						w = 6.1,
 						h = 5.6,
 					},
-					label = "TEORISAL",
+					label = "",
 				},
 				{
 					id = "sadelkammare",
@@ -1720,7 +1720,7 @@ return {
 						w = 8.2,
 						h = 6.9,
 					},
-					label = "SADELKAMMARE",
+					label = "",
 				},
 				{
 					id = "ostrum",
@@ -3003,7 +3003,7 @@ return {
 				typ = "soffa",
 				pos = {
 					0.55,
-					61.9,
+					65.6,
 				},
 				rikt = 0,
 				matt = {
@@ -3015,7 +3015,7 @@ return {
 				kolliderar = true,
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_soffa_s",
@@ -3023,7 +3023,7 @@ return {
 				typ = "soffa",
 				pos = {
 					2.6,
-					64.95,
+					63.85,
 				},
 				rikt = 1.570796,
 				matt = {
@@ -3035,7 +3035,7 @@ return {
 				kolliderar = true,
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_bord_1",
@@ -3043,7 +3043,7 @@ return {
 				typ = "bord",
 				pos = {
 					1.65,
-					61.75,
+					65.2,
 				},
 				rikt = 0,
 				matt = {
@@ -3055,7 +3055,7 @@ return {
 				kolliderar = true,
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_bord_2",
@@ -3063,7 +3063,7 @@ return {
 				typ = "bord",
 				pos = {
 					1.65,
-					62.5,
+					65.95,
 				},
 				rikt = 0,
 				matt = {
@@ -3075,15 +3075,15 @@ return {
 				kolliderar = true,
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_ponny",
 				rum = "uppehallsrum",
 				typ = "ponny",
 				pos = {
-					1,
-					65.8,
+					1.1,
+					67.55,
 				},
 				rikt = 1.570796,
 				matt = {
@@ -3096,7 +3096,7 @@ return {
 				kolliderar = true,
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_klocka",
@@ -3104,7 +3104,7 @@ return {
 				typ = "klocka",
 				pos = {
 					0.02,
-					60.9,
+					63.9,
 				},
 				rikt = 0,
 				matt = {
@@ -3116,15 +3116,15 @@ return {
 				farg = Color3.fromRGB(244, 242, 236),
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_vaxt",
 				rum = "uppehallsrum",
 				typ = "vaxt",
 				pos = {
-					0.35,
-					63.9,
+					0.38,
+					64.45,
 				},
 				rikt = 0,
 				matt = {
@@ -3137,7 +3137,7 @@ return {
 				kolliderar = true,
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "uppehall_fotovagg",
@@ -3145,7 +3145,7 @@ return {
 				typ = "tavlor",
 				pos = {
 					0.02,
-					63,
+					65.75,
 				},
 				rikt = 0,
 				matt = {
@@ -3159,7 +3159,7 @@ return {
 				farg2 = Color3.fromRGB(138, 154, 122),
 				kalla = "stall-inne-01",
 				klass = "VERIFIED",
-				lage = "ASSUMPTION",
+				lage = "DERIVED",
 			},
 			{
 				id = "teori_whiteboard_1",
@@ -3662,16 +3662,16 @@ return {
 				typ = "krokrad",
 				pos = {
 					7.32,
-					62.4,
+					62.2,
 				},
 				rikt = 0,
 				matt = {
-					b = 2.6,
-					d = 0.35,
-					h = 0.9,
+					b = 3.4,
+					d = 0.4,
+					h = 1.05,
 				},
-				z0 = 1.15,
-				antal = 7,
+				z0 = 1.05,
+				antal = 10,
 				farg = Color3.fromRGB(154, 155, 147),
 				farg2 = Color3.fromRGB(35, 42, 58),
 				kalla = "stall-inne-03",
@@ -3683,18 +3683,38 @@ return {
 				rum = "sadelkammare",
 				typ = "stovelhylla",
 				pos = {
-					9.85,
-					62.4,
+					10.3,
+					62.2,
 				},
 				rikt = 3.141593,
 				matt = {
-					b = 2.6,
-					d = 0.4,
-					h = 2.2,
+					b = 3.4,
+					d = 0.42,
+					h = 2.15,
 				},
 				farg = Color3.fromRGB(242, 241, 236),
 				farg2 = Color3.fromRGB(30, 30, 30),
 				kolliderar = true,
+				kalla = "stall-inne-03",
+				klass = "VERIFIED",
+				lage = "DERIVED",
+			},
+			{
+				id = "sadel_dorr_teori",
+				rum = "sadelkammare",
+				typ = "dorr",
+				pos = {
+					8.8,
+					64.29,
+				},
+				rikt = -1.570796,
+				matt = {
+					b = 1,
+					d = 0.08,
+					h = 2.1,
+				},
+				farg = Color3.fromRGB(140, 143, 146),
+				farg2 = Color3.fromRGB(191, 211, 220),
 				kalla = "stall-inne-03",
 				klass = "VERIFIED",
 				lage = "DERIVED",
@@ -3923,65 +3943,11 @@ return {
 				typ = "skapbank",
 				pos = {
 					4.45,
-					69.1,
+					71.65,
 				},
 				rikt = 3.141593,
 				matt = {
-					b = 1.5,
-					d = 0.5,
-					h = 1.9,
-				},
-				farg = Color3.fromRGB(201, 203, 203),
-				fargor = {
-					Color3.fromRGB(201, 203, 203),
-					Color3.fromRGB(201, 203, 203),
-					Color3.fromRGB(58, 60, 64),
-					Color3.fromRGB(201, 203, 203),
-					Color3.fromRGB(184, 50, 46),
-				},
-				kolliderar = true,
-				kalla = "ridhus-klubb-01, -15, IMG_0169-f02, IMG_0268-r12",
-				klass = "VERIFIED",
-				lage = "ASSUMPTION",
-			},
-			{
-				id = "skap_v_2",
-				rum = "hall",
-				typ = "skapbank",
-				pos = {
-					4.45,
-					71.25,
-				},
-				rikt = 3.141593,
-				matt = {
-					b = 2.4,
-					d = 0.5,
-					h = 1.9,
-				},
-				farg = Color3.fromRGB(201, 203, 203),
-				fargor = {
-					Color3.fromRGB(201, 203, 203),
-					Color3.fromRGB(201, 203, 203),
-					Color3.fromRGB(58, 60, 64),
-					Color3.fromRGB(201, 203, 203),
-					Color3.fromRGB(184, 50, 46),
-				},
-				kolliderar = true,
-				kalla = "ridhus-klubb-01, -15, IMG_0169-f02, IMG_0268-r12",
-				klass = "VERIFIED",
-				lage = "ASSUMPTION",
-			},
-			{
-				id = "skap_v_3",
-				rum = "hall",
-				typ = "skapbank",
-				pos = {
-					4.45,
-					75.25,
-				},
-				rikt = 3.141593,
-				matt = {
-					b = 1.8,
+					b = 6.6,
 					d = 0.5,
 					h = 1.9,
 				},
@@ -4003,8 +3969,8 @@ return {
 				rum = "hall",
 				typ = "bord",
 				pos = {
-					3.65,
-					70.7,
+					3.4,
+					74.7,
 				},
 				rikt = 0,
 				matt = {
@@ -4023,8 +3989,8 @@ return {
 				rum = "hall",
 				typ = "stol",
 				pos = {
-					3.65,
-					71.4,
+					3.4,
+					75.4,
 				},
 				rikt = -1.570796,
 				matt = {
@@ -4044,8 +4010,8 @@ return {
 				rum = "hall",
 				typ = "stol",
 				pos = {
-					3.65,
-					70,
+					3.4,
+					74,
 				},
 				rikt = 1.570796,
 				matt = {

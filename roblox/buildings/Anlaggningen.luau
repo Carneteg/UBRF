@@ -751,6 +751,12 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 		elseif typ == "tavlor" or typ == "whiteboard" or typ == "exitskylt" or typ == "lysror" then
 			del("", X, z0, Y, W, ob.matt.h, H, f,
 				if typ == "lysror" or typ == "exitskylt" then Enum.Material.Neon else Enum.Material.SmoothPlastic, false)
+		elseif typ == "dorr" then
+			-- stängt dörrblad med karm, fönster och handtag PÅ en vägg (ingen passage)
+			del(" karm", X - 0.10, 0, Y - 0.01, W + 0.20, ob.matt.h + 0.10, H + 0.02, Color3.fromRGB(238, 238, 232), Enum.Material.SmoothPlastic, false)
+			del(" blad", X, 0, Y, W, ob.matt.h, H, f, Enum.Material.Metal, false)
+			local g = del(" fönster", X + W * 0.29, ob.matt.h * 0.58, Y - 0.01, W * 0.42, ob.matt.h * 0.24, H + 0.02, f2, Enum.Material.Glass, false)
+			g.Transparency = 0.4
 		elseif typ == "spegel" then
 			del(" ram", X, z0 - 0.06, Y, W, ob.matt.h + 0.12, H, f, Enum.Material.Wood, false)
 			local gp = del(" glas", X, z0, Y, W, ob.matt.h, H, Color3.fromRGB(159, 179, 196), Enum.Material.Glass, false)
@@ -903,6 +909,19 @@ local function byggStallInre(model: Model, base: CFrame)
 		en tunn golvplatta så att Studio kan visa vad som är vad utan att
 		något solitt tillkommer. ]]
 	byggVaggarOchRum(model, base, o, h, S.klubb, "Klubbvägg", INRE.vagg)
+	--[[ KLUBBDELENS INNERTAK (PO/ChatGPT 2026-09-04 08:50, blocker A):
+		stall-inne-01/-02/-03/-04 visar ett platt vitt innertak — plattan på
+		klubbväggarnas höjd över hela klubbdelen norr om den genomgående
+		väggen. Genomsiktlig så att den tonas om kameran hamnar över den. ]]
+	do
+		local gy = nil
+		for _, v in ipairs(S.klubb.vaggar) do if v.id == "genomgaende" then gy = v.y end end
+		gy = gy or S.klubbY
+		local tak = BK.box(model, base, "Klubbdelens innertak", o.x, 2.8, o.y + gy, S.bredd, 0.10, S.langd - gy,
+			Color3.fromRGB(244, 242, 236), Enum.Material.SmoothPlastic)
+		tak.CanCollide = false
+		tak:SetAttribute("Genomsiktlig", true)
+	end
 
 	--[[ Taket över boxhallen: limträstomme och galvad plåt.
 

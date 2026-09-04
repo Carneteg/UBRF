@@ -77,11 +77,11 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok, detalj }); console.
 /* 1. main_entrance → open_entrance_hall: från dörren österut in i skåpgången
    och norrut genom hallen ända fram till gaveln (receptionen stänger västra
    bandets norra del sedan 2026-09-04 07:54; gången x 2,2–4,2 är fri). */
-let p = await ga("ridhusinne", 2.8, dy + 1.4, "N", q => q.y > 76.0, 20000);
+let p = await ga("ridhusinne", 2.6, dy + 1.4, "N", q => q.y > 76.0, 20000);
 prova("skåpgången norrut genom den öppna hallen fram till gaveln (8 m utan vägg)", p.y > 76.0, `från y ${(dy + 1.4).toFixed(2)} till ${p.y} (gaveln vid 77,18)`);
 /* 2. tvärs över hallen österut, norr om receptionens sydvägg. */
-p = await ga("ridhusinne", 2.6, 73.5, "O", q => q.x > 12.0, 24000);
-prova("tvärs över hallen österut (10 m utan rumslådor)", p.x > 12.0, `från x 2,6 till ${p.x}`);
+p = await ga("ridhusinne", 2.8, 75.7, "O", q => q.x > 12.0, 24000);
+prova("tvärs över hallen österut norr om skåpraden (10 m utan rumslådor)", p.x > 12.0, `från x 2,8 till ${p.x}`);
 /* 3. open_entrance_hall → arena_access → physical_riding_area: från dörrens
    höjd, i sargportens x, söderut genom porten ut på banan. */
 p = await ga("ridhusinne", px, dy, "S", q => q.y < info.banaTopp - 3.0, 16000);

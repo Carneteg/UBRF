@@ -1115,6 +1115,15 @@ function v3dInredning(scen,lagg){
             box(0.11,Math.min(0.42,h/hyll-0.08),0.28,f2,-b/2+0.08+j*0.16,y+0.03,0.02); }
         break;}
       case"exitskylt": box(b,h,d,f,0,0,0,glas); box(b*0.5,h*0.6,0.005,"#E8F5EC",0,h*0.2,d/2+0.003); break;
+      case"dorr":{
+        /* Stängt dörrblad med karm, fönster och handtag PÅ en vägg — för
+           dörrar som bilden visar men som inte är passager i datan. */
+        box(b+0.20,0.10,d+0.02,"#EEEEE8",0,h,0);                          // karm topp
+        for(const s of [-1,1]) box(0.10,h+0.10,d+0.02,"#EEEEE8",s*(b/2+0.05),0,0);
+        box(b,h,d,f,0,0,0);                                              // bladet
+        box(b*0.42,h*0.24,0.01,f2,0,h*0.58,d/2+0.006,glas);              // fönstret
+        box(0.04,0.16,0.04,"#C4C7C9",b*0.36,1.02,d/2+0.02);              // handtag
+        break;}
       case"spegel":{
         box(b+0.12,h+0.12,d,f,0,-0.06,0);
         box(b,h,0.02,"#9FB3C4",0,0,d/2-0.005,glas);
@@ -1161,6 +1170,7 @@ function v3dInredning(scen,lagg){
    når över bröst­höjd och har djup nog att dölja en figur. */
 function inredningHog(o){
   if(o.typ==="lysror"||o.typ==="exitskylt"||o.typ==="ventkanal"||o.typ==="spegel")return false;
+  if(o.typ==="dorr")return true;   // ett ritat dörrblad är tunt men skymmer figuren (siktgrind STALL-ENTRE)
   return (o.z0||0)+o.matt.h>=1.4 && o.matt.d>=0.3;
 }
 
@@ -1625,6 +1635,16 @@ function v3dStall(lagg,opp){
      Geometri.vaggBitar — och de slutna rummen som hela volymer. Samma
      byggare som ridhusets entrédel. */
   v3dVaggarOchRum(S.klubb,"#FFFFFF",2.8,lagg,T.parlspont);
+  /* KLUBBDELENS INNERTAK (review 2026-09-04 08:50, blocker A): stall-inne-01,
+     -02, -03 och -04 visar ett PLATT vitt innertak med taklist över
+     pärlsponten — inte stallets synliga takstolar. Plattan ligger på
+     klubbväggarnas höjd (2,8 m) över hela klubbdelen norr om den
+     genomgående väggen; tona3d så att den tonas om kameran hamnar över den. */
+  {const ky=S.klubb.vaggar.find(v=>v.id==="genomgaende"), y0=ky?ky.y:S.klubbY;
+   const tak=new Bygge();
+   tak.lada(S.bredd,0.10,S.langd-y0,"#F4F2EC",M4.translation(S.bredd/2,2.85,(y0+S.langd)/2));
+   tak.lada(S.bredd,0.06,0.06,"#E6E2D8",M4.translation(S.bredd/2,2.77,y0+0.03));
+   S3.statiskt.push({nat:GL.nat(tak),tex:null,tona3d:v3dBox(tak)});}
   lagg(rum,T.parlspont);
   /* Whiteboarden. */
   const wb=new Bygge();

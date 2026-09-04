@@ -49,34 +49,44 @@ const INREDNING = (() => {
        träponny med riktig sadel, rund väggklocka, krukväxt och inramade
        hästfoton på pärlsponten, allt vid ett valvfönster. Valvfönstren i
        västväggen sitter i fasaden 2,6 och 8,6 m från norra gaveln
-       (site.js, `valv`), alltså y 67,35 och 61,35 — soffgruppen läggs vid
-       det södra. Att möblerna FINNS är VERIFIED; var i rummet de står är
-       ASSUMPTION inom rummet, förankrat i fönstret. */
-    {id:"uppehall_soffa_v", rum:"uppehallsrum", typ:"soffa", pos:[U.x+0.55, 61.9], rikt:E,
+       (site.js, `valv`), alltså y 67,35 och 61,35.
+       LÄGET (omläst 2026-09-04 efter review 08:50): i bilden ligger
+       ordningen längs västväggen klocka · växt · fotovägg · valvfönster
+       med ponnyn under fönstret — fönstret HÖGER om fotoväggen, dvs. norr
+       om den. Det går bara ihop med det NORRA fönstret (y 67,35): vid det
+       södra får soffan inte plats söder om fönstret (rummet börjar 59,95).
+       Samma norra fönster är pentryts valvfönster i stall-inne-02
+       (valv + runt fönster i NV-hörnet) — pentryhörnan ligger alltså
+       omedelbart norr om soffgruppen. Därför DERIVED, inte ASSUMPTION:
+       soffan mot västväggen under fotoväggen (y 64,7–66,5), fönstret
+       norr om den, ponnyn under fönstret, klockan och växten söder om
+       fotoväggen, den andra soffan i vinkel söder om borden (bildens
+       förgrund). Pentryts möbler byggs fortsatt inte (ingen order). */
+    {id:"uppehall_soffa_v", rum:"uppehallsrum", typ:"soffa", pos:[U.x+0.55, 65.6], rikt:E,
      matt:{b:1.85, d:0.85, h:0.70}, farg:"#1C1C1E", kolliderar:true,
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"uppehall_soffa_s", rum:"uppehallsrum", typ:"soffa", pos:[2.6, 64.95], rikt:N,
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"uppehall_soffa_s", rum:"uppehallsrum", typ:"soffa", pos:[2.6, 63.85], rikt:N,
      matt:{b:1.85, d:0.85, h:0.70}, farg:"#1C1C1E", kolliderar:true,
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"uppehall_bord_1", rum:"uppehallsrum", typ:"bord", pos:[1.65, 61.75], rikt:E,
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"uppehall_bord_1", rum:"uppehallsrum", typ:"bord", pos:[1.65, 65.2], rikt:E,
      matt:{b:0.55, d:0.55, h:0.45}, farg:"#141416", kolliderar:true,
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"uppehall_bord_2", rum:"uppehallsrum", typ:"bord", pos:[1.65, 62.5], rikt:E,
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"uppehall_bord_2", rum:"uppehallsrum", typ:"bord", pos:[1.65, 65.95], rikt:E,
      matt:{b:0.55, d:0.55, h:0.45}, farg:"#141416", kolliderar:true,
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"uppehall_ponny", rum:"uppehallsrum", typ:"ponny", pos:[1.0, 65.8], rikt:N,
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"uppehall_ponny", rum:"uppehallsrum", typ:"ponny", pos:[1.1, 67.55], rikt:N,
      matt:{b:0.45, d:1.35, h:1.45}, farg:"#D63A8C", farg2:"#2A2420", kolliderar:true,
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"uppehall_klocka", rum:"uppehallsrum", typ:"klocka", pos:[U.x+0.02, 60.9], rikt:E,
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"uppehall_klocka", rum:"uppehallsrum", typ:"klocka", pos:[U.x+0.02, 63.9], rikt:E,
      matt:{b:0.30, d:0.04, h:0.30}, z0:1.9, farg:"#F4F2EC",
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"uppehall_vaxt", rum:"uppehallsrum", typ:"vaxt", pos:[U.x+0.35, 63.9], rikt:E,
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
+    {id:"uppehall_vaxt", rum:"uppehallsrum", typ:"vaxt", pos:[U.x+0.38, 64.45], rikt:E,
      matt:{b:0.7, d:0.7, h:1.9}, farg:"#4E7A3A", farg2:"#5B5B8C", kolliderar:true,
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
     /* Sex inramade hästfoton i svarta ramar i en lös grupp. */
-    {id:"uppehall_fotovagg", rum:"uppehallsrum", typ:"tavlor", pos:[U.x+0.02, 63.0], rikt:E,
+    {id:"uppehall_fotovagg", rum:"uppehallsrum", typ:"tavlor", pos:[U.x+0.02, 65.75], rikt:E,
      matt:{b:2.2, d:0.03, h:1.0}, z0:1.35, antal:6, farg:"#1E1E1E", farg2:"#8A9A7A",
-     kalla:"stall-inne-01", klass:"VERIFIED", lage:"ASSUMPTION"},
+     kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
 
     /* TEORISALEN — stall-inne-04-teorisalen.jpg (IMG_0138). Kameran står
        med valvfönstren till vänster och whiteboardväggen rakt fram. Rummets
@@ -140,11 +150,19 @@ const INREDNING = (() => {
        smala passage uppstår. Dörren till teorisalen finns INTE i F02-A:s
        topologi (teorisal_s saknar öppning) — det rapporteras separat och
        byggs inte här. */
-    {id:"sadel_vastkrokar", rum:"sadelkammare", typ:"krokrad", pos:[SK.x+0.02, 62.4], rikt:E,
-     matt:{b:2.6, d:0.35, h:0.9}, z0:1.15, antal:7, farg:"#9A9B93", farg2:"#232A3A",
+    {id:"sadel_vastkrokar", rum:"sadelkammare", typ:"krokrad", pos:[SK.x+0.02, 62.2], rikt:E,
+     matt:{b:3.4, d:0.40, h:1.05}, z0:1.05, antal:10, farg:"#9A9B93", farg2:"#232A3A",
      kalla:"stall-inne-03", klass:"VERIFIED", lage:"DERIVED"},
-    {id:"sadel_stovelhylla", rum:"sadelkammare", typ:"stovelhylla", pos:[9.85, 62.4], rikt:W,
-     matt:{b:2.6, d:0.4, h:2.2}, farg:"#F2F1EC", farg2:"#1E1E1E", kolliderar:true,
+    {id:"sadel_stovelhylla", rum:"sadelkammare", typ:"stovelhylla", pos:[10.3, 62.2], rikt:W,
+     matt:{b:3.4, d:0.42, h:2.15}, farg:"#F2F1EC", farg2:"#1E1E1E", kolliderar:true,
+     kalla:"stall-inne-03", klass:"VERIFIED", lage:"DERIVED"},
+    /* Den grå ståldörren med fönster och skylten "Teorisal" rakt fram
+       (stall-inne-03). F02-A:s `teorisal_s` har ingen öppning (rapporterat,
+       topologin låst) — dörren ritas därför som ett stängt dörrblad med
+       karm och fönster PÅ väggens sydsida, inte som passage. Läget längs
+       väggen: mellan västarna och stövelhyllan [antagande]. */
+    {id:"sadel_dorr_teori", rum:"sadelkammare", typ:"dorr", pos:[8.8, SK.y+SK.h-0.06], rikt:Sy,
+     matt:{b:1.0, d:0.08, h:2.1}, farg:"#8C8F92", farg2:"#BFD3DC",
      kalla:"stall-inne-03", klass:"VERIFIED", lage:"DERIVED"},
 
     /* GÅNG A:s NORRA ÄNDE — filmerna IMG_0249/0250 (stall-gang-*): grå
@@ -182,10 +200,12 @@ const INREDNING = (() => {
      linje) och planens skåpremsa på x 4,2–5,7 — skåpbankarna ställs alltså
      i remsan med FRONTEN mot glaset (väster), gången emellan. Var raden
      börjar och slutar visar ingen bild (planens "fyra luckor" är olästa) —
-     ASSUMPTION; luckan vid y 72,6–74,3 lämnar SCV2-03-rutten entré → bana
-     fri. Ingen bank står där väggen stod som en ersättningsvägg: de är
+     ASSUMPTION; rutten entré → bana går norr om raden. Ingen bank står där väggen stod som en ersättningsvägg: de är
      0,5 m djupa möbler i öppen yta, inte en linje från gavel till gavel. */
-  const skapBitar = [[68.3, 69.9], [70.0, 72.5], [74.3, 76.2]];
+  /* En LÅNG rad (review 2026-09-04 08:50: bildens identitet är den långa
+     skåpraden) från receptionens sydvägglinje till gavelns valvfönster —
+     rutten entré → bana går norr om raden (y ≈ 75,7). */
+  const skapBitar = [[68.3, 75.0]];
   const skapX = 4.2 + 0.25;                              // fronten i remsans västkant
 
   const ridhus = [
@@ -249,13 +269,13 @@ const INREDNING = (() => {
        (-01, -15); ungefär mitt för receptionsglaset. Planens etikett
        RECEPTION på samma remsa är passiv (F02-A); vilken sida av glaset som
        är receptionens insida är F02-A:s GEOMETRY_REFERENCE_GAP. */
-    {id:"skap_bord", rum:"hall", typ:"bord", pos:[3.65, 70.7], rikt:E,
+    {id:"skap_bord", rum:"hall", typ:"bord", pos:[3.4, 74.7], rikt:E,
      matt:{b:0.6, d:0.6, h:0.72}, farg:"#F2EFE8", kolliderar:true,
      kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stol_1", rum:"hall", typ:"stol", pos:[3.65, 71.4], rikt:Sy,
+    {id:"skap_stol_1", rum:"hall", typ:"stol", pos:[3.4, 75.4], rikt:Sy,
      matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
      kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_stol_2", rum:"hall", typ:"stol", pos:[3.65, 70.0], rikt:N,
+    {id:"skap_stol_2", rum:"hall", typ:"stol", pos:[3.4, 74.0], rikt:N,
      matt:{b:0.5, d:0.5, h:0.95}, farg:"#F2EFE8", farg2:"#B8322E", kolliderar:true,
      kalla:"ridhus-klubb-01, -15, IMG_0268-r15", klass:"VERIFIED", lage:"ASSUMPTION"},
     /* RECEPTIONEN — Product Owner 2026-09-04 07:54 placerade rummet i

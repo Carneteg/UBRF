@@ -330,8 +330,11 @@ do
 	check("namnlösa öppna rum får ingen tom etikettplatta i Roblox",
 		namnlosa > 0 and tomma == 0,
 		string.format("%d namnlösa öppna rum, %d tomma plattor", namnlosa, tomma))
+	--[[ Efter review 2026-09-04 08:50 (ChatGPT: "Remove player-facing room
+		labels in reviewed interiors") har klubbdelen och entrédelen inga
+		namngivna öppna rum alls — då ska antalet plattor vara exakt noll. ]]
 	check("etikettplattor byggs för exakt de namngivna öppna rummen",
-		byggda == vantade and vantade > 0,
+		byggda == vantade,
 		string.format("%d plattor mot %d namngivna öppna rum", byggda, vantade))
 end
 
@@ -1052,7 +1055,7 @@ do
 		local dx, dy = dorr and dorr.pos[1] or 1.6, dorr and dorr.pos[2] or 67.18
 		local rutt = {
 			-- main_entrance → open_entrance_hall
-			{ dx, dy }, { 2.2, dy + 1.3 }, { 2.8, 70.5 }, { 2.8, 71.4 }, { 3.3, 73.5 }, { 5.0, 73.5 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
+			{ dx, dy }, { 2.2, dy + 1.3 }, { 2.6, 70.5 }, { 2.6, 71.4 }, { 2.8, 75.7 }, { 5.2, 75.7 }, { 10.0, 71.5 }, { 14.0, 72.5 }, { 20.0, 71.5 },
 			-- open_entrance_hall → arena_access
 			{ dx, dy }, { px, dy - 0.6 }, { px, sp.y + 0.4 },
 			-- arena_access → physical_riding_area

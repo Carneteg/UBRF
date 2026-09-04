@@ -1151,12 +1151,12 @@ const STALLINNE = {
          `uppehallsrum_o` nedan, utan vägg emellan (`del` pekar hit).
          Den dubbellinjeritade rutan x 2,0–3,0 som en tidigare runda byggde
          som sluten volym är ÅTERKALLAD av Product Owner (kanon v2). */
-      {id:"uppehallsrum", rekt:{x:0,    y:59.95, w:5.9, h:10.0}, label:"UPPEHÅLLSRUM"},
-      {id:"wc_v",         rekt:{x:0,    y:57.45, w:3.0, h:2.5},  label:"WC"},
+      {id:"uppehallsrum", rekt:{x:0,    y:59.95, w:5.9, h:10.0}, label:""},   // etiketter bort: PO 2026-09-04 08:50
+      {id:"wc_v",         rekt:{x:0,    y:57.45, w:3.0, h:2.5},  label:""},
       {id:"lobby",        rekt:{x:3.0,  y:57.45, w:2.9, h:2.5},  label:""},
       /* Ö-toaletten: en dörr går inte att läsa i planen och hittas inte på.
          `stangt`: byggs som sluten volym tills dörren är belagd. */
-      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.8},  label:"WC", stangt:true,
+      {id:"wc_o",         rekt:{x:5.9,  y:57.45, w:1.4, h:1.8},  label:"", stangt:true,
        primitiv:"WALL", canon_id:"stall_volume_wc_o", source_id:"PLAN:stall-plan1-utrymning.jpg#cell-x5.9-7.3-N10.7-12.5;PO-2026-09-03:tva-toaletter", confidence:"VERIFIED_PLAN_OR_PHOTO"},
       /* SLUTEN VOLYM UTAN NAMN. Planen ritar en symbol i den här rutan.
          Vad rutan ÄR finns det ingen oberoende källa för — ingen bild, ingen
@@ -1173,8 +1173,8 @@ const STALLINNE = {
          västdelen, och pentryt/soffhörnet hör till samma rum. Ingen egen
          etikett — namnet står en gång, i västdelen. */
       {id:"uppehallsrum_o", rekt:{x:5.9, y:64.35, w:5.3, h:5.6}, label:"", del:"uppehallsrum"},
-      {id:"teorisal",     rekt:{x:11.2, y:64.35, w:6.1, h:5.6},  label:"TEORISAL"},
-      {id:"sadelkammare", rekt:{x:7.3,  y:57.45, w:8.2, h:6.9},  label:"SADELKAMMARE"},
+      {id:"teorisal",     rekt:{x:11.2, y:64.35, w:6.1, h:5.6},  label:""},
+      {id:"sadelkammare", rekt:{x:7.3,  y:57.45, w:8.2, h:6.9},  label:""},
       {id:"ostrum",       rekt:{x:15.5, y:57.45, w:5.5, h:6.9},  label:""},
       {id:"ostrum_n",     rekt:{x:17.3, y:64.35, w:3.7, h:5.6},  label:""},
     ],
