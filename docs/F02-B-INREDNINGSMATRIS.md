@@ -193,6 +193,25 @@ entré → hall går x 2,6–2,8 (glas 2,2, stolar 3,15–3,65). Explicit kamera
 `RIDHUS-SKAPKORRIDOR` (3,4; 66,7) → (2,6; 76,0): skåpraden höger, glaset
 och disken vänster, bordet, gavelns valvfönster och stövelbänken i fonden.
 
+**Product Owner 2026-09-04 11:56 — "Saknas skåp" (enda korrigeringen i
+rundan; receptionen och stallets sidodörr/passage godkända, rörs inte).**
+Skåpförvaringen ur `ridhus-klubb-16` (höga mörkblå/grå skåp, tio halvhöga
+vita i två våningar, pelare, öppen dörr till ett litet rum), `-18` (tre grå +
+tre svarta luckor i vita profilramar), `-20/-21` (fyra gröna dubbelluckor på
+svarta ben, gul skogräns) byggs som **tre fristående grupper i entrédelens
+öppna västra remsa** x 0–2,2 söder om receptionen: `skap_grona` (x 0,3–0,8 ·
+N 68,5–70,1, front öster, två våningar, ben), `skap_hoga_v` (x 0,3–0,8 ·
+N 70,5–72,5, front öster, 3 grå + 2 mörkblå), `skap_vita_2v` (under
+receptionens sydvägg, x 0,85–2,05, front söder, 3 × 2 luckor). Inga nya rum
+eller väggar; gången x 2,2–4,2, entréns vindfång och rutten entré → bana
+fria (SCV2-03, gångtest). Att skåpen finns: `VERIFIED`; lägena:
+`ASSUMPTION` — planens cellrad bär funktionerna skåpförvaring/ombyte där
+`[antagande]`; rummen själva (Bild 2–5) är fortfarande inte placerade
+(`REFERENCE GAP` nedan kvarstår för rummen, inte för skåpen). Förenklat:
+vita banken 3 × 2 mot bildens 5 × 2; pelaren i -16 byggs inte. `skapbank`
+har fått `vaningar` och `ben` på båda ytorna. Kamera `RIDHUS-SKAPRUM`
+(19:e) från gångens södra ände snett mot nordväst.
+
 ### Ridhuset — receptionen (PO 2026-09-04 07:54)
 
 | | |
@@ -253,6 +272,10 @@ RECEPTION är borta.
 - Falsifierat (mutation → röd → återställt via cp): objekt hoppat över i
   byggaren; `laktarRader` tom; soffa flyttad ut ur rummet; soffa utan
   kollision; den gamla fronten återinförd. Alla fem gav rött.
+- PO 11:56: `geometri.spec` kräver `skap_grona`, `skap_hoga_v`, `skap_vita_2v`
+  i listan; `sikt.spec`/`kolla-visuell-grind` kräver 19 kameror inkl.
+  `RIDHUS-SKAPRUM`. Falsifierat: `skap_grona` bortkommenterad → rött;
+  kameran bort ur `Vyer.luau` → rött; återställt → grönt.
 - Review 08:50: `bygge.spec` kräver noll etikettplattor när inga öppna rum
   är namngivna, två valvfönster inifrån klubbdelen (karm + glas) med
   överkant under innertaket 2,8. Falsifierat: klippningen bort (rutan når

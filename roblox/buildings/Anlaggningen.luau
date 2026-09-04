@@ -767,17 +767,33 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 			del(" skena", X, z0 + ob.matt.h - 0.05, Y, W, 0.05, H, f, Enum.Material.Metal, false)
 			del(" vastar", X, z0, Y, W, ob.matt.h - 0.15, H, f2, Enum.Material.Fabric, false)
 		elseif typ == "skapbank" then
-			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal)
+			-- `vaningar` = luckor i två våningar (ridhus-klubb-16/-20), `ben` = kroppen på svarta ben (-20/-21)
+			local ben = ob.ben or 0
+			local kh = ob.matt.h - ben
+			local v = ob.vaningar or 1
+			del("", X, z0 + ben, Y, W, kh, H, f, Enum.Material.Metal)
+			if ben > 0 then
+				for _, bx in ipairs({ X + 0.03, X + W - 0.08 }) do
+					for _, by in ipairs({ Y + 0.03, Y + H - 0.08 }) do
+						del(" ben", bx, z0, by, 0.05, ben, 0.05, Color3.fromRGB(30, 30, 30), Enum.Material.Metal, false)
+					end
+				end
+			end
 			local fargor = ob.fargor or { f }
 			local n = math.max(1, math.round(ob.matt.b / 0.4))
+			local dh = (kh - 0.16) / v
 			for i = 0, n - 1 do
 				local c = fargor[(i % #fargor) + 1]
-				if math.abs(math.cos(ob.rikt)) > 0.5 then
-					local fx = if math.cos(ob.rikt) > 0 then X + W else X - 0.01
-					del(" dorr " .. (i + 1), fx, z0 + 0.1, Y + (H / n) * i + 0.01, 0.01, ob.matt.h - 0.16, H / n - 0.02, c, Enum.Material.Metal, false)
-				else
-					local fy = if math.sin(ob.rikt) > 0 then Y + H else Y - 0.01
-					del(" dorr " .. (i + 1), X + (W / n) * i + 0.01, z0 + 0.1, fy, W / n - 0.02, ob.matt.h - 0.16, 0.01, c, Enum.Material.Metal, false)
+				for j = 0, v - 1 do
+					local zy = z0 + ben + 0.1 + j * dh
+					local namn = " dorr " .. (i + 1) .. (if v > 1 then "-" .. (j + 1) else "")
+					if math.abs(math.cos(ob.rikt)) > 0.5 then
+						local fx = if math.cos(ob.rikt) > 0 then X + W else X - 0.01
+						del(namn, fx, zy, Y + (H / n) * i + 0.01, 0.01, dh - 0.02, H / n - 0.02, c, Enum.Material.Metal, false)
+					else
+						local fy = if math.sin(ob.rikt) > 0 then Y + H else Y - 0.01
+						del(namn, X + (W / n) * i + 0.01, zy, fy, W / n - 0.02, dh - 0.02, 0.01, c, Enum.Material.Metal, false)
+					end
 				end
 			end
 		elseif typ == "bommar" then

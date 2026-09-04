@@ -479,6 +479,18 @@ Vyer.reviewkameror = {
 		figur = { x = Ro.x + 3.0, y = Ro.y + 68.7, z = 0 },
 		krav = "Entrédörren i västväggen rakt fram: vit glasad dubbeldörr med vita karmar och grön utrymningsskylt ovanför, dörrmarkören vid samma dörr; öppen hall runt figuren.",
 	},
+	--[[ Product Owner 2026-09-04 11:56 ("Saknas skåp"): skåpförvaringen ur
+		ridhus-klubb-16/-18/-20/-21 som fristående grupper i entrédelens
+		västra remsa. Explicit kamera från gångens södra ände snett mot NV. ]]
+	{
+		id = "RIDHUS-SKAPRUM", grupp = VG,
+		text = "Skåpförvaringen i entrédelens västra remsa (ridhus-klubb-16/-18/-20/-21) — från gångens södra ände snett mot nordväst",
+		fran = { x = Ro.x + 3.0, y = Ro.y + 68.4, h = 1.55 },
+		mot = { x = Ro.x + 0.8, y = Ro.y + 71.9 },
+		aim = 1.1,
+		figur = { x = Ro.x + 2.0, y = Ro.y + 71.9, z = 0 },
+		krav = "Tre skåpgrupper i öppen yta utan nya väggar: de gröna tvåvåningsskåpen på svarta ben närmast, de höga grå/mörkblå skåpen längs västväggen, den vita tvåvåningsbanken under receptionens sydvägg; gången x 2,2–4,2 fri; inga rumslådor.",
+	},
 	{
 		id = "RIDHUS-LAKTARTRAPPA", grupp = VG,
 		text = "Trappan vid läktarens norra ände (H) — från hallens sydvästra hörn mot västväggen (ridhus-inne-39, ridhus-klubb-11)",

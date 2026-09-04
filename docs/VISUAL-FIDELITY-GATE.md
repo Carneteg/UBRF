@@ -47,6 +47,7 @@ exteriöra `STALL-ANKOMST`, samma ID på webb och Roblox:
 | `RIDHUS-RECEPTION` | Receptionen från skåpgången — glasdisken i NV-hörnet mot skåpraden (blocker 1); explicit kamera |
 | `RIDHUS-ENTRE-INNE` | Huvudentrén inifrån — fasadens dörr ritad på väggens insida (blocker 2); explicit kamera |
 | `RIDHUS-LAKTARTRAPPA` | Läktartrappan vid H från hallens sydvästra hörn (blocker 3); explicit kamera |
+| `RIDHUS-SKAPRUM` | Skåpförvaringen i entrédelens västra remsa (ridhus-klubb-16/-18/-20/-21; Product Owner 2026-09-04 11:56 "Saknas skåp"); explicit kamera |
 | `STALL-TEORISAL` | Teorisal |
 | `STALL-SADELKAMMARE` | Sadelkammare |
 | `STALL-GANG-A` | Stallgång A |

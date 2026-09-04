@@ -539,6 +539,45 @@
       }
     },
     {
+      "id": "RIDHUS-SKAPRUM",
+      "namn": "Skåpförvaringen",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": "2.0",
+        "y": "71.9",
+        "rikt": "Math.PI*0.75"
+      },
+      "text": "Product Owner 2026-09-04 11:56 (\"Saknas skåp\"): skåpförvaringen ur ridhus-klubb-16/-18/-20/-21 som tre fristående grupper i entrédelens öppna västra remsa (x 0–2,2 söder om receptionen) — gröna tvåvåningsskåp på ben, höga grå/mörkblå skåp, vit tvåvåningsbank. Explicit kamera från gångens södra ände snett mot nordväst.",
+      "referenser": [
+        "references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg",
+        "references/buildings/ridhus/ridhus-klubb-18-skapraden-narbild.jpg",
+        "references/buildings/ridhus/ridhus-klubb-20-grona-skapen.jpg",
+        "references/buildings/ridhus/ridhus-klubb-21-grona-skapen-vinkel.jpg"
+      ],
+      "gap": [
+        "rummen skåpen står i (Bild 2–5: skåpförvaring, ombyte med dusch) är inte placerade — grupperna står i öppen yta där planens cellrad bär funktionen [antagande]; lägena ASSUMPTION",
+        "antal luckor förenklat: vita banken 3 × 2 mot bildens 5 × 2; pelaren i -16 byggs inte (ingen bärande stomme belagd där)"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Tre skåpgrupper i öppen yta: gröna tvåvåningsskåp i vita ramar på svarta ben närmast kameran, höga grå + mörkblå skåp i vita profilramar längs västväggen, vit tvåvåningsbank under receptionens sydvägg; gången x 2,2–4,2 fri; inga nya väggar eller rumslådor.",
+      "kamera": {
+        "x": "3.0",
+        "y": "68.4",
+        "h": "1.55"
+      },
+      "mal": {
+        "x": "0.8",
+        "y": "71.9",
+        "h": "1.1"
+      }
+    },
+    {
       "id": "RIDHUS-LAKTARTRAPPA",
       "namn": "Trappan vid läktarens norra ände (H)",
       "hus": "ridhus",

@@ -1136,10 +1136,15 @@ function v3dInredning(scen,lagg){
         if((o.antal||1)>1) box(0.06,h,0.03,f,0,0,d/2);
         break;}
       case"skapbank":{
-        box(b,h,d,f,0,0,0); box(b,0.08,d,"#3A3C40",0,0,0);
-        const n=Math.max(1,Math.round(b/0.4)), w=b/n, fargor=o.fargor||[f];
-        for(let i=0;i<n;i++){ box(w-0.02,h-0.16,0.01,fargor[i%fargor.length],-b/2+w*(i+0.5),0.1,d/2+0.005);
-          box(0.02,0.06,0.01,"#5A5C60",-b/2+w*(i+0.5)+0.12,h*0.5,d/2+0.012); }
+        /* `vaningar` = luckor i två våningar (ridhus-klubb-16/-20),
+           `ben` = kroppen står på svarta ben (ridhus-klubb-20/-21). */
+        const ben=o.ben||0, kh=h-ben, v=o.vaningar||1;
+        box(b,kh,d,f,0,ben,0); box(b,0.08,d,"#3A3C40",0,ben,0);
+        if(ben>0) for(const s of [-1,1]) for(const t of [-1,1]) box(0.05,ben,0.05,"#1E1E1E",s*(b/2-0.06),0,t*(d/2-0.06));
+        const n=Math.max(1,Math.round(b/0.4)), w=b/n, fargor=o.fargor||[f], dh=(kh-0.16)/v;
+        for(let i=0;i<n;i++) for(let j=0;j<v;j++){ const lx=-b/2+w*(i+0.5), y0=ben+0.1+j*dh;
+          box(w-0.02,dh-0.02,0.01,fargor[i%fargor.length],lx,y0,d/2+0.005);
+          box(0.02,0.06,0.01,"#5A5C60",lx+0.12,y0+dh*0.5,d/2+0.012); }
         break;}
       case"bank":
         box(b,0.05,d,f,0,h-0.05,0);
