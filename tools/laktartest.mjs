@@ -41,9 +41,19 @@ async function sida(mobil) {
 /* Går med spelets riktiga loop och loggar VARJE prov: läge, nivå och att
    nivåbytet aldrig överstiger NIVA_STEG (ingen teleport). `touch` matar
    IN.joy som mobil.js gör; annars hålls W (kamerarelativt framåt). */
-async function ga(page, { x, y, z = 0, rikt, ms, touch, klar }) {
-  await page.evaluate(({ x, y, z, rikt }) => { slutaGa(); gaTill("ridhusinne", { x, y, rikt, z }); }, { x, y, z, rikt });
-  await page.waitForTimeout(500);
+async function ga(page, { x, y, z = 0, rikt, ms, touch, klar, fortsatt }) {
+  /* `fortsatt`: gå vidare från nuvarande läge i stället för att placeras om.
+     Behövs för rutter i flera ben — en spelare som kommer in genom dörren
+     går först fram till stegen och SEDAN upp för dem. Ett enda rakt ben
+     från dörren till stegens mitt går inte in på stegen alls; det mäter
+     däckets kant, inte stegen. */
+  if (!fortsatt) {
+    await page.evaluate(({ x, y, z, rikt }) => { slutaGa(); gaTill("ridhusinne", { x, y, rikt, z }); }, { x, y, z, rikt });
+    await page.waitForTimeout(500);
+  } else {
+    await page.evaluate(() => slutaGa());
+    await page.waitForTimeout(150);
+  }
   await page.evaluate(({ rikt }) => { VD.rikt = rikt; if (typeof V3D !== "undefined" && V3D.kam) V3D.kam.satt = false; }, { rikt });
   await page.waitForTimeout(400);
   await page.evaluate(() => { window.__spar = []; window.__hopp = 0; let f = (VD.pz || 0);
@@ -76,31 +86,133 @@ for (const mobil of [false, true]) {
   const namn = mobil ? "MOBIL/touch" : "DATOR/tangent";
   const I = await page.evaluate(() => { const R = RIDHUSINNE, L = R.laktare, ls = SPELABSTRAKTIONER.ridhus.laktarSteg;
     const d = R.dorrar.find(d => d.id === "ut_ridhus_W_9");
-    return { dorr: d.pos, ls: { x0: ls.x0, x1: ls.x1, y0: ls.y0, y1: ls.y1 }, L: { dackZ: L.dackZ, y1: L.y1, x0: L.x0, d: L.dackDjup } }; });
+    /* Läktartrappan vid H upptar däckets nordvästra hörn och är ingen
+       ingång — den går uppåt mot caféplanet. Allt ÖSTER om den, fram till
+       däckets bortre kant, är däck som spelaren ska kunna nå. */
+    const t = R.trappor.find(t => t.id === "laktar_trappa_h");
+    return { dorr: d.pos, ls: { x0: ls.x0, x1: ls.x1, y0: ls.y0, y1: ls.y1, z0: ls.z0, z1: ls.z1 },
+      L: { dackZ: L.dackZ, y1: L.y1, x0: L.x0, d: L.dackDjup },
+      rader: { antal: L.rader.antal, stegH: L.rader.stegH },
+      /* Högsta bänkrad man faktiskt kan STÅ på. Den översta radens band
+         ligger under läktartrappan vid H (`foten på översta radens nivå`,
+         ridhus-inne-39) — där tar trappan över nivån, så den raden är
+         trappans fot och ingen sittplats. Räknas ur datan, inte antaget. */
+      toppRad: (() => {
+        const lE = (R.sidor && R.sidor.laktare === "E");
+        let b = L.dackZ;
+        for (const rad of laktarRader(L)) {
+          const mitt = lE ? L.x0 + (rad.in0 + rad.in1) / 2
+                          : L.x0 + L.dackDjup - (rad.in0 + rad.in1) / 2;
+          if (t && mitt >= t.x0 && mitt <= t.x1) continue;    // trappans fot
+          b = Math.max(b, rad.z);
+        }
+        return b;
+      })(),
+      /* Gångbrädan: den enda däcksytan som ligger på dackZ. Läktarens nivå
+         beror på avståndet in från bankanten, så det är hit — och bara hit
+         — stegen kan landa plant. */
+      brada: { x0: L.x0 + L.dackDjup - L.gangbrada.djup, x1: L.x0 + L.dackDjup },
+      gavel: { x0: t ? t.x1 : L.x0, x1: L.x0 + L.dackDjup } }; });
   /* 1. Från huvudentrén rakt fram (söderut) upp på däcket — det PO gör. */
   /* Spelaren kliver in genom huvudentrén och går mot trappan hon ser —
      inte mot en osynlig punkt. Läktartrappan vid H upptar däckets
      nordvästra hörn, så däckets gångbara ände börjar strax öster om
      dörren; kursen tas därför mot stegens mitt. */
-  const mot = Math.atan2(I.ls.y0 - I.dorr[1], (I.ls.x0 + I.ls.x1) / 2 - I.dorr[0]);
-  let q = await ga(page, { x: I.dorr[0], y: I.dorr[1], rikt: mot, ms: 45000, touch: mobil,
+  /* Kursen tas mot stegens INGÅNG — deras norra kant — inte mot deras
+     topp. Siktar man på toppen går den räta linjen in på golvet väster om
+     stegen och slutar mot däckets kant, vilket mäter fel sak. */
+  /* Ben 1: in genom dörren och österut fram till stegens bredd.
+     Ben 2: söderut upp för stegen, från där ben 1 slutade. */
+  const mittX = (I.ls.x0 + I.ls.x1) / 2;
+  await ga(page, { x: I.dorr[0], y: I.ls.y1 + 1.4, rikt: 0, ms: 30000, touch: mobil,
+    klar: `p.x >= ${mittX - 0.15}` });
+  let q = await ga(page, { rikt: S, ms: 45000, touch: mobil, fortsatt: true,
     klar: `p.z >= ${I.L.dackZ - 0.02}` });
-  prova(`${namn}: från huvudentrén till läktardäcket (kurs mot stegen)`,
-    q.z >= I.L.dackZ - 0.02 && q.hopp === 0,
-    `(${q.x}, ${q.y}) z ${q.z} efter ${q.n} bildrutor, teleporthopp ${q.hopp}`);
-  /* 2. Angreppssvep: från golvet söderut på flera x längs däckets norra ände. */
-  /* Svepet mäter STEGENS egen bredd: däckets nordvästra hörn upptas av
-     läktartrappan vid H (z 1,7 → café) och är ingen ingång. */
-  const bredd = [];
-  for (let x = I.ls.x0 + 0.2; x <= I.ls.x1 - 0.2; x += 0.3) {
-    const r = await ga(page, { x: +x.toFixed(2), y: I.ls.y1 + 1.0, rikt: S, ms: 20000, touch: mobil,
+  /* Kravet är inte bara en höjd — det är att STÅ PÅ LÄKTAREN. En figur som
+     drivit iväg österut och hamnat 1,03 m upp på något annat är inte uppe
+     på läktaren, och det ska inte kunna passera som grönt. */
+  const paLaktaren = q.x >= I.L.x0 - 0.05 && q.x <= I.L.x0 + I.L.d + 0.05;
+  prova(`${namn}: från huvudentrén fram till stegen och upp på läktardäcket`,
+    q.z >= I.L.dackZ - 0.02 && q.hopp === 0 && paLaktaren,
+    `(${q.x}, ${q.y}) z ${q.z} efter ${q.n} bildrutor, teleporthopp ${q.hopp}` +
+    (paLaktaren ? "" : "  ⟵ UTANFÖR läktarens fotavtryck"));
+  /* 2. Angreppssvep över HELA STEGENS BREDD, med däckets nivåer som
+     ankare — inte över stegen relativt sig själva.
+
+     Det här är rättelsen av en svaghet jag själv flaggade i PR #85: svepet
+     gick förut från `ls.x0` till `ls.x1`. Krympte man stegen följde svepet
+     med, och testet kunde aldrig bli rött — det mätte bara att stegen
+     fungerar där stegen finns. Ankaret är nu GÅNGBRÄDAN, som är den enda
+     yta stegen kan möta plant (läktarens nivå beror på avståndet in från
+     bankanten: gångbräda 0,80, sedan bänkrader 1,10 / 1,40 / 1,70).
+
+     SVÄLT ÄR INTE GEOMETRI. Headless SwiftShader ger ibland så få
+     bildrutor att spelaren inte hinner fram innan taket löper ut, och en
+     körning som aldrig NÅDDE stegen säger ingenting om stegen. En punkt
+     räknas därför som oåtkomlig först när spelaren faktiskt tog sig fram
+     till stegets norra kant och ändå stod kvar på z 0. Kom hon inte ens
+     dit görs ett försök till; händer det igen rapporteras det som OKLART —
+     aldrig omskrivet till vare sig pass eller fail. (Min första mätning i
+     #81 var delvis just svält, och det ska inte kunna hända tyst igen.) */
+  const bredd = [], missade = [], oklara = [];
+  const framme = r => r.y <= I.ls.y1 + 0.25;          // nådde stegets norra kant
+  for (let x = I.ls.x0 + 0.15; x <= I.ls.x1 - 0.15; x += 0.2) {
+    const px = +x.toFixed(2), etikett = +x.toFixed(2);
+    let r = await ga(page, { x: px, y: I.ls.y1 + 1.0, rikt: S, ms: 20000, touch: mobil,
       klar: `p.z >= ${I.L.dackZ - 0.02}` });
-    if (r.z >= I.L.dackZ - 0.02) bredd.push(+x.toFixed(1));
+    if (r.z < I.L.dackZ - 0.02 && !framme(r)) {
+      r = await ga(page, { x: px, y: I.ls.y1 + 1.0, rikt: S, ms: 30000, touch: mobil,
+        klar: `p.z >= ${I.L.dackZ - 0.02}` });
+    }
+    if (r.z >= I.L.dackZ - 0.02) bredd.push(etikett);
+    else if (framme(r)) missade.push(etikett);
+    else oklara.push(`${etikett} (stannade på y ${r.y}, ${r.n} bildrutor)`);
   }
-  const antalProv = Math.floor((I.ls.x1 - 0.2 - (I.ls.x0 + 0.2)) / 0.3) + 1;
-  prova(`${namn}: hela stegbredden går att gå upp för (inte en smal remsa)`,
-    bredd.length >= antalProv - 1,
-    `${bredd.length} av ${antalProv} angreppspunkter längs x ${I.ls.x0.toFixed(1)}–${I.ls.x1.toFixed(1)} kom upp: ${JSON.stringify(bredd)}`);
+  const antalProv = bredd.length + missade.length + oklara.length;
+  prova(`${namn}: HELA stegens bredd (x ${I.ls.x0.toFixed(1)}–${I.ls.x1.toFixed(1)}) går att gå upp på`,
+    missade.length === 0 && oklara.length === 0,
+    `${bredd.length} av ${antalProv} angreppspunkter kom upp` +
+    (missade.length ? ` — OÅTKOMLIGA: ${JSON.stringify(missade)}` : "") +
+    (oklara.length ? ` — OKLART, nådde aldrig stegen (bildrutesvält?): ${oklara.join("; ")}` : ""));
+
+  /* 2b. UPP FÖR BÄNKRADERNA. Att stå på gångbrädan är inte att vara på
+     läktaren — man ska kunna gå västerut upp för raderna, 0,30 m i taget.
+     Det var här felet satt: stegen slutade förut mot SIDAN av en rad, ett
+     hopp på 0,62 m mot nivåregelns 0,36. Kravet är översta radens nivå,
+     nådd utan ett enda teleporthopp. */
+  {
+    const V = Math.PI;                                  // västerut
+    const topp = I.toppRad;
+    const r = await ga(page, { x: (I.brada.x0 + I.brada.x1) / 2, y: I.ls.y0 - 0.6,
+      z: I.L.dackZ, rikt: V, ms: 45000, touch: mobil, klar: `p.z >= ${topp - 0.02}` });
+    prova(`${namn}: vidare upp för bänkraderna till översta STÅBARA raden (${topp.toFixed(2)} m)`,
+      r.z >= topp - 0.02 && r.hopp === 0,
+      `(${r.x}, ${r.y}) z ${r.z} av ${topp.toFixed(2)}, teleporthopp ${r.hopp}`);
+  }
+  /* 2c. STEGENS TOPP MÅSTE MÖTA DÄCKET PLANT ÖVER HELA SIN BREDD.
+     Det här är felet i #81 uttryckt som en invariant i stället för som en
+     promenad, och det är den kontroll som inte går att luras av att stegen
+     krymper: den läser däckets verkliga nivå strax söder om stegens topp,
+     för varje x stegen täcker, och kräver att språnget håller sig under
+     nivåregeln. Förut var det 0,62 m mot tillåtna 0,36 väster om
+     gångbrädan, eftersom läktarens nivå beror på avståndet in från
+     bankanten och stegen hade en enda topphöjd. */
+  {
+    const brott = await page.evaluate(({ ls }) => {
+      const ut = [];
+      for (let x = ls.x0 + 0.05; x <= ls.x1 - 0.05; x += 0.1) {
+        const under = ridhusNiva(x, ls.y0 - 0.05, ls.z1);
+        if (Math.abs(under - ls.z1) > NIVA_STEG + 1e-9)
+          ut.push({ x: +x.toFixed(2), topp: ls.z1, dack: +under.toFixed(2), d: +(under - ls.z1).toFixed(2) });
+      }
+      return ut;
+    }, { ls: I.ls });
+    prova(`${namn}: stegens topp möter däcket plant över hela bredden (≤ NIVA_STEG)`,
+      brott.length === 0,
+      brott.length ? `${brott.length} x-lägen bryter nivåregeln, värst ${JSON.stringify(brott[0])}`
+                   : `topp ${I.ls.z1.toFixed(2)} m möter däcket inom nivåregeln på hela x ${I.ls.x0.toFixed(1)}–${I.ls.x1.toFixed(1)}`);
+  }
+
   /* 3. Minst 10 m längs läktargången, kvar på däcksnivå. */
   q = await ga(page, { x: (I.ls.x0 + I.ls.x1) / 2, y: I.ls.y0 - 0.8, z: I.L.dackZ, rikt: S, ms: 60000, touch: mobil,
     klar: `p.y <= ${I.ls.y0 - 0.8 - 10.5}` });

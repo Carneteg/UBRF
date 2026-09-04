@@ -2224,7 +2224,7 @@ const SPELABSTRAKTIONER = {
        Läget härleds ur läktaren. */
     laktarSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
                 klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
-                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Spänner däckets brukbara norra gavel (x 1,6–4,0) sedan P0 #81: en smalare remsa med 0,2 m godtycklig marginal gjorde läktaren oåtkomlig i den riktiga webbruntimen"},
+                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Slutar på GÅNGBRÄDAN (x 3,1–4,0) sedan P0 #81: läktarens nivå beror på avståndet in från bankanten, så en bredare ramp med en enda topp slutade mot sidan av en bänkrad — ett hopp på 0,62 m där nivåregeln tillåter 0,36. Bänkraderna klivs därefter 0,30 m i taget"},
   },
 };
 
@@ -2361,16 +2361,40 @@ const SPELABSTRAKTIONER = {
           hall ledde alltså ett par meter osynlig remsa upp — det är felet
           PO rapporterade.
 
-          De 0,2 m var godtyckliga och tas bort: stegen börjar där däcket
-          FAKTISKT blir gångbart. Läktartrappan vid H upptar däckets
-          nordvästra hörn (x 0,6–1,6, y 62,82–65,68) och ligger på z 1,7 →
-          3,68 — den nås från översta raden, inte från däcket. Väster om
-          x 1,6 finns därför ingen däcksnivå att kliva ut på, och stegen
-          spänner nu exakt den brukbara änden: x 1,6 → 4,0. Ingen ny
-          geometri, samma abstraktion, inget källbelagt flyttat. Däckets
-          långsida spärrar fortfarande — man går upp vid gaveln. */
+          RÄTTELSE, andra rundan på #81. Att bredda stegen till x 1,6–4,0
+          botade inte felet, bara en del av det, och orsaken var en annan
+          än jag först skrev. Uppmätt med ridhusNivaer längs stegens topp:
+
+            x 3,1–4,0  däcksnivå (gångbrädan)  0,80 m
+            x 2,3–3,1  bänkrad 1               1,10 m
+            x 1,5–2,3  bänkrad 2               1,40 m
+            x 1,6–1,5  bänkrad 3               1,70 m
+
+          Läktarens nivå beror alltså på HUR LÅNGT IN från bankanten man
+          står, inte på y. Stegen hade en enda topp — 0,80 m över hela sin
+          bredd — så väster om gångbrädan slutade de mot SIDAN av en
+          bänkrad: ett hopp på 0,62 m där nivåregeln tillåter 0,36. Den som
+          gick rakt söderut på x 2,0 stannade på z 0,78, tre centimeter från
+          däcket. Att det ibland ändå gick igenom berodde på hur en enskild
+          bildruta råkade falla, vilket också förklarar varför mina första
+          svepmätningar flimrade mellan 11 och 12 av 15.
+
+          Stegen slutar därför nu på den yta de faktiskt kan möta plant:
+          GÅNGBRÄDAN, x 3,1–4,0 (`dackDjup - gangbrada.djup`). Därifrån går
+          man västerut upp för bänkraderna, 0,30 m i taget — under
+          nivåregelns 0,36 utan att någon siffra behöver justeras.
+
+          Att i stället låta stegen spänna hela gaveln hade krävt fyra
+          ramper med var sin topphöjd, alltså en 2,4 m bred trappa som
+          inget foto visar. Stiliserat betyder förenklat, inte påhittat:
+          en väg upp vid gångbrädan är det mindre uppfunna av de två.
+          Vilken PO vill ha är ett produktbeslut, och det står i #81.
+
+          Ingen ny geometri, samma abstraktion, inget källbelagt flyttat.
+          Däckets långsida spärrar fortfarande — man går upp vid gaveln. */
        const ls=SPELABSTRAKTIONER.ridhus.laktarSteg;
-       ls.x0=L.x0+bredd; ls.x1=L.x0+L.dackDjup; ls.y0=L.y1; ls.y1=L.y1+1.2;
+       ls.x0=L.x0+L.dackDjup-L.gangbrada.djup; ls.x1=L.x0+L.dackDjup;
+       ls.y0=L.y1; ls.y1=L.y1+1.2;
        ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
      }}
   }
