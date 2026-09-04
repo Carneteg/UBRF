@@ -1,0 +1,58 @@
+--!strict
+--[[
+	GENERERAD FIL — handredigera inte.
+
+	Skrivs av tools/exportera-ridkanon.mjs ur webbens src/model.js och
+	src/riding/telemetri.js. Det här är WEBBENS ridkanon, exporterad så att
+	Roblox-sidan har något exakt att mäta sig mot i stället för att två
+	uppsättningar siffror driver isär i tysthet.
+
+	Modulen STYR ingenting i Roblox — Gaits.luau är fortfarande Roblox
+	egna, intrimmade tabell. Den här filen används av
+	roblox/tests/paritet.spec.luau för att jämföra, och för att lista de
+	avvikelser som faktiskt finns. Att jämna ut en avvikelse är ett
+	produktbeslut och ändrar ridkänslan; det görs aldrig av en export.
+
+	Kör om med:  node tools/exportera-ridkanon.mjs
+]]
+
+local RidKanon = {}
+
+--[[ Webbens gångartsordning. Roblox har en gångart till (fyrsprång);
+     paritetsspecen kräver att den här är ett PREFIX av Roblox ordning. ]]
+RidKanon.ORDNING = { "halt", "skritt", "trav", "galopp" }
+
+--[[ Vilken Roblox-gångart varje webbgångart motsvarar. ]]
+RidKanon.MOTSVARIGHET = {
+	halt = "halt",
+	skritt = "walk",
+	trav = "trot",
+	galopp = "canter",
+}
+
+--[[ Gångartsbanden ur src/model.js (Gait.G). min/max i m/s, norm är
+     gångartens normaltempo, steg är webbens steglängdsfaktor. ]]
+RidKanon.BAND = {
+	halt = { min = 0, max = 0.2, norm = 0, steg = 0 },
+	skritt = { min = 0.9, max = 2, norm = 1.45, steg = 0.46 },
+	trav = { min = 2.4, max = 4.3, norm = 3.2, steg = 0.63 },
+	galopp = { min = 4.6, max = 8, norm = 5.6, steg = 1 },
+}
+
+--[[ Hysteres: hur långt utanför sitt band en gångart får leva kvar. ]]
+RidKanon.HYSTERES = 0.35
+
+--[[ Trösklarna, MÄTTA ur Gait.forTempo — inte avskrivna. ]]
+RidKanon.TROSKLAR = {
+	{ under = 0.25, gangart = "skritt" },
+	{ under = 2.2, gangart = "trav" },
+	{ under = 4.45, gangart = "galopp" },
+}
+
+--[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
+RidKanon.TELEMETRI_FALT = { "balans", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "kurvatur", "mjukhet", "onskadFart", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
+
+--[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]
+RidKanon.HARLEDDA = { "balans", "fokus" }
+
+return RidKanon

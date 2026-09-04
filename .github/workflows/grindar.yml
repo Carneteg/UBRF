@@ -48,6 +48,11 @@ jobs:
           if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera
           else echo "hoppar: tools/exportera-spel.js finns inte i denna branch"; fi
 
+      - name: Ridkanon i synk — src/model.js mot RidKanon.luau
+        run: |
+          if [ -f tools/exportera-ridkanon.mjs ]; then node tools/exportera-ridkanon.mjs --kontrollera
+          else echo "hoppar: tools/exportera-ridkanon.mjs finns inte i denna branch"; fi
+
       - name: Geometri i synk — src/site.js mot UBRFKomplex.luau
         run: |
           if [ -f tools/exportera-geometri.js ]; then node tools/exportera-geometri.js --kontrollera
@@ -110,12 +115,13 @@ jobs:
           git rev-parse --verify "$bas" >/dev/null 2>&1 || { echo "ingen bas att jämföra mot"; exit 0; }
           andrade=$(git diff --name-only "$bas"...HEAD || true)
           fel=0
-          for genererad in roblox/game/UBRFSpelData.luau roblox/game/UBRFSkotsel.luau roblox/buildings/UBRFKomplex.luau; do
+          for genererad in roblox/game/UBRFSpelData.luau roblox/game/UBRFSkotsel.luau roblox/buildings/UBRFKomplex.luau roblox/src/shared/HorseCore/RidKanon.luau; do
             printf '%s\n' "$andrade" | grep -qx "$genererad" || continue
             case "$genererad" in
               roblox/game/UBRFSpelData.luau)      gen="tools/exportera-spel.js";;
               roblox/game/UBRFSkotsel.luau)       gen="tools/exportera-spel.js";;
               roblox/buildings/UBRFKomplex.luau) gen="tools/exportera-geometri.js";;
+              roblox/src/shared/HorseCore/RidKanon.luau) gen="tools/exportera-ridkanon.mjs";;
             esac
             kalla=$(printf '%s\n' "$andrade" | grep -E '^(src/|tools/)' || true)
             if [ -z "$kalla" ]; then

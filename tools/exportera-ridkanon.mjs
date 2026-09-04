@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+/* Exporterar RIDNINGENS KANON ur webbens ridmodell till en Luau-modul som
+   Roblox-sidan kan mäta sig mot.
+
+   Poängen är densamma som i tools/exportera-geometri.js: det ska bara finnas
+   EN sanning om gångartsbanden, hysteresen och telemetrins fält. Webbens
+   src/model.js och src/riding/telemetri.js är den sanningen; den här filen
+   kopierar inga siffror för hand utan räknar ut dem ur samma kod som
+   webbspelet kör.
+
+       node tools/exportera-ridkanon.mjs               skriver om modulen
+       node tools/exportera-ridkanon.mjs --kontrollera faller om den är osynk
+
+   VIKTIGT — filen ändrar INGEN ridkänsla. Den läser Gate 01:s intrimmade
+   värden och skriver ned dem. Roblox-sidans egna värden rörs inte heller:
+   paritetsspecen (roblox/tests/paritet.spec.luau) JÄMFÖR mot den här
+   modulen och listar de avvikelser som faktiskt finns, i stället för att
+   tysta harmonisera bort dem. Att ändra ett gångartsband är ett
+   produktbeslut, inte en exportbiverkning. */
+
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
+import { fileURLToPath } from "node:url";
+
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
+
+const ctx = { console, Math, JSON, window: {} };
+vm.createContext(ctx);
+vm.runInContext(las("src/model.js") + "\n" + las("src/riding/telemetri.js"), ctx);
+const { Gait, RID_ORDNING } = vm.runInContext("({Gait, RID_ORDNING})", ctx);
+
+/* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
+   ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
+   forTempo utan tidigare gångart (då gäller inte hysteresen) och notera var
+   svaret byter. Då kan trösklarna aldrig hamna i osynk med koden. */
+function mataTrosklar() {
+  const ut = [];
+  /* Grovsvep för att hitta VAR ett byte sker, sedan halvering för att hitta
+     EXAKT var. Utan halveringen blir tröskeln beroende av svepets steglängd
+     (0,0005 gav 2,2005 i stället för 2,20) och exporten slutar vara
+     deterministisk mot koden den påstår sig mäta. */
+  let forra = Gait.forTempo(0, null);
+  for (let i = 1; i <= 24000; i++) {
+    const t = i * 0.0005, g = Gait.forTempo(t, null);
+    if (g === forra) continue;
+    let lo = t - 0.0005, hi = t;
+    for (let k = 0; k < 60; k++) {
+      const m = (lo + hi) / 2;
+      if (Gait.forTempo(m, null) === forra) lo = m; else hi = m;
+    }
+    ut.push({ under: Math.round(hi * 1e6) / 1e6, gangart: g });
+    forra = g;
+  }
+  return ut;
+}
+
+/* Telemetrins fältnamn läses ur ett riktigt anrop, inte ur en handskriven
+   lista — då kan ett fält aldrig försvinna ur kontraktet obemärkt. */
+function telemetriFalt() {
+  const ride = vm.runInContext("nyState(0.7,0.5,0.8)", ctx);
+  ride.gangart = "trav"; ride.tempo = 3.2; ride.steglangd = 2.2;
+  const tm = ctx.ridTelemetri(ride, { skankel: 0.5, tygel: 0.4, sits: 0.5, styrning: 0 },
+    { kappa: 0.1, fas: 0.25 });
+  return { falt: Object.keys(tm).filter(k => k !== "_harledda").sort(), harledda: tm._harledda.slice().sort() };
+}
+
+const tal = v => {
+  if (!Number.isFinite(v)) return "math.huge";
+  const r = Math.round(v * 1e6) / 1e6;
+  return Object.is(r, -0) ? "0" : String(r);
+};
+const str = s => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+
+const { falt, harledda } = telemetriFalt();
+const trosklar = mataTrosklar();
+
+const rader = [];
+rader.push("--!strict");
+rader.push("--[[");
+rader.push("\tGENERERAD FIL — handredigera inte.");
+rader.push("");
+rader.push("\tSkrivs av tools/exportera-ridkanon.mjs ur webbens src/model.js och");
+rader.push("\tsrc/riding/telemetri.js. Det här är WEBBENS ridkanon, exporterad så att");
+rader.push("\tRoblox-sidan har något exakt att mäta sig mot i stället för att två");
+rader.push("\tuppsättningar siffror driver isär i tysthet.");
+rader.push("");
+rader.push("\tModulen STYR ingenting i Roblox — Gaits.luau är fortfarande Roblox");
+rader.push("\tegna, intrimmade tabell. Den här filen används av");
+rader.push("\troblox/tests/paritet.spec.luau för att jämföra, och för att lista de");
+rader.push("\tavvikelser som faktiskt finns. Att jämna ut en avvikelse är ett");
+rader.push("\tproduktbeslut och ändrar ridkänslan; det görs aldrig av en export.");
+rader.push("");
+rader.push("\tKör om med:  node tools/exportera-ridkanon.mjs");
+rader.push("]]");
+rader.push("");
+rader.push("local RidKanon = {}");
+rader.push("");
+rader.push("--[[ Webbens gångartsordning. Roblox har en gångart till (fyrsprång);");
+rader.push("     paritetsspecen kräver att den här är ett PREFIX av Roblox ordning. ]]");
+rader.push("RidKanon.ORDNING = { " + RID_ORDNING.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ Vilken Roblox-gångart varje webbgångart motsvarar. ]]");
+rader.push("RidKanon.MOTSVARIGHET = {");
+for (const [w, r] of [["halt", "halt"], ["skritt", "walk"], ["trav", "trot"], ["galopp", "canter"]]) {
+  rader.push(`\t${w} = ${str(r)},`);
+}
+rader.push("}");
+rader.push("");
+rader.push("--[[ Gångartsbanden ur src/model.js (Gait.G). min/max i m/s, norm är");
+rader.push("     gångartens normaltempo, steg är webbens steglängdsfaktor. ]]");
+rader.push("RidKanon.BAND = {");
+for (const namn of RID_ORDNING) {
+  const g = Gait.G[namn];
+  rader.push(`\t${namn} = { min = ${tal(g.min)}, max = ${tal(g.max)}, norm = ${tal(g.norm)}, steg = ${tal(g.steg)} },`);
+}
+rader.push("}");
+rader.push("");
+rader.push("--[[ Hysteres: hur långt utanför sitt band en gångart får leva kvar. ]]");
+rader.push(`RidKanon.HYSTERES = ${tal(Gait.HYST)}`);
+rader.push("");
+rader.push("--[[ Trösklarna, MÄTTA ur Gait.forTempo — inte avskrivna. ]]");
+rader.push("RidKanon.TROSKLAR = {");
+for (const t of trosklar) rader.push(`\t{ under = ${tal(t.under)}, gangart = ${str(t.gangart)} },`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");
+rader.push("RidKanon.TELEMETRI_FALT = { " + falt.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]");
+rader.push("RidKanon.HARLEDDA = { " + harledda.map(str).join(", ") + " }");
+rader.push("");
+rader.push("return RidKanon");
+rader.push("");
+
+const utfil = "roblox/src/shared/HorseCore/RidKanon.luau";
+const ny = rader.join("\n");
+const abs = path.join(ROT, utfil);
+
+if (process.argv.includes("--kontrollera")) {
+  const gammal = fs.existsSync(abs) ? fs.readFileSync(abs, "utf8") : "";
+  if (gammal === ny) { console.log(`OK   ${utfil} i synk med webbens ridmodell`); process.exit(0); }
+  console.error(`FEL  ${utfil} är osynk med src/model.js / src/riding/telemetri.js`);
+  console.error("     kör: node tools/exportera-ridkanon.mjs");
+  process.exit(1);
+}
+fs.writeFileSync(abs, ny);
+console.log(`${utfil}: ${RID_ORDNING.length} gångarter, ${trosklar.length} trösklar, ${falt.length} telemetrifält`);

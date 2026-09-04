@@ -79,6 +79,16 @@ FORBEREDELSE = SPEL + [
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
+# Paritetsspecen jamfor Roblox gangarter och telemetri mot webbens
+# exporterade ridkanon. Den behover ingen rorelsemodul: den mater kontrakt,
+# inte fysik.
+PARITET = [
+    ("Types",      "src/shared/HorseCore/Types.luau"),
+    ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
+    ("RidKanon",   "src/shared/HorseCore/RidKanon.luau"),
+    ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
+]
+
 MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -134,7 +144,9 @@ def inlina(kalla: str) -> str:
 def bygg(spec_rel: str) -> pathlib.Path:
     # Ordningen ar viktig: "forberedelse" far inte falla igenom till MODULER,
     # dar varken UBRFSkotsel eller Stallet finns. Testas forst av det skalet.
-    if "forberedelse" in spec_rel:
+    if "paritet" in spec_rel:
+        moduler, stubbar = PARITET, "tests/stubs.luau"
+    elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
