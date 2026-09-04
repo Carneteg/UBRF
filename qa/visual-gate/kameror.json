@@ -17,25 +17,36 @@
       "hus": "stall",
       "scen": "stallinne",
       "lage": {
-        "x": "S.klubb.rum.find(r=>r.id==='vindfang').rekt.x + S.klubb.rum.find(r=>r.id==='vindfang').rekt.w/2",
-        "y": "S.langd - 6.0",
+        "x": "(()=>{const o=A.byggnader.find(b=>b.id==='stall').oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return S.bredd-o.u-o.b/2;})() - 2.2",
+        "y": "S.langd - 3.0",
         "rikt": "Math.PI/2"
       },
-      "text": "Inne i uppehållsrummet 6 m från norra gaveln, blicken norrut mot entrén: vindfånget, dörren, gavelväggen",
+      "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
       "referenser": [
         "references/buildings/stall/stall-entre-15-dorren.jpg",
         "references/buildings/stall/stall-entre-16-runda-fonstren.jpg"
       ],
       "gap": [
-        "vindfångets insida: ingen interiörbild"
+        "ingen interiörbild av gavelns insida: dörrbladets färg inifrån [antagande]",
+        "planens vindfång mot fasadens entré: dokumenterad motsägelse"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Gaveln lästes som blank grå vägg med en liten öppning; källan stall-entre-15 visar den stora ockragula entrédörren och de runda fönstren. Rättat i F02-A (6df46af): gavelns insida visar fasadens öppningar; kameran vänd mot dörren. Väntar på ny review."
       },
-      "ram": "Gavelväggen med entrédörren och vindfångets region rakt fram i ögonhöjd; uppehållsrummets öppna yta fram till gaveln; ingen inre vägg mellan figuren och entrén"
+      "ram": "Gavelväggen med fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram, det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång x 3,6–5,5 mot fasadens entré x 10,5, DEFERRED BY EXTERIOR LOCK)",
+      "kamera": {
+        "x": "(()=>{const o=A.byggnader.find(b=>b.id==='stall').oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return S.bredd-o.u-o.b/2;})() - 0.4",
+        "y": "S.langd - 5.4",
+        "h": "1.7"
+      },
+      "mal": {
+        "x": "(()=>{const o=A.byggnader.find(b=>b.id==='stall').oppningar.find(o=>o.sida==='N'&&o.typ==='dorrgul'); return S.bredd-o.u-o.b/2;})()",
+        "y": "S.langd",
+        "h": "1.2"
+      }
     },
     {
       "id": "STALL-UPPEHALL",
@@ -56,10 +67,10 @@
         "möbler (F02-B) saknas ännu — inte ett fel i F02-A"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Ramen duger, men rummet liknar inte stall-inne-01 tillräckligt för produktacceptans — möbler är F02-B. Förblir MISMATCH tills F02-B (#76) integrerats och granskats."
       },
       "ram": "Rummets hela längd (10 m) i ögonhöjd: västväggen till vänster, öppningen mot östdelen (uppehallsrum_o) till höger utan vägg emellan, planens slutna symbolruta till höger, gaveln med entrén längst bort"
     },
@@ -274,10 +285,10 @@
         "Café Krubbans rum bakom glaset byggs inte (REFERENCE GAP)"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Loppen lästes som dominerande mörkbruna träramper; ridhus-inne-01 visar vita snedställda sidostycken i liv med väggen med mörkt räcke. Rättat i F02-A (6df46af): sidostyckena i eget otexturerat nät, utanför loppet, full höjd. Väntar på ny review."
       },
       "ram": "C-blocket över norra sargen: bänkraderna, klockväggen mellan de två loppen, vita sidostycken, glasbandet i tre fält, övre gången bakom"
     },
@@ -333,10 +344,10 @@
         "övre gångens bredd [uppskattning]"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "MISMATCH",
+        "av": "ChatGPT senior visual review 2026-09-04 05:51",
+        "head": "3b101e59f4b81a5edbe60c2082b4bcaee639cd0d",
+        "mismatch": "Samma som ARENA-C: loppens byggda form/material/sidostycke-relation stämde inte med källan. Rättat i F02-A (6df46af). Väntar på ny review."
       },
       "ram": "Från nedersta raden: raderna uppåt, båda loppen stigande utåt från klockväggen, räcken, glasbandet ovanför, övre gångens golv/räcke; spelets bänkradssteg (gul markör) till vänster som SPELABSTRAKTION"
     }

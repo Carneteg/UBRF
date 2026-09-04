@@ -72,8 +72,8 @@ export async function oppnaWebb({ port = 8792, siktprov = false, bredd = 1280, h
    vid förra kameran när provet togs (run 33841003442). */
 export async function stallKamera(page, kamera, vantaMs = 300) {
   const lage = await page.evaluate(({ scen, lage, kam, mal }) => {
-    const S = STALLINNE, R = RIDHUSINNE, SA = SPELABSTRAKTIONER;
-    const f = e => (e === undefined || e === null) ? 0 : (typeof e === "number" ? e : Function("S", "R", "SA", "Math", `return (${e})`)(S, R, SA, Math));
+    const S = STALLINNE, R = RIDHUSINNE, SA = SPELABSTRAKTIONER, A = ANL;
+    const f = e => (e === undefined || e === null) ? 0 : (typeof e === "number" ? e : Function("S", "R", "SA", "A", "Math", `return (${e})`)(S, R, SA, A, Math));
     const p = { x: f(lage.x), y: f(lage.y), z: f(lage.z), rikt: f(lage.rikt) };
     V3D.fast = null;
     gaTill(scen, { x: p.x, y: p.y, rikt: p.rikt, z: p.z });

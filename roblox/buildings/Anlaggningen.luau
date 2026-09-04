@@ -1072,14 +1072,17 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				local c = (st.a0 + st.a1) / 2
 				local px = if langsX then c else sx
 				local pz = if langsX then sx else c
-				BK.box(model, base, "Trappa " .. t.id .. " räckesstolpe " .. i,
+				local stolpe = BK.box(model, base, "Trappa " .. t.id .. " räckesstolpe " .. i,
 					o.x + px - 0.03, st.z, o.y + pz - 0.03, 0.06, 0.95, 0.06,
-					Color3.fromRGB(138, 106, 68), Enum.Material.Wood).CanCollide = false
+					Color3.fromRGB(138, 106, 68), Enum.Material.Wood)
+				stolpe.CanCollide = false
+				stolpe:SetAttribute("Genomsiktlig", true)   -- tonas när de skymmer (som webben)
 			end
 			local am, zm = (a0 + a1) / 2, (t.z0 + t.z1) / 2
 			local function sned(namn, h, dz, farg, mat, ds)
 				local d = BK.box(model, base, namn, 0, 0, 0, 0.06, h, 0.06, farg, mat)
 				d.CanCollide = false
+				d:SetAttribute("Genomsiktlig", true)   -- sidostycke/handledare tonas när de skymmer
 				if langsX then
 					d.Size = Vector3.new(BK.M * L, BK.M * h, BK.M * 0.05)
 					d.CFrame = base * CFrame.new(BK.M * (o.x + am), BK.M * (zm + dz), BK.M * (o.y + sx + (ds or 0))) * CFrame.Angles(0, 0, lut)

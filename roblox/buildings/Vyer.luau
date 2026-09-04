@@ -298,9 +298,25 @@ local gangA = (S.gangar.A.x0 + S.gangar.A.x1) / 2
 local K = R.kortanda
 local sadelO = oppning("genomgaende", "sadelkammare")
 Vyer.reviewkameror = {
-	bakom(VG, "STALL-ENTRE", "Stallhuset entré — inne i uppehållsrummet 6 m från gaveln, norrut mot entrén",
-		S, So.x, So.y, rum("vindfang").x + rum("vindfang").w / 2, S.langd - 6.0, 0, math.pi / 2,
-		"Gavelväggen med entrédörren och vindfångets region rakt fram i ögonhöjd; öppen yta fram till gaveln, ingen inre vägg. Vindfångets insida är REFERENCE GAP."),
+	--[[ Explicit kamera mot den låsta fasadens entrédörr (mitt på gaveln, läst ur
+		G.byggnader stall, sida N, typ dorrgul) — samma som kameror.json. ]]
+	(function()
+		local hus
+		for _, b in ipairs(G.byggnader) do if b.id == "stall" then hus = b end end
+		local dorrX = S.bredd / 2
+		for _, op in ipairs((hus and hus.oppningar) or {}) do
+			if op.sida == "N" and op.typ == "dorrgul" then dorrX = S.bredd - op.u - op.b / 2 end
+		end
+		return {
+			id = "STALL-ENTRE", grupp = VG,
+			text = "Stallhuset entré — inne i uppehållsrummets östdel i ögonhöjd, norrut mot fasadens entrédörr mitt på gaveln",
+			fran = { x = So.x + dorrX - 0.4, y = So.y + S.langd - 5.4, h = 1.7 },
+			mot = { x = So.x + dorrX, y = So.y + S.langd },
+			aim = 1.2,
+			figur = { x = So.x + dorrX - 2.2, y = So.y + S.langd - 3.0, z = 0 },   -- till vänster om dörren, inte framför
+			krav = "Fasadens entrédörr (ockragul, solfjäderfönster, vit karm) rakt fram med det västra runda fönstret bredvid; öppen yta fram till gaveln. Det östra runda fönstret hamnar i teorisalen — dokumenterad motsägelse (planens vindfång mot fasadens entré). Dörrbladets färg inifrån är [antagande].",
+		}
+	end)(),
 	bakom(VG, "STALL-UPPEHALL", "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
 		S, So.x, So.y, 4.0, rum("uppehallsrum").y + 1.6, 0, math.pi / 2,
 		"Rummets hela längd i ögonhöjd: västväggen till vänster, öppningen mot östdelen till höger UTAN vägg (Spatial Canon v2 stall_uppehall_open), planens symbolruta till höger, gaveln med entrén längst bort. Möbler (F02-B) saknas ännu."),

@@ -1652,12 +1652,17 @@ function v3dRidhus(lagg,opp){
     m.lada(SA.x1-SA.x0,0.12,b,"#D6AE3C",M4.translation((SA.x0+SA.x1)/2,SA.z1+0.3,mitt));
     S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true});
   }
-  /* Sidostyckena ritas i ett EGET, otexturerat nät: i `lak` ligger
-     träreliefen (T.tra) över allt, och den gjorde de vita skivorna till
-     mörkbruna ramper — det var det senior visual review såg. */
-  const sido=new Bygge();
+  /* Sidostyckena, handledarna och räckesstolparna ritas i ett EGET,
+     otexturerat nät per lopp: i `lak` ligger träreliefen (T.tra) över
+     allt, och den gjorde de vita skivorna till mörkbruna ramper — det var
+     det senior visual review såg. Nätet bär dessutom ett toningsfotavtryck
+     (loppets bansida): står kameran utanför loppet när figuren går i
+     trappan skymmer skivan och räcket henne — då tonas de, som väggar
+     (siktgrinden, rutten upp för c_trappa_v). */
+  let sido=null;
   for(const t of R.trappor||[]){
     const T=trappsteg(t), langsX=(T.axel==="x");
+    sido=new Bygge();
     const b=langsX ? t.y1-t.y0 : t.x1-t.x0;            // loppets bredd tvärs
     const mitt=langsX ? (t.y0+t.y1)/2 : (t.x0+t.x1)/2;
     for(const st of T.steg){
@@ -1683,18 +1688,19 @@ function v3dRidhus(lagg,opp){
         sido.lada(L,1.6,0.05,"#E9E5DC",M4.mul(M4.translation(am,zm+0.30,sx-0.10),M4.rotZ(lut)));
         /* Handledaren ligger ovanpå sidostyckets överkant — den mörka
            linjen längs den vita skivan i fotot. */
-        lak.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+1.13,sx-0.10),M4.rotZ(lut)));
+        sido.lada(L,0.06,0.06,"#8A6A44",M4.mul(M4.translation(am,zm+1.13,sx-0.10),M4.rotZ(lut)));
       }else{
-        lak.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx,zm+0.95,am),M4.rotX(-lut)));
+        sido.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx,zm+0.95,am),M4.rotX(-lut)));
       }
       for(let i=0;i<T.n;i+=3){
         const st=T.steg[i], c=(st.a0+st.a1)/2;
-        if(langsX) lak.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(c,st.z+0.95/2,sx));
-        else       lak.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(sx,st.z+0.95/2,c));
+        if(langsX) sido.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(c,st.z+0.95/2,sx));
+        else       sido.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(sx,st.z+0.95/2,c));
       }
     }
+    S3.statiskt.push({nat:GL.nat(sido), tex:null,
+      tona: langsX ? {x:t.x0, y:t.y0-0.15, w:t.x1-t.x0, h:0.30} : {x:t.x0-0.15, y:t.y0, w:0.30, h:t.y1-t.y0}});
   }
-  if(R.trappor&&R.trappor.length) lagg(sido,null);
   for(const z of [L.y0+6,L.y0+8.4,L.y1-7]){         // stolarna på översta däcket
     const x=frontX+inat*L.dackDjup*0.2;
     lak.lada(0.42,0.06,0.42,"#D4551E",M4.translation(x,0.45+L.dackZ,z));

@@ -52,8 +52,8 @@ const RUTTER = [
 
 const w = await oppnaWebb({ port: 8793, siktprov: true });
 const varde = async (scen, e) => w.page.evaluate(({ e }) => {
-  const S = STALLINNE, R = RIDHUSINNE, SA = SPELABSTRAKTIONER;
-  return e === undefined ? 0 : (typeof e === "number" ? e : Function("S", "R", "SA", "Math", `return (${e})`)(S, R, SA, Math));
+  const S = STALLINNE, R = RIDHUSINNE, SA = SPELABSTRAKTIONER, A = ANL;
+  return e === undefined ? 0 : (typeof e === "number" ? e : Function("S", "R", "SA", "A", "Math", `return (${e})`)(S, R, SA, A, Math));
 }, { e });
 
 /* Provpunkterna: kamerorna + rutterna utsamplade. */
