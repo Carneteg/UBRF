@@ -58,9 +58,15 @@ med; ett handskrivet tal vore en andra sanning. Kameran är spelets egen
 tredjepersonskamera (3,6 m bakom figuren, 2,25 m över hennes golv,
 kläms in och lyfts vid väggar) — det spelaren faktiskt ser, inte en fri kamera.
 
-Varje kamera bär `referenser` (repo-sökvägar till verifierat material) och
-`gap` (det ingen referens visar). `granskning` är ChatGPTs fält:
-`EJ_GRANSKAD` | `MISMATCH` | `CHATGPT_VISUAL_PASS`, med `av` och `head`.
+Varje kamera bär `referenser` (repo-sökvägar till verifierat material),
+`gap` (det ingen referens visar) och **`ram`** — ramkontraktet: vad som
+MÅSTE synas i bilden för att den ska duga som jämförelse. En bild som inte
+visar sitt ram-innehåll är fel ställd, inte "klar" (senior review
+2026-09-04 05:24: en bild som mest är golv är ingen evidens). Kameran står
+i ögonhöjd; där följkameran inte får plats (ett brott i en boxrad) ställs
+den explicit med `kamera` + `mal` — fortfarande uttryck i datan.
+`granskning` är ChatGPTs fält: `EJ_GRANSKAD` | `MISMATCH` |
+`CHATGPT_VISUAL_PASS`, med `av` och `head`. HUD:en döljs i evidensbilderna.
 
 Roblox: samma tolv vyer finns i `roblox/buildings/Vyer.luau`, gruppen
 **Visuell grind** (`Vyer.ga("RIDHUS-ENTRE")`), räknade ur `UBRFKomplex`.
@@ -78,6 +84,13 @@ ja/nej, kameralägen, siktprov, granskningsstatus) och `index.html` —
 side-by-side per kamera: referens-ID (med kopia under `ref/`), implementation
 @ head, siktprov, **mismatch-status (ChatGPT)**, kvarstående `REFERENCE GAP`.
 Paketet är gitignorerat lokalt; CI laddar upp det.
+
+**Exakt head:** på `pull_request` checkar `actions/checkout` annars ut den
+syntetiska merge-committen. Workflowen checkar därför ut
+`pull_request.head.sha`, asserterar `git rev-parse HEAD` mot den, skickar
+den till `screenshot-pack.mjs --forvantad-head` (som vägrar om HEAD skiljer)
+och asserterar efteråt att `pack.json.head` är PR-headen och att trädet
+var rent. Skiljer något sig är jobbet rött — paketet är då inte evidens.
 
 CI (`.github/workflows/visuell-grind.yml`) kör på varje PR från exakt headen:
 kameralista + Roblox-paritet, spatiala ankare, siktgrinden med negativ
@@ -177,6 +190,16 @@ något `VISUALLY_ACCEPTED`.
 - **`main`-länken används aldrig som reviewlänk för en omergad förändring.**
 - `pack.json` markerar om paketet renderades från ett smutsigt arbetsträd;
   ett sådant paket är inte PR-evidens.
+
+## Ambienta figurer
+
+Product Owner 2026-09-04 (#78): de tre anonyma gårdsfigurerna
+(`gardsFolk()`: grusvägen, picknickborden, lekhagen) är borttagna ur
+gårdsscenen. Varje synlig person ska ha en roll — ridlärare, elev, förälder,
+stallpersonal. Lektionernas NPC-ryttare (`NPC_ELEVER`) är kvar. Inga nya
+dekorfigurer; `tools/kolla-visuell-grind.mjs` faller om `gardsFolk` eller
+en gårdsfigurlista dyker upp i `src/` igen. Roblox har inga motsvarande
+figurer.
 
 ## Hårda regler
 

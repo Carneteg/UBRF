@@ -296,7 +296,9 @@ gruppen **Visuell grind** i `Vyer.lista()`: `STALL-ENTRE`, `STALL-UPPEHALL`,
 figuren, 2,25 m över hennes golv (lyft när den kläms mot en vägg).
 
 **Ska gå att göra:** `Vyer.ga("<ID>")` för var och en, och jämföra mot
-referenserna som kameran listar i `kameror.json`. Ta en skärmdump per ID med
+referenserna som kameran listar i `kameror.json`. Varje kamera har ett
+ramkontrakt (`ram` i `kameror.json`, `krav` i vyn): det som MÅSTE synas —
+syns det inte är kameran fel ställd, inte bilden klar. Ta en skärmdump per ID med
 samma namn som webbens — det är Roblox-halvan av reviewpaketet.
 
 **Ska synas:** figuren (eller platsen hon står på, `figur` i vyn) ska vara

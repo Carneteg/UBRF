@@ -66,13 +66,18 @@ export async function oppnaWebb({ port = 8792, siktprov = false, bredd = 1280, h
 /* Räknar ut ett läge ur uttrycken och teleporterar dit; kameran snappar
    bakom figuren i blickriktningen (kameraNollstall), som vid ett scenbyte. */
 export async function stallKamera(page, kamera, vantaMs = 1500) {
-  const lage = await page.evaluate(({ scen, lage }) => {
+  const lage = await page.evaluate(({ scen, lage, kam, mal }) => {
     const S = STALLINNE, R = RIDHUSINNE, SA = SPELABSTRAKTIONER;
     const f = e => (e === undefined || e === null) ? 0 : (typeof e === "number" ? e : Function("S", "R", "SA", "Math", `return (${e})`)(S, R, SA, Math));
     const p = { x: f(lage.x), y: f(lage.y), z: f(lage.z), rikt: f(lage.rikt) };
+    V3D.fast = null;
     gaTill(scen, { x: p.x, y: p.y, rikt: p.rikt, z: p.z });
+    /* Explicit kamera (`kamera` + `mal` i kameror.json): spelets följkamera
+       hinner inte stå i ögonhöjd i trånga lägen (ett brott i en boxrad),
+       så reviewkameran ställs själv — deterministiskt ur samma data. */
+    if (kam && mal) V3D.fast = { x: f(kam.x), y: f(kam.h), z: f(kam.y), tx: f(mal.x), ty: f(mal.h), tz: f(mal.y) };
     return p;
-  }, kamera);
+  }, { scen: kamera.scen, lage: kamera.lage, kam: kamera.kamera || null, mal: kamera.mal || null });
   await page.waitForTimeout(vantaMs);
   return lage;
 }

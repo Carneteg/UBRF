@@ -116,9 +116,24 @@ for _, v in ipairs(Vyer.reviewkameror or {}) do
 	local nn = prov(v, true)
 	if nn >= 4 then negDolda += 1 end
 end
---[[ Negativ kontroll: utan toningen (alla delar räknas) ska minst en
-	kamera se figuren dold — annars provar specen ingenting. ]]
-check("negativ kontroll: utan Genomsiktlig blir minst en kamera DOLD", negDolda >= 1, negDolda .. " dolda")
+--[[ Negativ kontroll: en KONTROLLVY som avsiktligt står bakom en tonbar
+	vägg — i gång A söder om klubbdelens genomgående vägg, med figuren i
+	lobbyn norr om den (S-data, inte tal). Med Genomsiktlig ska figuren
+	synas (väggen tonas); utan attributet ska hon vara DOLD. Kontrollen
+	ligger i specen och inte i reviewkamerorna, så att den inte tappar
+	sin mening när en reviewkamera flyttas in i ett rum. ]]
+local Sd, So = UBRFKomplex.stall, UBRFKomplex.stall.origo
+local kx = (Sd.gangar.A.x0 + Sd.gangar.A.x1) / 2
+local kontroll = {
+	id = "KONTROLL-genomgaende",
+	fran = { x = So.x + kx, y = So.y + Sd.klubb.y0 - 2.0, h = 2.25 },
+	figur = { x = So.x + kx, y = So.y + Sd.klubb.y0 + 2.0, z = 0 },
+}
+local kMed = prov(kontroll, false)
+local kUtan = prov(kontroll, true)
+check("kontrollvyn genom den genomgående väggen: figuren syns när väggen tonas", kMed < 4, kMed .. "/5")
+check("negativ kontroll: utan Genomsiktlig är figuren DOLD bakom den genomgående väggen", kUtan >= 4, kUtan .. "/5")
+if negDolda > 0 then print(string.format("  (utan Genomsiktlig blir dessutom %d reviewkamera/-or dolda)", negDolda)) end
 
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

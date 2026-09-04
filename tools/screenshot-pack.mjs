@@ -23,11 +23,19 @@ import { ROT, lasKameror, gitHead, oppnaWebb, stallKamera, lasLage } from "./qa-
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : d; };
 const UT = path.resolve(ROT, arg("--ut", "qa/screenshot-pack"));
 const utanRef = process.argv.includes("--utan-referenser");
+const forvantad = arg("--forvantad-head", null);
 const kameror = lasKameror();
 const head = gitHead();
+/* Evidenskontraktet (#78 § 2, § 7): paketet ska vara renderat från exakt
+   den SHA som PR:n anger. CI skickar in den; skiljer den sig från HEAD är
+   det inte PR-evidens och verktyget vägrar. */
+if (forvantad && forvantad !== head.sha) { console.log(`FEL: HEAD är ${head.sha}, men paketet ska vara från ${forvantad}`); process.exit(1); }
 fs.mkdirSync(path.join(UT, "ref"), { recursive: true });
 
 const w = await oppnaWebb({ port: 8792, siktprov: true });
+/* HUD:en (uppgiftsrutan, sagobubblan, vyväxlaren) döljs i evidensbilderna:
+   den är spel-UI, inte anläggning, och får inte dominera bilden. */
+await w.page.addStyleTag({ content: "#viewToggle,.hudh,#saga{display:none!important}" });
 const pack = { head: head.sha, smutsigt: head.smutsigt, renderad: new Date().toISOString(), kameror: {} };
 let dolda = 0;
 for (const k of kameror) {
@@ -71,6 +79,7 @@ const rad = k => {
     <p class="meta">spelare ${esc(JSON.stringify(c.spelare))} · kamera ${esc(JSON.stringify(c.kamera))} · tonade väggar ${c.tonade} · siktprov: <b>${c.sikt.dold ? "DOLD" : c.sikt.delvis ? "delvis skymd" : "synlig"}</b></p></div>
 </div>
 <table><tr><th>Mismatch-status (ChatGPT)</th><td><b>${esc(g.status || "EJ_GRANSKAD")}</b>${g.head ? ` på <code>${esc(g.head)}</code>` : ""}${g.av ? ` av ${esc(g.av)}` : ""}</td></tr>
+<tr><th>Ska synas (ramkontrakt)</th><td>${esc(k.ram || "—")}</td></tr>
 <tr><th>Mismatch</th><td>${esc(g.mismatch || "—")}</td></tr>
 <tr><th>REFERENCE GAP</th><td>${(k.gap || []).length ? (k.gap || []).map(esc).join("<br>") : "—"}</td></tr></table>
 </section>`;

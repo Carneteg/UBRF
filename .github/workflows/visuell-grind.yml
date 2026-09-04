@@ -24,7 +24,20 @@ jobs:
   visuell-grind:
     runs-on: ubuntu-latest
     steps:
+      # EXAKT PR-head, inte den syntetiska merge-committen som pull_request
+      # annars checkar ut: bilderna ska vara evidens för just den SHA som
+      # står i PR:n. Steget "Head-identitet" nedan faller om de skiljer sig.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Head-identitet — utcheckad kod är PR-headen
+        run: |
+          set -euo pipefail
+          vantad="${{ github.event.pull_request.head.sha || github.sha }}"
+          faktisk="$(git rev-parse HEAD)"
+          echo "väntad $vantad · utcheckad $faktisk"
+          [ "$vantad" = "$faktisk" ] || { echo "FEL: utcheckad kod är inte PR-headen"; exit 1; }
 
       - uses: actions/setup-node@v4
         with:
@@ -53,7 +66,17 @@ jobs:
         run: node tools/siktgrind.mjs
 
       - name: Screenshot-pack från PR-headen
-        run: node tools/screenshot-pack.mjs --ut qa/screenshot-pack
+        run: node tools/screenshot-pack.mjs --ut qa/screenshot-pack --forvantad-head "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Head-identitet — pack.json bär PR-headen
+        run: |
+          set -euo pipefail
+          vantad="${{ github.event.pull_request.head.sha || github.sha }}"
+          faktisk="$(node -e "process.stdout.write(require('./qa/screenshot-pack/pack.json').head)")"
+          smutsigt="$(node -e "process.stdout.write(String(require('./qa/screenshot-pack/pack.json').smutsigt))")"
+          echo "pack.json head $faktisk (smutsigt: $smutsigt) · väntad $vantad"
+          [ "$vantad" = "$faktisk" ] || { echo "FEL: paketet är inte renderat från PR-headen"; exit 1; }
+          [ "$smutsigt" = "false" ] || { echo "FEL: paketet renderades från ett smutsigt arbetsträd"; exit 1; }
 
       - name: Ladda upp paketet
         if: always()

@@ -36,6 +36,19 @@ for (const c of k.kameror) {
   for (const r of c.referenser || []) saga(fs.existsSync(path.join(ROT, r)), `${c.id}: referensen ${r} finns i repot`);
   saga(Array.isArray(c.gap), `${c.id}: gap är en lista (tom = inget känt REFERENCE GAP)`);
 }
+/* Product Owner 2026-09-04 (#78): de anonyma gårdsfigurerna är borttagna
+   och får inte komma tillbaka som dekor. Lektionernas NPC-ryttare
+   (NPC_ELEVER) är en roll, inte dekor, och lämnas i fred. */
+{
+  const src = fs.readdirSync(path.join(ROT, "src")).filter(f => f.endsWith(".js")).map(f => [f, fs.readFileSync(path.join(ROT, "src", f), "utf8")]);
+  for (const [f, t] of src) {
+    saga(!/gardsFolk/.test(t), `${f}: ingen gardsFolk()`);
+    const kod = t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    saga(!/vid picknickborden|förälder vid lekhagen|på väg längs grusvägen/.test(kod), `${f}: ingen gårdsfigurlista i koden (kommentarer undantagna)`);
+  }
+  saga(src.some(([, t]) => /NPC_ELEVER/.test(t)), "lektionernas NPC-ryttare (NPC_ELEVER) finns kvar");
+}
+for (const c of k.kameror) saga(typeof c.ram === "string" && c.ram.length > 20, `${c.id}: ramkontrakt (vad som ska synas) finns`);
 const vyer = fs.readFileSync(path.join(ROT, "roblox/buildings/Vyer.luau"), "utf8");
 for (const id of ids) saga(vyer.includes(`"${id}"`), `Roblox Vyer.luau har vyn ${id}`);
 saga(!k.kameror.some(c => JSON.stringify(c.granskning || {}).includes("VISUALLY_ACCEPTED")), "ingen kamera bär VISUALLY_ACCEPTED (statusen finns inte för automation)");

@@ -1955,6 +1955,11 @@ function v3dBygg(scen){
 
 /* ── Kameran bakom vandraren ──────────────────────────────────── */
 function v3dKamera(dt){
+  /* QA-harnessens fasta kamera (reviewkameror med explicit läge i
+     qa/visual-gate/kameror.json): står still där den ställts. Aldrig
+     satt i spelet. */
+  if(V3D.fast){const F=V3D.fast, k=V3D.kam;
+    k.x=F.x;k.y=F.y;k.z=F.z;k.tx=F.tx;k.ty=F.ty;k.tz=F.tz;k.satt=true;return k;}
   const fram=[Math.cos(VD.rikt),0,Math.sin(VD.rikt)];
   /* Kameran ställs efter skärmens format. En porträttskärm ser en smal
      kil av världen med samma kameraläge som en bred — figuren fyller
@@ -2392,9 +2397,6 @@ function ritaVandring3D(){
         s3RitaHast({hast:h,x:f[0],z:f[1],rikt:Math.PI,gangart:"halt",fas:0,
           samling:-0.3,beta:true,skugga:true,tacke:!!(G.vader&&G.vader.tacke)});
       }
-      for(const p of gardsFolk())
-        v3dFigur({x:p.x,z:p.y,rikt:p.rikt===undefined?2.1:p.rikt,
-          fas:(VD.tid*0.5+p.x*0.3)%1,jacka:p.farg,hjalm:false});
     }else if(G.scen==="stallinne"){
       const S=STALLINNE;
       for(const rad2 of S.rader){                  // hästhuvuden över boxdörrarna

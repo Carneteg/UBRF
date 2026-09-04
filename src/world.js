@@ -1317,8 +1317,6 @@ function ritaGard3D(){
   }
   for(const d of ANL.dorrar) items.push({d:-avst2(d.pos), rita(){ritaMarkor3D(k,d.pos);}});
   if(G.leder) items.push({d:-avst2([VD.hastX,VD.hastY]), rita(){ritaLeddHast3D(k);}});
-  for(const f of gardsFolk())
-    items.push({d:-avst2([f.x,f.y]), rita(){ritaPerson3D(k,f.x,f.y,f);}});
   items.sort((a,b)=>a.d-b.d);
   for(const o of items)o.rita();
   if(G.vader&&G.vader.typ==="regn")ritaRegn();
@@ -1517,8 +1515,6 @@ function ritaGard2D(){
     cx.strokeStyle="rgba(214,174,60,.85)";cx.lineWidth=2;
     cx.beginPath();cx.arc(ga2,gb,s*1.4+Math.sin(VD.tid*3)*2,0,Math.PI*2);cx.stroke();
   }
-  for(const f of gardsFolk()){const[a,b]=gs(f.x,f.y);
-    cx.fillStyle=f.farg;cx.beginPath();cx.arc(a,b,Math.max(2,s*0.4),0,Math.PI*2);cx.fill();}
   for(const b of ANL.byggnader){
     const[a,c,w,h]=gsRekt(b.rekt);
     cx.fillStyle=fargSkala(b.fargT,0.95); cx.fillRect(a,c,w,h);
@@ -1860,24 +1856,21 @@ function ritaPerson3D(k,x,y,opts){
   cx.fillStyle="#3A3128";
   cx.beginPath();cx.ellipse(s[0]+sv,s[1]-sz*0.88,sz*0.12,sz*0.07,0,0,Math.PI,true);cx.fill();
 }
-/* Livet på anläggningen: elever som sköter sina hästar i stallgången
-   och folk på gården — en på väg längs grusvägen, andra vid borden
-   och lekhagen. Deterministiskt ur dagens frö. */
+/* Livet på anläggningen: elever som sköter sina hästar i stallgången.
+   Deterministiskt ur dagens frö.
+
+   De tre anonyma gårdsfigurerna (grusvägen, picknickborden, lekhagen)
+   är BORTTAGNA på Product Owners beslut 2026-09-04 (#78): varje synlig
+   person ska ha en roll — ridlärare, elev, förälder, stallpersonal —
+   inte vara dekor. Lektionernas NPC-ryttare (NPC_ELEVER) är kvar. Inga
+   nya platshållare får läggas till; tools/kolla-visuell-grind.mjs
+   vaktar att ingen gårdsfigurlista kommer tillbaka. */
 function stallFolk(){
   const s=((G.seed||1)*29+7)>>>0;
   const farger=["#5C4A6E","#7A3E36","#3E5C74","#6B5E3C"];
   /* Eleverna står i den gång spelets hästar bor i, alltså gång A. */
   return [{rad:"W",  ix:(s%7)+1,     farg:farger[s%4]},
           {rad:"MA", ix:((s>>3)%6)+2, farg:farger[(s+1)%4]}];
-}
-function gardsFolk(){
-  const t=VD.tid*0.55, span=42;
-  const tri=Math.abs((t%(span*2))-span);
-  return [
-    {x:115.5, y:52+tri, farg:"#3E5C74", rorlig:true},   // på väg längs grusvägen
-    {x:150.5, y:60.8, farg:"#7A3E36"},                  // vid picknickborden
-    {x:101.5, y:127.2, farg:"#5C4A6E"},                 // förälder vid lekhagen
-  ];
 }
 
 /* ── Ridhuset invändigt: 2D ───────────────────────────────────── */
