@@ -1,7 +1,7 @@
 {
-  "head": "7a95f0a8cf15b2c17dcf3267739114f27423b205",
+  "head": "119bc3331ea873db8dc37f3b78e5d0dbf23c2bbb",
   "smutsigt": false,
-  "renderad": "2026-09-04T06:58:49.822Z",
+  "renderad": "2026-09-04T07:41:50.402Z",
   "kameror": {
     "STALL-ANKOMST": {
       "id": "STALL-ANKOMST",
@@ -13,7 +13,7 @@
         "y": 131,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 3
+        "bild0": 4
       },
       "kamera": [
         160.1,
@@ -96,7 +96,7 @@
         "y": 66.95,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 11
+        "bild0": 13
       },
       "text": "Inne i uppehållsrummets östdel i ögonhöjd, blicken norrut mot den låsta fasadens entrédörr mitt på gaveln",
       "referenser": [
@@ -162,7 +162,7 @@
         "y": 61.550000000000004,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 21
+        "bild0": 22
       },
       "text": "Uppehållsrummet från södra änden (vid lobbyn) norrut genom hela rummet",
       "referenser": [
@@ -178,7 +178,7 @@
         }
       ],
       "gap": [
-        "möbler (F02-B) saknas ännu — inte ett fel i F02-A"
+        "var i rummet soffgruppen står (vilket valvfönster): ASSUMPTION i F02-B, förankrad i det södra valvfönstret; bildens dörr till vänster/fönster till höger avgör inte entydigt"
       ],
       "granskning": {
         "status": "MISMATCH",
@@ -212,6 +212,66 @@
         }
       }
     },
+    "STALL-UPPEHALL-SOFFA": {
+      "id": "STALL-UPPEHALL-SOFFA",
+      "namn": "Uppehållsrummets soffhörna",
+      "hus": "stall",
+      "scen": "stallinne",
+      "lage": {
+        "x": 4,
+        "y": 62.900000000000006,
+        "z": 0,
+        "rikt": 2.356194490192345,
+        "bild0": 32
+      },
+      "text": "Fotots vinkel (stall-inne-01): från rummets östra del snett mot sydvästra hörnet — soffgruppen vid västväggen, träponnyn, klockan, växten, fotoväggen. Explicit kamera; figuren till vänster om blicklinjen.",
+      "referenser": [
+        {
+          "id": "references/buildings/stall/stall-inne-01-uppehallsrummet.jpg",
+          "finns": true,
+          "kopia": null
+        }
+      ],
+      "gap": [
+        "var i rummet gruppen står och vid vilket valvfönster: ASSUMPTION (F02-B) — fotots ordning dörr till vänster / klocka / växt / fotovägg / valvfönster till höger / ponny går inte att lägga entydigt mot den låsta fasadens två valvfönster (y 61,35 och 67,35) och rummets sydvägg y 60,15; se F02-B-INREDNINGSMATRIS § Uppehållsrummet"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Två svarta skinnsoffor i vinkel kring två låga svarta bord, den rosa träponnyn med sadel, rund klocka, krukväxt och inramade foton på pärlsponten, valvfönstret i västväggen — samma objekt som stall-inne-01; hur gruppen sitter i förhållande till fönstret är den öppna frågan",
+      "kamera": [
+        4.7,
+        1.6,
+        65
+      ],
+      "mal": {
+        "x": "1.2",
+        "y": "S.klubb.rum.find(r=>r.id==='uppehallsrum').rekt.y + 2.1",
+        "h": "0.9"
+      },
+      "spelare": [
+        4,
+        62.9,
+        0
+      ],
+      "tonade": 0,
+      "sikt": {
+        "dold": false,
+        "delvis": false,
+        "tonade": 0,
+        "skymmande": 0,
+        "blockerade": {
+          "hoft": false,
+          "brost": false,
+          "huvud": false,
+          "axelV": false,
+          "axelH": false
+        }
+      }
+    },
     "STALL-TEORISAL": {
       "id": "STALL-TEORISAL",
       "namn": "Teorisal",
@@ -222,7 +282,7 @@
         "y": 65.64999999999999,
         "z": 0,
         "rikt": 0,
-        "bild0": 31
+        "bild0": 41
       },
       "text": "Innanför teorisalens dörr (västväggen), blicken österut genom salen",
       "referenser": [
@@ -232,9 +292,7 @@
           "kopia": null
         }
       ],
-      "gap": [
-        "möbler (F02-B) saknas ännu"
-      ],
+      "gap": [],
       "granskning": {
         "status": "EJ_GRANSKAD",
         "av": null,
@@ -277,7 +335,7 @@
         "y": 60.95,
         "z": 0,
         "rikt": 0,
-        "bild0": 40
+        "bild0": 51
       },
       "text": "Inne i sadelkammaren, blicken österut genom rummet mot östväggen (x 15,5)",
       "referenser": [
@@ -287,9 +345,7 @@
           "kopia": null
         }
       ],
-      "gap": [
-        "sadelhängare och inredning (F02-B) saknas ännu"
-      ],
+      "gap": [],
       "granskning": {
         "status": "EJ_GRANSKAD",
         "av": null,
@@ -307,11 +363,11 @@
         61.28,
         0
       ],
-      "tonade": 0,
+      "tonade": 1,
       "sikt": {
         "dold": false,
         "delvis": false,
-        "tonade": 0,
+        "tonade": 1,
         "skymmande": 0,
         "blockerade": {
           "hoft": false,
@@ -332,7 +388,7 @@
         "y": 12.8,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 49
+        "bild0": 60
       },
       "text": "I gång A, blicken norrut mot klubbdelen — boxfronter på båda sidor",
       "referenser": [
@@ -392,7 +448,7 @@
         "y": 29.549999999999997,
         "z": 0,
         "rikt": 3.141592653589793,
-        "bild0": 58
+        "bild0": 70
       },
       "text": "Från gång A:s östra kant i ögonhöjd, blicken västerut genom brottet i västra boxraden in i hästgången mot ridhuset",
       "referenser": [
@@ -448,13 +504,13 @@
       "hus": "ridhus",
       "scen": "ridhusinne",
       "lage": {
-        "x": 1.2999999999999943,
-        "y": 66.98,
+        "x": 1.3999999999999944,
+        "y": 69.58000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 68
+        "bild0": 79
       },
-      "text": "Huvudentrén → norrut över entré/reception: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1)",
+      "text": "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1). Explicit kamera i hallen — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen.",
       "referenser": [
         {
           "id": "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
@@ -482,15 +538,20 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Öppen hall utan rumslådor norrut från huvudentrén, ENTRÉ-plattan, receptionens låga bröstning + glas till höger, toaletternas volym i bortre hörnet",
+      "ram": "Öppen hall utan rumslådor norrut från huvudentrén, ENTRÉ-plattan, receptionens låga bröstning + glas till höger, toaletternas volym i bortre hörnet; skåpraden (F02-B) bortom glaset",
       "kamera": [
-        1.3,
-        2.25,
-        63.65
+        1.2,
+        1.7,
+        66.68
       ],
+      "mal": {
+        "x": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[0] + 0.6",
+        "y": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[1] + 6.0",
+        "h": "1.1"
+      },
       "spelare": [
-        1.3,
-        66.98,
+        1.4,
+        69.58,
         0
       ],
       "tonade": 0,
@@ -514,13 +575,13 @@
       "hus": "ridhus",
       "scen": "ridhusinne",
       "lage": {
-        "x": 4.95,
+        "x": 3.2,
         "y": 67.98,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 77
+        "bild0": 87
       },
-      "text": "Den öppna gången där skåpen står (planens x 4,2–5,7), blicken norrut mot toaletterna",
+      "text": "Gången mellan receptionsglaset (x 2,2) och skåpraden i planens skåpremsa (x 4,2–5,7), blicken norrut mot valvfönstret med stövelbänken (= ridhus-klubb-01 fast åt andra hållet)",
       "referenser": [
         {
           "id": "references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg",
@@ -544,7 +605,7 @@
         }
       ],
       "gap": [
-        "skåpen är möbler (F02-B) och saknas ännu; korridorväggarna är återkallade (Spatial Canon v2) — här ska INGEN vägg synas"
+        "skåpradens början/slut: planens fyra luckor olästa — bankarnas y-lägen är ASSUMPTION (F02-B); vilken sida av glaset receptionen ligger på är F02-A:s GEOMETRY_REFERENCE_GAP"
       ],
       "granskning": {
         "status": "EJ_GRANSKAD",
@@ -552,22 +613,22 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Fri sikt norrut längs planens skåpremsa (x 4,2–5,7) utan korridorväggar; schaktvolymen till höger; toaletterna längst bort",
+      "ram": "Fri sikt norrut i gången utan korridorväggar: receptionens bröstning + glas till vänster, skåpbankarna (F02-B) till höger med fronten mot gången, bordet med de två stolarna i gången, stövelbänken under gavelns valvfönster längst bort; schaktvolymen bakom skåpen",
       "kamera": [
-        4.95,
+        3.2,
         2.25,
         64.65
       ],
       "spelare": [
-        4.95,
+        3.2,
         67.98,
         0
       ],
-      "tonade": 0,
+      "tonade": 1,
       "sikt": {
         "dold": false,
         "delvis": false,
-        "tonade": 0,
+        "tonade": 1,
         "skymmande": 0,
         "blockerade": {
           "hoft": false,
@@ -588,7 +649,7 @@
         "y": 6.15,
         "z": 0,
         "rikt": -1.5707963267948966,
-        "bild0": 87
+        "bild0": 96
       },
       "text": "På banan nära A, blicken söderut mot kortsidan vid A",
       "referenser": [
@@ -646,7 +707,7 @@
         "y": 57.68000000000001,
         "z": 0,
         "rikt": 1.5707963267948966,
-        "bild0": 97
+        "bild0": 107
       },
       "text": "På banan nära C, blicken norrut mot C-blocket, glasbandet och trapporna",
       "referenser": [
@@ -711,7 +772,7 @@
         "y": 38.915000000000006,
         "z": 0.8,
         "rikt": -1.5707963267948966,
-        "bild0": 107
+        "bild0": 116
       },
       "text": "På läktardäcket, blicken söderut längs läktaren med banan till vänster",
       "referenser": [
@@ -748,13 +809,13 @@
       "ram": "Plankdäcket, den mörka fronten med ljus kappregel och räcket till vänster, banan bortom, domarbåset på däcket, läktarväggen till höger",
       "kamera": [
         2.3,
-        3.05,
+        3.65,
         42.24
       ],
       "spelare": [
         2.3,
         38.92,
-        0.8
+        1.4
       ],
       "tonade": 0,
       "sikt": {
@@ -781,7 +842,7 @@
         "y": 66.28,
         "z": 1.12,
         "rikt": 1.5707963267948966,
-        "bild0": 117
+        "bild0": 126
       },
       "text": "Från nedersta bänkraden vid klockan (som ridhus-inne-01): raderna, de två loppen, klockväggen, glasbandet och övre gången",
       "referenser": [
