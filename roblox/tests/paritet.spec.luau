@@ -107,7 +107,26 @@ do
 		ok, forsta or string.format("(%d trösklar)", #RidKanon.TROSKLAR))
 end
 
---[[ 6. Telemetrins fältnamn. G02-B ska kunna läsa samma namn oavsett yta. ]]
+--[[ 6. Styrningens tidskonstanter. Att lägga sig i en båge ska gå fortare
+     än att räta upp sig ur den, och med SAMMA siffror på båda ytorna —
+     det är den halvan av svängkänslan som inte får skilja sig. ]]
+check("kurvaturens tidskonstant, lägga sig i bågen",
+	nara(RidKanon.KAPPA_TAU_LAGG, Config.MOVEMENT.CurvatureTauPress),
+	string.format("(%.2f = %.2f s)", RidKanon.KAPPA_TAU_LAGG, Config.MOVEMENT.CurvatureTauPress))
+check("kurvaturens tidskonstant, räta upp sig ur bågen",
+	nara(RidKanon.KAPPA_TAU_RATA, Config.MOVEMENT.CurvatureTauRelease),
+	string.format("(%.2f = %.2f s)", RidKanon.KAPPA_TAU_RATA, Config.MOVEMENT.CurvatureTauRelease))
+
+--[[ 6b. Svängfaktorn per gångart. Skritt och trav är porterade rakt av och
+     måste stämma; galoppens skiljer sig och står under B. ]]
+for _, webbnamn in { "halt", "skritt", "trav" } do
+	local g = Gaits.get(RidKanon.MOTSVARIGHET[webbnamn])
+	check(string.format("svängfaktor %s/%s", webbnamn, g.name),
+		nara(RidKanon.SVANGFAKTOR[webbnamn], g.turn),
+		string.format("(%.2f = %.2f)", RidKanon.SVANGFAKTOR[webbnamn], g.turn))
+end
+
+--[[ 7. Telemetrins fältnamn. G02-B ska kunna läsa samma namn oavsett yta. ]]
 check("telemetrins fältnamn är identiska",
 	samma(sorterad(Telemetri.FALT), sorterad(RidKanon.TELEMETRI_FALT)),
 	string.format("(%d fält)", #Telemetri.FALT))
@@ -207,6 +226,21 @@ do
 	check("KÄND AVVIKELSE — cykellängden (webb/Roblox, meter)",
 		ok, "(" .. table.concat(rader, ", ") .. ")")
 end
+
+--[[ Kurvaturtaket. Webben ger en snävare volt vid full styrning än Roblox.
+     Skillnaden är inte kosmetisk: 0,42 mot 0,30 är 2,4 m mot 3,3 m radie i
+     skritt. Uppmätt på webben i tools/ridtest.mjs — full styrning i trav
+     ger en RIDD volt på 8,25 m diameter mot 1/κ = 4,12 m radie. ]]
+check("KÄND AVVIKELSE — kurvaturtaket vid full styrning",
+	nara(RidKanon.KAPPA_MAX, 0.42) and nara(Config.MOVEMENT.CurvatureMax, 0.30),
+	string.format("(webb %.2f 1/m ⇒ %.1f m radie, Roblox %.2f ⇒ %.1f m, i skritt)",
+		RidKanon.KAPPA_MAX, 1 / RidKanon.KAPPA_MAX,
+		Config.MOVEMENT.CurvatureMax, 1 / Config.MOVEMENT.CurvatureMax))
+
+check("KÄND AVVIKELSE — galoppens svängfaktor",
+	nara(RidKanon.SVANGFAKTOR.galopp, 0.52) and nara(Gaits.get("canter").turn, 0.62),
+	string.format("(webb galopp %.2f, Roblox canter %.2f)",
+		RidKanon.SVANGFAKTOR.galopp, Gaits.get("canter").turn))
 
 check("KÄND AVVIKELSE — hjälplager, spänning och mjukhet saknas på Roblox",
 	#Telemetri.SAKNAS == 5,

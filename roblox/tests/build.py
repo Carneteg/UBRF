@@ -84,6 +84,7 @@ FORBEREDELSE = SPEL + [
 # inte fysik.
 PARITET = [
     ("Types",      "src/shared/HorseCore/Types.luau"),
+    ("Config",     "src/shared/HorseCore/Config.luau"),
     ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
     ("RidKanon",   "src/shared/HorseCore/RidKanon.luau"),
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),

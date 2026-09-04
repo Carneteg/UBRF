@@ -73,7 +73,31 @@ const tal = v => {
 };
 const str = s => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
 
+/* STYRKANONEN ligger som literaler inne i stegaRitt() i src/game.js —
+   filen går inte att köra utan DOM, så den läses som text. Mönstren är
+   avsiktligt strikta och exporten FALLER om något av dem försvinner: en
+   tyst nolla vore värre än ett stopp, eftersom paritetsspecen då skulle
+   jämföra mot ingenting och bli grön. */
+function styrkanon() {
+  const kalla = las("src/game.js");
+  const gm = kalla.match(/const GANGSVANG=\{([^}]*)\};/);
+  const km = kalla.match(/const KAPPA_MAX=([0-9.]+);/);
+  const tm = kalla.match(/const kappaTau=[^?]*\?\s*([0-9.]+)\s*:\s*([0-9.]+);/);
+  if (!gm || !km || !tm) {
+    console.error("FEL  hittar inte GANGSVANG / KAPPA_MAX / kappaTau i src/game.js");
+    console.error("     styrkanonen kan inte exporteras — rätta mönstren i den här filen");
+    process.exit(1);
+  }
+  const svang = {};
+  for (const del of gm[1].split(",")) {
+    const [namn, varde] = del.split(":").map(x => x.trim());
+    if (namn) svang[namn] = Number(varde);
+  }
+  return { svang, kappaMax: Number(km[1]), tauPress: Number(tm[1]), tauRelease: Number(tm[2]) };
+}
+
 const { falt, harledda } = telemetriFalt();
+const styr = styrkanon();
 const trosklar = mataTrosklar();
 
 const rader = [];
@@ -123,6 +147,16 @@ rader.push("");
 rader.push("--[[ Trösklarna, MÄTTA ur Gait.forTempo — inte avskrivna. ]]");
 rader.push("RidKanon.TROSKLAR = {");
 for (const t of trosklar) rader.push(`\t{ under = ${tal(t.under)}, gangart = ${str(t.gangart)} },`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ STYRKANONEN ur stegaRitt() i src/game.js. Kurvaturtaket i 1/m vid");
+rader.push("     full styrning, gångarternas svängfaktorer, och tidskonstanterna för");
+rader.push("     att lägga sig i respektive räta upp sig ur en båge. ]]");
+rader.push(`RidKanon.KAPPA_MAX = ${tal(styr.kappaMax)}`);
+rader.push(`RidKanon.KAPPA_TAU_LAGG = ${tal(styr.tauPress)}`);
+rader.push(`RidKanon.KAPPA_TAU_RATA = ${tal(styr.tauRelease)}`);
+rader.push("RidKanon.SVANGFAKTOR = {");
+for (const namn of RID_ORDNING) rader.push(`\t${namn} = ${tal(styr.svang[namn])},`);
 rader.push("}");
 rader.push("");
 rader.push("--[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");

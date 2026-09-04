@@ -49,6 +49,19 @@ RidKanon.TROSKLAR = {
 	{ under = 4.45, gangart = "galopp" },
 }
 
+--[[ STYRKANONEN ur stegaRitt() i src/game.js. Kurvaturtaket i 1/m vid
+     full styrning, gångarternas svängfaktorer, och tidskonstanterna för
+     att lägga sig i respektive räta upp sig ur en båge. ]]
+RidKanon.KAPPA_MAX = 0.42
+RidKanon.KAPPA_TAU_LAGG = 0.13
+RidKanon.KAPPA_TAU_RATA = 0.19
+RidKanon.SVANGFAKTOR = {
+	halt = 1,
+	skritt = 1,
+	trav = 0.82,
+	galopp = 0.52,
+}
+
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
 RidKanon.TELEMETRI_FALT = { "balans", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "kurvatur", "mjukhet", "onskadFart", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
 

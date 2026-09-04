@@ -71,18 +71,52 @@ specen i stället för att glida förbi.
 
 | Avvikelse | Webb | Roblox |
 | --- | --- | --- |
+| Kurvaturtak vid full styrning | 0,42 1/m ⇒ 2,4 m radie | 0,30 1/m ⇒ 3,3 m radie |
+| Galoppens svängfaktor | 0,52 | canter 0,62 |
 | Galoppens övre bandgräns | 8,00 m/s | canter ≤ 7,00 m/s |
 | Fyrsprång | saknas | `gallop` 7,20–11,0 m/s |
 | Cykellängd, skritt/trav/galopp | 1,61 / 2,21 / 3,50 m | 1,45 / 2,13 / 3,20 m |
 | Hjälplager, spänning, mjukhet, balans, fokus | finns | saknar källa |
 
+De två första är nya fynd ur det här arbetet och de tyngsta: **samma
+styrutslag ger olika snäv volt på de två ytorna.** Full styrning i skritt
+är 2,4 m radie på webben mot 3,3 m på Roblox — nästan en meter, alltså
+inte en avrundning.
+
 Att jämna ut någon av dem **ändrar ridkänslan** och är ett produktbeslut,
-inte något en konsolidering får göra på eget initiativ. De fyra ligger
+inte något en konsolidering får göra på eget initiativ. De sex ligger
 därför kvar som de är, synliga i varje testkörning.
+
+Tidskonstanterna för att lägga sig i och räta upp sig ur en båge
+(0,13 respektive 0,19 s) och svängfaktorerna för halt, skritt och trav
+stämmer redan, och specen kräver att de fortsätter göra det.
 
 Cykellängdsavvikelsen är sedan tidigare dokumenterad i `Gaits.luau` och
 `roblox/docs/HASTRIGG-KRAVSPEC.md` § 4; den står nu också i en körning i
 stället för bara i en kommentar.
+
+## Volten — styrutslaget mätt som en ridd bana
+
+#81 visade vad som händer när ett test provar formeln i stället för
+banan: formeln stämde, och läktaren gick ändå inte att gå upp på. Volten
+mäts därför på samma sätt som en ryttare rider den — fast styrutslag,
+samplat läge ur den körande ridloopen, minsta-kvadrat-cirkel på punkterna.
+
+| Mätning | Resultat |
+| --- | --- |
+| Full styrning, trav | ridd diameter **8,25 m**, största avvikelse från cirkeln **1,0 cm** över 240 punkter |
+| Samma, mot kurvaturen | ridd radie **4,12 m** = 1/κ **4,12 m** |
+| 0,45 styrutslag, trav | ridd radie **9,16 m** = 1/κ **9,16 m**, alltså en volt på **18,3 m** |
+| Kurvaturlagen | κ 0,1091 = styrutslag 0,324 × gångartens tak 0,3368 |
+
+Två saker värda att notera för produktbeslut:
+
+1. **0,45 styrutslag i trav ger en 18,3 m volt i en 18,4 m bred hall.**
+   Volten ryms alltså precis, och rids den inte mitt i banan tar den i
+   sargen. Det är ett mätresultat, inte ett fel — men det är värt att veta
+   innan en lektion ber spelaren rida en volt var som helst i ridhuset.
+2. Insatt styrutslag 0,45 blir **0,324** efter hjälplagrets utjämning.
+   Kurvaturen följer den utjämnade hjälpen, inte råinsatsen.
 
 ## Evidens
 
@@ -109,6 +143,12 @@ Varje central kontroll har visats kunna bli röd:
 | `SAKNAS` påstår att `spanning` finns | FEL — deklarerade luckor |
 | webbens `HYST` ändrad utan omexport | FEL — `--kontrollera` osynk |
 | samma, efter omexport | FEL — hysteresen i paritetsspecen |
+| Roblox `CurvatureTauPress` 0,13 → 0,16 | FEL — tidskonstanten |
+| Roblox trot `turn` 0,82 → 0,75 | FEL — svängfaktorn |
+| `GANGSVANG` omdöpt i `src/game.js` | exporten avslutar med kod 1 i stället för att exportera en nolla |
+| `omega = κ · tempo · 1,1` | FEL — den ridna radien slutar vara 1/κ |
+| `KAPPA_MAX` 0,42 → 0,50 | FEL — kurvaturlagen |
+| `GANGSVANG.trav` 0,82 → 0,70 | FEL — kurvaturlagen och den ridna volten |
 
 ## Not tested
 
@@ -117,4 +157,13 @@ Varje central kontroll har visats kunna bli röd:
   `Telemetri.las()` är provad mot en konstruerad `Locomotion`, inte mot en
   MovementController som körts en riktig bildruta.
 - **Subjektiv game feel.** Kräver Tobias uttryckliga PASS.
-- **20 m volt mot Gate 01:s 0,45 styrutslag** — nästa checkpoint.
+- **Render review-build.** Render-tjänsten `srv-dadf7idg1s2s73f1109g` bygger
+  från `main` med auto-deploy, inte från den här branchen. En review-build
+  för `claude/g02-a-riding-core` finns alltså inte på Render; Netlifys
+  `deploy-preview-86` är det som går att öppna i dag. Att lägga upp en ny
+  Render-tjänst för branchen är ett infrastrukturbeslut som är Tobias, inte
+  mitt.
+- **Volten på Roblox.** Den är mätt på webben. Roblox-motsvarigheten kräver
+  en MovementController som körts riktiga bildrutor mot en Humanoid, alltså
+  Studio. Paritetsspecen jämför i stället styrkanonens siffror, och de två
+  som skiljer sig står i registret ovan.
