@@ -208,8 +208,13 @@ prova("genom inputlagret: parad tar ned till halt utan överhoppade gångarter",
 const neutral = await page.evaluate(() => {
   RIDIN.skankel = 0; RIDIN.tygel = 0; RIDIN.sits = 0; RIDIN.styr = 0;
   ridAvsiktTillHjalp();
-  return { spel: { skankel: IN.kan.skankel.mal, tygel: IN.kan.tygel.mal, sits: IN.kan.sits.mal },
-    modell: { skankel: K.SKANKEL_NEUTRAL, tygel: K.TYGEL_NEUTRAL, sits: K.SITS_NEUTRAL } };
+  const mitt = { skankel: IN.kan.skankel.mal, tygel: IN.kan.tygel.mal, sits: IN.kan.sits.mal };
+  RIDIN.tygel = 1; RIDIN.sits = 1; ridAvsiktTillHjalp();
+  const tak = { tygel: IN.kan.tygel.mal, sits: IN.kan.sits.mal };
+  RIDIN.tygel = 0; RIDIN.sits = 0; ridAvsiktTillHjalp();
+  return { spel: mitt, tak,
+    modell: { skankel: K.SKANKEL_NEUTRAL, tygel: K.TYGEL_NEUTRAL, sits: K.SITS_NEUTRAL },
+    modellTak: { tygel: K.TYGEL_MAX, sits: K.SITS_MAX } };
 });
 {
   const d = k => Math.abs(neutral.spel[k] - neutral.modell[k]);
@@ -218,6 +223,13 @@ const neutral = await page.evaluate(() => {
     `skänkel ${neutral.spel.skankel} = ${neutral.modell.skankel}, ` +
     `tygel ${neutral.spel.tygel} = ${neutral.modell.tygel}, ` +
     `sits ${neutral.spel.sits} = ${neutral.modell.sits}`);
+  /* Och taket. Paradens bestämdhet mäts mot det ryttaren FAKTISKT kan
+     lägga på; räknas den mot 1,0 går den aldrig att be om helt. */
+  const t = k => Math.abs(neutral.tak[k] - neutral.modellTak[k]);
+  prova("hjälpens tak är samma tal i modellen och i spelets inputlager",
+    t("tygel") < 1e-9 && t("sits") < 1e-9,
+    `tygel ${neutral.tak.tygel} = ${neutral.modellTak.tygel}, ` +
+    `sits ${neutral.tak.sits} = ${neutral.modellTak.sits}`);
 }
 
 /* 4. ÖVERGÅNGSKONTRAKTET dömer rätt. */
@@ -573,6 +585,112 @@ prova("styrningen: riktningsbytet passerar rakt i stället för att hoppa över"
   byte.fore * byte.efter < 0 && byte.nara >= 1,
   `κ ${byte.fore.toFixed(3)} → ${byte.efter.toFixed(3)}, ` +
   `${byte.nara} bildrutor inom ±0,02 av rakt`);
+
+/* 8f. PARADEN — G02-A.1 P5, genom inputlagret.
+
+   Uppmätt före: en normal parad (tygel 0,65) och en mycket stark
+   (0,95 + full sits) stannade från galopp på 2,58 mot 2,57 s med samma
+   toppinbromsning 5,1 m/s². Hjälpens styrka ändrade alltså ingenting,
+   och varje halt var en nödbromsning. Arbetsordern säger raka motsatsen:
+   halten får se ut som en nödbromsning bara när ryttaren ber bestämt.
+
+   Provet rider upp i galopp och parerar ned på två sätt, med samma häst
+   och samma startläge. Kravet är att den bestämda paraden bromsar
+   HÅRDARE — inte hur mycket, för hur hårt som känns rätt är game feel
+   och Tobias sak. Dessutom: ingen krypning efter halt, och ingen
+   gångart som studsar tillbaka. */
+const parad = await page.evaluate(() => {
+  const dt = 1 / 60;
+  const kor = (o, sek, ut) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0;
+    RIDIN.sits = o.sits ?? 0; RIDIN.styr = 0;
+    stegaRitt(dt); if (ut) ut(); } };
+  const stopp = (aid) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
+    for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+    const fran = G.ride.tempo;
+    let t = 0, strack = 0, ret = 0, forra = G.ride.tempo, klar = null;
+    kor(aid, 12, () => {
+      strack += G.ride.tempo * dt; t += dt;
+      ret = Math.max(ret, (forra - G.ride.tempo) / dt); forra = G.ride.tempo;
+      if (klar === null && G.ride.tempo < 0.02 && G.ride.gangart === "halt") klar = t;
+    });
+    /* Och stå kvar: samma hjälp åtta sekunder till. */
+    let kryp = 0, studs = false;
+    kor(aid, 8, () => { kryp += Math.abs(G.ride.tempo) * dt;
+      if (G.ride.gangart !== "halt") studs = true; });
+    return { fran, tid: klar, strack, ret, kryp, studs, slut: G.ride.gangart };
+  };
+  /* Och längden på SJÄLVA förloppet, mätt tills modellen släpper det.
+     Arbetsorderns kuvert för nedåtgående övergångar är 0,6–1,2 s, och
+     P5 rör just den siffran — båda ändarna måste rymmas. */
+  const forlopp = (aid) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
+    for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+    /* FÖRSTA förloppet, galopp→trav.
+
+       "Mät tills _ov är tom" fungerar inte: paraden ger tre steg med
+       0,9 s mellan sig och förloppen är nästan exakt så långa, så
+       nästa börjar innan förra hunnit släppa och _ov är i praktiken
+       aldrig tom under en parad. Uppmätt: fyra sekunder utan ett enda
+       tomt mellanrum.
+
+       Förloppets klocka (_ov.t) NOLLSTÄLLS däremot vid varje nytt
+       steg. Toppvärdet strax före nollställningen ÄR längden.
+
+       SISTA förloppet mäts, inte första. Hjälpen rampar in på 0,28 s
+       och cue:n hinner falla innan tygeln är hemma, så paradens första
+       steg är alltid mjukare än ryttaren bad om — även när hon drar
+       fullt. Det är korrekt beteende, men det är inte den hjälp man
+       ville mäta. */
+    const toppar = [];
+    let forra = -1;
+    kor(aid, 5, () => {
+      const nu = G.ride._ov ? G.ride._ov.t : -1;
+      if (nu < forra && forra > 0) toppar.push(forra);
+      forra = nu;
+    });
+    return toppar.length ? toppar[toppar.length - 1] : null;
+  };
+  /* Kuvertet måste hålla för HELA stallet, inte för en häst. Tyngden
+     och trögheten skalar förloppets längd, så den lättaste och den
+     tyngsta hästen ligger längst ut åt var sitt håll. */
+  const ider = Object.keys(HORSES);
+  const tung = ider.reduce((b, i) => HORSES[i].tyngd > HORSES[b].tyngd ? i : b, ider[0]);
+  const latt = ider.reduce((b, i) => HORSES[i].tyngd < HORSES[b].tyngd ? i : b, ider[0]);
+  const forHast = (id) => { G.hastId = id;
+    return { mjuk: forlopp({ tygel: 0.60 }), bestamd: forlopp({ tygel: 1, sits: 1 }),
+      tyngd: HORSES[id].tyngd, namn: HORSES[id].namn || id }; };
+  const kuvert = { tung: forHast(tung), latt: forHast(latt) };
+  G.hastId = ider[0];
+  /* Lätt men hållande tygel mot full tygel och full sits. */
+  return { mjuk: stopp({ tygel: 0.60 }), bestamd: stopp({ tygel: 1, sits: 1 }),
+    kuvert, hast: G.hastId };
+});
+prova("paraden: en bestämd hjälp bromsar hårdare än en mjuk",
+  parad.bestamd.ret > parad.mjuk.ret * 1.10
+  && parad.mjuk.tid !== null && parad.bestamd.tid !== null,
+  `topp ${parad.bestamd.ret.toFixed(2)} mot ${parad.mjuk.ret.toFixed(2)} m/s², ` +
+  `halt på ${parad.bestamd.tid?.toFixed(2)} mot ${parad.mjuk.tid?.toFixed(2)} s, ` +
+  `${parad.bestamd.strack.toFixed(2)} mot ${parad.mjuk.strack.toFixed(2)} m`);
+{
+  const rader = [parad.kuvert.tung, parad.kuvert.latt];
+  const inne = v => v !== null && v >= 0.6 - 1e-9 && v <= 1.2 + 1e-9;
+  prova("paraden: kuvertet 0,60–1,20 s håller för både tyngsta och lättaste hästen",
+    rader.every(r => inne(r.mjuk) && inne(r.bestamd)),
+    rader.map(r => `${r.namn} (tyngd ${r.tyngd.toFixed(2)}): ` +
+      `mjuk ${r.mjuk?.toFixed(2)}, bestämd ${r.bestamd?.toFixed(2)} s`).join(" · "));
+}
+prova("paraden: ingen krypning och ingen gångart som studsar efter halt",
+  parad.mjuk.kryp < 0.05 && parad.bestamd.kryp < 0.05
+  && !parad.mjuk.studs && !parad.bestamd.studs
+  && parad.mjuk.slut === "halt" && parad.bestamd.slut === "halt",
+  `krypning ${parad.mjuk.kryp.toFixed(4)} / ${parad.bestamd.kryp.toFixed(4)} m på 8 s, ` +
+  `studs ${parad.mjuk.studs || parad.bestamd.studs ? "JA" : "nej"}`);
 
 const slice = await page.evaluate(() => {
   const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.4, skygghet: 0.2, flaggor: {} };

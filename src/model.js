@@ -148,6 +148,12 @@ const K={
      glider isär — modellen kan inte läsa spelets inputlager, så
      kopplingen måste bevakas i stället för antas. */
   SKANKEL_NEUTRAL:0.42, TYGEL_NEUTRAL:0.34, SITS_NEUTRAL:0.20,
+  /* Och hjälpens TAK, av samma skäl. Ryttaren når aldrig 1,0: tygeln
+     går till 0,80 och sitsen till 0,85 i ridAvsiktTillHjalp(). En
+     styrka som räknas mot 1,0 skulle alltså aldrig kunna bli hel, och
+     paradens bestämda ände vore omöjlig att be om. Bevakas av samma
+     prov i tools/ridtest.mjs som neutralvärdena. */
+  TYGEL_MAX:0.80, SITS_MAX:0.85,
   /* Kvar av den gamla termen: hjälpen får fortfarande variera tempot
      INOM gångarten — det är skillnaden mellan en samlad och en utsträckt
      skritt — men inte längre bära över ett gångartsband. Skrittens band
@@ -168,7 +174,43 @@ const K={
      fastna på, ingen studs i slutet. Gångartsetiketten byter en bit in i
      förloppet (BYTPUNKT), inte vid dess början: hästen är på väg in i
      travet en stund innan travet syns. */
-  OVERGANG:{ upp:{skritt:0.80, trav:0.95, galopp:1.20}, ner:0.90, BYTPUNKT:0.55 },
+  OVERGANG:{ upp:{skritt:0.80, trav:0.95, galopp:1.20}, ner:0.90, BYTPUNKT:0.55,
+    /* ── PARADEN FÅR VARA MJUK ELLER BESTÄMD (G02-A.1 P5) ──
+       Nedåt var förloppet lika långt oavsett hur ryttaren bad. Uppmätt:
+       en normal parad (tygel 0,65) och en mycket stark (tygel 0,95 +
+       full sits) stannade från galopp på 2,58 respektive 2,57 s och
+       6,33 respektive 6,29 m, med samma toppinbromsning 5,1 m/s².
+       VARJE halt var alltså en nödbromsning, och hjälpens styrka
+       ändrade ingenting.
+
+       Nu ligger längden mellan nerMjuk och nerHart efter hur långt
+       tygeln och sitsen går förbi sitt eget hållande läge. Båda
+       ändarna ryms i arbetsorderns kuvert för nedåtgående övergångar
+       (0,6–1,2 s) efter att hästens tyngd skalat dem.
+
+       Roblox har samma skillnad sedan tidigare, men uttryckt som en
+       tangent: M.BrakeExtra läggs på när S hålls. Webbens hjälp är
+       analog, så styrkan läses ur hjälpen i stället för ur en knapp.
+       Beteendet är detsamma — ber du bestämdare stannar hon fortare. */
+    nerMjuk:1.05, nerHart:0.78,
+    /* KUVERTEN ur arbetsordern, i sekunder, som hårda gränser och inte
+       som förhoppningar. Baslängderna ovan ligger inne i dem, men
+       hästens tyngd och tröghet skalar längden med mellan ungefär 0,75
+       och 1,3 — en tung, seg häst hamnade utanför uppåt och en lätt,
+       villig utanför nedåt. Uppmätt: nedåt 0,54 s med full parad på en
+       lätt häst, mot golvet 0,60.
+
+       Att klippa längden här i stället för att trimma bort skalningen
+       är avsiktligt: skalningen ÄR hästens karaktär och ska finnas
+       kvar, men kuvertet är ett produktbeslut och gäller alla hästar. */
+    /* KUVERTEN ur arbetsordern (nedåt 0,60–1,20 s) bevakas av ett prov
+       i tools/ridtest.mjs som mäter tyngsta och lättaste hästen, inte
+       av en klippning här.
+
+       Jag skrev först klippningen. Den visade sig aldrig slå till för
+       någon häst i stallet — och hade den gjort det hade den TYSTAT
+       provet i stället för att låta det säga ifrån. En gräns som gömmer
+       just det den finns för att fånga är sämre än ingen gräns. */ },
 };
 /* Gångarterna i ordning. Cue:n stegar i den här listan, ett steg i taget. */
 const GANGORDNING=["halt","skritt","trav","galopp"];
@@ -283,8 +325,23 @@ function stepRide(s,a,h,ctx,dt){
           gör förloppet avbrytbart: kommer en motsatt hjälp mitt i, börjar
           nästa förlopp där hon är, inte där hon var. */
        const upp=GANGORDNING.indexOf(till)>GANGORDNING.indexOf(fran);
+       /* Paradens bestämdhet: hur långt tygeln respektive sitsen går
+          förbi sitt hållande läge, det starkaste av de två. */
+       const kraft=clamp(Math.max(
+         (a.tygel-K.TYGEL_BAND_MAX)/(K.TYGEL_MAX-K.TYGEL_BAND_MAX),
+         (a.sits -K.SITS_PARAD)   /(K.SITS_MAX -K.SITS_PARAD)),0,1);
+       const bas=upp?(K.OVERGANG.upp[till]||0.9)
+                    :K.OVERGANG.nerMjuk-(K.OVERGANG.nerMjuk-K.OVERGANG.nerHart)*kraft;
+       /* LÄNGDEN LAGRAS FÄRDIGSKALAD. Hästens tyngd och tröghet skalade
+          förut längden på ett ställe (kurvan) men inte på det andra
+          (villkoret som håller förloppet vid liv). För en lätt häst låg
+          förloppet därför kvar en stund efter att kurvan var klar, och
+          för en tung KLIPPTES det av vid 97 % — tempot hoppade den sista
+          biten när approach() tog över. Nu betyder ov.langd samma sak på
+          båda ställena. */
+       const D0=ctx.avdrift||{tröghet:1};
        s._ov={fran:s.tempo, t:0,
-         langd:upp?(K.OVERGANG.upp[till]||0.9):K.OVERGANG.ner};
+         langd:bas*(0.75+0.35*h.tyngd)*(D0.tröghet||1)};
      }
    }
   }
@@ -347,8 +404,7 @@ function stepRide(s,a,h,ctx,dt){
         Trögheten skalar längden: en tung häst tar längre på sig, men
         formen på förloppet är densamma. */
      ov.t+=dt;
-     const langd=ov.langd*(0.75+0.35*h.tyngd)*D.tröghet;
-     const u=clamp(ov.t/langd,0,1), mjuk=u*u*(3-2*u);
+     const u=clamp(ov.t/ov.langd,0,1), mjuk=u*u*(3-2*u);
      s.tempo=ov.fran+(mal-ov.fran)*mjuk;
      /* Etiketten byter en bit in i förloppet — hästen är på väg in i
         travet en stund innan travet syns. Före bytpunkten behåller hon

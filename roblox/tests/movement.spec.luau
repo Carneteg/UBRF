@@ -717,6 +717,42 @@ do
 		string.format("uppsutten %s", tostring(efter.uppsutten)))
 end
 
+--[[ PARADEN — G02-A.1 P5, paritet med webben.
+
+     Webben mätte fram att hjälpens styrka inte påverkade halten alls:
+     varje parad var en nödbromsning. Roblox hade redan skillnaden, men
+     ingen mätte den. Mekanismen skiljer sig — Roblox lägger på
+     M.BrakeExtra när S hålls, webben läser tygelns och sitsens styrka —
+     men BETEENDET ska vara detsamma: ber du bestämdare stannar hon
+     fortare. Det är den sortens paritet som gäller när ytorna har olika
+     inputmodell. ]]
+do
+	print("\n── Paraden: ber man bestämdare stannar hon fortare ──")
+	local dt = 1 / 240
+	local function stoppa(bakat)
+		local mc = newMC()
+		upToGait(mc, 3)                       -- upp i galopp
+		run(mc, 2.0, { forward = 1 }, 1 / 60) -- låt tempot sätta sig
+		local fran = mc.loco.speed
+		local t, ret, forra = 0, 0, mc.loco.speed
+		for _ = 1, math.floor(12 / dt) do
+			mc:step(intent({ forward = if bakat then -1 else 0, gaitDown = (t < dt) }), dt)
+			ret = math.max(ret, (forra - mc.loco.speed) / dt)
+			forra = mc.loco.speed
+			t += dt
+			if mc.loco.speed < 0.02 then break end
+		end
+		return fran, t, ret
+	end
+	--[[ Nedstegning utan S mot nedstegning MED S. Samma häst, samma
+	     startläge, samma gångartsbegäran — bara bromshjälpen skiljer. ]]
+	local f1, t1, r1 = stoppa(false)
+	local f2, t2, r2 = stoppa(true)
+	check("bestämd broms bromsar hårdare än enbart nedstegning", r2 > r1 * 1.10,
+		string.format("topp %.2f mot %.2f m/s² (från %.2f respektive %.2f m/s)",
+			r2, r1, f2, f1))
+end
+
 --[[ BÅGEN ÄNDRAS ALDRIG FORTARE VID ETT BYTE ÄN VID EN INSVÄNGNING.
 
      G02-A.1 P4, samma självrefererande krav som webbens ridtest.
