@@ -57,3 +57,39 @@ if (spärrade.length) {
   process.exit(1);
 }
 console.log(`  OK   hela uppgångens bredd går att lämna uppåt (marginal ${(NIVA_STEG - varst.d).toFixed(3)} m kvar)`);
+
+/* ── BREDDEN, som tal ────────────────────────────────────────────────
+   Bredd-problemet är intermittent i promenadgrindarna: en 0,9 m ramp
+   fäller gangtest ungefär var sjätte körning, eftersom det beror på var
+   vägsökningen råkar hamna. Ett prov som bara ibland blir rött duger inte
+   som grind, så bredden mäts här som SPELRUM FÖR FIGURENS MITTPUNKT:
+   fri bredd minus figurens diameter. Det är det mått som avgör om en
+   spelare som siktar ungefär kommer fram.
+
+   Kravet 0,60 m är satt över det uppmätta felet: den smala rampen gav
+   0,20 m och fällde på riktigt i CI.
+
+   VAD MÅTTET INTE FÅR PÅSTÅ. Det mäter fri bredd, inte om ytan hänger
+   ihop. Domarbåset på faktor 0,30 lämnade 1,38 m fri korridor och går
+   igenom här — men skar samtidigt in i första bänkraden, så den som kom
+   upp där gick in i en återvändsgränd. Det fångas av stoppdiag, som går
+   sträckan på riktigt. De två grindarna mäter olika saker och ersätter
+   inte varandra. */
+const RADIE = 0.35, KRAV_SPELRUM = 0.60;
+const matt = vm.runInContext(`(() => {
+  const R=RIDHUSINNE, L=R.laktare, S=SPELABSTRAKTIONER.ridhus, D=R.domarbas;
+  const band=[S.laktarSteg, S.laktarStegRad1].filter(t=>t&&t.x1>t.x0);
+  const bank=L.x0+L.dackDjup;
+  return { ramp: Math.max(...band.map(b=>b.x1)) - Math.min(...band.map(b=>b.x0)),
+           forbiBaset: bank - (D.x + D.b/2) };
+})()`, ctx);
+
+let breddFel = 0;
+for (const [namn, bredd] of [["uppgången", matt.ramp], ["gångytan förbi domarbåset", matt.forbiBaset]]) {
+  const spelrum = bredd - 2 * RADIE;
+  const ok = spelrum >= KRAV_SPELRUM;
+  if (!ok) breddFel++;
+  console.log(`  ${ok ? "OK  " : "FEL "} ${namn}: ${bredd.toFixed(2)} m fritt` +
+    ` → ${spelrum.toFixed(2)} m spelrum för mittpunkten (krav ${KRAV_SPELRUM})`);
+}
+if (breddFel) process.exit(1);
