@@ -73,27 +73,30 @@ const tal = v => {
 };
 const str = s => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
 
-/* STYRKANONEN ligger som literaler inne i stegaRitt() i src/game.js —
-   filen går inte att köra utan DOM, så den läses som text. Mönstren är
-   avsiktligt strikta och exporten FALLER om något av dem försvinner: en
-   tyst nolla vore värre än ett stopp, eftersom paritetsspecen då skulle
-   jämföra mot ingenting och bli grön. */
+/* STYRKANONEN läses ur `RID_AB.A` i src/riding/telemetri.js — objektet
+   som src/game.js själv konsulterar. Förut skrapades literalerna ur
+   game.js med regex; nu finns de på ett ställe som går att KÖRA, så
+   exporten och spelet kan inte längre läsa olika saker.
+
+   Tidskonstanterna står fortfarande som literaler inne i stegaRitt() och
+   läses som text. Mönstret är avsiktligt strikt och exporten FALLER om
+   det försvinner: en tyst nolla vore värre än ett stopp, eftersom
+   paritetsspecen då skulle jämföra mot ingenting och bli grön. */
 function styrkanon() {
-  const kalla = las("src/game.js");
-  const gm = kalla.match(/const GANGSVANG=\{([^}]*)\};/);
-  const km = kalla.match(/const KAPPA_MAX=([0-9.]+);/);
-  const tm = kalla.match(/const kappaTau=[^?]*\?\s*([0-9.]+)\s*:\s*([0-9.]+);/);
-  if (!gm || !km || !tm) {
-    console.error("FEL  hittar inte GANGSVANG / KAPPA_MAX / kappaTau i src/game.js");
-    console.error("     styrkanonen kan inte exporteras — rätta mönstren i den här filen");
+  const AB = vm.runInContext("(typeof RID_AB!=='undefined')?RID_AB:null", ctx);
+  if (!AB || !AB.A) {
+    console.error("FEL  hittar inte RID_AB.A i src/riding/telemetri.js");
+    console.error("     styrkanonen kan inte exporteras");
     process.exit(1);
   }
-  const svang = {};
-  for (const del of gm[1].split(",")) {
-    const [namn, varde] = del.split(":").map(x => x.trim());
-    if (namn) svang[namn] = Number(varde);
+  const tm = las("src/game.js").match(/const kappaTau=[^?]*\?\s*([0-9.]+)\s*:\s*([0-9.]+);/);
+  if (!tm) {
+    console.error("FEL  hittar inte kappaTau i src/game.js");
+    console.error("     rätta mönstret i den här filen");
+    process.exit(1);
   }
-  return { svang, kappaMax: Number(km[1]), tauPress: Number(tm[1]), tauRelease: Number(tm[2]) };
+  return { svang: AB.A.GANGSVANG, kappaMax: AB.A.KAPPA_MAX,
+    tauPress: Number(tm[1]), tauRelease: Number(tm[2]) };
 }
 
 const { falt, harledda } = telemetriFalt();

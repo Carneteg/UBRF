@@ -138,6 +138,34 @@ prova("live i spelet: G.telemetri fylls av den körande ridloopen",
   !!live.telemetri && typeof live.telemetri.fart === "number" && live.telemetri.harHjalper,
   live.telemetri ? `gångart ${live.telemetri.gangart}, fart ${live.telemetri.fart.toFixed(2)}, härledda ${JSON.stringify(live.telemetri.harledda)}` : "G.telemetri saknas");
 
+/* 7a. PRODUKTIONEN KÖR A. Review-only-lagret får inte ändra något utan
+   att någon uttryckligen ber om det, så det här fallet kontrollerar att
+   sidan utan `?ridab` har exakt Gate 01:s värden — och att B verkligen
+   ändrar dem när den väljs, annars vore A/B-underlaget en attrapp. */
+const abLage = await page.evaluate(() => {
+  const fore = { aktiv: ridAB().namn, kappa: ridAB().KAPPA_MAX,
+    galoppSvang: ridAB().GANGSVANG.galopp, galoppMax: Gait.G.galopp.max,
+    cykelTrav: Gait.steglangd("hast", "trav", 0.5, 0.15) };
+  ridSattAB("B");
+  const b = { kappa: ridAB().KAPPA_MAX, galoppSvang: ridAB().GANGSVANG.galopp,
+    galoppMax: Gait.G.galopp.max, cykelTrav: Gait.steglangd("hast", "trav", 0.5, 0.15) };
+  ridSattAB("A");
+  const ater = { kappa: ridAB().KAPPA_MAX, galoppMax: Gait.G.galopp.max,
+    cykelTrav: Gait.steglangd("hast", "trav", 0.5, 0.15) };
+  return { fore, b, ater };
+});
+prova("produktionen kör A: Gate 01:s värden gäller utan review-läge",
+  abLage.fore.kappa === 0.42 && abLage.fore.galoppSvang === 0.52 && abLage.fore.galoppMax === 8.00,
+  `${abLage.fore.aktiv}: κ-tak ${abLage.fore.kappa}, galoppsväng ${abLage.fore.galoppSvang}, galoppband ${abLage.fore.galoppMax}`);
+prova("B ändrar faktiskt alla fyra blockerande parametrarna",
+  abLage.b.kappa === 0.30 && abLage.b.galoppSvang === 0.62 && abLage.b.galoppMax === 7.00
+    && Math.abs(abLage.b.cykelTrav - abLage.fore.cykelTrav) > 0.01,
+  `κ-tak ${abLage.b.kappa}, galoppsväng ${abLage.b.galoppSvang}, galoppband ${abLage.b.galoppMax}, cykel trav ${abLage.fore.cykelTrav.toFixed(2)} → ${abLage.b.cykelTrav.toFixed(2)} m`);
+prova("A/B är reversibelt: tillbaka till A ger Gate 01:s värden igen",
+  abLage.ater.kappa === 0.42 && abLage.ater.galoppMax === 8.00
+    && Math.abs(abLage.ater.cykelTrav - abLage.fore.cykelTrav) < 1e-9,
+  `κ-tak ${abLage.ater.kappa}, galoppband ${abLage.ater.galoppMax}, cykel trav ${abLage.ater.cykelTrav.toFixed(3)} m`);
+
 /* 7b. ORDNINGEN: tillståndet ska stå INNAN lektionen startar.
    Senior review av #86, blocker C. Startar lektionen först finns ett
    första-bildrutefönster där den körande ridloopen kan läsa uppsutten=false
