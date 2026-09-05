@@ -28,8 +28,10 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
-vm.runInContext(las("src/model.js") + "\n" + las("src/riding/telemetri.js"), ctx);
-const { Gait, RID_ORDNING, K } = vm.runInContext("({Gait, RID_ORDNING, K})", ctx);
+vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
+  + "\n" + las("src/riding/telemetri.js"), ctx);
+const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA } =
+  vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -63,7 +65,12 @@ function telemetriFalt() {
   ride.gangart = "trav"; ride.tempo = 3.2; ride.steglangd = 2.2;
   const tm = ctx.ridTelemetri(ride, { skankel: 0.5, tygel: 0.4, sits: 0.5, styrning: 0 },
     { kappa: 0.1, fas: 0.25 });
-  return { falt: Object.keys(tm).filter(k => k !== "_harledda").sort(), harledda: tm._harledda.slice().sort() };
+  return { falt: Object.keys(tm).filter(k => k !== "_harledda" && k !== "hjalpHarledda").sort(),
+           harledda: tm._harledda.slice().sort(),
+           /* Hjälpernas fältnamn läses ur SAMMA anrop, inte ur listan de
+              påstår sig följa — då kan HJALP_FALT inte hamna i osynk med
+              det hjalpSemantik faktiskt returnerar. */
+           hjalpFalt: Object.keys(tm.hjalper).sort() };
 }
 
 const tal = v => {
@@ -129,7 +136,7 @@ function kameralagen() {
   return ut;
 }
 
-const { falt, harledda } = telemetriFalt();
+const { falt, harledda, hjalpFalt } = telemetriFalt();
 const styr = styrkanon();
 const kam = kameralagen();
 const trosklar = mataTrosklar();
@@ -255,6 +262,28 @@ rader.push("RidKanon.TELEMETRI_FALT = { " + falt.map(str).join(", ") + " }");
 rader.push("");
 rader.push("--[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]");
 rader.push("RidKanon.HARLEDDA = { " + harledda.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ HJÄLPERNAS SEMANTIK (G02-B punkt 1, src/riding/hjalper.js).");
+rader.push("");
+rader.push("     Webbens ridning har fyra AXLAR — skänkel, styrning, tygel, sits —");
+rader.push("     och ovanpå dem ridningens ord: innertygel, yttertygel, yttertygel-");
+rader.push("     stöd, böjsida, vikt och paraden som en EGEN signal. Inner och");
+rader.push("     ytter härleds ur styr- och tygelaxeln, så ingen ny kontroll behövs");
+rader.push("     på någon yta; talen nedan är översättningen.");
+rader.push("");
+rader.push("     Roblox rörelsekärna har ännu inget hjälplager alls (se");
+rader.push("     Telemetri.SAKNAS). Kanonen exporteras hit FÖRE implementationen");
+rader.push("     med flit: när Roblox-sidan bygger sina hjälper ska den läsa de här");
+rader.push("     talen, inte skriva av dem. ]]");
+rader.push("RidKanon.HJALP = {");
+for (const namn of Object.keys(HJALP_KANON)) rader.push(`\t${namn} = ${tal(HJALP_KANON[namn])},`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ Hjälpernas fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");
+rader.push("RidKanon.HJALP_FALT = { " + hjalpFalt.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]");
+rader.push("RidKanon.HJALP_HARLEDDA = { " + HJALP_HARLEDDA.slice().sort().map(str).join(", ") + " }");
 rader.push("");
 rader.push("return RidKanon");
 rader.push("");

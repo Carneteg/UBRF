@@ -219,6 +219,119 @@ prova("genom inputlagret: parad tar ned till halt utan överhoppade gångarter",
   via.slut === "halt" && via.glapp === 0,
   `${via.sedda.join(" → ")}, ${via.glapp} olagliga byten`);
 
+/* ══════════════════════════════════════════════════════════════════
+   G02-B PUNKT 1 — HJÄLPERNA SOM SEMANTIK (issue #83)
+
+   Ordern är uttrycklig: "Acceptance ska bevisas med faktisk inputväg,
+   inte bara direktanrop av modellen." Allt nedan går därför genom
+   RIDIN → stegaInput → stegaRitt, samma väg som ett tangenttryck.
+
+   Två påståenden provas, och båda är sådana som kan bli röda:
+
+     PARADEN ÄR EN EGEN SIGNAL. Den ska nå modellen på egen kanal, den
+     ska INTE knuffa skänkel, tygel och sits på vägen, och hästen ska
+     läsa hur väl samordnad den var.
+
+     YTTERTYGELN BÄR SVÄNGEN. Att svänga med släppt tygel ska ge mätbart
+     sämre rakriktning än samma sväng med kontakten kvar.
+   ══════════════════════════════════════════════════════════════════ */
+const hj = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+    RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
+  const ut = {};
+
+  /* a) KANALEN. Paraden ges mitt i en lugn skritt. Efteråt ska `parad`
+     ha gått upp OCH de tre axlarna stå exakt där de stod. Före G02-B
+     knuffade envelopen dem 0,26–0,28 var. */
+  nyRitt(); kor({ skankel: 1 }, 1.2); kor({ skankel: 0.55 }, 2.0);
+  const fore = { ...G.aids };
+  kor({ skankel: 0.55, parad: 1 }, 0.2);
+  ut.kanal = { parad: G.aids.parad,
+    dSk: G.aids.skankel - fore.skankel, dTy: G.aids.tygel - fore.tygel,
+    dSi: G.aids.sits - fore.sits };
+
+  /* b) VERKAN. En parad ur trav ska ta ned ett steg, läst som halvhalt. */
+  nyRitt(); for (let n = 0; n < 2; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+  const foreG = G.ride.gangart;
+  kor({ parad: 1 }, 0.3); kor({}, 3.0);
+  ut.verkan = { fore: foreG, efter: G.ride.gangart, cue: G.ride.cue };
+
+  /* c) KVALITETEN. Samma tangent, två ryttare: en med skänkeln på och
+     handen i kontaktbandet, en utan skänkel och med handen utanför.
+     Båda ska få sin övergång — en halvhalt är inte en knapp som nekas —
+     men hästen ska läsa dem olika. */
+  const enParad = (skankel, tygel) => { nyRitt();
+    kor({ tygel }, 2.0);
+    kor({ skankel: 1, tygel }, 1.5); kor({ skankel, tygel }, 1.0);
+    kor({ skankel: 1, tygel }, 1.5); kor({ skankel, tygel }, 2.0);
+    const f = G.ride.gangart, iF = ["halt","skritt","trav","galopp"].indexOf(f);
+    kor({ skankel, tygel, parad: 1 }, 0.3); kor({ skankel, tygel }, 2.0);
+    const iE = ["halt","skritt","trav","galopp"].indexOf(G.ride.gangart);
+    return { fore: f, efter: G.ride.gangart, steg: iE - iF, cue: G.ride.cue,
+      kval: G.ride.paradKval, aSk: G.aids.skankel, aTy: G.aids.tygel }; };
+  ut.bra = enParad(0.7, 0.15);
+  ut.slarv = enParad(-1, 0.35);
+
+  /* d) YTTERTYGELN. Samma volt, samma skänkel, samma styrutslag — bara
+     kontakten skiljer. Kontakten tas FÖRST och får lägga sig, annars är
+     själva tygeltagningen en nedåtgående hjälp och de två ritterna
+     hamnar i olika gångart, vilket vore ett annat prov än det här. */
+  const volt = (tygel) => { nyRitt();
+    kor({ tygel }, 2.0); kor({ skankel: 1, tygel }, 1.2); kor({ skankel: 0.55, tygel }, 1.5);
+    kor({ skankel: 0.55, tygel, styr: 1 }, 40);
+    return { rak: G.ride.skala.rakriktning, schvung: G.ride.skala.schvung,
+      kontakt: G.ride.skala.kontakt, gangart: G.ride.gangart,
+      stod: G.telemetri.hjalper.ytterstod,
+      inner: G.telemetri.hjalper.innerTygel, ytter: G.telemetri.hjalper.ytterTygel }; };
+  ut.los = volt(0);
+  ut.buren = volt(0.5);
+
+  ut.dublett = { kanon: HJALP_KANON.TYGEL_NEUTRAL, modell: K.TYGEL_NEUTRAL,
+    styr: HJALP_KANON.STYR_FULLT, styrMal: (() => { RIDIN.styr = 1; ridAvsiktTillHjalp();
+      const v = IN.kan.styrning.mal; RIDIN.styr = 0; ridAvsiktTillHjalp(); return v; })() };
+  return ut;
+});
+prova("paraden är en EGEN kanal — tangenten knuffar inte skänkel, tygel och sits",
+  hj.kanal.parad > 0.9 && Math.abs(hj.kanal.dSk) < 1e-9 &&
+  Math.abs(hj.kanal.dTy) < 1e-9 && Math.abs(hj.kanal.dSi) < 1e-9,
+  `parad ${hj.kanal.parad.toFixed(2)}, axlarna rörde sig ` +
+  `${hj.kanal.dSk.toFixed(3)} / ${hj.kanal.dTy.toFixed(3)} / ${hj.kanal.dSi.toFixed(3)}`);
+prova("genom inputlagret: en parad tar ned ett steg och läses som halvhalt",
+  hj.verkan.fore === "trav" && hj.verkan.efter === "skritt" && hj.verkan.cue === "halvhalt",
+  `${hj.verkan.fore} → ${hj.verkan.efter}, cue ${hj.verkan.cue}`);
+prova("genom inputlagret: hästen läser HUR paraden reds, inte bara ATT den gavs",
+  hj.bra.kval >= 0.90 && hj.slarv.kval <= 0.55 &&
+  hj.bra.steg === -1 && hj.slarv.steg === -1 &&
+  hj.bra.cue === "halvhalt" && hj.slarv.cue === "halvhalt",
+  `samordnad (skänkel ${hj.bra.aSk.toFixed(2)}, tygel ${hj.bra.aTy.toFixed(2)}) ` +
+  `kvalitet ${hj.bra.kval.toFixed(2)} · slarvig (skänkel ${hj.slarv.aSk.toFixed(2)}, ` +
+  `tygel ${hj.slarv.aTy.toFixed(2)}) kvalitet ${hj.slarv.kval.toFixed(2)} — båda tog ned ett steg`);
+prova("telemetrin visar yttertygelstödet i den körande ritten",
+  hj.los.stod <= 0.45 && hj.buren.stod >= 0.60 && hj.los.inner > hj.los.ytter,
+  `volt på lös tygel: stöd ${hj.los.stod.toFixed(2)} (inner ${hj.los.inner.toFixed(2)} / ` +
+  `ytter ${hj.los.ytter.toFixed(2)}) · med kontakten kvar: stöd ${hj.buren.stod.toFixed(2)}`);
+/* Den här raden är den som säger att semantiken inte är dekoration.
+   Den burna volten har LÄGRE schvung och LÄGRE kontakt än den lösa —
+   tygeln kostar på båda de skalorna — och ändå högre rakriktning.
+   Tas yttertygelstödet ur mal.rakriktning vänder ordningen. */
+prova("yttertygeln bär svängen: buren volt ger bättre rakriktning än lös",
+  hj.buren.rak > hj.los.rak && hj.buren.schvung < hj.los.schvung &&
+  hj.buren.kontakt < hj.los.kontakt && hj.buren.gangart === hj.los.gangart,
+  `rakriktning ${hj.los.rak.toFixed(3)} → ${hj.buren.rak.toFixed(3)} ` +
+  `(+${((hj.buren.rak / hj.los.rak - 1) * 100).toFixed(1)} %) trots schvung ` +
+  `${hj.los.schvung.toFixed(3)} → ${hj.buren.schvung.toFixed(3)} och kontakt ` +
+  `${hj.los.kontakt.toFixed(3)} → ${hj.buren.kontakt.toFixed(3)}, båda i ${hj.buren.gangart}`);
+prova("hjälpkanonen och modellen delar tal i stället för att spegla dem",
+  hj.dublett.kanon === hj.dublett.modell &&
+  Math.abs(hj.dublett.styr - hj.dublett.styrMal) < 1e-9,
+  `tygelns neutralläge ${hj.dublett.kanon} på båda ställena; fullt styrutslag ` +
+  `${hj.dublett.styr} ur kanonen ger ${hj.dublett.styrMal} i inputlagret`);
+
 /* Och att nollställningen verkligen är inkopplad där ritten börjar.
    Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se
    om produktionen glömmer den; det här läser funktionskroppen i den

@@ -25,7 +25,7 @@
 import fs from "node:fs"; import path from "node:path"; import vm from "node:vm";
 const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
 const ctx = vm.createContext({ console, Math, JSON });
-for (const f of ["src/model.js", "src/riding/telemetri.js"])
+for (const f of ["src/model.js", "src/riding/hjalper.js", "src/riding/telemetri.js"])
   vm.runInContext(fs.readFileSync(path.join(ROT, f), "utf8"), ctx, { filename: f });
 
 const DT = 1 / 120;                     // fin upplösning: tiderna mäts, inte bildrutorna

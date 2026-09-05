@@ -39,7 +39,12 @@ Telemetri.HARLEDDA = RidKanon.HARLEDDA
 --[[ Fält utan källa på Roblox ännu. Deklarerad lucka, inte en bugg som
      ska tystas: paritetsspecen kräver att listan stämmer exakt, så ett
      nytt hål blir rött och ett igenfyllt hål tvingar fram en ändring här. ]]
-Telemetri.SAKNAS = { "balans", "fokus", "hjalper", "mjukhet", "spanning" }
+--[[ G02-B punkt 1 la till paradKvalitet och paradAlder i kontraktet:
+     webben läser nu HUR en halvhalt reds, inte bara att den gavs.
+     Roblox har ingen parad alls ännu — ingen kanal, ingen läsning —
+     så de två är luckor av exakt samma slag som hjälplagret. ]]
+Telemetri.SAKNAS = { "balans", "fokus", "hjalper", "mjukhet", "paradAlder",
+	"paradKvalitet", "spanning" }
 
 --[[ Lagliga gångartsbyten: grannsteg i ordningen, plus halt från vad som
      helst (en häst kan stanna ur galopp). Ordningen är Roblox egen — den

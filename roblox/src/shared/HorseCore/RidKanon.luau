@@ -122,9 +122,40 @@ RidKanon.KAMERA = {
 }
 
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
-RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
+RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "paradAlder", "paradKvalitet", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
 
 --[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]
 RidKanon.HARLEDDA = { "balans", "fokus" }
+
+--[[ HJÄLPERNAS SEMANTIK (G02-B punkt 1, src/riding/hjalper.js).
+
+     Webbens ridning har fyra AXLAR — skänkel, styrning, tygel, sits —
+     och ovanpå dem ridningens ord: innertygel, yttertygel, yttertygel-
+     stöd, böjsida, vikt och paraden som en EGEN signal. Inner och
+     ytter härleds ur styr- och tygelaxeln, så ingen ny kontroll behövs
+     på någon yta; talen nedan är översättningen.
+
+     Roblox rörelsekärna har ännu inget hjälplager alls (se
+     Telemetri.SAKNAS). Kanonen exporteras hit FÖRE implementationen
+     med flit: när Roblox-sidan bygger sina hjälper ska den läsa de här
+     talen, inte skriva av dem. ]]
+RidKanon.HJALP = {
+	INNER_BER = 0.55,
+	YTTER_SLAPP = 0.35,
+	STYR_FULLT = 0.72,
+	STOD_KRAV = 0.3,
+	TYGEL_NEUTRAL = 0.34,
+	BOJ_TROSKEL = 0.05,
+	PARAD_GOLV = 0.2,
+	PARAD_DRIV = 0.5,
+	PARAD_BAND = 0.4,
+	PARAD_TROSKEL = 0.05,
+}
+
+--[[ Hjälpernas fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
+RidKanon.HJALP_FALT = { "bojSida", "innerTygel", "parad", "sits", "skankel", "styrning", "tygel", "vikt", "ytterTygel", "ytterstod" }
+
+--[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]
+RidKanon.HJALP_HARLEDDA = { "innerTygel", "vikt", "ytterTygel", "ytterstod" }
 
 return RidKanon

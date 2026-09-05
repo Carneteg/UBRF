@@ -436,9 +436,59 @@ check("galoppens svängfaktor är densamma",
 	string.format("(webb galopp %.2f, Roblox canter %.2f)",
 		RidKanon.SVANGFAKTOR.galopp, Gaits.get("canter").turn))
 
-beslut("LUCKA", "hjälplager, spänning och mjukhet saknas på Roblox",
-	#Telemetri.SAKNAS == 5,
+--[[ HJÄLPERNAS SEMANTIK (G02-B punkt 1). Webben har fått ridningens ord
+     ovanpå de fyra axlarna — innertygel, yttertygel, yttertygelstöd,
+     böjsida, vikt och paraden som egen signal. Roblox har ännu inget
+     hjälplager alls, och det är därför en LUCKA och inte en paritetsbrist.
+
+     Vad som ändå MÅSTE stämma redan nu är att talen finns här och att de
+     kommer ur webbens modul och inte ur en handskriven kopia. När Roblox
+     bygger sina hjälper ska den läsa RidKanon.HJALP — annars föds två
+     uppsättningar av samma översättning, vilket är precis det
+     paritetsregeln finns för. ]]
+do
+	local kravda = { "INNER_BER", "YTTER_SLAPP", "STYR_FULLT", "STOD_KRAV",
+		"TYGEL_NEUTRAL", "BOJ_TROSKEL", "PARAD_GOLV", "PARAD_DRIV", "PARAD_BAND",
+		"PARAD_TROSKEL" }
+	local saknas = {}
+	for _, namn in kravda do
+		if type(RidKanon.HJALP[namn]) ~= "number" then table.insert(saknas, namn) end
+	end
+	check("hjälpkanonen är exporterad till Roblox, inte avskriven",
+		#saknas == 0 and RidKanon.HJALP.STOD_KRAV > 0 and RidKanon.HJALP.STYR_FULLT > 0,
+		string.format("(%d konstanter, fullt styrutslag %.2f, böjningens tygelkrav %.2f)",
+			#kravda, RidKanon.HJALP.STYR_FULLT, RidKanon.HJALP.STOD_KRAV))
+
+	--[[ Varje härlett hjälpfält ska finnas i kontraktet. Ett härlett namn
+	     som inte publiceras är en märkning av ingenting. ]]
+	local iFalt = {}
+	for _, namn in RidKanon.HJALP_FALT do iFalt[namn] = true end
+	local foraldralosa = {}
+	for _, namn in RidKanon.HJALP_HARLEDDA do
+		if not iFalt[namn] then table.insert(foraldralosa, namn) end
+	end
+	check("varje härlett hjälpfält finns i hjälpkontraktet",
+		#foraldralosa == 0,
+		string.format("(%d fält, varav %d härledda)",
+			#RidKanon.HJALP_FALT, #RidKanon.HJALP_HARLEDDA))
+
+	--[[ Och att paraden ÄR ett eget fält. Det är hela punkt 1 i #83: en
+	     halvhalt som bara syns som tre hjälper i rörelse går inte att
+	     mäta och inte att lära ut. Faller den här raden har paraden
+	     slutat vara en egen signal. ]]
+	check("paraden är en egen signal i hjälpkontraktet, inte tre hjälper",
+		iFalt.parad == true and iFalt.innerTygel == true and iFalt.ytterTygel == true,
+		"(parad, innerTygel, ytterTygel)")
+end
+
+beslut("LUCKA", "hjälplager, parad, spänning och mjukhet saknas på Roblox",
+	#Telemetri.SAKNAS == 7,
 	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — G02-B ger dem källor)")
+
+beslut("LUCKA", "hjälpernas semantik är byggd på webben, inte på Roblox",
+	#RidKanon.HJALP_FALT == 10,
+	"(" .. table.concat(sorterad(RidKanon.HJALP_FALT), ", ") ..
+	" — kanonen finns här, implementationen är G02-B:s Roblox-checkpoint)")
 
 print("")
 if oppna > 0 then

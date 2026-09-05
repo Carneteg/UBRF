@@ -97,8 +97,18 @@ function ridTelemetri(ride, aids, extra) {
     mjukhet: ride.mjukhet,
     balans: clamp(1 - Math.abs(kappa) / 0.42 * 0.5 - ride.spanning * 0.3, 0, 1),   // härledd
     fokus: clamp(1 - ride.spanning, 0, 1),                                          // härledd
-    hjalper: aids ? { skankel: aids.skankel, tygel: aids.tygel,
-                      sits: aids.sits, styrning: aids.styrning } : null,
+    /* HJÄLPERNA I RIDNINGENS ORD (G02-B punkt 1). Axlarna ligger kvar
+       oförändrade — de är enhetens språk — och ovanpå dem publiceras
+       innertygel, yttertygel, yttertygelstöd, böjsida, vikt och paraden
+       som en egen signal. Vad som är härlett ur axlarna och vad som är
+       en egen kontroll står i HJALP_HARLEDDA, inte i en kommentar. */
+    hjalper: aids
+      ? ((typeof hjalpSemantik === "function")
+          ? hjalpSemantik(aids)
+          : { skankel: aids.skankel, tygel: aids.tygel,
+              sits: aids.sits, styrning: aids.styrning })
+      : null,
+    hjalpHarledda: (typeof HJALP_HARLEDDA !== "undefined") ? HJALP_HARLEDDA.slice() : [],
     /* HJÄLPEN SOM CUE (PO 2026-09-05). `gangart` är vad hästen gör,
        `beddGangart` är vad ryttaren senast bad om. Skiljer de sig pågår
        en övergång, och det är den skillnaden G02-B/C ska kunna läsa —
@@ -106,6 +116,14 @@ function ridTelemetri(ride, aids, extra) {
        som rider skritt med avsikt. */
     beddGangart: ride.malGangart || ride.gangart,
     cue: ride.cue || null,                              // framåt · halvhalt · tygel · sits · parad
+    /* PARADEN SOM MÄTT HJÄLP (G02-B punkt 1). `parad` i `hjalper` är
+       kanalen ryttaren skickar; de här två är vad hästen LÄSTE: hur väl
+       samordnad halvhalten var och hur länge sedan den gavs. En
+       halvhalt utan skänkel och med en hand utanför kontaktbandet är
+       inte samma hjälp som en ridd — och nu syns skillnaden. */
+    paradKvalitet: ride.paradKval || 0,
+    paradAlder: (ride.paradTid !== undefined && ride.paradTid > -90)
+      ? Math.max(0, (ride._tid || 0) - ride.paradTid) : null,
     cueAlder: ride.cueTid !== undefined && ride.cueTid > -90
       ? Math.max(0, (ride._tid || 0) - ride.cueTid) : null,   // s sedan hjälpen gavs
     /* Övergångstiden: från att ryttaren bad till att hästen faktiskt gick

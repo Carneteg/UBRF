@@ -229,8 +229,10 @@ function nyState(dagsform,rang,sadellage){
        något annat; `gangart` är vad hon faktiskt går just nu, och de två
        skiljer sig under en övergång. */
     malGangart:"halt", cue:null, cueTid:-99, overgang:null, senasteOvergang:0,
+    /* Senast LÄSTA parad och när. 0/-99 tills ryttaren gett en. */
+    paradKval:0, paradTid:-99,
     rang:rang??0.5,dagsform:dagsform??0.7,sadellage:sadellage??0.8,mjukhet:0.5,
-    _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_tid:0,
+    _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_senastePar:-99,_tid:0,
     _cueSparr:0,_overgangStart:-99,_cueFonster:null};
 }
 
@@ -276,6 +278,50 @@ function stepRide(s,a,h,ctx,dt){
       if(hh.t>K.HH_FONSTER*((ctx.fard&&ctx.fard.hhFonster)||1)){hh.fas=0;hhKval=-0.35;}
       else if(dT<-0.02&&a.tygel<=p.tygel){hh.fas=0;s._senasteHH=s._tid;hhKval=hh.kval;}}}
   }
+  /* ── PARADEN SOM EGEN SIGNAL (G02-B punkt 1) ──────────────────────
+     Två vägar in, EN signal ut.
+
+       `a.parad`  ryttaren ber uttryckligen om en halvhalt — en egen
+                  kanal från tangenten/knappen, inte tre hjälper som
+                  knuffas samtidigt för att låtsas vara en.
+       mönstret   sits, skänkel och tygel som stiger ihop och en tygel
+                  som ger efter. Den som rider paraden med riktiga
+                  hjälper ska fortfarande få den, och gör det här.
+
+     Den uttryckliga signalen läses på FLANKEN uppåt. Kanalen är en
+     ramp, så utan flankläsning skulle en enda parad räknas i varje
+     bildruta den är över tröskeln. Kvaliteten fryses i samma ögonblick:
+     en halvhalt bedöms på hjälperna som fanns när den gavs, inte på
+     dem som råkar finnas när rampen klingar av.
+
+     hhKval < 0 — en påbörjad parad som rann ut i sanden — lämnas orörd.
+     Det är ett straff mönsterläsningen delar ut, och den uttryckliga
+     kanalen kan varken orsaka eller lösa upp det. */
+  let paradKval=0;
+  {const pIn=clamp(a.parad||0,0,1);
+   const pFore=s._prev?clamp(s._prev.parad||0,0,1):0;
+   const TR=(typeof HJALP_KANON!=="undefined")?HJALP_KANON.PARAD_TROSKEL:0.05;
+   if(pIn>TR&&pFore<=TR&&(s._tid-s._senastePar)>K.HH_COOLDOWN){
+     paradKval=(typeof paradKvalitet==="function")?paradKvalitet(a):0.75;
+     s._senastePar=s._tid;
+     /* PUBLICERAD, inte bara använd. Kvaliteten är det enda som skiljer
+        en halvhalt från ett ryck i tygeln, och den ska gå att läsa ut —
+        av telemetrin, av ridläraren och av G02-C. Att bara låta den
+        gångas in i samlingen vore att gömma den bakom en skala som
+        dessutom faller tillbaka mellan halvhalterna.
+
+        [KÄND BEGRÄNSNING] Samlingen sjunker 0,16 per bildruta utan
+        halvhalt (raden i målvärdena nedan är Gate 01:s), så en serie
+        halvhalter bygger inte upp samling i dag oavsett kvalitet.
+        Mätt 2026-09-05: fjorton halvhalter i trav gav samling 0,000
+        både välridna och slarviga. Att ändra samlingens dynamik är en
+        känsloändring och hör hemma i G02-B punkt 2 (hästens svar), inte
+        i den här punkten. Kvaliteten publiceras därför nu; vad hästen
+        gör av den är nästa checkpoint. */
+     s.paradKval=paradKval; s.paradTid=s._tid;}}
+  /* Den signal resten av modellen läser. Mönstret får företräde bara
+     när det faktiskt lästes den här bildrutan. */
+  const parad=paradKval>0?paradKval:(hhKval>0?hhKval:0);
   /* ── CUE: ryttaren BER om en gångart, hästen bär den ──────────────
      Uppåt av en framåtdrivande impuls — skänkeln ökar tydligt medan
      tygeln inte håller emot. Nedåt av en fullbordad halvhalt, eller av
@@ -316,8 +362,8 @@ function stepRide(s,a,h,ctx,dt){
      const hallerAn=a.tygel>=K.TYGEL_BAND_MAX||a.sits>=K.SITS_PARAD;
      if(dK>=K.CUE_UPP&&a.tygel<=K.TYGEL_BAND_MAX&&i<GANGORDNING.length-1){
        i++; cue="framåt";
-     }else if((hhKval>0||dT>=K.CUE_NER||dS>=K.CUE_NER||hallerAn)&&i>0){
-       i--; cue=hhKval>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
+     }else if((parad>0||dT>=K.CUE_NER||dS>=K.CUE_NER||hallerAn)&&i>0){
+       i--; cue=parad>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
      }
      if(cue){
        const fran=s.gangart, till=GANGORDNING[i];
@@ -487,8 +533,24 @@ function stepRide(s,a,h,ctx,dt){
    if(ctx.svangradie>100)rak=clamp(1-sb*2.2,0,1);
    else{const onskad=clamp(12/Math.max(ctx.svangradie,4),0,1);
      rak=clamp(1-Math.abs(sb-onskad)*1.8,0,1)*clamp(0.45+a.skankel*0.9,0,1);}
-   mal.rakriktning=clamp(0.02+0.46*rak+0.26*mal.schvung+0.20*s.mjukhet-0.20*s.spanning,0,1);
-   if(hhKval>0)mal.samling=clamp(s.skala.samling+hhKval*0.22*(0.5+0.7*h.utbildning),0,1);
+   /* ── YTTERTYGELN BÄR SVÄNGEN (G02-B punkt 1) ───────────────────
+      Rakriktning i en sväng är inte att styra lagom mycket — det är att
+      innertygeln BER om böjningen och yttertygeln BEGRÄNSAR den. En
+      sväng riden på bara innertygel låter hästen falla in på inre
+      skuldran; hon kommer runt, men inte rak.
+
+      `ytterstod` är 1 på rakt spår, så termen kan inte röra en rak
+      ridning: faktorn är då exakt 1 och raden betyder vad den betydde
+      före G02-B. Först när styrningen läggs på finns det en inner- och
+      en yttersida att göra rätt eller fel med, och då avgör den
+      kontakt ryttaren HÅLLER genom svängen hur mycket stöd hon ger.
+
+      Golvet 0,55 är avsiktligt inte 0: en sväng utan yttertygel är
+      dåligt riden, inte omöjlig. */
+   const HS=(typeof hjalpSemantik==="function")?hjalpSemantik(a):null;
+   const stod=HS?HS.ytterstod:1;
+   mal.rakriktning=clamp(0.02+0.46*rak*(0.55+0.45*stod)+0.26*mal.schvung+0.20*s.mjukhet-0.20*s.spanning,0,1);
+   if(parad>0)mal.samling=clamp(s.skala.samling+parad*0.22*(0.5+0.7*h.utbildning),0,1);
    else if(hhKval<0)mal.samling=clamp(s.skala.samling+hhKval*0.4,0,1);
    else mal.samling=clamp(s.skala.samling-0.16,0,1);
   }
