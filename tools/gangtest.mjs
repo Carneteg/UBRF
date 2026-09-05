@@ -51,14 +51,45 @@ async function ga(scen, x, y, hall, klar, maxMs, z) {
   await page.waitForTimeout(300);
   const keys = [...hall].map(h => TANGENT[h]);
   for (const k of keys) await page.keyboard.down(k);
+  /* BUDGETEN ÄR PROGRESSMEDVETEN, inte en platt klocka.
+
+     Förut var det bara `Date.now() - t0 < maxMs`. På en långsam runner
+     kunde en klättring hinna halvvägs innan tiden tog slut, och testet
+     blev rött fast geometrin var hel — precis det som hände i CI på
+     d8a67da: "bänkraderna går att gå upp för till översta raden" slutade
+     på z 1,76 av 2,08, alltså MITT I klättringen.
+
+     Nu skiljs två olika saker åt:
+       · figuren rör sig fortfarande när budgeten tar slut  ⇒ förläng EN
+         gång, hon var på väg,
+       · figuren står still                                  ⇒ hon är
+         blockerad, avbryt DIREKT.
+
+     Det gör inte testet mildare — tvärtom. En verklig blockering faller
+     nu snabbare och med tydligare orsak, och en långsam bildrutetakt kan
+     inte längre se ut som en vägg. Slutläget bär med sig VARFÖR loopen
+     slutade, så nästa läsare slipper gissa. */
   const t0 = Date.now();
-  let p;
-  do {
+  let p, forra = null, stillaSedan = 0, tak = maxMs, forlangd = false, orsak = "klar";
+  for (;;) {
     await page.waitForTimeout(200);
     p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2), z: +(VD.pz || 0).toFixed(2) }));
-  } while (!klar(p) && Date.now() - t0 < maxMs);
+    if (klar(p)) break;
+    const flyttad = forra ? Math.hypot(p.x - forra.x, p.y - forra.y) + Math.abs(p.z - forra.z) : Infinity;
+    stillaSedan = flyttad < 0.05 ? stillaSedan + 1 : 0;
+    forra = p;
+    /* Fem avläsningar utan förflyttning: hon står mot något. */
+    if (stillaSedan >= 5) { orsak = "blockerad"; break; }
+    if (Date.now() - t0 >= tak) {
+      if (!forlangd && stillaSedan === 0) { forlangd = true; tak = maxMs * 2; continue; }
+      orsak = forlangd ? "budgeten slut trots förlängning" : "budgeten slut";
+      break;
+    }
+  }
   for (const k of keys) await page.keyboard.up(k);
   await page.waitForTimeout(150);
+  p.orsak = orsak;
+  p.forlangd = forlangd;
   return p;
 }
 const gaZ = ga;
