@@ -236,7 +236,11 @@ function stegaRitt(dt){
      bågen till sin nya radie i samma bildruta som fingret rör sig.
      Att lägga sig i en båge går fortare än att räta upp sig ur den —
      det är så en häst gör, och det är också vad som känns rätt. */
-  const kappaTau=Math.abs(kappaBegard)>Math.abs(G.kappa)?0.13:0.19;
+  /* Gångartens egen tröghet i svängen (G02-A.1 P3). Galoppen lägger sig
+     i bågen långsammare och känns därför vidare, skritten rättar sig
+     kvickast. Faktorn ligger i kanonen så Roblox speglar samma tal. */
+  const svangTau=(KAN&&KAN.SVANGTAU&&KAN.SVANGTAU[G.ride.gangart])||1.00;
+  const kappaTau=(Math.abs(kappaBegard)>Math.abs(G.kappa)?0.13:0.19)*svangTau;
   G.kappa+=(kappaBegard-G.kappa)*(1-Math.exp(-dt/kappaTau));
   if(Math.abs(G.kappa)<0.0015)G.kappa=0;
   const omega=G.kappa*G.ride.tempo;

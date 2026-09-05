@@ -92,13 +92,16 @@ function styrkanon() {
     console.error("     styrkanonen kan inte exporteras");
     process.exit(1);
   }
-  const tm = las("src/game.js").match(/const kappaTau=[^?]*\?\s*([0-9.]+)\s*:\s*([0-9.]+);/);
+  /* Mönstret tål nu att uttrycket är inklamrat och skalas per gångart
+     (G02-A.1 P3: `(...?0.13:0.19)*svangTau`). Baskonstanterna är vad som
+     exporteras; gångartsfaktorn ligger i SVANGTAU och speglas separat. */
+  const tm = las("src/game.js").match(/const kappaTau=\(?[^?]*\?\s*([0-9.]+)\s*:\s*([0-9.]+)\)?/);
   if (!tm) {
     console.error("FEL  hittar inte kappaTau i src/game.js");
     console.error("     rätta mönstret i den här filen");
     process.exit(1);
   }
-  return { svang: AB.A.GANGSVANG, kappaMax: AB.A.KAPPA_MAX,
+  return { svang: AB.A.GANGSVANG, kappaMax: AB.A.KAPPA_MAX, svangTau: AB.A.SVANGTAU,
     tauPress: Number(tm[1]), tauRelease: Number(tm[2]) };
 }
 
@@ -139,11 +142,18 @@ for (const [w, r] of [["halt", "halt"], ["skritt", "walk"], ["trav", "trot"], ["
 rader.push("}");
 rader.push("");
 rader.push("--[[ Gångartsbanden ur src/model.js (Gait.G). min/max i m/s, norm är");
-rader.push("     gångartens normaltempo, steg är webbens steglängdsfaktor. ]]");
+rader.push("     gångartens normaltempo, steg är webbens steglängdsfaktor.");
+rader.push("");
+rader.push("     upp/ner är G02-A.1 P3: hur många m/s² hon tar respektive släpper");
+rader.push("     INOM gångarten. De är Roblox egna accel/retard, portade till");
+rader.push("     webben — inte en andra uppsättning tal. Paritetsspecen kräver");
+rader.push("     att de fortfarande är identiska, och att de skiljer sig åt");
+rader.push("     mellan gångarterna: en gemensam siffra vore just den vikt per");
+rader.push("     gångart som P3 införde. ]]");
 rader.push("RidKanon.BAND = {");
 for (const namn of RID_ORDNING) {
   const g = Gait.G[namn];
-  rader.push(`\t${namn} = { min = ${tal(g.min)}, max = ${tal(g.max)}, norm = ${tal(g.norm)}, steg = ${tal(g.steg)} },`);
+  rader.push(`\t${namn} = { min = ${tal(g.min)}, max = ${tal(g.max)}, norm = ${tal(g.norm)}, steg = ${tal(g.steg)}, upp = ${tal(g.upp)}, ner = ${tal(g.ner)} },`);
 }
 rader.push("}");
 rader.push("");
@@ -163,6 +173,13 @@ rader.push(`RidKanon.KAPPA_TAU_LAGG = ${tal(styr.tauPress)}`);
 rader.push(`RidKanon.KAPPA_TAU_RATA = ${tal(styr.tauRelease)}`);
 rader.push("RidKanon.SVANGFAKTOR = {");
 for (const namn of RID_ORDNING) rader.push(`\t${namn} = ${tal(styr.svang[namn])},`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ Gångartens TRÖGHET i styrningen (G02-A.1 P3). Multiplikator på");
+rader.push("     KAPPA_TAU_LAGG/RATA. SVANGFAKTOR säger hur snävt hon KAN svänga,");
+rader.push("     den här hur snabbt bågen ändras. Speglas i Gaits.svangTau. ]]");
+rader.push("RidKanon.SVANGTAU = {");
+for (const namn of RID_ORDNING) rader.push(`\t${namn} = ${tal(styr.svangTau[namn])},`);
 rader.push("}");
 rader.push("");
 rader.push("--[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");

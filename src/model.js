@@ -36,10 +36,31 @@ const Skala={
 const Gait={
   SPRANG:{hast:3.50,D:3.25,C:3.00,B:2.75},
   G:{
-    halt:{namn:"Halt",min:0,max:0.20,norm:0,steg:0},
-    skritt:{namn:"Skritt",min:0.90,max:2.00,norm:1.45,steg:0.46},
-    trav:{namn:"Trav",min:2.40,max:4.30,norm:3.20,steg:0.63},
-    galopp:{namn:"Galopp",min:4.60,max:8.00,norm:5.60,steg:1.00},
+    /* `upp`/`ner` är tempots svar INOM gångarten, i m/s², och `svangTau`
+       hur trögt kurvaturen följer styrningen (multiplikator på basen i
+       game.js). Före G02-A.1 P3 var alla tre lika för varje gångart, och
+       det var därför skritt, trav och galopp kändes som samma sak i olika
+       hastighet.
+
+       Nu har de var sin karaktär, byggd av tröghet och inte av animation:
+         skritt  lugn och planterad, snabbast att rätta sig, snävast sväng
+         trav    mest framåtenergi, svarar villigt utan att bli nervös
+         galopp  tyngst rörelsemängd, vidast känsla i svängen, mjukast ned
+
+       Att galoppen har LÄGST `ner` är avsikten: en galopp som bromsar lika
+       tvärt som en skritt känns som ett fordon. Arbetsordern säger
+       uttryckligen "smoothest decel" för galopp.
+
+       TALEN ÄR ROBLOX EGNA. Gaits.luau hade redan accel/retard per
+       gångart — precis som den hade cue-modellen före webben. Jag skrev
+       först ett eget set och bytte till Roblox när jag såg det: två
+       genomtänkta uppsättningar är sämre än en, och paritetskravet
+       avgör vilken som ska bort. `svangTau` är däremot ny och speglas
+       till Roblox i stället. */
+    halt:{namn:"Halt",min:0,max:0.20,norm:0,steg:0,upp:3.2,ner:5.5,svangTau:1.00},
+    skritt:{namn:"Skritt",min:0.90,max:2.00,norm:1.45,steg:0.46,upp:2.6,ner:3.4,svangTau:0.85},
+    trav:{namn:"Trav",min:2.40,max:4.30,norm:3.20,steg:0.63,upp:2.9,ner:3.6,svangTau:1.00},
+    galopp:{namn:"Galopp",min:4.60,max:8.00,norm:5.60,steg:1.00,upp:3.4,ner:3.2,svangTau:1.45},
   },
   HYST:0.35,
   forTempo(t,nuv){const h=this.HYST,k=nuv&&this.G[nuv];
@@ -273,7 +294,26 @@ function stepRide(s,a,h,ctx,dt){
      if(!ov.franG)ov.franG=forra;
      if(u>=1)s._ov=null;
    }else{
-     s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
+     /* INOM gångarten svarar tempot med gångartens egen tröghet. Talen
+        låg förut som 8,8 och 11 delat med hästens tyngd, lika för alla
+        gångarter; nu bär varje gångart sina, och tyngden skalar dem.
+
+        FAKTORN 2 är ingen enhetsomräkning och ska inte läsas som en.
+        Roblox tal ligger på halva webbens gamla nivå (halt 5,5 × 2 = 11,
+        exakt det gamla `ner`). Utan faktorn hade HELA ridningen blivit
+        trögare på en gång, vilket är just den regression arbetsordern
+        förbjuder. Faktorn håller alltså kvar webbens NIVÅ; Roblox tal
+        sätter SPRIDNINGEN mellan gångarterna.
+
+        Följden, ärligt: paritetsspecen prövar att TABELLERNA är samma
+        tal — inte att uppmätt m/s² är samma på båda ytorna. Webbens
+        approach() ger ungefär nominellt/2,16 i uppmätt acceleration
+        (8,8 gav 4,07; 5,2 ger 2,41). Vad som verkligen har paritet är
+        ordningen och förhållandet mellan gångarterna. Att mäta samma
+        absoluta acceleration på båda ytorna kräver Studio och är
+        [ANTAGANDE] tills det gjorts. */
+     const gg=Gait.G[s.gangart]||Gait.G.halt;
+     s.tempo=approach(s.tempo,mal,(gg.upp??3.2)*2/tr,(gg.ner??5.5)*2/tr,dt);
      s.gangart=Gait.forTempo(s.tempo,s.gangart);
    }
    s._avdrift=vandring;

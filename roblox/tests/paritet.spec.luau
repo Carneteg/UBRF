@@ -150,6 +150,57 @@ for _, webbnamn in { "halt", "skritt", "trav" } do
 		string.format("(%.2f = %.2f)", RidKanon.SVANGFAKTOR[webbnamn], g.turn))
 end
 
+--[[ 6c. VIKTEN PER GÅNGART (G02-A.1 P3). Två saker prövas, och de är
+     olika sorters påstående:
+
+     Det första är paritet: hur snabbt hon tar respektive släpper fart
+     INOM en gångart, och hur trögt bågen följer styrningen, ska vara
+     samma tal på webben som i Gaits.luau. Talen är Roblox egna; webben
+     hade ingen egen uppsättning innan P3, och ska inte få en nu.
+
+     Det andra är att skillnaden FINNS. Hela poängen med P3 är att en
+     galopp inte accelererar som en skritt och inte lägger sig i bågen
+     lika kvickt. Kollapsar någon tillbaka till en gemensam siffra —
+     på endera ytan — är paritetskontrollen ovan fortfarande grön, för
+     två lika platta tabeller är fortfarande lika. Därför krävs här
+     uttryckligen att raderna skiljer sig åt. Det är den kontroll som
+     blir röd om förbättringen tas bort. ]]
+for _, webbnamn in RidKanon.ORDNING do
+	local band, g = RidKanon.BAND[webbnamn], Gaits.get(RidKanon.MOTSVARIGHET[webbnamn])
+	check(string.format("acceleration inom gångarten %s/%s", webbnamn, g.name),
+		nara(band.upp, g.accel) and nara(band.ner, g.retard),
+		string.format("(upp %.2f = %.2f, ner %.2f = %.2f m/s²)", band.upp, g.accel, band.ner, g.retard))
+	check(string.format("styrningens tröghet %s/%s", webbnamn, g.name),
+		nara(RidKanon.SVANGTAU[webbnamn], g.svangTau),
+		string.format("(%.2f = %.2f)", RidKanon.SVANGTAU[webbnamn], g.svangTau))
+end
+
+do
+	--[[ Halt är undantagen ur jämförelsen: den har inget eget tempoband att
+	     accelerera inom, och dess siffror är stoppets, inte en gångarts. ]]
+	local rorliga = { "skritt", "trav", "galopp" }
+	local skildaUpp, skildaTau = false, false
+	local u0 = RidKanon.BAND[rorliga[1]].upp
+	local t0 = RidKanon.SVANGTAU[rorliga[1]]
+	for _, webbnamn in rorliga do
+		if not nara(RidKanon.BAND[webbnamn].upp, u0) then skildaUpp = true end
+		if not nara(RidKanon.SVANGTAU[webbnamn], t0) then skildaTau = true end
+	end
+	check("gångarterna har OLIKA acceleration — inte en gemensam siffra",
+		skildaUpp, string.format("(skritt %.2f, trav %.2f, galopp %.2f m/s²)",
+			RidKanon.BAND.skritt.upp, RidKanon.BAND.trav.upp, RidKanon.BAND.galopp.upp))
+	check("gångarterna har OLIKA styrtröghet — inte en gemensam siffra",
+		skildaTau, string.format("(skritt %.2f, trav %.2f, galopp %.2f)",
+			RidKanon.SVANGTAU.skritt, RidKanon.SVANGTAU.trav, RidKanon.SVANGTAU.galopp))
+
+	--[[ Och riktningen, inte bara spridningen: galoppen ska lägga sig i
+	     bågen TRÖGARE än skritten. Två olika tal i fel ordning vore en
+	     regression som spridningskontrollen ovan inte ser. ]]
+	check("galoppen lägger sig i bågen trögare än skritten",
+		RidKanon.SVANGTAU.galopp > RidKanon.SVANGTAU.skritt,
+		string.format("(galopp %.2f > skritt %.2f)", RidKanon.SVANGTAU.galopp, RidKanon.SVANGTAU.skritt))
+end
+
 --[[ 7. Telemetrins fältnamn. G02-B ska kunna läsa samma namn oavsett yta. ]]
 check("telemetrins fältnamn är identiska",
 	samma(sorterad(Telemetri.FALT), sorterad(RidKanon.TELEMETRI_FALT)),

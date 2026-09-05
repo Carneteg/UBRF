@@ -163,6 +163,27 @@ for (const [namn, upp] of [["skritt", [[0.35, 8]]], ["trav", [[0.35, 8], [0.60, 
   rader.push({ moment: `  stoppsträcka från ${namn}`, stracka: st ? `${st.m} m på ${st.t} s` : "stannade inte" });
 }
 
+/* ── INOM GÅNGARTEN (G02-A.1 P3) ────────────────────────────────────
+   Karaktären syns inte i övergångarna utan i hur hon svarar när hon
+   REDAN går i gångarten: en skritt ska rätta sig kvickt och lugnt, en
+   galopp bära sin rörelsemängd. Mäts som svaret på en höjd skänkel som
+   varierar tempot inom bandet, utan att be om nästa gångart. */
+{
+  const etabl = { skritt: [[0.35, 10]], trav: [[0.35, 8], [0.60, 10]],
+                  galopp: [[0.35, 8], [0.60, 8], [0.85, 10]] };
+  for (const g of ["skritt", "trav", "galopp"]) {
+    const steg = [[{ ...HALL, skankel: 0 }, 2]];
+    let t = 2, sista = 0;
+    for (const [n, sek] of etabl[g]) { steg.push([{ ...HALL, skankel: n }, sek]); t += sek; sista = n; }
+    /* En liten höjning: under CUE_UPP, så den ber inte om nästa gångart —
+       den ber om mer inom den hon går i. */
+    steg.push([{ ...HALL, skankel: sista + 0.12 }, 8]);
+    const m = matt(spela(steg), t, null, t + 8);
+    rader.push({ moment: `  inom ${g} (hjälp +0,12)`, respons: m.respons,
+      insvangning: m.insvangning, overslag: m.overslag, acceleration: m.acceleration, jamvikt: m.jamvikt });
+  }
+}
+
 const kanon = vm.runInContext("ridKanon()", ctx);
 if (process.argv.includes("--json")) { console.log(JSON.stringify({ rader, kanon }, null, 2)); process.exit(0); }
 
@@ -177,5 +198,6 @@ console.log(rad(rubrik));
 console.log(kol.map(k => "─".repeat(bredd[k])).join("  "));
 for (const r of rader) console.log(rad(r));
 console.log("\nenheter: sekunder · överslag i % av jämvikt · accel i m/s² · jämvikt i m/s");
-console.log(`kurvaturens tidskonstanter (konfigurerade, mäts i banan av ridtest): ` +
-  `κ-tak ${kanon.KAPPA_MAX} 1/m, gångartsfaktorer ${JSON.stringify(kanon.GANGSVANG)}`);
+console.log(`styrningen (kanon, mäts i banan av ridtest): κ-tak ${kanon.KAPPA_MAX} 1/m`);
+console.log(`  hur SNÄVT per gångart (GANGSVANG):  ${JSON.stringify(kanon.GANGSVANG)}`);
+console.log(`  hur TRÖGT per gångart (SVANGTAU):   ${JSON.stringify(kanon.SVANGTAU || {})}`);

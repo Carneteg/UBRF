@@ -20,7 +20,7 @@ export type Gait = {
 	name: string, label: string,
 	min: number, max: number, norm: number,
 	cycles: number, steps: number,
-	accel: number, retard: number, turn: number, stamina: number,
+	accel: number, retard: number, turn: number, svangTau: number, stamina: number,
 	camera: { dist: number, height: number, fov: number },
 }
 
@@ -29,37 +29,42 @@ Gaits.ORDER = { "halt", "walk", "trot", "canter", "gallop" }
 --[[ steps  = hovnedslag per cykel (skritt fyra, trav två, galopp tre)
      accel  = m/s² uppåt   retard = m/s² nedåt
      turn   = andel av grundsvarvheten; hög fart ger vidare sväng
+     svangTau = hur TRÖGT kurvaturen följer styrningen (G02-A.1 P3).
+                turn säger hur snävt hon KAN svänga, svangTau hur snabbt
+                bågen ändras. Skritten rättar sig kvickast, galoppen
+                lägger sig i bågen långsammare och känns vidare.
+                Samma tal som RID_KANON.SVANGTAU på webben.
      stamina = enheter per sekund, 0 = gratis
      camera = { avstånd, höjd, fov-tillägg } ]]
 Gaits.BY_NAME = ({
 	halt = {
 		name = "halt", label = "Halt", min = 0.00, max = 0.20,
 		norm = 0.00, cycles = 0.00, steps = 0,
-		accel = 3.2, retard = 5.5, turn = 1.00, stamina = -3.0,
+		accel = 3.2, retard = 5.5, turn = 1.00, svangTau = 1.00, stamina = -3.0,
 		camera = { dist = 14, height = 5.0, fov = 0 },
 	},
 	walk = {
 		name = "walk", label = "Skritt", min = 0.90, max = 2.00,
 		norm = 1.45, cycles = 0.900621, steps = 4,
-		accel = 2.6, retard = 3.4, turn = 1.00, stamina = 0.0,
+		accel = 2.6, retard = 3.4, turn = 1.00, svangTau = 0.85, stamina = 0.0,
 		camera = { dist = 15, height = 5.2, fov = 0 },
 	},
 	trot = {
 		name = "trot", label = "Trav", min = 2.40, max = 4.30,
 		norm = 3.20, cycles = 1.451247, steps = 2,
-		accel = 2.9, retard = 3.6, turn = 0.82, stamina = 0.4,
+		accel = 2.9, retard = 3.6, turn = 0.82, svangTau = 1.00, stamina = 0.4,
 		camera = { dist = 17, height = 5.6, fov = 1 },
 	},
 	canter = {
 		name = "canter", label = "Galopp", min = 4.60, max = 8.00,
 		norm = 5.60, cycles = 1.6, steps = 3,
-		accel = 3.4, retard = 3.2, turn = 0.52, stamina = 2.2,
+		accel = 3.4, retard = 3.2, turn = 0.52, svangTau = 1.45, stamina = 2.2,
 		camera = { dist = 19, height = 6.0, fov = 4 },
 	},
 	gallop = {
 		name = "gallop", label = "Fyrsprång", min = 8.20, max = 11.0,
 		norm = 8.60, cycles = 2.05, steps = 4,
-		accel = 3.0, retard = 2.6, turn = 0.42, stamina = 5.5,
+		accel = 3.0, retard = 2.6, turn = 0.42, svangTau = 1.60, stamina = 5.5,
 		camera = { dist = 23, height = 6.4, fov = 8 },
 	},
 } :: { [string]: Gait })

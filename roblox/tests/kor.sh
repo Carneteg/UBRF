@@ -7,6 +7,13 @@
 # kod 0, att inga FEL skrevs, och att specen nådde sin slutrad. Exitkoden är
 # den enda av dem som inte går att lura genom att skriva rätt text.
 #
+# TREDJE RÄTTELSEN: krasch-grenen låg före FEL-grenen och testade bara att
+# slutraden saknades. Men en spec som RAPPORTERAR fel skriver ingen slutrad
+# heller — varje vanligt testfel såg alltså ut som en krasch, med "nådde
+# aldrig sin slutrad" i loggen medan specen hade nått den och räknat upp
+# precis vad som föll. Rött blev det, men av fel anledning i loggen. Nu
+# kräver krasch-grenen att INGA fel skrevs.
+#
 # ANDRA HÅLET, tätat i efterhand: den här körde bara de FÄRDIGBYGGDA specarna
 # och byggde dem aldrig. Den rapporterade alltså om .build/ — inte om koden på
 # disk. Under ett falsifieringspass gav det både falskt rött och falskt grönt,
@@ -43,7 +50,7 @@ for f in $SPECAR; do
   fi
   if [ "$fel" -eq 0 ] && [ "$slut" -ge 1 ]; then
     printf '%-10s OK\n' "$f"
-  elif [ "$slut" -eq 0 ]; then
+  elif [ "$fel" -eq 0 ] && [ "$slut" -eq 0 ]; then
     printf '%-10s KRASCH — specen nådde aldrig sin slutrad\n' "$f"
     printf '%s\n' "$ut" | tail -4 | sed 's/^/           /'
     status=1

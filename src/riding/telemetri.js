@@ -140,6 +140,15 @@ const RID_KANON = {
   KAPPA_MAX: 0.42,
   GANGSVANG: { halt: 1.00, skritt: 1.00, trav: 0.82, galopp: 0.52 },
   galoppMax: 8.00,
+  /* G02-A.1 P3: hur trögt kurvaturen följer styrningen, per gångart.
+     Multiplikator på baskonstanterna i game.js. Låg = rättar sig snabbt,
+     hög = lägger sig i bågen långsammare och känns vidare.
+
+     Skritten är snävast och kvickast att rätta; galoppen vidast och
+     trögast. Det är den enda skillnaden i STYRNING mellan gångarterna
+     utöver GANGSVANG, som sätter hur snävt de alls kan svänga — den ena
+     är hur snabbt bågen ändras, den andra hur snäv den får bli. */
+  SVANGTAU: { halt: 1.00, skritt: 0.85, trav: 1.00, galopp: 1.45 },
 };
 
 /* Läsare. Fanns som `ridAB()` medan A/B levde; namnet säger nu vad det
