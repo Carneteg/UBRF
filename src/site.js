@@ -2224,7 +2224,27 @@ const SPELABSTRAKTIONER = {
        Läget härleds ur läktaren. */
     laktarSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
                 klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
-                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Slutar på GÅNGBRÄDAN (x 3,1–4,0) sedan P0 #81: läktarens nivå beror på avståndet in från bankanten, så en bredare ramp med en enda topp slutade mot sidan av en bänkrad — ett hopp på 0,62 m där nivåregeln tillåter 0,36. Bänkraderna klivs därefter 0,30 m i taget"},
+                motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Bredden går in till första bänkraden sedan PO-beslutet 2026-09-05: gångbrädans 0,9 m gav 0,2 m spelrum för en figur med radie 0,35 och en intermittent omöjlig uppgång"},
+    /* `laktarAvsats`: AVSATSEN överst i uppgången — en plan yta på däckets
+       nivå, lika bred som rampen.
+
+       Senior re-review av d5b47d5 mätte varför den behövs. En touch-approach
+       på x ≈ 3,00 stannade på z 0,73, en decimeter från rampens topp 0,80.
+       Orsaken är aritmetisk: vid x 3,00 ligger däcket på första bänkraden
+       (1,10), och från 0,73 blir steget dit 0,37 — nivåregeln tillåter 0,36.
+       Rampens sista decimeter gick alltså inte att gå, och det syntes bara
+       på vissa approacher.
+
+       En avsats är dessutom det en trappa faktiskt har högst upp. Här är
+       den plan på dackZ över hela rampens bredd, så varje approach möter
+       samma nivå oavsett var på bredden hon kommer upp. Bänkraderna börjar
+       söder om avsatsen och klivs därefter 0,30 m i taget som förut.
+
+       z0 = z1 = dackZ ger en plan yta genom samma trappNiva() som stegen
+       läses med — ingen ny regel, bara en trappa utan lutning. */
+    laktarAvsats:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
+                klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
+                motiv:"avsatsen överst i spelets uppgång till läktardäcket; plan på däckets nivå över rampens bredd så att sista steget upp inte hamnar mot en bänkradskant. Följer laktarSteg och har ingen egen källa"},
   },
 };
 
@@ -2269,10 +2289,22 @@ const SPELABSTRAKTIONER = {
        här faktorn är [ASSUMPTION], och framkomlighet väger tyngre än en
        härledd placering utan stöd.
 
-       0,30 lägger båset mot läktarens bakkant och lämnar 1,38 m fri
-       gångbräda — 0,70 m spelrum för figurens mittpunkt, samma
-       storleksordning som den breddade uppgången. */
-    R.domarbas.x = R.laktare.x0+D*0.30;
+       Senior re-review av d5b47d5: 0,30 räckte inte. Båset blev 0,62–2,62
+       och skar 0,32 m in i FÖRSTA BÄNKRADEN (2,3–3,1), så en spelare som
+       kom upp och gick söderut på raden stannade mot båset vid x < 2,97.
+       Att bredda uppgången utan att frigöra raden flyttade bara stoppet
+       en rad inåt.
+
+       Båset ryms nu HELT väster om första raden: bredden 1,7 m och
+       faktorn 0,25 ger x 0,60–2,30. Både gångbrädan (3,1–4,0) och rad 1
+       (2,3–3,1) är därmed fria hela vägen förbi båset — 1,7 m
+       sammanhängande gångyta i stället för en knivsegg. Rad 2 och 3
+       spärras av båset, vilket är vad en bod på en läktare gör.
+
+       Bredden är [ASSUMPTION] precis som placeringen: matrisen har ingen
+       rad om båsets mått. Den ändras därför tillsammans med faktorn. */
+    R.domarbas.b = 1.7;
+    R.domarbas.x = R.laktare.x0+D*0.25;
     /* Båset vid E: dressyrlayoutens mitt, 30 m från A. */
     R.domarbas.y = R.dressyr.y+R.dressyr.h/2;
   }
@@ -2426,6 +2458,14 @@ const SPELABSTRAKTIONER = {
        ls.x0=L.x0+L.dackDjup-inatMax; ls.x1=L.x0+L.dackDjup;
        ls.y0=L.y1; ls.y1=L.y1+1.2;
        ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
+       /* AVSATSEN ligger söder om rampen, alltså inne på däcket, lika bred
+          som rampen och plan på däckets nivå. Djupet 1,2 m är figurens
+          diameter med marginal: hon ska hinna stå stadigt på däcksnivå
+          innan bänkraderna börjar. */
+       const la=SPELABSTRAKTIONER.ridhus.laktarAvsats;
+       la.x0=ls.x0; la.x1=ls.x1;
+       la.y0=L.y1-1.2; la.y1=L.y1;
+       la.z0=L.dackZ; la.z1=L.dackZ; la.axel="y"; la.stiger="S";
      }}
   }
   /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */

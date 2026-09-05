@@ -312,7 +312,7 @@ function ridhusNivaer(x,y){
      (SPELABSTRAKTION) läses lika för gåendet — det är bara sanningsvärdet
      som skiljer dem, inte hur figuren kliver. */
   const SAr=(typeof SPELABSTRAKTIONER!=="undefined")?SPELABSTRAKTIONER.ridhus:null;
-  const abstr=SAr?[SAr.bankradSteg,SAr.laktarSteg].filter(t=>t&&t.x1>t.x0):[];
+  const abstr=SAr?[SAr.bankradSteg,SAr.laktarSteg,SAr.laktarAvsats].filter(t=>t&&t.x1>t.x0):[];
   for(const t of [...(R.trappor||[]),...abstr])
     if(x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1) bas=trappNiva(t,x,y);
   const ut=[bas];
