@@ -126,7 +126,7 @@ for (const mobil of [false, true]) {
     }
   }
   /* Går RAKT på fast kurs, som en spelare som håller fram-knappen. */
-  async function rakt(kurs, maxMs) {
+  async function rakt(kurs, maxMs, klart) {
     await page.evaluate(k => { window.__mal = null; if (window.__joy) { clearInterval(window.__joy); window.__joy = null; }
       VD.rikt = k; if (typeof V3D !== "undefined" && V3D.kam) V3D.kam.satt = false; }, kurs);
     await page.waitForTimeout(300);
@@ -143,7 +143,8 @@ for (const mobil of [false, true]) {
       const fl = f ? Math.hypot(p.x - f.x, p.y - f.y) : Infinity;
       still = fl < 0.03 ? still + 1 : 0; f = p;
       if (still >= 7) { p.slut = "STOPP"; break; }
-      if (Date.now() - t0 > maxMs) { p.slut = "gick klart"; break; }
+      if (klart && klart(p)) { p.slut = "framme"; break; }
+      if (Date.now() - t0 > maxMs) { p.slut = "tiden slut"; break; }
     }
     if (mobil) await page.evaluate(() => { clearInterval(window.__joy); window.__joy = null; IN.joy = null; });
     else await page.keyboard.up("KeyW");
@@ -202,7 +203,21 @@ for (const mobil of [false, true]) {
        ingenting. Målet är därför y < 28, alltså söder om båsets
        y-intervall, och budgeten är tilltagen därefter. */
     const FORBI = 28;
-    const langs = await rakt(-Math.PI / 2, 60000);
+    /* BUDGETEN MÅSTE RÄCKA HELA STRÄCKAN, oavsett var uppe hon råkar
+       hamna. 60 s föll i CI med "gick klart" på y 35,65: hon kom upp
+       högst uppe vid rampen (y 65,45) och hann 29,8 m innan tiden tog
+       slut — aldrig blockerad, bara avbruten. Lokalt startade hon längre
+       söderut och samma budget räckte. Ett prov som tar slut före
+       problemet mäter ingenting, och det är andra gången samma
+       misstag: gangtest hade en platt timeout som gav falskt rött
+       mitt i en klättring.
+
+       Höjningen försvagar inte provet. Det som fångar en blockering är
+       stall-vakten (sju stillastående frames), och den slår till på en
+       dryg sekund. Tidsgränsen finns bara mot oändliga loopar. Dessutom
+       avbryts gåendet så snart kravet är uppfyllt, så en grön körning
+       kostar inte mer tid än förut. */
+    const langs = await rakt(-Math.PI / 2, 180000, p => p.y <= FORBI);
     const kvar = langs.z >= F.laktare.z - 0.02;
     /* KRAVET ÄR ATT KOMMA FÖRBI BÅSET, inte att aldrig stanna. Först stod
        `slut !== "STOPP"` med, och när fixen väl satt gick figuren hela
