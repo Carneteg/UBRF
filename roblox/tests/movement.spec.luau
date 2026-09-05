@@ -944,6 +944,99 @@ do
 		varst <= 0.08, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
 end
 
+--[[ NÄR BYTER SJÄLVA GÅNGARTEN — senior re-review 2026-09-05.
+
+     Föregående prov klockar när FÖRLOPPET slutar. Det säger ingenting om
+     när loco.gait byter, och det är den siffran animation, telemetri och
+     kamera följer. Webben byter etikett vid BYTPUNKT = 55 % av
+     förloppet; Roblox ska göra detsamma, och det ska mätas och inte
+     läsas ur en tabell.
+
+     Väntade tider = switchAt × förloppets längd:
+       halt→skritt 0,55 × 0,80 = 0,44 s
+       skritt→trav 0,55 × 0,95 = 0,52 s
+       trav→galopp 0,55 × 1,20 = 0,66 s
+     Samma tal som webbens ridkansla mäter i kolumnen "etikett". ]]
+do
+	print("\n── När byter själva gångarten ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	local function bytestid(steg, langd)
+		local mc = newMC()
+		if steg > 0 then
+			upToGait(mc, steg, 1 / 60)
+			run(mc, 2.0, { forward = 1 }, 1 / 60)
+		end
+		local fore = mc.loco.gait
+		local t = 0
+		for _ = 1, math.floor(4.0 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (t < dt) }), dt)
+			t += dt
+			if mc.loco.gait ~= fore then return t, mc.loco.gait end
+		end
+		return nil, mc.loco.gait
+	end
+	local rader = {
+		{ "halt→skritt", 0, T.walk },
+		{ "skritt→trav", 1, T.trot },
+		{ "trav→galopp", 2, T.canter },
+	}
+	local varst, sam = 0, {}
+	for _, rad in rader do
+		local matt = bytestid(rad[2], rad[3])
+		local vantad = T.switchAt * rad[3]
+		local avvik = if matt then math.abs(matt - vantad) else 99
+		varst = math.max(varst, avvik)
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], matt or -1, vantad))
+		print(string.format("  %-12s bytte vid %.3f s, väntat %.2f s (%.0f %% av %.2f)",
+			rad[1], matt or -1, vantad, T.switchAt * 100, rad[3]))
+	end
+	check("gångarten byter vid switchAt-punkten, inte när tempot passerar ett band",
+		varst <= 0.06, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
+end
+
+--[[ SVÄNGKÄNSLAN BYTER OCKSÅ VID 55 %, INTE VID CUE:N.
+
+     Senior re-review 2026-09-05: Roblox tog turn/svangTau ur
+     Gaits.get(loco.targetGait), alltså ur den gångart ryttaren just BAD
+     om. Kurvaturtaket vidgades därmed i samma bildruta som cue:n föll,
+     medan webben behåller den gamla gångartens sväng till 55 %-punkten.
+
+     Mätt på KURVATUREN och inte på etiketten — etiketten provas redan
+     ovan, och ett prov som läser loco.gait här hade bevisat fel sak.
+
+     Två controllers, båda i skritt, båda med kurvaturen på noll. Den ena
+     får ligga kvar i skritt, den andra får en cue mot trav. Sedan fullt
+     styrutslag lika länge i båda, och mätningen sker FÖRE bytpunkten
+     0,55. Räknas svängen ur skritt i båda ska kurvaturen bli densamma;
+     räknas den ur travet i den andra blir den lägre — travets turn är
+     0,82 mot skrittens 1,00, och dess svangTau trögare. ]]
+do
+	print("\n── Svängkänslan byter vid 55 %, inte vid cue:n ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	local function kappaEfterStyrning(medCue)
+		local mc = newMC()
+		upToGait(mc, 1, 1 / 60)
+		run(mc, 2.0, { forward = 1 }, 1 / 60)
+		mc.curvature = 0
+		local t, fonster = 0, 0.30 * T.trot   -- klart före bytpunkten 0,55
+		while t < fonster do
+			mc:step(intent({ forward = 1, steer = 1, gaitUp = (medCue and t < dt) }), dt)
+			t += dt
+		end
+		return math.abs(mc.curvature), mc.loco.gait
+	end
+	local utan, gUtan = kappaEfterStyrning(false)
+	local med, gMed = kappaEfterStyrning(true)
+	local kvot = med / math.max(utan, 1e-6)
+	print(string.format("  utan cue: κ %.4f (%s)   med cue: κ %.4f (%s)   kvot %.3f",
+		utan, gUtan, med, gMed, kvot))
+	check("kurvaturen räknas ur SKRITT även efter cue:n, fram till bytpunkten",
+		math.abs(kvot - 1) < 0.02,
+		string.format("(kvot %.3f — travets turn hade gett ~0,82)", kvot))
+end
+
 --[[ FYRSPRÅNGET ÄR INTE SPELBART — senior review 2026-09-05.
 
      Gångarten finns kvar som data, men en spelare ska inte kunna nå

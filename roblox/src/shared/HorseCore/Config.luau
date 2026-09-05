@@ -50,8 +50,10 @@ Config.MOVEMENT = {
 	     fälten är borta; gångartens turn-faktor lever kvar och skalar
 	     kurvaturtaket i stället för vridhastigheten.
 
-	     CurvatureMax är satt så att full styrning i skritt ger ungefär
-	     3,3 m radie, samma som webbversionens modell. ]]
+	     CurvatureMax är satt så att full styrning i skritt ger 2,4 m
+	     radie, samma som webbens kanon. Meningen ovanför sa tidigare
+	     3,3 m och "samma som webbversionens modell" — den var sann före
+	     harmoniseringen och motsade sedan raden rakt under. ]]
 	-- HARMONISERAT MOT WEBBENS KANON (PO-beslut 2026-09-05): A är kanon,
 	-- och Roblox följer den i stället för att bära en egen produktfysik.
 	-- Var 0.30 (3,3 m radie i skritt), nu 0.42 (2,4 m) som webben.

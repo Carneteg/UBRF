@@ -198,7 +198,20 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     och i känslan. ]]
 	local speedAbs = math.abs(loco.speed)
 	local steer = self:_steer(intent.steer, dt)
-	local kappaCeiling = M.CurvatureMax * gait.turn * (0.70 + 0.60 * stats.Agility)
+	--[[ SVÄNGKÄNSLAN FÖLJER DEN FAKTISKA GÅNGARTEN, inte den begärda.
+
+	     Taket och trögheten togs förut ur Gaits.get(loco.targetGait),
+	     alltså ur den gångart ryttaren just BAD om. Då bytte svängkänslan
+	     i samma bildruta som cue:n föll, medan webben behåller den gamla
+	     gångartens sväng ända till 55 %-punkten — hela poängen med att
+	     etiketten byter en bit in i förloppet är att hästen inte ÄR i
+	     travet förrän hon är det.
+
+	     loco.gait sätts längre ned i step(), så värdet här är förra
+	     bildrutans. Webben har exakt samma förhållande: GANGSVANG läses i
+	     stegaRitt() innan stepRide() uppdaterar gångarten. ]]
+	local svangGait = Gaits.get(loco.gait)
+	local kappaCeiling = M.CurvatureMax * svangGait.turn * (0.70 + 0.60 * stats.Agility)
 	local kappaWanted = steer * kappaCeiling
 	if loco.speed < -0.05 then
 		kappaWanted = -kappaWanted                    -- backar man styr man spegelvänt
@@ -208,7 +221,7 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     Skritten rättar sig kvickast, galoppen lägger sig i bågen
 	     långsammare och känns därför vidare. ]]
 	local kappaTau = (if math.abs(kappaWanted) > math.abs(self.curvature)
-		then M.CurvatureTauPress else M.CurvatureTauRelease) * (gait.svangTau or 1)
+		then M.CurvatureTauPress else M.CurvatureTauRelease) * (svangGait.svangTau or 1)
 	--[[ Bågen måste ur kroppen innan den läggs åt andra hållet
 	     (G02-A.1 P4). Samma regel och samma tal som webben: kurvaturen
 	     får inte ändras fortare än gångartens kurvaturtak delat med

@@ -174,8 +174,11 @@ end
      gångartens stegfaktor: skritt 1,61 m, trav 2,205 m, galopp 3,50 m. Var
      1,45 / 2,133 / 3,20. Det ändrar takten i animationen, och det är just
      vad harmoniseringen innebär — två produktfysiker blir en.
-     Webben och Roblox är dock inte överens om den — se `HASTRIGG-KRAVSPEC.md`
-     § 4 och issue om plattformsavvikelsen. ]]
+
+     Raden om att webben och Roblox INTE är överens stod kvar här efter
+     harmoniseringen och motsade koden ovan. Den är borta; paritetsspecen
+     mäter numera att cykellängderna är identiska. `HASTRIGG-KRAVSPEC.md`
+     § 4 beskriver den gamla avvikelsen som historik. ]]
 function Gaits.cycleLength(name: string): number
 	local g = Gaits.get(name)
 	if g.cycles <= 0 or g.norm <= 0 then return 0 end
