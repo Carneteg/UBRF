@@ -41,7 +41,8 @@ const spela = (steg) => vm.runInContext(`(() => {
     const a = A(aid);
     for (let i = 0; i < Math.round(sek / ${DT}); i++) {
       stepRide(s, a, ${JSON.stringify(HAST)}, ${JSON.stringify(MILJO)}, ${DT});
-      spar.push({ t: s._tid, tempo: s.tempo, gangart: s.gangart, bad: s.malGangart });
+      spar.push({ t: s._tid, tempo: s.tempo, gangart: s.gangart, bad: s.malGangart,
+        iOvergang: !!s._ov });
     }
   }
   return spar;
@@ -53,7 +54,7 @@ const spela = (steg) => vm.runInContext(`(() => {
    insvängningen mättes till nästa gångart i stället för till sin egen.
    Talen såg rimliga ut och var fel — precis den sortens baslinje som
    hade gjort hela trimningen meningslös. */
-function matt(spar, t0, malGangart, t1) {
+function matt(spar, t0, malGangart, t1, kort) {
   const efter = spar.filter(p => p.t >= t0 && (t1 === undefined || p.t < t1));
   if (!efter.length) return null;
   const start = efter[0].tempo;
@@ -66,6 +67,13 @@ function matt(spar, t0, malGangart, t1) {
 
   const rorde = efter.find(p => Math.abs(p.tempo - start) > Math.max(0.02 * spann, 0.01));
   const bytte = malGangart ? efter.find(p => p.gangart === malGangart) : null;
+  /* KLAR är när förloppet är slut, inte när etiketten byter. Etiketten
+     byter vid BYTPUNKT (55 %) — mäter man den tror man att övergången är
+     nästan halva så lång som den är, och trimmar mot fel tal. Båda
+     redovisas, för de betyder olika saker: `etikett` är när travet SYNS,
+     `övergång` är när hon är etablerad i det. */
+  const iOv = efter.find(p => p.iOvergang);
+  const klar = iOv ? efter.find(p => p.t > iOv.t && !p.iOvergang) : null;
   const inom = efter.find(p => Math.abs(p.tempo - jamvikt) <= 0.05 * Math.max(jamvikt, 0.1)
     && p.t > (rorde ? rorde.t : t0));
   let overslag = 0;
@@ -80,11 +88,17 @@ function matt(spar, t0, malGangart, t1) {
   }
   return {
     respons: rorde ? +(rorde.t - t0).toFixed(3) : null,
-    overgang: bytte ? +(bytte.t - t0).toFixed(3) : null,
-    insvangning: inom ? +(inom.t - t0).toFixed(2) : null,
-    overslag: +(overslag / Math.max(jamvikt, 0.1) * 100).toFixed(1),
+    etikett: bytte ? +(bytte.t - t0).toFixed(2) : null,
+    overgang: klar ? +(klar.t - t0).toFixed(2) : null,
+    /* KORT FÖNSTER: jämvikten hinner aldrig bli en jämvikt, och då blir
+       överslag och insvängning tal utan innebörd — skritt→halt gav
+       "100 % överslag" enbart för att medelvärdet låg mitt i förloppet.
+       Hellre tomt än osant. Överslaget för hela paraden mäts i svepraden,
+       som har fönster nog. */
+    insvangning: kort ? null : (inom ? +(inom.t - t0).toFixed(2) : null),
+    overslag: kort ? null : +(overslag / Math.max(jamvikt, 0.1) * 100).toFixed(1),
     acceleration: +topp.toFixed(2),
-    jamvikt: +jamvikt.toFixed(2),
+    jamvikt: kort ? null : +jamvikt.toFixed(2),
   };
 }
 
@@ -112,7 +126,23 @@ const rader = [];
   for (let i = 0; i < 3; i++)
     rader.push({ moment: `${i === 0 ? "halt" : mal[i-1]}→${mal[i]}`, ...matt(spar, cueT[i], mal[i], cueT[i] + 10) });
 }
-/* NEDÅT från galopp med en hållen parad. */
+/* NEDÅT, ETT STEG I TAGET. Kuvertet 0,6–1,2 s gäller per övergång, inte
+   galopp→halt i ett svep: en parad genom gångarterna är tre övergångar
+   och tar med spärren emellan naturligt längre. Mätte jag hela svepet mot
+   ett ensteg-kuvert skulle jag trimma bort spärren, som finns av ett
+   annat skäl. */
+{
+  const HH = { skankel: 0.05, tygel: 0.80, sits: 0.85, styrning: 0 };
+  const upp = [[0.35, 8], [0.60, 8], [0.85, 10]];
+  const steg = [[{ ...HALL, skankel: 0 }, 2]];
+  let t = 2;
+  for (const [n, sek] of upp) { steg.push([{ ...HALL, skankel: n }, sek]); t += sek; }
+  steg.push([HH, 25]);
+  const spar = spela(steg);
+  for (const [namn, mal, forskjut] of [["galopp→trav", "trav", 0], ["trav→skritt", "skritt", 0.95], ["skritt→halt", "halt", 1.9]])
+    rader.push({ moment: namn, ...matt(spar, t + forskjut, mal, t + forskjut + 0.95, true) });
+}
+/* NEDÅT från galopp med en hållen parad, hela svepet. */
 {
   const steg = [[{ ...HALL, skankel: 0 }, 2], [{ ...HALL, skankel: 0.35 }, 8],
     [{ ...HALL, skankel: 0.60 }, 8], [{ ...HALL, skankel: 0.85 }, 10],
@@ -137,8 +167,8 @@ const kanon = vm.runInContext("ridKanon()", ctx);
 if (process.argv.includes("--json")) { console.log(JSON.stringify({ rader, kanon }, null, 2)); process.exit(0); }
 
 console.log("RIDKÄNSLANS MÄTVÄRDEN — kanonisk modell, avdrift av, dt " + DT.toFixed(4) + " s\n");
-const kol = ["moment", "respons", "overgang", "insvangning", "overslag", "acceleration", "jamvikt", "stracka"];
-const rubrik = { moment: "moment", respons: "cue→resp", overgang: "övergång", insvangning: "insvängn",
+const kol = ["moment", "respons", "etikett", "overgang", "insvangning", "overslag", "acceleration", "jamvikt", "stracka"];
+const rubrik = { moment: "moment", respons: "cue→resp", etikett: "etikett", overgang: "övergång", insvangning: "insvängn",
   overslag: "överslag", acceleration: "accel", jamvikt: "jämvikt", stracka: "stoppsträcka" };
 const bredd = {};
 for (const k of kol) bredd[k] = Math.max(rubrik[k].length, ...rader.map(r => String(r[k] ?? "").length));

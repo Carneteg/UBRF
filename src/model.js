@@ -86,6 +86,22 @@ const K={
      skritt — men inte längre bära över ett gångartsband. Skrittens band
      är 1,10 brett, så 0,6 räcker till nyans och inte till att byta. */
   HALL_BAND:0.60,
+  /* ── ÖVERGÅNGEN ÄR ETT FÖRLOPP, INTE ETT SNÄPP (G02-A.1 P2) ──
+     Mätt före trimningen: halt→skritt tog 0,14 s, skritt→trav 0,18 och
+     trav→galopp 0,26 — hästen bytte gångart nästan omedelbart. Nedåt tog
+     paraden 1,99 s. Obalansen kändes som att gasa en maskin uppåt och
+     bromsa en lastbil nedåt.
+
+     Längderna nedan ligger i mitten av arbetsorderns kuvert (0,6–1,0 /
+     0,7–1,2 / 0,9–1,5 uppåt, 0,6–1,2 nedåt). De är TRIMVÄRDEN, inte
+     realismkanon: en verklig häst varierar med utbildning och dagsform,
+     och den variationen hör G02-B till.
+
+     Tempot följer en mjukstegskurva över förloppet — ingen platå att
+     fastna på, ingen studs i slutet. Gångartsetiketten byter en bit in i
+     förloppet (BYTPUNKT), inte vid dess början: hästen är på väg in i
+     travet en stund innan travet syns. */
+  OVERGANG:{ upp:{skritt:0.80, trav:0.95, galopp:1.20}, ner:0.90, BYTPUNKT:0.55 },
 };
 /* Gångarterna i ordning. Cue:n stegar i den här listan, ett steg i taget. */
 const GANGORDNING=["halt","skritt","trav","galopp"];
@@ -174,9 +190,17 @@ function stepRide(s,a,h,ctx,dt){
        i--; cue=hhKval>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
      }
      if(cue){
-       s.malGangart=GANGORDNING[i]; s.cue=cue; s.cueTid=s._tid;
+       const fran=s.gangart, till=GANGORDNING[i];
+       s.malGangart=till; s.cue=cue; s.cueTid=s._tid;
        s._cueSparr=K.CUE_SPARR; s._overgangStart=s._tid;
-       s.overgang={fran:s.gangart,till:s.malGangart,klar:false};
+       s.overgang={fran,till,klar:false};
+       /* FÖRLOPPET startas här, från det tempo hon FAKTISKT har. Att utgå
+          från nuvarande tempo och inte från gångartens norm är det som
+          gör förloppet avbrytbart: kommer en motsatt hjälp mitt i, börjar
+          nästa förlopp där hon är, inte där hon var. */
+       const upp=GANGORDNING.indexOf(till)>GANGORDNING.indexOf(fran);
+       s._ov={fran:s.tempo, t:0,
+         langd:upp?(K.OVERGANG.upp[till]||0.9):K.OVERGANG.ner};
      }
    }
   }
@@ -230,10 +254,29 @@ function stepRide(s,a,h,ctx,dt){
    /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
       omöjlig, hon kräver att du ber tydligare och håller kvar. */
    const tr=(1.6+1.4*h.tyngd)*D.tröghet;
-   s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
-   s._avdrift=vandring;
    const forra=s.gangart;
-   s.gangart=Gait.forTempo(s.tempo,s.gangart);
+   const ov=s._ov;
+   if(ov&&ov.t<ov.langd){
+     /* UNDER FÖRLOPPET styr kurvan, inte approach(). Mjukstegskurvan
+        u²(3−2u) startar och slutar med noll lutning, vilket ger en
+        övergång utan ryck i någon ände och utan platå på mitten.
+        Trögheten skalar längden: en tung häst tar längre på sig, men
+        formen på förloppet är densamma. */
+     ov.t+=dt;
+     const langd=ov.langd*(0.75+0.35*h.tyngd)*D.tröghet;
+     const u=clamp(ov.t/langd,0,1), mjuk=u*u*(3-2*u);
+     s.tempo=ov.fran+(mal-ov.fran)*mjuk;
+     /* Etiketten byter en bit in i förloppet — hästen är på väg in i
+        travet en stund innan travet syns. Före bytpunkten behåller hon
+        den gamla gångarten även om tempot råkat passera ett band. */
+     s.gangart=u>=K.OVERGANG.BYTPUNKT?s.malGangart:ov.franG||forra;
+     if(!ov.franG)ov.franG=forra;
+     if(u>=1)s._ov=null;
+   }else{
+     s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
+     s.gangart=Gait.forTempo(s.tempo,s.gangart);
+   }
+   s._avdrift=vandring;
    /* ÖVERGÅNGSTIDEN: från att ryttaren bad till att hästen faktiskt går
       i den gångarten. Det är måttet G02-B/C ska kunna bygga på, och det
       enda som säger om en övergång var mjuk eller ryckig. */
