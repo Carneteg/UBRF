@@ -40,7 +40,9 @@ async function sida(mobil) {
 }
 /* Går med spelets riktiga loop och loggar VARJE prov: läge, nivå och att
    nivåbytet aldrig överstiger NIVA_STEG (ingen teleport). `touch` matar
-   IN.joy som mobil.js gör; annars hålls W (kamerarelativt framåt). */
+   IN.joy som mobil.js gör; annars trycks riktiga tangenter (W + A/D).
+   INGEN rad skriver spelarens kurs — styrningen går genom spelets egen
+   inputväg, se blocket längre ned. */
 async function ga(page, { x, y, z = 0, rikt, mot, ms, touch, klar, fortsatt }) {
   /* `fortsatt`: gå vidare från nuvarande läge i stället för att placeras om.
      Behövs för rutter i flera ben — en spelare som kommer in genom dörren
@@ -54,37 +56,92 @@ async function ga(page, { x, y, z = 0, rikt, mot, ms, touch, klar, fortsatt }) {
     await page.evaluate(() => slutaGa());
     await page.waitForTimeout(150);
   }
-  await page.evaluate(({ rikt }) => { VD.rikt = rikt; if (typeof V3D !== "undefined" && V3D.kam) V3D.kam.satt = false; }, { rikt });
+  /* ENDA stället kursen sätts, och bara vid PLACERING: åt vilket håll
+     figuren råkar titta när hon ställs ned. Motsvarar var en spelare har
+     kameran när hon börjar gå. Under själva gåendet skrivs kursen aldrig
+     — den kommer ur tangenterna respektive joysticken. */
+  if (!fortsatt) await page.evaluate(({ rikt }) => { VD.rikt = rikt; if (typeof V3D !== "undefined" && V3D.kam) V3D.kam.satt = false; }, { rikt });
   await page.waitForTimeout(400);
   await page.evaluate(() => { window.__spar = []; window.__hopp = 0; let f = (VD.pz || 0);
     window.__tick = () => { const z = VD.pz || 0; if (Math.abs(z - f) > NIVA_STEG + 1e-6) window.__hopp++; f = z;
       window.__spar.push([+VD.px.toFixed(2), +VD.py.toFixed(2), +z.toFixed(2)]);
       if (window.__gar) requestAnimationFrame(window.__tick); };
     window.__gar = true; requestAnimationFrame(window.__tick); });
-  /* `mot`: styr mot en PUNKT varje tick i stället för att hålla en fast
-     kurs. Det är vad en spelare gör — hon går mot det hon ser — och det
-     tar bort översläng: en fast kurs österut med kamerarelativ spak bar
-     figuren förbi stegen och ut ur läktarens fotavtryck. Kursen räknas om
-     ur figurens aktuella läge, så benet kan inte skjuta över målet. */
-  if (mot) await page.evaluate(({ mot }) => { window.__styr = setInterval(() => {
-      VD.rikt = Math.atan2(mot[1] - VD.py, mot[0] - VD.px); }, 16); }, { mot });
-  if (touch) await page.evaluate(({ rikt, mot }) => { window.__joy = setInterval(() => {
+  /* ── STYRNINGEN GÅR GENOM SPELARENS EGEN INPUTVÄG ─────────────────
+     Senior re-review av #85: testet skrev förut `VD.rikt` direkt var
+     16:e ms. Då bevisades kollision, nivå och rörelse — men inte
+     styrningen, som är halva det #81 handlar om. Ingen rad skriver
+     längre spelarens kurs.
+
+     DATOR: riktiga tangenthändelser genom Playwright, W plus A/D. Spelet
+     läser `IN.ned.KeyW/KeyA/KeyD` och räknar ut kursen själv, precis som
+     när en människa spelar. Testharnessen väljer bara VILKA tangenter som
+     hålls — det är samma beslut en spelare fattar.
+
+     MOBIL: bara `IN.joy`, genom samma väg som mobil.js matar.
+
+     Kursvalet: spelet räknar `ix = D − A`, `iy = W − S` och roterar det
+     med kameran, så att den resulterande kursen blir `v − atan2(ix, iy)`.
+     Med W plus A/D finns alltså fem kurser att välja mellan, 45° isär.
+     Harnessen tar den som ligger närmast riktningen mot vägpunkten och
+     trycker om när valet ändras — inte varje tick, bara vid byte. */
+  const TANGENTVAL = [
+    { ix: 0, iy: 1, tangenter: ["KeyW"] },                    // rakt fram
+    { ix: 1, iy: 1, tangenter: ["KeyW", "KeyD"] },            // fram-höger, −45°
+    { ix: -1, iy: 1, tangenter: ["KeyW", "KeyA"] },           // fram-vänster, +45°
+    { ix: 1, iy: 0, tangenter: ["KeyD"] },                    // rakt höger, −90°
+    { ix: -1, iy: 0, tangenter: ["KeyA"] },                   // rakt vänster, +90°
+  ];
+  const vinkelDiff = a => Math.atan2(Math.sin(a), Math.cos(a));
+
+  let nere = [];
+  const tryck = async val => {
+    const vill = val.tangenter;
+    for (const t of nere) if (!vill.includes(t)) await page.keyboard.up(t);
+    for (const t of vill) if (!nere.includes(t)) await page.keyboard.down(t);
+    nere = vill.slice();
+  };
+
+  if (touch) {
+    await page.evaluate(({ rikt, mot }) => { window.__joy = setInterval(() => {
       const k = mot ? Math.atan2(mot[1] - VD.py, mot[0] - VD.px) : rikt;
-      const v = vandringYaw(), w = v - k; IN.joy = { x: Math.sin(w), y: -Math.cos(w), styrka: 0.95 }; }, 16); }, { rikt, mot });
-  else await page.keyboard.down("KeyW");
+      const v = vandringYaw(), w = v - k;
+      IN.joy = { x: Math.sin(w), y: -Math.cos(w), styrka: 0.95 }; }, 16); }, { rikt, mot });
+  } else if (mot) {
+    await tryck(TANGENTVAL[0]);
+  } else {
+    await page.keyboard.down("KeyW");
+    nere = ["KeyW"];
+  }
+
   /* Tidsoberoende: headless SwiftShader ger få bildrutor per sekund, så
      villkoret avgör, inte klockan (samma princip som gangtest.mjs). `ms`
-     är bara taket. */
+     är bara taket. Samma avläsning bär både klar-villkoret och
+     tangentbeslutet, så styrningen kostar inga extra anrop. */
   const t0 = Date.now();
   for (;;) {
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(touch || !mot ? 250 : 60);
     if (Date.now() - t0 > ms) break;
-    if (klar && await page.evaluate(({ f }) => (new Function("p", "return " + f))(
-      { x: VD.px, y: VD.py, z: VD.pz || 0 }), { f: klar })) break;
+    const lage = await page.evaluate(({ f }) => ({
+      p: { x: VD.px, y: VD.py, z: VD.pz || 0 },
+      yaw: vandringYaw(),
+      klar: f ? (new Function("p", "return " + f))({ x: VD.px, y: VD.py, z: VD.pz || 0 }) : false,
+    }), { f: klar });
+    if (lage.klar) break;
+    if (!touch && mot) {
+      const mal = Math.atan2(mot[1] - lage.p.y, mot[0] - lage.p.x);
+      let bast = TANGENTVAL[0], bd = Infinity;
+      for (const val of TANGENTVAL) {
+        const kurs = lage.yaw - Math.atan2(val.ix, val.iy);
+        const d = Math.abs(vinkelDiff(kurs - mal));
+        if (d < bd) { bd = d; bast = val; }
+      }
+      if (bast.tangenter.join() !== nere.join()) await tryck(bast);
+    }
   }
-  await page.evaluate(() => { if (window.__styr) { clearInterval(window.__styr); window.__styr = null; } });
   if (touch) await page.evaluate(() => { clearInterval(window.__joy); IN.joy = null; });
-  else await page.keyboard.up("KeyW");
+  else for (const t of nere) await page.keyboard.up(t);
+  nere = [];
   return await page.evaluate(() => { window.__gar = false;
     return { spar: window.__spar, hopp: window.__hopp, n: window.__spar.length,
       x: +VD.px.toFixed(2), y: +VD.py.toFixed(2), z: +(VD.pz || 0).toFixed(2) }; });
