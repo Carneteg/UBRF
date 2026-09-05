@@ -48,6 +48,16 @@ jobs:
           if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera
           else echo "hoppar: tools/exportera-spel.js finns inte i denna branch"; fi
 
+      # Aritmetisk grind, ingen webbläsare: kan figuren lämna uppgången
+      # uppåt över HELA dess bredd? Felet den fångar är ett steg på 0,40 m
+      # där nivåregeln tillåter 0,36 — det slår bara till på vissa
+      # approacher, så en promenadgrind hittar det nyckfullt. Här mäts det
+      # i stället som det tal det är.
+      - name: Uppgångens nivåmarginal över hela bredden
+        run: |
+          if [ -f tools/nivamarginal.mjs ]; then node tools/nivamarginal.mjs
+          else echo "hoppar: tools/nivamarginal.mjs finns inte i denna branch"; fi
+
       - name: Geometri i synk — src/site.js mot UBRFKomplex.luau
         run: |
           if [ -f tools/exportera-geometri.js ]; then node tools/exportera-geometri.js --kontrollera
@@ -93,6 +103,119 @@ jobs:
         run: |
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
+
+  # P0 #81: läktaren gick inte att gå upp på i den RIKTIGA webbruntimen, och
+  # felet överlevde två omgångar därför att inget CI-jobb körde spelets
+  # movement-loop. tools/laktartest.mjs gör det — bildruta för bildruta, i
+  # 3D-vyn, med tangent och med touch, utan att någonsin anropa vägsökaren.
+  #
+  # Egen job i stället för ett steg i `grindar`: det här är det enda som
+  # behöver en webbläsare, och en Chromium-installation ska inte sinka de
+  # övriga grindarna. Faller det här jobbet är läktaren oåtkomlig igen.
+  gangbarhet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Playwright + Chromium
+        run: |
+          set -euo pipefail
+          if [ -f tools/laktartest.mjs ]; then
+            npm install --no-save --no-package-lock playwright@1.49.1
+            npx playwright install --with-deps chromium
+          else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+
+      - name: Webbygget
+        run: |
+          if [ -f tools/build.py ]; then python3 tools/build.py
+          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+
+      - name: Läktaren är gångbar i den riktiga 3D-runtimen (dator + mobil)
+        run: |
+          if [ -f tools/laktartest.mjs ]; then node tools/laktartest.mjs
+          else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+
+      - name: Gå-hit i ridhuset och stallet
+        run: |
+          if [ -f tools/gangtest.mjs ]; then node tools/gangtest.mjs
+          else echo "hoppar: tools/gangtest.mjs finns inte i denna branch"; fi
+
+      # PO:s VERKLIGA väg till läktaren, från spelstart och utan gaTill.
+      # RÖD I SKRIVANDE STUND, med flit: vägen upp finns och är gångbar,
+      # men ingen ledtråd i spelet leder dit, och spelaren landar tjugo
+      # meter bort. Ett regressionsfall utanför CI grindar ingenting —
+      # det var lärdomen från förra rundan. Jobbet ska vara rött tills
+      # produktbeslutet om ledtråden är fattat och genomfört.
+      # FYSISK FRAMKOMLIGHET. Ska vara GRÖN: går det inte att gå upp på
+      # läktaren från en riktig spelstart är #81 inte löst.
+      # `if: always()` — INTE för att mildra något, utan för att ett tidigt
+      # rött steg annars hoppar över resten och döljer de andra fynden.
+      # Det hände direkt: gangtest föll på den kända rampbredds-missen och
+      # stoppdiagnostiken nedanför kördes aldrig. Varje steg avgör sitt
+      # eget utfall, och jobbet blir rött om något av dem är rött.
+      - name: PO-flödet, fysisk framkomlighet — spelstart → entrén → läktaren
+        if: always()
+        run: |
+          if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs --endast=fysisk
+          else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
+
+      # RÖD I SKRIVANDE STUND, och det är avsikten. PO reproducerade felet
+      # igen på 8f15bef trots att stegen ovan var gröna: de mätte bara att
+      # man kommer UPP på däcket, aldrig att man kan gå VIDARE LÄNGS det.
+      # Det gör det här steget, och det stannar mot domarbåset på
+      # (3,3–3,6, 31,5) z 0,80 — dator och mobil, samma punkt. Grinden blir
+      # grön först när båsets fotavtryck på däcket är avgjort som
+      # produktbeslut. Mildra inte provet för att få jobbet grönt.
+      - name: Stoppdiagnostik — upp på läktaren OCH vidare längs den
+        if: always()
+        run: |
+          if [ -f tools/stoppdiag.mjs ]; then node tools/stoppdiag.mjs
+          else echo "hoppar: tools/stoppdiag.mjs finns inte i denna branch"; fi
+
+
+  # DISKOVERBARHET — EGET JOBB, och rött i skrivande stund: ingen markör
+  # leder till läktaren, så vägen upp går inte att hitta från entrén.
+  #
+  # Skilt från `gangbarhet` med flit. Senior review av #85 var tydlig med
+  # att skyltning inte får användas för att förklara bort en fysisk repro.
+  # Låg det i samma jobb skulle UX-fallet göra hela jobbet rött och dölja
+  # att den fysiska framkomligheten är lagad — den som tittar i
+  # checklistan ska se båda sanningarna var för sig.
+  #
+  # Blir grönt när ledtråden finns. Den formen är ett produktbeslut.
+  diskoverbarhet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Playwright + Chromium
+        run: |
+          set -euo pipefail
+          if [ -f tools/poflode.mjs ]; then
+            npm install --no-save --no-package-lock playwright@1.49.1
+            npx playwright install --with-deps chromium
+          else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
+      - name: Webbygget
+        run: |
+          if [ -f tools/build.py ]; then python3 tools/build.py
+          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+      - name: Hittar spelaren vägen upp på läktaren från entrén?
+        run: |
+          if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs --endast=ux
+          else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
 
   dubbel-sanning:
     runs-on: ubuntu-latest

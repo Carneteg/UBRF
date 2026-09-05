@@ -288,9 +288,28 @@ const INREDNING = (() => {
      ASSUMPTION; rutten entré → bana går norr om raden. Ingen bank står där väggen stod som en ersättningsvägg: de är
      0,5 m djupa möbler i öppen yta, inte en linje från gavel till gavel. */
   /* En LÅNG rad (review 2026-09-04 08:50: bildens identitet är den långa
-     skåpraden) från receptionens sydvägglinje till gavelns valvfönster —
-     rutten entré → bana går norr om raden (y ≈ 75,7). */
-  const skapBitar = [[68.3, 75.0]];
+     skåpraden) från receptionens sydvägglinje till gavelns valvfönster.
+
+     P0 #81, tredje rundan: raden var EN obruten bit, y 68,3–75,0. Jag
+     kontrollerade då rutten entré → BANAN och skrev att den går norr om
+     raden. Rutten entré → LÄKTAREN kontrollerade jag aldrig, och det var
+     felet PO reproducerade.
+
+     Entrédörren släpper in spelaren på (21,9, 73,4) — mitt BAKOM raden
+     sett från läktaren. Uppmätt med spelets egen kollision: den som går
+     västerut i hallen stannar dött på x 5,05 vid y 70,8, 72,0 och 73,5,
+     mot skåpens front på x 4,70. Den enda vägen förbi gick norr om y 75,0,
+     alltså en omväg runt nästan sju meter skåp, utan någon ledtråd.
+
+     Raden är därför delad i två med en PASSAGE i spelarens ankomsthöjd.
+     `skapBitar` var byggd för just det — den är en lista med bitar, och
+     var det redan innan den råkade bli en enda. Skåpen ligger kvar i
+     samma remsa, med samma källa och samma djup; det som ändras är att
+     de får ett uppehåll. Lägena är ASSUMPTION (se nedan), så det här
+     flyttar ingenting källbelagt, och en obruten sjumetersrad utan
+     genomgång är dessutom mindre trolig än en med. */
+  const skapPassage = [72.7, 74.1];                      // 1,4 m, centrerad på ankomsten
+  const skapBitar = [[68.3, skapPassage[0]], [skapPassage[1], 75.0]];
   const skapX = 4.2 + 0.25;                              // fronten i remsans västkant
 
   const ridhus = [
