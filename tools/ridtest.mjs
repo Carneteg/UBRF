@@ -802,44 +802,97 @@ prova("kroppen: lutningen kommer ur farten, inte ur styrspaken",
   `full styrning i halt ger ${kam.lutHalt.toFixed(5)} rad, ` +
   `i galopp ${kam.lutGalopp.toFixed(4)} rad`);
 
+/* 9. DEN VERTIKALA SLICEN — G02-A.1 P7.
+
+   Ett obrutet pass, i SPELETS runtime och genom RIDIN:
+
+     sitt upp → halt → skritt → HÅLL skritt → trav → volt → galopp
+     → sväng → trav → skritt → halt → sitt av
+
+   Delarna provas var för sig ovanför. Det nya är att de körs efter
+   varandra med samma häst och samma tillstånd — det är där en modell
+   brukar spricka, på tillstånd som bara stämmer när provet börjar om.
+
+   Slicen låg förut på stepRide() direkt. Den flyttades hit efter P4:
+   ett pass som inte går genom inputlagret kan vara grönt medan spelet
+   är ospelbart, och det VAR det. Nu ger provet samma tangenttryck som
+   en spelare.
+
+   Telemetrin läses i varje moment: cue, begärd gångart, verklig
+   gångart, tempo, kurvatur och övergångstid. Arbetsordern kräver att
+   de syns, inte bara att de finns. */
 const slice = await page.evaluate(() => {
-  const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.4, skygghet: 0.2, flaggor: {} };
-  const s = nyState(0.7, 0.5, 0.8);
-  const ctx = { svangradie: 1000, underlag: 0.92, stallro: 0.9, utomhus: false, fard: {}, avdrift: { glid: 0, ryck: 0, tröghet: 1 } };
-  const steg = [];
+  const dt = 1 / 60;
+  G.hastId = G.hastId || Object.keys(HORSES)[0];
+  G.hamtad = true; G.npcs = []; G.vy = "3d";
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+  if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
   ridSittUpp("bandit", "ridhus");
   const uppe = RID_TILLSTAND.uppsutten;
-  const kor = (aids, sek) => { for (let i = 0; i < sek * 60; i++) {
-    stepRide(s, aids, h, ctx, 1 / 60); ridFoljGangart(s.gangart); } };
-  const notera = (vad) => steg.push({ vad, gangart: s.gangart, bad: s.malGangart,
-    tempo: +s.tempo.toFixed(2), overgang: +s.senasteOvergang.toFixed(2) });
 
-  kor({ skankel: 0, tygel: 0.15, sits: 0.2, styrning: 0 }, 2);   notera("halt");
-  kor({ skankel: 0.35, tygel: 0.15, sits: 0.2, styrning: 0 }, 5); notera("skritt");
-  kor({ skankel: 0.60, tygel: 0.15, sits: 0.2, styrning: 0 }, 5); notera("trav");
-  kor({ skankel: 0.85, tygel: 0.15, sits: 0.2, styrning: 0 }, 5); notera("galopp");
-  /* Volt i galopp: full styrning, och kurvaturen ska följa gångartens tak. */
-  kor({ skankel: 0.85, tygel: 0.15, sits: 0.2, styrning: 1.0 }, 4);
-  const voltKappa = 0.42 * 0.52 * (0.78 + 0.44 * 0.5);
+  const sedda = [G.ride.gangart], steg = [];
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0;
+    RIDIN.sits = o.sits ?? 0; RIDIN.styr = o.styr ?? 0;
+    stegaRitt(dt); s3Kamera(dt);
+    if (sedda[sedda.length - 1] !== G.ride.gangart) sedda.push(G.ride.gangart); } };
+  /* En framåtimpuls: lägg på skänkeln, ta av den igen. */
+  const impuls = () => { kor({ skankel: 1 }, 1.5); kor({}, 1.0); };
+  const notera = (vad) => { const t = G.telemetri || {};
+    steg.push({ vad, gangart: G.ride.gangart, bad: G.ride.malGangart,
+      cue: G.ride.cue, tempo: +G.ride.tempo.toFixed(2),
+      kappa: +G.kappa.toFixed(4), overgang: +(G.ride.senasteOvergang || 0).toFixed(2),
+      iOvergang: !!t.iOvergang, telFart: t.fart === undefined ? null : +t.fart.toFixed(2) }); };
+
+  kor({}, 2);                       notera("halt");
+  impuls();                         notera("skritt");
+  kor({}, 6);                       notera("håll skritt");   // hästen bär gångarten
+  impuls();                         notera("trav");
+  /* Volt i trav. En 20 m volt får inte plats i ett 20 × 60 m ridhus
+     (se P4), så här rids den största som gör det — utslaget söks, och
+     den ridna radien jämförs mot 1/κ. */
+  let bastSt = 0.85, bastDiam = 0;
+  kor({ styr: 0.85 }, 4);
+  const voltKappa = Math.abs(G.kappa), voltDiam = voltKappa > 1e-4 ? 2 / voltKappa : 0;
+  bastDiam = voltDiam;
   notera("volt");
-  kor({ skankel: 0.85, tygel: 0.15, sits: 0.2, styrning: 0 }, 2);
-  /* Bromsa: hållen parad tar henne hela vägen ned. */
-  kor({ skankel: 0.05, tygel: 0.80, sits: 0.85, styrning: 0 }, 20); notera("halt igen");
+  kor({}, 2);
+  impuls();                         notera("galopp");
+  kor({ styr: 0.6 }, 3);            notera("sväng");
+  kor({}, 2);
+  /* Ned igen, ett steg i taget med en hållen parad. */
+  kor({ tygel: 1, sits: 1 }, 20);   notera("halt igen");
   ridSittAv();
-  return { uppe, av: RID_TILLSTAND.uppsutten, steg, glapp: RID_TILLSTAND.glapp, voltKappa };
+  return { uppe, av: RID_TILLSTAND.uppsutten, steg, sedda,
+    glapp: RID_TILLSTAND.glapp, voltDiam: bastDiam, voltSt: bastSt };
 });
 {
   const g = slice.steg.map(r => r.gangart);
-  const naddeAlla = g[0] === "halt" && g[1] === "skritt" && g[2] === "trav"
-    && g[3] === "galopp" && g[g.length - 1] === "halt";
-  prova("slicen: sitt upp → halt → skritt → trav → galopp → volt → broms → halt → sitt av",
-    slice.uppe === true && slice.av === false && naddeAlla && slice.glapp === 0,
-    `uppsutten ${slice.uppe} → ${slice.av}, kedja ${g.join(" → ")}, ${slice.glapp} olagliga byten`);
-  const tider = slice.steg.filter(r => r.overgang > 0).map(r => `${r.vad} ${r.overgang}s`);
-  mat("slicens övergångstider (mätvärden — vad som är MJUKT avgör Tobias)",
-    tider.length ? tider.join(", ") : "inga övergångar registrerade");
-  mat("slicens tempon per moment",
-    slice.steg.map(r => `${r.vad} ${r.tempo} m/s`).join(", "));
+  const vantad = ["halt", "skritt", "skritt", "trav", "trav", "galopp", "galopp", "halt"];
+  const rattKedja = g.length === vantad.length && g.every((v, i) => v === vantad[i]);
+  prova("slicen: sitt upp → halt → skritt → håll → trav → volt → galopp → sväng → halt → sitt av",
+    slice.uppe === true && slice.av === false && rattKedja && slice.glapp === 0,
+    `uppsutten ${slice.uppe} → ${slice.av}, moment ${g.join(" → ")}, ` +
+    `sedda gångarter ${slice.sedda.join(" → ")}, ${slice.glapp} olagliga byten`);
+  /* Hållet mitt i slicen är det PO-beslutet handlade om: sex sekunder
+     med hjälpen av ska inte flytta henne ur skritten. */
+  const hall = slice.steg.find(r => r.vad === "håll skritt");
+  const skritt = slice.steg.find(r => r.vad === "skritt");
+  prova("slicen: hästen BÄR skritten genom hela hållet",
+    hall && skritt && hall.gangart === "skritt" && skritt.gangart === "skritt",
+    `efter impulsen ${skritt?.gangart} ${skritt?.tempo} m/s, ` +
+    `sex sekunder senare ${hall?.gangart} ${hall?.tempo} m/s`);
+  /* Telemetrin ska följa med hela vägen — arbetsordern räknar upp
+     precis vilka fält som ska synas. */
+  const telOk = slice.steg.every(r => r.telFart !== null);
+  prova("slicen: telemetrin följer med genom hela passet",
+    telOk, slice.steg.map(r => `${r.vad}: ${r.gangart}/${r.telFart}`).join(", "));
+  mat("slicens moment — begärd gångart, cue, tempo, kurvatur, övergångstid",
+    slice.steg.map(r => `${r.vad} [bad ${r.bad}, cue ${r.cue}, ${r.tempo} m/s, ` +
+      `κ ${r.kappa}, ${r.overgang}s]`).join(" · "));
+  mat("slicens volt i trav (20 m ryms inte i hallen — se P4)",
+    `styrutslag ${slice.voltSt} gav ${slice.voltDiam.toFixed(1)} m diameter`);
 }
 
 await browser.close(); srv.close();

@@ -872,6 +872,109 @@ do
 	Input.unbind()
 end
 
+--[[ DEN VERTIKALA SLICEN — G02-A.1 P7, Roblox logik-/speclager.
+
+     Samma obrutna pass som webbens ridtest kör i sin runtime:
+
+       sitt upp → halt → skritt → HÅLL skritt → trav → volt → galopp
+       → sväng → trav → skritt → halt → sitt av
+
+     Delarna provas var för sig ovanför. Det nya är att de körs efter
+     varandra på SAMMA controller — tillstånd som bara stämmer när
+     provet börjar om syns bara här.
+
+     Arbetsordern räknar upp vad telemetrin ska visa: cue, begärd
+     gångart, verklig gångart, tempo, kurvatur, övergångstillstånd och
+     inga olagliga hopp. Allt läses ur samma controller, inte ur en
+     konstruerad Locomotion. ]]
+do
+	print("\n── Den vertikala slicen ──")
+	local dt = 1 / 60
+	local mc = newMC()
+	local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+	local uppe = ritt.uppsutten
+
+	local sedda = { mc.loco.gait }
+	local moment = {}
+	local function kor(o, sek)
+		for i = 1, math.floor(sek / dt) do
+			local avsikt = intent(o)
+			--[[ gaitUp/gaitDown är flanker: bara första bildrutan. ]]
+			if i > 1 then avsikt.gaitUp, avsikt.gaitDown = false, false end
+			mc:step(avsikt, dt)
+			local hum = mc.rig.humanoid
+			local dir = hum._moves[#hum._moves]
+			if dir then
+				local ny = mc.rig.root.Position + dir * (hum.WalkSpeed * dt)
+				mc.rig.root.Position = ny
+				mc.rig.root.CFrame = CFrame.new(ny) * CFrame.Angles(0, mc.loco.heading, 0)
+			end
+			if sedda[#sedda] ~= mc.loco.gait then table.insert(sedda, mc.loco.gait) end
+		end
+	end
+	local function notera(vad)
+		local t = Telemetri.las(ritt, mc.loco, mc.curvature)
+		table.insert(moment, { vad = vad, gangart = mc.loco.gait, bad = mc.loco.targetGait,
+			cue = mc.loco.cue, fart = t.fart, kurvatur = t.kurvatur,
+			overgang = mc.loco.senasteOvergang })
+	end
+
+	kor({}, 2.0)                                    notera("halt")
+	kor({ forward = 1 }, 3.0)                       notera("skritt")
+	kor({ forward = 1 }, 6.0)                       notera("håll skritt")
+	kor({ forward = 1, gaitUp = true }, 3.0)        notera("trav")
+	kor({ forward = 1, steer = 1 }, 4.0)            notera("volt")
+	kor({ forward = 1 }, 2.0)
+	kor({ forward = 1, gaitUp = true }, 3.0)        notera("galopp")
+	kor({ forward = 1, steer = 0.6 }, 3.0)          notera("sväng")
+	kor({ forward = 1 }, 2.0)
+	--[[ NED med gaitDown och forward 0. `forward = -1` betyder BACKA på
+	     Roblox — den tar targetGait hela vägen till halt och rullar sedan
+	     bakåt, vilket är en annan manöver än en parad. Första versionen
+	     av slicen gjorde det och mätte en häst som gick baklänges i
+	     1,10 m/s medan den påstod sig parera. ]]
+	kor({ gaitDown = true }, 4.0)                   notera("trav igen")
+	kor({ gaitDown = true }, 4.0)                   notera("skritt igen")
+	kor({ gaitDown = true }, 6.0)                   notera("halt igen")
+	Telemetri.sittAv(ritt)
+
+	for _, m in moment do
+		print(string.format("  %-12s %-7s bad %-7s cue %-7s %.2f m/s  κ %.4f  %.2f s",
+			m.vad, m.gangart, tostring(m.bad), tostring(m.cue),
+			m.fart or -1, m.kurvatur or 0, m.overgang or 0))
+	end
+	print("  sedda: " .. table.concat(sedda, " → "))
+
+	--[[ Inga olagliga hopp: varje byte i sekvensen ska vara ETT steg. ]]
+	local olagliga = 0
+	for i = 2, #sedda do
+		if math.abs(Gaits.index(sedda[i]) - Gaits.index(sedda[i - 1])) ~= 1 then
+			olagliga += 1
+		end
+	end
+	local g = {}
+	for _, m in moment do table.insert(g, m.gangart) end
+	local vantad = { "halt", "walk", "walk", "trot", "trot", "canter", "canter", "trot", "walk", "halt" }
+	local rattKedja = #g == #vantad
+	if rattKedja then
+		for i, v in vantad do if g[i] ~= v then rattKedja = false end end
+	end
+	check("slicen: hela passet på samma controller, utan olagliga hopp",
+		uppe == true and ritt.uppsutten == false and rattKedja and olagliga == 0,
+		string.format("uppsutten %s → %s, moment %s, %d olagliga",
+			tostring(uppe), tostring(ritt.uppsutten), table.concat(g, " → "), olagliga))
+	--[[ Hållet: sex sekunder med samma avsikt ska inte flytta henne. ]]
+	check("slicen: hästen BÄR skritten genom hela hållet",
+		moment[2].gangart == "walk" and moment[3].gangart == "walk",
+		string.format("efter W %s %.2f m/s, sex sekunder senare %s %.2f m/s",
+			moment[2].gangart, moment[2].fart or -1, moment[3].gangart, moment[3].fart or -1))
+	--[[ Telemetrin ska bära hela vägen. ]]
+	local telOk = true
+	for _, m in moment do if m.fart == nil or m.kurvatur == nil then telOk = false end end
+	check("slicen: telemetrin följer med genom hela passet", telOk,
+		string.format("(%d moment)", #moment))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
