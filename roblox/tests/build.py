@@ -36,6 +36,11 @@ BYGGE = GEOMETRI + [
 # Speldatan: hästdata och skötseldata genereras var för sig. UBRFSpel är den
 # tunna runtime-fasaden som fogar ihop dem innan Stallet läser kontraktet.
 SPEL = GEOMETRI + [
+    # RidKanon ar ren data utan beroenden och ligger med sa att
+    # spelkanon.spec kan korsprova hastarnas `profil` mot de profiler som
+    # faktiskt finns (G02-B punkt 3). Ett profilnamn i hastdatan som inte
+    # finns i kanonen ar en tyst degradering till utgangslaget.
+    ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
     ("UBRFSpelData", "game/UBRFSpelData.luau"),
     ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
     ("UBRFSpel",     "game/UBRFSpel.luau"),

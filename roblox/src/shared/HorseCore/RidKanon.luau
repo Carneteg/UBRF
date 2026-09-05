@@ -166,6 +166,20 @@ RidKanon.HJALP_HARLEDDA = { "innerTygel", "vikt", "ytterTygel", "ytterstod" }
 
      ENERGI_TAPP/ENERGI_ATER är per sekund och per gångart, med webbens
      namn. Roblox gångartsnamn översätts av RidKanon.MOTSVARIGHET. ]]
+--[[ SKOLHÄSTPROFILERNA (G02-B punkt 3). Multiplikatorer på SVAR
+     ovan — INTE egna kodvägar. `skolhast` är 1,00 rakt igenom och
+     därmed modellens utgångsläge; varje annan profil mäts mot den.
+
+     Vilken häst som har vilken profil ligger i UBRFSpelData
+     (fältet `profil`), tilldelad ur ridskolans egna beskrivningar.
+     Se src/spel/hastar.js för citaten. ]]
+RidKanon.PROFILER = {
+	skolhast = { namn = "Skolhäst", kort = "pålitlig, går med i alla grupper", svar = 1, klar = 1, balans = 1, fokus = 1, tapp = 1, ater = 1 },
+	kanslig = { namn = "Känslig", kort = "svarar på lite, kräver en mjuk hand", svar = 0.72, klar = 1.45, balans = 1.35, fokus = 1.25, tapp = 1.15, ater = 1 },
+	tung = { namn = "Tyngre modell", kort = "tar tid, står stadigt, vill ha tydlighet", svar = 1.38, klar = 1.3, balans = 0.7, fokus = 0.85, tapp = 1.25, ater = 0.85 },
+	arbetsvillig = { namn = "Arbetsvillig", kort = "bjuder till och orkar länge", svar = 0.86, klar = 0.85, balans = 0.9, fokus = 1.05, tapp = 0.8, ater = 1.2 },
+}
+
 RidKanon.SVAR = {
 	SVAR_BAS = 0.12,
 	SVAR_TROG = 0.14,

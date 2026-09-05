@@ -30,8 +30,9 @@ const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   + "\n" + las("src/riding/svar.js") + "\n" + las("src/riding/telemetri.js"), ctx);
-const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON } =
-  vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON})", ctx);
+const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
+  SKOLHAST_PROFILER } = vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
+  + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -293,6 +294,22 @@ rader.push("     LUCKA i paritetsspecen i stället för att fyllas med gissninga
 rader.push("");
 rader.push("     ENERGI_TAPP/ENERGI_ATER är per sekund och per gångart, med webbens");
 rader.push("     namn. Roblox gångartsnamn översätts av RidKanon.MOTSVARIGHET. ]]");
+rader.push("--[[ SKOLHÄSTPROFILERNA (G02-B punkt 3). Multiplikatorer på SVAR");
+rader.push("     ovan — INTE egna kodvägar. `skolhast` är 1,00 rakt igenom och");
+rader.push("     därmed modellens utgångsläge; varje annan profil mäts mot den.");
+rader.push("");
+rader.push("     Vilken häst som har vilken profil ligger i UBRFSpelData");
+rader.push("     (fältet `profil`), tilldelad ur ridskolans egna beskrivningar.");
+rader.push("     Se src/spel/hastar.js för citaten. ]]");
+rader.push("RidKanon.PROFILER = {");
+for (const namn of Object.keys(SKOLHAST_PROFILER)) {
+  const pr = SKOLHAST_PROFILER[namn];
+  const tal2 = Object.keys(pr).filter(k => typeof pr[k] === "number")
+    .map(k => `${k} = ${tal(pr[k])}`).join(", ");
+  rader.push(`\t${namn} = { namn = ${str(pr.namn)}, kort = ${str(pr.kort)}, ${tal2} },`);
+}
+rader.push("}");
+rader.push("");
 rader.push("RidKanon.SVAR = {");
 for (const namn of Object.keys(SVAR_KANON)) {
   const v = SVAR_KANON[namn];

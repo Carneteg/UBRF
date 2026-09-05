@@ -498,6 +498,115 @@ prova("balansen tappas i en ostödd volt, hästen FALLER IN, och den hämtar sig
   `(${((1 - svar.los.radie / svar.buren.radie) * 100).toFixed(1)} % snävare än bett) · ` +
   `tolv sekunder rakt efteråt: balans ${svar.los.efterRakt.toFixed(3)}`);
 
+/* ══════════════════════════════════════════════════════════════════
+   G02-B PUNKT 3 — SKOLHÄSTPROFILERNA (issue #83)
+
+   "Minst tre datadrivna skolhästprofiler — mätbart olika utan separata
+   controllers." Tre påståenden, tre prov:
+
+     PROFILEN ÄR DATA. Samma häst, samma ritt, bara profilnamnet skiljer
+     — och svaret blir mätbart annorlunda. Går det, är profilen data och
+     inte en kodväg.
+     HÄSTARNA ÄR OLIKA SOM HELHETER. Tre riktiga UBRF-hästar med var sin
+     profil, ridna likadant, ska skilja sig.
+     TILLDELNINGEN HAR KÄLLA. Varje häst med en annan profil än
+     utgångsläget ska ha en mening ur ridskolans egen beskrivning bakom
+     sig, och varje häst utan sådan evidens ska ligga kvar på
+     utgångsläget. Annars är profilen påhittad, och det är precis vad
+     CLAUDE.md förbjuder.
+   ══════════════════════════════════════════════════════════════════ */
+const prof = await page.evaluate(() => {
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(0.7, 0.5, 0.8);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+    RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
+  G.hamtad = true; G.npcs = [];
+
+  /* Ett PASS som varje häst rids likadant: två impulser upp i trav, en
+     ostödd volt, en parad, och sedan tio minuters arbete. */
+  const pass = (id) => { G.hastId = id; nyRitt();
+    kor({ skankel: 1 }, 1.5); kor({}, 1.0); kor({ skankel: 1 }, 1.5); kor({}, 2.0);
+    const svarUpp = G.ride.svarstid;
+    kor({ skankel: 0.55, styr: 1 }, 25);
+    const balansIVolt = G.ride.balans, radie = Math.abs(G.kappa) > 0.002 ? 1 / Math.abs(G.kappa) : null;
+    kor({ skankel: 0.55 }, 6);
+    kor({ skankel: 0.7, tygel: 0.15, parad: 1 }, 0.3); kor({ skankel: 0.7, tygel: 0.15 }, 1.0);
+    const svarParad = G.ride.svarstid, fokus = G.ride.fokus;
+    const e0 = G.ride.energi;
+    kor({}, 480);
+    return { svarUpp, svarParad, balansIVolt, radie, fokus,
+      energiFore: e0, energiEfter: G.ride.energi, gang: G.ride.gangart }; };
+
+  /* a) SAMMA HÄST, olika profil. Kloner av en riktig häst där ENDA
+     skillnaden är profilnamnet — då kan skillnaden i utfall inte komma
+     från känslighet, tyngd eller utbildning. */
+  const bas = HORSES.cosmo;
+  const namn = Object.keys(SKOLHAST_PROFILER);
+  const klon = {};
+  for (const pnamn of namn) {
+    HORSES["__prov_" + pnamn] = { ...bas, id: "__prov_" + pnamn, profil: pnamn };
+    klon[pnamn] = pass("__prov_" + pnamn);
+    delete HORSES["__prov_" + pnamn];
+  }
+
+  /* b) TRE RIKTIGA HÄSTAR, var sin profil, samma pass. */
+  const riktiga = { crokino: pass("crokino"), curiretto: pass("curiretto"),
+    hjartat: pass("hjartat"), cosmo: pass("cosmo") };
+
+  /* c) STRUKTUR: alla profiler har SAMMA fält, utgångsläget är 1,00 rakt
+     igenom, och inget fält är något annat än ett tal eller en text.
+     En profil med ett eget fält vore början på en egen kodväg. */
+  const talFalt = (o) => Object.keys(o).filter(k => typeof o[k] === "number").sort();
+  const nyckelSet = namn.map(n => talFalt(SKOLHAST_PROFILER[n]).join(","));
+  const skolhastEtt = talFalt(SKOLHAST_PROFILER.skolhast)
+    .every(k => SKOLHAST_PROFILER.skolhast[k] === 1);
+  const baraDataTyper = namn.every(n => Object.keys(SKOLHAST_PROFILER[n])
+    .every(k => ["number", "string"].includes(typeof SKOLHAST_PROFILER[n][k])));
+
+  /* d) KÄLLKEDJAN för tilldelningen. */
+  let medKalla = 0, utanKalla = 0, fel = [];
+  for (const [id, h] of Object.entries(HORSES)) {
+    if (h.profilStatus === "KALLTEXT") { medKalla++;
+      if (!h.besk || h.besk.length < 10) fel.push(id + ": profil utan beskrivning"); }
+    else { utanKalla++;
+      if (h.profil !== "skolhast") fel.push(id + ": profil utan källa"); }
+  }
+  return { klon, riktiga, namn, nyckelSet, skolhastEtt, baraDataTyper,
+    medKalla, utanKalla, fel,
+    anvanda: [...new Set(Object.values(HORSES).map(h => h.profil))].sort() };
+});
+{
+  const k = prof.klon;
+  const snabbast = k.kanslig.svarUpp, tregast = k.tung.svarUpp;
+  prova("profilen är DATA: samma häst, bara profilnamnet bytt, ger mätbart olika svar",
+    tregast > snabbast * 1.25 &&
+    k.kanslig.balansIVolt < k.tung.balansIVolt - 0.03 &&
+    k.arbetsvillig.energiEfter > k.tung.energiEfter + 0.05 &&
+    k.skolhast.svarUpp > snabbast && k.skolhast.svarUpp < tregast,
+    prof.namn.map(n => `${n}: svar ${k[n].svarUpp.toFixed(3)} s, balans ` +
+      `${k[n].balansIVolt.toFixed(3)}, energi efter 8 min ${k[n].energiEfter.toFixed(3)}`).join(" · "));
+  const r = prof.riktiga;
+  prova("tre riktiga UBRF-hästar med var sin profil svarar olika på samma ritt",
+    r.crokino.svarUpp < r.cosmo.svarUpp && r.cosmo.svarUpp < r.curiretto.svarUpp &&
+    r.hjartat.energiEfter > r.curiretto.energiEfter,
+    `Crokino (känslig) ${r.crokino.svarUpp.toFixed(3)} s · Cosmo (skolhäst) ` +
+    `${r.cosmo.svarUpp.toFixed(3)} s · Curre (tyngre) ${r.curiretto.svarUpp.toFixed(3)} s · ` +
+    `energi efter 8 min: Hjärtat ${r.hjartat.energiEfter.toFixed(3)} mot Curre ` +
+    `${r.curiretto.energiEfter.toFixed(3)}`);
+  prova("profilerna är en uppsättning tal, inte fyra kodvägar",
+    prof.namn.length >= 3 && new Set(prof.nyckelSet).size === 1 &&
+    prof.skolhastEtt && prof.baraDataTyper,
+    `${prof.namn.length} profiler med identiska fält (${prof.nyckelSet[0]}), ` +
+    `utgångsläget skolhast är 1,00 rakt igenom`);
+  prova("varje tilldelad profil har en mening ur ridskolans egen beskrivning bakom sig",
+    prof.fel.length === 0 && prof.medKalla >= 3 && prof.utanKalla >= 1 &&
+    prof.anvanda.length >= 3,
+    `${prof.medKalla} hästar med källtext, ${prof.utanKalla} utan (och de ligger kvar på ` +
+    `utgångsläget), profiler i bruk: ${prof.anvanda.join(", ")}`);
+}
+
 /* Och att nollställningen verkligen är inkopplad där ritten börjar.
    Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se
    om produktionen glömmer den; det här läser funktionskroppen i den

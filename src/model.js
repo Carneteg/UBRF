@@ -500,12 +500,13 @@ function stepRide(s,a,h,ctx,dt){
      /* FOKUS. Paraden lyfter den i samma ögonblick den läses — en
         halvhalt är en uppmärksamhetssignal, och det är där paradens
         kvalitet från punkt 1 får sin verkan på hästen. */
-     const fMal=svarFokusMal(s,ctx,paradKval);
+     const fMal=svarFokusMal(s,ctx,paradKval,h);
      s.fokus+=(fMal-s.fokus)*clamp(dt/S.FOKUS_TAU,0,1);
      /* Ett paradlyft ska verka NU och inte sippra in över tre sekunder.
         Tau:n gäller den långsamma driften mot vardagsläget. */
      if(paradKval>0)s.fokus=clamp(Math.max(s.fokus,
-       s.fokus+S.FOKUS_PARAD*paradKval*0.55),0,1);
+       s.fokus+S.FOKUS_PARAD*((typeof svarProfil==="function")?svarProfil(h).fokus:1)
+         *paradKval*0.55),0,1);
 
      /* BALANS. Böjkravet och yttertygelstödet kommer ur hjälpsemantiken,
         fartkravet ur samma centripetaluttryck som takten redan använder
@@ -523,7 +524,7 @@ function stepRide(s,a,h,ctx,dt){
      /* ENERGI. Arbetet tär, halten ger tillbaka, skritten går jämnt ut.
         Talen är satta på en lektion och inte på ett testfönster — se
         SVAR_KANON.ENERGI_TAPP. */
-     s.energi=clamp(s.energi+svarEnergiTakt(s.gangart,s.spanning)*dt,0,1);
+     s.energi=clamp(s.energi+svarEnergiTakt(s.gangart,s.spanning,h)*dt,0,1);
    }
 
    /* SVARET. Hjälpen tappas aldrig bort: när väntan är slut startar

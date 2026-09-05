@@ -3,7 +3,7 @@
 Issue #83. Arbetsdokument för gaten: acceptance contract, checkpointer,
 mätvärden och kvarstående luckor. Uppdateras vid varje checkpoint.
 
-**Status:** `IMPLEMENTING` (checkpoint 2 av 5 pushad)
+**Status:** `IMPLEMENTING` (checkpoint 3 av 5 pushad)
 
 Claude sätter aldrig `APPROVED`, `ACCEPTED`, `DONE` eller
 `PRODUCT_ACCEPTED` här. Högsta status Claude får sätta är
@@ -105,8 +105,8 @@ inte säga att skillnaden känns rätt.
 |---|----------|--------|
 | 0 | Skrittfyndet från #83 återverifierat mot main och stängt med mätning | pushad `751b5b4` |
 | 1 | Semantiska hjälper: inner-/yttertygel, vikt, paraden som egen signal | pushad `9540e0c` |
-| 2 | Hästens svar: fördröjning, känslighet, balans, fokus, spänning, energi | pushad |
-| 3 | Minst tre datadrivna skolhästprofiler | ej påbörjad |
+| 2 | Hästens svar: fördröjning, känslighet, balans, fokus, spänning, energi | pushad `ca853a3` |
+| 3 | Minst tre datadrivna skolhästprofiler | pushad |
 | 4 | Roblox: hjälplagret och profilerna till paritet | ej påbörjad |
 | 5 | Telemetri, dokumentation, falsifieringsprotokoll | ej påbörjad |
 
@@ -321,3 +321,94 @@ exakt, så ett nytt hål blir rött.
   Tobias sak — det är den mest kännbara ändringen i hela checkpointen.
 - **Om infallet läses som karaktär eller som trasig styrning.** Human
   gate, och avstängbart med ett tal.
+
+---
+
+## 5. Checkpoint 3 — skolhästprofilerna
+
+### Vad som byggdes
+
+Fyra profiler i `SKOLHAST_PROFILER` (`src/riding/svar.js`). En profil är
+**sex multiplikatorer på svarsmodellen** — inte en egen kodväg. Byter man
+profil på en häst ändras hur hon svarar, inte vilken kod som kör.
+
+| Profil | svar | klar | balans | tapp | ater | fokus |
+|--------|------|------|--------|------|------|-------|
+| `skolhast` — pålitlig | 1,00 | 1,00 | 1,00 | 1,00 | 1,00 | 1,00 |
+| `kanslig` — svarar på lite | 0,72 | 1,45 | 1,35 | 1,15 | 1,00 | 1,25 |
+| `tung` — tar tid, står stadigt | 1,38 | 1,30 | 0,70 | 1,25 | 0,85 | 0,85 |
+| `arbetsvillig` — orkar länge | 0,86 | 0,85 | 0,90 | 0,80 | 1,20 | 1,05 |
+
+`skolhast` är 1,00 rakt igenom och därmed modellens utgångsläge. Varje
+annan profil mäts mot den, och en häst utan tilldelad profil beter sig
+exakt som modellen alltid gjort.
+
+### Tilldelningen har källa
+
+Profilerna kommer ur **ridskolans egna beskrivningar** av hästarna
+(snapshoten `references/data/ubrf-hastar-2026-09-01.json`, upstream
+ubrf.se/hastar). Citatet står i kommentaren på varje rad i
+`src/spel/hastar.js`:
+
+- *"Han är en känsligare individ."* → Hamilton, `kanslig`
+- *"kräver en mjuk balanserad ryttare"* → Conor, `kanslig`
+- *"Lite åt det tyngre hållet."* → Curre, `tung`
+- *"Kräver sin ryttare för att jobba bra."* → Replay, `tung`
+- *"positiv inställning till arbetet. Alltid ambitiös."* → Hjärtat, `arbetsvillig`
+
+**16 hästar** har källtext bakom sin profil. **17 hästar** har det inte —
+beskrivningen säger inget om ridkänsla, eller är *"Mer info kommer."* — och
+de ligger kvar på `skolhast`, märkta `profilStatus: "SAKNAR_KALLA"`. Det
+är en deklarerad frånvaro av evidens, inte en tilldelning på känsla.
+
+### Uppmätt, genom inputlagret
+
+**Samma häst, bara profilnamnet bytt** (kloner av Cosmo — känslighet,
+tyngd och utbildning identiska, så skillnaden kan bara komma från
+profilen):
+
+| Profil | svarstid | balans i ostödd volt | energi efter 8 min |
+|--------|----------|----------------------|--------------------|
+| `kanslig` | **0,060 s** | 0,559 | 0,446 |
+| `arbetsvillig` | 0,128 s | 0,711 | **0,565** |
+| `skolhast` | 0,148 s | 0,678 | 0,497 |
+| `tung` | **0,213 s** | **0,777** | 0,412 |
+
+**Tre riktiga UBRF-hästar**, samma ritt: Crokino (känslig) 0,060 s ·
+Cosmo (skolhäst) 0,148 s · Curre (tyngre) 0,197 s. Energi efter åtta
+minuter: Hjärtat 0,565 mot Curre 0,412.
+
+### Falsifiering
+
+| Mutation | Prov som föll |
+|----------|---------------|
+| Alla profiler blir 1,00 rakt igenom | två prov: kloner och riktiga hästar |
+| `svarProfil()` returnerar alltid `skolhast` | samma två |
+| En häst får profil utan källtext | källkedjeprovet |
+| En profil får ett eget fält | strukturprovet ("inte fyra kodvägar") |
+
+De två första är olika fel — data som är lika, respektive data som inte
+läses — och båda faller på samma prov. Det är avsikten: provet frågar om
+profilen **verkar**, inte om den finns.
+
+### Paritet
+
+`RidKanon.PROFILER` genereras ur `svar.js`; varje hästs `profil` följer
+med till `UBRFSpelData` som vanlig hästdata. `spelkanon.spec` korsprovar
+att varje profilnamn i hästdatan finns i kanonen — ett namn som inte
+finns skulle annars tyst falla tillbaka på utgångsläget, och då rider man
+en annan häst än den man valde — att minst tre profiler är i bruk och
+inte bara definierade, och att `skolhast` är 1,00 rakt igenom också på
+Roblox-sidan.
+
+Roblox har fortfarande ingen svarsmodell att köra profilerna genom. Det
+är checkpoint 4.
+
+### Not tested
+
+- Roblox runtime.
+- **Om de fyra känns som fyra olika hästar.** Automatiken visar att de är
+  mätbart olika; om skillnaden är den rätta karaktären är human gate.
+- `kanslig` bottnar i svarstidens golv (0,06 s) för en välriden hjälp.
+  Det är golvets syfte, men det betyder att samordningen inte går att
+  skilja åt på henne — hon svarar direkt oavsett.
