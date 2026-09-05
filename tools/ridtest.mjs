@@ -46,9 +46,21 @@ prova("halt → skritt → trav → galopp → trav → skritt → halt ur tempo
   JSON.stringify(trappa) === JSON.stringify(["halt", "skritt", "trav", "galopp", "trav", "skritt", "halt"]),
   trappa.join(" → "));
 
-/* 3. RIDKÄRNAN KÖRD: full skänkel från halt ska ta ekipaget genom
-   gångarterna utan att hoppa över någon, och sedan ned igen. Kör
-   stepRide med fast dt — samma modell som spelet, utan UI. */
+/* 3. RIDKÄRNAN KÖRD, efter PO-beslutet 2026-09-05: grundhjälpen är en CUE,
+   inte en gaspedal. Provet mätte förut att en HÅLLEN full skänkel klättrade
+   hela vägen till galopp — och det var precis den gaspedalen beslutet tog
+   bort. Kontraktet är nu ett annat, och strängare på den punkt som betyder
+   något för känslan:
+
+     · varje framåtdrivande IMPULS ber om nästa gångart, en i taget,
+     · hästen BÄR gångarten vidare utan att hjälpen hålls på ett exakt
+       värde, och klättrar inte vidare av sig själv,
+     · nedåtgående hjälp tar henne ned igen,
+     · ingen gångart hoppas över åt något håll.
+
+   Den mittersta raden är den nya garantin, och den provas uttryckligen
+   nedan: efter sista impulsen hålls hjälpen konstant i 20 s och gångarten
+   ska ligga still. Kör stepRide med fast dt — samma modell som spelet. */
 const loop = await page.evaluate(() => {
   const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.4, skygghet: 0.2, flaggor: {} };
   const s = nyState(0.7, 0.5, 0.8);
@@ -57,13 +69,29 @@ const loop = await page.evaluate(() => {
   const kor = (aids, sek) => { for (let i = 0; i < sek * 60; i++) {
     stepRide(s, aids, h, ctx, 1 / 60); ridFoljGangart(s.gangart);
     if (sedda[sedda.length - 1] !== s.gangart) sedda.push(s.gangart); } };
-  kor({ skankel: 0.78, tygel: 0.34, sits: 0.2, styrning: 0 }, 25);   // be om framåt
+  /* Tre impulser upp. Mellan dem hålls hjälpen — det är där hästen ska
+     bära gångarten själv. Skänkeln höjs varje gång; spärren (K.CUE_SPARR)
+     ser till att en impuls inte räknas två gånger. */
+  const impulser = [];
+  for (const niva of [0.35, 0.60, 0.85]) {
+    kor({ skankel: niva, tygel: 0.20, sits: 0.2, styrning: 0 }, 4);
+    impulser.push({ bad: s.malGangart, gick: s.gangart, overgang: +s.senasteOvergang.toFixed(2) });
+  }
   const topp = s.gangart, toppFart = s.tempo;
+  /* HÅLL. Samma hjälp, tjugo sekunder. Gångarten ska ligga still. */
+  const foreHall = s.gangart;
+  kor({ skankel: 0.85, tygel: 0.20, sits: 0.2, styrning: 0 }, 20);
+  const efterHall = s.gangart, hallFart = s.tempo;
   kor({ skankel: 0.05, tygel: 0.80, sits: 0.85, styrning: 0 }, 25);  // parera ned
-  return { sedda, topp, toppFart, slut: s.gangart, glapp: RID_TILLSTAND.glapp };
+  return { sedda, topp, toppFart, impulser, foreHall, efterHall, hallFart,
+    slut: s.gangart, glapp: RID_TILLSTAND.glapp };
 });
-prova("ridkärnan: full skänkel tar ekipaget upp till galopp",
-  loop.topp === "galopp", `nådde ${loop.topp} vid ${loop.toppFart.toFixed(2)} m/s`);
+prova("ridkärnan: tre framåtimpulser tar ekipaget upp till galopp",
+  loop.topp === "galopp", `nådde ${loop.topp} vid ${loop.toppFart.toFixed(2)} m/s` +
+  ` — impulserna bad om ${loop.impulser.map(i => i.bad).join(" → ")}`);
+prova("ridkärnan: hästen BÄR gångarten — hållen hjälp klättrar inte vidare",
+  loop.foreHall === loop.efterHall,
+  `${loop.foreHall} före hållet, ${loop.efterHall} efter 20 s konstant hjälp (fart ${loop.hallFart.toFixed(2)} m/s)`);
 prova("ridkärnan: parering tar ekipaget ned till halt igen",
   loop.slut === "halt", `slutgångart ${loop.slut}`);
 prova("ridkärnan: inga överhoppade gångarter i någon riktning",

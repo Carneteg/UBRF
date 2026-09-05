@@ -64,18 +64,56 @@ const K={
   HH_FONSTER:0.45, HH_MIN_AMPLITUD:0.18, HH_COOLDOWN:1.2,
   BAS_STIGNING:0.55, BAS_FALL:0.95,
   SPANNING_STIGNING:1.10, SPANNING_FALL:0.42,
+  /* ── GRUNDHJÄLPEN ÄR EN CUE, INTE EN GASPEDAL (PO 2026-09-05) ──
+     Förut låg skänkeln som en konstant term ovanpå hästens egen norm:
+     `begäran = (skänkel − tygel·0,9)·3,2`. Etablerade du skritt och höll
+     kvar skänkeln hamnade målet över skrittens tak och hon travade iväg;
+     släppte du helt föll takten. Skritt gick alltså bara att hålla genom
+     att balansera skänkeln på ett exakt värde — en bilgas.
+
+     Nu ber en FRAMÅTDRIVANDE IMPULS om nästa gångart. Hästen bär den
+     därefter själv tills ryttaren ber om något annat: halvhalt, tygel
+     eller sits tar henne ner ett steg. Det som mäts är alltså ändringen
+     i hjälpen, inte dess nivå.
+
+     Trösklarna ligger över handens normala darr (mjukheten mäter samma
+     storhet med K.AMPLITUD_SKALA 0,22) så att en ostadig hand inte råkar
+     be om galopp. Spärren hindrar att en enda rörelse räknas två gånger
+     och ger övergången tid att bli klar innan nästa kan begäras. */
+  CUE_UPP:0.16, CUE_NER:0.13, CUE_SPARR:0.9, SITS_PARAD:0.78,
+  /* Kvar av den gamla termen: hjälpen får fortfarande variera tempot
+     INOM gångarten — det är skillnaden mellan en samlad och en utsträckt
+     skritt — men inte längre bära över ett gångartsband. Skrittens band
+     är 1,10 brett, så 0,6 räcker till nyans och inte till att byta. */
+  HALL_BAND:0.60,
 };
+/* Gångarterna i ordning. Cue:n stegar i den här listan, ett steg i taget. */
+const GANGORDNING=["halt","skritt","trav","galopp"];
 
 function nyState(dagsform,rang,sadellage){
   return {skala:Skala.tom(),spanning:0.15,tempo:0,gangart:"halt",steglangd:0,
+    /* Den gångart ryttaren senast BAD om. Hästen bär den tills hon ombeds
+       något annat; `gangart` är vad hon faktiskt går just nu, och de två
+       skiljer sig under en övergång. */
+    malGangart:"halt", cue:null, cueTid:-99, overgang:null, senasteOvergang:0,
     rang:rang??0.5,dagsform:dagsform??0.7,sadellage:sadellage??0.8,mjukhet:0.5,
-    _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_tid:0};
+    _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_tid:0,
+    _cueSparr:0,_overgangStart:-99};
 }
 
 function stepRide(s,a,h,ctx,dt){
   if(dt<=0)return s; s._tid+=dt;
   // mjukhet: amplitud mot glidande medel
-  if(!s._medel){s._medel={skankel:a.skankel,tygel:a.tygel,sits:a.sits,styrning:a.styrning};s._prev={...a};}
+  /* `_prev` sås med INGEN hjälp, inte med den första bildrutans hjälp.
+     Innan ryttaren lägger på skänkeln finns ingen skänkel, så en hjälp
+     som ligger på redan från början är en pålagd hjälp och ska räknas som
+     impuls. Såddes den med sig själv blev första bildrutans ändring noll
+     och en häst som satt still med full skänkel stod kvar för evigt.
+     Glidande medelvärdet sås däremot med den faktiska hjälpen — det
+     mäter handens darr, och där är utgångsläget inte noll utan det hon
+     håller. */
+  if(!s._medel){s._medel={skankel:a.skankel,tygel:a.tygel,sits:a.sits,styrning:a.styrning};
+    s._prev={skankel:0,tygel:0,sits:0,styrning:0,spo:false,lattridning:false,diagonal:0};}
   else{
     const m=s._medel,beta=clamp(dt/K.AIDS_TAU,0,1);
     const avvik=Math.abs(a.skankel-m.skankel)+Math.abs(a.tygel-m.tygel)
@@ -102,6 +140,45 @@ function stepRide(s,a,h,ctx,dt){
     }else{hh.t+=dt;
       if(hh.t>K.HH_FONSTER*((ctx.fard&&ctx.fard.hhFonster)||1)){hh.fas=0;hhKval=-0.35;}
       else if(dT<-0.02&&a.tygel<=p.tygel){hh.fas=0;s._senasteHH=s._tid;hhKval=hh.kval;}}}
+  }
+  /* ── CUE: ryttaren BER om en gångart, hästen bär den ──────────────
+     Uppåt av en framåtdrivande impuls — skänkeln ökar tydligt medan
+     tygeln inte håller emot. Nedåt av en fullbordad halvhalt, eller av
+     tygel eller sits som tas på. Halvhalten är den ridmässigt rätta
+     nedåtgående hjälpen och får därför gälla även när den är svag.
+
+     Spärren gör att en enda rörelse inte räknas två gånger, och att
+     hästen hinner göra klart övergången innan nästa kan begäras. */
+  {const p=s._prev;
+   s._cueSparr=Math.max(0,(s._cueSparr||0)-dt);
+   if(p&&s._cueSparr<=0){
+     const dK=a.skankel-p.skankel, dT=a.tygel-p.tygel, dS=a.sits-p.sits;
+     let i=GANGORDNING.indexOf(s.malGangart||s.gangart); if(i<0)i=0;
+     let cue=null;
+     /* ASYMMETRIN ÄR AVSIKTLIG, och den är ridmässig.
+
+        UPPÅT krävs en NY impuls varje gång. En hållen skänkel är inte en
+        fortsatt begäran om mer fart — man rider framåt med skänkeln på
+        utan att hästen accelererar. Det var precis den gaspedalen
+        beslutet tog bort.
+
+        NEDÅT räcker det att den starka hjälpen LIGGER KVAR. En tygel som
+        hålls an är en fortsatt begäran om att komma tillbaka, och en
+        parad från galopp till halt är en sammanhängande hjälp, inte tre
+        separata ryck. En lätt halvhalt ger däremot ett steg och sedan
+        inget mer — den är en impuls till sin natur. */
+     const hallerAn=a.tygel>=K.TYGEL_BAND_MAX||a.sits>=K.SITS_PARAD;
+     if(dK>=K.CUE_UPP&&a.tygel<=K.TYGEL_BAND_MAX&&i<GANGORDNING.length-1){
+       i++; cue="framåt";
+     }else if((hhKval>0||dT>=K.CUE_NER||dS>=K.CUE_NER||hallerAn)&&i>0){
+       i--; cue=hhKval>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
+     }
+     if(cue){
+       s.malGangart=GANGORDNING[i]; s.cue=cue; s.cueTid=s._tid;
+       s._cueSparr=K.CUE_SPARR; s._overgangStart=s._tid;
+       s.overgang={fran:s.gangart,till:s.malGangart,klar:false};
+     }
+   }
   }
   // spänning
   {const kf=0.55+0.9*h.kanslighet;let press=0;
@@ -140,15 +217,29 @@ function stepRide(s,a,h,ctx,dt){
    const t=s._tid;
    const vandring=D.glid*(0.62*Math.sin(t*0.41)+0.38*Math.sin(t*0.97+1.3))
      + D.ryck*Math.max(0,Math.sin(t*0.23+2.1))**6;
-   const eget=g.norm*(0.80+0.40*h.framatbjudning)+vandring*(g.norm>0?1:0);
-   const begaran=(a.skankel-a.tygel*0.9)*3.2;
+   /* Hästen bär den gångart hon senast ombads, inte den hon råkar ha.
+      Det är skillnaden mot förr: `eget` läste `s.gangart`, så tempot
+      hade ingen minneskälla utom sig självt och föll tillbaka så fort
+      hjälpen släpptes. */
+   const gm=Gait.G[s.malGangart]||g;
+   const eget=gm.norm*(0.80+0.40*h.framatbjudning)+vandring*(gm.norm>0?1:0);
+   /* Hjälpen nyanserar INOM gångarten — samlad eller utsträckt skritt —
+      men bär inte längre över ett band. Se K.HALL_BAND. */
+   const begaran=(a.skankel-a.tygel*0.9)*K.HALL_BAND;
    const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
    /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
       omöjlig, hon kräver att du ber tydligare och håller kvar. */
    const tr=(1.6+1.4*h.tyngd)*D.tröghet;
    s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
    s._avdrift=vandring;
+   const forra=s.gangart;
    s.gangart=Gait.forTempo(s.tempo,s.gangart);
+   /* ÖVERGÅNGSTIDEN: från att ryttaren bad till att hästen faktiskt går
+      i den gångarten. Det är måttet G02-B/C ska kunna bygga på, och det
+      enda som säger om en övergång var mjuk eller ryckig. */
+   if(s.gangart!==forra&&s.overgang&&!s.overgang.klar&&s.gangart===s.malGangart){
+     s.overgang.klar=true; s.senasteOvergang=s._tid-s._overgangStart;
+   }
    s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
   }
   // målvärden
