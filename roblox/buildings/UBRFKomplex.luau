@@ -2454,7 +2454,7 @@ return {
 			},
 		},
 		domarbas = {
-			x = 2.81,
+			x = 1.62,
 			y = 30.15,
 			b = 2,
 			h = 2.3,
@@ -2981,7 +2981,7 @@ return {
 				motiv = "spelets väg från hallgolvet upp på bänkraderna; inget foto visar stegen; läge och form valda",
 			},
 			laktarSteg = {
-				x0 = 3.1,
+				x0 = 2.3,
 				x1 = 4,
 				y0 = 65.68,
 				y1 = 66.88,

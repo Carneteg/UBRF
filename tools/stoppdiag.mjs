@@ -204,8 +204,14 @@ for (const mobil of [false, true]) {
     const FORBI = 28;
     const langs = await rakt(-Math.PI / 2, 60000);
     const kvar = langs.z >= F.laktare.z - 0.02;
+    /* KRAVET ÄR ATT KOMMA FÖRBI BÅSET, inte att aldrig stanna. Först stod
+       `slut !== "STOPP"` med, och när fixen väl satt gick figuren hela
+       däcket ut och stannade mot dess södra ände på y 0,5 — ett STOPP som
+       betyder att hon gått klart. Kravet y <= 28 bär ensamt: båset ligger
+       på y 29,15–31,15, så ingen som stoppas av det kan nå 28. Provet blir
+       alltså inte svagare av att raden tas bort, bara sant. */
     prova(`${namn}: kan gå VIDARE LÄNGS däcket förbi domarbåset`,
-      langs.slut !== "STOPP" && kvar && langs.y <= FORBI,
+      kvar && langs.y <= FORBI,
       `från (${upp.x}, ${upp.y}) → (${langs.x}, ${langs.y}) z ${langs.z} · ${langs.slut}` +
       ` · däcket går y ${F.laktare.y0}–${F.laktare.y1}, krav y ≤ ${FORBI}, nådde y ${langs.y}`);
     if (langs.slut === "STOPP") await dumpa(langs, "STOPP LÄNGS DÄCKET:");

@@ -2257,7 +2257,22 @@ const SPELABSTRAKTIONER = {
      FRÅN x0 i positiv x-led, åt båda hållen — mitt första försök vände
      tecknet och la båset 2 m utanför däcket. Speglingsprovet fällde det. */
   if(R.domarbas){
-    R.domarbas.x = R.laktare.x0+D*0.65;
+    /* PLACERINGEN TVÄRS DÄCKET, efter PO-beslutet 2026-09-05. Faktorn var
+       0,65, vilket la båset på x 1,81–3,81 av ett däck som slutar 4,0 —
+       0,19 m fri gångbräda kvar, och figuren behöver 0,70. Läktargången
+       var alltså helt stängd, och det var det PO fastnade mot.
+
+       Källkontroll (INTERIOR-MATRIS.md § 7): matrisen har INGEN rad om
+       båsets bredd och ingen om dess läge tvärs däcket. Verifierat är att
+       båset står PÅ läktaren, mitt på långsidan mellan E och H, med
+       trappa, räcke och grön skylt — allt det behålls. Både `b` och den
+       här faktorn är [ASSUMPTION], och framkomlighet väger tyngre än en
+       härledd placering utan stöd.
+
+       0,30 lägger båset mot läktarens bakkant och lämnar 1,38 m fri
+       gångbräda — 0,70 m spelrum för figurens mittpunkt, samma
+       storleksordning som den breddade uppgången. */
+    R.domarbas.x = R.laktare.x0+D*0.30;
     /* Båset vid E: dressyrlayoutens mitt, 30 m från A. */
     R.domarbas.y = R.dressyr.y+R.dressyr.h/2;
   }
@@ -2392,8 +2407,23 @@ const SPELABSTRAKTIONER = {
 
           Ingen ny geometri, samma abstraktion, inget källbelagt flyttat.
           Däckets långsida spärrar fortfarande — man går upp vid gaveln. */
+       /* BREDDEN, efter PO-beslutet 2026-09-05: uppgången ska tåla normal
+          spelarrörelse, inte kräva perfekt linjering. Gångbrädans 0,9 m
+          gav 0,2 m spelrum för en figur med radie 0,35 — och en
+          intermittent CI-röd som bevisade att det inte räcker: vägsökningen
+          siktade x 3,3, figuren hamnade på 3,1 och kom inte upp.
+
+          Rampen går därför ända in till FÖRSTA BÄNKRADEN. Bredare än så
+          bär inte: nivåregeln tillåter 0,36 m per steg, och rampens topp
+          ligger på dackZ 0,80. Rad 1 ligger på 1,10 — ett steg på 0,30,
+          som går. Rad 2 ligger på 1,40, ett steg på 0,60, som spärras.
+          Rad 1:s inre kant är alltså den bredaste ramp som landar gångbart
+          över hela sin bredd, och den räknas fram ur radernas egen regel
+          i stället för att skrivas som ett tal. */
+       const rad1=(typeof laktarRader==="function")?laktarRader(L)[0]:null;
+       const inatMax=rad1?rad1.in1:L.gangbrada.djup;   // 1,7 m i stället för 0,9
        const ls=SPELABSTRAKTIONER.ridhus.laktarSteg;
-       ls.x0=L.x0+L.dackDjup-L.gangbrada.djup; ls.x1=L.x0+L.dackDjup;
+       ls.x0=L.x0+L.dackDjup-inatMax; ls.x1=L.x0+L.dackDjup;
        ls.y0=L.y1; ls.y1=L.y1+1.2;
        ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
      }}
