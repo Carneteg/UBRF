@@ -158,6 +158,14 @@ RidKanon.HJALP_FALT = { "bojSida", "innerTygel", "parad", "sits", "skankel", "st
 --[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]
 RidKanon.HJALP_HARLEDDA = { "innerTygel", "vikt", "ytterTygel", "ytterstod" }
 
+--[[ KONTRAKTET G02-C LÄSER (G02-B punkt 5).
+
+     Telemetrin ska exponera BÅDE hjälpen och responsen, och en
+     läsare måste kunna se vilka fält som är vad. HJALP_FALT är vad
+     ryttaren gör, SVAR_FALT vad hästen svarar. Listorna kommer ur
+     webbens moduler, inte ur en handskriven uppräkning. ]]
+RidKanon.SVAR_FALT = { "balans", "energi", "fokus", "mjukhet", "paradAlder", "paradKvalitet", "spanning", "svarAlder", "svarstid" }
+
 --[[ HÄSTENS SVAR (G02-B punkt 2, src/riding/svar.js).
 
      Fördröjning, fokus, balans och energi som riktiga storheter. Webben

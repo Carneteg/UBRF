@@ -37,6 +37,14 @@ Telemetri.FALT = RidKanon.TELEMETRI_FALT
 --[[ Fält som är härledda, inte mätta. Speglar webbens `_harledda`. ]]
 Telemetri.HARLEDDA = RidKanon.HARLEDDA
 
+--[[ KONTRAKTET G02-C LÄSER (G02-B punkt 5). `HJALP_FALT` är vad ryttaren
+     gör, `SVAR_FALT` vad hästen svarar. Indelningen kommer ur kanonen,
+     alltså ur webbens moduler — inte ur en handskriven uppräkning här.
+     En läsare som vill veta "vad bad ryttaren om, och vad gjorde hon av
+     det" behöver inte gissa vilka fält som är vilka. ]]
+Telemetri.HJALP_FALT = RidKanon.HJALP_FALT
+Telemetri.SVAR_FALT = RidKanon.SVAR_FALT
+
 --[[ Fält utan källa på Roblox ännu. Deklarerad lucka, inte en bugg som
      ska tystas: paritetsspecen kräver att listan stämmer exakt, så ett
      nytt hål blir rött och ett igenfyllt hål tvingar fram en ändring här. ]]

@@ -580,6 +580,68 @@ do
 		#tysta == 0, table.concat(tysta, ", "))
 end
 
+--[[ ══ KONTRAKTET G02-C LÄSER (G02-B punkt 5) ══════════════════════
+
+     Ordern: telemetrin ska exponera BÅDE hjälpen och responsen. Att
+     fälten finns räcker inte — en läsare måste kunna se vilka som är
+     vad, annars får den gissa, och en gissning i ett kontrakt är en bugg
+     som väntar.
+
+     Provet är därför strukturellt och inte en uppräkning: varje
+     svarsfält ska finnas i telemetrikontraktet, ingen hjälp ska stå som
+     svar eller tvärtom, och båda ytorna ska dela samma indelning. ]]
+do
+	local iKontrakt = {}
+	for _, namn in RidKanon.TELEMETRI_FALT do iKontrakt[namn] = true end
+
+	local utanfor = {}
+	for _, namn in RidKanon.SVAR_FALT do
+		if not iKontrakt[namn] then table.insert(utanfor, namn) end
+	end
+	check("varje svarsfält finns i telemetrikontraktet",
+		#utanfor == 0 and #RidKanon.SVAR_FALT >= 6,
+		string.format("(%d svarsfält: %s)", #RidKanon.SVAR_FALT,
+			table.concat(RidKanon.SVAR_FALT, ", ")))
+
+	--[[ Och att de två listorna inte överlappar. Ett fält som är både
+	     hjälp och svar betyder att någon av de två är felmärkt, och då
+	     kan G02-C inte läsa "vad bad ryttaren om" mot "vad gjorde hon av
+	     det" — vilket är hela poängen med indelningen. ]]
+	local iSvar = {}
+	for _, namn in RidKanon.SVAR_FALT do iSvar[namn] = true end
+	local dubbla = {}
+	for _, namn in RidKanon.HJALP_FALT do
+		if iSvar[namn] then table.insert(dubbla, namn) end
+	end
+	check("hjälp och svar är två skilda listor, inte en med överlapp",
+		#dubbla == 0, table.concat(dubbla, ", "))
+
+	check("Roblox läser samma indelning som webben, inte en egen",
+		Telemetri.SVAR_FALT == RidKanon.SVAR_FALT
+			and Telemetri.HJALP_FALT == RidKanon.HJALP_FALT,
+		string.format("(%d hjälpfält, %d svarsfält)",
+			#Telemetri.HJALP_FALT, #Telemetri.SVAR_FALT))
+
+	--[[ Varje svarsfält ska ha en källa på Roblox ELLER stå i
+	     Telemetri.SAKNAS. Ett svarsfält som varken fylls eller är
+	     deklarerat är ett tyst hål i just det kontrakt G02-C ska bygga
+	     på, och det är den värsta sorten. ]]
+	local deklarerat = {}
+	for _, namn in Telemetri.SAKNAS do deklarerat[namn] = true end
+	local r2 = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+	local prov = Telemetri.las(r2, { gait = "trot", targetGait = "trot",
+		beddGangart = "trot", speed = 3.2, turnRate = 0.3, phase = 0.2, tid = 2,
+		balans = 0.9, energi = 0.8, svarstid = 0.15, svarTid = 1.8,
+		paradKvalitet = 0.7, paradTid = 1.7 }, 0.1,
+		Hjalper.semantik({ skankel = 0.6, tygel = 0.4, styrning = 0.3 }))
+	local tysta = {}
+	for _, namn in RidKanon.SVAR_FALT do
+		if prov[namn] == nil and not deklarerat[namn] then table.insert(tysta, namn) end
+	end
+	check("varje svarsfält fylls på Roblox eller är deklarerat som saknat",
+		#tysta == 0, table.concat(tysta, ", "))
+end
+
 beslut("LUCKA", "fokus, mjukhet och spänning saknar källa på Roblox",
 	#Telemetri.SAKNAS == 3,
 	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — hemmet är G02-C)")

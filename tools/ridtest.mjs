@@ -25,6 +25,16 @@ await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
 await page.waitForTimeout(1500);
 const resultat = [];
 const prova = (namn, ok, detalj) => { resultat.push({ namn, ok }); console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); };
+/* Formatterare som TÅL ett saknat fält.
+
+   Ett prov ska bli RÖTT när ett kontraktsfält försvinner — inte krascha
+   hela sviten på `undefined.toFixed()` innan de senare proven ens körts.
+   Uppmätt under falsifieringen 2026-09-05: att ta bort `svarstid` ur
+   telemetrin stoppade körningen vid prov 43 av 62, och de nitton därefter
+   sa ingenting alls. Rött blev det, men av fel skäl och utan att peka på
+   vad som saknades. */
+const nf = (v, d = 3) => (typeof v === "number" && Number.isFinite(v)) ? v.toFixed(d) : "—";
+
 /* Mätvärde utan krav. Används där talet ska SYNAS i en körning men var
    gränsen går är game feel och alltså Tobias sak, inte mitt. */
 const mat = (namn, detalj) => console.log("  mät ", namn, "—", detalj);
@@ -468,8 +478,8 @@ prova("kontroll först: fördröjningen skjuter svaret i tid, den tappar aldrig 
 prova("fördröjningen är verklig och mäts utifrån: bedd gångart före buren",
   svar.klocka.klockad !== null && Math.abs(svar.klocka.klockad - svar.klocka.redovisad) < 0.02 &&
   svar.klocka.telemetri === svar.klocka.redovisad,
-  `klockad ${svar.klocka.klockad.toFixed(3)} s mot redovisad ${svar.klocka.redovisad.toFixed(3)} s, ` +
-  `telemetrin visar ${svar.klocka.telemetri.toFixed(3)} s`);
+  `klockad ${nf(svar.klocka.klockad)} s mot redovisad ${nf(svar.klocka.redovisad)} s, ` +
+  `telemetrin visar ${nf(svar.klocka.telemetri)} s`);
 prova("en välriden parad får snabbare svar än en slarvig",
   svar.bra.svarstid < svar.slarv.svarstid - 0.02 &&
   svar.bra.kval > svar.slarv.kval,
@@ -606,6 +616,70 @@ const prof = await page.evaluate(() => {
     `${prof.medKalla} hästar med källtext, ${prof.utanKalla} utan (och de ligger kvar på ` +
     `utgångsläget), profiler i bruk: ${prof.anvanda.join(", ")}`);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   G02-B PUNKT 5 — KONTRAKTET G02-C LÄSER (issue #83)
+
+   "Telemetri som exponerar både hjälp och respons." Att fälten finns
+   räcker inte: en läsare måste kunna se VILKA fält som är vad, annars
+   får den gissa, och en gissning i ett kontrakt är en bugg som väntar.
+
+   Provet läser den LEVANDE ritten — samma telemetri spelet självt
+   skriver varje bildruta — och kräver att både hjälpen och svaret finns
+   där med riktiga värden, inte bara som nycklar.
+   ══════════════════════════════════════════════════════════════════ */
+const kontraktG02C = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  const dt = 1 / 60;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp();
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+    RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
+  /* En riktig liten ritt: upp i trav, en parad, och en volt med kontakt —
+     så att varje fält har hunnit få ett värde av något som hänt. */
+  kor({ skankel: 1 }, 1.5); kor({}, 1.0); kor({ skankel: 1 }, 1.5); kor({}, 1.5);
+  kor({ skankel: 0.7, tygel: 0.25, parad: 1 }, 0.3);
+  kor({ skankel: 0.7, tygel: 0.25 }, 1.5);
+  kor({ skankel: 0.6, tygel: 0.4, styr: 0.8 }, 6);
+  const tm = G.telemetri;
+  const hjalpFalt = tm._hjalpFalt, svarFalt = tm._svarFalt;
+  /* Överlapp: ett fält som är både hjälp och svar betyder att någon av de
+     två är felmärkt, och då kan G02-C inte läsa "vad bad ryttaren om" mot
+     "vad gjorde hon av det". */
+  const dubbla = hjalpFalt.filter(n => svarFalt.includes(n));
+  const svarUtanVarde = svarFalt.filter(n => tm[n] === undefined);
+  const hjalpUtanVarde = hjalpFalt.filter(n => !tm.hjalper || tm.hjalper[n] === undefined);
+  return { hjalpFalt, svarFalt, dubbla, svarUtanVarde, hjalpUtanVarde,
+    harledda: tm._harledda,
+    prov: { bedd: tm.beddGangart, gangart: tm.gangart, cue: tm.cue,
+      stod: tm.hjalper.ytterstod, balans: tm.balans, fokus: tm.fokus,
+      energi: tm.energi, svarstid: tm.svarstid, paradKval: tm.paradKvalitet } };
+});
+prova("telemetrin skiljer på HJÄLPEN och SVARET, och båda har riktiga värden",
+  kontraktG02C.dubbla.length === 0 &&
+  kontraktG02C.svarUtanVarde.length === 0 &&
+  kontraktG02C.hjalpUtanVarde.length === 0 &&
+  kontraktG02C.hjalpFalt.length >= 8 && kontraktG02C.svarFalt.length >= 6,
+  `${kontraktG02C.hjalpFalt.length} hjälpfält och ${kontraktG02C.svarFalt.length} ` +
+  `svarsfält` +
+  (kontraktG02C.dubbla.length ? `, ÖVERLAPP: ${kontraktG02C.dubbla.join(", ")}` : ", inget överlapp") +
+  (kontraktG02C.svarUtanVarde.length ? `, SVAR UTAN VÄRDE: ${kontraktG02C.svarUtanVarde.join(", ")}` : "") +
+  (kontraktG02C.hjalpUtanVarde.length ? `, HJÄLP UTAN VÄRDE: ${kontraktG02C.hjalpUtanVarde.join(", ")}` : "") +
+  (kontraktG02C.dubbla.length + kontraktG02C.svarUtanVarde.length
+    + kontraktG02C.hjalpUtanVarde.length === 0 ? ", alla ifyllda ur den levande ritten" : ""));
+prova("och kontraktet räcker för att läsa en hjälp mot dess svar",
+  kontraktG02C.prov.bedd !== undefined && kontraktG02C.prov.cue !== null &&
+  kontraktG02C.prov.stod < 1 && kontraktG02C.prov.balans < 1 &&
+  kontraktG02C.prov.svarstid > 0 && kontraktG02C.prov.paradKval > 0 &&
+  kontraktG02C.prov.fokus !== undefined && kontraktG02C.prov.energi !== undefined &&
+  kontraktG02C.harledda.length === 0,
+  `bad ${kontraktG02C.prov.bedd} · går ${kontraktG02C.prov.gangart} · cue ` +
+  `${kontraktG02C.prov.cue} · yttertygelstöd ${nf(kontraktG02C.prov.stod, 2)} → ` +
+  `balans ${nf(kontraktG02C.prov.balans)} · svarstid ` +
+  `${nf(kontraktG02C.prov.svarstid)} s · paradkvalitet ` +
+  `${nf(kontraktG02C.prov.paradKval, 2)} · fokus ${nf(kontraktG02C.prov.fokus)} · ` +
+  `energi ${nf(kontraktG02C.prov.energi)} · härledda ${JSON.stringify(kontraktG02C.harledda)}`);
 
 /* Och att nollställningen verkligen är inkopplad där ritten börjar.
    Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se

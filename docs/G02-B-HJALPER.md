@@ -3,7 +3,10 @@
 Issue #83. Arbetsdokument för gaten: acceptance contract, checkpointer,
 mätvärden och kvarstående luckor. Uppdateras vid varje checkpoint.
 
-**Status:** `IMPLEMENTING` (checkpoint 4 av 5 pushad)
+**Status:** `READY_FOR_CHATGPT_REVIEW` (alla fem checkpointer pushade)
+
+Det är den högsta status Claude får sätta. `READY_FOR_PRODUCT_ACCEPTANCE`
+sätts av ChatGPT efter oberoende review; `PRODUCT_ACCEPTED` bara av Tobias.
 
 Claude sätter aldrig `APPROVED`, `ACCEPTED`, `DONE` eller
 `PRODUCT_ACCEPTED` här. Högsta status Claude får sätta är
@@ -107,8 +110,8 @@ inte säga att skillnaden känns rätt.
 | 1 | Semantiska hjälper: inner-/yttertygel, vikt, paraden som egen signal | pushad `9540e0c` |
 | 2 | Hästens svar: fördröjning, känslighet, balans, fokus, spänning, energi | pushad `ca853a3` |
 | 3 | Minst tre datadrivna skolhästprofiler | pushad `bc77fbb` |
-| 4 | Roblox: hjälplagret och profilerna till paritet | pushad |
-| 5 | Telemetri, dokumentation, falsifieringsprotokoll | ej påbörjad |
+| 4 | Roblox: hjälplagret och profilerna till paritet | pushad `8171f3b` |
+| 5 | Telemetri, dokumentation, falsifieringsprotokoll | pushad |
 
 ---
 
@@ -520,3 +523,141 @@ faller, inte bara ett prov.
   F är ett val, inte ett faktum — `E` är upptagen av sitt upp/av sedan
   Gate 01. Human gate.
 - **Om den analoga tygeln på avtryckaren känns bättre än en knapp.**
+
+---
+
+## 7. Checkpoint 5 — kontraktet G02-C läser
+
+### Vad som byggdes
+
+Ordern punkt 5: *"Telemetri som exponerar både hjälp och respons."* Att
+fälten finns räcker inte — en läsare måste kunna se **vilka fält som är
+vad**, annars får den gissa, och en gissning i ett kontrakt är en bugg
+som väntar.
+
+Telemetrin publicerar därför indelningen som data:
+
+- `_hjalpFalt` / `RidKanon.HJALP_FALT` — vad ryttaren gör (10 fält)
+- `_svarFalt` / `RidKanon.SVAR_FALT` — vad hästen svarar (9 fält)
+
+Listorna kommer ur modulerna själva, inte ur en handskriven uppräkning,
+och exporteras till Roblox där paritetsspecen provar att båda ytorna
+publicerar **samma** indelning.
+
+### Provet är strukturellt, inte en uppräkning
+
+Fyra påståenden på var sin yta:
+
+- varje svarsfält finns i telemetrikontraktet,
+- hjälp och svar är två **skilda** listor — inget fält får vara båda,
+- Roblox läser samma indelning som webben, inte en egen,
+- varje svarsfält fylls, eller står i `Telemetri.SAKNAS`.
+
+På webben körs det mot den **levande ritten** — samma telemetri spelet
+självt skriver varje bildruta, efter en riktig liten ritt med uppgång,
+parad och volt:
+
+> bad `skritt` · går `skritt` · cue `halvhalt` · yttertygelstöd 0,78 →
+> balans 0,922 · svarstid 0,152 s · paradkvalitet 0,93 · fokus 0,802 ·
+> energi 0,834 · inga härledda fält
+
+Det är raden G02-C ska kunna läsa: **vad ryttaren bad om, och vad hästen
+gjorde av det.**
+
+### Ett fel i själva provharnesket, rättat
+
+Falsifieringen avslöjade en svaghet i `ridtest.mjs`: att ta bort
+`svarstid` ur telemetrin fick sviten att **krascha** på
+`undefined.toFixed()` vid prov 43 av 62, i stället för att bli röd. Rött
+blev det — exitkoden — men utan att peka på vad som saknades, och de
+nitton proven därefter sa ingenting alls.
+
+Nu formaterar `nf()` ett saknat fält som `—`, och samma mutation ger tre
+tydliga rader som namnger fältet:
+
+    FEL  fördröjningen är verklig … telemetrin visar — s
+    FEL  telemetrin skiljer på HJÄLPEN och SVARET … SVAR UTAN VÄRDE: svarstid
+    FEL  och kontraktet räcker … svarstid — s
+
+---
+
+## 8. Falsifieringsprotokoll — hela G02-B
+
+Varje garanti i den här gaten har en mutation som gör den röd. Det är
+kravet i `docs/DELIVERY-PROTOCOL.md`: ett prov som aldrig visats kunna
+falla är otillräcklig evidens.
+
+| # | Mutation | Prov som föll |
+|---|----------|---------------|
+| 1 | Paraden knuffar axlarna igen (gamla envelopen) | axlarna rörde sig 0,260 / 0,270 / 0,280 |
+| 2 | `stegaInput` returnerar ingen parad | kanal, verkan och kvalitet |
+| 3 | `paradKvalitet()` returnerar en konstant | slarvig parad fick 1,00 |
+| 4 | `YTTER_SLAPP` = 0 | stöd 0,53 / 0,89 i stället för 0,40 / 0,67 |
+| 5 | Stödet tas ur `mal.rakriktning` | **ordningen vänder**: 0,609 → 0,597 |
+| 6 | Kanonens `TYGEL_NEUTRAL` glider från modellens | dublettvakten |
+| 7 | Ingen fördröjning alls | kontroll, samordning och energi |
+| 8 | `SVAR_KLAR` = 0 | parader fick samma svar (0,238 / 0,241 s) |
+| 9 | `ENERGI_TAPP` = 0 | energi 0,837 → 0,837 |
+| 10 | `FOKUS_PARAD` = 0 | fokus 0,797 → 0,791 |
+| 11 | `INFALL_MAX` = 0 | båda volterna 3,38 m |
+| 12 | `BALANS_YTTER` = 0 | balans 1,000 i båda volterna |
+| 13 | Telemetrin räknar balans/fokus själv igen | talen skilde sig från modellens |
+| 14 | Väntan konsumeras aldrig | **åtta prov**, bland dem "1 hjälp, 0 svar" |
+| 15 | Alla profiler blir 1,00 rakt igenom | kloner och riktiga hästar |
+| 16 | `svarProfil()` ger alltid `skolhast` | samma två |
+| 17 | En häst får profil utan källtext | källkedjeprovet |
+| 18 | En profil får ett eget fält | strukturprovet |
+| 19 | Roblox räknar yttertygelstödet på sitt eget vis | hjälpsemantiken (5,7 · 10⁻²) |
+| 20 | Profilen läses inte på Roblox | svarstid, balans och energitakt |
+| 21 | Svaret går till fel gångart | **17 prov** i movement.spec |
+| 22 | `INFALL_MAX` = 0 på Roblox | båda volterna 2,38 m |
+| 23 | Energin dras inte på Roblox | 1,000 → 1,000 på åtta minuter |
+| 24 | Pekskärmens tygel blir en impuls | tygeln HÅLLS-provet |
+| 25 | Paraden blir hållbar | 30 extra bildrutor |
+| 26 | Hjälp och svar slås ihop till en lista | ÖVERLAPP: `tygel` |
+| 27 | Ett svarsfält publiceras inte | tre prov namnger `svarstid` |
+
+### Fyra fel av mina egna, hittade av falsifieringen och rättade
+
+1. **Tydlighet mätt som impulsens storlek gick inte att göra röd.** Genom
+   det riktiga inputlagret faller cue:n på första bildrutan rampen
+   passerar tröskeln, och rampen går lika fort oavsett hur långt
+   tangenten trycks. Termen hade varit en konstant förklädd till ett
+   mätvärde. Tydlighet är i stället **samordning**.
+2. **Kontroll-först-provet var grönt utan att ha sett efter.** Det körde
+   i 0,35-sekundersklumpar, så väntefönstret var passerat när provet
+   tittade — bandkontrollen blev sann av att ingenting mätts (min 9, max
+   0 mot bandet 0,06–0,48).
+3. **Yttertygelstödet lästes efter svängen** i Roblox-provet, där
+   styrutslaget är noll och stödet därför 1 för båda ritterna. Provet
+   var grönt av att mäta fel ögonblick.
+4. **`ridtest.mjs` kraschade i stället för att bli röd** när ett
+   kontraktsfält togs bort. Se checkpoint 5.
+
+---
+
+## 9. Vad som återstår, och var det hör hemma
+
+| Öppet | Hem |
+|-------|-----|
+| `mjukhet` och `spanning` saknar källa på Roblox | G02-C |
+| `fokus` följer av de två | G02-C |
+| Sitsen finns inte som axel på Roblox (Shift/Ctrl är gångartsknappar) | eget inputbeslut |
+| Samlingens dynamik (faller 0,16/bildruta) är Gate 01:s | eget beslut |
+| Inner-/yttertygel som två riktiga axlar i stället för en härledning | eget inputbeslut |
+| 17 hästar utan källtext ligger på `skolhast` | ny evidens från Tobias |
+
+## 10. Vad som kräver Tobias PASS
+
+Automatiken kan visa att storheterna finns, hänger ihop och skiljer sig
+mätbart. Den kan inte säga att de känns rätt. Fyra saker är därför human
+gate:
+
+1. **Fördröjningen.** 0,14–0,17 s för en pigg häst, upp mot 0,22 s för en
+   trött. Det är den mest kännbara ändringen i hela gaten.
+2. **Infallet.** Att hästen alls får avvika från den båge ryttaren bad
+   om. Avstängbart med `SVAR_KANON.INFALL_MAX = 0`, utan annan kod.
+3. **Om de fyra profilerna känns som fyra olika hästar** — inte bara
+   mäter olika.
+4. **`Q` och `F` som Roblox-tangenter** för tygel och halvhalt. `E` är
+   upptagen av sitt upp/av sedan Gate 01.

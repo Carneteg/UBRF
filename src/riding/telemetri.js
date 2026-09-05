@@ -69,6 +69,12 @@ function ridFoljGangart(gangart) {
   return gangart;
 }
 
+/* HÄSTENS SVAR — de fält i telemetrin som beskriver vad hon GÖR av
+   hjälpen, till skillnad från `hjalper`, som är vad ryttaren gör.
+   Indelningen är kontraktet G02-C bygger på. */
+const RID_SVAR_FALT = ["balans", "energi", "fokus", "spanning", "mjukhet",
+  "svarstid", "svarAlder", "paradKvalitet", "paradAlder"];
+
 /* TELEMETRIN. `ride` är RideModel-tillståndet (nyState/stepRide), `aids`
    de utjämnade hjälpvärdena, `extra` det som bara den körande scenen
    känner till: kurvatur, gångartsfas och önskat tempo.
@@ -153,6 +159,18 @@ function ridTelemetri(ride, aids, extra) {
        modellen. Fältet står kvar som kontrakt — nästa härledda storhet
        ska deklareras här och inte smygas in som ett mätvärde. */
     _harledda: [],
+    /* ── KONTRAKTET G02-C LÄSER (G02-B punkt 5) ──────────────────────
+       Ordern säger att telemetrin ska exponera BÅDE hjälpen och
+       responsen. Fältnamnen räcker inte: en läsare måste kunna se VILKA
+       fält som är vad, annars får den gissa, och en gissning i ett
+       kontrakt är en bugg som väntar.
+
+       `_hjalpFalt` är vad ryttaren gör, `_svarFalt` vad hästen svarar.
+       Listorna kommer ur modulerna själva, inte ur en handskriven
+       uppräkning, och exporteras till Roblox där paritetsspecen provar
+       att båda ytorna publicerar samma indelning. */
+    _hjalpFalt: (typeof HJALP_FALT !== "undefined") ? HJALP_FALT.slice() : [],
+    _svarFalt: RID_SVAR_FALT.slice(),
   };
 }
 

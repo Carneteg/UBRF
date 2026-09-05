@@ -66,12 +66,15 @@ function telemetriFalt() {
   ride.gangart = "trav"; ride.tempo = 3.2; ride.steglangd = 2.2;
   const tm = ctx.ridTelemetri(ride, { skankel: 0.5, tygel: 0.4, sits: 0.5, styrning: 0 },
     { kappa: 0.1, fas: 0.25 });
-  return { falt: Object.keys(tm).filter(k => k !== "_harledda" && k !== "hjalpHarledda").sort(),
+  return { falt: Object.keys(tm)
+             .filter(k => !k.startsWith("_") && k !== "hjalpHarledda").sort(),
            harledda: tm._harledda.slice().sort(),
            /* Hjälpernas fältnamn läses ur SAMMA anrop, inte ur listan de
               påstår sig följa — då kan HJALP_FALT inte hamna i osynk med
               det hjalpSemantik faktiskt returnerar. */
-           hjalpFalt: Object.keys(tm.hjalper).sort() };
+           hjalpFalt: Object.keys(tm.hjalper).sort(),
+           /* Indelningen hjälp/svar läses ur samma anrop som fälten. */
+           svarFalt: tm._svarFalt.slice().sort() };
 }
 
 const tal = v => {
@@ -137,7 +140,7 @@ function kameralagen() {
   return ut;
 }
 
-const { falt, harledda, hjalpFalt } = telemetriFalt();
+const { falt, harledda, hjalpFalt, svarFalt } = telemetriFalt();
 const styr = styrkanon();
 const kam = kameralagen();
 const trosklar = mataTrosklar();
@@ -285,6 +288,14 @@ rader.push("RidKanon.HJALP_FALT = { " + hjalpFalt.map(str).join(", ") + " }");
 rader.push("");
 rader.push("--[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]");
 rader.push("RidKanon.HJALP_HARLEDDA = { " + HJALP_HARLEDDA.slice().sort().map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ KONTRAKTET G02-C LÄSER (G02-B punkt 5).");
+rader.push("");
+rader.push("     Telemetrin ska exponera BÅDE hjälpen och responsen, och en");
+rader.push("     läsare måste kunna se vilka fält som är vad. HJALP_FALT är vad");
+rader.push("     ryttaren gör, SVAR_FALT vad hästen svarar. Listorna kommer ur");
+rader.push("     webbens moduler, inte ur en handskriven uppräkning. ]]");
+rader.push("RidKanon.SVAR_FALT = { " + svarFalt.map(str).join(", ") + " }");
 rader.push("");
 rader.push("--[[ HÄSTENS SVAR (G02-B punkt 2, src/riding/svar.js).");
 rader.push("");
