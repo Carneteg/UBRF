@@ -395,16 +395,28 @@ do
 	upToGait(mcv, 2)
 	runMoving(mcv, 1.5, { forward = 1, steer = -1 })
 	local forra, storst, dt = rigYaw(mcv), 0, 1 / 60
-	local passerade = false
+	local start = mcv.curvature
+	local minsta = math.abs(start)
 	for _ = 1, math.floor(3.0 / dt) do
-		local innan = mcv.loco.turnRate
 		runMoving(mcv, dt, { forward = 1, steer = 1 }, dt)
-		if innan * mcv.loco.turnRate < 0 then passerade = true end
+		minsta = math.min(minsta, math.abs(mcv.curvature))
 		local nu = rigYaw(mcv)
 		storst = math.max(storst, math.abs(vinkelDiff(nu, forra)))
 		forra = nu
 	end
-	check("vänster → höger passerar faktiskt genom neutralt", passerade)
+	--[[ Provet letade förut efter ett TECKENBYTE mellan två bildrutor
+	     (innan * nu < 0). Det missar det starkaste utfallet av alla: att
+	     hästen råkar landa EXAKT på noll en bildruta, vilket kurvaturens
+	     dödband gör att den kan. Då är produkten noll, inte negativ, och
+	     ett perfekt genomgående såg ut som ett hopp. Kravet är i stället
+	     att svängen bytte håll OCH att den var nära noll på vägen. ]]
+	--[[ Mätt på KURVATUREN och inte på vridhastigheten. Vridhastigheten
+	     är kurvatur × fart, så samma båge ger olika tal i olika gångart
+	     — en gräns i rad/s hade mätt farten lika mycket som bågen. ]]
+	local passerade = start * mcv.curvature < 0 and minsta < 0.02
+	check("vänster → höger passerar faktiskt genom neutralt", passerade,
+		string.format("(κ %.4f → %.4f, minst %.5f 1/m på vägen)",
+			start, mcv.curvature, minsta))
 	check("och gör det utan snäpp", storst < 0.03,
 		string.format("(största kurssteg %.4f rad/bildruta i %s)", storst, mcv.loco.gait))
 
@@ -703,6 +715,85 @@ do
 	check("avsittning syns i telemetrin ur samma controller",
 		efter.uppsutten == false and efter.hast == nil,
 		string.format("uppsutten %s", tostring(efter.uppsutten)))
+end
+
+--[[ BÅGEN ÄNDRAS ALDRIG FORTARE VID ETT BYTE ÄN VID EN INSVÄNGNING.
+
+     G02-A.1 P4, samma självrefererande krav som webbens ridtest.
+     Kurvaturens ändringstakt vid ett riktningsbyte jämförs med samma
+     takt vid den hårdaste insvängningen från rakt. Bytet får inte vara
+     snabbare: det är fysiskt samma rörelse, att lägga en båge i
+     kroppen, och ett byte som går fortare är ett ryck.
+
+     Utan taket i MovementController mäter webben 1,43 gånger snabbare.
+     Marginalen 1,15 är taket självt — CurvatureRateTime är satt med
+     luft så att en vanlig insvängning aldrig bromsas. ]]
+do
+	print("\n── Bågen ändras aldrig fortare vid ett byte än vid en insvängning ──")
+	local dt = 1 / 60
+	local function takt(spar)
+		local m = 0
+		for i = 2, #spar do m = math.max(m, math.abs(spar[i] - spar[i - 1]) / dt) end
+		return m
+	end
+	--[[ Insvängning från rakt. ]]
+	local a = newMC(); upToGait(a, 2); run(a, 2.0, { forward = 1 }, dt)
+	local sIn = {}
+	for _ = 1, math.floor(3.0 / dt) do
+		a:step(intent({ forward = 1, steer = 1 }), dt)
+		table.insert(sIn, a.curvature)
+	end
+	--[[ Riktningsbyte från etablerad full vänster. ]]
+	local b = newMC(); upToGait(b, 2); run(b, 3.0, { forward = 1, steer = -1 }, dt)
+	local sByte = {}
+	for _ = 1, math.floor(3.0 / dt) do
+		b:step(intent({ forward = 1, steer = 1 }), dt)
+		table.insert(sByte, b.curvature)
+	end
+	local tIn, tByte = takt(sIn), takt(sByte)
+	check("bytets takt överstiger inte insvängningens", tByte <= tIn * 1.15,
+		string.format("byte %.3f mot insvängning %.3f 1/(m·s) = %.2f×",
+			tByte, tIn, tByte / tIn))
+end
+
+--[[ GÅNGARTENS TRÖGHET I SVÄNGEN — G02-A.1 P3, mätt.
+
+     Talet svangTau kom in i Gaits.luau i P3, men BARA som data: det
+     lästes inte av någon och Roblox svängde likadant i alla gångarter
+     medan tabellen påstod motsatsen. Webben hade det inkopplat, Roblox
+     inte, och paritetsspecen jämförde tabeller — inte beteende. Nu läser
+     MovementController det, och det här provet mäter att den gör det.
+
+     Mätt som tiden till 90 % av sin egen slutkurvatur vid fullt utslag.
+     Taken skiljer sig mellan gångarterna (galoppen svänger vidare), så
+     jämförelsen görs mot varje gångarts EGET slutvärde — annars mäter
+     man turn och inte svangTau. ]]
+do
+	print("\n── Galoppen lägger sig i bågen trögare än skritten ──")
+	local dt = 1 / 240                              -- fin upplösning: tiden mäts
+	local function tid90(steg)
+		local mc = newMC()
+		upToGait(mc, steg, 1 / 60)
+		--[[ Rakt fram tills kurvaturen dött ut, så mätningen börjar från noll. ]]
+		run(mc, 2.0, { forward = 1 }, 1 / 60)
+		local slut = 0
+		local mc2 = newMC()
+		upToGait(mc2, steg, 1 / 60); run(mc2, 2.0, { forward = 1 }, 1 / 60)
+		for _ = 1, math.floor(4.0 / dt) do mc2:step(intent({ forward = 1, steer = 1 }), dt) end
+		slut = math.abs(mc2.curvature)
+		local t = 0
+		for _ = 1, math.floor(4.0 / dt) do
+			mc:step(intent({ forward = 1, steer = 1 }), dt)
+			t += dt
+			if math.abs(mc.curvature) >= 0.90 * slut then break end
+		end
+		return t, slut, mc.loco.gait
+	end
+	local tW, kW, gW = tid90(1)
+	local tC, kC, gC = tid90(3)
+	check("galopp tar längre tid till 90 % av sin båge än skritt",
+		tC > tW * 1.15,
+		string.format("%s %.3f s (κ %.3f) mot %s %.3f s (κ %.3f)", gC, tC, kC, gW, tW, kW))
 end
 
 --[[ HÅLLEN TANGENT GER ETT STEG — paritet med webbens G02-A.1 P4.

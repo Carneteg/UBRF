@@ -269,7 +269,23 @@ function stegaRitt(dt){
      kvickast. Faktorn ligger i kanonen så Roblox speglar samma tal. */
   const svangTau=(KAN&&KAN.SVANGTAU&&KAN.SVANGTAU[G.ride.gangart])||1.00;
   const kappaTau=(Math.abs(kappaBegard)>Math.abs(G.kappa)?0.13:0.19)*svangTau;
-  G.kappa+=(kappaBegard-G.kappa)*(1-Math.exp(-dt/kappaTau));
+  /* ── BÅGEN MÅSTE UR KROPPEN INNAN DEN LÄGGS ÅT ANDRA HÅLLET (P4) ──
+     Kurvaturen får inte ändras fortare än hästen lägger sig i en båge
+     från rakt. Taket är gångartens kurvaturtak delat med KAPPA_RAT_TID
+     och skalar därför med både gångart och hästens smidighet.
+
+     Uppmätt före: ett riktningsbyte svepte bågen igenom 1,4 gånger
+     snabbare än den hårdaste insvängningen — full vänster till full
+     höger på 0,30 s i skritt, alltså en halv meter av en tvåochenhalv
+     meter lång häst. Det är rycket man känner som skating, och det är
+     det enda i styrningen som gjorde det.
+
+     En vanlig insvängning ligger under taket och rörs inte. */
+  const kappaRat=kappaTak/((KAN&&KAN.KAPPA_RAT_TID)||0.32);
+  let dKappa=(kappaBegard-G.kappa)*(1-Math.exp(-dt/kappaTau));
+  const takSteg=kappaRat*dt;
+  if(Math.abs(dKappa)>takSteg)dKappa=dKappa>0?takSteg:-takSteg;
+  G.kappa+=dKappa;
   if(Math.abs(G.kappa)<0.0015)G.kappa=0;
   const omega=G.kappa*G.ride.tempo;
   const radie=Math.abs(G.kappa)>0.002?1/Math.abs(G.kappa):1000;

@@ -58,6 +58,13 @@ Config.MOVEMENT = {
 	CurvatureMax = 0.42,   -- 1/m vid full styrning i skritt
 	CurvatureTauPress = 0.13,   -- sekunder att lägga sig i bågen
 	CurvatureTauRelease = 0.19, -- längre: att räta upp sig tar tid
+	--[[ Sekunder från rakt till full båge (G02-A.1 P4). Ett TAK på hur
+	     fort kurvaturen får ändras: gångartens kurvaturtak delat med den
+	     här tiden. En vanlig insvängning ligger under taket och rörs
+	     inte; ett riktningsbyte, som annars sveper bågen igenom snabbare
+	     än hästen någonsin lägger sig i en, begränsas.
+	     Samma tal som RidKanon.KAPPA_RAT_TID på webben. ]]
+	CurvatureRateTime = 0.32,
 	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
 
 	--[[ Vändning på stället. Kurvaturmodellen ger noll vridning vid noll

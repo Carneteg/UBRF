@@ -167,9 +167,20 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	if loco.speed < -0.05 then
 		kappaWanted = -kappaWanted                    -- backar man styr man spegelvänt
 	end
-	local kappaTau = if math.abs(kappaWanted) > math.abs(self.curvature)
-		then M.CurvatureTauPress else M.CurvatureTauRelease
-	self.curvature = smooth(self.curvature, kappaWanted, kappaTau, dt)
+	--[[ Gångartens egen tröghet i svängen (G02-A.1 P3). Talet ligger i
+	     Gaits.svangTau och speglar RID_KANON.SVANGTAU på webben.
+	     Skritten rättar sig kvickast, galoppen lägger sig i bågen
+	     långsammare och känns därför vidare. ]]
+	local kappaTau = (if math.abs(kappaWanted) > math.abs(self.curvature)
+		then M.CurvatureTauPress else M.CurvatureTauRelease) * (gait.svangTau or 1)
+	--[[ Bågen måste ur kroppen innan den läggs åt andra hållet
+	     (G02-A.1 P4). Samma regel och samma tal som webben: kurvaturen
+	     får inte ändras fortare än gångartens kurvaturtak delat med
+	     CurvatureRateTime. En vanlig insvängning ligger under taket. ]]
+	local nyKappa = smooth(self.curvature, kappaWanted, kappaTau, dt)
+	local takSteg = (kappaCeiling / M.CurvatureRateTime) * dt
+	local steg = math.clamp(nyKappa - self.curvature, -takSteg, takSteg)
+	self.curvature += steg
 	if math.abs(self.curvature) < 0.0015 then self.curvature = 0 end
 	loco.turnRate = self.curvature * loco.speed
 	--[[ Vändning på stället läggs till där farten är låg. Utan den kan en

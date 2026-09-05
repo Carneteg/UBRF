@@ -149,6 +149,27 @@ const RID_KANON = {
      utöver GANGSVANG, som sätter hur snävt de alls kan svänga — den ena
      är hur snabbt bågen ändras, den andra hur snäv den får bli. */
   SVANGTAU: { halt: 1.00, skritt: 0.85, trav: 1.00, galopp: 1.45 },
+  /* G02-A.1 P4: sekunder från rakt till full båge. Talet är inte en
+     trimning utan ett TAK på hur fort kurvaturen får ändras, uttryckt
+     som en tid: hastighetstaket blir gångartens kurvaturtak delat med
+     den här tiden, och skalar därför av sig självt med gångart och med
+     hästens smidighet.
+
+     Härlett ur mätningar, inte valt på känsla (tools/styrkansla.mjs,
+     max κ̇ i 1/(m·s)):
+
+       insvängning full styrning   skritt 1,23  trav 0,95  galopp 0,50
+       riktningsbyte v→h           skritt 1,75  trav 1,34  galopp 0,74
+
+     Taket ska ligga ÖVER varje insvängning — en vanlig sväng får inte
+     bromsas — och UNDER varje riktningsbyte, som är det enda som
+     ändrade bågen snabbare än hästen någonsin lägger sig i en. Det ger
+     0,294 < tid < 0,342 s. 0,32 ligger mitt i, med 7–43 % marginal
+     uppåt och 8–25 % nedåt.
+
+     Marginalerna är oberoende av hästen: både taket och insvängningen
+     skalar med kurvaturtaket, så kvoten står still oavsett smidighet. */
+  KAPPA_RAT_TID: 0.32,
 };
 
 /* Läsare. Fanns som `ridAB()` medan A/B levde; namnet säger nu vad det

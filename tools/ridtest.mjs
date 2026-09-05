@@ -470,6 +470,110 @@ async function ridVolt(styrutslag, skankel, marginal) {
    MJUK övergång är game feel och avgörs av Tobias, inte av ett tal jag
    hittar på. Det som grindas är att kedjan går att rida igenom och att
    ingen gångart hoppas över. */
+/* 8d. STYRNINGENS KARAKTÄR PER GÅNGART — G02-A.1 P4, genom inputlagret.
+
+   Mätvärdena bor i tools/styrkansla.mjs; kraven bor här. Två egenskaper
+   som är lätta att förlora och svåra att upptäcka:
+
+   1. Galoppen ska lägga sig i bågen TRÖGARE än skritten. Det är
+      SVANGTAU, och det är halva skillnaden mellan gångarterna i
+      styrningen — den andra halvan, hur snävt de alls kan svänga, är
+      GANGSVANG och provas i volten ovan. Roblox har samma prov i
+      movement.spec; utan det här kan webbens sida kopplas ur medan
+      paritetsspecen fortsätter jämföra två tabeller som stämmer.
+
+   2. Kurvaturen ska SÄTTA SIG, inte skjuta över. En båge som svänger
+      förbi sitt mål och tillbaka känns som en bil som fiskar.
+
+   Mätt i den byggda sidan, genom RIDIN och stegaRitt — samma väg som
+   ett tangenttryck. */
+const styr = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0];
+  G.hamtad = true; G.npcs = [];
+  const dt = 1 / 60;
+  /* Upp i gångart med samma tryck som en spelare ger, sedan fullt
+     styrutslag från rakt. Mäter tiden till 90 % av slutkurvaturen och
+     hur mycket kurvaturen någonsin skjuter förbi den. */
+  const bage = (tryck) => {
+    G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
+    const kor = (sk, st, sek) => { for (let i = 0; i < sek * 60; i++) {
+      RIDIN.skankel = sk; RIDIN.styr = st; RIDIN.tygel = 0; RIDIN.sits = 0;
+      stegaRitt(dt); } };
+    for (let n = 0; n < tryck; n++) { kor(1, 0, 1.5); kor(0, 0, 1.0); }
+    kor(0, 0, 2);                                  // rakt, låt kurvaturen dö
+    const spar = [];
+    for (let i = 0; i < 60 * 5; i++) {
+      RIDIN.skankel = 0; RIDIN.styr = 1; RIDIN.tygel = 0; RIDIN.sits = 0;
+      stegaRitt(dt); spar.push(Math.abs(G.kappa));
+    }
+    const slut = spar[spar.length - 1];
+    let t90 = null;
+    for (let i = 0; i < spar.length; i++) if (spar[i] >= 0.9 * slut) { t90 = i / 60; break; }
+    const topp = Math.max(...spar);
+    return { t90, slut, over: (topp - slut) / slut * 100, gangart: G.ride.gangart };
+  };
+  return { skritt: bage(1), galopp: bage(3) };
+});
+prova("styrningen: galoppen lägger sig i bågen trögare än skritten",
+  styr.galopp.t90 > styr.skritt.t90 * 1.15
+  && styr.skritt.gangart === "skritt" && styr.galopp.gangart === "galopp",
+  `${styr.galopp.gangart} ${styr.galopp.t90.toFixed(3)} s (κ ${styr.galopp.slut.toFixed(3)}) ` +
+  `mot ${styr.skritt.gangart} ${styr.skritt.t90.toFixed(3)} s (κ ${styr.skritt.slut.toFixed(3)})`);
+prova("styrningen: kurvaturen sätter sig utan att skjuta över",
+  styr.skritt.over < 1.0 && styr.galopp.over < 1.0,
+  `överslag skritt ${styr.skritt.over.toFixed(2)} %, galopp ${styr.galopp.over.toFixed(2)} %`);
+
+/* 8e. BÅGEN ÄNDRAS ALDRIG FORTARE ÄN HÄSTEN LÄGGER SIG I EN.
+
+   Det här är G02-A.1 P4:s egentliga krav, och det är självrefererande —
+   inget tal ur luften. Kurvaturens ändringstakt vid ett RIKTNINGSBYTE
+   jämförs med samma takt vid den hårdaste INSVÄNGNINGEN från rakt.
+   Bytet får inte vara snabbare, för det är fysiskt samma rörelse: att
+   lägga en båge i kroppen.
+
+   Uppmätt före taket infördes: 1,43 gånger snabbare (skritt 1,75 mot
+   1,23 1/(m·s)). Det är rycket man känner som skating.
+
+   Marginalen 1,15 är taket självt: KAPPA_RAT_TID är satt med 7–25 %
+   luft åt båda håll så att en vanlig insvängning aldrig bromsas.
+
+   Dessutom att bytet passerar RAKT — byter kurvaturen tecken utan att
+   vara nära noll har hästen vikt sig i stället för att svänga. */
+const byte = await page.evaluate(() => {
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp(); };
+  const kor = (sk, st, sek, ut) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = sk; RIDIN.styr = st; RIDIN.tygel = 0; RIDIN.sits = 0;
+    stegaRitt(dt); if (ut) ut.push(G.kappa); } };
+  const takt = spar => { let m = 0;
+    for (let i = 1; i < spar.length; i++) m = Math.max(m, Math.abs(spar[i] - spar[i - 1]) / dt);
+    return m; };
+
+  /* Hårdaste insvängningen från rakt: fullt utslag, ingen tidigare båge. */
+  nyRitt(); kor(1, 0, 1.5); kor(0, 0, 1.0); kor(0, 0, 2);
+  const in_ = []; kor(0, 1, 4, in_);
+
+  /* Riktningsbytet: etablerad full vänster, sedan fullt höger. */
+  nyRitt(); kor(1, 0, 1.5); kor(0, 0, 1.0);
+  kor(0, -1, 4);
+  const fore = G.kappa, spar = [];
+  kor(0, 1, 4, spar);
+  return { fore, efter: G.kappa, taktIn: takt(in_), taktByte: takt(spar),
+    nara: spar.filter(k => Math.abs(k) < 0.02).length };
+});
+prova("styrningen: bågen ändras aldrig fortare vid ett byte än vid en insvängning",
+  byte.taktByte <= byte.taktIn * 1.15,
+  `byte ${byte.taktByte.toFixed(3)} mot insvängning ${byte.taktIn.toFixed(3)} 1/(m·s) ` +
+  `= ${(byte.taktByte / byte.taktIn).toFixed(2)}×`);
+prova("styrningen: riktningsbytet passerar rakt i stället för att hoppa över",
+  byte.fore * byte.efter < 0 && byte.nara >= 1,
+  `κ ${byte.fore.toFixed(3)} → ${byte.efter.toFixed(3)}, ` +
+  `${byte.nara} bildrutor inom ±0,02 av rakt`);
+
 const slice = await page.evaluate(() => {
   const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.4, skygghet: 0.2, flaggor: {} };
   const s = nyState(0.7, 0.5, 0.8);

@@ -150,6 +150,16 @@ for _, webbnamn in { "halt", "skritt", "trav" } do
 		string.format("(%.2f = %.2f)", RidKanon.SVANGFAKTOR[webbnamn], g.turn))
 end
 
+--[[ 6b2. TAKET PÅ HUR FORT BÅGEN FÅR ÄNDRAS (G02-A.1 P4).
+
+     Tiden från rakt till full båge. Kurvaturens ändringstakt får inte
+     överstiga gångartens kurvaturtak delat med den här tiden. Talet är
+     härlett ur webbens mätningar och gäller båda ytorna oförändrat —
+     det är samma rörelse som begränsas. ]]
+check("tiden från rakt till full båge är samma på båda ytorna",
+	nara(RidKanon.KAPPA_RAT_TID, Config.MOVEMENT.CurvatureRateTime),
+	string.format("(%.2f = %.2f s)", RidKanon.KAPPA_RAT_TID, Config.MOVEMENT.CurvatureRateTime))
+
 --[[ 6c. VIKTEN PER GÅNGART (G02-A.1 P3). Två saker prövas, och de är
      olika sorters påstående:
 

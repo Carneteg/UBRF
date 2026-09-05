@@ -102,6 +102,7 @@ function styrkanon() {
     process.exit(1);
   }
   return { svang: AB.A.GANGSVANG, kappaMax: AB.A.KAPPA_MAX, svangTau: AB.A.SVANGTAU,
+    ratTid: AB.A.KAPPA_RAT_TID,
     tauPress: Number(tm[1]), tauRelease: Number(tm[2]) };
 }
 
@@ -181,6 +182,11 @@ rader.push("     den här hur snabbt bågen ändras. Speglas i Gaits.svangTau. ]
 rader.push("RidKanon.SVANGTAU = {");
 for (const namn of RID_ORDNING) rader.push(`\t${namn} = ${tal(styr.svangTau[namn])},`);
 rader.push("}");
+rader.push("");
+rader.push("--[[ Sekunder från rakt till full båge (G02-A.1 P4). Kurvaturen får");
+rader.push("     inte ändras fortare än gångartens kurvaturtak delat med den här");
+rader.push("     tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]");
+rader.push(`RidKanon.KAPPA_RAT_TID = ${tal(styr.ratTid)}`);
 rader.push("");
 rader.push("--[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");
 rader.push("RidKanon.TELEMETRI_FALT = { " + falt.map(str).join(", ") + " }");

@@ -79,6 +79,11 @@ RidKanon.SVANGTAU = {
 	galopp = 1.45,
 }
 
+--[[ Sekunder från rakt till full båge (G02-A.1 P4). Kurvaturen får
+     inte ändras fortare än gångartens kurvaturtak delat med den här
+     tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]
+RidKanon.KAPPA_RAT_TID = 0.32
+
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
 RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
 

@@ -42,9 +42,10 @@ async function manover(mal, segment) {
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.npcs = [];
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
     const dt = 1 / 60;
     let skankel = 0;
-    const satt = st => { RIDIN.skankel = skankel; RIDIN.styr = st; RIDIN.tygel = 0; RIDIN.sits = 0.5; };
+    const satt = st => { RIDIN.skankel = skankel; RIDIN.styr = st; RIDIN.tygel = 0; RIDIN.sits = 0; };
 
     /* UPP I GÅNGART MED IMPULSER, inte med en hållen nivå.
        Första versionen av den här filen satte skänkeln till 0,85 och
@@ -53,11 +54,15 @@ async function manover(mal, segment) {
        ber om ingenting. Mätningen mätte alltså tre gånger samma gångart
        och jag hade läst det som tre. Stegen är samma stege som
        ridtest.mjs använder, och gångarten i tabellen kommer från spelet
-       — den skrivs inte av mig. */
-    const stege = { skritt: [0.35], trav: [0.35, 0.60], galopp: [0.35, 0.60, 0.85] }[mal];
-    for (const niva of stege) {
-      skankel = niva;
-      for (let i = 0; i < 60 * 4; i++) { satt(0); stegaRitt(dt); }
+       — den skrivs inte av mig.
+
+       RIDIN, inte hjälpvärden: den här filen går samma väg som en
+       spelares tangent, genom rampen i stegaInput(). Det var precis
+       den vägen som var trasig när P4 började. */
+    const tryck = { skritt: 1, trav: 2, galopp: 3 }[mal];
+    for (let n = 0; n < tryck; n++) {
+      skankel = 1;  for (let i = 0; i < 60 * 1.5; i++) { satt(0); stegaRitt(dt); }
+      skankel = 0;  for (let i = 0; i < 60 * 1.0; i++) { satt(0); stegaRitt(dt); }
     }
     /* Och låt kursen lugna sig innan mätningen börjar. */
     for (let i = 0; i < 60 * 3; i++) { satt(0); stegaRitt(dt); }
@@ -123,11 +128,12 @@ const n2 = v => v === null || v === undefined ? "" : (typeof v === "number" ? v.
    Grundmanövern. Hur lång tid tar det att lägga sig i bågen, hur lång
    att räta ut sig igen, och hur våldsamt ändras kurvaturen på vägen. */
 for (const namn of ["skritt", "trav", "galopp"]) {
-  const seg = [[3, 0], [4, 0.60], [4, 0]];
+ for (const utslag of [0.60, 1.00]) {
+  const seg = [[3, 0], [4, utslag], [4, 0]];
   const { spar, dt } = await manover(namn, seg);
   const g = granser(seg, dt);
   const kIn = derivera(spar.slice(g[1], g[2]), dt), kUt = derivera(spar.slice(g[2], g[3]), dt);
-  rad(`rakt→båge→rakt (${namn})`, {
+  rad(`rakt→båge→rakt ${utslag.toFixed(2)} (${namn})`, {
     in90: restid(spar, dt, g[1], g[2], 0.90),
     ut90: restid(spar, dt, g[2], g[3], 0.90),
     kappa: Math.abs(spar[g[2] - 1].kappa),
@@ -135,6 +141,7 @@ for (const namn of ["skritt", "trav", "galopp"]) {
     kprickIn: max(kIn), kprickUt: max(kUt),
     gangart: spar[g[2] - 1].gangart,
   });
+ }
 }
 
 /* ── 2. RIKTNINGSBYTE ─────────────────────────────────────────────
@@ -178,23 +185,35 @@ for (const namn of ["skritt", "trav", "galopp"]) {
   });
 }
 
-/* ── 4. 20 m VOLT ─────────────────────────────────────────────────
-   Söker det styrutslag som ger ~20 m ridd diameter i trav, och mäter
-   sedan hur rund bågen faktiskt är. Utslaget SÖKS: gissar man det
-   mäter man en annan volt än den man skrev i rubriken. */
-{
+/* ── 4. VOLTER ────────────────────────────────────────────────────
+   Söker det styrutslag som ger en given ridd diameter i trav, och mäter
+   sedan hur rund bågen faktiskt blir. Utslaget SÖKS: gissar man det
+   mäter man en annan volt än den man skrev i rubriken.
+
+   TVÅ diametrar, och skillnaden mellan dem är själva poängen. Ridhuset
+   är 20 × 60 m invändigt, så en 20 m volt har noll marginal på bredden
+   och tar i sargen. Den 10 m volt som får plats visar hur rund
+   styrningen är när ingenting stör; 20 m-raden visar vad arbetsordern
+   bad om, med sargen inräknad. Punkter närmare sargen än en meter
+   lämnas utanför anpassningen — annars mäter rundheten sargglidning
+   och inte styrning. */
+for (const malDiam of [10, 20]) {
   let bast = null;
   for (let st = 0.05; st <= 1.0001; st += 0.05) {
     const { spar } = await manover("trav", [[6, st]]);
     const k = Math.abs(spar[spar.length - 1].kappa);
     if (k < 1e-4) continue;
     const diam = 2 / k;
-    if (!bast || Math.abs(diam - 20) < Math.abs(bast.diam - 20)) bast = { st, diam, k };
+    if (!bast || Math.abs(diam - malDiam) < Math.abs(bast.diam - malDiam)) bast = { st, diam, k };
   }
   const seg = [[6, bast.st], [14, bast.st]];
   const { spar, dt } = await manover("trav", seg);
   const g = granser(seg, dt);
-  const p = spar.slice(g[1]).map(s => [s.px, s.py]);
+  const alla = spar.slice(g[1]).map(s => [s.px, s.py]);
+  const p = alla.filter(([x, y]) => x > 1.8 && x < 18.2 && y > 1.8 && y < 58.2);
+  if (p.length < 20) { rad(`volt ~${malDiam} m (trav, sökt utslag)`, {
+    styrutslag: bast.st, kappa: bast.k, gangart: "trav",
+    diameter: 2 / bast.k, rundhet: null }); continue; }
   /* Cirkelanpassning: minsta kvadrat på (x²+y²) = 2ax + 2by + c. */
   let Sx = 0, Sy = 0, Sxx = 0, Syy = 0, Sxy = 0, Sz = 0, Szx = 0, Szy = 0, n = p.length;
   for (const [x, y] of p) { const z = x * x + y * y;
@@ -212,9 +231,10 @@ for (const namn of ["skritt", "trav", "galopp"]) {
   const cx = B[0] / A[0][0], cy = B[1] / A[1][1], cc = B[2] / A[2][2];
   const r = Math.sqrt(cc + cx * cx + cy * cy);
   let avv = 0; for (const [x, y] of p) avv = Math.max(avv, Math.abs(Math.hypot(x - cx, y - cy) - r));
-  rad("volt ~20 m (trav, sökt utslag)", {
+  rad(`volt ~${malDiam} m (trav, sökt utslag)`, {
     styrutslag: bast.st, diameter: 2 * r, kappa: Math.abs(spar[spar.length - 1].kappa),
-    rundhet: avv, gangart: spar[spar.length - 1].gangart,
+    rundhet: avv, fria: p.length + "/" + alla.length,
+    gangart: spar[spar.length - 1].gangart,
   });
 }
 
@@ -228,6 +248,7 @@ const kol = [
   ["överslag %", "overslag", 10], ["max κ̇ in", "kprickIn", 9], ["max κ̇ ut", "kprickUt", 9],
   ["kursbyte °", "kursbyte", 10], ["utslag", "styrutslag", 7],
   ["diameter m", "diameter", 10], ["rundhet m", "rundhet", 9],
+  ["fria pkt", "fria", 9],
 ];
 const brukas = kol.filter(([, k]) => k === "namn" || rader.some(r => r[k] !== undefined && r[k] !== null));
 console.log(brukas.map(([t, , w]) => t.padEnd(w)).join("  "));
