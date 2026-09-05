@@ -151,6 +151,18 @@ jobs:
           if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs --endast=fysisk
           else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
 
+      # RÖD I SKRIVANDE STUND, och det är avsikten. PO reproducerade felet
+      # igen på 8f15bef trots att stegen ovan var gröna: de mätte bara att
+      # man kommer UPP på däcket, aldrig att man kan gå VIDARE LÄNGS det.
+      # Det gör det här steget, och det stannar mot domarbåset på
+      # (3,3–3,6, 31,5) z 0,80 — dator och mobil, samma punkt. Grinden blir
+      # grön först när båsets fotavtryck på däcket är avgjort som
+      # produktbeslut. Mildra inte provet för att få jobbet grönt.
+      - name: Stoppdiagnostik — upp på läktaren OCH vidare längs den
+        run: |
+          if [ -f tools/stoppdiag.mjs ]; then node tools/stoppdiag.mjs
+          else echo "hoppar: tools/stoppdiag.mjs finns inte i denna branch"; fi
+
 
   # DISKOVERBARHET — EGET JOBB, och rött i skrivande stund: ingen markör
   # leder till läktaren, så vägen upp går inte att hitta från entrén.
