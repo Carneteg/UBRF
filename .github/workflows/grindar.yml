@@ -138,6 +138,17 @@ jobs:
           if [ -f tools/gangtest.mjs ]; then node tools/gangtest.mjs
           else echo "hoppar: tools/gangtest.mjs finns inte i denna branch"; fi
 
+      # PO:s VERKLIGA väg till läktaren, från spelstart och utan gaTill.
+      # RÖD I SKRIVANDE STUND, med flit: vägen upp finns och är gångbar,
+      # men ingen ledtråd i spelet leder dit, och spelaren landar tjugo
+      # meter bort. Ett regressionsfall utanför CI grindar ingenting —
+      # det var lärdomen från förra rundan. Jobbet ska vara rött tills
+      # produktbeslutet om ledtråden är fattat och genomfört.
+      - name: PO-flödet — spelstart → entrén → läktaren (utan gaTill)
+        run: |
+          if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs
+          else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
+
   dubbel-sanning:
     runs-on: ubuntu-latest
     steps:
