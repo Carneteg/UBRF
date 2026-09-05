@@ -28,8 +28,11 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
-vm.runInContext(las("src/model.js") + "\n" + las("src/riding/telemetri.js"), ctx);
-const { Gait, RID_ORDNING, K } = vm.runInContext("({Gait, RID_ORDNING, K})", ctx);
+vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
+  + "\n" + las("src/riding/svar.js") + "\n" + las("src/riding/telemetri.js"), ctx);
+const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
+  SKOLHAST_PROFILER } = vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
+  + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -63,7 +66,15 @@ function telemetriFalt() {
   ride.gangart = "trav"; ride.tempo = 3.2; ride.steglangd = 2.2;
   const tm = ctx.ridTelemetri(ride, { skankel: 0.5, tygel: 0.4, sits: 0.5, styrning: 0 },
     { kappa: 0.1, fas: 0.25 });
-  return { falt: Object.keys(tm).filter(k => k !== "_harledda").sort(), harledda: tm._harledda.slice().sort() };
+  return { falt: Object.keys(tm)
+             .filter(k => !k.startsWith("_") && k !== "hjalpHarledda").sort(),
+           harledda: tm._harledda.slice().sort(),
+           /* Hjälpernas fältnamn läses ur SAMMA anrop, inte ur listan de
+              påstår sig följa — då kan HJALP_FALT inte hamna i osynk med
+              det hjalpSemantik faktiskt returnerar. */
+           hjalpFalt: Object.keys(tm.hjalper).sort(),
+           /* Indelningen hjälp/svar läses ur samma anrop som fälten. */
+           svarFalt: tm._svarFalt.slice().sort() };
 }
 
 const tal = v => {
@@ -129,7 +140,7 @@ function kameralagen() {
   return ut;
 }
 
-const { falt, harledda } = telemetriFalt();
+const { falt, harledda, hjalpFalt, svarFalt } = telemetriFalt();
 const styr = styrkanon();
 const kam = kameralagen();
 const trosklar = mataTrosklar();
@@ -255,6 +266,169 @@ rader.push("RidKanon.TELEMETRI_FALT = { " + falt.map(str).join(", ") + " }");
 rader.push("");
 rader.push("--[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]");
 rader.push("RidKanon.HARLEDDA = { " + harledda.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ HJÄLPERNAS SEMANTIK (G02-B punkt 1, src/riding/hjalper.js).");
+rader.push("");
+rader.push("     Webbens ridning har fyra AXLAR — skänkel, styrning, tygel, sits —");
+rader.push("     och ovanpå dem ridningens ord: innertygel, yttertygel, yttertygel-");
+rader.push("     stöd, böjsida, vikt och paraden som en EGEN signal. Inner och");
+rader.push("     ytter härleds ur styr- och tygelaxeln, så ingen ny kontroll behövs");
+rader.push("     på någon yta; talen nedan är översättningen.");
+rader.push("");
+rader.push("     Roblox rörelsekärna har ännu inget hjälplager alls (se");
+rader.push("     Telemetri.SAKNAS). Kanonen exporteras hit FÖRE implementationen");
+rader.push("     med flit: när Roblox-sidan bygger sina hjälper ska den läsa de här");
+rader.push("     talen, inte skriva av dem. ]]");
+rader.push("RidKanon.HJALP = {");
+for (const namn of Object.keys(HJALP_KANON)) rader.push(`\t${namn} = ${tal(HJALP_KANON[namn])},`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ Hjälpernas fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");
+rader.push("RidKanon.HJALP_FALT = { " + hjalpFalt.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]");
+rader.push("RidKanon.HJALP_HARLEDDA = { " + HJALP_HARLEDDA.slice().sort().map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ KONTRAKTET G02-C LÄSER (G02-B punkt 5).");
+rader.push("");
+rader.push("     Telemetrin ska exponera BÅDE hjälpen och responsen, och en");
+rader.push("     läsare måste kunna se vilka fält som är vad. HJALP_FALT är vad");
+rader.push("     ryttaren gör, SVAR_FALT vad hästen svarar. Listorna kommer ur");
+rader.push("     webbens moduler, inte ur en handskriven uppräkning. ]]");
+rader.push("RidKanon.SVAR_FALT = { " + svarFalt.map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ HÄSTENS SVAR (G02-B punkt 2, src/riding/svar.js).");
+rader.push("");
+rader.push("     Fördröjning, fokus, balans och energi som riktiga storheter. Webben");
+rader.push("     har dem i modellen; Roblox har dem inte alls ännu, och det står som");
+rader.push("     LUCKA i paritetsspecen i stället för att fyllas med gissningar.");
+rader.push("");
+rader.push("     ENERGI_TAPP/ENERGI_ATER är per sekund och per gångart, med webbens");
+rader.push("     namn. Roblox gångartsnamn översätts av RidKanon.MOTSVARIGHET. ]]");
+rader.push("--[[ KONTAKTEN — modellens K-konstanter som hjälpsemantiken behöver.");
+rader.push("");
+rader.push("     Skänkelns tröskel och tygelns kontaktband ÄGS av src/model.js och");
+rader.push("     läses härifrån av Roblox-sidan i stället för att skrivas av. Det är");
+rader.push("     samma tal som avgör om en halvhalt är välriden på webben. ]]");
+rader.push("RidKanon.KONTAKT = {");
+for (const namn of ["SKANKEL_TROSKEL", "SKANKEL_FOR_MYCKET", "SKANKEL_NEUTRAL",
+                    "TYGEL_BAND_MIN", "TYGEL_BAND_MAX", "TYGEL_NEUTRAL", "TYGEL_MAX",
+                    "SITS_NEUTRAL", "SITS_PARAD", "SITS_MAX"]) {
+  rader.push(`\t${namn} = ${tal(K[namn])},`);
+}
+rader.push("}");
+rader.push("");
+rader.push("--[[ SKOLHÄSTPROFILERNA (G02-B punkt 3). Multiplikatorer på SVAR");
+rader.push("     ovan — INTE egna kodvägar. `skolhast` är 1,00 rakt igenom och");
+rader.push("     därmed modellens utgångsläge; varje annan profil mäts mot den.");
+rader.push("");
+rader.push("     Vilken häst som har vilken profil ligger i UBRFSpelData");
+rader.push("     (fältet `profil`), tilldelad ur ridskolans egna beskrivningar.");
+rader.push("     Se src/spel/hastar.js för citaten. ]]");
+rader.push("RidKanon.PROFILER = {");
+for (const namn of Object.keys(SKOLHAST_PROFILER)) {
+  const pr = SKOLHAST_PROFILER[namn];
+  const tal2 = Object.keys(pr).filter(k => typeof pr[k] === "number")
+    .map(k => `${k} = ${tal(pr[k])}`).join(", ");
+  rader.push(`\t${namn} = { namn = ${str(pr.namn)}, kort = ${str(pr.kort)}, ${tal2} },`);
+}
+rader.push("}");
+rader.push("");
+rader.push("RidKanon.SVAR = {");
+for (const namn of Object.keys(SVAR_KANON)) {
+  const v = SVAR_KANON[namn];
+  if (typeof v === "number") { rader.push(`\t${namn} = ${tal(v)},`); continue; }
+  rader.push(`\t${namn} = {`);
+  for (const g of RID_ORDNING) if (v[g] !== undefined) rader.push(`\t\t${g} = ${tal(v[g])},`);
+  rader.push("\t},");
+}
+rader.push("}");
+rader.push("");
+/* ── GOLDEN-RADER: webbens EGNA svar på ett par bestämda indata ──────
+   Paritet mellan två implementationer bevisas inte av att konstanterna är
+   lika — det bevisas av att formlerna ger samma tal. Raderna nedan RÄKNAS
+   av webbens moduler här och nu, och Roblox-specen kör sin egen kod på
+   samma indata och jämför. Skulle någon av de två driva iväg blir specen
+   röd, även om varenda konstant fortfarande stämmer. */
+const hjalpProv = [
+  { skankel: 0.42, tygel: 0.34, styrning: 0.00 },
+  { skankel: 0.42, tygel: 0.34, styrning: 0.72 },
+  { skankel: 0.62, tygel: 0.57, styrning: 0.72 },
+  { skankel: 0.78, tygel: 0.80, styrning: 0.36 },
+  { skankel: 0.05, tygel: 0.22, styrning: 0.72 },
+];
+const svarProv = [
+  { profil: "skolhast", kanslighet: 0.50, fokus: 1.00, energi: 1.00, klarhet: 0.00 },
+  { profil: "skolhast", kanslighet: 0.50, fokus: 1.00, energi: 0.60, klarhet: 0.75 },
+  { profil: "kanslig",  kanslighet: 0.80, fokus: 1.00, energi: 1.00, klarhet: 0.40 },
+  { profil: "tung",     kanslighet: 0.30, fokus: 1.00, energi: 0.50, klarhet: 0.20 },
+  { profil: "arbetsvillig", kanslighet: 0.60, fokus: 1.00, energi: 0.90, klarhet: 1.00 },
+];
+const balansProv = [
+  { profil: "skolhast", utbildning: 0.60, bojkrav: 0.00, ytterstod: 1.00, fartkrav: 0.00, iOvergang: false },
+  { profil: "skolhast", utbildning: 0.60, bojkrav: 1.00, ytterstod: 0.40, fartkrav: 0.00, iOvergang: false },
+  { profil: "kanslig",  utbildning: 0.72, bojkrav: 1.00, ytterstod: 0.67, fartkrav: 0.20, iOvergang: true },
+  { profil: "tung",     utbildning: 0.90, bojkrav: 0.80, ytterstod: 0.30, fartkrav: 0.50, iOvergang: false },
+];
+const hjalpSemantik = ctx.hjalpSemantik, svarSvarstid = ctx.svarSvarstid,
+  svarBalansMal = ctx.svarBalansMal, svarInfall = ctx.svarInfall,
+  svarEnergiTakt = ctx.svarEnergiTakt;
+rader.push("--[[ GOLDEN-RADER — webbens egna svar på bestämda indata.");
+rader.push("");
+rader.push("     Räknade av src/riding/hjalper.js och src/riding/svar.js när den");
+rader.push("     här filen genererades. Roblox-specen kör SIN kod på samma indata");
+rader.push("     och jämför: driver de två isär blir den röd, även om varenda");
+rader.push("     konstant fortfarande stämmer. Att konstanterna är lika bevisar");
+rader.push("     inte att formlerna är det. ]]");
+rader.push("RidKanon.PROV = {");
+rader.push("\thjalper = {");
+for (const a of hjalpProv) {
+  const r = hjalpSemantik(a);
+  rader.push(`\t\t{ in_ = { skankel = ${tal(a.skankel)}, tygel = ${tal(a.tygel)}, `
+    + `styrning = ${tal(a.styrning)} }, ut = { innerTygel = ${tal(r.innerTygel)}, `
+    + `ytterTygel = ${tal(r.ytterTygel)}, ytterstod = ${tal(r.ytterstod)}, `
+    + `bojSida = ${tal(r.bojSida)} } },`);
+}
+rader.push("\t},");
+rader.push("\tparadKvalitet = {");
+for (const a of hjalpProv) {
+  rader.push(`\t\t{ in_ = { skankel = ${tal(a.skankel)}, tygel = ${tal(a.tygel)} }, `
+    + `ut = ${tal(ctx.paradKvalitet(a))} },`);
+}
+rader.push("\t},");
+rader.push("\tsvarstid = {");
+for (const v of svarProv) {
+  const t2 = svarSvarstid({ kanslighet: v.kanslighet, profil: v.profil },
+    v.fokus, v.energi, v.klarhet);
+  rader.push(`\t\t{ in_ = { profil = ${str(v.profil)}, kanslighet = ${tal(v.kanslighet)}, `
+    + `fokus = ${tal(v.fokus)}, energi = ${tal(v.energi)}, klarhet = ${tal(v.klarhet)} }, `
+    + `ut = ${tal(t2)} },`);
+}
+rader.push("\t},");
+rader.push("\tbalans = {");
+for (const v of balansProv) {
+  const b = svarBalansMal({ spanning: 0 }, { utbildning: v.utbildning, profil: v.profil },
+    v.bojkrav, v.ytterstod, v.fartkrav, v.iOvergang);
+  rader.push(`\t\t{ in_ = { profil = ${str(v.profil)}, utbildning = ${tal(v.utbildning)}, `
+    + `bojkrav = ${tal(v.bojkrav)}, ytterstod = ${tal(v.ytterstod)}, `
+    + `fartkrav = ${tal(v.fartkrav)}, iOvergang = ${v.iOvergang} }, ut = ${tal(b)} },`);
+}
+rader.push("\t},");
+rader.push("\tinfall = {");
+for (const [b, k] of [[1.0, 1.0], [0.73, 1.0], [0.5, 0.5], [0.0, 1.0]]) {
+  rader.push(`\t\t{ in_ = { balans = ${tal(b)}, bojkrav = ${tal(k)} }, `
+    + `ut = ${tal(svarInfall(b, k))} },`);
+}
+rader.push("\t},");
+rader.push("\tenergiTakt = {");
+for (const g of RID_ORDNING) {
+  for (const pn of Object.keys(SKOLHAST_PROFILER)) {
+    rader.push(`\t\t{ in_ = { gangart = ${str(g)}, profil = ${str(pn)} }, `
+      + `ut = ${tal(svarEnergiTakt(g, 0, { profil: pn }))} },`);
+  }
+}
+rader.push("\t},");
+rader.push("}");
 rader.push("");
 rader.push("return RidKanon");
 rader.push("");

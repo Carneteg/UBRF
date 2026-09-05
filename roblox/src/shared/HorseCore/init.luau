@@ -16,4 +16,6 @@ return {
 	Networking = require(script.Networking),
 	Telemetri = require(script.Telemetri),
 	RidKanon = require(script.RidKanon),
+	Hjalper = require(script.Hjalper),
+	Svar = require(script.Svar),
 }

@@ -69,6 +69,12 @@ function ridFoljGangart(gangart) {
   return gangart;
 }
 
+/* HÄSTENS SVAR — de fält i telemetrin som beskriver vad hon GÖR av
+   hjälpen, till skillnad från `hjalper`, som är vad ryttaren gör.
+   Indelningen är kontraktet G02-C bygger på. */
+const RID_SVAR_FALT = ["balans", "energi", "fokus", "spanning", "mjukhet",
+  "svarstid", "svarAlder", "paradKvalitet", "paradAlder"];
+
 /* TELEMETRIN. `ride` är RideModel-tillståndet (nyState/stepRide), `aids`
    de utjämnade hjälpvärdena, `extra` det som bara den körande scenen
    känner till: kurvatur, gångartsfas och önskat tempo.
@@ -95,24 +101,76 @@ function ridTelemetri(ride, aids, extra) {
     steglangd: ride.steglangd || 0,
     spanning: ride.spanning,
     mjukhet: ride.mjukhet,
-    balans: clamp(1 - Math.abs(kappa) / 0.42 * 0.5 - ride.spanning * 0.3, 0, 1),   // härledd
-    fokus: clamp(1 - ride.spanning, 0, 1),                                          // härledd
-    hjalper: aids ? { skankel: aids.skankel, tygel: aids.tygel,
-                      sits: aids.sits, styrning: aids.styrning } : null,
+    /* ── HÄSTENS SVAR (G02-B punkt 2) ────────────────────────────
+       `balans` och `fokus` var HÄRLEDDA: balansen räknades ur kurvatur
+       och spänning, fokus var bara 1 − spänning. De var alltså två
+       omskrivningar av tillstånd som redan publicerades, och det stod
+       de öppet som i `_harledda`.
+
+       Nu är de tillstånd i modellen med egna källor — yttertygelstöd,
+       svängens fartkrav, övergångar och spänning för balansen; handens
+       stadga, lugnet, utomhus och den lästa halvhalten för fokus — och
+       `energi` är ny. Ingen av dem är längre härledd. */
+    balans: ride.balans,
+    fokus: ride.fokus,
+    energi: ride.energi,
+    /* HJÄLPERNA I RIDNINGENS ORD (G02-B punkt 1). Axlarna ligger kvar
+       oförändrade — de är enhetens språk — och ovanpå dem publiceras
+       innertygel, yttertygel, yttertygelstöd, böjsida, vikt och paraden
+       som en egen signal. Vad som är härlett ur axlarna och vad som är
+       en egen kontroll står i HJALP_HARLEDDA, inte i en kommentar. */
+    hjalper: aids
+      ? ((typeof hjalpSemantik === "function")
+          ? hjalpSemantik(aids)
+          : { skankel: aids.skankel, tygel: aids.tygel,
+              sits: aids.sits, styrning: aids.styrning })
+      : null,
+    hjalpHarledda: (typeof HJALP_HARLEDDA !== "undefined") ? HJALP_HARLEDDA.slice() : [],
     /* HJÄLPEN SOM CUE (PO 2026-09-05). `gangart` är vad hästen gör,
        `beddGangart` är vad ryttaren senast bad om. Skiljer de sig pågår
        en övergång, och det är den skillnaden G02-B/C ska kunna läsa —
        en ryttare som ber om trav och får skritt är inte samma sak som en
        som rider skritt med avsikt. */
-    beddGangart: ride.malGangart || ride.gangart,
+    beddGangart: ride.beddGangart || ride.malGangart || ride.gangart,
+    /* SVARSTIDEN: hur länge hästen tog på sig innan hon började svara på
+       den senaste hjälpen, och hur länge sedan det var. Skilj den från
+       `overgangstid`, som mäter själva förloppet. Under väntan skiljer
+       sig `beddGangart` från `gangart` utan att `iOvergang` är sant —
+       hon har hört, men inte börjat. */
+    svarstid: ride.svarstid || 0,
+    svarAlder: (ride.svarTid !== undefined && ride.svarTid > -90)
+      ? Math.max(0, (ride._tid || 0) - ride.svarTid) : null,
     cue: ride.cue || null,                              // framåt · halvhalt · tygel · sits · parad
+    /* PARADEN SOM MÄTT HJÄLP (G02-B punkt 1). `parad` i `hjalper` är
+       kanalen ryttaren skickar; de här två är vad hästen LÄSTE: hur väl
+       samordnad halvhalten var och hur länge sedan den gavs. En
+       halvhalt utan skänkel och med en hand utanför kontaktbandet är
+       inte samma hjälp som en ridd — och nu syns skillnaden. */
+    paradKvalitet: ride.paradKval || 0,
+    paradAlder: (ride.paradTid !== undefined && ride.paradTid > -90)
+      ? Math.max(0, (ride._tid || 0) - ride.paradTid) : null,
     cueAlder: ride.cueTid !== undefined && ride.cueTid > -90
       ? Math.max(0, (ride._tid || 0) - ride.cueTid) : null,   // s sedan hjälpen gavs
     /* Övergångstiden: från att ryttaren bad till att hästen faktiskt gick
        i gångarten. Måttet på om en övergång var mjuk eller ryckig. */
     overgangstid: ride.senasteOvergang || 0,
     iOvergang: !!(ride.overgang && !ride.overgang.klar),
-    _harledda: ["balans", "fokus"],                     // ärlig märkning för G02-B
+    /* Tomt sedan G02-B punkt 2: balans och fokus har riktiga källor i
+       modellen. Fältet står kvar som kontrakt — nästa härledda storhet
+       ska deklareras här och inte smygas in som ett mätvärde. */
+    _harledda: [],
+    /* ── KONTRAKTET G02-C LÄSER (G02-B punkt 5) ──────────────────────
+       Ordern säger att telemetrin ska exponera BÅDE hjälpen och
+       responsen. Fältnamnen räcker inte: en läsare måste kunna se VILKA
+       fält som är vad, annars får den gissa, och en gissning i ett
+       kontrakt är en bugg som väntar.
+
+       `_hjalpFalt` är vad ryttaren gör, `_svarFalt` vad hästen svarar.
+       Listorna kommer ur modulerna själva, inte ur en handskriven
+       uppräkning, och exporteras till Roblox där paritetsspecen provar
+       att båda ytorna publicerar samma indelning. */
+    _hjalpFalt: (typeof HJALP_FALT !== "undefined") ? HJALP_FALT.slice() : [],
+    _svarFalt: RID_SVAR_FALT.slice(),
   };
 }
 

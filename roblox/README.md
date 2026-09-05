@@ -35,11 +35,23 @@ Sedan: lägg in en hästmodell, sätt taggen `Horse` på den, kör.
 | `A` `D` | styr |
 | `Shift` | upp en gångart |
 | `Ctrl` | ned en gångart |
+| `Q` | tygel — håll för kontakt |
+| `F` | halvhalt/parad |
 | `Space` | hoppa |
 | `E` | sitt av |
 | `F8` | felsökningsrutan |
 
-Gamepad: vänsterspak styr, `R1`/`L1` byter gångart, `A` hoppar.
+Gamepad: vänsterspak styr, `R1`/`L1` byter gångart, `A` hoppar, **`R2` är
+tygeln och analog** — halvt utslag ger halv kontakt — och `B` ger halvhalten.
+
+Pekskärm: spak till vänster, knapparna `▲ FRAMÅT` / `▼ LUGNARE` / `TYGEL` /
+`HALVHALT` / `HOPP` / `SITT AV` till höger. Tygeln hålls, halvhalten är ett
+tryck.
+
+**Tygeln är inte en broms.** Den är kontakten ryttaren håller, och det är den
+som avgör om yttertygeln bär svängen. Rider man en volt med släppt tygel
+faller hästen in på inre skuldran och bågen blir snävare än man bad om; håller
+man kontakten genom svängen bär hon sig själv. Se `docs/G02-B-HJALPER.md`.
 
 Spelaren väljer **gångart**, aldrig ett exakt tempo. Det är skillnaden mot en
 gaspedal, och det är den enskilt viktigaste orsaken till att hästen känns som en
