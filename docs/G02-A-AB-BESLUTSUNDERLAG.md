@@ -100,3 +100,46 @@ köra. Väljer vi B ändras webbens känsla, som redan är accepterad.
 
 Jag har inte ändrat något. Säg A, B eller en tredje trimning, så
 implementerar jag den på båda ytorna och kör om paritetsspecen.
+
+## Villkor för merge — A/B-lagret är temporär reviewkod
+
+Fastställt i senior review av #86 (`A/B_REVIEW_PASS`):
+
+> A/B-harnessen är **temporär review-kod**. När Tobias har valt canonical
+> känsla ska `?ridab`, B-växlingen och den temporära dubbla
+> feel-konfigurationen tas bort eller kollapsas till EN canonical
+> uppsättning innan G02-A får mergeas. Vi ska inte lämna en dold
+> alternativ produktfysik i produktion.
+
+Alltså, när beslutet är fattat och innan merge:
+
+1. den valda uppsättningens värden skrivs in som de enda i modellen,
+2. `RID_AB`, `ridSattAB()`, `ridAB()` och `?ridab`-avläsningen tas bort,
+3. `tools/abtest.mjs` tas bort eller görs om till ett rent mätverktyg utan
+   växling,
+4. `src/game.js` läser konstanterna direkt igen och
+   `tools/exportera-ridkanon.mjs` pekas om,
+5. de fyra `BLOCKERAR`-raderna i `roblox/tests/paritet.spec.luau` tas bort
+   i takt med att avvikelserna försvinner,
+6. produktionsvakten i `tools/ridtest.mjs` skrivs om till att låsa den nya
+   canonical uppsättningen.
+
+Ingen del av det görs innan valet är gjort.
+
+## Kvarstående produktfråga, buren vidare till G02-B
+
+**Modellen håller inte skritt med konstanta hjälper.** Uppmätt i båda
+uppsättningarna: skänkeln söktes i 40 steg från 0,01 till 1,00 under full
+styrning, och ingen insats landade i skrittbandet — ekipaget stannar i
+halt eller lägger sig i trav.
+
+Senior review av #86 bekräftar det som en **separat produktfråga inför
+G02-B**, uttryckligen inte något som ska lösas tyst inom G02-A:
+
+> Lös inte detta tyst i G02-A — logga det som nästa riding-feel
+> blocker/tuningbeslut.
+
+Skritt är den gångart en ridskoleelev tillbringar mest tid i. Att den
+bara går att hålla genom att parera, inte genom att lägga sig på en
+insats, är antingen ett medvetet val eller ett hål i tempoförhandlingen.
+Det avgörs i G02-B, inte här.
