@@ -25,6 +25,9 @@ await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
 await page.waitForTimeout(1500);
 const resultat = [];
 const prova = (namn, ok, detalj) => { resultat.push({ namn, ok }); console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); };
+/* Mätvärde utan krav. Används där talet ska SYNAS i en körning men var
+   gränsen går är game feel och alltså Tobias sak, inte mitt. */
+const mat = (namn, detalj) => console.log("  mät ", namn, "—", detalj);
 
 /* 1. GATE 01-BASELINE: gångarternas normtempon och band får inte glida.
    Siffrorna står i audits/GATE-01-RIDING-FEEL-RESULT.md. */
@@ -332,6 +335,59 @@ async function ridVolt(styrutslag, skankel, marginal) {
   prova("volten: kurvaturen är styrutslaget × gångartens tak, inte något annat",
     Math.abs(Math.abs(v.kappa) - v.styrning * tak) < 5e-3,
     `κ ${Math.abs(v.kappa).toFixed(4)} ≈ ${v.styrning.toFixed(3)} × ${tak.toFixed(4)} = ${(v.styrning * tak).toFixed(4)} 1/m (${v.gangart})`);
+}
+
+/* ── DEN VERTIKALA SLICEN (PO 2026-09-05) ──────────────────────────
+   Hela kedjan i EN körning, som en lektion: sitt upp → halt → skritt →
+   trav → galopp → övergångar → volt → bromsa → halt → sitt av.
+
+   Poängen är inte att varje del fungerar var för sig — det provas ovan —
+   utan att de fungerar EFTER VARANDRA, med samma häst och samma
+   tillstånd. Det är där en modell brukar spricka: tillstånd som bara
+   stämmer när provet börjar om.
+
+   Övergångstiderna redovisas som mätvärden, inte som krav. Vad som är en
+   MJUK övergång är game feel och avgörs av Tobias, inte av ett tal jag
+   hittar på. Det som grindas är att kedjan går att rida igenom och att
+   ingen gångart hoppas över. */
+const slice = await page.evaluate(() => {
+  const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.4, skygghet: 0.2, flaggor: {} };
+  const s = nyState(0.7, 0.5, 0.8);
+  const ctx = { svangradie: 1000, underlag: 0.92, stallro: 0.9, utomhus: false, fard: {}, avdrift: { glid: 0, ryck: 0, tröghet: 1 } };
+  const steg = [];
+  ridSittUpp("bandit", "ridhus");
+  const uppe = RID_TILLSTAND.uppsutten;
+  const kor = (aids, sek) => { for (let i = 0; i < sek * 60; i++) {
+    stepRide(s, aids, h, ctx, 1 / 60); ridFoljGangart(s.gangart); } };
+  const notera = (vad) => steg.push({ vad, gangart: s.gangart, bad: s.malGangart,
+    tempo: +s.tempo.toFixed(2), overgang: +s.senasteOvergang.toFixed(2) });
+
+  kor({ skankel: 0, tygel: 0.15, sits: 0.2, styrning: 0 }, 2);   notera("halt");
+  kor({ skankel: 0.35, tygel: 0.15, sits: 0.2, styrning: 0 }, 5); notera("skritt");
+  kor({ skankel: 0.60, tygel: 0.15, sits: 0.2, styrning: 0 }, 5); notera("trav");
+  kor({ skankel: 0.85, tygel: 0.15, sits: 0.2, styrning: 0 }, 5); notera("galopp");
+  /* Volt i galopp: full styrning, och kurvaturen ska följa gångartens tak. */
+  kor({ skankel: 0.85, tygel: 0.15, sits: 0.2, styrning: 1.0 }, 4);
+  const voltKappa = 0.42 * 0.52 * (0.78 + 0.44 * 0.5);
+  notera("volt");
+  kor({ skankel: 0.85, tygel: 0.15, sits: 0.2, styrning: 0 }, 2);
+  /* Bromsa: hållen parad tar henne hela vägen ned. */
+  kor({ skankel: 0.05, tygel: 0.80, sits: 0.85, styrning: 0 }, 20); notera("halt igen");
+  ridSittAv();
+  return { uppe, av: RID_TILLSTAND.uppsutten, steg, glapp: RID_TILLSTAND.glapp, voltKappa };
+});
+{
+  const g = slice.steg.map(r => r.gangart);
+  const naddeAlla = g[0] === "halt" && g[1] === "skritt" && g[2] === "trav"
+    && g[3] === "galopp" && g[g.length - 1] === "halt";
+  prova("slicen: sitt upp → halt → skritt → trav → galopp → volt → broms → halt → sitt av",
+    slice.uppe === true && slice.av === false && naddeAlla && slice.glapp === 0,
+    `uppsutten ${slice.uppe} → ${slice.av}, kedja ${g.join(" → ")}, ${slice.glapp} olagliga byten`);
+  const tider = slice.steg.filter(r => r.overgang > 0).map(r => `${r.vad} ${r.overgang}s`);
+  mat("slicens övergångstider (mätvärden — vad som är MJUKT avgör Tobias)",
+    tider.length ? tider.join(", ") : "inga övergångar registrerade");
+  mat("slicens tempon per moment",
+    slice.steg.map(r => `${r.vad} ${r.tempo} m/s`).join(", "));
 }
 
 await browser.close(); srv.close();
