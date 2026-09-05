@@ -36,10 +36,31 @@ const Skala={
 const Gait={
   SPRANG:{hast:3.50,D:3.25,C:3.00,B:2.75},
   G:{
-    halt:{namn:"Halt",min:0,max:0.20,norm:0,steg:0},
-    skritt:{namn:"Skritt",min:0.90,max:2.00,norm:1.45,steg:0.46},
-    trav:{namn:"Trav",min:2.40,max:4.30,norm:3.20,steg:0.63},
-    galopp:{namn:"Galopp",min:4.60,max:8.00,norm:5.60,steg:1.00},
+    /* `upp`/`ner` är tempots svar INOM gångarten, i m/s², och `svangTau`
+       hur trögt kurvaturen följer styrningen (multiplikator på basen i
+       game.js). Före G02-A.1 P3 var alla tre lika för varje gångart, och
+       det var därför skritt, trav och galopp kändes som samma sak i olika
+       hastighet.
+
+       Nu har de var sin karaktär, byggd av tröghet och inte av animation:
+         skritt  lugn och planterad, snabbast att rätta sig, snävast sväng
+         trav    mest framåtenergi, svarar villigt utan att bli nervös
+         galopp  tyngst rörelsemängd, vidast känsla i svängen, mjukast ned
+
+       Att galoppen har LÄGST `ner` är avsikten: en galopp som bromsar lika
+       tvärt som en skritt känns som ett fordon. Arbetsordern säger
+       uttryckligen "smoothest decel" för galopp.
+
+       TALEN ÄR ROBLOX EGNA. Gaits.luau hade redan accel/retard per
+       gångart — precis som den hade cue-modellen före webben. Jag skrev
+       först ett eget set och bytte till Roblox när jag såg det: två
+       genomtänkta uppsättningar är sämre än en, och paritetskravet
+       avgör vilken som ska bort. `svangTau` är däremot ny och speglas
+       till Roblox i stället. */
+    halt:{namn:"Halt",min:0,max:0.20,norm:0,steg:0,upp:3.2,ner:5.5,svangTau:1.00},
+    skritt:{namn:"Skritt",min:0.90,max:2.00,norm:1.45,steg:0.46,upp:2.6,ner:3.4,svangTau:0.85},
+    trav:{namn:"Trav",min:2.40,max:4.30,norm:3.20,steg:0.63,upp:2.9,ner:3.6,svangTau:1.00},
+    galopp:{namn:"Galopp",min:4.60,max:8.00,norm:5.60,steg:1.00,upp:3.4,ner:3.2,svangTau:1.45},
   },
   HYST:0.35,
   forTempo(t,nuv){const h=this.HYST,k=nuv&&this.G[nuv];
@@ -64,18 +85,170 @@ const K={
   HH_FONSTER:0.45, HH_MIN_AMPLITUD:0.18, HH_COOLDOWN:1.2,
   BAS_STIGNING:0.55, BAS_FALL:0.95,
   SPANNING_STIGNING:1.10, SPANNING_FALL:0.42,
+  /* ── GRUNDHJÄLPEN ÄR EN CUE, INTE EN GASPEDAL (PO 2026-09-05) ──
+     Förut låg skänkeln som en konstant term ovanpå hästens egen norm:
+     `begäran = (skänkel − tygel·0,9)·3,2`. Etablerade du skritt och höll
+     kvar skänkeln hamnade målet över skrittens tak och hon travade iväg;
+     släppte du helt föll takten. Skritt gick alltså bara att hålla genom
+     att balansera skänkeln på ett exakt värde — en bilgas.
+
+     Nu ber en FRAMÅTDRIVANDE IMPULS om nästa gångart. Hästen bär den
+     därefter själv tills ryttaren ber om något annat: halvhalt, tygel
+     eller sits tar henne ner ett steg. Det som mäts är alltså ändringen
+     i hjälpen, inte dess nivå.
+
+     Trösklarna ligger över handens normala darr (mjukheten mäter samma
+     storhet med K.AMPLITUD_SKALA 0,22) så att en ostadig hand inte råkar
+     be om galopp. Spärren hindrar att en enda rörelse räknas två gånger
+     och ger övergången tid att bli klar innan nästa kan begäras. */
+  CUE_UPP:0.16, CUE_NER:0.13, CUE_SPARR:0.9, SITS_PARAD:0.78,
+  /* ── IMPULSEN MÄTS ÖVER ETT FÖNSTER, INTE PER BILDRUTA (P4) ──
+     Det här är rättelsen av ett fel som P2 införde och som inga tester
+     såg, därför att varje test körde stepRide direkt med hjälper som
+     hoppar färdigt på en bildruta.
+
+     I SPELET gör de inte det. src/game.js rampar hjälpen mot sitt mål
+     med STIG = 0,28 s, alltså 3,57 enheter i sekunden, alltså 0,0595
+     per bildruta i 60 Hz. Tröskeln för en framåtimpuls är 0,16. En
+     rampad hjälp når den ALDRIG. Uppmätt på byggd sida före rättelsen:
+     W i botten från stillastående, sex sekunder — hästen stannade i
+     skritt, och gjorde det för alltid. Hela gångartsstegen var
+     onåbar för en spelare med tangentbord eller pekskärm.
+
+     Impulsen är därför resan från hjälpens LÄGSTA värde under det
+     senaste fönstret upp till nu. En ramp som klättrar 0,36 på 0,10 s
+     räknas som 0,36, inte som sex separata 0,0595. En HÅLLEN hjälp ger
+     fortfarande ingenting: fönstret kommer ikapp och resan blir noll
+     igen. Det var poängen med PO-beslutet och den står kvar.
+
+     0,45 s är valt så att hela inrampningen (0,28 s) ryms med marginal
+     och så att spärren (0,9 s) fortfarande är dubbelt så lång — annars
+     hade ETT tryck kunnat räknas två gånger.
+
+     Roblox löser samma sak utan fönster: där är gaitUp/gaitDown
+     tangentflanker, alltså redan diskreta händelser. Webbens hjälp är
+     analog och utjämnad, och fönstret är den analoga motsvarigheten
+     till en flank. Regeln är densamma på båda ytorna. */
+  CUE_FONSTER:0.45,
+  /* NEUTRALLÄGET. Ryttaren sitter aldrig med släppt skänkel; det som
+     gäller när ingenting hålls är ett mittvärde. Fönstret sås med de
+     här talen, så att en ryttare som sätter sig upp och INTE gör något
+     inte råkar be om skritt.
+
+     Det var det andra felet P4 mätte fram: `_prev` såddes med noll
+     hjälp, neutral skänkel är 0,42, och hästen läste alltså sin egen
+     uppsittning som en framåtimpuls och gick i väg av sig själv.
+     Sådden med noll fanns av ett riktigt skäl — en hjälp som redan
+     ligger på ska räknas som pålagd — och det skälet överlever: en
+     ryttare som sätter sig med 0,78 i skänkeln ligger 0,36 över
+     neutral och ber alltså om skritt, precis som förut.
+
+     TALEN MÅSTE VARA SAMMA som mittvärdena i ridAvsiktTillHjalp() i
+     src/game.js. tools/ridtest.mjs har ett prov som faller om de
+     glider isär — modellen kan inte läsa spelets inputlager, så
+     kopplingen måste bevakas i stället för antas. */
+  SKANKEL_NEUTRAL:0.42, TYGEL_NEUTRAL:0.34, SITS_NEUTRAL:0.20,
+  /* Och hjälpens TAK, av samma skäl. Ryttaren når aldrig 1,0: tygeln
+     går till 0,80 och sitsen till 0,85 i ridAvsiktTillHjalp(). En
+     styrka som räknas mot 1,0 skulle alltså aldrig kunna bli hel, och
+     paradens bestämda ände vore omöjlig att be om. Bevakas av samma
+     prov i tools/ridtest.mjs som neutralvärdena. */
+  TYGEL_MAX:0.80, SITS_MAX:0.85,
+  /* Kvar av den gamla termen: hjälpen får fortfarande variera tempot
+     INOM gångarten — det är skillnaden mellan en samlad och en utsträckt
+     skritt — men inte längre bära över ett gångartsband. Skrittens band
+     är 1,10 brett, så 0,6 räcker till nyans och inte till att byta. */
+  HALL_BAND:0.60,
+  /* ── ÖVERGÅNGEN ÄR ETT FÖRLOPP, INTE ETT SNÄPP (G02-A.1 P2) ──
+     Mätt före trimningen: halt→skritt tog 0,14 s, skritt→trav 0,18 och
+     trav→galopp 0,26 — hästen bytte gångart nästan omedelbart. Nedåt tog
+     paraden 1,99 s. Obalansen kändes som att gasa en maskin uppåt och
+     bromsa en lastbil nedåt.
+
+     Längderna nedan ligger i mitten av arbetsorderns kuvert (0,6–1,0 /
+     0,7–1,2 / 0,9–1,5 uppåt, 0,6–1,2 nedåt). De är TRIMVÄRDEN, inte
+     realismkanon: en verklig häst varierar med utbildning och dagsform,
+     och den variationen hör G02-B till.
+
+     Tempot följer en mjukstegskurva över förloppet — ingen platå att
+     fastna på, ingen studs i slutet. Gångartsetiketten byter en bit in i
+     förloppet (BYTPUNKT), inte vid dess början: hästen är på väg in i
+     travet en stund innan travet syns. */
+  OVERGANG:{ upp:{skritt:0.80, trav:0.95, galopp:1.20}, ner:0.90, BYTPUNKT:0.55,
+    /* ── PARADEN FÅR VARA MJUK ELLER BESTÄMD (G02-A.1 P5) ──
+       Nedåt var förloppet lika långt oavsett hur ryttaren bad. Uppmätt:
+       en normal parad (tygel 0,65) och en mycket stark (tygel 0,95 +
+       full sits) stannade från galopp på 2,58 respektive 2,57 s och
+       6,33 respektive 6,29 m, med samma toppinbromsning 5,1 m/s².
+       VARJE halt var alltså en nödbromsning, och hjälpens styrka
+       ändrade ingenting.
+
+       Nu ligger längden mellan nerMjuk och nerHart efter hur långt
+       tygeln och sitsen går förbi sitt eget hållande läge. Båda ändarna
+       ryms i arbetsorderns kuvert för nedåtgående övergångar
+       (0,6–1,2 s) efter att hästens tyngd och tröghet skalat dem —
+       provet i tools/ridtest.mjs mäter stallets lättaste och tyngsta
+       häst, inte bara den neutrala.
+
+       nerMjuk stod på 1,05 tills skalan rebasades till 1,0 för en
+       neutral häst (senior review 2026-09-05). Då blev talen literala,
+       och den lättaste hästen landade på 1,22 s — utanför taket.
+       0,98 ger 1,10–1,14 s för ytterhästarna, alltså marginal åt båda
+       håll.
+
+       Roblox har samma skillnad sedan tidigare, men uttryckt som en
+       tangent: M.BrakeExtra läggs på när S hålls. Webbens hjälp är
+       analog, så styrkan läses ur hjälpen i stället för ur en knapp.
+       Beteendet är detsamma — ber du bestämdare stannar hon fortare. */
+    nerMjuk:0.98, nerHart:0.78,
+    /* KUVERTEN ur arbetsordern, i sekunder, som hårda gränser och inte
+       som förhoppningar. Baslängderna ovan ligger inne i dem, men
+       hästens tyngd och tröghet skalar längden med mellan ungefär 0,75
+       och 1,3 — en tung, seg häst hamnade utanför uppåt och en lätt,
+       villig utanför nedåt. Uppmätt: nedåt 0,54 s med full parad på en
+       lätt häst, mot golvet 0,60.
+
+       Att klippa längden här i stället för att trimma bort skalningen
+       är avsiktligt: skalningen ÄR hästens karaktär och ska finnas
+       kvar, men kuvertet är ett produktbeslut och gäller alla hästar. */
+    /* KUVERTEN ur arbetsordern (nedåt 0,60–1,20 s) bevakas av ett prov
+       i tools/ridtest.mjs som mäter tyngsta och lättaste hästen, inte
+       av en klippning här.
+
+       Jag skrev först klippningen. Den visade sig aldrig slå till för
+       någon häst i stallet — och hade den gjort det hade den TYSTAT
+       provet i stället för att låta det säga ifrån. En gräns som gömmer
+       just det den finns för att fånga är sämre än ingen gräns. */ },
 };
+/* Gångarterna i ordning. Cue:n stegar i den här listan, ett steg i taget. */
+const GANGORDNING=["halt","skritt","trav","galopp"];
 
 function nyState(dagsform,rang,sadellage){
   return {skala:Skala.tom(),spanning:0.15,tempo:0,gangart:"halt",steglangd:0,
+    /* Den gångart ryttaren senast BAD om. Hästen bär den tills hon ombeds
+       något annat; `gangart` är vad hon faktiskt går just nu, och de två
+       skiljer sig under en övergång. */
+    malGangart:"halt", cue:null, cueTid:-99, overgang:null, senasteOvergang:0,
     rang:rang??0.5,dagsform:dagsform??0.7,sadellage:sadellage??0.8,mjukhet:0.5,
-    _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_tid:0};
+    _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_tid:0,
+    _cueSparr:0,_overgangStart:-99,_cueFonster:null};
 }
 
 function stepRide(s,a,h,ctx,dt){
   if(dt<=0)return s; s._tid+=dt;
   // mjukhet: amplitud mot glidande medel
-  if(!s._medel){s._medel={skankel:a.skankel,tygel:a.tygel,sits:a.sits,styrning:a.styrning};s._prev={...a};}
+  /* `_prev` är bildrutan innan. Den används av HALVHALTEN, som är en
+     rörelse med riktning och vändpunkt och därför måste läsas bildruta
+     för bildruta. Cue:n läser i stället fönstret nedan.
+
+     Glidande medelvärdet sås med den faktiska hjälpen — det mäter
+     handens darr, och där är utgångsläget inte noll utan det hon
+     håller. */
+  if(!s._medel){s._medel={skankel:a.skankel,tygel:a.tygel,sits:a.sits,styrning:a.styrning};
+    s._prev={...a};
+    /* Fönstret sås med NEUTRALLÄGET, inte med noll och inte med den
+       första bildrutans hjälp. Se K.SKANKEL_NEUTRAL för varför. */
+    s._cueFonster=[{t:s._tid,k:K.SKANKEL_NEUTRAL,ty:K.TYGEL_NEUTRAL,si:K.SITS_NEUTRAL}];}
   else{
     const m=s._medel,beta=clamp(dt/K.AIDS_TAU,0,1);
     const avvik=Math.abs(a.skankel-m.skankel)+Math.abs(a.tygel-m.tygel)
@@ -102,6 +275,90 @@ function stepRide(s,a,h,ctx,dt){
     }else{hh.t+=dt;
       if(hh.t>K.HH_FONSTER*((ctx.fard&&ctx.fard.hhFonster)||1)){hh.fas=0;hhKval=-0.35;}
       else if(dT<-0.02&&a.tygel<=p.tygel){hh.fas=0;s._senasteHH=s._tid;hhKval=hh.kval;}}}
+  }
+  /* ── CUE: ryttaren BER om en gångart, hästen bär den ──────────────
+     Uppåt av en framåtdrivande impuls — skänkeln ökar tydligt medan
+     tygeln inte håller emot. Nedåt av en fullbordad halvhalt, eller av
+     tygel eller sits som tas på. Halvhalten är den ridmässigt rätta
+     nedåtgående hjälpen och får därför gälla även när den är svag.
+
+     Spärren gör att en enda rörelse inte räknas två gånger, och att
+     hästen hinner göra klart övergången innan nästa kan begäras. */
+  {const p=s._prev;
+   s._cueSparr=Math.max(0,(s._cueSparr||0)-dt);
+   /* Fönstret: hjälpens lägsta värde den senaste K.CUE_FONSTER-sekunden.
+      Impulsen är resan därifrån upp till nu. Bufferten är ~27 poster i
+      60 Hz och skrivs framifrån, så ingen allokering per bildruta. */
+   const CF=s._cueFonster||(s._cueFonster=[{t:s._tid,k:K.SKANKEL_NEUTRAL,ty:K.TYGEL_NEUTRAL,si:K.SITS_NEUTRAL}]);
+   CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
+   while(CF.length>1&&CF[0].t<s._tid-K.CUE_FONSTER)CF.shift();
+   let botK=CF[0].k,botT=CF[0].ty,botS=CF[0].si;
+   for(let i=1;i<CF.length;i++){
+     if(CF[i].k<botK)botK=CF[i].k;
+     if(CF[i].ty<botT)botT=CF[i].ty;
+     if(CF[i].si<botS)botS=CF[i].si;}
+   if(p&&s._cueSparr<=0){
+     const dK=a.skankel-botK, dT=a.tygel-botT, dS=a.sits-botS;
+     let i=GANGORDNING.indexOf(s.malGangart||s.gangart); if(i<0)i=0;
+     let cue=null;
+     /* ASYMMETRIN ÄR AVSIKTLIG, och den är ridmässig.
+
+        UPPÅT krävs en NY impuls varje gång. En hållen skänkel är inte en
+        fortsatt begäran om mer fart — man rider framåt med skänkeln på
+        utan att hästen accelererar. Det var precis den gaspedalen
+        beslutet tog bort.
+
+        NEDÅT räcker det att den starka hjälpen LIGGER KVAR. En tygel som
+        hålls an är en fortsatt begäran om att komma tillbaka, och en
+        parad från galopp till halt är en sammanhängande hjälp, inte tre
+        separata ryck. En lätt halvhalt ger däremot ett steg och sedan
+        inget mer — den är en impuls till sin natur. */
+     const hallerAn=a.tygel>=K.TYGEL_BAND_MAX||a.sits>=K.SITS_PARAD;
+     if(dK>=K.CUE_UPP&&a.tygel<=K.TYGEL_BAND_MAX&&i<GANGORDNING.length-1){
+       i++; cue="framåt";
+     }else if((hhKval>0||dT>=K.CUE_NER||dS>=K.CUE_NER||hallerAn)&&i>0){
+       i--; cue=hhKval>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
+     }
+     if(cue){
+       const fran=s.gangart, till=GANGORDNING[i];
+       s.malGangart=till; s.cue=cue; s.cueTid=s._tid;
+       s._cueSparr=K.CUE_SPARR; s._overgangStart=s._tid;
+       /* Resan är förbrukad. Utan den här raden ligger den kvar i
+          fönstret och skulle kunna räknas igen så fort spärren släpper,
+          fast ryttaren inte gjort något nytt. */
+       CF.length=0; CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
+       s.overgang={fran,till,klar:false};
+       /* FÖRLOPPET startas här, från det tempo hon FAKTISKT har. Att utgå
+          från nuvarande tempo och inte från gångartens norm är det som
+          gör förloppet avbrytbart: kommer en motsatt hjälp mitt i, börjar
+          nästa förlopp där hon är, inte där hon var. */
+       const upp=GANGORDNING.indexOf(till)>GANGORDNING.indexOf(fran);
+       /* Paradens bestämdhet: hur långt tygeln respektive sitsen går
+          förbi sitt hållande läge, det starkaste av de två. */
+       const kraft=clamp(Math.max(
+         (a.tygel-K.TYGEL_BAND_MAX)/(K.TYGEL_MAX-K.TYGEL_BAND_MAX),
+         (a.sits -K.SITS_PARAD)   /(K.SITS_MAX -K.SITS_PARAD)),0,1);
+       const bas=upp?(K.OVERGANG.upp[till]||0.9)
+                    :K.OVERGANG.nerMjuk-(K.OVERGANG.nerMjuk-K.OVERGANG.nerHart)*kraft;
+       /* LÄNGDEN LAGRAS FÄRDIGSKALAD. Hästens tyngd och tröghet skalade
+          förut längden på ett ställe (kurvan) men inte på det andra
+          (villkoret som håller förloppet vid liv). För en lätt häst låg
+          förloppet därför kvar en stund efter att kurvan var klar, och
+          för en tung KLIPPTES det av vid 97 % — tempot hoppade den sista
+          biten när approach() tog över. Nu betyder ov.langd samma sak på
+          båda ställena. */
+       const D0=ctx.avdrift||{tröghet:1};
+       /* SKALAN ÄR 1,0 FÖR EN NEUTRAL HÄST (senior review 2026-09-05).
+          Den stod förut som (0,75 + 0,35·tyngd), vilket ger 0,89 vid
+          normaltyngden 0,4 — basvärdena ovan betydde alltså inte det de
+          sa, och Roblox kunde inte mäta samma tid utan att kopiera in
+          en förskjutning på 11 %. Nu är 0,80 s verkligen 0,80 s för en
+          normal häst, och hästens tyngd flyttar den därifrån med samma
+          spridning som förut (0,84 vid tyngd 0, 1,24 vid tyngd 1). */
+       s._ov={fran:s.tempo, t:0,
+         langd:bas*(1+0.393*(h.tyngd-0.40))*(D0.tröghet||1)};
+     }
+   }
   }
   // spänning
   {const kf=0.55+0.9*h.kanslighet;let press=0;
@@ -140,15 +397,66 @@ function stepRide(s,a,h,ctx,dt){
    const t=s._tid;
    const vandring=D.glid*(0.62*Math.sin(t*0.41)+0.38*Math.sin(t*0.97+1.3))
      + D.ryck*Math.max(0,Math.sin(t*0.23+2.1))**6;
-   const eget=g.norm*(0.80+0.40*h.framatbjudning)+vandring*(g.norm>0?1:0);
-   const begaran=(a.skankel-a.tygel*0.9)*3.2;
+   /* Hästen bär den gångart hon senast ombads, inte den hon råkar ha.
+      Det är skillnaden mot förr: `eget` läste `s.gangart`, så tempot
+      hade ingen minneskälla utom sig självt och föll tillbaka så fort
+      hjälpen släpptes. */
+   const gm=Gait.G[s.malGangart]||g;
+   const eget=gm.norm*(0.80+0.40*h.framatbjudning)+vandring*(gm.norm>0?1:0);
+   /* Hjälpen nyanserar INOM gångarten — samlad eller utsträckt skritt —
+      men bär inte längre över ett band. Se K.HALL_BAND. */
+   const begaran=(a.skankel-a.tygel*0.9)*K.HALL_BAND;
    const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
    /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
       omöjlig, hon kräver att du ber tydligare och håller kvar. */
    const tr=(1.6+1.4*h.tyngd)*D.tröghet;
-   s.tempo=approach(s.tempo,mal,8.8/tr,11/tr,dt);
+   const forra=s.gangart;
+   const ov=s._ov;
+   if(ov&&ov.t<ov.langd){
+     /* UNDER FÖRLOPPET styr kurvan, inte approach(). Mjukstegskurvan
+        u²(3−2u) startar och slutar med noll lutning, vilket ger en
+        övergång utan ryck i någon ände och utan platå på mitten.
+        Trögheten skalar längden: en tung häst tar längre på sig, men
+        formen på förloppet är densamma. */
+     ov.t+=dt;
+     const u=clamp(ov.t/ov.langd,0,1), mjuk=u*u*(3-2*u);
+     s.tempo=ov.fran+(mal-ov.fran)*mjuk;
+     /* Etiketten byter en bit in i förloppet — hästen är på väg in i
+        travet en stund innan travet syns. Före bytpunkten behåller hon
+        den gamla gångarten även om tempot råkat passera ett band. */
+     s.gangart=u>=K.OVERGANG.BYTPUNKT?s.malGangart:ov.franG||forra;
+     if(!ov.franG)ov.franG=forra;
+     if(u>=1)s._ov=null;
+   }else{
+     /* INOM gångarten svarar tempot med gångartens egen tröghet. Talen
+        låg förut som 8,8 och 11 delat med hästens tyngd, lika för alla
+        gångarter; nu bär varje gångart sina, och tyngden skalar dem.
+
+        FAKTORN 2 är ingen enhetsomräkning och ska inte läsas som en.
+        Roblox tal ligger på halva webbens gamla nivå (halt 5,5 × 2 = 11,
+        exakt det gamla `ner`). Utan faktorn hade HELA ridningen blivit
+        trögare på en gång, vilket är just den regression arbetsordern
+        förbjuder. Faktorn håller alltså kvar webbens NIVÅ; Roblox tal
+        sätter SPRIDNINGEN mellan gångarterna.
+
+        Följden, ärligt: paritetsspecen prövar att TABELLERNA är samma
+        tal — inte att uppmätt m/s² är samma på båda ytorna. Webbens
+        approach() ger ungefär nominellt/2,16 i uppmätt acceleration
+        (8,8 gav 4,07; 5,2 ger 2,41). Vad som verkligen har paritet är
+        ordningen och förhållandet mellan gångarterna. Att mäta samma
+        absoluta acceleration på båda ytorna kräver Studio och är
+        [ANTAGANDE] tills det gjorts. */
+     const gg=Gait.G[s.gangart]||Gait.G.halt;
+     s.tempo=approach(s.tempo,mal,(gg.upp??3.2)*2/tr,(gg.ner??5.5)*2/tr,dt);
+     s.gangart=Gait.forTempo(s.tempo,s.gangart);
+   }
    s._avdrift=vandring;
-   s.gangart=Gait.forTempo(s.tempo,s.gangart);
+   /* ÖVERGÅNGSTIDEN: från att ryttaren bad till att hästen faktiskt går
+      i den gångarten. Det är måttet G02-B/C ska kunna bygga på, och det
+      enda som säger om en övergång var mjuk eller ryckig. */
+   if(s.gangart!==forra&&s.overgang&&!s.overgang.klar&&s.gangart===s.malGangart){
+     s.overgang.klar=true; s.senasteOvergang=s._tid-s._overgangStart;
+   }
    s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
   }
   // målvärden

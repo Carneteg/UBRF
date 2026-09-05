@@ -25,8 +25,22 @@ const RIDIN={
   pek:false,      // sant när spaken senast rörde värdena
 };
 
+/* Utgångsvärdena SKRIVS INTE HÄR. De sätts av ridNollstallHjalp() längre
+   ned, ur samma mittvärden som ridAvsiktTillHjalp() ger — se raden efter
+   den funktionen.
+
+   Före G02-A.1 P4 stod det .15 i skänkelraden medan neutralläget i
+   ridAvsiktTillHjalp() är 0,42. Första ridsekunden rampade hjälpen
+   alltså 0,15 → 0,42 av sig själv, och ridmodellen läste den resan som
+   en framåtimpuls: hästen gick i skritt så fort man satt upp, utan att
+   ryttaren rört någonting. Höll man sedan in W låg resan kvar och gav
+   ett andra steg, så en enda tangent tog ekipaget till trav.
+
+   Nollorna nedan är alltså platshållare som skrivs över innan första
+   bildrutan. Att skriva neutralläget på två ställen och sedan prova att
+   de är lika vore att bevaka en dubblett som inte behöver finnas. */
 const IN={
-  kan:{skankel:{v:.15,mal:.15},tygel:{v:0,mal:0},sits:{v:.2,mal:.2},styrning:{v:0,mal:0}},
+  kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,ned:{},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
@@ -35,6 +49,16 @@ const IN={
    hålls — är inte noll skänkel: en häst rids inte med släppt skänkel.
    Det är därför nollan i varje rad nedan är ett mittvärde och inte 0. Samma kurva för tangent och spak, så att ett
    halvt spakutslag ger precis halva vägen mot tangentens läge. */
+/* Sätt hjälpfiltret i neutralläget. Körs när en ritt börjar: annars
+   följer förra passets utslag med in i det nya, och en kvarliggande
+   skänkel läses som en impuls av en häst som just satt sig i sadeln. */
+function ridNollstallHjalp(){
+  RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.pek=false;
+  ridAvsiktTillHjalp();
+  for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
+  IN.hh=-1;
+}
+
 function ridAvsiktTillHjalp(){
   const r=RIDIN, k=IN.kan;
   k.skankel.mal = r.skankel>=0
@@ -44,6 +68,10 @@ function ridAvsiktTillHjalp(){
   k.sits.mal    = r.sits>=0 ? 0.2+r.sits*(0.85-0.2) : 0.2+r.sits*(0.2-(-0.6));
   k.styrning.mal= clamp(r.styr,-1,1)*0.72;
 }
+/* Och sätt filtret i neutralläge NU, vid inläsningen. Utan den här raden
+   startar hjälpen på noll och rampar upp till sitt mittvärde av sig
+   själv — en resa som ridmodellen med rätta läser som en framåtimpuls. */
+ridNollstallHjalp();
 const STIG=0.28,FALL=0.22;
 addEventListener("keydown",e=>{
   if(e.repeat)return; IN.ned[e.code]=true;
@@ -220,8 +248,13 @@ function stegaRitt(dt){
      gångart har ett tak för hur snävt den kan böja — en häst i fyrsprång
      böjer sig inte som en häst i skritt — och taken är samma siffror som
      Roblox-spårets turn-faktorer, så designen bara översätts. */
-  const GANGSVANG={halt:1.00, skritt:1.00, trav:0.82, galopp:0.52};
-  const KAPPA_MAX=0.42;          // 1/m vid full styrning i skritt ≈ 2,4 m radie
+  /* STYRKANONEN ligger i RID_KANON i src/riding/telemetri.js. Värdena är
+     Gate 01:s, oförändrade sedan 33559d9 — PO-beslutet 2026-09-05 valde
+     dem till kanon, det ändrade dem inte. Fallbacken finns kvar för att
+     modellen ska gå att köra utan telemetrimodulen. */
+  const KAN=(typeof ridKanon==="function")?ridKanon():null;
+  const GANGSVANG=KAN?KAN.GANGSVANG:{halt:1.00, skritt:1.00, trav:0.82, galopp:0.52};
+  const KAPPA_MAX=KAN?KAN.KAPPA_MAX:0.42;   // 1/m vid full styrning i skritt ≈ 2,4 m radie
   const gv=GANGSVANG[G.ride.gangart]||1.00;
   /* Smidigheten sitter i hästen och i ryttarens hand: en vig häst böjer
      sig snävare, och den som rider mjukt får mer båge för samma utslag. */
@@ -231,8 +264,28 @@ function stegaRitt(dt){
      bågen till sin nya radie i samma bildruta som fingret rör sig.
      Att lägga sig i en båge går fortare än att räta upp sig ur den —
      det är så en häst gör, och det är också vad som känns rätt. */
-  const kappaTau=Math.abs(kappaBegard)>Math.abs(G.kappa)?0.13:0.19;
-  G.kappa+=(kappaBegard-G.kappa)*(1-Math.exp(-dt/kappaTau));
+  /* Gångartens egen tröghet i svängen (G02-A.1 P3). Galoppen lägger sig
+     i bågen långsammare och känns därför vidare, skritten rättar sig
+     kvickast. Faktorn ligger i kanonen så Roblox speglar samma tal. */
+  const svangTau=(KAN&&KAN.SVANGTAU&&KAN.SVANGTAU[G.ride.gangart])||1.00;
+  const kappaTau=(Math.abs(kappaBegard)>Math.abs(G.kappa)?0.13:0.19)*svangTau;
+  /* ── BÅGEN MÅSTE UR KROPPEN INNAN DEN LÄGGS ÅT ANDRA HÅLLET (P4) ──
+     Kurvaturen får inte ändras fortare än hästen lägger sig i en båge
+     från rakt. Taket är gångartens kurvaturtak delat med KAPPA_RAT_TID
+     och skalar därför med både gångart och hästens smidighet.
+
+     Uppmätt före: ett riktningsbyte svepte bågen igenom 1,4 gånger
+     snabbare än den hårdaste insvängningen — full vänster till full
+     höger på 0,30 s i skritt, alltså en halv meter av en tvåochenhalv
+     meter lång häst. Det är rycket man känner som skating, och det är
+     det enda i styrningen som gjorde det.
+
+     En vanlig insvängning ligger under taket och rörs inte. */
+  const kappaRat=kappaTak/((KAN&&KAN.KAPPA_RAT_TID)||0.32);
+  let dKappa=(kappaBegard-G.kappa)*(1-Math.exp(-dt/kappaTau));
+  const takSteg=kappaRat*dt;
+  if(Math.abs(dKappa)>takSteg)dKappa=dKappa>0?takSteg:-takSteg;
+  G.kappa+=dKappa;
   if(Math.abs(G.kappa)<0.0015)G.kappa=0;
   const omega=G.kappa*G.ride.tempo;
   const radie=Math.abs(G.kappa)>0.002?1/Math.abs(G.kappa):1000;
@@ -361,6 +414,13 @@ function stegaRitt(dt){
         fryser mitt i ett steg. */
      G.gaitFas=(G.gaitFas+G.ride.tempo*dt*0.5)%1;
    }}
+  /* G02-A: gångarten följs av övergångskontraktet och telemetrin läggs
+     på G.telemetri, så att G02-B/C har en enda avläsningspunkt. Ren
+     avläsning — inget här får påverka ridkänslan. */
+  if(typeof ridFoljGangart==="function"&&G.ride){
+    ridFoljGangart(G.ride.gangart);
+    G.telemetri=ridTelemetri(G.ride,G.aids,{kappa:G.kappa,fas:G.gaitFas});
+  }
   ljudRittSteg(G.gaitFas,G.ride.gangart,
     G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;

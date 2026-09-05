@@ -892,6 +892,7 @@ function gaTill(scen,spawn){
   kameraNollstall();
 }
 function startaVandring(){
+  if(typeof ridSittAv==="function")ridSittAv();   // G02-A: avsutten när ritten lämnas
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
   G.sysslor={mockat:0,fodrat:0}; G.hamtad=false; G.tackePa=false;

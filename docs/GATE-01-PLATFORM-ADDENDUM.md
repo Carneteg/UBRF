@@ -58,3 +58,12 @@ Exakta tekniska implementationer får skilja sig.
 - `Remaining risks`
 
 Ingen agent får kalla Gate 01 klar enbart på webbrowser-test eller enbart på Luau-kompilering.
+
+## Paritetsregistret (G02-A)
+
+Paritetstabellen och de avsiktliga plattformsskillnaderna är sedan G02-A
+körbara i stället för bara skrivna: `roblox/tests/paritet.spec.luau` jämför
+Roblox `Gaits`/`Telemetri` mot webbens exporterade ridkanon och kräver att
+de kända avvikelserna ser exakt ut som de gör. En ny avvikelse blir röd.
+
+Registret och dess bevis står i `docs/G02-A-RIDKARNAN.md`.

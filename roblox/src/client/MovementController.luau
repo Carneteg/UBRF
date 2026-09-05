@@ -56,7 +56,7 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	self.temperament = Config.TEMPERAMENTS[stats.Temperament] or Config.TEMPERAMENTS.Calm
 	self.machine = StateMachine.new()
 	self.jumpReady = 0
-	self.ceiling = "gallop"
+	self.ceiling = Gaits.SPELBAR_TOPP
 
 	local heading = math.atan2(rig.root.CFrame.LookVector.X, rig.root.CFrame.LookVector.Z)
 	self.loco = {
@@ -101,8 +101,12 @@ function MovementController:_targetGait(intent: Types.Intent): string
 		index -= 1                                   -- S rullar ned en gångart
 	end
 
-	local ceilingIndex = Gaits.index(self.ceiling)
-	index = math.clamp(index, 1, math.min(#Gaits.ORDER, ceilingIndex))
+	--[[ Två tak, och det yttre går inte att förhandla bort: uthålligheten
+	     kan sänka spelarens tak, men ingenting kan höja det över
+	     Gaits.SPELBAR_TOPP. Utan min() här hade en felaktig eller
+	     manipulerad GaitCeiling från servern öppnat fyrsprånget. ]]
+	local ceilingIndex = math.min(Gaits.index(self.ceiling), Gaits.index(Gaits.SPELBAR_TOPP))
+	index = math.clamp(index, 1, ceilingIndex)
 	return Gaits.byIndex(index)
 end
 
@@ -112,7 +116,41 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local stats = self.stats
 	local M = Config.MOVEMENT
 
+	--[[ CUE OCH ÖVERGÅNGSTID (G02-A, PO 2026-09-05). Modellen fanns redan
+	     — spelaren väljer gångart, inte tempo — men den mättes inte. Här
+	     bokförs NÄR begäran ändrades och hur lång tid hästen tog på sig,
+	     så telemetrin kan visa samma sak som webben. Ingen regel ändras. ]]
+	loco.tid = (loco.tid or 0) + dt
+	local forraMal = loco.targetGait
 	loco.targetGait = self:_targetGait(intent)
+	if loco.targetGait ~= forraMal then
+		local upp = Gaits.index(loco.targetGait) > Gaits.index(forraMal)
+		loco.cue = if upp then "framåt" else "nedåt"
+		loco.cueTid = loco.tid
+		loco._overgangKlar = false
+		--[[ FÖRLOPPET STARTAS HÄR, från det tempo hästen FAKTISKT har.
+		     Att utgå från nuvarande tempo och inte från gångartens norm
+		     är det som gör förloppet avbrytbart: kommer en motsatt
+		     begäran mitt i, börjar nästa förlopp där hon är.
+
+		     Längden är kanon (Config.MOVEMENT.Transition) skalad med
+		     hästens egen svarsförmåga. Skalan är 1,0 för en neutral
+		     häst, precis som webbens, så basvärdena betyder samma sak
+		     på båda ytorna. Nedåt avgör bestämdheten: att bara hålla
+		     emot ger det mjuka förloppet, S ger det korta. ]]
+		local T = M.Transition
+		local kraft = if intent.forward < -0.5 then 1 else 0
+		local bas = if upp
+			then (T[loco.targetGait] or T.canter)
+			else T.downSoft - (T.downSoft - T.downFirm) * kraft
+		local svar = (0.65 + 0.70 * stats.Acceleration) * self.temperament.accelBias
+		self._ov = { fran = loco.speed, t = 0,
+			langd = bas / math.max(svar, 0.2), fran_gait = forraMal }
+	end
+	if not loco._overgangKlar and loco.gait == loco.targetGait and loco.cueTid then
+		loco.senasteOvergang = loco.tid - loco.cueTid
+		loco._overgangKlar = true
+	end
 	local gait = Gaits.get(loco.targetGait)
 
 	--[[ ── Tempo ──────────────────────────────────────────────────────
@@ -126,12 +164,26 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	end
 
 	local accelScale = (0.65 + 0.70 * stats.Acceleration) * self.temperament.accelBias
-	local up = gait.accel * accelScale
-	local down = gait.retard * accelScale
-	if intent.forward < -0.5 then
-		down += M.BrakeExtra
+	local ov = self._ov
+	if ov and ov.t < ov.langd then
+		--[[ UNDER FÖRLOPPET styr kurvan, inte approach(). Mjukstegskurvan
+		     u²(3−2u) startar och slutar med noll lutning, vilket ger en
+		     övergång utan ryck i någon ände och utan platå på mitten.
+		     Samma kurva och samma längd som webben. ]]
+		ov.t += dt
+		local u = math.clamp(ov.t / ov.langd, 0, 1)
+		local mjuk = u * u * (3 - 2 * u)
+		loco.speed = ov.fran + (target - ov.fran) * mjuk
+		if u >= 1 then self._ov = nil end
+	else
+		self._ov = nil
+		local up = gait.accel * accelScale
+		local down = gait.retard * accelScale
+		if intent.forward < -0.5 then
+			down += M.BrakeExtra
+		end
+		loco.speed = approach(loco.speed, target, up, down, dt)
 	end
-	loco.speed = approach(loco.speed, target, up, down, dt)
 
 	--[[ ── Sväng ──────────────────────────────────────────────────────
 	     Kurvaturen är det spelaren styr: hur snävt hästen böjer sig, i
@@ -146,14 +198,38 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     och i känslan. ]]
 	local speedAbs = math.abs(loco.speed)
 	local steer = self:_steer(intent.steer, dt)
-	local kappaCeiling = M.CurvatureMax * gait.turn * (0.70 + 0.60 * stats.Agility)
+	--[[ SVÄNGKÄNSLAN FÖLJER DEN FAKTISKA GÅNGARTEN, inte den begärda.
+
+	     Taket och trögheten togs förut ur Gaits.get(loco.targetGait),
+	     alltså ur den gångart ryttaren just BAD om. Då bytte svängkänslan
+	     i samma bildruta som cue:n föll, medan webben behåller den gamla
+	     gångartens sväng ända till 55 %-punkten — hela poängen med att
+	     etiketten byter en bit in i förloppet är att hästen inte ÄR i
+	     travet förrän hon är det.
+
+	     loco.gait sätts längre ned i step(), så värdet här är förra
+	     bildrutans. Webben har exakt samma förhållande: GANGSVANG läses i
+	     stegaRitt() innan stepRide() uppdaterar gångarten. ]]
+	local svangGait = Gaits.get(loco.gait)
+	local kappaCeiling = M.CurvatureMax * svangGait.turn * (0.70 + 0.60 * stats.Agility)
 	local kappaWanted = steer * kappaCeiling
 	if loco.speed < -0.05 then
 		kappaWanted = -kappaWanted                    -- backar man styr man spegelvänt
 	end
-	local kappaTau = if math.abs(kappaWanted) > math.abs(self.curvature)
-		then M.CurvatureTauPress else M.CurvatureTauRelease
-	self.curvature = smooth(self.curvature, kappaWanted, kappaTau, dt)
+	--[[ Gångartens egen tröghet i svängen (G02-A.1 P3). Talet ligger i
+	     Gaits.svangTau och speglar RID_KANON.SVANGTAU på webben.
+	     Skritten rättar sig kvickast, galoppen lägger sig i bågen
+	     långsammare och känns därför vidare. ]]
+	local kappaTau = (if math.abs(kappaWanted) > math.abs(self.curvature)
+		then M.CurvatureTauPress else M.CurvatureTauRelease) * (svangGait.svangTau or 1)
+	--[[ Bågen måste ur kroppen innan den läggs åt andra hållet
+	     (G02-A.1 P4). Samma regel och samma tal som webben: kurvaturen
+	     får inte ändras fortare än gångartens kurvaturtak delat med
+	     CurvatureRateTime. En vanlig insvängning ligger under taket. ]]
+	local nyKappa = smooth(self.curvature, kappaWanted, kappaTau, dt)
+	local takSteg = (kappaCeiling / M.CurvatureRateTime) * dt
+	local steg = math.clamp(nyKappa - self.curvature, -takSteg, takSteg)
+	self.curvature += steg
 	if math.abs(self.curvature) < 0.0015 then self.curvature = 0 end
 	loco.turnRate = self.curvature * loco.speed
 	--[[ Vändning på stället läggs till där farten är låg. Utan den kan en
@@ -208,12 +284,28 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		else false
 
 	--[[ ── Tillstånd och fas ──────────────────────────────────────────── ]]
+	--[[ Den FAKTISKA gångarten räknas här och skickas IN i maskinen, i
+	     stället för att skrivas över efteråt. Skillnaden är inte kosmetisk:
+	     maskinens tillstånd (och därmed animationen, som väljs ur
+	     loco.state) byggde annars på sin egen fartbaserade gångart medan
+	     loco.gait redan följde förloppet. Två sanningar i samma bildruta.
+
+	     Etiketten byter en bit in i förloppet — hästen är på väg in i
+	     travet en stund innan travet syns. Samma regel som webben. ]]
+	local faktiskGangart = nil
+	if self._ov then
+		local u = math.clamp(self._ov.t / self._ov.langd, 0, 1)
+		faktiskGangart = if u >= M.Transition.switchAt
+			then loco.targetGait
+			else self._ov.fran_gait
+	end
 	loco.state = self.machine:step({
 		speed = loco.speed,
 		turnRate = loco.turnRate,
 		airborne = loco.airborne,
 		braking = intent.forward < -0.5,
 		jumpFired = jumpFired,
+		gait = faktiskGangart,
 	}, dt)
 	loco.gait = self.machine.gait
 
@@ -277,6 +369,7 @@ end
 function MovementController:release()
 	self.steerInput = 0
 	self.curvature = 0
+	self._ov = nil
 	self.lastPos = nil
 	local hum = self.rig.humanoid
 	if hum then

@@ -96,10 +96,17 @@ function sittUpp(plats){
       return;
     }
     G.plats=plats;
-    visaSekretariat(()=>{G.leder=false;hudLage("ritt");startaLektion();});
+    /* G02-A: tillståndet FÖRE lektionen. Startar lektionen först finns ett
+       första-bildrutefönster där den körande ridloopen kan läsa
+       uppsutten=false — telemetrin skulle då rapportera en avsutten ryttare
+       mitt i en ritt. Senior review av #86, blocker C. */
+    visaSekretariat(()=>{G.leder=false;hudLage("ritt");
+      ridSittUpp(G.hastId,plats);startaLektion();});
     return;
   }
-  G.leder=false;G.plats=plats;hudLage("ritt");startaLektion();
+  G.leder=false;G.plats=plats;hudLage("ritt");
+  ridSittUpp(G.hastId,plats);          // G02-A: tillståndet FÖRE lektionen, se ovan
+  startaLektion();
 }
 
 /* ── Sekretariatet: startordningen ropas upp ──────────────────── */

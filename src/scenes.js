@@ -425,6 +425,9 @@ function avslutaSkotsel(){
      har ihop sedan tidigare. Sedan ligger det fast under passet. */
   G.humor=dagensHumor(G.hastId);
   G.ride=nyState(G.dagsform,hastminne(G.hastId).rang,G.sadellage);
+  /* Hjälpfiltret i neutralläge innan första bildrutan — se
+     ridNollstallHjalp() i src/game.js. */
+  if(typeof ridNollstallHjalp==="function")ridNollstallHjalp();
   initNPC();
   G.px=10;G.py=52;G.rikt=-Math.PI/2;
   overlay(true,`

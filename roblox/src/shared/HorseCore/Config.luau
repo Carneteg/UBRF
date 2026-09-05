@@ -50,11 +50,43 @@ Config.MOVEMENT = {
 	     fälten är borta; gångartens turn-faktor lever kvar och skalar
 	     kurvaturtaket i stället för vridhastigheten.
 
-	     CurvatureMax är satt så att full styrning i skritt ger ungefär
-	     3,3 m radie, samma som webbversionens modell. ]]
-	CurvatureMax = 0.30,   -- 1/m vid full styrning i skritt
+	     CurvatureMax är satt så att full styrning i skritt ger 2,4 m
+	     radie, samma som webbens kanon. Meningen ovanför sa tidigare
+	     3,3 m och "samma som webbversionens modell" — den var sann före
+	     harmoniseringen och motsade sedan raden rakt under. ]]
+	-- HARMONISERAT MOT WEBBENS KANON (PO-beslut 2026-09-05): A är kanon,
+	-- och Roblox följer den i stället för att bära en egen produktfysik.
+	-- Var 0.30 (3,3 m radie i skritt), nu 0.42 (2,4 m) som webben.
+	CurvatureMax = 0.42,   -- 1/m vid full styrning i skritt
 	CurvatureTauPress = 0.13,   -- sekunder att lägga sig i bågen
 	CurvatureTauRelease = 0.19, -- längre: att räta upp sig tar tid
+	--[[ Sekunder från rakt till full båge (G02-A.1 P4). Ett TAK på hur
+	     fort kurvaturen får ändras: gångartens kurvaturtak delat med den
+	     här tiden. En vanlig insvängning ligger under taket och rörs
+	     inte; ett riktningsbyte, som annars sveper bågen igenom snabbare
+	     än hästen någonsin lägger sig i en, begränsas.
+	     Samma tal som RidKanon.KAPPA_RAT_TID på webben. ]]
+	CurvatureRateTime = 0.32,
+	--[[ ÖVERGÅNGSFÖRLOPPET (senior review 2026-09-05).
+
+	     Ett gångartsbyte är ett FÖRLOPP, inte en ny måltempo som
+	     approach() rör sig mot. Tempot följer mjukstegskurvan u²(3−2u)
+	     från det tempo hästen faktiskt har till den nya gångartens, över
+	     en längd som beror på riktningen och på hur bestämt ryttaren ber.
+
+	     Roblox körde tidigare bara linjär approach() med accel/retard.
+	     Tabellerna hade paritet men KÄNSLAN hade det inte — ett byte tog
+	     olika lång tid och hade olika form på de två ytorna. Det är
+	     kärnrörelse, och kärnrörelse får inte vara plattformsspecifik.
+
+	     Sekunder för en NEUTRAL häst. Samma tal som RidKanon.OVERGANG,
+	     och paritetsspecen faller om de glider isär. ]]
+	Transition = {
+		walk = 0.80, trot = 0.95, canter = 1.20,   -- uppåt, per gångart man går TILL
+		downSoft = 0.98,                            -- nedåt när ryttaren bara håller emot
+		downFirm = 0.78,                            -- nedåt vid full broms
+		switchAt = 0.55,                            -- var i förloppet ETIKETTEN byter
+	},
 	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
 
 	--[[ Vändning på stället. Kurvaturmodellen ger noll vridning vid noll

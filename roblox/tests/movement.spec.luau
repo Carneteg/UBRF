@@ -209,12 +209,16 @@ do
 		string.format("(%.3f s)", tSlapp))
 end
 
-print("")
-if fails > 0 then
-	print(string.format("%d mätning(ar) föll.", fails))
-else
-	print("Alla mätningar gick igenom.")
-end
+--[[ HÄR STOD EN SAMMANFATTNING MITT I SPECEN, och den var ett hål.
+
+     roblox/tests/kor.sh kräver tre saker för grönt: exitkod 0, inga
+     FEL-rader, och att specen NÅDDE SIN SLUTRAD. Det tredje finns för att
+     en krasch inte ska se ut som grönt. En "Alla mätningar gick igenom."
+     halvvägs in gjorde det kravet uppfyllt oavsett vad som hände sedan —
+     kraschade specen efter den här punkten var slutradskravet ändå
+     uppfyllt, och bara exitkoden återstod som skydd.
+
+     Borttagen i G02-A. Sammanfattningen skrivs en gång, sist. ]]
 
 print("\n── Gångartsbyten: inget flimmer vid gränserna ──")
 do
@@ -222,13 +226,17 @@ do
 	     bandgräns och gångarten hoppar fram och tillbaka mellan bildrutor,
 	     så animationen studsar. Mäts genom att sakta rulla farten genom
 	     hela spannet och räkna hur många gånger gångarten byter. En ren
-	     upprullning från halt till fyrsprång ska ge fyra byten, inte fler. ]]
+	     upprullning från halt till galopp ska ge TRE byten, inte fler.
+
+	     Det stod fyra här, och gick ändå igenom, därför att fyrsprånget
+	     var spelbart. Efter senior review 2026-09-05 slutar spelarens
+	     stege vid galopp (Gaits.SPELBAR_TOPP), och då är tre rätt. ]]
 	local mc = newMC()
 	local dt = 1 / 60
 	local byten, forra = 0, mc.loco.gait
 	local sekvens = { mc.loco.gait }
 	--[[ Stega upp en gångart var tredje sekund och låt farten hinna ifatt. ]]
-	for steg = 1, 4 do
+	for steg = 1, 3 do
 		for i = 1, 180 do
 			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
 			if mc.loco.gait ~= forra then
@@ -238,13 +246,13 @@ do
 		end
 	end
 	print("  uppåt:  " .. table.concat(sekvens, " → "))
-	check("fyra byten upp, inget flimmer", byten == 4,
+	check("tre byten upp, inget flimmer", byten == 3,
 		string.format("(%d byten)", byten))
 
 	--[[ Och samma väg ned. ]]
 	local ned, forraNed = 0, mc.loco.gait
 	local sekvensNed = { mc.loco.gait }
-	for steg = 1, 4 do
+	for steg = 1, 3 do
 		for i = 1, 180 do
 			mc:step(intent({ forward = 0, gaitDown = (i == 1) }), dt)
 			if mc.loco.gait ~= forraNed then
@@ -254,7 +262,7 @@ do
 		end
 	end
 	print("  nedåt:  " .. table.concat(sekvensNed, " → "))
-	check("fyra byten ned, inget flimmer", ned == 4,
+	check("tre byten ned, inget flimmer", ned == 3,
 		string.format("(%d byten)", ned))
 end
 
@@ -262,8 +270,13 @@ print("\n── Låg fart: precision i skritt ──")
 do
 	--[[ Precision vid låg fart betyder att man kan lägga en liten
 	     kursändring utan att hästen kastar sig runt. Mäts som kurs efter
-	     ett halvsekunds utslag i skritt jämfört med i fyrsprång — skritt
-	     ska ge finare kontroll, alltså mindre utslag per tidsenhet. ]]
+	     ett halvsekunds utslag i skritt jämfört med i galopp — skritt
+	     ska ge finare kontroll, alltså mindre utslag per tidsenhet.
+
+	     Jämförelsen gick förut mot fyrsprång med fyra impulser. Den
+	     gångarten är inte spelbar längre, och fyra impulser landar nu i
+	     galopp — samma mätning med fel etikett. Tre impulser, och
+	     etiketten säger galopp. ]]
 	local function svangIGangart(gangart, steg)
 		local mc = newMC()
 		for _ = 1, steg do mc:step(intent({ forward = 1, gaitUp = true }), 1 / 60) end
@@ -274,10 +287,10 @@ do
 		return d, mc.loco.speed
 	end
 	local dSkritt, vSkritt = svangIGangart("walk", 1)
-	local dGalopp, vGalopp = svangIGangart("gallop", 4)
-	print(string.format("  skritt    (%.1f m/s): %.3f rad på 0,5 s", vSkritt, dSkritt))
-	print(string.format("  fyrsprång (%.1f m/s): %.3f rad på 0,5 s", vGalopp, dGalopp))
-	check("skritt ger finare kontroll än fyrsprång", dSkritt < dGalopp,
+	local dGalopp, vGalopp = svangIGangart("canter", 3)
+	print(string.format("  skritt (%.1f m/s): %.3f rad på 0,5 s", vSkritt, dSkritt))
+	print(string.format("  galopp (%.1f m/s): %.3f rad på 0,5 s", vGalopp, dGalopp))
+	check("skritt ger finare kontroll än galopp", dSkritt < dGalopp,
 		string.format("(%.3f mot %.3f rad)", dSkritt, dGalopp))
 end
 
@@ -289,7 +302,13 @@ do
 	     kurvaturen satt sig. ]]
 	local dt = 1 / 120
 	local rader = {}
-	for _, rad in { { "walk", 1.45, 2 }, { "trot", 3.20, 3 }, { "canter", 5.60, 4 } } do
+	--[[ Stegen var förut 2/3/4 och etiketterna alltså förskjutna ETT
+	     steg: raden märkt "walk" reds i trav, "trot" i galopp och
+	     "canter" i fyrsprång. Provet passerade ändå — radien växte —
+	     men paritetsraden byggde på fel gångarters svängfaktorer. Att
+	     fyrsprånget stängdes gjorde felet synligt: två rader landade i
+	     samma gångart och gav samma radie. En impuls per gångart. ]]
+	for _, rad in { { "walk", 1.45, 1 }, { "trot", 3.20, 2 }, { "canter", 5.60, 3 } } do
 		local namn, tempo, steg = rad[1], rad[2], rad[3]
 		for _, s in { 0.25, 0.50, 1.00 } do
 			local mc = newMC()
@@ -391,16 +410,28 @@ do
 	upToGait(mcv, 2)
 	runMoving(mcv, 1.5, { forward = 1, steer = -1 })
 	local forra, storst, dt = rigYaw(mcv), 0, 1 / 60
-	local passerade = false
+	local start = mcv.curvature
+	local minsta = math.abs(start)
 	for _ = 1, math.floor(3.0 / dt) do
-		local innan = mcv.loco.turnRate
 		runMoving(mcv, dt, { forward = 1, steer = 1 }, dt)
-		if innan * mcv.loco.turnRate < 0 then passerade = true end
+		minsta = math.min(minsta, math.abs(mcv.curvature))
 		local nu = rigYaw(mcv)
 		storst = math.max(storst, math.abs(vinkelDiff(nu, forra)))
 		forra = nu
 	end
-	check("vänster → höger passerar faktiskt genom neutralt", passerade)
+	--[[ Provet letade förut efter ett TECKENBYTE mellan två bildrutor
+	     (innan * nu < 0). Det missar det starkaste utfallet av alla: att
+	     hästen råkar landa EXAKT på noll en bildruta, vilket kurvaturens
+	     dödband gör att den kan. Då är produkten noll, inte negativ, och
+	     ett perfekt genomgående såg ut som ett hopp. Kravet är i stället
+	     att svängen bytte håll OCH att den var nära noll på vägen. ]]
+	--[[ Mätt på KURVATUREN och inte på vridhastigheten. Vridhastigheten
+	     är kurvatur × fart, så samma båge ger olika tal i olika gångart
+	     — en gräns i rad/s hade mätt farten lika mycket som bågen. ]]
+	local passerade = start * mcv.curvature < 0 and minsta < 0.02
+	check("vänster → höger passerar faktiskt genom neutralt", passerade,
+		string.format("(κ %.4f → %.4f, minst %.5f 1/m på vägen)",
+			start, mcv.curvature, minsta))
 	check("och gör det utan snäpp", storst < 0.03,
 		string.format("(största kurssteg %.4f rad/bildruta i %s)", storst, mcv.loco.gait))
 
@@ -629,6 +660,607 @@ do
 	check("oläst klipplängd faller tillbaka på klockan i stället för att frysa",
 		t0 ~= nil and t0.Speed ~= 0 and t0.TimePosition == 0,
 		t0 and string.format("(Speed %.3f, läge %.3f)", t0.Speed, t0.TimePosition) or "")
+end
+
+--[[ ── G02-A: TELEMETRIN UR EN RIKTIG CONTROLLER-FRAME ──────────────
+     Senior review av #86, blocker B: paritetsspecen provade Telemetri.las()
+     mot en HANDSKRIVEN `loco`-tabell, alltså mot något jag själv hittat på.
+     Det bevisar att funktionen läser en tabell, inte att den läser hästen.
+
+     Här körs en verklig MovementController i verkliga bildrutor — samma
+     `runMoving` som resten av specen använder, med riktig förflyttning —
+     och telemetrin läses ur DESS loco och DESS kurvatur, precis som
+     klientens ridloop gör.
+
+     Kontrollen är också att lagret är RENT: samma frames körda med och utan
+     telemetriavläsning ska ge exakt samma rörelse. Kan avläsningen ändra
+     hästen är den inte read-only, och då hör den inte hemma i ridloopen. ]]
+do
+	print("")
+	print("── G02-A: telemetri ur en riktig MovementController-frame ───")
+
+	local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+
+	local mc = newMC()
+	runMoving(mc, 6, { forward = 1, steer = 0.6 })
+	local loco = mc.loco
+	Telemetri.foljGangart(ritt, loco.gait)
+	local tm = Telemetri.las(ritt, loco, mc.curvature)
+
+	check("controllern rörde sig på riktigt innan telemetrin lästes",
+		loco.speed > 0.5 and math.abs(mc.curvature) > 1e-4,
+		string.format("(fart %.2f m/s, gångart %s, κ %.4f 1/m)", loco.speed, loco.gait, mc.curvature))
+
+	local kravda = { "uppsutten", "hast", "gangart", "gangartGlapp", "fart",
+		"onskadFart", "kurvatur", "svangradie", "vridhastighet", "rytm", "steglangd" }
+	local saknas = {}
+	for _, k in kravda do if tm[k] == nil then table.insert(saknas, k) end end
+	check("telemetrin fylls ur controllerns eget tillstånd",
+		#saknas == 0 and tm.uppsutten == true and tm.hast == "bandit",
+		if #saknas > 0 then "saknas: " .. table.concat(saknas, ", ")
+		else string.format("gångart %s, fart %.2f, radie %.1f m, rytm %.2f",
+			tm.gangart, tm.fart, tm.svangradie, tm.rytm))
+
+	check("vridhastighet = kurvatur × tempo, mätt på controllern",
+		math.abs(tm.vridhastighet - tm.kurvatur * tm.fart) < 1e-6,
+		string.format("(%.4f rad/s = %.4f × %.2f)", tm.vridhastighet, tm.kurvatur, tm.fart))
+
+	--[[ REN AVLÄSNING: två identiska körningar, en med telemetri varje
+	     bildruta och en utan. Skiljer de sig har lagret rört rörelsen. ]]
+	local a, b = newMC(), newMC()
+	local r2 = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+	local dt = 1 / 60
+	for _ = 1, 360 do
+		a:step(intent({ forward = 1, steer = 0.6 }), dt)
+		b:step(intent({ forward = 1, steer = 0.6 }), dt)
+		Telemetri.foljGangart(r2, b.loco.gait)
+		Telemetri.las(r2, b.loco, b.curvature)
+	end
+	local dFart = math.abs(a.loco.speed - b.loco.speed)
+	local dKurv = math.abs(a.curvature - b.curvature)
+	local dKurs = math.abs(a.loco.heading - b.loco.heading)
+	check("avläsningen ändrar inte rörelsen (fart, kurvatur, kurs identiska)",
+		dFart < 1e-12 and dKurv < 1e-12 and dKurs < 1e-12,
+		string.format("(Δfart %.2e, Δκ %.2e, Δkurs %.2e)", dFart, dKurv, dKurs))
+
+	--[[ Uppsittningen är ett tillstånd även här: släpps ritten ska
+	     telemetrin sluta påstå att någon sitter upp. ]]
+	Telemetri.sittAv(ritt)
+	local efter = Telemetri.las(ritt, loco, mc.curvature)
+	check("avsittning syns i telemetrin ur samma controller",
+		efter.uppsutten == false and efter.hast == nil,
+		string.format("uppsutten %s", tostring(efter.uppsutten)))
+end
+
+--[[ PARADEN — G02-A.1 P5, paritet med webben.
+
+     Webben mätte fram att hjälpens styrka inte påverkade halten alls:
+     varje parad var en nödbromsning. Roblox hade redan skillnaden, men
+     ingen mätte den. Mekanismen skiljer sig — Roblox lägger på
+     M.BrakeExtra när S hålls, webben läser tygelns och sitsens styrka —
+     men BETEENDET ska vara detsamma: ber du bestämdare stannar hon
+     fortare. Det är den sortens paritet som gäller när ytorna har olika
+     inputmodell. ]]
+do
+	print("\n── Paraden: ber man bestämdare stannar hon fortare ──")
+	local dt = 1 / 240
+	local function stoppa(bakat)
+		local mc = newMC()
+		upToGait(mc, 3)                       -- upp i galopp
+		run(mc, 2.0, { forward = 1 }, 1 / 60) -- låt tempot sätta sig
+		local fran = mc.loco.speed
+		local t, ret, forra = 0, 0, mc.loco.speed
+		for _ = 1, math.floor(12 / dt) do
+			mc:step(intent({ forward = if bakat then -1 else 0, gaitDown = (t < dt) }), dt)
+			ret = math.max(ret, (forra - mc.loco.speed) / dt)
+			forra = mc.loco.speed
+			t += dt
+			if mc.loco.speed < 0.02 then break end
+		end
+		return fran, t, ret
+	end
+	--[[ Nedstegning utan S mot nedstegning MED S. Samma häst, samma
+	     startläge, samma gångartsbegäran — bara bromshjälpen skiljer. ]]
+	local f1, t1, r1 = stoppa(false)
+	local f2, t2, r2 = stoppa(true)
+	check("bestämd broms bromsar hårdare än enbart nedstegning", r2 > r1 * 1.10,
+		string.format("topp %.2f mot %.2f m/s² (från %.2f respektive %.2f m/s)",
+			r2, r1, f2, f1))
+end
+
+--[[ BÅGEN ÄNDRAS ALDRIG FORTARE VID ETT BYTE ÄN VID EN INSVÄNGNING.
+
+     G02-A.1 P4, samma självrefererande krav som webbens ridtest.
+     Kurvaturens ändringstakt vid ett riktningsbyte jämförs med samma
+     takt vid den hårdaste insvängningen från rakt. Bytet får inte vara
+     snabbare: det är fysiskt samma rörelse, att lägga en båge i
+     kroppen, och ett byte som går fortare är ett ryck.
+
+     Utan taket i MovementController mäter webben 1,43 gånger snabbare.
+     Marginalen 1,15 är taket självt — CurvatureRateTime är satt med
+     luft så att en vanlig insvängning aldrig bromsas. ]]
+do
+	print("\n── Bågen ändras aldrig fortare vid ett byte än vid en insvängning ──")
+	local dt = 1 / 60
+	local function takt(spar)
+		local m = 0
+		for i = 2, #spar do m = math.max(m, math.abs(spar[i] - spar[i - 1]) / dt) end
+		return m
+	end
+	--[[ Insvängning från rakt. ]]
+	local a = newMC(); upToGait(a, 2); run(a, 2.0, { forward = 1 }, dt)
+	local sIn = {}
+	for _ = 1, math.floor(3.0 / dt) do
+		a:step(intent({ forward = 1, steer = 1 }), dt)
+		table.insert(sIn, a.curvature)
+	end
+	--[[ Riktningsbyte från etablerad full vänster. ]]
+	local b = newMC(); upToGait(b, 2); run(b, 3.0, { forward = 1, steer = -1 }, dt)
+	local sByte = {}
+	for _ = 1, math.floor(3.0 / dt) do
+		b:step(intent({ forward = 1, steer = 1 }), dt)
+		table.insert(sByte, b.curvature)
+	end
+	local tIn, tByte = takt(sIn), takt(sByte)
+	check("bytets takt överstiger inte insvängningens", tByte <= tIn * 1.15,
+		string.format("byte %.3f mot insvängning %.3f 1/(m·s) = %.2f×",
+			tByte, tIn, tByte / tIn))
+end
+
+--[[ GÅNGARTENS TRÖGHET I SVÄNGEN — G02-A.1 P3, mätt.
+
+     Talet svangTau kom in i Gaits.luau i P3, men BARA som data: det
+     lästes inte av någon och Roblox svängde likadant i alla gångarter
+     medan tabellen påstod motsatsen. Webben hade det inkopplat, Roblox
+     inte, och paritetsspecen jämförde tabeller — inte beteende. Nu läser
+     MovementController det, och det här provet mäter att den gör det.
+
+     Mätt som tiden till 90 % av sin egen slutkurvatur vid fullt utslag.
+     Taken skiljer sig mellan gångarterna (galoppen svänger vidare), så
+     jämförelsen görs mot varje gångarts EGET slutvärde — annars mäter
+     man turn och inte svangTau. ]]
+do
+	print("\n── Galoppen lägger sig i bågen trögare än skritten ──")
+	local dt = 1 / 240                              -- fin upplösning: tiden mäts
+	local function tid90(steg)
+		local mc = newMC()
+		upToGait(mc, steg, 1 / 60)
+		--[[ Rakt fram tills kurvaturen dött ut, så mätningen börjar från noll. ]]
+		run(mc, 2.0, { forward = 1 }, 1 / 60)
+		local slut = 0
+		local mc2 = newMC()
+		upToGait(mc2, steg, 1 / 60); run(mc2, 2.0, { forward = 1 }, 1 / 60)
+		for _ = 1, math.floor(4.0 / dt) do mc2:step(intent({ forward = 1, steer = 1 }), dt) end
+		slut = math.abs(mc2.curvature)
+		local t = 0
+		for _ = 1, math.floor(4.0 / dt) do
+			mc:step(intent({ forward = 1, steer = 1 }), dt)
+			t += dt
+			if math.abs(mc.curvature) >= 0.90 * slut then break end
+		end
+		return t, slut, mc.loco.gait
+	end
+	local tW, kW, gW = tid90(1)
+	local tC, kC, gC = tid90(3)
+	check("galopp tar längre tid till 90 % av sin båge än skritt",
+		tC > tW * 1.15,
+		string.format("%s %.3f s (κ %.3f) mot %s %.3f s (κ %.3f)", gC, tC, kC, gW, tW, kW))
+end
+
+--[[ HÅLLEN TANGENT GER ETT STEG — paritet med webbens G02-A.1 P4.
+
+     Webben mätte fram att en HÅLLEN framåthjälp inte kunde ge något
+     gångartsbyte alls, och rättade det genom att läsa hjälpens resa över
+     ett fönster i stället för per bildruta. Roblox har inte det felet,
+     men det är värt att visa VARFÖR: här är gaitUp redan en flank,
+     satt i Input.luau när tangenten går ned och nollställd i consume().
+
+     Regeln är alltså densamma på båda ytorna — ett tryck är en begäran,
+     att fortsätta hålla är ingen ny begäran — men den bor på olika
+     ställen. Roblox löser den i inputlagret därför att tangenten är
+     diskret; webben måste lösa den i modellen därför att hjälpen är
+     analog och utjämnad och först DÄR har en historia att jämföras med.
+
+     Faller det här provet klättrar hästen en gångart per bildruta så
+     länge Shift hålls nere, alltså från halt till fyrsprång på under en
+     tiondels sekund. ]]
+do
+	print("\n── Hållen tangent är EN begäran, inte en per bildruta ──")
+	Input.unbind(); __setStick(nil); Input.bind()
+	local mc = newMC()
+	local dt = 1 / 60
+	--[[ Upp i skritt först, så att steget som mäts inte är W:s egen
+	     "ur halt startar skritt". ]]
+	for i = 1, 180 do mc:step(intent({ forward = 1 }), dt) end
+	local fore = mc.loco.targetGait
+	__key(Enum.KeyCode.LeftShift, true)             -- Shift NED och kvar där
+	for i = 1, 300 do
+		local avsikt = Input.consume()
+		avsikt.forward = 1
+		mc:step(avsikt, dt)
+	end
+	local efter = mc.loco.targetGait
+	__key(Enum.KeyCode.LeftShift, false)
+	local steg = Gaits.index(efter) - Gaits.index(fore)
+	check("hållen Shift i fem sekunder ger ETT steg upp", steg == 1,
+		string.format("%s → %s (%d steg)", fore, efter, steg))
+	Input.unbind()
+end
+
+--[[ ÖVERGÅNGSTIDERNA, MÄTTA — senior review 2026-09-05.
+
+     Tabellparitet räcker inte för kärnrörelse. Det här provet KLOCKAR
+     förloppet på en neutral häst och jämför mot kanon. Toleransen är
+     uttalad: ±0,08 s, vilket är fem bildrutor i 60 Hz och rymmer att
+     mätningen bara kan se hela steg.
+
+     Motsvarande siffror på webben, mätta av tools/ridkansla.mjs:
+     halt→skritt 0,81 · skritt→trav 0,96 · trav→galopp 1,21 ·
+     nedåt bestämt 0,78. Kanonvärdena är 0,80 / 0,95 / 1,20 / 0,78. ]]
+do
+	print("\n── Övergångstiderna, mätta mot kanon ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	--[[ Neutral häst: Acceleration 0,5 och lugnt temperament ger skalan
+	     1,0, precis som webbens normaltyngd 0,4. ]]
+	--[[ steg = 0 betyder att förloppet som klockas är halt→skritt, och då
+	     får ekipaget INTE värmas upp med forward = 1 först: W ur halt
+	     startar skritt av sig själv, och då klockas nästa förlopp i
+	     stället. Första versionen gjorde det och mätte 0,95 s — vilket
+	     är skritt→trav, inte halt→skritt. ]]
+	local function klocka(steg, ned)
+		local mc = newMC()
+		if steg > 0 then
+			upToGait(mc, steg, 1 / 60)
+			run(mc, 2.0, { forward = 1 }, 1 / 60)
+		end
+		local t, sett = 0, nil
+		for _ = 1, math.floor(4.0 / dt) do
+			local avsikt = if ned
+				then intent({ gaitDown = (t < dt) })
+				else intent({ forward = 1, gaitUp = (t < dt) })
+			mc:step(avsikt, dt)
+			t += dt
+			if mc._ov then sett = mc._ov.langd end
+			if sett and not mc._ov then return t, sett end
+		end
+		return nil, sett
+	end
+	local rader = {
+		{ "halt→skritt", 0, false, T.walk },
+		{ "skritt→trav", 1, false, T.trot },
+		{ "trav→galopp", 2, false, T.canter },
+		{ "galopp→trav", 3, true, T.downSoft },
+	}
+	local varst, sam = 0, {}
+	for _, rad in rader do
+		local matt = klocka(rad[2], rad[3])
+		local avvik = if matt then math.abs(matt - rad[4]) else 99
+		varst = math.max(varst, avvik)
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], matt or -1, rad[4]))
+		print(string.format("  %-12s mätt %.3f s mot kanon %.2f s", rad[1], matt or -1, rad[4]))
+	end
+	check("uppmätta övergångstider ligger inom ±0,08 s av kanon",
+		varst <= 0.08, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
+end
+
+--[[ NÄR BYTER SJÄLVA GÅNGARTEN — senior re-review 2026-09-05.
+
+     Föregående prov klockar när FÖRLOPPET slutar. Det säger ingenting om
+     när loco.gait byter, och det är den siffran animation, telemetri och
+     kamera följer. Webben byter etikett vid BYTPUNKT = 55 % av
+     förloppet; Roblox ska göra detsamma, och det ska mätas och inte
+     läsas ur en tabell.
+
+     Väntade tider = switchAt × förloppets längd:
+       halt→skritt 0,55 × 0,80 = 0,44 s
+       skritt→trav 0,55 × 0,95 = 0,52 s
+       trav→galopp 0,55 × 1,20 = 0,66 s
+     Samma tal som webbens ridkansla mäter i kolumnen "etikett". ]]
+do
+	print("\n── När byter själva gångarten ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	local function bytestid(steg, langd)
+		local mc = newMC()
+		if steg > 0 then
+			upToGait(mc, steg, 1 / 60)
+			run(mc, 2.0, { forward = 1 }, 1 / 60)
+		end
+		local fore = mc.loco.gait
+		local t = 0
+		for _ = 1, math.floor(4.0 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (t < dt) }), dt)
+			t += dt
+			if mc.loco.gait ~= fore then return t, mc.loco.gait end
+		end
+		return nil, mc.loco.gait
+	end
+	local rader = {
+		{ "halt→skritt", 0, T.walk },
+		{ "skritt→trav", 1, T.trot },
+		{ "trav→galopp", 2, T.canter },
+	}
+	local varst, sam = 0, {}
+	for _, rad in rader do
+		local matt = bytestid(rad[2], rad[3])
+		local vantad = T.switchAt * rad[3]
+		local avvik = if matt then math.abs(matt - vantad) else 99
+		varst = math.max(varst, avvik)
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], matt or -1, vantad))
+		print(string.format("  %-12s bytte vid %.3f s, väntat %.2f s (%.0f %% av %.2f)",
+			rad[1], matt or -1, vantad, T.switchAt * 100, rad[3]))
+	end
+	check("gångarten byter vid switchAt-punkten, inte när tempot passerar ett band",
+		varst <= 0.06, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
+end
+
+--[[ MÄTVÄRDE, inget krav: hur länge hästen rör sig med stillastående
+     klipp under halt→skritt. Etiketten är "halt" till 55 %, och halt har
+     ingen steglängd — samma egenskap som webben, där Gait.steglangd
+     returnerar 0 för halt. Talet redovisas för att det ska SYNAS, inte
+     för att jag satt en gräns för det. ]]
+do
+	print("\n── Halt→skritt: fönstret med rörelse men stillastående klipp ──")
+	local dt = 1 / 240
+	local mc = newMC()
+	local anim = AnimationController.new(mc.rig, STATS)
+	local t, rorFran, klippVid = 0, nil, nil
+	while t < 1.5 do
+		mc:step(intent({ forward = 1 }), dt)
+		anim:step(mc.loco, dt)
+		t += dt
+		if not rorFran and math.abs(mc.loco.speed) >= 0.25 then rorFran = t end
+		if rorFran and not klippVid and anim.current ~= "Idle" then klippVid = t end
+	end
+	print(string.format("  rörelse från %.3f s, gångartsklipp från %.3f s → fönster %.3f s",
+		rorFran or -1, klippVid or -1, (klippVid or 0) - (rorFran or 0)))
+end
+
+--[[ ANIMATIONEN BYTER OCKSÅ VID 55 % — senior re-review 2026-09-05.
+
+     Etiketten loco.gait byter vid switchAt, men ANIMATIONEN väljs ur
+     loco.state, och tillståndet kom ur maskinens egen fartbaserade
+     gångart. Under skritt→trav kunde travklippet därför börja när tempot
+     passerade bandet medan kamera, telemetri och sväng fortfarande sa
+     skritt. En intern dubbel-sanning.
+
+     Provet går genom den RIKTIGA kedjan: MovementController → loco.state
+     → AnimationController → vilket spår som faktiskt spelas.
+
+     BYTET KLOCKAS, det stickprovas inte. Första versionen läste klippet
+     vid 35 % och 85 % av förloppet och var grön även med mutationen
+     inlagd — bandets korsning ligger runt 41 %, alltså mellan
+     mätpunkterna, så båda mekanismerna gav samma svar på båda ställena.
+     Ett prov som inte kan skilja de två fallen åt bevisar ingenting. ]]
+do
+	print("\n── Animationen byter vid 55 %, inte på fartbandet ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	local function bytestid(steg, langd)
+		local mc = newMC()
+		local anim = AnimationController.new(mc.rig, STATS)
+		upToGait(mc, steg, 1 / 60)
+		run(mc, 2.0, { forward = 1 }, 1 / 60)
+		anim:step(mc.loco, 1 / 60)
+		local fore = anim.current
+		local t = 0
+		while t < 2.0 * langd do
+			mc:step(intent({ forward = 1, gaitUp = (t < dt) }), dt)
+			anim:step(mc.loco, dt)
+			t += dt
+			if anim.current ~= fore then return t, fore, anim.current end
+		end
+		return nil, fore, anim.current
+	end
+	local rader = {
+		{ "skritt→trav", 1, T.trot },
+		{ "trav→galopp", 2, T.canter },
+	}
+	local varst, sam = 0, {}
+	for _, rad in rader do
+		local matt, fran, till = bytestid(rad[2], rad[3])
+		local vantad = T.switchAt * rad[3]
+		local avvik = if matt then math.abs(matt - vantad) else 99
+		varst = math.max(varst, avvik)
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], matt or -1, vantad))
+		print(string.format("  %-12s %s → %s vid %.3f s, väntat %.2f s",
+			rad[1], fran, till, matt or -1, vantad))
+	end
+	check("gångartsklippet byter vid switchAt, inte när tempot passerar bandet",
+		varst <= 0.06, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
+end
+
+--[[ SVÄNGKÄNSLAN BYTER OCKSÅ VID 55 %, INTE VID CUE:N.
+
+     Senior re-review 2026-09-05: Roblox tog turn/svangTau ur
+     Gaits.get(loco.targetGait), alltså ur den gångart ryttaren just BAD
+     om. Kurvaturtaket vidgades därmed i samma bildruta som cue:n föll,
+     medan webben behåller den gamla gångartens sväng till 55 %-punkten.
+
+     Mätt på KURVATUREN och inte på etiketten — etiketten provas redan
+     ovan, och ett prov som läser loco.gait här hade bevisat fel sak.
+
+     Två controllers, båda i skritt, båda med kurvaturen på noll. Den ena
+     får ligga kvar i skritt, den andra får en cue mot trav. Sedan fullt
+     styrutslag lika länge i båda, och mätningen sker FÖRE bytpunkten
+     0,55. Räknas svängen ur skritt i båda ska kurvaturen bli densamma;
+     räknas den ur travet i den andra blir den lägre — travets turn är
+     0,82 mot skrittens 1,00, och dess svangTau trögare. ]]
+do
+	print("\n── Svängkänslan byter vid 55 %, inte vid cue:n ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	local function kappaEfterStyrning(medCue)
+		local mc = newMC()
+		upToGait(mc, 1, 1 / 60)
+		run(mc, 2.0, { forward = 1 }, 1 / 60)
+		mc.curvature = 0
+		local t, fonster = 0, 0.30 * T.trot   -- klart före bytpunkten 0,55
+		while t < fonster do
+			mc:step(intent({ forward = 1, steer = 1, gaitUp = (medCue and t < dt) }), dt)
+			t += dt
+		end
+		return math.abs(mc.curvature), mc.loco.gait
+	end
+	local utan, gUtan = kappaEfterStyrning(false)
+	local med, gMed = kappaEfterStyrning(true)
+	local kvot = med / math.max(utan, 1e-6)
+	print(string.format("  utan cue: κ %.4f (%s)   med cue: κ %.4f (%s)   kvot %.3f",
+		utan, gUtan, med, gMed, kvot))
+	check("kurvaturen räknas ur SKRITT även efter cue:n, fram till bytpunkten",
+		math.abs(kvot - 1) < 0.02,
+		string.format("(kvot %.3f — travets turn hade gett ~0,82)", kvot))
+end
+
+--[[ FYRSPRÅNGET ÄR INTE SPELBART — senior review 2026-09-05.
+
+     Gångarten finns kvar som data, men en spelare ska inte kunna nå
+     den, därför att webben inte har den. En femte spelbar gångart på
+     bara den ena ytan är en plattformsspecifik kärnregel, och #82
+     förbjuder sådana.
+
+     Provet spammar gaitUp långt fler gånger än det finns gångarter, och
+     försöker dessutom höja taket direkt via setCeiling — det är vägen
+     servern använder, och den ska inte heller kunna öppna gångarten. ]]
+do
+	print("\n── Fyrsprånget går inte att nå ──")
+	local dt = 1 / 60
+	local mc = newMC()
+	for _ = 1, 8 do
+		for i = 1, math.floor(2.0 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+		end
+	end
+	local efterSpam = mc.loco.targetGait
+	--[[ Och med taket uttryckligen uppskruvat till fyrsprång. ]]
+	mc:setCeiling("gallop")
+	for _ = 1, 4 do
+		for i = 1, math.floor(2.0 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+		end
+	end
+	local efterTak = mc.loco.targetGait
+	--[[ Mätt mot "canter" och INTE mot Gaits.SPELBAR_TOPP.
+
+	     Första versionen jämförde med konstanten själv. Då blir provet
+	     tautologiskt: skruvas taket upp till fyrsprång följer kravet med
+	     och provet förblir grönt medan gångarten öppnas. Uppmätt när jag
+	     falsifierade: movement OK, bara paritetsspecen föll.
+
+	     "canter" är webbens sista gångart översatt hit. Att den
+	     översättningen stämmer bevakas av paritetsspecen, som jämför
+	     RidKanon.ORDNING mot Gaits.SPELBAR_TOPP. De två proven håller
+	     alltså i var sin ände av samma påstående. ]]
+	check("åtta gångartsimpulser tar inte spelaren förbi galopp",
+		efterSpam == "canter",
+		string.format("hamnade i %s (taket är %s)", efterSpam, Gaits.SPELBAR_TOPP))
+	check("ett uppskruvat tak öppnar inte fyrsprånget heller",
+		efterTak == "canter",
+		string.format("setCeiling(\"gallop\") gav %s", efterTak))
+end
+
+--[[ DEN VERTIKALA SLICEN — G02-A.1 P7, Roblox logik-/speclager.
+
+     Samma obrutna pass som webbens ridtest kör i sin runtime:
+
+       sitt upp → halt → skritt → HÅLL skritt → trav → volt → galopp
+       → sväng → trav → skritt → halt → sitt av
+
+     Delarna provas var för sig ovanför. Det nya är att de körs efter
+     varandra på SAMMA controller — tillstånd som bara stämmer när
+     provet börjar om syns bara här.
+
+     Arbetsordern räknar upp vad telemetrin ska visa: cue, begärd
+     gångart, verklig gångart, tempo, kurvatur, övergångstillstånd och
+     inga olagliga hopp. Allt läses ur samma controller, inte ur en
+     konstruerad Locomotion. ]]
+do
+	print("\n── Den vertikala slicen ──")
+	local dt = 1 / 60
+	local mc = newMC()
+	local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+	local uppe = ritt.uppsutten
+
+	local sedda = { mc.loco.gait }
+	local moment = {}
+	local function kor(o, sek)
+		for i = 1, math.floor(sek / dt) do
+			local avsikt = intent(o)
+			--[[ gaitUp/gaitDown är flanker: bara första bildrutan. ]]
+			if i > 1 then avsikt.gaitUp, avsikt.gaitDown = false, false end
+			mc:step(avsikt, dt)
+			local hum = mc.rig.humanoid
+			local dir = hum._moves[#hum._moves]
+			if dir then
+				local ny = mc.rig.root.Position + dir * (hum.WalkSpeed * dt)
+				mc.rig.root.Position = ny
+				mc.rig.root.CFrame = CFrame.new(ny) * CFrame.Angles(0, mc.loco.heading, 0)
+			end
+			if sedda[#sedda] ~= mc.loco.gait then table.insert(sedda, mc.loco.gait) end
+		end
+	end
+	local function notera(vad)
+		local t = Telemetri.las(ritt, mc.loco, mc.curvature)
+		table.insert(moment, { vad = vad, gangart = mc.loco.gait, bad = mc.loco.targetGait,
+			cue = mc.loco.cue, fart = t.fart, kurvatur = t.kurvatur,
+			overgang = mc.loco.senasteOvergang })
+	end
+
+	kor({}, 2.0)                                    notera("halt")
+	kor({ forward = 1 }, 3.0)                       notera("skritt")
+	kor({ forward = 1 }, 6.0)                       notera("håll skritt")
+	kor({ forward = 1, gaitUp = true }, 3.0)        notera("trav")
+	kor({ forward = 1, steer = 1 }, 4.0)            notera("volt")
+	kor({ forward = 1 }, 2.0)
+	kor({ forward = 1, gaitUp = true }, 3.0)        notera("galopp")
+	kor({ forward = 1, steer = 0.6 }, 3.0)          notera("sväng")
+	kor({ forward = 1 }, 2.0)
+	--[[ NED med gaitDown och forward 0. `forward = -1` betyder BACKA på
+	     Roblox — den tar targetGait hela vägen till halt och rullar sedan
+	     bakåt, vilket är en annan manöver än en parad. Första versionen
+	     av slicen gjorde det och mätte en häst som gick baklänges i
+	     1,10 m/s medan den påstod sig parera. ]]
+	kor({ gaitDown = true }, 4.0)                   notera("trav igen")
+	kor({ gaitDown = true }, 4.0)                   notera("skritt igen")
+	kor({ gaitDown = true }, 6.0)                   notera("halt igen")
+	Telemetri.sittAv(ritt)
+
+	for _, m in moment do
+		print(string.format("  %-12s %-7s bad %-7s cue %-7s %.2f m/s  κ %.4f  %.2f s",
+			m.vad, m.gangart, tostring(m.bad), tostring(m.cue),
+			m.fart or -1, m.kurvatur or 0, m.overgang or 0))
+	end
+	print("  sedda: " .. table.concat(sedda, " → "))
+
+	--[[ Inga olagliga hopp: varje byte i sekvensen ska vara ETT steg. ]]
+	local olagliga = 0
+	for i = 2, #sedda do
+		if math.abs(Gaits.index(sedda[i]) - Gaits.index(sedda[i - 1])) ~= 1 then
+			olagliga += 1
+		end
+	end
+	local g = {}
+	for _, m in moment do table.insert(g, m.gangart) end
+	local vantad = { "halt", "walk", "walk", "trot", "trot", "canter", "canter", "trot", "walk", "halt" }
+	local rattKedja = #g == #vantad
+	if rattKedja then
+		for i, v in vantad do if g[i] ~= v then rattKedja = false end end
+	end
+	check("slicen: hela passet på samma controller, utan olagliga hopp",
+		uppe == true and ritt.uppsutten == false and rattKedja and olagliga == 0,
+		string.format("uppsutten %s → %s, moment %s, %d olagliga",
+			tostring(uppe), tostring(ritt.uppsutten), table.concat(g, " → "), olagliga))
+	--[[ Hållet: sex sekunder med samma avsikt ska inte flytta henne. ]]
+	check("slicen: hästen BÄR skritten genom hela hållet",
+		moment[2].gangart == "walk" and moment[3].gangart == "walk",
+		string.format("efter W %s %.2f m/s, sex sekunder senare %s %.2f m/s",
+			moment[2].gangart, moment[2].fart or -1, moment[3].gangart, moment[3].fart or -1))
+	--[[ Telemetrin ska bära hela vägen. ]]
+	local telOk = true
+	for _, m in moment do if m.fart == nil or m.kurvatur == nil then telOk = false end end
+	check("slicen: telemetrin följer med genom hela passet", telOk,
+		string.format("(%d moment)", #moment))
 end
 
 print("")

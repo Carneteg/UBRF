@@ -20,46 +20,69 @@ export type Gait = {
 	name: string, label: string,
 	min: number, max: number, norm: number,
 	cycles: number, steps: number,
-	accel: number, retard: number, turn: number, stamina: number,
+	accel: number, retard: number, turn: number, svangTau: number, stamina: number,
 	camera: { dist: number, height: number, fov: number },
 }
 
 Gaits.ORDER = { "halt", "walk", "trot", "canter", "gallop" }
 
+--[[ HÖGSTA SPELBARA GÅNGART I G02-A.
+
+     Fyrsprånget finns kvar som DATA — tempoband, kamera, uthållighet —
+     men en spelare ska inte kunna nå det, därför att webben inte har
+     gångarten. Efter PO-beslutet 2026-09-05 är webbens A-modell kanon
+     och den slutar vid galopp; en femte spelbar gångart på bara den ena
+     ytan är precis en sådan plattformsspecifik kärnregel som #82
+     förbjuder.
+
+     Taket läses av MovementController (spelarens stege), av
+     HorseService (uthållighetstaket och valideringen av vad klienten
+     påstår) och av paritetsspecen. Det står HÄR och ingen annanstans,
+     så att en yta inte kan öppna gångarten av misstag.
+
+     Att öppna fyrsprånget igen är ett produktbeslut som kräver att
+     webben får motsvarande gångart först. ]]
+Gaits.SPELBAR_TOPP = "canter"
+
 --[[ steps  = hovnedslag per cykel (skritt fyra, trav två, galopp tre)
      accel  = m/s² uppåt   retard = m/s² nedåt
      turn   = andel av grundsvarvheten; hög fart ger vidare sväng
+     svangTau = hur TRÖGT kurvaturen följer styrningen (G02-A.1 P3).
+                turn säger hur snävt hon KAN svänga, svangTau hur snabbt
+                bågen ändras. Skritten rättar sig kvickast, galoppen
+                lägger sig i bågen långsammare och känns vidare.
+                Samma tal som RID_KANON.SVANGTAU på webben.
      stamina = enheter per sekund, 0 = gratis
      camera = { avstånd, höjd, fov-tillägg } ]]
 Gaits.BY_NAME = ({
 	halt = {
 		name = "halt", label = "Halt", min = 0.00, max = 0.20,
 		norm = 0.00, cycles = 0.00, steps = 0,
-		accel = 3.2, retard = 5.5, turn = 1.00, stamina = -3.0,
+		accel = 3.2, retard = 5.5, turn = 1.00, svangTau = 1.00, stamina = -3.0,
 		camera = { dist = 14, height = 5.0, fov = 0 },
 	},
 	walk = {
 		name = "walk", label = "Skritt", min = 0.90, max = 2.00,
-		norm = 1.45, cycles = 1.00, steps = 4,
-		accel = 2.6, retard = 3.4, turn = 1.00, stamina = 0.0,
+		norm = 1.45, cycles = 0.900621, steps = 4,
+		accel = 2.6, retard = 3.4, turn = 1.00, svangTau = 0.85, stamina = 0.0,
 		camera = { dist = 15, height = 5.2, fov = 0 },
 	},
 	trot = {
 		name = "trot", label = "Trav", min = 2.40, max = 4.30,
-		norm = 3.20, cycles = 1.50, steps = 2,
-		accel = 2.9, retard = 3.6, turn = 0.82, stamina = 0.4,
+		norm = 3.20, cycles = 1.451247, steps = 2,
+		accel = 2.9, retard = 3.6, turn = 0.82, svangTau = 1.00, stamina = 0.4,
 		camera = { dist = 17, height = 5.6, fov = 1 },
 	},
 	canter = {
-		name = "canter", label = "Galopp", min = 4.60, max = 7.00,
-		norm = 5.60, cycles = 1.75, steps = 3,
-		accel = 3.4, retard = 3.2, turn = 0.62, stamina = 2.2,
+		name = "canter", label = "Galopp", min = 4.60, max = 8.00,
+		norm = 5.60, cycles = 1.6, steps = 3,
+		accel = 3.4, retard = 3.2, turn = 0.52, svangTau = 1.45, stamina = 2.2,
 		camera = { dist = 19, height = 6.0, fov = 4 },
 	},
 	gallop = {
-		name = "gallop", label = "Fyrsprång", min = 7.20, max = 11.0,
+		name = "gallop", label = "Fyrsprång", min = 8.20, max = 11.0,
 		norm = 8.60, cycles = 2.05, steps = 4,
-		accel = 3.0, retard = 2.6, turn = 0.42, stamina = 5.5,
+		accel = 3.0, retard = 2.6, turn = 0.42, svangTau = 1.60, stamina = 5.5,
 		camera = { dist = 23, height = 6.4, fov = 8 },
 	},
 } :: { [string]: Gait })
@@ -145,8 +168,17 @@ end
      precis den hovglidning som är förbjuden i acceptanskraven för riggen.
 
      Cykellängden är `Gaits.cycleLength`, och den är det enda bindande måttet.
-     Webben och Roblox är dock inte överens om den — se `HASTRIGG-KRAVSPEC.md`
-     § 4 och issue om plattformsavvikelsen. ]]
+
+     HARMONISERAD MOT WEBBEN (PO-beslut 2026-09-05). `cycles` är satt så att
+     norm ÷ cycles ger webbens cykellängd, alltså SPRANG("hast") 3,50 gånger
+     gångartens stegfaktor: skritt 1,61 m, trav 2,205 m, galopp 3,50 m. Var
+     1,45 / 2,133 / 3,20. Det ändrar takten i animationen, och det är just
+     vad harmoniseringen innebär — två produktfysiker blir en.
+
+     Raden om att webben och Roblox INTE är överens stod kvar här efter
+     harmoniseringen och motsade koden ovan. Den är borta; paritetsspecen
+     mäter numera att cykellängderna är identiska. `HASTRIGG-KRAVSPEC.md`
+     § 4 beskriver den gamla avvikelsen som historik. ]]
 function Gaits.cycleLength(name: string): number
 	local g = Gaits.get(name)
 	if g.cycles <= 0 or g.norm <= 0 then return 0 end

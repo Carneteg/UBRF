@@ -14,4 +14,6 @@ return {
 	StateMachine = require(script.StateMachine),
 	RigAdapter = require(script.RigAdapter),
 	Networking = require(script.Networking),
+	Telemetri = require(script.Telemetri),
+	RidKanon = require(script.RidKanon),
 }

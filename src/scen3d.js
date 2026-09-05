@@ -992,6 +992,14 @@ function s3RitaHinder(){
 }
 
 /* ── Kameran: bakom hästen, mjukt efterföljande ───────────────── */
+/* Kamerans lägen per gångart. Se kommentaren i s3Kamera(). */
+const KAM_GANG={
+  halt  :{bak:3.78, hojd:1.88, fov:0.000},
+  skritt:{bak:4.05, hojd:1.95, fov:0.000},
+  trav  :{bak:4.59, hojd:2.10, fov:0.017},
+  galopp:{bak:5.13, hojd:2.25, fov:0.070},
+};
+
 function s3Kamera(dt){
   /* ── Kamerans egen kurs ───────────────────────────────────────────
      Kameran satt fastsvetsad i hästens kurs: varje styrutslag vred hela
@@ -1013,8 +1021,24 @@ function s3Kamera(dt){
      FÄRDRIKTNING, så att vägen framåt är läsbar även mitt i en sväng. */
   const bakat=[Math.cos(k.yaw),0,Math.sin(k.yaw)];
   const fram=[Math.cos(G.rikt),0,Math.sin(G.rikt)];
-  const hojd=G.luft>0?2.30:1.95;
-  let bakMal=G.luft>0?5.0:4.05;
+  /* ── KAMERAN ANDAS MED GÅNGARTEN (G02-A.1 P6) ─────────────────────
+     Boomen låg fast på 4,05 m i alla gångarter. Galoppen såg därför ut
+     precis som skritten, bara snabbare — och den enda signalen om att
+     hästen går fortare var att marken rullade förbi.
+
+     Roblox har haft skillnaden hela tiden: Gaits.camera bär avstånd,
+     höjd och fov-tillägg per gångart. Talen här är DERAS förhållanden,
+     förankrade i webbens nuvarande skrittvärden — 15 studs blir 4,05 m,
+     och de övriga följer samma kvoter (14/15, 17/15, 19/15 för
+     avståndet; 5,0/5,2, 5,6/5,2, 6,0/5,2 för höjden). Fov-tilläggen är
+     Roblox grader omräknade till radianer.
+
+     Absoluta kameratal behöver inte vara lika på de två ytorna —
+     rendering får vara plattformsspecifik — men FÖRHÅLLANDET ska vara
+     det, för det är förhållandet man känner. */
+  const KG=KAM_GANG[(G.ride&&G.ride.gangart)||"halt"]||KAM_GANG.skritt;
+  const hojd=G.luft>0?2.30:KG.hojd;
+  let bakMal=G.luft>0?5.0:KG.bak;
 
   /* Boomen kortas tills kameran ligger innanför rummets väggar. Utan
      det går kameran rakt genom sargen så fort man rider i ett hörn —
@@ -1062,6 +1086,12 @@ function s3Kamera(dt){
   k.tx+=((G.px+fram[0]*2.6)-k.tx)*fBlick;
   k.ty+=((1.58+(G.luft>0?0.6:0))-k.ty)*fBlick;
   k.tz+=((G.py+fram[2]*2.6)-k.tz)*fBlick;
+  /* Synfältet mjukas för sig, och HÄR — det är kameratillstånd, inte
+     rendering. Första försöket låg i ritfunktionen, och då fanns fov
+     inte alls när kameran stegades utan att ritas. Ett hopp i synfältet
+     vid ett gångartsbyte läser dessutom som en zoom, inte som fart. */
+  if(k.fov===undefined)k.fov=1.02+KG.fov;
+  k.fov+=((1.02+KG.fov)-k.fov)*(1-Math.exp(-dt/0.45));
   return k;
 }
 
@@ -1087,7 +1117,7 @@ function rita3D(Gs){
   const L=s3Ljus();
   GL.start(CW,CH,DPR,L);
   const k=s3Kamera(dt);
-  GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],1.02);
+  GL.kamera([k.x,k.y,k.z],[k.tx,k.ty,k.tz],k.fov||1.02);
   /* Himlen först: gradient och sol som ett helskärmspass, molnen som
      geometri ovanpå. Ingen djupskrivning. */
   const gl=GL.gl;
