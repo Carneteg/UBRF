@@ -106,8 +106,32 @@ function styrkanon() {
     tauPress: Number(tm[1]), tauRelease: Number(tm[2]) };
 }
 
+/* Kameraläget per gångart ur src/scen3d.js (G02-A.1 P6). Läses som
+   text: scen3d.js drar in hela renderaren om den körs, och det enda som
+   behövs är tabellen. Mönstret är strikt och exporten faller om det
+   inte träffar — en tyst tom tabell hade gjort paritetsspecen grön mot
+   ingenting. */
+function kameralagen() {
+  const m = las("src/scen3d.js").match(/const KAM_GANG=\{([\s\S]*?)\};/);
+  if (!m) {
+    console.error("FEL  hittar inte KAM_GANG i src/scen3d.js");
+    console.error("     rätta mönstret i den här filen");
+    process.exit(1);
+  }
+  const ut = {};
+  for (const rad of m[1].matchAll(/(\w+)\s*:\{bak:([0-9.]+),\s*hojd:([0-9.]+),\s*fov:([0-9.]+)\}/g)) {
+    ut[rad[1]] = { bak: Number(rad[2]), hojd: Number(rad[3]), fov: Number(rad[4]) };
+  }
+  for (const namn of RID_ORDNING) if (!ut[namn]) {
+    console.error(`FEL  KAM_GANG saknar ${namn}`);
+    process.exit(1);
+  }
+  return ut;
+}
+
 const { falt, harledda } = telemetriFalt();
 const styr = styrkanon();
+const kam = kameralagen();
 const trosklar = mataTrosklar();
 
 const rader = [];
@@ -187,6 +211,20 @@ rader.push("--[[ Sekunder från rakt till full båge (G02-A.1 P4). Kurvaturen f�
 rader.push("     inte ändras fortare än gångartens kurvaturtak delat med den här");
 rader.push("     tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]");
 rader.push(`RidKanon.KAPPA_RAT_TID = ${tal(styr.ratTid)}`);
+rader.push("");
+rader.push("--[[ Kameraläget per gångart ur src/scen3d.js (G02-A.1 P6). bak i");
+rader.push("     meter bakom hästen, hojd i meter, fov som tillägg i radianer.");
+rader.push("");
+rader.push("     ABSOLUTA tal ska INTE vara lika på de två ytorna — rendering får");
+rader.push("     vara plattformsspecifik. FÖRHÅLLANDET mellan gångarterna ska det,");
+rader.push("     för det är förhållandet man känner. Paritetsspecen jämför därför");
+rader.push("     kvoter mot skritt, inte tal mot tal. ]]");
+rader.push("RidKanon.KAMERA = {");
+for (const namn of RID_ORDNING) {
+  const c = kam[namn];
+  rader.push(`\t${namn} = { bak = ${tal(c.bak)}, hojd = ${tal(c.hojd)}, fov = ${tal(c.fov)} },`);
+}
+rader.push("}");
 rader.push("");
 rader.push("--[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]");
 rader.push("RidKanon.TELEMETRI_FALT = { " + falt.map(str).join(", ") + " }");

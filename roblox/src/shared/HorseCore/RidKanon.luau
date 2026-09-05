@@ -84,6 +84,20 @@ RidKanon.SVANGTAU = {
      tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]
 RidKanon.KAPPA_RAT_TID = 0.32
 
+--[[ Kameraläget per gångart ur src/scen3d.js (G02-A.1 P6). bak i
+     meter bakom hästen, hojd i meter, fov som tillägg i radianer.
+
+     ABSOLUTA tal ska INTE vara lika på de två ytorna — rendering får
+     vara plattformsspecifik. FÖRHÅLLANDET mellan gångarterna ska det,
+     för det är förhållandet man känner. Paritetsspecen jämför därför
+     kvoter mot skritt, inte tal mot tal. ]]
+RidKanon.KAMERA = {
+	halt = { bak = 3.78, hojd = 1.88, fov = 0 },
+	skritt = { bak = 4.05, hojd = 1.95, fov = 0 },
+	trav = { bak = 4.59, hojd = 2.1, fov = 0.017 },
+	galopp = { bak = 5.13, hojd = 2.25, fov = 0.07 },
+}
+
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
 RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
 

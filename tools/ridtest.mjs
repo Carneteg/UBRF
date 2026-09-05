@@ -692,6 +692,116 @@ prova("paraden: ingen krypning och ingen gångart som studsar efter halt",
   `krypning ${parad.mjuk.kryp.toFixed(4)} / ${parad.bestamd.kryp.toFixed(4)} m på 8 s, ` +
   `studs ${parad.mjuk.studs || parad.bestamd.studs ? "JA" : "nej"}`);
 
+/* 8g. KAMERA OCH KROPP — G02-A.1 P6.
+
+   Arbetsordern är tydlig med ordningen: kameran tunas EFTER att
+   rörelsen är rätt, och ingen visuell utjämning får dölja dålig fysik.
+   Två saker provas därför, och de drar åt olika håll med flit.
+
+   Att kameran ANDAS med gångarten: boomen längre, ögat högre och
+   synfältet vidare ju snabbare hon går. Utan det ser galoppen ut precis
+   som skritten, bara med marken rullande fortare förbi.
+
+   Att den ändå inte SLÄPAR: kameran har en egen kurs som hinner ifatt
+   hästens, och hinner den inte det går styrfelet inte att se — vilket
+   är precis det arbetsordern förbjuder.
+
+   Och att kroppens lutning kommer ur SIMULERINGEN och inte ur
+   styrspaken: en häst som står still lutar inte hur mycket man än drar
+   i tygeln. Lutningen är centripetalen κ·v², och v² är noll i halt. */
+const kam = await page.evaluate(() => {
+  const dt = 1 / 60;
+  G.vy = "3d";
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0;
+    RIDIN.sits = o.sits ?? 0; RIDIN.styr = o.styr ?? 0;
+    stegaRitt(dt); s3Kamera(dt); } };
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; G.npcs = [];
+    S3.kam.satt = false; S3.kam.yaw = undefined;
+    S3.kam.bak = undefined; S3.kam.fov = undefined;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp(); };
+
+  /* a) Läget per gångart, avläst när kameran hunnit sätta sig. */
+  const lagen = {};
+  for (const [namn, tryck] of [["halt", 0], ["skritt", 1], ["trav", 2], ["galopp", 3]]) {
+    nyRitt();
+    for (let n = 0; n < tryck; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+    kor({}, 3);
+    lagen[namn] = { bak: S3.kam.bak, hojd: S3.kam.y, fov: S3.kam.fov,
+      gangart: G.ride.gangart };
+  }
+
+  /* b) Kamerans eftersläpning.
+
+     Första versionen mätte "tid till 90 % av kursändringen". Det går
+     inte: under en pågående sväng ÄNDRAS kursen hela tiden, så målet
+     flyttar sig och kameran når det aldrig. Den mätningen sa 1,87 s och
+     betydde ingenting.
+
+     Det man känner är i stället det STÅENDE vinkelavståndet mitt i en
+     sväng — hur långt bakom hästens kurs bilden ligger — och hur fort
+     det stängs när man slutar svänga. Det förra är eftersläpningen,
+     det senare att den inte fastnar. */
+  const slap = {};
+  for (const [namn, tryck] of [["skritt", 1], ["galopp", 3]]) {
+    nyRitt();
+    for (let n = 0; n < tryck; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+    kor({}, 2);
+    kor({ styr: 1 }, 4);                     // etablerad sväng
+    const diff = () => { let d = G.rikt - S3.kam.yaw;
+      while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+    const staende = Math.abs(diff());
+    /* Släpp styrningen. Två tider mäts, och skillnaden mellan dem är
+       kamerans egen andel: när HÄSTEN är rak, och när KAMERAN har
+       hunnit ifatt. Mäter man bara det senare mäter man mest hästens
+       urläggning — galoppen tar 0,70 s på sig att räta ut sig, och det
+       är inte kamerans fel. */
+    let t = 0, rak = null, stangd = null;
+    for (let i = 0; i < 60 * 3; i++) {
+      RIDIN.skankel = 0; RIDIN.styr = 0; RIDIN.tygel = 0; RIDIN.sits = 0;
+      stegaRitt(dt); s3Kamera(dt); t += dt;
+      if (rak === null && Math.abs(G.kappa) < 0.02) rak = t;
+      if (stangd === null && Math.abs(diff()) < 0.02) stangd = t;
+    }
+    slap[namn] = { staende, rak, stangd, egen: (stangd !== null && rak !== null) ? stangd - rak : null,
+      gangart: G.ride.gangart };
+  }
+
+  /* c) Lutningen ur simuleringen: full styrning i HALT ska ge noll. */
+  nyRitt(); kor({ styr: 1 }, 4);
+  const lutHalt = G.banLut, gangHalt = G.ride.gangart;
+  nyRitt();
+  for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+  kor({ styr: 1 }, 4);
+  const lutGalopp = G.banLut, gangGalopp = G.ride.gangart;
+
+  return { lagen, slap, lutHalt, gangHalt, lutGalopp, gangGalopp };
+});
+{
+  const L = kam.lagen;
+  const stiger = (f) => L.halt[f] < L.skritt[f] && L.skritt[f] < L.trav[f] && L.trav[f] < L.galopp[f];
+  const ratt = ["halt", "skritt", "trav", "galopp"].every(g => L[g].gangart === g);
+  prova("kameran: boom, öga och synfält växer med gångarten",
+    ratt && stiger("bak") && L.halt.hojd < L.galopp.hojd && L.skritt.fov < L.galopp.fov,
+    ["halt", "skritt", "trav", "galopp"].map(g =>
+      `${g} ${L[g].bak.toFixed(2)} m / ${L[g].hojd.toFixed(2)} m / ${L[g].fov.toFixed(3)} rad`).join(" · "));
+}
+{
+  const g = ["skritt", "galopp"].map(n => kam.slap[n]);
+  prova("kameran: hinner ifatt hästens kurs — utjämningen döljer inte styrningen",
+    g.every(r => r.staende < 0.26 && r.egen !== null && r.egen < 0.30),
+    ["skritt", "galopp"].map(n => { const r = kam.slap[n];
+      return `${n}: ${(r.staende * 180 / Math.PI).toFixed(1)}° bakom mitt i svängen, ` +
+        `hästen rak på ${r.rak?.toFixed(2)} s och kameran ifatt ${r.egen?.toFixed(2)} s senare`;
+    }).join(" · "));
+}
+prova("kroppen: lutningen kommer ur farten, inte ur styrspaken",
+  Math.abs(kam.lutHalt) < 1e-3 && Math.abs(kam.lutGalopp) > 0.02
+  && kam.gangHalt === "halt" && kam.gangGalopp === "galopp",
+  `full styrning i halt ger ${kam.lutHalt.toFixed(5)} rad, ` +
+  `i galopp ${kam.lutGalopp.toFixed(4)} rad`);
+
 const slice = await page.evaluate(() => {
   const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.4, skygghet: 0.2, flaggor: {} };
   const s = nyState(0.7, 0.5, 0.8);

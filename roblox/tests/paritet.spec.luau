@@ -211,6 +211,43 @@ do
 		string.format("(galopp %.2f > skritt %.2f)", RidKanon.SVANGTAU.galopp, RidKanon.SVANGTAU.skritt))
 end
 
+--[[ 6d. KAMERAN ANDAS MED GÅNGARTEN — G02-A.1 P6.
+
+     Här jämförs KVOTER, inte tal. Webbens boom är 4,05 m i skritt och
+     Roblox 15 studs; absoluta kameratal ska inte vara lika, för
+     rendering får vara plattformsspecifik enligt CLAUDE.md. Det man
+     KÄNNER är däremot förhållandet: hur mycket längre bak, hur mycket
+     högre och hur mycket vidare galoppen ligger jämfört med skritten.
+     Det ska vara samma på båda ytorna, och det är vad som prövas.
+
+     Webben hade ingen skillnad alls före P6 — samma boom i alla
+     gångarter — medan Roblox haft Gaits.camera hela tiden. ]]
+do
+	local bas = RidKanon.MOTSVARIGHET.skritt
+	local rBas = Gaits.get(bas).camera
+	local wBas = RidKanon.KAMERA.skritt
+	local varst, sam = 0, {}
+	for _, webbnamn in RidKanon.ORDNING do
+		local w = RidKanon.KAMERA[webbnamn]
+		local r = Gaits.get(RidKanon.MOTSVARIGHET[webbnamn]).camera
+		local kvW, kvR = w.bak / wBas.bak, r.dist / rBas.dist
+		local hvW, hvR = w.hojd / wBas.hojd, r.height / rBas.height
+		varst = math.max(varst, math.abs(kvW - kvR), math.abs(hvW - hvR))
+		table.insert(sam, string.format("%s %.3f/%.3f", webbnamn, kvW, kvR))
+	end
+	check("kamerans avstånds- och höjdkvoter mot skritt är samma på båda ytorna",
+		varst < 0.02, string.format("(största avvikelse %.4f) %s", varst, table.concat(sam, " ")))
+
+	--[[ Och att synfältet vidgas i samma ordning. Webbens fov-tillägg är
+	     radianer, Roblox grader — jämförs som riktning, inte som tal. ]]
+	local wG = RidKanon.KAMERA.galopp.fov - RidKanon.KAMERA.skritt.fov
+	local rG = Gaits.get(RidKanon.MOTSVARIGHET.galopp).camera.fov
+		- Gaits.get(bas).camera.fov
+	check("synfältet vidgas i galopp på båda ytorna",
+		wG > 0 and rG > 0,
+		string.format("(webb +%.3f rad, Roblox +%.0f°)", wG, rG))
+end
+
 --[[ 7. Telemetrins fältnamn. G02-B ska kunna läsa samma namn oavsett yta. ]]
 check("telemetrins fältnamn är identiska",
 	samma(sorterad(Telemetri.FALT), sorterad(RidKanon.TELEMETRI_FALT)),
