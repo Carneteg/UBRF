@@ -2225,26 +2225,30 @@ const SPELABSTRAKTIONER = {
     laktarSteg:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
                 klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
                 motiv:"spelets väg från hallgolvet upp på läktardäcket vid dess norra ände; ridhus-inne-39 visar nivåskillnaden, inte stegen; läge och form valda. Bredden går in till första bänkraden sedan PO-beslutet 2026-09-05: gångbrädans 0,9 m gav 0,2 m spelrum för en figur med radie 0,35 och en intermittent omöjlig uppgång"},
-    /* `laktarAvsats`: AVSATSEN överst i uppgången — en plan yta på däckets
-       nivå, lika bred som rampen.
+    /* `laktarStegRad1`: uppgångens ANDRA BAND, det som landar på första
+       bänkraden.
 
-       Senior re-review av d5b47d5 mätte varför den behövs. En touch-approach
-       på x ≈ 3,00 stannade på z 0,73, en decimeter från rampens topp 0,80.
-       Orsaken är aritmetisk: vid x 3,00 ligger däcket på första bänkraden
-       (1,10), och från 0,73 blir steget dit 0,37 — nivåregeln tillåter 0,36.
-       Rampens sista decimeter gick alltså inte att gå, och det syntes bara
-       på vissa approacher.
+       Senior re-review av d5b47d5 mätte varför bandningen behövs. En
+       touch-approach på x ≈ 3,00 stannade på z 0,73, en decimeter från
+       rampens topp. Orsaken är aritmetisk: en ramp med EN topphöjd (0,80)
+       landar på första bänkraden (1,10) där den är bredare än gångbrädan,
+       och det sista steget blir 0,37 där nivåregeln tillåter 0,36. Att
+       marginalen är 0,01 m gör felet nyckfullt, inte litet.
 
-       En avsats är dessutom det en trappa faktiskt har högst upp. Här är
-       den plan på dackZ över hela rampens bredd, så varje approach möter
-       samma nivå oavsett var på bredden hon kommer upp. Bänkraderna börjar
-       söder om avsatsen och klivs därefter 0,30 m i taget som förut.
+       Jag prövade först en plan avsats på däcksnivå över hela bredden. Den
+       löste approachen men plattade samtidigt ut bänkraderna i sitt band,
+       så vägen UPPFÖR raderna försvann: från 0,80 blev nästa steg 0,60 till
+       rad 2. laktartest fällde det. En avsats som tar bort det den ska
+       ansluta till är fel lösning.
 
-       z0 = z1 = dackZ ger en plan yta genom samma trappNiva() som stegen
-       läses med — ingen ny regel, bara en trappa utan lutning. */
-    laktarAvsats:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
+       Bandningen är den PO godkände, och den är rätt: varje band landar
+       PLANT på sin egen nivå. Bandet mot gångbrädan slutar på 0,80, bandet
+       mot rad 1 på 1,10. Inget marginellt steg någonstans, och raderna är
+       orörda. Att gå i sidled mellan banden kostar som mest 0,30 m, alltså
+       inom nivåregeln, så bredden hänger ihop hela vägen upp. */
+    laktarStegRad1:{x0:0, x1:0, y0:0, y1:0, z0:0, z1:0, axel:"y", stiger:"S", stegMax:0.19,
                 klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
-                motiv:"avsatsen överst i spelets uppgång till läktardäcket; plan på däckets nivå över rampens bredd så att sista steget upp inte hamnar mot en bänkradskant. Följer laktarSteg och har ingen egen källa"},
+                motiv:"uppgångens band mot första bänkraden; samma abstraktion som laktarSteg men med radens topphöjd, så att bandet landar plant i stället för mot radens kant. Ingen egen källa"},
   },
 };
 
@@ -2452,20 +2456,20 @@ const SPELABSTRAKTIONER = {
           Rad 1:s inre kant är alltså den bredaste ramp som landar gångbart
           över hela sin bredd, och den räknas fram ur radernas egen regel
           i stället för att skrivas som ett tal. */
+       const bank=L.x0+L.dackDjup;
        const rad1=(typeof laktarRader==="function")?laktarRader(L)[0]:null;
-       const inatMax=rad1?rad1.in1:L.gangbrada.djup;   // 1,7 m i stället för 0,9
        const ls=SPELABSTRAKTIONER.ridhus.laktarSteg;
-       ls.x0=L.x0+L.dackDjup-inatMax; ls.x1=L.x0+L.dackDjup;
+       ls.x0=bank-L.gangbrada.djup; ls.x1=bank;         // bandet mot gångbrädan
        ls.y0=L.y1; ls.y1=L.y1+1.2;
        ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
-       /* AVSATSEN ligger söder om rampen, alltså inne på däcket, lika bred
-          som rampen och plan på däckets nivå. Djupet 1,2 m är figurens
-          diameter med marginal: hon ska hinna stå stadigt på däcksnivå
-          innan bänkraderna börjar. */
-       const la=SPELABSTRAKTIONER.ridhus.laktarAvsats;
-       la.x0=ls.x0; la.x1=ls.x1;
-       la.y0=L.y1-1.2; la.y1=L.y1;
-       la.z0=L.dackZ; la.z1=L.dackZ; la.axel="y"; la.stiger="S";
+       /* ANDRA BANDET täcker första bänkradens bredd och slutar på RADENS
+          höjd, inte däckets. Det är det som gör uppgången bred utan att
+          något band landar mot en kant. Saknas raddata blir bandet tomt
+          (x1 = x0) och filtreras bort av nivåläsningen. */
+       const lr=SPELABSTRAKTIONER.ridhus.laktarStegRad1;
+       lr.y0=ls.y0; lr.y1=ls.y1; lr.axel="y"; lr.stiger="S"; lr.z0=0;
+       if(rad1){ lr.x0=bank-rad1.in1; lr.x1=bank-rad1.in0; lr.z1=rad1.z; }
+       else    { lr.x0=0; lr.x1=0; lr.z1=0; }
      }}
   }
   /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */

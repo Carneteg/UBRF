@@ -169,7 +169,15 @@ prova("c_trappa_o → övre gången", q.y > niv.G.y0 + 0.8 && Math.abs(q.z - niv
    läktartrappan (STAIR) → landgången på övre plan → övre gången. */
 const lak = await page.evaluate(() => { const R = RIDHUSINNE, L = R.laktare;
   return { L: { x0: L.x0, dackDjup: L.dackDjup, dackZ: L.dackZ, y1: L.y1, topp: L.dackZ + L.rader.antal * L.rader.stegH, stegH: L.rader.stegH },
-    steg: SPELABSTRAKTIONER.ridhus.laktarSteg, t: R.trappor.find(t => t.id === "laktar_trappa_h"), V: R.ovreGangV, G: R.ovreGang }; });
+    steg: SPELABSTRAKTIONER.ridhus.laktarSteg,
+    /* Uppgången är BANDAD sedan P0 #81: ett band mot gångbrädan och ett mot
+       första bänkraden, med var sin topphöjd. Båda banden är uppgången, så
+       viaSteg måste känna till båda — annars underkänns en rutt som går upp
+       via det andra bandet, vilket är precis vad vägsökningen gör. Kravet är
+       oförändrat: rutten ska gå via uppgången och inte över däckets kant. */
+    band: [SPELABSTRAKTIONER.ridhus.laktarSteg, SPELABSTRAKTIONER.ridhus.laktarStegRad1]
+            .filter(t => t && t.x1 > t.x0),
+    t: R.trappor.find(t => t.id === "laktar_trappa_h"), V: R.ovreGangV, G: R.ovreGang }; });
 q = await gaZ("ridhusinne", (lak.steg.x0 + lak.steg.x1) / 2, lak.steg.y1 + 0.6, "S", r => r.z > lak.L.dackZ - 0.02 && r.y < lak.L.y1 - 0.3, 10000, 0);
 prova("SPELKRAV (inte fidelity): hallgolvet → spelets läktarsteg (SPELABSTRAKTION) → läktardäcket", q.z >= lak.L.dackZ - 0.02 && q.y < lak.L.y1 - 0.3, `till (${q.x}, ${q.y}) z ${q.z} (däck ${lak.L.dackZ.toFixed(2)})`);
 /* Tvärs över raderna SÖDER om trappans fot: i trappans fotavtryck (läktarens
@@ -206,7 +214,8 @@ async function tapp(fx, fy, fz, tx, ty, maxMs) {
   while (p.mal && Date.now() - t0 < maxMs);
   return { ...p, vag };
 }
-const viaSteg = (vag) => !!(vag && vag.some(v => v[0] >= lak.steg.x0 - 0.3 && v[0] <= lak.steg.x1 + 0.3 && v[1] >= lak.steg.y0 - 0.3 && v[1] <= lak.steg.y1 + 0.9));
+const viaSteg = (vag) => !!(vag && vag.some(v => lak.band.some(s =>
+  v[0] >= s.x0 - 0.3 && v[0] <= s.x1 + 0.3 && v[1] >= s.y0 - 0.3 && v[1] <= s.y1 + 0.9)));
 const dackX = lak.L.x0 + lak.L.dackDjup - 0.6;
 /* T1. från huvudentrén: tryck på däcket 3 m in. */
 q = await tapp(dx, dy, 0, dackX, lak.L.y1 - 3.0, 30000);
