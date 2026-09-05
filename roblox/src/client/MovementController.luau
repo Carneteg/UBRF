@@ -284,28 +284,30 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		else false
 
 	--[[ ── Tillstånd och fas ──────────────────────────────────────────── ]]
+	--[[ Den FAKTISKA gångarten räknas här och skickas IN i maskinen, i
+	     stället för att skrivas över efteråt. Skillnaden är inte kosmetisk:
+	     maskinens tillstånd (och därmed animationen, som väljs ur
+	     loco.state) byggde annars på sin egen fartbaserade gångart medan
+	     loco.gait redan följde förloppet. Två sanningar i samma bildruta.
+
+	     Etiketten byter en bit in i förloppet — hästen är på väg in i
+	     travet en stund innan travet syns. Samma regel som webben. ]]
+	local faktiskGangart = nil
+	if self._ov then
+		local u = math.clamp(self._ov.t / self._ov.langd, 0, 1)
+		faktiskGangart = if u >= M.Transition.switchAt
+			then loco.targetGait
+			else self._ov.fran_gait
+	end
 	loco.state = self.machine:step({
 		speed = loco.speed,
 		turnRate = loco.turnRate,
 		airborne = loco.airborne,
 		braking = intent.forward < -0.5,
 		jumpFired = jumpFired,
+		gait = faktiskGangart,
 	}, dt)
 	loco.gait = self.machine.gait
-	--[[ ETIKETTEN BYTER EN BIT IN I FÖRLOPPET, inte när tempot råkar
-	     passera ett band. Hästen är på väg in i travet en stund innan
-	     travet syns, och det är den halvan av övergångskänslan som
-	     tillståndsmaskinens hysteres inte kan uttrycka.
-
-	     Maskinen behåller sin egen fartbaserade gångart för TILLSTÅNDET
-	     (Idle/Move/Brake); det är bara den utåtriktade etiketten som
-	     följer förloppet. Webben gör exakt likadant. ]]
-	if self._ov then
-		local u = math.clamp(self._ov.t / self._ov.langd, 0, 1)
-		loco.gait = if u >= M.Transition.switchAt
-			then loco.targetGait
-			else (self._ov.fran_gait or loco.gait)
-	end
 
 	--[[ ── Fasen följer MARKEN ────────────────────────────────────────
 	     Förut drevs fasen av beatRate × dt, alltså av den fart vi BEGÄRT.

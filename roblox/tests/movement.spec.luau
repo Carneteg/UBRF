@@ -995,6 +995,82 @@ do
 		varst <= 0.06, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
 end
 
+--[[ MÄTVÄRDE, inget krav: hur länge hästen rör sig med stillastående
+     klipp under halt→skritt. Etiketten är "halt" till 55 %, och halt har
+     ingen steglängd — samma egenskap som webben, där Gait.steglangd
+     returnerar 0 för halt. Talet redovisas för att det ska SYNAS, inte
+     för att jag satt en gräns för det. ]]
+do
+	print("\n── Halt→skritt: fönstret med rörelse men stillastående klipp ──")
+	local dt = 1 / 240
+	local mc = newMC()
+	local anim = AnimationController.new(mc.rig, STATS)
+	local t, rorFran, klippVid = 0, nil, nil
+	while t < 1.5 do
+		mc:step(intent({ forward = 1 }), dt)
+		anim:step(mc.loco, dt)
+		t += dt
+		if not rorFran and math.abs(mc.loco.speed) >= 0.25 then rorFran = t end
+		if rorFran and not klippVid and anim.current ~= "Idle" then klippVid = t end
+	end
+	print(string.format("  rörelse från %.3f s, gångartsklipp från %.3f s → fönster %.3f s",
+		rorFran or -1, klippVid or -1, (klippVid or 0) - (rorFran or 0)))
+end
+
+--[[ ANIMATIONEN BYTER OCKSÅ VID 55 % — senior re-review 2026-09-05.
+
+     Etiketten loco.gait byter vid switchAt, men ANIMATIONEN väljs ur
+     loco.state, och tillståndet kom ur maskinens egen fartbaserade
+     gångart. Under skritt→trav kunde travklippet därför börja när tempot
+     passerade bandet medan kamera, telemetri och sväng fortfarande sa
+     skritt. En intern dubbel-sanning.
+
+     Provet går genom den RIKTIGA kedjan: MovementController → loco.state
+     → AnimationController → vilket spår som faktiskt spelas.
+
+     BYTET KLOCKAS, det stickprovas inte. Första versionen läste klippet
+     vid 35 % och 85 % av förloppet och var grön även med mutationen
+     inlagd — bandets korsning ligger runt 41 %, alltså mellan
+     mätpunkterna, så båda mekanismerna gav samma svar på båda ställena.
+     Ett prov som inte kan skilja de två fallen åt bevisar ingenting. ]]
+do
+	print("\n── Animationen byter vid 55 %, inte på fartbandet ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	local function bytestid(steg, langd)
+		local mc = newMC()
+		local anim = AnimationController.new(mc.rig, STATS)
+		upToGait(mc, steg, 1 / 60)
+		run(mc, 2.0, { forward = 1 }, 1 / 60)
+		anim:step(mc.loco, 1 / 60)
+		local fore = anim.current
+		local t = 0
+		while t < 2.0 * langd do
+			mc:step(intent({ forward = 1, gaitUp = (t < dt) }), dt)
+			anim:step(mc.loco, dt)
+			t += dt
+			if anim.current ~= fore then return t, fore, anim.current end
+		end
+		return nil, fore, anim.current
+	end
+	local rader = {
+		{ "skritt→trav", 1, T.trot },
+		{ "trav→galopp", 2, T.canter },
+	}
+	local varst, sam = 0, {}
+	for _, rad in rader do
+		local matt, fran, till = bytestid(rad[2], rad[3])
+		local vantad = T.switchAt * rad[3]
+		local avvik = if matt then math.abs(matt - vantad) else 99
+		varst = math.max(varst, avvik)
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], matt or -1, vantad))
+		print(string.format("  %-12s %s → %s vid %.3f s, väntat %.2f s",
+			rad[1], fran, till, matt or -1, vantad))
+	end
+	check("gångartsklippet byter vid switchAt, inte när tempot passerar bandet",
+		varst <= 0.06, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
+end
+
 --[[ SVÄNGKÄNSLAN BYTER OCKSÅ VID 55 %, INTE VID CUE:N.
 
      Senior re-review 2026-09-05: Roblox tog turn/svangTau ur

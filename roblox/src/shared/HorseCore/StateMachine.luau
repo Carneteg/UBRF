@@ -44,6 +44,7 @@ export type Input = {
 	airborne: boolean,
 	braking: boolean,     -- ryttaren begär stopp
 	jumpFired: boolean,
+	gait: string?,        -- den FAKTISKA gångarten, om anroparen vet den
 }
 
 function StateMachine:step(input: Input, dt: number): State
@@ -52,9 +53,25 @@ function StateMachine:step(input: Input, dt: number): State
 	local landed = self._wasAirborne and not input.airborne
 	self._wasAirborne = input.airborne
 
-	-- Gångarten följer tempot oavsett tillstånd, så animationslagret vet
-	-- vad den ska landa tillbaka i efter ett hopp.
-	self.gait = Gaits.forSpeed(math.abs(input.speed), self.gait)
+	--[[ GÅNGARTEN KOMMER UTIFRÅN NÄR ANROPAREN VET DEN.
+
+	     Maskinen härledde den förut alltid ur tempot. Under ett
+	     gångartsbyte är det fel källa: förloppet byter gångart vid
+	     Transition.switchAt, alltså 55 % in, medan tempot passerar
+	     bandgränsen tidigare. Maskinen satte då Trot medan resten av
+	     spelet — kamera, telemetri, sväng — fortfarande sa skritt, och
+	     travanimationen började för tidigt.
+
+	     Uppmätt skillnad: bandet ~0,31 / 0,39 / 0,50 s mot förloppets
+	     0,44 / 0,52 / 0,66 s. Det är en intern dubbel-sanning, och den
+	     sortens sak är hela poängen med G02-A.
+
+	     Tempot är kvar som källa när ingen gångart skickas in — då
+	     gäller hysteresen i forSpeed, precis som förut. Tillstånden för
+	     HÄNDELSER (Jump, Landing, Stopping, BackingUp, TurningInPlace)
+	     rörs inte av det här: de avgörs nedan av mark, avsikt och tempo
+	     och har företräde framför gångartstillståndet. ]]
+	self.gait = input.gait or Gaits.forSpeed(math.abs(input.speed), self.gait)
 
 	local next: State? = nil
 
