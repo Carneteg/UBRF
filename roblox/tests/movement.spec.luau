@@ -226,13 +226,17 @@ do
 	     bandgräns och gångarten hoppar fram och tillbaka mellan bildrutor,
 	     så animationen studsar. Mäts genom att sakta rulla farten genom
 	     hela spannet och räkna hur många gånger gångarten byter. En ren
-	     upprullning från halt till fyrsprång ska ge fyra byten, inte fler. ]]
+	     upprullning från halt till galopp ska ge TRE byten, inte fler.
+
+	     Det stod fyra här, och gick ändå igenom, därför att fyrsprånget
+	     var spelbart. Efter senior review 2026-09-05 slutar spelarens
+	     stege vid galopp (Gaits.SPELBAR_TOPP), och då är tre rätt. ]]
 	local mc = newMC()
 	local dt = 1 / 60
 	local byten, forra = 0, mc.loco.gait
 	local sekvens = { mc.loco.gait }
 	--[[ Stega upp en gångart var tredje sekund och låt farten hinna ifatt. ]]
-	for steg = 1, 4 do
+	for steg = 1, 3 do
 		for i = 1, 180 do
 			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
 			if mc.loco.gait ~= forra then
@@ -242,13 +246,13 @@ do
 		end
 	end
 	print("  uppåt:  " .. table.concat(sekvens, " → "))
-	check("fyra byten upp, inget flimmer", byten == 4,
+	check("tre byten upp, inget flimmer", byten == 3,
 		string.format("(%d byten)", byten))
 
 	--[[ Och samma väg ned. ]]
 	local ned, forraNed = 0, mc.loco.gait
 	local sekvensNed = { mc.loco.gait }
-	for steg = 1, 4 do
+	for steg = 1, 3 do
 		for i = 1, 180 do
 			mc:step(intent({ forward = 0, gaitDown = (i == 1) }), dt)
 			if mc.loco.gait ~= forraNed then
@@ -258,7 +262,7 @@ do
 		end
 	end
 	print("  nedåt:  " .. table.concat(sekvensNed, " → "))
-	check("fyra byten ned, inget flimmer", ned == 4,
+	check("tre byten ned, inget flimmer", ned == 3,
 		string.format("(%d byten)", ned))
 end
 
@@ -266,8 +270,13 @@ print("\n── Låg fart: precision i skritt ──")
 do
 	--[[ Precision vid låg fart betyder att man kan lägga en liten
 	     kursändring utan att hästen kastar sig runt. Mäts som kurs efter
-	     ett halvsekunds utslag i skritt jämfört med i fyrsprång — skritt
-	     ska ge finare kontroll, alltså mindre utslag per tidsenhet. ]]
+	     ett halvsekunds utslag i skritt jämfört med i galopp — skritt
+	     ska ge finare kontroll, alltså mindre utslag per tidsenhet.
+
+	     Jämförelsen gick förut mot fyrsprång med fyra impulser. Den
+	     gångarten är inte spelbar längre, och fyra impulser landar nu i
+	     galopp — samma mätning med fel etikett. Tre impulser, och
+	     etiketten säger galopp. ]]
 	local function svangIGangart(gangart, steg)
 		local mc = newMC()
 		for _ = 1, steg do mc:step(intent({ forward = 1, gaitUp = true }), 1 / 60) end
@@ -278,10 +287,10 @@ do
 		return d, mc.loco.speed
 	end
 	local dSkritt, vSkritt = svangIGangart("walk", 1)
-	local dGalopp, vGalopp = svangIGangart("gallop", 4)
-	print(string.format("  skritt    (%.1f m/s): %.3f rad på 0,5 s", vSkritt, dSkritt))
-	print(string.format("  fyrsprång (%.1f m/s): %.3f rad på 0,5 s", vGalopp, dGalopp))
-	check("skritt ger finare kontroll än fyrsprång", dSkritt < dGalopp,
+	local dGalopp, vGalopp = svangIGangart("canter", 3)
+	print(string.format("  skritt (%.1f m/s): %.3f rad på 0,5 s", vSkritt, dSkritt))
+	print(string.format("  galopp (%.1f m/s): %.3f rad på 0,5 s", vGalopp, dGalopp))
+	check("skritt ger finare kontroll än galopp", dSkritt < dGalopp,
 		string.format("(%.3f mot %.3f rad)", dSkritt, dGalopp))
 end
 
@@ -293,7 +302,13 @@ do
 	     kurvaturen satt sig. ]]
 	local dt = 1 / 120
 	local rader = {}
-	for _, rad in { { "walk", 1.45, 2 }, { "trot", 3.20, 3 }, { "canter", 5.60, 4 } } do
+	--[[ Stegen var förut 2/3/4 och etiketterna alltså förskjutna ETT
+	     steg: raden märkt "walk" reds i trav, "trot" i galopp och
+	     "canter" i fyrsprång. Provet passerade ändå — radien växte —
+	     men paritetsraden byggde på fel gångarters svängfaktorer. Att
+	     fyrsprånget stängdes gjorde felet synligt: två rader landade i
+	     samma gångart och gav samma radie. En impuls per gångart. ]]
+	for _, rad in { { "walk", 1.45, 1 }, { "trot", 3.20, 2 }, { "canter", 5.60, 3 } } do
 		local namn, tempo, steg = rad[1], rad[2], rad[3]
 		for _, s in { 0.25, 0.50, 1.00 } do
 			local mc = newMC()
@@ -870,6 +885,110 @@ do
 	check("hållen Shift i fem sekunder ger ETT steg upp", steg == 1,
 		string.format("%s → %s (%d steg)", fore, efter, steg))
 	Input.unbind()
+end
+
+--[[ ÖVERGÅNGSTIDERNA, MÄTTA — senior review 2026-09-05.
+
+     Tabellparitet räcker inte för kärnrörelse. Det här provet KLOCKAR
+     förloppet på en neutral häst och jämför mot kanon. Toleransen är
+     uttalad: ±0,08 s, vilket är fem bildrutor i 60 Hz och rymmer att
+     mätningen bara kan se hela steg.
+
+     Motsvarande siffror på webben, mätta av tools/ridkansla.mjs:
+     halt→skritt 0,81 · skritt→trav 0,96 · trav→galopp 1,21 ·
+     nedåt bestämt 0,78. Kanonvärdena är 0,80 / 0,95 / 1,20 / 0,78. ]]
+do
+	print("\n── Övergångstiderna, mätta mot kanon ──")
+	local dt = 1 / 240
+	local T = Config.MOVEMENT.Transition
+	--[[ Neutral häst: Acceleration 0,5 och lugnt temperament ger skalan
+	     1,0, precis som webbens normaltyngd 0,4. ]]
+	--[[ steg = 0 betyder att förloppet som klockas är halt→skritt, och då
+	     får ekipaget INTE värmas upp med forward = 1 först: W ur halt
+	     startar skritt av sig själv, och då klockas nästa förlopp i
+	     stället. Första versionen gjorde det och mätte 0,95 s — vilket
+	     är skritt→trav, inte halt→skritt. ]]
+	local function klocka(steg, ned)
+		local mc = newMC()
+		if steg > 0 then
+			upToGait(mc, steg, 1 / 60)
+			run(mc, 2.0, { forward = 1 }, 1 / 60)
+		end
+		local t, sett = 0, nil
+		for _ = 1, math.floor(4.0 / dt) do
+			local avsikt = if ned
+				then intent({ gaitDown = (t < dt) })
+				else intent({ forward = 1, gaitUp = (t < dt) })
+			mc:step(avsikt, dt)
+			t += dt
+			if mc._ov then sett = mc._ov.langd end
+			if sett and not mc._ov then return t, sett end
+		end
+		return nil, sett
+	end
+	local rader = {
+		{ "halt→skritt", 0, false, T.walk },
+		{ "skritt→trav", 1, false, T.trot },
+		{ "trav→galopp", 2, false, T.canter },
+		{ "galopp→trav", 3, true, T.downSoft },
+	}
+	local varst, sam = 0, {}
+	for _, rad in rader do
+		local matt = klocka(rad[2], rad[3])
+		local avvik = if matt then math.abs(matt - rad[4]) else 99
+		varst = math.max(varst, avvik)
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], matt or -1, rad[4]))
+		print(string.format("  %-12s mätt %.3f s mot kanon %.2f s", rad[1], matt or -1, rad[4]))
+	end
+	check("uppmätta övergångstider ligger inom ±0,08 s av kanon",
+		varst <= 0.08, string.format("(största avvikelse %.3f s) %s", varst, table.concat(sam, " ")))
+end
+
+--[[ FYRSPRÅNGET ÄR INTE SPELBART — senior review 2026-09-05.
+
+     Gångarten finns kvar som data, men en spelare ska inte kunna nå
+     den, därför att webben inte har den. En femte spelbar gångart på
+     bara den ena ytan är en plattformsspecifik kärnregel, och #82
+     förbjuder sådana.
+
+     Provet spammar gaitUp långt fler gånger än det finns gångarter, och
+     försöker dessutom höja taket direkt via setCeiling — det är vägen
+     servern använder, och den ska inte heller kunna öppna gångarten. ]]
+do
+	print("\n── Fyrsprånget går inte att nå ──")
+	local dt = 1 / 60
+	local mc = newMC()
+	for _ = 1, 8 do
+		for i = 1, math.floor(2.0 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+		end
+	end
+	local efterSpam = mc.loco.targetGait
+	--[[ Och med taket uttryckligen uppskruvat till fyrsprång. ]]
+	mc:setCeiling("gallop")
+	for _ = 1, 4 do
+		for i = 1, math.floor(2.0 / dt) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt)
+		end
+	end
+	local efterTak = mc.loco.targetGait
+	--[[ Mätt mot "canter" och INTE mot Gaits.SPELBAR_TOPP.
+
+	     Första versionen jämförde med konstanten själv. Då blir provet
+	     tautologiskt: skruvas taket upp till fyrsprång följer kravet med
+	     och provet förblir grönt medan gångarten öppnas. Uppmätt när jag
+	     falsifierade: movement OK, bara paritetsspecen föll.
+
+	     "canter" är webbens sista gångart översatt hit. Att den
+	     översättningen stämmer bevakas av paritetsspecen, som jämför
+	     RidKanon.ORDNING mot Gaits.SPELBAR_TOPP. De två proven håller
+	     alltså i var sin ände av samma påstående. ]]
+	check("åtta gångartsimpulser tar inte spelaren förbi galopp",
+		efterSpam == "canter",
+		string.format("hamnade i %s (taket är %s)", efterSpam, Gaits.SPELBAR_TOPP))
+	check("ett uppskruvat tak öppnar inte fyrsprånget heller",
+		efterTak == "canter",
+		string.format("setCeiling(\"gallop\") gav %s", efterTak))
 end
 
 --[[ DEN VERTIKALA SLICEN — G02-A.1 P7, Roblox logik-/speclager.

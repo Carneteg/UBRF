@@ -29,7 +29,7 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/riding/telemetri.js"), ctx);
-const { Gait, RID_ORDNING } = vm.runInContext("({Gait, RID_ORDNING})", ctx);
+const { Gait, RID_ORDNING, K } = vm.runInContext("({Gait, RID_ORDNING, K})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -180,6 +180,30 @@ for (const namn of RID_ORDNING) {
   const g = Gait.G[namn];
   rader.push(`\t${namn} = { min = ${tal(g.min)}, max = ${tal(g.max)}, norm = ${tal(g.norm)}, steg = ${tal(g.steg)}, upp = ${tal(g.upp)}, ner = ${tal(g.ner)} },`);
 }
+rader.push("}");
+rader.push("");
+rader.push("--[[ ÖVERGÅNGSFÖRLOPPET (G02-A.1 P2/P5, harmoniserat efter senior");
+rader.push("     review 2026-09-05). Sekunder för en NEUTRAL häst; hästens egen");
+rader.push("     tyngd respektive acceleration skalar därifrån med 1,0 i mitten.");
+rader.push("");
+rader.push("     upp     per gångart man går TILL");
+rader.push("     nerMjuk längden när ryttaren bara håller emot");
+rader.push("     nerHart  längden vid full parad — bestämdheten interpolerar");
+rader.push("     bytpunkt hur långt in i förloppet gångartsETIKETTEN byter");
+rader.push("");
+rader.push("     Kurvan är samma på båda ytorna: mjukstegskurvan u²(3−2u),");
+rader.push("     som börjar och slutar med noll lutning. Roblox har talen i");
+rader.push("     Config.MOVEMENT.Transition och paritetsspecen jämför dem. ]]");
+rader.push("RidKanon.OVERGANG = {");
+rader.push("\tupp = {");
+for (const namn of RID_ORDNING) {
+  const v = K.OVERGANG.upp[namn];
+  if (v !== undefined) rader.push(`\t\t${namn} = ${tal(v)},`);
+}
+rader.push("\t},");
+rader.push(`\tnerMjuk = ${tal(K.OVERGANG.nerMjuk)},`);
+rader.push(`\tnerHart = ${tal(K.OVERGANG.nerHart)},`);
+rader.push(`\tbytpunkt = ${tal(K.OVERGANG.BYTPUNKT)},`);
 rader.push("}");
 rader.push("");
 rader.push("--[[ Hysteres: hur långt utanför sitt band en gångart får leva kvar. ]]");

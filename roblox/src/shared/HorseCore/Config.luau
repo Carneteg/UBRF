@@ -65,6 +65,26 @@ Config.MOVEMENT = {
 	     än hästen någonsin lägger sig i en, begränsas.
 	     Samma tal som RidKanon.KAPPA_RAT_TID på webben. ]]
 	CurvatureRateTime = 0.32,
+	--[[ ÖVERGÅNGSFÖRLOPPET (senior review 2026-09-05).
+
+	     Ett gångartsbyte är ett FÖRLOPP, inte en ny måltempo som
+	     approach() rör sig mot. Tempot följer mjukstegskurvan u²(3−2u)
+	     från det tempo hästen faktiskt har till den nya gångartens, över
+	     en längd som beror på riktningen och på hur bestämt ryttaren ber.
+
+	     Roblox körde tidigare bara linjär approach() med accel/retard.
+	     Tabellerna hade paritet men KÄNSLAN hade det inte — ett byte tog
+	     olika lång tid och hade olika form på de två ytorna. Det är
+	     kärnrörelse, och kärnrörelse får inte vara plattformsspecifik.
+
+	     Sekunder för en NEUTRAL häst. Samma tal som RidKanon.OVERGANG,
+	     och paritetsspecen faller om de glider isär. ]]
+	Transition = {
+		walk = 0.80, trot = 0.95, canter = 1.20,   -- uppåt, per gångart man går TILL
+		downSoft = 0.98,                            -- nedåt när ryttaren bara håller emot
+		downFirm = 0.78,                            -- nedåt vid full broms
+		switchAt = 0.55,                            -- var i förloppet ETIKETTEN byter
+	},
 	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
 
 	--[[ Vändning på stället. Kurvaturmodellen ger noll vridning vid noll

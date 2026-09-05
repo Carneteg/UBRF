@@ -167,8 +167,16 @@ const via = await page.evaluate(() => {
   nyRitt(); sedda.length = 0; sedda.push(G.ride.gangart);
   for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
   const topp = G.ride.gangart, toppFart = G.ride.tempo;
+
+  /* c2) Och FLER impulser än det finns gångarter. Webben har fyra och
+     ska stanna på galopp; Roblox har en femte i tabellen som efter
+     senior review 2026-09-05 inte är spelbar. Taket ska vara samma
+     gångart på båda ytorna, och det här är webbens halva av beviset. */
+  nyRitt();
+  for (let n = 0; n < 8; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+  const spam = G.ride.gangart, spamFart = G.ride.tempo;
   kor({ skankel: -1, tygel: 1, sits: 1 }, 25);
-  return { stilla, kvarliggande, hallenW, hallenFart, topp, toppFart,
+  return { stilla, kvarliggande, hallenW, hallenFart, topp, toppFart, spam, spamFart,
     slut: G.ride.gangart, sedda, glapp: RID_TILLSTAND.glapp };
 });
 prova("genom inputlagret: uppsittning utan hjälp startar INTE hästen",
@@ -180,6 +188,9 @@ prova("genom inputlagret: hållen W ger ETT steg upp, inte fler",
   `W i botten i 12 s → ${via.hallenW} (${via.hallenFart.toFixed(2)} m/s)`);
 prova("genom inputlagret: tre tryck tar ekipaget till galopp",
   via.topp === "galopp", `nådde ${via.topp} vid ${via.toppFart.toFixed(2)} m/s`);
+prova("genom inputlagret: fler impulser tar inte ekipaget förbi galopp",
+  via.spam === "galopp",
+  `åtta framåtimpulser gav ${via.spam} (${via.spamFart?.toFixed(2)} m/s)`);
 prova("genom inputlagret: parad tar ned till halt utan överhoppade gångarter",
   via.slut === "halt" && via.glapp === 0,
   `${via.sedda.join(" → ")}, ${via.glapp} olagliga byten`);
@@ -802,7 +813,66 @@ prova("kroppen: lutningen kommer ur farten, inte ur styrspaken",
   `full styrning i halt ger ${kam.lutHalt.toFixed(5)} rad, ` +
   `i galopp ${kam.lutGalopp.toFixed(4)} rad`);
 
-/* 9. DEN VERTIKALA SLICEN — G02-A.1 P7.
+/* 8h. ÖVERGÅNGSTIDERNA MOT KANON — senior review 2026-09-05.
+
+   Roblox körde tidigare linjär approach() mot den nya gångartens norm
+   medan webben körde en mjukstegskurva över en bestämd längd. Tabellerna
+   hade paritet men känslan hade det inte: ett byte tog olika lång tid
+   och hade olika form på de två ytorna.
+
+   Nu kör båda samma kurva över samma längd, och BÅDA klockar den.
+   Roblox har samma prov i movement.spec med samma tolerans, ±0,08 s,
+   mätt på en neutral häst. Talen ska alltså stå bredvid varandra i
+   reviewen utan omräkning.
+
+   Mätt i modellen och inte genom inputlagret: rampen där lägger till sin
+   egen fördröjning innan cue:n faller, och den fördröjningen hör inte
+   till förloppets längd. Roblox-provet mäter på samma nivå. */
+const overgang = await page.evaluate(() => {
+  const h = { kanslighet: 0.5, framatbjudning: 0.6, forlatande: 0.6, tyngd: 0.40,
+    skygghet: 0.2, flaggor: {} };
+  const ctx = { svangradie: 1000, underlag: 0.92, stallro: 0.9, utomhus: false,
+    fard: {}, avdrift: { glid: 0, ryck: 0, "tröghet": 1 } };
+  const dt = 1 / 240;
+  const A = o => ({ skankel: 0, tygel: 0, sits: 0, styrning: 0,
+    spo: false, lattridning: false, diagonal: 0, ...o });
+  const NEUTRAL = { skankel: 0.42, tygel: 0.34, sits: 0.20 };
+  const klocka = (tryck, ned) => {
+    const s = nyState(0.7, 0.5, 0.8);
+    const kor = (aid, sek) => { for (let i = 0; i < sek / dt; i++) stepRide(s, A(aid), h, ctx, dt); };
+    for (let n = 0; n < tryck; n++) {
+      kor({ ...NEUTRAL, skankel: 0.66 }, 2.0);
+      kor(NEUTRAL, 1.2);
+    }
+    /* Cue:n, och sedan klockan tills förloppet släpper. */
+    const aid = ned ? { skankel: 0.05, tygel: 0.80, sits: 0.85 } : { ...NEUTRAL, skankel: 0.66 };
+    let t = 0, sett = null;
+    for (let i = 0; i < 4.0 / dt; i++) {
+      stepRide(s, A(aid), h, ctx, dt); t += dt;
+      if (s._ov) sett = s._ov.langd;
+      if (sett && !s._ov) return { t, langd: sett };
+    }
+    return { t: null, langd: sett };
+  };
+  return { hs: klocka(0, false), st: klocka(1, false),
+    tg: klocka(2, false), ned: klocka(3, true),
+    kanon: { hs: K.OVERGANG.upp.skritt, st: K.OVERGANG.upp.trav,
+      tg: K.OVERGANG.upp.galopp, ned: K.OVERGANG.nerHart } };
+});
+{
+  const rader = [["halt→skritt", "hs"], ["skritt→trav", "st"],
+    ["trav→galopp", "tg"], ["galopp→trav (bestämt)", "ned"]];
+  let varst = 0;
+  const text = rader.map(([namn, k]) => {
+    const m = overgang[k].t, kanon = overgang.kanon[k];
+    varst = Math.max(varst, m === null ? 99 : Math.abs(m - kanon));
+    return `${namn} ${m === null ? "—" : m.toFixed(2)}/${kanon.toFixed(2)}`;
+  }).join(" · ");
+  prova("övergångarna: uppmätt längd ligger inom ±0,08 s av kanon",
+    varst <= 0.08, `(största avvikelse ${varst.toFixed(3)} s) ${text}`);
+}
+
+/* 9. DEN VERTIKALA SLICEN/* 9. DEN VERTIKALA SLICEN — G02-A.1 P7.
 
    Ett obrutet pass, i SPELETS runtime och genom RIDIN:
 

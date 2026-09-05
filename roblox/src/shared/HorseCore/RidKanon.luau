@@ -46,6 +46,29 @@ RidKanon.BAND = {
 	galopp = { min = 4.6, max = 8, norm = 5.6, steg = 1, upp = 3.4, ner = 3.2 },
 }
 
+--[[ ÖVERGÅNGSFÖRLOPPET (G02-A.1 P2/P5, harmoniserat efter senior
+     review 2026-09-05). Sekunder för en NEUTRAL häst; hästens egen
+     tyngd respektive acceleration skalar därifrån med 1,0 i mitten.
+
+     upp     per gångart man går TILL
+     nerMjuk längden när ryttaren bara håller emot
+     nerHart  längden vid full parad — bestämdheten interpolerar
+     bytpunkt hur långt in i förloppet gångartsETIKETTEN byter
+
+     Kurvan är samma på båda ytorna: mjukstegskurvan u²(3−2u),
+     som börjar och slutar med noll lutning. Roblox har talen i
+     Config.MOVEMENT.Transition och paritetsspecen jämför dem. ]]
+RidKanon.OVERGANG = {
+	upp = {
+		skritt = 0.8,
+		trav = 0.95,
+		galopp = 1.2,
+	},
+	nerMjuk = 0.98,
+	nerHart = 0.78,
+	bytpunkt = 0.55,
+}
+
 --[[ Hysteres: hur långt utanför sitt band en gångart får leva kvar. ]]
 RidKanon.HYSTERES = 0.35
 

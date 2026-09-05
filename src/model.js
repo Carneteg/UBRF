@@ -184,15 +184,23 @@ const K={
        ändrade ingenting.
 
        Nu ligger längden mellan nerMjuk och nerHart efter hur långt
-       tygeln och sitsen går förbi sitt eget hållande läge. Båda
-       ändarna ryms i arbetsorderns kuvert för nedåtgående övergångar
-       (0,6–1,2 s) efter att hästens tyngd skalat dem.
+       tygeln och sitsen går förbi sitt eget hållande läge. Båda ändarna
+       ryms i arbetsorderns kuvert för nedåtgående övergångar
+       (0,6–1,2 s) efter att hästens tyngd och tröghet skalat dem —
+       provet i tools/ridtest.mjs mäter stallets lättaste och tyngsta
+       häst, inte bara den neutrala.
+
+       nerMjuk stod på 1,05 tills skalan rebasades till 1,0 för en
+       neutral häst (senior review 2026-09-05). Då blev talen literala,
+       och den lättaste hästen landade på 1,22 s — utanför taket.
+       0,98 ger 1,10–1,14 s för ytterhästarna, alltså marginal åt båda
+       håll.
 
        Roblox har samma skillnad sedan tidigare, men uttryckt som en
        tangent: M.BrakeExtra läggs på när S hålls. Webbens hjälp är
        analog, så styrkan läses ur hjälpen i stället för ur en knapp.
        Beteendet är detsamma — ber du bestämdare stannar hon fortare. */
-    nerMjuk:1.05, nerHart:0.78,
+    nerMjuk:0.98, nerHart:0.78,
     /* KUVERTEN ur arbetsordern, i sekunder, som hårda gränser och inte
        som förhoppningar. Baslängderna ovan ligger inne i dem, men
        hästens tyngd och tröghet skalar längden med mellan ungefär 0,75
@@ -340,8 +348,15 @@ function stepRide(s,a,h,ctx,dt){
           biten när approach() tog över. Nu betyder ov.langd samma sak på
           båda ställena. */
        const D0=ctx.avdrift||{tröghet:1};
+       /* SKALAN ÄR 1,0 FÖR EN NEUTRAL HÄST (senior review 2026-09-05).
+          Den stod förut som (0,75 + 0,35·tyngd), vilket ger 0,89 vid
+          normaltyngden 0,4 — basvärdena ovan betydde alltså inte det de
+          sa, och Roblox kunde inte mäta samma tid utan att kopiera in
+          en förskjutning på 11 %. Nu är 0,80 s verkligen 0,80 s för en
+          normal häst, och hästens tyngd flyttar den därifrån med samma
+          spridning som förut (0,84 vid tyngd 0, 1,24 vid tyngd 1). */
        s._ov={fran:s.tempo, t:0,
-         langd:bas*(0.75+0.35*h.tyngd)*(D0.tröghet||1)};
+         langd:bas*(1+0.393*(h.tyngd-0.40))*(D0.tröghet||1)};
      }
    }
   }

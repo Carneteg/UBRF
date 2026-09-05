@@ -56,7 +56,7 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	self.temperament = Config.TEMPERAMENTS[stats.Temperament] or Config.TEMPERAMENTS.Calm
 	self.machine = StateMachine.new()
 	self.jumpReady = 0
-	self.ceiling = "gallop"
+	self.ceiling = Gaits.SPELBAR_TOPP
 
 	local heading = math.atan2(rig.root.CFrame.LookVector.X, rig.root.CFrame.LookVector.Z)
 	self.loco = {
@@ -101,8 +101,12 @@ function MovementController:_targetGait(intent: Types.Intent): string
 		index -= 1                                   -- S rullar ned en gångart
 	end
 
-	local ceilingIndex = Gaits.index(self.ceiling)
-	index = math.clamp(index, 1, math.min(#Gaits.ORDER, ceilingIndex))
+	--[[ Två tak, och det yttre går inte att förhandla bort: uthålligheten
+	     kan sänka spelarens tak, men ingenting kan höja det över
+	     Gaits.SPELBAR_TOPP. Utan min() här hade en felaktig eller
+	     manipulerad GaitCeiling från servern öppnat fyrsprånget. ]]
+	local ceilingIndex = math.min(Gaits.index(self.ceiling), Gaits.index(Gaits.SPELBAR_TOPP))
+	index = math.clamp(index, 1, ceilingIndex)
 	return Gaits.byIndex(index)
 end
 
@@ -124,6 +128,24 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		loco.cue = if upp then "framåt" else "nedåt"
 		loco.cueTid = loco.tid
 		loco._overgangKlar = false
+		--[[ FÖRLOPPET STARTAS HÄR, från det tempo hästen FAKTISKT har.
+		     Att utgå från nuvarande tempo och inte från gångartens norm
+		     är det som gör förloppet avbrytbart: kommer en motsatt
+		     begäran mitt i, börjar nästa förlopp där hon är.
+
+		     Längden är kanon (Config.MOVEMENT.Transition) skalad med
+		     hästens egen svarsförmåga. Skalan är 1,0 för en neutral
+		     häst, precis som webbens, så basvärdena betyder samma sak
+		     på båda ytorna. Nedåt avgör bestämdheten: att bara hålla
+		     emot ger det mjuka förloppet, S ger det korta. ]]
+		local T = M.Transition
+		local kraft = if intent.forward < -0.5 then 1 else 0
+		local bas = if upp
+			then (T[loco.targetGait] or T.canter)
+			else T.downSoft - (T.downSoft - T.downFirm) * kraft
+		local svar = (0.65 + 0.70 * stats.Acceleration) * self.temperament.accelBias
+		self._ov = { fran = loco.speed, t = 0,
+			langd = bas / math.max(svar, 0.2), fran_gait = forraMal }
 	end
 	if not loco._overgangKlar and loco.gait == loco.targetGait and loco.cueTid then
 		loco.senasteOvergang = loco.tid - loco.cueTid
@@ -142,12 +164,26 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	end
 
 	local accelScale = (0.65 + 0.70 * stats.Acceleration) * self.temperament.accelBias
-	local up = gait.accel * accelScale
-	local down = gait.retard * accelScale
-	if intent.forward < -0.5 then
-		down += M.BrakeExtra
+	local ov = self._ov
+	if ov and ov.t < ov.langd then
+		--[[ UNDER FÖRLOPPET styr kurvan, inte approach(). Mjukstegskurvan
+		     u²(3−2u) startar och slutar med noll lutning, vilket ger en
+		     övergång utan ryck i någon ände och utan platå på mitten.
+		     Samma kurva och samma längd som webben. ]]
+		ov.t += dt
+		local u = math.clamp(ov.t / ov.langd, 0, 1)
+		local mjuk = u * u * (3 - 2 * u)
+		loco.speed = ov.fran + (target - ov.fran) * mjuk
+		if u >= 1 then self._ov = nil end
+	else
+		self._ov = nil
+		local up = gait.accel * accelScale
+		local down = gait.retard * accelScale
+		if intent.forward < -0.5 then
+			down += M.BrakeExtra
+		end
+		loco.speed = approach(loco.speed, target, up, down, dt)
 	end
-	loco.speed = approach(loco.speed, target, up, down, dt)
 
 	--[[ ── Sväng ──────────────────────────────────────────────────────
 	     Kurvaturen är det spelaren styr: hur snävt hästen böjer sig, i
@@ -243,6 +279,20 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		jumpFired = jumpFired,
 	}, dt)
 	loco.gait = self.machine.gait
+	--[[ ETIKETTEN BYTER EN BIT IN I FÖRLOPPET, inte när tempot råkar
+	     passera ett band. Hästen är på väg in i travet en stund innan
+	     travet syns, och det är den halvan av övergångskänslan som
+	     tillståndsmaskinens hysteres inte kan uttrycka.
+
+	     Maskinen behåller sin egen fartbaserade gångart för TILLSTÅNDET
+	     (Idle/Move/Brake); det är bara den utåtriktade etiketten som
+	     följer förloppet. Webben gör exakt likadant. ]]
+	if self._ov then
+		local u = math.clamp(self._ov.t / self._ov.langd, 0, 1)
+		loco.gait = if u >= M.Transition.switchAt
+			then loco.targetGait
+			else (self._ov.fran_gait or loco.gait)
+	end
 
 	--[[ ── Fasen följer MARKEN ────────────────────────────────────────
 	     Förut drevs fasen av beatRate × dt, alltså av den fart vi BEGÄRT.
@@ -304,6 +354,7 @@ end
 function MovementController:release()
 	self.steerInput = 0
 	self.curvature = 0
+	self._ov = nil
 	self.lastPos = nil
 	local hum = self.rig.humanoid
 	if hum then

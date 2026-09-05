@@ -150,6 +150,22 @@ for _, webbnamn in { "halt", "skritt", "trav" } do
 		string.format("(%.2f = %.2f)", RidKanon.SVANGFAKTOR[webbnamn], g.turn))
 end
 
+--[[ 5b. SAMMA HÖGSTA SPELBARA GÅNGART.
+
+     Roblox har en gångart till i tabellen. Efter senior review
+     2026-09-05 ska den inte gå att NÅ: webbens sista gångart och
+     Roblox spelbara tak måste vara samma gångart. Att fyrsprånget
+     finns kvar som data är kvar under KNOWN DIVERGENCES nedan — men
+     som en datalucka, inte som en spelbar skillnad. ]]
+do
+	local webbSist = RidKanon.ORDNING[#RidKanon.ORDNING]
+	local vantad = RidKanon.MOTSVARIGHET[webbSist]
+	check("webbens sista gångart är Roblox högsta SPELBARA",
+		Gaits.SPELBAR_TOPP == vantad,
+		string.format("webb %s ⇒ %s, Roblox spelbara tak %s",
+			webbSist, vantad, Gaits.SPELBAR_TOPP))
+end
+
 --[[ 6b2. TAKET PÅ HUR FORT BÅGEN FÅR ÄNDRAS (G02-A.1 P4).
 
      Tiden från rakt till full båge. Kurvaturens ändringstakt får inte
@@ -159,6 +175,35 @@ end
 check("tiden från rakt till full båge är samma på båda ytorna",
 	nara(RidKanon.KAPPA_RAT_TID, Config.MOVEMENT.CurvatureRateTime),
 	string.format("(%.2f = %.2f s)", RidKanon.KAPPA_RAT_TID, Config.MOVEMENT.CurvatureRateTime))
+
+--[[ 6b3. ÖVERGÅNGSFÖRLOPPET — senior review 2026-09-05.
+
+     Roblox drev förut tempot mot den nya gångartens norm med linjär
+     approach(). Tabellerna hade paritet men KÄNSLAN hade det inte: ett
+     byte tog olika lång tid och hade olika form på de två ytorna. Nu
+     kör båda samma mjukstegskurva över samma längd.
+
+     Här jämförs TALEN. Att de faktiskt ger samma uppmätta tid mäts i
+     movement.spec, som kör förloppet och klockar det. ]]
+do
+	local T = Config.MOVEMENT.Transition
+	local O = RidKanon.OVERGANG
+	local par = {
+		{ "skritt", O.upp.skritt, T.walk },
+		{ "trav", O.upp.trav, T.trot },
+		{ "galopp", O.upp.galopp, T.canter },
+		{ "nedåt mjukt", O.nerMjuk, T.downSoft },
+		{ "nedåt bestämt", O.nerHart, T.downFirm },
+		{ "bytpunkt", O.bytpunkt, T.switchAt },
+	}
+	local varst, sam = 0, {}
+	for _, rad in par do
+		varst = math.max(varst, math.abs(rad[2] - rad[3]))
+		table.insert(sam, string.format("%s %.2f/%.2f", rad[1], rad[2], rad[3]))
+	end
+	check("övergångsförloppets längder är samma tal på båda ytorna",
+		varst < 1e-6, string.format("(största avvikelse %.4f) %s", varst, table.concat(sam, " ")))
+end
 
 --[[ 6c. VIKTEN PER GÅNGART (G02-A.1 P3). Två saker prövas, och de är
      olika sorters påstående:
@@ -344,10 +389,19 @@ check("galoppens övre bandgräns är densamma",
 	string.format("(webb galopp ≤ %.2f, Roblox canter ≤ %.2f m/s)",
 		RidKanon.BAND.galopp.max, Gaits.get("canter").max))
 
-beslut("LUCKA", "fyrsprånget finns bara på Roblox",
-	#Gaits.ORDER == #RidKanon.ORDNING + 1 and Gaits.ORDER[5] == "gallop",
-	string.format("(Roblox %s %.2f–%.2f m/s, webben saknar gångarten)",
-		Gaits.get("gallop").label, Gaits.get("gallop").min, Gaits.get("gallop").max))
+--[[ Fyrsprånget är sedan senior review 2026-09-05 en DATALUCKA och inte
+     en spelbar skillnad: gångarten finns kvar i tabellen men ligger över
+     Gaits.SPELBAR_TOPP och går inte att nå. Raden står kvar därför att
+     datan finns, och för att den ska bli röd om någon öppnar gångarten
+     igen utan beslut — men den beskriver inte längre något en spelare
+     kan uppleva. Att den inte går att nå provas i movement.spec och
+     ovan i 5b. ]]
+beslut("LUCKA", "fyrsprånget finns som data på Roblox, men går inte att rida",
+	#Gaits.ORDER == #RidKanon.ORDNING + 1 and Gaits.ORDER[5] == "gallop"
+		and Gaits.SPELBAR_TOPP ~= "gallop",
+	string.format("(Roblox %s %.2f–%.2f m/s i tabellen, spelbart tak %s)",
+		Gaits.get("gallop").label, Gaits.get("gallop").min, Gaits.get("gallop").max,
+		Gaits.SPELBAR_TOPP))
 
 --[[ Cykellängden. Webbens värde är SPRANG.hast × steg vid neutral häst.
      Raden hävdade förut att avvikelsen SKA finnas — den var ett register

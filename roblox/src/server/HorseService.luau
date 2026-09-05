@@ -260,11 +260,11 @@ local function stepStamina(session: Session, dt: number)
 	     hästen rullar ned en gångart av sig själv. Det är läsbart för
 	     spelaren och känns som en trött häst, inte som en tom bensintank. ]]
 	local fraction = session.stamina / math.max(stats.MaxStamina, 1)
-	local ceiling = "gallop"
+	local ceiling = Gaits.SPELBAR_TOPP
 	if fraction < Config.STAMINA.LowThreshold then
 		local t = fraction / Config.STAMINA.LowThreshold
 		local floorIndex = Gaits.index(Config.STAMINA.FloorGait)
-		local topIndex = #Gaits.ORDER
+		local topIndex = Gaits.index(Gaits.SPELBAR_TOPP)
 		ceiling = Gaits.byIndex(math.floor(floorIndex + (topIndex - floorIndex) * t + 0.5))
 	end
 
@@ -287,7 +287,7 @@ local function onStateSync(player: Player, gait: string, speed: number)
 	if not Gaits.BY_NAME[gait] then return end
 	if speed ~= speed or speed < -3 or speed > 15 then return end   -- NaN och orimligt
 
-	local ceiling = session.rig.model:GetAttribute("GaitCeiling") or "gallop"
+	local ceiling = session.rig.model:GetAttribute("GaitCeiling") or Gaits.SPELBAR_TOPP
 	if Gaits.index(gait) > Gaits.index(ceiling) then
 		gait = ceiling
 	end

@@ -26,6 +26,24 @@ export type Gait = {
 
 Gaits.ORDER = { "halt", "walk", "trot", "canter", "gallop" }
 
+--[[ HÖGSTA SPELBARA GÅNGART I G02-A.
+
+     Fyrsprånget finns kvar som DATA — tempoband, kamera, uthållighet —
+     men en spelare ska inte kunna nå det, därför att webben inte har
+     gångarten. Efter PO-beslutet 2026-09-05 är webbens A-modell kanon
+     och den slutar vid galopp; en femte spelbar gångart på bara den ena
+     ytan är precis en sådan plattformsspecifik kärnregel som #82
+     förbjuder.
+
+     Taket läses av MovementController (spelarens stege), av
+     HorseService (uthållighetstaket och valideringen av vad klienten
+     påstår) och av paritetsspecen. Det står HÄR och ingen annanstans,
+     så att en yta inte kan öppna gångarten av misstag.
+
+     Att öppna fyrsprånget igen är ett produktbeslut som kräver att
+     webben får motsvarande gångart först. ]]
+Gaits.SPELBAR_TOPP = "canter"
+
 --[[ steps  = hovnedslag per cykel (skritt fyra, trav två, galopp tre)
      accel  = m/s² uppåt   retard = m/s² nedåt
      turn   = andel av grundsvarvheten; hög fart ger vidare sväng
