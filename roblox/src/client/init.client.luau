@@ -21,6 +21,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Config, RigAdapter, Net = Core.Config, Core.RigAdapter, Core.Networking
+local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemetri)
 
 local Input = require(script.Input)
 local TouchControls = require(script.TouchControls)
@@ -40,6 +41,7 @@ local ride: { [string]: any }? = nil
 
 local function dismount()
 	if not ride then return end
+	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
 	TouchControls.unmount()
 	ride.movement:release()
@@ -73,6 +75,12 @@ local function mount(model: Model)
 		sound = SoundController.new(rig, stats),
 		effects = EffectsController.new(rig),
 		rider = RiderController.new(rig),
+		--[[ G02-A: ridningens tillstånd och telemetri, samma kontrakt som
+		     webbens src/riding/telemetri.js. Sätts FÖRE första bildrutan
+		     av samma skäl som på webben — annars finns ett fönster där
+		     loopen kan läsa en avsutten ryttare mitt i en ritt. ]]
+		ritt = Telemetri.sittUpp(Telemetri.nyRitt(), model.Name, "ridhus"),
+		telemetri = nil :: { [string]: any }?,
 		syncTimer = 0,
 	}
 
@@ -166,6 +174,15 @@ RunService.RenderStepped:Connect(function(dt)
 	ride.movement:step(intent, dt)
 
 	local loco = ride.movement.loco
+
+	--[[ G02-A: gångarten följs av övergångskontraktet och telemetrin läggs
+	     på ride.telemetri, så att G02-B/C har EN avläsningspunkt på båda
+	     ytorna. REN AVLÄSNING — modulen räknar ingen fysik, rör ingen
+	     Instance och ligger efter movement:step, så den kan varken ändra
+	     rörelsen eller ridkänslan. ]]
+	Telemetri.foljGangart(ride.ritt, loco.gait)
+	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature)
+
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)
 	ride.sound:step(loco, dt)

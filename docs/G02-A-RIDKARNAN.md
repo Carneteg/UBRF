@@ -4,6 +4,10 @@ Status: `READY_FOR_CHATGPT_REVIEW` (Claudes högsta normala status enligt
 `docs/DELIVERY-PROTOCOL.md`). Ingen del av det här dokumentet är
 produktacceptans.
 
+**G02-A kan inte nå `PRODUCT_ACCEPTED` medan de fyra `BLOCKERAR`-raderna i
+paritetsregistret står öppna.** De är skillnader i kärnrörelsen som
+påverkar känslan, och att jämna ut dem är Tobias produktbeslut.
+
 ## Vad uppdraget ÄR
 
 Ett delta ovanpå Gate 01, inte en omskrivning. Ridkärnan fanns redan:
@@ -63,11 +67,17 @@ Paritetsregeln i `CLAUDE.md` har hittills varit en text. Den är nu körbar:
   osynk. Kört i CI (`.github/workflows/grindar.yml`), och filen står i
   `dubbel-sanning`-listan så att den inte kan handredigeras.
 
-### Kända avvikelser — dokumenterade, inte harmoniserade
+### Öppna produktbeslut — INTE ett parity pass
 
-Specen kräver att dessa ser ut **exakt** så här. Det gör två saker: en NY
-avvikelse blir röd, och en avvikelse som rättas tvingar fram en ändring i
-specen i stället för att glida förbi.
+Efter senior review av #86 (blocker A) är registret skilt från
+paritetskontrollerna, i specen och här. Raderna nedan är **inte**
+godkännanden och räknas inte som paritet. De skrivs som `PO`, aldrig `OK`,
+och de **blockerar produktacceptans av G02-A**.
+
+Värdena kontrolleras ändå. Stämmer ett av dem inte längre har någon ändrat
+en feel-siffra i tysthet, och då blir raden `FEL`. Registret dokumenterar
+alltså skillnaden utan att sanktionera den, och skyddar samtidigt mot att
+den ändras utan beslut.
 
 | Avvikelse | Webb | Roblox |
 | --- | --- | --- |
@@ -78,14 +88,20 @@ specen i stället för att glida förbi.
 | Cykellängd, skritt/trav/galopp | 1,61 / 2,21 / 3,50 m | 1,45 / 2,13 / 3,20 m |
 | Hjälplager, spänning, mjukhet, balans, fokus | finns | saknar källa |
 
+Fyra av dem är klassade `BLOCKERAR` (kärnrörelse som påverkar känslan):
+kurvaturtaket, galoppens svängfaktor, galoppens övre bandgräns och
+cykellängden. Två är klassade `LUCKA` (saknad funktion, G02-B:s arbete):
+fyrsprånget och hjälplagret.
+
 De två första är nya fynd ur det här arbetet och de tyngsta: **samma
 styrutslag ger olika snäv volt på de två ytorna.** Full styrning i skritt
 är 2,4 m radie på webben mot 3,3 m på Roblox — nästan en meter, alltså
 inte en avrundning.
 
 Att jämna ut någon av dem **ändrar ridkänslan** och är ett produktbeslut,
-inte något en konsolidering får göra på eget initiativ. De sex ligger
-därför kvar som de är, synliga i varje testkörning.
+inte något en konsolidering får göra på eget initiativ. De ligger därför
+kvar som de är, synliga i varje testkörning — men de gör också att G02-A
+inte kan nå `PRODUCT_ACCEPTED` förrän Tobias har avgjort dem.
 
 Tidskonstanterna för att lägga sig i och räta upp sig ur en båge
 (0,13 respektive 0,19 s) och svängfaktorerna för halt, skritt och trav
@@ -94,6 +110,44 @@ stämmer redan, och specen kräver att de fortsätter göra det.
 Cykellängdsavvikelsen är sedan tidigare dokumenterad i `Gaits.luau` och
 `roblox/docs/HASTRIGG-KRAVSPEC.md` § 4; den står nu också i en körning i
 stället för bara i en kommentar.
+
+## Gate 01-styrkanonens proveniens
+
+Senior review av #86 frågade om dagens värden verkligen är Gate 01:s, eller
+om kanonen har glidit. Spårat med `git log -L`:
+
+| Konstant | Införd | Ändrad sedan dess |
+| --- | --- | --- |
+| `KAPPA_MAX = 0,42` (webb) | `33559d9` — Gate 01-committen | nej |
+| `GANGSVANG` (webb) | `33559d9` — Gate 01-committen | nej |
+| `CurvatureMax = 0,30` (Roblox) | `58a8030` — Gate 01:s Roblox-port | nej |
+
+**Ingen drift.** Ingen av dem har rörts efter sin införandecommit.
+
+Den skenbara motsägelsen mot auditen är två olika storheter. Auditen
+(`audits/GATE-01-RIDING-FEEL-RESULT.md`, rad 133) mäter **κ i det körande
+spelet vid fullt utslag**: skritt κ 0,2758, radie 3,6 m. `KAPPA_MAX` är
+**takkonstanten**, som aldrig nås: hjälplagret mättar `styrning` vid 0,72
+för råinsats 1,00, och hästens känslighetsfönster
+(`0,78 + 0,44 × kanslighet`) skalar taket därutöver.
+
+Uppmätt i dag, råinsats 1,00, häst med `kanslighet` 0,45:
+
+| Gångart | styrning | κ-tak | κ | radie |
+| --- | --- | --- | --- | --- |
+| skritt | 0,72 | 0,4108 | 0,2957 | 3,38 m |
+| trav | 0,72 | 0,3368 | 0,2425 | 4,12 m |
+| galopp | 0,72 | 0,2136 | 0,1538 | 6,50 m |
+
+Auditens 0,2758 faller ur samma formel med en häst vars `kanslighet` är
+0,30. Skillnaden är alltså hästen, inte kanonen.
+
+Avvikelsen mot Roblox är däremot **född i porteringen**: `58a8030` gav
+Roblox samma formulering men egna tal, och Gate 01-auditens paritetstabell
+(rad 283) godkände raden uttryckligen på *formuleringen* — "samma
+formulering sedan `58a8030`; talen skiljer med Roblox egna gångartstempon".
+Det är precis den invändning senior review nu gör på G02-A-nivå: samma
+formulering är inte samma känsla. Beslutet ligger hos Tobias.
 
 ## Volten — styrutslaget mätt som en ridd bana
 
@@ -152,10 +206,13 @@ Varje central kontroll har visats kunna bli röd:
 
 ## Not tested
 
-- **Roblox Studio.** Ingen Studio-runtime finns i den här miljön. Luau-specarna
-  provar kontrakt och tabeller, inte hur ritten känns i Studio.
-  `Telemetri.las()` är provad mot en konstruerad `Locomotion`, inte mot en
-  MovementController som körts en riktig bildruta.
+- **Roblox Studio.** Ingen Studio-runtime finns i den här miljön.
+  Telemetrin är sedan senior review inkopplad read-only i klientens
+  ridloop (`init.client.luau`) och provad mot en RIKTIG `MovementController`
+  som körts verkliga bildrutor (`movement.spec.luau`), inklusive ett prov
+  på att avläsningen inte ändrar rörelsen. Det som fortfarande inte är
+  provat är Studio-runtimen själv: att `RunService.RenderStepped`-loopen
+  beter sig som specen i en riktig klient.
 - **Subjektiv game feel.** Kräver Tobias uttryckliga PASS.
 - **Render review-build.** Render-tjänsten `srv-dadf7idg1s2s73f1109g` bygger
   från `main` med auto-deploy, inte från den här branchen. En review-build

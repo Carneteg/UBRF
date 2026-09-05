@@ -37,6 +37,30 @@ local function check(namn, ok, detalj)
 	end
 end
 
+--[[ ÖPPET PRODUKTBESLUT — inte ett godkännande.
+
+     Senior review av #86, blocker A: en plattformsskillnad i kärnrörelsen
+     får inte redovisas som ett grönt "förväntat" utfall. Den är inte
+     paritet; den är en fråga som väntar på Tobias.
+
+     `beslut` skiljer sig från `check` på två sätt. Raden skrivs som `PO`,
+     aldrig `OK`, så ingen kan läsa registret som ett parity-pass. Och
+     värdet KONTROLLERAS ändå: stämmer det inte längre har någon ändrat en
+     feel-siffra i tysthet, och då blir raden FEL. Registret dokumenterar
+     alltså skillnaden utan att sanktionera den, och skyddar samtidigt mot
+     att den ändras utan beslut. ]]
+local oppna, oppnaBlockerande = 0, 0
+local function beslut(klass, namn, oforandrat, detalj)
+	if not oforandrat then
+		fails += 1
+		print(string.format("  FEL  %s — VÄRDET HAR ÄNDRATS UTAN BESLUT %s", namn, detalj or ""))
+		return
+	end
+	oppna += 1
+	if klass == "BLOCKERAR" then oppnaBlockerande += 1 end
+	print(string.format("  PO   [%s] %s %s", klass, namn, detalj or ""))
+end
+
 local function nara(a, b, eps)
 	return math.abs(a - b) <= (eps or 1e-6)
 end
@@ -53,7 +77,7 @@ local function samma(a, b)
 	return true
 end
 
-print("── A. Det som MÅSTE stämma ──────────────────────────────────")
+print("── PARITY PASS — det som MÅSTE stämma, och gör det ──────────")
 
 --[[ 1. Gångartsordningen. Roblox har fyrsprånget som webben saknar, men de
      fyra första stegen måste vara samma stege — annars betyder ett
@@ -195,18 +219,22 @@ do
 end
 
 print("")
-print("── B. Kända avvikelser (dokumenterade, inte harmoniserade) ───")
+print("── KNOWN DIVERGENCES — öppna produktbeslut, INTE paritet ────")
+print("   Raderna nedan är inte godkännanden. De är skillnader i kärnrörelsen")
+print("   som väntar på Tobias beslut, och de BLOCKERAR produktacceptans av")
+print("   G02-A. Ändras ett värde utan beslut blir raden FEL.")
+print("")
 
 --[[ Varje rad: vad som skiljer, webbens värde, Roblox värde. Ändras något
      av dem blir raden röd och avvikelsen måste beskrivas om — eller,
      om den rättas, tas bort här. ]]
 
-check("KÄND AVVIKELSE — galoppens övre bandgräns",
+beslut("BLOCKERAR", "galoppens övre bandgräns",
 	nara(RidKanon.BAND.galopp.max, 8.00) and nara(Gaits.get("canter").max, 7.00),
 	string.format("(webb galopp ≤ %.2f, Roblox canter ≤ %.2f m/s)",
 		RidKanon.BAND.galopp.max, Gaits.get("canter").max))
 
-check("KÄND AVVIKELSE — fyrsprånget finns bara på Roblox",
+beslut("LUCKA", "fyrsprånget finns bara på Roblox",
 	#Gaits.ORDER == #RidKanon.ORDNING + 1 and Gaits.ORDER[5] == "gallop",
 	string.format("(Roblox %s %.2f–%.2f m/s, webben saknar gångarten)",
 		Gaits.get("gallop").label, Gaits.get("gallop").min, Gaits.get("gallop").max))
@@ -223,7 +251,7 @@ do
 		table.insert(rader, string.format("%s %.2f/%.2f", webbnamn, webb, rob))
 		if nara(webb, rob, 0.02) then ok = false end        -- avvikelsen SKA finnas
 	end
-	check("KÄND AVVIKELSE — cykellängden (webb/Roblox, meter)",
+	beslut("BLOCKERAR", "cykellängden (webb/Roblox, meter)",
 		ok, "(" .. table.concat(rader, ", ") .. ")")
 end
 
@@ -231,22 +259,29 @@ end
      Skillnaden är inte kosmetisk: 0,42 mot 0,30 är 2,4 m mot 3,3 m radie i
      skritt. Uppmätt på webben i tools/ridtest.mjs — full styrning i trav
      ger en RIDD volt på 8,25 m diameter mot 1/κ = 4,12 m radie. ]]
-check("KÄND AVVIKELSE — kurvaturtaket vid full styrning",
+beslut("BLOCKERAR", "kurvaturtaket vid full styrning",
 	nara(RidKanon.KAPPA_MAX, 0.42) and nara(Config.MOVEMENT.CurvatureMax, 0.30),
 	string.format("(webb %.2f 1/m ⇒ %.1f m radie, Roblox %.2f ⇒ %.1f m, i skritt)",
 		RidKanon.KAPPA_MAX, 1 / RidKanon.KAPPA_MAX,
 		Config.MOVEMENT.CurvatureMax, 1 / Config.MOVEMENT.CurvatureMax))
 
-check("KÄND AVVIKELSE — galoppens svängfaktor",
+beslut("BLOCKERAR", "galoppens svängfaktor",
 	nara(RidKanon.SVANGFAKTOR.galopp, 0.52) and nara(Gaits.get("canter").turn, 0.62),
 	string.format("(webb galopp %.2f, Roblox canter %.2f)",
 		RidKanon.SVANGFAKTOR.galopp, Gaits.get("canter").turn))
 
-check("KÄND AVVIKELSE — hjälplager, spänning och mjukhet saknas på Roblox",
+beslut("LUCKA", "hjälplager, spänning och mjukhet saknas på Roblox",
 	#Telemetri.SAKNAS == 5,
 	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — G02-B ger dem källor)")
 
 print("")
+if oppna > 0 then
+	print(string.format("%d öppna produktbeslut, varav %d BLOCKERAR produktacceptans av G02-A.",
+		oppna, oppnaBlockerande))
+	print("Paritetsspecen kan inte ge PARITY PASS för kärnrörelsen medan de står öppna.")
+	print("Att jämna ut dem ändrar ridkänslan och är Tobias beslut — se docs/G02-A-RIDKARNAN.md.")
+	print("")
+end
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

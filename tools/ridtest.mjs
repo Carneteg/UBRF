@@ -138,6 +138,31 @@ prova("live i spelet: G.telemetri fylls av den körande ridloopen",
   !!live.telemetri && typeof live.telemetri.fart === "number" && live.telemetri.harHjalper,
   live.telemetri ? `gångart ${live.telemetri.gangart}, fart ${live.telemetri.fart.toFixed(2)}, härledda ${JSON.stringify(live.telemetri.harledda)}` : "G.telemetri saknas");
 
+/* 7b. ORDNINGEN: tillståndet ska stå INNAN lektionen startar.
+   Senior review av #86, blocker C. Startar lektionen först finns ett
+   första-bildrutefönster där den körande ridloopen kan läsa uppsutten=false
+   och rapportera en avsutten ryttare mitt i en ritt. Testet spionerar på
+   startaLektion och läser tillståndet i det ögonblick den anropas — inte
+   efteråt, då hade båda ordningarna sett likadana ut. */
+const ordning = await page.evaluate(() => {
+  ridSittAv();
+  G.hastId = G.hastId || Object.keys(HORSES)[0];
+  G.hamtad = true;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  const original = window.startaLektion;
+  let uppsuttenVidStart = null, hastVidStart = null;
+  window.startaLektion = function (...a) {
+    uppsuttenVidStart = RID_TILLSTAND.uppsutten;
+    hastVidStart = RID_TILLSTAND.hast;
+    return original.apply(this, a);
+  };
+  try { sittUpp("ridhus"); } finally { window.startaLektion = original; }
+  return { uppsuttenVidStart, hastVidStart };
+});
+prova("uppsittningen är etablerad INNAN lektionen startar (inget första-bildrutefönster)",
+  ordning.uppsuttenVidStart === true && !!ordning.hastVidStart,
+  `vid startaLektion: uppsutten ${ordning.uppsuttenVidStart}, häst ${ordning.hastVidStart}`);
+
 /* 8. VOLTEN — Gate 01:s styrutslag mätt som en RIKTIG BANA, inte som en
    formel. Testet håller ett fast styrutslag och samplar hästens verkliga
    läge (G.px/G.py) ur den körande ridloopen, precis som en ryttare rider

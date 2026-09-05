@@ -132,3 +132,45 @@ jobs:
           done
           [ "$fel" -eq 0 ] && echo "OK   inga handredigerade genererade filer"
           exit $fel
+
+  # G02-A #82: ridkärnans regressionstest kör den KANONISKA ridmodellen i den
+  # byggda sidan — gångartsband, övergångskontrakt, telemetri, live-kopplingen
+  # och volten mätt som ridd bana. Utan det här jobbet kan telemetrin,
+  # uppsittningen eller styrningen gå sönder medan CI fortsätter vara grön.
+  #
+  # Egen job därför att det är det enda i G02-A som behöver en webbläsare, och
+  # en Chromium-installation ska inte sinka de övriga grindarna.
+  #
+  # NOT: PR #85 lägger ett `gangbarhet`-job i samma fil, före `dubbel-sanning`.
+  # Det här ligger sist med flit, så att de två PR:erna inte krockar textuellt
+  # i workflowen.
+  ridning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Playwright + Chromium
+        run: |
+          set -euo pipefail
+          if [ -f tools/ridtest.mjs ]; then
+            npm install --no-save --no-package-lock playwright@1.49.1
+            npx playwright install --with-deps chromium
+          else echo "hoppar: tools/ridtest.mjs finns inte i denna branch"; fi
+
+      - name: Webbygget
+        run: |
+          if [ -f tools/build.py ]; then python3 tools/build.py
+          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+
+      - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
+        run: |
+          if [ -f tools/ridtest.mjs ]; then node tools/ridtest.mjs
+          else echo "hoppar: tools/ridtest.mjs finns inte i denna branch"; fi

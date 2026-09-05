@@ -209,12 +209,16 @@ do
 		string.format("(%.3f s)", tSlapp))
 end
 
-print("")
-if fails > 0 then
-	print(string.format("%d mätning(ar) föll.", fails))
-else
-	print("Alla mätningar gick igenom.")
-end
+--[[ HÄR STOD EN SAMMANFATTNING MITT I SPECEN, och den var ett hål.
+
+     roblox/tests/kor.sh kräver tre saker för grönt: exitkod 0, inga
+     FEL-rader, och att specen NÅDDE SIN SLUTRAD. Det tredje finns för att
+     en krasch inte ska se ut som grönt. En "Alla mätningar gick igenom."
+     halvvägs in gjorde det kravet uppfyllt oavsett vad som hände sedan —
+     kraschade specen efter den här punkten var slutradskravet ändå
+     uppfyllt, och bara exitkoden återstod som skydd.
+
+     Borttagen i G02-A. Sammanfattningen skrivs en gång, sist. ]]
 
 print("\n── Gångartsbyten: inget flimmer vid gränserna ──")
 do
@@ -629,6 +633,76 @@ do
 	check("oläst klipplängd faller tillbaka på klockan i stället för att frysa",
 		t0 ~= nil and t0.Speed ~= 0 and t0.TimePosition == 0,
 		t0 and string.format("(Speed %.3f, läge %.3f)", t0.Speed, t0.TimePosition) or "")
+end
+
+--[[ ── G02-A: TELEMETRIN UR EN RIKTIG CONTROLLER-FRAME ──────────────
+     Senior review av #86, blocker B: paritetsspecen provade Telemetri.las()
+     mot en HANDSKRIVEN `loco`-tabell, alltså mot något jag själv hittat på.
+     Det bevisar att funktionen läser en tabell, inte att den läser hästen.
+
+     Här körs en verklig MovementController i verkliga bildrutor — samma
+     `runMoving` som resten av specen använder, med riktig förflyttning —
+     och telemetrin läses ur DESS loco och DESS kurvatur, precis som
+     klientens ridloop gör.
+
+     Kontrollen är också att lagret är RENT: samma frames körda med och utan
+     telemetriavläsning ska ge exakt samma rörelse. Kan avläsningen ändra
+     hästen är den inte read-only, och då hör den inte hemma i ridloopen. ]]
+do
+	print("")
+	print("── G02-A: telemetri ur en riktig MovementController-frame ───")
+
+	local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+
+	local mc = newMC()
+	runMoving(mc, 6, { forward = 1, steer = 0.6 })
+	local loco = mc.loco
+	Telemetri.foljGangart(ritt, loco.gait)
+	local tm = Telemetri.las(ritt, loco, mc.curvature)
+
+	check("controllern rörde sig på riktigt innan telemetrin lästes",
+		loco.speed > 0.5 and math.abs(mc.curvature) > 1e-4,
+		string.format("(fart %.2f m/s, gångart %s, κ %.4f 1/m)", loco.speed, loco.gait, mc.curvature))
+
+	local kravda = { "uppsutten", "hast", "gangart", "gangartGlapp", "fart",
+		"onskadFart", "kurvatur", "svangradie", "vridhastighet", "rytm", "steglangd" }
+	local saknas = {}
+	for _, k in kravda do if tm[k] == nil then table.insert(saknas, k) end end
+	check("telemetrin fylls ur controllerns eget tillstånd",
+		#saknas == 0 and tm.uppsutten == true and tm.hast == "bandit",
+		if #saknas > 0 then "saknas: " .. table.concat(saknas, ", ")
+		else string.format("gångart %s, fart %.2f, radie %.1f m, rytm %.2f",
+			tm.gangart, tm.fart, tm.svangradie, tm.rytm))
+
+	check("vridhastighet = kurvatur × tempo, mätt på controllern",
+		math.abs(tm.vridhastighet - tm.kurvatur * tm.fart) < 1e-6,
+		string.format("(%.4f rad/s = %.4f × %.2f)", tm.vridhastighet, tm.kurvatur, tm.fart))
+
+	--[[ REN AVLÄSNING: två identiska körningar, en med telemetri varje
+	     bildruta och en utan. Skiljer de sig har lagret rört rörelsen. ]]
+	local a, b = newMC(), newMC()
+	local r2 = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+	local dt = 1 / 60
+	for _ = 1, 360 do
+		a:step(intent({ forward = 1, steer = 0.6 }), dt)
+		b:step(intent({ forward = 1, steer = 0.6 }), dt)
+		Telemetri.foljGangart(r2, b.loco.gait)
+		Telemetri.las(r2, b.loco, b.curvature)
+	end
+	local dFart = math.abs(a.loco.speed - b.loco.speed)
+	local dKurv = math.abs(a.curvature - b.curvature)
+	local dKurs = math.abs(a.loco.heading - b.loco.heading)
+	check("avläsningen ändrar inte rörelsen (fart, kurvatur, kurs identiska)",
+		dFart < 1e-12 and dKurv < 1e-12 and dKurs < 1e-12,
+		string.format("(Δfart %.2e, Δκ %.2e, Δkurs %.2e)", dFart, dKurv, dKurs))
+
+	--[[ Uppsittningen är ett tillstånd även här: släpps ritten ska
+	     telemetrin sluta påstå att någon sitter upp. ]]
+	Telemetri.sittAv(ritt)
+	local efter = Telemetri.las(ritt, loco, mc.curvature)
+	check("avsittning syns i telemetrin ur samma controller",
+		efter.uppsutten == false and efter.hast == nil,
+		string.format("uppsutten %s", tostring(efter.uppsutten)))
 end
 
 print("")
