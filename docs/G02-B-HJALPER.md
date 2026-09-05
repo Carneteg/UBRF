@@ -3,7 +3,7 @@
 Issue #83. Arbetsdokument för gaten: acceptance contract, checkpointer,
 mätvärden och kvarstående luckor. Uppdateras vid varje checkpoint.
 
-**Status:** `IMPLEMENTING` (checkpoint 3 av 5 pushad)
+**Status:** `IMPLEMENTING` (checkpoint 4 av 5 pushad)
 
 Claude sätter aldrig `APPROVED`, `ACCEPTED`, `DONE` eller
 `PRODUCT_ACCEPTED` här. Högsta status Claude får sätta är
@@ -106,8 +106,8 @@ inte säga att skillnaden känns rätt.
 | 0 | Skrittfyndet från #83 återverifierat mot main och stängt med mätning | pushad `751b5b4` |
 | 1 | Semantiska hjälper: inner-/yttertygel, vikt, paraden som egen signal | pushad `9540e0c` |
 | 2 | Hästens svar: fördröjning, känslighet, balans, fokus, spänning, energi | pushad `ca853a3` |
-| 3 | Minst tre datadrivna skolhästprofiler | pushad |
-| 4 | Roblox: hjälplagret och profilerna till paritet | ej påbörjad |
+| 3 | Minst tre datadrivna skolhästprofiler | pushad `bc77fbb` |
+| 4 | Roblox: hjälplagret och profilerna till paritet | pushad |
 | 5 | Telemetri, dokumentation, falsifieringsprotokoll | ej påbörjad |
 
 ---
@@ -412,3 +412,111 @@ Roblox har fortfarande ingen svarsmodell att köra profilerna genom. Det
 - `kanslig` bottnar i svarstidens golv (0,06 s) för en välriden hjälp.
   Det är golvets syfte, men det betyder att samordningen inte går att
   skilja åt på henne — hon svarar direkt oavsett.
+
+---
+
+## 6. Checkpoint 4 — Roblox till paritet
+
+### Vad som byggdes
+
+Två nya delade moduler på Roblox-sidan, båda spegelbilder av webbens:
+
+- `HorseCore/Hjalper.luau` — hjälpsemantiken, läser `RidKanon.HJALP`
+- `HorseCore/Svar.luau` — svarsmodellen och profilerna, läser
+  `RidKanon.SVAR` och `RidKanon.PROFILER`
+
+**Inga tal skrivs av.** Båda läser den kanon som genereras ur webbens
+moduler av `tools/exportera-ridkanon.mjs`. Ändras en konstant på webben
+ändras den på Roblox, och `--kontrollera` faller om exporten inte körts.
+
+`MovementController` fick svarstiden mellan begäran och svar, balansen,
+energin och infallet. `Input` fick tygeln och paraden — tygeln som en
+**analog** axel på höger avtryckare, vilket är bättre än webbens binära
+Space och är avsikten: plattformsspecifik input, samma regler.
+
+`loco.stamina` fanns sedan Gate 01 men drogs aldrig. Nu **är** den
+energin, i sin egen skala. En sanning om hur trött hon är, inte två.
+
+### Paritet bevisas på formlerna, inte på bokföringen
+
+Att båda ytorna har samma konstanter bevisar ingenting om att de räknar
+lika. `RidKanon.PROV` innehåller därför **webbens egna svar** på bestämda
+indata, räknade av `hjalper.js` och `svar.js` när exporten kördes.
+Paritetsspecen kör Roblox implementation på samma indata och jämför:
+
+| Prov | Jämförelser | Största avvikelse |
+|------|-------------|-------------------|
+| hjälpsemantiken | 20 | 5,0 · 10⁻⁷ |
+| paradens kvalitet | 5 | 1,1 · 10⁻⁷ |
+| svarstiden, profil för profil | 5 | 1,4 · 10⁻¹⁷ |
+| balansen vid spänning noll | 4 | 4,0 · 10⁻⁷ |
+| infallet | 4 | 0 |
+| energitakten, gångart för gångart | 16 | 5,0 · 10⁻⁷ |
+
+Driver de två isär blir det rött, även om varenda konstant fortfarande
+stämmer.
+
+### En riktig bildruta, inte en handbyggd tabell
+
+`movement.spec` kör en riktig `MovementController` och provar samma fyra
+saker som webbens `ridtest`:
+
+| Prov | Resultat |
+|------|----------|
+| Sex hjälper i rad | **6 av 6 besvarade**, svarstid 0,138–0,163 s |
+| Åtta minuter trav | energi 0,999 → **0,701**, stamina 70,1 speglar den |
+| Fem minuter halt efter det | energi → **0,971** |
+| Volt utan kontakt | stöd 0,40, balans 0,718, ridd radie **2,20 m** |
+| Volt med kontakten kvar | stöd 0,94, balans 0,970, radie **2,36 m** (7,0 % snävare än bett) |
+| Telemetrin ur en riktig bildruta | bara `fokus`, `mjukhet`, `spanning` saknas |
+
+### Vad som INTE portades, och varför
+
+`Telemetri.SAKNAS` gick från tio fält till **tre**, och de tre har ett
+gemensamt skäl:
+
+- **`mjukhet`** — handens stadga över tid, ett eget delsystem på webben.
+- **`spanning`** — detsamma.
+- **`fokus`** — kräver båda.
+
+Följden redovisas öppet i `HorseCore/Svar.luau` i stället för att döljas:
+svarstiden på Roblox saknar fokustermen (0–`SVAR_FOKUS` sekunder) och
+balansen saknar spänningstermen. Termerna anropas med sina **neutrala
+element** — 1 respektive 0 — alltså med noll bidrag i stället för med en
+gissning. Att fylla dem med konstanter hade gett paritet i siffran men
+inte i upplevelsen, och det är precis vad paritetsregeln finns för att
+förhindra. Hemmet är G02-C.
+
+**Sitsen** finns inte som axel på Roblox: Shift och Ctrl är
+gångartsknappar sedan Gate 01, och att flytta dem är en inputändring
+utanför G02-B. `sits` och `vikt` står därför i `Hjalper.SAKNAS` och
+utelämnas ur hjälperna hellre än fylls. Paradens kvalitet väger därmed
+två hjälper på Roblox och tre på webben — deklarerat, inte gömt i en
+formel som ser lika ut.
+
+### Falsifiering
+
+| Mutation | Prov som föll |
+|----------|---------------|
+| Roblox räknar yttertygelstödet på sitt eget vis | hjälpsemantiken (avvikelse 5,7 · 10⁻²) |
+| Profilen läses inte på Roblox | tre paritetsprov: svarstid, balans, energitakt |
+| Svaret går till fel gångart (hjälpen tappas) | **17 prov** i movement.spec |
+| `INFALL_MAX` = 0 | båda volterna 2,38 m — ingen faller in |
+| Energin dras inte | 1,000 → 1,000 på åtta minuter |
+| Pekskärmens tygel blir en impuls | tygeln HÅLLS-provet |
+| Paraden blir hållbar i stället för en impuls | 30 extra bildrutor |
+
+Två av dem är värda en rad var. Den andra visar att profilerna verkligen
+läses på Roblox och inte bara finns i tabellen. Den tredje visar vad som
+händer om fördröjningen tappar bort en hjälp — hela gångartstrappan
+faller, inte bara ett prov.
+
+### Not tested
+
+- **Roblox runtime.** Specarna körs som moduler under `luau`, inte i
+  Studio. Att en riktig `MovementController`-bildruta producerar svaret
+  är provat; att det känns rätt i Studio är det inte.
+- **Q och F som tangentval.** Att kontakten hamnar på Q och halvhalten på
+  F är ett val, inte ett faktum — `E` är upptagen av sitt upp/av sedan
+  Gate 01. Human gate.
+- **Om den analoga tygeln på avtryckaren känns bättre än en knapp.**

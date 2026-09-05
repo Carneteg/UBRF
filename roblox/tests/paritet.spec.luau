@@ -332,10 +332,17 @@ do
 	     blocker B var just att en konstruerad loco kan ljuga om vad
 	     runtimen kan. Värdena är en häst mitt i en övergång: hon travar,
 	     ryttaren har bett om galopp. ]]
-	local loco = { gait = "trot", targetGait = "trot", speed = 3.2,
+	--[[ G02-B: locon bär nu också hästens svar, precis som en riktig
+	     controller-frame gör. Fälten fylls här för att KONTRAKTET ska gå
+	     att prova utan en rig; att en RIKTIG bildruta producerar dem
+	     provas i movement.spec, som senior review av #86 krävde. ]]
+	local loco = { gait = "trot", targetGait = "trot", beddGangart = "trot", speed = 3.2,
 		turnRate = kurvatur * 3.2, phase = 0.25,
-		cue = "framåt", cueTid = 1.0, tid = 1.4, senasteOvergang = 0.4 }
-	local tm = Telemetri.las(ritt, loco, kurvatur)
+		cue = "framåt", cueTid = 1.0, tid = 1.4, senasteOvergang = 0.4,
+		balans = 0.9, energi = 0.8, svarstid = 0.15, svarTid = 1.2,
+		paradKvalitet = 0.7, paradTid = 1.1 }
+	local tm = Telemetri.las(ritt, loco, kurvatur,
+		Hjalper.semantik({ skankel = 0.6, tygel = 0.4, styrning = 0.3 }))
 	check("vridhastighet = kurvatur × tempo",
 		nara(tm.vridhastighet, tm.kurvatur * tm.fart),
 		string.format("(%.3f rad/s vid r = %.1f m)", tm.vridhastighet, tm.svangradie))
@@ -481,9 +488,101 @@ do
 		"(parad, innerTygel, ytterTygel)")
 end
 
-beslut("LUCKA", "hjälplager, parad, hästens svar och spänning saknas på Roblox",
-	#Telemetri.SAKNAS == 10,
-	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — G02-B ger dem källor)")
+--[[ G02-B punkt 4 stängde de flesta hålen. Kvar står tre, och de har
+     ETT skäl: fokus behöver mjukhet och spänning, som är egna delsystem
+     på webben och inte portade. Att fylla dem med konstanter hade gett
+     paritet i siffran men inte i upplevelsen. ]]
+--[[ ══ FORMLERNA, INTE BARA KONSTANTERNA (G02-B punkt 4) ═══════════
+
+     Att de två ytorna har samma tal i kanonen bevisar ingenting om att de
+     RÄKNAR lika. RidKanon.PROV innehåller webbens egna svar på bestämda
+     indata, räknade av src/riding/hjalper.js och src/riding/svar.js när
+     exporten kördes. Här körs Roblox implementation på samma indata.
+
+     Driver de två isär blir det rött — även om varenda konstant
+     fortfarande stämmer. Det är den enda paritetskontroll som faktiskt
+     provar paritet i beteende och inte i bokföring. ]]
+do
+	local P = RidKanon.PROV
+	local EPS = 1e-5
+
+	local varst, antal = 0, 0
+	for _, rad in P.hjalper do
+		local r = Hjalper.semantik(rad.in_)
+		for namn, vantat in rad.ut do
+			varst = math.max(varst, math.abs((r[namn] or 0) - vantat))
+			antal += 1
+		end
+	end
+	check("hjälpsemantiken räknar samma tal som webben",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	varst, antal = 0, 0
+	for _, rad in P.paradKvalitet do
+		varst = math.max(varst, math.abs(Hjalper.paradKvalitet(rad.in_) - rad.ut))
+		antal += 1
+	end
+	check("paradens kvalitet räknas lika på båda ytorna",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	varst, antal = 0, 0
+	for _, rad in P.svarstid do
+		local h = { profil = rad.in_.profil }
+		local t = Svar.svarstid(h, rad.in_.kanslighet, rad.in_.fokus, rad.in_.energi, rad.in_.klarhet)
+		varst = math.max(varst, math.abs(t - rad.ut))
+		antal += 1
+	end
+	check("svarstiden räknas lika på båda ytorna, profil för profil",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	varst, antal = 0, 0
+	for _, rad in P.balans do
+		local b = Svar.balansMal({ profil = rad.in_.profil }, rad.in_.utbildning,
+			rad.in_.bojkrav, rad.in_.ytterstod, rad.in_.fartkrav, rad.in_.iOvergang)
+		varst = math.max(varst, math.abs(b - rad.ut))
+		antal += 1
+	end
+	--[[ Webbens golden-rader räknas med spänning 0, alltså exakt det
+	     läge Roblox alltid befinner sig i. Provet jämför därför två
+	     jämförbara storheter; att Roblox saknar spänningstermen står
+	     som deklarerad LUCKA nedan och göms inte i den här raden. ]]
+	check("balansen räknas lika på båda ytorna vid spänning noll",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	varst, antal = 0, 0
+	for _, rad in P.infall do
+		varst = math.max(varst, math.abs(Svar.infall(rad.in_.balans, rad.in_.bojkrav) - rad.ut))
+		antal += 1
+	end
+	check("infallet räknas lika på båda ytorna",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	varst, antal = 0, 0
+	for _, rad in P.energiTakt do
+		local t = Svar.energiTakt(rad.in_.gangart, 0, { profil = rad.in_.profil })
+		varst = math.max(varst, math.abs(t - rad.ut))
+		antal += 1
+	end
+	check("energitakten räknas lika på båda ytorna, gångart för gångart",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	--[[ Och att hjälpkontraktet faktiskt fylls: varje fält i HJALP_FALT
+	     ska antingen produceras av semantiken eller stå i Hjalper.SAKNAS.
+	     Ett fält som varken finns eller är deklarerat är ett tyst hål. ]]
+	local r = Hjalper.semantik({ skankel = 0.5, tygel = 0.4, styrning = 0.3, parad = 0.5 })
+	local deklarerat = {}
+	for _, namn in Hjalper.SAKNAS do deklarerat[namn] = true end
+	local tysta = {}
+	for _, namn in RidKanon.HJALP_FALT do
+		if r[namn] == nil and not deklarerat[namn] then table.insert(tysta, namn) end
+	end
+	check("varje hjälpfält produceras eller är deklarerat som saknat",
+		#tysta == 0, table.concat(tysta, ", "))
+end
+
+beslut("LUCKA", "fokus, mjukhet och spänning saknar källa på Roblox",
+	#Telemetri.SAKNAS == 3,
+	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — hemmet är G02-C)")
 
 --[[ HÄSTENS SVAR (G02-B punkt 2). Samma sak som hjälperna: talen ska
      ligga här före implementationen så att Roblox läser dem i stället för
@@ -519,15 +618,11 @@ do
 			S.INFALL_MAX * 100))
 end
 
-beslut("LUCKA", "hästens svar är byggt på webben, inte på Roblox",
-	RidKanon.SVAR.INFALL_MAX > 0 and RidKanon.SVAR.SVAR_BAS > 0,
-	"(fördröjning, fokus, balans, energi och infall — kanonen finns här," ..
-	" implementationen är G02-B:s Roblox-checkpoint)")
-
-beslut("LUCKA", "hjälpernas semantik är byggd på webben, inte på Roblox",
-	#RidKanon.HJALP_FALT == 10,
-	"(" .. table.concat(sorterad(RidKanon.HJALP_FALT), ", ") ..
-	" — kanonen finns här, implementationen är G02-B:s Roblox-checkpoint)")
+beslut("LUCKA", "sitsen finns inte som axel på Roblox",
+	#Hjalper.SAKNAS == 2,
+	"(" .. table.concat(sorterad(Hjalper.SAKNAS), ", ") ..
+	" — Shift/Ctrl är gångartsknappar sedan Gate 01, och att flytta dem" ..
+	" är en inputändring utanför G02-B)")
 
 print("")
 if oppna > 0 then

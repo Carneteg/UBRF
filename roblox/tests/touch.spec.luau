@@ -131,6 +131,40 @@ do
 	check("hoppknappen tänder hoppet", Input.consume().jump)
 	if __senasteDelay then __senasteDelay() end
 	check("och släpper det igen", not Input.consume().jump)
+
+	--[[ G02-B: TYGELN OCH PARADEN på pekskärmen.
+
+	     De två har olika natur med flit, och provet är vad som håller dem
+	     isär: kontakten är ett TILLSTÅND som ligger kvar så länge fingret
+	     ligger på, paraden är en IMPULS som bärs av exakt en bildruta.
+	     Byter de plats får man en tygel man knäpper på och en halvhalt
+	     man kan hålla inne, och ingetdera är ridning. ]]
+	nollstall()
+	Input.setTouchRein(1)
+	local r1, r2 = Input.consume().rein, Input.consume().rein
+	Input.setTouchRein(0)
+	local r3 = Input.consume().rein
+	check("tygeln HÅLLS: kontakten ligger kvar tills fingret lyfts",
+		r1 == 1 and r2 == 1 and r3 == 0,
+		string.format("(%.0f, %.0f, sedan %.0f)", r1, r2, r3))
+	--[[ Och att den är ANALOG i kontraktet: halva utslaget ska nå fram
+	     som halvt. Pekskärmens knapp ger 1, men gamepadens avtryckare är
+	     en axel, och det är samma fält de skriver i. ]]
+	Input.setTouchRein(0.45)
+	check("tygeln är analog hela vägen genom kontraktet",
+		math.abs(Input.consume().rein - 0.45) < 1e-6)
+	Input.setTouchRein(0)
+
+	Input.touchParad()
+	local barandeP, efteratP = 0, 0
+	for i = 1, 31 do
+		if Input.consume().parad > 0 then
+			if i == 1 then barandeP += 1 else efteratP += 1 end
+		end
+	end
+	check("paraden är en IMPULS: ett tryck bärs av exakt en bildruta",
+		barandeP == 1 and efteratP == 0,
+		string.format("(%d bärande, %d extra på 30 följande bildrutor)", barandeP, efteratP))
 end
 
 print("\n── Ingen regression för tangent och gamepad ──")
