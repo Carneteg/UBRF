@@ -48,6 +48,16 @@ jobs:
           if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera
           else echo "hoppar: tools/exportera-spel.js finns inte i denna branch"; fi
 
+      # Aritmetisk grind, ingen webbläsare: kan figuren lämna uppgången
+      # uppåt över HELA dess bredd? Felet den fångar är ett steg på 0,40 m
+      # där nivåregeln tillåter 0,36 — det slår bara till på vissa
+      # approacher, så en promenadgrind hittar det nyckfullt. Här mäts det
+      # i stället som det tal det är.
+      - name: Uppgångens nivåmarginal över hela bredden
+        run: |
+          if [ -f tools/nivamarginal.mjs ]; then node tools/nivamarginal.mjs
+          else echo "hoppar: tools/nivamarginal.mjs finns inte i denna branch"; fi
+
       - name: Geometri i synk — src/site.js mot UBRFKomplex.luau
         run: |
           if [ -f tools/exportera-geometri.js ]; then node tools/exportera-geometri.js --kontrollera
