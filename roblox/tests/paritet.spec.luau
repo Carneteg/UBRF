@@ -481,9 +481,48 @@ do
 		"(parad, innerTygel, ytterTygel)")
 end
 
-beslut("LUCKA", "hjälplager, parad, spänning och mjukhet saknas på Roblox",
-	#Telemetri.SAKNAS == 7,
+beslut("LUCKA", "hjälplager, parad, hästens svar och spänning saknas på Roblox",
+	#Telemetri.SAKNAS == 10,
 	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — G02-B ger dem källor)")
+
+--[[ HÄSTENS SVAR (G02-B punkt 2). Samma sak som hjälperna: talen ska
+     ligga här före implementationen så att Roblox läser dem i stället för
+     att skriva av dem. Kontrollen är att kanonen är hel och rimlig — ett
+     svarsband som inte går att spela igenom, eller en energitabell där
+     galoppen kostar mindre än skritten, är ett fel oavsett vilken yta som
+     kör den. ]]
+do
+	local S = RidKanon.SVAR
+	check("svarstidens band är spelbart och rätt vänt",
+		S.SVAR_MIN > 0 and S.SVAR_MAX > S.SVAR_MIN and S.SVAR_MAX <= 0.60,
+		string.format("(%.2f–%.2f s)", S.SVAR_MIN, S.SVAR_MAX))
+	check("en tydligare hjälp kan bara göra svaret snabbare, aldrig segare",
+		S.SVAR_KLAR > 0,
+		string.format("(samordningen drar av upp till %.2f s)", S.SVAR_KLAR))
+	check("arbetet kostar mer ju högre gångart, och halten ger tillbaka",
+		S.ENERGI_TAPP.galopp > S.ENERGI_TAPP.trav
+			and S.ENERGI_TAPP.trav > S.ENERGI_TAPP.skritt
+			and S.ENERGI_TAPP.halt == 0 and S.ENERGI_ATER.halt > 0,
+		string.format("(skritt %.5f < trav %.5f < galopp %.5f per s, halt +%.5f)",
+			S.ENERGI_TAPP.skritt, S.ENERGI_TAPP.trav, S.ENERGI_TAPP.galopp,
+			S.ENERGI_ATER.halt))
+	check("balansen faller fortare än den byggs",
+		S.BALANS_TAU_NER < S.BALANS_TAU_UPP,
+		string.format("(ned %.1f s, upp %.1f s)", S.BALANS_TAU_NER, S.BALANS_TAU_UPP))
+	--[[ INFALL_MAX är den enda storhet i G02-B som flyttar hästen från
+	     det ryttaren bad om. Taket ska vara litet nog att styrningen
+	     fortfarande är styrning — kontroll först, enligt scope
+	     guardrailen — och den här raden är vad som håller det så. ]]
+	check("infallet är begränsat: hästen faller in, hon tar inte över styrningen",
+		S.INFALL_MAX > 0 and S.INFALL_MAX <= 0.35,
+		string.format("(högst %.0f %% snävare båge än bett, och 0 i balans)",
+			S.INFALL_MAX * 100))
+end
+
+beslut("LUCKA", "hästens svar är byggt på webben, inte på Roblox",
+	RidKanon.SVAR.INFALL_MAX > 0 and RidKanon.SVAR.SVAR_BAS > 0,
+	"(fördröjning, fokus, balans, energi och infall — kanonen finns här," ..
+	" implementationen är G02-B:s Roblox-checkpoint)")
 
 beslut("LUCKA", "hjälpernas semantik är byggd på webben, inte på Roblox",
 	#RidKanon.HJALP_FALT == 10,

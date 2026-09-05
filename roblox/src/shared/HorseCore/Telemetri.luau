@@ -43,8 +43,14 @@ Telemetri.HARLEDDA = RidKanon.HARLEDDA
      webben läser nu HUR en halvhalt reds, inte bara att den gavs.
      Roblox har ingen parad alls ännu — ingen kanal, ingen läsning —
      så de två är luckor av exakt samma slag som hjälplagret. ]]
-Telemetri.SAKNAS = { "balans", "fokus", "hjalper", "mjukhet", "paradAlder",
-	"paradKvalitet", "spanning" }
+--[[ G02-B punkt 2 gav balans och fokus riktiga källor i webbens modell
+     och la till energi, svarstid och svarAlder. På Roblox finns ingen av
+     dem: rörelsekärnan har varken hjälplager, spänning eller en väntan
+     mellan begäran och svar — en cue startar förloppet i samma bildruta.
+     Att räkna fram en balanssiffra ur `lean` vore att uppfinna en annan
+     modell och kalla den paritet. ]]
+Telemetri.SAKNAS = { "balans", "energi", "fokus", "hjalper", "mjukhet",
+	"paradAlder", "paradKvalitet", "spanning", "svarAlder", "svarstid" }
 
 --[[ Lagliga gångartsbyten: grannsteg i ordningen, plus halt från vad som
      helst (en häst kan stanna ur galopp). Ordningen är Roblox egen — den

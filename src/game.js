@@ -284,7 +284,27 @@ function stegaRitt(dt){
   /* Smidigheten sitter i hästen och i ryttarens hand: en vig häst böjer
      sig snävare, och den som rider mjukt får mer båge för samma utslag. */
   const kappaTak=KAPPA_MAX*gv*(0.78+0.44*clamp(h.kanslighet,0,1));
-  const kappaBegard=clamp(G.aids.styrning,-1,1)*kappaTak;
+  let kappaBegard=clamp(G.aids.styrning,-1,1)*kappaTak;
+  /* ── HÄSTEN FALLER IN (G02-B punkt 2) ────────────────────────────
+     Den enda plats i hela G02-B där hästens tillstånd ändrar VAR hon
+     hamnar och inte bara vad hon får för betyg. En häst som tappat
+     balansen i en sväng faller in på inre skuldran: bågen blir snävare
+     än ryttaren bad om.
+
+     Talet kommer ur SVAR_KANON.INFALL_MAX och är noll i två fall som
+     båda är avsiktliga: på rakt spår (böjkravet är noll) och när hästen
+     är i balans. Boten är alltså inte att sluta svänga utan att rida
+     svängen med yttertygel — precis den hjälp punkt 1 gav ryttaren.
+
+     Taket ligger på begäran och inte på den integrerade kurvaturen, så
+     kurvaturens egen tröghet och P4:s ändringstak gäller oförändrat.
+     Infallet kan därför inte göra styrningen ryckig; det flyttar var
+     bågen hamnar, inte hur snabbt den ändras. */
+  if(typeof svarInfall==="function"&&G.ride){
+    const bojkrav=Math.min(1,Math.abs(G.aids.styrning)/
+      ((typeof HJALP_KANON!=="undefined")?HJALP_KANON.STYR_FULLT:0.72));
+    kappaBegard*=1+svarInfall(G.ride.balans===undefined?1:G.ride.balans,bojkrav);
+  }
   /* Kurvaturen tar tag och släpper mjukt, dt-baserat. Utan den snäpper
      bågen till sin nya radie i samma bildruta som fingret rör sig.
      Att lägga sig i en båge går fortare än att räta upp sig ur den —

@@ -29,9 +29,9 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
-  + "\n" + las("src/riding/telemetri.js"), ctx);
-const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA } =
-  vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA})", ctx);
+  + "\n" + las("src/riding/svar.js") + "\n" + las("src/riding/telemetri.js"), ctx);
+const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON } =
+  vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -284,6 +284,24 @@ rader.push("RidKanon.HJALP_FALT = { " + hjalpFalt.map(str).join(", ") + " }");
 rader.push("");
 rader.push("--[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]");
 rader.push("RidKanon.HJALP_HARLEDDA = { " + HJALP_HARLEDDA.slice().sort().map(str).join(", ") + " }");
+rader.push("");
+rader.push("--[[ HÄSTENS SVAR (G02-B punkt 2, src/riding/svar.js).");
+rader.push("");
+rader.push("     Fördröjning, fokus, balans och energi som riktiga storheter. Webben");
+rader.push("     har dem i modellen; Roblox har dem inte alls ännu, och det står som");
+rader.push("     LUCKA i paritetsspecen i stället för att fyllas med gissningar.");
+rader.push("");
+rader.push("     ENERGI_TAPP/ENERGI_ATER är per sekund och per gångart, med webbens");
+rader.push("     namn. Roblox gångartsnamn översätts av RidKanon.MOTSVARIGHET. ]]");
+rader.push("RidKanon.SVAR = {");
+for (const namn of Object.keys(SVAR_KANON)) {
+  const v = SVAR_KANON[namn];
+  if (typeof v === "number") { rader.push(`\t${namn} = ${tal(v)},`); continue; }
+  rader.push(`\t${namn} = {`);
+  for (const g of RID_ORDNING) if (v[g] !== undefined) rader.push(`\t\t${g} = ${tal(v[g])},`);
+  rader.push("\t},");
+}
+rader.push("}");
 rader.push("");
 rader.push("return RidKanon");
 rader.push("");

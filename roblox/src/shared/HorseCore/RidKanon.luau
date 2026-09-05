@@ -122,10 +122,10 @@ RidKanon.KAMERA = {
 }
 
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
-RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "paradAlder", "paradKvalitet", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
+RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "energi", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "paradAlder", "paradKvalitet", "rytm", "spanning", "steglangd", "svangradie", "svarAlder", "svarstid", "uppsutten", "vridhastighet" }
 
 --[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]
-RidKanon.HARLEDDA = { "balans", "fokus" }
+RidKanon.HARLEDDA = {  }
 
 --[[ HJÄLPERNAS SEMANTIK (G02-B punkt 1, src/riding/hjalper.js).
 
@@ -157,5 +157,51 @@ RidKanon.HJALP_FALT = { "bojSida", "innerTygel", "parad", "sits", "skankel", "st
 
 --[[ Hjälpfält som är HÄRLEDDA ur axlarna, inte egna kontroller. ]]
 RidKanon.HJALP_HARLEDDA = { "innerTygel", "vikt", "ytterTygel", "ytterstod" }
+
+--[[ HÄSTENS SVAR (G02-B punkt 2, src/riding/svar.js).
+
+     Fördröjning, fokus, balans och energi som riktiga storheter. Webben
+     har dem i modellen; Roblox har dem inte alls ännu, och det står som
+     LUCKA i paritetsspecen i stället för att fyllas med gissningar.
+
+     ENERGI_TAPP/ENERGI_ATER är per sekund och per gångart, med webbens
+     namn. Roblox gångartsnamn översätts av RidKanon.MOTSVARIGHET. ]]
+RidKanon.SVAR = {
+	SVAR_BAS = 0.12,
+	SVAR_TROG = 0.14,
+	SVAR_FOKUS = 0.12,
+	SVAR_ENERGI = 0.1,
+	SVAR_KLAR = 0.1,
+	SVAR_MIN = 0.06,
+	SVAR_MAX = 0.48,
+	FOKUS_BAS = 0.3,
+	FOKUS_MJUK = 0.3,
+	FOKUS_LUGN = 0.2,
+	FOKUS_UTE = 0.14,
+	FOKUS_PARAD = 0.22,
+	FOKUS_TAU = 2.6,
+	BALANS_YTTER = 0.55,
+	BALANS_FART = 0.3,
+	BALANS_OVERGANG = 0.16,
+	BALANS_SPANNING = 0.26,
+	BALANS_UTB = 0.3,
+	BALANS_TAU_NER = 1.1,
+	BALANS_TAU_UPP = 2.2,
+	INFALL_MAX = 0.3,
+	ENERGI_TAPP = {
+		halt = 0,
+		skritt = 0.00042,
+		trav = 0.00062,
+		galopp = 0.00125,
+	},
+	ENERGI_ATER = {
+		halt = 0.0009,
+		skritt = 0.00042,
+		trav = 0,
+		galopp = 0,
+	},
+	ENERGI_SPANN = 0.45,
+	ENERGI_BJUD = 0.35,
+}
 
 return RidKanon

@@ -332,6 +332,172 @@ prova("hjälpkanonen och modellen delar tal i stället för att spegla dem",
   `tygelns neutralläge ${hj.dublett.kanon} på båda ställena; fullt styrutslag ` +
   `${hj.dublett.styr} ur kanonen ger ${hj.dublett.styrMal} i inputlagret`);
 
+/* ══════════════════════════════════════════════════════════════════
+   G02-B PUNKT 2 — HÄSTENS SVAR (issue #83)
+
+   Fördröjning, känslighet, balans, fokus, spänning och energi. Proven
+   går genom inputlagret av samma skäl som punkt 1:s, och tre av dem är
+   direkt riktade mot risken i den här punkten — att en häst som "svarar
+   som en individ" i praktiken blir en häst som inte lyder.
+
+   KONTROLL FÖRST är inte en formulering här utan ett prov: tolv hjälper
+   i rad ska ge tolv svar. Fördröjningen skjuter svaret i tid; den får
+   aldrig tappa bort det.
+   ══════════════════════════════════════════════════════════════════ */
+const { SVAR_KANON_MIN, SVAR_KANON_MAX } = await page.evaluate(
+  () => ({ SVAR_KANON_MIN: SVAR_KANON.SVAR_MIN, SVAR_KANON_MAX: SVAR_KANON.SVAR_MAX }));
+const svar = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+    RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
+  const ut = {};
+
+  /* a) HJÄLPEN TAPPAS ALDRIG BORT. Tolv hjälper upp och ned om vartannat.
+     Varje gång ryttaren ber ska `beddGangart` byta, och varje sådan
+     begäran ska sluta med att `malGangart` kommit ifatt. En hjälp som
+     försvinner under fördröjningen är den värsta buggen den här punkten
+     kan införa, och det här provet är vad som fångar den. */
+  nyRitt();
+  let bad = 0, svarade = 0, maxVantan = 0, minVantan = 9;
+  /* Bildruta för bildruta, för väntan är kortare än ett vanligt
+     testintervall. Kördes den i 0,35-sekundersklumpar var fönstret redan
+     passerat när provet tittade, och band-kontrollen blev sann av att
+     ingenting hade mätts — grön utan att ha sett efter. */
+  let sågVantan = 0;
+  const enHjalp = (o, sek) => {
+    const foreBedd = G.ride.beddGangart;
+    let hittad = false;
+    for (let i = 0; i < sek * 60; i++) {
+      RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+      RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0;
+      stegaRitt(dt);
+      if (!hittad && G.ride.beddGangart !== foreBedd) {
+        hittad = true; bad++;
+        /* Samma bildruta som hon hörde: hon har ännu inte börjat. */
+        if (G.ride._vantar && G.ride.malGangart !== G.ride.beddGangart) {
+          sågVantan++;
+          maxVantan = Math.max(maxVantan, G.ride.svarstid);
+          minVantan = Math.min(minVantan, G.ride.svarstid);
+        }
+      }
+    }
+    if (hittad && G.ride.malGangart === G.ride.beddGangart) svarade++;
+  };
+  for (let n = 0; n < 3; n++) { enHjalp({ skankel: 1 }, 1.4); enHjalp({}, 1.2); }
+  for (let n = 0; n < 3; n++) { enHjalp({ parad: 1 }, 1.6); enHjalp({}, 1.0); }
+  ut.aldrigTappad = { bad, svarade, maxVantan, minVantan, sagVantan: sågVantan };
+
+  /* b) SVARSTIDEN, klockad utifrån: från att `beddGangart` byter till att
+     `malGangart` gör det. Ska stämma med det modellen själv redovisar. */
+  nyRitt(); kor({}, 1.0);
+  let t0 = null, klockad = null;
+  for (let i = 0; i < 240; i++) {
+    RIDIN.skankel = 1; stegaRitt(dt);
+    if (t0 === null && G.ride.beddGangart !== "halt") t0 = G.ride._tid;
+    if (t0 !== null && klockad === null && G.ride.malGangart !== "halt")
+      klockad = G.ride._tid - t0;
+  }
+  ut.klocka = { redovisad: G.ride.svarstid, klockad,
+    telemetri: G.telemetri ? G.telemetri.svarstid : null };
+
+  /* c) SAMORDNINGEN GER SNABBARE SVAR. Två parader ur samma trav: en
+     välriden och en slarvig. Båda ska tas emot; den välridna ska svaras
+     på snabbare. */
+  const paradSvar = (skankel, tygel) => { nyRitt();
+    kor({ tygel }, 2.0);
+    kor({ skankel: 1, tygel }, 1.5); kor({ skankel, tygel }, 1.0);
+    kor({ skankel: 1, tygel }, 1.5); kor({ skankel, tygel }, 2.5);
+    kor({ skankel, tygel, parad: 1 }, 0.3); kor({ skankel, tygel }, 2.0);
+    return { svarstid: G.ride.svarstid, kval: G.ride.paradKval,
+      gang: G.ride.gangart }; };
+  ut.bra = paradSvar(0.7, 0.15);
+  ut.slarv = paradSvar(-1, 0.35);
+
+  /* d) ENERGIN. Tio minuter sammanhängande trav. Hjälpen ligger på
+     NEUTRAL hela hållet — höjs den ens en gång är det en ny impuls och
+     provet mäter något annat än det påstår (samma fällа som checkpoint
+     0 gick i). */
+  nyRitt(); for (let n = 0; n < 2; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+  const e0 = G.ride.energi, g0 = G.ride.gangart, f0 = G.ride.tempo;
+  kor({}, 600);
+  const h = HORSES[G.hastId];
+  ut.energi = { fore: e0, efter: G.ride.energi, gangFore: g0, gangEfter: G.ride.gangart,
+    fartFore: f0, fartEfter: G.ride.tempo,
+    svarPigg: svarSvarstid(h, G.ride.fokus, e0, 0.6),
+    svarTrott: svarSvarstid(h, G.ride.fokus, G.ride.energi, 0.6) };
+  /* Och att halten ger tillbaka. */
+  kor({ tygel: 1, sits: 1 }, 6); kor({}, 300);
+  ut.energi.efterVila = G.ride.energi;
+  ut.energi.gangVila = G.ride.gangart;
+
+  /* e) FOKUS. En välriden halvhalt är en uppmärksamhetssignal. */
+  nyRitt(); kor({ skankel: 1 }, 1.5); kor({}, 1.0); kor({}, 8.0);
+  const fokFore = G.ride.fokus;
+  kor({ skankel: 0.7, tygel: 0.15, parad: 1 }, 0.3);
+  kor({ skankel: 0.7, tygel: 0.15 }, 0.5);
+  ut.fokus = { fore: fokFore, efter: G.ride.fokus, kval: G.ride.paradKval };
+
+  /* f) BALANSEN OCH INFALLET. Samma volt, samma skänkel, samma
+     styrutslag — bara kontakten skiljer. Den ostödda hästen ska tappa
+     balansen och FALLA IN: bågen blir snävare än den ryttaren bad om. */
+  const volt = (tygel) => { nyRitt();
+    kor({ tygel }, 2.0); kor({ skankel: 1, tygel }, 1.2); kor({ skankel: 0.55, tygel }, 1.5);
+    kor({ skankel: 0.55, tygel, styr: 1 }, 40);
+    const iSvang = { balans: G.ride.balans, kappa: Math.abs(G.kappa),
+      radie: Math.abs(G.kappa) > 0.002 ? 1 / Math.abs(G.kappa) : null };
+    /* Rakt spår igen — balansen ska hämta sig. */
+    kor({ skankel: 0.55, tygel }, 12);
+    iSvang.efterRakt = G.ride.balans;
+    return iSvang; };
+  ut.los = volt(0);
+  ut.buren = volt(0.5);
+  return ut;
+});
+prova("kontroll först: fördröjningen skjuter svaret i tid, den tappar aldrig bort det",
+  svar.aldrigTappad.bad >= 6 && svar.aldrigTappad.svarade === svar.aldrigTappad.bad &&
+  svar.aldrigTappad.sagVantan === svar.aldrigTappad.bad &&
+  svar.aldrigTappad.maxVantan <= SVAR_KANON_MAX && svar.aldrigTappad.minVantan >= SVAR_KANON_MIN,
+  `${svar.aldrigTappad.bad} hjälper, ${svar.aldrigTappad.svarade} svar, ` +
+  `${svar.aldrigTappad.sagVantan} väntefönster sedda, svarstid ` +
+  `${svar.aldrigTappad.minVantan.toFixed(3)}–${svar.aldrigTappad.maxVantan.toFixed(3)} s ` +
+  `(spelbart band ${SVAR_KANON_MIN}–${SVAR_KANON_MAX})`);
+prova("fördröjningen är verklig och mäts utifrån: bedd gångart före buren",
+  svar.klocka.klockad !== null && Math.abs(svar.klocka.klockad - svar.klocka.redovisad) < 0.02 &&
+  svar.klocka.telemetri === svar.klocka.redovisad,
+  `klockad ${svar.klocka.klockad.toFixed(3)} s mot redovisad ${svar.klocka.redovisad.toFixed(3)} s, ` +
+  `telemetrin visar ${svar.klocka.telemetri.toFixed(3)} s`);
+prova("en välriden parad får snabbare svar än en slarvig",
+  svar.bra.svarstid < svar.slarv.svarstid - 0.02 &&
+  svar.bra.kval > svar.slarv.kval,
+  `välriden: kvalitet ${svar.bra.kval.toFixed(2)} → svar ${svar.bra.svarstid.toFixed(3)} s · ` +
+  `slarvig: kvalitet ${svar.slarv.kval.toFixed(2)} → svar ${svar.slarv.svarstid.toFixed(3)} s`);
+prova("energin tär av arbete och kommer tillbaka i halt — och trött häst svarar segare",
+  svar.energi.efter < svar.energi.fore - 0.20 &&
+  svar.energi.gangEfter === svar.energi.gangFore &&
+  svar.energi.efterVila > svar.energi.efter + 0.05 &&
+  svar.energi.svarTrott > svar.energi.svarPigg,
+  `tio minuter ${svar.energi.gangFore}: energi ${svar.energi.fore.toFixed(3)} → ` +
+  `${svar.energi.efter.toFixed(3)}, fem minuter halt → ${svar.energi.efterVila.toFixed(3)} · ` +
+  `svarstid ${svar.energi.svarPigg.toFixed(3)} → ${svar.energi.svarTrott.toFixed(3)} s · ` +
+  `gångarten stod still (${svar.energi.gangFore} → ${svar.energi.gangEfter})`);
+prova("en välriden halvhalt lyfter fokus — den är en uppmärksamhetssignal",
+  svar.fokus.efter > svar.fokus.fore + 0.03 && svar.fokus.kval > 0.8,
+  `fokus ${svar.fokus.fore.toFixed(3)} → ${svar.fokus.efter.toFixed(3)} ` +
+  `(+${((svar.fokus.efter / svar.fokus.fore - 1) * 100).toFixed(1)} %) på en parad med kvalitet ` +
+  `${svar.fokus.kval.toFixed(2)}`);
+prova("balansen tappas i en ostödd volt, hästen FALLER IN, och den hämtar sig på rakt spår",
+  svar.los.balans < svar.buren.balans - 0.05 &&
+  svar.los.radie < svar.buren.radie &&
+  svar.los.efterRakt > svar.los.balans + 0.05,
+  `lös tygel: balans ${svar.los.balans.toFixed(3)}, ridd radie ${svar.los.radie.toFixed(2)} m · ` +
+  `kontakten kvar: balans ${svar.buren.balans.toFixed(3)}, radie ${svar.buren.radie.toFixed(2)} m ` +
+  `(${((1 - svar.los.radie / svar.buren.radie) * 100).toFixed(1)} % snävare än bett) · ` +
+  `tolv sekunder rakt efteråt: balans ${svar.los.efterRakt.toFixed(3)}`);
+
 /* Och att nollställningen verkligen är inkopplad där ritten börjar.
    Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se
    om produktionen glömmer den; det här läser funktionskroppen i den
@@ -399,8 +565,11 @@ const tm = await page.evaluate(() => {
   const aids = { skankel: 0.78, tygel: 0.34, sits: 0.2, styrning: 0.45 };
   for (let i = 0; i < 600; i++) stepRide(s, aids, h, ctx, 1 / 60);
   ridSittUpp("test", "ridhus"); ridFoljGangart(s.gangart);
-  return ridTelemetri(s, aids, { kappa: 0.1, fas: 0.25, onskadFart: 3.2 });
+  const t = ridTelemetri(s, aids, { kappa: 0.1, fas: 0.25, onskadFart: 3.2 });
+  t._modell = { balans: s.balans, fokus: s.fokus, energi: s.energi };
+  return t;
 });
+const tmRide = tm._modell;
 const kravda = ["uppsutten", "gangart", "fart", "onskadFart", "kurvatur", "svangradie",
   "vridhastighet", "rytm", "spanning", "balans", "fokus", "hjalper"];
 const saknas = kravda.filter(k => tm[k] === undefined);
@@ -408,9 +577,23 @@ prova("telemetrin exponerar gångart, fart/önskad fart, kurvatur, rytm, balans,
   saknas.length === 0, saknas.length ? "saknas: " + saknas.join(", ") : `gångart ${tm.gangart}, fart ${tm.fart.toFixed(2)}, radie ${tm.svangradie.toFixed(1)} m`);
 prova("telemetrin: vridhastighet = kurvatur × tempo (Gate 01:s formulering)",
   Math.abs(tm.vridhastighet - 0.1 * tm.fart) < 1e-9, `${tm.vridhastighet.toFixed(3)} rad/s`);
-prova("telemetrin märker härledda fält i stället för att låtsas att de är mätta",
-  Array.isArray(tm._harledda) && tm._harledda.includes("balans") && tm._harledda.includes("fokus"),
-  JSON.stringify(tm._harledda));
+/* G02-B punkt 2 gav balans och fokus riktiga källor i modellen, och la
+   till energi. Listan över härledda fält är därför TOM — och kravet är
+   nu det omvända: den ska stämma med verkligheten åt båda hållen. Ett
+   fält som räknas fram ur andra publicerade fält ska stå i listan, och
+   ett som har egen källa ska inte stå där.
+
+   Provet kontrollerar därför att de tre svarsfälten finns, att de INTE
+   är märkta som härledda, och att de faktiskt kommer ur modellens
+   tillstånd och inte ur telemetrins egen aritmetik: telemetrin läses två
+   gånger med samma hjälper men olika modelltillstånd, och svaren ska
+   följa tillståndet. */
+prova("balans, fokus och energi är mätta ur modellen, inte härledda i telemetrin",
+  Array.isArray(tm._harledda) && tm._harledda.length === 0 &&
+  tm.balans !== undefined && tm.fokus !== undefined && tm.energi !== undefined &&
+  tm.balans === tmRide.balans && tm.fokus === tmRide.fokus && tm.energi === tmRide.energi,
+  `härledda ${JSON.stringify(tm._harledda)} · balans ${tm.balans.toFixed(3)}, ` +
+  `fokus ${tm.fokus.toFixed(3)}, energi ${tm.energi.toFixed(3)} — samma tal som i modellen`);
 
 /* 6. UPPSITTNING/AVSITTNING som riktigt tillstånd. */
 const mount = await page.evaluate(() => { ridSittUpp("bandit", "ridhus");
@@ -981,15 +1164,23 @@ const overgang = await page.evaluate(() => {
       kor({ ...NEUTRAL, skankel: 0.66 }, 2.0);
       kor(NEUTRAL, 1.2);
     }
-    /* Cue:n, och sedan klockan tills förloppet släpper. */
+    /* Cue:n, och sedan klockan över FÖRLOPPET.
+       Klockan startar när förloppet startar, inte när hjälpen ges.
+       G02-B punkt 2 la in hästens svarstid mellan de två, och den hör
+       inte till förloppets längd — den mäts för sig i svarsprovet
+       nedan. Roblox-provet klockar samma sträcka: Roblox har ingen
+       svarstid ännu, så där sammanfaller de två. Blandades de ihop
+       skulle det här provet mäta två saker och kunna bli grönt av att
+       den ena växer medan den andra krymper. */
     const aid = ned ? { skankel: 0.05, tygel: 0.80, sits: 0.85 } : { ...NEUTRAL, skankel: 0.66 };
-    let t = 0, sett = null;
+    let t = null, sett = null, vantan = 0;
     for (let i = 0; i < 4.0 / dt; i++) {
-      stepRide(s, A(aid), h, ctx, dt); t += dt;
-      if (s._ov) sett = s._ov.langd;
-      if (sett && !s._ov) return { t, langd: sett };
+      stepRide(s, A(aid), h, ctx, dt);
+      if (s._ov) { if (t === null) t = 0; sett = s._ov.langd; t += dt; }
+      else if (t === null) vantan += dt;
+      else return { t, langd: sett, vantan };
     }
-    return { t: null, langd: sett };
+    return { t: null, langd: sett, vantan };
   };
   return { hs: klocka(0, false), st: klocka(1, false),
     tg: klocka(2, false), ned: klocka(3, true),
