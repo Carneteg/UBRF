@@ -112,7 +112,23 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local stats = self.stats
 	local M = Config.MOVEMENT
 
+	--[[ CUE OCH ÖVERGÅNGSTID (G02-A, PO 2026-09-05). Modellen fanns redan
+	     — spelaren väljer gångart, inte tempo — men den mättes inte. Här
+	     bokförs NÄR begäran ändrades och hur lång tid hästen tog på sig,
+	     så telemetrin kan visa samma sak som webben. Ingen regel ändras. ]]
+	loco.tid = (loco.tid or 0) + dt
+	local forraMal = loco.targetGait
 	loco.targetGait = self:_targetGait(intent)
+	if loco.targetGait ~= forraMal then
+		local upp = Gaits.index(loco.targetGait) > Gaits.index(forraMal)
+		loco.cue = if upp then "framåt" else "nedåt"
+		loco.cueTid = loco.tid
+		loco._overgangKlar = false
+	end
+	if not loco._overgangKlar and loco.gait == loco.targetGait and loco.cueTid then
+		loco.senasteOvergang = loco.tid - loco.cueTid
+		loco._overgangKlar = true
+	end
 	local gait = Gaits.get(loco.targetGait)
 
 	--[[ ── Tempo ──────────────────────────────────────────────────────

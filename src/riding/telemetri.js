@@ -99,74 +99,49 @@ function ridTelemetri(ride, aids, extra) {
     fokus: clamp(1 - ride.spanning, 0, 1),                                          // härledd
     hjalper: aids ? { skankel: aids.skankel, tygel: aids.tygel,
                       sits: aids.sits, styrning: aids.styrning } : null,
+    /* HJÄLPEN SOM CUE (PO 2026-09-05). `gangart` är vad hästen gör,
+       `beddGangart` är vad ryttaren senast bad om. Skiljer de sig pågår
+       en övergång, och det är den skillnaden G02-B/C ska kunna läsa —
+       en ryttare som ber om trav och får skritt är inte samma sak som en
+       som rider skritt med avsikt. */
+    beddGangart: ride.malGangart || ride.gangart,
+    cue: ride.cue || null,                              // framåt · halvhalt · tygel · sits · parad
+    cueAlder: ride.cueTid !== undefined && ride.cueTid > -90
+      ? Math.max(0, (ride._tid || 0) - ride.cueTid) : null,   // s sedan hjälpen gavs
+    /* Övergångstiden: från att ryttaren bad till att hästen faktiskt gick
+       i gångarten. Måttet på om en övergång var mjuk eller ryckig. */
+    overgangstid: ride.senasteOvergang || 0,
+    iOvergang: !!(ride.overgang && !ride.overgang.klar),
     _harledda: ["balans", "fokus"],                     // ärlig märkning för G02-B
   };
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   G02-A — REVIEW-ONLY A/B FÖR DE FYRA BLOCKERANDE PARAMETRARNA
+   STYRKANONEN — EN uppsättning, inget alternativ
 
-   Senior re-review av #86: G02-A fick TECHNICAL_REVIEW_PASS men
-   PRODUCT_DECISION_REQUIRED. Fyra skillnader i kärnrörelsen påverkar
-   faktisk känsla, och Tobias ska kunna jämföra dem på webben innan
-   någon harmoniserar något.
+   PO-beslut 2026-09-05: A, webbens Gate 01-baseline, är kanon. Den är
+   den enda subjektivt provade grunden, och Roblox harmoniseras mot den
+   i stället för att två produktfysiker lever vidare.
 
-   HÄR ÄNDRAS INGEN PRODUKTKANON. `A` är exakt dagens webbvärden och är
-   det enda som körs om ingen uttryckligen ber om annat. `B` finns bara
-   för jämförelsen. Uppsättningen byts med `?ridab=B` i adressfältet
-   eller `ridSattAB("B")` från en testharness — aldrig av spelet självt.
+   Den review-only A/B-switchen (`?ridab=`, `ridSattAB()`, uppsättning B)
+   är därmed borta enligt mergevillkoret i
+   docs/G02-A-AB-BESLUTSUNDERLAG.md: ingen dold alternativ fysik följer
+   med mot merge. Värdena nedan ÄR A, oförändrade — beslutet valde dem,
+   det ändrade dem inte.
 
-   Att välja A eller B, eller en tredje trimning, är ett produktbeslut.
-   Den här filen mäter, den bestämmer inte. ── */
+   Den som vill jämföra en framtida trimning får göra det som ett nytt,
+   uttryckligt underlag med eget beslut. Det finns ingen väg att byta
+   fysik i en byggd sida längre, och det är avsikten.
+   ══════════════════════════════════════════════════════════════════ */
 
-const RID_AB = {
-  A: {
-    namn: "A — webb (Gate 01)",
-    kallа: "src/game.js @ 33559d9, src/model.js",
-    KAPPA_MAX: 0.42,
-    GANGSVANG: { halt: 1.00, skritt: 1.00, trav: 0.82, galopp: 0.52 },
-    galoppMax: 8.00,
-    /* Cykellängd: SPRANG[kat] × gångartens steg-faktor. */
-    cykel: null,
-  },
-  B: {
-    namn: "B — Roblox (HorseCore)",
-    kallа: "roblox/src/shared/HorseCore/Config.luau, Gaits.luau @ 58a8030",
-    KAPPA_MAX: 0.30,
-    GANGSVANG: { halt: 1.00, skritt: 1.00, trav: 0.82, galopp: 0.62 },
-    galoppMax: 7.00,
-    /* Roblox cycleLength = norm ÷ cycles, i meter. */
-    cykel: { skritt: 1.45, trav: 2.1333333, galopp: 3.20 },
-  },
+const RID_KANON = {
+  namn: "Gate 01 — webbens baseline, kanon sedan 2026-09-05",
+  kalla: "src/game.js, src/model.js; PO-beslut på #86",
+  KAPPA_MAX: 0.42,
+  GANGSVANG: { halt: 1.00, skritt: 1.00, trav: 0.82, galopp: 0.52 },
+  galoppMax: 8.00,
 };
 
-/* Aktiv uppsättning. PRODUKTION KÖR ALLTID A. */
-let RID_AKTIV = "A";
-function ridAB() { return RID_AB[RID_AKTIV]; }
-
-/* Byter uppsättning genom att skriva om de fyra värdena i den kanoniska
-   modellen. Returnerar vilken som nu gäller. Reversibel: A skriver
-   tillbaka Gate 01:s värden, som ligger kvar oförändrade i RID_AB.A. */
-function ridSattAB(vilken) {
-  const s = RID_AB[vilken];
-  if (!s) return RID_AKTIV;
-  RID_AKTIV = vilken;
-  if (typeof Gait !== "undefined") {
-    Gait.G.galopp.max = s.galoppMax;
-    if (!Gait._steglangdA) Gait._steglangdA = Gait.steglangd;
-    Gait.steglangd = s.cykel
-      ? function (kat, g, schvung, spanning) {
-          const c = s.cykel[g];
-          if (!c) return 0;
-          return c * clamp(1 + 0.22 * (schvung - 0.5) - 0.18 * spanning, 0.72, 1.28);
-        }
-      : Gait._steglangdA;
-  }
-  return RID_AKTIV;
-}
-
-/* Adressfältet — bara läsning, bara en gång, bara om den finns. */
-if (typeof location !== "undefined" && location.search) {
-  const m = /[?&]ridab=([AB])\b/.exec(location.search);
-  if (m) ridSattAB(m[1]);
-}
+/* Läsare. Fanns som `ridAB()` medan A/B levde; namnet säger nu vad det
+   är, och det finns ingen motsvarande skrivare. */
+function ridKanon() { return RID_KANON; }

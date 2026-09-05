@@ -220,13 +220,13 @@ function stegaRitt(dt){
      gångart har ett tak för hur snävt den kan böja — en häst i fyrsprång
      böjer sig inte som en häst i skritt — och taken är samma siffror som
      Roblox-spårets turn-faktorer, så designen bara översätts. */
-  /* Gate 01:s intrimmade värden. De ligger i RID_AB.A i
-     src/riding/telemetri.js och är OFÖRÄNDRADE sedan 33559d9 — objektet
-     gör dem läsbara, inte andra. Utan review-only-läget är `ridAB()`
-     alltid A, och raderna nedan ger exakt samma tal som förut. */
-  const AB=(typeof ridAB==="function")?ridAB():null;
-  const GANGSVANG=AB?AB.GANGSVANG:{halt:1.00, skritt:1.00, trav:0.82, galopp:0.52};
-  const KAPPA_MAX=AB?AB.KAPPA_MAX:0.42;   // 1/m vid full styrning i skritt ≈ 2,4 m radie
+  /* STYRKANONEN ligger i RID_KANON i src/riding/telemetri.js. Värdena är
+     Gate 01:s, oförändrade sedan 33559d9 — PO-beslutet 2026-09-05 valde
+     dem till kanon, det ändrade dem inte. Fallbacken finns kvar för att
+     modellen ska gå att köra utan telemetrimodulen. */
+  const KAN=(typeof ridKanon==="function")?ridKanon():null;
+  const GANGSVANG=KAN?KAN.GANGSVANG:{halt:1.00, skritt:1.00, trav:0.82, galopp:0.52};
+  const KAPPA_MAX=KAN?KAN.KAPPA_MAX:0.42;   // 1/m vid full styrning i skritt ≈ 2,4 m radie
   const gv=GANGSVANG[G.ride.gangart]||1.00;
   /* Smidigheten sitter i hästen och i ryttarens hand: en vig häst böjer
      sig snävare, och den som rider mjukt får mer båge för samma utslag. */

@@ -73,19 +73,22 @@ const tal = v => {
 };
 const str = s => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
 
-/* STYRKANONEN läses ur `RID_AB.A` i src/riding/telemetri.js — objektet
+/* STYRKANONEN läses ur `RID_KANON` i src/riding/telemetri.js — objektet
    som src/game.js själv konsulterar. Förut skrapades literalerna ur
    game.js med regex; nu finns de på ett ställe som går att KÖRA, så
    exporten och spelet kan inte längre läsa olika saker.
+
+   Hette `RID_AB.A` medan review-lägets A/B levde. Efter PO-beslutet
+   2026-09-05 finns bara en uppsättning, och namnet säger det.
 
    Tidskonstanterna står fortfarande som literaler inne i stegaRitt() och
    läses som text. Mönstret är avsiktligt strikt och exporten FALLER om
    det försvinner: en tyst nolla vore värre än ett stopp, eftersom
    paritetsspecen då skulle jämföra mot ingenting och bli grön. */
 function styrkanon() {
-  const AB = vm.runInContext("(typeof RID_AB!=='undefined')?RID_AB:null", ctx);
+  const AB = vm.runInContext("(typeof RID_KANON!=='undefined')?{A:RID_KANON}:null", ctx);
   if (!AB || !AB.A) {
-    console.error("FEL  hittar inte RID_AB.A i src/riding/telemetri.js");
+    console.error("FEL  hittar inte RID_KANON i src/riding/telemetri.js");
     console.error("     styrkanonen kan inte exporteras");
     process.exit(1);
   }

@@ -110,6 +110,16 @@ function Telemetri.las(ritt: Ritt, loco: { [string]: any }, kurvatur: number): {
 		vridhastighet = loco.turnRate,
 		rytm = loco.phase,
 		steglangd = Gaits.cycleLength(loco.gait),
+		--[[ CUE-FÄLTEN. Roblox hade redan modellen webben nu fått: spelaren
+		     väljer gångart, inte tempo (se MovementController:_targetGait —
+		     "det är skillnaden mot en gaspedal"). `targetGait` ÄR alltså den
+		     beddna gångarten, och fälten har riktiga källor här, inte
+		     härledda. ]]
+		beddGangart = loco.targetGait,
+		cue = loco.cue,
+		cueAlder = if loco.cueTid then math.max(0, (loco.tid or 0) - loco.cueTid) else nil,
+		overgangstid = loco.senasteOvergang or 0,
+		iOvergang = loco.gait ~= loco.targetGait,
 	}
 end
 

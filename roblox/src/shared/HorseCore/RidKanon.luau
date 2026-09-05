@@ -63,7 +63,7 @@ RidKanon.SVANGFAKTOR = {
 }
 
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
-RidKanon.TELEMETRI_FALT = { "balans", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "kurvatur", "mjukhet", "onskadFart", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
+RidKanon.TELEMETRI_FALT = { "balans", "beddGangart", "cue", "cueAlder", "fart", "fokus", "gangart", "gangartGlapp", "hast", "hjalper", "iOvergang", "kurvatur", "mjukhet", "onskadFart", "overgangstid", "rytm", "spanning", "steglangd", "svangradie", "uppsutten", "vridhastighet" }
 
 --[[ Fält som är HÄRLEDDA, inte mätta. Ärlig märkning för G02-B. ]]
 RidKanon.HARLEDDA = { "balans", "fokus" }

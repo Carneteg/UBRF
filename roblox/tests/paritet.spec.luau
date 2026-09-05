@@ -183,8 +183,15 @@ end
 do
 	local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
 	local kurvatur = 0.1
+	--[[ Fixturen bär också cue-fälten, som MovementController skriver när
+	     begäran ändras (se `loco.cue` där). Utan dem skulle raden nedan
+	     rapportera dem som hål trots att källan finns — och lärdomen från
+	     blocker B var just att en konstruerad loco kan ljuga om vad
+	     runtimen kan. Värdena är en häst mitt i en övergång: hon travar,
+	     ryttaren har bett om galopp. ]]
 	local loco = { gait = "trot", targetGait = "trot", speed = 3.2,
-		turnRate = kurvatur * 3.2, phase = 0.25 }
+		turnRate = kurvatur * 3.2, phase = 0.25,
+		cue = "framåt", cueTid = 1.0, tid = 1.4, senasteOvergang = 0.4 }
 	local tm = Telemetri.las(ritt, loco, kurvatur)
 	check("vridhastighet = kurvatur × tempo",
 		nara(tm.vridhastighet, tm.kurvatur * tm.fart),
@@ -219,18 +226,23 @@ do
 end
 
 print("")
-print("── KNOWN DIVERGENCES — öppna produktbeslut, INTE paritet ────")
-print("   Raderna nedan är inte godkännanden. De är skillnader i kärnrörelsen")
-print("   som väntar på Tobias beslut, och de BLOCKERAR produktacceptans av")
-print("   G02-A. Ändras ett värde utan beslut blir raden FEL.")
+print("── KÄRNRÖRELSEN: PARITY PASS, och de luckor som återstår ────")
+print("   PO-beslutet 2026-09-05 gjorde webbens Gate 01-baseline till kanon")
+print("   och Roblox är harmoniserad mot den. De fyra skillnader som förut")
+print("   blockerade produktacceptans är därmed borta — raderna nedan mäter")
+print("   nu att värdena är LIKA, inte att de skiljer sig.")
+print("")
+print("   KNOWN DIVERGENCES står kvar som PO-rader. De är inte godkännanden")
+print("   och inte paritet; de är kända luckor med känt hem. Ändras ett värde")
+print("   utan beslut blir raden FEL.")
 print("")
 
 --[[ Varje rad: vad som skiljer, webbens värde, Roblox värde. Ändras något
      av dem blir raden röd och avvikelsen måste beskrivas om — eller,
      om den rättas, tas bort här. ]]
 
-beslut("BLOCKERAR", "galoppens övre bandgräns",
-	nara(RidKanon.BAND.galopp.max, 8.00) and nara(Gaits.get("canter").max, 7.00),
+check("galoppens övre bandgräns är densamma",
+	nara(RidKanon.BAND.galopp.max, Gaits.get("canter").max),
 	string.format("(webb galopp ≤ %.2f, Roblox canter ≤ %.2f m/s)",
 		RidKanon.BAND.galopp.max, Gaits.get("canter").max))
 
@@ -239,9 +251,11 @@ beslut("LUCKA", "fyrsprånget finns bara på Roblox",
 	string.format("(Roblox %s %.2f–%.2f m/s, webben saknar gångarten)",
 		Gaits.get("gallop").label, Gaits.get("gallop").min, Gaits.get("gallop").max))
 
---[[ Cykellängden. Redan dokumenterad i Gaits.luau och HASTRIGG-KRAVSPEC § 4;
-     står här också för att den ska SYNAS i en körning, inte bara i en
-     kommentar. Webbens värde är SPRANG.hast × steg vid neutral häst. ]]
+--[[ Cykellängden. Webbens värde är SPRANG.hast × steg vid neutral häst.
+     Raden hävdade förut att avvikelsen SKA finnas — den var ett register
+     över en öppen produktfråga. Efter PO-beslutet 2026-09-05 är webben
+     kanon och Roblox harmoniserad mot den, så raden mäter nu det den
+     heter: att de är lika. ]]
 do
 	local ok, rader = true, {}
 	for _, par in { { "skritt", 3.50 }, { "trav", 3.50 }, { "galopp", 3.50 } } do
@@ -249,9 +263,9 @@ do
 		local webb = sprang * RidKanon.BAND[webbnamn].steg
 		local rob = Gaits.cycleLength(RidKanon.MOTSVARIGHET[webbnamn])
 		table.insert(rader, string.format("%s %.2f/%.2f", webbnamn, webb, rob))
-		if nara(webb, rob, 0.02) then ok = false end        -- avvikelsen SKA finnas
+		if not nara(webb, rob, 0.02) then ok = false end
 	end
-	beslut("BLOCKERAR", "cykellängden (webb/Roblox, meter)",
+	check("cykellängden är densamma (webb/Roblox, meter)",
 		ok, "(" .. table.concat(rader, ", ") .. ")")
 end
 
@@ -259,14 +273,14 @@ end
      Skillnaden är inte kosmetisk: 0,42 mot 0,30 är 2,4 m mot 3,3 m radie i
      skritt. Uppmätt på webben i tools/ridtest.mjs — full styrning i trav
      ger en RIDD volt på 8,25 m diameter mot 1/κ = 4,12 m radie. ]]
-beslut("BLOCKERAR", "kurvaturtaket vid full styrning",
-	nara(RidKanon.KAPPA_MAX, 0.42) and nara(Config.MOVEMENT.CurvatureMax, 0.30),
+check("kurvaturtaket vid full styrning är detsamma",
+	nara(RidKanon.KAPPA_MAX, Config.MOVEMENT.CurvatureMax),
 	string.format("(webb %.2f 1/m ⇒ %.1f m radie, Roblox %.2f ⇒ %.1f m, i skritt)",
 		RidKanon.KAPPA_MAX, 1 / RidKanon.KAPPA_MAX,
 		Config.MOVEMENT.CurvatureMax, 1 / Config.MOVEMENT.CurvatureMax))
 
-beslut("BLOCKERAR", "galoppens svängfaktor",
-	nara(RidKanon.SVANGFAKTOR.galopp, 0.52) and nara(Gaits.get("canter").turn, 0.62),
+check("galoppens svängfaktor är densamma",
+	nara(RidKanon.SVANGFAKTOR.galopp, Gaits.get("canter").turn),
 	string.format("(webb galopp %.2f, Roblox canter %.2f)",
 		RidKanon.SVANGFAKTOR.galopp, Gaits.get("canter").turn))
 
@@ -276,10 +290,17 @@ beslut("LUCKA", "hjälplager, spänning och mjukhet saknas på Roblox",
 
 print("")
 if oppna > 0 then
-	print(string.format("%d öppna produktbeslut, varav %d BLOCKERAR produktacceptans av G02-A.",
+	print(string.format("%d kända luckor, varav %d BLOCKERAR produktacceptans av G02-A.",
 		oppna, oppnaBlockerande))
-	print("Paritetsspecen kan inte ge PARITY PASS för kärnrörelsen medan de står öppna.")
-	print("Att jämna ut dem ändrar ridkänslan och är Tobias beslut — se docs/G02-A-RIDKARNAN.md.")
+	if oppnaBlockerande == 0 then
+		print("KÄRNRÖRELSEN HAR PARITET: kurvaturtak, galoppens band och svängfaktor")
+		print("och cykellängderna är samma tal på båda ytorna efter PO-beslutet.")
+		print("Luckorna ovan ligger utanför kärnrörelsen och har känt hem — se")
+		print("docs/G02-A-RIDKARNAN.md. De ger inte i sig produktacceptans.")
+	else
+		print("Paritetsspecen kan inte ge PARITY PASS för kärnrörelsen medan de står öppna.")
+		print("Att jämna ut dem ändrar ridkänslan och är Tobias beslut — se docs/G02-A-RIDKARNAN.md.")
+	end
 	print("")
 end
 if fails > 0 then

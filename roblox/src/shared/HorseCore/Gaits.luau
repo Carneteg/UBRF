@@ -40,24 +40,24 @@ Gaits.BY_NAME = ({
 	},
 	walk = {
 		name = "walk", label = "Skritt", min = 0.90, max = 2.00,
-		norm = 1.45, cycles = 1.00, steps = 4,
+		norm = 1.45, cycles = 0.900621, steps = 4,
 		accel = 2.6, retard = 3.4, turn = 1.00, stamina = 0.0,
 		camera = { dist = 15, height = 5.2, fov = 0 },
 	},
 	trot = {
 		name = "trot", label = "Trav", min = 2.40, max = 4.30,
-		norm = 3.20, cycles = 1.50, steps = 2,
+		norm = 3.20, cycles = 1.451247, steps = 2,
 		accel = 2.9, retard = 3.6, turn = 0.82, stamina = 0.4,
 		camera = { dist = 17, height = 5.6, fov = 1 },
 	},
 	canter = {
-		name = "canter", label = "Galopp", min = 4.60, max = 7.00,
-		norm = 5.60, cycles = 1.75, steps = 3,
-		accel = 3.4, retard = 3.2, turn = 0.62, stamina = 2.2,
+		name = "canter", label = "Galopp", min = 4.60, max = 8.00,
+		norm = 5.60, cycles = 1.6, steps = 3,
+		accel = 3.4, retard = 3.2, turn = 0.52, stamina = 2.2,
 		camera = { dist = 19, height = 6.0, fov = 4 },
 	},
 	gallop = {
-		name = "gallop", label = "Fyrsprång", min = 7.20, max = 11.0,
+		name = "gallop", label = "Fyrsprång", min = 8.20, max = 11.0,
 		norm = 8.60, cycles = 2.05, steps = 4,
 		accel = 3.0, retard = 2.6, turn = 0.42, stamina = 5.5,
 		camera = { dist = 23, height = 6.4, fov = 8 },
@@ -145,6 +145,12 @@ end
      precis den hovglidning som är förbjuden i acceptanskraven för riggen.
 
      Cykellängden är `Gaits.cycleLength`, och den är det enda bindande måttet.
+
+     HARMONISERAD MOT WEBBEN (PO-beslut 2026-09-05). `cycles` är satt så att
+     norm ÷ cycles ger webbens cykellängd, alltså SPRANG("hast") 3,50 gånger
+     gångartens stegfaktor: skritt 1,61 m, trav 2,205 m, galopp 3,50 m. Var
+     1,45 / 2,133 / 3,20. Det ändrar takten i animationen, och det är just
+     vad harmoniseringen innebär — två produktfysiker blir en.
      Webben och Roblox är dock inte överens om den — se `HASTRIGG-KRAVSPEC.md`
      § 4 och issue om plattformsavvikelsen. ]]
 function Gaits.cycleLength(name: string): number

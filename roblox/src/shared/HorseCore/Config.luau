@@ -52,7 +52,10 @@ Config.MOVEMENT = {
 
 	     CurvatureMax är satt så att full styrning i skritt ger ungefär
 	     3,3 m radie, samma som webbversionens modell. ]]
-	CurvatureMax = 0.30,   -- 1/m vid full styrning i skritt
+	-- HARMONISERAT MOT WEBBENS KANON (PO-beslut 2026-09-05): A är kanon,
+	-- och Roblox följer den i stället för att bära en egen produktfysik.
+	-- Var 0.30 (3,3 m radie i skritt), nu 0.42 (2,4 m) som webben.
+	CurvatureMax = 0.42,   -- 1/m vid full styrning i skritt
 	CurvatureTauPress = 0.13,   -- sekunder att lägga sig i bågen
 	CurvatureTauRelease = 0.19, -- längre: att räta upp sig tar tid
 	TurnAccel = 6.0,       -- hur snabbt svängen får fäste, rad/s²
