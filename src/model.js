@@ -102,6 +102,52 @@ const K={
      be om galopp. Spärren hindrar att en enda rörelse räknas två gånger
      och ger övergången tid att bli klar innan nästa kan begäras. */
   CUE_UPP:0.16, CUE_NER:0.13, CUE_SPARR:0.9, SITS_PARAD:0.78,
+  /* ── IMPULSEN MÄTS ÖVER ETT FÖNSTER, INTE PER BILDRUTA (P4) ──
+     Det här är rättelsen av ett fel som P2 införde och som inga tester
+     såg, därför att varje test körde stepRide direkt med hjälper som
+     hoppar färdigt på en bildruta.
+
+     I SPELET gör de inte det. src/game.js rampar hjälpen mot sitt mål
+     med STIG = 0,28 s, alltså 3,57 enheter i sekunden, alltså 0,0595
+     per bildruta i 60 Hz. Tröskeln för en framåtimpuls är 0,16. En
+     rampad hjälp når den ALDRIG. Uppmätt på byggd sida före rättelsen:
+     W i botten från stillastående, sex sekunder — hästen stannade i
+     skritt, och gjorde det för alltid. Hela gångartsstegen var
+     onåbar för en spelare med tangentbord eller pekskärm.
+
+     Impulsen är därför resan från hjälpens LÄGSTA värde under det
+     senaste fönstret upp till nu. En ramp som klättrar 0,36 på 0,10 s
+     räknas som 0,36, inte som sex separata 0,0595. En HÅLLEN hjälp ger
+     fortfarande ingenting: fönstret kommer ikapp och resan blir noll
+     igen. Det var poängen med PO-beslutet och den står kvar.
+
+     0,45 s är valt så att hela inrampningen (0,28 s) ryms med marginal
+     och så att spärren (0,9 s) fortfarande är dubbelt så lång — annars
+     hade ETT tryck kunnat räknas två gånger.
+
+     Roblox löser samma sak utan fönster: där är gaitUp/gaitDown
+     tangentflanker, alltså redan diskreta händelser. Webbens hjälp är
+     analog och utjämnad, och fönstret är den analoga motsvarigheten
+     till en flank. Regeln är densamma på båda ytorna. */
+  CUE_FONSTER:0.45,
+  /* NEUTRALLÄGET. Ryttaren sitter aldrig med släppt skänkel; det som
+     gäller när ingenting hålls är ett mittvärde. Fönstret sås med de
+     här talen, så att en ryttare som sätter sig upp och INTE gör något
+     inte råkar be om skritt.
+
+     Det var det andra felet P4 mätte fram: `_prev` såddes med noll
+     hjälp, neutral skänkel är 0,42, och hästen läste alltså sin egen
+     uppsittning som en framåtimpuls och gick i väg av sig själv.
+     Sådden med noll fanns av ett riktigt skäl — en hjälp som redan
+     ligger på ska räknas som pålagd — och det skälet överlever: en
+     ryttare som sätter sig med 0,78 i skänkeln ligger 0,36 över
+     neutral och ber alltså om skritt, precis som förut.
+
+     TALEN MÅSTE VARA SAMMA som mittvärdena i ridAvsiktTillHjalp() i
+     src/game.js. tools/ridtest.mjs har ett prov som faller om de
+     glider isär — modellen kan inte läsa spelets inputlager, så
+     kopplingen måste bevakas i stället för antas. */
+  SKANKEL_NEUTRAL:0.42, TYGEL_NEUTRAL:0.34, SITS_NEUTRAL:0.20,
   /* Kvar av den gamla termen: hjälpen får fortfarande variera tempot
      INOM gångarten — det är skillnaden mellan en samlad och en utsträckt
      skritt — men inte längre bära över ett gångartsband. Skrittens band
@@ -135,22 +181,24 @@ function nyState(dagsform,rang,sadellage){
     malGangart:"halt", cue:null, cueTid:-99, overgang:null, senasteOvergang:0,
     rang:rang??0.5,dagsform:dagsform??0.7,sadellage:sadellage??0.8,mjukhet:0.5,
     _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_tid:0,
-    _cueSparr:0,_overgangStart:-99};
+    _cueSparr:0,_overgangStart:-99,_cueFonster:null};
 }
 
 function stepRide(s,a,h,ctx,dt){
   if(dt<=0)return s; s._tid+=dt;
   // mjukhet: amplitud mot glidande medel
-  /* `_prev` sås med INGEN hjälp, inte med den första bildrutans hjälp.
-     Innan ryttaren lägger på skänkeln finns ingen skänkel, så en hjälp
-     som ligger på redan från början är en pålagd hjälp och ska räknas som
-     impuls. Såddes den med sig själv blev första bildrutans ändring noll
-     och en häst som satt still med full skänkel stod kvar för evigt.
-     Glidande medelvärdet sås däremot med den faktiska hjälpen — det
-     mäter handens darr, och där är utgångsläget inte noll utan det hon
+  /* `_prev` är bildrutan innan. Den används av HALVHALTEN, som är en
+     rörelse med riktning och vändpunkt och därför måste läsas bildruta
+     för bildruta. Cue:n läser i stället fönstret nedan.
+
+     Glidande medelvärdet sås med den faktiska hjälpen — det mäter
+     handens darr, och där är utgångsläget inte noll utan det hon
      håller. */
   if(!s._medel){s._medel={skankel:a.skankel,tygel:a.tygel,sits:a.sits,styrning:a.styrning};
-    s._prev={skankel:0,tygel:0,sits:0,styrning:0,spo:false,lattridning:false,diagonal:0};}
+    s._prev={...a};
+    /* Fönstret sås med NEUTRALLÄGET, inte med noll och inte med den
+       första bildrutans hjälp. Se K.SKANKEL_NEUTRAL för varför. */
+    s._cueFonster=[{t:s._tid,k:K.SKANKEL_NEUTRAL,ty:K.TYGEL_NEUTRAL,si:K.SITS_NEUTRAL}];}
   else{
     const m=s._medel,beta=clamp(dt/K.AIDS_TAU,0,1);
     const avvik=Math.abs(a.skankel-m.skankel)+Math.abs(a.tygel-m.tygel)
@@ -188,8 +236,19 @@ function stepRide(s,a,h,ctx,dt){
      hästen hinner göra klart övergången innan nästa kan begäras. */
   {const p=s._prev;
    s._cueSparr=Math.max(0,(s._cueSparr||0)-dt);
+   /* Fönstret: hjälpens lägsta värde den senaste K.CUE_FONSTER-sekunden.
+      Impulsen är resan därifrån upp till nu. Bufferten är ~27 poster i
+      60 Hz och skrivs framifrån, så ingen allokering per bildruta. */
+   const CF=s._cueFonster||(s._cueFonster=[{t:s._tid,k:K.SKANKEL_NEUTRAL,ty:K.TYGEL_NEUTRAL,si:K.SITS_NEUTRAL}]);
+   CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
+   while(CF.length>1&&CF[0].t<s._tid-K.CUE_FONSTER)CF.shift();
+   let botK=CF[0].k,botT=CF[0].ty,botS=CF[0].si;
+   for(let i=1;i<CF.length;i++){
+     if(CF[i].k<botK)botK=CF[i].k;
+     if(CF[i].ty<botT)botT=CF[i].ty;
+     if(CF[i].si<botS)botS=CF[i].si;}
    if(p&&s._cueSparr<=0){
-     const dK=a.skankel-p.skankel, dT=a.tygel-p.tygel, dS=a.sits-p.sits;
+     const dK=a.skankel-botK, dT=a.tygel-botT, dS=a.sits-botS;
      let i=GANGORDNING.indexOf(s.malGangart||s.gangart); if(i<0)i=0;
      let cue=null;
      /* ASYMMETRIN ÄR AVSIKTLIG, och den är ridmässig.
@@ -214,6 +273,10 @@ function stepRide(s,a,h,ctx,dt){
        const fran=s.gangart, till=GANGORDNING[i];
        s.malGangart=till; s.cue=cue; s.cueTid=s._tid;
        s._cueSparr=K.CUE_SPARR; s._overgangStart=s._tid;
+       /* Resan är förbrukad. Utan den här raden ligger den kvar i
+          fönstret och skulle kunna räknas igen så fort spärren släpper,
+          fast ryttaren inte gjort något nytt. */
+       CF.length=0; CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
        s.overgang={fran,till,klar:false};
        /* FÖRLOPPET startas här, från det tempo hon FAKTISKT har. Att utgå
           från nuvarande tempo och inte från gångartens norm är det som

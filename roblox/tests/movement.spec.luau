@@ -705,6 +705,46 @@ do
 		string.format("uppsutten %s", tostring(efter.uppsutten)))
 end
 
+--[[ HÅLLEN TANGENT GER ETT STEG — paritet med webbens G02-A.1 P4.
+
+     Webben mätte fram att en HÅLLEN framåthjälp inte kunde ge något
+     gångartsbyte alls, och rättade det genom att läsa hjälpens resa över
+     ett fönster i stället för per bildruta. Roblox har inte det felet,
+     men det är värt att visa VARFÖR: här är gaitUp redan en flank,
+     satt i Input.luau när tangenten går ned och nollställd i consume().
+
+     Regeln är alltså densamma på båda ytorna — ett tryck är en begäran,
+     att fortsätta hålla är ingen ny begäran — men den bor på olika
+     ställen. Roblox löser den i inputlagret därför att tangenten är
+     diskret; webben måste lösa den i modellen därför att hjälpen är
+     analog och utjämnad och först DÄR har en historia att jämföras med.
+
+     Faller det här provet klättrar hästen en gångart per bildruta så
+     länge Shift hålls nere, alltså från halt till fyrsprång på under en
+     tiondels sekund. ]]
+do
+	print("\n── Hållen tangent är EN begäran, inte en per bildruta ──")
+	Input.unbind(); __setStick(nil); Input.bind()
+	local mc = newMC()
+	local dt = 1 / 60
+	--[[ Upp i skritt först, så att steget som mäts inte är W:s egen
+	     "ur halt startar skritt". ]]
+	for i = 1, 180 do mc:step(intent({ forward = 1 }), dt) end
+	local fore = mc.loco.targetGait
+	__key(Enum.KeyCode.LeftShift, true)             -- Shift NED och kvar där
+	for i = 1, 300 do
+		local avsikt = Input.consume()
+		avsikt.forward = 1
+		mc:step(avsikt, dt)
+	end
+	local efter = mc.loco.targetGait
+	__key(Enum.KeyCode.LeftShift, false)
+	local steg = Gaits.index(efter) - Gaits.index(fore)
+	check("hållen Shift i fem sekunder ger ETT steg upp", steg == 1,
+		string.format("%s → %s (%d steg)", fore, efter, steg))
+	Input.unbind()
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

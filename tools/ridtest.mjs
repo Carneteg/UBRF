@@ -72,18 +72,32 @@ const loop = await page.evaluate(() => {
   const kor = (aids, sek) => { for (let i = 0; i < sek * 60; i++) {
     stepRide(s, aids, h, ctx, 1 / 60); ridFoljGangart(s.gangart);
     if (sedda[sedda.length - 1] !== s.gangart) sedda.push(s.gangart); } };
-  /* Tre impulser upp. Mellan dem hålls hjälpen — det är där hästen ska
-     bära gångarten själv. Skänkeln höjs varje gång; spärren (K.CUE_SPARR)
-     ser till att en impuls inte räknas två gånger. */
+  /* Tre impulser upp — GIVNA, inte hållna. Skänkeln läggs på, tas av och
+     läggs på igen, som en ryttare gör. Mellan impulserna ligger hjälpen
+     på neutral, och det är där hästen ska bära gångarten själv.
+
+     Stegen såg förut ut som en trappa av allt högre HÅLLNA nivåer
+     (0,35 → 0,60 → 0,85), och den började dessutom UNDER neutralläget
+     0,42 — första steget var alltså ingen framåtimpuls utan en lättnad.
+     Det gick igenom så länge cue:n mättes per bildruta från en nolla.
+     Med fönstermätningen i P4 mäts resan från det ryttaren faktiskt
+     bär, och en trappa av nivåer är inte längre tre impulser. Att ge
+     samma impuls tre gånger är både det som fungerar och det som en
+     ryttare faktiskt gör.
+
+     Hållet efter stegen är den viktiga delen: samma hjälp i tjugo
+     sekunder ska inte ta ett enda steg till. */
   const impulser = [];
-  for (const niva of [0.35, 0.60, 0.85]) {
-    kor({ skankel: niva, tygel: 0.20, sits: 0.2, styrning: 0 }, 4);
+  kor({ skankel: 0.42, tygel: 0.20, sits: 0.2, styrning: 0 }, 1);   // neutral först
+  for (let n = 0; n < 3; n++) {
+    kor({ skankel: 0.66, tygel: 0.20, sits: 0.2, styrning: 0 }, 3);
     impulser.push({ bad: s.malGangart, gick: s.gangart, overgang: +s.senasteOvergang.toFixed(2) });
+    if (n < 2) kor({ skankel: 0.42, tygel: 0.20, sits: 0.2, styrning: 0 }, 1);
   }
   const topp = s.gangart, toppFart = s.tempo;
   /* HÅLL. Samma hjälp, tjugo sekunder. Gångarten ska ligga still. */
   const foreHall = s.gangart;
-  kor({ skankel: 0.85, tygel: 0.20, sits: 0.2, styrning: 0 }, 20);
+  kor({ skankel: 0.66, tygel: 0.20, sits: 0.2, styrning: 0 }, 20);
   const efterHall = s.gangart, hallFart = s.tempo;
   kor({ skankel: 0.05, tygel: 0.80, sits: 0.85, styrning: 0 }, 25);  // parera ned
   return { sedda, topp, toppFart, impulser, foreHall, efterHall, hallFart,
@@ -99,6 +113,112 @@ prova("ridkärnan: parering tar ekipaget ned till halt igen",
   loop.slut === "halt", `slutgångart ${loop.slut}`);
 prova("ridkärnan: inga överhoppade gångarter i någon riktning",
   loop.glapp === 0, `${loop.glapp} olagliga byten, sekvens ${loop.sedda.join(" → ")}`);
+
+/* 3b. SAMMA STEGE, MEN GENOM SPELETS EGET INPUTLAGER.
+
+   Det här provet finns därför att allt ovanför det kan vara grönt medan
+   spelet är ospelbart, och var det.
+
+   Proven i 3 anropar stepRide() direkt med hjälper som hoppar färdigt på
+   en bildruta. Ingen spelare gör det. I spelet går tangenten eller
+   spaken via RIDIN → ridAvsiktTillHjalp() → en ramp med STIG = 0,28 s,
+   och först därefter in i modellen. Uppmätt på byggd sida före
+   G02-A.1 P4:
+
+     W i botten från stillastående, sex sekunder → hästen stannade i
+     skritt. Rampens ändring per bildruta är 0,0595 och tröskeln för en
+     framåtimpuls 0,16, så begäran om trav kunde aldrig uppstå.
+     Gångartsstegen var onåbar för en spelare, på alla ytor, medan
+     ridtest var grönt.
+
+   Därför körs stegen här genom stegaRitt() och RIDIN — samma väg som
+   ett tangenttryck. Blir det här provet rött är spelet trasigt även om
+   modellproven är gröna. */
+const via = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0];
+  G.hamtad = true;
+  G.npcs = [];
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
+    if (typeof ridNollstallHjalp === "function") ridNollstallHjalp(); };
+  const sedda = [];
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0;
+    RIDIN.sits = o.sits ?? 0; RIDIN.styr = o.styr ?? 0;
+    stegaRitt(dt);
+    if (sedda[sedda.length - 1] !== G.ride.gangart) sedda.push(G.ride.gangart); } };
+
+  /* a) Sitt upp och gör INGENTING. Filtret bär först ett kraftigt
+     BAKÅT-utslag från ett tidigare pass — det är det farliga fallet:
+     när ritten börjar rampar hjälpen tillbaka UPP mot neutral av sig
+     själv, och den resan läses som en framåtimpuls om ingen nollställer
+     filtret först. */
+  RIDIN.skankel = -1; for (let i = 0; i < 120; i++) { ridAvsiktTillHjalp(); stegaInput(1 / 60); }
+  const kvarliggande = IN.kan.skankel.v;
+  nyRitt(); kor({}, 5);
+  const stilla = G.ride.gangart;
+
+  /* b) W i botten, hållet. Ett steg upp — inte noll, inte tre. */
+  nyRitt(); kor({ skankel: 1 }, 12);
+  const hallenW = G.ride.gangart, hallenFart = G.ride.tempo;
+
+  /* c) Tre tryck med släpp emellan, sedan parad ned. */
+  nyRitt(); sedda.length = 0; sedda.push(G.ride.gangart);
+  for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
+  const topp = G.ride.gangart, toppFart = G.ride.tempo;
+  kor({ skankel: -1, tygel: 1, sits: 1 }, 25);
+  return { stilla, kvarliggande, hallenW, hallenFart, topp, toppFart,
+    slut: G.ride.gangart, sedda, glapp: RID_TILLSTAND.glapp };
+});
+prova("genom inputlagret: uppsittning utan hjälp startar INTE hästen",
+  via.stilla === "halt",
+  `förra passet lämnade skänkeln på ${via.kvarliggande.toFixed(2)}; ` +
+  `fem sekunder utan tangent → ${via.stilla}`);
+prova("genom inputlagret: hållen W ger ETT steg upp, inte fler",
+  via.hallenW === "skritt",
+  `W i botten i 12 s → ${via.hallenW} (${via.hallenFart.toFixed(2)} m/s)`);
+prova("genom inputlagret: tre tryck tar ekipaget till galopp",
+  via.topp === "galopp", `nådde ${via.topp} vid ${via.toppFart.toFixed(2)} m/s`);
+prova("genom inputlagret: parad tar ned till halt utan överhoppade gångarter",
+  via.slut === "halt" && via.glapp === 0,
+  `${via.sedda.join(" → ")}, ${via.glapp} olagliga byten`);
+
+/* Och att nollställningen verkligen är inkopplad där ritten börjar.
+   Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se
+   om produktionen glömmer den; det här läser funktionskroppen i den
+   körande sidan i stället. Ett grovt prov, men det pinnar just den
+   kopplingen — och kopplingen var precis vad som saknades. */
+{
+  const kopplad = await page.evaluate(() =>
+    typeof avslutaSkotsel === "function"
+    && /ridNollstallHjalp/.test(avslutaSkotsel.toString()));
+  prova("nollställningen är inkopplad där ritten börjar (avslutaSkotsel)",
+    kopplad, kopplad ? "avslutaSkotsel anropar ridNollstallHjalp()"
+      : "avslutaSkotsel saknar anropet — filtret bär med sig förra passet");
+}
+
+/* 3c. NEUTRALLÄGET FINNS PÅ TVÅ STÄLLEN och måste vara samma tal.
+
+   Modellen sår sitt cue-fönster med K.SKANKEL_NEUTRAL/TYGEL/SITS;
+   spelet sätter hjälpen ur ridAvsiktTillHjalp(). Modellen kan inte läsa
+   spelets inputlager, så kopplingen är ett antagande — och ett antagande
+   som glider isär gör exakt det som 3b just beskrev: neutral hjälp läses
+   som en impuls, eller en verklig impuls läses som neutral. */
+const neutral = await page.evaluate(() => {
+  RIDIN.skankel = 0; RIDIN.tygel = 0; RIDIN.sits = 0; RIDIN.styr = 0;
+  ridAvsiktTillHjalp();
+  return { spel: { skankel: IN.kan.skankel.mal, tygel: IN.kan.tygel.mal, sits: IN.kan.sits.mal },
+    modell: { skankel: K.SKANKEL_NEUTRAL, tygel: K.TYGEL_NEUTRAL, sits: K.SITS_NEUTRAL } };
+});
+{
+  const d = k => Math.abs(neutral.spel[k] - neutral.modell[k]);
+  prova("neutralläget är samma tal i modellen och i spelets inputlager",
+    d("skankel") < 1e-9 && d("tygel") < 1e-9 && d("sits") < 1e-9,
+    `skänkel ${neutral.spel.skankel} = ${neutral.modell.skankel}, ` +
+    `tygel ${neutral.spel.tygel} = ${neutral.modell.tygel}, ` +
+    `sits ${neutral.spel.sits} = ${neutral.modell.sits}`);
+}
 
 /* 4. ÖVERGÅNGSKONTRAKTET dömer rätt. */
 const kontrakt = await page.evaluate(() => ({

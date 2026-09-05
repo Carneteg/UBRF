@@ -25,8 +25,22 @@ const RIDIN={
   pek:false,      // sant när spaken senast rörde värdena
 };
 
+/* Utgångsvärdena SKRIVS INTE HÄR. De sätts av ridNollstallHjalp() längre
+   ned, ur samma mittvärden som ridAvsiktTillHjalp() ger — se raden efter
+   den funktionen.
+
+   Före G02-A.1 P4 stod det .15 i skänkelraden medan neutralläget i
+   ridAvsiktTillHjalp() är 0,42. Första ridsekunden rampade hjälpen
+   alltså 0,15 → 0,42 av sig själv, och ridmodellen läste den resan som
+   en framåtimpuls: hästen gick i skritt så fort man satt upp, utan att
+   ryttaren rört någonting. Höll man sedan in W låg resan kvar och gav
+   ett andra steg, så en enda tangent tog ekipaget till trav.
+
+   Nollorna nedan är alltså platshållare som skrivs över innan första
+   bildrutan. Att skriva neutralläget på två ställen och sedan prova att
+   de är lika vore att bevaka en dubblett som inte behöver finnas. */
 const IN={
-  kan:{skankel:{v:.15,mal:.15},tygel:{v:0,mal:0},sits:{v:.2,mal:.2},styrning:{v:0,mal:0}},
+  kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,ned:{},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
@@ -35,6 +49,16 @@ const IN={
    hålls — är inte noll skänkel: en häst rids inte med släppt skänkel.
    Det är därför nollan i varje rad nedan är ett mittvärde och inte 0. Samma kurva för tangent och spak, så att ett
    halvt spakutslag ger precis halva vägen mot tangentens läge. */
+/* Sätt hjälpfiltret i neutralläget. Körs när en ritt börjar: annars
+   följer förra passets utslag med in i det nya, och en kvarliggande
+   skänkel läses som en impuls av en häst som just satt sig i sadeln. */
+function ridNollstallHjalp(){
+  RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.pek=false;
+  ridAvsiktTillHjalp();
+  for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
+  IN.hh=-1;
+}
+
 function ridAvsiktTillHjalp(){
   const r=RIDIN, k=IN.kan;
   k.skankel.mal = r.skankel>=0
@@ -44,6 +68,10 @@ function ridAvsiktTillHjalp(){
   k.sits.mal    = r.sits>=0 ? 0.2+r.sits*(0.85-0.2) : 0.2+r.sits*(0.2-(-0.6));
   k.styrning.mal= clamp(r.styr,-1,1)*0.72;
 }
+/* Och sätt filtret i neutralläge NU, vid inläsningen. Utan den här raden
+   startar hjälpen på noll och rampar upp till sitt mittvärde av sig
+   själv — en resa som ridmodellen med rätta läser som en framåtimpuls. */
+ridNollstallHjalp();
 const STIG=0.28,FALL=0.22;
 addEventListener("keydown",e=>{
   if(e.repeat)return; IN.ned[e.code]=true;
