@@ -89,7 +89,9 @@ for (const mobil of [false, true]) {
   const F = await page.evaluate(() => {
     const d = ANL.dorrar.find(d => d.id === "ridhus_n");
     const ls = SPELABSTRAKTIONER.ridhus.laktarSteg, L = RIDHUSINNE.laktare;
+    const lr = SPELABSTRAKTIONER.ridhus.laktarStegRad1;
     return { markor: d.pos, steg: { x0: ls.x0, x1: ls.x1, y0: ls.y0, y1: ls.y1 },
+      rad1: lr ? { x0: lr.x0, x1: lr.x1, z: lr.z1 } : null,
       laktare: { x0: L.x0, djup: L.dackDjup, y0: L.y0, y1: L.y1, z: L.dackZ } };
   });
 
@@ -230,6 +232,34 @@ for (const mobil of [false, true]) {
       `från (${upp.x}, ${upp.y}) → (${langs.x}, ${langs.y}) z ${langs.z} · ${langs.slut}` +
       ` · däcket går y ${F.laktare.y0}–${F.laktare.y1}, krav y ≤ ${FORBI}, nådde y ${langs.y}`);
     if (langs.slut === "STOPP") await dumpa(langs, "STOPP LÄNGS DÄCKET:");
+
+    /* ── OCH SAMMA SAK PÅ RADBANDET ──────────────────────────────────
+       Uppgången är bandad: ett band landar på gångbrädan, ett på första
+       bänkraden. Uppställningen ovan hamnar alltid på gångbrädan, så
+       radbandets yta testades aldrig — och just den luckan gjorde att en
+       falsifiering (båset 2,0 m på faktor 0,30) gick igenom trots att
+       båset då skär 0,32 m in i raden. Den som går upp på radbandet
+       hamnar i en återvändsgränd som inget prov såg.
+
+       Ett band som spelet erbjuder som väg upp måste leda vidare. Här
+       ställs figuren på radbandets mitt och går söderut på samma sätt. */
+    if (F.rad1 && F.rad1.x1 > F.rad1.x0) {
+      const radX = +((F.rad1.x0 + F.rad1.x1) / 2).toFixed(2);
+      for (const wp of [[5.6, 73.4], [3.6, 73.4], [radX, 71.0]]) { await gaMot(wp, 40000); await slapp(); }
+      await gaMot([radX, F.steg.y1 + 3.0], 60000); await slapp();
+      const uppRad = await rakt(-Math.PI / 2, 30000, p => p.z >= F.rad1.z - 0.02 && p.y < F.laktare.y1 - 1.0);
+      const paRad = uppRad.z >= F.rad1.z - 0.02;
+      prova(`${namn}: kommer upp på RADBANDET (uppgångens andra band)`, paRad,
+        `(${uppRad.x}, ${uppRad.y}) z ${uppRad.z} · krav z ≥ ${F.rad1.z.toFixed(2)} · ${uppRad.slut}`);
+      if (paRad) {
+        const langsRad = await rakt(-Math.PI / 2, 180000, p => p.y <= FORBI);
+        prova(`${namn}: kan gå VIDARE LÄNGS radbandets yta förbi domarbåset`,
+          langsRad.slut !== "STOPP" && langsRad.y <= FORBI,
+          `från (${uppRad.x}, ${uppRad.y}) → (${langsRad.x}, ${langsRad.y}) z ${langsRad.z}` +
+          ` · ${langsRad.slut} · krav y ≤ ${FORBI}, nådde y ${langsRad.y}`);
+        if (langsRad.slut === "STOPP") await dumpa(langsRad, "STOPP LÄNGS RADBANDET:");
+      }
+    }
   }
 
   /* ── 4. Alla stopp från svepet, med full kollisionskontext ── */
