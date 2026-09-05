@@ -163,6 +163,10 @@ const via = await page.evaluate(() => {
   nyRitt(); kor({ skankel: 1 }, 12);
   const hallenW = G.ride.gangart, hallenFart = G.ride.tempo;
 
+  /* b2) Och samma hjälp i två minuter — G02-B:s första fråga. */
+  nyRitt(); kor({ skankel: 1 }, 120);
+  const langtHall = G.ride.gangart, langtFart = G.ride.tempo;
+
   /* c) Tre tryck med släpp emellan, sedan parad ned. */
   nyRitt(); sedda.length = 0; sedda.push(G.ride.gangart);
   for (let n = 0; n < 3; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
@@ -176,7 +180,7 @@ const via = await page.evaluate(() => {
   for (let n = 0; n < 8; n++) { kor({ skankel: 1 }, 1.5); kor({}, 1.0); }
   const spam = G.ride.gangart, spamFart = G.ride.tempo;
   kor({ skankel: -1, tygel: 1, sits: 1 }, 25);
-  return { stilla, kvarliggande, hallenW, hallenFart, topp, toppFart, spam, spamFart,
+  return { stilla, kvarliggande, hallenW, hallenFart, langtHall, langtFart, topp, toppFart, spam, spamFart,
     slut: G.ride.gangart, sedda, glapp: RID_TILLSTAND.glapp };
 });
 prova("genom inputlagret: uppsittning utan hjälp startar INTE hästen",
@@ -186,6 +190,26 @@ prova("genom inputlagret: uppsittning utan hjälp startar INTE hästen",
 prova("genom inputlagret: hållen W ger ETT steg upp, inte fler",
   via.hallenW === "skritt",
   `W i botten i 12 s → ${via.hallenW} (${via.hallenFart.toFixed(2)} m/s)`);
+/* G02-B: FYNDET FRÅN ISSUE #83 ÄR STÄNGT — och det här provet är vad som
+   håller det stängt.
+
+   Mätningen 2026-09-05 08:36 svepte skänkeln i 40 steg och fann att INGEN
+   konstant insats landade i skrittbandet: ekipaget hamnade i halt eller
+   trav. Den mätningen gjordes före G02-A:s cue-modell. Samma svep mot
+   main efter #86 ger 17 av 40 i skritt, och det rätta provet — en impuls
+   och sedan hjälpen kvar — ger skritt på varje nivå från 0,60 till 1,00.
+
+   Tolv sekunder räckte inte som bevis. Skritt är den gångart en elev
+   tillbringar mest tid i, och frågan var uttryckligen om den går att
+   HÅLLA. Två minuter, genom inputlagret, är det som svarar på det.
+
+   Tempot får röra sig inom bandet — hästen andas, och hjälpens styrka
+   nyanserar samlad mot utsträckt skritt. Vad som inte får hända är att
+   gångarten byter. */
+prova("genom inputlagret: skritten går att HÅLLA — två minuter med W nere",
+  via.langtHall === "skritt" && via.langtFart >= 0.90 && via.langtFart <= 2.00,
+  `W i botten i 120 s → ${via.langtHall} ${via.langtFart?.toFixed(2)} m/s ` +
+  `(skrittbandet 0,90–2,00)`);
 prova("genom inputlagret: tre tryck tar ekipaget till galopp",
   via.topp === "galopp", `nådde ${via.topp} vid ${via.toppFart.toFixed(2)} m/s`);
 prova("genom inputlagret: fler impulser tar inte ekipaget förbi galopp",
