@@ -146,7 +146,13 @@ jobs:
       # produktbeslutet om ledtråden är fattat och genomfört.
       # FYSISK FRAMKOMLIGHET. Ska vara GRÖN: går det inte att gå upp på
       # läktaren från en riktig spelstart är #81 inte löst.
+      # `if: always()` — INTE för att mildra något, utan för att ett tidigt
+      # rött steg annars hoppar över resten och döljer de andra fynden.
+      # Det hände direkt: gangtest föll på den kända rampbredds-missen och
+      # stoppdiagnostiken nedanför kördes aldrig. Varje steg avgör sitt
+      # eget utfall, och jobbet blir rött om något av dem är rött.
       - name: PO-flödet, fysisk framkomlighet — spelstart → entrén → läktaren
+        if: always()
         run: |
           if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs --endast=fysisk
           else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
@@ -159,6 +165,7 @@ jobs:
       # grön först när båsets fotavtryck på däcket är avgjort som
       # produktbeslut. Mildra inte provet för att få jobbet grönt.
       - name: Stoppdiagnostik — upp på läktaren OCH vidare längs den
+        if: always()
         run: |
           if [ -f tools/stoppdiag.mjs ]; then node tools/stoppdiag.mjs
           else echo "hoppar: tools/stoppdiag.mjs finns inte i denna branch"; fi
