@@ -141,16 +141,117 @@ for (const mobil of [false, true]) {
     cue.pekar.length ? cue.pekar.map(m => `«${m.text}» @ ${m.avst} m`).join(", ")
       : "INGEN markör leder till läktaren eller dess uppgång — vägen finns men går inte att hitta");
 
-  /* 3. Den fysiska vägen, när man VET var den är. Skiljer diskoverbarhet
-     från framkomlighet: faller den här är det geometri, faller bara 2 är
-     det skyltning. */
+  /* 3. FYSISK FRAMKOMLIGHET MED MÄNSKLIG FELMARGINAL.
+
+     Senior review av b5239be, och den träffade rätt: förra fallet styrde
+     mot exakta koordinater och korrigerade kursen varje tick. Det bevisar
+     att en idealiserad agent hittar en smal passage — inte att en spelare
+     kan gå upp. Och Tobias sa inte att han inte HITTAR läktaren; han sa
+     att det inte GÅR att gå upp. Diskoverbarhet får inte förklara bort
+     hans repro.
+
+     Här ställs figuren några meter norr om uppgången på en rad
+     sidolägen, och går sedan RAKT SÖDERUT med fast kurs. Ingen
+     waypointkorrigering, ingen styrning under approachen — det är en
+     spelare som siktar ungefär och går. Varje stopp loggas med allt som
+     behövs för att se varför: läge, nivå, nivåerna i punkten, kurs och
+     vilken tangent/spak som hölls. */
   const mittX = (F.steg.x0 + F.steg.x1) / 2;
-  r = await gaMot([mittX, F.steg.y1 + 0.9], 120000);
-  const framme = r.slut === "framme";
-  r = await gaMot([mittX, F.steg.y0 - 1.5], 90000); await slapp();
-  prova(`${namn}: den fysiska vägen upp fungerar när man vet var den är`,
-    framme && r.z >= F.dack.z - 0.02,
-    `(${r.x}, ${r.y}) z ${r.z} av ${F.dack.z}`);
+  const approach = [];
+  /* Sidolägena hålls INOM rampen. Rampen är 0,9 m bred, alltså ±0,45 m
+     från mitten. Att pröva ±0,6 m vore att sikta utanför uppgången och
+     kalla bommen ett fel — första versionen gjorde det, och mätte då
+     kortändans block i stället för uppgången. */
+  for (const dx of [-0.4, -0.2, 0, 0.2, 0.4]) {
+    const x0 = +(mittX + dx).toFixed(2), y0 = +(F.steg.y1 + 3.0).toFixed(2);
+    /* Ställ figuren på startläget via en STYRD promenad dit — det är
+       hallgolvet, inte uppgången, och att gå dit är inte det som mäts.
+       UPPSTÄLLNINGEN VERIFIERAS: kom hon inte fram redovisas det som just
+       det, i stället för att mäta en rak approach från fel plats. Så gick
+       det fel förra gången — startlägena hamnade öster om rampen och jag
+       mätte kortändan. */
+    let start = null;
+    for (let f = 0; f < 2; f++) {
+      /* RUTTEN, inte fågelvägen. Harnessen går greedy mot en punkt och kan
+         inte runda ett hinder på egen hand, så uppställningen får
+         vägpunkterna: genom skåppassagen, västerut, sedan söderut. Det är
+         vägen en spelare tar; det som MÄTS är den sista raka approachen
+         mot rampen, utan korrigering. */
+      for (const wp of [[5.6, 73.4], [3.6, 73.4], [x0, 71.0]]) {
+        await gaMot(wp, 40000); await slapp();
+      }
+      await gaMot([x0, y0], 60000); await slapp();
+      start = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
+      /* Toleransen måste vara vidare än gaMot:s egen ankomstradie (0,7 m),
+         annars underkänns en uppställning som walkern anser färdig — så
+         var det först, och det gav fyra falska "kunde inte ställa upp".
+         För en rak promenad söderut är det X som betyder något; y får
+         gärna ligga någon meter längre norrut. */
+      if (Math.abs(start.x - x0) < 0.35 && Math.abs(start.y - y0) < 1.2) break;
+    }
+    if (!(Math.abs(start.x - x0) < 0.35 && Math.abs(start.y - y0) < 1.2)) {
+      approach.push({ dx, start, x: start.x, y: start.y, z: 0, niva: null, nivaer: [],
+        kurs: null, slut: "KUNDE INTE STÄLLA UPP", input: mobil ? "IN.joy" : "KeyW",
+        mal: [x0, y0] });
+      continue;
+    }
+
+    /* Rakt söderut, fast kurs, ingen korrigering. */
+    await page.evaluate(() => { window.__mal = null;
+      if (window.__joy) { clearInterval(window.__joy); window.__joy = null; }
+      VD.rikt = -Math.PI / 2; if (typeof V3D !== "undefined" && V3D.kam) V3D.kam.satt = false; });
+    await page.waitForTimeout(350);
+    if (mobil) await page.evaluate(() => { window.__joy = setInterval(() => {
+        const v = vandringYaw(), w = v - (-Math.PI / 2);
+        IN.joy = { x: Math.sin(w), y: -Math.cos(w), styrka: 0.95 }; }, 16); });
+    else await page.keyboard.down("KeyW");
+    let p = null, f = null, still = 0;
+    const t0 = Date.now();
+    for (;;) {
+      await page.waitForTimeout(140);
+      p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2), z: +(VD.pz || 0).toFixed(2),
+        niva: +ridhusNiva(VD.px, VD.py, VD.pz || 0).toFixed(2),
+        nivaer: ridhusNivaer(VD.px, VD.py).map(v => +v.toFixed(2)),
+        kurs: +(VD.rikt * 180 / Math.PI).toFixed(1) }));
+      if (p.z >= F.dack.z - 0.02) { p.slut = "uppe"; break; }
+      const fl = f ? Math.hypot(p.x - f.x, p.y - f.y) : Infinity;
+      still = fl < 0.03 ? still + 1 : 0; f = p;
+      if (still >= 7) { p.slut = "STOPP"; break; }
+      if (Date.now() - t0 > 20000) { p.slut = "tid slut"; break; }
+    }
+    if (mobil) await page.evaluate(() => { clearInterval(window.__joy); window.__joy = null; IN.joy = null; });
+    else await page.keyboard.up("KeyW");
+    approach.push({ dx, start, ...p, input: mobil ? "IN.joy (0,-1)" : "KeyW" });
+  }
+  for (const a of approach)
+    mat(`${namn}: rak approach ${a.dx >= 0 ? "+" : ""}${a.dx} m från mitten` +
+      (a.start && a.slut !== "KUNDE INTE STÄLLA UPP"
+        ? ` (verkligt x ${a.start.x}, alltså ${(a.start.x - mittX >= 0 ? "+" : "")}${(a.start.x - mittX).toFixed(2)} m)` : ""),
+      `start (${a.start.x}, ${a.start.y}) → (${a.x}, ${a.y}) z ${a.z} · ${a.slut}` +
+      ` · nivå ${a.niva} av ${JSON.stringify(a.nivaer)} · kurs ${a.kurs}° · ${a.input}`);
+  /* KRAVET GÄLLER APPROACHER SOM FAKTISKT SIKTAR PÅ UPPGÅNGEN. Rampen är
+     0,9 m bred; en approach som hamnar utanför den missar av samma skäl
+     som man missar en dörr man inte går mot, och att räkna det som ett
+     fel vore att mäta uppställningens precision i stället för spelet.
+     Utanförliggande fall redovisas ändå, som mätvärden — de är underlag
+     till den öppna frågan om uppgångens BREDD, inte till framkomligheten. */
+  const inomRampen = a => a.start && a.start.x >= F.steg.x0 && a.start.x <= F.steg.x1;
+  const provade = approach.filter(a => a.slut !== "KUNDE INTE STÄLLA UPP" && inomRampen(a));
+  const utanfor = approach.filter(a => a.slut !== "KUNDE INTE STÄLLA UPP" && !inomRampen(a));
+  if (utanfor.length)
+    mat(`${namn}: approacher utanför rampens bredd (x ${F.steg.x0}–${F.steg.x1})`,
+      utanfor.map(a => `x ${a.start.x}: ${a.slut === "uppe" ? "upp ändå" : "kom inte upp"}`).join("; "));
+  const uppe = provade.filter(a => a.slut === "uppe");
+  const ejUppstalld = approach.filter(a => a.slut === "KUNDE INTE STÄLLA UPP");
+  if (ejUppstalld.length)
+    mat(`${namn}: uppställningen misslyckades`,
+      ejUppstalld.map(a => `${a.dx} m: ville (${a.mal}) men stod (${a.start.x}, ${a.start.y})`).join("; "));
+  prova(`${namn}: uppgången tål mänsklig felmarginal — rak approach utan korrigering`,
+    provade.length >= 3 && uppe.length === provade.length,
+    `${uppe.length} av ${provade.length} approacher inom rampen kom upp` +
+    (provade.length < 3 ? "  ⟵ för få uppställningar lyckades för att vara ett prov" : "") +
+    (uppe.length === provade.length ? ""
+      : ` — FÖLL på ${provade.filter(a => a.slut !== "uppe").map(a => `x ${a.start.x} (stopp ${a.x}, ${a.y} z ${a.z}, nivå ${a.niva})`).join("; ")}`));
 
   /* 4. NAIV SPELARE: går rakt fram från ankomsten, som den som inte vet. */
   /* HELT ostyrd: bara framåt, ingen A/D, ingen joystickkorrigering. Det
