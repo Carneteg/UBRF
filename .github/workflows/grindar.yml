@@ -144,9 +144,48 @@ jobs:
       # meter bort. Ett regressionsfall utanför CI grindar ingenting —
       # det var lärdomen från förra rundan. Jobbet ska vara rött tills
       # produktbeslutet om ledtråden är fattat och genomfört.
-      - name: PO-flödet — spelstart → entrén → läktaren (utan gaTill)
+      # FYSISK FRAMKOMLIGHET. Ska vara GRÖN: går det inte att gå upp på
+      # läktaren från en riktig spelstart är #81 inte löst.
+      - name: PO-flödet, fysisk framkomlighet — spelstart → entrén → läktaren
         run: |
-          if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs
+          if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs --endast=fysisk
+          else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
+
+
+  # DISKOVERBARHET — EGET JOBB, och rött i skrivande stund: ingen markör
+  # leder till läktaren, så vägen upp går inte att hitta från entrén.
+  #
+  # Skilt från `gangbarhet` med flit. Senior review av #85 var tydlig med
+  # att skyltning inte får användas för att förklara bort en fysisk repro.
+  # Låg det i samma jobb skulle UX-fallet göra hela jobbet rött och dölja
+  # att den fysiska framkomligheten är lagad — den som tittar i
+  # checklistan ska se båda sanningarna var för sig.
+  #
+  # Blir grönt när ledtråden finns. Den formen är ett produktbeslut.
+  diskoverbarhet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Playwright + Chromium
+        run: |
+          set -euo pipefail
+          if [ -f tools/poflode.mjs ]; then
+            npm install --no-save --no-package-lock playwright@1.49.1
+            npx playwright install --with-deps chromium
+          else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
+      - name: Webbygget
+        run: |
+          if [ -f tools/build.py ]; then python3 tools/build.py
+          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+      - name: Hittar spelaren vägen upp på läktaren från entrén?
+        run: |
+          if [ -f tools/poflode.mjs ]; then node tools/poflode.mjs --endast=ux
           else echo "hoppar: tools/poflode.mjs finns inte i denna branch"; fi
 
   dubbel-sanning:

@@ -27,6 +27,15 @@ await new Promise(r => srv.listen(PORT, r));
 const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 const browser = await chromium.launch({ executablePath: fs.existsSync(exe) ? exe : undefined,
   args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"] });
+/* --endast=fysisk | ux
+   Fysisk framkomlighet och diskoverbarhet är två olika fynd, och senior
+   review var tydlig med att det andra inte får användas för att förklara
+   det första. Körs de i samma CI-steg blir jobbet rött av UX-fallet och
+   döljer att fysiken är lagad. Flaggan låter dem grinda var för sig. */
+const ENDAST = (process.argv.find(a => a.startsWith("--endast=")) || "").split("=")[1] || "allt";
+const korFysisk = ENDAST === "allt" || ENDAST === "fysisk";
+const korUX = ENDAST === "allt" || ENDAST === "ux";
+
 const resultat = [];
 const prova = (namn, ok, detalj) => { resultat.push({ namn, ok }); console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); };
 const mat = (namn, detalj) => console.log("  mät ", namn, "—", detalj);
@@ -136,7 +145,7 @@ for (const mobil of [false, true]) {
   }, F);
   mat(`${namn}: markörer inom räckhåll vid ankomsten`,
     cue.alla.map(m => `${m.avst} m «${m.text}»`).join("  ·  "));
-  prova(`${namn}: spelet pekar ut vägen upp på läktaren från entrén`,
+  if (korUX) prova(`${namn}: spelet pekar ut vägen upp på läktaren från entrén`,
     cue.pekar.length > 0,
     cue.pekar.length ? cue.pekar.map(m => `«${m.text}» @ ${m.avst} m`).join(", ")
       : "INGEN markör leder till läktaren eller dess uppgång — vägen finns men går inte att hitta");
@@ -246,7 +255,7 @@ for (const mobil of [false, true]) {
   if (ejUppstalld.length)
     mat(`${namn}: uppställningen misslyckades`,
       ejUppstalld.map(a => `${a.dx} m: ville (${a.mal}) men stod (${a.start.x}, ${a.start.y})`).join("; "));
-  prova(`${namn}: uppgången tål mänsklig felmarginal — rak approach utan korrigering`,
+  if (korFysisk) prova(`${namn}: uppgången tål mänsklig felmarginal — rak approach utan korrigering`,
     provade.length >= 3 && uppe.length === provade.length,
     `${uppe.length} av ${provade.length} approacher inom rampen kom upp` +
     (provade.length < 3 ? "  ⟵ för få uppställningar lyckades för att vara ett prov" : "") +
