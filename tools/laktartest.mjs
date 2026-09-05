@@ -41,7 +41,7 @@ async function sida(mobil) {
 /* Går med spelets riktiga loop och loggar VARJE prov: läge, nivå och att
    nivåbytet aldrig överstiger NIVA_STEG (ingen teleport). `touch` matar
    IN.joy som mobil.js gör; annars hålls W (kamerarelativt framåt). */
-async function ga(page, { x, y, z = 0, rikt, ms, touch, klar, fortsatt }) {
+async function ga(page, { x, y, z = 0, rikt, mot, ms, touch, klar, fortsatt }) {
   /* `fortsatt`: gå vidare från nuvarande läge i stället för att placeras om.
      Behövs för rutter i flera ben — en spelare som kommer in genom dörren
      går först fram till stegen och SEDAN upp för dem. Ett enda rakt ben
@@ -61,8 +61,16 @@ async function ga(page, { x, y, z = 0, rikt, ms, touch, klar, fortsatt }) {
       window.__spar.push([+VD.px.toFixed(2), +VD.py.toFixed(2), +z.toFixed(2)]);
       if (window.__gar) requestAnimationFrame(window.__tick); };
     window.__gar = true; requestAnimationFrame(window.__tick); });
-  if (touch) await page.evaluate(({ rikt }) => { window.__joy = setInterval(() => {
-      const v = vandringYaw(), w = v - rikt; IN.joy = { x: Math.sin(w), y: -Math.cos(w), styrka: 0.95 }; }, 16); }, { rikt });
+  /* `mot`: styr mot en PUNKT varje tick i stället för att hålla en fast
+     kurs. Det är vad en spelare gör — hon går mot det hon ser — och det
+     tar bort översläng: en fast kurs österut med kamerarelativ spak bar
+     figuren förbi stegen och ut ur läktarens fotavtryck. Kursen räknas om
+     ur figurens aktuella läge, så benet kan inte skjuta över målet. */
+  if (mot) await page.evaluate(({ mot }) => { window.__styr = setInterval(() => {
+      VD.rikt = Math.atan2(mot[1] - VD.py, mot[0] - VD.px); }, 16); }, { mot });
+  if (touch) await page.evaluate(({ rikt, mot }) => { window.__joy = setInterval(() => {
+      const k = mot ? Math.atan2(mot[1] - VD.py, mot[0] - VD.px) : rikt;
+      const v = vandringYaw(), w = v - k; IN.joy = { x: Math.sin(w), y: -Math.cos(w), styrka: 0.95 }; }, 16); }, { rikt, mot });
   else await page.keyboard.down("KeyW");
   /* Tidsoberoende: headless SwiftShader ger få bildrutor per sekund, så
      villkoret avgör, inte klockan (samma princip som gangtest.mjs). `ms`
@@ -74,6 +82,7 @@ async function ga(page, { x, y, z = 0, rikt, ms, touch, klar, fortsatt }) {
     if (klar && await page.evaluate(({ f }) => (new Function("p", "return " + f))(
       { x: VD.px, y: VD.py, z: VD.pz || 0 }), { f: klar })) break;
   }
+  await page.evaluate(() => { if (window.__styr) { clearInterval(window.__styr); window.__styr = null; } });
   if (touch) await page.evaluate(() => { clearInterval(window.__joy); IN.joy = null; });
   else await page.keyboard.up("KeyW");
   return await page.evaluate(() => { window.__gar = false;
@@ -113,29 +122,56 @@ for (const mobil of [false, true]) {
          — stegen kan landa plant. */
       brada: { x0: L.x0 + L.dackDjup - L.gangbrada.djup, x1: L.x0 + L.dackDjup },
       gavel: { x0: t ? t.x1 : L.x0, x1: L.x0 + L.dackDjup } }; });
-  /* 1. Från huvudentrén rakt fram (söderut) upp på däcket — det PO gör. */
-  /* Spelaren kliver in genom huvudentrén och går mot trappan hon ser —
-     inte mot en osynlig punkt. Läktartrappan vid H upptar däckets
-     nordvästra hörn, så däckets gångbara ände börjar strax öster om
-     dörren; kursen tas därför mot stegens mitt. */
-  /* Kursen tas mot stegens INGÅNG — deras norra kant — inte mot deras
-     topp. Siktar man på toppen går den räta linjen in på golvet väster om
-     stegen och slutar mot däckets kant, vilket mäter fel sak. */
-  /* Ben 1: in genom dörren och österut fram till stegens bredd.
-     Ben 2: söderut upp för stegen, från där ben 1 slutade. */
+  /* 1. HELA KEDJAN I EN ENDA SAMMANHÄNGANDE KÖRNING:
+     huvudentrén → fram till stegen → upp på däcket → minst 10 m längs
+     läktargången. Figuren placeras EN gång, på dörrens faktiska position,
+     och därefter bara går. Inga `gaTill` mellan benen, ingen teleport upp
+     på däcket.
+
+     Efter senior review av #85: förra versionen började på dörrens x men
+     på en y strax norr om stegen, och bevisade 10-metersgången separat
+     genom att först placera figuren på däcksnivå. Båda gjorde kedjan
+     kortare än acceptanskravet. Nu byter benen bara riktning — kroppen,
+     nivån och kollisionen bärs vidare hela vägen. */
   const mittX = (I.ls.x0 + I.ls.x1) / 2;
-  await ga(page, { x: I.dorr[0], y: I.ls.y1 + 1.4, rikt: 0, ms: 30000, touch: mobil,
-    klar: `p.x >= ${mittX - 0.15}` });
-  let q = await ga(page, { rikt: S, ms: 45000, touch: mobil, fortsatt: true,
+  const ben = [];
+
+  /* Ben 1: in genom dörren och fram till stegens ingång — figuren styr mot
+     punkten, precis som en spelare går mot den trappa hon ser. */
+  const ingang = [mittX, I.ls.y1 + 0.9];
+  let q = await ga(page, { x: I.dorr[0], y: I.dorr[1], rikt: S, mot: ingang, ms: 60000, touch: mobil,
+    klar: `Math.hypot(p.x - ${ingang[0]}, p.y - ${ingang[1]}) <= 0.35` });
+  ben.push(`dörr (${I.dorr[0].toFixed(2)}, ${I.dorr[1].toFixed(2)}) → (${q.x}, ${q.y})`);
+  const nadeHallen = q.y <= I.ls.y1 + 1.5;
+  const nadeStegen = q.x >= I.ls.x0 && q.x <= I.ls.x1;
+
+  /* Ben 2: UPP FÖR STEGEN, mot samma x men bortom deras topp. */
+  q = await ga(page, { rikt: S, mot: [mittX, I.ls.y0 - 1.5], ms: 60000, touch: mobil, fortsatt: true,
     klar: `p.z >= ${I.L.dackZ - 0.02}` });
+  ben.push(`upp för stegen → (${q.x}, ${q.y}) z ${q.z}`);
+  const uppe = q.z >= I.L.dackZ - 0.02;
+  const yUppe = q.y, hoppUpp = q.hopp;
   /* Kravet är inte bara en höjd — det är att STÅ PÅ LÄKTAREN. En figur som
      drivit iväg österut och hamnat 1,03 m upp på något annat är inte uppe
      på läktaren, och det ska inte kunna passera som grönt. */
   const paLaktaren = q.x >= I.L.x0 - 0.05 && q.x <= I.L.x0 + I.L.d + 0.05;
-  prova(`${namn}: från huvudentrén fram till stegen och upp på läktardäcket`,
-    q.z >= I.L.dackZ - 0.02 && q.hopp === 0 && paLaktaren,
-    `(${q.x}, ${q.y}) z ${q.z} efter ${q.n} bildrutor, teleporthopp ${q.hopp}` +
-    (paLaktaren ? "" : "  ⟵ UTANFÖR läktarens fotavtryck"));
+
+  /* Ben 3: vidare minst 10 m längs läktargången — SAMMA körning, ingen
+     omplacering, ingen teleport till däcksnivå. */
+  q = await ga(page, { rikt: S, mot: [mittX, yUppe - 11.5], ms: 90000, touch: mobil, fortsatt: true,
+    klar: `p.y <= ${yUppe - 10.4}` });
+  const langd = yUppe - q.y;
+  ben.push(`${langd.toFixed(1)} m längs gången → (${q.x}, ${q.y}) z ${q.z}`);
+
+  const helKedja = nadeHallen && nadeStegen && uppe && paLaktaren
+    && langd >= 10 && q.z >= I.L.dackZ - 0.02 && hoppUpp === 0 && q.hopp === 0;
+  prova(`${namn}: HELA kedjan i en körning — huvudentrén → stegen → däcket → ${langd.toFixed(1)} m`,
+    helKedja,
+    ben.join("  ·  ") + `  · teleporthopp ${hoppUpp + q.hopp}` +
+    (paLaktaren ? "" : "  ⟵ UTANFÖR läktarens fotavtryck") +
+    (nadeHallen ? "" : "  ⟵ kom aldrig ned i hallen") +
+    (nadeStegen ? "" : "  ⟵ nådde aldrig stegens bredd"));
+
   /* 2. Angreppssvep över HELA STEGENS BREDD, med däckets nivåer som
      ankare — inte över stegen relativt sig själva.
 
@@ -213,13 +249,6 @@ for (const mobil of [false, true]) {
                    : `topp ${I.ls.z1.toFixed(2)} m möter däcket inom nivåregeln på hela x ${I.ls.x0.toFixed(1)}–${I.ls.x1.toFixed(1)}`);
   }
 
-  /* 3. Minst 10 m längs läktargången, kvar på däcksnivå. */
-  q = await ga(page, { x: (I.ls.x0 + I.ls.x1) / 2, y: I.ls.y0 - 0.8, z: I.L.dackZ, rikt: S, ms: 60000, touch: mobil,
-    klar: `p.y <= ${I.ls.y0 - 0.8 - 10.5}` });
-  const langd = (I.ls.y0 - 0.8) - q.y;
-  prova(`${namn}: minst 10 m längs läktargången på däcksnivå`,
-    langd >= 10 && q.z >= I.L.dackZ - 0.02 && q.hopp === 0,
-    `gick ${langd.toFixed(1)} m söderut, slut z ${q.z}, teleporthopp ${q.hopp}`);
   /* MÄTNING, inte pass-krav (#81, öppen fråga till PO/ChatGPT): den som
      kliver in genom huvudentrén (x 1,6) och går RAKT söderut stannar
      fortfarande mot läktartrappan vid H, som når caféplanet (z 3,68) vid

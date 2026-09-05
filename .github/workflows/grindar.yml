@@ -94,6 +94,50 @@ jobs:
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
 
+  # P0 #81: läktaren gick inte att gå upp på i den RIKTIGA webbruntimen, och
+  # felet överlevde två omgångar därför att inget CI-jobb körde spelets
+  # movement-loop. tools/laktartest.mjs gör det — bildruta för bildruta, i
+  # 3D-vyn, med tangent och med touch, utan att någonsin anropa vägsökaren.
+  #
+  # Egen job i stället för ett steg i `grindar`: det här är det enda som
+  # behöver en webbläsare, och en Chromium-installation ska inte sinka de
+  # övriga grindarna. Faller det här jobbet är läktaren oåtkomlig igen.
+  gangbarhet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Playwright + Chromium
+        run: |
+          set -euo pipefail
+          if [ -f tools/laktartest.mjs ]; then
+            npm install --no-save --no-package-lock playwright@1.49.1
+            npx playwright install --with-deps chromium
+          else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+
+      - name: Webbygget
+        run: |
+          if [ -f tools/build.py ]; then python3 tools/build.py
+          else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+
+      - name: Läktaren är gångbar i den riktiga 3D-runtimen (dator + mobil)
+        run: |
+          if [ -f tools/laktartest.mjs ]; then node tools/laktartest.mjs
+          else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+
+      - name: Gå-hit i ridhuset och stallet
+        run: |
+          if [ -f tools/gangtest.mjs ]; then node tools/gangtest.mjs
+          else echo "hoppar: tools/gangtest.mjs finns inte i denna branch"; fi
+
   dubbel-sanning:
     runs-on: ubuntu-latest
     steps:
