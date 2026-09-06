@@ -151,7 +151,12 @@ function Telemetri.las(ritt: Ritt, loco: { [string]: any }, kurvatur: number,
 		beddGangart = loco.beddGangart or loco.targetGait,
 		cue = loco.cue,
 		cueAlder = if loco.cueTid then math.max(0, (loco.tid or 0) - loco.cueTid) else nil,
-		overgangstid = loco.senasteOvergang or 0,
+		--[[ TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87). Samma
+		     kontrakt som webbens: svarstid = begäran → svar,
+		     overgangstid = förloppets faktiska längd, etableringstid =
+		     begäran → gångarten ÄR den beddna. ]]
+		overgangstid = loco.overgangstid or 0,
+		etableringstid = loco.etableringstid or 0,
 		iOvergang = loco.gait ~= loco.targetGait,
 		--[[ ── HÄSTENS SVAR OCH RYTTARENS HJÄLPER (G02-B) ───────────
 		     Samma fältnamn och samma tal som webben. `hjalper` kommer ur

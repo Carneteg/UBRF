@@ -74,10 +74,13 @@ end
 --[[ Paradens kvalitet i det ögonblick den ges: hästen ska vara framför
      skänkeln och handen i kontaktbandet.
 
-     WEBBEN VÄGER TRE HJÄLPER, ROBLOX TVÅ. Sitsen finns inte här (se
-     modulhuvudet), så termen som väger den saknas. Skillnaden är
-     deklarerad i Telemetri.SAKNAS och mäts av paritetsspecen — den är
-     inte bortgömd i en formel som ser lika ut. ]]
+     BÅDA YTORNA VÄGER TVÅ HJÄLPER: skänkeln mot tröskeln och handen mot
+     kontaktbandet. Sitsen ingår inte i formeln på någondera ytan.
+
+     Den här kommentaren påstod tidigare att webben väger tre — det var
+     fel, och senior review av #87 fångade det. src/riding/hjalper.js har
+     alltid vägt två. Paritetsspecen jämför formlerna mot webbens egna
+     golden-rader, så talen var aldrig i osynk; det var beskrivningen. ]]
 function Hjalper.paradKvalitet(a: { [string]: number }): number
 	local H = RidKanon.HJALP
 	local K = RidKanon.KONTAKT

@@ -1230,7 +1230,7 @@ do
 		local t = Telemetri.las(ritt, mc.loco, mc.curvature)
 		table.insert(moment, { vad = vad, gangart = mc.loco.gait, bad = mc.loco.targetGait,
 			cue = mc.loco.cue, fart = t.fart, kurvatur = t.kurvatur,
-			overgang = mc.loco.senasteOvergang })
+			overgang = mc.loco.etableringstid })
 	end
 
 	kor({}, 2.0)                                    notera("halt")
@@ -1347,6 +1347,40 @@ do
 	--[[ b) ENERGIN tär av arbete och kommer tillbaka i halt, och
 	     `loco.stamina` speglar den. Fältet fanns sedan Gate 01 men drogs
 	     aldrig — nu finns det bara en sanning om hur trött hon är. ]]
+	--[[ TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87, blocker 3).
+	     Samma prov som webbens: klocka alla tre utifrån och kräv att
+	     etableringen ligger MELLAN svaret och förloppets slut, vid
+	     switchAt av förloppet. Ett fält som byter betydelse bryter
+	     relationen och blir rött. ]]
+	do
+		local mc = newMC()
+		local dt2 = 1 / 240
+		local t0, tSvar, tGang, tOv = nil, nil, nil, nil
+		for i = 1, math.floor(4.0 / dt2) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt2)
+			local l = mc.loco
+			if t0 == nil and l.beddGangart ~= "halt" then t0 = l.tid end
+			if t0 ~= nil and tSvar == nil and l.targetGait ~= "halt" then tSvar = l.tid end
+			if t0 ~= nil and tGang == nil and l.gait ~= "halt" then tGang = l.tid end
+			if tSvar ~= nil and tOv == nil and mc._ov == nil then tOv = l.tid end
+		end
+		local l = mc.loco
+		local eps = 0.02
+		local function nara(a, b) return math.abs(a - b) <= eps end
+		local ordning = l.svarstid < l.etableringstid
+			and l.etableringstid < l.svarstid + l.overgangstid
+		local andel = (l.etableringstid - l.svarstid) / l.overgangstid
+		check("de tre tiderna mäter var sin sak, och var och en stämmer med klockan",
+			t0 ~= nil and tSvar ~= nil and tGang ~= nil and tOv ~= nil
+				and nara(tSvar - t0, l.svarstid) and nara(tOv - tSvar, l.overgangstid)
+				and nara(tGang - t0, l.etableringstid) and ordning
+				and nara(andel, Config.MOVEMENT.Transition.switchAt),
+			string.format("svarstid %.3f · overgangstid %.3f · etableringstid %.3f —"
+				.. " etableringen ligger %.2f in i förloppet, switchAt är %.2f",
+				l.svarstid, l.overgangstid, l.etableringstid, andel,
+				Config.MOVEMENT.Transition.switchAt))
+	end
+
 	do
 		local mc = newMC()
 		upToGait(mc, 2, 1 / 60)

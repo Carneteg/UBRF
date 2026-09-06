@@ -380,10 +380,16 @@ function stegaRitt(dt){
   let ny=G.py+Math.sin(G.rikt)*G.ride.tempo*dt;
   const VAGG_TAU=0.55;                      // sekunder att lägga sig längs sargen
   const vaggT=1-Math.exp(-dt/VAGG_TAU);
-  if(nx<0.8){nx=0.8;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(nx>19.2){nx=19.2;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(ny<0.8){ny=0.8;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
-  if(ny>59.2){ny=59.2;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  /* Sargen ligger på banans mått; hästens MITT kommer som närmast sin
+     egen halvbredd. Talen står i RID_KANON — se HAST_HALVBREDD för
+     varför den var 0,8 och vad det kostade. */
+  const KB=(typeof ridKanon==="function")?ridKanon():null;
+  const HB=KB?KB.HAST_HALVBREDD:0.35;
+  const BB=KB?KB.BANA_BREDD:20, BL=KB?KB.BANA_LANGD:60;
+  if(nx<HB){nx=HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
+  if(nx>BB-HB){nx=BB-HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
+  if(ny<HB){ny=HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  if(ny>BL-HB){ny=BL-HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
   /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
      och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
      är till för hästarnas skull, inte för ordningens. */

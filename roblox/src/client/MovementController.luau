@@ -69,7 +69,8 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 		     `targetGait` vad hästen svarat på — under svarstiden skiljer
 		     de sig, och det är hela skillnaden mot före G02-B, då cue:n
 		     startade förloppet i samma bildruta den föll. ]]
-		beddGangart = "halt", svarstid = 0, balans = 1,
+		beddGangart = "halt", svarstid = 0, overgangstid = 0, etableringstid = 0,
+		balans = 1,
 		energi = Svar.startEnergi(), paradKvalitet = 0,
 	} :: Types.Locomotion
 
@@ -224,13 +225,27 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		if vantar.kvar <= 0 then
 			loco.targetGait = vantar.till
 			loco.svarTid = loco.tid
+			--[[ Förloppets klocka startar med rörelsen, inte med begäran. ]]
+			self._ovStart = loco.tid
 			self._ov = { fran = loco.speed, t = 0,
 				langd = vantar.langd, fran_gait = vantar.fran_gait }
 			self._vantar = nil
 		end
 	end
-	if not loco._overgangKlar and loco.gait == loco.targetGait and loco.cueTid then
-		loco.senasteOvergang = loco.tid - loco.cueTid
+	--[[ TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87, blocker 3).
+	     Fältet mätte förut en tredje sak än kommentarerna påstod, på båda
+	     ytorna. Nu: `svarstid` begäran → svar, `overgangstid` förloppets
+	     faktiska längd, `etableringstid` begäran → gångarten ÄR den
+	     beddna. Alla tre mäts; ingen räknas fram ur de andra. ]]
+	--[[ Jämför mot BEDDGANGART och inte mot targetGait. Under svarstiden
+	     har targetGait ännu inte bytt, så `gait == targetGait` är sant
+	     redan innan hästen börjat svara — villkoret slog då till i samma
+	     bildruta som cue:n föll och rapporterade etableringstid 0,000.
+	     Uppmätt när provet nedan skrevs; det är precis vad provet finns
+	     för. Etablerad är hon när hon går i den gångart ryttaren BAD om. ]]
+	if not loco._overgangKlar and loco.cueTid
+		and loco.gait == loco.beddGangart and loco.targetGait == loco.beddGangart then
+		loco.etableringstid = loco.tid - loco.cueTid
 		loco._overgangKlar = true
 	end
 	local gait = Gaits.get(loco.targetGait)
@@ -256,7 +271,13 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		local u = math.clamp(ov.t / ov.langd, 0, 1)
 		local mjuk = u * u * (3 - 2 * u)
 		loco.speed = ov.fran + (target - ov.fran) * mjuk
-		if u >= 1 then self._ov = nil end
+		if u >= 1 then
+			--[[ KLOCKAD, inte avläst ur ov.langd: läses längden ur planen
+			     kan provet inte upptäcka att kurvan slutar någon
+			     annanstans än den skulle. ]]
+			loco.overgangstid = loco.tid - (self._ovStart or loco.tid)
+			self._ov = nil
+		end
 	else
 		self._ov = nil
 		local up = gait.accel * accelScale

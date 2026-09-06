@@ -228,7 +228,28 @@ function nyState(dagsform,rang,sadellage){
     /* Den gångart ryttaren senast BAD om. Hästen bär den tills hon ombeds
        något annat; `gangart` är vad hon faktiskt går just nu, och de två
        skiljer sig under en övergång. */
-    malGangart:"halt", cue:null, cueTid:-99, overgang:null, senasteOvergang:0,
+    malGangart:"halt", cue:null, cueTid:-99, overgang:null,
+    /* ── TRE TIDER, TRE NAMN (senior review #87, blocker 3) ───────────
+       Fältet hette `senasteOvergang` och mätte en tredje sak än de två
+       kommentarerna påstod. Uppmätt på b01e90c, halt→skritt genom
+       spelet: svarstid 0,147 s · etablering 0,55 s efter svaret ·
+       förloppet 1,017 s. Fältet rapporterade 0,55 — alltså varken
+       "begäran → etablerad" eller "förloppets längd", utan avståndet
+       från svaret till att etiketten byter.
+
+       G02-C ska bedöma timing och mjukhet och får inte gissa. Därför
+       tre fält med var sin låsta betydelse:
+
+         svarstid        begäran → hästen BÖRJAR svara
+         overgangstid    förloppets faktiska längd (svar → rörelsen klar)
+         etableringstid  begäran → `gangart` ÄR den beddna
+
+       Etableringen ligger mellan de två: etiketten byter vid
+       K.OVERGANG.BYTPUNKT av förloppet, så etableringstid ≈ svarstid +
+       BYTPUNKT × overgangstid. Att den ändå mäts och inte räknas fram
+       är avsikten — räknas den fram kan den inte avslöja att modellen
+       slutat följa sin egen kurva. */
+    overgangstid:0, etableringstid:0,
     /* Senast LÄSTA parad och när. 0/-99 tills ryttaren gett en. */
     paradKval:0, paradTid:-99,
     /* ── HÄSTENS SVAR (G02-B punkt 2) ─────────────────────────────
@@ -541,6 +562,9 @@ function stepRide(s,a,h,ctx,dt){
        s.overgang={fran:v.fran,till:v.till,klar:false};
        s._overgangStart=s._tid;
        s.svarTid=s._tid;
+       /* Förloppets klocka startar HÄR, med rörelsen. Etableringens
+          klocka startade redan när ryttaren bad (cueTid). */
+       s._ovStart=s._tid;
        s._ov={fran:s.tempo,t:0,langd:v.langd};
        s._vantar=null;
      }
@@ -599,7 +623,10 @@ function stepRide(s,a,h,ctx,dt){
         den gamla gångarten även om tempot råkat passera ett band. */
      s.gangart=u>=K.OVERGANG.BYTPUNKT?s.malGangart:ov.franG||forra;
      if(!ov.franG)ov.franG=forra;
-     if(u>=1)s._ov=null;
+     /* FÖRLOPPETS FAKTISKA LÄNGD, klockad och inte avläst ur ov.langd.
+        Skillnaden är poängen: läses längden ur planen kan provet inte
+        upptäcka att kurvan slutar någon annanstans än den skulle. */
+     if(u>=1){s.overgangstid=s._tid-(s._ovStart!==undefined?s._ovStart:s._tid); s._ov=null;}
    }else{
      /* INOM gångarten svarar tempot med gångartens egen tröghet. Talen
         låg förut som 8,8 och 11 delat med hästens tyngd, lika för alla
@@ -628,7 +655,11 @@ function stepRide(s,a,h,ctx,dt){
       i den gångarten. Det är måttet G02-B/C ska kunna bygga på, och det
       enda som säger om en övergång var mjuk eller ryckig. */
    if(s.gangart!==forra&&s.overgang&&!s.overgang.klar&&s.gangart===s.malGangart){
-     s.overgang.klar=true; s.senasteOvergang=s._tid-s._overgangStart;
+     s.overgang.klar=true;
+     /* ETABLERINGEN: från att ryttaren BAD till att hon faktiskt går i
+        gångarten. Mäts från cueTid och inte från svaret, så att
+        fördröjningen ingår — det är den tid en ryttare upplever. */
+     s.etableringstid=s._tid-s.cueTid;
    }
    s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
   }

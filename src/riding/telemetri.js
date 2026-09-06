@@ -151,9 +151,19 @@ function ridTelemetri(ride, aids, extra) {
       ? Math.max(0, (ride._tid || 0) - ride.paradTid) : null,
     cueAlder: ride.cueTid !== undefined && ride.cueTid > -90
       ? Math.max(0, (ride._tid || 0) - ride.cueTid) : null,   // s sedan hjälpen gavs
-    /* Övergångstiden: från att ryttaren bad till att hästen faktiskt gick
-       i gångarten. Måttet på om en övergång var mjuk eller ryckig. */
-    overgangstid: ride.senasteOvergang || 0,
+    /* ── TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87) ─────────
+       Fältet mätte förut varken det ena eller det andra av vad
+       kommentarerna påstod. G02-C ska bedöma timing och mjukhet och får
+       inte gissa vilken semantik ett fält har.
+
+         svarstid        begäran → hästen BÖRJAR svara     (ovan)
+         overgangstid    förloppets faktiska längd, klockad
+         etableringstid  begäran → `gangart` ÄR den beddna
+
+       Etableringen ligger mellan de två: etiketten byter vid BYTPUNKT av
+       förloppet. Alla tre mäts; ingen räknas fram ur de andra. */
+    overgangstid: ride.overgangstid || 0,
+    etableringstid: ride.etableringstid || 0,
     iOvergang: !!(ride.overgang && !ride.overgang.klar),
     /* Tomt sedan G02-B punkt 2: balans och fokus har riktiga källor i
        modellen. Fältet står kvar som kontrakt — nästa härledda storhet
@@ -193,6 +203,29 @@ function ridTelemetri(ride, aids, extra) {
    ══════════════════════════════════════════════════════════════════ */
 
 const RID_KANON = {
+  /* ── HÄSTENS HALVBREDD MOT SARGEN ────────────────────────────────
+     Hur nära sargen hästens MITT kan komma. Talet är hennes halva
+     bredd: en ridhäst är 0,60–0,80 m bred över bålen, alltså 0,30–0,40 m
+     från mitt till sida. 0,35 ligger mitt i det spannet.
+
+     TALET STOD FÖRUT SOM 0,8 i src/game.js, och det är inte en
+     halvbredd — det är nästan en hel hästbredd. Följden var geometrisk
+     och träffade ett acceptanskriterium: den fria bredden i en 20 m bred
+     ridbana blev 20 − 2 × 0,8 = 18,4 m, och en 20 m volt fick därför per
+     definition inte plats. Senior review av #87 fångade att jag skrivit
+     ned det som ett faktum om volten i stället för som det det var — en
+     följd av ett för stort tal.
+
+     Med en riktig halvbredd blir den fria bredden 19,3 m för hästens
+     mitt, och hennes KROPP spänner då 19,3 + 0,7 = 20,0 m. Det är precis
+     vad en 20 m volt är: figuren mäts till sargen, inte till hästens
+     mittlinje, och hon rider på spåret med kroppen mot sargen.
+
+     [HUMAN GATE] Ändringen flyttar hur nära sargen man kan rida, och det
+     är game feel. Den är avsiktlig och mätbar, inte en biverkning. */
+  HAST_HALVBREDD: 0.35,
+  /* Ridbanans mått, i meter. Standardbanan 20 × 60. */
+  BANA_BREDD: 20, BANA_LANGD: 60,
   namn: "Gate 01 — webbens baseline, kanon sedan 2026-09-05",
   kalla: "src/game.js, src/model.js; PO-beslut på #86",
   KAPPA_MAX: 0.42,

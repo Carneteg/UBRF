@@ -101,7 +101,7 @@ const loop = await page.evaluate(() => {
   kor({ skankel: 0.42, tygel: 0.20, sits: 0.2, styrning: 0 }, 1);   // neutral först
   for (let n = 0; n < 3; n++) {
     kor({ skankel: 0.66, tygel: 0.20, sits: 0.2, styrning: 0 }, 3);
-    impulser.push({ bad: s.malGangart, gick: s.gangart, overgang: +s.senasteOvergang.toFixed(2) });
+    impulser.push({ bad: s.malGangart, gick: s.gangart, overgang: +s.overgangstid.toFixed(2) });
     if (n < 2) kor({ skankel: 0.42, tygel: 0.20, sits: 0.2, styrning: 0 }, 1);
   }
   const topp = s.gangart, toppFart = s.tempo;
@@ -681,6 +681,197 @@ prova("och kontraktet räcker för att läsa en hjälp mot dess svar",
   `${nf(kontraktG02C.prov.paradKval, 2)} · fokus ${nf(kontraktG02C.prov.fokus)} · ` +
   `energi ${nf(kontraktG02C.prov.energi)} · härledda ${JSON.stringify(kontraktG02C.harledda)}`);
 
+/* ══════════════════════════════════════════════════════════════════
+   TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87, blocker 3)
+
+   Fältet `overgangstid` beskrevs på ett ställe som "begäran → etablerad
+   gångart" och på ett annat som "själva förloppet". Det var VARKEN:
+   uppmätt på b01e90c rapporterade det avståndet från svaret till att
+   etiketten byter — en tredje storhet som ingen kommentar nämnde.
+
+   Nu finns tre fält med var sin låsta betydelse, alla MÄTTA:
+
+     svarstid        begäran → hästen börjar svara
+     overgangstid    förloppets faktiska längd
+     etableringstid  begäran → `gangart` ÄR den beddna
+
+   Provet låser ordningen och relationen mellan dem. Skulle någon
+   framtida ändring låta ett fält byta betydelse bryts den relationen,
+   och det är precis vad G02-C inte får råka ut för. ══════════════════ */
+const tider = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  const dt = 1 / 240;
+  G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+  G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp();
+  /* Klocka allt utifrån, oberoende av vad modellen påstår. */
+  let t0 = null, tSvar = null, tGang = null, tOv = null;
+  for (let i = 0; i < 240 * 4; i++) {
+    RIDIN.skankel = 1; stegaRitt(dt);
+    const r = G.ride;
+    if (t0 === null && r.beddGangart !== "halt") t0 = r._tid;
+    if (t0 !== null && tSvar === null && r.malGangart !== "halt") tSvar = r._tid;
+    if (t0 !== null && tGang === null && r.gangart !== "halt") tGang = r._tid;
+    if (tSvar !== null && tOv === null && !r._ov) tOv = r._tid;
+  }
+  const r = G.ride;
+  return { klockadSvar: tSvar - t0, klockadEtablering: tGang - t0, klockadForlopp: tOv - tSvar,
+    svarstid: r.svarstid, overgangstid: r.overgangstid, etableringstid: r.etableringstid,
+    tmOvergang: G.telemetri.overgangstid, tmEtablering: G.telemetri.etableringstid,
+    tmSvar: G.telemetri.svarstid, bytpunkt: K.OVERGANG.BYTPUNKT };
+});
+{
+  const t = tider, e = 0.02;
+  const nara = (a, b) => Math.abs(a - b) < e;
+  /* Etableringen ska ligga MELLAN de två andra: hon är etablerad när
+     etiketten byter, alltså en bit in i förloppet — aldrig före svaret
+     och aldrig efter att rörelsen är klar. */
+  const ordning = t.svarstid < t.etableringstid &&
+    t.etableringstid < t.svarstid + t.overgangstid;
+  /* Och etiketten ska byta vid BYTPUNKT av förloppet, inte var som helst. */
+  const vidBytpunkt = nara(t.etableringstid - t.svarstid, t.bytpunkt * t.overgangstid);
+  prova("de tre tiderna mäter var sin sak, och var och en stämmer med klockan",
+    nara(t.klockadSvar, t.svarstid) && nara(t.klockadForlopp, t.overgangstid) &&
+    nara(t.klockadEtablering, t.etableringstid) && ordning && vidBytpunkt,
+    `svarstid ${nf(t.svarstid)} (klockad ${nf(t.klockadSvar)}) · ` +
+    `overgangstid ${nf(t.overgangstid)} (klockad ${nf(t.klockadForlopp)}) · ` +
+    `etableringstid ${nf(t.etableringstid)} (klockad ${nf(t.klockadEtablering)}) — ` +
+    `etableringen ligger ${nf((t.etableringstid - t.svarstid) / t.overgangstid, 2)} in i ` +
+    `förloppet, bytpunkten är ${t.bytpunkt}`);
+  prova("telemetrin publicerar samma tre tal som modellen, inte en omräkning",
+    t.tmSvar === t.svarstid && t.tmOvergang === t.overgangstid &&
+    t.tmEtablering === t.etableringstid,
+    `${nf(t.tmSvar)} / ${nf(t.tmOvergang)} / ${nf(t.tmEtablering)} s`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   20 M-VOLTEN (senior review #87, blocker 2)
+
+   #83 kräver att en 20 m volt går att rida med bibehållen rytm och
+   balans. Det provet fanns inte. I stället stod en rad i den här filen
+   om att "en 20 m volt får inte plats i ett 20 × 60 m ridhus" — och det
+   var en slutsats jag aldrig mätt, som dessutom följde av ett fel:
+   väggmarginalen stod som 0,8 m, alltså nästan en hel hästbredd i
+   stället för en halv. Den fria bredden blev 18,4 m och volten fick per
+   definition inte plats.
+
+   EN 20 M VOLT MÄTS TILL SARGEN, inte till hästens mittlinje. Hon rider
+   på spåret med kroppen mot sargen, så figurens 20 m är hennes
+   YTTERKANTER. Med halvbredden 0,35 m går mittlinjens cirkel på 19,3 m
+   och kroppen spänner 20,0 m — vilket är volten.
+
+   Provet rider den genom spelarens inputväg och kräver fyra saker:
+   figuren är 20 m bred, banan är en verklig cirkel, gångarten står
+   still, och rytm och balans hålls. ══════════════════════════════════ */
+const volt20 = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  const dt = 1 / 60;
+  const KN = ridKanon();
+  const HB = KN.HAST_HALVBREDD, BB = KN.BANA_BREDD;
+  const nyRitt = (x, y, r) => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = x; G.py = y; G.rikt = r; G.kappa = 0; ridNollstallHjalp(); };
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+    RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
+  /* Mittlinjens radie för en 20 m volt: halva figuren minus halvbredden.
+     Siktet ligger två procent innanför, av ett mätskäl: en cirkel med
+     exakt maxradie tangerar clampen, och då flimrar den in och ut på
+     avrundningen och deformerar banan. Två procent är 19 cm — figuren
+     blir 19,6 m i stället för 20,0 och ligger väl inom provets tolerans,
+     men hästen behöver aldrig sargen för att komma runt. Det är
+     skillnaden mellan att RIDA volten och att bli styrd av väggen. */
+  const malRadie = (BB / 2 - HB) * 0.99;
+
+  /* Upp i trav på mitten av banan, och sök det styrutslag som ger
+     målradien. Sökningen är en halvering och inte en tabell — då kan
+     provet inte bli grönt av att någon skrivit in rätt siffra. */
+  /* TRAV, som en lektionsvolt rids i.
+
+     GRUNDHJÄLPEN LIGGER PÅ FRÅN BÖRJAN och impulserna ges ovanpå den.
+     Första versionen gick från neutral till 0,45 EFTER impulserna — och
+     den resan är i sig en framåtimpuls (0,42 → 0,58, alltså 0,162 mot
+     tröskeln 0,16). Ekipaget hamnade i galopp och provet mätte en
+     galoppvolt medan det påstod sig mäta en travvolt. Samma fälla som
+     checkpoint 0 gick i: hjälpen måste ligga still, annars skapar provet
+     det det mäter. */
+  /* Grundhjälpens NIVÅER är valda så att själva pålägget inte är en cue.
+     Skänkeln 0,40 lyfter hjälpen 0,42 → 0,564, alltså 0,144 mot tröskeln
+     0,16; tygeln 0,25 lyfter 0,34 → 0,455, alltså 0,115 mot 0,13 och
+     kvar innanför kontaktbandets tak. Med 0,45 respektive 0,30 var
+     pålägget i sig en tredje impuls och ekipaget hamnade i galopp —
+     uppmätt, inte antaget. */
+  const BAS = { skankel: 0.40, tygel: 0.25 };
+  const uppITrav = () => { nyRitt(10, 30, 0);
+    kor(BAS, 1.0);
+    kor({ ...BAS, skankel: 1 }, 1.5); kor(BAS, 1.2);
+    kor({ ...BAS, skankel: 1 }, 1.5); kor(BAS, 2.5); };
+  const kappaVid = (styr) => { uppITrav();
+    kor({ ...BAS, styr }, 12);
+    return { kappa: Math.abs(G.kappa), gang: G.ride.gangart }; };
+  let lo = 0.05, hi = 1.0, styr = 0.3, sista = null;
+  for (let i = 0; i < 12; i++) {
+    styr = (lo + hi) / 2; sista = kappaVid(styr);
+    const r = 1 / sista.kappa;
+    if (r > malRadie) lo = styr; else hi = styr;
+  }
+  const gangIVolt = sista.gang, radie = 1 / sista.kappa;
+
+  /* Rid volten. Placera hästen på cirkeln så att medelpunkten hamnar
+     mitt i banans bredd — då ligger figuren symmetriskt mellan sargarna. */
+  uppITrav();
+  kor({ ...BAS, styr }, 8);
+  const r = 1 / Math.abs(G.kappa);
+  G.px = 10; G.py = 30 - r; G.rikt = 0;
+  const pts = [], gangs = new Set(), balanser = [], takter = [];
+  let minx = 99, maxx = -99, vaggTraff = 0;
+  for (let i = 0; i < 60 * 45; i++) {
+    RIDIN.skankel = BAS.skankel; RIDIN.tygel = BAS.tygel; RIDIN.styr = styr;
+    RIDIN.sits = 0; RIDIN.parad = 0;
+    stegaRitt(dt);
+    /* Väggkorrigeringen klämmer mitten till exakt HB respektive BB−HB.
+       Träffar banan den har hästen RIDIT IN I sargen, och då är det inte
+       längre en volt utan en korrigerad bana. */
+    if (G.px <= HB + 1e-9 || G.px >= BB - HB - 1e-9) vaggTraff++;
+    if (i % 4) continue;
+    pts.push([G.px, G.py]);
+    minx = Math.min(minx, G.px); maxx = Math.max(maxx, G.px);
+    gangs.add(G.ride.gangart); balanser.push(G.ride.balans);
+    takter.push(G.ride.skala.takt);
+  }
+  return { styr, radie, malRadie, gangIVolt, pts, minx, maxx, vaggTraff,
+    gangs: [...gangs], balansMin: Math.min(...balanser),
+    taktMin: Math.min(...takter), taktSlut: takter[takter.length - 1],
+    halvbredd: HB, banBredd: BB };
+});
+{
+  const v = volt20, c = cirkel(v.pts);
+  /* Figurens bredd = mittlinjens diameter + hästens bredd. Det är den
+     20 m som en 20 m volt heter efter. */
+  const figur = 2 * c.r + 2 * v.halvbredd;
+  /* HALVBREDDEN MÅSTE VARA EN HÄSTS. Utan den här raden följer provet
+     mutationen: figuren räknas som mittlinjens diameter plus 2 × HB, och
+     mittlinjens sikte räknas som banbredden minus 2 × HB — så figuren
+     blir ~20 m för VILKEN halvbredd som helst. Med HB = 0,8 påstår
+     provet att hästen är 1,6 m bred, och det är inte en häst.
+
+     Uppmätt under falsifieringen: att sätta tillbaka 0,8 gjorde INGET
+     prov rött förrän den här raden fanns. En ridhäst är 0,60–0,80 m över
+     bålen, alltså 0,30–0,40 m halvbredd. */
+  const hastbredd = v.halvbredd >= 0.30 && v.halvbredd <= 0.40;
+  prova("20 m-volten: figuren är 20 m bred, mätt med en hästs bredd, och banan är en verklig cirkel",
+    Math.abs(figur - v.banBredd) < 0.6 && c.max < 0.15 && v.vaggTraff === 0 &&
+    v.gangIVolt === "trav" && hastbredd,
+    `mittlinjens diameter ${nf(2 * c.r, 2)} m + hästens bredd ${nf(2 * v.halvbredd, 2)} m = ` +
+    `figur ${nf(figur, 2)} m (mål ${v.banBredd}) · största avvikelse från cirkeln ` +
+    `${nf(c.max * 100, 1)} cm · ${v.vaggTraff} bildrutor mot sargen · i ${v.gangIVolt} ` +
+    `vid styrutslag ${nf(v.styr, 3)}` +
+    (hastbredd ? "" : ` · HALVBREDDEN ${nf(v.halvbredd, 2)} m ÄR INGEN HÄST (0,30–0,40)`));
+  prova("20 m-volten: gångart, rytm och balans hålls hela varvet",
+    v.gangs.length === 1 && v.gangs[0] === v.gangIVolt &&
+    v.taktMin > 0.55 && v.balansMin > 0.70,
+    `${v.gangs.join(", ")} hela varvet · takt lägst ${nf(v.taktMin)} (slut ${nf(v.taktSlut)}) · ` +
+    `balans lägst ${nf(v.balansMin)}`);
+}
+
 /* Och att nollställningen verkligen är inkopplad där ritten börjar.
    Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se
    om produktionen glömmer den; det här läser funktionskroppen i den
@@ -959,11 +1150,14 @@ async function ridVolt(styrutslag, skankel, marginal) {
     `ridd ${c.r.toFixed(2)} m mot 1/κ = ${vantad.toFixed(2)} m (κ ${Math.abs(v.kappa).toFixed(4)} 1/m)`);
 }
 
-/* 8b. 0,45 STYRUTSLAG — det utslag Gate 01 mätte. Volten blir här nästan
-   exakt ridhusets bredd, så bara den del av bågen som går fri från sargen
-   används till anpassningen. Att den inte ryms är ett MÄTRESULTAT och
-   rapporteras som ett: en 18-metersvolt i en 18,4 m bred hall rider på
-   sargen, precis som den skulle göra i verkligheten. */
+/* 8b. 0,45 STYRUTSLAG — det utslag Gate 01 mätte. Volten blir här nära
+   banans bredd, så bara den del av bågen som går fri från sargen används
+   till anpassningen.
+
+   Kommentaren här sa förut att volten "inte ryms" i en 18,4 m bred hall.
+   Den siffran var en följd av att väggmarginalen stod som 0,8 m i stället
+   för hästens halvbredd, inte ett mått på banan — se RID_KANON.
+   HAST_HALVBREDD och 20 m-voltprovet längre ned. */
 {
   const v = await ridVolt(0.45, 0.35, 0.6);
   const c = cirkel(v.fria);
@@ -973,7 +1167,7 @@ async function ridVolt(styrutslag, skankel, marginal) {
 
   prova("volten vid 0,45 styrutslag: fri båge följer samma cirkellag",
     v.fria.length > 40 && Math.abs(c.r - vantad) / vantad < 0.05,
-    `ridd ${c.r.toFixed(2)} m mot 1/κ = ${vantad.toFixed(2)} m — diameter ${(2 * vantad).toFixed(1)} m i en 18,4 m bred hall (${v.fria.length} fria av ${v.alla.length} punkter)`);
+    `ridd ${c.r.toFixed(2)} m mot 1/κ = ${vantad.toFixed(2)} m — diameter ${(2 * vantad).toFixed(1)} m på en 20 m bred bana (${v.fria.length} fria av ${v.alla.length} punkter)`);
 
   /* Kurvaturtaket är samma siffror som Roblox turn-faktorer. Att räkna om
      det här är ingen dubblering utan en OBEROENDE kontroll: går taket isär
@@ -1423,16 +1617,19 @@ const slice = await page.evaluate(() => {
   const notera = (vad) => { const t = G.telemetri || {};
     steg.push({ vad, gangart: G.ride.gangart, bad: G.ride.malGangart,
       cue: G.ride.cue, tempo: +G.ride.tempo.toFixed(2),
-      kappa: +G.kappa.toFixed(4), overgang: +(G.ride.senasteOvergang || 0).toFixed(2),
+      kappa: +G.kappa.toFixed(4), overgang: +(G.ride.etableringstid || 0).toFixed(2),
       iOvergang: !!t.iOvergang, telFart: t.fart === undefined ? null : +t.fart.toFixed(2) }); };
 
   kor({}, 2);                       notera("halt");
   impuls();                         notera("skritt");
   kor({}, 6);                       notera("håll skritt");   // hästen bär gångarten
   impuls();                         notera("trav");
-  /* Volt i trav. En 20 m volt får inte plats i ett 20 × 60 m ridhus
-     (se P4), så här rids den största som gör det — utslaget söks, och
-     den ridna radien jämförs mot 1/κ. */
+  /* Volt i trav vid ett bestämt styrutslag. Den 20 m volt #83 kräver
+     provas för sig längre ned; den här raden mäter bara vad utslaget ger
+     i slicen, och jämför den ridna radien mot 1/κ.
+
+     Kommentaren sa förut att en 20 m volt inte får plats. Det var fel —
+     se 20 m-provet och RID_KANON.HAST_HALVBREDD för varför. */
   let bastSt = 0.85, bastDiam = 0;
   kor({ styr: 0.85 }, 4);
   const voltKappa = Math.abs(G.kappa), voltDiam = voltKappa > 1e-4 ? 2 / voltKappa : 0;
@@ -1472,7 +1669,7 @@ const slice = await page.evaluate(() => {
   mat("slicens moment — begärd gångart, cue, tempo, kurvatur, övergångstid",
     slice.steg.map(r => `${r.vad} [bad ${r.bad}, cue ${r.cue}, ${r.tempo} m/s, ` +
       `κ ${r.kappa}, ${r.overgang}s]`).join(" · "));
-  mat("slicens volt i trav (20 m ryms inte i hallen — se P4)",
+  mat("slicens volt i trav vid givet styrutslag",
     `styrutslag ${slice.voltSt} gav ${slice.voltDiam.toFixed(1)} m diameter`);
 }
 

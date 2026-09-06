@@ -338,7 +338,7 @@ do
 	     provas i movement.spec, som senior review av #86 krävde. ]]
 	local loco = { gait = "trot", targetGait = "trot", beddGangart = "trot", speed = 3.2,
 		turnRate = kurvatur * 3.2, phase = 0.25,
-		cue = "framåt", cueTid = 1.0, tid = 1.4, senasteOvergang = 0.4,
+		cue = "framåt", cueTid = 1.0, tid = 1.4, overgangstid = 0.4, etableringstid = 0.7,
 		balans = 0.9, energi = 0.8, svarstid = 0.15, svarTid = 1.2,
 		paradKvalitet = 0.7, paradTid = 1.1 }
 	local tm = Telemetri.las(ritt, loco, kurvatur,
