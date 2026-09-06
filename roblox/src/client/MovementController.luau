@@ -407,9 +407,12 @@ function MovementController:step(intent: Types.Intent, dt: number)
 
 	     Energin räknas per gångart och sekund ur samma tabell som webben,
 	     översatt via RidKanon.MOTSVARIGHET så att tabellen slipper finnas
-	     i två nyckelrymder. `loco.stamina` speglar den i sin egen skala:
-	     fältet fanns sedan Gate 01 men drogs aldrig — nu är det energin,
-	     och det finns bara en sanning om hur trött hon är. ]]
+	     i två nyckelrymder.
+
+	     ENERGIN ÄR SERVERNS (senior re-review #87). Det här är klientens
+	     prediktion mellan synkarna, med samma kanon; `setEnergi()` rättar
+	     den när StaminaSync kommer. `loco.stamina` är presentationen i
+	     0–MaxStamina, inte ett eget tillstånd. ]]
 	do
 		local S = RidKanon.SVAR
 		local radie = if math.abs(self.curvature) > 0.002
@@ -441,8 +444,12 @@ function MovementController:step(intent: Types.Intent, dt: number)
 			if r == loco.gait then webbGangart = w end
 		end
 		self.gangartWebb = webbGangart
+		--[[ PREDIKTION mellan serverns synkar, med samma kanon som
+		     servern räknar med. Rättas av setEnergi(). ]]
 		loco.energi = math.clamp((loco.energi or 1)
 			+ Svar.energiTakt(webbGangart, loco.spanning or 0, self.stats) * dt, 0, 1)
+		--[[ `stamina` är energins PRESENTATION i 0–MaxStamina, inte ett
+		     eget tillstånd. Servern skriver samma tal på modellen. ]]
 		loco.stamina = loco.energi * (stats.MaxStamina or 100)
 	end
 
@@ -566,6 +573,14 @@ end
 
 function MovementController:setCeiling(gait: string)
 	self.ceiling = gait
+end
+
+--[[ Serverns energi. Klienten predikterar mellan synkarna med samma
+     kanon; det här är rättelsen som gör att de två inte kan glida isär.
+     Att det är en SETTER och inte ett eget tillstånd är hela poängen med
+     blocker 3: en sanning, med prediktion. ]]
+function MovementController:setEnergi(energi: number)
+	self.loco.energi = math.clamp(energi, 0, 1)
 end
 
 function MovementController:release()

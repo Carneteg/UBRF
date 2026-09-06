@@ -71,6 +71,10 @@ FORBEREDELSE = SPEL + [
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
+    # och laser den tilldelade hastens profil (blocker 1).
+    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("HorseService", "src/server/HorseService.luau"),

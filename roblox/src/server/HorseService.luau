@@ -19,6 +19,10 @@ local CollectionService = game:GetService("CollectionService")
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
 local Config, Gaits, RigAdapter, Net = Core.Config, Core.Gaits, Core.RigAdapter, Core.Networking
+local Svar, RidKanon = Core.Svar, Core.RidKanon
+--[[ Stallet äger den kanoniska hästdatan; HorseService läser den för att
+     binda rätt individ till rätt ridkänsla (blocker 1). ]]
+local Stallet = require(game:GetService("ReplicatedStorage").Stallet)
 
 local HorseService = {}
 
@@ -26,7 +30,11 @@ export type Session = {
 	rig: Types.Rig,
 	stats: { [string]: any },
 	rider: Player?,
-	stamina: number,
+	--[[ ENERGIN ÄR DEN ENDA TRÖTTHETSSANNINGEN (senior re-review #87).
+	     0–1, samma storhet och samma kanon som klientens `loco.energi`
+	     och webbens `s.energi`. `Stamina`-attributet och StaminaSync är
+	     dess presentation i 0–MaxStamina, inget eget tillstånd. ]]
+	energi: number,
 	lastExertion: number,
 	lastSync: number,
 	lastPosition: Vector3,
@@ -64,6 +72,37 @@ local function register(model: Model)
 	rig.gaitConfig = rig.gaitConfig or ensure("GaitConfig")
 	rig.animConfig = rig.animConfig or ensure("AnimationConfig")
 
+	--[[ ── DEN TILLDELADE HÄSTENS EGNA VÄRDEN (blocker 1) ─────────────
+	     Modellens `HorseId` är den kanoniska identiteten, och hästens
+	     spelvärden ur UBRFSpelData skrivs på HorseStats FÖRE
+	     writeDefaults. Ordningen är hela poängen:
+
+	       ett attribut som redan finns   någon satte det i Studio → vinner
+	       kanon                          skrivs här om det saknas
+	       Config.STATS default           writeDefaults fyller resten
+
+	     Först skrev jag kanonen EFTER writeDefaults och lät `Config.attr`
+	     avgöra. Det gick inte: writeDefaults hade just stämplat sina
+	     defaultvärden på samma Configuration, så "någon satte det i
+	     Studio" gick inte att skilja från "vi skrev standardvärdet för en
+	     millisekund sedan" — och varje häst red som `skolhast` ändå.
+	     Uppmätt, inte resonerat: provet i forberedelse.spec sa
+	     `crokino → skolhast`.
+
+	     Utan det här ledet nådde profilerna aldrig ridcontrollern. ]]
+	do
+		local id = model:GetAttribute("HorseId")
+		local kanon = if type(id) == "string" then Stallet.statsFor(id) else nil
+		if kanon then
+			local c = rig.stats :: Configuration
+			for nyckel, varde in kanon do
+				if varde ~= nil and c:GetAttribute(nyckel) == nil then
+					c:SetAttribute(nyckel, varde)
+				end
+			end
+		end
+	end
+
 	Config.writeDefaults(rig.stats :: Configuration, Config.STATS)
 	Config.writeDefaults(rig.gaitConfig :: Configuration, Config.MOVEMENT)
 
@@ -86,7 +125,7 @@ local function register(model: Model)
 		rig = rig,
 		stats = stats,
 		rider = nil,
-		stamina = stats.MaxStamina,
+		energi = 1,
 		lastExertion = 0,
 		lastSync = os.clock(),
 		lastPosition = rig.root.Position,
@@ -95,6 +134,18 @@ local function register(model: Model)
 	model:SetAttribute("Registered", true)
 	model:SetAttribute("Gait", "halt")
 	model:SetAttribute("Stamina", stats.MaxStamina)
+end
+
+--[[ Provkrokar. `register` är lokal med flit — produktionen registrerar
+     via CollectionService — men blocker 1 kräver ett prov som går genom
+     den RIKTIGA registreringen och läser de stats hästen faktiskt fick.
+     Krokarna kallar samma kod, de duplicerar den inte. ]]
+function HorseService._registerForProv(model: Model)
+	register(model)
+end
+function HorseService._statsFor(model: Model): { [string]: any }?
+	local session = sessions[model]
+	return if session then session.stats else nil
 end
 
 local function unregister(model: Model)
@@ -244,35 +295,58 @@ end
 
 local function stepStamina(session: Session, dt: number)
 	local stats = session.stats
-	local gait = Gaits.get(session.rig.model:GetAttribute("Gait") or "halt")
-	local cost = gait.stamina
+	local gaitR = session.rig.model:GetAttribute("Gait") or "halt"
 
-	if cost > 0 then
-		local drain = cost * dt / (0.6 + 0.9 * stats.Endurance)
-		session.stamina = math.max(0, session.stamina - drain)
-		session.lastExertion = os.clock()
-	elseif os.clock() - session.lastExertion > Config.STAMINA.RecoveryDelay then
-		local gain = math.abs(cost) * dt * (0.6 + 0.9 * stats.Endurance)
-		session.stamina = math.min(stats.MaxStamina, session.stamina + gain)
+	--[[ ── EN TRÖTTHETSSANNING (senior re-review #87, blocker 3) ───────
+	     Här fanns förut en EGEN uthållighetsmodell: `Gaits.stamina` per
+	     gångart, egen återhämtningsfördröjning och en egen skala 0–100.
+	     Samtidigt räknade klienten G02-B:s `energi` med kanonens tal och
+	     lät den styra framåtbjudning och svarstid. Två trötthetsmodeller
+	     på samma häst: den ena kunde göra henne segare, den andra sänka
+	     gångartstaket — och de kunde säga olika saker samtidigt.
+
+	     Nu är ENERGIN den enda sanningen, med servern som auktoritet och
+	     klienten som prediktion. Dräneringen är kanonens `energiTakt`,
+	     alltså exakt samma tal som webben och klienten räknar med.
+
+	     `Gaits.stamina` läses inte längre. Taket är kvar som eget
+	     PRODUKTBEGREPP — en trött häst rullar ned en gångart av sig
+	     själv — men det drivs nu av samma energi och inte av en andra
+	     modell. Det är skillnaden mellan två begrepp och två sanningar. ]]
+	local webbGangart = "halt"
+	for w, r in RidKanon.MOTSVARIGHET do
+		if r == gaitR then webbGangart = w end
 	end
+	--[[ Uthålligheten (Endurance) skalar takten: en seg häst tär
+	     långsammare och hämtar sig fortare. Det är samma roll statet hade
+	     i den gamla modellen, nu på kanonens kurva. ]]
+	local takt = Svar.energiTakt(webbGangart, 0, stats)
+	local skala = if takt < 0 then 1 / (0.6 + 0.9 * stats.Endurance)
+		else (0.6 + 0.9 * stats.Endurance)
+	session.energi = math.clamp(session.energi + takt * skala * dt, 0, 1)
+	if takt < 0 then session.lastExertion = os.clock() end
 
 	--[[ Uthålligheten tvingar aldrig fram ett stopp. Den sänker taket, och
 	     hästen rullar ned en gångart av sig själv. Det är läsbart för
 	     spelaren och känns som en trött häst, inte som en tom bensintank. ]]
-	local fraction = session.stamina / math.max(stats.MaxStamina, 1)
 	local ceiling = Gaits.SPELBAR_TOPP
-	if fraction < Config.STAMINA.LowThreshold then
-		local t = fraction / Config.STAMINA.LowThreshold
+	if session.energi < Config.STAMINA.LowThreshold then
+		local t = session.energi / Config.STAMINA.LowThreshold
 		local floorIndex = Gaits.index(Config.STAMINA.FloorGait)
 		local topIndex = Gaits.index(Gaits.SPELBAR_TOPP)
 		ceiling = Gaits.byIndex(math.floor(floorIndex + (topIndex - floorIndex) * t + 0.5))
 	end
 
-	session.rig.model:SetAttribute("Stamina", math.floor(session.stamina))
+	local visad = session.energi * stats.MaxStamina
+	session.rig.model:SetAttribute("Stamina", math.floor(visad))
 	session.rig.model:SetAttribute("GaitCeiling", ceiling)
 
 	if session.rider then
-		Net.get("StaminaSync"):FireClient(session.rider, session.stamina, stats.MaxStamina, ceiling)
+		--[[ Fjärde argumentet är energin i sin KANONISKA skala 0–1.
+		     Klienten sätter sin prediktion till den; de tre första är
+		     presentationen, som Debug redan visar. ]]
+		Net.get("StaminaSync"):FireClient(session.rider, visad, stats.MaxStamina,
+			ceiling, session.energi)
 	end
 end
 

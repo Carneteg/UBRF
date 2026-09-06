@@ -501,6 +501,69 @@ do
 	game:GetService("RunService")._server = false
 end
 
+--[[ ══ HÄSTENS EGNA VÄRDEN HELA VÄGEN TILL RIDNINGEN ═══════════════════
+     Senior re-review av #87, blocker 1: profilerna fanns i datat och
+     provades syntetiskt, men den VERKLIGA vägen — tilldelning, bindning,
+     registrering, MovementController — tappade dem. `resolveStats` läste
+     bara Studio-attribut, så varje individ red som `skolhast` med
+     standardvärden hur noga tilldelningen än var gjord.
+
+     Provet tar TVÅ RIKTIGA HÄSTAR med olika profil genom hela kedjan och
+     kräver att samma hjälp ger mätbart olika svar. En mutation som tar
+     bort kanonpåläggningen i HorseService.register ska fälla det. ]]
+print("\n── Hästens egna värden når ridningen ──")
+do
+	local Spel = UBRFSpel
+
+	--[[ Två hästar ur den riktiga rostern, med olika profil OCH olika
+	     känslighet. Namnen slås upp i datat i stället för att skrivas av,
+	     så provet inte kan bli grönt av att någon bytt profil i källan. ]]
+	local kanslig, tung
+	for id, h in Spel.hastar do
+		if h.profil == "kanslig" and not kanslig then kanslig = id end
+		if h.profil == "tung" and not tung then tung = id end
+	end
+	check("rostern har både en känslig och en tyngre häst att prova med",
+		kanslig ~= nil and tung ~= nil,
+		string.format("(%s / %s)", tostring(kanslig), tostring(tung)))
+
+	local function ridEfterRegistrering(id)
+		local modell = Instance.new("Model")
+		modell.Name = "Hast_" .. id
+		modell:SetAttribute("HorseId", id)
+		local rot = Instance.new("Part")
+		rot.Name = "HumanoidRootPart"
+		rot.Parent = modell
+		modell.PrimaryPart = rot
+		local hum = Instance.new("Humanoid")
+		hum.Parent = modell
+		game:GetService("CollectionService"):AddTag(modell, "Horse")
+		HorseService._registerForProv(modell)
+		local stats = HorseService._statsFor(modell)
+		return stats
+	end
+
+	local sK = ridEfterRegistrering(kanslig)
+	local sT = ridEfterRegistrering(tung)
+	check("den tilldelade hästens profil når HorseStats",
+		sK ~= nil and sT ~= nil and sK.Profil == "kanslig" and sT.Profil == "tung",
+		string.format("%s → %s · %s → %s", kanslig, tostring(sK and sK.Profil),
+			tung, tostring(sT and sT.Profil)))
+
+	--[[ Och att den FAKTISKT ändrar ridningen: samma hjälp, samma
+	     bildruta, två olika svar. Det är skillnaden mellan att datat
+	     finns och att hästen rider med det. ]]
+	local svarK = Svar.svarstid(sK, Svar.kanslighet(
+		Config.TEMPERAMENTS[sK.Temperament]), 0.8, 1, 0.5)
+	local svarT = Svar.svarstid(sT, Svar.kanslighet(
+		Config.TEMPERAMENTS[sT.Temperament]), 0.8, 1, 0.5)
+	check("och den ändrar ridningen: samma hjälp ger olika svar",
+		svarK < svarT - 0.02,
+		string.format("%s (%s, %s) svarar på %.3f s · %s (%s, %s) på %.3f s",
+			kanslig, sK.Profil, sK.Temperament, svarK,
+			tung, sT.Profil, sT.Temperament, svarT))
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("forberedelse.spec: " .. fails .. " fel")

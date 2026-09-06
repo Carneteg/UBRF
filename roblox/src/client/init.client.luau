@@ -145,9 +145,14 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 	end
 end)
 
-Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling)
+--[[ Servern äger energin; klienten predikterar mellan synkarna och
+     RÄTTAS här (senior re-review #87, blocker 3). Utan rättelsen hade
+     klienten och servern varit två trötthetssanningar igen — nu är
+     klientens värde en prediktion av serverns, inte en egen modell. ]]
+Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling, energi)
 	if ride then
 		ride.movement:setCeiling(ceiling)
+		if energi ~= nil then ride.movement:setEnergi(energi) end
 		Debug.setStamina(stamina, max, ceiling)
 	end
 end)
