@@ -276,7 +276,82 @@ function installeraTydligVagvisare(){
   requestAnimationFrame(tick);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   P0 #81 — LÄKTAREN EFTER G02-B
+
+   #85 verifierade två fysiska blockerare i riktig movement-loop:
+   1) uppgången var för smal/marginell för normal touch/keyboard-approach,
+   2) domarbåset skar av den fria gångytan längs läktaren.
+
+   Den gamla #85-branchen kan inte trevägsmergas ovanpå G02-B utan konflikt
+   i kärnfilerna. Därför appliceras exakt samma gameplaygeometri sent, efter
+   att site/world har laddats. Ingen quest- eller häststate ändras här.
+   Detta är en övergångslösning för P0-test; när den accepterats flyttas
+   samma data tillbaka till site.js/Roblox-exporten i en ren konsolidering.
+   ══════════════════════════════════════════════════════════════════ */
+function installeraLaktarP0(){
+  if(typeof RIDHUSINNE==="undefined"||typeof SPELABSTRAKTIONER==="undefined")return;
+  const R=RIDHUSINNE, L=R.laktare, S=SPELABSTRAKTIONER.ridhus;
+  if(!L||!S||!S.laktarSteg)return;
+
+  const bank=L.x0+L.dackDjup;
+  const rader=(typeof laktarRader==="function")?laktarRader(L):[];
+  const rad1=rader[0]||null;
+
+  /* Band 1 landar plant på gångbrädan. */
+  const ls=S.laktarSteg;
+  ls.x0=bank-L.gangbrada.djup; ls.x1=bank;
+  ls.y0=L.y1; ls.y1=L.y1+1.2; ls.z0=0; ls.z1=L.dackZ;
+  ls.axel="y"; ls.stiger="S";
+
+  /* Band 2 landar plant på första bänkraden. Tillsammans ger banden
+     1,7 m robust uppgång i stället för en knivsegg för touch. */
+  if(rad1){
+    S.laktarStegRad1={
+      x0:bank-rad1.in1, x1:bank-rad1.in0,
+      y0:ls.y0, y1:ls.y1, z0:0, z1:rad1.z,
+      axel:"y", stiger:"S", stegMax:ls.stegMax||0.19,
+      klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
+      motiv:"P0 #81: andra uppgångsbandet landar plant på första bänkraden"
+    };
+  }
+
+  /* Domarbåsets bredd/läge saknar hårt källstöd. Det flyttas minimalt
+     västerut och smalnas så gångbrädan + första raden är fria hela vägen. */
+  if(R.domarbas){
+    const D=L.dackDjup;
+    R.domarbas.b=1.7;
+    R.domarbas.x=L.x0+D*0.25;
+    const info=(R.info||[]).find(i=>i.domarbas);
+    if(info){
+      const lE=R.sidor&&R.sidor.laktare==="E";
+      info.pos[0]=R.domarbas.x+(lE?-1:1)*(R.domarbas.b/2+0.6);
+      info.pos[1]=R.domarbas.y;
+    }
+  }
+
+  /* world.js känner i den äldre implementationen bara till ett
+     laktarSteg. Lägg in band 2 i samma nivåfunktion utan att röra övrig
+     navigation/collision. */
+  if(S.laktarStegRad1&&typeof ridhusNivaer==="function"&&!ridhusNivaer._laktarP0){
+    const original=ridhusNivaer;
+    const wrapped=function(x,y){
+      const t=S.laktarStegRad1;
+      if(t&&x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1&&typeof trappNiva==="function")
+        return [trappNiva(t,x,y)];
+      return original(x,y);
+    };
+    wrapped._laktarP0=true;
+    ridhusNivaer=wrapped;
+  }
+}
+
 if(typeof window!=="undefined"){
-  if(document.readyState==="complete")installeraTydligVagvisare();
-  else window.addEventListener("load",installeraTydligVagvisare,{once:true});
+  if(document.readyState==="complete"){
+    installeraTydligVagvisare();
+    installeraLaktarP0();
+  }else{
+    window.addEventListener("load",installeraTydligVagvisare,{once:true});
+    window.addEventListener("load",installeraLaktarP0,{once:true});
+  }
 }
