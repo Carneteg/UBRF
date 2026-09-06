@@ -153,10 +153,15 @@ function draw2D(G){
     const u=ugnetaPlats();
     if(u){const [a,b]=w2s(u.x,u.y);
       cx.save();
-      cx.fillStyle="#5B5F66";
+      cx.fillStyle="#4B5A52";                       // kavaj
       cx.beginPath();cx.ellipse(a,b,s*0.22,s*0.30,0,0,Math.PI*2);cx.fill();
-      cx.fillStyle="#B9BDC3";                       // grått hår
-      cx.beginPath();cx.arc(a,b-s*0.26,s*0.15,0,Math.PI*2);cx.fill();
+      cx.fillStyle="#C9CDD2";                       // grått hår, ovanifrån
+      cx.beginPath();cx.arc(a,b-s*0.20,s*0.17,0,Math.PI*2);cx.fill();
+      cx.fillStyle="#E2C0A2";                       // ansiktet i mitten
+      cx.beginPath();cx.arc(a,b-s*0.20,s*0.10,0,Math.PI*2);cx.fill();
+      cx.strokeStyle="#2B2E34";cx.lineWidth=Math.max(1,s*0.05);
+      cx.beginPath();                                // glasögonen som ett streck
+      cx.moveTo(a-s*0.10,b-s*0.20);cx.lineTo(a+s*0.10,b-s*0.20);cx.stroke();
       cx.restore();}
   }
   // spelaren

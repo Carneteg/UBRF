@@ -108,6 +108,8 @@ PARITET = [
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
     # G02-C: Ugnetas bedomningskontrakt lases ur RidKanon.UGNETA.
     ("Ugneta",     "src/shared/HorseCore/Ugneta.luau"),
+    # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
+    ("UgnetaController", "src/client/UgnetaController.luau"),
 ]
 
 MODULER = [
@@ -172,7 +174,9 @@ def inlina(kalla: str) -> str:
 def bygg(spec_rel: str) -> pathlib.Path:
     # Ordningen ar viktig: "forberedelse" far inte falla igenom till MODULER,
     # dar varken UBRFSkotsel eller Stallet finns. Testas forst av det skalet.
-    if "paritet" in spec_rel:
+    if "paritet" in spec_rel or "ugneta" in spec_rel:
+        # ugneta.spec provar larar-UX:en ovanpa samma moduler som
+        # paritetsspecen: RidKanon, Ugneta och UgnetaController.
         moduler, stubbar = PARITET, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"

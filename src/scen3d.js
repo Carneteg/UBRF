@@ -396,6 +396,24 @@ function s3BygHast(){
     b.klot(1,vit,M4.mul(M4.translation(0,0.55,0),M4.skala(0.19,0.32,0.17)),10);
     b.klot(0.13,"#D8B08C",M4.translation(0,0.98,0),10);
     return b;})());
+  /* UGNETA (G02-C). Samma kroppsbyggnad som publikens figur — samma
+     stiliserade UBRF-stil, ingen ny art direction — men igenkännbar
+     som just henne: äldre kvinna, GRÅTT HÅR och GLASÖGON, som Tobias
+     karaktärsbeslut säger. Färgerna ligger i meshen och figuren ritas
+     utan `ton`; uTon multiplicerar vertexfärgen, så en tonad figur
+     hade grumlat både håret och glasögonen.
+
+     Bågarna är två tunna lådor med en näsbrygga emellan — läsbart på
+     avstånd utan att bli en detaljerad modell. */
+  D.ugneta=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,"#4B5A52",M4.mul(M4.translation(0,0.55,0),M4.skala(0.20,0.33,0.18)),10); // kavaj
+    b.klot(0.132,"#E2C0A2",M4.translation(0,0.99,0),10);                              // ansikte
+    b.klot(1,"#C9CDD2",M4.mul(M4.translation(0,1.045,-0.005),M4.skala(0.150,0.115,0.150)),10); // grått hår
+    b.lada(0.058,0.030,0.014,"#2B2E34",M4.translation(-0.050,0.985,0.118));           // vänster glas
+    b.lada(0.058,0.030,0.014,"#2B2E34",M4.translation( 0.050,0.985,0.118));           // höger glas
+    b.lada(0.034,0.008,0.010,"#2B2E34",M4.translation(0,0.985,0.120));                // näsbrygga
+    return b;})());
   /* Klosstilen ersätter delarna i samma lokala rum, så riggen ovan
      ritar dem utan att veta om bytet. */
   if(STIL==="kloss")klossDelar(D);
@@ -1144,7 +1162,9 @@ function rita3D(Gs){
      samma som publiken använder; ingen ny geometri hittas på. */
   if(typeof ugnetaPlats==="function"&&typeof ugnetaNarvarande==="function"&&ugnetaNarvarande()){
     const u=ugnetaPlats();
-    if(u)GL.rita(S3.del.person,M4.mul(M4.translation(u.x,0,u.y),M4.skala(1)),{ton:"#5B5F66"});
+    /* Ingen `ton`: meshen bär sina egna färger, annars tonas det grå
+       håret och glasögonen bort och hon blir en anonym figur igen. */
+    if(u)GL.rita(S3.del.ugneta,M4.mul(M4.translation(u.x,0,u.y),M4.skala(1)),{});
   }
   if(G.hinderAktiva)s3RitaHinder();
   /* NPC-ekipagen. */

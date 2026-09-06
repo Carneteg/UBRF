@@ -62,6 +62,11 @@ function Ugneta.observationer(ovningId: string,
 		end
 		if svag then table.insert(ut, { dim = svag, sort = "forbattra", varde = nu[svag] or 0 }) end
 	end
+	--[[ Taket är ett skyddsnät, inte det som håller regeln i dag: varje
+	     gren lägger till högst en förbättring och en kvarvarande, alltså
+	     högst två. En falsifiering som tar bort raden ändrar därför
+	     ingenting — det är inte en lucka i provet utan en mutation utan
+	     verkan. Raden står kvar för den dag en gren till läggs till. ]]
 	while #ut > Ugneta.MAX_OBSERVATIONER do table.remove(ut) end
 	return ut
 end

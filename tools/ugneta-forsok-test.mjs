@@ -225,6 +225,23 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
   prova("Ugneta står vid kortsidan, utanför ridvägen",
     !!r.p && Math.abs(r.p.x - r.bredd / 2) < 0.01 && r.p.y < 0,
     `[${r.p.x}, ${r.p.y}] · banbredd ${r.bredd}`);
+  /* IGENKÄNNBAR, inte en anonym figur (ChatGPT senior review, blocker 2).
+     Meshen ska bära grått hår och glasögon, och ritas UTAN ton — uTon
+     multiplicerar vertexfärgen, så en tonad figur grumlar båda. */
+  await ev(() => { G.vy = "3d"; if (typeof draw3D === "function") draw3D(G); });
+  await page.waitForTimeout(500);
+  const f = await ev(() => {
+    const D = (typeof S3 !== "undefined" && S3.del) ? S3.del : {};
+    return { harMesh: !!D.ugneta, harPerson: !!D.person };
+  });
+  /* Meshen byggs när 3D-scenen ritas första gången — provet går därför
+     genom en riktig 3D-bildruta i stället för att anropa byggfunktionen.
+     En figur som bara finns om man kallar på byggaren är inte en figur
+     spelaren ser (läktarlärdomen, #114). */
+  prova("Ugneta har en EGEN mesh efter en riktig 3D-bildruta",
+    f.harMesh === true && f.harPerson === true,
+    `S3.del.ugneta ${f.harMesh} · publikens person ${f.harPerson}`);
+
   prova("hon är närvarande på lektionen men inte under tävling",
     r.narv === true && r.underTavling === false,
     `lektion ${r.narv} · tävling ${r.underTavling}`);

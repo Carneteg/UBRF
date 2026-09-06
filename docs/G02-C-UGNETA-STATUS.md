@@ -50,11 +50,14 @@ röd om dimensionerna skiljer sig eller kanonen inte regenererats.
   gameplay-test: att det KÄNNS som en lektion, inte bara att lifecycle stämmer.
 - Human UX-test på liten mobil, surfplatta och desktop.
 - Kontroll att Ugneta-kortet inte skymmer ridväg, vägvisare eller kritiska säkerhetsmeddelanden.
-- Roblox-sidan har nu kontraktet och paritetsprovet, men **ingen Roblox-UI**
-  läser det ännu: `Ugneta.luau` är data och regler på plats, inte en byggd
-  lärarupplevelse i Studio. Det är kvar innan G02-C är paritet i praktiken.
-- Ugnetas gestalt vid sargen är personmeshen som publiken använder — inte
-  en egen modell med grått hår och glasögon i 3D. Porträttet i kortet bär
-  utseendet; världsfiguren är en markering av var hon står.
+- **Roblox-UX finns nu** (`roblox/src/client/UgnetaController.luau`): live-chip
+  under ridning, kort mellan försöken med `Prova igen`, säkerhet före
+  undervisning, och observationerna ur `HorseCore/Ugneta`. Provad av
+  `roblox/tests/ugneta.spec.luau` (15 mätningar) i bänken — **inte** körd i
+  Studio. Att den ser rätt ut och känns rätt på en riktig klient är kvar.
+- **Ugneta är igenkännbar** i webbens 3D (`S3.del.ugneta`: kavaj, ansikte,
+  grått hår, glasögonbågar) och på kartan. Stiliserat i UBRF:s befintliga
+  stil — inte en detaljerad karaktärsmodell. Roblox-figuren vid sargen är
+  ännu inte byggd; där finns lärar-UX:en men inte gestalten.
 
 Grön CI betyder att pedagogik-/UX-kontraktet och kvalitetsmotorn håller tekniskt. `PRODUCT_ACCEPTED` kräver fortfarande Tobias gameplay-test.
