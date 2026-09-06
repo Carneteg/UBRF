@@ -77,4 +77,18 @@ const ny = ladda(null);
 assert.equal(ny.hastkanonVersion, "2026-09-01");
 assert.deepEqual(ny.fortroende, {});
 
+const context = { G: {}, console, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} } };
+vm.createContext(context);
+vm.runInContext(source, context, { filename: "src/ryttare.js" });
+const nyProfilObj = JSON.parse(vm.runInContext("JSON.stringify(nyProfil())", context));
+
+assert.equal(nyProfilObj.grupp, "ledlektion");
+assert.equal(nyProfilObj.poang, 0);
+assert.equal(nyProfilObj.pass, 0);
+assert.deepEqual(nyProfilObj.fortroende, {});
+assert.deepEqual(nyProfilObj.historik, []);
+assert.deepEqual(nyProfilObj.rosetter, []);
+assert.equal(nyProfilObj.hastkanonVersion, "2026-09-01");
+
+console.log("OK   nyProfil returnerar korrekt grundprofil");
 console.log("OK   hästkanon-save migrerar gamla identiteter exakt en gång");
