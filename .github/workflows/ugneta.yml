@@ -30,7 +30,11 @@ jobs:
         run: node tools/ugneta-ui-test.mjs
       - name: Försök 1 → 2 genom produktionsflödet, live-register och paritetspunkt
         run: node tools/ugneta-forsok-test.mjs
-      - name: Roblox-paritet för G02-C:s bedömningskontrakt
+      # Kanonen måste vara regenererad, och specen måste gå att bygga.
+      # Själva paritetsPÅSTÅENDENA körs med luau i jobbet `grindar`
+      # (roblox/tests/kor.sh) — luau installeras inte här, så den här
+      # raden bevisar synk och byggbarhet, inte att specen passerar.
+      - name: G02-C-kanonen i synk och paritetsspecen byggbar
         run: |
           node tools/exportera-ridkanon.mjs --kontrollera
           python3 roblox/tests/build.py tests/paritet.spec.luau
