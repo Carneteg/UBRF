@@ -208,7 +208,20 @@ function stegaVandring(dt){
       const v0=VD.vag[0], v1=VD.vag[1];
       const nivaSkifte=(v0.length>2&&v1.length>2&&Math.abs(v1[2]-v0[2])>0.02)
         ||(v0.length>2&&Math.abs(v0[2]-(VD.pz||0))>0.02);
-      if(Math.hypot(v0[0]-VD.px,v0[1]-VD.py)>=(nivaSkifte?0.45:1.1))break;
+      const d0=Math.hypot(v0[0]-VD.px,v0[1]-VD.py);
+      if(d0>=(nivaSkifte?0.45:1.1))break;
+      /* Framförhållningen på 1,1 m fick förut släppa delmålet innan
+         figuren hade PASSERAT det. Genom en smal glugg är delmålet
+         självt porten: släpps den en meter för tidigt siktar gåendet
+         rakt på nästa punkt, och den linjen går genom väggen bredvid
+         gluggen. Så tog sig ingen ut ur stallet igen — vägen ut går
+         genom 1,5 m-gluggen vid y 64,35, figuren svängde mot dörren en
+         meter för tidigt och stod kvar mot teorisalens vägg på
+         (9,74, 63,92) tills fastnadsvakten sa "du kommer inte fram".
+         Genvägen tas därför bara när nästa delmål FAKTISKT går att gå
+         till härifrån; annars går figuren fram till porten först. */
+      if(d0>0.45&&!navFriSikt(VD.px,VD.py,v1[0],v1[1],
+          G.scen==="ridhusinne"?(VD.pz||0):undefined))break;
       VD.vag.shift();
     }
     const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
@@ -495,13 +508,16 @@ function navBygg(){
      sedan still mot ett räcke vid y=42,0 som inga prov hade sett.
      Rutnätet får hellre vara för försiktigt än för optimistiskt — en väg
      som inte finns är värre än en väg som går en meter från väggen. */
-  /* Inomhus räcker en fjärdedels ruta utöver figurens radie: väggarna
-     är minst 0,16 m tjocka och rutorna 0,6 m — ingen vägg kan glida
-     mellan två rutmitter. Med 0,71 (hela rutan) var ingen ruta fri
-     mellan skåpraden och schaktet (1,08 m) eller vid bordet i gången,
-     så gå-hit fann ingen väg till läktaren från halva entrédelen. Ute
-     står staketen som linjer, där behövs hela rutan. */
-  const r=GA.radie+NAV.cell*(G.scen==="gard"?0.71:0.25);
+  /* Rutan är fri när FIGUREN får plats i den — inget påslag. Påslaget
+     fanns för att en vägg annars kunde glida mellan två rutmitter, men
+     det priset var för högt: med 0,5 m provradie rymde stallets
+     dörröppningar (0,9 m och 1,1 m) ingen fri rutmitt alls, och då
+     fanns ingen väg mellan stallgången och klubbdelen i rutnätet över
+     huvud taget. Allt som såg ut att fungera var raka linjen och
+     glidningen längs väggen. Väggen mellan två rutor fångas i stället
+     där den hör hemma: navKantFri() provar kanten med samma kollision
+     som gåendet. */
+  const r=GA.radie;
   NAV.nivafri=true;
   try{
     for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
@@ -537,6 +553,24 @@ function navNarmasteFri(x,y){
     if(bast)return bast;
   }
   return null;
+}
+
+/* Kanten mellan två rutor, provad med samma kollision som gåendet.
+   Det här är motstycket till att rutorna provas med figurens egen
+   radie: en vägg som ligger mellan två rutmitter syns inte i rutorna,
+   men den syns här. Nivåerna räknas som gångbara — nivåregeln ägs av
+   navNivaOK, som prövas separat på samma kant. */
+function navKantFri(ax,ay,bx,by){
+  const d=Math.hypot(bx-ax,by-ay), steg=Math.max(2,Math.ceil(d/0.25));
+  NAV.nivafri=true;
+  try{
+    for(let k=1;k<steg;k++){
+      const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
+      const [kx,ky]=vandringKollision(x,y,GA.radie);
+      if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
+    }
+  }finally{NAV.nivafri=false;}
+  return true;
 }
 
 /* Fri sikt mellan två punkter? Används för att räta ut trapporna som
@@ -624,6 +658,7 @@ function navVag(sx,sy,mx,my){
       const ny2=g[cur]+((di&&dj)?Math.SQRT2:1);
       if(ny2<g[ni]){
         const [ax2,ay2]=navPunkt(a,b), [bx2,by2]=navPunkt(na,nb);
+        if(!navKantFri(ax2,ay2,bx2,by2))continue;
         const zn=navNivaOK(ax2,ay2,bx2,by2,zAt[cur]);
         if(zn===null)continue;
         g[ni]=ny2; fr[ni]=cur; zAt[ni]=zn; putt([ny2+h(ni),ni]);
