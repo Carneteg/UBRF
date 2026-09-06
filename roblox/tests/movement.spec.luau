@@ -21,7 +21,7 @@ local function intent(o)
 		     lös tygel och ingen halvhalt — samma utgångsläge som före
 		     G02-B, vilket är varför de äldre proven i den här filen inte
 		     behövde skrivas om. ]]
-		rein = o.rein or 0, parad = o.parad or 0 }
+		rein = o.rein or 0, parad = o.parad or 0, seat = o.seat or 0 }
 end
 
 --[[ Kör n sekunder med fast dt och samma avsikt. Returnerar controllern. ]]
@@ -1429,6 +1429,103 @@ do
 				(1 - losR / burenR) * 100))
 	end
 
+	--[[ d2) SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1).
+	     Samma volt, samma tygel, samma styrutslag — bara sitsens djup
+	     skiljer. Sitter ryttaren ned bär hon hästen; sitter hon lätt får
+	     hästen bära bågen själv. ]]
+	do
+		local function voltMedSits(seat)
+			local mc = newMC()
+			upToGait(mc, 1, 1 / 60)
+			run(mc, 2.0, { forward = 0.5, rein = 1, seat = seat }, 1 / 60)
+			run(mc, 25, { forward = 0.5, steer = 1, rein = 1, seat = seat }, 1 / 60)
+			return mc.loco.balans, mc.hjalper.sits, Svar.sitsStod(mc.hjalper.sits)
+		end
+		local lattB, lattS, lattStod = voltMedSits(-1)
+		local djupB, djupS, djupStod = voltMedSits(1)
+		check("sätet är en balansmodifierare: djup sits bär bågen, lätt sits gör det inte",
+			djupB > lattB + 0.03 and djupStod > lattStod,
+			string.format("lätt sits %.2f (stöd %.2f) → balans %.3f · djup sits %.2f"
+				.. " (stöd %.2f) → balans %.3f", lattS, lattStod, lattB,
+				djupS, djupStod, djupB))
+	end
+
+	--[[ d3) SPÄNNING OCH FOKUS I EN RIKTIG BILDRUTA. En hård hand spänner
+	     henne, och spänningen äter fokus — samma kedja som på webben. ]]
+	do
+		--[[ Det är HANDENS STADGA som spänner henne, inte hur hårt hon
+		     hålls. En stadig hand ger mjukhet 1, och då tar lugnet ut
+		     pressen även på full tygel — uppmätt spänning 0,000 i båda
+		     fallen när provet först jämförde lös mot hård hand. Modellen
+		     har rätt och provet hade fel fråga.
+
+		     Här skakas tygeln i stället: mjukheten faller, spänningen
+		     stiger, och fokus äts av spänningen. Det är kedjan, och den
+		     är densamma på båda ytorna. ]]
+		--[[ En KÄNSLIG häst, för att spänningen alls ska komma över noll.
+		     Det är inte en tillrättalagd uppställning utan vad modellen
+		     säger: lugnet (rang + förlåtande + mjukhet) tar ut pressen
+		     hos en `Calm`-häst även med darrig hand — uppmätt spänning
+		     0,000 för Calm vid mjukhet 0,52. Den känsliga hästen är den
+		     som visar kedjan, och det är också hon som gör det i
+		     verkligheten. ]]
+		local KANSLIG = { Speed = 0.5, Acceleration = 0.5, Agility = 0.5,
+			Stamina = 0.5, MaxStamina = 100, Temperament = "Sensitive",
+			Forlatande = 0.35, Skygghet = 0.42 }
+		local function ritt(skaka, sek)
+			local mc = MovementController.new(__makeRig(), KANSLIG)
+			upToGait(mc, 1, 1 / 60)
+			local dt3 = 1 / 60
+			for i = 1, math.floor(sek / dt3) do
+				local r = if skaka then (if i % 6 < 3 then 0.05 else 0.95) else 0.5
+				mc:step(intent({ forward = 0.5, rein = r }), dt3)
+			end
+			return mc.loco.spanning, mc.loco.fokus, mc.loco.mjukhet
+		end
+		local stadigSp, stadigFo, stadigMj = ritt(false, 20)
+		local darrSp, darrFo, darrMj = ritt(true, 20)
+		check("en darrig hand spänner hästen, och spänningen äter fokus",
+			darrMj < stadigMj - 0.1 and darrSp > stadigSp + 0.05
+				and darrFo < stadigFo - 0.05,
+			string.format("stadig hand: mjukhet %.2f → spänning %.3f, fokus %.3f ·"
+				.. " darrig hand: mjukhet %.2f → spänning %.3f, fokus %.3f",
+				stadigMj, stadigSp, stadigFo, darrMj, darrSp, darrFo))
+	end
+
+	--[[ d4) FOKUS PÅVERKAR SVARSTIDEN. Utan den här raden gick det att
+	     koppla ur fokustermen i MovementController utan att ett enda prov
+	     blev rött — uppmätt under falsifieringen. Kedjan darrig hand →
+	     mjukhet ned → fokus ned → segare svar är hela poängen med att
+	     fokus finns, och den provas här genom den faktiska inputvägen. ]]
+	do
+		local KANSLIG = { Speed = 0.5, Acceleration = 0.5, Agility = 0.5,
+			Stamina = 0.5, MaxStamina = 100, Temperament = "Sensitive",
+			Forlatande = 0.35, Skygghet = 0.42 }
+		local function svarEfter(skaka)
+			local mc = MovementController.new(__makeRig(), KANSLIG)
+			upToGait(mc, 1, 1 / 60)
+			local dt4 = 1 / 60
+			for i = 1, math.floor(18 / dt4) do
+				local r = if skaka then (if i % 6 < 3 then 0.05 else 0.95) else 0.5
+				mc:step(intent({ forward = 0.5, rein = r }), dt4)
+			end
+			--[[ Be om nästa gångart med SAMMA hjälp i båda fallen, så att
+			     bara fokus skiljer. ]]
+			local fokus = mc.loco.fokus
+			for i = 1, 30 do
+				mc:step(intent({ forward = 0.5, rein = 0.5, gaitUp = (i == 1) }), dt4)
+			end
+			return mc.loco.svarstid, fokus
+		end
+		local stadigT, stadigF = svarEfter(false)
+		local darrT, darrF = svarEfter(true)
+		check("fokus påverkar svarstiden: en ofokuserad häst svarar segare",
+			darrF < stadigF - 0.05 and darrT > stadigT + 0.005,
+			string.format("stadig hand: fokus %.3f → svar %.3f s ·"
+				.. " darrig hand: fokus %.3f → svar %.3f s",
+				stadigF, stadigT, darrF, darrT))
+	end
+
 	--[[ d) TELEMETRIN fylls av en RIKTIG bildruta, inte av en handbyggd
 	     tabell — och de fält som saknas är exakt de deklarerade. ]]
 	do
@@ -1449,7 +1546,9 @@ do
 		table.sort(hal)
 		check("en riktig bildruta fyller telemetrin, och bara de deklarerade fälten saknas",
 			#hal == #Telemetri.SAKNAS and tm.balans ~= nil and tm.energi ~= nil
-				and tm.hjalper ~= nil and tm.hjalper.ytterstod ~= nil,
+				and tm.hjalper ~= nil and tm.hjalper.ytterstod ~= nil
+				and tm.mjukhet ~= nil and tm.spanning ~= nil and tm.fokus ~= nil
+				and tm.hjalper.sits ~= nil and tm.hjalper.vikt ~= nil,
 			string.format("(saknas: %s · balans %.3f, energi %.3f, yttertygelstöd %.2f)",
 				table.concat(hal, ", "), tm.balans, tm.energi, tm.hjalper.ytterstod))
 	end

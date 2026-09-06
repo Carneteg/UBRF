@@ -14,14 +14,11 @@
 	   går att UPPTÄCKA. Gångarten kommer fortsatt ur Gaits.forSpeed med
 	   hysteres — kontraktet dömer, det styr inte.
 
-	VAD SOM SAKNAS PÅ ROBLOX, och varför det står här i stället för att
-	fyllas med ett påhittat värde: webbens ridmodell har spänning, mjukhet
-	och ett hjälplager med skänkel/tygel/sits. Roblox rörelsekärna har
-	ingen motsvarighet ännu — den tar `forward`/`steer`, inte sits och
-	tygel. Fälten finns därför i FALT (kontraktet är detsamma) men listas i
-	SAKNAS, och `las()` fyller dem inte. Att räkna fram en balanssiffra ur
-	`lean` vore att uppfinna en annan modell än webbens och kalla den
-	paritet. Det är G02-B:s arbete att ge dem riktiga källor.
+	G02-B GAV DEM RIKTIGA KÄLLOR. Modulen skrev tidigare att spänning,
+	mjukhet och hjälplagret saknades på Roblox — rörelsekärnan tog bara
+	`forward`/`steer`. Efter G02-B har den tygel, sits och parad som egna
+	axlar, och mjukhet, spänning, fokus, balans och energi räknas med
+	webbens formler och webbens tal ur RidKanon. SAKNAS är därför tom.
 ]]
 
 local Gaits = require(script.Parent.Gaits)
@@ -52,22 +49,11 @@ Telemetri.SVAR_FALT = RidKanon.SVAR_FALT
      webben läser nu HUR en halvhalt reds, inte bara att den gavs.
      Roblox har ingen parad alls ännu — ingen kanal, ingen läsning —
      så de två är luckor av exakt samma slag som hjälplagret. ]]
---[[ G02-B punkt 4 STÄNGDE de flesta av de här hålen. Kvar står bara det
-     som saknar KÄLLA på Roblox, inte det som saknar kod:
-
-       fokus     kräver mjukhet (handens stadga över tid) och spänning.
-       mjukhet   eget delsystem på webben, inte portat.
-       spanning  detsamma.
-
-     Att fylla dem med konstanter hade gett paritet i siffran men inte i
-     upplevelsen, och det är precis vad paritetsregeln finns för att
-     förhindra. Hemmet är G02-C.
-
-     Följden redovisas öppet i HorseCore.Svar: svarstiden på Roblox
-     saknar fokustermen (0–SVAR_FOKUS sekunder) och balansen saknar
-     spänningstermen. Paritetsspecen mäter skillnaden i stället för att
-     dölja den. ]]
-Telemetri.SAKNAS = { "fokus", "mjukhet", "spanning" }
+--[[ Tomt sedan senior review av #87. Sitsen fick en egen axel, och
+     mjukhet, spänning och fokus räknas nu på Roblox med webbens formler
+     och webbens tal. Listan står kvar som kontrakt: ett fält utan källa
+     ska deklareras här och inte utelämnas tyst. ]]
+Telemetri.SAKNAS = {}
 
 --[[ Lagliga gångartsbyten: grannsteg i ordningen, plus halt från vad som
      helst (en häst kan stanna ur galopp). Ordningen är Roblox egen — den
@@ -169,6 +155,12 @@ function Telemetri.las(ritt: Ritt, loco: { [string]: any }, kurvatur: number,
 		     G02-B. Fälten utelämnas hellre än fylls. ]]
 		balans = loco.balans,
 		energi = loco.energi,
+		--[[ Senior review #87: de tre som stod som luckor har källor nu.
+		     `mjukhet` är handens stadga över tid, `spanning` webbens
+		     formel med Roblox egna hästdata, `fokus` bygger på de två. ]]
+		mjukhet = loco.mjukhet,
+		spanning = loco.spanning,
+		fokus = loco.fokus,
 		svarstid = loco.svarstid or 0,
 		svarAlder = if loco.svarTid then math.max(0, (loco.tid or 0) - loco.svarTid) else nil,
 		paradKvalitet = loco.paradKvalitet or 0,

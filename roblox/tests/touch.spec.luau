@@ -165,6 +165,23 @@ do
 	check("paraden är en IMPULS: ett tryck bärs av exakt en bildruta",
 		barandeP == 1 and efteratP == 0,
 		string.format("(%d bärande, %d extra på 30 följande bildrutor)", barandeP, efteratP))
+
+	--[[ SITSEN (senior review #87). Hålls som tygeln — hur djupt man
+	     sitter är ett tillstånd — och är analog i kontraktet, så att
+	     vänster avtryckare kan dosera den. Utan knappen är sätet som
+	     balansmodifierare stängt för hela pekskärmen. ]]
+	nollstall()
+	Input.setTouchSeat(1)
+	local s1, s2 = Input.consume().seat, Input.consume().seat
+	Input.setTouchSeat(0)
+	local s3 = Input.consume().seat
+	check("sitsen HÅLLS: djupet ligger kvar tills fingret lyfts",
+		s1 == 1 and s2 == 1 and s3 == 0,
+		string.format("(%.0f, %.0f, sedan %.0f)", s1, s2, s3))
+	Input.setTouchSeat(0.6)
+	check("sitsen är analog hela vägen genom kontraktet",
+		math.abs(Input.consume().seat - 0.6) < 1e-6)
+	Input.setTouchSeat(0)
 end
 
 print("\n── Ingen regression för tangent och gamepad ──")

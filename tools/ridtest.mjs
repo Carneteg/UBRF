@@ -872,6 +872,66 @@ const volt20 = await page.evaluate(() => {
     `balans lägst ${nf(v.balansMin)}`);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1)
+
+   #83 kräver vikt/säte som balansmodifierare. `vikt` fanns som ett
+   härlett fält men gjorde ingenting — och ett fält som bara märks är
+   dekoration. Nu väger sitsens djup in i balansen, på båda ytorna:
+   sitter ryttaren ned i bågen bär hon hästen, sitter hon lätt får hästen
+   bära den själv.
+
+   Termen biter bara när det finns en båge att stödja — en rak ridning på
+   lätt sits straffas inte, för där finns ingenting att falla in åt. ── */
+const sate = await page.evaluate(() => {
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  const dt = 1 / 60;
+  const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
+    G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
+  const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
+    RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
+    RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
+  /* Samma volt, samma tygel, samma styrutslag — bara sitsen skiljer.
+
+     NIVÅERNA ÄR VALDA SÅ ATT DE INTE ÄR HJÄLPER I SIG. En sits på fullt
+     djup (a.sits 0,85) ligger över SITS_PARAD 0,78 och ÄR en parad —
+     första versionen av provet parerade henne till halt och jämförde
+     sedan två stillastående hästar. Sitsen går därför till 0,8 av
+     spaken (a.sits 0,72), och tygeln till 0,25 (a.tygel 0,455), vilket
+     håller sig under CUE_NER. Modellen har rätt: en djup sits med tagen
+     tygel ÄR en halvhalt. Provet hade fel nivåer. */
+  const volt = (sits) => { nyRitt();
+    kor({ tygel: 0.25, sits }, 2.0); kor({ skankel: 1, tygel: 0.25, sits }, 1.2);
+    kor({ skankel: 0.55, tygel: 0.25, sits }, 1.5);
+    kor({ skankel: 0.55, tygel: 0.25, sits, styr: 1 }, 25);
+    return { balans: G.ride.balans, sits: G.aids.sits,
+      stod: svarSitsStod(G.aids.sits), vikt: G.telemetri.hjalper.vikt,
+      gang: G.ride.gangart }; };
+  /* Och på RAKT SPÅR ska sitsen inte straffas: där finns ingen båge. */
+  const rakt = (sits) => { nyRitt();
+    kor({ tygel: 0.25, sits }, 2.0); kor({ skankel: 1, tygel: 0.25, sits }, 1.2);
+    kor({ skankel: 0.55, tygel: 0.25, sits }, 20);
+    return { balans: G.ride.balans, gang: G.ride.gangart }; };
+  return { latt: volt(-1), djup: volt(0.8),
+    raktLatt: rakt(-1), raktDjup: rakt(0.8) };
+});
+{
+  const s2 = sate;
+  prova("sätet är en balansmodifierare: djup sits bär bågen, lätt sits gör det inte",
+    s2.djup.balans > s2.latt.balans + 0.03 && s2.djup.stod > s2.latt.stod &&
+    s2.latt.gang === s2.djup.gang && s2.latt.gang !== "halt",
+    `lätt sits ${nf(s2.latt.sits, 2)} (stöd ${nf(s2.latt.stod, 2)}, vikt ` +
+    `${nf(s2.latt.vikt, 2)}) → balans ${nf(s2.latt.balans)} · djup sits ` +
+    `${nf(s2.djup.sits, 2)} (stöd ${nf(s2.djup.stod, 2)}, vikt ${nf(s2.djup.vikt, 2)}) → ` +
+    `balans ${nf(s2.djup.balans)}, båda i ${s2.djup.gang}`);
+  prova("och på rakt spår kostar den lätta sitsen ingenting — där finns ingen båge",
+    Math.abs(s2.raktLatt.balans - s2.raktDjup.balans) < 1e-6 &&
+    s2.raktLatt.gang !== "halt",
+    `lätt ${nf(s2.raktLatt.balans)} mot djup ${nf(s2.raktDjup.balans)} i ` +
+    `${s2.raktLatt.gang} — samma balans, medan samma två sitsar i volten ovan ` +
+    `skiljde ${nf(s2.djup.balans - s2.latt.balans)}`);
+}
+
 /* Och att nollställningen verkligen är inkopplad där ritten börjar.
    Provet ovan anropar ridNollstallHjalp() själv och kan därför inte se
    om produktionen glömmer den; det här läser funktionskroppen i den

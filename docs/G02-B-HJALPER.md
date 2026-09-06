@@ -3,7 +3,7 @@
 Issue #83. Arbetsdokument för gaten: acceptance contract, checkpointer,
 mätvärden och kvarstående luckor. Uppdateras vid varje checkpoint.
 
-**Status:** `READY_FOR_CHATGPT_REVIEW` (alla fem checkpointer pushade)
+**Status:** `READY_FOR_CHATGPT_REVIEW` (runda 2 — tre blockerare åtgärdade)
 
 Det är den högsta status Claude får sätta. `READY_FOR_PRODUCT_ACCEPTANCE`
 sätts av ChatGPT efter oberoende review; `PRODUCT_ACCEPTED` bara av Tobias.
@@ -661,3 +661,117 @@ gate:
    mäter olika.
 4. **`Q` och `F` som Roblox-tangenter** för tygel och halvhalt. `E` är
    upptagen av sitt upp/av sedan Gate 01.
+
+---
+
+## 11. Senior review av `b01e90c` — tre blockerare, åtgärdade
+
+### Blocker 1 — Roblox saknade sits/vikt, spänning och fokus
+
+Reviewen underkände att de stod som `LUCKA` med G02-C som hem: #83 kräver
+dem i G02-B, och plattformsspecifik input får skilja sig — produkten får
+inte sakna beteendet.
+
+**Sitsen fick en egen axel.** `Z` / `C` på tangentbord, vänster
+avtryckare (analog) på gamepad, `DJUP SITS` på pekskärm. Shift och Ctrl
+är gångartsknappar sedan Gate 01 och rörs inte.
+
+**Sätet är nu en balansmodifierare på båda ytorna.**
+`SVAR_KANON.BALANS_VIKT` väger sitsens djup mot dess neutralläge, och
+termen biter bara när det finns en båge att stödja.
+
+| Prov (genom inputvägen) | Webb | Roblox |
+|---|---|---|
+| Lätt sits i volt | balans **0,556** | balans **0,715** |
+| Djup sits, samma volt | balans **0,770** | balans **0,970** |
+| Samma två sitsar på rakt spår | 1,000 mot 1,000 | — |
+
+**Mjukhet, spänning och fokus räknas nu på Roblox** med webbens formler.
+För att det skulle gå fick spänningens literaler i `src/model.js` namn
+(`SP_*`) och flyttade till kanonen, och målvärdet flyttade till
+`svarSpanningMal()`. **Ingen siffra ändrades** — paritetsspecens
+golden-rader hade fallit annars.
+
+Uppmätt på Roblox, genom inputvägen: darrig hand → mjukhet 1,00 → 0,52 →
+spänning 0,000 → 0,558 → fokus 0,800 → 0,544 → svarstid 0,060 → 0,089 s.
+
+**Fem ingångar saknar källa på Roblox** och anropas med sina neutrala
+element, var och en namngiven i `HorseCore/Svar.luau`: `stallro` 1,
+`sadellage` 1, `underlag` 1, `dagsform` 0, inget spö. Plus ryttarens
+`rang` på 0,5. De fylls inte med gissningar.
+
+`Telemetri.SAKNAS`, `Hjalper.SAKNAS` och `Svar.SAKNAS` är **tomma**, och
+paritetsspecen kräver att de är det.
+
+### Blocker 2 — 20 m-volten
+
+Reviewen har rätt, och roten var ett tal: väggmarginalen stod som 0,8 m,
+alltså nästan en hel hästbredd i stället för en halv. Fria bredden blev
+18,4 m och volten fick per definition inte plats. Mitt påstående att den
+"inte får plats" var en slutsats jag aldrig mätt.
+
+En 20 m volt mäts **till sargen**, inte till hästens mittlinje. Med
+halvbredden 0,35 m går mittlinjen på 19,3 m och kroppen spänner 20,0 m.
+
+Ridd genom inputvägen, med styrutslaget sökt genom halvering:
+
+> mittlinjens diameter **19,12 m** + hästens bredd 0,70 m = figur
+> **19,82 m** · största avvikelse från cirkeln **0,6 cm** · **0**
+> bildrutor mot sargen · **trav** hela varvet · takt lägst 1,000 ·
+> balans lägst 0,988
+
+### Blocker 3 — övergångstidens semantik
+
+Värre än reviewen visste. Fältet var varken "begäran → etablerad" eller
+"förloppets längd": det rapporterade avståndet från svaret till att
+etiketten byter — en tredje storhet ingen kommentar nämnde.
+
+Nu tre fält med var sin **låsta** betydelse, alla mätta:
+
+| Fält | Betydelse | Webb | Roblox |
+|---|---|---|---|
+| `svarstid` | begäran → hästen börjar svara | 0,154 s | 0,138 s |
+| `overgangstid` | förloppets faktiska längd | 0,996 s | 0,800 s |
+| `etableringstid` | begäran → gångarten ÄR den beddna | 0,696 s | 0,579 s |
+
+Provet klockar alla tre utifrån och kräver att etableringen ligger
+**mellan** svaret och förloppets slut, vid `BYTPUNKT` av förloppet.
+Roblox-provet fällde direkt en bugg i min egen kod: etableringen jämförde
+mot `targetGait`, som under svarstiden fortfarande är den gamla
+gångarten, och rapporterade 0,000.
+
+### Cleanup
+
+`Hjalper.luau` sa att webben väger tre hjälper i `paradKvalitet`. Webben
+har alltid vägt två. Kommentaren var fel, inte talen.
+
+### Falsifiering, runda 2
+
+| Mutation | Prov som föll |
+|---|---|
+| Halvbredden tillbaka till 0,8 | 20 m-voltprovet (1,60 m bred häst) |
+| `overgangstid` läses ur planen | tidsprovet (0,799 mot klockade 0,996) |
+| Etablering mäts från svaret | tidsprovet (0,546 mot klockade 0,696) |
+| `BALANS_VIKT` = 0 | sätesprovet på **båda** ytorna |
+| Roblox räknar spänningen på sitt eget vis | spänningsparitet (9,1 · 10⁻²) |
+| Fokus kopplas ur svarstiden på Roblox | fokusprovet |
+| Sitsaxeln kopplas ur på Roblox | sätesprovet |
+
+### Tre fel av mina egna i den här rundan
+
+1. **20 m-provet mätte en galoppvolt** medan det påstod sig mäta trav:
+   att lägga på grundhjälpen efter impulserna är i sig en impuls.
+2. **20 m-provet följde mutationen.** Figuren räknas som mittlinjen plus
+   2 × halvbredden medan siktet räknas som banbredden minus 2 ×
+   halvbredden — figuren blir ~20 m för vilken halvbredd som helst. Att
+   sätta tillbaka 0,8 gjorde inget prov rött förrän provet också krävde
+   att halvbredden är en **hästs**.
+3. **Fokus var urkopplingsbart utan att något prov märkte det.** Inget
+   Roblox-prov band fokus till svarstiden förrän falsifieringen visade
+   det.
+
+### Not tested, oförändrat
+
+Roblox runtime, och all game feel: fördröjningen, infallet, halvbreddens
+nya värde, om profilerna känns som fyra hästar, och tangentvalen
+`Q`/`F`/`Z`/`C`.

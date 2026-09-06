@@ -18,11 +18,14 @@
 	  yttertygelstöd  hur stor del av böjningen yttertygeln bär
 	  parad       halvhalten som EGEN signal   (`intent.parad`)
 
-	SITSEN SAKNAS PÅ ROBLOX. Webben har en sitsaxel (Shift/Ctrl); här är
-	de tangenterna gångartsknappar sedan Gate 01, och att flytta dem vore
-	en inputändring utanför G02-B:s scope. `sits` fylls därför INTE med
-	ett påhittat värde: fältet står som deklarerad lucka i Telemetri.SAKNAS
-	och paradens kvalitet räknas på de två hjälper som finns.
+	  sits        hur djupt ryttaren sitter    (`intent.seat`, ny)
+	  vikt        bågens sida × sitsens djup
+
+	SITSEN FICK EN EGEN AXEL efter senior review av #87. Shift och Ctrl är
+	gångartsknappar sedan Gate 01 och rörs inte; sitsen ligger på Z och C,
+	och analogt på vänster avtryckare. Att den saknades var inte ett
+	scope-beslut utan ett hål: #83 kräver vikt/säte som balansmodifierare,
+	och den delen av modellen gick då inte att ha på Roblox alls.
 ]]
 
 local RidKanon = require(script.Parent.RidKanon)
@@ -34,9 +37,10 @@ local Hjalper = {}
 Hjalper.FALT = RidKanon.HJALP_FALT
 Hjalper.HARLEDDA = RidKanon.HJALP_HARLEDDA
 
---[[ Hjälper som Roblox inte har någon källa till. `sits` av skälet ovan;
-     de härledda som hänger på den följer med. ]]
-Hjalper.SAKNAS = { "sits", "vikt" }
+--[[ Tomt sedan senior review av #87 gav sitsen en egen axel. Listan står
+     kvar som kontrakt: nästa hjälp utan källa ska deklareras här och
+     inte utelämnas tyst. ]]
+Hjalper.SAKNAS = {}
 
 local function kl(v: number, lo: number, hi: number): number
 	return math.clamp(v, lo, hi)
@@ -59,14 +63,20 @@ function Hjalper.semantik(a: { [string]: number }): { [string]: any }
 	local ber = kl(s / H.STYR_FULLT, 0, 1)
 	local behov = H.TYGEL_NEUTRAL + H.STOD_KRAV * ber
 	local bar = kl(ytterTygel / behov, 0, 1)
+	local sits = a.sits or 0
 	return {
 		skankel = a.skankel or 0,
 		tygel = t,
+		sits = sits,
 		styrning = sb,
 		innerTygel = innerTygel,
 		ytterTygel = ytterTygel,
 		ytterstod = 1 - ber * (1 - bar),
 		bojSida = if s > H.BOJ_TROSKEL then (if sb > 0 then 1 else -1) else 0,
+		--[[ Vikten följer bågen, som på webben: sitsen säger hur djupt
+		     ryttaren sitter, bågen åt vilket håll vikten går. ]]
+		vikt = (if s > H.BOJ_TROSKEL then (if sb > 0 then 1 else -1) else 0)
+			* math.min(1, s * 1.4),
 		parad = kl(a.parad or 0, 0, 1),
 	}
 end

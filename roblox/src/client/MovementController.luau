@@ -70,10 +70,19 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 		     de sig, och det är hela skillnaden mot före G02-B, då cue:n
 		     startade förloppet i samma bildruta den föll. ]]
 		beddGangart = "halt", svarstid = 0, overgangstid = 0, etableringstid = 0,
+		--[[ Senior review #87 stängde luckorna: mjukhet, spänning och
+		     fokus räknas nu här med webbens formler. En stadig hand ger
+		     mjukhet 1, och en lugn häst spänning 0 — utgångsläget är
+		     alltså det oskrivna bladet, inte en gissning. ]]
+		mjukhet = 1, spanning = 0, fokus = 0.70,
 		balans = 1,
 		energi = Svar.startEnergi(), paradKvalitet = 0,
 	} :: Types.Locomotion
 
+	--[[ Ryttarens rang hos hästen. Webben låter den växa med mjukheten
+	     över ett pass; Roblox har ingen ryttarprofil ännu, så den ligger
+	     på mitten. Neutralt värde, namngivet — inte en gissning. ]]
+	self.rang = 0.5
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
 	self.curvature = 0         -- aktuell kurvatur, 1/m
@@ -158,12 +167,41 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		+ math.clamp(intent.rein or 0, 0, 1) * (KN.TYGEL_MAX - KN.TYGEL_NEUTRAL)
 	--[[ Styraxeln skalas till samma spann som webbens inputlager, så att
 	     böjkravet betyder samma sak på båda ytorna. ]]
+	--[[ Sitsen: −1 lätt … 0 normal … 1 djup, skalad till modellens spann
+	     kring SITS_NEUTRAL på samma sätt som webbens inputlager gör det. ]]
+	local seat = math.clamp(intent.seat or 0, -1, 1)
+	local sits = if seat >= 0
+		then KN.SITS_NEUTRAL + seat * (KN.SITS_MAX - KN.SITS_NEUTRAL)
+		else KN.SITS_NEUTRAL + seat * (KN.SITS_NEUTRAL - (-0.6))
 	local hj = Hjalper.semantik({
-		skankel = skankel, tygel = tygel,
+		skankel = skankel, tygel = tygel, sits = sits,
 		styrning = math.clamp(intent.steer or 0, -1, 1) * RidKanon.HJALP.STYR_FULLT,
 		parad = intent.parad or 0,
 	})
 	self.hjalper = hj
+
+	--[[ ── MJUKHET OCH SPÄNNING (senior review #87, blocker 1) ────────
+	     Mjukheten är handens stadga över tid: hjälpernas avvikelse från
+	     sitt eget glidande medel. Spänningen läser den, och fokus läser
+	     båda. Formlerna är webbens och talen ligger i RidKanon.SVAR. ]]
+	self._medel = self._medel or { skankel = skankel, tygel = tygel,
+		sits = sits, styrning = hj.styrning }
+	loco.mjukhet = Svar.mjukhet(loco.mjukhet or 1, self._medel, hj, dt)
+	do
+		local hast = {
+			kanslighet = Svar.kanslighet(self.temperament),
+			forlatande = stats.Forlatande or 0.60,
+			skygghet = stats.Skygghet or 0.20,
+		}
+		--[[ NEUTRALA INGÅNGAR där Roblox saknar källa, namngivna i
+		     HorseCore.Svar: stallro/sadellage/underlag 1, dagsform 0,
+		     inget spö. De fylls inte med gissningar. ]]
+		local spMal = Svar.spanningMal(hj, hast, loco.mjukhet, self.rang or 0.5,
+			self.gangartWebb or "halt",
+			{ stallro = 1, sadellage = 1, underlag = 1, dagsform = 0,
+				utomhus = self.utomhus == true })
+		loco.spanning = Svar.spanningSteg(loco.spanning or 0, spMal, hast, dt)
+	end
 
 	local forraMal = loco.beddGangart or loco.targetGait
 	loco.beddGangart = self:_targetGait(intent)
@@ -208,8 +246,8 @@ function MovementController:step(intent: Types.Intent, dt: number)
 			loco.paradTid = loco.tid
 			loco.cue = "halvhalt"
 		end
-		local vantan = Svar.svarstid(self.stats, Svar.kanslighet(self.temperament), 1,
-			loco.energi or 1, klarhet)
+		local vantan = Svar.svarstid(self.stats, Svar.kanslighet(self.temperament),
+			loco.fokus or 1, loco.energi or 1, klarhet)
 		loco.svarstid = vantan
 		self._vantar = { fran_gait = forraMal, till = loco.beddGangart,
 			kvar = vantan, langd = bas / math.max(svar, 0.2) }
@@ -380,8 +418,21 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		if speedAbs > 0.5 and radie < 40 then
 			fartkrav = math.clamp(((speedAbs * speedAbs) / math.max(radie, 1) - 3.0) / 9.0, 0, 1)
 		end
+		--[[ FOKUS: handens stadga, lugnet, utomhus och den lästa
+		     halvhalten. Paradlyftet ligger i `loco.paradKvalitet` den
+		     bildruta paraden lästes. ]]
+		local paradLyft = if loco.paradTid == loco.tid then (loco.paradKvalitet or 0) else 0
+		local fMal = Svar.fokusMal(loco.mjukhet or 1, loco.spanning or 0,
+			self.utomhus == true, paradLyft, self.stats)
+		loco.fokus = (loco.fokus or 0.70)
+			+ (fMal - (loco.fokus or 0.70)) * math.clamp(dt / S.FOKUS_TAU, 0, 1)
+		if paradLyft > 0 then
+			loco.fokus = math.clamp(math.max(loco.fokus,
+				loco.fokus + S.FOKUS_PARAD * Svar.profil(self.stats).fokus
+					* paradLyft * 0.55), 0, 1)
+		end
 		local bMal = Svar.balansMal(self.stats, stats.Agility or 0.5, bojkrav,
-			hj.ytterstod, fartkrav, self._ov ~= nil)
+			hj.ytterstod, fartkrav, self._ov ~= nil, loco.spanning or 0, hj.sits)
 		local bTau = if bMal < (loco.balans or 1) then S.BALANS_TAU_NER else S.BALANS_TAU_UPP
 		loco.balans = smooth(loco.balans or 1, bMal, bTau, dt)
 
@@ -391,7 +442,7 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		end
 		self.gangartWebb = webbGangart
 		loco.energi = math.clamp((loco.energi or 1)
-			+ Svar.energiTakt(webbGangart, 0, self.stats) * dt, 0, 1)
+			+ Svar.energiTakt(webbGangart, loco.spanning or 0, self.stats) * dt, 0, 1)
 		loco.stamina = loco.energi * (stats.MaxStamina or 100)
 	end
 

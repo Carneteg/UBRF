@@ -340,6 +340,7 @@ do
 		turnRate = kurvatur * 3.2, phase = 0.25,
 		cue = "framåt", cueTid = 1.0, tid = 1.4, overgangstid = 0.4, etableringstid = 0.7,
 		balans = 0.9, energi = 0.8, svarstid = 0.15, svarTid = 1.2,
+		mjukhet = 0.85, spanning = 0.12, fokus = 0.78,
 		paradKvalitet = 0.7, paradTid = 1.1 }
 	local tm = Telemetri.las(ritt, loco, kurvatur,
 		Hjalper.semantik({ skankel = 0.6, tygel = 0.4, styrning = 0.3 }))
@@ -488,10 +489,6 @@ do
 		"(parad, innerTygel, ytterTygel)")
 end
 
---[[ G02-B punkt 4 stängde de flesta hålen. Kvar står tre, och de har
-     ETT skäl: fokus behöver mjukhet och spänning, som är egna delsystem
-     på webben och inte portade. Att fylla dem med konstanter hade gett
-     paritet i siffran men inte i upplevelsen. ]]
 --[[ ══ FORMLERNA, INTE BARA KONSTANTERNA (G02-B punkt 4) ═══════════
 
      Att de två ytorna har samma tal i kanonen bevisar ingenting om att de
@@ -538,15 +535,46 @@ do
 	varst, antal = 0, 0
 	for _, rad in P.balans do
 		local b = Svar.balansMal({ profil = rad.in_.profil }, rad.in_.utbildning,
-			rad.in_.bojkrav, rad.in_.ytterstod, rad.in_.fartkrav, rad.in_.iOvergang)
+			rad.in_.bojkrav, rad.in_.ytterstod, rad.in_.fartkrav, rad.in_.iOvergang,
+			0, rad.in_.sits)
 		varst = math.max(varst, math.abs(b - rad.ut))
 		antal += 1
 	end
-	--[[ Webbens golden-rader räknas med spänning 0, alltså exakt det
-	     läge Roblox alltid befinner sig i. Provet jämför därför två
-	     jämförbara storheter; att Roblox saknar spänningstermen står
-	     som deklarerad LUCKA nedan och göms inte i den här raden. ]]
-	check("balansen räknas lika på båda ytorna vid spänning noll",
+	--[[ Raderna räknas med spänning 0 på båda ytorna, så att just
+	     sits- och yttertygeltermerna kan jämföras rent. Spänningens egen
+	     verkan provas i sin egen rad nedan. ]]
+	check("balansen räknas lika på båda ytorna, sitsdjup för sitsdjup",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	--[[ SPÄNNINGEN OCH FOKUS (senior review #87, blocker 1). De två fanns
+	     inte på Roblox och stod som luckor med G02-C som hem; reviewen
+	     underkände det. Nu räknar båda ytorna dem med samma formler och
+	     samma tal, och de här raderna är beviset. ]]
+	varst, antal = 0, 0
+	for _, rad in P.spanning do
+		local hast = { kanslighet = rad.in_.kanslighet, forlatande = rad.in_.forlatande,
+			skygghet = rad.in_.skygghet }
+		--[[ Neutrala ingångar där Roblox saknar källa — namngivna, inte
+		     gissade. Se HorseCore.Svar för vilka och varför. ]]
+		local sp = Svar.spanningMal(
+			{ skankel = rad.in_.skankel, tygel = rad.in_.tygel, sits = rad.in_.sits },
+			hast, rad.in_.mjukhet, rad.in_.rang, rad.in_.gangart,
+			{ stallro = 1, sadellage = 1, underlag = 1, dagsform = 0,
+				utomhus = rad.in_.utomhus })
+		varst = math.max(varst, math.abs(sp - rad.ut))
+		antal += 1
+	end
+	check("spänningen räknas lika på båda ytorna",
+		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
+
+	varst, antal = 0, 0
+	for _, rad in P.fokus do
+		local f = Svar.fokusMal(rad.in_.mjukhet, rad.in_.spanning, rad.in_.utomhus,
+			rad.in_.parad, { profil = rad.in_.profil })
+		varst = math.max(varst, math.abs(f - rad.ut))
+		antal += 1
+	end
+	check("fokus räknas lika på båda ytorna, profil för profil",
 		varst <= EPS, string.format("(%d jämförelser, största avvikelse %.2e)", antal, varst))
 
 	varst, antal = 0, 0
@@ -632,6 +660,7 @@ do
 	local prov = Telemetri.las(r2, { gait = "trot", targetGait = "trot",
 		beddGangart = "trot", speed = 3.2, turnRate = 0.3, phase = 0.2, tid = 2,
 		balans = 0.9, energi = 0.8, svarstid = 0.15, svarTid = 1.8,
+		mjukhet = 0.85, spanning = 0.12, fokus = 0.78,
 		paradKvalitet = 0.7, paradTid = 1.7 }, 0.1,
 		Hjalper.semantik({ skankel = 0.6, tygel = 0.4, styrning = 0.3 }))
 	local tysta = {}
@@ -642,9 +671,9 @@ do
 		#tysta == 0, table.concat(tysta, ", "))
 end
 
-beslut("LUCKA", "fokus, mjukhet och spänning saknar källa på Roblox",
-	#Telemetri.SAKNAS == 3,
-	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. " — hemmet är G02-C)")
+check("telemetrin har källa för varje fält på Roblox",
+	#Telemetri.SAKNAS == 0,
+	"(" .. table.concat(sorterad(Telemetri.SAKNAS), ", ") .. ")")
 
 --[[ HÄSTENS SVAR (G02-B punkt 2). Samma sak som hjälperna: talen ska
      ligga här före implementationen så att Roblox läser dem i stället för
@@ -680,11 +709,15 @@ do
 			S.INFALL_MAX * 100))
 end
 
-beslut("LUCKA", "sitsen finns inte som axel på Roblox",
-	#Hjalper.SAKNAS == 2,
-	"(" .. table.concat(sorterad(Hjalper.SAKNAS), ", ") ..
-	" — Shift/Ctrl är gångartsknappar sedan Gate 01, och att flytta dem" ..
-	" är en inputändring utanför G02-B)")
+--[[ Luckorna från runda 1 är STÄNGDA efter senior review av #87.
+     Sitsen har en egen axel (Z/C och vänster avtryckare), och mjukhet,
+     spänning och fokus räknas här med webbens formler. Kontrollen är
+     därför den omvända: listorna ska vara TOMMA, och blir de det inte
+     har ett hål öppnats igen. ]]
+check("inga deklarerade hjälpluckor kvar på Roblox",
+	#Hjalper.SAKNAS == 0, "(" .. table.concat(sorterad(Hjalper.SAKNAS), ", ") .. ")")
+check("inga deklarerade svarsluckor kvar på Roblox",
+	#Svar.SAKNAS == 0, "(" .. table.concat(sorterad(Svar.SAKNAS), ", ") .. ")")
 
 print("")
 if oppna > 0 then

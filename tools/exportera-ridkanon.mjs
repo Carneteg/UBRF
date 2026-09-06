@@ -313,7 +313,11 @@ rader.push("     samma tal som avgör om en halvhalt är välriden på webben. ]
 rader.push("RidKanon.KONTAKT = {");
 for (const namn of ["SKANKEL_TROSKEL", "SKANKEL_FOR_MYCKET", "SKANKEL_NEUTRAL",
                     "TYGEL_BAND_MIN", "TYGEL_BAND_MAX", "TYGEL_NEUTRAL", "TYGEL_MAX",
-                    "SITS_NEUTRAL", "SITS_PARAD", "SITS_MAX"]) {
+                    "TYGEL_HART", "SITS_NEUTRAL", "SITS_PARAD", "SITS_MAX",
+                    /* Mjukheten och spänningen: konstanterna Roblox behöver för
+                       att räkna dem med webbens formler i stället för egna. */
+                    "AIDS_TAU", "AMPLITUD_SKALA", "MJUKHET_EMA",
+                    "SPANNING_STIGNING", "SPANNING_FALL"]) {
   rader.push(`\t${namn} = ${tal(K[namn])},`);
 }
 rader.push("}");
@@ -365,10 +369,28 @@ const svarProv = [
   { profil: "arbetsvillig", kanslighet: 0.60, fokus: 1.00, energi: 0.90, klarhet: 1.00 },
 ];
 const balansProv = [
-  { profil: "skolhast", utbildning: 0.60, bojkrav: 0.00, ytterstod: 1.00, fartkrav: 0.00, iOvergang: false },
-  { profil: "skolhast", utbildning: 0.60, bojkrav: 1.00, ytterstod: 0.40, fartkrav: 0.00, iOvergang: false },
-  { profil: "kanslig",  utbildning: 0.72, bojkrav: 1.00, ytterstod: 0.67, fartkrav: 0.20, iOvergang: true },
-  { profil: "tung",     utbildning: 0.90, bojkrav: 0.80, ytterstod: 0.30, fartkrav: 0.50, iOvergang: false },
+  { profil: "skolhast", utbildning: 0.60, bojkrav: 0.00, ytterstod: 1.00, fartkrav: 0.00, iOvergang: false, sits: 0.20 },
+  { profil: "skolhast", utbildning: 0.60, bojkrav: 1.00, ytterstod: 0.40, fartkrav: 0.00, iOvergang: false, sits: 0.20 },
+  { profil: "kanslig",  utbildning: 0.72, bojkrav: 1.00, ytterstod: 0.67, fartkrav: 0.20, iOvergang: true,  sits: 0.55 },
+  { profil: "tung",     utbildning: 0.90, bojkrav: 0.80, ytterstod: 0.30, fartkrav: 0.50, iOvergang: false, sits: 0.78 },
+  /* Samma sväng, tre sitsdjup: den raden är vad som visar att sätet ÄR
+     en balansmodifierare och inte en märkning. */
+  { profil: "skolhast", utbildning: 0.60, bojkrav: 1.00, ytterstod: 0.67, fartkrav: 0.00, iOvergang: false, sits: 0.20 },
+  { profil: "skolhast", utbildning: 0.60, bojkrav: 1.00, ytterstod: 0.67, fartkrav: 0.00, iOvergang: false, sits: 0.78 },
+];
+const spanningProv = [
+  { tygel: 0.34, skankel: 0.42, sits: 0.20, mjukhet: 1.00, rang: 0.50, gangart: "skritt",
+    kanslighet: 0.50, forlatande: 0.60, skygghet: 0.20, utomhus: false },
+  { tygel: 0.78, skankel: 0.42, sits: 0.20, mjukhet: 0.60, rang: 0.50, gangart: "trav",
+    kanslighet: 0.80, forlatande: 0.40, skygghet: 0.42, utomhus: false },
+  { tygel: 0.62, skankel: 0.90, sits: 0.82, mjukhet: 0.30, rang: 0.30, gangart: "galopp",
+    kanslighet: 0.35, forlatande: 0.95, skygghet: 0.05, utomhus: true },
+];
+const fokusProv = [
+  { mjukhet: 1.00, spanning: 0.00, utomhus: false, parad: 0.00, profil: "skolhast" },
+  { mjukhet: 1.00, spanning: 0.00, utomhus: false, parad: 0.93, profil: "skolhast" },
+  { mjukhet: 0.50, spanning: 0.40, utomhus: true,  parad: 0.00, profil: "kanslig" },
+  { mjukhet: 0.80, spanning: 0.10, utomhus: false, parad: 0.60, profil: "tung" },
 ];
 const hjalpSemantik = ctx.hjalpSemantik, svarSvarstid = ctx.svarSvarstid,
   svarBalansMal = ctx.svarBalansMal, svarInfall = ctx.svarInfall,
@@ -408,10 +430,40 @@ rader.push("\t},");
 rader.push("\tbalans = {");
 for (const v of balansProv) {
   const b = svarBalansMal({ spanning: 0 }, { utbildning: v.utbildning, profil: v.profil },
-    v.bojkrav, v.ytterstod, v.fartkrav, v.iOvergang);
+    v.bojkrav, v.ytterstod, v.fartkrav, v.iOvergang, v.sits);
   rader.push(`\t\t{ in_ = { profil = ${str(v.profil)}, utbildning = ${tal(v.utbildning)}, `
     + `bojkrav = ${tal(v.bojkrav)}, ytterstod = ${tal(v.ytterstod)}, `
-    + `fartkrav = ${tal(v.fartkrav)}, iOvergang = ${v.iOvergang} }, ut = ${tal(b)} },`);
+    + `fartkrav = ${tal(v.fartkrav)}, iOvergang = ${v.iOvergang}, `
+    + `sits = ${tal(v.sits)} }, ut = ${tal(b)} },`);
+}
+rader.push("\t},");
+rader.push("\tspanning = {");
+for (const v of spanningProv) {
+  /* MÅLVÄRDET, direkt ur webbens svarSpanningMal — inte ett steg av
+     approach(). Roblox Svar.spanningMal jämförs mot exakt samma tal.
+     Neutrala ingångar där Roblox saknar källa: stallro/sadellage/
+     underlag 1, dagsform 0, inget spö. */
+  const st = { mjukhet: v.mjukhet, spanning: 0, gangart: v.gangart, rang: v.rang,
+    sadellage: 1, dagsform: 0 };
+  const hast = { kanslighet: v.kanslighet, forlatande: v.forlatande,
+    skygghet: v.skygghet, flaggor: {} };
+  const aid = { skankel: v.skankel, tygel: v.tygel, sits: v.sits, styrning: 0, spo: false };
+  const c2 = { underlag: 1, stallro: 1, utomhus: v.utomhus, fard: {} };
+  const sp = ctx.svarSpanningMal(aid, hast, st, c2);
+  rader.push(`\t\t{ in_ = { tygel = ${tal(v.tygel)}, skankel = ${tal(v.skankel)}, `
+    + `sits = ${tal(v.sits)}, mjukhet = ${tal(v.mjukhet)}, rang = ${tal(v.rang)}, `
+    + `gangart = ${str(v.gangart)}, kanslighet = ${tal(v.kanslighet)}, `
+    + `forlatande = ${tal(v.forlatande)}, skygghet = ${tal(v.skygghet)}, `
+    + `utomhus = ${v.utomhus} }, ut = ${tal(sp)} },`);
+}
+rader.push("\t},");
+rader.push("\tfokus = {");
+for (const v of fokusProv) {
+  const st = { mjukhet: v.mjukhet, spanning: v.spanning };
+  const f = ctx.svarFokusMal(st, { utomhus: v.utomhus }, v.parad, { profil: v.profil });
+  rader.push(`\t\t{ in_ = { mjukhet = ${tal(v.mjukhet)}, spanning = ${tal(v.spanning)}, `
+    + `utomhus = ${v.utomhus}, parad = ${tal(v.parad)}, profil = ${str(v.profil)} }, `
+    + `ut = ${tal(f)} },`);
 }
 rader.push("\t},");
 rader.push("\tinfall = {");

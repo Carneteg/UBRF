@@ -86,6 +86,20 @@ const SVAR_KANON = {
      0,79 mot 0,89 talen nedan ger. En välbalanserad rak ridning ska
      ligga på 1, och allt annat ska mätas därifrån. */
   BALANS_UTB: 0.30,       // × utbildning, DÄMPAR avdraget
+  /* ── SÄTET OCH VIKTEN SOM BALANSMODIFIERARE (senior review #87) ──
+     En volt rids inte bara med tygel. Ryttaren sitter NED och lägger
+     vikten åt bågens håll; sitter hon lätt och framåt tar hon bort sitt
+     eget stöd, och hästen får bära bågen själv.
+
+     Termen väger sitsens djup mot dess neutralläge, och den biter bara
+     när det finns en båge att stödja — precis som yttertygeln. En rak
+     ridning på lätt sits straffas inte, för där finns ingenting att
+     falla in åt.
+
+     Att den saknades var reviewens punkt: #83 kräver vikt/säte som
+     balansmodifierare, och en `vikt` som bara härleds ur bågens tecken
+     utan att göra något är dekoration. */
+  BALANS_VIKT: 0.30,      // × böjkrav × (1 − sitsstöd)
   BALANS_TAU_NER: 1.1, BALANS_TAU_UPP: 2.2,   // faller fortare än den byggs
 
   /* ── ATT FALLA IN ───────────────────────────────────────────────
@@ -115,6 +129,29 @@ const SVAR_KANON = {
   /* Hur mycket av framåtbjudningen som sitter i dagsformen. En slut
      häst bjuder mindre men blir inte en annan häst. */
   ENERGI_BJUD: 0.35,
+
+  /* ── SPÄNNINGEN OCH MJUKHETEN, namngivna (senior review #87) ──────
+     Talen låg som literaler inne i stepRide och gick därför inte att
+     porta till Roblox utan att skrivas av — och en avskriven formel är
+     två formler. Nu bor de här, webben läser dem, och Roblox räknar med
+     samma tal genom RidKanon.SVAR.
+
+     Ingen siffra är ändrad. Det här är en namngivning, inte en
+     omtrimning: paritetsspecens golden-rader hade fallit annars. */
+  SP_HART: 2.60,        // × tygel över TYGEL_HART
+  SP_BAND: 0.90,        // × tygel över kontaktbandets tak
+  SP_OMJUK: 0.85,       // × (1 − mjukhet)
+  SP_SKANKEL: 1.10,     // × skänkel över SKANKEL_FOR_MYCKET
+  SP_SITS_GALOPP: 0.70, // × sits över 0,75 i galopp
+  SP_SITS_TROSKEL: 0.75,
+  SP_SPO: 0.15, SP_SPO_RADD: 1.60,
+  SP_STALLRO: 0.50, SP_SADEL: 0.70, SP_UNDERLAG: 0.25,
+  SP_SKYGG: 0.18, SP_SKYGG_UTE: 1.50,
+  SP_KANSL_BAS: 0.55, SP_KANSL: 0.90,
+  SP_LUGN_RANG: 0.60, SP_LUGN_FORLAT: 0.50, SP_LUGN_MJUK: 0.60,
+  SP_LUGN_DAGSFORM: 0.30, SP_LUGN_VIKT: 0.45,
+  SP_STIG_BAS: 0.60, SP_STIG_KANSL: 0.80,
+  SP_FALL_BAS: 0.50, SP_FALL_FORLAT: 1.00,
 };
 
 /* Svarstiden för EN hjälp. `klarhet` är 0–1: hur tydlig hjälpen var —
@@ -149,10 +186,22 @@ function svarFokusMal(s, ctx, paradLyft, h) {
 /* Balansens målvärde. `bojkrav` 0–1 av fullt styrutslag, `ytterstod`
    ur hjälpsemantiken, `fartkrav` svängens centripetalkrav normaliserat
    som i modellens `svang`. */
-function svarBalansMal(s, h, bojkrav, ytterstod, fartkrav, iOvergang) {
+/* Sitsens stöd i svängen, 0–1: hur mycket av vägen från neutral sits till
+   den djupa paradsitsen ryttaren sitter. Egen funktion för att de två
+   ytorna ska räkna den på samma ställe och paritetsspecen kunna prova
+   den för sig. */
+function svarSitsStod(sits) {
+  const kl = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  const KK = (typeof K !== "undefined") ? K : null;
+  const neutral = KK ? KK.SITS_NEUTRAL : 0.20, djup = KK ? KK.SITS_PARAD : 0.78;
+  return kl(((sits || 0) - neutral) / (djup - neutral), 0, 1);
+}
+
+function svarBalansMal(s, h, bojkrav, ytterstod, fartkrav, iOvergang, sits) {
   const S = SVAR_KANON;
   const kl = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
   const avdrag = S.BALANS_YTTER * kl(bojkrav, 0, 1) * (1 - kl(ytterstod, 0, 1))
+    + S.BALANS_VIKT * kl(bojkrav, 0, 1) * (1 - svarSitsStod(sits))
     + S.BALANS_FART * kl(fartkrav, 0, 1)
     + (iOvergang ? S.BALANS_OVERGANG : 0)
     + S.BALANS_SPANNING * kl(s.spanning, 0, 1);
@@ -170,6 +219,40 @@ function svarInfall(balans, bojkrav) {
   const S = SVAR_KANON;
   const kl = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
   return S.INFALL_MAX * (1 - kl(balans, 0, 1)) * kl(bojkrav, 0, 1);
+}
+
+/* ── SPÄNNINGENS MÅLVÄRDE ────────────────────────────────────────────
+   Låg som en literalsoppa inne i stepRide och gick därför inte att porta
+   till Roblox utan att skrivas av. Nu en funktion med talen ur kanonen,
+   och Roblox Svar.spanningMal är dess spegel — paritetsspecen jämför de
+   två mot webbens egna golden-rader.
+
+   Ingen siffra är ändrad. Det här är en utflyttning, inte en omtrimning. */
+function svarSpanningMal(a, h, s, ctx) {
+  const S = SVAR_KANON;
+  const kl = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  const KK = (typeof K !== "undefined") ? K : null;
+  const F = (ctx && ctx.fard) || {};
+  const kf = S.SP_KANSL_BAS + S.SP_KANSL * h.kanslighet;
+  let press = 0;
+  const bandExtra = F.tygelband || 0;
+  if (a.tygel > KK.TYGEL_HART) press += (a.tygel - KK.TYGEL_HART) * S.SP_HART;
+  else if (a.tygel > KK.TYGEL_BAND_MAX + bandExtra)
+    press += (a.tygel - KK.TYGEL_BAND_MAX - bandExtra) * S.SP_BAND;
+  press += (1 - s.mjukhet) * S.SP_OMJUK;
+  if (a.skankel > KK.SKANKEL_FOR_MYCKET)
+    press += (a.skankel - KK.SKANKEL_FOR_MYCKET) * S.SP_SKANKEL;
+  if (a.sits > S.SP_SITS_TROSKEL && s.gangart === "galopp")
+    press += (a.sits - S.SP_SITS_TROSKEL) * S.SP_SITS_GALOPP;
+  if (a.spo && h.flaggor && h.flaggor.radd_for_spo) press += S.SP_SPO_RADD;
+  else if (a.spo) press += S.SP_SPO;
+  press += (1 - ctx.stallro) * S.SP_STALLRO + (1 - s.sadellage) * S.SP_SADEL
+    + (1 - ctx.underlag) * S.SP_UNDERLAG;
+  const damp = 1 - kl(F.skygghet || 0, 0, 0.5);
+  press += h.skygghet * S.SP_SKYGG * (ctx.utomhus ? S.SP_SKYGG_UTE : 1) * damp;
+  const lugn = s.rang * S.SP_LUGN_RANG + h.forlatande * S.SP_LUGN_FORLAT
+    + s.mjukhet * S.SP_LUGN_MJUK + s.dagsform * S.SP_LUGN_DAGSFORM + (F.lugn || 0);
+  return kl(press * kf - lugn * S.SP_LUGN_VIKT, 0, 1);
 }
 
 /* Energins ändring per sekund. Positiv = hämtar sig. */

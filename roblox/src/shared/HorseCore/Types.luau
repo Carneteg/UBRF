@@ -37,6 +37,10 @@ export type Intent = {
 	     med `or 0`. ]]
 	rein: number?,
 	parad: number?,
+	--[[ Sitsen: −1 lätt (avlastad), 0 normal, 1 djup. Analog på vänster
+	     avtryckare. Den är hästens balansmodifierare i en båge — se
+	     SVAR.BALANS_VIKT. ]]
+	seat: number?,
 }
 
 --[[ Hästens rörelsetillstånd. Simuleras hos den som äger nätverket. ]]
@@ -58,6 +62,9 @@ export type Locomotion = {
 	     som saknar källa. ]]
 	balans: number?,
 	energi: number?,
+	mjukhet: number?,
+	spanning: number?,
+	fokus: number?,
 	svarstid: number?,
 	beddGangart: GaitName?,
 	paradKvalitet: number?,

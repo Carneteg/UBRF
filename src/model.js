@@ -486,28 +486,21 @@ function stepRide(s,a,h,ctx,dt){
    }
   }
   // spänning
-  {const kf=0.55+0.9*h.kanslighet;let press=0;
-   const bandExtra=(ctx.fard&&ctx.fard.tygelband)||0;
-   if(a.tygel>K.TYGEL_HART)press+=(a.tygel-K.TYGEL_HART)*2.6;
-   else if(a.tygel>K.TYGEL_BAND_MAX+bandExtra)press+=(a.tygel-K.TYGEL_BAND_MAX-bandExtra)*0.9;
-   press+=(1-s.mjukhet)*0.85;
-   if(a.skankel>K.SKANKEL_FOR_MYCKET)press+=(a.skankel-K.SKANKEL_FOR_MYCKET)*1.1;
-   if(a.sits>0.75&&s.gangart==="galopp")press+=(a.sits-0.75)*0.7;
-   if(a.spo&&h.flaggor.radd_for_spo)press+=1.6; else if(a.spo)press+=0.15;
-   press+=(1-ctx.stallro)*0.5+(1-s.sadellage)*0.7+(1-ctx.underlag)*0.25;
-   /* Skyggheten: en ryttare med pondus tar udden av den. Hon slutar
-      inte vara skygg — hon reagerar mindre på dig som ledare. */
-   const damp=1-clamp((ctx.fard&&ctx.fard.skygghet)||0,0,0.5);
-   press+=h.skygghet*0.18*(ctx.utomhus?1.5:1)*damp;
-   const lugn=s.rang*0.6+h.forlatande*0.5+s.mjukhet*0.6+s.dagsform*0.3
-     +((ctx.fard&&ctx.fard.lugn)||0);
-   const mal=clamp(press*kf-lugn*0.45,0,1);
+  /* MÅLVÄRDET bor i src/riding/svar.js (senior review #87, blocker 1).
+     Det låg som en literalsoppa här och gick därför inte att porta till
+     Roblox utan att skrivas av — och en avskriven formel är två formler.
+     Ingen siffra är ändrad; paritetsspecens golden-rader bevakar det. */
+  {const mal=(typeof svarSpanningMal==="function")?svarSpanningMal(a,h,s,ctx):s.spanning;
    /* Fallet är hur fort spänningen släpper när pressen lättar. En lugn
       ryttare får den att sjunka undan fortare — hon smittar av sig. */
    const fall=(ctx.fard&&ctx.fard.spanningFall)||1;
-   s.spanning=clamp(approach(s.spanning,mal,K.SPANNING_STIGNING*(0.6+0.8*h.kanslighet),
-     K.SPANNING_FALL*(0.5+1.0*h.forlatande)*fall,dt),0,1);
+   const SP=(typeof SVAR_KANON!=="undefined")?SVAR_KANON:null;
+   s.spanning=clamp(approach(s.spanning,mal,
+     K.SPANNING_STIGNING*((SP?SP.SP_STIG_BAS:0.6)+(SP?SP.SP_STIG_KANSL:0.8)*h.kanslighet),
+     K.SPANNING_FALL*((SP?SP.SP_FALL_BAS:0.5)+(SP?SP.SP_FALL_FORLAT:1.0)*h.forlatande)*fall,
+     dt),0,1);
   }
+
   /* ── HÄSTENS SVAR (G02-B punkt 2) ────────────────────────────────
      Fokus, balans och energi uppdateras här — efter spänningen, som de
      alla tre läser, och före tempot, som läser dem tillbaka. Sedan
@@ -538,7 +531,7 @@ function stepRide(s,a,h,ctx,dt){
      let fartkrav=0;
      if(s.tempo>0.5&&ctx.svangradie<40)
        fartkrav=clamp(((s.tempo*s.tempo)/Math.max(ctx.svangradie,1)-3.0)/9.0,0,1);
-     const bMal=svarBalansMal(s,h,bojkrav,stodNu,fartkrav,!!s._ov);
+     const bMal=svarBalansMal(s,h,bojkrav,stodNu,fartkrav,!!s._ov,a.sits);
      const bTau=bMal<s.balans?S.BALANS_TAU_NER:S.BALANS_TAU_UPP;
      s.balans+=(bMal-s.balans)*clamp(dt/bTau,0,1);
 

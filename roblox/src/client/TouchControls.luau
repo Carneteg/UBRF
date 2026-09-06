@@ -208,8 +208,8 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	knopHorn.Parent = knop
 
 	local knappar = nyRam("Knappar", g)
-	knappar.Size = UDim2.fromOffset(150, 296)
-	knappar.Position = UDim2.new(1, -168, 1, -324)
+	knappar.Size = UDim2.fromOffset(150, 344)
+	knappar.Position = UDim2.new(1, -168, 1, -372)
 	local rad = Instance.new("UIListLayout")
 	rad.FillDirection = Enum.FillDirection.Vertical
 	rad.HorizontalAlignment = Enum.HorizontalAlignment.Right
@@ -228,9 +228,14 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	     pekskärm (HALVHALT-knappen och tygeln). ]]
 	local tygel = nyKnapp("Tygel", "TYGEL", knappar)
 	local parad = nyKnapp("Parad", "HALVHALT", knappar)
+	--[[ Sitsen: hålls, som tygeln. Djup sits bär bågen — se
+	     SVAR.BALANS_VIKT. Utan knappen kan en spelare med pekskärm inte
+	     stödja volten med sätet, och då är den delen av modellen stängd
+	     för hela plattformen. ]]
+	local sits = nyKnapp("Sits", "DJUP SITS", knappar)
 	upp.LayoutOrder, ned.LayoutOrder = 1, 2
-	tygel.LayoutOrder, parad.LayoutOrder = 3, 4
-	hoppa.LayoutOrder, av.LayoutOrder = 5, 6
+	tygel.LayoutOrder, sits.LayoutOrder, parad.LayoutOrder = 3, 4, 5
+	hoppa.LayoutOrder, av.LayoutOrder = 6, 7
 
 	--[[ Gångartsknapparna är flanktriggade i `Input`: ett tryck ger ett
 	     byte, hur länge man än håller kvar. Att hålla ned ska inte rusa
@@ -248,6 +253,9 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	tygel.MouseButton1Up:Connect(function() Input.setTouchRein(0) end)
 	tygel.MouseLeave:Connect(function() Input.setTouchRein(0) end)
 	parad.MouseButton1Click:Connect(function() Input.touchParad() end)
+	sits.MouseButton1Down:Connect(function() Input.setTouchSeat(1) end)
+	sits.MouseButton1Up:Connect(function() Input.setTouchSeat(0) end)
+	sits.MouseLeave:Connect(function() Input.setTouchSeat(0) end)
 
 	kopplaSpak(bas, knop)
 	egnaReglage(false)

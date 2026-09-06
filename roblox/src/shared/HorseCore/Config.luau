@@ -43,6 +43,13 @@ Config.STATS = {
 	     gjort. ]]
 	Profil = "skolhast",
 
+	--[[ Senior review #87: FÖRLÅTANDE och SKYGGHET som riktiga stats.
+	     Spänningen behöver dem, och hästdatan i UBRFSpelData har dem
+	     redan per häst — de saknades bara här. Defaultvärdena är samma
+	     som webbens BAS_GAMEPLAY. ]]
+	Forlatande = 0.60,
+	Skygghet = 0.20,
+
 	MaxStamina = 100,
 	BondLevel = 0,
 }
