@@ -1044,39 +1044,36 @@ första ridpasset. Din häst ritas i hagen **bara** när hon står där;
 villkoret läste `!G.hamtad`, vilket efter det här hade betytt att hon
 betade och stod i boxen samtidigt.
 
-### Blocker 3 — stalldörren låg nästan i en vägg → **ÖPPEN, PO-FRÅGA**
+### Blocker 3 — stalldörren låg nästan i en vägg
 
-Måttet stämmer. Fri yta runt dörrens innerpunkt (10,50 · 68,95), med
-spelets egen kollision:
+Måttet stämde. Fri yta runt dörrens innerpunkt (10,50 · 68,95), med
+spelets egen kollision: väster 4,0 · söder 4,0 · **öster 0,3** · **norr
+0,3 m**. Dörren ligger 0,7 m från teorisalens västvägg (x 11,2).
 
-| Riktning | Fritt |
-|---|---|
-| väster | 4,0 m |
-| söder | 4,0 m |
-| **öster** | **0,3 m** |
-| **norr** | **0,3 m** |
+**Det tog två försök, och det första var fel.** Jag flyttade
+innerpunkten 1,6 m västerut — vilket fällde ankaret
+`stall_entre_samma_dorr` (#80 runda 3) i den visuella grinden, eftersom
+det krävde att gårdsmarkörens spawn var **exakt** innerpunkten.
+Återställt, och frågan lyft till PO i stället för att avgöras av mig:
+båda vägarna framåt bröt mot något redan beslutat.
 
-Dörren ligger 0,7 m från teorisalens västvägg (x 11,2). Man kan gå ut —
-väster och söder är fria, och vägen till stallet går väster ~4,6 m och
-sedan söderut genom `inre_entre` (x 4,1–5,0) — men man kliver in i ett
-hörn.
+**PO-beslut 2026-09-06: dörren står kvar, ankomsten flyttar.**
 
-**Jag rättade det inte, och det är ett medvetet stopp.** Jag provade
-först att flytta ankomstpunkten 1,6 m västerut. Det gav 4,0/1,2/3,7/0,9 m
-— och **fällde ankaret `stall_entre_samma_dorr`** i CI (#80 runda 3:
-samma fysiska dörr inne som ute, gårdsmarkörens spawn = `ut_n`).
-Återställt.
+| | före | efter |
+|---|---|---|
+| interaktionspunkt (`pos`) | x 10,50 | x 10,50 — **oförändrad** |
+| ankomst (`ankomst`) | = `pos` | x 9,60 · y 68,40 |
+| fritt V / Ö / S / N | 4,0 / **0,3** / 4,0 / **0,3** | 4,0 / 1,2 / 3,7 / 0,9 |
 
-Båda vägarna framåt bryter mot något som redan är beslutat:
+Geometrin är orörd: dörrbladet, öppningen och teorisalens vägg ligger
+där fasaden och planen säger. Ankaret är omformulerat efter beslutet —
+kravet är **samma dörr**, inte samma punkt: ankomsten ska ligga inom 2 m
+från dörren och i det rum dörren öppnar mot. Uppmätt: 1,05 m.
 
-| Väg | Vad den bryter |
-|---|---|
-| flytta interaktions-/ankomstpunkten ur dörren | ankaret `stall_entre_samma_dorr` (#80) |
-| flytta teorisalens vägg eller dörren | verifierad geometri; CLAUDE.md förbjuder det uttryckligen |
-
-Det är ett produktbeslut, inte en implementationsdetalj. Frågan ligger i
-PR #87. Gångtestet **mäter** läget i stället för att tiga om det, och
-raden blir röd den dag beslutet är fattat och infört.
+Vägen ut i stallet fanns hela tiden och är uppmätt: väster till x 4,57,
+sedan söderut genom `genomgaende`-väggens `inre_entre`-öppning
+(x 4,1–5,0) ned i tvärgången vid y 53,2. Gångtestet går den, och
+tillbaka.
 
 **Lärdom av mitt eget fel:** jag rättade först och läste ankaret sedan.
 Ankaret fanns just för att stoppa den rättelsen, och CI hittade det jag

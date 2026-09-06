@@ -119,22 +119,31 @@ function prova(namn, ok, detalj) {
       } return +s.toFixed(1); };
     /* Dörrbladets läge ur FASADEN — det ska inte ha flyttat sig. */
     const o = ANL.byggnader.find(b => b.id === "stall").oppningar.find(o => o.sida === "N" && o.typ === "dorrgul");
+    const ank = dd.ankomst || dd.pos;
+    const friA = (dx, dy) => { let s = 0;
+      for (; s < 4; s += 0.1) {
+        const [kx, ky] = vandringKollision(ank[0] + dx * s, ank[1] + dy * s, GA.radie, ank[0], ank[1]);
+        if (Math.hypot(kx - (ank[0] + dx * s), ky - (ank[1] + dy * s)) > 0.02) break;
+      } return +s.toFixed(1); };
     return { pos: dd.pos.map(v => +v.toFixed(2)),
+      ankomst: ank.map(v => +v.toFixed(2)),
       dorrX: +(STALL_BREDD - o.u - o.b / 2).toFixed(2),
-      fri: { V: fri(-1, 0), O: fri(1, 0), S: fri(0, -1), N: fri(0, 1) } };
+      fri: { V: fri(-1, 0), O: fri(1, 0), S: fri(0, -1), N: fri(0, 1) },
+      friAnkomst: { V: friA(-1, 0), O: friA(1, 0), S: friA(0, -1), N: friA(0, 1) } };
   });
-  /* [ÖPPEN FRÅGA TILL PO] Trångt innanför entrédörren: 0,3 m fritt åt
-     öster och norr. Att rätta det bryter antingen ankaret
-     `stall_entre_samma_dorr` (#80) eller verifierad geometri, så det är
-     ett produktbeslut och inte mitt. Raden MÄTER läget i stället för att
-     tiga om det, och ska bli röd den dag beslutet är fattat och infört. */
-  prova("[KÄNT, PO-FRÅGA] innanför entrédörren är trångt åt öster/norr",
-    d.fri.O < 0.8 || d.fri.N < 0.8,
-    `fritt V ${d.fri.V} · Ö ${d.fri.O} · S ${d.fri.S} · N ${d.fri.N} m ` +
-    `— dörren ligger 0,7 m från teorisalens västvägg`);
-  prova("dörren är SAMMA fysiska dörr inne som ute (ankaret stall_entre_samma_dorr)",
+  /* PO-beslut 2026-09-06: dörren står kvar, ankomsten flyttar. Mätningen
+     gäller ANKOMSTEN — där spelaren faktiskt landar — inte dörrbladet. */
+  prova("man landar fritt innanför entrédörren, inte i ett hörn",
+    d.friAnkomst.O >= 0.8 && d.friAnkomst.N >= 0.8
+      && d.friAnkomst.V >= 0.8 && d.friAnkomst.S >= 0.8,
+    `fritt V ${d.friAnkomst.V} · Ö ${d.friAnkomst.O} · S ${d.friAnkomst.S} · N ${d.friAnkomst.N} m`);
+  prova("dörrbladet sitter kvar där fasaden säger — geometrin är orörd",
     Math.abs(d.dorrX - 10.5) < 0.01 && Math.abs(d.pos[0] - d.dorrX) < 0.01,
-    `dörr x ${d.dorrX}, innerpunkt x ${d.pos[0]}`);
+    `dörr x ${d.dorrX}, interaktionspunkt x ${d.pos[0]}`);
+  prova("och ankomsten hör till samma dörr (ankaret stall_entre_samma_dorr)",
+    Math.hypot(d.ankomst[0] - d.pos[0], d.ankomst[1] - d.pos[1]) <= 2.0
+      && d.ankomst[0] <= 11.2 && d.ankomst[1] >= 64.35,
+    `ankomst [${d.ankomst}] · ${Math.hypot(d.ankomst[0] - d.pos[0], d.ankomst[1] - d.pos[1]).toFixed(2)} m från dörren`);
 
   /* GENOM DÖRREN, med riktig rörelse: från ankomstpunkten västerut och
      sedan söderut genom inre entréns öppning ned i tvärgången. */
@@ -142,7 +151,7 @@ function prova(namn, ok, detalj) {
      inte en fast tid: en tidsatt sträcka missar öppningen så fort
      gånghastigheten ändras, och då mäter provet klockan i stället för
      geometrin. Sedan söderut genom öppningen. */
-  await page.evaluate(({ x, y }) => gaTill("stallinne", { x, y, rikt: 0 }), { x: d.pos[0], y: d.pos[1] });
+  await page.evaluate(({ x, y }) => gaTill("stallinne", { x, y, rikt: 0 }), { x: d.ankomst[0], y: d.ankomst[1] });
   await page.waitForTimeout(250);
   await page.keyboard.down("a");
   const t0 = Date.now();

@@ -1335,33 +1335,28 @@ const STALLINNE = {
        genom dörren under verandan står innanför just den dörren. Planens
        vindfångscell (x 3,6–5,5) står kvar som region utan etikett —
        motsägelsen plan/fasad är dokumenterad ovan, fasaden vinner. */
-    /* ── [ÖPPEN FRÅGA TILL PO] TRÅNGT INNANFÖR ENTRÉDÖRREN ─────────
-       Tobias produkttest 2026-09-06, blocker 3: "dörren man går ut genom
-       i stallet ligger nästan i en vägg". Uppmätt fri yta runt
-       innerpunkten (10,50 · 68,95), med spelets egen kollision:
+    /* ── DÖRREN STÅR KVAR, ANKOMSTEN FLYTTAR (PO-beslut 2026-09-06) ──
+       Tobias produkttest: "dörren man går ut genom i stallet ligger
+       nästan i en vägg". Uppmätt fri yta runt innerpunkten
+       (10,50 · 68,95): väster 4,0 · söder 4,0 · ÖSTER 0,3 · NORR 0,3 m.
+       Dörren ligger 0,7 m från teorisalens västvägg (x 11,2).
 
-         väster 4,0 m · söder 4,0 m · ÖSTER 0,3 m · NORR 0,3 m
+       `pos` är dörrens INTERAKTIONSPUNKT och ligger kvar i fasadens
+       dörr — geometrin är orörd och prompten hör till rätt dörr.
+       `ankomst` är var man LANDAR: 1,6 m västerut, i den fria delen av
+       samma rum (kanonens OPEN_AREA `stall_uppehall_open`). Ger
+       4,0/1,2/3,7/0,9 m fritt.
 
-       Måttet stämmer: dörren ligger 0,7 m från teorisalens västvägg
-       (x 11,2). Man kan gå ut därifrån — västerut och söderut är fritt,
-       och vägen till stallet går väster ~4,6 m och sedan söderut genom
-       `inre_entre` (x 4,1–5,0) — men man kliver in i ett hörn.
-
-       JAG HAR INTE RÄTTAT DET, och det är ett medvetet stopp. Båda
-       vägarna framåt bryter mot något som redan är beslutat:
-
-         · flytta interaktions-/ankomstpunkten ur dörren → fäller
-           ankaret `stall_entre_samma_dorr` (#80 runda 3: samma fysiska
-           dörr inne som ute, och gårdsmarkörens spawn = ut_n). Provat,
-           CI blev röd, återställt.
-         · flytta teorisalens vägg eller dörren → verifierad geometri,
-           och CLAUDE.md förbjuder uttryckligen att flytta väggar och
-           dörrar för att lösa ett spelproblem.
-
-       Det här är alltså ett produktbeslut, inte en implementationsdetalj.
-       Frågan ligger i PR #87. */
+       Ankaret `stall_entre_samma_dorr` (#80 runda 3) krävde förut att
+       gårdsmarkörens spawn var EXAKT innerpunkten, och min första
+       rättelse fällde det i CI. Efter PO-beslutet kräver ankaret i
+       stället att ankomsten hör till dörren — inom 2 m och i dörrens
+       eget rum. Kravet är "samma dörr", inte "samma punkt". */
     {id:"ut_n", pos:[(()=>{const o=ANL.byggnader.find(b=>b.id==="stall").oppningar.find(o=>o.sida==="N"&&o.typ==="dorrgul");
                           return STALL_BREDD-o.u-o.b/2;})(), STALL_LANGD-1.0],
+     /* Teorisalens västvägg (x 11,2) är rummets östra kant; 1,6 m in från
+        den ger figurens 0,35 m radie gott om marginal. */
+     ankomst:[11.2-1.6, STALL_LANGD-1.55],
      text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (Entré, under verandan)",
      spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},
@@ -1437,7 +1432,10 @@ for(const d of STALLINNE.dorrar){
     pos:[d.spawn.x, d.spawn.y],
     text:d.uttext,
     mot:"stallinne",
-    spawn:{x:d.pos[0], y:d.pos[1], rikt:d.inrikt},
+    /* `ankomst` när dörren har en — annars dörrens egen punkt.
+       Interaktionspunkten ligger I dörren (ankaret), man LANDAR där det
+       finns plats att stå (PO-beslut 2026-09-06). */
+    spawn:{x:(d.ankomst||d.pos)[0], y:(d.ankomst||d.pos)[1], rikt:d.inrikt},
   });
 }
 
