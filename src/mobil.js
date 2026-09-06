@@ -196,3 +196,49 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
     ritt.style.display=rider?"":"none";
   },250);
 })();
+
+/* ══════════════════════════════════════════════════════════════════
+   P0 #81 — läktaren: figurens visuella höjd måste följa golvnivån.
+
+   `v3dRitaSpelare()` skickar redan `y: VD.pz`, och den mjuka figuren
+   använder det. Klossfiguren ignorerade däremot `o.y` och byggde sin
+   basmatris på Y=0. Resultat: kamera + kollision gick uppför trappan men
+   kroppen stod kvar på marknivå och skars genom läktaren.
+
+   Patchen ligger efter varld3d.js i laddordningen (mobil.js laddas sist)
+   och korrigerar bara klossfigurens bastranslation. Samtidigt filtreras
+   de två gula halvtransparenta SPELABSTRAKTION-markörerna ur normal
+   gameplay; själva trappstegen och nivåregeln finns kvar.
+   ══════════════════════════════════════════════════════════════════ */
+(function installeraLaktarRenderFix(){
+  if(typeof v3dFigurKloss==="function"&&!v3dFigurKloss.__pzFix){
+    const original=v3dFigurKloss;
+    const wrapped=function(o){
+      const tr=M4.translation;
+      let bas=false;
+      M4.translation=function(x,y,z){
+        if(!bas&&o&&x===o.x&&y===0&&z===o.z){
+          bas=true;
+          return tr(x,o.y||0,z);
+        }
+        return tr(x,y,z);
+      };
+      try{return original(o);}finally{M4.translation=tr;}
+    };
+    wrapped.__pzFix=true;
+    v3dFigurKloss=wrapped;
+  }
+
+  if(typeof v3dRidhus==="function"&&!v3dRidhus.__utanDebugMarkor){
+    const original=v3dRidhus;
+    const wrapped=function(...args){
+      const fore=S3.statiskt.length;
+      const svar=original.apply(this,args);
+      S3.statiskt=S3.statiskt.filter((s,i)=>
+        !(i>=fore&&s&&s.glas===true&&s.alfa===0.35));
+      return svar;
+    };
+    wrapped.__utanDebugMarkor=true;
+    v3dRidhus=wrapped;
+  }
+})();
