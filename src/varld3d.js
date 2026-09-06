@@ -1763,8 +1763,7 @@ function ridhusFalt(R){
   if(slut-z>0.5)ut.push([z,slut]);
   return ut;
 }
-function v3dRidhus(lagg,opp){
-  const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
+function v3dRidhusUnderlag(R, ba, lagg, T) {
   lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
     M4.translation(R.bredd/2,0.01,R.langd/2),8),T.grus);
   /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula sand.
@@ -1789,6 +1788,8 @@ function v3dRidhus(lagg,opp){
        .toString(16).padStart(2,"0")).join("");
    lagg(new Bygge().yta(ba.w,ba.h,sandBas,
      M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);}
+}
+function v3dRidhusSarg(R, ba, lagg) {
   /* Sargen med svart sockel — porten vid A lämnas öppen. */
   const sarg=new Bygge();
   const bit=(x0,z0,x1,z1)=>{
@@ -1813,6 +1814,8 @@ function v3dRidhus(lagg,opp){
            bit(ba.x+ba.w,gr.y1,ba.x+ba.w,ba.y+ba.h); }
    else bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);}
   lagg(sarg,null);
+}
+function v3dRidhusTakOchVaggar(R, lagg) {
   /* Ytterväggar, sadeltak och limträstolar. */
   const hall=new Bygge();
   hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,-0.15));
@@ -1881,7 +1884,8 @@ function v3dRidhus(lagg,opp){
      for(const a of ly.andelar)
        hall.lada(ly.bredd,0.08,ly.langd,ly.farg,M4.translation(R.bredd*a,R.tak-ly.underTak,z));}
   lagg(hall,null);
-
+}
+function v3dRidhusLangsidansOvreVagg(R, lagg) {
   /* ── MOTSÄGELSE 1: långsidans övre väggyta ────────────────────────
      `IMG_0183`: mörkröd/maroon ovanför sargen, med horisontella
      detaljer. Spelet hade en vit vägg här och brun panel bara i den
@@ -1944,12 +1948,13 @@ function v3dRidhus(lagg,opp){
        pan.lada(LV.skarvB,R.tak-R.sargH,0.05,LV.skarvFarg,M4.translation(lx,(R.sargH+R.tak)/2,z));
    }
    lagg(pan,null);}
+}
+function v3dRidhusLaktareOchTrappor(R, lagg, T, lak, lakN) {
   /* Läktaren, domarbåset, cafeterian och trappan. */
   /* Läktaren är en trästomme: fyrkantsstolpar, balkar och plankbänkar i
      ljus furu — inte gjutna trappsteg. Under den finns ett mörkt utrymme
      där bommar och stöd förvaras, och på översta bänken ligger elons
      svarta dynor. Allt ur interiörfotona. */
-  const lak=new Bygge(), lakN=new Bygge();
   /* Läktaren byggs i sektioner: hästgången går igenom den centralt, och ett
      obrutet block här murar igen gången. */
   for(const sek of laktarSektioner(R.laktare)){
@@ -2007,9 +2012,9 @@ function v3dRidhus(lagg,opp){
      att en granskare ser att de inte är fidelity-geometri. */
   {const LS=SPELABSTRAKTIONER.ridhus.laktarSteg;
    if(LS&&LS.x1>LS.x0){
-     const T=trappsteg(LS), b=LS.x1-LS.x0, mitt=(LS.x0+LS.x1)/2;
-     for(const st of T.steg){
-       const tj=Math.max(0.06,Math.abs(T.stig));
+     const Tt=trappsteg(LS), b=LS.x1-LS.x0, mitt=(LS.x0+LS.x1)/2;
+     for(const st of Tt.steg){
+       const tj=Math.max(0.06,Math.abs(Tt.stig));
        lak.lada(b,tj,st.a1-st.a0,"#B9A886",M4.translation(mitt,st.z-tj/2,(st.a0+st.a1)/2));
      }
      const m=new Bygge();
@@ -2018,9 +2023,9 @@ function v3dRidhus(lagg,opp){
    }}
   const SA=SPELABSTRAKTIONER.ridhus.bankradSteg;
   if(SA&&SA.x1>SA.x0){
-    const T=trappsteg(SA), b=SA.y1-SA.y0, mitt=(SA.y0+SA.y1)/2;
-    for(const st of T.steg){
-      const tj=Math.max(0.06,Math.abs(T.stig));
+    const Tt=trappsteg(SA), b=SA.y1-SA.y0, mitt=(SA.y0+SA.y1)/2;
+    for(const st of Tt.steg){
+      const tj=Math.max(0.06,Math.abs(Tt.stig));
       lak.lada(st.a1-st.a0,tj,b,"#B9A886",M4.translation((st.a0+st.a1)/2,st.z-tj/2,mitt));
     }
     const m=new Bygge();
@@ -2036,12 +2041,12 @@ function v3dRidhus(lagg,opp){
      (siktgrinden, rutten upp för c_trappa_v). */
   let sido=null;
   for(const t of R.trappor||[]){
-    const T=trappsteg(t), langsX=(T.axel==="x");
+    const Tt=trappsteg(t), langsX=(Tt.axel==="x");
     sido=new Bygge();
     const b=langsX ? t.y1-t.y0 : t.x1-t.x0;            // loppets bredd tvärs
     const mitt=langsX ? (t.y0+t.y1)/2 : (t.x0+t.x1)/2;
-    for(const st of T.steg){
-      const tj=Math.max(0.06,Math.abs(T.stig)), am=(st.a0+st.a1)/2, d=st.a1-st.a0;
+    for(const st of Tt.steg){
+      const tj=Math.max(0.06,Math.abs(Tt.stig)), am=(st.a0+st.a1)/2, d=st.a1-st.a0;
       if(langsX) lak.lada(d,tj,b,"#5A4232",M4.translation(am,st.z-tj/2,mitt));
       else       lak.lada(b,tj,d,"#5A4232",M4.translation(mitt,st.z-tj/2,am));
     }
@@ -2084,8 +2089,8 @@ function v3dRidhus(lagg,opp){
          v3dPolygon(sido,pts,"#E9E5DC",v3dFasadMat([sx+0.10,0],0,1,0,0,0));}
         sido.lada(0.06,0.06,L,"#8A6A44",M4.mul(M4.translation(sx+0.10,zm+0.93,am),M4.rotX(-lut)));
       }
-      for(let i=0;i<T.n;i+=3){
-        const st=T.steg[i], c=(st.a0+st.a1)/2;
+      for(let i=0;i<Tt.n;i+=3){
+        const st=Tt.steg[i], c=(st.a0+st.a1)/2;
         if(langsX) sido.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(c,st.z+0.95/2,sx));
         else       sido.lada(0.06,0.95,0.06,"#8A6A44",M4.translation(sx,st.z+0.95/2,c));
       }
@@ -2093,6 +2098,8 @@ function v3dRidhus(lagg,opp){
     S3.statiskt.push({nat:GL.nat(sido), tex:null,
       tona: langsX ? {x:t.x0, y:t.y0-0.15, w:t.x1-t.x0, h:0.30} : {x:t.x0-0.15, y:t.y0, w:0.30, h:t.y1-t.y0}});
   }
+}
+function v3dRidhusDomarbas(R, lagg, T, lak, lakN) {
   /* ── MOTSÄGELSE 4: båset vid E ────────────────────────────────────
      `IMG_0198`: vid dressyrbokstaven E leder en trappa MED TRÄRÄCKEN upp
      till ett litet MÖRKT TRÄBYGGT bås, med en exit-skylt vid öppningen.
@@ -2166,7 +2173,8 @@ function v3dRidhus(lagg,opp){
        M4.translation(D.x+dIn*(D.b/2+0.08),golv+D.h+0.30,D.y));
    }
    lagg(sk,null);}
-
+}
+function v3dRidhusGlasadeRum(R, lagg) {
   /* ── MOTSÄGELSE 5: glasade rum bakom sargen ───────────────────────
      `IMG_0179`: bakom sargen finns upphöjda träbänkar i nivåer OCH flera
      glasade rum/fönsterpartier. Läktarens nivåer fanns redan; de glasade
@@ -2259,6 +2267,8 @@ function v3dRidhus(lagg,opp){
         M4.mul(M4.translation(KL.x,ky,vagg-ut*0.21),M4.rotX(Math.PI/2)),18);}
     lagg(gl,null);
    }}
+}
+function v3dRidhusEntredel(R, lagg, T) {
   /* ── ENTRÉDELEN i norra gaveln, ur utrymningsplanen ──────────────
      Förut byggdes en 180°-vriden hall med antydda väggar, receptionsdisk,
      bänkar, hjälmhylla, anslagstavla och ett andra trapphus — allt
@@ -2310,6 +2320,8 @@ function v3dRidhus(lagg,opp){
     g.lada(0.06,1.0,l,"#E9E5DC",M4.translation(V.x1-0.03,V.z+0.5+0.13,(V.y0+V.y1)/2));
     S3.statiskt.push({nat:GL.nat(g),tex:null});
   }
+}
+function v3dRidhusHinderOchInredning(R, ba, lagg) {
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
      står i ridhuset mellan lektionerna och gör det till en arbetsplats
@@ -2373,6 +2385,19 @@ function v3dRidhus(lagg,opp){
   /* Inredningen ur INREDNING.ridhus (F02-B): speglarna, hinderupplaget på
      läktaren, skåpkorridorens skåp och stolar, entréns bänk. */
   v3dInredning("ridhusinne",lagg);
+}
+function v3dRidhus(lagg, opp) {
+  const R = RIDHUSINNE, ba = R.bana, T = S3.tex;
+  v3dRidhusUnderlag(R, ba, lagg, T);
+  v3dRidhusSarg(R, ba, lagg);
+  v3dRidhusTakOchVaggar(R, lagg);
+  v3dRidhusLangsidansOvreVagg(R, lagg);
+  const lak = new Bygge(), lakN = new Bygge();
+  v3dRidhusLaktareOchTrappor(R, lagg, T, lak, lakN);
+  v3dRidhusDomarbas(R, lagg, T, lak, lakN);
+  v3dRidhusGlasadeRum(R, lagg);
+  v3dRidhusEntredel(R, lagg, T);
+  v3dRidhusHinderOchInredning(R, ba, lagg);
 }
 
 /* ── Bygg om scenen ───────────────────────────────────────────── */
