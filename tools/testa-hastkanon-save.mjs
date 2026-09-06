@@ -78,3 +78,25 @@ assert.equal(ny.hastkanonVersion, "2026-09-01");
 assert.deepEqual(ny.fortroende, {});
 
 console.log("OK   hästkanon-save migrerar gamla identiteter exakt en gång");
+
+function testaSparaFel() {
+  const context = {
+    console,
+    G: {},
+    localStorage: {
+      getItem() { return null; },
+      setItem(_key, value) { throw new Error("QuotaExceededError"); },
+      removeItem() { },
+    },
+    synkKnuffa: () => {},
+  };
+  vm.createContext(context);
+  vm.runInContext(source, context, { filename: "src/ryttare.js" });
+
+  assert.doesNotThrow(() => {
+    vm.runInContext("SPAR = {}; sparaRyttare()", context);
+  });
+}
+
+testaSparaFel();
+console.log("OK   sparaRyttare hanterar localStorage-fel mjukt");
