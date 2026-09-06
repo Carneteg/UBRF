@@ -77,7 +77,9 @@ const M4={
 /* ── Färghjälp: "#RRGGBB" → [r,g,b] i 0–1 ─────────────────────── */
 function glFarg(h){
   if(Array.isArray(h))return h;
-  const n=parseInt(h.slice(1),16);
+  let str = h.slice(1);
+  if (str.length === 3) str = str[0]+str[0]+str[1]+str[1]+str[2]+str[2];
+  const n=parseInt(str,16);
   return [(n>>16&255)/255, (n>>8&255)/255, (n&255)/255];
 }
 function glMorka(f,k){const c=glFarg(f);return [c[0]*k,c[1]*k,c[2]*k];}
