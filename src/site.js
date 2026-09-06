@@ -2338,7 +2338,17 @@ const SPELABSTRAKTIONER = {
      FRÅN x0 i positiv x-led, åt båda hållen — mitt första försök vände
      tecknet och la båset 2 m utanför däcket. Speglingsprovet fällde det. */
   if(R.domarbas){
-    R.domarbas.x = R.laktare.x0+D*0.65;
+    /* P0 #81: FAKTORN 0,65 MURADE IGEN GÅNGBRÄDAN. Båset är 2,0 m brett
+       och låg då 1,81–3,81; gångbrädan ligger de innersta 0,9 m av
+       däcket (3,10–4,00, se laktarRader), alltså blockerad så när som på
+       0,19 m. PO-ordern på #114 är uttrycklig: domarbås och bänkar får
+       inte blockera gånglinjen.
+
+       BREDDEN 2,0 m RÖRS INTE — den är båsets mått. Det som ändras är
+       PLACERINGSFAKTORN, som alltid varit härledd och aldrig mätt (se
+       noten vid domarbas). 0,40 lägger båset 0,96–2,96: helt på däcket,
+       över raderna som förut, och gångbrädan fri med 0,14 m marginal. */
+    R.domarbas.x = R.laktare.x0+D*0.40;
     /* Båset vid E: dressyrlayoutens mitt, 30 m från A. */
     R.domarbas.y = R.dressyr.y+R.dressyr.h/2;
   }
@@ -2432,10 +2442,30 @@ const SPELABSTRAKTIONER = {
          source_id:"FOTO:ridhus-klubb-10,ridhus-inne-39", confidence:"VERIFIED_PLAN_OR_PHOTO"};
        /* Spelets steg från hallgolvet upp på däcket vid läktarens norra
           ände — SPELABSTRAKTION (se SPELABSTRAKTIONER.ridhus.laktarSteg):
-          -39 visar en nivåskillnad vid däckets ände, inte stegen. */
+          -39 visar en nivåskillnad vid däckets ände, inte stegen.
+
+          P0 #81: LOPPET ÄR 1,6 m, INTE 1,2. 0,8 m stigning på 1,2 m var
+          33° — gångbart i kod, men det läste som en ramp och kändes inte
+          som en trappa att gå uppför. 1,6 m ger 27° och fem tydliga steg
+          på 0,24 m plansteg. Bredden 2,2 m behålls: den är till för
+          pekskärmens felmarginal.
+
+          Trappan DEFINIERAS HÄR, i den kanoniska härledningen ur
+          läktaren, och muteras inte vid load. Ett tidigare försök satte
+          måtten sent i uppdrag.js; då hann delar av 3D-scenen byggas ur
+          de gamla värdena och spelaren kolliderade mot en trappa som
+          inte var den hon såg (#114-postmortem, punkt 1). */
        const ls=SPELABSTRAKTIONER.ridhus.laktarSteg;
-       ls.x0=L.x0+bredd+0.2; ls.x1=L.x0+L.dackDjup; ls.y0=L.y1; ls.y1=L.y1+1.2;
+       ls.x0=L.x0+bredd+0.2; ls.x1=L.x0+L.dackDjup; ls.y0=L.y1; ls.y1=L.y1+1.6;
        ls.z0=0; ls.z1=L.dackZ; ls.axel="y"; ls.stiger="S";
+       /* Läsbarhet för någon som inte känner huset: en lokal
+          interaktionspunkt vid trappfoten, inte ett nytt quest-state. */
+       if(Array.isArray(R.info)&&!R.info.some(i=>i.laktaruppgang)){
+         R.info.push({laktaruppgang:true,
+           pos:[(ls.x0+ls.x1)/2, ls.y1+0.4],
+           text:"Läktaren — trappan upp",
+           svar:"Här går trappan upp till läktargången."});
+       }
      }}
   }
   /* Markörerna framför C-blocket och vid domarbåset följer sina objekt. */
