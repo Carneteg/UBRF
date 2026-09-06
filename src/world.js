@@ -1756,8 +1756,10 @@ function ritaStall2D(){
     cx.fillStyle=HORSES[G.hastId].farg;
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
+  const raderById = {};
+  for(const r of S.rader) raderById[r.id] = r;
   for(const f of stallFolk()){
-    const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix, f.rad);
+    const rad=raderById[f.rad], fy=boxY(f.ix, f.rad);
     if(!rad||fy>S.klubbY-1)continue;
     const fx2=boxFrontX(rad)+rad.vetter*0.55;
     const[a,b]=ss(fx2,fy);
@@ -1942,8 +1944,10 @@ function ritaStall3D(){
     items.push({d:-avst2(rl.pos), rita(){ritaPerson3D(k,rl.pos[0],rl.pos[1]);}});
   }
   // elever som sköter sina hästar i gången
+  const raderById2 = {};
+  for(const r of S.rader) raderById2[r.id] = r;
   for(const f of stallFolk()){
-    const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix, f.rad);
+    const rad=raderById2[f.rad], fy=boxY(f.ix, f.rad);
     if(!rad||fy>S.klubbY-1)continue;
     const fx2=boxFrontX(rad)+rad.vetter*0.55;
     items.push({d:-avst2([fx2,fy]), rita(){ritaPerson3D(k,fx2,fy,{farg:f.farg,fasel:f.ix,rorlig:true});}});
