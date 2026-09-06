@@ -1277,8 +1277,7 @@ function v3dSiktProv(){
   ut.delvis = n>0&&n<4;
   return ut;
 }
-function v3dStall(lagg,opp){
-  const S=STALLINNE, T=S3.tex, vx=S.bredd/2;
+function v3dStallGolv(S, T, vx, lagg){
   /* Golvet, efter IMG_0249: en markstensgång i mitten — smalare än
      hela gången — och en ljus spånremsa längs boxfronterna på båda
      sidor. Remsan är det första ögat läser i filmen; utan den blir
@@ -1329,7 +1328,9 @@ function v3dStall(lagg,opp){
      ytorna i den underkända vyn. Den läser nu STALLINNE.golv. */
   lagg(new Bygge().yta(S.bredd,S.langd,S.golv,
     M4.translation(vx,0.005,S.langd/2),14),T.betong);
+}
 
+function v3dStallYttervaggar(S, lagg){
   /* YTTERVÄGGARNA.
 
      De här fanns hela tiden — jag påstod i ett tidigare pass att stallscenen
@@ -1400,6 +1401,9 @@ function v3dStall(lagg,opp){
      }
    }
    if(NO.length) lagg(g,null);}
+}
+
+function v3dStallTak(S, T, vx, lagg){
   /* Taket. Formen — sadeltak med korrugerad plåt som undertak, balkar var
      fjärde meter, takfönster i västra fallet och galvade dragstag ner till
      boxarna — kommer ur IMG_0249/0250 och stämmer mot
@@ -1496,7 +1500,9 @@ function v3dStall(lagg,opp){
     kl.cyl(K.r*0.82,K.r*0.82,0.02,"#2E2E2C",
       M4.mul(M4.translation(K.x+0.06,K.z,K.y),M4.rotZ(Math.PI/2)),14);
     lagg(kl,null);}
+}
 
+function v3dStallBoxar(S, lagg){
   /* Boxfronterna: komposit, galvad ram, vågräta reglar och namnskylt.
      Färger och form ur IDENTITET.stall.boxfront — samma data som Roblox
      läser, så att fronterna inte kan glida isär mellan ytorna. */
@@ -1559,8 +1565,11 @@ function v3dStall(lagg,opp){
     }
   }
   lagg(front,null); lagg(galler,null);
+}
 
+function v3dStallRum(S, T, vx, lagg){
   /* Rummen i klubbdelen och servicedelen. */
+  const BF=IDENTITET.stall.boxfront;
   const rum=new Bygge();
   /* KLUBBRUMMEN har riktiga väggar: brandplanen ritar dem som rum, och
      stall-inne-01..04 visar slutna rum. SERVICEBUKTARNA har det inte —
@@ -1748,6 +1757,17 @@ function v3dStall(lagg,opp){
   wb.panel(1.6,1.0,"#F6F4EE",M4.mul(M4.translation(S.whiteboard.pos[0]+0.2,1.7,
     S.whiteboard.pos[1]),M4.rotY(-Math.PI/2)));
   lagg(wb,null);
+}
+
+function v3dStall(lagg,opp){
+  const S=STALLINNE, T=S3.tex, vx=S.bredd/2;
+
+  v3dStallGolv(S, T, vx, lagg);
+  v3dStallYttervaggar(S, lagg);
+  v3dStallTak(S, T, vx, lagg);
+  v3dStallBoxar(S, lagg);
+  v3dStallRum(S, T, vx, lagg);
+
   /* Inredningen ur INREDNING.stall (F02-B). */
   v3dInredning("stallinne",lagg);
 }
