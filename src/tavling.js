@@ -91,8 +91,8 @@ function sittUpp(plats){
     const ratt=G.tavling.typ==="hoppning"?"ridhus":"utebana";
     if(plats!==ratt){
       saga(G.tavling.typ==="hoppning"
-        ?"Tävlingsdag — Påskhoppet rids i ridhuset. Led honom dit."
-        :"Tävlingsdag — dressyren rids på uteridbanan. Led honom dit.",4);
+        ?`Tävlingsdag — Påskhoppet rids i ridhuset. Led ${HORSES[G.hastId].namn} dit.`
+        :`Tävlingsdag — dressyren rids på uteridbanan. Led ${HORSES[G.hastId].namn} dit.`,4);
       return;
     }
     G.plats=plats;
@@ -202,7 +202,7 @@ function visaTavlingsResultat(dom){
     :"";
   const omdome=uteJag?`Inte er dag. ${h.namn} förtjänar en lugn hemritt — och du en ny chans nästa tävling.`
     :plac===1?`Ni vann. ${h.namn} visste om det innan resultatet lästes upp.`
-    :plac<=3?`Placerade! Rosetten hängs på ${h.namn}s boxdörr — han har förtjänat den lika mycket som du.`
+    :plac<=3?`Placerade! Rosetten hängs på ${h.namn}s boxdörr — förtjänad lika mycket av hästen som av dig.`
     :plac<=5?`En rosett på första försöket är inget att fnysa åt. Vidare mot nästa.`
     :`Ingen rosett i dag — men ridningen håller. Domarna såg samma sak som jag.`;
   overlay(true,`

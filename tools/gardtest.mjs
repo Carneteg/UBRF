@@ -343,17 +343,26 @@ function prova(namn, ok, detalj) {
 
   /* 4. Och den försvinner när uppgiften gått vidare — hjälpen ska vara
         kontextuell, inte ett konstant tutorialskelett. */
+  /* Utgångsläget sätts UTTRYCKLIGEN: markören hör till uppdragssteget
+     "hitta hästen", inte till hästens plats. Provet läste förut bara
+     `uppgiftsMarkor()` med det tillstånd som råkade ligga kvar från
+     vandringarna ovan — och när uppdraget hunnit vidare till
+     sadelkammaren var markören (helt riktigt) borta, vilket såg ut som
+     ett fel i markören. Varje rad nedan säger nu vilket steg den mäter. */
   const v = await page.evaluate(() => {
-    const utan = !!uppgiftsMarkor();
-    G.hastPlats = "leds";       const leds = !!uppgiftsMarkor();
+    G.hastMott = false; G.skotselRes = null; G.hastPlats = "box";
+    const utan = !!uppgiftsMarkor();                    // steg: hitta hästen
+    G.hastMott = true;  const utrustning = !!uppgiftsMarkor(); // steg: hämta sadel
+    G.hastMott = false; G.hastPlats = "leds";
+    const leds = !!uppgiftsMarkor();
     G.hastPlats = "box"; G.skotselRes = { klart: true };
     const skott = !!uppgiftsMarkor();
-    G.skotselRes = null;
-    return { utan, leds, skott };
+    G.skotselRes = null; G.hastMott = false;
+    return { utan, utrustning, leds, skott };
   });
-  prova("markören försvinner när hästen leds och när skötseln är klar",
-    v.utan === true && v.leds === false && v.skott === false,
-    `vid boxen ${v.utan} · leds ${v.leds} · skött ${v.skott}`);
+  prova("markören sitter på hästen bara när uppgiften ÄR hästen",
+    v.utan === true && v.utrustning === false && v.leds === false && v.skott === false,
+    `hitta hästen ${v.utan} · hämta sadel ${v.utrustning} · leds ${v.leds} · skött ${v.skott}`);
   await page.evaluate(() => { startaVandring(); G.vy = "2d"; });
 }
 

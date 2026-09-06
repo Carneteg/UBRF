@@ -45,7 +45,7 @@ function visaSadelkammare(){
     <div style="display:flex;gap:8px;flex-wrap:wrap">${grannar.map(id=>bygel(id,"trans")).join("")}</div>
   </div>
   <div class="note" id="skStatus" style="font-size:13px;margin-top:14px">
-    Du rider <b style="color:var(--ink)">${h.namn}</b> i dag. Ta hans sadel och hans träns.</div>
+    Du rider <b style="color:var(--ink)">${h.namn}</b> i dag. Ta ${hastPron(h.id,"poss")} sadel och träns.</div>
   <div class="btnrow">
     <button class="btn" id="bSkKlar">Ta med utrustningen</button>
     <button class="btn ghost" id="bSkStang">Stäng</button>
@@ -195,13 +195,13 @@ function visaBoxmeny(){
   <div class="btnrow"><button class="btn ghost" id="bStang">Stäng</button></div>`);
   const bT=document.getElementById("bTacke");
   if(bT)bT.onclick=()=>{G.tackePa=false;
-    saga("Täcket av och upphängt över boxkanten. Han skakar på sig.",3);visaBoxmeny();};
+    saga(`Täcket av och upphängt över boxkanten. ${h.namn} skakar på sig.`,3);visaBoxmeny();};
   document.getElementById("bMocka").onclick=visaMockning;
   document.getElementById("bFodra").onclick=visaFodring;
   document.getElementById("bSkots").onclick=()=>{
     if(G.tackePa){saga("Täcket hänger i vägen — ta av det först.",3);return;}
     if(!G.utrustning){overlay(false);
-      saga(`Du har varken sadel eller träns här. ${h.namn}s hänger på sin bygel i sadelkammaren, innanför uppehållsrummet.`,4.5);
+      saga(`Du har varken sadel eller träns här. ${h.namn}s hänger på sin egen bygel i sadelkammaren, innanför uppehållsrummet.`,4.5);
       return;}
     visaSkotsel();};
   document.getElementById("bStang").onclick=()=>overlay(false);

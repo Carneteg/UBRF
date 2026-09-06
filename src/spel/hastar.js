@@ -115,6 +115,31 @@ const PROFIL={
   allan:"arbetsvillig",     // "en trevlig valack som går bra i både hoppning och dressyr"
 };
 
+/* PRONOMEN — härlett ur källtexten, aldrig påhittat.
+
+   PO-order 2026-09-06: "Pronomen/namn/plats ska komma från canonical
+   horse data/runtime, inte separata strängar. Ingen hårdkodad
+   honom/henne som kan bli fel." Underlaget är samma `besk` som allt
+   annat verklighetsfaktum: står det valack eller han i beskrivningen är
+   hästen en han, står det sto eller hon är hon ett sto. Står det ingetdera
+   VET vi inte — och då används namnet i stället för ett gissat pronomen.
+   Bränntomts Lydia är just ett sådant fall: källtexten säger varken
+   valack eller sto. [REFERENCE GAP] tills UBRF kan bekräfta könet.
+
+   Hon/han-formerna nedan är svenska pronomen för hästen som individ. */
+const PRONOMEN_HAN={subj:"han", obj:"honom", poss:"hans"};
+const PRONOMEN_HON={subj:"hon", obj:"henne", poss:"hennes"};
+function harledPronomen(besk){
+  const t=" "+String(besk||"").toLowerCase()+" ";
+  const ord=r=>r.test(t);
+  const han=ord(/[^a-zåäö]valack[a-zåäö]*[^a-zåäö]/)||ord(/[^a-zåäö](han|honom|hans)[^a-zåäö]/);
+  const hon=ord(/[^a-zåäö]sto[^a-zåäö]/)||ord(/[^a-zåäö](hon|henne|hennes)[^a-zåäö]/);
+  if(han&&!hon)return {...PRONOMEN_HAN, kalla:"besk"};
+  if(hon&&!han)return {...PRONOMEN_HON, kalla:"besk"};
+  /* Både och, eller ingetdera: vi vet inte. Namnet får bära meningen. */
+  return {subj:null, obj:null, poss:null, kalla:han&&hon?"besk_motsagelse":"REFERENCE_GAP"};
+}
+
 const HORSES={};
 for(const fakta of HASTFAKTA){
   const legacy=LEGACY_GAMEPLAY[fakta.id];
@@ -133,6 +158,7 @@ for(const fakta of HASTFAKTA){
     profil:PROFIL[fakta.id]||"skolhast",
     profilStatus:PROFIL[fakta.id]?"KALLTEXT":"SAKNAR_KALLA",
     visuellStatus:"ASSUMPTION",
+    pronomen:harledPronomen(fakta.besk),
   };
 }
 

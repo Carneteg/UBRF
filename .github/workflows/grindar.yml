@@ -182,3 +182,10 @@ jobs:
         run: |
           if [ -f tools/gardtest.mjs ]; then node tools/gardtest.mjs
           else echo "hoppar: tools/gardtest.mjs finns inte i denna branch"; fi
+
+      # Uppdraget: objective/navigation-kedjan och att uppsittningen går
+      # att NÅ genom hela produktionsvägen, gående, med E-interaktioner.
+      - name: Uppdraget — vad, var, hur — och uppsittningen hela vägen
+        run: |
+          if [ -f tools/uppdragstest.mjs ]; then node tools/uppdragstest.mjs
+          else echo "hoppar: tools/uppdragstest.mjs finns inte i denna branch"; fi

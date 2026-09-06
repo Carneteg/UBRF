@@ -779,7 +779,7 @@ const Approach={
     if(r<pV)return{resultat:"vagran",kommentar:over>0?"Hindret var för högt för hästen."
       :"Hon läste inte hindret — inridningen gav inget att hoppa på."};
     if(r<pV+pR)return{resultat:"rivning",kommentar:kval<0.4?"Fel avstånd. Bommen följde med.":"Snuddade bara."};
-    return{resultat:"felfritt",kommentar:kval>0.8?"Precis där du ville ha honom.":"Igenom."};
+    return{resultat:"felfritt",kommentar:kval>0.8?"Precis där du ville ha hästen.":"Igenom."};
   },
   rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;
     return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646;};},
@@ -808,7 +808,7 @@ function utvarderaSkotsel(sk,forlatande,stallro){
   else if(risker.includes("sadeln_glider"))omdome="Dra åt gjorden ett hål till innan du sitter upp.";
   else if(risker.includes("sten_i_hoven"))omdome="Kratsa hovarna ordentligt — alla fyra.";
   else if(risker.length)omdome="Visitera henne innan du sadlar. Mungipor och skav.";
-  else if(df>0.82)omdome="Fint skött. Det syns på honom.";
+  else if(df>0.82)omdome="Fint skött. Det syns på hästen.";
   else if(df>0.62)omdome="Godkänt. Rykta lite noggrannare där sadeln ligger.";
   else omdome="Du hade bråttom idag. Det märks.";
   return{dagsform:df,sadellage:sadel,risker,omdome};

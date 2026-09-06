@@ -52,18 +52,18 @@ function visaTilldelning(){
      2026-09-06). Raden satte förut `G.hamtad=false`, vilket flyttade ut
      henne i hagen igen direkt efter tilldelningen — dagen började i
      boxen och hoppade till hagen på första repliken. */
-  G.hastPlats="box";G.tackePa=false;G.fangstForsok=false;
+  G.hastPlats="box";G.tackePa=false;G.fangstForsok=false;G.hastMott=false;
   G.utrustning=false;G.lerig=false;G.spolad=0;G.felUtrustning=0;
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
-    lydia:"Lydia tar hand om dig. Lyssna på henne, så lär hon dig takten.",
+    lydia:"Lydia tar hand om dig. Lyssna — då kommer takten.",
     cosmo:"Snäll och okomplicerad. Bra dag att träna vägen till hindret.",
     air:"Air går i alla grupper — idag går han med dig. Rid framåt.",
-    larry:"Han hoppar gärna. Ge honom en rak linje så gör han resten.",
-    dexter:"Håll i dig. Han har lite mer fart — låt honom inte bestämma tempot.",
+    larry:"Larry hoppar gärna. Ge en rak linje, så gör Larry resten.",
+    dexter:"Håll i dig. Dexter har lite mer fart — låt inte hästen bestämma tempot.",
     hamilton:"Arbetsvillig men känslig — sitt stilla, så växer han.",
     crokino:"Stor men lättriden. Och du såg lappen om spöet, va?",
-    conor:"Du får Conor idag. Mjuk hand, balanserad sits. Han ger tillbaka exakt vad du ger honom.",
+    conor:"Du får Conor idag. Mjuk hand, balanserad sits — Conor ger tillbaka exakt vad du ger.",
     lady:"Lady kan det här bättre än vi båda. Din uppgift är att inte störa henne.",
     chip:"Chip testar dig direkt — var vänlig men bestämd, annars bestämmer han.",
     tina:"Tina har stallets finaste trav. Rykta försiktigt, hon är kittlig.",
@@ -71,16 +71,16 @@ function visaTilldelning(){
     makadu:"Makadu är snäll som få. Men kolla gjorden en extra gång innan du sitter upp.",
     mara:"Bry dig inte om minen i boxen. Mara ger dig allt när ni väl är på banan.",
     husky:"Om du får med dig Husky från hagen är halva lektionen redan vunnen.",
-    kennedy:"Kennedy är ung och allt är på riktigt för honom. Visa honom att världen är ofarlig."}[val]
+    kennedy:"Kennedy är ung och allt är på riktigt. Visa att världen är ofarlig."}[val]
     ||"Rid som du red senast — fast bättre.";
   const tavMotiv=G.tavling?(G.tavling.typ==="hoppning"
-    ?`Tävlingsdag — ${G.tavling.klass.namn} i Påskhoppet. Du rider ${h.namn}. Sköt honom extra noga, domarna ser allt.`
+    ?`Tävlingsdag — ${G.tavling.klass.namn} i Påskhoppet. Du rider ${h.namn}. Sköt om ${h.namn} extra noga, domarna ser allt.`
     :`Tävlingsdag — dressyr LC på uteridbanan. Du rider ${h.namn}. Ren ridning slår djärv ridning i dag.`):null;
   const minne=hastminne(val);
   const EGENHET={radd_for_spo:"är rädd för spö — det står på hästlistan. Låt bli F-tangenten.",
     blaser_upp_magen:"blåser upp magen när du gjordar. Vänta en stund och dra åt igen innan du sitter upp.",
     kittlig:"är kittlig — rykta med lugna, långsamma drag, annars registreras de inte.",
-    svarfangad:"är svårfångad i hagen. Drar han sig undan: stå still och gå lugnt fram en gång till."};
+    svarfangad:"är svårfångad i hagen. Drar hästen sig undan: stå still och gå lugnt fram en gång till."};
   const egenheter=Object.keys(h.flaggor||{}).map(f=>EGENHET[f]).filter(Boolean);
   const trott=minne.pass>0&&minne.sistaPassNr===SPAR.pass;
   const rehab=!!minne.rehab;
@@ -98,7 +98,7 @@ function visaTilldelning(){
         <span>Maxhöjd <b>${h.maxhojd.toFixed(2).replace(".",",")} m</b></span>
       </div>
       <div class="why">”${tavMotiv||motiv}”</div>
-      ${minne.pass>0?`<div class="dim" style="font-size:12px;margin-top:8px">Ni har ridit ${minne.pass} pass ihop — han minns dig (rang ${minne.rang.toFixed(2).replace(".",",")})${
+      ${minne.pass>0?`<div class="dim" style="font-size:12px;margin-top:8px">Ni har ridit ${minne.pass} pass ihop — ${h.namn} minns dig (rang ${minne.rang.toFixed(2).replace(".",",")})${
         typeof minne.sistaForm==="number"?` · dagsform senast ${minne.sistaForm.toFixed(2).replace(".",",")}`:""}.</div>`
         :`<div class="dim" style="font-size:12px;margin-top:8px">Första gången ni möts.</div>`}
     </div>
@@ -120,7 +120,7 @@ function visaTilldelning(){
     const a=hastAnvisning(h.namn);
     saga(G.hastPlats==="box"
       ? `${h.namn} står i sin box inne i stallet${G.vader&&G.vader.tacke?" — täcket hänger på boxdörren":""}. ${a.hur}`
-      : `${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta honom.`,4);};
+      : `${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta ${h.namn}.`,4);};
   document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
     setTimeout(()=>{const w=document.querySelector(".why");
       if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};
@@ -465,7 +465,7 @@ function avslutaSkotsel(){
     sys.fodrat<0.99?"Fodringen stämmer inte med schemat. ":""}Det sänker stallron — hästen känner av oredan.</div>`:""}
   <p class="dim" style="font-size:13.5px">Dagsformen skalar hela avsprångskvaliteten i hoppningen,
   och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
-  <div class="btnrow"><button class="btn" id="bLek">Led honom ut till lektionen</button></div>`);
+  <div class="btnrow"><button class="btn" id="bLek">Led ${HORSES[G.hastId].namn} ut till lektionen</button></div>`);
   document.getElementById("bLek").onclick=()=>{overlay(false);
     G.hastPlats="leds";VD.spår.length=0;
     const gIdx=GRUPPSTEGE.indexOf(G.grupp);
@@ -522,7 +522,7 @@ function visaResultat(dom){
           ?`Godkänt pass — snittet höll gruppens förväntan. Uppflyttning: <b class="gold">${P.poang}/2</b>.`
           :`Uppflyttning kräver snitt över gruppens förväntan (${forv.toFixed(2).replace(".",",")}) utan uteslutning. Just nu: ${P.poang}/2.`}</div>`}
       ${P.skada?`<div class="note bad" style="font-size:13px">Efter lektionen visar ${h.namn} <b>${P.skada.namn}</b>.
-        Han sätts på vila i ${P.skada.passKvar} pass — och första passet tillbaka blir bara skritt och trav.
+        ${HORSES[P.skada.hast]?HORSES[P.skada.hast].namn:"Hästen"} sätts på vila i ${P.skada.passKvar} pass — och första passet tillbaka blir bara skritt och trav.
         Nästa gång: visitera och kratsa ordentligt <em>före</em> lektionen.</div>`:""}
     </div>
   </div>
@@ -544,7 +544,7 @@ function visaResultat(dom){
       return;
     }
     nollstall();
-    G.skotselRes=null;G.hastPlats="box";G.tackePa=false;
+    G.skotselRes=null;G.hastPlats="box";G.tackePa=false;G.hastMott=true;
     G.utrustning=true;G.lerig=false;G.spolad=0;   // sadeln är redan hämtad
     overlay(false);hudLage("gang");
     const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
