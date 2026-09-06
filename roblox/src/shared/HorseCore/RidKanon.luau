@@ -616,6 +616,72 @@ RidKanon.UGNETA = {
 		storvolt = { "linje", "rytm", "balans" },
 		trav_skritt = { "timing", "mjukhet", "respons" },
 	},
+	ORDNING = { "halt_skritt", "skritt_trav", "storvolt", "horn", "trav_skritt", "galoppfattning" },
+	OVNINGAR = {
+		halt_skritt = {
+			rubrik = "Halt → skritt",
+			punkter = { "Titta dit du ska.", "En tydlig skänkel — vänta på svaret." },
+		},
+		skritt_trav = {
+			rubrik = "Skritt → trav",
+			punkter = { "Behåll lugn kontakt.", "Driv en gång tydligt fram i trav." },
+		},
+		storvolt = {
+			rubrik = "20 m volt",
+			punkter = { "Titta runt volten.", "Inre skänkel — yttre tygel håller storleken." },
+		},
+		horn = {
+			rubrik = "Rid genom hörnet",
+			punkter = { "Behåll samma rytm.", "Balansera före hörnet — inte mitt i." },
+		},
+		trav_skritt = {
+			rubrik = "Trav → skritt",
+			punkter = { "Sitt ner och förbered.", "Behåll skänkeln genom övergången." },
+		},
+		galoppfattning = {
+			rubrik = "Galoppfattning",
+			punkter = { "Balansera först.", "Be tydligt — och låt hästen svara." },
+		},
+	},
+	LIVE = {
+		framat = { fel = "Rid framåt", bra = "Bra rytm" },
+		hand = { fel = "Mjukare hand", bra = "Mjuk hand" },
+		lugn = { fel = "Andas ut", bra = "Fint lugn" },
+		sits = { fel = "Sitt stilla", bra = "Bra sits" },
+		timing = { fel = "Vänta på svaret", bra = "Precis så" },
+		vagen = { fel = "Titta dit du ska", bra = "Bra linje" },
+	},
+	LIVE_CD = { bra = 14, fel = 8, visa = 2.6 },
+	DIM_CUE = {
+		balans = "sits",
+		linje = "vagen",
+		mjukhet = "hand",
+		respons = "lugn",
+		rytm = "framat",
+		tempo = "framat",
+		timing = "timing",
+	},
+	KVALITET = {
+		VOLT_RADIE = 10,
+		VOLT_SPANN = 7,
+		LINJE_RADIE = 0.65,
+		LINJE_RAK = 0.35,
+		SVARSTID_TAK = 0.55,
+		ETABLERING_TAK = 2.6,
+		TIMING_SVAR = 0.4,
+		TIMING_ETABLERING = 0.4,
+		TIMING_PARAD = 0.2,
+		RESPONS_FOKUS = 0.4,
+		RESPONS_LUGN = 0.35,
+		RESPONS_SVAR = 0.25,
+		TEMPO_GOLV = 0.15,
+		TEMPO_NAMNARE = 0.8,
+		OMATT = 0.5,
+		BATTRE = 0.045,
+		SVAG = 0.68,
+		BRA = 0.55,
+	},
+	PLATS = { u = 0.5, bortomC = 1.4, bredd = 20, langd = 60 },
 }
 
 return RidKanon

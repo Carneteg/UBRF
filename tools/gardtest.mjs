@@ -52,11 +52,22 @@ async function ga(scen, x, y, hall, framme, maxMs = 20000) {
   await page.waitForTimeout(250);
   for (const h of hall) await page.keyboard.down(TANGENT[h]);
   const las = () => page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
-  let p = await las(), stilla = 0, t = 0, nadde = false;
+  /* UPPSTARTEN RÄKNAS INTE SOM STILLASTÅENDE. Räknaren startade förut
+     direkt, så en figur som ännu inte hunnit börja gå — tangenten
+     registrerad men ingen bildruta körd — såg ut att stå mot något
+     solitt efter 0,6 s. Det gav ett falskt rött på "in i hagen genom
+     grinden" med figuren kvar på startpunkten: den hade inte blockerats,
+     den hade inte börjat. Provet ska mäta geometrin, inte starten.
+     Uppstartsfönstret är ändå ändligt: har inget hänt på 2 s räknas
+     stillastående även utan att figuren rört sig, så en verkligt
+     blockerad figur avgörs snabbt. */
+  let p = await las(), stilla = 0, t = 0, nadde = false, rort = false;
   while (t < maxMs) {
     await page.waitForTimeout(200); t += 200;
     const q = await las();
-    if (Math.hypot(q.x - p.x, q.y - p.y) < 0.02) stilla += 200; else stilla = 0;
+    const flyttad = Math.hypot(q.x - p.x, q.y - p.y) >= 0.02;
+    if (flyttad) rort = true;
+    if (!flyttad && (rort || t >= 2000)) stilla += 200; else stilla = 0;
     p = q;
     if (framme(p)) { nadde = true; break; }
     if (stilla >= 600) break;          /* står mot något solitt */

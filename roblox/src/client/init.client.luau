@@ -34,6 +34,7 @@ local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
+local LektionController = require(script.LektionController)
 local Debug = require(script.Debug)
 local Genomsikt = require(script.Genomsikt)
 
@@ -51,6 +52,12 @@ local function dismount()
 	ride.sound:release()
 	ride.effects:release()
 	ride.rider:release()
+	--[[ SÄKERHET FÖRE UNDERVISNING (G02-C). Ritten är slut — av vilket
+	     skäl som helst, och flera av dem ÄR säkerhetshändelser: karaktären
+	     försvinner, riggen är borta ur workspace, servern flyttar
+	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
+	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
+	LektionController.avbryt()
 	Debug.clear()
 	InteractionController.setEnabled(true)
 	ride = nil
@@ -102,6 +109,17 @@ local function mount(model: Model)
 	InteractionController.setEnabled(false)
 	Debug.attach(rig, stats)
 
+	--[[ G02-C: lektionen börjar när man sitter upp i ridhuset. Ugneta
+	     ställer sig vid sargen och undervisningen kör i den ordinarie
+	     loopen nedan — det är hela skillnaden mot en HUD som bara går att
+	     anropa. Gestalten placeras mot den BYGGDA banan; hittas den inte
+	     körs lektionen ändå, utan figur. ]]
+	--[[ Hela anläggningen är EN modell, "UBRF" i mappen "Anläggning"
+	     (BuildKit.newBuilding i roblox/buildings/Anlaggningen.luau).
+	     Ridbanan och sargen hänger direkt under den. ]]
+	local anlaggning = workspace:FindFirstChild("Anläggning")
+	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
+
 	local missing = (ride.animation :: any).missing
 	if missing and #missing > 0 then
 		warn(("[Horse] Saknade animationer (%d): %s")
@@ -133,8 +151,9 @@ PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
 PreparationController.start()
---[[ G02-C: Ugnetas lärar-UX. Live-chip under ridning, kort mellan
-     försöken, säkerhet före undervisning. ]]
+--[[ G02-C: Ugnetas lärar-UX byggs vid uppstart så att den finns när
+     första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
+     av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]
 UgnetaController.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
@@ -192,6 +211,12 @@ RunService.RenderStepped:Connect(function(dt)
 	Telemetri.foljGangart(ride.ritt, loco.gait)
 	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature,
 		ride.movement.hjalper)
+
+	--[[ G02-C: lektionen läser telemetrin som just skrivits. Den ligger
+	     EFTER avläsningen och FÖRE renderingen av samma skäl som allt
+	     annat i den här ordningen: den ska se bildrutans mätning, inte
+	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
+	LektionController.steg(dt, ride.telemetri)
 
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)

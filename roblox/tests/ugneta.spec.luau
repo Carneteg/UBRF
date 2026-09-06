@@ -155,6 +155,210 @@ do
 		string.format('(volt "%s" · övergång "%s")', volt[1] or "-", overgang[1] or "-"))
 end
 
+--[[ ══ PRODUKTIONSKEDJAN ═══════════════════════════════════════════
+	Blocker 1 i senior review av 09e07da: HUD:en gick att anropa men var
+	inte inkopplad i någon lektionslifecycle. Ett prov som anropar
+	`efterForsok` direkt bevisar bara att funktionen finns — precis som
+	läktarprovet som mätte hjälpfunktionen i stället för spelarens väg.
+
+	Här körs i stället LektionController, den modul init.client.luau
+	stegar i sin RenderStepped-loop, med telemetri av samma form som
+	HorseCore/Telemetri.las lämnar. En hel ritt: presentation → live →
+	försök 1-kort → försök 2 → jämförelse. ]]
+do
+	local function tele(over)
+		local t = {
+			uppsutten = true, gangart = "trav", fart = 3.0, onskadFart = 3.0,
+			svangradie = 10, balans = 0.80, mjukhet = 0.75, fokus = 0.80,
+			spanning = 0.20, svarstid = 0.12, etableringstid = 0.8,
+			paradKvalitet = 0.70,
+		}
+		for k, v in over or {} do t[k] = v end
+		return t
+	end
+	--[[ Kör loopen som klienten gör: fast bildrutetid, telemetrin in.
+	     Chipet SAMPLAS varje bildruta i stället för att läsas av på slutet.
+	     Skälet är produktens eget tempo: cuen har en spärr på 8–14 s och
+	     står kvar i 2,6 s, så en avläsning efter en godtycklig sekund
+	     mäter var i spärren man råkade hamna — inte om hon sa något. ]]
+	local sedda
+	local function rid(sek, over)
+		local dt = 1 / 30
+		sedda = {}
+		for _ = 1, math.floor(sek / dt) do
+			LektionController.steg(dt, tele(over))
+			local c = hitta("Live")
+			if c and c.Visible and c.Text ~= "" then sedda[c.Text] = true end
+		end
+	end
+
+	LektionController.start(nil)          -- ingen byggd bana i den här bänken
+	check("lektionen startar och pågår", LektionController.pagar() == true,
+		string.format("(pågår %s)", tostring(LektionController.pagar())))
+
+	--[[ FÖRSTA STEGET presenterar övningen ur kanonens ordning. ]]
+	LektionController.steg(1 / 30, tele())
+	local rubrik = hitta("Rubrik")
+	local forstaOvning = Lektion.OVNINGAR[Lektion.ORDNING[1]]
+	check("första övningen presenteras med kanonens rubrik",
+		rubrik ~= nil and rubrik.Text == forstaOvning.rubrik,
+		string.format('("%s")', rubrik and rubrik.Text or "-"))
+
+	--[[ …och kortet försvinner när hon börjar rida. Ett kort som ligger
+	     kvar mitt i ritten ÄR variant 2, den som inte valdes. ]]
+	rid(LektionController.PAUS_SEK + 1)
+	local kort = hitta("Kort")
+	check("kortet är borta när ritten börjat", kort ~= nil and kort.Visible == false,
+		string.format("(Visible %s)", tostring(kort and kort.Visible)))
+
+	--[[ LIVE: några ord, valda ur mätningen. Här rids medvetet med hård
+	     hand — mjukheten är den svagaste MÄTTA dimensionen — och då ska
+	     cuen handla om handen och ingenting annat. ]]
+	rid(16, { mjukhet = 0.10, balans = 0.95, fokus = 0.95, spanning = 0.02 })
+	local antal = 0
+	local vilka = {}
+	for txt in sedda do antal += 1; table.insert(vilka, txt) end
+	check("live-chipet kommer av sig självt under ritten", antal > 0,
+		string.format('("%s")', table.concat(vilka, '", "')))
+	check("och cuen följer den svagaste MÄTTA dimensionen",
+		sedda["Mjukare hand"] == true,
+		string.format('("%s")', table.concat(vilka, '", "')))
+	--[[ …och den blir inte en textström: på 16 sekunders ridning hinner
+	     hon säga några ord, inte en rad per sekund. ]]
+	check("hon säger några ord, inte en ström", antal <= 2,
+		string.format("(%d olika på 16 s)", antal))
+
+	--[[ FÖRSÖK 1 → KORT. Rid klart RESTEN av försöket — inte en godtycklig
+	     stund till. Rider man för länge hinner pausen löpa ut och försök 2
+	     starta, och då mäter provet nästa försök i tron att det mäter
+	     kortet. Tiden läses ur lifecyclen själv. ]]
+	rid(Lektion.FORSOK_SEK - LektionController.pass().tid + 0.2,
+		{ mjukhet = 0.30, balans = 0.55 })
+	local knapp = hitta("Knapp")
+	kort = hitta("Kort")
+	check("efter försök 1 kommer kortet av sig självt",
+		kort ~= nil and kort.Visible == true,
+		string.format("(Visible %s)", tostring(kort and kort.Visible)))
+	check("med Prova igen, alltså samma övning en gång till",
+		knapp ~= nil and knapp.Visible == true,
+		string.format("(knapp %s)", tostring(knapp and knapp.Visible)))
+	local pass = LektionController.pass()
+	check("och lifecyclen står på försök 2 av SAMMA övning",
+		pass ~= nil and pass.forsokNr == 2 and pass.ix == 1,
+		string.format("(övning %d, försök %d)", pass and pass.ix or -1,
+			pass and pass.forsokNr or -1))
+
+	--[[ MÄTNINGEN NOLLSTÄLLS. Försök 2 ska inte ärva försök 1:s
+	     ackumulator — det var hela poängen med att byta den explicit. ]]
+	check("försök 2 börjar från noll mätningar",
+		pass ~= nil and pass.prov.n == 0,
+		string.format("(n %d)", pass and pass.prov.n or -1))
+
+	--[[ FÖRSÖK 2, tydligt bättre. Jämförelsen ska nämna förbättringen. ]]
+	rid(LektionController.PAUS_SEK + Lektion.FORSOK_SEK + 0.5,
+		{ mjukhet = 0.92, balans = 0.90, svarstid = 0.05, etableringstid = 0.4 })
+	local punkt = hitta("Punkt1")
+	check("efter försök 2 jämförs det mot försök 1",
+		punkt ~= nil and string.find(punkt.Text or "", "Bättre") ~= nil,
+		string.format('("%s")', punkt and punkt.Text or "-"))
+	pass = LektionController.pass()
+	check("och lektionen går vidare till nästa övning",
+		pass ~= nil and pass.ix == 2 and pass.forsokNr == 1,
+		string.format("(övning %d, försök %d)", pass and pass.ix or -1,
+			pass and pass.forsokNr or -1))
+
+	--[[ SÄKERHET AVBRYTER — genom produktionsvägen. `avbryt` är det
+	     init.client.luau anropar i `dismount`, alltså också när karaktären
+	     försvinner eller riggen är borta ur workspace. ]]
+	--[[ Kör tills chipet FAKTISKT står uppe. Att stega en godtycklig
+	     sekund och hoppas att man hamnar i cuens 2,6-sekundersfönster är
+	     att mäta turen; här avbryts lektionen i det ögonblick hon säger
+	     något, vilket är precis det fall regeln handlar om. ]]
+	do
+		local dt, kvar = 1 / 30, 40
+		while kvar > 0 and not hitta("Live").Visible do
+			LektionController.steg(dt, tele({ mjukhet = 0.10 }))
+			kvar -= dt
+		end
+	end
+	local foreChip = hitta("Live").Visible
+	LektionController.avbryt()
+	check("säkerhet avbryter lektionen och släcker chipet",
+		foreChip == true and hitta("Live").Visible == false,
+		string.format("(före %s → efter %s)", tostring(foreChip),
+			tostring(hitta("Live").Visible)))
+	check("och kortet stängs samtidigt",
+		hitta("Kort").Visible == false,
+		string.format("(Visible %s)", tostring(hitta("Kort").Visible)))
+	check("ingen lektion pågår efter avbrottet",
+		LektionController.pagar() == false,
+		string.format("(pågår %s)", tostring(LektionController.pagar())))
+	--[[ …och en stegning efter avbrottet får inte väcka något till liv. ]]
+	LektionController.steg(1, tele())
+	check("och en bildruta efter avbrottet visar ingenting",
+		hitta("Kort").Visible == false and hitta("Live").Visible == false,
+		"(kort och chip fortsatt släckta)")
+end
+
+--[[ ══ MÄTNINGEN STYR — INTE SLUMPEN, INTE EN KONSTANT ═════════════
+	Kvaliteten ska komma ur telemetrin. Provet varierar ETT fält och
+	kräver att bedömningen följer med; gör den inte det mäter modulen
+	något annat än ritten. ]]
+do
+	local bas = { uppsutten = true, gangart = "trav", fart = 3, onskadFart = 3,
+		svangradie = 10, balans = 0.5, mjukhet = 0.5, fokus = 0.5,
+		spanning = 0.5, svarstid = 0.3, etableringstid = 1.2, paradKvalitet = 0.5 }
+	local function med(k, v)
+		local t = {}
+		for a, b in bas do t[a] = b end
+		t[k] = v
+		return Lektion.kvalitet(t)
+	end
+	local mjukLag, mjukHog = med("mjukhet", 0.10), med("mjukhet", 0.95)
+	check("mjukheten i bedömningen kommer ur telemetrins mjukhet",
+		mjukHog.mjukhet > mjukLag.mjukhet + 0.5,
+		string.format("(%.2f → %.2f)", mjukLag.mjukhet, mjukHog.mjukhet))
+	local snabb, trog = med("svarstid", 0.05), med("svarstid", 0.50)
+	check("timingen kommer ur svarstiden",
+		snabb.timing > trog.timing + 0.1,
+		string.format("(%.2f → %.2f)", trog.timing, snabb.timing))
+	local rakt = med("svangradie", math.huge)
+	check("en rak linje ger ingen linjebedömning i stället för en påhittad",
+		rakt.linje == nil,
+		string.format("(linje %s)", tostring(rakt.linje)))
+
+	--[[ DEN DEKLARERADE LUCKAN. Roblox har ingen utbildningsskala och
+	     mäter därför ingen rytm. Det ska stå i SAKNAS och rytmen ska vara
+	     nil — inte 0, som hade gjort den till svagast i varje volt. ]]
+	local q = Lektion.kvalitet(bas)
+	check("rytmen är deklarerad som omätt, inte satt till noll",
+		q.rytm == nil and table.concat(Lektion.SAKNAS, ",") == "rytm",
+		string.format("(rytm %s · SAKNAS %s)", tostring(q.rytm),
+			table.concat(Lektion.SAKNAS, ",")))
+	local obs = Ugneta.observationer("storvolt",
+		{ linje = 0.90, balans = 0.40 }, nil)
+	local nammerRytm = false
+	for _, o in obs do if o.dim == "rytm" then nammerRytm = true end end
+	check("och en omätt dimension nämns inte som svagast",
+		not nammerRytm and #obs == 2,
+		string.format("(%d observationer, rytm nämnd %s)", #obs, tostring(nammerRytm)))
+end
+
+--[[ ══ KANONEN ÄGER ORDEN ═══════════════════════════════════════════ ]]
+do
+	check("live-registret läses ur kanonen, inte ur en kopia",
+		UgnetaController.liveText("hand", false)
+			== RidKanon.UGNETA.LIVE.hand.fel,
+		string.format('("%s")', UgnetaController.liveText("hand", false)))
+	check("övningarnas ordning kommer ur kanonen",
+		#Lektion.ORDNING == 6 and Lektion.ORDNING[3] == "storvolt",
+		string.format("(%d övningar, tredje %s)", #Lektion.ORDNING,
+			tostring(Lektion.ORDNING[3])))
+	check("skillnaderna mot webben är uppräknade, inte tysta",
+		#Lektion.SKILLNAD == 2,
+		string.format("(%d deklarerade)", #Lektion.SKILLNAD))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

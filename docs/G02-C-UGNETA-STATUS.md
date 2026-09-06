@@ -44,6 +44,52 @@ Bedömningskontraktet exporteras ur `src/larare.js` till
 för att bära en egen lista, och `roblox/tests/paritet.spec.luau` blir
 röd om dimensionerna skiljer sig eller kanonen inte regenererats.
 
+Kanonen bär nu också övningarnas ordning och text, live-ordförrådet,
+kopplingen dimension → cue, kvalitetsformelns tal och trösklarna
+(`BATTRE`, `SVAG`, `BRA`). Det som tidigare var handskrivna kopior i
+Luau — live-registret i `UgnetaController`, trösklarna i `Ugneta.luau`
+— läses därifrån.
+
+## Roblox-lektionen är inkopplad i klientens egen loop
+`roblox/src/shared/HorseCore/Lektion.luau` är försökslifecyclen: den
+mäter kvaliteten ur `HorseCore/Telemetri`, avgör när ett försök är slut,
+nollställer explicit inför försök 2 och väljer live-cue.
+`roblox/src/client/LektionController.luau` binder den till UX:en, och
+`init.client.luau` startar den i `mount`, stegar den i sin ENDA
+`RenderStepped`-loop och släcker den i `dismount`.
+
+`roblox/tests/klient.spec.luau` kör faktiskt `init.client.luau`: den
+fyrar `MountChanged`, driver `RenderStepped` och läser vad spelaren ser.
+Tas raden `LektionController.steg(...)` bort blir specen röd med 6 fel;
+tas `LektionController.start(...)` bort blir den röd med 7; tas
+`LektionController.avbryt()` bort med 3.
+
+### Deklarerade skillnader mot webben
+Uppräknade i `Lektion.SKILLNAD`, provade av specen:
+1. **Live-cuens ingång.** Webben väljer cue ur passets fokus
+   (`LARARE.fokus`), som kommer ur ryttarmodellen `fard()`. Roblox har
+   ingen ryttarmodell ännu och väljer ur den svagaste MÄTTA dimensionen
+   i övningens kontrakt. Samma ordförråd, samma tabell, annan ingång.
+2. **Rytmen är inte mätt** (`Lektion.SAKNAS`). Webbens `rytm` och halva
+   `linje` kommer ur utbildningsskalan i `src/model.js`; Roblox har ingen
+   sådan modell. En omätt dimension är `nil`, inte 0 — annars hade rytmen
+   blivit svagast i varje 20 m volt och Ugneta tjatat om en takt hon
+   aldrig sett.
+
+## Ugnetas plats flyttad från A till C
+Punkten kommer ur `RidKanon.UGNETA.PLATS` och löses upp mot banans mått
+på båda ytorna. Den flyttades i den här rundan, och skälet är
+geometriskt: webbens lektionsscen är en abstrakt 20 × 60-bana där det
+finns plats 1,4 m bortom kortsidan vid A, men i den verifierade
+byggnaden ligger banans A-ände 0,15 m från gavelväggen. Vid C fortsätter
+den fysiska ridytan 5,5 m bortom dressyrlayoutens 60-m-linje — vilket
+`DRESSYRBOKSTAVER` redan dokumenterar för C. Verkligheten är facit, inte
+abstraktionen.
+
+`[antagande]` Att UBRF:s instruktör står just vid C är inte belagt i
+referensmaterialet. Ytan är verifierad; valet av punkt på den är det
+inte.
+
 ## Kvar innan PRODUCT_ACCEPTED
 - Två faktiska försök av samma övning genom produktionsflödet är nu verifierat
   headless (`tools/ugneta-forsok-test.mjs`, 15 mätningar). Kvar är Tobias eget
@@ -55,9 +101,13 @@ röd om dimensionerna skiljer sig eller kanonen inte regenererats.
   undervisning, och observationerna ur `HorseCore/Ugneta`. Provad av
   `roblox/tests/ugneta.spec.luau` (15 mätningar) i bänken — **inte** körd i
   Studio. Att den ser rätt ut och känns rätt på en riktig klient är kvar.
-- **Ugneta är igenkännbar** i webbens 3D (`S3.del.ugneta`: kavaj, ansikte,
-  grått hår, glasögonbågar) och på kartan. Stiliserat i UBRF:s befintliga
-  stil — inte en detaljerad karaktärsmodell. Roblox-figuren vid sargen är
-  ännu inte byggd; där finns lärar-UX:en men inte gestalten.
+- **Ugneta är igenkännbar på båda ytorna.** Webbens 3D har `S3.del.ugneta`
+  (kavaj, ansikte, grått hår, glasögonbågar) och kartan samma. Roblox har
+  `roblox/src/client/UgnetaGestalt.luau`: samma färger, samma drag, byggd
+  av husets egna primitiver. Hon kolliderar inte, hon finns bara under
+  lektionen, och hennes plats räknas ut genom att MÄTA mellan de byggda
+  delarna "Ridbanan" och "Sarg syd" — inte ur en andra modell av huset.
+  Provad av `roblox/tests/ugneta-gestalt.spec.luau` ovanpå den faktiskt
+  byggda anläggningen.
 
 Grön CI betyder att pedagogik-/UX-kontraktet och kvalitetsmotorn håller tekniskt. `PRODUCT_ACCEPTED` kräver fortfarande Tobias gameplay-test.

@@ -220,11 +220,15 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
     G.tavling = { typ: "hoppning" };
     const underTavling = ugnetaNarvarande();
     G.tavling = null;
-    return { p, narv, underTavling, bredd: KB.BANA_BREDD };
+    return { p, narv, underTavling, bredd: KB.BANA_BREDD, langd: KB.BANA_LANGD };
   });
+  /* Vid C, bortom dressyrlayoutens kortsida — alltså utanför ridvägen och
+     på en yta som finns i den VERIFIERADE byggnaden. Vid A finns den inte:
+     där ligger banan 0,15 m från gavelväggen. Se motiveringen i
+     src/larare.js. */
   prova("Ugneta står vid kortsidan, utanför ridvägen",
-    !!r.p && Math.abs(r.p.x - r.bredd / 2) < 0.01 && r.p.y < 0,
-    `[${r.p.x}, ${r.p.y}] · banbredd ${r.bredd}`);
+    !!r.p && Math.abs(r.p.x - r.bredd / 2) < 0.01 && r.p.y > r.langd,
+    `[${r.p.x}, ${r.p.y}] · bana ${r.bredd}×${r.langd}`);
   /* IGENKÄNNBAR, inte en anonym figur (ChatGPT senior review, blocker 2).
      Meshen ska bära grått hår och glasögon, och ritas UTAN ton — uTon
      multiplicerar vertexfärgen, så en tonad figur grumlar båda. */

@@ -159,23 +159,39 @@ function ugnetaNarvarande(){
   return G.scen==="lektion"&&!G.tavling&&!!G.moment;
 }
 
+/* Övningarnas ORDNING OCH TEXT på ett ställe. Låg tidigare inbakad i
+   if-kedjan nedan, och en Roblox-modul som skulle undervisa samma sex
+   övningar hade då fått skriva av dem. Nu exporteras listan till
+   RidKanon.UGNETA.OVNINGAR och båda ytorna läser samma rader. */
+const UGNETA_OVNINGAR=[
+  {id:"halt_skritt",rubrik:"Halt → skritt",punkter:["Titta dit du ska.","En tydlig skänkel — vänta på svaret."]},
+  {id:"skritt_trav",rubrik:"Skritt → trav",punkter:["Behåll lugn kontakt.","Driv en gång tydligt fram i trav."]},
+  {id:"storvolt",rubrik:"20 m volt",punkter:["Titta runt volten.","Inre skänkel — yttre tygel håller storleken."]},
+  {id:"horn",rubrik:"Rid genom hörnet",punkter:["Behåll samma rytm.","Balansera före hörnet — inte mitt i."]},
+  {id:"trav_skritt",rubrik:"Trav → skritt",punkter:["Sitt ner och förbered.","Behåll skänkeln genom övergången."]},
+  {id:"galoppfattning",rubrik:"Galoppfattning",punkter:["Balansera först.","Be tydligt — och låt hästen svara."]},
+];
+function ugnetaOvningMed(id){
+  const o=UGNETA_OVNINGAR.find(x=>x.id===id);
+  return o?{id:o.id,rubrik:o.rubrik,punkter:o.punkter.slice()}:null;
+}
 function ugnetaOvning(){return ugnetaOvningFor(G&&G.moment?G.moment:null);}
 function ugnetaOvningFor(mIn){
   const m=mIn||null;
   const id=String((m&&m.ovning)||(m&&m.id)||"").toLowerCase();
   const namn=String((m&&m.namn)||"").toLowerCase();
   if(id.includes("halt_skritt")||namn.includes("halt")&&namn.includes("skritt"))
-    return {id:"halt_skritt",rubrik:"Halt → skritt",punkter:["Titta dit du ska.","En tydlig skänkel — vänta på svaret."]};
+    return ugnetaOvningMed("halt_skritt");
   if(id.includes("skritt_trav")||namn.includes("skritt")&&namn.includes("trav")&&!namn.includes("halt")&&!namn.includes("trav–skritt"))
-    return {id:"skritt_trav",rubrik:"Skritt → trav",punkter:["Behåll lugn kontakt.","Driv en gång tydligt fram i trav."]};
+    return ugnetaOvningMed("skritt_trav");
   if(id.includes("storvolt")||namn.includes("20")&&namn.includes("volt"))
-    return {id:"storvolt",rubrik:"20 m volt",punkter:["Titta runt volten.","Inre skänkel — yttre tygel håller storleken."]};
+    return ugnetaOvningMed("storvolt");
   if(id.includes("horn")||id.includes("hörn")||namn.includes("hörn")||namn.includes("horn"))
-    return {id:"horn",rubrik:"Rid genom hörnet",punkter:["Behåll samma rytm.","Balansera före hörnet — inte mitt i."]};
+    return ugnetaOvningMed("horn");
   if(id.includes("trav_skritt")||namn.includes("trav")&&namn.includes("skritt"))
-    return {id:"trav_skritt",rubrik:"Trav → skritt",punkter:["Sitt ner och förbered.","Behåll skänkeln genom övergången."]};
+    return ugnetaOvningMed("trav_skritt");
   if(id.includes("galoppfattning")||namn.includes("galopp"))
-    return {id:"galoppfattning",rubrik:"Galoppfattning",punkter:["Balansera först.","Be tydligt — och låt hästen svara."]};
+    return ugnetaOvningMed("galoppfattning");
   return null;
 }
 
@@ -262,6 +278,10 @@ const UGNETA_LIVE={
   timing:{fel:"Vänta på svaret",bra:"Precis så"},
   vagen:{fel:"Titta dit du ska",bra:"Bra linje"},
 };
+/* Hur ofta hon säger något live, och hur länge chipet står kvar. Talen
+   låg i lararSteg respektive ugnetaLive; de exporteras nu så att Roblox
+   får samma tempo i stället för ett eget. */
+const UGNETA_LIVE_CD={bra:14,fel:8,visa:2.6};
 function ugnetaLiveText(fokusId,bra){
   const r=UGNETA_LIVE[fokusId];
   if(!r)return bra?"Precis så":"";
@@ -298,7 +318,7 @@ function ugnetaLive(txt,bra){
   const el=document.getElementById("ugnetaLive");if(!el)return false;
   el.textContent=txt;
   el.className="pa"+(bra?" bra":"");
-  LARARE.liveSagt=txt;LARARE.liveT=2.6;
+  LARARE.liveSagt=txt;LARARE.liveT=UGNETA_LIVE_CD.visa;
   return true;
 }
 function ugnetaLiveSteg(dt){
@@ -311,19 +331,40 @@ function ugnetaLiveSteg(dt){
 
 /* ── Ugneta står vid sargen ───────────────────────────────────── */
 /* Variant 1: hon är fysiskt närvarande i lektionen, inte bara en röst i
-   ett HUD-kort. Platsen är banans kortsida vid A, utanför sargen — inte
-   inne på ridvägen. Samma punkt läses av 2D-kartan och 3D-vyn, så det
-   är EN sanning (läktarlärdomen: rendering och logik får inte ha var
-   sin uppfattning om var något står). */
+   ett HUD-kort. Samma punkt läses av 2D-kartan, 3D-vyn OCH Roblox, så
+   det är EN sanning (läktarlärdomen: rendering och logik får inte ha
+   var sin uppfattning om var något står).
+
+   PLATSEN FLYTTADES FRÅN A TILL C i och med Roblox-gestalten. Skälet är
+   inte estetiskt utan geometriskt, och det hör hemma här: webbens
+   lektionsscen är en abstrakt 20 × 60-bana där det finns gott om plats
+   1,4 m bortom kortsidan vid A — men i den VERIFIERADE byggnaden ligger
+   banans A-ände 0,15 m från gavelväggen (roblox/buildings, R.bana.y).
+   Där ryms ingen människa. Vid C är förhållandet det omvända: den
+   fysiska ridytan fortsätter 5,5 m bortom dressyrlayoutens 60-m-linje,
+   vilket DRESSYRBOKSTAVER redan dokumenterar för C ("layoutens
+   60-m-linje ligger 5,5 m söder om sargen"). Punkten finns alltså på
+   riktigt i huset, och verkligheten är facit — inte abstraktionen.
+
+   [antagande] Att UBRF:s instruktör står just vid C är inte belagt i
+   referensmaterialet. Det är ridbanans konvention (läraren vid kortsidan
+   där hon ser hela ekipaget), och den ytan finns verifierat. Ersätts av
+   verklig evidens när sådan finns. */
+const UGNETA_PLATS={
+  /* Andel av banbredden — 0,5 = mitt på kortsidan. */
+  u:0.5,
+  /* Meter bortom dressyrlayoutens C-linje. Positivt = utanför
+     ridvägen, inne i den zon som fortsätter fram till norra sargen. */
+  bortomC:1.4,
+};
 function ugnetaPlats(){
   /* Banans mått läses ur ridkanonen (RID_KANON.BANA_BREDD/LANGD) —
      samma tal som kollisionen och telemetrin använder. Ingen egen
      uppfattning om var sargen går. */
   const KB=(typeof ridKanon==="function")?ridKanon():null;
   const bredd=KB&&KB.BANA_BREDD?KB.BANA_BREDD:20;
-  /* Vid A, strax utanför kortsidans sarg. y<0 är utanför ridvägen, så
-     hon står aldrig i vägen för ekipaget. */
-  return {x:bredd/2, y:-1.4, rikt:Math.PI/2};
+  const langd=KB&&KB.BANA_LANGD?KB.BANA_LANGD:60;
+  return {x:bredd*UGNETA_PLATS.u, y:langd+UGNETA_PLATS.bortomC, rikt:-Math.PI/2};
 }
 
 /* ── G02-C försök och kvalitetsbedömning ──────────────────────── */
@@ -337,26 +378,64 @@ const UGNETA_OVNING_DIM={
   galoppfattning:["timing","balans","respons"],
 };
 function ugClamp(v){return Math.max(0,Math.min(1,Number.isFinite(v)?v:0));}
+/* KVALITETENS TAL, samlade. De låg tidigare inbakade i formeln nedan,
+   vilket gjorde dem omöjliga att exportera — och en Roblox-modul som
+   skrev av dem för hand hade blivit en andra sanning. Nu står de här,
+   webben läser dem härifrån, och tools/exportera-ridkanon.mjs skickar
+   samma tal till RidKanon.UGNETA.KVALITET. */
+const UGNETA_KVALITET={
+  VOLT_RADIE:10, VOLT_SPANN:7,          // 20 m volt = 10 m radie
+  LINJE_RADIE:0.65, LINJE_RAK:0.35,
+  SVARSTID_TAK:0.55, ETABLERING_TAK:2.6,
+  TIMING_SVAR:0.40, TIMING_ETABLERING:0.40, TIMING_PARAD:0.20,
+  RESPONS_FOKUS:0.40, RESPONS_LUGN:0.35, RESPONS_SVAR:0.25,
+  TEMPO_GOLV:0.15, TEMPO_NAMNARE:0.8,
+  OMATT:0.5,                            // varken beröm eller kritik
+  /* Trösklarna som avgör VAD Ugneta säger efter ett försök. Låg tidigare
+     som literaler i ugnetaJamfor/ugnetaForstaForsok — och som avskrivna
+     kopior i Ugneta.luau. Nu står de en gång. */
+  BATTRE:0.045,                         // så mycket ska en dimension ha stigit
+  SVAG:0.68,                            // under detta är den värd att nämna
+  BRA:0.55,                             // över detta är den värd att berömma
+};
+/* Vilken live-cue hör till vilken dimension? Ordförrådet är detsamma på
+   båda ytorna (UGNETA_LIVE), och kopplingen dimension → cue står här så
+   att Roblox kan välja samma ord för samma brist.
+
+   DEKLARERAD SKILLNAD, inte en smygande: webben VÄLJER cue ur passets
+   fokus (LARARE.fokus), för den har en ryttarmodell (`fard()`) att välja
+   fokus ur. Roblox har ingen sådan modell ännu och väljer i stället ur
+   den svagaste MÄTTA dimensionen i övningens kontrakt. Olika ingång,
+   samma ordförråd och samma tabell — och skillnaden står i
+   HorseCore/Lektion.SKILLNAD så den inte kan glömmas bort. */
+const UGNETA_DIM_CUE={linje:"vagen",rytm:"framat",balans:"sits",
+  timing:"timing",mjukhet:"hand",respons:"lugn",tempo:"framat"};
 function ugnetaKvalitet(){
+  const UK=UGNETA_KVALITET;
   const tm=(typeof G!=="undefined"&&G.telemetri)||{};
   const r=(typeof G!=="undefined"&&G.ride)||{};
   const s=r.skala||{};
   const rad=Number.isFinite(tm.svangradie)?tm.svangradie:null;
-  const radie=rad===null?ugClamp(s.rakriktning||0):ugClamp(1-Math.abs(rad-10)/7);
-  const linje=ugClamp(0.65*radie+0.35*ugClamp(s.rakriktning||0));
+  const radie=rad===null?ugClamp(s.rakriktning||0)
+    :ugClamp(1-Math.abs(rad-UK.VOLT_RADIE)/UK.VOLT_SPANN);
+  const linje=ugClamp(UK.LINJE_RADIE*radie+UK.LINJE_RAK*ugClamp(s.rakriktning||0));
   const rytm=ugClamp(s.takt||0);
   const balans=ugClamp(tm.balans!==undefined?tm.balans:r.balans||0);
   const mjukhet=ugClamp(tm.mjukhet!==undefined?tm.mjukhet:r.mjukhet||0);
   const fokus=ugClamp(tm.fokus!==undefined?tm.fokus:r.fokus||0);
   const lugn=1-ugClamp(tm.spanning!==undefined?tm.spanning:r.spanning||0);
-  const svar=tm.svarstid>0?ugClamp(1-tm.svarstid/0.55):0.5;
-  const etablering=tm.etableringstid>0?ugClamp(1-tm.etableringstid/2.6):0.5;
+  const svar=tm.svarstid>0?ugClamp(1-tm.svarstid/UK.SVARSTID_TAK):UK.OMATT;
+  const etablering=tm.etableringstid>0
+    ?ugClamp(1-tm.etableringstid/UK.ETABLERING_TAK):UK.OMATT;
   const parad=ugClamp(tm.paradKvalitet||0);
-  const timing=ugClamp(0.40*svar+0.40*etablering+0.20*parad);
-  const respons=ugClamp(0.40*fokus+0.35*lugn+0.25*svar);
+  const timing=ugClamp(UK.TIMING_SVAR*svar+UK.TIMING_ETABLERING*etablering
+    +UK.TIMING_PARAD*parad);
+  const respons=ugClamp(UK.RESPONS_FOKUS*fokus+UK.RESPONS_LUGN*lugn
+    +UK.RESPONS_SVAR*svar);
   const fart=Number.isFinite(tm.fart)?tm.fart:r.tempo||0;
   const onskad=Number.isFinite(tm.onskadFart)?tm.onskadFart:fart;
-  const tempo=onskad>0.15?ugClamp(1-Math.abs(fart-onskad)/Math.max(onskad,0.8)):1;
+  const tempo=onskad>UK.TEMPO_GOLV
+    ?ugClamp(1-Math.abs(fart-onskad)/Math.max(onskad,UK.TEMPO_NAMNARE)):1;
   return {linje,rytm,balans,timing,mjukhet,respons,tempo};
 }
 function ugnetaTomForsok(o){
@@ -369,10 +448,10 @@ function ugnetaJamfor(id,fore,nu,nr){
   const dims=UGNETA_OVNING_DIM[id]||["rytm","balans","mjukhet"];
   const d=dims.map(k=>({k,d:(nu[k]||0)-(fore[k]||0),v:nu[k]||0})).sort((a,b)=>b.d-a.d);
   const punkter=[];
-  const upp=d.find(x=>x.d>=0.045);
+  const upp=d.find(x=>x.d>=UGNETA_KVALITET.BATTRE);
   if(upp)punkter.push(`Bättre ${UGNETA_DIM_LABEL[upp.k]} den här gången.`);
   const kvar=[...d].sort((a,b)=>a.v-b.v).find(x=>!upp||x.k!==upp.k);
-  if(kvar&&kvar.v<0.68)punkter.push(`Fortsätt med ${UGNETA_DIM_LABEL[kvar.k]}.`);
+  if(kvar&&kvar.v<UGNETA_KVALITET.SVAG)punkter.push(`Fortsätt med ${UGNETA_DIM_LABEL[kvar.k]}.`);
   if(!punkter.length)punkter.push("Jämnare försök. Behåll samma känsla.");
   return {rubrik:`Försök ${nr}`,punkter:punkter.slice(0,2),ton:upp?"bra":""};
 }
@@ -385,7 +464,7 @@ function ugnetaForstaForsok(id,medel){
   const rank=dims.map(k=>({k,v:medel[k]||0})).sort((a,b)=>b.v-a.v);
   const bast=rank[0], samst=rank[rank.length-1];
   const punkter=[];
-  if(bast&&bast.v>=0.55)punkter.push(`Bra ${UGNETA_DIM_LABEL[bast.k]}.`);
+  if(bast&&bast.v>=UGNETA_KVALITET.BRA)punkter.push(`Bra ${UGNETA_DIM_LABEL[bast.k]}.`);
   if(samst&&(!bast||samst.k!==bast.k))punkter.push(`Jobba på ${UGNETA_DIM_LABEL[samst.k]}.`);
   if(!punkter.length)punkter.push(`Jobba på ${UGNETA_DIM_LABEL[dims[0]]}.`);
   return {rubrik:"Prova igen",punkter:punkter.slice(0,2),ton:"",
@@ -485,7 +564,7 @@ function lararSteg(dt){
   if(ugnetaNarvarande()&&LARARE.liveCd<=0){
     const txt=ugnetaLiveText(F.id,bra&&LARARE.brasedan>6);
     if(txt&&txt!==LARARE.liveSagt){
-      LARARE.liveCd=bra?14:8;
+      LARARE.liveCd=bra?UGNETA_LIVE_CD.bra:UGNETA_LIVE_CD.fel;
       ugnetaLive(txt,bra);
       return "";
     }

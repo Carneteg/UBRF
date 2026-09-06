@@ -30,8 +30,8 @@
 
 local Players = game:GetService("Players")
 
-local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
+local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
 
 local UgnetaController = {}
 
@@ -49,17 +49,15 @@ local FARG_BRA = Color3.fromRGB(140, 196, 120)
 local FARG_MORK = Color3.fromRGB(12, 14, 18)
 local FARG_TEXT = Color3.fromRGB(246, 242, 232)
 
---[[ Live-orden. Samma register som webbens UGNETA_LIVE — korta cues, en
-	för fel och en för rätt. Listan är avsiktligt liten: fler ord blir en
-	textström, och det är precis det variant 1+3 säger nej till. ]]
-local LIVE = {
-	hand = { fel = "Mjukare hand", bra = "Mjuk hand" },
-	framat = { fel = "Rid framåt", bra = "Bra rytm" },
-	sits = { fel = "Sitt stilla", bra = "Bra sits" },
-	lugn = { fel = "Andas ut", bra = "Fint lugn" },
-	timing = { fel = "Vänta på svaret", bra = "Precis så" },
-	vagen = { fel = "Titta dit du ska", bra = "Bra linje" },
-}
+--[[ Live-orden: korta cues, en för fel och en för rätt. Registret är
+	avsiktligt litet — fler ord blir en textström, och det är precis det
+	variant 1+3 säger nej till.
+
+	Det stod förut som en handskriven kopia här. Samma ord som webbens,
+	men en KOPIA, och en kopia kan glida. Nu läses både orden och hur
+	länge chipet står kvar ur kanonen. ]]
+local LIVE = RidKanon.UGNETA.LIVE
+local LIVE_CD = RidKanon.UGNETA.LIVE_CD
 
 local DIM_ORD = {
 	linje = "linjen", rytm = "rytmen", balans = "balansen",
@@ -225,7 +223,7 @@ function UgnetaController.live(txt: string, bra: boolean)
 	c.Visible = true
 	local stroke = c:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = if bra then FARG_BRA else FARG_GULD end
-	liveTid = 2.6
+	liveTid = LIVE_CD.visa
 	liveSagt = txt
 end
 
@@ -269,6 +267,13 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean)
 		ska det bort — det får aldrig ligga kvar över en aktiv ritt. ]]
 	local c = chip
 	if c then c.Visible = false end
+end
+
+--[[ Kortet, öppet för den som kör lektionen. Presentationen av en övning
+	och återkopplingen efter ett försök är samma yta — skillnaden är vad
+	som står i den, inte vilken ruta den ritas i. ]]
+function UgnetaController.visa(rubrik: string, punkter: { string }, knapp: boolean)
+	visaKort(rubrik, punkter, knapp)
 end
 
 function UgnetaController.dolj()
