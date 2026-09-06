@@ -29,6 +29,75 @@ const UPPDRAG={
   färg:"#E8B54A",
 };
 
+/* ══════════════════════════════════════════════════════════════════
+   P0 #81 V2 — LÄKTAREN: DET SPELAREN SER ÄR DET SPELAREN GÅR PÅ
+
+   Första post-G02-B-försöket ändrade höjd/collision sent vid window.load.
+   Då kunde 3D-geometrin redan vara byggd från de gamla värdena: figuren
+   fick en annan nivå än det som syntes. PO beskrev exakt följden:
+   genomskinligt, konstig gång och ingen tydlig höjdskillnad.
+
+   Den här rättelsen körs SYNKRONT här. site.js + inredning.js är redan
+   laddade, medan world.js och varld3d.js kommer EFTER uppdrag.js. Därmed
+   läser rörelse, vägsökning och rendering samma trappa från början.
+
+   Trappan är en bred sidouppgång vid läktarens norra ände. Den ligger
+   utanför själva ridbanan, stiger fysiskt 0 → däckets 0,80 m och landar
+   direkt på gångbrädan. Inga dubbla höjdband, inga osynliga hopp.
+   Fortsatt SPELABSTRAKTION / REFERENCE GAP — ingen ny verklighetsfakta.
+   ══════════════════════════════════════════════════════════════════ */
+function forberedLaktareVisualV2(){
+  if(typeof RIDHUSINNE==="undefined"||typeof SPELABSTRAKTIONER==="undefined")return;
+  const R=RIDHUSINNE, L=R.laktare, S=SPELABSTRAKTIONER.ridhus;
+  if(!L||!S||!S.laktarSteg)return;
+
+  const lE=!!(R.sidor&&R.sidor.laktare==="E");
+  const innerKant=lE ? L.x0 : L.x0+L.dackDjup;
+  const trappDjup=1.60;       // riktning golv → läktargång
+  const trappBredd=1.80;      // mänsklig felmarginal desktop + touch
+  const ls=S.laktarSteg;
+
+  /* Hög sida ligger mot gångbrädan, låg sida mot entréhallens golv. */
+  if(lE){
+    ls.x0=innerKant-trappDjup; ls.x1=innerKant; ls.stiger="E";
+  }else{
+    ls.x0=innerKant; ls.x1=innerKant+trappDjup; ls.stiger="W";
+  }
+  ls.y0=L.y1; ls.y1=L.y1+trappBredd;
+  ls.z0=0; ls.z1=L.dackZ; ls.axel="x"; ls.stegMax=0.18;
+  ls.klass="SPELABSTRAKTION"; ls.fidelity="REFERENCE GAP";
+  ls.motiv="P0 #81 v2: bred fysisk sidotrappa som landar direkt på läktargångens däcknivå; PO 2026-09-06";
+
+  /* Den gamla bandade prototypens andra nivå får aldrig leva kvar om en
+     preview återanvänder state. world.js på main läser den inte, men
+     rensningen gör sanningen entydig även i devtools/testharness. */
+  if(S.laktarStegRad1)delete S.laktarStegRad1;
+
+  /* Domarbåsets nuvarande tvärmått/läge saknar hårt källstöd och skar av
+     gångytan. Flytta det mot ytterväggen så den faktiska 0,8 m-gången är
+     sammanhängande. Speglas korrekt om läktarsidan någon gång ändras. */
+  if(R.domarbas){
+    const D=L.dackDjup;
+    R.domarbas.b=1.70;
+    R.domarbas.x=lE ? L.x0+D*0.75 : L.x0+D*0.25;
+    const info=(R.info||[]).find(i=>i.domarbas);
+    if(info){
+      info.pos[0]=R.domarbas.x+(lE?-1:1)*(R.domarbas.b/2+0.6);
+      info.pos[1]=R.domarbas.y;
+    }
+  }
+
+  /* Gör uppgången läsbar även för någon som inte känner huset. Det är en
+     lokal skylt/interaktionspunkt, inte ett nytt quest-state. */
+  if(Array.isArray(R.info)&&!R.info.some(i=>i.laktaruppgang)){
+    const basX=lE?ls.x0:ls.x1, mittY=(ls.y0+ls.y1)/2;
+    R.info.push({laktaruppgang:true,pos:[basX,mittY],
+      text:"Läktaren — trappan upp",
+      svar:"Här går trappan upp till läktargången."});
+  }
+}
+forberedLaktareVisualV2();
+
 /* ── Pronomen ur hästdatan, aldrig gissade ────────────────────── */
 function hastPron(id,form){
   const h=(typeof HORSES!=="undefined")&&HORSES[id]; if(!h)return "hästen";
@@ -276,7 +345,37 @@ function installeraTydligVagvisare(){
   requestAnimationFrame(tick);
 }
 
+/* Läktarens norra fyra meter har en cutaway för att markspelaren inte ska
+   döljas av bänkarna. När spelaren SJÄLV står på läktaren blir samma regel
+   fel: det hon står på tonas bort. Behåll cutaway på marknivå men slå av
+   just läktarnätets toning när spelarens golv är uppe på däcket/raderna. */
+function installeraLaktarSiktV2(){
+  if(typeof v3dTonas!=="function"||v3dTonas.__laktarVisualV2)return;
+  const original=v3dTonas;
+  const wrapped=function(s,kx,kz,px,pz){
+    try{
+      if(G.scen==="ridhusinne"&&s&&s.tona&&typeof RIDHUSINNE!=="undefined"){
+        const L=RIDHUSINNE.laktare, t=s.tona, z=VD.pz||0;
+        const paLaktare=z>=L.dackZ-0.08
+          &&VD.px>=L.x0-0.15&&VD.px<=L.x0+L.dackDjup+0.15
+          &&VD.py>=L.y0-0.15&&VD.py<=L.y1+0.15;
+        const arNorraLaktaren=t.x<L.x0+L.dackDjup+0.15&&t.x+t.w>L.x0-0.15
+          &&t.y<L.y1+0.15&&t.y+t.h>L.y1-4.15;
+        if(paLaktare&&arNorraLaktaren)return false;
+      }
+    }catch(_){}
+    return original(s,kx,kz,px,pz);
+  };
+  wrapped.__laktarVisualV2=true;
+  v3dTonas=wrapped;
+}
+
 if(typeof window!=="undefined"){
-  if(document.readyState==="complete")installeraTydligVagvisare();
-  else window.addEventListener("load",installeraTydligVagvisare,{once:true});
+  if(document.readyState==="complete"){
+    installeraTydligVagvisare();
+    installeraLaktarSiktV2();
+  }else{
+    window.addEventListener("load",installeraTydligVagvisare,{once:true});
+    window.addEventListener("load",installeraLaktarSiktV2,{once:true});
+  }
 }
