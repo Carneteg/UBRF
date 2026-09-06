@@ -1,8 +1,7 @@
 # Active Gate
 
-Current active implementation: **G02-C — Training & Feedback Engine / Ugneta**
+Current active implementation: **P0 Grandstand / Läktare — issue #81, PR #114**
 
-Primary implementation PR: **#119**
 Primary builder: **Claude**
 Review: **ChatGPT**
 Product acceptance: **Tobias**
@@ -13,41 +12,49 @@ Mandatory delivery chain:
 
 ## Current priority
 
-Claude's active work is **PR #119**. Do not continue implementation work on older/stale PRs unless Tobias explicitly re-prioritizes them.
+Claude's active work is now **PR #114 / issue #81**. G02-C / PR #119 is `PRODUCT_ACCEPTED` and merged at `9f15475f4137984238325bd533a068684f9daa85`.
 
-Current product direction for G02-C:
+Do not start unrelated work while the grandstand P0 is active.
 
-- instructor name: **Ugneta**,
-- Ugneta is an older woman with gray hair and glasses,
-- UX direction = combine **variant 1 + variant 3**,
-- Ugneta is physically present by the arena fence during the lesson,
-- live riding feedback is short and sparse,
-- main pedagogical feedback happens between attempts,
-- attempt 1 → attempt 2 must be a real production-flow comparison,
-- feedback must be derived from actual telemetry/state, never random or fabricated,
-- 20 m circle evaluates **line + rhythm + balance**,
-- transitions evaluate **timing + softness + horse response**,
-- at most two prioritized observations after an attempt,
-- safety messages always override instructor feedback,
-- responsive UX must preserve the riding view on mobile, tablet and desktop,
-- Roblox and web must share the same assessment intent/contract,
-- Roblox remains the primary game platform,
-- preview/deploy for UBRF uses **Vercel only**.
+### Grandstand product requirement
 
-Reference UX images are linked in PR #119, comment `5560006564`.
-Latest builder directive is in PR #119, comment `5560081926`.
+The web and Roblox experiences must agree on the same physical grandstand truth:
+
+- player can walk from ground level onto the grandstand without teleporting,
+- avatar visibly rises with collision/floor height,
+- steps are physically readable and walkable with keyboard and touch/joystick,
+- deck stays opaque under the player,
+- no yellow/transparent debug abstraction geometry in product view,
+- player can move at least 10 m along the grandstand walkway,
+- judge booth and seating must not block the usable walkway,
+- exterior UBRF geometry stays locked unless a verified source requires a change,
+- Vercel is the only UBRF preview/deploy path.
+
+### Known root cause from failed attempts
+
+The previous implementation proved that internal collision/path tests are not enough when rendering reads different state.
+
+Claude must preserve these lessons:
+
+1. `v3dFigurKloss` must use the same vertical player state as collision/camera (`o.y` / `VD.pz`), not hard-coded Y=0.
+2. Review/debug geometry such as the yellow transparent stair abstractions must be dev/debug-only, never product-visible.
+3. Canonical stair/deck geometry must live in the canonical site/world model, not as a late runtime patch.
+4. Rendering, collision, camera and avatar height must be verified together in the actual player-facing path.
+5. Web and Roblox must share the same intent/geometry contract rather than parallel truths.
+
+The direct wrapper patch in `src/mobil.js` from the earlier #114 experiment is temporary evidence, not the desired final architecture. Claude should consolidate the real fix into the canonical implementation.
 
 ## Required Claude handshake
 
-A GitHub `@claude` mention is **not considered proof that the active Claude session received the task**.
+A GitHub mention alone is not proof that the active Claude session received the task.
 
-Before implementation begins, Claude must post in the active PR:
+Before implementation begins, Claude must post in PR #114:
 
-`CLAUDE_ACK #119 — base/head <SHA> — scope: G02-C Ugneta UX 1+3, försök 1→2, Roblox-paritet`
+`CLAUDE_ACK #114 — base/head <SHA> — scope: P0 läktare, fysisk trappa, korrekt avatarhöjd/sikt, web+Roblox`
 
 Only after that ACK is the handoff considered delivered.
 
-When implementation is ready, Claude must post:
+When ready for review Claude must post:
 
 - exact HEAD SHA,
 - Changed,
@@ -58,35 +65,26 @@ When implementation is ready, Claude must post:
 - human-test requirements,
 - `READY_FOR_CHATGPT_REVIEW`.
 
-ChatGPT then reviews the actual diff and evidence. Tobias alone sets `PRODUCT_ACCEPTED` where human acceptance is required.
+No merge before ChatGPT review and Tobias product test.
 
-## Explicitly not active for Claude
+## Accepted / follow-up work
+
+### G02-C / PR #119
+
+`PRODUCT_ACCEPTED` by Tobias and merged. Issue #84 is closed.
+
+Known accepted follow-up debt is tracked in **issue #126**:
+- full Roblox Ugneta production wiring,
+- physical Ugneta coach at the arena fence in Roblox.
+
+Issue #126 is not the active P0 and must wait until the grandstand is resolved unless Tobias explicitly reprioritizes it.
 
 ### PR #116 — Lydia pronoun
 
-Technically green and separate. It is waiting on Tobias's decision. Claude must not spend active implementation time or repeated monitoring cycles on it unless Tobias reopens the task.
-
-### PR #114 / issue #81 — grandstand P0
-
-Separate problem track. Claude should read the staircase postmortem as a lesson, but **must not overlap #119 implementation with grandstand code** unless Tobias/ChatGPT explicitly hands it back.
-
-Key lesson from the grandstand failure:
-
-- internal state/path tests are insufficient when rendering uses another truth,
-- avatar/render/collision must agree on spatial state,
-- debug geometry must never leak into the player view,
-- verify the real player-facing chain, not just helper functions.
-
-## Completed prerequisite
-
-G02-B is `PRODUCT_ACCEPTED` and merged. G02-C may rely on its telemetry and rider-aid contract but must not retune G02-B game feel without a new explicit product decision.
+Separate technically green language decision. Do not spend active implementation cycles on it unless Tobias reprioritizes it.
 
 ## Source-of-truth rule
 
 If this document conflicts with Tobias's newer explicit instruction, Tobias wins and this file must be updated immediately.
 
-If PR comments and this file disagree and there is no newer Tobias instruction, **stop implementation and reconcile the task before coding**. Do not silently choose an older task.
-
-## Historical gates
-
-Older G01/F01 material remains valid historical/reference evidence in their respective gate documents, PRs and commits, but it is **not the current Claude execution priority**.
+If PR comments and this file disagree and there is no newer Tobias instruction, stop implementation and reconcile the task before coding.
