@@ -117,6 +117,13 @@ For a bug/CI task, Jules may implement a narrow fix on its own branch, but it mu
 
 If Jules becomes slow, stale, duplicates another task or opens a PR from an outdated base, stop that task rather than blocking delivery.
 
+## Preview / deployment rule
+
+- **Netlify is not used for UBRF previews or review links.** Do not create, construct, recommend or rely on Netlify deploy-preview URLs.
+- Web review builds must use **Vercel or Replit** and must identify the exact PR/head SHA they represent.
+- If no Vercel/Replit preview has been deployed yet, report `PREVIEW_NOT_DEPLOYED` rather than inventing or reusing another platform's URL.
+- CI may still create screenshot artifacts independently of the hosting provider.
+
 ## Git rules
 
 - Work on feature branches.
