@@ -1,1 +1,0 @@
-Ugneta-regeln: under aktiv ridning visas en kort rubrik och högst två konkreta instruktioner. Feedback ska komma från faktisk riddata och vara läsbar på mobil, surfplatta och dator. Fullt kontrakt finns i docs/G02-C-UGNETA.md.
