@@ -2076,6 +2076,10 @@ function v3dRidhusLaktare(R, lagg, T) {
     S3.statiskt.push({nat:GL.nat(sido), tex:null,
       tona: langsX ? {x:t.x0, y:t.y0-0.15, w:t.x1-t.x0, h:0.30} : {x:t.x0-0.15, y:t.y0, w:0.30, h:t.y1-t.y0}});
   }
+  lagg(lak,T.tra);
+  {const L=R.laktare;
+   S3.statiskt.push({nat:GL.nat(lakN), tex:T.tra,
+     tona:{x:L.x0, y:L.y1-LAKTARE_TONAD_ANDE, w:L.dackDjup, h:LAKTARE_TONAD_ANDE}});}
 }
 
 function v3dRidhusDomarbas(R, lagg, T) {
@@ -2136,10 +2140,6 @@ function v3dRidhusDomarbas(R, lagg, T) {
   /* Den separata trätrappan till caféet och den andra klockan är borta:
      caféet nås via C-blockets två trappor, och klockan sitter mellan dem.
      Se noten vid RIDHUSINNE.cafe. */
-  lagg(lak,T.tra);
-  {const L=R.laktare;
-   S3.statiskt.push({nat:GL.nat(lakN), tex:T.tra,
-     tona:{x:L.x0, y:L.y1-LAKTARE_TONAD_ANDE, w:L.dackDjup, h:LAKTARE_TONAD_ANDE}});}
 
   /* Exit-skylten över båsets öppning — MOTSÄGELSE 4. Utanför trä-
      texturen: en grön skylt ska inte ha ådring. */
