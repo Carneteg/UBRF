@@ -1,113 +1,92 @@
 # Active Gate
 
-Current gate: **Gate G01 — First Playable Horse Loop** (`docs/GATE-G01-FIRST-PLAYABLE.md`)
+Current active implementation: **G02-C — Training & Feedback Engine / Ugneta**
 
-## Gate F01 — UBRF Fidelity: `TARGETED_CORRECTION_REQUIRED`
+Primary implementation PR: **#119**
+Primary builder: **Claude**
+Review: **ChatGPT**
+Product acceptance: **Tobias**
 
-Human Roblox Studio acceptance was completed **2026-08-30** against the corrected
-Studio package from PR #26, but Tobias has since supplied a new explicit visual
-correction on **2026-09-02**. Per `CLAUDE.md`, Tobias's direct product decision
-outranks the previously accepted baseline. F01 is therefore reopened **only for
-this narrow facade correction**; broad environment rework remains out of scope.
+Mandatory delivery chain:
 
-### Mandatory facade correction — 2026-09-02
+> **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
 
-This is a **fidelity correction, not optional polish**.
+## Current priority
 
-On the red stable facade, the following two architectural groups are currently
-in the wrong relative positions and **must swap places**:
+Claude's active work is **PR #119**. Do not continue implementation work on older/stale PRs unless Tobias explicitly re-prioritizes them.
 
-1. the porch / roofed entrance structure,
-2. the small roofed door together with the black spiral staircase and its upper
-   landing/platform.
+Current product direction for G02-C:
 
-After the swap, the **spiral staircase must also sit visibly farther to the
-left** than in the current implementation, with clearer lateral separation from
-the small roofed door and landing composition.
+- instructor name: **Ugneta**,
+- Ugneta is an older woman with gray hair and glasses,
+- UX direction = combine **variant 1 + variant 3**,
+- Ugneta is physically present by the arena fence during the lesson,
+- live riding feedback is short and sparse,
+- main pedagogical feedback happens between attempts,
+- attempt 1 → attempt 2 must be a real production-flow comparison,
+- feedback must be derived from actual telemetry/state, never random or fabricated,
+- 20 m circle evaluates **line + rhythm + balance**,
+- transitions evaluate **timing + softness + horse response**,
+- at most two prioritized observations after an attempt,
+- safety messages always override instructor feedback,
+- responsive UX must preserve the riding view on mobile, tablet and desktop,
+- Roblox and web must share the same assessment intent/contract,
+- Roblox remains the primary game platform,
+- preview/deploy for UBRF uses **Vercel only**.
 
-Implementation requirements:
+Reference UX images are linked in PR #119, comment `5560006564`.
+Latest builder directive is in PR #119, comment `5560081926`.
 
-- Correct the **world geometry / authoritative building source**, not only a
-  camera, screenshot, render, CSS transform, or view-specific offset.
-- Apply the corrected architectural placement to both **Roblox** and the
-  **HTML/web playable world** where this facade exists.
-- Preserve the verified red siding, trim, windows, door style and overall UBRF
-  building identity; do not redesign unrelated facade elements.
-- Do not move unrelated doors/windows/buildings to make the correction easier.
-- Re-render / re-capture the relevant canonical fidelity views after the change
-  so the new positions can be compared against Tobias's reference.
-- Claude may report at most `READY_FOR_CHATGPT_REVIEW` after implementation and
-  evidence. Claude must **not** mark the correction accepted/done/final on its
-  own.
-- Final visual fidelity requires Tobias's explicit human PASS.
+## Required Claude handshake
 
-### Acceptance criteria for this targeted correction
+A GitHub `@claude` mention is **not considered proof that the active Claude session received the task**.
 
-The correction is ready for review only when all of the following are true:
+Before implementation begins, Claude must post in the active PR:
 
-- porch/roofed entrance and staircase-door-platform group have actually swapped
-  their facade locations,
-- spiral staircase is visibly farther left than before,
-- Roblox source/build and HTML/web source/build both reflect the same intended
-  real-world relationship,
-- no unrelated facade regression has been introduced,
-- before/after or equivalent view evidence is supplied from matching angles,
-- any environment/runtime that Claude could not execute is listed under
-  `Not tested` rather than claimed as PASS.
+`CLAUDE_ACK #119 — base/head <SHA> — scope: G02-C Ugneta UX 1+3, försök 1→2, Roblox-paritet`
 
-The previous F01 result remains useful baseline evidence:
+Only after that ACK is the handoff considered delivered.
 
-- **11 / 11 canonical QA views: PASS** at the 2026-08-30 acceptance state,
-- **walk path `ankomsten → stallet → hästgången → ridhuset → banan`: PASS**,
-- non-blocking observation: **the stable interior feels a little dark**.
+When implementation is ready, Claude must post:
 
-Those earlier PASS results do not override the new targeted correction above.
-Once Tobias accepts this correction in the target experience, F01 may return to
-`ACCEPTED_IN_ROBLOX_STUDIO`.
+- exact HEAD SHA,
+- Changed,
+- Tested,
+- Falsified,
+- Not tested,
+- Remaining risk,
+- human-test requirements,
+- `READY_FOR_CHATGPT_REVIEW`.
 
-Open `REFERENCE GAP` items remain open and must not be invented:
+ChatGPT then reviews the actual diff and evidence. Tobias alone sets `PRODUCT_ACCEPTED` where human acceptance is required.
 
-- hall orientation
-- exact size of the gable offset
-- documented contradiction between arena board and spectator-front references
+## Explicitly not active for Claude
 
----
+### PR #116 — Lydia pronoun
 
-## Gate G01 focus
+Technically green and separate. It is waiting on Tobias's decision. Claude must not spend active implementation time or repeated monitoring cycles on it unless Tobias reopens the task.
 
-UBRF must now become a playable horse game. Build vertically around:
+### PR #114 / issue #81 — grandstand P0
 
-`arrival → stable → assigned horse → preparation → lead out → riding hall → mount → simple exercise → return → aftercare → feedback`
+Separate problem track. Claude should read the staircase postmortem as a lesson, but **must not overlap #119 implementation with grandstand code** unless Tobias/ChatGPT explicitly hands it back.
 
-Roblox is the primary game platform. HTML/web remains a real playable parallel
-implementation. GitHub + Supabase are the development source chain; Google
-Drive must not be required by implementation agents.
+Key lesson from the grandstand failure:
 
-The targeted F01 facade correction above is allowed to interrupt G01 only to the
-extent needed to fix and verify that specific real-world fidelity defect. Do not
-use it as permission for a broad environment rewrite.
+- internal state/path tests are insufficient when rendering uses another truth,
+- avatar/render/collision must agree on spatial state,
+- debug geometry must never leak into the player view,
+- verify the real player-facing chain, not just helper functions.
 
-## Roles
+## Completed prerequisite
 
-### Claude
+G02-B is `PRODUCT_ACCEPTED` and merged. G02-C may rely on its telemetry and rider-aid contract but must not retune G02-B game feel without a new explicit product decision.
 
-Lead implementation engineer. Before G01 work, read `CLAUDE.md`, product canon,
-AI collaboration rules, the active G01 gate, existing HorseCore/riding code and
-relevant web gameplay modules. Reuse existing systems; do not create a second
-riding engine or a second competing horse-assignment authority.
+## Source-of-truth rule
 
-For the reopened targeted F01 correction, Claude must first inspect the current
-authoritative building implementation and relevant repo references, then change
-the underlying geometry and provide review evidence. A visually similar render
-without a source-level correction is not completion.
+If this document conflicts with Tobias's newer explicit instruction, Tobias wins and this file must be updated immediately.
 
-### ChatGPT
+If PR comments and this file disagree and there is no newer Tobias instruction, **stop implementation and reconcile the task before coding**. Do not silently choose an older task.
 
-Senior Game Developer / Game Architect / Reviewer. Keep the slices vertical,
-server-authoritative and testable, reconcile overlapping branches before
-merging them, and independently review the facade correction against the actual
-diff and evidence.
+## Historical gates
 
-### Product Owner
-
-Final Roblox Studio visual/play acceptance and product decisions.
+Older G01/F01 material remains valid historical/reference evidence in their respective gate documents, PRs and commits, but it is **not the current Claude execution priority**.
