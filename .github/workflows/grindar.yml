@@ -99,6 +99,11 @@ jobs:
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
 
+      - name: GL-tester
+        run: |
+          if [ -f tools/test-gl.mjs ]; then node tools/test-gl.mjs
+          else echo "hoppar: tools/test-gl.mjs finns inte i denna branch"; fi
+
   dubbel-sanning:
     runs-on: ubuntu-latest
     steps:
