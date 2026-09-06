@@ -148,6 +148,17 @@ function draw2D(G){
   if(G.hinderAktiva)for(const h of BANA.hinder)drawFence2D(h,s,G);
   // NPC-ekipage
   for(const n of G.npcs)drawHorse2D(n.x,n.y,n.rikt,n.farg,s*0.9,false);
+  /* Ugneta vid sargen — samma `ugnetaPlats()` som 3D-vyn läser. */
+  if(typeof ugnetaPlats==="function"&&typeof ugnetaNarvarande==="function"&&ugnetaNarvarande()){
+    const u=ugnetaPlats();
+    if(u){const [a,b]=w2s(u.x,u.y);
+      cx.save();
+      cx.fillStyle="#5B5F66";
+      cx.beginPath();cx.ellipse(a,b,s*0.22,s*0.30,0,0,Math.PI*2);cx.fill();
+      cx.fillStyle="#B9BDC3";                       // grått hår
+      cx.beginPath();cx.arc(a,b-s*0.26,s*0.15,0,Math.PI*2);cx.fill();
+      cx.restore();}
+  }
   // spelaren
   drawHorse2D(G.px,G.py,G.rikt,HORSES[G.hastId].farg,s,true,G);
 }

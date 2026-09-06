@@ -33,10 +33,17 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   /* Hästdatan med — scenariot nedan ska rida VERKLIGA UBRF-hästar
      ur samma tabell som spelet och Roblox Stallet läser, inte en
      handskriven kopia av deras siffror. */
-  + "\n" + las("src/spel/hastar.js"), ctx);
+  + "\n" + las("src/spel/hastar.js")
+  /* G02-C: Ugnetas bedömningskontrakt exporteras ur SAMMA fil som
+     webben kör (src/larare.js). Roblox ska inte ha en handskriven kopia
+     av vilka dimensioner en 20 m volt bedöms på — då skulle de två
+     ytorna kunna glida isär utan att något blir rött. */
+  + "\n" + las("src/larare.js"), ctx);
 const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
-  SKOLHAST_PROFILER, SVAR_START } = vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
-  + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START})", ctx);
+  SKOLHAST_PROFILER, SVAR_START, UGNETA_OVNING_DIM, UGNETA_DIM_LABEL } =
+  vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
+  + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START, "
+  + "UGNETA_OVNING_DIM, UGNETA_DIM_LABEL})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -806,9 +813,23 @@ for (const h of scen.hastar) {
 rader.push("\t},");
 rader.push("}");
 rader.push("");
-rader.push("return RidKanon");
+/* ── UGNETA: G02-C:s bedömningskontrakt ───────────────────────────
+   Vilka dimensioner en övning faktiskt bedöms på, och högsta antal
+   observationer Ugneta får ge efter ett försök. Roblox läser det här
+   i stället för att bära en egen lista. */
+rader.push("--[[ G02-C: Ugnetas bedömningskontrakt, ur src/larare.js. ]]");
+rader.push("RidKanon.UGNETA = {");
+rader.push("\tMAX_OBSERVATIONER = 2,");
+rader.push("\tDIMENSIONER = { " + Object.keys(UGNETA_DIM_LABEL).map(str).join(", ") + " },");
+rader.push("\tOVNING = {");
+for (const id of Object.keys(UGNETA_OVNING_DIM).sort())
+  rader.push(`\t\t${id} = { ` + UGNETA_OVNING_DIM[id].map(str).join(", ") + " },");
+rader.push("\t},");
+rader.push("}");
 rader.push("");
 
+rader.push("return RidKanon");
+rader.push("");
 const utfil = "roblox/src/shared/HorseCore/RidKanon.luau";
 const ny = rader.join("\n");
 const abs = path.join(ROT, utfil);

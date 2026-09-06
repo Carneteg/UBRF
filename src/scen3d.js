@@ -1137,6 +1137,15 @@ function rita3D(Gs){
       GL.rita(S3.del.person,M4.mul(M4.translation(21.6+(i%2)*1.05,0.5+(i%2)*0.45,z0+i*steg),
         M4.skala(1)),{ton:kul[i%4]});
   }
+  /* UGNETA VID SARGEN (G02-C, UX-variant 1). Hon står fysiskt i
+     lektionen, vid A utanför kortsidans sarg — samma punkt som
+     `ugnetaPlats()` ger 2D-kartan, så rendering och logik läser EN
+     sanning om var hon står (läktarlärdomen, #114). Personmeshen är
+     samma som publiken använder; ingen ny geometri hittas på. */
+  if(typeof ugnetaPlats==="function"&&typeof ugnetaNarvarande==="function"&&ugnetaNarvarande()){
+    const u=ugnetaPlats();
+    if(u)GL.rita(S3.del.person,M4.mul(M4.translation(u.x,0,u.y),M4.skala(1)),{ton:"#5B5F66"});
+  }
   if(G.hinderAktiva)s3RitaHinder();
   /* NPC-ekipagen. */
   for(const n of G.npcs)

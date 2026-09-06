@@ -20,7 +20,15 @@ function prova(ok,namn,detalj=""){
   else{console.error(`FEL  ${namn}${detalj?` — ${detalj}`:""}`);fel++;}
 }
 
-const browser=await chromium.launch({headless:true,args:["--no-sandbox","--enable-unsafe-swiftshader"]});
+/* Samma binärupplösning som repots övriga browsertester (gardtest,
+   ridtest, uppdragstest): en förinstallerad Chromium används när den
+   finns, annars Playwrights egen. CI installerar sin egen och träffar
+   fallbacken; lokalt finns bara /opt/pw-browsers, och utan det här
+   kunde provet inte köras alls före push. Inget villkor är ändrat. */
+const PW_EXE=process.env.CHROMIUM||"/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const browser=await chromium.launch({headless:true,
+  executablePath:fs.existsSync(PW_EXE)?PW_EXE:undefined,
+  args:["--no-sandbox","--enable-unsafe-swiftshader"]});
 const vyer=[
   {namn:"desktop",width:1366,height:768,minFont:13},
   {namn:"tablet",width:1024,height:768,minFont:13},

@@ -28,3 +28,9 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Browser-UX — desktop, tablet, mobil, landscape och säkerhetsövertagande
         run: node tools/ugneta-ui-test.mjs
+      - name: Försök 1 → 2 genom produktionsflödet, live-register och paritetspunkt
+        run: node tools/ugneta-forsok-test.mjs
+      - name: Roblox-paritet för G02-C:s bedömningskontrakt
+        run: |
+          node tools/exportera-ridkanon.mjs --kontrollera
+          python3 roblox/tests/build.py tests/paritet.spec.luau

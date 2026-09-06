@@ -106,6 +106,8 @@ PARITET = [
     ("Hjalper",    "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",       "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
+    # G02-C: Ugnetas bedomningskontrakt lases ur RidKanon.UGNETA.
+    ("Ugneta",     "src/shared/HorseCore/Ugneta.luau"),
 ]
 
 MODULER = [
