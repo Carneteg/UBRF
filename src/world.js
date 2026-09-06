@@ -286,6 +286,7 @@ const NIVA_STEG=0.36;
    C-blockets bänkrad; en trappa ERSÄTTER basen med sin lutning där den
    står. Övre gången ligger OVANPÅ basen — under den finns entréhallens
    golv — så där finns två nivåer, och den man står närmast gäller. */
+let _ridhusAbstrCache = null;
 function ridhusNivaer(x,y){
   const R=RIDHUSINNE;
   let bas=0;
@@ -311,10 +312,20 @@ function ridhusNivaer(x,y){
   /* De källbelagda trapporna (fidelity) och spelets bänkradssteg
      (SPELABSTRAKTION) läses lika för gåendet — det är bara sanningsvärdet
      som skiljer dem, inte hur figuren kliver. */
-  const SAr=(typeof SPELABSTRAKTIONER!=="undefined")?SPELABSTRAKTIONER.ridhus:null;
-  const abstr=SAr?[SAr.bankradSteg,SAr.laktarSteg].filter(t=>t&&t.x1>t.x0):[];
-  for(const t of [...(R.trappor||[]),...abstr])
+  if (_ridhusAbstrCache === null) {
+    const SAr=(typeof SPELABSTRAKTIONER!=="undefined")?SPELABSTRAKTIONER.ridhus:null;
+    _ridhusAbstrCache = SAr?[SAr.bankradSteg,SAr.laktarSteg].filter(t=>t&&t.x1>t.x0):[];
+  }
+
+  if (R.trappor) {
+    for (const t of R.trappor) {
+      if(x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1) bas=trappNiva(t,x,y);
+    }
+  }
+  for (const t of _ridhusAbstrCache) {
     if(x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1) bas=trappNiva(t,x,y);
+  }
+
   const ut=[bas];
   for(const G of [R.ovreGang,R.ovreGangV])
     if(G&&x>=G.x0&&x<=G.x1&&y>=G.y0&&y<=G.y1&&G.z-bas>NIVA_STEG) ut.push(G.z);
