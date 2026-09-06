@@ -1044,10 +1044,10 @@ första ridpasset. Din häst ritas i hagen **bara** när hon står där;
 villkoret läste `!G.hamtad`, vilket efter det här hade betytt att hon
 betade och stod i boxen samtidigt.
 
-### Blocker 3 — stalldörren låg nästan i en vägg
+### Blocker 3 — stalldörren låg nästan i en vägg → **ÖPPEN, PO-FRÅGA**
 
-Det var inte en känsla utan ett mått. Fri yta runt dörrens gamla
-innerpunkt (10,50 · 68,95), uppmätt med spelets egen kollision:
+Måttet stämmer. Fri yta runt dörrens innerpunkt (10,50 · 68,95), med
+spelets egen kollision:
 
 | Riktning | Fritt |
 |---|---|
@@ -1056,20 +1056,31 @@ innerpunkt (10,50 · 68,95), uppmätt med spelets egen kollision:
 | **öster** | **0,3 m** |
 | **norr** | **0,3 m** |
 
-Spelaren landade i ett hörn på 0,3 × 0,3 m mellan norrfasaden och
-teorisalens västvägg (x 11,2).
+Dörren ligger 0,7 m från teorisalens västvägg (x 11,2). Man kan gå ut —
+väster och söder är fria, och vägen till stallet går väster ~4,6 m och
+sedan söderut genom `inre_entre` (x 4,1–5,0) — men man kliver in i ett
+hörn.
 
-**Geometrin är orörd.** Dörrbladet ligger kvar där fasaden säger
-(x 10,50), öppningen är oförändrad och teorisalens vägg står kvar —
-CLAUDE.md är uttrycklig om att inte flytta dörrar och väggar för att
-lösa ett spelproblem. Det som ändrades är var man **står**: ankomst- och
-interaktionspunkten flyttades 1,6 m in i den fria delen av samma rum
-(kanonens `OPEN_AREA stall_uppehall_open`). Nu: väster 4,0 · öster 1,2 ·
-söder 3,7 · norr 0,9 m.
+**Jag rättade det inte, och det är ett medvetet stopp.** Jag provade
+först att flytta ankomstpunkten 1,6 m västerut. Det gav 4,0/1,2/3,7/0,9 m
+— och **fällde ankaret `stall_entre_samma_dorr`** i CI (#80 runda 3:
+samma fysiska dörr inne som ute, gårdsmarkörens spawn = `ut_n`).
+Återställt.
 
-Vägen ut i stallet **fanns hela tiden** och är uppmätt: väster ~4,6 m,
-sedan söderut genom `genomgaende`-väggens `inre_entre`-öppning (x 4,1–5,0)
-ned i tvärgången vid y 53,2. Gångtestet går den, och tillbaka.
+Båda vägarna framåt bryter mot något som redan är beslutat:
+
+| Väg | Vad den bryter |
+|---|---|
+| flytta interaktions-/ankomstpunkten ur dörren | ankaret `stall_entre_samma_dorr` (#80) |
+| flytta teorisalens vägg eller dörren | verifierad geometri; CLAUDE.md förbjuder det uttryckligen |
+
+Det är ett produktbeslut, inte en implementationsdetalj. Frågan ligger i
+PR #87. Gångtestet **mäter** läget i stället för att tiga om det, och
+raden blir röd den dag beslutet är fattat och infört.
+
+**Lärdom av mitt eget fel:** jag rättade först och läste ankaret sedan.
+Ankaret fanns just för att stoppa den rättelsen, och CI hittade det jag
+borde ha sett i källan.
 
 ### Blocker 4 — konstigt kontinuerligt ljud
 

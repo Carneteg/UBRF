@@ -886,8 +886,8 @@ return {
 			text = "Gå in i stallet (Entré, under verandan)",
 			mot = "stallinne",
 			spawn = {
-				x = 9.6,
-				y = 68.4,
+				x = 10.5,
+				y = 68.95,
 				rikt = -1.570796,
 			},
 		},
@@ -1765,8 +1765,8 @@ return {
 			{
 				id = "ut_n",
 				pos = {
-					9.6,
-					68.4,
+					10.5,
+					68.95,
 				},
 				text = "Ut genom entrén — mot grusplanen",
 				mot = "gard",

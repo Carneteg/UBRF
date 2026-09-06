@@ -1335,37 +1335,33 @@ const STALLINNE = {
        genom dörren under verandan står innanför just den dörren. Planens
        vindfångscell (x 3,6–5,5) står kvar som region utan etikett —
        motsägelsen plan/fasad är dokumenterad ovan, fasaden vinner. */
-    /* ── ANKOMSTPUNKTEN, INTE DÖRREN (Tobias produkttest 2026-09-06,
-          blocker 3) ────────────────────────────────────────────────
-       "Dörren man går ut genom i stallet ligger nästan i en vägg."
-       Uppmätt fri yta runt den gamla innerpunkten (10,50 · 68,95):
-       väster 4,0 m, söder 4,0 m — men ÖSTER 0,3 m och NORR 0,3 m.
-       Spelaren landade i ett hörn på 0,3 × 0,3 m mellan norrfasaden och
-       teorisalens västvägg (x 11,2). Det är inte en känsla, det är ett
-       mått.
+    /* ── [ÖPPEN FRÅGA TILL PO] TRÅNGT INNANFÖR ENTRÉDÖRREN ─────────
+       Tobias produkttest 2026-09-06, blocker 3: "dörren man går ut genom
+       i stallet ligger nästan i en vägg". Uppmätt fri yta runt
+       innerpunkten (10,50 · 68,95), med spelets egen kollision:
 
-       DÖRREN FLYTTAS INTE. Fasadens gula dörr ligger där fasaden säger
-       (x 10,50 räknat inifrån), öppningen är orörd och teorisalens vägg
-       står kvar på 11,2 — CLAUDE.md är uttrycklig om att geometri inte
-       får flyttas för att lösa ett spelproblem.
+         väster 4,0 m · söder 4,0 m · ÖSTER 0,3 m · NORR 0,3 m
 
-       Det som ändras är var man STÅR: ankomst- och interaktionspunkten
-       läggs i den fria delen av samma rum som dörren öppnar mot
-       (kanonens OPEN_AREA `stall_uppehall_open`, x 7,3–11,2 ×
-       y 64,35–69,95). 1,6 m väster om dörrbladet ger ≥1,5 m fritt åt
-       alla håll, och dörren är fortfarande inom en meter — prompten
-       hör tydligt till den.
+       Måttet stämmer: dörren ligger 0,7 m från teorisalens västvägg
+       (x 11,2). Man kan gå ut därifrån — västerut och söderut är fritt,
+       och vägen till stallet går väster ~4,6 m och sedan söderut genom
+       `inre_entre` (x 4,1–5,0) — men man kliver in i ett hörn.
 
-       Vägen ut i stallet finns och är uppmätt: väster ~4,6 m, sedan
-       söderut genom `genomgaende`-väggens `inre_entre`-öppning
-       (x 4,1–5,0) ned i tvärgången. Gångtestet nedan går den. */
+       JAG HAR INTE RÄTTAT DET, och det är ett medvetet stopp. Båda
+       vägarna framåt bryter mot något som redan är beslutat:
+
+         · flytta interaktions-/ankomstpunkten ur dörren → fäller
+           ankaret `stall_entre_samma_dorr` (#80 runda 3: samma fysiska
+           dörr inne som ute, och gårdsmarkörens spawn = ut_n). Provat,
+           CI blev röd, återställt.
+         · flytta teorisalens vägg eller dörren → verifierad geometri,
+           och CLAUDE.md förbjuder uttryckligen att flytta väggar och
+           dörrar för att lösa ett spelproblem.
+
+       Det här är alltså ett produktbeslut, inte en implementationsdetalj.
+       Frågan ligger i PR #87. */
     {id:"ut_n", pos:[(()=>{const o=ANL.byggnader.find(b=>b.id==="stall").oppningar.find(o=>o.sida==="N"&&o.typ==="dorrgul");
-                          const dorrX=STALL_BREDD-o.u-o.b/2;
-                          /* Teorisalens västvägg är rummets östra kant.
-                             1,6 m in från den räcker för figurens 0,35 m
-                             radie med marginal, och ligger fortfarande i
-                             dörrens eget rum. */
-                          return Math.min(dorrX, 11.2-1.6);})(), STALL_LANGD-1.55],
+                          return STALL_BREDD-o.u-o.b/2;})(), STALL_LANGD-1.0],
      text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (Entré, under verandan)",
      spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},
