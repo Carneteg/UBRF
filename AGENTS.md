@@ -83,6 +83,32 @@ Green CI, a mergeable PR or a passing local test suite is not product acceptance
 
 Use Jules for narrow, high-value checks such as a concrete runtime-wiring suspicion, a regression test, a security check or a focused falsification task.
 
+### Mandatory duplicate preflight — before Jules starts work
+
+Before Jules creates a task, branch, commit or PR, it **must** search the repository for existing work covering the same root cause, function, file set or acceptance claim.
+
+Minimum preflight:
+
+1. search open PRs and issues for the same function/file/symptom/root cause,
+2. inspect existing Jules PRs/tasks that touch the same code path,
+3. compare the intended change against already-open work, not just titles,
+4. if substantially overlapping work exists, **do not create a new branch or PR**.
+
+If overlap is found:
+
+- reuse or comment on the existing issue/PR,
+- add evidence/tests to the existing thread only when explicitly useful,
+- otherwise stop and report `DUPLICATE — existing #<number>`,
+- if two Jules tasks already exist for the same concern, the **newer one is stopped/closed** unless Tobias or ChatGPT explicitly says otherwise.
+
+Hard rule: **one active Jules task/PR per root cause/code path.** Different wording, benchmark framing or test style does not make duplicate work unique.
+
+Examples that count as duplicates:
+
+- two PRs caching the same `ryktChipp(W,H)` allocation path,
+- two PRs replacing the same `S.rader.find(...)` render-loop lookup,
+- a new QA task for the same PR/head while an existing Jules QA task is still open.
+
 For an existing PR, prefer a review task such as:
 
 > Review PR <number> adversarially. Do not redesign the feature. Find runtime wiring gaps, duplicated sources of truth, web/Roblox parity mismatches, state inconsistencies, and tests that can pass without exercising production paths. Reproduce confirmed defects. Add failing regression tests when useful. Do not merge and do not change product tuning unless explicitly asked.
