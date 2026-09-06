@@ -47,13 +47,15 @@ function visaTilldelning(){
     if(friska.length)kandidater=friska;
   }
   const val=kandidater[G.seed%kandidater.length];
-  G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
   /* HÄSTEN STÅR I SIN BOX när ridläraren delar ut henne (produktbeslut
      2026-09-06). Raden satte förut `G.hamtad=false`, vilket flyttade ut
      henne i hagen igen direkt efter tilldelningen — dagen började i
-     boxen och hoppade till hagen på första repliken. */
-  G.hastPlats="box";G.tackePa=false;G.fangstForsok=false;G.hastMott=false;
-  G.utrustning=false;G.lerig=false;G.spolad=0;G.felUtrustning=0;
+     boxen och hoppade till hagen på första repliken.
+
+     Tilldelningen går genom sattAktivHast() — samma rad kod som ett
+     hästbyte — så att ingen av dem kan glömma ett fält den andra
+     nollar. */
+  sattAktivHast(val);
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
     lydia:"Lydia tar hand om dig. Lyssna — då kommer takten.",

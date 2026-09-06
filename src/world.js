@@ -847,8 +847,14 @@ function interaktioner(){
     for(const d of S.dorrar) L.push({pos:d.pos,
       text:G.leder?`Led hästen ${d.text.toLowerCase().replace("ut ","ut ")}`:d.text,
       gor(){gaTill(d.mot,d.spawn);}});
-    if(!G.hastId) L.push({pos:S.ridlarare.pos, text:"Prata med ridläraren",
-      gor(){visaTilldelning();}});
+    /* Ridläraren delar ut hästen — och byter den om spelaren vill.
+       Bytet ska gå att hitta utan att man vet var det finns, så det
+       ligger på samma person som delade ut hästen. */
+    L.push({pos:S.ridlarare.pos,
+      text:G.hastId?`Byt häst hos ridläraren (du har ${HORSES[G.hastId].namn})`
+        :"Prata med ridläraren",
+      gor(){ if(G.hastId&&typeof visaHastbyte==="function")visaHastbyte();
+             else visaTilldelning(); }});
     if(G.hastId&&!G.skotselRes){
       const b=hittaBox(G.hastId);
       if(b&&G.leder&&!G.hamtad){

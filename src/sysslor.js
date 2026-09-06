@@ -19,6 +19,42 @@
    på egen krok, båda med namnskylt. Att hämta rätt utrustning är
    första handgreppet — fel sadel passar inte ryggen den ska ligga på.
    ── */
+/* ── Byt häst hos ridläraren ──────────────────────────────────── */
+/* PO-order 2026-09-06: en tydlig men ENKEL väg att byta häst före
+   ridmomentet. Kort lista, ett klick, ingen lång text — och hela
+   vägledningskedjan följer med genom sattAktivHast(). */
+function visaHastbyte(){
+  const nu=G.hastId?HORSES[G.hastId]:null;
+  const lista=valbaraHastar();
+  const knapp=id=>{
+    const h=HORSES[id];
+    return `<button class="btn ghost hb-val" data-id="${id}"
+      style="justify-content:space-between;width:100%${id===G.hastId?";outline:1px solid var(--gold)":""}">
+      <span>${h.namn}</span>
+      <span class="dim" style="font-size:12px">${h.typ==="ponny"?"ponny":"häst"}${id===G.hastId?" · din i dag":""}</span></button>`;
+  };
+  overlay(true,`
+  <span class="lbl">Ridläraren · stallgången</span>
+  <h1 style="margin-top:6px">Byt häst</h1>
+  <p class="dim" style="font-size:13.5px;margin-top:2px">${nu
+    ? `Du har ${nu.namn} i dag. Byter du får du börja om med boxen, sadeln och skötseln.`
+    : "Välj hästen du ska rida i dag."}</p>
+  <div style="display:grid;gap:8px;margin-top:14px;max-height:46vh;overflow:auto">
+    ${lista.map(knapp).join("")}
+  </div>
+  <div class="btnrow"><button class="btn" id="bHbStang">Behåll ${nu?nu.namn:"—"}</button></div>`);
+  for(const b of document.querySelectorAll(".hb-val"))
+    b.onclick=()=>{
+      const id=b.dataset.id;
+      if(id!==G.hastId){
+        sattAktivHast(id);
+        saga(`${HORSES[id].namn} är din i dag. ${hastAnvisning().hur}`,4);
+      }
+      overlay(false);
+    };
+  document.getElementById("bHbStang").onclick=()=>overlay(false);
+}
+
 function visaSadelkammare(){
   if(!G.hastId){
     saga("Sadelkammaren: sadelbyglar i två rader, träns på krokar och en vit pegboard med putsgrejer. Du hämtar din utrustning när du fått veta vilken häst du rider.",5);

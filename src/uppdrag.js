@@ -41,6 +41,41 @@ function hastNamn(id){
   return h?h.namn:"hästen";
 }
 
+/* ── AKTIV HÄST — en sanning, ett ställe som får byta den ─────── */
+/* PO-order 2026-09-06: spelaren ska kunna byta häst före ridmomentet,
+   och hela vägledningskedjan ska följa med direkt. `G.hastId` ÄR den
+   aktiva hästen; det här är enda funktionen som får ändra den, så att
+   inget kan lämnas kvar från den förra. Tilldelningen och bytet går
+   genom samma rad kod — annars vore "en sanning" bara en avsikt.
+
+   Allt som hänger på hästen nollas: platsen, mötet, utrustningen,
+   skötseln, sysslorna, täcket, leran och spåret efter den förra
+   hästen. Missas ett fält blir det ett spöke: sadeln till Lydia i
+   handen medan uppdraget pekar på en annan häst. */
+function sattAktivHast(id){
+  if(typeof HORSES==="undefined"||!HORSES[id])return false;
+  G.hastId=id;
+  G.hastPlats="box";          // hästen står i sin box när dagen börjar
+  G.hastMott=false;
+  G.utrustning=false; G.felUtrustning=0;
+  G.skotselRes=null; G.sysslor={mockat:0,fodrat:0};
+  G.tackePa=false; G.fangstForsok=false; G.lerig=false; G.spolad=0;
+  if(typeof VD!=="undefined"&&VD.spår)VD.spår.length=0;
+  return true;
+}
+
+/* Hästar som går att välja: de som FAKTISKT står uppstallade i en box.
+   Utan box finns ingen punkt att peka på, och då kan vägledningen inte
+   svara på "var är det". Ingen häst hittas på. */
+function valbaraHastar(){
+  if(typeof STALLINNE==="undefined")return [];
+  const ut=[];
+  for(const rad of STALLINNE.rader)
+    for(const id of (STALLINNE.boxar[rad.id]||[]))
+      if(id&&HORSES[id]&&!ut.includes(id))ut.push(id);
+  return ut;
+}
+
 /* ── Punkterna i världen ──────────────────────────────────────── */
 function uppdragHastPunkt(){
   if(!G.hastId)return null;

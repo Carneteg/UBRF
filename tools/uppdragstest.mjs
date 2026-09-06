@@ -33,27 +33,40 @@ await page.goto(`http://localhost:${PORT}/ridskolan.html`, { waitUntil: "load" }
 await page.waitForTimeout(1500);
 const ev = (f, a) => page.evaluate(f, a);
 const resultat = [];
+const HORSES_NAMN = b => b.nyNamn;
 function prova(namn, ok, detalj) { resultat.push({ namn, ok });
   console.log(ok ? "  OK  " : "  FEL ", namn, "—", detalj); }
+
+/* Ett prov som KRASCHAR är inget rött prov — det är ett prov som inte
+   svarar. Mutationen "behåll första horseId" lämnade G.hastId null, och
+   då dog hela sviten på `HORSES[null].namn` innan en enda rad hann
+   skrivas ut: noll röda, noll gröna, ingen evidens. Sektionen som kör
+   namnges därför, och ett kast blir ett FEL med sitt sammanhang. */
+let sektion = "(start)";
+try {
 
 await ev(() => { startaVandring(); G.vy = "2d"; });
 await page.waitForTimeout(400);
 
 /* ══ A. PLATS OCH PRONOMEN UR RUNTIME-DATAN ════════════════════════ */
+sektion = "A: plats och pronomen";
 {
   const a = await ev(() => {
     startaVandring(); visaTilldelning(); overlay(false);
-    const h = HORSES[G.hastId];
-    const u = uppdragText();
-    const anv = hastAnvisning();
+    const h = HORSES[G.hastId] || { namn: "(ingen)", pronomen: { kalla: "(ingen häst)" } };
+    const u = uppdragText() || { rubrik: "", punkter: [] };
+    const anv = hastAnvisning() || { vart: "", hur: "", kort: "" };
     /* Varje yta som säger något om var hästen står. */
     const ytor = [u.rubrik, ...u.punkter, anv.vart, anv.hur, anv.kort];
-    return { plats: G.hastPlats, namn: h.namn, ytor,
+    return { plats: G.hastPlats, namn: h.namn, hastId: G.hastId, finns: !!HORSES[G.hastId], ytor,
       pronomen: h.pronomen, hanKalla: HORSES.toblerone.pronomen,
       pron: { subj: hastPron(G.hastId, "subj"), obj: hastPron(G.hastId, "obj"),
         poss: hastPron(G.hastId, "poss") },
       tobl: { subj: hastPron("toblerone", "subj"), obj: hastPron("toblerone", "obj") } };
   });
+  prova("tilldelningen sätter en aktiv häst (G.hastId) som finns i hästdatan",
+    !!a.hastId && a.finns === true,
+    `aktiv häst: ${a.hastId === null ? "INGEN" : `${a.hastId} → ${a.namn}`}`);
   prova("hastPlats=box och ingen yta säger hagen",
     a.plats === "box" && !a.ytor.some(t => /hage/i.test(t || "")),
     `${a.ytor.map(t => JSON.stringify(t)).join(" · ")}`);
@@ -90,6 +103,7 @@ await page.waitForTimeout(400);
    den gången. Ett prov som inte kan se skillnad på "det finns en väg"
    och "figuren råkade glida rätt" bevisar ingenting om vägsökningen.
    Här frågas navVag rakt ut, och rutorna i öppningarna räknas. */
+sektion = "A2: rutnätet genom dörröppningarna";
 {
   const n = await ev(() => {
     gaTill("stallinne", { x: 5, y: 30, rikt: 0 });
@@ -117,6 +131,7 @@ await page.waitForTimeout(400);
 }
 
 /* ══ B–C. KEDJAN GÅR VIDARE AV SIG SJÄLV ═══════════════════════════ */
+sektion = "B–C: kedjan";
 {
   const kedja = await ev(() => {
     const steg = [];
@@ -151,6 +166,7 @@ await page.waitForTimeout(400);
 }
 
 /* ══ E. ETT MÅL, OCH VÄGVISAREN TONAS BORT NÄRA ════════════════════ */
+sektion = "E: ett mål, toningen";
 {
   const e = await ev(() => {
     startaVandring(); visaTilldelning(); overlay(false);
@@ -174,6 +190,7 @@ await page.waitForTimeout(400);
 }
 
 /* ══ F. TEXTEN ÄR SKANNBAR ═════════════════════════════════════════ */
+sektion = "F: kort text";
 {
   const f = await ev(() => {
     const lagen = [];
@@ -199,7 +216,139 @@ await page.waitForTimeout(400);
     f.map(l => `${l.id}: "${l.rubrik}"`).join(" · "));
 }
 
+/* ══ HÄSTBYTE — hela vägledningen följer den AKTIVA hästen ═════════
+   PO-order 2026-09-06. Spelaren kan byta häst före ridmomentet, och då
+   får ingenting ligga kvar från den förra: objective, namn, plats,
+   markör, utrustningsmål, återvägen och uppsittningen ska alla peka på
+   den nya hästen. Ett kvarglömt fält blir ett spöke — sadeln till den
+   förra hästen i handen medan uppdraget pekar på en annan. */
+sektion = "hästbytet";
+{
+  const b = await ev(() => {
+    startaVandring(); visaTilldelning(); overlay(false);
+    const gammal = G.hastId;
+    const gammalBox = hittaBox(gammal).dorr.slice();
+    gaTill("stallinne", { x: gammalBox[0], y: gammalBox[1] - 9, rikt: 0 });
+    const fore = { steg: uppdragMal().id, rubrik: uppdragText().rubrik,
+      mal: uppdragVagvisare().pos.slice(), markor: markorGallerFor(gammal) };
+
+    /* Byt till en ANNAN verifierad, uppstallad häst. */
+    const ny = valbaraHastar().find(id => id !== gammal);
+    /* Genom den riktiga vägen: ridlärarens bytesvy. */
+    visaHastbyte();
+    for (const el of document.querySelectorAll(".hb-val"))
+      if (el.dataset.id === ny) el.click();
+    overlay(false);
+
+    const nyBox = hittaBox(ny).dorr.slice();
+    gaTill("stallinne", { x: nyBox[0], y: nyBox[1] - 9, rikt: 0 });
+    const efter = { steg: uppdragMal().id, rubrik: uppdragText().rubrik,
+      mal: uppdragVagvisare().pos.slice(),
+      markorNy: markorGallerFor(ny), markorGammal: markorGallerFor(gammal) };
+
+    /* Utrustningen ska gälla den AKTIVA hästen: fel bygel ska nekas. */
+    G.hastMott = true;
+    const utrMal = uppdragMal().mal.pos.slice();
+    /* Sadel OCH träns väljs, sedan bekräftas med "Ta med utrustningen" —
+       det är där valet prövas mot den aktiva hästen. */
+    const valj = id => { for (const el of document.querySelectorAll(".sk-val"))
+      if (el.dataset.id === id) el.click();
+      document.getElementById("bSkKlar").click(); };
+    /* FEL bygel: någon annan hästs, vilken som helst av dem som hänger
+       framme. (Sadelkammaren visar åtta byglar runt den aktiva hästen,
+       så den förra hästens hänger inte nödvändigtvis kvar i bild.) */
+    visaSadelkammare();
+    const felId = [...document.querySelectorAll(".sk-val")]
+      .map(el => el.dataset.id).find(id => id !== G.hastId);
+    valj(felId);
+    const felUtr = { utrustning: G.utrustning, fel: G.felUtrustning,
+      namn: HORSES[felId].namn };
+    visaSadelkammare(); valj(ny);               // den aktiva hästens
+    const rattUtr = { utrustning: G.utrustning };
+    overlay(false);
+
+    /* Återvägen efter sadelkammaren. */
+    const tillbaka = uppdragMal().mal.pos.slice();
+
+    return { gammal, ny, aktivEfter: G.hastId,
+      gammalNamn: HORSES[gammal].namn, nyNamn: HORSES[ny].namn,
+      gammalBox, nyBox, fore, efter, utrMal, felUtr, rattUtr, tillbaka,
+      sadelkammare: (STALLINNE.info || []).find(i => i.sadelkammare).pos };
+  });
+
+  prova("bytet byter den aktiva hästen (G.hastId)",
+    b.aktivEfter === b.ny && b.ny !== b.gammal,
+    `${b.gammalNamn} → ${b.aktivEfter === null ? "INGEN" : HORSES_NAMN(b)}`);
+  prova("bytet: bara den nya hästen är markerad — den förras markering är borta",
+    b.fore.markor === true && b.efter.markorNy === true && b.efter.markorGammal === false,
+    `före: ${b.gammalNamn} ${b.fore.markor} · efter: ${b.nyNamn} ${b.efter.markorNy}, ${b.gammalNamn} ${b.efter.markorGammal}`);
+  prova("objective, namn och plats följer den nya hästen",
+    b.efter.rubrik.includes(b.nyNamn) && !b.efter.rubrik.includes(b.gammalNamn) &&
+    b.fore.rubrik.includes(b.gammalNamn),
+    `"${b.fore.rubrik}" → "${b.efter.rubrik}"`);
+  prova("och waypointen pekar på den NYA hästens box",
+    Math.hypot(b.efter.mal[0] - b.nyBox[0], b.efter.mal[1] - b.nyBox[1]) < 0.01 &&
+    Math.hypot(b.efter.mal[0] - b.gammalBox[0], b.efter.mal[1] - b.gammalBox[1]) > 0.01,
+    `waypoint [${b.efter.mal.map(n=>n.toFixed(1))}] · ny box [${b.nyBox.map(n=>n.toFixed(1))}] · förras box [${b.gammalBox.map(n=>n.toFixed(1))}]`);
+  prova("sadelkammaren ger utrustning för den AKTIVA hästen, inte den förra",
+    b.felUtr.utrustning === false && b.felUtr.fel >= 1 && b.rattUtr.utrustning === true,
+    `${b.felUtr.namn}s bygel → nekad (fel ${b.felUtr.fel}) · ${b.nyNamn}s bygel → utrustning ${b.rattUtr.utrustning}`);
+  /* STALE STATE: bytet görs från ett FÖRBERETT läge — sadeln hämtad,
+     hästen mött, skötseln gjord, hästen ledd ut. Inget av det får följa
+     med till den nya hästen; annars står man med den förra hästens
+     sadel i handen och ett uppdrag som pekar på en annan box. */
+  const st = await ev(() => {
+    startaVandring(); visaTilldelning(); overlay(false);
+    const gammal = G.hastId;
+    G.hastMott = true; G.utrustning = true; G.felUtrustning = 2;
+    G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds";
+    G.sysslor = { mockat: 1, fodrat: 1 }; G.tackePa = true; G.lerig = true;
+    const ny = valbaraHastar().find(id => id !== gammal);
+    sattAktivHast(ny);
+    return { gammal, ny, aktiv: G.hastId, mott: G.hastMott, utr: G.utrustning,
+      fel: G.felUtrustning, skotsel: !!G.skotselRes, plats: G.hastPlats,
+      sysslor: G.sysslor, tacke: G.tackePa, lerig: G.lerig,
+      steg: uppdragMal().id, rubrik: uppdragText().rubrik };
+  });
+  prova("bytet lämnar inget kvar från den förra hästen (stale state)",
+    st.aktiv === st.ny && st.mott === false && st.utr === false && st.fel === 0 &&
+    st.skotsel === false && st.plats === "box" && st.tacke === false &&
+    st.lerig === false && st.sysslor.mockat === 0 && st.sysslor.fodrat === 0,
+    `plats ${st.plats} · mött ${st.mott} · utrustning ${st.utr} (fel ${st.fel}) · skötsel ${st.skotsel} · täcke ${st.tacke} · lera ${st.lerig} · sysslor ${JSON.stringify(st.sysslor)}`);
+  prova("och kedjan börjar om på den nya hästen i stället för mitt i den förras",
+    st.steg === "hitta_hast",
+    `steg "${st.steg}" · rubrik "${st.rubrik}"`);
+
+  prova("återvägen efter sadelkammaren leder till den nya hästen",
+    Math.hypot(b.tillbaka[0] - b.nyBox[0], b.tillbaka[1] - b.nyBox[1]) < 0.01,
+    `tillbaka [${b.tillbaka.map(n=>n.toFixed(1))}] mot nya boxen [${b.nyBox.map(n=>n.toFixed(1))}]`);
+
+  /* Uppsittningen: den riktiga interaktionen vid sargporten, på den
+     häst som faktiskt är aktiv. */
+  const m = await ev(() => {
+    G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds";
+    const sp = SPELABSTRAKTIONER.ridhus.sargport;
+    const port = [(sp.x0 + sp.x1) / 2, RIDHUSINNE.bana.y + RIDHUSINNE.bana.h];
+    gaTill("ridhusinne", { x: port[0], y: port[1] - 1.0, rikt: 0 });
+    interagera();
+    const text = VD.prompt ? VD.prompt.text : null;
+    if (VD.prompt) VD.prompt.gor();
+    const ut = { text, scen: G.scen, hastId: G.hastId, namn: HORSES[G.hastId].namn };
+    /* Lämna lektionen direkt igen: provet har satt skotselRes för hand
+       och har därför ingen ridmodell (G.ride) — ridloopen ska inte få
+       en bildruta med halvt tillstånd. */
+    startaVandring();
+    return ut;
+  });
+  prova("uppsittningen sker på den aktiva hästen, inte via kvarglömt tillstånd",
+    m.scen === "lektion" && m.hastId === b.ny && (m.text || "").includes(b.nyNamn) &&
+    !(m.text || "").includes(b.gammalNamn),
+    `prompt ${JSON.stringify(m.text)} → scen "${m.scen}", aktiv häst ${m.namn}`);
+  await ev(() => { startaVandring(); G.vy = "2d"; });
+}
+
 /* ══ D. HELA PRODUKTIONSVÄGEN, GÅENDE, ÄNDA IN I RIDLÄGE ═══════════ */
+sektion = "D: hela produktionsvägen";
 {
   const TANGENT = { N:"w", S:"s", O:"d", V:"a" };
   async function gaHit(mal, namn, maxMs = 150000) {
@@ -281,6 +430,11 @@ await page.waitForTimeout(400);
   prova("och varje steg på vägen hade en interaktion att trycka E på",
     steg.every(([, p]) => !!p),
     steg.map(([n, p]) => `${n}: ${p ? "ja" : "INGEN"}`).join(" · "));
+}
+
+} catch (e) {
+  prova(`sektionen "${sektion}" kraschade i stället för att bli röd`, false,
+    `${e && e.message ? e.message.split("\n")[0] : e}`);
 }
 
 console.log("");

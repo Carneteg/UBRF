@@ -53,6 +53,27 @@ själv vilken häst som ska märkas — annars går det inte att prova, och en
 mutation som märkte alla hästar gav noll röda prov när testet bara läste
 tillståndet.
 
+## Aktiv häst — och byte av den
+
+`G.hastId` **är** den aktiva hästen. `sattAktivHast(id)` är enda stället
+som får ändra den, och både tilldelningen och ett byte går genom den —
+annars vore "en sanning" bara en avsikt. Funktionen nollar allt som
+hänger på hästen: plats, möte, utrustning (och felräknaren), skötsel,
+sysslor, täcke, lera och spåret efter den förra. Ett missat fält blir
+ett spöke: den förra hästens sadel i handen medan uppdraget pekar på en
+annan box.
+
+Bytet ligger hos ridläraren — samma person som delade ut hästen — så att
+det går att hitta utan att man vet att det finns. `valbaraHastar()` ger
+bara hästar som faktiskt står uppstallade i en box; utan box finns ingen
+punkt att peka på, och då kan vägledningen inte svara på "var är det".
+Ingen häst hittas på.
+
+Efter ett byte följer hela kedjan med av sig själv: objective, namn,
+pronomen, box-waypoint, markör, minikarta, utrustningsmål, återvägen och
+uppsittningen. Det finns ingen separat "byteskod" som måste hållas i
+synk — allt läser den aktiva hästen.
+
 ## Vad som INTE får hittas på
 
 - **Boxnummer.** Repot har ingen verifierad boxnumrering. Uppdraget säger
