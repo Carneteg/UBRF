@@ -100,11 +100,11 @@ function sittUpp(plats){
        första-bildrutefönster där den körande ridloopen kan läsa
        uppsutten=false — telemetrin skulle då rapportera en avsutten ryttare
        mitt i en ritt. Senior review av #86, blocker C. */
-    visaSekretariat(()=>{G.leder=false;hudLage("ritt");
+    visaSekretariat(()=>{hudLage("ritt");
       ridSittUpp(G.hastId,plats);startaLektion();});
     return;
   }
-  G.leder=false;G.plats=plats;hudLage("ritt");
+  G.plats=plats;hudLage("ritt");
   ridSittUpp(G.hastId,plats);          // G02-A: tillståndet FÖRE lektionen, se ovan
   startaLektion();
 }

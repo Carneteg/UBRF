@@ -731,7 +731,7 @@ function interaktioner(){
             saga(`${h.namn} lyfter huvudet och drar sig undan — precis som det står på listan. Stå still en stund och gå lugnt fram igen.`,4.5);
             return;
           }
-          G.leder=true; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
+          G.hastPlats="leds"; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
           ljudGnagg();
           /* Hagen är blöt i regn och lerig i slasket — benen ska spolas. */
           G.lerig=!!(G.vader&&(G.vader.typ==="regn"||G.vader.temp<9));
@@ -767,7 +767,7 @@ function interaktioner(){
         L.push({pos:b.dorr, text:G.lerig
             ?`Släpp in ${HORSES[G.hastId].namn} (leriga ben — spolspiltan ligger i söder)`
             :`Släpp in ${HORSES[G.hastId].namn} i boxen`,
-          gor(){G.leder=false;G.hamtad=true;ljudFnys();
+          gor(){G.hastPlats="box";ljudFnys();
             saga(G.lerig
               ?"Han går in med leran kvar på benen. Ridläraren kommer att se den."
               :"Han går in och drar en tugga hö. Nu: boxen, fodret och sadeln.",3.5);}});
@@ -2277,13 +2277,19 @@ function ritaVandring(){
     ? (G.scen==="gard"?["Gå till stallet","Stallentrén är den gula dörren under verandan, bortom parkeringen."]
       :G.scen==="ridhusinne"?["Titta dig omkring","Läktaren, speglarna, Café Krubban — lektionen börjar i stallet."]
       :["Prata med ridläraren","Hon står i stallgången och fördelar hästarna."])
-    : !G.hamtad
-    ? (G.leder?[`Led ${HORSES[G.hastId].namn} till boxen`,
-         G.scen==="gard"?"In genom stalldörren och fram till boxen."
-         :G.lerig?"Leriga ben efter hagen — spola av honom i spiltan i södra änden först."
-         :"Fram till boxen och släpp in honom (E)."]
-       :[`Hämta ${HORSES[G.hastId].namn} i hagen`,
-         "Grinden sitter på hagens västra sida, öster om stallet."])
+    /* UPPGIFTSTEXTEN LÄSER PLATSEN DIREKT (Tobias produkttest
+       2026-09-06, blocker 2). Den läste `!G.hamtad` och sedan `G.leder`,
+       alltså två booleaner där hagegrenen var det som blev kvar när
+       ingen av dem stämde. Nu står de tre lägena för sig, och "hämta i
+       hagen" kan bara visas när hästen FAKTISKT står i hagen. */
+    : G.hastPlats === "leds"
+    ? [`Led ${HORSES[G.hastId].namn} till boxen`,
+       G.scen==="gard"?"In genom stalldörren och fram till boxen."
+       :G.lerig?"Leriga ben efter hagen — spola av honom i spiltan i södra änden först."
+       :"Fram till boxen och släpp in honom (E)."]
+    : G.hastPlats === "hage"
+    ? [`Hämta ${HORSES[G.hastId].namn} i hagen`,
+       "Grinden sitter på hagens västra sida, öster om stallet."]
     : !G.skotselRes
     ? [`Sköt om ${HORSES[G.hastId].namn}`,
        G.scen!=="stallinne"?"Boxen är inne i stallet."

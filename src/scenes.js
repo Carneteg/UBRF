@@ -48,7 +48,11 @@ function visaTilldelning(){
   }
   const val=kandidater[G.seed%kandidater.length];
   G.hastId=val;G.skotselRes=null;G.sysslor={mockat:0,fodrat:0};
-  G.hamtad=false;G.tackePa=false;G.fangstForsok=false;
+  /* HÄSTEN STÅR I SIN BOX när ridläraren delar ut henne (produktbeslut
+     2026-09-06). Raden satte förut `G.hamtad=false`, vilket flyttade ut
+     henne i hagen igen direkt efter tilldelningen — dagen började i
+     boxen och hoppade till hagen på första repliken. */
+  G.hastPlats="box";G.tackePa=false;G.fangstForsok=false;
   G.utrustning=false;G.lerig=false;G.spolad=0;G.felUtrustning=0;
   const h=HORSES[val];
   const motiv={toblerone:"Han förlåter det mesta — och du ska få jobba på följsamheten idag.",
@@ -456,7 +460,7 @@ function avslutaSkotsel(){
   och sadelläget sätter tak på lösgjordheten. Det är därför de tjugo minuterna före lektionen finns.</p>
   <div class="btnrow"><button class="btn" id="bLek">Led honom ut till lektionen</button></div>`);
   document.getElementById("bLek").onclick=()=>{overlay(false);
-    G.leder=true;VD.spår.length=0;
+    G.hastPlats="leds";VD.spår.length=0;
     const gIdx=GRUPPSTEGE.indexOf(G.grupp);
     saga("Led hästen ut. I dag kan ni ta ridhuset eller uteridbanan"+
       (gIdx>=5?" — eller sitta upp för uteritt på skogsstigen.":"."),4.5);};
@@ -533,7 +537,7 @@ function visaResultat(dom){
       return;
     }
     nollstall();
-    G.skotselRes=null;G.hamtad=true;G.tackePa=false;
+    G.skotselRes=null;G.hastPlats="box";G.tackePa=false;
     G.utrustning=true;G.lerig=false;G.spolad=0;   // sadeln är redan hämtad
     overlay(false);hudLage("gang");
     const b=hittaBox(G.hastId)||{dorr:[7.5,12]};
@@ -541,7 +545,9 @@ function visaResultat(dom){
     visaSkotsel();};
 }
 function nollstall(){
-  G.auto=false;G.leder=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
+  /* `nollstall` rör INTE var hästen är: den nollar ritten, inte
+     platsen. Förut stod `G.leder=false` här och kunde knuffa läget. */
+  G.auto=false;G.sysslor={mockat:0,fodrat:0};G.plats="ridhus";
   G.kappa=0;G.gaitSpar=0;G.gaitFas=0;G.accel=0;G.forraTempo=0;G.banLut=0;G.ryttarPitch=0;G.ryttarRoll=0;
   G.tavling=null;BANA.hojd=0.60;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;

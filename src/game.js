@@ -190,19 +190,29 @@ const G={
      är kvar att utforska men inte obligatorisk. */
   hastPlats:"box",
 };
-/* De gamla namnen som VYER av `hastPlats`. Skrivningar går tillbaka in
-   i samma fält, så en `G.leder=true` någonstans i koden inte kan skapa
-   ett andra läge. Att behålla namnen är med flit: 36 läsningar i fem
-   filer skulle annars ha skrivits om i samma runda som fyra
-   produktblockerare, och det är precis så man inför en femte. */
-Object.defineProperty(G,"leder",{
-  get(){return G.hastPlats==="leds";},
-  set(v){G.hastPlats=v?"leds":(G.hastPlats==="leds"?"hage":G.hastPlats);},
-});
-Object.defineProperty(G,"hamtad",{
-  get(){return G.hastPlats==="box";},
-  set(v){G.hastPlats=v?"box":(G.hastPlats==="box"?"hage":G.hastPlats);},
-});
+/* De gamla namnen är LÄSVYER av `hastPlats` — och bara det.
+
+   Första försöket lät dem också SKRIVAS, med översättning tillbaka in i
+   fältet. Det räckte inte, och Tobias produkttest 2026-09-06 visade
+   exakt varför: `G.hamtad=false` i scenes.js (när ridläraren delar ut
+   hästen) översattes till `hastPlats="hage"`, så dagen startade i boxen
+   och hoppade ut i hagen så fort man fick sin häst. "Hämta Lydia i
+   hagen" stod kvar i uppgiftstexten.
+
+   Ett gammalt booleskt derivat kunde alltså fortfarande välja
+   hageflödet. Nu KASTAR skrivningen: varje ställe som flyttar hästen
+   måste säga vilket av de tre lägena som gäller. Det är hela poängen
+   med en enda platssanning — den som skriver ska behöva mena det. */
+function hastPlatsVy(namn, lage){
+  Object.defineProperty(G, namn, {
+    get(){ return G.hastPlats === lage; },
+    set(){ throw new Error(
+      `G.${namn} är en läsvy av G.hastPlats — sätt G.hastPlats till `
+      + `"hage", "leds" eller "box" i stället.`); },
+  });
+}
+hastPlatsVy("leder", "leds");
+hastPlatsVy("hamtad", "box");
 /* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
    spelas, och kartan är ett uppslag man tar när man vill orientera
    sig. Med kartan som förval landade en ny spelare i en ovanifrånvy

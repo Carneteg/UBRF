@@ -1131,3 +1131,99 @@ fortfarande Tobias bedömning; det är hela poängen med en ny preview.
 
 **Status: `READY_FOR_CHATGPT_REVIEW`.** `READY_FOR_PRODUCT_ACCEPTANCE`
 är återkallad och sätts inte av mig.
+
+---
+
+## 15. Produktacceptans FALLERAD igen @ `9bd9642` — två repros
+
+### Repro 2 — "Hämta Bränntomts Lydia i hagen" stod kvar
+
+**Root cause, och den var min:** `G.hastPlats="box"` vid dagens start
+räckte inte. `visaTilldelning()` i `src/scenes.js` satte
+`G.hamtad=false` direkt efteråt — och min **skrivbara** vy översatte det
+till `hastPlats="hage"`. Dagen började i boxen och hoppade ut i hagen på
+första repliken från ridläraren.
+
+Det var precis det PO varnade för: *"gamla booleska derivat som kan
+välja hageflödet ändå"*. Jag byggde en vy som gick att skriva till, och
+då var det inte en enda sanning.
+
+**Rättat:**
+
+1. `leder` och `hamtad` är nu **läsvyer som kastar vid skrivning**. Varje
+   ställe som flyttar hästen måste säga vilket av de tre lägena som
+   gäller.
+2. Sju skrivningar konverterade till explicit `G.hastPlats` i
+   `scenes.js`, `tavling.js` och `world.js`. `nollstall()` rör inte
+   längre platsen — den nollar ritten.
+3. Uppgiftstexten läser `G.hastPlats` direkt i stället för `!G.hamtad`
+   och sedan `G.leder`. "Hämta i hagen" kan bara visas när hästen
+   faktiskt står i hagen.
+
+**End-to-end-prov** (ny session → riktig `visaTilldelning()` → texten
+produktionen renderar): `hastPlats "box"`, rubrik **"Sköt om Bränntomts
+Lydia"**, undertext **"Boxen är inne i stallet."**, `iHage false`, och
+de gamla booleanerna kastar vid skrivning.
+
+**Falsifiering:** mutationen "tilldelningen flyttar ut hästen i hagen
+igen" ger **4 röda** med Tobias exakta strängar tillbaka: *"Hämta
+Bränntomts Lydia i hagen" · "Grinden sitter på hagens västra sida, öster
+om stallet."*
+
+**Och en mutation som INTE blev röd, redovisad som sådan:** att sätta
+tillbaka uppgiftstextens gamla villkor (`!G.hamtad` … `G.leder`) ger
+**0 röda**. De två formuleringarna är nämligen ekvivalenta så länge
+platssanningen är rätt — med tre lägen ger båda samma text. Omskrivningen
+är alltså läsbarhet och en borttagen fälla för framtida ändringar, **inte**
+det som rättade buggen. Det som rättade buggen är den låsta
+platssanningen (mutation A). Jag redovisar det hellre än att låta två
+ändringar dela på en förtjänst.
+
+**Vakten hittade ett fel till, i mina egna verktyg.** När skrivningen
+började kasta föll `tools/ridtest.mjs` direkt: den satte `G.hamtad = true`
+på 13 ställen, och `tools/styrkansla.mjs` på ett. Alla är konverterade
+till `G.hastPlats = "box"`. Det är precis vad en läsvy som kastar är till
+för — den hittar de ställen ingen letat på.
+
+### Repro 1 — stalldörren: KÄLLMOTSÄGELSE, jag stoppar
+
+PO:s order: rätta den fysiska geometrin, och *"om två repo-källor
+faktiskt motsäger varandra: redovisa exakt vilka, med fil/referens, och
+stoppa hellre än att uppfinna geometri."*
+
+**Det är precis vad som gäller här.** Uppmätt ur källdatan:
+
+| Vad | Läge (stallets innerkoordinater) | Källa |
+|---|---|---|
+| Entrédörren `dorrgul` | x **9,92 – 11,07** (u 9,925, b 1,15) | `ANL.byggnader` stall `oppningar` sida N — **FASAD, låst**, PRODUKTBESLUT 2026-09-02, `stall-entre-15/-16`, `stall-fasad-04` |
+| Teorisalens västvägg `teorisal_v` | x **11,20**, y 64,35–69,95 (möter norra gaveln) | `PLAN:stall-plan1-utrymning-rak.jpg#linje-x11.2`; `PO-2026-09-03:teorisalen-till-vanster`; `FOTO:stall-inne-04-teorisalen.jpg` — `VERIFIED_PLAN_OR_PHOTO` |
+
+**Avstånd dörrkant → vägg: 0,13 m.** Ingen överlappning, men väggen
+landar i praktiken på dörrens östra karm — vilket är exakt vad Tobias
+skärmbild visar.
+
+Båda är verifierade, ur **olika** källor: dörren ur fasadfotot, väggen
+ur planen. Att flytta någon av dem vore att uppfinna geometri, och
+`src/site.js` dokumenterar redan motsägelsen plan/fasad för just den här
+gaveln.
+
+**Jag stoppar därför på geometrin och lämnar valet till PO:**
+
+| Alternativ | Konsekvens |
+|---|---|
+| Fasaden vinner (som i dag) | dörren står kvar; teorisalens västvägg måste läsas om ur planen |
+| Planen vinner | väggen står kvar; entrédörrens läge i fasaden måste läsas om — men fasaden är **låst** sedan 2026-09-02 |
+| Båda är rätt | dörren sitter i rummets hörn; då är det ingen bugg utan verklighetens utformning, och 0,13 m ska stå som deklarerat mått |
+
+**Nytt geom-prov** i `tools/gardtest.mjs` mäter avståndet från varje
+ytterdörr i norra gaveln till närmaste solida innervägg som möter
+gaveln. Det **faller vid överlappning** och rapporterar 0,13 m som en
+deklarerad, mätt känd avvikelse i stället för att tiga om den.
+
+**En sak jag måste flagga:** jag ändrade ankaret
+`stall_entre_samma_dorr` tidigare i dag, på uttryckligt svar från
+Tobias, för att tillåta att ankomstpunkten flyttar. PO:s order säger nu
+*"ändra inte spatialankaret för att göra CI grönt om källdatan är fel"*.
+Ankomstflytten står kvar (den valdes uttryckligen och förbättrar
+spelbarheten), men den är **inte** min rättelse av repro 1 — och säg
+till om ankaret ska tillbaka till sin ursprungliga ordalydelse.

@@ -102,6 +102,52 @@ function prova(namn, ok, detalj) {
   const h = await page.evaluate(() => { G.hastPlats = "hage"; return { hamtad: G.hamtad, leder: G.leder }; });
   prova("hagflödet finns kvar: läget går att ställa tillbaka",
     h.hamtad === false && h.leder === false, `hamtad ${h.hamtad}, leder ${h.leder}`);
+
+  /* ── END-TO-END: NY SESSION → TILLDELNING → UPPGIFTSTEXT → HÄSTEN ──
+     Tobias produkttest 2026-09-06, blocker 2: han fick fortfarande
+     "Hämta Bränntomts Lydia i hagen". Att sätta hastPlats="box" vid
+     dagens start räckte inte — `tilldelaHast()` i scenes.js satte
+     `G.hamtad=false` direkt efteråt, och den gamla skrivvyn översatte
+     det till "hage". Provet går hela vägen: ny session, riktig
+     tilldelning, och LÄSER uppgiftstexten produktionen renderar. */
+  const e2e = await page.evaluate(() => {
+    startaVandring();
+    /* Samma väg som ridläraren: den riktiga tilldelningsfunktionen. */
+    visaTilldelning();
+    if (typeof overlay === "function") overlay(false);
+    const namn = G.hastId ? HORSES[G.hastId].namn : null;
+    /* Uppgiftstexten ur produktionen, inte ur en kopia av villkoret. */
+    ritaVandring();
+    const rubrik = document.getElementById("momentNamn");
+    const under = document.getElementById("momentText");
+    return { plats: G.hastPlats, hastId: G.hastId, namn,
+      rubrik: rubrik ? rubrik.textContent : null,
+      under: under ? under.textContent : null,
+      /* Står hon samtidigt i hagen? Det ritade läget ska följa platsen. */
+      iHage: ANL.hagar.some(hg => hg.hastar.includes(G.hastId)) && G.hastPlats === "hage" };
+  });
+  prova("efter tilldelning står hästen fortfarande i boxen",
+    e2e.plats === "box", `hastPlats "${e2e.plats}" (${e2e.namn})`);
+  prova("uppgiftstexten säger INTE hagen",
+    !!e2e.rubrik && !/hagen/i.test(e2e.rubrik) && !/hagens|grinden/i.test(e2e.under || ""),
+    `"${e2e.rubrik}" · "${e2e.under}"`);
+  prova("och hästen är inte samtidigt utritad i hagen",
+    e2e.iHage === false, `iHage ${e2e.iHage}`);
+
+  /* De gamla namnen går inte längre att SKRIVA — det var så hageflödet
+     kunde väljas bakvägen. */
+  const skydd = await page.evaluate(() => {
+    const ut = {};
+    for (const namn of ["hamtad", "leder"]) {
+      try { G[namn] = false; ut[namn] = "skrev utan fel"; }
+      catch (e) { ut[namn] = "kastade"; }
+    }
+    return { ...ut, plats: G.hastPlats };
+  });
+  prova("gamla booleanerna går inte att skriva förbi platssanningen",
+    skydd.hamtad === "kastade" && skydd.leder === "kastade" && skydd.plats === "box",
+    `hamtad: ${skydd.hamtad} · leder: ${skydd.leder} · hastPlats "${skydd.plats}"`);
+
   await page.evaluate(() => { startaVandring(); G.vy = "2d"; });
 }
 
@@ -198,6 +244,48 @@ function prova(namn, ok, detalj) {
   prova("och tillbaka norrut ur stallgången förbi klubbdelens tvärvägg (gå-hit)",
     p.y > 60.0, `väg ${vagUt} punkter, hamnade (${p.x}, ${p.y}) — sista metrarna ` +
     `fram till dörren är en känd svaghet i vägsökningen genom 1,5 m-gluggen`);
+}
+
+/* ══ 3b. DÖRRÖPPNING MOT SOLID INNERVÄGG ═══════════════════════════
+   Tobias produkttest 2026-09-06: den renderade stalldörren sitter tätt
+   mot en innervägg. Provet MÄTER det i geometrin i stället för att
+   bedöma en skärmbild: för varje ytterdörr i stallets norra gavel, hur
+   nära ligger närmaste solida innervägg dörröppningens kant?
+
+   Raden är avsiktligt en MÄTNING med en deklarerad känd avvikelse och
+   inte ett tyst godkännande: entrédörren ligger 0,13 m från teorisalens
+   västvägg, och vilken av de två källorna som är fel är ett
+   produktbeslut (se PR #87). Blir avståndet MINDRE — alltså överlapp —
+   ska provet falla. */
+{
+  const g = await page.evaluate(() => {
+    const hus = ANL.byggnader.find(b => b.id === "stall");
+    const S = STALLINNE;
+    const ut = [];
+    for (const o of hus.oppningar.filter(o => o.sida === "N" && /^dorr/.test(o.typ))) {
+      const x0 = S.bredd - o.u - o.b, x1 = S.bredd - o.u;
+      let narmast = Infinity, vem = null;
+      for (const v of S.klubb.vaggar) {
+        if (v.typ !== "langs") continue;
+        /* Bara väggar som faktiskt möter norra gaveln. */
+        if (v.y1 < S.langd - 0.2) continue;
+        const d = v.x >= x1 ? v.x - x1 : (v.x <= x0 ? x0 - v.x : -1);
+        if (d < narmast) { narmast = d; vem = v.id; }
+      }
+      ut.push({ typ: o.typ, x0: +x0.toFixed(2), x1: +x1.toFixed(2),
+        avstand: +narmast.toFixed(2), vagg: vem });
+    }
+    return ut;
+  });
+  for (const d of g) {
+    prova(`dörröppningen ${d.typ} överlappar ingen solid innervägg`,
+      d.avstand >= 0, `x ${d.x0}–${d.x1}, närmast ${d.vagg} på ${d.avstand} m`);
+  }
+  const entre = g.find(d => d.typ === "dorrgul");
+  prova("[KÄND KÄLLMOTSÄGELSE, PO-FRÅGA] entrédörren står 0,13 m från teorisalens västvägg",
+    !!entre && Math.abs(entre.avstand - 0.13) < 0.02,
+    `fasadens dorrgul x ${entre && entre.x0}–${entre && entre.x1} mot ` +
+    `PLAN:stall-plan1-utrymning-rak.jpg#linje-x11.2 — se PR #87`);
 }
 
 /* ══ 4. INGEN KONTINUERLIG BRUSAMBIENS ═════════════════════════════ */

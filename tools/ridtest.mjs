@@ -146,7 +146,7 @@ prova("ridkärnan: inga överhoppade gångarter i någon riktning",
    modellproven är gröna. */
 const via = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0];
-  G.hamtad = true;
+  G.hastPlats = "box";
   G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
@@ -246,7 +246,7 @@ prova("genom inputlagret: parad tar ned till halt utan överhoppade gångarter",
      sämre rakriktning än samma sväng med kontakten kvar.
    ══════════════════════════════════════════════════════════════════ */
 const hj = await page.evaluate(() => {
-  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
@@ -357,7 +357,7 @@ prova("hjälpkanonen och modellen delar tal i stället för att spegla dem",
 const { SVAR_KANON_MIN, SVAR_KANON_MAX } = await page.evaluate(
   () => ({ SVAR_KANON_MIN: SVAR_KANON.SVAR_MIN, SVAR_KANON_MAX: SVAR_KANON.SVAR_MAX }));
 const svar = await page.evaluate(() => {
-  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
@@ -532,7 +532,7 @@ const prof = await page.evaluate(() => {
   const kor = (o, sek) => { for (let i = 0; i < sek * 60; i++) {
     RIDIN.skankel = o.skankel ?? 0; RIDIN.tygel = o.tygel ?? 0; RIDIN.sits = o.sits ?? 0;
     RIDIN.styr = o.styr ?? 0; RIDIN.parad = o.parad ?? 0; stegaRitt(dt); } };
-  G.hamtad = true; G.npcs = [];
+  G.hastPlats = "box"; G.npcs = [];
 
   /* Ett PASS som varje häst rids likadant: två impulser upp i trav, en
      ostödd volt, en parad, och sedan tio minuters arbete. */
@@ -629,7 +629,7 @@ const prof = await page.evaluate(() => {
    där med riktiga värden, inte bara som nycklar.
    ══════════════════════════════════════════════════════════════════ */
 const kontraktG02C = await page.evaluate(() => {
-  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp();
@@ -699,7 +699,7 @@ prova("och kontraktet räcker för att läsa en hjälp mot dess svar",
    framtida ändring låta ett fält byta betydelse bryts den relationen,
    och det är precis vad G02-C inte får råka ut för. ══════════════════ */
 const tider = await page.evaluate(() => {
-  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 240;
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp();
@@ -763,7 +763,7 @@ const tider = await page.evaluate(() => {
    figuren är 20 m bred, banan är en verklig cirkel, gångarten står
    still, och rytm och balans hålls. ══════════════════════════════════ */
 const volt20 = await page.evaluate(() => {
-  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const KN = ridKanon();
   const HB = KN.HAST_HALVBREDD, BB = KN.BANA_BREDD;
@@ -884,7 +884,7 @@ const volt20 = await page.evaluate(() => {
    Termen biter bara när det finns en båge att stödja — en rak ridning på
    lätt sits straffas inte, för där finns ingenting att falla in åt. ── */
 const sate = await page.evaluate(() => {
-  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hamtad = true; G.npcs = [];
+  G.hastId = G.hastId || Object.keys(HORSES)[0]; G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   const nyRitt = () => { G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0; ridNollstallHjalp(); };
@@ -1051,7 +1051,7 @@ const live = await page.evaluate(async () => {
      vald häst och ett RideModel-tillstånd. Det som TESTAS är att den
      körande ridloopen följer gångarten och fyller G.telemetri. */
   G.hastId = G.hastId || Object.keys(HORSES)[0];
-  G.hamtad = true;
+  G.hastPlats = "box";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   sittUpp("ridhus");
   await new Promise(r => setTimeout(r, 1200));
@@ -1096,7 +1096,7 @@ prova("A/B-switchen är borta ur den byggda sidan (mergevillkoret)",
 const ordning = await page.evaluate(() => {
   ridSittAv();
   G.hastId = G.hastId || Object.keys(HORSES)[0];
-  G.hamtad = true;
+  G.hastPlats = "box";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   const original = window.startaLektion;
   let uppsuttenVidStart = null, hastVidStart = null;
@@ -1159,7 +1159,7 @@ function cirkel(p) {
 async function ridVolt(styrutslag, skankel, marginal) {
   return await page.evaluate(async ([styrutslag, skankel, marginal]) => {
     G.hastId = G.hastId || Object.keys(HORSES)[0];
-    G.hamtad = true;
+    G.hastPlats = "box";
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.npcs = [];                                   // volten mäter styrning, inte trängsel
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
@@ -1269,7 +1269,7 @@ async function ridVolt(styrutslag, skankel, marginal) {
    ett tangenttryck. */
 const styr = await page.evaluate(() => {
   G.hastId = G.hastId || Object.keys(HORSES)[0];
-  G.hamtad = true; G.npcs = [];
+  G.hastPlats = "box"; G.npcs = [];
   const dt = 1 / 60;
   /* Upp i gångart med samma tryck som en spelare ger, sedan fullt
      styrutslag från rakt. Mäter tiden till 90 % av slutkurvaturen och
@@ -1659,7 +1659,7 @@ const overgang = await page.evaluate(() => {
 const slice = await page.evaluate(() => {
   const dt = 1 / 60;
   G.hastId = G.hastId || Object.keys(HORSES)[0];
-  G.hamtad = true; G.npcs = []; G.vy = "3d";
+  G.hastPlats = "box"; G.npcs = []; G.vy = "3d";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
   G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;
   if (typeof ridNollstallHjalp === "function") ridNollstallHjalp();
