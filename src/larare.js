@@ -1,307 +1,263 @@
 /* ══════════════════════════════════════════════════════════════════
-   RIDLÄRAREN — en sak i taget, hela lektionen.
+   UGNETA — ridinstruktör för barn och ungdomar
 
-   Så här såg hon ut innan: ridlararRop() tog den lägsta siffran på
-   utbildningsskalan just den bildrutan, läste upp en färdig replik ur en
-   lista, och gjorde om det var trettonde sekund. Byttes den lägsta
-   siffran bytte hon ämne mitt i meningen.
+   Pedagogisk regel:
+   - en sak i taget
+   - högst två korta punkter
+   - feedback ska komma från faktisk riddata
+   - beröm ska säga VAD som blev bättre
+   - säkerhetsrop går fortfarande före all undervisning
 
-   Det är inte en instruktör. Det är en felrapport, och det är precis vad
-   en dålig ridlärare gör: rabblar allt som är fel tills eleven slutar
-   höra något alls.
-
-   En riktig instruktör gör tvärtom. Hon BESTÄMMER en sak när hon ser er
-   komma in på banan, säger den, och ändrar sig inte på fyrtio minuter.
-   Rider du med spända händer och tappar takten samtidigt säger hon
-   ingenting om takten — takten kommer när händerna släpper. Säger hon
-   båda får du ingendera.
-
-   Fyra saker gör henne till en lärare i stället för en mätare:
-
-     FOKUS      Ett tema per lektion, valt ur din svagaste färdighet och
-                förra passets historik — inte ur bildrutans lägsta tal.
-     MINNE      Hon vet vad ni jobbade med förra gången och säger det.
-     ATTRIBUT   Hon skiljer dig från hästen. "Det där var hon, inte du"
-                är den viktigaste meningen på hela lektionen.
-     BERÖM      Sällan, och exakt. Beröm var tionde sekund betyder inget;
-                beröm när något faktiskt hände lär dig känna igen det
-                själv nästa gång. Målet är att du ska sluta behöva henne.
-
-   Säkerhet ligger inte här. Den avbryter allt och har sin egen röst
-   (avståndsregeln i game.js) — en tillsägelse om takten och ett stopp
-   ska aldrig låta likadant.
+   UX-regel:
+   - läsbart på mobil, surfplatta och dator
+   - ingen lång brödtext under aktiv ridning
+   - Ugneta visas med en enkel porträttmarkör: äldre kvinna,
+     grått hår och glasögon
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
-/* ── Temana ───────────────────────────────────────────────────────
-   `vikt` läser ryttarens FÄRDIGHETER och dagens häst, inte ögonblickets
-   siffror — fokus ska väljas en gång och hålla. `bra` avgör om du gör
-   det just nu; det styr både beröm och när temat får släppas.
+const RIDLARARE={
+  namn:"Ugneta",
+  beskrivning:"Äldre ridinstruktör med grått hår och glasögon",
+  har:"grått",
+  glasogon:true,
+};
 
-   Varje `bra` kräver att det syns på HÄSTEN — en siffra ur
-   utbildningsskalan — och inte bara att en tangent står i rätt läge. Med
-   bara tangentkravet räckte det att hålla tygeln stilla i bandet för att
-   få andelen 1,00 och tre beröm: hon berömde att spelaren tryckte rätt,
-   inte att hästen svarade. Passets betyg låg samtidigt på 0,11, och hon
-   sa både "det satt" efteråt och "samma sak som förra gången" nästa
-   pass. Kraven är kalibrerade så att de går att nå men inte gratis.
-
-   `ratta` sägs när det inte sitter, `beroem` när det gör det. Båda är
-   listor så att hon inte upprepar sig ordagrant. */
-const FOKUS=[
-  {id:"hand", namn:"Handen",
-   inledning:h=>`Idag tittar vi på handen. Allt annat får vänta — får du `
-     +`förbindelsen mjuk kommer resten efter.`,
-   vikt:(f)=>1-f.hand,
-   bra:()=>{const t=G.aids?G.aids.tygel:0;
-     return t>K.TYGEL_BAND_MIN&&t<K.TYGEL_BAND_MAX&&G.ride.mjukhet>0.62
-       &&G.ride.skala.kontakt>0.45;},
-   ratta:["Mjuka händer. Du hänger i munnen.",
-     "Jämn förbindelse — inte ryck och släpp.",
-     "Tänk att du håller två fågelungar. Så mycket, inte mer.",
-     "Släpp med handen och behåll skänkeln. Tvärtom mot vad det känns."],
-   beroem:["Där. Kände du att hon blev mjuk i käken?",
-     "Så där ser en förbindelse ut. Kom ihåg hur det känns.",
-     "Nu bär hon sig själv. Det är din hand som gjorde det."]},
-
-  {id:"sits", namn:"Sitsen",
-   inledning:h=>`Idag är det sitsen. Sitt still, så slutar ${h.namn} `
-     +`gissa vad du menar.`,
-   vikt:(f)=>1-f.sits,
-   bra:()=>G.ride.mjukhet>0.72&&G.ride.spanning<0.45,
-   ratta:["Sitt still. Varje rörelse du gör är ett besked till henne.",
-     "Axel, höft, häl i lodlinje. Känn efter var du sitter.",
-     "Du kastar med kroppen i övergången. Låt henne komma till dig.",
-     "Djupare i sadeln — sitt ner i henne, inte på henne."],
-   beroem:["Nu satt du still. Ser du hur mycket lugnare hon blir?",
-     "Där höll du lodlinjen hela långsidan.",
-     "Bra sits. Det är den som gör allt annat möjligt."]},
-
-  {id:"framat", namn:"Framåtbjudningen",
-   inledning:h=>`Idag rider vi framåt. ${h.namn} ska gå för din skänkel, `
-     +`inte för att du tjatar.`,
-   vikt:(f,h)=>0.55+0.45*(1-(h.framatbjudning||0.5))-0.30*f.sits,
-   bra:()=>{const b=(typeof tempoBand==="function")&&tempoBand(
-     (G.moment&&G.moment.gangart)||G.ride.gangart,G.grupp);
-     const iband=b?G.ride.tempo>=b.min&&G.ride.tempo<=b.max:G.ride.tempo>0.9;
-     return iband&&G.ride.skala.schvung>0.40;},
-   ratta:["Mer skänkel. Rid framåt först, forma sedan.",
-     "Bakbenen sover. Driv in i handen.",
-     "Håll takten — du travar fortare på långsidan.",
-     "En gång med skänkeln, tydligt. Inte tio gånger halvt."],
-   beroem:["Nu går hon för dig. Känn skillnaden.",
-     "Där kom bakbenen med.",
-     "Jämn takt hela varvet. Precis så."]},
-
-  {id:"timing", namn:"Timingen",
-   inledning:h=>`Idag jobbar vi med när du ber, inte hur mycket. `
-     +`${h.namn} svarar på det du gör just nu.`,
-   vikt:(f)=>1-f.kansla,
-   bra:()=>G.ride.skala.samling>0.34,
-   ratta:["Halvhalt före hörnet, inte i det.",
-     "Förbered övergången ett par steg innan. Sitt ner, andas, be.",
-     "Balansera om henne innan du vänder.",
-     "Be en gång och vänta på svaret. Hon behöver en sekund."],
-   beroem:["Den halvhalten satt precis rätt.",
-     "Där bad du i rätt ögonblick. Det är timing.",
-     "Nu väntade du på svaret i stället för att fråga igen."]},
-
-  {id:"lugn", namn:"Lugnet",
-   inledning:h=>`${h.namn} är en känslig individ. Idag handlar allt om `
-     +`att hålla henne lugn — resten kommer av sig självt.`,
-   vikt:(f,h)=>0.35+0.75*(h.kanslighet||0.5)-0.25*f.sits,
-   bra:()=>G.ride.spanning<0.30,
-   ratta:["Hon är spänd. Ge lite med handen och andas själv.",
-     "Långsammare. Du har all tid i världen.",
-     "Låt henne sträcka sig framåt-nedåt ett varv.",
-     "Ditt lugn smittar. Släpp axlarna."],
-   beroem:["Där släppte hon. Bra jobbat.",
-     "Nu är hon mjuk i ryggen. Det var du som gjorde det.",
-     "Se — hon andas ut. Det där är förtroende."]},
-
-  {id:"vagen", namn:"Vägen",
-   inledning:h=>`Idag rider vi vägen. Bestäm var ni ska gå innan ni går `
-     +`dit — ${h.namn} följer den som vet.`,
-   vikt:(f)=>0.45+0.35*(1-f.kansla),
-   bra:()=>G.ride.skala.rakriktning>0.45,
-   ratta:["Rid volten rund, inte som en potatis.",
-     "Hon faller in i hörnet — inre skänkel.",
-     "Styr med kroppen och blicken, inte med handen.",
-     "Titta dit du ska. Hon går dit du tittar."],
-   beroem:["Rund volt. Precis så.",
-     "Nu red du vägen, inte hindret.",
-     "Rak på medellinjen. Det är svårare än det ser ut."]},
-];
-
-/* ── Lektionens tillstånd ─────────────────────────────────────────
-   `start` är temat hon valde när ni kom in på banan. `fokus` kan byta
-   under passet (se nedan), men det är `start` som hör hemma i
-   historiken och i efter-passet — annars skulle en lektion som gick så
-   bra att hon hann byta ämne registreras som en lektion om det andra
-   ämnet, och nästa pass skulle ta upp fel tråd.
-
-   `bratid`/`tid` är underlaget för omdömet efteråt: andelen av passet
-   du faktiskt gjorde det hon bad om. */
-const LARARE={fokus:null, start:null, sagt:"", cd:0, brasedan:0, beromt:0,
-  bytt:0, attributCd:0, upprepad:null, inled:false, bratid:0, tid:0};
-
-function lararNollstall(){
-  LARARE.fokus=null; LARARE.start=null; LARARE.sagt=""; LARARE.cd=0;
-  LARARE.brasedan=0; LARARE.beromt=0; LARARE.bytt=0; LARARE.attributCd=0;
-  LARARE.upprepad=null; LARARE.inled=false; LARARE.bratid=0; LARARE.tid=0;
+/* Den fysiska ridlärarpunkten finns redan i stallkanon. Namnet och
+   utseendet hör däremot till lärarrollen och sätts här, på ett ställe. */
+if(typeof STALLINNE!=="undefined"&&STALLINNE.ridlarare){
+  STALLINNE.ridlarare.namn=RIDLARARE.namn;
+  STALLINNE.ridlarare.utseende={alder:"äldre",har:"grått",glasogon:true};
 }
 
-/* Väljer dagens tema. Görs EN gång, vid lektionens start.
+/* ── Responsiv lärar-UX ───────────────────────────────────────── */
+function installeraUgnetaUX(){
+  if(typeof document==="undefined"||document.getElementById("ugneta-style"))return;
+  const st=document.createElement("style");
+  st.id="ugneta-style";
+  st.textContent=`
+    .hudh.bc.ugneta-wrap{width:min(640px,94vw);bottom:14px}
+    #saga.ugneta-kort{display:grid!important;grid-template-columns:52px minmax(0,1fr);
+      gap:11px;align-items:center;width:100%;max-width:640px;text-align:left;
+      padding:10px 13px!important;border-radius:10px!important;
+      background:rgba(12,14,18,.92)!important;border:1px solid rgba(214,174,60,.48);
+      box-shadow:0 8px 30px -10px rgba(0,0,0,.9)!important;
+      font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+      font-style:normal!important;text-shadow:none!important;color:#F6F2E8!important}
+    .ugneta-portratt{width:48px;height:48px;border-radius:50%;position:relative;overflow:hidden;
+      background:#D7C2AD;border:2px solid #D6AE3C;box-shadow:inset 0 -12px 0 #33413B}
+    .ugneta-har{position:absolute;left:4px;right:4px;top:2px;height:19px;border-radius:22px 22px 9px 9px;
+      background:#B9BDC3;border-bottom:2px solid #8C9198}
+    .ugneta-glas{position:absolute;left:7px;top:20px;width:14px;height:9px;border:2px solid #2B2E34;
+      border-radius:5px;box-shadow:18px 0 0 -2px #D7C2AD,18px 0 0 0 #2B2E34}
+    .ugneta-glas:after{content:"";position:absolute;left:12px;top:2px;width:8px;border-top:2px solid #2B2E34}
+    .ugneta-namn{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;line-height:1.2;
+      letter-spacing:.12em;text-transform:uppercase;color:#E7C86B;font-weight:700}
+    .ugneta-rubrik{font-family:Petrona,Georgia,serif;font-size:clamp(16px,2.4vw,20px);
+      line-height:1.15;margin-top:2px;color:#FFF9EC;font-weight:650}
+    .ugneta-punkter{display:grid;gap:2px;margin-top:4px;font-size:clamp(13px,1.8vw,15px);line-height:1.28;color:#E6E4DE}
+    .ugneta-punkt{display:grid;grid-template-columns:12px 1fr;gap:3px;min-width:0}
+    .ugneta-punkt:before{content:"•";color:#D6AE3C;font-weight:800}
+    #saga.ugneta-kort.bra{border-color:rgba(127,180,137,.7)}
+    #saga.ugneta-kort.bra .ugneta-punkt:before{color:#7FB489}
+    #saga.ugneta-kort.sakerhet{border-color:rgba(208,101,90,.82)}
+    @media(max-width:560px){
+      .hudh.bc.ugneta-wrap{width:94vw;bottom:8px}
+      #saga.ugneta-kort{grid-template-columns:40px minmax(0,1fr);gap:8px;padding:8px 10px!important}
+      .ugneta-portratt{width:38px;height:38px}
+      .ugneta-har{height:15px}.ugneta-glas{left:5px;top:16px;transform:scale(.82);transform-origin:left top}
+      .ugneta-namn{font-size:9px}.ugneta-rubrik{font-size:15px}.ugneta-punkter{font-size:13px}
+    }
+    @media(max-height:560px) and (orientation:landscape){
+      .hudh.bc.ugneta-wrap{width:min(620px,68vw);bottom:6px}
+      #saga.ugneta-kort{grid-template-columns:36px minmax(0,1fr);padding:6px 9px!important}
+      .ugneta-portratt{width:34px;height:34px}.ugneta-rubrik{font-size:14px}.ugneta-punkter{font-size:12px}
+    }
+  `;
+  document.head.appendChild(st);
+}
 
-   Historiken väger in: jobbade ni med samma sak förra gången och det
-   inte satt, tar hon det igen — och säger att hon gör det. Satt det,
-   går hon vidare. Det är skillnaden mellan en lärare och en främling. */
+function ugnetaKort(meta,txt,dur){
+  if(typeof document==="undefined")return false;
+  installeraUgnetaUX();
+  const s=document.getElementById("saga"); if(!s)return false;
+  const wrap=s.closest(".hudh.bc"); if(wrap)wrap.classList.add("ugneta-wrap");
+  s.className="on ugneta-kort "+(meta.ton||"");
+  s.textContent="";
+  const p=document.createElement("div"); p.className="ugneta-portratt";
+  const h=document.createElement("i");h.className="ugneta-har";
+  const g=document.createElement("i");g.className="ugneta-glas";p.append(h,g);
+  const t=document.createElement("div");
+  const n=document.createElement("div");n.className="ugneta-namn";n.textContent="Ugneta · ridinstruktör";
+  const r=document.createElement("div");r.className="ugneta-rubrik";r.textContent=meta.rubrik||"Nästa steg";
+  const ps=document.createElement("div");ps.className="ugneta-punkter";
+  const punkter=(meta.punkter&&meta.punkter.length?meta.punkter:[txt]).slice(0,2);
+  for(const rad of punkter){const d=document.createElement("div");d.className="ugneta-punkt";d.textContent=rad;ps.appendChild(d);}
+  t.append(n,r,ps);s.append(p,t);
+  if(typeof G!=="undefined")G.sagaT=dur||4;
+  if(typeof ljudRost==="function")ljudRost(txt);
+  return true;
+}
+
+/* game.js äger den vanliga saga()-funktionen. Vi behåller den för alla
+   andra system och fångar bara den replik som lararSteg precis märkt
+   som Ugneta. Därmed påverkas inte säkerhetsrop, stalltext eller UI. */
+let UGNETA_ORIGINAL_SAGA=null;
+function installeraUgnetaSaga(){
+  if(typeof window==="undefined"||typeof saga!=="function"||UGNETA_ORIGINAL_SAGA)return;
+  UGNETA_ORIGINAL_SAGA=saga;
+  window.saga=function(txt,dur){
+    const m=LARARE.ugnetaNasta;
+    if(m&&m.txt===txt){LARARE.ugnetaNasta=null;ugnetaKort(m,txt,dur);return;}
+    return UGNETA_ORIGINAL_SAGA(txt,dur);
+  };
+}
+
+/* ── Övningen: vad ska eleven göra just nu? ───────────────────── */
+function ugnetaOvning(){
+  const m=G&&G.moment?G.moment:null;
+  const id=String((m&&m.id)||"").toLowerCase();
+  const namn=String((m&&m.namn)||"").toLowerCase();
+  if(id.includes("halt_skritt")||namn.includes("halt")&&namn.includes("skritt"))
+    return {rubrik:"Halt → skritt",punkter:["Titta dit du ska.","En tydlig skänkel — vänta på svaret."]};
+  if(namn.includes("skritt")&&namn.includes("trav")&&!namn.includes("halt"))
+    return {rubrik:"Skritt → trav",punkter:["Behåll lugn kontakt.","Driv en gång tydligt fram i trav."]};
+  if(id.includes("storvolt")||namn.includes("20")&&namn.includes("volt"))
+    return {rubrik:"20 m volt",punkter:["Titta runt volten.","Inre skänkel — yttre tygel håller storleken."]};
+  if(namn.includes("hörn")||namn.includes("horn"))
+    return {rubrik:"Rid genom hörnet",punkter:["Behåll samma rytm.","Balansera före hörnet — inte mitt i."]};
+  if(id.includes("trav_skritt")||namn.includes("trav")&&namn.includes("skritt"))
+    return {rubrik:"Trav → skritt",punkter:["Sitt ner och förbered.","Behåll skänkeln genom övergången."]};
+  if(id.includes("galoppfattning")||namn.includes("galopp"))
+    return {rubrik:"Galoppfattning",punkter:["Balansera först.","Be tydligt — och låt hästen svara."]};
+  return null;
+}
+
+/* ── Fokusområden. Feedbacken är deterministisk från riddata. ── */
+const FOKUS=[
+  {id:"hand",namn:"Handen",
+   vikt:f=>1-f.hand,
+   bra:()=>{const t=G.aids?G.aids.tygel:0;return t>K.TYGEL_BAND_MIN&&t<K.TYGEL_BAND_MAX&&G.ride.mjukhet>0.62&&G.ride.skala.kontakt>0.45;},
+   feedback:()=>{const t=G.aids?G.aids.tygel:0;if(t>=K.TYGEL_BAND_MAX)return "Lätta lite i handen.";if(t<=K.TYGEL_BAND_MIN)return "Ta en mjuk, jämn kontakt.";return "Håll handen still och mjuk.";},
+   berom:()=>"Bra — kontakten blev mjuk och jämn."},
+  {id:"sits",namn:"Sitsen",vikt:f=>1-f.sits,
+   bra:()=>G.ride.mjukhet>0.72&&G.ride.spanning<0.45,
+   feedback:()=>G.ride.spanning>0.5?"Släpp axlarna och sitt still.":"Följ rörelsen utan att kasta kroppen.",
+   berom:()=>"Bra sits — hästen blev lugnare."},
+  {id:"framat",namn:"Framåtbjudning",vikt:(f,h)=>0.55+0.45*(1-(h.framatbjudning||0.5))-0.30*f.sits,
+   bra:()=>{const b=(typeof tempoBand==="function")&&tempoBand((G.moment&&G.moment.gangart)||G.ride.gangart,G.grupp);const ok=b?G.ride.tempo>=b.min&&G.ride.tempo<=b.max:G.ride.tempo>0.9;return ok&&G.ride.skala.schvung>0.40;},
+   feedback:()=>{const b=(typeof tempoBand==="function")&&tempoBand((G.moment&&G.moment.gangart)||G.ride.gangart,G.grupp);if(b&&G.ride.tempo<b.min)return "En tydlig skänkel — vänta på svaret.";if(b&&G.ride.tempo>b.max)return "Sakta med sätet. Behåll rytmen.";return "Rid framåt utan att jaga.";},
+   berom:()=>"Bra — jämn rytm och bättre framåtbjudning."},
+  {id:"timing",namn:"Timingen",vikt:f=>1-f.kansla,
+   bra:()=>G.ride.skala.samling>0.34,
+   feedback:()=>"Förbered först. Be sedan en gång.",
+   berom:()=>"Bra timing — du väntade på svaret."},
+  {id:"lugn",namn:"Lugnet",vikt:(f,h)=>0.35+0.75*(h.kanslighet||0.5)-0.25*f.sits,
+   bra:()=>G.ride.spanning<0.30,
+   feedback:()=>G.ride.spanning>0.55?"Andas ut. Mjukna i hand och axlar.":"Behåll lugnet och låt hästen sträcka sig.",
+   berom:()=>"Bra — spänningen sjönk."},
+  {id:"vagen",namn:"Vägen",vikt:f=>0.45+0.35*(1-f.kansla),
+   bra:()=>G.ride.skala.rakriktning>0.45,
+   feedback:()=>"Titta dit du ska. Rid med kropp och skänkel.",
+   berom:()=>"Bra väg — jämnare linje och balans."},
+];
+
+const LARARE={fokus:null,start:null,sagt:"",cd:0,brasedan:0,beromt:0,bytt:0,
+  attributCd:0,upprepad:null,inled:false,bratid:0,tid:0,ugnetaNasta:null};
+
+function lararNollstall(){
+  LARARE.fokus=null;LARARE.start=null;LARARE.sagt="";LARARE.cd=0;LARARE.brasedan=0;
+  LARARE.beromt=0;LARARE.bytt=0;LARARE.attributCd=0;LARARE.upprepad=null;
+  LARARE.inled=false;LARARE.bratid=0;LARARE.tid=0;LARARE.ugnetaNasta=null;
+}
+
 function lararValjFokus(){
   const f=(typeof fard==="function")?fard():{sits:.3,hand:.3,kansla:.3,skotsel:.3};
-  const h=HORSES[G.hastId]||{};
-  const forra=(SPAR.historik&&SPAR.historik[0])||null;
-  /* Vad "gick bra" betyder: hur mycket av FÖRRA passet du höll förra
-     temat — inte vad passet fick i snitt. Ett pass kan vara svagt i sin
-     helhet och ändå ha löst just den sak hon bad om, och det är den
-     saken hon minns. Äldre spar saknar talet; då duger snittet. */
-  const forraOk=forra
-    ? (typeof forra.fokusAndel==="number"?forra.fokusAndel>=0.55:forra.snitt>=0.66)
-    : false;
-  let bast=null,bastV=-9;
-  for(const F of FOKUS){
-    let v=F.vikt(f,h);
-    /* Samma tema som förra passet får en knuff uppåt om det gick dåligt
-       och en knuff nedåt om det gick bra. */
+  const h=HORSES[G.hastId]||{};const forra=(SPAR.historik&&SPAR.historik[0])||null;
+  const forraOk=forra?(typeof forra.fokusAndel==="number"?forra.fokusAndel>=0.55:forra.snitt>=0.66):false;
+  let bast=null,bastV=-99;
+  for(let i=0;i<FOKUS.length;i++){
+    const F=FOKUS[i];let v=F.vikt(f,h);
     if(forra&&forra.fokus===F.id)v+=forraOk?-0.30:0.22;
-    v+=(Math.random()-0.5)*0.06;          // två jämna teman ska inte låsa sig
+    /* Ingen slump i undervisningsvalet. Vid lika värde vinner ordningen. */
     if(v>bastV){bastV=v;bast=F;}
   }
-  LARARE.fokus=bast; LARARE.start=bast;
-  LARARE.upprepad=!!(forra&&forra.fokus===bast.id&&!forraOk);
-  LARARE.inled=true;                    // sägs av lararSteg när passet börjat
+  LARARE.fokus=bast;LARARE.start=bast;LARARE.upprepad=!!(forra&&forra.fokus===bast.id&&!forraOk);LARARE.inled=true;
   return bast;
 }
 
-/* Repliken vid lektionens början. */
 function lararInledning(){
   const F=LARARE.fokus||lararValjFokus();
-  const h=HORSES[G.hastId]||{namn:"hon"};
-  if(LARARE.upprepad)
-    return `Samma sak som förra gången: ${F.namn.toLowerCase()}. `
-      +`Vi lämnar den inte förrän den sitter.`;
-  return F.inledning(h);
+  if(LARARE.upprepad)return `Vi fortsätter med ${F.namn.toLowerCase()} från förra gången.`;
+  return `Idag fokuserar vi på ${F.namn.toLowerCase()}.`;
 }
 
-/* Hämtar en replik ur en lista utan att ta samma två gånger i rad. */
-function lararRad(lista){
-  if(!lista||!lista.length)return "";
-  let r=lista[Math.floor(Math.random()*lista.length)];
-  if(lista.length>1&&r===LARARE.sagt)
-    r=lista[(lista.indexOf(r)+1)%lista.length];
-  LARARE.sagt=r;
-  return r;
+function lararRad(lista){return Array.isArray(lista)&&lista.length?lista[0]:"";}
+
+function lararMeddelande(txt,rubrik,punkter,ton){
+  LARARE.sagt=txt;
+  LARARE.ugnetaNasta={txt,rubrik:rubrik||"Ugneta",punkter:(punkter||[txt]).slice(0,2),ton:ton||""};
+  return txt;
 }
 
-/* ── Anropas varje bildruta under lektionen ───────────────────────
-   Returnerar en replik när det är dags att säga något, annars "". */
 function lararSteg(dt){
   if(!G.ride||!LARARE.fokus)return "";
-  const F=LARARE.fokus;
-  LARARE.cd-=dt; LARARE.attributCd-=dt;
+  const F=LARARE.fokus;LARARE.cd-=dt;LARARE.attributCd-=dt;
 
-  /* Dagens tema sägs en gång, som första repliken på banan. Den ligger
-     här och inte i startaLektion för att momentets egen text hinner
-     sägas först — sägs de i samma bildruta skriver den ena över den
-     andra och spelaren får aldrig veta vad passet handlar om. */
   if(LARARE.inled){
-    LARARE.inled=false; LARARE.cd=13;
-    return lararInledning();
+    LARARE.inled=false;LARARE.cd=12;
+    const o=ugnetaOvning();
+    if(o)return lararMeddelande(o.punkter.join(" "),o.rubrik,o.punkter,"");
+    const t=lararInledning();
+    return lararMeddelande(t,"Dagens fokus",[F.namn],"");
   }
 
-  /* Håller du temat? Räknas i sträck — en tillfällig träff är ingen
-     prestation, femton sekunder är det. */
-  const bra=!!F.bra();
-  LARARE.brasedan=bra?LARARE.brasedan+dt:0;
-  LARARE.tid+=dt; if(bra)LARARE.bratid+=dt;
+  const bra=!!F.bra();LARARE.brasedan=bra?LARARE.brasedan+dt:0;LARARE.tid+=dt;if(bra)LARARE.bratid+=dt;
 
-  /* Det där var hon, inte du. Hästens egen skygghet och dagsform får
-     inte läggas på ryttaren — en nybörjare som tror att allt är hennes
-     fel slutar rida, och en van ryttare som skyller allt på hästen
-     slutar lära sig. */
+  /* Skilj hästens reaktion från elevens misstag när källan stödjer det. */
   if(LARARE.attributCd<=0&&G.ride.spanning>0.55){
-    const h=HORSES[G.hastId]||{};
-    const hennes=(h.skygghet||0)>0.28||G.dagsform<0.55;
-    if(hennes){
-      LARARE.attributCd=26; LARARE.cd=Math.max(LARARE.cd,7);
-      return lararRad([
-        `Det där var ${h.namn||"hon"}, inte du. Sitt still och rid vidare.`,
-        `Hon spökar. Det gör hon — låt henne, och fortsätt.`,
-        `Inte ditt fel. Hon är på tå idag. Håll bara i vägen.`]);
+    const h=HORSES[G.hastId]||{};const hastEgen=(h.skygghet||0)>0.28||G.dagsform<0.55;
+    if(hastEgen){
+      LARARE.attributCd=26;LARARE.cd=Math.max(LARARE.cd,7);
+      const n=h.namn||"Hästen";
+      const t=`Det där kom från ${n}.`;
+      return lararMeddelande(t,"Lugn",[t,"Sitt still och rid vidare."],"");
     }
   }
 
-  /* Beröm: sällan, och bara när något faktiskt hållit i sig.
-
-     Tjugo sekunder i sträck, och sedan tyst i tjugofyra. Med fjorton och
-     sexton — de tal som stod här först — hann en ryttare som red rätt få
-     tre beröm på femtio sekunder och blev bytt på tema efter sjuttio.
-     Då är beröm ingen belöning längre utan en kvittens per långsida, och
-     hela poängen med att hålla ETT tema hela lektionen försvann. */
   if(LARARE.brasedan>20&&LARARE.beromt<3){
-    LARARE.brasedan=0; LARARE.beromt++; LARARE.cd=24;
-    return lararRad(F.beroem);
+    LARARE.brasedan=0;LARARE.beromt++;LARARE.cd=24;
+    const t=F.berom();return lararMeddelande(t,"Bra!",[t],"bra");
   }
 
-  if(LARARE.cd>0)return "";
-  LARARE.cd=12+Math.random()*5;
+  if(LARARE.cd>0)return "";LARARE.cd=14;
 
-  /* Sitter det efter tre beröm och en hel lektion — då först byter hon
-     tema, och säger att hon gör det. Det är en riktig undervisningsbeat:
-     "bra, nu tittar vi på något annat". */
-  /* …och inte förrän lektionen är ridd ett tag. Ett tema man släppte
-     efter en dryg minut var aldrig dagens tema. */
   if(LARARE.beromt>=3&&LARARE.bytt<1&&bra&&LARARE.tid>210){
     LARARE.bytt++;
-    const gammalt=F.namn.toLowerCase();
-    const kvar=FOKUS.filter(x=>x.id!==F.id);
-    LARARE.fokus=kvar[Math.floor(Math.random()*kvar.length)];
-    LARARE.beromt=0; LARARE.brasedan=0;
-    return `${gammalt[0].toUpperCase()+gammalt.slice(1)} sitter. `
-      +`Nu tittar vi på ${LARARE.fokus.namn.toLowerCase()} i stället.`;
+    const f=(typeof fard==="function")?fard():{sits:.3,hand:.3,kansla:.3,skotsel:.3};
+    const h=HORSES[G.hastId]||{};let next=null,nv=-99;
+    for(const x of FOKUS){if(x.id===F.id)continue;const v=x.vikt(f,h);if(v>nv){nv=v;next=x;}}
+    LARARE.fokus=next||F;LARARE.beromt=0;LARARE.brasedan=0;
+    const t=`${F.namn} sitter bättre.`;
+    return lararMeddelande(t,"Nytt fokus",[t,`Nu: ${LARARE.fokus.namn}.`],"bra");
   }
-  if(bra)return "";                      // går det bra ska hon vara tyst
-  return lararRad(F.ratta);
+  if(bra)return "";
+  const t=F.feedback();
+  return lararMeddelande(t,"Prova detta",[t],"");
 }
 
-/* Vad hon tittar på just nu — för HUD:en. */
-function lararFokusId(){ return LARARE.fokus?LARARE.fokus.id:null; }
-function lararFokusNamn(){ return LARARE.fokus?LARARE.fokus.namn:""; }
-/* Vad passet HANDLADE om — för historiken och efter-passet. */
-function lararDagensId(){ return LARARE.start?LARARE.start.id:null; }
-function lararAndel(){ return LARARE.tid>4?LARARE.bratid/LARARE.tid:0; }
+function lararFokusId(){return LARARE.fokus?LARARE.fokus.id:null;}
+function lararFokusNamn(){return LARARE.fokus?LARARE.fokus.namn:"";}
+function lararDagensId(){return LARARE.start?LARARE.start.id:null;}
+function lararAndel(){return LARARE.tid>4?LARARE.bratid/LARARE.tid:0;}
 
-/* ── Omdömet efteråt ──────────────────────────────────────────────
-   En mening om dagens tema, i samma enhet som hon undervisade i: hur
-   stor del av passet du gjorde det hon bad om. Den ska gå att läsa som
-   ett besked om nästa gång, inte som ett betyg — därför säger den alltid
-   vad som händer härnäst.
-
-   Ingen siffra utan riktning: "du höll det 41 %" lär ingen någonting. */
 function lararOmdome(){
   if(!LARARE.start||LARARE.tid<8)return "";
-  const namn=LARARE.start.namn.toLowerCase();
-  const a=lararAndel();
-  if(LARARE.bytt>0)
-    return `Dagens tema var <b>${namn}</b>, och den satt så pass att vi hann `
-      +`gå vidare till ${(LARARE.fokus?LARARE.fokus.namn:"nästa sak").toLowerCase()} `
-      +`på slutet. Den delen är avklarad.`;
-  if(a>=0.62)
-    return `Dagens tema var <b>${namn}</b>, och du höll den `
-      +`större delen av passet. Nästa gång tittar vi på något annat.`;
-  if(a>=0.30)
-    return `Dagens tema var <b>${namn}</b>. Den kom och gick — du hittar `
-      +`den, men tappar den i övergångarna. Vi tar den en gång till.`;
-  return `Dagens tema var <b>${namn}</b>, och dit kom vi inte idag. `
-    +`Det gör inget: vi lämnar den inte förrän den sitter, så den står `
-    +`kvar till nästa pass.`;
+  const n=LARARE.start.namn.toLowerCase(),a=lararAndel();
+  if(LARARE.bytt>0)return `<b>${n}</b> blev tydligt bättre. Nästa pass går vi vidare.`;
+  if(a>=0.62)return `<b>${n}</b> fungerade större delen av passet. Bra grund.`;
+  if(a>=0.30)return `<b>${n}</b> fungerade ibland. Nästa gång tränar vi samma sak igen.`;
+  return `<b>${n}</b> behöver mer tid. Vi tar en sak i taget nästa pass.`;
 }
+
+installeraUgnetaSaga();
