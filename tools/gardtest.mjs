@@ -38,14 +38,32 @@ await page.waitForTimeout(500);
 await page.evaluate(() => { G.vy = "2d"; });
 
 const TANGENT = { N: "w", S: "s", O: "d", V: "a" };
-async function ga(scen, x, y, hall, ms) {
+/* Går tills något AVGÖR vandringen, inte i ett fast antal sekunder.
+
+   Huvudloopen klampar dt till 0,05 s (game.js), så under 20 bilder/s
+   går spelet i slow motion. En sträcka mätt per vägguret blir därför
+   ett mått på maskinens bildfrekvens — CI:s swiftshader hann kortare
+   än den lokala körningen och rundade av grinden till FEL på 0,5 m.
+   Provet ska mäta GEOMETRIN: gick figuren igenom, eller stod den
+   still mot en solid linje? Därför hålls tangenten tills målet är
+   nått eller tills figuren har stått stilla i 0,6 s. */
+async function ga(scen, x, y, hall, framme, maxMs = 20000) {
   await page.evaluate(({ scen, x, y }) => gaTill(scen, { x, y, rikt: 0 }), { scen, x, y });
   await page.waitForTimeout(250);
   for (const h of hall) await page.keyboard.down(TANGENT[h]);
-  await page.waitForTimeout(ms);
+  const las = () => page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
+  let p = await las(), stilla = 0, t = 0, nadde = false;
+  while (t < maxMs) {
+    await page.waitForTimeout(200); t += 200;
+    const q = await las();
+    if (Math.hypot(q.x - p.x, q.y - p.y) < 0.02) stilla += 200; else stilla = 0;
+    p = q;
+    if (framme(p)) { nadde = true; break; }
+    if (stilla >= 600) break;          /* står mot något solitt */
+  }
   for (const h of hall) await page.keyboard.up(TANGENT[h]);
   await page.waitForTimeout(150);
-  return page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
+  return Object.assign(await las(), { nadde, stod: stilla >= 600, sek: +(t / 1000).toFixed(1) });
 }
 const resultat = [];
 function prova(namn, ok, detalj) {
@@ -69,21 +87,24 @@ function prova(namn, ok, detalj) {
     `grind [${gx}, ${gy}] mot markör [${g.markor}]`);
 
   /* Utifrån (4 m väster om grinden) rakt österut in i hagen. */
-  let p = await ga("gard", gx - 4, gy, ["O"], 4000);
+  let p = await ga("gard", gx - 4, gy, ["O"], q => q.x > gx + 1.0);
   prova("in i hagen genom grinden (utifrån, österut)", p.x > gx + 1.0,
-    `hamnade x ${p.x} (grinden x ${gx}, hagen börjar ${g.hage.x})`);
+    `hamnade x ${p.x} efter ${p.sek} s (grinden x ${gx}, hagen börjar ${g.hage.x})`);
 
   /* Och ut igen samma väg. */
-  p = await ga("gard", gx + 4, gy, ["V"], 4000);
+  p = await ga("gard", gx + 4, gy, ["V"], q => q.x < gx - 1.0);
   prova("ut ur hagen genom grinden (inifrån, västerut)", p.x < gx - 1.0,
-    `hamnade x ${p.x} (grinden x ${gx})`);
+    `hamnade x ${p.x} efter ${p.sek} s (grinden x ${gx})`);
 
   /* NEGATIV KONTROLL: staketet ska fortfarande vara tätt bredvid
      grinden. Utan den här raden hade "grinden funkar" också blivit
-     grönt av att hela staketet slutat kollidera. */
-  p = await ga("gard", gx - 4, gy + 6, ["O"], 4000);
-  prova("staketet är TÄTT 6 m norr om grinden (negativ kontroll)", p.x < gx - 0.2,
-    `hamnade x ${p.x}, stoppad före staketlinjen x ${gx}`);
+     grönt av att hela staketet slutat kollidera. Här är det STOPPET
+     som är beviset — figuren ska stå still mot linjen, inte bara ha
+     hunnit kort. */
+  p = await ga("gard", gx - 4, gy + 6, ["O"], q => q.x > gx + 1.0);
+  prova("staketet är TÄTT 6 m norr om grinden (negativ kontroll)",
+    p.stod && !p.nadde && p.x < gx - 0.2,
+    `stod stilla ${p.stod} på x ${p.x}, stoppad före staketlinjen x ${gx}`);
 }
 
 /* ══ 2. HÄSTEN BÖRJAR I BOXEN ══════════════════════════════════════
