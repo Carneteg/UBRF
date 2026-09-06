@@ -94,6 +94,11 @@ jobs:
           if [ -f tools/testa-hastkanon-save.mjs ]; then node tools/testa-hastkanon-save.mjs
           else echo "hoppar: tools/testa-hastkanon-save.mjs finns inte i denna branch"; fi
 
+      - name: laddaRyttare hanterar localStorage-fel mjukt
+        run: |
+          if [ -f tools/testa-ryttare-error.mjs ]; then node tools/testa-ryttare-error.mjs
+          else echo "hoppar: tools/testa-ryttare-error.mjs finns inte i denna branch"; fi
+
       - name: Studio-paketet ska gå att bygga
         run: |
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
