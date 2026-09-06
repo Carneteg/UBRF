@@ -99,6 +99,11 @@ jobs:
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
 
+      - name: Enhetstester för ridmodellen
+        run: |
+          if [ -f tools/model.test.mjs ]; then node tools/model.test.mjs
+          else echo "hoppar: tools/model.test.mjs finns inte i denna branch"; fi
+
   dubbel-sanning:
     runs-on: ubuntu-latest
     steps:
