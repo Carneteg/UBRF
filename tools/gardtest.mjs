@@ -147,34 +147,57 @@ function prova(namn, ok, detalj) {
 
   /* GENOM DÖRREN, med riktig rörelse: från ankomstpunkten västerut och
      sedan söderut genom inre entréns öppning ned i tvärgången. */
-  /* Västerut tills figuren står FÖR den inre entréns öppning (x 4,1–5,0),
-     inte en fast tid: en tidsatt sträcka missar öppningen så fort
-     gånghastigheten ändras, och då mäter provet klockan i stället för
-     geometrin. Sedan söderut genom öppningen. */
-  await page.evaluate(({ x, y }) => gaTill("stallinne", { x, y, rikt: 0 }), { x: d.ankomst[0], y: d.ankomst[1] });
-  await page.waitForTimeout(250);
-  await page.keyboard.down("a");
-  const t0 = Date.now();
-  let p;
+  /* GENOM DÖRREN MED SPELETS EGEN VÄGSÖKNING (`satMal`) — inte med
+     handstyrning. Första versionen höll tangenten västerut tills x låg
+     under en tröskel och gick sedan söderut. Den var grön lokalt och
+     RÖD I CI: den inre entréns öppning är 0,9 m bred (x 4,1–5,0), och
+     med figurens 0,35 m radie måste mitten ligga i 4,45–4,65. En
+     avläsning var 200:e ms hann över målet — CI stannade på x 4,34 och
+     gick in i väggen. Ett prov som beror på pollningstakten mäter
+     klockan, inte geometrin.
+
+     Gå-hit är dessutom vad en spelare faktiskt använder, så provet
+     följer nu den riktiga vägen: samma A*-rutnät som frågar samma
+     kollision. ]] */
+  await page.evaluate(({ x, y }) => { if (typeof slutaGa === "function") slutaGa();
+    gaTill("stallinne", { x, y, rikt: 0 }); }, { x: d.ankomst[0], y: d.ankomst[1] });
+  await page.waitForTimeout(300);
+  const vagIn = await page.evaluate(() => { satMal(5.6, 30.0); return VD.vag ? VD.vag.length : null; });
+  let p, t0 = Date.now();
   do {
-    await page.waitForTimeout(200);
-    p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
-  } while (p.x > 4.7 && Date.now() - t0 < 15000);
-  await page.keyboard.up("a");
-  await page.waitForTimeout(150);
-  const efterV = p.x;
-  await page.keyboard.down("s");
-  await page.waitForTimeout(9000);
-  await page.keyboard.up("s");
-  await page.waitForTimeout(150);
-  p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2) }));
-  prova("från dörren in i stallet: förbi klubbdelens tvärvägg (y 57,45)",
-    p.y < 57.0, `väster till x ${efterV}, sedan söderut till y ${p.y}`);
+    await page.waitForTimeout(300);
+    p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2), mal: !!VD.mal }));
+  } while (p.mal && Date.now() - t0 < 60000);
+  const efterV = vagIn;
+  prova("från dörren in i stallet: hela vägen ned i stallgången (gå-hit)",
+    p.y < 45.0, `väg ${efterV} punkter, hamnade (${p.x}, ${p.y})`);
 
   /* Och tillbaka ut: norrut från tvärgången upp till dörrens rum. */
-  p = await ga("stallinne", 4.6, 55.5, ["N"], 9000);
-  prova("och tillbaka ut igen: norrut genom samma öppning",
-    p.y > 60.0, `hamnade y ${p.y}`);
+  await page.evaluate(() => { if (typeof slutaGa === "function") slutaGa();
+    gaTill("stallinne", { x: 5.6, y: 30.0, rikt: 0 }); });
+  await page.waitForTimeout(300);
+  const vagUt = await page.evaluate(({ x, y }) => { satMal(x, y); return VD.vag ? VD.vag.length : null; },
+    { x: d.ankomst[0], y: d.ankomst[1] });
+  t0 = Date.now();
+  do {
+    await page.waitForTimeout(300);
+    p = await page.evaluate(() => ({ x: +VD.px.toFixed(2), y: +VD.py.toFixed(2), mal: !!VD.mal }));
+  } while (p.mal && Date.now() - t0 < 60000);
+  /* [MÄTT BEGRÄNSNING] Vägen TILLBAKA går genom samma 1,5 m breda glugg
+     (x 7,3–8,8 vid y 64,35) som vägen in. Gå-hit tar sig förbi
+     klubbdelens tvärvägg och upp i klubbänden, men de sista metrarna
+     fram till dörren är opålitliga: uppmätt stannar figuren på
+     (9,74 · 63,92), pressad mot sadelkammarens norrvägg — A*-rutnätet
+     löser inte gluggen lika säkert från söder som från norr.
+
+     Provet mäter därför det som ÄR sant: hon tar sig ur stallgången och
+     norrut förbi tvärväggen. Att skruva tröskeln till 64 för att få
+     grönt hade varit att mäta ingenting. Den svaga sista biten är
+     rapporterad i PR #87 och hör till vägsökningens kvalitet, inte till
+     någon av de fyra acceptansblockerarna. */
+  prova("och tillbaka norrut ur stallgången förbi klubbdelens tvärvägg (gå-hit)",
+    p.y > 60.0, `väg ${vagUt} punkter, hamnade (${p.x}, ${p.y}) — sista metrarna ` +
+    `fram till dörren är en känd svaghet i vägsökningen genom 1,5 m-gluggen`);
 }
 
 /* ══ 4. INGEN KONTINUERLIG BRUSAMBIENS ═════════════════════════════ */

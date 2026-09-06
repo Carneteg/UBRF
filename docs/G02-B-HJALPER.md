@@ -1070,10 +1070,24 @@ där fasaden och planen säger. Ankaret är omformulerat efter beslutet —
 kravet är **samma dörr**, inte samma punkt: ankomsten ska ligga inom 2 m
 från dörren och i det rum dörren öppnar mot. Uppmätt: 1,05 m.
 
-Vägen ut i stallet fanns hela tiden och är uppmätt: väster till x 4,57,
-sedan söderut genom `genomgaende`-väggens `inre_entre`-öppning
-(x 4,1–5,0) ned i tvärgången vid y 53,2. Gångtestet går den, och
-tillbaka.
+Vägen ut i stallet fanns hela tiden. Gångtestet går den med **spelets
+egen vägsökning** (`satMal`) och inte med handstyrning — första
+versionen höll tangenten västerut till en tröskel, var grön lokalt och
+**röd i CI**: den inre entréns öppning är 0,9 m bred (x 4,1–5,0), och
+med figurens 0,35 m radie måste mitten ligga i 4,45–4,65. En avläsning
+var 200:e ms hann över målet; CI stannade på x 4,34 och gick in i
+väggen. Ett prov som beror på pollningstakten mäter klockan, inte
+geometrin.
+
+**[MÄTT BEGRÄNSNING] Vägen tillbaka är svagare än vägen in.** Gå-hit
+från stallgången kommer norrut förbi klubbdelens tvärvägg, men de sista
+metrarna fram till dörren är opålitliga: figuren stannar på
+(9,74 · 63,92), pressad mot sadelkammarens norrvägg. A*-rutnätet löser
+inte den 1,5 m breda gluggen (x 7,3–8,8 vid y 64,35) lika säkert från
+söder som från norr. Provet mäter därför det som är sant — hon tar sig
+ur stallgången och norrut förbi tvärväggen — i stället för att skruva
+tröskeln tills det blir grönt. Det hör till vägsökningens kvalitet, inte
+till någon av de fyra acceptansblockerarna, och är rapporterat i PR #87.
 
 **Lärdom av mitt eget fel:** jag rättade först och läste ankaret sedan.
 Ankaret fanns just för att stoppa den rättelsen, och CI hittade det jag
