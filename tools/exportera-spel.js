@@ -267,6 +267,12 @@ const BAS_RUNTIME = {
   kanslighet: .50, framatbjudning: .50, forlatande: .60, skygghet: .20,
   hoppkapacitet: .60, hopplust: .60, tyngd: .40, utbildning: .60, maxhojd: .80,
   farg: "#72533B", man: "#2F2118",
+  /* G02-B punkt 3: skolhästprofilen följer med till Roblox som DATA.
+     Talen bakom namnet ligger i RidKanon.PROFILER, genererade ur
+     src/riding/svar.js — hästen bär bara vilken profil hon har, precis
+     som webben. `skolhast` är utgångsläget och serialiseras därför
+     bort som alla andra basvärden. */
+  profil: "skolhast",
 };
 const FAKTA_RUNTIME = ["namn", "typ", "fodd", "ras", "mankhojd", "import", "kategori", "besk"];
 const GAME_RUNTIME = Object.keys(BAS_RUNTIME);

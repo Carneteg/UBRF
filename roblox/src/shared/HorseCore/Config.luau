@@ -31,6 +31,25 @@ Config.STATS = {
 	JumpStrength = 0.50,
 	Temperament = "Calm", -- Calm | Energetic | Sensitive | Brave | Stubborn
 
+	--[[ G02-B punkt 3: SKOLHÄSTPROFILEN. Namnet slås upp i
+	     RidKanon.PROFILER och avgör hur hästen svarar — fördröjning, hur
+	     mycket hon bryr sig om att hjälpen är tydlig, hur lätt hon tappar
+	     balansen, hur mycket hon orkar.
+
+	     Värdet kommer från UBRFSpelData (fältet `profil`), tilldelat ur
+	     ridskolans egna beskrivningar av hästarna. Som attribut går det
+	     att sätta per modell i Studio, precis som Breed. `skolhast` är
+	     utgångsläget: en häst utan profil beter sig som modellen alltid
+	     gjort. ]]
+	Profil = "skolhast",
+
+	--[[ Senior review #87: FÖRLÅTANDE och SKYGGHET som riktiga stats.
+	     Spänningen behöver dem, och hästdatan i UBRFSpelData har dem
+	     redan per häst — de saknades bara här. Defaultvärdena är samma
+	     som webbens BAS_GAMEPLAY. ]]
+	Forlatande = 0.60,
+	Skygghet = 0.20,
+
 	MaxStamina = 100,
 	BondLevel = 0,
 }

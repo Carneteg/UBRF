@@ -181,7 +181,8 @@ RunService.RenderStepped:Connect(function(dt)
 	     Instance och ligger efter movement:step, så den kan varken ändra
 	     rörelsen eller ridkänslan. ]]
 	Telemetri.foljGangart(ride.ritt, loco.gait)
-	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature)
+	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature,
+		ride.movement.hjalper)
 
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)

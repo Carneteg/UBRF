@@ -3,15 +3,6 @@
 	Adversarial / Falsification regression tests for PR #87 issues.
 ]]
 
-local Core = require(game:GetService("ReplicatedStorage").HorseCore)
-local Config, Gaits = Core.Config, Core.Gaits
-local RidKanon, Hjalper, Svar = Core.RidKanon, Core.Hjalper, Core.Svar
-local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemetri)
-
-local Input = require(game:GetService("StarterPlayerScripts").Horse.Input)
-local TouchControls = require(game:GetService("StarterPlayerScripts").Horse.TouchControls)
-local MovementController = require(game:GetService("StarterPlayerScripts").Horse.MovementController)
-
 local STATS = {
 	Speed = 0.5, Acceleration = 0.5, Agility = 0.5, Stamina = 0.5,
 	MaxStamina = 100, Temperament = "Calm",

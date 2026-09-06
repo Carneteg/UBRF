@@ -208,8 +208,8 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	knopHorn.Parent = knop
 
 	local knappar = nyRam("Knappar", g)
-	knappar.Size = UDim2.fromOffset(150, 200)
-	knappar.Position = UDim2.new(1, -168, 1, -228)
+	knappar.Size = UDim2.fromOffset(150, 344)
+	knappar.Position = UDim2.new(1, -168, 1, -372)
 	local rad = Instance.new("UIListLayout")
 	rad.FillDirection = Enum.FillDirection.Vertical
 	rad.HorizontalAlignment = Enum.HorizontalAlignment.Right
@@ -221,8 +221,21 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	local hoppa = nyKnapp("Hoppa", "HOPP", knappar)
 	local ned = nyKnapp("Ned", "▼ LUGNARE", knappar)
 	local upp = nyKnapp("Upp", "▲ FRAMÅT", knappar)
+	--[[ G02-B: TYGELN och PARADEN på pekskärmen. Utan dem kan en spelare
+	     med pekskärm varken hålla kontakten eller ge en halvhalt, och då
+	     är yttertygelstödet — och därmed hästens balans i svängen —
+	     stängt för hela den plattformen. Webben har samma två på sin
+	     pekskärm (HALVHALT-knappen och tygeln). ]]
+	local tygel = nyKnapp("Tygel", "TYGEL", knappar)
+	local parad = nyKnapp("Parad", "HALVHALT", knappar)
+	--[[ Sitsen: hålls, som tygeln. Djup sits bär bågen — se
+	     SVAR.BALANS_VIKT. Utan knappen kan en spelare med pekskärm inte
+	     stödja volten med sätet, och då är den delen av modellen stängd
+	     för hela plattformen. ]]
+	local sits = nyKnapp("Sits", "DJUP SITS", knappar)
 	upp.LayoutOrder, ned.LayoutOrder = 1, 2
-	hoppa.LayoutOrder, av.LayoutOrder = 3, 4
+	tygel.LayoutOrder, sits.LayoutOrder, parad.LayoutOrder = 3, 4, 5
+	hoppa.LayoutOrder, av.LayoutOrder = 6, 7
 
 	--[[ Gångartsknapparna är flanktriggade i `Input`: ett tryck ger ett
 	     byte, hur länge man än håller kvar. Att hålla ned ska inte rusa
@@ -231,6 +244,18 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	ned.MouseButton1Click:Connect(function() Input.touchGait(false) end)
 	hoppa.MouseButton1Click:Connect(function() Input.touchJump() end)
 	av.MouseButton1Click:Connect(hooks.dismount)
+
+	--[[ Tygeln HÅLLS — kontakten är ett tillstånd, inte en händelse — och
+	     paraden är en impuls, precis som flanken på F. Att göra tvärtom
+	     hade gett en tygel man knäpper på och en halvhalt man kan hålla
+	     inne, och ingetdera är ridning. ]]
+	tygel.MouseButton1Down:Connect(function() Input.setTouchRein(1) end)
+	tygel.MouseButton1Up:Connect(function() Input.setTouchRein(0) end)
+	tygel.MouseLeave:Connect(function() Input.setTouchRein(0) end)
+	parad.MouseButton1Click:Connect(function() Input.touchParad() end)
+	sits.MouseButton1Down:Connect(function() Input.setTouchSeat(1) end)
+	sits.MouseButton1Up:Connect(function() Input.setTouchSeat(0) end)
+	sits.MouseLeave:Connect(function() Input.setTouchSeat(0) end)
 
 	kopplaSpak(bas, knop)
 	egnaReglage(false)

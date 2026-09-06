@@ -81,6 +81,43 @@ end
 check("individuella fodergivor utger sig inte för att vara verifierade",
 	#felFoder == 0, table.concat(felFoder, ", "))
 
+--[[ G02-B punkt 3: SKOLHÄSTPROFILERNA som data, hela vägen till Roblox.
+
+     Två saker provas, och båda är sådana som kan gå sönder tyst.
+
+     Att varje `profil` i hästdatan finns i RidKanon.PROFILER — ett
+     namn som inte finns faller tillbaka på utgångsläget utan att någon
+     märker det, och då rider man en annan häst än den man valde.
+
+     Att minst tre profiler faktiskt ÄR i bruk. Fyra profiler i kanonen
+     som ingen häst bär är fyra tal, inte tre skolhästar. ]]
+do
+	local finns, iBruk, fel = {}, {}, {}
+	for namn in pairs(RidKanon.PROFILER) do finns[namn] = true end
+	for id, h in pairs(UBRFSpel.hastar) do
+		local p = h.profil
+		if type(p) ~= "string" or not finns[p] then
+			table.insert(fel, id .. "=" .. tostring(p))
+		else
+			iBruk[p] = (iBruk[p] or 0) + 1
+		end
+	end
+	local antalIBruk = 0
+	local delar = {}
+	for namn, n in pairs(iBruk) do antalIBruk += 1; table.insert(delar, namn .. " " .. n) end
+	table.sort(delar)
+	check("varje hästs profil finns i ridkanonen", #fel == 0, table.concat(fel, ", "))
+	check("minst tre skolhästprofiler är i bruk, inte bara definierade",
+		antalIBruk >= 3, table.concat(delar, ", "))
+	--[[ Och att utgångsläget verkligen är neutralt på den här sidan också:
+	     en `skolhast` med annat än 1,00 vore en tyst omtrimning av alla
+	     hästar som saknar källtext. ]]
+	local sh = RidKanon.PROFILER.skolhast
+	check("utgångsläget skolhast är 1,00 rakt igenom på Roblox med",
+		sh.svar == 1 and sh.klar == 1 and sh.balans == 1
+			and sh.fokus == 1 and sh.tapp == 1 and sh.ater == 1)
+end
+
 check("S2a-skötselfasaden överlever moduldelningen",
 	UBRFSpel.rykt ~= nil and UBRFSpel.sadelfaser ~= nil and UBRFSpel.visitation ~= nil)
 
