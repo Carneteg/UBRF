@@ -1765,32 +1765,7 @@ function ridhusFalt(R){
   if(slut-z>0.5)ut.push([z,slut]);
   return ut;
 }
-function v3dRidhus(lagg,opp){
-  const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
-  lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
-    M4.translation(R.bredd/2,0.01,R.langd/2),8),T.grus);
-  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula sand.
-
-     Tonen låg som ett LITERALT tal här ("#9C8663") och läste alltså inte
-     RIDHUSINNE.sandFarg alls. Samma dolda literal som gårdsplanen, silon och
-     sponsorskyltarna fällts på: ändrar man datan händer ingenting.
-
-     Mätt: literalen renderades #976930 mot fotots #6F5D4D (`-03`) — mycket
-     ljusare och kraftigt orangare, blått nedtryckt från 0x4D till 0x30. Det
-     är T.sand-texturens varma ton, inte ljuset.
-
-     Kompensationen är KANALVIS, och det är avsiktligt: det som sprängde
-     boxfronternas reglar och ridhusväggen var kanalvis invertering av
-     LJUSET på ytor med varierande infallsvinkel. Det här är en plan,
-     jämnt belyst golvyta där texturen är den varma faktorn — samma fall som
-     stallets marksten, där kanalvis kompensation konvergerade på några
-     enheter. Kvoterna är mätta, inte gissade. */
-  {const SK=[0.968,0.784,0.485];
-   const sandBas="#"+[1,3,5].map((i,k)=>
-     Math.min(255,Math.round(parseInt(R.sandFarg.substr(i,2),16)/SK[k]))
-       .toString(16).padStart(2,"0")).join("");
-   lagg(new Bygge().yta(ba.w,ba.h,sandBas,
-     M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);}
+function v3dRidhusSarg(R, ba, lagg) {
   /* Sargen med svart sockel — porten vid A lämnas öppen. */
   const sarg=new Bygge();
   const bit=(x0,z0,x1,z1)=>{
@@ -1815,6 +1790,9 @@ function v3dRidhus(lagg,opp){
            bit(ba.x+ba.w,gr.y1,ba.x+ba.w,ba.y+ba.h); }
    else bit(ba.x+ba.w,ba.y,ba.x+ba.w,ba.y+ba.h);}
   lagg(sarg,null);
+}
+
+function v3dRidhusTakOchVaggar(R, lagg) {
   /* Ytterväggar, sadeltak och limträstolar. */
   const hall=new Bygge();
   hall.lada(R.bredd,R.tak,0.3,R.hallvagg,M4.translation(R.bredd/2,R.tak/2,-0.15));
@@ -1946,6 +1924,9 @@ function v3dRidhus(lagg,opp){
        pan.lada(LV.skarvB,R.tak-R.sargH,0.05,LV.skarvFarg,M4.translation(lx,(R.sargH+R.tak)/2,z));
    }
    lagg(pan,null);}
+}
+
+function v3dRidhusLaktare(R, lagg, T) {
   /* Läktaren, domarbåset, cafeterian och trappan. */
   /* Läktaren är en trästomme: fyrkantsstolpar, balkar och plankbänkar i
      ljus furu — inte gjutna trappsteg. Under den finns ett mörkt utrymme
@@ -2095,6 +2076,9 @@ function v3dRidhus(lagg,opp){
     S3.statiskt.push({nat:GL.nat(sido), tex:null,
       tona: langsX ? {x:t.x0, y:t.y0-0.15, w:t.x1-t.x0, h:0.30} : {x:t.x0-0.15, y:t.y0, w:0.30, h:t.y1-t.y0}});
   }
+}
+
+function v3dRidhusDomarbas(R, lagg, T) {
   /* ── MOTSÄGELSE 4: båset vid E ────────────────────────────────────
      `IMG_0198`: vid dressyrbokstaven E leder en trappa MED TRÄRÄCKEN upp
      till ett litet MÖRKT TRÄBYGGT bås, med en exit-skylt vid öppningen.
@@ -2169,6 +2153,9 @@ function v3dRidhus(lagg,opp){
    }
    lagg(sk,null);}
 
+}
+
+function v3dRidhusKortanda(R, lagg) {
   /* ── MOTSÄGELSE 5: glasade rum bakom sargen ───────────────────────
      `IMG_0179`: bakom sargen finns upphöjda träbänkar i nivåer OCH flera
      glasade rum/fönsterpartier. Läktarens nivåer fanns redan; de glasade
@@ -2261,6 +2248,9 @@ function v3dRidhus(lagg,opp){
         M4.mul(M4.translation(KL.x,ky,vagg-ut*0.21),M4.rotX(Math.PI/2)),18);}
     lagg(gl,null);
    }}
+}
+
+function v3dRidhusEntre(R, lagg, T) {
   /* ── ENTRÉDELEN i norra gaveln, ur utrymningsplanen ──────────────
      Förut byggdes en 180°-vriden hall med antydda väggar, receptionsdisk,
      bänkar, hjälmhylla, anslagstavla och ett andra trapphus — allt
@@ -2312,6 +2302,9 @@ function v3dRidhus(lagg,opp){
     g.lada(0.06,1.0,l,"#E9E5DC",M4.translation(V.x1-0.03,V.z+0.5+0.13,(V.y0+V.y1)/2));
     S3.statiskt.push({nat:GL.nat(g),tex:null});
   }
+}
+
+function v3dRidhusHinderOchSkyltar(R, ba, lagg, T) {
   /* Hindren som står framme, konerna och uppsittningspallen. Vita stöd
      med kupor, bommar i blå-vitt eller röd-vitt — det som ligger och
      står i ridhuset mellan lektionerna och gör det till en arbetsplats
@@ -2372,6 +2365,42 @@ function v3dRidhus(lagg,opp){
     const b=new Bygge(); v3dTextPanel(b,0.62,0.31,mat);
     S3.statiskt.push({nat:GL.nat(b), tex:(S3.tex.bokstav||{})[bo.b]});
   }
+}
+
+function v3dRidhus(lagg,opp){
+  const R=RIDHUSINNE, ba=R.bana, T=S3.tex;
+  lagg(new Bygge().yta(R.bredd,R.langd,"#FFFFFF",
+    M4.translation(R.bredd/2,0.01,R.langd/2),8),T.grus);
+  /* Underlaget inne är brunt och träfiberbemängt — inte utebanans gula sand.
+
+     Tonen låg som ett LITERALT tal här ("#9C8663") och läste alltså inte
+     RIDHUSINNE.sandFarg alls. Samma dolda literal som gårdsplanen, silon och
+     sponsorskyltarna fällts på: ändrar man datan händer ingenting.
+
+     Mätt: literalen renderades #976930 mot fotots #6F5D4D (`-03`) — mycket
+     ljusare och kraftigt orangare, blått nedtryckt från 0x4D till 0x30. Det
+     är T.sand-texturens varma ton, inte ljuset.
+
+     Kompensationen är KANALVIS, och det är avsiktligt: det som sprängde
+     boxfronternas reglar och ridhusväggen var kanalvis invertering av
+     LJUSET på ytor med varierande infallsvinkel. Det här är en plan,
+     jämnt belyst golvyta där texturen är den varma faktorn — samma fall som
+     stallets marksten, där kanalvis kompensation konvergerade på några
+     enheter. Kvoterna är mätta, inte gissade. */
+  {const SK=[0.968,0.784,0.485];
+   const sandBas="#"+[1,3,5].map((i,k)=>
+     Math.min(255,Math.round(parseInt(R.sandFarg.substr(i,2),16)/SK[k]))
+       .toString(16).padStart(2,"0")).join("");
+   lagg(new Bygge().yta(ba.w,ba.h,sandBas,
+     M4.translation(ba.x+ba.w/2,0.03,ba.y+ba.h/2),9),T.sand);}
+
+  v3dRidhusSarg(R, ba, lagg);
+  v3dRidhusTakOchVaggar(R, lagg);
+  v3dRidhusLaktare(R, lagg, T);
+  v3dRidhusDomarbas(R, lagg, T);
+  v3dRidhusKortanda(R, lagg);
+  v3dRidhusEntre(R, lagg, T);
+  v3dRidhusHinderOchSkyltar(R, ba, lagg, T);
   /* Inredningen ur INREDNING.ridhus (F02-B): speglarna, hinderupplaget på
      läktaren, skåpkorridorens skåp och stolar, entréns bänk. */
   v3dInredning("ridhusinne",lagg);
