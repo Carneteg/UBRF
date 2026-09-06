@@ -337,6 +337,16 @@ local function __nyInstans(klass)
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 		return nil
 	end
+	--[[ Efter senior re-review av #87 går ett prov genom den RIKTIGA
+	     HorseService.register, och RigAdapter letar Humanoid och Animator
+	     med klass i stället för namn. Sökningen är samma linjära svep som
+	     FindFirstChild, mot IsA — ingen arvshierarki uppfinns här. ]]
+	function inst:FindFirstChildOfClass(klassnamn)
+		for _, b in ipairs(self._barn) do
+			if b.ClassName == klassnamn or (b.IsA and b:IsA(klassnamn)) then return b end
+		end
+		return nil
+	end
 	--[[ `IsA` svarar bara på den egna klassen och de få basklasser koden
 	     faktiskt frågar efter. Ingen full arvshierarki: en mock som svarar
 	     ja på allt hade gjort varje IsA-grind meningslös. ]]

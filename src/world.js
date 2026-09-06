@@ -97,6 +97,9 @@ if(typeof cv!=="undefined"&&cv&&cv.addEventListener)
   });
 
 const VCOL={
+  /* Uppgiftsmarkörens färg (PO 2026-09-06). Varm och avvikande nog att
+     hittas, dämpad nog att inte se ut som ett HUD-element. */
+  markor:"#E8B54A",
   gras:"#5D6C39", grasLj:"#6C7C44", grus:"#BCA179", asfalt:"#54524E",
   sand:"#DCC9A0", sandKant:"#9C8B66", aker:"#B08F55", betong:"#A09A8C",
   slant:"#54663A",
@@ -205,7 +208,20 @@ function stegaVandring(dt){
       const v0=VD.vag[0], v1=VD.vag[1];
       const nivaSkifte=(v0.length>2&&v1.length>2&&Math.abs(v1[2]-v0[2])>0.02)
         ||(v0.length>2&&Math.abs(v0[2]-(VD.pz||0))>0.02);
-      if(Math.hypot(v0[0]-VD.px,v0[1]-VD.py)>=(nivaSkifte?0.45:1.1))break;
+      const d0=Math.hypot(v0[0]-VD.px,v0[1]-VD.py);
+      if(d0>=(nivaSkifte?0.45:1.1))break;
+      /* Framförhållningen på 1,1 m fick förut släppa delmålet innan
+         figuren hade PASSERAT det. Genom en smal glugg är delmålet
+         självt porten: släpps den en meter för tidigt siktar gåendet
+         rakt på nästa punkt, och den linjen går genom väggen bredvid
+         gluggen. Så tog sig ingen ut ur stallet igen — vägen ut går
+         genom 1,5 m-gluggen vid y 64,35, figuren svängde mot dörren en
+         meter för tidigt och stod kvar mot teorisalens vägg på
+         (9,74, 63,92) tills fastnadsvakten sa "du kommer inte fram".
+         Genvägen tas därför bara när nästa delmål FAKTISKT går att gå
+         till härifrån; annars går figuren fram till porten först. */
+      if(d0>0.45&&!navFriSikt(VD.px,VD.py,v1[0],v1[1],
+          G.scen==="ridhusinne"?(VD.pz||0):undefined))break;
       VD.vag.shift();
     }
     const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
@@ -340,8 +356,12 @@ function inredningPaNiva(o){
 function vandringKollision(nx,ny,r,fx,fy){
   if(G.scen==="gard"){
     for(const b of ANL.byggnader) [nx,ny]=kollideraRekt(nx,ny,r+0.2,b.rekt);
-    for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++)
-      [nx,ny]=kollideraSeg(nx,ny,r,st.p[i][0],st.p[i][1],st.p[i+1][0],st.p[i+1][1]);
+    /* GRINDARNA ÄR HÅL, inte markörer (Tobias produkttest 2026-09-06,
+       blocker 1). `staketSegment()` lämnar de sträckor som faktiskt
+       spärrar; öppningen vid grinden finns inte här och går därför att
+       gå igenom. Vägsökningen frågar samma funktion via den här. */
+    for(const st of ANL.staket) for(const [ax,ay,bx,by] of staketSegment(st))
+      [nx,ny]=kollideraSeg(nx,ny,r,ax,ay,bx,by);
     nx=clamp(nx,1,ANL.bredd-1); ny=clamp(ny,1,ANL.djup-1);
   }else if(G.scen==="ridhusinne"){
     const R=RIDHUSINNE, ba=R.bana;
@@ -488,13 +508,16 @@ function navBygg(){
      sedan still mot ett räcke vid y=42,0 som inga prov hade sett.
      Rutnätet får hellre vara för försiktigt än för optimistiskt — en väg
      som inte finns är värre än en väg som går en meter från väggen. */
-  /* Inomhus räcker en fjärdedels ruta utöver figurens radie: väggarna
-     är minst 0,16 m tjocka och rutorna 0,6 m — ingen vägg kan glida
-     mellan två rutmitter. Med 0,71 (hela rutan) var ingen ruta fri
-     mellan skåpraden och schaktet (1,08 m) eller vid bordet i gången,
-     så gå-hit fann ingen väg till läktaren från halva entrédelen. Ute
-     står staketen som linjer, där behövs hela rutan. */
-  const r=GA.radie+NAV.cell*(G.scen==="gard"?0.71:0.25);
+  /* Rutan är fri när FIGUREN får plats i den — inget påslag. Påslaget
+     fanns för att en vägg annars kunde glida mellan två rutmitter, men
+     det priset var för högt: med 0,5 m provradie rymde stallets
+     dörröppningar (0,9 m och 1,1 m) ingen fri rutmitt alls, och då
+     fanns ingen väg mellan stallgången och klubbdelen i rutnätet över
+     huvud taget. Allt som såg ut att fungera var raka linjen och
+     glidningen längs väggen. Väggen mellan två rutor fångas i stället
+     där den hör hemma: navKantFri() provar kanten med samma kollision
+     som gåendet. */
+  const r=GA.radie;
   NAV.nivafri=true;
   try{
     for(let j=0;j<NAV.ny;j++)for(let i=0;i<NAV.nx;i++){
@@ -530,6 +553,24 @@ function navNarmasteFri(x,y){
     if(bast)return bast;
   }
   return null;
+}
+
+/* Kanten mellan två rutor, provad med samma kollision som gåendet.
+   Det här är motstycket till att rutorna provas med figurens egen
+   radie: en vägg som ligger mellan två rutmitter syns inte i rutorna,
+   men den syns här. Nivåerna räknas som gångbara — nivåregeln ägs av
+   navNivaOK, som prövas separat på samma kant. */
+function navKantFri(ax,ay,bx,by){
+  const d=Math.hypot(bx-ax,by-ay), steg=Math.max(2,Math.ceil(d/0.25));
+  NAV.nivafri=true;
+  try{
+    for(let k=1;k<steg;k++){
+      const t=k/steg, x=ax+(bx-ax)*t, y=ay+(by-ay)*t;
+      const [kx,ky]=vandringKollision(x,y,GA.radie);
+      if(Math.abs(kx-x)>1e-6||Math.abs(ky-y)>1e-6)return false;
+    }
+  }finally{NAV.nivafri=false;}
+  return true;
 }
 
 /* Fri sikt mellan två punkter? Används för att räta ut trapporna som
@@ -617,6 +658,7 @@ function navVag(sx,sy,mx,my){
       const ny2=g[cur]+((di&&dj)?Math.SQRT2:1);
       if(ny2<g[ni]){
         const [ax2,ay2]=navPunkt(a,b), [bx2,by2]=navPunkt(na,nb);
+        if(!navKantFri(ax2,ay2,bx2,by2))continue;
         const zn=navNivaOK(ax2,ay2,bx2,by2,zAt[cur]);
         if(zn===null)continue;
         g[ni]=ny2; fr[ni]=cur; zAt[ni]=zn; putt([ny2+h(ni),ni]);
@@ -690,6 +732,55 @@ function ritaMal2D(proj){
   cx.restore();
 }
 
+/* ── Vägvisaren ───────────────────────────────────────────────── */
+/* En diskret pil mot nästa mål, ritad ovanpå både kartan och 3D-vyn ur
+   SAMMA uppdrag (src/uppdrag.js). Ligger målet i bild pekas det ut där
+   det står; ligger det utanför bild läggs pilen vid kanten i målets
+   riktning, så att "hur tar jag mig dit" har ett svar även när man
+   tittar åt fel håll. Nära målet tonas den bort — då har den lokala
+   markören och E-prompten tagit över. */
+function vagvisareSkarm(){
+  const v=(typeof uppdragVagvisare==="function")?uppdragVagvisare():null;
+  if(!v||!v.synlig)return null;
+  if(G.vy==="2d"){
+    if(V2T.scen!==G.scen)return null;
+    return {x:V2T.ox+v.pos[0]*V2T.s, y:V2T.oy+(V2T.hojd-v.pos[1])*V2T.s,
+      alfa:v.alfa, bakom:false, rubrik:v.rubrik, avstand:v.avstand};
+  }
+  const k=kamera();
+  const pk=tillKam(k,v.pos[0],v.pos[1],1.6);
+  if(pk.d<K3.nara)
+    return {x:CW/2, y:CH*0.5, alfa:v.alfa, bakom:true, rubrik:v.rubrik, avstand:v.avstand};
+  const sp=projK(k,pk);
+  return {x:sp[0], y:sp[1], alfa:v.alfa, bakom:false,
+    rubrik:v.rubrik, avstand:v.avstand};
+}
+function ritaVagvisare(){
+  const w=vagvisareSkarm(); if(!w)return;
+  const kant=48;
+  let x=w.x, y=w.y, utanfor=w.bakom;
+  if(x<kant||x>CW-kant||y<kant||y>CH-kant)utanfor=true;
+  x=clamp(x,kant,CW-kant); y=clamp(y,kant,CH-kant);
+  const puls=0.75+0.25*Math.sin(VD.tid*3);
+  cx.save();
+  cx.globalAlpha=w.alfa*(utanfor?0.85:1);
+  cx.fillStyle=UPPDRAG.färg;
+  /* Pilen pekar mot målet när det ligger utanför bild, annars nedåt mot
+     punkten själv. */
+  const vin=utanfor?Math.atan2(y-CH*0.62,x-CW/2):Math.PI/2;
+  cx.translate(x,y-(utanfor?0:14));
+  cx.rotate(vin-Math.PI/2);
+  const r=11*puls;
+  cx.beginPath();cx.moveTo(0,r);cx.lineTo(-r*0.8,-r*0.6);
+  cx.lineTo(0,-r*0.15);cx.lineTo(r*0.8,-r*0.6);cx.closePath();cx.fill();
+  cx.restore();
+  if(!utanfor){
+    cx.save();cx.globalAlpha=w.alfa*0.5;
+    cx.strokeStyle=UPPDRAG.färg;cx.lineWidth=2;
+    cx.beginPath();cx.arc(x,y,9+3*puls,0,Math.PI*2);cx.stroke();cx.restore();
+  }
+}
+
 /* ── Interaktion ──────────────────────────────────────────────── */
 function interaktioner(){
   const L=[];
@@ -717,7 +808,7 @@ function interaktioner(){
           else saga("Uteritt får du följa med på från grupp 3 — skogen kräver en säker ryttare.",4);
         }});
     }
-    if(G.hastId&&!G.hamtad&&!G.leder){
+    if(G.hastId&&G.hastPlats==="hage"){
       const h=HORSES[G.hastId];
       L.push({pos:ANL.hamtHage.grind, text:`Öppna grinden och hämta ${h.namn}`,
         gor(){
@@ -727,13 +818,14 @@ function interaktioner(){
             saga(`${h.namn} lyfter huvudet och drar sig undan — precis som det står på listan. Stå still en stund och gå lugnt fram igen.`,4.5);
             return;
           }
-          G.leder=true; G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
+          G.hastPlats="leds"; G.hastMott=true;
+          G.tackePa=!!(G.vader&&G.vader.tacke); VD.spår.length=0;
           ljudGnagg();
           /* Hagen är blöt i regn och lerig i slasket — benen ska spolas. */
           G.lerig=!!(G.vader&&(G.vader.typ==="regn"||G.vader.temp<9));
           G.spolad=0;
           saga(G.tackePa
-            ?`${h.namn} har täcket på i det här vädret. Grimman på — led honom till boxen.`
+            ?`${h.namn} har täcket på i det här vädret. Grimman på — led ${h.namn} till boxen.`
             :`Grimman på. Led ${h.namn} till boxen i stallet.`,4);
         }});
     }
@@ -755,18 +847,24 @@ function interaktioner(){
     for(const d of S.dorrar) L.push({pos:d.pos,
       text:G.leder?`Led hästen ${d.text.toLowerCase().replace("ut ","ut ")}`:d.text,
       gor(){gaTill(d.mot,d.spawn);}});
-    if(!G.hastId) L.push({pos:S.ridlarare.pos, text:"Prata med ridläraren",
-      gor(){visaTilldelning();}});
+    /* Ridläraren delar ut hästen — och byter den om spelaren vill.
+       Bytet ska gå att hitta utan att man vet var det finns, så det
+       ligger på samma person som delade ut hästen. */
+    L.push({pos:S.ridlarare.pos,
+      text:G.hastId?`Byt häst hos ridläraren (du har ${HORSES[G.hastId].namn})`
+        :"Prata med ridläraren",
+      gor(){ if(G.hastId&&typeof visaHastbyte==="function")visaHastbyte();
+             else visaTilldelning(); }});
     if(G.hastId&&!G.skotselRes){
       const b=hittaBox(G.hastId);
       if(b&&G.leder&&!G.hamtad){
         L.push({pos:b.dorr, text:G.lerig
             ?`Släpp in ${HORSES[G.hastId].namn} (leriga ben — spolspiltan ligger i söder)`
             :`Släpp in ${HORSES[G.hastId].namn} i boxen`,
-          gor(){G.leder=false;G.hamtad=true;ljudFnys();
+          gor(){G.hastPlats="box";ljudFnys();
             saga(G.lerig
-              ?"Han går in med leran kvar på benen. Ridläraren kommer att se den."
-              :"Han går in och drar en tugga hö. Nu: boxen, fodret och sadeln.",3.5);}});
+              ?`${HORSES[G.hastId].namn} går in med leran kvar på benen. Ridläraren kommer att se den.`
+              :`${HORSES[G.hastId].namn} går in och drar en tugga hö. Nu: boxen, fodret och sadeln.`,3.5);}});
       }else if(b&&G.hamtad){
         L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
           gor(){visaBoxmeny();}});
@@ -801,6 +899,13 @@ function interaktioner(){
   return L;
 }
 function interagera(){
+  /* "Jag har hittat hästen" är inte ett klick utan att man STÅR där —
+     uppdraget går vidare till sadelkammaren när spelaren faktiskt är
+     framme vid boxen, inte när hon råkar trycka på rätt knapp. */
+  if(G.hastId&&!G.hastMott&&typeof uppdragVagvisare==="function"){
+    const v=uppdragVagvisare();
+    if(v&&v.nara&&(v.id==="hitta_hast"))G.hastMott=true;
+  }
   const L=interaktioner(); let bast=null,bd=2.4;
   for(const i of L){const d=Math.hypot(VD.px-i.pos[0],VD.py-i.pos[1]); if(d<bd){bd=d;bast=i;}}
   VD.prompt=bast;
@@ -849,6 +954,43 @@ function boxFrontX(rad){
      längorna — de yttre är djupare än de två i mitten. */
   return rad.vetter>0 ? rad.x0+rad.djup : rad.x0;
 }
+/* ── UPPGIFTSMARKÖREN — var är hästen uppgiften handlar om? ─────────
+   PO-regel 2026-09-06: "objekt/NPC/häst som en aktiv uppgift syftar på
+   ska kunna identifieras visuellt", och hjälpen ska vara diskret och
+   kontextuell — inte ett konstant tutorialskelett.
+
+   Funktionen är markörens ENDA sanning: vilken häst, var, i vilken
+   scen, och hur stark markeringen ska vara. Renderarna frågar den; de
+   bestämmer inte själva. Det är också den som går att porta till
+   Roblox — en Highlight eller BillboardGui på samma häst, samma regel.
+
+   Returnerar null när markören inte ska synas:
+     · ingen häst tilldelad ännu,
+     · hästen leds (då ÄR hon hos spelaren),
+     · skötseln är klar (uppgiften har gått vidare).
+
+   `alfa` tonar ned de sista metrarna: full styrka på håll, borta när
+   spelaren står vid hästen. Att den försvinner är hela poängen — en
+   markör som ligger kvar när man hittat fram är ett tutorialskelett. */
+const MARKOR = { NARA: 2.2, FJARRAN: 6.0 };
+/* Markören på den tilldelade hästen är numera en VY av uppdraget
+   (src/uppdrag.js) — samma sanning som uppgiftspanelen och vägvisaren.
+   Förut räknade den ut sitt eget mål, och då kunde panelen och markören
+   peka på olika saker. */
+function uppgiftsMarkor(){
+  const u=(typeof uppdragMal==="function")&&uppdragMal();
+  if(!u||!u.hastId||!u.mal)return null;
+  const v=uppdragVagvisare();
+  const h=HORSES[u.hastId];
+  if(!v)return null;
+  return {hastId:u.hastId, namn:h?h.namn:"", pos:u.mal.pos, scen:u.mal.scen,
+    avstand:v.avstand, alfa:v.iScen?v.alfa:0, nara:!!v.nara,
+    synlig:v.iScen&&(v.alfa>0.01||v.nara)};
+}
+function markorGallerFor(hastId){
+  return (typeof uppdragGallerFor==="function")&&uppdragGallerFor(hastId);
+}
+
 function hittaBox(hastId){
   const S=STALLINNE;
   for(const rad of S.rader){
@@ -894,9 +1036,16 @@ function gaTill(scen,spawn){
 function startaVandring(){
   if(typeof ridSittAv==="function")ridSittAv();   // G02-A: avsutten när ritten lämnas
   overlay(false);
-  G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
-  G.sysslor={mockat:0,fodrat:0}; G.hamtad=false; G.tackePa=false;
+  G.scen="gard"; G.hastId=null; G.skotselRes=null;
+  /* DAGEN BÖRJAR MED HÄSTEN I BOXEN (Tobias produkttest 2026-09-06,
+     blocker 2). Vägen från grusplanen ut till hagen och tillbaka var
+     hela onboardingen innan man fick rida en meter. Hagarna är kvar
+     att gå ut till — och går numera att komma IN i, blocker 1 — men
+     hämtningen är inte längre obligatorisk för första ridpasset. */
+  G.hastPlats="box";
+  G.sysslor={mockat:0,fodrat:0}; G.tackePa=false;
   G.fangstForsok=false; G.utrustning=false; G.lerig=false; G.spolad=0;
+  G.hastMott=false;
   // dagens väder — avgör om hästarna går med täcke i hagen
   const v=(G.seed*2654435761>>>0)%100;
   G.vader={typ:v<52?"sol":v<80?"mulet":"regn", temp:7+(v%11)};
@@ -920,10 +1069,17 @@ function hudLage(lage){
   vt.querySelector('[data-v="2d"]').textContent=gang?"Karta":"Bana";
   vt.querySelector('[data-v="3d"]').textContent=gang?"Bakom dig":"Sidovy";
 }
+/* Rubrik + punkter. PO 2026-09-06: gameplay-text ska vara kort och
+   skannbar — en rubrik och 1–3 punkter, inte ett stycke. Texten tas
+   emot som lista; en sträng får fortfarande skickas in (tävlingen och
+   introt använder den formen). */
 function visaUppgift(rubrik,text){
   document.getElementById("momentLbl").textContent="Uppgift";
   document.getElementById("momentNamn").textContent=rubrik;
-  document.getElementById("momentText").textContent=text||"";
+  const el=document.getElementById("momentText");
+  const rader=Array.isArray(text)?text.filter(Boolean).slice(0,3):(text?[text]:[]);
+  el.textContent=rader.map(r=>"• "+r).join("\n");
+  el.style.whiteSpace="pre-line";
   document.querySelector("#momentBar i").style.width="0%";
 }
 
@@ -1379,21 +1535,38 @@ function ritaGard3D(){
     if(b.huvar) items.push({d:-avst2([b.rekt.x+b.rekt.w/2,b.rekt.y+b.rekt.h/2])+1,
       rita(){ritaHuvar(k,b);}});
   }
-  for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++){
-    const a=st.p[i], c=st.p[i+1];
+  /* Samma bitar som kollisionen: ritas grinden igen syns ett staket där
+     spelaren går rakt igenom, och det är värre än ingen grind alls. */
+  for(const st of ANL.staket) for(const [ax,ay,bx,by] of staketSegment(st)){
+    const a=[ax,ay], c=[bx,by];
     items.push({d:-avst2([(a[0]+c[0])/2,(a[1]+c[1])/2]), rita(){ritaStaket3D(k,a,c,st.typ,st.sandkant);}});
   }
   for(const t of ANL.trad) items.push({d:-avst2(t), rita(){ritaTrad3D(k,t);}});
   for(const p of ANL.props) items.push({d:-avst2(p.pos), rita(){ritaProp3D(k,p);}});
   for(const hg of ANL.hagar) for(let i=0;i<hg.hastar.length;i++){
-    if(hg.hastar[i]===G.hastId&&!G.hamtad)continue;   // din häst står vid grinden
+    /* DIN häst ritas i hagen BARA när hon faktiskt står där. Villkoret
+       läste `!G.hamtad`, vilket efter blocker 2 hade betytt att hon
+       betade i hagen samtidigt som hon stod i sin box — precis den
+       dubbla platssanningen som skulle bort. */
+    if(hg.hastar[i]===G.hastId&&G.hastPlats!=="hage")continue;
     const h=HORSES[hg.hastar[i]]; if(!h)continue;
     const hx=hg.rekt.x+hg.rekt.w*(0.25+0.5*((i*0.618)%1));
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     items.push({d:-avst2([hx,hy]), rita(){ritaHage3DHast(k,hx,hy,h,i);}});
   }
-  if(G.hastId&&!G.hamtad&&!G.leder){
+  if(G.hastId&&G.hastPlats==="hage"){
     const f=ANL.hamtHage.falt, h=HORSES[G.hastId];
+    /* Samma diskreta markör som över boxen — en pil ovanför just den
+       häst uppgiften gäller, tonad efter avstånd. */
+    items.push({d:-avst2(f)+0.01, rita(){
+      const mk=(typeof uppgiftsMarkor==="function")?uppgiftsMarkor():null;
+      if(!mk||!mk.synlig)return;
+      const p=tillKam(k,f[0],f[1],2.6); if(p.d<K3.nara)return;
+      const sp=projK(k,p), pb=clamp(0.42*k.f/p.d,4,26);
+      cx.save();cx.globalAlpha=mk.alfa;cx.fillStyle=VCOL.markor||"#E8B54A";
+      cx.beginPath();cx.moveTo(sp[0],sp[1]+pb);cx.lineTo(sp[0]-pb,sp[1]-pb);
+      cx.lineTo(sp[0]+pb,sp[1]-pb);cx.closePath();cx.fill();cx.restore();
+    }});
     items.push({d:-avst2(f), rita(){
       const p=tillKam(k,f[0],f[1],0); if(p.d<K3.nara)return;
       const s=projK(k,p), sz=clamp(1.6*k.f/p.d,3,140);
@@ -1569,9 +1742,13 @@ function ritaGard2D(){
   for(const st of ANL.staket){
     cx.strokeStyle=st.typ==="tra"?VCOL.staketTra:st.typ==="rail"?VCOL.staketRail:VCOL.staketEl;
     cx.lineWidth=st.typ==="el"?1.2:2;
+    /* Minikartan ritar de SOLIDA bitarna, så grinden syns som ett hål
+       att sikta på i stället för som en tät linje man ändå går igenom. */
     cx.beginPath();
-    for(let i=0;i<st.p.length;i++){const[a,b]=gs(st.p[i][0],st.p[i][1]);
-      i?cx.lineTo(a,b):cx.moveTo(a,b);}
+    for(const [ax,ay,bx,by] of staketSegment(st)){
+      const [a0,b0]=gs(ax,ay), [a1,b1]=gs(bx,by);
+      cx.moveTo(a0,b0); cx.lineTo(a1,b1);
+    }
     cx.stroke();}
   for(const t of ANL.trad){const[a,b]=gs(t[0],t[1]);
     const hash=(t[0]*13+t[1]*7)|0, [mork,ljus]=TRADFARG[hash%TRADFARG.length];
@@ -1589,13 +1766,20 @@ function ritaGard2D(){
     else if(p.typ==="mast"||p.typ==="flagga"){cx.fillStyle="#B9BCBE";cx.beginPath();cx.arc(a,b,s*0.35,0,Math.PI*2);cx.fill();}
   }
   for(const hg of ANL.hagar)for(let i=0;i<hg.hastar.length;i++){
-    if(hg.hastar[i]===G.hastId&&!G.hamtad)continue;
+    if(hg.hastar[i]===G.hastId&&G.hastPlats!=="hage")continue;
     const h=HORSES[hg.hastar[i]];if(!h)continue;
     const hx=hg.rekt.x+hg.rekt.w*(0.25+0.5*((i*0.618)%1));
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     const[a,b]=gs(hx,hy);
     cx.fillStyle=h.farg;cx.beginPath();cx.ellipse(a,b,s*0.9,s*0.5,i,0,Math.PI*2);cx.fill();}
-  if(G.hastId&&!G.hamtad&&!G.leder){
+  /* Uppgiftsmarkören på kartan — samma uppdrag som vägvisaren och
+     panelen läser. Kartan visar alltså ALLTID samma mål som pilen. */
+  {const v=(typeof uppdragVagvisare==="function")?uppdragVagvisare():null;
+   if(v&&v.synlig&&v.iScen){
+     const[a,b]=gs(v.pos[0],v.pos[1]);
+     cx.save();cx.globalAlpha=v.alfa;cx.strokeStyle=UPPDRAG.färg;cx.lineWidth=2;
+     cx.beginPath();cx.arc(a,b,s*1.5,0,Math.PI*2);cx.stroke();cx.restore();}}
+  if(G.hastId&&G.hastPlats==="hage"){
     const[a,b]=gs(ANL.hamtHage.falt[0],ANL.hamtHage.falt[1]);
     cx.fillStyle=HORSES[G.hastId].farg;
     cx.beginPath();cx.ellipse(a,b,s*1.1,s*0.6,0,0,Math.PI*2);cx.fill();
@@ -1625,6 +1809,7 @@ function ritaGard2D(){
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.3,s*0.55,0,0,Math.PI*2);cx.fill();cx.restore();}
   ritaMal2D(gs);
+  ritaVagvisare();
   ritaSpelare2D(gs(VD.px,VD.py),-VD.rikt,Math.max(s,2.2));
 }
 function ritaSpelare2D(pos,rikt,s){
@@ -1766,6 +1951,7 @@ function ritaStall2D(){
   /* Inredningen ur INREDNING.stall (F02-B), ovanpå golv och väggar. */
   ritaInredning2D(ss,s,"stallinne");
   ritaMal2D(ss);
+  ritaVagvisare();
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
 
@@ -1885,8 +2071,27 @@ function ritaStall3D(){
         const np=tillKam(k,fx,my,2.4);
         if(np.d>=K3.nara&&np.d<15&&Math.abs(np.s)<np.d*1.2){
           const s=projK(k,np), b=clamp(2.6*k.f/np.d,26,150), hh=b*0.24;
+          /* DAGENS HÄST FÅR EN DISKRET MARKÖR (PO 2026-09-06): en pil
+             ovanför skylten och en varm ram runt den, tonad efter
+             avstånd så att den är borta när man står vid boxen. Bara
+             DEN hästen — att markera alla vore ingen hjälp alls. */
+          const mk=(typeof uppgiftsMarkor==="function")?uppgiftsMarkor():null;
+          const minBox=(typeof markorGallerFor==="function")&&markorGallerFor(rad[i]);
+          if(minBox){
+            /* Långt bort: vägvisarens toning. Framme: markören kommer
+               tillbaka som lokal highlight över just den boxen. */
+            cx.save();cx.globalAlpha=mk.nara?0.9:mk.alfa;
+            const py=s[1]-hh*1.5, pb=b*0.16;
+            cx.fillStyle=VCOL.markor||"#E8B54A";
+            cx.beginPath();cx.moveTo(s[0],py+pb);cx.lineTo(s[0]-pb,py-pb);
+            cx.lineTo(s[0]+pb,py-pb);cx.closePath();cx.fill();
+            cx.restore();
+          }
           cx.fillStyle=VCOL.skylt;cx.fillRect(s[0]-b/2,s[1]-hh/2,b,hh);
-          cx.strokeStyle="#3A3E44";cx.strokeRect(s[0]-b/2,s[1]-hh/2,b,hh);
+          cx.strokeStyle=minBox?(VCOL.markor||"#E8B54A"):"#3A3E44";
+          if(minBox){cx.save();cx.globalAlpha=mk.alfa;cx.lineWidth=2;}
+          cx.strokeRect(s[0]-b/2,s[1]-hh/2,b,hh);
+          if(minBox)cx.restore();
           cx.fillStyle=h?"#E6E4DE":"#5A5F66";
           cx.font=`600 ${hh*0.55}px "IBM Plex Mono",monospace`;cx.textAlign="center";
           cx.fillText(h?h.namn.toUpperCase():"—",s[0],s[1]+hh*0.2);
@@ -2063,6 +2268,7 @@ function ritaRidhus2D(){
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
   ritaMal2D(ss);
+  ritaVagvisare();
   ritaSpelare2D(ss(VD.px,VD.py),-VD.rikt,Math.max(s*0.9,2.2));
 }
 
@@ -2250,35 +2456,18 @@ function ritaRidhus3D(){
 /* ── Huvudingång från spelloopen ─────────────────────────────── */
 function ritaVandring(){
   ritaVandringVy();
+  /* 3D-vyn ritar vägvisaren här; kartan gör det inne i sin egen
+     ritfunktion, där projektionen finns. */
+  if(G.vy!=="2d")ritaVagvisare();
   const ap=document.getElementById("approach");
   ap.textContent=VD.prompt&&!overlayUppe()?`Tryck E — ${VD.prompt.text}`:"";
   if(G.sagaT>0){G.sagaT-=1/60;if(G.sagaT<=0)document.getElementById("saga").classList.remove("on");}
-  const mål=!G.hastId
-    ? (G.scen==="gard"?["Gå till stallet","Stallentrén är den gula dörren under verandan, bortom parkeringen."]
-      :G.scen==="ridhusinne"?["Titta dig omkring","Läktaren, speglarna, Café Krubban — lektionen börjar i stallet."]
-      :["Prata med ridläraren","Hon står i stallgången och fördelar hästarna."])
-    : !G.hamtad
-    ? (G.leder?[`Led ${HORSES[G.hastId].namn} till boxen`,
-         G.scen==="gard"?"In genom stalldörren och fram till boxen."
-         :G.lerig?"Leriga ben efter hagen — spola av honom i spiltan i södra änden först."
-         :"Fram till boxen och släpp in honom (E)."]
-       :[`Hämta ${HORSES[G.hastId].namn} i hagen`,
-         "Grinden sitter på hagens västra sida, öster om stallet."])
-    : !G.skotselRes
-    ? [`Sköt om ${HORSES[G.hastId].namn}`,
-       G.scen!=="stallinne"?"Boxen är inne i stallet."
-       :!G.utrustning?"Hämta sadel och träns i sadelkammaren (klubbdelen) — sedan boxen."
-       :"Vid boxen (E): mocka, fodra och sadla."]
-    : G.tavling
-    ? [`Led ${HORSES[G.hastId].namn} till tävlingen`,
-       G.scen==="stallinne"?"Ut genom stalldörren — tävlingsdagen väntar."
-       :G.tavling.typ==="hoppning"
-         ?(G.scen==="ridhusinne"?"Sekretariatet ropar upp startordningen vid sargporten."
-           :"Påskhoppet rids i ridhuset — in genom durkplåtdörrarna.")
-         :"Dressyren rids på uteridbanan i väster. Domaren sitter i kuren."]
-    : [`Led ${HORSES[G.hastId].namn} till lektionen`,
-       G.scen==="stallinne"?"Ut genom stalldörren och över gården."
-       :G.scen==="ridhusinne"?"Fram till sargporten vid A — sitt upp där."
-       :"Ridhuset genom durkplåtdörrarna — eller uteridbanan bortom hagarna. Skogsstigen (uteritt) börjar vid åkerkanten i nordväst."];
-  visaUppgift(mål[0],mål[1]);
+  /* ALL uppgiftstext kommer ur uppdraget (src/uppdrag.js) — samma
+     objective som vägvisaren, kartan och markören läser. Den långa
+     if-kedjan som stod här är borta: den var en fjärde uppfattning om
+     var hästen stod och vad som var nästa steg, och det var den som
+     kunde skicka spelaren till hagen efter en häst som stod i boxen. */
+  const u=(typeof uppdragText==="function")?uppdragText():null;
+  if(!u){ visaUppgift("Rid","Lektionen är igång."); return; }
+  visaUppgift(u.rubrik,u.punkter);
 }

@@ -38,7 +38,7 @@ await page.waitForTimeout(1500);
 async function manover(mal, segment) {
   return await page.evaluate(async ([mal, segment]) => {
     G.hastId = G.hastId || Object.keys(HORSES)[0];
-    G.hamtad = true;
+    G.hastPlats = "box";
     G.ride = nyState(G.dagsform, 0.5, G.sadellage);
     G.npcs = [];
     G.px = 10; G.py = 30; G.rikt = 0; G.kappa = 0;

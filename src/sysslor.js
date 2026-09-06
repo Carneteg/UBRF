@@ -19,6 +19,42 @@
    på egen krok, båda med namnskylt. Att hämta rätt utrustning är
    första handgreppet — fel sadel passar inte ryggen den ska ligga på.
    ── */
+/* ── Byt häst hos ridläraren ──────────────────────────────────── */
+/* PO-order 2026-09-06: en tydlig men ENKEL väg att byta häst före
+   ridmomentet. Kort lista, ett klick, ingen lång text — och hela
+   vägledningskedjan följer med genom sattAktivHast(). */
+function visaHastbyte(){
+  const nu=G.hastId?HORSES[G.hastId]:null;
+  const lista=valbaraHastar();
+  const knapp=id=>{
+    const h=HORSES[id];
+    return `<button class="btn ghost hb-val" data-id="${id}"
+      style="justify-content:space-between;width:100%${id===G.hastId?";outline:1px solid var(--gold)":""}">
+      <span>${h.namn}</span>
+      <span class="dim" style="font-size:12px">${h.typ==="ponny"?"ponny":"häst"}${id===G.hastId?" · din i dag":""}</span></button>`;
+  };
+  overlay(true,`
+  <span class="lbl">Ridläraren · stallgången</span>
+  <h1 style="margin-top:6px">Byt häst</h1>
+  <p class="dim" style="font-size:13.5px;margin-top:2px">${nu
+    ? `Du har ${nu.namn} i dag. Byter du får du börja om med boxen, sadeln och skötseln.`
+    : "Välj hästen du ska rida i dag."}</p>
+  <div style="display:grid;gap:8px;margin-top:14px;max-height:46vh;overflow:auto">
+    ${lista.map(knapp).join("")}
+  </div>
+  <div class="btnrow"><button class="btn" id="bHbStang">Behåll ${nu?nu.namn:"—"}</button></div>`);
+  for(const b of document.querySelectorAll(".hb-val"))
+    b.onclick=()=>{
+      const id=b.dataset.id;
+      if(id!==G.hastId){
+        sattAktivHast(id);
+        saga(`${HORSES[id].namn} är din i dag. ${hastAnvisning().hur}`,4);
+      }
+      overlay(false);
+    };
+  document.getElementById("bHbStang").onclick=()=>overlay(false);
+}
+
 function visaSadelkammare(){
   if(!G.hastId){
     saga("Sadelkammaren: sadelbyglar i två rader, träns på krokar och en vit pegboard med putsgrejer. Du hämtar din utrustning när du fått veta vilken häst du rider.",5);
@@ -45,7 +81,7 @@ function visaSadelkammare(){
     <div style="display:flex;gap:8px;flex-wrap:wrap">${grannar.map(id=>bygel(id,"trans")).join("")}</div>
   </div>
   <div class="note" id="skStatus" style="font-size:13px;margin-top:14px">
-    Du rider <b style="color:var(--ink)">${h.namn}</b> i dag. Ta hans sadel och hans träns.</div>
+    Du rider <b style="color:var(--ink)">${h.namn}</b> i dag. Ta ${hastPron(h.id,"poss")} sadel och träns.</div>
   <div class="btnrow">
     <button class="btn" id="bSkKlar">Ta med utrustningen</button>
     <button class="btn ghost" id="bSkStang">Stäng</button>
@@ -195,13 +231,13 @@ function visaBoxmeny(){
   <div class="btnrow"><button class="btn ghost" id="bStang">Stäng</button></div>`);
   const bT=document.getElementById("bTacke");
   if(bT)bT.onclick=()=>{G.tackePa=false;
-    saga("Täcket av och upphängt över boxkanten. Han skakar på sig.",3);visaBoxmeny();};
+    saga(`Täcket av och upphängt över boxkanten. ${h.namn} skakar på sig.`,3);visaBoxmeny();};
   document.getElementById("bMocka").onclick=visaMockning;
   document.getElementById("bFodra").onclick=visaFodring;
   document.getElementById("bSkots").onclick=()=>{
     if(G.tackePa){saga("Täcket hänger i vägen — ta av det först.",3);return;}
     if(!G.utrustning){overlay(false);
-      saga(`Du har varken sadel eller träns här. ${h.namn}s hänger på sin bygel i sadelkammaren, innanför uppehållsrummet.`,4.5);
+      saga(`Du har varken sadel eller träns här. ${h.namn}s hänger på sin egen bygel i sadelkammaren, innanför uppehållsrummet.`,4.5);
       return;}
     visaSkotsel();};
   document.getElementById("bStang").onclick=()=>overlay(false);
@@ -224,7 +260,8 @@ function visaSchema(){
   Schemat gäller tills lektionen börjar — ridläraren bockar av resten.</p>
   <ul style="list-style:none;padding:0;margin:14px 0;display:grid;gap:9px;font-size:14.5px">
     ${rad(!!G.hastId,"Prata med ridläraren — dagens häst")}
-    ${rad(!!G.hamtad,"Hämta hästen i hagen och led till boxen")}
+    ${rad(G.hastPlats==="box", G.hastPlats==="box"
+      ? "Hästen står i sin box" : "Hämta hästen i hagen och led till boxen")}
     ${G.lerig||G.spolad>0?rad(!G.lerig,"Spola av leriga ben i spolspiltan"):""}
     ${v.tacke?rad(G.hamtad&&!G.tackePa,"Ta av täcket och häng upp det"):""}
     ${rad(!!G.utrustning,"Hämta sadel och träns i sadelkammaren")}

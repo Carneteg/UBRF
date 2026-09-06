@@ -145,9 +145,14 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 	end
 end)
 
-Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling)
+--[[ Servern äger energin; klienten predikterar mellan synkarna och
+     RÄTTAS här (senior re-review #87, blocker 3). Utan rättelsen hade
+     klienten och servern varit två trötthetssanningar igen — nu är
+     klientens värde en prediktion av serverns, inte en egen modell. ]]
+Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling, energi)
 	if ride then
 		ride.movement:setCeiling(ceiling)
+		if energi ~= nil then ride.movement:setEnergi(energi) end
 		Debug.setStamina(stamina, max, ceiling)
 	end
 end)
@@ -181,7 +186,8 @@ RunService.RenderStepped:Connect(function(dt)
 	     Instance och ligger efter movement:step, så den kan varken ändra
 	     rörelsen eller ridkänslan. ]]
 	Telemetri.foljGangart(ride.ritt, loco.gait)
-	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature)
+	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature,
+		ride.movement.hjalper)
 
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)

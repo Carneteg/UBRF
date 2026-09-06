@@ -31,6 +31,35 @@ Config.STATS = {
 	JumpStrength = 0.50,
 	Temperament = "Calm", -- Calm | Energetic | Sensitive | Brave | Stubborn
 
+	--[[ G02-B punkt 3: SKOLHÄSTPROFILEN. Namnet slås upp i
+	     RidKanon.PROFILER och avgör hur hästen svarar — fördröjning, hur
+	     mycket hon bryr sig om att hjälpen är tydlig, hur lätt hon tappar
+	     balansen, hur mycket hon orkar.
+
+	     Värdet kommer från UBRFSpelData (fältet `profil`), tilldelat ur
+	     ridskolans egna beskrivningar av hästarna. Som attribut går det
+	     att sätta per modell i Studio, precis som Breed. `skolhast` är
+	     utgångsläget: en häst utan profil beter sig som modellen alltid
+	     gjort. ]]
+	Profil = "skolhast",
+
+	--[[ Senior review #87: FÖRLÅTANDE och SKYGGHET som riktiga stats.
+	     Spänningen behöver dem, och hästdatan i UBRFSpelData har dem
+	     redan per häst — de saknades bara här. Defaultvärdena är samma
+	     som webbens BAS_GAMEPLAY. ]]
+	Forlatande = 0.60,
+	Skygghet = 0.20,
+
+	--[[ Senior re-review #87, blocker 2: KÄNSLIGHET som riktig stat.
+	     Den räknades förut ur Temperament, och det KVANTISERADE hästen:
+	     0,78 och 0,71 blev båda "Sensitive" och därmed 1,00. Cross-
+	     platform-scenariot mätte upp följden — samma ritt gav crokino
+	     spänning 0,28 på Roblox mot 0,16 på webben, och mac_kenzie
+	     svarade 0,067 s för segt. Temperamentet finns kvar och styr
+	     fortfarande accelBias och animation; känsligheten läser hästens
+	     eget tal när det finns. Defaulten är webbens BAS_GAMEPLAY. ]]
+	Kanslighet = 0.50,
+
 	MaxStamina = 100,
 	BondLevel = 0,
 }

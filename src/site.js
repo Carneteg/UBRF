@@ -485,8 +485,20 @@ const ANL = {
        saknar den — där möter staketet gräs. */
     {typ:"tra", sandkant:true, p:rektRunt(UTEBANA)},     // uteridbanan
     {typ:"tra", sandkant:true, p:rektRunt(PADDOCK)},  // paddocken bredvid
-    {typ:"tra", p:[[178,65],[206,65],[206,93],[178,93],[178,65]]},     // hage Ö1
-    {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]]},   // hage Ö2
+    /* GRINDARNA ÄR RIKTIGA ÖPPNINGAR (Tobias produkttest 2026-09-06,
+       blocker 1). Staketen var slutna polygoner medan `hamtHage.grind`
+       bara var en interaktionsmarkör, och `vandringKollision()` gjorde
+       varje segment solitt — spelaren kom aldrig in till hästarna.
+
+       Grinden står på samma punkt som kanonmarkören pekar ut; ingen ny
+       plats är hittad på. Öppningen subtraheras av `staketSegment()`
+       nedan, som ALLA konsumenter läser: kollision, vägsökning,
+       3D-bygget, minikartan och Roblox-exporten. En grind som bara
+       ritas men inte går att gå igenom är just den bugg som fälldes. */
+    {typ:"tra", p:[[178,65],[206,65],[206,93],[178,93],[178,65]],
+     grindar:[{p:[178,79], bredd:2.4}]},                               // hage Ö1
+    {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]],
+     grindar:[{p:[178,107], bredd:2.4}]},                              // hage Ö2
     {typ:"el",  p:[[112,20],[112,121]]},                               // trådstängsel mot åkern
     {typ:"rail",p:[[155,121.5],[168,121.5]]},                          // rail framför klubbgaveln
     {typ:"rail",p:[[96,127],[96,136]]},                                // rail vid lekhagen
@@ -586,6 +598,52 @@ const ANL = {
   hamtHage: {grind:[178,79], falt:[186,77]},
   skylt: {pos:[120,150.5], text:"HUSBYVÄGEN 1A · UPPLANDS-BRO RYTTARFÖRENING"},
 };
+
+/* ── STAKETENS SOLIDA BITAR ─────────────────────────────────────────
+   ETT staket, EN sanning om var det är tätt. Funktionen tar en post ur
+   `ANL.staket` och lämnar de sträckor som faktiskt spärrar — grindarnas
+   öppningar bortsubtraherade.
+
+   Den finns för att blocker 1 i Tobias produkttest 2026-09-06 var precis
+   den sortens fel som uppstår när fyra konsumenter tolkar samma data var
+   för sig: kollisionen, vägsökningen, 3D-bygget och minikartan läste
+   `st.p` rakt av, så grinden fanns som markör men inte som hål. Nu läser
+   alla den här, och en grind som inte går att gå igenom är omöjlig att
+   införa av misstag.
+
+   Grinden anges som en PUNKT på staketlinjen plus en bredd. Punkten
+   projiceras på det segment den ligger närmast, och det segmentet delas.
+   Att ange punkten och inte två brytpunkter är med flit: markören i
+   `hamtHage.grind` är kanon, och öppningen ska följa den. */
+function staketSegment(st){
+  const ut=[];
+  for(let i=0;i<st.p.length-1;i++){
+    const [x0,y0]=st.p[i], [x1,y1]=st.p[i+1];
+    const dx=x1-x0, dy=y1-y0, L=Math.hypot(dx,dy);
+    if(L<1e-9) continue;
+    /* Grindar som ligger PÅ det här segmentet, som andel längs det. */
+    const hal=[];
+    for(const g of (st.grindar||[])){
+      const t=((g.p[0]-x0)*dx+(g.p[1]-y0)*dy)/(L*L);
+      if(t<0||t>1) continue;
+      /* Punkten måste ligga på linjen, inte bara projiceras på den —
+         annars hade en grind på en annan sida öppnat fel sträcka. */
+      const px=x0+dx*t, py=y0+dy*t;
+      if(Math.hypot(px-g.p[0],py-g.p[1])>0.35) continue;
+      const halv=(g.bredd||2.0)/2/L;
+      hal.push([Math.max(0,t-halv), Math.min(1,t+halv)]);
+    }
+    hal.sort((a,b)=>a[0]-b[0]);
+    let t0=0;
+    for(const [a,b] of hal){
+      if(a>t0) ut.push([x0+dx*t0, y0+dy*t0, x0+dx*a, y0+dy*a]);
+      t0=Math.max(t0,b);
+    }
+    if(t0<1) ut.push([x0+dx*t0, y0+dy*t0, x1, y1]);
+  }
+  return ut;
+}
+
 
 /* ── Stallet invändigt — lokala koordinater: origo i sydväst,
       +x öster (bredd 15), +y norr (längd 52).
@@ -1277,8 +1335,28 @@ const STALLINNE = {
        genom dörren under verandan står innanför just den dörren. Planens
        vindfångscell (x 3,6–5,5) står kvar som region utan etikett —
        motsägelsen plan/fasad är dokumenterad ovan, fasaden vinner. */
+    /* ── DÖRREN STÅR KVAR, ANKOMSTEN FLYTTAR (PO-beslut 2026-09-06) ──
+       Tobias produkttest: "dörren man går ut genom i stallet ligger
+       nästan i en vägg". Uppmätt fri yta runt innerpunkten
+       (10,50 · 68,95): väster 4,0 · söder 4,0 · ÖSTER 0,3 · NORR 0,3 m.
+       Dörren ligger 0,7 m från teorisalens västvägg (x 11,2).
+
+       `pos` är dörrens INTERAKTIONSPUNKT och ligger kvar i fasadens
+       dörr — geometrin är orörd och prompten hör till rätt dörr.
+       `ankomst` är var man LANDAR: 1,6 m västerut, i den fria delen av
+       samma rum (kanonens OPEN_AREA `stall_uppehall_open`). Ger
+       4,0/1,2/3,7/0,9 m fritt.
+
+       Ankaret `stall_entre_samma_dorr` (#80 runda 3) krävde förut att
+       gårdsmarkörens spawn var EXAKT innerpunkten, och min första
+       rättelse fällde det i CI. Efter PO-beslutet kräver ankaret i
+       stället att ankomsten hör till dörren — inom 2 m och i dörrens
+       eget rum. Kravet är "samma dörr", inte "samma punkt". */
     {id:"ut_n", pos:[(()=>{const o=ANL.byggnader.find(b=>b.id==="stall").oppningar.find(o=>o.sida==="N"&&o.typ==="dorrgul");
                           return STALL_BREDD-o.u-o.b/2;})(), STALL_LANGD-1.0],
+     /* Teorisalens västvägg (x 11,2) är rummets östra kant; 1,6 m in från
+        den ger figurens 0,35 m radie gott om marginal. */
+     ankomst:[11.2-1.6, STALL_LANGD-1.55],
      text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (Entré, under verandan)",
      spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},
@@ -1354,7 +1432,10 @@ for(const d of STALLINNE.dorrar){
     pos:[d.spawn.x, d.spawn.y],
     text:d.uttext,
     mot:"stallinne",
-    spawn:{x:d.pos[0], y:d.pos[1], rikt:d.inrikt},
+    /* `ankomst` när dörren har en — annars dörrens egen punkt.
+       Interaktionspunkten ligger I dörren (ankaret), man LANDAR där det
+       finns plats att stå (PO-beslut 2026-09-06). */
+    spawn:{x:(d.ankomst||d.pos)[0], y:(d.ankomst||d.pos)[1], rikt:d.inrikt},
   });
 }
 

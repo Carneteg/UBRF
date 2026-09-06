@@ -16,7 +16,12 @@ local function intent(o)
 	o = o or {}
 	return { forward = o.forward or 0, steer = o.steer or 0,
 		gaitUp = o.gaitUp or false, gaitDown = o.gaitDown or false,
-		jump = o.jump or false }
+		jump = o.jump or false,
+		--[[ G02-B: tygeln och paraden. Utelämnas de blir de 0, alltså
+		     lös tygel och ingen halvhalt — samma utgångsläge som före
+		     G02-B, vilket är varför de äldre proven i den här filen inte
+		     behövde skrivas om. ]]
+		rein = o.rein or 0, parad = o.parad or 0, seat = o.seat or 0 }
 end
 
 --[[ Kör n sekunder med fast dt och samma avsikt. Returnerar controllern. ]]
@@ -914,15 +919,27 @@ do
 			upToGait(mc, steg, 1 / 60)
 			run(mc, 2.0, { forward = 1 }, 1 / 60)
 		end
-		local t, sett = 0, nil
+		--[[ Klockan startar när FÖRLOPPET startar, inte när hjälpen ges.
+		     G02-B punkt 2 la in hästens svarstid mellan de två, och den
+		     hör inte till förloppets längd — den mäts för sig i
+		     svarsprovet nedan. Webbens motsvarande prov klockar samma
+		     sträcka. Blandades de ihop skulle det här provet mäta två
+		     saker och kunna bli grönt av att den ena växer medan den
+		     andra krymper. ]]
+		local t, sett, tick = nil, nil, 0
 		for _ = 1, math.floor(4.0 / dt) do
 			local avsikt = if ned
-				then intent({ gaitDown = (t < dt) })
-				else intent({ forward = 1, gaitUp = (t < dt) })
+				then intent({ gaitDown = (tick < dt) })
+				else intent({ forward = 1, gaitUp = (tick < dt) })
 			mc:step(avsikt, dt)
-			t += dt
-			if mc._ov then sett = mc._ov.langd end
-			if sett and not mc._ov then return t, sett end
+			tick += dt
+			if mc._ov then
+				if t == nil then t = 0 end
+				sett = mc._ov.langd
+				t += dt
+			elseif t ~= nil then
+				return t, sett
+			end
 		end
 		return nil, sett
 	end
@@ -968,10 +985,15 @@ do
 			run(mc, 2.0, { forward = 1 }, 1 / 60)
 		end
 		local fore = mc.loco.gait
-		local t = 0
+		--[[ Samma sak här: `t` börjar räkna när förloppet startar. Det
+		     provet mäter är VAR I FÖRLOPPET etiketten byter, och
+		     svarstiden ligger före förloppet. ]]
+		local t, tick = nil, 0
 		for _ = 1, math.floor(4.0 / dt) do
-			mc:step(intent({ forward = 1, gaitUp = (t < dt) }), dt)
-			t += dt
+			mc:step(intent({ forward = 1, gaitUp = (tick < dt) }), dt)
+			tick += dt
+			if mc._ov and t == nil then t = 0 end
+			if t ~= nil then t += dt end
 			if mc.loco.gait ~= fore then return t, mc.loco.gait end
 		end
 		return nil, mc.loco.gait
@@ -1044,11 +1066,15 @@ do
 		run(mc, 2.0, { forward = 1 }, 1 / 60)
 		anim:step(mc.loco, 1 / 60)
 		local fore = anim.current
-		local t = 0
-		while t < 2.0 * langd do
-			mc:step(intent({ forward = 1, gaitUp = (t < dt) }), dt)
+		--[[ Klockan startar med förloppet, inte med hjälpen — svarstiden
+		     (G02-B punkt 2) ligger före och mäts för sig. ]]
+		local t, tick = nil, 0
+		while tick < 2.0 * langd + 1.0 do
+			mc:step(intent({ forward = 1, gaitUp = (tick < dt) }), dt)
 			anim:step(mc.loco, dt)
-			t += dt
+			tick += dt
+			if mc._ov and t == nil then t = 0 end
+			if t ~= nil then t += dt end
 			if anim.current ~= fore then return t, fore, anim.current end
 		end
 		return nil, fore, anim.current
@@ -1204,7 +1230,7 @@ do
 		local t = Telemetri.las(ritt, mc.loco, mc.curvature)
 		table.insert(moment, { vad = vad, gangart = mc.loco.gait, bad = mc.loco.targetGait,
 			cue = mc.loco.cue, fart = t.fart, kurvatur = t.kurvatur,
-			overgang = mc.loco.senasteOvergang })
+			overgang = mc.loco.etableringstid })
 	end
 
 	kor({}, 2.0)                                    notera("halt")
@@ -1264,6 +1290,483 @@ do
 end
 
 print("")
+--[[ ══ G02-B — HÄSTENS SVAR I EN RIKTIG BILDRUTA ═══════════════════
+
+     Paritetsspecen provar att formlerna räknar lika. Det här provar att
+     de faktiskt KÖRS av en riktig controller-frame — samma krav som
+     senior review av #86 ställde på telemetrin: ett kontrakt som bara
+     provas på en handbyggd tabell bevisar inte att produktionen fyller
+     det.
+
+     Tre påståenden, och det första är det viktigaste: fördröjningen ska
+     skjuta svaret i tid, aldrig ta bort det. ]]
+do
+	print("\n── G02-B: hästens svar i en riktig bildruta ──")
+	local dt = 1 / 240
+
+	--[[ a) HJÄLPEN TAPPAS ALDRIG BORT. Sex hjälper upp och ned om
+	     vartannat; varje begäran ska sluta med att hästen svarat. ]]
+	do
+		local mc = newMC()
+		local bad, svarade, sagVantan = 0, 0, 0
+		local minV, maxV = 9, 0
+		local function enHjalp(o, sek)
+			local foreBedd = mc.loco.beddGangart
+			local hittad = false
+			for i = 1, math.floor(sek / dt) do
+				local a = intent(o)
+				a.gaitUp = o.gaitUp and i == 1 or false
+				a.gaitDown = o.gaitDown and i == 1 or false
+				a.parad = if (o.parad and i == 1) then 1 else 0
+				mc:step(a, dt)
+				if not hittad and mc.loco.beddGangart ~= foreBedd then
+					hittad = true
+					bad += 1
+					if mc._vantar and mc.loco.targetGait ~= mc.loco.beddGangart then
+						sagVantan += 1
+						minV = math.min(minV, mc.loco.svarstid)
+						maxV = math.max(maxV, mc.loco.svarstid)
+					end
+				end
+			end
+			if hittad and mc.loco.targetGait == mc.loco.beddGangart then svarade += 1 end
+		end
+		for _ = 1, 3 do
+			enHjalp({ forward = 1, gaitUp = true }, 2.0)
+			enHjalp({ forward = 0, gaitDown = true }, 2.0)
+		end
+		local S = RidKanon.SVAR
+		check("kontroll först: fördröjningen skjuter svaret i tid, den tappar aldrig bort det",
+			bad >= 6 and svarade == bad and sagVantan == bad
+				and minV >= S.SVAR_MIN and maxV <= S.SVAR_MAX,
+			string.format("(%d hjälper, %d svar, %d väntefönster sedda, svarstid %.3f–%.3f s"
+				.. " i bandet %.2f–%.2f)", bad, svarade, sagVantan, minV, maxV,
+				S.SVAR_MIN, S.SVAR_MAX))
+	end
+
+	--[[ b) ENERGIN tär av arbete och kommer tillbaka i halt, och
+	     `loco.stamina` speglar den. Fältet fanns sedan Gate 01 men drogs
+	     aldrig — nu finns det bara en sanning om hur trött hon är. ]]
+	--[[ TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87, blocker 3).
+	     Samma prov som webbens: klocka alla tre utifrån och kräv att
+	     etableringen ligger MELLAN svaret och förloppets slut, vid
+	     switchAt av förloppet. Ett fält som byter betydelse bryter
+	     relationen och blir rött. ]]
+	do
+		local mc = newMC()
+		local dt2 = 1 / 240
+		local t0, tSvar, tGang, tOv = nil, nil, nil, nil
+		for i = 1, math.floor(4.0 / dt2) do
+			mc:step(intent({ forward = 1, gaitUp = (i == 1) }), dt2)
+			local l = mc.loco
+			if t0 == nil and l.beddGangart ~= "halt" then t0 = l.tid end
+			if t0 ~= nil and tSvar == nil and l.targetGait ~= "halt" then tSvar = l.tid end
+			if t0 ~= nil and tGang == nil and l.gait ~= "halt" then tGang = l.tid end
+			if tSvar ~= nil and tOv == nil and mc._ov == nil then tOv = l.tid end
+		end
+		local l = mc.loco
+		local eps = 0.02
+		local function nara(a, b) return math.abs(a - b) <= eps end
+		local ordning = l.svarstid < l.etableringstid
+			and l.etableringstid < l.svarstid + l.overgangstid
+		local andel = (l.etableringstid - l.svarstid) / l.overgangstid
+		check("de tre tiderna mäter var sin sak, och var och en stämmer med klockan",
+			t0 ~= nil and tSvar ~= nil and tGang ~= nil and tOv ~= nil
+				and nara(tSvar - t0, l.svarstid) and nara(tOv - tSvar, l.overgangstid)
+				and nara(tGang - t0, l.etableringstid) and ordning
+				and nara(andel, Config.MOVEMENT.Transition.switchAt),
+			string.format("svarstid %.3f · overgangstid %.3f · etableringstid %.3f —"
+				.. " etableringen ligger %.2f in i förloppet, switchAt är %.2f",
+				l.svarstid, l.overgangstid, l.etableringstid, andel,
+				Config.MOVEMENT.Transition.switchAt))
+	end
+
+	do
+		local mc = newMC()
+		upToGait(mc, 2, 1 / 60)
+		local fore, gangFore = mc.loco.energi, mc.loco.gait
+		run(mc, 480, { forward = 1 }, 1 / 60)
+		local efterArbete, gangEfter = mc.loco.energi, mc.loco.gait
+		local staminaEfter = mc.loco.stamina
+		run(mc, 4, { forward = -1, gaitDown = true }, 1 / 60)
+		run(mc, 300, {}, 1 / 60)
+		check("energin tär av arbete och kommer tillbaka i halt",
+			efterArbete < fore - 0.15 and gangEfter == gangFore
+				and mc.loco.energi > efterArbete + 0.05
+				and math.abs(staminaEfter - efterArbete * STATS.MaxStamina) < 1e-6,
+			string.format("(%s i åtta minuter: %.3f → %.3f, sedan fem minuter halt → %.3f;"
+				.. " stamina %.1f speglar energin)", gangFore, fore, efterArbete,
+				mc.loco.energi, staminaEfter))
+	end
+
+	--[[ c) YTTERTYGELN OCH INFALLET. Samma volt, samma styrutslag — bara
+	     kontakten skiljer. Den ostödda hästen ska tappa balansen och
+	     falla in: bågen blir snävare än den ryttaren bad om. ]]
+	do
+		local function volt(rein)
+			local mc = newMC()
+			upToGait(mc, 1, 1 / 60)
+			run(mc, 2.0, { forward = 0.5, rein = rein }, 1 / 60)
+			run(mc, 25, { forward = 0.5, steer = 1, rein = rein }, 1 / 60)
+			local radie = if math.abs(mc.curvature) > 0.002
+				then 1 / math.abs(mc.curvature) else math.huge
+			local balansISvang = mc.loco.balans
+			--[[ Stödet läses I SVÄNGEN. Läste man det efter uppritningen
+			     var styrutslaget noll och stödet därmed 1 för båda —
+			     provet blev grönt av att mäta fel ögonblick. ]]
+			local stodISvang = mc.hjalper.ytterstod
+			run(mc, 12, { forward = 0.5, rein = rein }, 1 / 60)
+			return balansISvang, radie, stodISvang, mc.loco.balans
+		end
+		local losB, losR, losStod = volt(0)
+		local burenB, burenR, burenStod, burenEfter = volt(1)
+		check("yttertygeln bär svängen: utan kontakt tappas balansen och hästen faller in",
+			losB < burenB - 0.03 and losR < burenR and losStod < burenStod
+				and burenEfter > burenB - 1e-9,
+			string.format("lös tygel: stöd %.2f, balans %.3f, ridd radie %.2f m ·"
+				.. " kontakten kvar: stöd %.2f, balans %.3f, radie %.2f m (%.1f %% snävare än bett)",
+				losStod, losB, losR, burenStod, burenB, burenR,
+				(1 - losR / burenR) * 100))
+	end
+
+	--[[ d2) SÄTET SOM BALANSMODIFIERARE (senior review #87, blocker 1).
+	     Samma volt, samma tygel, samma styrutslag — bara sitsens djup
+	     skiljer. Sitter ryttaren ned bär hon hästen; sitter hon lätt får
+	     hästen bära bågen själv. ]]
+	do
+		local function voltMedSits(seat)
+			local mc = newMC()
+			upToGait(mc, 1, 1 / 60)
+			run(mc, 2.0, { forward = 0.5, rein = 1, seat = seat }, 1 / 60)
+			run(mc, 25, { forward = 0.5, steer = 1, rein = 1, seat = seat }, 1 / 60)
+			return mc.loco.balans, mc.hjalper.sits, Svar.sitsStod(mc.hjalper.sits)
+		end
+		local lattB, lattS, lattStod = voltMedSits(-1)
+		local djupB, djupS, djupStod = voltMedSits(1)
+		check("sätet är en balansmodifierare: djup sits bär bågen, lätt sits gör det inte",
+			djupB > lattB + 0.03 and djupStod > lattStod,
+			string.format("lätt sits %.2f (stöd %.2f) → balans %.3f · djup sits %.2f"
+				.. " (stöd %.2f) → balans %.3f", lattS, lattStod, lattB,
+				djupS, djupStod, djupB))
+	end
+
+	--[[ d3) SPÄNNING OCH FOKUS I EN RIKTIG BILDRUTA. En hård hand spänner
+	     henne, och spänningen äter fokus — samma kedja som på webben. ]]
+	do
+		--[[ Det är HANDENS STADGA som spänner henne, inte hur hårt hon
+		     hålls. En stadig hand ger mjukhet 1, och då tar lugnet ut
+		     pressen även på full tygel — uppmätt spänning 0,000 i båda
+		     fallen när provet först jämförde lös mot hård hand. Modellen
+		     har rätt och provet hade fel fråga.
+
+		     Här skakas tygeln i stället: mjukheten faller, spänningen
+		     stiger, och fokus äts av spänningen. Det är kedjan, och den
+		     är densamma på båda ytorna. ]]
+		--[[ En KÄNSLIG häst, för att spänningen alls ska komma över noll.
+		     Det är inte en tillrättalagd uppställning utan vad modellen
+		     säger: lugnet (rang + förlåtande + mjukhet) tar ut pressen
+		     hos en `Calm`-häst även med darrig hand — uppmätt spänning
+		     0,000 för Calm vid mjukhet 0,52. Den känsliga hästen är den
+		     som visar kedjan, och det är också hon som gör det i
+		     verkligheten. ]]
+		local KANSLIG = { Speed = 0.5, Acceleration = 0.5, Agility = 0.5,
+			Stamina = 0.5, MaxStamina = 100, Temperament = "Sensitive",
+			Forlatande = 0.35, Skygghet = 0.42 }
+		local function ritt(skaka, sek)
+			local mc = MovementController.new(__makeRig(), KANSLIG)
+			upToGait(mc, 1, 1 / 60)
+			local dt3 = 1 / 60
+			for i = 1, math.floor(sek / dt3) do
+				local r = if skaka then (if i % 6 < 3 then 0.05 else 0.95) else 0.5
+				mc:step(intent({ forward = 0.5, rein = r }), dt3)
+			end
+			return mc.loco.spanning, mc.loco.fokus, mc.loco.mjukhet
+		end
+		local stadigSp, stadigFo, stadigMj = ritt(false, 20)
+		local darrSp, darrFo, darrMj = ritt(true, 20)
+		check("en darrig hand spänner hästen, och spänningen äter fokus",
+			darrMj < stadigMj - 0.1 and darrSp > stadigSp + 0.05
+				and darrFo < stadigFo - 0.05,
+			string.format("stadig hand: mjukhet %.2f → spänning %.3f, fokus %.3f ·"
+				.. " darrig hand: mjukhet %.2f → spänning %.3f, fokus %.3f",
+				stadigMj, stadigSp, stadigFo, darrMj, darrSp, darrFo))
+	end
+
+	--[[ d4) FOKUS PÅVERKAR SVARSTIDEN. Utan den här raden gick det att
+	     koppla ur fokustermen i MovementController utan att ett enda prov
+	     blev rött — uppmätt under falsifieringen. Kedjan darrig hand →
+	     mjukhet ned → fokus ned → segare svar är hela poängen med att
+	     fokus finns, och den provas här genom den faktiska inputvägen. ]]
+	do
+		local KANSLIG = { Speed = 0.5, Acceleration = 0.5, Agility = 0.5,
+			Stamina = 0.5, MaxStamina = 100, Temperament = "Sensitive",
+			Forlatande = 0.35, Skygghet = 0.42 }
+		local function svarEfter(skaka)
+			local mc = MovementController.new(__makeRig(), KANSLIG)
+			upToGait(mc, 1, 1 / 60)
+			local dt4 = 1 / 60
+			for i = 1, math.floor(18 / dt4) do
+				local r = if skaka then (if i % 6 < 3 then 0.05 else 0.95) else 0.5
+				mc:step(intent({ forward = 0.5, rein = r }), dt4)
+			end
+			--[[ Be om nästa gångart med SAMMA hjälp i båda fallen, så att
+			     bara fokus skiljer. ]]
+			local fokus = mc.loco.fokus
+			for i = 1, 30 do
+				mc:step(intent({ forward = 0.5, rein = 0.5, gaitUp = (i == 1) }), dt4)
+			end
+			return mc.loco.svarstid, fokus
+		end
+		local stadigT, stadigF = svarEfter(false)
+		local darrT, darrF = svarEfter(true)
+		check("fokus påverkar svarstiden: en ofokuserad häst svarar segare",
+			darrF < stadigF - 0.05 and darrT > stadigT + 0.005,
+			string.format("stadig hand: fokus %.3f → svar %.3f s ·"
+				.. " darrig hand: fokus %.3f → svar %.3f s",
+				stadigF, stadigT, darrF, darrT))
+	end
+
+	--[[ d) TELEMETRIN fylls av en RIKTIG bildruta, inte av en handbyggd
+	     tabell — och de fält som saknas är exakt de deklarerade. ]]
+	do
+		local mc = newMC()
+		upToGait(mc, 2, 1 / 60)
+		run(mc, 1.0, { forward = 0.5, rein = 0.5 }, 1 / 60)
+		--[[ En parad ges, annars är paradAlder med rätta nil — fältet är
+		     tomt tills ryttaren gett en halvhalt, precis som på webben,
+		     och då hade provet räknat den som en lucka. ]]
+		mc:step(intent({ forward = 0.5, rein = 0.5, parad = 1 }), 1 / 60)
+		run(mc, 1.0, { forward = 0.5, rein = 0.5, steer = 0.6 }, 1 / 60)
+		local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
+		local tm = Telemetri.las(ritt, mc.loco, mc.curvature, mc.hjalper)
+		local hal = {}
+		for _, namn in Telemetri.FALT do
+			if tm[namn] == nil then table.insert(hal, namn) end
+		end
+		table.sort(hal)
+		check("en riktig bildruta fyller telemetrin, och bara de deklarerade fälten saknas",
+			#hal == #Telemetri.SAKNAS and tm.balans ~= nil and tm.energi ~= nil
+				and tm.hjalper ~= nil and tm.hjalper.ytterstod ~= nil
+				and tm.mjukhet ~= nil and tm.spanning ~= nil and tm.fokus ~= nil
+				and tm.hjalper.sits ~= nil and tm.hjalper.vikt ~= nil,
+			string.format("(saknas: %s · balans %.3f, energi %.3f, yttertygelstöd %.2f)",
+				table.concat(hal, ", "), tm.balans, tm.energi, tm.hjalper.ytterstod))
+	end
+end
+
+--[[ ══ ROBUSTHET — Jules QA-fynd (#89) ════════════════════════════════
+     Tre fynd ur ett oberoende QA-spår, provade här på #87:s egen bas.
+     PR #96 cherry-plockas inte: den utgår från gammal bas och river
+     governance från #88. Fynden är evidens, koden är vår. ]]
+print("\n── Robusthet: tillstånd före första bildrutan, sits, nolldelta ──")
+
+--[[ FYND 1: `self.hjalper` var nil fram till första `step()`.
+     Allt som läste controllern dessförinnan — telemetrin i synnerhet —
+     tappade hela hjälpblocket. Provet läser FÖRE första step(). ]]
+do
+	local mc = newMC()
+	local hj = mc.hjalper
+	check("hjälperna finns redan efter new(), före första step()",
+		type(hj) == "table",
+		if type(hj) == "table" then "(tabell)" else "(" .. tostring(hj) .. ")")
+
+	if type(hj) == "table" then
+		--[[ NIL-SÄKRA JÄMFÖRELSER, och det är inte pedanteri: första
+		     versionen av det här provet skrev `math.abs(hj.skankel - …)`
+		     rakt av. Mutationen "konstruktorn sätter en TOM tabell" fick
+		     då specen att KRASCHA efter första raden i stället för att bli
+		     röd — noll FEL-rader, och falsifieringen såg ut att passera.
+		     Ett prov som kraschar mäter ingenting. ]]
+		local function tal(v: any): number?
+			return if type(v) == "number" then v else nil
+		end
+		local function lika(v: any, mot: number): boolean
+			local n = tal(v)
+			return n ~= nil and math.abs(n - mot) < 1e-9
+		end
+		local function visa(v: any): string
+			local n = tal(v)
+			return if n then string.format("%.2f", n) else tostring(v)
+		end
+
+		--[[ Och de är NEUTRALLÄGET, inte nollor: en häst rids aldrig med
+		     släppt skänkel. Talen jämförs mot kanonen, inte mot avskrivna
+		     literaler. ]]
+		local KN = RidKanon.KONTAKT
+		check("och de är kanonens neutralläge, inte nollor",
+			lika(hj.skankel, KN.SKANKEL_NEUTRAL)
+				and lika(hj.tygel, KN.TYGEL_NEUTRAL)
+				and lika(hj.sits, KN.SITS_NEUTRAL)
+				and lika(hj.styrning, 0) and lika(hj.parad, 0),
+			string.format("skänkel %s · tygel %s · sits %s · styrning %s",
+				visa(hj.skankel), visa(hj.tygel), visa(hj.sits), visa(hj.styrning)))
+
+		--[[ HELA hjälpkontraktet ska vara ifyllt redan här — det är det
+		     telemetrin publicerar, och ett halvfyllt utgångsläge hade
+		     varit samma hål en bildruta senare. ]]
+		local saknas = {}
+		for _, namn in RidKanon.HJALP_FALT do
+			if hj[namn] == nil then table.insert(saknas, namn) end
+		end
+		check("varje hjälpfält i kontraktet är ifyllt före första bildrutan",
+			#saknas == 0, "(" .. table.concat(saknas, ", ") .. ")")
+
+		--[[ Och telemetrin kan LÄSAS före första bildrutan utan att tappa
+		     blocket. Det var den konkreta kostnaden för nil:et. ]]
+		local tm = Telemetri.las(Telemetri.sittUpp(Telemetri.nyRitt(), "prov", "ridhus"),
+			mc.loco, 0.1, mc.hjalper)
+		check("telemetrin bär hjälperna redan före första bildrutan",
+			tm.hjalper ~= nil and tal(tm.hjalper.ytterstod) ~= nil,
+			string.format("(yttertygelstöd %s)",
+				if tm.hjalper then visa(tm.hjalper.ytterstod) else "inget hjälpblock"))
+
+		--[[ SAMMA funktion som runtime, inte en andra uppsättning tal:
+		     en step() med tom avsikt ska ge exakt utgångsläget igen. ]]
+		local mc2 = newMC()
+		mc2:step(intent({}), 1 / 60)
+		local h2 = mc2.hjalper
+		local samma = true
+		for _, namn in { "skankel", "tygel", "sits", "styrning", "ytterstod",
+			"innerTygel", "ytterTygel", "vikt", "bojSida", "parad" } do
+			local a, b = tal(h2[namn]), tal(hj[namn])
+			if a == nil or b == nil or math.abs(a - b) > 1e-9 then samma = false end
+		end
+		check("konstruktorns hjälper är samma översättning som runtime gör",
+			samma, string.format("(ytterstöd %s mot %s)",
+				visa(h2.ytterstod), visa(hj.ytterstod)))
+	end
+end
+
+--[[ FYND 2: Z och C skrev båda direkt i `state.seat`, och den som
+     släpptes sist bestämde. Provet kör båda ordningarna genom den
+     RIKTIGA bindningen (`__key` → ContextActionService → Input). ]]
+do
+	local function sits()
+		return Input.consume().seat
+	end
+	local sekvenser = {
+		{ namn = "Z ned → C ned → Z upp → C upp",
+			steg = {
+				{ Enum.KeyCode.Z, true,  -1, "Z ensam = lätt sits" },
+				{ Enum.KeyCode.C, true,   1, "C vinner medan båda hålls" },
+				{ Enum.KeyCode.Z, false,  1, "Z släpps, C håller kvar djup" },
+				{ Enum.KeyCode.C, false,  0, "båda uppe = neutral" },
+			} },
+		{ namn = "C ned → Z ned → C upp → Z upp",
+			steg = {
+				{ Enum.KeyCode.C, true,   1, "C ensam = djup sits" },
+				{ Enum.KeyCode.Z, true,   1, "C vinner fortfarande" },
+				--[[ DEN HÄR RADEN ÄR FYNDET. Med det gamla mönstret gick
+				     axeln till 0 här, fastän Z höll kvar. ]]
+				{ Enum.KeyCode.C, false, -1, "C släpps, Z håller kvar lätt" },
+				{ Enum.KeyCode.Z, false,  0, "båda uppe = neutral" },
+			} },
+	}
+	for _, seq in sekvenser do
+		Input.unbind()
+		Input.bind()
+		local fel, spar = nil, {}
+		for _, steg in seq.steg do
+			__key(steg[1], steg[2])
+			local v = sits()
+			table.insert(spar, string.format("%s→%.0f", steg[4], v))
+			if fel == nil and math.abs(v - steg[3]) > 1e-9 then
+				fel = string.format("%s gav %.0f, väntat %.0f", steg[4], v, steg[3])
+			end
+		end
+		check("sitsen följer knappstatus: " .. seq.namn, fel == nil,
+			fel or table.concat(spar, " · "))
+	end
+
+	--[[ Och unbind ska lämna axeln neutral — annars läcker en hållen
+	     tangent in i nästa ritt. ]]
+	Input.bind()
+	__key(Enum.KeyCode.C, true)
+	Input.unbind()
+	Input.bind()
+	check("en hållen sits läcker inte genom unbind", Input.consume().seat == 0,
+		string.format("(%.0f)", Input.consume().seat))
+	Input.unbind()
+end
+
+--[[ FYND 3: `step(intent, dt)` med icke-positiv dt.
+     UPPMÄTT FÖRE FIXEN: `dt = 0` var redan säker — inget NaN, inget Inf,
+     tillståndet orört. `dt < 0` var det INTE: `takSteg` blev negativt i
+     kurvaturens takstegsberäkning och `math.clamp(steg, -takSteg,
+     takSteg)` kastade "invalid argument #3 to 'clamp'" mitt i bildrutan,
+     med halva tillståndet redan skrivet. Provet täcker båda. ]]
+do
+	local FALT = { "speed", "heading", "turnRate", "phase", "lean", "stamina",
+		"mjukhet", "spanning", "fokus", "balans", "energi",
+		"svarstid", "overgangstid", "etableringstid", "tid" }
+	local function finit(loco)
+		local trasiga = {}
+		for _, k in FALT do
+			local v = loco[k]
+			if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
+				table.insert(trasiga, string.format("%s=%s", k, tostring(v)))
+			end
+		end
+		return trasiga
+	end
+
+	--[[ dt = 0 som ALLRA FÖRSTA bildruta: inget tillstånd att luta sig mot. ]]
+	local mc = newMC()
+	local ok = pcall(function() mc:step(intent({ forward = 1, rein = 0.5, seat = 1 }), 0) end)
+	local trasiga = if ok then finit(mc.loco) else { "(anropet kastade)" }
+	check("step(dt=0) som första bildruta kastar inte och ger finita värden",
+		ok and #trasiga == 0, table.concat(trasiga, ", "))
+
+	--[[ dt = 0 MITT I en ritt, med fart, sväng och pågående förlopp. ]]
+	local mc2 = newMC()
+	runMoving(mc2, 1.0, { forward = 1 })
+	mc2:step(intent({ forward = 1, gaitUp = true }), 1 / 60)
+	local fore = { speed = mc2.loco.speed, tid = mc2.loco.tid,
+		phase = mc2.loco.phase, kappa = mc2.curvature }
+	local ok2 = pcall(function() mc2:step(intent({ forward = 1, steer = 1 }), 0) end)
+	local tr2 = if ok2 then finit(mc2.loco) else { "(anropet kastade)" }
+	check("step(dt=0) mitt i en ritt kastar inte och ger finita värden",
+		ok2 and #tr2 == 0, table.concat(tr2, ", "))
+	--[[ Noll tid = noll rörelse. Att den släpps igenom i stället för att
+	     hoppas över är avsiktligt (bildrutans hjälper och en gångarts-
+	     begäran som råkar falla där ska inte tappas), och då ska den heller
+	     inte flytta något. ]]
+	check("och noll tid flyttar ingenting",
+		ok2 and math.abs(mc2.loco.speed - fore.speed) < 1e-9
+			and math.abs(mc2.loco.tid - fore.tid) < 1e-9
+			and math.abs(mc2.loco.phase - fore.phase) < 1e-9
+			and math.abs(mc2.curvature - fore.kappa) < 1e-9,
+		string.format("fart %.4f→%.4f · tid %.4f→%.4f · κ %.5f→%.5f",
+			fore.speed, mc2.loco.speed, fore.tid, mc2.loco.tid,
+			fore.kappa, mc2.curvature))
+
+	--[[ NEGATIV dt — det som faktiskt sprack. ]]
+	local mc3 = newMC()
+	runMoving(mc3, 1.0, { forward = 1 })
+	local f3 = { speed = mc3.loco.speed, tid = mc3.loco.tid, kappa = mc3.curvature }
+	local ok3, err3 = pcall(function() mc3:step(intent({ forward = 1, steer = 1 }), -0.5) end)
+	local tr3 = if ok3 then finit(mc3.loco) else { tostring(err3) }
+	check("step(dt<0) kastar inte och lämnar tillståndet finit",
+		ok3 and #tr3 == 0, table.concat(tr3, ", "))
+	check("och en klocka som går baklänges rör inte tillståndet alls",
+		ok3 and math.abs(mc3.loco.speed - f3.speed) < 1e-9
+			and math.abs(mc3.loco.tid - f3.tid) < 1e-9
+			and math.abs(mc3.curvature - f3.kappa) < 1e-9,
+		string.format("fart %.4f→%.4f · tid %.4f→%.4f",
+			f3.speed, mc3.loco.speed, f3.tid, mc3.loco.tid))
+
+	--[[ NaN som dt: samma vakt, och `not (dt >= 0)` fångar den — ett
+	     `dt < 0`-villkor hade släppt igenom den. ]]
+	local mc4 = newMC()
+	runMoving(mc4, 0.5, { forward = 1 })
+	local f4 = mc4.loco.speed
+	local ok4 = pcall(function() mc4:step(intent({ forward = 1 }), 0 / 0) end)
+	local tr4 = if ok4 then finit(mc4.loco) else { "(anropet kastade)" }
+	check("en icke-finit dt lämnar tillståndet orört och finit",
+		ok4 and #tr4 == 0 and math.abs(mc4.loco.speed - f4) < 1e-9,
+		table.concat(tr4, ", "))
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

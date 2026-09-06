@@ -91,8 +91,8 @@ function sittUpp(plats){
     const ratt=G.tavling.typ==="hoppning"?"ridhus":"utebana";
     if(plats!==ratt){
       saga(G.tavling.typ==="hoppning"
-        ?"Tävlingsdag — Påskhoppet rids i ridhuset. Led honom dit."
-        :"Tävlingsdag — dressyren rids på uteridbanan. Led honom dit.",4);
+        ?`Tävlingsdag — Påskhoppet rids i ridhuset. Led ${HORSES[G.hastId].namn} dit.`
+        :`Tävlingsdag — dressyren rids på uteridbanan. Led ${HORSES[G.hastId].namn} dit.`,4);
       return;
     }
     G.plats=plats;
@@ -100,11 +100,11 @@ function sittUpp(plats){
        första-bildrutefönster där den körande ridloopen kan läsa
        uppsutten=false — telemetrin skulle då rapportera en avsutten ryttare
        mitt i en ritt. Senior review av #86, blocker C. */
-    visaSekretariat(()=>{G.leder=false;hudLage("ritt");
+    visaSekretariat(()=>{hudLage("ritt");
       ridSittUpp(G.hastId,plats);startaLektion();});
     return;
   }
-  G.leder=false;G.plats=plats;hudLage("ritt");
+  G.plats=plats;hudLage("ritt");
   ridSittUpp(G.hastId,plats);          // G02-A: tillståndet FÖRE lektionen, se ovan
   startaLektion();
 }
@@ -202,7 +202,7 @@ function visaTavlingsResultat(dom){
     :"";
   const omdome=uteJag?`Inte er dag. ${h.namn} förtjänar en lugn hemritt — och du en ny chans nästa tävling.`
     :plac===1?`Ni vann. ${h.namn} visste om det innan resultatet lästes upp.`
-    :plac<=3?`Placerade! Rosetten hängs på ${h.namn}s boxdörr — han har förtjänat den lika mycket som du.`
+    :plac<=3?`Placerade! Rosetten hängs på ${h.namn}s boxdörr — förtjänad lika mycket av hästen som av dig.`
     :plac<=5?`En rosett på första försöket är inget att fnysa åt. Vidare mot nästa.`
     :`Ingen rosett i dag — men ridningen håller. Domarna såg samma sak som jag.`;
   overlay(true,`

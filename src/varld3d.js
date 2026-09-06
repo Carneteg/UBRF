@@ -341,8 +341,10 @@ function v3dGard(lagg,opp){
   /* Staketen. */
   const stak=new Bygge();
   for(const st of ANL.staket){
-    for(let i=0;i<st.p.length-1;i++){
-      const a=st.p[i], b=st.p[i+1];
+    /* Grindöppningarna är bortsubtraherade här också — samma funktion som
+       kollisionen läser, så det man ser är det man kan gå igenom. */
+    for(const [sax,say,sbx,sby] of staketSegment(st)){
+      const a=[sax,say], b=[sbx,sby];
       const dx=b[0]-a[0], dz=b[1]-a[1], len=Math.hypot(dx,dz);
       if(len<0.01)continue;
       const vin=Math.atan2(dz,dx);

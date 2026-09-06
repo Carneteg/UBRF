@@ -501,6 +501,282 @@ do
 	game:GetService("RunService")._server = false
 end
 
+--[[ ══ HÄSTENS EGNA VÄRDEN HELA VÄGEN TILL RIDNINGEN ═══════════════════
+     Senior re-review av #87, blocker 1: profilerna fanns i datat och
+     provades syntetiskt, men den VERKLIGA vägen — tilldelning, bindning,
+     registrering, MovementController — tappade dem. `resolveStats` läste
+     bara Studio-attribut, så varje individ red som `skolhast` med
+     standardvärden hur noga tilldelningen än var gjord.
+
+     Provet tar TVÅ RIKTIGA HÄSTAR med olika profil genom hela kedjan och
+     kräver att samma hjälp ger mätbart olika svar. En mutation som tar
+     bort kanonpåläggningen i HorseService.register ska fälla det. ]]
+print("\n── Hästens egna värden når ridningen ──")
+do
+	local Spel = UBRFSpel
+
+	--[[ Två hästar ur den riktiga rostern, med olika profil OCH olika
+	     känslighet. Namnen slås upp i datat i stället för att skrivas av,
+	     så provet inte kan bli grönt av att någon bytt profil i källan. ]]
+	local kanslig, tung
+	for id, h in Spel.hastar do
+		if h.profil == "kanslig" and not kanslig then kanslig = id end
+		if h.profil == "tung" and not tung then tung = id end
+	end
+	check("rostern har både en känslig och en tyngre häst att prova med",
+		kanslig ~= nil and tung ~= nil,
+		string.format("(%s / %s)", tostring(kanslig), tostring(tung)))
+
+	local function ridEfterRegistrering(id)
+		local modell = Instance.new("Model")
+		modell.Name = "Hast_" .. id
+		modell:SetAttribute("HorseId", id)
+		local rot = Instance.new("Part")
+		rot.Name = "HumanoidRootPart"
+		rot.Parent = modell
+		modell.PrimaryPart = rot
+		local hum = Instance.new("Humanoid")
+		hum.Parent = modell
+		game:GetService("CollectionService"):AddTag(modell, "Horse")
+		HorseService._registerForProv(modell)
+		local stats = HorseService._statsFor(modell)
+		return stats
+	end
+
+	local sK = ridEfterRegistrering(kanslig)
+	local sT = ridEfterRegistrering(tung)
+	check("den tilldelade hästens profil når HorseStats",
+		sK ~= nil and sT ~= nil and sK.Profil == "kanslig" and sT.Profil == "tung",
+		string.format("%s → %s · %s → %s", kanslig, tostring(sK and sK.Profil),
+			tung, tostring(sT and sT.Profil)))
+
+	--[[ Och att den FAKTISKT ändrar ridningen: samma hjälp, samma
+	     bildruta, två olika svar. Det är skillnaden mellan att datat
+	     finns och att hästen rider med det. ]]
+	local svarK = Svar.svarstid(sK, Svar.kanslighet(
+		Config.TEMPERAMENTS[sK.Temperament], sK), 0.8, 1, 0.5)
+	local svarT = Svar.svarstid(sT, Svar.kanslighet(
+		Config.TEMPERAMENTS[sT.Temperament], sT), 0.8, 1, 0.5)
+	check("och den ändrar ridningen: samma hjälp ger olika svar",
+		svarK < svarT - 0.02,
+		string.format("%s (%s, %s) svarar på %.3f s · %s (%s, %s) på %.3f s",
+			kanslig, sK.Profil, sK.Temperament, svarK,
+			tung, sT.Profil, sT.Temperament, svarT))
+end
+
+--[[ ══ CROSS-PLATFORM-SCENARIOT ═══════════════════════════════════════
+     Senior re-review av #87, blocker 2: "formelparitet är grön men
+     runtimeparitet är inte samma produktbeteende".
+
+     Golden-raderna bevisade att funktionerna räknar lika på givna tal.
+     De bevisade INTE att en ritt utvecklar sig lika — utgångsläget skilde
+     sig (webben spänning 0,15 / energi 0,835, Roblox 0 / 1) och ingen
+     körning jämfördes.
+
+     Här körs RITTEN. RidKanon.SCENARIO bär webbens egen stepRide, bildruta
+     för bildruta, med två verkliga UBRF-hästar och med den context Roblox
+     faktiskt har. Uppspelningen går genom en RIKTIG MovementController med
+     den häst Stallet delar ut — inte genom direktanrop av svarsmodellen,
+     vilket är exakt vad ordern i #83 förbjöd.
+
+     GRÄNSEN, uttryckligen: jämförelsen börjar vid SEMANTISKA HJÄLPER per
+     bildruta. Inputadaptern får vara plattformsspecifik enligt
+     paritetsregeln — hjälpaxlarna räknas därför om till Roblox
+     intent-axlar med KONTAKT:s egna neutrallägen, alltså genom det
+     riktiga inputlagret och inte förbi det. ]]
+print("\n── Cross-platform: samma ritt på båda ytorna ──")
+do
+	local SC = RidKanon.SCENARIO
+	local KN = RidKanon.KONTAKT
+	local dt = 1 / SC.HZ
+
+	--[[ Hjälpsemantiken tillbaka till intent-axlarna. Inversen av det
+	     MovementController:step gör i sin första halva, med samma
+	     konstanter — så att en scenariorad ger EXAKT den hjälp webben red
+	     med, och inte en ungefärlig. ]]
+	local function axlar(a)
+		local forward = if a.skankel >= KN.SKANKEL_NEUTRAL
+			then (a.skankel - KN.SKANKEL_NEUTRAL) / (0.78 - KN.SKANKEL_NEUTRAL)
+			else (a.skankel - KN.SKANKEL_NEUTRAL) / (KN.SKANKEL_NEUTRAL - 0.05)
+		local rein = (a.tygel - KN.TYGEL_NEUTRAL) / (KN.TYGEL_MAX - KN.TYGEL_NEUTRAL)
+		local seat = if a.sits >= KN.SITS_NEUTRAL
+			then (a.sits - KN.SITS_NEUTRAL) / (KN.SITS_MAX - KN.SITS_NEUTRAL)
+			else (a.sits - KN.SITS_NEUTRAL) / (KN.SITS_NEUTRAL + 0.6)
+		return math.clamp(forward, -1, 1), math.clamp(rein, 0, 1),
+			math.clamp(seat, -1, 1)
+	end
+
+	--[[ Vilken gångart ryttaren bad om vid varje bildruta, ur BEDD. ]]
+	local function beddVid(hast)
+		local karta, nu = {}, "halt"
+		local n = 1
+		for i = 0, SC.RUTOR - 1 do
+			while n <= #hast.BEDD and hast.BEDD[n].i == i do
+				nu = hast.BEDD[n].gangart
+				n += 1
+			end
+			karta[i] = nu
+		end
+		return karta
+	end
+
+	--[[ Hjälperna är GLESA i kanonen — en rad först när något ändras. ]]
+	local function hjalpVid()
+		local karta, nu = {}, SC.STEG[1]
+		local n = 1
+		for i = 0, SC.RUTOR - 1 do
+			while n <= #SC.STEG and SC.STEG[n].i == i do
+				nu = SC.STEG[n]
+				n += 1
+			end
+			karta[i] = nu
+		end
+		return karta
+	end
+	local HJALP = hjalpVid()
+
+	--[[ Kör ritten genom en riktig controller och plocka ut samma
+	     mätpunkter som webben mätte. Returnerar också hur många bildrutor
+	     som behövde mer än ETT steg i gångartstrappan för att hamna rätt
+	     — blir det fler än noll jämför scenariot två olika ritter, och
+	     då är siffrorna nedan inte värda något. ]]
+	local function korRitt(id)
+		local hast
+		for _, h in SC.HASTAR do if h.id == id then hast = h end end
+		--[[ SAMMA VÄG SOM HORSESERVICE tar vid registrering: en riktig
+		     Configuration, kanonen påskriven FÖRE writeDefaults, och
+		     resolveStats därefter. Att bygga stats-tabellen för hand hade
+		     hoppat över exakt den ordning blocker 1 handlade om. ]]
+		local cfg = Instance.new("Configuration")
+		for nyckel, varde in Stallet.statsFor(id) do
+			if varde ~= nil and cfg:GetAttribute(nyckel) == nil then
+				cfg:SetAttribute(nyckel, varde)
+			end
+		end
+		Config.writeDefaults(cfg, Config.STATS)
+		local mc = MovementController.new(__makeRig(), Config.resolveStats(cfg))
+		local BEDD = beddVid(hast)
+		local matt, hopp = {}, 0
+		local n = 1
+		for i = 0, SC.RUTOR - 1 do
+			local a = HJALP[i]
+			local forward, rein, seat = axlar(a)
+			local intent = { forward = forward, steer = a.styrning, rein = rein,
+				seat = seat, parad = a.parad, gaitUp = false, gaitDown = false,
+				jump = false }
+			--[[ SAMMA BEGÄRAN, INTE SAMMA TANGENT. Webbens cue faller ur
+			     hjälpens impuls över ett fönster, Roblox ur flanker och
+			     W-regeln. Här frågas controllerns EGNA regel vad den skulle
+			     välja, och flanken sätts bara för att stänga skillnaden mot
+			     vad webbens ryttare bad om. Utan det hade scenariot jämfört
+			     två olika ritter — och med mer än ett steg kvar går det inte
+			     att stänga på en bildruta, vilket `hopp` räknar. ]]
+			local onskad = RidKanon.MOTSVARIGHET[BEDD[i]] or "halt"
+			--[[ Paraden räknas på sin STIGANDE FLANK i controllern, så
+			     förhandsfrågan här måste ställas med samma flank — annars
+			     hade korrigeringen nedan stängt en skillnad som inte finns. ]]
+			local paradNu = a.parad > RidKanon.HJALP.PARAD_TROSKEL
+			local flank = paradNu and not mc._paradHalls
+			local d = Gaits.index(onskad) - Gaits.index(mc:_targetGait(intent, flank))
+			if d > 0 then intent.gaitUp = true elseif d < 0 then intent.gaitDown = true end
+			if math.abs(d) > 1 then hopp += 1 end
+			mc:step(intent, dt)
+			while n <= #hast.MATT and hast.MATT[n].i == i do
+				local L = mc.loco
+				table.insert(matt, { t = hast.MATT[n].t, facit = hast.MATT[n],
+					svarstid = L.svarstid or 0, balans = L.balans or 0,
+					fokus = L.fokus or 0, spanning = L.spanning or 0,
+					energi = L.energi or 0 })
+				n += 1
+			end
+		end
+		return matt, hopp, hast
+	end
+
+	--[[ TOLERANSERNA. Satta strax över det som FAKTISKT uppmätts, inte
+	     löst nog att passera. Uppmätt på den här ritten, största avvikelse
+	     över båda hästarna och alla åtta mätpunkter:
+
+	       svarstid  0,0002   (tak 0,005)
+	       spanning  0,0087   (tak 0,010)
+	       fokus     0,0021   (tak 0,005)
+	       balans    0,0122   (tak 0,020)
+	       energi    0,0001   (tak 0,005)
+
+	     BALANSEN har det största utrymmet av ett känt skäl: dess
+	     övergångsterm är på/av, och de två gångartstabellerna (webbens
+	     BAND och Roblox Gaits) släpper förloppet på olika bildruta. De
+	     avvikelserna är listade i paritetsspecen och är produktbeslut,
+	     inte drift.
+
+	     SPÄNNINGENS 0,0087 ligger i ETT ENDA fönster — 0,30 s, mitt i
+	     uppsittningens avklingning — och ingen annanstans i ritten
+	     (0,0001 vid 6,0 s, där spänningen är som störst). Storheten
+	     faller 0,0074 per bildruta där, så avvikelsen är drygt EN
+	     BILDRUTAS förskjutning i när vändpunkten infaller, inte en
+	     skillnad i nivå eller form.
+
+	     [ÄRLIG BEGRÄNSNING] Exakt vilken bildruta som skiljer är inte
+	     rotorsaksanalyserad. Den syns bara för den känsliga hästen och
+	     bara i övergående läge; att jaga den vidare vore att trimma
+	     bildruteordning utan spelarvinst. Den är MÄTT och avgränsad, och
+	     taket är satt strax över det uppmätta — inte löst nog att gömma
+	     något större.
+
+	     RESAN HIT ÄR POÄNGEN: första körningen låg spänningen 0,119 fel
+	     och fokus 0,047 fel. Tre riktiga fel föll ut av det —
+	     känsligheten kvantiserad genom Temperament, halvhalten läst bara
+	     när den råkade byta gångart, och paraden läst per bildruta i
+	     stället för per tryck. Formelpariteten var grön hela tiden. ]]
+	local TOL = { svarstid = 0.005, spanning = 0.010, fokus = 0.005,
+		balans = 0.020, energi = 0.005 }
+
+	for _, hastKanon in SC.HASTAR do
+		local matt, hopp = korRitt(hastKanon.id)
+		check(string.format("%s: samma gångartsbegäran på båda ytorna",
+			hastKanon.id), hopp == 0,
+			string.format("(%d bildrutor låg mer än ett steg fel)", hopp))
+		check(string.format("%s: alla %d mätpunkter nåddes",
+			hastKanon.id, #hastKanon.MATT),
+			#matt == #hastKanon.MATT, string.format("(%d av %d)", #matt, #hastKanon.MATT))
+
+		for _, storhet in { "svarstid", "balans", "fokus", "spanning", "energi" } do
+			local varst, varstT, rader = 0, 0, {}
+			for _, m in matt do
+				local d = math.abs(m[storhet] - m.facit[storhet])
+				if d > varst then varst, varstT = d, m.t end
+				table.insert(rader, string.format("%.1f s %.4f/%.4f",
+					m.t, m[storhet], m.facit[storhet]))
+			end
+			check(string.format("%s · %s följer webben inom %.3f",
+				hastKanon.id, storhet, TOL[storhet]),
+				varst <= TOL[storhet],
+				string.format("(störst %.4f vid %.1f s) %s", varst, varstT,
+					table.concat(rader, " · ")))
+		end
+	end
+
+	--[[ VAD LUCKAN ÄR VÄRD. De nio contextkällor Roblox saknar är inte
+	     gratis, och att bara namnge dem säger inte hur mycket de betyder.
+	     Samma ritt kördes på webben med webbens egen context, och
+	     skillnaden mot facit ovan mäts här. Den ska vara SKILD FRÅN NOLL —
+	     annars vore luckorna inget att deklarera — och samtidigt liten nog
+	     att den inte förklarar bort en verklig avvikelse. ]]
+	for _, h in SC.HASTAR do
+		local varst, namn = 0, ""
+		for k = 1, #h.MATT do
+			for _, storhet in { "svarstid", "balans", "fokus", "spanning", "energi" } do
+				local d = math.abs(h.MATT[k][storhet] - h.WEBB[k][storhet])
+				if d > varst then varst, namn = d, storhet end
+			end
+		end
+		check(string.format("%s: de deklarerade contextluckorna är MÄTTA, inte gissade",
+			h.id), varst > 0.0005 and varst < 0.10,
+			string.format("(största skillnad mot webbens egen context: %.4f i %s)",
+				varst, namn))
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("forberedelse.spec: " .. fails .. " fel")

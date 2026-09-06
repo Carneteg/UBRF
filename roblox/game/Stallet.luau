@@ -117,6 +117,47 @@ function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: boolean }?)
 end
 
 --[[ Allt en spelare behöver veta vid ankomsten, i ett svar. ]]
+--[[ Hästens kanoniska spelvärden, översatta till Config.STATS namn.
+
+     ETT ÖVERSÄTTNINGSLAGER OCH INGET ANNAT. Talen kommer ur
+     UBRFSpelData, som genereras ur src/spel/hastar.js; det enda som
+     händer här är att `kanslighet` blir `Kanslighet` och så vidare, så
+     att `Config.resolveStats` kan läsa dem som vilka attribut som helst.
+
+     Att det behövs alls är blocker 1 i re-reviewen: profilerna fanns i
+     datat och provades syntetiskt, men den verkliga vägen
+     tilldelning → bindning → uppsittning → MovementController tappade
+     dem, och varje häst red som `skolhast`. ]]
+function Stallet.statsFor(id: string): { [string]: any }?
+	local h = Spel.hastar[id]
+	if not h then return nil end
+	return {
+		Profil = h.profil,
+		Forlatande = h.forlatande,
+		Skygghet = h.skygghet,
+		--[[ KÄNSLIGHETEN GÅR MED SOM TAL sedan blocker 2 i senior
+		     re-review av #87. Den räknades förut bara ur temperamentet,
+		     och trösklarna nedan kvantiserade bort hästen: 0,78 och 0,71
+		     blev båda "Sensitive" och därmed samma 1,00 i modellen.
+		     Cross-platform-scenariot mätte upp priset.
+
+		     Temperamentet sätts fortfarande, för det styr mer än
+		     känsligheten (accelBias, animation, ridkänsla), och trösklarna
+		     följer Config.TEMPERAMENTS egna reactGain-nivåer. ]]
+		Kanslighet = h.kanslighet,
+		Temperament = if (h.kanslighet or 0.5) >= 0.70 then "Sensitive"
+			elseif (h.kanslighet or 0.5) >= 0.55 then "Energetic"
+			elseif (h.kanslighet or 0.5) <= 0.35 then "Brave"
+			else "Calm",
+		--[[ Tyngd och framåtbjudning är webbens namn på det Roblox kallar
+		     Acceleration och Speed. Samma roll, andra ord. ]]
+		Acceleration = 1 - (h.tyngd or 0.4),
+		Speed = h.framatbjudning,
+		Agility = h.utbildning,
+		Endurance = h.forlatande,
+	}
+end
+
 function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?)
 	local id = Stallet.tilldelaLedig(userId, upptagna)
 	if not id then return nil end
@@ -130,6 +171,12 @@ function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?)
 		besk = hast.besk,
 		foder = Spel.foder[id],
 		box = Stallet.boxFor(id),
+		--[[ Hästens SPELVÄRDEN följer med tilldelningen (senior re-review
+		     #87, blocker 1). De låg i UBRFSpelData men nådde aldrig den
+		     häst spelaren faktiskt red: `resolveStats` läste bara Studio-
+		     attribut, så varje individ blev `skolhast` med standardvärden
+		     hur noga profilerna än var tilldelade. ]]
+		stats = Stallet.statsFor(id),
 	}
 end
 

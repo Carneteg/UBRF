@@ -886,8 +886,8 @@ return {
 			text = "Gå in i stallet (Entré, under verandan)",
 			mot = "stallinne",
 			spawn = {
-				x = 10.5,
-				y = 68.95,
+				x = 9.6,
+				y = 68.4,
 				rikt = -1.570796,
 			},
 		},
@@ -1768,6 +1768,10 @@ return {
 					10.5,
 					68.95,
 				},
+				ankomst = {
+					9.6,
+					68.4,
+				},
 				text = "Ut genom entrén — mot grusplanen",
 				mot = "gard",
 				inrikt = -1.570796,
@@ -2099,6 +2103,15 @@ return {
 					65,
 				},
 			},
+			grindar = {
+				{
+					p = {
+						178,
+						79,
+					},
+					bredd = 2.4,
+				},
+			},
 		},
 		{
 			typ = "tra",
@@ -2122,6 +2135,15 @@ return {
 				{
 					178,
 					97,
+				},
+			},
+			grindar = {
+				{
+					p = {
+						178,
+						107,
+					},
+					bredd = 2.4,
 				},
 			},
 		},

@@ -391,6 +391,55 @@ local STAKETFARG: { [string]: { regel: Color3, stolpe: Color3 } } = {
 	el   = { regel = Color3.fromRGB(140, 133, 120), stolpe = Color3.fromRGB(110, 106, 94) },
 }
 
+--[[ STAKETENS SOLIDA BITAR — grindöppningarna bortsubtraherade.
+
+     Motsvarigheten till `staketSegment()` i src/site.js, och den finns
+     av samma skäl: en grind som bara är en markör är ingen grind.
+     Tobias produkttest 2026-09-06 fällde webben på precis det, och en
+     rättelse som bara gällde webben hade lämnat Roblox med slutna
+     hagar — paritetsregeln säger att spelvärlden ska motsvara sig
+     själv på båda ytorna.
+
+     Grinden anges som en punkt på staketlinjen plus en bredd; punkten
+     projiceras på det segment den ligger på och segmentet delas. ]]
+local function staketSegment(st): { { number } }
+	local ut = {}
+	for i = 1, #st.p - 1 do
+		local x0, y0 = st.p[i][1], st.p[i][2]
+		local x1, y1 = st.p[i + 1][1], st.p[i + 1][2]
+		local dx, dy = x1 - x0, y1 - y0
+		local L = math.sqrt(dx * dx + dy * dy)
+		if L >= 1e-9 then
+			local hal = {}
+			for _, g in ipairs((st :: any).grindar or {}) do
+				local t = ((g.p[1] - x0) * dx + (g.p[2] - y0) * dy) / (L * L)
+				if t >= 0 and t <= 1 then
+					local px, py = x0 + dx * t, y0 + dy * t
+					--[[ Punkten måste ligga PÅ linjen, inte bara projiceras
+					     på den — annars öppnar en grind på en annan sida
+					     fel sträcka. ]]
+					if math.sqrt((px - g.p[1]) ^ 2 + (py - g.p[2]) ^ 2) <= 0.35 then
+						local halv = (g.bredd or 2.0) / 2 / L
+						table.insert(hal, { math.max(0, t - halv), math.min(1, t + halv) })
+					end
+				end
+			end
+			table.sort(hal, function(a, b) return a[1] < b[1] end)
+			local t0 = 0
+			for _, h in ipairs(hal) do
+				if h[1] > t0 then
+					table.insert(ut, { x0 + dx * t0, y0 + dy * t0, x0 + dx * h[1], y0 + dy * h[1] })
+				end
+				t0 = math.max(t0, h[2])
+			end
+			if t0 < 1 then
+				table.insert(ut, { x0 + dx * t0, y0 + dy * t0, x1, y1 })
+			end
+		end
+	end
+	return ut
+end
+
 local function byggStaket(model: Model, base: CFrame)
 	local S = G.banomrade.staket
 	for _, st in ipairs(G.staket) do
@@ -408,8 +457,8 @@ local function byggStaket(model: Model, base: CFrame)
 			reglar, stolpH, delning, tj = { 0.70, 1.05 }, 1.0, 6.0, 0.07
 		end
 
-		for i = 1, #st.p - 1 do
-			local a, b = st.p[i], st.p[i + 1]
+		for _, bit in ipairs(staketSegment(st)) do
+			local a, b = { bit[1], bit[2] }, { bit[3], bit[4] }
 			local dx, dz = b[1] - a[1], b[2] - a[2]
 			local len = math.sqrt(dx * dx + dz * dz)
 			if len >= 0.01 then

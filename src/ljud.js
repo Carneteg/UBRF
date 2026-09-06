@@ -1,9 +1,13 @@
 /* ══════════════════════════════════════════════════════════════════
    LJUDET — steg 8: anläggningen låter. Allt syntetiseras med Web
    Audio (inga filer, ingen CDN): hovslag med olika klang per
-   underlag, fotsteg till fots, gnägg och fnysningar, stallets
-   ambiens, vind och fåglar på gården, regn på plåttaken och
-   domarklockan på tävlingsdagen. Ridlärarens röst talar genom
+   underlag, fotsteg till fots, gnägg och fnysningar, fåglar på
+   gården och domarklockan på tävlingsdagen.
+
+   DEN LOOPADE BRUSAMBIENSEN ÄR AV sedan Tobias produkttest
+   2026-09-06: ett filtrerat brusloop hördes som ett konstant hum, inte
+   som ett stall. Maskineriet ligger kvar bakom `LJUD.ambiens` för den
+   dag en riktig inspelning finns. Se flaggan nedan. Ridlärarens röst talar genom
    webbläsarens svenska talsyntes under lektionen.
    M stänger av och på allt. Inget ljud är ett krav: spelet är
    detsamma med ljudet av.
@@ -12,6 +16,19 @@
 
 const LJUD={
   ctx:null, pa:true, rost:true,
+  /* ── AMBIENSEN ÄR AV SOM DEFAULT ────────────────────────────────
+     Tobias produkttest 2026-09-06, blocker 4: den loopade syntetiska
+     brusbädden hördes som ett konstant brus/hum så fort man rört
+     tangentbordet. Ett filtrerat brusloop ÄR ett hum — den efterliknar
+     inte stallets ljud, den lägger på en ton.
+
+     Maskineriet står kvar orört bakom flaggan, så en riktig
+     ambiensinspelning kan tändas här den dag det finns en. Att riva
+     koden hade betytt att nästa försök börjar om från noll; att låta
+     den ligga på hade betytt att previewn brummar. Diskreta ljud —
+     hovslag, fotsteg, gnägg, fnys — är kvar, och M styr fortfarande
+     allt ljud. */
+  ambiens:false,
   master:null, ambGain:null, ambKalla:null, ambFilter:null, ambTyp:null,
   brus:null,
   hovBeat:-1, gangAvstand:0,
@@ -204,7 +221,10 @@ function ljudPuls(dt){
   const regn=G.vader&&G.vader.typ==="regn";
   const ute=(G.scen==="lektion"||G.scen==="bana")&&G.plats!=="ridhus";
   let typ=null;
-  if(!LJUD.pa)typ=null;
+  /* Brusbädden begärs bara om den uttryckligen är påslagen. Beräkningen
+     nedan står kvar så att platsvalet inte hinner ruttna medan flaggan
+     är av — den är en rad att tända igen, inte en funktion att skriva om. */
+  if(!LJUD.pa||!LJUD.ambiens)typ=null;
   else if(G.scen==="stallinne")typ="stall";
   else if(G.scen==="gard"||ute)typ=regn?"regn":"gard";
   else if(G.scen==="ridhusinne")typ="stall";

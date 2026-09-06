@@ -72,6 +72,74 @@ const SOURCE_GAMEPLAY={
   bing:{hoppkapacitet:0,flaggor:{hoppar_inte:true}},
 };
 
+/* ══════════════════════════════════════════════════════════════════
+   SKOLHÄSTPROFILER (G02-B punkt 3, issue #83)
+
+   Profilen säger HUR hästen svarar — fördröjning, hur mycket hon bryr
+   sig om att hjälpen är tydlig, hur lätt hon tappar balansen, hur
+   mycket hon orkar. Talen ligger i SKOLHAST_PROFILER i
+   src/riding/svar.js; här står bara vem som är vad, och VARFÖR.
+
+   KÄLLAN ÄR RIDSKOLANS EGNA BESKRIVNINGAR, ordagrant i `besk` ovan och
+   i snapshoten references/data/ubrf-hastar-2026-09-01.json. Citatet
+   står i kommentaren på varje rad. En häst vars beskrivning inte säger
+   något om ridkänsla står INTE här: hon får `skolhast`, som är
+   modellens utgångsläge, och det är en deklarerad frånvaro av evidens
+   och inte en gissning.
+
+   Att lägga till en rad här kräver alltså en mening ur källan. Att
+   flytta en häst mellan profiler för att en mätning ser bättre ut vore
+   att låta koden bli facit åt verkligheten. ── */
+const PROFIL={
+  /* KÄNSLIG — källan säger uttryckligen känslig eller kräsen. */
+  crokino:"kanslig",        // "en större, lite känsligare häst men som är lättriden"
+  hamilton:"kanslig",       // "Han är en känsligare individ."
+  conor:"kanslig",          // "En trevlig häst som kräver en mjuk balanserad ryttare."
+  trixie:"kanslig",         // "väldigt snäll men lite känslig"
+  blackrock_jack:"kanslig", // "en lite känsligare ponny"
+  dante:"kanslig",          // "Snäll men lite försiktig i all hantering."
+
+  /* TYNGRE MODELL — källan säger tyngre, äldre eller "kräver sin
+     ryttare" i betydelsen att hon måste ridas fram. */
+  curiretto:"tung",         // "En äldre gentleman ... Lite åt det tyngre hållet."
+  westside:"tung",          // "Han kräver sin ryttare."
+  replay:"tung",            // "Kräver sin ryttare för att jobba bra."
+  toblerone:"tung",         // fjordvalack, "snäll, välutbildad och populär"
+  kay_z:"tung",             // "En allroundhäst av den större modellen."
+  mac_kenzie:"tung",        // född 2002 — "en fin, snäll gentleman"
+
+  /* ARBETSVILLIG — källan säger arbetsvillig, ambitiös eller framåt. */
+  hjartat:"arbetsvillig",   // "positiv inställning till arbetet. Alltid ambitiös."
+  marabou:"arbetsvillig",   // "en arbetsvillig liten valack"
+  dexter:"arbetsvillig",    // "En ponny med lite mer fart."
+  allan:"arbetsvillig",     // "en trevlig valack som går bra i både hoppning och dressyr"
+};
+
+/* PRONOMEN — härlett ur källtexten, aldrig påhittat.
+
+   PO-order 2026-09-06: "Pronomen/namn/plats ska komma från canonical
+   horse data/runtime, inte separata strängar. Ingen hårdkodad
+   honom/henne som kan bli fel." Underlaget är samma `besk` som allt
+   annat verklighetsfaktum: står det valack eller han i beskrivningen är
+   hästen en han, står det sto eller hon är hon ett sto. Står det ingetdera
+   VET vi inte — och då används namnet i stället för ett gissat pronomen.
+   Bränntomts Lydia är just ett sådant fall: källtexten säger varken
+   valack eller sto. [REFERENCE GAP] tills UBRF kan bekräfta könet.
+
+   Hon/han-formerna nedan är svenska pronomen för hästen som individ. */
+const PRONOMEN_HAN={subj:"han", obj:"honom", poss:"hans"};
+const PRONOMEN_HON={subj:"hon", obj:"henne", poss:"hennes"};
+function harledPronomen(besk){
+  const t=" "+String(besk||"").toLowerCase()+" ";
+  const ord=r=>r.test(t);
+  const han=ord(/[^a-zåäö]valack[a-zåäö]*[^a-zåäö]/)||ord(/[^a-zåäö](han|honom|hans)[^a-zåäö]/);
+  const hon=ord(/[^a-zåäö]sto[^a-zåäö]/)||ord(/[^a-zåäö](hon|henne|hennes)[^a-zåäö]/);
+  if(han&&!hon)return {...PRONOMEN_HAN, kalla:"besk"};
+  if(hon&&!han)return {...PRONOMEN_HON, kalla:"besk"};
+  /* Både och, eller ingetdera: vi vet inte. Namnet får bära meningen. */
+  return {subj:null, obj:null, poss:null, kalla:han&&hon?"besk_motsagelse":"REFERENCE_GAP"};
+}
+
 const HORSES={};
 for(const fakta of HASTFAKTA){
   const legacy=LEGACY_GAMEPLAY[fakta.id];
@@ -85,7 +153,12 @@ for(const fakta of HASTFAKTA){
     ...(source||{}),
     flaggor:{...((legacy&&legacy.flaggor)||{}),...((source&&source.flaggor)||{})},
     gameplayStatus:source?"SOURCE_RULE":legacy?"LEGACY_TUNED":"UNTUNED",
+    /* Profilen och varifrån den kommer. `skolhast` utan källa är en
+       DEKLARERAD frånvaro av evidens, inte en tilldelning. */
+    profil:PROFIL[fakta.id]||"skolhast",
+    profilStatus:PROFIL[fakta.id]?"KALLTEXT":"SAKNAR_KALLA",
     visuellStatus:"ASSUMPTION",
+    pronomen:harledPronomen(fakta.besk),
   };
 }
 

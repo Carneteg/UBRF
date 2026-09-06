@@ -36,6 +36,11 @@ BYGGE = GEOMETRI + [
 # Speldatan: hästdata och skötseldata genereras var för sig. UBRFSpel är den
 # tunna runtime-fasaden som fogar ihop dem innan Stallet läser kontraktet.
 SPEL = GEOMETRI + [
+    # RidKanon ar ren data utan beroenden och ligger med sa att
+    # spelkanon.spec kan korsprova hastarnas `profil` mot de profiler som
+    # faktiskt finns (G02-B punkt 3). Ett profilnamn i hastdatan som inte
+    # finns i kanonen ar en tyst degradering till utgangslaget.
+    ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
     ("UBRFSpelData", "game/UBRFSpelData.luau"),
     ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
     ("UBRFSpel",     "game/UBRFSpel.luau"),
@@ -66,6 +71,10 @@ FORBEREDELSE = SPEL + [
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
+    # och laser den tilldelade hastens profil (blocker 1).
+    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("HorseService", "src/server/HorseService.luau"),
@@ -73,6 +82,13 @@ FORBEREDELSE = SPEL + [
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
+    # StateMachine + MovementController ligger med sedan blocker 2 i senior
+    # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
+    # controller med den hast Stallet faktiskt delar ut, inte genom
+    # direktanrop av svarsmodellen.
+    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
+    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    ("MovementController", "src/client/MovementController.luau"),
     # GameplayService laddas SIST och ar poangen med hela listan: utan den
     # bevisade specen bara att HorseService-kroken fungerar, inte att
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
@@ -87,6 +103,8 @@ PARITET = [
     ("Config",     "src/shared/HorseCore/Config.luau"),
     ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
     ("RidKanon",   "src/shared/HorseCore/RidKanon.luau"),
+    ("Hjalper",    "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",       "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
 ]
 
@@ -99,6 +117,8 @@ MODULER = [
     # provar att en RIKTIG controller-frame producerar underlaget till
     # telemetrin (G02-A, senior review blocker B).
     ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
+    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
     ("MovementController", "src/client/MovementController.luau"),
@@ -174,7 +194,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
-        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter", "Networking"):
+        # Hjalper/Svar/RidKanon ligger med sedan G02-B: MovementController
+        # laser dem ur Core, precis som produktionen gor.
+        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter", "Networking",
+                    "RidKanon", "Hjalper", "Svar", "Telemetri"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)

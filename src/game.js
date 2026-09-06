@@ -22,6 +22,11 @@ const RIDIN={
   styr:0,         // −1 vänster … 0 rakt … 1 höger   (styraxeln)
   tygel:0,        // 0 lös … 1 tagen
   sits:0,         // −1 lätt (avlastad) … 0 normal … 1 djup
+  /* G02-B: PARADEN ÄR EN EGEN AVSIKT, inte tre hjälper som råkar röra
+     sig ihop. 0 = ingen begäran, 1 = ge en halvhalt/parad nu. Kanalen
+     är en IMPULS: flanken uppåt startar förloppet i stegaInput, och att
+     hålla tangenten ger inte en oändlig parad. */
+  parad:0,
   pek:false,      // sant när spaken senast rörde värdena
 };
 
@@ -41,7 +46,7 @@ const RIDIN={
    de är lika vore att bevaka en dubblett som inte behöver finnas. */
 const IN={
   kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
-  latt:true,diagonal:1,spo:false,hh:-1,ned:{},
+  latt:true,diagonal:1,spo:false,hh:-1,paradFore:0,ned:{},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
 
@@ -53,10 +58,10 @@ const IN={
    följer förra passets utslag med in i det nya, och en kvarliggande
    skänkel läses som en impuls av en häst som just satt sig i sadeln. */
 function ridNollstallHjalp(){
-  RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.pek=false;
+  RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.parad=0; RIDIN.pek=false;
   ridAvsiktTillHjalp();
   for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
-  IN.hh=-1;
+  IN.hh=-1; IN.paradFore=0;
 }
 
 function ridAvsiktTillHjalp(){
@@ -66,7 +71,10 @@ function ridAvsiktTillHjalp(){
     : 0.42+r.skankel*(0.42-0.05);
   k.tygel.mal   = 0.34+clamp(r.tygel,0,1)*(0.80-0.34);
   k.sits.mal    = r.sits>=0 ? 0.2+r.sits*(0.85-0.2) : 0.2+r.sits*(0.2-(-0.6));
-  k.styrning.mal= clamp(r.styr,-1,1)*0.72;
+  /* Fullt styrutslag ligger i HJALP_KANON.STYR_FULLT — samma tal som
+     hjälpsemantiken normaliserar böjkravet mot. Låg förut som en
+     literal på båda ställena. */
+  k.styrning.mal= clamp(r.styr,-1,1)*((typeof HJALP_KANON!=="undefined")?HJALP_KANON.STYR_FULLT:0.72);
 }
 /* Och sätt filtret i neutralläge NU, vid inläsningen. Utan den här raden
    startar hjälpen på noll och rampar upp till sitt mittvärde av sig
@@ -86,7 +94,7 @@ addEventListener("keydown",e=>{
     case"KeyR":IN.latt=!IN.latt;break;
     case"KeyQ":IN.diagonal=1-IN.diagonal;break;
     case"KeyF":IN.spo=true;break;
-    case"KeyE":if(IN.hh<0)IN.hh=0;break;
+    case"KeyE":RIDIN.parad=1;break;
     case"KeyN":G.hoppaMoment=true;break;
     case"KeyP":G.auto=!G.auto;saga(G.auto?"Jag visar. Titta på vägen jag väljer.":"Din tur.",2.5);break;
     case"KeyV":vaxlaVy();break;
@@ -111,6 +119,7 @@ addEventListener("keyup",e=>{
     case"KeyA":RIDIN.styr=IN.ned.KeyD?1:0;break;
     case"KeyD":RIDIN.styr=IN.ned.KeyA?-1:0;break;
     case"KeyF":IN.spo=false;break;
+    case"KeyE":RIDIN.parad=0;break;
   }
 });
 function stegaInput(dt){
@@ -118,20 +127,36 @@ function stegaInput(dt){
   for(const n in IN.kan){const k=IN.kan[n];
     const fart=(k.mal>k.v?1/STIG:1/FALL)*dt;
     if(Math.abs(k.mal-k.v)<=fart)k.v=k.mal;else k.v+=k.mal>k.v?fart:-fart;}
-  let hS=0,hK=0,hT=0;
-  if(IN.hh>=0){IN.hh+=dt;const t=IN.hh;let st=0;
-    if(t<0.14)st=t/0.14;else if(t<0.24)st=1;else if(t<0.42)st=1-(t-0.24)/0.18;else IN.hh=-1;
-    hS=st*0.28;hK=st*0.26;hT=st*0.27;}
-  return{skankel:clamp(IN.kan.skankel.v+hK,0,1),tygel:clamp(IN.kan.tygel.v+hT,0,1),
-    sits:clamp(IN.kan.sits.v+hS,-1,1),styrning:clamp(IN.kan.styrning.v,-1,1),
+  /* ── PARADEN: EN KANAL, INTE TRE KNUFFAR (G02-B punkt 1) ─────────
+     Förut lade den här envelopen 0,26–0,28 ovanpå skänkel, tygel OCH
+     sits samtidigt. Modellen kände då igen halvhalten på att de tre
+     steg ihop — tangenten spelade ryttare. Det fungerade, men i
+     telemetrin syntes tre hjälper röra sig och ingen parad, och det
+     gick därför varken att mäta eller lära ut.
+
+     Nu bär `parad` sin egen kanal hela vägen. Formen är exakt densamma
+     — 0,14 s an, 0,10 s kvar, 0,18 s efterge — för det är formen som
+     gör den till en halvhalt och inte ett drag. Vad som ändrats är att
+     signalen har ett namn. Mönsterläsningen i modellen finns kvar för
+     den som rider paraden med riktiga hjälper; båda vägarna mynnar i
+     samma signal. */
+  const paradNu=clamp(RIDIN.parad||0,0,1);
+  if(paradNu>0.05&&IN.paradFore<=0.05&&IN.hh<0)IN.hh=0;
+  IN.paradFore=paradNu;
+  let par=0;
+  if(IN.hh>=0){IN.hh+=dt;const t=IN.hh;
+    if(t<0.14)par=t/0.14;else if(t<0.24)par=1;else if(t<0.42)par=1-(t-0.24)/0.18;else IN.hh=-1;}
+  return{skankel:clamp(IN.kan.skankel.v,0,1),tygel:clamp(IN.kan.tygel.v,0,1),
+    sits:clamp(IN.kan.sits.v,-1,1),styrning:clamp(IN.kan.styrning.v,-1,1),
+    parad:clamp(par,0,1),
     lattridning:IN.latt,diagonal:IN.diagonal,spo:IN.spo};
 }
 
 /* ── Speltillstånd ── */
 const G={
   scen:"meny",vy:"3d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
-  hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
-  utrustning:false,lerig:false,spolad:0,felUtrustning:0,
+  hastId:null,ride:null,aids:null,skotselRes:null,
+  utrustning:false,lerig:false,spolad:0,felUtrustning:0,hastMott:false,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
   moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,
@@ -147,7 +172,77 @@ const G={
   ryttarPitch:0,     // ryttarens tröghet framåt/bakåt, radianer
   ryttarRoll:0,      // ryttarens balans i svängen, radianer
   gaitSpar:0,        // tillryggalagd sträcka i m, driver gångartsfasen
+  /* ── VAR HÄSTEN ÄR — EN ENDA SANNING ────────────────────────────
+     Tobias produkttest 2026-09-06, blocker 2. Läget bars förut av TVÅ
+     booleaner, `leder` och `hamtad`, som kunde motsäga varandra:
+     `leder && hamtad` betyder ingenting, och ingen rad hindrade det.
+
+     Nu finns ETT fält med tre lägen, och de gamla namnen är HÄRLEDDA
+     (se defineProperty nedan) så att alla befintliga läsningar lever
+     kvar utan att kunna hålla en egen kopia:
+
+       "hage"  hästen står i hagen och ska hämtas
+       "leds"  ryttaren leder henne
+       "box"   hon står i sin box — förberedelse och uppsittning härifrån
+
+     PRODUKTBESLUT (Tobias, samma test): dagen börjar i "box". Vägen
+     ut till hagen var för lång för att komma åt ridningen, och hagen
+     är kvar att utforska men inte obligatorisk. */
+  hastPlats:"box",
 };
+/* De gamla namnen är LÄSVYER av `hastPlats` — och bara det.
+
+   Första försöket lät dem också SKRIVAS, med översättning tillbaka in i
+   fältet. Det räckte inte, och Tobias produkttest 2026-09-06 visade
+   exakt varför: `G.hamtad=false` i scenes.js (när ridläraren delar ut
+   hästen) översattes till `hastPlats="hage"`, så dagen startade i boxen
+   och hoppade ut i hagen så fort man fick sin häst. "Hämta Lydia i
+   hagen" stod kvar i uppgiftstexten.
+
+   Ett gammalt booleskt derivat kunde alltså fortfarande välja
+   hageflödet. Nu KASTAR skrivningen: varje ställe som flyttar hästen
+   måste säga vilket av de tre lägena som gäller. Det är hela poängen
+   med en enda platssanning — den som skriver ska behöva mena det. */
+function hastPlatsVy(namn, lage){
+  Object.defineProperty(G, namn, {
+    get(){ return G.hastPlats === lage; },
+    set(){ throw new Error(
+      `G.${namn} är en läsvy av G.hastPlats — sätt G.hastPlats till `
+      + `"hage", "leds" eller "box" i stället.`); },
+  });
+}
+hastPlatsVy("leder", "leds");
+hastPlatsVy("hamtad", "box");
+
+/* ── VAR SPELAREN SKA GÅ HÄRNÄST, I ORD ─────────────────────────────
+   PO-regel 2026-09-06: nästa handling ska vara självklar utan att
+   spelaren behöver gissa, och TEXTEN SKA ALLTID SPEGLA FAKTISK
+   RUNTIME-STATE.
+
+   Funktionen finns för att texterna annars driver isär. Tobias fick
+   "Hämta Lydia i hagen" ur ridlärarens dialogruta långt efter att
+   uppgiftspanelen sagt rätt — de var två strängar med var sin
+   uppfattning om var hästen stod. Nu är det EN funktion, och den läser
+   `G.hastPlats`.
+
+   Returnerar {vart, hur, kort} — rubrikens riktning, en mening som
+   säger vägen, och en knapptext. */
+function hastAnvisning(namn){
+  const n = namn || (G.hastId && typeof HORSES!=="undefined" && HORSES[G.hastId]
+    ? HORSES[G.hastId].namn : "hästen");
+  if(G.hastPlats==="box") return {
+    vart:`Gå till ${n} i boxen`,
+    hur:"Följ namnskylten på boxdörren.",
+    kort:`Gå till ${n} i stallet`};
+  if(G.hastPlats==="leds") return {
+    vart:`Led ${n} till boxen`,
+    hur:"In genom stalldörren och fram till boxen.",
+    kort:`Led ${n}`};
+  return {
+    vart:`Hämta ${n} i hagen`,
+    hur:"Grinden sitter på hagens västra sida, öster om stallet.",
+    kort:`Hämta ${n} i hagen`};
+}
 /* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
    spelas, och kartan är ett uppslag man tar när man vill orientera
    sig. Med kartan som förval landade en ny spelare i en ovanifrånvy
@@ -259,7 +354,27 @@ function stegaRitt(dt){
   /* Smidigheten sitter i hästen och i ryttarens hand: en vig häst böjer
      sig snävare, och den som rider mjukt får mer båge för samma utslag. */
   const kappaTak=KAPPA_MAX*gv*(0.78+0.44*clamp(h.kanslighet,0,1));
-  const kappaBegard=clamp(G.aids.styrning,-1,1)*kappaTak;
+  let kappaBegard=clamp(G.aids.styrning,-1,1)*kappaTak;
+  /* ── HÄSTEN FALLER IN (G02-B punkt 2) ────────────────────────────
+     Den enda plats i hela G02-B där hästens tillstånd ändrar VAR hon
+     hamnar och inte bara vad hon får för betyg. En häst som tappat
+     balansen i en sväng faller in på inre skuldran: bågen blir snävare
+     än ryttaren bad om.
+
+     Talet kommer ur SVAR_KANON.INFALL_MAX och är noll i två fall som
+     båda är avsiktliga: på rakt spår (böjkravet är noll) och när hästen
+     är i balans. Boten är alltså inte att sluta svänga utan att rida
+     svängen med yttertygel — precis den hjälp punkt 1 gav ryttaren.
+
+     Taket ligger på begäran och inte på den integrerade kurvaturen, så
+     kurvaturens egen tröghet och P4:s ändringstak gäller oförändrat.
+     Infallet kan därför inte göra styrningen ryckig; det flyttar var
+     bågen hamnar, inte hur snabbt den ändras. */
+  if(typeof svarInfall==="function"&&G.ride){
+    const bojkrav=Math.min(1,Math.abs(G.aids.styrning)/
+      ((typeof HJALP_KANON!=="undefined")?HJALP_KANON.STYR_FULLT:0.72));
+    kappaBegard*=1+svarInfall(G.ride.balans===undefined?1:G.ride.balans,bojkrav);
+  }
   /* Kurvaturen tar tag och släpper mjukt, dt-baserat. Utan den snäpper
      bågen till sin nya radie i samma bildruta som fingret rör sig.
      Att lägga sig i en båge går fortare än att räta upp sig ur den —
@@ -335,10 +450,16 @@ function stegaRitt(dt){
   let ny=G.py+Math.sin(G.rikt)*G.ride.tempo*dt;
   const VAGG_TAU=0.55;                      // sekunder att lägga sig längs sargen
   const vaggT=1-Math.exp(-dt/VAGG_TAU);
-  if(nx<0.8){nx=0.8;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(nx>19.2){nx=19.2;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
-  if(ny<0.8){ny=0.8;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
-  if(ny>59.2){ny=59.2;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  /* Sargen ligger på banans mått; hästens MITT kommer som närmast sin
+     egen halvbredd. Talen står i RID_KANON — se HAST_HALVBREDD för
+     varför den var 0,8 och vad det kostade. */
+  const KB=(typeof ridKanon==="function")?ridKanon():null;
+  const HB=KB?KB.HAST_HALVBREDD:0.35;
+  const BB=KB?KB.BANA_BREDD:20, BL=KB?KB.BANA_LANGD:60;
+  if(nx<HB){nx=HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
+  if(nx>BB-HB){nx=BB-HB;G.rikt=lerpAngle(G.rikt,ny>G.py?Math.PI/2:-Math.PI/2,vaggT);}
+  if(ny<HB){ny=HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
+  if(ny>BL-HB){ny=BL-HB;G.rikt=lerpAngle(G.rikt,nx>G.px?0:Math.PI,vaggT);}
   /* Ekipagen framför är också väggar. Man kan inte rida genom en häst,
      och kommer man för nära blir hon spänd — avståndsregeln i ridhuset
      är till för hästarnas skull, inte för ordningens. */
