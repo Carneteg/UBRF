@@ -1,1 +1,0 @@
-Phase: Ugneta UX foundation implemented. Attempt comparison and explicit quality dimensions pending.
