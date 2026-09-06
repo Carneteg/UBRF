@@ -124,7 +124,7 @@ function uppdragMal(){
   if(!G.skotselRes){
     if(!G.hastMott)
       return {id:"hitta_hast", rubrik:`Hitta ${n}`,
-        punkter:["Boxen i stallet — namnskylten på dörren","Följ pilen"],
+        punkter:["Boxen i stallet — namnskylten på dörren","Följ den gula vägvisaren"],
         mal:hast, hastId:G.hastId};
     if(!G.utrustning)
       return {id:"utrustning", rubrik:"Hämta sadel + träns",
@@ -135,9 +135,9 @@ function uppdragMal(){
       punkter:["Tillbaka till boxen","Mocka, fodra, visitera, sadla (E)"],
       mal:hast, hastId:G.hastId};
   }
-  return {id:"sitt_upp", rubrik:"Sitt upp",
-    punkter:[G.tavling?"Tävlingen rids i ridhuset":"Ridhuset — sargporten vid A",
-      "Tryck E vid porten"],
+  return {id:"sitt_upp", rubrik:`Sitt upp på ${n}`,
+    punkter:["Led hästen till sargporten i ridhuset",
+      "När “Sitt upp” visas: tryck E / Interagera"],
     mal:uppdragUppsittning()};
 }
 
@@ -192,4 +192,91 @@ function uppdragText(){
      svaret på "hur tar jag mig dit", och det ska stå först. */
   if(v&&!v.iScen&&v.viaDorr)punkter.unshift(v.viaDorr);
   return {rubrik:u.rubrik, punkter:punkter.slice(0,3), id:u.id};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SENIOR UX HOTFIX — alltid synlig vägvisare ovanpå canvasen.
+
+   Canvas-pilen visade sig vara för subtil i faktisk gameplay. Den här
+   HUD-markören läser exakt samma `uppdragVagvisare()` och lägger inget
+   nytt state ovanpå spelet. Skillnaden är presentationen: spelaren ska
+   inte behöva leta efter själva hjälpsystemet.
+   ══════════════════════════════════════════════════════════════════ */
+function installeraTydligVagvisare(){
+  if(typeof document==="undefined"||document.getElementById("ubrfVagvisare"))return;
+
+  const stil=document.createElement("style");
+  stil.id="ubrfVagvisareStil";
+  stil.textContent=`
+    #ubrfVagvisare{position:fixed;left:0;top:0;width:0;height:0;z-index:70;pointer-events:none;
+      font-family:'IBM Plex Sans',system-ui,sans-serif;display:none}
+    #ubrfVagvisare .pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;
+      align-items:center;gap:4px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.65))}
+    #ubrfVagvisare .pil{width:28px;height:28px;border-radius:50%;background:#E8B54A;color:#17140A;
+      display:grid;place-items:center;font-size:20px;font-weight:900;border:3px solid rgba(255,255,255,.9);
+      animation:ubrfPuls 1.1s ease-in-out infinite}
+    #ubrfVagvisare .etikett{white-space:nowrap;background:rgba(20,20,18,.94);color:#fff;border:2px solid #E8B54A;
+      border-radius:999px;padding:6px 10px;font-size:13px;font-weight:800;letter-spacing:.01em}
+    #ubrfVagvisare.nara .pil{width:34px;height:34px;font-size:22px}
+    #ubrfVagvisare.nara .etikett{background:#E8B54A;color:#17140A;font-size:14px}
+    @keyframes ubrfPuls{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.08)}}
+  `;
+  document.head.appendChild(stil);
+
+  const rot=document.createElement("div");
+  rot.id="ubrfVagvisare";
+  rot.innerHTML='<div class="pin"><div class="pil">▼</div><div class="etikett"></div></div>';
+  document.body.appendChild(rot);
+  const pin=rot.querySelector(".pin"), etikett=rot.querySelector(".etikett"), pil=rot.querySelector(".pil");
+
+  function skarmPos(v){
+    if(typeof cx==="undefined"||!cx||!cx.canvas)return null;
+    const canvas=cx.canvas, rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return null;
+    let sx=null,sy=null,bakom=false;
+    try{
+      if(G.vy==="2d"&&typeof V2T!=="undefined"&&V2T&&V2T.scen===G.scen){
+        sx=V2T.ox+v.pos[0]*V2T.s;
+        sy=V2T.oy+(V2T.hojd-v.pos[1])*V2T.s;
+      }else if(typeof kamera==="function"&&typeof tillKam==="function"&&typeof projK==="function"){
+        const k=kamera(), pk=tillKam(k,v.pos[0],v.pos[1],1.7);
+        if(typeof K3!=="undefined"&&pk.d<K3.nara){sx=CW/2;sy=CH*0.35;bakom=true;}
+        else {const p=projK(k,pk);sx=p[0];sy=p[1];}
+      }
+    }catch(_){return null;}
+    if(!Number.isFinite(sx)||!Number.isFinite(sy))return null;
+    const px=rect.left+(sx/CW)*rect.width, py=rect.top+(sy/CH)*rect.height;
+    const m=44;
+    return {x:clamp(px,rect.left+m,rect.right-m),y:clamp(py,rect.top+m,rect.bottom-m),
+      utanför:bakom||px<rect.left+m||px>rect.right-m||py<rect.top+m||py>rect.bottom-m};
+  }
+
+  function tick(){
+    let v=null,u=null;
+    try{
+      u=(typeof uppdragMal==="function")?uppdragMal():null;
+      v=(typeof uppdragVagvisare==="function")?uppdragVagvisare():null;
+    }catch(_){}
+    const dolj=!u||!v||(typeof overlayUppe==="function"&&overlayUppe());
+    if(dolj){rot.style.display="none";requestAnimationFrame(tick);return;}
+    const p=skarmPos(v);
+    if(!p){rot.style.display="none";requestAnimationFrame(tick);return;}
+
+    rot.style.display="block";
+    rot.classList.toggle("nara",!!v.nara);
+    pin.style.left=`${p.x}px`; pin.style.top=`${p.y}px`;
+    const av=Math.max(0,Math.round(v.avstand));
+    const namn=(u.hastId&&typeof HORSES!=="undefined"&&HORSES[u.hastId])?HORSES[u.hastId].namn:null;
+    etikett.textContent=v.nara
+      ? (namn?`HÄR · ${namn}`:`HÄR · ${u.rubrik}`)
+      : `${u.rubrik} · ${av} m`;
+    pil.textContent=p.utanför?"➜":"▼";
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+if(typeof window!=="undefined"){
+  if(document.readyState==="complete")installeraTydligVagvisare();
+  else window.addEventListener("load",installeraTydligVagvisare,{once:true});
 }
