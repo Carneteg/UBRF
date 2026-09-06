@@ -1,27 +1,26 @@
-# AI collaboration — ChatGPT + Claude + Jules
+# AI collaboration — ChatGPT + Claude + optional Jules
 
-Detta dokument definierar hur ChatGPT, Claude och Jules samarbetar i UBRF.
+Detta dokument definierar hur ChatGPT, Claude och vid behov Jules samarbetar i UBRF.
 
-`docs/DELIVERY-PROTOCOL.md` styr status, evidens, falsifiering, review, human acceptance och merge. Vid konflikt gäller leveransprotokollet.
+`docs/DELIVERY-PROTOCOL.md` styr status, evidens, falsifiering, review, human acceptance och merge. Vid konflikt gäller leveransprotokollet. Tobias senaste uttryckliga produktbeslut har alltid högst prioritet.
 
 ## Grundprincip
 
-**Tobias är Product Owner och har alltid sista ordet.**
+- **Tobias = Product Owner** — äger scope, prioritet, subjektiv game feel och produktacceptans.
+- **ChatGPT = Senior Game Director / Game Systems Architect / Independent Reviewer** — äger acceptance contracts, arkitektur, oberoende senior review och release gating.
+- **Claude = Lead Implementation Engineer / Builder** — äger implementation, integration, builder-side tester och falsifiering.
+- **Jules = Optional Independent QA / Falsification Agent** — används selektivt som extra QA, aldrig som obligatorisk grind.
 
-- **ChatGPT = Senior Game Director / Game Systems Architect / Independent Reviewer**
-- **Claude = Lead Implementation Engineer / Builder**
-- **Jules = Independent QA / Falsification Agent**
+Den obligatoriska arbetskedjan är:
 
-Normal arbetskedja:
+> **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
 
-> **CLAUDE BUILDS → JULES CHALLENGES (när tilldelad) → CHATGPT REVIEWS → TOBIAS ACCEPTS**
-
-Jules är ett oberoende QA-lager, inte en andra lead-utvecklare. Ingen agent får både införa en större förändring och ensam slutgodkänna den.
+Jules ligger i en frivillig sidokanal. Leveransen får aldrig stå och vänta på att Jules ska starta, avsluta eller återhämta en fastnad körning.
 
 ## Produktens tekniska riktning
 
 - **Roblox är primär spelplattform.**
-- HTML/webb är en **riktig parallell spelbar distribution** och används dessutom för snabb iteration, QA och beteendemätning.
+- HTML/webb är en riktig parallell spelbar distribution och används dessutom för snabb iteration, QA och beteendemätning.
 - Roblox får inte behandlas som en senare port.
 - Webben får inte förfalla till en icke-spelbar demo.
 - När logik delas mellan plattformarna ska avsikt, regler, parametrar och acceptance criteria hållas i paritet; rendering, UI och inputadapter får vara plattformsspecifika.
@@ -37,7 +36,7 @@ ChatGPT ska:
 3. formulera acceptance contract, gates och testfall,
 4. utmana scope creep,
 5. kontrollera faktisk evidens bakom Claudes handoff,
-6. väga in Jules oberoende QA-bevis när Jules har tilldelats,
+6. väga in Jules-evidens när sådan finns, men aldrig blockera på att Jules saknas eller är sen,
 7. leta efter dubbla sanningar, falsk precision, hårdkodade spatiala antaganden, generiska placeholders, regressioner och tester som testar sig själva,
 8. kontrollera Roblox/webb-paritet där relevant,
 9. skilja teknisk review från Tobias produktacceptans.
@@ -65,22 +64,31 @@ Claudes högsta normala leveransstatus är `READY_FOR_CHATGPT_REVIEW`.
 
 ## Roll: Jules
 
-Jules ansvarar främst för **oberoende QA, adversarial review och falsifiering av redan implementerat arbete**.
+Jules är ett **extra QA-verktyg**, inte en del av den obligatoriska leveranskedjan och inte en andra lead-utvecklare.
 
-Jules ska:
+Använd Jules främst för:
 
-1. läsa root `AGENTS.md`, leveransprotokollet och aktiv gate före arbete,
-2. utgå från faktisk diff/branch och inte implementerarens sammanfattning,
-3. försöka motbevisa centrala acceptance claims,
-4. leta efter runtime wiring gaps, dubbla sources of truth, state-inconsistencies, fallback-beteenden och tester som passerar utan produktionsvägen,
-5. kontrollera webb/Roblox-beteendeparitet där relevant,
-6. reproducera bekräftade fel och lägga fokuserade regressionstester när det förbättrar evidensen,
-7. endast göra minsta kodfix när uppgiften uttryckligen är en smal bugfix/CI-fix,
-8. alltid redovisa `Not tested`, exakta testkommandon och remaining risk,
-9. inte ändra game-feel-tuning, produktregler eller UBRF-verklighetsfakta utan explicit beslut,
-10. aldrig mergea eller sätta `PRODUCT_ACCEPTED`.
+- en konkret misstanke om runtime-wiring,
+- ett fokuserat regressionstest,
+- säkerhetskontroll,
+- en smal adversarial falsifiering,
+- en isolerad CI-/bugfix som inte konkurrerar med Claudes aktiva kärnimplementation.
 
-Jules högsta normala status är `QA_REPORT_READY`. Om Jules får en explicit bugfix kan Jules skapa en fokuserad PR, men den går fortfarande genom ChatGPT-review och Tobias acceptance där human gate krävs.
+Jules ska när den används:
+
+1. utgå från faktisk diff/branch och inte implementerarens sammanfattning,
+2. försöka motbevisa centrala acceptance claims,
+3. leta efter runtime wiring gaps, dubbla sources of truth, state-inconsistencies, fallback-beteenden och tester som passerar utan produktionsvägen,
+4. kontrollera webb/Roblox-beteendeparitet där relevant,
+5. reproducera bekräftade fel och lägga fokuserade regressionstester när det förbättrar evidensen,
+6. endast göra minsta kodfix när uppgiften uttryckligen är en smal bugfix/CI-fix,
+7. alltid redovisa `Not tested`, exakta testkommandon och remaining risk,
+8. inte ändra game-feel-tuning, produktregler eller UBRF-verklighetsfakta utan explicit beslut,
+9. aldrig mergea eller sätta `PRODUCT_ACCEPTED`.
+
+Jules högsta normala status är `QA_REPORT_READY`. En Jules-rapport är **extra evidens**, inte ett krav för att ChatGPT ska kunna slutföra senior review.
+
+Om Jules blir långsam, fastnar, duplicerar en annan task, kör mot fel head eller öppnar en PR från gammal bas ska uppgiften avbrytas/stängas och huvudkedjan fortsätta. Bekräftade fynd ska däremot fortfarande hanteras.
 
 Jules får inte arbeta parallellt i samma kärnfiler som Claude om inte Tobias eller ChatGPT uttryckligen tilldelar överlappet.
 
@@ -120,22 +128,9 @@ Claude lämnar:
 - Human gate
 - SHA
 
-### 5. Jules utmanar vid tilldelning
+### 5. Optional Jules QA
 
-Jules får ett avgränsat QA-uppdrag mot exakt PR/head/issue. Standarduppdraget är att försöka falsifiera leveransen utan redesign eller scope-expansion.
-
-Jules lämnar:
-
-- `QA_REPORT_READY`
-- Confirmed defects
-- Reproduction
-- Tests added/run
-- Claims falsified / claims not falsified
-- Not tested
-- Remaining risk
-- Exact head/branch reviewed
-
-Jules QA ersätter inte ChatGPT senior review.
+ChatGPT eller Tobias kan skicka en smal, avgränsad QA-task till Jules. Huvudkedjan fortsätter oberoende. Om Jules levererar i tid används fynden som extra evidens.
 
 ### 6. ChatGPT gör oberoende senior review
 
@@ -150,21 +145,15 @@ Utfall:
 
 När human gate krävs är det endast Tobias som kan sätta `PRODUCT_ACCEPTED`.
 
-## När Jules ska användas
+## Regeln för Jules
 
-Använd Jules när den ger verklig oberoende nytta, främst:
+**Jules får hjälpa oss hitta fel men får aldrig bli projektets flaskhals.**
 
-- efter en större Claude-implementation före slutreview,
-- vid misstänkt runtime-wiring-problem,
-- när CI är grönt men produkten ändå beter sig fel,
-- för regressionstest/falsifiering av en konkret blocker,
-- för smala CI-/bugfixar som inte konkurrerar med Claudes aktiva kärnimplementation.
+Skapa inte breda Jules-tasks för hela features när en smal fråga räcker. Skapa inte dubbla Jules-tasks för samma PR/head. Om en Jules-task fastnar ska den stängas i stället för att stoppa Claude eller ChatGPT.
 
-Använd inte Jules som parallell feature-builder på samma aktiva kärnscope. Det skapar dubbla sanningar och mergekonflikter utan att ge oberoende QA.
+Standardprompt för en smal PR-review:
 
-Standardprompt för PR-review:
-
-> Review PR <number> adversarially. Do not redesign the feature. Find runtime wiring gaps, duplicated sources of truth, web/Roblox parity mismatches, state inconsistencies, hidden fallbacks, and tests that can pass without exercising production paths. Reproduce confirmed defects. Add failing regression tests when useful. Do not merge and do not change product tuning unless explicitly asked.
+> Review PR <number> adversarially on exact head <sha>. Do not redesign the feature. Focus only on <specific risks>. Find production-path gaps, duplicated truths and tests that can pass falsely. Reproduce confirmed defects. Add regression tests only when useful. Do not merge and do not change product tuning.
 
 ## Fidelity-samarbete
 
@@ -215,13 +204,15 @@ Claude → review:
 8. Human gate
 9. SHA
 
+När Jules används:
+
 ChatGPT → Jules:
 
-1. Exact PR/head/issue to review
-2. Claims to falsify
-3. Production paths that must be exercised
-4. Out of scope / no-redesign boundaries
-5. Whether Jules may add tests only or also make a narrow fix
+1. Exact PR/head/issue
+2. En liten uppsättning claims att falsifiera
+3. Production paths som måste köras
+4. Out of scope / no-redesign
+5. Om Jules får lägga test eller även göra en smal fix
 
 Jules → review:
 
@@ -248,6 +239,6 @@ Om implementation eller källa visar att ett äldre dokument är fel ska verklig
 
 ## Definition of done
 
-Se `docs/DELIVERY-PROTOCOL.md`: source traceability + automated verification + independent review + human product acceptance där relevant.
+Se `docs/DELIVERY-PROTOCOL.md`: source traceability + automated verification + independent ChatGPT review + human product acceptance där relevant.
 
-**Claude bygger. Jules försöker slå hål på bevisen. ChatGPT avgör den tekniska gaten. Tobias avgör produkten.**
+**Claude bygger. ChatGPT avgör den tekniska gaten. Tobias avgör produkten. Jules används när extra falsifiering ger mer värde än friktion.**
