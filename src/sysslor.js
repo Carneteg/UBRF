@@ -80,8 +80,11 @@ function visaSadelkammare(){
            igenom ryggen hur bra du än rider.`
         : `Ett träns är inställt efter ett bestämt huvud. På fel häst hamnar
            bettet för högt eller för lågt i munnen och skaver i mungiporna.`;
-      st.innerHTML=`Fel ${fel}. Det där är <b>${HORSES[val.sadel!==G.hastId?val.sadel:val.trans].namn}</b>s.
-        ${varfor} Läs namnskylten en gång till — ${h.namn}s hänger på sin egen plats.`;
+      st.textContent = `Fel ${fel}. Det där är `;
+      const boldName = document.createElement("b");
+      boldName.textContent = HORSES[val.sadel!==G.hastId?val.sadel:val.trans].namn;
+      st.appendChild(boldName);
+      st.appendChild(document.createTextNode(`s.\n        ${varfor} Läs namnskylten en gång till — ${h.namn}s hänger på sin egen plats.`));
       G.felUtrustning=(G.felUtrustning||0)+1;
       return;
     }
