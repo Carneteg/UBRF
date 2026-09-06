@@ -1,0 +1,184 @@
+#!/usr/bin/env node
+/*
+   Unit tests for src/model.js
+   Uses VM to sandbox evaluate unexported code in src/model.js
+*/
+
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
+import { fileURLToPath } from "node:url";
+
+const ROT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
+const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
+
+const ctx = { console, Math, JSON, Object };
+vm.createContext(ctx);
+
+// Load the script into context
+vm.runInContext(
+  las("src/model.js") + "\n" +
+  "var _Skala = Skala;\n" +
+  "var _Gait = Gait;\n" +
+  "var _K = K;\n" +
+  "var _nyState = nyState;\n" +
+  "var _stepRide = stepRide;\n" +
+  "var _Approach = Approach;\n" +
+  "var _utvarderaSkotsel = utvarderaSkotsel;\n" +
+  "var _domaRitt = domaRitt;\n",
+  ctx
+);
+
+const M = ctx;
+let fel = 0;
+
+function prova(namn, ok, detalj = "") {
+  if (ok) {
+    console.log("  OK  " + namn);
+  } else {
+    fel++;
+    console.log("  FEL " + namn + (detalj ? " — " + detalj : ""));
+  }
+}
+
+// Ensure the functions exist
+prova("Skala is defined", typeof M._Skala === "object");
+prova("Approach is defined", typeof M._Approach === "object");
+prova("utvarderaSkotsel is defined", typeof M._utvarderaSkotsel === "function");
+prova("domaRitt is defined", typeof M._domaRitt === "function");
+
+
+// 1. Skala tests
+{
+  const s = M._Skala.tom();
+  s.takt = 1.0;
+  s.losgjordhet = 1.0; // Let's check how floor rule propagates.
+  s.kontakt = 1.0;
+  M._Skala.pyramid(s);
+
+  // Floor is initially 1.0.
+  // takt: floor 1.0, takt 1.0. tak = 1.0 + 0.12 = 1.12. v is 1.0. s.takt = 1.0. floor = 1.0.
+  // losgjordhet: tak = 1.12. v is 1.0. s.losgjordhet = 1.0. floor = 1.0.
+  // This means if all are 1.0, they stay 1.0.
+
+  const s2 = M._Skala.tom();
+  s2.takt = 0.5;
+  s2.losgjordhet = 1.0;
+  M._Skala.pyramid(s2);
+
+  // Floor is 1.0.
+  // takt: v is 0.5. tak = 1.12. s2.takt = 0.5. floor = 0.5.
+  // losgjordhet: v is 1.0. tak = 0.5 + 0.12 = 0.62. v = 0.62. s2.losgjordhet = 0.62. floor = 0.5. (Actually 0.5 because floor is updated to min(floor, s2.losgjordhet), which is 0.5)
+  prova("Skala.pyramid caps higher levels based on lower levels",
+    Math.abs(s2.takt - 0.5) < 0.001 && Math.abs(s2.losgjordhet - 0.62) < 0.001,
+    "Expected takt ~0.5, losgjordhet ~0.62, got " + s2.takt + " / " + s2.losgjordhet);
+}
+
+// 2. utvarderaSkotsel tests
+{
+  // A perfect grooming session
+  const braSk = {
+    ryktning: 1,
+    hovar: [1, 1, 1, 1],
+    gjord: 0.55,
+    sadellage: 1,
+    betsling: 1,
+    visitering: 1,
+    tid: 200
+  };
+  const braRes = M._utvarderaSkotsel(braSk, 0.5, 0.8);
+  prova("utvarderaSkotsel: perfect grooming gives good result",
+    braRes.risker.length === 0 && !isNaN(braRes.dagsform),
+    "Expected no risks and valid form, got risks: " + JSON.stringify(braRes.risker) + " form: " + braRes.dagsform);
+
+  // A bad grooming session - stones in hooves and loose girth
+  const daligSk = {
+    ryktning: 0,
+    hovar: [0.2, 1, 1, 1],
+    gjord: 0.2,
+    sadellage: 0.8,
+    betsling: 0.3,
+    visitering: 0.2,
+    tid: 60
+  };
+  const daligRes = M._utvarderaSkotsel(daligSk, 0.5, 0.8);
+  prova("utvarderaSkotsel: bad grooming triggers risks",
+    daligRes.risker.includes("sten_i_hoven") &&
+    daligRes.risker.includes("sadeln_glider") &&
+    daligRes.risker.includes("skav_i_mungipan") &&
+    daligRes.risker.includes("missat_skav"),
+    "Expected specific risks, got: " + JSON.stringify(daligRes.risker));
+}
+
+// 3. domaRitt tests
+{
+  // Clear round
+  const handelser1 = [];
+  const res1 = M._domaRitt(handelser1, 120, false);
+  prova("domaRitt: felfri ritt",
+    res1.totalfel === 0 && !res1.utesluten,
+    "Expected 0 fel and not utesluten");
+
+  // Round with 1 nedslag and 1 olydnad
+  const handelser2 = [
+    { typ: "nedslag", hinder: 1 },
+    { typ: "olydnad", hinder: 2 }
+  ];
+  const res2 = M._domaRitt(handelser2, 120, false);
+  prova("domaRitt: nedslag (4) + 1 olydnad (4) = 8 fel",
+    res2.totalfel === 8 && res2.hinderfel === 8 && !res2.utesluten,
+    "Expected 8 fel, got " + res2.totalfel);
+
+  // Elimination on 2nd obedience (high class)
+  const handelser3 = [
+    { typ: "olydnad", hinder: 1 },
+    { typ: "olydnad", hinder: 1 }
+  ];
+  const res3 = M._domaRitt(handelser3, 120, false);
+  prova("domaRitt: elimination on 2nd olydnad in high class",
+    res3.utesluten && res3.anledning === "andra olydnaden",
+    "Expected utesluten for 'andra olydnaden'");
+
+  // No elimination on 2nd obedience (low class), elimination on 3rd
+  const handelser4 = [
+    { typ: "olydnad", hinder: 1 },
+    { typ: "olydnad", hinder: 1 },
+    { typ: "olydnad", hinder: 2 }
+  ];
+  const res4_1 = M._domaRitt(handelser4.slice(0, 2), 120, true);
+  prova("domaRitt: no elimination on 2nd olydnad in low class",
+    !res4_1.utesluten && res4_1.hinderfel === 12, // 4 + 8 = 12
+    "Expected 12 fel and not utesluten");
+
+  const res4_2 = M._domaRitt(handelser4, 120, true);
+  prova("domaRitt: elimination on 3rd olydnad in low class",
+    res4_2.utesluten && res4_2.anledning === "tredje olydnaden",
+    "Expected utesluten for 'tredje olydnaden'");
+}
+
+// 4. Approach tests
+{
+  const testSteg = 3.5;
+  const testHojd = 1.0;
+
+  // Expected jump zone
+  const z = M._Approach.zon(testSteg, testHojd);
+  prova("Approach.zon computes reasonable zone", z > 1.5 && z < 2.5, "Zone: " + z);
+
+  // Still standing
+  const los1 = M._Approach.los(5.0, 0, testHojd);
+  prova("Approach.los: standing still gives error", !los1.mojlig && los1.rad.indexOf("står still") > -1);
+
+  // Crashed into obstacle
+  const los2 = M._Approach.los(1.0, testSteg, testHojd);
+  // eff = 1.0 - z (which is ~2.1) = -1.1 (negative)
+  prova("Approach.los: too close gives error", !los2.mojlig && los2.rad.indexOf("rakt in i hindret") > -1);
+
+  // Perfect distance
+  // Just outside the zone by exactly one stride
+  const perfectDist = z + testSteg;
+  const los3 = M._Approach.los(perfectDist, testSteg, testHojd);
+  prova("Approach.los: perfect distance", los3.mojlig && los3.fel < 0.01 && los3.rad.indexOf("Perfekt") > -1);
+}
+console.log(fel ? "\n" + fel + " FEL" : "\nALLA OK");
+process.exit(fel ? 1 : 0);
