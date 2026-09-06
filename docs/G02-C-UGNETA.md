@@ -60,9 +60,31 @@ G02-C bedömer kvalitet, inte bara completion. Dimensioner:
 
 20 m volt ska minst väga linje + rytm + balans. Övergångar ska minst väga timing + mjukhet + hästens respons.
 
+### Vad varje yta faktiskt kan mäta
+Bedömningen ska komma ur telemetri, inte ur en siffra som ser ut som
+telemetri. Därför gäller: **en dimension utan källa på en yta är omätt,
+inte noll.** En nolla hade gjort den till den svagaste i varje övning,
+och läraren hade kommenterat något hon aldrig sett.
+
+Roblox saknar utbildningsskalan (`src/model.js`) och mäter därför ingen
+`rytm`; `linje` bygger bara på den mätta svängradien. Luckan är
+deklarerad i `HorseCore/Lektion.SAKNAS` och provad — den får inte växa
+fram i tysthet.
+
 ## Försök 1 → försök 2
 När samma övning görs igen ska Ugneta prioritera faktisk förbättring, till exempel:
 - “Övergången blev mjukare.”
 - “Bättre rytm, men volten faller fortfarande inåt.”
 
 Högst två prioriterade observationer visas samtidigt.
+
+## Var Ugneta står
+Vid C, strax bortom dressyrlayoutens kortsida — alltså utanför ridvägen,
+på den del av den fysiska ridytan som fortsätter förbi 60-m-linjen.
+Punkten är kanon (`RidKanon.UGNETA.PLATS`) och löses upp mot banans egna
+mått på båda ytorna; på Roblox räknas den fram genom att mäta mellan de
+byggda delarna, inte ur en andra modell av huset.
+
+`[antagande]` Att UBRF:s instruktör står just vid C är inte belagt i
+referensmaterialet. Ytan är verifierad; valet av punkt på den är det
+inte, och ersätts när evidens finns.

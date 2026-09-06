@@ -176,14 +176,46 @@ workspace = {
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 		return nil
 	end,
+	--[[ Genomsikt.start() sveper workspace efter genomsiktliga delar och
+	     lyssnar på nya. Bänken hade varken svepet eller signalen, så
+	     `start` gick inte att köra — och klientbänken kör hela
+	     init.client.luau, `Genomsikt.start()` inkluderad. ]]
+	GetDescendants = function(self)
+		local ut = {}
+		local function ner(nod)
+			for _, b in ipairs(nod._barn or {}) do
+				table.insert(ut, b); ner(b)
+			end
+		end
+		ner(self)
+		return ut
+	end,
+	DescendantAdded = { Connect = function() return { Disconnect = function() end } end },
 }
+
+--[[ Signalfabriken låg förut nedanför tjänsterna. Den flyttades hit när
+     klientbänken (tests/klient.spec.luau) började KÖRA init.client.luau:
+     ett skript som kopplar sig till RenderStepped, InputBegan och
+     CharacterRemoving går inte att prova mot en Connect som slänger sin
+     callback. Nu sparas lyssnarna och provet kan driva loopen. ]]
+local function __signal()
+	local sig = { _lyssnare = {} }
+	function sig:Connect(fn)
+		table.insert(self._lyssnare, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		for _, fn in ipairs(self._lyssnare) do fn(...) end
+	end
+	return sig
+end
 
 local __services = {
 	ReplicatedStorage = nil,   -- sätts efter att __Core byggts
 	Workspace = workspace,     -- kameran hämtar den som tjänst
 	RunService = {
-		Heartbeat = { Connect = function() return { Disconnect = function() end } end },
-		RenderStepped = { Connect = function() return { Disconnect = function() end } end },
+		Heartbeat = __signal(),
+		RenderStepped = __signal(),
 		--[[ `_server` lades till för S2b: GameplayService är serverkod och
 		     Networking väljer väg på IsServer. Standard är oförändrad (klient),
 		     så alla äldre specar mäter exakt samma sak som förut. ]]
@@ -194,7 +226,12 @@ local __services = {
 	Players = {
 		LocalPlayer = {
 			Name = "Spelare", UserId = 1,
-			Character = { Name = "Spelare" },
+			--[[ Karaktären svarar som en riktig Model gör innan den fått sin
+			     Humanoid: RiderController ska då hoppa över IK:n i stället
+			     för att krascha. Det är produktionens egen respawn-väg. ]]
+			Character = { Name = "Spelare",
+				FindFirstChild = function() return nil end,
+				FindFirstChildOfClass = function() return nil end },
 			FindFirstChild = function() return nil end,
 			FindFirstChildOfClass = function() return nil end,
 			--[[ HUD:en parentas hit. Utan den gick PreparationController inte
@@ -203,6 +240,9 @@ local __services = {
 				self._gui = self._gui or { Name = namn, _barn = {} }
 				return self._gui
 			end,
+			--[[ Karaktären kan försvinna mitt i en ritt. Klienten sitter av
+			     på den signalen, och det är också där lärarytan släcks. ]]
+			CharacterRemoving = __signal(),
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
@@ -215,6 +255,7 @@ local __services = {
 		_pad = {},
 		GetGamepadState = function(self) return self._pad end,
 		TouchEnabled = false,
+		InputBegan = __signal(),
 		InputChanged = { Connect = function() return { Disconnect = function() end } end },
 		InputEnded = { Connect = function() return { Disconnect = function() end } end },
 	},
@@ -270,7 +311,34 @@ function __rs:FindFirstChild(namn)
 	for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 	return nil
 end
-function __rs:WaitForChild(namn) return self:FindFirstChild(namn) end
+--[[ I produktionen SKAPAR servern fjärrmappen och dess objekt, och klienten
+     väntar in dem. Bänken har ingen server, så den står in för den: ett
+     efterfrågat barn som inte finns skapas här i stället för att klienten
+     ska fastna i en väntan som aldrig löses ut.
+
+     Det gäller bara uppslag klienten gör på vägen till ett fjärrobjekt.
+     Ett prov som vill mäta att något SAKNAS ska använda FindFirstChild,
+     som fortsatt svarar nil. ]]
+function __rs:WaitForChild(namn)
+	local fanns = self:FindFirstChild(namn)
+	if fanns then return fanns end
+	local ny = Instance.new(if namn == "HorseRemotes" then "Folder" else "RemoteEvent")
+	ny.Name = namn
+	ny.Parent = self
+	--[[ Mappen måste kunna skapa sina egna barn på samma sätt; annars
+	     stannar kedjan ett steg ner. ]]
+	if ny.ClassName == "Folder" then
+		function ny:WaitForChild(barnnamn)
+			local b = self:FindFirstChild(barnnamn)
+			if b then return b end
+			local e = Instance.new("RemoteEvent")
+			e.Name = barnnamn
+			e.Parent = self
+			return e
+		end
+	end
+	return ny
+end
 
 game = {
 	GetService = function(_, name)
@@ -300,6 +368,35 @@ function __makeRig()
 		bones = {}, attachments = {}, animator = nil }
 end
 
+--[[ En hästmodell av riktiga (stubbade) instanser. `__makeRig` lämnar en
+     färdig Rig, vilket duger för rörelsemodulerna — men klientens `mount`
+     går genom RigAdapter.build, och den kräver en Model med rot och
+     Humanoid. Utan den här gick klientens egen uppsittning inte att köra
+     i bänken. ]]
+function __makeHastModell(namn)
+	local m = Instance.new("Model")
+	m.Name = namn or "Bamse"
+	m:SetAttribute("HorseId", "bamse")
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Size = vec(2, 2, 4)
+	rot.CFrame = cframe(vec(0, 3, 0), vec(0, 0, 1))
+	rot.Position = vec(0, 3, 0)
+	rot.AssemblyLinearVelocity = vec()
+	rot.Parent = m
+	local hum = Instance.new("Humanoid")
+	hum.Name = "Humanoid"
+	hum.WalkSpeed = 0
+	function hum:Move() end
+	function hum:GetState() return Enum.HumanoidStateType.Running end
+	function hum:ChangeState() end
+	hum.Parent = m
+	local anim = Instance.new("Animator")
+	anim.Name = "Animator"
+	anim.Parent = hum
+	return m
+end
+
 --[[ `Instance.new` fanns inte här alls, bara i bygg-stubbarna. Den behövs
      för att `AnimationController:_load` skapar `Animation`-objekt. Minimal
      med flit: bara namn, klass och id, alltså precis det modulen rör. ]]
@@ -313,17 +410,6 @@ end
      Mocken är avsiktligt trubbig men inte magisk: den svarar bara på det
      riktiga instanser faktiskt gör här — sätta egenskaper, sätta Parent,
      hitta barn, kopplas ur, och (för knappar) ett Activated att ansluta. ]]
-local function __signal()
-	local sig = { _lyssnare = {} }
-	function sig:Connect(fn)
-		table.insert(self._lyssnare, fn)
-		return { Disconnect = function() end }
-	end
-	function sig:Fire(...)
-		for _, fn in ipairs(self._lyssnare) do fn(...) end
-	end
-	return sig
-end
 __signal_ny = __signal
 
 local function __nyInstans(klass)
@@ -362,6 +448,34 @@ local function __nyInstans(klass)
 		end
 		return false
 	end
+	--[[ Riktiga instanser kan räkna upp sina barn. Det behövdes när
+	     klientbänken började bygga en häst av instanser: RigAdapter letar
+	     rot, attachments och ben genom GetDescendants. ]]
+	--[[ Klientloopen sitter av om riggen inte längre står i världen. Utan
+	     den här kunde den vägen aldrig köras i bänken. ]]
+	function inst:IsDescendantOf(mojligForfader)
+		local f = rawget(self, "Parent")
+		while f do
+			if f == mojligForfader then return true end
+			f = rawget(f, "Parent") or (type(f) == "table" and f.Parent) or nil
+		end
+		return false
+	end
+	function inst:GetChildren()
+		local ut = {}
+		for _, b in ipairs(self._barn) do table.insert(ut, b) end
+		return ut
+	end
+	function inst:GetDescendants()
+		local ut = {}
+		local function ner(nod)
+			for _, b in ipairs(nod._barn or {}) do
+				table.insert(ut, b); ner(b)
+			end
+		end
+		ner(self)
+		return ut
+	end
 	function inst:Destroy()
 		local far = rawget(self, "Parent")
 		if far and far._barn then
@@ -375,6 +489,11 @@ local function __nyInstans(klass)
 		inst.OnClientEvent = __signal()
 		inst.OnServerEvent = __signal()
 		inst._skickat = {}
+		--[[ FireServer och InvokeServer finns på riktiga fjärrobjekt och
+		     används av klienten (avsittning, tillståndssynk). Utan dem
+		     kraschar klientens egen väg i bänken. ]]
+		function inst:FireServer(...) table.insert(self._skickat, { ... }) end
+		function inst:InvokeServer(...) table.insert(self._skickat, { ... }); return true end
 		function inst:FireClient(spelare, ...) table.insert(self._skickat, { spelare, ... }) end
 		function inst:FireAllClients(...) table.insert(self._skickat, { ... }) end
 	end

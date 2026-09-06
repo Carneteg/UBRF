@@ -40,10 +40,12 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
      ytorna kunna glida isär utan att något blir rött. */
   + "\n" + las("src/larare.js"), ctx);
 const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
-  SKOLHAST_PROFILER, SVAR_START, UGNETA_OVNING_DIM, UGNETA_DIM_LABEL } =
+  SKOLHAST_PROFILER, SVAR_START, UGNETA_OVNING_DIM, UGNETA_DIM_LABEL,
+  UGNETA_LIVE, UGNETA_DIM_CUE, UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD } =
   vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
   + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START, "
-  + "UGNETA_OVNING_DIM, UGNETA_DIM_LABEL})", ctx);
+  + "UGNETA_OVNING_DIM, UGNETA_DIM_LABEL, UGNETA_LIVE, UGNETA_DIM_CUE, "
+  + "UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -825,6 +827,46 @@ rader.push("\tOVNING = {");
 for (const id of Object.keys(UGNETA_OVNING_DIM).sort())
   rader.push(`\t\t${id} = { ` + UGNETA_OVNING_DIM[id].map(str).join(", ") + " },");
 rader.push("\t},");
+/* Övningarnas ordning och text. Roblox undervisar samma sex övningar i
+   samma följd med samma ord — inte en avskrift som kan glida. */
+rader.push("\tORDNING = { " + UGNETA_OVNINGAR.map(o => str(o.id)).join(", ") + " },");
+rader.push("\tOVNINGAR = {");
+for (const o of UGNETA_OVNINGAR) {
+  rader.push(`\t\t${o.id} = {`);
+  rader.push(`\t\t\trubrik = ${str(o.rubrik)},`);
+  rader.push("\t\t\tpunkter = { " + o.punkter.map(str).join(", ") + " },");
+  rader.push("\t\t},");
+}
+rader.push("\t},");
+/* Live-registret: samma få ord på båda ytorna. */
+rader.push("\tLIVE = {");
+for (const id of Object.keys(UGNETA_LIVE).sort())
+  rader.push(`\t\t${id} = { fel = ${str(UGNETA_LIVE[id].fel)}, bra = ${str(UGNETA_LIVE[id].bra)} },`);
+rader.push("\t},");
+rader.push("\tLIVE_CD = { bra = " + tal(UGNETA_LIVE_CD.bra)
+  + ", fel = " + tal(UGNETA_LIVE_CD.fel)
+  + ", visa = " + tal(UGNETA_LIVE_CD.visa) + " },");
+rader.push("\tDIM_CUE = {");
+for (const k of Object.keys(UGNETA_DIM_CUE).sort())
+  rader.push(`\t\t${k} = ${str(UGNETA_DIM_CUE[k])},`);
+rader.push("\t},");
+/* Kvalitetens tal. Utan dem hade Roblox-modulen skrivit av formeln. */
+rader.push("\tKVALITET = {");
+for (const k of Object.keys(UGNETA_KVALITET))
+  rader.push(`\t\t${k} = ${tal(UGNETA_KVALITET[k])},`);
+rader.push("\t},");
+/* Platsen vid sargen, uttryckt i banans egna mått så att båda ytorna
+   kan lösa upp den mot SIN bana. */
+{
+  /* Banans mått följer med platsen: den som ska lösa upp punkten mot en
+     byggd bana behöver veta vilken bana webben räknade den ur, och ska
+     inte behöva leta upp talen i en annan del av kanonen. */
+  const KB = vm.runInContext("RID_KANON", ctx);
+  rader.push("\tPLATS = { u = " + tal(UGNETA_PLATS.u)
+    + ", bortomC = " + tal(UGNETA_PLATS.bortomC)
+    + ", bredd = " + tal(KB.BANA_BREDD)
+    + ", langd = " + tal(KB.BANA_LANGD) + " },");
+}
 rader.push("}");
 rader.push("");
 

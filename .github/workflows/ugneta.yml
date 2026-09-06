@@ -39,3 +39,5 @@ jobs:
           node tools/exportera-ridkanon.mjs --kontrollera
           python3 roblox/tests/build.py tests/paritet.spec.luau
           python3 roblox/tests/build.py tests/ugneta.spec.luau
+          python3 roblox/tests/build.py tests/ugneta-gestalt.spec.luau
+          python3 roblox/tests/build.py tests/klient.spec.luau

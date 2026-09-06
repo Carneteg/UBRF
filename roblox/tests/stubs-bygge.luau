@@ -55,6 +55,23 @@ local function vec(x, y, z)
 		if type(b) == "number" then return vec(a.X * b, a.Y * b, a.Z * b) end
 		return vec(a.X * b.X, a.Y * b.Y, a.Z * b.Z)
 	end
+	mt.__unm = function(a) return vec(-a.X, -a.Y, -a.Z) end
+	--[[ Magnitude och Unit tillkom med UgnetaGestalt, som räknar ut var hon
+	     står genom att mäta MELLAN två byggda delar. Samma implementation
+	     som i tests/stubs.luau; utan dem hade provet mätt stubben i stället
+	     för placeringen. ]]
+	mt.Magnitude = nil
+	local index = mt.__index
+	mt.__index = function(t, k)
+		if k == "Magnitude" then
+			return math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z)
+		elseif k == "Unit" then
+			local m = math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z)
+			if m < 1e-9 then return vec(0, 0, 0) end
+			return vec(t.X / m, t.Y / m, t.Z / m)
+		end
+		return rawget(index, k)
+	end
 	return setmetatable(v, mt)
 end
 Vector3 = { new = vec, zero = vec(0, 0, 0), yAxis = vec(0, 1, 0) }
@@ -164,6 +181,11 @@ local function instance(klass)
 			attr[k] = v
 		end,
 		GetAttribute = function(_, k) return attr[k] end,
+		GetChildren = function(self)
+			local ut = {}
+			for _, b in ipairs(self.Children) do table.insert(ut, b) end
+			return ut
+		end,
 		GetDescendants = function(self)
 			local ut = {}
 			local function ner(nod)
@@ -176,7 +198,17 @@ local function instance(klass)
 		end,
 	}
 	return setmetatable(i, {
-		__index = function(_, k) return rawget(i, k) end,
+		--[[ `Position` är inte ett eget fält på en riktig BasePart heller —
+		     den läses ur CFrame. Stubben gjorde det inte, och en modul som
+		     placerar något genom att MÄTA mellan två byggda delar fick då
+		     nil i stället för ett läge. ]]
+		__index = function(_, k)
+			if k == "Position" then
+				local cf = rawget(i, "CFrame")
+				return cf and cf.Position or vec()
+			end
+			return rawget(i, k)
+		end,
 		__newindex = function(t, k, v)
 			if k == "Parent" then
 				rawset(t, "__parent", v)
