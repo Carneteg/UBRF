@@ -1554,6 +1554,219 @@ do
 	end
 end
 
+--[[ ══ ROBUSTHET — Jules QA-fynd (#89) ════════════════════════════════
+     Tre fynd ur ett oberoende QA-spår, provade här på #87:s egen bas.
+     PR #96 cherry-plockas inte: den utgår från gammal bas och river
+     governance från #88. Fynden är evidens, koden är vår. ]]
+print("\n── Robusthet: tillstånd före första bildrutan, sits, nolldelta ──")
+
+--[[ FYND 1: `self.hjalper` var nil fram till första `step()`.
+     Allt som läste controllern dessförinnan — telemetrin i synnerhet —
+     tappade hela hjälpblocket. Provet läser FÖRE första step(). ]]
+do
+	local mc = newMC()
+	local hj = mc.hjalper
+	check("hjälperna finns redan efter new(), före första step()",
+		type(hj) == "table",
+		if type(hj) == "table" then "(tabell)" else "(" .. tostring(hj) .. ")")
+
+	if type(hj) == "table" then
+		--[[ NIL-SÄKRA JÄMFÖRELSER, och det är inte pedanteri: första
+		     versionen av det här provet skrev `math.abs(hj.skankel - …)`
+		     rakt av. Mutationen "konstruktorn sätter en TOM tabell" fick
+		     då specen att KRASCHA efter första raden i stället för att bli
+		     röd — noll FEL-rader, och falsifieringen såg ut att passera.
+		     Ett prov som kraschar mäter ingenting. ]]
+		local function tal(v: any): number?
+			return if type(v) == "number" then v else nil
+		end
+		local function lika(v: any, mot: number): boolean
+			local n = tal(v)
+			return n ~= nil and math.abs(n - mot) < 1e-9
+		end
+		local function visa(v: any): string
+			local n = tal(v)
+			return if n then string.format("%.2f", n) else tostring(v)
+		end
+
+		--[[ Och de är NEUTRALLÄGET, inte nollor: en häst rids aldrig med
+		     släppt skänkel. Talen jämförs mot kanonen, inte mot avskrivna
+		     literaler. ]]
+		local KN = RidKanon.KONTAKT
+		check("och de är kanonens neutralläge, inte nollor",
+			lika(hj.skankel, KN.SKANKEL_NEUTRAL)
+				and lika(hj.tygel, KN.TYGEL_NEUTRAL)
+				and lika(hj.sits, KN.SITS_NEUTRAL)
+				and lika(hj.styrning, 0) and lika(hj.parad, 0),
+			string.format("skänkel %s · tygel %s · sits %s · styrning %s",
+				visa(hj.skankel), visa(hj.tygel), visa(hj.sits), visa(hj.styrning)))
+
+		--[[ HELA hjälpkontraktet ska vara ifyllt redan här — det är det
+		     telemetrin publicerar, och ett halvfyllt utgångsläge hade
+		     varit samma hål en bildruta senare. ]]
+		local saknas = {}
+		for _, namn in RidKanon.HJALP_FALT do
+			if hj[namn] == nil then table.insert(saknas, namn) end
+		end
+		check("varje hjälpfält i kontraktet är ifyllt före första bildrutan",
+			#saknas == 0, "(" .. table.concat(saknas, ", ") .. ")")
+
+		--[[ Och telemetrin kan LÄSAS före första bildrutan utan att tappa
+		     blocket. Det var den konkreta kostnaden för nil:et. ]]
+		local tm = Telemetri.las(Telemetri.sittUpp(Telemetri.nyRitt(), "prov", "ridhus"),
+			mc.loco, 0.1, mc.hjalper)
+		check("telemetrin bär hjälperna redan före första bildrutan",
+			tm.hjalper ~= nil and tal(tm.hjalper.ytterstod) ~= nil,
+			string.format("(yttertygelstöd %s)",
+				if tm.hjalper then visa(tm.hjalper.ytterstod) else "inget hjälpblock"))
+
+		--[[ SAMMA funktion som runtime, inte en andra uppsättning tal:
+		     en step() med tom avsikt ska ge exakt utgångsläget igen. ]]
+		local mc2 = newMC()
+		mc2:step(intent({}), 1 / 60)
+		local h2 = mc2.hjalper
+		local samma = true
+		for _, namn in { "skankel", "tygel", "sits", "styrning", "ytterstod",
+			"innerTygel", "ytterTygel", "vikt", "bojSida", "parad" } do
+			local a, b = tal(h2[namn]), tal(hj[namn])
+			if a == nil or b == nil or math.abs(a - b) > 1e-9 then samma = false end
+		end
+		check("konstruktorns hjälper är samma översättning som runtime gör",
+			samma, string.format("(ytterstöd %s mot %s)",
+				visa(h2.ytterstod), visa(hj.ytterstod)))
+	end
+end
+
+--[[ FYND 2: Z och C skrev båda direkt i `state.seat`, och den som
+     släpptes sist bestämde. Provet kör båda ordningarna genom den
+     RIKTIGA bindningen (`__key` → ContextActionService → Input). ]]
+do
+	local function sits()
+		return Input.consume().seat
+	end
+	local sekvenser = {
+		{ namn = "Z ned → C ned → Z upp → C upp",
+			steg = {
+				{ Enum.KeyCode.Z, true,  -1, "Z ensam = lätt sits" },
+				{ Enum.KeyCode.C, true,   1, "C vinner medan båda hålls" },
+				{ Enum.KeyCode.Z, false,  1, "Z släpps, C håller kvar djup" },
+				{ Enum.KeyCode.C, false,  0, "båda uppe = neutral" },
+			} },
+		{ namn = "C ned → Z ned → C upp → Z upp",
+			steg = {
+				{ Enum.KeyCode.C, true,   1, "C ensam = djup sits" },
+				{ Enum.KeyCode.Z, true,   1, "C vinner fortfarande" },
+				--[[ DEN HÄR RADEN ÄR FYNDET. Med det gamla mönstret gick
+				     axeln till 0 här, fastän Z höll kvar. ]]
+				{ Enum.KeyCode.C, false, -1, "C släpps, Z håller kvar lätt" },
+				{ Enum.KeyCode.Z, false,  0, "båda uppe = neutral" },
+			} },
+	}
+	for _, seq in sekvenser do
+		Input.unbind()
+		Input.bind()
+		local fel, spar = nil, {}
+		for _, steg in seq.steg do
+			__key(steg[1], steg[2])
+			local v = sits()
+			table.insert(spar, string.format("%s→%.0f", steg[4], v))
+			if fel == nil and math.abs(v - steg[3]) > 1e-9 then
+				fel = string.format("%s gav %.0f, väntat %.0f", steg[4], v, steg[3])
+			end
+		end
+		check("sitsen följer knappstatus: " .. seq.namn, fel == nil,
+			fel or table.concat(spar, " · "))
+	end
+
+	--[[ Och unbind ska lämna axeln neutral — annars läcker en hållen
+	     tangent in i nästa ritt. ]]
+	Input.bind()
+	__key(Enum.KeyCode.C, true)
+	Input.unbind()
+	Input.bind()
+	check("en hållen sits läcker inte genom unbind", Input.consume().seat == 0,
+		string.format("(%.0f)", Input.consume().seat))
+	Input.unbind()
+end
+
+--[[ FYND 3: `step(intent, dt)` med icke-positiv dt.
+     UPPMÄTT FÖRE FIXEN: `dt = 0` var redan säker — inget NaN, inget Inf,
+     tillståndet orört. `dt < 0` var det INTE: `takSteg` blev negativt i
+     kurvaturens takstegsberäkning och `math.clamp(steg, -takSteg,
+     takSteg)` kastade "invalid argument #3 to 'clamp'" mitt i bildrutan,
+     med halva tillståndet redan skrivet. Provet täcker båda. ]]
+do
+	local FALT = { "speed", "heading", "turnRate", "phase", "lean", "stamina",
+		"mjukhet", "spanning", "fokus", "balans", "energi",
+		"svarstid", "overgangstid", "etableringstid", "tid" }
+	local function finit(loco)
+		local trasiga = {}
+		for _, k in FALT do
+			local v = loco[k]
+			if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
+				table.insert(trasiga, string.format("%s=%s", k, tostring(v)))
+			end
+		end
+		return trasiga
+	end
+
+	--[[ dt = 0 som ALLRA FÖRSTA bildruta: inget tillstånd att luta sig mot. ]]
+	local mc = newMC()
+	local ok = pcall(function() mc:step(intent({ forward = 1, rein = 0.5, seat = 1 }), 0) end)
+	local trasiga = if ok then finit(mc.loco) else { "(anropet kastade)" }
+	check("step(dt=0) som första bildruta kastar inte och ger finita värden",
+		ok and #trasiga == 0, table.concat(trasiga, ", "))
+
+	--[[ dt = 0 MITT I en ritt, med fart, sväng och pågående förlopp. ]]
+	local mc2 = newMC()
+	runMoving(mc2, 1.0, { forward = 1 })
+	mc2:step(intent({ forward = 1, gaitUp = true }), 1 / 60)
+	local fore = { speed = mc2.loco.speed, tid = mc2.loco.tid,
+		phase = mc2.loco.phase, kappa = mc2.curvature }
+	local ok2 = pcall(function() mc2:step(intent({ forward = 1, steer = 1 }), 0) end)
+	local tr2 = if ok2 then finit(mc2.loco) else { "(anropet kastade)" }
+	check("step(dt=0) mitt i en ritt kastar inte och ger finita värden",
+		ok2 and #tr2 == 0, table.concat(tr2, ", "))
+	--[[ Noll tid = noll rörelse. Att den släpps igenom i stället för att
+	     hoppas över är avsiktligt (bildrutans hjälper och en gångarts-
+	     begäran som råkar falla där ska inte tappas), och då ska den heller
+	     inte flytta något. ]]
+	check("och noll tid flyttar ingenting",
+		ok2 and math.abs(mc2.loco.speed - fore.speed) < 1e-9
+			and math.abs(mc2.loco.tid - fore.tid) < 1e-9
+			and math.abs(mc2.loco.phase - fore.phase) < 1e-9
+			and math.abs(mc2.curvature - fore.kappa) < 1e-9,
+		string.format("fart %.4f→%.4f · tid %.4f→%.4f · κ %.5f→%.5f",
+			fore.speed, mc2.loco.speed, fore.tid, mc2.loco.tid,
+			fore.kappa, mc2.curvature))
+
+	--[[ NEGATIV dt — det som faktiskt sprack. ]]
+	local mc3 = newMC()
+	runMoving(mc3, 1.0, { forward = 1 })
+	local f3 = { speed = mc3.loco.speed, tid = mc3.loco.tid, kappa = mc3.curvature }
+	local ok3, err3 = pcall(function() mc3:step(intent({ forward = 1, steer = 1 }), -0.5) end)
+	local tr3 = if ok3 then finit(mc3.loco) else { tostring(err3) }
+	check("step(dt<0) kastar inte och lämnar tillståndet finit",
+		ok3 and #tr3 == 0, table.concat(tr3, ", "))
+	check("och en klocka som går baklänges rör inte tillståndet alls",
+		ok3 and math.abs(mc3.loco.speed - f3.speed) < 1e-9
+			and math.abs(mc3.loco.tid - f3.tid) < 1e-9
+			and math.abs(mc3.curvature - f3.kappa) < 1e-9,
+		string.format("fart %.4f→%.4f · tid %.4f→%.4f",
+			f3.speed, mc3.loco.speed, f3.tid, mc3.loco.tid))
+
+	--[[ NaN som dt: samma vakt, och `not (dt >= 0)` fångar den — ett
+	     `dt < 0`-villkor hade släppt igenom den. ]]
+	local mc4 = newMC()
+	runMoving(mc4, 0.5, { forward = 1 })
+	local f4 = mc4.loco.speed
+	local ok4 = pcall(function() mc4:step(intent({ forward = 1 }), 0 / 0) end)
+	local tr4 = if ok4 then finit(mc4.loco) else { "(anropet kastade)" }
+	check("en icke-finit dt lämnar tillståndet orört och finit",
+		ok4 and #tr4 == 0 and math.abs(mc4.loco.speed - f4) < 1e-9,
+		table.concat(tr4, ", "))
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

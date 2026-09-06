@@ -910,3 +910,95 @@ Det kräver Tobias PASS.
 
 **Status: `READY_FOR_CHATGPT_REVIEW`.** Jag sätter inte acceptans på
 egen leverans.
+
+---
+
+## 13. Jules QA-fynd (#89) — tre robusthetsbrister, åtgärdade
+
+Ett oberoende QA-spår rapporterade tre risker. Alla tre är provade på
+#87:s egen bas; **PR #96 cherry-plockas inte** — den utgår från gammal bas
+och river governance från #88. Fynden är evidens, koden är vår.
+
+### Fynd 1 — `self.hjalper` var nil fram till första `step()`
+
+Hjälpsemantiken räknades bara inne i `step()`. Allt som läste controllern
+före första bildrutan fick `nil`, och telemetrin tappade då **hela**
+hjälpblocket — `tm.hjalper` var frånvarande, inte tomt.
+
+Översättningen ligger nu i `MovementController.semantik(intent)`, en ren
+funktion som både konstruktorn och `step()` anropar. Utgångsläget är
+`NEUTRAL_INTENT`, alltså ryttaren som ännu inte gjort något — och
+neutralläget är inte nollor utan `KONTAKT`:s egna mittvärden (skänkel
+0,42 · tygel 0,34 · sits 0,20). Att skriva dem en andra gång i
+konstruktorn hade varit två sanningar om samma sak.
+
+### Fynd 2 — Z och C skrev båda i samma `seat`-fält
+
+Sist skriven vann. Håll `Z` (lätt) → tryck `C` (djup) → släpp `C`: axeln
+gick till **0** fastän `Z` fortfarande var nedtryckt.
+
+`state.seatLight` och `state.seatDeep` bokför nu vilken tangent som
+faktiskt är nere, och `Input.seatAxis()` **härleder** axeln ur det. Djup
+sits vinner när båda hålls — det är den som gör något med hästen. Provet
+kör båda ordningarna genom den riktiga bindningen
+(`__key` → `ContextActionService` → `Input`).
+
+**[KÄND, EJ ÅTGÄRDAD]** `W`/`S` och `A`/`D` har kvar samma
+sist-skriven-vinner-mönster i `KEY_ACTIONS`. Det är Gate 01:s inputlager
+och ligger utanför G02-B:s scope; jag rapporterar det i stället för att
+bredda PR:en på eget initiativ.
+
+### Fynd 3 — `step(..., dt)` vid icke-positiv dt
+
+**Uppmätt före fixen, och rapporten stämde inte riktigt:** `dt = 0` var
+**redan säker** — inget NaN, inget Inf, tillståndet orört, både som
+allra första bildruta och mitt i en ritt. Det var **negativ** dt som
+sprack:
+
+```
+step(intent, -0.5)
+→ invalid argument #3 to 'clamp' (max must be greater than or equal to min)
+```
+
+`takSteg = (kappaCeiling / CurvatureRateTime) * dt` blir negativt vid
+negativ dt, så `math.clamp(steg, -takSteg, takSteg)` fick min > max — och
+kastade **mitt i bildrutan, med halva tillståndet redan skrivet**.
+
+Vakten är `if not (dt >= 0) then return end`. Formen är vald med flit:
+`not (dt >= 0)` fångar även `NaN`, vilket ett `dt < 0` inte hade gjort.
+`dt == 0` släpps igenom — den är mätt säker, och att hoppa över den hade
+tappat bildrutans hjälper och en gångartsbegäran som råkar falla där.
+
+### Falsifiering
+
+| Mutation | Röda prov |
+|---|---|
+| `self.hjalper` tillbaka till nil i konstruktorn | 1, namnger `nil` |
+| Konstruktorn sätter en **tom** hjälptabell | 4, namnger alla tio fälten |
+| **Ett** hjälpfält saknas i utgångsläget | 3, namnger `ytterstod` |
+| Konstruktorn använder nollor i stället för kanonens neutralläge | 2 |
+| Z/C tillbaka till ömsesidig uteslutning | 1 |
+| Släpp av en tangent nollar axeln (**det rapporterade symptomet**) | 1: "C släpps, Z håller kvar lätt gav 0, väntat −1" |
+| Tie-break vänds: lätt sits vinner över djup | 2 |
+| `unbind` nollställer inte sitsen | 1 |
+| dt-vakten tas bort | 3, med det ursprungliga `clamp`-felet ordagrant |
+
+### Ett fel av mitt eget i den här rundan
+
+Första versionen av hjälpprovet skrev `math.abs(hj.skankel - …)` rakt av.
+Mutationen "konstruktorn sätter en tom tabell" fick då specen att
+**krascha** efter första raden i stället för att bli röd — noll FEL-rader,
+och falsifieringen såg ut att passera. Ett prov som kraschar mäter
+ingenting. Jämförelserna är nu nil-säkra, och samma mutation ger fyra
+röda med fältnamnen utskrivna.
+
+Det är andra gången i den här gaten som ett provharnesk kraschat i
+stället för att bli rött. Mönstret är värt att notera: **varje ny
+mutation måste kontrolleras på sin utskrift, inte bara på sin exitkod.**
+
+### Not tested, oförändrat
+
+Roblox runtime i Studio. Vakten och sitsmodellen är provade under `luau`
+mot stubbade tjänster, inte i en riktig klient.
+
+**Status: `READY_FOR_CHATGPT_REVIEW`.**

@@ -43,6 +43,50 @@ local function approach(current: number, target: number, up: number, down: numbe
 	return current - math.min(current - target, down * dt)
 end
 
+--[[ ── HJÄLPERNA UR AVSIKTEN ────────────────────────────────────────
+     Enhetens axlar → ridningens ord, med talen ur RidKanon.KONTAKT.
+
+     REN FUNKTION, och den ligger utanför `step()` av ett skäl (Jules
+     QA-fynd, #89): konstruktorn behöver EXAKT samma översättning för att
+     kunna sätta ett giltigt utgångsläge. Räknades den bara inne i
+     `step()` var `self.hjalper` nil fram till första bildrutan, och en
+     telemetriläsning dessförinnan saknade hela hjälpblocket. Att skriva
+     neutralvärdena en andra gång i konstruktorn hade varit två sanningar
+     om samma sak; nu är det en. ]]
+function MovementController.semantik(intent: Types.Intent): { [string]: any }
+	local KN = RidKanon.KONTAKT
+	local framat = math.clamp(intent.forward or 0, -1, 1)
+	local skankel = if framat >= 0
+		then KN.SKANKEL_NEUTRAL + framat * (0.78 - KN.SKANKEL_NEUTRAL)
+		else KN.SKANKEL_NEUTRAL + framat * (KN.SKANKEL_NEUTRAL - 0.05)
+	local tygel = KN.TYGEL_NEUTRAL
+		+ math.clamp(intent.rein or 0, 0, 1) * (KN.TYGEL_MAX - KN.TYGEL_NEUTRAL)
+	--[[ Sitsen: −1 lätt … 0 normal … 1 djup, skalad till modellens spann
+	     kring SITS_NEUTRAL på samma sätt som webbens inputlager gör det. ]]
+	local seat = math.clamp(intent.seat or 0, -1, 1)
+	local sits = if seat >= 0
+		then KN.SITS_NEUTRAL + seat * (KN.SITS_MAX - KN.SITS_NEUTRAL)
+		else KN.SITS_NEUTRAL + seat * (KN.SITS_NEUTRAL - (-0.6))
+	--[[ Styraxeln skalas till samma spann som webbens inputlager, så att
+	     böjkravet betyder samma sak på båda ytorna. ]]
+	local hj = Hjalper.semantik({
+		skankel = skankel, tygel = tygel, sits = sits,
+		styrning = math.clamp(intent.steer or 0, -1, 1) * RidKanon.HJALP.STYR_FULLT,
+		parad = intent.parad or 0,
+	})
+	--[[ Hjalper.semantik lämnar redan skankel/tygel/sits vidare, så
+	     anroparen läser dem därifrån i stället för att räkna om dem. ]]
+	return hj
+end
+
+--[[ Ryttaren som INTE gör något. Neutralläget är inte nollor — en häst
+     rids aldrig med släppt skänkel — utan KONTAKT:s egna mittvärden, och
+     de kommer härifrån så att de inte kan skilja sig från runtime. ]]
+local NEUTRAL_INTENT: Types.Intent = {
+	forward = 0, steer = 0, rein = 0, seat = 0, parad = 0,
+	gaitUp = false, gaitDown = false, jump = false,
+}
+
 --[[ Exponentiell utjämning som är oberoende av bildfrekvens. Ett rakt
      lerp med fast faktor ger olika känsla vid 30 och 144 Hz. ]]
 local function smooth(current: number, target: number, tau: number, dt: number): number
@@ -87,6 +131,12 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	     med webbens formel: en stadig hand bygger den, spänning river
 	     den. Den låg låst på 0,5 här, och eftersom spänningen läser
 	     rangen var det en tyst skillnad i hela spänningsmodellen. ]]
+	--[[ HJÄLPERNA ÄR GILTIGA REDAN HÄR (Jules QA-fynd, #89). `self.hjalper`
+	     sattes förut först inne i `step()`, så allt som läste controllern
+	     före första bildrutan — telemetrin i synnerhet — fick nil och
+	     tappade hela hjälpblocket. Utgångsläget är ryttaren som ännu inte
+	     gjort något, räknat med SAMMA funktion som runtime använder. ]]
+	self.hjalper = MovementController.semantik(NEUTRAL_INTENT)
 	self.rang = RidKanon.START.RANG
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
@@ -150,6 +200,19 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 end
 
 function MovementController:step(intent: Types.Intent, dt: number)
+	--[[ ── TIDEN MÅSTE GÅ FRAMÅT (Jules QA-fynd, #89) ─────────────────
+	     En negativ eller icke-finit `dt` är en klockanomali, och bildrutan
+	     hoppas över hel. Utan vakten sprack `math.clamp(steg, -takSteg,
+	     takSteg)` i kurvaturens takstegsberäkning: `takSteg` blir negativt
+	     vid negativ dt, och då är min > max. Uppmätt: `step(intent, -0.5)`
+	     kastade "invalid argument #3 to 'clamp'" mitt i bildrutan, med
+	     halva tillståndet redan skrivet.
+
+	     `dt == 0` släpps IGENOM med flit och är mätt säker: allt rör sig
+	     noll, kurvaturens tak blir noll, och tillståndet är oförändrat och
+	     finit efteråt. Att hoppa över nolldeltat hade tappat bildrutans
+	     hjälper och en gångartsbegäran som råkar falla där. ]]
+	if not (dt >= 0) then return end
 	local loco = self.loco
 	local rig = self.rig
 	local stats = self.stats
@@ -169,34 +232,16 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     Skänkeln byggs av framåtavsikten kring modellens neutralläge, på
 	     samma sätt som webbens inputlager gör det: en häst rids inte med
 	     släppt skänkel, så nollan i mitten är ett mittvärde och inte 0. ]]
-	local KN = RidKanon.KONTAKT
-	local framat = math.clamp(intent.forward or 0, -1, 1)
-	local skankel = if framat >= 0
-		then KN.SKANKEL_NEUTRAL + framat * (0.78 - KN.SKANKEL_NEUTRAL)
-		else KN.SKANKEL_NEUTRAL + framat * (KN.SKANKEL_NEUTRAL - 0.05)
-	local tygel = KN.TYGEL_NEUTRAL
-		+ math.clamp(intent.rein or 0, 0, 1) * (KN.TYGEL_MAX - KN.TYGEL_NEUTRAL)
-	--[[ Styraxeln skalas till samma spann som webbens inputlager, så att
-	     böjkravet betyder samma sak på båda ytorna. ]]
-	--[[ Sitsen: −1 lätt … 0 normal … 1 djup, skalad till modellens spann
-	     kring SITS_NEUTRAL på samma sätt som webbens inputlager gör det. ]]
-	local seat = math.clamp(intent.seat or 0, -1, 1)
-	local sits = if seat >= 0
-		then KN.SITS_NEUTRAL + seat * (KN.SITS_MAX - KN.SITS_NEUTRAL)
-		else KN.SITS_NEUTRAL + seat * (KN.SITS_NEUTRAL - (-0.6))
-	local hj = Hjalper.semantik({
-		skankel = skankel, tygel = tygel, sits = sits,
-		styrning = math.clamp(intent.steer or 0, -1, 1) * RidKanon.HJALP.STYR_FULLT,
-		parad = intent.parad or 0,
-	})
+	local hj = MovementController.semantik(intent)
+	local skankel, tygel = hj.skankel, hj.tygel
 	self.hjalper = hj
 
 	--[[ ── MJUKHET OCH SPÄNNING (senior review #87, blocker 1) ────────
 	     Mjukheten är handens stadga över tid: hjälpernas avvikelse från
 	     sitt eget glidande medel. Spänningen läser den, och fokus läser
 	     båda. Formlerna är webbens och talen ligger i RidKanon.SVAR. ]]
-	self._medel = self._medel or { skankel = skankel, tygel = tygel,
-		sits = sits, styrning = hj.styrning }
+	self._medel = self._medel or { skankel = hj.skankel, tygel = hj.tygel,
+		sits = hj.sits, styrning = hj.styrning }
 	loco.mjukhet = Svar.mjukhet(loco.mjukhet or 1, self._medel, hj, dt)
 	do
 		local hast = {

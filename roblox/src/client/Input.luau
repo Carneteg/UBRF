@@ -45,7 +45,22 @@ local state = {
 	     Sitsen är en balansmodifierare: sitter man ned i bågen bär man
 	     hästen, sitter man lätt får hon bära den själv. Utan axeln kunde
 	     Roblox inte ha den delen av modellen alls. ]]
-	seat = 0,
+	--[[ KNAPPSTATUS, INTE ETT DELAT AXELVÄRDE (Jules QA-fynd, #89).
+	     Z och C skrev förut båda direkt i `seat`, och den som släpptes
+	     sist bestämde. Håll Z (lätt) → tryck C (djup) → släpp C: axeln
+	     gick till 0 fastän Z fortfarande var nedtryckt. Nu bokförs vilken
+	     tangent som FAKTISKT är nere, och axeln HÄRLEDS ur det — samma
+	     sak varje gång oavsett ordning.
+
+	     Hålls båda vinner den djupa sitsen: det är den som gör något med
+	     hästen (bär bågen), medan den lätta sitsen är att låta bli.
+
+	     [KÄND, EJ ÅTGÄRDAD] W/S och A/D har kvar samma sist-skriven-
+	     vinner-mönster i KEY_ACTIONS. Det är Gate 01:s inputlager och
+	     ligger utanför G02-B:s scope; jag rapporterar det i stället för
+	     att bredda den här PR:en på eget initiativ. ]]
+	seatLight = false,
+	seatDeep = false,
 	touchSeat = 0,
 	paradHeld = false,
 	_paradEdge = false,
@@ -88,9 +103,9 @@ local function onInput(_, inputState: Enum.UserInputState, obj: InputObject)
 		if pressed and not state.paradHeld then state._paradEdge = true end
 		state.paradHeld = pressed
 	elseif obj.KeyCode == Enum.KeyCode.Z then
-		state.seat = if pressed then -1 else (if state.seat < 0 then 0 else state.seat)
+		state.seatLight = pressed
 	elseif obj.KeyCode == Enum.KeyCode.C then
-		state.seat = if pressed then 1 else (if state.seat > 0 then 0 else state.seat)
+		state.seatDeep = pressed
 	end
 	return Enum.ContextActionResult.Sink
 end
@@ -113,7 +128,7 @@ function Input.unbind()
 	state.forward, state.steer = 0, 0
 	state.touchForward, state.touchSteer = 0, 0
 	state.rein, state.touchRein = 0, 0
-	state.seat, state.touchSeat = 0, 0
+	state.seatLight, state.seatDeep, state.touchSeat = false, false, 0
 	state.paradHeld, state._paradEdge, state.touchParad = false, false, false
 	state.gaitUp, state.gaitDown, state.jump = false, false, false
 end
@@ -147,6 +162,15 @@ local function trigger(): number
 	return 0
 end
 
+--[[ Sitsaxeln HÄRLEDD ur knappstatus. Ren funktion av vad som är nere,
+     så ordningen på tryck och släpp inte kan ge två olika svar på samma
+     fysiska läge. Djup sits vinner när båda hålls. ]]
+function Input.seatAxis(): number
+	if state.seatDeep then return 1 end
+	if state.seatLight then return -1 end
+	return 0
+end
+
 --[[ Vänster avtryckare som ANALOG sits. Samma skäl som tygeln på höger:
      hur djupt man sitter är en dosering, inte ett av/på. ]]
 local function seatTrigger(): number
@@ -170,7 +194,7 @@ function Input.consume(): Types.Intent
 		gaitDown = state._downEdge,
 		jump = state.jump,
 		rein = math.clamp(state.rein + trigger() + state.touchRein, 0, 1),
-		seat = math.clamp(state.seat + seatTrigger() + state.touchSeat, -1, 1),
+		seat = math.clamp(Input.seatAxis() + seatTrigger() + state.touchSeat, -1, 1),
 		parad = if (state._paradEdge or state.touchParad) then 1 else 0,
 	}
 	state._upEdge, state._downEdge = false, false
