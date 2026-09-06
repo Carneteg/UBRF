@@ -31,8 +31,8 @@ Owns acceptance contracts, system architecture, independent review, cross-platfo
 ### Claude — Lead Implementation Engineer
 Owns the primary implementation of the active gate, integration and builder-side tests/falsification.
 
-### Jules — Independent QA / Falsification Agent
-Jules is **not** a second lead implementer. Jules' default job is to challenge work already implemented by Claude/others.
+### Jules — Optional Independent QA / Falsification Agent
+Jules is **not** a second lead implementer and is **never a blocking delivery gate**. Use Jules only when an extra independent falsification pass is likely to add value.
 
 Jules should:
 
@@ -57,9 +57,16 @@ Jules must not:
 
 ## Locked delivery chain
 
-**CLAUDE BUILDS → JULES CHALLENGES (when assigned) → CHATGPT REVIEWS → TOBIAS ACCEPTS**
+**CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
 
-Jules is optional per task. When invoked, its role is adversarial QA/falsification, not ownership of the feature.
+Jules is an optional sidecar QA lane, not part of the mandatory chain. Delivery must not wait for Jules to start, finish or recover from a stalled task.
+
+If Jules is invoked:
+
+- its findings are additional evidence for ChatGPT review,
+- confirmed defects still need to be resolved,
+- a stalled, duplicated or outdated Jules task should be cancelled and the main delivery chain should continue,
+- Jules output never replaces ChatGPT senior review or Tobias product acceptance.
 
 No agent may both introduce a major change and independently grant final approval for that same change.
 
@@ -74,11 +81,15 @@ Green CI, a mergeable PR or a passing local test suite is not product acceptance
 
 ## Jules operating pattern
 
+Use Jules for narrow, high-value checks such as a concrete runtime-wiring suspicion, a regression test, a security check or a focused falsification task.
+
 For an existing PR, prefer a review task such as:
 
 > Review PR <number> adversarially. Do not redesign the feature. Find runtime wiring gaps, duplicated sources of truth, web/Roblox parity mismatches, state inconsistencies, and tests that can pass without exercising production paths. Reproduce confirmed defects. Add failing regression tests when useful. Do not merge and do not change product tuning unless explicitly asked.
 
 For a bug/CI task, Jules may implement a narrow fix on its own branch, but it must stay within the issue's acceptance contract.
+
+If Jules becomes slow, stale, duplicates another task or opens a PR from an outdated base, stop that task rather than blocking delivery.
 
 ## Git rules
 
