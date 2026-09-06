@@ -70,19 +70,24 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 		     de sig, och det är hela skillnaden mot före G02-B, då cue:n
 		     startade förloppet i samma bildruta den föll. ]]
 		beddGangart = "halt", svarstid = 0, overgangstid = 0, etableringstid = 0,
-		--[[ Senior review #87 stängde luckorna: mjukhet, spänning och
-		     fokus räknas nu här med webbens formler. En stadig hand ger
-		     mjukhet 1, och en lugn häst spänning 0 — utgångsläget är
-		     alltså det oskrivna bladet, inte en gissning. ]]
-		mjukhet = 1, spanning = 0, fokus = 0.70,
-		balans = 1,
+		--[[ UTGÅNGSLÄGET ÄR KANON (senior re-review #87, blocker 2).
+		     Stod som literaler här — mjukhet 1, spänning 0, energi 1 —
+		     medan webben satte upp på 0,5 / 0,15 / 0,835. Samma formler
+		     på olika ritt är inte samma produkt, och det var blockeraren.
+		     Talen läses nu ur RidKanon.START, exporterad ur webbens
+		     SVAR_START. ]]
+		mjukhet = RidKanon.START.MJUKHET,
+		spanning = RidKanon.START.SPANNING,
+		fokus = RidKanon.START.FOKUS,
+		balans = RidKanon.START.BALANS,
 		energi = Svar.startEnergi(), paradKvalitet = 0,
 	} :: Types.Locomotion
 
-	--[[ Ryttarens rang hos hästen. Webben låter den växa med mjukheten
-	     över ett pass; Roblox har ingen ryttarprofil ännu, så den ligger
-	     på mitten. Neutralt värde, namngivet — inte en gissning. ]]
-	self.rang = 0.5
+	--[[ Ryttarens rang hos hästen. VÄXER under ritten sedan blocker 2,
+	     med webbens formel: en stadig hand bygger den, spänning river
+	     den. Den låg låst på 0,5 här, och eftersom spänningen läser
+	     rangen var det en tyst skillnad i hela spänningsmodellen. ]]
+	self.rang = RidKanon.START.RANG
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
 	self.curvature = 0         -- aktuell kurvatur, 1/m
@@ -106,7 +111,7 @@ end
      Shift/Ctrl stegar, S rullar ned och backar till slut. Spelaren väljer
      alltså gångart, aldrig ett exakt tempo — det är skillnaden mot en
      gaspedal, och det är därför hästen känns som en häst. ]]
-function MovementController:_targetGait(intent: Types.Intent): string
+function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolean?): string
 	--[[ Stegar från den gångart ryttaren SENAST BAD OM, inte från den
 	     hästen hunnit svara på (G02-B punkt 2). Två snabba tryck ska ge
 	     två steg även om hästen ännu inte börjat på det första — annars
@@ -121,7 +126,13 @@ function MovementController:_targetGait(intent: Types.Intent): string
 	     vägen ned och tar ett steg i gångartstrappan; här gör den
 	     detsamma, vid sidan av gångartsknappen. Kanalen är en impuls, så
 	     flanken räknas en gång — att hålla F ger inte en oändlig parad. ]]
-	if (intent.parad or 0) > 0 then index -= 1 end
+	--[[ FLANKEN, inte nivån (senior re-review #87, blocker 2). Raden
+	     läste `intent.parad > 0` varje bildruta, så att HÅLLA F stegade
+	     ned hela trappan på tre bildrutor — precis det kommentaren ovan
+	     påstod inte kunde hända. Den var osynlig så länge blocket runt
+	     bara kördes när gångarten redan bytt. ]]
+	if paradFlank == nil then paradFlank = (intent.parad or 0) > 0 end
+	if paradFlank then index -= 1 end
 
 	if intent.forward > 0.5 and index <= 1 then
 		index = 2                                   -- W ur halt startar skritt
@@ -189,22 +200,55 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	loco.mjukhet = Svar.mjukhet(loco.mjukhet or 1, self._medel, hj, dt)
 	do
 		local hast = {
-			kanslighet = Svar.kanslighet(self.temperament),
+			kanslighet = Svar.kanslighet(self.temperament, stats),
 			forlatande = stats.Forlatande or 0.60,
 			skygghet = stats.Skygghet or 0.20,
 		}
-		--[[ NEUTRALA INGÅNGAR där Roblox saknar källa, namngivna i
-		     HorseCore.Svar: stallro/sadellage/underlag 1, dagsform 0,
-		     inget spö. De fylls inte med gissningar. ]]
-		local spMal = Svar.spanningMal(hj, hast, loco.mjukhet, self.rang or 0.5,
+		--[[ SADELLAGE OCH DAGSFORM ÄR KANON sedan blocker 2 — samma
+		     utgångsläge som webben, ur RidKanon.START, i stället för
+		     två egna neutrala element. STALLRO och UNDERLAG saknar
+		     fortfarande källa och står i Svar.KONTEXT_SAKNAS; de körs
+		     på sina neutrala element och fylls inte med gissningar. ]]
+		local spMal = Svar.spanningMal(hj, hast, loco.mjukhet, self.rang,
 			self.gangartWebb or "halt",
-			{ stallro = 1, sadellage = 1, underlag = 1, dagsform = 0,
+			{ stallro = 1, underlag = 1,
+				sadellage = RidKanon.START.SADELLAGE,
+				dagsform = RidKanon.START.DAGSFORM,
 				utomhus = self.utomhus == true })
+		--[[ Rangen växer av handen och rivs av spänningen. Läses av
+		     spänningen NÄSTA bildruta, precis som på webben där raden
+		     ligger sist i stepRide. ]]
+		self.rang = Svar.rangSteg(self.rang, loco.mjukhet, loco.spanning or 0, dt)
 		loco.spanning = Svar.spanningSteg(loco.spanning or 0, spMal, hast, dt)
 	end
 
+	--[[ ── HALVHALTEN LÄSES ALLTID (senior re-review #87, blocker 2) ──
+	     Den här läsningen låg INNE i "begäran ändrades"-blocket nedan.
+	     En halvhalt som inte råkade byta gångart registrerades därför
+	     aldrig: ingen paradkvalitet, ingen fokuslyft, ingen `halvhalt`
+	     i telemetrin. På webben är en halvhalt en hjälp i sig och läses
+	     när den ges — och det är hela poängen med G02-B punkt 1.
+
+	     Cross-platform-scenariot hittade det: mac_kenzie parerades vid
+	     10,0 s och bad om halt först vid 10,23 s, och tappade då hela
+	     fokuslyftet — 0,738 mot webbens 0,785. En halvhalt är inte
+	     mindre välriden för att hästen redan gick i den gångart
+	     ryttaren ville ha.
+
+	     EN PARAD PER TRYCK. `paradFlank` är kanalens stigande flank, så
+	     att hålla knappen inne inte blir en oändlig rad halvhalter. Det
+	     var vad koden PÅSTOD att den gjorde; den läste nivån. ]]
+	local paradNu = (intent.parad or 0) > RidKanon.HJALP.PARAD_TROSKEL
+	local paradFlank = paradNu and not self._paradHalls
+	self._paradHalls = paradNu
+	if paradFlank then
+		loco.paradKvalitet = Hjalper.paradKvalitet({ skankel = skankel, tygel = tygel })
+		loco.paradTid = loco.tid
+		loco.cue = "halvhalt"
+	end
+
 	local forraMal = loco.beddGangart or loco.targetGait
-	loco.beddGangart = self:_targetGait(intent)
+	loco.beddGangart = self:_targetGait(intent, paradFlank)
 	if loco.beddGangart ~= forraMal then
 		local upp = Gaits.index(loco.beddGangart) > Gaits.index(forraMal)
 		loco.cue = if upp then "framåt" else "nedåt"
@@ -237,16 +281,11 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		     och samma val som webben gjorde efter att marginalmåttet
 		     visat sig omöjligt att göra rött genom inputlagret.
 
-		     FOKUS SAKNAS PÅ ROBLOX och skickas därför som 1, termens
-		     neutrala element: den bidrar med noll i stället för med en
-		     gissning. Se HorseCore.Svar för varför. ]]
+		     FOKUS RÄKNAS HÄR sedan #87:s första review och skickas som
+		     hästens faktiska fokus. `or 1` nedan är bara en vakt för
+		     bildrutan innan fokus fått sitt första värde. ]]
 		local klarhet = Hjalper.paradKvalitet({ skankel = skankel, tygel = tygel })
-		if (intent.parad or 0) > RidKanon.HJALP.PARAD_TROSKEL then
-			loco.paradKvalitet = klarhet
-			loco.paradTid = loco.tid
-			loco.cue = "halvhalt"
-		end
-		local vantan = Svar.svarstid(self.stats, Svar.kanslighet(self.temperament),
+		local vantan = Svar.svarstid(self.stats, Svar.kanslighet(self.temperament, stats),
 			loco.fokus or 1, loco.energi or 1, klarhet)
 		loco.svarstid = vantan
 		self._vantar = { fran_gait = forraMal, till = loco.beddGangart,
@@ -401,9 +440,8 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	--[[ ── HÄSTENS SVAR: BALANS OCH ENERGI (G02-B punkt 2) ────────────
 	     Balansen läser yttertygelstödet ur hjälpsemantiken, svängens
 	     fartkrav ur samma centripetaluttryck som webben (v²/r) och
-	     övergången ur att ett förlopp pågår. SPÄNNINGSTERMEN SAKNAS —
-	     Roblox har ingen spänning, och den fylls inte med ett påhittat
-	     tal. Se HorseCore.Svar.
+	     övergången ur att ett förlopp pågår. SPÄNNINGSTERMEN FINNS sedan
+	     #87:s första review och skickas som hästens faktiska spänning.
 
 	     Energin räknas per gångart och sekund ur samma tabell som webben,
 	     översatt via RidKanon.MOTSVARIGHET så att tabellen slipper finnas

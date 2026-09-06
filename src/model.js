@@ -224,7 +224,13 @@ const K={
 const GANGORDNING=["halt","skritt","trav","galopp"];
 
 function nyState(dagsform,rang,sadellage){
-  const st = {skala:Skala.tom(),spanning:0.15,tempo:0,gangart:"halt",steglangd:0,
+  /* UTGÅNGSLÄGET ÄR KANON (senior re-review #87, blocker 2). Talen
+     stod som literaler här; nu står de i SVAR_START i
+     src/riding/svar.js, och Roblox läser samma tal ur RidKanon.START.
+     Inget värde ändrades på webben — men de två ytorna startade förut
+     olika ritt, och det är blockeraren. */
+  const ST = (typeof SVAR_START !== "undefined") ? SVAR_START : null;
+  const st = {skala:Skala.tom(),spanning:ST.SPANNING,tempo:0,gangart:"halt",steglangd:0,
     /* Den gångart ryttaren senast BAD om. Hästen bär den tills hon ombeds
        något annat; `gangart` är vad hon faktiskt går just nu, och de två
        skiljer sig under en övergång. */
@@ -263,13 +269,14 @@ function nyState(dagsform,rang,sadellage){
        startar där en utvilad, uppmärksam häst står, så att Gate 01:s
        beteende är utgångsläget och avvikelsen växer därifrån. */
     beddGangart:"halt", svarstid:0, svarTid:-99,
-    balans:1, fokus:0.70, energi:0,
-    rang:rang??0.5,dagsform:dagsform??0.7,sadellage:sadellage??0.8,mjukhet:0.5,
+    balans:ST.BALANS, fokus:ST.FOKUS, energi:0,
+    rang:rang??ST.RANG,dagsform:dagsform??ST.DAGSFORM,
+    sadellage:sadellage??ST.SADELLAGE,mjukhet:ST.MJUKHET,
     _prev:null,_medel:null,_hist:[],_hh:{fas:0,t:0,kval:0},_senasteHH:-99,_senastePar:-99,_tid:0,
     _cueSparr:0,_overgangStart:-99,_cueFonster:null,_vantar:null};
   /* Energin börjar i dagsformen. En häst som haft en tung dag går ut
      med mindre i tanken, och det är samma tal ridläraren redan ser. */
-  st.energi = clamp(0.45 + 0.55*st.dagsform, 0, 1);
+  st.energi = svarStartEnergi(st.dagsform);
   return st;
 }
 
@@ -723,7 +730,9 @@ function stepRide(s,a,h,ctx,dt){
    Skala.pyramid(s.skala);
   }
   s.steglangd=Gait.steglangd(h.kategori,s.gangart,s.skala.schvung,s.spanning);
-  s.rang=clamp(s.rang+((s.mjukhet-0.55)*0.020-s.spanning*0.012)*dt,0,1);
+  /* Rangen ligger i svar.js sedan blocker 2 — Roblox räknar den med
+     samma formel i stället för att hålla 0,5 hela ritten. */
+  s.rang=svarRangSteg(s.rang,s.mjukhet,s.spanning,dt);
   s._prev={...a};
   return s;
 }

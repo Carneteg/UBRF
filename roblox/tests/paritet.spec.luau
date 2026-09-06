@@ -709,15 +709,97 @@ do
 			S.INFALL_MAX * 100))
 end
 
---[[ Luckorna från runda 1 är STÄNGDA efter senior review av #87.
+--[[ BETEENDEluckorna från runda 1 är STÄNGDA efter senior review av #87.
      Sitsen har en egen axel (Z/C och vänster avtryckare), och mjukhet,
      spänning och fokus räknas här med webbens formler. Kontrollen är
      därför den omvända: listorna ska vara TOMMA, och blir de det inte
-     har ett hål öppnats igen. ]]
-check("inga deklarerade hjälpluckor kvar på Roblox",
+     har ett hål öppnats igen.
+
+     RADERNA SÄGER "STORHET" OCH INTE "LUCKA" sedan senior re-review av
+     #87. Formuleringen "inga svarsluckor kvar" var för bred: den lät en
+     tom SAKNAS gälla som att ingenting fattades, medan modellen kördes
+     med nio contextingångar på sina neutrala element. Contextluckorna
+     har en egen kontroll nedan, och den kräver att de är DEKLARERADE —
+     inte att de är noll. ]]
+check("varje HJÄLPSTORHET webben har räknas också på Roblox",
 	#Hjalper.SAKNAS == 0, "(" .. table.concat(sorterad(Hjalper.SAKNAS), ", ") .. ")")
-check("inga deklarerade svarsluckor kvar på Roblox",
+check("varje SVARSSTORHET webben har räknas också på Roblox",
 	#Svar.SAKNAS == 0, "(" .. table.concat(sorterad(Svar.SAKNAS), ", ") .. ")")
+
+--[[ ══ CONTEXTKÄLLORNA (senior re-review av #87, blocker 2) ═══════════
+     "Om vissa externa contextkällor medvetet saknas på Roblox ska de
+     deklareras separat och får inte samtidigt passera som `inga
+     svarsluckor`."
+
+     RidKanon.KONTEXT_KALLOR är MÄTT ur webbens stepRide, inte skriven.
+     Varje källa ska ha antingen ett hem (Svar.KONTEXT_HAR) eller en
+     deklarerad lucka (Svar.KONTEXT_SAKNAS). Kontrollen går åt BÅDA
+     hållen: en ny webbkälla utan hem fäller den, och en deklarerad lucka
+     som inte finns i webbens modell fäller den också — annars hade
+     listan kunnat fyllas med namn för att se noggrann ut. ]]
+do
+	local har, saknas = {}, {}
+	for _, n in Svar.KONTEXT_HAR do har[n] = true end
+	for _, n in Svar.KONTEXT_SAKNAS do saknas[n] = true end
+
+	local hemlosa, dubbla = {}, {}
+	for _, n in RidKanon.KONTEXT_KALLOR do
+		if not har[n] and not saknas[n] then table.insert(hemlosa, n) end
+		if har[n] and saknas[n] then table.insert(dubbla, n) end
+	end
+	check("varje contextkälla webben läser har ett hem eller en deklarerad lucka",
+		#hemlosa == 0, "(" .. table.concat(sorterad(hemlosa), ", ") .. ")")
+	check("ingen källa står som både funnen och saknad",
+		#dubbla == 0, "(" .. table.concat(sorterad(dubbla), ", ") .. ")")
+
+	local uppfunna = {}
+	local kanon = {}
+	for _, n in RidKanon.KONTEXT_KALLOR do kanon[n] = true end
+	for _, n in Svar.KONTEXT_HAR do
+		if not kanon[n] then table.insert(uppfunna, n) end
+	end
+	for _, n in Svar.KONTEXT_SAKNAS do
+		if not kanon[n] then table.insert(uppfunna, n) end
+	end
+	check("och ingen källa är uppfunnen: listorna håller sig till webbens modell",
+		#uppfunna == 0, "(" .. table.concat(sorterad(uppfunna), ", ") .. ")")
+
+	--[[ Att luckorna FINNS är en sanning om produkten, inte ett fel som
+	     ska tystas. Raden står här för att den ska SYNAS i varje körning:
+	     Roblox rider utan spö, stallro, underlag, humör och ryttarens
+	     färdighetsprofil, och vad det är värt mäts i forberedelse-specens
+	     cross-platform-scenario. ]]
+	check("contextluckorna är deklarerade — och de är inte noll",
+		#Svar.KONTEXT_SAKNAS > 0,
+		string.format("(%d källor utan hem på Roblox: %s)", #Svar.KONTEXT_SAKNAS,
+			table.concat(sorterad(Svar.KONTEXT_SAKNAS), ", ")))
+end
+
+--[[ ══ UTGÅNGSLÄGET (samma blockerare) ════════════════════════════════
+     Webben startade en ritt på spänning 0,15 / energi 0,835 / mjukhet
+     0,5, Roblox på 0 / 1 / 1. Talen är kanon nu; det här är raden som
+     håller dem det. ]]
+do
+	local S = RidKanon.START
+	check("utgångsläget är komplett i kanonen",
+		S.SPANNING ~= nil and S.MJUKHET ~= nil and S.FOKUS ~= nil
+			and S.BALANS ~= nil and S.RANG ~= nil and S.DAGSFORM ~= nil
+			and S.SADELLAGE ~= nil and S.ENERGI_BAS ~= nil and S.ENERGI_DAG ~= nil,
+		string.format("(spänning %.2f, mjukhet %.2f, fokus %.2f, balans %.2f, rang %.2f)",
+			S.SPANNING, S.MJUKHET, S.FOKUS, S.BALANS, S.RANG))
+	check("och Roblox startenergi räknas ur dagsformen, inte satt till 1",
+		math.abs(Svar.startEnergi() - (S.ENERGI_BAS + S.ENERGI_DAG * S.DAGSFORM)) < 1e-9
+			and Svar.startEnergi() < 1,
+		string.format("(%.4f vid dagsform %.2f)", Svar.startEnergi(), S.DAGSFORM))
+	--[[ Rangen växer av handen och rivs av spänningen — den låg låst på
+	     0,5 hela ritten på Roblox, och spänningen läser den. ]]
+	local stadig = Svar.rangSteg(0.5, 1.0, 0, 1)
+	local skakig = Svar.rangSteg(0.5, 0.2, 0.5, 1)
+	check("rangen växer av en stadig hand och rivs av spänning",
+		stadig > 0.5 and skakig < 0.5,
+		string.format("(stadig hand +%.4f/s · ostadig och spänd %.4f/s)",
+			stadig - 0.5, skakig - 0.5))
+end
 
 print("")
 if oppna > 0 then

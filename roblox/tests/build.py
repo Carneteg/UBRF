@@ -82,6 +82,13 @@ FORBEREDELSE = SPEL + [
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
+    # StateMachine + MovementController ligger med sedan blocker 2 i senior
+    # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
+    # controller med den hast Stallet faktiskt delar ut, inte genom
+    # direktanrop av svarsmodellen.
+    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
+    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    ("MovementController", "src/client/MovementController.luau"),
     # GameplayService laddas SIST och ar poangen med hela listan: utan den
     # bevisade specen bara att HorseService-kroken fungerar, inte att
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.

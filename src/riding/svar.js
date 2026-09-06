@@ -154,6 +154,69 @@ const SVAR_KANON = {
   SP_FALL_BAS: 0.50, SP_FALL_FORLAT: 1.00,
 };
 
+/* ══════════════════════════════════════════════════════════════════
+   UTGÅNGSLÄGET (senior re-review av #87, blocker 2)
+
+   Formelpariteten var grön medan RUNTIME-pariteten inte var det:
+   webben startade en ritt på spänning 0,15 och energi ≈ 0,835, Roblox
+   på spänning 0 och energi 1. Samma formler, olika startpunkt — och
+   då är det inte samma produkt, hur lika formlerna än räknar.
+
+   Utgångsläget är därför kanon, ett enda ställe, och båda ytorna
+   LÄSER det. `nyState()` nedan tar fortfarande emot dagsform, rang
+   och sadellage — en ritt kan börja någon annanstans — men när ingen
+   säger något är det de här talen som gäller, på båda ytorna.
+
+   Talen är inte nya: de är precis de literaler nyState() redan hade.
+   Ingen ridkänsla ändras på webben av att de fått ett namn. På Roblox
+   ÄNDRAS den, och det är hela poängen — Roblox startade fel. */
+const SVAR_START = {
+  /* Hästens dag och hur sadeln ligger. Roblox har inget system för
+     någotdera, och satte förut de neutrala elementen (dagsform 0,
+     sadellage 1). Nu läser den samma utgångsläge som webben i stället
+     för ett eget. */
+  DAGSFORM: 0.7,
+  SADELLAGE: 0.8,
+  /* Ryttarens rang hos hästen. Växer under ritten, se svarRangSteg. */
+  RANG: 0.5,
+  /* Tillståndet vid uppsittning. `mjukhet` är handens stadga och
+     börjar mitt på skalan: hästen har ännu inte känt något att döma
+     efter. `energi` räknas ur dagsformen och står därför inte här. */
+  SPANNING: 0.15,
+  MJUKHET: 0.5,
+  FOKUS: 0.70,
+  BALANS: 1,
+  /* energi = ENERGI_BAS + ENERGI_DAG × dagsform. En häst som haft en
+     tung dag går ut med mindre i tanken. */
+  ENERGI_BAS: 0.45,
+  ENERGI_DAG: 0.55,
+  /* ── RANGEN VÄXER (samma orsak som ovan) ─────────────────────────
+     Webben lät rangen krypa uppåt av en stadig hand och nedåt av
+     spänning; Roblox höll den låst på 0,5 hela ritten. Spänningen
+     läser rangen, så det var en tyst skillnad i hela spänningsmodellen
+     och inte bara i ett starttal. Konstanterna stod som literaler i
+     src/model.js och har flyttat hit utan att ändras. */
+  RANG_PIVOT: 0.55,   // mjukhet över detta bygger rang, under river
+  RANG_MJUK: 0.020,   // per sekund vid full avvikelse
+  RANG_SPANN: 0.012,  // × spänning, DRAR IFRÅN
+};
+
+/* Energin vid uppsittning, ur hästens dagsform. */
+function svarStartEnergi(dagsform) {
+  const S = SVAR_START;
+  const d = (dagsform === undefined || dagsform === null) ? S.DAGSFORM : dagsform;
+  return Math.max(0, Math.min(1, S.ENERGI_BAS + S.ENERGI_DAG * d));
+}
+
+/* Rangens ändring per sekund. Ryttaren förtjänar den med handen och
+   förlorar den på spänning. */
+function svarRangSteg(rang, mjukhet, spanning, dt) {
+  const S = SVAR_START;
+  const d = (mjukhet - S.RANG_PIVOT) * S.RANG_MJUK - (spanning || 0) * S.RANG_SPANN;
+  const v = rang + d * dt;
+  return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+
 /* Svarstiden för EN hjälp. `klarhet` är 0–1: hur tydlig hjälpen var —
    framåtimpulsens marginal över tröskeln, eller paradens kvalitet. */
 function svarSvarstid(h, fokus, energi, klarhet) {

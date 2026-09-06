@@ -125,7 +125,10 @@ local function register(model: Model)
 		rig = rig,
 		stats = stats,
 		rider = nil,
-		energi = 1,
+		--[[ Utgångsläget ur kanonen (senior re-review #87, blocker 2).
+		     Stod som 1 — en utvilad häst som webben aldrig satte upp på;
+		     där börjar energin i dagsformen. ]]
+		energi = Svar.startEnergi(),
 		lastExertion = 0,
 		lastSync = os.clock(),
 		lastPosition = rig.root.Position,

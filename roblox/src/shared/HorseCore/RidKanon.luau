@@ -349,4 +349,259 @@ RidKanon.PROV = {
 	},
 }
 
+--[[ UTGÅNGSLÄGET (senior re-review av #87, blocker 2).
+
+     Webben startade en ritt på spänning 0,15 och energi ≈ 0,835,
+     Roblox på spänning 0 och energi 1. Formlerna var lika, ritten
+     var det inte — och då är det inte samma produkt. Talen står nu
+     i SVAR_START i src/riding/svar.js, exporteras hit, och BÅDA
+     ytorna läser dem. Ingen siffra ändrades på webben.
+
+     ENERGI = ENERGI_BAS + ENERGI_DAG × dagsform. RANG_* är hur
+     rangen växer under ritten; Roblox höll den låst på 0,5 och
+     hade därmed en tyst skillnad i hela spänningsmodellen. ]]
+RidKanon.START = {
+	DAGSFORM = 0.7,
+	SADELLAGE = 0.8,
+	RANG = 0.5,
+	SPANNING = 0.15,
+	MJUKHET = 0.5,
+	FOKUS = 0.7,
+	BALANS = 1,
+	ENERGI_BAS = 0.45,
+	ENERGI_DAG = 0.55,
+	RANG_PIVOT = 0.55,
+	RANG_MJUK = 0.02,
+	RANG_SPANN = 0.012,
+}
+
+--[[ CONTEXTKÄLLORNA — allt som kommer UTIFRÅN in i ridmodellen.
+
+     MÄTT, inte skriven: stepRide körs med hjälperna, ridtillståndets
+     contextfält och context-objektet bakom en Proxy som noterar varje
+     läsning, över ett svep av hjälper och gångarter.
+
+     Roblox ska för var och en av de här ha ANTINGEN en källa i
+     HorseCore.Svar.KONTEXT_HAR eller en deklarerad lucka i
+     Svar.KONTEXT_SAKNAS. Paritetsspecen kräver att unionen är exakt
+     den här listan. Lägger webben till en källa blir Roblox rött
+     tills den fått ett hem — en lucka kan inte uppstå tyst, och
+     `inga svarsluckor` kan inte längre gälla en yta som i själva
+     verket kör nio ingångar på sina neutrala element. ]]
+RidKanon.KONTEXT_KALLOR = { "a.parad", "a.sits", "a.skankel", "a.spo", "a.styrning", "a.tygel", "ctx.avdrift", "ctx.fard.hhAmplitud", "ctx.fard.lugn", "ctx.fard.skygghet", "ctx.fard.spanningFall", "ctx.fard.tygelband", "ctx.stallro", "ctx.svangradie", "ctx.underlag", "ctx.utomhus", "s.dagsform", "s.rang", "s.sadellage" }
+
+--[[ CROSS-PLATFORM-SCENARIOT (senior re-review av #87, blocker 2).
+
+     En RITT, inte en formel. Webbens riktiga stepRide, bildruta för
+     bildruta, med två verkliga UBRF-hästar ur src/spel/hastar.js och
+     med den context Roblox faktiskt har. Roblox-specen kör samma
+     ritt genom en riktig MovementController och jämför fem storheter
+     i åtta mätpunkter.
+
+     GRÄNSEN, uttryckligen: jämförelsen börjar vid SEMANTISKA HJÄLPER
+     per bildruta, inte vid tangenttryck. Inputadaptern får vara
+     plattformsspecifik enligt paritetsregeln; att hjälpen leder till
+     samma svar får den inte.
+
+     STEG är glest: en rad först när en hjälp ändras, håll kvar
+     mellan raderna. BEDD är vilken gångart ryttaren bad om och på
+     vilken bildruta — mätt ur webbens cue-modell, så att Roblox
+     tangentflank hamnar på exakt samma bildruta.
+
+     MATT är facit med Roblox context. WEBB är samma ritt med webbens
+     egen context; skillnaden mellan de två är vad de deklarerade
+     luckorna är VÄRDA, i siffror, i stället för bara namngivna. ]]
+RidKanon.SCENARIO = {
+	HZ = 60,
+	RUTOR = 720,
+	STEG = {
+		{ i = 0, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 61, skankel = 0.48, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 62, skankel = 0.54, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 63, skankel = 0.6, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 64, skankel = 0.66, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 65, skankel = 0.72, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 66, skankel = 0.78, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 87, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 181, skankel = 0.48, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 182, skankel = 0.54, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 183, skankel = 0.6, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 184, skankel = 0.66, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 185, skankel = 0.72, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 186, skankel = 0.78, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 208, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 301, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 302, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 303, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 304, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 305, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 306, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 307, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 308, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 309, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 310, skankel = 0.42, tygel = 0.8, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 311, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 312, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 313, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 314, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 315, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 316, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 317, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 318, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 319, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 320, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 321, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 322, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 323, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 324, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 325, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 326, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 327, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 328, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 329, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 330, skankel = 0.42, tygel = 0.8, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 331, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 332, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 333, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 334, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 335, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 336, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 337, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 338, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 339, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 340, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 341, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 342, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 343, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 344, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 345, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 346, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 347, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 348, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 349, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 350, skankel = 0.42, tygel = 0.8, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 351, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 352, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 353, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 354, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 355, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 356, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 357, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 358, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 359, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 360, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 361, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 362, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 363, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 364, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 365, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 366, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 367, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 368, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 369, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 370, skankel = 0.42, tygel = 0.8, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 371, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 372, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 373, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 374, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 375, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 376, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 377, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 378, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 379, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 380, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 381, skankel = 0.42, tygel = 0.351257, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 382, skankel = 0.42, tygel = 0.383926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 383, skankel = 0.42, tygel = 0.434809, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 384, skankel = 0.42, tygel = 0.498926, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 385, skankel = 0.42, tygel = 0.57, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 386, skankel = 0.42, tygel = 0.641074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 387, skankel = 0.42, tygel = 0.705191, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 388, skankel = 0.42, tygel = 0.756074, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 389, skankel = 0.42, tygel = 0.788743, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 390, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 511, skankel = 0.48, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 512, skankel = 0.54, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 513, skankel = 0.6, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 514, skankel = 0.66, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 515, skankel = 0.72, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 516, skankel = 0.78, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 537, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+		{ i = 600, skankel = 0.42, tygel = 0.52, sits = 0.85, styrning = 0, parad = 1 },
+		{ i = 612, skankel = 0.42, tygel = 0.34, sits = 0.2, styrning = 0, parad = 0 },
+	},
+	HASTAR = {
+		{
+			id = "crokino", profil = "kanslig",
+			BEDD = {
+				{ i = 63, gangart = "skritt" },
+				{ i = 183, gangart = "trav" },
+				{ i = 304, gangart = "skritt" },
+				{ i = 364, gangart = "halt" },
+				{ i = 513, gangart = "skritt" },
+				{ i = 600, gangart = "halt" },
+			},
+			MATT = {
+				{ t = 0.05, i = 2, gangart = "halt", svarstid = 0, balans = 0.997596, fokus = 0.698441, spanning = 0.21732, energi = 0.835045 },
+				{ t = 0.3, i = 17, gangart = "halt", svarstid = 0, balans = 0.988787, fokus = 0.696309, spanning = 0.115774, energi = 0.83527 },
+				{ t = 1, i = 59, gangart = "halt", svarstid = 0, balans = 0.990007, fokus = 0.714313, spanning = 0, energi = 0.8359 },
+				{ t = 2.5, i = 149, gangart = "skritt", svarstid = 0.06, balans = 0.92578, fokus = 0.724444, spanning = 0, energi = 0.83633 },
+				{ t = 4.5, i = 269, gangart = "trav", svarstid = 0.06, balans = 0.897508, fokus = 0.737476, spanning = 0, energi = 0.835633 },
+				{ t = 6, i = 359, gangart = "skritt", svarstid = 0.06, balans = 0.855439, fokus = 0.73455, spanning = 0.160501, energi = 0.834757 },
+				{ t = 8, i = 479, gangart = "halt", svarstid = 0.06, balans = 0.882612, fokus = 0.738114, spanning = 0, energi = 0.835891 },
+				{ t = 9.5, i = 569, gangart = "skritt", svarstid = 0.06, balans = 0.871679, fokus = 0.739675, spanning = 0, energi = 0.836804 },
+				{ t = 11, i = 659, gangart = "halt", svarstid = 0.06, balans = 0.85759, fokus = 0.796966, spanning = 0, energi = 0.837192 },
+				{ t = 12, i = 719, gangart = "halt", svarstid = 0.06, balans = 0.909764, fokus = 0.794517, spanning = 0, energi = 0.838092 },
+			},
+			WEBB = {
+				{ t = 0.05, i = 2, gangart = "galopp", svarstid = 0, balans = 0.997596, fokus = 0.698441, spanning = 0.21732, energi = 0.834963 },
+				{ t = 0.3, i = 17, gangart = "galopp", svarstid = 0, balans = 0.986892, fokus = 0.695692, spanning = 0.150213, energi = 0.834571 },
+				{ t = 1, i = 59, gangart = "galopp", svarstid = 0, balans = 0.987212, fokus = 0.713212, spanning = 0, energi = 0.833549 },
+				{ t = 2.5, i = 149, gangart = "galopp", svarstid = 0.06, balans = 0.903574, fokus = 0.721544, spanning = 0, energi = 0.831976 },
+				{ t = 4.5, i = 269, gangart = "galopp", svarstid = 0.06, balans = 0.883702, fokus = 0.73394, spanning = 0, energi = 0.829393 },
+				{ t = 6, i = 359, gangart = "skritt", svarstid = 0.06, balans = 0.84926, fokus = 0.731999, spanning = 0.16586, energi = 0.827653 },
+				{ t = 8, i = 479, gangart = "galopp", svarstid = 0.06, balans = 0.877449, fokus = 0.735463, spanning = 0, energi = 0.825917 },
+				{ t = 9.5, i = 569, gangart = "skritt", svarstid = 0.06, balans = 0.854412, fokus = 0.735737, spanning = 0, energi = 0.824212 },
+				{ t = 11, i = 659, gangart = "galopp", svarstid = 0.06, balans = 0.840339, fokus = 0.791333, spanning = 0.021187, energi = 0.822985 },
+				{ t = 12, i = 719, gangart = "galopp", svarstid = 0.06, balans = 0.898805, fokus = 0.79067, spanning = 0, energi = 0.821547 },
+			},
+		},
+		{
+			id = "mac_kenzie", profil = "tung",
+			BEDD = {
+				{ i = 63, gangart = "skritt" },
+				{ i = 183, gangart = "trav" },
+				{ i = 304, gangart = "skritt" },
+				{ i = 364, gangart = "halt" },
+				{ i = 513, gangart = "skritt" },
+				{ i = 600, gangart = "halt" },
+			},
+			MATT = {
+				{ t = 0.05, i = 2, gangart = "halt", svarstid = 0, balans = 0.999101, fokus = 0.698672, spanning = 0.1269, energi = 0.835038 },
+				{ t = 0.3, i = 17, gangart = "halt", svarstid = 0, balans = 0.99735, fokus = 0.698394, spanning = 0.0114, energi = 0.83523 },
+				{ t = 1, i = 59, gangart = "halt", svarstid = 0, balans = 0.998072, fokus = 0.716768, spanning = 0, energi = 0.835765 },
+				{ t = 2.5, i = 149, gangart = "skritt", svarstid = 0.201525, balans = 0.961023, fokus = 0.727581, spanning = 0, energi = 0.836166 },
+				{ t = 4.5, i = 269, gangart = "trav", svarstid = 0.197856, balans = 0.944131, fokus = 0.740435, spanning = 0, energi = 0.835385 },
+				{ t = 6, i = 359, gangart = "skritt", svarstid = 0.235766, balans = 0.935786, fokus = 0.741753, spanning = 0, energi = 0.834311 },
+				{ t = 8, i = 479, gangart = "halt", svarstid = 0.237519, balans = 0.940157, fokus = 0.746547, spanning = 0, energi = 0.835046 },
+				{ t = 9.5, i = 569, gangart = "skritt", svarstid = 0.19524, balans = 0.932981, fokus = 0.745894, spanning = 0, energi = 0.835898 },
+				{ t = 11, i = 659, gangart = "halt", svarstid = 0.239529, balans = 0.929391, fokus = 0.784566, spanning = 0, energi = 0.835956 },
+				{ t = 12, i = 719, gangart = "halt", svarstid = 0.239529, balans = 0.954712, fokus = 0.786087, spanning = 0, energi = 0.836721 },
+			},
+			WEBB = {
+				{ t = 0.05, i = 2, gangart = "galopp", svarstid = 0, balans = 0.99908, fokus = 0.69866, spanning = 0.13, energi = 0.834958 },
+				{ t = 0.3, i = 17, gangart = "galopp", svarstid = 0, balans = 0.997242, fokus = 0.698327, spanning = 0.0145, energi = 0.834555 },
+				{ t = 1, i = 59, gangart = "galopp", svarstid = 0, balans = 0.99799, fokus = 0.716714, spanning = 0, energi = 0.833461 },
+				{ t = 2.5, i = 149, gangart = "galopp", svarstid = 0.201868, balans = 0.951576, fokus = 0.727551, spanning = 0, energi = 0.831745 },
+				{ t = 4.5, i = 269, gangart = "galopp", svarstid = 0.198576, balans = 0.940121, fokus = 0.740421, spanning = 0, energi = 0.828974 },
+				{ t = 6, i = 359, gangart = "skritt", svarstid = 0.236714, balans = 0.934207, fokus = 0.741662, spanning = 0, energi = 0.826835 },
+				{ t = 8, i = 479, gangart = "galopp", svarstid = 0.238565, balans = 0.939718, fokus = 0.746426, spanning = 0, energi = 0.825172 },
+				{ t = 9.5, i = 569, gangart = "skritt", svarstid = 0.196795, balans = 0.932824, fokus = 0.745826, spanning = 0, energi = 0.82313 },
+				{ t = 11, i = 659, gangart = "halt", svarstid = 0.241351, balans = 0.92467, fokus = 0.783526, spanning = 0, energi = 0.821872 },
+				{ t = 12, i = 719, gangart = "galopp", svarstid = 0.241351, balans = 0.951744, fokus = 0.785379, spanning = 0, energi = 0.820387 },
+			},
+		},
+	},
+}
+
 return RidKanon

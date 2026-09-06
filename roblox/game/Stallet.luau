@@ -135,11 +135,16 @@ function Stallet.statsFor(id: string): { [string]: any }?
 		Profil = h.profil,
 		Forlatande = h.forlatande,
 		Skygghet = h.skygghet,
-		--[[ Webbens `kanslighet` är hästens svarsvillighet. På Roblox
-		     räknas den ur temperamentet (Svar.kanslighet), så här sätts
-		     TEMPERAMENTET ur känsligheten i stället för att ett andra
-		     känslighetsfält uppfinns. Trösklarna följer
-		     Config.TEMPERAMENTS egna reactGain-nivåer. ]]
+		--[[ KÄNSLIGHETEN GÅR MED SOM TAL sedan blocker 2 i senior
+		     re-review av #87. Den räknades förut bara ur temperamentet,
+		     och trösklarna nedan kvantiserade bort hästen: 0,78 och 0,71
+		     blev båda "Sensitive" och därmed samma 1,00 i modellen.
+		     Cross-platform-scenariot mätte upp priset.
+
+		     Temperamentet sätts fortfarande, för det styr mer än
+		     känsligheten (accelBias, animation, ridkänsla), och trösklarna
+		     följer Config.TEMPERAMENTS egna reactGain-nivåer. ]]
+		Kanslighet = h.kanslighet,
 		Temperament = if (h.kanslighet or 0.5) >= 0.70 then "Sensitive"
 			elseif (h.kanslighet or 0.5) >= 0.55 then "Energetic"
 			elseif (h.kanslighet or 0.5) <= 0.35 then "Brave"

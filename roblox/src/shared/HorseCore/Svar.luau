@@ -40,9 +40,81 @@ local Svar = {}
 
 Svar.PROFILER = RidKanon.PROFILER
 
---[[ Tomt sedan #87:s review. Listan står kvar som kontrakt: nästa
-     storhet utan källa ska deklareras här och inte utelämnas tyst. ]]
+--[[ SVAR.SAKNAS är BETEENDEluckor: en storhet i svarsmodellen som
+     Roblox inte räknar alls. Tom sedan #87:s första review — mjukhet,
+     spänning och fokus räknas här nu. Listan står kvar som kontrakt:
+     nästa storhet utan implementation ska deklareras här. ]]
 Svar.SAKNAS = {}
+
+--[[ ══ CONTEXTKÄLLORNA (senior re-review av #87, blocker 2) ═════════
+
+     Reviewen: "Om vissa externa contextkällor medvetet saknas på Roblox
+     ska de deklareras separat och får inte samtidigt passera som `inga
+     svarsluckor`." Det var precis vad som hände. `Svar.SAKNAS` var tom
+     och ett test KRÄVDE att den skulle vara det, medan modellen i själva
+     verket kördes med flera ingångar på sina neutrala element. Kontraktet
+     var därmed grönare än verkligheten.
+
+     Nu är det två listor med två olika betydelser:
+
+       SAKNAS          en STORHET som inte räknas alls  (tom)
+       KONTEXT_SAKNAS  en INGÅNG utan källa på Roblox   (nio)
+
+     Unionen av KONTEXT_HAR och KONTEXT_SAKNAS ska vara exakt
+     RidKanon.KONTEXT_KALLOR — den lista exporten MÄTTE ur webbens
+     stepRide. Paritetsspecen faller annars, åt båda hållen: en ny
+     webbkälla utan hem, och en deklarerad lucka som inte finns.
+
+     Vad luckorna är VÄRDA står inte som gissning utan är uppmätt:
+     RidKanon.SCENARIO kör samma ritt med Roblox context och med
+     webbens, och skillnaden är siffran. ]]
+Svar.KONTEXT_HAR = {
+	"a.parad",        -- F / ButtonB / HALVHALT
+	"a.sits",         -- Z/C / ButtonL2 / DJUP SITS
+	"a.skankel",      -- framåtaxeln kring SKANKEL_NEUTRAL
+	"a.styrning",     -- styraxeln
+	"a.tygel",        -- Q / ButtonR2 / TYGEL
+	"ctx.svangradie", -- ur kurvaturen, samma uttryck som webben
+	"ctx.utomhus",    -- ridhus eller ute
+	"s.dagsform",     -- RidKanon.START.DAGSFORM
+	"s.rang",         -- växer under ritten, Svar.rangSteg
+	"s.sadellage",    -- RidKanon.START.SADELLAGE
+}
+
+--[[ NIO INGÅNGAR UTAN KÄLLA. De körs på sina NEUTRALA element — inte
+     på gissningar — och var och en har en orsak som är ett system som
+     inte finns, inte en glömska:
+
+       a.spo                  inget spö på Roblox
+       ctx.stallro            ingen stallro-modell
+       ctx.underlag           inget underlagssystem
+       ctx.avdrift            ingen humör-/avdriftsmodell
+       ctx.fard.tygelband     ryttarens färdigheter finns inte som
+       ctx.fard.skygghet        system på Roblox; hela `fard`-blocket
+       ctx.fard.lugn            är webbens färdighetsprofil
+       ctx.fard.hhAmplitud
+       ctx.fard.spanningFall
+
+     Skillnaden mot webben är därmed en känd och MÄTT förskjutning i
+     spänningens och energins nivå, inte i deras form. Att fylla dem med
+     konstanter för att få identiska tal hade gett paritet i siffran och
+     inte i upplevelsen. ]]
+Svar.KONTEXT_SAKNAS = {
+	"a.spo",
+	"ctx.avdrift",
+	"ctx.fard.hhAmplitud",
+	"ctx.fard.lugn",
+	"ctx.fard.skygghet",
+	"ctx.fard.spanningFall",
+	"ctx.fard.tygelband",
+	"ctx.stallro",
+	"ctx.underlag",
+}
+
+--[[ Utgångsläget, ur kanonen. Roblox startade förut spänning 0, energi 1
+     och mjukhet 1 medan webben startade 0,15 / 0,835 / 0,5 — samma
+     formler på olika ritt. ]]
+Svar.START = RidKanon.START
 
 local function kl(v: number, lo: number, hi: number): number
 	return math.clamp(v, lo, hi)
@@ -60,14 +132,22 @@ function Svar.profil(h: { [string]: any }?): { [string]: any }
 	return (namn and Svar.PROFILER[namn]) or Svar.PROFILER.skolhast
 end
 
---[[ Hästens KÄNSLIGHET, 0–1, ur det Roblox redan har.
+--[[ Hästens KÄNSLIGHET, 0–1.
 
-     Webbens `h.kanslighet` säger hur mycket hon reagerar. Roblox
-     motsvarighet är temperamentets `reactGain` — samma storhet, annan
-     skala — och den normaliseras här i stället för att ett nytt
-     stat-fält uppfinns. Spannet är temperamentstabellens eget:
-     Brave 0,70 lägst, Sensitive 1,35 högst. ]]
-function Svar.kanslighet(temperament: { [string]: any }?): number
+     HÄSTENS EGET TAL FÖRST (`Kanslighet` i Config.STATS, satt ur
+     UBRFSpelData av Stallet.statsFor). Härledningen ur temperamentets
+     `reactGain` finns kvar som fallback för en häst som bara är
+     konfigurerad i Studio, men den KVANTISERAR: hela spannet 0,70–1,00
+     blir "Sensitive" och därmed 1,00. Cross-platform-scenariot mätte
+     följden — crokino fick spänning 0,28 på Roblox mot 0,16 på webben
+     med exakt samma ritt — och det är därför talet nu går hela vägen.
+
+     Fallback-spannet är temperamentstabellens eget: Brave 0,70 lägst,
+     Sensitive 1,35 högst. ]]
+function Svar.kanslighet(temperament: { [string]: any }?,
+	stats: { [string]: any }?): number
+	local eget = if stats then stats.Kanslighet else nil
+	if type(eget) == "number" then return kl(eget, 0, 1) end
 	local g = if temperament then (temperament.reactGain or 1) else 1
 	return kl((g - 0.70) / (1.35 - 0.70), 0, 1)
 end
@@ -226,8 +306,23 @@ end
 --[[ Energin en häst går ut med. Webben räknar den ur dagsformen; Roblox
      har ingen dagsform, så en utvilad häst startar på full energi — det
      är webbens värde vid dagsform 1,0 och alltså ingen egen konstant. ]]
-function Svar.startEnergi(): number
-	return 1
+--[[ Energin vid uppsittning, ur hästens dagsform — samma uttryck som
+     webbens svarStartEnergi(). Returnerade 1 före blocker 2, alltså en
+     annan häst än den webben satte upp på. ]]
+function Svar.startEnergi(dagsform: number?): number
+	local S = RidKanon.START
+	local d = if dagsform ~= nil then dagsform else S.DAGSFORM
+	return math.clamp(S.ENERGI_BAS + S.ENERGI_DAG * d, 0, 1)
+end
+
+--[[ Rangens ändring per sekund. Ryttaren förtjänar den med handen och
+     förlorar den på spänning. Roblox höll den låst på 0,5 hela ritten,
+     och eftersom spänningen läser rangen var det en tyst skillnad i hela
+     spänningsmodellen — inte bara i ett starttal. ]]
+function Svar.rangSteg(rang: number, mjukhet: number, spanning: number, dt: number): number
+	local S = RidKanon.START
+	local d = (mjukhet - S.RANG_PIVOT) * S.RANG_MJUK - (spanning or 0) * S.RANG_SPANN
+	return math.clamp(rang + d * dt, 0, 1)
 end
 
 return Svar

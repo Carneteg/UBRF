@@ -29,10 +29,14 @@ const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
-  + "\n" + las("src/riding/svar.js") + "\n" + las("src/riding/telemetri.js"), ctx);
+  + "\n" + las("src/riding/svar.js") + "\n" + las("src/riding/telemetri.js")
+  /* Hästdatan med — scenariot nedan ska rida VERKLIGA UBRF-hästar
+     ur samma tabell som spelet och Roblox Stallet läser, inte en
+     handskriven kopia av deras siffror. */
+  + "\n" + las("src/spel/hastar.js"), ctx);
 const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
-  SKOLHAST_PROFILER } = vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
-  + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER})", ctx);
+  SKOLHAST_PROFILER, SVAR_START } = vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
+  + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -140,7 +144,235 @@ function kameralagen() {
   return ut;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   CONTEXTKÄLLORNA (senior re-review av #87, blocker 2)
+
+   Reviewen: "Om vissa externa contextkällor medvetet saknas på Roblox
+   ska de deklareras separat och får inte samtidigt passera som `inga
+   svarsluckor`." Det var precis vad som hände — Svar.SAKNAS var tom
+   och ett test krävde att den skulle vara det, medan fem ingångar i
+   själva verket anropades med sina neutrala element.
+
+   Listan nedan skrivs INTE för hand. Den MÄTS: stepRide körs med
+   `a`, `s` och `ctx` bakom en Proxy som noterar varje läsning. Sveper
+   över de grenar som bara nås av vissa hjälper, så att en källa som
+   bara läses vid hård tygel eller i galopp också kommer med.
+
+   Poängen är gaten: lägger webben till en contextkälla dyker den upp
+   här, och Roblox-specen blir röd tills källan antingen har ett hem på
+   Roblox eller står i Svar.KONTEXT_SAKNAS. En lucka kan inte längre
+   uppstå tyst. */
+function kontextKallor() {
+  const sedda = new Set();
+  const spar = (prefix, obj) => new Proxy(obj, {
+    get(t, k) {
+      if (typeof k === "string") sedda.add(prefix + "." + k);
+      const v = t[k];
+      /* Nästlade contextobjekt följs med — `ctx.fard.lugn` är en egen
+         källa och inte samma sak som att `ctx.fard` finns. */
+      return (v && typeof v === "object" && !Array.isArray(v)) ? spar(prefix + "." + k, v) : v;
+    },
+  });
+  /* Sveper de grenar som bara nås av vissa hjälper eller gångarter. */
+  const hjalpSvep = [
+    { skankel: 0.50, tygel: 0.40, sits: 0.30, styrning: 0.0, spo: false },
+    { skankel: 0.95, tygel: 0.80, sits: 0.90, styrning: 0.9, spo: true },
+    { skankel: 0.10, tygel: 0.10, sits: 0.10, styrning: -0.5, spo: false },
+  ];
+  const hast = { kanslighet: 0.6, forlatande: 0.6, skygghet: 0.3, tyngd: 0.4,
+    framatbjudning: 0.6, utbildning: 0.7, kategori: "hast", profil: "skolhast",
+    flaggor: { radd_for_spo: true } };
+  for (const a of hjalpSvep) {
+    for (const gangart of RID_ORDNING) {
+      const st = vm.runInContext("nyState()", ctx);
+      st.gangart = gangart;
+      st.tempo = Gait.G[gangart].norm;
+      const c = { svangradie: 12, underlag: 0.9, stallro: 0.9, utomhus: true,
+        fard: { tygelband: 0.05, skygghet: 0.1, lugn: 0.05, halla: 0.3 }, avdrift: 0.02 };
+      ctx.stepRide(spar("s", st), spar("a", a), hast, spar("ctx", c), 1 / 60);
+    }
+  }
+  /* Bara CONTEXT och HJÄLP intresserar kontraktet — ridtillståndets egna
+     fält (tempo, gångart, skalan …) ägs av modellen på båda ytorna och
+     står redan i telemetrikontraktet. Kvar blir de ingångar som kommer
+     UTIFRÅN: ryttarens hjälper, världen och hästens dag. */
+  const STAT_CONTEXT = new Set(["s.sadellage", "s.dagsform", "s.rang"]);
+  return [...sedda].filter(n => n.startsWith("ctx.") || n.startsWith("a.")
+      || STAT_CONTEXT.has(n))
+    /* `ctx.fard` som helhet är behållaren, inte en källa. */
+    .filter(n => n !== "ctx.fard")
+    .sort();
+}
+
 const { falt, harledda, hjalpFalt, svarFalt } = telemetriFalt();
+const kontext = kontextKallor();
+
+/* ══════════════════════════════════════════════════════════════════
+   CROSS-PLATFORM-SCENARIOT (senior re-review av #87, blocker 2)
+
+   Reviewen: "formelparitet är grön men runtimeparitet är inte samma
+   produktbeteende". Golden-raderna bevisade att funktionerna räknar
+   lika på givna tal. De bevisade INTE att en ritt utvecklar sig lika,
+   för utgångsläget skilde sig och ingen körning jämfördes.
+
+   Här körs en RITT. Webbens riktiga stepRide, bildruta för bildruta,
+   med samma häst, samma utgångsläge och samma context som Roblox har.
+   Roblox-specen kör samma ritt genom en riktig MovementController och
+   jämför fem storheter i sex mätpunkter.
+
+   VAR GRÄNSEN GÅR, uttryckligen: jämförelsen börjar vid SEMANTISKA
+   HJÄLPER per bildruta, inte vid tangenttryck. Inputlagren får skilja
+   sig — det är paritetsregelns "rendering, UI och inputadapter får vara
+   plattformsspecifika". Att hjälpen leder till samma svar är det som
+   ska vara lika, och det är det som mäts.
+
+   GÅNGARTSBEGÄRAN mäts, den skrivs inte. Webbens cue faller ur
+   hjälpens impuls över ett fönster; Roblox har tangentflanker. Vilka
+   bildrutor webben faktiskt bad om nästa gångart på noteras här, och
+   Roblox sätter sin flank på exakt de bildrutorna. Annars hade
+   scenariot jämfört två olika ritter.
+
+   CONTEXTEN ÄR ROBLOX. De nio källor som saknas där (se
+   Svar.KONTEXT_SAKNAS) körs på sina neutrala element också på webben,
+   så att det som mäts är modellen och inte den kända luckan. Vad
+   luckan är VÄRD mäts separat, i SCENARIO.WEBB_CONTEXT. */
+function scenario() {
+  const HZ = 60, dt = 1 / HZ;
+  const HORSES = vm.runInContext("HORSES", ctx);
+  /* TVÅ VERKLIGA UBRF-HÄSTAR med var sin profil, ur src/spel/hastar.js —
+     samma tabell Roblox Stallet läser. Att det är två och inte en är
+     inte pynt: `kanslig` ligger i svarstidens golv medan `tung` ligger
+     mitt i bandet, så en mätpunkt som bara visade golvet inte kan
+     passera som bevis för att svarstiden räknas alls. */
+  const HAST_ID = ["crokino", "mac_kenzie"];
+
+  /* VARJE HJÄLPVÄRDE ÄR NÅBART PÅ BÅDA YTORNA. Roblox inputlager
+     bygger skänkel, tygel och sits kring RidKanon.KONTAKT:s neutrallägen
+     och når som mest SKANKEL 0,78 / TYGEL_MAX / SITS_MAX. Ett scenario
+     med tygel 0,30 hade varit omöjligt att rida på Roblox — där klampas
+     tygeln vid neutralläget 0,34 — och jämförelsen hade då mätt
+     inputlagrens spann i stället för hästens svar. Baslinjen är därför
+     exakt neutralläget, och utslagen ligger inom spannen.
+
+     STYRNINGEN ÄR NOLL HELA RITTEN, med avsikt. Böjkrav och svängens
+     fartkrav läser hästens FART, och farten kommer ur gångartstabellen
+     — webbens BAND och Roblox Gaits är två intrimmade tabeller med
+     kända, listade avvikelser (se paritetsspecen). En sväng hade mätt
+     den skillnaden och inte svarsmodellen. Kurvaturpariteten har egna
+     kontroller: paritetsspecens kurvaturtak och webbens 20 m-volt. */
+  const KN = { skankel: K.SKANKEL_NEUTRAL, tygel: K.TYGEL_NEUTRAL,
+    sits: K.SITS_NEUTRAL, top: 0.78, sitsMax: K.SITS_MAX };
+  function hjalp(t) {
+    const bas = { skankel: KN.skankel, tygel: KN.tygel, sits: KN.sits,
+      styrning: 0, parad: 0, spo: false };
+    /* Impulserna: en ramp på 0,10 s upp och kvar. Samma form som
+       src/game.js ger en tangent, mätt över samma fönster. */
+    const puls = (t0, topp, fran) => {
+      if (t < t0) return fran;
+      if (t < t0 + 0.10) return fran + (topp - fran) * ((t - t0) / 0.10);
+      if (t < t0 + 0.45) return topp;
+      return fran;
+    };
+    if (t >= 1.00 && t < 1.60) bas.skankel = puls(1.00, KN.top, KN.skankel);
+    if (t >= 3.00 && t < 3.60) bas.skankel = puls(3.00, KN.top, KN.skankel);
+    /* OSTADIG HAND, 5,0–6,5 s. Handen puttrar med 3 Hz UPPÅT ur
+       neutralläget: mjukheten faller, spänningen stiger, fokus följer
+       med ned och svaret blir segare. Det är kedjan G02-B påstår finns,
+       körd skarpt. Uppåt och inte kring — under neutralläget finns
+       ingen Roblox-input, och en oåtkomlig hjälp bevisar ingenting.
+       Toppen är TYGEL_MAX 0,80, hela vägen genom kontaktbandet och över
+       hård hand (0,72), för att spänningen ska HÄNDA: en lugnare hand
+       ger de här hästarna inomhus ingen spänning alls, och en mätpunkt
+       som bara visar noll bevisar ingenting om modellen. */
+    if (t >= 5.00 && t < 6.50)
+      bas.tygel = KN.tygel + 0.46 * (0.5 - 0.5 * Math.cos((t - 5.00) * 2 * Math.PI * 3));
+    /* 6,5–8,5 s: handen tillbaka i neutralläget. Spänningen ska FALLA
+       igen — att den kan gå ned är lika mycket modell som att den kan
+       gå upp, och en ritt som bara stiger bevisar bara halva kurvan. */
+    if (t >= 8.50 && t < 9.10) bas.skankel = puls(8.50, KN.top, KN.skankel);
+    /* PARADEN, 10,0 s: sits och tygel tillsammans, skänkeln kvar. */
+    if (t >= 10.00 && t < 10.20) { bas.sits = KN.sitsMax; bas.tygel = 0.52; bas.parad = 1; }
+    return bas;
+  }
+
+  /* 0,05 och 0,30 s ligger med för att UTGÅNGSLÄGET ska mätas och inte
+     bara påstås. Spänningen startar på 0,15 och faller mot noll på under
+     en sekund för en lugn häst inomhus — en första mätpunkt vid 1,0 s
+     hade sett noll oavsett vad ritten började på, och en Roblox som
+     startade på 0 hade passerat. Uppmätt: den mutationen gav noll röda
+     innan de här två raderna fanns. */
+  const MATPUNKTER = [0.05, 0.30, 1.0, 2.5, 4.5, 6.0, 8.0, 9.5, 11.0, 12.0];
+  const TOT = Math.round(12.0 * HZ);
+
+  /* Hjälperna en gång — de är hästoberoende. Glest: en rad först när
+     något faktiskt ändras, och Roblox håller kvar förra raden. En tät
+     tabell hade varit 720 rader i åtta testbyggen utan att säga mer. */
+  const steg = [];
+  {
+    let forra = null;
+    for (let i = 0; i < TOT; i++) {
+      const a = hjalp(i * dt);
+      const nyckel = [a.skankel, a.tygel, a.sits, a.styrning, a.parad].join(",");
+      if (nyckel !== forra) {
+        steg.push({ i, skankel: a.skankel, tygel: a.tygel, sits: a.sits,
+          styrning: a.styrning, parad: a.parad });
+        forra = nyckel;
+      }
+    }
+  }
+
+  /* En ritt per häst och context. `ctxNamn` "roblox" = de nio saknade
+     källorna på sina neutrala element (det Roblox faktiskt kör),
+     "webb" = webbens egna. Skillnaden mellan de två ÄR den deklarerade
+     luckans värde, i siffror. */
+  function rid(hast, ctxNamn) {
+    const st = vm.runInContext("nyState()", ctx);
+    const c = ctxNamn === "roblox"
+      ? { svangradie: 1000, underlag: 1, stallro: 1, utomhus: false, fard: {}, avdrift: 0 }
+      : { svangradie: 1000, underlag: 0.92, stallro: 0.9, utomhus: false,
+          fard: { tygelband: 0.05, skygghet: 0.10, lugn: 0.05 }, avdrift: 0.02 };
+    const bedd = [], matt = [];
+    let n = 0, tid = 0, forraBedd = st.beddGangart;
+    for (let i = 0; i < TOT; i++) {
+      ctx.stepRide(st, hjalp(tid), hast, c, dt);
+      /* Vilken gångart ryttaren BAD om, och på vilken bildruta — MÄTT,
+         inte skrivet. Webbens cue faller ur hjälpens impuls över ett
+         fönster; Roblox har tangentflanker. Roblox-specen sätter sin
+         flank på exakt de här bildrutorna, annars hade scenariot
+         jämfört två olika ritter. */
+      /* `beddGangart` och inte `malGangart`: det förra är vad ryttaren
+         BAD om, det senare vad hästen hunnit svara på. De skiljer sig med
+         hela svarstiden, och att läsa fel av de två la Roblox flank fyra
+         bildrutor efter webbens — mitt i en oscillerande tygel blev
+         hjälpens tydlighet då en annan, och svarstiderna drev isär. */
+      if (st.beddGangart !== forraBedd) {
+        bedd.push({ i, gangart: st.beddGangart });
+        forraBedd = st.beddGangart;
+      }
+      tid += dt;
+      while (n < MATPUNKTER.length && tid >= MATPUNKTER[n] - dt / 2) {
+        matt.push({ t: MATPUNKTER[n], i, gangart: st.gangart,
+          svarstid: st.svarstid, balans: st.balans, fokus: st.fokus,
+          spanning: st.spanning, energi: st.energi });
+        n++;
+      }
+    }
+    return { bedd, matt };
+  }
+
+  const hastar = HAST_ID.map(id => {
+    const h = HORSES[id];
+    const r = rid(h, "roblox");
+    return { id, profil: h.profil, kanslighet: h.kanslighet,
+      forlatande: h.forlatande, skygghet: h.skygghet, utbildning: h.utbildning,
+      tyngd: h.tyngd, bedd: r.bedd, matt: r.matt, webb: rid(h, "webb").matt };
+  });
+  return { HZ, TOT, MATPUNKTER, steg, hastar };
+}
+
+const scen = scenario();
+
+
 const styr = styrkanon();
 const kam = kameralagen();
 const trosklar = mataTrosklar();
@@ -482,6 +714,98 @@ for (const g of RID_ORDNING) {
 rader.push("\t},");
 rader.push("}");
 rader.push("");
+
+/* ── UTGÅNGSLÄGET ────────────────────────────────────────────────── */
+rader.push("--[[ UTGÅNGSLÄGET (senior re-review av #87, blocker 2).");
+rader.push("");
+rader.push("     Webben startade en ritt på spänning 0,15 och energi ≈ 0,835,");
+rader.push("     Roblox på spänning 0 och energi 1. Formlerna var lika, ritten");
+rader.push("     var det inte — och då är det inte samma produkt. Talen står nu");
+rader.push("     i SVAR_START i src/riding/svar.js, exporteras hit, och BÅDA");
+rader.push("     ytorna läser dem. Ingen siffra ändrades på webben.");
+rader.push("");
+rader.push("     ENERGI = ENERGI_BAS + ENERGI_DAG × dagsform. RANG_* är hur");
+rader.push("     rangen växer under ritten; Roblox höll den låst på 0,5 och");
+rader.push("     hade därmed en tyst skillnad i hela spänningsmodellen. ]]");
+rader.push("RidKanon.START = {");
+for (const namn of ["DAGSFORM", "SADELLAGE", "RANG", "SPANNING", "MJUKHET", "FOKUS",
+                    "BALANS", "ENERGI_BAS", "ENERGI_DAG",
+                    "RANG_PIVOT", "RANG_MJUK", "RANG_SPANN"]) {
+  rader.push(`\t${namn} = ${tal(SVAR_START[namn])},`);
+}
+rader.push("}");
+rader.push("");
+
+/* ── CONTEXTKÄLLORNA ─────────────────────────────────────────────── */
+rader.push("--[[ CONTEXTKÄLLORNA — allt som kommer UTIFRÅN in i ridmodellen.");
+rader.push("");
+rader.push("     MÄTT, inte skriven: stepRide körs med hjälperna, ridtillståndets");
+rader.push("     contextfält och context-objektet bakom en Proxy som noterar varje");
+rader.push("     läsning, över ett svep av hjälper och gångarter.");
+rader.push("");
+rader.push("     Roblox ska för var och en av de här ha ANTINGEN en källa i");
+rader.push("     HorseCore.Svar.KONTEXT_HAR eller en deklarerad lucka i");
+rader.push("     Svar.KONTEXT_SAKNAS. Paritetsspecen kräver att unionen är exakt");
+rader.push("     den här listan. Lägger webben till en källa blir Roblox rött");
+rader.push("     tills den fått ett hem — en lucka kan inte uppstå tyst, och");
+rader.push("     `inga svarsluckor` kan inte längre gälla en yta som i själva");
+rader.push("     verket kör nio ingångar på sina neutrala element. ]]");
+rader.push("RidKanon.KONTEXT_KALLOR = { " + kontext.map(str).join(", ") + " }");
+rader.push("");
+
+/* ── CROSS-PLATFORM-SCENARIOT ────────────────────────────────────── */
+rader.push("--[[ CROSS-PLATFORM-SCENARIOT (senior re-review av #87, blocker 2).");
+rader.push("");
+rader.push("     En RITT, inte en formel. Webbens riktiga stepRide, bildruta för");
+rader.push("     bildruta, med två verkliga UBRF-hästar ur src/spel/hastar.js och");
+rader.push("     med den context Roblox faktiskt har. Roblox-specen kör samma");
+rader.push("     ritt genom en riktig MovementController och jämför fem storheter");
+rader.push("     i åtta mätpunkter.");
+rader.push("");
+rader.push("     GRÄNSEN, uttryckligen: jämförelsen börjar vid SEMANTISKA HJÄLPER");
+rader.push("     per bildruta, inte vid tangenttryck. Inputadaptern får vara");
+rader.push("     plattformsspecifik enligt paritetsregeln; att hjälpen leder till");
+rader.push("     samma svar får den inte.");
+rader.push("");
+rader.push("     STEG är glest: en rad först när en hjälp ändras, håll kvar");
+rader.push("     mellan raderna. BEDD är vilken gångart ryttaren bad om och på");
+rader.push("     vilken bildruta — mätt ur webbens cue-modell, så att Roblox");
+rader.push("     tangentflank hamnar på exakt samma bildruta.");
+rader.push("");
+rader.push("     MATT är facit med Roblox context. WEBB är samma ritt med webbens");
+rader.push("     egen context; skillnaden mellan de två är vad de deklarerade");
+rader.push("     luckorna är VÄRDA, i siffror, i stället för bara namngivna. ]]");
+rader.push(`RidKanon.SCENARIO = {`);
+rader.push(`\tHZ = ${tal(scen.HZ)},`);
+rader.push(`\tRUTOR = ${tal(scen.TOT)},`);
+rader.push("\tSTEG = {");
+for (const g of scen.steg) {
+  rader.push(`\t\t{ i = ${g.i}, skankel = ${tal(g.skankel)}, tygel = ${tal(g.tygel)}, `
+    + `sits = ${tal(g.sits)}, styrning = ${tal(g.styrning)}, parad = ${tal(g.parad)} },`);
+}
+rader.push("\t},");
+rader.push("\tHASTAR = {");
+for (const h of scen.hastar) {
+  rader.push(`\t\t{`);
+  rader.push(`\t\t\tid = ${str(h.id)}, profil = ${str(h.profil)},`);
+  rader.push(`\t\t\tBEDD = {`);
+  for (const b of h.bedd) rader.push(`\t\t\t\t{ i = ${b.i}, gangart = ${str(b.gangart)} },`);
+  rader.push(`\t\t\t},`);
+  for (const [namn, rows] of [["MATT", h.matt], ["WEBB", h.webb]]) {
+    rader.push(`\t\t\t${namn} = {`);
+    for (const m of rows) {
+      rader.push(`\t\t\t\t{ t = ${tal(m.t)}, i = ${m.i}, gangart = ${str(m.gangart)}, `
+        + `svarstid = ${tal(m.svarstid)}, balans = ${tal(m.balans)}, `
+        + `fokus = ${tal(m.fokus)}, spanning = ${tal(m.spanning)}, `
+        + `energi = ${tal(m.energi)} },`);
+    }
+    rader.push(`\t\t\t},`);
+  }
+  rader.push(`\t\t},`);
+}
+rader.push("\t},");
+rader.push("}");
+rader.push("");
 rader.push("return RidKanon");
 rader.push("");
 
@@ -497,4 +821,4 @@ if (process.argv.includes("--kontrollera")) {
   process.exit(1);
 }
 fs.writeFileSync(abs, ny);
-console.log(`${utfil}: ${RID_ORDNING.length} gångarter, ${trosklar.length} trösklar, ${falt.length} telemetrifält`);
+console.log(`${utfil}: ${RID_ORDNING.length} gångarter, ${trosklar.length} trösklar, ${falt.length} telemetrifält, ${kontext.length} contextkällor, scenario ${scen.steg.length} steg × ${scen.hastar.length} hästar`);

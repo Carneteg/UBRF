@@ -775,3 +775,138 @@ har alltid vägt två. Kommentaren var fel, inte talen.
 Roblox runtime, och all game feel: fördröjningen, infallet, halvbreddens
 nya värde, om profilerna känns som fyra hästar, och tangentvalen
 `Q`/`F`/`Z`/`C`.
+
+---
+
+## 12. Senior re-review av `0f9aa12` — tre blockerare, åtgärdade
+
+Reviewen satte `DO NOT MERGE` och pekade ut tre saker. Blocker 1 och 3
+sitter i `53f8aa8`, blocker 2 i den här rundan.
+
+### Blocker 1 — profilerna var data, men band inte till hästen i runtime
+
+`Stallet.dagensHast()` lämnade ingen profil, `GameplayService.bind()`
+band bara `HorseId`, och `HorseService.register()` → `resolveStats` gav
+`skolhast`-defaults. Datat fanns; hästen spelaren red bar det inte.
+
+- `Stallet.statsFor(id)` översätter UBRFSpelData till `Config.STATS`.
+- `HorseService.register()` skriver kanonen på `HorseStats` **före**
+  `writeDefaults`. Med överlägget efter gick "satt i Studio" inte att
+  skilja från ett nystämplat default, och **varje** häst föll tillbaka
+  på `skolhast`.
+
+Uppmätt genom hela kedjan (`forberedelse.spec`): `crokino` → `kanslig`,
+`mac_kenzie` → `tung`; samma hjälp ger 0,060 s mot 0,297 s.
+
+### Blocker 3 — Roblox hade två oberoende trötthetssanningar
+
+`loco.energi` på klienten och `session.stamina` på servern, med egen
+dränering, egen återhämtning och eget `GaitCeiling`. Nu äger **servern**
+energin via `Svar.energiTakt`, härleder taket ur den och synkar den i
+`StaminaSync`; klienten predikterar mellan synkarna med samma kanon och
+rättas av `setEnergi()`. Det döda `Gaits.stamina`-fältet är borta.
+
+### Blocker 2 — formelparitet är inte samma produktbeteende
+
+Reviewens formulering: *"grön formelparitet men runtimeparitet är inte
+samma produktbeteende"*, plus att `SAKNAS == 0` gjorde kontraktet
+**grönare än verkligheten**.
+
+**Utgångsläget är kanon.** Webben satte upp på spänning 0,15 / energi
+0,835 / mjukhet 0,5, Roblox på 0 / 1 / 1. Talen står nu i `SVAR_START`
+(`src/riding/svar.js`), exporteras som `RidKanon.START` och läses av
+**båda**. Ingen siffra ändrades på webben; på Roblox ändrades den, och
+det var hela poängen. Rangen växer nu också på Roblox (`Svar.rangSteg`)
+— den låg låst på 0,5, och spänningen läser den.
+
+**Contextluckorna är deklarerade och mätta.** `RidKanon.KONTEXT_KALLOR`
+skrivs inte för hand: exporten kör `stepRide` med hjälper, ridtillstånd
+och context bakom en `Proxy` och noterar varje läsning, över ett svep av
+hjälper och gångarter. 19 källor. Roblox har tio (`Svar.KONTEXT_HAR`)
+och saknar nio (`Svar.KONTEXT_SAKNAS`): `a.spo`, `ctx.stallro`,
+`ctx.underlag`, `ctx.avdrift` och `ctx.fard.{tygelband, skygghet, lugn,
+hhAmplitud, spanningFall}`. Paritetsspecen kräver att unionen är **exakt**
+kanonlistan, åt båda hållen. `SAKNAS` betyder nu *storhet som inte
+räknas* (tom), `KONTEXT_SAKNAS` *ingång utan källa* (nio) — två listor,
+två betydelser.
+
+**Ritten körs på båda ytorna.** `RidKanon.SCENARIO` är 12 s à 60 Hz med
+två verkliga UBRF-hästar (`crokino`/kanslig, `mac_kenzie`/tung) ur
+`src/spel/hastar.js`: uppsittning, impuls till skritt, impuls till trav,
+en hand som puttrar 3 Hz upp genom hela kontaktbandet, återhämtning, ny
+uppgång och en parad. Facit är webbens **egen `stepRide`**, bildruta för
+bildruta, med Roblox context. `forberedelse.spec` spelar upp samma ritt
+genom en **riktig `MovementController`** med den häst `Stallet` delar ut
+— inte genom direktanrop av svarsmodellen.
+
+Gränsen är uttalad: jämförelsen börjar vid **semantiska hjälper per
+bildruta**, inte vid tangenttryck, och hjälpaxlarna räknas om till Roblox
+intent-axlar med `KONTAKT`:s egna neutrallägen — alltså genom
+inputlagret, inte förbi det. Varje hjälpvärde i scenariot är nåbart på
+båda ytorna. Styrningen är noll hela ritten, med avsikt: en sväng hade
+mätt de två gångartstabellernas kända avvikelser i stället för
+svarsmodellen (kurvaturpariteten har egna prov).
+
+### Vad scenariot hittade — tre riktiga fel som formelpariteten inte såg
+
+| Fel | Utslag |
+|---|---|
+| **Känsligheten kvantiserades genom `Temperament`.** 0,78 och 0,71 blev båda "Sensitive" = 1,00. `Kanslighet` är nu en riktig stat. | spänning **0,2798 mot 0,1605**; `mac_kenzie` svarade **0,067 s** för segt |
+| **Halvhalten lästes bara när den råkade byta gångart.** En välriden parad på en häst som redan gick rätt gav ingenting. | fokus **0,738 mot 0,785** |
+| **Paraden lästes per bildruta, inte per tryck.** Att hålla `F` var en oändlig rad halvhalter — och stegade ned hela trappan på tre bildrutor. Koden påstod i kommentar att flanken räknades en gång; den läste nivån. | fokus **0,916 mot 0,797** |
+
+Plus ett fel i mitt eget scenario: jag exporterade `malGangart` (vad
+hästen svarat på) i stället för `beddGangart` (vad ryttaren bad om). Det
+la Roblox flank fyra bildrutor efter webbens, mitt i en oscillerande
+tygel — hjälpens tydlighet blev en annan och svarstiderna drev isär.
+
+### Uppmätt paritet efter rättelserna
+
+Största avvikelse över båda hästarna och alla tio mätpunkter:
+
+| Storhet | Störst | Tak | Varför taket ligger där |
+|---|---|---|---|
+| `svarstid` | 0,0002 | 0,005 | formelbrus |
+| `energi` | 0,0001 | 0,005 | formelbrus |
+| `fokus` | 0,0021 | 0,005 | formelbrus |
+| `spanning` | 0,0087 | 0,010 | **en** mätpunkt (0,30 s), drygt en bildrutas förskjutning i avklingningens vändpunkt |
+| `balans` | 0,0122 | 0,020 | övergångstermen är på/av och de två gångartstabellerna släpper förloppet på olika bildruta |
+
+Vad luckan är **värd** mäts också: samma ritt med webbens egen context
+skiljer sig 0,0344 (spänning, `crokino`) respektive 0,0163 (energi,
+`mac_kenzie`). Deklarerad *och* prissatt, inte bara namngiven.
+
+### Falsifiering av runda 3
+
+Varje ny garanti är visad kunna bli röd.
+
+| Mutation | Röda prov |
+|---|---|
+| Känsligheten tillbaka till `Temperament`-kvantiseringen | 4 (spänning 0,119 fel, svarstid 0,067 fel) |
+| Halvhalten läses bara när gångarten byter | 2 (fokus 0,069 fel) |
+| Paraden läses per bildruta i stället för per tryck | 2 (fokus 0,119 fel) |
+| Startenergin tillbaka till 1 | 3 (energi 0,164 fel) |
+| Rangen låst på 0,5 igen | 1 |
+| Spänningen startar på 0 igen | 2 (0,150 fel) |
+| Mjukheten startar på 1 igen | 3 |
+| Sadellage/dagsform tillbaka till egna neutrala element | 2 |
+| En contextlucka tystas bort ur deklarationen | 1, med namnet |
+| En källa påstås finnas som inte finns i webbens modell | 1, med namnet |
+| En källa står som både funnen och saknad | 1, med namnet |
+| `KONTEXT_SAKNAS` nollas | 2 |
+| **Ny contextkälla i webbens `svarSpanningMal`** | exporten fångar den och paritetsspecen blir röd (`ctx.vind`) |
+
+**Ett fel av mitt eget i falsifieringen:** mutationen "spänningen startar
+på 0" gav först **noll** röda. Första mätpunkten låg på 1,0 s, och
+spänningen har hunnit falla till noll där oavsett vad ritten började på.
+Mätpunkter vid 0,05 och 0,30 s tillkom av det skälet; utan dem hade
+utgångsläget varit ett påstående och inte ett prov.
+
+### Not tested, oförändrat
+
+Roblox runtime i Studio, och all game feel. Scenariot bevisar att de två
+modellerna utvecklar sig lika — inte att den utvecklingen känns rätt.
+Det kräver Tobias PASS.
+
+**Status: `READY_FOR_CHATGPT_REVIEW`.** Jag sätter inte acceptans på
+egen leverans.
