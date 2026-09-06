@@ -33,6 +33,7 @@ local EffectsController = require(script.EffectsController)
 local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
+local UgnetaController = require(script.UgnetaController)
 local Debug = require(script.Debug)
 local Genomsikt = require(script.Genomsikt)
 
@@ -132,6 +133,9 @@ PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
 PreparationController.start()
+--[[ G02-C: Ugnetas lärar-UX. Live-chip under ridning, kort mellan
+     försöken, säkerhet före undervisning. ]]
+UgnetaController.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]

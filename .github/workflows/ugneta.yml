@@ -1,0 +1,41 @@
+name: Ugneta pedagogik och UX
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+jobs:
+  ugneta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: JavaScript-syntax
+        run: node --check src/larare.js
+      - name: Pedagogik, lektionspaket och responsiv UX
+        run: node tools/ugnetatest.mjs
+      - name: Bygg webbspelet
+        run: python3 tools/build.py
+      - name: Installera Playwright + Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Browser-UX — desktop, tablet, mobil, landscape och säkerhetsövertagande
+        run: node tools/ugneta-ui-test.mjs
+      - name: Försök 1 → 2 genom produktionsflödet, live-register och paritetspunkt
+        run: node tools/ugneta-forsok-test.mjs
+      # Kanonen måste vara regenererad, och specen måste gå att bygga.
+      # Själva paritetsPÅSTÅENDENA körs med luau i jobbet `grindar`
+      # (roblox/tests/kor.sh) — luau installeras inte här, så den här
+      # raden bevisar synk och byggbarhet, inte att specen passerar.
+      - name: G02-C-kanonen i synk och specarna byggbara
+        run: |
+          node tools/exportera-ridkanon.mjs --kontrollera
+          python3 roblox/tests/build.py tests/paritet.spec.luau
+          python3 roblox/tests/build.py tests/ugneta.spec.luau
