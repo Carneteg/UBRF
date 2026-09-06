@@ -13,7 +13,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: JavaScript-syntax
         run: node --check src/larare.js
       - name: Pedagogik, lektionspaket och responsiv UX
         run: node tools/ugnetatest.mjs
+      - name: Bygg webbspelet
+        run: python3 tools/build.py
+      - name: Installera Playwright + Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Browser-UX — desktop, tablet, mobil, landscape och säkerhetsövertagande
+        run: node tools/ugneta-ui-test.mjs
