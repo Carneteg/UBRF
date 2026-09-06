@@ -990,7 +990,7 @@ const STALLINNE = {
           y0:GANG_FASTE+GANG_DJUP-0.55-2.4-STALL_Y,
           y1:GANG_FASTE+GANG_DJUP-0.55-STALL_Y}],
   /* Fylls ur STALL_BAND nedan: rader med x0/boxDjup, gångar med x0/x1. */
-  rader:[], gangar:{},
+  rader:[], raderById:{}, gangar:{},
   /* Spelets sjutton hästar står i gång A, den man kommer in i från
      förstukvisten. Gång B:s boxar ritas men får ingen häst: spelet har
      sjutton namn och fler får inte hittas på. */
@@ -1310,8 +1310,12 @@ const STALLINNE = {
   for(const b of STALL_BAND){
     const w=b.andel*S.bredd;
     if(b.typ==="gang") S.gangar[b.id]={x0:x, x1:x+w};
-    else S.rader.push({id:b.id, x0:x, djup:w, vetter:b.vetter,
-                       gang:b.gang, yttervagg:b.yttervagg});
+    else {
+      const rad = {id:b.id, x0:x, djup:w, vetter:b.vetter,
+                   gang:b.gang, yttervagg:b.yttervagg};
+      S.rader.push(rad);
+      S.raderById[b.id] = rad;
+    }
     x+=w;
   }
   /* Ridläraren och whiteboarden mitt i gång A. */
@@ -1389,7 +1393,7 @@ STALLINNE.gangytor = (()=>{
      ingen sådan, bara det här brottet. Sträcks DORRGAP in i gång A av samma
      skäl som gångarna sträcks in i hallarna. */
   for(const b of S.brott){
-    const rad=S.rader.find(r=>r.id===b.rad);
+    const rad=S.raderById[b.rad];
     const x0=rad.vetter>0 ? 0.4 : rad.x0-DORRGAP;
     const x1=rad.vetter>0 ? rad.x0+rad.djup+DORRGAP : S.bredd-0.4;
     g.push({x:x0, y:b.y0, w:x1-x0, h:b.y1-b.y0});
