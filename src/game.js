@@ -213,6 +213,36 @@ function hastPlatsVy(namn, lage){
 }
 hastPlatsVy("leder", "leds");
 hastPlatsVy("hamtad", "box");
+
+/* ── VAR SPELAREN SKA GÅ HÄRNÄST, I ORD ─────────────────────────────
+   PO-regel 2026-09-06: nästa handling ska vara självklar utan att
+   spelaren behöver gissa, och TEXTEN SKA ALLTID SPEGLA FAKTISK
+   RUNTIME-STATE.
+
+   Funktionen finns för att texterna annars driver isär. Tobias fick
+   "Hämta Lydia i hagen" ur ridlärarens dialogruta långt efter att
+   uppgiftspanelen sagt rätt — de var två strängar med var sin
+   uppfattning om var hästen stod. Nu är det EN funktion, och den läser
+   `G.hastPlats`.
+
+   Returnerar {vart, hur, kort} — rubrikens riktning, en mening som
+   säger vägen, och en knapptext. */
+function hastAnvisning(namn){
+  const n = namn || (G.hastId && typeof HORSES!=="undefined" && HORSES[G.hastId]
+    ? HORSES[G.hastId].namn : "hästen");
+  if(G.hastPlats==="box") return {
+    vart:`Gå till ${n} i boxen`,
+    hur:"Hon står uppstallad inne i stallet — följ namnskylten på boxdörren.",
+    kort:`Gå till ${n} i stallet`};
+  if(G.hastPlats==="leds") return {
+    vart:`Led ${n} till boxen`,
+    hur:"In genom stalldörren och fram till boxen.",
+    kort:`Led ${n}`};
+  return {
+    vart:`Hämta ${n} i hagen`,
+    hur:"Grinden sitter på hagens västra sida, öster om stallet.",
+    kort:`Hämta ${n} i hagen`};
+}
 /* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
    spelas, och kartan är ett uppslag man tar när man vill orientera
    sig. Med kartan som förval landade en ny spelare i en ovanifrånvy

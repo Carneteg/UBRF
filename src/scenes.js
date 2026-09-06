@@ -109,11 +109,18 @@ function visaTilldelning(){
   <p class="dim" style="font-size:13.5px">Du väljer inte häst på en ridskola. Ridläraren tilldelar —
   att få rida en bättre häst är belöningen. Nästa gång du spelar får du en annan.</p>
   <div class="btnrow">
-    <button class="btn" id="bGroom">Hämta ${h.namn} i hagen</button>
+    <button class="btn" id="bGroom">${hastAnvisning(h.namn).kort}</button>
     <button class="btn ghost" id="bAnnan">Fråga om en annan häst</button>
   </div>`);
+  /* Repliken läser PLATSEN (PO 2026-09-06). Den sa förut alltid "går i
+     hagen ... ta grimman och hämta honom", oavsett var hästen faktiskt
+     stod — det var den sista strängen som fortfarande skickade spelaren
+     till hagen efter att uppgiftspanelen hade rättats. */
   document.getElementById("bGroom").onclick=()=>{overlay(false);
-    saga(`${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta honom.`,4);};
+    const a=hastAnvisning(h.namn);
+    saga(G.hastPlats==="box"
+      ? `${h.namn} står i sin box inne i stallet${G.vader&&G.vader.tacke?" — täcket hänger på boxdörren":""}. ${a.hur}`
+      : `${h.namn} går i hagen öster om stallet${G.vader&&G.vader.tacke?" — med täcke i det här vädret":""}. Ta grimman och hämta honom.`,4);};
   document.getElementById("bAnnan").onclick=()=>{G.seed++;visaTilldelning();
     setTimeout(()=>{const w=document.querySelector(".why");
       if(w&&G.seed%3===0)w.textContent="”Nej. Du rider den du fått. Så fungerar det här.”";},50);};

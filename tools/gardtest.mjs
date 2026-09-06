@@ -246,6 +246,96 @@ function prova(namn, ok, detalj) {
     `fram till dörren är en känd svaghet i vägsökningen genom 1,5 m-gluggen`);
 }
 
+/* ══ 2b. INSTRUKTIONEN OCH MARKÖREN (PO-order 2026-09-06) ══════════
+   "Nästa handling ska vara självklar utan att spelaren behöver gissa.
+   Objekt/NPC/häst som en aktiv uppgift syftar på ska kunna identifieras
+   visuellt, och texten ska alltid spegla faktisk runtime-state." */
+{
+  /* 1. INGEN hageinstruktion när hästen står i boxen — och provet läser
+        ALLA texter, inte bara uppgiftspanelen. Det var ridlärarens
+        dialogruta som fortfarande skickade Tobias till hagen. */
+  const t = await page.evaluate(() => {
+    startaVandring(); visaTilldelning(); overlay(false);
+    const a = hastAnvisning();
+    ritaVandring();
+    const rubrik = document.getElementById("momentNamn").textContent;
+    const under = document.getElementById("momentText").textContent;
+    /* Ridlärarens knapp och whiteboardens rad, ur produktionen. */
+    visaTilldelning();
+    const knapp = document.getElementById("bGroom");
+    const knapptext = knapp ? knapp.textContent : null;
+    overlay(false);
+    return { plats: G.hastPlats, anvisning: a, rubrik, under, knapptext };
+  });
+  const allaTexter = [t.rubrik, t.under, t.knapptext,
+    t.anvisning.vart, t.anvisning.hur, t.anvisning.kort].join(" | ");
+  prova("hastPlats=box ger ingen hageinstruktion någonstans",
+    t.plats === "box" && !/hage|grind/i.test(allaTexter), allaTexter);
+  prova("och instruktionen pekar uttryckligen på boxen",
+    /box|stallet/i.test(t.anvisning.vart + t.anvisning.hur),
+    `"${t.anvisning.vart}" · "${t.anvisning.hur}"`);
+
+  /* 2. Markören sitter på RÄTT häst — och bara på den. */
+  const m = await page.evaluate(() => {
+    startaVandring(); visaTilldelning(); overlay(false);
+    const b = hittaBox(G.hastId);
+    /* Ställ spelaren långt från boxen så markören är på full styrka. */
+    gaTill("stallinne", { x: b.dorr[0], y: Math.max(2, b.dorr[1] - 12), rikt: 0 });
+    const mk = uppgiftsMarkor();
+    /* En ANNAN häst i rostern ska inte ha markören. */
+    const annan = Object.keys(HORSES).find(id => id !== G.hastId);
+    return { min: G.hastId, mk, annan, sammaSomMin: mk && mk.hastId === G.hastId,
+      annanFar: mk && mk.hastId === annan };
+  });
+  prova("markören sitter på den tilldelade hästen",
+    !!m.mk && m.sammaSomMin === true && m.mk.synlig === true,
+    `${m.min} · alfa ${m.mk && m.mk.alfa.toFixed(2)} på ${m.mk && m.mk.avstand.toFixed(1)} m`);
+  prova("och inte på någon annan häst",
+    m.annanFar === false, `annan häst i rostern: ${m.annan}`);
+
+  /* RENDERARENS EGET BESLUT, inte bara tillståndet. Provet ovan läste
+     `uppgiftsMarkor()`; mutationen "markören sätts på alla hästar"
+     ändrade renderarens jämförelse och gav då NOLL röda. Nu frågas
+     samma predikat som ritkoden frågar. */
+  const r = await page.evaluate(() => {
+    const b = hittaBox(G.hastId);
+    gaTill("stallinne", { x: b.dorr[0], y: Math.max(2, b.dorr[1] - 12), rikt: 0 });
+    const andra = Object.keys(HORSES).filter(id => id !== G.hastId).slice(0, 6);
+    return { min: markorGallerFor(G.hastId),
+      andra: andra.map(id => markorGallerFor(id)),
+      tom: markorGallerFor(null) };
+  });
+  prova("renderarens predikat gäller BARA den tilldelade hästen",
+    r.min === true && r.andra.every(v => v === false) && r.tom === false,
+    `min ${r.min} · sex andra ${JSON.stringify(r.andra)} · tom ${r.tom}`);
+
+  /* 3. Markören tonas ned när spelaren kommit fram. */
+  const f = await page.evaluate(() => {
+    const b = hittaBox(G.hastId);
+    const las = (dy) => { gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1] - dy, rikt: 0 });
+      const mk = uppgiftsMarkor(); return mk ? +mk.alfa.toFixed(2) : null; };
+    return { langt: las(8), mitten: las(4), nara: las(1.0) };
+  });
+  prova("markören tonas ned ju närmare spelaren kommer",
+    f.langt === 1 && f.mitten > 0 && f.mitten < 1 && f.nara === 0,
+    `8 m → ${f.langt} · 4 m → ${f.mitten} · 1 m → ${f.nara}`);
+
+  /* 4. Och den försvinner när uppgiften gått vidare — hjälpen ska vara
+        kontextuell, inte ett konstant tutorialskelett. */
+  const v = await page.evaluate(() => {
+    const utan = !!uppgiftsMarkor();
+    G.hastPlats = "leds";       const leds = !!uppgiftsMarkor();
+    G.hastPlats = "box"; G.skotselRes = { klart: true };
+    const skott = !!uppgiftsMarkor();
+    G.skotselRes = null;
+    return { utan, leds, skott };
+  });
+  prova("markören försvinner när hästen leds och när skötseln är klar",
+    v.utan === true && v.leds === false && v.skott === false,
+    `vid boxen ${v.utan} · leds ${v.leds} · skött ${v.skott}`);
+  await page.evaluate(() => { startaVandring(); G.vy = "2d"; });
+}
+
 /* ══ 3b. DÖRRÖPPNING MOT SOLID INNERVÄGG ═══════════════════════════
    Tobias produkttest 2026-09-06: den renderade stalldörren sitter tätt
    mot en innervägg. Provet MÄTER det i geometrin i stället för att

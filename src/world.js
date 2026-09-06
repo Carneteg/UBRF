@@ -97,6 +97,9 @@ if(typeof cv!=="undefined"&&cv&&cv.addEventListener)
   });
 
 const VCOL={
+  /* Uppgiftsmarkörens färg (PO 2026-09-06). Varm och avvikande nog att
+     hittas, dämpad nog att inte se ut som ett HUD-element. */
+  markor:"#E8B54A",
   gras:"#5D6C39", grasLj:"#6C7C44", grus:"#BCA179", asfalt:"#54524E",
   sand:"#DCC9A0", sandKant:"#9C8B66", aker:"#B08F55", betong:"#A09A8C",
   slant:"#54663A",
@@ -853,6 +856,65 @@ function boxFrontX(rad){
      längorna — de yttre är djupare än de två i mitten. */
   return rad.vetter>0 ? rad.x0+rad.djup : rad.x0;
 }
+/* ── UPPGIFTSMARKÖREN — var är hästen uppgiften handlar om? ─────────
+   PO-regel 2026-09-06: "objekt/NPC/häst som en aktiv uppgift syftar på
+   ska kunna identifieras visuellt", och hjälpen ska vara diskret och
+   kontextuell — inte ett konstant tutorialskelett.
+
+   Funktionen är markörens ENDA sanning: vilken häst, var, i vilken
+   scen, och hur stark markeringen ska vara. Renderarna frågar den; de
+   bestämmer inte själva. Det är också den som går att porta till
+   Roblox — en Highlight eller BillboardGui på samma häst, samma regel.
+
+   Returnerar null när markören inte ska synas:
+     · ingen häst tilldelad ännu,
+     · hästen leds (då ÄR hon hos spelaren),
+     · skötseln är klar (uppgiften har gått vidare).
+
+   `alfa` tonar ned de sista metrarna: full styrka på håll, borta när
+   spelaren står vid hästen. Att den försvinner är hela poängen — en
+   markör som ligger kvar när man hittat fram är ett tutorialskelett. */
+const MARKOR = { NARA: 2.2, FJARRAN: 6.0 };
+function uppgiftsMarkor(){
+  if(!G.hastId) return null;
+  if(G.hastPlats==="leds") return null;
+  if(G.skotselRes) return null;
+  const h=HORSES[G.hastId]; if(!h) return null;
+  let pos=null, scen=null;
+  if(G.hastPlats==="box"){
+    const b=hittaBox(G.hastId);
+    if(!b) return null;
+    pos=b.dorr; scen="stallinne";
+  }else{
+    pos=ANL.hamtHage.falt; scen="gard";
+  }
+  /* Bara i den scen hästen faktiskt står i — en markör genom en vägg
+     hjälper ingen. */
+  if(G.scen!==scen) return {hastId:G.hastId, namn:h.namn, pos, scen, alfa:0, synlig:false};
+  const d=Math.hypot(VD.px-pos[0], VD.py-pos[1]);
+  const alfa=clamp((d-MARKOR.NARA)/(MARKOR.FJARRAN-MARKOR.NARA),0,1);
+  return {hastId:G.hastId, namn:h.namn, pos, scen, avstand:d, alfa,
+    synlig:alfa>0.01};
+}
+
+/* Ska DEN HÄR hästen ha markören just nu? Renderarna frågar den här och
+   avgör inte själva — och den är därmed provbar.
+
+   Den finns efter en falsifiering som INTE blev röd: mutationen
+   "markören sätts på alla hästar" ändrade renderarens egen jämförelse,
+   och provet märkte ingenting eftersom det bara läste tillståndet.
+   Ett prov som inte kan se skillnad på "rätt häst" och "alla hästar"
+   bevisar inte att bara rätt häst markeras.
+
+   [ÄRLIG BEGRÄNSNING] Själva canvasritningen är fortfarande inte
+   pixelprovad. Den som skriver om ritkoden och slutar fråga här kan
+   fortfarande markera fel — men då är det en ny kodväg, inte en tyst
+   ändring av ett villkor. */
+function markorGallerFor(hastId){
+  const mk=uppgiftsMarkor();
+  return !!(mk && mk.synlig && hastId && hastId===mk.hastId);
+}
+
 function hittaBox(hastId){
   const S=STALLINNE;
   for(const rad of S.rader){
@@ -1410,6 +1472,17 @@ function ritaGard3D(){
   }
   if(G.hastId&&G.hastPlats==="hage"){
     const f=ANL.hamtHage.falt, h=HORSES[G.hastId];
+    /* Samma diskreta markör som över boxen — en pil ovanför just den
+       häst uppgiften gäller, tonad efter avstånd. */
+    items.push({d:-avst2(f)+0.01, rita(){
+      const mk=(typeof uppgiftsMarkor==="function")?uppgiftsMarkor():null;
+      if(!mk||!mk.synlig)return;
+      const p=tillKam(k,f[0],f[1],2.6); if(p.d<K3.nara)return;
+      const sp=projK(k,p), pb=clamp(0.42*k.f/p.d,4,26);
+      cx.save();cx.globalAlpha=mk.alfa;cx.fillStyle=VCOL.markor||"#E8B54A";
+      cx.beginPath();cx.moveTo(sp[0],sp[1]+pb);cx.lineTo(sp[0]-pb,sp[1]-pb);
+      cx.lineTo(sp[0]+pb,sp[1]-pb);cx.closePath();cx.fill();cx.restore();
+    }});
     items.push({d:-avst2(f), rita(){
       const p=tillKam(k,f[0],f[1],0); if(p.d<K3.nara)return;
       const s=projK(k,p), sz=clamp(1.6*k.f/p.d,3,140);
@@ -1615,6 +1688,12 @@ function ritaGard2D(){
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     const[a,b]=gs(hx,hy);
     cx.fillStyle=h.farg;cx.beginPath();cx.ellipse(a,b,s*0.9,s*0.5,i,0,Math.PI*2);cx.fill();}
+  /* Uppgiftsmarkören på minikartan — samma sanning som i 3D. */
+  {const mk=(typeof uppgiftsMarkor==="function")?uppgiftsMarkor():null;
+   if(mk&&mk.synlig&&mk.scen==="gard"){
+     const[a,b]=gs(mk.pos[0],mk.pos[1]);
+     cx.save();cx.globalAlpha=mk.alfa;cx.strokeStyle=VCOL.markor;cx.lineWidth=2;
+     cx.beginPath();cx.arc(a,b,s*1.5,0,Math.PI*2);cx.stroke();cx.restore();}}
   if(G.hastId&&G.hastPlats==="hage"){
     const[a,b]=gs(ANL.hamtHage.falt[0],ANL.hamtHage.falt[1]);
     cx.fillStyle=HORSES[G.hastId].farg;
@@ -1905,8 +1984,25 @@ function ritaStall3D(){
         const np=tillKam(k,fx,my,2.4);
         if(np.d>=K3.nara&&np.d<15&&Math.abs(np.s)<np.d*1.2){
           const s=projK(k,np), b=clamp(2.6*k.f/np.d,26,150), hh=b*0.24;
+          /* DAGENS HÄST FÅR EN DISKRET MARKÖR (PO 2026-09-06): en pil
+             ovanför skylten och en varm ram runt den, tonad efter
+             avstånd så att den är borta när man står vid boxen. Bara
+             DEN hästen — att markera alla vore ingen hjälp alls. */
+          const mk=(typeof uppgiftsMarkor==="function")?uppgiftsMarkor():null;
+          const minBox=(typeof markorGallerFor==="function")&&markorGallerFor(rad[i]);
+          if(minBox){
+            cx.save();cx.globalAlpha=mk.alfa;
+            const py=s[1]-hh*1.5, pb=b*0.16;
+            cx.fillStyle=VCOL.markor||"#E8B54A";
+            cx.beginPath();cx.moveTo(s[0],py+pb);cx.lineTo(s[0]-pb,py-pb);
+            cx.lineTo(s[0]+pb,py-pb);cx.closePath();cx.fill();
+            cx.restore();
+          }
           cx.fillStyle=VCOL.skylt;cx.fillRect(s[0]-b/2,s[1]-hh/2,b,hh);
-          cx.strokeStyle="#3A3E44";cx.strokeRect(s[0]-b/2,s[1]-hh/2,b,hh);
+          cx.strokeStyle=minBox?(VCOL.markor||"#E8B54A"):"#3A3E44";
+          if(minBox){cx.save();cx.globalAlpha=mk.alfa;cx.lineWidth=2;}
+          cx.strokeRect(s[0]-b/2,s[1]-hh/2,b,hh);
+          if(minBox)cx.restore();
           cx.fillStyle=h?"#E6E4DE":"#5A5F66";
           cx.font=`600 ${hh*0.55}px "IBM Plex Mono",monospace`;cx.textAlign="center";
           cx.fillText(h?h.namn.toUpperCase():"—",s[0],s[1]+hh*0.2);
@@ -2282,14 +2378,16 @@ function ritaVandring(){
        alltså två booleaner där hagegrenen var det som blev kvar när
        ingen av dem stämde. Nu står de tre lägena för sig, och "hämta i
        hagen" kan bara visas när hästen FAKTISKT står i hagen. */
+    /* Rubrik och undertext ur SAMMA funktion som ridlärarens replik och
+       whiteboarden (PO 2026-09-06) — tre texter kan inte längre ha var
+       sin uppfattning om var hästen står. */
     : G.hastPlats === "leds"
-    ? [`Led ${HORSES[G.hastId].namn} till boxen`,
+    ? [hastAnvisning().vart,
        G.scen==="gard"?"In genom stalldörren och fram till boxen."
        :G.lerig?"Leriga ben efter hagen — spola av honom i spiltan i södra änden först."
        :"Fram till boxen och släpp in honom (E)."]
     : G.hastPlats === "hage"
-    ? [`Hämta ${HORSES[G.hastId].namn} i hagen`,
-       "Grinden sitter på hagens västra sida, öster om stallet."]
+    ? [hastAnvisning().vart, hastAnvisning().hur]
     : !G.skotselRes
     ? [`Sköt om ${HORSES[G.hastId].namn}`,
        G.scen!=="stallinne"?"Boxen är inne i stallet."

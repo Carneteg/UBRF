@@ -224,7 +224,8 @@ function visaSchema(){
   Schemat gäller tills lektionen börjar — ridläraren bockar av resten.</p>
   <ul style="list-style:none;padding:0;margin:14px 0;display:grid;gap:9px;font-size:14.5px">
     ${rad(!!G.hastId,"Prata med ridläraren — dagens häst")}
-    ${rad(!!G.hamtad,"Hämta hästen i hagen och led till boxen")}
+    ${rad(G.hastPlats==="box", G.hastPlats==="box"
+      ? "Hästen står i sin box" : "Hämta hästen i hagen och led till boxen")}
     ${G.lerig||G.spolad>0?rad(!G.lerig,"Spola av leriga ben i spolspiltan"):""}
     ${v.tacke?rad(G.hamtad&&!G.tackePa,"Ta av täcket och häng upp det"):""}
     ${rad(!!G.utrustning,"Hämta sadel och träns i sadelkammaren")}

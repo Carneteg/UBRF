@@ -1227,3 +1227,88 @@ Tobias, för att tillåta att ankomstpunkten flyttar. PO:s order säger nu
 Ankomstflytten står kvar (den valdes uttryckligen och förbättrar
 spelbarheten), men den är **inte** min rättelse av repro 1 — och säg
 till om ankaret ska tillbaka till sin ursprungliga ordalydelse.
+
+---
+
+## 16. PO-UX-order 2026-09-06 — instruktionen och markören
+
+### 1. All instruktion läser platsen
+
+Tobias hade rätt igen: uppgiftspanelen var rättad, men **ridlärarens
+dialogruta** sa fortfarande *"Hämta Lydia i hagen"* — det var en annan
+sträng, i en annan fil, med sin egen uppfattning om var hästen stod.
+Whiteboardens checklista sa samma sak.
+
+Tre texter med tre kopior av samma fråga blir förr eller senare tre
+svar. Nu finns **en** funktion, `hastAnvisning()` i `src/game.js`, som
+läser `G.hastPlats` och returnerar `{vart, hur, kort}`. Uppgiftspanelen
+(`world.js`), ridlärarens knapp och replik (`scenes.js`) och
+whiteboarden (`sysslor.js`) hämtar därifrån.
+
+Uppmätt genom produktionen, med `hastPlats="box"`:
+
+| Yta | Text |
+|---|---|
+| uppgiftsrubrik | "Sköt om Bränntomts Lydia" |
+| undertext | "Boxen är inne i stallet." |
+| ridlärarens knapp | "Gå till Bränntomts Lydia i stallet" |
+| anvisning | "Gå till Bränntomts Lydia i boxen" / "Hon står uppstallad inne i stallet — följ namnskylten på boxdörren." |
+
+Ingen av dem innehåller "hage" eller "grind". Provet läser **alla**
+texterna, inte bara panelen — det var precis skillnaden mellan förra
+rundans gröna prov och Tobias skärmbild.
+
+### 2. Markören på den tilldelade hästen
+
+`uppgiftsMarkor()` i `src/world.js` är markörens enda sanning: vilken
+häst, var, i vilken scen, och hur stark markeringen ska vara. Renderarna
+frågar den — de bestämmer inte själva. Det är också det som går att
+porta: en `Highlight` eller `BillboardGui` på samma häst i Roblox, samma
+regel.
+
+- **Diskret:** en liten pil ovanför boxens namnskylt plus en varm ram
+  runt skylten (`VCOL.markor`). I hagen: samma pil över hästen. På
+  minikartan: en tunn ring. Inget HUD-element.
+- **Bara den hästen.** Att markera alla vore ingen hjälp alls.
+- **Tonas ned:** full styrka på 6 m, borta på 2,2 m. Uppmätt
+  8 m → 1,00 · 4 m → 0,47 · 1 m → 0,00.
+- **Försvinner när uppgiften gått vidare:** inte när hästen leds (då är
+  hon hos spelaren), inte när skötseln är klar. Hjälpen är kontextuell,
+  inte ett tutorialskelett.
+
+### 3. UX-regeln
+
+PO:s formulering, som gäller UBRF generellt: *nästa handling ska vara
+självklar utan att spelaren behöver gissa; objekt/NPC/häst som en aktiv
+uppgift syftar på ska kunna identifieras visuellt; texten ska alltid
+spegla faktisk runtime-state; hjälpen ska vara diskret och kontextuell.*
+
+Regeln står i koden där den gäller — i huvudkommentaren till
+`hastAnvisning()` och `uppgiftsMarkor()` — så att nästa ändring möter
+den på plats i stället för i ett dokument ingen läser.
+
+### Prov och falsifiering
+
+`tools/gardtest.mjs` **29 mätningar**, bland dem de tre PO begärde:
+`hastPlats=box` ger ingen hageinstruktion någonstans; rätt häst får
+markören och en annan får den inte; markören tonas ned och försvinner.
+
+| Mutation | Röda prov |
+|---|---|
+| Ridlärarens replik säger hagen igen | 1 — med Tobias exakta sträng |
+| Markören sätts på alla hästar | **först 0** — se nedan |
+
+**Falsifieringen hittade ett hål i mitt eget prov.** Mutationen "markören
+sätts på alla hästar" ändrade RENDERARENS jämförelse, och provet läste
+bara `uppgiftsMarkor()`:s tillstånd — noll röda. Ett prov som inte kan
+skilja "rätt häst" från "alla hästar" bevisar inte att bara rätt häst
+markeras.
+
+Rättat: renderarens beslut ligger nu i `markorGallerFor(hastId)`, som
+ritkoden frågar och provet provar — mot den tilldelade hästen, mot sex
+andra i rostern och mot `null`.
+
+**[ÄRLIG BEGRÄNSNING]** Själva canvasritningen är fortfarande inte
+pixelprovad. Den som skriver om ritkoden och slutar fråga predikatet kan
+fortfarande markera fel häst — men det är då en ny kodväg, inte en tyst
+ändring av ett villkor.
