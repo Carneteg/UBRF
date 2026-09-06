@@ -31,6 +31,7 @@ local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
 local Config, Gaits, RigAdapter = Core.Config, Core.Gaits, Core.RigAdapter
 local StateMachine = Core.StateMachine
+local RidKanon, Hjalper, Svar = Core.RidKanon, Core.Hjalper, Core.Svar
 
 local MovementController = {}
 MovementController.__index = MovementController
@@ -64,8 +65,24 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 		gait = "halt", targetGait = "halt", state = "Idle",
 		phase = 0, airborne = false, grounded = true,
 		slope = Vector3.yAxis, stamina = stats.MaxStamina,
+		--[[ G02-B punkt 2. `beddGangart` är vad ryttaren bad om,
+		     `targetGait` vad hästen svarat på — under svarstiden skiljer
+		     de sig, och det är hela skillnaden mot före G02-B, då cue:n
+		     startade förloppet i samma bildruta den föll. ]]
+		beddGangart = "halt", svarstid = 0, overgangstid = 0, etableringstid = 0,
+		--[[ Senior review #87 stängde luckorna: mjukhet, spänning och
+		     fokus räknas nu här med webbens formler. En stadig hand ger
+		     mjukhet 1, och en lugn häst spänning 0 — utgångsläget är
+		     alltså det oskrivna bladet, inte en gissning. ]]
+		mjukhet = 1, spanning = 0, fokus = 0.70,
+		balans = 1,
+		energi = Svar.startEnergi(), paradKvalitet = 0,
 	} :: Types.Locomotion
 
+	--[[ Ryttarens rang hos hästen. Webben låter den växa med mjukheten
+	     över ett pass; Roblox har ingen ryttarprofil ännu, så den ligger
+	     på mitten. Neutralt värde, namngivet — inte en gissning. ]]
+	self.rang = 0.5
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
 	self.curvature = 0         -- aktuell kurvatur, 1/m
@@ -90,10 +107,21 @@ end
      alltså gångart, aldrig ett exakt tempo — det är skillnaden mot en
      gaspedal, och det är därför hästen känns som en häst. ]]
 function MovementController:_targetGait(intent: Types.Intent): string
-	local index = Gaits.index(self.loco.targetGait)
+	--[[ Stegar från den gångart ryttaren SENAST BAD OM, inte från den
+	     hästen hunnit svara på (G02-B punkt 2). Två snabba tryck ska ge
+	     två steg även om hästen ännu inte börjat på det första — annars
+	     äter svarstiden upp hjälper, och den ska skjuta svaret i tid, inte
+	     ta bort det. ]]
+	local index = Gaits.index(self.loco.beddGangart or self.loco.targetGait)
 
 	if intent.gaitUp then index += 1 end
 	if intent.gaitDown then index -= 1 end
+	--[[ PARADEN ÄR EN NEDÅTGÅENDE HJÄLP (G02-B punkt 1), inte bara en
+	     kvalitetsmätare. På webben är halvhalten den ridmässigt rätta
+	     vägen ned och tar ett steg i gångartstrappan; här gör den
+	     detsamma, vid sidan av gångartsknappen. Kanalen är en impuls, så
+	     flanken räknas en gång — att hålla F ger inte en oändlig parad. ]]
+	if (intent.parad or 0) > 0 then index -= 1 end
 
 	if intent.forward > 0.5 and index <= 1 then
 		index = 2                                   -- W ur halt startar skritt
@@ -121,10 +149,64 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     bokförs NÄR begäran ändrades och hur lång tid hästen tog på sig,
 	     så telemetrin kan visa samma sak som webben. Ingen regel ändras. ]]
 	loco.tid = (loco.tid or 0) + dt
-	local forraMal = loco.targetGait
-	loco.targetGait = self:_targetGait(intent)
-	if loco.targetGait ~= forraMal then
-		local upp = Gaits.index(loco.targetGait) > Gaits.index(forraMal)
+
+	--[[ ── HJÄLPERNA I RIDNINGENS ORD (G02-B punkt 1) ────────────────
+	     Axlarna översätts en gång per bildruta med den DELADE semantiken
+	     i HorseCore.Hjalper, som läser talen ur RidKanon.HJALP —
+	     genererad ur webbens modul. Inga tal skrivs av här.
+
+	     Skänkeln byggs av framåtavsikten kring modellens neutralläge, på
+	     samma sätt som webbens inputlager gör det: en häst rids inte med
+	     släppt skänkel, så nollan i mitten är ett mittvärde och inte 0. ]]
+	local KN = RidKanon.KONTAKT
+	local framat = math.clamp(intent.forward or 0, -1, 1)
+	local skankel = if framat >= 0
+		then KN.SKANKEL_NEUTRAL + framat * (0.78 - KN.SKANKEL_NEUTRAL)
+		else KN.SKANKEL_NEUTRAL + framat * (KN.SKANKEL_NEUTRAL - 0.05)
+	local tygel = KN.TYGEL_NEUTRAL
+		+ math.clamp(intent.rein or 0, 0, 1) * (KN.TYGEL_MAX - KN.TYGEL_NEUTRAL)
+	--[[ Styraxeln skalas till samma spann som webbens inputlager, så att
+	     böjkravet betyder samma sak på båda ytorna. ]]
+	--[[ Sitsen: −1 lätt … 0 normal … 1 djup, skalad till modellens spann
+	     kring SITS_NEUTRAL på samma sätt som webbens inputlager gör det. ]]
+	local seat = math.clamp(intent.seat or 0, -1, 1)
+	local sits = if seat >= 0
+		then KN.SITS_NEUTRAL + seat * (KN.SITS_MAX - KN.SITS_NEUTRAL)
+		else KN.SITS_NEUTRAL + seat * (KN.SITS_NEUTRAL - (-0.6))
+	local hj = Hjalper.semantik({
+		skankel = skankel, tygel = tygel, sits = sits,
+		styrning = math.clamp(intent.steer or 0, -1, 1) * RidKanon.HJALP.STYR_FULLT,
+		parad = intent.parad or 0,
+	})
+	self.hjalper = hj
+
+	--[[ ── MJUKHET OCH SPÄNNING (senior review #87, blocker 1) ────────
+	     Mjukheten är handens stadga över tid: hjälpernas avvikelse från
+	     sitt eget glidande medel. Spänningen läser den, och fokus läser
+	     båda. Formlerna är webbens och talen ligger i RidKanon.SVAR. ]]
+	self._medel = self._medel or { skankel = skankel, tygel = tygel,
+		sits = sits, styrning = hj.styrning }
+	loco.mjukhet = Svar.mjukhet(loco.mjukhet or 1, self._medel, hj, dt)
+	do
+		local hast = {
+			kanslighet = Svar.kanslighet(self.temperament),
+			forlatande = stats.Forlatande or 0.60,
+			skygghet = stats.Skygghet or 0.20,
+		}
+		--[[ NEUTRALA INGÅNGAR där Roblox saknar källa, namngivna i
+		     HorseCore.Svar: stallro/sadellage/underlag 1, dagsform 0,
+		     inget spö. De fylls inte med gissningar. ]]
+		local spMal = Svar.spanningMal(hj, hast, loco.mjukhet, self.rang or 0.5,
+			self.gangartWebb or "halt",
+			{ stallro = 1, sadellage = 1, underlag = 1, dagsform = 0,
+				utomhus = self.utomhus == true })
+		loco.spanning = Svar.spanningSteg(loco.spanning or 0, spMal, hast, dt)
+	end
+
+	local forraMal = loco.beddGangart or loco.targetGait
+	loco.beddGangart = self:_targetGait(intent)
+	if loco.beddGangart ~= forraMal then
+		local upp = Gaits.index(loco.beddGangart) > Gaits.index(forraMal)
 		loco.cue = if upp then "framåt" else "nedåt"
 		loco.cueTid = loco.tid
 		loco._overgangKlar = false
@@ -141,14 +223,67 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		local T = M.Transition
 		local kraft = if intent.forward < -0.5 then 1 else 0
 		local bas = if upp
-			then (T[loco.targetGait] or T.canter)
+			then (T[loco.beddGangart] or T.canter)
 			else T.downSoft - (T.downSoft - T.downFirm) * kraft
 		local svar = (0.65 + 0.70 * stats.Acceleration) * self.temperament.accelBias
-		self._ov = { fran = loco.speed, t = 0,
-			langd = bas / math.max(svar, 0.2), fran_gait = forraMal }
+		--[[ HÄSTENS SVARSTID (G02-B punkt 2). Förloppet beräknas här, ur
+		     hjälpen som gavs, men STARTAR först när väntan är slut. Att
+		     flytta beräkningen till svaret hade betytt att en parad mätte
+		     den tygel ryttaren råkar ha en halv sekund senare i stället
+		     för den hon parerade med.
+
+		     Tydligheten är samordningen — skänkeln framför tröskeln och
+		     handen i kontaktbandet — samma formel som paradens kvalitet,
+		     och samma val som webben gjorde efter att marginalmåttet
+		     visat sig omöjligt att göra rött genom inputlagret.
+
+		     FOKUS SAKNAS PÅ ROBLOX och skickas därför som 1, termens
+		     neutrala element: den bidrar med noll i stället för med en
+		     gissning. Se HorseCore.Svar för varför. ]]
+		local klarhet = Hjalper.paradKvalitet({ skankel = skankel, tygel = tygel })
+		if (intent.parad or 0) > RidKanon.HJALP.PARAD_TROSKEL then
+			loco.paradKvalitet = klarhet
+			loco.paradTid = loco.tid
+			loco.cue = "halvhalt"
+		end
+		local vantan = Svar.svarstid(self.stats, Svar.kanslighet(self.temperament),
+			loco.fokus or 1, loco.energi or 1, klarhet)
+		loco.svarstid = vantan
+		self._vantar = { fran_gait = forraMal, till = loco.beddGangart,
+			kvar = vantan, langd = bas / math.max(svar, 0.2) }
 	end
-	if not loco._overgangKlar and loco.gait == loco.targetGait and loco.cueTid then
-		loco.senasteOvergang = loco.tid - loco.cueTid
+
+	--[[ SVARET. Hjälpen tappas aldrig bort: när väntan är slut startar
+	     förloppet, och det är först då `targetGait` byter. Övergångens
+	     kanon mäter alltså fortsatt FÖRLOPPET och inte fördröjningen,
+	     precis som på webben. ]]
+	local vantar = self._vantar
+	if vantar then
+		vantar.kvar -= dt
+		if vantar.kvar <= 0 then
+			loco.targetGait = vantar.till
+			loco.svarTid = loco.tid
+			--[[ Förloppets klocka startar med rörelsen, inte med begäran. ]]
+			self._ovStart = loco.tid
+			self._ov = { fran = loco.speed, t = 0,
+				langd = vantar.langd, fran_gait = vantar.fran_gait }
+			self._vantar = nil
+		end
+	end
+	--[[ TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87, blocker 3).
+	     Fältet mätte förut en tredje sak än kommentarerna påstod, på båda
+	     ytorna. Nu: `svarstid` begäran → svar, `overgangstid` förloppets
+	     faktiska längd, `etableringstid` begäran → gångarten ÄR den
+	     beddna. Alla tre mäts; ingen räknas fram ur de andra. ]]
+	--[[ Jämför mot BEDDGANGART och inte mot targetGait. Under svarstiden
+	     har targetGait ännu inte bytt, så `gait == targetGait` är sant
+	     redan innan hästen börjat svara — villkoret slog då till i samma
+	     bildruta som cue:n föll och rapporterade etableringstid 0,000.
+	     Uppmätt när provet nedan skrevs; det är precis vad provet finns
+	     för. Etablerad är hon när hon går i den gångart ryttaren BAD om. ]]
+	if not loco._overgangKlar and loco.cueTid
+		and loco.gait == loco.beddGangart and loco.targetGait == loco.beddGangart then
+		loco.etableringstid = loco.tid - loco.cueTid
 		loco._overgangKlar = true
 	end
 	local gait = Gaits.get(loco.targetGait)
@@ -174,7 +309,13 @@ function MovementController:step(intent: Types.Intent, dt: number)
 		local u = math.clamp(ov.t / ov.langd, 0, 1)
 		local mjuk = u * u * (3 - 2 * u)
 		loco.speed = ov.fran + (target - ov.fran) * mjuk
-		if u >= 1 then self._ov = nil end
+		if u >= 1 then
+			--[[ KLOCKAD, inte avläst ur ov.langd: läses längden ur planen
+			     kan provet inte upptäcka att kurvan slutar någon
+			     annanstans än den skulle. ]]
+			loco.overgangstid = loco.tid - (self._ovStart or loco.tid)
+			self._ov = nil
+		end
 	else
 		self._ov = nil
 		local up = gait.accel * accelScale
@@ -213,6 +354,19 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local svangGait = Gaits.get(loco.gait)
 	local kappaCeiling = M.CurvatureMax * svangGait.turn * (0.70 + 0.60 * stats.Agility)
 	local kappaWanted = steer * kappaCeiling
+	--[[ ── HÄSTEN FALLER IN (G02-B punkt 2) ───────────────────────────
+	     Den enda plats där hästens tillstånd ändrar VAR hon hamnar och
+	     inte bara vad hon får för betyg. En häst som tappat balansen i en
+	     sväng faller in på inre skuldran: bågen blir snävare än ryttaren
+	     bad om.
+
+	     Taket ligger på BEGÄRAN och inte på den integrerade kurvaturen,
+	     så CurvatureRateTime och kurvaturens tröghet gäller oförändrat —
+	     infallet kan inte göra styrningen ryckig, det flyttar var bågen
+	     hamnar. Noll på rakt spår och noll i balans. Identiskt med
+	     webbens, och avstängbart med SVAR.INFALL_MAX = 0. ]]
+	local bojkrav = math.min(1, math.abs(hj.styrning) / RidKanon.HJALP.STYR_FULLT)
+	kappaWanted *= 1 + Svar.infall(loco.balans or 1, bojkrav)
 	if loco.speed < -0.05 then
 		kappaWanted = -kappaWanted                    -- backar man styr man spegelvänt
 	end
@@ -243,6 +397,54 @@ function MovementController:step(intent: Types.Intent, dt: number)
 			* (0.70 + 0.60 * stats.Agility) * andel
 	end
 	loco.heading = (loco.heading + loco.turnRate * dt) % (2 * math.pi)
+
+	--[[ ── HÄSTENS SVAR: BALANS OCH ENERGI (G02-B punkt 2) ────────────
+	     Balansen läser yttertygelstödet ur hjälpsemantiken, svängens
+	     fartkrav ur samma centripetaluttryck som webben (v²/r) och
+	     övergången ur att ett förlopp pågår. SPÄNNINGSTERMEN SAKNAS —
+	     Roblox har ingen spänning, och den fylls inte med ett påhittat
+	     tal. Se HorseCore.Svar.
+
+	     Energin räknas per gångart och sekund ur samma tabell som webben,
+	     översatt via RidKanon.MOTSVARIGHET så att tabellen slipper finnas
+	     i två nyckelrymder. `loco.stamina` speglar den i sin egen skala:
+	     fältet fanns sedan Gate 01 men drogs aldrig — nu är det energin,
+	     och det finns bara en sanning om hur trött hon är. ]]
+	do
+		local S = RidKanon.SVAR
+		local radie = if math.abs(self.curvature) > 0.002
+			then 1 / math.abs(self.curvature) else math.huge
+		local fartkrav = 0
+		if speedAbs > 0.5 and radie < 40 then
+			fartkrav = math.clamp(((speedAbs * speedAbs) / math.max(radie, 1) - 3.0) / 9.0, 0, 1)
+		end
+		--[[ FOKUS: handens stadga, lugnet, utomhus och den lästa
+		     halvhalten. Paradlyftet ligger i `loco.paradKvalitet` den
+		     bildruta paraden lästes. ]]
+		local paradLyft = if loco.paradTid == loco.tid then (loco.paradKvalitet or 0) else 0
+		local fMal = Svar.fokusMal(loco.mjukhet or 1, loco.spanning or 0,
+			self.utomhus == true, paradLyft, self.stats)
+		loco.fokus = (loco.fokus or 0.70)
+			+ (fMal - (loco.fokus or 0.70)) * math.clamp(dt / S.FOKUS_TAU, 0, 1)
+		if paradLyft > 0 then
+			loco.fokus = math.clamp(math.max(loco.fokus,
+				loco.fokus + S.FOKUS_PARAD * Svar.profil(self.stats).fokus
+					* paradLyft * 0.55), 0, 1)
+		end
+		local bMal = Svar.balansMal(self.stats, stats.Agility or 0.5, bojkrav,
+			hj.ytterstod, fartkrav, self._ov ~= nil, loco.spanning or 0, hj.sits)
+		local bTau = if bMal < (loco.balans or 1) then S.BALANS_TAU_NER else S.BALANS_TAU_UPP
+		loco.balans = smooth(loco.balans or 1, bMal, bTau, dt)
+
+		local webbGangart = self.gangartWebb or "halt"
+		for w, r in RidKanon.MOTSVARIGHET do
+			if r == loco.gait then webbGangart = w end
+		end
+		self.gangartWebb = webbGangart
+		loco.energi = math.clamp((loco.energi or 1)
+			+ Svar.energiTakt(webbGangart, loco.spanning or 0, self.stats) * dt, 0, 1)
+		loco.stamina = loco.energi * (stats.MaxStamina or 100)
+	end
 
 	--[[ ── Lutning ─────────────────────────────────────────────────────
 	     Proportionell mot svängkraften, alltså turnRate × fart. Klampad så

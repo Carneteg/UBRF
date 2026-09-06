@@ -29,6 +29,27 @@ local state = {
 	gaitUp = false,
 	gaitDown = false,
 	jump = false,
+	--[[ G02-B: TYGELN och PARADEN. `rein` är kontakten (Q eller höger
+	     avtryckare — den senare analog, så halvt utslag ger halv
+	     kontakt); `paradEdge` är halvhaltens flank. Pekskärmen skriver i
+	     touchRein/touchParad vid sidan av, av samma skäl som forward och
+	     steer har varsitt par: skriver de i samma fält slår de ut
+	     varandra. ]]
+	rein = 0,
+	touchRein = 0,
+	--[[ G02-B, senior review #87: SITSEN som egen axel. −1 lätt (avlastad,
+	     framåt), 0 normal, 1 djup. Z och C på tangentbord; vänster
+	     avtryckare (analog) för den djupa sitsen på gamepad. Shift och
+	     Ctrl är gångartsknappar sedan Gate 01 och rörs inte.
+
+	     Sitsen är en balansmodifierare: sitter man ned i bågen bär man
+	     hästen, sitter man lätt får hon bära den själv. Utan axeln kunde
+	     Roblox inte ha den delen av modellen alls. ]]
+	seat = 0,
+	touchSeat = 0,
+	paradHeld = false,
+	_paradEdge = false,
+	touchParad = false,
 	_upEdge = false,
 	_downEdge = false,
 }
@@ -57,6 +78,19 @@ local function onInput(_, inputState: Enum.UserInputState, obj: InputObject)
 		state.gaitDown = pressed
 	elseif obj.KeyCode == Enum.KeyCode.Space or obj.KeyCode == Enum.KeyCode.ButtonA then
 		state.jump = pressed
+	elseif obj.KeyCode == Enum.KeyCode.Q then
+		--[[ Tangenten är av eller på; avtryckaren nedan är analog och
+		     läggs till i consume(). Den som har gamepad doserar alltså
+		     kontakten, den som har tangentbord får hel eller ingen —
+		     samma förhållande som webbens Space mot pekskärmens spak. ]]
+		state.rein = if pressed then 1 else 0
+	elseif obj.KeyCode == Enum.KeyCode.F or obj.KeyCode == Enum.KeyCode.ButtonB then
+		if pressed and not state.paradHeld then state._paradEdge = true end
+		state.paradHeld = pressed
+	elseif obj.KeyCode == Enum.KeyCode.Z then
+		state.seat = if pressed then -1 else (if state.seat < 0 then 0 else state.seat)
+	elseif obj.KeyCode == Enum.KeyCode.C then
+		state.seat = if pressed then 1 else (if state.seat > 0 then 0 else state.seat)
 	end
 	return Enum.ContextActionResult.Sink
 end
@@ -67,7 +101,9 @@ function Input.bind()
 	ContextActionService:BindAction("HorseControl", onInput, false,
 		Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D,
 		Enum.KeyCode.Space, Enum.KeyCode.LeftShift, Enum.KeyCode.LeftControl,
-		Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonR1, Enum.KeyCode.ButtonL1)
+		Enum.KeyCode.Q, Enum.KeyCode.F, Enum.KeyCode.Z, Enum.KeyCode.C,
+		Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonR1, Enum.KeyCode.ButtonL1,
+		Enum.KeyCode.ButtonB)
 end
 
 function Input.unbind()
@@ -76,6 +112,9 @@ function Input.unbind()
 	ContextActionService:UnbindAction("HorseControl")
 	state.forward, state.steer = 0, 0
 	state.touchForward, state.touchSteer = 0, 0
+	state.rein, state.touchRein = 0, 0
+	state.seat, state.touchSeat = 0, 0
+	state.paradHeld, state._paradEdge, state.touchParad = false, false, false
 	state.gaitUp, state.gaitDown, state.jump = false, false, false
 end
 
@@ -94,6 +133,32 @@ local function stick(): (number, number)
 	return 0, 0
 end
 
+--[[ Höger avtryckare som ANALOG tygel. Den är en axel och inte en knapp
+     på gamepaden, och det är hela poängen: kontakten ska gå att dosera,
+     för det är den som avgör om yttertygeln bär svängen. Dödzonen är
+     densamma som spakens. ]]
+local function trigger(): number
+	for _, obj in UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1) do
+		if obj.KeyCode == Enum.KeyCode.ButtonR2 then
+			local v = obj.Position.Z
+			return if v > 0.10 then math.clamp(v, 0, 1) else 0
+		end
+	end
+	return 0
+end
+
+--[[ Vänster avtryckare som ANALOG sits. Samma skäl som tygeln på höger:
+     hur djupt man sitter är en dosering, inte ett av/på. ]]
+local function seatTrigger(): number
+	for _, obj in UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1) do
+		if obj.KeyCode == Enum.KeyCode.ButtonL2 then
+			local v = obj.Position.Z
+			return if v > 0.10 then math.clamp(v, 0, 1) else 0
+		end
+	end
+	return 0
+end
+
 --[[ Läser av och nollställer flankerna. Anropas exakt en gång per bildruta
      av klientens loop — kallas den två gånger tappas ett gångartsbyte. ]]
 function Input.consume(): Types.Intent
@@ -104,8 +169,12 @@ function Input.consume(): Types.Intent
 		gaitUp = state._upEdge,
 		gaitDown = state._downEdge,
 		jump = state.jump,
+		rein = math.clamp(state.rein + trigger() + state.touchRein, 0, 1),
+		seat = math.clamp(state.seat + seatTrigger() + state.touchSeat, -1, 1),
+		parad = if (state._paradEdge or state.touchParad) then 1 else 0,
 	}
 	state._upEdge, state._downEdge = false, false
+	state._paradEdge, state.touchParad = false, false
 	return intent
 end
 
@@ -115,6 +184,15 @@ end
 function Input.setTouch(forward: number, steer: number)
 	state.touchForward = math.clamp(forward, -1, 1)
 	state.touchSteer = math.clamp(steer, -1, 1)
+end
+function Input.setTouchRein(rein: number)
+	state.touchRein = math.clamp(rein, 0, 1)
+end
+function Input.setTouchSeat(seat: number)
+	state.touchSeat = math.clamp(seat, -1, 1)
+end
+function Input.touchParad()
+	state.touchParad = true
 end
 function Input.touchGait(up: boolean)
 	if up then state._upEdge = true else state._downEdge = true end

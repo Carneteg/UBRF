@@ -14,18 +14,16 @@
 	   går att UPPTÄCKA. Gångarten kommer fortsatt ur Gaits.forSpeed med
 	   hysteres — kontraktet dömer, det styr inte.
 
-	VAD SOM SAKNAS PÅ ROBLOX, och varför det står här i stället för att
-	fyllas med ett påhittat värde: webbens ridmodell har spänning, mjukhet
-	och ett hjälplager med skänkel/tygel/sits. Roblox rörelsekärna har
-	ingen motsvarighet ännu — den tar `forward`/`steer`, inte sits och
-	tygel. Fälten finns därför i FALT (kontraktet är detsamma) men listas i
-	SAKNAS, och `las()` fyller dem inte. Att räkna fram en balanssiffra ur
-	`lean` vore att uppfinna en annan modell än webbens och kalla den
-	paritet. Det är G02-B:s arbete att ge dem riktiga källor.
+	G02-B GAV DEM RIKTIGA KÄLLOR. Modulen skrev tidigare att spänning,
+	mjukhet och hjälplagret saknades på Roblox — rörelsekärnan tog bara
+	`forward`/`steer`. Efter G02-B har den tygel, sits och parad som egna
+	axlar, och mjukhet, spänning, fokus, balans och energi räknas med
+	webbens formler och webbens tal ur RidKanon. SAKNAS är därför tom.
 ]]
 
 local Gaits = require(script.Parent.Gaits)
 local RidKanon = require(script.Parent.RidKanon)
+local Hjalper = require(script.Parent.Hjalper)
 
 local Telemetri = {}
 
@@ -36,10 +34,26 @@ Telemetri.FALT = RidKanon.TELEMETRI_FALT
 --[[ Fält som är härledda, inte mätta. Speglar webbens `_harledda`. ]]
 Telemetri.HARLEDDA = RidKanon.HARLEDDA
 
+--[[ KONTRAKTET G02-C LÄSER (G02-B punkt 5). `HJALP_FALT` är vad ryttaren
+     gör, `SVAR_FALT` vad hästen svarar. Indelningen kommer ur kanonen,
+     alltså ur webbens moduler — inte ur en handskriven uppräkning här.
+     En läsare som vill veta "vad bad ryttaren om, och vad gjorde hon av
+     det" behöver inte gissa vilka fält som är vilka. ]]
+Telemetri.HJALP_FALT = RidKanon.HJALP_FALT
+Telemetri.SVAR_FALT = RidKanon.SVAR_FALT
+
 --[[ Fält utan källa på Roblox ännu. Deklarerad lucka, inte en bugg som
      ska tystas: paritetsspecen kräver att listan stämmer exakt, så ett
      nytt hål blir rött och ett igenfyllt hål tvingar fram en ändring här. ]]
-Telemetri.SAKNAS = { "balans", "fokus", "hjalper", "mjukhet", "spanning" }
+--[[ G02-B punkt 1 la till paradKvalitet och paradAlder i kontraktet:
+     webben läser nu HUR en halvhalt reds, inte bara att den gavs.
+     Roblox har ingen parad alls ännu — ingen kanal, ingen läsning —
+     så de två är luckor av exakt samma slag som hjälplagret. ]]
+--[[ Tomt sedan senior review av #87. Sitsen fick en egen axel, och
+     mjukhet, spänning och fokus räknas nu på Roblox med webbens formler
+     och webbens tal. Listan står kvar som kontrakt: ett fält utan källa
+     ska deklareras här och inte utelämnas tyst. ]]
+Telemetri.SAKNAS = {}
 
 --[[ Lagliga gångartsbyten: grannsteg i ordningen, plus halt från vad som
      helst (en häst kan stanna ur galopp). Ordningen är Roblox egen — den
@@ -96,7 +110,8 @@ end
      Notera identiteten: MovementController skriver redan
      `loco.turnRate = curvature * speed`, alltså exakt webbens
      `vridhastighet = kurvatur × tempo`. Den läses ut, den räknas inte om. ]]
-function Telemetri.las(ritt: Ritt, loco: { [string]: any }, kurvatur: number): { [string]: any }
+function Telemetri.las(ritt: Ritt, loco: { [string]: any }, kurvatur: number,
+	hjalper: { [string]: any }?): { [string]: any }
 	local k = kurvatur or 0
 	return {
 		uppsutten = ritt.uppsutten,
@@ -115,11 +130,42 @@ function Telemetri.las(ritt: Ritt, loco: { [string]: any }, kurvatur: number): {
 		     "det är skillnaden mot en gaspedal"). `targetGait` ÄR alltså den
 		     beddna gångarten, och fälten har riktiga källor här, inte
 		     härledda. ]]
-		beddGangart = loco.targetGait,
+		--[[ G02-B punkt 2: `beddGangart` är vad ryttaren BAD om,
+		     `gangart`/`targetGait` vad hästen svarat på. Under svarstiden
+		     skiljer de sig utan att `iOvergang` är sant — hon har hört,
+		     men inte börjat. ]]
+		beddGangart = loco.beddGangart or loco.targetGait,
 		cue = loco.cue,
 		cueAlder = if loco.cueTid then math.max(0, (loco.tid or 0) - loco.cueTid) else nil,
-		overgangstid = loco.senasteOvergang or 0,
+		--[[ TRE TIDER, TRE LÅSTA BETYDELSER (senior review #87). Samma
+		     kontrakt som webbens: svarstid = begäran → svar,
+		     overgangstid = förloppets faktiska längd, etableringstid =
+		     begäran → gångarten ÄR den beddna. ]]
+		overgangstid = loco.overgangstid or 0,
+		etableringstid = loco.etableringstid or 0,
 		iOvergang = loco.gait ~= loco.targetGait,
+		--[[ ── HÄSTENS SVAR OCH RYTTARENS HJÄLPER (G02-B) ───────────
+		     Samma fältnamn och samma tal som webben. `hjalper` kommer ur
+		     den delade semantiken i HorseCore.Hjalper, som läser
+		     RidKanon.HJALP — inga tal skrivs av här.
+
+		     `sits` och `vikt` saknas i hjälperna av det skäl som står i
+		     Hjalper.SAKNAS: Shift och Ctrl är gångartsknappar på Roblox
+		     sedan Gate 01, och att flytta dem är en inputändring utanför
+		     G02-B. Fälten utelämnas hellre än fylls. ]]
+		balans = loco.balans,
+		energi = loco.energi,
+		--[[ Senior review #87: de tre som stod som luckor har källor nu.
+		     `mjukhet` är handens stadga över tid, `spanning` webbens
+		     formel med Roblox egna hästdata, `fokus` bygger på de två. ]]
+		mjukhet = loco.mjukhet,
+		spanning = loco.spanning,
+		fokus = loco.fokus,
+		svarstid = loco.svarstid or 0,
+		svarAlder = if loco.svarTid then math.max(0, (loco.tid or 0) - loco.svarTid) else nil,
+		paradKvalitet = loco.paradKvalitet or 0,
+		paradAlder = if loco.paradTid then math.max(0, (loco.tid or 0) - loco.paradTid) else nil,
+		hjalper = hjalper,
 	}
 end
 

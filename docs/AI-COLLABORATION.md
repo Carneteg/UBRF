@@ -1,6 +1,6 @@
-# AI collaboration — ChatGPT + Claude + Jules
+# AI collaboration — ChatGPT + Claude
 
-Detta dokument definierar hur ChatGPT, Claude och Jules samarbetar i UBRF.
+Detta dokument definierar hur ChatGPT och Claude samarbetar i UBRF.
 
 `docs/DELIVERY-PROTOCOL.md` styr status, evidens, falsifiering, review, human acceptance och merge. Vid konflikt gäller leveransprotokollet.
 
@@ -10,13 +10,12 @@ Detta dokument definierar hur ChatGPT, Claude och Jules samarbetar i UBRF.
 
 - **ChatGPT = Senior Game Director / Game Systems Architect / Independent Reviewer**
 - **Claude = Lead Implementation Engineer / Builder**
-- **Jules = Independent QA / Falsification Agent**
 
-Normal arbetskedja:
+Arbetskedjan är låst:
 
-> **CLAUDE BUILDS → JULES CHALLENGES (när tilldelad) → CHATGPT REVIEWS → TOBIAS ACCEPTS**
+> **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
 
-Jules är ett oberoende QA-lager, inte en andra lead-utvecklare. Ingen agent får både införa en större förändring och ensam slutgodkänna den.
+Ingen agent får både införa en större förändring och ensam slutgodkänna den.
 
 ## Produktens tekniska riktning
 
@@ -37,10 +36,9 @@ ChatGPT ska:
 3. formulera acceptance contract, gates och testfall,
 4. utmana scope creep,
 5. kontrollera faktisk evidens bakom Claudes handoff,
-6. väga in Jules oberoende QA-bevis när Jules har tilldelats,
-7. leta efter dubbla sanningar, falsk precision, hårdkodade spatiala antaganden, generiska placeholders, regressioner och tester som testar sig själva,
-8. kontrollera Roblox/webb-paritet där relevant,
-9. skilja teknisk review från Tobias produktacceptans.
+6. leta efter dubbla sanningar, falsk precision, hårdkodade spatiala antaganden, generiska placeholders, regressioner och tester som testar sig själva,
+7. kontrollera Roblox/webb-paritet där relevant,
+8. skilja teknisk review från Tobias produktacceptans.
 
 ChatGPT får sätta `READY_FOR_PRODUCT_ACCEPTANCE` efter grön oberoende review men ersätter inte Tobias visuella eller game-feel-PASS.
 
@@ -62,27 +60,6 @@ Claude ska:
 10. aldrig själv slutgodkänna sin större leverans.
 
 Claudes högsta normala leveransstatus är `READY_FOR_CHATGPT_REVIEW`.
-
-## Roll: Jules
-
-Jules ansvarar främst för **oberoende QA, adversarial review och falsifiering av redan implementerat arbete**.
-
-Jules ska:
-
-1. läsa root `AGENTS.md`, leveransprotokollet och aktiv gate före arbete,
-2. utgå från faktisk diff/branch och inte implementerarens sammanfattning,
-3. försöka motbevisa centrala acceptance claims,
-4. leta efter runtime wiring gaps, dubbla sources of truth, state-inconsistencies, fallback-beteenden och tester som passerar utan produktionsvägen,
-5. kontrollera webb/Roblox-beteendeparitet där relevant,
-6. reproducera bekräftade fel och lägga fokuserade regressionstester när det förbättrar evidensen,
-7. endast göra minsta kodfix när uppgiften uttryckligen är en smal bugfix/CI-fix,
-8. alltid redovisa `Not tested`, exakta testkommandon och remaining risk,
-9. inte ändra game-feel-tuning, produktregler eller UBRF-verklighetsfakta utan explicit beslut,
-10. aldrig mergea eller sätta `PRODUCT_ACCEPTED`.
-
-Jules högsta normala status är `QA_REPORT_READY`. Om Jules får en explicit bugfix kan Jules skapa en fokuserad PR, men den går fortfarande genom ChatGPT-review och Tobias acceptance där human gate krävs.
-
-Jules får inte arbeta parallellt i samma kärnfiler som Claude om inte Tobias eller ChatGPT uttryckligen tilldelar överlappet.
 
 ## Gemensamt arbetsflöde
 
@@ -120,57 +97,24 @@ Claude lämnar:
 - Human gate
 - SHA
 
-### 5. Jules utmanar vid tilldelning
+### 5. ChatGPT gör oberoende senior review
 
-Jules får ett avgränsat QA-uppdrag mot exakt PR/head/issue. Standarduppdraget är att försöka falsifiera leveransen utan redesign eller scope-expansion.
-
-Jules lämnar:
-
-- `QA_REPORT_READY`
-- Confirmed defects
-- Reproduction
-- Tests added/run
-- Claims falsified / claims not falsified
-- Not tested
-- Remaining risk
-- Exact head/branch reviewed
-
-Jules QA ersätter inte ChatGPT senior review.
-
-### 6. ChatGPT gör oberoende senior review
-
-ChatGPT granskar faktisk diff, relevanta källor, CI och eventuell Jules-evidens, inte bara sammanfattningen.
+ChatGPT granskar faktisk diff och relevanta källor, inte bara sammanfattningen.
 
 Utfall:
 
 - `CHANGES_REQUESTED`, eller
 - `READY_FOR_PRODUCT_ACCEPTANCE`.
 
-### 7. Tobias accepterar eller begär ny iteration
+### 6. Tobias accepterar eller begär ny iteration
 
 När human gate krävs är det endast Tobias som kan sätta `PRODUCT_ACCEPTED`.
-
-## När Jules ska användas
-
-Använd Jules när den ger verklig oberoende nytta, främst:
-
-- efter en större Claude-implementation före slutreview,
-- vid misstänkt runtime-wiring-problem,
-- när CI är grönt men produkten ändå beter sig fel,
-- för regressionstest/falsifiering av en konkret blocker,
-- för smala CI-/bugfixar som inte konkurrerar med Claudes aktiva kärnimplementation.
-
-Använd inte Jules som parallell feature-builder på samma aktiva kärnscope. Det skapar dubbla sanningar och mergekonflikter utan att ge oberoende QA.
-
-Standardprompt för PR-review:
-
-> Review PR <number> adversarially. Do not redesign the feature. Find runtime wiring gaps, duplicated sources of truth, web/Roblox parity mismatches, state inconsistencies, hidden fallbacks, and tests that can pass without exercising production paths. Reproduce confirmed defects. Add failing regression tests when useful. Do not merge and do not change product tuning unless explicitly asked.
 
 ## Fidelity-samarbete
 
 För verkliga UBRF-byggnader/interiörer är bilder, filmer och planer specifikation.
 
-Alla agenter ska kontrollera relevant källmaterial enligt `CLAUDE.md`, `AGENTS.md` och `docs/DELIVERY-PROTOCOL.md`. Särskilt:
+Claude ska kontrollera relevant källmaterial enligt `CLAUDE.md` och `docs/DELIVERY-PROTOCOL.md`. Särskilt:
 
 - råfilmer i `references/video/` får inte hoppas över innan en visuell detalj kallas `REFERENCE GAP`,
 - planens struktur och rummets funktion ska klassas separat,
@@ -215,28 +159,10 @@ Claude → review:
 8. Human gate
 9. SHA
 
-ChatGPT → Jules:
-
-1. Exact PR/head/issue to review
-2. Claims to falsify
-3. Production paths that must be exercised
-4. Out of scope / no-redesign boundaries
-5. Whether Jules may add tests only or also make a narrow fix
-
-Jules → review:
-
-1. `QA_REPORT_READY`
-2. Exact head reviewed
-3. Confirmed defects
-4. Reproduction/tests
-5. Falsification result
-6. Not tested
-7. Remaining risk
-
 ## Konflikt- och beslutshierarki
 
 1. Tobias senaste uttryckliga instruktion.
-2. `docs/PRODUCT-CANON.md`, `CLAUDE.md` och root `AGENTS.md`.
+2. `docs/PRODUCT-CANON.md` och `CLAUDE.md`.
 3. `docs/DELIVERY-PROTOCOL.md` för leveransprocessen.
 4. verifierade referenser/data inom sin domän.
 5. detta samarbetsdokument.
@@ -250,4 +176,4 @@ Om implementation eller källa visar att ett äldre dokument är fel ska verklig
 
 Se `docs/DELIVERY-PROTOCOL.md`: source traceability + automated verification + independent review + human product acceptance där relevant.
 
-**Claude bygger. Jules försöker slå hål på bevisen. ChatGPT avgör den tekniska gaten. Tobias avgör produkten.**
+**ChatGPT ska göra Claude bättre på att bygga rätt sak. Claude ska göra analysen konkret och spelbar. Tobias avgör vad som är rätt produkt.**
