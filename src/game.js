@@ -155,7 +155,7 @@ function stegaInput(dt){
 /* ── Speltillstånd ── */
 const G={
   scen:"meny",vy:"3d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
-  hastId:null,ride:null,aids:null,leder:false,skotselRes:null,
+  hastId:null,ride:null,aids:null,skotselRes:null,
   utrustning:false,lerig:false,spolad:0,felUtrustning:0,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
@@ -172,7 +172,37 @@ const G={
   ryttarPitch:0,     // ryttarens tröghet framåt/bakåt, radianer
   ryttarRoll:0,      // ryttarens balans i svängen, radianer
   gaitSpar:0,        // tillryggalagd sträcka i m, driver gångartsfasen
+  /* ── VAR HÄSTEN ÄR — EN ENDA SANNING ────────────────────────────
+     Tobias produkttest 2026-09-06, blocker 2. Läget bars förut av TVÅ
+     booleaner, `leder` och `hamtad`, som kunde motsäga varandra:
+     `leder && hamtad` betyder ingenting, och ingen rad hindrade det.
+
+     Nu finns ETT fält med tre lägen, och de gamla namnen är HÄRLEDDA
+     (se defineProperty nedan) så att alla befintliga läsningar lever
+     kvar utan att kunna hålla en egen kopia:
+
+       "hage"  hästen står i hagen och ska hämtas
+       "leds"  ryttaren leder henne
+       "box"   hon står i sin box — förberedelse och uppsittning härifrån
+
+     PRODUKTBESLUT (Tobias, samma test): dagen börjar i "box". Vägen
+     ut till hagen var för lång för att komma åt ridningen, och hagen
+     är kvar att utforska men inte obligatorisk. */
+  hastPlats:"box",
 };
+/* De gamla namnen som VYER av `hastPlats`. Skrivningar går tillbaka in
+   i samma fält, så en `G.leder=true` någonstans i koden inte kan skapa
+   ett andra läge. Att behålla namnen är med flit: 36 läsningar i fem
+   filer skulle annars ha skrivits om i samma runda som fyra
+   produktblockerare, och det är precis så man inför en femte. */
+Object.defineProperty(G,"leder",{
+  get(){return G.hastPlats==="leds";},
+  set(v){G.hastPlats=v?"leds":(G.hastPlats==="leds"?"hage":G.hastPlats);},
+});
+Object.defineProperty(G,"hamtad",{
+  get(){return G.hastPlats==="box";},
+  set(v){G.hastPlats=v?"box":(G.hastPlats==="box"?"hage":G.hastPlats);},
+});
 /* Standardvyn är 3D bakom figuren: det är så spelet är tänkt att
    spelas, och kartan är ett uppslag man tar när man vill orientera
    sig. Med kartan som förval landade en ny spelare i en ovanifrånvy

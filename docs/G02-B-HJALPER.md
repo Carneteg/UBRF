@@ -1002,3 +1002,110 @@ Roblox runtime i Studio. Vakten och sitsmodellen är provade under `luau`
 mot stubbade tjänster, inte i en riktig klient.
 
 **Status: `READY_FOR_CHATGPT_REVIEW`.**
+
+---
+
+## 14. Produktacceptans FALLERAD @ `607e879` — fyra blockerare, åtgärdade
+
+Tobias testade previewn och hittade fyra saker. Ingen av dem är en
+G02-B-regression: alla fyra fanns före gaten, och alla fyra gjorde
+ridloopen otestbar. `READY_FOR_PRODUCT_ACCEPTANCE` är återkallad.
+
+### Blocker 1 — hagarna gick inte att komma in i
+
+`ANL.hamtHage.grind` pekade ut en grind, men staketet var en **sluten
+polygon** och `vandringKollision()` gjorde varje segment solitt. Grinden
+fanns som markör, inte som hål.
+
+Fyra konsumenter läste `st.p` rakt av och tolkade den var för sig:
+kollisionen, vägsökningen (via kollisionen), 3D-bygget och minikartan.
+Nu finns **en** funktion — `staketSegment(st)` i `src/site.js` — som
+lämnar de sträckor som faktiskt spärrar, med grindöppningarna
+bortsubtraherade, och alla fyra läser den. Grinden står på **kanonens
+egen markör** (178, 79); ingen ny plats är hittad på.
+
+Uppmätt genom riktig rörelse: in i hagen x 175 → **179,96**, ut igen
+x 182 → **175,70**, och staketet 6 m norr om grinden stoppar
+fortfarande vid **177,65** (negativ kontroll).
+
+### Blocker 2 — onboardingvägen var för lång
+
+**Produktbeslut (Tobias):** den tilldelade hästen börjar i sin box.
+
+Läget bars av **två** booleaner som kunde motsäga varandra — `leder` och
+`hamtad`; `leder && hamtad` betyder ingenting och ingen rad hindrade
+det. Nu finns ett fält, `G.hastPlats` ∈ {`hage`, `leds`, `box`}, och de
+gamla namnen är **härledda vyer** (`Object.defineProperty`) så att de 36
+läsningarna i fem filer lever kvar utan att kunna hålla en egen kopia.
+
+Dagen börjar i `box`. Hagarna är kvar att utforska — och går efter
+blocker 1 att komma in i — men hämtningen är inte obligatorisk för
+första ridpasset. Din häst ritas i hagen **bara** när hon står där;
+villkoret läste `!G.hamtad`, vilket efter det här hade betytt att hon
+betade och stod i boxen samtidigt.
+
+### Blocker 3 — stalldörren låg nästan i en vägg
+
+Det var inte en känsla utan ett mått. Fri yta runt dörrens gamla
+innerpunkt (10,50 · 68,95), uppmätt med spelets egen kollision:
+
+| Riktning | Fritt |
+|---|---|
+| väster | 4,0 m |
+| söder | 4,0 m |
+| **öster** | **0,3 m** |
+| **norr** | **0,3 m** |
+
+Spelaren landade i ett hörn på 0,3 × 0,3 m mellan norrfasaden och
+teorisalens västvägg (x 11,2).
+
+**Geometrin är orörd.** Dörrbladet ligger kvar där fasaden säger
+(x 10,50), öppningen är oförändrad och teorisalens vägg står kvar —
+CLAUDE.md är uttrycklig om att inte flytta dörrar och väggar för att
+lösa ett spelproblem. Det som ändrades är var man **står**: ankomst- och
+interaktionspunkten flyttades 1,6 m in i den fria delen av samma rum
+(kanonens `OPEN_AREA stall_uppehall_open`). Nu: väster 4,0 · öster 1,2 ·
+söder 3,7 · norr 0,9 m.
+
+Vägen ut i stallet **fanns hela tiden** och är uppmätt: väster ~4,6 m,
+sedan söderut genom `genomgaende`-väggens `inre_entre`-öppning (x 4,1–5,0)
+ned i tvärgången vid y 53,2. Gångtestet går den, och tillbaka.
+
+### Blocker 4 — konstigt kontinuerligt ljud
+
+`ljudAmbiens()` startade en loopad syntetisk brown-noise-buffer efter
+första input. Ett filtrerat brusloop **är** ett hum — det efterliknar
+inte ett stall, det lägger på en ton.
+
+`LJUD.ambiens` är `false` som default. Maskineriet står kvar orört bakom
+flaggan för den dag en riktig inspelning finns; att riva koden hade
+betytt att nästa försök börjar om från noll. Diskreta ljud — hovslag,
+fotsteg, gnägg, fnys — är kvar, och `M` styr fortfarande allt ljud.
+
+**[NOTERAT] Regnet har inte längre någon ljudbädd.** Regnbruset låg i
+samma funktion. Det är en följd av beslutet, inte en glömska.
+
+### Evidens: `tools/gardtest.mjs`
+
+Nytt gångtest, samma harness som `gangtest.mjs`: Chromium, spelets
+riktiga kollision, tangenter som hålls — **inga punktprov mot datan**,
+för det var precis skillnaden mellan "grönt test" och "går inte att
+spela" i den här rundan. **14 mätningar, alla gröna.**
+
+### Falsifiering
+
+| Mutation | Röda prov |
+|---|---|
+| Grinden stängs igen (`staketSegment` struntar i grindar) | 2 — in x 177,65, ut x 178,35 |
+| Dagen börjar i hagen igen | 2 |
+| Ankomstpunkten tillbaka i hörnet | 2 — 0,3/0,3 m, OCH genomgången faller |
+| Brusambiensen på igen | se tabellen i PR-kommentaren |
+
+### Not tested
+
+Roblox-sidan är **inte** rörd i den här rundan — alla fyra blockerarna
+ligger i webbens gårds- och stallager. Hur det känns att spela är
+fortfarande Tobias bedömning; det är hela poängen med en ny preview.
+
+**Status: `READY_FOR_CHATGPT_REVIEW`.** `READY_FOR_PRODUCT_ACCEPTANCE`
+är återkallad och sätts inte av mig.

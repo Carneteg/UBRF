@@ -485,8 +485,20 @@ const ANL = {
        saknar den — där möter staketet gräs. */
     {typ:"tra", sandkant:true, p:rektRunt(UTEBANA)},     // uteridbanan
     {typ:"tra", sandkant:true, p:rektRunt(PADDOCK)},  // paddocken bredvid
-    {typ:"tra", p:[[178,65],[206,65],[206,93],[178,93],[178,65]]},     // hage Ö1
-    {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]]},   // hage Ö2
+    /* GRINDARNA ÄR RIKTIGA ÖPPNINGAR (Tobias produkttest 2026-09-06,
+       blocker 1). Staketen var slutna polygoner medan `hamtHage.grind`
+       bara var en interaktionsmarkör, och `vandringKollision()` gjorde
+       varje segment solitt — spelaren kom aldrig in till hästarna.
+
+       Grinden står på samma punkt som kanonmarkören pekar ut; ingen ny
+       plats är hittad på. Öppningen subtraheras av `staketSegment()`
+       nedan, som ALLA konsumenter läser: kollision, vägsökning,
+       3D-bygget, minikartan och Roblox-exporten. En grind som bara
+       ritas men inte går att gå igenom är just den bugg som fälldes. */
+    {typ:"tra", p:[[178,65],[206,65],[206,93],[178,93],[178,65]],
+     grindar:[{p:[178,79], bredd:2.4}]},                               // hage Ö1
+    {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]],
+     grindar:[{p:[178,107], bredd:2.4}]},                              // hage Ö2
     {typ:"el",  p:[[112,20],[112,121]]},                               // trådstängsel mot åkern
     {typ:"rail",p:[[155,121.5],[168,121.5]]},                          // rail framför klubbgaveln
     {typ:"rail",p:[[96,127],[96,136]]},                                // rail vid lekhagen
@@ -586,6 +598,52 @@ const ANL = {
   hamtHage: {grind:[178,79], falt:[186,77]},
   skylt: {pos:[120,150.5], text:"HUSBYVÄGEN 1A · UPPLANDS-BRO RYTTARFÖRENING"},
 };
+
+/* ── STAKETENS SOLIDA BITAR ─────────────────────────────────────────
+   ETT staket, EN sanning om var det är tätt. Funktionen tar en post ur
+   `ANL.staket` och lämnar de sträckor som faktiskt spärrar — grindarnas
+   öppningar bortsubtraherade.
+
+   Den finns för att blocker 1 i Tobias produkttest 2026-09-06 var precis
+   den sortens fel som uppstår när fyra konsumenter tolkar samma data var
+   för sig: kollisionen, vägsökningen, 3D-bygget och minikartan läste
+   `st.p` rakt av, så grinden fanns som markör men inte som hål. Nu läser
+   alla den här, och en grind som inte går att gå igenom är omöjlig att
+   införa av misstag.
+
+   Grinden anges som en PUNKT på staketlinjen plus en bredd. Punkten
+   projiceras på det segment den ligger närmast, och det segmentet delas.
+   Att ange punkten och inte två brytpunkter är med flit: markören i
+   `hamtHage.grind` är kanon, och öppningen ska följa den. */
+function staketSegment(st){
+  const ut=[];
+  for(let i=0;i<st.p.length-1;i++){
+    const [x0,y0]=st.p[i], [x1,y1]=st.p[i+1];
+    const dx=x1-x0, dy=y1-y0, L=Math.hypot(dx,dy);
+    if(L<1e-9) continue;
+    /* Grindar som ligger PÅ det här segmentet, som andel längs det. */
+    const hal=[];
+    for(const g of (st.grindar||[])){
+      const t=((g.p[0]-x0)*dx+(g.p[1]-y0)*dy)/(L*L);
+      if(t<0||t>1) continue;
+      /* Punkten måste ligga på linjen, inte bara projiceras på den —
+         annars hade en grind på en annan sida öppnat fel sträcka. */
+      const px=x0+dx*t, py=y0+dy*t;
+      if(Math.hypot(px-g.p[0],py-g.p[1])>0.35) continue;
+      const halv=(g.bredd||2.0)/2/L;
+      hal.push([Math.max(0,t-halv), Math.min(1,t+halv)]);
+    }
+    hal.sort((a,b)=>a[0]-b[0]);
+    let t0=0;
+    for(const [a,b] of hal){
+      if(a>t0) ut.push([x0+dx*t0, y0+dy*t0, x0+dx*a, y0+dy*a]);
+      t0=Math.max(t0,b);
+    }
+    if(t0<1) ut.push([x0+dx*t0, y0+dy*t0, x1, y1]);
+  }
+  return ut;
+}
+
 
 /* ── Stallet invändigt — lokala koordinater: origo i sydväst,
       +x öster (bredd 15), +y norr (längd 52).
@@ -1277,8 +1335,37 @@ const STALLINNE = {
        genom dörren under verandan står innanför just den dörren. Planens
        vindfångscell (x 3,6–5,5) står kvar som region utan etikett —
        motsägelsen plan/fasad är dokumenterad ovan, fasaden vinner. */
+    /* ── ANKOMSTPUNKTEN, INTE DÖRREN (Tobias produkttest 2026-09-06,
+          blocker 3) ────────────────────────────────────────────────
+       "Dörren man går ut genom i stallet ligger nästan i en vägg."
+       Uppmätt fri yta runt den gamla innerpunkten (10,50 · 68,95):
+       väster 4,0 m, söder 4,0 m — men ÖSTER 0,3 m och NORR 0,3 m.
+       Spelaren landade i ett hörn på 0,3 × 0,3 m mellan norrfasaden och
+       teorisalens västvägg (x 11,2). Det är inte en känsla, det är ett
+       mått.
+
+       DÖRREN FLYTTAS INTE. Fasadens gula dörr ligger där fasaden säger
+       (x 10,50 räknat inifrån), öppningen är orörd och teorisalens vägg
+       står kvar på 11,2 — CLAUDE.md är uttrycklig om att geometri inte
+       får flyttas för att lösa ett spelproblem.
+
+       Det som ändras är var man STÅR: ankomst- och interaktionspunkten
+       läggs i den fria delen av samma rum som dörren öppnar mot
+       (kanonens OPEN_AREA `stall_uppehall_open`, x 7,3–11,2 ×
+       y 64,35–69,95). 1,6 m väster om dörrbladet ger ≥1,5 m fritt åt
+       alla håll, och dörren är fortfarande inom en meter — prompten
+       hör tydligt till den.
+
+       Vägen ut i stallet finns och är uppmätt: väster ~4,6 m, sedan
+       söderut genom `genomgaende`-väggens `inre_entre`-öppning
+       (x 4,1–5,0) ned i tvärgången. Gångtestet nedan går den. */
     {id:"ut_n", pos:[(()=>{const o=ANL.byggnader.find(b=>b.id==="stall").oppningar.find(o=>o.sida==="N"&&o.typ==="dorrgul");
-                          return STALL_BREDD-o.u-o.b/2;})(), STALL_LANGD-1.0],
+                          const dorrX=STALL_BREDD-o.u-o.b/2;
+                          /* Teorisalens västvägg är rummets östra kant.
+                             1,6 m in från den räcker för figurens 0,35 m
+                             radie med marginal, och ligger fortfarande i
+                             dörrens eget rum. */
+                          return Math.min(dorrX, 11.2-1.6);})(), STALL_LANGD-1.55],
      text:"Ut genom entrén — mot grusplanen", mot:"gard", inrikt:-Math.PI/2,
      uttext:"Gå in i stallet (Entré, under verandan)",
      spawn:{x:STALL_X+STALL_BREDD-10.5, y:STALL_NORR+1.6, rikt:Math.PI/2}},

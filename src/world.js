@@ -340,8 +340,12 @@ function inredningPaNiva(o){
 function vandringKollision(nx,ny,r,fx,fy){
   if(G.scen==="gard"){
     for(const b of ANL.byggnader) [nx,ny]=kollideraRekt(nx,ny,r+0.2,b.rekt);
-    for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++)
-      [nx,ny]=kollideraSeg(nx,ny,r,st.p[i][0],st.p[i][1],st.p[i+1][0],st.p[i+1][1]);
+    /* GRINDARNA ÄR HÅL, inte markörer (Tobias produkttest 2026-09-06,
+       blocker 1). `staketSegment()` lämnar de sträckor som faktiskt
+       spärrar; öppningen vid grinden finns inte här och går därför att
+       gå igenom. Vägsökningen frågar samma funktion via den här. */
+    for(const st of ANL.staket) for(const [ax,ay,bx,by] of staketSegment(st))
+      [nx,ny]=kollideraSeg(nx,ny,r,ax,ay,bx,by);
     nx=clamp(nx,1,ANL.bredd-1); ny=clamp(ny,1,ANL.djup-1);
   }else if(G.scen==="ridhusinne"){
     const R=RIDHUSINNE, ba=R.bana;
@@ -717,7 +721,7 @@ function interaktioner(){
           else saga("Uteritt får du följa med på från grupp 3 — skogen kräver en säker ryttare.",4);
         }});
     }
-    if(G.hastId&&!G.hamtad&&!G.leder){
+    if(G.hastId&&G.hastPlats==="hage"){
       const h=HORSES[G.hastId];
       L.push({pos:ANL.hamtHage.grind, text:`Öppna grinden och hämta ${h.namn}`,
         gor(){
@@ -894,8 +898,14 @@ function gaTill(scen,spawn){
 function startaVandring(){
   if(typeof ridSittAv==="function")ridSittAv();   // G02-A: avsutten när ritten lämnas
   overlay(false);
-  G.scen="gard"; G.hastId=null; G.skotselRes=null; G.leder=false;
-  G.sysslor={mockat:0,fodrat:0}; G.hamtad=false; G.tackePa=false;
+  G.scen="gard"; G.hastId=null; G.skotselRes=null;
+  /* DAGEN BÖRJAR MED HÄSTEN I BOXEN (Tobias produkttest 2026-09-06,
+     blocker 2). Vägen från grusplanen ut till hagen och tillbaka var
+     hela onboardingen innan man fick rida en meter. Hagarna är kvar
+     att gå ut till — och går numera att komma IN i, blocker 1 — men
+     hämtningen är inte längre obligatorisk för första ridpasset. */
+  G.hastPlats="box";
+  G.sysslor={mockat:0,fodrat:0}; G.tackePa=false;
   G.fangstForsok=false; G.utrustning=false; G.lerig=false; G.spolad=0;
   // dagens väder — avgör om hästarna går med täcke i hagen
   const v=(G.seed*2654435761>>>0)%100;
@@ -1379,20 +1389,26 @@ function ritaGard3D(){
     if(b.huvar) items.push({d:-avst2([b.rekt.x+b.rekt.w/2,b.rekt.y+b.rekt.h/2])+1,
       rita(){ritaHuvar(k,b);}});
   }
-  for(const st of ANL.staket) for(let i=0;i<st.p.length-1;i++){
-    const a=st.p[i], c=st.p[i+1];
+  /* Samma bitar som kollisionen: ritas grinden igen syns ett staket där
+     spelaren går rakt igenom, och det är värre än ingen grind alls. */
+  for(const st of ANL.staket) for(const [ax,ay,bx,by] of staketSegment(st)){
+    const a=[ax,ay], c=[bx,by];
     items.push({d:-avst2([(a[0]+c[0])/2,(a[1]+c[1])/2]), rita(){ritaStaket3D(k,a,c,st.typ,st.sandkant);}});
   }
   for(const t of ANL.trad) items.push({d:-avst2(t), rita(){ritaTrad3D(k,t);}});
   for(const p of ANL.props) items.push({d:-avst2(p.pos), rita(){ritaProp3D(k,p);}});
   for(const hg of ANL.hagar) for(let i=0;i<hg.hastar.length;i++){
-    if(hg.hastar[i]===G.hastId&&!G.hamtad)continue;   // din häst står vid grinden
+    /* DIN häst ritas i hagen BARA när hon faktiskt står där. Villkoret
+       läste `!G.hamtad`, vilket efter blocker 2 hade betytt att hon
+       betade i hagen samtidigt som hon stod i sin box — precis den
+       dubbla platssanningen som skulle bort. */
+    if(hg.hastar[i]===G.hastId&&G.hastPlats!=="hage")continue;
     const h=HORSES[hg.hastar[i]]; if(!h)continue;
     const hx=hg.rekt.x+hg.rekt.w*(0.25+0.5*((i*0.618)%1));
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     items.push({d:-avst2([hx,hy]), rita(){ritaHage3DHast(k,hx,hy,h,i);}});
   }
-  if(G.hastId&&!G.hamtad&&!G.leder){
+  if(G.hastId&&G.hastPlats==="hage"){
     const f=ANL.hamtHage.falt, h=HORSES[G.hastId];
     items.push({d:-avst2(f), rita(){
       const p=tillKam(k,f[0],f[1],0); if(p.d<K3.nara)return;
@@ -1569,9 +1585,13 @@ function ritaGard2D(){
   for(const st of ANL.staket){
     cx.strokeStyle=st.typ==="tra"?VCOL.staketTra:st.typ==="rail"?VCOL.staketRail:VCOL.staketEl;
     cx.lineWidth=st.typ==="el"?1.2:2;
+    /* Minikartan ritar de SOLIDA bitarna, så grinden syns som ett hål
+       att sikta på i stället för som en tät linje man ändå går igenom. */
     cx.beginPath();
-    for(let i=0;i<st.p.length;i++){const[a,b]=gs(st.p[i][0],st.p[i][1]);
-      i?cx.lineTo(a,b):cx.moveTo(a,b);}
+    for(const [ax,ay,bx,by] of staketSegment(st)){
+      const [a0,b0]=gs(ax,ay), [a1,b1]=gs(bx,by);
+      cx.moveTo(a0,b0); cx.lineTo(a1,b1);
+    }
     cx.stroke();}
   for(const t of ANL.trad){const[a,b]=gs(t[0],t[1]);
     const hash=(t[0]*13+t[1]*7)|0, [mork,ljus]=TRADFARG[hash%TRADFARG.length];
@@ -1589,13 +1609,13 @@ function ritaGard2D(){
     else if(p.typ==="mast"||p.typ==="flagga"){cx.fillStyle="#B9BCBE";cx.beginPath();cx.arc(a,b,s*0.35,0,Math.PI*2);cx.fill();}
   }
   for(const hg of ANL.hagar)for(let i=0;i<hg.hastar.length;i++){
-    if(hg.hastar[i]===G.hastId&&!G.hamtad)continue;
+    if(hg.hastar[i]===G.hastId&&G.hastPlats!=="hage")continue;
     const h=HORSES[hg.hastar[i]];if(!h)continue;
     const hx=hg.rekt.x+hg.rekt.w*(0.25+0.5*((i*0.618)%1));
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     const[a,b]=gs(hx,hy);
     cx.fillStyle=h.farg;cx.beginPath();cx.ellipse(a,b,s*0.9,s*0.5,i,0,Math.PI*2);cx.fill();}
-  if(G.hastId&&!G.hamtad&&!G.leder){
+  if(G.hastId&&G.hastPlats==="hage"){
     const[a,b]=gs(ANL.hamtHage.falt[0],ANL.hamtHage.falt[1]);
     cx.fillStyle=HORSES[G.hastId].farg;
     cx.beginPath();cx.ellipse(a,b,s*1.1,s*0.6,0,0,Math.PI*2);cx.fill();

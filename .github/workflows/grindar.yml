@@ -174,3 +174,11 @@ jobs:
         run: |
           if [ -f tools/ridtest.mjs ]; then node tools/ridtest.mjs
           else echo "hoppar: tools/ridtest.mjs finns inte i denna branch"; fi
+
+      # Gården: de fyra blockerarna ur Tobias produkttest 2026-09-06 —
+      # haggrinden, hästens startplats, stalldörren och tystnaden. Går med
+      # spelets riktiga kollision, inte med punktprov mot datan.
+      - name: Gården — grind, startplats, stalldörr och ljud
+        run: |
+          if [ -f tools/gardtest.mjs ]; then node tools/gardtest.mjs
+          else echo "hoppar: tools/gardtest.mjs finns inte i denna branch"; fi
