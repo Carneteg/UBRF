@@ -396,9 +396,15 @@ function ryktDrag(p,f){
   if(traff)RY.varning=RY.varning.indexOf("hårets")>=0?RY.varning:"";
 }
 /* Redskapsraden längst ner i rutan. Ritas utanför utsnittet. */
+let ryktChippCache = null;
 function ryktChipp(W,H){
+  if (ryktChippCache && ryktChippCache.W === W && ryktChippCache.H === H) {
+    return ryktChippCache.data;
+  }
   const b=W*0.29, h=H*0.085, y=H-h-H*0.035;
-  return RYKTREDSKAP.map((r,i)=>({r,i,x:W*0.025+i*(b+W*0.012),y,b,h}));
+  const data = RYKTREDSKAP.map((r,i)=>({r,i,x:W*0.025+i*(b+W*0.012),y,b,h}));
+  ryktChippCache = { W, H, data };
+  return data;
 }
 function ryktKlickChipp(sx,sy,W,H){
   for(const c of ryktChipp(W,H))
