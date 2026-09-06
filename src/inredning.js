@@ -43,7 +43,7 @@ const INREDNING = (() => {
   const SK = rum(S.klubb, "sadelkammare");    // x 7,3–15,5 · y 57,45–64,35
   const genom = S.klubb.vaggar.find(v => v.id === "genomgaende");
   const inreEntre = genom.oppningar.find(o => o.id === "inre_entre");
-  const radW = S.rader.find(r => r.id === "W");
+  const radW = S.raderById["W"];
   const fxW = radW.x0 + radW.djup;                       // västra boxradens front mot gång A
 
   const stall = [

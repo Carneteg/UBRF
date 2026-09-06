@@ -2871,7 +2871,7 @@ function ritaVandring3D(){
         v3dFigur({x:S.ridlarare.pos[0],z:S.ridlarare.pos[1],rikt:Math.PI,
           fas:0,rorlig:false,jacka:"#2E4638",hjalm:false});
       for(const f of stallFolk()){
-        const rad=S.rader.find(r=>r.id===f.rad), fy=boxY(f.ix, f.rad);
+        const rad=S.raderById[f.rad], fy=boxY(f.ix, f.rad);
         if(!rad||fy>S.klubbY-1)continue;
         const fx2=boxFrontX(rad)+rad.vetter*0.6;
         v3dFigur({x:fx2,z:fy,rikt:rad.vetter>0?Math.PI/2:-Math.PI/2,
