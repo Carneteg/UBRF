@@ -180,9 +180,22 @@ Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling, ene
 	end
 end)
 
---[[ Sitt av med E, och alltid om karaktären dör. ]]
+--[[ Sitt av med E, och alltid om karaktären dör. Lektionens fortsättning
+     ligger före avsittningen: den är ett svar på ett kort som står uppe,
+     och får aldrig kunna tolkas som något annat. ]]
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed or not ride then return end
+	--[[ G02-C: spelaren går vidare i lektionen. R och gamepadens Y är
+	     valda för att de INTE är bundna i ridningen — Input.luau tar
+	     W A S D, Space, Shift, Ctrl, Q, F, Z, C och ButtonA/B/R1/L1, och
+	     E betyder redan sitt av. Musen och fingret går in genom knappens
+	     eget Activated, inte här.
+
+	     `fortsatt` returnerar false när inget kort väntar, så tangenten
+	     stjäl ingenting när lektionen inte frågar. ]]
+	if input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.ButtonY then
+		if LektionController.fortsatt() then return end
+	end
 	if input.KeyCode == Enum.KeyCode.E then
 		Net.get("DismountRequest"):InvokeServer()
 		dismount()

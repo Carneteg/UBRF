@@ -1,15 +1,27 @@
 --!nostrict
---[[ KLIENTENS EGNA FLÖDE — får spelaren lektionen?
+--[[ KLIENTENS EGNA FLÖDE — får spelaren lektionen, och KAN hon välja?
 
 	Senior review av 09e07da, blocker 1: UgnetaController var byggd men
 	inte inkopplad. Ett prov som anropar controllern själv bevisar bara
 	att funktionen finns — samma fel som läktarprovet som mätte
 	hjälpfunktionen i stället för spelarens väg (#114).
 
-	Den här specen kör därför init.client.luau. Skriptet har redan
-	laddats när raderna nedan körs: det har kopplat sig till
-	RenderStepped, MountChanged och CharacterRemoving. Provet FYRAR de
-	signalerna, precis som Roblox gör, och läser vad spelaren ser.
+	Senior review av c53a2c7: provet mätte fortfarande fel sak. Det såg
+	texten "Prova igen" och att state gick vidare — men knappen var en
+	TextLabel utan input och lifecyclen gick vidare på en timer. Provet
+	kunde alltså inte skilja ett val från en nedräkning.
+
+	Därför mäter den här specen två saker den förut inte mätte:
+	  1. att INGENTING händer medan kortet väntar (ingen mätning, inget
+	     försök 2), och
+	  2. att det som får det att hända är en VERKLIG inmatning —
+	     UserInputService.InputBegan och knappens eget Activated, alltså
+	     tangent/gamepad och mus/finger.
+
+	Specen kör init.client.luau. Skriptet har redan laddats när raderna
+	nedan körs: det har kopplat sig till RenderStepped, MountChanged,
+	InputBegan och CharacterRemoving. Provet FYRAR de signalerna, precis
+	som Roblox gör, och läser vad spelaren ser.
 
 	GRÄNSEN, uttalad: bänken är inte en klient. GUI:t byggs mot stubbar,
 	så den här specen säger ingenting om hur kortet SER UT eller känns i
@@ -29,6 +41,7 @@ print("\nKLIENTENS FLÖDE — LEKTIONEN GENOM RENDERSTEPPED\n")
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 prova("klienten kopplade sig till RenderStepped",
@@ -49,12 +62,15 @@ local function hitta(namn)
 	return sok(gui)
 end
 
---[[ SITT UPP genom produktionens egen väg: servern säger att
-	uppsittningen ändrats, precis som HorseService gör. ]]
+--[[ EN VERKLIG TANGENTTRYCKNING. Samma signal Roblox fyrar, med
+	gameProcessedEvent = false — provet rör inte LektionController. ]]
+local function tryck(tangent)
+	UserInputService.InputBegan:Fire({ KeyCode = Enum.KeyCode[tangent] }, false)
+end
+
+--[[ SITT UPP genom produktionens egen väg. ]]
 local Net = Networking
 local hast = __makeHastModell("Bamse")
---[[ Hästen står i världen. Klientloopen sitter av om riggen inte gör det,
-     och det är en riktig gren — inte en bänkdetalj. ]]
 hast.Parent = workspace
 prova("bänken har en hästmodell klienten kan bygga en rigg av",
 	select(1, RigAdapter.build(hast)) ~= nil,
@@ -65,8 +81,6 @@ prova("uppsittningen startade lektionen",
 	LektionController.pagar() == true,
 	("(pågår %s)"):format(tostring(LektionController.pagar())))
 
---[[ KÖR LOOPEN. Ingen egen stegning av LektionController — signalen
-	fyras och klientens egen callback gör resten. ]]
 local dt = 1 / 30
 local sedda = {}
 local function bildrutor(sek)
@@ -78,35 +92,88 @@ local function bildrutor(sek)
 end
 
 bildrutor(1)
-local rubrik = hitta("Rubrik")
+local rubrik, knapp = hitta("Rubrik"), hitta("Knapp")
 prova("övningen presenteras i klientens loop",
 	rubrik ~= nil and rubrik.Text ~= "",
 	('("%s")'):format(rubrik and rubrik.Text or "-"))
+prova("knappen är en riktig TextButton, inte en skylt",
+	knapp ~= nil and knapp.ClassName == "TextButton"
+		and knapp.Activated ~= nil,
+	("(%s · Activated %s)"):format(knapp and knapp.ClassName or "-",
+		tostring(knapp and knapp.Activated ~= nil)))
 
---[[ Rid tills försök 1 är slut. Ekipaget står stilla i bänken, men
-	telemetrin skrivs varje bildruta av samma rad som i produktion —
-	det är kedjan som provas, inte ridkänslan. ]]
-bildrutor(LektionController.PAUS_SEK + Lektion.FORSOK_SEK + 0.5)
-local kort, knapp = hitta("Kort"), hitta("Knapp")
+--[[ VÄNTAN MÄTER INGENTING. Här satt den gamla timern: efter sex
+	sekunder började mätningen av sig själv, oavsett om ryttaren var
+	redo. Rid långt förbi ett helt försök och kräv att ingenting rört
+	sig. ]]
+bildrutor(Lektion.FORSOK_SEK + 4)
+local pass = LektionController.pass()
+prova("kortet väntar på spelaren — ingen mätning under tiden",
+	LektionController.lage() == "presentation" and pass.tid == 0
+		and pass.prov.n == 0,
+	('(läge "%s" · tid %.1f · prov %d)'):format(LektionController.lage(),
+		pass.tid, pass.prov.n))
+
+--[[ SPELAREN STARTAR. Tangenten, genom klientens egen InputBegan. ]]
+tryck("R")
+prova("R startar försöket — tangenten går genom klientens inmatning",
+	LektionController.lage() == "rider",
+	('(läge "%s")'):format(LektionController.lage()))
+
+bildrutor(Lektion.FORSOK_SEK + 0.5)
+local kort = hitta("Kort")
+knapp = hitta("Knapp")
+pass = LektionController.pass()
 prova("efter försök 1 visas kortet, utan att provet rört controllern",
 	kort ~= nil and kort.Visible == true,
 	("(Visible %s)"):format(tostring(kort and kort.Visible)))
-prova("med Prova igen",
-	knapp ~= nil and knapp.Visible == true,
-	("(knapp %s)"):format(tostring(knapp and knapp.Visible)))
-local pass = LektionController.pass()
-prova("och lifecyclen står på försök 2 av samma övning",
-	pass ~= nil and pass.forsokNr == 2 and pass.ix == 1,
-	("(övning %d, försök %d)"):format(pass and pass.ix or -1,
-		pass and pass.forsokNr or -1))
+prova("med en tryckbar Prova igen",
+	knapp ~= nil and knapp.Visible == true and knapp.Text == "Prova igen",
+	('("%s" · synlig %s)'):format(knapp and knapp.Text or "-",
+		tostring(knapp and knapp.Visible)))
 
-bildrutor(LektionController.PAUS_SEK + Lektion.FORSOK_SEK + 0.5)
-local punkt = hitta("Punkt1")
+--[[ FÖRSÖK 2 FÅR INTE BÖRJA AV SIG SJÄLVT. Det här är blockeraren. ]]
+local tidVidKort = pass.tid
+bildrutor(12)
 pass = LektionController.pass()
-prova("försök 2 bedöms och lektionen går vidare",
-	pass ~= nil and pass.ix == 2 and punkt ~= nil and punkt.Text ~= "",
-	("(övning %d · \"%s\")"):format(pass and pass.ix or -1,
-		punkt and punkt.Text or "-"))
+prova("försök 2 startar INTE utan spelarens handling",
+	pass.forsokNr == 1 and LektionController.lage() == "efter"
+		and pass.tid == tidVidKort,
+	("(försök %d · läge \"%s\" · tid oförändrad %s)"):format(pass.forsokNr,
+		LektionController.lage(), tostring(pass.tid == tidVidKort)))
+
+--[[ MUS OCH FINGER: knappens eget Activated, samma väg en tryckning på
+	skärmen tar. ]]
+knapp.Activated:Fire()
+pass = LektionController.pass()
+prova("knappen startar försök 2 — och mätningen nollställs",
+	pass.forsokNr == 2 and pass.ix == 1 and pass.tid == 0
+		and pass.prov.n == 0 and LektionController.lage() == "rider",
+	("(övning %d · försök %d · tid %.1f · prov %d)"):format(pass.ix,
+		pass.forsokNr, pass.tid, pass.prov.n))
+prova("och kortet är borta när ritten återupptas",
+	kort.Visible == false, ("(Visible %s)"):format(tostring(kort.Visible)))
+
+bildrutor(Lektion.FORSOK_SEK + 0.5)
+knapp = hitta("Knapp")
+prova("efter försök 2 väntar en jämförelse med Nästa övning",
+	knapp ~= nil and knapp.Visible == true and knapp.Text == "Nästa övning"
+		and LektionController.lage() == "efter",
+	('("%s" · läge "%s")'):format(knapp and knapp.Text or "-",
+		LektionController.lage()))
+
+tryck("ButtonY")
+pass = LektionController.pass()
+prova("gamepadens Y går vidare till nästa övning",
+	pass.ix == 2 and pass.forsokNr == 1,
+	("(övning %d, försök %d)"):format(pass.ix, pass.forsokNr))
+
+bildrutor(1)
+local punkt = hitta("Punkt1")
+prova("nästa övning presenteras",
+	punkt ~= nil and punkt.Text ~= "" and LektionController.lage() == "presentation",
+	('("%s" · läge "%s")'):format(punkt and punkt.Text or "-",
+		LektionController.lage()))
 
 --[[ LIVE-CHIPET ska ha kommit någon gång under de två försöken, av sig
 	självt — ingen i provet har anropat `live`. ]]
@@ -115,9 +182,12 @@ for _ in sedda do antal += 1 end
 prova("live-chipet kom av sig självt under ritten", antal > 0,
 	("(%d olika cues)"):format(antal))
 
---[[ SÄKERHET: karaktären försvinner. Det är en riktig säkerhetshändelse
-	i produktionen — och lärarytan ska släckas i samma andetag. ]]
-bildrutor(2)
+--[[ SÄKERHET medan kortet väntar. Karaktären försvinner — en riktig
+	säkerhetshändelse — och både ytan OCH den väntande fortsättningen
+	ska vara borta. Annars kunde ett R-tryck efteråt starta ett försök
+	på en häst som inte finns. ]]
+prova("lektionen väntar på spelaren just nu",
+	LektionController.vantar() == true, "(inför säkerhetsavbrottet)")
 player.CharacterRemoving:Fire(player.Character)
 prova("karaktären försvinner → ingen lektion pågår",
 	LektionController.pagar() == false,
@@ -126,12 +196,30 @@ prova("och lärarytan är släckt",
 	hitta("Kort").Visible == false and hitta("Live").Visible == false,
 	("(kort %s · chip %s)"):format(tostring(hitta("Kort").Visible),
 		tostring(hitta("Live").Visible)))
+--[[ HUD:ens EGEN flagga måste läsas här. `LektionController.vantar()`
+	returnerar false så snart passet är borta, alltså även om HUD:en
+	fortfarande stod och väntade — en kontroll som bara läser den är
+	sann oavsett om säkerheten städade eller inte. Det är precis en
+	sådan vakuumkontroll det här provet finns för att undvika, och en
+	falsifiering (säkerhet som lämnar kvar väntan) visade att den förra
+	formuleringen inte blev röd. ]]
+prova("den väntande fortsättningen kastades med",
+	UgnetaController.vantar() == false
+		and LektionController.vantar() == false
+		and LektionController.fortsatt() == false,
+	("(HUD väntar %s · lektionen väntar %s · fortsatt %s)"):format(
+		tostring(UgnetaController.vantar()),
+		tostring(LektionController.vantar()),
+		tostring(LektionController.fortsatt())))
 
---[[ …och loopen får inte väcka något efter avsittningen. ]]
+--[[ …och varken loopen eller tangenten får väcka något efteråt. ]]
 bildrutor(3)
+tryck("R")
+knapp.Activated:Fire()
 prova("en avsutten spelare får ingen undervisning",
-	hitta("Kort").Visible == false and hitta("Live").Visible == false,
-	"(kort och chip fortsatt släckta)")
+	hitta("Kort").Visible == false and hitta("Live").Visible == false
+		and LektionController.pagar() == false,
+	"(kort och chip fortsatt släckta, R och knappen utan verkan)")
 
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))

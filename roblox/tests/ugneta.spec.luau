@@ -119,10 +119,17 @@ do
 		#p2 <= Ugneta.MAX_OBSERVATIONER,
 		string.format("(%d av högst %d)", #p2, Ugneta.MAX_OBSERVATIONER))
 
+	--[[ Efter sista försöket erbjuds INGET tredje försök. Kravet stod
+	     förut som "knappen är osynlig", vilket stämde när lifecyclen gick
+	     vidare på en timer. Sedan senior review av c53a2c7 väntar
+	     lektionen på spelaren, så kortet MÅSTE ha en väg framåt — annars
+	     stod hon fast. Avsikten är oförändrad och prövas nu direkt: det
+	     som erbjuds är nästa övning, aldrig ett tredje försök. ]]
 	local knapp2 = hitta("Knapp")
-	check("men Prova igen visas inte efter sista försöket",
-		knapp2 ~= nil and knapp2.Visible == false,
-		string.format("(Visible %s)", tostring(knapp2 and knapp2.Visible)))
+	check("men Prova igen erbjuds inte efter sista försöket",
+		knapp2 ~= nil and knapp2.Visible == true
+			and knapp2.Text == "Nästa övning",
+		string.format('("%s")', knapp2 and knapp2.Text or "-"))
 end
 
 --[[ ── SÄKERHET VINNER ────────────────────────────────────────── ]]
@@ -206,7 +213,13 @@ do
 
 	--[[ …och kortet försvinner när hon börjar rida. Ett kort som ligger
 	     kvar mitt i ritten ÄR variant 2, den som inte valdes. ]]
-	rid(LektionController.PAUS_SEK + 1)
+	--[[ Kortet väntar nu på spelaren i stället för på en timer (senior
+	     review av c53a2c7). Det är hon som startar försöket, och först
+	     därefter är kortet borta. ]]
+	check("presentationen väntar på spelaren", LektionController.vantar() == true,
+		string.format("(väntar %s)", tostring(LektionController.vantar())))
+	LektionController.fortsatt()
+	rid(1)
 	local kort = hitta("Kort")
 	check("kortet är borta när ritten börjat", kort ~= nil and kort.Visible == false,
 		string.format("(Visible %s)", tostring(kort and kort.Visible)))
@@ -243,24 +256,30 @@ do
 		knapp ~= nil and knapp.Visible == true,
 		string.format("(knapp %s)", tostring(knapp and knapp.Visible)))
 	local pass = LektionController.pass()
-	check("och lifecyclen står på försök 2 av SAMMA övning",
-		pass ~= nil and pass.forsokNr == 2 and pass.ix == 1,
+	--[[ …men lifecyclen står KVAR på försök 1. Förut bytte den här av sig
+	     själv, och kortet var bara en nedräkning. ]]
+	check("och lifecyclen står kvar på försök 1 tills spelaren väljer",
+		pass ~= nil and pass.forsokNr == 1 and pass.ix == 1,
 		string.format("(övning %d, försök %d)", pass and pass.ix or -1,
 			pass and pass.forsokNr or -1))
 
-	--[[ MÄTNINGEN NOLLSTÄLLS. Försök 2 ska inte ärva försök 1:s
-	     ackumulator — det var hela poängen med att byta den explicit. ]]
-	check("försök 2 börjar från noll mätningar",
-		pass ~= nil and pass.prov.n == 0,
-		string.format("(n %d)", pass and pass.prov.n or -1))
+	--[[ MÄTNINGEN NOLLSTÄLLS — vid spelarens handling, inte när en timer
+	     råkar löpa ut. Försök 2 ska inte ärva försök 1:s ackumulator. ]]
+	LektionController.fortsatt()
+	pass = LektionController.pass()
+	check("spelarens val startar försök 2 från noll mätningar",
+		pass ~= nil and pass.forsokNr == 2 and pass.ix == 1 and pass.prov.n == 0,
+		string.format("(övning %d, försök %d, n %d)", pass and pass.ix or -1,
+			pass and pass.forsokNr or -1, pass and pass.prov.n or -1))
 
 	--[[ FÖRSÖK 2, tydligt bättre. Jämförelsen ska nämna förbättringen. ]]
-	rid(LektionController.PAUS_SEK + Lektion.FORSOK_SEK + 0.5,
+	rid(Lektion.FORSOK_SEK + 0.5,
 		{ mjukhet = 0.92, balans = 0.90, svarstid = 0.05, etableringstid = 0.4 })
 	local punkt = hitta("Punkt1")
 	check("efter försök 2 jämförs det mot försök 1",
 		punkt ~= nil and string.find(punkt.Text or "", "Bättre") ~= nil,
 		string.format('("%s")', punkt and punkt.Text or "-"))
+	LektionController.fortsatt()
 	pass = LektionController.pass()
 	check("och lektionen går vidare till nästa övning",
 		pass ~= nil and pass.ix == 2 and pass.forsokNr == 1,
@@ -274,6 +293,11 @@ do
 	     sekund och hoppas att man hamnar i cuens 2,6-sekundersfönster är
 	     att mäta turen; här avbryts lektionen i det ögonblick hon säger
 	     något, vilket är precis det fall regeln handlar om. ]]
+	--[[ Nästa övning presenteras först, och presentationen väntar på
+	     spelaren. Utan den här starten skulle loopen nedan snurra mot ett
+	     kort som aldrig går vidare — och chipet aldrig komma. ]]
+	LektionController.steg(1 / 30, tele())
+	LektionController.fortsatt()
 	do
 		local dt, kvar = 1 / 30, 40
 		while kvar > 0 and not hitta("Live").Visible do
