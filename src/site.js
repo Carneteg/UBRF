@@ -1049,12 +1049,25 @@ const STALLINNE = {
           y1:GANG_FASTE+GANG_DJUP-0.55-STALL_Y}],
   /* Fylls ur STALL_BAND nedan: rader med x0/boxDjup, gångar med x0/x1. */
   rader:[], gangar:{},
-  /* Spelets sjutton hästar står i gång A, den man kommer in i från
+  /* Spelets hästar står i gång A, den man kommer in i från
      förstukvisten. Gång B:s boxar ritas men får ingen häst: spelet har
-     sjutton namn och fler får inte hittas på. */
+     ett bestämt antal namn och fler får inte hittas på.
+
+     BLACKROCK JACK tillkom 2026-09-07. Produktbeslutet i
+     `docs/FIRST-DAY-HORSE.md` gör honom till spelarens första häst, och
+     `visaTilldelning()` delar ut honom på dag ett — men han fanns bara i
+     hästkanonen, inte i stallet. Utan en box svarade `hittaBox()` null,
+     `uppgiftsMarkor()` gav ingen markör, och nybörjaren fick uppmaningen
+     "Hitta Blackrock Jack · Boxen i stallet — namnskylten på dörren ·
+     Följ den gula vägvisaren" till en box som inte fanns. Mätt i den
+     byggda sidan, inte antaget.
+
+     Han står i W[9], ett fack som redan fanns, redan ritades och redan
+     var tomt — ingen geometri är flyttad och ingen häst är påhittad:
+     Jack ligger i den verifierade kanonen som `blackrock-jack`. */
   boxar:{
     W: [ "lady","toblerone","westside","lydia","makadu","conor","mara","hamilton","husky",
-         null,null ],
+         "blackrock_jack",null ],
     MA:[ "kennedy","cosmo","tina","air","chip","larry","crokino","dexter",null,null,null ],
     MB:[ null,null,null,null,null,null,null,null,null,null,null ],
     E: [ null,null,null,null,null,null,null,null,null,null,null ],

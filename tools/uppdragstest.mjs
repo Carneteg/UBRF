@@ -71,13 +71,37 @@ sektion = "A: plats och pronomen";
     a.plats === "box" && !a.ytor.some(t => /hage/i.test(t || "")),
     `${a.ytor.map(t => JSON.stringify(t)).join(" · ")}`);
 
-  /* Lydias kön står INTE i källtexten. Då får inget pronomen hittas på —
-     namnet bär meningen i stället. Det var "honom" om Lydia som föll i
-     produkttestet. */
+  /* REGELN, inte hästen: ett pronomen får användas BARA när källtexten
+     ger det, och aldrig gissas.
+
+     Provet krävde tidigare att den tilldelade hästen var en vars kön
+     saknas i källan — sant så länge rotationen gav Lydia. Med
+     produktbeslutet om Blackrock Jack på dag ett (docs/FIRST-DAY-HORSE.md)
+     är den tilldelade hästen en vars källtext SÄGER "valack" och "Han",
+     och provet föll på en korrekt härledning. Det var provet som var
+     överspecificerat, inte koden som var fel.
+
+     Nu prövas båda utfallen: har hästen en källa får pronomenet synas,
+     saknas den får inget pronomen förekomma någonstans. */
   const pronOrd = /\b(han|hon|honom|henne|hans|hennes)\b/i;
-  prova("ingen text om hästen använder ett gissat pronomen",
-    a.pronomen.kalla === "REFERENCE_GAP" && !a.ytor.some(t => pronOrd.test(t || "")),
+  const harKalla = a.pronomen.kalla === "besk";
+  const gap = a.pronomen.kalla === "REFERENCE_GAP" || a.pronomen.kalla === "besk_motsagelse";
+  prova("pronomenet kommer ur källan, eller används inte alls",
+    (harKalla && a.pron.subj !== null) || (gap && !a.ytor.some(t => pronOrd.test(t || ""))),
     `${a.namn}: pronomenkälla ${a.pronomen.kalla} · hastPron ger "${a.pron.subj}" / "${a.pron.obj}"`);
+
+  /* Och den ursprungliga produktbuggen kan inte komma tillbaka: Lydias
+     kön står inte i källtexten, alltså får hon aldrig ett pronomen —
+     oavsett vilken häst spelaren råkar ha fått. Det var "honom" om Lydia
+     som föll i Tobias produkttest. */
+  const lyd = await ev(() => ({
+    kalla: (HORSES.lydia.pronomen || {}).kalla,
+    subj: hastPron("lydia", "subj"), obj: hastPron("lydia", "obj"),
+    poss: hastPron("lydia", "poss") }));
+  prova("Lydia får fortfarande inget påhittat pronomen",
+    lyd.kalla === "REFERENCE_GAP" && !pronOrd.test(lyd.subj) && !pronOrd.test(lyd.obj)
+      && !pronOrd.test(lyd.poss),
+    `källa ${lyd.kalla} · "${lyd.subj}" / "${lyd.obj}" / "${lyd.poss}"`);
 
   /* Och där källan FAKTISKT säger det används pronomenet — annars vore
      regeln bara "skriv aldrig han", inte "läs ur datan". */

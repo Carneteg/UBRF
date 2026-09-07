@@ -46,7 +46,25 @@ function visaTilldelning(){
     const friska=kandidater.filter(id=>!hastminne(id).rehab);
     if(friska.length)kandidater=friska;
   }
-  const val=kandidater[G.seed%kandidater.length];
+  /* FÖRSTA ORDINARIE DAGEN ÄR JACKS. Produktbeslut 2026-09-07,
+     `docs/FIRST-DAY-HORSE.md`: på spelarens allra första ridskoledag
+     tilldelar ridläraren Blackrock Jack — inte en rotation som kan ge
+     vilken häst som helst. Senare ordinarie dagar rullar som förut, och
+     tävlingsdagen styrs av tävlingslogiken.
+
+     Han ligger med FLIT utanför `hastpool()`: Jack står inte i
+     HAST_MINGRUPP, och att lägga in honom där hade ändrat rotationen
+     för alla efterföljande pass. Det här är en tilldelning, inte en ny
+     pool.
+
+     Villkoret läser hästkanonen innan det pekar ut honom. Saknas han
+     faller dagen tillbaka på rotationen i stället för att kasta — en
+     första dag utan häst vore värre än en första dag med fel häst. */
+  const FORSTA_DAGEN_HAST="blackrock_jack";
+  const forstaOrdinarie=!G.tavling&&typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
+  const val=(forstaOrdinarie&&HORSES[FORSTA_DAGEN_HAST])
+    ? FORSTA_DAGEN_HAST
+    : kandidater[G.seed%kandidater.length];
   /* HÄSTEN STÅR I SIN BOX när ridläraren delar ut henne (produktbeslut
      2026-09-06). Raden satte förut `G.hamtad=false`, vilket flyttade ut
      henne i hagen igen direkt efter tilldelningen — dagen började i
@@ -74,7 +92,11 @@ function visaTilldelning(){
     mara:"Bry dig inte om minen i boxen. Mara ger dig allt när ni väl är på banan.",
     husky:"Om du får med dig Husky från hagen är halva lektionen redan vunnen.",
     kennedy:"Kennedy är ung och allt är på riktigt. Visa att världen är ofarlig."}[val]
-    ||"Rid som du red senast — fast bättre.";
+    /* Första dagen har man inte ridit senast. Standardmotiveringen
+       nedan förutsätter ett förra pass, och Jack hade ingen egen rad —
+       han fick alltså en replik som inte stämde på dagen han delas ut. */
+    ||(forstaOrdinarie?"Din första dag. Jack är känslig men ärlig — är du lugn, är han lugn."
+      :"Rid som du red senast — fast bättre.");
   const tavMotiv=G.tavling?(G.tavling.typ==="hoppning"
     ?`Tävlingsdag — ${G.tavling.klass.namn} i Påskhoppet. Du rider ${h.namn}. Sköt om ${h.namn} extra noga, domarna ser allt.`
     :`Tävlingsdag — dressyr LC på uteridbanan. Du rider ${h.namn}. Ren ridning slår djärv ridning i dag.`):null;

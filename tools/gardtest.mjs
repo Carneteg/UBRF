@@ -180,6 +180,56 @@ function prova(namn, ok, detalj) {
     skydd.hamtad === "kastade" && skydd.leder === "kastade" && skydd.plats === "box",
     `hamtad: ${skydd.hamtad} · leder: ${skydd.leder} · hastPlats "${skydd.plats}"`);
 
+  /* ── FÖRSTA ORDINARIE DAGEN ÄR JACKS ─────────────────────────────
+     Produktbeslut 2026-09-07, docs/FIRST-DAY-HORSE.md. Provet går genom
+     den riktiga `visaTilldelning()`, inte genom en kopia av villkoret,
+     och kontrollerar BÅDA halvorna: första ordinarie passet ger Jack,
+     senare ordinarie pass ger rotationen tillbaka. Ett prov som bara
+     provade den första halvan hade varit grönt även om villkoret
+     tillämpades på varenda dag. */
+  const jack = await page.evaluate(() => {
+    SPAR.pass = 0; G.tavling = null; G.seed = 1;
+    startaVandring(); visaTilldelning();
+    const forsta = G.hastId;
+    const motiv = (document.getElementById("sheet") || {}).textContent || "";
+    overlay(false);
+
+    /* Samma dag, men spelaren ber om en annan häst: valet är ett
+       produktbeslut, inte en slump som får rullas bort. */
+    G.seed++; visaTilldelning(); overlay(false);
+    const efterAnnan = G.hastId;
+
+    /* Ett SENARE ordinarie pass — rotationen ska vara tillbaka. Vilken
+       häst det blir är rotationens sak; provet kräver bara att den inte
+       är låst och att hästen kommer ur poolen. */
+    SPAR.pass = 3; G.seed = 1;
+    startaVandring(); visaTilldelning(); overlay(false);
+    const senare = G.hastId;
+    const pool = hastpool(G.grupp);
+
+    /* Tävlingsdag styrs av tävlingslogiken, även på pass 0. */
+    SPAR.pass = 0; G.tavling = { typ: "hoppning", klass: { namn: "test" } };
+    G.seed = 1; visaTilldelning(); overlay(false);
+    const tavling = G.hastId;
+    G.tavling = null; SPAR.pass = 0;
+    return { forsta, efterAnnan, senare, tavling,
+      iPool: pool.includes(senare), jackIPool: pool.includes("blackrock_jack"),
+      motivOk: /f\u00f6rsta dag/i.test(motiv) };
+  });
+  prova("första ordinarie dagen tilldelas Blackrock Jack",
+    jack.forsta === "blackrock_jack", `fick "${jack.forsta}"`);
+  prova("och den står fast när spelaren ber om en annan häst",
+    jack.efterAnnan === "blackrock_jack", `fick "${jack.efterAnnan}"`);
+  prova("ett senare ordinarie pass går tillbaka till rotationen",
+    jack.senare !== "blackrock_jack" && jack.iPool === true,
+    `fick "${jack.senare}" · ur poolen ${jack.iPool}`);
+  prova("Jack ligger utanför gruppoolen — rotationen är oförändrad",
+    jack.jackIPool === false, `jack i poolen: ${jack.jackIPool}`);
+  prova("tävlingsdagen styrs fortfarande av tävlingslogiken",
+    jack.tavling !== "blackrock_jack", `fick "${jack.tavling}"`);
+  prova("ridläraren säger inte 'rid som du red senast' på dag ett",
+    jack.motivOk === true, `första-dags-motivering hittad: ${jack.motivOk}`);
+
   await page.evaluate(() => { startaVandring(); G.vy = "2d"; });
 }
 
