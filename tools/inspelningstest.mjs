@@ -18,15 +18,18 @@ const ctx = { console, Math, JSON, Number, String, Object, Array };
 vm.createContext(ctx);
 vm.runInContext(
   fs.readFileSync("src/riding/ovningsdef.js", "utf8") + "\n" +
-  fs.readFileSync("src/riding/inspelning.js", "utf8"), ctx);
+  fs.readFileSync("src/riding/inspelning.js", "utf8") + "\n" +
+  fs.readFileSync("src/riding/ridanalys.js", "utf8"), ctx);
 const {
   Inspelning, Uppspelning, INSPELNING_HZ, INSPELNING_MAX_SAMPEL,
   INSPELNING_SCHEMA, INSPELNING_FALT, inspelningLasbar, ovningsDef,
   ovningsMatt, ovningsGeometri, OVNING_GILTIG, OVNINGAR_DEF,
+  analysVolt, analysOvergang, jamforRitter, voltIOrd, anpassaCirkel,
 } = vm.runInContext(
   "({Inspelning,Uppspelning,INSPELNING_HZ,INSPELNING_MAX_SAMPEL," +
   "INSPELNING_SCHEMA,INSPELNING_FALT,inspelningLasbar,ovningsDef," +
-  "ovningsMatt,ovningsGeometri,OVNING_GILTIG,OVNINGAR_DEF})", ctx);
+  "ovningsMatt,ovningsGeometri,OVNING_GILTIG,OVNINGAR_DEF," +
+  "analysVolt,analysOvergang,jamforRitter,voltIOrd,anpassaCirkel})", ctx);
 
 let fel = 0, n = 0;
 const prova = (namn, ok, detalj) => {
@@ -242,6 +245,108 @@ console.log("\n── FÖR LITE UNDERLAG ──");
   const p = ins.avsluta();
   prova("ett enda sampel går att spela upp utan att interpolera mot sig självt",
     new Uppspelning(p).vid(0.05) !== null, "ett läge, inget NaN");
+}
+
+
+console.log("\n── RIDANALYSEN: VAD VOLTEN FAKTISKT BLEV ──");
+{
+  /* En perfekt cirkel med känd radie — analysen ska hitta tillbaka till
+     den. Utan det här provet vore varje senare siffra obevisad. */
+  const { post } = ridCirkel({ sek: 20, radie: 10, fart: 3.2 });
+  const a = analysVolt(post);
+  prova("volten går att analysera", a.ok, a.ok ? `${a.punkter} punkter` : a.skal);
+  prova("den anpassade radien hittar tillbaka till den ridna",
+    a.ok && Math.abs(a.radie - 10) < 0.05,
+    a.ok ? `${a.radie.toFixed(3)} m mot ridd 10 m` : a.skal);
+  prova("och mitten hamnar där cirkeln faktiskt låg",
+    a.ok && Math.hypot(a.mitt.x, a.mitt.y) < 0.05,
+    a.ok ? `(${a.mitt.x.toFixed(3)}, ${a.mitt.y.toFixed(3)}) mot (0, 0)` : a.skal);
+  prova("avvikelsen från cirkeln är nära noll för en perfekt cirkel",
+    a.ok && a.avvikelse.rms < 0.02,
+    a.ok ? `rms ${(a.avvikelse.rms * 100).toFixed(2)} cm` : a.skal);
+  /* 20 s i 3,2 m/s = 64 m. En cirkel med radie 10 är 62,8 m runt, alltså
+     drygt ett varv. Talet ska falla ur sträckan, inte ur en gissning. */
+  prova("varvräkningen faller ur den ridna sträckan",
+    a.ok && Math.abs(a.varv - a.stracka / (2 * Math.PI * a.radie)) < 1e-9
+        && a.varv > 1 && a.varv < 1.1,
+    a.ok ? `${a.varv.toFixed(3)} varv på ${a.stracka.toFixed(1)} m` : a.skal);
+
+  /* En MINDRE volt ska ge en mindre radie — annars mäter analysen inte
+     det den påstår. */
+  const liten = analysVolt(ridCirkel({ sek: 20, radie: 6, fart: 3.2 }).post);
+  prova("en snävare volt ger en mindre uppmätt radie",
+    liten.ok && Math.abs(liten.radie - 6) < 0.05 && liten.radie < a.radie,
+    liten.ok ? `${liten.radie.toFixed(2)} m mot ${a.radie.toFixed(2)} m` : liten.skal);
+}
+
+console.log("\n── ANALYSEN VÄGRAR SVARA NÄR DEN INTE VET ──");
+{
+  const rak = new Inspelning();
+  rak.starta("storvolt", "h", "p", {}, 1);
+  for (let i = 0; i < 40; i++) rak.sampla(0.06, { x: i * 0.5, y: 0, gangart: "trav" });
+  const r = analysVolt(rak.avsluta());
+  prova("en rak linje ger ingen cirkel — och påstår ingen", !r.ok, r.skal);
+
+  const tom = analysVolt({ sampel: [] });
+  prova("en tom post ger inget svar", !tom.ok, tom.skal);
+  prova("och ingen post alls kraschar inte", !analysVolt(null).ok, analysVolt(null).skal);
+
+  const hal = new Inspelning();
+  hal.starta("storvolt", "h", "p", {}, 1);
+  for (let i = 0; i < 30; i++) hal.sampla(0.06, { gangart: "trav" });   // ingen position alls
+  const h = analysVolt(hal.avsluta());
+  prova("sampel utan position räknas inte som punkter", !h.ok && h.punkter === 0,
+    `${h.punkter} punkter · ${h.skal}`);
+}
+
+console.log("\n── ÖVERGÅNGEN I POSTEN ──");
+{
+  const i = new Inspelning();
+  i.starta("trav_skritt", "h", "p", {}, 1);
+  for (let k = 0; k < 20; k++) i.sampla(0.06, { x: k, y: 0, gangart: "trav", fart: 3.2 });
+  for (let k = 0; k < 20; k++) i.sampla(0.06, { x: 20 + k, y: 0, gangart: "skritt", fart: 1.4 });
+  const o = analysOvergang(i.avsluta());
+  prova("gångartsbytet hittas i posten", o.ok && o.antal === 1,
+    o.ok ? `${o.forsta.fran} → ${o.forsta.till} vid ${o.forsta.t.toFixed(2)} s` : o.skal);
+  prova("och farten före och efter finns med",
+    o.ok && o.forsta.fartFore > o.forsta.fartEfter,
+    o.ok ? `${o.forsta.fartFore} → ${o.forsta.fartEfter} m/s` : o.skal);
+
+  const utan = new Inspelning();
+  utan.starta("trav_skritt", "h", "p", {}, 1);
+  for (let k = 0; k < 20; k++) utan.sampla(0.06, { x: k, y: 0, gangart: "trav" });
+  const u = analysOvergang(utan.avsluta());
+  prova("en ritt utan gångartsändring beskrivs inte som en övergång", !u.ok, u.skal);
+}
+
+console.log("\n── JÄMFÖRELSEN MELLAN TVÅ RITTER ──");
+{
+  const f1 = ridCirkel({ sek: 20, radie: 8, fart: 3.2 }).post;
+  const f2 = ridCirkel({ sek: 20, radie: 10, fart: 3.2 }).post;
+  const j = jamforRitter(f1, f2);
+  prova("jämförelsen beskriver skillnaden i radie", j.ok && j.radie.diff > 1.9 && j.radie.diff < 2.1,
+    j.ok ? `${j.radie.fore.toFixed(1)} → ${j.radie.nu.toFixed(1)} m (${j.radie.diff.toFixed(2)})` : j.skal);
+  prova("och sätter inget betyg — bara tal",
+    j.ok && !("poang" in j) && !("battre" in j) && !("ton" in j),
+    Object.keys(j).join(", "));
+  const trasig = jamforRitter({ sampel: [] }, f2);
+  prova("en oanalyserbar ritt jämförs inte", !trasig.ok, trasig.skal);
+}
+
+console.log("\n── ANALYSEN I ORD ──");
+{
+  /* Målradien skickas in. Modulen har med flit inget dolt beroende till
+     src/larare.js — den laddas senare i sidan och finns inte alls här. */
+  const a = analysVolt(ridCirkel({ sek: 20, radie: 10, fart: 3.2 }).post, 10);
+  const txt = voltIOrd(a);
+  prova("raden nämner den uppmätta radien", /10\.0 m/.test(txt), txt);
+  prova("och att den ligger nära målet", /nära/.test(txt), txt);
+  const liten = voltIOrd(analysVolt(ridCirkel({ sek: 20, radie: 6, fart: 3.2 }).post, 10));
+  prova("en tydligt mindre volt beskrivs som mindre", /mindre/.test(liten), liten);
+  prova("ingen analys ger ingen text", voltIOrd(null) === null, String(voltIOrd(null)));
+  const utanMal = voltIOrd(analysVolt(ridCirkel({ sek: 20, radie: 6, fart: 3.2 }).post));
+  prova("utan mål jämförs ingenting — volten beskrivs bara",
+    !/mindre|större|nära/.test(utanMal), utanMal);
 }
 
 console.log(fel === 0 ? `\nALLA OK (${n} mätningar)` : `\n${fel} FEL av ${n}`);
