@@ -37,6 +37,12 @@ page.on("pageerror", e => console.log("PAGEERROR", e.message, "\n", (e.stack || 
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
 await page.waitForTimeout(900);
 const ev = (f, a) => page.evaluate(f, a);
+/* Samma sak, men ett fel i sidan blir ett RÖTT PROV i stället för en
+   kraschad process. Mutationen "pausen gör ingenting" lät lektionen rida
+   vidare bakom replayen och byta ut hela overlayen; nästa klick tog då
+   på null och provet dog innan det hann säga varför. */
+const evSafe = async (f, a) => { try { return await ev(f, a); }
+  catch (e) { return { fel: String(e.message).split("\n")[0] }; } };
 
 const resultat = [];
 const prova = (namn, ok, detalj) => { resultat.push(ok);
@@ -197,45 +203,51 @@ console.log("\n── REPLAYEN SOM SPELAREN FAKTISKT ÖPPNAR ──");
      sekunden. En fast paus på 500 ms fångade första rAF-varvet, där dt
      är noll, och provet blev rött på en replay som faktiskt spelade. */
   const las = () => ev(() => REPLAY.up ? REPLAY.up.lage : -1);
-  if (oppna.fel) { prova("resten av replay-avsnittet kunde köras", false, oppna.fel); }
-  const fore = oppna.fel ? 0 : await las();
+  /* Öppnades replayen FAKTISKT? Knappen kan finnas utan att vyn kom upp
+     — det var precis vad mutationen "försök 2 spelas inte in" gav, och
+     då kraschade resten av avsnittet i stället för att rapportera. */
+  const stangt = !!oppna.fel || !oppna.canvas;
+  if (stangt) prova("resten av replay-avsnittet kunde köras", false,
+    oppna.fel || "replayvyn öppnades inte");
+  const fore = stangt ? 0 : await las();
   let efter = fore;
   for (let i = 0; i < 40 && efter <= fore; i++) { await page.waitForTimeout(200); efter = await las(); }
   prova("uppspelningen går framåt av sig själv",
     efter > fore, `${fore.toFixed(2)} → ${efter.toFixed(2)} s`);
 
-  const p1 = oppna.fel ? { spelar: null, lage: 0, etikett: "—" } : await ev(() => { document.getElementById("replaySpela").click();
+  const p1 = stangt ? { spelar: null, lage: 0, etikett: "—" } : await evSafe(() => { document.getElementById("replaySpela").click();
     return { spelar: REPLAY.up.spelar, lage: REPLAY.up.lage,
       etikett: document.getElementById("replaySpela").textContent }; });
   await page.waitForTimeout(800);
-  const p2 = oppna.fel ? 0 : await ev(() => REPLAY.up.lage);
+  const p2raw = stangt ? 0 : await evSafe(() => REPLAY.up.lage);
+  const p2 = typeof p2raw === "number" ? p2raw : NaN;
   prova("Pausa stoppar den — läget står stilla",
-    p1.spelar === false && Math.abs(p2 - p1.lage) < 1e-9,
-    `${p1.etikett} · ${p1.lage.toFixed(2)} → ${p2.toFixed(2)} s`);
+    p1.spelar === false && Number.isFinite(p2) && Math.abs(p2 - p1.lage) < 1e-9,
+    `${p1.fel || p1.etikett} · ${p1.lage.toFixed(2)} → ${p2.toFixed(2)} s`);
 
-  const halv = oppna.fel ? { fart: null, etikett: "—" } : await ev(() => { const b = document.getElementById("replayLangsam");
+  const halv = stangt ? { fart: null, etikett: "—" } : await evSafe(() => { const b = document.getElementById("replayLangsam");
     b.click(); return { fart: REPLAY.up.fart, etikett: b.textContent }; });
   prova("halv fart går att välja och syns på knappen",
-    halv.fart === 0.5 && /Normal/i.test(halv.etikett), `${halv.fart} · "${halv.etikett}"`);
+    halv.fart === 0.5 && /Normal/i.test(halv.etikett), `${halv.fel || ""} ${halv.fart} · "${halv.etikett}"`);
 
-  const skrubb = oppna.fel ? { lage: 0, langd: 99, spelar: null } : await ev(() => {
+  const skrubb = stangt ? { lage: 0, langd: 99, spelar: null } : await evSafe(() => {
     const s = document.getElementById("replaySkjut");
     s.value = "500"; s.dispatchEvent(new Event("input"));
     return { lage: REPLAY.up.lage, langd: REPLAY.up.langd(), spelar: REPLAY.up.spelar };
   });
   prova("spolningen sätter läget till ungefär mitten och pausar",
     Math.abs(skrubb.lage - skrubb.langd / 2) < 0.2 && skrubb.spelar === false,
-    `${skrubb.lage.toFixed(2)} av ${skrubb.langd.toFixed(2)} s`);
+    `${skrubb.fel || ""} ${Number(skrubb.lage).toFixed(2)} av ${Number(skrubb.langd).toFixed(2)} s`);
 
-  const gh = oppna.fel ? { av: null, pa: null, e1: "—", e2: "—" } : await ev(() => { const b = document.getElementById("replayGhost");
+  const gh = stangt ? { av: null, pa: null, e1: "—", e2: "—" } : await evSafe(() => { const b = document.getElementById("replayGhost");
     b.click(); const av = REPLAY.ghostSyns; const e1 = b.textContent;
     b.click(); return { av, pa: REPLAY.ghostSyns, e1, e2: b.textContent }; });
   prova("förra försöket går att dölja och visa igen",
     gh.av === false && gh.pa === true && /Visa/i.test(gh.e1) && /Dölj/i.test(gh.e2),
-    `${gh.e1} → ${gh.e2}`);
+    `${gh.fel || ""} ${gh.e1} → ${gh.e2}`);
 
   /* Reduced-motion-alternativet: samma uppgifter i läsbar form. */
-  const txt = oppna.fel ? { text: "", siffror: 0, tabell: false } : await ev(() => {
+  const txt = stangt ? { text: "", siffror: 0, tabell: false } : await evSafe(() => {
     const ruta = document.getElementById("replayRutnat");
     const t = ruta ? ruta.textContent : "";
     return { text: t, siffror: (t.match(/\d+,\d+/g) || []).length,
@@ -243,10 +255,10 @@ console.log("\n── REPLAYEN SOM SPELAREN FAKTISKT ÖPPNAR ──");
   });
   prova("mätvärdena finns som läsbar text bredvid banan, inte bara som bild",
     txt.tabell === true && txt.siffror >= 3,
-    `tabell ${txt.tabell} · ${txt.siffror} mätvärden`);
+    `${txt.fel || ""} tabell ${txt.tabell} · ${txt.siffror} mätvärden`);
 
   /* Read-only genom UI:t, inte bara genom modulen. */
-  const ro = oppna.fel ? { px: 0, py: 0, rikt: 0, forsok: -1 } : await ev(() => {
+  const ro = stangt ? { px: 0, py: 0, rikt: 0, forsok: -1 } : await evSafe(() => {
     const f = { px: G.px, py: G.py, rikt: G.rikt,
       gangart: G.ride && G.ride.gangart, tempo: G.ride && G.ride.tempo,
       forsok: (ugnetaForsokHistorik(REPLAY.ovningId) || []).length };
@@ -254,18 +266,18 @@ console.log("\n── REPLAYEN SOM SPELAREN FAKTISKT ÖPPNAR ──");
     return f;
   });
   await page.waitForTimeout(800);
-  const ro2 = oppna.fel ? { orort: null, forsok: -2, paus: null } : await ev(f => ({
+  const ro2 = stangt ? { orort: null, forsok: -2, paus: null } : await evSafe(f => ({
     orort: G.px === f.px && G.py === f.py && G.rikt === f.rikt
       && (G.ride && G.ride.gangart) === f.gangart && (G.ride && G.ride.tempo) === f.tempo,
     forsok: (ugnetaForsokHistorik(REPLAY.ovningId) || []).length,
     paus: !!G.paus }), ro);
   prova("en spelande replay rör varken hästen, ritten eller historiken",
     ro2.orort === true && ro2.forsok === ro.forsok,
-    `orört ${ro2.orort} · ${ro.forsok} → ${ro2.forsok} försök i historiken`);
+    `${ro2.fel || ""} orört ${ro2.orort} · ${ro.forsok} → ${ro2.forsok} försök i historiken`);
   prova("och lektionen står kvar pausad bakom replayen",
-    ro2.paus === true, `G.paus ${ro2.paus}`);
+    ro2.paus === true, `${ro2.fel || ""} G.paus ${ro2.paus}`);
 
-  const ut = oppna.fel ? { fel: "ingen replay öppnades" } : await ev(() => { const b = document.getElementById("replayTillbaka");
+  const ut = stangt ? { fel: "ingen replay öppnades" } : await evSafe(() => { const b = document.getElementById("replayTillbaka");
     if (!b) return { fel: "ingen Tillbaka-knapp" };
     b.click();
     return { fel: null, replayKvar: !!document.getElementById("replayBana"),
@@ -276,12 +288,12 @@ console.log("\n── REPLAYEN SOM SPELAREN FAKTISKT ÖPPNAR ──");
     !ut.fel && ut.replayKvar === false && ut.valTillbaka === true && ut.raf === 0,
     ut.fel || `replay kvar ${ut.replayKvar} · val ${ut.valTillbaka} · raf ${ut.raf}`);
 
-  const slut = oppna.fel ? { paus: null, bedomda: -1, ov: null } : await ev(() => { document.getElementById("valVidare").click();
+  const slut = stangt ? { paus: null, bedomda: -1, ov: null } : await evSafe(() => { document.getElementById("valVidare").click();
     return { paus: !!G.paus, bedomda: G.bedomda || 0,
       ov: document.getElementById("ov").classList.contains("hide") }; });
   prova("Gå vidare släpper pausen utan att betygsätta momentet en gång till",
     slut.paus === false && slut.bedomda === 1 && slut.ov === true,
-    `paus ${slut.paus} · bedomda ${slut.bedomda} · overlay dold ${slut.ov}`);
+    `${slut.fel || ""} paus ${slut.paus} · bedomda ${slut.bedomda} · overlay dold ${slut.ov}`);
 }
 
 console.log("\n── ETT AVBRUTET MOMENT LÄMNAR INTE RITTEN OSTÄNGD ──");
