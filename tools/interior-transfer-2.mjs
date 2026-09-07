@@ -12,12 +12,12 @@ const paths=['src/site.js','src/varld3d.js','roblox/buildings/Anlaggningen.luau'
 function run(cmd,args){const r=spawnSync(cmd,args,{stdio:'inherit',encoding:'utf8'});if(r.status!==0)throw Error(`${cmd} exited ${r.status}`);}
 function output(cmd,args){const r=spawnSync(cmd,args,{encoding:'utf8'});if(r.status!==0)throw Error(r.stderr);return r.stdout.trim();}
 if(process.env.GITHUB_REF!==`refs/heads/${TRANSFER}`)throw Error('Wrong source branch');
-const remote=output('git',['ls-remote','origin',`refs/heads/${TARGET}`]).split(/\s+/)[0];
-if(remote!==BASE)throw Error(`Target changed: ${remote}; stop and reconcile`);
-run('git',['checkout','--detach',BASE]);
 const patch=zlib.brotliDecompressSync(Buffer.from(fs.readFileSync('tools/interior-second-pass.patch.br.b64','utf8').trim(),'base64'));
 if(crypto.createHash('sha256').update(patch).digest('hex')!==EXPECTED)throw Error('Patch checksum mismatch');
 fs.writeFileSync('/tmp/ubrf-interior-second-pass.patch',patch);
+const remote=output('git',['ls-remote','origin',`refs/heads/${TARGET}`]).split(/\s+/)[0];
+if(remote!==BASE)throw Error(`Target changed: ${remote}; stop and reconcile`);
+run('git',['checkout','--detach',BASE]);
 run('git',['apply','--check','/tmp/ubrf-interior-second-pass.patch']);
 run('git',['apply','/tmp/ubrf-interior-second-pass.patch']);
 const changed=output('git',['diff','--name-only']).split('\n').filter(Boolean);
