@@ -1,0 +1,29 @@
+name: Alpha — webbstart
+
+# Releasegrind: prova den distribution som Vercel faktiskt serverar.
+# De bundlade ridtesterna ersätter inte denna kontroll.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  alpha-webbstart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Installera låsta publika beroenden
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Installera Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Prova den obundlade webbdistributionen
+        run: node tools/bootkoll.mjs

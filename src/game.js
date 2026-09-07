@@ -329,6 +329,19 @@ function stegaRitt(dt){
   G.aids=stegaInput(dt);
   if(G.auto)autopilot(dt);
   const h=HORSES[G.hastId];
+  /* INGEN HÄST, INGEN RITT.
+
+     `h` användes oskyddat två dussin rader ned (`h.kanslighet`), och när
+     G.hastId inte pekar på en häst dog hela animationsloopen med
+     "Cannot read properties of undefined (reading 'kanslighet')".
+
+     Det felet sågs EN gång under #128 och gick inte att reproducera då;
+     det stod kvar som öppen risk. G02-D:s replay-prov reproducerade det:
+     loopen fortsätter köra medan lektionen sätts upp, och i det
+     glappet finns ingen giltig häst. Att stega en ritt utan häst betyder
+     ingenting — så den gör det inte längre, i stället för att krascha
+     bildrutan och ta med sig allt annat som loopen skulle ha gjort. */
+  if(!h)return;
 
   /* ── Svängen som KURVATUR, inte som vridhastighet ────────────────
      Förut: omega = styrning × (0,5 + 0,22 × tempo). Vridhastigheten

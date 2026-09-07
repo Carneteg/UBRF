@@ -30,6 +30,9 @@ const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);
 vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   + "\n" + las("src/riding/svar.js") + "\n" + las("src/riding/telemetri.js")
+  /* G02-D: övningsdefinitionen. Måste laddas FÖRE src/larare.js, precis
+     som i index.html — larare.js bygger UGNETA_OVNING_DIM ur den. */
+  + "\n" + las("src/riding/ovningsdef.js")
   /* Hästdatan med — scenariot nedan ska rida VERKLIGA UBRF-hästar
      ur samma tabell som spelet och Roblox Stallet läser, inte en
      handskriven kopia av deras siffror. */
