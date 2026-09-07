@@ -18,6 +18,7 @@
 local BK = BuildKit             -- inklistrad ovanför, eller require(...)
 local G = UBRFKomplex           -- likaså
 local GEO = Geometri            -- likaså; ren geometri, mätt i roblox/tests/
+local YTOR = G.interiorytor     -- F02-C: delade interiörmaterial, inte en andra färglista
 
 local VAGGT = 0.3               -- väggtjocklek, rendering
 local MARKT = 0.2               -- marklagrets tjocklek
@@ -767,19 +768,21 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 			p:SetAttribute("Rum", ob.rum)
 			p:SetAttribute("Klass", ob.klass)
 			p:SetAttribute("Kalla", ob.kalla)
-			return p
+            if ob.ytmaterial then p:SetAttribute("Ytmaterial", ob.ytmaterial) end
+            return p
 		end
 		local f, f2 = ob.farg, ob.farg2 or Color3.fromRGB(107, 107, 107)
+        local ytmaterial = if ob.ytmaterial == "Leather" then Enum.Material.SmoothPlastic else Enum.Material.Fabric
 		local X, Y, W, H = o.x + q.x, o.y + q.y, q.w, q.h
 		local typ = ob.typ
 		if typ == "soffa" or typ == "fatolj" then
-			del("", X, z0, Y, W, 0.42, H, f, Enum.Material.Fabric)
+			del("", X, z0, Y, W, 0.42, H, f, ytmaterial)
 			-- ryggen ligger på baksidan: motsatt `rikt`
 			local dx = -math.cos(ob.rikt) * (q.w / 2 - 0.11) * (if math.abs(math.cos(ob.rikt)) > 0.5 then 1 else 0)
 			local dy = -math.sin(ob.rikt) * (q.h / 2 - 0.11) * (if math.abs(math.sin(ob.rikt)) > 0.5 then 1 else 0)
 			local rw = if math.abs(math.cos(ob.rikt)) > 0.5 then 0.22 else W
 			local rh = if math.abs(math.cos(ob.rikt)) > 0.5 then H else 0.22
-			del(" rygg", X + W / 2 + dx - rw / 2, z0 + 0.42, Y + H / 2 + dy - rh / 2, rw, ob.matt.h - 0.42, rh, f, Enum.Material.Fabric)
+			del(" rygg", X + W / 2 + dx - rw / 2, z0 + 0.42, Y + H / 2 + dy - rh / 2, rw, ob.matt.h - 0.42, rh, f, ytmaterial)
 		elseif typ == "bord" then
 			del(" skiva", X, z0 + ob.matt.h - 0.05, Y, W, 0.05, H, f, Enum.Material.Wood)
 			del(" ben", X + W / 2 - 0.03, z0, Y + H / 2 - 0.03, 0.06, ob.matt.h - 0.05, 0.06, f, Enum.Material.Wood, false)
@@ -828,20 +831,47 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 					end
 				end
 			end
+			local D = ob.detaljer or {}
 			local fargor = ob.fargor or { f }
-			local n = math.max(1, math.round(ob.matt.b / 0.4))
+			local n = D.kolumner or math.max(1, math.round(ob.matt.b / 0.4))
 			local dh = (kh - 0.16) / v
+			local langsX = math.abs(math.sin(ob.rikt)) > 0.5
+			local fx = if math.cos(ob.rikt) > 0 then X + W else X - 0.01
+			local fy = if math.sin(ob.rikt) > 0 then Y + H else Y - 0.01
+			local langd = if langsX then W else H
+			local w = langd / n
+			-- u = längs fronten, inte världens X. Därmed fungerar samma
+			-- beskrivning på båda sidor av gången och för alla fyra riktningar.
+			local function front(suffix, u, low, ww, hh, dj, c, material)
+				if langsX then
+					return del(suffix, X + u, low, fy, ww, hh, dj, c, material, false)
+				else
+					return del(suffix, fx, low, Y + u, dj, hh, ww, c, material, false)
+				end
+			end
 			for i = 0, n - 1 do
 				local c = fargor[(i % #fargor) + 1]
 				for j = 0, v - 1 do
 					local zy = z0 + ben + 0.1 + j * dh
 					local namn = " dorr " .. (i + 1) .. (if v > 1 then "-" .. (j + 1) else "")
-					if math.abs(math.cos(ob.rikt)) > 0.5 then
-						local fx = if math.cos(ob.rikt) > 0 then X + W else X - 0.01
-						del(namn, fx, zy, Y + (H / n) * i + 0.01, 0.01, dh - 0.02, H / n - 0.02, c, Enum.Material.Metal, false)
-					else
-						local fy = if math.sin(ob.rikt) > 0 then Y + H else Y - 0.01
-						del(namn, X + (W / n) * i + 0.01, zy, fy, W / n - 0.02, dh - 0.02, 0.01, c, Enum.Material.Metal, false)
+					local u = i * w + 0.01
+					front(namn, u, zy, w - 0.02, dh - 0.02, 0.01, c, Enum.Material.Metal)
+					if D.profil then
+						local line = Color3.fromRGB(68, 73, 74)
+						front(namn .. " profil neder", u + 0.015, zy + 0.04, w - 0.05, 0.008, 0.015, line, Enum.Material.Metal)
+						for _, side in ipairs({ 0.016, w - 0.044 }) do
+							front(namn .. " profil sida", u + side, zy + 0.045, 0.008, dh - 0.09, 0.015, line, Enum.Material.Metal)
+						end
+					end
+					if D.beslag then
+						front(namn .. " las", u + w * 0.75, zy + dh * 0.55, 0.055, 0.09, 0.025, Color3.fromRGB(142, 147, 149), Enum.Material.Metal)
+						front(namn .. " nyckelhal", u + w * 0.765, zy + dh * 0.58, 0.018, 0.025, 0.03, Color3.fromRGB(52, 56, 59), Enum.Material.Metal)
+						front(namn .. " nummerskylt", u + w * 0.13, zy + dh * 0.88, 0.035, 0.012, 0.02, Color3.fromRGB(217, 216, 209), Enum.Material.SmoothPlastic)
+					end
+					if D.ventilation then
+						for k = 0, 2 do
+							front(namn .. " ventilation " .. k, u + w * 0.285, zy + 0.035 + k * 0.025, w * 0.43, 0.008, 0.02, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
+						end
 					end
 				end
 			end
@@ -919,6 +949,19 @@ local function byggStallInre(model: Model, base: CFrame)
 	local S = G.stall
 	local o = S.origo
 	local h = S.tak
+
+	-- F02-C: endast den befintliga klubbdelens golv. Samma källa och
+	-- material som webben; inga nya rumsgränser eller kollisionsytor.
+	do
+		local Y = YTOR.stallKlubb
+		local k = S.klubb
+		local gp = BK.box(model, base, "Stallklubb matt golv", o.x, 0.02, o.y + k.y0,
+			S.bredd, 0.004, S.langd - k.y0, Y.farg, Enum.Material.Concrete)
+		gp.CanCollide = false
+		gp:SetAttribute("Ytfinish", Y.typ)
+		gp:SetAttribute("Kalla", Y.kalla)
+		gp:SetAttribute("FargKlass", Y.fargKlass)
+	end
 
 	-- Gångytorna, inklusive tvärkorridoren. De ligger som eget golv så att man
 	-- ser var man kan gå — det är cirkulationen gaten frågar efter.
@@ -1871,6 +1914,14 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		klubbdel: väggar i bitar med planens luckor, slutna rum som volymer,
 		namngivna gångbara rum som etikettplattor. ]]
 	if R.entrehall then
+		local Y = YTOR.ridhusEntre
+		local E = R.entre or R.cafe.djup
+		local gp = BK.box(model, base, "Ridhusentre matt golv", o.x + 0.2, 0.02, o.y + R.langd - E + 0.2,
+			R.bredd - 0.4, 0.004, E - 0.4, Y.farg, Enum.Material.SmoothPlastic)
+		gp.CanCollide = false
+		gp:SetAttribute("Ytfinish", Y.typ)
+		gp:SetAttribute("Kalla", Y.kalla)
+		gp:SetAttribute("FargKlass", Y.fargKlass)
 		byggVaggarOchRum(model, base, o, R.tak, R.entrehall, "Entrévägg", INRE.vagg)
 		--[[ FASADENS DÖRRAR INIFRÅN (PO 2026-09-04 07:54, blocker 2): huvudentrén i
 			västväggen (dorrvit u 9), gavlarnas dörrar — dörrblad, vitt foder,

@@ -32,8 +32,8 @@ vm.createContext(ctx);
    möblerna i STALLINNE/RIDHUSINNE) — samma ordning som index.html. */
 vm.runInContext(las("src/model.js") + "\n" + las("src/data.js") + "\n" + las("src/site.js")
   + "\n" + las("src/inredning.js"), ctx);
-const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER } =
-  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER})", ctx);
+const { ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER, INTERIORYTOR } =
+  vm.runInContext("({ANL, STALLINNE, RIDHUSINNE, STALL_BAND, IDENTITET, BANOMRADE, UTEBANA, PADDOCK, TRANINGSYTOR, INREDNING, SPELABSTRAKTIONER, INTERIORYTOR})", ctx);
 
 /* ── Luau-serialisering ────────────────────────────────────────────────
    Två fällor som redan slagit till i det här repot (roblox/buildings/README):
@@ -179,6 +179,7 @@ const ut = {
      saknas på båda ställena. Kommentaren ovan om att "möblering stannar i
      webbkoden" gällde tills det fanns verifierad inredning att dela. */
   inredning: INREDNING,
+  interiorytor: INTERIORYTOR,
 };
 
 const huvud = `--!strict

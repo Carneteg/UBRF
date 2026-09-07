@@ -2474,3 +2474,18 @@ const SPELABSTRAKTIONER = {
     if(i.domarbas&&R.domarbas){ i.pos[0]=R.domarbas.x+(S.laktare==="E"?-1:1)*(R.domarbas.b/2+0.6); i.pos[1]=R.domarbas.y; }
   }
 })();
+
+/* F02-C — interiörernas ytskikt, INTE ny geometri.
+   Färgerna är fotografiska uppskattningar; ljus/vitbalans ger inte ett
+   materials NCS-kod. Materialtyp och frånvaro av ett kakelrutnät är belagda.
+   Samma data exporteras till Roblox. Källkonflikter ändrar inga rum. */
+const INTERIORYTOR = Object.freeze({
+  stallKlubb: {id:"stallKlubb", typ:"mattBetong", farg:"#746F66",
+    material:"Concrete", fogar:false, glans:"matt",
+    kalla:"stall-inne-01-uppehallsrummet.jpg, stall-inne-04-teorisalen.jpg",
+    klass:"FOTO", fargKlass:"UPPSKATTNING"},
+  ridhusEntre: {id:"ridhusEntre", typ:"mattPlastgolv", farg:"#55575A",
+    material:"SmoothPlastic", fogar:false, glans:"matt",
+    kalla:"ridhus-klubb-20-grona-skapen.jpg, IMG_0268.MOV",
+    klass:"FOTO", fargKlass:"UPPSKATTNING"}
+});
