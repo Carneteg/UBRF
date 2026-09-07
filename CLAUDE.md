@@ -7,11 +7,12 @@ Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, 
 1. `docs/PRODUCT-CANON.md`
 2. `docs/DELIVERY-PROTOCOL.md`
 3. `docs/ASSET-SOURCE-OF-TRUTH.md`
-4. `docs/AI-COLLABORATION.md`
-5. `docs/ACTIVE-GATE.md`
-6. relevant implementation-/referensdokumentation
+4. `docs/ENVIRONMENT-DELIVERY.md` (senaste rollbeslut, verktyg och två spelplattformar)
+5. `docs/AI-COLLABORATION.md`
+6. `docs/ACTIVE-GATE.md`
+7. relevant implementation-/referensdokumentation
 
-`docs/DELIVERY-PROTOCOL.md` är bindande för status, evidens, falsifiering, review, human acceptance och merge. Om äldre dokument antyder att implementerande agent själv kan slutgodkänna sitt arbete gäller leveransprotokollet.
+`docs/DELIVERY-PROTOCOL.md` är bindande för status, evidens, falsifiering, review, human acceptance och merge. Om äldre dokument antyder att implementerande agent själv kan slutgodkänna sitt arbete gäller leveransprotokollet. Tobias senaste uttryckliga produktbeslut har högst prioritet. `docs/ENVIRONMENT-DELIVERY.md` förtydligar den nuvarande ansvarsfördelningen: Replit bygger miljön, Claude bygger gameplay och integration, ChatGPT orkestrerar och granskar, Tobias godkänner. Äldre rolluppdrag som motsäger detta gäller inte.
 
 ## Låst produktkärna
 
@@ -53,39 +54,46 @@ Vid konflikt gäller denna ordning:
 - skriver acceptance criteria och gates,
 - förvaltar produkt-/referenskanon,
 - reviewar faktisk diff, testbevis, scope, regressioner och plattformsparitet,
-- skriver normalt inte parallellt i samma kärnfiler som Claude arbetar i.
+- skriver normalt inte parallellt i samma kärnfiler som aktiva builders arbetar i.
 
-### Claude — Lead Implementation Engineer / Builder
-- implementerar aktiv gate på feature branch,
+### Replit — Lead Environment & World Builder
+- bygger hela den verklighetstrogna UBRF-miljön: området, byggnader, interiörer, skyltar, material och rekvisita,
+- äger tilldelad miljöimplementation och dess webb-/Roblox-export,
+- använder befintliga GitHub-, Supabase-, Google Drive- och Vercel-anslutningar enligt `docs/ENVIRONMENT-DELIVERY.md`,
+- lämnar källkopplade visuella bevis och tester utan att själv slutgodkänna.
+
+### Claude — Lead Gameplay & Integration Engineer
+- implementerar aktiv gameplay-/integrationsgate på feature branch,
 - verifierar observationer mot aktuell kod före ändring,
 - testar gameplay, inte bara lint/compile,
 - använder Sonnet-subagenter om det hjälper men en huvudagent äger integrationen,
 - lämnar bevis, kända begränsningar och commit-SHA,
-- expanderar inte scope på eget initiativ.
+- expanderar inte scope på eget initiativ,
+- använder den gemensamma verktygskedjan och ändrar inte Replits aktiva miljöfiler utan samordning.
 
 ### Arbetsloop
 1. Tobias anger mål/problem.
-2. ChatGPT diagnos + brief + acceptance criteria.
-3. Claude implementerar och testar.
-4. Claude lämnar audit/evidence.
-5. ChatGPT gör senior review av diff och spelproblem.
+2. ChatGPT diagnos + brief + acceptance criteria och filägarskap.
+3. Tilldelad builder (Replit för miljö, Claude för gameplay/integration) implementerar och testar.
+4. Builder lämnar audit/evidence.
+5. ChatGPT gör senior review av diff, källor, spelproblem och båda plattformarna.
 6. Tobias avgör accept/ny iteration.
 
 Ingen agent får både införa en större förändring och ensam slutgodkänna den.
 
 ## Leveransauktoritet — hårda regler
 
-**CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS.**
+**TILLDELAD BUILDER BYGGER → CHATGPT REVIEWS → TOBIAS ACCEPTS.**
 
-- Claude får aldrig själv sätta slutstatus `APPROVED`, `ACCEPTED`, `DONE`, `CLOSED` eller `FINAL` på sin egen större leverans.
-- Claudes högsta normala status är `READY_FOR_CHATGPT_REVIEW`.
+- Claude eller Replit får aldrig själv sätta slutstatus `APPROVED`, `ACCEPTED`, `DONE`, `CLOSED` eller `FINAL` på sin egen större leverans.
+- Builders högsta normala status är `READY_FOR_CHATGPT_REVIEW`.
 - ChatGPT kan efter oberoende review sätta `READY_FOR_PRODUCT_ACCEPTANCE`.
 - Endast Tobias får sätta `PRODUCT_ACCEPTED` när human acceptance krävs.
 - Merge, grön CI eller grön lokal testsvit är **inte** i sig produktacceptans.
 - Varje icke-trivial leverans ska ha Acceptance Contract enligt `docs/DELIVERY-PROTOCOL.md` innan implementationen expanderar.
-- Claude ska aktivt falsifiera centrala tester; ett test som aldrig visats kunna bli rött är otillräcklig evidens för en kritisk gate.
-- Claude ska uttryckligen redovisa `Not tested`; frånvaro av tillgång till Studio/runtime får aldrig omskrivas till PASS.
-- ChatGPT-review ska utgå från faktisk diff och relevanta källor, inte Claudes summary.
+- Builders ska aktivt falsifiera centrala tester; ett test som aldrig visats kunna bli rött är otillräcklig evidens för en kritisk gate.
+- Builders ska uttryckligen redovisa `Not tested`; frånvaro av tillgång till Studio/runtime får aldrig omskrivas till PASS.
+- ChatGPT-review ska utgå från faktisk diff och relevanta källor, inte en builders summary.
 - Visuell fidelity, game feel och målmiljöflöden kräver Tobias uttryckliga PASS där Acceptance Contract säger det.
 
 ## Plattformskontrakt
@@ -112,7 +120,7 @@ När logik delas mellan plattformarna: porta **avsikt, regler, parametrar och ac
 
 Kärnloop, hästlogik, lärande, ansvar, UBRF-värld och centrala gameplayregler ska motsvara varandra. Rendering, UI och inputadapter får vara plattformsspecifika.
 
-Bygg inte en ny JS-only kärnfeature eller Roblox-only kärnfeature utan att aktivt redovisa hur motsvarande upplevelse hålls möjlig på den andra ytan.
+Bygg inte en ny JS-only kärnfeature eller Roblox-only kärnfeature utan att aktivt redovisa hur motsvarande upplevelse hålls möjlig på den andra ytan. Miljöändringar ska levereras genom gemensam källstyrd miljösanning och båda plattformarnas implementation enligt `docs/ENVIRONMENT-DELIVERY.md`.
 
 ## Scope guardrail
 
@@ -149,7 +157,7 @@ Förbättra befintlig arkitektur innan du uppfinner en ny.
 3. Kontrollera relevant råfilm i `references/video/` innan en visuell/interiör detalj deklareras `REFERENCE GAP`; en panorering kan innehålla evidens som saknas i extraherade stillbilder.
 4. Uppdatera byggnadskort/SITEPLAN först när ny evidens ändrar facit.
 5. Koden följer kortet; kortet följer verifierat originalmaterial.
-6. Verifiera visuellt från motsvarande vinkel innan "klart" — och rapportera då `READY_FOR_PRODUCT_ACCEPTANCE`, inte egen acceptans.
+6. Verifiera visuellt från motsvarande vinkel innan "klart" — och rapportera då `READY_FOR_CHATGPT_REVIEW`, inte egen acceptans.
 7. Stiliserat betyder förenklat — inte påhittat.
 8. Saknas evidens efter full källkontroll: märk `[REFERENCE GAP]`.
 9. Placering på tomten styrs av verifierad `references/SITEPLAN.md`.
@@ -159,18 +167,18 @@ Förbättra befintlig arkitektur innan du uppfinner en ny.
 
 ## Referensmaterial och Drive
 
-Drive-mappen `UBRF` är endast insamlings-/originalyta. När nytt material läggs där ska relevant material migreras eller härledas till GitHub/Supabase innan Claude blir beroende av det.
+Drive-mappen `UBRF` är endast insamlings-/originalyta. När nytt material läggs där ska relevant material migreras eller härledas till GitHub/Supabase innan någon builder blir beroende av det.
 
 Använd:
 - `references/` för verifierade bilder/frames, råfilmer, kort, siteplan och licenser,
 - `docs/ASSET-SOURCE-OF-TRUTH.md` för källpolicy,
 - Supabase `public.reference_assets` för sökbart manifest.
 
-Claude ska aldrig instrueras att "gå till Drive" som enda väg till en build-kritisk källa.
+Ingen builder ska instrueras att "gå till Drive" som enda väg till en build-kritisk källa. Både Claude och Replit ska känna till GitHub, Supabase, Google Drive och Vercel och verifiera faktisk åtkomst i sin egen session enligt `docs/ENVIRONMENT-DELIVERY.md`.
 
 ## Aktiv gate
 
-`docs/ACTIVE-GATE.md` pekar ut aktuell kvalitetsgrind. Läs den före gameplay-, movement-, camera- eller inputändringar. Scope får inte expanderas utanför aktiv gate utan Tobias uttryckliga beslut.
+`docs/ACTIVE-GATE.md` pekar ut aktuell kvalitetsgrind. Läs den före gameplay-, movement-, camera- eller inputändringar. Scope får inte expanderas utanför aktiv gate utan Tobias uttryckliga beslut. Vid inaktuellt gate-dokument gäller Tobias senaste beslut och aktuell PR-status; dokumentet ska uppdateras innan motstridig implementation fortsätter.
 
 ## Git
 
