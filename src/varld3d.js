@@ -66,11 +66,19 @@ function v3dTexturer(){
     for(let i=0;i<500;i++){c.fillStyle="rgba(0,0,0,.15)";
       c.fillRect(Math.random()*w,Math.random()*h,1,1);}
   },true);
-  T.betong=glCanvasTex(64,64,(c,w,h)=>{
-    c.fillStyle="#A09A8C";c.fillRect(0,0,w,h);
-    c.strokeStyle="rgba(0,0,0,.10)";c.lineWidth=1;
-    c.strokeRect(0.5,0.5,w-1,h-1);
+  /* Gammal kakelliknande betongtextur ersätts av en foglös yta.
+     Speckle ger material utan påhittade plattor. */
+  T.betong=glCanvasTex(128,128,(c,w,h)=>{
+    c.fillStyle="#FFFFFF";c.fillRect(0,0,w,h);
+    for(let i=0;i<850;i++){
+      const n=(i*7919)%16384, x=n%128, y=(n>>7)%128;
+      c.fillStyle=i%3?"rgba(0,0,0,.035)":"rgba(255,255,255,.045)";
+      c.fillRect(x,y,1+(i%3),1+(i%2));
+    }
   },true);
+  T.interiorytor={};
+  for(const [id,yta] of Object.entries(INTERIORYTOR))
+    T.interiorytor[id]=T.betong;
   T.parlspont=glCanvasTex(128,128,(c,w,h)=>{
     c.fillStyle="#F0EADC";c.fillRect(0,0,w,h);
     c.strokeStyle="rgba(0,0,0,.07)";c.lineWidth=1;
@@ -1189,10 +1197,25 @@ function v3dInredning(scen,lagg){
         const ben=o.ben||0, kh=h-ben, v=o.vaningar||1;
         box(b,kh,d,f,0,ben,0); box(b,0.08,d,"#3A3C40",0,ben,0);
         if(ben>0) for(const s of [-1,1]) for(const t of [-1,1]) box(0.05,ben,0.05,"#1E1E1E",s*(b/2-0.06),0,t*(d/2-0.06));
-        const n=Math.max(1,Math.round(b/0.4)), w=b/n, fargor=o.fargor||[f], dh=(kh-0.16)/v;
-        for(let i=0;i<n;i++) for(let j=0;j<v;j++){ const lx=-b/2+w*(i+0.5), y0=ben+0.1+j*dh;
-          box(w-0.02,dh-0.02,0.01,fargor[i%fargor.length],lx,y0,d/2+0.005);
-          box(0.02,0.06,0.01,"#5A5C60",lx+0.12,y0+dh*0.5,d/2+0.012); }
+        const D=o.detaljer||{}, n=D.kolumner||Math.max(1,Math.round(b/0.4));
+        const w=b/n, fargor=o.fargor||[f], dh=(kh-0.16)/v;
+        for(let i=0;i<n;i++) for(let j=0;j<v;j++){
+          const lx=-b/2+w*(i+0.5), y0=ben+0.1+j*dh, front=d/2+0.005;
+          const c=fargor[i%fargor.length];
+          box(w-0.02,dh-0.02,0.01,c,lx,y0,front);
+          if(D.profil){
+            box(w-0.045,0.008,0.003,"#44494A",lx,y0+0.04,front+0.007);
+            for(const s of [-1,1]) box(0.008,dh-0.09,0.003,"#44494A",lx+s*(w/2-0.026),y0+0.045,front+0.007);
+          }
+          if(D.beslag){
+            const bx=lx+w*0.27;
+            box(0.055,0.09,0.012,"#8E9395",bx,y0+dh*0.55,front+0.012);
+            box(0.018,0.025,0.014,"#34383B",bx,y0+dh*0.55,front+0.023);
+            box(0.035,0.012,0.005,"#D9D8D1",lx-w*0.30,y0+dh*0.88,front+0.009);
+          }
+          if(D.ventilation) for(let k=0;k<3;k++)
+            box(w*0.43,0.008,0.003,"#4D5152",lx,y0+0.035+k*0.025,front+0.009);
+        }
         break;}
       case"bank":
         box(b,0.05,d,f,0,h-0.05,0);
@@ -1754,6 +1777,12 @@ function v3dStall(lagg,opp){
      luckor — samma bitar som world.js kolliderar mot och Roblox bygger ur
      Geometri.vaggBitar — och de slutna rummen som hela volymer. Samma
      byggare som ridhusets entrédel. */
+  /* Klubbdelen har ett sammanhängande matt betonggolv enligt interiör-
+     fotona. Läggs på befintligt golv utan att ändra höjd/kollision. */
+  {const Y=INTERIORYTOR.stallKlubb, K=S.klubb, golv=new Bygge();
+   golv.yta(S.bredd,S.langd-K.y0,Y.farg,
+     M4.translation(S.bredd/2,0.021,(K.y0+S.langd)/2),6);
+   lagg(golv,T.interiorytor.stallKlubb);}
   v3dVaggarOchRum(S.klubb,"#FFFFFF",2.8,lagg,T.parlspont);
   /* KLUBBDELENS INNERTAK (review 2026-09-04 08:50, blocker A): stall-inne-01,
      -02, -03 och -04 visar ett PLATT vitt innertak med taklist över
@@ -2351,8 +2380,9 @@ function v3dRidhus(lagg,opp){
       cafe.lada(b-a,h,0.16,"#E9E5DC",M4.translation((a+b)/2,zc,KY1));}
    lagg(cafe,null);}
   /* Hallens golv, ljusare än banan, och takarmaturer under caféplattan. */
-  lagg(new Bygge().yta(R.bredd-0.4,E-0.4,"#FFFFFF",
-    M4.translation(R.bredd/2,0.02,EY+E/2),6),T.marksten);
+  const hallYta=INTERIORYTOR.ridhusEntre;
+  lagg(new Bygge().yta(R.bredd-0.4,E-0.4,hallYta.farg,
+    M4.translation(R.bredd/2,0.02,EY+E/2),6),T.interiorytor.ridhusEntre);
   /* Takarmaturerna i entrédelen — ett jämnt rutnät 4,4 × 4,0 m — är BORTA
      (Senior Re-review 2026-09-03): ingen källa bar delningen. Belagda
      armaturer (skåpkorridorens lysrörsrader, ridhus-klubb-01) hör till

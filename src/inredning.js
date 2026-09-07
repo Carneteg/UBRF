@@ -66,10 +66,10 @@ const INREDNING = (() => {
        fotoväggen, den andra soffan i vinkel söder om borden (bildens
        förgrund). Pentryts möbler byggs fortsatt inte (ingen order). */
     {id:"uppehall_soffa_v", rum:"uppehallsrum", typ:"soffa", pos:[U.x+0.55, 65.6], rikt:E,
-     matt:{b:1.85, d:0.85, h:0.70}, farg:"#1C1C1E", kolliderar:true,
+     matt:{b:1.85, d:0.85, h:0.70}, farg:"#1C1C1E", ytmaterial:"Leather", kolliderar:true,
      kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
     {id:"uppehall_soffa_s", rum:"uppehallsrum", typ:"soffa", pos:[2.6, 63.85], rikt:N,
-     matt:{b:1.85, d:0.85, h:0.70}, farg:"#1C1C1E", kolliderar:true,
+     matt:{b:1.85, d:0.85, h:0.70}, farg:"#1C1C1E", ytmaterial:"Leather", kolliderar:true,
      kalla:"stall-inne-01", klass:"VERIFIED", lage:"DERIVED"},
     {id:"uppehall_bord_1", rum:"uppehallsrum", typ:"bord", pos:[1.65, 65.2], rikt:E,
      matt:{b:0.55, d:0.55, h:0.45}, farg:"#141416", kolliderar:true,
@@ -348,7 +348,7 @@ const INREDNING = (() => {
     ...skapBitar.map(([y0, y1], i) => (
       {id:"skap_v_"+(i+1), rum:"hall", typ:"skapbank", pos:[skapX, (y0+y1)/2], rikt:W,
        matt:{b:y1-y0-0.1, d:0.5, h:1.9}, farg:"#C9CBCB", fargor:["#C9CBCB","#C9CBCB","#3A3C40","#C9CBCB","#B8322E"],
-       kolliderar:true,
+       kolliderar:true, ytmaterial:"Metal", detaljer:{profil:true, beslag:true, ventilation:true},
        kalla:"ridhus-klubb-01, -15, IMG_0169-f02, IMG_0268-r12", klass:"VERIFIED", lage:"ASSUMPTION"})),
     /* SKÅPFÖRVARINGEN — Product Owner 2026-09-04 11:56: "Saknas skåp."
        ridhus-klubb-16 (skåprummet med pelaren: höga mörkblå/grå skåp till
@@ -360,19 +360,19 @@ const INREDNING = (() => {
        fristående förvaring i entrédelens ÖPPNA västra remsa (x 0–2,2 söder
        om receptionen), där planens cellrad bär funktionerna skåpförvaring/
        ombyte [antagande]: inga nya rum, inga väggar, gången x 2,2–4,2 och
-       entréns vindfång fria. Lägena: ASSUMPTION. Antalet luckor förenklat
-       (vita banken 3 × 2 mot bildens 5 × 2). */
+       entréns vindfång fria. Lägena: ASSUMPTION. Antalet luckor följer nu den belagda 5 × 2-gruppen.
+       Frontdetaljernas småmått är stiliserade uppskattningar. */
     {id:"skap_grona", rum:"hall", typ:"skapbank", pos:[0.55, 69.3], rikt:E,
      matt:{b:1.6, d:0.5, h:1.8}, ben:0.15, vaningar:2, farg:"#EDEAE0", fargor:["#7FA07E"],
-     kolliderar:true,
+     kolliderar:true, ytmaterial:"Metal", detaljer:{kolumner:4, profil:true, beslag:true, ventilation:true, ben:true},
      kalla:"ridhus-klubb-20, -21", klass:"VERIFIED", lage:"ASSUMPTION"},
     {id:"skap_hoga_v", rum:"hall", typ:"skapbank", pos:[0.55, 71.5], rikt:E,
      matt:{b:2.0, d:0.5, h:1.9}, farg:"#EDEAE0", fargor:["#C9CBCB","#C9CBCB","#C9CBCB","#1F2430","#1F2430"],
-     kolliderar:true,
+     kolliderar:true, ytmaterial:"Metal", detaljer:{kolumner:5, profil:true, beslag:true, ventilation:true},
      kalla:"ridhus-klubb-16, -18", klass:"VERIFIED", lage:"ASSUMPTION"},
     {id:"skap_vita_2v", rum:"hall", typ:"skapbank", pos:[1.45, 72.35], rikt:Sy,
      matt:{b:1.2, d:0.45, h:1.8}, vaningar:2, farg:"#F2F0EA", fargor:["#E9E5D8"],
-     kolliderar:true,
+     kolliderar:true, ytmaterial:"Metal", detaljer:{kolumner:5, profil:true, beslag:true, ventilation:true},
      kalla:"ridhus-klubb-16", klass:"VERIFIED", lage:"ASSUMPTION"},
     /* Bordet med de två stolarna står i gången mellan glaset och skåpen
        (-01, -15); ungefär mitt för receptionsglaset. Planens etikett

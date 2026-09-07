@@ -1,0 +1,62 @@
+{
+  "base": "e65675dfe3584f5654aab3280d53692fe9b17f1a",
+  "sha256": "806acb10d559796ceaae9a052f83d4ef7ac3aafc0ce501a8b91006c1b12835a7",
+  "lockers": [
+    {
+      "id": "skap_v_1",
+      "pos": [
+        4.45,
+        71.65
+      ],
+      "matt": {
+        "b": 6.600000000000003,
+        "d": 0.5,
+        "h": 1.9
+      },
+      "rikt": 3.141592653589793,
+      "kolliderar": true
+    },
+    {
+      "id": "skap_grona",
+      "pos": [
+        0.55,
+        69.3
+      ],
+      "matt": {
+        "b": 1.6,
+        "d": 0.5,
+        "h": 1.8
+      },
+      "rikt": 0,
+      "kolliderar": true
+    },
+    {
+      "id": "skap_hoga_v",
+      "pos": [
+        0.55,
+        71.5
+      ],
+      "matt": {
+        "b": 2,
+        "d": 0.5,
+        "h": 1.9
+      },
+      "rikt": 0,
+      "kolliderar": true
+    },
+    {
+      "id": "skap_vita_2v",
+      "pos": [
+        1.45,
+        72.35
+      ],
+      "matt": {
+        "b": 1.2,
+        "d": 0.45,
+        "h": 1.8
+      },
+      "rikt": -1.5707963267948966,
+      "kolliderar": true
+    }
+  ]
+}
