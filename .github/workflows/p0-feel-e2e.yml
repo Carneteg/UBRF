@@ -1,0 +1,49 @@
+name: P0 — styrkänsla genom verkligt spel
+on:
+  push:
+    branches: [chatgpt/p0-feel-e2e-20260908]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  speltest:
+    name: QA ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [first-day, riding, touch]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verifiera att spelkoden är exakt den granskade styrningsfixen
+        run: |
+          git fetch --no-tags --depth=1 origin 6c749973b8f2c79f5ff8322e830535adbd694cae
+          git diff --exit-code 6c749973b8f2c79f5ff8322e830535adbd694cae HEAD -- src roblox index.html
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Installera låsta beroenden och Chromium
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Bygg exakt spelversion
+        run: python3 tools/build.py
+      - name: Kör riktiga UI-handlingar utan att sätta speltillstånd
+        env:
+          QA_TARGET_SHA: ${{ github.sha }}
+          QA_OUT: qa/p0-${{ matrix.mode }}
+        run: node tools/p0-qa-runner.mjs ${{ matrix.mode }}
+      - name: Spara skärmbilder, tillstånd och felrapport även vid fel
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-${{ matrix.mode }}-${{ github.sha }}
+          path: qa/p0-${{ matrix.mode }}/
+          if-no-files-found: warn
+          retention-days: 30
