@@ -125,6 +125,12 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
    — då måste kvaliteten röra sig, annars kommer den inte därifrån. */
 {
   const r = await ev(() => {
+    /* Literalen är avsiktlig — den ÄR falsifieringen. Men den saknar
+       ridkärnans interna fält, och spelloopen stegar G.ride varje
+       bildruta. Förut lämnades den kvar och nästa rAF-tick kastade i
+       stepRide. Hela mätningen ligger därför i EN evaluate, och det
+       riktiga tillståndet läggs tillbaka innan bildrutan är slut. */
+    const forra = G.ride;
     const ride = { tempo: 3.0, balans: 0.50, mjukhet: 0.50, fokus: 0.50, spanning: 0.50,
       skala: { rakriktning: 0.60, takt: 0.60, schvung: 0.60, kontakt: 0.60, samling: 0.50 } };
     G.ride = JSON.parse(JSON.stringify(ride));
@@ -136,7 +142,9 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
     const hog = mat({ svangradie: 10, balans: 0.95, mjukhet: 0.95, fokus: 0.95,
       spanning: 0.05, svarstid: 0.08, etableringstid: 0.5, paradKvalitet: 0.95,
       fart: 3.0, onskadFart: 3.0 });
-    return { lag, hog, rideOrord: JSON.stringify(G.ride) === JSON.stringify(ride) };
+    const ut = { lag, hog, rideOrord: JSON.stringify(G.ride) === JSON.stringify(ride) };
+    G.ride = forra;
+    return ut;
   });
   prova("balans, mjukhet och respons följer telemetrin — inte något annat",
     r.hog.balans - r.lag.balans > 0.5 && r.hog.mjukhet - r.lag.mjukhet > 0.5 &&

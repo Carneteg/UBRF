@@ -66,6 +66,25 @@ local function klamp(v: number?): number
 	return v
 end
 
+--[[ OKÄNT ÄR INTE NOLL (senior review av b303530, punkt 2).
+
+	Förut lästes varje fält som `tonumber(x) or 0`. Följden var att ett
+	SAKNAT mätvärde blev en giltig siffra: en telemetri som bara sa
+	`{uppsutten = true}` gav balans 0 och mjukhet 0 — alltså "dålig
+	ritt" — medan `lugn = 1 - klamp(spänning)` blev 1 och tempo blev 1,
+	alltså beröm. Båda är påhitt om en ritt som aldrig mättes.
+
+	`tal` skiljer de två fallen: ett verkligt uppmätt 0 är en siffra,
+	ett saknat eller ogiltigt fält är `nil`. NaN och oändligheter räknas
+	som saknade — de är mätfel, inte mätvärden. ]]
+local function tal(v: any): number?
+	local n = tonumber(v)
+	if n == nil then return nil end
+	if n ~= n then return nil end                 -- NaN
+	if n == math.huge or n == -math.huge then return nil end
+	return n
+end
+
 --[[ KVALITETEN, ur telemetrin och ingenting annat.
 
 	Samma formel som webbens `ugnetaKvalitet` med samma tal, hämtade ur
@@ -82,30 +101,64 @@ function Lektion.kvalitet(tm: { [string]: any }): { [string]: number? }
 		     linjen är omätt i det ögonblicket i stället för påhittad. ]]
 		radie = -1
 	end
-	local svarstid = tonumber(tm.svarstid) or 0
-	local etab = tonumber(tm.etableringstid) or 0
-	local svar = if svarstid > 0 then klamp(1 - svarstid / KV.SVARSTID_TAK) else KV.OMATT
-	local etablering = if etab > 0 then klamp(1 - etab / KV.ETABLERING_TAK) else KV.OMATT
-	local parad = klamp(tonumber(tm.paradKvalitet) or 0)
-	local fokus = klamp(tonumber(tm.fokus) or 0)
-	local lugn = 1 - klamp(tonumber(tm.spanning) or 0)
-	local fart = tonumber(tm.fart) or 0
-	local onskad = tonumber(tm.onskadFart) or fart
+	--[[ Delkomponenterna. `mattes` räknar hur många av dem som faktiskt
+	     kom ur telemetrin — en sammansatt dimension där INGEN del är mätt
+	     får inte bli en siffra bara för att de neutrala fallbacksen råkar
+	     summera till något. ]]
+	local svarstidV, etabV = tal(tm.svarstid), tal(tm.etableringstid)
+	local paradV, fokusV, spanningV = tal(tm.paradKvalitet), tal(tm.fokus), tal(tm.spanning)
+	local fart, onskad = tal(tm.fart), tal(tm.onskadFart)
+
+	--[[ KV.OMATT är den deklarerade neutralen för en delkomponent som
+	     inte mätts. Den behålls — formeln är verifierad — men den får
+	     inte ensam bära en dimension. ]]
+	local svar = if svarstidV ~= nil and svarstidV > 0
+		then klamp(1 - svarstidV / KV.SVARSTID_TAK) else KV.OMATT
+	local etablering = if etabV ~= nil and etabV > 0
+		then klamp(1 - etabV / KV.ETABLERING_TAK) else KV.OMATT
+	local parad = if paradV ~= nil then klamp(paradV) else KV.OMATT
+	local fokus = if fokusV ~= nil then klamp(fokusV) else KV.OMATT
+	local lugn = if spanningV ~= nil then 1 - klamp(spanningV) else KV.OMATT
+
+	local timingMatt = (svarstidV ~= nil and svarstidV > 0)
+		or (etabV ~= nil and etabV > 0) or paradV ~= nil
+	local responsMatt = fokusV ~= nil or spanningV ~= nil
+		or (svarstidV ~= nil and svarstidV > 0)
+
+	--[[ TEMPO kräver att den önskade farten faktiskt är mätt. Förut föll
+	     `onskad` tillbaka på `fart`, och då blev avvikelsen noll och
+	     tempot 1,0 — full pott ur ingenting. Saknas önskad fart är
+	     tempot okänt. Är den mätt men under golvet finns inget tempokrav
+	     att missa, och 1,0 är då ett riktigt svar, inte ett påhitt. ]]
+	local tempo: number? = nil
+	if onskad ~= nil then
+		if onskad <= KV.TEMPO_GOLV then
+			tempo = 1
+		elseif fart ~= nil then
+			tempo = klamp(1 - math.abs(fart - onskad) / math.max(onskad, KV.TEMPO_NAMNARE))
+		end
+	end
+
+	local balansV, mjukhetV = tal(tm.balans), tal(tm.mjukhet)
 	return {
 		--[[ Bara radietermen. Webbens andra halva (LINJE_RAK ×
 		     rakriktning) har ingen källa här; att skala upp radien till
 		     1,0 hade gett en bättre linje än den som faktiskt mätts. ]]
 		linje = if radie >= 0 then klamp(radie) else nil,
 		rytm = nil,                       -- se Lektion.SAKNAS
-		balans = klamp(tonumber(tm.balans) or 0),
-		mjukhet = klamp(tonumber(tm.mjukhet) or 0),
-		timing = klamp(KV.TIMING_SVAR * svar + KV.TIMING_ETABLERING * etablering
-			+ KV.TIMING_PARAD * parad),
-		respons = klamp(KV.RESPONS_FOKUS * fokus + KV.RESPONS_LUGN * lugn
-			+ KV.RESPONS_SVAR * svar),
-		tempo = if onskad > KV.TEMPO_GOLV
-			then klamp(1 - math.abs(fart - onskad) / math.max(onskad, KV.TEMPO_NAMNARE))
-			else 1,
+		balans = if balansV ~= nil then klamp(balansV) else nil,
+		mjukhet = if mjukhetV ~= nil then klamp(mjukhetV) else nil,
+		--[[ Formlerna är oförändrade. Det enda som tillkommit är kravet
+		     att minst en delkomponent verkligen mättes. ]]
+		timing = if timingMatt
+			then klamp(KV.TIMING_SVAR * svar + KV.TIMING_ETABLERING * etablering
+				+ KV.TIMING_PARAD * parad)
+			else nil,
+		respons = if responsMatt
+			then klamp(KV.RESPONS_FOKUS * fokus + KV.RESPONS_LUGN * lugn
+				+ KV.RESPONS_SVAR * svar)
+			else nil,
+		tempo = tempo,
 	}
 end
 
@@ -114,7 +167,8 @@ end
 	lifecycle som webbens `stegaLektion`: betyget hör till sista
 	försöket, och ett nytt försök NOLLSTÄLLER mätningen explicit i stället
 	för att patchas i nästa bildruta. ]]
-export type Prov = { n: number, sum: { [string]: number }, matt: { [string]: number } }
+export type Prov = { n: number, sum: { [string]: number }, matt: { [string]: number },
+	sek: { [string]: number } }
 export type Pass = {
 	ix: number,
 	forsokNr: number,
@@ -128,10 +182,22 @@ export type Pass = {
      egen tid per övning; Roblox har ingen momentbank ännu, så längden
      är EN siffra här och deklareras som spelbeslut, inte som mätning. ]]
 Lektion.FORSOK_SEK = 22
+
+--[[ HUR MYCKET UNDERLAG SOM KRÄVS INNAN NÅGOT BEDÖMS.
+
+	Förut räckte två bildrutor för hela försöket, och `prov.n` räknades
+	upp för varje uppsutten bildruta oavsett om något faktiskt mättes.
+	Två saker föll ut av det: ett försök kunde bedömas på underlag som
+	inte fanns, och täckningen berodde på bildfrekvensen — 120 fps gav
+	dubbelt så många "mätningar" som 60 fps på samma ritt.
+
+	Kraven ställs därför per dimension och i SEKUNDER, inte i bildrutor.
+	Antalet prov behålls som ett golv mot enstaka utstickare. ]]
 Lektion.MIN_MATNINGAR = 2
+Lektion.MIN_DIM_SEK = 1.0
 
 local function tomtProv(): Prov
-	return { n = 0, sum = {}, matt = {} }
+	return { n = 0, sum = {}, matt = {}, sek = {} }
 end
 
 function Lektion.nyttPass(): Pass
@@ -153,23 +219,36 @@ end
 	håller reda på hur många prov varje dimension faktiskt fått, så en
 	dimension som var omätt halva försöket inte får ett medelvärde
 	utspätt med nollor. ]]
-function Lektion.matning(pass: Pass, tm: { [string]: any })
+--[[ Ett prov per bildruta. `dt` gör täckningen bildfrekvensoberoende:
+	en dimension räknas i uppmätta SEKUNDER, inte i hur ofta loopen råkade
+	titta. Saknas `dt` bidrar provet med antal men ingen tid, och kan då
+	aldrig ensamt nå tidskravet — det är avsiktligt. ]]
+function Lektion.matning(pass: Pass, tm: { [string]: any }, dt: number?)
 	local q = Lektion.kvalitet(tm)
 	local p = pass.prov
+	local steg = tal(dt)
+	if steg == nil or steg < 0 then steg = 0 end
 	p.n += 1
 	for k, v in q do
 		if v ~= nil then
 			p.sum[k] = (p.sum[k] or 0) + v
 			p.matt[k] = (p.matt[k] or 0) + 1
+			p.sek[k] = (p.sek[k] or 0) + steg
 		end
 	end
 end
 
+--[[ Medelvärdet för de dimensioner som har TILLRÄCKLIGT underlag. En
+	dimension som bara snuddades vid under en bråkdel av försöket lämnas
+	utanför i stället för att bäras fram som ett omdöme. ]]
 function Lektion.medel(pass: Pass): { [string]: number }
 	local ut = {}
 	for k, s in pass.prov.sum do
 		local n = pass.prov.matt[k] or 0
-		if n > 0 then ut[k] = s / n end
+		local sek = pass.prov.sek[k] or 0
+		if n >= Lektion.MIN_MATNINGAR and sek >= Lektion.MIN_DIM_SEK then
+			ut[k] = s / n
+		end
 	end
 	return ut
 end
@@ -187,8 +266,11 @@ export type Handelse = {
 function Lektion.avslutaForsok(pass: Pass): Handelse?
 	local id = Lektion.ovningId(pass)
 	if not id then return nil end
-	if pass.prov.n < Lektion.MIN_MATNINGAR then return nil end
+	--[[ INGEN BEDÖMNING UTAN UNDERLAG. `medel` returnerar bara de
+	     dimensioner som klarat kraven; är den tom fanns det ingenting att
+	     uttala sig om, och då lämnas inget omdöme alls. ]]
 	local nu = Lektion.medel(pass)
+	if next(nu) == nil then return nil end
 	local lista = pass.historik[id]
 	if not lista then lista = {}; pass.historik[id] = lista end
 	local fore = lista[#lista]

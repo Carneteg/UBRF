@@ -314,7 +314,13 @@ function stepRide(s,a,h,ctx,dt){
   }
   // halvhalt
   let hhKval=0;
-  {const hh=s._hh,p=s._prev;
+  /* `_hh` skapas av nyState(). Ett ridtillstånd som passerat JSON —
+     molnsynk, sparning, ett prov som byter ut G.ride — har `_prev` men
+     inget `_hh`, och kastade då "Cannot read properties of undefined
+     (reading 'fas')" på ANDRA bildrutan, eftersom `_prev` skrivs i slutet
+     av den första. Halvhalten återupptas hellre från vila än fäller
+     ridsteget. */
+  {const hh=s._hh||(s._hh={fas:0,t:0,kval:0}),p=s._prev;
    if(p){const dS=a.sits-p.sits,dK=a.skankel-p.skankel,dT=a.tygel-p.tygel;
     if(hh.fas===0){
       const hhMin=K.HH_MIN_AMPLITUD*((ctx.fard&&ctx.fard.hhAmplitud)||1);

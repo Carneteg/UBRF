@@ -221,6 +221,65 @@ prova("en avsutten spelare får ingen undervisning",
 		and LektionController.pagar() == false,
 	"(kort och chip fortsatt släckta, R och knappen utan verkan)")
 
+--[[ ══ SÄKERHET FÖRE SERVERSVAR ═══════════════════════════════════
+	Senior review av b303530, punkt 1. Förut anropades
+	`DismountRequest:InvokeServer()` FÖRE `dismount()`. `InvokeServer`
+	yieldar, så ett långsamt eller uteblivet svar lämnade lektionen igång
+	och lärarytan uppe efter att spelaren bett om att få sitta av.
+
+	Provet mäter ORDNINGEN, inte bara slutresultatet: fjärranropet
+	rapporterar vad lektionen hade för läge i det ögonblick det kördes.
+	Var städningen redan gjord är svaret false. Anropet kastar dessutom,
+	vilket är det värsta realistiska serverfallet — klienten får inte
+	återuppliva något på ett uteblivet svar. ]]
+do
+	local spar = { anrop = 0, pagarVidAnrop = nil, kortVidAnrop = nil }
+	local fjarr = Net.get("DismountRequest")
+	fjarr.InvokeServer = function()
+		spar.anrop += 1
+		spar.pagarVidAnrop = LektionController.pagar()
+		spar.kortVidAnrop = hitta("Kort").Visible
+		error("serversvar uteblev")
+	end
+
+	--[[ Sitt upp igen och rid en bit, så att det FINNS en lektion att
+	     städa bort när avsittningen begärs. ]]
+	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+	bildrutor(1)
+	tryck("R")
+	bildrutor(3)
+	prova("en lektion pågår inför avsittningen",
+		LektionController.pagar() == true,
+		("(pågår %s)"):format(tostring(LektionController.pagar())))
+
+	tryck("E")
+	prova("serveranropet skedde EFTER den lokala städningen",
+		spar.anrop == 1 and spar.pagarVidAnrop == false
+			and spar.kortVidAnrop == false,
+		("(anrop %d · pågick %s · kort %s)"):format(spar.anrop,
+			tostring(spar.pagarVidAnrop), tostring(spar.kortVidAnrop)))
+	prova("ett uteblivet serversvar återupplivar ingenting",
+		LektionController.pagar() == false
+			and hitta("Kort").Visible == false and hitta("Live").Visible == false
+			and LektionController.fortsatt() == false,
+		"(lektion av, kort och chip släckta, ingen väntan kvar)")
+
+	--[[ UPPREPAD AVSITTNING: varken dubbel städning eller en andra
+	     begäran till servern. ]]
+	tryck("E")
+	tryck("E")
+	prova("upprepad avsittning ger ingen ny begäran",
+		spar.anrop == 1,
+		("(%d anrop totalt)"):format(spar.anrop))
+
+	--[[ SENT INPUT EFTER AVBROTT får inte starta något. ]]
+	tryck("R")
+	bildrutor(2)
+	prova("sent R efter avbrottet startar ingen lektion",
+		LektionController.pagar() == false and hitta("Kort").Visible == false,
+		"(fortsatt avsutten)")
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else

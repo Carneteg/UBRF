@@ -162,7 +162,10 @@ function LektionController.steg(dt: number, tm: { [string]: any }?)
 	if not tm or tm.uppsutten ~= true then return end
 
 	p.tid += dt
-	Lektion.matning(p, tm)
+	--[[ `dt` följer med: täckningen räknas i uppmätta sekunder, inte i
+	     bildrutor, så en snabb klient inte får "mer underlag" än en
+	     långsam på samma ritt. ]]
+	Lektion.matning(p, tm, dt)
 
 	--[[ LIVE: några ord, och aldrig samma ord två gånger i rad. ]]
 	liveCd -= dt
@@ -185,14 +188,19 @@ function LektionController.steg(dt: number, tm: { [string]: any }?)
 		UgnetaController.efterForsok(h.ovningId, h.nu, h.fore, h.forsokNr)
 		lage = "efter"
 	else
-		--[[ FÖR FÅ MÄTNINGAR — okänd kvalitet, alltså inget påstående.
-		     `avslutaForsok` ger nil när försöket inte fick minst
-		     MIN_MATNINGAR prov (ryttaren satt aldrig upp, telemetrin
-		     uteblev). Att visa ett kort här hade blivit antingen falskt
-		     beröm eller falskt fel om en ritt som aldrig mättes. Passet
-		     går vidare, tyst. ]]
-		Lektion.vidare(p)
-		lage = if p.klar then "ingen" else "ny"
+		--[[ INGET UNDERLAG → INGET OMDÖME, men spelaren får veta varför.
+		     `avslutaForsok` ger nil när ingen dimension nådde kraven
+		     (ryttaren satt aldrig upp, telemetrin uteblev, fälten var
+		     ogiltiga). Att gissa fram ett omdöme hade blivit falskt
+		     beröm eller falskt fel om en ritt som aldrig mättes — men att
+		     bara tyst gå vidare vore obegripligt: hon såg ett försök ta
+		     slut utan ett ord. Kortet säger därför exakt det som är
+		     sant, varken mer eller mindre, och väntar på spelaren som
+		     alla andra kort. ]]
+		UgnetaController.visa("Försöket kunde inte bedömas",
+			{ "Det fanns inte tillräckligt mätt underlag den här gången." },
+			true, if p.forsokNr < 2 then "Prova igen" else "Nästa övning")
+		lage = "efter"
 	end
 	liveCd, liveSagt = 0, ""
 end

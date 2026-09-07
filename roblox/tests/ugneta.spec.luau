@@ -383,6 +383,98 @@ do
 		string.format("(%d deklarerade)", #Lektion.SKILLNAD))
 end
 
+--[[ ══ OKÄNT ÄR INTE NOLL — OCH INTE HELLER FULL POTT ═════════════
+	Senior review av b303530, punkt 2. Förut lästes varje fält som
+	`or 0`, och då kunde en telemetri som bara sa `{uppsutten = true}`
+	både klaga (balans 0) och berömma (lugn 1, tempo 1). Provet skiljer
+	därför tre lägen åt: uppmätt värde, uppmätt NOLLA och saknat. ]]
+do
+	local tomt = Lektion.kvalitet({ uppsutten = true })
+	local antalMatta = 0
+	for _, v in tomt do if v ~= nil then antalMatta += 1 end end
+	check("utan telemetri mäts INGEN dimension",
+		antalMatta == 0,
+		string.format("(%d mätta av %d fält)", antalMatta, 7))
+	check("och lugnet blir inte 1 för att spänningen saknas",
+		tomt.respons == nil,
+		string.format("(respons %s)", tostring(tomt.respons)))
+	check("och tempot blir inte full pott för att önskad fart saknas",
+		tomt.tempo == nil,
+		string.format("(tempo %s)", tostring(tomt.tempo)))
+
+	--[[ EN UPPMÄTT NOLLA ÄR ETT VÄRDE. Den får inte försvinna bara för
+	     att rättelsen gjorde saknade fält till nil. ]]
+	local nolla = Lektion.kvalitet({ uppsutten = true, balans = 0, mjukhet = 0 })
+	check("men en uppmätt nolla är fortfarande en nolla",
+		nolla.balans == 0 and nolla.mjukhet == 0,
+		string.format("(balans %s · mjukhet %s)", tostring(nolla.balans),
+			tostring(nolla.mjukhet)))
+
+	--[[ NaN och oändlighet är mätfel, inte mätvärden. ]]
+	local trasig = Lektion.kvalitet({ uppsutten = true, balans = 0 / 0,
+		mjukhet = math.huge, fokus = -math.huge })
+	check("NaN och oändlighet räknas som saknade, inte som värden",
+		trasig.balans == nil and trasig.mjukhet == nil and trasig.respons == nil,
+		string.format("(balans %s · mjukhet %s · respons %s)",
+			tostring(trasig.balans), tostring(trasig.mjukhet),
+			tostring(trasig.respons)))
+
+	--[[ DELVIS MÄTT: bara balans finns. Då ska balans bedömas och
+	     ingenting annat hittas på. ]]
+	local delvis = Lektion.kvalitet({ uppsutten = true, balans = 0.8 })
+	check("delvis telemetri ger bara den mätta dimensionen",
+		delvis.balans == 0.8 and delvis.mjukhet == nil and delvis.timing == nil
+			and delvis.tempo == nil,
+		string.format("(balans %s · mjukhet %s · timing %s)",
+			tostring(delvis.balans), tostring(delvis.mjukhet),
+			tostring(delvis.timing)))
+end
+
+--[[ ══ INGEN BEDÖMNING UTAN UNDERLAG ════════════════════════════════ ]]
+do
+	local p = Lektion.nyttPass()
+	for _ = 1, 400 do Lektion.matning(p, { uppsutten = true }, 1 / 30) end
+	check("400 bildrutor utan mätvärden ger fortfarande inget omdöme",
+		Lektion.avslutaForsok(p) == nil and next(Lektion.medel(p)) == nil,
+		string.format("(prov %d · medel tomt %s)", p.prov.n,
+			tostring(next(Lektion.medel(p)) == nil)))
+
+	--[[ EN KORT SNUTT RÄCKER INTE. Två bildrutor med värden är inte ett
+	     försök — kravet är mätt TID, inte antal bildrutor. ]]
+	local kort = Lektion.nyttPass()
+	for _ = 1, 2 do Lektion.matning(kort, { uppsutten = true, balans = 0.9 }, 1 / 30) end
+	check("två bildrutor med värden räcker inte för ett omdöme",
+		Lektion.avslutaForsok(kort) == nil,
+		string.format("(balans-sek %.2f av %.2f)", kort.prov.sek.balans or 0,
+			Lektion.MIN_DIM_SEK))
+end
+
+--[[ ══ TÄCKNINGEN ÄR BILDFREKVENSOBEROENDE ═════════════════════════
+	Samma ritt, två bildfrekvenser. Förut räknades prov per bildruta, så
+	120 fps gav fyra gånger så mycket "underlag" som 30 fps på samma
+	sekunder. Nu ska båda ge samma bedömning. ]]
+do
+	local function rid(fps)
+		local p = Lektion.nyttPass()
+		local dt = 1 / fps
+		for _ = 1, fps * 3 do                       -- exakt 3 sekunder
+			Lektion.matning(p, { uppsutten = true, balans = 0.8, mjukhet = 0.6 }, dt)
+		end
+		return p
+	end
+	local lag, hog = rid(30), rid(120)
+	local mLag, mHog = Lektion.medel(lag), Lektion.medel(hog)
+	check("30 och 120 fps ger samma bedömda dimensioner på samma ritt",
+		(mLag.balans ~= nil) == (mHog.balans ~= nil)
+			and math.abs((mLag.balans or 0) - (mHog.balans or 0)) < 1e-6,
+		string.format("(30 fps %s · 120 fps %s · sek %.2f/%.2f)",
+			tostring(mLag.balans), tostring(mHog.balans),
+			lag.prov.sek.balans or 0, hog.prov.sek.balans or 0))
+	check("och båda når tidskravet trots olika antal prov",
+		lag.prov.n ~= hog.prov.n and mLag.balans ~= nil and mHog.balans ~= nil,
+		string.format("(prov %d mot %d)", lag.prov.n, hog.prov.n))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
