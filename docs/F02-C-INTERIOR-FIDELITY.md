@@ -1,6 +1,6 @@
 # F02-C — Interiörens källtrohet
 
-Status: implementation in progress, not PRODUCT_ACCEPTED. Owner: ChatGPT, temporary delegation by Tobias on 2026-09-07. The accepted baseline is main `e65675dfe3584f5654aab3280d53692fe9b17f1a`.
+Status: implementation in progress, not PRODUCT_ACCEPTED. Owner: Replit environment/world builder; ChatGPT orchestrates and reviews, Claude owns gameplay/integration, Tobias retains final PASS. The accepted baseline is main `e65675dfe3584f5654aab3280d53692fe9b17f1a`.
 
 ## First implementation batch: finishes and lockers
 
@@ -21,6 +21,19 @@ invented labels or anatomical text. The existing ceiling duct carries shared
 perforation metadata and is rendered with the visible perforation rows on both
 platforms. Object footprints, positions, room boundaries and collision are
 unchanged.
+
+The bounded post-review correction uses the V1/R1 originals `IMG_0140`–
+`IMG_0143` documented in
+`docs/source-audit/P0-P1-ORIGINAL-VERIFICATION-2026-09-07.md`. It keeps every
+canonical theory-room object transform and collision body while the renderers
+add non-semantic marker traces to the existing boards, unlabeled graphic
+layers to the two existing anatomy posters, wood frames/legs and light seat
+surfaces to the existing furniture, suspended housings to the existing lights,
+and a perforated rectangular profile for the existing ceiling tray. These are visual
+derivatives, not transcriptions: no source text or anatomical claim is
+invented. The web floor now uses a dedicated low-contrast, non-directional
+interior concrete texture with no line/grid operations; Roblox retains one
+non-colliding `Concrete` surface from the same canonical finish data.
 
 ## Verification contract
 
