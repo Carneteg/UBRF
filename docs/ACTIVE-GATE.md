@@ -1,62 +1,93 @@
 # Active Gate
 
-Current active implementation: **P0 Grandstand / Läktare — issue #81, PR #114**
+Current active implementation: **Sammanhållen produktprovsbaseline — PR #135**
 
-Primary builder: **Claude**
+Källleveranser som baselinen är byggd av:
+
+| spår | ägare | PR | SHA |
+|---|---|---|---|
+| Miljö | **Replit** | #134 | `98736e3` (evidenshead), `0848366` (produkt-SHA) |
+| Gameplay | **Claude** | #128 | `f183963` |
+| Governance | ChatGPT | #133 | `cf9c5e1` |
+| Accepterad bas | — | — | `e65675d` |
+
+Integration: **Claude**
 Review: **ChatGPT**
 Product acceptance: **Tobias**
 
 Mandatory delivery chain:
 
-> **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
+> **TILLDELAD BUILDER BYGGER → CHATGPT REVIEWS → TOBIAS ACCEPTS**
+
+Rollfördelningen mellan builders står i `docs/ENVIRONMENT-DELIVERY.md`: Replit
+bygger miljön, Claude bygger gameplay och integration. Äldre gate-text som
+utpekar Claude som ensam builder gäller inte.
 
 ## Current priority
 
-Claude's active work is now **PR #114 / issue #81**. G02-C / PR #119 is `PRODUCT_ACCEPTED` and merged at `9f15475f4137984238325bd533a068684f9daa85`.
+Den sammanhållna baselinen i PR #135 ska bli produktprovbar: en byggd webb och
+en deterministisk Roblox-export ur samma miljö- och spelkanon, relevanta
+regressioner körda på integrations-SHA:t, och en spelbar Vercel-preview.
 
-Do not start unrelated work while the grandstand P0 is active.
+Acceptance criteria för nästa gate efter #135 skrivs av ChatGPT, inte av en
+builder. Det här dokumentet registrerar vad som är aktivt — det uppfinner inte
+nya krav.
 
-### Grandstand product requirement
+Starta inte orelaterat arbete medan baselinen är aktiv.
 
-The web and Roblox experiences must agree on the same physical grandstand truth:
+## Accepted / merged
 
-- player can walk from ground level onto the grandstand without teleporting,
-- avatar visibly rises with collision/floor height,
-- steps are physically readable and walkable with keyboard and touch/joystick,
-- deck stays opaque under the player,
-- no yellow/transparent debug abstraction geometry in product view,
-- player can move at least 10 m along the grandstand walkway,
-- judge booth and seating must not block the usable walkway,
-- exterior UBRF geometry stays locked unless a verified source requires a change,
-- Vercel is the only UBRF preview/deploy path.
+### P0 Läktare — issue #81 / PR #114
 
-### Known root cause from failed attempts
+`PRODUCT_ACCEPTED` av Tobias 2026-09-07 04:25 UTC på
+`a1360bcf2a08fdaa469d489f379f44683b526a56`, mergad till main i `e65675d`.
+Inte längre aktivt arbete.
 
-The previous implementation proved that internal collision/path tests are not enough when rendering reads different state.
+Lärdomarna från de underkända försöken står kvar och är **bindande** för allt
+kommande arbete som rör rendering, kollision, kamera och avatarhöjd:
 
-Claude must preserve these lessons:
+1. `v3dFigurKloss` måste använda samma vertikala spelartillstånd som kollision
+   och kamera (`o.y` / `VD.pz`), inte hårdkodad Y=0.
+2. Review-/debuggeometri, som de gula genomskinliga trappabstraktionerna, ska
+   vara dev/debug-only och aldrig synlig i produktvyn.
+3. Kanonisk trapp-/däckgeometri hör hemma i den kanoniska site-/världsmodellen,
+   inte som en sen runtime-patch.
+4. Rendering, kollision, kamera och avatarhöjd ska verifieras tillsammans i den
+   faktiska spelarvägen.
+5. Webb och Roblox ska dela samma avsikts-/geometrikontrakt i stället för att
+   hålla parallella sanningar.
 
-1. `v3dFigurKloss` must use the same vertical player state as collision/camera (`o.y` / `VD.pz`), not hard-coded Y=0.
-2. Review/debug geometry such as the yellow transparent stair abstractions must be dev/debug-only, never product-visible.
-3. Canonical stair/deck geometry must live in the canonical site/world model, not as a late runtime patch.
-4. Rendering, collision, camera and avatar height must be verified together in the actual player-facing path.
-5. Web and Roblox must share the same intent/geometry contract rather than parallel truths.
+Läktarens produktkrav — gångbar trappa utan teleport, synlig höjdändring,
+läsbara steg med tangentbord och touch, ogenomskinligt däck under spelaren,
+ingen debuggeometri i produktvy, minst 10 m gångväg, fri passage förbi
+domarbåset, låst exteriörgeometri utan verifierad källa — är accepterade och
+skyddas nu av `laktartest`. De får inte regrera.
 
-The direct wrapper patch in `src/mobil.js` from the earlier #114 experiment is temporary evidence, not the desired final architecture. Claude should consolidate the real fix into the canonical implementation.
+### G02-C / PR #119
 
-## Required Claude handshake
+`PRODUCT_ACCEPTED` av Tobias och mergad. Issue #84 stängd.
 
-A GitHub mention alone is not proof that the active Claude session received the task.
+### G02-C follow-up / issue #126 → PR #128
 
-Before implementation begins, Claude must post in PR #114:
+Uppföljningsskulden i #126 är byggd i PR #128 och satt till
+`READY_FOR_PRODUCT_ACCEPTANCE` av ChatGPT efter oberoende re-review av
+`f183963`. Kvarvarande produktgrind: Tobias Studio-/enhetstest.
 
-`CLAUDE_ACK #114 — base/head <SHA> — scope: P0 läktare, fysisk trappa, korrekt avatarhöjd/sikt, web+Roblox`
+## Required builder handshake
 
-Only after that ACK is the handoff considered delivered.
+En GitHub-mention är inte i sig bevis för att en builder-session tagit emot
+uppgiften.
 
-When ready for review Claude must post:
+Innan implementation börjar ska tilldelad builder posta i den aktuella PR:en:
 
-- exact HEAD SHA,
+`CLAUDE_ACK #<nr> — base/head <SHA> — scope: <avgränsning>`
+
+(motsvarande för Replit). Först efter den kvittensen räknas handoffen som
+levererad.
+
+När leveransen är klar ska builder posta:
+
+- exakt HEAD SHA,
 - Changed,
 - Tested,
 - Falsified,
@@ -65,26 +96,24 @@ When ready for review Claude must post:
 - human-test requirements,
 - `READY_FOR_CHATGPT_REVIEW`.
 
-No merge before ChatGPT review and Tobias product test.
+Ingen merge före ChatGPT-review och Tobias produkttest.
 
-## Accepted / follow-up work
+## Vercel
 
-### G02-C / PR #119
+Vercel är den enda UBRF-preview-/deployvägen.
 
-`PRODUCT_ACCEPTED` by Tobias and merged. Issue #84 is closed.
+## Separat, ej aktivt
 
-Known accepted follow-up debt is tracked in **issue #126**:
-- full Roblox Ugneta production wiring,
-- physical Ugneta coach at the arena fence in Roblox.
+### PR #116 — Lydia-pronomenet
 
-Issue #126 is not the active P0 and must wait until the grandstand is resolved unless Tobias explicitly reprioritizes it.
-
-### PR #116 — Lydia pronoun
-
-Separate technically green language decision. Do not spend active implementation cycles on it unless Tobias reprioritizes it.
+Separat, tekniskt grönt språkbeslut. Lägg inga aktiva implementationscykler på
+det om inte Tobias omprioriterar.
 
 ## Source-of-truth rule
 
-If this document conflicts with Tobias's newer explicit instruction, Tobias wins and this file must be updated immediately.
+Om det här dokumentet står i konflikt med en nyare uttrycklig instruktion från
+Tobias vinner Tobias, och filen ska uppdateras omedelbart.
 
-If PR comments and this file disagree and there is no newer Tobias instruction, stop implementation and reconcile the task before coding.
+Om PR-kommentarer och den här filen säger emot varandra och det inte finns
+någon nyare Tobias-instruktion: stoppa implementationen och red ut uppgiften
+innan du kodar.
