@@ -10,6 +10,18 @@ The existing sourced locker groups now carry shared material and front-detail me
 
 The lounge sofas use the source's black leather identity rather than Roblox Fabric. Roblox has no Leather material enum; SmoothPlastic is the supported approximation. No new sofa, room or pentry has been invented.
 
+## Theory-room source-fidelity pass
+
+The verified source remains `references/buildings/stall/stall-inne-04-teorisalen.jpg`.
+The two existing whiteboard objects now carry shared frame/tray detail metadata,
+and the web no longer draws a separate fallback board outside `INREDNING`.
+The two existing framed anatomical posters remain exactly two sourced surfaces;
+their renderers add only the horse silhouette visible in the source, without
+invented labels or anatomical text. The existing ceiling duct carries shared
+perforation metadata and is rendered with the visible perforation rows on both
+platforms. Object footprints, positions, room boundaries and collision are
+unchanged.
+
 ## Verification contract
 
 `tools/interiortest.mjs` executes canonical data and the actual web furniture renderer with a recording mesh harness. It checks sources, finish differentiation, door counts, hardware, positive primitive dimensions, export values and negative mutations. `docs/INTERIOR-GEOMETRY-LOCK.json` records the accepted building/room/grandstand spatial snapshot and existing locker footprints. The test is deliberately independent of browser rendering and cannot by itself prove visual fidelity or game feel. Existing movement, visual, geometry and Roblox checks must also pass. A full browser and Roblox Studio test are separate evidence.

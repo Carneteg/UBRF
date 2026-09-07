@@ -3202,6 +3202,10 @@ return {
 				},
 				z0 = 0.95,
 				farg = Color3.fromRGB(247, 247, 245),
+				detaljer = {
+					ram = true,
+					hylla = true,
+				},
 				kalla = "stall-inne-04",
 				klass = "VERIFIED",
 				lage = "DERIVED",
@@ -3222,6 +3226,10 @@ return {
 				},
 				z0 = 0.95,
 				farg = Color3.fromRGB(247, 247, 245),
+				detaljer = {
+					ram = true,
+					hylla = true,
+				},
 				kalla = "stall-inne-04",
 				klass = "VERIFIED",
 				lage = "DERIVED",
@@ -3535,6 +3543,9 @@ return {
 				antal = 1,
 				farg = Color3.fromRGB(184, 146, 92),
 				farg2 = Color3.fromRGB(232, 221, 208),
+				detaljer = {
+					motiv = "hastanatomi",
+				},
 				kalla = "stall-inne-04",
 				klass = "VERIFIED",
 				lage = "DERIVED",
@@ -3557,6 +3568,9 @@ return {
 				antal = 1,
 				farg = Color3.fromRGB(184, 146, 92),
 				farg2 = Color3.fromRGB(232, 221, 208),
+				detaljer = {
+					motiv = "hastanatomi",
+				},
 				kalla = "stall-inne-04",
 				klass = "VERIFIED",
 				lage = "DERIVED",
@@ -3677,6 +3691,10 @@ return {
 				},
 				z0 = 2.6,
 				farg = Color3.fromRGB(185, 189, 192),
+				detaljer = {
+					perforerad = true,
+					halrader = 2,
+				},
 				kalla = "stall-inne-04",
 				klass = "VERIFIED",
 				lage = "DERIVED",

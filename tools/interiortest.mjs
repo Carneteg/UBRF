@@ -79,6 +79,25 @@ check('missing material/detail mutation is rejected',()=>{
  const old=o.detaljer;delete o.detaljer;
  try{assert.notEqual(render(o).filter(x=>x.args[3]==='#8E9395').length,8);}finally{o.detaljer=old;}
 });
+check('theory-room source details share data and render without a fallback board',()=>{
+ const boards=I.stall.filter(o=>o.rum==='teorisal'&&o.typ==='whiteboard');
+ const posters=I.stall.filter(o=>o.rum==='teorisal'&&o.typ==='tavlor');
+ const duct=I.stall.find(o=>o.id==='teori_ventkanal');
+ assert.equal(boards.length,2);
+ assert.ok(boards.every(o=>o.kalla==='stall-inne-04'&&o.detaljer.ram&&o.detaljer.hylla));
+ assert.equal(posters.length,2);
+ assert.ok(posters.every(o=>o.kalla==='stall-inne-04'&&o.detaljer.motiv==='hastanatomi'));
+ assert.equal(duct.kalla,'stall-inne-04');
+ assert.deepEqual(JSON.parse(JSON.stringify(duct.detaljer)),{perforerad:true,halrader:2});
+ assert.ok(render(boards[0]).some(x=>x.args[3]==='#AEB3B5'));
+ assert.ok(render(posters[0]).some(x=>x.args[3]==='#A86F68'));
+ assert.equal(render(duct).filter(x=>x.args[3]==='#5F6264').length,28);
+ const stallBuild=source.slice(source.indexOf('function v3dStall('),source.indexOf('/* ── Ridhuset invändigt'));
+ assert.equal(stallBuild.includes('S.whiteboard.pos'),false);
+ const out=read('roblox/buildings/UBRFKomplex.luau');
+ assert.ok(out.includes('motiv = "hastanatomi"'));
+ assert.ok(out.includes('perforerad = true'));
+});
 check('no invented pentry or room geometry',()=>{
  assert.equal([...I.stall,...I.ridhus].some(o=>o.id.startsWith('pentry')),false);
  assert.equal(S.klubb.rum.some(r=>r.id==='pentry'),false);

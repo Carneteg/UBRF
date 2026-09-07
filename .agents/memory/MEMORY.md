@@ -1,0 +1,1 @@
+- [Headless visual QA baseline](headless-visual-qa.md) — current runner can stall before fixed review cameras; compare against an untouched baseline before blaming scene edits.

@@ -104,9 +104,11 @@ const INREDNING = (() => {
        ligger däremot 0,025 innanför sin linje (fotoväggen på x 0,02). */
     {id:"teori_whiteboard_1", rum:"teorisal", typ:"whiteboard", pos:[T.x+T.w-0.10, 68.55], rikt:W,
      matt:{b:1.5, d:0.03, h:1.0}, z0:0.95, farg:"#F7F7F5",
+     detaljer:{ram:true, hylla:true},
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     {id:"teori_whiteboard_2", rum:"teorisal", typ:"whiteboard", pos:[T.x+T.w-0.10, 66.95], rikt:W,
      matt:{b:1.5, d:0.03, h:1.0}, z0:0.95, farg:"#F7F7F5",
+     detaljer:{ram:true, hylla:true},
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     {id:"teori_bord_1", rum:"teorisal", typ:"bord", pos:[13.2, 68.4], rikt:N,
      matt:{b:2.4, d:0.8, h:0.73}, farg:"#C8A878", kolliderar:true,
@@ -127,9 +129,11 @@ const INREDNING = (() => {
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     {id:"teori_plansch_1", rum:"teorisal", typ:"tavlor", pos:[15.9, T.y+0.10], rikt:N,
      matt:{b:1.0, d:0.03, h:0.75}, z0:1.25, antal:1, farg:"#B8925C", farg2:"#E8DDD0",
+     detaljer:{motiv:"hastanatomi"},
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     {id:"teori_plansch_2", rum:"teorisal", typ:"tavlor", pos:[14.6, T.y+0.10], rikt:N,
      matt:{b:1.0, d:0.03, h:0.75}, z0:1.25, antal:1, farg:"#B8925C", farg2:"#E8DDD0",
+     detaljer:{motiv:"hastanatomi"},
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     ...[15.3,14.6,13.9].map((x,i)=>(
       {id:"teori_kartong_"+(i+1), rum:"teorisal", typ:"kartong", pos:[x, T.y+0.3], rikt:N,
@@ -145,6 +149,7 @@ const INREDNING = (() => {
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
     {id:"teori_ventkanal", rum:"teorisal", typ:"ventkanal", pos:[14.25, 69.2], rikt:N,
      matt:{b:5.6, d:0.3, h:0.3}, z0:2.6, farg:"#B9BDC0",
+     detaljer:{perforerad:true, halrader:2},
      kalla:"stall-inne-04", klass:"VERIFIED", lage:"DERIVED"},
 
     /* SADELKAMMAREN — stall-inne-03-sadelkammaren.jpg (IMG_0137). Bilden

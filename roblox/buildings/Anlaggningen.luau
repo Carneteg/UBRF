@@ -800,9 +800,50 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 		elseif typ == "vaxt" then
 			del(" kruka", X + W / 2 - 0.2, z0, Y + H / 2 - 0.2, 0.4, 0.35, 0.4, f2, Enum.Material.SmoothPlastic)
 			del(" krona", X, z0 + ob.matt.h * 0.45, Y, W, ob.matt.h * 0.55, H, f, Enum.Material.Grass, false)
-		elseif typ == "tavlor" or typ == "whiteboard" or typ == "exitskylt" or typ == "lysror" then
+		elseif typ == "tavlor" then
 			del("", X, z0, Y, W, ob.matt.h, H, f,
-				if typ == "lysror" or typ == "exitskylt" then Enum.Material.Neon else Enum.Material.SmoothPlastic, false)
+				Enum.Material.SmoothPlastic, false)
+			local D = ob.detaljer or {}
+			local langsX = math.abs(math.sin(ob.rikt)) > 0.5
+			local front = if langsX
+				then Y + (if math.sin(ob.rikt) > 0 then H else -0.015)
+				else X + (if math.cos(ob.rikt) > 0 then W else -0.015)
+			local function mark(suffix, u, low, ww, hh, color)
+				if langsX then
+					del(suffix, X + u, z0 + low, front, ww, hh, 0.015, color, Enum.Material.SmoothPlastic, false)
+				else
+					del(suffix, front, z0 + low, Y + u, 0.015, hh, ww, color, Enum.Material.SmoothPlastic, false)
+				end
+			end
+			local langd = if langsX then W else H
+			mark(" bildyta", langd * 0.08, ob.matt.h * 0.08, langd * 0.84, ob.matt.h * 0.84, f2)
+			if D.motiv == "hastanatomi" then
+				-- Endast den källbelagda hästsiluetten, inga uppfunna texter.
+				local a = Color3.fromRGB(168, 111, 104)
+				mark(" anatomi kropp", langd * 0.31, ob.matt.h * 0.48, langd * 0.34, ob.matt.h * 0.16, a)
+				mark(" anatomi hals", langd * 0.62, ob.matt.h * 0.55, langd * 0.12, ob.matt.h * 0.13, a)
+				mark(" anatomi ben 1", langd * 0.38, ob.matt.h * 0.24, langd * 0.035, ob.matt.h * 0.25, a)
+				mark(" anatomi ben 2", langd * 0.60, ob.matt.h * 0.24, langd * 0.035, ob.matt.h * 0.25, a)
+			end
+		elseif typ == "whiteboard" then
+			del("", X, z0, Y, W, ob.matt.h, H, Color3.fromRGB(185, 189, 192), Enum.Material.Metal, false)
+			local langsX = math.abs(math.sin(ob.rikt)) > 0.5
+			local front = if langsX
+				then Y + (if math.sin(ob.rikt) > 0 then H else -0.015)
+				else X + (if math.cos(ob.rikt) > 0 then W else -0.015)
+			if langsX then
+				del(" skrivyta", X + 0.03, z0 + 0.03, front, W - 0.06, ob.matt.h - 0.06, 0.015, f, Enum.Material.SmoothPlastic, false)
+				if ob.detaljer and ob.detaljer.hylla then
+					del(" pennhylla", X + W * 0.04, z0 - 0.04, front, W * 0.92, 0.035, 0.08, Color3.fromRGB(174, 179, 181), Enum.Material.Metal, false)
+				end
+			else
+				del(" skrivyta", front, z0 + 0.03, Y + 0.03, 0.015, ob.matt.h - 0.06, H - 0.06, f, Enum.Material.SmoothPlastic, false)
+				if ob.detaljer and ob.detaljer.hylla then
+					del(" pennhylla", front, z0 - 0.04, Y + H * 0.04, 0.08, 0.035, H * 0.92, Color3.fromRGB(174, 179, 181), Enum.Material.Metal, false)
+				end
+			end
+		elseif typ == "exitskylt" or typ == "lysror" then
+			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Neon, false)
 		elseif typ == "dorr" then
 			-- stängt dörrblad med karm, fönster och handtag PÅ en vägg (ingen passage)
 			del(" karm", X - 0.10, 0, Y - 0.01, W + 0.20, ob.matt.h + 0.10, H + 0.02, Color3.fromRGB(238, 238, 232), Enum.Material.SmoothPlastic, false)
@@ -815,6 +856,24 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 			gp.Reflectance = 0.6
 		elseif typ == "ventkanal" then
 			del("", X, z0, Y, W, ob.matt.h, H, f, Enum.Material.Metal, false)
+			local D = ob.detaljer or {}
+			if D.perforerad then
+				local langsX = math.abs(math.sin(ob.rikt)) > 0.5
+				local front = if langsX
+					then Y + (if math.sin(ob.rikt) > 0 then H else -0.01)
+					else X + (if math.cos(ob.rikt) > 0 then W else -0.01)
+				local langd = if langsX then W else H
+				for rad = 0, (D.halrader or 1) - 1 do
+					for i = 0, 13 do
+						local u = langd * (i + 0.5 + (rad % 2) * 0.25) / 14
+						if langsX then
+							del(" perforering", X + u, z0 + 0.055 + rad * 0.075, front, 0.045, 0.045, 0.01, Color3.fromRGB(95, 98, 100), Enum.Material.Metal, false)
+						else
+							del(" perforering", front, z0 + 0.055 + rad * 0.075, Y + u, 0.01, 0.045, 0.045, Color3.fromRGB(95, 98, 100), Enum.Material.Metal, false)
+						end
+					end
+				end
+			end
 		elseif typ == "krokrad" then
 			del(" skena", X, z0 + ob.matt.h - 0.05, Y, W, 0.05, H, f, Enum.Material.Metal, false)
 			del(" vastar", X, z0, Y, W, ob.matt.h - 0.15, H, f2, Enum.Material.Fabric, false)

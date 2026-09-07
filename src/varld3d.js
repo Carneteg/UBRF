@@ -1146,10 +1146,23 @@ function v3dInredning(scen,lagg){
       case"tavlor":{
         const n=o.antal||1, w=b/n;
         for(let i=0;i<n;i++){ const lx=-b/2+w*(i+0.5), hh=h*(n>1?0.8:1), yy=n>1?(i%2)*0.15:0;
-          box(w*0.82,hh,0.03,f,lx,yy,0); box(w*0.7,hh*0.85,0.01,f2,lx,yy+hh*0.075,0.02); }
+          box(w*0.82,hh,0.03,f,lx,yy,0); box(w*0.7,hh*0.85,0.01,f2,lx,yy+hh*0.075,0.026);
+          /* Teorisalens två befintliga anatomiplanscher: bara den tydligt
+             läsbara hästsiluetten från stall-inne-04, inga påhittade etiketter
+             eller anatomiska texter. */
+          if(o.detaljer&&o.detaljer.motiv==="hastanatomi"){
+            const accent="#A86F68", front=0.038;
+            box(w*0.34,hh*0.16,0.008,accent,lx-w*0.02,yy+hh*0.47,front);
+            box(w*0.12,hh*0.13,0.008,accent,lx+w*0.19,yy+hh*0.54,front);
+            for(const sx of [-0.12,0.10])
+              box(w*0.035,hh*0.25,0.008,accent,lx+w*sx,yy+hh*0.23,front);
+          }
+        }
         break;}
       case"whiteboard":
         box(b,h,0.03,"#B9BDC0",0,0,0); box(b-0.06,h-0.06,0.01,f,0,0.03,0.02);
+        if(o.detaljer&&o.detaljer.hylla)
+          box(b*0.92,0.035,0.08,"#AEB3B5",0,-0.04,0.045);
         break;
       case"skap":
         box(b,h,d,f,0,0,0);
@@ -1163,6 +1176,12 @@ function v3dInredning(scen,lagg){
            taket och syntes aldrig (checkpoint A). Här läggs den på sin
            radie. */
         alla.cyl(d/2,d/2,b,f,M4.mul(M4.mul(mat,M4.translation(b/2,d/2,0)),M4.rotZ(Math.PI/2)),10);  // rotZ(+90°) lägger lokala +y längs −x: starta vid +b/2
+        if(o.detaljer&&o.detaljer.perforerad){
+          const rader=o.detaljer.halrader||1, kol=14;
+          for(let j=0;j<rader;j++) for(let i=0;i<kol;i++)
+            box(0.045,0.045,0.008,"#5F6264",
+              -b/2+b*(i+0.5+(j%2)*0.25)/kol,0.055+j*0.075,d/2+0.006);
+        }
         break;
       case"krokrad":{
         box(b,0.05,0.05,f,0,h-0.05,0);
@@ -1820,12 +1839,9 @@ function v3dStall(lagg,opp){
    }
    lagg(g,null);}
   lagg(rum,T.parlspont);
-  /* Whiteboarden. */
-  const wb=new Bygge();
-  wb.panel(1.6,1.0,"#F6F4EE",M4.mul(M4.translation(S.whiteboard.pos[0]+0.2,1.7,
-    S.whiteboard.pos[1]),M4.rotY(-Math.PI/2)));
-  lagg(wb,null);
-  /* Inredningen ur INREDNING.stall (F02-B). */
+  /* Inredningen ur INREDNING.stall (F02-B/F02-C), inklusive teorisalens
+     verifierade whiteboardytor. Ingen fristående reserv-whiteboard här:
+     webben och Roblox ska läsa samma objektlista. */
   v3dInredning("stallinne",lagg);
 }
 
