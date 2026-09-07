@@ -923,7 +923,7 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 			del(" vastar", X, z0, Y, W, ob.matt.h - 0.15, H, f2, Enum.Material.Fabric, false)
 		elseif typ == "skapbank" then
 			-- `vaningar` = luckor i två våningar (ridhus-klubb-16/-20), `ben` = kroppen på svarta ben (-20/-21).
-			-- Närbilderna -18/-20 visar ljusa profilramar och perforerad ventilation, inte målade streck.
+			-- Ventilation byggs bara som familjens separata över-/sockelband, aldrig som ett gemensamt hålmönster.
 			local ben = ob.ben or 0
 			local kh = ob.matt.h - ben
 			local v = ob.vaningar or 1
@@ -982,24 +982,25 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 						front(namn .. " nummerskylt", u + w * 0.13, zy + dh * 0.88, 0.035, 0.012, 0.02, Color3.fromRGB(217, 216, 209), Enum.Material.SmoothPlastic)
 					end
 					if D.ventilation then
-						local rader = (D.ventilationshal and D.ventilationshal[1]) or 2
-						local kolumner = (D.ventilationshal and D.ventilationshal[2]) or 5
-						for r = 0, rader - 1 do
-							for k = 0, kolumner - 1 do
-								local steg = if kolumner > 1 then k / (kolumner - 1) else 0
-								front(namn .. " ventilationshål " .. r .. "-" .. k,
-									u + w * 0.30 + w * 0.40 * steg, zy + 0.035 + r * 0.026,
-									0.012, 0.012, 0.022, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
-							end
+						for k = 0, 2 do
+							front(namn .. " ventilation " .. k, u + w * 0.285, zy + 0.035 + k * 0.025,
+								w * 0.43, 0.008, 0.02, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
 						end
 					end
+				end
+			end
+			if D.overkantVent then
+				local hal = math.max(8, n * 4)
+				for k = 0, hal - 1 do
+					front(" overkantvent " .. k, langd * (0.04 + 0.92 * k / (hal - 1)),
+						z0 + kh - 0.035, 0.018, 0.012, 0.022, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
 				end
 			end
 			if D.sockelVent then
 				local hal = math.max(8, n * 4)
 				for k = 0, hal - 1 do
 					front(" sockelvent " .. k, langd * (0.04 + 0.92 * k / (hal - 1)),
-						z0 + ben + 0.025, 0.012, 0.012, 0.022, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
+						z0 + ben + 0.025, 0.018, 0.012, 0.022, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
 				end
 			end
 		elseif typ == "bommar" then
@@ -2138,12 +2139,8 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			local y = 4
 			while y < R.langd - 2 do
 				n += 1
-				BK.box(model, base, "Lysrörshölje " .. n,
-					o.x + x - ly.bredd / 2, R.tak - ly.underTak, o.y + y - ly.langd / 2,
-					ly.bredd, ly.holjeH, ly.langd, ly.holjeFarg, Enum.Material.Metal).CanCollide = false
 				BK.box(model, base, "Lysrör " .. n,
-					o.x + x - ly.bredd * 0.36, R.tak - ly.underTak - ly.holjeH * 0.42,
-					o.y + y - ly.langd * 0.44, ly.bredd * 0.72, ly.lysH, ly.langd * 0.88,
+					o.x + x - ly.bredd / 2, R.tak - ly.underTak, o.y + y - ly.langd / 2, ly.bredd, 0.08, ly.langd,
 					ly.farg, Enum.Material.Neon).CanCollide = false
 				y += ly.delning
 			end
