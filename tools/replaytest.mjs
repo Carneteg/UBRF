@@ -74,10 +74,28 @@ const kor = () => ev(() => {
   /* Momentet avslutas av lifecyclen vid moment.tid * 2.2 — för storvolten
      32 s, alltså 70,4 s. Loopen måste alltså rida LÄNGRE än så för att
      försöket ska hinna avslutas och posten hamna i historiken. 30 Hz i
-     2700 varv = 90 s. */
+     2700 varv = 90 s.
+
+     G02-D rider TVÅ försök genom samma loop, med valpanelen emellan.
+     Två gånger 70,4 s i 30 Hz är 4224 varv; taket är 5200 så att
+     slutpanelen hinner visas. Mätt, inte gissat: med 2700 tog varven
+     slut mitt i försök 2, och provet såg grönt ut på ett moment som
+     aldrig avslutades. */
   const dt = 1 / 30;
   const vag = [];
-  for (let i = 0; i < 2700; i++) {
+  /* G02-D: valpanelen står mellan försöken. Provet svarar som spelaren —
+     "Prova igen" en gång, och sedan stannar det vid slutpanelen så att
+     replay-UI:t kan granskas där det faktiskt visas. Loopen stegar inte
+     ritten vidare medan panelen är uppe; det är hela poängen med G.paus. */
+  let paneler = 0, slutpanel = false;
+  for (let i = 0; i < 5200; i++) {
+    if (G.paus) {
+      paneler++;
+      const igen = document.getElementById("valIgen");
+      if (igen) igen.click();
+      else { slutpanel = true; break; }
+      continue;
+    }
     RIDIN.skankel = 0.55; RIDIN.tygel = 0.34; RIDIN.sits = 0.2; RIDIN.styr = 0.42;
     stegaRitt(dt);
     lararSteg(dt);
@@ -89,7 +107,10 @@ const kor = () => ev(() => {
   const hist = ugnetaForsokHistorik(ovning) || [];
   const post = ugnetaForsokPost(ovning, 1);
   return {
-    ovning, forsok: hist.length,
+    ovning, forsok: hist.length, paneler, slutpanel,
+    seKnapp: !!document.getElementById("valSe"),
+    igenKnapp: !!document.getElementById("valIgen"),
+    bedomda: G.bedomda || 0,
     vagLangd: vag.length,
     post: post ? {
       schema: post.schema, ovning: post.ovning, ovningVersion: post.ovningVersion,
@@ -122,6 +143,159 @@ prova("inspelningen ryms i taket — ingen trunkering på ett normalt pass",
 prova("takten följer loopen i stället för att skriva flera sampel per varv",
   !!r.post && r.post.sampel <= r.vagLangd,
   r.post ? `${r.post.sampel} sampel på ${r.vagLangd} loopvarv` : "—");
+
+console.log("\n── VALET EFTER FÖRSÖKET ──");
+prova("lifecyclen stannar och frågar i stället för att rida om automatiskt",
+  !r.fel && r.paneler >= 1, r.fel || `${r.paneler} paneler`);
+prova("slutpanelen erbjuder replayen men inte ett tredje försök",
+  !r.fel && r.slutpanel === true && r.seKnapp === true && r.igenKnapp === false,
+  r.fel || `slutpanel ${r.slutpanel} · Se ritten ${r.seKnapp} · Prova igen ${r.igenKnapp}`);
+prova("två försök och två paneler ger ETT betyg, inte flera",
+  !r.fel && r.bedomda === 1, r.fel || `bedomda ${r.bedomda}`);
+
+console.log("\n── REPLAYEN SOM SPELAREN FAKTISKT ÖPPNAR ──");
+{
+  /* Här klickas det på riktigt i den byggda sidan. Ett prov som anropar
+     visaReplay() direkt hade inte sagt något om att knappen finns, att
+     den sitter i panelen eller att den gör något. */
+  const oppna = await ev(() => {
+    const b = document.getElementById("valSe");
+    if (!b) return { fel: "ingen Se ritten-knapp" };
+    b.click();
+    return { fel: null,
+      canvas: !!document.getElementById("replayBana"),
+      spela: !!document.getElementById("replaySpela"),
+      langsam: !!document.getElementById("replayLangsam"),
+      skjut: !!document.getElementById("replaySkjut"),
+      ghostKnapp: !!document.getElementById("replayGhost"),
+      ghost: !!(REPLAY.ghost && REPLAY.ghost.sampel && REPLAY.ghost.sampel.length),
+      spelar: !!(REPLAY.up && REPLAY.up.spelar),
+      langd: REPLAY.up ? REPLAY.up.langd() : 0 };
+  });
+  prova("knappen öppnar en replay med bana och kontroller",
+    !oppna.fel && oppna.canvas && oppna.spela && oppna.langsam && oppna.skjut,
+    oppna.fel || `bana ${oppna.canvas} · spela ${oppna.spela} · fart ${oppna.langsam} · skjut ${oppna.skjut}`);
+  prova("den jämför mot spelarens EGET förra försök, inte mot en mall",
+    !oppna.fel && oppna.ghost === true && oppna.ghostKnapp === true,
+    oppna.fel || `ghost ${oppna.ghost} · knapp ${oppna.ghostKnapp}`);
+  prova("och det finns något att spela upp",
+    !oppna.fel && oppna.langd > 1, oppna.fel || `${Number(oppna.langd).toFixed(1)} s`);
+
+  /* Spelar den? Mätt på LÄGET, inte på flaggan `spelar` — en flagga som
+     står på medan ingenting rör sig är precis felet provet ska hitta.
+
+     Väntan är en poll med tak, inte en fast paus: headless Chromium
+     ritar spelets 3D-scen i mjukvara och hinner bara några bildrutor i
+     sekunden. En fast paus på 500 ms fångade första rAF-varvet, där dt
+     är noll, och provet blev rött på en replay som faktiskt spelade. */
+  const las = () => ev(() => REPLAY.up ? REPLAY.up.lage : -1);
+  const fore = await las();
+  let efter = fore;
+  for (let i = 0; i < 40 && efter <= fore; i++) { await page.waitForTimeout(200); efter = await las(); }
+  prova("uppspelningen går framåt av sig själv",
+    efter > fore, `${fore.toFixed(2)} → ${efter.toFixed(2)} s`);
+
+  const p1 = await ev(() => { document.getElementById("replaySpela").click();
+    return { spelar: REPLAY.up.spelar, lage: REPLAY.up.lage,
+      etikett: document.getElementById("replaySpela").textContent }; });
+  await page.waitForTimeout(800);
+  const p2 = await ev(() => REPLAY.up.lage);
+  prova("Pausa stoppar den — läget står stilla",
+    p1.spelar === false && Math.abs(p2 - p1.lage) < 1e-9,
+    `${p1.etikett} · ${p1.lage.toFixed(2)} → ${p2.toFixed(2)} s`);
+
+  const halv = await ev(() => { const b = document.getElementById("replayLangsam");
+    b.click(); return { fart: REPLAY.up.fart, etikett: b.textContent }; });
+  prova("halv fart går att välja och syns på knappen",
+    halv.fart === 0.5 && /Normal/i.test(halv.etikett), `${halv.fart} · "${halv.etikett}"`);
+
+  const skrubb = await ev(() => {
+    const s = document.getElementById("replaySkjut");
+    s.value = "500"; s.dispatchEvent(new Event("input"));
+    return { lage: REPLAY.up.lage, langd: REPLAY.up.langd(), spelar: REPLAY.up.spelar };
+  });
+  prova("spolningen sätter läget till ungefär mitten och pausar",
+    Math.abs(skrubb.lage - skrubb.langd / 2) < 0.2 && skrubb.spelar === false,
+    `${skrubb.lage.toFixed(2)} av ${skrubb.langd.toFixed(2)} s`);
+
+  const gh = await ev(() => { const b = document.getElementById("replayGhost");
+    b.click(); const av = REPLAY.ghostSyns; const e1 = b.textContent;
+    b.click(); return { av, pa: REPLAY.ghostSyns, e1, e2: b.textContent }; });
+  prova("förra försöket går att dölja och visa igen",
+    gh.av === false && gh.pa === true && /Visa/i.test(gh.e1) && /Dölj/i.test(gh.e2),
+    `${gh.e1} → ${gh.e2}`);
+
+  /* Reduced-motion-alternativet: samma uppgifter i läsbar form. */
+  const txt = await ev(() => {
+    const ruta = document.getElementById("replayRutnat");
+    const t = ruta ? ruta.textContent : "";
+    return { text: t, siffror: (t.match(/\d+,\d+/g) || []).length,
+      tabell: !!(ruta && ruta.querySelector("table")) };
+  });
+  prova("mätvärdena finns som läsbar text bredvid banan, inte bara som bild",
+    txt.tabell === true && txt.siffror >= 3,
+    `tabell ${txt.tabell} · ${txt.siffror} mätvärden`);
+
+  /* Read-only genom UI:t, inte bara genom modulen. */
+  const ro = await ev(() => {
+    const f = { px: G.px, py: G.py, rikt: G.rikt,
+      gangart: G.ride && G.ride.gangart, tempo: G.ride && G.ride.tempo,
+      forsok: (ugnetaForsokHistorik(REPLAY.ovningId) || []).length };
+    document.getElementById("replaySpela").click();   // spela igen
+    return f;
+  });
+  await page.waitForTimeout(800);
+  const ro2 = await ev(f => ({
+    orort: G.px === f.px && G.py === f.py && G.rikt === f.rikt
+      && (G.ride && G.ride.gangart) === f.gangart && (G.ride && G.ride.tempo) === f.tempo,
+    forsok: (ugnetaForsokHistorik(REPLAY.ovningId) || []).length,
+    paus: !!G.paus }), ro);
+  prova("en spelande replay rör varken hästen, ritten eller historiken",
+    ro2.orort === true && ro2.forsok === ro.forsok,
+    `orört ${ro2.orort} · ${ro.forsok} → ${ro2.forsok} försök i historiken`);
+  prova("och lektionen står kvar pausad bakom replayen",
+    ro2.paus === true, `G.paus ${ro2.paus}`);
+
+  const ut = await ev(() => { const b = document.getElementById("replayTillbaka");
+    if (!b) return { fel: "ingen Tillbaka-knapp" };
+    b.click();
+    return { fel: null, replayKvar: !!document.getElementById("replayBana"),
+      valTillbaka: !!document.getElementById("valVidare"), raf: REPLAY.raf,
+      paus: !!G.paus };
+  });
+  prova("Tillbaka stänger replayen och lämnar spelaren i valet, inte i tomma intet",
+    !ut.fel && ut.replayKvar === false && ut.valTillbaka === true && ut.raf === 0,
+    ut.fel || `replay kvar ${ut.replayKvar} · val ${ut.valTillbaka} · raf ${ut.raf}`);
+
+  const slut = await ev(() => { document.getElementById("valVidare").click();
+    return { paus: !!G.paus, bedomda: G.bedomda || 0,
+      ov: document.getElementById("ov").classList.contains("hide") }; });
+  prova("Gå vidare släpper pausen utan att betygsätta momentet en gång till",
+    slut.paus === false && slut.bedomda === 1 && slut.ov === true,
+    `paus ${slut.paus} · bedomda ${slut.bedomda} · overlay dold ${slut.ov}`);
+}
+
+console.log("\n── MINDRE RÖRELSE: INNEHÅLLET FINNS ÄNDÅ ──");
+{
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const d = await ev(() => {
+    const id = "storvolt";
+    if (!replayFinns(id, 2)) return { fel: "ingen post att visa" };
+    const ok = visaReplay(id, 2);
+    const ruta = document.getElementById("replayRutnat");
+    return { fel: ok ? null : "visaReplay nekade",
+      spelar: !!(REPLAY.up && REPLAY.up.spelar),
+      text: ruta ? ruta.textContent : "",
+      tabell: !!(ruta && ruta.querySelector("table")) };
+  });
+  prova("uppspelningen startar inte av sig själv när mindre rörelse är begärt",
+    !d.fel && d.spelar === false, d.fel || `spelar ${d.spelar}`);
+  prova("men samma mätvärden står där i text",
+    !d.fel && d.tabell === true && /mindre rörelse/i.test(d.text),
+    d.fel || `tabell ${d.tabell}`);
+  await ev(() => { stangReplay(); if (typeof valStang === "function") valStang(); });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+}
 
 console.log("\n── POSTEN BESKRIVER DEN VÄG SOM FAKTISKT REDS ──");
 {

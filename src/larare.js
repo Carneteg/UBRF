@@ -267,6 +267,24 @@ function ugnetaNyttForsok(moment,forsokNr){
   LARARE.aktivForsok=o?ugnetaTomForsok(o):null;
   LARARE.forsokNr=forsokNr||1;
   LARARE.liveCd=0;LARARE.liveSagt="";
+  /* Och en ny INSPELNING. ugnetaForsokSteg startar bara en inspelning
+     när den byter övning eller moment — en omridning av SAMMA moment
+     ser likadan ut för den, så försök 2 spelades inte in alls. Bara
+     försök 1 hamnade i historiken, och "se ritten och jämför" hade
+     ingenting att jämföra. Hittat av replay-provet när slutpanelen
+     vägrade visa sig. */
+  if(o&&typeof ugnetaInspelningStarta==="function")ugnetaInspelningStarta(o);
+}
+
+/* Stänger det pågående försöket PÅ BEGÄRAN av lifecyclen, i samma
+   bildruta som momentet tar slut. ugnetaForsokSteg upptäcker slutet
+   först nästa bildruta — den körde redan innan G.momentKlart sattes —
+   och valpanelen hann då fråga "vill du se ritten?" innan ritten fanns
+   i historiken. */
+function ugnetaStangForsok(){
+  const j=ugnetaForsokAvsluta();
+  if(j){LARARE.sistaFeedback=j;LARARE.vantaFeedback=j;}
+  return j;
 }
 
 /* ── Live-registret: kort cue, inget kort ─────────────────────── */
@@ -669,7 +687,7 @@ function ugnetaForsokHistorik(id){return (LARARE.forsok&&LARARE.forsok[id])||[];
 
 const LARARE={fokus:null,start:null,sagt:"",cd:0,brasedan:0,beromt:0,bytt:0,
   attributCd:0,upprepad:null,inled:false,bratid:0,tid:0,ugnetaNasta:null,
-  forsok:Object.create(null),aktivForsok:null,vantaFeedback:null,inspelare:null,
+  forsok:Object.create(null),aktivForsok:null,vantaFeedback:null,sistaFeedback:null,inspelare:null,
   forsokNr:1,liveT:0,liveCd:0,liveSagt:""};
 
 function lararNollstall(){
@@ -677,6 +695,7 @@ function lararNollstall(){
   LARARE.beromt=0;LARARE.bytt=0;LARARE.attributCd=0;LARARE.upprepad=null;
   LARARE.inled=false;LARARE.bratid=0;LARARE.tid=0;LARARE.ugnetaNasta=null;
   LARARE.forsok=Object.create(null);LARARE.aktivForsok=null;LARARE.vantaFeedback=null;
+  LARARE.sistaFeedback=null;
   /* Inspelaren nollställs med resten: en avbruten ritt får inte lämna en
      halv post som nästa lektion råkar avsluta och lägga i historiken. */
   if(LARARE.inspelare)LARARE.inspelare.avsluta();
@@ -722,6 +741,11 @@ function lararSteg(dt){
      jämförelsen mot försök 1. Det är den pedagogiska återkopplingen. */
   if(LARARE.vantaFeedback){
     const j=LARARE.vantaFeedback;LARARE.vantaFeedback=null;LARARE.inled=false;LARARE.cd=12;
+    /* Kortet är en HUD-remsa som tonar bort. Valpanelen som öppnas i
+       samma bildruta ligger ovanpå den, så återkopplingen sparas här och
+       skrivs ut i panelen — annars hade spelaren fått välja om hon vill
+       rida om utan att se vad Ugneta just sagt om försöket. */
+    LARARE.sistaFeedback=j;
     const txt=j.punkter.join(" ");return lararMeddelande(txt,j.rubrik,j.punkter,j.ton,j);
   }
 

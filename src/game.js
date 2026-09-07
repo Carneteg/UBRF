@@ -160,6 +160,9 @@ const G={
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
   moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,momentForsok:1,
+  /* Lektionen står stilla medan spelaren svarar på ett val. Hästen
+     rider inte vidare bakom en panel hon inte kan se förbi. */
+  paus:false,
   betyg:{},npcs:[],
   hinderAktiva:false,nastaHinder:0,rivna:new Set(),handelser:[],banTid:0,banStart:0,
   vagranStopp:0,sisteHopp:0,luft:0,auto:false,
@@ -725,6 +728,9 @@ function saga(txt,dur){const s=document.getElementById("saga");
 /* ── Lektionen ── */
 function startaLektion(){
   G.scen="lektion";G.momentIx=0;G.momentT=0;G.momentForsok=1;G.betyg={};
+  /* En ny lektion börjar aldrig pausad. Lämnade spelaren förra passet
+     med valpanelen uppe låg flaggan kvar och hästen stod stilla. */
+  G.paus=false;
   G.narkontakter=0; G.narkontaktT=-99; G.naraRop=0;
   G.bedomda=0; G.klarade=0;
   if(typeof lararNollstall==="function")lararNollstall();
@@ -791,6 +797,56 @@ function visaMoment(){
   document.getElementById("momentMal").textContent=momentMalText(m,G.grupp);
   saga(m.text,4);
 }
+/* ── DE TVÅ VÄGARNA UT UR ETT AVSLUTAT FÖRSÖK ────────────────────────
+   Låg förut inbakade i stegaLektion. De är utbrutna för att panelen ska
+   kunna kalla på exakt samma kod som lifecyclen gjorde — inte en kopia
+   som kan glida isär från den. */
+
+/* Rid om momentet. Samma moment-objekt, samma mätning, ny ackumulator. */
+function momentProvaIgen(m){
+  G.paus=false;
+  G.momentForsok++;
+  G.momentT=0;G.momentHall=0;G.momentKlart=false;
+  if(typeof ugnetaNyttForsok==="function")ugnetaNyttForsok(m,G.momentForsok);
+  visaMoment();
+}
+
+/* Betygsättningen av ett avslutat moment. Ett moment betygsätts EN
+   gång — därför är den här utbruten och anropas från exakt ett ställe i
+   varje väg ut. Ett tidigare utkast lät panelen sätta hoppaMoment och
+   återinträda i grenen; då räknades momentet in i `bedomda` två gånger
+   och godkäntgränsen flyttade sig tyst. */
+function momentBetygsatt(m){
+  if(!m||!m.bedoms)return;
+  const mal2=momentMal(m,G.grupp);
+  const andel=mal2?clamp((G.momentHall||0)/mal2.hall,0,1):1;
+  G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp)*(0.25+0.75*andel);
+  G.bedomda=(G.bedomda||0)+1;
+  if(andel>=0.999)G.klarade=(G.klarade||0)+1;
+}
+
+/* Vidare till nästa moment, eller till domen om passet är slut. */
+function momentNasta(){
+  G.paus=false;
+  G.momentIx++;
+  G.momentForsok=1;
+  if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;
+    G.momentHall=0;G.momentKlart=false;visaMoment();}
+  else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
+    const dom=domaRitt([],0,true);
+    dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
+    G.moment=null; G.momentKlart=false;   // passet är över, inte pausat
+    avslutaBana(dom);
+  }
+}
+
+/* Nöj dig med försöket. Momentet BETYGSÄTTS fortfarande — spelaren
+   hoppar över omridningen, inte bedömningen. */
+function momentGaVidare(m){
+  momentBetygsatt(m);
+  momentNasta();
+}
+
 function stegaLektion(dt){
   /* Passet är slut när scenen bytt. Utan den här raden räknar ett extra
      anrop in ett helt nytt pass: avslutaBana registrerar, men G.moment
@@ -856,6 +912,9 @@ function stegaLektion(dt){
        ingen fastnar. Då blir det underkänt, inte oändligt. */
     if(G.momentKlart||G.momentT>=m.tid*2.2||G.hoppaMoment){
       G.hoppaMoment=false;
+      /* Stäng försöket FÖRST. Betyget, valet och replayen ska alla se
+         samma avslutade ritt — inte en som stängs en bildruta senare. */
+      if(typeof ugnetaStangForsok==="function")ugnetaStangForsok();
       /* Betyget vägs med hur mycket av hålltiden du faktiskt klarade.
          Utan det gick hela lektionen att sitta av i HALT: kvaliteten
          driver upp mot 0,72 när ingenting händer, taket m.tid*2.2 tvingar
@@ -871,13 +930,7 @@ function stegaLektion(dt){
          moment som både betygsätts och rids om. */
       const forsokKvar=(typeof ugnetaVillRepetera==="function")
         && ugnetaVillRepetera(m,G.momentForsok);
-      if(m.bedoms&&!forsokKvar){
-        const mal2=momentMal(m,G.grupp);
-        const andel=mal2?clamp((G.momentHall||0)/mal2.hall,0,1):1;
-        G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp)*(0.25+0.75*andel);
-        G.bedomda=(G.bedomda||0)+1;
-        if(andel>=0.999)G.klarade=(G.klarade||0)+1;
-      }
+      if(!forsokKvar)momentBetygsatt(m);
       /* G02-C: en känd övning rids TVÅ försök genom samma lifecycle.
          Efter försök 1 ger Ugneta en sak som var bra, en att förbättra
          och ett tydligt "Prova igen"; efter försök 2 jämför hon mot
@@ -889,22 +942,24 @@ function stegaLektion(dt){
          om ska inte räknas två gånger i `bedomda`/`klarade`; det vore
          en tyst regeländring av godkäntgränsen. */
       if(forsokKvar){
-        G.momentForsok++;
-        G.momentT=0;G.momentHall=0;G.momentKlart=false;
-        if(typeof ugnetaNyttForsok==="function")ugnetaNyttForsok(m,G.momentForsok);
-        visaMoment();
+        /* G02-D: omridningen är spelarens BESLUT, inte lifecyclens.
+           Panelen tar över här och kallar tillbaka på momentProvaIgen()
+           eller momentGaVidare(). Svarar den nej — ingen DOM, ingen
+           återkoppling att visa — går det gamla automatiska försöket
+           igång som förut. Ingen lektion får låsa sig på en panel som
+           inte gick att rita. */
+        if(typeof visaForsokVal==="function"&&visaForsokVal(m,G.momentForsok,false))return;
+        momentProvaIgen(m);
         return;
       }
-      G.momentIx++;
-      G.momentForsok=1;
-      if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;
-        G.momentHall=0;G.momentKlart=false;visaMoment();}
-      else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel
-        const dom=domaRitt([],0,true);
-        dom.tid=G.lektion.reduce((a,m)=>a+m.tid,0);
-        G.moment=null; G.momentKlart=false;   // passet är över, inte pausat
-        avslutaBana(dom);
-      }
+      /* Efter DET SISTA försöket på en övning som rids två gånger finns
+         det något att jämföra: den här ritten mot den förra. Då — och
+         bara då — erbjuds valet igen, nu utan "Prova igen" eftersom
+         försöken är slut. Ett moment som bara rids en gång får ingen
+         panel; ett val utan innehåll är sämre än inget val. */
+      if(G.momentForsok>=2&&typeof visaForsokVal==="function"
+         &&visaForsokVal(m,G.momentForsok,true))return;
+      momentNasta();
     }
   }
 }
@@ -996,8 +1051,13 @@ function loop(now){
   const dt=Math.min((now-last)/1000,0.05);last=now;G.t+=dt;
   ljudPuls(dt);
   if(G.scen==="lektion"||G.scen==="bana"){
-    stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
-    if(G.luft>0)G.luft-=dt;
+    /* PAUS: världen ritas fortfarande — spelaren ska se var hon står —
+       men ingenting stegas. Utan det red hästen vidare medan replayen
+       låg öppen, och försöket hon just tittade på hann bli ogiltigt. */
+    if(!G.paus){
+      stegaRitt(dt);stegaNPC(dt);stegaLektion(dt);
+      if(G.luft>0)G.luft-=dt;
+    }
     if(G.vy==="2d"){gl3dLage(false);draw2D(G);}else draw3D(G);
     ritaHUD(); ritaVaxer();
   } else if(G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne"){
