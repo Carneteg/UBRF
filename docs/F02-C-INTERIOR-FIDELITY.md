@@ -1,6 +1,6 @@
 # F02-C — Interiörens källtrohet
 
-Status: implementation in progress, not PRODUCT_ACCEPTED. Owner: ChatGPT, temporary delegation by Tobias on 2026-09-07. The accepted baseline is main `e65675dfe3584f5654aab3280d53692fe9b17f1a`.
+Status: implementation in progress, not PRODUCT_ACCEPTED. Owner: Replit environment/world builder; ChatGPT orchestrates and reviews, Claude owns gameplay/integration, Tobias retains final PASS. The accepted baseline is main `e65675dfe3584f5654aab3280d53692fe9b17f1a`.
 
 ## First implementation batch: finishes and lockers
 
@@ -9,6 +9,31 @@ The source images show two distinct interior floors. The stall clubhouse has a w
 The existing sourced locker groups now carry shared material and front-detail metadata. The green group has four columns and two tiers, white profile frames, black legs, visible hardware and lower ventilation (`ridhus-klubb-20/-21`). The white two-tier group has five columns, hence ten doors (`ridhus-klubb-16`), replacing the previous three-by-two simplification. The high gray/dark group uses five columns (`-16/-18`). Long corridor rows preserve their previous count approximation because the exact full count is not securely established. The renderers add decorative panel seams, number labels, metal hardware and ventilation. The existing object footprint, position, orientation and collision body are unchanged. Small decorative dimensions are style approximations, not architectural measurements.
 
 The lounge sofas use the source's black leather identity rather than Roblox Fabric. Roblox has no Leather material enum; SmoothPlastic is the supported approximation. No new sofa, room or pentry has been invented.
+
+## Theory-room source-fidelity pass
+
+The verified source remains `references/buildings/stall/stall-inne-04-teorisalen.jpg`.
+The two existing whiteboard objects now carry shared frame/tray detail metadata,
+and the web no longer draws a separate fallback board outside `INREDNING`.
+The two existing framed anatomical posters remain exactly two sourced surfaces;
+their renderers add only the horse silhouette visible in the source, without
+invented labels or anatomical text. The existing ceiling duct carries shared
+perforation metadata and is rendered with the visible perforation rows on both
+platforms. Object footprints, positions, room boundaries and collision are
+unchanged.
+
+The bounded post-review correction uses the V1/R1 originals `IMG_0140`–
+`IMG_0143` documented in
+`docs/source-audit/P0-P1-ORIGINAL-VERIFICATION-2026-09-07.md`. It keeps every
+canonical theory-room object transform and collision body while the renderers
+add non-semantic marker traces to the existing boards, unlabeled graphic
+layers to the two existing anatomy posters, wood frames/legs and light seat
+surfaces to the existing furniture, suspended housings to the existing lights,
+and a perforated rectangular profile for the existing ceiling tray. These are visual
+derivatives, not transcriptions: no source text or anatomical claim is
+invented. The web floor now uses a dedicated low-contrast, non-directional
+interior concrete texture with no line/grid operations; Roblox retains one
+non-colliding `Concrete` surface from the same canonical finish data.
 
 ## Verification contract
 

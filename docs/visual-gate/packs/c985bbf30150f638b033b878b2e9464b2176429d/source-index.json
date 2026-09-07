@@ -1,0 +1,245 @@
+{
+  "render_head": "c985bbf30150f638b033b878b2e9464b2176429d",
+  "sources": [
+    {
+      "id": "references/buildings/stall/stall-fasad-04.jpg",
+      "type": "image",
+      "git_blob": "0164242873034977c6c75c8bf1a76b0058469c80",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-fasad-04.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-entre-01.jpg",
+      "type": "image",
+      "git_blob": "5a98fcf7c2ad80053a37c5f48fd424acd6713d83",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-entre-01.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-entre-03.jpg",
+      "type": "image",
+      "git_blob": "0b21c67f1899efd2b9d471982bf3fbae761b3dad",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-entre-03.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-entre-06.jpg",
+      "type": "image",
+      "git_blob": "ef4e2b03fd9b625145b5ff511015d67e084ebd28",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-entre-06.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-entre-15-dorren.jpg",
+      "type": "image",
+      "git_blob": "a50ddfdb7dbbe8f6621ba7a8a16e01cf401714b1",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-entre-15-dorren.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-entre-16-runda-fonstren.jpg",
+      "type": "image",
+      "git_blob": "9ce0cced6157912624763c5343f632574350628e",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-entre-16-runda-fonstren.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-inne-01-uppehallsrummet.jpg",
+      "type": "image",
+      "git_blob": "5bb4f66089975193e1a6e2ad94d168a908920db7",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-inne-01-uppehallsrummet.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-inne-02-pentryt.jpg",
+      "type": "image",
+      "git_blob": "d371d5457abf5565cf6599f3f8c1794955fddf93",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-inne-02-pentryt.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-inne-04-teorisalen.jpg",
+      "type": "image",
+      "git_blob": "4947847a81cbe1f7f50547fac922599fa871e599",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-inne-04-teorisalen.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-inne-03-sadelkammaren.jpg",
+      "type": "image",
+      "git_blob": "95016fba46dcd5ffa7d0c1265b8a433477db2dfd",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-inne-03-sadelkammaren.jpg"
+    },
+    {
+      "id": "references/spatial/stall-efter-pausrum-po-v1.md",
+      "type": "document",
+      "git_blob": "7fdcf3df4bbd17924f8994ba158701285c2f75db",
+      "github_url": "https://github.com/Carneteg/UBRF/blob/c985bbf30150f638b033b878b2e9464b2176429d/references/spatial/stall-efter-pausrum-po-v1.md"
+    },
+    {
+      "id": "references/buildings/stall/stall-inne-05-stallgangen.jpg",
+      "type": "image",
+      "git_blob": "a4bc5a9458a26d89e795e4d143f4238dc36325fb",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-inne-05-stallgangen.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-gang-05.jpg",
+      "type": "image",
+      "git_blob": "c6c357e61f8fd925540df5a5be26ed6fc54d4800",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-gang-05.jpg"
+    },
+    {
+      "id": "references/buildings/stall/stall-inne-08-breda-gangen.jpg",
+      "type": "image",
+      "git_blob": "f39097972f14811b2d8de00c5c5598dafe623e65",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/stall/stall-inne-08-breda-gangen.jpg"
+    },
+    {
+      "id": "references/plans/SATELLIT-HASTGANG-2026-08-30.md",
+      "type": "document",
+      "git_blob": "3817fc195fc1725c54cf7bd58fdfb8c3fb1dccc5",
+      "github_url": "https://github.com/Carneteg/UBRF/blob/c985bbf30150f638b033b878b2e9464b2176429d/references/plans/SATELLIT-HASTGANG-2026-08-30.md"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
+      "type": "image",
+      "git_blob": "f266a82ebfeb9bc92ffb3cce9b58c54578b15979",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
+      "type": "image",
+      "git_blob": "8f9f8fcf890ecf00c680f6d57f90a96d97f54a73",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-02-glasrummen.jpg",
+      "type": "image",
+      "git_blob": "b82fcba615e3b334c778eba40053dd9394c92758",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-02-glasrummen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg",
+      "type": "image",
+      "git_blob": "fb258977aace05cd7235176afdce1001d2805608",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-16-skaprummet-med-pelaren.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-18-skapraden-narbild.jpg",
+      "type": "image",
+      "git_blob": "cdedd8916843fbfe0aa737992d5de30dd517b353",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-18-skapraden-narbild.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-20-grona-skapen.jpg",
+      "type": "image",
+      "git_blob": "7462fd6db716a5a832d166ae0ef4bff1a0b33829",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-20-grona-skapen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-21-grona-skapen-vinkel.jpg",
+      "type": "image",
+      "git_blob": "68ccc14a05dc8636730b1cc1f32683ae7a242c5d",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-21-grona-skapen-vinkel.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-23-kortsidan-vid-a.jpg",
+      "type": "image",
+      "git_blob": "7f0bbc0397f11980369236b41d2b8e7e8fafecce",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-23-kortsidan-vid-a.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-11-ridbanan.jpg",
+      "type": "image",
+      "git_blob": "1766c675a2af676b6939a8973b359b7d510eb825",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-11-ridbanan.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg",
+      "type": "image",
+      "git_blob": "48b312fc1d12cbbf953822bca09f924c9ea65b3e",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-01-glasrummen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-06-laktaren-och-glasrummet.jpg",
+      "type": "image",
+      "git_blob": "ce8eeb027592e072732fc499b7ed0498d11dc35a",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-06-laktaren-och-glasrummet.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-27-glasrummet-inifran-banan.jpg",
+      "type": "image",
+      "git_blob": "5cd50c81a51f04d5bb778a9fd179627ee6c7182a",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-27-glasrummet-inifran-banan.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-14-laktaren.jpg",
+      "type": "image",
+      "git_blob": "cfe7410b8f1c8c9dbde1c1a6d6d5b0bdd66c0e2a",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-14-laktaren.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-41-banan-fran-laktaren.jpg",
+      "type": "image",
+      "git_blob": "3f2b5cb3d32b7fea8117e00f838584c127758700",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-41-banan-fran-laktaren.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-40-domartornet-pa-laktaren.jpg",
+      "type": "image",
+      "git_blob": "45522f646b9d845b953938745c71efa4af0f8ccf",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-40-domartornet-pa-laktaren.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-43-laktaren-vid-h.jpg",
+      "type": "image",
+      "git_blob": "dd8a149ce774e965a6d07ede288a679da4888b05",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-43-laktaren-vid-h.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-07-laktartrappstegen.jpg",
+      "type": "image",
+      "git_blob": "984fa0f2c3f1db1140db51669acfa6c57524c8c0",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-07-laktartrappstegen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-10-overvaningens-gang.jpg",
+      "type": "image",
+      "git_blob": "985f9fb7a642c78df4655fbbfe5f7b7414db68d0",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-10-overvaningens-gang.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/granskning-2026-08-31/C-kortandan-och-kafeet.md",
+      "type": "document",
+      "git_blob": "46a3414ea7e005cd0ab7a8ffb4d2a6f9c99def3c",
+      "github_url": "https://github.com/Carneteg/UBRF/blob/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/granskning-2026-08-31/C-kortandan-och-kafeet.md"
+    },
+    {
+      "id": "references/video/ridhus-nyckelrutor/IMG_0169-f05-korridoren-mot-entren.jpg",
+      "type": "image",
+      "git_blob": "97dfcbab859013ad0805615ab02bb7c48eea888a",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/video/ridhus-nyckelrutor/IMG_0169-f05-korridoren-mot-entren.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-03-korridordorrarna.jpg",
+      "type": "image",
+      "git_blob": "1ffe16ad3d354e632f65b694999bf9112611c211",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-03-korridordorrarna.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-39-gangen-bakom-laktaren.jpg",
+      "type": "image",
+      "git_blob": "fed24367f6e6dc84d1a12e59c2e21c208ef7f9a1",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-39-gangen-bakom-laktaren.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-11-trappan-till-hinderforradet.jpg",
+      "type": "image",
+      "git_blob": "fd3efac7ce9de3e076b0f0b581c0b70fefd0b4b5",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-11-trappan-till-hinderforradet.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-inne-15-hornet-mot-glasrummen.jpg",
+      "type": "image",
+      "git_blob": "a603b1a798dab59d0824ea929662e585b856f640",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-inne-15-hornet-mot-glasrummen.jpg"
+    },
+    {
+      "id": "references/buildings/ridhus/ridhus-klubb-19-dorrarna-till-omkladningen.jpg",
+      "type": "image",
+      "git_blob": "c61ab670e9e3bfe58a717c0d597507975b712572",
+      "github_url": "https://raw.githubusercontent.com/Carneteg/UBRF/c985bbf30150f638b033b878b2e9464b2176429d/references/buildings/ridhus/ridhus-klubb-19-dorrarna-till-omkladningen.jpg"
+    }
+  ]
+}

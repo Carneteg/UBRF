@@ -1,0 +1,7 @@
+{
+  "name": "ubrf-visual-qa",
+  "private": true,
+  "dependencies": {
+    "playwright": "1.55.0"
+  }
+}

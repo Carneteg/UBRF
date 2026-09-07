@@ -23,30 +23,10 @@
    abstraktionsnät finns i scenen.
 
    Kör: python3 tools/build.py && node tools/laktartest.mjs */
-import { chromium } from "playwright";
-import http from "node:http";
-import fs from "node:fs";
-import path from "node:path";
+import { oppnaWebb } from "./qa-webb.mjs";
 
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
-const DIST = path.join(ROT, "dist");
-const PORT = 8796;
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json" };
-const srv = http.createServer((req, res) => {
-  const p = path.join(DIST, decodeURIComponent(req.url.split("?")[0] === "/" ? "/index.html" : req.url.split("?")[0]));
-  fs.readFile(p, (e, d) => { if (e) { res.writeHead(404); res.end(); return; } res.writeHead(200, { "content-type": MIME[path.extname(p)] || "application/octet-stream" }); res.end(d); });
-});
-await new Promise(r => srv.listen(PORT, r));
-
-const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
-const browser = await chromium.launch({ executablePath: fs.existsSync(exe) ? exe : undefined,
-  args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-page.on("pageerror", e => console.log("PAGEERROR", e.message));
-await page.goto(`http://localhost:${PORT}/ridskolan.html`, { waitUntil: "load" });
-await page.waitForTimeout(1500);
-await page.evaluate(() => { try { startaVandring(); } catch (e) { console.log("startaVandring:", e.message); } });
-await page.waitForTimeout(600);
+const webb = await oppnaWebb({ port: 8796 });
+const { page } = webb;
 
 const resultat = [];
 function prova(namn, ok, detalj) {
@@ -224,7 +204,7 @@ prova("och figuren följde med hela vägen",
   ritad.golv !== null && Math.abs(ritad.golv - ritad.pz) < 0.02 && ritad.golv > L.dackZ - 0.02,
   `ritad ${ritad.golv.toFixed(2)} · nivå ${ritad.pz.toFixed(2)}`);
 
-await browser.close(); srv.close();
+await webb.stang();
 const fel = resultat.filter(r => !r.ok).length;
 console.log(fel ? `\n${fel} FEL` : `\nALLA OK (${resultat.length} mätningar)`);
 process.exit(fel ? 1 : 0);

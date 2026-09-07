@@ -76,9 +76,24 @@ function v3dTexturer(){
       c.fillRect(x,y,1+(i%3),1+(i%2));
     }
   },true);
+  /* Klubbrummens källa visar en matt, gjuten yta utan fogar. En egen
+     lågkontrasttextur undviker både markstenens rutnät och den generella
+     betongens tätare korn. Variationerna är deterministiska, mjuka och
+     icke-riktade: de ska läsa som slitage/ljus, aldrig som plattor. */
+  T.mattBetong=glCanvasTex(256,256,(c,w,h)=>{
+    const p=c.createImageData(w,h), tau=Math.PI*2;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      /* Helt periodisk i båda axlarna: motsatta kanter möts utan fog. */
+      const n=2.2*Math.sin(tau*x/w)+1.5*Math.cos(tau*y/h)
+        +0.9*Math.sin(tau*(2*x+y)/w)+0.6*Math.cos(tau*(x-2*y)/h);
+      const v=Math.max(248,Math.min(255,252+n)), i=(y*w+x)*4;
+      p.data[i]=p.data[i+1]=p.data[i+2]=v;p.data[i+3]=255;
+    }
+    c.putImageData(p,0,0);
+  },true);
   T.interiorytor={};
   for(const [id,yta] of Object.entries(INTERIORYTOR))
-    T.interiorytor[id]=T.betong;
+    T.interiorytor[id]=T.mattBetong;
   T.parlspont=glCanvasTex(128,128,(c,w,h)=>{
     c.fillStyle="#F0EADC";c.fillRect(0,0,w,h);
     c.strokeStyle="rgba(0,0,0,.07)";c.lineWidth=1;
@@ -1114,13 +1129,19 @@ function v3dInredning(scen,lagg){
           box(0.05,0.10,0.05,"#9A9A9A",s*(b/2-0.12),-0.10,t*(d/2-0.12)); // ben
         break;
       case"bord":
-        box(b,0.05,d,f,0,h-0.05,0);
+        {const tj=(o.detaljer&&o.detaljer.skivaTjocklek)||0.05;
+        box(b,tj,d,f,0,h-tj,0);
         for(const s of [-1,1]) for(const t of [-1,1])
-          box(0.05,h-0.05,0.05,f2==="#6B6B6B"?f:f2,s*(b/2-0.05),0,t*(d/2-0.05));
-        break;
+          box(0.045,h-tj,0.045,f2==="#6B6B6B"?f:f2,s*(b/2-0.07),0,t*(d/2-0.07));
+        break;}
       case"stol":
         box(b,0.05,d,f,0,0.45,0);
-        box(b*0.9,h-0.5,0.04,f,0,0.5,-d/2+0.02);
+        box(b*0.9,0.07,0.045,f,0,h-0.10,-d/2+0.02);
+        for(const s of [-1,1])
+          box(0.045,h-0.45,0.045,f2,s*(b/2-0.045),0.45,-d/2+0.02);
+        if(o.detaljer&&o.detaljer.ryggSpjalor)
+          for(let i=1;i<=o.detaljer.ryggSpjalor;i++)
+            box(b*0.72,0.035,0.04,f,0,0.49+(h-0.54)*i/(o.detaljer.ryggSpjalor+1),-d/2+0.02);
         for(const s of [-1,1]) for(const t of [-1,1])
           box(0.035,0.45,0.035,f2,s*(b/2-0.04),0,t*(d/2-0.04));
         break;
@@ -1146,23 +1167,56 @@ function v3dInredning(scen,lagg){
       case"tavlor":{
         const n=o.antal||1, w=b/n;
         for(let i=0;i<n;i++){ const lx=-b/2+w*(i+0.5), hh=h*(n>1?0.8:1), yy=n>1?(i%2)*0.15:0;
-          box(w*0.82,hh,0.03,f,lx,yy,0); box(w*0.7,hh*0.85,0.01,f2,lx,yy+hh*0.075,0.02); }
+          box(w*0.82,hh,0.03,f,lx,yy,0); box(w*0.7,hh*0.85,0.01,f2,lx,yy+hh*0.075,0.026);
+          /* Teorisalens två befintliga anatomiplanscher: bara den tydligt
+             läsbara hästsiluetten från stall-inne-04, inga påhittade etiketter
+             eller anatomiska texter. */
+          if(o.detaljer&&o.detaljer.motiv==="hastanatomi"){
+            const accent=o.detaljer.variant===2?"#8C6E5A":"#A86F68", front=0.038;
+            box(w*0.34,hh*0.16,0.008,accent,lx-w*0.02,yy+hh*0.47,front);
+            box(w*0.12,hh*0.13,0.008,accent,lx+w*0.19,yy+hh*0.54,front);
+            box(w*0.10,hh*0.07,0.008,accent,lx+w*0.31,yy+hh*0.57,front);
+            box(w*0.13,hh*0.035,0.008,accent,lx-w*0.25,yy+hh*0.50,front);
+            for(const sx of [-0.12,0.10])
+              box(w*0.035,hh*0.25,0.008,accent,lx+w*sx,yy+hh*0.23,front);
+            for(const k of [-0.22,-0.07,0.08,0.23])
+              box(w*0.018,hh*0.13,0.009,"#D2B8A8",lx+w*k,yy+hh*0.485,front+0.006);
+          }
+        }
         break;}
       case"whiteboard":
         box(b,h,0.03,"#B9BDC0",0,0,0); box(b-0.06,h-0.06,0.01,f,0,0.03,0.02);
+        if(o.detaljer&&o.detaljer.hylla)
+          box(b*0.92,0.035,0.08,"#AEB3B5",0,-0.04,0.045);
+        if(o.detaljer&&o.detaljer.arbetsmarken){
+          const v=o.detaljer.variant||1, ink=v===1?"#506A70":"#65705A";
+          for(let i=0;i<6;i++){
+            const ww=b*(0.13+((i*3+v)%5)*0.055);
+            box(ww,0.018,0.006,ink,-b*0.34+ww/2+(i%2)*b*0.22,h*0.18+i*h*0.105,0.037);
+          }
+        }
         break;
       case"skap":
         box(b,h,d,f,0,0,0);
         if(o.mikro){ box(0.45,0.27,0.35,"#1A1A1A",0,h,0); box(0.30,0.20,0.01,"#3A3A3A",0,h+0.035,0.18); }
         break;
       case"kartong": box(b,h,d,f,0,0,0); break;
-      case"lysror": box(b,h,d,f,0,0,0,glas); break;
+      case"lysror":
+        if(o.detaljer&&o.detaljer.holje) box(b,h*0.7,d,"#D8D8D3",0,h*0.3,0);
+        box(b*0.88,h*0.45,d*0.62,f,0,-h*0.02,0,glas);
+        if(o.detaljer&&o.detaljer.upphangd)
+          for(const s of [-1,1]) box(0.018,0.22,0.018,"#777A7B",s*b*0.34,-0.16,0);
+        break;
       case"ventkanal":
-        /* Liggande spiralkanal längs objektets bredd: cyl() lyfter kroppen
-           halva LÄNGDEN innan den läggs ner, så den hamnade 2,8 m över
-           taket och syntes aldrig (checkpoint A). Här läggs den på sin
-           radie. */
-        alla.cyl(d/2,d/2,b,f,M4.mul(M4.mul(mat,M4.translation(b/2,d/2,0)),M4.rotZ(Math.PI/2)),10);  // rotZ(+90°) lägger lokala +y längs −x: starta vid +b/2
+        /* Originalet visar en lång perforerad rektangulär takränna. Den
+           delar fortfarande samma kanoniska footprint som tidigare. */
+        box(b,d,d,f,0,0,0);
+        if(o.detaljer&&o.detaljer.perforerad){
+          const rader=o.detaljer.halrader||1, kol=14;
+          for(let j=0;j<rader;j++) for(let i=0;i<kol;i++)
+            box(0.045,0.045,0.008,"#5F6264",
+              -b/2+b*(i+0.5+(j%2)*0.25)/kol,0.055+j*0.075,d/2+0.006);
+        }
         break;
       case"krokrad":{
         box(b,0.05,0.05,f,0,h-0.05,0);
@@ -1820,12 +1874,9 @@ function v3dStall(lagg,opp){
    }
    lagg(g,null);}
   lagg(rum,T.parlspont);
-  /* Whiteboarden. */
-  const wb=new Bygge();
-  wb.panel(1.6,1.0,"#F6F4EE",M4.mul(M4.translation(S.whiteboard.pos[0]+0.2,1.7,
-    S.whiteboard.pos[1]),M4.rotY(-Math.PI/2)));
-  lagg(wb,null);
-  /* Inredningen ur INREDNING.stall (F02-B). */
+  /* Inredningen ur INREDNING.stall (F02-B/F02-C), inklusive teorisalens
+     verifierade whiteboardytor. Ingen fristående reserv-whiteboard här:
+     webben och Roblox ska läsa samma objektlista. */
   v3dInredning("stallinne",lagg);
 }
 
