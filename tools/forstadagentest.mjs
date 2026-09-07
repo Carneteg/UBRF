@@ -297,6 +297,20 @@ prova("uppsittningen startar lektionen — spelaren sitter upp",
   s.scen === "lektion" && foreUpp.scen !== "lektion",
   `scen ${foreUpp.scen} → ${s.scen}`);
 
+/* ══ 9. TVÅ TRYCK ══════════════════════════════════════════════════
+   Ett andra E direkt efter uppsittningen får inte starta om lektionen
+   eller hoppa ett moment. Provet ligger HÄR och inte i
+   lastlagetest.mjs, för här är tillståndet spelets eget: ett läge satt
+   för hand har inget `G.ride` — den byggs av skötseln — och sittUpp()
+   sprack då på `null.gangart`. Det hade sagt något om mitt
+   konstruerade tillstånd, inte om spelet. */
+const eft1 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentForsok }));
+await tryckE(null);
+const eft2 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentForsok }));
+prova("ett andra tryck startar inte om lektionen",
+  eft2.scen === "lektion" && eft2.ix === eft1.ix && eft2.forsok === eft1.forsok,
+  `moment ${eft1.ix}/${eft1.forsok} → ${eft2.ix}/${eft2.forsok}`);
+
 console.log("\nPAGEERRORS:", sidfel.length ? sidfel.slice(0, 3) : "inga");
 const fel = resultat.filter(x => !x).length;
 console.log(fel === 0 ? `\nALLA OK (${resultat.length} mätningar)` : `\n${fel} FEL av ${resultat.length}`);

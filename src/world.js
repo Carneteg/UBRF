@@ -781,6 +781,22 @@ function ritaVagvisare(){
   }
 }
 
+/* ── Hästen som data — aldrig ett oskyddat uppslag ────────────────
+   `interaktioner()` och `ritaVandring()` körs varje bildruta inifrån
+   spelloopen, och loopen har ingen try/catch. Ett uppslag på ett id som
+   inte finns i HORSES kastade därför inte bara bort en prompt: hela
+   bildrutan dog innan requestAnimationFrame hann köas igen, och spelet
+   stannade permanent. Mätt i tools/lastlagetest.mjs — G.t stod stilla
+   på 0,42 efteråt.
+
+   Namnet går genom hastNamn() (src/uppdrag.js), som redan är
+   vägvisarens accessor och faller tillbaka på "hästen". Färgen har
+   ingen sådan sanning att falla tillbaka på, så där ritas hästen
+   helt enkelt inte — inget hittas på. */
+function hastData(id){
+  return (typeof HORSES!=="undefined" && HORSES[id||G.hastId]) || null;
+}
+
 /* ── Interaktion ──────────────────────────────────────────────── */
 function interaktioner(){
   const L=[];
@@ -808,8 +824,8 @@ function interaktioner(){
           else saga("Uteritt får du följa med på från grupp 3 — skogen kräver en säker ryttare.",4);
         }});
     }
-    if(G.hastId&&G.hastPlats==="hage"){
-      const h=HORSES[G.hastId];
+    if(G.hastId&&G.hastPlats==="hage"&&hastData()){
+      const h=hastData();
       L.push({pos:ANL.hamtHage.grind, text:`Öppna grinden och hämta ${h.namn}`,
         gor(){
           /* Egenhet: en svårfångad häst drar sig undan första försöket. */
@@ -838,7 +854,7 @@ function interaktioner(){
     L.push({pos:[portX,R.bana.y+R.bana.h], text:G.leder
         ? (G.tavling&&G.tavling.typ==="hoppning"
           ? `Sitt upp — Påskhoppet, ${G.tavling.klass.namn}`
-          : `Sitt upp på ${HORSES[G.hastId].namn} — lektionen börjar`)
+          : `Sitt upp på ${hastNamn()} — lektionen börjar`)
         : "Sargporten",
       gor(){ if(G.leder)sittUpp("ridhus");
              else saga("Genom sargporten går man ut på banan. Hästarna kommer in genom hästgången från stallet.",3.5); }});
@@ -851,7 +867,7 @@ function interaktioner(){
        Bytet ska gå att hitta utan att man vet var det finns, så det
        ligger på samma person som delade ut hästen. */
     L.push({pos:S.ridlarare.pos,
-      text:G.hastId?`Byt häst hos ridläraren (du har ${HORSES[G.hastId].namn})`
+      text:G.hastId?`Byt häst hos ridläraren (du har ${hastNamn()})`
         :"Prata med ridläraren",
       gor(){ if(G.hastId&&typeof visaHastbyte==="function")visaHastbyte();
              else visaTilldelning(); }});
@@ -859,14 +875,14 @@ function interaktioner(){
       const b=hittaBox(G.hastId);
       if(b&&G.leder&&!G.hamtad){
         L.push({pos:b.dorr, text:G.lerig
-            ?`Släpp in ${HORSES[G.hastId].namn} (leriga ben — spolspiltan ligger i söder)`
-            :`Släpp in ${HORSES[G.hastId].namn} i boxen`,
+            ?`Släpp in ${hastNamn()} (leriga ben — spolspiltan ligger i söder)`
+            :`Släpp in ${hastNamn()} i boxen`,
           gor(){G.hastPlats="box";ljudFnys();
             saga(G.lerig
-              ?`${HORSES[G.hastId].namn} går in med leran kvar på benen. Ridläraren kommer att se den.`
-              :`${HORSES[G.hastId].namn} går in och drar en tugga hö. Nu: boxen, fodret och sadeln.`,3.5);}});
+              ?`${hastNamn()} går in med leran kvar på benen. Ridläraren kommer att se den.`
+              :`${hastNamn()} går in och drar en tugga hö. Nu: boxen, fodret och sadeln.`,3.5);}});
       }else if(b&&G.hamtad){
-        L.push({pos:b.dorr, text:`Sköt om ${HORSES[G.hastId].namn} vid boxen`,
+        L.push({pos:b.dorr, text:`Sköt om ${hastNamn()} vid boxen`,
           gor(){visaBoxmeny();}});
       }
     }
@@ -877,8 +893,8 @@ function interaktioner(){
       if(i.spolspilta){
         const kanSpola=G.hastId&&G.leder&&!G.hamtad;
         L.push({pos:i.pos, text:kanSpola
-            ?(G.lerig?`Spola av leran på ${HORSES[G.hastId].namn}`
-              :`Spola av ${HORSES[G.hastId].namn} i spiltan`)
+            ?(G.lerig?`Spola av leran på ${hastNamn()}`
+              :`Spola av ${hastNamn()} i spiltan`)
             :"Spolspiltan",
           gor(){ if(kanSpola)visaSpolning();
             else saga("Spolspiltan: gummimattor, duschblandare och slangvinda på väggen. Hit leds hästen in från hagen när benen är leriga.",4.5); }});
@@ -886,7 +902,7 @@ function interaktioner(){
       }
       if(i.sadelkammare){
         L.push({pos:i.pos, text:G.hastId&&!G.utrustning
-            ?`Hämta ${HORSES[G.hastId].namn}s sadel och träns`:"Sadelkammaren",
+            ?`Hämta ${hastNamn()}s sadel och träns`:"Sadelkammaren",
           gor(){visaSadelkammare();}});
         continue;
       }
@@ -1554,8 +1570,8 @@ function ritaGard3D(){
     const hy=hg.rekt.y+hg.rekt.h*(0.3+0.45*((i*0.377)%1));
     items.push({d:-avst2([hx,hy]), rita(){ritaHage3DHast(k,hx,hy,h,i);}});
   }
-  if(G.hastId&&G.hastPlats==="hage"){
-    const f=ANL.hamtHage.falt, h=HORSES[G.hastId];
+  if(G.hastId&&G.hastPlats==="hage"&&hastData()){
+    const f=ANL.hamtHage.falt, h=hastData();
     /* Samma diskreta markör som över boxen — en pil ovanför just den
        häst uppgiften gäller, tonad efter avstånd. */
     items.push({d:-avst2(f)+0.01, rita(){
@@ -1779,9 +1795,9 @@ function ritaGard2D(){
      const[a,b]=gs(v.pos[0],v.pos[1]);
      cx.save();cx.globalAlpha=v.alfa;cx.strokeStyle=UPPDRAG.färg;cx.lineWidth=2;
      cx.beginPath();cx.arc(a,b,s*1.5,0,Math.PI*2);cx.stroke();cx.restore();}}
-  if(G.hastId&&G.hastPlats==="hage"){
+  if(G.hastId&&G.hastPlats==="hage"&&hastData()){
     const[a,b]=gs(ANL.hamtHage.falt[0],ANL.hamtHage.falt[1]);
-    cx.fillStyle=HORSES[G.hastId].farg;
+    cx.fillStyle=hastData().farg;
     cx.beginPath();cx.ellipse(a,b,s*1.1,s*0.6,0,0,Math.PI*2);cx.fill();
     const[ga2,gb]=gs(ANL.hamtHage.grind[0],ANL.hamtHage.grind[1]);
     cx.strokeStyle="rgba(214,174,60,.85)";cx.lineWidth=2;
@@ -1937,8 +1953,8 @@ function ritaStall2D(){
     cx.beginPath();cx.arc(a,b,s*0.9+Math.sin(VD.tid*3)*2,0,Math.PI*2);cx.stroke();}
   for(const d of S.dorrar){const[a,b]=ss(d.pos[0],d.pos[1]);
     cx.fillStyle="rgba(214,174,60,.9)";cx.beginPath();cx.arc(a,b,3,0,Math.PI*2);cx.fill();}
-  if(G.leder){const[a,b]=ss(VD.hastX,VD.hastY);
-    cx.fillStyle=HORSES[G.hastId].farg;
+  if(G.leder&&hastData()){const[a,b]=ss(VD.hastX,VD.hastY);
+    cx.fillStyle=hastData().farg;
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
   for(const f of stallFolk()){
@@ -2263,8 +2279,8 @@ function ritaRidhus2D(){
     cx.fillStyle="rgba(214,174,60,.9)";cx.beginPath();cx.arc(a,b,3.5,0,Math.PI*2);cx.fill();}
   for(const i of R.info){const[a,b]=ss(i.pos[0],i.pos[1]);
     cx.fillStyle="rgba(214,174,60,.5)";cx.beginPath();cx.arc(a,b,2.5,0,Math.PI*2);cx.fill();}
-  if(G.leder){const[a,b]=ss(VD.hastX,VD.hastY);
-    cx.fillStyle=HORSES[G.hastId].farg;
+  if(G.leder&&hastData()){const[a,b]=ss(VD.hastX,VD.hastY);
+    cx.fillStyle=hastData().farg;
     cx.save();cx.translate(a,b);cx.rotate(-VD.hastRikt);
     cx.beginPath();cx.ellipse(0,0,s*1.1,s*0.5,0,0,Math.PI*2);cx.fill();cx.restore();}
   ritaMal2D(ss);
