@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/interior-source-workbench.yml'
       - 'tools/interior-source-workbench.mjs'
-      - 'tools/interior-fidelity.patch'
+      - 'tools/interior-fidelity.patch.br.b64'
 permissions:
   contents: write
 jobs:
@@ -15,23 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: true
-      - name: Export source snapshot
-        uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v4
         with:
-          name: interior-source-snapshot
-          path: |
-            src/
-            tools/
-            roblox/
-            references/
-            docs/
-            index.html
-            package.json
-            .github/workflows/
-          retention-days: 1
-      - name: Apply reviewed source patch when present
-        run: |
-          if [ -f tools/interior-fidelity.patch ]; then
-            node tools/interior-source-workbench.mjs
-          fi
+          node-version: '22'
+      - name: Apply SHA-256-verified local implementation and remove temporary transfer files
+        run: node tools/interior-source-workbench.mjs
