@@ -1,8 +1,12 @@
 #!/usr/bin/env node
+/* P0 QA — tre isolerade browser-contexts på samma spel-SHA.
+   Endast riktiga UI-handlingar ändrar spelet. Read-only state används
+   för vägval och diagnostik. Inget test får sätta ridklart tillstånd. */
 import { chromium, devices } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+
 const mode=process.argv[2]||'first-day';
 const sha=process.env.QA_TARGET_SHA||'unknown';
 const out=path.resolve(process.env.QA_OUT||`qa/p0-${mode}`);
@@ -15,6 +19,7 @@ async function state(){return page.evaluate(()=>({
  ride:!!G.ride,pass:SPAR.pass,
  objective:typeof uppdragMal==='function'?(()=>{const u=uppdragMal();return u?{id:u.id,scene:u.mal?.scen,pos:u.mal?.pos,text:uppdragText()?.rubrik}:null;})():null,
  player:{x:VD.px,y:VD.py,z:VD.pz},
+ riding:{x:G.px,y:G.py,tempo:G.ride?.tempo,gangart:G.ride?.gangart,moment:G.moment?.id,momentIx:G.momentIx},
  prompt:VD.prompt?{text:VD.prompt.text,pos:VD.prompt.pos}:null,
  overlay:!document.getElementById('ov').classList.contains('hide'),
  buttons:[...document.querySelectorAll('#sheet button')].filter(e=>e.getClientRects().length).map(e=>({id:e.id,text:e.innerText,disabled:e.disabled})),
@@ -23,14 +28,16 @@ async function state(){return page.evaluate(()=>({
  box:typeof hittaBox==='function'&&G.hastId?hittaBox(G.hastId):null
 }));}
 async function snap(name){const s=await state();fs.writeFileSync(path.join(out,`${name}.json`),JSON.stringify(s,null,2));await page.screenshot({path:path.join(out,`${name}.png`),fullPage:true});return s;}
-async function button(selector){const b=page.locator(selector).first();if(await b.count()&&await b.isVisible()){await b.click();return true;}return false;}
+async function button(selector){const b=page.locator(selector).first();if(await b.count()&&await b.isVisible()&&!await b.isDisabled()){await b.click();return true;}return false;}
 async function key(code){await page.keyboard.press(code);await page.waitForTimeout(130);}
+async function hold(code,ms){await page.keyboard.down(code);await page.waitForTimeout(ms);await page.keyboard.up(code);}
 async function mapOn(){if((await state()).view!=='2d'&&!await button('#viewToggle [data-v="2d"]'))throw Error('Karta-knappen saknas');await page.waitForTimeout(250);}
+async function point(x,y){if(mode==='touch')await page.touchscreen.tap(x,y);else await page.mouse.click(x,y);}
 async function walk(pos,label){
  await mapOn();const s=await state();if(!s.map||s.map.scene!==s.scene)throw Error('Kartan saknar aktuell transform');
  const t=await page.evaluate(p=>{const r=cv.getBoundingClientRect();return {x:r.left+V2T.ox+p[0]*V2T.s,y:r.top+V2T.oy+(V2T.hojd-p[1])*V2T.s,left:r.left,top:r.top,right:r.right,bottom:r.bottom};},pos);
  if(t.x<t.left||t.x>t.right||t.y<t.top||t.y>t.bottom)throw Error(`Målet ${label} ligger utanför kartan: ${JSON.stringify(t)}`);
- await page.mouse.click(t.x,t.y);let previous=s.player,still=0;
+ await point(t.x,t.y);let previous=s.player,still=0;
  for(let elapsed=0;elapsed<90000;elapsed+=250){
   await page.waitForTimeout(250);const q=await state();const d=Math.hypot(q.player.x-pos[0],q.player.y-pos[1]);
   if(d<1.65)return q;if(q.overlay)throw Error(`Overlay stoppar vandringen till ${label}`);
@@ -58,11 +65,14 @@ async function goToScene(target){
 }
 async function actOverlay(){
  const s=await state();if(!s.overlay)return false;
- if(await button('#bGroom')||await button('#bLek'))return true;
+ // Den av spelet erbjudna första-dagen-genvägen är tillåten. Det är
+ // inte tillåtet att direkt skriva G.skotselRes eller G.hastPlats.
+ if(await button('#bGroom')||await button('#bLek')||await button('#bTacke')||await button('#bSkots'))return true;
  if(await page.locator('.sk-val').count()){
   for(const typ of ['sadel','trans'])if(!await button(`.sk-val[data-id="${s.horse}"][data-typ="${typ}"]`))throw Error(`Rätt ${typ} för ${s.horse} saknas`);
   return button('#bSkKlar');
  }
+ if(await button('#bKlar'))return true;
  if(await button('#bHbStang')||await button('#bStart'))return true;
  for(const label of ['Sitt upp','Börja','Fortsätt','Gör i ordning','Sköt om','Klar','Tillbaka till stallgången']){
   const b=page.locator('#sheet button').filter({hasText:label}).first();if(await b.count()&&await b.isVisible()&&!await b.isDisabled()){await b.click();return true;}}
@@ -70,11 +80,16 @@ async function actOverlay(){
 }
 async function firstDay(){
  stage='start';let s=await snap('00-menu');if(!s.overlay)throw Error('Startmenyn saknas');
- if(!await button('#bStart'))throw Error('Rid nu-knappen saknas');s=await snap('01-start');record('Gäststart via Rid nu','PASS',{scene:s.scene});
+ // På en tom profil öppnas karaktärsskaparen före menyn. Välj dess
+ // riktiga gästgenväg, utan att förskriva localStorage eller profilen.
+ if(await button('#bSkapHoppa')){s=await snap('00b-guest');record('Karaktärsskaparens gästgenväg','PASS',{scene:s.scene});}
+ if(!await button('#bStart'))throw Error(`Rid nu-knappen saknas efter gäststart: ${JSON.stringify((await state()).buttons)}`);
+ s=await snap('01-start');record('Gäststart via Rid nu',s.scene==='gard'?'PASS':'FAIL',{scene:s.scene});
+ if(s.scene!=='gard')throw Error('Rid nu öppnade inte gården');
  if(mode==='touch'){
   const b=page.locator('#pekGang [data-tap="KeyE"]');record('Touch ANVÄND är synlig och fingerstor',await b.count()&&await b.isVisible()&&await b.evaluate(e=>e.getBoundingClientRect().height>=44)?'PASS':'FAIL');
  }
- for(let i=0;i<24;i++){
+ for(let i=0;i<60;i++){
   s=await state();stage=`day-${i}-${s.objective?.id||s.scene}`;
   if(s.scene==='lektion'||s.scene==='bana'){
    record('Uppsittning genom verkligt flöde',s.ride?'PASS':'FAIL',{scene:s.scene,horse:s.horse,ride:s.ride});return s;
@@ -83,12 +98,14 @@ async function firstDay(){
   const u=s.objective;if(!u?.pos||!u.scene)throw Error(`Uppdragsmål saknas: ${JSON.stringify(u)}`);
   await goToScene(u.scene);await walk(u.pos,u.text||u.id);await interact();await snap(`step-${String(i).padStart(2,'0')}`);
   const next=await state();if(next.horse&&!next.box)record('Aktiv häst har placerad box','FAIL',{horse:next.horse});
- }throw Error('Första dagen nådde inte ridning inom 24 spelarhandlingar');
+  if(next.horse&&next.pass===0&&next.horse!=='blackrock_jack')record('Första dagens häst är Jack','FAIL',{horse:next.horse});
+ }throw Error('Första dagen nådde inte ridning inom 60 spelarhandlingar');
 }
 async function riding(){
  const s=await firstDay();if(s.scene!=='lektion'||!s.ride)throw Error('Ridtest BLOCKED: ingen uppsittning');stage='riding';
- for(const c of ['KeyW','KeyW','KeyA','KeyD','KeyS','KeyE']){await key(c);await page.waitForTimeout(600);}
- const r=await snap('riding-input');record('Ridinput och aktiv ridloop',r.ride?'PASS':'FAIL',{scene:r.scene,horse:r.horse});
+ const before=await state();await hold('KeyW',1000);await hold('Space',800);
+ await hold('KeyA',650);await hold('KeyD',650);await hold('KeyS',500);await key('KeyE');
+ const r=await snap('riding-input');record('Ridinput och aktiv ridloop',r.ride?'PASS':'FAIL',{scene:r.scene,horse:r.horse,before:before.riding,after:r.riding});
  await key('KeyT');await snap('riding-training-book');record('Träningsboken öppnas från sadeln',(await state()).overlay?'PASS':'FAIL');
 }
 async function main(){
