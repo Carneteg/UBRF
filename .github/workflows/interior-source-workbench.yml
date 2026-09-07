@@ -1,0 +1,37 @@
+name: Interior source workbench
+on:
+  push:
+    branches: [chatgpt/interior-fidelity-v1]
+    paths:
+      - '.github/workflows/interior-source-workbench.yml'
+      - 'tools/interior-source-workbench.mjs'
+      - 'tools/interior-fidelity.patch'
+permissions:
+  contents: write
+jobs:
+  workbench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Export source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: interior-source-snapshot
+          path: |
+            src/
+            tools/
+            roblox/
+            references/
+            docs/
+            index.html
+            package.json
+            .github/workflows/
+          retention-days: 1
+      - name: Apply reviewed source patch when present
+        run: |
+          if [ -f tools/interior-fidelity.patch ]; then
+            node tools/interior-source-workbench.mjs
+          fi
