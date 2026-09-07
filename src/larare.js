@@ -267,6 +267,24 @@ function ugnetaNyttForsok(moment,forsokNr){
   LARARE.aktivForsok=o?ugnetaTomForsok(o):null;
   LARARE.forsokNr=forsokNr||1;
   LARARE.liveCd=0;LARARE.liveSagt="";
+  /* Och en ny INSPELNING. ugnetaForsokSteg startar bara en inspelning
+     när den byter övning eller moment — en omridning av SAMMA moment
+     ser likadan ut för den, så försök 2 spelades inte in alls. Bara
+     försök 1 hamnade i historiken, och "se ritten och jämför" hade
+     ingenting att jämföra. Hittat av replay-provet när slutpanelen
+     vägrade visa sig. */
+  if(o&&typeof ugnetaInspelningStarta==="function")ugnetaInspelningStarta(o);
+}
+
+/* Stänger det pågående försöket PÅ BEGÄRAN av lifecyclen, i samma
+   bildruta som momentet tar slut. ugnetaForsokSteg upptäcker slutet
+   först nästa bildruta — den körde redan innan G.momentKlart sattes —
+   och valpanelen hann då fråga "vill du se ritten?" innan ritten fanns
+   i historiken. */
+function ugnetaStangForsok(){
+  const j=ugnetaForsokAvsluta();
+  if(j){LARARE.sistaFeedback=j;LARARE.vantaFeedback=j;}
+  return j;
 }
 
 /* ── Live-registret: kort cue, inget kort ─────────────────────── */
@@ -368,13 +386,24 @@ function ugnetaPlats(){
 }
 
 /* ── G02-C försök och kvalitetsbedömning ──────────────────────── */
+const UGNETA_DIMENSIONER=["linje","rytm","balans","timing","mjukhet","respons","tempo"];
 const UGNETA_DIM_LABEL={linje:"linjen",rytm:"rytmen",balans:"balansen",timing:"timingen",mjukhet:"mjukheten",respons:"hästens svar",tempo:"tempot"};
+/* Vilka dimensioner bedöms i vilken övning.
+
+   G02-D: de två övningar som har en VERSIONERAD definition i
+   src/riding/ovningsdef.js hämtar sin lista därifrån i stället för att ha
+   en andra kopia här. De övriga fyra har ingen definition ännu och står
+   kvar oförändrade — en definition är ett produktbeslut per övning, inte
+   något den här filen ska hitta på i förbifarten.
+
+   Ordningen spelar roll: ugnetaForstaForsok rankar på VÄRDE, men
+   fallbacken när inget är mätbart tar dims[0]. */
 const UGNETA_OVNING_DIM={
   halt_skritt:["timing","mjukhet","respons"],
   skritt_trav:["timing","mjukhet","respons"],
-  storvolt:["linje","rytm","balans"],
+  storvolt:ovningsMatt("storvolt"),
   horn:["rytm","balans","linje"],
-  trav_skritt:["timing","mjukhet","respons"],
+  trav_skritt:ovningsMatt("trav_skritt"),
   galoppfattning:["timing","balans","respons"],
 };
 function ugClamp(v){return Math.max(0,Math.min(1,Number.isFinite(v)?v:0));}
@@ -410,47 +439,159 @@ const UGNETA_KVALITET={
    HorseCore/Lektion.SKILLNAD så den inte kan glömmas bort. */
 const UGNETA_DIM_CUE={linje:"vagen",rytm:"framat",balans:"sits",
   timing:"timing",mjukhet:"hand",respons:"lugn",tempo:"framat"};
+/* ETT MÄTVÄRDE, ELLER INGET.
+
+   G02-D-specen: "If a metric is unavailable, say so or use a valid
+   qualitative observation; do not turn missing data into a neutral or
+   positive score."
+
+   `ugTal` skiljer saknat, NaN och oändlighet från en uppmätt nolla —
+   samma disciplin som `tal()` i HorseCore/Lektion.luau, som Roblox fick
+   i #128 och webben aldrig fick. Osymmetrin var mätbar i den byggda
+   sidan: en ritt utan mätvärden gav linje/rytm/balans/mjukhet = 0
+   (sämsta betyg) och samtidigt tempo = 1,0 (full pott). Samma tomma
+   försök kunde alltså både sågas på fyra dimensioner och berömmas på en,
+   och Ugneta kunde säga "Bra tempot" om en ritt hon aldrig sett.
+
+   FORMLERNA ÄR OFÖRÄNDRADE. Det som tillkommit är kravet på underlag. */
+/* Lua-parity: samma svar som `tonumber()` i Lektion.luau ger.
+
+   `Number()` är JavaScripts egen fälla och den enda av de tre som
+   behövde lagas: `Number(null)`, `Number("")`, `Number("  ")`,
+   `Number(false)` och `Number([])` är alla 0, och `Number(true)` är 1.
+   Ett saknat värde blev alltså ett uppmätt värde — precis det kontraktet
+   säger att det inte får bli. `tonumber` i Lua svarar nil på var och en
+   av dem, så webben låg fel mot Roblox, inte tvärtom.
+
+   Numeriska STRÄNGAR släpps igenom med flit: `tonumber("1.5")` är 1.5 i
+   Lua, och en vakt som avvisade dem hade infört en NY asymmetri i stället
+   för att stänga den gamla. Det är en medveten tillåtelse, inte en
+   glömska. */
+function ugTal(v){
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v !== "string") return null;          // null, undefined, boolean, array, objekt
+  const t = v.trim();
+  if (t === "") return null;                        // "" och "   " är inte noll
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+/* Fanns minst ett delvärde? En sammansatt dimension bedöms bara om
+   någon av dess beståndsdelar faktiskt mättes. */
+function ugNagot(){
+  /* Ett VÄRDE, inte "inte null". Argumenten kommer från ugTal och är
+     number eller null — men ett undefined som slank in hade räknats som
+     ett mätvärde av den gamla raden. */
+  for(let i=0;i<arguments.length;i++)if(typeof arguments[i]==="number")return true;
+  return false;
+}
+
 function ugnetaKvalitet(){
   const UK=UGNETA_KVALITET;
   const tm=(typeof G!=="undefined"&&G.telemetri)||{};
   const r=(typeof G!=="undefined"&&G.ride)||{};
   const s=r.skala||{};
-  const rad=Number.isFinite(tm.svangradie)?tm.svangradie:null;
-  const radie=rad===null?ugClamp(s.rakriktning||0)
-    :ugClamp(1-Math.abs(rad-UK.VOLT_RADIE)/UK.VOLT_SPANN);
-  const linje=ugClamp(UK.LINJE_RADIE*radie+UK.LINJE_RAK*ugClamp(s.rakriktning||0));
-  const rytm=ugClamp(s.takt||0);
-  const balans=ugClamp(tm.balans!==undefined?tm.balans:r.balans||0);
-  const mjukhet=ugClamp(tm.mjukhet!==undefined?tm.mjukhet:r.mjukhet||0);
-  const fokus=ugClamp(tm.fokus!==undefined?tm.fokus:r.fokus||0);
-  const lugn=1-ugClamp(tm.spanning!==undefined?tm.spanning:r.spanning||0);
-  const svar=tm.svarstid>0?ugClamp(1-tm.svarstid/UK.SVARSTID_TAK):UK.OMATT;
-  const etablering=tm.etableringstid>0
-    ?ugClamp(1-tm.etableringstid/UK.ETABLERING_TAK):UK.OMATT;
-  const parad=ugClamp(tm.paradKvalitet||0);
-  const timing=ugClamp(UK.TIMING_SVAR*svar+UK.TIMING_ETABLERING*etablering
-    +UK.TIMING_PARAD*parad);
-  const respons=ugClamp(UK.RESPONS_FOKUS*fokus+UK.RESPONS_LUGN*lugn
-    +UK.RESPONS_SVAR*svar);
-  const fart=Number.isFinite(tm.fart)?tm.fart:r.tempo||0;
-  const onskad=Number.isFinite(tm.onskadFart)?tm.onskadFart:fart;
-  const tempo=onskad>UK.TEMPO_GOLV
-    ?ugClamp(1-Math.abs(fart-onskad)/Math.max(onskad,UK.TEMPO_NAMNARE)):1;
+
+  const rakriktning=ugTal(s.rakriktning);
+  const rad=ugTal(tm.svangradie);
+  /* Radien: mätt svängradie först, annars rakriktningen som ersättare —
+     men saknas BÅDA finns ingen linje att bedöma. */
+  const radie=rad!==null?ugClamp(1-Math.abs(rad-UK.VOLT_RADIE)/UK.VOLT_SPANN)
+    :(rakriktning!==null?ugClamp(rakriktning):null);
+  const linje=(radie===null&&rakriktning===null)?null
+    :ugClamp(UK.LINJE_RADIE*(radie===null?0:radie)
+      +UK.LINJE_RAK*(rakriktning===null?0:ugClamp(rakriktning)));
+
+  const takt=ugTal(s.takt);
+  const rytm=takt===null?null:ugClamp(takt);
+
+  const balansT=ugTal(tm.balans!==undefined?tm.balans:r.balans);
+  const balans=balansT===null?null:ugClamp(balansT);
+
+  const mjukT=ugTal(tm.mjukhet!==undefined?tm.mjukhet:r.mjukhet);
+  const mjukhet=mjukT===null?null:ugClamp(mjukT);
+
+  const fokusT=ugTal(tm.fokus!==undefined?tm.fokus:r.fokus);
+  const spanT=ugTal(tm.spanning!==undefined?tm.spanning:r.spanning);
+  const fokus=fokusT===null?null:ugClamp(fokusT);
+  const lugn=spanT===null?null:1-ugClamp(spanT);
+
+  /* Tiderna: 0 betyder "ingen övergång mätt", inte "svarade omedelbart".
+     Det var redan avsikten (`tm.svarstid>0`), men fallbacken var OMATT —
+     ett tal mitt emellan som såg ut som ett betyg. Nu är den null. */
+  const svarT=ugTal(tm.svarstid);
+  const svar=(svarT!==null&&svarT>0)?ugClamp(1-svarT/UK.SVARSTID_TAK):null;
+  const etabT=ugTal(tm.etableringstid);
+  const etablering=(etabT!==null&&etabT>0)?ugClamp(1-etabT/UK.ETABLERING_TAK):null;
+  const paradT=ugTal(tm.paradKvalitet);
+  const parad=paradT===null?null:ugClamp(paradT);
+
+  const timing=ugNagot(svar,etablering,parad)
+    ?ugClamp(UK.TIMING_SVAR*(svar||0)+UK.TIMING_ETABLERING*(etablering||0)
+      +UK.TIMING_PARAD*(parad||0)):null;
+  const respons=ugNagot(fokus,lugn,svar)
+    ?ugClamp(UK.RESPONS_FOKUS*(fokus||0)+UK.RESPONS_LUGN*(lugn||0)
+      +UK.RESPONS_SVAR*(svar||0)):null;
+
+  /* Tempot krävde förut ingenting alls och gav 1,0 när önskad fart
+     saknades — den enskilt värsta raden i den gamla funktionen. Nu krävs
+     både en mätt fart OCH en mätt önskad fart. */
+  const fart=ugTal(tm.fart!==undefined?tm.fart:r.tempo);
+  const onskad=ugTal(tm.onskadFart);
+  const tempo=(fart===null||onskad===null||!(onskad>UK.TEMPO_GOLV))?null
+    :ugClamp(1-Math.abs(fart-onskad)/Math.max(onskad,UK.TEMPO_NAMNARE));
+
   return {linje,rytm,balans,timing,mjukhet,respons,tempo};
 }
+/* Ett försök räknar numera PER DIMENSION: summa, antal sampel och
+   uppmätta sekunder. Förut fanns bara ett gemensamt `n`, och en dimension
+   som aldrig kunde mätas fick ändå dela nämnare med dem som mättes hela
+   tiden — vilket är samma sak som att kalla ett hål för en nolla. */
 function ugnetaTomForsok(o){
-  return {id:o.id,momentIx:G.momentIx,n:0,sum:{linje:0,rytm:0,balans:0,timing:0,mjukhet:0,respons:0,tempo:0},klar:false};
+  const sum={},antal={},sek={};
+  for(const k of UGNETA_DIMENSIONER){sum[k]=0;antal[k]=0;sek[k]=0;}
+  return {id:o.id,momentIx:G.momentIx,n:0,sum,antal,sek,klar:false};
 }
+/* Medelvärdet för de dimensioner som HAR underlag. Övriga blir null.
+
+   Kravet är Roblox-sidans, via ovningsdef.OVNING_GILTIG: minst två sampel
+   OCH minst en uppmätt sekund. Sekunder och inte bildrutor, så att 120 fps
+   inte ger fyra gånger så mycket underlag som 30. */
 function ugnetaForsokMedel(a){
-  const ut={};const n=Math.max(1,a.n);for(const k in a.sum)ut[k]=a.sum[k]/n;return ut;
+  const KRAV=(typeof OVNING_GILTIG!=="undefined")?OVNING_GILTIG:{MIN_MATNINGAR:2,MIN_SEK:1.0};
+  const ut={};
+  for(const k in a.sum){
+    const n=a.antal?a.antal[k]:a.n, sek=a.sek?a.sek[k]:0;
+    ut[k]=(n>=KRAV.MIN_MATNINGAR&&sek>=KRAV.MIN_SEK)?a.sum[k]/n:null;
+  }
+  return ut;
+}
+/* Kortet när försöket inte gick att bedöma. Sanningen är ett bättre
+   besked än ett påhittat betyg — och samma svar som Roblox-sidan ger
+   (LektionController: "Försöket kunde inte bedömas"). */
+function ugnetaEjBedomt(nr){
+  return {rubrik:"Försöket kunde inte bedömas",
+    punkter:["Det fanns inte tillräckligt mätt underlag den här gången."],
+    ton:"", forsok:nr||1, knapp:(nr||1)<2?"Prova igen":"Nästa övning"};
 }
 function ugnetaJamfor(id,fore,nu,nr){
   const dims=UGNETA_OVNING_DIM[id]||["rytm","balans","mjukhet"];
-  const d=dims.map(k=>({k,d:(nu[k]||0)-(fore[k]||0),v:nu[k]||0})).sort((a,b)=>b.d-a.d);
+  /* Bara dimensioner som mättes i BÅDA försöken går att jämföra. Att
+     jämföra ett mätvärde mot ett hål är att hitta på en förbättring
+     eller en försämring som ingen har sett. */
+  const d=dims.filter(k=>nu[k]!==null&&nu[k]!==undefined
+      &&fore[k]!==null&&fore[k]!==undefined)
+    .map(k=>({k,d:nu[k]-fore[k],v:nu[k]})).sort((a,b)=>b.d-a.d);
+  /* Dimensioner som mättes NU men inte förra gången går inte att
+     jämföra, men de går att beskriva. */
+  const bara=dims.filter(k=>nu[k]!==null&&nu[k]!==undefined
+      &&(fore[k]===null||fore[k]===undefined))
+    .map(k=>({k,v:nu[k]})).sort((a,b)=>a.v-b.v);
+  if(!d.length&&!bara.length)return ugnetaEjBedomt(nr);
   const punkter=[];
   const upp=d.find(x=>x.d>=UGNETA_KVALITET.BATTRE);
   if(upp)punkter.push(`Bättre ${UGNETA_DIM_LABEL[upp.k]} den här gången.`);
-  const kvar=[...d].sort((a,b)=>a.v-b.v).find(x=>!upp||x.k!==upp.k);
+  const kandidater=[...d,...bara].sort((a,b)=>a.v-b.v);
+  const kvar=kandidater.find(x=>!upp||x.k!==upp.k);
   if(kvar&&kvar.v<UGNETA_KVALITET.SVAG)punkter.push(`Fortsätt med ${UGNETA_DIM_LABEL[kvar.k]}.`);
   if(!punkter.length)punkter.push("Jämnare försök. Behåll samma känsla.");
   return {rubrik:`Försök ${nr}`,punkter:punkter.slice(0,2),ton:upp?"bra":""};
@@ -461,42 +602,112 @@ function ugnetaJamfor(id,fore,nu,nr){
    i övningens kontrakt. Inget påhittat procenttal, ingen slumptext. */
 function ugnetaForstaForsok(id,medel){
   const dims=UGNETA_OVNING_DIM[id]||["rytm","balans","mjukhet"];
-  const rank=dims.map(k=>({k,v:medel[k]||0})).sort((a,b)=>b.v-a.v);
+  /* Endast MÄTTA dimensioner rankas. En obedömd dimension får varken bli
+     "bäst" (falskt beröm) eller "sämst" (falsk kritik). */
+  const rank=dims.filter(k=>medel[k]!==null&&medel[k]!==undefined)
+    .map(k=>({k,v:medel[k]})).sort((a,b)=>b.v-a.v);
+  if(!rank.length)return ugnetaEjBedomt(1);
   const bast=rank[0], samst=rank[rank.length-1];
   const punkter=[];
   if(bast&&bast.v>=UGNETA_KVALITET.BRA)punkter.push(`Bra ${UGNETA_DIM_LABEL[bast.k]}.`);
   if(samst&&(!bast||samst.k!==bast.k))punkter.push(`Jobba på ${UGNETA_DIM_LABEL[samst.k]}.`);
-  if(!punkter.length)punkter.push(`Jobba på ${UGNETA_DIM_LABEL[dims[0]]}.`);
+  if(!punkter.length)punkter.push(`Jobba på ${UGNETA_DIM_LABEL[rank[0].k]}.`);
   return {rubrik:"Prova igen",punkter:punkter.slice(0,2),ton:"",
     forsok:1,knapp:"Prova igen"};
+}
+
+/* ── G02-D: INSPELNINGEN AV FÖRSÖKET ────────────────────────────────
+   Ritten skrivs ned EN gång och återanvänds för uppspelning och
+   jämförelse. Bedömningen ligger kvar i ugnetaKvalitet() — inspelningen
+   är ett vittne, inte en andra domare.
+
+   Startar när ett försök startar, avslutas när försöket avslutas, och
+   posten följer med försöket in i historiken så att "spela upp mitt förra
+   försök" betyder just det försöket och inte något annat. */
+function ugnetaSpelaIn(){
+  return (typeof Inspelning!=="undefined")?(LARARE.inspelare||(LARARE.inspelare=new Inspelning())):null;
+}
+function ugnetaInspelningStarta(o){
+  const ins=ugnetaSpelaIn();if(!ins)return;
+  const d=(typeof ovningsDef==="function")?ovningsDef(o.id):null;
+  /* Bara övningar med en VERSIONERAD definition spelas in. G02-D:s första
+     leverans är 20 m volten och en övergång; de fyra övriga har ingen
+     definition ännu, och en post utan version kan varken läsas tillbaka
+     säkert eller jämföras — `inspelningLasbar` skulle avvisa den som
+     okänd övning. Att spela in något vi inte kan analysera vore just den
+     tysta meningslösa datan specen varnar för.
+
+     Upptäckt av replay-provet: lektionens första G02-övning är
+     `halt_skritt`, inte volten, så utan det här villkoret blev den
+     allra första posten oläsbar av sin egen kontroll. */
+  if(!d){if(ins.aktiv)ins.avsluta();return;}
+  const h=(typeof HORSES!=="undefined"&&G.hastId)?HORSES[G.hastId]:null;
+  ins.starta(o.id,G.hastId||null,(h&&h.profil)||null,
+    {gangart:(G.ride&&G.ride.gangart)||null,fart:(G.ride&&G.ride.tempo)||null,
+     x:G.px,y:G.py,kurs:G.rikt},
+    d?d.version:null);
+}
+function ugnetaInspelningSampla(dt){
+  const ins=LARARE.inspelare;if(!ins||!ins.aktiv)return;
+  const tm=G.telemetri||{},r=G.ride||{};
+  ins.sampla(dt,{
+    x:G.px,y:G.py,kurs:G.rikt,
+    gangart:r.gangart,fas:tm.rytm,fart:tm.fart!==undefined?tm.fart:r.tempo,
+    kurvatur:tm.kurvatur,balans:tm.balans!==undefined?tm.balans:r.balans,
+    hjalper:tm.hjalper||null,
+  });
 }
 
 function ugnetaForsokAvsluta(){
   const a=LARARE.aktivForsok;if(!a||a.klar||a.n<2)return null;
   a.klar=true;const medel=ugnetaForsokMedel(a);
+  /* Posten hämtas ur inspelaren och läggs i försöket. Finns ingen
+     inspelare (äldre bygge, eller modulen inte laddad) blir den null —
+     jämförelsen och återkopplingen fungerar ändå, de har aldrig behövt
+     inspelningen. */
+  const ins=LARARE.inspelare;
+  medel.__post=(ins&&ins.aktiv)?ins.avsluta():null;
   const lista=LARARE.forsok[a.id]||(LARARE.forsok[a.id]=[]);lista.push(medel);
   /* Första försöket får sin egen återkoppling i stället för tystnad —
      det är den som ska leda fram till försök 2. */
   if(lista.length<2)return ugnetaForstaForsok(a.id,medel);
   return ugnetaJamfor(a.id,lista[lista.length-2],lista[lista.length-1],lista.length);
 }
-function ugnetaForsokSteg(){
+function ugnetaForsokSteg(dt){
   const o=ugnetaOvning();
   if(!o){if(LARARE.aktivForsok)ugnetaForsokAvsluta();LARARE.aktivForsok=null;return;}
   if(!LARARE.aktivForsok||LARARE.aktivForsok.id!==o.id||LARARE.aktivForsok.momentIx!==G.momentIx){
     const j=ugnetaForsokAvsluta();if(j)LARARE.vantaFeedback=j;
     LARARE.aktivForsok=ugnetaTomForsok(o);
+    ugnetaInspelningStarta(o);
   }
   const q=ugnetaKvalitet(),a=LARARE.aktivForsok;a.n++;
-  for(const k in a.sum)a.sum[k]+=q[k]||0;
+  /* Bara uppmätta värden räknas — med sin egen nämnare och sin egen tid.
+     `dt` kan saknas i äldre anropsvägar; då räknas sampel men inga
+     sekunder, och dimensionen blir obedömd i stället för att smyga in på
+     ett antagande om bildrutetakt. */
+  const dsek=(typeof dt==="number"&&isFinite(dt)&&dt>0&&dt<0.5)?dt:0;
+  for(const k in a.sum){
+    if(q[k]===null||q[k]===undefined)continue;
+    a.sum[k]+=q[k];a.antal[k]++;a.sek[k]+=dsek;
+  }
+  ugnetaInspelningSampla(dt);
   const m=G.moment||{};
   if(G.momentKlart||G.momentT>=((m.tid||0)*2.2)){const j=ugnetaForsokAvsluta();if(j)LARARE.vantaFeedback=j;}
+}
+/* Posten för ett tidigare försök — 1 är det första. Returnerar null när
+   försöket inte finns eller inte spelades in, aldrig ett tomt objekt som
+   ser ut som en ritt. */
+function ugnetaForsokPost(id,nr){
+  const lista=ugnetaForsokHistorik(id);
+  const a=lista[(nr||lista.length)-1];
+  return (a&&a.__post)||null;
 }
 function ugnetaForsokHistorik(id){return (LARARE.forsok&&LARARE.forsok[id])||[];}
 
 const LARARE={fokus:null,start:null,sagt:"",cd:0,brasedan:0,beromt:0,bytt:0,
   attributCd:0,upprepad:null,inled:false,bratid:0,tid:0,ugnetaNasta:null,
-  forsok:Object.create(null),aktivForsok:null,vantaFeedback:null,
+  forsok:Object.create(null),aktivForsok:null,vantaFeedback:null,sistaFeedback:null,inspelare:null,
   forsokNr:1,liveT:0,liveCd:0,liveSagt:""};
 
 function lararNollstall(){
@@ -504,6 +715,10 @@ function lararNollstall(){
   LARARE.beromt=0;LARARE.bytt=0;LARARE.attributCd=0;LARARE.upprepad=null;
   LARARE.inled=false;LARARE.bratid=0;LARARE.tid=0;LARARE.ugnetaNasta=null;
   LARARE.forsok=Object.create(null);LARARE.aktivForsok=null;LARARE.vantaFeedback=null;
+  LARARE.sistaFeedback=null;
+  /* Inspelaren nollställs med resten: en avbruten ritt får inte lämna en
+     halv post som nästa lektion råkar avsluta och lägga i historiken. */
+  if(LARARE.inspelare)LARARE.inspelare.avsluta();
 }
 
 function lararValjFokus(){
@@ -537,7 +752,7 @@ function lararMeddelande(txt,rubrik,punkter,ton,extra){
 
 function lararSteg(dt){
   if(!G.ride||!LARARE.fokus)return "";
-  ugnetaForsokSteg();
+  ugnetaForsokSteg(dt);
   ugnetaLiveSteg(dt);
   const F=LARARE.fokus;LARARE.cd-=dt;LARARE.attributCd-=dt;LARARE.liveCd-=dt;
 
@@ -546,6 +761,11 @@ function lararSteg(dt){
      jämförelsen mot försök 1. Det är den pedagogiska återkopplingen. */
   if(LARARE.vantaFeedback){
     const j=LARARE.vantaFeedback;LARARE.vantaFeedback=null;LARARE.inled=false;LARARE.cd=12;
+    /* Kortet är en HUD-remsa som tonar bort. Valpanelen som öppnas i
+       samma bildruta ligger ovanpå den, så återkopplingen sparas här och
+       skrivs ut i panelen — annars hade spelaren fått välja om hon vill
+       rida om utan att se vad Ugneta just sagt om försöket. */
+    LARARE.sistaFeedback=j;
     const txt=j.punkter.join(" ");return lararMeddelande(txt,j.rubrik,j.punkter,j.ton,j);
   }
 

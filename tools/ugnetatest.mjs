@@ -33,12 +33,15 @@ ok(langa.length===0,"direkt feedback hålls kort (≤72 tecken för enkla feedba
    saknas, så samma produktionsfunktioner kan provas utan en kopia av logiken. */
 const ctx={console};
 vm.createContext(ctx);
-vm.runInContext(src+`\nglobalThis.__UG={
+vm.runInContext(fs.readFileSync("src/riding/ovningsdef.js","utf8")+"\n"+src+`\nglobalThis.__UG={
   kvalitet:ugnetaKvalitet,
   jamfor:ugnetaJamfor,
+  forsta:ugnetaForstaForsok,
+  medel:ugnetaForsokMedel,
   dims:UGNETA_OVNING_DIM,
   meddela:lararMeddelande,
-  larare:LARARE
+  larare:LARARE,
+  tal:ugTal
 };`,ctx);
 
 ctx.G={
@@ -70,4 +73,175 @@ ctx.__UG.meddela("test","Rubrik",["ett","två","tre"],"");
 ok(ctx.__UG.larare.ugnetaNasta.punkter.length===2,"även runtime-metadata kapar tredje punkten");
 
 if(fel){console.error(`\n${fel} Ugneta-kontroller föll.`);process.exit(1);}
-console.log("\nALLA UGNETA-KONTROLLER OK");
+
+/* ══ G02-D: SAKNAT ÄR VARKEN NOLL ELLER FULL POTT ═══════════════════
+   Specen (docs/RIDANALYS.md): "If a metric is unavailable, say so ...
+   do not turn missing data into a neutral or positive score."
+
+   Mätt före rättelsen, i den byggda sidan: en ritt UTAN mätvärden gav
+   linje/rytm/balans/mjukhet = 0 (sämsta betyg) och samtidigt tempo = 1,0
+   (full pott). Samma tomma försök kunde alltså både sågas på fyra
+   dimensioner och berömmas på en. */
+{
+  const sparaG = ctx.G;
+
+  ctx.G = { telemetri:{}, ride:{skala:{}} };
+  const tomt = ctx.__UG.kvalitet();
+  ok(Object.values(tomt).every(v => v === null),
+     "en ritt utan mätvärden ger null i ALLA dimensioner, inte betyg");
+  ok(tomt.tempo === null,
+     "särskilt tempot — det gav förut 1,0, alltså full pott på en omätt ritt");
+
+  ctx.G = { telemetri:{balans:0,fokus:0,spanning:1,mjukhet:0,svarstid:0,fart:0,onskadFart:2},
+            ride:{tempo:0,skala:{takt:0,rakriktning:0}} };
+  const noll = ctx.__UG.kvalitet();
+  ok(noll.balans === 0 && noll.rytm === 0 && noll.mjukhet === 0,
+     "men ett värde som FAKTISKT mättes till noll blir noll");
+  ok(noll.balans !== tomt.balans && noll.rytm !== tomt.rytm,
+     "uppmätt noll och omätt går alltså att skilja åt");
+
+  ctx.G = { telemetri:{balans:NaN,mjukhet:Infinity,fart:-Infinity},
+            ride:{skala:{takt:NaN}} };
+  const trasigt = ctx.__UG.kvalitet();
+  ok(trasigt.balans === null && trasigt.mjukhet === null && trasigt.rytm === null,
+     "NaN och oändlighet blir null, aldrig ett betyg");
+
+  ctx.G = sparaG;
+}
+
+/* ══ G02-D: ÅTERKOPPLINGEN LJUGER INTE OM DET SOM INTE MÄTTES ══════ */
+{
+  const inget = {linje:null,rytm:null,balans:null,timing:null,mjukhet:null,respons:null,tempo:null};
+  const f = ctx.__UG.forsta("storvolt", inget);
+  ok(/kunde inte bedömas/i.test(f.rubrik),
+     "ett obedömbart försök får ett sanningsenligt kort, inte ett påhittat betyg");
+  ok(!f.punkter.some(p => /^Bra /.test(p)),
+     "och absolut inget beröm för något ingen har mätt");
+
+  const halvt = {linje:0.9,rytm:null,balans:0.4,timing:null,mjukhet:null,respons:null,tempo:null};
+  const h = ctx.__UG.forsta("storvolt", halvt);
+  ok(h.punkter.some(p => /linjen/i.test(p)) && !h.punkter.some(p => /rytmen/i.test(p)),
+     "en omätt dimension blir varken bäst eller sämst — bara de mätta rankas");
+
+  const f1 = {linje:0.50, rytm:null, balans:0.70};
+  const f2 = {linje:0.74, rytm:0.60, balans:0.52};
+  const j = ctx.__UG.jamfor("storvolt", f1, f2, 2);
+  ok(j.punkter.some(p => /linjen/i.test(p)),
+     "jämförelsen pekar ut den dimension som mättes i BÅDA försöken");
+  ok(!j.punkter.some(p => /Bättre rytmen/i.test(p)),
+     "och påstår ingen förbättring i en dimension som saknades förra gången");
+
+  const badaTomma = ctx.__UG.jamfor("storvolt", {linje:null}, {linje:null}, 2);
+  ok(/kunde inte bedömas/i.test(badaTomma.rubrik),
+     "två obedömbara försök jämförs inte — de redovisas som obedömda");
+}
+
+/* ══ G02-D: UNDERLAGET RÄKNAS I SEKUNDER, INTE BILDRUTOR ══════════ */
+{
+  const bygg = (antal, sek) => ({
+    sum:{linje:antal*0.8}, antal:{linje:antal}, sek:{linje:sek}, n:antal });
+  const foretag = ctx.__UG.medel(bygg(2, 1.0));
+  ok(foretag.linje !== null, "två sampel över en sekund räcker som underlag");
+  ok(Math.abs(foretag.linje - 0.8) < 1e-9, "och medelvärdet är de mätta sampelns");
+  ok(ctx.__UG.medel(bygg(1, 5)).linje === null,
+     "ett enda sampel räcker inte, hur länge det än varade");
+  ok(ctx.__UG.medel(bygg(120, 0.4)).linje === null,
+     "och 120 bildrutor på fyra tiondelar räcker inte heller — sekunder avgör");
+}
+
+/* ══ TALVAKTEN: SAKNAT ÄR INTE NOLL, OCH INTE HELLER "" ELLER null ══
+   ChatGPT senior review 2026-09-07 på #138: `ugTal` använde `Number(v)`,
+   och `Number(null)`, `Number("")`, `Number("  ")`, `Number(false)` och
+   `Number([])` är alla 0 medan `Number(true)` är 1. Ett saknat värde
+   blev alltså ett uppmätt värde.
+
+   Facit är Lua: `tonumber()` i Lektion.luau svarar nil på var och en av
+   dem. Numeriska strängar är den enda avvikelsen som får finnas kvar,
+   för `tonumber("1.5")` är 1.5 där också. */
+{
+  const ug = ctx.__UG.tal;
+  const FALL = [
+    ["null", null, null], ["tom sträng", "", null], ["blanksteg", "   ", null],
+    ["undefined", undefined, null], ["NaN", NaN, null],
+    ["oändlighet", Infinity, null], ["negativ oändlighet", -Infinity, null],
+    ["true", true, null], ["false", false, null],
+    ["tom array", [], null], ["objekt", {}, null], ["text", "abc", null],
+    /* Och det som FAKTISKT är ett mätvärde ska överleva. */
+    ["riktig nolla", 0, 0], ["negativ nolla", -0, -0],
+    ["decimal", 0.375, 0.375], ["negativt tal", -2.5, -2.5],
+    ["numerisk sträng (Lua-paritet)", "1.5", 1.5],
+  ];
+  for (const [namn, in_, ut] of FALL)
+    ok(Object.is(ug(in_), ut), `talvakten: ${namn} → ${JSON.stringify(ut)}`);
+
+  /* SAMMA svar i alla tre modulerna. Tre kopior av en regel som glider
+     isär är värre än ingen regel — och de tre filerna får med flit inte
+     importera varandra (ridanalys och inspelning är motoroberoende). */
+  const utdrag = (fil, namn) => {
+    const kall = fs.readFileSync(fil, "utf8");
+    const c = { console }; vm.createContext(c);
+    vm.runInContext(kall + `\nglobalThis.__T=${namn};`, c);
+    return c.__T;
+  };
+  const ins = utdrag("src/riding/inspelning.js", "insTal");
+  const ra = utdrag("src/riding/ridanalys.js", "raTal");
+  let oense = [];
+  for (const [namn, in_] of FALL.map(f => [f[0], f[1]]))
+    if (!Object.is(ug(in_), ins(in_)) || !Object.is(ug(in_), ra(in_)))
+      oense.push(`${namn}: ug=${ug(in_)} ins=${ins(in_)} ra=${ra(in_)}`);
+  ok(oense.length === 0,
+    `talvakten svarar likadant i larare, inspelning och ridanalys${oense.length ? " — " + oense.join(" · " ) : ""}`);
+}
+
+/* ══ INGET OGILTIGT VÄRDE NÅR BERÖM ELLER JÄMFÖRELSE ══════════════
+   Vakten är en dörr. Provet nedan kontrollerar att det inte finns en
+   annan väg in: en ritt där varje telemetrivärde är null, "" eller
+   whitespace får inte producera ett omdöme. */
+{
+  const forra = ctx.G;
+  ctx.G = {
+    momentIx: 2, momentT: 12, momentKlart: false,
+    telemetri: { svangradie: null, balans: "", mjukhet: "   ", fokus: null,
+      spanning: undefined, svarstid: "", etableringstid: null,
+      paradKvalitet: "  ", fart: null, onskadFart: "" },
+    ride: { tempo: null, balans: "", mjukhet: null, fokus: "  ", spanning: null,
+      skala: { rakriktning: "", takt: null, schvung: "", kontakt: null, samling: "" } },
+    aids: { tygel: null }, grupp: "grupp2", dagsform: .8,
+  };
+  const q = ctx.__UG.kvalitet();
+  const matta = Object.keys(q).filter(k => q[k] !== null && q[k] !== undefined);
+  ok(matta.length === 0,
+    `en ritt utan mätvärden bedöms inte alls — mätta dimensioner: ${JSON.stringify(matta)}`);
+
+  /* Och feedbacken säger det, i stället för att berömma ingenting. */
+  const medel = {}; for (const k of Object.keys(q)) medel[k] = null;
+  const f = ctx.__UG.forsta("storvolt", medel);
+  ok(/kunde inte bedömas/i.test(f.rubrik),
+    `utan underlag ges inget beröm — "${f.rubrik}"`);
+
+  /* Jämförelsen får inte heller hitta en förbättring i tomma luften. */
+  const j = ctx.__UG.jamfor("storvolt", medel, medel, 2);
+  ok(!/[Bb]ättre/.test(JSON.stringify(j.punkter || [])),
+    `jämförelsen påstår ingen förbättring utan underlag — ${JSON.stringify(j.punkter)}`);
+  ctx.G = forra;
+}
+
+/* SLUTRADEN LJÖG.
+
+   Funktionen `ok()` räknade upp `fel`, men filen avslutades med ett
+   ovillkorligt "ALLA UGNETA-KONTROLLER OK" och exitkod 0 — oavsett hur
+   många kontroller som fallit. Ett rött prov såg alltså grönt ut för
+   CI, för `kor()`-skript och för den som läser sista raden.
+
+   Upptäckt under G02-D:s falsifiering: en mutation som gjorde saknat
+   till noll igen gav fortfarande "ALLA OK" och exitkod 0. Det var inte
+   koden som var rätt — det var provet som inte kunde bli rött.
+
+   Samma lärdom som roblox/tests/kor.sh skrevs för: exitkoden är den
+   enda signalen som inte går att lura genom att skriva rätt text. */
+if (fel === 0) {
+  console.log("\nALLA UGNETA-KONTROLLER OK");
+} else {
+  console.error(`\n${fel} FEL — Ugneta-kontrollerna gick INTE igenom`);
+  process.exit(1);
+}
