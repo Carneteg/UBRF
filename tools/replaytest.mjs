@@ -222,8 +222,9 @@ console.log("\n── REPLAYEN SOM SPELAREN FAKTISKT ÖPPNAR ──");
   const p2raw = stangt ? 0 : await evSafe(() => REPLAY.up.lage);
   const p2 = typeof p2raw === "number" ? p2raw : NaN;
   prova("Pausa stoppar den — läget står stilla",
-    p1.spelar === false && Number.isFinite(p2) && Math.abs(p2 - p1.lage) < 1e-9,
-    `${p1.fel || p1.etikett} · ${p1.lage.toFixed(2)} → ${p2.toFixed(2)} s`);
+    p1.spelar === false && Number.isFinite(p2) && Number.isFinite(p1.lage)
+      && Math.abs(p2 - p1.lage) < 1e-9,
+    `${p1.fel || p1.etikett} · ${Number(p1.lage).toFixed(2)} → ${Number(p2).toFixed(2)} s`);
 
   const halv = stangt ? { fart: null, etikett: "—" } : await evSafe(() => { const b = document.getElementById("replayLangsam");
     b.click(); return { fart: REPLAY.up.fart, etikett: b.textContent }; });
