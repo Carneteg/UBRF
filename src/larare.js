@@ -454,14 +454,34 @@ const UGNETA_DIM_CUE={linje:"vagen",rytm:"framat",balans:"sits",
    och Ugneta kunde säga "Bra tempot" om en ritt hon aldrig sett.
 
    FORMLERNA ÄR OFÖRÄNDRADE. Det som tillkommit är kravet på underlag. */
+/* Lua-parity: samma svar som `tonumber()` i Lektion.luau ger.
+
+   `Number()` är JavaScripts egen fälla och den enda av de tre som
+   behövde lagas: `Number(null)`, `Number("")`, `Number("  ")`,
+   `Number(false)` och `Number([])` är alla 0, och `Number(true)` är 1.
+   Ett saknat värde blev alltså ett uppmätt värde — precis det kontraktet
+   säger att det inte får bli. `tonumber` i Lua svarar nil på var och en
+   av dem, så webben låg fel mot Roblox, inte tvärtom.
+
+   Numeriska STRÄNGAR släpps igenom med flit: `tonumber("1.5")` är 1.5 i
+   Lua, och en vakt som avvisade dem hade infört en NY asymmetri i stället
+   för att stänga den gamla. Det är en medveten tillåtelse, inte en
+   glömska. */
 function ugTal(v){
-  const n=typeof v==="number"?v:Number(v);
-  return Number.isFinite(n)?n:null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v !== "string") return null;          // null, undefined, boolean, array, objekt
+  const t = v.trim();
+  if (t === "") return null;                        // "" och "   " är inte noll
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
 }
 /* Fanns minst ett delvärde? En sammansatt dimension bedöms bara om
    någon av dess beståndsdelar faktiskt mättes. */
 function ugNagot(){
-  for(let i=0;i<arguments.length;i++)if(arguments[i]!==null)return true;
+  /* Ett VÄRDE, inte "inte null". Argumenten kommer från ugTal och är
+     number eller null — men ett undefined som slank in hade räknats som
+     ett mätvärde av den gamla raden. */
+  for(let i=0;i<arguments.length;i++)if(typeof arguments[i]==="number")return true;
   return false;
 }
 
