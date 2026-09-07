@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-/* One-shot transfer of ChatGPT's reviewed local implementation. This tool is
-   branch-scoped and removes itself and the write-enabled workflow on success. */
+/* One-shot, branch-scoped transfer of the locally reviewed F02-C patch.
+   Never push changes to an existing protected workflow. */
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
@@ -20,14 +20,18 @@ if(crypto.createHash('sha256').update(patch).digest('hex')!==EXPECTED)throw Erro
 fs.writeFileSync('/tmp/ubrf-interior-reviewed.patch',patch);
 run('git',['apply','--check','/tmp/ubrf-interior-reviewed.patch']);
 run('git',['apply','/tmp/ubrf-interior-reviewed.patch']);
+// The local patch included a test registration in grindar.yml. GitHub's
+// workflow permission boundary is respected: restore it, do not stage it.
+run('git',['restore','--','.github/workflows/grindar.yml']);
 run('node',['tools/interiortest.mjs']);
 run('node',['tools/exportera-geometri.js','--kontrollera']);
 run('python3',['tools/kolla-material.py']);
 run('git',['diff','--check']);
-const paths=['.github/workflows/grindar.yml','docs/F02-C-INTERIOR-FIDELITY.md','docs/INTERIOR-GEOMETRY-LOCK.json','roblox/buildings/Anlaggningen.luau','roblox/buildings/UBRFKomplex.luau','src/inredning.js','src/site.js','src/varld3d.js','tools/exportera-geometri.js','tools/interiortest.mjs'];
+const paths=['docs/F02-C-INTERIOR-FIDELITY.md','docs/INTERIOR-GEOMETRY-LOCK.json','roblox/buildings/Anlaggningen.luau','roblox/buildings/UBRFKomplex.luau','src/inredning.js','src/site.js','src/varld3d.js','tools/exportera-geometri.js','tools/interiortest.mjs'];
 run('git',['add','--',...paths]);
-// Remove the temporary transfer mechanism before it can enter main.
-run('git',['rm','--','.github/workflows/interior-source-workbench.yml','tools/interior-source-workbench.mjs','tools/interior-fidelity.patch.br.b64']);
+run('git',['rm','--','tools/interior-source-workbench.mjs','tools/interior-fidelity.patch.br.b64']);
 run('git',['-c','user.name=ChatGPT','-c','user.email=83163288+Carneteg@users.noreply.github.com','commit','-m','F02-C: source-driven interior finishes and locker details']);
+// Leave the temporary workflow untouched. Remove it separately through the
+// authorized GitHub contents API after this code commit is published.
 run('git',['push','origin',`HEAD:refs/heads/${BRANCH}`]);
-console.log('F02-C implementation published; full PR CI and human visual acceptance still required.');
+console.log('F02-C implementation published without protected workflow changes.');
