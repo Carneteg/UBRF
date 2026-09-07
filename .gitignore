@@ -1,7 +1,5 @@
 dist/
 node_modules/
-package.json
-package-lock.json
 
 # Tillfälliga provskript. Speltestning körs med Playwright-snuttar som
 # skrivs, körs och slängs — de är inte projektfiler och ska aldrig
