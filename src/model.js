@@ -280,12 +280,8 @@ function nyState(dagsform,rang,sadellage){
   return st;
 }
 
-function stepRide(s,a,h,ctx,dt){
-  if(dt<=0)return s; s._tid+=dt;
-  /* Hjälperna i ridningens ord, en gång per bildruta. Både hästens svar
-     och målvärdena läser dem; att räkna dem två gånger vore två
-     sanningar om samma bildruta. */
-  const HS=(typeof hjalpSemantik==="function")?hjalpSemantik(a):null;
+
+function updateMjukhet(s, a, ctx, dt) {
   // mjukhet: amplitud mot glidande medel
   /* `_prev` är bildrutan innan. Den används av HALVHALTEN, som är en
      rörelse med riktning och vändpunkt och därför måste läsas bildruta
@@ -312,10 +308,13 @@ function stepRide(s,a,h,ctx,dt){
     const kvot=avvik/(K.AMPLITUD_SKALA*(F.amplitud||1)), tick=1/(1+kvot*kvot);
     s.mjukhet+= (tick-s.mjukhet)*clamp(K.MJUKHET_EMA*(F.mjukhetFart||1)*dt,0,1);
   }
+}
+
+function updateHalvhaltOchParad(s, a, ctx, dt) {
   // halvhalt
   let hhKval=0;
-  {const hh=s._hh,p=s._prev;
-   if(p){const dS=a.sits-p.sits,dK=a.skankel-p.skankel,dT=a.tygel-p.tygel;
+  const hh=s._hh,p=s._prev;
+  if(p){const dS=a.sits-p.sits,dK=a.skankel-p.skankel,dT=a.tygel-p.tygel;
     if(hh.fas===0){
       const hhMin=K.HH_MIN_AMPLITUD*((ctx.fard&&ctx.fard.hhAmplitud)||1);
       if(dS>0&&dK>0&&dT>0&&(dS+dK+dT)>=hhMin&&(s._tid-s._senasteHH)>K.HH_COOLDOWN){
@@ -325,7 +324,7 @@ function stepRide(s,a,h,ctx,dt){
     }else{hh.t+=dt;
       if(hh.t>K.HH_FONSTER*((ctx.fard&&ctx.fard.hhFonster)||1)){hh.fas=0;hhKval=-0.35;}
       else if(dT<-0.02&&a.tygel<=p.tygel){hh.fas=0;s._senasteHH=s._tid;hhKval=hh.kval;}}}
-  }
+
   /* ── PARADEN SOM EGEN SIGNAL (G02-B punkt 1) ──────────────────────
      Två vägar in, EN signal ut.
 
@@ -346,30 +345,35 @@ function stepRide(s,a,h,ctx,dt){
      Det är ett straff mönsterläsningen delar ut, och den uttryckliga
      kanalen kan varken orsaka eller lösa upp det. */
   let paradKval=0;
-  {const pIn=clamp(a.parad||0,0,1);
-   const pFore=s._prev?clamp(s._prev.parad||0,0,1):0;
-   const TR=(typeof HJALP_KANON!=="undefined")?HJALP_KANON.PARAD_TROSKEL:0.05;
-   if(pIn>TR&&pFore<=TR&&(s._tid-s._senastePar)>K.HH_COOLDOWN){
-     paradKval=(typeof paradKvalitet==="function")?paradKvalitet(a):0.75;
-     s._senastePar=s._tid;
-     /* PUBLICERAD, inte bara använd. Kvaliteten är det enda som skiljer
-        en halvhalt från ett ryck i tygeln, och den ska gå att läsa ut —
-        av telemetrin, av ridläraren och av G02-C. Att bara låta den
-        gångas in i samlingen vore att gömma den bakom en skala som
-        dessutom faller tillbaka mellan halvhalterna.
+  const pIn=clamp(a.parad||0,0,1);
+  const pFore=p?clamp(p.parad||0,0,1):0;
+  const TR=(typeof HJALP_KANON!=="undefined")?HJALP_KANON.PARAD_TROSKEL:0.05;
+  if(pIn>TR&&pFore<=TR&&(s._tid-s._senastePar)>K.HH_COOLDOWN){
+    paradKval=(typeof paradKvalitet==="function")?paradKvalitet(a):0.75;
+    s._senastePar=s._tid;
+    /* PUBLICERAD, inte bara använd. Kvaliteten är det enda som skiljer
+       en halvhalt från ett ryck i tygeln, och den ska gå att läsa ut —
+       av telemetrin, av ridläraren och av G02-C. Att bara låta den
+       gångas in i samlingen vore att gömma den bakom en skala som
+       dessutom faller tillbaka mellan halvhalterna.
 
-        [KÄND BEGRÄNSNING] Samlingen sjunker 0,16 per bildruta utan
-        halvhalt (raden i målvärdena nedan är Gate 01:s), så en serie
-        halvhalter bygger inte upp samling i dag oavsett kvalitet.
-        Mätt 2026-09-05: fjorton halvhalter i trav gav samling 0,000
-        både välridna och slarviga. Att ändra samlingens dynamik är en
-        känsloändring och hör hemma i G02-B punkt 2 (hästens svar), inte
-        i den här punkten. Kvaliteten publiceras därför nu; vad hästen
-        gör av den är nästa checkpoint. */
-     s.paradKval=paradKval; s.paradTid=s._tid;}}
+       [KÄND BEGRÄNSNING] Samlingen sjunker 0,16 per bildruta utan
+       halvhalt (raden i målvärdena nedan är Gate 01:s), så en serie
+       halvhalter bygger inte upp samling i dag oavsett kvalitet.
+       Mätt 2026-09-05: fjorton halvhalter i trav gav samling 0,000
+       både välridna och slarviga. Att ändra samlingens dynamik är en
+       känsloändring och hör hemma i G02-B punkt 2 (hästens svar), inte
+       i den här punkten. Kvaliteten publiceras därför nu; vad hästen
+       gör av den är nästa checkpoint. */
+    s.paradKval=paradKval; s.paradTid=s._tid;}
+
   /* Den signal resten av modellen läser. Mönstret får företräde bara
      när det faktiskt lästes den här bildrutan. */
   const parad=paradKval>0?paradKval:(hhKval>0?hhKval:0);
+  return { hhKval, paradKval, parad };
+}
+
+function updateCue(s, a, h, ctx, dt, parad) {
   /* ── CUE: ryttaren BER om en gångart, hästen bär den ──────────────
      Uppåt av en framåtdrivande impuls — skänkeln ökar tydligt medan
      tygeln inte håller emot. Nedåt av en fullbordad halvhalt, eller av
@@ -378,136 +382,139 @@ function stepRide(s,a,h,ctx,dt){
 
      Spärren gör att en enda rörelse inte räknas två gånger, och att
      hästen hinner göra klart övergången innan nästa kan begäras. */
-  {const p=s._prev;
-   s._cueSparr=Math.max(0,(s._cueSparr||0)-dt);
-   /* Fönstret: hjälpens lägsta värde den senaste K.CUE_FONSTER-sekunden.
-      Impulsen är resan därifrån upp till nu. Bufferten är ~27 poster i
-      60 Hz och skrivs framifrån, så ingen allokering per bildruta. */
-   const CF=s._cueFonster||(s._cueFonster=[{t:s._tid,k:K.SKANKEL_NEUTRAL,ty:K.TYGEL_NEUTRAL,si:K.SITS_NEUTRAL}]);
-   CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
-   while(CF.length>1&&CF[0].t<s._tid-K.CUE_FONSTER)CF.shift();
-   let botK=CF[0].k,botT=CF[0].ty,botS=CF[0].si;
-   for(let i=1;i<CF.length;i++){
-     if(CF[i].k<botK)botK=CF[i].k;
-     if(CF[i].ty<botT)botT=CF[i].ty;
-     if(CF[i].si<botS)botS=CF[i].si;}
-   if(p&&s._cueSparr<=0){
-     const dK=a.skankel-botK, dT=a.tygel-botT, dS=a.sits-botS;
-     let i=GANGORDNING.indexOf(s.malGangart||s.gangart); if(i<0)i=0;
-     let cue=null;
-     /* ASYMMETRIN ÄR AVSIKTLIG, och den är ridmässig.
+  const p=s._prev;
+  s._cueSparr=Math.max(0,(s._cueSparr||0)-dt);
+  /* Fönstret: hjälpens lägsta värde den senaste K.CUE_FONSTER-sekunden.
+     Impulsen är resan därifrån upp till nu. Bufferten är ~27 poster i
+     60 Hz och skrivs framifrån, så ingen allokering per bildruta. */
+  const CF=s._cueFonster||(s._cueFonster=[{t:s._tid,k:K.SKANKEL_NEUTRAL,ty:K.TYGEL_NEUTRAL,si:K.SITS_NEUTRAL}]);
+  CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
+  while(CF.length>1&&CF[0].t<s._tid-K.CUE_FONSTER)CF.shift();
+  let botK=CF[0].k,botT=CF[0].ty,botS=CF[0].si;
+  for(let i=1;i<CF.length;i++){
+    if(CF[i].k<botK)botK=CF[i].k;
+    if(CF[i].ty<botT)botT=CF[i].ty;
+    if(CF[i].si<botS)botS=CF[i].si;}
+  if(p&&s._cueSparr<=0){
+    const dK=a.skankel-botK, dT=a.tygel-botT, dS=a.sits-botS;
+    let i=GANGORDNING.indexOf(s.malGangart||s.gangart); if(i<0)i=0;
+    let cue=null;
+    /* ASYMMETRIN ÄR AVSIKTLIG, och den är ridmässig.
 
-        UPPÅT krävs en NY impuls varje gång. En hållen skänkel är inte en
-        fortsatt begäran om mer fart — man rider framåt med skänkeln på
-        utan att hästen accelererar. Det var precis den gaspedalen
-        beslutet tog bort.
+       UPPÅT krävs en NY impuls varje gång. En hållen skänkel är inte en
+       fortsatt begäran om mer fart — man rider framåt med skänkeln på
+       utan att hästen accelererar. Det var precis den gaspedalen
+       beslutet tog bort.
 
-        NEDÅT räcker det att den starka hjälpen LIGGER KVAR. En tygel som
-        hålls an är en fortsatt begäran om att komma tillbaka, och en
-        parad från galopp till halt är en sammanhängande hjälp, inte tre
-        separata ryck. En lätt halvhalt ger däremot ett steg och sedan
-        inget mer — den är en impuls till sin natur. */
-     const hallerAn=a.tygel>=K.TYGEL_BAND_MAX||a.sits>=K.SITS_PARAD;
-     if(dK>=K.CUE_UPP&&a.tygel<=K.TYGEL_BAND_MAX&&i<GANGORDNING.length-1){
-       i++; cue="framåt";
-     }else if((parad>0||dT>=K.CUE_NER||dS>=K.CUE_NER||hallerAn)&&i>0){
-       i--; cue=parad>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
-     }
-     if(cue){
-       const fran=s.gangart, till=GANGORDNING[i];
-       /* ── ATT BE ÄR INTE ATT FÅ (G02-B punkt 2) ──────────────────
-          Här slutar ryttarens del. `beddGangart` är vad hon bad om och
-          `cue`/`cueTid` NÄR hon bad; hästens svar startar först när
-          svarstiden gått, i svarsblocket längre ned.
+       NEDÅT räcker det att den starka hjälpen LIGGER KVAR. En tygel som
+       hålls an är en fortsatt begäran om att komma tillbaka, och en
+       parad från galopp till halt är en sammanhängande hjälp, inte tre
+       separata ryck. En lätt halvhalt ger däremot ett steg och sedan
+       inget mer — den är en impuls till sin natur. */
+    const hallerAn=a.tygel>=K.TYGEL_BAND_MAX||a.sits>=K.SITS_PARAD;
+    if(dK>=K.CUE_UPP&&a.tygel<=K.TYGEL_BAND_MAX&&i<GANGORDNING.length-1){
+      i++; cue="framåt";
+    }else if((parad>0||dT>=K.CUE_NER||dS>=K.CUE_NER||hallerAn)&&i>0){
+      i--; cue=parad>0?"halvhalt":(hallerAn&&dT<K.CUE_NER&&dS<K.CUE_NER?"parad":(dT>=K.CUE_NER?"tygel":"sits"));
+    }
+    if(cue){
+      const fran=s.gangart, till=GANGORDNING[i];
+      /* ── ATT BE ÄR INTE ATT FÅ (G02-B punkt 2) ──────────────────
+         Här slutar ryttarens del. `beddGangart` är vad hon bad om och
+         `cue`/`cueTid` NÄR hon bad; hästens svar startar först när
+         svarstiden gått, i svarsblocket längre ned.
 
-          Före G02-B satte den här raden `malGangart` direkt, och
-          tempoblocket började dra mot den nya gångarten i samma
-          bildruta. Det är därför fördröjningen inte kan läggas på
-          utanpå modellen: den måste ligga mellan begäran och svaret,
-          annars svarar hästen redan innan hon fått tid att göra det. */
-       s.beddGangart=till; s.cue=cue; s.cueTid=s._tid;
-       s._cueSparr=K.CUE_SPARR;
-       /* Resan är förbrukad. Utan den här raden ligger den kvar i
-          fönstret och skulle kunna räknas igen så fort spärren släpper,
-          fast ryttaren inte gjort något nytt. */
-       CF.length=0; CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
+         Före G02-B satte den här raden `malGangart` direkt, och
+         tempoblocket började dra mot den nya gångarten i samma
+         bildruta. Det är därför fördröjningen inte kan läggas på
+         utanpå modellen: den måste ligga mellan begäran och svaret,
+         annars svarar hästen redan innan hon fått tid att göra det. */
+      s.beddGangart=till; s.cue=cue; s.cueTid=s._tid;
+      s._cueSparr=K.CUE_SPARR;
+      /* Resan är förbrukad. Utan den här raden ligger den kvar i
+         fönstret och skulle kunna räknas igen så fort spärren släpper,
+         fast ryttaren inte gjort något nytt. */
+      CF.length=0; CF.push({t:s._tid,k:a.skankel,ty:a.tygel,si:a.sits});
 
-       /* FÖRLOPPET startas här, från det tempo hon FAKTISKT har. Att utgå
-          från nuvarande tempo och inte från gångartens norm är det som
-          gör förloppet avbrytbart: kommer en motsatt hjälp mitt i, börjar
-          nästa förlopp där hon är, inte där hon var. */
-       const upp=GANGORDNING.indexOf(till)>GANGORDNING.indexOf(fran);
-       /* Paradens bestämdhet: hur långt tygeln respektive sitsen går
-          förbi sitt hållande läge, det starkaste av de två. */
-       const kraft=clamp(Math.max(
-         (a.tygel-K.TYGEL_BAND_MAX)/(K.TYGEL_MAX-K.TYGEL_BAND_MAX),
-         (a.sits -K.SITS_PARAD)   /(K.SITS_MAX -K.SITS_PARAD)),0,1);
-       const bas=upp?(K.OVERGANG.upp[till]||0.9)
-                    :K.OVERGANG.nerMjuk-(K.OVERGANG.nerMjuk-K.OVERGANG.nerHart)*kraft;
-       /* LÄNGDEN LAGRAS FÄRDIGSKALAD. Hästens tyngd och tröghet skalade
-          förut längden på ett ställe (kurvan) men inte på det andra
-          (villkoret som håller förloppet vid liv). För en lätt häst låg
-          förloppet därför kvar en stund efter att kurvan var klar, och
-          för en tung KLIPPTES det av vid 97 % — tempot hoppade den sista
-          biten när approach() tog över. Nu betyder ov.langd samma sak på
-          båda ställena. */
-       const D0=ctx.avdrift||{tröghet:1};
-       /* HJÄLPENS TYDLIGHET, 0–1 — SAMORDNINGEN, inte storleken.
-          En tydlig hjälp får snabbare svar. Frågan är vad "tydlig"
-          betyder, och det första svaret var fel: impulsens marginal
-          över tröskeln. Genom det riktiga inputlagret faller cue:n på
-          den FÖRSTA bildruta rampen passerar tröskeln, och rampen går
-          lika fort oavsett hur långt tangenten trycks — marginalen är
-          alltså ~0 för både ett halvt och ett helt tryck. Termen hade
-          varit en konstant förklädd till ett mätvärde, och den hade
-          inte gått att göra röd genom spelarens väg in.
+      /* FÖRLOPPET startas här, från det tempo hon FAKTISKT har. Att utgå
+         från nuvarande tempo och inte från gångartens norm är det som
+         gör förloppet avbrytbart: kommer en motsatt hjälp mitt i, börjar
+         nästa förlopp där hon är, inte där hon var. */
+      const upp=GANGORDNING.indexOf(till)>GANGORDNING.indexOf(fran);
+      /* Paradens bestämdhet: hur långt tygeln respektive sitsen går
+         förbi sitt hållande läge, det starkaste av de två. */
+      const kraft=clamp(Math.max(
+        (a.tygel-K.TYGEL_BAND_MAX)/(K.TYGEL_MAX-K.TYGEL_BAND_MAX),
+        (a.sits -K.SITS_PARAD)   /(K.SITS_MAX -K.SITS_PARAD)),0,1);
+      const bas=upp?(K.OVERGANG.upp[till]||0.9)
+                   :K.OVERGANG.nerMjuk-(K.OVERGANG.nerMjuk-K.OVERGANG.nerHart)*kraft;
+      /* LÄNGDEN LAGRAS FÄRDIGSKALAD. Hästens tyngd och tröghet skalade
+         förut längden på ett ställe (kurvan) men inte på det andra
+         (villkoret som håller förloppet vid liv). För en lätt häst låg
+         förloppet därför kvar en stund efter att kurvan var klar, och
+         för en tung KLIPPTES det av vid 97 % — tempot hoppade den sista
+         biten när approach() tog över. Nu betyder ov.langd samma sak på
+         båda ställena. */
+      const D0=ctx.avdrift||{tröghet:1};
+      /* HJÄLPENS TYDLIGHET, 0–1 — SAMORDNINGEN, inte storleken.
+         En tydlig hjälp får snabbare svar. Frågan är vad "tydlig"
+         betyder, och det första svaret var fel: impulsens marginal
+         över tröskeln. Genom det riktiga inputlagret faller cue:n på
+         den FÖRSTA bildruta rampen passerar tröskeln, och rampen går
+         lika fort oavsett hur långt tangenten trycks — marginalen är
+         alltså ~0 för både ett halvt och ett helt tryck. Termen hade
+         varit en konstant förklädd till ett mätvärde, och den hade
+         inte gått att göra röd genom spelarens väg in.
 
-          Tydlighet är i stället SAMORDNING: skänkeln framför tröskeln
-          och handen i kontaktbandet — samma sak som gör en halvhalt
-          till en halvhalt, och därför samma formel. En häst som rids
-          framför skänkeln svarar snabbare på allt.
+         Tydlighet är i stället SAMORDNING: skänkeln framför tröskeln
+         och handen i kontaktbandet — samma sak som gör en halvhalt
+         till en halvhalt, och därför samma formel. En häst som rids
+         framför skänkeln svarar snabbare på allt.
 
-          [ÄRLIG BEGRÄNSNING] Med tangentbord ligger samordningen nästan
-          alltid högt när man ber om mer fart, så termen syns mest på
-          paraderna (uppmätt spann 0,46–1,00). På analog input finns mer
-          rum. Provet ligger därför på paraden, där den varierar. */
-       const klarhet=parad>0?parad
-         :((typeof paradKvalitet==="function")?paradKvalitet(a):0.75);
-       /* SKALAN ÄR 1,0 FÖR EN NEUTRAL HÄST (senior review 2026-09-05).
-          Den stod förut som (0,75 + 0,35·tyngd), vilket ger 0,89 vid
-          normaltyngden 0,4 — basvärdena ovan betydde alltså inte det de
-          sa, och Roblox kunde inte mäta samma tid utan att kopiera in
-          en förskjutning på 11 %. Nu är 0,80 s verkligen 0,80 s för en
-          normal häst, och hästens tyngd flyttar den därifrån med samma
-          spridning som förut (0,84 vid tyngd 0, 1,24 vid tyngd 1). */
-       /* Förloppets längd räknas HÄR, ur hjälpen som gavs, men startar
-          först när hästen svarar. Att flytta beräkningen till svaret
-          hade betytt att en parad mätte den tygel ryttaren råkar ha en
-          halv sekund senare i stället för den hon parerade med. */
-       s._vantar={fran,till,upp,
-         kvar:(typeof svarSvarstid==="function")
-           ? svarSvarstid(h,s.fokus,s.energi,klarhet) : 0,
-         langd:bas*(1+0.393*(h.tyngd-0.40))*(D0.tröghet||1)};
-       s.svarstid=s._vantar.kvar;
-     }
-   }
+         [ÄRLIG BEGRÄNSNING] Med tangentbord ligger samordningen nästan
+         alltid högt när man ber om mer fart, så termen syns mest på
+         paraderna (uppmätt spann 0,46–1,00). På analog input finns mer
+         rum. Provet ligger därför på paraden, där den varierar. */
+      const klarhet=parad>0?parad
+        :((typeof paradKvalitet==="function")?paradKvalitet(a):0.75);
+      /* SKALAN ÄR 1,0 FÖR EN NEUTRAL HÄST (senior review 2026-09-05).
+         Den stod förut som (0,75 + 0,35·tyngd), vilket ger 0,89 vid
+         normaltyngden 0,4 — basvärdena ovan betydde alltså inte det de
+         sa, och Roblox kunde inte mäta samma tid utan att kopiera in
+         en förskjutning på 11 %. Nu är 0,80 s verkligen 0,80 s för en
+         normal häst, och hästens tyngd flyttar den därifrån med samma
+         spridning som förut (0,84 vid tyngd 0, 1,24 vid tyngd 1). */
+      /* Förloppets längd räknas HÄR, ur hjälpen som gavs, men startar
+         först när hästen svarar. Att flytta beräkningen till svaret
+         hade betytt att en parad mätte den tygel ryttaren råkar ha en
+         halv sekund senare i stället för den hon parerade med. */
+      s._vantar={fran,till,upp,
+        kvar:(typeof svarSvarstid==="function")
+          ? svarSvarstid(h,s.fokus,s.energi,klarhet) : 0,
+        langd:bas*(1+0.393*(h.tyngd-0.40))*(D0.tröghet||1)};
+      s.svarstid=s._vantar.kvar;
+    }
   }
+}
+
+function updateSpanning(s, a, h, ctx, dt) {
   // spänning
   /* MÅLVÄRDET bor i src/riding/svar.js (senior review #87, blocker 1).
      Det låg som en literalsoppa här och gick därför inte att porta till
      Roblox utan att skrivas av — och en avskriven formel är två formler.
      Ingen siffra är ändrad; paritetsspecens golden-rader bevakar det. */
-  {const mal=(typeof svarSpanningMal==="function")?svarSpanningMal(a,h,s,ctx):s.spanning;
-   /* Fallet är hur fort spänningen släpper när pressen lättar. En lugn
-      ryttare får den att sjunka undan fortare — hon smittar av sig. */
-   const fall=(ctx.fard&&ctx.fard.spanningFall)||1;
-   const SP=(typeof SVAR_KANON!=="undefined")?SVAR_KANON:null;
-   s.spanning=clamp(approach(s.spanning,mal,
-     K.SPANNING_STIGNING*((SP?SP.SP_STIG_BAS:0.6)+(SP?SP.SP_STIG_KANSL:0.8)*h.kanslighet),
-     K.SPANNING_FALL*((SP?SP.SP_FALL_BAS:0.5)+(SP?SP.SP_FALL_FORLAT:1.0)*h.forlatande)*fall,
-     dt),0,1);
-  }
+  const mal=(typeof svarSpanningMal==="function")?svarSpanningMal(a,h,s,ctx):s.spanning;
+  /* Fallet är hur fort spänningen släpper när pressen lättar. En lugn
+     ryttare får den att sjunka undan fortare — hon smittar av sig. */
+  const fall=(ctx.fard&&ctx.fard.spanningFall)||1;
+  const SP=(typeof SVAR_KANON!=="undefined")?SVAR_KANON:null;
+  s.spanning=clamp(approach(s.spanning,mal,
+    K.SPANNING_STIGNING*((SP?SP.SP_STIG_BAS:0.6)+(SP?SP.SP_STIG_KANSL:0.8)*h.kanslighet),
+    K.SPANNING_FALL*((SP?SP.SP_FALL_BAS:0.5)+(SP?SP.SP_FALL_FORLAT:1.0)*h.forlatande)*fall,
+    dt),0,1);
+}
 
+function updateSvar(s, a, h, ctx, dt, paradKval, HS) {
   /* ── HÄSTENS SVAR (G02-B punkt 2) ────────────────────────────────
      Fokus, balans och energi uppdateras här — efter spänningen, som de
      alla tre läser, och före tempot, som läser dem tillbaka. Sedan
@@ -516,219 +523,243 @@ function stepRide(s,a,h,ctx,dt){
      Ordningen är inte godtycklig: lägger man svaret före spänningen
      bygger balansen på förra bildrutans spänning, och lägger man det
      efter tempot svarar hästen en bildruta för sent på sitt eget svar. */
-  {const S=(typeof SVAR_KANON!=="undefined")?SVAR_KANON:null;
-   if(S){
-     /* FOKUS. Paraden lyfter den i samma ögonblick den läses — en
-        halvhalt är en uppmärksamhetssignal, och det är där paradens
-        kvalitet från punkt 1 får sin verkan på hästen. */
-     const fMal=svarFokusMal(s,ctx,paradKval,h);
-     s.fokus+=(fMal-s.fokus)*clamp(dt/S.FOKUS_TAU,0,1);
-     /* Ett paradlyft ska verka NU och inte sippra in över tre sekunder.
-        Tau:n gäller den långsamma driften mot vardagsläget. */
-     if(paradKval>0)s.fokus=clamp(Math.max(s.fokus,
-       s.fokus+S.FOKUS_PARAD*((typeof svarProfil==="function")?svarProfil(h).fokus:1)
-         *paradKval*0.55),0,1);
+  const S=(typeof SVAR_KANON!=="undefined")?SVAR_KANON:null;
+  if(S){
+    /* FOKUS. Paraden lyfter den i samma ögonblick den läses — en
+       halvhalt är en uppmärksamhetssignal, och det är där paradens
+       kvalitet från punkt 1 får sin verkan på hästen. */
+    const fMal=svarFokusMal(s,ctx,paradKval,h);
+    s.fokus+=(fMal-s.fokus)*clamp(dt/S.FOKUS_TAU,0,1);
+    /* Ett paradlyft ska verka NU och inte sippra in över tre sekunder.
+       Tau:n gäller den långsamma driften mot vardagsläget. */
+    if(paradKval>0)s.fokus=clamp(Math.max(s.fokus,
+      s.fokus+S.FOKUS_PARAD*((typeof svarProfil==="function")?svarProfil(h).fokus:1)
+        *paradKval*0.55),0,1);
 
-     /* BALANS. Böjkravet och yttertygelstödet kommer ur hjälpsemantiken,
-        fartkravet ur samma centripetaluttryck som takten redan använder
-        (v²/r), och övergången ur att ett förlopp pågår. */
-     const bojkrav=HS?Math.min(1,Math.abs(HS.styrning)/
-       ((typeof HJALP_KANON!=="undefined")?HJALP_KANON.STYR_FULLT:0.72)):0;
-     const stodNu=HS?HS.ytterstod:1;
-     let fartkrav=0;
-     if(s.tempo>0.5&&ctx.svangradie<40)
-       fartkrav=clamp(((s.tempo*s.tempo)/Math.max(ctx.svangradie,1)-3.0)/9.0,0,1);
-     const bMal=svarBalansMal(s,h,bojkrav,stodNu,fartkrav,!!s._ov,a.sits);
-     const bTau=bMal<s.balans?S.BALANS_TAU_NER:S.BALANS_TAU_UPP;
-     s.balans+=(bMal-s.balans)*clamp(dt/bTau,0,1);
+    /* BALANS. Böjkravet och yttertygelstödet kommer ur hjälpsemantiken,
+       fartkravet ur samma centripetaluttryck som takten redan använder
+       (v²/r), och övergången ur att ett förlopp pågår. */
+    const bojkrav=HS?Math.min(1,Math.abs(HS.styrning)/
+      ((typeof HJALP_KANON!=="undefined")?HJALP_KANON.STYR_FULLT:0.72)):0;
+    const stodNu=HS?HS.ytterstod:1;
+    let fartkrav=0;
+    if(s.tempo>0.5&&ctx.svangradie<40)
+      fartkrav=clamp(((s.tempo*s.tempo)/Math.max(ctx.svangradie,1)-3.0)/9.0,0,1);
+    const bMal=svarBalansMal(s,h,bojkrav,stodNu,fartkrav,!!s._ov,a.sits);
+    const bTau=bMal<s.balans?S.BALANS_TAU_NER:S.BALANS_TAU_UPP;
+    s.balans+=(bMal-s.balans)*clamp(dt/bTau,0,1);
 
-     /* ENERGI. Arbetet tär, halten ger tillbaka, skritten går jämnt ut.
-        Talen är satta på en lektion och inte på ett testfönster — se
-        SVAR_KANON.ENERGI_TAPP. */
-     s.energi=clamp(s.energi+svarEnergiTakt(s.gangart,s.spanning,h)*dt,0,1);
-   }
-
-   /* SVARET. Hjälpen tappas aldrig bort: när väntan är slut startar
-      förloppet, och det är först här `malGangart` byter och
-      övergångstiden börjar räknas. Övergångens KANON — längderna i
-      K.OVERGANG — mäter alltså fortfarande själva förloppet och inte
-      fördröjningen, precis som före G02-B. Svarstiden redovisas för sig
-      i telemetrin, som den egna storhet den är. */
-   const v=s._vantar;
-   if(v){
-     v.kvar-=dt;
-     if(v.kvar<=0){
-       s.malGangart=v.till;
-       s.overgang={fran:v.fran,till:v.till,klar:false};
-       s._overgangStart=s._tid;
-       s.svarTid=s._tid;
-       /* Förloppets klocka startar HÄR, med rörelsen. Etableringens
-          klocka startade redan när ryttaren bad (cueTid). */
-       s._ovStart=s._tid;
-       s._ov={fran:s.tempo,t:0,langd:v.langd};
-       s._vantar=null;
-     }
-   }
+    /* ENERGI. Arbetet tär, halten ger tillbaka, skritten går jämnt ut.
+       Talen är satta på en lektion och inte på ett testfönster — se
+       SVAR_KANON.ENERGI_TAPP. */
+    s.energi=clamp(s.energi+svarEnergiTakt(s.gangart,s.spanning,h)*dt,0,1);
   }
+
+  /* SVARET. Hjälpen tappas aldrig bort: när väntan är slut startar
+     förloppet, och det är först här `malGangart` byter och
+     övergångstiden börjar räknas. Övergångens KANON — längderna i
+     K.OVERGANG — mäter alltså fortfarande själva förloppet och inte
+     fördröjningen, precis som före G02-B. Svarstiden redovisas för sig
+     i telemetrin, som den egna storhet den är. */
+  const v=s._vantar;
+  if(v){
+    v.kvar-=dt;
+    if(v.kvar<=0){
+      s.malGangart=v.till;
+      s.overgang={fran:v.fran,till:v.till,klar:false};
+      s._overgangStart=s._tid;
+      s.svarTid=s._tid;
+      /* Förloppets klocka startar HÄR, med rörelsen. Etableringens
+         klocka startade redan när ryttaren bad (cueTid). */
+      s._ovStart=s._tid;
+      s._ov={fran:s.tempo,t:0,langd:v.langd};
+      s._vantar=null;
+    }
+  }
+}
+
+function updateTempo(s, a, h, ctx, dt) {
   // tempo — förhandling, inte kommando
-  {const g=Gait.G[s.gangart]||Gait.G.halt;
-   /* Avdriften: hästens eget tempo ligger inte still. Hon glider sakta
-      åt sitt håll och rycker till ibland, och hur mycket beror på
-      lydnaden och dagens humör. Det är den här termen som gör att
-      stillasittande inte längre är optimalt — släpper du henne faller
-      takten, och takten är det inverkan mäter.
+  const g=Gait.G[s.gangart]||Gait.G.halt;
+  /* Avdriften: hästens eget tempo ligger inte still. Hon glider sakta
+     åt sitt håll och rycker till ibland, och hur mycket beror på
+     lydnaden och dagens humör. Det är den här termen som gör att
+     stillasittande inte längre är optimalt — släpper du henne faller
+     takten, och takten är det inverkan mäter.
 
-      Två frekvenser med olika period, så att vandringen aldrig blir en
-      förutsägbar sinus man lär sig utantill. */
-   const D=ctx.avdrift||{glid:0,ryck:0,tröghet:1};
-   const t=s._tid;
-   const vandring=D.glid*(0.62*Math.sin(t*0.41)+0.38*Math.sin(t*0.97+1.3))
-     + D.ryck*Math.max(0,Math.sin(t*0.23+2.1))**6;
-   /* Hästen bär den gångart hon senast ombads, inte den hon råkar ha.
-      Det är skillnaden mot förr: `eget` läste `s.gangart`, så tempot
-      hade ingen minneskälla utom sig självt och föll tillbaka så fort
-      hjälpen släpptes. */
-   const gm=Gait.G[s.malGangart]||g;
-   /* ENERGIN SITTER I FRAMÅTBJUDNINGEN (G02-B punkt 2). En trött häst
-      bjuder mindre men blir inte en annan häst: vid full energi är
-      faktorn exakt 1 och raden betyder vad den betydde före G02-B.
+     Två frekvenser med olika period, så att vandringen aldrig blir en
+     förutsägbar sinus man lär sig utantill. */
+  const D=ctx.avdrift||{glid:0,ryck:0,tröghet:1};
+  const t=s._tid;
+  const vandring=D.glid*(0.62*Math.sin(t*0.41)+0.38*Math.sin(t*0.97+1.3))
+    + D.ryck*Math.max(0,Math.sin(t*0.23+2.1))**6;
+  /* Hästen bär den gångart hon senast ombads, inte den hon råkar ha.
+     Det är skillnaden mot förr: `eget` läste `s.gangart`, så tempot
+     hade ingen minneskälla utom sig självt och föll tillbaka så fort
+     hjälpen släpptes. */
+  const gm=Gait.G[s.malGangart]||g;
+  /* ENERGIN SITTER I FRAMÅTBJUDNINGEN (G02-B punkt 2). En trött häst
+     bjuder mindre men blir inte en annan häst: vid full energi är
+     faktorn exakt 1 och raden betyder vad den betydde före G02-B.
 
-      Referenspunkten är alltså en HELT utvilad häst, och en häst startar
-      på 0,45 + 0,55 × dagsform. Den som har en toppdag går ut på Gate
-      01:s tal; den som har en medelmåttig dag går ut någon procent
-      lugnare, och det är vad dagsform borde ha betytt hela tiden. */
-   const eBjud=(typeof SVAR_KANON!=="undefined")
-     ? 1-SVAR_KANON.ENERGI_BJUD*(1-clamp(s.energi,0,1)) : 1;
-   const eget=gm.norm*(0.80+0.40*h.framatbjudning*eBjud)+vandring*(gm.norm>0?1:0);
-   /* Hjälpen nyanserar INOM gångarten — samlad eller utsträckt skritt —
-      men bär inte längre över ett band. Se K.HALL_BAND. */
-   const begaran=(a.skankel-a.tygel*0.9)*K.HALL_BAND;
-   const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
-   /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
-      omöjlig, hon kräver att du ber tydligare och håller kvar. */
-   const tr=(1.6+1.4*h.tyngd)*D.tröghet;
-   const forra=s.gangart;
-   const ov=s._ov;
-   if(ov&&ov.t<ov.langd){
-     /* UNDER FÖRLOPPET styr kurvan, inte approach(). Mjukstegskurvan
-        u²(3−2u) startar och slutar med noll lutning, vilket ger en
-        övergång utan ryck i någon ände och utan platå på mitten.
-        Trögheten skalar längden: en tung häst tar längre på sig, men
-        formen på förloppet är densamma. */
-     ov.t+=dt;
-     const u=clamp(ov.t/ov.langd,0,1), mjuk=u*u*(3-2*u);
-     s.tempo=ov.fran+(mal-ov.fran)*mjuk;
-     /* Etiketten byter en bit in i förloppet — hästen är på väg in i
-        travet en stund innan travet syns. Före bytpunkten behåller hon
-        den gamla gångarten även om tempot råkat passera ett band. */
-     s.gangart=u>=K.OVERGANG.BYTPUNKT?s.malGangart:ov.franG||forra;
-     if(!ov.franG)ov.franG=forra;
-     /* FÖRLOPPETS FAKTISKA LÄNGD, klockad och inte avläst ur ov.langd.
-        Skillnaden är poängen: läses längden ur planen kan provet inte
-        upptäcka att kurvan slutar någon annanstans än den skulle. */
-     if(u>=1){s.overgangstid=s._tid-(s._ovStart!==undefined?s._ovStart:s._tid); s._ov=null;}
-   }else{
-     /* INOM gångarten svarar tempot med gångartens egen tröghet. Talen
-        låg förut som 8,8 och 11 delat med hästens tyngd, lika för alla
-        gångarter; nu bär varje gångart sina, och tyngden skalar dem.
+     Referenspunkten är alltså en HELT utvilad häst, och en häst startar
+     på 0,45 + 0,55 × dagsform. Den som har en toppdag går ut på Gate
+     01:s tal; den som har en medelmåttig dag går ut någon procent
+     lugnare, och det är vad dagsform borde ha betytt hela tiden. */
+  const eBjud=(typeof SVAR_KANON!=="undefined")
+    ? 1-SVAR_KANON.ENERGI_BJUD*(1-clamp(s.energi,0,1)) : 1;
+  const eget=gm.norm*(0.80+0.40*h.framatbjudning*eBjud)+vandring*(gm.norm>0?1:0);
+  /* Hjälpen nyanserar INOM gångarten — samlad eller utsträckt skritt —
+     men bär inte längre över ett band. Se K.HALL_BAND. */
+  const begaran=(a.skankel-a.tygel*0.9)*K.HALL_BAND;
+  const mal=clamp(eget+begaran+s.spanning*0.8*h.framatbjudning,0,9);
+  /* Trögheten: en olydig häst svarar segare på skänkeln. Hon blir inte
+     omöjlig, hon kräver att du ber tydligare och håller kvar. */
+  const tr=(1.6+1.4*h.tyngd)*D.tröghet;
+  const forra=s.gangart;
+  const ov=s._ov;
+  if(ov&&ov.t<ov.langd){
+    /* UNDER FÖRLOPPET styr kurvan, inte approach(). Mjukstegskurvan
+       u²(3−2u) startar och slutar med noll lutning, vilket ger en
+       övergång utan ryck i någon ände och utan platå på mitten.
+       Trögheten skalar längden: en tung häst tar längre på sig, men
+       formen på förloppet är densamma. */
+    ov.t+=dt;
+    const u=clamp(ov.t/ov.langd,0,1), mjuk=u*u*(3-2*u);
+    s.tempo=ov.fran+(mal-ov.fran)*mjuk;
+    /* Etiketten byter en bit in i förloppet — hästen är på väg in i
+       travet en stund innan travet syns. Före bytpunkten behåller hon
+       den gamla gångarten även om tempot råkat passera ett band. */
+    s.gangart=u>=K.OVERGANG.BYTPUNKT?s.malGangart:ov.franG||forra;
+    if(!ov.franG)ov.franG=forra;
+    /* FÖRLOPPETS FAKTISKA LÄNGD, klockad och inte avläst ur ov.langd.
+       Skillnaden är poängen: läses längden ur planen kan provet inte
+       upptäcka att kurvan slutar någon annanstans än den skulle. */
+    if(u>=1){s.overgangstid=s._tid-(s._ovStart!==undefined?s._ovStart:s._tid); s._ov=null;}
+  }else{
+    /* INOM gångarten svarar tempot med gångartens egen tröghet. Talen
+       låg förut som 8,8 och 11 delat med hästens tyngd, lika för alla
+       gångarter; nu bär varje gångart sina, och tyngden skalar dem.
 
-        FAKTORN 2 är ingen enhetsomräkning och ska inte läsas som en.
-        Roblox tal ligger på halva webbens gamla nivå (halt 5,5 × 2 = 11,
-        exakt det gamla `ner`). Utan faktorn hade HELA ridningen blivit
-        trögare på en gång, vilket är just den regression arbetsordern
-        förbjuder. Faktorn håller alltså kvar webbens NIVÅ; Roblox tal
-        sätter SPRIDNINGEN mellan gångarterna.
+       FAKTORN 2 är ingen enhetsomräkning och ska inte läsas som en.
+       Roblox tal ligger på halva webbens gamla nivå (halt 5,5 × 2 = 11,
+       exakt det gamla `ner`). Utan faktorn hade HELA ridningen blivit
+       trögare på en gång, vilket är just den regression arbetsordern
+       förbjuder. Faktorn håller alltså kvar webbens NIVÅ; Roblox tal
+       sätter SPRIDNINGEN mellan gångarterna.
 
-        Följden, ärligt: paritetsspecen prövar att TABELLERNA är samma
-        tal — inte att uppmätt m/s² är samma på båda ytorna. Webbens
-        approach() ger ungefär nominellt/2,16 i uppmätt acceleration
-        (8,8 gav 4,07; 5,2 ger 2,41). Vad som verkligen har paritet är
-        ordningen och förhållandet mellan gångarterna. Att mäta samma
-        absoluta acceleration på båda ytorna kräver Studio och är
-        [ANTAGANDE] tills det gjorts. */
-     const gg=Gait.G[s.gangart]||Gait.G.halt;
-     s.tempo=approach(s.tempo,mal,(gg.upp??3.2)*2/tr,(gg.ner??5.5)*2/tr,dt);
-     s.gangart=Gait.forTempo(s.tempo,s.gangart);
-   }
-   s._avdrift=vandring;
-   /* ÖVERGÅNGSTIDEN: från att ryttaren bad till att hästen faktiskt går
-      i den gångarten. Det är måttet G02-B/C ska kunna bygga på, och det
-      enda som säger om en övergång var mjuk eller ryckig. */
-   if(s.gangart!==forra&&s.overgang&&!s.overgang.klar&&s.gangart===s.malGangart){
-     s.overgang.klar=true;
-     /* ETABLERINGEN: från att ryttaren BAD till att hon faktiskt går i
-        gångarten. Mäts från cueTid och inte från svaret, så att
-        fördröjningen ingår — det är den tid en ryttare upplever. */
-     s.etableringstid=s._tid-s.cueTid;
-   }
-   s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
+       Följden, ärligt: paritetsspecen prövar att TABELLERNA är samma
+       tal — inte att uppmätt m/s² är samma på båda ytorna. Webbens
+       approach() ger ungefär nominellt/2,16 i uppmätt acceleration
+       (8,8 gav 4,07; 5,2 ger 2,41). Vad som verkligen har paritet är
+       ordningen och förhållandet mellan gångarterna. Att mäta samma
+       absoluta acceleration på båda ytorna kräver Studio och är
+       [ANTAGANDE] tills det gjorts. */
+    const gg=Gait.G[s.gangart]||Gait.G.halt;
+    s.tempo=approach(s.tempo,mal,(gg.upp??3.2)*2/tr,(gg.ner??5.5)*2/tr,dt);
+    s.gangart=Gait.forTempo(s.tempo,s.gangart);
   }
+  s._avdrift=vandring;
+  /* ÖVERGÅNGSTIDEN: från att ryttaren bad till att hästen faktiskt går
+     i den gångarten. Det är måttet G02-B/C ska kunna bygga på, och det
+     enda som säger om en övergång var mjuk eller ryckig. */
+  if(s.gangart!==forra&&s.overgang&&!s.overgang.klar&&s.gangart===s.malGangart){
+    s.overgang.klar=true;
+    /* ETABLERINGEN: från att ryttaren BAD till att hon faktiskt går i
+       gångarten. Mäts från cueTid och inte från svaret, så att
+       fördröjningen ingår — det är den tid en ryttare upplever. */
+    s.etableringstid=s._tid-s.cueTid;
+  }
+  s._hist.push(s.tempo); if(s._hist.length>12)s._hist.shift();
+}
+
+function updateMalvarden(s, a, h, ctx, dt, parad, hhKval, HS) {
   // målvärden
   const mal={};
-  {let stab=1;const n=s._hist.length;
-   if(n>=3){let me=0;for(const v of s._hist)me+=v;me/=n;
-     let sp=0;for(const v of s._hist)sp+=Math.abs(v-me);sp/=n;stab=clamp(1-sp/0.9,0,1);}
-   let svang=0;
-   if(s.tempo>0.5&&ctx.svangradie<40){
-     const krav=(s.tempo*s.tempo)/Math.max(ctx.svangradie,1);
-     svang=clamp((krav-3.0)/9.0,0,0.55);}
-   let diag=0;
-   if(s.gangart==="trav"&&a.lattridning)diag=(1-clamp(a.diagonal,0,1))*0.30;
-   if(s.gangart==="trav"&&!a.lattridning&&s.spanning>0.5)diag+=0.10;
-   mal.takt=clamp(0.15+0.42*stab+0.28*s.mjukhet+0.15*h.utbildning-svang-diag-0.30*s.spanning,0,1);
-   const handMjuk=1-clamp((a.tygel-K.TYGEL_BAND_MAX-((ctx.fard&&ctx.fard.tygelband)||0))/0.35,0,1);
-   mal.losgjordhet=clamp(0.10+0.55*(1-s.spanning)+0.20*handMjuk+0.18*s.dagsform
-     +0.12*s.sadellage+0.10*h.forlatande-0.15*(1-s.mjukhet),0,1);
-   const mitt=(K.TYGEL_BAND_MIN+K.TYGEL_BAND_MAX)/2,halv=(K.TYGEL_BAND_MAX-K.TYGEL_BAND_MIN)/2;
-   const iband=clamp(1-Math.abs(a.tygel-mitt)/(halv*1.6),0,1);
-   mal.kontakt=clamp(0.05+0.48*iband+0.32*s.mjukhet+0.20*mal.losgjordhet-0.25*s.spanning,0,1);
-   const kravS=K.SKANKEL_TROSKEL+0.35*h.tyngd;
-   let driv=clamp((a.skankel-kravS)/0.45,0,1);
-   if(a.skankel>K.SKANKEL_FOR_MYCKET)driv*=clamp(1-(a.skankel-K.SKANKEL_FOR_MYCKET)*2,0.25,1);
-   mal.schvung=clamp(0.02+0.50*Math.min(driv,iband+0.25)+0.22*mal.kontakt
-     +0.16*h.framatbjudning-0.28*s.spanning,0,1);
-   const sb=Math.abs(a.styrning);let rak;
-   if(ctx.svangradie>100)rak=clamp(1-sb*2.2,0,1);
-   else{const onskad=clamp(12/Math.max(ctx.svangradie,4),0,1);
-     rak=clamp(1-Math.abs(sb-onskad)*1.8,0,1)*clamp(0.45+a.skankel*0.9,0,1);}
-   /* ── YTTERTYGELN BÄR SVÄNGEN (G02-B punkt 1) ───────────────────
-      Rakriktning i en sväng är inte att styra lagom mycket — det är att
-      innertygeln BER om böjningen och yttertygeln BEGRÄNSAR den. En
-      sväng riden på bara innertygel låter hästen falla in på inre
-      skuldran; hon kommer runt, men inte rak.
+  let stab=1;const n=s._hist.length;
+  if(n>=3){let me=0;for(const v of s._hist)me+=v;me/=n;
+    let sp=0;for(const v of s._hist)sp+=Math.abs(v-me);sp/=n;stab=clamp(1-sp/0.9,0,1);}
+  let svang=0;
+  if(s.tempo>0.5&&ctx.svangradie<40){
+    const krav=(s.tempo*s.tempo)/Math.max(ctx.svangradie,1);
+    svang=clamp((krav-3.0)/9.0,0,0.55);}
+  let diag=0;
+  if(s.gangart==="trav"&&a.lattridning)diag=(1-clamp(a.diagonal,0,1))*0.30;
+  if(s.gangart==="trav"&&!a.lattridning&&s.spanning>0.5)diag+=0.10;
+  mal.takt=clamp(0.15+0.42*stab+0.28*s.mjukhet+0.15*h.utbildning-svang-diag-0.30*s.spanning,0,1);
+  const handMjuk=1-clamp((a.tygel-K.TYGEL_BAND_MAX-((ctx.fard&&ctx.fard.tygelband)||0))/0.35,0,1);
+  mal.losgjordhet=clamp(0.10+0.55*(1-s.spanning)+0.20*handMjuk+0.18*s.dagsform
+    +0.12*s.sadellage+0.10*h.forlatande-0.15*(1-s.mjukhet),0,1);
+  const mitt=(K.TYGEL_BAND_MIN+K.TYGEL_BAND_MAX)/2,halv=(K.TYGEL_BAND_MAX-K.TYGEL_BAND_MIN)/2;
+  const iband=clamp(1-Math.abs(a.tygel-mitt)/(halv*1.6),0,1);
+  mal.kontakt=clamp(0.05+0.48*iband+0.32*s.mjukhet+0.20*mal.losgjordhet-0.25*s.spanning,0,1);
+  const kravS=K.SKANKEL_TROSKEL+0.35*h.tyngd;
+  let driv=clamp((a.skankel-kravS)/0.45,0,1);
+  if(a.skankel>K.SKANKEL_FOR_MYCKET)driv*=clamp(1-(a.skankel-K.SKANKEL_FOR_MYCKET)*2,0.25,1);
+  mal.schvung=clamp(0.02+0.50*Math.min(driv,iband+0.25)+0.22*mal.kontakt
+    +0.16*h.framatbjudning-0.28*s.spanning,0,1);
+  const sb=Math.abs(a.styrning);let rak;
+  if(ctx.svangradie>100)rak=clamp(1-sb*2.2,0,1);
+  else{const onskad=clamp(12/Math.max(ctx.svangradie,4),0,1);
+    rak=clamp(1-Math.abs(sb-onskad)*1.8,0,1)*clamp(0.45+a.skankel*0.9,0,1);}
+  /* ── YTTERTYGELN BÄR SVÄNGEN (G02-B punkt 1) ───────────────────
+     Rakriktning i en sväng är inte att styra lagom mycket — det är att
+     innertygeln BER om böjningen och yttertygeln BEGRÄNSAR den. En
+     sväng riden på bara innertygel låter hästen falla in på inre
+     skuldran; hon kommer runt, men inte rak.
 
-      `ytterstod` är 1 på rakt spår, så termen kan inte röra en rak
-      ridning: faktorn är då exakt 1 och raden betyder vad den betydde
-      före G02-B. Först när styrningen läggs på finns det en inner- och
-      en yttersida att göra rätt eller fel med, och då avgör den
-      kontakt ryttaren HÅLLER genom svängen hur mycket stöd hon ger.
+     `ytterstod` är 1 på rakt spår, så termen kan inte röra en rak
+     ridning: faktorn är då exakt 1 och raden betyder vad den betydde
+     före G02-B. Först när styrningen läggs på finns det en inner- och
+     en yttersida att göra rätt eller fel med, och då avgör den
+     kontakt ryttaren HÅLLER genom svängen hur mycket stöd hon ger.
 
-      Golvet 0,55 är avsiktligt inte 0: en sväng utan yttertygel är
-      dåligt riden, inte omöjlig.
+     Golvet 0,55 är avsiktligt inte 0: en sväng utan yttertygel är
+     dåligt riden, inte omöjlig.
 
-      TVÅ SKILDA SAKER, INTE EN RÄKNAD TVÅ GÅNGER. Den här termen läser
-      yttertygelstödet DIREKT: den är mekanisk och omedelbar — vad handen
-      begränsar just nu. Hästens BALANS är något annat, ett tillstånd som
-      byggs upp och tappas med tröghet, och den har sin egen verkan på
-      annat håll: en häst ur balans FALLER IN i svängen (se
-      SVAR_KANON.INFALL_MAX och kurvaturen i src/game.js). Att låta
-      balansen också styra rakriktningen hade räknat samma yttertygel
-      två gånger; att ta bort den här termen hade gjort punkt 1:s
-      mekanik osynlig. De är komplement. */
-   const stod=HS?HS.ytterstod:1;
-   mal.rakriktning=clamp(0.02+0.46*rak*(0.55+0.45*stod)+0.26*mal.schvung+0.20*s.mjukhet-0.20*s.spanning,0,1);
-   if(parad>0)mal.samling=clamp(s.skala.samling+parad*0.22*(0.5+0.7*h.utbildning),0,1);
-   else if(hhKval<0)mal.samling=clamp(s.skala.samling+hhKval*0.4,0,1);
-   else mal.samling=clamp(s.skala.samling-0.16,0,1);
-  }
+     TVÅ SKILDA SAKER, INTE EN RÄKNAD TVÅ GÅNGER. Den här termen läser
+     yttertygelstödet DIREKT: den är mekanisk och omedelbar — vad handen
+     begränsar just nu. Hästens BALANS är något annat, ett tillstånd som
+     byggs upp och tappas med tröghet, och den har sin egen verkan på
+     annat håll: en häst ur balans FALLER IN i svängen (se
+     SVAR_KANON.INFALL_MAX och kurvaturen i src/game.js). Att låta
+     balansen också styra rakriktningen hade räknat samma yttertygel
+     två gånger; att ta bort den här termen hade gjort punkt 1:s
+     mekanik osynlig. De är komplement. */
+  const stod=HS?HS.ytterstod:1;
+  mal.rakriktning=clamp(0.02+0.46*rak*(0.55+0.45*stod)+0.26*mal.schvung+0.20*s.mjukhet-0.20*s.spanning,0,1);
+  if(parad>0)mal.samling=clamp(s.skala.samling+parad*0.22*(0.5+0.7*h.utbildning),0,1);
+  else if(hhKval<0)mal.samling=clamp(s.skala.samling+hhKval*0.4,0,1);
+  else mal.samling=clamp(s.skala.samling-0.16,0,1);
+  return mal;
+}
+
+function updateSkala(s, h, mal, dt) {
   // KÄNSLIGHET ÄR KONTRAST
-  {const kontrast=0.78+0.85*h.kanslighet,PIVOT=0.44;
-   for(const k of Skala.ORDER)if(k!=="samling")mal[k]=clamp(PIVOT+(mal[k]-PIVOT)*kontrast,0,1);
-   const gain=0.55+0.95*h.kanslighet;
-   const upp=K.BAS_STIGNING*gain, ner=K.BAS_FALL*gain*(1.35-0.70*h.forlatande);
-   for(const k of Skala.ORDER)s.skala[k]=approach(s.skala[k],mal[k],upp,ner,dt);
-   Skala.pyramid(s.skala);
-  }
+  const kontrast=0.78+0.85*h.kanslighet,PIVOT=0.44;
+  for(const k of Skala.ORDER)if(k!=="samling")mal[k]=clamp(PIVOT+(mal[k]-PIVOT)*kontrast,0,1);
+  const gain=0.55+0.95*h.kanslighet;
+  const upp=K.BAS_STIGNING*gain, ner=K.BAS_FALL*gain*(1.35-0.70*h.forlatande);
+  for(const k of Skala.ORDER)s.skala[k]=approach(s.skala[k],mal[k],upp,ner,dt);
+  Skala.pyramid(s.skala);
+}
+
+function stepRide(s,a,h,ctx,dt){
+  if(dt<=0)return s; s._tid+=dt;
+  /* Hjälperna i ridningens ord, en gång per bildruta. Både hästens svar
+     och målvärdena läser dem; att räkna dem två gånger vore två
+     sanningar om samma bildruta. */
+  const HS=(typeof hjalpSemantik==="function")?hjalpSemantik(a):null;
+
+  updateMjukhet(s, a, ctx, dt);
+  const { hhKval, paradKval, parad } = updateHalvhaltOchParad(s, a, ctx, dt);
+  updateCue(s, a, h, ctx, dt, parad);
+  updateSpanning(s, a, h, ctx, dt);
+  updateSvar(s, a, h, ctx, dt, paradKval, HS);
+  updateTempo(s, a, h, ctx, dt);
+  const mal = updateMalvarden(s, a, h, ctx, dt, parad, hhKval, HS);
+  updateSkala(s, h, mal, dt);
+
   s.steglangd=Gait.steglangd(h.kategori,s.gangart,s.skala.schvung,s.spanning);
   /* Rangen ligger i svar.js sedan blocker 2 — Roblox räknar den med
      samma formel i stället för att hålla 0,5 hela ritten. */
