@@ -29,8 +29,11 @@ async function state(){return page.evaluate(()=>({
 }));}
 async function snap(name){const s=await state();fs.writeFileSync(path.join(out,`${name}.json`),JSON.stringify(s,null,2));await page.screenshot({path:path.join(out,`${name}.png`),fullPage:true});return s;}
 async function button(selector){const b=page.locator(selector).first();if(await b.count()&&await b.isVisible()&&!await b.isDisabled()){await b.click();return true;}return false;}
-async function key(code){await page.keyboard.press(code);await page.waitForTimeout(130);}
 async function hold(code,ms){await page.keyboard.down(code);await page.waitForTimeout(ms);await page.keyboard.up(code);}
+/* keyboard.press skickar down+up utan att invänta en animation frame.
+   Det är inte ett riktigt tangenttryck för ett spel som samplar IN.ned
+   i requestAnimationFrame. Håll minst 180 ms och invänta en ny frame. */
+async function key(code){await hold(code,180);await page.waitForTimeout(80);}
 async function mapOn(){if((await state()).view!=='2d'&&!await button('#viewToggle [data-v="2d"]'))throw Error('Karta-knappen saknas');await page.waitForTimeout(250);}
 async function point(x,y){if(mode==='touch')await page.touchscreen.tap(x,y);else await page.mouse.click(x,y);}
 async function walk(pos,label){
@@ -60,6 +63,7 @@ async function goToScene(target){
   if(!route?.length)throw Error(`Ingen scenrutt ${s.scene} → ${target}`);
   const d=s.sceneDoors.filter(x=>x.to===route[0]).sort((a,b)=>Math.hypot(a.pos[0]-s.player.x,a.pos[1]-s.player.y)-Math.hypot(b.pos[0]-s.player.x,b.pos[1]-s.player.y))[0];
   if(!d)throw Error(`Ingen dörr till ${route[0]}`);await walk(d.pos,d.text);await interact();
+  await page.waitForFunction(previous=>G.scen!==previous,s.scene,{timeout:3000}).catch(()=>{});
   if((await state()).scene===s.scene)throw Error(`Dörren ${d.text} bytte inte scen`);
  }throw Error(`För många scenbyten till ${target}`);
 }
