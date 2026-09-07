@@ -1395,6 +1395,9 @@ const STALLINNE = {
   /* Ridläraren och whiteboarden mitt i gång A. */
   const mA=(S.gangar.A.x0+S.gangar.A.x1)/2;
   S.ridlarare.pos[0]=mA; S.whiteboard.pos[0]=mA;
+
+  S.raderById = Object.create(null);
+  for (const rad of S.rader) S.raderById[rad.id] = rad;
 })();
 
 /* BOXFACKEN per rad, som y-intervall. Samma regel som Geometri.boxfack i
@@ -1470,7 +1473,7 @@ STALLINNE.gangytor = (()=>{
      ingen sådan, bara det här brottet. Sträcks DORRGAP in i gång A av samma
      skäl som gångarna sträcks in i hallarna. */
   for(const b of S.brott){
-    const rad=S.rader.find(r=>r.id===b.rad);
+    const rad=S.raderById[b.rad];
     const x0=rad.vetter>0 ? 0.4 : rad.x0-DORRGAP;
     const x1=rad.vetter>0 ? rad.x0+rad.djup+DORRGAP : S.bredd-0.4;
     g.push({x:x0, y:b.y0, w:x1-x0, h:b.y1-b.y0});
