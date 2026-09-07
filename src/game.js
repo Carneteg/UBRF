@@ -325,11 +325,7 @@ function stegaNPC(dt){
 
 /* ── Ritt-fysik på planen ── */
 let kursHist=[];
-function stegaRitt(dt){
-  G.aids=stegaInput(dt);
-  if(G.auto)autopilot(dt);
-  const h=HORSES[G.hastId];
-
+function stegaRittKurvatur(dt, h) {
   /* ── Svängen som KURVATUR, inte som vridhastighet ────────────────
      Förut: omega = styrning × (0,5 + 0,22 × tempo). Vridhastigheten
      växte alltså med farten — i fyrsprång kunde hästen snurra 2,2 rad/s,
@@ -404,39 +400,10 @@ function stegaRitt(dt){
   if(Math.abs(G.kappa)<0.0015)G.kappa=0;
   const omega=G.kappa*G.ride.tempo;
   const radie=Math.abs(G.kappa)>0.002?1/Math.abs(G.kappa):1000;
-  /* Utomhus väger skyggheten tyngre (modellen har faktorn), och regn
-     gör underlaget tyngre än ridhusets harvade fiber. */
-  const ute=G.plats!=="ridhus";
-  const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
-  /* Färdigheter plus de valda egenskaperna, i ett anrop — modellen ska
-     inte behöva veta att lutningen har två källor. */
-  const F=fardighetsModMedJag();
-  stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,
-    utomhus:ute,fard:F,
-    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,F.halla)},dt);
-  /* Färdigheterna växer av det som just hände. Returnerar ett id när en
-     färdighet passerar ett helt tiondelssteg, så att det går att visa. */
-  {const steg=stegaFardighet(G.ride,G.aids,dt);
-   if(steg)visaFardighetsSteg(steg);}
-  passSteg(dt);
-  /* MINUS, inte plus. Kursen är atan2-vinkeln i ett y-uppåt-plan
-     (framåt = cos, sin), och där betyder VÄXANDE vinkel moturs — alltså
-     vänster. D gav styrning +0,72 och därmed en vänstersväng: höger och
-     vänster har varit spegelvända i hela spelet.
+  return { omega, radie };
+}
 
-     Uppmätt före rättningen: med nosen rakt norrut (90°) och D nedtryckt
-     en halv sekund gick kursen till 130° i ridningen och 167° i gå-läget
-     — bägge moturs, alltså vänster.
-
-     Rättningen ligger HÄR och inte i tangentborden, så att styrning > 0
-     genomgående betyder höger: det är vad D ger, vad pekstyrningens
-     högerdrag ger, och vad HUD:ens markör visar. Kameran var oskyldig —
-     en punkt rakt öster om spelaren projiceras till NDC-x +13,9, alltså
-     höger på skärmen, precis som den ska. */
-  /* Ingen extra fartgrind behövs: omega är kurvatur × tempo, så en
-     stillastående häst svänger inte av sig själv. Det är också kravet
-     om att inga vridningar på stället får ske under rörelse. */
-  G.rikt-=omega*dt;
+function stegaRittPosition(dt, omega) {
   /* ── Väggen: glid längs den, snäpp inte ──────────────────────────
      Korrigeringen mot sargen använde en fast lerp-faktor per bildruta,
      alltså 0,06 oavsett om spelet gick i 30 eller 144 Hz. Samma vägg
@@ -499,6 +466,12 @@ function stegaRitt(dt){
       saga("För nära! Håll en hästlängd till ekipaget framför.",3.2);
     }
   }
+  const strackaSteg=Math.hypot(nx-G.px, ny-G.py);
+  G.px=nx;G.py=ny;
+  return strackaSteg;
+}
+
+function stegaRittFas(dt, strackaSteg) {
   /* ── Gångartsfasen följer MARKEN, inte klockan ────────────────────
      Förut drevs fasen av en frekvens gånger tempot, vilket är nästan
      rätt men inte riktigt: samma sträcka i samma gångart kunde ge olika
@@ -523,8 +496,6 @@ function stegaRitt(dt){
      tidigare multiplicerad med antalet hovnedslag, vilket gjorde
      fasvarvet 2,7–4 gånger för långt — hovarna gled fortfarande, bara
      långsammare. Roblox räknar samma storhet som norm ÷ cycles. */
-  const strackaSteg=Math.hypot(nx-G.px, ny-G.py);
-  G.px=nx;G.py=ny;
   G.gaitSpar+=strackaSteg;
   {const cykelLangd=G.ride.steglangd;
    if(cykelLangd>0.05){
@@ -546,6 +517,9 @@ function stegaRitt(dt){
     G.plats==="ridhus"?"fiber":(G.vader&&G.vader.typ==="regn"?"vat":"grus"));
   G.spanningPuls=clamp(G.ride.spanning-0.55,0,1)/0.45;
 
+}
+
+function stegaRittTroghet(dt) {
   /* ── Kroppens lutning i svängen ───────────────────────────────────
      Centripetalaccelerationen är kurvatur gånger tempo i kvadrat. Den
      storheten är noll när hästen står still hur mycket man än styr, växer
@@ -583,6 +557,50 @@ function stegaRitt(dt){
       en tredjedel av banlutningen. Kroppen ska följa, inte tävla. */
    G.ryttarPitch=clamp(-G.accel*0.014,-0.055,0.055);
    G.ryttarRoll=clamp((G.banLut||0)*0.34,-0.030,0.030);}
+}
+
+function stegaRitt(dt){
+  G.aids=stegaInput(dt);
+  if(G.auto)autopilot(dt);
+  const h=HORSES[G.hastId];
+
+  const { omega, radie } = stegaRittKurvatur(dt, h);
+  /* Utomhus väger skyggheten tyngre (modellen har faktorn), och regn
+     gör underlaget tyngre än ridhusets harvade fiber. */
+  const ute=G.plats!=="ridhus";
+  const underlag=ute?(G.vader&&G.vader.typ==="regn"?0.76:0.88):0.92;
+  /* Färdigheter plus de valda egenskaperna, i ett anrop — modellen ska
+     inte behöva veta att lutningen har två källor. */
+  const F=fardighetsModMedJag();
+  stepRide(G.ride,G.aids,h,{svangradie:clamp(radie,3,1000),underlag,stallro:G.stallro,
+    utomhus:ute,fard:F,
+    avdrift:hastAvdrift(h,G.humor===undefined?0.6:G.humor,F.halla)},dt);
+  /* Färdigheterna växer av det som just hände. Returnerar ett id när en
+     färdighet passerar ett helt tiondelssteg, så att det går att visa. */
+  {const steg=stegaFardighet(G.ride,G.aids,dt);
+   if(steg)visaFardighetsSteg(steg);}
+  passSteg(dt);
+  /* MINUS, inte plus. Kursen är atan2-vinkeln i ett y-uppåt-plan
+     (framåt = cos, sin), och där betyder VÄXANDE vinkel moturs — alltså
+     vänster. D gav styrning +0,72 och därmed en vänstersväng: höger och
+     vänster har varit spegelvända i hela spelet.
+
+     Uppmätt före rättningen: med nosen rakt norrut (90°) och D nedtryckt
+     en halv sekund gick kursen till 130° i ridningen och 167° i gå-läget
+     — bägge moturs, alltså vänster.
+
+     Rättningen ligger HÄR och inte i tangentborden, så att styrning > 0
+     genomgående betyder höger: det är vad D ger, vad pekstyrningens
+     högerdrag ger, och vad HUD:ens markör visar. Kameran var oskyldig —
+     en punkt rakt öster om spelaren projiceras till NDC-x +13,9, alltså
+     höger på skärmen, precis som den ska. */
+  /* Ingen extra fartgrind behövs: omega är kurvatur × tempo, så en
+     stillastående häst svänger inte av sig själv. Det är också kravet
+     om att inga vridningar på stället får ske under rörelse. */
+  G.rikt-=omega*dt;
+  const strackaSteg = stegaRittPosition(dt, omega);
+  stegaRittFas(dt, strackaSteg);
+  stegaRittTroghet(dt);
 }
 function lerpAngle(a,b,t){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*t;}
 
