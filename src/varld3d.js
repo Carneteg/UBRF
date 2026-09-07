@@ -9,7 +9,31 @@
 "use strict";
 
 const V3D={ plats:null, nyckel:null, statiskt:[], oppningar:null,
-  kam:{x:0,y:2.2,z:0, tx:0,ty:1.3,tz:0, satt:false} };
+  kam:{x:0,y:2.2,z:0, tx:0,ty:1.3,tz:0, satt:false},
+  /* Den höjd figuren SENAST RITADES på. Sätts i v3dFigurGolv, av samma
+     variabel som går in i bastranslationen — se noten där. En grind kan
+     alltså mäta att kroppen följde golvet, inte bara att nivåregeln
+     tyckte det. */
+  figurGolv:0,
+  /* Produktvyn visar ingen SPELABSTRAKTION-markering. Sätts av QA/grind
+     (`?abstraktion=1`) — se v3dAbstraktionSynlig. */
+  visaAbstraktion:false };
+
+/* SKA SPELABSTRAKTIONERNAS MARKÖRER RITAS?
+
+   De gula genomskinliga plattorna över spelets steg är en GRANSKNINGS-
+   markering: de säger "det här är inte fidelity-geometri". För spelaren
+   var de ett genomskinligt block mitt i trappan, och det var en av
+   orsakerna till att läktaren kändes fel (#114-postmortem, punkt 2).
+
+   Debugvisualisering får aldrig vara det som kommunicerar fysisk
+   geometri i normal gameplay. Markörerna ritas därför bara när någon
+   uttryckligen ber om dem. */
+function v3dAbstraktionSynlig(){
+  if(V3D.visaAbstraktion)return true;
+  if(typeof location==="undefined"||!location.search)return false;
+  return /(^|[?&])abstraktion=1(&|$)/.test(location.search);
+}
 
 /* ── Extra texturer för anläggningen ──────────────────────────── */
 function v3dTexturer(){
@@ -970,7 +994,29 @@ function v3dKameraUtUr(mx,mz,px,pz,q,m){
 /* Hur många meter av läktarens norra ände som tonas när den skymmer
    (delad med Roblox: Anlaggningen.luau LAKTARE_TONAD_ANDE). */
 const LAKTARE_TONAD_ANDE=4.0;
+/* STÅR SPELAREN SJÄLV PÅ LÄKTAREN? (P0 #81, postmortem punkt 4.)
+
+   Läktarens norra del tonas bort så att en spelare på marken inte döljs
+   av bänkarna. När hon står DÄR UPPE blir samma regel fel: det hon står
+   på blir genomskinligt under fötterna. Siktregeln måste alltså bero på
+   spelarens NIVÅ, inte bara på kameravinkeln.
+
+   Nivån läses ur `VD.pz` — samma vertikala tillstånd som kollisionen,
+   kameran och numera figuren. Ingen egen uppfattning om var hon är. */
+function v3dPaLaktaren(){
+  if(typeof RIDHUSINNE==="undefined"||typeof VD==="undefined")return false;
+  if(typeof G==="undefined"||G.scen!=="ridhusinne")return false;
+  const L=RIDHUSINNE.laktare; if(!L)return false;
+  const z=VD.pz||0;
+  return z>=L.dackZ-0.08
+    && VD.px>=L.x0-0.15 && VD.px<=L.x0+L.dackDjup+0.15
+    && VD.py>=L.y0-0.15 && VD.py<=L.y1+0.15;
+}
+
 function v3dTonas(s,kx,kz,px,pz){
+  /* Ytan man står på tonas aldrig. Testet ligger FÖRE de vanliga
+     reglerna: annars skulle en av dem hinna säga ja först. */
+  if(s.laktargolv&&v3dPaLaktaren())return false;
   if(s.tona3d){
     const k=V3D.kam, h=(VD.pz||0)+1.25;
     const o=[k.x,k.y,k.z], d=[px-o[0],h-o[1],pz-o[2]];
@@ -2004,9 +2050,14 @@ function v3dRidhus(lagg,opp){
      axel loppet har (`axel` "x": längs gaveln), med ett vitt snedställt
      sidostycke mot banan och en handledare i trä. Samma steg som
      gåendets nivåregel läser. */
-  /* Spelets bänkradssteg (SPELABSTRAKTION, se site.js) ritas med samma
-     stegregel men i neutral färg och med en gul genomskinlig markör, så
-     att en granskare ser att de inte är fidelity-geometri. */
+  /* Spelets bänkradssteg och läktarsteg (SPELABSTRAKTION, se site.js)
+     ritas med samma stegregel som riktiga trappor och i neutral färg.
+     Själva STEGEN är produktgeometri — de är det spelaren går på och de
+     ska vara opaka. Den gula genomskinliga plattan ovanför är däremot en
+     GRANSKNINGSMARKERING, och den ritas bara i abstraktionsläget
+     (`v3dAbstraktionSynlig`). I spelarvyn såg den ut som ett
+     genomskinligt block mitt i trappan — #114-postmortem, punkt 2. */
+  const visaAbstr=v3dAbstraktionSynlig();
   {const LS=SPELABSTRAKTIONER.ridhus.laktarSteg;
    if(LS&&LS.x1>LS.x0){
      const T=trappsteg(LS), b=LS.x1-LS.x0, mitt=(LS.x0+LS.x1)/2;
@@ -2014,9 +2065,11 @@ function v3dRidhus(lagg,opp){
        const tj=Math.max(0.06,Math.abs(T.stig));
        lak.lada(b,tj,st.a1-st.a0,"#B9A886",M4.translation(mitt,st.z-tj/2,(st.a0+st.a1)/2));
      }
-     const m=new Bygge();
-     m.lada(b,0.12,LS.y1-LS.y0,"#D6AE3C",M4.translation(mitt,LS.z1+0.3,(LS.y0+LS.y1)/2));
-     S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true});
+     if(visaAbstr){
+       const m=new Bygge();
+       m.lada(b,0.12,LS.y1-LS.y0,"#D6AE3C",M4.translation(mitt,LS.z1+0.3,(LS.y0+LS.y1)/2));
+       S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true,abstraktion:true});
+     }
    }}
   const SA=SPELABSTRAKTIONER.ridhus.bankradSteg;
   if(SA&&SA.x1>SA.x0){
@@ -2025,9 +2078,11 @@ function v3dRidhus(lagg,opp){
       const tj=Math.max(0.06,Math.abs(T.stig));
       lak.lada(st.a1-st.a0,tj,b,"#B9A886",M4.translation((st.a0+st.a1)/2,st.z-tj/2,mitt));
     }
-    const m=new Bygge();
-    m.lada(SA.x1-SA.x0,0.12,b,"#D6AE3C",M4.translation((SA.x0+SA.x1)/2,SA.z1+0.3,mitt));
-    S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true});
+    if(visaAbstr){
+      const m=new Bygge();
+      m.lada(SA.x1-SA.x0,0.12,b,"#D6AE3C",M4.translation((SA.x0+SA.x1)/2,SA.z1+0.3,mitt));
+      S3.statiskt.push({nat:GL.nat(m),tex:null,alfa:0.35,glas:true,abstraktion:true});
+    }
   }
   /* Sidostyckena, handledarna och räckesstolparna ritas i ett EGET,
      otexturerat nät per lopp: i `lak` ligger träreliefen (T.tra) över
@@ -2154,7 +2209,11 @@ function v3dRidhus(lagg,opp){
      Se noten vid RIDHUSINNE.cafe. */
   lagg(lak,T.tra);
   {const L=R.laktare;
-   S3.statiskt.push({nat:GL.nat(lakN), tex:T.tra,
+   /* `laktargolv` säger att det HÄR nätet är golv någon kan stå på.
+      v3dTonas låter det aldrig tonas när spelaren själv är uppe — annars
+      blir det hon står på genomskinligt under fötterna (#114-postmortem
+      punkt 4). Från marknivå tonas det som förut. */
+   S3.statiskt.push({nat:GL.nat(lakN), tex:T.tra, laktargolv:true,
      tona:{x:L.x0, y:L.y1-LAKTARE_TONAD_ANDE, w:L.dackDjup, h:LAKTARE_TONAD_ANDE}});}
 
   /* Exit-skylten över båsets öppning — MOTSÄGELSE 4. Utanför trä-
@@ -2596,7 +2655,8 @@ function v3dBygFigur(){
     return b;})());
 }
 function v3dRitaSpelare(){
-  v3dFigur({x:VD.px,y:VD.pz||0,z:VD.py,rikt:VD.rikt,fas:VD.fas,jacka:"#3E5F7A",hjalm:true});
+  v3dFigur({x:VD.px,y:VD.pz||0,z:VD.py,rikt:VD.rikt,fas:VD.fas,jacka:"#3E5F7A",
+    hjalm:true,spelare:true});
 }
 
 /* En figur till fots — spelaren och stallets folk ritas likadant, med
@@ -2684,7 +2744,16 @@ function v3dBygKloss(){
 function v3dFigurKloss(o){
   v3dBygKloss();
   const D=S3.del, K=KLOSS;
-  const bas=M4.mul(M4.translation(o.x,0,o.z),M4.rotY(-o.rikt));
+  /* GOLVNIVÅN, INTE NOLL (P0 #81). Den mjuka figuren har alltid läst
+     `o.y`; klossfiguren byggde sin bas på Y=0. Kameran och kollisionen
+     gick alltså uppför läktartrappan medan kroppen stod kvar på
+     marknivå och skars genom däcket — precis det Tobias såg.
+
+     `o.y` ÄR `VD.pz` för spelaren (v3dRitaSpelare), alltså exakt det
+     värde nivåregeln och kameran använder. Ingen egen höjdmodell här:
+     en andra uppfattning om var golvet ligger var hela felet. */
+  const golv=v3dFigurGolv(o);
+  const bas=M4.mul(M4.translation(o.x,golv,o.z),M4.rotY(-o.rikt));
   const fas=o.fas||0, rr=o.rorlig===false?0:1;
   const sv=Math.sin(fas*Math.PI*2)*rr*0.42;       // benens utslag i radianer
   const gung=0.022*Math.abs(Math.sin(fas*Math.PI*2))*rr;
@@ -2723,14 +2792,34 @@ function v3dFigurKloss(o){
   if(o.hjalm!==false)rita(D.kHjalm,M4.translation(0,huvY,0),"#FFFFFF");
 
   /* En mjuk fläck under figuren i stället för tio projicerade skuggor. */
-  if(typeof s3Skuggflack==="function")s3Skuggflack(o.x,o.z,0.42,0.85);
+  /* Skuggan hör till det golv figuren står på, inte till marken. */
+  if(typeof s3Skuggflack==="function")s3Skuggflack(o.x,o.z,0.42,0.85,golv);
+}
+
+/* FIGURENS GOLVHÖJD — en rad, en sanning, och den går att läsa av.
+
+   Båda figurstilarna hämtar sin bashöjd här, och värdet som FAKTISKT
+   ritades skrivs till `V3D.figurGolv`. Det är inte en parallell modell:
+   det är samma variabel som går in i bastranslationen, sparad så att en
+   grind kan mäta vad spelaren såg i stället för vad koden tänkte.
+   Läktarlärdomen (#114) var att ett grönt tillståndstest inte säger
+   något om vad som ritades. */
+function v3dFigurGolv(o){
+  const golv=Number.isFinite(o&&o.y)?o.y:0;
+  /* Bara SPELAREN skrivs upp. Stallets folk ritas med samma funktion, och
+     eftersom de kommer efter henne i bildrutan skrev de över värdet med
+     sin egen marknivå — mätningen sa då 0 medan spelaren stod på däcket.
+     Det är samma sorts fel som provet finns för att fånga, och det satt i
+     provets egen avläsning. */
+  if(o&&o.spelare)V3D.figurGolv=golv;
+  return golv;
 }
 
 function v3dFigur(o){
   if(STIL==="kloss")return v3dFigurKloss(o);
   v3dBygFigur();
   const D=S3.del;
-  const bas=M4.mul(M4.translation(o.x,o.y||0,o.z),M4.rotY(-o.rikt));
+  const bas=M4.mul(M4.translation(o.x,v3dFigurGolv(o),o.z),M4.rotY(-o.rikt));
   const fas=o.fas||0, rr=o.rorlig===false?0:1;
   const g=Math.sin(fas*Math.PI*2)*rr, g2=Math.cos(fas*Math.PI*2)*rr;
   const gung=0.018*Math.abs(Math.sin(fas*Math.PI*2))*rr;

@@ -689,7 +689,11 @@ function s3RitaHast(o){
 
    Solens riktning skjuter fläcken något åt sidan, och ringarna glider
    med — så skuggan tänjs åt det håll ljuset faller. */
-function s3Skuggflack(x,z,r,styrka){
+/* `golv` är den nivå figuren står på (P0 #81). Utan den låg skuggan kvar
+   på marken medan spelaren gick uppför läktartrappan — en skugga under
+   däcket i stället för under fötterna. Default 0 = marknivå, så alla
+   befintliga anrop är oförändrade. */
+function s3Skuggflack(x,z,r,styrka,golv){
   const D=S3.del, L=GL.ljus; if(!D.skuggflack||!L)return;
   const sl=Math.hypot(L.sol[0],L.sol[1],L.sol[2])||1;
   const dx=-L.sol[0]/sl*0.45, dz=-L.sol[2]/sl*0.45;
@@ -705,7 +709,7 @@ function s3Skuggflack(x,z,r,styrka){
   }
   for(const [k,v] of ringar){
     GL.rita(D.skuggflack,
-      M4.mul(M4.translation(x+dx*k*0.4,0.045,z+dz*k*0.4),
+      M4.mul(M4.translation(x+dx*k*0.4,(golv||0)+0.045,z+dz*k*0.4),
              M4.skala(r*2.3*k,1,r*1.5*k)),
       {platt:true, alfa:a*v, ton:L.skuggFarg||"#000000"});
   }
