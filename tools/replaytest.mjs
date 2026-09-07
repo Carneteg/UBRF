@@ -87,12 +87,19 @@ const kor = () => ev(() => {
      "Prova igen" en gång, och sedan stannar det vid slutpanelen så att
      replay-UI:t kan granskas där det faktiskt visas. Loopen stegar inte
      ritten vidare medan panelen är uppe; det är hela poängen med G.paus. */
-  let paneler = 0, slutpanel = false;
+  let paneler = 0, igenKlick = 0, slutpanel = false, forsokVidKlick = null;
   for (let i = 0; i < 5200; i++) {
     if (G.paus) {
       paneler++;
       const igen = document.getElementById("valIgen");
-      if (igen) igen.click();
+      if (igen) {
+        /* Vilket försök stod vi på NÄR klicket gjordes? Utan den siffran
+           går det inte att skilja "spelaren startade försök 2" från
+           "lifecyclen red om av sig själv och panelen dök upp först
+           efteråt". */
+        if (forsokVidKlick === null) forsokVidKlick = G.momentForsok;
+        igenKlick++; igen.click();
+      }
       else { slutpanel = true; break; }
       continue;
     }
@@ -107,7 +114,7 @@ const kor = () => ev(() => {
   const hist = ugnetaForsokHistorik(ovning) || [];
   const post = ugnetaForsokPost(ovning, 1);
   return {
-    ovning, forsok: hist.length, paneler, slutpanel,
+    ovning, forsok: hist.length, paneler, igenKlick, forsokVidKlick, slutpanel,
     seKnapp: !!document.getElementById("valSe"),
     igenKnapp: !!document.getElementById("valIgen"),
     bedomda: G.bedomda || 0,
@@ -146,7 +153,8 @@ prova("takten följer loopen i stället för att skriva flera sampel per varv",
 
 console.log("\n── VALET EFTER FÖRSÖKET ──");
 prova("lifecyclen stannar och frågar i stället för att rida om automatiskt",
-  !r.fel && r.paneler >= 1, r.fel || `${r.paneler} paneler`);
+  !r.fel && r.paneler === 2 && r.igenKlick === 1 && r.forsokVidKlick === 1 && r.forsok === 2,
+  r.fel || `${r.paneler} paneler · ${r.igenKlick} klick på Prova igen vid försök ${r.forsokVidKlick} · ${r.forsok} ridna försök`);
 prova("slutpanelen erbjuder replayen men inte ett tredje försök",
   !r.fel && r.slutpanel === true && r.seKnapp === true && r.igenKnapp === false,
   r.fel || `slutpanel ${r.slutpanel} · Se ritten ${r.seKnapp} · Prova igen ${r.igenKnapp}`);
