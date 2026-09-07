@@ -1247,7 +1247,9 @@ function v3dInredning(scen,lagg){
         break;}
       case"skapbank":{
         /* `vaningar` = luckor i två våningar (ridhus-klubb-16/-20),
-           `ben` = kroppen står på svarta ben (ridhus-klubb-20/-21). */
+           `ben` = kroppen står på svarta ben (ridhus-klubb-20/-21).
+           Ventilationen är en hålmatris och luckorna ligger i ljusa
+           profilramar, som närbilderna -18/-20 visar. */
         const ben=o.ben||0, kh=h-ben, v=o.vaningar||1;
         box(b,kh,d,f,0,ben,0); box(b,0.08,d,"#3A3C40",0,ben,0);
         if(ben>0) for(const s of [-1,1]) for(const t of [-1,1]) box(0.05,ben,0.05,"#1E1E1E",s*(b/2-0.06),0,t*(d/2-0.06));
@@ -1257,6 +1259,11 @@ function v3dInredning(scen,lagg){
           const lx=-b/2+w*(i+0.5), y0=ben+0.1+j*dh, front=d/2+0.005;
           const c=fargor[i%fargor.length];
           box(w-0.02,dh-0.02,0.01,c,lx,y0,front);
+           if(D.ram){
+             const rc=D.ramfarg||f;
+             for(const s of [-1,1]) box(0.018,dh,0.014,rc,lx+s*(w/2-0.012),y0,front+0.004);
+             for(const s of [-1,1]) box(w,0.018,0.014,rc,lx,y0+s*(dh/2-0.012),front+0.004);
+           }
           if(D.profil){
             box(w-0.045,0.008,0.003,"#44494A",lx,y0+0.04,front+0.007);
             for(const s of [-1,1]) box(0.008,dh-0.09,0.003,"#44494A",lx+s*(w/2-0.026),y0+0.045,front+0.007);
@@ -1267,9 +1274,19 @@ function v3dInredning(scen,lagg){
             box(0.018,0.025,0.014,"#34383B",bx,y0+dh*0.55,front+0.023);
             box(0.035,0.012,0.005,"#D9D8D1",lx-w*0.30,y0+dh*0.88,front+0.009);
           }
-          if(D.ventilation) for(let k=0;k<3;k++)
-            box(w*0.43,0.008,0.003,"#4D5152",lx,y0+0.035+k*0.025,front+0.009);
+           if(D.ventilation){
+             const [rader,kolumner]=D.ventilationshal||[2,5];
+             for(let r=0;r<rader;r++) for(let k=0;k<kolumner;k++)
+               box(0.012,0.012,0.004,"#4D5152",
+                 lx-w*0.20+w*0.40*(k/(Math.max(1,kolumner-1))),
+                 y0+0.035+r*0.026,front+0.009);
+           }
         }
+         if(D.sockelVent){
+           const hal=Math.max(8,n*4);
+           for(let k=0;k<hal;k++)
+             box(0.012,0.012,0.004,"#4D5152",-b*0.46+b*0.92*k/(hal-1),ben+0.025,d/2+0.012);
+         }
         break;}
       case"bank":
         box(b,0.05,d,f,0,h-0.05,0);
@@ -2004,10 +2021,15 @@ function v3dRidhus(lagg,opp){
    /* Tonas när kameran står uppe bland dem (övre gången) — se v3dTonas. */
    S3.statiskt.push({nat:GL.nat(st), tona3d:v3dBox(st)});}
   /* Lysrörsraderna ur RIDHUSINNE.lysror — låg som literaler här (F02-B). */
-  {const ly=R.lysror||{andelar:[0.3,0.7],delning:7,langd:1.5,bredd:0.18,underTak:0.35,farg:"#F6F2E4"};
+  {const ly=R.lysror||{andelar:[0.3,0.7],delning:7,langd:1.5,bredd:0.18,underTak:0.35,
+                       farg:"#FFF9E8",holjeFarg:"#D8D8D3",holjeH:0.12,lysH:0.035};
    for(let z=4;z<R.langd-2;z+=ly.delning)
-     for(const a of ly.andelar)
-       hall.lada(ly.bredd,0.08,ly.langd,ly.farg,M4.translation(R.bredd*a,R.tak-ly.underTak,z));}
+      for(const a of ly.andelar){
+        const p=M4.translation(R.bredd*a,R.tak-ly.underTak,z);
+        hall.lada(ly.bredd,ly.holjeH,ly.langd,ly.holjeFarg,p);
+        hall.lada(ly.bredd*0.72,ly.lysH,ly.langd*0.88,ly.farg,
+          M4.translation(R.bredd*a,R.tak-ly.underTak-ly.holjeH*0.42,z));
+      }}
   lagg(hall,null);
 
   /* ── MOTSÄGELSE 1: långsidans övre väggyta ────────────────────────

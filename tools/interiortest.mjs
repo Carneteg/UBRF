@@ -42,7 +42,12 @@ check('source-defined doors and material are exported',()=>{
  const out=read('roblox/buildings/UBRFKomplex.luau');
  assert.ok(out.includes('interiorytor = {'));
  for(const y of Object.values(Y))assert.ok(out.includes(y.kalla));
- for(const o of lockers){assert.equal(o.ytmaterial,'Metal');assert.ok(o.detaljer.profil&&o.detaljer.beslag&&o.detaljer.ventilation);}
+  for(const o of lockers){
+   assert.equal(o.ytmaterial,'Metal');
+   assert.ok(o.detaljer.profil&&o.detaljer.beslag&&o.detaljer.ventilation);
+   same(o.detaljer.ventilationshal,[2,5]);
+   assert.ok(o.detaljer.ram&&o.detaljer.ramfarg==='#EEEDE7'&&o.detaljer.sockelVent);
+  }
  assert.equal(I.ridhus.find(o=>o.id==='skap_grona').detaljer.kolumner,4);
  assert.equal(I.ridhus.find(o=>o.id==='skap_vita_2v').detaljer.kolumner,5);
  assert.ok(out.includes('kolumner = 5'));
@@ -70,7 +75,8 @@ check('actual web renderer emits correct locker faces and hardware',()=>{
   const o=I.ridhus.find(x=>x.id===id), calls=render(o);
   assert.equal(calls.filter(x=>x.args[3]===o.fargor[0]).length,count);
   assert.equal(calls.filter(x=>x.args[3]==='#8E9395').length,count);
-  assert.equal(calls.filter(x=>x.args[3]==='#4D5152').length,count*3);
+   assert.ok(calls.filter(x=>x.args[3]==='#4D5152').length>=count*10);
+   assert.equal(calls.filter(x=>x.args[3]==='#EEEDE7').length,count*4);
   for(const c of calls.filter(x=>x.kind==='box'))for(const d of c.args.slice(0,3))assert.ok(d>0,id+' invalid dimension');
  }
 });
@@ -122,6 +128,15 @@ check('web uses a dedicated seamless matt interior floor texture',()=>{
   const block=source.slice(source.indexOf('T.mattBetong='),source.indexOf('T.interiorytor={}'));
   assert.ok(block.includes('Math.sin')&&block.includes('Math.cos')&&block.includes('tau*x/w'));
   assert.equal(/stroke|lineTo|marksten|createRadialGradient/i.test(block),false);
+});
+check('existing shared hall lights have sourced housings without moving their rows',()=>{
+  same({andelar:R.lysror.andelar,delning:R.lysror.delning,langd:R.lysror.langd,
+        bredd:R.lysror.bredd,underTak:R.lysror.underTak},
+       {andelar:[0.3,0.7],delning:7,langd:1.5,bredd:0.18,underTak:0.35});
+  assert.equal(R.lysror.holjeFarg,'#D8D8D3');
+  assert.ok(source.includes('hall.lada(ly.bredd,ly.holjeH,ly.langd,ly.holjeFarg'));
+  const out=read('roblox/buildings/UBRFKomplex.luau');
+  assert.ok(out.includes('holjeFarg = Color3.fromRGB(216, 216, 211)'));
 });
 check('no invented pentry or room geometry',()=>{
  assert.equal([...I.stall,...I.ridhus].some(o=>o.id.startsWith('pentry')),false);

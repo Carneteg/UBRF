@@ -1946,7 +1946,8 @@ const RIDHUSINNE = {
      -14, -31: "balkarna tvärs, lysrören längs"). Antal och delning är
      `[REFERENCE GAP]` — andelarna och delningen nedan är ASSUMPTION. Låg
      förut som literaler i webbritaren; nu delad så att Roblox får dem. */
-  lysror:{andelar:[0.3,0.7], delning:7, langd:1.5, bredd:0.18, underTak:0.35, farg:"#F6F2E4"},
+  lysror:{andelar:[0.3,0.7], delning:7, langd:1.5, bredd:0.18, underTak:0.35,
+          farg:"#FFF9E8", holjeFarg:"#D8D8D3", holjeH:0.12, lysH:0.035},
   /* TRAPPOR — vertikala förbindelser i ridhuset (Product Owner
      2026-09-03 17:16; senior review 17:18: "reconstruct BOTH source-backed
      C-end stairs from the existing evidence"). Byggs ur samma data på
