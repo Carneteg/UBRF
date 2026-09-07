@@ -359,7 +359,9 @@ const INREDNING = (() => {
     ...skapBitar.map(([y0, y1], i) => (
       {id:"skap_v_"+(i+1), rum:"hall", typ:"skapbank", pos:[skapX, (y0+y1)/2], rikt:W,
        matt:{b:y1-y0-0.1, d:0.5, h:1.9}, farg:"#C9CBCB", fargor:["#C9CBCB","#C9CBCB","#3A3C40","#C9CBCB","#B8322E"],
-       kolliderar:true, ytmaterial:"Metal", detaljer:{profil:true, beslag:true, ventilation:true},
+       kolliderar:true, ytmaterial:"Metal",
+       detaljer:{profil:true, beslag:true, ventilation:false,
+                 ram:true, ramfarg:"#EEEDE7", sockelVent:true},
        kalla:"ridhus-klubb-01, -15, IMG_0169-f02, IMG_0268-r12", klass:"VERIFIED", lage:"ASSUMPTION"})),
     /* SKÅPFÖRVARINGEN — Product Owner 2026-09-04 11:56: "Saknas skåp."
        ridhus-klubb-16 (skåprummet med pelaren: höga mörkblå/grå skåp till
@@ -375,15 +377,21 @@ const INREDNING = (() => {
        Frontdetaljernas småmått är stiliserade uppskattningar. */
     {id:"skap_grona", rum:"hall", typ:"skapbank", pos:[0.55, 69.3], rikt:E,
      matt:{b:1.6, d:0.5, h:1.8}, ben:0.15, vaningar:2, farg:"#EDEAE0", fargor:["#7FA07E"],
-     kolliderar:true, ytmaterial:"Metal", detaljer:{kolumner:4, profil:true, beslag:true, ventilation:true, ben:true},
-     kalla:"ridhus-klubb-20, -21", klass:"VERIFIED", lage:"ASSUMPTION"},
+      kolliderar:true, ytmaterial:"Metal",
+      detaljer:{kolumner:4, profil:true, beslag:true, ventilation:false,
+                ram:true, ramfarg:"#EEEDE7", sockelVent:true, ben:true},
+      kalla:"ridhus-klubb-20, -21", klass:"FOTO", lage:"ASSUMPTION"},
     {id:"skap_hoga_v", rum:"hall", typ:"skapbank", pos:[0.55, 71.5], rikt:E,
      matt:{b:2.0, d:0.5, h:1.9}, farg:"#EDEAE0", fargor:["#C9CBCB","#C9CBCB","#C9CBCB","#1F2430","#1F2430"],
-     kolliderar:true, ytmaterial:"Metal", detaljer:{kolumner:5, profil:true, beslag:true, ventilation:true},
+      kolliderar:true, ytmaterial:"Metal",
+      detaljer:{kolumner:5, profil:true, beslag:true, ventilation:false,
+                ram:true, ramfarg:"#EEEDE7", overkantVent:true, sockelVent:true},
      kalla:"ridhus-klubb-16, -18", klass:"VERIFIED", lage:"ASSUMPTION"},
     {id:"skap_vita_2v", rum:"hall", typ:"skapbank", pos:[1.45, 72.35], rikt:Sy,
      matt:{b:1.2, d:0.45, h:1.8}, vaningar:2, farg:"#F2F0EA", fargor:["#E9E5D8"],
-     kolliderar:true, ytmaterial:"Metal", detaljer:{kolumner:5, profil:true, beslag:true, ventilation:true},
+      kolliderar:true, ytmaterial:"Metal",
+      detaljer:{kolumner:5, profil:true, beslag:true, ventilation:false,
+                ram:true, ramfarg:"#EEEDE7"},
      kalla:"ridhus-klubb-16", klass:"VERIFIED", lage:"ASSUMPTION"},
     /* Bordet med de två stolarna står i gången mellan glaset och skåpen
        (-01, -15); ungefär mitt för receptionsglaset. Planens etikett

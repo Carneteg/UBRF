@@ -922,7 +922,8 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 			del(" skena", X, z0 + ob.matt.h - 0.05, Y, W, 0.05, H, f, Enum.Material.Metal, false)
 			del(" vastar", X, z0, Y, W, ob.matt.h - 0.15, H, f2, Enum.Material.Fabric, false)
 		elseif typ == "skapbank" then
-			-- `vaningar` = luckor i två våningar (ridhus-klubb-16/-20), `ben` = kroppen på svarta ben (-20/-21)
+			-- `vaningar` = luckor i två våningar (ridhus-klubb-16/-20), `ben` = kroppen på svarta ben (-20/-21).
+			-- Ventilation byggs bara som familjens separata över-/sockelband, aldrig som ett gemensamt hålmönster.
 			local ben = ob.ben or 0
 			local kh = ob.matt.h - ben
 			local v = ob.vaningar or 1
@@ -959,6 +960,15 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 					local namn = " dorr " .. (i + 1) .. (if v > 1 then "-" .. (j + 1) else "")
 					local u = i * w + 0.01
 					front(namn, u, zy, w - 0.02, dh - 0.02, 0.01, c, Enum.Material.Metal)
+					if D.ram then
+						local rc = D.ramfarg or f
+						for _, side in ipairs({ 0.002, w - 0.020 }) do
+							front(namn .. " ram sida", u + side, zy, 0.018, dh, 0.018, rc, Enum.Material.Metal)
+						end
+						for _, low in ipairs({ zy, zy + dh - 0.018 }) do
+							front(namn .. " ram tvär", u, low, w, 0.018, 0.018, rc, Enum.Material.Metal)
+						end
+					end
 					if D.profil then
 						local line = Color3.fromRGB(68, 73, 74)
 						front(namn .. " profil neder", u + 0.015, zy + 0.04, w - 0.05, 0.008, 0.015, line, Enum.Material.Metal)
@@ -973,9 +983,24 @@ local function byggInredning(model: Model, base: CFrame, o, lista, prefix: strin
 					end
 					if D.ventilation then
 						for k = 0, 2 do
-							front(namn .. " ventilation " .. k, u + w * 0.285, zy + 0.035 + k * 0.025, w * 0.43, 0.008, 0.02, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
+							front(namn .. " ventilation " .. k, u + w * 0.285, zy + 0.035 + k * 0.025,
+								w * 0.43, 0.008, 0.02, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
 						end
 					end
+				end
+			end
+			if D.overkantVent then
+				local hal = math.max(8, n * 4)
+				for k = 0, hal - 1 do
+					front(" overkantvent " .. k, langd * (0.04 + 0.92 * k / (hal - 1)),
+						z0 + kh - 0.035, 0.018, 0.012, 0.022, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
+				end
+			end
+			if D.sockelVent then
+				local hal = math.max(8, n * 4)
+				for k = 0, hal - 1 do
+					front(" sockelvent " .. k, langd * (0.04 + 0.92 * k / (hal - 1)),
+						z0 + ben + 0.025, 0.018, 0.012, 0.022, Color3.fromRGB(77, 81, 82), Enum.Material.Metal)
 				end
 			end
 		elseif typ == "bommar" then

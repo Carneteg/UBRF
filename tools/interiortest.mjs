@@ -42,9 +42,19 @@ check('source-defined doors and material are exported',()=>{
  const out=read('roblox/buildings/UBRFKomplex.luau');
  assert.ok(out.includes('interiorytor = {'));
  for(const y of Object.values(Y))assert.ok(out.includes(y.kalla));
- for(const o of lockers){assert.equal(o.ytmaterial,'Metal');assert.ok(o.detaljer.profil&&o.detaljer.beslag&&o.detaljer.ventilation);}
+  for(const o of lockers){
+   assert.equal(o.ytmaterial,'Metal');
+   assert.ok(o.detaljer.profil&&o.detaljer.beslag);
+   assert.equal(o.detaljer.ventilation,false);
+   assert.ok(o.detaljer.ram&&o.detaljer.ramfarg==='#EEEDE7');
+  }
  assert.equal(I.ridhus.find(o=>o.id==='skap_grona').detaljer.kolumner,4);
  assert.equal(I.ridhus.find(o=>o.id==='skap_vita_2v').detaljer.kolumner,5);
+  assert.equal(I.ridhus.find(o=>o.id==='skap_grona').klass,'FOTO');
+  assert.equal(I.ridhus.find(o=>o.id==='skap_grona').detaljer.sockelVent,true);
+  assert.equal(I.ridhus.find(o=>o.id==='skap_hoga_v').detaljer.overkantVent,true);
+  assert.equal(I.ridhus.find(o=>o.id==='skap_hoga_v').detaljer.sockelVent,true);
+  assert.equal(I.ridhus.find(o=>o.id==='skap_vita_2v').detaljer.sockelVent,undefined);
  assert.ok(out.includes('kolumner = 5'));
 });
 // Execute the actual furniture renderer with a recording mesh implementation.
@@ -70,7 +80,8 @@ check('actual web renderer emits correct locker faces and hardware',()=>{
   const o=I.ridhus.find(x=>x.id===id), calls=render(o);
   assert.equal(calls.filter(x=>x.args[3]===o.fargor[0]).length,count);
   assert.equal(calls.filter(x=>x.args[3]==='#8E9395').length,count);
-  assert.equal(calls.filter(x=>x.args[3]==='#4D5152').length,count*3);
+   assert.equal(calls.filter(x=>x.args[3]==='#4D5152').length,id==='skap_grona'?16:0);
+   assert.equal(calls.filter(x=>x.args[3]==='#EEEDE7').length,count*4);
   for(const c of calls.filter(x=>x.kind==='box'))for(const d of c.args.slice(0,3))assert.ok(d>0,id+' invalid dimension');
  }
 });

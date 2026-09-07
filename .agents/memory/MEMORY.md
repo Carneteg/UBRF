@@ -1,1 +1,2 @@
 - [Headless visual QA baseline](headless-visual-qa.md) — use Replit’s maintained Chromium for WebGL proof; stale Playwright-image browsers can stall at frame zero.
+- [Teorisalens visuella frysning](theory-room-freeze.md) — den produktgodkända teorisalen ska inte poleras eller påverkas av senare miljöslices.
