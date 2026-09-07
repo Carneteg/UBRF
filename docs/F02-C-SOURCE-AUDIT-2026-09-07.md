@@ -118,18 +118,22 @@ som ersättning för originalinnehållet.
 | Prio | Rum/zon | Källa och evidensklass | Observerad skillnad/risk | Minsta korrekta nästa steg | Webb/Roblox-paritet | Human gate |
 | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Spårbar review | `pack.json`, `source-index.json`, Vercel; VERIFIED teknisk proveniens | Äldre paket gällde fel SHA | Använd endast SHA-paketet; ingen visuell rättelse | Samma produktdata på `c985bbf`; evidenscommit ändrar bara docs | Tobias öppnar paketet; ingen automation sätter PASS |
-| P0 | Figur, navigation och skymning | 21 kamerors siktprov; AUTOMATED | Tidigare skymd figur/navigation är ett känt underkänt problem; fasta kameror bevisar inte fri spelrutt | Manuell gång- och kamerakontroll i webb och Roblox Studio före korrigering | Route/collision måste skyddas separat i båda | Tobias bedömer game feel; Studio ännu inte manuellt granskat |
-| P0 | Stall — uppehållsrum | `stall-inne-01`, `stall-inne-02`, spatial canon; VERIFIED rum, DERIVED möblering | `STALL-UPPEHALL` är avsiktligt `MISMATCH`; hela cirka 10 m och öppen L-form måste synas; soffans exakta fönsterläge är gap | Öppna prioriterade nya Stallhuset-källor; bevara `OPEN_AREA/NO_WALL_ZONE`; korrigera endast källbelagd möblering | Samma öppna topologi och objektidentitet; Roblox-material får vara dokumenterad approximation | Side-by-side + gångbarhet + Tobias PASS |
+| P0 | Figur, navigation och skymning | 21 kamerors siktprov; AUTOMATED + riktad originalreview | Originalfoton kan inte bevisa fri spelrutt; fasta kameror bevisar inte fri spelrutt eller game feel | `REFERENCE GAP`: manuell gång- och kamerakontroll i webb och Roblox Studio före korrigering | Route/collision måste skyddas separat i båda | Tobias bedömer game feel; Studio ännu inte manuellt granskat |
+| P0 | Stall — uppehållsrum | `stall-inne-01`, `stall-inne-02` + Drive `IMG_0137`, `IMG_0217`–`0218`; V1/R1 | Nya original visar en liten sittzon men inte hela cirka 10 m, öppen L-form eller soffans exakta fönsterläge | Ingen ändring stöds ännu; bevara `OPEN_AREA/NO_WALL_ZONE` och `MISMATCH / REFERENCE GAP` | Samma öppna topologi och objektidentitet; Roblox-material får vara dokumenterad approximation | Side-by-side + gångbarhet + Tobias PASS |
 | P0 | Läktare | låsfil, läktartest, `LAKTARE`; ACCEPTED baseline / AUTOMATED | Tekniska skydd är gröna men ingen ny mänsklig acceptans | Ingen ändring; endast regression och manuell kontroll | Bevara höjd, trappa, collision och vy i båda | Tobias acceptance kvarstår blockerande |
-| P1 | Teorisal | `stall-inne-04`, `STALL-TEORISAL`; VERIFIED visuell inventering | Whiteboards, planscher, bord/stolar, skåp/mikro, ljus och kanal finns; status `EJ_GRANSKAD` | Tobias/oberoende side-by-side i nya paketet; rätta bara konkreta fynd | Gemensam metadata finns; visuell likvärdighet måste granskas separat | Ingen `CHATGPT_VISUAL_PASS` eller Tobias PASS ännu |
-| P1 | Sadelkammare/teorisalsdörr | `stall-inne-03`, plan; foto VERIFIED, läge ASSUMPTION | Bild visar smal passage och dörr; plan/topologi saknar öppning och bredden motsäger fotointrycket | Granska ny Stallhuset-film/foto; stoppa om läget förblir motsägande | Ingen öppning i endast en implementation | Tobias beslutar vid plan/foto-konflikt |
-| P1 | Efter pausrum/service | två PO-varianter + spatial dokumentation; CONFLICT | Slutna rum kontra öppen bukt är olöst | Behåll båda alternativen som `REFERENCE GAP`; klassificera ny Drive-evidens | Ingen asymmetrisk geometri | PO/Tobias väljer endast med evidens |
-| P1 | Hästpassage | satellit-/planunderlag; PARTIAL/REFERENCE GAP | Exakt läge, dimensioner och utseende saknas | Öppna relevant Drive-video/foto; ändra inte passage före entydig källa | Samma öppning och collision i webb/Roblox | Manuell traversering och Tobias beslut |
-| P1 | Ridhusentré/reception | ridhusbilder/plan; VERIFIED/PARTIAL | Öppen hall och NW-receptionens glas får inte byggas igen; toaletter/okända dörrar är gap | Prioritera ej matchade `IMG_0303`–`IMG_0305` och relevanta filmer; minsta material-/möbelrättning | Samma öppna hall, glas och dörrfunktioner | Side-by-side och Tobias PASS |
-| P1 | Ridhusplan | Supabase planpost; MISSING BINARY | `ridhus-entreplan-rektifierad.jpg` saknas i GitHub | Återfinn originalet i Drive/Storage och verifiera rättighet/hash innan eventuell migrering | Ingen geometriändring från manifestpost ensam | Källa måste godkännas före användning |
+| P1 | Teorisal | Drive `IMG_0140`–`0143`, `IMG_0238.MOV` + `STALL-TEORISAL`; V1/R1, oberoende side-by-side | Huvudobjekten finns i renderingen; originalen visar tydligare U-liknande långbord, trästolar, valvfönster och tätare detaljer | Minsta möbel-/materialrättning kan källbeläggas, men ingen ändring före Tobias PASS | Gemensam metadata finns; visuell likvärdighet måste granskas separat | Status fortsatt `EJ_GRANSKAD`; ingen `CHATGPT_VISUAL_PASS` eller Tobias PASS |
+| P1 | Sadelkammare/teorisalsdörr | Drive `IMG_0138`–`0139`, `IMG_0216`, `IMG_0219`–`0226`, `IMG_0238`–`0239.MOV`; V1/R1 | Rumsföljd, utrustning och grå glasad dörr styrks visuellt; planläge och öppningsbredd är inte entydiga | Stoppa geometriändring; endast källbelagd möblering efter review | Ingen öppning i endast en implementation | Tobias beslutar vid kvarstående plan/foto-konflikt |
+| P1 | Efter pausrum/service | Drive `IMG_0156`–`0157` + två PO-varianter; V1/R1 + CONFLICT | Bred öppning och invändig grind syns, men hela gränsen mellan slutna rum och öppen bukt visas inte | Behåll båda alternativen som `REFERENCE GAP`; ingen topologiändring | Ingen asymmetrisk geometri | PO/Tobias väljer endast med evidens |
+| P1 | Hästpassage | Drive `IMG_0156`–`0157`, `IMG_0210`–`0214`, `IMG_0289.MOV`; V1/R1 + PARTIAL | Öppning/grind och gårdsvyer finns, men exakt läge, dimension och identitet kan inte bindas ihop | Fortsatt `REFERENCE GAP`; ändra inte passage/collision | Samma öppning och collision i webb/Roblox | Manuell traversering och Tobias beslut |
+| P1 | Ridhusentré/reception | Drive `IMG_0268.MOV`, `IMG_0303`–`0305`; V1/R1 | Filmen styrker skåpkorridor och glasad receptionsdisk; `0303`–`0305` visar bara exteriör | Skydda öppen hall/glas; endast minsta material-/möbelrättning efter PASS | Samma öppna hall, glas och dörrfunktioner | Side-by-side och Tobias PASS |
+| P1 | Ridhusplan | Supabase planpost + riktad Drive-sökning; MISSING BINARY | GitHub saknar filen; tre Drive-sökningar gav 0 träffar med `incompleteSearch=false` | Fortsatt `REFERENCE GAP`; återfinn original i annan källa och verifiera rättighet/hash före migrering | Ingen geometriändring från manifestpost ensam | Källa måste godkännas före användning |
 | P2 | Stallentrébilder 07–14 | Supabase/GitHub; METADATA MISMATCH | Manifestets bytevärden är inaktuella | Jämför faktisk Storage-/Drive-binär, fastställ kanonisk fil och SHA-256; ändra inte bild eller kanon ännu | Ingen produktpåverkan | Proveniensreview |
 | P2 | Omnejd/utebanor | Drive `IMG_0285`–`0308`; UNREVIEWED | Identitet, skala, nivåskillnad och grind är okända | Öppna endast relevanta nya filer och klassificera observationer | Om senare byggt: gemensam spatial data | Tobias avgör anläggningsidentitet |
 | P2 | Parkering/Models/`1.pdf` | tom livekategori eller extern manifestpost; REFERENCE GAP | Ingen livefil verifierad i aktuell listning | Separat riktad Drive-uppslagning; använd inte mappnamn som bevis | Ingen produktändring | Källa/rättighet måste verifieras |
+
+Individuell source-ID-, SHA-256-, rättighets- och observationsredovisning för
+samtliga öppnade P0/P1-original finns i
+`docs/source-audit/P0-P1-ORIGINAL-VERIFICATION-2026-09-07.md`.
 
 ## Tested
 
@@ -142,6 +146,13 @@ som ersättning för originalinnehållet.
 - Vercel deployment för `fb5d792…` är `success`; både spelstart och paketindex renderar.
 - Supabase: projektref matchar, `Content-Range: 0-81/82`.
 - Supabase- och Drive-inventeringarna var GET/read-only.
+- 41 prioriterade Drive-stillbilder och fyra relevanta filmer hämtades
+  skrivskyddat; live-storlek matchade samtliga binärer och alla 45 SHA-256 var
+  unika.
+- Drive-rättighetsmetadata var konsekvent `ownedByMe=true`, `shared=false`,
+  `canDownload=true`; detta bevisar inte separat extern publiceringslicens.
+- Supabase live-GET gav åter 82 poster och de granskade fälten var identiska
+  med den beständiga snapshoten.
 
 Tidigare oförändrad produktcommit `c985bbf…` hade dessutom grönt
 interiörtest, A-gavelguard, 13 läktarmätningar och 14 Roblox-specgrupper.
@@ -163,7 +174,8 @@ Evidens- och auditcommits ändrar ingen kod som dessa tester mäter.
 - Ingen människa har ännu godkänt side-by-side-vyerna.
 - Ingen ny manuell Roblox Studio-runda eller game-feel-test har körts.
 - Supabase Storage-binärerna har inte hämtats eller hashats.
-- Ingen av de 230 Drive-filerna har i denna inventering visuellt klassificerats.
+- 45 prioriterade Drive-original har klassificerats; övriga 185 av 230 är
+  fortsatt `content_verified=false`.
 - Drive-only/ej matchad betyder inte bevisat ny eller ändrad binär.
 - Motstridiga mått, okända öppningar, pentryts läge, Plan 2, servicedelen,
   hästpassagen, toaletter, sargporten och uteridbanans nivåskillnad är olösta.
