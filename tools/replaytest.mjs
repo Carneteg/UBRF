@@ -123,6 +123,9 @@ const kor = () => ev(() => {
     ovning, forsok: hist.length, paneler, igenKlick, forsokVidKlick, slutpanel,
     seKnapp: !!document.getElementById("valSe"),
     igenKnapp: !!document.getElementById("valIgen"),
+    fokus: !!(document.activeElement
+      && /^val(Igen|Se|Vidare)$/.test(document.activeElement.id || "")),
+    fokusId: document.activeElement ? document.activeElement.id || "(inget id)" : "(inget)",
     bedomda: G.bedomda || 0,
     vagLangd: vag.length,
     post: post ? {
@@ -164,6 +167,8 @@ prova("lifecyclen stannar och frågar i stället för att rida om automatiskt",
 prova("slutpanelen erbjuder replayen men inte ett tredje försök",
   !r.fel && r.slutpanel === true && r.seKnapp === true && r.igenKnapp === false,
   r.fel || `slutpanel ${r.slutpanel} · Se ritten ${r.seKnapp} · Prova igen ${r.igenKnapp}`);
+prova("valet går att svara på utan mus — fokus ligger i panelen",
+  !r.fel && r.fokus === true, r.fel || `fokuserat element: ${r.fokusId}`);
 prova("två försök och två paneler ger ETT betyg, inte flera",
   !r.fel && r.bedomda === 1, r.fel || `bedomda ${r.bedomda}`);
 

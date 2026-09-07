@@ -249,6 +249,8 @@ function visaReplay(ovningId, nr){
     replayRita();
   });
   kn("replayTillbaka", stangReplay);
+  const forst = document.getElementById("replaySpela");
+  if (forst && typeof forst.focus === "function") forst.focus();
   const skjut = document.getElementById("replaySkjut");
   if (skjut) skjut.oninput = () => {
     REPLAY.up.pausa();
@@ -318,6 +320,12 @@ function ritaForsokVal(){
   kn("valVidare", () => { const mm = VAL.moment, si = VAL.slut; valStang();
     if (si) momentNasta(); else momentGaVidare(mm); });
   kn("valSe", () => { visaReplay(VAL.ovningId, VAL.forsokNr); });
+  /* Fokus på det första valet. Utan det måste den som spelar med
+     tangentbord eller handkontroll först tabba sig in i panelen för att
+     kunna svara på en fråga spelet just ställt. */
+  const forst = document.getElementById(slut ? "valSe" : "valIgen")
+    || document.getElementById("valVidare");
+  if (forst && typeof forst.focus === "function") forst.focus();
   return true;
 }
 
