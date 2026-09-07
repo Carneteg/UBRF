@@ -1,0 +1,29 @@
+name: P0 — spelbundle för oberoende test
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/p0-local-bundle.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d340b8fbd2daf1478e8d6b20329ed6f8b106a3bd
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: python3 tools/build.py
+      - name: Verifiera spel-SHA
+        run: test "$(git rev-parse HEAD)" = d340b8fbd2daf1478e8d6b20329ed6f8b106a3bd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p0-game-d340b8f
+          path: dist/ridskolan.html
+          retention-days: 7

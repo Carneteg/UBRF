@@ -1,0 +1,49 @@
+name: P0 — tre oberoende speltest
+on:
+  push:
+    branches: [chatgpt/p0-three-qa-20260907]
+  pull_request:
+    branches: [chatgpt/integration-review-20260907]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  speltest:
+    name: QA ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [first-day, riding, touch]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verifiera att spelkoden är oförändrad mot testbasen
+        run: |
+          git fetch --no-tags --depth=1 origin d340b8fbd2daf1478e8d6b20329ed6f8b106a3bd
+          git diff --exit-code d340b8fbd2daf1478e8d6b20329ed6f8b106a3bd HEAD -- src roblox index.html
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Installera låsta beroenden och Chromium
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Bygg exakt spelversion
+        run: python3 tools/build.py
+      - name: Kör verkliga UI-handlingar
+        env:
+          QA_TARGET_SHA: d340b8fbd2daf1478e8d6b20329ed6f8b106a3bd
+          QA_OUT: qa/p0-${{ matrix.mode }}
+        run: node tools/p0-qa-runner.mjs ${{ matrix.mode }}
+      - name: Spara skärmbilder, tillstånd och felrapport även vid fel
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-${{ matrix.mode }}-${{ github.sha }}
+          path: qa/p0-${{ matrix.mode }}/
+          if-no-files-found: warn
+          retention-days: 30
