@@ -29,6 +29,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
 local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
 local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
@@ -228,6 +229,26 @@ local function bygg()
 	end)
 end
 
+--[[ TANGENTLEDTEXT PÅ KNAPPEN (Tobias beslut 2026-09-07).
+
+	Spelaren såg "Prova igen" men ingenting om att R gör samma sak —
+	knappen var träffbar men tangenten var osynlig.
+
+	Ledtexten visas bara där tangenten FINNS. En ren pekenhet ska inte
+	få en bokstav hon inte kan trycka på, och det är inmatningen som
+	avgör, inte plattformen: en iPad med tangentbord får ledtexten, en
+	telefon får den inte. Tangenterna är desamma som init.client lyssnar
+	på — R och gamepadens Y.
+
+	Webben har ingen motsvarande ledtext, och ska inte ha det: den styrs
+	med mus och finger. Paritetsregeln säger uttryckligen att inputadapter
+	och UI får vara plattformsspecifika. ]]
+local function medLedtext(txt: string): string
+	if UserInputService.KeyboardEnabled then return txt .. "  (R)" end
+	if UserInputService.GamepadEnabled then return txt .. "  (Y)" end
+	return txt
+end
+
 --[[ ── Live-registret ─────────────────────────────────────────── ]]
 function UgnetaController.liveText(fokusId: string, bra: boolean): string
 	local r = LIVE[fokusId]
@@ -289,7 +310,7 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 	local kn = kortKnapp
 	if kn then
 		kn.Visible = knapp
-		if knapp and knappText then kn.Text = knappText end
+		if knapp and knappText then kn.Text = medLedtext(knappText) end
 	end
 	--[[ Kortet väntar exakt när det har en knapp. Ett kort utan knapp är
 	     en upplysning, inte ett val. ]]

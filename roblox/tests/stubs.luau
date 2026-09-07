@@ -254,7 +254,12 @@ local __services = {
 	UserInputService = {
 		_pad = {},
 		GetGamepadState = function(self) return self._pad end,
+		--[[ Bänkens standard är en skrivbordsklient: tangentbord finns,
+		     pekskärm och gamepad inte. Provet växlar dem för att mäta att
+		     tangentledtexten följer inmatningen och inte plattformen. ]]
 		TouchEnabled = false,
+		KeyboardEnabled = true,
+		GamepadEnabled = false,
 		InputBegan = __signal(),
 		InputChanged = { Connect = function() return { Disconnect = function() end } end },
 		InputEnded = { Connect = function() return { Disconnect = function() end } end },

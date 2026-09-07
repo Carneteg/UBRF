@@ -128,9 +128,15 @@ prova("efter försök 1 visas kortet, utan att provet rört controllern",
 	kort ~= nil and kort.Visible == true,
 	("(Visible %s)"):format(tostring(kort and kort.Visible)))
 prova("med en tryckbar Prova igen",
-	knapp ~= nil and knapp.Visible == true and knapp.Text == "Prova igen",
+	knapp ~= nil and knapp.Visible == true
+		and string.find(knapp.Text, "Prova igen", 1, true) ~= nil,
 	('("%s" · synlig %s)'):format(knapp and knapp.Text or "-",
 		tostring(knapp and knapp.Visible)))
+--[[ …och spelaren ser att tangenten finns. Bänken är en skrivbordsklient
+	(KeyboardEnabled), så ledtexten ska vara R. ]]
+prova("och knappen visar att R gör samma sak",
+	knapp ~= nil and string.find(knapp.Text, "(R)", 1, true) ~= nil,
+	('("%s")'):format(knapp and knapp.Text or "-"))
 
 --[[ FÖRSÖK 2 FÅR INTE BÖRJA AV SIG SJÄLVT. Det här är blockeraren. ]]
 local tidVidKort = pass.tid
@@ -157,7 +163,8 @@ prova("och kortet är borta när ritten återupptas",
 bildrutor(Lektion.FORSOK_SEK + 0.5)
 knapp = hitta("Knapp")
 prova("efter försök 2 väntar en jämförelse med Nästa övning",
-	knapp ~= nil and knapp.Visible == true and knapp.Text == "Nästa övning"
+	knapp ~= nil and knapp.Visible == true
+		and string.find(knapp.Text, "Nästa övning", 1, true) ~= nil
 		and LektionController.lage() == "efter",
 	('("%s" · läge "%s")'):format(knapp and knapp.Text or "-",
 		LektionController.lage()))
@@ -278,6 +285,41 @@ do
 	prova("sent R efter avbrottet startar ingen lektion",
 		LektionController.pagar() == false and hitta("Kort").Visible == false,
 		"(fortsatt avsutten)")
+end
+
+--[[ ══ LEDTEXTEN FÖLJER INMATNINGEN, INTE PLATTFORMEN ═════════════
+	Tobias beslut 2026-09-07: knappen ska visa att R fungerar. Men en ren
+	pekenhet ska INTE få en bokstav hon inte kan trycka på. Provet växlar
+	inmatningsförmågorna och läser vad knappen faktiskt säger. ]]
+do
+	local usv = game:GetService("UserInputService")
+	local kb, gp, touch = usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled
+
+	local function knappTextMed(tangentbord, gamepad, pek)
+		usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled =
+			tangentbord, gamepad, pek
+		UgnetaController.visa("Rubrik", { "punkt" }, true, "Prova igen")
+		return hitta("Knapp").Text
+	end
+
+	local medTgb = knappTextMed(true, false, false)
+	local medPad = knappTextMed(false, true, false)
+	local baraPek = knappTextMed(false, false, true)
+
+	prova("tangentbord ger R-ledtext",
+		string.find(medTgb, "(R)", 1, true) ~= nil, ('("%s")'):format(medTgb))
+	prova("gamepad ger Y-ledtext i stället",
+		string.find(medPad, "(Y)", 1, true) ~= nil
+			and string.find(medPad, "(R)", 1, true) == nil,
+		('("%s")'):format(medPad))
+	prova("en ren pekenhet får ingen bokstav hon inte kan trycka på",
+		string.find(baraPek, "(R)", 1, true) == nil
+			and string.find(baraPek, "(Y)", 1, true) == nil
+			and string.find(baraPek, "Prova igen", 1, true) ~= nil,
+		('("%s")'):format(baraPek))
+
+	usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
+	UgnetaController.sakerhetTarOver()
 end
 
 if fel > 0 then

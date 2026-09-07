@@ -128,7 +128,8 @@ do
 	local knapp2 = hitta("Knapp")
 	check("men Prova igen erbjuds inte efter sista försöket",
 		knapp2 ~= nil and knapp2.Visible == true
-			and knapp2.Text == "Nästa övning",
+			and string.find(knapp2.Text, "Nästa övning", 1, true) ~= nil
+			and string.find(knapp2.Text, "Prova igen", 1, true) == nil,
 		string.format('("%s")', knapp2 and knapp2.Text or "-"))
 end
 
