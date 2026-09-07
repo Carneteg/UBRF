@@ -33,7 +33,7 @@ ok(langa.length===0,"direkt feedback hålls kort (≤72 tecken för enkla feedba
    saknas, så samma produktionsfunktioner kan provas utan en kopia av logiken. */
 const ctx={console};
 vm.createContext(ctx);
-vm.runInContext(src+`\nglobalThis.__UG={
+vm.runInContext(fs.readFileSync("src/riding/ovningsdef.js","utf8")+"\n"+src+`\nglobalThis.__UG={
   kvalitet:ugnetaKvalitet,
   jamfor:ugnetaJamfor,
   dims:UGNETA_OVNING_DIM,

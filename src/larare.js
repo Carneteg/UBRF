@@ -369,12 +369,22 @@ function ugnetaPlats(){
 
 /* ── G02-C försök och kvalitetsbedömning ──────────────────────── */
 const UGNETA_DIM_LABEL={linje:"linjen",rytm:"rytmen",balans:"balansen",timing:"timingen",mjukhet:"mjukheten",respons:"hästens svar",tempo:"tempot"};
+/* Vilka dimensioner bedöms i vilken övning.
+
+   G02-D: de två övningar som har en VERSIONERAD definition i
+   src/riding/ovningsdef.js hämtar sin lista därifrån i stället för att ha
+   en andra kopia här. De övriga fyra har ingen definition ännu och står
+   kvar oförändrade — en definition är ett produktbeslut per övning, inte
+   något den här filen ska hitta på i förbifarten.
+
+   Ordningen spelar roll: ugnetaForstaForsok rankar på VÄRDE, men
+   fallbacken när inget är mätbart tar dims[0]. */
 const UGNETA_OVNING_DIM={
   halt_skritt:["timing","mjukhet","respons"],
   skritt_trav:["timing","mjukhet","respons"],
-  storvolt:["linje","rytm","balans"],
+  storvolt:ovningsMatt("storvolt"),
   horn:["rytm","balans","linje"],
-  trav_skritt:["timing","mjukhet","respons"],
+  trav_skritt:ovningsMatt("trav_skritt"),
   galoppfattning:["timing","balans","respons"],
 };
 function ugClamp(v){return Math.max(0,Math.min(1,Number.isFinite(v)?v:0));}
