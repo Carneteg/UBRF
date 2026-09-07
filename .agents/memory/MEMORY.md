@@ -1,1 +1,1 @@
-- [Headless visual QA baseline](headless-visual-qa.md) — current runner can stall before fixed review cameras; compare against an untouched baseline before blaming scene edits.
+- [Headless visual QA baseline](headless-visual-qa.md) — use Replit’s maintained Chromium for WebGL proof; stale Playwright-image browsers can stall at frame zero.

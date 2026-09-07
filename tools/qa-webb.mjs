@@ -42,10 +42,21 @@ export async function oppnaWebb({ port = 8792, siktprov = false, bredd = 1280, h
     if (!fs.existsSync(p)) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { "content-type": MIME[path.extname(p)] || "application/octet-stream" });
     res.end(fs.readFileSync(p));
-  }).listen(port);
-  const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+  });
+  await new Promise((resolve, reject) => {
+    srv.once("error", reject);
+    srv.listen(port, "127.0.0.1", resolve);
+  });
+  /* Replits stödda Chromium följer runnerns uppdateringar. Den gamla
+     Playwright-imagevägen kan finnas kvar men ge WebGL utan bildrutor. */
+  const kandidater = [
+    process.env.CHROMIUM,
+    "/repl/tools/bin/chromium",
+    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  ].filter(Boolean);
+  const exe = kandidater.find(p => fs.existsSync(p));
   const browser = await chromium.launch({
-    executablePath: fs.existsSync(exe) ? exe : undefined,
+    executablePath: exe,
     args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"],
   });
   const page = await browser.newPage({ viewport: { width: bredd, height: hojd } });
@@ -59,7 +70,10 @@ export async function oppnaWebb({ port = 8792, siktprov = false, bredd = 1280, h
   await page.waitForTimeout(800);
   return {
     page, browser, fel,
-    async stang() { await browser.close(); srv.close(); },
+    async stang() {
+      await browser.close();
+      await new Promise((resolve, reject) => srv.close(e => e ? reject(e) : resolve()));
+    },
   };
 }
 
