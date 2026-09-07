@@ -1,5 +1,13 @@
 dist/
-node_modules/
+# `node_modules/` med snedstreck matchar bara en KATALOG. En symlänk med
+# samma namn — den man gör i ett git worktree för att slippa installera
+# om beroendena — är ingen katalog, gled därför förbi ignoreringen och
+# gick att checka in. Den hamnade i d340b8f och gjorde CI:s arbetsträd
+# smutsigt: checkouten la tillbaka en symlänk till en sökväg som inte
+# finns på runnern, npm ersatte den med en riktig katalog, och
+# `git status --porcelain` såg en raderad SPÅRAD fil. Utan snedstreck
+# matchas både katalog och symlänk, på alla nivåer.
+node_modules
 
 # Tillfälliga provskript. Speltestning körs med Playwright-snuttar som
 # skrivs, körs och slängs — de är inte projektfiler och ska aldrig
