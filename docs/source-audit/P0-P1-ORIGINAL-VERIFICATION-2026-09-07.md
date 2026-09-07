@@ -1,7 +1,7 @@
 # P0/P1 — verifiering av prioriterade original
 
-Datum: 2026-09-07  
-Källsystem: Google Drive och Supabase-projekt `tdznhaybxmekznasxtts`  
+Datum: 2026-09-07
+Källsystem: Google Drive och Supabase-projekt `tdznhaybxmekznasxtts`
 Arbetssätt: skrivskyddad metadata- och binärläsning; ingen produkt- eller källsystemsändring
 
 ## Evidens- och rättighetsnyckel
