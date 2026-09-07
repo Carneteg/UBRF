@@ -227,6 +227,17 @@ let s = await vantaPa(() => ({ scen: G.scen, ov: !document.getElementById("ov").
 prova("Rid nu släpper ut spelaren på gården", s.scen === "gard" && !s.ov,
   `scen ${s.scen} · overlay ${s.ov}`);
 
+/* Bildrutetakten i GÅ-SCENEN, mätt i samma körning som lektionens
+   nedan — de två talen ska kunna ställas bredvid varandra. */
+if (process.env.MATFART === "1") {
+  const a = await ev(() => G.t);
+  await page.waitForTimeout(30000);
+  const b = await ev(() => G.t);
+  console.log(`  MÄTT gå-scenen (${await ev(() => G.scen)}, vy ${await ev(() => G.vy)}):`
+    + ` ${(b - a).toFixed(2)} s simulerad på 30 s verklig = ${((b - a) / 30 * 100).toFixed(1)} %`
+    + ` · ~${((b - a) / 0.05 / 30).toFixed(2)} bilder/s`);
+}
+
 /* ══ 2. IN I STALLET ════════════════════════════════════════════════ */
 s = await station("in i stallet", "stalldörren", v => v.scen === "stallinne") || await las();
 prova("E tar spelaren in i stallet", s.scen === "stallinne", `scen ${s.scen}`);
@@ -310,6 +321,26 @@ const eft2 = await ev(() => ({ scen: G.scen, ix: G.momentIx, forsok: G.momentFor
 prova("ett andra tryck startar inte om lektionen",
   eft2.scen === "lektion" && eft2.ix === eft1.ix && eft2.forsok === eft1.forsok,
   `moment ${eft1.ix}/${eft1.forsok} → ${eft2.ix}/${eft2.forsok}`);
+
+/* ══ 10. HUR LÅNGT RÄCKER MILJÖN? (MATFART=1) ══════════════════════
+   Ordern bad också om ritten, Ugneta, prova-igen, avslutning, eftervård,
+   sparning och omstart. De ligger BAKOM lektionens moment, och ett
+   moment tar `tid` sekunder SIMULERAD tid att klara (20–26 s), eller
+   `tid*2,2` att tajma ut. Här mäts hur lång verklig tid det motsvarar,
+   så att "inte provat" blir ett tal och inte en ursäkt. */
+if (process.env.MATFART === "1" && (await ev(() => G.scen)) === "lektion") {
+  const f0 = await ev(() => ({ t: G.t, mt: G.momentT || 0, tid: (G.moment && G.moment.tid) || 0 }));
+  await page.waitForTimeout(60000);
+  const f1 = await ev(() => ({ t: G.t, mt: G.momentT || 0 }));
+  const simPerSek = (f1.t - f0.t) / 60;
+  const bildrutor = (f1.t - f0.t) / 0.05;
+  const tid = f0.tid || 24;
+  const enMoment = simPerSek > 0 ? (tid * 2.2) / simPerSek / 60 : Infinity;
+  console.log(`  MÄTT simulerad tid: ${(f1.t - f0.t).toFixed(2)} s på 60 s verklig`
+    + ` = ${(simPerSek * 100).toFixed(1)} % · ~${(bildrutor / 60).toFixed(2)} bilder/s`);
+  console.log(`  MÄTT ett moment (${tid} s, timeout ${(tid * 2.2).toFixed(0)} s simulerat)`
+    + ` ≈ ${enMoment.toFixed(0)} minuter verklig tid i den här miljön.`);
+}
 
 console.log("\nPAGEERRORS:", sidfel.length ? sidfel.slice(0, 3) : "inga");
 const fel = resultat.filter(x => !x).length;

@@ -231,6 +231,78 @@ prova("spelets egen DOM-prompt står också där",
    inte om spelet. Uppsittningen och det andra trycket hör hemma där
    tillståndet är på riktigt: tools/forstadagentest.mjs. */
 
+/* ══ 6. FEL HÄST ═══════════════════════════════════════════════════
+   Ordern bad om "fel häst" som negativprov. Två frågor: kan spelaren ta
+   någon annans utrustning, och vad händer vid en box som inte är hennes?
+
+   Sadelkammaren öppnas genom `visaSadelkammare()` — samma anrop som
+   interaktionens `gor()` gör. Det som provas är vad panelen SVARAR, inte
+   hur man kom in i den.
+
+   GRANNEN HÄMTAS UR PANELEN, inte ur HORSES. Sadelkammaren visar åtta
+   byglar runt din egen häst, inte hela stallet; ett godtyckligt annat
+   häst-id ("air") fanns inte på väggen och provet letade efter en knapp
+   som aldrig ritats. Det såg ut som att fel utrustning inte gick att
+   välja — men ingen hade valt något alls. */
+r = await stallIn({ hastId: "blackrock_jack", hastPlats: "box", skotsel: false,
+  utrustning: false, hastMott: true });
+
+await ev(() => visaSadelkammare());
+await page.waitForTimeout(800);
+const val = await ev(() => {
+  const knappar = [...document.querySelectorAll('.sk-val[data-typ="sadel"]')]
+    .filter(b => b.dataset.id !== G.hastId);
+  if (!knappar.length) return null;
+  const id = knappar[0].dataset.id;
+  const t = document.querySelector(`.sk-val[data-typ="trans"][data-id="${id}"]`);
+  if (!t) return null;
+  knappar[0].click(); t.click();
+  return { id, namn: (HORSES[id] || {}).namn || id };
+});
+prova("sadelkammaren visar grannarnas byglar, inte bara din egen",
+  !!val, val ? `granne ${val.namn}` : "ingen grannbygel ritad");
+if (val) {
+  await klicka("bSkKlar");
+  const e = await ev(() => ({ utr: !!G.utrustning,
+    not: ((document.getElementById("skStatus") || {}).className || ""),
+    text: ((document.getElementById("skStatus") || {}).textContent || "").trim().slice(0, 90) }));
+  prova("fel hästs sadel och träns ger INGEN utrustning", e.utr === false, `utrustning ${e.utr}`);
+  prova("och spelaren får veta varför", /bad/.test(e.not), `"${e.text}"`);
+}
+await ev(() => overlay(false));
+await page.waitForTimeout(400);
+
+/* Boxarna ligger i STALLET. Första försöket frågade efter dem medan
+   spelaren stod i ridhuset, där `interaktioner()` bygger ridhusets lista
+   och inga boxar finns — "den egna boxen har en interaktion: null" sade
+   alltså bara att jag mätte i fel byggnad. */
+const boxar = await ev(() => {
+  const S = STALLINNE;
+  gaTill("stallinne", { x: S.ridlarare.pos[0], y: S.ridlarare.pos[1], rikt: 0 });
+  const min = hittaBox(G.hastId);
+  let kast = null, vidAnnan = null, vidMin = null;
+  try {
+    const L = interaktioner();
+    const nara = (p) => L.find(i => Math.hypot(i.pos[0] - p[0], i.pos[1] - p[1]) < 0.6);
+    vidMin = min ? ((nara(min.dorr) || {}).text || null) : "INGEN EGEN BOX";
+    const andra = Object.keys(HORSES).map(id => hittaBox(id))
+      .filter(b => b && (!min || b.dorr[0] !== min.dorr[0] || b.dorr[1] !== min.dorr[1]));
+    vidAnnan = andra.length ? ((nara(andra[0].dorr) || {}).text || null) : "INGEN ANNAN BOX";
+  } catch (e) { kast = String(e && e.message || e); }
+  const u = (typeof uppdragMal === "function") ? uppdragMal() : null;
+  return { kast, vidMin, vidAnnan, malVar: u && u.mal ? u.mal.var : null,
+    malId: u ? u.id : null };
+});
+prova("i stallet har den egna boxen en interaktion",
+  !!boxar.vidMin && boxar.vidMin !== "INGEN EGEN BOX", `"${boxar.vidMin}"`);
+prova("en annan hästs box har ingen — den är inte spelarens att öppna",
+  boxar.vidAnnan === null || boxar.vidAnnan === "INGEN ANNAN BOX", `"${boxar.vidAnnan}"`);
+/* Utrustningen är fortfarande inte hämtad — då SKA vägvisaren peka på
+   sadelkammaren, inte på boxen. Provet kräver rätt mål, inte bara att
+   något mål finns: "finns ett mål" var grönt oavsett vad det pekade på. */
+prova("och vägvisaren pekar på nästa riktiga steg — sadelkammaren",
+  boxar.malId === "utrustning", `mål ${boxar.malId} · "${boxar.malVar}"`);
+
 console.log("\nPAGEERRORS:", sidfel.length ? sidfel.slice(0, 3) : "inga");
 const fel = resultat.filter(x => !x).length;
 console.log(fel === 0 ? `\nALLA OK (${resultat.length} mätningar)` : `\n${fel} FEL av ${resultat.length}`);
