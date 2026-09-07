@@ -1,0 +1,23 @@
+name: Interior source transfer 2
+on:
+  push:
+    branches: [chatgpt/interior-fidelity-transfer-2]
+    paths:
+      - '.github/workflows/interior-transfer-2.yml'
+      - 'tools/interior-transfer-2.mjs'
+permissions:
+  contents: write
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify and publish source-only patch
+        run: node tools/interior-transfer-2.mjs
