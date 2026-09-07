@@ -58,7 +58,14 @@ const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux
 const browser = await chromium.launch({ headless: true,
   executablePath: fs.existsSync(exe) ? exe : undefined,
   args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+/* MOBIL=1 kör samma kedja på en telefonyta med touch: E ersätts av
+   pekknappen ANVÄND (src/mobil.js), som är spelarens enda väg att
+   interagera utan tangentbord. */
+const MOBIL = process.env.MOBIL === "1";
+const page = await browser.newPage(MOBIL
+  ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true,
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" }
+  : { viewport: { width: 1280, height: 720 } });
 const sidfel = [];
 page.on("pageerror", e => sidfel.push(e.message));
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: "load" });
@@ -157,10 +164,31 @@ async function stallDigVid(re, maxMs = 90000) {
    ungefär EN bildruta vid 0,5 fps; det räckte ibland och ibland inte,
    vilket såg ut som ett ostabilt spel men var en ostabil mätning. */
 async function tryckE(klar) {
-  await page.keyboard.down("KeyE");
-  await page.waitForTimeout(4000);
-  await page.keyboard.up("KeyE");
-  await page.waitForTimeout(1000);
+  if (MOBIL) {
+    /* Pekknappen ANVÄND skickar samma KeyE genom spelets eget
+       inputlager. Hålls nere lika länge, av samma bildruteskäl. */
+    /* FINGRET LIGGER KVAR på knappen, precis som på tangenten.
+
+       `data-tap` i src/mobil.js skickar keydown på pointerdown och
+       keyup först 60 ms efter pointerup. En blixtsnabb tap() håller
+       alltså tangenten nere i ~60 ms — på en riktig telefon i 60 fps är
+       det fyra bildrutor, men här (0,5 fps) är sannolikheten att spelet
+       råkar läsa just då omkring tre procent. Ett tryck missade, två
+       tryck öppnade och stängde. Ingetdera säger något om touch.
+
+       Att hålla fingret stilla är en lika giltig spelarhandling och ger
+       samma flank som tangentbordet. */
+    const knapp = page.locator('#pekGang .pekKnapp[data-tap="KeyE"]');
+    await knapp.dispatchEvent("pointerdown");
+    await page.waitForTimeout(4000);
+    await knapp.dispatchEvent("pointerup");
+    await page.waitForTimeout(2500);
+  } else {
+    await page.keyboard.down("KeyE");
+    await page.waitForTimeout(4000);
+    await page.keyboard.up("KeyE");
+    await page.waitForTimeout(1000);
+  }
   if (!klar) { await page.waitForTimeout(2000); return las(); }
   return vantaPa(() => ({
     scen: G.scen, hastId: G.hastId, plats: G.hastPlats, leder: G.leder,
@@ -177,7 +205,17 @@ const station = async (re, namn, klar) => {
   return g.framme ? tryckE(klar) : null;
 };
 
-console.log(`\n── FÖRSTA DAGEN${process.env.ROT_SERVE ? " (obundlad sida)" : ""} ──`);
+console.log(`\n── FÖRSTA DAGEN${process.env.ROT_SERVE ? " (obundlad sida)" : ""}${
+  MOBIL ? " (mobil 390×844 + touch)" : ""} ──`);
+if (MOBIL) {
+  const pek = await ev(() => ({
+    ui: !!document.getElementById("pekUI"),
+    joy: !!document.getElementById("joy"),
+    anvand: !!document.querySelector('#pekGang .pekKnapp[data-tap="KeyE"]'),
+  }));
+  prova("pekgränssnittet finns på en telefon — styrspak och ANVÄND",
+    pek.ui && pek.joy && pek.anvand, JSON.stringify(pek));
+}
 
 /* ══ 1. GÄSTEN ══════════════════════════════════════════════════════ */
 prova("en ren gäst möts av karaktärsskaparen", await knappFinns("bSkapHoppa"), "bSkapHoppa");
@@ -262,6 +300,7 @@ prova("uppsittningen startar lektionen — spelaren sitter upp",
 console.log("\nPAGEERRORS:", sidfel.length ? sidfel.slice(0, 3) : "inga");
 const fel = resultat.filter(x => !x).length;
 console.log(fel === 0 ? `\nALLA OK (${resultat.length} mätningar)` : `\n${fel} FEL av ${resultat.length}`);
-console.log("NOT_TESTED: gångsträckorna mellan stationerna (se filhuvudet), mobil/touch, Studio, gamepad.");
+console.log("NOT_TESTED: gångsträckorna mellan stationerna (se filhuvudet), Studio, fysisk gamepad"
+  + (MOBIL ? "." : ", mobil/touch — kör MOBIL=1 för den."));
 await browser.close(); srv.close();
 process.exit(fel === 0 ? 0 : 1);
