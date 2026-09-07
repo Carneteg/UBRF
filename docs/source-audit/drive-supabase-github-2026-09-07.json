@@ -4,6 +4,12 @@
     "manifest_row_count": 82,
     "canonical_repo": "/home/runner/workspace",
     "generated_at": "2026-09-07T10:47:32.124Z",
+    "snapshot_status": "pre_content_review",
+    "snapshot_verified_count": 0,
+    "content_review_authority": "docs/source-audit/P0-P1-ORIGINAL-VERIFICATION-2026-09-07.md",
+    "content_review_overlay_verified_count": 45,
+    "content_review_overlay_unverified_count": 185,
+    "content_review_overlay_rule": "The per-file content_verified=false values below preserve the pre-review live-inventory snapshot. For current verification status, the authoritative overlay named by content_review_authority governs the 45 individually listed source IDs.",
     "rule": "folder names are not visual evidence; content_verified remains false unless binary/hash/visual proof exists"
   },
   "categories": {

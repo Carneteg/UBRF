@@ -4,6 +4,12 @@ Datum: 2026-09-07
 Källsystem: Google Drive och Supabase-projekt `tdznhaybxmekznasxtts`
 Arbetssätt: skrivskyddad metadata- och binärläsning; ingen produkt- eller källsystemsändring
 
+Detta dokument är den **auktoritativa status-overlayen** till
+`drive-supabase-github-2026-09-07.json`. JSON-filen är en oföränderlig
+`pre_content_review`-snapshot vars per-fil-värden fortsatt visar läget före
+denna granskning. För de 45 source-ID:n nedan gäller V1/R1-statusen här; övriga
+185 Drive-poster är fortsatt `content_verified=false`.
+
 ## Evidens- och rättighetsnyckel
 
 - `V1` — Drive-originalet har hämtats, byteantalet stämmer med live-metadata,

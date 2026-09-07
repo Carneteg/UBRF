@@ -105,9 +105,14 @@ Exempel på ej matchade, potentiellt nyare käll-ID:n är:
 
 Drive-listningen exponerar ingen användbar MD5/SHA-256 för dessa poster.
 `likely_match` betyder därför endast filnamns-/indexmatchning.
-Samtliga 230 är fortsatt `content_verified=false` tills prioriterade binärer
-öppnats och jämförts. Full liveinventering:
-`docs/source-audit/drive-supabase-github-2026-09-07.json`.
+Inventeringsfilen
+`docs/source-audit/drive-supabase-github-2026-09-07.json` är uttryckligen en
+`pre_content_review`-snapshot: dess 230 per-fil-värden
+`content_verified=false` bevarar läget före binärgranskningen. Den
+auktoritativa status-overlayen är
+`docs/source-audit/P0-P1-ORIGINAL-VERIFICATION-2026-09-07.md`: 45 individuellt
+listade source-ID:n är nu V1/R1-verifierade och övriga 185 är fortsatt
+`content_verified=false`.
 
 `1.pdf` och Models-licensen finns som externa manifestposter men inte som
 livefiler i de listade rotkategorierna. Derivat eller mappnamn får inte användas
