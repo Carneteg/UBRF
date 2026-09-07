@@ -29,10 +29,16 @@ const INSPELNING_HZ = 20;
 const INSPELNING_DT = 1 / INSPELNING_HZ;
 
 /* Gränser. En post får inte växa obegränsat i en flik som lämnas öppen.
-   60 sekunder vid 20 Hz = 1200 sampel; en 20 m volt i trav tar ~20 s. Når
-   inspelningen taket stängs den och märks `trunkerad`, i stället för att
-   tyst fortsätta äta minne eller tyst kasta det som redan spelats in. */
-const INSPELNING_MAX_SEK = 60;
+   Når inspelningen taket stängs den och märks `trunkerad`, i stället för
+   att tyst fortsätta äta minne eller tyst kasta det som redan spelats in.
+
+   TAKET ÄR MÄTT MOT LIFECYCLEN, inte gissat. Ett försök avslutas av
+   `ugnetaForsokSteg` vid `moment.tid * 2.2`, och det längsta momentet i
+   G02-D:s två övningar är storvolten på 32 s — alltså 70,4 s. Ett tak på
+   60 s hade kapat en HELT NORMAL volt, vilket replay-provet visade genom
+   att posten fortfarande var aktiv efter 57 s. 120 s ger marginal för
+   varje moment upp till 54 s och kostar 2400 sampel. */
+const INSPELNING_MAX_SEK = 120;
 const INSPELNING_MAX_SAMPEL = INSPELNING_MAX_SEK * INSPELNING_HZ;
 const INSPELNING_MAX_HANDELSER = 200;
 

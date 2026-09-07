@@ -481,32 +481,90 @@ function ugnetaForstaForsok(id,medel){
     forsok:1,knapp:"Prova igen"};
 }
 
+/* ── G02-D: INSPELNINGEN AV FÖRSÖKET ────────────────────────────────
+   Ritten skrivs ned EN gång och återanvänds för uppspelning och
+   jämförelse. Bedömningen ligger kvar i ugnetaKvalitet() — inspelningen
+   är ett vittne, inte en andra domare.
+
+   Startar när ett försök startar, avslutas när försöket avslutas, och
+   posten följer med försöket in i historiken så att "spela upp mitt förra
+   försök" betyder just det försöket och inte något annat. */
+function ugnetaSpelaIn(){
+  return (typeof Inspelning!=="undefined")?(LARARE.inspelare||(LARARE.inspelare=new Inspelning())):null;
+}
+function ugnetaInspelningStarta(o){
+  const ins=ugnetaSpelaIn();if(!ins)return;
+  const d=(typeof ovningsDef==="function")?ovningsDef(o.id):null;
+  /* Bara övningar med en VERSIONERAD definition spelas in. G02-D:s första
+     leverans är 20 m volten och en övergång; de fyra övriga har ingen
+     definition ännu, och en post utan version kan varken läsas tillbaka
+     säkert eller jämföras — `inspelningLasbar` skulle avvisa den som
+     okänd övning. Att spela in något vi inte kan analysera vore just den
+     tysta meningslösa datan specen varnar för.
+
+     Upptäckt av replay-provet: lektionens första G02-övning är
+     `halt_skritt`, inte volten, så utan det här villkoret blev den
+     allra första posten oläsbar av sin egen kontroll. */
+  if(!d){if(ins.aktiv)ins.avsluta();return;}
+  const h=(typeof HORSES!=="undefined"&&G.hastId)?HORSES[G.hastId]:null;
+  ins.starta(o.id,G.hastId||null,(h&&h.profil)||null,
+    {gangart:(G.ride&&G.ride.gangart)||null,fart:(G.ride&&G.ride.tempo)||null,
+     x:G.px,y:G.py,kurs:G.rikt},
+    d?d.version:null);
+}
+function ugnetaInspelningSampla(dt){
+  const ins=LARARE.inspelare;if(!ins||!ins.aktiv)return;
+  const tm=G.telemetri||{},r=G.ride||{};
+  ins.sampla(dt,{
+    x:G.px,y:G.py,kurs:G.rikt,
+    gangart:r.gangart,fas:tm.rytm,fart:tm.fart!==undefined?tm.fart:r.tempo,
+    kurvatur:tm.kurvatur,balans:tm.balans!==undefined?tm.balans:r.balans,
+    hjalper:tm.hjalper||null,
+  });
+}
+
 function ugnetaForsokAvsluta(){
   const a=LARARE.aktivForsok;if(!a||a.klar||a.n<2)return null;
   a.klar=true;const medel=ugnetaForsokMedel(a);
+  /* Posten hämtas ur inspelaren och läggs i försöket. Finns ingen
+     inspelare (äldre bygge, eller modulen inte laddad) blir den null —
+     jämförelsen och återkopplingen fungerar ändå, de har aldrig behövt
+     inspelningen. */
+  const ins=LARARE.inspelare;
+  medel.__post=(ins&&ins.aktiv)?ins.avsluta():null;
   const lista=LARARE.forsok[a.id]||(LARARE.forsok[a.id]=[]);lista.push(medel);
   /* Första försöket får sin egen återkoppling i stället för tystnad —
      det är den som ska leda fram till försök 2. */
   if(lista.length<2)return ugnetaForstaForsok(a.id,medel);
   return ugnetaJamfor(a.id,lista[lista.length-2],lista[lista.length-1],lista.length);
 }
-function ugnetaForsokSteg(){
+function ugnetaForsokSteg(dt){
   const o=ugnetaOvning();
   if(!o){if(LARARE.aktivForsok)ugnetaForsokAvsluta();LARARE.aktivForsok=null;return;}
   if(!LARARE.aktivForsok||LARARE.aktivForsok.id!==o.id||LARARE.aktivForsok.momentIx!==G.momentIx){
     const j=ugnetaForsokAvsluta();if(j)LARARE.vantaFeedback=j;
     LARARE.aktivForsok=ugnetaTomForsok(o);
+    ugnetaInspelningStarta(o);
   }
   const q=ugnetaKvalitet(),a=LARARE.aktivForsok;a.n++;
   for(const k in a.sum)a.sum[k]+=q[k]||0;
+  ugnetaInspelningSampla(dt);
   const m=G.moment||{};
   if(G.momentKlart||G.momentT>=((m.tid||0)*2.2)){const j=ugnetaForsokAvsluta();if(j)LARARE.vantaFeedback=j;}
+}
+/* Posten för ett tidigare försök — 1 är det första. Returnerar null när
+   försöket inte finns eller inte spelades in, aldrig ett tomt objekt som
+   ser ut som en ritt. */
+function ugnetaForsokPost(id,nr){
+  const lista=ugnetaForsokHistorik(id);
+  const a=lista[(nr||lista.length)-1];
+  return (a&&a.__post)||null;
 }
 function ugnetaForsokHistorik(id){return (LARARE.forsok&&LARARE.forsok[id])||[];}
 
 const LARARE={fokus:null,start:null,sagt:"",cd:0,brasedan:0,beromt:0,bytt:0,
   attributCd:0,upprepad:null,inled:false,bratid:0,tid:0,ugnetaNasta:null,
-  forsok:Object.create(null),aktivForsok:null,vantaFeedback:null,
+  forsok:Object.create(null),aktivForsok:null,vantaFeedback:null,inspelare:null,
   forsokNr:1,liveT:0,liveCd:0,liveSagt:""};
 
 function lararNollstall(){
@@ -514,6 +572,9 @@ function lararNollstall(){
   LARARE.beromt=0;LARARE.bytt=0;LARARE.attributCd=0;LARARE.upprepad=null;
   LARARE.inled=false;LARARE.bratid=0;LARARE.tid=0;LARARE.ugnetaNasta=null;
   LARARE.forsok=Object.create(null);LARARE.aktivForsok=null;LARARE.vantaFeedback=null;
+  /* Inspelaren nollställs med resten: en avbruten ritt får inte lämna en
+     halv post som nästa lektion råkar avsluta och lägga i historiken. */
+  if(LARARE.inspelare)LARARE.inspelare.avsluta();
 }
 
 function lararValjFokus(){
@@ -547,7 +608,7 @@ function lararMeddelande(txt,rubrik,punkter,ton,extra){
 
 function lararSteg(dt){
   if(!G.ride||!LARARE.fokus)return "";
-  ugnetaForsokSteg();
+  ugnetaForsokSteg(dt);
   ugnetaLiveSteg(dt);
   const F=LARARE.fokus;LARARE.cd-=dt;LARARE.attributCd-=dt;LARARE.liveCd-=dt;
 
