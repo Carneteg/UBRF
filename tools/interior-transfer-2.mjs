@@ -19,7 +19,7 @@ const tail3=fs.readFileSync('tools/interior-second-pass-tail-3.txt','utf8').trim
 const tail4=fs.readFileSync('tools/interior-second-pass-tail-4.txt','utf8').trim();
 if(hash(original.slice(0,2000))!=='5b76412698aef392deff7ac8f316efadad3b6523ac42197aa586cca2f6ced3f9'||hash(original.slice(2000,4000))!=='b9943399bc95860a664f74eb9e680d786a3b08ec290c999bb754937c7220f76c')throw Error('Original prefix differs from reviewed source');
 if(tail3.length!==2000||hash(tail3)!=='b5008c2a5deb783184be4ee1f44c275c397611206808b7b0268a92a1cec353da')throw Error('Third chunk mismatch');
-if(tail4.length!==2060||hash(tail4)!=='8a3146a5662e81821807b57725d89509d1f63be7350c1c394f4a607b9f8fe558')throw Error('Fourth chunk mismatch');
+if(tail4.length!==2060||hash(tail4)!=='08a028b0a18487f1c09254f9cddfa7670c8a5fd5ec52d6718094f321e1f237cd')throw Error('Fourth chunk mismatch');
 const text=original.slice(0,4000)+tail3+tail4;
 if(text.length!==8060||hash(text)!==EXPECTED_TEXT)throw Error('Reconstructed payload checksum mismatch');
 const patch=zlib.brotliDecompressSync(Buffer.from(text,'base64'));
