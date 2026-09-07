@@ -7,13 +7,14 @@
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
-const GA={fart:1.8, jogg:3.4, svangMax:5.5, accel:8, broms:13, radie:0.35};
+const GA={fart:1.8, jogg:3.4, svangMax:InputFeel.WALK.turn, accel:InputFeel.WALK.accel, broms:InputFeel.WALK.brake, radie:0.35};
 const VD={
   px:0, py:0, pz:0, rikt:0, fart:0, fas:0, tid:0,
   spår:[], hastX:0, hastY:0, hastRikt:0,
   prompt:null, ePrev:false, _ov:null,
   /* Klickmålet på kartan: {x, y, namn} eller null. Se GÅ HIT nedan. */
   mal:null, malT:0, malAvst:0, vag:null,
+  styrKansla:{x:0,y:0},
 };
 
 /* ── GÅ HIT ────────────────────────────────────────────────────────
@@ -183,17 +184,18 @@ function stegaVandring(dt){
      blir aldrig snabbare än en rak linje. */
   let ix=(IN.ned.KeyD?1:0)-(IN.ned.KeyA?1:0);
   let iy=(IN.ned.KeyW?1:0)-(IN.ned.KeyS?1:0);
-  let styrka=1;
-  if(IN.joy){ ix=IN.joy.x; iy=-IN.joy.y; styrka=IN.joy.styrka; }
+  const analog=!!IN.joy;
+  if(analog){ix=IN.joy.x;iy=-IN.joy.y;}
   const jogg=IN.ned.ShiftLeft||IN.ned.ShiftRight;
+  const styr=InputFeel.walk(ix,iy,dt,VD.styrKansla,analog);
   let onskad=null, malFart=0;
-  if(ix||iy){
+  if(styr.moving){
     const v=vandringYaw();
-    const rx=Math.cos(v)*iy+Math.sin(v)*ix;
-    const ry=Math.sin(v)*iy-Math.cos(v)*ix;
+    const rx=Math.cos(v)*styr.y+Math.sin(v)*styr.x;
+    const ry=Math.sin(v)*styr.y-Math.cos(v)*styr.x;
     onskad=Math.atan2(ry,rx);
-    malFart=IN.joy ? GA.fart+(GA.jogg-GA.fart)*Math.max(0,styrka-0.55)/0.45
-                   : (jogg?GA.jogg:GA.fart);
+    malFart=analog ? GA.fart*styr.strength+(GA.jogg-GA.fart)*Math.max(0,styr.strength-0.55)/0.45
+                   : (jogg?GA.jogg:GA.fart)*styr.strength;
   }
 
   /* GÅ HIT: klickmålet styr — men bara så länge spelaren håller
@@ -226,7 +228,7 @@ function stegaVandring(dt){
     }
     const delmal=(VD.vag&&VD.vag.length)?VD.vag[0]:[VD.mal.x,VD.mal.y];
     const avst=Math.hypot(VD.mal.x-VD.px, VD.mal.y-VD.py);
-    if(ix||iy||avst<0.9){
+    if(styr.moving||avst<0.9){
       slutaGa();
     }else{
       onskad=Math.atan2(delmal[1]-VD.py, delmal[0]-VD.px);
