@@ -29,9 +29,10 @@
 ]]
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
-local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
+local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
 
 local UgnetaController = {}
 
@@ -42,24 +43,35 @@ local chip: TextLabel? = nil
 local kort: Frame? = nil
 local kortRubrik: TextLabel? = nil
 local kortPunkter: { TextLabel } = {}
-local kortKnapp: TextLabel? = nil
+local kortKnapp: TextButton? = nil
+
+--[[ ÅTERFÖRSÖKET ÄR EN HANDLING, INTE EN SKYLT (senior review av
+	c53a2c7). Knappen var en TextLabel utan input-handler, och lifecyclen
+	gick vidare på en sexsekunderstimer: kortet SÅG ut som ett val men var
+	en nedräkning. En skylt som ser ut som en knapp är inte en knapp.
+
+	Nu väntar lektionen på spelaren. `vantarPa` ÄR den väntan, och så
+	länge den är sann mäts ingenting — se LektionController.steg. Det är
+	också därför tre ingångar (knapp, tangent, gamepad) går genom EN
+	`fortsatt`: en väntan som kan avslutas på tre ställen skulle kunna
+	avslutas två gånger. ]]
+local vantarPa = false
+local fortsattFn: (() -> ())? = nil
 
 local FARG_GULD = Color3.fromRGB(232, 181, 74)
 local FARG_BRA = Color3.fromRGB(140, 196, 120)
 local FARG_MORK = Color3.fromRGB(12, 14, 18)
 local FARG_TEXT = Color3.fromRGB(246, 242, 232)
 
---[[ Live-orden. Samma register som webbens UGNETA_LIVE — korta cues, en
-	för fel och en för rätt. Listan är avsiktligt liten: fler ord blir en
-	textström, och det är precis det variant 1+3 säger nej till. ]]
-local LIVE = {
-	hand = { fel = "Mjukare hand", bra = "Mjuk hand" },
-	framat = { fel = "Rid framåt", bra = "Bra rytm" },
-	sits = { fel = "Sitt stilla", bra = "Bra sits" },
-	lugn = { fel = "Andas ut", bra = "Fint lugn" },
-	timing = { fel = "Vänta på svaret", bra = "Precis så" },
-	vagen = { fel = "Titta dit du ska", bra = "Bra linje" },
-}
+--[[ Live-orden: korta cues, en för fel och en för rätt. Registret är
+	avsiktligt litet — fler ord blir en textström, och det är precis det
+	variant 1+3 säger nej till.
+
+	Det stod förut som en handskriven kopia här. Samma ord som webbens,
+	men en KOPIA, och en kopia kan glida. Nu läses både orden och hur
+	länge chipet står kvar ur kanonen. ]]
+local LIVE = RidKanon.UGNETA.LIVE
+local LIVE_CD = RidKanon.UGNETA.LIVE_CD
 
 local DIM_ORD = {
 	linje = "linjen", rytm = "rytmen", balans = "balansen",
@@ -191,8 +203,9 @@ local function bygg()
 		table.insert(kortPunkter, p)
 	end
 
-	local kn = Instance.new("TextLabel")
+	local kn = Instance.new("TextButton")
 	kn.Name = "Knapp"
+	kn.AutoButtonColor = true
 	kn.LayoutOrder = 9
 	kn.Size = UDim2.new(0, 108, 0, 22)
 	kn.BackgroundColor3 = FARG_GULD
@@ -207,6 +220,33 @@ local function bygg()
 	kncorner.Parent = kn
 	kn.Parent = k
 	kortKnapp = kn
+	--[[ Mus och finger går in här. Tangent och gamepad kommer in via
+	     init.client.luau, som äger inmatningen — HUD:en lyssnar inte
+	     själv på UserInputService, av samma skäl som allt annat ligger i
+	     den enda loopen. ]]
+	kn.Activated:Connect(function()
+		UgnetaController.fortsatt()
+	end)
+end
+
+--[[ TANGENTLEDTEXT PÅ KNAPPEN (Tobias beslut 2026-09-07).
+
+	Spelaren såg "Prova igen" men ingenting om att R gör samma sak —
+	knappen var träffbar men tangenten var osynlig.
+
+	Ledtexten visas bara där tangenten FINNS. En ren pekenhet ska inte
+	få en bokstav hon inte kan trycka på, och det är inmatningen som
+	avgör, inte plattformen: en iPad med tangentbord får ledtexten, en
+	telefon får den inte. Tangenterna är desamma som init.client lyssnar
+	på — R och gamepadens Y.
+
+	Webben har ingen motsvarande ledtext, och ska inte ha det: den styrs
+	med mus och finger. Paritetsregeln säger uttryckligen att inputadapter
+	och UI får vara plattformsspecifika. ]]
+local function medLedtext(txt: string): string
+	if UserInputService.KeyboardEnabled then return txt .. "  (R)" end
+	if UserInputService.GamepadEnabled then return txt .. "  (Y)" end
+	return txt
 end
 
 --[[ ── Live-registret ─────────────────────────────────────────── ]]
@@ -225,7 +265,7 @@ function UgnetaController.live(txt: string, bra: boolean)
 	c.Visible = true
 	local stroke = c:FindFirstChildOfClass("UIStroke")
 	if stroke then stroke.Color = if bra then FARG_BRA else FARG_GULD end
-	liveTid = 2.6
+	liveTid = LIVE_CD.visa
 	liveSagt = txt
 end
 
@@ -249,10 +289,15 @@ function UgnetaController.sakerhetTarOver()
 	if k then k.Visible = false end
 	liveTid = 0
 	liveSagt = ""
+	--[[ SÄKERHET FÖRE UNDERVISNING. En väntande fortsättning får inte
+	     överleva ett säkerhetsavbrott: annars kunde ett R-tryck efter
+	     avsittningen starta ett försök på en häst som inte finns. ]]
+	vantarPa = false
 end
 
 --[[ ── Kortet mellan försöken ─────────────────────────────────── ]]
-local function visaKort(rubrik: string, punkter: { string }, knapp: boolean)
+local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
+	knappText: string?)
 	bygg()
 	local k, r = kort, kortRubrik
 	if not k or not r then return end
@@ -263,7 +308,13 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean)
 		p.Visible = txt ~= nil
 	end
 	local kn = kortKnapp
-	if kn then kn.Visible = knapp end
+	if kn then
+		kn.Visible = knapp
+		if knapp and knappText then kn.Text = medLedtext(knappText) end
+	end
+	--[[ Kortet väntar exakt när det har en knapp. Ett kort utan knapp är
+	     en upplysning, inte ett val. ]]
+	vantarPa = knapp
 	k.Visible = true
 	--[[ Kortet hör till pausen mellan försöken. Går ridningen vidare
 		ska det bort — det får aldrig ligga kvar över en aktiv ritt. ]]
@@ -271,9 +322,18 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean)
 	if c then c.Visible = false end
 end
 
+--[[ Kortet, öppet för den som kör lektionen. Presentationen av en övning
+	och återkopplingen efter ett försök är samma yta — skillnaden är vad
+	som står i den, inte vilken ruta den ritas i. ]]
+function UgnetaController.visa(rubrik: string, punkter: { string }, knapp: boolean,
+	knappText: string?)
+	visaKort(rubrik, punkter, knapp, knappText)
+end
+
 function UgnetaController.dolj()
 	local k = kort
 	if k then k.Visible = false end
+	vantarPa = false
 end
 
 --[[ Efter ett försök. `fore` är nil på första försöket. Observationerna
@@ -296,8 +356,38 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 	end
 	if #punkter == 0 then table.insert(punkter, "Jämnare försök. Behåll samma känsla.") end
 	local forsta = fore == nil
-	visaKort(if forsta then "Prova igen" else `Försök {forsokNr}`, punkter, forsta)
+	--[[ Kortet har alltid en fortsättning nu. Förut fick bara försök 1 en
+	     knapp och försök 2 låg kvar tills timern tog det — spelaren hade
+	     inget sätt att säga "klar". ]]
+	visaKort(if forsta then "Prova igen" else `Försök {forsokNr}`, punkter, true,
+		if forsta then "Prova igen" else "Nästa övning")
 	return punkter
+end
+
+--[[ ── Fortsättningen: spelarens handling ──────────────────────────
+	Kortet mellan försöken stänger inte sig självt. Den som kör lektionen
+	registrerar vad som ska hända när spelaren väljer att gå vidare. ]]
+function UgnetaController.vidFortsatt(fn: (() -> ())?)
+	fortsattFn = fn
+end
+
+--[[ Står kortet och väntar på spelaren? ]]
+function UgnetaController.vantar(): boolean
+	return vantarPa
+end
+
+--[[ Spelaren gick vidare. Returnerar false när det inte fanns någon
+	väntan att avsluta — så att en tangenttryckning utan kort aldrig kan
+	starta ett försök i smyg, och så att init.client kan låta samma
+	tangent falla igenom till sin vanliga betydelse. ]]
+function UgnetaController.fortsatt(): boolean
+	if not vantarPa then return false end
+	vantarPa = false
+	local k = kort
+	if k then k.Visible = false end
+	local fn = fortsattFn
+	if fn then fn() end
+	return true
 end
 
 function UgnetaController.start()

@@ -20,6 +20,12 @@ local Ugneta = {}
 Ugneta.MAX_OBSERVATIONER = RidKanon.UGNETA.MAX_OBSERVATIONER
 Ugneta.DIMENSIONER = RidKanon.UGNETA.DIMENSIONER
 
+--[[ Trösklarna som avgör VAD hon säger. De stod förut som literaler här
+     — avskrivna ur webbens ugnetaJamfor/ugnetaForstaForsok, alltså en
+     andra sanning som kunde glida utan att något blev rött. Nu kommer de
+     ur samma kanon som allt annat i den här modulen. ]]
+local KV = RidKanon.UGNETA.KVALITET
+
 --[[ Vilka dimensioner bedöms den här övningen på? Okänd övning ger
      samma reserv som webben: rytm, balans och mjukhet. ]]
 function Ugneta.dimensionerFor(ovningId: string): { string }
@@ -35,32 +41,41 @@ function Ugneta.observationer(ovningId: string,
 	nu: { [string]: number }, fore: { [string]: number }?): { { dim: string, sort: string, varde: number } }
 	local dims = Ugneta.dimensionerFor(ovningId)
 	local ut = {}
+	--[[ EN OMÄTT DIMENSION ÄR INTE EN DÅLIG DIMENSION. `nu[k]` som är nil
+	     betyder att ytan saknar källa för den (HorseCore/Lektion.SAKNAS:
+	     Roblox har ingen utbildningsskala och mäter därför ingen rytm).
+	     Tidigare lästes den som 0, och då blev den automatiskt svagast i
+	     varje 20 m volt — Ugneta hade tjatat om en takt hon aldrig sett.
+	     Den hoppas nu över, och det syns i observationerna att den inte
+	     bedömdes i stället för att den bedömdes till noll. ]]
 	if fore then
-		local bast, bastD = nil, 0.045
+		local bast, bastD = nil, KV.BATTRE
 		for _, k in dims do
-			local d = (nu[k] or 0) - (fore[k] or 0)
-			if d >= bastD then bast, bastD = k, d end
+			if nu[k] ~= nil and fore[k] ~= nil then
+				local d = nu[k] - fore[k]
+				if d >= bastD then bast, bastD = k, d end
+			end
 		end
-		if bast then table.insert(ut, { dim = bast, sort = "battre", varde = nu[bast] or 0 }) end
-		local svag, svagV = nil, 0.68
+		if bast then table.insert(ut, { dim = bast, sort = "battre", varde = nu[bast] }) end
+		local svag, svagV = nil, KV.SVAG
 		for _, k in dims do
-			local v = nu[k] or 0
-			if k ~= bast and v < svagV then svag, svagV = k, v end
+			local v = nu[k]
+			if v ~= nil and k ~= bast and v < svagV then svag, svagV = k, v end
 		end
-		if svag then table.insert(ut, { dim = svag, sort = "kvar", varde = nu[svag] or 0 }) end
+		if svag then table.insert(ut, { dim = svag, sort = "kvar", varde = nu[svag] }) end
 	else
-		local bast, bastV = nil, 0.55
+		local bast, bastV = nil, KV.BRA
 		for _, k in dims do
-			local v = nu[k] or 0
-			if v >= bastV then bast, bastV = k, v end
+			local v = nu[k]
+			if v ~= nil and v >= bastV then bast, bastV = k, v end
 		end
-		if bast then table.insert(ut, { dim = bast, sort = "bra", varde = nu[bast] or 0 }) end
+		if bast then table.insert(ut, { dim = bast, sort = "bra", varde = nu[bast] }) end
 		local svag, svagV = nil, math.huge
 		for _, k in dims do
-			local v = nu[k] or 0
-			if k ~= bast and v < svagV then svag, svagV = k, v end
+			local v = nu[k]
+			if v ~= nil and k ~= bast and v < svagV then svag, svagV = k, v end
 		end
-		if svag then table.insert(ut, { dim = svag, sort = "forbattra", varde = nu[svag] or 0 }) end
+		if svag then table.insert(ut, { dim = svag, sort = "forbattra", varde = nu[svag] }) end
 	end
 	--[[ Taket är ett skyddsnät, inte det som håller regeln i dag: varje
 	     gren lägger till högst en förbättring och en kvarvarande, alltså

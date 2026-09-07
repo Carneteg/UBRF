@@ -34,6 +34,7 @@ local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
+local LektionController = require(script.LektionController)
 local Debug = require(script.Debug)
 local Genomsikt = require(script.Genomsikt)
 
@@ -51,9 +52,53 @@ local function dismount()
 	ride.sound:release()
 	ride.effects:release()
 	ride.rider:release()
+	--[[ SÄKERHET FÖRE UNDERVISNING (G02-C). Ritten är slut — av vilket
+	     skäl som helst, och flera av dem ÄR säkerhetshändelser: karaktären
+	     försvinner, riggen är borta ur workspace, servern flyttar
+	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
+	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
+	LektionController.avbryt()
 	Debug.clear()
 	InteractionController.setEnabled(true)
 	ride = nil
+end
+
+--[[ SPELAREN BEGÄR AVSITTNING — lokalt först, servern sedan.
+
+	Förut gjorde både E-vägen och touchkontrollen `InvokeServer()` FÖRE
+	`dismount()`. `InvokeServer` yieldar, så ett långsamt eller uteblivet
+	serversvar lämnade lektionen igång, den väntande fortsättningen kvar
+	och lärarytan uppe — efter att spelaren bett om att få sitta av. Det
+	är oförenligt med att säkerhet går före undervisning (senior review av
+	b303530, punkt 1).
+
+	Ordningen är därför omvänd:
+
+	  1. `dismount()` städar LOKALT och omedelbart — lärarytan släcks, den
+	     väntande fortsättningen kastas, touchkontrollerna rivs och
+	     inmatningen kopplas ur. Inget av det behöver serverns tillstånd.
+	  2. Serveranropet läggs i en egen tråd, så att svarstiden aldrig kan
+	     hålla kvar något lokalt.
+
+	SERVERN ÄGER FORTFARANDE SANNINGEN. Den validerar avsittningen, och
+	nekar den skickar den `MountChanged` — då sätter klienten upp igen på
+	serverns ord, vilket är en legitim rättelse och inte en egen
+	uppsittning. `dismount` är idempotent (`if not ride then return end`),
+	och vakten här gör att upprepade tryck varken städar två gånger eller
+	skickar en andra begäran. ]]
+local function begarAvsittning()
+	if not ride then return end
+	dismount()
+	task.spawn(function()
+		local ok, err = pcall(function()
+			Net.get("DismountRequest"):InvokeServer()
+		end)
+		if not ok then
+			--[[ Uteblivet eller felande svar får inte återuppliva något
+			     lokalt. Servern rättar oss via MountChanged om den vill. ]]
+			warn("[Horse] DismountRequest misslyckades: " .. tostring(err))
+		end
+	end)
 end
 
 local function mount(model: Model)
@@ -95,12 +140,20 @@ local function mount(model: Model)
 	     spelare vid tangentbordet ska inte få en spak över bilden. De river
 	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
 	     häst man klivit av. ]]
-	TouchControls.mount(Input, { dismount = function()
-		Net.get("DismountRequest"):InvokeServer()
-		dismount()
-	end })
+	TouchControls.mount(Input, { dismount = begarAvsittning })
 	InteractionController.setEnabled(false)
 	Debug.attach(rig, stats)
+
+	--[[ G02-C: lektionen börjar när man sitter upp i ridhuset. Ugneta
+	     ställer sig vid sargen och undervisningen kör i den ordinarie
+	     loopen nedan — det är hela skillnaden mot en HUD som bara går att
+	     anropa. Gestalten placeras mot den BYGGDA banan; hittas den inte
+	     körs lektionen ändå, utan figur. ]]
+	--[[ Hela anläggningen är EN modell, "UBRF" i mappen "Anläggning"
+	     (BuildKit.newBuilding i roblox/buildings/Anlaggningen.luau).
+	     Ridbanan och sargen hänger direkt under den. ]]
+	local anlaggning = workspace:FindFirstChild("Anläggning")
+	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
 
 	local missing = (ride.animation :: any).missing
 	if missing and #missing > 0 then
@@ -133,8 +186,9 @@ PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
 PreparationController.start()
---[[ G02-C: Ugnetas lärar-UX. Live-chip under ridning, kort mellan
-     försöken, säkerhet före undervisning. ]]
+--[[ G02-C: Ugnetas lärar-UX byggs vid uppstart så att den finns när
+     första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
+     av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]
 UgnetaController.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
@@ -161,12 +215,24 @@ Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling, ene
 	end
 end)
 
---[[ Sitt av med E, och alltid om karaktären dör. ]]
+--[[ Sitt av med E, och alltid om karaktären dör. Lektionens fortsättning
+     ligger före avsittningen: den är ett svar på ett kort som står uppe,
+     och får aldrig kunna tolkas som något annat. ]]
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed or not ride then return end
+	--[[ G02-C: spelaren går vidare i lektionen. R och gamepadens Y är
+	     valda för att de INTE är bundna i ridningen — Input.luau tar
+	     W A S D, Space, Shift, Ctrl, Q, F, Z, C och ButtonA/B/R1/L1, och
+	     E betyder redan sitt av. Musen och fingret går in genom knappens
+	     eget Activated, inte här.
+
+	     `fortsatt` returnerar false när inget kort väntar, så tangenten
+	     stjäl ingenting när lektionen inte frågar. ]]
+	if input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.ButtonY then
+		if LektionController.fortsatt() then return end
+	end
 	if input.KeyCode == Enum.KeyCode.E then
-		Net.get("DismountRequest"):InvokeServer()
-		dismount()
+		begarAvsittning()
 	end
 end)
 
@@ -192,6 +258,12 @@ RunService.RenderStepped:Connect(function(dt)
 	Telemetri.foljGangart(ride.ritt, loco.gait)
 	ride.telemetri = Telemetri.las(ride.ritt, loco, ride.movement.curvature,
 		ride.movement.hjalper)
+
+	--[[ G02-C: lektionen läser telemetrin som just skrivits. Den ligger
+	     EFTER avläsningen och FÖRE renderingen av samma skäl som allt
+	     annat i den här ordningen: den ska se bildrutans mätning, inte
+	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
+	LektionController.steg(dt, ride.telemetri)
 
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)

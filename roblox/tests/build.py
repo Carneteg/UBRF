@@ -108,8 +108,61 @@ PARITET = [
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
     # G02-C: Ugnetas bedomningskontrakt lases ur RidKanon.UGNETA.
     ("Ugneta",     "src/shared/HorseCore/Ugneta.luau"),
+    # Lektionens lifecycle: mater, avgor forsok 1 -> 2, valjer live-cue.
+    ("Lektion",    "src/shared/HorseCore/Lektion.luau"),
     # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
     ("UgnetaController", "src/client/UgnetaController.luau"),
+    ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
+    # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
+    ("LektionController", "src/client/LektionController.luau"),
+]
+
+# Ugnetas GESTALT provas ovanpa det FARDIGBYGGDA huset: hon placeras genom att
+# mata mellan "Ridbanan" och "Sarg syd", alltsa mot delar som faktiskt star i
+# workspace. Ett prov mot handskrivna koordinater hade mott en andra modell av
+# huset, vilket ar precis det placeringen undviker.
+GESTALT = BYGGE + [
+    ("RidKanon",      "src/shared/HorseCore/RidKanon.luau"),
+    ("UgnetaGestalt", "src/client/UgnetaGestalt.luau"),
+]
+
+# KLIENTBANKEN kor init.client.luau pa riktigt. Det ar skillnaden mellan att
+# prova att en modul GAR att anropa och att prova att spelaren far det den gor:
+# lektionen stegas av klientens enda RenderStepped-loop, och en spec som anropar
+# LektionController sjalv hade aldrig sett om den loopen anropar den.
+# init.client.luau ar ett skript, inte en modul -- det inlinas sist och
+# returnerar ingenting, precis som Anlaggningen.luau i BYGGE.
+# Speldatan ligger under: Preparation laser faserna ur UBRFSkotsel, precis som
+# i produktionen.
+KLIENT = SPEL + [
+    ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Config",       "src/shared/HorseCore/Config.luau"),
+    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",         "src/shared/HorseCore/Svar.luau"),
+    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
+    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    ("Networking",   "src/shared/HorseCore/Networking.luau"),
+    ("Ugneta",       "src/shared/HorseCore/Ugneta.luau"),
+    ("Lektion",      "src/shared/HorseCore/Lektion.luau"),
+    ("MovementController",  "src/client/MovementController.luau"),
+    ("AnimationController", "src/client/AnimationController.luau"),
+    ("CameraController",    "src/client/CameraController.luau"),
+    ("SoundController",     "src/client/SoundController.luau"),
+    ("EffectsController",   "src/client/EffectsController.luau"),
+    ("RiderController",     "src/client/RiderController.luau"),
+    ("Input",               "src/client/Input.luau"),
+    ("TouchControls",       "src/client/TouchControls.luau"),
+    ("InteractionController", "src/client/InteractionController.luau"),
+    ("PreparationController", "src/client/PreparationController.luau"),
+    ("UgnetaController",    "src/client/UgnetaController.luau"),
+    ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
+    ("LektionController",   "src/client/LektionController.luau"),
+    ("Debug",               "src/client/Debug.luau"),
+    ("Genomsikt",           "src/client/Genomsikt.luau"),
+    ("Init",                "src/client/init.client.luau"),
 ]
 
 MODULER = [
@@ -143,6 +196,7 @@ MODULER = [
 # kannas igen -- annars lamnas require:t orort och luau far en nil-sokvag.
 REQUIRE = re.compile(
     r'require\(\s*(?:script\.Parent\.(\w+)'
+    r'|script\.(\w+)'
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS|ReplicatedStorage)\.HorseCore(?:\.(\w+))?'
     r'|(?:game:GetService\("ReplicatedStorage"\)|RS|ReplicatedStorage)\.(\w+))\s*\)')
 
@@ -165,16 +219,20 @@ def inlina(kalla: str) -> str:
     """Byter require-anrop mot modulnamn. HorseCore utan barn blir __Core,
     tabellen som stubbfilen bygger av de redan laddade modulerna."""
     def byt(m):
-        if m.group(1): return m.group(1)
-        if m.group(2): return m.group(2)
-        if m.group(3): return m.group(3)
+        for g in m.groups():
+            if g:
+                return g
         return "__Core"
     return REQUIRE.sub(byt, kalla)
 
 def bygg(spec_rel: str) -> pathlib.Path:
     # Ordningen ar viktig: "forberedelse" far inte falla igenom till MODULER,
     # dar varken UBRFSkotsel eller Stallet finns. Testas forst av det skalet.
-    if "paritet" in spec_rel or "ugneta" in spec_rel:
+    if "klient" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
+    elif "gestalt" in spec_rel:
+        moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"
+    elif "paritet" in spec_rel or "ugneta" in spec_rel:
         # ugneta.spec provar larar-UX:en ovanpa samma moduler som
         # paritetsspecen: RidKanon, Ugneta och UgnetaController.
         moduler, stubbar = PARITET, "tests/stubs.luau"
@@ -196,14 +254,17 @@ def bygg(spec_rel: str) -> pathlib.Path:
         "local __MATERIAL = {}",
         "local __MATERIAL = { " + ", ".join(f'"{m}"' for m in material()) + " }",
         1)
+    har_core = "__Core" in stubbtext
     delar = [stubbtext]
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
         # Hjalper/Svar/RidKanon ligger med sedan G02-B: MovementController
         # laser dem ur Core, precis som produktionen gor.
-        if namn in ("Config", "Gaits", "StateMachine", "RigAdapter", "Networking",
-                    "RidKanon", "Hjalper", "Svar", "Telemetri"):
+        # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
+        # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
+        if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
+                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)
