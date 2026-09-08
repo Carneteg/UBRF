@@ -377,6 +377,207 @@ prova("ett andra tryck startar inte om lektionen",
   eft2.scen === "lektion" && eft2.ix === eft1.ix && eft2.forsok === eft1.forsok,
   `moment ${eft1.ix}/${eft1.forsok} → ${eft2.ix}/${eft2.forsok}`);
 
+/* ══ 10. RITTEN (RITT=1) ══════════════════════════════════════════
+   Sista delen av P0-ordern: styrning, gångarter och Ugneta — genom
+   spelets riktiga tangenter, inte genom att skriva i G.ride.
+
+   Att det här går att prova alls är en rättelse: jag skrev NOT_TESTED
+   på ritten med motiveringen "för långsamt här". Lektionen går i ~19
+   b/s med simulerad tid på 96 % av verklig, alltså i stort sett
+   realtid. Motiveringen var fel.
+
+   Tangenterna är spelets egna (src/game.js): W skänkel, S nedåt,
+   mellanslag tygel, A/D styr, E parad. */
+if (process.env.RITT === "1" && (await ev(() => G.scen)) === "lektion") {
+  const ritt = () => ev(() => ({
+    gangart: G.ride ? G.ride.gangart : null,
+    mal: G.ride ? G.ride.malGangart : null,
+    tempo: G.ride ? +(G.ride.tempo || 0).toFixed(3) : null,
+    rikt: +(G.rikt || 0).toFixed(3),
+    moment: G.momentIx, forsok: G.momentForsok,
+    feedback: (typeof LARARE !== "undefined" && LARARE.sistaFeedback) ? true : false,
+  }));
+  const hall = async (kod, ms) => {
+    await page.keyboard.down(kod); await page.waitForTimeout(ms);
+    await page.keyboard.up(kod); await page.waitForTimeout(1200);
+  };
+
+  const r0 = await ritt();
+  prova("ritten börjar i halt", r0.gangart === "halt", `gångart ${r0.gangart}`);
+
+  /* SKÄNKEL → framåt. Hästen ska svara, inte stå kvar. */
+  await hall("KeyW", 3000);
+  const r1 = await ritt();
+  prova("skänkeln ber om en högre gångart — hästen svarar",
+    r1.gangart !== "halt" || r1.mal !== "halt",
+    `gångart ${r0.gangart} → ${r1.gangart} (bad om ${r1.mal}) · tempo ${r1.tempo}`);
+
+  await hall("KeyW", 4000);
+  const r2 = await ritt();
+  prova("mer skänkel ger mer gång", r2.tempo >= r1.tempo,
+    `tempo ${r1.tempo} → ${r2.tempo} · gångart ${r2.gangart}`);
+
+  /* STYRNING: kursen ska ändras åt OLIKA håll för A och D.
+
+     Kursen är en atan2-vinkel och vänder vid ±π, så en rå subtraktion
+     kan ge 2,20 rad där svängen i själva verket var −0,9. Första
+     versionen gjorde precis det och rapporterade "A 2,20 · D 0,83" som
+     om båda svängde åt samma håll. Skillnaden tas nu kortaste vägen
+     runt cirkeln, och mäts MEDAN tangenten hålls — inte efteråt, när
+     hästen redan rätat upp sig. */
+  const kurs = () => ev(() => G.rikt || 0);
+  const varv = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+  /* LÅT KURSEN LUGNA SIG FÖRST. Hästen fortsätter svänga en stund efter
+     att tangenten släppts — det är meningen, en häst är ingen kran. Men
+     mätningen av D startade mitt i den kvarvarande vänstersvängen och
+     fick +0,33 där svängen åt höger drunknade i resterna av A:s +2,06.
+     Båda såg positiva ut, som om styrningen bara gick åt ett håll. */
+  const lugna = async () => {
+    let a = await kurs();
+    for (let i = 0; i < 25; i++) {
+      await page.waitForTimeout(800);
+      const b = await kurs();
+      if (Math.abs(varv(a, b)) < 0.02) return true;   // kursen står stilla
+      a = b;
+    }
+    return false;                                      // hann inte lugna sig
+  };
+  /* Mät DEN EGNA svängen, inte resterna av den förra.
+
+     Provet var FLAKIGT: en körning gav A +2,02 / D −0,44 (rätt), nästa
+     A +1,81 / D +0,62 (fel tecken). Skillnaden var inte spelet utan om
+     hästen hunnit räta upp sig innan D mättes — i trav bär hon svängen
+     vidare, och en tröskel som ibland nås och ibland inte ger ett prov
+     som ibland är grönt. Ett flakigt prov är ett trasigt prov.
+
+     Därför: styrningen mäts i SKRITT, där kursen faktiskt planar ut, och
+     provet kräver att kursen verkligen stod stilla före varje mätning.
+     Gjorde den inte det rapporteras mätningen som ogjord i stället för
+     att gissa. */
+  await hall("Space", 3000);            // ner i skritt
+  await hall("KeyW", 1500);             // men fortfarande i rörelse
+  const svang = async (kod) => {
+    const stilla = await lugna();
+    if (!stilla) return null;
+    const f = await kurs();
+    await page.keyboard.down(kod); await page.waitForTimeout(3000);
+    const u = await kurs();
+    await page.keyboard.up(kod);
+    return varv(f, u);
+  };
+  const dA = await svang("KeyA");
+  const dD = await svang("KeyD");
+  if (dA === null || dD === null) {
+    console.log("  NOT  styrningen — kursen hann inte lugna sig mellan mätningarna,"
+      + " mätningen är ogjord snarare än grön eller röd");
+  } else {
+    prova("styrningen svarar åt båda hållen",
+      Math.abs(dA) > 0.05 && Math.abs(dD) > 0.05 && Math.sign(dA) !== Math.sign(dD),
+      `A ${dA.toFixed(2)} rad · D ${dD.toFixed(2)} rad (kortaste vägen, ur skritt)`);
+  }
+
+  /* TYGEL → nedåt igen. */
+  await hall("Space", 4000);
+  const r3 = await ritt();
+  prova("tygeln ber om lugnare gång", r3.tempo <= r2.tempo,
+    `tempo ${r2.tempo} → ${r3.tempo} · gångart ${r3.gangart}`);
+
+  /* MOMENTET: N hoppar till nästa — spelarens egen väg vidare. */
+  const fN = await ritt();
+  await page.keyboard.press("KeyN");
+  await page.waitForTimeout(3000);
+  const eN = await ritt();
+  prova("N tar spelaren vidare till nästa moment", eN.moment > fN.moment,
+    `moment ${fN.moment} → ${eN.moment}`);
+
+  /* UGNETA. Alla moment har INTE en Ugneta-övning: ugnetaOvningFor()
+     känner igen halt→skritt, skritt→trav, storvolt, hörn, trav→skritt
+     och galoppfattning. Lektionens första moment är "Skritt på lång
+     tygel" och har ingen — att kräva ett omdöme där var mitt fel, inte
+     spelets. Provet letar därför upp ett moment som FAKTISKT har en
+     övning, rider det, och kräver omdömet där. */
+  let hittad = null;
+  for (let i = 0; i < 8 && !hittad; i++) {
+    const o = await ev(() => {
+      const ov = (typeof ugnetaOvning === "function") ? ugnetaOvning() : null;
+      return { ov: ov ? (ov.id || true) : null,
+        moment: G.moment ? (G.moment.namn || G.moment.id) : null, ix: G.momentIx };
+    });
+    if (o.ov) { hittad = o; break; }
+    await page.keyboard.press("KeyN");
+    await page.waitForTimeout(2500);
+  }
+  prova("lektionen innehåller ett moment med en Ugneta-övning", !!hittad,
+    hittad ? `moment ${hittad.ix}: "${hittad.moment}" → ${hittad.ov}` : "hittade inget på åtta moment");
+
+  if (hittad) {
+    /* RID MOMENTET TILL SLUT i stället för att hoppa över det.
+
+       Första versionen tryckte N och krävde ett omdöme. Det uteblev, och
+       det är inte ett mätfel utan spelets faktiska beteende på den här
+       grenen: `ugnetaForsokSteg()` lämnar ifrån sig ett omdöme bara när
+       `G.momentKlart` eller taket `m.tid*2,2` slår till. N går via
+       `G.hoppaMoment` i game.js, och om NÄSTA moment saknar Ugneta-övning
+       stänger raden `if(!o){...ugnetaForsokAvsluta();...}` försöket och
+       KASTAR returvärdet. Ridningen mäts men omdömet försvinner.
+
+       Det är samma lucka som `ugnetaStangForsok()` täpper till på
+       G02-D-grenen (#138). Den rättelsen ligger i samma funktion, så jag
+       gör den inte om här — det hör hemma i den PR:en. Här provas den
+       väg som ÄR avsedd: rid momentet till dess slut. */
+    /* SPIONERA PÅ TILLDELNINGEN i stället för att polla efter den.
+
+       `LARARE.vantaFeedback` sätts när omdömet är klart och NOLLAS
+       omedelbart när Ugneta säger det (src/larare.js:723). Att polla
+       varannan sekund efter ett fält som töms lika fort ger falskt rött.
+       En get/set-vakt på fältet ser tilldelningen när den sker, utan att
+       ändra vad spelet gör.
+
+       (`LARARE.sistaFeedback` finns INTE på den här grenen — det är ett
+       G02-D-fält. Att prova på det var att importera en förväntan från
+       en annan gren.) */
+    await ev(() => {
+      window.__ugnetaSagt = null;
+      let v = LARARE.vantaFeedback;
+      Object.defineProperty(LARARE, "vantaFeedback", {
+        configurable: true,
+        get() { return v; },
+        set(x) { if (x) window.__ugnetaSagt = x.rubrik || true; v = x; },
+      });
+    });
+    const start = await ev(() => G.momentIx);
+    const t = Date.now();
+    let nu = start;
+    while (nu === start && Date.now() - t < 150000) {
+      await hall("KeyW", 3000);
+      await hall("Space", 2000);
+      /* Återkopplingen POLLAS under tiden. Ett enda prov efter fyra
+         sekunder sa "sista false · väntar false" trots att ett försök
+         hade registrerats — fältet hinner tömmas när omdömet visats. Att
+         då låta mätningen gå grön på `försök > 0` vore att döpa raden
+         till "Ugneta lämnar ett omdöme" och belägga den med något helt
+         annat: att en ritt spelats in. */
+      nu = await ev(() => G.momentIx);
+    }
+    for (let i = 0; i < 8; i++) {
+      if (await ev(() => !!window.__ugnetaSagt)) break;
+      await page.waitForTimeout(1000);
+    }
+    const e2 = await ev(() => ({
+      forsok: Object.keys(LARARE.forsok || {}).length, ix: G.momentIx,
+      sagt: window.__ugnetaSagt }));
+    prova("momentet tar slut av sig självt när det rids",
+      e2.ix > start, `moment ${start} → ${e2.ix} på ${Math.round((Date.now() - t) / 1000)} s`);
+    prova("ritten spelas in som ett försök", e2.forsok > 0, `försök ${e2.forsok}`);
+    prova("Ugneta lämnar ett omdöme när ett ridet moment tar slut",
+      !!e2.sagt, e2.sagt ? `"${e2.sagt}"` : "vantaFeedback sattes aldrig");
+
+    console.log("  NOT  N-tangenten (hoppa moment) ger INGET Ugneta-omdöme —"
+      + " ugnetaForsokSteg() lämnar ifrån sig omdömet bara vid momentKlart"
+      + " eller taket; ugnetaStangForsok() på G02-D (#138) täpper till det.");
+  }
+}
+
 /* ══ 10. HUR LÅNGT RÄCKER MILJÖN? (MATFART=1) ══════════════════════
    Ordern bad också om ritten, Ugneta, prova-igen, avslutning, eftervård,
    sparning och omstart. De ligger BAKOM lektionens moment, och ett
