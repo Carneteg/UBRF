@@ -1,0 +1,39 @@
+name: P0 - stable door touch smoke
+on:
+  push:
+    branches: [chatgpt/p0-door-smoke-20260908]
+permissions:
+  contents: read
+jobs:
+  door:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify production sources are exact PR 149
+        run: |
+          git diff --exit-code f2b527533f79a31b157b3f4bb6b4d719f546da6e HEAD -- src roblox index.html assets
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install locked browser dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Build pinned game
+        run: python3 tools/build.py
+      - name: Test one real touch through stable door
+        env:
+          QA_OUT: qa/p0-door-smoke
+        run: node tools/p0-door-smoke.mjs
+      - name: Save evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-door-smoke-${{ github.sha }}
+          path: qa/p0-door-smoke/
+          if-no-files-found: warn
+          retention-days: 30
