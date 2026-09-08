@@ -46,6 +46,13 @@ jobs:
           new='and string.find(punkter[2], "gör hjälpen mindre", 1, true) ~= nil'
           if old not in s: raise SystemExit('legacy Roblox coaching assertion missing')
           p.write_text(s.replace(old,new,1))
+
+          p=Path('roblox/src/client/init.client.luau')
+          s=p.read_text()
+          old='LektionController.steg(dt, ride.telemetri, { x=ride.rig.root.Position.X, z=ride.rig.root.Position.Z, yaw=select(2, ride.rig.root.CFrame:ToOrientation()) })'
+          new='''local pose = nil\n\tlocal root = ride.rig.root\n\tlocal pos = (root :: any).Position\n\tif pos and pos.X ~= nil and pos.Z ~= nil then\n\t\tpose = { x = pos.X, z = pos.Z }\n\tend\n\tLektionController.steg(dt, ride.telemetri, pose)'''
+          if old not in s: raise SystemExit('unsafe replay pose call missing')
+          p.write_text(s.replace(old,new,1))
           PY
       - name: Installera Playwright och Luau
         run: |
