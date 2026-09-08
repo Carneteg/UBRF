@@ -695,12 +695,25 @@ function uppdateraProt(){
   /* Höjden ur banan, inte hårdkodad — Klass 2 och 3 rids på 0,75 och
      0,85 m och protokollet påstod 0,60 hela ritten. */
   const hojd=((BANA&&BANA.hojd)||0.60).toFixed(2).replace(".",",");
-  let rows=`<div class="lbl" style="margin-bottom:6px">Protokoll · ${hojd} m</div>`;
-  rows+=`<div class="r"><span>Hinder</span><b>${Math.min(G.nastaHinder,6)} / 6</b></div>`;
-  rows+=`<div class="r ${dom.hinderfel?"bad":""}"><span>Fel</span><b>${dom.hinderfel}</b></div>`;
-  rows+=`<div class="r"><span>Olydnader</span><b>${dom.olydnader}</b></div>`;
-  rows+=`<div class="r"><span>Tid</span><b>${(G.t-G.banStart).toFixed(0)} s</b></div>`;
-  el.innerHTML=rows;
+  el.innerHTML=""; // clear existing
+  const d1=document.createElement("div");d1.className="lbl";d1.style.marginBottom="6px";d1.textContent=`Protokoll · ${hojd} m`;
+  const d2=document.createElement("div");d2.className="r";
+  const s2=document.createElement("span");s2.textContent="Hinder";
+  const b2=document.createElement("b");b2.textContent=`${Math.min(G.nastaHinder,6)} / 6`;
+  d2.appendChild(s2);d2.appendChild(b2);
+  const d3=document.createElement("div");d3.className=`r ${dom.hinderfel?"bad":""}`;
+  const s3=document.createElement("span");s3.textContent="Fel";
+  const b3=document.createElement("b");b3.textContent=`${dom.hinderfel}`;
+  d3.appendChild(s3);d3.appendChild(b3);
+  const d4=document.createElement("div");d4.className="r";
+  const s4=document.createElement("span");s4.textContent="Olydnader";
+  const b4=document.createElement("b");b4.textContent=`${dom.olydnader}`;
+  d4.appendChild(s4);d4.appendChild(b4);
+  const d5=document.createElement("div");d5.className="r";
+  const s5=document.createElement("span");s5.textContent="Tid";
+  const b5=document.createElement("b");b5.textContent=`${(G.t-G.banStart).toFixed(0)} s`;
+  d5.appendChild(s5);d5.appendChild(b5);
+  el.appendChild(d1);el.appendChild(d2);el.appendChild(d3);el.appendChild(d4);el.appendChild(d5);
 }
 function flash(txt){const f=document.getElementById("faults");
   f.textContent=txt;f.style.opacity=1;f.style.transform="translate(-50%,-50%) scale(1.06)";
@@ -921,17 +934,24 @@ const PCOL={takt:"#4A737E",losgjordhet:"#56888A",kontakt:"#5F9C85",schvung:"#86A
   const pr=document.getElementById("pyrRows");
   for(const k of [...Skala.ORDER].reverse()){
     const d=document.createElement("div");d.className="prow";d.dataset.k=k;
-    d.innerHTML=`<span class="pname">${Skala.LABEL[k]}</span>
-      <span class="ptrack"><i class="pfill" style="background:${PCOL[k]}"></i><i class="pcap"></i></span>`;
+    const s1=document.createElement("span");s1.className="pname";s1.textContent=Skala.LABEL[k];
+    const s2=document.createElement("span");s2.className="ptrack";
+    const i1=document.createElement("i");i1.className="pfill";i1.style.background=PCOL[k];
+    const i2=document.createElement("i");i2.className="pcap";
+    s2.appendChild(i1);s2.appendChild(i2);
+    d.appendChild(s1);d.appendChild(s2);
     pr.appendChild(d);}
   const ar=document.getElementById("aidRows");
   const rows=[["skankel","Skänkel","W/S"],["tygel","Tygel","Space"],["sits","Sits","⇧/Ctrl"],["styrning","Styr","A/D"]];
   for(const[k,n,key]of rows){
     const d=document.createElement("div");d.className="arow";d.dataset.k=k;
-    let band="";
-    if(k==="tygel")band=`<i class="band" style="left:22%;width:36%"></i>`;
-    if(k==="skankel")band=`<i class="band" style="left:28%;width:45%"></i>`;
-    d.innerHTML=`<span class="aname">${n}</span><span class="atrack">${band}<i class="v"></i></span><span class="akey">${key}</span>`;
+    const s1=document.createElement("span");s1.className="aname";s1.textContent=n;
+    const s2=document.createElement("span");s2.className="atrack";
+    if(k==="tygel"){const i1=document.createElement("i");i1.className="band";i1.style.left="22%";i1.style.width="36%";s2.appendChild(i1);}
+    if(k==="skankel"){const i1=document.createElement("i");i1.className="band";i1.style.left="28%";i1.style.width="45%";s2.appendChild(i1);}
+    const iv=document.createElement("i");iv.className="v";s2.appendChild(iv);
+    const s3=document.createElement("span");s3.className="akey";s3.textContent=key;
+    d.appendChild(s1);d.appendChild(s2);d.appendChild(s3);
     ar.appendChild(d);}
 })();
 function ritaHUD(){
