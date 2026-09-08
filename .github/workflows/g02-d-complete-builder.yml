@@ -31,6 +31,15 @@ jobs:
             tools/exportera-ridkanon.mjs tools/inspelningstest.mjs tools/replaytest.mjs \
             tools/ugneta-forsok-test.mjs tools/ugnetatest.mjs
           python3 tools/complete-ridanalys.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/ugneta-forsok-test.mjs')
+          s=p.read_text()
+          old='r.punkter.length === 2 && /Bra/i.test(r.punkter[0]) && /Jobba på/i.test(r.punkter[1])'
+          new='r.punkter.length === 2 && /Bra/i.test(r.punkter[0]) && /Nästa gång:/i.test(r.punkter[1])'
+          if old not in s: raise SystemExit('legacy coaching assertion missing')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Installera Playwright och Luau
         run: |
           set -euo pipefail
