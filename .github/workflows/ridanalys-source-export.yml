@@ -1,0 +1,28 @@
+name: Ridanalys — pinned source export
+on:
+  push:
+    branches: [chatgpt/ridanalys-source-20260908]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Package exact tracked sources
+        run: |
+          mkdir -p /tmp/ubrf-source
+          git fetch --no-tags origin 87cad7187468216677707bd960c3ad23313b99f1 6bc25fdb3b3e468fbf363c82c5cae0a7dd3d6593
+          git archive --format=tar.gz -o /tmp/ubrf-source/p0.tar.gz 87cad7187468216677707bd960c3ad23313b99f1
+          git archive --format=tar.gz -o /tmp/ubrf-source/ridanalys.tar.gz 6bc25fdb3b3e468fbf363c82c5cae0a7dd3d6593
+          printf '%s\n' 'P0=87cad7187468216677707bd960c3ad23313b99f1' 'RIDANALYS=6bc25fdb3b3e468fbf363c82c5cae0a7dd3d6593' > /tmp/ubrf-source/MANIFEST.txt
+          sha256sum /tmp/ubrf-source/*.tar.gz > /tmp/ubrf-source/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridanalys-pinned-sources-${{ github.sha }}
+          path: /tmp/ubrf-source/
+          retention-days: 7
