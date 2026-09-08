@@ -213,7 +213,7 @@ function v3dSkarmtak(b,mat,bredd,ut,res){
 }
 
 /* ── Gården ───────────────────────────────────────────────────── */
-function v3dGard(lagg,opp){
+function v3dGardMark(lagg){
   const T=S3.tex;
   const markTex={gras:T.gras, aker:T.aker, asfalt:T.asfalt, grus:T.grus,
     betong:T.betong, sand:T.sand, slant:T.gras};
@@ -232,6 +232,10 @@ function v3dGard(lagg,opp){
     const b=new Bygge().cyl(c.r,c.r,0.05,"#FFFFFF",M4.translation(c.c[0],niva,c.c[1]),20);
     lagg(b,T.sand); niva+=0.008;
   }
+}
+
+function v3dGardByggnader(lagg,opp){
+  const T=S3.tex;
   /* Byggnaderna: väggar, sadeltak, gavelspetsar. husD samlar de
      omålade detaljerna — svarta lister, vindskivor, plåtbeslag —
      som ska ligga ovanpå fasadtexturen utan att ta upp den. */
@@ -361,7 +365,9 @@ function v3dGard(lagg,opp){
     else if(bg.detalj==="stall")v3dStallYttre(bg,husD,opp);
   }
   lagg(husV,T.falu); lagg(husP,T.ridhusplat); lagg(husT,T.takplat); lagg(husD,null);
+}
 
+function v3dGardStaket(lagg){
   /* Staketen. */
   const stak=new Bygge();
   for(const st of ANL.staket){
@@ -416,7 +422,9 @@ function v3dGard(lagg,opp){
     }
   }
   lagg(stak,null);
+}
 
+function v3dGardTrad(lagg){
   /* Träden. */
   const skog=new Bygge();
   for(let i=0;i<ANL.trad.length;i++){
@@ -430,7 +438,9 @@ function v3dGard(lagg,opp){
       M4.skala(tr*0.6,tr*0.62,tr*0.6)),9);
   }
   lagg(STIL==="kloss"?glPlatta(skog):skog,null);
+}
 
+function v3dGardRekvisita(lagg){
   /* Rekvisitan. I lågpolyläget dras segmentantalet ner så att
      cylindrarna läser som fasetterade prismor. */
   const SEG=(hog,lag)=>STIL==="kloss"?lag:hog;
@@ -542,8 +552,16 @@ function v3dGard(lagg,opp){
   lagg(STIL==="kloss"?glPlatta(pr):pr,null);
 }
 
+function v3dGard(lagg,opp){
+  v3dGardMark(lagg);
+  v3dGardByggnader(lagg,opp);
+  v3dGardStaket(lagg);
+  v3dGardTrad(lagg);
+  v3dGardRekvisita(lagg);
+}
 
 /* ── Ridhuset utvändigt ────────────────────────────────────────────
+
    Byggt efter references/buildings/ridhus/KORT.md, som är läst ur
    fotona i samma mapp. Volymen, den svarta listen och takfoten sköts
    av den generella slingan ovan; här läggs det som bara det här huset
