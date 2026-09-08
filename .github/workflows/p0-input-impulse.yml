@@ -1,0 +1,25 @@
+name: P0 — inputimpuls
+on:
+  push:
+    branches:
+      - chatgpt/p0-input-impulse-part1-20260908
+      - chatgpt/p0-input-impulse-part2-20260908
+  pull_request:
+    paths:
+      - src/input-impulse.js
+      - tools/input-impulse-test.mjs
+      - .github/workflows/p0-input-impulse.yml
+permissions:
+  contents: read
+jobs:
+  input-impulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/input-impulse-test.mjs
