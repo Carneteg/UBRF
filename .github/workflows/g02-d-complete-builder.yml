@@ -37,7 +37,14 @@ jobs:
           s=p.read_text()
           old='r.punkter.length === 2 && /Bra/i.test(r.punkter[0]) && /Jobba på/i.test(r.punkter[1])'
           new='r.punkter.length === 2 && /Bra/i.test(r.punkter[0]) && /Nästa gång:/i.test(r.punkter[1])'
-          if old not in s: raise SystemExit('legacy coaching assertion missing')
+          if old not in s: raise SystemExit('legacy web coaching assertion missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('roblox/tests/ugneta.spec.luau')
+          s=p.read_text()
+          old='and string.find(punkter[2], "Jobba på") ~= nil'
+          new='and string.find(punkter[2], "gör hjälpen mindre", 1, true) ~= nil'
+          if old not in s: raise SystemExit('legacy Roblox coaching assertion missing')
           p.write_text(s.replace(old,new,1))
           PY
       - name: Installera Playwright och Luau
