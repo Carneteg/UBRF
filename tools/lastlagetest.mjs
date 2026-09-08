@@ -147,8 +147,8 @@ async function stallIn(lage) {
    `stegaVandring()`. En bildruta som kastar hinner alltså öka klockan
    innan den dör, och ett prov på "b > a" blev grönt på en död loop —
    G.t 3,08 → 3,13, exakt ett dt. Kravet är att klockan går VIDARE,
-   alltså två steg i rad. Fönstren är tilltagna: i den här miljön går
-   spelet i 0,1–0,5 bilder/s. */
+   alltså två steg i rad. Fönstren är tilltagna: gå-scenen
+   går i ~5 bilder/s på en tyst maskin, långsammare under last. */
 async function loopenLever() {
   const a = await ev(() => G.t);
   await page.waitForTimeout(7000);

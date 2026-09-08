@@ -12,26 +12,34 @@
  * ett riktigt E-tryck, och varje interaktion hämtas ur produktionens
  * egen interaktionslista.
  *
- * ── VARFÖR PROVET INTE GÅR STRÄCKORNA ──────────────────────────────
- * Mätt i den här miljön: 0,1 fps i 3D-vyn, 0,5 fps i 2D. Spelloopen
- * klampar dt till 0,05 s per bildruta, så simulerad tid går med 1–3 % av
- * verklig tid. En figur som går 1,8 m/s kommer 0,03 m på tre sekunder,
- * och gårdsplanens sjutton meter tar över nittio sekunder. Att gå hela
- * anläggningen skulle ta timmar per körning.
+ * ── STRÄCKORNA: GA_HELA=1 GÅR HELA VÄGEN ──────────────────────────
+ * Som standard placeras spelaren tre meter från varje station med
+ * `gaTill` och går sista biten med tangenter — det är snabbt och räcker
+ * för att pröva interaktionerna.
  *
- * Därför placeras spelaren vid varje station med `gaTill` — spelets egen
- * placering, samma funktion dörrarna använder — och allt DÄREFTER är
- * spelets: `interagera()` avgör själv vad som är inom räckhåll (2,4 m),
- * skriver sin egen prompt, och E trycks på riktigt.
+ * Med GA_HELA=1 går hon i stället HELA vägen genom spelets egen
+ * vägsökning, `satMal(x,y)` — exakt det ett musklick gör, med kollision
+ * och dörrar. Mätt: 16 m, 30 m, 27,1 m, 17,7 m, 14,4 m och 27,4 m, var
+ * och en på 11–20 sekunder. Cirka 133 meter, alla gröna.
  *
- * SJÄLVA GÅENDET ÄR ALLTSÅ NOT_TESTED HÄR. Det står i rapporten, inte
- * gömt som grönt. Ett steg är dock provat på riktigt: gården →
- * stalldörren med tangenter tog 95 s och gav "Tryck E — Gå in i
- * stallet", så gåendet i sig fungerar — det är bara ohyggligt långsamt
- * i mjukvarurendering.
+ * RÄTTELSE. Här stod tidigare att sträckorna inte gick att gå: "0,1 fps
+ * i 3D, 0,5 fps i 2D", "simulerad tid 1–3 % av verklig", "gårdsplanens
+ * sjutton meter tar över nittio sekunder". Det var fel med ungefär
+ * femtio gånger, och felet var mitt eget: sex kvarglömda testprocesser
+ * körde headless Chromium i timmar och åt processorn. På en tyst maskin
+ * går gå-scenen i ~5 b/s med simulerad tid på 26 % av verklig, och
+ * lektionen i ~19 b/s på 96 %. Kör MATFART=1 för att mäta båda.
+ *
+ * En gångare med tangenter rakt mot målet räcker ändå inte inomhus: den
+ * stannade 23,88 m från ridläraren och kom 7,8 m på fem minuter. Det
+ * säger ingenting om spelet — stallet är en korridor och den gångaren
+ * hade ingen vägsökning. Spelaren har klicka-gå, och det är den vägen
+ * som provas.
  *
  * ── VÄNTA PÅ BILDRUTOR, INTE PÅ MILLISEKUNDER ──────────────────────
- * Vid 0,5 fps är en paus på 700 ms ofta KORTARE ÄN EN BILDRUTA. Alla
+ * Gå-scenen går i ~5 b/s, alltså 200 ms per bildruta, och under last
+ * betydligt långsammare. En kort fast paus är därför en opålitlig
+ * väntan. Alla
  * väntor nedan pollar tills spelet faktiskt hunnit räkna om, med tak.
  * Samma sak för E: `interagera()` letar efter flanken från släppt till
  * nedtryckt och läser den en gång per bildruta.
@@ -115,7 +123,7 @@ const klicka = async (id) => {
    ligger i fasaden. Placerad DÄR syntes prompten men E gjorde ingenting —
    figuren stod på fel sida av väggen. Gången på tre meter tar ungefär
    tjugo sekunder i den här miljöns bildrutetakt, vilket är råd att ta. */
-async function stallDigVid(re, maxMs = 90000) {
+async function stallDigVid(re, maxMs = 90000) {  // maxMs höjs av GA_HELA
   const mal = await ev(m => {
     const L = interaktioner().filter(i => new RegExp(m, "i").test(i.text));
     if (!L.length) return null;
@@ -125,11 +133,52 @@ async function stallDigVid(re, maxMs = 90000) {
   }, re);
   if (!mal) return { mal: null, framme: false, prompt: null };
 
-  await ev(({ mx, my }) => {
+  /* GA_HELA=1 hoppar över placeringen och GÅR HELA VÄGEN med tangenter.
+     Det gick inte förut — eller rättare sagt: jag trodde det, för mina
+     egna kvarglömda testprocesser åt processorn och gå-scenen kröp fram
+     i 0,1 bilder/s. På en tyst maskin går den i ~5 b/s med simulerad tid
+     på 26 % av verklig, och sjutton meter tar en halv minut. Då finns
+     det ingen ursäkt för att placera figuren. */
+  /* GA_HELA=1 GÅR HELA VÄGEN i stället för att placeras — genom spelets
+     EGEN vägsökning, `satMal(x,y)`, alltså exakt det ett musklick gör.
+     Figuren går själv dit, med kollision och dörrar.
+
+     Varför inte med tangenter hela vägen: en första version höll W/A/S/D
+     mot målet. Utomhus gick det (gården → stalldörren, 15,7 m på 14 s),
+     men inne i stallet stannade den 23,88 m från ridläraren och kom 7,8 m
+     på fem minuter. Det säger ingenting om spelet — stallet är en
+     korridor och min gångare hade ingen vägsökning alls. Spelaren har
+     klicka-gå; det är den vägen som ska provas, och det är den
+     `uppdragstest.mjs` använder i CI. */
+  const HELA = process.env.GA_HELA === "1";
+  let vagsok = null;
+  /* Mät från INNAN vägsökningen startar. Första versionen mätte bara
+     tangentsteget efteråt och skrev "gick 0 m på 1 s" — sant om just det
+     steget, men det såg ut som att provet teleporterade. Sträckan som
+     räknas är den spelet självt gick. */
+  const fore = await ev(() => ({ x: VD.px, y: VD.py, t: Date.now() }));
+  await ev(({ mx, my, hela }) => {
     if (G.vy !== "2d" && typeof vaxlaVy === "function") vaxlaVy();
+    if (hela) { if (typeof satMal === "function") satMal(mx, my); return; }
     const dx = VD.px - mx, dy = VD.py - my, d = Math.hypot(dx, dy);
     if (d > 3.2) { const k = 3 / d; gaTill(G.scen, { x: mx + dx * k, y: my + dy * k, rikt: 0 }); }
-  }, { mx: mal.pos[0], my: mal.pos[1] });
+  }, { mx: mal.pos[0], my: mal.pos[1], hela: HELA });
+  if (HELA) {
+    /* Vänta tills spelets egen gång är framme eller har gett upp. */
+    maxMs = Math.max(maxMs, 240000);
+    const t = Date.now();
+    let f = await ev(m => ({ d: Math.hypot(VD.px - m[0], VD.py - m[1]),
+      gar: !!(typeof VD !== "undefined" && VD.mal) }), mal.pos);
+    let bast = f.d, stilla = 0;
+    while (f.d > 2.0 && Date.now() - t < maxMs) {
+      await page.waitForTimeout(1000);
+      f = await ev(m => ({ d: Math.hypot(VD.px - m[0], VD.py - m[1]),
+        gar: !!(typeof VD !== "undefined" && VD.mal) }), mal.pos);
+      if (f.d < bast - 0.2) { bast = f.d; stilla = 0; } else if (++stilla > 12) break;
+    }
+    vagsok = await ev(f0 => ({ m: +Math.hypot(VD.px - f0.x, VD.py - f0.y).toFixed(1),
+      s: Math.round((Date.now() - f0.t) / 1000) }), fore);
+  }
   await page.waitForTimeout(1200);
 
   const [mx, my] = mal.pos;
@@ -143,6 +192,7 @@ async function stallDigVid(re, maxMs = 90000) {
 
   const t0 = Date.now();
   let p = await lage();
+  const start = { x: p.x, y: p.y };
   while (!p.traff && Date.now() - t0 < maxMs) {
     const dx = mx - p.x, dy = my - p.y;
     await (dx > 0.3 ? ner("KeyD") : upp("KeyD"));
@@ -156,12 +206,14 @@ async function stallDigVid(re, maxMs = 90000) {
   await page.waitForTimeout(600);
   p = await lage();
   return { mal: mal.text, prompt: p.prompt, dom: p.dom, framme: !!p.traff,
-    avst: +Math.hypot(p.x - mx, p.y - my).toFixed(2) };
+    avst: +Math.hypot(p.x - mx, p.y - my).toFixed(2),
+    gick: vagsok ? vagsok.m : +Math.hypot(p.x - start.x, p.y - start.y).toFixed(1),
+    sek: vagsok ? vagsok.s : Math.round((Date.now() - t0) / 1000) };
 }
 
 /* E — hållen tillräckligt länge för att en bildruta säkert ska se
    flanken, och sedan POLLAD tills verkan syns. En fast paus på 2,5 s är
-   ungefär EN bildruta vid 0,5 fps; det räckte ibland och ibland inte,
+   bara ett par bildrutor i gå-scenen; det räckte ibland och ibland inte,
    vilket såg ut som ett ostabilt spel men var en ostabil mätning. */
 async function tryckE(klar) {
   if (MOBIL) {
@@ -172,8 +224,9 @@ async function tryckE(klar) {
        `data-tap` i src/mobil.js skickar keydown på pointerdown och
        keyup först 60 ms efter pointerup. En blixtsnabb tap() håller
        alltså tangenten nere i ~60 ms — på en riktig telefon i 60 fps är
-       det fyra bildrutor, men här (0,5 fps) är sannolikheten att spelet
-       råkar läsa just då omkring tre procent. Ett tryck missade, två
+       det fyra bildrutor, men i gå-scenen här (~5 b/s) är det knappt en
+       tredjedels bildruta — och under den last mina egna kvarglömda
+       processer orsakade var chansen några procent. Ett tryck missade, två
        tryck öppnade och stängde. Ingetdera säger något om touch.
 
        Att hålla fingret stilla är en lika giltig spelarhandling och ger
@@ -201,7 +254,9 @@ async function tryckE(klar) {
 const station = async (re, namn, klar) => {
   const g = await stallDigVid(re);
   prova(`${namn}: spelets egen E-prompt står där`, g.framme === true,
-    g.mal ? `"${g.dom || g.prompt || "INGEN PROMPT"}" · ${g.avst} m` : "INGEN sådan interaktion");
+    g.mal ? `"${g.dom || g.prompt || "INGEN PROMPT"}" · ${g.avst} m`
+      + (process.env.GA_HELA === "1" ? ` · gick ${g.gick} m på ${g.sek} s` : "")
+      : "INGEN sådan interaktion");
   return g.framme ? tryckE(klar) : null;
 };
 
@@ -345,7 +400,8 @@ if (process.env.MATFART === "1" && (await ev(() => G.scen)) === "lektion") {
 console.log("\nPAGEERRORS:", sidfel.length ? sidfel.slice(0, 3) : "inga");
 const fel = resultat.filter(x => !x).length;
 console.log(fel === 0 ? `\nALLA OK (${resultat.length} mätningar)` : `\n${fel} FEL av ${resultat.length}`);
-console.log("NOT_TESTED: gångsträckorna mellan stationerna (se filhuvudet), Studio, fysisk gamepad"
-  + (MOBIL ? "." : ", mobil/touch — kör MOBIL=1 för den."));
+console.log("NOT_TESTED: Studio, fysisk gamepad"
+  + (process.env.GA_HELA === "1" ? "" : "; gångsträckorna — kör GA_HELA=1 för dem")
+  + (MOBIL ? "." : "; mobil/touch — kör MOBIL=1 för den."));
 await browser.close(); srv.close();
 process.exit(fel === 0 ? 0 : 1);
