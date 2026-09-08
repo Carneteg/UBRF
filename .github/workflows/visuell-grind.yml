@@ -4,8 +4,8 @@ name: Visuell grind
 # från EXAKT PR-headen: kameralistan och Roblox-vyerna kontrolleras,
 # spatiala ankare provas mot datan, siktgrinden mäter att figuren syns
 # (med sin negativa kontroll), och screenshot-packet laddas upp som artifact.
-# Sedan skrivs EN kommentar på PR:n med head-SHA, Netlify-preview och länk
-# till paketet — aldrig en main-länk för en omergad ändring.
+# Sedan skrivs EN kommentar på PR:n med head-SHA och länk till paketet.
+# Hosting-preview hanteras separat via Vercel/Replit; Netlify används inte.
 #
 # Grön här betyder INTE visual fidelity. Paketet finns för att ChatGPT ska
 # kunna göra senior visual QA innan Tobias ser något. Se
@@ -91,7 +91,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Head-SHA + preview + paket i PR-kommentaren
+      - name: Head-SHA + paket i PR-kommentaren
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
@@ -100,14 +100,13 @@ jobs:
             const nr = context.payload.pull_request.number;
             const status = '${{ job.status }}';
             const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const preview = `https://deploy-preview-${nr}--ubrf-game.netlify.app`;
             const marke = '<!-- visuell-grind -->';
             const body = [
               marke,
               '## Visuell grind — reviewpaket från PR-headen',
               '',
               `**Head:** \`${sha}\``,
-              `**Preview (byggd från denna PR, aldrig main):** ${preview}`,
+              '**Preview:** `PREVIEW_NOT_DEPLOYED` tills en Vercel/Replit-reviewbuild för exakt denna head finns.',
               `**Screenshot-pack:** artifact \`screenshot-pack-${sha}\` på ${run}`,
               `**Automatik:** ${status === 'success' ? 'AUTOMATED_GREEN — kameralista, ankare, siktgrind (inkl. negativ kontroll) och paket' : 'RÖD — se körningen'}`,
               '',
