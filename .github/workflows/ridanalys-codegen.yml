@@ -1,0 +1,32 @@
+name: Ridanalys — shared canon
+on:
+  push:
+    paths: [tools/ridanalys-canon.mjs]
+permissions:
+  contents: write
+jobs:
+  canon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate from existing sources
+        run: |
+          set -euo pipefail
+          node tools/ridanalys-canon.mjs
+          node tools/exportera-ridkanon.mjs
+          node tools/exportera-ridkanon.mjs --kontrollera
+          node tools/inspelningstest.mjs
+          node tools/ugnetatest.mjs
+          git diff --check
+      - name: Commit generated source on feature branch only
+        run: |
+          git config user.name 'UBRF Integration'
+          git config user.email '83163288+Carneteg@users.noreply.github.com'
+          git add tools/exportera-ridkanon.mjs roblox/src/shared/HorseCore/RidKanon.luau
+          git commit -m 'G02-D: export versioned replay contract to Roblox'
+          git push origin HEAD:chatgpt/ridanalys-source-20260908
