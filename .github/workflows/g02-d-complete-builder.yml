@@ -48,14 +48,14 @@ jobs:
           node --check src/replayvy.js
           node tools/inspelningstest.mjs
           node tools/ugnetatest.mjs
-          node tools/ugneta-forsok-test.mjs
-          node tools/replaytest.mjs
           node tools/control-feel-test.mjs
           node tools/exportera-ridkanon.mjs --kontrollera
           node tools/exportera-spel.js --kontrollera
           node tools/exportera-geometri.js --kontrollera
           python3 tools/build.py
           node tools/bootkoll.mjs
+          node tools/ugneta-forsok-test.mjs
+          node tools/replaytest.mjs
           bash roblox/tests/kor.sh
       - name: Commit endast efter grön verifiering
         run: |
