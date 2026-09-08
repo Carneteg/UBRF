@@ -35,6 +35,21 @@ nya krav.
 
 Starta inte orelaterat arbete medan baselinen är aktiv.
 
+## Parallellt sanktionerat spår — G02-D
+
+PO-beslut 2026-09-07 15:12 på #135: **G02-D — ridanalys, positiv feedback och
+replay**, på egen feature branch `claude/g02-d-ridanalys` (PR #138). Spec:
+`docs/RIDANALYS.md` (PR #137 @ `f211617`). Leveransen är en vertikal slice —
+20 m volt plus en övergång — och den ska återanvända befintliga modeller, inte
+bygga ett parallellt bedömningssystem.
+
+Det här spåret är alltså **inte** orelaterat arbete i den mening stycket ovan
+menar: det är beställt av Tobias efter alpha-frysningen, på egen gren, och rör
+inte baselinens kärnfiler i #135.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**. Status och
+paritetsredovisning i `docs/G02-D-RIDANALYS-REPLAY.md`.
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114
