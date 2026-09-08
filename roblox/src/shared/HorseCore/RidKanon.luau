@@ -684,4 +684,7 @@ RidKanon.UGNETA = {
 	PLATS = { u = 0.5, bortomC = 1.4, bredd = 20, langd = 60 },
 }
 
+-- G02-D: generated recording contract; false denotes absent reference.
+RidKanon.RIDANALYS = {["hz"] = 20, ["maxHandelser"] = 200, ["maxSampel"] = 2400, ["maxSek"] = 120, ["ovningSchema"] = 1, ["ovningar"] = {["storvolt"] = {["bedomer"] = {"svangradie", "rakriktning"}, ["bedomerInte"] = {"position på banan"}, ["gangart"] = false, ["id"] = "storvolt", ["matt"] = {"linje", "rytm", "balans"}, ["ram"] = "ridhus.dressyr", ["referens"] = false, ["rubrik"] = "20 m volt", ["version"] = 1}, ["trav_skritt"] = {["bedomer"] = {"svarstid", "overgangstid", "etableringstid", "paradKvalitet"}, ["bedomerInte"] = {"position på banan"}, ["gangart"] = {["fran"] = "trav", ["till"] = "skritt"}, ["id"] = "trav_skritt", ["matt"] = {"timing", "mjukhet", "respons"}, ["ram"] = "ridhus.dressyr", ["referens"] = false, ["rubrik"] = "Trav → skritt", ["version"] = 1}}, ["schema"] = 1}
+
 return RidKanon
