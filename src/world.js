@@ -1371,7 +1371,6 @@ function ritaProp3D(k,p){
       ritaLinje3D(k,[x+1.4,y-0.9,3.8],[x+1.4,y-0.9,4.8],VCOL.galv,1.5);
       break;}
     case "skylt":{ // UBRF-skylten: vitt band med text på fasaden
-      const b=ANL.byggnader.find(bb=>bb.id==="ridhus");
       ritaPoly3D(k,[[x-0.05,y-5,3.4],[x-0.05,y+5,3.4],[x-0.05,y+5,4.4],[x-0.05,y-5,4.4]],
         "#E8E4DA","#B9B5AB");
       ritaText3D(k,x-0.1,y,3.75,p.text,2.6,"#5A5F66");
