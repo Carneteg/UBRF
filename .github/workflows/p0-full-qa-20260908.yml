@@ -1,0 +1,50 @@
+name: P0 — full QA on PR 149
+on:
+  push:
+    branches: [chatgpt/p0-full-qa-20260908]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  speltest:
+    name: QA ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [first-day, riding, touch]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f2b527533f79a31b157b3f4bb6b4d719f546da6e
+          persist-credentials: false
+      - name: Verify exact production and QA source
+        run: test "$(git rev-parse HEAD)" = "f2b527533f79a31b157b3f4bb6b4d719f546da6e"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies and Chromium
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Check map readiness and negative controls
+        run: node tools/p0-map-ready-test.mjs
+      - name: Build exact game version
+        run: python3 tools/build.py
+      - name: Run real UI gameplay without state writes
+        env:
+          QA_TARGET_SHA: f2b527533f79a31b157b3f4bb6b4d719f546da6e
+          QA_OUT: qa/p0-${{ matrix.mode }}
+        run: node tools/p0-qa-runner.mjs ${{ matrix.mode }}
+      - name: Save screenshots, states and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-${{ matrix.mode }}-${{ github.sha }}
+          path: qa/p0-${{ matrix.mode }}/
+          if-no-files-found: warn
+          retention-days: 30
