@@ -33,12 +33,12 @@ jobs:
           node --check src/world.js
           node --check src/scenes.js
           python3 tools/build.py
-      - name: Publicera utan temporara filer
+      - name: Publicera endast spelkod
         run: |
           git config user.name 'UBRF QA'
           git config user.email 'ubrf-qa@users.noreply.github.com'
-          git rm .github/workflows/p0-part2-apply.yml tools/p0-part2-apply.py
-          git add index.html src/game.js src/world.js src/scenes.js .github/workflows/p0-input-impulse.yml
+          git restore .github/workflows/p0-input-impulse.yml
+          git add index.html src/game.js src/world.js src/scenes.js
           git diff --cached --stat
           git diff --cached --exit-code -- src/riding roblox src/mobil.js src/model.js
           git commit -m 'P0 del 2: konsumera E-impuls i ganglaget'
