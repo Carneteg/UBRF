@@ -2,7 +2,7 @@
    SCENER — meny, hästtilldelning, skötsel, resultat. Overlay-ark.
    ══════════════════════════════════════════════════════════════════ */
 const ov=document.getElementById("ov"),sheet=document.getElementById("sheet");
-function overlay(on,html){ov.classList.toggle("hide",!on);if(html!==undefined)sheet.innerHTML=html;}
+function overlay(on,html){if(on)InputImpulse.clear("KeyE");ov.classList.toggle("hide",!on);if(html!==undefined)sheet.innerHTML=html;}
 
 /* ── Meny ── */
 function visaMeny(){

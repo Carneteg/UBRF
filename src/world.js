@@ -927,9 +927,11 @@ function interagera(){
   const L=interaktioner(); let bast=null,bd=2.4;
   for(const i of L){const d=Math.hypot(VD.px-i.pos[0],VD.py-i.pos[1]); if(d<bd){bd=d;bast=i;}}
   VD.prompt=bast;
-  const e=!!IN.ned.KeyE;
-  if(e&&!VD.ePrev&&bast&&!overlayUppe()) bast.gor();
-  VD.ePrev=e;
+  /* Konsumera även om inget giltigt mål finns: ett gammalt tryck får
+     aldrig aktivera en dörr som spelaren närmar sig senare. */
+  const e=InputImpulse.consume("KeyE",G.scen);
+  if(e&&bast&&!overlayUppe()) bast.gor();
+  VD.ePrev=!!IN.ned.KeyE;
 }
 /* Boxarnas mitt-y, per rad. Facken läses ur STALLINNE.fack — samma lista
    som Roblox bygger ur — och där saknas det fack hästförbindelsen går
@@ -1042,6 +1044,7 @@ function kameraNollstall(){
   if(typeof V3D!=="undefined"&&V3D.kam)V3D.kam.satt=false;
 }
 function gaTill(scen,spawn){
+  InputImpulse.clear("KeyE");
   G.scen=scen;
   if(spawn){VD.px=spawn.x;VD.py=spawn.y;VD.rikt=spawn.rikt;VD.spår.length=0;VD.fart=0;VD.pz=nivaHojd(VD.px,VD.py,spawn.z||0);}
   slutaGa();                       // ett mål i förra scenen betyder inget här
@@ -1052,6 +1055,7 @@ function gaTill(scen,spawn){
   kameraNollstall();
 }
 function startaVandring(){
+  InputImpulse.clear("KeyE");
   if(typeof ridSittAv==="function")ridSittAv();   // G02-A: avsutten när ritten lämnas
   overlay(false);
   G.scen="gard"; G.hastId=null; G.skotselRes=null;

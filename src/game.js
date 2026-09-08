@@ -84,7 +84,14 @@ function ridAvsiktTillHjalp(){
 ridNollstallHjalp();
 const STIG=0.28,FALL=0.22;
 addEventListener("keydown",e=>{
-  if(e.repeat)return; IN.ned[e.code]=true;
+  if(e.repeat)return;
+  const wasDown=!!IN.ned[e.code];
+  IN.ned[e.code]=true;
+  /* E är en engångshandling i gångläget. Bevara den tills spelet samplar,
+     men skapa aldrig en impuls från autorepeat, en overlay eller ridning. */
+  if(e.code==="KeyE"&&!wasDown&&
+     (G.scen==="gard"||G.scen==="stallinne"||G.scen==="ridhusinne")&&
+     !overlayUppe())InputImpulse.press("KeyE",G.scen);
   switch(e.code){
     case"KeyW":RIDIN.skankel=1;RIDIN.pek=false;break;
     case"KeyS":RIDIN.skankel=-1;RIDIN.pek=false;break;
