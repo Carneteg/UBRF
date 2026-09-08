@@ -1,0 +1,54 @@
+name: Claude — G02-E camera handoff
+on:
+  push:
+    branches:
+      - chatgpt/claude-camera-launch-20260908
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+concurrency:
+  group: claude-camera-150
+  cancel-in-progress: false
+jobs:
+  claude-camera:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact verified P0 source
+        uses: actions/checkout@v4
+        with:
+          ref: f2b527533f79a31b157b3f4bb6b4d719f546da6e
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check existing Claude authentication without revealing credentials
+        env:
+          HAS_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          if [ "$HAS_API_KEY" != "true" ] && [ "$HAS_OAUTH" != "true" ]; then
+            echo 'No existing Anthropic API key or Claude Code OAuth token is configured for this workflow.'
+            echo 'No credential was created, requested, or printed. Claude Code was not started.'
+            exit 1
+          fi
+          echo 'An existing Claude authentication method is available.'
+      - name: Start Claude Code on issue 150 — Part 1 only
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.ANTHROPIC_API_KEY == '' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
+          base_branch: chatgpt/p0-input-impulse-part2-20260908
+          branch_prefix: claude/g02-e-
+          prompt: |
+            You are Claude, the UBRF Lead Implementation Engineer. Tobias has explicitly authorized this task. Read the full acceptance contract in https://github.com/Carneteg/UBRF/issues/150 and the repository governance documents before editing.
+
+            Implement G02-E Part 1 only: riding defaults to rider perspective; a temporary contextual feedback camera can be requested; transitions and automatic return are smooth, bounded and deterministic. Preserve riding controls, camera collision, existing game feel and web/Roblox parity. Do not implement Part 2 feedback-event wiring, alter riding physics, change environment geometry, or merge any PR.
+
+            Start from the verified P0 source f2b527533f79a31b157b3f4bb6b4d719f546da6e, but inspect current branches and ownership first. PR #144 contains separate unmerged Ridanalys work overlapping game.js/index.html. Preserve the approved P0 input fix and do not overwrite or silently merge #144. If a conflicting active implementation exists, stop and report the conflict rather than duplicate it.
+
+            First post a genuine CLAUDE_ACK on issue #150 with the exact base/head and scope. Then inspect the existing camera architecture and write the eight-field acceptance contract. Make the smallest safe Part 1 implementation on a new feature branch and draft PR. Run focused tests, negative/falsification tests, relevant P0 regressions and Roblox parity checks. Report exact SHA, Changed, Source evidence, Tested, Falsified, Not tested, Remaining risk and Human gate. Stop at READY_FOR_CHATGPT_REVIEW. Never claim Studio, physical-device or human game-feel acceptance without evidence. No merge.
+          claude_args: |
+            --max-turns 18
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(node:*),Bash(npm:*),Bash(python3:*),Bash(gh:*)"
