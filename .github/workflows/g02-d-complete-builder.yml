@@ -1,0 +1,71 @@
+name: G02-D — bygg komplett Ridanalys
+on:
+  push:
+    branches: [chatgpt/g02-d-complete-20260908]
+permissions:
+  contents: write
+jobs:
+  bygg:
+    if: ${{ !contains(github.event.head_commit.message, '[g02d-built]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Hämta den granskade Ridanalys-implementationen
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin claude/g02-d-ridanalys
+          git checkout origin/claude/g02-d-ridanalys -- \
+            docs/ACTIVE-GATE.md docs/G02-D-RIDANALYS-REPLAY.md \
+            index.html src/game.js src/larare.js src/replayvy.js \
+            src/riding/inspelning.js src/riding/ovningsdef.js src/riding/ridanalys.js \
+            tools/exportera-ridkanon.mjs tools/inspelningstest.mjs tools/replaytest.mjs \
+            tools/ugneta-forsok-test.mjs tools/ugnetatest.mjs
+          python3 tools/complete-ridanalys.py
+      - name: Installera Playwright och Luau
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+          curl -sSfL -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/latest/download/luau-ubuntu.zip
+          unzip -o -q /tmp/luau.zip -d /tmp/luau
+          sudo install -m 0755 /tmp/luau/luau /usr/local/bin/luau
+          luau --help >/dev/null
+      - name: Bygg och kör Ridanalys-grindarna
+        run: |
+          set -euo pipefail
+          node --check src/game.js
+          node --check src/larare.js
+          node --check src/replayvy.js
+          node tools/inspelningstest.mjs
+          node tools/ugnetatest.mjs
+          node tools/ugneta-forsok-test.mjs
+          node tools/replaytest.mjs
+          node tools/control-feel-test.mjs
+          node tools/exportera-ridkanon.mjs --kontrollera
+          node tools/exportera-spel.js --kontrollera
+          node tools/exportera-geometri.js --kontrollera
+          python3 tools/build.py
+          node tools/bootkoll.mjs
+          bash roblox/tests/kor.sh
+      - name: Commit endast efter grön verifiering
+        run: |
+          set -euo pipefail
+          git config user.name "UBRF G02-D Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Ingen ändring att committa"
+            exit 0
+          fi
+          git commit -m "[g02d-built] Complete Ridanalys on P0 baseline"
+          git push origin HEAD:chatgpt/g02-d-complete-20260908
