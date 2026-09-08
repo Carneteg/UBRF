@@ -1,0 +1,26 @@
+name: P0 short tap — baseline reproduction
+on:
+  push:
+    branches: [chatgpt/p0-short-tap-test-20260908]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify production code is unchanged from PR 145
+        run: |
+          git fetch --no-tags --depth=1 origin c097a82399feaa94076f815c233eab0df2a2f883
+          git diff --exit-code c097a82399feaa94076f815c233eab0df2a2f883 HEAD -- src roblox index.html
+      - name: Verify the known failure is reproducible
+        run: |
+          node --check tools/p0-short-tap-test.mjs
+          node tools/p0-short-tap-test.mjs --baseline-red
