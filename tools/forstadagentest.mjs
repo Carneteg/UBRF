@@ -576,6 +576,62 @@ if (process.env.RITT === "1" && (await ev(() => G.scen)) === "lektion") {
       + " ugnetaForsokSteg() lämnar ifrån sig omdömet bara vid momentKlart"
       + " eller taket; ugnetaStangForsok() på G02-D (#138) täpper till det.");
   }
+
+  /* ── LEKTIONEN UT: eftervård, sparning och nytt pass ─────────────
+     Resten av momenten hoppas med N. Det är en riktig spelarhandling
+     och det enda som gör slutet nåbart på rimlig tid — ett moment taget
+     med ridning tar 74–125 s, och lektionen har flera.
+
+     Kedjan som mäts är game.js `avslutaBana()`:
+       passSlut()  (efter.js — eftervården räknas samman)
+       registreraPass()  (ryttare.js — SPAR.pass++, historiken skrivs)
+       G.scen="resultat" och resultatrutan
+     och därefter spelarens knapp "Rid igen — ny häst". */
+  const passFore = await ev(() => (typeof SPAR !== "undefined" && SPAR) ? SPAR.pass : -1);
+  const tSlut = Date.now();
+  let scen = await ev(() => G.scen);
+  while (scen === "lektion" && Date.now() - tSlut < 240000) {
+    await page.keyboard.press("KeyN");
+    await page.waitForTimeout(2500);
+    scen = await ev(() => G.scen);
+  }
+  prova("lektionen tar slut och resultatrutan kommer", scen === "resultat",
+    `scen ${scen} efter ${Math.round((Date.now() - tSlut) / 1000)} s`);
+
+  if (scen === "resultat") {
+    const slut = await ev(() => ({
+      pass: (typeof SPAR !== "undefined" && SPAR) ? SPAR.pass : -1,
+      historik: (typeof SPAR !== "undefined" && SPAR && SPAR.historik) ? SPAR.historik.length : 0,
+      passKlart: (typeof PASS !== "undefined" && PASS) ? !!PASS.klart : null,
+      fardEfter: (typeof PASS !== "undefined" && PASS) ? !!PASS.fardEfter : null,
+      igen: !!document.getElementById("bIgen"),
+      samma: !!document.getElementById("bSamma"),
+      betyg: Object.keys(G.betyg || {}).length,
+    }));
+    prova("eftervården räknas samman när passet avslutas",
+      slut.passKlart === true && slut.fardEfter === true,
+      `PASS.klart ${slut.passKlart} · färdigheter efter ${slut.fardEfter}`);
+    prova("passet sparas — SPAR.pass räknas upp och historiken skrivs",
+      slut.pass === passFore + 1 && slut.historik > 0,
+      `pass ${passFore} → ${slut.pass} · historik ${slut.historik}`);
+    prova("resultatrutan erbjuder både ny häst och samma häst igen",
+      slut.igen && slut.samma, `bIgen ${slut.igen} · bSamma ${slut.samma}`);
+
+    /* NYTT PASS genom spelarens egen knapp. */
+    await klicka("bIgen");
+    const ny = await vantaPa(() => ({ scen: G.scen, hastId: G.hastId,
+      ov: !document.getElementById("ov").classList.contains("hide") }),
+      null, v => v.scen === "stallinne" && !v.ov, 20000);
+    prova("\"Rid igen\" lämnar spelaren i stallgången utan häst — ett nytt pass",
+      ny.scen === "stallinne" && !ny.hastId && !ny.ov,
+      `scen ${ny.scen} · hastId ${ny.hastId} · overlay ${ny.ov}`);
+    const kvar = await ev(() => {
+      const L = interaktioner();
+      return L.some(i => /ridläraren/i.test(i.text));
+    });
+    prova("och ridläraren står där för nästa tilldelning", kvar === true,
+      `ridlärarinteraktion ${kvar}`);
+  }
 }
 
 /* ══ 10. HUR LÅNGT RÄCKER MILJÖN? (MATFART=1) ══════════════════════
