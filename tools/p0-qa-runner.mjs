@@ -6,6 +6,7 @@ import { chromium, devices } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import { invantaP0Karta } from './p0-map-ready.mjs';
 
 const mode=process.argv[2]||'first-day';
 const sha=process.env.QA_TARGET_SHA||'unknown';
@@ -34,7 +35,15 @@ async function hold(code,ms){await page.keyboard.down(code);await page.waitForTi
    Det är inte ett riktigt tangenttryck för ett spel som samplar IN.ned
    i requestAnimationFrame. Håll minst 180 ms och invänta en ny frame. */
 async function key(code){await hold(code,180);await page.waitForTimeout(80);}
-async function mapOn(){if((await state()).view!=='2d'&&!await button('#viewToggle [data-v="2d"]'))throw Error('Karta-knappen saknas');await page.waitForTimeout(250);}
+async function mapOn(){
+ const before=await state();
+ if(before.view!=='2d'&&!await button('#viewToggle [data-v="2d"]'))throw Error('Karta-knappen saknas');
+ try{await invantaP0Karta(page,before.scene);}
+ catch(e){
+  const after=await state().catch(err=>({diagnostik:String(err)}));
+  throw new Error(`Kartan blev inte redo för ${before.scene}: ${e.message}; ${JSON.stringify(after)}`,{cause:e});
+ }
+}
 async function point(x,y){if(mode==='touch')await page.touchscreen.tap(x,y);else await page.mouse.click(x,y);}
 async function walk(pos,label){
  await mapOn();const s=await state();if(!s.map||s.map.scene!==s.scene)throw Error('Kartan saknar aktuell transform');

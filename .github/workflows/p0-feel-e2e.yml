@@ -1,7 +1,7 @@
 name: P0 — sammanhållet speltest
 on:
   push:
-    branches: [chatgpt/p0-consolidated-20260908]
+    branches: [chatgpt/p0-consolidated-20260908, chatgpt/p0-touch-repair-20260908]
   pull_request:
     branches: [chatgpt/integration-review-20260907]
   workflow_dispatch:
@@ -34,6 +34,8 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npx playwright install --with-deps chromium
+      - name: Kontrollera kartberedskap och negativa kontroller
+        run: node tools/p0-map-ready-test.mjs
       - name: Bygg exakt spelversion
         run: python3 tools/build.py
       - name: Kör riktiga UI-handlingar utan att sätta speltillstånd
