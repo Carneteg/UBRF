@@ -99,6 +99,11 @@ jobs:
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
 
+      - name: Spelets lektionslogik
+        run: |
+          if [ -f tools/test-game.mjs ]; then node tools/test-game.mjs
+          else echo "hoppar: tools/test-game.mjs finns inte i denna branch"; fi
+
   dubbel-sanning:
     runs-on: ubuntu-latest
     steps:
