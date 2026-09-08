@@ -1,0 +1,58 @@
+name: P0 — applicera och prova styrkänsla
+on:
+  push:
+    branches: [chatgpt/p0-control-feel-20260908]
+    paths:
+      - src/input-feel.js
+      - tools/apply-control-feel.mjs
+      - tools/control-feel-test.mjs
+      - .github/workflows/p0-control-apply.yml
+permissions:
+  contents: write
+jobs:
+  apply-and-test:
+    if: github.repository == 'Carneteg/UBRF' && github.ref == 'refs/heads/chatgpt/p0-control-feel-20260908'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/p0-control-feel-20260908
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Bevisa oförändrad spelbas
+        run: |
+          git diff --exit-code 2131dee12263d627f74a3c40721d007d341311df HEAD -- index.html src/world.js src/game.js
+          test ! -f src/.input-feel-applied
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Applicera endast den granskade källpatchen
+        run: node tools/apply-control-feel.mjs
+      - name: Syntax och elva inputregressioner
+        run: |
+          node --check src/input-feel.js
+          node --check src/world.js
+          node --check src/game.js
+          node tools/control-feel-test.mjs
+      - name: Installera låsta beroenden och Chromium
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Bygg och testa faktiskt spel
+        run: |
+          python3 tools/build.py
+          node tools/bootkoll.mjs
+          node tools/forstadagentest.mjs
+      - name: Publicera endast verifierad källändring på featuregrenen
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/chatgpt/p0-control-feel-20260908'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html src/world.js src/game.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix P0 input sensitivity after source and browser regression tests'
+          git push origin HEAD:refs/heads/chatgpt/p0-control-feel-20260908

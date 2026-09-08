@@ -47,6 +47,7 @@ const RIDIN={
 const IN={
   kan:{skankel:{v:0,mal:0},tygel:{v:0,mal:0},sits:{v:0,mal:0},styrning:{v:0,mal:0}},
   latt:true,diagonal:1,spo:false,hh:-1,paradFore:0,ned:{},
+  styrDigital:null,styrKansla:{v:0},
   joy:null,          // pekskärmens analoga spak: {x,y,styrka} eller null
 };
 
@@ -59,6 +60,7 @@ const IN={
    skänkel läses som en impuls av en häst som just satt sig i sadeln. */
 function ridNollstallHjalp(){
   RIDIN.skankel=0; RIDIN.tygel=0; RIDIN.sits=0; RIDIN.styr=0; RIDIN.parad=0; RIDIN.pek=false;
+  IN.styrDigital=null; IN.styrKansla.v=0;
   ridAvsiktTillHjalp();
   for(const n in IN.kan)IN.kan[n].v=IN.kan[n].mal;
   IN.hh=-1; IN.paradFore=0;
@@ -89,8 +91,8 @@ addEventListener("keydown",e=>{
     case"Space":RIDIN.tygel=1;e.preventDefault();break;
     case"ShiftLeft":case"ShiftRight":RIDIN.sits=-1;break;
     case"ControlLeft":case"ControlRight":RIDIN.sits=1;e.preventDefault();break;
-    case"KeyA":RIDIN.styr=-1;RIDIN.pek=false;break;
-    case"KeyD":RIDIN.styr=1;RIDIN.pek=false;break;
+    case"KeyA":IN.styrDigital=-1;RIDIN.pek=false;break;
+    case"KeyD":IN.styrDigital=1;RIDIN.pek=false;break;
     case"KeyR":IN.latt=!IN.latt;break;
     case"KeyQ":IN.diagonal=1-IN.diagonal;break;
     case"KeyF":IN.spo=true;break;
@@ -116,13 +118,19 @@ addEventListener("keyup",e=>{
     case"KeyS":RIDIN.skankel=IN.ned.KeyW?1:0;break;
     case"Space":RIDIN.tygel=0;break;
     case"ShiftLeft":case"ShiftRight":case"ControlLeft":case"ControlRight":RIDIN.sits=0;break;
-    case"KeyA":RIDIN.styr=IN.ned.KeyD?1:0;break;
-    case"KeyD":RIDIN.styr=IN.ned.KeyA?-1:0;break;
+    case"KeyA":if(!RIDIN.pek)IN.styrDigital=IN.ned.KeyD?1:0;break;
+    case"KeyD":if(!RIDIN.pek)IN.styrDigital=IN.ned.KeyA?-1:0;break;
     case"KeyF":IN.spo=false;break;
     case"KeyE":RIDIN.parad=0;break;
   }
 });
 function stegaInput(dt){
+  // Forma digital A/D före det befintliga hjälp- och kurvaturfiltret.
+  // Direkta modellprov och analog spak behåller hela sitt omfång.
+  if(RIDIN.pek){IN.styrDigital=null;IN.styrKansla.v=RIDIN.styr;}
+  else if(IN.styrDigital!==null){
+    RIDIN.styr=InputFeel.ride(IN.styrDigital,dt,IN.styrKansla);
+  }
   ridAvsiktTillHjalp();          // avsikt → hjälpmål, en gång per bildruta
   for(const n in IN.kan){const k=IN.kan[n];
     const fart=(k.mal>k.v?1/STIG:1/FALL)*dt;
