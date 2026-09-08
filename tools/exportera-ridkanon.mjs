@@ -33,6 +33,7 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   /* G02-D: övningsdefinitionen. Måste laddas FÖRE src/larare.js, precis
      som i index.html — larare.js bygger UGNETA_OVNING_DIM ur den. */
   + "\n" + las("src/riding/ovningsdef.js")
+  + "\n" + las("src/riding/inspelning.js")
   /* Hästdatan med — scenariot nedan ska rida VERKLIGA UBRF-hästar
      ur samma tabell som spelet och Roblox Stallet läser, inte en
      handskriven kopia av deras siffror. */
@@ -873,6 +874,20 @@ rader.push("\t},");
 rader.push("}");
 rader.push("");
 
+/* RIDANALYS_CANON_EXPORT — generated definitions and recording bounds. */
+const rd = vm.runInContext("({schema:INSPELNING_SCHEMA,ovningSchema:OVNING_SCHEMA,hz:INSPELNING_HZ,maxSek:INSPELNING_MAX_SEK,maxSampel:INSPELNING_MAX_SAMPEL,maxHandelser:INSPELNING_MAX_HANDELSER,ovningar:OVNINGAR_DEF})",ctx);
+function rdLua(v){
+  if(v===null||v===undefined)return 'false';
+  if(typeof v==='number')return Number.isFinite(v)?tal(v):'nil';
+  if(typeof v==='string')return str(v);
+  if(typeof v==='boolean')return String(v);
+  if(Array.isArray(v))return '{'+v.map(rdLua).join(', ')+'}';
+  if(typeof v==='object')return '{'+Object.keys(v).sort().map(k=>'['+str(k)+'] = '+rdLua(v[k])).join(', ')+'}';
+  throw new Error('Unsupported canon value');
+}
+rader.push('-- G02-D: generated recording contract; false denotes absent reference.');
+rader.push('RidKanon.RIDANALYS = '+rdLua(rd));
+rader.push('');
 rader.push("return RidKanon");
 rader.push("");
 const utfil = "roblox/src/shared/HorseCore/RidKanon.luau";

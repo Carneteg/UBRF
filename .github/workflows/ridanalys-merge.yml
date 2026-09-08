@@ -1,0 +1,70 @@
+name: Ridanalys — merge and verify
+on:
+  push:
+    paths: [.github/workflows/ridanalys-merge.yml]
+permissions:
+  contents: write
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Merge exact source history
+        run: |
+          set -euo pipefail
+          git config user.name 'UBRF Integration'
+          git config user.email '83163288+Carneteg@users.noreply.github.com'
+          git fetch --no-tags origin 87cad7187468216677707bd960c3ad23313b99f1 6bc25fdb3b3e468fbf363c82c5cae0a7dd3d6593
+          git merge --no-commit --no-ff -X theirs 6bc25fdb3b3e468fbf363c82c5cae0a7dd3d6593
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          p=Path('src/game.js')
+          text=p.read_text()
+          assert 'function visaForsokVal' in Path('src/replayvy.js').read_text()
+          assert 'function momentProvaIgen' in text
+          assert 'InputFeel.ride' in text
+          assert 'IN.styrDigital' in text
+          assert 'blackrock_jack' in Path('src/scenes.js').read_text()
+          assert 'blackrock_jack' in Path('src/site.js').read_text()
+          assert '<script src="src/replayvy.js"></script>' in Path('index.html').read_text()
+          assert '<script src="src/input-feel.js"></script>' in Path('index.html').read_text()
+          for f in ('src/game.js','src/larare.js','src/replayvy.js'):
+              assert '<<<<<<<' not in Path(f).read_text(), f
+          print('P0 and Ridanalys integration invariants OK')
+          PY
+          git diff --cached --check
+          git diff --check
+          node tools/exportera-ridkanon.mjs
+          node tools/exportera-ridkanon.mjs --kontrollera
+          node tools/exportera-spel.js --kontrollera
+          node tools/exportera-geometri.js --kontrollera
+          node tools/inspelningstest.mjs
+          node tools/ugnetatest.mjs
+          node tools/control-feel-test.mjs
+          python3 tools/build.py
+      - name: Web browser regression
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          node tools/replaytest.mjs
+          node tools/ugneta-forsok-test.mjs
+          node tools/bootkoll.mjs
+      - name: Publish verified merge to feature branch only
+        run: |
+          set -euo pipefail
+          git add -A
+          git commit -m 'G02-D: merge existing replay with P0 controls and first-day fixes'
+          git push origin HEAD:chatgpt/ridanalys-source-20260908
+          git rev-parse HEAD

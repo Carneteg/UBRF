@@ -1,0 +1,25 @@
+name: Ridanalys — Luau QA
+on:
+  push:
+    paths: [.github/workflows/ridanalys-luau-qa.yml]
+permissions:
+  contents: read
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Luau runner
+        run: |
+          curl -sSfL -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/latest/download/luau-ubuntu.zip
+          unzip -o -q /tmp/luau.zip -d /tmp/luau
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridanalys-luau-runner
+          path: /tmp/luau/luau
+          retention-days: 2
+      - name: Verify source and tests
+        run: |
+          sudo install -m 0755 /tmp/luau/luau /usr/local/bin/luau
+          node tools/exportera-ridkanon.mjs --kontrollera
+          bash roblox/tests/kor.sh
