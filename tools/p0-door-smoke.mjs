@@ -51,7 +51,7 @@ async function main(){
   const guest=page.locator('#bSkapHoppa');
   if(await guest.isVisible())await guest.click();
   await page.locator('#bStart').click();
-  await page.waitForFunction(()=>G.scen==='gard'&&!document.getElementById('ov').classList.contains('hide'),null,{timeout:10000});
+  await page.waitForFunction(()=>G.scen==='gard'&&document.getElementById('ov').classList.contains('hide'),null,{timeout:10000});
   const initial=await snap('01-courtyard');
   check('Guest reaches courtyard through UI',initial.scene==='gard'&&!initial.overlay);
   const door=initial.doors.find(d=>d.text?.includes('stallet'))||initial.doors[0];
