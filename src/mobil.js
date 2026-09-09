@@ -35,6 +35,21 @@ const PEKSKARM = matchMedia("(pointer:coarse)").matches || "ontouchstart" in win
      knapparna är redan bredare än 44 px och ska inte tvingas isär. */
   .pek .btn{min-height:44px; min-width:44px;
     display:inline-flex; align-items:center; justify-content:center}
+  /* KARAKTÄRSSKAPAREN GICK FRI. Golvet ovan gäller klassen btn, men
+     skaparens val är skapChip och skapFlik — andra klasser, samma
+     finger. Uppmätt före rättelsen: chipsen 26 px och flikarna 31 px,
+     alltså precis de 26 px kommentaren ovan säger att man inte ska ha,
+     på den allra FÖRSTA skärmen spelaren rör vid.
+     Bara på pekskärm: på skrivbord är de kompakta med flit, och där
+     pekar man med en muspekare som är en pixel bred.
+     (Inga backticks i kommentarerna här — hela stilmallen är en
+     template-literal, och en backtick stänger den mitt i.) */
+  .pek .skapChip, .pek .skapFlik{min-height:44px; min-width:44px;
+    display:inline-flex; align-items:center; justify-content:center}
+  /* Raden bär align-items:baseline, och en 44 px hög chip mot en
+     baslinje lägger etiketten på fel höjd. Centrera i stället — det är
+     en följd av golvet, inte en egen designändring. */
+  .pek .skapRad{align-items:center}
   @supports(padding:max(0px)){        /* hakens och hemknappens säkra zon */
     .pek #viewToggle{top:max(8px,env(safe-area-inset-top))}
     .pek #pekUI{padding-bottom:env(safe-area-inset-bottom)}
