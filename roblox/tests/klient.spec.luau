@@ -900,8 +900,144 @@ do
 			if post then end
 		end
 
+		--[[ ══ KONTROLLHJÄLPEN ═══════════════════════════════════════
+			Tobias fråga på #151: hur sitter man upp, byter gångart och
+			hoppar? Hjälpen svarar — och provet ser till att den svarar
+			SANT. En hjälptext som påstår en tangent som inte är bunden är
+			värre än ingen hjälp: spelaren trycker och ingenting händer. ]]
+		do
+			prova("hjälpen finns i klientbunten",
+				type(KontrollHjalp) == "table"
+					and type(KontrollHjalp.rader) == "function",
+				("(%s)"):format(type(KontrollHjalp)))
+
+			local usv = game:GetService("UserInputService")
+			local kb, gp, touch = usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled
+
+			local function raderMed(tangentbord, gamepad, pek)
+				usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled =
+					tangentbord, gamepad, pek
+				local m = {}
+				for _, r in KontrollHjalp.rader() do m[r.vad] = r.reglage end
+				return m
+			end
+
+			local tgb = raderMed(true, false, false)
+			local pad = raderMed(false, true, false)
+			local pek = raderMed(false, false, true)
+
+			--[[ DE TRE FRÅGORNA, ordagrant. ]]
+			prova("hjälpen svarar hur man sitter upp",
+				tgb["Sitt upp / sitt av"] == "E",
+				('("%s")'):format(tostring(tgb["Sitt upp / sitt av"])))
+			prova("…hur man byter gångart",
+				tgb["Högre gångart"] == "Shift" and tgb["Lägre gångart"] == "Ctrl",
+				('("%s" / "%s")'):format(tostring(tgb["Högre gångart"]),
+					tostring(tgb["Lägre gångart"])))
+			prova("…och hur man hoppar",
+				tgb["Hoppa"] == "Space", ('("%s")'):format(tostring(tgb["Hoppa"])))
+
+			--[[ REGLAGEN FÖLJER INMATNINGEN. En ren pekenhet får aldrig en
+			     bokstav hon inte kan trycka på. ]]
+			prova("gamepad får sina egna reglage, inte tangenter",
+				pad["Högre gångart"] == "R1" and pad["Hoppa"] == "A",
+				('("%s" / "%s")'):format(tostring(pad["Högre gångart"]),
+					tostring(pad["Hoppa"])))
+			prova("en ren pekenhet får skärmknapparnas egna etiketter",
+				pek["Hoppa"] == "HOPP" and pek["Högre gångart"] == "▲ FRAMÅT"
+					and pek["Tygel (kontakt)"] == "TYGEL",
+				('("%s" · "%s")'):format(tostring(pek["Hoppa"]),
+					tostring(pek["Högre gångart"])))
+			do
+				--[[ …och ingen rad för touch får bära en ensam versal
+				     bokstav, alltså en tangent. ]]
+				local bokstav = 0
+				for _, v in pek do
+					if type(v) == "string" and #v == 1
+						and v:match("%u") ~= nil then bokstav += 1 end
+				end
+				prova("ingen tangentbokstav slinker in i pekenhetens hjälp",
+					bokstav == 0, ("(%d bokstavsreglage)"):format(bokstav))
+			end
+
+			--[[ HJÄLPEN MÅSTE STÄMMA MED INPUT.LUAU. Provet fyrar de
+			     tangenter hjälpen PÅSTÅR och läser vad inputlagret gjorde.
+			     Ändrar någon en bindning utan att ändra hjälpen blir den
+			     här raden röd — det är hela poängen med den. ]]
+			usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = true, false, false
+			local ca = game:GetService("ContextActionService")._bound.HorseControl
+			prova("inputlagret är bundet så att påståendena går att prova",
+				type(ca) == "function", ("(%s)"):format(type(ca)))
+			if type(ca) == "function" then
+				--[[ Tangenten FYRAS UR HJÄLPENS EGEN TEXT, inte ur en
+				     handskriven lista här. Ett tidigare utkast fyrade
+				     LeftShift oavsett vad hjälpen påstod — då mätte provet
+				     att Input.luau fungerar, inte att hjälpen talar sanning,
+				     och en hjälp som pekade på fel tangent hade passerat. ]]
+				local NAMN = {
+					["Shift"] = Enum.KeyCode.LeftShift,
+					["Ctrl"] = Enum.KeyCode.LeftControl,
+					["Space"] = Enum.KeyCode.Space,
+					["Q"] = Enum.KeyCode.Q,
+					["F"] = Enum.KeyCode.F,
+					["E"] = Enum.KeyCode.E,
+				}
+				local function fyraEnligtHjalpen(vad)
+					local kod = NAMN[tgb[vad]]
+					if not kod then return nil end
+					ca("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+					local i = Input.consume()
+					ca("HorseControl", Enum.UserInputState.End, { KeyCode = kod })
+					return i
+				end
+				local upp = fyraEnligtHjalpen("Högre gångart")
+				local ner = fyraEnligtHjalpen("Lägre gångart")
+				local hopp = fyraEnligtHjalpen("Hoppa")
+				local tygel = fyraEnligtHjalpen("Tygel (kontakt)")
+				prova("tangenten hjälpen anger för HÖGRE gångart gör det också",
+					upp ~= nil and upp.gaitUp == true,
+					('("%s" → gaitUp %s)'):format(tostring(tgb["Högre gångart"]),
+						tostring(upp and upp.gaitUp)))
+				prova("…och den för LÄGRE gångart",
+					ner ~= nil and ner.gaitDown == true,
+					('("%s" → gaitDown %s)'):format(tostring(tgb["Lägre gångart"]),
+						tostring(ner and ner.gaitDown)))
+				prova("…och den för HOPP",
+					hopp ~= nil and hopp.jump == true,
+					('("%s" → jump %s)'):format(tostring(tgb["Hoppa"]),
+						tostring(hopp and hopp.jump)))
+				prova("…och den för TYGEL",
+					tygel ~= nil and tygel.rein > 0,
+					('("%s" → rein %s)'):format(tostring(tgb["Tygel (kontakt)"]),
+						tostring(tygel and tygel.rein)))
+			end
+
+			--[[ Panelen går att stänga utan tangentbord. ]]
+			KontrollHjalp.visa()
+			prova("hjälpen går att visa", KontrollHjalp.synlig() == true, "(synlig)")
+			local stang = hitta("StangHjalp")
+			prova("och att stänga med en riktig knapp — inte bara med H",
+				stang ~= nil and stang.ClassName == "TextButton"
+					and stang.Size.Y.Offset >= 44,
+				("(%s · %d px hög)"):format(stang and stang.ClassName or "-",
+					stang and stang.Size.Y.Offset or -1))
+			if stang then stang.Activated:Fire() end
+			prova("knappen stänger den",
+				KontrollHjalp.synlig() == false, "(dold)")
+
+			--[[ H växlar den — och hjälpen släcks när spelaren sitter av. ]]
+			tryck("H")
+			local eftertryck = KontrollHjalp.synlig()
+			usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
+			prova("H växlar hjälpen genom klientens egen inmatning",
+				eftertryck == true, ("(synlig %s)"):format(tostring(eftertryck)))
+		end
+
 		--[[ Städa upp efter oss: nästa block ska inte ärva en pågående ritt. ]]
 		player.CharacterRemoving:Fire(player.Character)
+		prova("hjälpen släcks när ritten tar slut",
+			KontrollHjalp.synlig() == false,
+			("(synlig %s)"):format(tostring(KontrollHjalp.synlig())))
 	end
 end
 

@@ -171,6 +171,10 @@ KLIENT = SPEL + [
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
+    # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
+    # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
+    # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
+    ("KontrollHjalp",       "src/client/KontrollHjalp.luau"),
     ("Debug",               "src/client/Debug.luau"),
     ("Genomsikt",           "src/client/Genomsikt.luau"),
     ("Init",                "src/client/init.client.luau"),

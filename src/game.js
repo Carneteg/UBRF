@@ -100,6 +100,9 @@ addEventListener("keydown",e=>{
     case"KeyN":G.hoppaMoment=true;break;
     case"KeyP":G.auto=!G.auto;saga(G.auto?"Jag visar. Titta på vägen jag väljer.":"Din tur.",2.5);break;
     case"KeyV":vaxlaVy();break;
+    /* G02-D: H visar reglagen. Tangenten är fri — game.js tar W A S D,
+       Space, Shift, Ctrl, E, R, Q, F, N, P, V, M, T. */
+    case"KeyH":if(typeof vaxlaKontrollHjalp==="function")vaxlaKontrollHjalp();break;
     case"KeyM":ljudToggle();break;
     case"KeyT":{
       const ov2=document.getElementById("ov");

@@ -314,6 +314,24 @@ tr:last-child td{border-bottom:0}
 .grn{color:var(--ok)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
+/* ── Kontrollhjälpen ────────────────────────────────────────────
+   Smal och vid kanten så att den går att ha uppe medan man rider, inte
+   över vägen framåt. Knappen är 44 px — minsta träffyta för ett finger,
+   samma regel som ridanalysens kontroller. */
+#kontrollhjalp{position:fixed;left:12px;top:50%;transform:translateY(-50%);
+  z-index:60;width:250px;max-width:calc(100vw - 24px);
+  max-height:calc(100vh - 24px);overflow:auto;
+  background:rgba(12,14,18,.92);border-radius:10px;padding:10px 12px;
+  color:#f6f2e8;font-size:12px;line-height:1.5}
+#kontrollhjalp[hidden]{display:none}
+#kontrollhjalp .khRubrik{color:#e8b54a;font-weight:700;font-size:15px;
+  margin-bottom:6px}
+#kontrollhjalp .khRad{display:flex;justify-content:space-between;gap:10px}
+#kontrollhjalp .khReglage{color:#cfc7b4;text-align:right;white-space:nowrap}
+#kontrollhjalp .khStang{margin-top:10px;width:100%;min-height:44px;
+  border:0;border-radius:22px;background:#e8b54a;color:#17140a;
+  font-weight:700;font-size:12px;cursor:pointer}
+
 /* ── Små skärmar: krymp HUD:en, ge plats åt pekkontrollerna ──── */
 @media(max-width:760px){
   body{font-size:14px}
@@ -409,6 +427,7 @@ tr:last-child td{border-bottom:0}
 <script src="src/riding/inspelning.js"></script>
 <script src="src/riding/ridanalys.js"></script>
 <script src="src/replayvy.js"></script>
+<script src="src/kontrollhjalp.js"></script>
 <script src="src/spel/hastar.js"></script>
 <script src="src/spel/skotsel.js"></script>
 <script src="src/data.js"></script>

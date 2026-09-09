@@ -35,6 +35,7 @@ local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
+local KontrollHjalp = require(script.KontrollHjalp)
 local Debug = require(script.Debug)
 local Genomsikt = require(script.Genomsikt)
 
@@ -83,6 +84,9 @@ local function dismount()
 	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
 	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
 	LektionController.avbryt()
+	--[[ Hjälpen hör till ritten. Den ska inte ligga kvar över en spelare
+	     som just klivit av. ]]
+	KontrollHjalp.dolj()
 	Debug.clear()
 	InteractionController.setEnabled(true)
 	ride = nil
@@ -179,6 +183,9 @@ local function mount(model: Model)
 	     Ridbanan och sargen hänger direkt under den. ]]
 	local anlaggning = workspace:FindFirstChild("Anläggning")
 	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
+	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
+	     frågan "vad gör jag nu?" som mest aktuell. ]]
+	KontrollHjalp.vidUppsittning()
 
 	local missing = (ride.animation :: any).missing
 	if missing and #missing > 0 then
@@ -276,6 +283,12 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	--[[ "Gå vidare": nöj dig med försöket. Momentet bedöms ändå. ]]
 	if input.KeyCode == Enum.KeyCode.G then
 		if LektionController.gaVidare() then return end
+	end
+	--[[ H visar reglagen. Tangenten är fri: Input.luau tar W A S D, Space,
+	     Shift, Ctrl, Q, F, Z, C och spakarna, och E/R/T/G är tagna här. ]]
+	if input.KeyCode == Enum.KeyCode.H then
+		KontrollHjalp.vaxla()
+		return
 	end
 	if input.KeyCode == Enum.KeyCode.E then
 		begarAvsittning()

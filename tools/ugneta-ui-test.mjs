@@ -73,6 +73,61 @@ for(const vy of vyer){
   prova(!r.efter.klass.includes("ugneta-kort")&&!r.efter.wrap.includes("ugneta-wrap"),
     `${vy.namn}: säkerhetsmeddelande återställer vanlig UI`);
   prova(r.efter.text==="STANNA – håll avstånd!",`${vy.namn}: säkerhetsmeddelandet vinner`);
+
+  /* ── KONTROLLHJÄLPEN (G02-D, review på #151) ────────────────────
+     Tobias frågade hur man sitter upp, byter gångart och hoppar. Hjälpen
+     svarar — och den ska svara med webbens EGNA reglage, rymmas i
+     viewporten och gå att stänga utan tangentbord.
+
+     De två raderna utan reglage är avsiktliga och provas som sådana:
+     webben har ingen gångartsknapp (gångarten följer skänkel och tygel)
+     och inget hoppreglage (avsprånget kommer ur anridningen). En hjälp
+     som hittade på en tangent för dem hade påstått en paritet med Roblox
+     som inte finns. */
+  const h=await page.evaluate(()=>{
+    if(typeof visaKontrollHjalp!=="function")return {saknas:"visaKontrollHjalp"};
+    visaKontrollHjalp();
+    const el=document.getElementById("kontrollhjalp");
+    if(!el)return {saknas:"#kontrollhjalp"};
+    const rader=kontrollRader();
+    const box=el.getBoundingClientRect();
+    const kn=el.querySelector("#khStang");
+    const knBox=kn?kn.getBoundingClientRect():null;
+    const karta={};for(const r of rader)karta[r.vad]=r.reglage;
+    return {
+      synlig:kontrollHjalpSynlig(), antal:rader.length, karta,
+      inmatning:kontrollInmatning(),
+      utan:rader.filter(r=>!r.reglage).map(r=>r.vad),
+      box:{l:box.left,r:box.right,t:box.top,b:box.bottom},
+      inner:{w:innerWidth,h:innerHeight},
+      knHojd:knBox?knBox.height:0,
+      knText:kn?kn.textContent:"",
+      overflowX:document.documentElement.scrollWidth>innerWidth+1,
+    };
+  });
+  prova(!h.saknas,`${vy.namn}: kontrollhjälpen finns i byggd sida`,h.saknas||"");
+  if(!h.saknas){
+    prova(h.synlig&&h.antal>=8,`${vy.namn}: hjälpen visar reglagen`,
+      `${h.antal} rader`);
+    prova(h.karta["Sitt upp / använd"]==="E",
+      `${vy.namn}: hjälpen svarar hur man sitter upp`,h.karta["Sitt upp / använd"]);
+    prova(h.karta["Tygel (kontakt)"]==="Mellanslag",
+      `${vy.namn}: …och vad tygeln är`,h.karta["Tygel (kontakt)"]);
+    /* Gångart och hopp SKA sakna reglage på webben. */
+    prova(h.utan.includes("Gångart")&&h.utan.includes("Hoppa"),
+      `${vy.namn}: gångart och hopp anges utan uppfunnen tangent`,
+      h.utan.join(", "));
+    prova(h.box.l>=-1&&h.box.r<=h.inner.w+1&&h.box.t>=-1&&h.box.b<=h.inner.h+1,
+      `${vy.namn}: hjälpen ryms i viewporten`,JSON.stringify(h.box));
+    prova(!h.overflowX,`${vy.namn}: hjälpen ger ingen horisontell overflow`);
+    prova(h.knHojd>=44,`${vy.namn}: stängknappen är minst 44 px`,
+      `${Math.round(h.knHojd)}px`);
+    const dolt=await page.evaluate(()=>{
+      document.getElementById("khStang").click();
+      return kontrollHjalpSynlig();
+    });
+    prova(dolt===false,`${vy.namn}: knappen stänger hjälpen utan tangentbord`);
+  }
   await page.close();
 }
 

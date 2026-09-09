@@ -106,6 +106,11 @@ function sittUpp(plats){
   }
   G.plats=plats;hudLage("ritt");
   ridSittUpp(G.hastId,plats);          // G02-A: tillståndet FÖRE lektionen, se ovan
+  /* G02-D: reglagen en gång, vid FÖRSTA uppsittningen. Ligger efter
+     ridSittUpp så att hjälpen aldrig står uppe över en ritt som inte
+     hann börja, och den visar sig bara en gång per session — vid varje
+     uppsittning hade det blivit en ruta att stänga bort. */
+  if(typeof kontrollHjalpVidUppsittning==="function")kontrollHjalpVidUppsittning();
   startaLektion();
 }
 
