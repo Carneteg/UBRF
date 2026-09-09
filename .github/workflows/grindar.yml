@@ -190,6 +190,15 @@ jobs:
           if [ -f tools/uppdragstest.mjs ]; then node tools/uppdragstest.mjs
           else echo "hoppar: tools/uppdragstest.mjs finns inte i denna branch"; fi
 
+      # Inputsemantiken (PO-tillägg #151): att hjälperna SLÄPPS när spelaren
+      # inte trycker. Kör riktiga tangent- och pekhändelser i telefon, iPad
+      # landscape och skrivbord. Fångade ett verkligt fel: focus loss lämnade
+      # skänkeln på, så hästen gick vidare medan spelaren var i en annan app.
+      - name: Inputsemantik — focus loss, dold flik, spak och paneler
+        run: |
+          if [ -f tools/inputsemantiktest.mjs ]; then node tools/inputsemantiktest.mjs
+          else echo "hoppar: tools/inputsemantiktest.mjs finns inte i denna branch"; fi
+
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
       # att ingen debugmarkering ligger i produktvyn och att ytan under

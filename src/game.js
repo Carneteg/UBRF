@@ -127,6 +127,31 @@ addEventListener("keyup",e=>{
     case"KeyE":RIDIN.parad=0;break;
   }
 });
+/* ── FOKUS FÖRSVINNER — SLÄPP ALLT ────────────────────────────────
+   Alt-tab, en app som växlas in på iPaden, en flik som göms. Sidan slutar
+   få `keyup`, och tangenten som var nere BLIR KVAR nere: skänkeln låg på
+   1 och hästen gick vidare medan spelaren var någon annanstans. Mätt i
+   tools/inputsemantiktest.mjs — elva mätningar föll före de här raderna,
+   på telefon, iPad landscape och skrivbord.
+
+   `IN.ned` måste tömmas med hjälperna. Den är sanningen om vilka
+   tangenter som är nere, och keyup-grenarna läser den: släpps A medan
+   `IN.ned.KeyD` fortfarande påstår att D är nere, härleds en styrning
+   spelaren aldrig bad om.
+
+   Pekvägen har redan sitt: `src/mobil.js` lyssnar på pointercancel och
+   pointerleave. Det här är tangentbordets motsvarighet. */
+function ridSlappAllt(){
+  for(const k in IN.ned)delete IN.ned[k];
+  IN.spo=false;
+  RIDIN.pek=false;
+  ridNollstallHjalp();
+}
+addEventListener("blur",ridSlappAllt);
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden")ridSlappAllt();
+});
+
 function stegaInput(dt){
   // Forma digital A/D före det befintliga hjälp- och kurvaturfiltret.
   // Direkta modellprov och analog spak behåller hela sitt omfång.
