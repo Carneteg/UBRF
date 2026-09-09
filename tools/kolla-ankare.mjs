@@ -12,8 +12,9 @@
 import fs from "node:fs";
 import vm from "node:vm";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const ctx = { console, Math, JSON, window: {} };
 vm.createContext(ctx);

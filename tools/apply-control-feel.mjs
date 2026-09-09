@@ -2,7 +2,8 @@
 /* Applies only to the pinned integration source. Unknown anchors fail closed. */
 import fs from 'node:fs';
 import path from 'node:path';
-const root=path.resolve(new URL('..',import.meta.url).pathname);
+import { fileURLToPath } from "node:url";
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 function edit(file,changes){
   let s=fs.readFileSync(path.join(root,file),'utf8');
   for(const [before,after] of changes){

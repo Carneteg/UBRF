@@ -3,8 +3,9 @@ import { chromium } from "playwright";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROT=path.resolve(new URL(".",import.meta.url).pathname,"..");
+const ROT=path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST=path.join(ROT,"dist"),PORT=8831;
 const srv=http.createServer((q,s)=>{
   const raw=q.url.split("?")[0];
