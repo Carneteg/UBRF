@@ -2,7 +2,13 @@
    SCENER — meny, hästtilldelning, skötsel, resultat. Overlay-ark.
    ══════════════════════════════════════════════════════════════════ */
 const ov=document.getElementById("ov"),sheet=document.getElementById("sheet");
-function overlay(on,html){if(on)InputImpulse.clear("KeyE");ov.classList.toggle("hide",!on);if(html!==undefined)sheet.innerHTML=html;}
+/* En overlay täcker bilden. En feedbackvy som fortsätter tona bakom ett
+   ark är en vy spelaren varken ser eller kan avbryta — och som ligger kvar
+   när arket stängs. Den släpps därför här, i samma andetag som den
+   väntande E-impulsen (G02-E del 1, #150). */
+function overlay(on,html){if(on){InputImpulse.clear("KeyE");
+  if(typeof ridKameraNollstall==="function")ridKameraNollstall("overlay");}
+  ov.classList.toggle("hide",!on);if(html!==undefined)sheet.innerHTML=html;}
 
 /* ── Meny ── */
 function visaMeny(){
@@ -583,6 +589,8 @@ function nollstall(){
   G.tavling=null;BANA.hojd=0.60;
   G.hinderAktiva=false;G.rivna.clear();G.handelser=[];G.nastaHinder=0;
   G.momentIx=0;G.moment=null;G.betyg={};G.scen="meny";
+  /* Ritten nollas — då nollas kameraläget med den (G02-E del 1). */
+  if(typeof ridKameraNollstall==="function")ridKameraNollstall("nollstall");
   document.getElementById("protWrap").hidden=true;
   document.getElementById("approach").textContent="";
 }

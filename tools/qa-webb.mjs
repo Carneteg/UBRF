@@ -11,9 +11,10 @@ import { chromium } from "playwright";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 
-export const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+export const ROT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const DIST = path.join(ROT, "dist");
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json" };
 

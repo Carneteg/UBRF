@@ -14,7 +14,11 @@ const S3={
   redo:false, forsokt:false, canvas:null,
   plats:null, rum:null, statiskt:[], hinderNat:null, stolpNat:null,
   del:{}, tex:{},
-  kam:{x:10,y:2.6,z:52, tx:10,ty:1.4,tz:46, satt:false},
+  /* `lage`/`vikt`/`egetHuvud` är kameralägets utfall (G02-E del 1) och
+     står här med sadelvärden, så att den allra första bildrutan är
+     ryttarperspektiv även om den ritas innan s3Kamera hunnit köra. */
+  kam:{x:10,y:2.6,z:52, tx:10,ty:1.4,tz:46, satt:false,
+       lage:"ryttare", vikt:0, vinkel:null, oga:null, egetHuvud:0},
 };
 
 /* ── Ljussättning per plats och väder ─────────────────────────── */
@@ -542,24 +546,53 @@ function s3Ben(fas,gangart,i){
   return {t1, t2};
 }
 
-/* ── En häst: rigg, ben, man, svans, sadel, ryttare ───────────── */
-function s3RitaHast(o){
-  const D=S3.del, gl=GL;
-  const h=o.hast, M=(h.typ==="ponny"?1.42:1.62)/1.62;    // skala mot 1,62 m
-  const farg=h.farg, man=h.man;
+/* ── Hästens kropp och grundmatris — EN sanning ────────────────────
+   Bröts ut ur s3RitaHast när sadelkameran kom (G02-E del 1, #150).
+   Kameran ska stå i ryttarens ögon, och ögonen sitter i den här
+   matrisen. Räknade renderaren och kameran fram den var för sig hade vi
+   haft två sanningar om var spelaren faktiskt är — precis det som
+   läktarlärdomen i #114 förbjuder ("rendering, kollision, kamera och
+   avatarhöjd ska verifieras tillsammans i den faktiska spelarvägen").
+   Nu bygger båda sin matris ur den här funktionen, med samma indata, i
+   samma bildruta.
+
+   Rena funktioner utan sidoeffekter: de läser `o` och returnerar tal.
+   Att anropa dem två gånger i en bildruta ger identiskt svar, vilket är
+   vad som gör kamerans läge deterministiskt. */
+function s3HastKropp(o){
+  const h=o.hast, M=(h&&h.typ==="ponny"?1.42:1.62)/1.62;  // skala mot 1,62 m
   const gangart=o.gangart||"halt", fas=o.fas||0;
   const luft=o.luft||0;
   const u=luft>0?1-luft/0.55:0;                          // 0→1 genom språnget
   const bage=luft>0?Math.sin(Math.PI*u):0;
   /* Kroppens rörelse: takten lyfter, galoppen vaggar, språnget stiger.
      Det här är gångartens egen rytm, räknad ur fasen — den ska hållas
-     skild från svängens lutning nedan, annars går det inte att trimma
-     den ena utan att den andra ändras. */
+     skild från svängens lutning, annars går det inte att trimma den ena
+     utan att den andra ändras. */
   let bob=0,lut=0;
   if(gangart==="trav")bob=0.035*Math.sin(4*Math.PI*fas);
   else if(gangart==="galopp"){bob=0.06*Math.sin(2*Math.PI*fas);lut=0.07*Math.sin(2*Math.PI*fas);}
   else if(gangart==="skritt")bob=0.018*Math.sin(4*Math.PI*fas);
   if(luft>0){bob+=1.15*bage; lut-=0.52*Math.cos(Math.PI*u);}
+  return {M,gangart,fas,luft,u,bage,bob,lut};
+}
+/* Grundmatris: position, riktning (hästen är byggd mot +X), skala.
+   Svängens lutning är en rullning kring färdriktningen och läggs som en
+   egen rotation efter kursen, så att den inte blandas ihop med
+   gångartens vaggning. */
+function s3HastBas(o,K){
+  return M4.mul(
+    M4.mul(M4.translation(o.x,K.bob*K.M,o.z), M4.rotY(-o.rikt)),
+    M4.mul(M4.mul(M4.rotX(o.banlut||0), M4.rotZ(K.lut)), M4.skala(K.M)));
+}
+
+/* ── En häst: rigg, ben, man, svans, sadel, ryttare ───────────── */
+function s3RitaHast(o){
+  const D=S3.del, gl=GL;
+  const h=o.hast;
+  const farg=h.farg, man=h.man;
+  const K=s3HastKropp(o);
+  const M=K.M, gangart=K.gangart, fas=K.fas, luft=K.luft, u=K.u, bage=K.bage;
 
   /* ── Svängens lutning ─────────────────────────────────────────────
      Kroppen lade sig inte i svängen: positionen böjde av medan hästen
@@ -574,13 +607,7 @@ function s3RitaHast(o){
      häst, och mer läser som fel. */
   const banLut=o.banlut||0;
 
-  /* Grundmatris: position, riktning (hästen är byggd mot +X), skala.
-     Svängens lutning är en rullning kring färdriktningen och läggs som
-     en egen rotation efter kursen, så att den inte blandas ihop med
-     gångartens vaggning. */
-  const bas=M4.mul(
-    M4.mul(M4.translation(o.x,bob*M,o.z), M4.rotY(-o.rikt)),
-    M4.mul(M4.mul(M4.rotX(banLut), M4.rotZ(lut)), M4.skala(M)));
+  const bas=s3HastBas(o,K);
   const P=(x,y,z)=>[x,y,z];                              // lokala punkter
   const rita=(nat,mat,ton)=>{ gl.rita(nat,M4.mul(bas,mat),{ton}); };
   /* Skuggan läggs en gång för hela ekipaget, som en mjuk fläck under
@@ -591,7 +618,7 @@ function s3RitaHast(o){
   rita(D.kropp,M4.ny(),farg);
   /* Halsen: reser sig när hästen samlas, sträcks på lång tygel. */
   const samling=o.samling===undefined?0.4:o.samling;
-  const halsA=P(0.84,1.34,0), halsL=0.88+0.07*(1-samling);
+  const halsA=P(HALS_ANKARE[0],HALS_ANKARE[1],HALS_ANKARE[2]), halsL=0.88+0.07*(1-samling);
   /* Betande häst sänker halsen till marken; annars styr samlingen. */
   const halsVin=o.beta ? -0.72
     : 0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
@@ -716,11 +743,16 @@ function s3Skuggflack(x,z,r,styrka,golv){
   gl.depthMask(true); gl.disable(gl.BLEND);
 }
 
-/* ── Ryttaren: sits, lättridning, lätt sits och tyglarna ──────── */
-function s3RitaRyttare(bas,o){
-  /* o.jag sant = du. Övriga elever ritas ur normaluppsättningen. */
-  const D=(o.jag&&S3.del.jag&&S3.del.jag.torso)?S3.del.jag:S3.del, gl=GL;
-  const rita=(nat,mat,ton)=>{ gl.rita(nat,M4.mul(bas,mat),{ton}); };
+/* ── Ryttarens sits och ögonpunkt — EN sanning ─────────────────────
+   Bröts ut ur s3RitaRyttare för sadelkameran (G02-E del 1, #150). Allt
+   som avgör var ryttarens huvud sitter räknas HÄR, en gång, och läses
+   både av den som ritar henne och av den som ställer kameran i hennes
+   ögon. Två kopior av den här matematiken hade betytt att bilden och
+   ögat kunde glida isär i en trav — samma sorts dubbla sanning som
+   #114 kostade oss en gång.
+
+   Ren funktion: samma `o` ger samma svar, utan sidoeffekter. */
+function s3Sits(o){
   const a=o.aids||{sits:0.5,tygel:0.3,lattridning:true,diagonal:1};
   /* Lättridning: upp ur sadeln vartannat travsteg. */
   const latt=o.gangart==="trav"&&a.lattridning
@@ -729,7 +761,7 @@ function s3RitaRyttare(bas,o){
      Det här är den PEDAGOGISKA sitsen — den ryttaren väljer — och den
      ändras inte av det som läggs till nedan. */
   let lutning=0.16+0.42*(0.5-clamp(a.sits,0,1));
-  if(o.luft>0)lutning=0.55*o.bage+0.16;
+  if(o.luft>0)lutning=0.55*(o.bage||0)+0.16;
 
   /* ── Sekundärrörelsen ─────────────────────────────────────────────
      Ovanpå sitsen, aldrig i stället för den: de ofrivilliga rörelser en
@@ -759,6 +791,84 @@ function s3RitaRyttare(bas,o){
   const balans=(o.jag&&typeof G!=="undefined"&&G.ryttarRoll)||0;
 
   const satY=1.64+latt+rytm, satX=0.06+lutning*0.10;
+  /* Huvudet blickar dit hästen ska; håret följer med. Huvudet håller
+     sig stillare än överkroppen — en ryttare stabiliserar blicken, och
+     det är också det som skiljer en ryttare från en säck. */
+  const hx=satX+0.04+Math.sin(lutning)*0.50, hy=satY+0.28+Math.cos(lutning)*0.33;
+  const huvM=M4.mul(M4.mul(M4.translation(hx,hy,0),
+    M4.rotZ(-lutning*0.6-troghet*0.35)), M4.rotX(balans*0.4));
+  return {a,latt,lutning,rytm,troghet,balans,satX,satY,hx,hy,huvM};
+}
+
+/* Ögonpunkten i huvudets EGET rum.
+
+   Talen är inte valda, de är AVLÄSTA: `D.huvudR` byggs med två pupiller
+   på x 0,072, y 0,002, z ±0,035 (se ryttarnätet ovan). Kameran ställs
+   alltså där ryttarens ögon faktiskt är modellerade, mitt emellan dem —
+   inte på en uppfunnen ögonhöjd. Ändras huvudnätet ska den här raden
+   ändras med det, och `ryttarvytest` mäter att den följer med. */
+const RYTTAR_OGA=[0.072,0.002,0];
+
+/* Ögonpunkten i VÄRLDEN för ett ekipage. Returnerar matrisen, så att
+   både läge och blickriktning kan läsas ur samma transform. */
+function s3OgaMatris(o){
+  const K=s3HastKropp(o);
+  const bas=s3HastBas(o,K);
+  const S=s3Sits({...o,bage:K.bage});
+  return M4.mul(M4.mul(bas,S.huvM),
+    M4.translation(RYTTAR_OGA[0],RYTTAR_OGA[1],RYTTAR_OGA[2]));
+}
+
+/* Manken — där halsen börjar, i hästens eget rum. Stod som ett par
+   siffror inne i s3RitaHast tills sadelvyn behövde veta var hästen är i
+   bild: `ryttarvytest` mäter att hals och öron LIGGER i synfältet, och
+   den mätningen måste läsa samma punkt som renderaren ritar. */
+const HALS_ANKARE=[0.84,1.34,0];
+
+/* Mankens världspunkt för ett ekipage. Samma bas som ögat, alltså samma
+   bildruta och samma sanning. */
+function s3HalsPunkt(o){
+  const K=s3HastKropp(o);
+  const m=M4.mul(s3HastBas(o,K),
+    M4.translation(HALS_ANKARE[0],HALS_ANKARE[1],HALS_ANKARE[2]));
+  return {x:m[12], y:m[13], z:m[14]};
+}
+
+/* DITT ekipage som ritfunktionen ser det. En enda beskrivning, byggd ur
+   samma speltillstånd som `rita3D` skickar in i `s3RitaHast` samma
+   bildruta — kameran och renderaren får aldrig läsa olika hästar. */
+function s3MittEkipage(){
+  const h=(typeof HORSES!=="undefined")&&HORSES[G.hastId];
+  if(!h)return null;
+  return {hast:h, jag:true, x:G.px, z:G.py, rikt:G.rikt,
+    gangart:G.ride?G.ride.gangart:"halt", fas:G.gaitFas, luft:G.luft,
+    banlut:G.banLut||0, aids:G.aids};
+}
+
+/* Din egen ögonpunkt, byggd ur exakt de tillstånd renderaren ritar
+   hästen med i samma bildruta. Saknas häst finns ingen sadel att sitta
+   i, och då säger funktionen det i stället för att gissa en punkt. */
+function s3MinOgonpunkt(){
+  const o=s3MittEkipage();
+  if(!o)return null;
+  const m=s3OgaMatris(o);
+  return {x:m[12], y:m[13], z:m[14]};
+}
+
+/* Din hästs manke i världen — mätpunkten för "hästen syns i bild". */
+function s3MinHalsPunkt(){
+  const o=s3MittEkipage();
+  return o?s3HalsPunkt(o):null;
+}
+
+/* ── Ryttaren: sits, lättridning, lätt sits och tyglarna ──────── */
+function s3RitaRyttare(bas,o){
+  /* o.jag sant = du. Övriga elever ritas ur normaluppsättningen. */
+  const D=(o.jag&&S3.del.jag&&S3.del.jag.torso)?S3.del.jag:S3.del, gl=GL;
+  const rita=(nat,mat,ton,alfa)=>{ gl.rita(nat,M4.mul(bas,mat),
+    alfa===undefined?{ton}:{ton,alfa}); };
+  const S=s3Sits(o);
+  const {a,lutning,troghet,balans,satX,satY,huvM}=S;
   /* Bäckenet bär rytmen och tröghetens halva; överkroppen hela, så att
      kroppen viker sig i midjan i stället för att luta som en stolpe. */
   const bal=M4.mul(M4.mul(M4.translation(satX,satY,0),M4.rotZ(-lutning*0.5-troghet*0.5)),
@@ -767,15 +877,26 @@ function s3RitaRyttare(bas,o){
   const torso=M4.mul(M4.mul(M4.translation(satX+0.02,satY+0.28,0),
     M4.rotZ(-lutning-troghet)), M4.rotX(balans));
   rita(D.torso,torso,"#FFFFFF");
-  /* Huvudet blickar dit hästen ska; håret följer med. Huvudet håller
-     sig stillare än överkroppen — en ryttare stabiliserar blicken, och
-     det är också det som skiljer en ryttare från en säck. */
-  const hx=satX+0.04+Math.sin(lutning)*0.50, hy=satY+0.28+Math.cos(lutning)*0.33;
-  const huvM=M4.mul(M4.mul(M4.translation(hx,hy,0),
-    M4.rotZ(-lutning*0.6-troghet*0.35)), M4.rotX(balans*0.4));
-  rita(D.har,huvM,"#FFFFFF");
-  rita(D.huvudR,huvM,"#FFFFFF");
-  rita(D.hjalm,M4.mul(huvM,M4.translation(0,0.100,0)),"#FFFFFF");
+  /* Huvudet, håret och hjälmen. Matrisen kommer ur s3Sits — samma
+     transform som kameran läser sin ögonpunkt ur.
+
+     SADELVYN (G02-E del 1): ditt eget huvud sitter runt objektivet, och
+     ett huvud som ritas ovanpå kameran är bara en vägg av hy och hjälm.
+     Det tonas därför ut när kameran går in i sadeln och tonas in igen
+     när den lämnar den. `S3.kam.egetHuvud` är kamerans EGEN vikt — samma
+     tal som flyttade den — så synligheten kan inte glida ur synk med var
+     kameran faktiskt står. Resten av kroppen ritas som förut: armar,
+     händer, tyglar, ben och stövlar är vad man SKA se från sadeln.
+
+     Bara ditt eget huvud rörs. Övriga ekipage sitter i sina sadlar, inte
+     i din. */
+  const huvAlfa=o.jag&&S3.kam&&S3.kam.egetHuvud!==undefined?S3.kam.egetHuvud:1;
+  if(huvAlfa>0.004){
+    const opak=huvAlfa>=0.999?undefined:huvAlfa;
+    rita(D.har,huvM,"#FFFFFF",opak);
+    rita(D.huvudR,huvM,"#FFFFFF",opak);
+    rita(D.hjalm,M4.mul(huvM,M4.translation(0,0.100,0)),"#FFFFFF",opak);
+  }
   /* Benen: låret ner mot stigbygeln, vaden längs hästens sida. */
   for(const s of [-1,1]){
     const hoft=[satX-0.02,satY-0.02,s*0.19];
@@ -1013,8 +1134,48 @@ function s3RitaHinder(){
   }
 }
 
-/* ── Kameran: bakom hästen, mjukt efterföljande ───────────────── */
-/* Kamerans lägen per gångart. Se kommentaren i s3Kamera(). */
+/* ── Kameran under ritten: SADELN ÄR STANDARD ─────────────────────
+   G02-E del 1 (#150), Tobias produktbeslut 2026-09-08.
+
+   Före det här satt ridkameran på en bom 3,8–5,1 m BAKOM hästen. Det är
+   en tredjepersonskamera: man ser sig själv rida. Beslutet är att
+   standardvyn ska vara RYTTARENS — vyn från sadeln, med hästens hals och
+   öron och vägen framåt.
+
+   Kameran har därför två färdiga mål varje bildruta:
+
+     A. SADELN — ögonpunkten hämtas ur riggens egen ryttare via
+        `s3MinOgonpunkt()`, alltså ur exakt samma sits- och huvudmatris
+        som `s3RitaRyttare` ritar henne med. Ingen uppfunnen ögonhöjd och
+        inga anläggningskoordinater: flyttas ryttaren i modellen flyttas
+        kameran med, för det är samma matris.
+     B. BOMMEN — den gamla utifrånvyn, oförändrad, numera lånad ut som
+        feedbackvinkel.
+
+   `Kameralage` ger vikten mellan dem. Vikt 0 är sadeln, vikt 1 är
+   vinkeln, och renderaren interpolerar. En halv vikt är alltså en kamera
+   på väg — inte ett tredje specialfall som kan gå sönder för sig.
+
+   INGEN SKAKNING. Roblox-sidans kamerakommentar säger det redan och det
+   gäller dubbelt här: skakning läser som skada, inte som fart, och gör
+   folk åksjuka i förstapersonsnära vinklar. Sadelvyn LÄGGER därför inte
+   till någon rörelse. Den DÄMPAR den rörelse riggen redan har: taktens
+   studs och lättridningens lyft mjukas hårt i höjdled och klampas mot
+   huvudets faktiska läge, medan sidled sitter nästan stelt — man ska
+   sitta i sadeln, inte sväva bredvid den. */
+
+/* Bomkamerans lägen per gångart.
+
+   TALEN ÄR OFÖRÄNDRADE. BETYDELSEN ÄR DET INTE (G02-E del 1). Fram till
+   #150 beskrev tabellen ridningens standardvy. Det gör den inte längre —
+   standarden är sadeln. Tabellen beskriver nu den UTIFRÅNVY som lånas ut
+   som feedbackvinkel `utifran`, och de andra vinklarna skalar den.
+
+   Att talen står kvar orörda är avsiktligt: gångartens andning är ett
+   trimmat Gate 01-uttryck, och `RidKanon.KAMERA` samt paritetsspecen
+   mäter kvoterna mellan dem. Meningsändringen är skriven i
+   tools/exportera-ridkanon.mjs och i roblox/tests/paritet.spec.luau, så
+   att ingen läser tabellen som "så här ser ridningen ut" igen. */
 const KAM_GANG={
   halt  :{bak:3.78, hojd:1.88, fov:0.000},
   skritt:{bak:4.05, hojd:1.95, fov:0.000},
@@ -1022,7 +1183,45 @@ const KAM_GANG={
   galopp:{bak:5.13, hojd:2.25, fov:0.070},
 };
 
+/* Sadelvyns egna konstanter. DERIVED — spelkänsla, inte UBRF-fakta, och
+   alltså Tobias sak att döma i den riktiga webbläsaren.
+
+   TRE AV DEM BÄR PARITETEN och står därför som enhetslösa tal eller
+   kvoter, inte som meter: sekunder är sekunder på båda ytorna, och en
+   kvot är en kvot. Roblox `Config.SADELKAMERA` bär EXAKT samma tal, och
+   `camera.spec` mäter att de inte glidit isär. Det som INTE kan vara
+   lika är längder — webben räknar i meter, Roblox i studs — och de
+   räknas därför ur ytans egna bomvärden i stället för att kopieras. */
+const KAM_SADEL={
+  YAW_TAU  :0.10,   // s — blicken hinner ifatt hästens kurs; kortare än bommens
+  TAU_XZ   :0.05,   // s — ögat sitter nästan stelt i sadeln i sidled
+  TAU_Y    :0.30,   // s — taktens studs dämpas hårt i höjdled
+  FOV_KVOT :1.128,  // × bomkamerans synfält: hals, öron OCH väg ska rymmas
+  NED_KVOT :0.0607, // fall delat med siktavstånd = 3,5° under horisonten
+  TAK_Y    :0.11,   // m — ögat får aldrig glida längre än så från huvudet
+  BLICK_KVOT:5.38,  // × bommens siktavstånd (2,6 m) = 14,0 m
+};
+/* Längderna och synfältet HÄRLEDS ur bomkamerans egna tal, precis som
+   Roblox härleder sina ur sina. Det är hela paritetstricket: kvoterna är
+   lika, alltså blir synfältet och blickens vinkel lika, medan meter
+   förblir meter och studs förblir studs. */
+KAM_SADEL.BLICK=2.6*KAM_SADEL.BLICK_KVOT;              // 14,0 m
+KAM_SADEL.FALL =KAM_SADEL.BLICK*KAM_SADEL.NED_KVOT;    // 0,85 m
+KAM_SADEL.FOV  =1.02*KAM_SADEL.FOV_KVOT;               // 1,15 rad ≈ 66°
+const KAM_BOM_YAW_TAU=0.16;
+
 function s3Kamera(dt){
+  const k=S3.kam;
+
+  /* ── KAMERALÄGET (G02-E del 1) ────────────────────────────────────
+     Stegas HÄR för att drivas av samma dt som resten av kameran och
+     aldrig av väggklockan — det är vad som gör återgången deterministisk.
+     Saknas modulen är vikten noll, alltså sadeln, vilket är rätt sorts
+     degradering: standardvyn ska inte kunna gå förlorad. */
+  const KL=(typeof Kameralage!=="undefined")
+    ? Kameralage.stega(Kameralage.ritten,dt)
+    : {lage:"ryttare",id:null,vikt:0,yaw:0,bak:1,hojd:1,fov:1,blick:1};
+
   /* ── Kamerans egen kurs ───────────────────────────────────────────
      Kameran satt fastsvetsad i hästens kurs: varje styrutslag vred hela
      bilden i samma bildruta som hästen vred sig, vilket läser som att
@@ -1030,20 +1229,32 @@ function s3Kamera(dt){
      som följer hästens med kort fördröjning — hästen svänger först,
      bilden hinner ifatt.
 
+     I sadeln är fördröjningen KORTARE. Där är man ryttaren, inte en
+     kamera bakom henne, och en ryttare vrider huvudet in i svängen
+     tidigare än en släpande bom gör. Konstanten glider med vikten, så
+     att det bara finns EN kurs att hålla reda på.
+
      Skillnaden räknas den korta vägen runt cirkeln, annars snurrar
      kameran ett helt varv när kursen passerar noll. */
-  const k=S3.kam;
-  const KAM_YAW_TAU=0.16;
+  const w=Math.max(0,Math.min(1,KL.vikt||0));
+  const yawTau=KAM_SADEL.YAW_TAU+(KAM_BOM_YAW_TAU-KAM_SADEL.YAW_TAU)*w;
   if(k.yaw===undefined)k.yaw=G.rikt;
   {let d=G.rikt-k.yaw;
    while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
-   k.yaw+=d*(1-Math.exp(-dt/KAM_YAW_TAU));}
+   k.yaw+=d*(1-Math.exp(-dt/yawTau));}
 
   /* Boomen ligger bakom kamerans kurs; blicken siktar i hästens
-     FÄRDRIKTNING, så att vägen framåt är läsbar även mitt i en sväng. */
-  const bakat=[Math.cos(k.yaw),0,Math.sin(k.yaw)];
+     FÄRDRIKTNING, så att vägen framåt är läsbar även mitt i en sväng.
+     Feedbackvinkeln vrider BOOMEN, inte hästens kurs — därför fortsätter
+     styrningen läsa exakt samma riktning som förut. */
+  const bakat=[Math.cos(k.yaw+KL.yaw),0,Math.sin(k.yaw+KL.yaw)];
   const fram=[Math.cos(G.rikt),0,Math.sin(G.rikt)];
-  /* ── KAMERAN ANDAS MED GÅNGARTEN (G02-A.1 P6) ─────────────────────
+  /* Sadelns blick följer kamerakursen, inte hästens ögonblickskurs: det
+     är den som är stabiliserad, och en blick som rycker per styrutslag
+     är precis vad man inte ska ha nära förstaperson. */
+  const blickFram=[Math.cos(k.yaw),0,Math.sin(k.yaw)];
+
+  /* ── MÅL B: BOMMEN — KAMERAN ANDAS MED GÅNGARTEN (G02-A.1 P6) ─────
      Boomen låg fast på 4,05 m i alla gångarter. Galoppen såg därför ut
      precis som skritten, bara snabbare — och den enda signalen om att
      hästen går fortare var att marken rullade förbi.
@@ -1057,10 +1268,17 @@ function s3Kamera(dt){
 
      Absoluta kameratal behöver inte vara lika på de två ytorna —
      rendering får vara plattformsspecifik — men FÖRHÅLLANDET ska vara
-     det, för det är förhållandet man känner. */
+     det, för det är förhållandet man känner.
+
+     Bommen räknas VARJE bildruta, även när den inte syns. Annars hade
+     dess utjämnade längd stått och ruttnat på ett gammalt värde och
+     hoppat till fram första gången en feedbackvinkel begärdes. */
   const KG=KAM_GANG[(G.ride&&G.ride.gangart)||"halt"]||KAM_GANG.skritt;
-  const hojd=G.luft>0?2.30:KG.hojd;
-  let bakMal=G.luft>0?5.0:KG.bak;
+  /* Feedbackvinkeln SKALAR bomkamerans tal i stället för att sätta egna.
+     Gångartens andning finns alltså kvar även i feedbackvyn — och en
+     vinkel kan aldrig råka nollställa den. */
+  const bomHojd=(G.luft>0?2.30:KG.hojd)*KL.hojd;
+  let bakMal=(G.luft>0?5.0:KG.bak)*KL.bak;
 
   /* Boomen kortas tills kameran ligger innanför rummets väggar. Utan
      det går kameran rakt genom sargen så fort man rider i ett hörn —
@@ -1089,32 +1307,118 @@ function s3Kamera(dt){
   if(k.bak===undefined)k.bak=bakMal;
   k.bak+=(bakMal-k.bak)*(1-Math.exp(-dt/(bakMal<k.bak?0.10:0.42)));
 
-  const mx=G.px-bakat[0]*k.bak, mz=G.py-bakat[2]*k.bak;
-  if(!k.satt){k.x=mx;k.y=hojd;k.z=mz;k.tx=G.px;k.ty=1.35;k.tz=G.py;k.satt=true;}
+  const bomX=G.px-bakat[0]*k.bak, bomZ=G.py-bakat[2]*k.bak;
+  const bomTx=G.px+fram[0]*2.6*KL.blick;
+  const bomTy=1.58+(G.luft>0?0.6:0);
+  const bomTz=G.py+fram[2]*2.6*KL.blick;
+  const bomFov=(1.02+KG.fov)*KL.fov;
+
+  /* ── MÅL A: SADELN ────────────────────────────────────────────────
+     Ögonpunkten kommer ur riggen. Finns ingen häst finns ingen sadel att
+     sitta i — då faller kameran tillbaka på bommen i stället för att
+     gissa fram en punkt i luften. Rätt sorts degradering: hellre den
+     gamla kända vyn än en påhittad. */
+  const oga=s3MinOgonpunkt();
+  /* Ingen sadel ⇒ full bomvikt, oavsett vad läget säger. */
+  const vb=oga?w:1;
+
+  let malX,malY,malZ,malTx,malTy,malTz,malFov,tauXZ,tauY;
+  if(oga){
+    /* Blicken siktar framåt och något nedåt, så att både hästens hals
+       och vägen framför henne ligger i bild. Fallet är litet — en
+       ryttare tittar dit hon ska, inte ner i manen. */
+    const sadTx=oga.x+blickFram[0]*KAM_SADEL.BLICK;
+    const sadTy=oga.y-KAM_SADEL.FALL;
+    const sadTz=oga.z+blickFram[2]*KAM_SADEL.BLICK;
+    malX =oga.x+(bomX -oga.x)*vb;
+    malY =oga.y+(bomHojd-oga.y)*vb;
+    malZ =oga.z+(bomZ -oga.z)*vb;
+    malTx=sadTx+(bomTx-sadTx)*vb;
+    malTy=sadTy+(bomTy-sadTy)*vb;
+    malTz=sadTz+(bomTz-sadTz)*vb;
+    malFov=KAM_SADEL.FOV+(bomFov-KAM_SADEL.FOV)*vb;
+    tauXZ=KAM_SADEL.TAU_XZ+(0.13-KAM_SADEL.TAU_XZ)*vb;
+    tauY =KAM_SADEL.TAU_Y +(0.13-KAM_SADEL.TAU_Y )*vb;
+  }else{
+    malX=bomX; malY=bomHojd; malZ=bomZ;
+    malTx=bomTx; malTy=bomTy; malTz=bomTz;
+    malFov=bomFov; tauXZ=0.13; tauY=0.13;
+  }
+
+  if(!k.satt){k.x=malX;k.y=malY;k.z=malZ;k.tx=malTx;k.ty=malTy;k.tz=malTz;k.satt=true;}
 
   /* Position och blickpunkt har SEPARATA svar. Blicken är snabbare än
      kroppen: den ska ligga stadigt på vägen framåt medan kameran själv
      glider mjukare. Med en gemensam faktor blev det antingen en slängig
-     blick eller en trög kamera. */
-  const fPos=1-Math.exp(-dt/0.13);
+     blick eller en trög kamera.
+
+     Höjden har ett EGET svar, och det är sadelvyns hela dämpning: i
+     trav lyfter lättridningen huvudet 8,5 cm två gånger per steg, och
+     den rörelsen ska kännas i bilden utan att bli en studsmatta. */
+  const fXZ=1-Math.exp(-dt/tauXZ);
+  const fY=1-Math.exp(-dt/tauY);
   const fBlick=1-Math.exp(-dt/0.09);
-  k.x+=(mx-k.x)*fPos; k.y+=(hojd-k.y)*fPos; k.z+=(mz-k.z)*fPos;
+  k.x+=(malX-k.x)*fXZ; k.z+=(malZ-k.z)*fXZ;
+  k.y+=(malY-k.y)*fY;
+  /* Dämpningen får inte bli en gummisnodd: ögat ska aldrig hamna längre
+     från huvudets faktiska höjd än takvärdet. Taket lyfts med vikten,
+     för bomkameran har ingen sådan koppling. */
+  {const tak=KAM_SADEL.TAK_Y+vb*3.0;
+   k.y=Math.max(malY-tak,Math.min(malY+tak,k.y));}
   /* Mjukningen kan glida ut genom en vägg i en sväng även när målet
      ligger innanför. Ett hårt tak efteråt, så att det aldrig händer. */
   if(R){
     k.x=Math.max(R.x0,Math.min(R.x1,k.x));
     k.z=Math.max(R.z0,Math.min(R.z1,k.z));
   }
-  k.tx+=((G.px+fram[0]*2.6)-k.tx)*fBlick;
-  k.ty+=((1.58+(G.luft>0?0.6:0))-k.ty)*fBlick;
-  k.tz+=((G.py+fram[2]*2.6)-k.tz)*fBlick;
+  k.tx+=(malTx-k.tx)*fBlick;
+  k.ty+=(malTy-k.ty)*fBlick;
+  k.tz+=(malTz-k.tz)*fBlick;
   /* Synfältet mjukas för sig, och HÄR — det är kameratillstånd, inte
      rendering. Första försöket låg i ritfunktionen, och då fanns fov
      inte alls när kameran stegades utan att ritas. Ett hopp i synfältet
      vid ett gångartsbyte läser dessutom som en zoom, inte som fart. */
-  if(k.fov===undefined)k.fov=1.02+KG.fov;
-  k.fov+=((1.02+KG.fov)-k.fov)*(1-Math.exp(-dt/0.45));
+  if(k.fov===undefined)k.fov=malFov;
+  k.fov+=(malFov-k.fov)*(1-Math.exp(-dt/0.45));
+
+  /* ── Vad renderaren behöver veta om läget ─────────────────────────
+     `egetHuvud` är alfan på ditt eget huvud, hår och hjälm. I sadeln
+     sitter de runt objektivet och ska bort; på bommen ska de tillbaka.
+     Att tona i stället för att slå av/på gör att bytet inte poppar mitt
+     i en övergång. Fälten sparas på kameran och inte på en egen
+     modul, för de ÄR kamerans läge — en andra sanning om samma sak är
+     precis det #114 kostade oss. */
+  k.vikt=vb;
+  k.lage=vb<0.5?"ryttare":"feedback";
+  k.vinkel=KL.id||null;
+  k.oga=oga;
+  {const p=Math.max(0,Math.min(1,(vb-0.30)/0.40));
+   k.egetHuvud=p*p*(3-2*p);}
   return k;
+}
+
+/* Nollställ ridkameran HÅRT (G02-E del 1, #150).
+
+   Ett anrop, en sanning, för alla de tillfällen där bilden ändå byts ut
+   eller täcks: scenbyte, avsittning, overlay och lektionsstart. Två
+   saker händer, och båda måste hända ihop:
+
+     · kameraläget släpps utan uttoning, så att ingen begäran kan ligga
+       kvar och tändas i nästa scen,
+     · kameran SNAPPAR i stället för att flyga, av samma skäl som
+       `kameraNollstall()` i src/world.js snappar vandringskameran —
+       en halv sekunds flygning genom väggar efter ett scenbyte.
+
+   Returnerar om en feedbackvy faktiskt var uppe, så att tester kan mäta
+   att avbrottet gjorde något. */
+function ridKameraNollstall(orsak){
+  const brots=(typeof Kameralage!=="undefined")
+    ? Kameralage.nollstall(Kameralage.ritten,orsak||"nollstall") : false;
+  if(S3&&S3.kam){
+    S3.kam.satt=false;
+    S3.kam.vikt=0; S3.kam.lage="ryttare"; S3.kam.vinkel=null; S3.kam.egetHuvud=0;
+  }
+  return brots;
 }
 
 /* ── Bildrutan ────────────────────────────────────────────────── */

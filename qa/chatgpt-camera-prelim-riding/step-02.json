@@ -1,0 +1,127 @@
+{
+  "scene": "stallinne",
+  "horse": "blackrock_jack",
+  "horseName": "Blackrock Jack",
+  "horsePlace": "box",
+  "met": true,
+  "equipment": false,
+  "care": false,
+  "ride": false,
+  "pass": 0,
+  "objective": {
+    "id": "utrustning",
+    "scene": "stallinne",
+    "pos": [
+      9.8,
+      62.6
+    ],
+    "text": "Hämta sadel + träns"
+  },
+  "player": {
+    "x": 5.1038315417411075,
+    "y": 43.158481348628364,
+    "z": 0
+  },
+  "riding": {
+    "x": 10,
+    "y": 52,
+    "momentIx": 0
+  },
+  "prompt": {
+    "text": "Sköt om Blackrock Jack vid boxen",
+    "pos": [
+      4.389,
+      43.55
+    ]
+  },
+  "overlay": true,
+  "buttons": [
+    {
+      "id": "bMocka",
+      "text": "1 · Mocka boxen\n—",
+      "disabled": false
+    },
+    {
+      "id": "bFodra",
+      "text": "2 · Fodra och vattna\n—",
+      "disabled": false
+    },
+    {
+      "id": "bSkots",
+      "text": "3 · Visitera, rykta, kratsa, sadla\nsadeln saknas",
+      "disabled": false
+    },
+    {
+      "id": "bStang",
+      "text": "Stäng",
+      "disabled": false
+    }
+  ],
+  "view": "2d",
+  "map": {
+    "ox": 540.9292351679771,
+    "oy": 30,
+    "s": 9.43531093638313,
+    "h": 69.95,
+    "scene": "stallinne"
+  },
+  "sceneDoors": [
+    {
+      "to": "gard",
+      "pos": [
+        10.5,
+        68.95
+      ],
+      "text": "Ut genom entrén — mot grusplanen"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        1.6,
+        64.35
+      ],
+      "text": "Ut på gårdssidan"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        5.6,
+        1.6
+      ],
+      "text": "Ut till gårdsplanen — mot Husbyvägen"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        0.9,
+        29.549999999999997
+      ],
+      "text": "Hästgången — in i ridhuset"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        13.074999999999989,
+        1.6000000000000014
+      ],
+      "text": "Ut"
+    }
+  ],
+  "box": {
+    "sida": "W",
+    "rad": {
+      "id": "W",
+      "x0": 0,
+      "djup": 4.389,
+      "vetter": 1,
+      "gang": "A",
+      "yttervagg": true
+    },
+    "i": 9,
+    "y": 43.55,
+    "dorr": [
+      4.389,
+      43.55
+    ]
+  }
+}

@@ -156,6 +156,56 @@ function kameralagen() {
   return ut;
 }
 
+/* ── G02-E del 1 (#150): SADELKAMERANS PARITETSTAL ────────────────────
+   Sadelvyn är ridningens standardvy på båda ytorna. De tal som bär
+   pariteten är enhetslösa — sekunder och kvoter — och läses här ur
+   src/scen3d.js precis som KAM_GANG. Längderna exporteras INTE: de är
+   meter på webben och studs i Roblox och räknas på varje yta ur dess
+   egna bomvärden, vilket är hela poängen med att kvoterna är lika. */
+const SADEL_FALT = ["YAW_TAU", "TAU_XZ", "TAU_Y", "FOV_KVOT", "NED_KVOT", "BLICK_KVOT"];
+function sadelkameran() {
+  const m = las("src/scen3d.js").match(/const KAM_SADEL=\{([\s\S]*?)\};/);
+  if (!m) {
+    console.error("FEL  hittar inte KAM_SADEL i src/scen3d.js");
+    process.exit(1);
+  }
+  const ut = {};
+  for (const rad of m[1].matchAll(/(\w+)\s*:\s*(-?[0-9.]+)/g)) ut[rad[1]] = Number(rad[2]);
+  for (const namn of SADEL_FALT) if (ut[namn] === undefined) {
+    console.error(`FEL  KAM_SADEL saknar ${namn}`);
+    process.exit(1);
+  }
+  return ut;
+}
+
+/* ── G02-E del 1 (#150): FEEDBACKVINKLARNA ───────────────────────────
+   Körs, inte lästs som text: src/riding/kameralage.js är en fristående
+   modul utan DOM-beroenden, och den VALIDERAR sin egen tabell vid
+   inläsning. Att köra den betyder alltså att exporten bara kan skriva
+   ned vinklar som spelet faktiskt skulle acceptera — en vinkel som
+   underkänts hamnar aldrig i kanonen och kan därför inte se ut att vara
+   i paritet med en Roblox-vinkel som lever. */
+function feedbackvinklarna() {
+  const c = { console: { warn: (...a) => console.error("VARN ", ...a), log() {} } };
+  vm.createContext(c);
+  vm.runInContext(las("src/riding/kameralage.js"), c, { filename: "src/riding/kameralage.js" });
+  const K = c.Kameralage;
+  if (!K || !K.VINKLAR) {
+    console.error("FEL  src/riding/kameralage.js exporterade ingen VINKLAR-tabell");
+    process.exit(1);
+  }
+  const namn = Object.keys(K.VINKLAR).sort();
+  if (!namn.length) {
+    console.error("FEL  inga feedbackvinklar överlevde valideringen");
+    process.exit(1);
+  }
+  if (!namn.includes("utifran")) {
+    console.error("FEL  vinkeln `utifran` saknas — den gamla bomvyn måste finnas kvar");
+    process.exit(1);
+  }
+  return { namn, tabell: K.VINKLAR };
+}
+
 /* ══════════════════════════════════════════════════════════════════
    CONTEXTKÄLLORNA (senior re-review av #87, blocker 2)
 
@@ -387,6 +437,8 @@ const scen = scenario();
 
 const styr = styrkanon();
 const kam = kameralagen();
+const sadel = sadelkameran();
+const vinklar = feedbackvinklarna();
 const trosklar = mataTrosklar();
 
 const rader = [];
@@ -491,8 +543,14 @@ rader.push("     inte ändras fortare än gångartens kurvaturtak delat med den 
 rader.push("     tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]");
 rader.push(`RidKanon.KAPPA_RAT_TID = ${tal(styr.ratTid)}`);
 rader.push("");
-rader.push("--[[ Kameraläget per gångart ur src/scen3d.js (G02-A.1 P6). bak i");
+rader.push("--[[ Bomkameran per gångart ur src/scen3d.js (G02-A.1 P6). bak i");
 rader.push("     meter bakom hästen, hojd i meter, fov som tillägg i radianer.");
+rader.push("");
+rader.push("     BETYDELSEN ÄNDRADES I G02-E DEL 1 (#150). Talen är oförändrade,");
+rader.push("     men de beskriver INTE LÄNGRE ridningens standardvy. Standarden är");
+rader.push("     sadeln — ryttarens eget perspektiv, se RidKanon.SADELKAMERA. Den");
+rader.push("     här tabellen beskriver den UTIFRÅNVY som lånas ut som");
+rader.push("     feedbackvinkeln `utifran`, och som de andra vinklarna skalar.");
 rader.push("");
 rader.push("     ABSOLUTA tal ska INTE vara lika på de två ytorna — rendering får");
 rader.push("     vara plattformsspecifik. FÖRHÅLLANDET mellan gångarterna ska det,");
@@ -502,6 +560,43 @@ rader.push("RidKanon.KAMERA = {");
 for (const namn of RID_ORDNING) {
   const c = kam[namn];
   rader.push(`\t${namn} = { bak = ${tal(c.bak)}, hojd = ${tal(c.hojd)}, fov = ${tal(c.fov)} },`);
+}
+rader.push("}");
+rader.push("");
+rader.push("--[[ SADELKAMERAN — ridningens standardvy (G02-E del 1, #150).");
+rader.push("");
+rader.push("     Tobias produktbeslut 2026-09-08: när spelaren rider ska kameran");
+rader.push("     vara ryttarens perspektiv. Ögonpunkten hämtas på varje yta ur");
+rader.push("     dess EGEN rigg — webbens s3Sits/s3OgaMatris, Roblox karaktärens");
+rader.push("     Head — och kan därför inte exporteras som ett tal.");
+rader.push("");
+rader.push("     Det som DÄREMOT måste vara lika är de enhetslösa talen: sekunder");
+rader.push("     är sekunder, och en kvot är en kvot. Längderna räknas på varje");
+rader.push("     yta ur dess egna bomvärden, så att blickens VINKEL och synfältet");
+rader.push("     blir desamma i meter som i studs. Speglas i Config.CAMERA.Saddle. ]]");
+rader.push("RidKanon.SADELKAMERA = {");
+for (const namn of SADEL_FALT) rader.push(`\t${namn} = ${tal(sadel[namn])},`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ FEEDBACKVINKLARNA (G02-E del 1, #150), ur");
+rader.push("     src/riding/kameralage.js efter modulens egen validering.");
+rader.push("");
+rader.push("     En tillfällig vinkel som lånas ut när feedback ges, och som");
+rader.push("     ALLTID återgår till sadeln. yaw i radianer runt hästen; bak, hojd,");
+rader.push("     fov och blick som multiplikatorer på bomkameran ovan; in, hall och");
+rader.push("     ut i sekunder.");
+rader.push("");
+rader.push("     Talen är enhetslösa och ska därför vara IDENTISKA på båda ytorna,");
+rader.push("     inte bara i förhållande. Paritetsspecen jämför tal mot tal.");
+rader.push("");
+rader.push("     `utifran` är den gamla tredjepersonskameran, oförändrad: yaw 0 och");
+rader.push("     alla multiplikatorer 1. Den finns kvar som en LÅNAD vy. ]]");
+rader.push("RidKanon.KAMERALAGE = {");
+for (const namn of vinklar.namn) {
+  const v = vinklar.tabell[namn];
+  rader.push(`\t${namn} = { yaw = ${tal(v.yaw)}, bak = ${tal(v.bak)}, hojd = ${tal(v.hojd)},`
+    + ` fov = ${tal(v.fov)}, blick = ${tal(v.blick)},`
+    + ` ["in"] = ${tal(v.in)}, hall = ${tal(v.hall)}, ut = ${tal(v.ut)} },`);
 }
 rader.push("}");
 rader.push("");

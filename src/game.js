@@ -743,6 +743,15 @@ function startaLektion(){
   G.narkontakter=0; G.narkontaktT=-99; G.naraRop=0;
   G.bedomda=0; G.klarade=0;
   if(typeof lararNollstall==="function")lararNollstall();
+  /* VARJE RITT BÖRJAR I SADELN (G02-E del 1, #150). Kravet är att en
+     riktig ritt startar i ryttarperspektiv utan att spelaren väljer
+     något — så lektionen nollar kameraläget i stället för att ärva vad
+     förra passet råkade lämna efter sig. */
+  if(typeof ridKameraNollstall==="function")ridKameraNollstall("lektionsstart");
+  /* EN RITT BÖRJAR I SADELN (G02-E del 1, #150). Ingen manuell
+     kameravalsituation, ingen kvarhängande feedbackvy från förra passet
+     — lektionen börjar i ryttarens perspektiv, varje gång. */
+  if(typeof ridKameraNollstall==="function")ridKameraNollstall("lektionsstart");
   /* HUD:en tillbaka i ridläge. Gå-läget döljer pyramiden, hjälpmätarna
      och gångartsrutan, och bara tävlingsvägen slog på dem igen — en
      vanlig lektion reds alltså helt utan utbildningsskalan, som är den
