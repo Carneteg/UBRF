@@ -209,6 +209,15 @@ jobs:
           if [ -f tools/valfardstest.mjs ]; then node tools/valfardstest.mjs
           else echo "hoppar: tools/valfardstest.mjs finns inte i denna branch"; fi
 
+      # Karaktärsskaparen (#153 fix 4 / QA-3): mobil.js sätter golvet 44 px
+      # för .btn och motiverar det själv — "fingret behöver 44 px, inte 26".
+      # Skaparens .skapChip/.skapFlik är andra klasser och gick fria: 26 resp
+      # 31 px på den allra första skärmen en spelare rör vid på en iPad.
+      - name: Karaktärsskaparen — träffytorna når 44 px på pekskärm
+        run: |
+          if [ -f tools/skapartest.mjs ]; then node tools/skapartest.mjs
+          else echo "hoppar: tools/skapartest.mjs finns inte i denna branch"; fi
+
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
       # att ingen debugmarkering ligger i produktvyn och att ytan under
