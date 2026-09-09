@@ -94,15 +94,46 @@ function dagensHandelser(){
       ut[id]={typ:"skada", text:`vila — ${m.skada.namn} (${m.skada.passKvar} pass kvar)`}; }
   return ut;
 }
+/* Vilar hästen för en skada? Skilj den frågan från "är hon upptagen i
+   dag" — hovslagare och veterinär är schema, en skada är välfärd. Bara
+   det ena får aldrig vika sig. */
+function hastVilarForSkada(id){
+  const m=hastminne(id);
+  return !!(m&&m.skada&&m.skada.passKvar>0);
+}
+/* Är hästen i tjänst just nu — alltså varken skadad eller bokad? */
+function hastTillganglig(id,borta){
+  if(!HORSES[id])return false;
+  if(hastVilarForSkada(id))return false;
+  return !((borta||dagensHandelser())[id]);
+}
 /* Hästpoolen för en grupp: bara hästar som både finns i den aktuella kanonen,
-   har en avsiktlig gameplay-tröskel och är i tjänst i dag. */
+   har en avsiktlig gameplay-tröskel och är i tjänst i dag.
+
+   POOLEN FÅR VARA TOM, och det är hela poängen. Den gamla raden föll
+   tillbaka på `enligtGrupp` — den OFILTRERADE listan — när alla gruppens
+   hästar vilade, och delade alltså ut precis de skadade hästar filtret
+   just hade plockat bort. Sista utvägen var dessutom hårdkodad
+   `["toblerone"]` oavsett hur Toblerone mådde.
+
+   Att hitta på en häst när stallet inte har någon är inte en tjänst mot
+   spelaren. `docs/PRODUCT-CANON.md`: ansvaret kring hästen ÄR gameplay.
+   Är alla lediga hästar sjuka ska ridläraren säga det — anropslistan
+   nedan (`visaTilldelning`) visar väntläget.
+
+   TVÅ NIVÅER, med avsikt. En skada är välfärd och väger absolut: en
+   hälta rids aldrig, oavsett hur tomt stallet är. Hovslagare och
+   veterinär är SCHEMA — hästen är frisk, hon är bara upptagen. Att låta
+   ett schemakrock låsa ute spelaren vore en ny bugg i stället för den
+   gamla, så den vikningen behålls: hellre en häst som skos i dag än en
+   dag utan ridning. Skadan viker sig aldrig. */
 function hastpool(grupp){
   const idx=GRUPPSTEGE.indexOf(grupp);
-  const enligtGrupp=Object.keys(HAST_MINGRUPP)
-    .filter(id=>HORSES[id]&&HAST_MINGRUPP[id]<=idx);
   const borta=dagensHandelser();
-  const pool=enligtGrupp.filter(id=>!borta[id]);
-  return pool.length?pool:(enligtGrupp.length?enligtGrupp:["toblerone"]);
+  const iGruppen=Object.keys(HAST_MINGRUPP)
+    .filter(id=>HORSES[id]&&HAST_MINGRUPP[id]<=idx&&!hastVilarForSkada(id));
+  const lediga=iGruppen.filter(id=>!borta[id]);
+  return lediga.length?lediga:iGruppen;
 }
 /* Hästens sparade minne av dig — rang, pass, gårdagens form och
    eventuell skada eller rehab. */
@@ -171,7 +202,19 @@ function registreraPass(dom){
    rangEfterRitt=clamp(m.rang+d,0,1);}
   const ny={...m, rang:rangEfterRitt, pass:m.pass+1,
     sistaPassNr:SPAR.pass, sistaForm:Math.round(G.dagsform*100)/100, rehab:false};
-  delete ny.skada;
+  /* EN RITT LÄKER INGEN SKADA. Raden var `delete ny.skada` utan villkor:
+     hästen spelaren red blev frisk på fläcken, medan alla andras skador
+     räknades ned ett pass i taget på slingan nedanför. Arbete läkte
+     alltså snabbare än vila — tvärtemot både verkligheten och
+     produktkanonen.
+
+     Spärren i `hastpool()`/`visaTilldelning()` ska göra det omöjligt att
+     sitta upp på en skadad häst. Det här är andra låset: skulle en väg
+     ändå leda hit får passet inte tvätta bort skadan. Den står kvar
+     oräknad — vilodagen räknas ned när hästen VILAR, inte när hon
+     arbetar. Är skadan däremot redan utläkt försvinner den tomma
+     posten som förut. */
+  if(!(m.skada&&m.skada.passKvar>0))delete ny.skada;
   /* Slarv i skötseln har ett pris dagen efter — sten i hoven eller
      missat skav blir en skada som kräver vila. */
   const risker=(G.skotselRes&&G.skotselRes.risker)||[];
