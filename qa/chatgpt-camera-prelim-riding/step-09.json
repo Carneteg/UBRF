@@ -1,0 +1,108 @@
+{
+  "scene": "stallinne",
+  "horse": "blackrock_jack",
+  "horseName": "Blackrock Jack",
+  "horsePlace": "leds",
+  "met": true,
+  "equipment": true,
+  "care": true,
+  "ride": true,
+  "pass": 0,
+  "objective": {
+    "id": "sitt_upp",
+    "scene": "ridhusinne",
+    "pos": [
+      5.799999999999999,
+      65.68
+    ],
+    "text": "Sitt upp på Blackrock Jack"
+  },
+  "player": {
+    "x": 5.160980056774776,
+    "y": 44.786141721418005,
+    "z": 0
+  },
+  "riding": {
+    "x": 10,
+    "y": 52,
+    "tempo": 0,
+    "gangart": "halt",
+    "momentIx": 0
+  },
+  "prompt": {
+    "text": "Sköt om Blackrock Jack vid boxen",
+    "pos": [
+      4.389,
+      43.55
+    ]
+  },
+  "overlay": false,
+  "buttons": [],
+  "view": "2d",
+  "map": {
+    "ox": 540.9292351679771,
+    "oy": 30,
+    "s": 9.43531093638313,
+    "h": 69.95,
+    "scene": "stallinne"
+  },
+  "sceneDoors": [
+    {
+      "to": "gard",
+      "pos": [
+        10.5,
+        68.95
+      ],
+      "text": "Ut genom entrén — mot grusplanen"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        1.6,
+        64.35
+      ],
+      "text": "Ut på gårdssidan"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        5.6,
+        1.6
+      ],
+      "text": "Ut till gårdsplanen — mot Husbyvägen"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        0.9,
+        29.549999999999997
+      ],
+      "text": "Hästgången — in i ridhuset"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        13.074999999999989,
+        1.6000000000000014
+      ],
+      "text": "Ut"
+    }
+  ],
+  "box": {
+    "sida": "W",
+    "rad": {
+      "id": "W",
+      "x0": 0,
+      "djup": 4.389,
+      "vetter": 1,
+      "gang": "A",
+      "yttervagg": true
+    },
+    "i": 9,
+    "y": 43.55,
+    "dorr": [
+      4.389,
+      43.55
+    ]
+  }
+}

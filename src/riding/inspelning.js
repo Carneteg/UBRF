@@ -46,10 +46,26 @@ const INSPELNING_MAX_HANDELSER = 200;
    på Roblox-sidan: saknat, NaN och oändlighet är INTE noll. Ett fält som
    inte gick att mäta blir `null` i posten, och den som läser posten får
    veta att det saknades i stället för att tro på en nolla. */
-function insTal(v) {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return null;
-  return n;
+/* Lua-parity: samma svar som `tonumber()` i Lektion.luau ger.
+
+   `Number()` är JavaScripts egen fälla och den enda av de tre som
+   behövde lagas: `Number(null)`, `Number("")`, `Number("  ")`,
+   `Number(false)` och `Number([])` är alla 0, och `Number(true)` är 1.
+   Ett saknat värde blev alltså ett uppmätt värde — precis det kontraktet
+   säger att det inte får bli. `tonumber` i Lua svarar nil på var och en
+   av dem, så webben låg fel mot Roblox, inte tvärtom.
+
+   Numeriska STRÄNGAR släpps igenom med flit: `tonumber("1.5")` är 1.5 i
+   Lua, och en vakt som avvisade dem hade infört en NY asymmetri i stället
+   för att stänga den gamla. Det är en medveten tillåtelse, inte en
+   glömska. */
+function insTal(v){
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v !== "string") return null;          // null, undefined, boolean, array, objekt
+  const t = v.trim();
+  if (t === "") return null;                        // "" och "   " är inte noll
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
 }
 
 function Inspelning() {

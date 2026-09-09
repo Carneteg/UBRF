@@ -249,6 +249,141 @@ do
 	check("unmount är ofarlig även när inget är byggt", true)
 end
 
+--[[ ══ GÅNGARTSBEGÄRAN: ETT STEG PER BEGÄRAN ══════════════════════
+	PO-tillägget på #151: "halt → skritt → trav → galopp och tillbaka ska
+	kunna begäras avsiktligt, ETT STEG PER BEGÄRAN, utan att en hållen
+	knapp eller ett hållet finger ger flera oavsiktliga byten."
+
+	Begäran är en FLANK i Input: `_upEdge` sätts när tangenten går ned och
+	nollas av `consume`. Provet håller tangenten nere över flera bildrutor
+	och räknar hur många begäranden inputlagret lämnar ifrån sig. ]]
+print("\n── Gångartsbegäran: en flank, inte en ström ──")
+do
+	local ca = game:GetService("ContextActionService")
+	local function ned(kod)
+		ca._bound.HorseControl("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+	end
+	local function upp(kod)
+		ca._bound.HorseControl("HorseControl", Enum.UserInputState.End, { KeyCode = kod })
+	end
+
+	nollstall()
+	ned(Enum.KeyCode.LeftShift)
+	local begaranden = 0
+	--[[ Tangenten HÅLLS: tio bildrutor utan att släppa. ]]
+	for _ = 1, 10 do
+		if Input.consume().gaitUp then begaranden += 1 end
+	end
+	check("en hållen Shift ger EN gångartsbegäran, inte tio",
+		begaranden == 1, string.format("(%d begäranden på 10 bildrutor)", begaranden))
+	upp(Enum.KeyCode.LeftShift)
+
+	--[[ En NY begäran efter släpp ska gå igenom — annars vore hästen låst
+	     i en gångart efter första bytet. ]]
+	nollstall()
+	ned(Enum.KeyCode.LeftShift); local a = Input.consume().gaitUp
+	upp(Enum.KeyCode.LeftShift); Input.consume()
+	ned(Enum.KeyCode.LeftShift); local b = Input.consume().gaitUp
+	upp(Enum.KeyCode.LeftShift)
+	check("ett nytt tryck efter släpp ger en ny begäran",
+		a == true and b == true, string.format("(%s, %s)", tostring(a), tostring(b)))
+
+	--[[ Ner-vägen mäts likadant: tillbaka genom gångarterna. ]]
+	nollstall()
+	ned(Enum.KeyCode.LeftControl)
+	local ner = 0
+	for _ = 1, 10 do
+		if Input.consume().gaitDown then ner += 1 end
+	end
+	check("en hållen Ctrl ger EN begäran neråt",
+		ner == 1, string.format("(%d begäranden)", ner))
+	upp(Enum.KeyCode.LeftControl)
+
+	--[[ Pekskärmen går genom samma flank. Ett tryck = en begäran, och
+	     knappen som hålls nere kan inte skicka en ström: TouchControls
+	     kopplar den till Click, inte till Down. ]]
+	nollstall()
+	Input.touchGait(true)
+	local pek = 0
+	for _ = 1, 10 do
+		if Input.consume().gaitUp then pek += 1 end
+	end
+	check("ett fingertryck ger EN begäran",
+		pek == 1, string.format("(%d begäranden)", pek))
+
+	--[[ BILDRUTETAKTEN FÅR INTE ÄNDRA UPPLEVELSEN. Samma tryck, dubbelt
+	     så många bildrutor: fortfarande en begäran. ]]
+	nollstall()
+	ned(Enum.KeyCode.LeftShift)
+	local snabb = 0
+	for _ = 1, 120 do
+		if Input.consume().gaitUp then snabb += 1 end
+	end
+	upp(Enum.KeyCode.LeftShift)
+	check("120 bildrutor ger inte fler begäranden än 10",
+		snabb == 1, string.format("(%d begäranden på 120 bildrutor)", snabb))
+end
+
+--[[ ══ INGEN FASTNAD INPUT ÖVER EN AV- OCH UPPSITTNING ═════════════
+	PO-tillägget: "ingen fastnad input vid focus loss, multitouch,
+	scenbyte, upp-/avsittning, respawn eller när en panel öppnas/stängs."
+
+	`Input.unbind()` körs vid avsittning. Den nollade tillstånden men INTE
+	de två flankerna `_upEdge`/`_downEdge` — en begäran som gjordes strax
+	före avsittningen låg alltså kvar och fyrade på FÖRSTA bildrutan efter
+	nästa uppsittning. Hästen bytte gångart av sig själv innan ryttaren
+	rört en tangent. Mätt här. ]]
+print("\n── Av- och uppsittning lämnar ingen begäran kvar ──")
+do
+	local ca = game:GetService("ContextActionService")
+	local function ned(kod)
+		ca._bound.HorseControl("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+	end
+
+	nollstall()
+	ned(Enum.KeyCode.LeftShift)      -- begäran gjord …
+	Input.unbind()                    -- … men avsittningen kom före bildrutan
+	Input.bind()                      -- ny uppsittning
+	local i = Input.consume()
+	check("en obehandlad gångartsbegäran överlever inte avsittningen",
+		i.gaitUp == false, string.format("(gaitUp %s)", tostring(i.gaitUp)))
+
+	nollstall()
+	ned(Enum.KeyCode.LeftControl)
+	Input.unbind(); Input.bind()
+	check("och inte heller neråt",
+		Input.consume().gaitDown == false, "(gaitDown)")
+
+	--[[ Samma sak från pekskärmen. ]]
+	nollstall()
+	Input.touchGait(true)
+	Input.unbind(); Input.bind()
+	check("ett fingertryck strax före avsittningen fyrar inte efteråt",
+		Input.consume().gaitUp == false, "(gaitUp)")
+
+	--[[ NEUTRAL UPPSITTNING STÅR STILLA: ingen avsikt alls i första
+	     bildrutan efter en ren uppsittning. ]]
+	nollstall()
+	local n = Input.consume()
+	check("en neutral uppsittning begär ingenting",
+		n.forward == 0 and n.steer == 0 and n.rein == 0
+			and n.gaitUp == false and n.gaitDown == false and n.jump == false
+			and n.parad == 0,
+		string.format("(fram %.2f · styr %.2f · tygel %.2f)",
+			n.forward, n.steer, n.rein))
+
+	--[[ …och ett släppt finger driver inte vidare. ]]
+	nollstall()
+	Input.setTouch(0.8, -0.6)
+	check("spaken ger utslag medan fingret ligger kvar",
+		math.abs(Input.consume().steer + 0.6) < 0.001, "(styr -0.60)")
+	Input.setTouch(0, 0)
+	local slappt = Input.consume()
+	check("och noll så snart fingret lyfts — ingen drift",
+		slappt.forward == 0 and slappt.steer == 0,
+		string.format("(fram %.2f · styr %.2f)", slappt.forward, slappt.steer))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

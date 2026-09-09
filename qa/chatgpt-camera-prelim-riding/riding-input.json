@@ -1,0 +1,60 @@
+{
+  "scene": "lektion",
+  "horse": "blackrock_jack",
+  "horseName": "Blackrock Jack",
+  "horsePlace": "leds",
+  "met": true,
+  "equipment": true,
+  "care": true,
+  "ride": true,
+  "pass": 0,
+  "objective": null,
+  "player": {
+    "x": 6.594237453039026,
+    "y": 64.65130962404392,
+    "z": 0
+  },
+  "riding": {
+    "x": 10.002546108008511,
+    "y": 49.572299147435636,
+    "tempo": 0.875896143621132,
+    "gangart": "halt",
+    "moment": "skritt",
+    "momentIx": 0
+  },
+  "prompt": {
+    "text": "Sitt upp på Blackrock Jack — lektionen börjar",
+    "pos": [
+      5.799999999999999,
+      65.68
+    ]
+  },
+  "overlay": false,
+  "buttons": [],
+  "view": "2d",
+  "map": {
+    "ox": 540.9292351679771,
+    "oy": 30,
+    "s": 9.43531093638313,
+    "h": 69.95,
+    "scene": "lektion"
+  },
+  "sceneDoors": [],
+  "box": {
+    "sida": "W",
+    "rad": {
+      "id": "W",
+      "x0": 0,
+      "djup": 4.389,
+      "vetter": 1,
+      "gang": "A",
+      "yttervagg": true
+    },
+    "i": 9,
+    "y": 43.55,
+    "dorr": [
+      4.389,
+      43.55
+    ]
+  }
+}

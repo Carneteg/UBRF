@@ -18,4 +18,5 @@ return {
 	RidKanon = require(script.RidKanon),
 	Hjalper = require(script.Hjalper),
 	Svar = require(script.Svar),
+	Kameralage = require(script.Kameralage),
 }

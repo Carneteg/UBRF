@@ -1,0 +1,206 @@
+{
+  "scene": "meny",
+  "horse": null,
+  "horseName": null,
+  "horsePlace": "box",
+  "met": false,
+  "equipment": false,
+  "care": false,
+  "ride": false,
+  "pass": 0,
+  "objective": null,
+  "player": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "riding": {
+    "x": 10,
+    "y": 52,
+    "momentIx": 0
+  },
+  "prompt": null,
+  "overlay": true,
+  "buttons": [
+    {
+      "id": "",
+      "text": "Utseende",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Egenskaper 0/3",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "ljus",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "mellan",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "oliv",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "brun",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "mörk",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "ljus",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "ljusbrun",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "brun",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "mörk",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "röd",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "grå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "hästsvans",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "fläta",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "kort",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "uppsatt",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "marinblå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "mörkgrön",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "vinröd",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "grå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "svart",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "ljusblå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "beige",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "vit",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "grå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "mörkblå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "svart",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "svart",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "marinblå",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "mörkgrön",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "vinröd",
+      "disabled": false
+    },
+    {
+      "id": "bSkapKlar",
+      "text": "Så här ser jag ut",
+      "disabled": false
+    },
+    {
+      "id": "bSkapHoppa",
+      "text": "Rid direkt — jag fixar det sen",
+      "disabled": false
+    }
+  ],
+  "view": "3d",
+  "map": {
+    "ox": 0,
+    "oy": 0,
+    "s": 1,
+    "h": 0,
+    "scene": null
+  },
+  "sceneDoors": [],
+  "box": null
+}

@@ -1,0 +1,68 @@
+{
+  "sha": "working-tree-preliminary-not-candidate",
+  "mode": "riding",
+  "results": [
+    {
+      "name": "Exakt testversion",
+      "status": "INFO",
+      "details": {
+        "sha": "working-tree-preliminary-not-candidate",
+        "mode": "riding",
+        "scene": "meny",
+        "horseCount": 33
+      }
+    },
+    {
+      "name": "Karaktärsskaparens gästgenväg",
+      "status": "PASS",
+      "details": {
+        "scene": "meny"
+      }
+    },
+    {
+      "name": "Gäststart via Rid nu",
+      "status": "PASS",
+      "details": {
+        "scene": "gard"
+      }
+    },
+    {
+      "name": "Uppsittning genom verkligt flöde",
+      "status": "PASS",
+      "details": {
+        "scene": "lektion",
+        "horse": "blackrock_jack",
+        "ride": true
+      }
+    },
+    {
+      "name": "Ridinput och aktiv ridloop",
+      "status": "PASS",
+      "details": {
+        "scene": "lektion",
+        "horse": "blackrock_jack",
+        "before": {
+          "x": 10,
+          "y": 51.92698153515049,
+          "tempo": 0.06839999999999996,
+          "gangart": "halt",
+          "moment": "skritt",
+          "momentIx": 0
+        },
+        "after": {
+          "x": 10.002546108008511,
+          "y": 49.572299147435636,
+          "tempo": 0.875896143621132,
+          "gangart": "halt",
+          "moment": "skritt",
+          "momentIx": 0
+        }
+      }
+    },
+    {
+      "name": "Träningsboken öppnas från sadeln",
+      "status": "PASS",
+      "details": {}
+    }
+  ]
+}

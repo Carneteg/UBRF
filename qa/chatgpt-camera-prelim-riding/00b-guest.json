@@ -1,0 +1,71 @@
+{
+  "scene": "meny",
+  "horse": null,
+  "horseName": null,
+  "horsePlace": "box",
+  "met": false,
+  "equipment": false,
+  "care": false,
+  "ride": false,
+  "pass": 0,
+  "objective": null,
+  "player": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "riding": {
+    "x": 10,
+    "y": 52,
+    "momentIx": 0
+  },
+  "prompt": null,
+  "overlay": true,
+  "buttons": [
+    {
+      "id": "bStart",
+      "text": "Rid nu",
+      "disabled": false
+    },
+    {
+      "id": "bTavling",
+      "text": "Tävlingsdag",
+      "disabled": false
+    },
+    {
+      "id": "bBok",
+      "text": "Träningsboken",
+      "disabled": false
+    },
+    {
+      "id": "bJagAndra",
+      "text": "Ändra ryttare",
+      "disabled": false
+    },
+    {
+      "id": "bNollstall",
+      "text": "Nollställ ryttaren",
+      "disabled": false
+    },
+    {
+      "id": "bSynkNy",
+      "text": "Skapa konto",
+      "disabled": false
+    },
+    {
+      "id": "bSynkVaxla",
+      "text": "Jag har redan ett konto",
+      "disabled": false
+    }
+  ],
+  "view": "3d",
+  "map": {
+    "ox": 0,
+    "oy": 0,
+    "s": 1,
+    "h": 0,
+    "scene": null
+  },
+  "sceneDoors": [],
+  "box": null
+}

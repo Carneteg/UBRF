@@ -35,6 +35,38 @@ nya krav.
 
 Starta inte orelaterat arbete medan baselinen är aktiv.
 
+## Parallellt sanktionerat spår — G02-D
+
+PO-beslut 2026-09-07 15:12 på #135: **G02-D — ridanalys, positiv feedback och
+replay**, på egen feature branch `claude/g02-d-ridanalys` (PR #138). Spec:
+`docs/RIDANALYS.md` (PR #137 @ `f211617`). Leveransen är en vertikal slice —
+20 m volt plus en övergång — och den ska återanvända befintliga modeller, inte
+bygga ett parallellt bedömningssystem.
+
+Det här spåret är alltså **inte** orelaterat arbete i den mening stycket ovan
+menar: det är beställt av Tobias efter alpha-frysningen, på egen gren, och rör
+inte baselinens kärnfiler i #135.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**. Status och
+paritetsredovisning i `docs/G02-D-RIDANALYS-REPLAY.md`.
+
+**Integrationsgren 2026-09-09:** `claude/g02-d-integration-20260909`, utgången
+ur #143 @ `87cad71` (senaste P0-integrationen) med `claude/g02-d-ridanalys`
+@ `6bc25fd` inmergad. Grenen bär både P0-inputlagret och G02-D:s lifecycle;
+ingen fil är ersatt i klump. #137 är kvar som acceptanstracker.
+
+Rutan "Se ritten — frivillig replay: **saknas** på Roblox" i
+paritetstabellen är stängd: `HorseCore/Inspelning.luau` och
+`client/ReplayController.luau` är byggda, inkopplade i `LektionController`
+och `init.client.luau`, och provade genom klientens egen `RenderStepped`.
+Schema och övningsversion exporteras till `RidKanon.INSPELNING`, så webbens
+`ovningsdef.js` är fortsatt enda källa.
+
+**Ingen självskrivande builder-workflow.** `g02-d-complete-builder.yml`
+finns inte på integrationsgrenen och ska inte återinföras: den testade en
+syntetiserad källa, inte den committade. Grindarna är `grindar.yml` och
+`ugneta.yml` — vanlig read-only CI på det utcheckade commit:et.
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114

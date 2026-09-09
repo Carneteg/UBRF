@@ -66,15 +66,28 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
     const logg = [];
     /* Låt spelets egen loop driva. Momentet avslutas av lifecycle när
        taket m.tid*2.2 passeras — samma väg som i spelet. */
+    /* G02-D: lifecyclen stannar numera och FRÅGAR om omridningen. Provet
+       svarar som en spelare gör — genom att trycka på knappen i panelen.
+       Räknas panelklicken behövs de: utan dem stannar lektionen, och det
+       är precis vad som ska hända när ingen svarar. */
+    let klick = { igen: 0, vidare: 0 }, pausSedd = false;
     for (let i = 0; i < 900; i++) {
       lararSteg(0.1);
       G.momentT += 0.1;
       stegaLektion(0.1);
+      if (G.paus) {
+        pausSedd = true;
+        const igen = document.getElementById("valIgen");
+        const vidare = document.getElementById("valVidare");
+        if (igen) { klick.igen++; igen.click(); }
+        else if (vidare) { klick.vidare++; vidare.click(); }
+        else return { fel: "pausad utan knappar i panelen" };
+      }
       logg.push({ ix: G.momentIx, forsok: G.momentForsok, id: G.moment ? G.moment.id : null });
       if (!G.moment || G.moment.id !== momentId) break;
     }
     const sedda = [...new Set(logg.map(l => l.forsok))];
-    return { ovning, momentId, sedda,
+    return { ovning, momentId, sedda, klick, pausSedd, paus: !!G.paus,
       historik: (ugnetaForsokHistorik(ovning) || []).length,
       bedomda: G.bedomda || 0 };
   });
@@ -84,6 +97,14 @@ function prova(namn, ok, detalj) { resultat.push({ namn, ok });
   prova("och båda försöken mättes var för sig",
     !r.fel && r.historik >= 2,
     r.fel || `${r.historik} mätta försök i historiken`);
+  /* G02-D: omridningen är ett BESLUT. Provet ska visa att lifecyclen
+     stannade och att det var klicket som startade försök 2 — inte att
+     panelen råkade ligga där medan spelet red vidare av sig självt. */
+  prova("omridningen skedde för att spelaren valde den",
+    !r.fel && r.pausSedd === true && r.klick.igen >= 1,
+    r.fel || `paus sedd: ${r.pausSedd} · klick ${JSON.stringify(r.klick)}`);
+  prova("och lektionen lämnas inte pausad efter valet",
+    !r.fel && r.paus === false, r.fel || `G.paus: ${r.paus}`);
   prova("momentet betygsätts en gång, inte en gång per försök",
     !r.fel && r.bedomda <= 1,
     r.fel || `bedomda ${r.bedomda}`);

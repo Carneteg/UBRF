@@ -1,0 +1,197 @@
+{
+  "scene": "stallinne",
+  "horse": "blackrock_jack",
+  "horseName": "Blackrock Jack",
+  "horsePlace": "box",
+  "met": true,
+  "equipment": false,
+  "care": false,
+  "ride": false,
+  "pass": 0,
+  "objective": {
+    "id": "utrustning",
+    "scene": "stallinne",
+    "pos": [
+      9.8,
+      62.6
+    ],
+    "text": "Hämta sadel + träns"
+  },
+  "player": {
+    "x": 8.843514276465749,
+    "y": 61.51979595611994,
+    "z": 0
+  },
+  "riding": {
+    "x": 10,
+    "y": 52,
+    "momentIx": 0
+  },
+  "prompt": {
+    "text": "Hämta Blackrock Jacks sadel och träns",
+    "pos": [
+      9.8,
+      62.6
+    ]
+  },
+  "overlay": true,
+  "buttons": [
+    {
+      "id": "",
+      "text": "Puma ( Ashdale cougar )",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Sune",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Tess",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Blackrock Jack",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Bränntomts Lydia",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Dante",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Dexter",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Garnit Parasido",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Puma ( Ashdale cougar )",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Sune",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Tess",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Blackrock Jack",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Bränntomts Lydia",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Dante",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Dexter",
+      "disabled": false
+    },
+    {
+      "id": "",
+      "text": "Garnit Parasido",
+      "disabled": false
+    },
+    {
+      "id": "bSkKlar",
+      "text": "Ta med utrustningen",
+      "disabled": false
+    },
+    {
+      "id": "bSkStang",
+      "text": "Stäng",
+      "disabled": false
+    }
+  ],
+  "view": "2d",
+  "map": {
+    "ox": 540.9292351679771,
+    "oy": 30,
+    "s": 9.43531093638313,
+    "h": 69.95,
+    "scene": "stallinne"
+  },
+  "sceneDoors": [
+    {
+      "to": "gard",
+      "pos": [
+        10.5,
+        68.95
+      ],
+      "text": "Ut genom entrén — mot grusplanen"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        1.6,
+        64.35
+      ],
+      "text": "Ut på gårdssidan"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        5.6,
+        1.6
+      ],
+      "text": "Ut till gårdsplanen — mot Husbyvägen"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        0.9,
+        29.549999999999997
+      ],
+      "text": "Hästgången — in i ridhuset"
+    },
+    {
+      "to": "gard",
+      "pos": [
+        13.074999999999989,
+        1.6000000000000014
+      ],
+      "text": "Ut"
+    }
+  ],
+  "box": {
+    "sida": "W",
+    "rad": {
+      "id": "W",
+      "x0": 0,
+      "djup": 4.389,
+      "vetter": 1,
+      "gang": "A",
+      "yttervagg": true
+    },
+    "i": 9,
+    "y": 43.55,
+    "dorr": [
+      4.389,
+      43.55
+    ]
+  }
+}

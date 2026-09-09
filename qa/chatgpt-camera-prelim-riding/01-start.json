@@ -1,0 +1,124 @@
+{
+  "scene": "gard",
+  "horse": null,
+  "horseName": null,
+  "horsePlace": "box",
+  "met": false,
+  "equipment": false,
+  "care": false,
+  "ride": false,
+  "pass": 0,
+  "objective": {
+    "id": "ridlarare",
+    "scene": "stallinne",
+    "pos": [
+      5.691000000000001,
+      34
+    ],
+    "text": "Prata med ridläraren"
+  },
+  "player": {
+    "x": 146,
+    "y": 136,
+    "z": 0
+  },
+  "riding": {
+    "x": 10,
+    "y": 52,
+    "momentIx": 0
+  },
+  "prompt": null,
+  "overlay": false,
+  "buttons": [],
+  "view": "3d",
+  "map": {
+    "ox": 0,
+    "oy": 0,
+    "s": 1,
+    "h": 0,
+    "scene": null
+  },
+  "sceneDoors": [
+    {
+      "to": "ridhusinne",
+      "pos": [
+        143.9,
+        49
+      ],
+      "text": "In i ridhuset (durkplåtdörrarna)"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        139.9,
+        119.8
+      ],
+      "text": "In i ridhuset (entrén)"
+    },
+    {
+      "to": "stallinne",
+      "pos": [
+        161.6,
+        126.6
+      ],
+      "text": "Gå in i stallet (Entré, under verandan)"
+    },
+    {
+      "to": "stallinne",
+      "pos": [
+        149.6,
+        118.825
+      ],
+      "text": "Gå in i stallet (dörren på gårdssidan)"
+    },
+    {
+      "to": "stallinne",
+      "pos": [
+        156.7,
+        53.449999999999996
+      ],
+      "text": "Gå in i stallet (gaveldörren vid gårdsplanen)"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        134.35,
+        120.1
+      ],
+      "text": "In i ridhuset"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        116.9,
+        109
+      ],
+      "text": "In i ridhuset"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        116.9,
+        78.45
+      ],
+      "text": "In i ridhuset"
+    },
+    {
+      "to": "ridhusinne",
+      "pos": [
+        128,
+        40.71999999999999
+      ],
+      "text": "In i ridhuset"
+    },
+    {
+      "to": "stallinne",
+      "pos": [
+        164.17499999999998,
+        53.949999999999996
+      ],
+      "text": "Gå in i stallet"
+    }
+  ],
+  "box": null
+}

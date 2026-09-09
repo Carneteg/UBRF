@@ -1042,6 +1042,11 @@ function boxHast(id){
    så W bär iväg åt fel håll precis när man kommit in genom en dörr. */
 function kameraNollstall(){
   if(typeof V3D!=="undefined"&&V3D.kam)V3D.kam.satt=false;
+  /* RIDKAMERAN OCKSÅ (G02-E del 1, #150). Den här funktionen anropas vid
+     varje scenbyte och när ritten lämnas — alltså exakt de tillfällen då
+     en utlånad feedbackvy annars kunde leva vidare in i nästa scen eller
+     ligga och vänta på att spelaren sitter upp igen. */
+  if(typeof ridKameraNollstall==="function")ridKameraNollstall("scenbyte");
 }
 function gaTill(scen,spawn){
   InputImpulse.clear("KeyE");

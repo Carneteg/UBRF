@@ -107,8 +107,14 @@ RidKanon.SVANGTAU = {
      tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]
 RidKanon.KAPPA_RAT_TID = 0.32
 
---[[ Kameraläget per gångart ur src/scen3d.js (G02-A.1 P6). bak i
+--[[ Bomkameran per gångart ur src/scen3d.js (G02-A.1 P6). bak i
      meter bakom hästen, hojd i meter, fov som tillägg i radianer.
+
+     BETYDELSEN ÄNDRADES I G02-E DEL 1 (#150). Talen är oförändrade,
+     men de beskriver INTE LÄNGRE ridningens standardvy. Standarden är
+     sadeln — ryttarens eget perspektiv, se RidKanon.SADELKAMERA. Den
+     här tabellen beskriver den UTIFRÅNVY som lånas ut som
+     feedbackvinkeln `utifran`, och som de andra vinklarna skalar.
 
      ABSOLUTA tal ska INTE vara lika på de två ytorna — rendering får
      vara plattformsspecifik. FÖRHÅLLANDET mellan gångarterna ska det,
@@ -119,6 +125,46 @@ RidKanon.KAMERA = {
 	skritt = { bak = 4.05, hojd = 1.95, fov = 0 },
 	trav = { bak = 4.59, hojd = 2.1, fov = 0.017 },
 	galopp = { bak = 5.13, hojd = 2.25, fov = 0.07 },
+}
+
+--[[ SADELKAMERAN — ridningens standardvy (G02-E del 1, #150).
+
+     Tobias produktbeslut 2026-09-08: när spelaren rider ska kameran
+     vara ryttarens perspektiv. Ögonpunkten hämtas på varje yta ur
+     dess EGEN rigg — webbens s3Sits/s3OgaMatris, Roblox karaktärens
+     Head — och kan därför inte exporteras som ett tal.
+
+     Det som DÄREMOT måste vara lika är de enhetslösa talen: sekunder
+     är sekunder, och en kvot är en kvot. Längderna räknas på varje
+     yta ur dess egna bomvärden, så att blickens VINKEL och synfältet
+     blir desamma i meter som i studs. Speglas i Config.CAMERA.Saddle. ]]
+RidKanon.SADELKAMERA = {
+	YAW_TAU = 0.1,
+	TAU_XZ = 0.05,
+	TAU_Y = 0.3,
+	FOV_KVOT = 1.128,
+	NED_KVOT = 0.0607,
+	BLICK_KVOT = 5.38,
+}
+
+--[[ FEEDBACKVINKLARNA (G02-E del 1, #150), ur
+     src/riding/kameralage.js efter modulens egen validering.
+
+     En tillfällig vinkel som lånas ut när feedback ges, och som
+     ALLTID återgår till sadeln. yaw i radianer runt hästen; bak, hojd,
+     fov och blick som multiplikatorer på bomkameran ovan; in, hall och
+     ut i sekunder.
+
+     Talen är enhetslösa och ska därför vara IDENTISKA på båda ytorna,
+     inte bara i förhållande. Paritetsspecen jämför tal mot tal.
+
+     `utifran` är den gamla tredjepersonskameran, oförändrad: yaw 0 och
+     alla multiplikatorer 1. Den finns kvar som en LÅNAD vy. ]]
+RidKanon.KAMERALAGE = {
+	ansats = { yaw = 3.141593, bak = 1.25, hojd = 1.05, fov = 1, blick = -0.35, ["in"] = 0.4, hall = 1.5, ut = 0.5 },
+	sits = { yaw = 1.570796, bak = 0.95, hojd = 0.92, fov = 0.94, blick = 0.1, ["in"] = 0.4, hall = 1.6, ut = 0.5 },
+	utifran = { yaw = 0, bak = 1, hojd = 1, fov = 1, blick = 1, ["in"] = 0.45, hall = 1.8, ut = 0.55 },
+	vagval = { yaw = 0, bak = 1.9, hojd = 2.4, fov = 1.08, blick = 1.3, ["in"] = 0.45, hall = 1.7, ut = 0.55 },
 }
 
 --[[ Telemetrins fältnamn, lästa ur ett riktigt anrop av ridTelemetri. ]]
@@ -682,6 +728,18 @@ RidKanon.UGNETA = {
 		BRA = 0.55,
 	},
 	PLATS = { u = 0.5, bortomC = 1.4, bredd = 20, langd = 60 },
+}
+
+--[[ G02-D: inspelningens kontrakt, ur src/riding/ovningsdef.js
+     och src/riding/inspelning.js. ]]
+RidKanon.INSPELNING = {
+	SCHEMA = 1,
+	HZ = 20,
+	MAX_SEK = 120,
+	OVNING = {
+		storvolt = { version = 1, ram = "ridhus.dressyr", matt = { "linje", "rytm", "balans" } },
+		trav_skritt = { version = 1, ram = "ridhus.dressyr", matt = { "timing", "mjukhet", "respons" } },
+	},
 }
 
 return RidKanon

@@ -33,6 +33,9 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   /* G02-D: övningsdefinitionen. Måste laddas FÖRE src/larare.js, precis
      som i index.html — larare.js bygger UGNETA_OVNING_DIM ur den. */
   + "\n" + las("src/riding/ovningsdef.js")
+  /* G02-D: inspelningens egna tal (takt och tak) bor i inspelning.js och
+     ska exporteras därifrån, inte skrivas av i den här filen. */
+  + "\n" + las("src/riding/inspelning.js")
   /* Hästdatan med — scenariot nedan ska rida VERKLIGA UBRF-hästar
      ur samma tabell som spelet och Roblox Stallet läser, inte en
      handskriven kopia av deras siffror. */
@@ -49,6 +52,14 @@ const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANO
   + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START, "
   + "UGNETA_OVNING_DIM, UGNETA_DIM_LABEL, UGNETA_LIVE, UGNETA_DIM_CUE, "
   + "UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD})", ctx);
+/* G02-D: inspelningens kontrakt. Övningens VERSION är det som avgör om en
+   gammal inspelning får jämföras mot en ny definition, och den siffran får
+   inte finnas två gånger. Roblox läser den härifrån av exakt samma skäl som
+   den läser UGNETA-blocket: en handskriven kopia kan glida utan att något
+   blir rött. */
+const { OVNINGAR_DEF, INSPELNING_SCHEMA, INSPELNING_HZ, INSPELNING_MAX_SEK } =
+  vm.runInContext("({OVNINGAR_DEF, INSPELNING_SCHEMA, INSPELNING_HZ, "
+  + "INSPELNING_MAX_SEK})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -154,6 +165,56 @@ function kameralagen() {
     process.exit(1);
   }
   return ut;
+}
+
+/* ── G02-E del 1 (#150): SADELKAMERANS PARITETSTAL ────────────────────
+   Sadelvyn är ridningens standardvy på båda ytorna. De tal som bär
+   pariteten är enhetslösa — sekunder och kvoter — och läses här ur
+   src/scen3d.js precis som KAM_GANG. Längderna exporteras INTE: de är
+   meter på webben och studs i Roblox och räknas på varje yta ur dess
+   egna bomvärden, vilket är hela poängen med att kvoterna är lika. */
+const SADEL_FALT = ["YAW_TAU", "TAU_XZ", "TAU_Y", "FOV_KVOT", "NED_KVOT", "BLICK_KVOT"];
+function sadelkameran() {
+  const m = las("src/scen3d.js").match(/const KAM_SADEL=\{([\s\S]*?)\};/);
+  if (!m) {
+    console.error("FEL  hittar inte KAM_SADEL i src/scen3d.js");
+    process.exit(1);
+  }
+  const ut = {};
+  for (const rad of m[1].matchAll(/(\w+)\s*:\s*(-?[0-9.]+)/g)) ut[rad[1]] = Number(rad[2]);
+  for (const namn of SADEL_FALT) if (ut[namn] === undefined) {
+    console.error(`FEL  KAM_SADEL saknar ${namn}`);
+    process.exit(1);
+  }
+  return ut;
+}
+
+/* ── G02-E del 1 (#150): FEEDBACKVINKLARNA ───────────────────────────
+   Körs, inte lästs som text: src/riding/kameralage.js är en fristående
+   modul utan DOM-beroenden, och den VALIDERAR sin egen tabell vid
+   inläsning. Att köra den betyder alltså att exporten bara kan skriva
+   ned vinklar som spelet faktiskt skulle acceptera — en vinkel som
+   underkänts hamnar aldrig i kanonen och kan därför inte se ut att vara
+   i paritet med en Roblox-vinkel som lever. */
+function feedbackvinklarna() {
+  const c = { console: { warn: (...a) => console.error("VARN ", ...a), log() {} } };
+  vm.createContext(c);
+  vm.runInContext(las("src/riding/kameralage.js"), c, { filename: "src/riding/kameralage.js" });
+  const K = c.Kameralage;
+  if (!K || !K.VINKLAR) {
+    console.error("FEL  src/riding/kameralage.js exporterade ingen VINKLAR-tabell");
+    process.exit(1);
+  }
+  const namn = Object.keys(K.VINKLAR).sort();
+  if (!namn.length) {
+    console.error("FEL  inga feedbackvinklar överlevde valideringen");
+    process.exit(1);
+  }
+  if (!namn.includes("utifran")) {
+    console.error("FEL  vinkeln `utifran` saknas — den gamla bomvyn måste finnas kvar");
+    process.exit(1);
+  }
+  return { namn, tabell: K.VINKLAR };
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -387,6 +448,8 @@ const scen = scenario();
 
 const styr = styrkanon();
 const kam = kameralagen();
+const sadel = sadelkameran();
+const vinklar = feedbackvinklarna();
 const trosklar = mataTrosklar();
 
 const rader = [];
@@ -491,8 +554,14 @@ rader.push("     inte ändras fortare än gångartens kurvaturtak delat med den 
 rader.push("     tiden. Speglas i Config.MOVEMENT.CurvatureRateTime. ]]");
 rader.push(`RidKanon.KAPPA_RAT_TID = ${tal(styr.ratTid)}`);
 rader.push("");
-rader.push("--[[ Kameraläget per gångart ur src/scen3d.js (G02-A.1 P6). bak i");
+rader.push("--[[ Bomkameran per gångart ur src/scen3d.js (G02-A.1 P6). bak i");
 rader.push("     meter bakom hästen, hojd i meter, fov som tillägg i radianer.");
+rader.push("");
+rader.push("     BETYDELSEN ÄNDRADES I G02-E DEL 1 (#150). Talen är oförändrade,");
+rader.push("     men de beskriver INTE LÄNGRE ridningens standardvy. Standarden är");
+rader.push("     sadeln — ryttarens eget perspektiv, se RidKanon.SADELKAMERA. Den");
+rader.push("     här tabellen beskriver den UTIFRÅNVY som lånas ut som");
+rader.push("     feedbackvinkeln `utifran`, och som de andra vinklarna skalar.");
 rader.push("");
 rader.push("     ABSOLUTA tal ska INTE vara lika på de två ytorna — rendering får");
 rader.push("     vara plattformsspecifik. FÖRHÅLLANDET mellan gångarterna ska det,");
@@ -502,6 +571,43 @@ rader.push("RidKanon.KAMERA = {");
 for (const namn of RID_ORDNING) {
   const c = kam[namn];
   rader.push(`\t${namn} = { bak = ${tal(c.bak)}, hojd = ${tal(c.hojd)}, fov = ${tal(c.fov)} },`);
+}
+rader.push("}");
+rader.push("");
+rader.push("--[[ SADELKAMERAN — ridningens standardvy (G02-E del 1, #150).");
+rader.push("");
+rader.push("     Tobias produktbeslut 2026-09-08: när spelaren rider ska kameran");
+rader.push("     vara ryttarens perspektiv. Ögonpunkten hämtas på varje yta ur");
+rader.push("     dess EGEN rigg — webbens s3Sits/s3OgaMatris, Roblox karaktärens");
+rader.push("     Head — och kan därför inte exporteras som ett tal.");
+rader.push("");
+rader.push("     Det som DÄREMOT måste vara lika är de enhetslösa talen: sekunder");
+rader.push("     är sekunder, och en kvot är en kvot. Längderna räknas på varje");
+rader.push("     yta ur dess egna bomvärden, så att blickens VINKEL och synfältet");
+rader.push("     blir desamma i meter som i studs. Speglas i Config.CAMERA.Saddle. ]]");
+rader.push("RidKanon.SADELKAMERA = {");
+for (const namn of SADEL_FALT) rader.push(`\t${namn} = ${tal(sadel[namn])},`);
+rader.push("}");
+rader.push("");
+rader.push("--[[ FEEDBACKVINKLARNA (G02-E del 1, #150), ur");
+rader.push("     src/riding/kameralage.js efter modulens egen validering.");
+rader.push("");
+rader.push("     En tillfällig vinkel som lånas ut när feedback ges, och som");
+rader.push("     ALLTID återgår till sadeln. yaw i radianer runt hästen; bak, hojd,");
+rader.push("     fov och blick som multiplikatorer på bomkameran ovan; in, hall och");
+rader.push("     ut i sekunder.");
+rader.push("");
+rader.push("     Talen är enhetslösa och ska därför vara IDENTISKA på båda ytorna,");
+rader.push("     inte bara i förhållande. Paritetsspecen jämför tal mot tal.");
+rader.push("");
+rader.push("     `utifran` är den gamla tredjepersonskameran, oförändrad: yaw 0 och");
+rader.push("     alla multiplikatorer 1. Den finns kvar som en LÅNAD vy. ]]");
+rader.push("RidKanon.KAMERALAGE = {");
+for (const namn of vinklar.namn) {
+  const v = vinklar.tabell[namn];
+  rader.push(`\t${namn} = { yaw = ${tal(v.yaw)}, bak = ${tal(v.bak)}, hojd = ${tal(v.hojd)},`
+    + ` fov = ${tal(v.fov)}, blick = ${tal(v.blick)},`
+    + ` ["in"] = ${tal(v.in)}, hall = ${tal(v.hall)}, ut = ${tal(v.ut)} },`);
 }
 rader.push("}");
 rader.push("");
@@ -870,6 +976,27 @@ rader.push("\t},");
     + ", bredd = " + tal(KB.BANA_BREDD)
     + ", langd = " + tal(KB.BANA_LANGD) + " },");
 }
+rader.push("}");
+rader.push("");
+
+/* ── INSPELNINGEN: G02-D:s replay-kontrakt ────────────────────────
+   Vad en inspelning ÄR, som tal: schemaversion, sampeltakt, tak — och
+   varje övnings definitionsversion. Roblox spelar in med samma takt och
+   stämplar posten med samma version som webben, så att en post från den
+   ena ytan kan läsas av den andra utan att någon gissar. */
+rader.push("--[[ G02-D: inspelningens kontrakt, ur src/riding/ovningsdef.js");
+rader.push("     och src/riding/inspelning.js. ]]");
+rader.push("RidKanon.INSPELNING = {");
+rader.push("\tSCHEMA = " + tal(INSPELNING_SCHEMA) + ",");
+rader.push("\tHZ = " + tal(INSPELNING_HZ) + ",");
+rader.push("\tMAX_SEK = " + tal(INSPELNING_MAX_SEK) + ",");
+rader.push("\tOVNING = {");
+for (const id of Object.keys(OVNINGAR_DEF).sort()) {
+  const d = OVNINGAR_DEF[id];
+  rader.push(`\t\t${id} = { version = ${tal(d.version)}, ram = ${str(d.ram)}, `
+    + "matt = { " + d.matt.map(str).join(", ") + " } },");
+}
+rader.push("\t},");
 rader.push("}");
 rader.push("");
 

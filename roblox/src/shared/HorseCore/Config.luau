@@ -249,6 +249,49 @@ Config.CAMERA = {
 	LookAhead = 6.0,     -- studs framför hästen som kameran siktar mot
 }
 
+--[[ ── Sadelkameran (G02-E del 1, issue #150) ────────────────────────
+     Ridningens STANDARDVY. Config.CAMERA ovan beskriver inte längre hur
+     ridningen ser ut — den beskriver den utifrånvy som lånas ut som
+     feedbackvinkel `utifran`. Talen där är oförändrade; det är
+     betydelsen som flyttat.
+
+     TRE AV TALEN HÄR BÄR PARITETEN mot webbens KAM_SADEL i
+     src/scen3d.js och är därför enhetslösa — sekunder är sekunder, och
+     en kvot är en kvot:
+
+       YawTau, TauXZ, TauY   sekunder, identiska med webben
+       FovKvot               × basfov, identisk med webben
+       NedKvot               fall delat med siktavstånd = 3,5° under
+                             horisonten, identisk med webben
+
+     LÄNGDERNA kan inte vara lika — webben räknar i meter, Roblox i
+     studs — och räknas därför ur den här ytans EGNA bomvärden i stället
+     för att kopieras: siktavståndet är en multipel av CAMERA.LookAhead,
+     och fallet är siktavståndet gånger NedKvot. Det gör att blickens
+     VINKEL blir densamma på båda ytorna, vilket är det man känner.
+
+     INGEN SKAKNING. Kommentaren överst i CameraController gäller dubbelt
+     nära förstaperson: sadelvyn lägger inte till någon rörelse alls, den
+     DÄMPAR den riggen redan har. ]]
+Config.CAMERA.Saddle = {
+	YawTau = 0.10,       -- s  — blicken hinner ifatt hästens kurs
+	TauXZ = 0.05,        -- s  — ögat sitter nästan stelt i sadeln i sidled
+	TauY = 0.30,         -- s  — taktens studs dämpas hårt i höjdled
+	CapY = 0.40,         -- studs — ögat får aldrig glida längre från huvudet
+	FovKvot = 1.128,     -- × BaseFov: hals, öron OCH väg ska rymmas
+	BlickKvot = 5.38,    -- × LookAhead
+	NedKvot = 0.0607,    -- fall / siktavstånd = 3,5° under horisonten
+}
+
+--[[ Längderna HÄRLEDS ur den här ytans egna bomvärden i stället för att
+     kopieras från webben. Det är hela paritetstricket: kvoterna är lika,
+     alltså blir synfältet och blickens vinkel lika, medan studs förblir
+     studs och meter förblir meter. Räknas här och inte i kameran, så att
+     det finns ett enda ställe att läsa dem på. ]]
+Config.CAMERA.Saddle.Fov = Config.CAMERA.BaseFov * Config.CAMERA.Saddle.FovKvot
+Config.CAMERA.Saddle.LookAhead = Config.CAMERA.LookAhead * Config.CAMERA.Saddle.BlickKvot
+Config.CAMERA.Saddle.Fall = Config.CAMERA.Saddle.LookAhead * Config.CAMERA.Saddle.NedKvot
+
 --[[ ── Uthållighet ───────────────────────────────────────────────────
      Får aldrig tvinga hästen till stopp. Den sänker taket, hästen rullar
      ned en gångart, och spelaren ser varför i HUD:en. ]]

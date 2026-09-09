@@ -110,9 +110,17 @@ PARITET = [
     ("Ugneta",     "src/shared/HorseCore/Ugneta.luau"),
     # Lektionens lifecycle: mater, avgor forsok 1 -> 2, valjer live-cue.
     ("Lektion",    "src/shared/HorseCore/Lektion.luau"),
+    # G02-D: inspelningen och analysen. BADA maste ligga fore
+    # LektionController -- den require:ar dem bagge. Ligger de bara i EN av
+    # listorna blir require:t nil i den andra bunten, och det syns forst som
+    # "attempt to index nil with 'aktiv'" ur RenderStepped-loopen, alltsa
+    # langt ifran orsaken. Precis sa foll klient-specen i CI (run 34186458506);
+    # darfor star de nu i BADA listorna, i beroendeordning.
+    ("Inspelning",       "src/shared/HorseCore/Inspelning.luau"),
     # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
+    ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
     ("LektionController", "src/client/LektionController.luau"),
 ]
@@ -147,6 +155,11 @@ KLIENT = SPEL + [
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("Ugneta",       "src/shared/HorseCore/Ugneta.luau"),
     ("Lektion",      "src/shared/HorseCore/Lektion.luau"),
+    # G02-D: samma tva moduler som i PARITET, av samma skal. Se noten dar.
+    ("Inspelning",   "src/shared/HorseCore/Inspelning.luau"),
+    # G02-E del 1 (#150): CameraController.new() lasare Core.Kameralage
+    # direkt - saknas den kraschar klientbanken redan vid uppsittning.
+    ("Kameralage",   "src/shared/HorseCore/Kameralage.luau"),
     ("MovementController",  "src/client/MovementController.luau"),
     ("AnimationController", "src/client/AnimationController.luau"),
     ("CameraController",    "src/client/CameraController.luau"),
@@ -159,7 +172,12 @@ KLIENT = SPEL + [
     ("PreparationController", "src/client/PreparationController.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
+    ("ReplayController",    "src/client/ReplayController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
+    # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
+    # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
+    # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
+    ("KontrollHjalp",       "src/client/KontrollHjalp.luau"),
     ("Debug",               "src/client/Debug.luau"),
     ("Genomsikt",           "src/client/Genomsikt.luau"),
     ("Init",                "src/client/init.client.luau"),
@@ -178,6 +196,9 @@ MODULER = [
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    # G02-E del 1 (#150): kameralaget. Rent tillstand utan beroenden - maste
+    # bara ligga FORE CameraController, som lasare Core.Kameralage.
+    ("Kameralage",   "src/shared/HorseCore/Kameralage.luau"),
     ("MovementController", "src/client/MovementController.luau"),
     ("AnimationController", "src/client/AnimationController.luau"),
     ("CameraController",   "src/client/CameraController.luau"),
@@ -264,7 +285,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
-                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri"):
+                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
+                    "Inspelning", "Kameralage"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)
