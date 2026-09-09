@@ -131,6 +131,16 @@ function Input.unbind()
 	state.seatLight, state.seatDeep, state.touchSeat = false, false, 0
 	state.paradHeld, state._paradEdge, state.touchParad = false, false, false
 	state.gaitUp, state.gaitDown, state.jump = false, false, false
+	--[[ FLANKERNA MÅSTE MED. `gaitUp`/`gaitDown` är hållna tillstånd;
+	     `_upEdge`/`_downEdge` är den OBEHANDLADE begäran, och den låg kvar
+	     här. En spelare som tryckte Shift och sedan satt av innan
+	     bildrutan hann konsumera flanken fick gångartsbytet på FÖRSTA
+	     bildrutan efter nästa uppsittning — hästen bytte gångart av sig
+	     själv innan ryttaren rört en tangent.
+
+	     `_paradEdge` nollades redan; de här två glömdes. Mätt i
+	     tests/touch.spec.luau: tre mätningar föll före den här raden. ]]
+	state._upEdge, state._downEdge = false, false
 end
 
 --[[ Gamepadens vänsterspak går in vid sidan av tangenterna, så att båda
