@@ -43,6 +43,33 @@ function visaMeny(){
   if(typeof kopplaSynkPanel==="function")kopplaSynkPanel();
 }
 
+/* ── Ingen häst i tjänst i dag ──────────────────────────────────
+   Väntläget när gruppens alla hästar vilar. Det ska LÄSA som ett besked
+   från ridläraren, inte som ett fel: spelaren har inte gjort något
+   tokigt, stallet har bara ingen frisk häst på hennes nivå just nu.
+   Skälen hämtas ur `dagensHandelser()` — samma källa som schemat i
+   `sysslor.js` — så att inget hittas på här. */
+function visaIngenHastIdag(){
+  const hand=(typeof dagensHandelser==="function")?dagensHandelser():{};
+  const rader=Object.entries(hand)
+    .map(([id,e])=>`<li><b style="color:var(--ink)">${HORSES[id]?HORSES[id].namn:id}</b> — ${e.text}</li>`);
+  overlay(true,`
+  <span class="lbl">Ridläraren fördelar hästarna</span>
+  <h1 style="margin-top:8px">Ingen häst för dig i dag</h1>
+  <p style="font-size:15px;margin-top:4px">”Jag har ingen häst på din nivå som är i tjänst i dag.
+  Vi rider inte en häst som vilar — då blir vilan längre. Kom tillbaka nästa dag, så ser vi.”</p>
+  ${rader.length?`<div class="note" style="font-size:13px">
+    <b class="lbl" style="display:block;margin-bottom:4px;color:var(--gold-2)">Går ej i dag</b>
+    <ul style="list-style:none;padding:0;margin:0;display:grid;gap:4px">${rader.join("")}</ul></div>`:""}
+  <p class="dim" style="font-size:13px">Skador läker på vila, ett pass i taget. Du kan fortfarande
+  gå ut i stallet och sköta om hästarna — det räknas.</p>
+  <div class="btnrow">
+    <button class="btn" id="bIngenHastOk">Tillbaka till stallet</button>
+  </div>`);
+  const k=document.getElementById("bIngenHastOk");
+  if(k)k.onclick=()=>overlay(false);
+}
+
 /* ── Ridläraren tilldelar häst ── */
 function visaTilldelning(){
   // rotation ur gruppens hästpool — känsligare hästar på högre nivåer.
@@ -65,10 +92,24 @@ function visaTilldelning(){
 
      Villkoret läser hästkanonen innan det pekar ut honom. Saknas han
      faller dagen tillbaka på rotationen i stället för att kasta — en
-     första dag utan häst vore värre än en första dag med fel häst. */
+     första dag utan häst vore värre än en första dag med fel häst.
+
+     Villkoret frågar numera OCKSÅ om Jack är i tjänst. Tilldelningen går
+     med flit utanför `hastpool()`, och därför gick den också utanför
+     välfärdsspärren: en skadad Jack sattes i arbete på dag ett. Att stå
+     utanför rotationen är inte samma sak som att stå utanför vilan.
+     Vilar han rullar dagen på rotationen precis som när han saknas. */
   const FORSTA_DAGEN_HAST="blackrock_jack";
   const forstaOrdinarie=!G.tavling&&typeof SPAR!=="undefined"&&SPAR&&SPAR.pass===0;
-  const val=(forstaOrdinarie&&HORSES[FORSTA_DAGEN_HAST])
+  const jackKanRida=!!HORSES[FORSTA_DAGEN_HAST]
+    &&!(typeof hastVilarForSkada==="function"&&hastVilarForSkada(FORSTA_DAGEN_HAST));
+  /* INGEN HÄST ATT DELA UT. Poolen får vara tom sedan välfärdsspärren
+     slutade återinföra vilande hästar, och då finns det ingenting att
+     välja på. Ridläraren säger det i stället för att spelet hittar på en
+     häst — det är dagens besked, inte ett fel. */
+  if(!kandidater.length&&!(forstaOrdinarie&&jackKanRida))
+    return visaIngenHastIdag();
+  const val=(forstaOrdinarie&&jackKanRida)
     ? FORSTA_DAGEN_HAST
     : kandidater[G.seed%kandidater.length];
   /* HÄSTEN STÅR I SIN BOX när ridläraren delar ut henne (produktbeslut

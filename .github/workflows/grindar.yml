@@ -199,6 +199,16 @@ jobs:
           if [ -f tools/inputsemantiktest.mjs ]; then node tools/inputsemantiktest.mjs
           else echo "hoppar: tools/inputsemantiktest.mjs finns inte i denna branch"; fi
 
+      # Välfärden (#153 fix 1): en häst som vilar för en skada får aldrig
+      # tilldelas, och en ritt får aldrig radera skadan. Poolen föll förut
+      # tillbaka på den OFILTRERADE listan när alla gruppens hästar vilade
+      # och delade alltså ut precis de skadade hästar filtret plockat bort;
+      # `delete ny.skada` gjorde sedan hästen frisk av att ha arbetat.
+      - name: Välfärden — skadad häst tilldelas inte och skadan består
+        run: |
+          if [ -f tools/valfardstest.mjs ]; then node tools/valfardstest.mjs
+          else echo "hoppar: tools/valfardstest.mjs finns inte i denna branch"; fi
+
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
       # att ingen debugmarkering ligger i produktvyn och att ytan under

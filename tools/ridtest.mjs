@@ -1499,6 +1499,11 @@ const kam = await page.evaluate(() => {
     lagen[namn] = { bak: S3.kam.bak, hojd: S3.kam.y, fov: S3.kam.fov,
       gangart: G.ride.gangart };
   }
+  /* Kontraktet läses ur MODULEN, inte ur tal skrivna i provet. Sadelns
+     synfält och ögats tillåtna glidning är kamerans egna konstanter; en
+     ändring där ska synas som ett rött prov, inte tyst passera. */
+  const kanon = { sadelFov: KAM_SADEL.FOV, takY: KAM_SADEL.TAK_Y,
+    gangFov: { halt: KAM_GANG.halt.fov, galopp: KAM_GANG.galopp.fov } };
 
   /* b) Kamerans eftersläpning.
 
@@ -1544,16 +1549,56 @@ const kam = await page.evaluate(() => {
   kor({ styr: 1 }, 4);
   const lutGalopp = G.banLut, gangGalopp = G.ride.gangart;
 
-  return { lagen, slap, lutHalt, gangHalt, lutGalopp, gangGalopp };
+  return { lagen, kanon, slap, lutHalt, gangHalt, lutGalopp, gangGalopp };
 });
 {
   const L = kam.lagen;
+  const K = kam.kanon;
   const stiger = (f) => L.halt[f] < L.skritt[f] && L.skritt[f] < L.trav[f] && L.trav[f] < L.galopp[f];
   const ratt = ["halt", "skritt", "trav", "galopp"].every(g => L[g].gangart === g);
-  prova("kameran: boom, öga och synfält växer med gångarten",
-    ratt && stiger("bak") && L.halt.hojd < L.galopp.hojd && L.skritt.fov < L.galopp.fov,
-    ["halt", "skritt", "trav", "galopp"].map(g =>
-      `${g} ${L[g].bak.toFixed(2)} m / ${L[g].hojd.toFixed(2)} m / ${L[g].fov.toFixed(3)} rad`).join(" · "));
+  const gangar = ["halt", "skritt", "trav", "galopp"];
+  const visa = gangar.map(g =>
+    `${g} ${L[g].bak.toFixed(2)} m / ${L[g].hojd.toFixed(2)} m / ${L[g].fov.toFixed(3)} rad`).join(" · ");
+
+  /* G02-E ändrade vad de här talen BETYDER. Före sadelkameran satt ögat
+     på en bom bakom hästen, och då var det rätt att kräva att bom, höjd
+     OCH synfält växte med gångarten — det var fartkänslan. Nu är ögat
+     ryttarens, och en ryttare byter inte lins när hästen galopperar.
+     Assertionen nedan är därför delad i tre, så att var och en säger vad
+     den faktiskt mäter i stället för att ett enda krav bär tre kontrakt.
+
+     Bomavståndet lever kvar och varierar fortfarande per gångart — det
+     är den lånade feedbackvinkelns mått, inte sadelns. Det kravet står
+     alltså orört. */
+  prova("kameran: bomavståndet växer fortfarande med gångarten",
+    ratt && stiger("bak"), visa);
+
+  /* Sadelns synfält är ryttarens, alltså konstant. Talet läses ur
+     KAM_SADEL.FOV och inte ur en siffra här — ändras kameran ska provet
+     bli rött, inte tyst följa med. */
+  prova("kameran: ryttarens synfält är konstant och lika med sadelkanonen",
+    gangar.every(g => Math.abs(L[g].fov - K.sadelFov) < 1e-6),
+    `sadelkanon ${K.sadelFov.toFixed(3)} rad · ${visa}`);
+
+  /* Ögonhöjden är huvudets, inte en bom. Den får röra sig lite med
+     takten men aldrig mer än modulens eget tak för hur långt ögat får
+     glida från huvudet. */
+  {
+    const hojder = gangar.map(g => L[g].hojd);
+    const spann = Math.max(...hojder) - Math.min(...hojder);
+    prova("kameran: ryttarens ögonhöjd glider inte med gångarten",
+      spann <= K.takY,
+      `spann ${spann.toFixed(3)} m av tillåtna ${K.takY.toFixed(2)} m · ${visa}`);
+  }
+
+  /* KONTROLLMÄTNING. Utan den hade de tre kraven ovan kunnat bli gröna
+     genom att gångartens fartkänsla försvunnit helt ur kameramodellen.
+     Tabellen ska fortfarande DEKLARERA ett växande synfält — det är det
+     bomvyn lånar ut när en feedbackvinkel begärs. Kravet skiljer alltså
+     "sadeln använder det inte" från "det finns inte längre". */
+  prova("kameran: gångartens synfältstillägg finns kvar i bomtabellen",
+    K.gangFov.galopp > K.gangFov.halt,
+    `halt +${K.gangFov.halt.toFixed(3)} → galopp +${K.gangFov.galopp.toFixed(3)} rad`);
 }
 {
   const g = ["skritt", "galopp"].map(n => kam.slap[n]);
