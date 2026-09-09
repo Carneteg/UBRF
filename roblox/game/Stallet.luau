@@ -104,14 +104,52 @@ end
 
 	Är hela stallet upptaget returneras nil. Det är MENINGEN: hellre "vänta,
 	det finns ingen häst åt dig just nu" än två ryttare på samma häst. ]]
-function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: boolean }?): string?
+--[[ Vilar hästen för en skada?
+
+	Samma innebörd som webbens `hastVilarForSkada` i `src/ryttare.js`, och
+	samma minnesform: `{ skada = { passKvar = n } }`. Regeln bor här och
+	inte i tjänstelagret av samma skäl som resten av modulen — den ska gå
+	att fälla i bänken utan Studio. ]]
+function Stallet.vilarForSkada(minne: any?): boolean
+	if type(minne) ~= "table" then return false end
+	local skada = minne.skada
+	if type(skada) ~= "table" then return false end
+	local kvar = tonumber(skada.passKvar)
+	return kvar ~= nil and kvar > 0
+end
+
+--[[ Vilka hästar som vilar, härlett ur spelarens sparade hästminnen. ]]
+function Stallet.vilandeHastar(minnen: { [string]: any }?): { [string]: boolean }
+	local ut: { [string]: boolean } = {}
+	if type(minnen) ~= "table" then return ut end
+	for id, m in pairs(minnen) do
+		if Stallet.vilarForSkada(m) then ut[id] = true end
+	end
+	return ut
+end
+
+--[[ `vilande` är TVÅ nivåer, inte en till upptagen-lista.
+
+	`upptagna` är schema: hästen är frisk, någon annan rider henne just nu.
+	`vilande` är välfärd: hästen är skadad och ska inte arbeta alls. Båda
+	utesluter, men de betyder olika saker, och därför står de isär — den
+	dagen någon vill mjuka upp schemakravet får välfärden inte följa med.
+
+	Webbens motsvarande spärr (#153 fix 1, PR #154) hade ett hål som den
+	här inte har: när poolen tog slut föll den tillbaka på den OFILTRERADE
+	listan och delade ut precis de skadade hästar filtret plockat bort.
+	Här returneras nil, precis som när stallet är fullt — se kommentaren
+	ovan. Tomt är ett riktigt svar, inte ett fel att gissa sig ur. ]]
+function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: boolean }?,
+	vilande: { [string]: boolean }?): string?
 	local n = #Spel.ordning
 	if n == 0 then return nil end
 	local taget = upptagna or {}
+	local vilar = vilande or {}
 	local start = userId % n
 	for steg = 0, n - 1 do
 		local id = Spel.ordning[(start + steg) % n + 1]
-		if not taget[id] then return id end
+		if not taget[id] and not vilar[id] then return id end
 	end
 	return nil
 end
@@ -158,8 +196,9 @@ function Stallet.statsFor(id: string): { [string]: any }?
 	}
 end
 
-function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?)
-	local id = Stallet.tilldelaLedig(userId, upptagna)
+function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?,
+	vilande: { [string]: boolean }?)
+	local id = Stallet.tilldelaLedig(userId, upptagna, vilande)
 	if not id then return nil end
 	local hast = Spel.hastar[id]
 	if not hast then return nil end

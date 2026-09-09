@@ -109,14 +109,37 @@ local function upptagnaHastar(utom: Player?): { [string]: boolean }
 	return ut
 end
 
+--[[ Spelarens sparade hästminnen, i webbens form: `{ [id] = { skada = … } }`.
+
+	EN ENDA PLATS ATT KOPPLA IN ETT MINNE. I dag finns inget varaktigt lager
+	på Roblox, så den returnerar nil och välfärdsmängden blir tom. Den dagen
+	ett DataStore eller motsvarande läggs till är det HÄR det hämtas — inte
+	genom att sprida läsningar ut i tilldelningen. ]]
+function StallService.hastminnen(_player: Player): { [string]: any }?
+	return nil
+end
+
 function StallService.tilldela(player: Player)
 	--[[ Reservationen görs HÄR och inte i Stallet: modulen äger regeln, den
 		här filen äger vem som faktiskt är inloggad. Skickas ingen upptagen-
 		lista får två spelare med UserId som skiljer 33 samma häst. ]]
-	local dagens = Stallet.dagensHast(player.UserId, upptagnaHastar(player))
+	--[[ VÄLFÄRDEN GÅR GENOM SAMMA CHOKE POINT som reservationen (#153 fix 1).
+		En häst som vilar för en skada ska aldrig kunna tilldelas, och den
+		regeln hör hemma här där tilldelningen faktiskt sker — inte spridd
+		över anropskedjan, vilket var precis hur webbens spärr gick att
+		kringgå på tre ställen.
+
+		VAD SOM SAKNAS, uttryckligen: Roblox har i dag inget varaktigt
+		hästminne — det finns inget `DataStoreService` någonstans i
+		`roblox/`, bara den lokala `tilldelade`-tabellen ovan. Därför är
+		mängden alltid tom just nu och spärren kan inte utlösas i drift.
+		Regeln och dess prov finns ändå, så att den håller den dag ett
+		minne kopplas in i stället för att behöva upptäckas då. ]]
+	local vilande = Stallet.vilandeHastar(StallService.hastminnen(player))
+	local dagens = Stallet.dagensHast(player.UserId, upptagnaHastar(player), vilande)
 	if not dagens then
 		warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name
-			.. " — hela stallet är upptaget. Spelaren får vänta.")
+			.. " — hela stallet är upptaget eller vilar. Spelaren får vänta.")
 		tilldelade[player] = nil
 		taBortMarkor(player)
 		return nil
