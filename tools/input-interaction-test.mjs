@@ -11,7 +11,15 @@ function mount(){
     clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),
     G:{scen:'gard',hastId:null,hastMott:false},
     addEventListener:(n,f)=>(events[n]??=[]).push(f),
-    document:{getElementById:()=>({classList:{contains:()=>!overlay}})},
+    /* G02-D: game.js registrerar sedan `document.addEventListener(
+       "visibilitychange", ...)` i samma utdrag den här bänken kör (focus
+       loss-fixet, "Focus loss lämnade hjälperna på"). Provet här handlar
+       om E-interaktionens engångssemantik, inte om fliksynlighet — en
+       tom lyssnare räcker för att utdraget ska gå att köra utan att
+       provets egen mätning ändras. visibilitychange-beteendet har sitt
+       eget prov i tools/inputsemantiktest.mjs. */
+    document:{getElementById:()=>({classList:{contains:()=>!overlay}}),
+      addEventListener(){}},
     ov:{classList:{toggle:(_,hidden)=>{overlay=!hidden;}}},sheet:{innerHTML:''},
     interaktioner:()=>near?[{pos:[0,0],text:'Dörr',gor(){calls++;}}]:[{pos:[20,0],text:'Dörr',gor(){calls++;}}],
     overlayUppe:()=>overlay,navBygg(){},slutaGa(){},kameraNollstall(){},ridSittAv(){},hudLage(){},saga(){},

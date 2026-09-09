@@ -40,7 +40,8 @@ vm.runInContext(fs.readFileSync("src/riding/ovningsdef.js","utf8")+"\n"+src+`\ng
   medel:ugnetaForsokMedel,
   dims:UGNETA_OVNING_DIM,
   meddela:lararMeddelande,
-  larare:LARARE
+  larare:LARARE,
+  tal:ugTal
 };`,ctx);
 
 ctx.G={
@@ -146,6 +147,83 @@ if(fel){console.error(`\n${fel} Ugneta-kontroller föll.`);process.exit(1);}
      "ett enda sampel räcker inte, hur länge det än varade");
   ok(ctx.__UG.medel(bygg(120, 0.4)).linje === null,
      "och 120 bildrutor på fyra tiondelar räcker inte heller — sekunder avgör");
+}
+
+/* ══ TALVAKTEN: SAKNAT ÄR INTE NOLL, OCH INTE HELLER "" ELLER null ══
+   ChatGPT senior review 2026-09-07 på #138: `ugTal` använde `Number(v)`,
+   och `Number(null)`, `Number("")`, `Number("  ")`, `Number(false)` och
+   `Number([])` är alla 0 medan `Number(true)` är 1. Ett saknat värde
+   blev alltså ett uppmätt värde.
+
+   Facit är Lua: `tonumber()` i Lektion.luau svarar nil på var och en av
+   dem. Numeriska strängar är den enda avvikelsen som får finnas kvar,
+   för `tonumber("1.5")` är 1.5 där också. */
+{
+  const ug = ctx.__UG.tal;
+  const FALL = [
+    ["null", null, null], ["tom sträng", "", null], ["blanksteg", "   ", null],
+    ["undefined", undefined, null], ["NaN", NaN, null],
+    ["oändlighet", Infinity, null], ["negativ oändlighet", -Infinity, null],
+    ["true", true, null], ["false", false, null],
+    ["tom array", [], null], ["objekt", {}, null], ["text", "abc", null],
+    /* Och det som FAKTISKT är ett mätvärde ska överleva. */
+    ["riktig nolla", 0, 0], ["negativ nolla", -0, -0],
+    ["decimal", 0.375, 0.375], ["negativt tal", -2.5, -2.5],
+    ["numerisk sträng (Lua-paritet)", "1.5", 1.5],
+  ];
+  for (const [namn, in_, ut] of FALL)
+    ok(Object.is(ug(in_), ut), `talvakten: ${namn} → ${JSON.stringify(ut)}`);
+
+  /* SAMMA svar i alla tre modulerna. Tre kopior av en regel som glider
+     isär är värre än ingen regel — och de tre filerna får med flit inte
+     importera varandra (ridanalys och inspelning är motoroberoende). */
+  const utdrag = (fil, namn) => {
+    const kall = fs.readFileSync(fil, "utf8");
+    const c = { console }; vm.createContext(c);
+    vm.runInContext(kall + `\nglobalThis.__T=${namn};`, c);
+    return c.__T;
+  };
+  const ins = utdrag("src/riding/inspelning.js", "insTal");
+  const ra = utdrag("src/riding/ridanalys.js", "raTal");
+  let oense = [];
+  for (const [namn, in_] of FALL.map(f => [f[0], f[1]]))
+    if (!Object.is(ug(in_), ins(in_)) || !Object.is(ug(in_), ra(in_)))
+      oense.push(`${namn}: ug=${ug(in_)} ins=${ins(in_)} ra=${ra(in_)}`);
+  ok(oense.length === 0,
+    `talvakten svarar likadant i larare, inspelning och ridanalys${oense.length ? " — " + oense.join(" · " ) : ""}`);
+}
+
+/* ══ INGET OGILTIGT VÄRDE NÅR BERÖM ELLER JÄMFÖRELSE ══════════════
+   Vakten är en dörr. Provet nedan kontrollerar att det inte finns en
+   annan väg in: en ritt där varje telemetrivärde är null, "" eller
+   whitespace får inte producera ett omdöme. */
+{
+  const forra = ctx.G;
+  ctx.G = {
+    momentIx: 2, momentT: 12, momentKlart: false,
+    telemetri: { svangradie: null, balans: "", mjukhet: "   ", fokus: null,
+      spanning: undefined, svarstid: "", etableringstid: null,
+      paradKvalitet: "  ", fart: null, onskadFart: "" },
+    ride: { tempo: null, balans: "", mjukhet: null, fokus: "  ", spanning: null,
+      skala: { rakriktning: "", takt: null, schvung: "", kontakt: null, samling: "" } },
+    aids: { tygel: null }, grupp: "grupp2", dagsform: .8,
+  };
+  const q = ctx.__UG.kvalitet();
+  const matta = Object.keys(q).filter(k => q[k] !== null && q[k] !== undefined);
+  ok(matta.length === 0,
+    `en ritt utan mätvärden bedöms inte alls — mätta dimensioner: ${JSON.stringify(matta)}`);
+
+  /* Och feedbacken säger det, i stället för att berömma ingenting. */
+  const medel = {}; for (const k of Object.keys(q)) medel[k] = null;
+  const f = ctx.__UG.forsta("storvolt", medel);
+  ok(/kunde inte bedömas/i.test(f.rubrik),
+    `utan underlag ges inget beröm — "${f.rubrik}"`);
+
+  /* Jämförelsen får inte heller hitta en förbättring i tomma luften. */
+  const j = ctx.__UG.jamfor("storvolt", medel, medel, 2);
+  ok(!/[Bb]ättre/.test(JSON.stringify(j.punkter || [])),
+    `jämförelsen påstår ingen förbättring utan underlag — ${JSON.stringify(j.punkter)}`);
+  ctx.G = forra;
 }
 
 /* SLUTRADEN LJÖG.

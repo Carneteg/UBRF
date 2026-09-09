@@ -33,6 +33,9 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   /* G02-D: övningsdefinitionen. Måste laddas FÖRE src/larare.js, precis
      som i index.html — larare.js bygger UGNETA_OVNING_DIM ur den. */
   + "\n" + las("src/riding/ovningsdef.js")
+  /* G02-D: inspelningens egna tal (takt och tak) bor i inspelning.js och
+     ska exporteras därifrån, inte skrivas av i den här filen. */
+  + "\n" + las("src/riding/inspelning.js")
   /* Hästdatan med — scenariot nedan ska rida VERKLIGA UBRF-hästar
      ur samma tabell som spelet och Roblox Stallet läser, inte en
      handskriven kopia av deras siffror. */
@@ -49,6 +52,14 @@ const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANO
   + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START, "
   + "UGNETA_OVNING_DIM, UGNETA_DIM_LABEL, UGNETA_LIVE, UGNETA_DIM_CUE, "
   + "UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD})", ctx);
+/* G02-D: inspelningens kontrakt. Övningens VERSION är det som avgör om en
+   gammal inspelning får jämföras mot en ny definition, och den siffran får
+   inte finnas två gånger. Roblox läser den härifrån av exakt samma skäl som
+   den läser UGNETA-blocket: en handskriven kopia kan glida utan att något
+   blir rött. */
+const { OVNINGAR_DEF, INSPELNING_SCHEMA, INSPELNING_HZ, INSPELNING_MAX_SEK } =
+  vm.runInContext("({OVNINGAR_DEF, INSPELNING_SCHEMA, INSPELNING_HZ, "
+  + "INSPELNING_MAX_SEK})", ctx);
 
 /* Trösklarna står som literaler inne i Gait.forTempo — de går inte att läsa
    ut ur tabellen. I stället för att skriva av dem MÄTER vi dem: kör
@@ -965,6 +976,27 @@ rader.push("\t},");
     + ", bredd = " + tal(KB.BANA_BREDD)
     + ", langd = " + tal(KB.BANA_LANGD) + " },");
 }
+rader.push("}");
+rader.push("");
+
+/* ── INSPELNINGEN: G02-D:s replay-kontrakt ────────────────────────
+   Vad en inspelning ÄR, som tal: schemaversion, sampeltakt, tak — och
+   varje övnings definitionsversion. Roblox spelar in med samma takt och
+   stämplar posten med samma version som webben, så att en post från den
+   ena ytan kan läsas av den andra utan att någon gissar. */
+rader.push("--[[ G02-D: inspelningens kontrakt, ur src/riding/ovningsdef.js");
+rader.push("     och src/riding/inspelning.js. ]]");
+rader.push("RidKanon.INSPELNING = {");
+rader.push("\tSCHEMA = " + tal(INSPELNING_SCHEMA) + ",");
+rader.push("\tHZ = " + tal(INSPELNING_HZ) + ",");
+rader.push("\tMAX_SEK = " + tal(INSPELNING_MAX_SEK) + ",");
+rader.push("\tOVNING = {");
+for (const id of Object.keys(OVNINGAR_DEF).sort()) {
+  const d = OVNINGAR_DEF[id];
+  rader.push(`\t\t${id} = { version = ${tal(d.version)}, ram = ${str(d.ram)}, `
+    + "matt = { " + d.matt.map(str).join(", ") + " } },");
+}
+rader.push("\t},");
 rader.push("}");
 rader.push("");
 

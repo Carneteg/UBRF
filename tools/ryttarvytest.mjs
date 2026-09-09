@@ -16,8 +16,8 @@
 
      1. ögat ligger i ryttarens ögonpunkt ur riggen,
      2. ögat ligger INTE på den gamla bommen,
-     3. hästens hals ligger i synfältet — man sitter på henne, hon är
-        inte bortklippt,
+     3. hästens huvud och öron ligger i synfältet — man sitter på henne
+        och ser vart hon går, hon är inte bortklippt,
      4. ditt eget huvud ritas inte ovanpå objektivet,
      5. blicken pekar dit hästen går.
 
@@ -40,26 +40,37 @@ function prova(namn, ok, detalj) {
 const avst = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
 /* ══ PRODUKTIONSVÄGEN IN I EN LEKTION ══════════════════════════════
-   Ridläraren delar ut en häst ur den RIKTIGA poolen, skötseln bygger
-   ridtillståndet, ryttaren sitter upp och lektionen startar — samma
-   anrop i samma ordning som spelet gör dem. Ingen handbyggd G. */
+   Samma väg in i en riktig ritt som tools/ridtest.mjs redan använder
+   och som `sittUpp()` (src/tavling.js) faktiskt kör: G.ride sätts direkt
+   ur den RIKTIGA `nyState()`, och `sittUpp()` gör resten — hudLage,
+   ridSittUpp, startaLektion — i produktionens egen ordning. Ett tidigare
+   försök körde `visaSkotsel()` i tron att den sätter ridtillståndet; den
+   BARA ritar skötsel-minispelets UI och sätter det inte alls (det görs
+   av `avslutaSkotsel()`, kopplad till en knapp) — fel funktion, inte ett
+   fel i produktionen. Skötsel-UI:t hör inte hemma i ett kameraprov. */
 const boot = await ev(() => {
   try {
+    /* En FÄRSK profil står i "ledlektion" — GRUPPSTEGE[0], leds för hand,
+       ingen egen ridning. Kamerans sadelvy handlar om att RIDA; en test
+       som råkar landa i den ogångbara gruppen hade mätt fel scenario
+       (RID_TILLSTAND/telemetrin kräver ett `ride` med gångart, som en
+       ledlektion aldrig sätter upp). Gruppen tvingas därför till en
+       riktig ridgrupp, deterministiskt — inte lämnat åt vad en ny
+       profil råkar ha fått av `nyRyttare()`. */
+    G.grupp = "knatte";
     const pool = hastpool(G.grupp);
-    sattAktivHast(pool[0]);
-    G.hastMott = true; G.utrustning = true; G.hastPlats = "leds";
-    visaSkotsel();                 // sätter G.ride = nyState(...)
-    overlay(false);
-    ridSittUpp(G.hastId, "ridhus");
-    startaLektion();               // sätter G.scen och nollar kameraläget
-    G.plats = "ridhus";
+    G.hastId = pool[0];
+    G.hastPlats = "box";
+    G.dagsform = 0.7; G.sadellage = 0.8;      // samma deterministiska värden som ridtest.mjs
+    G.ride = nyState(G.dagsform, hastminne(G.hastId).rang, G.sadellage);
+    sittUpp("ridhus");              // hudLage + ridSittUpp + startaLektion, i rätt ordning
     return { ok: true, hast: G.hastId, scen: G.scen, harRide: !!G.ride,
-      uppsutten: ridTelemetri().uppsutten };
-  } catch (e) { return { ok: false, fel: e.message }; }
+      uppsutten: RID_TILLSTAND.uppsutten };
+  } catch (e) { return { ok: false, fel: e.message, stack: e.stack }; }
 });
 prova("produktionsvägen ger en riktig, uppsutten ritt",
   boot.ok && boot.harRide && boot.uppsutten && (boot.scen === "lektion" || boot.scen === "bana"),
-  boot.ok ? `${boot.hast} · scen ${boot.scen}` : boot.fel);
+  boot.ok ? `${boot.hast} · scen ${boot.scen}` : `${boot.fel}\n${boot.stack || ""}`);
 if (!boot.ok) { await webb.stang(); process.exit(1); }
 
 /* Spionen på GL.kamera. Allt som ritas passerar här; det finns ingen
@@ -91,7 +102,7 @@ async function mat() {
   return ev(() => {
     const s = window.__spion[window.__spion.length - 1];
     if (!s) return null;
-    const oga = s3MinOgonpunkt(), hals = s3MinHalsPunkt();
+    const oga = s3MinOgonpunkt(), huvud = s3MinHuvudPunkt();
     /* Den gamla bomvyn, räknad ur SAMMA kanon som förut — så att
        "kameran står inte där längre" mäts mot det verkliga talet och
        inte mot en siffra jag skrivit i testet. */
@@ -101,7 +112,7 @@ async function mat() {
     return {
       kamera: s.oga, mal: s.mal, fov: s.fov,
       oga: oga ? [oga.x, oga.y, oga.z] : null,
-      hals: hals ? [hals.x, hals.y, hals.z] : null,
+      huvud: huvud ? [huvud.x, huvud.y, huvud.z] : null,
       bom, bak: KG.bak,
       hast: [G.px, G.py], rikt: G.rikt, gangart: (G.ride && G.ride.gangart) || "halt",
       lage: S3.kam.lage, vikt: S3.kam.vikt, vinkel: S3.kam.vinkel,
@@ -135,19 +146,27 @@ prova("kameran ritades minst en gång", m !== null);
     `${m.kamera[1].toFixed(2)} m`);
 }
 
-/* 3. HÄSTEN SYNS. Halsen ska ligga i synfältet och framför kameran —
-      annars är det ingen ryttarvy, det är en svävande kamera. */
+/* 3. HÄSTEN SYNS. Huvudet/öronen — det en ryttare faktiskt siktar mot
+      över halsen — ska ligga i synfältet och framför kameran, annars är
+      det ingen ryttarvy, det är en svävande kamera.
+
+      MANKEN (halsens bas) duger inte som mätpunkt här: den sitter
+      nästan rakt under och strax framför ögat på under en meters håll,
+      vilket kräver en orimligt brant nedåtblick för att ens teoretiskt
+      rymmas i bild — ingen ryttare tittar ner på sin egen manke när hon
+      rider framåt. Huvudet ligger längre fram och lägre relativt ögat,
+      och är den punkt blicken faktiskt vilar mot. */
 {
   const f = [m.mal[0] - m.kamera[0], m.mal[1] - m.kamera[1], m.mal[2] - m.kamera[2]];
   const fl = Math.hypot(...f); const fn = f.map(x => x / fl);
-  const h = [m.hals[0] - m.kamera[0], m.hals[1] - m.kamera[1], m.hals[2] - m.kamera[2]];
+  const h = [m.huvud[0] - m.kamera[0], m.huvud[1] - m.kamera[1], m.huvud[2] - m.kamera[2]];
   const hl = Math.hypot(...h); const hn = h.map(x => x / hl);
   const vinkel = Math.acos(Math.max(-1, Math.min(1, fn[0] * hn[0] + fn[1] * hn[1] + fn[2] * hn[2])));
   const halvFov = m.fov / 2;
-  prova("hästens hals ligger i synfältet under blicken",
+  prova("hästens huvud/öron ligger i synfältet under blicken",
     vinkel < halvFov && hl > 0.12,
     `${(vinkel * 180 / Math.PI).toFixed(1)}° från blickmitten, halva synfältet ${(halvFov * 180 / Math.PI).toFixed(1)}° · avstånd ${hl.toFixed(2)} m`);
-  prova("halsen ligger utanför närplanet (0,12 m) och klipps inte", hl > 0.12,
+  prova("huvudet ligger utanför närplanet (0,12 m) och klipps inte", hl > 0.12,
     `${hl.toFixed(2)} m`);
 }
 
@@ -236,7 +255,7 @@ const avbrott = await ev(() => {
   uppe();
   startaVandring();              // avsittningen: ridSittAv + kameraNollstall
   R.efterAvsittning = { aktiv: Kameralage.aktiv(Kameralage.ritten), vikt: S3.kam.vikt,
-    uppsutten: ridTelemetri().uppsutten };
+    uppsutten: RID_TILLSTAND.uppsutten };
 
   /* Inget får vakna senare. */
   for (let i = 0; i < 60 * 30; i++) Kameralage.stega(Kameralage.ritten, 1 / 60);

@@ -616,20 +616,17 @@ function s3RitaHast(o){
 
   /* Bålen — en enda svept kropp, redan i hästens egna mått. */
   rita(D.kropp,M4.ny(),farg);
-  /* Halsen: reser sig när hästen samlas, sträcks på lång tygel. */
-  const samling=o.samling===undefined?0.4:o.samling;
-  const halsA=P(HALS_ANKARE[0],HALS_ANKARE[1],HALS_ANKARE[2]), halsL=0.88+0.07*(1-samling);
-  /* Betande häst sänker halsen till marken; annars styr samlingen. */
-  const halsVin=o.beta ? -0.72
-    : 0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
-  const halsB=P(halsA[0]+Math.cos(halsVin)*halsL, halsA[1]+Math.sin(halsVin)*halsL, 0);
+  /* Halsen och huvudet: SAMMA räkning som s3HuvudLokal (kameraprovets
+     huvudpunkt läser den funktionen, inte en egen kopia av formeln —
+     läktarlärdomen i #114, tillämpad här med flit). */
+  const HL=s3HuvudLokal(o);
+  const samling=HL.samling, halsL=HL.halsL, halsVin=HL.halsVin,
+    halsA=P(HALS_ANKARE[0],HALS_ANKARE[1],HALS_ANKARE[2]),
+    halsB=P(HL.halsB[0],HL.halsB[1],HL.halsB[2]), nick=HL.nick;
   const halsM=M4.mul(M4.mul(M4.translation(halsA[0],halsA[1],0),M4.rotZ(halsVin)),
     M4.skala(halsL,1,1));
   rita(D.hals,halsM,farg);
-  /* Huvudet följer halsens vinkel, nosen något nedåt. */
-  const nick=o.beta ? -1.15 : halsVin-0.95-0.25*samling;
-  const huvudM=M4.mul(M4.translation(halsB[0]+Math.cos(nick)*0.19,
-    halsB[1]+Math.sin(nick)*0.19-0.02,0), M4.rotZ(nick));
+  const huvudM=M4.mul(M4.translation(HL.huvud.x,HL.huvud.y,HL.huvud.z),M4.rotZ(nick));
   rita(D.huvud,huvudM,farg);
   for(const s of [-1,1])
     rita(D.ora,M4.mul(M4.mul(huvudM,M4.translation(-0.10,0.10,s*0.085)),
@@ -834,6 +831,38 @@ function s3HalsPunkt(o){
   return {x:m[12], y:m[13], z:m[14]};
 }
 
+/* Halsens och huvudets LOKALA geometri — samma räkning som s3RitaHast
+   gör för att placera D.hals/D.huvud, bruten ut till en ren funktion så
+   att kameraprovet frågar EXAKT samma punkt som ritas, inte en egen
+   uppskattning av var huvudet ungefär är.
+
+   Manken (HALS_ANKARE) sitter nästan rakt under och strax framför
+   ryttarens öga på nära håll — det är rätt för en KROPPSDEL man sitter
+   ovanpå, men fel mätpunkt för "syns hästen i bild": en ryttare tittar
+   mot HUVUDET/öronen längre fram, inte ner på sin egen manke. Provet
+   ska alltså fråga efter huvudpunkten nedan, inte manken. */
+function s3HuvudLokal(o){
+  const samling=o.samling===undefined?0.4:o.samling;
+  const luft=o.luft||0;
+  const u=luft>0?1-luft/0.55:0;
+  const halsL=0.88+0.07*(1-samling);
+  const halsVin=o.beta ? -0.72
+    : 0.55+0.55*samling+(luft>0?0.25*Math.cos(Math.PI*u):0);
+  const halsB=[HALS_ANKARE[0]+Math.cos(halsVin)*halsL,
+    HALS_ANKARE[1]+Math.sin(halsVin)*halsL, 0];
+  const nick=o.beta ? -1.15 : halsVin-0.95-0.25*samling;
+  const huvud={x:halsB[0]+Math.cos(nick)*0.19, y:halsB[1]+Math.sin(nick)*0.19-0.02, z:0};
+  return {samling, halsL, halsVin, halsB, nick, huvud};
+}
+
+/* Huvudets/öronens världspunkt — det ekipaget en ryttare faktiskt
+   siktar mot över halsen. Samma bas som ögat och manken. */
+function s3HuvudPunkt(o){
+  const K=s3HastKropp(o), hl=s3HuvudLokal(o).huvud;
+  const m=M4.mul(s3HastBas(o,K), M4.translation(hl.x,hl.y,hl.z));
+  return {x:m[12], y:m[13], z:m[14]};
+}
+
 /* DITT ekipage som ritfunktionen ser det. En enda beskrivning, byggd ur
    samma speltillstånd som `rita3D` skickar in i `s3RitaHast` samma
    bildruta — kameran och renderaren får aldrig läsa olika hästar. */
@@ -855,10 +884,23 @@ function s3MinOgonpunkt(){
   return {x:m[12], y:m[13], z:m[14]};
 }
 
-/* Din hästs manke i världen — mätpunkten för "hästen syns i bild". */
+/* Din hästs manke i världen. Ligger nästan rakt under och strax framför
+   ryttarens öga på nära håll — rätt punkt för en kollisions-/geometri-
+   kontroll, men FEL mätpunkt för "hästen syns i bild": ingen ryttare
+   tittar ner på sin egen manke. Behålls som en egen accessor eftersom
+   den beskriver en verklig, namngiven kroppsdel — men se
+   `s3MinHuvudPunkt` för vad blicken faktiskt siktar mot. */
 function s3MinHalsPunkt(){
   const o=s3MittEkipage();
   return o?s3HalsPunkt(o):null;
+}
+
+/* Din hästs huvud/öron i världen — mätpunkten för "hästen syns i bild".
+   Det är huvudet, inte manken, en ryttare ser över halsen när hon
+   tittar framåt. */
+function s3MinHuvudPunkt(){
+  const o=s3MittEkipage();
+  return o?s3HuvudPunkt(o):null;
 }
 
 /* ── Ryttaren: sits, lättridning, lätt sits och tyglarna ──────── */

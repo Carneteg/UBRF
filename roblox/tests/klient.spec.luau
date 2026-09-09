@@ -322,6 +322,725 @@ do
 	UgnetaController.sakerhetTarOver()
 end
 
+--[[ ══ G02-D: RIDANALYSEN GENOM SAMMA LOOP ════════════════════════
+
+	DEN HÄR DELEN ÄR REGRESSIONEN FÖR DET SOM FÖLL I CI.
+
+	Felet var inte i produktionskoden och inte i posen: `ReplayController`
+	och `HorseCore/Inspelning` lades bara till i EN av bunterna i
+	roblox/tests/build.py (PARITET), inte i KLIENT. `LektionController`
+	require:ar bägge, så i klientbunten blev require:t nil — och det syntes
+	först som "attempt to index nil with 'aktiv'" ur RenderStepped-loopen,
+	alltså långt ifrån orsaken.
+
+	Provet nedan går därför genom init.client.luau och dess RenderStepped,
+	precis som resten av den här specen. Faller en modul ur någon av
+	listorna dör loopen här igen, med samma fel, och specen blir röd.
+
+	FALSIFIERAT: raderna nedan har körts med `ReplayController` borttagen ur
+	KLIENT-listan — då dör bunten på require:t innan den första mätningen,
+	exakt som CI-körningen gjorde. De har också körts med `Inspelning`
+	borttagen ur samma lista, med samma utfall.
+
+	GRÄNSEN, uttalad: bänken kör ingen fysik. `humanoid:Move` spelas in men
+	flyttar ingen rigg, så hästen står stilla om ingen flyttar henne. Där
+	ritten behöver en UTSTRÄCKNING flyttar provet riggens root självt — det
+	är vad Roblox-fysiken hade gjort — och det står här så att ingen läser
+	panelens bana som ett bevis för rörelsemodellen. Den mäts i
+	movement.spec. ]]
+do
+	print("\n── G02-D: RIDANALYS, INSPELNING OCH VALEN ──")
+
+	prova("Inspelning finns i klientbunten",
+		type(Inspelning) == "table" and type(Inspelning.ny) == "function",
+		("(%s)"):format(type(Inspelning)))
+	prova("ReplayController finns i klientbunten",
+		type(ReplayController) == "table" and type(ReplayController.aktiv) == "function",
+		("(%s)"):format(type(ReplayController)))
+
+	--[[ ── Inspelningens kontrakt, utan loop ────────────────────────── ]]
+
+	prova("bara övningar MED definition spelas in",
+		Inspelning.spelasIn("storvolt") == true
+			and Inspelning.spelasIn("trav_skritt") == true
+			and Inspelning.spelasIn("horn") == false
+			and Inspelning.spelasIn(nil) == false,
+		"(storvolt/trav_skritt ja · horn nej)")
+	prova("versionen kommer ur kanonen, inte ur en siffra i koden",
+		Inspelning.version("storvolt") == RidKanon.INSPELNING.OVNING.storvolt.version,
+		("(v%s)"):format(tostring(Inspelning.version("storvolt"))))
+	prova("en okänd övning ger ingen inspelare alls",
+		Inspelning.ny("finns_inte") == nil, "(nil)")
+
+	--[[ POSEN. Beställningens punkt 3: en pose där positionen är omätbar
+	     men riktningen ÄR mätt ska behålla riktningen. Ett tidigare utkast
+	     kastade hela posen på ett trasigt fält. ]]
+	do
+		local r = Inspelning.ny("storvolt", "bamse")
+		local nan = 0 / 0
+		Inspelning.sampla(r, 0.06, { gangart = "trav" },
+			{ x = nan, z = 5.5, yaw = 1.25 })
+		local s1 = r.post.sampel[1]
+		prova("trasig x kastar INTE en giltig yaw",
+			s1 ~= nil and s1.x == nil and s1.z == 5.5 and s1.yaw == 1.25,
+			("(x %s · z %s · yaw %s)"):format(tostring(s1 and s1.x),
+				tostring(s1 and s1.z), tostring(s1 and s1.yaw)))
+
+		Inspelning.sampla(r, 0.06, { gangart = "trav" },
+			{ x = 2, z = 3, yaw = math.huge })
+		local s2 = r.post.sampel[2]
+		prova("oändlig yaw blir okänd — inte noll",
+			s2 ~= nil and s2.yaw == nil and s2.x == 2,
+			("(yaw %s · x %s)"):format(tostring(s2 and s2.yaw), tostring(s2 and s2.x)))
+
+		Inspelning.sampla(r, 0.06, { gangart = "trav" }, nil)
+		local s3 = r.post.sampel[3]
+		prova("en helt saknad pose ger okänt läge — inte origo",
+			s3 ~= nil and s3.x == nil and s3.z == nil and s3.yaw == nil,
+			"(x/z/yaw nil)")
+
+		--[[ Klockan. En sträng är inte ett tal, och en bildruta på 4,2 s
+		     efter en flikväxling är inte en ritt. ]]
+		local fore = #r.post.sampel
+		Inspelning.sampla(r, "0.06", { gangart = "trav" }, { x = 1, z = 1, yaw = 0 })
+		Inspelning.sampla(r, 4.2, { gangart = "trav" }, { x = 1, z = 1, yaw = 0 })
+		Inspelning.sampla(r, -0.06, { gangart = "trav" }, { x = 1, z = 1, yaw = 0 })
+		prova("sträng-dt, jättesteg och negativ tid skriver ingenting",
+			#r.post.sampel == fore, ("(%d sampel, oförändrat)"):format(#r.post.sampel))
+		prova("och en inspelare som är nil svarar false i stället för att krascha",
+			Inspelning.sampla(nil, 0.06, {}, nil) == false, "(false)")
+	end
+
+	--[[ VERSIONSKOMPATIBILITET. Tre svar, aldrig ett tyst ja. ]]
+	do
+		local r = Inspelning.ny("storvolt", "bamse")
+		Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = 0, z = 0, yaw = 0 })
+		local post = Inspelning.avsluta(r)
+		prova("en färsk post är läsbar", Inspelning.lasbar(post).lage == "ok",
+			("(%s)"):format(Inspelning.lasbar(post).lage))
+
+		local gammal = table.clone(post); gammal.ovningVersion = 0
+		local g = Inspelning.lasbar(gammal)
+		prova("en äldre övningsversion är läsbar men MÄRKT",
+			g.ok == true and g.lage == "gammal" and g.skal ~= "",
+			('("%s")'):format(g.skal))
+
+		local framtid = table.clone(post); framtid.schema = 99
+		local f = Inspelning.lasbar(framtid)
+		prova("ett okänt schema avvisas med skäl",
+			f.ok == false and f.lage == "nej" and f.skal ~= "",
+			('("%s")'):format(f.skal))
+		prova("en okänd övning avvisas med skäl",
+			Inspelning.lasbar({ schema = 1, ovning = "finns_inte" }).lage == "nej",
+			"(nej)")
+		prova("panelen öppnar inte en post den inte får tolka",
+			ReplayController.oppna(framtid) == false
+				and ReplayController.oppna({ schema = 1, ovning = "storvolt",
+					ovningVersion = 1, sampel = {} }) == false
+				and ReplayController.aktiv() == false,
+			"(false · false · inte aktiv)")
+	end
+
+	--[[ ── Genom loopen ─────────────────────────────────────────────── ]]
+
+	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+	prova("uppsittningen startade en ny lektion",
+		LektionController.pagar() == true,
+		("(pågår %s)"):format(tostring(LektionController.pagar())))
+
+	--[[ Riggens root, så att provet kan ge ritten en utsträckning. ]]
+	local root = hast:FindFirstChild("HumanoidRootPart")
+
+	--[[ DRIVNINGSRÄKNAREN. Pausen skyddar EN sak: att MovementController
+	     inte driver hästen medan spelaren läser. Drivningen syns i
+	     humanoidens `Move`, alltså i produktionens egen väg ut mot Roblox,
+	     och det är den här räknaren som mäter den.
+
+	     Ett tidigare utkast läste i stället `pass.tid`, och det provet gick
+	     ALDRIG att göra rött: `LektionController.steg` returnerar redan
+	     tidigt när kortet väntar, så tiden står stilla oavsett om
+	     init.client fryser ridningen eller inte. Falsifieringen visade det
+	     — pausen togs bort och provet var fortfarande grönt. ]]
+	local hum = hast:FindFirstChild("Humanoid")
+	local drivningar = 0
+	local origMove = hum.Move
+	hum.Move = function(self, ...) drivningar += 1; return origMove(self, ...) end
+	local vinkel = 0
+	local function ridBildrutor(sek)
+		for _ = 1, math.floor(sek / dt) do
+			--[[ En 10 m volt, körd av provet eftersom bänken saknar fysik. ]]
+			vinkel += dt * 0.6
+			root.Position = vec(10 * math.cos(vinkel), 3, 10 * math.sin(vinkel))
+			root.CFrame = cframe(root.Position, vec(0, 0, 1), vinkel)
+			RunService.RenderStepped:Fire(dt)
+		end
+	end
+
+	--[[ Kort som visats efter en övning UTAN inspelning, och hur många av
+	     dem som ändå erbjöd "Se ritten". Räknas i `tillOvning` eftersom det
+	     är den som passerar de oinspelade övningarna. ]]
+	local seddaUtanInspelning, seddaMedKnappUtanInspelning = 0, 0
+
+	--[[ Rid fram till storvolten genom spelarens egna handlingar. ]]
+	local function tillOvning(id)
+		for _ = 1, 80 do
+			local p = LektionController.pass()
+			if not p or p.klar then return false end
+			if Lektion.ovningId(p) == id and LektionController.lage() == "presentation" then
+				return true
+			end
+			if LektionController.lage() == "rider" then
+				ridBildrutor(Lektion.FORSOK_SEK + 0.6)
+			elseif LektionController.vantar() then
+				if LektionController.lage() == "efter"
+					and not Inspelning.spelasIn(Lektion.ovningId(p)) then
+					seddaUtanInspelning += 1
+					local k = hitta("SeRitten")
+					if k and k.Visible then seddaMedKnappUtanInspelning += 1 end
+				end
+				tryck("R")
+			else
+				ridBildrutor(0.4)
+			end
+		end
+		return false
+	end
+
+	prova("spelaren rider sig fram till 20 m volten",
+		tillOvning("storvolt") == true,
+		('(övning "%s")'):format(tostring(Lektion.ovningId(LektionController.pass()))))
+
+	--[[ FÖRSÖK 1 PÅ STORVOLTEN. ]]
+	tryck("R")
+	ridBildrutor(Lektion.FORSOK_SEK + 0.6)
+
+	local seRitten = hitta("SeRitten")
+	local gaVidare = hitta("GaVidare")
+	prova("efter försök 1 erbjuds Se ritten",
+		seRitten ~= nil and seRitten.ClassName == "TextButton"
+			and seRitten.Visible == true and seRitten.Activated ~= nil,
+		("(%s · synlig %s)"):format(seRitten and seRitten.ClassName or "-",
+			tostring(seRitten and seRitten.Visible)))
+	prova("och Gå vidare — tre vägar ut, inte en",
+		gaVidare ~= nil and gaVidare.Visible == true
+			and hitta("Knapp").Visible == true,
+		("(Se ritten %s · Gå vidare %s · huvudknapp %s)"):format(
+			tostring(seRitten and seRitten.Visible),
+			tostring(gaVidare and gaVidare.Visible),
+			tostring(hitta("Knapp").Visible)))
+
+	--[[ KONTROLLMÄTNINGEN FÖRST: räknaren måste ha gått upp under ritten,
+	     annars mäter frysprovet nedan ingenting alls. ]]
+	local drivnaUnderRitt = drivningar
+	prova("hästen drevs under själva ritten — räknaren mäter något",
+		drivnaUnderRitt > 0, ("(%d Move-anrop)"):format(drivnaUnderRitt))
+
+	--[[ HÄSTEN STÅR STILLA MEDAN KORTET VÄNTAR. Utan pausen red hon vidare
+	     bakom panelen och försöket hon tittade på hann bli ogiltigt. ]]
+	do
+		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
+		prova("hästen drivs INTE medan kortet väntar",
+			drivningar == drivnaUnderRitt,
+			("(%d Move-anrop, oförändrat under 60 bildrutor)"):format(drivningar))
+	end
+
+	--[[ SE RITTEN genom fingret — knappens eget Activated. ]]
+	seRitten.Activated:Fire()
+	prova("Se ritten öppnar analysen",
+		LektionController.replayAktiv() == true
+			and hitta("Bana") ~= nil,
+		("(aktiv %s)"):format(tostring(LektionController.replayAktiv())))
+	prova("kortets väntan lever kvar bakom panelen — valet är inte gjort",
+		UgnetaController.vantar() == true,
+		("(väntar %s)"):format(tostring(UgnetaController.vantar())))
+
+	do
+		local bana = hitta("Bana")
+		local nu, fore = 0, 0
+		for _, b in ipairs(bana._barn) do
+			if b.Name == "Nu" then nu += 1 elseif b.Name == "Fore" then fore += 1 end
+		end
+		prova("ritten är ritad ur riktiga sampel",
+			nu > 10, ("(%d punkter)"):format(nu))
+		prova("men inget spöke efter FÖRSTA försöket — ingen påhittad ideallinje",
+			fore == 0 and ReplayController.lage().harFore == false,
+			("(%d spökpunkter)"):format(fore))
+		prova("och panelen säger varför i stället för att lämna ett hål",
+			hitta("Status").Text ~= "",
+			('("%s")'):format(hitta("Status").Text))
+	end
+
+	--[[ UPPSPELNINGEN ÄNDRAR ALDRIG POSTEN. ]]
+	do
+		local lage0 = ReplayController.lage()
+		local sek0 = lage0.sekunder
+		for _ = 1, 120 do RunService.RenderStepped:Fire(dt) end
+		local lage1 = ReplayController.lage()
+		prova("uppspelningen rör sig framåt av sig själv",
+			lage1.tid > lage0.tid, ("(%.2f → %.2f s)"):format(lage0.tid, lage1.tid))
+		prova("och posten är oförändrad — uppspelningen är ren avläsning",
+			lage1.sekunder == sek0, ("(%.2f s före och efter)"):format(sek0))
+
+		ReplayController.hoppa(-5)
+		prova("hoppa bakåt klampas till noll, inte till negativ tid",
+			ReplayController.lage().tid >= 0,
+			("(%.2f s)"):format(ReplayController.lage().tid))
+		prova("halv fart går att välja",
+			ReplayController.vaxlaFart() == 0.5 and ReplayController.vaxlaFart() == 1,
+			"(0,5× → 1×)")
+	end
+
+	--[[ RIDNINGEN ÄR FRYST ÄVEN MEDAN ANALYSEN STÅR UPPE. Samma räknare,
+	     samma skäl. ]]
+	do
+		local fore = drivningar
+		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
+		prova("hästen drivs inte bakom ridanalysen",
+			drivningar == fore,
+			("(%d Move-anrop, oförändrat)"):format(drivningar))
+	end
+
+	--[[ TILLBAKA. Tangenten stänger PANELEN, inte kortet bakom den. ]]
+	tryck("R")
+	prova("R stänger analysen och lämnar valet kvar",
+		LektionController.replayAktiv() == false
+			and UgnetaController.vantar() == true
+			and hitta("Kort").Visible == true,
+		("(aktiv %s · väntar %s)"):format(
+			tostring(LektionController.replayAktiv()),
+			tostring(UgnetaController.vantar())))
+
+	--[[ FÖRSÖK 2, sedan spöket. ]]
+	tryck("R")
+	prova("Prova igen startar försök 2 på samma övning",
+		LektionController.pass().forsokNr == 2
+			and Lektion.ovningId(LektionController.pass()) == "storvolt",
+		("(försök %d)"):format(LektionController.pass().forsokNr))
+	ridBildrutor(Lektion.FORSOK_SEK + 0.6)
+
+	tryck("T")
+	prova("T öppnar analysen efter försök 2",
+		LektionController.replayAktiv() == true,
+		("(aktiv %s)"):format(tostring(LektionController.replayAktiv())))
+	do
+		local bana = hitta("Bana")
+		local fore = 0
+		for _, b in ipairs(bana._barn) do if b.Name == "Fore" then fore += 1 end end
+		prova("nu ligger FÖRRA försöket bakom som spöke — spelarens eget",
+			fore > 10 and ReplayController.lage().harFore == true,
+			("(%d spökpunkter)"):format(fore))
+	end
+
+	--[[ AVSITTNING MEDAN ANALYSEN STÅR UPPE. Säkerhet vinner. ]]
+	player.CharacterRemoving:Fire(player.Character)
+	prova("karaktären försvinner → analysen stängs med allt annat",
+		LektionController.replayAktiv() == false
+			and LektionController.pagar() == false
+			and hitta("Kort").Visible == false,
+		("(aktiv %s · pågår %s)"):format(
+			tostring(LektionController.replayAktiv()),
+			tostring(LektionController.pagar())))
+	for _ = 1, 30 do RunService.RenderStepped:Fire(dt) end
+	tryck("T")
+	tryck("G")
+	prova("och varken T eller G väcker något efteråt",
+		LektionController.replayAktiv() == false
+			and LektionController.pagar() == false,
+		"(fortsatt avsutten)")
+
+	--[[ SENT ÅTERANROP. `stang` får köra sitt återanrop EN gång, aldrig
+	     två — inte ens när återanropet självt stänger igen. ]]
+	do
+		local r = Inspelning.ny("storvolt", "bamse")
+		Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = 0, z = 0, yaw = 0 })
+		Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = 1, z = 1, yaw = 0 })
+		local post = Inspelning.avsluta(r)
+		local n = 0
+		local aterintratt = false
+		ReplayController.oppna(post, nil, function()
+			n += 1
+			--[[ ETT återinträde, inte oändligt många. Med den felaktiga
+			     ordningen (kör återanropet innan `stangFn` nollas) blir
+			     `n` 2 och raden nedan röd — utan bottenlös rekursion som
+			     hade dödat hela specen i stället för att peka på felet. ]]
+			if not aterintratt then
+				aterintratt = true
+				ReplayController.stang()
+			end
+		end)
+		ReplayController.stang()
+		ReplayController.stang()
+		prova("stängningens återanrop körs exakt en gång",
+			n == 1, ("(%d anrop)"):format(n))
+		prova("och en stängd panel svarar false i stället för att göra något",
+			ReplayController.spelaPausa() == false
+				and ReplayController.hoppa(1) == false
+				and ReplayController.aktiv() == false,
+			"(false · false · inte aktiv)")
+	end
+
+	--[[ MINDRE RÖRELSE. Har spelaren bett om det startar panelen PAUSAD
+	     i stället för att sätta igång en markör som rör sig av sig själv. ]]
+	do
+		local gs = game:GetService("GuiService")
+		local r = Inspelning.ny("storvolt", "bamse")
+		for i = 1, 40 do
+			Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = i, z = i, yaw = 0 })
+		end
+		local post = Inspelning.avsluta(r)
+
+		gs.ReducedMotionEnabled = false
+		ReplayController.oppna(post)
+		local normal = ReplayController.lage().spelar
+		ReplayController.stang()
+
+		gs.ReducedMotionEnabled = true
+		ReplayController.oppna(post)
+		local reducerad = ReplayController.lage().spelar
+		ReplayController.stang()
+		gs.ReducedMotionEnabled = false
+
+		prova("normalt startar analysen av sig själv", normal == true, "(spelar)")
+		prova("med mindre rörelse startar den pausad — inget innehåll går förlorat",
+			reducerad == false and #post.sampel > 10,
+			("(pausad · %d sampel kvar att scrubba)"):format(#post.sampel))
+	end
+
+	--[[ ══ GÅ VIDARE BEDÖMER EN GÅNG, INTE TVÅ ═══════════════════════
+		Ett tidigare utkast lät panelen sätta en hoppa-flagga och återinträda
+		i lifecyclen. Då bedömdes momentet två gånger och godkäntgränsen
+		flyttade sig tyst. Provet mäter historiken, inte skärmen. ]]
+	do
+		Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+		prova("en ny lektion att mäta Gå vidare i",
+			LektionController.pagar() == true, "(pågår)")
+		prova("och spelaren rider fram till storvolten igen",
+			tillOvning("storvolt") == true,
+			('(övning "%s")'):format(tostring(Lektion.ovningId(LektionController.pass()))))
+
+		tryck("R")
+		ridBildrutor(Lektion.FORSOK_SEK + 0.6)
+		local p = LektionController.pass()
+		local historik = p.historik["storvolt"]
+		local efterForsok1 = if historik then #historik else 0
+		prova("försök 1 är bedömt exakt en gång",
+			efterForsok1 == 1, ("(%d post i historiken)"):format(efterForsok1))
+
+		--[[ Gå vidare genom tangenten. ]]
+		tryck("G")
+		p = LektionController.pass()
+		historik = p.historik["storvolt"]
+		prova("Gå vidare hoppar över omridningen",
+			Lektion.ovningId(p) ~= "storvolt" and p.forsokNr == 1,
+			('(nu "%s", försök %d)'):format(tostring(Lektion.ovningId(p)), p.forsokNr))
+		prova("men bedömningen räknas fortfarande EN gång, inte två",
+			historik ~= nil and #historik == efterForsok1,
+			("(%d post i historiken, oförändrat)"):format(
+				if historik then #historik else -1))
+		prova("och ingen andra väntan blev kvar",
+			UgnetaController.gaVidare() == false,
+			("(gaVidare %s)"):format(tostring(UgnetaController.gaVidare())))
+
+		--[[ ══ DEN ANDRA ÖVNINGEN SPELAS OCKSÅ IN ═══════════════════════
+			Beställningen säger `storvolt` OCH `trav_skritt`. Att bara prova
+			den ena hade lämnat den andra på ett påstående. Spelaren rider
+			vidare genom passet med sina egna handlingar. ]]
+		prova("spelaren rider vidare till övergången trav → skritt",
+			tillOvning("trav_skritt") == true,
+			('(övning "%s")'):format(tostring(Lektion.ovningId(LektionController.pass()))))
+		--[[ Vägen dit går genom `horn`, som INTE har någon definition och
+		     därför inte spelas in. Kortet efter den får inget "Se ritten" —
+		     en knapp som öppnar någon ANNAN övnings ritt vore värre än
+		     ingen knapp alls. ]]
+		prova("en oinspelad övning erbjuder inte att se ritten",
+			seddaUtanInspelning > 0 and seddaMedKnappUtanInspelning == 0,
+			("(%d kort efter oinspelad övning, %d med Se ritten)"):format(
+				seddaUtanInspelning, seddaMedKnappUtanInspelning))
+
+		tryck("R")
+		ridBildrutor(Lektion.FORSOK_SEK + 0.6)
+		prova("också trav → skritt går att se om",
+			hitta("SeRitten").Visible == true,
+			("(Se ritten %s)"):format(tostring(hitta("SeRitten").Visible)))
+		tryck("T")
+		prova("och analysen öppnar på DEN övningens ritt, inte voltens",
+			LektionController.replayAktiv() == true
+				and ReplayController.lage().sekunder > 0,
+			("(%.1f s)"):format(ReplayController.lage().sekunder))
+
+		--[[ ══ TILLGÄNGLIGHET ═══════════════════════════════════════════
+			Panelen ska gå att använda med finger, tangent och gamepad.
+			Provet läser knapparna som de faktiskt byggdes. ]]
+		do
+			local knappar = { "Spela", "Bak", "Fram", "Fart", "Stang" }
+			local alla, minHojd = true, math.huge
+			for _, namn in knappar do
+				local k = hitta(namn)
+				if not k or k.ClassName ~= "TextButton" or k.Activated == nil then
+					alla = false
+				else
+					minHojd = math.min(minHojd, k.Size.Y.Offset)
+				end
+			end
+			prova("alla fem kontroller är riktiga knappar med Activated",
+				alla, ("(%d knappar)"):format(#knappar))
+			--[[ 44 px är minsta träffyta som går att peka på med ett finger.
+			     Familjen spelar på iPad och telefon. ]]
+			prova("och de är minst 44 px höga — fingret ska träffa",
+				minHojd >= 44, ("(minsta höjd %d px)"):format(minHojd))
+
+			--[[ ══ RYMS KONTROLLERNA PÅ EN TELEFON? ═══════════════════
+				Den här mätningen fanns INTE i förra rundan, och det var
+				felet. Provet mätte knapparnas höjd men aldrig om raden fick
+				plats. Panelen är 90 % av viewporten minus 24 px; med fem
+				fasta 104 px-knappar, mellanrum och en 120 px tidsruta krävde
+				raden 670 px och rymdes först vid 1024 px viewport. På en
+				390 px telefon fanns 327 px — knapparna gick inte att nå, och
+				sviten var grön.
+
+				Nu mäts det som faktiskt betyder något: att VARJE knapp
+				ligger helt innanför raden, på varje skärmstorlek familjen
+				spelar på. ]]
+			local cam = game:GetService("Workspace").CurrentCamera
+			local vpFore = cam.ViewportSize
+
+			local function matVid(bredd, hojd)
+				cam.ViewportSize = { _typ = "Vector2", X = bredd, Y = hojd }
+				ReplayController.tillampaLayout()
+				local L = ReplayController.layout()
+				local utanfor, minB, minH = 0, math.huge, math.huge
+				for _, namn in knappar do
+					local k = hitta(namn)
+					if k then
+						local hoger = k.Position.X.Offset + k.Size.X.Offset
+						if hoger > L.bredd + 0.5 then utanfor += 1 end
+						minB = math.min(minB, k.Size.X.Offset)
+						minH = math.min(minH, k.Size.Y.Offset)
+					end
+				end
+				return { utanfor = utanfor, minB = minB, minH = minH,
+					rader = L.rader, perRad = L.perRad, bredd = L.bredd }
+			end
+
+			--[[ Kontraktet läses ur modulen, inte skrivet av här: ett prov
+			     som bär sin egen kopia av minimimåttet kan glida ifrån
+			     koden utan att något blir rött. ]]
+			local L = ReplayController.layout()
+
+			--[[ De skärmar familjen faktiskt spelar på. ]]
+			local skarmar = {
+				{ namn = "telefon 390×844", b = 390, h = 844 },
+				{ namn = "liten telefon 320×568", b = 320, h = 568 },
+				{ namn = "iPad porträtt 768×1024", b = 768, h = 1024 },
+				{ namn = "iPad landskap 1024×768", b = 1024, h = 768 },
+				{ namn = "skrivbord 1920×1080", b = 1920, h = 1080 },
+			}
+			for _, sk in skarmar do
+				local m = matVid(sk.b, sk.h)
+				--[[ Tre krav, inte ett: ingen knapp utanför raden, ingen
+				     under 44 px hög, och ingen smalare än KNAPP_MIN.
+				     Breddkravet är det som skiljer en LÄSBAR knapp från en
+				     som råkar rymmas — en falsifiering där raden aldrig
+				     bryts klarade nämligen "ryms" genom att krympa varje
+				     knapp till 60 px, och då mätte provet inget. ]]
+				prova(("alla kontroller ryms på %s"):format(sk.namn),
+					m.utanfor == 0 and m.minH >= 44 and m.minB >= L.minBredd,
+					("(%d utanför · %d×%d px minst, krav %d×%d · %d rad(er) à %d)"):format(
+						m.utanfor, m.minB, m.minH, L.minBredd, 44,
+						m.rader, m.perRad))
+			end
+
+			--[[ …och att provet MÄTER något: den smalaste skärmen måste
+			     faktiskt ha tvingat fram fler rader än den bredaste. Utan
+			     den här kontrollen hade en layout som ignorerade bredden
+			     kunnat gå grön på alla fem raderna ovan. ]]
+			local smal = matVid(390, 844)
+			local bred = matVid(1920, 1080)
+			prova("den smala skärmen bryter raden, den breda gör det inte",
+				smal.rader > bred.rader and bred.rader == 1,
+				("(telefon %d rader · skrivbord %d rad)"):format(
+					smal.rader, bred.rader))
+
+			cam.ViewportSize = vpFore
+			ReplayController.tillampaLayout()
+
+			--[[ LEDTEXTEN FÖLJER INMATNINGEN, inte plattformen — samma regel
+			     som Ugnetas kort. En ren pekenhet ska inte få en bokstav hon
+			     inte kan trycka på. ]]
+			local usv = game:GetService("UserInputService")
+			local kb, gp, touch = usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled
+			local post = ReplayController.lage()
+			local function stangOppna(tangentbord, gamepad, pek)
+				usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled =
+					tangentbord, gamepad, pek
+				ReplayController.stang()
+				local r = Inspelning.ny("storvolt", "bamse")
+				for i = 1, 30 do
+					Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = i, z = i, yaw = 0 })
+				end
+				ReplayController.oppna(Inspelning.avsluta(r))
+				return hitta("Stang").Text
+			end
+			local medTgb = stangOppna(true, false, false)
+			local medPad = stangOppna(false, true, false)
+			local baraPek = stangOppna(false, false, true)
+			prova("tangentbord ger R-ledtext på Tillbaka",
+				string.find(medTgb, "(R)", 1, true) ~= nil, ('("%s")'):format(medTgb))
+			prova("gamepad ger Y-ledtext i stället",
+				string.find(medPad, "(Y)", 1, true) ~= nil
+					and string.find(medPad, "(R)", 1, true) == nil,
+				('("%s")'):format(medPad))
+			prova("en ren pekenhet får ingen bokstav hon inte kan trycka på",
+				string.find(baraPek, "(R)", 1, true) == nil
+					and string.find(baraPek, "(Y)", 1, true) == nil
+					and string.find(baraPek, "Tillbaka", 1, true) ~= nil,
+				('("%s")'):format(baraPek))
+			usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
+			ReplayController.stang()
+			if post then end
+		end
+
+		--[[ ══ KONTROLLHJÄLPEN ═══════════════════════════════════════
+			Tobias fråga på #151: hur sitter man upp, byter gångart och
+			hoppar? Hjälpen svarar — och provet ser till att den svarar
+			SANT. En hjälptext som påstår en tangent som inte är bunden är
+			värre än ingen hjälp: spelaren trycker och ingenting händer. ]]
+		do
+			prova("hjälpen finns i klientbunten",
+				type(KontrollHjalp) == "table"
+					and type(KontrollHjalp.rader) == "function",
+				("(%s)"):format(type(KontrollHjalp)))
+
+			local usv = game:GetService("UserInputService")
+			local kb, gp, touch = usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled
+
+			local function raderMed(tangentbord, gamepad, pek)
+				usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled =
+					tangentbord, gamepad, pek
+				local m = {}
+				for _, r in KontrollHjalp.rader() do m[r.vad] = r.reglage end
+				return m
+			end
+
+			local tgb = raderMed(true, false, false)
+			local pad = raderMed(false, true, false)
+			local pek = raderMed(false, false, true)
+
+			--[[ DE TRE FRÅGORNA, ordagrant. ]]
+			prova("hjälpen svarar hur man sitter upp",
+				tgb["Sitt upp / sitt av"] == "E",
+				('("%s")'):format(tostring(tgb["Sitt upp / sitt av"])))
+			prova("…hur man byter gångart",
+				tgb["Högre gångart"] == "Shift" and tgb["Lägre gångart"] == "Ctrl",
+				('("%s" / "%s")'):format(tostring(tgb["Högre gångart"]),
+					tostring(tgb["Lägre gångart"])))
+			prova("…och hur man hoppar",
+				tgb["Hoppa"] == "Space", ('("%s")'):format(tostring(tgb["Hoppa"])))
+
+			--[[ REGLAGEN FÖLJER INMATNINGEN. En ren pekenhet får aldrig en
+			     bokstav hon inte kan trycka på. ]]
+			prova("gamepad får sina egna reglage, inte tangenter",
+				pad["Högre gångart"] == "R1" and pad["Hoppa"] == "A",
+				('("%s" / "%s")'):format(tostring(pad["Högre gångart"]),
+					tostring(pad["Hoppa"])))
+			prova("en ren pekenhet får skärmknapparnas egna etiketter",
+				pek["Hoppa"] == "HOPP" and pek["Högre gångart"] == "▲ FRAMÅT"
+					and pek["Tygel (kontakt)"] == "TYGEL",
+				('("%s" · "%s")'):format(tostring(pek["Hoppa"]),
+					tostring(pek["Högre gångart"])))
+			do
+				--[[ …och ingen rad för touch får bära en ensam versal
+				     bokstav, alltså en tangent. ]]
+				local bokstav = 0
+				for _, v in pek do
+					if type(v) == "string" and #v == 1
+						and v:match("%u") ~= nil then bokstav += 1 end
+				end
+				prova("ingen tangentbokstav slinker in i pekenhetens hjälp",
+					bokstav == 0, ("(%d bokstavsreglage)"):format(bokstav))
+			end
+
+			--[[ HJÄLPEN MÅSTE STÄMMA MED INPUT.LUAU. Provet fyrar de
+			     tangenter hjälpen PÅSTÅR och läser vad inputlagret gjorde.
+			     Ändrar någon en bindning utan att ändra hjälpen blir den
+			     här raden röd — det är hela poängen med den. ]]
+			usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = true, false, false
+			local ca = game:GetService("ContextActionService")._bound.HorseControl
+			prova("inputlagret är bundet så att påståendena går att prova",
+				type(ca) == "function", ("(%s)"):format(type(ca)))
+			if type(ca) == "function" then
+				--[[ Tangenten FYRAS UR HJÄLPENS EGEN TEXT, inte ur en
+				     handskriven lista här. Ett tidigare utkast fyrade
+				     LeftShift oavsett vad hjälpen påstod — då mätte provet
+				     att Input.luau fungerar, inte att hjälpen talar sanning,
+				     och en hjälp som pekade på fel tangent hade passerat. ]]
+				local NAMN = {
+					["Shift"] = Enum.KeyCode.LeftShift,
+					["Ctrl"] = Enum.KeyCode.LeftControl,
+					["Space"] = Enum.KeyCode.Space,
+					["Q"] = Enum.KeyCode.Q,
+					["F"] = Enum.KeyCode.F,
+					["E"] = Enum.KeyCode.E,
+				}
+				local function fyraEnligtHjalpen(vad)
+					local kod = NAMN[tgb[vad]]
+					if not kod then return nil end
+					ca("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+					local i = Input.consume()
+					ca("HorseControl", Enum.UserInputState.End, { KeyCode = kod })
+					return i
+				end
+				local upp = fyraEnligtHjalpen("Högre gångart")
+				local ner = fyraEnligtHjalpen("Lägre gångart")
+				local hopp = fyraEnligtHjalpen("Hoppa")
+				local tygel = fyraEnligtHjalpen("Tygel (kontakt)")
+				prova("tangenten hjälpen anger för HÖGRE gångart gör det också",
+					upp ~= nil and upp.gaitUp == true,
+					('("%s" → gaitUp %s)'):format(tostring(tgb["Högre gångart"]),
+						tostring(upp and upp.gaitUp)))
+				prova("…och den för LÄGRE gångart",
+					ner ~= nil and ner.gaitDown == true,
+					('("%s" → gaitDown %s)'):format(tostring(tgb["Lägre gångart"]),
+						tostring(ner and ner.gaitDown)))
+				prova("…och den för HOPP",
+					hopp ~= nil and hopp.jump == true,
+					('("%s" → jump %s)'):format(tostring(tgb["Hoppa"]),
+						tostring(hopp and hopp.jump)))
+				prova("…och den för TYGEL",
+					tygel ~= nil and tygel.rein > 0,
+					('("%s" → rein %s)'):format(tostring(tgb["Tygel (kontakt)"]),
+						tostring(tygel and tygel.rein)))
+			end
+
+			--[[ Panelen går att stänga utan tangentbord. ]]
+			KontrollHjalp.visa()
+			prova("hjälpen går att visa", KontrollHjalp.synlig() == true, "(synlig)")
+			local stang = hitta("StangHjalp")
+			prova("och att stänga med en riktig knapp — inte bara med H",
+				stang ~= nil and stang.ClassName == "TextButton"
+					and stang.Size.Y.Offset >= 44,
+				("(%s · %d px hög)"):format(stang and stang.ClassName or "-",
+					stang and stang.Size.Y.Offset or -1))
+			if stang then stang.Activated:Fire() end
+			prova("knappen stänger den",
+				KontrollHjalp.synlig() == false, "(dold)")
+
+			--[[ H växlar den — och hjälpen släcks när spelaren sitter av. ]]
+			tryck("H")
+			local eftertryck = KontrollHjalp.synlig()
+			usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
+			prova("H växlar hjälpen genom klientens egen inmatning",
+				eftertryck == true, ("(synlig %s)"):format(tostring(eftertryck)))
+		end
+
+		--[[ Städa upp efter oss: nästa block ska inte ärva en pågående ritt. ]]
+		player.CharacterRemoving:Fire(player.Character)
+		prova("hjälpen släcks när ritten tar slut",
+			KontrollHjalp.synlig() == false,
+			("(synlig %s)"):format(tostring(KontrollHjalp.synlig())))
+	end
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else

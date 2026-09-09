@@ -298,6 +298,25 @@ end
 	Några ord, inte ett kort. Väljs ur den svagaste MÄTTA dimensionen i
 	övningens kontrakt — se Lektion.SKILLNAD för varför ingången är en
 	annan än webbens. Ordförrådet är kanonens. ]]
+--[[ SPELAREN NÖJER SIG MED FÖRSÖKET (G02-D).
+
+	Skillnaden mot `vidare` är EN sak: det andra försöket hoppas över.
+	Momentet är redan bedömt — `avslutaForsok` kördes när försöket tog
+	slut och skrev in medelvärdena i historiken. Den här funktionen
+	bedömer INGENTING igen, och får inte göra det: en andra bedömning av
+	samma ritt hade räknat in övningen två gånger i historiken och tyst
+	flyttat vad "bättre än förra gången" betyder.
+
+	Den ligger här och inte i controllern av samma skäl som `vidare`: hur
+	ett pass rör sig framåt är lifecyclens regel, inte HUD:ens. ]]
+function Lektion.hoppaOver(pass: Pass)
+	pass.ix += 1
+	pass.forsokNr = 1
+	if pass.ix > #Lektion.ORDNING then pass.klar = true end
+	pass.tid = 0
+	pass.prov = tomtProv()
+end
+
 function Lektion.liveCue(pass: Pass, q: { [string]: number? }): (string, boolean)
 	local id = Lektion.ovningId(pass)
 	if not id then return "", false end
