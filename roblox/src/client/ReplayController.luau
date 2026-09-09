@@ -38,6 +38,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
@@ -55,6 +56,8 @@ local tidLabel: TextLabel? = nil
 local statusLabel: TextLabel? = nil
 local spelaKnapp: TextButton? = nil
 local stangKnapp: TextButton? = nil
+local rad: Frame? = nil
+local knappar: { TextButton } = {}
 
 local aktiv = false
 local post: Inspelning.Post? = nil
@@ -82,6 +85,62 @@ local FARG_FORE = Color3.fromRGB(214, 174, 60)
      lång ritt kostar lika mycket att rita. ]]
 local PUNKTER_NU = 120
 local PUNKTER_FORE = 100
+
+--[[ ── KONTROLLRADEN MÅSTE FÅ PLATS ─────────────────────────────────
+     Första utkastet la fem knappar à 104 px, fyra mellanrum och en
+     tidsruta à 120 px på EN vågrät rad utan brytning: 670 px. Panelen är
+     90 % av viewporten minus 24 px, alltså 327 px på en 390 px telefon och
+     667 px på en iPad i porträtt. Knapparna gick helt enkelt inte att nå
+     — och provet såg det inte, för det mätte knapparnas HÖJD (44 px) men
+     aldrig om de rymdes.
+
+     Raden bryts nu i flera rader när bredden kräver det, och knapparna
+     delar på bredden i stället för att sticka ut. Två gränser hålls:
+     ingen träffyta under 44 px hög, och ingen knapp smalare än
+     KNAPP_MIN — hellre en rad till än en knapp som fingret missar.
+
+     Tidsrutan flyttades ut ur raden. Den är en avläsning, inte en
+     handling, och den ska inte konkurrera om plats med det spelaren
+     trycker på. ]]
+local KNAPP_MIN = 64
+local KNAPP_MAX = 104
+local KNAPP_HOJD = 44
+local GAP = 6
+local PANEL_ANDEL = 0.9      -- panelens bredd som andel av viewporten
+local PANEL_MARGINAL = 24    -- kontrollradens indrag i panelen
+
+--[[ Ren funktion, med flit: den går att prova mot en bredd utan att bygga
+     en enda Instance, och den är samma räkning som `tillampaLayout` sedan
+     använder. Två räkningar hade kunnat glida isär. ]]
+local function radLayout(bredd: number, antal: number): { perRad: number,
+	knappBredd: number, rader: number, hojd: number }
+	if antal <= 0 then
+		return { perRad = 0, knappBredd = 0, rader = 0, hojd = 0 }
+	end
+	local b = math.max(0, bredd)
+	--[[ Hur många ryms med den SMALASTE godtagbara knappen? Minst en, och
+	     aldrig fler än det finns knappar. ]]
+	local perRad = math.floor((b + GAP) / (KNAPP_MIN + GAP))
+	perRad = math.clamp(perRad, 1, antal)
+	local rader = math.ceil(antal / perRad)
+	--[[ Fyll ut raden jämnt, men bli inte bredare än designbredden. ]]
+	local knappBredd = math.floor((b - (perRad - 1) * GAP) / perRad)
+	knappBredd = math.max(1, math.min(KNAPP_MAX, knappBredd))
+	return {
+		perRad = perRad, knappBredd = knappBredd, rader = rader,
+		hojd = rader * KNAPP_HOJD + (rader - 1) * GAP,
+	}
+end
+
+--[[ Viewportens bredd. Saknas kameran — vilket den gör i vissa
+     uppstartslägen — antas en skrivbordsbredd hellre än noll: en nolla
+     hade gett en rad per knapp och en panel som fyller hela skärmen. ]]
+local function viewportBredd(): number
+	local cam = Workspace.CurrentCamera
+	local vp = cam and (cam :: any).ViewportSize
+	if vp and type(vp.X) == "number" and vp.X > 0 then return vp.X end
+	return 1280
+end
 
 local function reducerRorelse(): boolean
 	--[[ Egenskapen finns inte på alla klienter. Ett explicit typtest, inte
@@ -222,58 +281,98 @@ local function bygg()
 	m.Parent = b
 	markor = m
 
-	local rad = Instance.new("Frame")
-	rad.Name = "Kontroller"
-	rad.Size = UDim2.new(1, -24, 0, 48)
-	rad.Position = UDim2.new(0, 12, 1, -56)
-	rad.BackgroundTransparency = 1
-	rad.Parent = panel
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.Padding = UDim.new(0, 6)
-	layout.Parent = rad
+	--[[ TIDSRUTAN LIGGER I HUVUDET, inte i kontrollraden. Den är en
+	     avläsning och ska inte ta plats från det spelaren trycker på. ]]
+	local tl = Instance.new("TextLabel")
+	tl.Name = "Tid"
+	tl.Size = UDim2.new(0, 120, 0, 24)
+	tl.Position = UDim2.new(1, -132, 0, 10)
+	tl.BackgroundTransparency = 1
+	tl.TextColor3 = FARG_TEXT
+	tl.TextXAlignment = Enum.TextXAlignment.Right
+	tl.Font = Enum.Font.Gotham
+	tl.TextSize = 12
+	tl.Text = ""
+	tl.Parent = panel
+	tidLabel = tl
 
-	local function knapp(namn: string, txt: string, ordning: number, fn: () -> ()): TextButton
+	local r = Instance.new("Frame")
+	r.Name = "Kontroller"
+	r.BackgroundTransparency = 1
+	r.Parent = panel
+	rad = r
+
+	--[[ Ingen UIListLayout. Knapparna placeras av `tillampaLayout`, som
+	     räknar med samma funktion provet räknar med — en vågrät layout
+	     som inte kan brytas var precis felet. ]]
+	local function knapp(namn: string, txt: string, fn: () -> ()): TextButton
 		local x = Instance.new("TextButton")
 		x.Name = namn
 		x.AutoButtonColor = true
-		x.LayoutOrder = ordning
-		--[[ 44 px hög: minsta träffyta som går att peka på med ett finger.
-		     Familjen spelar på iPad och telefon. ]]
-		x.Size = UDim2.fromOffset(104, 44)
+		x.Size = UDim2.fromOffset(KNAPP_MAX, KNAPP_HOJD)
 		x.BackgroundColor3 = FARG_GULD
 		x.TextColor3 = Color3.fromRGB(23, 20, 10)
 		x.Font = Enum.Font.GothamBold
 		x.TextSize = 12
 		x.Text = txt
 		x.ZIndex = 6
-		x.Parent = rad
+		x.Parent = r
 		local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(1, 0); c.Parent = x
 		x.Activated:Connect(fn)
+		table.insert(knappar, x)
 		return x
 	end
 
-	spelaKnapp = knapp("Spela", "Spela", 1, function()
-		ReplayController.spelaPausa()
-	end)
-	knapp("Bak", "−5 s", 2, function() ReplayController.hoppa(-5) end)
-	knapp("Fram", "+5 s", 3, function() ReplayController.hoppa(5) end)
-	knapp("Fart", "0,5×", 4, function() ReplayController.vaxlaFart() end)
-	stangKnapp = knapp("Stang", "Tillbaka", 5, function()
-		ReplayController.stang()
-	end)
+	spelaKnapp = knapp("Spela", "Spela", function() ReplayController.spelaPausa() end)
+	knapp("Bak", "−5 s", function() ReplayController.hoppa(-5) end)
+	knapp("Fram", "+5 s", function() ReplayController.hoppa(5) end)
+	knapp("Fart", "0,5×", function() ReplayController.vaxlaFart() end)
+	stangKnapp = knapp("Stang", "Tillbaka", function() ReplayController.stang() end)
 
-	local tl = Instance.new("TextLabel")
-	tl.Name = "Tid"
-	tl.Size = UDim2.fromOffset(120, 44)
-	tl.BackgroundTransparency = 1
-	tl.TextColor3 = FARG_TEXT
-	tl.LayoutOrder = 6
-	tl.Font = Enum.Font.Gotham
-	tl.TextSize = 12
-	tl.Text = ""
-	tl.Parent = rad
-	tidLabel = tl
+	ReplayController.tillampaLayout()
+
+	--[[ Skärmen kan ändra storlek medan panelen står uppe: rotation på en
+	     telefon, ett fönster som dras. Layouten räknas om då. Signalen
+	     finns inte på alla klienter — ett explicit typtest, inget pcall. ]]
+	local cam = Workspace.CurrentCamera
+	if cam and type((cam :: any).GetPropertyChangedSignal) == "function" then
+		(cam :: any):GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			ReplayController.tillampaLayout()
+		end)
+	end
+end
+
+--[[ Placerar kontrollraden efter den bredd som faktiskt finns. Publik
+     för att provet ska kunna kalla den efter att ha ändrat viewporten —
+     samma väg som en skärmrotation tar. ]]
+function ReplayController.tillampaLayout()
+	local r = rad
+	if not r or #knappar == 0 then return end
+	local bredd = viewportBredd() * PANEL_ANDEL - PANEL_MARGINAL
+	local L = radLayout(bredd, #knappar)
+	for i, k in ipairs(knappar) do
+		local ix = i - 1
+		local kol = ix % L.perRad
+		local rd = math.floor(ix / L.perRad)
+		k.Size = UDim2.fromOffset(L.knappBredd, KNAPP_HOJD)
+		k.Position = UDim2.fromOffset(kol * (L.knappBredd + GAP),
+			rd * (KNAPP_HOJD + GAP))
+	end
+	r.Size = UDim2.new(1, -PANEL_MARGINAL, 0, L.hojd)
+	r.Position = UDim2.new(0, 12, 1, -(L.hojd + 12))
+	--[[ Banan krymper så att den aldrig hamnar under knapparna. ]]
+	local b = bana
+	if b then
+		b.Size = UDim2.new(1, -PANEL_MARGINAL, 1, -(L.hojd + 80))
+	end
+end
+
+--[[ Layouten som tal, för prov och felsökning. Ren avläsning. ]]
+function ReplayController.layout(): { [string]: any }
+	local bredd = viewportBredd() * PANEL_ANDEL - PANEL_MARGINAL
+	local L = radLayout(bredd, math.max(#knappar, 1))
+	return { bredd = bredd, perRad = L.perRad, knappBredd = L.knappBredd,
+		rader = L.rader, hojd = L.hojd, minBredd = KNAPP_MIN, minHojd = KNAPP_HOJD }
 end
 
 local function rita()
@@ -341,6 +440,7 @@ function ReplayController.oppna(nyPost: Inspelning.Post?, fore: Inspelning.Post?
 
 	local g = gui
 	if g then g.Enabled = true end
+	ReplayController.tillampaLayout()
 	tomBana()
 	ram()
 	ritaSpar(ghost, "Fore", FARG_FORE, 0.45, PUNKTER_FORE)

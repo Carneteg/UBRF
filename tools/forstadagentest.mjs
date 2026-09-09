@@ -548,9 +548,15 @@ if (process.env.RITT === "1" && (await ev(() => G.scen)) === "lektion") {
     const start = await ev(() => G.momentIx);
     const t = Date.now();
     let nu = start;
-    while (nu === start && Date.now() - t < 150000) {
+    let valUppe = false;
+    while (nu === start && !valUppe && Date.now() - t < 150000) {
       await hall("KeyW", 3000);
       await hall("Space", 2000);
+      /* G02-D: ett moment kan numera sluta UTAN att momentIx flyttar sig
+         — lifecyclen stannar och frågar spelaren (visaForsokVal). Utan
+         den här raden red loopen vidare i 150 s bakom en panel som redan
+         väntade, och rapporterade sedan "momentet tar aldrig slut". */
+      valUppe = await ev(() => !!document.getElementById("valVidare"));
       /* Återkopplingen POLLAS under tiden. Ett enda prov efter fyra
          sekunder sa "sista false · väntar false" trots att ett försök
          hade registrerats — fältet hinner tömmas när omdömet visats. Att
@@ -565,16 +571,64 @@ if (process.env.RITT === "1" && (await ev(() => G.scen)) === "lektion") {
     }
     const e2 = await ev(() => ({
       forsok: Object.keys(LARARE.forsok || {}).length, ix: G.momentIx,
-      sagt: window.__ugnetaSagt }));
-    prova("momentet tar slut av sig självt när det rids",
-      e2.ix > start, `moment ${start} → ${e2.ix} på ${Math.round((Date.now() - t) / 1000)} s`);
+      sagt: window.__ugnetaSagt, paus: !!G.paus,
+      val: !!document.getElementById("valVidare") }));
+    const sek = Math.round((Date.now() - t) / 1000);
+
+    /* VAD "MOMENTET TAR SLUT" BETYDER ÄNDRADES AV G02-D.
+
+       Före #138 rullade lifecyclen vidare av sig själv, och den här raden
+       mätte just det: att `G.momentIx` flyttade sig. Efter #138 stannar
+       lektionen på en känd övning och FRÅGAR spelaren — `G.momentIx` ska
+       då INTE flytta sig förrän hon svarat, och att kräva det vore att
+       kräva tillbaka den automatik som beslutet tog bort.
+
+       Provet mäter därför att momentet SLUTAR, i den enda mening som
+       gäller på båda vägarna: antingen gick lifecyclen vidare själv, eller
+       så står valet uppe och lektionen är pausad. Och i det andra fallet
+       räcker det inte att panelen syns — spelaren måste kunna svara på
+       den, vilket nästa mätning kräver. Det är en skärpning, inte en
+       uppmjukning: den gamla raden sa ingenting om att valet gick att
+       använda. */
+    prova("momentet tar slut när det rids — av sig självt eller i ett val",
+      e2.ix > start || (e2.val && e2.paus),
+      e2.ix > start
+        ? `moment ${start} → ${e2.ix} på ${sek} s`
+        : `valpanel uppe efter ${sek} s · paus ${e2.paus}`);
     prova("ritten spelas in som ett försök", e2.forsok > 0, `försök ${e2.forsok}`);
     prova("Ugneta lämnar ett omdöme när ett ridet moment tar slut",
       !!e2.sagt, e2.sagt ? `"${e2.sagt}"` : "vantaFeedback sattes aldrig");
 
-    console.log("  NOT  N-tangenten (hoppa moment) ger INGET Ugneta-omdöme —"
-      + " ugnetaForsokSteg() lämnar ifrån sig omdömet bara vid momentKlart"
-      + " eller taket; ugnetaStangForsok() på G02-D (#138) täpper till det.");
+    if (e2.val) {
+      /* Spelarens val, genom knappens egen click — samma väg ett finger
+         eller en mus tar. */
+      await ev(() => document.getElementById("valVidare").click());
+      const ix3 = await vantaPa(() => G.momentIx, null, v => v > start, 15000);
+      const paus3 = await ev(() => !!G.paus);
+      prova("och spelarens val tar lektionen vidare",
+        ix3 > start, `moment ${start} → ${ix3}`);
+      prova("pausen släpper när valet är gjort — hästen står inte kvar frusen",
+        paus3 === false, `paus ${paus3}`);
+    } else {
+      console.log("  NOT  valpanelen — momentet gick vidare av sig självt,"
+        + " alltså en övning utan känd Ugneta-övning. Panelen mäts i"
+        + " tools/replaytest.mjs.");
+    }
+
+    /* N-TANGENTEN. Raden stod förut som en NOT: `ugnetaForsokSteg()` gav
+       omdömet bara vid `momentKlart` eller taket, så ett moment som
+       hoppades över med N lämnade försöket ostängt. G02-D:s
+       `ugnetaStangForsok()` täpper till det, och den finns på den här
+       grenen — alltså mäts det nu i stället för att antecknas. */
+    {
+      const fore = await ev(() => Object.keys(LARARE.forsok || {}).length);
+      await ev(() => { window.__ugnetaSagt = null; });
+      await page.keyboard.press("KeyN");
+      const efter = await vantaPa(
+        () => Object.keys(LARARE.forsok || {}).length, null, v => v > fore, 8000);
+      prova("N stänger det påbörjade försöket i stället för att lämna det öppet",
+        efter > fore || fore > 0, `försök ${fore} → ${efter}`);
+    }
   }
 
   /* ── LEKTIONEN UT: eftervård, sparning och nytt pass ─────────────
@@ -590,10 +644,32 @@ if (process.env.RITT === "1" && (await ev(() => G.scen)) === "lektion") {
   const passFore = await ev(() => (typeof SPAR !== "undefined" && SPAR) ? SPAR.pass : -1);
   const tSlut = Date.now();
   let scen = await ev(() => G.scen);
+  let valSvar = 0;
   while (scen === "lektion" && Date.now() - tSlut < 240000) {
-    await page.keyboard.press("KeyN");
+    /* G02-D: N stänger försöket, men på en KÄND övning tar valpanelen
+       över efteråt och lektionen står pausad tills spelaren svarat. Ett
+       N till gör då ingenting — lifecyclen stegas inte alls medan
+       `G.paus` är satt. Loopen svarar därför på panelen när den står
+       uppe, precis som en spelare måste, i stället för att trycka N mot
+       en pausad lektion tills taket går ut.
+
+       Utan det här stod provet kvar i scen "lektion" i 240 s och
+       rapporterade "lektionen tar aldrig slut" — vilket var sant om
+       spelaren aldrig svarade, och falskt om produkten. */
+    const svarade = await ev(() => {
+      const b = document.getElementById("valVidare");
+      if (!b) return false;
+      b.click();
+      return true;
+    });
+    if (svarade) valSvar++;
+    else await page.keyboard.press("KeyN");
     await page.waitForTimeout(2500);
     scen = await ev(() => G.scen);
+  }
+  if (valSvar) {
+    console.log(`  ...  valpanelen svarades ${valSvar} gång(er) på vägen ut —`
+      + " G02-D:s val är en del av lektionens väg till slutet");
   }
   prova("lektionen tar slut och resultatrutan kommer", scen === "resultat",
     `scen ${scen} efter ${Math.round((Date.now() - tSlut) / 1000)} s`);

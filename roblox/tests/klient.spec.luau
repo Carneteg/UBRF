@@ -789,6 +789,81 @@ do
 			prova("och de är minst 44 px höga — fingret ska träffa",
 				minHojd >= 44, ("(minsta höjd %d px)"):format(minHojd))
 
+			--[[ ══ RYMS KONTROLLERNA PÅ EN TELEFON? ═══════════════════
+				Den här mätningen fanns INTE i förra rundan, och det var
+				felet. Provet mätte knapparnas höjd men aldrig om raden fick
+				plats. Panelen är 90 % av viewporten minus 24 px; med fem
+				fasta 104 px-knappar, mellanrum och en 120 px tidsruta krävde
+				raden 670 px och rymdes först vid 1024 px viewport. På en
+				390 px telefon fanns 327 px — knapparna gick inte att nå, och
+				sviten var grön.
+
+				Nu mäts det som faktiskt betyder något: att VARJE knapp
+				ligger helt innanför raden, på varje skärmstorlek familjen
+				spelar på. ]]
+			local cam = game:GetService("Workspace").CurrentCamera
+			local vpFore = cam.ViewportSize
+
+			local function matVid(bredd, hojd)
+				cam.ViewportSize = { _typ = "Vector2", X = bredd, Y = hojd }
+				ReplayController.tillampaLayout()
+				local L = ReplayController.layout()
+				local utanfor, minB, minH = 0, math.huge, math.huge
+				for _, namn in knappar do
+					local k = hitta(namn)
+					if k then
+						local hoger = k.Position.X.Offset + k.Size.X.Offset
+						if hoger > L.bredd + 0.5 then utanfor += 1 end
+						minB = math.min(minB, k.Size.X.Offset)
+						minH = math.min(minH, k.Size.Y.Offset)
+					end
+				end
+				return { utanfor = utanfor, minB = minB, minH = minH,
+					rader = L.rader, perRad = L.perRad, bredd = L.bredd }
+			end
+
+			--[[ Kontraktet läses ur modulen, inte skrivet av här: ett prov
+			     som bär sin egen kopia av minimimåttet kan glida ifrån
+			     koden utan att något blir rött. ]]
+			local L = ReplayController.layout()
+
+			--[[ De skärmar familjen faktiskt spelar på. ]]
+			local skarmar = {
+				{ namn = "telefon 390×844", b = 390, h = 844 },
+				{ namn = "liten telefon 320×568", b = 320, h = 568 },
+				{ namn = "iPad porträtt 768×1024", b = 768, h = 1024 },
+				{ namn = "iPad landskap 1024×768", b = 1024, h = 768 },
+				{ namn = "skrivbord 1920×1080", b = 1920, h = 1080 },
+			}
+			for _, sk in skarmar do
+				local m = matVid(sk.b, sk.h)
+				--[[ Tre krav, inte ett: ingen knapp utanför raden, ingen
+				     under 44 px hög, och ingen smalare än KNAPP_MIN.
+				     Breddkravet är det som skiljer en LÄSBAR knapp från en
+				     som råkar rymmas — en falsifiering där raden aldrig
+				     bryts klarade nämligen "ryms" genom att krympa varje
+				     knapp till 60 px, och då mätte provet inget. ]]
+				prova(("alla kontroller ryms på %s"):format(sk.namn),
+					m.utanfor == 0 and m.minH >= 44 and m.minB >= L.minBredd,
+					("(%d utanför · %d×%d px minst, krav %d×%d · %d rad(er) à %d)"):format(
+						m.utanfor, m.minB, m.minH, L.minBredd, 44,
+						m.rader, m.perRad))
+			end
+
+			--[[ …och att provet MÄTER något: den smalaste skärmen måste
+			     faktiskt ha tvingat fram fler rader än den bredaste. Utan
+			     den här kontrollen hade en layout som ignorerade bredden
+			     kunnat gå grön på alla fem raderna ovan. ]]
+			local smal = matVid(390, 844)
+			local bred = matVid(1920, 1080)
+			prova("den smala skärmen bryter raden, den breda gör det inte",
+				smal.rader > bred.rader and bred.rader == 1,
+				("(telefon %d rader · skrivbord %d rad)"):format(
+					smal.rader, bred.rader))
+
+			cam.ViewportSize = vpFore
+			ReplayController.tillampaLayout()
+
 			--[[ LEDTEXTEN FÖLJER INMATNINGEN, inte plattformen — samma regel
 			     som Ugnetas kort. En ren pekenhet ska inte få en bokstav hon
 			     inte kan trycka på. ]]

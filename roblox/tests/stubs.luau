@@ -178,7 +178,11 @@ workspace = {
 		return { Position = vec(origin.X, 0, origin.Z), Normal = vec(0, 1, 0),
 			Instance = { Name = "Baseplate" }, Material = Enum.Material.Grass }
 	end,
-	CurrentCamera = { CFrame = cframe(), FieldOfView = 70, CameraType = 2 },
+	--[[ ViewportSize lades till for G02-D: ridanalysens kontrollrad maste
+	     brytas efter den bredd som faktiskt finns, och provet stallr om den
+	     for telefon och iPad. Standard ar en skrivbordsbredd. ]]
+	CurrentCamera = { CFrame = cframe(), FieldOfView = 70, CameraType = 2,
+		ViewportSize = { _typ = "Vector2", X = 1280, Y = 720 } },
 	--[[ Ingen anläggning byggd i bänken. StallService frågar efter den för
 	     att kunna sätta en boxmarkör, och SKA då varna och hoppa över
 	     markören i stället för att krascha — det är produktionens egen
