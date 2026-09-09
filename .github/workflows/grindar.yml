@@ -209,6 +209,14 @@ jobs:
           if [ -f tools/valfardstest.mjs ]; then node tools/valfardstest.mjs
           else echo "hoppar: tools/valfardstest.mjs finns inte i denna branch"; fi
 
+      # Replaypanelen (#153 fix 4 / QA-2): rutnätet låg som inline-stil och
+      # kunde därför inte tas över av en media query. Kolumnerna låg kvar ner
+      # till 320 px, där ritt-canvasen — funktionens hela poäng — blev 122 px.
+      - name: Replaypanelen — en kolumn och läsbar canvas på små skärmar
+        run: |
+          if [ -f tools/replaylayouttest.mjs ]; then node tools/replaylayouttest.mjs
+          else echo "hoppar: tools/replaylayouttest.mjs finns inte i denna branch"; fi
+
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
       # att ingen debugmarkering ligger i produktvyn och att ytan under
