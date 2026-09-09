@@ -236,6 +236,19 @@ en volt — det är Tobias att avgöra.
 - **Game feel i replayen** — om det känns bra att se sin egen ritt är
   Tobias avgörande, inte ett prov.
 
+### Enhetstest — Studio och fysisk iPad
+
+Efter ChatGPTs review av `8413baa` är nästa acceptanssteg ett riktigt
+spelbart bygge på riktig hårdvara. Det fullständiga protokollet, med
+rapportmall för enhet, viewport, SHA och reproducerbara avvikelser, står
+i **`docs/ENHETSTEST-G02-D.md`** — det täcker hela första dagen,
+styrning med två tummar, ett gångartssteg per begäran, fokusförlust och
+rotation, hoppkedjan, Ugnetas val, ridanalysen på smal skärm, eftervård
+och nytt pass.
+
+De två kortare protokollen nedan är kvar för snabb egenkontroll av
+webben respektive Studio.
+
 ### Körbart testprotokoll (människa)
 
 1. Starta en lektion och rid fram till **20 m volten**.
