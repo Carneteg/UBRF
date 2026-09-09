@@ -16,8 +16,9 @@
    Kör: node tools/bootkoll.mjs */
 import { chromium } from "playwright";
 import http from "node:http"; import fs from "node:fs"; import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 8831;
 const typ = f => f.endsWith(".js") ? "text/javascript"
   : f.endsWith(".css") ? "text/css"

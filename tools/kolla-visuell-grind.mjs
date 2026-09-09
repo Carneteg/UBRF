@@ -15,8 +15,9 @@
    Kör: node tools/kolla-visuell-grind.mjs   (exit 1 vid fel) */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const KRAVDA = ["STALL-ANKOMST", "STALL-ENTRE", "STALL-UPPEHALL", "STALL-UPPEHALL-SOFFA", "STALL-TEORISAL", "STALL-SADELKAMMARE", "STALL-GANG-A", "HASTPASSAGE",
   "RIDHUS-ENTRE", "RIDHUS-SKAPKORRIDOR", "ARENA-A", "ARENA-C", "LAKTARE", "C-BLOCK-OVRE",
   "RIDHUS-RECEPTION", "RIDHUS-ENTRE-INNE", "RIDHUS-LAKTARTRAPPA", "STALL-KLUBBDORRAR", "RIDHUS-SKAPRUM",

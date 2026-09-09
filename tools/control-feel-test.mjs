@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import path from 'node:path';
-const root=path.resolve(new URL('..',import.meta.url).pathname);
+import { fileURLToPath } from "node:url";
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const source=read('src/input-feel.js'),game=read('src/game.js'),world=read('src/world.js');

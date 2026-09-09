@@ -19,8 +19,9 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
+import { fileURLToPath } from "node:url";
 
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROT, "dist");
 const PORT = 8894;   /* fri port: se toolchain — 8873 tas av lastlagetest */
 
