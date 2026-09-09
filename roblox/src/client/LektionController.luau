@@ -52,6 +52,8 @@
 local Lektion = require(game:GetService("ReplicatedStorage").HorseCore.Lektion)
 local UgnetaController = require(script.Parent.UgnetaController)
 local UgnetaGestalt = require(script.Parent.UgnetaGestalt)
+local ReplayController = require(script.Parent.ReplayController)
+local Inspelning = require(game:GetService("ReplicatedStorage").HorseCore.Inspelning)
 
 local LektionController = {}
 
@@ -62,6 +64,24 @@ local liveCd = 0
 local liveSagt = ""
 local lage = "ingen"
 
+--[[ ── G02-D: RITTEN SPELAS IN EN GÅNG ──────────────────────────────
+     En inspelare per FÖRSÖK. Den startas när mätningen startar och stängs
+     när försöket stängs — samma två ögonblick, inte två egna. Skulle de
+     glida isär hade replayen visat en annan ritt än den som bedömdes, och
+     då hade vi haft två sanningar om samma försök.
+
+     `inspelningar` håller posterna per övning i den ordning de rids.
+     Spöket i analysen är den NÄST sista i den listan: spelarens eget förra
+     försök, aldrig en uppfunnen ideallinje.
+
+     Bara de övningar som HAR en definition i kanonen spelas in
+     (Inspelning.spelasIn). En post utan version går inte att jämföra mot
+     något, och att stämpla den med en påhittad version vore precis den
+     falska referens som är förbjuden. ]]
+local inspelare: Inspelning.Recorder? = nil
+local inspelningar: { [string]: { Inspelning.Post } } = {}
+local senasteOvning: string? = nil
+
 --[[ SPELARENS HANDLING. Registreras hos HUD:en i `start` och körs när
      knappen, tangenten eller gamepadknappen fyrar — HUD:en har redan
      stängt kortet när vi kommer hit, så det här är bara lifecyclen.
@@ -69,9 +89,59 @@ local lage = "ingen"
      `Lektion.vidare` ligger HÄR och inte direkt efter `avslutaForsok`:
      det är spelarens val som nollställer mätningen, vilket är precis vad
      provet kan mäta. ]]
+--[[ Stänger den pågående inspelningen och lägger posten i historiken.
+     Idempotent: ett andra anrop har ingen inspelare att stänga. En post
+     utan sampel läggs INTE undan — en tom ritt är ingen ritt, och en tom
+     post i listan hade blivit ett spöke utan väg. ]]
+local function stangInspelning()
+	local r = inspelare
+	inspelare = nil
+	if not r then return end
+	local post = Inspelning.avsluta(r)
+	if not post or #post.sampel == 0 then return end
+	local lista = inspelningar[post.ovning]
+	if not lista then lista = {}; inspelningar[post.ovning] = lista end
+	table.insert(lista, post)
+end
+
+--[[ Startar en inspelning för det försök som just börjat mätas. Anropas
+     varje bildruta men gör bara något första gången: finns redan en
+     inspelare är försöket igång. ]]
+local function startaInspelning(p: Lektion.Pass, tm: { [string]: any }?)
+	if inspelare then return end
+	local id = Lektion.ovningId(p)
+	if not Inspelning.spelasIn(id) then return end
+	local hast = if type(tm) == "table" and type(tm.hast) == "string" then tm.hast else nil
+	inspelare = Inspelning.ny(id :: string, hast)
+	senasteOvning = id
+end
+
+--[[ Finns det en ritt att visa för den övning som just bedömdes? ]]
+local function harRitt(): boolean
+	local id = senasteOvning
+	if not id then return false end
+	local lista = inspelningar[id]
+	return lista ~= nil and #lista > 0
+end
+
+--[[ SE RITTEN. Öppnar analysen på det senaste försöket med förra försöket
+     som spöke. Ridningen fryses av init.client medan panelen är uppe —
+     inte här: den här modulen äger lektionen, inte rörelsen. ]]
+local function oppnaReplay()
+	local id = senasteOvning
+	if not id then return end
+	local lista = inspelningar[id]
+	if not lista or #lista == 0 then return end
+	ReplayController.oppna(lista[#lista], if #lista > 1 then lista[#lista - 1] else nil)
+end
+
 local function fortsattning()
 	local p = pass
 	if not p then return end
+	--[[ En ny mätning börjar. Inspelaren nollas HÄR, i samma handling som
+	     nollställer mätningen, så att nästa försök spelas in från noll och
+	     inte fortsätter i det förras post. ]]
+	inspelare = nil
 	if lage == "presentation" then
 		lage = "rider"
 	elseif lage == "efter" then
@@ -101,7 +171,22 @@ function LektionController.start(ridhus: Instance?)
 	pass = Lektion.nyttPass()
 	liveCd, liveSagt = 0, ""
 	lage = "ny"
+	inspelare = nil
+	inspelningar = {}
+	senasteOvning = nil
 	UgnetaController.vidFortsatt(fortsattning)
+	UgnetaController.vidReplay(oppnaReplay)
+	--[[ GÅ VIDARE. Momentet är redan bedömt av `avslutaForsok`; det här
+	     hoppar över omridningen, inte bedömningen. Lifecyclens regel ligger
+	     i Lektion.hoppaOver — HUD:en flyttar inte passet själv. ]]
+	UgnetaController.vidVidare(function()
+		local p = pass
+		if not p then return end
+		inspelare = nil
+		Lektion.hoppaOver(p)
+		lage = if p.klar then "ingen" else "ny"
+		liveCd, liveSagt = 0, ""
+	end)
 	UgnetaGestalt.visa(ridhus)
 end
 
@@ -132,6 +217,34 @@ function LektionController.fortsatt(): boolean
 	return UgnetaController.fortsatt()
 end
 
+--[[ De två andra vägarna ut ur ett avslutat försök. Samma mönster som
+     `fortsatt`: returnerar false när det inte fanns något val att göra, så
+     att tangenten faller igenom till sin vanliga betydelse. ]]
+function LektionController.replay(): boolean
+	if not pass then return false end
+	return UgnetaController.replay()
+end
+
+function LektionController.gaVidare(): boolean
+	if not pass then return false end
+	return UgnetaController.gaVidare()
+end
+
+--[[ Står analysen uppe? init.client fryser ridningen på den frågan — och
+     frågar modulen, inte ett eget flaggvärde, så att det bara finns ett
+     svar. ]]
+function LektionController.replayAktiv(): boolean
+	return ReplayController.aktiv()
+end
+
+--[[ Stänger analysen utan att röra kortet bakom den. Väntan är kvar: att
+     ha SETT sin ritt är inte att ha valt vad som ska hända med den. ]]
+function LektionController.stangReplay(): boolean
+	if not ReplayController.aktiv() then return false end
+	ReplayController.stang()
+	return true
+end
+
 --[[ Presentationen av övningen. Kortet, men INTE mitt under ridningen:
      det visas innan försöket börjar och spelaren stänger det själv
      genom att starta. ]]
@@ -143,7 +256,8 @@ local function presentera(p: Lektion.Pass)
 end
 
 --[[ ETT STEG. Anropas varje bildruta med ritt-telemetrin. ]]
-function LektionController.steg(dt: number, tm: { [string]: any }?)
+function LektionController.steg(dt: number, tm: { [string]: any }?,
+	pose: { [string]: any }?)
 	local p = pass
 	if not p or p.klar then return end
 	UgnetaController.steg(dt)
@@ -160,6 +274,12 @@ function LektionController.steg(dt: number, tm: { [string]: any }?)
 	if lage ~= "rider" then return end
 
 	if not tm or tm.uppsutten ~= true then return end
+
+	--[[ Inspelningen ligger FÖRE mätningen och läser samma bildruta som
+	     den. Att spela in efter `Lektion.matning` hade gett en post som
+	     ligger en bildruta efter det som bedömdes. ]]
+	startaInspelning(p, tm)
+	Inspelning.sampla(inspelare, dt, tm, pose)
 
 	p.tid += dt
 	--[[ `dt` följer med: täckningen räknas i uppmätta sekunder, inte i
@@ -183,9 +303,12 @@ function LektionController.steg(dt: number, tm: { [string]: any }?)
 	--[[ FÖRSÖKET ÄR SLUT. Betyget hör till underlaget, inte till
 	     lifecyclen: `avslutaForsok` lämnar medelvärdena och Ugneta
 	     rangordnar dem. ]]
+	--[[ Stäng försöket FÖRST. Betyget, kortet och replayen ska alla se
+	     samma avslutade ritt — inte en som stängs en bildruta senare. ]]
+	stangInspelning()
 	local h = Lektion.avslutaForsok(p)
 	if h then
-		UgnetaController.efterForsok(h.ovningId, h.nu, h.fore, h.forsokNr)
+		UgnetaController.efterForsok(h.ovningId, h.nu, h.fore, h.forsokNr, harRitt())
 		lage = "efter"
 	else
 		--[[ INGET UNDERLAG → INGET OMDÖME, men spelaren får veta varför.
@@ -212,7 +335,17 @@ function LektionController.avbryt()
 	pass = nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"
+	--[[ SÄKERHET FÖRE UNDERVISNING. Analysen stängs och inspelningen
+	     kastas — en halv ritt som avbröts av en avsittning är inget att
+	     spela upp, och panelen får aldrig bli kvar över ett ekipage som
+	     inte finns. Posterna släpps med passet: de hörde till det. ]]
+	ReplayController.stang()
+	inspelare = nil
+	inspelningar = {}
+	senasteOvning = nil
 	UgnetaController.vidFortsatt(nil)
+	UgnetaController.vidReplay(nil)
+	UgnetaController.vidVidare(nil)
 	UgnetaController.sakerhetTarOver()
 	UgnetaGestalt.dolj()
 end

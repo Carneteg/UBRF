@@ -41,6 +41,31 @@ local Genomsikt = require(script.Genomsikt)
 local player = Players.LocalPlayer
 local ride: { [string]: any }? = nil
 
+--[[ POSEN TILL INSPELNINGEN (G02-D).
+
+     Inspelningen behöver VAR hästen var och ÅT VILKET HÅLL hon stod. Båda
+     läses ur riggens root, och båda kan saknas i den bildruta där riggen
+     håller på att rivas.
+
+     Kontrollerna är explicita typtest, inte ett pcall. Ett pcall runt den
+     här avläsningen hade svalt varje annat fel i samma andetag — och det
+     är precis så en riktig krasch blir osynlig i stället för åtgärdad.
+
+     Fälten valideras var för sig i HorseCore/Inspelning: en pose där
+     positionen är omätbar men riktningen är ett riktigt tal BEHÅLLER
+     riktningen. Att kasta hela posen för ett trasigt fält hade tappat en
+     yaw som faktiskt var mätt. ]]
+local function poseAv(rig: { [string]: any }?): { [string]: any }?
+	if type(rig) ~= "table" then return nil end
+	local root = rig.root
+	if not root then return nil end
+	local pos = root.Position
+	local cf = root.CFrame
+	if pos == nil or cf == nil then return nil end
+	local _, yaw = cf:ToOrientation()
+	return { x = pos.X, z = pos.Z, yaw = yaw }
+end
+
 local function dismount()
 	if not ride then return end
 	Telemetri.sittAv(ride.ritt)
@@ -229,7 +254,28 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	     `fortsatt` returnerar false när inget kort väntar, så tangenten
 	     stjäl ingenting när lektionen inte frågar. ]]
 	if input.KeyCode == Enum.KeyCode.R or input.KeyCode == Enum.KeyCode.ButtonY then
+		--[[ Står ridanalysen uppe betyder R "tillbaka", inte "vidare":
+		     panelen ligger ovanpå kortet, och den översta ytan äger
+		     tangenten. Utan det hade ett R stängt kortet BAKOM panelen och
+		     lämnat analysen kvar över nästa försök. ]]
+		if LektionController.replayAktiv() then
+			LektionController.stangReplay()
+			return
+		end
 		if LektionController.fortsatt() then return end
+	end
+	--[[ G02-D: "Se ritten". T och gamepadens X är valda av samma skäl som
+	     R och Y — Input.luau tar dem inte, och E betyder redan sitt av. ]]
+	if input.KeyCode == Enum.KeyCode.T or input.KeyCode == Enum.KeyCode.ButtonX then
+		if LektionController.replayAktiv() then
+			LektionController.stangReplay()
+			return
+		end
+		if LektionController.replay() then return end
+	end
+	--[[ "Gå vidare": nöj dig med försöket. Momentet bedöms ändå. ]]
+	if input.KeyCode == Enum.KeyCode.G then
+		if LektionController.gaVidare() then return end
 	end
 	if input.KeyCode == Enum.KeyCode.E then
 		begarAvsittning()
@@ -242,6 +288,24 @@ RunService.RenderStepped:Connect(function(dt)
 	if not ride then return end
 	if not ride.rig.root:IsDescendantOf(workspace) then
 		dismount()
+		return
+	end
+
+	--[[ PAUS: världen ritas fortfarande — spelaren ska se var hon står —
+	     men hästen stegas inte. Utan det red hon vidare bakom kortet och
+	     bakom ridanalysen, och det försök spelaren just tittade på hann bli
+	     ogiltigt medan hon tittade.
+
+	     `Input.consume()` körs ÄNDÅ och kastas. Den nollställer
+	     engångsflankerna (gångart upp/ner, parad); låg de kvar hade varje
+	     tryck under pausen fyrat på en gång när pausen släppte. En impuls
+	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
+	if LektionController.vantar() or LektionController.replayAktiv() then
+		Input.consume()
+		local loco = ride.movement.loco
+		ride.animation:step(loco, dt)
+		ride.rider:step(loco, dt)
+		ride.camera:step(loco, dt)
 		return
 	end
 
@@ -263,7 +327,7 @@ RunService.RenderStepped:Connect(function(dt)
 	     EFTER avläsningen och FÖRE renderingen av samma skäl som allt
 	     annat i den här ordningen: den ska se bildrutans mätning, inte
 	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
-	LektionController.steg(dt, ride.telemetri)
+	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig))
 
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)

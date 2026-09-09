@@ -92,6 +92,11 @@ local function cframe(pos, look, yaw, pitch, roll)
 	     de tre vinklarna vidare som summor så att testet kan läsa dem. Det
 	     är inte riktig rotationsmatematik — men för små vinklar kring skilda
 	     axlar, vilket är allt koden lägger på, ger den samma svar. ]]
+	--[[ ToOrientation ger (pitch, yaw, roll) i radianer, precis som Roblox
+	     -- alltsa ar select(2, ...) girningen. Stubben bar redan de tre
+	     vinklarna, sa den svarar med dem i samma ordning. G02-D laser yaw
+	     har for att spela in at vilket hall hasten stod. ]]
+	c.ToOrientation = function(self) return self.Pitch or 0, self.Yaw or 0, self.Roll or 0 end
 	c.__mul = function(a, b)
 		return cframe(a.Position, a.LookVector, (a.Yaw or 0) + (b.Yaw or 0),
 			(a.Pitch or 0) + (b.Pitch or 0), (a.Roll or 0) + (b.Roll or 0))
@@ -263,6 +268,13 @@ local __services = {
 		InputBegan = __signal(),
 		InputChanged = { Connect = function() return { Disconnect = function() end } end },
 		InputEnded = { Connect = function() return { Disconnect = function() end } end },
+	},
+	--[[ GuiService: G02-D:s ridanalys laser ReducedMotionEnabled for att
+	     starta pausad i stallet for att satta igang en markor som ror sig av
+	     sig sjalv. Standard ar falskt (vanlig klient); provet satter den
+	     sant for att mata att panelen da INTE startar av sig sjalv. ]]
+	GuiService = {
+		ReducedMotionEnabled = false,
 	},
 	ContextActionService = {
 		_bound = {},
