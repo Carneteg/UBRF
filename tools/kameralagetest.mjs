@@ -139,6 +139,35 @@ const K = ladda();
     `${vikt1.toFixed(3)} → ${efter.toFixed(3)}`);
 }
 
+/* ══ 5b. UPPREPAD BEGÄRAN FÖRLÄNGER INTE DEADLINEN (blocker) ═══════
+   ChatGPT-fyndet på #150: `begar()` nollställde `total` vid VARJE
+   anrop, inte bara vid en riktigt ny begäran. En anropare som råkar
+   begära om SAMMA vinkel varje bildruta — en händelse som triggar
+   upprepat, ett dubbeltryck som studsar mot samma kod — kunde då hålla
+   kvar feedbackvyn för evigt, eftersom klockan nödbromsen läser
+   nollställdes om varje gång innan den hann nå taket.
+
+   Körs HÄR på den RIKTIGA, ofixade modulen `K` — inte via
+   mutationsharnesset nedan — så att detta är ett förstahandsbevis på
+   den faktiska koden, inte bara på att en textmutation kan upptäckas. */
+{
+  const st = K.skapa();
+  K.begar(st, "sits");
+  /* Nödbromsens tak plus uttoningens tak plus en sekunds marginal:
+     om vyn INTE stängt sig innan dess trots spammet är deadlinen
+     bruten. */
+  const grans = Math.ceil((K.MAX_TOTAL + K.GRANS.ut[1] + 1) * 60);
+  let n = 0;
+  while (K.aktiv(st) && n < grans) {
+    K.begar(st, "sits", "upprepad");    // samma vinkel begärs om, varje bildruta
+    K.stega(st, 1 / 60);
+    n++;
+  }
+  prova("upprepade begäranden av SAMMA vinkel kan inte hålla vyn för evigt",
+    !K.aktiv(st) && n < grans,
+    `stannade ${K.aktiv(st) ? "aldrig" : `efter ${(n / 60).toFixed(2)} s`} (tak ${(grans / 60).toFixed(2)} s)`);
+}
+
 /* ══ 6. AVBROTT LÄMNAR INGET SPÖKE ════════════════════════════════
    Scenbyte, avsittning och overlay går genom `nollstall`. Efter det får
    ingenting vakna — det är kravet "no stale camera request should
@@ -325,7 +354,15 @@ falsifiera("upprepad begäran av SAMMA vinkel förlänger deadlinen för evigt",
       Km.stega(st, 1 / 60);
       n++;
     }
-    return Km.aktiv(st) && n >= grans;    // "höll": vyn gick aldrig ur, deadlinen bröts
+    /* DEN ÖNSKADE EGENSKAPEN (samma som §5b ovan): vyn stänger sig
+       SJÄLV inom taket trots spammet. `falsifiera` kräver att mat()
+       returnerar sanningsvärdet för den önskade egenskapen — true om
+       den håller, false om mutationen bröt den — så att FEL bara
+       rapporteras när en trasig mutation ändå klarar provet. Skriver
+       man detta omvänt (true = "buggen syns") rapporterar harnesset
+       fel även när falsifieringen fungerar precis som den ska, vilket
+       var precis den miss som fanns här tidigare. */
+    return !Km.aktiv(st) && n < grans;
   });
 
 console.log("");

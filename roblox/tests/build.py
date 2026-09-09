@@ -147,6 +147,9 @@ KLIENT = SPEL + [
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("Ugneta",       "src/shared/HorseCore/Ugneta.luau"),
     ("Lektion",      "src/shared/HorseCore/Lektion.luau"),
+    # G02-E del 1 (#150): CameraController.new() lasare Core.Kameralage
+    # direkt - saknas den kraschar klientbanken redan vid uppsittning.
+    ("Kameralage",   "src/shared/HorseCore/Kameralage.luau"),
     ("MovementController",  "src/client/MovementController.luau"),
     ("AnimationController", "src/client/AnimationController.luau"),
     ("CameraController",    "src/client/CameraController.luau"),
@@ -178,6 +181,9 @@ MODULER = [
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    # G02-E del 1 (#150): kameralaget. Rent tillstand utan beroenden - maste
+    # bara ligga FORE CameraController, som lasare Core.Kameralage.
+    ("Kameralage",   "src/shared/HorseCore/Kameralage.luau"),
     ("MovementController", "src/client/MovementController.luau"),
     ("AnimationController", "src/client/AnimationController.luau"),
     ("CameraController",   "src/client/CameraController.luau"),
@@ -264,7 +270,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
-                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri"):
+                    "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
+                    "Kameralage"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)

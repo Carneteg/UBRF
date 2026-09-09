@@ -93,6 +93,141 @@ do
 		string.format("(%.1f → %.1f grader)", naraFov, fjarrFov))
 end
 
+--[[ ══════════════════════════════════════════════════════════════════
+     KAMERALÄGET — G02-E del 1 (issue #150), Roblox-halvan.
+
+     Webbens tillstånds-/livscykelkontrakt provas grundligt i
+     tools/kameralagetest.mjs (37 mätningar + 5 mutationsfalsifieringar).
+     Den här filen upprepar INTE alla — modulen är en ordagrann
+     tal-för-tal-portering och paritetsspecen jämför redan att
+     vinkeltabellerna är identiska. Det som provas här är det som är
+     SPECIFIKT för Roblox-ytan och det EN konkreta fyndet som gällde
+     båda:
+
+       1. att `CameraController` faktiskt ÄGER och DRIVER en
+          `Kameralage`-instans genom sin egen `:step()` — inte bara att
+          modulen fungerar isolerat (kravet "renderaren måste påvisbart
+          konsumera läget"),
+       2. den rapporterade regressionen (ChatGPT, #150): en anropare som
+          begär om SAMMA vinkel varje bildruta fick INTE kunna hålla
+          feedbackvyn för evigt genom att varje anrop nollställde
+          `total`. Provas här mot den RIKTIGA, körande kameran — inte
+          bara mot den bara modulen. ]]
+
+print("\n── Kameraläget: CameraController äger och driver Kameralage ──")
+do
+	local cam = newCam()
+	local dt = 1 / 60
+	local vila = loco({ gait = "walk" })
+
+	--[[ Standard: ryttarperspektiv. Ingen begäran är gjord, så
+	     Kameralage-instansen `cam` äger ska vara i vila med vikt 0. ]]
+	for _ = 1, 30 do cam:step(vila, dt) end
+	local vilaVikt = Kameralage.las(cam.lage).vikt
+	check("kameran startar i ryttarperspektiv (Kameralage-vikt 0)",
+		vilaVikt == 0, string.format("(vikt %.3f)", vilaVikt))
+
+	--[[ Bommen (avstånds-multiplikatorn) ska följa gångarten i vila —
+	     samma tal som förut, inget bidrag från någon vinkel. ]]
+	local restDist = cam.dist
+	local vantatVila = Gaits.get("walk").camera.dist * Kameralage.NEUTRAL.bak
+	check("viloavståndet matchar gångartens egen bom (× 1,0)",
+		math.abs(restDist - vantatVila) < 0.5,
+		string.format("(%.2f mot %.2f)", restDist, vantatVila))
+
+	--[[ Begär en feedbackvinkel via CAMERACONTROLLERNS EGET API — inte
+	     mot Kameralage-modulen direkt. Det är skillnaden mellan att
+	     bevisa att modulen fungerar och att bevisa att kameran faktiskt
+	     använder den. `vagval` skalar bommen 1,90×. ]]
+	local togEmot = cam:begarFeedback("vagval", "spec")
+	check("kameran tar emot en feedbackbegäran via sitt eget API", togEmot == true)
+
+	--[[ Sampla TOPPEN mitt i hålfasen, INTE efter den. vagval: in 0,45 s,
+	     håll 1,70 s → hållfasen pågår 0,45–2,15 s, och vikten är EXAKT 1
+	     bara däremellan. 1,5 s ligger gott och väl inuti det fönstret —
+	     samplar man i stället efter 2,15 s (t.ex. vid 2,4 s, som en
+	     tidigare version av det här provet gjorde) har uttoningen redan
+	     börjat och vikten är inte längre 1, vilket är en provbugg, inte
+	     ett produktionsfel. 1,5 s ger också kamerans EGNA Tau=0,35 s-
+	     utjämning av `dist` (~4,3 tidskonstanter) gott om tid att hinna
+	     ikapp den — bommens mål hoppar till fullt 1,90× redan i samma
+	     bildruta som begäran görs, det är bara `self.dist` som glider. ]]
+	for _ = 1, 90 do cam:step(vila, dt) end
+	local toppVikt = Kameralage.las(cam.lage).vikt
+	local toppDist = cam.dist
+	check("Kameralage-vikten är EXAKT 1 mitt i hållfasen, genom kamerans egen step()",
+		toppVikt == 1, string.format("(vikt %.4f)", toppVikt))
+	check("kamerans EGET avstånd följde med upp mot vagval-bommen (1,90×)",
+		toppDist > restDist * 1.4,
+		string.format("(%.2f → %.2f, gräns %.2f)", restDist, toppDist, restDist * 1.4))
+
+	--[[ Vinkelns hela livslängd är in+håll+ut = 0,45+1,70+0,55 = 2,70 s,
+	     alltså 1,20 s till efter de 1,5 s som redan körts. Men `self.dist`
+	     hoppar inte tillbaka förrän MÅLET gör det — och målet ändras
+	     inte förrän `nollstall` faktiskt fyrar vid t=2,70 s. Ytterligare
+	     3,75 s (7,5 tau) därefter ger `self.dist` gott om tid att glida
+	     tillbaka till viloläget innan det mäts. ]]
+	for _ = 1, math.floor((1.20 + 3.75) * 60) do cam:step(vila, dt) end
+	local slutVikt = Kameralage.las(cam.lage).vikt
+	local slutDist = cam.dist
+	check("Kameralage-vikten är EXAKT noll igen — automatisk återgång",
+		slutVikt == 0, string.format("(vikt %.4f)", slutVikt))
+	check("kamerans EGET avstånd är tillbaka vid vilobommen",
+		math.abs(slutDist - restDist) < 0.6,
+		string.format("(%.2f, ursprung %.2f)", slutDist, restDist))
+end
+
+print("\n── Kameraläget: upprepad begäran kan inte hålla vyn för evigt (blocker #150) ──")
+do
+	--[[ ChatGPT:s fynd (kommentar på #150): `Kameralage.begar()` nollställde
+	     `total` vid VARJE anrop — inte bara vid en riktigt ny begäran.
+	     En anropare som råkar begära om SAMMA vinkel varje bildruta (ett
+	     dubbeltryck som studsar, en händelse som triggar upprepat) kunde
+	     då hålla kvar feedbackvyn för evigt.
+
+	     Provat HÄR mot den RIKTIGA, körande `CameraController` — inte
+	     mot den bara modulen (den mätningen finns redan, grundligt, i
+	     tools/kameralagetest.mjs). Om fixen bara satt i modulen men
+	     kameran av någon anledning gick runt den, hade den här faktiskt
+	     kunnat missa det. ]]
+	local cam = newCam()
+	local dt = 1 / 60
+	local vila = loco({ gait = "walk" })
+
+	cam:begarFeedback("utifran", "spam")
+	--[[ Nödbromsens tak (MAX_TOTAL 6,0 + MAX_UT 1,5 = 7,5 s) plus
+	     marginal: om vyn INTE stängt sig innan dess trots att SAMMA
+	     vinkel begärs om varje bildruta är deadlinen bruten. ]]
+	local grans = math.ceil((Kameralage.MAX_TOTAL + Kameralage.GRANS.ut[2] + 1) * 60)
+	local n = 0
+	while Kameralage.aktiv(cam.lage) and n < grans do
+		cam:begarFeedback("utifran", "spam")   -- samma vinkel begärs om, varje bildruta
+		cam:step(vila, dt)
+		n += 1
+	end
+	local stannade = not Kameralage.aktiv(cam.lage)
+	check("upprepade begäranden av SAMMA vinkel kan inte hålla kamerans vy för evigt",
+		stannade and n < grans,
+		string.format("stannade %s (tak %.2f s)",
+			if stannade then string.format("efter %.2f s", n / 60) else "aldrig",
+			grans / 60))
+end
+
+print("\n── Kameraläget: hård avsittning lämnar inget spöke ──")
+do
+	--[[ `:release()` (dismount) ska nollställa Kameralage HÅRT, precis
+	     som webbens `ridKameraNollstall`. Ingen begäran får överleva och
+	     tändas på nästa häst. ]]
+	local cam = newCam()
+	local dt = 1 / 60
+	cam:begarFeedback("sits", "test")
+	for _ = 1, 40 do cam:step(loco({ gait = "walk" }), dt) end
+	check("en vy var uppe före avsittningen", Kameralage.aktiv(cam.lage) == true)
+	cam:release()
+	check("avsittningen nollställer kameraläget hårt",
+		Kameralage.las(cam.lage).vikt == 0 and not Kameralage.aktiv(cam.lage))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

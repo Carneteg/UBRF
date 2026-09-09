@@ -115,10 +115,17 @@ function CameraController:_egetHuvud(alfa: number, head: BasePart?)
 	if not character then return end
 	local delar: { BasePart } = {}
 	if head then table.insert(delar, head) end
-	for _, barn in character:GetChildren() do
-		if barn:IsA("Accessory") then
-			local handle = barn:FindFirstChild("Handle")
-			if handle and handle:IsA("BasePart") then table.insert(delar, handle) end
+	--[[ `GetChildren` finns på varje riktig Instance, men karaktären kan
+	     i en degraderad/ofullständig respawn vara ett placeholder-objekt
+	     som ännu inte har den (samma "rätt sorts degradering" som
+	     `ogonpunkt()` ovan redan tillämpar på `FindFirstChild`). Ett
+	     saknat huvud/accessoarer är då rätt svar — inte en krasch. ]]
+	if typeof(character.GetChildren) == "function" then
+		for _, barn in character:GetChildren() do
+			if barn:IsA("Accessory") then
+				local handle = barn:FindFirstChild("Handle")
+				if handle and handle:IsA("BasePart") then table.insert(delar, handle) end
+			end
 		end
 	end
 	for _, del in delar do
