@@ -173,6 +173,28 @@ och efter.
 | R5 | `Gå vidare` bedömer om momentet | RÖD, 1 FEL — `2 post i historiken` |
 | R6 | `stang` kör återanropet före nollningen | RÖD, 1 FEL — `2 anrop` |
 | R7 | Mindre rörelse ignoreras | RÖD, 1 FEL |
+| A1 | Ledtexten räknas bara om vid bygget | RÖD, 2 FEL |
+| A2 | Knapparna krymps till 28 px | RÖD, 1 FEL |
+| A3 | `trav_skritt` spelas inte in | RÖD, 3 FEL |
+| A4 | `senasteOvning` nollas inte för en oinspelad övning | RÖD, 1 FEL |
+
+**A3 och A4 hittade två riktiga fel i implementationen**, inte bara i
+proven:
+
+1. `senasteOvning` nollades inte när en övning saknar definition. Kortet
+   efter en **oinspelad** övning erbjöd därför "Se ritten", och knappen
+   öppnade **förra** övningens ritt. Provet räknar nu korten efter
+   oinspelade övningar och hur många av dem som ändå bar knappen — 10
+   respektive 0.
+2. Ledtexten på replaypanelens knappar räknades ut **en gång** i `bygg()`.
+   En iPad som får ett tangentbord, eller en handkontroll som kopplas in
+   mitt i ett pass, hade fått fel bokstav resten av sessionen. Texten
+   sätts nu i `rita()`, som körs vid varje öppning och varje bildruta —
+   samma regel som `UgnetaController` redan följde.
+
+Båda hittades av prov som skrevs för att täcka beställningens
+tillgänglighetskrav och kravet på **båda** övningarna. Utan dem hade
+koden varit grön och fel.
 
 **R4 var först GRÖN, och det var provets fel.** Frysprovet läste
 `pass.tid`, som står stilla ändå: `LektionController.steg` returnerar
