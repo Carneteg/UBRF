@@ -684,4 +684,16 @@ RidKanon.UGNETA = {
 	PLATS = { u = 0.5, bortomC = 1.4, bredd = 20, langd = 60 },
 }
 
+--[[ G02-D: inspelningens kontrakt, ur src/riding/ovningsdef.js
+     och src/riding/inspelning.js. ]]
+RidKanon.INSPELNING = {
+	SCHEMA = 1,
+	HZ = 20,
+	MAX_SEK = 120,
+	OVNING = {
+		storvolt = { version = 1, ram = "ridhus.dressyr", matt = { "linje", "rytm", "balans" } },
+		trav_skritt = { version = 1, ram = "ridhus.dressyr", matt = { "timing", "mjukhet", "respons" } },
+	},
+}
+
 return RidKanon

@@ -44,6 +44,24 @@ local kort: Frame? = nil
 local kortRubrik: TextLabel? = nil
 local kortPunkter: { TextLabel } = {}
 local kortKnapp: TextButton? = nil
+--[[ G02-D: kortet efter ett försök bär numera TRE vägar vidare, inte en.
+     Huvudknappen är kvar precis som den var (Prova igen / Nästa övning);
+     de två nya är sidoval och styr därför sina egna knappar:
+
+       "Se ritten"   öppnar ridanalysen. Den avslutar INTE väntan — kortet
+                     står kvar bakom panelen, och när panelen stängs är
+                     valet fortfarande hennes.
+       "Gå vidare"   nöjer sig med försöket. Momentet betygsätts ändå;
+                     det är omridningen hon hoppar över, inte bedömningen.
+
+     Kortet efter det SISTA försöket får ingen "Gå vidare" — huvudknappen
+     ÄR att gå vidare då, och två knappar för samma sak är ingen valfrihet.
+     Ett kort utan inspelning får ingen "Se ritten": ett val som inte kan
+     leda någonstans är sämre än inget val. ]]
+local replayKnapp: TextButton? = nil
+local vidareKnapp: TextButton? = nil
+local replayFn: (() -> ())? = nil
+local vidareFn: (() -> ())? = nil
 
 --[[ ÅTERFÖRSÖKET ÄR EN HANDLING, INTE EN SKYLT (senior review av
 	c53a2c7). Knappen var en TextLabel utan input-handler, och lifecyclen
@@ -130,14 +148,14 @@ local function bygg()
 	k.Name = "Kort"
 	k.AnchorPoint = Vector2.new(0.5, 1)
 	k.Position = UDim2.new(0.5, 0, 1, -14)
-	k.Size = UDim2.new(0.92, 0, 0, 108)
+	k.Size = UDim2.new(0.92, 0, 0, 170)
 	k.SizeConstraint = Enum.SizeConstraint.RelativeXX
 	k.BackgroundColor3 = FARG_MORK
 	k.BackgroundTransparency = 0.08
 	k.Visible = false
 	k.ZIndex = 5
 	local kmax = Instance.new("UISizeConstraint")
-	kmax.MaxSize = Vector2.new(640, 200)
+	kmax.MaxSize = Vector2.new(640, 260)
 	kmax.Parent = k
 	local kcorner = Instance.new("UICorner")
 	kcorner.CornerRadius = UDim.new(0, 10)
@@ -220,6 +238,37 @@ local function bygg()
 	kncorner.Parent = kn
 	kn.Parent = k
 	kortKnapp = kn
+
+	--[[ Sidoknapparna. Samma yta, samma träffstorlek, tydligt underordnad
+	     färg — huvudvalet ska fortfarande vara det som syns först. ]]
+	local function sidoKnapp(namn: string, txt: string, ordning: number,
+		fn: () -> ()): TextButton
+		local x = Instance.new("TextButton")
+		x.Name = namn
+		x.AutoButtonColor = true
+		x.LayoutOrder = ordning
+		x.Size = UDim2.new(0, 108, 0, 22)
+		x.BackgroundColor3 = Color3.fromRGB(60, 72, 68)
+		x.TextColor3 = FARG_TEXT
+		x.Font = Enum.Font.GothamBold
+		x.TextSize = 12
+		x.Text = txt
+		x.Visible = false
+		x.ZIndex = 6
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(1, 0)
+		c.Parent = x
+		x.Parent = k
+		x.Activated:Connect(fn)
+		return x
+	end
+	replayKnapp = sidoKnapp("SeRitten", "Se ritten", 10, function()
+		UgnetaController.replay()
+	end)
+	vidareKnapp = sidoKnapp("GaVidare", "Gå vidare", 11, function()
+		UgnetaController.gaVidare()
+	end)
+
 	--[[ Mus och finger går in här. Tangent och gamepad kommer in via
 	     init.client.luau, som äger inmatningen — HUD:en lyssnar inte
 	     själv på UserInputService, av samma skäl som allt annat ligger i
@@ -287,6 +336,15 @@ function UgnetaController.sakerhetTarOver()
 	if c then c.Visible = false end
 	local k = kort
 	if k then k.Visible = false end
+	--[[ SÄKERHET FÖRE UNDERVISNING. Även sidovalen kastas: ett "Se ritten"
+	     som överlevde avsittningen hade kunnat öppna en analys av en ritt
+	     på en häst som inte finns. ]]
+	replayFn = nil
+	vidareFn = nil
+	local rk = replayKnapp
+	if rk then rk.Visible = false end
+	local vk = vidareKnapp
+	if vk then vk.Visible = false end
 	liveTid = 0
 	liveSagt = ""
 	--[[ SÄKERHET FÖRE UNDERVISNING. En väntande fortsättning får inte
@@ -297,7 +355,7 @@ end
 
 --[[ ── Kortet mellan försöken ─────────────────────────────────── ]]
 local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
-	knappText: string?)
+	knappText: string?, replay: boolean?, vidare: boolean?)
 	bygg()
 	local k, r = kort, kortRubrik
 	if not k or not r then return end
@@ -312,6 +370,13 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 		kn.Visible = knapp
 		if knapp and knappText then kn.Text = medLedtext(knappText) end
 	end
+	--[[ Sidovalen visas bara när de FINNS. Den som ropar avgör: en övning
+	     utan inspelning har ingen ritt att se, och det sista försöket har
+	     ingen omridning att hoppa över. ]]
+	local rk = replayKnapp
+	if rk then rk.Visible = replay == true end
+	local vk = vidareKnapp
+	if vk then vk.Visible = vidare == true end
 	--[[ Kortet väntar exakt när det har en knapp. Ett kort utan knapp är
 	     en upplysning, inte ett val. ]]
 	vantarPa = knapp
@@ -326,8 +391,8 @@ end
 	och återkopplingen efter ett försök är samma yta — skillnaden är vad
 	som står i den, inte vilken ruta den ritas i. ]]
 function UgnetaController.visa(rubrik: string, punkter: { string }, knapp: boolean,
-	knappText: string?)
-	visaKort(rubrik, punkter, knapp, knappText)
+	knappText: string?, replay: boolean?, vidare: boolean?)
+	visaKort(rubrik, punkter, knapp, knappText, replay, vidare)
 end
 
 function UgnetaController.dolj()
@@ -339,7 +404,7 @@ end
 --[[ Efter ett försök. `fore` är nil på första försöket. Observationerna
 	kommer ur HorseCore/Ugneta — samma rangordning som webben. ]]
 function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number },
-	fore: { [string]: number }?, forsokNr: number)
+	fore: { [string]: number }?, forsokNr: number, kanSeRitten: boolean?)
 	local obs = Ugneta.observationer(ovningId, nu, fore)
 	local punkter = {}
 	for _, o in obs do
@@ -359,8 +424,12 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 	--[[ Kortet har alltid en fortsättning nu. Förut fick bara försök 1 en
 	     knapp och försök 2 låg kvar tills timern tog det — spelaren hade
 	     inget sätt att säga "klar". ]]
+	--[[ "Se ritten" bara när det FINNS en inspelning av försöket, och
+	     "Gå vidare" bara efter första försöket — efter det sista är
+	     huvudknappen redan vägen vidare. ]]
 	visaKort(if forsta then "Prova igen" else `Försök {forsokNr}`, punkter, true,
-		if forsta then "Prova igen" else "Nästa övning")
+		if forsta then "Prova igen" else "Nästa övning",
+		kanSeRitten == true, forsta)
 	return punkter
 end
 
@@ -369,6 +438,41 @@ end
 	registrerar vad som ska hända när spelaren väljer att gå vidare. ]]
 function UgnetaController.vidFortsatt(fn: (() -> ())?)
 	fortsattFn = fn
+end
+
+function UgnetaController.vidReplay(fn: (() -> ())?)
+	replayFn = fn
+end
+
+function UgnetaController.vidVidare(fn: (() -> ())?)
+	vidareFn = fn
+end
+
+--[[ SE RITTEN. Öppnar analysen och LÄMNAR KVAR väntan — kortet ligger
+     bakom panelen och valet är fortfarande spelarens när hon stänger den.
+     Returnerar false när det inte finns någon väntan eller ingen ritt att
+     visa, så att tangenten faller igenom till sin vanliga betydelse. ]]
+function UgnetaController.replay(): boolean
+	if not vantarPa then return false end
+	local fn = replayFn
+	if not fn then return false end
+	fn()
+	return true
+end
+
+--[[ GÅ VIDARE. Avslutar väntan precis som `fortsatt`, men kör den andra
+     vägen ut. De två delar vakt med flit: en väntan som kan avslutas på
+     två ställen får inte kunna avslutas två gånger — det var så ett
+     tidigare utkast räknade samma moment i `bedomda` en gång för mycket. ]]
+function UgnetaController.gaVidare(): boolean
+	if not vantarPa then return false end
+	local fn = vidareFn
+	if not fn then return false end
+	vantarPa = false
+	local k = kort
+	if k then k.Visible = false end
+	fn()
+	return true
 end
 
 --[[ Står kortet och väntar på spelaren? ]]
