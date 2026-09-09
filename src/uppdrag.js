@@ -215,8 +215,16 @@ function installeraTydligVagvisare(){
     #ubrfVagvisare .pil{width:28px;height:28px;border-radius:50%;background:#E8B54A;color:#17140A;
       display:grid;place-items:center;font-size:20px;font-weight:900;border:3px solid rgba(255,255,255,.9);
       animation:ubrfPuls 1.1s ease-in-out infinite}
-    #ubrfVagvisare .etikett{white-space:nowrap;background:rgba(20,20,18,.94);color:#fff;border:2px solid #E8B54A;
-      border-radius:999px;padding:6px 10px;font-size:13px;font-weight:800;letter-spacing:.01em}
+    /* MAXBREDD, annars hjälper ingen klampning. Med enbart nowrap växer
+       etiketten obegränsat med textens längd, och en lång svensk rubrik
+       på en 320 px-skärm blir bredare än hela fönstret — då finns ingen
+       position som håller den innanför. Taket låter den brytas i stället,
+       och text-wrap balance ger två jämna rader hellre än en lång och en
+       kort. (Inga backticks i den här kommentaren — blocket ligger i en
+       template-literal och en backtick här stänger hela stilmallen.) */
+    #ubrfVagvisare .etikett{background:rgba(20,20,18,.94);color:#fff;border:2px solid #E8B54A;
+      border-radius:16px;padding:6px 10px;font-size:13px;font-weight:800;letter-spacing:.01em;
+      width:max-content;max-width:min(280px, calc(100vw - 24px));text-wrap:balance;text-align:center}
     #ubrfVagvisare.nara .pil{width:34px;height:34px;font-size:22px}
     #ubrfVagvisare.nara .etikett{background:#E8B54A;color:#17140A;font-size:14px}
     @keyframes ubrfPuls{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.08)}}
@@ -228,6 +236,21 @@ function installeraTydligVagvisare(){
   rot.innerHTML='<div class="pin"><div class="pil">▼</div><div class="etikett"></div></div>';
   document.body.appendChild(rot);
   const pin=rot.querySelector(".pin"), etikett=rot.querySelector(".etikett"), pil=rot.querySelector(".pil");
+
+  /* Skärmens säkra zon, LÄST och inte gissad. En osynlig sond bär
+     `env(safe-area-inset-*)` som padding; webbläsaren räknar ut talen och
+     vi läser dem. På en skärm utan hak blir alla fyra 0 och klampningen
+     beter sig precis som förut. */
+  const sond=document.createElement("div");
+  sond.style.cssText="position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;"
+    +"padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);"
+    +"padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)";
+  document.body.appendChild(sond);
+  function sakerZon(){
+    const c=getComputedStyle(sond);
+    const t=s=>{const n=parseFloat(s); return Number.isFinite(n)?n:0;};
+    return {v:t(c.paddingLeft),h:t(c.paddingRight),t:t(c.paddingTop),b:t(c.paddingBottom)};
+  }
 
   function skarmPos(v){
     if(typeof cx==="undefined"||!cx||!cx.canvas)return null;
@@ -246,9 +269,31 @@ function installeraTydligVagvisare(){
     }catch(_){return null;}
     if(!Number.isFinite(sx)||!Number.isFinite(sy))return null;
     const px=rect.left+(sx/CW)*rect.width, py=rect.top+(sy/CH)*rect.height;
-    const m=44;
-    return {x:clamp(px,rect.left+m,rect.right-m),y:clamp(py,rect.top+m,rect.bottom-m),
-      utanför:bakom||px<rect.left+m||px>rect.right-m||py<rect.top+m||py>rect.bottom-m};
+    /* HELA ETIKETTEN INNANFÖR, inte bara ankaret.
+
+       Marginalen var 44 px och klampade PUNKTEN. Men `.pin` är centrerad
+       (`translate(-50%,…)`), så etiketten sticker ut halva sin bredd åt
+       vardera hållet. Med rubriken "Prata med ridläraren · 18 m" — 231 px
+       — hamnade 231/2 − 44 ≈ 72 px utanför skärmkanten, mätt lika på
+       320, 390, 1024 och 1366 px. Marginalen måste alltså vara etikettens
+       HALVA BREDD, inte ett fast tal.
+
+       Safe area räknas in för hakar och hemknappsstreck: på en telefon
+       kan 44 px vara helt under systemets eget UI. Värdena läses ur en
+       CSS-sond (`sakerZon`) i stället för att gissas. */
+    const halv=Math.ceil((etikett.getBoundingClientRect().width||0)/2);
+    const sz=sakerZon();
+    const mx=Math.max(44,halv), my=44;
+    /* Ryms den inte ens centrerad — smalare fönster än etiketten — då är
+       mitten det minst dåliga läget, och maxbredden i CSS ska ha brutit
+       raden redan. Utan den här vakten inverterar clamp och slänger ut
+       etiketten helt. */
+    const vLo=rect.left+sz.v+mx, vHi=rect.right-sz.h-mx;
+    const x=(vLo<=vHi)?clamp(px,vLo,vHi):(rect.left+rect.right)/2;
+    const yLo=rect.top+sz.t+my, yHi=rect.bottom-sz.b-my;
+    const y=(yLo<=yHi)?clamp(py,yLo,yHi):(rect.top+rect.bottom)/2;
+    return {x,y,
+      utanför:bakom||px<vLo||px>vHi||py<yLo||py>yHi};
   }
 
   function tick(){
@@ -259,17 +304,23 @@ function installeraTydligVagvisare(){
     }catch(_){}
     const dolj=!u||!v||(typeof overlayUppe==="function"&&overlayUppe());
     if(dolj){rot.style.display="none";requestAnimationFrame(tick);return;}
-    const p=skarmPos(v);
-    if(!p){rot.style.display="none";requestAnimationFrame(tick);return;}
-
+    /* TEXTEN FÖRST, sedan positionen. `skarmPos` mäter etikettens bredd
+       för att kunna hålla HELA den innanför kanten, och mätningen måste
+       gälla den text som faktiskt ska visas. Sattes texten efteråt — som
+       den gjorde förut — klampades bildrutan mot föregående rubriks
+       bredd, och ett byte från "HÄR · Jack" till en lång rubrik hann
+       sticka ut en bildruta innan det rättade sig. */
     rot.style.display="block";
     rot.classList.toggle("nara",!!v.nara);
-    pin.style.left=`${p.x}px`; pin.style.top=`${p.y}px`;
     const av=Math.max(0,Math.round(v.avstand));
     const namn=(u.hastId&&typeof HORSES!=="undefined"&&HORSES[u.hastId])?HORSES[u.hastId].namn:null;
     etikett.textContent=v.nara
       ? (namn?`HÄR · ${namn}`:`HÄR · ${u.rubrik}`)
       : `${u.rubrik} · ${av} m`;
+
+    const p=skarmPos(v);
+    if(!p){rot.style.display="none";requestAnimationFrame(tick);return;}
+    pin.style.left=`${p.x}px`; pin.style.top=`${p.y}px`;
     pil.textContent=p.utanför?"➜":"▼";
     requestAnimationFrame(tick);
   }
