@@ -39,9 +39,14 @@ const srv = http.createServer((q, s) => {
 });
 await new Promise(r => srv.listen(PORT, r));
 
+/* Samma mönster som gardtest/uppdragstest/replaytest: den förinstallerade
+   Chromium används NÄR DEN FINNS, annars låter vi Playwright hitta sin egen.
+   Ett hårdkodat sökvägsvärde föll i CI — runnern installerar sin browser via
+   `npx playwright install` och har ingen /opt/pw-browsers. */
+const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 const browser = await chromium.launch({
   headless: true,
-  executablePath: process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  executablePath: fs.existsSync(exe) ? exe : undefined,
   args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
 
