@@ -50,6 +50,23 @@ inte baselinens kärnfiler i #135.
 Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**. Status och
 paritetsredovisning i `docs/G02-D-RIDANALYS-REPLAY.md`.
 
+**Integrationsgren 2026-09-09:** `claude/g02-d-integration-20260909`, utgången
+ur #143 @ `87cad71` (senaste P0-integrationen) med `claude/g02-d-ridanalys`
+@ `6bc25fd` inmergad. Grenen bär både P0-inputlagret och G02-D:s lifecycle;
+ingen fil är ersatt i klump. #137 är kvar som acceptanstracker.
+
+Rutan "Se ritten — frivillig replay: **saknas** på Roblox" i
+paritetstabellen är stängd: `HorseCore/Inspelning.luau` och
+`client/ReplayController.luau` är byggda, inkopplade i `LektionController`
+och `init.client.luau`, och provade genom klientens egen `RenderStepped`.
+Schema och övningsversion exporteras till `RidKanon.INSPELNING`, så webbens
+`ovningsdef.js` är fortsatt enda källa.
+
+**Ingen självskrivande builder-workflow.** `g02-d-complete-builder.yml`
+finns inte på integrationsgrenen och ska inte återinföras: den testade en
+syntetiserad källa, inte den committade. Grindarna är `grindar.yml` och
+`ugneta.yml` — vanlig read-only CI på det utcheckade commit:et.
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114
