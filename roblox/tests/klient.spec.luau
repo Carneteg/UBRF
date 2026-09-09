@@ -476,6 +476,11 @@ do
 		end
 	end
 
+	--[[ Kort som visats efter en övning UTAN inspelning, och hur många av
+	     dem som ändå erbjöd "Se ritten". Räknas i `tillOvning` eftersom det
+	     är den som passerar de oinspelade övningarna. ]]
+	local seddaUtanInspelning, seddaMedKnappUtanInspelning = 0, 0
+
 	--[[ Rid fram till storvolten genom spelarens egna handlingar. ]]
 	local function tillOvning(id)
 		for _ = 1, 80 do
@@ -487,6 +492,12 @@ do
 			if LektionController.lage() == "rider" then
 				ridBildrutor(Lektion.FORSOK_SEK + 0.6)
 			elseif LektionController.vantar() then
+				if LektionController.lage() == "efter"
+					and not Inspelning.spelasIn(Lektion.ovningId(p)) then
+					seddaUtanInspelning += 1
+					local k = hitta("SeRitten")
+					if k and k.Visible then seddaMedKnappUtanInspelning += 1 end
+				end
 				tryck("R")
 			else
 				ridBildrutor(0.4)
@@ -729,6 +740,90 @@ do
 		prova("och ingen andra väntan blev kvar",
 			UgnetaController.gaVidare() == false,
 			("(gaVidare %s)"):format(tostring(UgnetaController.gaVidare())))
+
+		--[[ ══ DEN ANDRA ÖVNINGEN SPELAS OCKSÅ IN ═══════════════════════
+			Beställningen säger `storvolt` OCH `trav_skritt`. Att bara prova
+			den ena hade lämnat den andra på ett påstående. Spelaren rider
+			vidare genom passet med sina egna handlingar. ]]
+		prova("spelaren rider vidare till övergången trav → skritt",
+			tillOvning("trav_skritt") == true,
+			('(övning "%s")'):format(tostring(Lektion.ovningId(LektionController.pass()))))
+		--[[ Vägen dit går genom `horn`, som INTE har någon definition och
+		     därför inte spelas in. Kortet efter den får inget "Se ritten" —
+		     en knapp som öppnar någon ANNAN övnings ritt vore värre än
+		     ingen knapp alls. ]]
+		prova("en oinspelad övning erbjuder inte att se ritten",
+			seddaUtanInspelning > 0 and seddaMedKnappUtanInspelning == 0,
+			("(%d kort efter oinspelad övning, %d med Se ritten)"):format(
+				seddaUtanInspelning, seddaMedKnappUtanInspelning))
+
+		tryck("R")
+		ridBildrutor(Lektion.FORSOK_SEK + 0.6)
+		prova("också trav → skritt går att se om",
+			hitta("SeRitten").Visible == true,
+			("(Se ritten %s)"):format(tostring(hitta("SeRitten").Visible)))
+		tryck("T")
+		prova("och analysen öppnar på DEN övningens ritt, inte voltens",
+			LektionController.replayAktiv() == true
+				and ReplayController.lage().sekunder > 0,
+			("(%.1f s)"):format(ReplayController.lage().sekunder))
+
+		--[[ ══ TILLGÄNGLIGHET ═══════════════════════════════════════════
+			Panelen ska gå att använda med finger, tangent och gamepad.
+			Provet läser knapparna som de faktiskt byggdes. ]]
+		do
+			local knappar = { "Spela", "Bak", "Fram", "Fart", "Stang" }
+			local alla, minHojd = true, math.huge
+			for _, namn in knappar do
+				local k = hitta(namn)
+				if not k or k.ClassName ~= "TextButton" or k.Activated == nil then
+					alla = false
+				else
+					minHojd = math.min(minHojd, k.Size.Y.Offset)
+				end
+			end
+			prova("alla fem kontroller är riktiga knappar med Activated",
+				alla, ("(%d knappar)"):format(#knappar))
+			--[[ 44 px är minsta träffyta som går att peka på med ett finger.
+			     Familjen spelar på iPad och telefon. ]]
+			prova("och de är minst 44 px höga — fingret ska träffa",
+				minHojd >= 44, ("(minsta höjd %d px)"):format(minHojd))
+
+			--[[ LEDTEXTEN FÖLJER INMATNINGEN, inte plattformen — samma regel
+			     som Ugnetas kort. En ren pekenhet ska inte få en bokstav hon
+			     inte kan trycka på. ]]
+			local usv = game:GetService("UserInputService")
+			local kb, gp, touch = usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled
+			local post = ReplayController.lage()
+			local function stangOppna(tangentbord, gamepad, pek)
+				usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled =
+					tangentbord, gamepad, pek
+				ReplayController.stang()
+				local r = Inspelning.ny("storvolt", "bamse")
+				for i = 1, 30 do
+					Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = i, z = i, yaw = 0 })
+				end
+				ReplayController.oppna(Inspelning.avsluta(r))
+				return hitta("Stang").Text
+			end
+			local medTgb = stangOppna(true, false, false)
+			local medPad = stangOppna(false, true, false)
+			local baraPek = stangOppna(false, false, true)
+			prova("tangentbord ger R-ledtext på Tillbaka",
+				string.find(medTgb, "(R)", 1, true) ~= nil, ('("%s")'):format(medTgb))
+			prova("gamepad ger Y-ledtext i stället",
+				string.find(medPad, "(Y)", 1, true) ~= nil
+					and string.find(medPad, "(R)", 1, true) == nil,
+				('("%s")'):format(medPad))
+			prova("en ren pekenhet får ingen bokstav hon inte kan trycka på",
+				string.find(baraPek, "(R)", 1, true) == nil
+					and string.find(baraPek, "(Y)", 1, true) == nil
+					and string.find(baraPek, "Tillbaka", 1, true) ~= nil,
+				('("%s")'):format(baraPek))
+			usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
+			ReplayController.stang()
+			if post then end
+		end
 
 		--[[ Städa upp efter oss: nästa block ska inte ärva en pågående ritt. ]]
 		player.CharacterRemoving:Fire(player.Character)

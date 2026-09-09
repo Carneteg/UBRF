@@ -54,6 +54,7 @@ local markor: Frame? = nil
 local tidLabel: TextLabel? = nil
 local statusLabel: TextLabel? = nil
 local spelaKnapp: TextButton? = nil
+local stangKnapp: TextButton? = nil
 
 local aktiv = false
 local post: Inspelning.Post? = nil
@@ -252,13 +253,13 @@ local function bygg()
 		return x
 	end
 
-	spelaKnapp = knapp("Spela", medLedtext("Spela", "T", "X"), 1, function()
+	spelaKnapp = knapp("Spela", "Spela", 1, function()
 		ReplayController.spelaPausa()
 	end)
 	knapp("Bak", "−5 s", 2, function() ReplayController.hoppa(-5) end)
 	knapp("Fram", "+5 s", 3, function() ReplayController.hoppa(5) end)
 	knapp("Fart", "0,5×", 4, function() ReplayController.vaxlaFart() end)
-	knapp("Stang", medLedtext("Tillbaka", "R", "Y"), 5, function()
+	stangKnapp = knapp("Stang", "Tillbaka", 5, function()
 		ReplayController.stang()
 	end)
 
@@ -294,10 +295,17 @@ local function rita()
 	end
 	local tl = tidLabel
 	if tl then tl.Text = string.format("%.1f / %.1f s", tid, p.sekunder) end
+	--[[ LEDTEXTEN RÄKNAS OM HÄR, inte en gång i `bygg()`. En iPad kan få ett
+	     tangentbord efter att panelen byggts, och en spelare kan koppla in en
+	     handkontroll mitt i ett pass. Byggdes texten en gång låg fel bokstav
+	     kvar resten av sessionen — och provet som växlade inmatningsförmåga
+	     såg det. ]]
 	local sk = spelaKnapp
 	if sk then
 		sk.Text = medLedtext(if spelar then "Pausa" else "Spela", "T", "X")
 	end
+	local stk = stangKnapp
+	if stk then stk.Text = medLedtext("Tillbaka", "R", "Y") end
 end
 
 --[[ ── Publikt: öppna, stäng, styr ──────────────────────────────── ]]

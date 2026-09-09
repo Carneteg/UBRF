@@ -148,7 +148,14 @@ Enum = {
 --[[ UI-typerna. HUD:en bara skapar dem och läser dem aldrig isär, så de
      lagras som vad de är — inga beräkningar, ingen låtsad Roblox-matematik. ]]
 function UDim2_new(xs, xo, ys, yo)
-	return { _typ = "UDim2", XScale = xs, XOffset = xo, YScale = ys, YOffset = yo }
+	--[[ Bade den platta formen (aldre specar laser XOffset) och Roblox egen
+	     (Size.Y.Offset). En stub som bara har den platta formen later ett prov
+	     som laser rratt fram ge nil i stallet for ett tal, och da matte provet
+	     ingenting -- precis den sortens tysta halvsanning bankan finns for att
+	     undvika. ]]
+	return { _typ = "UDim2", XScale = xs, XOffset = xo, YScale = ys, YOffset = yo,
+		X = { _typ = "UDim", Scale = xs, Offset = xo },
+		Y = { _typ = "UDim", Scale = ys, Offset = yo } }
 end
 UDim2 = { new = UDim2_new, fromScale = function(x, y) return UDim2_new(x, 0, y, 0) end,
 	fromOffset = function(x, y) return UDim2_new(0, x, 0, y) end }

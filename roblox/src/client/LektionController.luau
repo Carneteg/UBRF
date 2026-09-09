@@ -110,7 +110,16 @@ end
 local function startaInspelning(p: Lektion.Pass, tm: { [string]: any }?)
 	if inspelare then return end
 	local id = Lektion.ovningId(p)
-	if not Inspelning.spelasIn(id) then return end
+	if not Inspelning.spelasIn(id) then
+		--[[ ÖVNINGEN SPELAS INTE IN — och då ska det INTE gå att "se ritten".
+		     `senasteOvning` måste nollas här, inte bara sättas när en
+		     inspelning startar. Annars pekade den kvar på FÖRRA övningen, och
+		     kortet efter en oinspelad övning erbjöd "Se ritten" som öppnade
+		     någon annans ritt. Falsifieringen (`trav_skritt` avstängd) visade
+		     det: knappen stod kvar, grön, med voltens post bakom sig. ]]
+		senasteOvning = nil
+		return
+	end
 	local hast = if type(tm) == "table" and type(tm.hast) == "string" then tm.hast else nil
 	inspelare = Inspelning.ny(id :: string, hast)
 	senasteOvning = id
