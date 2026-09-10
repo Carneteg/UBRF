@@ -687,25 +687,30 @@ end
 
 --[[ ══ FIRST PLAYABLE-SPAWNEN ═══════════════════════════════════════════
 
-	Blockerare i #162, punkt C: Tobias spawnade för långt från den avsedda
-	starten. Orsaken var att INGEN `SpawnLocation` skapades någonstans i
-	repot — Roblox spawnade därför på sitt eget standardläge, och det fanns
-	inget spawnkontrakt att vinna över.
+	Blockerare i #162, punkt C: Tobias spawnade för långt från starten.
+	Orsaken var att INGEN `SpawnLocation` skapades någonstans i repot, så
+	Roblox spawnade på sitt eget standardläge.
 
-	Läget är inte valt av mig. Det är `STALL-ANKOMST`, reviewkameran som
-	tillkom i #80 runda 3 och som bär `CHATGPT_VISUAL_PASS`: 6,0 m norr om
-	stallets nordfasad, centrerad på den ockragula entrédörren under
-	verandan, med blicken mot dörren. Alltså exakt den plats en besökare
-	anländer till, och den vy som redan är granskad som ankomsten.
+	FÖRSTA FÖRSÖKET VAR FEL, och felet var mitt: jag la spawnen på
+	`STALL-ANKOMST`:s kameraläge, 6,0 m norr om stallets nordfasad. Mätt i
+	bänken finns det INGEN kolliderande yta där — den nordligaste byggda
+	ytan vid dörrens x är verandagolvet, som når 2,80 m ut. Spawnen låg
+	alltså 3,2 m ut över tomrummet, och Tobias föll och dog.
 
-	Härlett ur samma `G.byggnader`/`GEO.oppningsMitt` som fasaden byggs ur —
-	inga egna koordinater. Flyttas dörren följer spawnen med.
+	Att en KAMERA står 6 m ut är riktigt: en kamera behöver ingen mark. Att
+	en SPAWN gör det är inte det. Läget härleds därför nu ur verandan
+	(`I.forstukvist`, verifierad data): mitt på verandagolvet, i räckets
+	öppning, som är gjord "mitt för dörren". Det är där en besökare
+	faktiskt står när hon kommit upp på verandan och vänt sig mot den
+	ockragula entrédörren — och det är byggd, kolliderande betong.
 
-	Plattan är GENOMSKINLIG. Den är en spawnpunkt, inte dekor, och en
-	synlig platta hade ändrat granskade exteriörbilder utan att tillföra
-	något. `Neon`-markörerna är QA-hjälp; det här är inte en sådan. ]]
+	Plattan är GENOMSKINLIG och kolliderar INTE. Den är en spawnpunkt, inte
+	dekor och inte golv: verandagolvet under bär kroppen. Att det finns
+	kolliderande mark under spawnen mäts nu av `forstaplayable.spec` — det
+	är den mätning som saknades och som hade fångat det här utan en
+	människa i Studio. ]]
 
-local ANKOMST_UT = 6.0          -- m norr om fasaden, som STALL-ANKOMST
+local FORSTUKVIST_GOLVTOPP = 0.14   -- som golvet byggs i byggStallIdentitet
 
 local function byggSpawn(model: Model, base: CFrame)
 	local stall
@@ -721,13 +726,20 @@ local function byggSpawn(model: Model, base: CFrame)
 	for _, o in ipairs(stall.oppningar or {}) do
 		if o.sida == "N" and o.typ == "dorrgul" then dorr = o end
 	end
-	if not dorr then
-		warn("[UBRF] Stallets ockragula entrédörr saknas — spawnen hoppas över.")
+	local K = G.identitet and G.identitet.stall and G.identitet.stall.forstukvist
+	if not dorr or not K then
+		warn("[UBRF] Stallets entrédörr eller förstukvist saknas i datan — "
+			.. "spawnen hoppas över hellre än att gissa ett läge.")
 		return
 	end
 
-	local dx, dz = GEO.oppningsMitt(stall.rekt, "N", dorr.u, dorr.b)
-	local sx, sz = dx, stall.rekt.y + stall.rekt.h + ANKOMST_UT
+	local r = stall.rekt
+	--[[ Samma härledning som verandan byggs ur: mitten längs gaveln, och
+		gavelns yttervägg som nollpunkt norrut. Flyttas verandan följer
+		spawnen med. ]]
+	local sx = r.x + r.w - K.uFranOst
+	local sz = r.y + r.h + K.djup / 2
+	local dx, dz = GEO.oppningsMitt(r, "N", dorr.u, dorr.b)
 
 	local M = BK.M
 	local sp = Instance.new("SpawnLocation")
@@ -735,19 +747,21 @@ local function byggSpawn(model: Model, base: CFrame)
 	sp.Anchored = true
 	sp.CanCollide = false
 	sp.Transparency = 1
-	sp.Size = Vector3.new(6, 0.2, 6)
+	sp.Size = Vector3.new(4, 0.2, 4)
 	sp.Neutral = true
 	sp.Duration = 0
 	--[[ Riktningen tas som en BLICK MOT DÖRREN i stället för som en vinkel.
 		Webbens `rikt` och Roblox yaw har olika konvention, och en vinkel som
 		räknas om för hand är precis den sorts detalj som tystnar fel. Ser man
 		dörren när man spawnar är riktningen rätt, oavsett konvention. ]]
-	local har = (base * CFrame.new(sx * M, 0.1 * M, sz * M)).Position
-	local dit = (base * CFrame.new(dx * M, 0.1 * M, dz * M)).Position
+	local h = FORSTUKVIST_GOLVTOPP + 0.1
+	local har = (base * CFrame.new(sx * M, h * M, sz * M)).Position
+	local dit = (base * CFrame.new(dx * M, h * M, dz * M)).Position
 	sp.CFrame = CFrame.lookAt(har, Vector3.new(dit.X, har.Y, dit.Z))
 	sp:SetAttribute("UBRFStart", true)
 	sp:SetAttribute("MotDorr", "stall N dorrgul")
-	sp:SetAttribute("AvstandM", ANKOMST_UT)
+	sp:SetAttribute("Star", "förstukvistens golv")
+	sp:SetAttribute("AvstandM", K.djup / 2)
 	sp.Parent = model
 end
 

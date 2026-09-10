@@ -45,6 +45,28 @@ local Preflight = require(script.Preflight)
 	beroende: `StallService` sätter sin boxmarkör i den byggda modellen och
 	`DorrService` letar dörrblad i den. Utan värld först får båda ingenting
 	att arbeta på, och det ska då SYNAS i outputen. ]]
+--[[ INGEN SPAWN FÖRE VÄRLDEN.
+
+	Andra halvan av att Tobias föll: även med spawnen på rätt plats hinner
+	Studio i Play-läge ladda karaktären innan servern byggt anläggningen —
+	bygget är 3300 delar. Finns ingen `SpawnLocation` ännu spawnar Roblox på
+	sitt standardläge, och står det inget där faller man.
+
+	`CharacterAutoLoads = false` håller karaktären tillbaka tills världen
+	står. Den som redan anslutit laddas sedan för hand. ]]
+local Players = game:GetService("Players")
+Players.CharacterAutoLoads = false
+
+local function slappInSpelare()
+	Players.CharacterAutoLoads = true
+	for _, p in ipairs(Players:GetPlayers()) do
+		if not p.Character then
+			local ok, fel = pcall(function() p:LoadCharacter() end)
+			if not ok then warn("[Horse] Kunde inte ladda karaktär: " .. tostring(fel)) end
+		end
+	end
+end
+
 local function byggVarlden(): boolean
 	local sss = game:GetService("ServerScriptService")
 	local varld = sss:FindFirstChild("Varld")
@@ -66,6 +88,9 @@ HorseService.start()
 StallService.start()
 GameplayService.start()
 DorrService.start()
+
+--[[ Först nu får någon spawna: världen står och dörrarna har interaktion. ]]
+slappInSpelare()
 print("[Horse] Servern igång")
 
 --[[ Preflight SIST: den mäter det färdiga läget, inte avsikten. ]]

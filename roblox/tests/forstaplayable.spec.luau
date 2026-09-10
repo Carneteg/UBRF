@@ -101,9 +101,10 @@ check("spawnen pekar ut vilken dörr den hör till",
 	start ~= nil and start:GetAttribute("MotDorr") == "stall N dorrgul",
 	start and tostring(start:GetAttribute("MotDorr")) or "ingen")
 
---[[ Läget mäts mot samma härledning som `Anlaggningen` använder: stallets
-	ockragula nordentré, 6,0 m ut. Ett tal skrivet för hand här hade bara
-	varit en andra sanning som kan glida. ]]
+--[[ Läget mäts mot samma härledning som `Anlaggningen` använder: mitt på
+	verandagolvet, i räckets öppning mitt för stallets ockragula nordentré.
+	Ett tal skrivet för hand här hade bara varit en andra sanning som kan
+	glida. ]]
 local stall
 for _, b in ipairs(UBRFKomplex.byggnader) do
 	if b.id == "stall" then stall = b end
@@ -112,24 +113,66 @@ local dorr
 for _, o in ipairs(stall.oppningar or {}) do
 	if o.sida == "N" and o.typ == "dorrgul" then dorr = o end
 end
+local K = UBRFKomplex.identitet.stall.forstukvist
 check("stallets ockragula nordentré finns i geometrin", dorr ~= nil)
+check("förstukvisten finns i geometrin", K ~= nil)
 
-if start and dorr then
-	local dx, dz = Geometri.oppningsMitt(stall.rekt, "N", dorr.u, dorr.b)
-	local vantadX = dx
-	local vantadZ = stall.rekt.y + stall.rekt.h + (start:GetAttribute("AvstandM") or 0)
-	--[[ Modellen är byggd relativt sitt eget origo, så jämförelsen görs i
-		meter mot origot i stället för i absoluta studs. ]]
-	local origo = UBRFKomplex.origo or { x = 0, y = 0 }
-	local px = start.CFrame.Position.X / M - (origo.x or 0)
-	local pz = start.CFrame.Position.Z / M - (origo.y or 0)
-	check("spawnen står på ankomstpunkten (STALL-ANKOMST)",
+local origo = UBRFKomplex.origo or { x = 0, y = 0 }
+local px, pz, py
+if start then
+	px = start.CFrame.Position.X / M - (origo.x or 0)
+	pz = start.CFrame.Position.Z / M - (origo.y or 0)
+	py = start.CFrame.Position.Y / M
+end
+
+if start and dorr and K then
+	local r = stall.rekt
+	local vantadX = r.x + r.w - K.uFranOst
+	local vantadZ = r.y + r.h + K.djup / 2
+	check("spawnen står mitt på förstukvistens golv",
 		math.abs(px - vantadX) < 0.15 and math.abs(pz - vantadZ) < 0.15,
 		("(%.2f, %.2f) mot väntat (%.2f, %.2f)"):format(px, pz, vantadX, vantadZ))
+
+	local dx, dz = Geometri.oppningsMitt(r, "N", dorr.u, dorr.b)
+	check("spawnen är i linje med entrédörren",
+		math.abs(px - dx) <= 0.6, ("%.2f m i sidled från dörrens mitt"):format(math.abs(px - dx)))
 	check("spawnen ligger inom rimligt gångavstånd från dörren",
-		math.abs(pz - dz) <= 10.0, ("%.1f m"):format(math.abs(pz - dz)))
+		math.abs(pz - dz) <= 4.0, ("%.2f m"):format(math.abs(pz - dz)))
 	check("spawnen syns inte i granskade bilder (genomskinlig)",
 		start.Transparency >= 1)
+end
+
+--[[ ══ DEN MÄTNING SOM SAKNADES ═════════════════════════════════════════
+
+	Tobias spawnade i luften, föll och dog. Specen var grön, för den mätte
+	att spawnen låg på ANKOMSTPUNKTEN — inte att det fanns något att stå på
+	där. Kameran som punkten kom ur står 6 m ut från fasaden, och en kamera
+	behöver ingen mark.
+
+	Här mäts marken. En spawn utan kolliderande yta rakt under sig är inte
+	en spawn, den är ett fall. Toleransen är en halvmeter: mark "långt
+	därnere" är samma fel med längre falltid. ]]
+if start then
+	local FALLHOJD = 0.5
+	local basta, namn = nil, nil
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d.CFrame and d.Size and d ~= start and d.CanCollide ~= false then
+			local c, s = d.CFrame.Position, d.Size
+			local cx, cz = c.X / M - (origo.x or 0), c.Z / M - (origo.y or 0)
+			if math.abs(cx - px) <= s.X / (2 * M) + 0.01
+				and math.abs(cz - pz) <= s.Z / (2 * M) + 0.01 then
+				local topp = (c.Y + s.Y / 2) / M
+				if topp <= py + 0.01 and (basta == nil or topp > basta) then
+					basta, namn = topp, d.Name
+				end
+			end
+		end
+	end
+	check("det finns kolliderande mark rakt under spawnen", basta ~= nil,
+		basta and ("%s, topp %.2f m"):format(namn, basta) or "INGENTING — spelaren faller")
+	check("marken ligger direkt under fötterna, inte långt därnere",
+		basta ~= nil and (py - basta) <= FALLHOJD,
+		basta and ("%.2f m fall"):format(py - basta) or "ingen mark")
 end
 
 -- ── 3. DÖRRKONTRAKTET ──────────────────────────────────────────────────
