@@ -67,6 +67,40 @@ finns inte på integrationsgrenen och ska inte återinföras: den testade en
 syntetiserad källa, inte den committade. Grindarna är `grindar.yml` och
 `ugneta.yml` — vanlig read-only CI på det utcheckade commit:et.
 
+## Parallellt sanktionerat spår — First Playable Candidate (#161)
+
+PO-beslut 2026-09-10 i issue #161: **First Playable Candidate**, på egen
+feature branch `claude/first-playable-20260910` med draft-PR mot
+`claude/ridspel-stall-omnejd-zo2zce`. Beslutet häver vänteläget för #153:s tre
+återstående punkter — P1-3b Roblox skötselmoment, P1-3c Roblox varaktig
+progression och P2-4b återöppningsbar kontrollhjälp — och slår samman dem med
+de godkända fixarna ur #154, #156, #157, #158 och #159 till EN spelbar version.
+
+Den här filen **registrerar** att spåret är aktivt. Den skriver inga
+acceptanskriterier: de står i #161 och är Tobias, inte en builders.
+
+Integrationens härledning, verifierad mot remote heads före merge:
+
+| PR | gren | head | relation |
+|---|---|---|---|
+| #152 | `claude/g02-e-camera-wip-20260909` | `e5af8fc` | integrationsbas |
+| #154 | `claude/p0-valfard-20260909` | `88067d3` | 2 commits ovanpå `e5af8fc` |
+| #156 | `claude/p2-uppdragsetikett-20260909` | `8b1bc4b` | 1 commit ovanpå `88067d3` |
+| #157 | `claude/p2-replaypanel-20260909` | `6097c3b` | 1 commit ovanpå `88067d3` |
+| #158 | `claude/p2-skaparchips-20260909` | `d2b6366` | 1 commit ovanpå `88067d3` |
+| #159 | `claude/p3-sokvagar-20260909` | `55d38a4` | 1 commit ovanpå `88067d3` |
+
+Riktiga merges med `88067d3` som gemensam förälder. Enda konflikten var
+`.github/workflows/grindar.yml`, där #156/#157/#158 var för sig lade till ett
+jobb sist i samma steglista; alla tre behölls. Ingen filersättning, ingen
+#144-integration, ingen force-push.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
+Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
+
+**Ingen merge till main i det här uppdraget.** Kandidaten är den enda version
+som därefter ska testas som spel; de små PR:erna ligger kvar som provenance.
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114
