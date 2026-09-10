@@ -23,7 +23,7 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 
 | Handling | Tangentbord | Gamepad | Pekskärm |
 |---|---|---|---|
-| Sitt upp / sitt av | `E` | `E` | `SITT AV` |
+| Sitt upp / sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` |
 | Framåt / bakåt | `W` / `S` | vänster spak | spaken |
 | Styr | `A` / `D` | vänster spak | spaken |
 | Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
@@ -103,10 +103,11 @@ tygeln"* respektive *"avsprånget kommer ur anridningen"*.
    P2-4b: `H` fanns, men på en iPad utan tangentbord fanns ingen väg
    tillbaka när panelen väl var bortstängd.
 
-## Kontrollhjälpens gamepadknapp — varför `DPadUp`
+## Styrkorsets knappar — varför `DPadUp` och `DPadDown`
 
-`DPadUp` valdes för #161 därför att den är **ledig**, och det är
-kontrollerat mot källan, inte antaget:
+`DPadUp` valdes för #161 (hjälpen) och `DPadDown` för #162 blockerare 2
+(avsittningen) därför att de är **lediga**, och det är kontrollerat mot
+källan, inte antaget:
 
 | Bunden | Av | Till |
 |---|---|---|
@@ -123,6 +124,24 @@ Styrkorset rörs av ingen av dem. `ButtonStart` och `ButtonSelect`
 valdes bort trots att de också är obundna i UBRF: de är reserverade av
 Roblox egna menyer på konsol, och en hjälpknapp som ibland öppnar
 Roblox-menyn i stället är sämre än ingen.
+
+### Avsittningen (#162 blockerare 2)
+
+Fram till #162 fanns **ingen** gamepadväg av hästen. `begarAvsittning`
+var bunden till `E` och inget annat, medan uppsittningen går genom en
+ProximityPrompt som handkontrollen når utan problem. En spelare med bara
+handkontroll kom alltså upp på hästen och satt kvar där. Kontrollhjälpen
+gjorde det värre genom att skriva `E` i gamepadkolumnen — en tangent
+presenterad som ett reglage.
+
+`DPadDown` är resten av styrkorset efter hjälpen, och paret läser sig
+självt: hjälpen upp, av hästen ned. Ingen befintlig rid-, hopp-,
+replay-, lektions- eller hjälpbindning ändrades.
+
+Ledtexten i panelen **härleds** numera ur bindningen
+(`KontrollHjalp.AVSITTNING_GAMEPAD` → `PADNAMN`), så texten och
+reglaget kan inte glida isär igen. Det var den andra halvan av samma
+blockerare.
 
 **Ingen befintlig rid-, hopp- eller replaybindning har flyttats** för att
 göra plats. Det var ett uttryckligt krav i #161.

@@ -1101,6 +1101,55 @@ do
 	UserInputService.InputBegan:Fire({ KeyCode = KontrollHjalp.GAMEPADKNAPP }, false)
 	prova("och stänger den igen", KontrollHjalp.synlig() == false)
 
+	--[[ ══ BLOCKERARE 2 (#162): GAMEPADEN MÅSTE KUNNA SITTA AV ══════
+		`KontrollHjalp` sa `pad = "E"` för "Sitt upp / sitt av". `E` är en
+		TANGENT. `begarAvsittning` var bara bunden till `E`, medan
+		uppsittningen går genom en ProximityPrompt som handkontrollen når —
+		alltså kom en gamepadspelare UPP på hästen och satt kvar där, med
+		en hjälptext som pekade på ett reglage hon inte hade.
+
+		Tre mätningar: knappen finns, den krockar inte, och den SITTER AV
+		på riktigt genom klientens egen lyssnare. Plus ledtexten, som var
+		den andra halvan av felet. ]]
+	prova("avsittningen deklarerar en gamepadknapp",
+		KontrollHjalp.AVSITTNING_GAMEPAD ~= nil,
+		("(%s)"):format(tostring(KontrollHjalp.AVSITTNING_GAMEPAD)))
+	prova("avsittningsknappen är inte tagen av ridningen",
+		tagna[KontrollHjalp.AVSITTNING_GAMEPAD] == nil,
+		("(%s → %s)"):format(tostring(KontrollHjalp.AVSITTNING_GAMEPAD),
+			tostring(tagna[KontrollHjalp.AVSITTNING_GAMEPAD] or "ledig")))
+	prova("och inte samma som hjälpens",
+		KontrollHjalp.AVSITTNING_GAMEPAD ~= KontrollHjalp.GAMEPADKNAPP,
+		("(av %s · hjälp %s)"):format(tostring(KontrollHjalp.AVSITTNING_GAMEPAD),
+			tostring(KontrollHjalp.GAMEPADKNAPP)))
+
+	--[[ LEDTEXTEN. Den ska beskriva gamepadens reglage, inte en tangent —
+		och den ska följa bindningen. ]]
+	local avrad = KontrollHjalp._rad("Sitt upp / sitt av")
+	prova("hjälpraden finns", avrad ~= nil)
+	prova("hjälpraden pekar inte på en tangent för gamepad",
+		avrad ~= nil and avrad.pad ~= "E" and avrad.pad ~= avrad.tgb,
+		("(pad %s · tgb %s)"):format(tostring(avrad and avrad.pad),
+			tostring(avrad and avrad.tgb)))
+
+	--[[ OCH DEN SITTER AV. Uppsittning genom produktionens MountChanged,
+		avsittning genom klientens InputBegan — inga direktanrop. ]]
+	do
+		local fjarr2 = Net.get("DismountRequest")
+		local gammal = fjarr2.InvokeServer
+		local anrop = 0
+		fjarr2.InvokeServer = function() anrop += 1; return true end
+
+		Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+		bildrutor(1)
+		UserInputService.InputBegan:Fire(
+			{ KeyCode = KontrollHjalp.AVSITTNING_GAMEPAD }, false)
+		prova("gamepadknappen begär avsittning",
+			anrop == 1, ("(%d anrop)"):format(anrop))
+
+		fjarr2.InvokeServer = gammal
+	end
+
 	--[[ PEKSKÄRMEN. `?`-knappen byggs bara när inmatningen behöver den, så
 		provet växlar till en ren pekenhet och startar om modulen — samma
 		beslut `KontrollHjalp.start` gör i produktion. ]]

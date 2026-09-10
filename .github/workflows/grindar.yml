@@ -63,6 +63,15 @@ jobs:
           if [ -f tools/kolla-dorrfarg.py ]; then python3 tools/kolla-dorrfarg.py
           else echo "hoppar: tools/kolla-dorrfarg.py finns inte i denna branch"; fi
 
+      # Första dagens häst (#162 blockerare 3): produktregeln "ny spelare
+      # rider Jack" står numera på två ställen — src/scenes.js och
+      # roblox/game/Stallet.luau. Grinden ser till att de två aldrig blir
+      # två SANNINGAR, och att hästen finns i den delade datan.
+      - name: Första dagens häst — samma på webb och Roblox
+        run: |
+          if [ -f tools/kolla-forstadagen.py ]; then python3 tools/kolla-forstadagen.py
+          else echo "hoppar: tools/kolla-forstadagen.py finns inte i denna branch"; fi
+
       - name: Rojo-projektkontroll
         run: |
           if [ -f tools/kolla-rojo.py ]; then python3 tools/kolla-rojo.py

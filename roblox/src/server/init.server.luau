@@ -16,9 +16,19 @@ local GameplayService = require(script.GameplayService)
      SparService ligger FÖRST sedan #161, och det är också ett beroende:
      StallService.tilldela frågar efter spelarens hästminnen för att inte
      dela ut en häst som vilar för en skada, och GameplayService läser
-     passnumret för att veta om det är första dagen. Startar den efter dem
-     får den första spelaren i servern en tom välfärdsmängd och kunde
-     tilldelas en skadad häst. ]]
+     passnumret för att veta om det är första dagen.
+
+     MEN ORDNINGEN HÄR ÄR INTE EN BARRIÄR, och sedan #162 blockerare 1
+     låtsas den inte vara det. Den bestämmer bara i vilken ordning
+     anslutningarna görs. `SparService.ladda` yieldar i sitt `GetAsync`,
+     och Roblox kör varje `PlayerAdded`-anslutning på egen tråd — så en
+     tjänst som kopplade signalen själv startade mitt i läsningen, hur
+     sent den än startades.
+
+     Därför finns nu exakt EN `PlayerAdded`-lyssnare i servern, i
+     SparService, och StallService/GameplayService hänger på
+     `SparService.efterLaddning`. Startordningen nedan avgör i vilken
+     ordning de hookarna körs, och det beroendet gäller fortfarande. ]]
 SparService.start()
 HorseService.start()
 StallService.start()

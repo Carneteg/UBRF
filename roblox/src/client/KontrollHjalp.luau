@@ -69,6 +69,48 @@ local FARG_MORK = Color3.fromRGB(12, 14, 18)
 local FARG_TEXT = Color3.fromRGB(246, 242, 232)
 local FARG_GULD = Color3.fromRGB(232, 181, 74)
 
+--[[ Reglaget som öppnar hjälpen igen, per inmatning. Publik för att provet
+     ska läsa samma beslut som panelen — och för att `docs/KONTROLLMATRIS.md`
+     ska gå att kontrollera mot källan i stället för mot minnet. ]]
+KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
+
+--[[ Avsittningens gamepadknapp (#162 blockerare 2). Samma skäl till att den
+     är publik: `init.client.luau` binder den, panelen skriver ut den och
+     provet läser den — ett beslut, en plats.
+
+     `DPadDown` är valt för att det är den enda naturliga knappen som är
+     LEDIG, kontrollerat mot hela `roblox/src`:
+       Input.luau       Thumbstick1, ButtonA/B, R1/L1, R2/L2
+       init.client      ButtonY (lektionen), ButtonX (se ritten), DPadUp (hjälp)
+     Kvar av styrkorset: ned, vänster, höger. `ButtonStart`/`ButtonSelect`
+     rörs inte — Roblox har egna menyer på dem.
+
+     Styrkors ned parar sig dessutom med styrkors upp: hjälpen upp, av
+     hästen ned. Ingen befintlig rid-, hopp-, replay- eller hjälpbindning
+     ändras. ]]
+KontrollHjalp.AVSITTNING_GAMEPAD = Enum.KeyCode.DPadDown
+
+--[[ LEDTEXTEN HÄRLEDS UR BINDNINGEN, inte skriven för hand vid sidan om.
+
+     Blockerare 2 var två fel i samma rad: bindningen saknades OCH raden
+     påstod "E", en tangent, som gamepadens reglage. Det andra felet är
+     möjligt så länge texten och bindningen är två oberoende strängar —
+     precis den dubbla sanning `CLAUDE.md` varnar för, i miniatyr.
+
+     Nu slår panelen upp knappen här. Byts konstanten följer texten med,
+     och en knapp utan namn syns direkt i panelen i stället för att bli en
+     tyst lögn. ]]
+local PADNAMN: { [Enum.KeyCode]: string } = {
+	[Enum.KeyCode.DPadUp] = "Styrkors upp",
+	[Enum.KeyCode.DPadDown] = "Styrkors ned",
+	[Enum.KeyCode.DPadLeft] = "Styrkors vänster",
+	[Enum.KeyCode.DPadRight] = "Styrkors höger",
+}
+
+local function padNamn(kod: Enum.KeyCode): string
+	return PADNAMN[kod] or ("(namnlös knapp: " .. tostring(kod) .. ")")
+end
+
 --[[ RADERNA. `tgb`/`pad`/`pek` är de reglage som är bundna i produktionen:
 
      tangentbord  Input.luau: W/S framåt-bakåt, A/D styr, LeftShift gångart
@@ -85,7 +127,13 @@ local FARG_GULD = Color3.fromRGB(232, 181, 74)
      Input.luau:s egna KeyCodes och faller när en rad påstår en tangent som
      inte längre är bunden. ]]
 local RADER = {
-	{ vad = "Sitt upp / sitt av", tgb = "E",        pad = "E",        pek = "SITT AV" },
+	--[[ `pad` stod "E" här (#162 blockerare 2). `E` är en TANGENT. En spelare
+	     med bara handkontroll läste alltså en instruktion hon inte kunde
+	     följa — och kunde faktiskt inte sitta av alls, för `begarAvsittning`
+	     var bara bunden till `E`. Uppsittningen gick via ProximityPrompt,
+	     så hon kom UPP på hästen och blev kvar där. ]]
+	{ vad = "Sitt upp / sitt av", tgb = "E",
+	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),                  pek = "SITT AV" },
 	{ vad = "Framåt / bakåt",     tgb = "W / S",    pad = "Vänster spak", pek = "Spaken" },
 	{ vad = "Styr",               tgb = "A / D",    pad = "Vänster spak", pek = "Spaken" },
 	{ vad = "Högre gångart",      tgb = "Shift",    pad = "R1",       pek = "▲ FRAMÅT" },
@@ -97,16 +145,22 @@ local RADER = {
 	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
 	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
 	     hade varit precis det problemet raden beskriver. ]]
-	{ vad = "Den här hjälpen",    tgb = "H",        pad = "Styrkors upp", pek = "?" },
+	{ vad = "Den här hjälpen",    tgb = "H",
+	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),                        pek = "?" },
 }
-
---[[ Reglaget som öppnar hjälpen igen, per inmatning. Publik för att provet
-     ska läsa samma beslut som panelen — och för att `docs/KONTROLLMATRIS.md`
-     ska gå att kontrollera mot källan i stället för mot minnet. ]]
-KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
 
 --[[ Vilken sorts inmatning ska hjälpen tala om? Publik för att provet ska
      kunna läsa samma beslut som panelen. ]]
+--[[ Raden för ett reglage, som panelen faktiskt skriver ut den. Publik
+     för att provet ska kunna mäta LEDTEXTEN och inte bara bindningen —
+     blockerare 2 var trasig i just texten. ]]
+function KontrollHjalp._rad(vad: string): { [string]: string }?
+	for _, r in RADER do
+		if r.vad == vad then return r end
+	end
+	return nil
+end
+
 function KontrollHjalp.inmatning(): string
 	if UserInputService.KeyboardEnabled then return "tangentbord" end
 	if UserInputService.GamepadEnabled then return "gamepad" end

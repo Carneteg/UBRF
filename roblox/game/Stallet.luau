@@ -21,6 +21,16 @@ local G = require(RS.UBRFKomplex)
 
 local S = G.stall
 
+--[[ FÖRSTA DAGENS HÄST. Produktregel, inte spelmekanik: en ny spelares
+	första dag rids på Blackrock Jack.
+
+	Webbens motsvarighet är `FORSTA_DAGEN_HAST` i `src/scenes.js`. Att den
+	står på två ställen är en dubbel sanning, och därför vaktas de mot
+	varandra av `tools/kolla-forstadagen.py` i CI — ändras den ena utan den
+	andra faller grinden. Regeln hör hemma HÄR på Roblox-sidan, i modulen
+	som äger tilldelningen; `scenes.js` är webbens vy-lager. ]]
+Stallet.FORSTA_DAGEN_HAST = "blackrock_jack"
+
 --[[ Boxrutnätet härleds ur stalldatan i stället för att räknas upp:
 	fyra rader × antalBoxar per rad. Ändras stallet följer boxarna med. ]]
 function Stallet.boxantal(): number
@@ -140,12 +150,32 @@ end
 	listan och delade ut precis de skadade hästar filtret plockat bort.
 	Här returneras nil, precis som när stallet är fullt — se kommentaren
 	ovan. Tomt är ett riktigt svar, inte ett fel att gissa sig ur. ]]
+--[[ `onskad` är en NAMNGIVEN häst som måste bli det, eller inget alls.
+
+	Den finns för första dagen (#162 blockerare 3). Före den fick en ny
+	spelare vilken häst som helst ur rotationen: `tilldelaLedig` såg varken
+	saven eller `Sparning.forstaDagen`, och produktkravet "ny spelare →
+	Jack" var därför inte uppfyllt i produktionen — bara i ett prov som
+	byggde Jack för handen.
+
+	ÖNSKAN GÅR GENOM SAMMA TVÅ GRINDAR som allt annat. Är hästen upptagen
+	av någon annan, eller vilar hon för en skada, blir svaret nil — alltså
+	VÄNTELÄGE, inte en ersättare. Att tysta ersätta Jack hade brutit
+	produktregeln; att kringgå reservationen eller välfärden hade brutit
+	#154. Nil är det enda svaret som håller båda, och det är samma svar
+	webben ger i `visaIngenHastIdag`. ]]
 function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: boolean }?,
-	vilande: { [string]: boolean }?): string?
+	vilande: { [string]: boolean }?, onskad: string?): string?
 	local n = #Spel.ordning
 	if n == 0 then return nil end
 	local taget = upptagna or {}
 	local vilar = vilande or {}
+	if onskad ~= nil then
+		if Spel.hastar[onskad] and not taget[onskad] and not vilar[onskad] then
+			return onskad
+		end
+		return nil
+	end
 	local start = userId % n
 	for steg = 0, n - 1 do
 		local id = Spel.ordning[(start + steg) % n + 1]
@@ -197,8 +227,8 @@ function Stallet.statsFor(id: string): { [string]: any }?
 end
 
 function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?,
-	vilande: { [string]: boolean }?)
-	local id = Stallet.tilldelaLedig(userId, upptagna, vilande)
+	vilande: { [string]: boolean }?, onskad: string?)
+	local id = Stallet.tilldelaLedig(userId, upptagna, vilande, onskad)
 	if not id then return nil end
 	local hast = Spel.hastar[id]
 	if not hast then return nil end

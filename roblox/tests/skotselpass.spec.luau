@@ -666,6 +666,284 @@ do
 	SparService._glomForProv(spelare)
 end
 
+--[[ ══ BLOCKERARE 1 (#162): PlayerAdded-RACET ═══════════════════════
+
+	ChatGPT:s oberoende review av `6f0c915`: `SparService.start()` kopplar
+	`Players.PlayerAdded` och anropar `ladda()`, som YIELDAR i `GetAsync`.
+	`StallService.start()` och `GameplayService.start()` kopplade samma
+	signal var för sig. Roblox startar varje anslutning på egen tråd, så när
+	den första suspenderar körs de andra omedelbart — mot en save som ännu
+	är nil. Följden: `hastminnen()` ger nil, en vilande häst kan tilldelas,
+	och `passnummer()` faller till 1 alltså "första dagen".
+
+	Startordningen i `init.server.luau` är INGEN barriär. Den bestämmer i
+	vilken ordning anslutningarna görs, inte att den första hinner klart.
+
+	Provet nedan mäter fönstret i två steg, och det är hela poängen:
+	  · efter `Fire` men FÖRE `slutfor` — där ska ingenting ha hänt ännu,
+	  · efter `slutfor` — där ska tilldelningen finnas och vara riktig.
+	Med den gamla koden är den första mätningen röd.
+]]
+do
+	print("\n── Blockerare 1: tilldelning får inte ske innan saven laddat ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	--[[ Reservationerna i StallService.tilldelade ligger kvar mellan block
+		och räknas då som "upptagna" av nästa provs spelare. Blocken städar
+		därför genom PRODUKTIONENS egen väg, `PlayerRemoving`, i stället för
+		genom en ny provlucka. Signalen nollställs här av samma skäl som
+		PlayerAdded: lyssnarna ackumuleras annars. ]]
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	local spelare = { Name = "Race", UserId = 9101,
+		--[[ GameplayService kopplar respawnen i samma andetag som
+			ankomsten. Utan signalen kraschar lyssnaren, och en krasch är
+			inte samma sak som ett fynd. ]]
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	--[[ Hästen som `tilldelaLedig` skulle valt UTAN välfärdsfiltret. Den
+		räknas fram ur modulen i stället för att skrivas som ett namn här:
+		skulle stallets ordning ändras följer provet med. ]]
+	local utanFilter = Stallet.tilldelaLedig(spelare.UserId, {}, {})
+	check("stallet har en häst att ge", utanFilter ~= nil, tostring(utanFilter))
+
+	--[[ En sparfil som finns i lagret: tre pass avklarade, första dagen
+		klar, och just den hästen vilar för en skada. Ligger den läsningen
+		efter tilldelningen ser servern ingen av de tre sanningarna. ]]
+	local befintlig = Sparning.tom()
+	befintlig.pass = 3
+	befintlig.forstaDagen = { klar = true, hastId = "blackrock_jack" }
+	Sparning.satSkada(befintlig, utanFilter, 2, "sten i hoven")
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(befintlig)
+
+	--[[ Läsningen ska göra sin nätverkstur, precis som en riktig GetAsync. ]]
+	__datastore.fordrojLas = true
+
+	--[[ Tom spelarlista under start(): annars laddar startens egen
+		GetPlayers-loop spelaren i förväg och racet maskeras. ]]
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+
+	--[[ MÄTNING 1 — fönstret. Läsningen är suspenderad; ingenting som beror
+		på saven får ha bestämt något ännu. ]]
+	check("läsningen är fortfarande i luften", Players.PlayerAdded:harVantande(),
+		"suspenderade lyssnare: " .. tostring(Players.PlayerAdded:harVantande()))
+	check("ingen häst är tilldelad innan saven laddat",
+		StallService.hastFor(spelare) == nil,
+		"tilldelad: " .. tostring(StallService.hastIdFor(spelare)))
+
+	--[[ Väck läsningen och låt allt gå klart. ]]
+	Players.PlayerAdded:slutfor()
+
+	--[[ MÄTNING 2 — efteråt ska det vara både gjort och riktigt. ]]
+	local efter = StallService.hastIdFor(spelare)
+	check("en häst är tilldelad när saven laddat", efter ~= nil, tostring(efter))
+	check("och det är INTE hästen som vilar för en skada", efter ~= utanFilter,
+		("fick %s, vilande %s"):format(tostring(efter), tostring(utanFilter)))
+	check("saven som lästes är den som låg i lagret",
+		SparService.save(spelare) ~= nil and SparService.save(spelare).pass == 3,
+		"pass " .. tostring(SparService.save(spelare) and SparService.save(spelare).pass))
+
+	__datastore.fordrojLas = false
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ KONTROLL: FAIL-SAFE-VÄGEN ÄR ORÖRD ═══════════════════════════
+
+	Barriären får inte råka göra läsfelet till en låsning. Faller läsningen
+	på riktigt ska spelaren fortfarande få en häst och kunna spela — bara
+	inte spara. Utan den här kontrollen kunde blockerare 1 "lösas" genom att
+	vänta för evigt på en save som aldrig kommer.
+]]
+do
+	print("\n── Kontroll: läsfel ger spelbar session utan sparning ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	--[[ Reservationerna i StallService.tilldelade ligger kvar mellan block
+		och räknas då som "upptagna" av nästa provs spelare. Blocken städar
+		därför genom PRODUKTIONENS egen väg, `PlayerRemoving`, i stället för
+		genom en ny provlucka. Signalen nollställs här av samma skäl som
+		PlayerAdded: lyssnarna ackumuleras annars. ]]
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	local spelare = { Name = "Lasfel", UserId = 9102,
+		--[[ GameplayService kopplar respawnen i samma andetag som
+			ankomsten. Utan signalen kraschar lyssnaren, och en krasch är
+			inte samma sak som ett fynd. ]]
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	__datastore.felLas = true
+	__datastore.fordrojLas = true
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+	Players.PlayerAdded:slutfor()
+
+	check("spelaren fick en häst trots läsfel",
+		StallService.hastIdFor(spelare) ~= nil,
+		tostring(StallService.hastIdFor(spelare)))
+	check("men sessionen sparas inte", SparService.kanSpara(spelare) == false)
+	check("och anmärkningen säger varför",
+		SparService.anmarkning(spelare) == "läsfel",
+		tostring(SparService.anmarkning(spelare)))
+	check("ingenting skrevs över i lagret",
+		__datastore._data["spelare_" .. spelare.UserId] == nil)
+
+	__datastore.felLas = false
+	__datastore.fordrojLas = false
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ BLOCKERARE 3 (#162): FÖRSTA DAGEN ÄR JACK — I PRODUKTIONEN ══
+
+	ChatGPT:s addendum: den riktiga vägen är
+	`StallService.tilldela` → `Stallet.dagensHast` → `Stallet.tilldelaLedig`,
+	och den sista väljer ur `userId % #Spel.ordning`. Den fick varken saven
+	eller `Sparning.forstaDagen(save)`. En ny spelare kunde alltså få vilken
+	häst som helst, och produktkravet "ny spelare → Jack" var inte uppfyllt.
+
+	Det positiva provet längre upp bygger `Preparation.nyState("blackrock_jack")`
+	för HANDEN — det bevisar att loopen fungerar OM Jack redan valts, inte
+	att produktionen väljer honom. Det här provet börjar i stället från en
+	TOM save och går genom tjänsterna.
+
+	Tre mätningar, och den tredje är den som gör de två första ärliga:
+	  1. ny spelare får Jack,
+	  2. när första dagen är avklarad är hon INTE längre låst till Jack,
+	  3. vilar Jack för en skada blir det VÄNTELÄGE — ingen ersättare, ingen
+	     kringgången välfärdsspärr. Utan den kunde "tvinga Jack" ha
+	     implementerats som ett hopp över reservationen.
+
+	UserId 9103 är valt så att rotationens naturliga val INTE är Jack
+	(9103 % 33 = 28 → `replay`). Vore det Jack ändå kunde mätning 1 bli
+	grön utan att någon regel fanns. ]]
+do
+	print("\n── Blockerare 3: första dagen är Jack, resten är rotationen ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	--[[ Reservationerna i StallService.tilldelade ligger kvar mellan block
+		och räknas då som "upptagna" av nästa provs spelare. Blocken städar
+		därför genom PRODUKTIONENS egen väg, `PlayerRemoving`, i stället för
+		genom en ny provlucka. Signalen nollställs här av samma skäl som
+		PlayerAdded: lyssnarna ackumuleras annars. ]]
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	local spelare = { Name = "Nyborjare", UserId = 9103,
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	local rotationen = Stallet.tilldelaLedig(spelare.UserId, {}, {})
+	check("rotationens naturliga val är någon annan än Jack",
+		rotationen ~= nil and rotationen ~= "blackrock_jack", tostring(rotationen))
+
+	--[[ Tomt lager: ingen rad för spelaren alls. Det är en helt ny spelare. ]]
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+	Players.PlayerAdded:slutfor()
+
+	check("saven är tom, alltså är det första dagen",
+		SparService.save(spelare) ~= nil
+			and Sparning.forstaDagen(SparService.save(spelare)) == true)
+	check("och den riktiga vägen delar ut JACK",
+		StallService.hastIdFor(spelare) == "blackrock_jack",
+		tostring(StallService.hastIdFor(spelare)))
+
+	--[[ Första dagen avklarad — då släpper tvånget. ]]
+	local save = SparService.save(spelare)
+	Sparning.markeraForstaDagen(save, "blackrock_jack")
+	local imorgon = StallService.tilldela(spelare)
+	check("när första dagen är avklarad tvingas inte Jack längre",
+		imorgon ~= nil and imorgon.id ~= "blackrock_jack",
+		tostring(imorgon and imorgon.id))
+	check("och det är rotationens val hon får",
+		imorgon ~= nil and imorgon.id == rotationen,
+		("fick %s, rotationen ger %s"):format(
+			tostring(imorgon and imorgon.id), tostring(rotationen)))
+
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ KONTROLL: JACK SOM VILAR GER VÄNTELÄGE, INTE ERSÄTTARE ═══════
+
+	#161: *"Första dagen med Jack ska bevaras som produktregel, men Jack
+	måste fortfarande vara tjänstbar."* Och #162: *"Do not silently
+	substitute another horse … use an explicit unavailable/wait state."*
+
+	Samma svar som webben ger i `visaIngenHastIdag` sedan #154. Utan den
+	här mätningen vore ett hopp över reservationen en grön lösning. ]]
+do
+	print("\n── Kontroll: vilar Jack blir det vänteläge, inte en annan häst ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	--[[ Reservationerna i StallService.tilldelade ligger kvar mellan block
+		och räknas då som "upptagna" av nästa provs spelare. Blocken städar
+		därför genom PRODUKTIONENS egen väg, `PlayerRemoving`, i stället för
+		genom en ny provlucka. Signalen nollställs här av samma skäl som
+		PlayerAdded: lyssnarna ackumuleras annars. ]]
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	local spelare = { Name = "Jackvilar", UserId = 9104,
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	--[[ Ny spelare — utom att Jack redan bär en skada i hennes minne. ]]
+	local rad = Sparning.tom()
+	Sparning.satSkada(rad, "blackrock_jack", 2, "sten i hoven")
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(rad)
+
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+	Players.PlayerAdded:slutfor()
+
+	check("det är fortfarande första dagen",
+		Sparning.forstaDagen(SparService.save(spelare)) == true)
+	check("Jack vilar", Sparning.vilar(SparService.save(spelare), "blackrock_jack") == true)
+	check("ingen häst delas ut — spelaren får vänta",
+		StallService.hastIdFor(spelare) == nil,
+		tostring(StallService.hastIdFor(spelare)))
+
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end

@@ -315,7 +315,13 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	--[[ H och styrkorset hanteras ovanför `not ride`-grinden — se noten
 	     där. Tangenten är fri: Input.luau tar W A S D, Space, Shift, Ctrl,
 	     Q, F, Z, C och spakarna, och E/R/T/G är tagna här. ]]
-	if input.KeyCode == Enum.KeyCode.E then
+	--[[ AVSITTNING PÅ BÅDA YTORNA (#162 blockerare 2). `E` var enda vägen
+	     ned, och den finns inte på en handkontroll: en gamepadspelare kom
+	     upp genom ProximityPrompten och satt sedan fast. Knappen kommer ur
+	     `KontrollHjalp.AVSITTNING_GAMEPAD` så att bindningen, hjälptexten
+	     och kontrollmatrisen inte kan glida isär. ]]
+	if input.KeyCode == Enum.KeyCode.E
+		or input.KeyCode == KontrollHjalp.AVSITTNING_GAMEPAD then
 		begarAvsittning()
 	end
 end)

@@ -434,7 +434,16 @@ function GameplayService.start()
 		och visar ingen uppsittningsprompt förrän den är sann. Sätts SIST i
 		start(), så att den aldrig är sann innan grinden är registrerad. ]]
 
-	Players.PlayerAdded:Connect(function(player)
+	--[[ BINDNINGEN HÄNGER PÅ BARRIÄREN (#162 blockerare 1). Kopplade den
+		här filen `PlayerAdded` själv kunde `bind()` köras medan saven ännu
+		var nil, och då föll `passnummer()` till 1 — alltså "första dagen",
+		med en dag fri från fynd — för en spelare som hade tio pass bakom
+		sig. Hooken körs efter att läsningen returnerat.
+
+		Registreringsordningen ger beroendet: `StallService` hookar först
+		(init.server startar den före), så `hastIdFor` har ett svar när
+		bindningen sker. ]]
+	SparService.efterLaddning(function(player)
 		GameplayService.bind(player)
 		player.CharacterAdded:Connect(function()
 			GameplayService.bind(player)

@@ -258,6 +258,51 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 	return ok
 end
 
+--[[ ── BARRIÄREN: LADDNINGEN ÄR KLAR ─────────────────────────────
+	#162 blockerare 1. `ladda()` yieldar i `GetAsync`. Roblox startar varje
+	`PlayerAdded`-anslutning på EGEN TRÅD, så en tjänst som kopplar samma
+	signal själv körs medan läsningen fortfarande är i luften — mot en save
+	som är nil. Det gav tre konkreta fel: `StallService.hastminnen` svarade
+	nil och en häst som vilade för en skada kunde tilldelas,
+	`GameplayService.passnummer` föll till 1 och därmed "första dagen", och
+	startordningen i `init.server.luau` såg ut att skydda mot det utan att
+	göra det.
+
+	Startordning är inte en barriär. Den bestämmer i vilken ordning
+	anslutningarna GÖRS, inte att den första blir KLAR först.
+
+	Lösningen är att ta bort de andra anslutningarna helt. Det finns nu EN
+	`PlayerAdded`-lyssnare i hela servern, den här, och den kör sina
+	registrerade hookar efter att läsningen returnerat. Hookarna körs i
+	registreringsordning, alltså samma ordning som `init.server.luau`
+	startar tjänsterna — StallService före GameplayService, vilket är det
+	beroende som redan gällde.
+
+	Fail-safe-vägen är oförändrad: `ladda()` returnerar ALLTID en save, även
+	när läsningen faller (då en sessionsave med `kanSpara = false`). Hookarna
+	körs alltså alltid, och en spelare vars datalager är nere får en häst och
+	kan rida. En barriär som väntade på en save som aldrig kommer hade bytt
+	ett race mot en låsning. ]]
+local efterLaddning: { (Player, Sparning.Save) -> () } = {}
+
+function SparService.efterLaddning(fn: (Player, Sparning.Save) -> ())
+	table.insert(efterLaddning, fn)
+end
+
+--[[ Läs först, kör hookarna sedan. Varje hook körs i sin egen `pcall`: en
+	tjänst som faller ska inte hindra nästa från att komma igång, och den
+	spelare vars tilldelning strular ska inte också bli utan bindning. ]]
+local function laddaOchStarta(player: Player)
+	local save = SparService.ladda(player)
+	for _, fn in ipairs(efterLaddning) do
+		local ok, fel = pcall(fn, player, save)
+		if not ok then
+			warn(("[Spar] en efterLaddning-hook föll för %s: %s")
+				:format(player.Name, tostring(fel)))
+		end
+	end
+end
+
 local function glom(player: Player)
 	sparade[player] = nil
 	kanSpara[player] = nil
@@ -268,11 +313,10 @@ end
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]
 
 function SparService.start()
-	Players.PlayerAdded:Connect(function(player)
-		SparService.ladda(player)
-	end)
+	--[[ DEN ENDA `PlayerAdded`-lyssnaren i servern. Se barriären ovan. ]]
+	Players.PlayerAdded:Connect(laddaOchStarta)
 	for _, player in Players:GetPlayers() do
-		SparService.ladda(player)
+		laddaOchStarta(player)
 	end
 
 	Players.PlayerRemoving:Connect(function(player)
@@ -309,6 +353,16 @@ end
 
 function SparService._glomButikForProv()
 	butik = nil
+end
+
+--[[ Glömmer de registrerade `efterLaddning`-hookarna. I produktion körs
+	`start()` en gång per server och registret ska växa monotont; i bänken
+	körs det en gång per provblock, och då lade block två på sig block
+	ettas hookar. Det syntes som en dubblerad tilldelningsrad — alltså
+	precis den sorts brus som gör att ett prov inte längre mäter det det
+	påstår. ]]
+function SparService._glomHookarForProv()
+	efterLaddning = {}
 end
 
 return SparService

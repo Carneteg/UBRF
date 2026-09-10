@@ -143,17 +143,48 @@ function StallService.tilldela(player: Player)
 		över anropskedjan, vilket var precis hur webbens spärr gick att
 		kringgå på tre ställen.
 
-		VAD SOM SAKNAS, uttryckligen: Roblox har i dag inget varaktigt
-		hästminne — det finns inget `DataStoreService` någonstans i
-		`roblox/`, bara den lokala `tilldelade`-tabellen ovan. Därför är
-		mängden alltid tom just nu och spärren kan inte utlösas i drift.
-		Regeln och dess prov finns ändå, så att den håller den dag ett
-		minne kopplas in i stället för att behöva upptäckas då. ]]
+		MINNET ÄR INKOPPLAT sedan #161: `hastminnen()` läser spelarens
+		sparfil ur `SparService`, så spärren utlöses nu i drift och inte
+		bara i provet. (Fram till #161 stod här att inget `DataStoreService`
+		fanns i `roblox/` och att mängden därför alltid var tom — det är
+		inte längre sant, och en kommentar som säger motsatsen om koden är
+		värre än ingen kommentar.)
+
+		Att mängden är riktig kräver att saven är LÄST när den här raden
+		körs. Det är vad barriären i `SparService.efterLaddning` finns för;
+		se `start()` längst ned. ]]
 	local vilande = Stallet.vilandeHastar(StallService.hastminnen(player))
-	local dagens = Stallet.dagensHast(player.UserId, upptagnaHastar(player), vilande)
+
+	--[[ FÖRSTA DAGEN ÄR JACK (#162 blockerare 3). Regeln låg tidigare bara
+		i webbens `scenes.js`; på Roblox valde rotationen fritt, så en ny
+		spelare kunde få vilken häst som helst.
+
+		Önskan skickas till samma `dagensHast` som allt annat och passerar
+		därmed både reservationen och välfärdsspärren — se `tilldelaLedig`.
+		Vilar Jack blir svaret nil och spelaren får vänta; ingen ersättare
+		delas ut bakom regelns rygg.
+
+		Saven kan vara en SESSIONSAVE om läsningen föll. Då ser dagen ut som
+		en första dag, och det är samma avsiktliga fail-safe som
+		`GameplayService.passnummer` redan har: ett datalagerfel ska inte
+		hitta på progression. Följden är att en återvändande spelare med
+		trasigt datalager får Jack i stället för sin rotationshäst — sämre
+		än rätt, bättre än att hennes riktiga pass skrivs över. ]]
+	local save = SparService.save(player)
+	local onskad = if save ~= nil and Sparning.forstaDagen(save)
+		then Stallet.FORSTA_DAGEN_HAST else nil
+
+	local dagens = Stallet.dagensHast(player.UserId, upptagnaHastar(player),
+		vilande, onskad)
 	if not dagens then
-		warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name
-			.. " — hela stallet är upptaget eller vilar. Spelaren får vänta.")
+		if onskad then
+			warn(("[Stallet] Första dagen skulle ridits på %s, men hon är "
+				.. "upptagen eller vilar. %s får vänta."):format(
+				tostring(onskad), player.Name))
+		else
+			warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name
+				.. " — hela stallet är upptaget eller vilar. Spelaren får vänta.")
+		end
 		tilldelade[player] = nil
 		taBortMarkor(player)
 		return nil
@@ -189,9 +220,22 @@ function StallService.start()
 		return tilldelade[player] or StallService.tilldela(player)
 	end
 
-	Players.PlayerAdded:Connect(function(player)
+	--[[ TILLDELNINGEN HÄNGER PÅ BARRIÄREN, INTE PÅ `PlayerAdded` (#162
+		blockerare 1). Kopplade den här filen signalen själv kördes den på
+		egen tråd medan `SparService.ladda` fortfarande yieldade i sitt
+		`GetAsync` — och då svarade `hastminnen()` nil, välfärdsmängden blev
+		tom, och en häst som vilade för en skada kunde tilldelas. Provet
+		"ingen häst är tilldelad innan saven laddat" i skotselpass.spec
+		mätte upp exakt det.
+
+		`SparService.efterLaddning` körs efter att läsningen returnerat,
+		också när den föll — så en spelare utan datalager får fortfarande
+		en häst. ]]
+	SparService.efterLaddning(function(player)
 		StallService.tilldela(player)
 	end)
+	--[[ Spelare som redan är inne när den här tjänsten startar. Deras save
+		är redan läst av SparService, så det finns inget fönster här. ]]
 	for _, player in Players:GetPlayers() do
 		StallService.tilldela(player)
 	end

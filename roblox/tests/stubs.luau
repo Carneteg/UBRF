@@ -223,6 +223,74 @@ local function __signal()
 	function sig:Fire(...)
 		for _, fn in ipairs(self._lyssnare) do fn(...) end
 	end
+	--[[ Samma skäl som i __signalTradar: varje `start()` i ett provblock
+		lägger en ny lyssnare, och utan nollställning kör block två med
+		block ettas kvar. ]]
+	function sig:nollstall()
+		self._lyssnare = {}
+	end
+	return sig
+end
+
+--[[ ── PlayerAdded MED RIKTIG TRÅDVÄXLING (#162 blockerare 1) ────────
+
+     `__signal` kör sina lyssnare synkront, en i taget, klart. Roblox gör
+     INTE så med `Players.PlayerAdded`: varje anslutning startas på sin
+     egen tråd, så när den första yieldar — till exempel inne i ett
+     `GetAsync` — körs nästa anslutning omedelbart, med den första ännu
+     halvfärdig.
+
+     Det är precis det fönstret blockerare 1 handlar om, och med den gamla
+     stubben (`Connect = function() return {Disconnect} end`) gick det inte
+     ens att nå: lyssnarna anropades aldrig. CI var grön därför att racet
+     låg utanför bänken, inte därför att det inte fanns.
+
+     `Fire` startar varje lyssnare i en coroutine och lägger de som
+     suspenderat i kö. `slutfor()` väcker dem. Provet får därmed hantera
+     interleavingen själv, deterministiskt, utan att sova. ]]
+local function __signalTradar()
+	local sig = { _lyssnare = {}, _vantande = {} }
+	function sig:Connect(fn)
+		table.insert(self._lyssnare, fn)
+		return { Disconnect = function() end }
+	end
+	function sig:Fire(...)
+		local arg = table.pack(...)
+		for _, fn in ipairs(self._lyssnare) do
+			local co = coroutine.create(fn)
+			local ok, fel = coroutine.resume(co, table.unpack(arg, 1, arg.n))
+			if not ok then error(fel, 0) end
+			if coroutine.status(co) == "suspended" then
+				table.insert(self._vantande, co)
+			end
+		end
+	end
+	--[[ Väck allt som suspenderat, i den ordning de suspenderade. ]]
+	function sig:slutfor()
+		local varv = 0
+		while #self._vantande > 0 do
+			varv += 1
+			assert(varv < 1000, "slutfor() snurrade — en lyssnare vaknar aldrig")
+			local co = table.remove(self._vantande, 1)
+			local ok, fel = coroutine.resume(co)
+			if not ok then error(fel, 0) end
+			if coroutine.status(co) == "suspended" then
+				table.insert(self._vantande, co)
+			end
+		end
+	end
+	function sig:harVantande(): boolean
+		return #self._vantande > 0
+	end
+	--[[ Anslutningarna ligger kvar mellan provblock, och varje `start()`
+		lägger nya. Utan nollställning körde block två med block ettas
+		lyssnare kvar — synligt som en dubblerad tilldelningsrad, och
+		precis den sorten som gör ett prov otillförlitligt utan att bli
+		rött. ]]
+	function sig:nollstall()
+		self._lyssnare = {}
+		self._vantande = {}
+	end
 	return sig
 end
 
@@ -266,8 +334,10 @@ local __services = {
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
-		PlayerAdded = { Connect = function() return { Disconnect = function() end } end },
-		PlayerRemoving = { Connect = function() return { Disconnect = function() end } end },
+		--[[ Trådväxlande med flit — se __signalTradar. `PlayerRemoving` är
+		     en vanlig signal: där finns inget yield-fönster att modellera. ]]
+		PlayerAdded = __signalTradar(),
+		PlayerRemoving = __signal(),
 	},
 	--[[ Spaken sätts av testet när gamepad ska mätas. TouchEnabled är falskt:
 	     bänken mäter kontraktet, inte gesterna — GUI:t byggs bara i Studio. ]]
@@ -397,6 +467,12 @@ __datastore = {
 	--[[ Sant = `GetDataStore` självt kastar, alltså Studio utan
 	     API-åtkomst. Då ska spelet gå att spela ändå. ]]
 	felButik = false,
+	--[[ Sant = `GetAsync` YIELDAR en gång innan den svarar, alltså gör det
+	     nätverksanropet en riktig `GetAsync` gör. Det är den enda knappen
+	     som gör blockerare 1 mätbar: utan den returnerar läsningen direkt
+	     och fönstret där en annan `PlayerAdded`-lyssnare ser en halvladdad
+	     save existerar inte i bänken. ]]
+	fordrojLas = false,
 	forsok = { las = 0, skriv = 0 },
 }
 
@@ -405,12 +481,18 @@ function __datastore.nollstall()
 	__datastore.felLas = false
 	__datastore.felSkriv = false
 	__datastore.felButik = false
+	__datastore.fordrojLas = false
 	__datastore.forsok = { las = 0, skriv = 0 }
 end
 
 local __butik = {}
 function __butik:GetAsync(nyckel)
 	__datastore.forsok.las += 1
+	--[[ Yielda FÖRE felkontrollen: en läsning som ska fela gör också sin
+	     nätverkstur först, och felvägen ska mätas med samma fönster öppet. ]]
+	if __datastore.fordrojLas and coroutine.isyieldable() then
+		coroutine.yield()
+	end
 	if __datastore.felLas then error("DataStore: läsning misslyckades (stub)") end
 	return __datastore._data[nyckel]
 end
