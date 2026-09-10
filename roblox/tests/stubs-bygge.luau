@@ -159,6 +159,9 @@ local function instance(klass)
 	i = {
 		ClassName = klass, Name = klass, Children = barn,
 		Size = vec(), CFrame = cframe(), Transparency = 0, CanCollide = true,
+		--[[ #162: en Motor6D har en `C0`. Utan den föll riggkontraktet på
+		     `setRiderLean`, alltså på mätverktyget och inte på koden. ]]
+		C0 = if klass == "Motor6D" then cframe() else nil,
 		Enabled = true,
 		--[[ Knappsignalerna. Bara de tva panelen anvander; en generisk
 		     signalfabrik hade dolt en felstavning. ]]
@@ -168,10 +171,28 @@ local function instance(klass)
 		     trycka på dörren, och då är den enda evidensen för att den
 		     öppnas Studio — som ingen agent här kommer åt. ]]
 		Triggered = signal(),
-		FindFirstChild = function(self, namn)
+		--[[ #162: `RigAdapter.findByName` anropar
+		     `model:FindFirstChild(namn, true)` — REKURSIVT. Stubben ignorerade
+		     andra argumentet, så leder och attachmentpunkter som ligger under
+		     BodyCollider hittades inte, och riggkontraktet blev rött på ett
+		     fel i mätverktyget. Flaggan respekteras nu. ]]
+		FindFirstChild = function(self, namn, rekursivt)
+			for _, b in ipairs(self.Children) do
+				if b.Name == namn then return b end
+			end
+			if rekursivt then
+				for _, b in ipairs(self.Children) do
+					local traff = b:FindFirstChild(namn, true)
+					if traff then return traff end
+				end
+			end
+			return nil
+		end,
+		WaitForChild = function(self, namn)
 			for _, b in ipairs(barn) do if b.Name == namn then return b end end
 			return nil
 		end,
+		Massless = false,
 		Destroy = function(self)
 			if self.__parent then
 				for k, b in ipairs(self.__parent.Children) do
@@ -280,7 +301,20 @@ local __tjanster = {
 	     annars kastar GetService innan en enda mätning gjorts. ]]
 	ReplicatedStorage = instance("ReplicatedStorage"),
 	CollectionService = {
-		GetTagged = function() return {} end,
+		--[[ #162: JackRigg taggar hästen; utan AddTag i stubben kan riggen
+		     inte byggas i bänken och då kan dess kontrakt inte mätas. ]]
+		__taggade = {},
+		AddTag = function(self, inst, tag)
+			self.__taggade[tag] = self.__taggade[tag] or {}
+			table.insert(self.__taggade[tag], inst)
+		end,
+		HasTag = function(self, inst, tag)
+			for _, i in ipairs(self.__taggade[tag] or {}) do
+				if i == inst then return true end
+			end
+			return false
+		end,
+		GetTagged = function(self, tag) return (self.__taggade or {})[tag] or {} end,
 		GetInstanceAddedSignal = function() return { Connect = function() end } end,
 		GetInstanceRemovedSignal = function() return { Connect = function() end } end,
 	},

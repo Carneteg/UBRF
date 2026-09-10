@@ -9,6 +9,7 @@ local HorseService = require(script.HorseService)
 local StallService = require(script.StallService)
 local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
+local JackRigg = require(script.JackRigg)
 local Preflight = require(script.Preflight)
 
 --[[ Ordningen är ett beroende, inte en smaksak: GameplayService registrerar
@@ -108,6 +109,17 @@ end
 kritisk("världsbygget", function()
 	varldenFinns = byggVarlden()
 	if not varldenFinns then error("anläggningen byggdes inte") end
+end)
+
+--[[ Hästen FÖRE HorseService. Tjänsten registrerar `GetTagged("Horse")`
+	vid start; en rigg som taggas efteråt fångas visserligen av
+	`GetInstanceAddedSignal`, men att förlita sig på det gör startordningen
+	till en tävling. Bygg först, registrera sedan.
+
+	P0 i #162: det fanns ingen hästmodell alls i placen. Spelaren tilldelades
+	blackrock_jack i datan och `bind()` fick aldrig en modell. ]]
+kritisk("Jack-riggen", function()
+	if JackRigg.start() == nil then error("hästen byggdes inte") end
 end)
 
 kritisk("SparService", SparService.start)

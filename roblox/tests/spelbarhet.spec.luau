@@ -408,6 +408,71 @@ if blad and prompt and utanfor and innanfor then
 	prompt.Triggered:_fire()
 end
 
+-- ══ 5. JACK FINNS SOM RIGG ══════════════════════════════════════════════
+--[[ P0 i ChatGPT:s whole-place review 16:40: det fanns INGEN hästmodell i
+	placen. Min förra spelbarhetsgrind var grön ändå, för den mätte att man
+	kan GÅ dit hästen borde stå. Ingen mätning frågade om hästen finns.
+
+	Här mäts riggens KONTRAKT, inte dess utseende: att den byggs, taggas,
+	bär rätt `HorseId`, och att `RigAdapter.build()` accepterar den. Måtten
+	prövas inte mot bänkens CFrame-stubb — den räknar inte riktigt — utan
+	strukturen, som är det koden är strikt om. ]]
+print("\n5. Jack finns som rigg")
+
+local CollectionService = game:GetService("CollectionService")
+local hastId = Stallet.FORSTA_DAGEN_HAST
+local rigg = JackRigg.bygg(hastId, "Blackrock Jack", CFrame.new())
+rigg.Parent = workspace
+CollectionService:AddTag(rigg, "Horse")
+
+check("riggen byggs som en Model", rigg ~= nil and rigg.ClassName == "Model")
+check("riggen bär rätt HorseId", rigg:GetAttribute("HorseId") == hastId,
+	tostring(rigg:GetAttribute("HorseId")))
+check("riggen är taggad Horse", CollectionService:HasTag(rigg, "Horse"))
+check("HorseService hittar den via taggen",
+	(function()
+		for _, m in ipairs(CollectionService:GetTagged("Horse")) do
+			if m == rigg then return true end
+		end
+		return false
+	end)())
+
+--[[ Det avgörande: att adaptern accepterar modellen. Utan detta stannar
+	`GameplayService.bind()` i `waiting_model` och inget moment kan börja. ]]
+local byggd, felmeddelande = RigAdapter.build(rigg)
+check("RigAdapter.build() lyckas mot riggen", byggd ~= nil,
+	felmeddelande or "ingen fel")
+
+if byggd then
+	check("riggen har en fysisk rot (BodyCollider)",
+		byggd.root ~= nil and byggd.root.Name == "BodyCollider",
+		byggd.root and byggd.root.Name or "ingen")
+	check("roten kolliderar — hästen finns fysiskt",
+		byggd.root ~= nil and byggd.root.CanCollide == true)
+	check("riggen har Humanoid (markkontakt)", byggd.humanoid ~= nil)
+	check("riggen har en Animator", byggd.animator ~= nil)
+	--[[ #162 blockerare 2: sätet ska vara en SITS och lutningen ligga på en
+		egen led. Att båda finns och är olika instanser är kontraktet. ]]
+	check("RiderSeat är en Seat", byggd.seat ~= nil and byggd.seat.ClassName == "Seat",
+		byggd.seat and byggd.seat.ClassName or "ingen sits")
+	check("RiderJoint finns som egen Motor6D",
+		byggd.riderJoint ~= nil and byggd.riderJoint.ClassName == "Motor6D",
+		byggd.riderJoint and byggd.riderJoint.ClassName or "ingen led")
+	check("sitsen och ryttarleden är INTE samma instans",
+		byggd.seat ~= nil and byggd.riderJoint ~= nil and byggd.seat ~= byggd.riderJoint)
+	check("RootJoint bär kroppslutningen", byggd.rootJoint ~= nil)
+	check("sadelns attachmentpunkt finns", byggd.attachments.Saddle ~= nil)
+
+	--[[ Och att ryttarlutningen faktiskt går att sätta mot den riktiga
+		riggen, utan att kasta. Det är den rad som hade kraschat på första
+		ridbildrutan. ]]
+	local okLutning = pcall(function()
+		RigAdapter.setRiderLean(byggd, 0.1, 0.05)
+		RigAdapter.setRiderLean(byggd, 0, 0)
+	end)
+	check("setRiderLean kastar inte mot en riktig Seat-rigg", okLutning)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	os.exit(1)

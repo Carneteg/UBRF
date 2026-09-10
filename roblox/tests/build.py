@@ -66,6 +66,9 @@ SPELBARHET = BYGGE + [
     ("UBRFSpel",     "game/UBRFSpel.luau"),
     ("Stallet",      "game/Stallet.luau"),
     ("DorrService",  "src/server/DorrService.luau"),
+    ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("JackRigg",     "src/server/JackRigg.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
