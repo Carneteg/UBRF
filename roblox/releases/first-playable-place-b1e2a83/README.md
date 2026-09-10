@@ -21,6 +21,7 @@ moduler.
 |---|---|
 | Filen | `UBRFFirstPlayable.rbxlx` |
 | Källkommit | `b1e2a836deb4c6c298b2ee4f26254a0d7018e00d` |
+| Release-SHA (committen som innehåller filen) | `897b082d3cbabd19378c587011539088f319e5d6` |
 | Genereringskommando | `python3 tools/bygg-place.py` |
 | SHA256 | `d1ec6af69c65371597e1594d6d5dd8686f5315e3caad94c4a63fddefbe47386e` |
 | Storlek | 58 instanser, 728 KB |
@@ -45,7 +46,7 @@ granskningen och ska inte användas för gameplaytest.
 Direktlänk, pinnad till committen som la in filen (den slutar aldrig
 fungera och kan inte peka på en nyare eller äldre version):
 
-<https://github.com/Carneteg/UBRF/raw/b1e2a836deb4c6c298b2ee4f26254a0d7018e00d/roblox/releases/first-playable-place-b1e2a83/UBRFFirstPlayable.rbxlx>
+<https://github.com/Carneteg/UBRF/raw/897b082d3cbabd19378c587011539088f319e5d6/roblox/releases/first-playable-place-b1e2a83/UBRFFirstPlayable.rbxlx>
 
 **404 betyder nästan alltid `main`.** Filen ligger bara på branchen
 `claude/first-playable-20260910` tills PR #162 är mergad; länken ovan pekar
