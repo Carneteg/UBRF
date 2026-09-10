@@ -764,9 +764,12 @@ function uppdateraProt(){
 function flash(txt){const f=document.getElementById("faults");
   f.textContent=txt;f.style.opacity=1;f.style.transform="translate(-50%,-50%) scale(1.06)";
   setTimeout(()=>{f.style.opacity=0;f.style.transform="translate(-50%,-50%) scale(1)";},900);}
+/* Repliken SKRIVS, den läses inte upp. Här stod `ljudRost(txt)`, som
+   skickade samma text till webbläsarens svenska talsyntes. Tobias
+   produktbeslut 2026-09-10 (#161): ingen röst agerar ridlärare. Texten
+   är oförändrad — det var uppläsningen som togs bort, inte innehållet. */
 function saga(txt,dur){const s=document.getElementById("saga");
-  s.textContent=txt;s.classList.add("on");G.sagaT=dur||3;
-  if(typeof ljudRost==="function")ljudRost(txt);}
+  s.textContent=txt;s.classList.add("on");G.sagaT=dur||3;}
 
 /* ── Lektionen ── */
 function startaLektion(){

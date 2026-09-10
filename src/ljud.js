@@ -7,15 +7,32 @@
    DEN LOOPADE BRUSAMBIENSEN ÄR AV sedan Tobias produkttest
    2026-09-06: ett filtrerat brusloop hördes som ett konstant hum, inte
    som ett stall. Maskineriet ligger kvar bakom `LJUD.ambiens` för den
-   dag en riktig inspelning finns. Se flaggan nedan. Ridlärarens röst talar genom
-   webbläsarens svenska talsyntes under lektionen.
+   dag en riktig inspelning finns. Se flaggan nedan.
    M stänger av och på allt. Inget ljud är ett krav: spelet är
    detsamma med ljudet av.
+
+   INGEN RIDLÄRARRÖST. Här fanns `ljudRost(text)`, som läste upp
+   lärarens repliker med webbläsarens svenska talsyntes
+   (`SpeechSynthesisUtterance`, `sv-SE`) medan man satt i sadeln.
+
+   Tobias produktbeslut 2026-09-10 (issue #161): **det ska inte finnas
+   någon röst som agerar ridlärare.** Funktionen, flaggan `LJUD.rost`
+   och båda anropsställena är borta ur spelet — inte gömda bakom en
+   avstängd flagga, för en avstängd flagga är en funktion som väntar på
+   att slås på igen.
+
+   Beslutet gäller ROSTEN, inte undervisningen: varje replik som
+   tidigare lästes upp står kvar som skriven text i lärarytan. Det som
+   togs bort var uppläsningen, inte innehållet.
+
+   Ersätt den inte. Varken med inspelad röst, en annan talsyntes,
+   Roblox egen uppläsning eller en AI-röst. `tools/rostgrind.mjs`
+   faller om något av det kommer tillbaka i produktionskoden.
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
 const LJUD={
-  ctx:null, pa:true, rost:true,
+  ctx:null, pa:true,
   /* ── AMBIENSEN ÄR AV SOM DEFAULT ────────────────────────────────
      Tobias produkttest 2026-09-06, blocker 4: den loopade syntetiska
      brusbädden hördes som ett konstant brus/hum så fort man rört
@@ -60,10 +77,10 @@ addEventListener("keydown",()=>{ljudInit();if(LJUD.ctx&&LJUD.ctx.state==="suspen
 
 function ljudToggle(){
   LJUD.pa=!LJUD.pa;
-  if(!LJUD.pa){
-    ljudAmbiens(null);
-    try{if("speechSynthesis"in window)speechSynthesis.cancel();}catch(_){}
-  }
+  /* Här stod också ett `speechSynthesis.cancel()`, som tystade
+     ridlärarrösten när ljudet slogs av. Rösten finns inte längre — se
+     filhuvudet — så det finns inget att avbryta. */
+  if(!LJUD.pa)ljudAmbiens(null);
   if(typeof saga==="function")saga(LJUD.pa?"Ljudet är på. M stänger av.":"Ljudet är av.",2);
 }
 
@@ -175,21 +192,6 @@ function ljudKlocka(){
     o.connect(g);g.connect(LJUD.master);
     o.start(t);o.stop(t+1.7);
   }
-}
-
-/* Ridlärarens röst — webbläsarens svenska talsyntes, bara i sadeln. */
-function ljudRost(text){
-  if(!LJUD.pa||!LJUD.rost)return;
-  if(!(G.scen==="lektion"||G.scen==="bana"))return;
-  try{
-    if(!("speechSynthesis"in window))return;
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.lang="sv-SE";u.rate=1.04;u.pitch=1.0;u.volume=0.85;
-    const sv=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.startsWith("sv"));
-    if(sv)u.voice=sv;
-    speechSynthesis.speak(u);
-  }catch(_){}
 }
 
 /* Ambiensen: en fortlöpande brusbädd per plats. */

@@ -1,7 +1,21 @@
 # G02-C — Ugneta: pedagogik och feedbackkontrakt
 
 ## Instruktören
-Ugneta är en äldre kvinnlig ridinstruktör med grått hår och glasögon. Hon är den återkommande lärarrösten under ridträning.
+Ugneta är en äldre kvinnlig ridinstruktör med grått hår och glasögon. Hon är den återkommande läraren under ridträning.
+
+**Ugneta talar inte.** Raden ovan stod tidigare som "den återkommande
+lärarrösten", vilket var menat bildligt — men spelet hade samtidigt en
+faktisk uppläsning: `ljudRost()` i `src/ljud.js` läste hennes repliker med
+webbläsarens svenska talsyntes. Formuleringen kunde alltså läsas som ett stöd
+för den, och det ska den inte kunna.
+
+Tobias produktbeslut 2026-09-10 (issue #161): **ingen röst får agera
+ridlärare.** Uppläsningen är borttagen. Ugnetas repliker, rubriker, punkter och
+säkerhetsrop är oförändrade och står kvar som SKRIVEN text — beslutet gällde
+rösten, inte pedagogiken. Hela feedbackkontraktet nedan är alltså intakt.
+
+Ersätt den inte med inspelad röst, en annan talsyntes, Roblox uppläsning eller
+en AI-röst; `tools/rostgrind.mjs` faller om något av det kommer tillbaka.
 
 ## Pedagogisk grundregel
 Under aktiv ridning ska eleven aldrig behöva läsa en lång förklaring.

@@ -133,7 +133,10 @@ function ugnetaKort(meta,txt,dur){
   }
   s.append(p,t);
   if(typeof G!=="undefined")G.sagaT=dur||4;
-  if(typeof ljudRost==="function")ljudRost(txt);
+  /* Kortet SKRIVS. Här stod `ljudRost(txt)` — se noten i src/ljud.js:
+     Tobias produktbeslut 2026-09-10 (#161) tog bort ridlärarrösten.
+     `txt` används fortfarande: den är reservpunkten i `punkter` ovan
+     när `meta.punkter` är tom, alltså den text spelaren LÄSER. */
   return true;
 }
 

@@ -246,6 +246,19 @@ jobs:
           if [ -f tools/skapartest.mjs ]; then node tools/skapartest.mjs
           else echo "hoppar: tools/skapartest.mjs finns inte i denna branch"; fi
 
+      # Röstgrinden (#161): Tobias produktbeslut 2026-09-10 — ingen röst får
+      # agera ridlärare. `ljudRost()` läste lärarens repliker med webbläsarens
+      # svenska talsyntes; funktionen, flaggan och båda anropsställena är
+      # borta. Grinden finns för att borttagningen ska HÅLLA: den strippar
+      # kommentarer (så en förklaring av varför rösten är borta inte fäller),
+      # mäter både src/ och den byggda webben, kräver att den SKRIVNA
+      # lärartexten och det icke-verbala ljudet står kvar, och provar sig
+      # själv mot tre syntetiserade återinföranden.
+      - name: Röstgrinden — skriven lärartext, ingen uppläsning
+        run: |
+          if [ -f tools/rostgrind.mjs ]; then node tools/rostgrind.mjs
+          else echo "hoppar: tools/rostgrind.mjs finns inte i denna branch"; fi
+
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
       # att ingen debugmarkering ligger i produktvyn och att ytan under

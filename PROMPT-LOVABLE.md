@@ -314,8 +314,25 @@ short, concrete, never patronising.
 Synthesise everything with the Web Audio API — no audio files. Hoof beats in the
 rhythm of the gait with a different timbre per surface (fibre sand, gravel, wet),
 footsteps, whinnies, snorts, stamping, stable ambience, wind and birds outdoors,
-rain, and the competition bell. The riding teacher's calls use Swedish speech
-synthesis (`sv-SE`), only while mounted. `M` mutes everything.
+rain, and the competition bell. `M` mutes everything.
+
+**No instructor voice.** This section used to say that the riding teacher's
+calls use Swedish speech synthesis (`sv-SE`) while mounted, and the game did
+exactly that: `ljudRost()` in `src/ljud.js` spoke every teacher line through
+`SpeechSynthesisUtterance`.
+
+Product decision by Tobias, 2026-09-10 (issue #161): **no voice may act as
+riding instructor.** The implementation, its flag and both call sites are gone
+— not disabled behind a setting, because a disabled setting is a feature
+waiting to be switched back on.
+
+Do not reintroduce it in any form: not browser speech synthesis, not a
+different TTS provider, not a prerecorded voice, not Roblox speech, not an AI
+voice. `tools/rostgrind.mjs` fails the build if any of those appear in a
+production path.
+
+The decision is about the **voice, not the teaching**. Every line that used to
+be spoken is still written on screen. Nothing instructional was removed.
 
 ## 13. Definition of done
 
