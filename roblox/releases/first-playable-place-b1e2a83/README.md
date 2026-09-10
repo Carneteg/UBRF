@@ -1,3 +1,16 @@
+> # ⛔ DO_NOT_TEST / SUPERSEDED
+>
+> **Testa inte den här filen.** Den är ersatt, och den bevarade kopian finns
+> kvar bara som spårbarhet för vad som levererades och vad som gick fel.
+>
+> Rätt fil pekas ut av **`roblox/releases/LATEST-FIRST-PLAYABLE.md`** — och
+> bara när `END_TO_END_PLAYABILITY_GATE` är PASS på den buildens SHA.
+>
+> Bakgrund: ChatGPT:s processreview 2026-09-10 16:31, efter att Tobias
+> manuellt hittat tre grundläggande Studio-fel i buildar som presenterats
+> som redo. Ingen fil går ut till fysisk test förrän spelbarheten är mätt
+> maskinellt.
+
 # First Playable — Studio-place, pinnad till `b1e2a83`
 
 **Det här är builden för den fysiska genomgången.** Öppna filen i Roblox
