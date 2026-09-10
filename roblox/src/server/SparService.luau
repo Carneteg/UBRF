@@ -83,6 +83,10 @@ local anmarkning: { [Player]: string? } = {}
 	komma i fel ordning; den här flaggan gör att avslut + utloggning inte
 	blir två skrivningar i luften samtidigt. ]]
 local skriver: { [Player]: boolean } = {}
+--[[ Revisionen vi LÄSTE. Skrivningen jämför lagrets rad mot den här: är
+	lagret nyare har någon annan hunnit skriva, och då avbryter vi i stället
+	för att slå ihop. Se `rev` i Sparning. ]]
+local laddadRev: { [Player]: number } = {}
 -- Identiteten gör ett sent nätverkssvar ogiltigt när sessionen avslutas.
 local laddningar: { [Player]: {} } = {}
 
@@ -133,6 +137,7 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 	local b = hamtaButik()
 	if not b then
 		sparade[player] = Sparning.tom()
+		laddadRev[player] = 0
 		kanSpara[player] = false
 		anmarkning[player] = "inget datalager"
 		return sparade[player]
@@ -150,6 +155,7 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 	if not ok then
 		--[[ FALL 1 i filhuvudet. Sessionssave, ingen skrivning. ]]
 		sparade[player] = Sparning.tom()
+		laddadRev[player] = 0
 		kanSpara[player] = false
 		anmarkning[player] = "läsfel"
 		warn(("[Spar] %s spelar utan sparning — läsningen gick inte igenom."):format(player.Name))
@@ -158,6 +164,7 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 
 	local save, notering = Sparning.migrera(rad)
 	sparade[player] = save
+	laddadRev[player] = save.rev
 	anmarkning[player] = notering
 
 	if notering == "framtida" then
@@ -211,12 +218,48 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 	end
 	skriver[player] = true
 
+	--[[ Sätts inne i callbacken när skrivningen måste avbrytas. Läses efter
+		anropet: `UpdateAsync` kastar inte när transformatorn returnerar nil,
+		så utan flaggan hade `skriv` svarat sant om en skrivning som aldrig
+		blev av. ]]
+	local konflikt: string? = nil
+
 	local ok = select(1, medRetry("skrivning för " .. player.Name, function()
 		return b:UpdateAsync(nyckelFor(player), function(gammal)
 			--[[ Slå ihop med det som faktiskt står i lagret, inte med det vi
 				råkade läsa vid inloggningen. Mellan då och nu kan en annan
 				server ha skrivit. ]]
-			local bas = select(1, Sparning.migrera(gammal))
+			local bas, notering = Sparning.migrera(gammal)
+
+			--[[ FYND 2 I OMREVIEWEN AV caac3f5: anteckningen kastades här.
+				Läsningen behandlade `framtida` som icke-skrivbar, men den
+				här callbacken konverterade en framtida rad till en TOM v1
+				och slog in vår gamla session i den. Filhuvudets utfästelse
+				gällde alltså bara inloggningen.
+
+				Att returnera nil ur transformatorn AVBRYTER skrivningen och
+				lämnar det lagrade värdet orört. Det är rätt utgång: en
+				gammal server ska inte röra en sparfil den inte förstår. ]]
+			if notering == "framtida" then
+				konflikt = "framtida sparfil i lagret"
+				return nil
+			end
+
+			--[[ FYND 1: NEDRÄKNINGEN. Är den lagrade raden NYARE än den vi
+				läste har någon annan server skrivit under vår session, och
+				då vet vi inte vems vila som är färskast. Vi avbryter i
+				stället för att gissa. Ändringen ligger kvar i minnet och
+				går med nästa skrivning, som då läser om.
+
+				Är raden INTE nyare är den här sessionen den enda som ändrat
+				något sedan läsningen — och då äger minnet vilan, inklusive
+				att den räknats ner eller tagit slut. ]]
+			local last = laddadRev[player] or 0
+			if bas.rev > last then
+				konflikt = ("lagret är revision %d, vi läste %d")
+					:format(bas.rev, last)
+				return nil
+			end
 
 			--[[ Progressionen tas ur den HÖGSTA av de två: en gammal server
 				ska aldrig kunna sänka ett passtal. Kvittona slås ihop, och
@@ -238,17 +281,31 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 					bas.hastar[id] = { relation = m.relation, skada = m.skada }
 				else
 					fanns.relation = math.max(fanns.relation, m.relation)
-					--[[ Skador slås ihop åt det FÖRSIKTIGA hållet: den
-						längsta vilan vinner. En sammanslagning får aldrig
-						förkorta en vila — det vore samma fail-open som PR
-						#154 stängde på webben. ]]
-					if m.skada and (not fanns.skada or m.skada.passKvar > fanns.skada.passKvar) then
-						fanns.skada = m.skada
-					end
+					--[[ MINNET ÄGER VILAN, rakt av — inte "längsta vinner".
+						Vi är förbi revisionskontrollen ovan, så ingen annan
+						har skrivit sedan vi läste; minnet ÄR den senaste
+						sanningen, och det gäller lika mycket när skadan
+						räknats ner till 1 som när den tagit slut helt.
+
+						Den gamla regeln ("längsta vilan vinner") var
+						välmenad — den skulle hindra en gammal server från
+						att korta en färsk skada — men den gjorde
+						nedräkningen omöjlig: lagrets 2 slog minnets 1, och
+						`sparade[player] = bas` skrev tillbaka 2 i minnet
+						också. Hästen vilade för evigt. Skyddet mot den
+						gamla servern ligger nu där det hör hemma, i
+						revisionen, och inte i en jämförelse av passtal. ]]
+					fanns.skada = m.skada
 				end
 			end
 
 			if andra then andra(bas) end
+
+			--[[ Ny revision. Nästa skrivning från den här sessionen jämför
+				mot den, och en annan server som läste tidigare kommer att
+				se att lagret hunnit före. ]]
+			bas.rev = last + 1
+			laddadRev[player] = bas.rev
 
 			--[[ Minnet uppdateras till det sammanslagna, så att nästa
 				skrivning utgår från samma sanning som lagret. ]]
@@ -258,6 +315,19 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 	end))
 
 	skriver[player] = false
+	if konflikt then
+		--[[ Ingenting skrevs, och det var avsiktligt. Framstegen ligger kvar
+			i minnet. Den framtida sparfilen gör dessutom sessionen
+			icke-skrivbar tills spelaren kommer in på en server som förstår
+			schemat — samma beslut som läsningen redan tar. ]]
+		if konflikt == "framtida sparfil i lagret" then
+			kanSpara[player] = false
+			anmarkning[player] = "framtida"
+		end
+		warn(("[Spar] %s sparades INTE: %s. Inget skrevs över.")
+			:format(player.Name, konflikt))
+		return false
+	end
 	if not ok then
 		warn(("[Spar] %s kunde inte sparas nu. Framstegen ligger kvar i minnet "
 			.. "och försöks igen."):format(player.Name))
@@ -367,6 +437,7 @@ local function glom(player: Player)
 	anmarkning[player] = nil
 	skriver[player] = nil
 	redo[player] = nil
+	laddadRev[player] = nil
 end
 
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]

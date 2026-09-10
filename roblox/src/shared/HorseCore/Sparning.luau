@@ -64,6 +64,23 @@ export type Hastminne = {
 
 export type Save = {
 	v: number,
+	--[[ REVISIONEN. Monoton räknare som ökar vid varje lyckad skrivning,
+		och som är HELT skild från `v`: `v` är schemaversionen, `rev` är
+		"hur många gånger den här sparfilen har skrivits".
+
+		Den finns för omreviewens fynd 1 (#162). Sammanslagningen i
+		`SparService.skriv` behöll den LÄNGSTA vilan, så en nedräkning från
+		2 till 1 aldrig gick fram — lagrets 2 vann över minnets 1, och en
+		häst kunde vila för evigt. Att bara byta `>` mot `<` hade bytt buggen
+		mot dess spegelbild: en gammal server hade då kunnat korta en färsk
+		skada.
+
+		Med `rev` behövs ingen sådan gissning. Servern jämför den rad som
+		ligger i lagret med den den själv läste: är lagret NYARE har någon
+		annan skrivit, och då avbryts skrivningen i stället för att slås
+		ihop. Är den inte nyare är den här sessionen den enda som ändrat
+		något sedan läsningen, och då äger minnet vilan. ]]
+	rev: number,
 	pass: number,
 	passId: { [string]: number },
 	forstaDagen: { klar: boolean, hastId: string? },
@@ -73,6 +90,7 @@ export type Save = {
 function Sparning.tom(): Save
 	return {
 		v = Sparning.VERSION,
+		rev = 0,
 		pass = 0,
 		passId = {},
 		forstaDagen = { klar = false, hastId = nil },
@@ -117,6 +135,10 @@ function Sparning.migrera(rad: any): (Save, string?)
 	end
 
 	local ut = Sparning.tom()
+	--[[ Revisionen läses med 0 som standard, så rader skrivna före #162
+		går in som rev 0 och nästa skrivning blir rev 1. Ingen migrering
+		behövs; en saknad räknare ÄR noll skrivningar. ]]
+	ut.rev = math.max(0, math.floor(tal(rad.rev, 0)))
 	ut.pass = math.max(0, math.floor(tal(rad.pass, 0)))
 
 	if type(rad.passId) == "table" then
@@ -310,6 +332,7 @@ function Sparning.tillRad(save: Save): any
 	for id, t in pairs(save.passId) do passId[id] = t end
 	return {
 		v = save.v,
+		rev = save.rev,
 		pass = save.pass,
 		passId = passId,
 		forstaDagen = { klar = save.forstaDagen.klar, hastId = save.forstaDagen.hastId },

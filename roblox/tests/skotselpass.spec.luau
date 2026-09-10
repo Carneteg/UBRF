@@ -1123,6 +1123,186 @@ do
 	game:GetService("RunService")._server = false
 end
 
+--[[ ══ OMREVIEW AV caac3f5, FYND 1: VILAN RÄKNAS NER I LAGRET ══════
+
+	`GameplayService.avslutaPass` anropar `Sparning.raknaNerVila(save)` och
+	sedan `SparService.skriv`. Enhetsprovet på `raknaNerVila` är grönt — men
+	det provar bara funktionen, inte vägen genom `UpdateAsync`.
+
+	I sammanslagningen vinner den LÄNGSTA vilan:
+
+	    if m.skada and (not fanns.skada or m.skada.passKvar > fanns.skada.passKvar)
+
+	Lagret har 2, minnet har 1 efter nedräkningen — och 1 > 2 är falskt, så
+	lagrets 2 vinner. `sparade[player] = bas` skriver sedan tillbaka 2 i
+	minnet också. Samma villkor gör att 1 → nil aldrig går fram: att `skada`
+	SAKNAS i minnet kan inte rensa en lagrad skada.
+
+	Följden i drift: en häst vilar för evigt. Det är värre än buggen #154
+	stängde, för den gick åtminstone att rida sig ur.
+
+	Provet går HELA vägen: seedad rad → ladda → räkna ner → skriv →
+	glöm → ladda igen. ]]
+do
+	print("\n── Omreview fynd 1: vilan ska räknas ner i själva lagret ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local spelare = { Name = "Vila", UserId = 9201 }
+	SparService._glomForProv(spelare)
+
+	--[[ Lagret har en häst som vilar två pass. ]]
+	local rad = Sparning.tom()
+	Sparning.satSkada(rad, "cosmo", 2, "sten i hoven")
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(rad)
+
+	local save = SparService.ladda(spelare)
+	check("laddad med två pass kvar",
+		save.hastar.cosmo ~= nil and save.hastar.cosmo.skada ~= nil
+			and save.hastar.cosmo.skada.passKvar == 2,
+		"passKvar " .. tostring(save.hastar.cosmo and save.hastar.cosmo.skada
+			and save.hastar.cosmo.skada.passKvar))
+
+	--[[ Ett pass rids och avslutas: nedräkningen sker i minnet, sedan skrivs
+		den. Exakt ordningen i `GameplayService.avslutaPass`. ]]
+	Sparning.raknaNerVila(save)
+	check("minnet räknade ner till ett pass",
+		save.hastar.cosmo.skada ~= nil and save.hastar.cosmo.skada.passKvar == 1,
+		"passKvar " .. tostring(save.hastar.cosmo.skada
+			and save.hastar.cosmo.skada.passKvar))
+	check("skrivningen gick fram", SparService.skriv(spelare) == true)
+
+	SparService._glomForProv(spelare)
+	local igen = SparService.ladda(spelare)
+	check("LAGRET har ett pass kvar, inte två",
+		igen.hastar.cosmo ~= nil and igen.hastar.cosmo.skada ~= nil
+			and igen.hastar.cosmo.skada.passKvar == 1,
+		"passKvar " .. tostring(igen.hastar.cosmo and igen.hastar.cosmo.skada
+			and igen.hastar.cosmo.skada.passKvar))
+
+	--[[ Andra passet: 1 → 0 → skadan ska bort ur lagret. ]]
+	Sparning.raknaNerVila(igen)
+	check("minnet är fritt från skada", igen.hastar.cosmo.skada == nil)
+	check("skrivningen gick fram igen", SparService.skriv(spelare) == true)
+
+	SparService._glomForProv(spelare)
+	local sista = SparService.ladda(spelare)
+	check("skadan är BORTA ur lagret",
+		sista.hastar.cosmo == nil or sista.hastar.cosmo.skada == nil,
+		"skada " .. tostring(sista.hastar.cosmo and sista.hastar.cosmo.skada
+			and sista.hastar.cosmo.skada.passKvar))
+
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ OMREVIEW FYND 2: EN NYARE SPARFIL FÅR INTE SKRIVAS ÖVER ═══════
+
+	Läsningen behandlar `migrera(...) == "framtida"` som icke-skrivbar och
+	sätter `kanSpara = false`. `UpdateAsync`-callbacken gör INTE det:
+
+	    local bas = select(1, Sparning.migrera(gammal))
+
+	Anteckningen kastas. Läste den här servern en giltig v1-rad, och en
+	nyare server skrev ett framtida schema innan vår nästa skrivning, så
+	konverterar callbacken den framtida raden till en TOM v1-save och
+	slår in vår gamla session i den. Filhuvudets egen utfästelse — *"en
+	gammal server ska inte skriva över en nyare sparfil den inte förstår"* —
+	gäller alltså bara vid inloggningen, inte vid skrivningen. ]]
+do
+	print("\n── Omreview fynd 2: framtida sparfil skrivs inte över ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local spelare = { Name = "Framtid", UserId = 9202 }
+	SparService._glomForProv(spelare)
+
+	--[[ En vanlig v1-rad läses in och är skrivbar. ]]
+	local rad = Sparning.tom()
+	rad.pass = 4
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(rad)
+	local save = SparService.ladda(spelare)
+	check("sessionen är skrivbar", SparService.kanSpara(spelare) == true)
+	check("och har fyra pass", save.pass == 4, tostring(save.pass))
+
+	--[[ En NYARE server hinner före oss. ]]
+	local framtida = Sparning.tillRad(rad)
+	framtida.v = Sparning.VERSION + 1
+	framtida.pass = 9
+	framtida.nyttFalt = "något vi inte förstår"
+	__datastore._data["spelare_" .. spelare.UserId] = framtida
+
+	SparService.skriv(spelare)
+
+	local kvar = __datastore._data["spelare_" .. spelare.UserId]
+	check("den framtida raden ligger kvar orörd",
+		kvar ~= nil and kvar.v == Sparning.VERSION + 1,
+		"v " .. tostring(kvar and kvar.v))
+	check("och dess pass är inte sänkta till våra",
+		kvar ~= nil and kvar.pass == 9, "pass " .. tostring(kvar and kvar.pass))
+	check("det okända fältet finns kvar",
+		kvar ~= nil and kvar.nyttFalt == "något vi inte förstår",
+		tostring(kvar and kvar.nyttFalt))
+
+	--[[ Omreviewen ber uttryckligen om att sessionstillståndet efter
+		konflikten redovisas. Sessionen blir icke-skrivbar och bär skälet —
+		samma beslut som läsningen tar för en framtida rad. ]]
+	check("sessionen är inte längre skrivbar",
+		SparService.kanSpara(spelare) == false)
+	check("och anmärkningen säger framtida",
+		SparService.anmarkning(spelare) == "framtida",
+		tostring(SparService.anmarkning(spelare)))
+
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ OMREVIEW: BÅDA EGENSKAPERNA, INTE BARA DEN ENA ════════════════
+
+	*"Do not simply switch `max` to `min`… both properties must hold: stale
+	writes cannot heal a new injury, and legitimate rest progression can
+	persist."*
+
+	Provet ovan visade den andra. Det här visar den FÖRSTA, och det är den
+	som en `min`-regel hade gått sönder på: en gammal server, med en session
+	som läste innan skadan fanns, försöker skriva. Lagret har hunnit före.
+	Skrivningen ska avbrytas — inte slås ihop, och absolut inte läka. ]]
+do
+	print("\n── Omreview: en gammal server får inte läka en färsk skada ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local spelare = { Name = "Gammal", UserId = 9203 }
+	SparService._glomForProv(spelare)
+
+	--[[ Servern läser en rad UTAN skada. ]]
+	local rad = Sparning.tom()
+	rad.pass = 2
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(rad)
+	local save = SparService.ladda(spelare)
+	check("vår session ser ingen skada",
+		save.hastar.cosmo == nil or save.hastar.cosmo.skada == nil)
+
+	--[[ En NYARE server sätter en skada och skriver — revisionen stiger. ]]
+	local nyare = Sparning.migrera(__datastore._data["spelare_" .. spelare.UserId])
+	Sparning.satSkada(nyare, "cosmo", 3, "hälta bak")
+	nyare.rev = save.rev + 1
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(nyare)
+
+	--[[ Vår gamla session skriver nu. Den vet ingenting om skadan. ]]
+	local skrevs = SparService.skriv(spelare)
+	check("skrivningen avbröts", skrevs == false, tostring(skrevs))
+
+	local kvar = Sparning.migrera(__datastore._data["spelare_" .. spelare.UserId])
+	check("den färska skadan finns kvar i lagret",
+		kvar.hastar.cosmo ~= nil and kvar.hastar.cosmo.skada ~= nil
+			and kvar.hastar.cosmo.skada.passKvar == 3,
+		"passKvar " .. tostring(kvar.hastar.cosmo and kvar.hastar.cosmo.skada
+			and kvar.hastar.cosmo.skada.passKvar))
+	check("och revisionen är den nyare serverns",
+		kvar.rev == save.rev + 1, "rev " .. tostring(kvar.rev))
+
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end

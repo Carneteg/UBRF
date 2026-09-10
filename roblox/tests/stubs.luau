@@ -506,6 +506,15 @@ function __butik:UpdateAsync(nyckel, fn)
 	__datastore.forsok.skriv += 1
 	if __datastore.felSkriv then error("DataStore: skrivning misslyckades (stub)") end
 	local nytt = fn(__datastore._data[nyckel])
+	--[[ NIL UR TRANSFORMATORN AVBRYTER SKRIVNINGEN och lämnar det lagrade
+	     värdet ORÖRT. Så gör Roblox, och stubben gjorde det inte: den skrev
+	     `_data[nyckel] = nil`, alltså RADERADE raden.
+	     Skillnaden är hela fynd 2 i omreviewen av caac3f5 — provet som ska
+	     visa att en framtida sparfil bevaras kunde inte skilja "bevarad"
+	     från "raderad" så länge stubben tog bort den. ]]
+	if nytt == nil then
+		return __datastore._data[nyckel]
+	end
 	__datastore._data[nyckel] = nytt
 	return nytt
 end
