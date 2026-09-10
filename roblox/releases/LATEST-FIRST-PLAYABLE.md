@@ -1,5 +1,14 @@
 # Vilken fil ska testas? — canonical pekare
 
+> ### Det FINNS ett provbygge att prova om du vill
+>
+> `first-playable-place-e9a37ff/` är ett **provbygge** — inte sanktionerat,
+> inte produktaccepterat. Det innehåller hästen och de fem rättelser som
+> gjordes efter att förra placen frös, och dess README säger exakt vad som
+> är rättat och vad som INTE är verifierat. Sanktionen nedan står kvar
+> tills hela `END_TO_END_PLAYABILITY_GATE`, lokaliseringen och ChatGPT:s
+> nya review är klara.
+
 > ## ⛔ INGEN FIL ÄR SANKTIONERAD FÖR FYSISK TEST
 >
 > Sanktionen av `first-playable-place-46231de` är **återtagen** efter
