@@ -1571,6 +1571,12 @@ do
 		"passKvar " .. tostring(kvar.hastar.cosmo and kvar.hastar.cosmo.skada
 			and kvar.hastar.cosmo.skada.passKvar))
 	check("vårt kvitto följde med", kvar.passId["pass-rebas-1"] ~= nil)
+	--[[ Och passet räknades EN gång. Arbetsordern 2026-09-10 kräver det
+		uttryckligen: en ombasering som adderar vårt kvitto till en färsk rad
+		får inte också ta med minnets passtal och räkna dagen två gånger.
+		Lagret stod på 2, vi la ett kvitto → 3. ]]
+	check("passet räknades en gång, inte två", kvar.pass == 3,
+		"pass " .. tostring(kvar.pass))
 	check("och relationen vi byggde",
 		kvar.hastar.cosmo ~= nil and kvar.hastar.cosmo.relation >= 0.5,
 		tostring(kvar.hastar.cosmo and kvar.hastar.cosmo.relation))
@@ -1588,6 +1594,8 @@ do
 		SparService.kanSpara(spelare) == true)
 
 	local kvar2 = Sparning.migrera(__datastore._data[nyckel])
+	check("och den andra skrivningen räknade inte passet igen", kvar2.pass == 3,
+		"pass " .. tostring(kvar2.pass))
 	check("och skadan står kvar även efter den andra skrivningen",
 		kvar2.hastar.cosmo ~= nil and kvar2.hastar.cosmo.skada ~= nil
 			and kvar2.hastar.cosmo.skada.passKvar == 3,
