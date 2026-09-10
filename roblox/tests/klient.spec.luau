@@ -1041,6 +1041,104 @@ do
 	end
 end
 
+--[[ ── HJÄLPEN GÅR ATT ÖPPNA IGEN (#161, P2-4b ur #153) ────────────
+
+	Felet: hjälpen gick att STÄNGA på varje yta men bara att ÖPPNA med `H`.
+	På en iPad utan tangentbord var den därmed en engångsruta. Blocket
+	nedan mäter alla tre vägarna in, genom klientens EGEN inmatning — inte
+	genom att anropa `KontrollHjalp.visa()`, som hade varit grönt även med
+	en trasig bindning.
+
+	Provet ligger EFTER avsittningen med flit. Det är hela poängen: den
+	gamla lyssnaren började med `if processed or not ride then return end`,
+	så `H` gjorde ingenting när man inte satt upp. Ett prov som körde
+	medan ritten pågick hade varit grönt före rättelsen. ]]
+do
+	local usv = game:GetService("UserInputService")
+
+	prova("ingen ritt pågår när återöppningen provas", true,
+		"(H prövas i stallet, inte i sadeln)")
+
+	KontrollHjalp.dolj()
+	tryck("H")
+	prova("H öppnar hjälpen ÄVEN när spelaren inte rider",
+		KontrollHjalp.synlig() == true,
+		("(synlig %s)"):format(tostring(KontrollHjalp.synlig())))
+	tryck("H")
+	prova("och stänger den igen", KontrollHjalp.synlig() == false)
+
+	--[[ GAMEPADEN. Knappen läses ur modulen, inte skriven här: står det
+		`DPadUp` på två ställen kan de glida isär, och då provar specen sin
+		egen tabell i stället för bindningen. ]]
+	--[[ Knappen läses ur modulen och inte ur en kopia här. Att den är en
+		riktig `EnumItem` går inte att mäta i bänken — stubbens `Enum.KeyCode`
+		svarar med namnet som sträng — så provet mäter det som FAKTISKT
+		betyder något: att den är deklarerad, att den inte krockar, och att
+		den öppnar hjälpen genom klientens egen lyssnare. ]]
+	prova("hjälpen deklarerar en gamepadknapp",
+		KontrollHjalp.GAMEPADKNAPP ~= nil,
+		("(%s)"):format(tostring(KontrollHjalp.GAMEPADKNAPP)))
+
+	--[[ ...och den knappen får INTE vara en av ridningens. Faller det här
+		har någon lagt hjälpen på ett reglage som redan gör något — precis
+		det #161 förbjuder. ]]
+	local tagna = {
+		[Enum.KeyCode.ButtonA] = "hopp", [Enum.KeyCode.ButtonB] = "halvhalt",
+		[Enum.KeyCode.ButtonX] = "se ritten", [Enum.KeyCode.ButtonY] = "lektionen vidare",
+		[Enum.KeyCode.ButtonR1] = "högre gångart", [Enum.KeyCode.ButtonL1] = "lägre gångart",
+		[Enum.KeyCode.ButtonR2] = "tygel", [Enum.KeyCode.ButtonL2] = "sits",
+		[Enum.KeyCode.Thumbstick1] = "styrning",
+	}
+	prova("gamepadknappen är inte redan tagen av ridningen",
+		tagna[KontrollHjalp.GAMEPADKNAPP] == nil,
+		("(%s → %s)"):format(tostring(KontrollHjalp.GAMEPADKNAPP),
+			tostring(tagna[KontrollHjalp.GAMEPADKNAPP] or "ledig")))
+
+	UserInputService.InputBegan:Fire({ KeyCode = KontrollHjalp.GAMEPADKNAPP }, false)
+	prova("gamepadknappen öppnar hjälpen",
+		KontrollHjalp.synlig() == true,
+		("(synlig %s)"):format(tostring(KontrollHjalp.synlig())))
+	UserInputService.InputBegan:Fire({ KeyCode = KontrollHjalp.GAMEPADKNAPP }, false)
+	prova("och stänger den igen", KontrollHjalp.synlig() == false)
+
+	--[[ PEKSKÄRMEN. `?`-knappen byggs bara när inmatningen behöver den, så
+		provet växlar till en ren pekenhet och startar om modulen — samma
+		beslut `KontrollHjalp.start` gör i produktion. ]]
+	local kb, gp, touch = usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled
+	usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = false, false, true
+	KontrollHjalp.start()
+	local knapp = KontrollHjalp._oppnaKnapp()
+	prova("en pekenhet får en permanent ?-knapp",
+		knapp ~= nil and knapp.ClassName == "TextButton",
+		("(%s)"):format(knapp and knapp.ClassName or "ingen"))
+	prova("och den når 44 px i BÅDA led",
+		knapp ~= nil and knapp.Size.X.Offset >= 44 and knapp.Size.Y.Offset >= 44,
+		("(%d×%d px)"):format(knapp and knapp.Size.X.Offset or -1,
+			knapp and knapp.Size.Y.Offset or -1))
+
+	if knapp then
+		knapp.Activated:Fire()
+		prova("?-knappen öppnar hjälpen", KontrollHjalp.synlig() == true)
+		prova("och göms medan panelen står uppe", knapp.Visible == false)
+		local stang = hitta("StangHjalp")
+		if stang then stang.Activated:Fire() end
+		prova("panelens Stäng stänger den", KontrollHjalp.synlig() == false)
+		prova("och ?-knappen kommer tillbaka", knapp.Visible == true,
+			("(synlig %s)"):format(tostring(knapp.Visible)))
+	end
+
+	--[[ Hjälpen ska tala om SIN EGEN väg in, och rätt väg för rätt
+		inmatning. En rad som säger "H" till en spelare utan tangentbord är
+		precis det problemet raden beskriver. ]]
+	local pek = {}
+	for _, r in KontrollHjalp.rader() do pek[r.vad] = r.reglage end
+	prova("hjälpen listar sig själv för pekskärm",
+		pek["Den här hjälpen"] == "?",
+		("(%s)"):format(tostring(pek["Den här hjälpen"])))
+
+	usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else

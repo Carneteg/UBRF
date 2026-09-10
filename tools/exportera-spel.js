@@ -28,9 +28,11 @@ const {
   HORSES, FODERSCHEMA, KRAFTVAL,
   RYKTZON, RYKTREDSKAP, RYKTKRAV, SADELFAS,
   VISITPUNKT, VISITFYND, VISITSVAR, FASER,
+  HALSNING, HOVAR, EFTERVARD,
 } = vm.runInContext(
   "({HORSES, FODERSCHEMA, KRAFTVAL, RYKTZON, RYKTREDSKAP, RYKTKRAV, " +
-  "SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR, FASER})",
+  "SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR, FASER, " +
+  "HALSNING, HOVAR, EFTERVARD})",
   ctx,
 );
 
@@ -153,6 +155,64 @@ function kontrolleraSkotsel() {
   }
   if (new Set(fasId).size !== fasId.length) {
     console.error("FEL  FASER har dubbla id: " + fasId.join(", "));
+    process.exit(2);
+  }
+
+  /* Ledningen hör till förberedelsen, inte till ritten: man leder hästen
+     till ridhuset och sitter upp DÄR. Hamnar `leda` efter `sittupp` leder
+     spelaren en häst hon redan sitter på. */
+  if (fasId.indexOf("leda") > fasId.indexOf("sittupp")) {
+    console.error("FEL  ledningen måste komma före uppsittningen.");
+    process.exit(2);
+  }
+
+  /* HÄLSNINGEN. Exakt ETT fel alternativ, och det är det pedagogiska
+     innehållet: det finns mer än ett sätt att göra rätt (framifrån, eller
+     från sidan vid bogen) men bara ett som gör ont. Blir alla rätta går
+     momentet inte att misslyckas med och lär inte ut någonting; blir fler
+     fel blir det en gissningslek. */
+  const halsFel = HALSNING.filter(h => !h.ratt).length;
+  if (halsFel !== 1) {
+    console.error(`FEL  HALSNING har ${halsFel} felaktiga alternativ, ska ha exakt 1.`);
+    process.exit(2);
+  }
+  if (HALSNING.some(h => !h.t || !h.svar)) {
+    console.error("FEL  varje HALSNING-alternativ måste ha både t och svar.");
+    process.exit(2);
+  }
+
+  /* HOVARNA. Fyra, en per ben, och man går ETT varv: vänster fram,
+     vänster bak, höger bak, höger fram. Byts ordningen mot vf→hf→vb→hb
+     korsar spelaren under hästen fram och tillbaka, vilket är precis det
+     man lär sig att inte göra. */
+  const hovId = HOVAR.map(h => h.id);
+  if (hovId.join(",") !== "vf,vb,hb,hf") {
+    console.error("FEL  HOVAR ska gå ett varv: vf,vb,hb,hf — inte " + hovId.join(","));
+    process.exit(2);
+  }
+  if (HOVAR.some(h => !h.namn || !h.text)) {
+    console.error("FEL  varje hov måste ha namn och text.");
+    process.exit(2);
+  }
+
+  /* EFTERVÅRDEN. Gjorden lossas före sadeln tas av, sadeln av före
+     tränset, och benen känns igenom medan de är varma. Kastas ordningen
+     om lär loopen ut fel sak utan att något kraschar — samma sorts tyst
+     skada som fasordningen ovan vaktar mot. */
+  const efterId = EFTERVARD.map(e => e.id);
+  if (new Set(efterId).size !== efterId.length) {
+    console.error("FEL  EFTERVARD har dubbla id: " + efterId.join(", "));
+    process.exit(2);
+  }
+  for (const [fore, efter] of [["gjord", "sadel"], ["sadel", "trans"], ["ben", "vatten"]]) {
+    if (efterId.indexOf(fore) < 0 || efterId.indexOf(efter) < 0
+        || efterId.indexOf(fore) > efterId.indexOf(efter)) {
+      console.error(`FEL  eftervården: ${fore} måste komma före ${efter}.`);
+      process.exit(2);
+    }
+  }
+  if (EFTERVARD.some(e => !e.namn || !e.text)) {
+    console.error("FEL  varje eftervårdssteg måste ha namn och text.");
     process.exit(2);
   }
 }
@@ -334,6 +394,15 @@ const skotselRuntime = {
   sadelfaser: SADELFAS,
   visitation: {punkter: VISITPUNKT, fynd: VISITFYND, svar: VISITSVAR},
   faser: FASER,
+  /* Hälsningen, hovarna och eftervården. HALSNING låg förut bara i
+     webbens src/moment.js som `VISITGANG` — fasen `halsa` fanns alltså på
+     Roblox utan sitt innehåll. HOVAR och EFTERVARD fanns inte som data
+     någonstans; webben hade hovarna som fyra namnlösa index och
+     eftervården som text i src/sysslor.js. Nu är alla tre kanon och båda
+     ytorna läser dem härifrån. */
+  halsning: HALSNING,
+  hovar: HOVAR,
+  eftervard: EFTERVARD,
 };
 const skotselUt = `--!strict
 --[[ GENERERAD av tools/exportera-spel.js ur src/spel/skotsel.js.

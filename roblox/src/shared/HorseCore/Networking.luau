@@ -29,6 +29,18 @@ local DEFINITIONS = {
 	PreparationStep = "RemoteFunction",  -- klient → server: jag vill göra det här steget
 	PreparationSync = "RemoteEvent",     -- server → ägaren: hela förberedelsens sanning
 	PreparationHello = "RemoteFunction", -- klient → server: listenern är ansluten, ge mig nuläget
+	--[[ #161. Skötselns MOMENT och passets eftervård.
+
+	     Alla tre är avsikter — "jag vill krafsa vänster fram", "jag säger
+	     till ridläraren", "jag lossar gjorden" — och inget av dem bär ett
+	     resultat. Det finns med flit ingen remote som tar emot ett
+	     saveobjekt, ett passtal eller ett hästminne: servern äger varje
+	     skrivning, och en klient som inte KAN skicka ett tillstånd kan
+	     heller inte fejka ett. ]]
+	PreparationMoment = "RemoteFunction",  -- klient → server: jag utför det här momentet
+	PreparationSvar = "RemoteFunction",    -- klient → server: mitt svar på ett fynd
+	PassSync = "RemoteEvent",              -- server → ägaren: passets läge och eftervård
+	PassMoment = "RemoteFunction",         -- klient → server: ett eftervårdsmoment
 }
 
 local cache: { [string]: Instance } = {}

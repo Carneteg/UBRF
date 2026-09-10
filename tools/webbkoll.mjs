@@ -11,6 +11,7 @@
  *
  * Kör: node tools/webbkoll.mjs [port]
  */
+import fs from "node:fs";
 import { chromium } from "playwright";
 
 const port = process.argv[2] || 8931;
@@ -20,8 +21,25 @@ const SCENER = [
   ["ridhusinne",  { x: 10.6, y: 20,  rikt: 0 }],
 ];
 
+/* Chromium HITTAS, den antas inte.
+ *
+ * Här stod sökvägen hårdkodad utan reservutgång:
+ *
+ *     executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+ *
+ * Det är en väg som bara finns i en Linux-container. Utanför den dog
+ * verktyget på `Failed to launch chromium because executable doesn't
+ * exist` innan en enda scen laddats — alltså exakt samma klass av
+ * portabilitetsfel som #159 rättade för sökvägarna, fast för browsern.
+ *
+ * Mönstret nedan är det de sjutton andra QA-verktygen redan använder:
+ * `CHROMIUM` ur miljön om den är satt, containervägen om den finns, och
+ * annars `undefined` — vilket låter Playwright hitta sin egen browser.
+ * Det sista ledet är hela poängen; utan det går grinden inte att köra
+ * någon annanstans än där den skrevs. */
+const exe = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 const b = await chromium.launch({
-  executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+  executablePath: fs.existsSync(exe) ? exe : undefined,
   args: ["--use-angle=swiftshader", "--no-sandbox", "--enable-unsafe-swiftshader"],
 });
 const p = await b.newPage({ viewport: { width: 1280, height: 800 } });

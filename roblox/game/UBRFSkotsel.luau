@@ -203,11 +203,84 @@ return {
 			text = "Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag.",
 		},
 		{
+			id = "leda",
+			namn = "Led till ridhuset",
+			krav = true,
+			sitt = false,
+			text = "Led från vänster sida, vid bogen, med tyglarna över halsen. Hon går bredvid dig — inte efter, inte före.",
+		},
+		{
 			id = "sittupp",
 			namn = "Sitt upp",
 			krav = false,
 			sitt = true,
 			text = "Först nu. Kontrollera gjorden en sista gång och sitt upp från vänster.",
+		},
+	},
+	halsning = {
+		{
+			t = "Framifrån, och säg hennes namn",
+			ratt = true,
+			svar = "Hon lyfter huvudet och ser på dig. Nu vet hon att du är här.",
+		},
+		{
+			t = "Från sidan vid bogen, med handen på halsen",
+			ratt = true,
+			svar = "Bra. Hon känner handen innan hon ser dig — och du står där hon kan se dig.",
+		},
+		{
+			t = "Rakt bakifrån, tyst",
+			ratt = false,
+			svar = "Hon rycker till och slår upp huvudet. Bakifrån ser hon dig inte, och en häst som blir överrumplad sparkar först och tittar sedan.",
+		},
+	},
+	hovar = {
+		{
+			id = "vf",
+			namn = "Vänster fram",
+			text = "Stå vänd bakåt, stryk ner längs benet och be om foten. Kratsa från trakten mot tån.",
+		},
+		{
+			id = "vb",
+			namn = "Vänster bak",
+			text = "Håll handen på hennes höft hela vägen ner så hon vet var du är.",
+		},
+		{
+			id = "hb",
+			namn = "Höger bak",
+			text = "Gå runt framför henne, aldrig tätt bakom. Samma grepp på andra sidan.",
+		},
+		{
+			id = "hf",
+			namn = "Höger fram",
+			text = "Sista hoven. Titta efter sten i strålfårorna innan du släpper ner foten.",
+		},
+	},
+	eftervard = {
+		{
+			id = "gjord",
+			namn = "Lossa gjorden",
+			text = "Lossa några hål direkt. Sadeln ligger kvar en stund till — ryggen ska få komma tillbaka långsamt.",
+		},
+		{
+			id = "sadel",
+			namn = "Ta av sadeln",
+			text = "Sadel och underlägg av. Lägg handen på ryggen: den ska vara jämnt varm, utan ömma fläckar.",
+		},
+		{
+			id = "trans",
+			namn = "Ta av tränset",
+			text = "Grimma på först, sedan tränset av. Hon ska aldrig stå lös i gången.",
+		},
+		{
+			id = "ben",
+			namn = "Känn igenom benen",
+			text = "Nu, medan de är varma. En värme eller svullnad som inte fanns i morse ska ridläraren få veta om.",
+		},
+		{
+			id = "vatten",
+			namn = "Vatten och hö",
+			text = "När andningen gått ner. Hö på golvet och rent vatten — och ett tack innan du går.",
 		},
 	},
 }

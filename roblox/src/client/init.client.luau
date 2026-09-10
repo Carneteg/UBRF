@@ -222,6 +222,10 @@ PreparationController.start()
      första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
      av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]
 UgnetaController.start()
+--[[ #161: `?`-knappen byggs vid uppstart och lever hela sessionen. Att
+     bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
+     ska finnas i stallet också. ]]
+KontrollHjalp.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]
@@ -251,7 +255,31 @@ end)
      ligger före avsittningen: den är ett svar på ett kort som står uppe,
      och får aldrig kunna tolkas som något annat. ]]
 UserInputService.InputBegan:Connect(function(input, processed)
-	if processed or not ride then return end
+	if processed then return end
+
+	--[[ HJÄLPEN LIGGER FÖRE `not ride`-GRINDEN, och det är rättelsen i
+	     #161 (P2-4b ur #153).
+
+	     Hela den här lyssnaren började med `if processed or not ride then
+	     return end`, vilket var rätt för avsittning och lektionskort — de
+	     betyder ingenting när man står i stallet. Men det gällde alltså
+	     ÄVEN `H`: kontrollhjälpen gick bara att öppna medan man satt upp,
+	     och att stänga den och sitta av var samma sak som att bli av med
+	     den. Det var precis den oåterkalleliga stängningen QA rapporterade.
+
+	     `DPadUp` är gamepadens väg in, kontrollerat ledig: Input.luau tar
+	     Thumbstick1, ButtonA/B/R1/L1/R2/L2 och den här filen tar
+	     ButtonY/ButtonX. Styrkorset rörs av ingen av dem, och till
+	     skillnad från ButtonStart/ButtonSelect är det inte reserverat av
+	     Roblox egna menyer. Ingen befintlig rid-, hopp- eller
+	     replaybindning har flyttats. ]]
+	if input.KeyCode == Enum.KeyCode.H
+		or input.KeyCode == KontrollHjalp.GAMEPADKNAPP then
+		KontrollHjalp.vaxla()
+		return
+	end
+
+	if not ride then return end
 	--[[ G02-C: spelaren går vidare i lektionen. R och gamepadens Y är
 	     valda för att de INTE är bundna i ridningen — Input.luau tar
 	     W A S D, Space, Shift, Ctrl, Q, F, Z, C och ButtonA/B/R1/L1, och
@@ -284,12 +312,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.G then
 		if LektionController.gaVidare() then return end
 	end
-	--[[ H visar reglagen. Tangenten är fri: Input.luau tar W A S D, Space,
-	     Shift, Ctrl, Q, F, Z, C och spakarna, och E/R/T/G är tagna här. ]]
-	if input.KeyCode == Enum.KeyCode.H then
-		KontrollHjalp.vaxla()
-		return
-	end
+	--[[ H och styrkorset hanteras ovanför `not ride`-grinden — se noten
+	     där. Tangenten är fri: Input.luau tar W A S D, Space, Shift, Ctrl,
+	     Q, F, Z, C och spakarna, och E/R/T/G är tagna här. ]]
 	if input.KeyCode == Enum.KeyCode.E then
 		begarAvsittning()
 	end

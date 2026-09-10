@@ -19,4 +19,10 @@ return {
 	Hjalper = require(script.Hjalper),
 	Svar = require(script.Svar),
 	Kameralage = require(script.Kameralage),
+	--[[ #161. Preparation ligger MEDVETET utanför: den require:as direkt
+	     som `HorseCore.Preparation` av både server och klient, och att
+	     lägga den här hade gjort require-ordningen cirkulär i bänkbygget.
+	     Pass och Sparning är rena datamoduler utan sådana beroenden. ]]
+	Pass = require(script.Pass),
+	Sparning = require(script.Sparning),
 }

@@ -25,6 +25,34 @@ local function check(namn, villkor, detalj)
 	end
 end
 
+--[[ ── gorFas: en hel fas, genom den RIKTIGA vägen ────────────────
+
+	#161 tog bort `Preparation.utfor(state, fasId, hastId)`. Att kvittera
+	en hel fas med ett anrop VAR bypassen skivan skrevs för att stänga: en
+	klient som fick göra det kunde göra i ordning en häst på fem anrop utan
+	att röra ett moment.
+
+	Specen behöver ändå ofta komma FÖRBI en fas för att prova något som
+	ligger efter den. Den här hjälparen gör det genom att utföra fasens
+	moment ETT I TAGET med `Preparation.utforMoment` — alltså exakt den
+	väg `GameplayService.moment` går. Den är en genväg i PROVET, inte i
+	produktionen, och den kan inte gömma ett ordningsfel: faller ett
+	moment returnerar den momentets eget avslag.
+
+	Returnerar (ok, skäl) med samma form som den gamla `utfor`, så att
+	provets äldre fall mäter samma sak som förut. ]]
+local function gorFas(state, fasId, hastId)
+	local ok, skal = Preparation.provaSteg(state, fasId, hastId)
+	if not ok then return false, skal end
+	while true do
+		local m = Preparation.nastaMoment(state, fasId)
+		if not m then break end
+		local mok, mskal = Preparation.utforMoment(state, fasId, m.id, hastId)
+		if not mok then return false, mskal end
+	end
+	return true, nil
+end
+
 --[[ ── Fasordningen kommer ur exporten ────────────────────────────
 	Krav 11: ingen hårdkodad parallell lista i Luau. Provet läser samma
 	tabell som modulen, och kontrollerar att den kommer FRÅN skötseln. ]]
@@ -33,13 +61,16 @@ do
 		Preparation.FASER == UBRFSkotsel.faser,
 		"samma tabell, inte en kopia")
 
-	check("det finns fem faser", #Preparation.FASER == 5,
+	check("det finns sex faser", #Preparation.FASER == 6,
 		#Preparation.FASER .. " st")
 
 	local id = {}
 	for _, f in ipairs(Preparation.FASER) do table.insert(id, f.id) end
-	check("ordningen är hälsa → visitera → rykta → iordning → sittupp",
-		table.concat(id, ",") == "halsa,visitera,rykta,iordning,sittupp",
+	--[[ #161 la till `leda` mellan iordningställandet och uppsittningen.
+		Ordningen är hästkunskap: man leder till ridhuset och sitter upp
+		DÄR, inte i spiltan. ]]
+	check("ordningen är hälsa → visitera → rykta → iordning → leda → sittupp",
+		table.concat(id, ",") == "halsa,visitera,rykta,iordning,leda,sittupp",
 		table.concat(id, " → "))
 
 	--[[ HÄSTKUNSKAP, inte layout: visitationen måste ligga före ryktningen.
@@ -53,7 +84,7 @@ do
 	--[[ Uppsittningen är inte ett förberedelsesteg. Räknas den som ett blir
 		hästen redo att sitta upp på först efter att man redan suttit upp. ]]
 	local steg = Preparation.stegFaser()
-	check("uppsittningen räknas inte som ett steg", #steg == 4,
+	check("uppsittningen räknas inte som ett steg", #steg == 5,
 		#steg .. " steg av " .. #Preparation.FASER .. " faser")
 	check("den sitt-märkta fasen ligger sist",
 		Preparation.FASER[#Preparation.FASER].sitt == true,
@@ -74,38 +105,41 @@ do
 
 	check("första steget är att hälsa", Preparation.nasta(s).id == "halsa")
 
-	local ok, skal = Preparation.utfor(s, "rykta", "cosmo")
+	local ok, skal = gorFas(s, "rykta", "cosmo")
 	check("går inte att rykta först", not ok, tostring(skal))
 	check("ett avvisat steg flyttar inte fram förberedelsen",
 		Preparation.nasta(s).id == "halsa" and s.klara.rykta == nil)
 
-	check("hälsa går", (Preparation.utfor(s, "halsa", "cosmo")))
-	local ok2, skal2 = Preparation.utfor(s, "iordning", "cosmo")
+	check("hälsa går", (gorFas(s, "halsa", "cosmo")))
+	local ok2, skal2 = gorFas(s, "iordning", "cosmo")
 	check("går inte att hoppa över visitationen", not ok2, tostring(skal2))
 
-	check("visitera går som nästa", (Preparation.utfor(s, "visitera", "cosmo")))
-	local ok3, skal3 = Preparation.utfor(s, "visitera", "cosmo")
+	check("visitera går som nästa", (gorFas(s, "visitera", "cosmo")))
+	local ok3, skal3 = gorFas(s, "visitera", "cosmo")
 	check("samma steg går inte att göra två gånger", not ok3, tostring(skal3))
 
 	--[[ Uppsittningen får inte gå att kvittera som ett steg och därmed
 		hoppa över resten. ]]
-	local ok4 = Preparation.utfor(s, "sittupp", "cosmo")
+	local ok4 = gorFas(s, "sittupp", "cosmo")
 	check("uppsittningen går inte att utföra som ett steg", not ok4)
 
-	check("rykta går", (Preparation.utfor(s, "rykta", "cosmo")))
+	check("rykta går", (gorFas(s, "rykta", "cosmo")))
 	check("inte redo förrän allt är gjort", not Preparation.redo(s),
 		"återstår: " .. Preparation.nasta(s).id)
-	check("gör i ordning går", (Preparation.utfor(s, "iordning", "cosmo")))
-	check("redo när alla fyra är gjorda", Preparation.redo(s))
+	check("gör i ordning går", (gorFas(s, "iordning", "cosmo")))
+	check("inte redo förrän hästen är ledd", not Preparation.redo(s),
+		"återstår: " .. Preparation.nasta(s).id)
+	check("leda går", (gorFas(s, "leda", "cosmo")))
+	check("redo när alla fem är gjorda", Preparation.redo(s))
 end
 
 --[[ ── Krav 4 och 7: fel häst ─────────────────────────────────────── ]]
 do
 	local s = Preparation.nyState("cosmo")
-	local ok, skal = Preparation.utfor(s, "halsa", "air")
+	local ok, skal = gorFas(s, "halsa", "air")
 	check("steg på fel häst avvisas", not ok, tostring(skal))
 	check("fel häst hindrar inte rätt häst efteråt",
-		(Preparation.utfor(s, "halsa", "cosmo")))
+		(gorFas(s, "halsa", "cosmo")))
 end
 
 --[[ ── Krav 6: uppsittning före ready_to_mount ─────────────────────── ]]
@@ -115,7 +149,7 @@ do
 	check("oförberedd spelare får inte sitta upp", not ok, tostring(skal))
 
 	for _, f in ipairs(Preparation.stegFaser()) do
-		Preparation.utfor(s, f.id, "cosmo")
+		gorFas(s, f.id, "cosmo")
 	end
 	check("förberedd spelare får sitta upp", (Preparation.provaModell(s, "cosmo")))
 
@@ -256,10 +290,13 @@ end
 --[[ ── Vyn som går till klienten ───────────────────────────────────── ]]
 do
 	local s = Preparation.nyState("cosmo")
-	Preparation.utfor(s, "halsa", "cosmo")
+	gorFas(s, "halsa", "cosmo")
 	local vy = Preparation.vy(s, Preparation.STATUS.FORBEREDER)
 
-	check("vyn har ett steg per förberedelsefas", #vy.steg == 4, #vy.steg .. " rader")
+	--[[ Fem sedan #161: `leda` kom till mellan iordningställandet och
+		uppsittningen. Talet läses inte ur `stegFaser` här med flit —
+		en vy som tappar en rad ska fällas, inte följa med. ]]
+	check("vyn har ett steg per förberedelsefas", #vy.steg == 5, #vy.steg .. " rader")
 	check("vyn markerar det som är gjort", vy.steg[1].klar == true and vy.steg[2].klar == false)
 	check("vyn pekar ut nästa steg", vy.nasta == "visitera", tostring(vy.nasta))
 	check("vyn är inte redo än", vy.redo == false)
@@ -356,7 +393,7 @@ do
 		tostring(skal2))
 
 	for _, f in ipairs(Preparation.stegFaser()) do
-		Preparation.utfor(st, f.id, "cosmo")
+		gorFas(st, f.id, "cosmo")
 	end
 	local ok3, skal3 = HorseService.tryMount(spelare, cosmoModell)
 	check("färdig förberedelse SLÄPPS IGENOM till mount-logiken",
@@ -424,7 +461,7 @@ do
 	local snapshot = hello.OnServerInvoke(spelare)
 	check("handskakningen ger hela nuläget",
 		type(snapshot) == "table" and snapshot.hastId == hastId
-			and #snapshot.steg == 4 and type(snapshot.rev) == "number",
+			and #snapshot.steg == 5 and type(snapshot.rev) == "number",
 		"hastId=" .. tostring(snapshot and snapshot.hastId))
 
 	--[[ Steg hela vägen till redo. Avståndet kan inte prövas i bänken (ingen
@@ -433,7 +470,7 @@ do
 	local st = GameplayService.stateFor(spelare)
 	check("GameplayService håller ett tillstånd för spelaren", st ~= nil)
 	for _, f in ipairs(Preparation.stegFaser()) do
-		Preparation.utfor(st, f.id, hastId)
+		gorFas(st, f.id, hastId)
 	end
 
 	--[[ Produktionsregeln `bunden[player] == modell`: en ANNAN modell med
@@ -472,7 +509,7 @@ do
 
 	local st = Preparation.nyState("cosmo")
 	for _, f in ipairs(Preparation.stegFaser()) do
-		Preparation.utfor(st, f.id, "cosmo")
+		gorFas(st, f.id, "cosmo")
 	end
 	local snapshot = Preparation.vy(st, Preparation.STATUS.REDO, 1)
 	check("snapshoten är redo", snapshot.redo == true)
@@ -516,7 +553,7 @@ do
 		lyssnareVidAnrop = #sync.OnClientEvent._lyssnare
 		local st = Preparation.nyState("cosmo")
 		for _, f in ipairs(Preparation.stegFaser()) do
-			Preparation.utfor(st, f.id, "cosmo")
+			gorFas(st, f.id, "cosmo")
 		end
 		return Preparation.vy(st, Preparation.STATUS.REDO, 99)
 	end

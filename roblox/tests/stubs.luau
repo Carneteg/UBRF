@@ -238,6 +238,10 @@ local __services = {
 		_server = false,
 		IsClient = function(self) return not self._server end,
 		IsServer = function(self) return self._server == true end,
+		--[[ SparService binder sin sista skrivning till `BindToClose` bara
+		     utanför Studio. Bänken säger `false` — alltså "riktig server" —
+		     så att den vägen faktiskt registreras och går att prova. ]]
+		IsStudio = function() return false end,
 	},
 	Players = {
 		LocalPlayer = {
@@ -368,12 +372,79 @@ function __rs:WaitForChild(namn)
 	return ny
 end
 
+--[[ ── DATALAGRET (#161) ───────────────────────────────────────────
+
+     En stub som beter sig som `DataStoreService` i de tre avseenden
+     `SparService` bryr sig om: `GetAsync` returnerar det som skrivits,
+     `UpdateAsync` kör transformatorn på det lagrade värdet och skriver
+     tillbaka, och BÅDA kan fås att KASTA.
+
+     Felläget är hela poängen. Ett persistenslager vars felväg aldrig
+     provats är ett persistenslager vars felväg inte finns — och #161
+     kräver uttryckligen att ett DataStore-fel varken kraschar eller ger
+     gratis progression. `__datastore.felLas` / `.felSkriv` sätts av
+     provet, och `.forsok` räknar hur många gånger lagret faktiskt
+     anropades, så retryn går att mäta i stället för att antas.
+
+     `_data` är avsiktligt en vanlig tabell utan djupkopiering: det speglar
+     att Roblox serialiserar, inte att den delar referenser — och provet
+     som bryr sig om det (sammanslagningen) skriver därför alltid genom
+     `UpdateAsync`, precis som produktionen. ]]
+__datastore = {
+	_data = {},
+	felLas = false,
+	felSkriv = false,
+	--[[ Sant = `GetDataStore` självt kastar, alltså Studio utan
+	     API-åtkomst. Då ska spelet gå att spela ändå. ]]
+	felButik = false,
+	forsok = { las = 0, skriv = 0 },
+}
+
+function __datastore.nollstall()
+	__datastore._data = {}
+	__datastore.felLas = false
+	__datastore.felSkriv = false
+	__datastore.felButik = false
+	__datastore.forsok = { las = 0, skriv = 0 }
+end
+
+local __butik = {}
+function __butik:GetAsync(nyckel)
+	__datastore.forsok.las += 1
+	if __datastore.felLas then error("DataStore: läsning misslyckades (stub)") end
+	return __datastore._data[nyckel]
+end
+function __butik:SetAsync(nyckel, varde)
+	__datastore.forsok.skriv += 1
+	if __datastore.felSkriv then error("DataStore: skrivning misslyckades (stub)") end
+	__datastore._data[nyckel] = varde
+	return varde
+end
+function __butik:UpdateAsync(nyckel, fn)
+	__datastore.forsok.skriv += 1
+	if __datastore.felSkriv then error("DataStore: skrivning misslyckades (stub)") end
+	local nytt = fn(__datastore._data[nyckel])
+	__datastore._data[nyckel] = nytt
+	return nytt
+end
+
+__services.DataStoreService = {
+	GetDataStore = function(_, _namn)
+		if __datastore.felButik then error("DataStore: ingen API-åtkomst (stub)") end
+		return __butik
+	end,
+}
+
 game = {
 	GetService = function(_, name)
 		if name == "ReplicatedStorage" then return __rs end
 		return assert(__services[name], "ingen stub för tjänsten " .. name)
 	end,
 	Players = __services.Players,
+	--[[ `BindToClose` sparar sin callback så att provet kan fyra den —
+	     serverns sista skrivning är en av de vägar ett pass kan gå
+	     förlorat, och den ska gå att mäta. ]]
+	BindToClose = function(_, fn) __senasteBindToClose = fn end,
 }
 __ReplicatedStorage = __rs
 script = { Parent = __Core }
@@ -635,4 +706,10 @@ end
 task = {
 	delay = function(_, fn) __senasteDelay = fn end,
 	spawn = function(fn, ...) fn(...) end,
+	--[[ `wait` är en no-op i bänken. SparService backar av med 1-2-4
+	     sekunder mellan retryförsöken; en riktig väntan hade gjort
+	     felprovet sju sekunder långt utan att mäta något annat än att
+	     luau kan sova. Antalet FÖRSÖK är det som provas, och det räknar
+	     datalagerstubben. ]]
+	wait = function() return 0 end,
 }

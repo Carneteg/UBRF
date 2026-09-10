@@ -518,17 +518,16 @@ function ritaSadel(cx,W,H){
    blir en skada nästa pass — samma väg som slarv med hovarna. */
 /* Svarsalternativen. Det rätta är alltid att säga till — en elev
    diagnostiserar inte, hon rapporterar. De andra två är de frestande. */
-/* Framgången till hästen. Det första man gör, och den enda regel på en
-   ridskola som kan sluta illa på riktigt: hon ska se dig komma och höra
-   dig först. Aldrig rakt bakifrån, aldrig tyst. */
-const VISITGANG=[
-  {t:"Framifrån, och säg hennes namn", ratt:true,
-   svar:"Hon lyfter huvudet och ser på dig. Nu vet hon att du är här."},
-  {t:"Från sidan vid bogen, med handen på halsen", ratt:true,
-   svar:"Bra. Hon känner handen innan hon ser dig — och du står där hon kan se dig."},
-  {t:"Rakt bakifrån, tyst", ratt:false,
-   svar:"Hon rycker till och slår upp huvudet. Bakifrån ser hon dig inte, och en häst som blir överrumplad sparkar först och tittar sedan."},
-];
+/* Framgången till hästen låg HÄR som en egen `VISITGANG`-tabell, och det
+   var samma dubbla sanning som FASER skrevs för att ta bort: `halsa` var
+   en fas i src/spel/skotsel.js, men det den faktiskt LÄR UT bodde bara i
+   webbens momentfil. Roblox hade alltså fasen utan innehållet.
+
+   Innehållet är nu HALSNING i src/spel/skotsel.js — samma fil som
+   exporteras till roblox/game/UBRFSkotsel.luau — och den här raden är
+   bara webbens namn på den. Texten och ordningen är oförändrade; det som
+   flyttade var VAR de bor, inte VAD de säger. */
+const VISITGANG=HALSNING;
 const VIS={sedd:new Set(), fynd:null, oppen:null, svar:-1, t:0,
   gang:-1, ordningsfel:""};
 

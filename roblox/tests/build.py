@@ -76,8 +76,16 @@ FORBEREDELSE = SPEL + [
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    # #161: skotselns moment, passets eftervard och sparschemat. Rena
+    # datamoduler; de ligger fore tjansterna for att SparService require:ar
+    # Sparning och GameplayService require:ar bada.
+    ("Pass",         "src/shared/HorseCore/Pass.luau"),
+    ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("HorseService", "src/server/HorseService.luau"),
+    # SparService FORE StallService: StallService.hastminnen laser saven ur
+    # den. Ordningen ar samma som init.server.luau har.
+    ("SparService",  "src/server/SparService.luau"),
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
@@ -152,6 +160,10 @@ KLIENT = SPEL + [
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
     ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
     ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    # #161: klientbanken kor init.client.luau, och PreparationController
+    # ritar numera bade skotselmoment och passets eftervard.
+    ("Pass",         "src/shared/HorseCore/Pass.luau"),
+    ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("Ugneta",       "src/shared/HorseCore/Ugneta.luau"),
     ("Lektion",      "src/shared/HorseCore/Lektion.luau"),
@@ -249,7 +261,14 @@ def inlina(kalla: str) -> str:
 def bygg(spec_rel: str) -> pathlib.Path:
     # Ordningen ar viktig: "forberedelse" far inte falla igenom till MODULER,
     # dar varken UBRFSkotsel eller Stallet finns. Testas forst av det skalet.
-    if "klient" in spec_rel:
+    # #161: skotselpass.spec provar skotselns moment, passets eftervard och
+    # DataStore-lagret. Den behover HELA FORBEREDELSE-bunten, och maste
+    # testas FORE "spel" — filnamnet innehaller inte "spel", men den ska
+    # heller inte falla igenom till MODULER dar varken UBRFSkotsel,
+    # Sparning eller SparService finns.
+    if "skotselpass" in spec_rel:
+        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+    elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:
         moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"
@@ -286,7 +305,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
                     "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
-                    "Inspelning", "Kameralage"):
+                    "Inspelning", "Kameralage", "Pass", "Sparning"):
             delar.append(f"__Core.{namn} = {namn}\n")
     delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
     UT.mkdir(parents=True, exist_ok=True)
@@ -298,4 +317,9 @@ if __name__ == "__main__":
     specar = sys.argv[1:] or ["tests/movement.spec.luau"]
     for s in specar:
         p = bygg(s)
-        print(f"{p.relative_to(ROT.parent)}: {len(p.read_text())} tecken")
+        # encoding="utf-8" ar inte kosmetiskt: specarna innehaller a, a och
+        # o, och pa en Windows-varddator dar Python defaultar till cp1252
+        # kastade den har raden UnicodeDecodeError och FALLDE HELA BYGGET
+        # innan en enda spec kordes. Samma klass av portabilitetsfel som
+        # #159 rattade for sokvagarna.
+        print(f"{p.relative_to(ROT.parent)}: {len(p.read_text(encoding='utf-8'))} tecken")

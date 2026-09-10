@@ -47,8 +47,79 @@ const FASER=[
    text:"Skrapa, kardborste, mjuk borste. Huvudet bara med den mjuka."},
   {id:"iordning",namn:"Gör i ordning", krav:true,  sitt:false,
    text:"Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag."},
+  {id:"leda",    namn:"Led till ridhuset", krav:true, sitt:false,
+   text:"Led från vänster sida, vid bogen, med tyglarna över halsen. Hon går bredvid dig — inte efter, inte före."},
   {id:"sittupp", namn:"Sitt upp",      krav:false, sitt:true,
    text:"Först nu. Kontrollera gjorden en sista gång och sitt upp från vänster."},
+];
+
+/* ── HÄLSNINGEN ─────────────────────────────────────────────────────
+   Fasen `halsa` fanns i FASER ovan, men det den LÄR UT låg bara i
+   webbens src/moment.js som `VISITGANG`. Roblox fick alltså fasen utan
+   innehållet — exakt den dubbla sanningen den här filen finns för att
+   ta bort. Texterna nedan är ordagrant flyttade, inte omskrivna.
+
+   Det här är den enda regeln på en ridskola som kan sluta illa på
+   riktigt: hon ska se dig komma och höra dig först. Aldrig rakt
+   bakifrån, aldrig tyst. Två av tre val är rätt, och det är meningen —
+   det finns mer än ett sätt att göra rätt, men bara ett sätt att göra
+   fel som gör ont. */
+const HALSNING=[
+  {t:"Framifrån, och säg hennes namn", ratt:true,
+   svar:"Hon lyfter huvudet och ser på dig. Nu vet hon att du är här."},
+  {t:"Från sidan vid bogen, med handen på halsen", ratt:true,
+   svar:"Bra. Hon känner handen innan hon ser dig — och du står där hon kan se dig."},
+  {t:"Rakt bakifrån, tyst", ratt:false,
+   svar:"Hon rycker till och slår upp huvudet. Bakifrån ser hon dig inte, och en häst som blir överrumplad sparkar först och tittar sedan."},
+];
+
+/* ── HOVARNA ────────────────────────────────────────────────────────
+   Fyra hovar, i den ordning man tar dem: vänster fram, vänster bak,
+   höger bak, höger fram. Man går ETT varv runt hästen och slutar där
+   man började, i stället för att korsa fram och tillbaka under henne.
+
+   Webben har hovmomentet i src/moment.js (HOV, fyra index 0–3) men har
+   aldrig haft hovarnas identitet som data — därför kunde Roblox inte
+   veta vilken hov spelaren lyfte. Namnen är standardsvenska, inte
+   UBRF-specifika, och benföljden vf/hf/vb/hb används redan i
+   src/scen3d.js. */
+const HOVAR=[
+  {id:"vf", namn:"Vänster fram",
+   text:"Stå vänd bakåt, stryk ner längs benet och be om foten. Kratsa från trakten mot tån."},
+  {id:"vb", namn:"Vänster bak",
+   text:"Håll handen på hennes höft hela vägen ner så hon vet var du är."},
+  {id:"hb", namn:"Höger bak",
+   text:"Gå runt framför henne, aldrig tätt bakom. Samma grepp på andra sidan."},
+  {id:"hf", namn:"Höger fram",
+   text:"Sista hoven. Titta efter sten i strålfårorna innan du släpper ner foten."},
+];
+
+/* ── EFTERVÅRDEN ────────────────────────────────────────────────────
+   Passet slutar inte när man sitter av. Det slutar när hästen är
+   omhändertagen — och att den ordningen är gameplay och inte en
+   avslutningsskärm är hela poängen med `CLAUDE.md`:s rad om att
+   ansvaret kring hästen ÄR spelet.
+
+   Ordningen är inte godtycklig:
+     · gjorden lossas först, medan sadeln fortfarande ligger still,
+     · sadeln av innan tränset, annars står hon lös med sadeln kvar,
+     · benen känns igenom medan de fortfarande är varma efter arbetet —
+       det är då en värme går att känna,
+     · vatten och hö sist, när hon andats ut.
+
+   Inget här är en UBRF-detalj som hittats på: det är samma allmänna
+   hästkunskap som resten av filen. */
+const EFTERVARD=[
+  {id:"gjord",  namn:"Lossa gjorden",
+   text:"Lossa några hål direkt. Sadeln ligger kvar en stund till — ryggen ska få komma tillbaka långsamt."},
+  {id:"sadel",  namn:"Ta av sadeln",
+   text:"Sadel och underlägg av. Lägg handen på ryggen: den ska vara jämnt varm, utan ömma fläckar."},
+  {id:"trans",  namn:"Ta av tränset",
+   text:"Grimma på först, sedan tränset av. Hon ska aldrig stå lös i gången."},
+  {id:"ben",    namn:"Känn igenom benen",
+   text:"Nu, medan de är varma. En värme eller svullnad som inte fanns i morse ska ridläraren få veta om."},
+  {id:"vatten", namn:"Vatten och hö",
+   text:"När andningen gått ner. Hö på golvet och rent vatten — och ett tack innan du går."},
 ];
 
 const RYKTZON=[

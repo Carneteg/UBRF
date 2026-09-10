@@ -35,7 +35,10 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Lektionen vidare | `R` | `Y` | kortets knapp |
 | Se ritten (ridanalys) | `T` | `X` | *Se ritten* |
 | Gå vidare | `G` | — | *Gå vidare* |
-| Kontrollhjälp | `H` | — | panelens *Stäng* |
+| Kontrollhjälp — öppna/stäng | `H` | `DPadUp` | `?`-knappen uppe till höger |
+| Kontrollhjälp — stäng | `H` | `DPadUp` | panelens *Stäng* |
+| Skötselmoment | — | — | momentknapparna i skötsel-HUD:en |
+| Eftervårdsmoment | — | — | samma knappar, efter avsittning |
 
 ## Webb
 
@@ -95,6 +98,61 @@ tygeln"* respektive *"avsprånget kommer ur anridningen"*.
    fryses ridningen, och `Input.consume()` körs ändå och kastas så att
    engångsflankerna inte sparas till efter pausen.
 5. **Minst 44 px träffyta** på varje knapp spelaren måste kunna nå.
+6. **Hjälpen går alltid att öppna igen.** En panel som bara går att stänga
+   är en engångsruta, och det var precis felet #153 rapporterade som
+   P2-4b: `H` fanns, men på en iPad utan tangentbord fanns ingen väg
+   tillbaka när panelen väl var bortstängd.
+
+## Kontrollhjälpens gamepadknapp — varför `DPadUp`
+
+`DPadUp` valdes för #161 därför att den är **ledig**, och det är
+kontrollerat mot källan, inte antaget:
+
+| Bunden | Av | Till |
+|---|---|---|
+| `Thumbstick1` | `Input.luau` | styrning och framåt |
+| `ButtonA` | `Input.luau` | hopp |
+| `ButtonB` | `Input.luau` | halvhalt |
+| `ButtonR1` / `ButtonL1` | `Input.luau` | gångart upp / ner |
+| `ButtonR2` | `Input.luau` | tygel |
+| `ButtonL2` | `Input.luau` | sits |
+| `ButtonY` | `init.client.luau` | lektionen vidare |
+| `ButtonX` | `init.client.luau` | se ritten |
+
+Styrkorset rörs av ingen av dem. `ButtonStart` och `ButtonSelect`
+valdes bort trots att de också är obundna i UBRF: de är reserverade av
+Roblox egna menyer på konsol, och en hjälpknapp som ibland öppnar
+Roblox-menyn i stället är sämre än ingen.
+
+**Ingen befintlig rid-, hopp- eller replaybindning har flyttats** för att
+göra plats. Det var ett uttryckligt krav i #161.
+
+`roblox/tests/klient.spec.luau` läser `KontrollHjalp.GAMEPADKNAPP` ur
+modulen, kontrollerar att den inte finns i listan ovan, och fyrar den
+genom klientens egen `InputBegan` — så tabellen här går att kontrollera
+mot källan i stället för mot minnet.
+
+## Skötselns moment (#161)
+
+Skötseln kvitteras inte längre med ett tryck per fas. Varje fas har
+**moment**, och de trycks på i skötsel-HUD:en:
+
+| Fas | Moment | Ordningskrav |
+|---|---|---|
+| Hälsa lugnt | de tre framgångssätten | ett **val**, inte en lista |
+| Visitera | fem punkter | strikt, framifrån och bakåt |
+| Rykta | tre redskap × sina zoner | **redskapsordningen** är strikt, zonordningen fri |
+| Gör i ordning | fyra hovar, sedan fyra utrustningssteg | strikt |
+| Led till ridhuset | ett moment | — |
+| Eftervård | fem steg efter avsittning | strikt |
+
+Momenten **härleds ur `src/spel/skotsel.js`**, inte ur en Luau-lista. En
+ny visitpunkt i JS-källan blir ett moment på Roblox utan att en rad Luau
+ändras.
+
+Momentknapparna är 44 px höga (`PreparationController.TRAFFYTA`).
+Fasraderna ovanför dem är **inte** tryckbara — de är en lägesvisning, och
+behöver därför inte samma yta.
 
 ## Not tested
 
@@ -103,3 +161,14 @@ rätt i handen, att gamepadens knappar sitter där fingret väntar sig dem,
 och att pekknapparna går att träffa under en ritt på en riktig iPad är
 `NOT_TESTED` — Studio, fysisk touch och fysisk gamepad är separata
 manuella grindar.
+
+Särskilt `NOT_TESTED` efter #161, och uttryckligen inte omskrivet till
+PASS:
+
+- att `DPadUp` faktiskt fyrar på en fysisk handkontroll (bänken fyrar
+  `InputBegan` själv — den provar bindningen, inte hårdvaran),
+- att `?`-knappen uppe till höger går att träffa med tummen medan man
+  håller i en iPad, och att den inte hamnar under Roblox egen topbar på
+  en enhet med hak,
+- att skötselns momentlista går att rulla och trycka på under ett riktigt
+  pass, med två tummar samtidigt.

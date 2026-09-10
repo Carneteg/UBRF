@@ -20,6 +20,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Stallet = require(ReplicatedStorage.Stallet)
+local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
+local SparService = require(script.Parent.SparService)
 
 local StallService = {}
 
@@ -111,12 +113,24 @@ end
 
 --[[ Spelarens sparade hästminnen, i webbens form: `{ [id] = { skada = … } }`.
 
-	EN ENDA PLATS ATT KOPPLA IN ETT MINNE. I dag finns inget varaktigt lager
-	på Roblox, så den returnerar nil och välfärdsmängden blir tom. Den dagen
-	ett DataStore eller motsvarande läggs till är det HÄR det hämtas — inte
-	genom att sprida läsningar ut i tilldelningen. ]]
-function StallService.hastminnen(_player: Player): { [string]: any }?
-	return nil
+	EN ENDA PLATS ATT KOPPLA IN ETT MINNE, och sedan #161 är den inkopplad.
+	PR #154 lämnade den som `return nil` med noten *"den dagen ett DataStore
+	läggs till är det HÄR det hämtas — inte genom att sprida läsningar ut i
+	tilldelningen"*. Den dagen är nu, och noten höll: det blev en rad.
+
+	Formen konverteras inte. `Sparning.hastminnen` returnerar exakt den
+	tabell `Stallet.vilandeHastar` redan läser, som i sin tur är webbens
+	form i `src/ryttare.js`. En översättning här hade blivit en tredje
+	sanning om samma sak.
+
+	Faller läsningen ur datalagret är saven tom och mängden blir tom — och
+	det är rätt fail-läge för just den här frågan: en spelare som inte kan
+	nå sin sparfil ska kunna rida, inte nekas häst. Skadan går ändå inte
+	förlorad, för `SparService` skriver inte över en sparfil den inte kunde
+	läsa. ]]
+function StallService.hastminnen(player: Player): { [string]: any }?
+	local save = SparService.save(player)
+	return save and Sparning.hastminnen(save) or nil
 end
 
 function StallService.tilldela(player: Player)

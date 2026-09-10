@@ -19,6 +19,35 @@
 	och inget hoppreglage (avsprånget kommer ur anridningen). Att skriva
 	Roblox-tangenter i webbens hjälp, eller tvärtom, vore att påstå en
 	paritet som inte finns. Varje yta visar sina egna.
+
+	── ÅTERÖPPNINGEN (#161) ─────────────────────────────────────────
+
+	Panelen gick att STÄNGA på varje yta men bara att ÖPPNA med `H`. På en
+	iPad utan tangentbord var hjälpen därmed en engångsruta: när den väl
+	var bortstängd fanns ingen väg tillbaka. QA-rapporten i #153 kallade
+	det P2-4b, och #161 löser det med tre vägar in, en per inmatning:
+
+	  · tangentbord  `H`, oförändrad,
+	  · pekskärm     en liten permanent `?`-knapp uppe till höger,
+	  · gamepad      `DPadUp`.
+
+	`DPadUp` är vald för att den är LEDIG, och det är kontrollerat, inte
+	antaget: `Input.luau` binder Thumbstick1, ButtonA, ButtonB, ButtonR1,
+	ButtonL1, ButtonR2 och ButtonL2, och `init.client.luau` binder ButtonY
+	(lektionen vidare) och ButtonX (se ritten). Styrkorset rörs inte av
+	någon av dem, och till skillnad från ButtonStart och ButtonSelect är
+	det inte heller reserverat av Roblox egna menyer. Ingen rid-, hopp-
+	eller replaybindning har flyttats för att göra plats — det var ett
+	uttryckligt krav i #161.
+
+	`?`-KNAPPEN ÄR EGEN GUI, inte en del av `TouchControls`. Skälet är att
+	`TouchControls` rivs vid avsittning: en hjälpknapp som bara finns i
+	sadeln hade varit borta i stallet, alltså precis när frågan "vad gör
+	jag nu?" är som vanligast. Den ligger uppe till höger, där varken
+	spaken (nere vänster), ridknapparna (nere höger), förberedelse-HUD:en
+	(nere mitten), Ugnetas kort (uppe mitten) eller ridanalysen (uppe
+	vänster) ligger — och därmed blockerar den varken ridkontroller eller
+	replay.
 ]]
 
 local Players = game:GetService("Players")
@@ -32,6 +61,9 @@ local gui: ScreenGui? = nil
 local panel: Frame? = nil
 local rader: { TextLabel } = {}
 local visadEnGang = false
+--[[ Den permanenta öppningsknappen. Egen ScreenGui, se filhuvudet. ]]
+local oppnaGui: ScreenGui? = nil
+local oppnaKnapp: TextButton? = nil
 
 local FARG_MORK = Color3.fromRGB(12, 14, 18)
 local FARG_TEXT = Color3.fromRGB(246, 242, 232)
@@ -62,7 +94,16 @@ local RADER = {
 	{ vad = "Halvhalt",           tgb = "F",        pad = "B",        pek = "HALVHALT" },
 	{ vad = "Djupare sits",       tgb = "Z / C",    pad = "L2",       pek = "DJUP SITS" },
 	{ vad = "Hoppa",              tgb = "Space",    pad = "A",        pek = "HOPP" },
+	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
+	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
+	     hade varit precis det problemet raden beskriver. ]]
+	{ vad = "Den här hjälpen",    tgb = "H",        pad = "Styrkors upp", pek = "?" },
 }
+
+--[[ Reglaget som öppnar hjälpen igen, per inmatning. Publik för att provet
+     ska läsa samma beslut som panelen — och för att `docs/KONTROLLMATRIS.md`
+     ska gå att kontrollera mot källan i stället för mot minnet. ]]
+KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
 
 --[[ Vilken sorts inmatning ska hjälpen tala om? Publik för att provet ska
      kunna läsa samma beslut som panelen. ]]
@@ -180,16 +221,95 @@ local function fyll()
 	end
 end
 
+--[[ ── ÖPPNINGSKNAPPEN ──────────────────────────────────────────────
+
+     En egen ScreenGui som lever hela sessionen. `ResetOnSpawn = false` gör
+     att den överlever respawn; `IgnoreGuiInset = false` gör att den lägger
+     sig UNDER Roblox egen topbar i stället för bakom den.
+
+     48 px, alltså över golvet på 44 som `docs/KONTROLLMATRIS.md` regel 5
+     sätter och som resten av pek-UI:t redan följer. Träffytan är knappens
+     egen storlek — ingen genomskinlig marginal som ser mindre ut än den
+     är, och ingen etikett som sticker utanför sin knapp.
+
+     Den ritas för TOUCH och GAMEPAD men inte för en ren tangentbords-
+     klient: där finns `H`, och en musanvändare får ändå knappen om hon
+     saknar tangentbord. Samma regel som resten av modulen — reglagen
+     följer inmatningen, inte plattformen. ]]
+local KNAPPSTORLEK = 48
+
+local function byggOppna()
+	if oppnaGui then return end
+	if UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled then
+		--[[ Ren tangentbordsklient: `H` finns och knappen skulle bara ta
+		     plats. Beslutet läses om vid varje `KontrollHjalp.start`, så en
+		     iPad som kopplar bort sitt tangentbord får knappen. ]]
+		return
+	end
+	local g = Instance.new("ScreenGui")
+	g.Name = "UBRFHjalpknapp"
+	g.ResetOnSpawn = false
+	g.IgnoreGuiInset = false
+	--[[ Under ridanalysen (20) men över kontrollpanelen (15): panelen ska
+	     kunna ligga över knappen utan att knappen försvinner bakom den. ]]
+	g.DisplayOrder = 16
+	g.Parent = player:WaitForChild("PlayerGui")
+	oppnaGui = g
+
+	local b = Instance.new("TextButton")
+	b.Name = "Hjalp"
+	b.AnchorPoint = Vector2.new(1, 0)
+	b.Position = UDim2.new(1, -12, 0, 12)
+	b.Size = UDim2.fromOffset(KNAPPSTORLEK, KNAPPSTORLEK)
+	b.BackgroundColor3 = FARG_MORK
+	b.BackgroundTransparency = 0.12
+	b.TextColor3 = FARG_GULD
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 22
+	b.Text = "?"
+	b.AutoButtonColor = true
+	b.BorderSizePixel = 0
+	b.Parent = g
+	local horn = Instance.new("UICorner")
+	horn.CornerRadius = UDim.new(1, 0)
+	horn.Parent = b
+	b.Activated:Connect(function() KontrollHjalp.vaxla() end)
+	oppnaKnapp = b
+end
+
+--[[ Knappen göms medan panelen står uppe: panelen har sin egen `Stäng`, och
+     två reglage för samma sak på skärmen samtidigt är en fråga, inte en
+     hjälp. Den kommer tillbaka i samma ögonblick panelen stängs. ]]
+local function speglaOppna()
+	local b = oppnaKnapp
+	if b then b.Visible = not KontrollHjalp.synlig() end
+end
+
 function KontrollHjalp.visa()
 	bygg()
 	fyll()
 	local g = gui
 	if g then g.Enabled = true end
+	speglaOppna()
 end
 
 function KontrollHjalp.dolj()
 	local g = gui
 	if g then g.Enabled = false end
+	speglaOppna()
+end
+
+--[[ Startas av `init.client.luau`. Bygger bara öppningsknappen — panelen
+     byggs först när den behövs, som förut. ]]
+function KontrollHjalp.start()
+	byggOppna()
+	speglaOppna()
+end
+
+--[[ Provkrok: knappen som faktiskt ritats, eller nil när inmatningen inte
+     ska ha någon. Provet läser den i stället för att bygga en egen. ]]
+function KontrollHjalp._oppnaKnapp(): TextButton?
+	return oppnaKnapp
 end
 
 function KontrollHjalp.synlig(): boolean

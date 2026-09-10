@@ -190,6 +190,20 @@ local function setRider(session: Session, player: Player?)
 	end
 
 	Net.get("MountChanged"):FireAllClients(session.rig.model, player)
+
+	--[[ Aviseringen sist, när allt annat är gjort: kroken ska se ett
+		färdigt tillstånd, inte ett halvt. ]]
+	local hook = riderHook
+	if hook then
+		if previous and previous ~= player then
+			local ok, fel = pcall(hook, previous, false)
+			if not ok then warn("[Horse] ryttarkroken (av) kastade: " .. tostring(fel)) end
+		end
+		if player then
+			local ok, fel = pcall(hook, player, true)
+			if not ok then warn("[Horse] ryttarkroken (upp) kastade: " .. tostring(fel)) end
+		end
+	end
 end
 
 --[[ Förberedelsegrinden.
@@ -207,6 +221,28 @@ local mountGate: ((Player, Model) -> (boolean, string?))? = nil
 
 function HorseService.setMountGate(gate: ((Player, Model) -> (boolean, string?))?)
 	mountGate = gate
+end
+
+--[[ RYTTARKROKEN (#161).
+
+	`GameplayService` behöver veta NÄR någon satt sig upp eller av, för att
+	driva passets läge — och den behöver veta det för VARJE väg in och ut,
+	inte bara för `MountRequest`. En krok på fjärranropet hade missat
+	karaktärens död, respawn, utloggning och en modell som tas bort ur
+	världen, och just de fallen är de som lämnar ett pass hängande.
+
+	Den ligger därför i `setRider`, som är den enda punkt all uppsittning
+	och avsittning faktiskt passerar — exakt samma resonemang som gjorde
+	att `mountGate` sitter i `tryMount` och inte på remoten.
+
+	Kroken får INTE avgöra något. Den är en avisering, inte en grind; ett
+	fel i den ska inte kunna hindra en avsittning, och därför är anropet
+	inkapslat i pcall. En spökryttare som sitter kvar för att en HUD
+	kastade vore värre än en HUD som visar fel. ]]
+local riderHook: ((Player, boolean) -> ())? = nil
+
+function HorseService.setRiderHook(hook: ((Player, boolean) -> ())?)
+	riderHook = hook
 end
 
 function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
