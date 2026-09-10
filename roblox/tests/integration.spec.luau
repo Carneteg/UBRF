@@ -520,6 +520,48 @@ do
 	stadaSession(S)
 end
 
+print("\n── Punkt 11b: kvittot är det som håller när skrivningen faller ──")
+do
+	--[[ DEN VÄG SOM FAKTISKT KAN RÄKNA TVÅ GÅNGER.
+	Mätningen ovan är sann men slö: `Pass.markeraRaknat` har satt läget
+	till `recorded`, så det andra avslutet nekas redan av läget och
+	kvittot i `Sparning.registreraPass` provas inte. Det syntes när
+	kvittot muterades bort — grinden förblev grön.
+
+	Vägen som verkligen kallar `registreraPass` två gånger med samma
+	`passId` är den som koden själv beskriver: SKRIVNINGEN FALLER.
+	Passet räknas då i minnesbilden men markeras INTE räknat, just för
+	att nästa försök ska ta det igen. Kommer det försöket fram ska
+	dagen ändå vara ETT pass. ]]
+	local T = nySession("Kvitto", 9207)
+	local okT = skotselGenomTjansten(T.spelare)
+	check("skötseln går igenom", okT == true)
+	HorseService.tryMount(T.spelare, T.modell)
+	HorseService.dismount(T.spelare)
+
+	--[[ Skrivningen faller under hela eftervården. ]]
+	__datastore.felSkriv = true
+	for _, m in ipairs(Pass.moment()) do
+		GameplayService.eftervard(T.spelare, m.id)
+	end
+	local p = GameplayService.passFor(T.spelare)
+	local saveT = SparService.save(T.spelare)
+	check("passet är räknat i minnet trots att skrivningen föll",
+		saveT.pass == 1, tostring(saveT.pass))
+	check("men INTE markerat räknat — nästa försök ska ta det igen",
+		p.lage ~= Pass.LAGE.RAKNAT, tostring(p.lage))
+
+	--[[ Nästa försök går fram. Kvittot är det enda som står mellan
+		spelaren och två pass för en dag. ]]
+	__datastore.felSkriv = false
+	GameplayService.avslutaPass(T.spelare)
+	check("det andra avslutet ger fortfarande ETT pass", saveT.pass == 1,
+		tostring(saveT.pass))
+	check("och nu är passet markerat räknat", p.lage == Pass.LAGE.RAKNAT,
+		tostring(p.lage))
+	stadaSession(T)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	os.exit(1)

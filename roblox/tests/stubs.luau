@@ -814,10 +814,18 @@ local function __nyInstans(klass)
 		function inst:PivotTo(cf) self._pivot = cf end
 		function inst:GetPivot() return self._pivot end
 	end
+	--[[ `GetFullName` går uppåt tills något inte längre är en instans.
+	     Bänkens `workspace` är en vanlig tabell utan Name, och en
+	     ovillkorlig klättring stoppade då in nil i listan och KRASCHADE —
+	     mitt i ett felmeddelande, vilket är precis när man behöver att den
+	     fungerar. ]]
 	function inst:GetFullName()
 		local led, nod = {}, self
-		while nod do
-			table.insert(led, 1, nod.Name ~= "" and nod.Name or nod.ClassName)
+		while type(nod) == "table" do
+			local namn = rawget(nod, "Name")
+			if type(namn) ~= "string" or namn == "" then namn = rawget(nod, "ClassName") end
+			if type(namn) ~= "string" then break end
+			table.insert(led, 1, namn)
 			nod = rawget(nod, "Parent")
 		end
 		return table.concat(led, ".")
