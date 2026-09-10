@@ -68,6 +68,9 @@ return {
 				kort = "cirklar",
 				farg = Color3.fromRGB(127, 180, 137),
 				text = "Cirklar på musklerna. Aldrig över ben eller huvud.",
+				namnEn = "Rubber curry comb",
+				kortEn = "circles",
+				textEn = "Circles on the muscles. Never over legs or head.",
 			},
 			{
 				id = "hard",
@@ -75,6 +78,9 @@ return {
 				kort = "korta drag",
 				farg = Color3.fromRGB(214, 174, 60),
 				text = "Korta drag med hårets riktning — bakåt.",
+				namnEn = "Dandy brush",
+				kortEn = "short strokes",
+				textEn = "Short strokes with the lie of the coat — backwards.",
 			},
 			{
 				id = "mjuk",
@@ -82,6 +88,9 @@ return {
 				kort = "långa drag",
 				farg = Color3.fromRGB(191, 212, 222),
 				text = "Långa drag, hela kroppen och benen.",
+				namnEn = "Soft brush",
+				kortEn = "long strokes",
+				textEn = "Long strokes, the whole body and the legs.",
 			},
 		},
 		krav = {
@@ -98,19 +107,33 @@ return {
 				"mjuk",
 			},
 		},
+		zonnamn = {
+			kropp = "kropp",
+			ben = "ben",
+			huvud = "huvud",
+		},
+		zonnamnEn = {
+			kropp = "body",
+			ben = "legs",
+			huvud = "head",
+		},
 	},
 	sadelfaser = {
 		{
 			t = "Lägg underlägget högt på manken och skjut det bakåt i hårets riktning.",
+			tEn = "Lay the numnah high on the withers and slide it back with the lie of the coat.",
 		},
 		{
 			t = "Lägg sadeln lite för långt fram och skjut den bakåt på plats, bakom bogbladet.",
+			tEn = "Set the saddle a little too far forward and slide it back into place, behind the shoulder blade.",
 		},
 		{
 			t = "Klicka i sadelbommen och lyft upp underlägget — manken ska vara fri.",
+			tEn = "Fasten the numnah to the saddle and lift it up into the gullet — the withers must be clear.",
 		},
 		{
 			t = "Gjorda i tre tag, med en paus emellan. Aldrig allt på en gång.",
+			tEn = "Do up the girth in three stages, with a pause between each. Never all at once.",
 		},
 	},
 	visitation = {
@@ -121,6 +144,8 @@ return {
 				y = 0.283,
 				namn = "Ögon och nos",
 				ok = "Klara ögon, torr nos. %N ser dig i ögonen — hon är pigg idag.",
+				namnEn = "Eyes and nose",
+				okEn = "Clear eyes, dry nose. %N looks you in the eye — she is bright today.",
 			},
 			{
 				id = "mun",
@@ -128,6 +153,8 @@ return {
 				y = 0.33,
 				namn = "Mungiporna",
 				ok = "Mjuka och hela. Bettet har inte skavt sedan sist.",
+				namnEn = "Corners of the mouth",
+				okEn = "Soft and unbroken. The bit has not rubbed since last time.",
 			},
 			{
 				id = "sadel",
@@ -135,6 +162,8 @@ return {
 				y = 0.335,
 				namn = "Sadelläget",
 				ok = "Slät och sval rygg. %N står still när du trycker — inget ömmar.",
+				namnEn = "Saddle area",
+				okEn = "Smooth, cool back. %N stands still when you press — nothing is sore.",
 			},
 			{
 				id = "gjord",
@@ -142,6 +171,8 @@ return {
 				y = 0.56,
 				namn = "Gjordläget",
 				ok = "Ingen svullnad bakom bogen. Huden är len där gjorden ska gå.",
+				namnEn = "Girth area",
+				okEn = "No swelling behind the shoulder. The skin is smooth where the girth will lie.",
 			},
 			{
 				id = "ben",
@@ -149,6 +180,8 @@ return {
 				y = 0.72,
 				namn = "Benen",
 				ok = "Svala och tunna hela vägen ner. %N lyfter foten innan du hinner be om det.",
+				namnEn = "Legs",
+				okEn = "Cool and clean all the way down. %N lifts the foot before you can even ask.",
 			},
 		},
 		fynd = {
@@ -158,18 +191,28 @@ return {
 			gjord = "Huden är röd och skavd efter gjorden.",
 			ben = "Höger framben är varmare än det vänstra.",
 		},
+		fyndEn = {
+			ogon = "Her nose is running and her eyes are a little dull.",
+			mun = "A small scab in the left corner of her mouth.",
+			sadel = "A warm, sore spot right where the saddle goes.",
+			gjord = "The skin is red and rubbed where the girth sits.",
+			ben = "The right foreleg is warmer than the left.",
+		},
 		svar = {
 			{
 				t = "Säg till ridläraren",
 				ratt = true,
+				tEn = "Tell the instructor",
 			},
 			{
 				t = "Det går nog bra idag",
 				ratt = false,
+				tEn = "It will probably be fine today",
 			},
 			{
 				t = "Lös det själv och sadla",
 				ratt = false,
+				tEn = "Sort it out yourself and tack up",
 			},
 		},
 	},
@@ -180,6 +223,8 @@ return {
 			krav = false,
 			sitt = false,
 			text = "Gå fram från sidan där hon ser dig och säg till innan du rör henne. Aldrig rakt bakifrån.",
+			namnEn = "Greet her calmly",
+			textEn = "Walk up from the side where she can see you, and speak to her before you touch her. Never straight from behind.",
 		},
 		{
 			id = "visitera",
@@ -187,6 +232,8 @@ return {
 			krav = true,
 			sitt = false,
 			text = "Ögon, mungipor, sadelläge, gjordläge och ben. Hittar du något: säg till ridläraren.",
+			namnEn = "Check her over",
+			textEn = "Eyes, corners of the mouth, saddle area, girth area and legs. If you find something: tell the instructor.",
 		},
 		{
 			id = "rykta",
@@ -194,6 +241,8 @@ return {
 			krav = true,
 			sitt = false,
 			text = "Skrapa, kardborste, mjuk borste. Huvudet bara med den mjuka.",
+			namnEn = "Groom",
+			textEn = "Curry comb, dandy brush, soft brush. The head with the soft brush only.",
 		},
 		{
 			id = "iordning",
@@ -201,6 +250,8 @@ return {
 			krav = true,
 			sitt = false,
 			text = "Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag.",
+			namnEn = "Get her ready",
+			textEn = "Pick out all four hooves, put on the numnah and saddle, and do up the girth in three stages.",
 		},
 		{
 			id = "leda",
@@ -208,6 +259,8 @@ return {
 			krav = true,
 			sitt = false,
 			text = "Led från vänster sida, vid bogen, med tyglarna över halsen. Hon går bredvid dig — inte efter, inte före.",
+			namnEn = "Lead her to the arena",
+			textEn = "Lead from her left side, level with her shoulder, with the reins over her neck. She walks beside you — not behind, not in front.",
 		},
 		{
 			id = "sittupp",
@@ -215,6 +268,8 @@ return {
 			krav = false,
 			sitt = true,
 			text = "Först nu. Kontrollera gjorden en sista gång och sitt upp från vänster.",
+			namnEn = "Mount",
+			textEn = "Not until now. Check the girth one last time and mount from the left.",
 		},
 	},
 	halsning = {
@@ -222,16 +277,22 @@ return {
 			t = "Framifrån, och säg hennes namn",
 			ratt = true,
 			svar = "Hon lyfter huvudet och ser på dig. Nu vet hon att du är här.",
+			tEn = "From the front, saying her name",
+			svarEn = "She lifts her head and looks at you. Now she knows you are here.",
 		},
 		{
 			t = "Från sidan vid bogen, med handen på halsen",
 			ratt = true,
 			svar = "Bra. Hon känner handen innan hon ser dig — och du står där hon kan se dig.",
+			tEn = "From the side at her shoulder, with a hand on her neck",
+			svarEn = "Good. She feels your hand before she sees you — and you are standing where she can see you.",
 		},
 		{
 			t = "Rakt bakifrån, tyst",
 			ratt = false,
 			svar = "Hon rycker till och slår upp huvudet. Bakifrån ser hon dig inte, och en häst som blir överrumplad sparkar först och tittar sedan.",
+			tEn = "Straight from behind, without a word",
+			svarEn = "She startles and throws her head up. She cannot see you from behind, and a horse that is taken by surprise kicks first and looks afterwards.",
 		},
 	},
 	hovar = {
@@ -239,21 +300,29 @@ return {
 			id = "vf",
 			namn = "Vänster fram",
 			text = "Stå vänd bakåt, stryk ner längs benet och be om foten. Kratsa från trakten mot tån.",
+			namnEn = "Left fore",
+			textEn = "Stand facing her tail, run your hand down the leg and ask for the foot. Pick from the heel towards the toe.",
 		},
 		{
 			id = "vb",
 			namn = "Vänster bak",
 			text = "Håll handen på hennes höft hela vägen ner så hon vet var du är.",
+			namnEn = "Left hind",
+			textEn = "Keep your hand on her hip the whole way down so she knows where you are.",
 		},
 		{
 			id = "hb",
 			namn = "Höger bak",
 			text = "Gå runt framför henne, aldrig tätt bakom. Samma grepp på andra sidan.",
+			namnEn = "Right hind",
+			textEn = "Walk around in front of her, never close behind her. The same hold on the other side.",
 		},
 		{
 			id = "hf",
 			namn = "Höger fram",
 			text = "Sista hoven. Titta efter sten i strålfårorna innan du släpper ner foten.",
+			namnEn = "Right fore",
+			textEn = "The last hoof. Look for stones in the clefts beside the frog before you set the foot down.",
 		},
 	},
 	eftervard = {
@@ -261,26 +330,36 @@ return {
 			id = "gjord",
 			namn = "Lossa gjorden",
 			text = "Lossa några hål direkt. Sadeln ligger kvar en stund till — ryggen ska få komma tillbaka långsamt.",
+			namnEn = "Loosen the girth",
+			textEn = "Loosen it a few holes straight away. The saddle stays on a while longer — her back should come back slowly.",
 		},
 		{
 			id = "sadel",
 			namn = "Ta av sadeln",
 			text = "Sadel och underlägg av. Lägg handen på ryggen: den ska vara jämnt varm, utan ömma fläckar.",
+			namnEn = "Take off the saddle",
+			textEn = "Saddle and numnah off. Lay your hand on her back: it should be evenly warm, with no sore spots.",
 		},
 		{
 			id = "trans",
 			namn = "Ta av tränset",
 			text = "Grimma på först, sedan tränset av. Hon ska aldrig stå lös i gången.",
+			namnEn = "Take off the bridle",
+			textEn = "Headcollar on first, then the bridle off. She must never stand loose in the aisle.",
 		},
 		{
 			id = "ben",
 			namn = "Känn igenom benen",
 			text = "Nu, medan de är varma. En värme eller svullnad som inte fanns i morse ska ridläraren få veta om.",
+			namnEn = "Feel her legs over",
+			textEn = "Now, while they are still warm. Any heat or swelling that was not there this morning is for the instructor to know about.",
 		},
 		{
 			id = "vatten",
 			namn = "Vatten och hö",
 			text = "När andningen gått ner. Hö på golvet och rent vatten — och ett tack innan du går.",
+			namnEn = "Water and hay",
+			textEn = "Once her breathing has settled. Hay on the floor and clean water — and a thank you before you leave.",
 		},
 	},
 }

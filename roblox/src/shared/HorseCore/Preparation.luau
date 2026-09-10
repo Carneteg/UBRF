@@ -48,6 +48,11 @@
 
 local RS = game:GetService("ReplicatedStorage")
 local Skotsel = require(RS.UBRFSkotsel)
+--[[ Språkkatalogen. Preparation äger REGLERNA och behöver normalt inget
+	språk — men utrustningsstegets namn är en räknare ("Utrustning 2/4"),
+	alltså gränssnitt och inte kanon, och den hör hemma i katalogen.
+	`Sprak` är ett löv: det kräver bara datatabellen, så ingen cykel. ]]
+local Sprak = require(script.Parent.Sprak)
 
 local Preparation = {}
 
@@ -206,7 +211,7 @@ local function iordningMoment()
 	for i, f in ipairs(Skotsel.sadelfaser) do
 		table.insert(ut, {
 			id = "utr:" .. i,
-			namn = ("Utrustning %d/%d"):format(i, #Skotsel.sadelfaser),
+			namn = Sprak.iSprak("sv", "forb.utrustning_steg", i, #Skotsel.sadelfaser),
 			text = f.t,
 			steg = efterHovar + i,
 		})
@@ -410,17 +415,22 @@ end
 	blev rött. Falsifieringspasset fällde det. ]]
 --[[ KANONTEXT SOM SKÄL.
 
-	Nästan alla nej går numera över nätet som SPRÅKNYCKLAR ("pass.fel_tur")
-	som klienten skriver ut i spelarens språk. Två skäl kan inte göra det:
+	Nästan alla nej går över nätet som SPRÅKNYCKLAR ("pass.fel_tur") som
+	klienten skriver ut i spelarens språk. Två skäl kan inte göra det:
 	välfärdsstoppets mening och ett moments egen förklaring kommer ur
-	skötselkanonen, alltså ur undervisningstexten — och den är svensk och
-	får inte maskinöversättas av en agent (`CLAUDE.md`).
+	skötselkanonen, alltså ur undervisningstexten.
 
 	De skickas därför med prefixet `kanon:`. Det är AVSIKTLIGT synligt:
 	klienten vet att texten är innehåll och inte en nyckel, och
-	språkgrinden kan RÄKNA dem och redovisa dem som översättningsskuld i
-	stället för att en svensk mening tystnar in i en engelsk HUD. Får
-	kanonen engelska poster är det här stället som slår upp dem. ]]
+	språkgrinden kan skilja redovisad kanontext från rå svenska.
+
+	SEDAN PRODUKTBESLUTET (#162, punkt 3) HAR KANONEN ENGELSKA POSTER.
+	Meningen som går över nätet är fortfarande den SVENSKA — den är
+	kanonens stabila identitet, och att byta den mot ett id hade ändrat
+	kontraktet och ett femtiotal påståenden utan att spelaren märkte
+	något. Klienten slår i stället upp den engelska syskontexten här,
+	genom ett index som HÄRLEDS ur kanonen. Saknas en engelsk post står
+	den svenska kvar — synligt, och grinden räknar den. ]]
 local KANON = "kanon:"
 
 function Preparation.kanontext(text: string?): string?
@@ -434,6 +444,144 @@ end
 
 function Preparation.utanKanonprefix(skal: string): string
 	return if Preparation.arKanontext(skal) then string.sub(skal, #KANON + 1) else skal
+end
+
+--[[ Ett kanonfält på ett språk. `namn` → `namnEn`, `text` → `textEn`.
+	Saknas syskonet faller den tillbaka på svenskan; det är HELA
+	fallbackregeln och den ligger på ett ställe. ]]
+function Preparation.kanonfalt(rec: any, falt: string, sprak: string?): string?
+	if sprak == "en" and type(rec) == "table" then
+		local v = rec[falt .. "En"]
+		if type(v) == "string" and v ~= "" then return v end
+	end
+	return if type(rec) == "table" then rec[falt] else nil
+end
+
+--[[ Index svenska → engelska, härlett ur kanonen. Byggs en gång.
+
+	EN TVETYDIG SVENSK MENING ÖVERSÄTTS INTE. Står samma svenska sträng
+	på två ställen med olika engelska syskon vet indexet inte vilken som
+	menas, och då är svenskan rätt svar: en felöversatt varning om en
+	häst är värre än en oöversatt. ]]
+local kanonIndex: { [string]: string }? = nil
+
+local function laggPar(ix, tvetydiga, sv, en)
+	if type(sv) ~= "string" or type(en) ~= "string" or sv == "" or en == "" then return end
+	if ix[sv] ~= nil and ix[sv] ~= en then tvetydiga[sv] = true end
+	ix[sv] = en
+end
+
+local function byggKanonIndex()
+	if kanonIndex then return kanonIndex end
+	local ix, tvetydiga = {}, {}
+	local function lista(rader, falt)
+		for _, r in ipairs(rader or {}) do
+			laggPar(ix, tvetydiga, r[falt], r[falt .. "En"])
+		end
+	end
+	local function karta(sv, en)
+		for nyckel, text in pairs(sv or {}) do
+			laggPar(ix, tvetydiga, text, (en or {})[nyckel])
+		end
+	end
+	lista(Skotsel.faser, "namn"); lista(Skotsel.faser, "text")
+	lista(Skotsel.halsning, "t"); lista(Skotsel.halsning, "svar")
+	lista(Skotsel.hovar, "namn"); lista(Skotsel.hovar, "text")
+	lista(Skotsel.eftervard, "namn"); lista(Skotsel.eftervard, "text")
+	lista(Skotsel.sadelfaser, "t")
+	local rykt = Skotsel.rykt or {}
+	lista(rykt.redskap, "namn"); lista(rykt.redskap, "kort"); lista(rykt.redskap, "text")
+	karta(rykt.zonnamn, rykt.zonnamnEn)
+	local vis = Skotsel.visitation or {}
+	lista(vis.punkter, "namn"); lista(vis.punkter, "ok")
+	lista(vis.svar, "t")
+	karta(vis.fynd, vis.fyndEn)
+	for sv in pairs(tvetydiga) do ix[sv] = nil end
+	kanonIndex = ix
+	return ix
+end
+
+--[[ Kanontexten på spelarens språk. Okänd text lämnas orörd: den kan
+	komma ur en gren indexet inte känner, och då är det bättre att
+	spelaren läser svenskan än ingenting. ]]
+function Preparation.kanonPaSprak(text: string?, sprak: string?): string?
+	if sprak ~= "en" or type(text) ~= "string" then return text end
+	return byggKanonIndex()[text] or text
+end
+
+--[[ Testkrok: tvingar fram en ombyggnad efter att kanonen bytts i bänken. ]]
+function Preparation.glomKanonIndex()
+	kanonIndex = nil
+end
+
+--[[ ── MOMENTRADEN PÅ SPELARENS SPRÅK ────────────────────────────────
+
+	Servern skickar momentet med kanonens svenska text. Klienten byter
+	språk här, på VÄG UT I VYN, för det är först där spelarens locale
+	finns. Två moment kan inte gå genom strängindexet:
+
+	  · ryktmomentets namn är SATT SAMMAN ("Gummiskrapa — kropp"), och en
+	    sammansättning står inte i kanonen som en egen mening,
+	  · utrustningsstegets namn är en räknare ("Utrustning 2/4") och alltså
+	    gränssnitt, inte kanon — den ligger i språkkatalogen.
+
+	Båda plockas isär på momentets ID i stället för att gissas ur texten.
+
+	`%N` ÄR HÄSTENS NAMN. Visitationens godkända text skrivs `%N ser dig i
+	ögonen` i kanonen, och webben har alltid bytt ut den (`moment.js`).
+	Roblox gjorde det aldrig — spelaren läste ett bokstavligt "%N" i
+	HUD:en. Bytet sker här, på båda språken, och egennamnet översätts
+	förstås inte. ]]
+function Preparation.momentPaSprak(m: any, sprak: string?, hastnamn: string?)
+	if type(m) ~= "table" then return m end
+	local namn, text = m.namn, m.text
+	local id = tostring(m.id or "")
+
+	local redskapId, zonTyp = string.match(id, "^rykt:([^:]+):(.+)$")
+	if redskapId then
+		local rykt = Skotsel.rykt or {}
+		for _, r in ipairs(rykt.redskap or {}) do
+			if r.id == redskapId then
+				local zon = if sprak == "en" then (rykt.zonnamnEn or {})[zonTyp]
+					else (rykt.zonnamn or {})[zonTyp]
+				namn = Preparation.kanonfalt(r, "namn", sprak) .. " — " .. (zon or zonTyp)
+				text = Preparation.kanonfalt(r, "text", sprak)
+			end
+		end
+	else
+		local utrIndex = tonumber(string.match(id, "^utr:(%d+)$"))
+		if utrIndex then
+			namn = Sprak.iSprak(sprak or "sv", "forb.utrustning_steg",
+				utrIndex, #Skotsel.sadelfaser)
+			local f = Skotsel.sadelfaser[utrIndex]
+			if f then text = Preparation.kanonfalt(f, "t", sprak) end
+		else
+			namn = Preparation.kanonPaSprak(namn, sprak)
+			text = Preparation.kanonPaSprak(text, sprak)
+		end
+	end
+
+	if hastnamn and hastnamn ~= "" then
+		if type(namn) == "string" then namn = string.gsub(namn, "%%N", hastnamn) end
+		if type(text) == "string" then text = string.gsub(text, "%%N", hastnamn) end
+	end
+
+	local ut = table.clone(m)
+	ut.namn = namn
+	ut.text = text
+	return ut
+end
+
+--[[ Fasraden på spelarens språk. Samma regel, men fasen har inga
+	sammansatta namn — den går rakt genom kanonfältet. ]]
+function Preparation.stegPaSprak(steg: any, sprak: string?)
+	if type(steg) ~= "table" then return steg end
+	local fas = Preparation.fas(tostring(steg.id or ""))
+	if not fas then return steg end
+	local ut = table.clone(steg)
+	ut.namn = Preparation.kanonfalt(fas, "namn", sprak)
+	ut.text = Preparation.kanonfalt(fas, "text", sprak)
+	return ut
 end
 
 function Preparation.provaSteg(state: State, fasId: string, hastId: string): (boolean, string?)
@@ -673,9 +821,15 @@ end
 	10: handskakningens svar och en spontan `PreparationSync` kan komma i
 	vilken ordning som helst över nätet, och utan serienummer kan det äldre
 	svaret skriva över det nyare. ]]
-function Preparation.vy(state: State?, status: string, rev: number?)
+--[[ `hastnamn` är hästens EGENNAMN och följer med vyn av ett enda skäl:
+	visitationens godkända text skrivs `%N ser dig i ögonen` i kanonen, och
+	klienten måste kunna sätta in namnet. Webben har alltid gjort det
+	(`moment.js`); Roblox gjorde det aldrig, så spelaren läste ett
+	bokstavligt "%N" i HUD:en. Namnet översätts inte — det är verklighetens
+	namn på en verklig häst. ]]
+function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: string?)
 	if not state then
-		return { status = status, hastId = nil, steg = {}, nasta = nil,
+		return { status = status, hastId = nil, hastnamn = nil, steg = {}, nasta = nil,
 			moment = {}, nastaMoment = nil, fynd = nil, svar = {},
 			stoppad = nil, redo = false, rev = rev or 0 }
 	end
@@ -723,6 +877,7 @@ function Preparation.vy(state: State?, status: string, rev: number?)
 	return {
 		status = status,
 		hastId = state.hastId,
+		hastnamn = hastnamn,
 		steg = steg,
 		nasta = nastaFas and nastaFas.id or nil,
 		moment = moment,

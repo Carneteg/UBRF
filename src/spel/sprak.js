@@ -45,6 +45,11 @@ const SPRAK = {
   "interaktion.sitt_upp": { sv: "Sitt upp", en: "Mount" },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
+  /* Utrustningsstegets namn är en RÄKNARE, inte kanon: "Utrustning 2/4"
+     står inte i ridhandboken, den är HUD:ens sätt att numrera sadelfaserna.
+     Därför ligger den här och inte i skotsel.js. */
+  "forb.utrustning_steg": { sv: "Utrustning %d/%d", en: "Tacking up %d/%d" },
+
   /* ── Uppsittning och avsittning (HorseService) ─────────────────────── */
   "hast.inte_redo": { sv: "Hästen är inte färdig att sitta upp på",
     en: "The horse is not ready to be ridden" },
@@ -199,15 +204,30 @@ const SPRAK = {
     en: "Could not save just now. Your progress is kept and will be retried." },
 };
 
-/* ÖVERSÄTTNINGSSKULD, redovisad. Innehåll som är svenskt idag och som
-   INTE får maskinöversättas av en builder — se filhuvudet. Grinden läser
-   listan och kräver att posterna faller tillbaka på svenska, inte att de
-   låtsas vara engelska. */
+/* ÖVERSÄTTNINGSSKULD, redovisad.
+
+   Listan såg annorlunda ut före PRODUKTBESLUTET i #162: skötselkanonens
+   undervisningstext och hästarnas beskrivningar stod här som skuld, med
+   skälet att en builder inte får maskinöversätta hästkunskapens
+   terminologi. Beslutet är fattat — en spelare som inte läser svenska ska
+   läsa engelska — och båda posterna är därför BORTA ur listan och
+   översatta i sina källor (`skotsel.js`, `hastar.js`). Egennamn är
+   oförändrade: hästarna heter vad de heter.
+
+   `firstPlayable` är det fältet grinden faktiskt mäter. Ingen post får
+   säga `true`: det som spelaren ser under en First Playable-genomgång är
+   inte skuld längre, det är krav. Posterna nedan lever på ytor utanför
+   den vägen. */
 const SPRAK_BACKLOG = [
-  { kalla: "src/spel/hastar.js", vad: "hästarnas namn, raser och beskrivningar",
-    skal: "UBRF:s verkliga fakta — verkligheten är facit och får inte översättas av en agent" },
-  { kalla: "src/spel/skotsel.js", vad: "skötselkanonens moment- och undervisningstext",
-    skal: "hämtad ur ridhandbokens struktur; hästkunskapens terminologi är Tobias beslut, inte mitt" },
+  { kalla: "src/*.js (webbens egna vyer)", firstPlayable: false,
+    vad: "webbens menyer, lektionstext, sysslo-vyer och hästkortets etiketter",
+    skal: "webbens textmassa ligger i vyerna själva och är ännu inte flyttad till katalogen; den vägen är inte First Playable och tas som ett eget steg" },
+  { kalla: "src/spel/hastar.js — fältet ras", firstPlayable: false,
+    vad: "rasnamn (\"Svenskt varmblod\", \"Irländsk Sporthäst\")",
+    skal: "visas ingenstans för spelaren i First Playable — bara i utvecklarutskrift — och är källdata ur ubrf.se; översätts när en yta faktiskt visar det" },
+  { kalla: "src/spel/hastar.js — foderschemats notis", firstPlayable: false,
+    vad: "foderradens notis på webbens sysslo-vy",
+    skal: "webbyta, samma steg som webbens övriga textmassa; i Roblox går den bara till utvecklarutskrift" },
 ];
 
 /* Språkvalet: svenska för svenska spelare, engelska annars. Regeln står

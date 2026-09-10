@@ -161,7 +161,7 @@ function visaTilldelning(){
   <div class="hcard">
     <div style="flex:1">
       <div class="n">${h.namn}</div>
-      <div class="k">”${h.besk}”</div>
+      <div class="k">”${SPRAKET === "en" && h.beskEn ? h.beskEn : h.besk}”</div>
       <div class="tr">
         <span>Känslighet <b>${h.kanslighet.toFixed(2).replace(".",",")}</b></span>
         <span>Förlåter <b>${h.forlatande.toFixed(2).replace(".",",")}</b></span>

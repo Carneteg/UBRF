@@ -42,6 +42,40 @@ local RunService = game:GetService("RunService")
 
 local SVENSKA_TECKEN = "[åäöÅÄÖ]"
 
+--[[ ÅÄÖ RÄCKER INTE. Mutationen "eftervårdsmomentet heter Lossa gjorden på
+	engelska" gick rakt igenom teckendetektorn — meningen har inte en enda
+	omljudsbokstav. Samma hål som den statiska skannern hade, hittat på
+	samma sätt: genom att prova, inte genom att läsa.
+
+	Andra detektorn är ORDBASERAD och listan är kort med flit: det är
+	svenska funktions- och stallord som inte finns i engelskan. En engelsk
+	mening kan innehålla "hand", "in" och "under" — de står därför inte
+	här. ]]
+local SVENSKA_ORD = {
+	"och", "inte", "eller", "med", "fran", "till", "som", "det", "den",
+	"lossa", "gjorden", "sadeln", "transet", "benen", "hovar", "hoven",
+	"halsa", "visitera", "rykta", "ridhuset", "ridlararen", "hasten",
+	"vanster", "hoger", "ogon", "mungiporna", "sadellaget", "gjordlaget",
+	"borste", "kardborste", "underlagget", "manken", "vatten",
+}
+
+--[[ Orden jämförs OMLJUDSLÖST. `Höger bak` och det felstavade `Hoger bak`
+	är samma fel för en engelsk spelare, och en mutation som råkar tappa
+	prickarna ska inte glida igenom just därför. ]]
+local function fallOmljud(s)
+	s = string.gsub(string.lower(s), "[åä]", "a")
+	return (string.gsub(s, "ö", "o"))
+end
+
+local function svenskSpelartext(rad)
+	if string.find(rad, SVENSKA_TECKEN) then return true end
+	local platt = fallOmljud(rad)
+	for _, ord in ipairs(SVENSKA_ORD) do
+		if string.find(platt, "%f[%a]" .. ord .. "%f[%A]") then return true end
+	end
+	return false
+end
+
 local function nyKaraktar(pos)
 	local k = Instance.new("Model")
 	k.Name = "Karaktar"
@@ -185,12 +219,13 @@ do
 	stadaSession(S)
 end
 
---[[ ── VÄLFÄRDSSTOPPET: ENGELSK RAM RUNT SVENSK KANONMENING ────────────
+--[[ ── VÄLFÄRDSSTOPPET: RAM OCH MENING, BÅDA PÅ SPELARENS SPRÅK ────────
 	Reviewen listar välfärdsstoppet uttryckligen, och det är det svåraste
-	fallet: ramen ("Ridläraren tar över …") är gränssnitt och ska bli
-	engelsk, medan fyndets mening kommer ur skötselkanonen och ännu är
-	svensk. Fallet finns bara från pass 2, så sessionen förbereds med en
-	sparfil där hästen bär ett fynd. ]]
+	fallet: ramen ("Ridläraren tar över …") är gränssnitt, medan fyndets
+	mening kommer ur skötselkanonen. Före produktbeslutet i #162 var bara
+	ramen engelsk och meningen svensk. Nu ska BÅDA byta språk, och det är
+	det den här sektionen mäter. Fallet finns bara från pass 2, så
+	sessionen förbereds med en sparfil där hästen bär ett fynd. ]]
 print("\n── Välfärdsstoppet, med fynd ──")
 do
 	local ID = 9410
@@ -238,14 +273,152 @@ do
 	local text = PreparationController.skalText(skalV, argV)
 	Sprak.satLocale("sv-se")
 	local svText = PreparationController.skalText(skalV, argV)
-	--[[ RAMEN ska vara engelsk även när meningen inuti är svensk. Mäts mot
-		katalogens engelska ram, inte mot en handskriven sträng. ]]
+	--[[ RAMEN mäts mot katalogens engelska ram, inte mot en handskriven
+		sträng. MENINGEN mäts mot kanonens engelska fyndtext — och att den
+		inte längre bär en enda svensk bokstav är det produktbeslutet
+		ändrade. ]]
 	local enRam = Sprak.iSprak("en", "forb.lararen_tar_over"):gsub("%%s", "")
-	check("ramen är ENGELSK på en-us, runt den svenska kanonmeningen",
+	check("ramen är ENGELSK på en-us",
 		string.find(text, (enRam:gsub("(%W)", "%%%1")):sub(1, 30)) ~= nil,
 		string.format("%q", text))
+	local fyndId = Preparation.fyndFor(hast, fyndPass or 2)
+	local enFynd = (UBRFSkotsel.visitation.fyndEn or {})[fyndId or ""]
+	check("och FYNDETS MENING är också engelsk, inte kvarlämnad svenska",
+		type(enFynd) == "string" and string.find(text, (enFynd:gsub("(%W)", "%%%1")), 1) ~= nil
+			and not string.find(text, SVENSKA_TECKEN),
+		string.format("fynd %s → %q", tostring(fyndId), tostring(enFynd)))
 	check("och svensk på sv-se", text ~= svText,
 		string.format("en %q · sv %q", text:sub(1, 60), svText:sub(1, 60)))
+	stadaSession(S)
+end
+
+--[[ ── HELA DAGEN PÅ en-US ────────────────────────────────────────────────
+
+	PRODUKTBESLUTET i #162 (punkt 4): en full First Playable-genomgång på
+	`en-US`, negativa vägar inkluderade, ska FÄLLA på svensk spelartext
+	eller oöversatt fallback.
+
+	Nej-vägarna mäts längre ner. Det här är den POSITIVA vägen — och den
+	var hålet: en spelare som gör rätt hela dagen ser aldrig ett enda nej,
+	men läser fas efter fas, moment efter moment och hela eftervården.
+	Sveper man bara avslagen kan hela undervisningstexten vara svensk i en
+	engelsk klient utan att någon grind säger ifrån.
+
+	Provet läser det HUD:EN RITADE (`_ritadText`), inte vyn det skickade
+	in. En översättning som aldrig når TextLabel:en är ingen översättning. ]]
+print("\n── en-us: hela dagen, inte bara nejen ──")
+do
+	local S = nySession("EnDagen", 9411)
+	local hastnamn
+	do
+		local dagens = StallService.hastFor(S.spelare)
+		hastnamn = dagens and dagens.namn
+	end
+	check("sessionen har en häst med ett egennamn",
+		type(hastnamn) == "string" and hastnamn ~= "", tostring(hastnamn))
+
+	--[[ Ritar en vy på ett locale och lämnar tillbaka varje ritad sträng. ]]
+	local function ritaPa(locale)
+		Sprak.satLocale(locale)
+		PreparationController.tillampa(Preparation.vy(
+			GameplayService.stateFor(S.spelare),
+			GameplayService.statusFor(S.spelare), os.clock(), hastnamn))
+		local ut = PreparationController._ritadText()
+		Sprak.satLocale("sv-se")
+		return ut
+	end
+
+	local svenskaFynd, vyer, tvillingar = {}, 0, {}
+	local function svep(vad)
+		vyer += 1
+		local en = ritaPa("en-us")
+		local sv = ritaPa("sv-se")
+		for _, rad in ipairs(en) do
+			if svenskSpelartext(rad) then
+				table.insert(svenskaFynd, string.format("%s → %q", vad, rad))
+			end
+			--[[ `%N` kvar betyder att hästens namn aldrig sattes in — det
+				var precis felet Roblox bar innan produktbeslutet. ]]
+			if string.find(rad, "%%N") then
+				table.insert(svenskaFynd, string.format("%s → osatt %%N i %q", vad, rad))
+			end
+		end
+		--[[ FÄLT FÖR FÄLT, inte vy för vy. En enda oöversatt rad gör inte
+			hela vyn identisk, och just den luckan var det mutationen
+			ovan gled igenom. Tomma fält och rena egennamn hoppas över:
+			hästen heter samma sak på båda språken. ]]
+		for i, rad in ipairs(en) do
+			local svRad = sv[i]
+			if rad ~= "" and rad == svRad and string.find(rad, "%a")
+				and not (hastnamn and string.find(rad, hastnamn, 1, true)) then
+				table.insert(tvillingar, string.format("%s → %q", vad, rad))
+			end
+		end
+	end
+
+	--[[ Varje fas, varje moment, i den ordning dagen faktiskt spelas. ]]
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		svep("fas " .. fas.id)
+		local varv = 0
+		while varv < 40 do
+			varv += 1
+			local st = GameplayService.stateFor(S.spelare)
+			local m = Preparation.nastaMoment(st, fas.id)
+			if not m then break end
+			svep(string.format("%s/%s", fas.id, m.id))
+			if not GameplayService.moment(S.spelare, fas.id, m.id) then break end
+		end
+	end
+	svep("klar att sitta upp")
+
+	--[[ EFTERVÅRDEN är andra halvan av dagen och ritas av en EGEN vy
+		(`tillampaPass`). Den låg utanför svepet i första utkastet, och det
+		hade varit ett hål av precis den sort som den här grinden finns
+		för: momenten går genom samma översättare, men "går genom samma
+		kod" är ett antagande tills det är mätt. Passet drivs framåt direkt
+		på `Pass`, för uppsittning och avsittning mäts på annat håll. ]]
+	do
+		local passState = Pass.nyState(S.hastId, Pass.byggId(9411, S.hastId, 1))
+		Pass.vidUppsittning(passState)
+		Pass.vidAvsittning(passState)
+		local function ritaPassPa(locale)
+			Sprak.satLocale(locale)
+			PreparationController.tillampaPass(Pass.vy(passState, os.clock()))
+			local ut = PreparationController._ritadText()
+			Sprak.satLocale("sv-se")
+			return ut
+		end
+		local varv = 0
+		while varv < 20 do
+			varv += 1
+			vyer += 1
+			local en, sv = ritaPassPa("en-us"), ritaPassPa("sv-se")
+			for _, rad in ipairs(en) do
+				if svenskSpelartext(rad) then
+					table.insert(svenskaFynd, string.format("eftervård → %q", rad))
+				end
+			end
+			for i, rad in ipairs(en) do
+				if rad ~= "" and rad == sv[i] and string.find(rad, "%a")
+					and not (hastnamn and string.find(rad, hastnamn, 1, true)) then
+					table.insert(tvillingar, string.format("eftervård → %q", rad))
+				end
+			end
+			local m = Pass.nastaMoment(passState)
+			if not m then break end
+			if not Pass.utfor(passState, m.id) then break end
+		end
+		check("eftervården sveptes också", varv > 1, varv .. " eftervårdsvyer")
+	end
+
+	check("hela dagen sveptes, inte bara en vy", vyer >= 10, vyer .. " vyer")
+	check("ingen svensk bokstav i något ritat fält på en-us", #svenskaFynd == 0,
+		#svenskaFynd > 0 and table.concat(svenskaFynd, " · ")
+			or (vyer .. " vyer lästa på engelska"))
+	--[[ EN TYST FALLBACK ser ut som en översättning. Är den engelska vyn
+		tecken för tecken identisk med den svenska har ingenting bytts. ]]
+	check("inget ritat fält är identiskt på de två språken", #tvillingar == 0,
+		#tvillingar > 0 and table.concat(tvillingar, " · ") or "varje fält skiljer sig")
 	stadaSession(S)
 end
 
@@ -269,29 +442,32 @@ end
 print("\n── en-us: ingen svensk spelartext på nej-vägarna ──")
 do
 	Sprak.satLocale("en-us")
-	local svenska, kanonskuld = {}, {}
+	local svenska, kanonvagar = {}, 0
 	for _, n in ipairs(nejen) do
 		local text = PreparationController.skalText(n.skal, n.extra)
-		--[[ DEKLARERAD kanontext får vara svensk: antingen är skälet självt
-			kanon, eller så är ARGUMENTET det (en engelsk ram runt fyndets
-			eller fasens svenska namn). Allt annat svenskt är odeklarerat
-			och faller. ]]
+		--[[ KANONTEXTEN HAR INGEN DISPENS LÄNGRE.
+
+			Här stod ett undantag: var skälet eller argumentet kanontext
+			fick svaret vara svenskt, och posten räknades som redovisad
+			skuld. PRODUKTBESLUTET i #162 tog bort skulden — kanonen har
+			engelska poster — och därmed undantaget. Ett kanonskäl mäts nu
+			som alla andra, och det är just de vägarna som skulle ha varit
+			svenska om översättningen inte nått fram. ]]
 		if Preparation.arKanontext(n.skal) or Preparation.arKanontext(n.extra) then
-			table.insert(kanonskuld, string.format("%s → %q", n.vad, text))
-		elseif string.find(text, SVENSKA_TECKEN) then
+			kanonvagar += 1
+		end
+		if string.find(text, SVENSKA_TECKEN) then
 			table.insert(svenska, string.format("%s → %q", n.vad, text))
 		end
 	end
 	Sprak.satLocale("sv-se")
-	check("ingen svensk text i något nej på en-us", #svenska == 0,
+	check("ingen svensk text i något nej på en-us — kanontexten inräknad",
+		#svenska == 0,
 		#svenska > 0 and table.concat(svenska, " · ")
-			or ((#nejen - #kanonskuld) .. " nej lästa på engelska"))
-	--[[ Kanonskulden REDOVISAS. Att listan får finnas är ett beslut; att
-		den skulle vara tyst är det inte. ]]
-	if #kanonskuld > 0 then
-		print("       redovisad kanonskuld på nej-vägarna:")
-		for _, r in ipairs(kanonskuld) do print("         · " .. r) end
-	end
+			or string.format("%d nej lästa på engelska, varav %d går genom kanonen",
+				#nejen, kanonvagar))
+	check("och kanonvägarna finns med i svepet — annars mäter raden ovan inget",
+		kanonvagar > 0, kanonvagar .. " kanonskäl")
 end
 
 --[[ ── OCH SVENSKAN FINNS KVAR FÖR SVENSKA SPELARE ─────────────────────── ]]

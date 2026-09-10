@@ -115,7 +115,11 @@ local function status(player: Player): string
 end
 
 local function vyFor(player: Player)
-	return Preparation.vy(state[player], status(player), nastaRev(player))
+	--[[ Hästens egennamn följer med så att klienten kan sätta in det där
+		kanonen skriver `%N`. Det översätts aldrig. ]]
+	local dagens = StallService.hastFor(player)
+	return Preparation.vy(state[player], status(player), nastaRev(player),
+		if dagens then dagens.namn else nil)
 end
 
 --[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte

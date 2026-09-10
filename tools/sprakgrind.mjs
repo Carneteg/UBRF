@@ -34,6 +34,15 @@ const kod = fs.readFileSync(path.join(ROT, "src/spel/sprak.js"), "utf8");
 new Function("window", "navigator", kod)(ctx.window, ctx.navigator);
 const W = ctx.window;
 
+/* Läser en kanonfil och lämnar tillbaka dess konstanter. Filerna är rena
+   datadeklarationer utan export — samma sätt som exportera-spel.js läser
+   dem, så grinden mäter exakt den källa Roblox genereras ur. */
+function ctxLas(rel) {
+  const kod = fs.readFileSync(path.join(ROT, rel), "utf8");
+  const namn = [...kod.matchAll(/^const ([A-Z_0-9]+)\s*=/gm)].map(m => m[1]);
+  return new Function("window", kod + `; return {${namn.join(",")}};`)({});
+}
+
 saga(W.sprakFor("sv-se") === "sv" && W.sprakFor("sv-FI") === "sv",
   "sv* ger svenska");
 saga(W.sprakFor("en-us") === "en" && W.sprakFor("de-de") === "en" && W.sprakFor("") === "en",
@@ -75,11 +84,53 @@ for (const nyckel of jsNycklar) {
 saga(olika.length === 0, "och exakt samma text i båda tabellerna",
   olika.length ? olika.slice(0, 6).join(", ") : `${jsNycklar.size} nycklar jämförda`);
 
-/* 4. Översättningsskulden. */
-saga(Array.isArray(W.SPRAK_BACKLOG) && W.SPRAK_BACKLOG.length > 0
-  && W.SPRAK_BACKLOG.every(p => p.kalla && p.vad && p.skal && p.skal.length > 20),
-  "översättningsskulden är redovisad med källa, vad och skäl",
-  `${W.SPRAK_BACKLOG.length} poster`);
+/* 4. Översättningsskulden — och att den inte längre rör First Playable.
+
+   Raden mätte förut bara att listan FANNS och var motiverad. Efter
+   produktbeslutet i #162 (punkt 5) är kravet skarpare: ingen post får
+   ligga i First Playable-vägen. En builder som lägger tillbaka
+   skötselkanonen som "skuld" fälls här. */
+const backlog = Array.isArray(W.SPRAK_BACKLOG) ? W.SPRAK_BACKLOG : null;
+saga(backlog !== null
+  && backlog.every(p => p.kalla && p.vad && p.skal && p.skal.length > 20
+    && p.firstPlayable === false),
+  "skulden är redovisad med källa, vad, skäl och firstPlayable: false",
+  backlog ? `${backlog.length} poster` : "SPRAK_BACKLOG saknas");
+const iVagen = (backlog || []).filter(p => p.firstPlayable !== false);
+saga(iVagen.length === 0,
+  "ingen kvarvarande skuld ligger i First Playable-vägen",
+  iVagen.length ? iVagen.map(p => p.kalla).join(", ") : "noll poster i vägen");
+
+/* 5. Kanonen HAR engelska poster. Skulle någon ta bort dem faller inte
+   punkt 4 — listan kan vara tom och ändå korrekt — så kanonen mäts för
+   sig, på den yta First Playable faktiskt läser. */
+const K = ctxLas("src/spel/skotsel.js");
+const utanEn = [];
+for (const [namn, falt] of [["FASER", ["namn", "text"]], ["HALSNING", ["t", "svar"]],
+    ["HOVAR", ["namn", "text"]], ["EFTERVARD", ["namn", "text"]],
+    ["RYKTREDSKAP", ["namn", "kort", "text"]], ["SADELFAS", ["t"]],
+    ["VISITPUNKT", ["namn", "ok"]], ["VISITSVAR", ["t"]]]) {
+  for (const rad of K[namn] || []) {
+    for (const f of falt) {
+      const en = rad[f + "En"];
+      if (!en || en === rad[f]) utanEn.push(`${namn}.${f}`);
+    }
+  }
+}
+for (const nyckel of Object.keys(K.VISITFYND || {})) {
+  const en = (K.VISITFYND_EN || {})[nyckel];
+  if (!en || en === K.VISITFYND[nyckel]) utanEn.push(`VISITFYND.${nyckel}`);
+}
+saga(utanEn.length === 0,
+  "skötselkanonen har en engelsk syskontext för varje spelarvänd sträng",
+  utanEn.length ? utanEn.slice(0, 8).join(", ") : "hela kanonen översatt");
+
+/* 6. Hästarnas beskrivningar. Egennamnen översätts INTE och mäts inte. */
+const H = ctxLas("src/spel/hastar.js");
+const utanBesk = (H.HASTFAKTA || []).filter(h => !h.beskEn || h.beskEn === h.besk);
+saga(utanBesk.length === 0,
+  "varje häst har en engelsk beskrivning skild från den svenska",
+  utanBesk.length ? utanBesk.map(h => h.id).join(", ") : `${(H.HASTFAKTA || []).length} hästar`);
 
 console.log(fel ? `\n${fel} FEL` : "\nSpråkgrinden (webb): katalogen är EN sanning på båda ytorna.");
 process.exit(fel ? 1 : 0);

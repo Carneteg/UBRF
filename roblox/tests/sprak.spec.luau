@@ -106,21 +106,29 @@ do
 			return PreparationController._rubrik()
 		end)
 	end
-	--[[ MITT I SKÖTSELN är rubriken FASENS NAMN ur skötselkanonen, inte
-		gränssnittstext. Den är svensk på båda språken, och det är
-		AVSIKTLIGT: kanonen är hämtad ur ridhandbokens struktur, och
-		hästkunskapens terminologi översätts inte av en agent (se
-		översättningsskulden längst ned). Grinden mäter därför att rubriken
-		ÄR kanonens fasnamn — inte att den blivit engelsk. Ändras
-		beslutet är det den här raden som ska ändras. ]]
+	--[[ MITT I SKÖTSELN är rubriken FASENS NAMN ur skötselkanonen.
+
+		Raden mätte förut att rubriken var SVENSK på båda språken och
+		kallade det redovisad skuld. PRODUKTBESLUTET i #162 tog bort den
+		skulden: en spelare som inte läser svenska ska läsa engelska, också
+		i kanonen. Kommentaren härintill sa att "ändras beslutet är det den
+		här raden som ska ändras" — beslutet ändrades, och det är den här
+		raden.
+
+		Nu mäts tre saker: att svenskan är kanonens svenska fasnamn, att
+		engelskan är kanonens ENGELSKA fasnamn, och att de skiljer sig. Det
+		sista är det som fäller en tyst fallback: en engelsk post som råkat
+		bli en kopia av den svenska ser annars ut som en översättning. ]]
 	local svRubrik = rubrikPa("sv-se", Preparation.STATUS.FORBEREDER)
 	local enRubrik = rubrikPa("en-us", Preparation.STATUS.FORBEREDER)
-	local fasnamn = Preparation.stegFaser()[1].namn
+	local forstaFas = Preparation.stegFaser()[1]
+	local fasnamn = forstaFas.namn
+	local fasnamnEn = forstaFas.namnEn
 	check("rubriken finns på svenska", svRubrik ~= "" and svRubrik ~= nil, tostring(svRubrik))
-	check("mitt i skötseln är rubriken kanonens fasnamn (redovisad skuld)",
-		svRubrik == fasnamn and enRubrik == fasnamn,
-		string.format("sv %q · en %q · kanon %q", tostring(svRubrik), tostring(enRubrik),
-			tostring(fasnamn)))
+	check("mitt i skötseln är rubriken kanonens fasnamn, på spelarens språk",
+		svRubrik == fasnamn and enRubrik == fasnamnEn and fasnamn ~= fasnamnEn,
+		string.format("sv %q · en %q · kanon sv %q / en %q", tostring(svRubrik),
+			tostring(enRubrik), tostring(fasnamn), tostring(fasnamnEn)))
 
 	--[[ Väntelägets rubrik har en egen nyckel och mäts för sig: den var
 		den enda vyn som varken har fas eller moment att falla tillbaka
@@ -248,25 +256,45 @@ do
 		string.find(utanArg, "%%s") == nil, string.format("%q", utanArg))
 end
 
---[[ ══ 5. ÖVERSÄTTNINGSSKULDEN ═══════════════════════════════════════════
-	Hästarnas verkliga beskrivningar och skötselkanonens undervisande text
-	är svenska. Att jag skulle maskinöversätta hästkunskapens terminologi
-	vore precis det CLAUDE.md förbjuder — att hitta på innehåll för att
-	fylla ett hål. Skulden ska därför vara REDOVISAD, inte tyst: varje
-	post bär källa och skäl. ]]
-print("\n── Översättningsskulden är redovisad ──")
+--[[ ══ 5. ÖVERSÄTTNINGSSKULDEN — OCH VAD SOM INTE FÅR LIGGA I DEN ═══════
+
+	Här stod förut att hästarnas beskrivningar och skötselkanonens
+	undervisande text var svenska med flit, och att skulden bara skulle
+	vara redovisad. PRODUKTBESLUTET i #162 ändrade det: en spelare som
+	inte läser svenska ska läsa engelska, också i kanonen. Båda posterna
+	är översatta i sina källor och borta ur listan.
+
+	Kvar mäts två saker: att varje kvarvarande post är motiverad, och —
+	det som är hela poängen — att INGEN post säger sig ligga i First
+	Playable-vägen. En builder som lägger tillbaka kanonen som "skuld"
+	fälls här, inte i en review. ]]
+print("\n── Översättningsskulden är redovisad och ligger utanför First Playable ──")
 do
 	local backlog = Sprak.backlog()
-	check("skulden är redovisad och inte tom", #backlog > 0, #backlog .. " poster")
-	local fel = {}
+	local fel, iVagen = {}, {}
 	for _, post in ipairs(backlog) do
 		if type(post.kalla) ~= "string" or post.kalla == ""
 			or type(post.vad) ~= "string" or post.vad == ""
 			or type(post.skal) ~= "string" or #post.skal < 20 then
 			table.insert(fel, tostring(post.kalla))
 		end
+		if post.firstPlayable ~= false then
+			table.insert(iVagen, tostring(post.kalla))
+		end
 	end
-	check("varje post bär källa, vad och ett skäl", #fel == 0, table.concat(fel, ", "))
+	check("varje post bär källa, vad och ett skäl", #fel == 0,
+		#fel > 0 and table.concat(fel, ", ") or (#backlog .. " poster"))
+	check("ingen post ligger i First Playable-vägen", #iVagen == 0,
+		#iVagen > 0 and table.concat(iVagen, ", ") or "noll poster i vägen")
+	--[[ Skötselkanonen och hästarna får inte tas tillbaka in i listan. ]]
+	local ater = {}
+	for _, post in ipairs(backlog) do
+		if string.find(post.kalla, "skotsel%.js") and not string.find(post.kalla, "—") then
+			table.insert(ater, post.kalla)
+		end
+	end
+	check("skötselkanonen står inte som skuld längre", #ater == 0,
+		#ater > 0 and table.concat(ater, ", ") or "kanonen är översatt, inte skuld")
 end
 
 --[[ `os.exit` finns INTE i luau-CLI:t (den är nil). Ett anrop rakt ut gav

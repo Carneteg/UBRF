@@ -31,12 +31,13 @@ vm.runInContext(las("src/spel/hastar.js") + "\n" + las("src/spel/skotsel.js")
   + "\n" + las("src/spel/sprak.js"), ctx);
 const {
   HORSES, FODERSCHEMA, KRAFTVAL,
-  RYKTZON, RYKTREDSKAP, RYKTKRAV, SADELFAS,
-  VISITPUNKT, VISITFYND, VISITSVAR, FASER,
+  RYKTZON, RYKTREDSKAP, RYKTKRAV, RYKTZONNAMN, RYKTZONNAMN_EN, SADELFAS,
+  VISITPUNKT, VISITFYND, VISITFYND_EN, VISITSVAR, FASER,
   HALSNING, HOVAR, EFTERVARD, SPRAK, SPRAK_BACKLOG,
 } = vm.runInContext(
   "({HORSES, FODERSCHEMA, KRAFTVAL, RYKTZON, RYKTREDSKAP, RYKTKRAV, " +
-  "SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR, FASER, " +
+  "RYKTZONNAMN, RYKTZONNAMN_EN, SADELFAS, VISITPUNKT, VISITFYND, " +
+  "VISITFYND_EN, VISITSVAR, FASER, " +
   "HALSNING, HOVAR, EFTERVARD, SPRAK, SPRAK_BACKLOG})",
   ctx,
 );
@@ -339,7 +340,11 @@ const BAS_RUNTIME = {
      bort som alla andra basvärden. */
   profil: "skolhast",
 };
-const FAKTA_RUNTIME = ["namn", "typ", "fodd", "ras", "mankhojd", "import", "kategori", "besk"];
+/* `beskEn` följer med för att beskrivningen ÄR spelartext på webben
+   (hästkortet) och ska kunna bli det i Roblox. Egennamnet `namn`
+   översätts aldrig; det är verklighetens namn. */
+const FAKTA_RUNTIME = ["namn", "typ", "fodd", "ras", "mankhojd", "import", "kategori",
+  "besk", "beskEn"];
 const GAME_RUNTIME = Object.keys(BAS_RUNTIME);
 const sparseHorses = {};
 for (const [id, h] of Object.entries(HORSES)) {
@@ -395,9 +400,11 @@ return {
 `;
 
 const skotselRuntime = {
-  rykt: {zoner: RYKTZON, redskap: RYKTREDSKAP, krav: RYKTKRAV},
+  rykt: {zoner: RYKTZON, redskap: RYKTREDSKAP, krav: RYKTKRAV,
+    zonnamn: RYKTZONNAMN, zonnamnEn: RYKTZONNAMN_EN},
   sadelfaser: SADELFAS,
-  visitation: {punkter: VISITPUNKT, fynd: VISITFYND, svar: VISITSVAR},
+  visitation: {punkter: VISITPUNKT, fynd: VISITFYND, fyndEn: VISITFYND_EN,
+    svar: VISITSVAR},
   faser: FASER,
   /* Hälsningen, hovarna och eftervården. HALSNING låg förut bara i
      webbens src/moment.js som `VISITGANG` — fasen `halsa` fanns alltså på

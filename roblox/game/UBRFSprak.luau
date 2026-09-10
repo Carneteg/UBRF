@@ -37,6 +37,10 @@ Sprak.text = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
 	},
+	["forb.utrustning_steg"] = {
+		sv = "Utrustning %d/%d",
+		en = "Tacking up %d/%d",
+	},
 	["hast.inte_redo"] = {
 		sv = "Hästen är inte färdig att sitta upp på",
 		en = "The horse is not ready to be ridden",
@@ -487,14 +491,22 @@ Sprak.text = {
      som inte får maskinöversättas av en agent. Se src/spel/sprak.js. ]]
 Sprak.backlog = {
 	{
-		kalla = "src/spel/hastar.js",
-		vad = "hästarnas namn, raser och beskrivningar",
-		skal = "UBRF:s verkliga fakta — verkligheten är facit och får inte översättas av en agent",
+		kalla = "src/*.js (webbens egna vyer)",
+		firstPlayable = false,
+		vad = "webbens menyer, lektionstext, sysslo-vyer och hästkortets etiketter",
+		skal = "webbens textmassa ligger i vyerna själva och är ännu inte flyttad till katalogen; den vägen är inte First Playable och tas som ett eget steg",
 	},
 	{
-		kalla = "src/spel/skotsel.js",
-		vad = "skötselkanonens moment- och undervisningstext",
-		skal = "hämtad ur ridhandbokens struktur; hästkunskapens terminologi är Tobias beslut, inte mitt",
+		kalla = "src/spel/hastar.js — fältet ras",
+		firstPlayable = false,
+		vad = "rasnamn (\"Svenskt varmblod\", \"Irländsk Sporthäst\")",
+		skal = "visas ingenstans för spelaren i First Playable — bara i utvecklarutskrift — och är källdata ur ubrf.se; översätts när en yta faktiskt visar det",
+	},
+	{
+		kalla = "src/spel/hastar.js — foderschemats notis",
+		firstPlayable = false,
+		vad = "foderradens notis på webbens sysslo-vy",
+		skal = "webbyta, samma steg som webbens övriga textmassa; i Roblox går den bara till utvecklarutskrift",
 	},
 }
 

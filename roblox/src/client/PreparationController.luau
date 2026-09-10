@@ -387,6 +387,21 @@ function rita(vy: any)
 
 	local anvanda: { [string]: boolean } = {}
 
+	--[[ #162 punkt 1: KANONEN BYTER SPRÅK HÄR. Servern skickar
+		skötselkanonens svenska mening — den är kanonens stabila identitet —
+		och klienten slår upp den engelska syskontexten, för det är först
+		här spelarens locale finns. Hästens egennamn sätts in samtidigt
+		(`%N`) och översätts aldrig. ]]
+	local sprak = Sprak.eget()
+	local hastnamn = if type(vy.hastnamn) == "string" then vy.hastnamn else nil
+	local function lokalt(m: any) return Preparation.momentPaSprak(m, sprak, hastnamn) end
+	local function lokaltSteg(s: any) return Preparation.stegPaSprak(s, sprak) end
+	local function lokalKanon(s: any)
+		local ut = Preparation.kanonPaSprak(if type(s) == "string" then s else nil, sprak)
+		if hastnamn and type(ut) == "string" then ut = string.gsub(ut, "%%N", hastnamn) end
+		return ut or ""
+	end
+
 	--[[ ── 1. VÄLFÄRDSSTOPPET ─────────────────────────────────────
 		Ligger först för att det stänger allt annat. Ingen fas, inget
 		moment, ingen uppsittning — bara texten om varför. ]]
@@ -394,7 +409,7 @@ function rita(vy: any)
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.lararen_tar_over") end
-		if hjalp then hjalp.Text = tostring(vy.stoppad) end
+		if hjalp then hjalp.Text = lokalKanon(vy.stoppad) end
 		if gui then gui.Enabled = true end
 		return
 	end
@@ -404,18 +419,18 @@ function rita(vy: any)
 		— spelaren ska se var i dagen hon är — men det enda som går att
 		trycka på är svaren. ]]
 	for i, steg in ipairs(vy.steg or {}) do
-		rad(steg, i)
+		rad(lokaltSteg(steg), i)
 	end
 
 	if vy.svar and #vy.svar > 0 then
 		for i, s in ipairs(vy.svar) do
 			anvanda[s.id] = true
-			momentRad({ id = s.id, namn = s.namn, klar = false, fel = s.fel }, i, not s.fel,
-				function() PreparationController.svara(s.id) end)
+			momentRad(lokalt({ id = s.id, namn = s.namn, klar = false, fel = s.fel }),
+				i, not s.fel, function() PreparationController.svara(s.id) end)
 		end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.du_hittade_nagot") end
-		if hjalp then hjalp.Text = tostring(vy.fynd or "") end
+		if hjalp then hjalp.Text = lokalKanon(vy.fynd) end
 		if gui then gui.Enabled = true end
 		return
 	end
@@ -429,10 +444,11 @@ function rita(vy: any)
 		local text = ""
 		for i, m in ipairs(senastePass.moment or {}) do
 			anvanda[m.id] = true
-			momentRad(m, i, m.id == nasta, function()
+			local lm = lokalt(m)
+			momentRad(lm, i, m.id == nasta, function()
 				PreparationController.eftervard(m.id)
 			end)
-			if m.id == nasta then text = m.text or "" end
+			if m.id == nasta then text = lm.text or "" end
 		end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.ta_hand_om_henne") end
@@ -462,10 +478,11 @@ function rita(vy: any)
 	local momenttext = ""
 	for i, m in ipairs(vy.moment or {}) do
 		anvanda[m.id] = true
-		momentRad(m, i, m.id == nasta, function()
+		local lm = lokalt(m)
+		momentRad(lm, i, m.id == nasta, function()
 			PreparationController.begar(vy.nasta, m.id)
 		end)
-		if m.id == nasta then momenttext = m.text or "" end
+		if m.id == nasta then momenttext = lm.text or "" end
 	end
 	doljOanvanda(anvanda)
 
@@ -481,7 +498,7 @@ function rita(vy: any)
 	else
 		local fasnamn = nil
 		for _, steg in ipairs(vy.steg or {}) do
-			if steg.id == vy.nasta then fasnamn = steg.namn end
+			if steg.id == vy.nasta then fasnamn = lokaltSteg(steg).namn end
 		end
 		if rubrik then rubrik.Text = fasnamn or Sprak.t("hud.gor_i_ordning") end
 		if hjalp then hjalp.Text = momenttext end
@@ -508,20 +525,33 @@ end
 	känd. Tre fall, i den ordningen:
 
 	  1. `kanon:…` — skötselkanonens egen mening (välfärdsstoppet, ett
-	     moments förklaring). Innehåll, inte gränssnitt: visas som den är
-	     och räknas som redovisad översättningsskuld av språkgrinden.
+	     moments förklaring). Innehåll, inte gränssnitt — men sedan
+	     produktbeslutet i #162 HAR kanonen engelska poster, så meningen
+	     slås upp på spelarens språk i stället för att visas rå.
 	  2. en nyckel som finns i katalogen — översätts, med argumentet.
 	  3. något annat — visas som det är. Det ska inte hända, och att det
 	     syns i klartext är avsiktligt: ett kvarglömt rått skäl ska
 	     upptäckas, inte döljas bakom en generisk fras.
 
 	Publik för att grinden ska kunna mäta samma funktion klienten kör. ]]
+--[[ Kanonens mening på spelarens språk, med hästens egennamn insatt där
+	kanonen skriver `%N`. Egennamnet kommer ur den senaste vyn och
+	översätts aldrig. ]]
+local function kanonPaEgetSprak(text: string): string
+	local ut = Preparation.kanonPaSprak(text, Sprak.eget()) or text
+	local namn = senasteVy and senasteVy.hastnamn
+	if type(namn) == "string" and namn ~= "" then
+		ut = string.gsub(ut, "%%N", namn)
+	end
+	return ut
+end
+
 function PreparationController.skalText(skal: any, extra: any?): string
 	if type(skal) ~= "string" or skal == "" then
 		return Sprak.t("hud.gick_inte_nu")
 	end
 	if Preparation.arKanontext(skal) then
-		return Preparation.utanKanonprefix(skal)
+		return kanonPaEgetSprak(Preparation.utanKanonprefix(skal))
 	end
 	if Sprak.finns(skal) then
 		--[[ ARGUMENTET kan i sin tur vara kanontext: välfärdsstoppet är en
@@ -531,7 +561,7 @@ function PreparationController.skalText(skal: any, extra: any?): string
 			meningen inuti ännu inte är översatt. ]]
 		local arg = extra
 		if Preparation.arKanontext(arg) then
-			arg = Preparation.utanKanonprefix(arg)
+			arg = kanonPaEgetSprak(Preparation.utanKanonprefix(arg))
 		elseif type(arg) == "string" and Sprak.finns(arg) then
 			arg = Sprak.t(arg)
 		end
@@ -587,6 +617,28 @@ end
 
 function PreparationController._rubrik(): string
 	return rubrik and rubrik.Text or ""
+end
+
+function PreparationController._hjalptext(): string
+	return hjalp and hjalp.Text or ""
+end
+
+--[[ ALLT HUD:EN FAKTISKT RITADE, som text. Grinden (#162 punkt 4) sveper
+	hela First Playable-dagen på en-us och läser den här listan; den får
+	inte innehålla en enda svensk bokstav. Att provet läser de RITADE
+	etiketterna, inte vyn det skickade in, är hela poängen: en översättning
+	som aldrig når TextLabel:en är ingen översättning. ]]
+function PreparationController._ritadText(): { string }
+	local ut = {}
+	if rubrik then table.insert(ut, rubrik.Text) end
+	if hjalp then table.insert(ut, hjalp.Text) end
+	for _, r in pairs(rader) do
+		if r.ram.Visible then table.insert(ut, r.namn.Text) end
+	end
+	for _, knapp in pairs(momentRader) do
+		if knapp.Visible then table.insert(ut, knapp.Text) end
+	end
+	return ut
 end
 
 function PreparationController.start()
