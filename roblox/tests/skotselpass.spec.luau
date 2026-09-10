@@ -1303,6 +1303,196 @@ do
 	game:GetService("RunService")._server = false
 end
 
+--[[ ══ OMREVIEW FYND 3: ETT RÄKNAT PASS BER INTE OM UPPSITTNING ══════
+
+	ChatGPT:s omreview av `caac3f5`: `Pass.markeraRaknat` sätter
+	`lage = "recorded"`, men klientens panel kände bara igen `"aftercare"`.
+	`recorded` föll därför igenom till skötselvyn — och där är
+	förberedelsen fortfarande komplett, så rubriken blev
+	**"Klar — du kan sitta upp"**. Samtidigt nekar serverns egen grind
+	`GameplayService.farSittaUpp` samma spelare med
+	**"Du har redan ridit idag"**, eftersom `lage ~= before_ride`.
+
+	Grinden är rätt. Det var PRESENTATIONEN som ljög, och en First Playable
+	får aldrig be spelaren om något servern uttryckligen nekar.
+
+	Provet mäter BÅDA sidorna av motsägelsen på samma spelare, i tre steg:
+
+	  1. BASLINJEN — med passet i `before_ride` säger servern JA och
+	     klienten "Klar — du kan sitta upp". Utan det här steget mätte
+	     provet ingenting: en rubrik som aldrig visats kunna säga
+	     "sitta upp" faller inte av att felet kommer tillbaka.
+	  2. Passet rids och avslutas genom `GameplayService.avslutaPass`,
+	     alltså serverns riktiga väg, med de sparningar den gör.
+	  3. MÄTNINGEN — samma spelare får nu NEJ av grinden, och de vyer
+	     servern FAKTISKT skickade matas in i klientens riktiga
+	     `PreparationSync`/`PassSync`-lyssnare. Panelen får inte längre
+	     nämna uppsittning.
+
+	Provet bygger ingen egen vy och ingen egen rubrik: payloaden kommer ur
+	`_skickat` på fjärrobjektet, och rubriken läses med
+	`PreparationController._rubrik()`, alltså det HUD:en ritade.
+
+	Bänkgräns: `CollectionService:GetInstanceAddedSignal` i stubbarna
+	dispatchar inte, så riggens ankomst kan inte fjärra hooken i
+	`GameplayService.start()`. Provet anropar därför `GameplayService.bind`
+	direkt — exakt den funktion hooken anropar — och att hooken är kopplad
+	står oprovad här. Avståndsregeln kan heller inte prövas utan karaktär,
+	så eftervårdens moment körs genom `Pass.utfor`, samma modulfunktion som
+	`GameplayService.eftervard` anropar efter sin närvarokontroll.
+]]
+do
+	print("\n── Fynd 3: ett räknat pass får inte be om uppsittning ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+
+	local spelare = { Name = "Fynd3", UserId = 9303,
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+
+	local hastId = StallService.hastIdFor(spelare)
+	check("spelaren har en tilldelad häst", hastId ~= nil, tostring(hastId))
+
+	--[[ Riggen står i världen med rätt identitet. ]]
+	local modell = Instance.new("Model")
+	modell.Name = "Hast"
+	modell:SetAttribute("HorseId", hastId)
+	game:GetService("CollectionService"):AddTag(modell, "Horse")
+	GameplayService.bind(spelare)
+	check("modellen är bunden", GameplayService.modellFor(spelare) == modell)
+
+	--[[ Hela förberedelsen, moment för moment genom den riktiga regeln. ]]
+	local st = GameplayService.stateFor(spelare)
+	check("tjänsten håller ett förberedelsetillstånd", st ~= nil)
+	for _, f in ipairs(Preparation.stegFaser()) do
+		local ok, skal = gorFas(st, f.id, hastId)
+		check("fasen " .. f.id .. " går att göra", ok, tostring(skal))
+	end
+
+	--[[ ── 1. BASLINJEN ───────────────────────────────────────────
+		Servern säger ja, och klientens panel ska säga det samma. ]]
+	local okFore, skalFore = GameplayService.farSittaUpp(spelare, modell)
+	check("servern släpper upp en förberedd spelare", okFore, tostring(skalFore))
+
+	local prepSync = Networking.get("PreparationSync")
+	local passSync = Networking.get("PassSync")
+	local hello = Networking.get("PreparationHello")
+
+	--[[ Handskakningen genom klientens riktiga `start()`. Stubbens
+		`InvokeServer` svarar `true`, så den kopplas till serverns riktiga
+		`OnServerInvoke` — samma funktion nätet hade nått. ]]
+	hello.InvokeServer = function()
+		return hello.OnServerInvoke(spelare)
+	end
+	PreparationController.start()
+
+	check("klienten fick sin häst i handskakningen",
+		PreparationController.hastId() == hastId,
+		tostring(PreparationController.hastId()))
+	check("BASLINJE: panelen bjuder in till uppsittning när passet inte är ridet",
+		PreparationController._rubrik() == "Klar — du kan sitta upp",
+		"rubrik: " .. PreparationController._rubrik())
+
+	--[[ ── 2. PASSET RIDS OCH AVSLUTAS ────────────────────────────
+		Lägesbytena är modulens egna; det är dem `GameplayService` driver
+		från uppsittningen, avsittningen och eftervårdens moment. ]]
+	local p = GameplayService.passFor(spelare)
+	check("tjänsten håller ett pass", p ~= nil)
+	local okUpp, skalUpp = Pass.vidUppsittning(p)
+	check("uppsittningen tas emot", okUpp, tostring(skalUpp))
+	local okAv, skalAv = Pass.vidAvsittning(p)
+	check("avsittningen tas emot", okAv, tostring(skalAv))
+
+	--[[ Eftervården ska nu stå i panelen, med sina moment att trycka på.
+		Serverns passvy hämtas genom handskakningen — samma väg en klient
+		som anslutit mitt i eftervården går, och den ENDA vägen i bänken
+		som får servern att skicka en passvy utan avståndsprövning.
+
+		De synliga raderna mätta HÄR är förutsättningen för mätningen
+		längre ned: utan dem vore "inga moment står kvar att trycka på"
+		grönt av sig självt, alltså ett krav som inte mäter någonting. ]]
+	local foreEftervard = #passSync._skickat
+	hello.OnServerInvoke(spelare)
+	for i = foreEftervard + 1, #passSync._skickat do
+		passSync.OnClientEvent:Fire(passSync._skickat[i][2])
+	end
+	check("panelen står i eftervården", PreparationController._rubrik() == "Ta hand om henne",
+		"rubrik: " .. PreparationController._rubrik())
+	check("och har moment att trycka på",
+		#PreparationController._synligaMoment() > 0,
+		table.concat(PreparationController._synligaMoment(), ", "))
+
+	while true do
+		local m = Pass.nastaMoment(p)
+		if not m then break end
+		local okM, skalM = Pass.utfor(p, m.id)
+		check("eftervårdsmomentet " .. m.id .. " går att göra", okM, tostring(skalM))
+	end
+	check("passet är klart att avsluta", p.lage == Pass.LAGE.KLART, tostring(p.lage))
+
+	local foreP = #prepSync._skickat
+	local foreS = #passSync._skickat
+
+	local okSlut, skalSlut = GameplayService.avslutaPass(spelare)
+	check("passet avslutas", okSlut, tostring(skalSlut))
+	check("och är RÄKNAT i serverns minne", p.lage == Pass.LAGE.RAKNAT, tostring(p.lage))
+
+	--[[ ── 3. MÄTNINGEN ───────────────────────────────────────────
+		Först serverns nej — det är den motsägelse presentationen låg fel
+		mot, och kravet står och faller med att den finns. ]]
+	local okEfter, skalEfter = GameplayService.farSittaUpp(spelare, modell)
+	check("servern NEKAR en andra uppsittning samma dag",
+		not okEfter and skalEfter == "Du har redan ridit idag", tostring(skalEfter))
+
+	--[[ Och så de vyer servern faktiskt skickade, in genom klientens
+		riktiga lyssnare i den ordning de gick ut. ]]
+	check("servern skickade en ny förberedelsevy", #prepSync._skickat > foreP,
+		("%d → %d"):format(foreP, #prepSync._skickat))
+	check("servern skickade en ny passvy", #passSync._skickat > foreS,
+		("%d → %d"):format(foreS, #passSync._skickat))
+
+	local sistaPass = passSync._skickat[#passSync._skickat][2]
+	check("passvyn bär läget recorded", sistaPass.lage == "recorded",
+		tostring(sistaPass.lage))
+
+	for i = foreP + 1, #prepSync._skickat do
+		prepSync.OnClientEvent:Fire(prepSync._skickat[i][2])
+	end
+	for i = foreS + 1, #passSync._skickat do
+		passSync.OnClientEvent:Fire(passSync._skickat[i][2])
+	end
+
+	--[[ KRAVET. Tas `passRaknat()`-grenen ur `PreparationController.rita`
+		faller vyn igenom till skötseln, där förberedelsen fortfarande är
+		komplett, och rubriken blir baslinjens "Klar — du kan sitta upp"
+		igen. Det är mutationen som ska fälla det här. ]]
+	local rubrikEfter = PreparationController._rubrik()
+	check("panelen säger att passet är klart och sparat",
+		rubrikEfter == "Passet är klart och sparat", "rubrik: " .. rubrikEfter)
+	check("och nämner inte uppsittning någonstans",
+		not string.find(rubrikEfter, "sitta upp", 1, true), "rubrik: " .. rubrikEfter)
+	check("inga moment står kvar att trycka på",
+		#PreparationController._synligaMoment() == 0,
+		table.concat(PreparationController._synligaMoment(), ", "))
+
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end

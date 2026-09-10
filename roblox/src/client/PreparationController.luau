@@ -363,6 +363,21 @@ local function iEftervard(): boolean
 	return senastePass ~= nil and senastePass.lage == "aftercare"
 end
 
+--[[ Är passet RÄKNAT och sparat? (#162 omreview, fynd 3.)
+
+	`Pass.markeraRaknat` sätter `lage = "recorded"`. Den här vyn kände bara
+	igen `aftercare`, så `recorded` föll igenom till skötselvyn — och där är
+	förberedelsen fortfarande komplett, så rubriken blev **"Klar — du kan
+	sitta upp"**. Samtidigt nekar `GameplayService.farSittaUpp` samma
+	spelare med **"Du har redan ridit idag"**, eftersom `lage ~= before_ride`.
+
+	Servergrinden är rätt: den är fail-closed. Det var PRESENTATIONEN som
+	ljög, och en First Playable får aldrig be spelaren om något servern
+	uttryckligen nekar. ]]
+local function passRaknat(): boolean
+	return senastePass ~= nil and senastePass.lage == "recorded"
+end
+
 function rita(vy: any)
 	bygg()
 	senasteVy = vy
@@ -419,6 +434,22 @@ function rita(vy: any)
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = "Ta hand om henne" end
 		if hjalp then hjalp.Text = text end
+		if gui then gui.Enabled = true end
+		return
+	end
+
+	--[[ ── 3b. PASSET ÄR RÄKNAT ───────────────────────────────────
+		Dagens pass är avslutat och sparat. Det finns ingenting kvar att
+		göra på den här hästen idag, och framför allt: sitt INTE upp — det
+		nekar servern. Raderna släcks; ett moment att trycka på här vore
+		samma lögn som rubriken var. ]]
+	if passRaknat() then
+		for _, r in pairs(rader) do r.ram.Visible = false end
+		doljOanvanda(anvanda)
+		if rubrik then rubrik.Text = "Passet är klart och sparat" end
+		if hjalp then
+			hjalp.Text = "Bra jobbat. Du har ridit ditt pass idag."
+		end
 		if gui then gui.Enabled = true end
 		return
 	end
