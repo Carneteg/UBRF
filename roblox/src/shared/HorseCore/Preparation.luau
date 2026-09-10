@@ -408,32 +408,59 @@ end
 	och det gjorde spärren obevisbar: ett försök att rykta avvisades med
 	"fel tur" ändå, så fyndspärren gick att ta bort utan att något prov
 	blev rött. Falsifieringspasset fällde det. ]]
+--[[ KANONTEXT SOM SKÄL.
+
+	Nästan alla nej går numera över nätet som SPRÅKNYCKLAR ("pass.fel_tur")
+	som klienten skriver ut i spelarens språk. Två skäl kan inte göra det:
+	välfärdsstoppets mening och ett moments egen förklaring kommer ur
+	skötselkanonen, alltså ur undervisningstexten — och den är svensk och
+	får inte maskinöversättas av en agent (`CLAUDE.md`).
+
+	De skickas därför med prefixet `kanon:`. Det är AVSIKTLIGT synligt:
+	klienten vet att texten är innehåll och inte en nyckel, och
+	språkgrinden kan RÄKNA dem och redovisa dem som översättningsskuld i
+	stället för att en svensk mening tystnar in i en engelsk HUD. Får
+	kanonen engelska poster är det här stället som slår upp dem. ]]
+local KANON = "kanon:"
+
+function Preparation.kanontext(text: string?): string
+	return KANON .. tostring(text or "")
+end
+
+function Preparation.arKanontext(skal: string?): boolean
+	return type(skal) == "string" and string.sub(skal, 1, #KANON) == KANON
+end
+
+function Preparation.utanKanonprefix(skal: string): string
+	return if Preparation.arKanontext(skal) then string.sub(skal, #KANON + 1) else skal
+end
+
 function Preparation.provaSteg(state: State, fasId: string, hastId: string): (boolean, string?)
 	if state.stoppad then
-		return false, state.stoppad
+		return false, Preparation.kanontext(state.stoppad)
 	end
 	if hastId ~= state.hastId then
-		return false, "fel häst"
+		return false, "forb.fel_hast"
 	end
 	--[[ Ett fynd som setts men inte rapporterats blockerar allt annat. Det
 		är hela poängen med momentet: man går inte vidare och sadlar över en
 		varm sena för att listan säger att ryktningen står på tur. ]]
 	if state.fyndSett and not state.fyndRapporterat then
-		return false, "Du hittade något. Bestäm vad du gör åt det först."
+		return false, "forb.oppet_fynd"
 	end
 	local fas = Preparation.fas(fasId)
 	if not fas then
-		return false, "okänd fas"
+		return false, "forb.okand_fas"
 	end
 	if fas.sitt then
-		return false, "uppsittningen är inget förberedelsesteg"
+		return false, "forb.uppsittning_inte_steg"
 	end
 	if state.klara[fasId] then
-		return false, "redan gjort"
+		return false, "forb.redan_gjort"
 	end
 	local nastaFas = Preparation.nasta(state)
 	if not nastaFas or nastaFas.id ~= fasId then
-		return false, "fel tur — " .. (nastaFas and nastaFas.namn or "inget kvar") .. " står på tur"
+		return false, "forb.fel_tur", (if nastaFas then nastaFas.namn else nil)
 	end
 	return true, nil
 end
@@ -458,19 +485,19 @@ function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 		if m.id == momentId then moment = m end
 	end
 	if not moment then
-		return false, "okänt moment", nil
+		return false, "forb.okant_moment", nil
 	end
 
 	local gjort = state.gjorda[fasId] or {}
 	if gjort[momentId] then
-		return false, "redan gjort", nil
+		return false, "forb.redan_gjort", nil
 	end
 
 	--[[ Ett felaktigt alternativ får VÄLJAS — det är så det lär ut — men
 		det flyttar ingenting framåt. Texten är kanonens egen konsekvens,
 		inte en tillrättavisning skriven här. ]]
 	if moment.fel then
-		return false, moment.text, moment
+		return false, Preparation.kanontext(moment.text), moment
 	end
 
 	local lagsta = nil
@@ -481,7 +508,7 @@ function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 	end
 	if lagsta and moment.steg > lagsta then
 		local pa_tur = Preparation.nastaMoment(state, fasId)
-		return false, "fel tur — " .. (pa_tur and pa_tur.namn or "något annat")
+		return false, "forb.fel_tur", (if pa_tur then pa_tur.namn else nil)
 			.. " står på tur", nil
 	end
 
@@ -527,23 +554,23 @@ end
 	det är momentet. Fel svar avvisas och fyndet står kvar öppet. ]]
 function Preparation.svaraFynd(state: State, svarId: string): (boolean, string?)
 	if not state.fyndSett then
-		return false, "det finns inget att rapportera"
+		return false, "forb.inget_att_rapportera"
 	end
 	if state.fyndRapporterat then
-		return false, "redan rapporterat"
+		return false, "forb.redan_rapporterat"
 	end
 	local valt = nil
 	for _, s in ipairs(Preparation.fyndSvar()) do
 		if s.id == svarId then valt = s end
 	end
 	if not valt then
-		return false, "okänt svar"
+		return false, "forb.okant_svar"
 	end
 	if valt.fel then
 		--[[ "Det går nog bra idag" och "lös det själv" avvisas och fyndet
 			står kvar. Att låta dem gå igenom med en sämre poäng hade gjort
 			dem till en genväg; här finns ingen genväg, bara ett rätt svar. ]]
-		return false, "Det är inte ditt beslut att ta. Säg till ridläraren."
+		return false, "forb.inte_ditt_beslut"
 	end
 	state.fyndRapporterat = true
 	local text = Skotsel.visitation.fynd[state.fynd or ""] or "Något är inte som det ska."
@@ -557,12 +584,12 @@ end
 	`GameplayService` med en modell i handen. ]]
 function Preparation.provaUppsittning(state: State, hastId: string): (boolean, string?)
 	if hastId ~= state.hastId then
-		return false, "det är inte din häst"
+		return false, "forb.inte_din_hast"
 	end
 	--[[ FAIL-CLOSED. Välfärdsstoppet prövas före allt annat och kan inte
 		kringgås av att faserna råkar vara avbockade. ]]
 	if state.stoppad then
-		return false, state.stoppad
+		return false, Preparation.kanontext(state.stoppad)
 	end
 	--[[ En fas som står som klar men vars moment inte är gjorda får inte
 		heller släppa igenom. `klara` sätts bara av `utforMoment`, men
@@ -570,12 +597,12 @@ function Preparation.provaUppsittning(state: State, hastId: string): (boolean, s
 		sätta flaggan. ]]
 	for _, f in ipairs(Preparation.stegFaser()) do
 		if not Preparation.fasKlar(state, f.id) then
-			return false, f.namn .. " återstår"
+			return false, "pass.aterstar", f.namn
 		end
 	end
 	local nastaFas = Preparation.nasta(state)
 	if nastaFas then
-		return false, nastaFas.namn .. " återstår"
+		return false, "pass.aterstar", nastaFas.namn
 	end
 	return true, nil
 end
@@ -628,10 +655,10 @@ end
 	ska få veta att det är fel häst, inte att något återstår. ]]
 function Preparation.provaModell(state: State?, modellHastId): (boolean, string?)
 	if not state then
-		return false, "Du har ingen tilldelad häst"
+		return false, "spel.ingen_hast"
 	end
 	if modellHastId ~= state.hastId then
-		return false, "Det är inte din häst"
+		return false, "spel.inte_din_hast"
 	end
 	return Preparation.provaUppsittning(state, state.hastId)
 end

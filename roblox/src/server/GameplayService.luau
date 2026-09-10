@@ -189,18 +189,18 @@ end
 local function narvaro(player: Player): (boolean, string?)
 	local s = state[player]
 	if not s then
-		return false, "Du har ingen tilldelad häst"
+		return false, "spel.ingen_hast"
 	end
 	local modell = bunden[player]
 	if not modell then
 		--[[ Prova en gång till: riggen kan ha dykt upp sedan sist. ]]
 		modell = GameplayService.bind(player)
 		if not modell then
-			return false, "Din häst finns inte i världen än"
+			return false, "spel.hast_saknas"
 		end
 	end
 	if not avstandOk(player, modell) then
-		return false, "Du står för långt bort"
+		return false, "spel.for_langt"
 	end
 	return true, nil
 end
@@ -214,7 +214,7 @@ end
 	som `Preparation` prövar mot ordning, avstånd, individ och välfärd. ]]
 function GameplayService.moment(player: Player, fasId: string, momentId: string): (boolean, string?)
 	if typeof(fasId) ~= "string" or typeof(momentId) ~= "string" then
-		return false, "Ogiltigt steg"
+		return false, "spel.ogiltigt_steg"
 	end
 	local naravaro_ok, skal = narvaro(player)
 	if not naravaro_ok then
@@ -232,7 +232,7 @@ end
 	förlora dagen på det. ]]
 function GameplayService.svara(player: Player, svarId: string): (boolean, string?)
 	if typeof(svarId) ~= "string" then
-		return false, "Ogiltigt svar"
+		return false, "spel.ogiltigt_svar"
 	end
 	local naravaro_ok, skal = narvaro(player)
 	if not naravaro_ok then
@@ -266,11 +266,11 @@ end
 
 function GameplayService.eftervard(player: Player, momentId: string): (boolean, string?)
 	if typeof(momentId) ~= "string" then
-		return false, "Ogiltigt steg"
+		return false, "spel.ogiltigt_steg"
 	end
 	local p = passState[player]
 	if not p then
-		return false, "Du har inget pass igång"
+		return false, "spel.inget_pass"
 	end
 	--[[ Eftervården kräver samma närvaro som skötseln: man tar av sadeln
 		vid hästen, inte från läktaren. ]]
@@ -300,7 +300,7 @@ end
 function GameplayService.avslutaPass(player: Player): (boolean, string?)
 	local p = passState[player]
 	if not p then
-		return false, "Du har inget pass igång"
+		return false, "spel.inget_pass"
 	end
 	local ok, skal = Pass.farAvsluta(p)
 	if not ok then
@@ -309,7 +309,7 @@ function GameplayService.avslutaPass(player: Player): (boolean, string?)
 
 	local save = SparService.save(player)
 	if not save then
-		return false, "Sparningen är inte igång"
+		return false, "spel.ingen_sparning"
 	end
 
 	--[[ Räkningen görs i minnesbilden först, så att `skriv` har något att
@@ -354,7 +354,7 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 		return false, skal
 	end
 	if bunden[player] ~= modell then
-		return false, "Det är inte din häst"
+		return false, "spel.inte_din_hast"
 	end
 	--[[ Passet får bara räknas en gång, och eftervården får inte
 		nollställas av ett andra `tryMount`. REGELN ligger i `Pass` och
@@ -365,7 +365,7 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 	if p then
 		local far, skalPass = Pass.farSittaUpp(p)
 		if not far then
-			return false, skalPass or "Du har redan ridit idag"
+			return false, skalPass or "spel.redan_ridit"
 		end
 	end
 	return true, nil
@@ -415,7 +415,7 @@ function GameplayService.start()
 		den ett begripligt nej. Fasen går inte att kvittera den vägen — det
 		är hela ändringen i #161. ]]
 	Net.get("PreparationStep").OnServerInvoke = function(_player, _fasId)
-		return false, "Skötseln görs moment för moment nu — uppdatera klienten."
+		return false, "spel.gammal_klient"
 	end
 
 	--[[ Handskakningen. Klienten anropar den FÖRST efter att den anslutit sin

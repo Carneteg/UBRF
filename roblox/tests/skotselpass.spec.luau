@@ -172,7 +172,7 @@ do
 		efter det första, så här är det bara momentspärren som kan säga nej. ]]
 	local ok3, skal3 = Preparation.utforMoment(s, "visitera", vis[1].id, "cosmo")
 	check("dubbeltryck på samma moment avvisas",
-		not ok3 and skal3 == "redan gjort", tostring(skal3))
+		not ok3 and skal3 == "forb.redan_gjort", tostring(skal3))
 	check("dubbeltryck flyttar inte fram fasen", s.klara.visitera == nil)
 	check("och nästa moment står kvar på tur",
 		Preparation.nastaMoment(s, "visitera").id == vis[2].id,
@@ -245,7 +245,10 @@ do
 		var de fortfarande gröna, för `provaSteg` avvisade ryktningen med
 		"fel tur" ändå (visitationen var inte klar). Ett nej av fel skäl är
 		inget bevis — spärren gick att ta bort utan att något blev rött. ]]
-	local FYNDSKAL = "Du hittade något. Bestäm vad du gör åt det först."
+	--[[ #162 lokalisering: nejen går över nätet som SPRÅKNYCKLAR, inte som
+		svensk prosa, så att en engelsk spelare får engelska. Provet mäter
+		nyckeln — det är kontraktet nu. ]]
+	local FYNDSKAL = "forb.oppet_fynd"
 	local ok1, skal1 = Preparation.utforMoment(s, "visitera",
 		Preparation.moment("visitera")[#UBRFSkotsel.visitation.punkter].id, hast)
 	local ok2, skal2 = Preparation.utforMoment(s, "rykta", "rykt:skrapa:kropp", hast)
@@ -280,16 +283,22 @@ do
 		"Visitera återstår". Provet mätte alltså fasordningen och trodde
 		att det mätte välfärden. Falsifieringspasset fällde det. ]]
 	local ok4, skal4 = Preparation.provaUppsittning(s, hast)
+	--[[ Välfärdsstoppets mening kommer ur skötselkanonen och skickas med
+		prefixet `kanon:` — den är undervisningstext, inte gränssnitt, och
+		översätts inte av en agent. Provet kräver därför BÅDE att skälet är
+		kanontext och att det är just den här hästens stoppmening: annars
+		hade en generisk nyckel kunnat passera som "stoppad av välfärden". ]]
 	check("uppsittningen är stängd AV VÄLFÄRDEN, inte av fasordningen",
-		not ok4 and skal4 == s.stoppad, tostring(skal4))
+		not ok4 and Preparation.arKanontext(skal4)
+			and Preparation.utanKanonprefix(skal4) == s.stoppad, tostring(skal4))
 	local ok5, skal5 = gorFas(s, "rykta", hast)
-	check("skötseln går inte vidare heller", not ok5 and skal5 == s.stoppad,
-		tostring(skal5))
+	check("skötseln går inte vidare heller", not ok5
+		and Preparation.utanKanonprefix(skal5) == s.stoppad, tostring(skal5))
 
 	--[[ Och inte via `provaModell`, som är den väg servern faktiskt går. ]]
 	local ok6, skal6 = Preparation.provaModell(s, hast)
 	check("provaModell säger också nej av samma skäl",
-		not ok6 and skal6 == s.stoppad, tostring(skal6))
+		not ok6 and Preparation.utanKanonprefix(skal6) == s.stoppad, tostring(skal6))
 
 	--[[ Det starkaste fallet: en spelare som fått ALLA faser avbockade och
 		SEDAN blir stoppad. Nu finns ingen fasordning kvar att förväxla
@@ -307,7 +316,7 @@ do
 	end
 	local ok7, skal7 = Preparation.provaUppsittning(t, hast)
 	check("en fullt förberedd men stoppad häst släpps ändå inte upp",
-		not ok7 and skal7 == t.stoppad, tostring(skal7))
+		not ok7 and Preparation.utanKanonprefix(skal7) == t.stoppad, tostring(skal7))
 end
 
 print("\n── Första dagen med Jack är tjänstbar ──")
@@ -1467,7 +1476,7 @@ do
 		mot, och kravet står och faller med att den finns. ]]
 	local okEfter, skalEfter = GameplayService.farSittaUpp(spelare, modell)
 	check("servern NEKAR en andra uppsittning samma dag",
-		not okEfter and skalEfter == "Du har redan ridit idag", tostring(skalEfter))
+		not okEfter and skalEfter == "spel.redan_ridit", tostring(skalEfter))
 
 	--[[ Och så de vyer servern faktiskt skickade, in genom klientens
 		riktiga lyssnare i den ordning de gick ut. ]]

@@ -322,7 +322,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ Sprakgrinden kor pa KLIENTBANKEN: den mater att HUD:en, hjalpen,
     #   pekknapparna och prompterna FAKTISKT ritas om, alltsa mot samma
     #   controllers som init.client startar. ]]
-    if "sprak" in spec_rel:
+    #[[ FORE "sprak": nej-vagssvepet behover TJANSTERNA och klientens
+    #   rendering i samma korning, alltsa integrationsbanken. Ligger den
+    #   efter faller den igenom till KLIENT dar GameplayService inte finns. ]]
+    if "sprak-en" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "sprak" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "integration" in spec_rel or "roster" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"

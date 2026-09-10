@@ -94,7 +94,11 @@ local function addPrompt(model: Model)
 		if ok and onMount then
 			onMount(model)
 		elseif not ok then
-			warn("[Horse] Kunde inte sitta upp: " .. tostring(reason))
+			--[[ Skälet är en språknyckel sedan #162. Loggen skriver båda:
+				nyckeln för den som felsöker, texten för den som läser
+				vad spelaren faktiskt fick se. ]]
+			warn(("[Horse] Kunde inte sitta upp: %s (%s)"):format(
+				Sprak.t(tostring(reason)), tostring(reason)))
 		end
 	end)
 

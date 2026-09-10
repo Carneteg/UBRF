@@ -167,6 +167,16 @@ jobs:
             luau roblox/tests/.build/sprak.spec.luau
           else echo "hoppar: sprak.spec.luau finns inte i denna branch"; fi
 
+      # Punkt 4 ur reviewen 18:27: ett engelskt svep över NEJ-vägarna.
+      # sprak.spec mäter att ytorna ritas om; den här mäter att serverns
+      # nekanden inte är svensk prosa — det var där prosan satt.
+      - name: Lokalisering — engelskt svep över nej-vägarna
+        run: |
+          if [ -f roblox/tests/sprak-en.spec.luau ]; then
+            python3 roblox/tests/build.py tests/sprak-en.spec.luau
+            luau roblox/tests/.build/sprak-en.spec.luau
+          else echo "hoppar: sprak-en.spec.luau finns inte i denna branch"; fi
+
       - name: Lokalisering — varje nyckel finns, ingen text utan nyckel
         run: |
           if [ -f tools/kolla-sprak.py ]; then python3 tools/kolla-sprak.py

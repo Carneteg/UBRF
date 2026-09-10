@@ -385,11 +385,11 @@ do
 	local ok, skal = HorseService.tryMount(spelare, cosmoModell)
 	check("oförberedd spelare stoppas av grinden", not ok, tostring(skal))
 	check("...och stoppas FÖRE mount-logiken",
-		skal ~= nil and skal ~= "Hästen är inte registrerad",
+		skal ~= nil and skal ~= "hast.oregistrerad",
 		"fick: " .. tostring(skal))
 
 	local ok2, skal2 = HorseService.tryMount(spelare, airModell)
-	check("annans häst stoppas av grinden", not ok2 and skal2 == "Det är inte din häst",
+	check("annans häst stoppas av grinden", not ok2 and skal2 == "spel.inte_din_hast",
 		tostring(skal2))
 
 	for _, f in ipairs(Preparation.stegFaser()) do
@@ -397,7 +397,7 @@ do
 	end
 	local ok3, skal3 = HorseService.tryMount(spelare, cosmoModell)
 	check("färdig förberedelse SLÄPPS IGENOM till mount-logiken",
-		not ok3 and skal3 == "Hästen är inte registrerad",
+		not ok3 and skal3 == "hast.oregistrerad",
 		"grinden passerade; mount-logiken svarade: " .. tostring(skal3))
 
 	--[[ Utan registrerad grind ska hästsystemet bete sig precis som före den
@@ -405,7 +405,7 @@ do
 	HorseService.setMountGate(nil)
 	local ok4, skal4 = HorseService.tryMount(spelare, cosmoModell)
 	check("utan grind är beteendet oförändrat",
-		not ok4 and skal4 == "Hästen är inte registrerad", tostring(skal4))
+		not ok4 and skal4 == "hast.oregistrerad", tostring(skal4))
 end
 
 --[[ ── Produktionens UPPKOPPLING, inte bara dess regler ────────────
@@ -458,7 +458,7 @@ do
 		"Hästen är inte registrerad" i stället för förberedelsens skäl. ]]
 	local ok, skal = HorseService.tryMount(spelare, modell)
 	check("start() registrerar den riktiga grinden i HorseService",
-		not ok and skal ~= "Hästen är inte registrerad",
+		not ok and skal ~= "hast.oregistrerad",
 		"tryMount svarade: " .. tostring(skal))
 
 	--[[ G01-flaggan sätts av servern, inte av klienten. ]]
@@ -498,10 +498,10 @@ do
 	dubblett:SetAttribute("HorseId", hastId)
 	local okD, skalD = GameplayService.farSittaUpp(spelare, dubblett)
 	check("en obunden modell med samma id avvisas ÄVEN när allt är gjort",
-		not okD and skalD == "Det är inte din häst", tostring(skalD))
+		not okD and skalD == "spel.inte_din_hast", tostring(skalD))
 	local ok2, skal2 = HorseService.tryMount(spelare, modell)
 	check("färdig förberedelse släpps igenom av den RIKTIGA grinden",
-		not ok2 and skal2 == "Hästen är inte registrerad",
+		not ok2 and skal2 == "hast.oregistrerad",
 		"grinden passerade; mount-logiken svarade: " .. tostring(skal2))
 
 	game:GetService("RunService")._server = false

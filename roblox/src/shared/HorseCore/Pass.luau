@@ -144,12 +144,12 @@ function Pass.farSittaUpp(state: State): (boolean, string?)
 		return true, nil
 	end
 	if state.lage == Pass.LAGE.RIDER then
-		return false, "du sitter redan upp"
+		return false, "pass.sitter_redan"
 	end
 	if state.lage == Pass.LAGE.EFTERVARD and not Pass.eftervardBorjad(state) then
 		return true, nil
 	end
-	return false, "Du har redan ridit idag"
+	return false, "spel.redan_ridit"
 end
 
 function Pass.vidUppsittning(state: State): (boolean, string?)
@@ -172,7 +172,7 @@ function Pass.vidAvsittning(state: State): (boolean, string?)
 		return true, nil
 	end
 	if state.lage ~= Pass.LAGE.RIDER then
-		return false, "du rider inte"
+		return false, "pass.rider_inte"
 	end
 	state.lage = Pass.LAGE.EFTERVARD
 	return true, nil
@@ -184,7 +184,7 @@ end
 	rätt. ]]
 function Pass.vidValfardsstopp(state: State): (boolean, string?)
 	if state.lage == Pass.LAGE.RAKNAT then
-		return false, "passet är redan räknat"
+		return false, "pass.redan_raknat"
 	end
 	state.stoppad = true
 	state.lage = Pass.LAGE.KLART
@@ -196,23 +196,23 @@ end
 function Pass.utfor(state: State, momentId: string): (boolean, string?)
 	if state.lage ~= Pass.LAGE.EFTERVARD then
 		if state.lage == Pass.LAGE.RIDER then
-			return false, "sitt av först"
+			return false, "pass.sitt_av_forst"
 		end
-		return false, "det är inte dags för eftervård"
+		return false, "pass.inte_dags"
 	end
 	local moment = nil
 	for _, m in ipairs(Pass.moment()) do
 		if m.id == momentId then moment = m end
 	end
 	if not moment then
-		return false, "okänt moment"
+		return false, "pass.okant_moment"
 	end
 	if state.gjorda[momentId] then
-		return false, "redan gjort"
+		return false, "pass.redan_gjort"
 	end
 	local pa_tur = Pass.nastaMoment(state)
 	if pa_tur and pa_tur.id ~= momentId then
-		return false, "fel tur — " .. pa_tur.namn .. " står på tur"
+		return false, "pass.fel_tur", pa_tur.namn
 	end
 	state.gjorda[momentId] = true
 	if Pass.nastaMoment(state) == nil then
@@ -229,17 +229,17 @@ end
 	i stället för en ruta som visas på vägen ut. ]]
 function Pass.farAvsluta(state: State): (boolean, string?)
 	if state.lage == Pass.LAGE.RAKNAT then
-		return false, "passet är redan räknat"
+		return false, "pass.redan_raknat"
 	end
 	if state.lage ~= Pass.LAGE.KLART then
 		local m = Pass.nastaMoment(state)
 		if state.lage == Pass.LAGE.RIDER then
-			return false, "du sitter fortfarande upp"
+			return false, "pass.sitter_fortfarande"
 		end
 		if state.lage == Pass.LAGE.FORE then
-			return false, "du har inte ridit än"
+			return false, "pass.inte_ridit"
 		end
-		return false, (m and m.namn or "eftervården") .. " återstår"
+		return false, "pass.aterstar", (if m then m.namn else nil)
 	end
 	return true, nil
 end

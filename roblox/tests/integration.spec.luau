@@ -209,8 +209,12 @@ do
 	stall(S.spelare, vec(40, 0, 0))
 	local okAvst, skalAvst = GameplayService.moment(S.spelare, forstaFas.id, forstaMoment.id)
 	check("b) ett skötselmoment på 40 studs avstånd nekas", okAvst == false, tostring(skalAvst))
+	--[[ Nejet är en SPRÅKNYCKEL sedan lokaliseringen (#162): servern skickar
+		aldrig svensk prosa över nätet. Provet mäter nyckeln, och att den
+		finns i katalogen — en nyckel som inte gör det visas som sin egen
+		text för spelaren. ]]
 	check("   och nejet handlar om avståndet, inte något annat",
-		tostring(skalAvst):find("långt") ~= nil, tostring(skalAvst))
+		skalAvst == "spel.for_langt" and Sprak.finns(skalAvst), tostring(skalAvst))
 	local okMont, skalMont = HorseService.tryMount(S.spelare, S.modell)
 	check("   uppsittning på samma avstånd nekas också", okMont == false, tostring(skalMont))
 

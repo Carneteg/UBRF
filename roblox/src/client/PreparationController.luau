@@ -500,15 +500,44 @@ end
 	alltid en färsk sync efter varje försök, och den är sanningen; skulle
 	det här svaret rita något eget skulle det kunna komma efter och skriva
 	över den. ]]
+--[[ SERVERNS NEJ, I SPELARENS SPRÅK.
+
+	Servern skickar aldrig svensk prosa över nätet sedan #162. Den skickar
+	en SPRÅKNYCKEL ("spel.for_langt") och ibland ett argument (fasens namn),
+	och den här funktionen skriver texten — här, där spelarens locale är
+	känd. Tre fall, i den ordningen:
+
+	  1. `kanon:…` — skötselkanonens egen mening (välfärdsstoppet, ett
+	     moments förklaring). Innehåll, inte gränssnitt: visas som den är
+	     och räknas som redovisad översättningsskuld av språkgrinden.
+	  2. en nyckel som finns i katalogen — översätts, med argumentet.
+	  3. något annat — visas som det är. Det ska inte hända, och att det
+	     syns i klartext är avsiktligt: ett kvarglömt rått skäl ska
+	     upptäckas, inte döljas bakom en generisk fras.
+
+	Publik för att grinden ska kunna mäta samma funktion klienten kör. ]]
+function PreparationController.skalText(skal: any, extra: any?): string
+	if type(skal) ~= "string" or skal == "" then
+		return Sprak.t("hud.gick_inte_nu")
+	end
+	if Preparation.arKanontext(skal) then
+		return Preparation.utanKanonprefix(skal)
+	end
+	if Sprak.finns(skal) then
+		return if extra ~= nil then Sprak.t(skal, extra) else Sprak.t(skal)
+	end
+	return skal
+end
+
 local function skicka(nyckel: string, remote: string, ...)
 	if vantarPa then return end
 	vantarPa = nyckel
 	local args = table.pack(...)
 	task.spawn(function()
-		local ok, skal = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
+		local ok, skal, extra = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
 		vantarPa = nil
 		if not ok and hjalp then
-			hjalp.Text = tostring(skal or Sprak.t("hud.gick_inte_nu"))
+			hjalp.Text = PreparationController.skalText(skal, extra)
 		end
 	end)
 end

@@ -291,35 +291,35 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
 	if mountGate then
 		local tillaten, skal = mountGate(player, model)
 		if not tillaten then
-			return false, skal or "Hästen är inte färdig att sitta upp på"
+			return false, skal or "hast.inte_redo"
 		end
 	end
 
 	local session = sessions[model]
 	if not session then
-		return false, "Hästen är inte registrerad"
+		return false, "hast.oregistrerad"
 	end
 	if session.rider then
-		return false, "Hästen är redan upptagen"
+		return false, "hast.upptagen"
 	end
 	if byRider[player] then
-		return false, "Du rider redan"
+		return false, "hast.rider_redan"
 	end
 
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not (root and root:IsA("BasePart")) then
-		return false, "Ingen karaktär"
+		return false, "hast.ingen_karaktar"
 	end
 
 	local range = Config.attr(session.rig.gaitConfig, "MountRange", 14)
 	if (root.Position - session.rig.root.Position).Magnitude > range then
-		return false, "För långt bort"
+		return false, "hast.for_langt"
 	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then
-		return false, "Ingen levande karaktär"
+		return false, "hast.ingen_levande"
 	end
 
 	--[[ Sitsen sköter fastsättningen. En Seat väljs framför en handgjord
@@ -333,7 +333,7 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
 			häst som står tom, och nästa försök nekas med "Du rider redan".
 			Sitsen får bekräfta själv. ]]
 		if seat.Occupant ~= humanoid then
-			return false, "Sitsen tog inte"
+			return false, "hast.sitsen_tog_inte"
 		end
 	else
 		character:PivotTo(seatCFrame(session))
@@ -512,7 +512,7 @@ function HorseService.start()
 
 	Net.get("MountRequest").OnServerInvoke = function(player, model)
 		if typeof(model) ~= "Instance" or not model:IsA("Model") then
-			return false, "Ogiltig häst"
+			return false, "hast.ogiltig"
 		end
 		return HorseService.tryMount(player, model)
 	end
