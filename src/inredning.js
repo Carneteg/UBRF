@@ -299,9 +299,20 @@ const INREDNING = (() => {
      ASSUMPTION; rutten entré → bana går norr om raden. Ingen bank står där väggen stod som en ersättningsvägg: de är
      0,5 m djupa möbler i öppen yta, inte en linje från gavel till gavel. */
   /* En LÅNG rad (review 2026-09-04 08:50: bildens identitet är den långa
-     skåpraden) från receptionens sydvägglinje till gavelns valvfönster —
-     rutten entré → bana går norr om raden (y ≈ 75,7). */
-  const skapBitar = [[68.3, 75.0]];
+     skåpraden) mitt emot receptionens glas, fram till gavelns valvfönster —
+     rutten entré → bana går norr om raden (y ≈ 75,7).
+
+     PO-order 2026-09-10 på #162: raden började vid y 68,3, alltså drygt en
+     meter norr om entrédörren (y 67,18), och mötte där de fristående
+     grupperna i västremsan. Följden var att huvudentrén läste som en
+     skåpkorridor i stället för som en öppen hall. Raden börjar nu vid
+     y 70,0 — den är fortfarande lång (5 m, plus de höga skåpen som
+     fortsätter norrut till y 77,2), den ligger fortfarande mitt emot
+     glaset (y 73,5–77), och entréns hall är fri. Radens början och slut var
+     och är ASSUMPTION: planens "fyra luckor" är olästa och ingen bild visar
+     var raden tar slut, så det som ändras är ett antagande — inte ett
+     verifierat läge. */
+  const skapBitar = [[70.0, 75.0]];
   const skapX = 4.2 + 0.25;                              // fronten i remsans västkant
 
   const ridhus = [
@@ -370,24 +381,55 @@ const INREDNING = (() => {
        (fyra gröna dubbelluckor i vita ramar på svarta ben, gul skogräns på
        golvet). Att skåpen FINNS: VERIFIED. Rummen de står i (Bild 2–5) är
        inte placerade — REFERENCE GAP kvarstår — så grupperna står som
-       fristående förvaring i entrédelens ÖPPNA västra remsa (x 0–2,2 söder
-       om receptionen), där planens cellrad bär funktionerna skåpförvaring/
-       ombyte [antagande]: inga nya rum, inga väggar, gången x 2,2–4,2 och
-       entréns vindfång fria. Lägena: ASSUMPTION. Antalet luckor följer nu den belagda 5 × 2-gruppen.
-       Frontdetaljernas småmått är stiliserade uppskattningar. */
-    {id:"skap_grona", rum:"hall", typ:"skapbank", pos:[0.55, 69.3], rikt:E,
+       fristående förvaring, utan nya rum och utan väggar. Lägena:
+       ASSUMPTION. Antalet luckor följer den belagda 5 × 2-gruppen.
+       Frontdetaljernas småmått är stiliserade uppskattningar.
+
+       LÄGENA OMPLACERADE — PO-order 2026-09-10 på #162: "entrén får inte
+       visuellt läsa som ännu en skåpkorridor". Grupperna stod i västremsan
+       x 0–2,2 vid y 69,3 · 71,5 · 72,35, alltså rakt i den norrgående
+       blicken från huvudentrén (fasadens u 9 → dörr x 1,6, y 67,18). Den
+       remsan är en 2 m bred ficka som slutar i receptionens sydvägg
+       (`reception_s`, y 72,6), så vyn kunde bara bli skåp på båda sidor med
+       en vägg i fonden — och receptionsglaset (x 2,2, y 73,5–77) ligger
+       BAKOM den väggen och gick inte att se därifrån alls. Ingen bild visar
+       skåp i den remsan; placeringen var ASSUMPTION, inte evidens, och det
+       är den som flyttas. Ingen vägg, ingen kamera och inget verifierat
+       läge har rörts.
+
+       Var de står nu, och varför:
+       · de höga grå/mörkblå (-16/-18) fortsätter den DOKUMENTERADE
+         skåpsidan norrut till gångens ände. `ridhus-klubb-15` visar mörkblå
+         skåp bortom det vita gavelskåpet i gångens fond, så läget har nu
+         mer stöd än förut, inte mindre.
+       · de gröna (-20/-21) och de halvhöga vita (-16) hör till
+         pelarrummet, som inte är placerat. De står nu som fristående
+         förvaring i den ÖPPNA hallen öster om gången (x 6,4), klara av
+         schaktet (x 5,78–7,6, y 72,98–74,68) och av rutten entré → bana
+         (y ≈ 75,7).
+
+         Två försök dessförinnan gav fel läsning och redovisas för att
+         nästa läsare inte ska göra om dem: i västremsan söder om dörren
+         hamnade den gröna gruppen i entrékamerans axel och dominerade
+         förgrunden; på skåpsidan söder om raden dominerade den i stället
+         `RIDHUS-SKAPKORRIDOR`, vars ramkontrakt kräver den långa GRÅ raden
+         till höger. Båda kamerorna tittar norrut från y ≈ 66,7, så allt som
+         står vid y 67–70 på höger sida tar över bilden.
+       Allt skåpgods ligger därmed på EN sida av gången, vilket är vad varje
+       foto visar, och entréns öppna hall är fri. */
+    {id:"skap_grona", rum:"hall", typ:"skapbank", pos:[6.4, 69.6], rikt:W,
      matt:{b:1.6, d:0.5, h:1.8}, ben:0.15, vaningar:2, farg:"#EDEAE0", fargor:["#7FA07E"],
       kolliderar:true, ytmaterial:"Metal",
       detaljer:{kolumner:4, profil:true, beslag:true, ventilation:false,
                 ram:true, ramfarg:"#EEEDE7", sockelVent:true, ben:true},
       kalla:"ridhus-klubb-20, -21", klass:"FOTO", lage:"ASSUMPTION"},
-    {id:"skap_hoga_v", rum:"hall", typ:"skapbank", pos:[0.55, 71.5], rikt:E,
+    {id:"skap_hoga_v", rum:"hall", typ:"skapbank", pos:[skapX, 76.15], rikt:W,
      matt:{b:2.0, d:0.5, h:1.9}, farg:"#EDEAE0", fargor:["#C9CBCB","#C9CBCB","#C9CBCB","#1F2430","#1F2430"],
       kolliderar:true, ytmaterial:"Metal",
       detaljer:{kolumner:5, profil:true, beslag:true, ventilation:false,
                 ram:true, ramfarg:"#EEEDE7", overkantVent:true, sockelVent:true},
-     kalla:"ridhus-klubb-16, -18", klass:"VERIFIED", lage:"ASSUMPTION"},
-    {id:"skap_vita_2v", rum:"hall", typ:"skapbank", pos:[1.45, 72.35], rikt:Sy,
+     kalla:"ridhus-klubb-15, -16, -18", klass:"VERIFIED", lage:"ASSUMPTION"},
+    {id:"skap_vita_2v", rum:"hall", typ:"skapbank", pos:[6.4, 71.3], rikt:W,
      matt:{b:1.2, d:0.45, h:1.8}, vaningar:2, farg:"#F2F0EA", fargor:["#E9E5D8"],
       kolliderar:true, ytmaterial:"Metal",
       detaljer:{kolumner:5, profil:true, beslag:true, ventilation:false,

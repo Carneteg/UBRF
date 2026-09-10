@@ -4455,11 +4455,11 @@ return {
 				typ = "skapbank",
 				pos = {
 					4.45,
-					71.65,
+					72.5,
 				},
 				rikt = 3.141593,
 				matt = {
-					b = 6.6,
+					b = 4.9,
 					d = 0.5,
 					h = 1.9,
 				},
@@ -4490,10 +4490,10 @@ return {
 				rum = "hall",
 				typ = "skapbank",
 				pos = {
-					0.55,
-					69.3,
+					6.4,
+					69.6,
 				},
-				rikt = 0,
+				rikt = 3.141593,
 				matt = {
 					b = 1.6,
 					d = 0.5,
@@ -4526,10 +4526,10 @@ return {
 				rum = "hall",
 				typ = "skapbank",
 				pos = {
-					0.55,
-					71.5,
+					4.45,
+					76.15,
 				},
-				rikt = 0,
+				rikt = 3.141593,
 				matt = {
 					b = 2,
 					d = 0.5,
@@ -4555,7 +4555,7 @@ return {
 					overkantVent = true,
 					sockelVent = true,
 				},
-				kalla = "ridhus-klubb-16, -18",
+				kalla = "ridhus-klubb-15, -16, -18",
 				klass = "VERIFIED",
 				lage = "ASSUMPTION",
 			},
@@ -4564,10 +4564,10 @@ return {
 				rum = "hall",
 				typ = "skapbank",
 				pos = {
-					1.45,
-					72.35,
+					6.4,
+					71.3,
 				},
-				rikt = -1.570796,
+				rikt = 3.141593,
 				matt = {
 					b = 1.2,
 					d = 0.45,
