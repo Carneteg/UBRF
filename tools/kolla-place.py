@@ -118,6 +118,21 @@ def main() -> int:
             elif nod is not None:
                 print(f"  OK   {vag} ar {klass}")
 
+        #[[ Varldsbyggaren requiras i en place. En ModuleScript som inte
+        #   returnerar exakt ett varde kastar "Module code did not return
+        #   exactly one value" — EFTER att den kort, sa varlden ser byggd ut
+        #   i Output medan resten av servern aldrig startar. Det tog en
+        #   fysisk session i Studio att hitta; det ska det inte gora igen. ]]
+        varld0 = hitta(rot, "ServerScriptService/Varld/Anlaggningen")
+        kod0 = varld0.find("Properties/ProtectedString[@name='Source']").text if varld0 is not None else ""
+        rader = [l.strip() for l in (kod0 or "").splitlines() if l.strip()
+                 and not l.strip().startswith("--")]
+        if rader and rader[-1].startswith("return "):
+            print("  OK   varldsbyggaren returnerar ett varde (requiras som ModuleScript)")
+        else:
+            fel.append("varldsbyggaren returnerar inget varde")
+            print("  FEL  varldsbyggaren saknar `return` — require() kastar efter bygget")
+
         #[[ Punkt 2: exakt en avsedd spawn. Den byggs i runtime av
         #   Anlaggningen, sa har mats i stallet att KODEN for den finns med i
         #   paketet — en place utan den raden ger ingen spawn alls. ]]

@@ -2391,3 +2391,21 @@ print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d o
 -- hästgången, samma vy som webbversionen verifieras mot. Husen ska läsa som
 -- ETT komplex härifrån, inte som två fristående lador.
 -- BK.cameraLike(base, 148, 130, 148, 106)
+
+--[[ ══ RETURVÄRDET ═══════════════════════════════════════════════════════
+
+	Den här filen är ett SKRIPT som körs för sin verkan, men i en place
+	requiras den som ModuleScript — och en ModuleScript måste returnera
+	exakt ett värde. Utan den här raden dog serverstarten med
+
+	    Module code did not return exactly one value  -  Server - Horse:80
+
+	EFTER att världen byggts färdigt (3314 objekt), vilket är det värsta
+	läget: bygget syntes lyckat i Output men resten av servern startade
+	aldrig, ingen dörr fick interaktion, och `CharacterAutoLoads` stod kvar
+	på false — så spelaren fick en frusen himmel utan avatar.
+
+	Paketet (`tools/studio-paket.py`) lindar därför in filen i en funktion,
+	så att raden är laglig även där. ]]
+return true
+

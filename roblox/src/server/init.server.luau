@@ -81,17 +81,37 @@ local function byggVarlden(): boolean
 	return true
 end
 
-local varldenFinns = byggVarlden()
+--[[ Varje fas i egen pcall.
 
-SparService.start()
-HorseService.start()
-StallService.start()
-GameplayService.start()
-DorrService.start()
+	Andra halvan av den frusna himlen: `require(byggare)` kastade EFTER att
+	världen byggts, skriptet dog på nästa rad, och därmed startade ingen
+	tjänst, ingen dörr fick interaktion och `CharacterAutoLoads` stod kvar
+	på false. Resultatet var en spelare utan kropp och utan ledtråd.
 
---[[ Först nu får någon spawna: världen står och dörrarna har interaktion. ]]
-slappInSpelare()
+	En trasig start ska säga vad som gick fel och ändå släppa in spelaren,
+	så att läget går att titta på. Att STOPPA hör till preflighten, som
+	skriver FAIL — inte till en frusen skärm som inte säger något. ]]
+local function fas(namn: string, f: () -> ()): boolean
+	local ok, fel = pcall(f)
+	if not ok then
+		warn(("[Horse] %s föll: %s"):format(namn, tostring(fel)))
+	end
+	return ok
+end
+
+local varldenFinns = false
+fas("världsbygget", function() varldenFinns = byggVarlden() end)
+
+fas("SparService", SparService.start)
+fas("HorseService", HorseService.start)
+fas("StallService", StallService.start)
+fas("GameplayService", GameplayService.start)
+fas("DorrService", DorrService.start)
+
+--[[ Först nu får någon spawna: världen står och dörrarna har interaktion.
+	Och den här raden körs ALLTID, även om något ovan föll. ]]
+fas("släpp in spelare", slappInSpelare)
 print("[Horse] Servern igång")
 
 --[[ Preflight SIST: den mäter det färdiga läget, inte avsikten. ]]
-Preflight.kor(varldenFinns)
+fas("preflight", function() Preflight.kor(varldenFinns) end)

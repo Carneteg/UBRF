@@ -113,8 +113,13 @@ def main(lage: str = "qa") -> int:
         kropp = (BYGG / fil).read_text(encoding="utf-8")
         delar.append(f"--[[ ══ {fil} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
 
-    delar.append(f"--[[ ══ {SKRIPT} ══ ]]\n"
-                 + (BYGG / SKRIPT).read_text(encoding="utf-8") + "\n")
+    #[[ Varldsbyggaren lindas in i en funktion. Den avslutas med `return
+    #   true` for att en place REQUIRAR den som ModuleScript, och en naken
+    #   return mitt i den har filen hade varit ett syntaxfel — allt efter
+    #   den (QA-panelen) kommer ju efter. Samma kod, laglig i bada vagarna. ]]
+    delar.append(f"--[[ ══ {SKRIPT} ══ ]]\nlocal __varld = (function()\n"
+                 + (BYGG / SKRIPT).read_text(encoding="utf-8")
+                 + "\nend)()\nassert(__varld, \"varldsbyggaren returnerade inget\")\n")
     #[[ QA-panelen startas sist och bara i Studio. Den ligger med i PAKETET,
     #   inte i roblox/src/client/, just for att den aldrig ska kunna folja med
     #   ut i spelet. UBRFQA() finns kvar sa att den gar att oppna igen. ]]
