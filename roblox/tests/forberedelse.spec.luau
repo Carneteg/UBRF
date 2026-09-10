@@ -424,9 +424,22 @@ do
 	local spelare = { Name = "Prov", UserId = 4242 }
 	game:GetService("Players")._spelare = { spelare }
 
+	--[[ SPARSERVICE FÖRST, precis som `init.server.luau` startar dem (#162
+		re-review). Tilldelningen hänger på `SparService.efterLaddning`, och
+		en spelare vars save aldrig lästs är inte redo — då tilldelas hon
+		ingen häst, vilket är hela poängen med barriären.
+
+		Specen förlitade sig tidigare på en `GetPlayers()`-loop i
+		`StallService.start()` som tilldelade utan att fråga om saven fanns.
+		Den loopen var ett hål: en spelare kunde ha anlänt medan SparService
+		läste, och loopen tilldelade då mot `save == nil` — omreviewen av
+		`2a8938e` pekade ut precis det. Loopen är borta, och specen sätter
+		nu upp den förutsättning produktionen faktiskt har. ]]
+	SparService.start()
+
 	--[[ Riggen står i världen med rätt identitet. `tilldela` körs av
-		StallService.start(); vi läser vilken häst spelaren fick och taggar
-		en modell med exakt det id:t. ]]
+		hooken som StallService.start() registrerar; vi läser vilken häst
+		spelaren fick och taggar en modell med exakt det id:t. ]]
 	StallService.start()
 	local hastId = StallService.hastIdFor(spelare)
 	check("StallService äger tilldelad HorseId", hastId ~= nil, tostring(hastId))

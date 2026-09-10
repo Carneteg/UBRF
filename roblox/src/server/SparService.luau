@@ -285,15 +285,58 @@ end
 	ett race mot en låsning. ]]
 local efterLaddning: { (Player, Sparning.Save) -> () } = {}
 
+--[[ REDO = laddningen har nått ett SLUTLÄGE för den här spelaren.
+
+	Slutläge betyder inte "lyckades". Både en lyckad läsning och varje
+	fail-safe-utgång (inget datalager, läsfel, framtida version, trasig rad)
+	är slutlägen: `ladda()` returnerar alltid en save, och efter den finns
+	inget mer att vänta på. Att låta ett läsfel lämna spelaren "inte redo"
+	hade bytt racet mot en låsning, och #162 är uttrycklig om att en
+	misslyckad laddning ska bli spelbar med `kanSpara = false`.
+
+	Flaggan är publik därför att den är en GRIND: varje väg som tilldelar
+	eller binder ska fråga den först, inte gissa utifrån startordning. ]]
+local redo: { [Player]: boolean } = {}
+
+function SparService.redo(player: Player): boolean
+	return redo[player] == true
+end
+
+--[[ Registrera en hook som körs när en spelares laddning nått slutläge.
+
+	KÖR OCKSÅ FÖR DEM SOM REDAN ÄR REDO. Det är hela skillnaden mot
+	re-reviewen av `2a8938e`: där hade StallService och GameplayService egna
+	`GetPlayers()`-loopar i sina `start()` för att fånga spelare som redan
+	var inne — och de looparna gick förbi barriären. En spelare kan ha
+	anlänt medan SparService läste, och då är hennes laddning fortfarande i
+	luften när nästa tjänst startar.
+
+	Nu finns ingen sådan loop. Registreringen är själv återhämtningen: är
+	spelaren redo körs hooken direkt, är hon inte redo körs den när
+	laddningen landar. Ett ställe, ingen väg runt. ]]
 function SparService.efterLaddning(fn: (Player, Sparning.Save) -> ())
 	table.insert(efterLaddning, fn)
+	for _, player in Players:GetPlayers() do
+		if redo[player] and sparade[player] then
+			local ok, fel = pcall(fn, player, sparade[player])
+			if not ok then
+				warn(("[Spar] en efterLaddning-hook föll för %s: %s")
+					:format(player.Name, tostring(fel)))
+			end
+		end
+	end
 end
 
 --[[ Läs först, kör hookarna sedan. Varje hook körs i sin egen `pcall`: en
 	tjänst som faller ska inte hindra nästa från att komma igång, och den
-	spelare vars tilldelning strular ska inte också bli utan bindning. ]]
+	spelare vars tilldelning strular ska inte också bli utan bindning.
+
+	`redo` sätts FÖRE hookarna. Ordningen spelar roll: en hook — eller ett
+	`MinHast`-anrop som kommer in medan hookarna körs — ska se ett slutfört
+	slutläge, inte halva sanningen. ]]
 local function laddaOchStarta(player: Player)
 	local save = SparService.ladda(player)
+	redo[player] = true
 	for _, fn in ipairs(efterLaddning) do
 		local ok, fel = pcall(fn, player, save)
 		if not ok then
@@ -308,6 +351,7 @@ local function glom(player: Player)
 	kanSpara[player] = nil
 	anmarkning[player] = nil
 	skriver[player] = nil
+	redo[player] = nil
 end
 
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]

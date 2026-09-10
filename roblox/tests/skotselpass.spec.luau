@@ -944,6 +944,147 @@ do
 	game:GetService("RunService")._server = false
 end
 
+--[[ ══ RE-REVIEW AV 2a8938e: TVÅ VÄGAR FÖRBI BARRIÄREN ═════════════
+
+	ChatGPT:s omreview: barriären höll på `PlayerAdded`, men två vägar gick
+	fortfarande runt den.
+
+	  1. `StallService.start()` och `GameplayService.start()` itererade
+	     `Players:GetPlayers()` och tilldelade/band direkt. En spelare kan
+	     ha anlänt medan SparService läste — då är hennes laddning kvar i
+	     luften när nästa tjänst startar, och startloopen sprang förbi.
+	  2. `MinHast.OnServerInvoke` gjorde `tilldelade[player] or tilldela(...)`.
+	     Ett tidigt klientanrop tilldelade alltså också mot `save == nil`.
+
+	Och kritiken mot mitt eget prov var riktig: det satte
+	`Players._spelare = {}` under starten, just för att inte maskera racet —
+	men därmed kunde det aldrig se startloopen.
+
+	Här är spelaren INNE i `GetPlayers()` medan `GetAsync` är suspenderad. ]]
+do
+	print("\n── Re-review: startloop och MinHast går inte förbi barriären ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	local spelare = { Name = "Startloop", UserId = 9105,
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	local utanFilter = Stallet.tilldelaLedig(spelare.UserId, {}, {})
+	local rad = Sparning.tom()
+	rad.pass = 5
+	rad.forstaDagen = { klar = true, hastId = "blackrock_jack" }
+	Sparning.satSkada(rad, utanFilter, 2, "sten i hoven")
+	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(rad)
+	__datastore.fordrojLas = true
+
+	--[[ 1. SparService startar utan någon inne. ]]
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+
+	--[[ 2. Spelaren ANLÄNDER. Läsningen suspenderar, och hookregistret är
+		ännu tomt — de andra tjänsterna har inte startat. ]]
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+	check("läsningen är i luften", Players.PlayerAdded:harVantande())
+	check("och spelaren är inte redo än", SparService.redo(spelare) == false,
+		"redo: " .. tostring(SparService.redo(spelare)))
+
+	--[[ 3. NU startar de andra, med spelaren redan i GetPlayers. Det här är
+		fönstret omreviewen pekade ut. ]]
+	StallService.start()
+	GameplayService.start()
+	check("startloopen tilldelar ingen häst förbi barriären",
+		StallService.hastFor(spelare) == nil,
+		"tilldelad: " .. tostring(StallService.hastIdFor(spelare)))
+
+	--[[ 4. Tidigt MinHast-anrop, den andra vägen runt. ]]
+	local minHast = nil
+	for _, b in ipairs(game:GetService("ReplicatedStorage")._barn) do
+		if b.Name == "MinHast" then minHast = b end
+	end
+	check("MinHast finns att fråga", minHast ~= nil and minHast.OnServerInvoke ~= nil)
+	check("MinHast svarar nil innan laddningen landat",
+		minHast.OnServerInvoke(spelare) == nil,
+		tostring(minHast.OnServerInvoke(spelare)))
+	check("och frågan tilldelade ingen häst heller",
+		StallService.hastFor(spelare) == nil,
+		"tilldelad: " .. tostring(StallService.hastIdFor(spelare)))
+
+	--[[ 5. Läsningen landar. Nu ska allt ha hänt, och hänt rätt. ]]
+	Players.PlayerAdded:slutfor()
+	check("spelaren är redo när laddningen nått slutläge",
+		SparService.redo(spelare) == true)
+	local efter = StallService.hastIdFor(spelare)
+	check("hooken tilldelade hästen då", efter ~= nil, tostring(efter))
+	check("och det är INTE hästen som vilar", efter ~= utanFilter,
+		("fick %s, vilande %s"):format(tostring(efter), tostring(utanFilter)))
+	check("saven som lästes är den som låg i lagret",
+		SparService.save(spelare).pass == 5,
+		"pass " .. tostring(SparService.save(spelare).pass))
+	check("MinHast svarar nu med hästen",
+		minHast.OnServerInvoke(spelare) ~= nil)
+
+	__datastore.fordrojLas = false
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ KONTROLL: EN FALLERAD LADDNING BLIR REDO, INTE LÅST ═══════════
+
+	Omreviewen är uttrycklig: *"Do not deadlock failed loads; failed/no-store
+	sessions must become ready with kanSpara=false and remain playable."*
+
+	Utan den här mätningen kunde barriären "lösas" genom att aldrig släppa
+	igenom en spelare vars datalager är nere — ett race utbytt mot en
+	låsning, vilket är sämre. ]]
+do
+	print("\n── Kontroll: utan datalager blir spelaren redo och spelbar ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	local spelare = { Name = "Ingenbutik", UserId = 9106,
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+
+	--[[ Studio utan API-åtkomst: `GetDataStore` självt kastar. ]]
+	__datastore.felButik = true
+	SparService._glomButikForProv()
+
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+	Players.PlayerAdded:slutfor()
+
+	check("spelaren blev redo trots att datalagret saknas",
+		SparService.redo(spelare) == true)
+	check("hon fick en häst och kan spela",
+		StallService.hastIdFor(spelare) ~= nil,
+		tostring(StallService.hastIdFor(spelare)))
+	check("men sessionen sparas inte", SparService.kanSpara(spelare) == false)
+	check("och anmärkningen säger varför",
+		SparService.anmarkning(spelare) == "inget datalager",
+		tostring(SparService.anmarkning(spelare)))
+
+	__datastore.felButik = false
+	SparService._glomButikForProv()
+	Players.PlayerRemoving:Fire(spelare)
+	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end

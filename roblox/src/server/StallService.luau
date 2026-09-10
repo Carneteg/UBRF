@@ -216,8 +216,23 @@ function StallService.start()
 	fraga.Parent = ReplicatedStorage
 	fraga.OnServerInvoke = function(player)
 		--[[ Klienten får FRÅGA, aldrig bestämma. Samma regel som
-			uppsittningen redan följer. ]]
-		return tilldelade[player] or StallService.tilldela(player)
+			uppsittningen redan följer.
+
+			OCH DEN FÅR INTE FRÅGA FÖRBI BARRIÄREN (#162 re-review). Ett
+			tidigt anrop hit — klienten är uppe innan läsningen landat —
+			gjorde en tilldelning mot `save == nil`, alltså exakt det som
+			blockerare 1 stängde på `PlayerAdded`-vägen. Är laddningen inte
+			i slutläge finns inget svar att ge ännu.
+
+			`nil` är rätt svar och inte en förlust: hooken i
+			`SparService.efterLaddning` tilldelar så fort läsningen landar,
+			så nästa fråga får hästen. Att i stället VÄNTA här hade hållit
+			en RemoteFunction öppen över ett nätverksanrop. ]]
+		if tilldelade[player] then return tilldelade[player] end
+		if not SparService.redo(player) then
+			return nil
+		end
+		return StallService.tilldela(player)
 	end
 
 	--[[ TILLDELNINGEN HÄNGER PÅ BARRIÄREN, INTE PÅ `PlayerAdded` (#162
@@ -234,11 +249,15 @@ function StallService.start()
 	SparService.efterLaddning(function(player)
 		StallService.tilldela(player)
 	end)
-	--[[ Spelare som redan är inne när den här tjänsten startar. Deras save
-		är redan läst av SparService, så det finns inget fönster här. ]]
-	for _, player in Players:GetPlayers() do
-		StallService.tilldela(player)
-	end
+	--[[ HÄR STOD EN `GetPlayers()`-LOOP, och den var ett hål (#162
+		re-review). Kommentaren påstod att "deras save är redan läst av
+		SparService, så det finns inget fönster här". Det var fel: en
+		spelare kan ha anlänt medan SparService läste, och då är hennes
+		laddning fortfarande i luften när den här tjänsten startar — loopen
+		tilldelade då mot `save == nil` och gick förbi hela barriären.
+
+		Återhämtningen ligger nu i `efterLaddning` självt, som kör hooken
+		direkt för alla som redan ÄR redo. Ett ställe, ingen väg runt. ]]
 	Players.PlayerRemoving:Connect(function(player)
 		taBortMarkor(player)
 		tilldelade[player] = nil

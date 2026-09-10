@@ -449,9 +449,9 @@ function GameplayService.start()
 			GameplayService.bind(player)
 		end)
 	end)
-	for _, player in Players:GetPlayers() do
-		GameplayService.bind(player)
-	end
+	--[[ Ingen `GetPlayers()`-loop här heller (#162 re-review): den band mot
+		ett `passnummer()` som föll till 1 när saven ännu var nil.
+		`efterLaddning` kör hooken direkt för dem som redan är redo. ]]
 	Players.PlayerRemoving:Connect(glom)
 
 	--[[ En rigg som kommer in senare ska plockas upp av den som väntar på
