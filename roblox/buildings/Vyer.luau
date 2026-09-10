@@ -527,7 +527,30 @@ Vyer.reviewkameror = {
 		mot = { x = Ro.x + 2.6, y = Ro.y + 76.0 },
 		aim = 1.0,
 		figur = { x = Ro.x + 2.9, y = Ro.y + 69.6, z = 0 },
-		krav = "Lång obruten skåprad till höger, receptionens bröstning + glas till vänster mitt emot, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken; inga korridorväggar.",
+		krav = "Lång obruten skåprad till höger, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken; inga korridorväggar. Glaset ingår INTE: härifrån ligger receptionsfronten kant i kant med blicken (se RIDHUS-KLUBBGANG).",
+	},
+	--[[ ChatGPT visual re-review 2026-09-10 av `d2e8211`: glas/skåp-relationen
+		går inte att visa norrut, eftersom receptionens sydvägg
+		(PRODUCT_OWNER_VERIFIED) står mellan entrén och glaset. Reviewn bad om
+		kameror vid FOTOGRAFISKT LIKVÄRDIGA lägen i stället för att flytta
+		verifierad geometri. De två nedan står där fotografen faktiskt stod. ]]
+	{
+		id = "RIDHUS-KLUBBGANG", grupp = VG,
+		text = "Klubbgången från gaveländen söderut (ridhus-klubb-15:s egen ståplats): skåpraden vänster, receptionens bröstning med glasrutorna höger, bordet med stolarna emellan",
+		fran = { x = Ro.x + 3.35, y = Ro.y + 76.3, h = 1.6 },
+		mot = { x = Ro.x + 3.3, y = Ro.y + 70.5 },
+		aim = 1.0,
+		figur = { x = Ro.x + 3.85, y = Ro.y + 73.6, z = 0 },
+		krav = "Skåpraden till VÄNSTER i hela gångens längd, receptionens låga vita bröstning med hylla och glasrutor till HÖGER, bordet med de två vita stolarna emellan, fri siktlinje söderut mot entrédelen; inga korridorväggar.",
+	},
+	{
+		id = "RIDHUS-RECEPTIONSFRONT", grupp = VG,
+		text = "Receptionsfronten snett framifrån (ridhus-klubb-02:s egen ståplats): bröstningen och rutorna löper bort i djupet i stället för att ses kant i kant",
+		fran = { x = Ro.x + 3.55, y = Ro.y + 70.2, h = 1.6 },
+		mot = { x = Ro.x + 2.4, y = Ro.y + 76.0 },
+		aim = 1.0,
+		figur = { x = Ro.x + 4.1, y = Ro.y + 74.0, z = 0 },
+		krav = "Receptionens låga vita bröstning med hyllan mot gången, glasrutorna i vita poster som löper bort i djupet, rummet bakom glaset med träskåp och tavlor, skåpsidan mitt emot i bildens kant; fronten läsbar som en glasad reception, inte som en vägg.",
 	},
 	bakom(VG, "ARENA-A", "Banan nära A, söderut mot kortsidan",
 		R, Ro.x, Ro.y, R.bana.x + R.bana.w / 2, R.bana.y + 6, 0, -math.pi / 2,

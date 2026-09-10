@@ -363,7 +363,7 @@
         "y": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[1] + 2.4",
         "rikt": "Math.PI/2"
       },
-      "text": "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd: öppen hall, receptionens glas till höger (= golden view RIDHUS-V1). Explicit kamera i hallen — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen.",
+      "text": "Från huvudentréns innerdörr norrut över entrédelen i ögonhöjd: öppen hall utan rumslådor. Explicit kamera — följkameran bakom figuren hamnar annars på läktarens bänkrader (F02-B) söder om hallen. RAMKONTRAKTET ÄNDRAT 2026-09-10 (ChatGPT visual re-review av d2e8211): kravet var tidigare att receptionens glas syns till höger. Det är BEVISLIGEN OMÖJLIGT från den här positionen — dörren sitter på fasadens u 9 (x 1,6, y 67,18), alltså i västremsan x 0–2,2, och receptionens sydvägg `reception_s` (x 0–2,2 vid y 72,6, PRODUCT_OWNER_VERIFIED, PO 2026-09-04 07:54) står mellan dörren och glaset (x 2,2, y 73,5–77). Glaset kan inte ses härifrån utan att en verifierad vägg rivs. Kameran mäter därför vad den KAN mäta — att entrén är en öppen hall och inte en skåpkorridor — och glas/skåp-relationen bärs av RIDHUS-KLUBBGANG och RIDHUS-RECEPTIONSFRONT, tagna ur fotonas egna ståplatser.",
       "referenser": [
         "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
         "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
@@ -379,7 +379,7 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Öppen hall utan rumslådor norrut från huvudentrén, ENTRÉ-plattan, receptionens låga bröstning + glas till höger, toaletternas volym i bortre hörnet; skåpraden (F02-B) bortom glaset",
+      "ram": "Öppen hall utan rumslådor norrut från huvudentrén, ENTRÉ-plattan, golv att gå på och skåpgodset samlat på EN sida av gången; receptionens sydvägg i fonden. Glaset ingår inte i den här ramen — se text-fältet för varför, och RIDHUS-KLUBBGANG/RIDHUS-RECEPTIONSFRONT för glas/skåp-relationen",
       "kamera": {
         "x": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[0] - 0.4",
         "y": "R.dorrar.find(d=>d.id==='ut_ridhus_W_9').pos[1] - 0.5",
@@ -417,7 +417,7 @@
         "head": null,
         "mismatch": ""
       },
-      "ram": "Lång obruten skåprad till höger (grå plåtskåp med enstaka röda/mörkgrå dörrar), receptionens låga bröstning + glasrutor till vänster mitt emot, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken — inga korridorväggar",
+      "ram": "Lång obruten skåprad till höger (grå plåtskåp med enstaka röda/mörkgrå dörrar), bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken — inga korridorväggar. Glaset ingår inte i den här ramen: härifrån (y 66,7) ligger receptionsfronten 7 m bort och kant i kant med blicken, alltså en strimma. RAMKONTRAKTET ÄNDRAT 2026-09-10 av samma skäl som RIDHUS-ENTRE; glas/skåp-relationen bärs av RIDHUS-KLUBBGANG, tagen ur ridhus-klubb-15:s egen ståplats",
       "kamera": {
         "x": "3.4",
         "y": "66.7",
@@ -427,6 +427,83 @@
         "x": "2.6",
         "y": "76.0",
         "h": "1.0"
+      }
+    },
+    {
+      "id": "RIDHUS-KLUBBGANG",
+      "namn": "Klubbgången mot entrén",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": "3.85",
+        "y": "73.6",
+        "rikt": "-Math.PI/2"
+      },
+      "text": "ridhus-klubb-15:s egen ståplats: i gången vid gaveländen, blicken SÖDERUT längs gången. Skåpraden till vänster i hela längden, receptionens låga bröstning med glasrutorna till höger som löper bort från betraktaren, bordet med de vita stolarna i gången mellan dem. Kameran finns för att den relationen inte går att visa norrut: receptionens sydvägg (reception_s, PRODUCT_OWNER_VERIFIED) står mellan huvudentrén och glaset, så RIDHUS-ENTRE och RIDHUS-SKAPKORRIDOR kan inte bära den. Den här kameran ersätter ingen av dem — den lägger till den vinkel fotot faktiskt är taget ur.",
+      "referenser": [
+        "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
+        "references/buildings/ridhus/ridhus-klubb-01-omkladningsgangen.jpg",
+        "references/video/ridhus-nyckelrutor/IMG_0169-f02-skapkorridoren.jpg"
+      ],
+      "gap": [
+        "receptionsglasets väderstreck (GEOMETRY_REFERENCE_GAP) — bilden ger relationen glas/skåp, inte kompassriktningen",
+        "skåpradens början/slut: planens fyra luckor olästa, y-lägena är ASSUMPTION (F02-B)"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Skåpraden (grå plåtskåp med enstaka röda/mörkgrå dörrar) till VÄNSTER i hela gångens längd, receptionens låga vita bröstning med hylla och glasrutor till HÖGER, bordet med de två vita stolarna i gången mellan dem, fri siktlinje söderut mot entrédelen — inga korridorväggar",
+      "kamera": {
+        "x": "3.35",
+        "y": "76.3",
+        "h": "1.6"
+      },
+      "mal": {
+        "x": "3.3",
+        "y": "70.5",
+        "h": "1.2"
+      }
+    },
+    {
+      "id": "RIDHUS-RECEPTIONSFRONT",
+      "namn": "Receptionsfronten snett framifrån",
+      "hus": "ridhus",
+      "scen": "ridhusinne",
+      "lage": {
+        "x": "4.1",
+        "y": "74.0",
+        "rikt": "2.0"
+      },
+      "text": "ridhus-klubb-02:s egen ståplats: i gången strax söder om glaspartiet, blicken snett NORDVÄST längs receptionsfronten så att den låga bröstningen och rutorna löper bort i djupet i stället för att ses kant i kant. Fotot visar en låg vit bröstning med hylla mot gången, fyra glasrutor i vita poster, hörnretur i bortre änden, och rummet bakom med träskåp och inramade tavlor; skåpsidan ligger mitt emot i bildens kant. RIDHUS-RECEPTION står kvar men är för trång — den här vinkeln är den som gör fronten läsbar.",
+      "referenser": [
+        "references/buildings/ridhus/ridhus-klubb-02-glasrummen.jpg",
+        "references/buildings/ridhus/ridhus-klubb-15-korridoren-mot-glasrummen.jpg",
+        "references/buildings/ridhus/ridhus-klubb-08-glasrummen.jpg"
+      ],
+      "gap": [
+        "receptionsglasets väderstreck (GEOMETRY_REFERENCE_GAP)",
+        "receptionens dörr: bilden visar en karm i glasväggens ena ände — vilken ände är [antagande]",
+        "rummets djup och möblering bakom glaset i DERIVED-lägen"
+      ],
+      "granskning": {
+        "status": "EJ_GRANSKAD",
+        "av": null,
+        "head": null,
+        "mismatch": ""
+      },
+      "ram": "Receptionens låga vita bröstning med hyllan mot gången i bildens nedre del, glasrutorna i vita poster som löper bort i djupet, rummet bakom glaset med träskåp och tavlor, skåpsidan mitt emot i bildens kant — fronten ska vara läsbar som en glasad reception, inte som en vägg",
+      "kamera": {
+        "x": "3.55",
+        "y": "70.2",
+        "h": "1.6"
+      },
+      "mal": {
+        "x": "2.4",
+        "y": "76.0",
+        "h": "1.4"
       }
     },
     {

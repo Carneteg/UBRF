@@ -21,7 +21,16 @@ const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const KRAVDA = ["STALL-ANKOMST", "STALL-ENTRE", "STALL-UPPEHALL", "STALL-UPPEHALL-SOFFA", "STALL-TEORISAL", "STALL-SADELKAMMARE", "STALL-GANG-A", "HASTPASSAGE",
   "RIDHUS-ENTRE", "RIDHUS-SKAPKORRIDOR", "ARENA-A", "ARENA-C", "LAKTARE", "C-BLOCK-OVRE",
   "RIDHUS-RECEPTION", "RIDHUS-ENTRE-INNE", "RIDHUS-LAKTARTRAPPA", "STALL-KLUBBDORRAR", "RIDHUS-SKAPRUM",
-  "STALL-EFTER-PAUSRUM-V1", "STALL-EFTER-PAUSRUM-V2"];
+  "STALL-EFTER-PAUSRUM-V1", "STALL-EFTER-PAUSRUM-V2",
+  /* ChatGPT visual re-review 2026-09-10 av `d2e8211`: de gamla entré- och
+     skåpkorridorkamerorna kan inte visa glas/skåp-relationen, eftersom
+     receptionens PRODUCT_OWNER_VERIFIED sydvägg står emellan. Reviewn bad om
+     kameror vid FOTOGRAFISKT LIKVÄRDIGA lägen i stället för att flytta
+     verifierad geometri. De två nedan är tagna ur fotonas egna ståplatser:
+     KLUBBGANG ur ridhus-klubb-15 (blicken söderut, skåp vänster, glas höger)
+     och RECEPTIONSFRONT ur ridhus-klubb-02 (snett längs fronten). Ingen gammal
+     kamera är omdöpt eller borttagen. */
+  "RIDHUS-KLUBBGANG", "RIDHUS-RECEPTIONSFRONT"];
 const TILLATNA = new Set(["EJ_GRANSKAD", "MISMATCH", "CHATGPT_VISUAL_PASS"]);
 let fel = 0;
 const saga = (ok, t) => { if (!ok) fel++; console.log(`  ${ok ? "OK  " : "FEL "} ${t}`); };
