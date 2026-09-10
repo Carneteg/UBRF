@@ -1085,6 +1085,44 @@ do
 	game:GetService("RunService")._server = false
 end
 
+-- Sen laddning efter utloggning får inte återskapa save eller reservation.
+-- Samma produktionssignaler som vid ankomst; inga direkta stateändringar.
+do
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local Players = game:GetService("Players")
+	Players.PlayerAdded:nollstall()
+	Players.PlayerRemoving:nollstall()
+	SparService._glomHookarForProv()
+	Players._spelare = {}
+	local p = { Name = "LamnarUnderLasning", UserId = 99101,
+		CharacterAdded = { Connect = function() return { Disconnect = function() end } end } }
+	SparService._glomForProv(p)
+	SparService.start()
+	StallService.start()
+	GameplayService.start()
+	__datastore.fordrojLas = true
+	Players._spelare = {p}
+	Players.PlayerAdded:Fire(p)
+	check("utloggningsprovet har en pågående läsning", Players.PlayerAdded:harVantande())
+	Players._spelare = {}
+	Players.PlayerRemoving:Fire(p)
+	Players.PlayerAdded:slutfor()
+	check("sent svar publicerar ingen save", SparService.save(p) == nil)
+	check("utloggad spelare blir inte redo", not SparService.redo(p))
+	check("utloggad spelare får ingen häst", StallService.hastIdFor(p) == nil)
+	__datastore.fordrojLas = false
+	local ny = { Name = "NastaSpelare", UserId = 99102,
+		CharacterAdded = p.CharacterAdded }
+	Players._spelare = {ny}
+	Players.PlayerAdded:Fire(ny)
+	Players.PlayerAdded:slutfor()
+	check("nästa spelare kan få Jack", StallService.hastIdFor(ny) == "blackrock_jack")
+	Players.PlayerRemoving:Fire(ny)
+	Players._spelare = {}
+	game:GetService("RunService")._server = false
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end

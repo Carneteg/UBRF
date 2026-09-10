@@ -35,13 +35,17 @@ fs.mkdirSync(path.join(UT, "ref"), { recursive: true });
 const w = await oppnaWebb({ port: 8792, siktprov: true });
 /* HUD:en (uppgiftsrutan, sagobubblan, vyväxlaren) döljs i evidensbilderna:
    den är spel-UI, inte anläggning, och får inte dominera bilden. */
-await w.page.addStyleTag({ content: "#viewToggle,.hudh,#saga{display:none!important}" });
+const hudSelektor = "#viewToggle,.hudh,#saga,#ubrfVagvisare";
+await w.page.addStyleTag({ content: `${hudSelektor}{display:none!important}` });
 const pack = { head: head.sha, smutsigt: head.smutsigt, renderad: new Date().toISOString(), kameror: {} };
 let dolda = 0;
 for (const k of kameror) {
   const lage = await stallKamera(w.page, k);
   const info = await lasLage(w.page);
   const sikt = await w.page.evaluate(() => v3dSiktProv());
+  const synligHud = await w.page.locator(hudSelektor).evaluateAll(els =>
+    els.some(el => getComputedStyle(el).display !== "none" && el.getClientRects().length > 0));
+  if (synligHud) throw new Error(`${k.id}: HUD skymmer granskningsbilden`);
   await w.page.screenshot({ path: path.join(UT, `${k.id}.png`) });
   const refs = [];
   for (const r of k.referenser || []) {

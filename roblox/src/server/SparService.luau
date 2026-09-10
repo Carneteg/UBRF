@@ -83,6 +83,8 @@ local anmarkning: { [Player]: string? } = {}
 	komma i fel ordning; den här flaggan gör att avslut + utloggning inte
 	blir två skrivningar i luften samtidigt. ]]
 local skriver: { [Player]: boolean } = {}
+-- Identiteten gör ett sent nätverkssvar ogiltigt när sessionen avslutas.
+local laddningar: { [Player]: {} } = {}
 
 --[[ Studio utan API-åtkomst, och alla lokala prov, ska INTE krascha på
 	rad ett. `GetDataStore` kastar då, och resultatet är nil — vilket
@@ -127,7 +129,7 @@ end
 
 --[[ ── LÄSNINGEN ──────────────────────────────────────────────────── ]]
 
-function SparService.ladda(player: Player): Sparning.Save
+function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?): Sparning.Save
 	local b = hamtaButik()
 	if not b then
 		sparade[player] = Sparning.tom()
@@ -139,6 +141,11 @@ function SparService.ladda(player: Player): Sparning.Save
 	local ok, rad = medRetry("läsning av " .. player.Name, function()
 		return b:GetAsync(nyckelFor(player))
 	end)
+	-- Läsningen kan ha yieldat förbi PlayerRemoving. Publicera då inget
+	-- tillstånd, inte heller en sessionsave efter ett sent läsfel.
+	if fortfarandeAktuell and not fortfarandeAktuell() then
+		return Sparning.tom()
+	end
 
 	if not ok then
 		--[[ FALL 1 i filhuvudet. Sessionssave, ingen skrivning. ]]
@@ -335,9 +342,16 @@ end
 	`MinHast`-anrop som kommer in medan hookarna körs — ska se ett slutfört
 	slutläge, inte halva sanningen. ]]
 local function laddaOchStarta(player: Player)
-	local save = SparService.ladda(player)
+	local laddning = {}
+	laddningar[player] = laddning
+	local function aktuell(): boolean
+		return laddningar[player] == laddning
+	end
+	local save = SparService.ladda(player, aktuell)
+	if not aktuell() then return end
 	redo[player] = true
 	for _, fn in ipairs(efterLaddning) do
+		if not aktuell() then return end
 		local ok, fel = pcall(fn, player, save)
 		if not ok then
 			warn(("[Spar] en efterLaddning-hook föll för %s: %s")
@@ -347,6 +361,7 @@ local function laddaOchStarta(player: Player)
 end
 
 local function glom(player: Player)
+	laddningar[player] = nil
 	sparade[player] = nil
 	kanSpara[player] = nil
 	anmarkning[player] = nil
@@ -357,20 +372,18 @@ end
 --[[ ── LIVSCYKEL ──────────────────────────────────────────────────── ]]
 
 function SparService.start()
+	-- Registrera städningen innan även startens GetPlayers-läsningar kan yielda.
+	Players.PlayerRemoving:Connect(function(player)
+		laddningar[player] = nil
+		redo[player] = nil
+		SparService.skriv(player)
+		glom(player)
+	end)
 	--[[ DEN ENDA `PlayerAdded`-lyssnaren i servern. Se barriären ovan. ]]
 	Players.PlayerAdded:Connect(laddaOchStarta)
 	for _, player in Players:GetPlayers() do
 		laddaOchStarta(player)
 	end
-
-	Players.PlayerRemoving:Connect(function(player)
-		--[[ Sista skrivningen. Den körs synkront i signalen med flit:
-			Roblox håller servern vid liv tills PlayerRemoving-lyssnarna
-			returnerat, men bara då. En `task.spawn` här hade gjort att
-			sista passet ibland inte hann skrivas. ]]
-		SparService.skriv(player)
-		glom(player)
-	end)
 
 	if not RunService:IsStudio() then
 		game:BindToClose(function()
