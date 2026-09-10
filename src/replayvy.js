@@ -199,8 +199,10 @@ function visaReplay(ovningId, nr){
   overlay(true, `
   <span class="lbl">Din ritt</span>
   <h1 style="margin-top:8px">Se ritten igen</h1>
-  <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;margin-top:12px"
-       id="replayRutnat">
+  <!-- Rutnätet ligger i index.html som #replayRutnat, INTE som inline-stil.
+       En inline-regel kan ingen media query ta över, och kolumnerna låg
+       därför kvar ner till 320 px där canvasen blev 122 px bred. -->
+  <div id="replayRutnat">
     <div>
       <canvas id="replayBana" width="520" height="360"
         style="width:100%;height:auto;background:#181B21;border:1px solid rgba(214,174,60,.35);border-radius:8px"
