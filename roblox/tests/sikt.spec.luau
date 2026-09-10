@@ -105,14 +105,14 @@ local function prov(v, ignoreraGenomsiktlig)
 end
 
 print("\nSiktgrinden — reviewkamerorna i Vyer.luau")
---[[ 23 sedan ChatGPT:s visuella omreview 2026-09-10 av `d2e8211`: de gamla
-	entré- och skåpkorridorkamerorna kan inte visa glas/skåp-relationen,
-	eftersom receptionens PRODUCT_OWNER_VERIFIED sydvägg står emellan.
-	Reviewn bad om kameror vid FOTOGRAFISKT LIKVÄRDIGA lägen i stället för att
-	flytta verifierad geometri, och RIDHUS-KLUBBGANG (ur ridhus-klubb-15) och
-	RIDHUS-RECEPTIONSFRONT (ur ridhus-klubb-02) är de två. Ingen gammal kamera
-	är omdöpt eller borttagen — talet ska växa, inte flyttas. ]]
-check("Vyer har reviewkamerorna", Vyer.reviewkameror ~= nil and #Vyer.reviewkameror == 23,
+--[[ 22 sedan arbetsordern 2026-09-10 på #162: RIDHUS-KLUBBGANG tillkom (den
+	enda vyn söderut, ur ridhus-klubb-15). RIDHUS-RECEPTIONSFRONT fanns kort
+	samma dag men togs bort — ordern punkt 3 vill se den läsbara glasfronten i
+	RIDHUS-RECEPTION, och den kameran korrigerades i stället, så två kameror
+	mot samma vägg vore utfyllnad. Entré-, skåpkorridor- och
+	receptionskamerorna är KORRIGERADE till lägen där glasfronten faktiskt
+	läses; motiveringen med mätta vinklar står i kameror.json. ]]
+check("Vyer har reviewkamerorna", Vyer.reviewkameror ~= nil and #Vyer.reviewkameror == 22,
 	Vyer.reviewkameror and (#Vyer.reviewkameror .. " st") or "saknas")
 
 local negDolda = 0

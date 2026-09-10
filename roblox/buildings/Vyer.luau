@@ -472,23 +472,35 @@ Vyer.reviewkameror = {
 		ögonhöjd och ser norrut, figuren några meter in i hallen. ]]
 	{
 		id = "RIDHUS-ENTRE", grupp = VG,
-		text = "Från huvudentréns innerdörr norrut över entré/reception i ögonhöjd",
-		fran = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] - 0.4, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] - 0.5, h = 1.7 },
-		mot = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] + 0.6, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] + 6.0 },
+		--[[ KORRIGERAD 2026-09-10 (arbetsorder #162 punkt 1/4): kameran stod i
+			dörren, alltså i västremsan x 0–2,2 som slutar i receptionens
+			sydvägg. Mätt därifrån är vinkeln mot glasfrontens normal 95,7° —
+			baksidan av fronten — så ingen framning i fickan kunde visa glaset.
+			Härifrån: 74,2°, 6,6 m till glasets mitt, kameran i gången (inte
+			inne i en skåpbank). Ingen geometri rörd. ]]
+		text = "Entrédelen från den plats en besökare står på när hon kommit in och vänt sig mot gången: blicken snett nordväst, receptionens glasade front läses och entréänden ligger kvar i bild",
+		fran = { x = Ro.x + 3.9, y = Ro.y + 68.9, h = 1.65 },
+		mot = { x = Ro.x + 2.4, y = Ro.y + 74.2 },
 		aim = 1.1,
-		figur = { x = Ro.x + dorr(R, "ut_ridhus_W_9").pos[1] - 0.2, y = Ro.y + dorr(R, "ut_ridhus_W_9").pos[2] + 2.4, z = 0 },
-		krav = "Öppen hall utan rumslådor, ENTRÉ-plattan, receptionens glas (GLASS) till höger, toaletterna i bortre hörnet; skåpraden (F02-B) bortom glaset.",
+		figur = { x = Ro.x + 3.9, y = Ro.y + 72.4, z = 0 },
+		krav = "Receptionens låga bröstning med hylla och glasrutor (GLASS) snett framför till vänster, skåpgodset samlat på höger sida av gången, öppen hall utan rumslådor tillbaka mot entréänden; ingen sida får läsa som två skåpväggar.",
 	},
 	--[[ Review 2026-09-04 07:54 (Tobias): receptionen, entrén inifrån och
 		läktartrappan — explicita kameror (samma lägen som kameror.json). ]]
 	{
 		id = "RIDHUS-RECEPTION", grupp = VG,
 		text = "Receptionen från skåpgången — glasad bröstning i nordvästra hörnet, skåpraden mitt emot (ridhus-klubb-02/-15)",
-		fran = { x = Ro.x + 4.0, y = Ro.y + 71.6, h = 1.6 },
-		mot = { x = Ro.x + 1.0, y = Ro.y + 75.6 },
+		--[[ KORRIGERAD 2026-09-10 (arbetsorder #162 punkt 3): vinkeln var redan
+			bäst av alla vyer (58,7° mot glasfrontens normal), men bilden var
+			för trång och figuren skymde fronten. Backad till 4,9 m med
+			figuren längre bort. Första försöket la kameran på x 4,55 — INNE i
+			skåpbankens volym (x 4,2–4,7), vilket tvingade fram en toning och
+			gav spökgeometri i bilden. Nu står den i gången: 70,1°, 5,0 m. ]]
+		fran = { x = Ro.x + 3.95, y = Ro.y + 70.6, h = 1.6 },
+		mot = { x = Ro.x + 2.5, y = Ro.y + 74.6 },
 		aim = 1.0,
-		figur = { x = Ro.x + 3.4, y = Ro.y + 73.6, z = 0 },
-		krav = "Receptionens låga bröstning med fyra glasrutor och hylla mot gången, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot, gavelns valvfönster längst bort. Inga toalettboxar i hörnet.",
+		figur = { x = Ro.x + 3.05, y = Ro.y + 74.2, z = 0 },
+		krav = "Receptionens LÅNGA låga bröstning med hyllan och de fyra glasrutorna tydligt läsbara, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot på gångens andra sida; fronten får inte skymmas av figuren eller skåpen. Inga toalettboxar i hörnet.",
 	},
 	{
 		id = "RIDHUS-ENTRE-INNE", grupp = VG,
@@ -522,12 +534,16 @@ Vyer.reviewkameror = {
 	},
 	{
 		id = "RIDHUS-SKAPKORRIDOR", grupp = VG,
-		text = "Den långa skåpgången (ridhus-klubb-01/-15) från södra änden norrut: skåpraden höger, receptionens glasdisk vänster längst upp, bordet med stolarna, gavelns valvfönster i fonden",
-		fran = { x = Ro.x + 3.4, y = Ro.y + 66.7, h = 1.65 },
-		mot = { x = Ro.x + 2.6, y = Ro.y + 76.0 },
+		--[[ KORRIGERAD 2026-09-10 (arbetsorder #162 punkt 2/4): kameran stod vid
+			y 66,7, sju meter söder om glaset och 85,1° mot dess normal — kant i
+			kant, alltså en strimma, och bilden blev bara skåp. Flyttad norrut
+			längs gången till 3,6 m från glasets mitt. Ingen geometri rörd. ]]
+		text = "Den långa skåpgången (ridhus-klubb-01/-15) norrut: skåpraden höger, receptionens bröstning och glasrutor vänster mitt emot, bordet med stolarna, gavelns valvfönster i fonden",
+		fran = { x = Ro.x + 3.3, y = Ro.y + 71.8, h = 1.65 },
+		mot = { x = Ro.x + 3.2, y = Ro.y + 77.0 },
 		aim = 1.0,
-		figur = { x = Ro.x + 2.9, y = Ro.y + 69.6, z = 0 },
-		krav = "Lång obruten skåprad till höger, bordet med de vita stolarna i gången, fri siktlinje till gavelns valvfönster och stövelbänken; inga korridorväggar. Glaset ingår INTE: härifrån ligger receptionsfronten kant i kant med blicken (se RIDHUS-KLUBBGANG).",
+		figur = { x = Ro.x + 3.5, y = Ro.y + 76.6, z = 0 },
+		krav = "Lång obruten skåprad till höger, receptionens låga bröstning med hylla och glasrutor till vänster mitt emot, bordet med de vita stolarna emellan, fri siktlinje till gavelns valvfönster och stövelbänken; inga korridorväggar.",
 	},
 	--[[ ChatGPT visual re-review 2026-09-10 av `d2e8211`: glas/skåp-relationen
 		går inte att visa norrut, eftersom receptionens sydvägg
@@ -543,15 +559,11 @@ Vyer.reviewkameror = {
 		figur = { x = Ro.x + 3.85, y = Ro.y + 73.6, z = 0 },
 		krav = "Skåpraden till VÄNSTER i hela gångens längd, receptionens låga vita bröstning med hylla och glasrutor till HÖGER, bordet med de två vita stolarna emellan, fri siktlinje söderut mot entrédelen; inga korridorväggar.",
 	},
-	{
-		id = "RIDHUS-RECEPTIONSFRONT", grupp = VG,
-		text = "Receptionsfronten snett framifrån (ridhus-klubb-02:s egen ståplats): bröstningen och rutorna löper bort i djupet i stället för att ses kant i kant",
-		fran = { x = Ro.x + 3.55, y = Ro.y + 70.2, h = 1.6 },
-		mot = { x = Ro.x + 2.4, y = Ro.y + 76.0 },
-		aim = 1.0,
-		figur = { x = Ro.x + 4.1, y = Ro.y + 74.0, z = 0 },
-		krav = "Receptionens låga vita bröstning med hyllan mot gången, glasrutorna i vita poster som löper bort i djupet, rummet bakom glaset med träskåp och tavlor, skåpsidan mitt emot i bildens kant; fronten läsbar som en glasad reception, inte som en vägg.",
-	},
+	--[[ RIDHUS-RECEPTIONSFRONT togs bort 2026-09-10 (arbetsorder #162 punkt 3):
+		dess uppgift — den läsbara glasfronten — är RIDHUS-RECEPTIONs, och den
+		kameran har korrigerats i stället. Två kameror mot samma vägg är
+		utfyllnad, inte evidens. `RIDHUS-KLUBBGANG` står kvar: den är den enda
+		vyn söderut och motsvarar ridhus-klubb-15:s egen vinkel. ]]
 	bakom(VG, "ARENA-A", "Banan nära A, söderut mot kortsidan",
 		R, Ro.x, Ro.y, R.bana.x + R.bana.w / 2, R.bana.y + 6, 0, -math.pi / 2,
 		"Vit sarg med mörk sockel, A-skylten på sargen, sanden dovt brungrå."),

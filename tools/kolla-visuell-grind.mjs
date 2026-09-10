@@ -22,15 +22,15 @@ const KRAVDA = ["STALL-ANKOMST", "STALL-ENTRE", "STALL-UPPEHALL", "STALL-UPPEHAL
   "RIDHUS-ENTRE", "RIDHUS-SKAPKORRIDOR", "ARENA-A", "ARENA-C", "LAKTARE", "C-BLOCK-OVRE",
   "RIDHUS-RECEPTION", "RIDHUS-ENTRE-INNE", "RIDHUS-LAKTARTRAPPA", "STALL-KLUBBDORRAR", "RIDHUS-SKAPRUM",
   "STALL-EFTER-PAUSRUM-V1", "STALL-EFTER-PAUSRUM-V2",
-  /* ChatGPT visual re-review 2026-09-10 av `d2e8211`: de gamla entré- och
-     skåpkorridorkamerorna kan inte visa glas/skåp-relationen, eftersom
-     receptionens PRODUCT_OWNER_VERIFIED sydvägg står emellan. Reviewn bad om
-     kameror vid FOTOGRAFISKT LIKVÄRDIGA lägen i stället för att flytta
-     verifierad geometri. De två nedan är tagna ur fotonas egna ståplatser:
-     KLUBBGANG ur ridhus-klubb-15 (blicken söderut, skåp vänster, glas höger)
-     och RECEPTIONSFRONT ur ridhus-klubb-02 (snett längs fronten). Ingen gammal
-     kamera är omdöpt eller borttagen. */
-  "RIDHUS-KLUBBGANG", "RIDHUS-RECEPTIONSFRONT"];
+  /* RIDHUS-KLUBBGANG ur ridhus-klubb-15 (den enda vyn SÖDERUT: skåpraden
+     vänster, receptionen höger). Tillagd 2026-09-10 efter ChatGPT:s visuella
+     omreview; `RIDHUS-RECEPTIONSFRONT` fanns kort men togs bort samma dag
+     eftersom arbetsordern punkt 3 vill se den läsbara glasfronten i
+     RIDHUS-RECEPTION, som korrigerades i stället — två kameror mot samma vägg
+     är utfyllnad. Entré-, skåpkorridor- och receptionskamerorna är
+     KORRIGERADE, inte omdöpta: se `text`-fälten i kameror.json för de mätta
+     vinklarna mot glasfrontens normal som motiverar varje läge. */
+  "RIDHUS-KLUBBGANG"];
 const TILLATNA = new Set(["EJ_GRANSKAD", "MISMATCH", "CHATGPT_VISUAL_PASS"]);
 let fel = 0;
 const saga = (ok, t) => { if (!ok) fel++; console.log(`  ${ok ? "OK  " : "FEL "} ${t}`); };
