@@ -209,6 +209,15 @@ jobs:
           if [ -f tools/valfardstest.mjs ]; then node tools/valfardstest.mjs
           else echo "hoppar: tools/valfardstest.mjs finns inte i denna branch"; fi
 
+      # Uppdragsetiketten (#153 fix 4): vägvisarens pin är centrerad, så
+      # etiketten sticker ut halva sin bredd åt vardera hållet. Klampningen
+      # höll bara ANKARET innanför 44 px — "Prata med ridläraren · 18 m"
+      # (231 px) hamnade 72 px utanför kanten på alla fyra vyer.
+      - name: Uppdragsetiketten — hela labeln innanför skärmen
+        run: |
+          if [ -f tools/uppdragsetikett-test.mjs ]; then node tools/uppdragsetikett-test.mjs
+          else echo "hoppar: tools/uppdragsetikett-test.mjs finns inte i denna branch"; fi
+
       # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
       # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
       # att ingen debugmarkering ligger i produktvyn och att ytan under
