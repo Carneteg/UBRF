@@ -98,13 +98,33 @@ local function cframe(pos, look, yaw, pitch, roll)
 	     har for att spela in at vilket hall hasten stod. ]]
 	c.ToOrientation = function(self) return self.Pitch or 0, self.Yaw or 0, self.Roll or 0 end
 	c.__mul = function(a, b)
-		return cframe(a.Position, a.LookVector, (a.Yaw or 0) + (b.Yaw or 0),
+		--[[ FÖRFLYTTNINGEN räknas, inte bara vinklarna. Förut svarade
+		     `a * b` med `a.Position` oavsett vad b var, och då hamnade
+		     varje del som placeras relativt en annan — hela JackRiggs
+		     rigg, till exempel — i samma punkt. Ett avståndsprov mot en
+		     sådan rigg mäter ingenting. Offseten vrids med a:s girning,
+		     precis som byggstubbarna gör (stubs-bygge.luau), så en
+		     placering "0,4 m framåt" följer den riktning delen står i. ]]
+		local off = b.Position or vec()
+		local ca, sa = math.cos(a.Yaw or 0), math.sin(a.Yaw or 0)
+		local ap = a.Position or vec()
+		local pos = vec(ap.X + off.X * ca + off.Z * sa,
+			ap.Y + off.Y,
+			ap.Z - off.X * sa + off.Z * ca)
+		return cframe(pos, a.LookVector, (a.Yaw or 0) + (b.Yaw or 0),
 			(a.Pitch or 0) + (b.Pitch or 0), (a.Roll or 0) + (b.Roll or 0))
 	end
 	return setmetatable(c, c)
 end
 CFrame = {
-	new = cframe,
+	--[[ Roblox har båda formerna: `CFrame.new(x, y, z)` och
+	     `CFrame.new(vector3)`. Stubben tog bara den andra, så en modul som
+	     placerar en del med tal — hela JackRigg — fick ett tal där en
+	     Vector3 skulle stå, och multiplikationen gick sönder på `off.X`. ]]
+	new = function(a, b, c)
+		if type(a) == "number" then return cframe(vec(a, b or 0, c or 0)) end
+		return cframe(a)
+	end,
 	lookAt = function(a, b) return cframe(a, b) end,
 	Angles = function(x, y, z) return cframe(nil, nil, y or 0, x or 0, z or 0) end,
 	identity = cframe(),
@@ -124,6 +144,12 @@ Enum = {
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	NormalId = { Top = 1 },
+	--[[ JackRigg satter Top/BottomSurface pa riggens delar, och RiderController
+	     bygger IKControl. Uppraknade, inte en __index som svarar pa allt: samma
+	     skal som Material ovan. ]]
+	SurfaceType = { Smooth = 1, SmoothNoOutlines = 2, Studs = 3, Inlet = 4,
+		Universal = 5, Weld = 6, Glue = 7, Hinge = 8, Motor = 9, SteppingMotor = 10 },
+	IKControlType = { Transform = 1, Position = 2, Rotation = 3, LookAt = 4 },
 	AnimationPriority = { Core = 1, Idle = 2, Movement = 3, Action = 4 },
 	--[[ STRIKT. Forst svarade Material pa vilket namn som helst, och da
 	     passerade materialnamnet CorrugatedMetal — som inte finns i Roblox —
@@ -372,18 +398,51 @@ local __services = {
 	     bindningsregel att prova: `GetTagged` svarade alltid {} och varje
 	     "hittade ingen modell"-gren blev grön av fel skäl. `__taggade`
 	     fylls av provet. ]]
+	--[[ Taggsignalerna FYRAR nu. Förut svarade `GetInstanceAddedSignal` med
+	     en tom Connect, och då gick produktionens egen väg för en rigg som
+	     dyker upp SENARE inte att köra i bänken: varken `HorseService`
+	     registrering eller `GameplayService` ombindning ("waiting_model ska
+	     läka av sig själv") kunde mätas. En spec fick i stället gå in genom
+	     provkroken `_registerForProv`, vilket bevisar att `register` gör sitt
+	     — inte att någon någonsin anropar den.
+
+	     Signalerna är per tagg, precis som i Roblox, och `AddTag`/`RemoveTag`
+	     fyrar dem. `nollstall` finns av samma skäl som på PlayerAdded:
+	     lyssnarna ackumuleras annars mellan provblock. ]]
 	CollectionService = {
 		_taggade = {},
+		_lagg = {},
+		_ta = {},
 		GetTagged = function(self, tagg) return self._taggade[tagg] or {} end,
+		HasTag = function(self, inst, tagg)
+			for _, i in ipairs(self._taggade[tagg] or {}) do
+				if i == inst then return true end
+			end
+			return false
+		end,
 		AddTag = function(self, inst, tagg)
+			if self:HasTag(inst, tagg) then return end
 			self._taggade[tagg] = self._taggade[tagg] or {}
 			table.insert(self._taggade[tagg], inst)
+			if self._lagg[tagg] then self._lagg[tagg]:Fire(inst) end
 		end,
-		GetInstanceAddedSignal = function()
-			return { Connect = function() return { Disconnect = function() end } end }
+		RemoveTag = function(self, inst, tagg)
+			for i, x in ipairs(self._taggade[tagg] or {}) do
+				if x == inst then table.remove(self._taggade[tagg], i) break end
+			end
+			if self._ta[tagg] then self._ta[tagg]:Fire(inst) end
 		end,
-		GetInstanceRemovedSignal = function()
-			return { Connect = function() return { Disconnect = function() end } end }
+		GetInstanceAddedSignal = function(self, tagg)
+			self._lagg[tagg] = self._lagg[tagg] or __signal()
+			return self._lagg[tagg]
+		end,
+		GetInstanceRemovedSignal = function(self, tagg)
+			self._ta[tagg] = self._ta[tagg] or __signal()
+			return self._ta[tagg]
+		end,
+		--[[ Nollställer taggar OCH lyssnare mellan provblock. ]]
+		nollstall = function(self)
+			self._taggade, self._lagg, self._ta = {}, {}, {}
 		end,
 	},
 }
@@ -602,15 +661,50 @@ end
      hitta barn, kopplas ur, och (för knappar) ett Activated att ansluta. ]]
 __signal_ny = __signal
 
+--[[ ── BEVAKADE EGENSKAPER ─────────────────────────────────────────────
+     Egenskaper som koden både SKRIVER och LYSSNAR på. De ligger i en
+     skuggtabell (`_p`) i stället för direkt i instansen, och skälet är en
+     Lua-detalj som annars gör hela mätningen tyst fel: `__newindex` fyrar
+     bara när nyckeln SAKNAS i tabellen. En `rawset` vid första skrivningen
+     gör alltså andra skrivningen osynlig — och då hade `Occupant`-signalen
+     fyrat en gång och sedan tigit, vilket är precis det HorseService
+     förlitar sig på för att städa efter en avsittning.
+
+     Med skuggtabellen går VARJE skrivning genom `__newindex` och varje
+     läsning genom `__index`, så länge namnet aldrig rawsettas. ]]
+local __BEVAKADE = {
+	Occupant = true, Sit = true, Health = true, SeatPart = true,
+	PlatformStand = true,
+}
+
 local function __nyInstans(klass)
 	local inst = {
 		ClassName = klass, Name = "", AnimationId = "",
-		_barn = {}, _attr = {}, Parent = nil,
+		_barn = {}, _attr = {}, _p = {}, _sig = {}, Parent = nil,
 	}
+	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
+	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
+	     värde — och det är den skillnaden `dismount` bygger på. ]]
+	function inst:GetPropertyChangedSignal(egenskap)
+		self._sig[egenskap] = self._sig[egenskap] or __signal()
+		return self._sig[egenskap]
+	end
 	function inst:GetAttribute(k) return self._attr[k] end
 	function inst:SetAttribute(k, v) self._attr[k] = v end
-	function inst:FindFirstChild(namn)
+	--[[ `FindFirstChild(namn, rekursivt)` — andra argumentet fanns inte, och
+	     det spelade roll: `RigAdapter.findByName` söker REKURSIVT, och
+	     riggens leder sitter under kroppsdelen. Utan rekursionen svarade
+	     stubben nil, adaptern lämnade `riderJoint` tom och ryttarlutningen
+	     hoppades tyst över — en degradering som inte gick att skilja från
+	     en rigg som saknade leden. ]]
+	function inst:FindFirstChild(namn, rekursivt)
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
+		if rekursivt then
+			for _, b in ipairs(self._barn) do
+				local traff = b.FindFirstChild and b:FindFirstChild(namn, true)
+				if traff then return traff end
+			end
+		end
 		return nil
 	end
 	--[[ Efter senior re-review av #87 går ett prov genom den RIKTIGA
@@ -675,6 +769,62 @@ local function __nyInstans(klass)
 		end
 	end
 	if klass == "TextButton" then inst.Activated = __signal() end
+	--[[ ── SITSEN ────────────────────────────────────────────────────────
+	     `Seat:Sit(humanoid)` gör tre saker i Roblox: den skapar en `Weld`
+	     som heter SeatWeld under sitsen, sätter `Occupant`, och sätter
+	     humanoidens `Sit` och `SeatPart`. Ingen av dem fanns i bänken, och
+	     därför har hela uppsittningskedjan varit omätbar här: specarna fick
+	     stubba en egen sits, och en sådan stubb blir per definition byggd
+	     efter koden i stället för efter API:et. ]]
+	if klass == "Seat" or klass == "VehicleSeat" then
+		function inst:Sit(hum)
+			if hum == nil then
+				--[[ `Seat:Sit(nil)` är INTE en dokumenterad väg att resa
+				     någon. Den kastar här, precis som den skulle göra i
+				     Studio, så att en kodväg som försöker det faller. ]]
+				error("Seat:Sit förväntar sig en Humanoid, inte nil", 2)
+			end
+			if self.Occupant == hum then return end
+			local weld = __nyInstans("Weld")
+			weld.Name = "SeatWeld"
+			weld.Part0 = self
+			weld.Parent = self
+			hum.SeatPart = self
+			hum.Sit = true
+			self.Occupant = hum
+		end
+	end
+	--[[ En led har C0 och C1, och de är CFrame.identity från början — inte
+	     nil. `RigAdapter.setRiderLean` läser `joint.C0` och multiplicerar
+	     den; en led utan C0 hade fällt raden på aritmetik i stället för att
+	     mäta lutningen. ]]
+	if klass == "Motor6D" or klass == "Weld" or klass == "Motor" then
+		inst.C0 = CFrame.new(0, 0, 0)
+		inst.C1 = CFrame.new(0, 0, 0)
+	end
+	if klass == "Humanoid" then
+		inst.Died = __signal()
+		inst.Health = 100
+		inst.Sit = false
+	end
+	if klass == "Model" then
+		--[[ Modellen flyttas med `PivotTo` av både uppsittningen och
+		     avsittningen. Stubben speglar bara att det HÄNDE och vart —
+		     ingen fysik. ]]
+		function inst:PivotTo(cf) self._pivot = cf end
+		function inst:GetPivot() return self._pivot end
+	end
+	function inst:GetFullName()
+		local led, nod = {}, self
+		while nod do
+			table.insert(led, 1, nod.Name ~= "" and nod.Name or nod.ClassName)
+			nod = rawget(nod, "Parent")
+		end
+		return table.concat(led, ".")
+	end
+	function inst:FindFirstChildWhichIsA(klassnamn)
+		return self:FindFirstChildOfClass(klassnamn)
+	end
 	if klass == "RemoteEvent" then
 		inst.OnClientEvent = __signal()
 		inst.OnServerEvent = __signal()
@@ -692,8 +842,56 @@ local function __nyInstans(klass)
 	end
 	--[[ Parent sätts via metatabell så att barnlistan hålls i takt; koden
 	     skriver `x.Parent = y` och förväntar sig att y ser x. ]]
+	--[[ De bevakade egenskaperna får sina startvärden genom skuggtabellen,
+	     annars rawsettas de av konstruktorn ovan och slutar fyra. ]]
+	local __start = { Health = rawget(inst, "Health"), Sit = rawget(inst, "Sit") }
+	rawset(inst, "Health", nil); rawset(inst, "Sit", nil)
+	for k, v in pairs(__start) do if v ~= nil then inst._p[k] = v end end
+
 	return setmetatable(inst, {
+		__index = function(t, k)
+			if __BEVAKADE[k] then return rawget(t, "_p")[k] end
+			--[[ `Position` är inget eget fält på en riktig BasePart: den
+			     läses ur CFrame. Koden som mäter avstånd till en häst
+			     (`GameplayService.avstandOk`, `HorseService.tryMount`)
+			     läser just `Position`, och en rigg som bara satt sin
+			     CFrame gav då nil. Samma härledning som byggstubbarna. ]]
+			if k == "Position" then
+				local cf = rawget(t, "CFrame")
+				return cf and cf.Position or nil
+			end
+			return nil
+		end,
 		__newindex = function(t, k, v)
+			if __BEVAKADE[k] then
+				local p = rawget(t, "_p")
+				local gammal = p[k]
+				p[k] = v
+				--[[ Semantiken som Roblox själv har, och som städningen
+				     efter en ritt hänger på: ]]
+				if k == "Sit" and v == false and gammal ~= false then
+					--[[ `Humanoid.Sit = false` reser ryttaren: sitsens egen
+					     SeatWeld tas bort och `Occupant` släpps. Det är den
+					     verifierade vägen ur en sits. ]]
+					local sits = p.SeatPart
+					p.SeatPart = nil
+					if sits then
+						local weld = sits:FindFirstChild("SeatWeld")
+						if weld then weld:Destroy() end
+						if sits.Occupant == t then sits.Occupant = nil end
+					end
+				elseif k == "Health" and v <= 0 and (gammal == nil or gammal > 0) then
+					--[[ Döden reser också ryttaren, och FÖRST därefter fyrar
+					     `Died` — annars hade en lyssnare som frågar efter
+					     sitsen sett en död ryttare som fortfarande sitter. ]]
+					t.Sit = false
+					local d = rawget(t, "Died")
+					if d then d:Fire() end
+				end
+				local sig = rawget(t, "_sig")[k]
+				if sig and gammal ~= v then sig:Fire() end
+				return
+			end
 			if k == "Parent" then
 				rawset(t, "Parent", v)
 				if v and type(v) == "table" then

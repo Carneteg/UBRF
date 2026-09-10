@@ -356,11 +356,17 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 	if bunden[player] ~= modell then
 		return false, "Det är inte din häst"
 	end
-	--[[ Passet får bara börja en gång. Ett andra `tryMount` på samma dag —
-		efter en avsittning — ska inte nollställa eftervården. ]]
+	--[[ Passet får bara räknas en gång, och eftervården får inte
+		nollställas av ett andra `tryMount`. REGELN ligger i `Pass` och
+		inte här: tjänsten hade en egen kopia (`p.lage ~= FORE`), och den
+		kopian låste ute en spelare som dött mitt i ritten — se
+		`Pass.farSittaUpp`. Nu finns villkoret på ett ställe. ]]
 	local p = passState[player]
-	if p and p.lage ~= Pass.LAGE.FORE then
-		return false, "Du har redan ridit idag"
+	if p then
+		local far, skalPass = Pass.farSittaUpp(p)
+		if not far then
+			return false, skalPass or "Du har redan ridit idag"
+		end
 	end
 	return true, nil
 end

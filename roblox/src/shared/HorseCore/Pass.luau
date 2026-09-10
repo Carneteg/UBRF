@@ -108,9 +108,54 @@ end
 
 --[[ ── ÖVERGÅNGARNA ──────────────────────────────────────────────── ]]
 
+--[[ Har eftervården börjat? Ett enda avbockat moment räknas: då är
+	hästen på väg att bli omhändertagen och dagen är i sitt slutskede. ]]
+function Pass.eftervardBorjad(state: State): boolean
+	for _, gjort in pairs(state.gjorda) do
+		if gjort then return true end
+	end
+	return false
+end
+
+--[[ FÅR HON SITTA UPP?
+
+	Regeln var "en gång per dag, punkt": allt utom läget FÖRE nekades. Den
+	gjorde dagen OSPELBAR i ett fall som inte är ovanligt — ryttaren dör
+	eller tappar sin karaktär mitt i ritten. `HorseService` städar då
+	korrekt, passet går till eftervård, och spelaren stod kvar med en häst
+	hon inte fick sitta upp på och en eftervård hon inte hade ridit fram
+	till. END_TO_END_PLAYABILITY_GATE punkt 10 kräver uttryckligen att
+	respawn följs av UPPSITTNING igen.
+
+	Regeln är därför: dagen slutar när hästen börjar bli omhändertagen,
+	inte första gången ryttarens fötter når marken. Har inget
+	eftervårdsmoment gjorts får hon sitta upp igen — hur hon än kom av.
+	Har eftervården börjat, eller är passet klart/räknat, är dagen slut.
+
+	Passet räknas fortfarande EXAKT en gång: kvittot `passId` ändras inte
+	av att man sitter upp två gånger.
+
+	[PRODUKTBESLUT som behöver ChatGPT/Tobias: gränsen "innan eftervården
+	börjat" är MIN läsning av punkt 10. Alternativen är att bara döden ger
+	en ny uppsittning, eller att antalet uppsittningar per dag är fritt.
+	Regeln ligger i EN funktion just för att den ska gå att flytta.] ]]
+function Pass.farSittaUpp(state: State): (boolean, string?)
+	if state.lage == Pass.LAGE.FORE then
+		return true, nil
+	end
+	if state.lage == Pass.LAGE.RIDER then
+		return false, "du sitter redan upp"
+	end
+	if state.lage == Pass.LAGE.EFTERVARD and not Pass.eftervardBorjad(state) then
+		return true, nil
+	end
+	return false, "Du har redan ridit idag"
+end
+
 function Pass.vidUppsittning(state: State): (boolean, string?)
-	if state.lage ~= Pass.LAGE.FORE then
-		return false, "passet är redan igång"
+	local far, skal = Pass.farSittaUpp(state)
+	if not far then
+		return false, skal or "passet är redan igång"
 	end
 	state.lage = Pass.LAGE.RIDER
 	return true, nil

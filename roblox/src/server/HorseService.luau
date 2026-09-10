@@ -194,6 +194,22 @@ local function slappStadning(player: Player)
 	end
 end
 
+--[[ Ryttarkroken deklareras HÄR och inte längre ner, och det är en
+	rättelse: `setRider` läser den, och en `local` som deklareras EFTER
+	funktionen fångas inte av den — namnet lästes då som en global, alltså
+	alltid nil. Följden var att kroken aldrig kördes: `Pass.vidUppsittning`
+	och `Pass.vidAvsittning` anropades inte, passet stannade i läget
+	"before_ride" hur mycket spelaren än red, och eftervården — som kräver
+	att ritten är avslutad — gick aldrig att göra. Dagen kunde alltså inte
+	spelas färdigt.
+
+	Att det inte syntes har samma orsak som `seat.C0`: ingen körning hade
+	någonsin monterat en ryttare mot en riktig rigg. Kontraktet mäts nu i
+	`integration.spec.luau` (punkt 9 och 11).
+
+	Kroken får INTE avgöra något — se noten vid `setRiderHook`. ]]
+local riderHook: ((Player, boolean) -> ())? = nil
+
 local function setRider(session: Session, player: Player?)
 	local previous = session.rider
 	session.rider = player
@@ -267,8 +283,6 @@ end
 	fel i den ska inte kunna hindra en avsittning, och därför är anropet
 	inkapslat i pcall. En spökryttare som sitter kvar för att en HUD
 	kastade vore värre än en HUD som visar fel. ]]
-local riderHook: ((Player, boolean) -> ())? = nil
-
 function HorseService.setRiderHook(hook: ((Player, boolean) -> ())?)
 	riderHook = hook
 end

@@ -163,7 +163,12 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	sits.Massless = true
 	sits.Anchored = false
 	sits.Parent = modell
-	svets(kropp, sits, "SeatWeld")
+	--[[ Namnet är INTE "SeatWeld": Roblox skapar själv en `Weld` med det
+		namnet under sitsen när någon sätter sig, och `HorseService.dismount`
+		letar just den när sitsen inte släpper. Två objekt med samma namn i
+		samma rigg är en fälla — avsittningen kunde få tag i riggens
+		bärande svets och sitsen hade lossnat från hästen. ]]
+	svets(kropp, sits, "SitsFaste")
 
 	--[[ Attachmentpunkterna. Specen är strikt här: sadel, tyglar och
 		stigbyglar är det utrustning och ryttarpose hänger på. ]]

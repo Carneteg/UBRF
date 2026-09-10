@@ -127,6 +127,18 @@ FORBEREDELSE = SPEL + [
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
+#[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
+#
+#   Skillnaden mot FORBEREDELSE ar VAD kedjan mats MOT: har byggs den
+#   RIKTIGA riggen ur JackRigg, med en riktig Seat, och skotseln,
+#   uppsittningen, doden, respawnen och passet gar genom tjansterna mot
+#   just den modellen. Forberedelsebanken matte reglerna; den har mater
+#   att spelaren kan ga igenom dagen. ]]
+INTEGRATION = FORBEREDELSE + [
+    ("JackRigg",        "src/server/JackRigg.luau"),
+    ("RiderController", "src/client/RiderController.luau"),
+]
+
 # Paritetsspecen jamfor Roblox gangarter och telemetri mot webbens
 # exporterade ridkanon. Den behover ingen rorelsemodul: den mater kontrakt,
 # inte fysik.
@@ -290,7 +302,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     # testas FORE "spel" — filnamnet innehaller inte "spel", men den ska
     # heller inte falla igenom till MODULER dar varken UBRFSkotsel,
     # Sparning eller SparService finns.
-    if "skotselpass" in spec_rel:
+    #[[ FORST av alla: "integration" ska inte kunna falla igenom till nagon
+    #   annan bunt. Den behover BADE tjanstestacken och riggen. ]]
+    if "integration" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "skotselpass" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"

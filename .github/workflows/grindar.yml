@@ -131,6 +131,20 @@ jobs:
             luau roblox/tests/.build/spelbarhet.spec.luau
           else echo "hoppar: spelbarhet.spec.luau finns inte i denna branch"; fi
 
+      # END_TO_END_PLAYABILITY_GATE punkt 7-11 (#162). Gångbarhetsgrinden
+      # ovan mäter att kedjan i VÄRLDEN går att gå. Den här mäter att DAGEN
+      # går att spela: skötseln, nejen, uppsittningen mot en riktig Seat, en
+      # ridbildruta, döden och respawnen, och att passet räknas exakt en
+      # gång — allt genom tjänsterna mot JackRiggs rigg. Egen step trots att
+      # kor.sh kör samma spec, av samma skäl som spelbarhetsgrinden: när den
+      # här faller ska loggen säga VILKEN punkt i gaten som föll.
+      - name: END_TO_END_PLAYABILITY_GATE — dagen går att spela igenom
+        run: |
+          if [ -f roblox/tests/integration.spec.luau ]; then
+            python3 roblox/tests/build.py tests/integration.spec.luau
+            luau roblox/tests/.build/integration.spec.luau
+          else echo "hoppar: integration.spec.luau finns inte i denna branch"; fi
+
       # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
       # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.
       # En katalog som heter "UBRF häst" blev "UBRF%20h%C3%A4st" och varje
