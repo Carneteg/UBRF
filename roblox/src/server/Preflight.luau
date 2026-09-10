@@ -195,6 +195,7 @@ function Preflight.kor(varldenFinns: boolean)
 		warn("STOPP: det här är inte en First Playable-build. Fortsätt INTE "
 			.. "med fysisk acceptans; rapportera raderna ovan.")
 	end
+	return #fel == 0, fel
 end
 
 return Preflight

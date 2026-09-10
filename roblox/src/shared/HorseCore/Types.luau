@@ -79,6 +79,12 @@ export type Rig = {
 	humanoid: Humanoid?,
 	controller: AnimationController?,
 	rootJoint: Motor6D?,             -- bär lutningen i svängar
+	--[[ #162: ryttarlutningen har sin EGEN led. Förut lades den på `seat`,
+	     som är en Roblox `Seat` — en BasePart utan `C0`. Den raden hade
+	     kastat på första ridbildrutan mot en riktig rigg, och syntes inte
+	     eftersom rider.spec stubbade sätet som en led. Sätet är en sits;
+	     leder är leder. ]]
+	riderJoint: Motor6D?,            -- bär ryttarens lutning, om riggen har en
 	seat: Seat?,
 	attachments: { [string]: Attachment },
 	bones: { [string]: Bone },

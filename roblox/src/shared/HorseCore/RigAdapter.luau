@@ -130,6 +130,7 @@ function RigAdapter.build(model: Model): (Types.Rig?, string?)
 	local seat: Seat? = if seatInstance and seatInstance:IsA("Seat") then seatInstance else nil
 
 	local rootJoint = findByName(model, "RootJoint")
+	local riderJoint = findByName(model, "RiderJoint")
 
 	return {
 		model = model,
@@ -138,6 +139,7 @@ function RigAdapter.build(model: Model): (Types.Rig?, string?)
 		humanoid = humanoid,
 		controller = controller,
 		rootJoint = if rootJoint and rootJoint:IsA("Motor6D") then rootJoint else nil,
+		riderJoint = if riderJoint and riderJoint:IsA("Motor6D") then riderJoint else nil,
 		seat = seat,
 		attachments = attachments,
 		bones = bones,
@@ -185,14 +187,29 @@ end
      ryttaren sitter kvar i sin vanliga pose, vilket är rätt sorts
      degradering: en saknad led ska inte kunna krascha ridningen. ]]
 function RigAdapter.setRiderLean(rig: Types.Rig, roll: number, pitch: number)
-	local seat = rig.seat
-	if not seat then return end
-	local base = seat:GetAttribute("BaseRiderC0")
+	--[[ #162: den här funktionen läste och skrev `rig.seat.C0`. `rig.seat`
+	     är en Roblox `Seat` — en BasePart, som inte har någon `C0`. Mot en
+	     riktig rigg hade raden kastat på FÖRSTA ridbildrutan, och `release()`
+	     hade kastat igen.
+
+	     Att det aldrig syntes har en obehaglig orsak: `rider.spec` stubbade
+	     `rig.seat` som en LED med `C0`. Testet var alltså byggt efter den
+	     buggiga koden i stället för efter Roblox API, och blev grönt på ett
+	     fel som gjorde ridningen omöjlig. Att ingen rigg fanns i placen
+	     gjorde att ingen körning kunde motbevisa det.
+
+	     Lutningen ligger nu på en egen `Motor6D` (`RiderJoint`), precis som
+	     kroppslutningen ligger på `RootJoint`. Saknas leden hoppas
+	     lutningen över — samma degradering som `setBodyTilt`: polish
+	     försvinner, spel inte. Sätet rörs inte. ]]
+	local joint = rig.riderJoint
+	if not joint then return end
+	local base = joint:GetAttribute("BaseRiderC0")
 	if base == nil then
-		seat:SetAttribute("BaseRiderC0", seat.C0)
-		base = seat.C0
+		joint:SetAttribute("BaseRiderC0", joint.C0)
+		base = joint.C0
 	end
-	seat.C0 = (base :: CFrame) * CFrame.Angles(pitch, 0, -roll)
+	joint.C0 = (base :: CFrame) * CFrame.Angles(pitch, 0, -roll)
 end
 
 --[[ Procedurell påbyggnad ovanpå animationen: huvudet vrids något mot

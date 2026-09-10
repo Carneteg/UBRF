@@ -28,6 +28,10 @@ Horse                          ← Model, taggad "Horse" med CollectionService
 │
 ├── BodyCollider               ← BasePart. Osynlig. DEN HÄR är hästen fysiskt.
 │   └── RootJoint              ← Motor6D till Visual. Bär lutning och nickning.
+│   └── RiderJoint             ← Motor6D, VALFRI. Bär ryttarens lutning (#162).
+│                                Saknas den lutar ryttaren inte — ridningen
+│                                fungerar ändå. Lutningen får ALDRIG läggas på
+│                                RiderSeat: en Seat är en BasePart utan C0.
 │
 ├── Humanoid                   ← se "Humanoid eller AnimationController" nedan
 │   └── Animator

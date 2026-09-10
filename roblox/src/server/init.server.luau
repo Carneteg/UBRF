@@ -100,18 +100,51 @@ local function fas(namn: string, f: () -> ()): boolean
 end
 
 local varldenFinns = false
-fas("världsbygget", function() varldenFinns = byggVarlden() end)
+local kritisktFel: { string } = {}
+local function kritisk(namn: string, f: () -> ())
+	if not fas(namn, f) then table.insert(kritisktFel, namn) end
+end
 
-fas("SparService", SparService.start)
-fas("HorseService", HorseService.start)
-fas("StallService", StallService.start)
-fas("GameplayService", GameplayService.start)
-fas("DorrService", DorrService.start)
+kritisk("världsbygget", function()
+	varldenFinns = byggVarlden()
+	if not varldenFinns then error("anläggningen byggdes inte") end
+end)
 
---[[ Först nu får någon spawna: världen står och dörrarna har interaktion.
-	Och den här raden körs ALLTID, även om något ovan föll. ]]
-fas("släpp in spelare", slappInSpelare)
-print("[Horse] Servern igång")
+kritisk("SparService", SparService.start)
+kritisk("HorseService", HorseService.start)
+kritisk("StallService", StallService.start)
+kritisk("GameplayService", GameplayService.start)
+kritisk("DorrService", DorrService.start)
 
---[[ Preflight SIST: den mäter det färdiga läget, inte avsikten. ]]
-fas("preflight", function() Preflight.kor(varldenFinns) end)
+--[[ ══ CRITICAL_STARTUP_GATE ═════════════════════════════════════════════
+
+	Preflighten körs FÖRE spelaren släpps in, och utfallet avgör om hon
+	släpps in alls.
+
+	Förra varianten körde `slappInSpelare()` alltid, före preflighten, med
+	argumentet att en frusen skärm inte säger något. ChatGPT:s review 16:40
+	invände, och invändningen är bättre än mitt argument: att släppa in
+	någon i en värld som saknar kritiska tjänster är precis den felklass vi
+	redan träffat fysiskt två gånger. En spelare som står i en halvbyggd
+	värld och undrar varför inget händer är sämre än ingen spelare alls med
+	ett tydligt STOPP i Output.
+
+	Fail closed: vid kritiskt fel laddas ingen karaktär.
+	`CharacterAutoLoads` förblir false, och Output säger vad som saknas. ]]
+local preflightOk = false
+fas("preflight", function()
+	local ok = Preflight.kor(varldenFinns)
+	preflightOk = ok == true
+end)
+
+if #kritisktFel > 0 or not preflightOk then
+	warn(("[Horse] CRITICAL_STARTUP_GATE: FAIL — %s")
+		:format(if #kritisktFel > 0 then table.concat(kritisktFel, ", ")
+			else "preflighten föll"))
+	warn("[Horse] INGEN SPELARE SLÄPPS IN. CharacterAutoLoads förblir false. "
+		.. "Det här är inte en spelbar build; rapportera raderna ovan i stället "
+		.. "för att fortsätta.")
+else
+	slappInSpelare()
+	print("[Horse] CRITICAL_STARTUP_GATE: PASS — servern igång")
+end

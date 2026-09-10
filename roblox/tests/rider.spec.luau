@@ -28,7 +28,15 @@ local GRAD = 180 / math.pi
      fungera utan dem. ]]
 local function newRC()
 	local rig = __makeRig()
-	rig.seat = __makeJoint("Seat")
+	--[[ #162: sätet stubbades förut som en LED med `C0`, och därför blev
+		specen grön på en rad som hade kastat mot en riktig Roblox `Seat`.
+		Testet var alltså byggt efter den buggiga koden i stället för efter
+		API:et. Sätet är nu en SITS utan `C0`; ryttarlutningen har sin egen
+		led. Sätts lutningen tillbaka på sätet kraschar specen — vilket är
+		precis vad den skulle ha gjort från början. ]]
+	rig.seat = { ClassName = "Seat", Occupant = nil, Sit = function() end,
+		GetAttribute = function() return nil end, SetAttribute = function() end }
+	rig.riderJoint = __makeJoint("RiderJoint")
 	return RiderController.new(rig), rig
 end
 
@@ -138,22 +146,22 @@ do
 	     gång som attribut och varje bildruta räknas från den. ]]
 	local rc, rig = newRC()
 	svep(rc, 0, 5.6, 2.0)
-	local bas = rig.seat:GetAttribute("BaseRiderC0")
+	local bas = rig.riderJoint:GetAttribute("BaseRiderC0")
 	check("basposen sparas som attribut", bas ~= nil)
 	check("sitsen roterar kring pitch och roll, inte yaw",
-		math.abs(rig.seat.C0.Yaw) < 1e-9)
+		math.abs(rig.riderJoint.C0.Yaw) < 1e-9)
 
 	--[[ Efter 20 s stillastående ska sitsen vara tillbaka i basposen. ]]
 	for _ = 1, 20 * 60 do rc:step(loco(0), 1 / 60) end
 	check("sitsen återgår helt till basposen",
-		math.abs(rig.seat.C0.Pitch) < 1e-4 and math.abs(rig.seat.C0.Roll) < 1e-4,
-		string.format("(pitch %.6f, roll %.6f)", rig.seat.C0.Pitch, rig.seat.C0.Roll))
+		math.abs(rig.riderJoint.C0.Pitch) < 1e-4 and math.abs(rig.riderJoint.C0.Roll) < 1e-4,
+		string.format("(pitch %.6f, roll %.6f)", rig.riderJoint.C0.Pitch, rig.riderJoint.C0.Roll))
 
 	--[[ Och avsittning nollställer direkt, inte efter en utdöende kurva. ]]
 	svep(rc, 0, 5.6, 1.0)
 	rc:release()
 	check("release nollställer sitsen på en gång",
-		math.abs(rig.seat.C0.Pitch) < 1e-9 and math.abs(rig.seat.C0.Roll) < 1e-9
+		math.abs(rig.riderJoint.C0.Pitch) < 1e-9 and math.abs(rig.riderJoint.C0.Roll) < 1e-9
 			and rc.pitch == 0 and rc.roll == 0)
 end
 
