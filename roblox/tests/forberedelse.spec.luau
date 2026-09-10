@@ -207,6 +207,52 @@ do
 		d ~= nil and d.id ~= forst, d and d.id or "nil")
 end
 
+--[[ ── VÄLFÄRDEN: en häst som vilar arbetar inte (#153 fix 1) ────────
+	Webbens spärr satt på ett ställe men kringgicks på tre. Roblox har
+	EN choke point — `tilldelaLedig` — och den här gruppen håller den. ]]
+do
+	--[[ Regeln som läser minnet. Samma form som webbens SPAR.fortroende. ]]
+	check("frisk häst vilar inte", Stallet.vilarForSkada({ rang = .5 }) == false)
+	check("skada med pass kvar räknas som vila",
+		Stallet.vilarForSkada({ skada = { passKvar = 2 } }) == true)
+	check("utläkt skada räknas inte som vila",
+		Stallet.vilarForSkada({ skada = { passKvar = 0 } }) == false)
+	check("skräp i minnet räknas inte som vila",
+		Stallet.vilarForSkada(nil) == false
+		and Stallet.vilarForSkada({ skada = true }) == false
+		and Stallet.vilarForSkada({ skada = { passKvar = "två" } }) == false)
+
+	local minnen = { toblerone = { skada = { passKvar = 2 } },
+		lydia = { rang = .5 } }
+	local vilar = Stallet.vilandeHastar(minnen)
+	check("vilandeHastar plockar ut precis de skadade",
+		vilar.toblerone == true and vilar.lydia == nil)
+
+	--[[ Spärren vid tilldelningen: den skadade hästen får aldrig komma ut,
+		oavsett vilket UserId som frågar. ]]
+	local traffar = 0
+	for uid = 1, 40 do
+		if Stallet.tilldelaLedig(uid, nil, { toblerone = true }) == "toblerone" then
+			traffar += 1
+		end
+	end
+	check("en vilande häst tilldelas aldrig", traffar == 0, traffar .. " av 40")
+
+	--[[ Och när ALLA vilar är tomt ett riktigt svar — ingen tillbakafallning
+		på den ofiltrerade listan, vilket var precis webbens fel. ]]
+	local allaVilar = {}
+	for _, id in ipairs(UBRFSpel.ordning) do allaVilar[id] = true end
+	check("alla vilar ⇒ ingen häst delas ut",
+		Stallet.tilldelaLedig(7, nil, allaVilar) == nil)
+	check("dagensHast ärver välfärdsspärren",
+		Stallet.dagensHast(7, nil, allaVilar) == nil)
+
+	--[[ En frisk häst påverkas inte — spärren får inte låsa hela stallet. ]]
+	local d2 = Stallet.dagensHast(3, nil, { [UBRFSpel.ordning[1]] = true })
+	check("en frisk häst delas fortfarande ut",
+		d2 ~= nil and d2.id ~= UBRFSpel.ordning[1], d2 and d2.id or "nil")
+end
+
 --[[ ── Vyn som går till klienten ───────────────────────────────────── ]]
 do
 	local s = Preparation.nyState("cosmo")
