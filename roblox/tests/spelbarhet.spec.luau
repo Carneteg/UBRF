@@ -1,0 +1,416 @@
+--!nostrict
+--[[
+	END_TO_END_PLAYABILITY_GATE — mäter SPELBARHET, inte avsikt.
+
+	ChatGPT:s processreview #162 16:31, efter att Tobias manuellt hittat tre
+	grundläggande Studio-fel i buildar som presenterats som redo. Mönstret
+	var att grindarna mätte att något LÅG RÄTT, aldrig att det gick att
+	SPELA: spawnen mättes mot ankomstpunkten men inte mot marken; placen
+	mättes som välformad XML men inte som en place Studio läser; koden
+	mättes som närvarande men inte som `require`-bar.
+
+	Den här grinden mäter i stället en gångbar kedja genom den FAKTISKT
+	BYGGDA geometrin, med avatarens verkliga mått:
+
+	    spawn → entrédörren → in genom öppningen → Blackrock Jacks box
+
+	Metoden är konfigurationsrymd, inte punktprov. Varje kolliderande del
+	blåses upp med avatarens radie i x/z, och sökningen sker sedan för en
+	PUNKT i den uppblåsta rymden. Det är matematiskt samma sak som att
+	flytta en kropp med bredd genom den ursprungliga världen — och det är
+	därför en dörr som är för smal för avataren faller här, medan ett
+	koordinatavstånd hade sagt att den går bra.
+
+	Golvet läses ur de ICKE uppblåsta delarna: man står på golvet man står
+	på, inte på en uppblåst variant av det.
+
+	Kör: python3 roblox/tests/build.py tests/spelbarhet.spec.luau
+	     && luau roblox/tests/.build/spelbarhet.spec.luau
+]]
+
+local fails = 0
+local function check(namn, villkor, detalj)
+	if villkor then
+		print(string.format("  OK   %s%s", namn, detalj and ("  " .. detalj) or ""))
+	else
+		fails += 1
+		print(string.format("  FEL  %s%s", namn, detalj and ("  " .. detalj) or ""))
+	end
+end
+
+local M = BuildKit.M
+local modell = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
+
+--[[ ══ AVATARENS MÅTT ═══════════════════════════════════════════════════
+
+	Roblox standardavatar: ~2 studs bred, ~5 studs hög. I meter med M = 3
+	studs/m blir det 0,67 m bred och 1,7 m hög. Radien är alltså 0,34 m;
+	jag använder 0,35 för marginal. StegHöjd är vad en Humanoid klarar att
+	kliva upp på utan hopp. ]]
+local RADIE   = 0.35
+local HOJD    = 1.75
+local STEG    = 0.55
+local MAXGOLV = 3.0     -- högre än så är ett tak, inte ett golv
+local CELL    = 0.25
+
+-- ── Regionen som mäts: stallet med marginal, där hela kedjan ligger ──
+local stall
+for _, b in ipairs(UBRFKomplex.byggnader) do
+	if b.id == "stall" then stall = b end
+end
+local MARGINAL = 14.0
+local X0 = stall.rekt.x - MARGINAL
+local X1 = stall.rekt.x + stall.rekt.w + MARGINAL
+local Z0 = stall.rekt.y - MARGINAL
+local Z1 = stall.rekt.y + stall.rekt.h + MARGINAL
+local NX = math.ceil((X1 - X0) / CELL)
+local NZ = math.ceil((Z1 - Z0) / CELL)
+
+local origo = UBRFKomplex.origo or { x = 0, y = 0 }
+local function cellFor(x, z)
+	return math.floor((x - X0) / CELL) + 1, math.floor((z - Z0) / CELL) + 1
+end
+local function mitt(ix, iz)
+	return X0 + (ix - 0.5) * CELL, Z0 + (iz - 0.5) * CELL
+end
+local function idx(ix, iz) return (iz - 1) * NX + ix end
+
+--[[ Delarnas lådor i METER, i tomtens koordinater. `origo` dras av så att
+	måtten kan jämföras med geometrin i UBRFKomplex direkt. ]]
+local lador = {}
+for _, d in ipairs(modell:GetDescendants()) do
+	if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
+		local c, s = d.CFrame.Position, d.Size
+		table.insert(lador, {
+			namn = d.Name,
+			x0 = c.X / M - origo.x - s.X / (2 * M), x1 = c.X / M - origo.x + s.X / (2 * M),
+			z0 = c.Z / M - origo.y - s.Z / (2 * M), z1 = c.Z / M - origo.y + s.Z / (2 * M),
+			y0 = (c.Y - s.Y / 2) / M, y1 = (c.Y + s.Y / 2) / M,
+			del = d,
+		})
+	end
+end
+print(("\nRegion %.0f×%.0f m, %d×%d celler, %d kolliderande delar")
+	:format(X1 - X0, Z1 - Z0, NX, NZ, #lador))
+
+--[[ ══ KARTORNA ══════════════════════════════════════════════════════════
+
+	Två rutnät per världstillstånd:
+
+	  golv[i]      — höjden på den yta man står på i cellen
+	  blockerad[i] — står något i kroppsvolymen över den ytan
+
+	MÄTPUNKTEN ÄR CELLENS MITT, och det är inte en detalj. Första versionen
+	rasterade varje cell som en låda NUDDAR, alltså konservativt. Då blev
+	dörröppningens fria korridor — 1,15 m minus avatarens 0,70 m = 0,45 m —
+	noll celler bred, eftersom de uppblåsta väggsegmenten nuddade båda
+	cellerna i öppningen. Grinden blev röd på en dörr som mätt är fri.
+	Konservativ rastrering är fel semantik för en punktsökning i
+	konfigurationsrymd: punkten ligger i cellens mitt, så det är mitten som
+	ska prövas.
+
+	Golvet läses ur de ICKE uppblåsta lådorna — man står på det golv man
+	står på. Hindren läses ur de UPPBLÅSTA, vilket är det som gör
+	punktsökningen ekvivalent med att flytta en kropp med bredd. ]]
+local function byggKartor(lista)
+	local golv, blockerad = {}, {}
+
+	for _, l in ipairs(lista) do
+		if l.y1 <= MAXGOLV then
+			local ax0, az0 = cellFor(l.x0, l.z0)
+			local ax1, az1 = cellFor(l.x1, l.z1)
+			for iz = math.max(1, az0), math.min(NZ, az1) do
+				for ix = math.max(1, ax0), math.min(NX, ax1) do
+					local mx, mz = mitt(ix, iz)
+					if mx >= l.x0 and mx <= l.x1 and mz >= l.z0 and mz <= l.z1 then
+						local i = idx(ix, iz)
+						if golv[i] == nil or l.y1 > golv[i] then golv[i] = l.y1 end
+					end
+				end
+			end
+		end
+	end
+
+	for _, l in ipairs(lista) do
+		local ax0, az0 = cellFor(l.x0 - RADIE, l.z0 - RADIE)
+		local ax1, az1 = cellFor(l.x1 + RADIE, l.z1 + RADIE)
+		for iz = math.max(1, az0), math.min(NZ, az1) do
+			for ix = math.max(1, ax0), math.min(NX, ax1) do
+				local i = idx(ix, iz)
+				local g = golv[i]
+				if g ~= nil and not blockerad[i] then
+					local mx, mz = mitt(ix, iz)
+					if mx >= l.x0 - RADIE and mx <= l.x1 + RADIE
+						and mz >= l.z0 - RADIE and mz <= l.z1 + RADIE then
+						--[[ Ett hinder är något man varken kan gå igenom
+							ELLER kliva upp på. Tröskeln är därför STEG, inte
+							noll: verandans 14 cm-steg är ett steg, och
+							golvet där blir stegets ovansida. ]]
+						if l.y1 > g + STEG and l.y0 < g + HOJD then
+							blockerad[i] = true
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return { golv = golv, blockerad = blockerad }
+end
+
+local function gangbarI(k, ix, iz)
+	if ix < 1 or iz < 1 or ix > NX or iz > NZ then return false end
+	local i = idx(ix, iz)
+	return k.golv[i] ~= nil and not k.blockerad[i]
+end
+
+--[[ BFS med stegvillkor: två celler hänger ihop bara om nivåskillnaden är
+	något en Humanoid kliver upp på. Utan det villkoret hade en vägg med tak
+	räknats som en ramp. ]]
+local function sokI(k, fran, till)
+	local sx, sz = cellFor(fran.x, fran.y)
+	local tx, tz = cellFor(till.x, till.y)
+	if not gangbarI(k, sx, sz) then return nil, "startcellen är inte gångbar" end
+	if not gangbarI(k, tx, tz) then return nil, "målcellen är inte gångbar" end
+
+	local ko, huvud = { { sx, sz } }, 1
+	local sedd = { [idx(sx, sz)] = true }
+	local steg = { [idx(sx, sz)] = 0 }
+	while huvud <= #ko do
+		local c = ko[huvud]; huvud += 1
+		if c[1] == tx and c[2] == tz then return steg[idx(c[1], c[2])] end
+		for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			local nx, nz = c[1] + d[1], c[2] + d[2]
+			local ni = idx(nx, nz)
+			if gangbarI(k, nx, nz) and not sedd[ni]
+				and math.abs(k.golv[ni] - k.golv[idx(c[1], c[2])]) <= STEG then
+				sedd[ni] = true
+				steg[ni] = steg[idx(c[1], c[2])] + 1
+				table.insert(ko, { nx, nz })
+			end
+		end
+	end
+	return nil, "ingen sammanhängande gångväg"
+end
+
+--[[ Alla celler man kan NÅ från en punkt. Skillnaden mot `sokI` är viktig:
+	en cell kan vara gångbar utan att vara nåbar. Boxarnas insida är precis
+	det — golvet finns, men boxfronten står emellan. ]]
+local function naddaFran(k, fran)
+	local sx, sz = cellFor(fran.x, fran.y)
+	if not gangbarI(k, sx, sz) then return nil end
+	local nadd = { [idx(sx, sz)] = true }
+	local ko, huvud = { { sx, sz } }, 1
+	while huvud <= #ko do
+		local c = ko[huvud]; huvud += 1
+		for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			local nx, nz = c[1] + d[1], c[2] + d[2]
+			local ni = idx(nx, nz)
+			if gangbarI(k, nx, nz) and not nadd[ni]
+				and math.abs(k.golv[ni] - k.golv[idx(c[1], c[2])]) <= STEG then
+				nadd[ni] = true
+				table.insert(ko, { nx, nz })
+			end
+		end
+	end
+	return nadd
+end
+
+--[[ Kartan runt en punkt, för felsökning. En grind som bara säger "ingen
+	väg" tvingar nästa person att bygga om felsökningen från noll. ]]
+local function skrivKarta(k, kring, hojd)
+	local cx, cz = cellFor(kring.x, kring.y)
+	local h = math.ceil((hojd or 2.0) / CELL)
+	print("      karta (. gångbar, # blockerad, ' ' inget golv):")
+	for iz = cz + h, cz - h, -1 do
+		local rad = ""
+		for ix = cx - 8, cx + 8 do
+			local i = idx(ix, iz)
+			rad = rad .. (k.golv[i] == nil and " " or (k.blockerad[i] and "#" or "."))
+		end
+		local _, mz = mitt(cx, iz)
+		print(("      z %.2f |%s|  golv %s"):format(mz, rad,
+			k.golv[idx(cx, iz)] and ("%.2f"):format(k.golv[idx(cx, iz)]) or "-"))
+	end
+end
+
+local STANGT = byggKartor(lador)
+
+-- ══ 1. SPAWN SURVIVAL ═══════════════════════════════════════════════════
+print("\n1. Spawn survival")
+
+local spawn
+for _, d in ipairs(modell:GetDescendants()) do
+	if d.ClassName == "SpawnLocation" then spawn = d end
+end
+check("spawnen finns i den byggda världen", spawn ~= nil)
+
+local spos
+if spawn then
+	local p = spawn.CFrame.Position
+	spos = { x = p.X / M - origo.x, y = p.Z / M - origo.y, h = p.Y / M }
+	local sx, sz = cellFor(spos.x, spos.y)
+	local i = idx(sx, sz)
+	local G, B = STANGT.golv, STANGT.blockerad
+	check("spawncellen har golv (kolliderande yta under)", G[i] ~= nil,
+		G[i] and ("golv %.2f m"):format(G[i]) or "INGET GOLV — spelaren faller")
+	check("fallet från spawn till golv är ofarligt",
+		G[i] ~= nil and (spos.h - G[i]) <= 0.6,
+		G[i] and ("%.2f m"):format(spos.h - G[i]) or "ingen mark")
+	check("spawnen har takfrihet för avataren", not B[i],
+		B[i] and "något står i vägen i kroppshöjd"
+			or ("%.2f m fritt över golvet"):format(HOJD))
+	check("spawncellen är gångbar", gangbarI(STANGT, sx, sz))
+end
+
+-- ══ 2. GÅNGBARHET SPAWN → ENTRÉDÖRREN ═══════════════════════════════════
+print("\n2. Gångbarhet spawn → entrédörren")
+
+local dorr
+for _, o in ipairs(stall.oppningar or {}) do
+	if o.sida == "N" and o.typ == "dorrgul" then dorr = o end
+end
+check("stallets ockragula nordentré finns", dorr ~= nil)
+
+local utanfor, innanfor, dmx, dmz
+if dorr then
+	dmx, dmz = Geometri.oppningsMitt(stall.rekt, "N", dorr.u, dorr.b)
+	--[[ En punkt strax utanför och en strax innanför öppningen. 0,9 m är
+		mer än väggens 0,3 m tjocklek, så punkterna hamnar på var sin sida
+		om muren och inte inne i den. ]]
+	utanfor = { x = dmx, y = dmz + 0.9 }
+	innanfor = { x = dmx, y = dmz - 0.9 }
+end
+
+if spos and utanfor then
+	local n, varfor = sokI(STANGT, spos, utanfor)
+	check("det går att gå från spawn fram till dörren", n ~= nil,
+		n and ("%d celler (%.1f m)"):format(n, n * CELL) or varfor)
+end
+
+-- ══ 3. DÖRRENS ANVÄNDBARHET ═════════════════════════════════════════════
+print("\n3. Dörrens användbarhet")
+
+DorrService.start()
+
+local blad
+if dorr then
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d:GetAttribute("UBRFDorr") == true and d:GetAttribute("Byggnad") == "stall"
+			and d:GetAttribute("Sida") == "N" then blad = d end
+	end
+end
+check("entrédörren har ett uppmärkt dörrblad", blad ~= nil)
+
+local prompt = blad and blad:FindFirstChildOfClass("ProximityPrompt")
+check("dörrbladet har en ProximityPrompt", prompt ~= nil)
+
+if prompt and utanfor and blad then
+	local bp = blad.CFrame.Position
+	local avst = math.sqrt((bp.X / M - origo.x - utanfor.x) ^ 2
+		+ (bp.Z / M - origo.y - utanfor.y) ^ 2)
+	--[[ Prompten mäts i studs i Roblox; jämförelsen görs i meter. ]]
+	check("prompten går att nå från gångytan utanför",
+		avst * M <= prompt.MaxActivationDistance,
+		("%.1f studs mot räckvidd %.0f"):format(avst * M, prompt.MaxActivationDistance))
+end
+
+--[[ Öppnad dörr ska ge fri passage. Mätningen görs som en ny gångsökning
+	genom öppningen EFTER att bladet öppnats — det är skillnaden mellan en
+	dörr som ser öppen ut och en man kommer igenom. ]]
+if blad and prompt and utanfor and innanfor then
+	prompt.Triggered:_fire()
+
+	local oppnaLador = {}
+	for _, l in ipairs(lador) do
+		--[[ Bladet tas ur kartan BARA om det verkligen slutat kollidera.
+			Att utesluta det villkorslöst var en lucka i min egen grind:
+			mutationen "dörren öppnas men behåller kollisionen" gjorde bara
+			CanCollide-raden röd, medan passagen förblev grön — alltså exakt
+			det fel grinden finns för att fånga. Nu står bladet kvar i
+			kartan när det kolliderar, och då är öppningen stängd. ]]
+		if l.del ~= blad or blad.CanCollide then table.insert(oppnaLador, l) end
+	end
+	check("dörrbladet slutar kollidera när det öppnas", blad.CanCollide == false)
+
+	--[[ Kartorna byggs om utan det öppnade bladet, med samma funktion som
+		det stängda läget. Billigare vore att bara frita bladets celler, men
+		då hade jag mätt min egen approximation och inte världen. ]]
+	local OPPET = byggKartor(oppnaLador)
+
+	local n, varfor = sokI(OPPET, utanfor, innanfor)
+	if n == nil then skrivKarta(OPPET, utanfor, 2.0) end
+	check("avataren kommer IGENOM öppningen när dörren är öppen", n ~= nil,
+		n and ("%d celler"):format(n) or varfor)
+
+	local n2, varfor2 = sokI(OPPET, spos, innanfor)
+	check("hela kedjan spawn → in i stallet är gångbar", n2 ~= nil,
+		n2 and ("%d celler (%.1f m)"):format(n2, n2 * CELL) or varfor2)
+
+	-- ══ 4. GÅNGBARHET ENTRÉ → BLACKROCK JACKS BOX ═══════════════════════
+	print("\n4. Gångbarhet entré → Blackrock Jacks box")
+
+	local hastId = Stallet.FORSTA_DAGEN_HAST
+	local box = Stallet.boxFor(hastId)
+	check("första dagens häst har en box med världskoordinater",
+		box ~= nil and box.varld ~= nil, hastId)
+
+	--[[ RÄTT KONTRAKT ÄR RÄCKVIDD, INTE ATT GÅ IN I BOXEN.
+
+		Första versionen krävde en gångväg till boxens mitt och blev röd.
+		Kartan visade varför: stallgångarna är nåbara ända fram, men
+		boxarnas INSIDA är inte — boxfronten står emellan. Så ska det vara.
+		Man går inte in genom en boxfront, man står i gången.
+
+		`StallService` sätter boxens `ProximityPrompt` med
+		`MaxActivationDistance = 8` studs och `RequiresLineOfSight = false`.
+		Kontraktet är alltså: finns en NÅDD gångyta inom räckvidden från
+		boxens mitt. Att kräva mer hade varit att kräva något spelet inte
+		behöver — och att kräva mindre hade släppt igenom en box man inte
+		kan interagera med. ]]
+	local RACKVIDD_BOX = 8 / M   -- studs → meter, samma tal som StallService
+
+	local nadd = naddaFran(OPPET, innanfor)
+	check("gångytan innanför entrén är nåbar", nadd ~= nil)
+
+	if box and box.varld and nadd then
+		local bx, bz = cellFor(box.varld.x, box.varld.y)
+		local bast, bcell = nil, nil
+		local R = math.ceil(6.0 / CELL)
+		for dz = -R, R do
+			for dx = -R, R do
+				local ix, iz = bx + dx, bz + dz
+				if nadd[idx(ix, iz)] then
+					local mx, mz = mitt(ix, iz)
+					local d2 = (mx - box.varld.x) ^ 2 + (mz - box.varld.y) ^ 2
+					if bast == nil or d2 < bast then bast, bcell = d2, { ix, iz } end
+				end
+			end
+		end
+		local avst = bast and math.sqrt(bast) or nil
+		check("det finns NÅDD gångyta vid Jacks box", bcell ~= nil,
+			avst and ("närmast %.2f m från boxens mitt"):format(avst) or "ingen nådd yta inom 6 m")
+		check("boxens prompt går att nå från gångytan",
+			avst ~= nil and avst <= RACKVIDD_BOX,
+			avst and ("%.2f m mot räckvidd %.2f m (8 studs)"):format(avst, RACKVIDD_BOX)
+				or "ingen nådd yta")
+
+		if bcell then
+			local mx, mz = mitt(bcell[1], bcell[2])
+			local n4, varfor4 = sokI(OPPET, spos, { x = mx, y = mz })
+			check("HELA KEDJAN spawn → dörr → gången vid Jacks box är gångbar", n4 ~= nil,
+				n4 and ("%d celler (%.1f m)"):format(n4, n4 * CELL) or varfor4)
+		end
+	end
+
+	--[[ Stäng dörren igen så att specen inte lämnar världen i ett annat
+		läge än den fann den. ]]
+	prompt.Triggered:_fire()
+end
+
+if fails > 0 then
+	print(string.format("\n%d mätning(ar) föll.", fails))
+	os.exit(1)
+else
+	print("\nEND_TO_END_PLAYABILITY_GATE: alla gröna")
+end

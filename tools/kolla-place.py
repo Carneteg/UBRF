@@ -147,6 +147,36 @@ def main() -> int:
                 fel.append(f"{vad} byggs inte ({markor} saknas i Anlaggningen)")
                 print(f"  FEL  varldsbyggaren bygger inte {vad}")
 
+        #[[ PUNKT 9: place-format-smoke. Well-formed XML rackte inte —
+        #   forsta filen oppnade inte i Studio, och det som saknades var de
+        #   tva <External>-raderna och en Workspace. Det mats nu, sa att
+        #   samma avvikelse inte kan levereras igen. ]]
+        txt = ut.read_text(encoding="utf-8")
+        ext = txt.count("<External>")
+        if ext >= 2:
+            print(f"  OK   place-format: {ext} <External>-rader som i Roblox egen XML")
+        else:
+            fel.append(f"place-format: {ext} <External>-rader, vantade 2")
+            print(f"  FEL  place-format: {ext} <External>-rader, vantade 2")
+
+        tjanster = [namn(it) for it in rot.findall("Item")]
+        for kravd in ("Workspace", "ReplicatedStorage", "ServerScriptService", "StarterPlayer"):
+            if kravd in tjanster:
+                print(f"  OK   place-format: tjansten {kravd} finns")
+            else:
+                fel.append(f"place-format: tjansten {kravd} saknas")
+                print(f"  FEL  place-format: tjansten {kravd} saknas")
+
+        #[[ Drift-skydd: spelbarhetsgrinden mater boxpromptens rackvidd mot
+        #   talet 8, som StallService satter. Andras det dar utan att grinden
+        #   foljer med mater grinden fel varld. ]]
+        st = (ROT / "roblox" / "src" / "server" / "StallService.luau").read_text(encoding="utf-8")
+        if "MaxActivationDistance = 8" in st:
+            print("  OK   boxpromptens rackvidd ar 8 studs, som spelbarhetsgrinden antar")
+        else:
+            fel.append("StallService.MaxActivationDistance ar inte 8 — spelbarhetsgrinden matar fel")
+            print("  FEL  StallService.MaxActivationDistance ar inte langre 8")
+
     if fel:
         print(f"\nFIRST_PLAYABLE_PREFLIGHT: FAIL — {len(fel)} saknas:")
         for f in fel:

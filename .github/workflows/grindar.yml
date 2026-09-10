@@ -119,6 +119,18 @@ jobs:
           if [ -f tools/kolla-place.py ]; then python3 tools/kolla-place.py
           else echo "hoppar: tools/kolla-place.py finns inte i denna branch"; fi
 
+      # END_TO_END_PLAYABILITY_GATE (#162, ChatGPT-processreview 16:31).
+      # Mäter en gångbar kedja spawn → entrédörr → in → gången vid Jacks
+      # box, collision-aware med avatarens footprint över den FAKTISKT
+      # byggda geometrin. Grinden finns för att de tre fel Tobias hittade
+      # fysiskt alla var osynliga för grindar som mätte avsikt.
+      - name: END_TO_END_PLAYABILITY_GATE — kedjan är gångbar
+        run: |
+          if [ -f roblox/tests/spelbarhet.spec.luau ]; then
+            python3 roblox/tests/build.py tests/spelbarhet.spec.luau
+            luau roblox/tests/.build/spelbarhet.spec.luau
+          else echo "hoppar: spelbarhet.spec.luau finns inte i denna branch"; fi
+
       # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
       # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.
       # En katalog som heter "UBRF häst" blev "UBRF%20h%C3%A4st" och varje

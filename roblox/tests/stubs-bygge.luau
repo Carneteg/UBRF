@@ -274,6 +274,11 @@ local __tjanster = {
 	               IsServer = function() return true end },
 	Players = { LocalPlayer = nil },
 	CoreGui = instance("CoreGui"),
+	--[[ #162: spelbarhetsbänken kör UBRFSpel, som hämtar ReplicatedStorage
+	     vid require. Tjänsten behöver inte innehålla något här — modulerna
+	     är redan inlinade som lokala variabler — men den måste FINNAS,
+	     annars kastar GetService innan en enda mätning gjorts. ]]
+	ReplicatedStorage = instance("ReplicatedStorage"),
 	CollectionService = {
 		GetTagged = function() return {} end,
 		GetInstanceAddedSignal = function() return { Connect = function() end } end,

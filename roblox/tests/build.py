@@ -33,6 +33,11 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
+#[[ Spelbarhetsbanken: varlden, dorrtjansten OCH speldatan, sa att den
+#   gangbara kedjan spawn -> dorr -> Jacks box kan matas i EN korning.
+#   Det ar den grind som saknades nar Tobias fick hitta felen fysiskt. ]]
+SPELBARHET = None  # satts efter SPEL, se nedan
+
 #[[ First Playable-bänken: varlden PLUS dorrtjansten, sa att spawn- och
 #   dorrkontraktet ur #162 kan matas i samma korning som bygget. Det ar
 #   den enda vagen att fa evidens for att dorren oppnas utan Studio. ]]
@@ -52,6 +57,15 @@ SPEL = GEOMETRI + [
     ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
     ("UBRFSpel",     "game/UBRFSpel.luau"),
     ("Stallet",      "game/Stallet.luau"),
+]
+
+SPELBARHET = BYGGE + [
+    ("RidKanon",     "src/shared/HorseCore/RidKanon.luau"),
+    ("UBRFSpelData", "game/UBRFSpelData.luau"),
+    ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
+    ("UBRFSpel",     "game/UBRFSpel.luau"),
+    ("Stallet",      "game/Stallet.luau"),
+    ("DorrService",  "src/server/DorrService.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
@@ -285,6 +299,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = PARITET, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+    #[[ FORE "spel": strangen "spelbarhet" INNEHALLER "spel", sa den hamnar
+    #   annars i speldatans bank utan BuildKit och Anlaggningen — samma
+    #   genomfallning som kommentaren om "forberedelse" varnar for. Den
+    #   traffade mig direkt: forsta korningen dog pa `BuildKit.M` som nil. ]]
+    elif "spelbarhet" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "spel" in spec_rel:
         moduler, stubbar = SPEL, "tests/stubs.luau"
     elif pathlib.Path(spec_rel).name == "sikt.spec.luau":
