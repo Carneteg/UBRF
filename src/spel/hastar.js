@@ -129,7 +129,24 @@ const PROFIL={
    Hon/han-formerna nedan är svenska pronomen för hästen som individ. */
 const PRONOMEN_HAN={subj:"han", obj:"honom", poss:"hans"};
 const PRONOMEN_HON={subj:"hon", obj:"henne", poss:"hennes"};
-function harledPronomen(besk){
+
+/* PRODUKTBESLUT går före härledningen ur källtexten. Tobias har sagt
+   uttryckligen att Bränntomts Lydia är "henne" och att "honom" är fel
+   (2026-09-06). Det är ett produktbeslut med känd upphovsman, inte en
+   gissning ur namnet — och enligt källordningen i CLAUDE.md står Tobias
+   uttryckliga produktbeslut över både härledd källtext och antaganden.
+
+   Listan är avsiktligt kort och namngiven: en häst hamnar här bara när
+   en människa har sagt hur det är. Övriga hästar utan uppgift i
+   källtexten behåller REFERENCE_GAP och får sitt namn i texten. */
+const PRONOMEN_BESLUT={
+  lydia:{...PRONOMEN_HON, kalla:"PRODUKTBESLUT:Tobias:2026-09-06"},
+};
+function harledPronomen(besk,id){
+  if(id&&PRONOMEN_BESLUT[id])return {...PRONOMEN_BESLUT[id]};
+  return harledPronomenUrText(besk);
+}
+function harledPronomenUrText(besk){
   const t=" "+String(besk||"").toLowerCase()+" ";
   const ord=r=>r.test(t);
   const han=ord(/[^a-zåäö]valack[a-zåäö]*[^a-zåäö]/)||ord(/[^a-zåäö](han|honom|hans)[^a-zåäö]/);
@@ -158,7 +175,7 @@ for(const fakta of HASTFAKTA){
     profil:PROFIL[fakta.id]||"skolhast",
     profilStatus:PROFIL[fakta.id]?"KALLTEXT":"SAKNAR_KALLA",
     visuellStatus:"ASSUMPTION",
-    pronomen:harledPronomen(fakta.besk),
+    pronomen:harledPronomen(fakta.besk,fakta.id),
   };
 }
 

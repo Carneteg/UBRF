@@ -62,7 +62,15 @@ sektion = "A: plats och pronomen";
       pronomen: h.pronomen, hanKalla: HORSES.toblerone.pronomen,
       pron: { subj: hastPron(G.hastId, "subj"), obj: hastPron(G.hastId, "obj"),
         poss: hastPron(G.hastId, "poss") },
-      tobl: { subj: hastPron("toblerone", "subj"), obj: hastPron("toblerone", "obj") } };
+      tobl: { subj: hastPron("toblerone", "subj"), obj: hastPron("toblerone", "obj") },
+      /* Finns ingen häst kvar utan källa har någon börjat gissa åt dem
+         allihop — det är ett fynd, inte en krasch. */
+      gap: (() => { const id = Object.keys(HORSES).find(k =>
+          HORSES[k].pronomen && HORSES[k].pronomen.kalla === "REFERENCE_GAP");
+        if (!id) return { id: null, namn: "(ingen häst saknar längre pronomenkälla)",
+          kalla: "(alla hästar har fått ett pronomen)", subj: null, obj: null, poss: null };
+        return { id, namn: HORSES[id].namn, kalla: HORSES[id].pronomen.kalla,
+          subj: hastPron(id, "subj"), obj: hastPron(id, "obj"), poss: hastPron(id, "poss") }; })() };
   });
   prova("tilldelningen sätter en aktiv häst (G.hastId) som finns i hästdatan",
     !!a.hastId && a.finns === true,
@@ -71,19 +79,27 @@ sektion = "A: plats och pronomen";
     a.plats === "box" && !a.ytor.some(t => /hage/i.test(t || "")),
     `${a.ytor.map(t => JSON.stringify(t)).join(" · ")}`);
 
-  /* Lydias kön står INTE i källtexten. Då får inget pronomen hittas på —
-     namnet bär meningen i stället. Det var "honom" om Lydia som föll i
-     produkttestet. */
-  const pronOrd = /\b(han|hon|honom|henne|hans|hennes)\b/i;
-  prova("ingen text om hästen använder ett gissat pronomen",
-    a.pronomen.kalla === "REFERENCE_GAP" && !a.ytor.some(t => pronOrd.test(t || "")),
-    `${a.namn}: pronomenkälla ${a.pronomen.kalla} · hastPron ger "${a.pron.subj}" / "${a.pron.obj}"`);
-
-  /* Och där källan FAKTISKT säger det används pronomenet — annars vore
-     regeln bara "skriv aldrig han", inte "läs ur datan". */
-  prova("men där källtexten säger det används pronomenet ur datan",
+  /* PRONOMEN — tre fall, tre olika källor. Lydia är ett PRODUKTBESLUT
+     (Tobias 2026-09-06: "henne", och "honom" är fel), Toblerone står som
+     valack i källtexten, och en tredje häst saknar uppgift helt. Regeln
+     är inte "skriv aldrig han" utan "läs ur datan". */
+  prova("Lydia: hon/henne/hennes ur canonical data — PRODUKTBESLUT, inte UI-sträng",
+    a.pron.subj === "hon" && a.pron.obj === "henne" && a.pron.poss === "hennes" &&
+    a.pronomen.kalla === "PRODUKTBESLUT:Tobias:2026-09-06",
+    `${a.namn}: "${a.pron.subj}" / "${a.pron.obj}" / "${a.pron.poss}" · källa ${a.pronomen.kalla}`);
+  prova("verifierad han-häst: pronomenet kommer ur källtexten",
     a.tobl.subj === "han" && a.tobl.obj === "honom" && a.hanKalla.kalla === "besk",
-    `Toblerone (valack i källtexten): "${a.tobl.subj}" / "${a.tobl.obj}"`);
+    `Toblerone (valack i källtexten): "${a.tobl.subj}" / "${a.tobl.obj}" · källa ${a.hanKalla.kalla}`);
+  prova("häst utan källa och utan produktbeslut: namnet, ingen gissning",
+    a.gap.kalla === "REFERENCE_GAP" && a.gap.subj === a.gap.namn &&
+    a.gap.obj === a.gap.namn && a.gap.poss === `${a.gap.namn}s`,
+    `${a.gap.namn}: hastPron ger "${a.gap.subj}" / "${a.gap.poss}" · källa ${a.gap.kalla}`);
+
+  /* Ingen yta får bära ett pronomen som MOTSÄGER datan. */
+  const felPron = /\b(han|honom|hans)\b/i;
+  prova("och ingen yta om Lydia säger han/honom/hans",
+    !a.ytor.some(t => felPron.test(t || "")),
+    a.ytor.filter(t => felPron.test(t || "")).join(" · ") || "inga sådana ord i någon yta");
 
   const w = await ev(() => {
     const b = hittaBox(G.hastId);
@@ -232,8 +248,12 @@ sektion = "hästbytet";
     const fore = { steg: uppdragMal().id, rubrik: uppdragText().rubrik,
       mal: uppdragVagvisare().pos.slice(), markor: markorGallerFor(gammal) };
 
-    /* Byt till en ANNAN verifierad, uppstallad häst. */
-    const ny = valbaraHastar().find(id => id !== gammal);
+    /* Byt till en ANNAN verifierad, uppstallad häst — och helst en med
+       ett ANNAT verifierat pronomen, så att provet ser om språket
+       följer datan eller står kvar på den förra hästen. */
+    const stall = valbaraHastar().filter(id => id !== gammal);
+    const ny = stall.find(id => HORSES[id].pronomen.subj &&
+        HORSES[id].pronomen.subj !== HORSES[gammal].pronomen.subj) || stall[0];
     /* Genom den riktiga vägen: ridlärarens bytesvy. */
     visaHastbyte();
     for (const el of document.querySelectorAll(".hb-val"))
@@ -271,6 +291,10 @@ sektion = "hästbytet";
     const tillbaka = uppdragMal().mal.pos.slice();
 
     return { gammal, ny, aktivEfter: G.hastId,
+      pronFore: { subj: HORSES[gammal].pronomen.subj, kalla: HORSES[gammal].pronomen.kalla },
+      pronEfter: { subj: hastPron(G.hastId, "subj"), kalla: HORSES[G.hastId].pronomen.kalla },
+      pronVantat: { subj: HORSES[ny].pronomen.subj || HORSES[ny].namn,
+        kalla: HORSES[ny].pronomen.kalla },
       gammalNamn: HORSES[gammal].namn, nyNamn: HORSES[ny].namn,
       gammalBox, nyBox, fore, efter, utrMal, felUtr, rattUtr, tillbaka,
       sadelkammare: (STALLINNE.info || []).find(i => i.sadelkammare).pos };
@@ -303,7 +327,12 @@ sektion = "hästbytet";
     G.hastMott = true; G.utrustning = true; G.felUtrustning = 2;
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds";
     G.sysslor = { mockat: 1, fodrat: 1 }; G.tackePa = true; G.lerig = true;
-    const ny = valbaraHastar().find(id => id !== gammal);
+    /* Samma val som ovan, så att den aktiva hästen är densamma genom
+       hela sektionen — annars mäter uppsittningsraden nedan en annan
+       häst än den bytet gällde. */
+    const stall = valbaraHastar().filter(id => id !== gammal);
+    const ny = stall.find(id => HORSES[id].pronomen.subj &&
+        HORSES[id].pronomen.subj !== HORSES[gammal].pronomen.subj) || stall[0];
     sattAktivHast(ny);
     return { gammal, ny, aktiv: G.hastId, mott: G.hastMott, utr: G.utrustning,
       fel: G.felUtrustning, skotsel: !!G.skotselRes, plats: G.hastPlats,
@@ -318,6 +347,11 @@ sektion = "hästbytet";
   prova("och kedjan börjar om på den nya hästen i stället för mitt i den förras",
     st.steg === "hitta_hast",
     `steg "${st.steg}" · rubrik "${st.rubrik}"`);
+
+  prova("efter bytet kommer pronomenet ur datan för den NYA hästen",
+    b.pronEfter.subj === b.pronVantat.subj && b.pronEfter.kalla === b.pronVantat.kalla &&
+    b.pronEfter.subj !== b.pronFore.subj,
+    `${b.gammalNamn} "${b.pronFore.subj}" (${b.pronFore.kalla}) → ${b.nyNamn} "${b.pronEfter.subj}" (${b.pronEfter.kalla})`);
 
   prova("återvägen efter sadelkammaren leder till den nya hästen",
     Math.hypot(b.tillbaka[0] - b.nyBox[0], b.tillbaka[1] - b.nyBox[1]) < 0.01,

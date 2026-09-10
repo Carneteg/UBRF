@@ -274,7 +274,12 @@ const BAS_RUNTIME = {
      bort som alla andra basvärden. */
   profil: "skolhast",
 };
-const FAKTA_RUNTIME = ["namn", "typ", "fodd", "ras", "mankhojd", "import", "kategori", "besk"];
+/* `pronomen` följer med till Roblox som DATA. Det mesta går att härleda
+   ur `besk` på båda plattformarna, men ett PRODUKTBESLUT (Tobias om
+   Bränntomts Lydia, 2026-09-06) står inte i källtexten och kan därför
+   inte härledas där. Utan fältet skulle Roblox säga "honom" om en häst
+   webben kallar "henne". */
+const FAKTA_RUNTIME = ["namn", "typ", "fodd", "ras", "mankhojd", "import", "kategori", "besk", "pronomen"];
 const GAME_RUNTIME = Object.keys(BAS_RUNTIME);
 const sparseHorses = {};
 for (const [id, h] of Object.entries(HORSES)) {

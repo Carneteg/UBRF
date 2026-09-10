@@ -79,12 +79,21 @@ synk — allt läser den aktiva hästen.
 - **Boxnummer.** Repot har ingen verifierad boxnumrering. Uppdraget säger
   därför "boxen i stallet — namnskylten på dörren" och pekar på dörren.
   `[REFERENCE GAP]`: boxnummer per häst.
-- **Pronomen.** `HORSES[id].pronomen` härleds ur källtexten `besk`:
-  står det valack eller han är hästen en han, står det sto eller hon är
-  hon ett sto. Står det ingetdera används namnet. 12 hästar har han ur
-  källan, 3 har hon, 18 saknar uppgift — Bränntomts Lydia är en av dem,
-  och det var "honom" om just Lydia som föll i produkttestet.
-  `[REFERENCE GAP]`: kön för de 18.
+- **Pronomen.** `HORSES[id].pronomen` har tre möjliga källor, i den
+  ordning `CLAUDE.md` sätter:
+
+  1. **`PRODUKTBESLUT`** — en människa har sagt hur det är. Tobias om
+     Bränntomts Lydia 2026-09-06: "henne", och "honom" är fel. Ett
+     produktbeslut med känd upphovsman står över härledd källtext, och
+     listan `PRONOMEN_BESLUT` är avsiktligt kort och namngiven.
+  2. **`besk`** — källtexten säger valack/han eller sto/hon. 12 hästar
+     läser han här, 3 läser hon.
+  3. **`REFERENCE_GAP`** — källan tiger och ingen har beslutat. Då
+     används namnet. 17 hästar. Ingen gissning ur namnet: "Lady" och
+     "Trixie" råkar stämma, men det är ingen metod.
+
+  Fältet exporteras till Roblox (`FAKTA_RUNTIME`), eftersom ett
+  produktbeslut inte står i `besk` och därför inte går att härleda där.
 
 ## Roblox-paritet
 
@@ -95,6 +104,7 @@ en billboard, en pil i världen, en markör på minikartan — är
 plattformsspecifikt. Det som inte får skilja sig är vilket mål som är
 aktivt, var det ligger och när vägvisaren tonas bort.
 
-Pronomenregeln kräver ingen ny data på Roblox-sidan: `besk` exporteras
-redan (`tools/exportera-spel.js`, `roblox/game/Stallet.luau`), så samma
-härledning kan göras där ur samma källtext.
+Pronomenet följer med som data till Roblox (`pronomen` i
+`FAKTA_RUNTIME`). Det mesta går att härleda ur `besk` på båda
+plattformarna, men ett produktbeslut står inte i källtexten — utan
+fältet skulle Roblox säga "honom" om en häst webben kallar "henne".
