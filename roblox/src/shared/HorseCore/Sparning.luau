@@ -125,7 +125,7 @@ function Sparning.migrera(rad: any): (Save, string?)
 
 	local v = tal(rad.v, 0)
 	if v > Sparning.VERSION then
-		return Sparning.tom(), "framtida"
+		return Sparning.tom(), "spar.framtida_sparfil"
 	end
 	if v < 1 then
 		--[[ En tabell utan igenkännbar version. Den kan vara en tidig

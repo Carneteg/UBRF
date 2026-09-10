@@ -425,7 +425,7 @@ do
 		n2 == "trasig" and trasig.pass == 0, tostring(n2))
 
 	local framtida, n3 = Sparning.migrera({ v = Sparning.VERSION + 1, pass = 99 })
-	check("en NYARE sparfil flaggas som framtida", n3 == "framtida", tostring(n3))
+	check("en NYARE sparfil flaggas som framtida", n3 == "spar.framtida_sparfil", tostring(n3))
 	check("och dess passtal tas inte över", framtida.pass == 0, framtida.pass .. " pass")
 
 	--[[ Migrationen ska bära över det den förstår. ]]
@@ -825,7 +825,7 @@ do
 		tostring(StallService.hastIdFor(spelare)))
 	check("men sessionen sparas inte", SparService.kanSpara(spelare) == false)
 	check("och anmärkningen säger varför",
-		SparService.anmarkning(spelare) == "läsfel",
+		SparService.anmarkning(spelare) == "spar.lasfel",
 		tostring(SparService.anmarkning(spelare)))
 	check("ingenting skrevs över i lagret",
 		__datastore._data["spelare_" .. spelare.UserId] == nil)
@@ -1097,7 +1097,7 @@ do
 		tostring(StallService.hastIdFor(spelare)))
 	check("men sessionen sparas inte", SparService.kanSpara(spelare) == false)
 	check("och anmärkningen säger varför",
-		SparService.anmarkning(spelare) == "inget datalager",
+		SparService.anmarkning(spelare) == "spar.inget_datalager",
 		tostring(SparService.anmarkning(spelare)))
 
 	__datastore.felButik = false
@@ -1271,7 +1271,7 @@ do
 	check("sessionen är inte längre skrivbar",
 		SparService.kanSpara(spelare) == false)
 	check("och anmärkningen säger framtida",
-		SparService.anmarkning(spelare) == "framtida",
+		SparService.anmarkning(spelare) == "spar.framtida_sparfil",
 		tostring(SparService.anmarkning(spelare)))
 
 	SparService._glomForProv(spelare)
@@ -1634,7 +1634,7 @@ do
 	check("sessionen blev icke-skrivbar av den framtida raden",
 		SparService.kanSpara(spelare) == false)
 	check("och anmärkningen säger framtida",
-		SparService.anmarkning(spelare) == "framtida",
+		SparService.anmarkning(spelare) == "spar.framtida_sparfil",
 		tostring(SparService.anmarkning(spelare)))
 	local orord = __datastore._data[nyckel]
 	check("den framtida raden ligger orörd",

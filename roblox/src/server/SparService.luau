@@ -77,6 +77,11 @@ local BACKOFF = { 1, 2, 4 }
 local butik: any = nil
 local sparade: { [Player]: Sparning.Save } = {}
 local kanSpara: { [Player]: boolean } = {}
+--[[ ANMÄRKNINGEN ÄR EN SPRÅKNYCKEL, inte ett svenskt ord (#162 punkt 2).
+	Ingen yta visar den för spelaren ännu — den läses av servern själv för
+	att avgöra om sessionen får spara. Men den dag den visas ska den vara
+	lokaliserbar, och en svensk statuskod hade då blivit svensk text i en
+	engelsk HUD. Nycklarna finns i språkkanonen (`spar.*`). ]]
 local anmarkning: { [Player]: string? } = {}
 --[[ Sant medan en skrivning pågår för spelaren. Två samtidiga
 	`UpdateAsync` på samma nyckel throttlas av Roblox och kan dessutom
@@ -139,7 +144,7 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 		sparade[player] = Sparning.tom()
 		laddadRev[player] = 0
 		kanSpara[player] = false
-		anmarkning[player] = "inget datalager"
+		anmarkning[player] = "spar.inget_datalager"
 		return sparade[player]
 	end
 
@@ -157,7 +162,7 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 		sparade[player] = Sparning.tom()
 		laddadRev[player] = 0
 		kanSpara[player] = false
-		anmarkning[player] = "läsfel"
+		anmarkning[player] = "spar.lasfel"
 		warn(("[Spar] %s spelar utan sparning — läsningen gick inte igenom."):format(player.Name))
 		return sparade[player]
 	end
@@ -167,7 +172,7 @@ function SparService.ladda(player: Player, fortfarandeAktuell: (() -> boolean)?)
 	laddadRev[player] = save.rev
 	anmarkning[player] = notering
 
-	if notering == "framtida" then
+	if notering == "spar.framtida_sparfil" then
 		--[[ FALL 2. En nyare sparfil vi inte förstår skrivs inte över. ]]
 		kanSpara[player] = false
 		warn(("[Spar] %s har en sparfil från en nyare version — sessionen sparas inte."):format(player.Name))
@@ -253,7 +258,7 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 				Att returnera nil ur transformatorn AVBRYTER skrivningen och
 				lämnar det lagrade värdet orört. Det är rätt utgång: en
 				gammal server ska inte röra en sparfil den inte förstår. ]]
-			if notering == "framtida" then
+			if notering == "spar.framtida_sparfil" then
 				konflikt = "framtida sparfil i lagret"
 				return nil
 			end
@@ -373,7 +378,7 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 			schemat — samma beslut som läsningen redan tar. ]]
 		if konflikt == "framtida sparfil i lagret" then
 			kanSpara[player] = false
-			anmarkning[player] = "framtida"
+			anmarkning[player] = "spar.framtida_sparfil"
 		end
 		warn(("[Spar] %s sparades INTE: %s. Inget skrevs över.")
 			:format(player.Name, konflikt))

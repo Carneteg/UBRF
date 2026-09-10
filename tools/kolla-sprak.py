@@ -42,12 +42,35 @@ LOKALISERADE = [
     "roblox/src/server/HorseService.luau",
     "roblox/src/shared/HorseCore/Pass.luau",
     "roblox/src/shared/HorseCore/Preparation.luau",
+    #[[ Sparningens anmarkning ar ocksa en nyckel nu (#162 punkt 2:
+    #   save/reconnect). Ingen yta visar den an, men den dag den gor det
+    #   ska den inte vara ett svenskt ord. ]]
+    "roblox/src/server/SparService.luau",
+    "roblox/src/shared/HorseCore/Sparning.luau",
 ]
 
 # Alla filer där en nyckel kan slås upp — nyckelkontrollen gäller brett.
 NYCKELSOK = ["roblox/src", "roblox/buildings"]
 
 SVENSKT = re.compile(r"[åäöÅÄÖ]")
+#[[ åäö räcker inte. "kunde inte spara framstegen" är svensk spelartext utan
+#   en enda omljudsbokstav — den mutationen slank igenom skannern (prov
+#   19:40) och hittades bara för att jag provade den. Andra detektorn:
+#   en sträng med MELLANSLAG som innehåller ett svenskt funktions- eller
+#   vardagsord. Mellanslagskravet är det som håller den tyst: alla
+#   nycklar (`pass.inte_dags`) och interna id:n (`UBRF_Spelare_v1`)
+#   innehåller samma ord men inga mellanslag. Mätt över alla lokaliserade
+#   filer gav detektorn noll falska fynd. ]]
+SVENSKA_ORD = re.compile(
+    r"(?<![A-Za-z])(och|inte|inget|inga|inne|kunde|kan|ska|maste|med|inom|som"
+    r"|till|den|det|har|men|utan|redan|klar|klart|klara|hos|nu|sen|sedan"
+    r"|bara|hela|vila|spara|sparat|sparar|spelet|spelare|dag|dagen|dagens"
+    r"|hast|hasten|hastar|ryttare|ridit|rider)(?![A-Za-z])", re.I)
+
+
+def misstankt_svenska(s: str) -> bool:
+    """Ser strängen ut som svensk spelartext?"""
+    return bool(SVENSKT.search(s) or (" " in s and SVENSKA_ORD.search(s)))
 STRANG = re.compile(r'"([^"\n]*)"')
 # `Sprak.t("nyckel")`, `Sprak.finns("nyckel")`, `Sprak.forSpelare(p, "nyckel")`
 # och `Sprak.iSprak("sv", "nyckel")` — i den sista är nyckeln ANDRA
@@ -66,7 +89,9 @@ REGLER = """  Tillåtna svenska litteraler i en lokaliserad fil:
       ProximityPrompt replikeras till alla spelare och kan inte ha ett
       språk på servern; standardtexten gör prompten läsbar även för en
       klient utan Prompttext-modulen.
-    · texten i en ~-sträng som bara är ett nyckelnamn (inte spelartext)"""
+    · texten i en ~-sträng som bara är ett nyckelnamn (inte spelartext)
+    · etikett till en retry-hjälpare (medRetry) vars parameter bevisligen
+      bara går ut i warn( — kontrolleras genom att läsa hjälparens kropp"""
 
 
 def avkommentera(kod: str) -> str:
@@ -105,6 +130,42 @@ def logiska(rader):
 # måste hitta modellen `Anlaggningen.luau` faktiskt döpte.
 OBJEKTNAMN = {"Anläggning", "Dörr"}
 
+#[[ Etiketten till en retry-hjälpare. `medRetry("läsning av " .. p.Name, fn)`
+#   namnger VAD som misslyckades i en warn — utvecklarutskrift, men skriven
+#   på anropsraden i stället för inne i warn(, så den generella
+#   warn/print-regeln ser den inte.
+#
+#   Undantaget är inte ett påstående på tro: `etikett_bara_i_warn` läser
+#   hjälparens kropp och kräver att parametern bara förekommer på rader med
+#   warn(. Skulle någon börja visa den för spelaren faller fyndet igen. ]]
+ETIKETTANROP = {"medRetry": "vad"}
+
+
+def etikett_bara_i_warn(kod: str, funk: str, param: str) -> bool:
+    """True om `param` i `funk`s kropp bara förekommer på warn-rader.
+
+    Kroppen läses från `function <funk>(` till nästa `end` i kolumn 0 —
+    projektets lokala hjälpare ligger på toppnivå. Hittas ingen sådan
+    kropp, eller nämns parametern inte alls, gäller inget undantag."""
+    m = re.search(r"^(?:local )?function %s\(" % re.escape(funk), kod, re.M)
+    if not m:
+        return False
+    rader = kod[m.start():].splitlines()
+    kropp = []
+    for rad in rader[1:]:
+        if rad.startswith("end"):
+            break
+        kropp.append(rad)
+    else:
+        return False
+    sett = False
+    for rad in kropp:
+        if re.search(r"\b%s\b" % re.escape(param), rad):
+            sett = True
+            if "warn(" not in rad and "print(" not in rad:
+                return False
+    return sett
+
 
 def katalognycklar() -> set:
     text = KATALOG.read_text(encoding="utf-8")
@@ -136,10 +197,11 @@ def main() -> int:
         if not fil.exists():
             fel.append(f"{rel} finns inte — listan i kolla-sprak.py är stale")
             continue
-        rader = avkommentera(fil.read_text(encoding="utf-8")).splitlines()
+        kod_rel = avkommentera(fil.read_text(encoding="utf-8"))
+        rader = kod_rel.splitlines()
         for i, sats in logiska(rader):
             for s in STRANG.findall(sats):
-                if not SVENSKT.search(s):
+                if not misstankt_svenska(s):
                     continue
                 if "warn(" in sats or "print(" in sats:
                     continue
@@ -153,6 +215,10 @@ def main() -> int:
                     if ("SprakNyckel" in sats or "SprakObjekt" in sats
                             or "SprakNyckel" in granne or "SprakObjekt" in granne):
                         continue
+                if any(re.search(r'%s\(\s*"%s' % (re.escape(f), re.escape(s)), sats)
+                       and etikett_bara_i_warn(kod_rel, f, p)
+                       for f, p in ETIKETTANROP.items()):
+                    continue
                 fel.append(f"{rel}:{i}  svensk spelartext utan nyckel: \"{s}\"")
 
     print(f"  Kontrollerade {len(nycklar)} nycklar och {len(LOKALISERADE)} lokaliserade filer.")
