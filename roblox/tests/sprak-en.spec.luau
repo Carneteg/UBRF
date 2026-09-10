@@ -185,6 +185,70 @@ do
 	stadaSession(S)
 end
 
+--[[ ── VÄLFÄRDSSTOPPET: ENGELSK RAM RUNT SVENSK KANONMENING ────────────
+	Reviewen listar välfärdsstoppet uttryckligen, och det är det svåraste
+	fallet: ramen ("Ridläraren tar över …") är gränssnitt och ska bli
+	engelsk, medan fyndets mening kommer ur skötselkanonen och ännu är
+	svensk. Fallet finns bara från pass 2, så sessionen förbereds med en
+	sparfil där hästen bär ett fynd. ]]
+print("\n── Välfärdsstoppet, med fynd ──")
+do
+	local ID = 9410
+	local hast = Stallet.tilldelaLedig(ID, {}, {})
+	local fyndPass
+	for pnr = 2, 40 do
+		if Preparation.fyndFor(hast, pnr) then fyndPass = pnr break end
+	end
+	check("det finns ett pass där hästen bär ett fynd", fyndPass ~= nil,
+		string.format("%s, pass %s", tostring(hast), tostring(fyndPass)))
+
+	local S = nySession("EnFynd", ID, function(spelare)
+		local sav = Sparning.tom()
+		sav.pass = (fyndPass or 2) - 1
+		sav.forstaDagen = { klar = true, hastId = Stallet.FORSTA_DAGEN_HAST }
+		__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(sav)
+	end)
+	local st = GameplayService.stateFor(S.spelare)
+	--[[ Hälsa, hitta fyndet, svara rätt → arbetet stoppas. ]]
+	local halsa = Preparation.stegFaser()[1]
+	while true do
+		local m = Preparation.nastaMoment(GameplayService.stateFor(S.spelare), halsa.id)
+		if not m then break end
+		if not GameplayService.moment(S.spelare, halsa.id, m.id) then break end
+	end
+	for _, m in ipairs(Preparation.moment("visitera")) do
+		GameplayService.moment(S.spelare, "visitera", m.id)
+	end
+	local ratt
+	for _, sv in ipairs(Preparation.fyndSvar()) do
+		if not sv.fel then ratt = sv break end
+	end
+	GameplayService.svara(S.spelare, ratt.id)
+	check("arbetet är stoppat av välfärdsskäl",
+		GameplayService.statusFor(S.spelare) == Preparation.STATUS.STOPPAD,
+		tostring(GameplayService.statusFor(S.spelare)))
+
+	local okV, skalV, argV = HorseService.tryMount(S.spelare, S.modell)
+	nej("uppsittning efter välfärdsstopp", okV, skalV, argV)
+	check("stoppets skäl är en RAM som nyckel plus kanonmeningen som argument",
+		skalV == "forb.lararen_tar_over" and Preparation.arKanontext(argV),
+		string.format("%s + %s", tostring(skalV), tostring(argV)))
+
+	Sprak.satLocale("en-us")
+	local text = PreparationController.skalText(skalV, argV)
+	Sprak.satLocale("sv-se")
+	local svText = PreparationController.skalText(skalV, argV)
+	--[[ RAMEN ska vara engelsk även när meningen inuti är svensk. Mäts mot
+		katalogens engelska ram, inte mot en handskriven sträng. ]]
+	local enRam = Sprak.iSprak("en", "forb.lararen_tar_over"):gsub("%%s", "")
+	check("ramen är ENGELSK på en-us, runt den svenska kanonmeningen",
+		string.find(text, (enRam:gsub("(%W)", "%%%1")):sub(1, 30)) ~= nil,
+		string.format("%q", text))
+	check("och svensk på sv-se", text ~= svText,
+		string.format("en %q · sv %q", text:sub(1, 60), svText:sub(1, 60)))
+	stadaSession(S)
+end
+
 --[[ ── VARJE SKÄL ÄR EN NYCKEL ELLER UTTRYCKLIG KANONTEXT ─────────────── ]]
 print("\n── Varje nej är en nyckel, inte prosa ──")
 do
@@ -208,7 +272,11 @@ do
 	local svenska, kanonskuld = {}, {}
 	for _, n in ipairs(nejen) do
 		local text = PreparationController.skalText(n.skal, n.extra)
-		if Preparation.arKanontext(n.skal) then
+		--[[ DEKLARERAD kanontext får vara svensk: antingen är skälet självt
+			kanon, eller så är ARGUMENTET det (en engelsk ram runt fyndets
+			eller fasens svenska namn). Allt annat svenskt är odeklarerat
+			och faller. ]]
+		if Preparation.arKanontext(n.skal) or Preparation.arKanontext(n.extra) then
 			table.insert(kanonskuld, string.format("%s → %q", n.vad, text))
 		elseif string.find(text, SVENSKA_TECKEN) then
 			table.insert(svenska, string.format("%s → %q", n.vad, text))

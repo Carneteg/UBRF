@@ -524,7 +524,18 @@ function PreparationController.skalText(skal: any, extra: any?): string
 		return Preparation.utanKanonprefix(skal)
 	end
 	if Sprak.finns(skal) then
-		return if extra ~= nil then Sprak.t(skal, extra) else Sprak.t(skal)
+		--[[ ARGUMENTET kan i sin tur vara kanontext: välfärdsstoppet är en
+			engelsk RAM runt fyndets svenska mening ur skötselkanonen.
+			Prefixet strippas här, och grinden räknar posten som redovisad
+			översättningsskuld — ramen ska vara på spelarens språk även när
+			meningen inuti ännu inte är översatt. ]]
+		local arg = extra
+		if Preparation.arKanontext(arg) then
+			arg = Preparation.utanKanonprefix(arg)
+		elseif type(arg) == "string" and Sprak.finns(arg) then
+			arg = Sprak.t(arg)
+		end
+		return if arg ~= nil then Sprak.t(skal, arg) else Sprak.t(skal)
 	end
 	return skal
 end

@@ -43,6 +43,21 @@ local Skotsel = require(RS.UBRFSkotsel)
 
 local Pass = {}
 
+--[[ Samma `kanon:`-konvention som `Preparation` använder. Den ligger i båda
+	modulerna med flit: `Pass` får inte require:a `Preparation` (det blir
+	cirkulärt i bänkbygget), och en delad tredje modul för fyra rader vore
+	dyrare än duplicerad konvention. Prefixet är kontraktet, inte koden. ]]
+local Kanon = {}
+Kanon.PREFIX = "kanon:"
+function Kanon.kanontext(text: string?): string?
+	if text == nil then return nil end
+	return Kanon.PREFIX .. tostring(text)
+end
+Pass.kanontext = Kanon.kanontext
+function Pass.arKanontext(skal: any): boolean
+	return type(skal) == "string" and string.sub(skal, 1, #Kanon.PREFIX) == Kanon.PREFIX
+end
+
 Pass.EFTERVARD = Skotsel.eftervard
 
 --[[ Lägena, i den ordning de kommer. Engelska av samma skäl som
@@ -155,7 +170,7 @@ end
 function Pass.vidUppsittning(state: State): (boolean, string?)
 	local far, skal = Pass.farSittaUpp(state)
 	if not far then
-		return false, skal or "passet är redan igång"
+		return false, skal or "pass.redan_igang"
 	end
 	state.lage = Pass.LAGE.RIDER
 	return true, nil
@@ -212,7 +227,11 @@ function Pass.utfor(state: State, momentId: string): (boolean, string?)
 	end
 	local pa_tur = Pass.nastaMoment(state)
 	if pa_tur and pa_tur.id ~= momentId then
-		return false, "pass.fel_tur", pa_tur.namn
+		--[[ Fasens/momentets namn kommer ur skötselkanonen och är alltså
+			innehåll, inte gränssnitt. Det taggas `kanon:` så att
+			språkgrinden kan skilja "engelsk ram runt redovisad svensk
+			kanontext" från "rå svenska som ingen deklarerat". ]]
+		return false, "pass.fel_tur", Kanon.kanontext(pa_tur.namn)
 	end
 	state.gjorda[momentId] = true
 	if Pass.nastaMoment(state) == nil then
@@ -239,7 +258,7 @@ function Pass.farAvsluta(state: State): (boolean, string?)
 		if state.lage == Pass.LAGE.FORE then
 			return false, "pass.inte_ridit"
 		end
-		return false, "pass.aterstar", (if m then m.namn else nil)
+		return false, "pass.aterstar", Kanon.kanontext(if m then m.namn else nil)
 	end
 	return true, nil
 end

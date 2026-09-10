@@ -106,6 +106,9 @@ const SPRAK = {
   "forb.okant_svar": { sv: "okänt svar", en: "unknown answer" },
   "forb.inte_ditt_beslut": { sv: "Det är inte ditt beslut att ta. Säg till ridläraren.",
     en: "That is not your decision to make. Tell the instructor." },
+  /* Om skötselkanonen saknar mening för just det fyndet. Ska inte hända —
+     men om det gör det ska spelaren läsa något begripligt, inte en nyckel. */
+  "forb.nagot_ar_fel": { sv: "Något är inte som det ska.", en: "Something is not right." },
   "forb.lararen_tar_over": { sv: "%s Ridläraren tar över — hon ska inte arbeta idag. Du har gjort precis rätt.",
     en: "%s The instructor takes over — she is not to work today. You did exactly the right thing." },
   "forb.inte_din_hast": { sv: "det är inte din häst", en: "that is not your horse" },

@@ -287,11 +287,16 @@ function HorseService.setRiderHook(hook: ((Player, boolean) -> ())?)
 	riderHook = hook
 end
 
-function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
+function HorseService.tryMount(player: Player, model: Model): (boolean, string?, string?)
 	if mountGate then
-		local tillaten, skal = mountGate(player, model)
+		--[[ TREDJE VÄRDET FÖLJER MED. Nejen är språknycklar sedan #162, och
+			välfärdsstoppets nyckel bär fyndets mening som ARGUMENT. Kastade
+			den här raden bort argumentet — vilket den gjorde — fick
+			spelaren se ett bokstavligt "%s" i stället för vad hästen hade.
+			Fångat av `sprak-en.spec`, inte av något jag såg i koden. ]]
+		local tillaten, skal, arg = mountGate(player, model)
 		if not tillaten then
-			return false, skal or "hast.inte_redo"
+			return false, skal or "hast.inte_redo", arg
 		end
 	end
 

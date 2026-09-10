@@ -33,6 +33,15 @@ LOKALISERADE = [
     "roblox/src/client/Prompttext.luau",
     "roblox/src/server/DorrService.luau",
     "roblox/src/server/StallService.luau",
+    #[[ Tjansterna och regelmodulerna bar spelarens NEJ sedan reviewen
+    #   18:27. De ar med i listan darfor att mutationen "ett ratt svenskt
+    #   servernej" annars bara fangades av en grind (sprak-en.spec) och
+    #   inte av den statiska. Tva oberoende grindar pa samma regel ar
+    #   inte overflod: den ena kor koden, den andra laser den. ]]
+    "roblox/src/server/GameplayService.luau",
+    "roblox/src/server/HorseService.luau",
+    "roblox/src/shared/HorseCore/Pass.luau",
+    "roblox/src/shared/HorseCore/Preparation.luau",
 ]
 
 # Alla filer där en nyckel kan slås upp — nyckelkontrollen gäller brett.
@@ -61,7 +70,15 @@ REGLER = """  Tillåtna svenska litteraler i en lokaliserad fil:
 
 
 def avkommentera(kod: str) -> str:
-    kod = re.sub(r"--\[(=*)\[.*?\]\1\]", "", kod, flags=re.S)
+    """Tar bort kommentarer men BEHÅLLER radbrytningarna.
+
+    Första versionen klippte bort blockkommentarer med allt innehåll,
+    radbrytningar inkluderade. Radnumren i felrapporten gled då — de pekade
+    på rader i den strippade texten, inte i filen — och ett fynd blev
+    omöjligt att hitta. Ett mätverktyg som pekar fel är värre än inget."""
+    def tomma(m):
+        return "\n" * m.group(0).count("\n")
+    kod = re.sub(r"--\[(=*)\[.*?\]\1\]", tomma, kod, flags=re.S)
     return re.sub(r"--[^\n]*", "", kod)
 
 

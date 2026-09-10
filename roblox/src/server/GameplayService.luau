@@ -344,14 +344,16 @@ end
 
 --[[ Registreras i `HorseService`. Körs FÖRE all uppsittningslogik, så en
 	oförberedd spelare aldrig hinner bli monterad och sedan kastas av. ]]
-function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, string?)
+function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, string?, string?)
 	local s = state[player]
 	--[[ Krav 6 och 7 avgörs av regeln, inte här. Kvar i tjänsten är bara
 		det instansnära: att modellen dessutom är den vi FAKTISKT bundit,
 		så att två modeller med samma id aldrig kan bli utbytbara. ]]
-	local ok, skal = Preparation.provaModell(s, modell:GetAttribute("HorseId"))
+	--[[ Argumentet följer med: välfärdsstoppets skäl är en ram (nyckel) och
+		fyndets mening (argument). Se noten i `HorseService.tryMount`. ]]
+	local ok, skal, arg = Preparation.provaModell(s, modell:GetAttribute("HorseId"))
 	if not ok then
-		return false, skal
+		return false, skal, arg
 	end
 	if bunden[player] ~= modell then
 		return false, "spel.inte_din_hast"

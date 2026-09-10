@@ -423,8 +423,9 @@ end
 	kanonen engelska poster är det här stället som slår upp dem. ]]
 local KANON = "kanon:"
 
-function Preparation.kanontext(text: string?): string
-	return KANON .. tostring(text or "")
+function Preparation.kanontext(text: string?): string?
+	if text == nil then return nil end
+	return KANON .. tostring(text)
 end
 
 function Preparation.arKanontext(skal: string?): boolean
@@ -437,7 +438,7 @@ end
 
 function Preparation.provaSteg(state: State, fasId: string, hastId: string): (boolean, string?)
 	if state.stoppad then
-		return false, Preparation.kanontext(state.stoppad)
+		return false, "forb.lararen_tar_over", Preparation.kanontext(state.stoppad)
 	end
 	if hastId ~= state.hastId then
 		return false, "forb.fel_hast"
@@ -460,7 +461,7 @@ function Preparation.provaSteg(state: State, fasId: string, hastId: string): (bo
 	end
 	local nastaFas = Preparation.nasta(state)
 	if not nastaFas or nastaFas.id ~= fasId then
-		return false, "forb.fel_tur", (if nastaFas then nastaFas.namn else nil)
+		return false, "forb.fel_tur", Preparation.kanontext(if nastaFas then nastaFas.namn else nil)
 	end
 	return true, nil
 end
@@ -508,8 +509,7 @@ function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 	end
 	if lagsta and moment.steg > lagsta then
 		local pa_tur = Preparation.nastaMoment(state, fasId)
-		return false, "forb.fel_tur", (if pa_tur then pa_tur.namn else nil)
-			.. " står på tur", nil
+		return false, "forb.fel_tur", Preparation.kanontext(if pa_tur then pa_tur.namn else nil)
 	end
 
 	return true, nil, moment
@@ -573,9 +573,12 @@ function Preparation.svaraFynd(state: State, svarId: string): (boolean, string?)
 		return false, "forb.inte_ditt_beslut"
 	end
 	state.fyndRapporterat = true
-	local text = Skotsel.visitation.fynd[state.fynd or ""] or "Något är inte som det ska."
-	state.stoppad = text .. " Ridläraren tar över — "
-		.. "hon ska inte arbeta idag. Du har gjort precis rätt."
+	--[[ #162 lokalisering: `stoppad` bär numera BARA kanonmeningen — fyndet
+		ur skötselkanonen. Ramen runt den ("Ridläraren tar över …") är
+		gränssnittstext och kommer ur språkkanonen (`forb.lararen_tar_over`)
+		när texten skrivs, alltså i spelarens språk. Förut satt ramen ihop
+		här, på svenska, och då kunde ingen engelsk spelare få den. ]]
+	state.stoppad = Skotsel.visitation.fynd[state.fynd or ""] or "forb.nagot_ar_fel"
 	return true, nil
 end
 
@@ -589,7 +592,7 @@ function Preparation.provaUppsittning(state: State, hastId: string): (boolean, s
 	--[[ FAIL-CLOSED. Välfärdsstoppet prövas före allt annat och kan inte
 		kringgås av att faserna råkar vara avbockade. ]]
 	if state.stoppad then
-		return false, Preparation.kanontext(state.stoppad)
+		return false, "forb.lararen_tar_over", Preparation.kanontext(state.stoppad)
 	end
 	--[[ En fas som står som klar men vars moment inte är gjorda får inte
 		heller släppa igenom. `klara` sätts bara av `utforMoment`, men
@@ -597,12 +600,12 @@ function Preparation.provaUppsittning(state: State, hastId: string): (boolean, s
 		sätta flaggan. ]]
 	for _, f in ipairs(Preparation.stegFaser()) do
 		if not Preparation.fasKlar(state, f.id) then
-			return false, "pass.aterstar", f.namn
+			return false, "pass.aterstar", Preparation.kanontext(f.namn)
 		end
 	end
 	local nastaFas = Preparation.nasta(state)
 	if nastaFas then
-		return false, "pass.aterstar", nastaFas.namn
+		return false, "pass.aterstar", Preparation.kanontext(nastaFas.namn)
 	end
 	return true, nil
 end

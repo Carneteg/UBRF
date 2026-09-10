@@ -37,13 +37,16 @@ end
 	Samma hjälpare som `forberedelse.spec.luau` — se noten där om varför
 	den inte får vara ett enda anrop. ]]
 local function gorFas(state, fasId, hastId)
-	local ok, skal = Preparation.provaSteg(state, fasId, hastId)
-	if not ok then return false, skal end
+	--[[ #162: nejen bär numera (nyckel, argument). Hjälparen SKICKAR VIDARE
+		argumentet — annars tappade provet det värde som säger VILKET fynd
+		som stoppade arbetet, och en generisk nyckel hade passerat. ]]
+	local ok, skal, arg = Preparation.provaSteg(state, fasId, hastId)
+	if not ok then return false, skal, arg end
 	while true do
 		local m = Preparation.nastaMoment(state, fasId)
 		if not m then break end
-		local mok, mskal = Preparation.utforMoment(state, fasId, m.id, hastId)
-		if not mok then return false, mskal end
+		local mok, mskal, marg = Preparation.utforMoment(state, fasId, m.id, hastId)
+		if not mok then return false, mskal, marg end
 	end
 	return true, nil
 end
@@ -282,23 +285,32 @@ do
 		visitationen var ju avbruten, så uppsittningen nekades med
 		"Visitera återstår". Provet mätte alltså fasordningen och trodde
 		att det mätte välfärden. Falsifieringspasset fällde det. ]]
-	local ok4, skal4 = Preparation.provaUppsittning(s, hast)
+	local ok4, skal4, arg4 = Preparation.provaUppsittning(s, hast)
 	--[[ Välfärdsstoppets mening kommer ur skötselkanonen och skickas med
 		prefixet `kanon:` — den är undervisningstext, inte gränssnitt, och
 		översätts inte av en agent. Provet kräver därför BÅDE att skälet är
 		kanontext och att det är just den här hästens stoppmening: annars
 		hade en generisk nyckel kunnat passera som "stoppad av välfärden". ]]
+	--[[ Skälet är RAMEN som nyckel (`forb.lararen_tar_over`) och fyndets
+		mening ur skötselkanonen som ARGUMENT, taggat `kanon:`. Provet
+		kräver båda: en generisk nyckel utan rätt fynd ska inte kunna
+		passera som "stoppad av välfärden". ]]
 	check("uppsittningen är stängd AV VÄLFÄRDEN, inte av fasordningen",
-		not ok4 and Preparation.arKanontext(skal4)
-			and Preparation.utanKanonprefix(skal4) == s.stoppad, tostring(skal4))
-	local ok5, skal5 = gorFas(s, "rykta", hast)
+		not ok4 and skal4 == "forb.lararen_tar_over"
+			and Preparation.utanKanonprefix(arg4) == s.stoppad,
+		string.format("%s + %s", tostring(skal4), tostring(arg4)))
+	local ok5, skal5, arg5 = gorFas(s, "rykta", hast)
 	check("skötseln går inte vidare heller", not ok5
-		and Preparation.utanKanonprefix(skal5) == s.stoppad, tostring(skal5))
+		and skal5 == "forb.lararen_tar_over"
+		and Preparation.utanKanonprefix(arg5) == s.stoppad,
+		string.format("%s + %s", tostring(skal5), tostring(arg5)))
 
 	--[[ Och inte via `provaModell`, som är den väg servern faktiskt går. ]]
-	local ok6, skal6 = Preparation.provaModell(s, hast)
+	local ok6, skal6, arg6 = Preparation.provaModell(s, hast)
 	check("provaModell säger också nej av samma skäl",
-		not ok6 and Preparation.utanKanonprefix(skal6) == s.stoppad, tostring(skal6))
+		not ok6 and skal6 == "forb.lararen_tar_over"
+			and Preparation.utanKanonprefix(arg6) == s.stoppad,
+		string.format("%s + %s", tostring(skal6), tostring(arg6)))
 
 	--[[ Det starkaste fallet: en spelare som fått ALLA faser avbockade och
 		SEDAN blir stoppad. Nu finns ingen fasordning kvar att förväxla
@@ -314,9 +326,11 @@ do
 		end
 		t.klara[f.id] = true
 	end
-	local ok7, skal7 = Preparation.provaUppsittning(t, hast)
+	local ok7, skal7, arg7 = Preparation.provaUppsittning(t, hast)
 	check("en fullt förberedd men stoppad häst släpps ändå inte upp",
-		not ok7 and Preparation.utanKanonprefix(skal7) == t.stoppad, tostring(skal7))
+		not ok7 and skal7 == "forb.lararen_tar_over"
+			and Preparation.utanKanonprefix(arg7) == t.stoppad,
+		string.format("%s + %s", tostring(skal7), tostring(arg7)))
 end
 
 print("\n── Första dagen med Jack är tjänstbar ──")

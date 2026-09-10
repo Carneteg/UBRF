@@ -47,9 +47,16 @@ def hastid():
 
 
 def avkommentera(kod: str) -> str:
-    kod = re.sub(r"--\[(=*)\[.*?\]\1\]", "", kod, flags=re.S)
-    kod = re.sub(r"--[^\n]*", "", kod)
-    return kod
+    """Tar bort kommentarer men BEHÅLLER radbrytningarna.
+
+    Första versionen klippte bort blockkommentarer med allt innehåll,
+    radbrytningar inkluderade. Radnumren i felrapporten gled då — de pekade
+    på rader i den strippade texten, inte i filen — och ett fynd blev
+    omöjligt att hitta. Ett mätverktyg som pekar fel är värre än inget."""
+    def tomma(m):
+        return "\n" * m.group(0).count("\n")
+    kod = re.sub(r"--\[(=*)\[.*?\]\1\]", tomma, kod, flags=re.S)
+    return re.sub(r"--[^\n]*", "", kod)
 
 
 def main() -> int:
