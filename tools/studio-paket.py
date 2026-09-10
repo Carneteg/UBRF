@@ -12,6 +12,13 @@ Filen skrivs till roblox/buildings/.studio/ och är avsiktligt INTE committad:
 den är bara en hopfogning av filer som redan ligger i repot, och en kopia i
 git hade blivit ännu en sanning att hålla i synk.
 
+Undantaget är en NEDLADDNINGSBAR release-kopia under roblox/releases/, som
+finns för att den som ska granska i Studio inte ska behöva en terminal alls.
+En sådan kopia är pinnad till EN källkommit, bär sin SHA256 i mappens
+README.md och regenereras inte på plats — ett nytt läge får en ny mapp med
+den nya SHA:n i namnet. Då kan en gammal och en ny fil inte förväxlas, och
+den här filen är fortfarande den enda som följer nuvarande head.
+
 Modulerna inlinas ordagrant, som roblox/tests/build.py gör för testbänken —
 det som körs i Studio är alltså exakt den kod som ligger i repot.
 """

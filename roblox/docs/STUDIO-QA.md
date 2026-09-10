@@ -8,12 +8,27 @@ och detaljunderlag. Kvitteringen sker här.
 
 ## Kom igång
 
+### Utan terminal (den vanliga vägen)
+
+Filen ligger färdig och nedladdningsbar i repot:
+
+`roblox/releases/first-playable-506b5a3/UBRF-klistra-in.luau`
+
+Öppna den på GitHub → **Raw** → markera allt och kopiera → klistra in i en
+Script i `ServerScriptService` i Studio → **Run** en gång. Mappens `README.md`
+bär källkommit, genereringskommando och filens SHA256, så det går att se att
+det är rätt fil. Kopian är pinnad till `506b5a3` — den regenereras inte på
+plats, ett nytt läge får en ny mapp med den nya SHA:n i namnet.
+
+### Med terminal (generera själv)
+
 ```bash
 python3 tools/studio-paket.py
 ```
 
 Klistra in **hela** `roblox/buildings/.studio/UBRF-klistra-in.luau` i Studio och
-kör den **en gång**.
+kör den **en gång**. Den filen är `.gitignore`-ad och alltid genererad ur
+nuvarande head — alltså inte nödvändigtvis samma läge som release-kopian ovan.
 
 Bygget ska sluta med:
 
