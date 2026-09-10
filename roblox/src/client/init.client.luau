@@ -36,6 +36,10 @@ local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
+--[[ #162: världens prompter skrivs om till spelarens språk på klienten —
+     en ProximityPrompt replikeras till alla och kan inte ha ett språk
+     på servern. ]]
+local Prompttext = require(script.Prompttext)
 local Debug = require(script.Debug)
 local Genomsikt = require(script.Genomsikt)
 
@@ -226,6 +230,7 @@ UgnetaController.start()
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]
 KontrollHjalp.start()
+Prompttext.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av
      något annat än oss, som respawn eller att hästen tas bort. ]]

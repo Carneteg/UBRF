@@ -41,6 +41,9 @@ local Players = game:GetService("Players")
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Preparation = require(game:GetService("ReplicatedStorage").HorseCore.Preparation)
+--[[ #162: spelarens text kommer ur språkkanonen, aldrig ur den här filen.
+     Klienten översätter — här är spelarens locale känd. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Net = Core.Networking
 
 local PreparationController = {}
@@ -131,7 +134,7 @@ local function bygg()
 	r.TextSize = 15
 	r.TextXAlignment = Enum.TextXAlignment.Left
 	r.TextColor3 = FARG_TEXT
-	r.Text = "Gör i ordning din häst"
+	r.Text = Sprak.t("hud.gor_i_ordning")
 	r.Parent = panel
 	rubrik = r
 
@@ -390,7 +393,7 @@ function rita(vy: any)
 	if vy.stoppad then
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
-		if rubrik then rubrik.Text = "Ridläraren tar över" end
+		if rubrik then rubrik.Text = Sprak.t("hud.lararen_tar_over") end
 		if hjalp then hjalp.Text = tostring(vy.stoppad) end
 		if gui then gui.Enabled = true end
 		return
@@ -411,7 +414,7 @@ function rita(vy: any)
 				function() PreparationController.svara(s.id) end)
 		end
 		doljOanvanda(anvanda)
-		if rubrik then rubrik.Text = "Du hittade något" end
+		if rubrik then rubrik.Text = Sprak.t("hud.du_hittade_nagot") end
 		if hjalp then hjalp.Text = tostring(vy.fynd or "") end
 		if gui then gui.Enabled = true end
 		return
@@ -432,7 +435,7 @@ function rita(vy: any)
 			if m.id == nasta then text = m.text or "" end
 		end
 		doljOanvanda(anvanda)
-		if rubrik then rubrik.Text = "Ta hand om henne" end
+		if rubrik then rubrik.Text = Sprak.t("hud.ta_hand_om_henne") end
 		if hjalp then hjalp.Text = text end
 		if gui then gui.Enabled = true end
 		return
@@ -446,9 +449,9 @@ function rita(vy: any)
 	if passRaknat() then
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
-		if rubrik then rubrik.Text = "Passet är klart och sparat" end
+		if rubrik then rubrik.Text = Sprak.t("hud.passet_sparat") end
 		if hjalp then
-			hjalp.Text = "Bra jobbat. Du har ridit ditt pass idag."
+			hjalp.Text = Sprak.t("hud.bra_jobbat")
 		end
 		if gui then gui.Enabled = true end
 		return
@@ -467,20 +470,20 @@ function rita(vy: any)
 	doljOanvanda(anvanda)
 
 	if vy.status == "waiting_model" then
-		if rubrik then rubrik.Text = "Väntar på din häst" end
-		if hjalp then hjalp.Text = "Hon är tilldelad men står inte i världen än." end
+		if rubrik then rubrik.Text = Sprak.t("hud.vantar_pa_hast") end
+		if hjalp then hjalp.Text = Sprak.t("hud.hast_inte_i_varlden") end
 	elseif vy.status == "riding" then
-		if rubrik then rubrik.Text = "Du rider" end
+		if rubrik then rubrik.Text = Sprak.t("hud.du_rider") end
 		if hjalp then hjalp.Text = "" end
 	elseif vy.redo then
-		if rubrik then rubrik.Text = "Klar — du kan sitta upp" end
-		if hjalp then hjalp.Text = "Kontrollera gjorden en sista gång." end
+		if rubrik then rubrik.Text = Sprak.t("hud.klar_sitt_upp") end
+		if hjalp then hjalp.Text = Sprak.t("hud.kolla_gjorden") end
 	else
 		local fasnamn = nil
 		for _, steg in ipairs(vy.steg or {}) do
 			if steg.id == vy.nasta then fasnamn = steg.namn end
 		end
-		if rubrik then rubrik.Text = fasnamn or "Gör i ordning din häst" end
+		if rubrik then rubrik.Text = fasnamn or Sprak.t("hud.gor_i_ordning") end
 		if hjalp then hjalp.Text = momenttext end
 	end
 
@@ -505,7 +508,7 @@ local function skicka(nyckel: string, remote: string, ...)
 		local ok, skal = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
 		vantarPa = nil
 		if not ok and hjalp then
-			hjalp.Text = tostring(skal or "Det gick inte just nu")
+			hjalp.Text = tostring(skal or Sprak.t("hud.gick_inte_nu"))
 		end
 	end)
 end

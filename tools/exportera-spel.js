@@ -19,20 +19,25 @@ const ROT = path.resolve(__dirname, "..");
 const las = f => fs.readFileSync(path.join(ROT, f), "utf8");
 const DATA_MAL = path.join(ROT, "roblox/game/UBRFSpelData.luau");
 const SKOTSEL_MAL = path.join(ROT, "roblox/game/UBRFSkotsel.luau");
+/* SPRÅKKANONEN (#162): spelarens text, svenska och engelska, ur EN källa.
+   Samma skäl som för hästarna och skötseln — två sanningar om vad spelet
+   SÄGER hade gett en spelare olika ord på olika plattformar. */
+const SPRAK_MAL = path.join(ROT, "roblox/game/UBRFSprak.luau");
 const SNAPSHOT = "references/data/ubrf-hastar-2026-09-01.json";
 
 const ctx = { console, Math, JSON, Object, window: {} };
 vm.createContext(ctx);
-vm.runInContext(las("src/spel/hastar.js") + "\n" + las("src/spel/skotsel.js"), ctx);
+vm.runInContext(las("src/spel/hastar.js") + "\n" + las("src/spel/skotsel.js")
+  + "\n" + las("src/spel/sprak.js"), ctx);
 const {
   HORSES, FODERSCHEMA, KRAFTVAL,
   RYKTZON, RYKTREDSKAP, RYKTKRAV, SADELFAS,
   VISITPUNKT, VISITFYND, VISITSVAR, FASER,
-  HALSNING, HOVAR, EFTERVARD,
+  HALSNING, HOVAR, EFTERVARD, SPRAK, SPRAK_BACKLOG,
 } = vm.runInContext(
   "({HORSES, FODERSCHEMA, KRAFTVAL, RYKTZON, RYKTREDSKAP, RYKTKRAV, " +
   "SADELFAS, VISITPUNKT, VISITFYND, VISITSVAR, FASER, " +
-  "HALSNING, HOVAR, EFTERVARD})",
+  "HALSNING, HOVAR, EFTERVARD, SPRAK, SPRAK_BACKLOG})",
   ctx,
 );
 
@@ -412,9 +417,35 @@ return ${luauPretty(skotselRuntime, 0)}
 `;
 
 const kontrollerar = process.argv.includes("--kontrollera");
+/* SPRÅKTABELLEN till Luau. Platshållarna (%s, %d) skrivs rakt igenom —
+   `string.format` på Roblox och webbens egen ersättning tar samma form. */
+function sprakUt() {
+  const rader = [];
+  rader.push("--!strict");
+  rader.push("--[[ GENERERAD av tools/exportera-spel.js ur src/spel/sprak.js.");
+  rader.push("     Ändra inte här — ändra i källan och kör om exporten.");
+  rader.push("");
+  rader.push("     Spelarens text på svenska och engelska. Ren data: regeln för");
+  rader.push("     vilket språk som gäller, uppslaget och formateringen ligger i");
+  rader.push("     ReplicatedStorage.HorseCore.Sprak, inte här. ]]");
+  rader.push("");
+  rader.push("local Sprak = {}");
+  rader.push("");
+  rader.push("Sprak.text = " + luauPretty(SPRAK, 0));
+  rader.push("");
+  rader.push("--[[ Redovisad översättningsskuld: innehåll som är svenskt idag och");
+  rader.push("     som inte får maskinöversättas av en agent. Se src/spel/sprak.js. ]]");
+  rader.push("Sprak.backlog = " + luauPretty(SPRAK_BACKLOG, 0));
+  rader.push("");
+  rader.push("return Sprak");
+  rader.push("");
+  return rader.join("\n");
+}
+
 const mal = [
   [DATA_MAL, dataUt, "UBRFSpelData.luau"],
   [SKOTSEL_MAL, skotselUt, "UBRFSkotsel.luau"],
+  [SPRAK_MAL, sprakUt(), "UBRFSprak.luau"],
 ];
 
 if (kontrollerar) {

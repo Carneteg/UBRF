@@ -20,6 +20,10 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
+--[[ #162: knapparnas etiketter kommer ur språkkanonen — samma nycklar
+     som KontrollHjalp beskriver dem med. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+
 local TouchControls = {}
 
 --[[ ── Kurvan ──────────────────────────────────────────────────────────
@@ -217,22 +221,22 @@ function TouchControls.mount(input: any, hooks: { dismount: () -> () })
 	rad.Padding = UDim.new(0, 10)
 	rad.Parent = knappar
 
-	local av = nyKnapp("Av", "SITT AV", knappar)
-	local hoppa = nyKnapp("Hoppa", "HOPP", knappar)
-	local ned = nyKnapp("Ned", "▼ LUGNARE", knappar)
-	local upp = nyKnapp("Upp", "▲ FRAMÅT", knappar)
+	local av = nyKnapp("Av", Sprak.t("touch.sitt_av"), knappar)
+	local hoppa = nyKnapp("Hoppa", Sprak.t("touch.hoppa"), knappar)
+	local ned = nyKnapp("Ned", Sprak.t("touch.lugnare"), knappar)
+	local upp = nyKnapp("Upp", Sprak.t("touch.framat"), knappar)
 	--[[ G02-B: TYGELN och PARADEN på pekskärmen. Utan dem kan en spelare
 	     med pekskärm varken hålla kontakten eller ge en halvhalt, och då
 	     är yttertygelstödet — och därmed hästens balans i svängen —
 	     stängt för hela den plattformen. Webben har samma två på sin
 	     pekskärm (HALVHALT-knappen och tygeln). ]]
-	local tygel = nyKnapp("Tygel", "TYGEL", knappar)
-	local parad = nyKnapp("Parad", "HALVHALT", knappar)
+	local tygel = nyKnapp("Tygel", Sprak.t("touch.tygel"), knappar)
+	local parad = nyKnapp("Parad", Sprak.t("touch.halvhalt"), knappar)
 	--[[ Sitsen: hålls, som tygeln. Djup sits bär bågen — se
 	     SVAR.BALANS_VIKT. Utan knappen kan en spelare med pekskärm inte
 	     stödja volten med sätet, och då är den delen av modellen stängd
 	     för hela plattformen. ]]
-	local sits = nyKnapp("Sits", "DJUP SITS", knappar)
+	local sits = nyKnapp("Sits", Sprak.t("touch.djup_sits"), knappar)
 	upp.LayoutOrder, ned.LayoutOrder = 1, 2
 	tygel.LayoutOrder, sits.LayoutOrder, parad.LayoutOrder = 3, 4, 5
 	hoppa.LayoutOrder, av.LayoutOrder = 6, 7

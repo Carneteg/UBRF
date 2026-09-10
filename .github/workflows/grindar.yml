@@ -156,6 +156,22 @@ jobs:
             luau roblox/tests/.build/roster.spec.luau
           else echo "hoppar: roster.spec.luau finns inte i denna branch"; fi
 
+      # LOKALISERING sv/en (#162). Tre steg, tre olika frågor:
+      #   · Luau-specen: ritas ytorna FAKTISKT om på sv-se och en-us,
+      #   · skannern: finns varje nyckel, och står svensk spelartext kvar,
+      #   · webbgrinden: läser webben SAMMA katalog som Roblox.
+      - name: Lokalisering — ytorna ritas om på sv-se och en-us
+        run: |
+          if [ -f roblox/tests/sprak.spec.luau ]; then
+            python3 roblox/tests/build.py tests/sprak.spec.luau
+            luau roblox/tests/.build/sprak.spec.luau
+          else echo "hoppar: sprak.spec.luau finns inte i denna branch"; fi
+
+      - name: Lokalisering — varje nyckel finns, ingen text utan nyckel
+        run: |
+          if [ -f tools/kolla-sprak.py ]; then python3 tools/kolla-sprak.py
+          else echo "hoppar: tools/kolla-sprak.py finns inte i denna branch"; fi
+
       - name: En generisk häststack — inget hästid hårdkodat
         run: |
           if [ -f tools/kolla-generisk-hast.py ]; then python3 tools/kolla-generisk-hast.py
@@ -242,6 +258,14 @@ jobs:
         run: |
           if [ -f tools/build.py ]; then python3 tools/build.py
           else echo "hoppar: tools/build.py finns inte i denna branch"; fi
+
+      # Paritetshalvan av lokaliseringen: läser webben SAMMA katalog som
+      # Roblox, nyckel för nyckel och text för text? Ligger i webbjobbet
+      # eftersom den mäter dist/ridskolan.html, inte bara källan.
+      - name: Lokalisering — webben läser samma katalog som Roblox
+        run: |
+          if [ -f tools/sprakgrind.mjs ]; then node tools/sprakgrind.mjs
+          else echo "hoppar: tools/sprakgrind.mjs finns inte i denna branch"; fi
 
       - name: Ridkärnan — Gate 01-värden, telemetri, live-koppling och volten
         run: |

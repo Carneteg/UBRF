@@ -73,8 +73,14 @@ local function satMarkor(player: Player, dagens: any): Model?
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "BoxPrompt"
+	--[[ #162 lokalisering: svensk standardtext plus nycklar som klientens
+		`Prompttext` skriver om. Hästens namn är ett EGENNAMN och skickas
+		som argument — det översätts inte. ]]
 	prompt.ActionText = "Titta in"
+	prompt:SetAttribute("SprakNyckel", "stall.titta_in")
 	prompt.ObjectText = dagens.namn .. " står här"
+	prompt:SetAttribute("SprakObjekt", "stall.star_har")
+	prompt:SetAttribute("SprakArg", tostring(dagens.namn))
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 8
 	prompt.RequiresLineOfSight = false

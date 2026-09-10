@@ -84,8 +84,19 @@ local function rustaDorr(blad: BasePart)
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "DorrPrompt"
+	--[[ #162 lokalisering: texten som skapas här är SVENSKA STANDARDEN, och
+		nyckeln intill är den klienten skriver om den med (`Prompttext`).
+		En prompt replikeras till alla spelare och kan därför inte ha en
+		spelares språk på servern. Skulle klientmodulen fattas ser spelaren
+		svenska — inte en tom prompt. ]]
 	prompt.ActionText = "Öppna"
+	prompt:SetAttribute("SprakNyckel", "dorr.oppna")
 	prompt.ObjectText = textFor(blad)
+	--[[ Byggnadens/dörrens egen etikett är ett namn i världen och översätts
+		inte; bara det generiska "Dörr" har en nyckel. ]]
+	if prompt.ObjectText == "Dörr" then
+		prompt:SetAttribute("SprakObjekt", "dorr.objekt")
+	end
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = RACKVIDD
 	--[[ Utan siktlinjekrav: bladet står i sin egen lucka och skymmer sig
@@ -97,6 +108,10 @@ local function rustaDorr(blad: BasePart)
 	prompt.Triggered:Connect(function()
 		local nu = not oppna[blad]
 		satt(blad, nu)
+		--[[ Nyckeln FÖRST, texten sedan: klientens `Prompttext` lyssnar på
+			attributet, och en svensk standardtext intill gör att prompten
+			är läsbar även utan klientmodulen. ]]
+		prompt:SetAttribute("SprakNyckel", if nu then "dorr.stang" else "dorr.oppna")
 		prompt.ActionText = if nu then "Stäng" else "Öppna"
 	end)
 end

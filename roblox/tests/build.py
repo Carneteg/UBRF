@@ -57,6 +57,11 @@ SPEL = GEOMETRI + [
     ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
     ("UBRFSpel",     "game/UBRFSpel.luau"),
     ("Stallet",      "game/Stallet.luau"),
+    #[[ SPRAKET (#162): den genererade texttabellen och uppslaget. Ligger i
+    #   SPEL sa att varje bank som ritar nagot spelaren LASER far dem med;
+    #   Sprak.luau require:ar UBRFSprak och maste darfor sta efter den. ]]
+    ("UBRFSprak",    "game/UBRFSprak.luau"),
+    ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
 ]
 
 SPELBARHET = BYGGE + [
@@ -143,6 +148,10 @@ INTEGRATION = FORBEREDELSE + [
 # exporterade ridkanon. Den behover ingen rorelsemodul: den mater kontrakt,
 # inte fysik.
 PARITET = [
+    #[[ SPRAKET forst: UgnetaController ritar lararkortets text och laser
+    #   Sprak, som i sin tur require:ar den genererade texttabellen. ]]
+    ("UBRFSprak",  "game/UBRFSprak.luau"),
+    ("Sprak",      "src/shared/HorseCore/Sprak.luau"),
     ("Types",      "src/shared/HorseCore/Types.luau"),
     ("Config",     "src/shared/HorseCore/Config.luau"),
     ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
@@ -226,12 +235,18 @@ KLIENT = SPEL + [
     # bara i KLIENT. Star har och inte i PARITET av det skalet -- inte av
     # forbiseende. Jamfor noten vid Inspelning/ReplayController ovan.
     ("KontrollHjalp",       "src/client/KontrollHjalp.luau"),
+    #[[ #162: prompttexten pa klienten. Bara init.client require:ar den. ]]
+    ("Prompttext",          "src/client/Prompttext.luau"),
     ("Debug",               "src/client/Debug.luau"),
     ("Genomsikt",           "src/client/Genomsikt.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
 MODULER = [
+    #[[ Samma skal som i PARITET: TouchControls och InteractionController
+    #   ritar spelartext. ]]
+    ("UBRFSprak",    "game/UBRFSprak.luau"),
+    ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
@@ -304,7 +319,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     # Sparning eller SparService finns.
     #[[ FORST av alla: "integration" ska inte kunna falla igenom till nagon
     #   annan bunt. Den behover BADE tjanstestacken och riggen. ]]
-    if "integration" in spec_rel or "roster" in spec_rel:
+    #[[ Sprakgrinden kor pa KLIENTBANKEN: den mater att HUD:en, hjalpen,
+    #   pekknapparna och prompterna FAKTISKT ritas om, alltsa mot samma
+    #   controllers som init.client startar. ]]
+    if "sprak" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
+    elif "integration" in spec_rel or "roster" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "skotselpass" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"

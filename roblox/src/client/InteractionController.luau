@@ -14,6 +14,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Net, RigAdapter = Core.Networking, Core.RigAdapter
 
+--[[ #162: prompttexten kommer ur språkkanonen. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+
 local InteractionController = {}
 
 local prompts: { [Model]: ProximityPrompt } = {}
@@ -79,7 +82,7 @@ local function addPrompt(model: Model)
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "MountPrompt"
-	prompt.ActionText = "Sitt upp"
+	prompt.ActionText = Sprak.t("interaktion.sitt_upp")
 	prompt.ObjectText = model:GetAttribute("HorseName") or model.Name
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 12

@@ -562,9 +562,15 @@ do
 	stadaSession(T)
 end
 
+--[[ `os.exit` finns INTE i luau-CLI:t (den är nil). Ett anrop rakt ut gav
+	en "attempt to call a nil value" i loggen i stället för ett läsbart
+	slut — rött blev det, men av fel anledning i texten. Här används den
+	om den finns, annars ger `error` den icke-nollskilda exitkoden. ]]
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
-	os.exit(1)
+	local avsluta = (os :: any).exit
+	if avsluta then avsluta(1) end
+	error(("%d mätning(ar) föll."):format(fails), 0)
 else
 	print("\nintegration.spec: alla gröna")
 end

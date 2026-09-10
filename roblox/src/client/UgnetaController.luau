@@ -34,6 +34,11 @@ local UserInputService = game:GetService("UserInputService")
 local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
 local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
 
+--[[ #162: lärarkortets egen text ur språkkanonen. Undervisningstexten
+     kommer ur RidKanon.UGNETA och är svensk kanon — se översättningsskulden
+     i src/spel/sprak.js. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+
 local UgnetaController = {}
 
 local player = Players.LocalPlayer
@@ -91,11 +96,18 @@ local FARG_TEXT = Color3.fromRGB(246, 242, 232)
 local LIVE = RidKanon.UGNETA.LIVE
 local LIVE_CD = RidKanon.UGNETA.LIVE_CD
 
-local DIM_ORD = {
-	linje = "linjen", rytm = "rytmen", balans = "balansen",
-	timing = "timingen", mjukhet = "mjukheten", respons = "hästens svar",
-	tempo = "tempot",
+--[[ Dimensionsorden bär nycklar; texten hämtas när kortet ritas. ]]
+local DIM_NYCKEL = {
+	linje = "ugneta.dim.linje", rytm = "ugneta.dim.rytm", balans = "ugneta.dim.balans",
+	timing = "ugneta.dim.timing", mjukhet = "ugneta.dim.mjukhet",
+	respons = "ugneta.dim.respons", tempo = "ugneta.dim.tempo",
 }
+local DIM_ORD = setmetatable({}, {
+	__index = function(_, dim)
+		local nyckel = DIM_NYCKEL[dim]
+		return if nyckel then Sprak.t(nyckel) else nil
+	end,
+})
 
 local liveTid = 0
 local liveSagt = ""
@@ -186,7 +198,7 @@ local function bygg()
 	namn.Font = Enum.Font.RobotoMono
 	namn.TextSize = 11
 	namn.TextColor3 = Color3.fromRGB(231, 200, 107)
-	namn.Text = "UGNETA · RIDINSTRUKTÖR"
+	namn.Text = Sprak.t("ugneta.rubrik")
 	namn.ZIndex = 6
 	namn.Parent = k
 
@@ -230,7 +242,7 @@ local function bygg()
 	kn.TextColor3 = Color3.fromRGB(23, 20, 10)
 	kn.Font = Enum.Font.GothamBold
 	kn.TextSize = 12
-	kn.Text = "Prova igen"
+	kn.Text = Sprak.t("ugneta.prova_igen")
 	kn.Visible = false
 	kn.ZIndex = 6
 	local kncorner = Instance.new("UICorner")
@@ -262,10 +274,10 @@ local function bygg()
 		x.Activated:Connect(fn)
 		return x
 	end
-	replayKnapp = sidoKnapp("SeRitten", "Se ritten", 10, function()
+	replayKnapp = sidoKnapp("SeRitten", Sprak.t("ugneta.se_ritten"), 10, function()
 		UgnetaController.replay()
 	end)
-	vidareKnapp = sidoKnapp("GaVidare", "Gå vidare", 11, function()
+	vidareKnapp = sidoKnapp("GaVidare", Sprak.t("ugneta.ga_vidare"), 11, function()
 		UgnetaController.gaVidare()
 	end)
 
@@ -301,7 +313,7 @@ end
 --[[ ── Live-registret ─────────────────────────────────────────── ]]
 function UgnetaController.liveText(fokusId: string, bra: boolean): string
 	local r = LIVE[fokusId]
-	if not r then return if bra then "Precis så" else "" end
+	if not r then return if bra then Sprak.t("ugneta.precis_sa") else "" end
 	return if bra then r.bra else r.fel
 end
 
@@ -419,7 +431,7 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 			table.insert(punkter, `Jobba på {ord}.`)
 		end
 	end
-	if #punkter == 0 then table.insert(punkter, "Jämnare försök. Behåll samma känsla.") end
+	if #punkter == 0 then table.insert(punkter, Sprak.t("ugneta.jamnare_forsok")) end
 	local forsta = fore == nil
 	--[[ Kortet har alltid en fortsättning nu. Förut fick bara försök 1 en
 	     knapp och försök 2 låg kvar tills timern tog det — spelaren hade
@@ -427,8 +439,9 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 	--[[ "Se ritten" bara när det FINNS en inspelning av försöket, och
 	     "Gå vidare" bara efter första försöket — efter det sista är
 	     huvudknappen redan vägen vidare. ]]
-	visaKort(if forsta then "Prova igen" else `Försök {forsokNr}`, punkter, true,
-		if forsta then "Prova igen" else "Nästa övning",
+	visaKort(if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.forsok", forsokNr),
+		punkter, true,
+		if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.nasta_ovning"),
 		kanSeRitten == true, forsta)
 	return punkter
 end

@@ -53,6 +53,10 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
+--[[ #162: raderna bär NYCKLAR, texten kommer ur språkkanonen. Se
+     `RADER` nedan för varför nyckeln och inte texten är radens identitet. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+
 local KontrollHjalp = {}
 
 local player = Players.LocalPlayer
@@ -101,14 +105,16 @@ KontrollHjalp.AVSITTNING_GAMEPAD = Enum.KeyCode.DPadDown
      och en knapp utan namn syns direkt i panelen i stället för att bli en
      tyst lögn. ]]
 local PADNAMN: { [Enum.KeyCode]: string } = {
-	[Enum.KeyCode.DPadUp] = "Styrkors upp",
-	[Enum.KeyCode.DPadDown] = "Styrkors ned",
-	[Enum.KeyCode.DPadLeft] = "Styrkors vänster",
-	[Enum.KeyCode.DPadRight] = "Styrkors höger",
+	[Enum.KeyCode.DPadUp] = "hjalp.styrkors_upp",
+	[Enum.KeyCode.DPadDown] = "hjalp.styrkors_ned",
+	[Enum.KeyCode.DPadLeft] = "hjalp.styrkors_vanster",
+	[Enum.KeyCode.DPadRight] = "hjalp.styrkors_hoger",
 }
 
 local function padNamn(kod: Enum.KeyCode): string
-	return PADNAMN[kod] or ("(namnlös knapp: " .. tostring(kod) .. ")")
+	local nyckel = PADNAMN[kod]
+	if nyckel then return Sprak.t(nyckel) end
+	return Sprak.t("hjalp.namnlos_knapp", tostring(kod))
 end
 
 --[[ RADERNA. `tgb`/`pad`/`pek` är de reglage som är bundna i produktionen:
@@ -127,36 +133,67 @@ end
      Input.luau:s egna KeyCodes och faller när en rad påstår en tangent som
      inte längre är bunden. ]]
 local RADER = {
+	--[[ VARJE RAD BÄR EN NYCKEL, inte en färdig text. Nyckeln är radens
+	     identitet: `_rad()` slår upp på den, och texten sätts när panelen
+	     ritas — där spelarens språk är känt. Låg den svenska texten kvar
+	     som identitet hade en engelsk spelare fått en panel som slog upp
+	     rader på ett språk hon inte läser.
+
+	     `pek` pekar på pekknappens EGEN etikett i språkkanonen
+	     (`touch.*`), samma nyckel som `TouchControls` ritar knappen med.
+	     Två sanningar där vore en instruktion som säger något annat än
+	     knappen den beskriver. ]]
 	--[[ `pad` stod "E" här (#162 blockerare 2). `E` är en TANGENT. En spelare
 	     med bara handkontroll läste alltså en instruktion hon inte kunde
 	     följa — och kunde faktiskt inte sitta av alls, för `begarAvsittning`
 	     var bara bunden till `E`. Uppsittningen gick via ProximityPrompt,
 	     så hon kom UPP på hästen och blev kvar där. ]]
-	{ vad = "Sitt upp / sitt av", tgb = "E",
-	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),                  pek = "SITT AV" },
-	{ vad = "Framåt / bakåt",     tgb = "W / S",    pad = "Vänster spak", pek = "Spaken" },
-	{ vad = "Styr",               tgb = "A / D",    pad = "Vänster spak", pek = "Spaken" },
-	{ vad = "Högre gångart",      tgb = "Shift",    pad = "R1",       pek = "▲ FRAMÅT" },
-	{ vad = "Lägre gångart",      tgb = "Ctrl",     pad = "L1",       pek = "▼ LUGNARE" },
-	{ vad = "Tygel (kontakt)",    tgb = "Q",        pad = "R2",       pek = "TYGEL" },
-	{ vad = "Halvhalt",           tgb = "F",        pad = "B",        pek = "HALVHALT" },
-	{ vad = "Djupare sits",       tgb = "Z / C",    pad = "L2",       pek = "DJUP SITS" },
-	{ vad = "Hoppa",              tgb = "Space",    pad = "A",        pek = "HOPP" },
+	{ nyckel = "hjalp.sitt_upp_av", tgb = "E",
+	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
+	{ nyckel = "hjalp.framat_bakat", tgb = "W / S", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
+	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
+	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.framat" },
+	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.lugnare" },
+	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2", pek = "touch.tygel" },
+	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B",  pek = "touch.halvhalt" },
+	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2", pek = "touch.djup_sits" },
+	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A",  pek = "touch.hoppa" },
 	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
 	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
 	     hade varit precis det problemet raden beskriver. ]]
-	{ vad = "Den här hjälpen",    tgb = "H",
-	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),                        pek = "?" },
+	{ nyckel = "hjalp.denna_hjalp",  tgb = "H",
+	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),        pek = "?" },
 }
+
+--[[ Radens text och reglage i spelarens språk. `pek`/`padNyckel` är
+     nycklar när de pekar på något spelet SÄGER, och råa tecken när de är
+     tangentnamn ("W / S", "R1") — de översätts inte, de är knappar. ]]
+local function radText(r): string
+	return Sprak.t(r.nyckel)
+end
+local function reglageText(varde: string?): string
+	if varde == nil then return "" end
+	if Sprak.finns(varde) then return Sprak.t(varde) end
+	return varde
+end
 
 --[[ Vilken sorts inmatning ska hjälpen tala om? Publik för att provet ska
      kunna läsa samma beslut som panelen. ]]
 --[[ Raden för ett reglage, som panelen faktiskt skriver ut den. Publik
      för att provet ska kunna mäta LEDTEXTEN och inte bara bindningen —
      blockerare 2 var trasig i just texten. ]]
+--[[ Slår upp en rad. Tar NYCKELN ("hjalp.sitt_upp_av") eller texten i
+	något av språken — det senare för att ett prov som frågar efter
+	"Sitt upp / sitt av" ska fortsätta mäta samma rad efter att texten
+	flyttat till språkkanonen. Identiteten är nyckeln; texten är en
+	bekvämlighet. ]]
 function KontrollHjalp._rad(vad: string): { [string]: string }?
 	for _, r in RADER do
-		if r.vad == vad then return r end
+		if r.nyckel == vad
+			or Sprak.iSprak("sv", r.nyckel) == vad
+			or Sprak.iSprak("en", r.nyckel) == vad then
+			return r
+		end
 	end
 	return nil
 end
@@ -177,10 +214,10 @@ function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 	for _, r in RADER do
 		local reglage =
 			if sort == "tangentbord" then r.tgb
-			elseif sort == "gamepad" then r.pad
-			elseif sort == "touch" then r.pek
+			elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
+			elseif sort == "touch" then reglageText(r.pek)
 			else ""
-		table.insert(ut, { vad = r.vad, reglage = reglage })
+		table.insert(ut, { vad = radText(r), reglage = reglage })
 	end
 	return ut
 end
@@ -214,7 +251,7 @@ local function bygg()
 	rubrik.Size = UDim2.new(1, -20, 0, 26)
 	rubrik.Position = UDim2.fromOffset(10, 8)
 	rubrik.BackgroundTransparency = 1
-	rubrik.Text = "Kontroller"
+	rubrik.Text = Sprak.t("hjalp.rubrik")
 	rubrik.TextColor3 = FARG_GULD
 	rubrik.TextXAlignment = Enum.TextXAlignment.Left
 	rubrik.Font = Enum.Font.GothamBold
@@ -248,7 +285,7 @@ local function bygg()
 	kn.TextColor3 = Color3.fromRGB(23, 20, 10)
 	kn.Font = Enum.Font.GothamBold
 	kn.TextSize = 12
-	kn.Text = "Stäng"
+	kn.Text = Sprak.t("hjalp.stang")
 	kn.ZIndex = 6
 	kn.Parent = p
 	local kc = Instance.new("UICorner"); kc.CornerRadius = UDim.new(1, 0); kc.Parent = kn
@@ -271,7 +308,7 @@ local function fyll()
 	if kn then
 		--[[ Ledtexten bara där tangenten finns. ]]
 		(kn :: TextButton).Text =
-			if UserInputService.KeyboardEnabled then "Stäng  (H)" else "Stäng"
+			if UserInputService.KeyboardEnabled then Sprak.t("hjalp.stang_tangent", "H") else Sprak.t("hjalp.stang")
 	end
 end
 
