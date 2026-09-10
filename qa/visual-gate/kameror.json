@@ -374,10 +374,10 @@
         "huvudentréns läge: CONTRADICTION plan/fasad, fasaden vinner"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual re-review 2026-09-10 14:55 (runda 7), paket screenshot-pack-506b5a3 ur visuell-grind run 34490982101",
+        "head": "506b5a3e42f2364c26a36d6c480af87c65f4bb78",
+        "mismatch": "PASS: 'the glazed reception frontage is now legible from a physically valid viewpoint and the frame no longer reads primarily as blank wall + locker corridor.'"
       },
       "ram": "Receptionens låga vita bröstning med hylla och glasrutor snett framför till vänster, skåpgodset samlat på höger sida av gången, öppen hall utan rumslådor och golv att gå på hela vägen tillbaka mot entréänden — inga korridorväggar, och ingen sida får läsa som två skåpväggar",
       "kamera": {
@@ -412,10 +412,10 @@
         "skåpradens början/slut: planens fyra luckor olästa — bankarnas y-lägen är ASSUMPTION (F02-B); vilken sida av glaset receptionen ligger på är F02-A:s GEOMETRY_REFERENCE_GAP"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual re-review 2026-09-10 14:55 (runda 7), paket screenshot-pack-506b5a3 ur visuell-grind run 34490982101",
+        "head": "506b5a3e42f2364c26a36d6c480af87c65f4bb78",
+        "mismatch": "PASS: 'the intended relation between the long locker bank, reception glazing and table/chairs is now readable in one frame.'"
       },
       "ram": "Lång obruten skåprad till höger (grå plåtskåp med enstaka röda/mörkgrå dörrar), receptionens låga bröstning med hylla och glasrutor till vänster mitt emot, bordet med de vita stolarna i gången mellan dem, fri siktlinje till gavelns valvfönster och stövelbänken — inga korridorväggar",
       "kamera": {
@@ -598,10 +598,10 @@
         "receptionens djup och möblering bakom glaset: träskåp, tavlor (ridhus-klubb-02) i DERIVED-lägen"
       ],
       "granskning": {
-        "status": "EJ_GRANSKAD",
-        "av": null,
-        "head": null,
-        "mismatch": ""
+        "status": "CHATGPT_VISUAL_PASS",
+        "av": "ChatGPT senior visual re-review 2026-09-10 14:55 (runda 7), paket screenshot-pack-506b5a3 ur visuell-grind run 34490982101",
+        "head": "506b5a3e42f2364c26a36d6c480af87c65f4bb78",
+        "mismatch": "PASS: 'the low glazed frontage and opposing locker side are both legible; no fade/ghost geometry is required.'"
       },
       "ram": "Receptionens låga bröstning med fyra glasrutor och avställningshyllan mot gången, rummet bakom glaset med träskåp och tavlor, skåpraden mitt emot på gångens andra sida, gavelns valvfönster längst bort. Inga toalettboxar i hörnet.",
       "kamera": {
