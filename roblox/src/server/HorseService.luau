@@ -166,6 +166,34 @@ local function seatCFrame(session: Session): CFrame
 	return RigAdapter.saddleCFrame(session.rig)
 end
 
+--[[ ══ LIVSCYKELSTÄDNING ═════════════════════════════════════════════════
+
+	Blockerare 3 i ChatGPT:s whole-place review #162: servern höll
+	`session.rider` och `byRider[player]` men hade INGEN lyssnare för att
+	avataren dör, tas bort eller kastas ur sitsen. Roblox kan lossa ryttaren
+	fysiskt medan våra tabeller fortfarande säger att hon rider. Då nekas
+	nästa uppsittning med "Du rider redan", hästen ligger reserverad, och
+	`Pass.vidAvsittning` körs aldrig.
+
+	Kommentaren vid `tryMount` hävdade att en `Seat` sköter frånkopplingen
+	"åt oss" vid död, respawn och utloggning. Det är sant om den FYSISKA
+	fastsättningen och falskt om vårt tillstånd — och det var precis den
+	skillnaden som gjorde att ingen såg luckan.
+
+	Kopplingarna görs vid uppsittning och rivs vid avsittning, så det finns
+	inga lyssnare för spelare som inte rider. `PlayerAdded` rörs inte:
+	SparService äger den ensam sedan blockerare 1 i #161. ]]
+local stadning: { [Player]: { RBXScriptConnection } } = {}
+
+local function slappStadning(player: Player)
+	local kopplingar = stadning[player]
+	if not kopplingar then return end
+	stadning[player] = nil
+	for _, k in ipairs(kopplingar) do
+		pcall(function() k:Disconnect() end)
+	end
+end
+
 local function setRider(session: Session, player: Player?)
 	local previous = session.rider
 	session.rider = player
@@ -286,6 +314,13 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
 	local seat = session.rig.seat
 	if seat then
 		seat:Sit(humanoid)
+		--[[ Blockerare 4 i reviewen: `session.rider` sattes som sanning även
+			om sitsen aldrig etablerades. Då tror servern att någon rider en
+			häst som står tom, och nästa försök nekas med "Du rider redan".
+			Sitsen får bekräfta själv. ]]
+		if seat.Occupant ~= humanoid then
+			return false, "Sitsen tog inte"
+		end
 	else
 		character:PivotTo(seatCFrame(session))
 		local weld = Instance.new("WeldConstraint")
@@ -297,6 +332,29 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?)
 	end
 
 	setRider(session, player)
+
+	--[[ Städningen kopplas EFTER att ryttaren är satt, så att en signal som
+		fyrar direkt hittar ett tillstånd att städa. Alla tre vägarna leder
+		till samma idempotenta `dismount`. ]]
+	slappStadning(player)
+	local kopplingar = {}
+	table.insert(kopplingar, player.CharacterRemoving:Connect(function()
+		HorseService.dismount(player)
+	end))
+	table.insert(kopplingar, humanoid.Died:Connect(function()
+		HorseService.dismount(player)
+	end))
+	if seat then
+		--[[ Roblox kan lossa ryttaren utan att någon av ovanstående fyrar —
+			en explosion, en `Sit`-ändring, en fysikträff. Occupant är den
+			enda källan som alltid säger sanningen om sitsen. ]]
+		table.insert(kopplingar, seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+			if seat.Occupant ~= humanoid then
+				HorseService.dismount(player)
+			end
+		end))
+	end
+	stadning[player] = kopplingar
 	return true, nil
 end
 
@@ -306,11 +364,24 @@ function HorseService.dismount(player: Player): boolean
 	local session = sessions[model]
 	if not session then return false end
 
+	--[[ Kopplingarna rivs FÖRST. Annars fyrar Occupant-lyssnaren när vi
+		själva reser ryttaren och anropar `dismount` igen mitt i. ]]
+	slappStadning(player)
+
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-	if session.rig.seat and session.rig.seat.Occupant == humanoid then
-		session.rig.seat:Sit(nil)
+	--[[ Blockerare 4: avsittningen gjorde `seat:Sit(nil)`. `Seat:Sit` tar en
+		humanoid som ska SÄTTA SIG; att skicka nil är inte en dokumenterad
+		väg att resa någon. Den verifierade vägen är `Humanoid.Sit = false`,
+		vilket lossar sitsens egen `SeatWeld`. Faller det bort tas welden
+		bort direkt, så en trasig sits inte låser ryttaren fast. ]]
+	if humanoid and session.rig.seat and session.rig.seat.Occupant == humanoid then
+		humanoid.Sit = false
+		if session.rig.seat.Occupant == humanoid then
+			local weld = session.rig.seat:FindFirstChild("SeatWeld")
+			if weld then weld:Destroy() end
+		end
 	end
 	if character then
 		local root = character:FindFirstChild("HumanoidRootPart")
@@ -438,6 +509,7 @@ function HorseService.start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		HorseService.dismount(player)
+		slappStadning(player)
 	end)
 
 	--[[ En loop för alla hästar, inte en per häst. Uthålligheten behöver
