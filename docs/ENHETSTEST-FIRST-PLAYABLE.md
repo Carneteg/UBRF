@@ -118,6 +118,12 @@ Kräver API-åtkomst enligt rutan högst upp.
    fältet du la dit finns kvar. Skrivs raden om är omreviewens fynd 2
    tillbaka.
 
+Det som INTE går att prova här: revisionskonflikten, alltså två servrar som
+skriver samma spelare. Den kräver en riktig kollision och provas bara i
+bänken. Ser du däremot en `[Spar] ... basar om på den färska raden` i
+utskriften under vanligt spel är det värt att rapportera — då kolliderar
+något som inte borde kollidera.
+
 Steg 7 är det viktigaste i hela avsnittet: det är fail-safe-vägen, och den
 ska vara spelbar utan att förstöra något. Steg 9 är samma sak sett från
 lagret: en gammal server ska hellre avstå än gissa.
@@ -184,6 +190,7 @@ Omreviewens runda 3 lade till tre:
 |---|---|---|
 | Vilan räknas ner | ja, minnet äger vilan och skrivningen avbryts vid konflikt | B8 över minst två sessioner |
 | Nyare sparfil skrivs inte över | ja, mot stubbad `UpdateAsync` som avbryter som Roblox | B9 med en handredigerad rad i butiken |
+| Revisionskonflikt låser inte sessionen | ja, ombaseringen provas i bänken | **kan inte provas för hand** — kräver två servrar som skriver samma nyckel. Förblir `NOT_TESTED IN LIVE DATASTORE`. |
 | Räknat pass ber inte om uppsittning | ja, serverns egna vyer genom klientens riktiga lyssnare | A15 och A16 |
 
 ## Vad som händer sedan

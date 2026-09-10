@@ -1264,7 +1264,14 @@ end
 	Provet ovan visade den andra. Det här visar den FÖRSTA, och det är den
 	som en `min`-regel hade gått sönder på: en gammal server, med en session
 	som läste innan skadan fanns, försöker skriva. Lagret har hunnit före.
-	Skrivningen ska avbrytas — inte slås ihop, och absolut inte läka. ]]
+	Skrivningen får inte läka hästen.
+
+	RUNDA 4: kravet är detsamma, utgången är en annan. Förut avbröts
+	skrivningen — vilket bevarade skadan men låste sessionen (se blocket
+	längre ned). Nu basar den om på den färska raden, och den färska skadan
+	ska stå kvar ändå. Provet mäter alltså EGENSKAPEN (ingen läkning), inte
+	mekanismen, och vår session bär med flit en hästminnesrad UTAN skada —
+	det är precis den bild som en `min`-regel hade låtit skriva över. ]]
 do
 	print("\n── Omreview: en gammal server får inte läka en färsk skada ──")
 	__datastore.nollstall()
@@ -1286,18 +1293,24 @@ do
 	nyare.rev = save.rev + 1
 	__datastore._data["spelare_" .. spelare.UserId] = Sparning.tillRad(nyare)
 
-	--[[ Vår gamla session skriver nu. Den vet ingenting om skadan. ]]
+	--[[ Vår gamla session har en bild av cosmo UTAN skada, och skriver. ]]
+	Sparning.hojRelation(save, "cosmo", 0.2)
+	check("vår bild av cosmo saknar skada",
+		save.hastar.cosmo ~= nil and save.hastar.cosmo.skada == nil)
 	local skrevs = SparService.skriv(spelare)
-	check("skrivningen avbröts", skrevs == false, tostring(skrevs))
+	check("skrivningen går fram", skrevs == true, tostring(skrevs))
 
 	local kvar = Sparning.migrera(__datastore._data["spelare_" .. spelare.UserId])
-	check("den färska skadan finns kvar i lagret",
+	check("den färska skadan finns kvar i lagret — ingen läkning",
 		kvar.hastar.cosmo ~= nil and kvar.hastar.cosmo.skada ~= nil
 			and kvar.hastar.cosmo.skada.passKvar == 3,
 		"passKvar " .. tostring(kvar.hastar.cosmo and kvar.hastar.cosmo.skada
 			and kvar.hastar.cosmo.skada.passKvar))
-	check("och revisionen är den nyare serverns",
-		kvar.rev == save.rev + 1, "rev " .. tostring(kvar.rev))
+	check("och skälet följde med, inte bara talet",
+		kvar.hastar.cosmo.skada.vad == "hälta bak",
+		tostring(kvar.hastar.cosmo.skada.vad))
+	check("revisionen ligger förbi den nyare serverns",
+		kvar.rev == save.rev + 2, "rev " .. tostring(kvar.rev))
 
 	SparService._glomForProv(spelare)
 	game:GetService("RunService")._server = false
@@ -1489,6 +1502,114 @@ do
 
 	Players.PlayerRemoving:Fire(spelare)
 	Players._spelare = {}
+	SparService._glomForProv(spelare)
+	game:GetService("RunService")._server = false
+end
+
+--[[ ══ RUNDA 4, P1: KONFLIKTEN FÅR INTE LÅSA SESSIONEN ═══════════════
+
+	ChatGPT:s omreview av `3b0e84d`: revisionsspärren avbryter riktigt när
+	lagret hunnit före, men den avancerar inte `laddadRev` och lämnar
+	`kanSpara` sann. Nästa `UpdateAsync` läser samma högre `bas.rev` mot
+	samma gamla `laddadRev` och avbryter igen — för alltid. Sessionen kunde
+	alltså tro att den sparade medan ingenting gick fram.
+
+	Provet nedan mäter det som saknades: att nästa läge är BESTÄMT. Inte
+	bara att den färska skadan finns kvar, utan att sessionen kommer vidare.
+
+	Regeln som gör det möjligt utan att gissa:
+
+	  · lagret står på samma revision som vi läste ⇒ ingen annan har
+	    skrivit, minnet ÄR den senaste sanningen, och minnet äger vilan
+	    (det är fynd 1 och nedräkningen hänger på det),
+	  · lagret står HÖGRE ⇒ någon annan skrev efter vår läsning. Då basar
+	    vi om på den FÄRSKA raden och slår bara ihop det som är monotont
+	    (kvitton, passtal, relation, första dagen). För vilan väljs den
+	    LÄNGSTA, för vi vet inte vems som är färskast — och att korta en
+	    vila på en gissning vore att släppa ut en halt häst, medan att
+	    förlänga den kostar ett pass.
+
+	Ombaseringen är begränsad till ett enda försök inne i samma
+	`UpdateAsync`: den läser färskt, slår ihop, skriver en gång. Ingen
+	omkörningsslinga, ingen väntan.
+]]
+do
+	print("\n── Runda 4: konflikten basar om i stället för att låsa ──")
+	__datastore.nollstall()
+	game:GetService("RunService")._server = true
+	local spelare = { Name = "Rebas", UserId = 9204 }
+	local nyckel = "spelare_" .. spelare.UserId
+	SparService._glomForProv(spelare)
+
+	--[[ Lagret: två pass, ingen skada. Vår session läser den raden. ]]
+	local rad = Sparning.tom()
+	rad.pass = 2
+	__datastore._data[nyckel] = Sparning.tillRad(rad)
+	local save = SparService.ladda(spelare)
+	local lastRev = save.rev
+
+	--[[ Vår session gör dagens pass: ett kvitto och en höjd relation. Det
+		är progression som INTE får gå förlorad av en konflikt. ]]
+	Sparning.registreraPass(save, "pass-rebas-1", 1000)
+	Sparning.hojRelation(save, "cosmo", 0.5)
+
+	--[[ En NYARE server sätter en skada och skriver. Revisionen stiger. ]]
+	local nyare = Sparning.migrera(__datastore._data[nyckel])
+	Sparning.satSkada(nyare, "cosmo", 3, "hälta bak")
+	nyare.rev = lastRev + 1
+	__datastore._data[nyckel] = Sparning.tillRad(nyare)
+
+	--[[ Vår skrivning möter konflikten. ]]
+	local skrevs1 = SparService.skriv(spelare)
+	check("skrivningen går fram genom en säker ombasering", skrevs1 == true,
+		tostring(skrevs1))
+
+	local kvar = Sparning.migrera(__datastore._data[nyckel])
+	check("den nyare serverns färska skada är BEVARAD",
+		kvar.hastar.cosmo ~= nil and kvar.hastar.cosmo.skada ~= nil
+			and kvar.hastar.cosmo.skada.passKvar == 3,
+		"passKvar " .. tostring(kvar.hastar.cosmo and kvar.hastar.cosmo.skada
+			and kvar.hastar.cosmo.skada.passKvar))
+	check("vårt kvitto följde med", kvar.passId["pass-rebas-1"] ~= nil)
+	check("och relationen vi byggde",
+		kvar.hastar.cosmo ~= nil and kvar.hastar.cosmo.relation >= 0.5,
+		tostring(kvar.hastar.cosmo and kvar.hastar.cosmo.relation))
+	check("revisionen steg FÖRBI den nyare serverns",
+		kvar.rev == lastRev + 2, "rev " .. tostring(kvar.rev))
+
+	--[[ DET DETERMINISTISKA NÄSTA LÄGET. Med den gamla koden låg sessionen
+		kvar på sin gamla `laddadRev` och varje följande skrivning avbröts
+		på nytt. Här ska nästa skrivning i samma session gå fram. ]]
+	Sparning.hojRelation(SparService.save(spelare), "cosmo", 0.1)
+	local skrevs2 = SparService.skriv(spelare)
+	check("nästa skrivning i samma session går också fram", skrevs2 == true,
+		tostring(skrevs2))
+	check("sessionen är fortfarande skrivbar",
+		SparService.kanSpara(spelare) == true)
+
+	local kvar2 = Sparning.migrera(__datastore._data[nyckel])
+	check("och skadan står kvar även efter den andra skrivningen",
+		kvar2.hastar.cosmo ~= nil and kvar2.hastar.cosmo.skada ~= nil
+			and kvar2.hastar.cosmo.skada.passKvar == 3,
+		"passKvar " .. tostring(kvar2.hastar.cosmo and kvar2.hastar.cosmo.skada
+			and kvar2.hastar.cosmo.skada.passKvar))
+
+	--[[ KONTRAST: en FRAMTIDA rad är fortfarande terminal. Den ska INTE
+		basas om — vi förstår inte schemat och får inte röra raden. Utan
+		den här kontrollen kunde ombaseringen ha svalt fynd 2. ]]
+	__datastore._data[nyckel] = { v = 99, rev = 500, framtidaFalt = "okänt" }
+	local skrevs3 = SparService.skriv(spelare)
+	check("en framtida rad basas INTE om", skrevs3 == false, tostring(skrevs3))
+	check("sessionen blev icke-skrivbar av den framtida raden",
+		SparService.kanSpara(spelare) == false)
+	check("och anmärkningen säger framtida",
+		SparService.anmarkning(spelare) == "framtida",
+		tostring(SparService.anmarkning(spelare)))
+	local orord = __datastore._data[nyckel]
+	check("den framtida raden ligger orörd",
+		orord.v == 99 and orord.framtidaFalt == "okänt",
+		"v " .. tostring(orord.v) .. " fält " .. tostring(orord.framtidaFalt))
+
 	SparService._glomForProv(spelare)
 	game:GetService("RunService")._server = false
 end

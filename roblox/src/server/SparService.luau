@@ -197,6 +197,19 @@ end
 
 --[[ ── SKRIVNINGEN ────────────────────────────────────────────────── ]]
 
+--[[ Den längsta av två vilor, nil-säkert. Används BARA på konfliktvägen i
+	`skriv`, där en annan server hunnit skriva efter vår läsning och ingen
+	av de två vilorna kan visas vara färskast.
+
+	`nil` är inte "noll pass kvar" utan "ingen skada", och den förlorar mot
+	en riktig skada: att låta en okänd session läka en häst vore att gissa
+	åt fel håll. ]]
+local function langstaVila(a: Sparning.Skada?, b: Sparning.Skada?): Sparning.Skada?
+	if not a then return b end
+	if not b then return a end
+	return if b.passKvar > a.passKvar then b else a
+end
+
 --[[ `andra` får ändra den save som ligger i datalagret. Den körs INUTI
 	`UpdateAsync` och kan därför köras om av Roblox — den måste vara
 	idempotent, och det är precis vad `Sparning.registreraPass` garanterar.
@@ -245,20 +258,39 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 				return nil
 			end
 
-			--[[ FYND 1: NEDRÄKNINGEN. Är den lagrade raden NYARE än den vi
-				läste har någon annan server skrivit under vår session, och
-				då vet vi inte vems vila som är färskast. Vi avbryter i
-				stället för att gissa. Ändringen ligger kvar i minnet och
-				går med nästa skrivning, som då läser om.
+			--[[ REVISIONEN, OCH VAD DEN BETYDER FÖR VILAN.
 
-				Är raden INTE nyare är den här sessionen den enda som ändrat
-				något sedan läsningen — och då äger minnet vilan, inklusive
-				att den räknats ner eller tagit slut. ]]
+				Står lagret på samma revision som vi läste har ingen annan
+				skrivit sedan dess. Då ÄR minnet den senaste sanningen, och
+				minnet äger vilan — inklusive att den räknats ner eller
+				tagit slut. Det är fynd 1, och nedräkningen hänger på det.
+
+				Står lagret HÖGRE har någon annan server skrivit efter vår
+				läsning. Vi basar då om på den FÄRSKA raden (`bas` kommer
+				ur `gammal`, alltså det som faktiskt ligger där nu) och slår
+				bara ihop det som är monotont: kvitton, passtal, relation
+				och första dagen. Ingen av dem kan sänka något.
+
+				För vilan finns ingen monoton väg, och därför gissar vi inte
+				åt spelarens håll: den LÄNGSTA vinner på konfliktvägen. Att
+				korta en vila på en gissning vore att släppa ut en halt
+				häst; att förlänga den kostar ett pass.
+
+				RUNDA 4, P1: den här grenen AVBRÖT tidigare skrivningen. Det
+				bevarade den färska skadan men lämnade `laddadRev` orörd och
+				`kanSpara` sann, så nästa skrivning läste samma högre rev mot
+				samma gamla `laddadRev` och avbröt igen — sessionen låg fast
+				och trodde ändå att den sparade. Ombaseringen nedan är
+				begränsad till ETT försök inne i samma `UpdateAsync`: läs
+				färskt, slå ihop, skriv en gång. Ingen omkörningsslinga.
+
+				Det som INTE basas om är den framtida raden ovan. Där
+				förstår vi inte schemat, och då är avbrottet rätt utgång. ]]
 			local last = laddadRev[player] or 0
-			if bas.rev > last then
-				konflikt = ("lagret är revision %d, vi läste %d")
-					:format(bas.rev, last)
-				return nil
+			local nyare = bas.rev > last
+			if nyare then
+				warn(("[Spar] %s: lagret är revision %d, vi läste %d — basar om på den färska raden.")
+					:format(player.Name, bas.rev, last))
 			end
 
 			--[[ Progressionen tas ur den HÖGSTA av de två: en gammal server
@@ -281,30 +313,49 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 					bas.hastar[id] = { relation = m.relation, skada = m.skada }
 				else
 					fanns.relation = math.max(fanns.relation, m.relation)
-					--[[ MINNET ÄGER VILAN, rakt av — inte "längsta vinner".
-						Vi är förbi revisionskontrollen ovan, så ingen annan
-						har skrivit sedan vi läste; minnet ÄR den senaste
-						sanningen, och det gäller lika mycket när skadan
-						räknats ner till 1 som när den tagit slut helt.
+					if nyare then
+						--[[ KONFLIKTVÄGEN: någon annan skrev efter vår
+							läsning, och vi vet inte vems vila som är
+							färskast. Den LÄNGSTA vinner. Regeln är gjord åt
+							hästens håll, inte åt spelarens: en vila som
+							blir ett pass för lång kostar en dag, en vila
+							som kortas på en gissning sätter en halt häst i
+							arbete.
 
-						Den gamla regeln ("längsta vilan vinner") var
-						välmenad — den skulle hindra en gammal server från
-						att korta en färsk skada — men den gjorde
-						nedräkningen omöjlig: lagrets 2 slog minnets 1, och
-						`sparade[player] = bas` skrev tillbaka 2 i minnet
-						också. Hästen vilade för evigt. Skyddet mot den
-						gamla servern ligger nu där det hör hemma, i
-						revisionen, och inte i en jämförelse av passtal. ]]
-					fanns.skada = m.skada
+							Vår egen nedräkning kan alltså gå förlorad just
+							den här gången. Det är avsiktligt och ofarligt —
+							nästa pass räknar ner igen från den rad vi nu
+							basat om på. ]]
+						fanns.skada = langstaVila(fanns.skada, m.skada)
+					else
+						--[[ MINNET ÄGER VILAN, rakt av — inte "längsta
+							vinner". Ingen annan har skrivit sedan vi läste;
+							minnet ÄR den senaste sanningen, och det gäller
+							lika mycket när skadan räknats ner till 1 som
+							när den tagit slut helt.
+
+							Den gamla regeln ("längsta vilan vinner", alltid)
+							var välmenad — den skulle hindra en gammal server
+							från att korta en färsk skada — men den gjorde
+							nedräkningen omöjlig: lagrets 2 slog minnets 1,
+							och `sparade[player] = bas` skrev tillbaka 2 i
+							minnet också. Hästen vilade för evigt. Nu gäller
+							den bara där osäkerheten finns. ]]
+						fanns.skada = m.skada
+					end
 				end
 			end
 
 			if andra then andra(bas) end
 
-			--[[ Ny revision. Nästa skrivning från den här sessionen jämför
-				mot den, och en annan server som läste tidigare kommer att
-				se att lagret hunnit före. ]]
-			bas.rev = last + 1
+			--[[ Ny revision, räknad från den rad som FAKTISKT ligger i
+				lagret — inte från den vi läste. Basar vi om måste vi hamna
+				förbi den andra serverns revision, annars skulle nästa
+				skrivning se en konflikt som inte finns.
+
+				Nästa skrivning från den här sessionen jämför mot den, och en
+				annan server som läste tidigare ser att lagret hunnit före. ]]
+			bas.rev = math.max(bas.rev, last) + 1
 			laddadRev[player] = bas.rev
 
 			--[[ Minnet uppdateras till det sammanslagna, så att nästa
