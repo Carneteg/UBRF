@@ -128,14 +128,29 @@ async function rita() {
   return ev(() => ({ golv: V3D.figurGolv, pz: VD.pz || 0, vy: G.vy }));
 }
 
-/* Marknivå först: figuren ska ritas på 0 när hon står på golvet. */
-const pMark = await gaTill3D((L.steg.x0 + L.steg.x1) / 2, L.steg.y1 + 0.8, 0, "S", p => p.y < L.steg.y1 + 0.4, 8000);
+/* Marknivå först: figuren ska ritas på 0 när hon står på golvet.
+
+   MÄTPUNKTEN MÅSTE LIGGA PÅ PLANT GOLV, med marginal. Nivåregeln börjar
+   stiga direkt söder om trappfoten (y = steg.y1) och gör det jämnt,
+   0,5 m höjd per meter: 4 cm ner i loppet är nivån redan 0,02. Gången
+   pollas var 200 ms och figuren hinner mätt 0,42 m per poll, så ett
+   stoppvillkor på y1+0,4 kunde landa strax SÖDER om trappfoten — där
+   0,02 är det RÄTTA svaret, inte ett fel. Det var det CI:t föll på
+   (`ritad 0.02 · nivå 0.02`) medan samma mätning var grön lokalt.
+
+   Två saker skiljer nu en mätning från en tajmning: marginalen är 1,0 m
+   (över två pollsteg), och mätningen KRÄVER att hon står norr om
+   trappfoten. Skjuter gången ändå över blir det ett läsbart FEL med
+   avståndet i klartext i stället för ett flakigt utfall. */
+const MARK_MARGINAL = 1.0;
+const pMark = await gaTill3D((L.steg.x0 + L.steg.x1) / 2, L.steg.y1 + MARK_MARGINAL + 0.8, 0,
+  "S", p => p.y < L.steg.y1 + MARK_MARGINAL, 8000);
 let ritad = await rita();
 /* `figurGolv` nollställs till null före varje mätning (se rita), så ett
    kvarvarande värde från förra mätpunkten kan inte passera som färskt. */
 prova("på hallgolvet ritas figuren på marknivå",
-  ritad.golv !== null && Math.abs(ritad.golv) < 0.02 && Math.abs(ritad.pz) < 0.02,
-  `ritad ${ritad.golv.toFixed(2)} · nivå ${ritad.pz.toFixed(2)}`);
+  pMark.y > L.steg.y1 && ritad.golv !== null && Math.abs(ritad.golv) < 0.02 && Math.abs(ritad.pz) < 0.02,
+  `ritad ${ritad.golv.toFixed(2)} · nivå ${ritad.pz.toFixed(2)} · stod ${(pMark.y - L.steg.y1).toFixed(2)} m norr om trappfoten`);
 
 /* …och uppe på däcket ska BÅDA vara däckhöjd. Gången mäts först, sedan
    ritningen — och de mäts var för sig, av det enkla skälet att de svarar
