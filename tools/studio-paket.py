@@ -29,6 +29,7 @@ import sys
 ROT = pathlib.Path(__file__).resolve().parent.parent
 BYGG = ROT / "roblox" / "buildings"
 UT = BYGG / ".studio" / "UBRF-klistra-in.luau"
+UT_SPEL = BYGG / ".studio" / "UBRF-varld-spel.luau"
 
 # Ordningen är beroendeordningen. Anlaggningen sist: den är ett skript som körs
 # för sin verkan, inte en modul som returnerar något.
@@ -42,7 +43,12 @@ MODULER = [
 SKRIPT = "Anlaggningen.luau"
 
 
-def main() -> int:
+def main(lage: str = "qa") -> int:
+    """lage: "qa" = paketet for visuell granskning (QA-panel + gula markorer),
+    "spel" = enbart varldsbyggaren, for en First Playable-place.
+
+    Blockeraren i #162: QA-paketet presenterades som First Playable. Det ar
+    inte samma sak, och sedan nu ar det inte samma FIL heller."""
     # Geometrin måste vara i synk, annars bygger Studio en gammal anläggning.
     synk = subprocess.run(
         [sys.executable and "node", str(ROT / "tools" / "exportera-geometri.js"),
@@ -93,7 +99,17 @@ def main() -> int:
 
 """]
 
-    for namn, fil in MODULER:
+    #[[ QA-flaggan. De gula dorrmarkorerna hor till den visuella
+    #   granskningen; i en spelbuild ska de inte finnas. Blockeraren i #162
+    #   var att Tobias stod pa en av dem och vantade sig interaktion. ]]
+    if lage == "qa":
+        delar.append("local UBRF_QA_MARKORER = true\n")
+
+    #[[ QA-panelen och vyerna behovs inte i en spelbuild. ]]
+    valda = MODULER if lage == "qa" else [
+        (n, f) for n, f in MODULER if n not in ("Vyer", "QAPanel")]
+
+    for namn, fil in valda:
         kropp = (BYGG / fil).read_text(encoding="utf-8")
         delar.append(f"--[[ ══ {fil} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
 
@@ -107,6 +123,14 @@ def main() -> int:
     #   — vilket det gjorde, och syntes bara pa exitkoden eftersom stderr och
     #   stdout kom i olika ordning. Misslyckas den sager vi det i stallet for
     #   att svalja det. ]]
+    if lage != "qa":
+        delar.append(
+            '\nprint("UBRF: varlden byggd (spellage — ingen QA-panel, inga QA-markorer)")\n')
+        UT_SPEL.parent.mkdir(parents=True, exist_ok=True)
+        UT_SPEL.write_text("\n".join(delar), encoding="utf-8")
+        print(f"{UT_SPEL.relative_to(ROT)}: {UT_SPEL.read_text(encoding='utf-8').count(chr(10))} rader")
+        return 0
+
     delar.append(
         "\nVyer.lista()\n"
         "QAPanel.start(Vyer)\n"
@@ -128,4 +152,13 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    #[[ `--lage spel` ger varldsbyggaren utan QA-panel och utan gula
+    #   markorer, for en First Playable-place. Standard ar oforandrat `qa`,
+    #   sa varje befintlig anropare far samma fil som forut. ]]
+    _lage = "qa"
+    if "--lage" in sys.argv:
+        _lage = sys.argv[sys.argv.index("--lage") + 1]
+    if _lage not in ("qa", "spel"):
+        print(f"okant lage: {_lage} (vantade qa eller spel)")
+        raise SystemExit(2)
+    raise SystemExit(main(_lage))

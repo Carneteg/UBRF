@@ -108,6 +108,17 @@ jobs:
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
 
+      # FIRST_PLAYABLE_PREFLIGHT, pakethalvan (#162). Blockeraren Tobias
+      # hittade fysiskt i Studio var att miljöpaketet presenterades som First
+      # Playable: världen fanns men ingen gameplay, ingen spawn och ingen
+      # dörrinteraktion. Den här grinden bygger placen ur default.project.json
+      # och FÄLLER om någon del av First Playable saknas i den. Fail closed —
+      # frånvaro av ett PASS är inte ett PASS.
+      - name: First Playable-placen är komplett
+        run: |
+          if [ -f tools/kolla-place.py ]; then python3 tools/kolla-place.py
+          else echo "hoppar: tools/kolla-place.py finns inte i denna branch"; fi
+
       # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
       # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.
       # En katalog som heter "UBRF häst" blev "UBRF%20h%C3%A4st" och varje

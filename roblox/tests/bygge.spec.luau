@@ -62,10 +62,69 @@ end
 
 print("\nByggnadsmassan")
 
-for _, id in ipairs({ "ridhus", "stall", "hastgang" }) do
-	check(id .. " fick fyra väggar",
-		raknaNamn(id .. " syd") == 1 and raknaNamn(id .. " norr") == 1
-			and raknaNamn(id .. " vast") == 1 and raknaNamn(id .. " ost") == 1)
+--[[ #162: fasaden byggs sedan blockeraren som SEGMENT runt dörrarna, så
+	"exakt en del per sida" gäller inte längre. Att bara räkna ner kravet till
+	">= 1" hade tappat det specen faktiskt vaktade: att huset är SLUTET.
+
+	Därför mäts nu i stället väggens SUMMERADE LÄNGD per sida. Den ska vara
+	sidans längd minus precis de öppningar man går igenom. Blir summan för
+	kort är huset öppet någon annanstans än i en dörr; blir den för lång är
+	dörren igenmurad — och det senare är exakt felet Tobias hittade i
+	Studio, så det är den riktning som måste kunna bli röd. ]]
+local function arFonsterTyp(typ)
+	return typ == "fonster" or typ == "rund" or typ == "valv"
+end
+
+-- Summerad längd (m) av delarna med EXAKT det namnet, längs sin egen axel.
+local function vagglangd(namn, along)
+	local s = 0
+	for _, d in ipairs(delar) do
+		if d.Name == namn then
+			s += (if along == "X" then d.Size.X else d.Size.Z) / M
+		end
+	end
+	return s
+end
+
+local SIDNAMN = { S = "syd", N = "norr", W = "vast", E = "ost" }
+for _, b in ipairs(UBRFKomplex.byggnader) do
+	for _, sida in ipairs({ "S", "N", "W", "E" }) do
+		local along = if sida == "S" or sida == "N" then "X" else "Z"
+		local hel = if along == "X" then b.rekt.w else b.rekt.h
+		local hal = 0
+		for _, o in ipairs(b.oppningar or {}) do
+			if o.sida == sida and not arFonsterTyp(o.typ) and (o.z0 or 0) <= 0.001 then
+				hal += o.b
+			end
+		end
+		local namn = b.id .. " " .. SIDNAMN[sida]
+		local matt = vagglangd(namn, along)
+		check(("%s: %s är sluten utom i sina dörrar"):format(b.id, SIDNAMN[sida]),
+			math.abs(matt - (hel - hal)) < 0.02,
+			("%.2f m mur, väntat %.2f (sida %.2f − %.2f dörr)"):format(matt, hel - hal, hel, hal))
+	end
+end
+
+--[[ Varje lucka ska ha ett överstycke, annars är dörren en glugg upp till
+	nocken. Räknas per byggnad: en dörr som är exakt lika hög som väggen får
+	inget överstycke, och det finns ingen sådan i datan i dag. ]]
+for _, b in ipairs(UBRFKomplex.byggnader) do
+	local vantade = 0
+	for _, o in ipairs(b.oppningar or {}) do
+		if not arFonsterTyp(o.typ) and (o.z0 or 0) <= 0.001 and b.hV > o.h + 0.001 then
+			vantade += 1
+		end
+	end
+	if vantade > 0 then
+		local fanns = 0
+		for _, d in ipairs(delar) do
+			if d.Name:find(" överstycke", 1, true) and d.Name:sub(1, #b.id) == b.id then
+				fanns += 1
+			end
+		end
+		check(("%s: varje dörrlucka har ett överstycke"):format(b.id), fanns == vantade,
+			("%d överstycken mot %d luckor"):format(fanns, vantade))
+	end
 end
 
 check("taken byggdes", raknaNamn("Takfall") == #UBRFKomplex.byggnader * 2,

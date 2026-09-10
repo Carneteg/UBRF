@@ -33,6 +33,13 @@ BYGGE = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ]
 
+#[[ First Playable-bänken: varlden PLUS dorrtjansten, sa att spawn- och
+#   dorrkontraktet ur #162 kan matas i samma korning som bygget. Det ar
+#   den enda vagen att fa evidens for att dorren oppnas utan Studio. ]]
+FORSTAPLAYABLE = BYGGE + [
+    ("DorrService", "src/server/DorrService.luau"),
+]
+
 # Speldatan: hästdata och skötseldata genereras var för sig. UBRFSpel är den
 # tunna runtime-fasaden som fogar ihop dem innan Stallet läser kontraktet.
 SPEL = GEOMETRI + [
@@ -284,6 +291,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = SIKT, "tests/stubs-bygge.luau"
     elif "qa" in spec_rel:
         moduler, stubbar = QA, "tests/stubs-bygge.luau"
+    elif "forstaplayable" in spec_rel:
+        moduler, stubbar = FORSTAPLAYABLE, "tests/stubs-bygge.luau"
     elif "bygge" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     elif "geometri" in spec_rel:
@@ -296,6 +305,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
         1)
     har_core = "__Core" in stubbtext
     delar = [stubbtext]
+    #[[ Bankens varld ar QA-varlden: bygge.spec raknar de gula dorrmarkorerna
+    #   mot antalet dorrar i datan. Sedan #162 byggs de bara nar flaggan ar
+    #   satt, sa banken satter den. En spelbuild gor det inte. ]]
+    delar.append("local UBRF_QA_MARKORER = true\n")
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")

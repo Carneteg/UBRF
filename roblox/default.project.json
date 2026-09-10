@@ -27,6 +27,18 @@
       "$className": "ServerScriptService",
       "Horse": {
         "$path": "src/server"
+      },
+      "Varld": {
+        "$className": "Folder",
+        "BuildKit": {
+          "$path": "buildings/BuildKit.luau"
+        },
+        "Geometri": {
+          "$path": "buildings/Geometri.luau"
+        },
+        "Anlaggningen": {
+          "$path": "buildings/Anlaggningen.luau"
+        }
       }
     },
     "StarterPlayer": {

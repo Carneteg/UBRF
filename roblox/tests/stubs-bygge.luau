@@ -164,6 +164,10 @@ local function instance(klass)
 		     signalfabrik hade dolt en felstavning. ]]
 		Activated = signal(),
 		MouseButton1Click = signal(),
+		--[[ #162: dörrarnas prompt. Utan signalen i stubben kan bänken inte
+		     trycka på dörren, och då är den enda evidensen för att den
+		     öppnas Studio — som ingen agent här kommer åt. ]]
+		Triggered = signal(),
 		FindFirstChild = function(self, namn)
 			for _, b in ipairs(barn) do if b.Name == namn then return b end end
 			return nil
@@ -195,6 +199,30 @@ local function instance(klass)
 			end
 			ner(self)
 			return ut
+		end,
+		--[[ #162: DorrService letar dörrblad med `IsA("BasePart")`, och
+		     preflighten letar prompten med `FindFirstChildOfClass`. Utan de
+		     två i stubben går dörrkontraktet inte att mäta i bänken — och då
+		     hade den enda evidensen för att dörren öppnas varit Studio, som
+		     ingen agent här kommer åt.
+
+		     `IsA` är medvetet grunt: bara det arv den här bänken behöver.
+		     En `Part` ÄR en `BasePart`; en `SpawnLocation` är också en
+		     `BasePart`, och det är precis den skillnaden spawnkontraktet
+		     hänger på. ]]
+		IsA = function(self, fragad)
+			if self.ClassName == fragad then return true end
+			if fragad == "BasePart" then
+				return self.ClassName == "Part" or self.ClassName == "SpawnLocation"
+					or self.ClassName == "MeshPart" or self.ClassName == "WedgePart"
+			end
+			return false
+		end,
+		FindFirstChildOfClass = function(self, klass)
+			for _, b in ipairs(self.Children) do
+				if b.ClassName == klass then return b end
+			end
+			return nil
 		end,
 	}
 	return setmetatable(i, {

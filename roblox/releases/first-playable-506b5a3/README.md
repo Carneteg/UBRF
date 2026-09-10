@@ -1,7 +1,22 @@
-# Studio-filen för First Playable — fast kopia av `506b5a3`
+# Miljö- och QA-paket — fast kopia av `506b5a3`
 
-Den här mappen finns för att Tobias ska kunna hämta **rätt** Studio-fil utan
-terminal, utan Git och utan risk att råka öppna en gammal lokal kopia.
+> ## ⚠️ DET HÄR ÄR INTE FIRST PLAYABLE
+>
+> Filen i den här mappen bygger **anläggningen och QA-panelen**. Den
+> innehåller **ingen rad gameplay** — ingen spawn, ingen dörrinteraktion,
+> ingen häst, ingen persistens. Den heter så här sedan Tobias upptäckte
+> problemet fysiskt i Studio (#162): han spawnade fel och kom inte in genom
+> den vita dörren, eftersom det inte fanns någon gameplay i paketet han
+> hade fått.
+>
+> **För den fysiska First Playable-genomgången: använd place-filen** under
+> `roblox/releases/first-playable-place-*/`, inte den här. Den här filen är
+> kvar för den *visuella* granskningen, som är vad den alltid var bra på.
+
+
+Den här mappen finns för att den visuella granskningen ska kunna hämta rätt
+miljöpaket utan terminal, utan Git och utan risk att råka öppna en gammal
+lokal kopia.
 
 `UBRF-klistra-in.luau` här är en **ordagrann, versionerad kopia** av det paket
 som `tools/studio-paket.py` genererar. Paketet självt är `.gitignore`-at

@@ -18,8 +18,32 @@ som #161 byggde och det som CI per definition inte kan nå.
 | Enhet och OS | t.ex. iPad Air 5, iPadOS 18.2 |
 | Viewport / orientering | t.ex. 1180×820 landscape |
 | Inmatning | finger · finger + tangentbord · gamepad (skriv modell) |
-| Studio-paket | `roblox/buildings/.studio/UBRF-klistra-in.luau` |
+| Studio-build | **place-filen** i `roblox/releases/first-playable-place-*/UBRF-FirstPlayable.rbxlx` — öppna och tryck Play |
+| Preflight i outputen | `FIRST_PLAYABLE_PREFLIGHT: PASS` + `FIRST_PLAYABLE_SHA=…` (står det `FAIL`: **STOPP**, rapportera raderna) |
 | Webbpreview | Vercel-projektet `ubrf`, länken i #162 |
+
+### Vilken build du ska testa — läs det här först
+
+**Blockerare i #162, hittad av Tobias fysiskt i Studio:** protokollet pekade
+tidigare ut `roblox/buildings/.studio/UBRF-klistra-in.luau` som Studio-paket.
+Den filen bygger **anläggningen och QA-panelen och ingenting annat** — ingen
+spawn, ingen dörrinteraktion, ingen häst, ingen persistens. Avsnitt B nedan
+provar persistens och gameplay, och gick alltså inte att prova med det
+paketet. Symptomen blev fel spawn och en gul dörrmarkör som inte gjorde
+något.
+
+Använd därför **place-filen**: öppna `UBRF-FirstPlayable.rbxlx` i Studio och
+tryck **Play**. Världen byggs av servern vid start, och det första som skrivs
+i Output är vilken build du kör och om den är komplett:
+
+```
+FIRST_PLAYABLE_SHA=<exakt sha>
+FIRST_PLAYABLE_PREFLIGHT: PASS
+```
+
+Står det `FIRST_PLAYABLE_PREFLIGHT: FAIL` — **fortsätt inte**. Då saknas
+något i builden, och raderna ovanför säger vad. Rapportera dem i stället för
+att kryssa i matrisen.
 
 ### DataStore i Studio — läs det här först
 

@@ -18,7 +18,40 @@
 local BK = BuildKit             -- inklistrad ovanför, eller require(...)
 local G = UBRFKomplex           -- likaså
 local GEO = Geometri            -- likaså; ren geometri, mätt i roblox/tests/
+
+--[[ #162: i det inklistrade paketet ligger modulerna redan som lokala
+	variabler ovanför den här raden — studio-paket.py inlinar dem. I en
+	RIKTIG place (Rojo-synk eller den genererade .rbxlx) finns de i stället
+	som syskonmoduler, och då är de tre ovan nil.
+
+	Fallbacken gör att SAMMA fil bygger världen i båda vägarna. Det är hela
+	poängen med blockeraren: förut byggde paketet en värld utan gameplay och
+	Rojo-synken en gameplay utan värld, och då kan ingen testa First
+	Playable. Nu finns det en enda världsbyggare, och den kan köras från
+	båda hållen. ]]
+if not BK then
+	local syskon = script.Parent
+	BK = require(syskon.BuildKit)
+	GEO = require(syskon.Geometri)
+	--[[ Geometrin ligger redan i ReplicatedStorage för klienten. Att mappa
+		samma modul en andra gång hade gett två kopior av samma sanning, och
+		det är precis vad projektet inte ska ha. Syskonet vinner om det finns,
+		annars tas den delade. ]]
+	local eget = syskon:FindFirstChild("UBRFKomplex")
+	G = require(eget or game:GetService("ReplicatedStorage"):WaitForChild("UBRFKomplex"))
+end
+
 local YTOR = G.interiorytor     -- F02-C: delade interiörmaterial, inte en andra färglista
+
+--[[ De gula dörrmarkörerna hör till den VISUELLA GRANSKNINGEN, inte till
+	spelet. Blockeraren #162: Tobias stod på en av dem och väntade sig att
+	något skulle hända. I QA-paketet ska de vara kvar — de är QA-hjälp och
+	flera grindar räknar dem — men en spelbuild ska inte visa gula plattor
+	som inte går att använda.
+
+	`studio-paket.py --lage qa` sätter flaggan; `--lage spel` och den
+	genererade placen gör det inte, och då blir den nil. ]]
+local QA_MARKORER = UBRF_QA_MARKORER == true
 
 local VAGGT = 0.3               -- väggtjocklek, rendering
 local MARKT = 0.2               -- marklagrets tjocklek
@@ -58,6 +91,13 @@ local function arFonster(typ: string): boolean
 	return typ == "fonster" or typ == "rund" or typ == "valv"
 end
 
+--[[ Går man igenom öppningen? Avgör både att fasaden får en lucka där och
+	att dörrbladet blir en dörr med interaktion i stället för en målad panel.
+	Ett fönster går man inte igenom, och inte en öppning med bröstning. ]]
+local function garIgenom(o): boolean
+	return not arFonster(o.typ) and (o.z0 or 0) <= 0.001
+end
+
 local function byggMark(model: Model, base: CFrame)
 	for _, m in ipairs(G.mark) do
 		local p = BK.box(model, base, "Mark " .. m.typ,
@@ -79,8 +119,23 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 			Color3.fromRGB(238, 236, 228))
 	else
 		local f = OPPNINGSFARG[o.typ] or Color3.fromRGB(200, 200, 200)
-		BK.opening(model, base, namn, x, z, o.z0, o.b, o.h, along, side, f,
+		local blad = BK.opening(model, base, namn, x, z, o.z0, o.b, o.h, along, side, f,
 			Enum.Material.SmoothPlastic)
+		--[[ #162: dörrbladet märks upp med det som behövs för att öppna det,
+			så att serverns DorrService inte behöver gissa ur ett namn som
+			"dorrvit" (flera dörrar delar namn). Attribut, inte tagg: den här
+			filen körs också i byggbänkens stubbar, där CollectionService inte
+			finns. Måtten kommer ur öppningen — inget nytt hittas på. ]]
+		if garIgenom(o) then
+			blad:SetAttribute("UBRFDorr", true)
+			blad:SetAttribute("Byggnad", b.id)
+			blad:SetAttribute("Sida", o.sida)
+			blad:SetAttribute("Bredd", o.b)
+			blad:SetAttribute("Hojd", o.h)
+			blad:SetAttribute("Langs", along)
+			blad:SetAttribute("Utat", side)
+			blad:SetAttribute("Etikett", namn)
+		end
 	end
 
 	--[[ Skärmtaket över en entrédörr.
@@ -121,6 +176,86 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 	end
 end
 
+--[[ ══ FASADEN SOM SEGMENT RUNT DÖRRARNA ═══════════════════════════════
+
+	Blockerare i #162, funnen av Tobias i Studio: han stod på den gula
+	markören vid den vita dörren och kom inte in. Orsaken satt inte i
+	markören och inte i en saknad prompt — fasaden byggdes som FYRA HELA
+	LÅDOR, och öppningarna MÅLADES på utsidan som 6 cm tunna paneler. Dörren
+	fanns alltså att se men väggen bakom den kolliderade. Ingen kom in i
+	något hus, med eller utan interaktion.
+
+	Interiörväggarna var redan segmenterade med dörrarna som luckor
+	(entréhallen, klubbdelen). Fasaden var inte det. Det här rättar just den
+	skillnaden.
+
+	INGEN BYGGNAD, DÖRR ELLER FÖNSTER FLYTTAS. Luckan läggs där öppningen
+	redan står, räknad ur samma verifierade `b.oppningar` och samma
+	`GEO.oppningsHorn` som panelen ritas ur. Väggen får en lucka; öppningen
+	behåller sitt läge, sin bredd och sin höjd.
+
+	Fönster segmenteras INTE — man går inte genom ett fönster — och inte
+	heller en öppning med bröstning (`z0 > 0`). ]]
+
+--[[ Luckornas spann längs väggens EGEN axel, sorterade.
+
+	`oppningsHorn` räknar N och W baklänges, så spannet måste hämtas därifrån
+	och inte räknas ut på nytt här — det är precis den detalj som annars
+	lägger luckan i fel ände av fasaden. ]]
+local function luckor(b, sida: string): { { number } }
+	local ut = {}
+	for _, o in ipairs(b.oppningar or {}) do
+		if o.sida == sida and garIgenom(o) then
+			local x, z, along = GEO.oppningsHorn(b.rekt, o.sida, o.u, o.b)
+			table.insert(ut, { (if along == "X" then x else z), o.b, o.h })
+		end
+	end
+	table.sort(ut, function(p, q) return p[1] < q[1] end)
+	return ut
+end
+
+--[[ En fasadvägg byggd som segment, med överstycke över varje lucka.
+
+	`langd` löper längs `along`; `x`/`z` är väggens hörn som i `BK.wall`. ]]
+local function vaggMedLuckor(model: Model, base: CFrame, namn: string,
+	x: number, z: number, langd: number, hojd: number, t: number,
+	along: "X" | "Z", farg: Color3, hal: { { number } })
+	local start = if along == "X" then x else z
+	local slut = start + langd
+	local kant = start
+
+	local function segment(fran: number, till: number)
+		if till - fran <= 0.001 then return end
+		if along == "X" then
+			BK.wall(model, base, namn, fran, z, till - fran, hojd, t, "X", farg)
+		else
+			BK.wall(model, base, namn, x, fran, till - fran, hojd, t, "Z", farg)
+		end
+	end
+
+	for _, l in ipairs(hal) do
+		local a0 = math.max(l[1], start)
+		local a1 = math.min(l[1] + l[2], slut)
+		if a1 > a0 then
+			segment(kant, a0)
+			--[[ Överstycket. Utan det blir luckan en glugg upp till nocken,
+				och då är dörren inte längre en dörr. ]]
+			local h = l[3]
+			if hojd > h + 0.001 then
+				if along == "X" then
+					BK.box(model, base, namn .. " överstycke", a0, h, z,
+						a1 - a0, hojd - h, t, farg)
+				else
+					BK.box(model, base, namn .. " överstycke", x, h, a0,
+						t, hojd - h, a1 - a0, farg)
+				end
+			end
+			kant = math.max(kant, a1)
+		end
+	end
+	segment(kant, slut)
+end
+
 local function byggHus(model: Model, base: CFrame, b)
 	local r = b.rekt
 	local fasad = b.fargV
@@ -129,10 +264,10 @@ local function byggHus(model: Model, base: CFrame, b)
 	BK.box(model, base, b.id .. " grund", r.x, -0.25, r.y, r.w, 0.25, r.h,
 		Color3.fromRGB(120, 120, 115), Enum.Material.Concrete)
 
-	BK.wall(model, base, b.id .. " syd",  r.x, r.y, r.w, b.hV, VAGGT, "X", fasad)
-	BK.wall(model, base, b.id .. " norr", r.x, r.y + r.h - VAGGT, r.w, b.hV, VAGGT, "X", fasad)
-	BK.wall(model, base, b.id .. " vast", r.x, r.y, r.h, b.hV, VAGGT, "Z", fasad)
-	BK.wall(model, base, b.id .. " ost",  r.x + r.w - VAGGT, r.y, r.h, b.hV, VAGGT, "Z", fasad)
+	vaggMedLuckor(model, base, b.id .. " syd",  r.x, r.y, r.w, b.hV, VAGGT, "X", fasad, luckor(b, "S"))
+	vaggMedLuckor(model, base, b.id .. " norr", r.x, r.y + r.h - VAGGT, r.w, b.hV, VAGGT, "X", fasad, luckor(b, "N"))
+	vaggMedLuckor(model, base, b.id .. " vast", r.x, r.y, r.h, b.hV, VAGGT, "Z", fasad, luckor(b, "W"))
+	vaggMedLuckor(model, base, b.id .. " ost",  r.x + r.w - VAGGT, r.y, r.h, b.hV, VAGGT, "Z", fasad, luckor(b, "E"))
 
 	for _, o in ipairs(b.oppningar or {}) do
 		byggOppning(model, base, b, o)
@@ -548,6 +683,72 @@ local function byggMaster(model: Model, base: CFrame)
 			end
 		end
 	end
+end
+
+--[[ ══ FIRST PLAYABLE-SPAWNEN ═══════════════════════════════════════════
+
+	Blockerare i #162, punkt C: Tobias spawnade för långt från den avsedda
+	starten. Orsaken var att INGEN `SpawnLocation` skapades någonstans i
+	repot — Roblox spawnade därför på sitt eget standardläge, och det fanns
+	inget spawnkontrakt att vinna över.
+
+	Läget är inte valt av mig. Det är `STALL-ANKOMST`, reviewkameran som
+	tillkom i #80 runda 3 och som bär `CHATGPT_VISUAL_PASS`: 6,0 m norr om
+	stallets nordfasad, centrerad på den ockragula entrédörren under
+	verandan, med blicken mot dörren. Alltså exakt den plats en besökare
+	anländer till, och den vy som redan är granskad som ankomsten.
+
+	Härlett ur samma `G.byggnader`/`GEO.oppningsMitt` som fasaden byggs ur —
+	inga egna koordinater. Flyttas dörren följer spawnen med.
+
+	Plattan är GENOMSKINLIG. Den är en spawnpunkt, inte dekor, och en
+	synlig platta hade ändrat granskade exteriörbilder utan att tillföra
+	något. `Neon`-markörerna är QA-hjälp; det här är inte en sådan. ]]
+
+local ANKOMST_UT = 6.0          -- m norr om fasaden, som STALL-ANKOMST
+
+local function byggSpawn(model: Model, base: CFrame)
+	local stall
+	for _, b in ipairs(G.byggnader) do
+		if b.id == "stall" then stall = b end
+	end
+	if not stall then
+		warn("[UBRF] Ingen byggnad 'stall' — First Playable-spawnen hoppas över.")
+		return
+	end
+
+	local dorr
+	for _, o in ipairs(stall.oppningar or {}) do
+		if o.sida == "N" and o.typ == "dorrgul" then dorr = o end
+	end
+	if not dorr then
+		warn("[UBRF] Stallets ockragula entrédörr saknas — spawnen hoppas över.")
+		return
+	end
+
+	local dx, dz = GEO.oppningsMitt(stall.rekt, "N", dorr.u, dorr.b)
+	local sx, sz = dx, stall.rekt.y + stall.rekt.h + ANKOMST_UT
+
+	local M = BK.M
+	local sp = Instance.new("SpawnLocation")
+	sp.Name = "UBRFStart"
+	sp.Anchored = true
+	sp.CanCollide = false
+	sp.Transparency = 1
+	sp.Size = Vector3.new(6, 0.2, 6)
+	sp.Neutral = true
+	sp.Duration = 0
+	--[[ Riktningen tas som en BLICK MOT DÖRREN i stället för som en vinkel.
+		Webbens `rikt` och Roblox yaw har olika konvention, och en vinkel som
+		räknas om för hand är precis den sorts detalj som tystnar fel. Ser man
+		dörren när man spawnar är riktningen rätt, oavsett konvention. ]]
+	local har = (base * CFrame.new(sx * M, 0.1 * M, sz * M)).Position
+	local dit = (base * CFrame.new(dx * M, 0.1 * M, dz * M)).Position
+	sp.CFrame = CFrame.lookAt(har, Vector3.new(dit.X, har.Y, dit.Z))
+	sp:SetAttribute("UBRFStart", true)
+	sp:SetAttribute("MotDorr", "stall N dorrgul")
+	sp:SetAttribute("AvstandM", ANKOMST_UT)
+	sp.Parent = model
 end
 
 local function byggDorrmarkorer(model: Model, base: CFrame)
@@ -2165,7 +2366,8 @@ byggStallIdentitet(model, base)
 byggRidhusIdentitet(model, base)
 byggStaket(model, base)
 byggMaster(model, base)
-byggDorrmarkorer(model, base)
+if QA_MARKORER then byggDorrmarkorer(model, base) end
+byggSpawn(model, base)
 
 print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d objekt")
 	:format(#G.byggnader, #G.dorrar, #G.stall.rader, #G.stall.gangytor,
