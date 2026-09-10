@@ -161,8 +161,12 @@ def main() -> int:
     args = ap.parse_args()
 
     sha = args.sha or sha_nu()
+    #[[ Filnamnet halls fritt fran bindestreck och mellanslag. Nar Tobias
+    #   forsta place-fil hamnade pa hans skrivbord blev den "UBRFFirstPlayable
+    #   .rbxlx" pa vagen, och en fil man tror sig ha ar inte samma fil som den
+    #   man har. Da ar det enklare att heta samma sak hela vagen. ]]
     ut = pathlib.Path(args.ut) if args.ut else \
-        ROBLOX / "releases" / f"first-playable-place-{sha[:7]}" / "UBRF-FirstPlayable.rbxlx"
+        ROBLOX / "releases" / f"first-playable-place-{sha[:7]}" / "UBRFFirstPlayable.rbxlx"
 
     projekt = json.loads(PROJEKT.read_text(encoding="utf-8"))
     trad = projekt["tree"]
@@ -188,12 +192,25 @@ def main() -> int:
         if nod.namn == "ReplicatedStorage":
             nod.barn.append(Nod("ModuleScript", "UBRFBuild", identitet))
 
+    #[[ En place MASTE ha en Workspace. Projektfilen namner ingen, for Rojo
+    #   behover den inte — men en fil som ska OPPNAS av Studio ar inte samma
+    #   sak som ett synktrad. Anlaggningen bygger sedan sina modeller i den
+    #   har Workspacen vid serverstart. ]]
+    if not any(n.namn == "Workspace" for n in rotnoder):
+        rotnoder.insert(0, Nod("Workspace", "Workspace"))
+
     raknare = [0]
     kropp = "\n".join(xml_for(n, raknare, 1) for n in rotnoder)
+    #[[ De tva <External>-raderna star i BORJAN av varje XML-fil Roblox sjalvt
+    #   skriver. Vi genererar filen for hand, och en fil som avviker fran
+    #   formatet ar en fil Studio kan vagra lasa — sa den ska inte avvika. ]]
     doc = ('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
            'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
            'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" '
-           'version="4">\n' + kropp + "\n</roblox>\n")
+           'version="4">\n'
+           "\t<External>null</External>\n"
+           "\t<External>nil</External>\n"
+           + kropp + "\n</roblox>\n")
 
     #[[ Well-formedness ar inte samma sak som att Studio oppnar filen, men en
     #   trasig XML ar ett fel vi KAN fanga har — och da ska den aldrig lamnas
