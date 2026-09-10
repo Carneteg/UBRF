@@ -13,7 +13,7 @@ som #161 byggde och det som CI per definition inte kan nå.
 
 | Fält | Fyll i |
 |---|---|
-| Build-SHA | `2a8938e940e1e77a64441c6ae6264dc63c3edfc6` (eller senare — skriv den du faktiskt testade) |
+| Build-SHA | `b812f1e302f5ec34a28090dbb1de76b1d640f85d` (eller senare — skriv den du faktiskt testade) |
 | Yta | Roblox Studio · Roblox på iPad · Roblox med handkontroll · webb på iPad |
 | Enhet och OS | t.ex. iPad Air 5, iPadOS 18.2 |
 | Viewport / orientering | t.ex. 1180×820 landscape |
@@ -75,17 +75,23 @@ Produktkravet är kedjan, inte de enskilda momenten.
 12. Sitt av.
 13. Eftervård. **Förväntat:** passet kan inte avslutas innan den är gjord.
 14. Passet sparas. **Förväntat:** feedback i skrift.
-15. Nytt pass. **Förväntat:** nu är du INTE låst till Jack längre.
+15. Läs panelen INNAN du lämnar boxen. **Förväntat:** den säger att dagens
+    pass är klart och sparat, och den bjuder INTE in till uppsittning. Står
+    det "Klar — du kan sitta upp" är det omreviewens fynd 3 tillbaka: servern
+    nekar dig, och panelen ska aldrig be om något servern nekar.
+16. Försök sitta upp igen samma dag. **Förväntat:** nekas, med besked — och
+    panelen ska inte ha lovat något annat i steg 15.
+17. Nytt pass (nästa dag). **Förväntat:** nu är du INTE låst till Jack längre.
 
 ### Negativa steg — de här ska falla
 
-16. Försök godkänna ett skötselmoment på **fel häst**.
-17. Försök göra momenten i **fel ordning**.
-18. **Dubbeltryck** på samma moment.
-19. Försök godkänna ett moment **på för långt avstånd**.
-20. Sitt upp **innan** momenten är klara.
+18. Försök godkänna ett skötselmoment på **fel häst**.
+19. Försök göra momenten i **fel ordning**.
+20. **Dubbeltryck** på samma moment.
+21. Försök godkänna ett moment **på för långt avstånd**.
+22. Sitt upp **innan** momenten är klara.
 
-Faller något av 16–20 igenom är det en release blocker, inte en nit.
+Faller något av 18–22 igenom är det en release blocker, inte en nit.
 
 ## B. Persistensen — `NOT_TESTED IN LIVE DATASTORE/STUDIO`
 
@@ -100,8 +106,21 @@ Kräver API-åtkomst enligt rutan högst upp.
 6. Stäng servern mitt i ett pass (Studio: stoppa körningen). **Förväntat:** ingen krasch, inget dubbelräknat pass.
 7. **Slå AV** API-åtkomsten och gå in. **Förväntat:** spelbart, men sparar inte, och den befintliga sparfilen skrivs inte över.
 
+8. **Vilan ska räknas NER, inte bara finnas.** Ge en häst en skada, spela
+   färdigt ett pass, lämna, gå in igen, spela färdigt nästa pass — och
+   fortsätt tills vilan är slut. **Förväntat:** talet sjunker mellan
+   sessionerna och skadan försvinner till slut. Står talet still är
+   omreviewens fynd 1 tillbaka, och hästen vilar för evigt.
+9. **En nyare sparfil får inte skrivas över.** Höj `v` i spelarens rad i
+   butiken till ett tal spelet inte känner (t.ex. `v = 99`) och gå in.
+   **Förväntat:** spelbart, men sessionen sparar INTE, och raden ligger
+   orörd kvar när du lämnar — kontrollera att `v` fortfarande är 99 och att
+   fältet du la dit finns kvar. Skrivs raden om är omreviewens fynd 2
+   tillbaka.
+
 Steg 7 är det viktigaste i hela avsnittet: det är fail-safe-vägen, och den
-ska vara spelbar utan att förstöra något.
+ska vara spelbar utan att förstöra något. Steg 9 är samma sak sett från
+lagret: en gammal server ska hellre avstå än gissa.
 
 ## C. Handkontrollen — blockerare 2, aldrig provad fysiskt
 
@@ -151,13 +170,21 @@ klar hur grön CI än är.
 
 ---
 
-## Vad de tre blockerarna kräver för att räknas som bevisade i drift
+## Vad blockerarna kräver för att räknas som bevisade i drift
 
 | # | Bevisat i bänken | Kräver för live-PASS |
 |---|---|---|
 | 1 DataStore-racet | ja, mot stubb med yieldande `GetAsync` | B1–B4 och B7 ifyllda i Studio med API-åtkomst |
 | 2 Gamepadavsittning | ja, genom klientens egen lyssnare | C2 på en fysisk handkontroll |
-| 3 Jack första dagen | ja, från tom save genom tjänsterna | A2 och A15 |
+| 3 Jack första dagen | ja, från tom save genom tjänsterna | A2 och A17 |
+
+Omreviewens runda 3 lade till tre:
+
+| # | Bevisat i bänken | Kräver för live-PASS |
+|---|---|---|
+| Vilan räknas ner | ja, minnet äger vilan och skrivningen avbryts vid konflikt | B8 över minst två sessioner |
+| Nyare sparfil skrivs inte över | ja, mot stubbad `UpdateAsync` som avbryter som Roblox | B9 med en handredigerad rad i butiken |
+| Räknat pass ber inte om uppsittning | ja, serverns egna vyer genom klientens riktiga lyssnare | A15 och A16 |
 
 ## Vad som händer sedan
 
