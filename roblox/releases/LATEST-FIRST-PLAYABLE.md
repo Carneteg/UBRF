@@ -1,20 +1,22 @@
 # Vilken fil ska testas? — canonical pekare
 
-> ## ⛔ JUST NU: INGEN FIL ÄR SANKTIONERAD FÖR FYSISK TEST
+> ## Filen att öppna
 >
-> `END_TO_END_PLAYABILITY_GATE` är **under uppbyggnad** och har ännu inte
-> varit PASS på någon build. Ingen mapp under `roblox/releases/` ska öppnas
-> för acceptanstest förrän den här filen pekar ut en, med både source-SHA
-> och gate-utfall ifyllda.
+> **`roblox/releases/first-playable-place-46231de/UBRFFirstPlayable.rbxlx`**
+>
+> Öppna via **File → Open from File…** i Studio (inte dubbelklick) och tryck
+> **Play**. Kontrollera att Output börjar med `FIRST_PLAYABLE_PREFLIGHT: PASS`.
+>
+> **Fysisk test väntar fortfarande på ChatGPT:s kontroll** av grind och
+> distributionsväg, enligt processreviewen 16:31.
 
 | Fält | Värde |
 |---|---|
-| Sanktionerad fil | **ingen ännu** |
-| Source-SHA | — |
-| Release-SHA | — |
-| SHA256 | — |
-| `END_TO_END_PLAYABILITY_GATE` | **ej PASS — grinden byggs** |
-| `FIRST_PLAYABLE_PREFLIGHT` (pakethalvan) | PASS på `14a0a6e`, men se förbehållet nedan |
+| Sanktionerad fil | `first-playable-place-46231de/UBRFFirstPlayable.rbxlx` |
+| Source-SHA | `46231dee2957de9075ae596e3eba5c747b9a4162` |
+| SHA256 | `aad3847880cf434a8cdf1f9d53d831e13fd22963bfb223d70c5cb84db0ff6bd7` |
+| `END_TO_END_PLAYABILITY_GATE` | **PASS** — kedjan spawn → dörr → gången vid Jacks box är gångbar |
+| `FIRST_PLAYABLE_PREFLIGHT` (pakethalvan) | PASS, men se förbehållet nedan |
 
 ## Varför den här filen finns
 
@@ -46,7 +48,8 @@ korrigering av hur jag tidigare rapporterade den.
 | `first-playable-place-94ce4c9` | första placen: `iostream stream error` — saknade `<External>`-rader och `Workspace` |
 | `first-playable-place-2af5de2` | öppnade och spelade, men spawnen låg 3,2 m ut över tomrummet: spelaren föll och dog |
 | `first-playable-place-b1e2a83` | spawnen rättad, men världsmodulen returnerade inget värde — `require()` kastade efter bygget, ingen tjänst startade, frusen himmel utan avatar |
-| `first-playable-place-14a0a6e` | returvärdet rättat. **Machine-verified candidate** — inte sanktionerad för acceptanstest, eftersom `END_TO_END_PLAYABILITY_GATE` inte finns än |
+| `first-playable-place-14a0a6e` | returvärdet rättat, men levererad innan spelbarheten mättes |
+| `first-playable-place-46231de` | **SANKTIONERAD.** Första filen där `END_TO_END_PLAYABILITY_GATE` är PASS |
 
 Ingen av mapparna regenereras på plats; var och en är pinnad till sin
 source-SHA så att det går att se exakt vad som levererades när.
