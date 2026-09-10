@@ -4,8 +4,9 @@ name: Visuell grind
 # från EXAKT PR-headen: kameralistan och Roblox-vyerna kontrolleras,
 # spatiala ankare provas mot datan, siktgrinden mäter att figuren syns
 # (med sin negativa kontroll), och screenshot-packet laddas upp som artifact.
-# Sedan skrivs EN kommentar på PR:n med head-SHA, Netlify-preview och länk
-# till paketet — aldrig en main-länk för en omergad ändring.
+# Sedan skrivs EN kommentar på PR:n med head-SHA, previewrad och länk till
+# paketet — aldrig en main-länk för en omergad ändring. Previewn är Vercel-
+# projektet `ubrf` (#155) och länken KONSTRUERAS INTE här; se steget nedan.
 #
 # Grön här betyder INTE visual fidelity. Paketet finns för att ChatGPT ska
 # kunna göra senior visual QA innan Tobias ser något. Se
@@ -100,7 +101,17 @@ jobs:
             const nr = context.payload.pull_request.number;
             const status = '${{ job.status }}';
             const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const preview = `https://deploy-preview-${nr}--ubrf-game.netlify.app`;
+            /* INGEN KONSTRUERAD PREVIEWLÄNK.
+               Här stod `https://deploy-preview-<nr>--ubrf-game.netlify.app`,
+               räknad ur PR-numret. Den länken var påhittad i två led: UBRF
+               ligger inte på Netlify — Vercel är enda preview-/deployvägen
+               (CLAUDE.md, #155, kanoniskt projekt `ubrf`) — och en Vercel-
+               deploy-URL innehåller ett slumpat bygg-id som INTE går att
+               räkna fram ur ett PR-nummer. En grind som skriver ut en URL
+               som aldrig svarat är värre än ingen URL: den läses som bevis.
+               Länken sätts därför av den som levererar, från den faktiska
+               Vercel-körningen på exakt den här headen. */
+            const preview = 'saknas i automatiken — klistras in av leverantören från Vercel-projektet `ubrf`, byggd på head-SHA ovan';
             const marke = '<!-- visuell-grind -->';
             const body = [
               marke,

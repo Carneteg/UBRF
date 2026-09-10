@@ -192,8 +192,15 @@ något `VISUALLY_ACCEPTED`.
 
 ## 7. Preview discipline
 
-- Previewn är Netlify deploy-preview för PR:n, byggd från exakt PR-head:
-  `https://deploy-preview-<nr>--ubrf-game.netlify.app`.
+- Previewn är en **Vercel**-deploy för PR:n ur det kanoniska projektet
+  `ubrf` (#155), byggd från exakt PR-head.
+- **Previewlänken får inte konstrueras.** Här stod tidigare en mall,
+  `https://deploy-preview-<nr>--ubrf-game.netlify.app`, räknad ur PR-numret.
+  Den var påhittad i två led: UBRF ligger inte på Netlify, och en Vercel-URL
+  bär ett slumpat bygg-id som inte går att härleda ur ett PR-nummer. Ingen
+  sådan länk har någonsin svarat. `visuell-grind.yml` skriver därför ut att
+  previewn saknas i automatiken, och den som levererar klistrar in den
+  faktiska URL:en från Vercel-körningen på samma head.
 - PR-kommentaren (CI) innehåller head-SHA + preview + paket. Claudes egna
   rapportkommentarer anger också exakt head-SHA.
 - **`main`-länken används aldrig som reviewlänk för en omergad förändring.**
