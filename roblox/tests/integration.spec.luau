@@ -5,7 +5,7 @@
 	Skillnaden mot `skotselpass.spec` och `forberedelse.spec` är VAD kedjan
 	mäts MOT. De två mäter reglerna: Preparation, Pass, Sparning och
 	tjänsternas beslut. Den här filen bygger den RIKTIGA riggen ur
-	`JackRigg` — med en riktig `Seat` — och kör dagen genom tjänsterna mot
+	`HastRigg` — med en riktig `Seat` — och kör dagen genom tjänsterna mot
 	just den modellen:
 
 	    tilldelning → bindning → visitera → rykta → hovar → utrustning
@@ -24,7 +24,7 @@
 	Studio — vilket är precis varför den kunde vara trasig.
 
 	NOT TESTED, uttryckligen: fysik, animationer, IK, kamera, verklig
-	nätverkslatens och Studio-känsla. Riggen är JackRiggs platshållare, inte
+	nätverkslatens och Studio-känsla. Riggen är HastRiggs platshållare, inte
 	en modellerad häst. Grinden säger att KEDJAN går att spela igenom, inte
 	att den känns rätt — det avgör Tobias i Studio.
 
@@ -118,7 +118,7 @@ local function nySession(namn, userId, forbered)
 	local modell = nil
 	if hastId then
 		local h = (UBRFSpel.hastar or {})[hastId]
-		modell = JackRigg.bygg(hastId, (h and h.namn) or hastId, CFrame.new(RIGG_LAGE))
+		modell = HastRigg.bygg(hastId, (h and h.namn) or hastId, CFrame.new(RIGG_LAGE))
 		modell.Parent = workspace
 		Taggar:AddTag(modell, "Horse")
 	end
@@ -241,7 +241,7 @@ do
 	for id in pairs(UBRFSpel.hastar) do
 		if id ~= S.hastId then annanId = id break end
 	end
-	local annan = JackRigg.bygg(annanId, tostring(annanId), CFrame.new(vec(3, 0, 0)))
+	local annan = HastRigg.bygg(annanId, tostring(annanId), CFrame.new(vec(3, 0, 0)))
 	annan.Parent = workspace
 	Taggar:AddTag(annan, "Horse")
 	check("e) den andra hästen registreras också", HorseService.sessionFor(annan) ~= nil,
@@ -351,7 +351,7 @@ end
 
 	Det här är den mätning som saknades när `RigAdapter.setRiderLean` skrev
 	på `seat.C0`: koden gick att kalla, regeln var grön, och första
-	ridbildrutan mot en riktig rigg hade kastat. Här körs den mot JackRiggs
+	ridbildrutan mot en riktig rigg hade kastat. Här körs den mot HastRiggs
 	rigg med sitsen HorseService faktiskt sitter i. ]]
 print("\n── Punkt 9: uppsittning → en ridbildruta → avsittning ──")
 do

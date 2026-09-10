@@ -100,7 +100,7 @@ local function cframe(pos, look, yaw, pitch, roll)
 	c.__mul = function(a, b)
 		--[[ FÖRFLYTTNINGEN räknas, inte bara vinklarna. Förut svarade
 		     `a * b` med `a.Position` oavsett vad b var, och då hamnade
-		     varje del som placeras relativt en annan — hela JackRiggs
+		     varje del som placeras relativt en annan — hela HastRiggs
 		     rigg, till exempel — i samma punkt. Ett avståndsprov mot en
 		     sådan rigg mäter ingenting. Offseten vrids med a:s girning,
 		     precis som byggstubbarna gör (stubs-bygge.luau), så en
@@ -119,7 +119,7 @@ end
 CFrame = {
 	--[[ Roblox har båda formerna: `CFrame.new(x, y, z)` och
 	     `CFrame.new(vector3)`. Stubben tog bara den andra, så en modul som
-	     placerar en del med tal — hela JackRigg — fick ett tal där en
+	     placerar en del med tal — hela HastRigg — fick ett tal där en
 	     Vector3 skulle stå, och multiplikationen gick sönder på `off.X`. ]]
 	new = function(a, b, c)
 		if type(a) == "number" then return cframe(vec(a, b or 0, c or 0)) end
@@ -144,7 +144,7 @@ Enum = {
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	NormalId = { Top = 1 },
-	--[[ JackRigg satter Top/BottomSurface pa riggens delar, och RiderController
+	--[[ HastRigg satter Top/BottomSurface pa riggens delar, och RiderController
 	     bygger IKControl. Uppraknade, inte en __index som svarar pa allt: samma
 	     skal som Material ovan. ]]
 	SurfaceType = { Smooth = 1, SmoothNoOutlines = 2, Studs = 3, Inlet = 4,

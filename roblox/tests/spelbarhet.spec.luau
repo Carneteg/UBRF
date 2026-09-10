@@ -421,7 +421,7 @@ print("\n5. Jack finns som rigg")
 
 local CollectionService = game:GetService("CollectionService")
 local hastId = Stallet.FORSTA_DAGEN_HAST
-local rigg = JackRigg.bygg(hastId, "Blackrock Jack", CFrame.new())
+local rigg = HastRigg.bygg(hastId, "Blackrock Jack", CFrame.new())
 rigg.Parent = workspace
 CollectionService:AddTag(rigg, "Horse")
 

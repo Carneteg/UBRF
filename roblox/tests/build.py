@@ -68,7 +68,7 @@ SPELBARHET = BYGGE + [
     ("DorrService",  "src/server/DorrService.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
-    ("JackRigg",     "src/server/JackRigg.luau"),
+    ("HastRigg",     "src/server/HastRigg.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
@@ -130,12 +130,12 @@ FORBEREDELSE = SPEL + [
 #[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
 #
 #   Skillnaden mot FORBEREDELSE ar VAD kedjan mats MOT: har byggs den
-#   RIKTIGA riggen ur JackRigg, med en riktig Seat, och skotseln,
+#   RIKTIGA riggen ur HastRigg, med en riktig Seat, och skotseln,
 #   uppsittningen, doden, respawnen och passet gar genom tjansterna mot
 #   just den modellen. Forberedelsebanken matte reglerna; den har mater
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
-    ("JackRigg",        "src/server/JackRigg.luau"),
+    ("HastRigg",        "src/server/HastRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -304,7 +304,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
     # Sparning eller SparService finns.
     #[[ FORST av alla: "integration" ska inte kunna falla igenom till nagon
     #   annan bunt. Den behover BADE tjanstestacken och riggen. ]]
-    if "integration" in spec_rel:
+    if "integration" in spec_rel or "roster" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "skotselpass" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"

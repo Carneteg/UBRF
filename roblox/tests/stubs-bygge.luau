@@ -301,7 +301,7 @@ local __tjanster = {
 	     annars kastar GetService innan en enda mätning gjorts. ]]
 	ReplicatedStorage = instance("ReplicatedStorage"),
 	CollectionService = {
-		--[[ #162: JackRigg taggar hästen; utan AddTag i stubben kan riggen
+		--[[ #162: HastRigg taggar hästen; utan AddTag i stubben kan riggen
 		     inte byggas i bänken och då kan dess kontrakt inte mätas. ]]
 		__taggade = {},
 		AddTag = function(self, inst, tag)

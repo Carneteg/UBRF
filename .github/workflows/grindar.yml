@@ -135,7 +135,7 @@ jobs:
       # ovan mäter att kedjan i VÄRLDEN går att gå. Den här mäter att DAGEN
       # går att spela: skötseln, nejen, uppsittningen mot en riktig Seat, en
       # ridbildruta, döden och respawnen, och att passet räknas exakt en
-      # gång — allt genom tjänsterna mot JackRiggs rigg. Egen step trots att
+      # gång — allt genom tjänsterna mot HastRiggs rigg. Egen step trots att
       # kor.sh kör samma spec, av samma skäl som spelbarhetsgrinden: när den
       # här faller ska loggen säga VILKEN punkt i gaten som föll.
       - name: END_TO_END_PLAYABILITY_GATE — dagen går att spela igenom
@@ -144,6 +144,22 @@ jobs:
             python3 roblox/tests/build.py tests/integration.spec.luau
             luau roblox/tests/.build/integration.spec.luau
           else echo "hoppar: integration.spec.luau finns inte i denna branch"; fi
+
+      # PRODUKTKRAV (#162): alla kanoniska UBRF-hästar ska vara ridbara,
+      # genom EN datastyrd kedja. Två steg för de två halvorna av kravet:
+      # rostergrinden rider varje individ i speldatan, och skannern fäller
+      # om någon enskild häst fått en egen gren i runtimekoden.
+      - name: Alla UBRF-hästar är ridbara — hela rostern
+        run: |
+          if [ -f roblox/tests/roster.spec.luau ]; then
+            python3 roblox/tests/build.py tests/roster.spec.luau
+            luau roblox/tests/.build/roster.spec.luau
+          else echo "hoppar: roster.spec.luau finns inte i denna branch"; fi
+
+      - name: En generisk häststack — inget hästid hårdkodat
+        run: |
+          if [ -f tools/kolla-generisk-hast.py ]; then python3 tools/kolla-generisk-hast.py
+          else echo "hoppar: tools/kolla-generisk-hast.py finns inte i denna branch"; fi
 
       # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
       # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.

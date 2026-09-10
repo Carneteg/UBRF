@@ -9,7 +9,7 @@ local HorseService = require(script.HorseService)
 local StallService = require(script.StallService)
 local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
-local JackRigg = require(script.JackRigg)
+local HastRigg = require(script.HastRigg)
 local Preflight = require(script.Preflight)
 
 --[[ Ordningen är ett beroende, inte en smaksak: GameplayService registrerar
@@ -119,7 +119,7 @@ end)
 	P0 i #162: det fanns ingen hästmodell alls i placen. Spelaren tilldelades
 	blackrock_jack i datan och `bind()` fick aldrig en modell. ]]
 kritisk("Jack-riggen", function()
-	if JackRigg.start() == nil then error("hästen byggdes inte") end
+	if HastRigg.start() == nil then error("hästen byggdes inte") end
 end)
 
 kritisk("SparService", SparService.start)
