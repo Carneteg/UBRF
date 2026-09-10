@@ -801,6 +801,58 @@ do
 			stadig - 0.5, skakig - 0.5))
 end
 
+--[[ ── G02-C: UGNETAS BEDÖMNINGSKONTRAKT ──────────────────────────
+     Webben och Roblox ska bedöma en övning på samma dimensioner. Det
+     som gör raden meningsfull är att den läser Roblox-modulen
+     (HorseCore/Ugneta) mot den GENERERADE kanonen: ändrar webben sitt
+     kontrakt utan att exporten körs om blir den här röd.
+
+     PO-direktiv 2026-09-06 på #119: 20 m volt bedöms på linje + rytm +
+     balans, övergångar på timing + mjukhet + hästens respons, och
+     Ugneta får ge högst två observationer efter ett försök. ]]
+do
+	local volt = Ugneta.dimensionerFor("storvolt")
+	local harAlla = function(lista: { string }, kravs: { string }): boolean
+		for _, k in kravs do
+			local hittad = false
+			for _, v in lista do if v == k then hittad = true end end
+			if not hittad then return false end
+		end
+		return true
+	end
+	check("20 m volt bedöms på linje + rytm + balans",
+		#volt == 3 and harAlla(volt, { "linje", "rytm", "balans" }),
+		"(" .. table.concat(volt, ", ") .. ")")
+
+	for _, id in { "halt_skritt", "skritt_trav", "trav_skritt" } do
+		local d = Ugneta.dimensionerFor(id)
+		check(id .. " bedöms på timing + mjukhet + hästens respons",
+			#d == 3 and harAlla(d, { "timing", "mjukhet", "respons" }),
+			"(" .. table.concat(d, ", ") .. ")")
+	end
+
+	check("taket är två observationer efter ett försök",
+		Ugneta.MAX_OBSERVATIONER == 2,
+		string.format("(%d)", Ugneta.MAX_OBSERVATIONER))
+
+	--[[ Och kontraktet ska faktiskt STYRA utfallet, inte bara stå i en
+	     tabell: två observationer ut, och förbättringen först. ]]
+	local fore = { linje = 0.40, rytm = 0.50, balans = 0.60 }
+	local nu = { linje = 0.62, rytm = 0.52, balans = 0.45 }
+	local obs = Ugneta.observationer("storvolt", nu, fore)
+	check("försök 2 ger högst två observationer, förbättringen först",
+		#obs <= 2 and #obs == 2 and obs[1].dim == "linje" and obs[1].sort == "battre",
+		string.format("(%d st, först %s/%s)", #obs, obs[1] and obs[1].dim or "-",
+			obs[1] and obs[1].sort or "-"))
+
+	local forsta = Ugneta.observationer("storvolt", nu, nil)
+	check("försök 1 ger en bra och en att förbättra",
+		#forsta == 2 and forsta[1].sort == "bra" and forsta[2].sort == "forbattra",
+		string.format("(%s/%s, %s/%s)", forsta[1] and forsta[1].dim or "-",
+			forsta[1] and forsta[1].sort or "-",
+			forsta[2] and forsta[2].dim or "-", forsta[2] and forsta[2].sort or "-"))
+end
+
 print("")
 if oppna > 0 then
 	print(string.format("%d kända luckor, varav %d BLOCKERAR produktacceptans av G02-A.",

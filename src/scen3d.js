@@ -396,6 +396,24 @@ function s3BygHast(){
     b.klot(1,vit,M4.mul(M4.translation(0,0.55,0),M4.skala(0.19,0.32,0.17)),10);
     b.klot(0.13,"#D8B08C",M4.translation(0,0.98,0),10);
     return b;})());
+  /* UGNETA (G02-C). Samma kroppsbyggnad som publikens figur — samma
+     stiliserade UBRF-stil, ingen ny art direction — men igenkännbar
+     som just henne: äldre kvinna, GRÅTT HÅR och GLASÖGON, som Tobias
+     karaktärsbeslut säger. Färgerna ligger i meshen och figuren ritas
+     utan `ton`; uTon multiplicerar vertexfärgen, så en tonad figur
+     hade grumlat både håret och glasögonen.
+
+     Bågarna är två tunna lådor med en näsbrygga emellan — läsbart på
+     avstånd utan att bli en detaljerad modell. */
+  D.ugneta=nyNat((()=>{
+    const b=new Bygge();
+    b.klot(1,"#4B5A52",M4.mul(M4.translation(0,0.55,0),M4.skala(0.20,0.33,0.18)),10); // kavaj
+    b.klot(0.132,"#E2C0A2",M4.translation(0,0.99,0),10);                              // ansikte
+    b.klot(1,"#C9CDD2",M4.mul(M4.translation(0,1.045,-0.005),M4.skala(0.150,0.115,0.150)),10); // grått hår
+    b.lada(0.058,0.030,0.014,"#2B2E34",M4.translation(-0.050,0.985,0.118));           // vänster glas
+    b.lada(0.058,0.030,0.014,"#2B2E34",M4.translation( 0.050,0.985,0.118));           // höger glas
+    b.lada(0.034,0.008,0.010,"#2B2E34",M4.translation(0,0.985,0.120));                // näsbrygga
+    return b;})());
   /* Klosstilen ersätter delarna i samma lokala rum, så riggen ovan
      ritar dem utan att veta om bytet. */
   if(STIL==="kloss")klossDelar(D);
@@ -671,7 +689,11 @@ function s3RitaHast(o){
 
    Solens riktning skjuter fläcken något åt sidan, och ringarna glider
    med — så skuggan tänjs åt det håll ljuset faller. */
-function s3Skuggflack(x,z,r,styrka){
+/* `golv` är den nivå figuren står på (P0 #81). Utan den låg skuggan kvar
+   på marken medan spelaren gick uppför läktartrappan — en skugga under
+   däcket i stället för under fötterna. Default 0 = marknivå, så alla
+   befintliga anrop är oförändrade. */
+function s3Skuggflack(x,z,r,styrka,golv){
   const D=S3.del, L=GL.ljus; if(!D.skuggflack||!L)return;
   const sl=Math.hypot(L.sol[0],L.sol[1],L.sol[2])||1;
   const dx=-L.sol[0]/sl*0.45, dz=-L.sol[2]/sl*0.45;
@@ -687,7 +709,7 @@ function s3Skuggflack(x,z,r,styrka){
   }
   for(const [k,v] of ringar){
     GL.rita(D.skuggflack,
-      M4.mul(M4.translation(x+dx*k*0.4,0.045,z+dz*k*0.4),
+      M4.mul(M4.translation(x+dx*k*0.4,(golv||0)+0.045,z+dz*k*0.4),
              M4.skala(r*2.3*k,1,r*1.5*k)),
       {platt:true, alfa:a*v, ton:L.skuggFarg||"#000000"});
   }
@@ -1136,6 +1158,17 @@ function rita3D(Gs){
     for(let i=0;i<antal;i++)
       GL.rita(S3.del.person,M4.mul(M4.translation(21.6+(i%2)*1.05,0.5+(i%2)*0.45,z0+i*steg),
         M4.skala(1)),{ton:kul[i%4]});
+  }
+  /* UGNETA VID SARGEN (G02-C, UX-variant 1). Hon står fysiskt i
+     lektionen, vid A utanför kortsidans sarg — samma punkt som
+     `ugnetaPlats()` ger 2D-kartan, så rendering och logik läser EN
+     sanning om var hon står (läktarlärdomen, #114). Personmeshen är
+     samma som publiken använder; ingen ny geometri hittas på. */
+  if(typeof ugnetaPlats==="function"&&typeof ugnetaNarvarande==="function"&&ugnetaNarvarande()){
+    const u=ugnetaPlats();
+    /* Ingen `ton`: meshen bär sina egna färger, annars tonas det grå
+       håret och glasögonen bort och hon blir en anonym figur igen. */
+    if(u)GL.rita(S3.del.ugneta,M4.mul(M4.translation(u.x,0,u.y),M4.skala(1)),{});
   }
   if(G.hinderAktiva)s3RitaHinder();
   /* NPC-ekipagen. */

@@ -604,4 +604,18 @@ RidKanon.SCENARIO = {
 	},
 }
 
+--[[ G02-C: Ugnetas bedömningskontrakt, ur src/larare.js. ]]
+RidKanon.UGNETA = {
+	MAX_OBSERVATIONER = 2,
+	DIMENSIONER = { "linje", "rytm", "balans", "timing", "mjukhet", "respons", "tempo" },
+	OVNING = {
+		galoppfattning = { "timing", "balans", "respons" },
+		halt_skritt = { "timing", "mjukhet", "respons" },
+		horn = { "rytm", "balans", "linje" },
+		skritt_trav = { "timing", "mjukhet", "respons" },
+		storvolt = { "linje", "rytm", "balans" },
+		trav_skritt = { "timing", "mjukhet", "respons" },
+	},
+}
+
 return RidKanon

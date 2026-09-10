@@ -159,7 +159,7 @@ const G={
   utrustning:false,lerig:false,spolad:0,felUtrustning:0,hastMott:false,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
-  moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,
+  moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,momentForsok:1,
   betyg:{},npcs:[],
   hinderAktiva:false,nastaHinder:0,rivna:new Set(),handelser:[],banTid:0,banStart:0,
   vagranStopp:0,sisteHopp:0,luft:0,auto:false,
@@ -711,7 +711,7 @@ function saga(txt,dur){const s=document.getElementById("saga");
 
 /* ── Lektionen ── */
 function startaLektion(){
-  G.scen="lektion";G.momentIx=0;G.momentT=0;G.betyg={};
+  G.scen="lektion";G.momentIx=0;G.momentT=0;G.momentForsok=1;G.betyg={};
   G.narkontakter=0; G.narkontaktT=-99; G.naraRop=0;
   G.bedomda=0; G.klarade=0;
   if(typeof lararNollstall==="function")lararNollstall();
@@ -853,14 +853,37 @@ function stegaLektion(dt){
          Golvet på 0,25 finns för att en ryttare som kämpar och nästan
          lyckas inte ska nollas — men 0,72 × 0,25 = 0,18 ligger under
          varje grupps krav, så att stå still räcker aldrig. */
-      if(m.bedoms){
+      /* Ett försök kvar? Frågan ställs EN gång och styr både betyget
+         och repetitionen — två anrop kunde annars glida isär och ge ett
+         moment som både betygsätts och rids om. */
+      const forsokKvar=(typeof ugnetaVillRepetera==="function")
+        && ugnetaVillRepetera(m,G.momentForsok);
+      if(m.bedoms&&!forsokKvar){
         const mal2=momentMal(m,G.grupp);
         const andel=mal2?clamp((G.momentHall||0)/mal2.hall,0,1):1;
         G.betyg[m.id]=Skala.inverkan(G.ride.skala,G.grupp)*(0.25+0.75*andel);
         G.bedomda=(G.bedomda||0)+1;
         if(andel>=0.999)G.klarade=(G.klarade||0)+1;
       }
+      /* G02-C: en känd övning rids TVÅ försök genom samma lifecycle.
+         Efter försök 1 ger Ugneta en sak som var bra, en att förbättra
+         och ett tydligt "Prova igen"; efter försök 2 jämför hon mot
+         försök 1. Repetitionen sker på det ordinarie momentet — samma
+         moment-objekt, samma mätning, ingen parallell modell vid sidan
+         om (PO-direktiv 2026-09-06 på #119).
+
+         Betyget sätts först på det SISTA försöket. Ett moment som rids
+         om ska inte räknas två gånger i `bedomda`/`klarade`; det vore
+         en tyst regeländring av godkäntgränsen. */
+      if(forsokKvar){
+        G.momentForsok++;
+        G.momentT=0;G.momentHall=0;G.momentKlart=false;
+        if(typeof ugnetaNyttForsok==="function")ugnetaNyttForsok(m,G.momentForsok);
+        visaMoment();
+        return;
+      }
       G.momentIx++;
+      G.momentForsok=1;
       if(G.momentIx<G.lektion.length){G.moment=G.lektion[G.momentIx];G.momentT=0;
         G.momentHall=0;G.momentKlart=false;visaMoment();}
       else{ // pass utan hoppning: inget hopprotokoll, ingen tidsregel

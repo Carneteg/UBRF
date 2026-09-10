@@ -189,3 +189,12 @@ jobs:
         run: |
           if [ -f tools/uppdragstest.mjs ]; then node tools/uppdragstest.mjs
           else echo "hoppar: tools/uppdragstest.mjs finns inte i denna branch"; fi
+
+      # Läktaren (P0 #81/#114): gångtestet visar att en VÄG finns, det här
+      # mäter vad spelaren SER — att kroppen ritas på golvnivån hon står på,
+      # att ingen debugmarkering ligger i produktvyn och att ytan under
+      # fötterna inte tonas bort. Grön CI på vägen räckte inte förra gången.
+      - name: Läktaren — kroppen följer golvet, ingen debuggeometri
+        run: |
+          if [ -f tools/laktartest.mjs ]; then node tools/laktartest.mjs
+          else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
