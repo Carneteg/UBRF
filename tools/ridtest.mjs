@@ -9,7 +9,8 @@
    Kör: python3 tools/build.py && node tools/ridtest.mjs */
 import { chromium } from "playwright";
 import http from "node:http"; import fs from "node:fs"; import path from "node:path";
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+import { fileURLToPath } from "node:url";
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROT, "dist"), PORT = 8820;
 const srv = http.createServer((q, s) => {
   const p = path.join(DIST, decodeURIComponent(q.url.split("?")[0] === "/" ? "/ridskolan.html" : q.url.split("?")[0]));

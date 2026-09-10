@@ -23,7 +23,8 @@
 
    Kör: node tools/ridkansla.mjs [--json] */
 import fs from "node:fs"; import path from "node:path"; import vm from "node:vm";
-const ROT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+import { fileURLToPath } from "node:url";
+const ROT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ctx = vm.createContext({ console, Math, JSON });
 for (const f of ["src/model.js", "src/riding/hjalper.js", "src/riding/svar.js", "src/riding/telemetri.js"])
   vm.runInContext(fs.readFileSync(path.join(ROT, f), "utf8"), ctx, { filename: f });

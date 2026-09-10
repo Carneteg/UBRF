@@ -99,6 +99,17 @@ jobs:
           if [ -f tools/studio-paket.py ]; then python3 tools/studio-paket.py
           else echo "hoppar: tools/studio-paket.py finns inte i denna branch"; fi
 
+      # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
+      # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.
+      # En katalog som heter "UBRF häst" blev "UBRF%20h%C3%A4st" och varje
+      # verktyg dog med ENOENT innan en mätning kördes. Auditen rapporterade
+      # det som ett Windows-fel; det slår lika hårt här. Ingen webbläsare
+      # behövs, så steget hör hemma i det här jobbet.
+      - name: Sökvägarna — verktygen kör ur en katalog med mellanslag och ä
+        run: |
+          if [ -f tools/sokvagstest.mjs ]; then node tools/sokvagstest.mjs
+          else echo "hoppar: tools/sokvagstest.mjs finns inte i denna branch"; fi
+
   dubbel-sanning:
     runs-on: ubuntu-latest
     steps:
