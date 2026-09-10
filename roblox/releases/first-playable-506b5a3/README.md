@@ -40,8 +40,21 @@ sha256sum UBRF-klistra-in.luau
 
 ## Hämta och kör — tre steg
 
-1. **Öppna filen på GitHub** och klicka **Raw** (eller **Download raw file**).
-2. **Markera allt och kopiera** (Raw-vyn är ren text utan radnummer).
+Direktlänkarna (pinnade till committen som la in filen, `44ccf04` — de slutar
+aldrig fungera och kan inte peka på en nyare eller äldre version):
+
+- **Raw, klicka och kopiera allt:**
+  <https://raw.githubusercontent.com/Carneteg/UBRF/44ccf047de36b950aa787818f08e8e25f94296f6/roblox/releases/first-playable-506b5a3/UBRF-klistra-in.luau>
+- Filen i GitHubs vanliga vy:
+  <https://github.com/Carneteg/UBRF/blob/44ccf047de36b950aa787818f08e8e25f94296f6/roblox/releases/first-playable-506b5a3/UBRF-klistra-in.luau>
+
+**404 betyder nästan alltid `main`.** Filen ligger bara på branchen
+`claude/first-playable-20260910` tills PR #162 är mergad. En URL med `/main/` i
+sig ger 404 — använd länkarna ovan, som pekar på en commit och inte på en
+gren.
+
+1. **Öppna Raw-länken.** (Raw-vyn är ren text utan radnummer.)
+2. **Markera allt och kopiera** — `Ctrl/Cmd + A`, `Ctrl/Cmd + C`.
 3. **Klistra in i Roblox Studio och kör en gång.**
 
 Om steg 3: filen är 244 KB, och Studios **Command Bar** är ett enradsfält som

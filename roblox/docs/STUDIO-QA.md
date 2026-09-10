@@ -10,12 +10,17 @@ och detaljunderlag. Kvitteringen sker här.
 
 ### Utan terminal (den vanliga vägen)
 
-Filen ligger färdig och nedladdningsbar i repot:
+Filen ligger färdig och nedladdningsbar i repot. Direktlänk (Raw, pinnad till
+committen som la in den — den slutar aldrig fungera):
 
-`roblox/releases/first-playable-506b5a3/UBRF-klistra-in.luau`
+<https://raw.githubusercontent.com/Carneteg/UBRF/44ccf047de36b950aa787818f08e8e25f94296f6/roblox/releases/first-playable-506b5a3/UBRF-klistra-in.luau>
 
-Öppna den på GitHub → **Raw** → markera allt och kopiera → klistra in i en
-Script i `ServerScriptService` i Studio → **Run** en gång. Mappens `README.md`
+Markera allt och kopiera → klistra in i en Script i `ServerScriptService` i
+Studio → **Run** en gång.
+
+**Får du 404?** Då pekar länken på `main`. Filen ligger bara på branchen
+`claude/first-playable-20260910` tills PR #162 är mergad; länken ovan pekar på
+en commit och inte på en gren, så den fungerar oavsett. Mappens `README.md`
 bär källkommit, genereringskommando och filens SHA256, så det går att se att
 det är rätt fil. Kopian är pinnad till `506b5a3` — den regenereras inte på
 plats, ett nytt läge får en ny mapp med den nya SHA:n i namnet.
