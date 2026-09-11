@@ -532,6 +532,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   HastRigg -- och star fore "spel" av samma skal som spelbarheten. ]]
     #[[ Topologigrinden mater ZONER i den byggda varlden och behover samma
     #   bank som spelbarheten. ]]
+    #[[ Manifestet behover varlden, tjansterna och speldatan — samma bank
+    #   som spelbarheten. ]]
+    elif "varldsmanifest" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "topologi" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "varldskoherens" in spec_rel:
