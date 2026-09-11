@@ -1,0 +1,499 @@
+{
+  "byggda_delar": 3313,
+  "mark": {
+    "barande": 15,
+    "dekor": 0,
+    "lager": [
+      {
+        "typ": "gras",
+        "bar": true,
+        "ovansida": -0.02
+      },
+      {
+        "typ": "aker",
+        "bar": true,
+        "ovansida": -0.019
+      },
+      {
+        "typ": "asfalt",
+        "bar": true,
+        "ovansida": -0.018
+      },
+      {
+        "typ": "asfalt",
+        "bar": true,
+        "ovansida": -0.017
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.016
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.015
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.014
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.013
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.012
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.011
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.01
+      },
+      {
+        "typ": "grus",
+        "bar": true,
+        "ovansida": -0.009
+      },
+      {
+        "typ": "sand",
+        "bar": true,
+        "ovansida": -0.008
+      },
+      {
+        "typ": "sand",
+        "bar": true,
+        "ovansida": -0.007
+      },
+      {
+        "typ": "betong",
+        "bar": true,
+        "ovansida": -0.006
+      }
+    ]
+  },
+  "portaler": [
+    {
+      "byggnad": "ridhus",
+      "sida": "N",
+      "typ": "dorrvit",
+      "x": 139.0,
+      "y": 119.03,
+      "bredd": 1.8
+    },
+    {
+      "byggnad": "ridhus",
+      "sida": "N",
+      "typ": "dorr",
+      "x": 134.35,
+      "y": 119.03,
+      "bredd": 1.1
+    },
+    {
+      "byggnad": "ridhus",
+      "sida": "W",
+      "typ": "dorrvit",
+      "x": 117.97,
+      "y": 109.0,
+      "bredd": 2.0
+    },
+    {
+      "byggnad": "ridhus",
+      "sida": "E",
+      "typ": "portplat",
+      "x": 143.03,
+      "y": 48.52,
+      "bredd": 3.4
+    },
+    {
+      "byggnad": "ridhus",
+      "sida": "E",
+      "typ": "portbla",
+      "x": 143.03,
+      "y": 84.6,
+      "bredd": 2.4
+    },
+    {
+      "byggnad": "ridhus",
+      "sida": "S",
+      "typ": "portsilver",
+      "x": 128.0,
+      "y": 41.79,
+      "bredd": 4.0
+    },
+    {
+      "byggnad": "stall",
+      "sida": "W",
+      "typ": "dorrgul",
+      "x": 151.07,
+      "y": 118.825,
+      "bredd": 1.15
+    },
+    {
+      "byggnad": "stall",
+      "sida": "W",
+      "typ": "portbla",
+      "x": 151.07,
+      "y": 84.6,
+      "bredd": 2.4
+    },
+    {
+      "byggnad": "stall",
+      "sida": "N",
+      "typ": "dorrgul",
+      "x": 161.6,
+      "y": 125.03,
+      "bredd": 1.15
+    },
+    {
+      "byggnad": "stall",
+      "sida": "E",
+      "typ": "portbla",
+      "x": 172.13,
+      "y": 91.2,
+      "bredd": 3.6
+    },
+    {
+      "byggnad": "stall",
+      "sida": "S",
+      "typ": "dorrvit",
+      "x": 157.275,
+      "y": 55.02,
+      "bredd": 1.15
+    },
+    {
+      "byggnad": "stall",
+      "sida": "S",
+      "typ": "dorrvit",
+      "x": 164.175,
+      "y": 55.02,
+      "bredd": 1.15
+    },
+    {
+      "byggnad": "langa",
+      "sida": "N",
+      "typ": "dorrmork",
+      "x": 149.05,
+      "y": 40.03,
+      "bredd": 1.1
+    }
+  ],
+  "icke_passager": [
+    {
+      "byggnad": "ridhus",
+      "sida": "W",
+      "typ": "dorr",
+      "skal": "[REFERENCE GAP] Öppningen ligger bakom läktarens bänkrader. Att såga hål i läktaren för att dörren ska gå att använda vore påhittad geometri. VILKEN långsida läktaren ligger på är ännu inte avgjord (se noten i buildings/Vyer.luau); visar sig den ligga på östra sidan blir den här dörren fri och raden ska bort."
+    }
+  ],
+  "hastar": {
+    "antal": 33,
+    "kanoniska": 33,
+    "lista": [
+      {
+        "id": "air",
+        "x": 153.294,
+        "y": 63.6,
+        "box": 1
+      },
+      {
+        "id": "allan",
+        "x": 159.962,
+        "y": 63.6,
+        "box": 14
+      },
+      {
+        "id": "berra",
+        "x": 163.679,
+        "y": 63.6,
+        "box": 27
+      },
+      {
+        "id": "bing",
+        "x": 170.105,
+        "y": 63.6,
+        "box": 40
+      },
+      {
+        "id": "blackrock_jack",
+        "x": 163.679,
+        "y": 77.6,
+        "box": 31
+      },
+      {
+        "id": "conor",
+        "x": 153.294,
+        "y": 67.1,
+        "box": 2
+      },
+      {
+        "id": "cosmo",
+        "x": 159.962,
+        "y": 67.1,
+        "box": 15
+      },
+      {
+        "id": "crokino",
+        "x": 163.679,
+        "y": 67.1,
+        "box": 28
+      },
+      {
+        "id": "curiretto",
+        "x": 170.105,
+        "y": 67.1,
+        "box": 41
+      },
+      {
+        "id": "dante",
+        "x": 153.294,
+        "y": 81.1,
+        "box": 6
+      },
+      {
+        "id": "dexter",
+        "x": 159.962,
+        "y": 81.1,
+        "box": 19
+      },
+      {
+        "id": "fay",
+        "x": 153.294,
+        "y": 70.6,
+        "box": 3
+      },
+      {
+        "id": "garnit",
+        "x": 163.679,
+        "y": 81.1,
+        "box": 32
+      },
+      {
+        "id": "hamilton",
+        "x": 163.679,
+        "y": 70.6,
+        "box": 29
+      },
+      {
+        "id": "hjartat",
+        "x": 159.962,
+        "y": 70.6,
+        "box": 16
+      },
+      {
+        "id": "jessy",
+        "x": 170.105,
+        "y": 81.1,
+        "box": 45
+      },
+      {
+        "id": "kay_z",
+        "x": 170.105,
+        "y": 70.6,
+        "box": 42
+      },
+      {
+        "id": "kennedy",
+        "x": 153.294,
+        "y": 88.1,
+        "box": 7
+      },
+      {
+        "id": "lady",
+        "x": 159.962,
+        "y": 84.6,
+        "box": 20
+      },
+      {
+        "id": "larry",
+        "x": 153.294,
+        "y": 74.1,
+        "box": 4
+      },
+      {
+        "id": "lothar",
+        "x": 159.962,
+        "y": 74.1,
+        "box": 17
+      },
+      {
+        "id": "lydia",
+        "x": 170.105,
+        "y": 77.6,
+        "box": 44
+      },
+      {
+        "id": "mac_kenzie",
+        "x": 163.679,
+        "y": 84.6,
+        "box": 33
+      },
+      {
+        "id": "marabou",
+        "x": 170.105,
+        "y": 84.6,
+        "box": 46
+      },
+      {
+        "id": "oska",
+        "x": 163.679,
+        "y": 74.1,
+        "box": 30
+      },
+      {
+        "id": "puma",
+        "x": 170.105,
+        "y": 74.1,
+        "box": 43
+      },
+      {
+        "id": "replay",
+        "x": 153.294,
+        "y": 91.6,
+        "box": 8
+      },
+      {
+        "id": "sune",
+        "x": 153.294,
+        "y": 77.6,
+        "box": 5
+      },
+      {
+        "id": "tess",
+        "x": 159.962,
+        "y": 77.6,
+        "box": 18
+      },
+      {
+        "id": "toblerone",
+        "x": 159.962,
+        "y": 88.1,
+        "box": 21
+      },
+      {
+        "id": "trixie",
+        "x": 163.679,
+        "y": 88.1,
+        "box": 34
+      },
+      {
+        "id": "troy",
+        "x": 170.105,
+        "y": 95.1,
+        "box": 47
+      },
+      {
+        "id": "westside",
+        "x": 153.294,
+        "y": 95.1,
+        "box": 9
+      }
+    ]
+  },
+  "utrustning": [
+    {
+      "id": "sadel_dorr_teori",
+      "delar": 3,
+      "x": 159.9,
+      "y": 119.34
+    },
+    {
+      "id": "sadel_stovelhylla",
+      "delar": 1,
+      "x": 161.4,
+      "y": 117.25
+    },
+    {
+      "id": "sadel_vastkrokar",
+      "delar": 2,
+      "x": 158.42,
+      "y": 117.25
+    }
+  ],
+  "skyltar": [
+    {
+      "typ": "skylt",
+      "text": "UPPLANDS-BRO RYTTARFÖRENING",
+      "x": 118.0,
+      "y": 82.0
+    },
+    {
+      "typ": "cafeskylt",
+      "text": "CAFÉ KRUBBAN",
+      "x": 124.4,
+      "y": 119.8
+    }
+  ],
+  "rekvisita_som_saknas": [
+    {
+      "typ": "ac",
+      "antal": 2
+    },
+    {
+      "typ": "balar",
+      "antal": 1
+    },
+    {
+      "typ": "bank",
+      "antal": 1
+    },
+    {
+      "typ": "bord",
+      "antal": 2
+    },
+    {
+      "typ": "busskylt",
+      "antal": 1
+    },
+    {
+      "typ": "flagga",
+      "antal": 1
+    },
+    {
+      "typ": "grushog",
+      "antal": 1
+    },
+    {
+      "typ": "silo",
+      "antal": 1
+    },
+    {
+      "typ": "sopstation",
+      "antal": 1
+    },
+    {
+      "typ": "stenhast",
+      "antal": 4
+    },
+    {
+      "typ": "stol",
+      "antal": 1
+    },
+    {
+      "typ": "torvbalar",
+      "antal": 1
+    },
+    {
+      "typ": "transport",
+      "antal": 1
+    },
+    {
+      "typ": "vagvisare",
+      "antal": 1
+    }
+  ],
+  "spawn": {
+    "x": 161.6,
+    "y": 126.4,
+    "motdorr": "stall N dorrgul"
+  }
+}
