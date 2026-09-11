@@ -20,6 +20,10 @@ local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local InteractionController = {}
 
 local prompts: { [Model]: ProximityPrompt } = {}
+--[[ Ledningens egen knapp och dess läge. Läget speglar serverns svar
+     och sätts aldrig av en gissning. ]]
+local ledKnappar: { [Model]: ProximityPrompt } = {}
+local ledPrompts: { [Model]: boolean } = {}
 local onMount: ((Model) -> ())? = nil
 
 --[[ Får uppsittningsprompten visas för den här modellen?
@@ -103,6 +107,40 @@ local function addPrompt(model: Model)
 	end)
 
 	prompts[model] = prompt
+
+	--[[ ── LEDA (#162 blockerare 2) ──────────────────────────────────
+
+		Ledningen behöver en egen knapp: uppsittningen och ledningen är
+		två olika handlingar, och en gemensam prompt hade tvingat spelaren
+		att gissa vilken hon fick. Den här sitter på samma rot men är ett
+		eget objekt, och den växlar text efter läget — precis som dörrarna.
+
+		Servern äger sanningen. Klienten frågar och skriver ut skälet;
+		den avgör ingenting själv. ]]
+	local led = Instance.new("ProximityPrompt")
+	led.Name = "LedPrompt"
+	led.ActionText = Sprak.t("led.borja")
+	led.ObjectText = model:GetAttribute("HorseName") or model.Name
+	led.HoldDuration = 0.2
+	led.MaxActivationDistance = 12
+	led.RequiresLineOfSight = false
+	led.KeyboardKeyCode = Enum.KeyCode.L
+	led.Parent = rig.root
+
+	led.Triggered:Connect(function()
+		local leder = ledPrompts[model] == true
+		local remote = if leder then "LedSlapp" else "LedBorja"
+		local ok, skal = if leder
+			then Net.get(remote):InvokeServer()
+			else Net.get(remote):InvokeServer(model)
+		if ok then
+			ledPrompts[model] = not leder
+			led.ActionText = Sprak.t(if ledPrompts[model] then "led.slapp" else "led.borja")
+		else
+			warn(("[Led] %s (%s)"):format(Sprak.t(tostring(skal)), tostring(skal)))
+		end
+	end)
+	ledKnappar[model] = led
 end
 
 local function removePrompt(model: Model)
@@ -110,6 +148,12 @@ local function removePrompt(model: Model)
 	if prompt then
 		prompt:Destroy()
 		prompts[model] = nil
+	end
+	local led = ledKnappar[model]
+	if led then
+		led:Destroy()
+		ledKnappar[model] = nil
+		ledPrompts[model] = nil
 	end
 end
 

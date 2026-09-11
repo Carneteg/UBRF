@@ -165,6 +165,32 @@ end
 	hämtningen inte igenom faller hela kedjan här, med skälet. ]]
 local function skotselGenomTjansten(spelare)
 	for _, fas in ipairs(Preparation.stegFaser()) do
+		--[[ `leda` KRÄVER numera att hästen faktiskt har letts dit (#162
+			blockerare 2). Den här specen driver därför den riktiga
+			ledningen i stället för att kvittera steget: den börjar leda,
+			flyttar SPELAREN mot ridbanan och låter `LedService._steg`
+			köra tjänstens egen följlogik. Hästen flyttas aldrig direkt —
+			det är hela skillnaden mot den gamla versionen. ]]
+		--[[ `leda` KRÄVER numera att hästen fysiskt letts till ridbanan
+			(#162 blockerare 2). Den här specen mäter INTE följfysiken —
+			den hör hemma i `ledning.spec` och i Studio-runtime. Här drivs
+			tjänstens tillstånd: ledningen startas, hästen ställs där
+			fysiken hade fört henne, och `LedService._steg` får SJÄLV
+			avgöra att hon lämnat boxen och nått zonen. Specen sätter
+			aldrig flaggorna. ]]
+		if fas.id == "leda" then
+			local modell = GameplayService.modellFor(spelare)
+			local zon = LedService.malzon()
+			local rot = spelare.Character and spelare.Character:FindFirstChild("HumanoidRootPart")
+			if modell and zon and rot and modell.PrimaryPart then
+				LedService.borja(spelare, modell, modell)
+				local mx = (zon.x + zon.w / 2) * 3
+				local mz = (170 - (zon.y + zon.h / 2)) * 3
+				modell.PrimaryPart.CFrame = CFrame.new(mx, modell.PrimaryPart.Position.Y, mz)
+				rot.CFrame = CFrame.new(mx + 6, rot.Position.Y, mz)
+				LedService._steg(1 / 30)
+			end
+		end
 		while true do
 			local s = GameplayService.stateFor(spelare)
 			local m = Preparation.nastaMoment(s, fas.id)
@@ -496,6 +522,17 @@ do
 	S.spelare.Character = k2
 	S.spelare.CharacterAdded:Fire(k2)
 	S.karaktar, S.hum = k2, hum2
+	--[[ Hästen står numera i RIDHUSET, dit hon leddes — inte kvar i sin
+		box. En spelare som respawnar går fram till henne igen, och det är
+		det den här raden gör. Utan den mäter specen bara att `tryMount`
+		nekar på avstånd, vilket den redan har ett eget prov för. ]]
+	do
+		local r2 = k2:FindFirstChild("HumanoidRootPart")
+		local pivot = S.modell.PrimaryPart
+		if r2 and pivot then
+			r2.CFrame = CFrame.new(pivot.Position.X + 4, r2.Position.Y, pivot.Position.Z)
+		end
+	end
 	check("skötseln räknas fortfarande som gjord efter respawnen",
 		GameplayService.statusFor(S.spelare) == Preparation.STATUS.REDO,
 		tostring(GameplayService.statusFor(S.spelare)))

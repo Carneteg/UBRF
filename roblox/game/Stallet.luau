@@ -148,8 +148,60 @@ end
 	fronten är det inte: sakerna hänger på den TÄTA PANELEN, aldrig i
 	boxdörrens öppning. En sadel i dörrgapet hade sett ut som en sadel i
 	vägen, och hade stått där hästen ska gå ut. ]]
+
 local UT_AVSTAND = 0.28          -- hur långt ut i gången krokarna sticker
 local PANELMARGINAL = 0.08       -- samma marginal fronten byggs med
+
+--[[ ── BOXDÖRRENS ÖPPNING ────────────────────────────────────────────
+
+	BOXDÖRRENS MITT, INIFRÅN OCH UTIFRÅN. Ren geometri, ingen instans.
+
+	Den finns för LEDNINGEN. Runtime-mätning 17:14: hästen kilar sig mot
+	`Boxfront MB 5` med `MoveDirection = 0` när hon styrs rakt mot ett mål
+	utanför boxen — en 1,85 m kropp och en 1,20 m öppning kräver att hon
+	riktar upp sig FÖRST, och `Humanoid:MoveTo` styr rakt mot punkten.
+
+	Rättelsen är en dörr-waypoint: styr henne till `inne`, sedan `ute`, och
+	först därefter mot målet. Den här funktionen ger de två punkterna;
+	VEM som använder dem och när är `LedService`:s sak, inte den här filens.
+
+	Talen kommer ur samma två datafält som panelen och utrustningen räknas
+	ur, och `spelbarhet.spec` mäter mitten mot den FAKTISKT byggda
+	`Boxdörr`-delen. Flyttar bygget dörren följer waypointen med. ]]
+local DORR_MARGINAL = 1.10       -- hur långt in/ut punkterna läggs, i meter
+
+function Stallet.boxdorr(hastId: string)
+	local box = Stallet.boxFor(hastId)
+	if not box then return nil end
+
+	local BF = (G.identitet and G.identitet.stall and G.identitet.stall.boxfront) or {}
+	if not BF.dorr then return nil end
+	local frontL = S.boxB - 2 * PANELMARGINAL
+	local dorrB = math.min(BF.dorr.bredd, frontL - 0.30)
+	if dorrB <= 0 then return nil end
+	local fastL = frontL - dorrB
+
+	--[[ Öppningen tar panelens bortre del: den börjar där panelen slutar. ]]
+	local y0 = box.fack.y0 + PANELMARGINAL + fastL
+	local yMitt = y0 + dorrB / 2
+
+	return {
+		nummer = box.nummer,
+		rad = box.rad,
+		gang = box.gang,
+		vetter = box.vetter,
+		bredd = dorrB,
+		--[[ Öppningens utbredning längs gången, för den som vill mäta. ]]
+		span = { y0 = S.origo.y + y0, y1 = S.origo.y + y0 + dorrB },
+		--[[ I öppningens mitt, en dryg meter IN i boxen — dit hästen ska
+			rikta sig innan hon går ut. ]]
+		inne = { x = box.frontVarld.x - box.vetter * DORR_MARGINAL,
+			y = S.origo.y + yMitt },
+		--[[ ...och lika långt UT i gången, på andra sidan öppningen. ]]
+		ute = { x = box.frontVarld.x + box.vetter * DORR_MARGINAL,
+			y = S.origo.y + yMitt },
+	}
+end
 
 --[[ Var hänger `sort` ("sadel" / "trans") för den här hästen?
 

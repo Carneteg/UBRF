@@ -524,8 +524,19 @@ do
 	local delFor = {}
 	for _, d in ipairs(modell:GetDescendants()) do
 		if d:IsA("BasePart") then
-			local sort, box = string.match(d.Name, "^(Box%a+) (.+)$")
-			if sort == "Boxfront" or sort == "Boxdörr" then
+			--[[ NAMNEN MATCHAS LITTERALT, inte med `Box%a+`.
+
+				Första versionen gjorde det senare, och `%a` matchar inte
+				`ö` — "Boxdörr MB 5" föll alltså utanför uppslaget helt.
+				Panelmätningen nedan såg därför ALDRIG en dörr, och dess
+				"utanför boxdörren"-halva var tom. Fångat när dörr-
+				waypointen mättes mot samma tabell och fick 33 × "ingen
+				byggd boxdörr" i ett bygge som har 49. ]]
+			local sort, box = string.match(d.Name, "^(Boxfront) (.+)$")
+			if not sort then
+				sort, box = string.match(d.Name, "^(Boxdörr) (.+)$")
+			end
+			if sort then
 				local _, cz = BuildKit.tomtkoord(bas, d.Position)
 				--[[ Delen löper i Z; halva dess Z-mått åt vardera sidan om
 					mitten ger dess utbredning längs gången. ]]
@@ -566,6 +577,47 @@ do
 	check("varje sadel och träns hänger på tät panel, utanför boxdörren",
 		antal > 0 and #fel == 0,
 		("%d lägen%s"):format(antal, #fel > 0 and (" — " .. table.concat(fel, "; ")) or ""))
+
+	--[[ DÖRR-WAYPOINTEN pekar på den FAKTISKA öppningen.
+
+		`Stallet.boxdorr` finns för ledningen: hästen kilar sig mot fronten
+		om hon styrs rakt mot ett mål utanför boxen, så hon behöver rikta upp
+		sig i öppningen först (runtime-mätning 17:14). Punkterna är bara
+		värda något om de ligger i öppningen, och det mäts här mot delen
+		bygget faktiskt lade. ]]
+	local dFel, dAntal = {}, 0
+	for _, hastId in ipairs(UBRFSpel.ordning or {}) do
+		local box = Stallet.boxFor(hastId)
+		local d = Stallet.boxdorr(hastId)
+		if box and d then
+			dAntal += 1
+			local byggd = delFor["Boxdörr|" .. box.rad .. " " .. box.plats]
+			if not byggd then
+				table.insert(dFel, hastId .. ": ingen byggd boxdörr")
+			else
+				local mitt = (d.span.y0 + d.span.y1) / 2
+				local bMitt = (byggd.y0 + byggd.y1) / 2
+				if math.abs(mitt - bMitt) > 0.05 then
+					table.insert(dFel, ("%s: mitt %.2f mot byggd %.2f")
+						:format(hastId, mitt, bMitt))
+				end
+				--[[ ...och de två waypointpunkterna ska ligga på var sin
+					sida om fronten, i öppningens y-läge. ]]
+				local inneUt = (d.inne.x - box.frontVarld.x) * box.vetter
+				local uteUt = (d.ute.x - box.frontVarld.x) * box.vetter
+				if inneUt >= 0 or uteUt <= 0 then
+					table.insert(dFel, ("%s: punkterna ligger på samma sida")
+						:format(hastId))
+				end
+				if math.abs(d.inne.y - mitt) > 0.01 or math.abs(d.ute.y - mitt) > 0.01 then
+					table.insert(dFel, ("%s: punkterna är inte i öppningen"):format(hastId))
+				end
+			end
+		end
+	end
+	check("dörr-waypointen ligger i den byggda öppningen, en punkt per sida",
+		dAntal > 0 and #dFel == 0,
+		("%d dörrar%s"):format(dAntal, #dFel > 0 and (" — " .. table.concat(dFel, "; ")) or ""))
 end
 
 --[[ ══ 52 MOT 49 BOXAR — DIAGNOSTISERAT, INTE ETT FEL ═════════════════

@@ -656,6 +656,17 @@ function Preparation.barUtrustning(state: State, sort: string): boolean
 	return type(u) == "table" and u[sort] == true
 end
 
+--[[ Nejet när saken inte är hämtad, eller nil när det inte finns något att
+	säga. Bor här och inte på de två ställen som frågar — `provaMoment` och
+	tjänstens `leda`-grind — så att nyckeln inte kan glida isär mellan dem. ]]
+function Preparation.utrustningsavslag(state: State, fasId: string,
+	momentId: string): string?
+	local kravd = Preparation.kraverUtrustning(fasId, momentId)
+	if kravd == nil or Preparation.barUtrustning(state, kravd) then return nil end
+	return if kravd == "sadel" then "forb.sadeln_inte_hamtad"
+		else "forb.transet_inte_hamtat"
+end
+
 --[[ Plockar upp en sak. Returnerar (ok, skäl): servern äger AVSTÅNDET och
 	VILKEN häst saken hör till — det kräver instanser — men "bär jag den
 	redan?" är en regel och bor här, så dubbelinteraktionen går att fälla
@@ -724,10 +735,9 @@ function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 		som återstår att säga. Låg den tidigare hade den varit oprovbar —
 		turordningen hade avvisat försöket ändå, precis som fyndspärren en
 		gång var dold bakom "fel tur". ]]
-	local kravd = Preparation.kraverUtrustning(fasId, momentId)
-	if kravd and not Preparation.barUtrustning(state, kravd) then
-		return false, (if kravd == "sadel" then "forb.sadeln_inte_hamtad"
-			else "forb.transet_inte_hamtat"), moment
+	local utr = Preparation.utrustningsavslag(state, fasId, momentId)
+	if utr then
+		return false, utr, moment
 	end
 
 	return true, nil, moment

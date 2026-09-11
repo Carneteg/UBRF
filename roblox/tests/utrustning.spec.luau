@@ -317,12 +317,26 @@ do
 	check("ledandet avvisas utan träns", not ok and skal == "forb.transet_inte_hamtat",
 		tostring(skal))
 
+	--[[ SÖMMEN MOT LEDNINGEN, mätt uttryckligen.
+
+		`leda` bär två villkor som kom i samma runda från två håll: att
+		tränset är hämtat, och att hästen faktiskt lämnat sin box
+		(`LedService`). Tränset ska komma FÖRST — man tränsar och leder
+		sedan. Att provet här inte kräver ett JA utan att nejet BYTER från
+		utrustningen till ledningen är hela poängen: det visar att den
+		första grinden är passerad, utan att låtsas att hästen är ledd i en
+		bänk som inte har någon gång att leda henne i.
+
+		Att ledningen sedan går att göra mäts av `ledning.spec`. ]]
 	local trans = hangUpp(S.hastId, "trans", vec(6, 0, 0))
 	check("tränset hämtas", (GameplayService.hamta(S.spelare, trans)))
 	local ok2, skal2 = GameplayService.moment(S.spelare, "leda", m.id)
-	check("och då går ledandet igenom", ok2, tostring(skal2))
-	check("tränset sitter på henne och bärs inte längre",
-		trans.Parent == nil or trans.Parent ~= S.spelare.Character)
+	check("med tränset faller ledandet på LEDNINGEN i stället för på utrustningen",
+		not ok2 and skal2 == "led.kvar_i_boxen", tostring(skal2))
+	--[[ ...och tränset hänger kvar på armen. Det kommer av först när hon
+		faktiskt är ledd, alltså när fasen blir klar. ]]
+	check("tränset bärs fortfarande — hon är inte ledd än",
+		trans.Parent == S.spelare.Character)
 	stadaSession(S)
 end
 

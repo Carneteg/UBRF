@@ -45,6 +45,10 @@ local DEFINITIONS = {
 	     saken" — en modell, inte ett tillstånd. Servern avgör om det är
 	     rätt hästs sak, om spelaren står vid den, och vad det betyder. ]]
 	HamtaUtrustning = "RemoteFunction",    -- klient → server: jag plockar ner den här
+	--[[ Ledningen. Samma princip: en avsikt, aldrig ett tillstånd. ]]
+	LedBorja = "RemoteFunction",           -- klient → server: jag börjar leda den här hästen
+	LedSlapp = "RemoteFunction",           -- klient → server: jag släpper
+	LedSync = "RemoteEvent",               -- server → ägaren: leder jag, och hur långt har hon kommit
 }
 
 local cache: { [string]: Instance } = {}

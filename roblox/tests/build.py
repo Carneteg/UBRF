@@ -140,6 +140,9 @@ FORBEREDELSE = SPEL + [
     # GameplayService laddas SIST och ar poangen med hela listan: utan den
     # bevisade specen bara att HorseService-kroken fungerar, inte att
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
+    #[[ LedService laddas FORE GameplayService: den senare require:ar
+    #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
@@ -211,6 +214,9 @@ FORBEREDELSE = SPEL + [
     # GameplayService laddas SIST och ar poangen med hela listan: utan den
     # bevisade specen bara att HorseService-kroken fungerar, inte att
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
+    #[[ LedService laddas FORE GameplayService: den senare require:ar
+    #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
@@ -283,6 +289,9 @@ FORBEREDELSE = SPEL + [
     # GameplayService laddas SIST och ar poangen med hela listan: utan den
     # bevisade specen bara att HorseService-kroken fungerar, inte att
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
+    #[[ LedService laddas FORE GameplayService: den senare require:ar
+    #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
@@ -426,6 +435,9 @@ KOHERENS = GEOMETRI + [
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
+    #[[ LedService laddas FORE GameplayService: den senare require:ar
+    #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
@@ -519,7 +531,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ FORE "sprak": nej-vagssvepet behover TJANSTERNA och klientens
     #   rendering i samma korning, alltsa integrationsbanken. Ligger den
     #   efter faller den igenom till KLIENT dar GameplayService inte finns. ]]
-    if "sprak-en" in spec_rel:
+    #[[ Ledningsspecen behover tjanstestacken: LedService och
+    #   GameplayService. Samma bunt som integration. ]]
+    if "ledning" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "sprak-en" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "sprak" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
