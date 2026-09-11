@@ -20,27 +20,33 @@ efter den.
 | Identitet | Värde | Vad det är |
 |---|---|---|
 | **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `67e7716ed5f00102dbcf28a134270489f439157a` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `9cca0f40e4e67c6a9c1e1d0d4ac73eece3d1eaaa4d0157dba42fb73d87ff36dc` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **artifact source SHA** | `efa341ecfcd422d65fb3e8f49176352392890864` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `fa2b492d3004c8516b94221b53eb43114e60c5988ba66e75e9f62fb1ba13fafa` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-67e7716/UBRFFirstPlayable.rbxlx` |
-| storlek | 873 337 byte, 62 instanser |
+| fil i repot | `roblox/releases/first-playable-place-efa341e/UBRFFirstPlayable.rbxlx` |
+| storlek | 874 395 byte, 62 instanser |
 | determinism | ombyggd ur samma källa, byte-identisk |
 
-> **Den här artefakten ersätter `first-playable-place-0a1b032`.** Den förra
-> kördes igenom §0–§9 den 11 september och gav tre fynd (§2 spawnriktningen,
-> §7 skylttexten, §8 `ActionText`). Alla tre är rättade i källan och finns i
-> den HÄR filen — den gamla är kvar orörd som historik och ska inte öppnas.
+> **Den här artefakten ersätter `first-playable-place-67e7716`**, som aldrig
+> kom förbi §1: världsbygget kraschade på
+> `CFrame is not a valid member of SurfaceGui`, och ingen spelare släpptes in.
+> Orsaken — en osund vakt `d.CFrame` där `d:IsA("BasePart")` hör hemma — är
+> rättad på fyra ställen. Den och `…-0a1b032` är kvar orörda som historik och
+> ska inte öppnas.
+>
+> §2 spawnriktningen, §7 skylttexten och §8 `ActionText` är rättade sedan
+> `0a1b032` och finns i den här filen. **Inget av dem har ännu kunnat mätas i
+> runtime** — §1 stoppade förra körningen innan de nåddes.
 
 ### Filen som ska öppnas i Studio
 
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-67e7716\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-efa341e\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -54,7 +60,7 @@ git fetch origin
 git checkout claude/first-playable-20260910
 git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-67e7716\UBRFFirstPlayable.rbxlx" SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-efa341e\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
 Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
@@ -69,7 +75,7 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=67e7716ed5f00102dbcf28a134270489f439157a
+FIRST_PLAYABLE_SHA=efa341ecfcd422d65fb3e8f49176352392890864
 FIRST_PLAYABLE_PREFLIGHT: PASS
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3309 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
@@ -302,7 +308,7 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 67e7716e… — rbxlx 9cca0f40e4e67c6a9c1e1d0d4ac73eece3d1eaaa4d0157dba42fb73d87ff36dc — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source efa341ec… — rbxlx fa2b492d3004c8516b94221b53eb43114e60c5988ba66e75e9f62fb1ba13fafa — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
