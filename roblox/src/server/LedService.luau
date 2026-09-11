@@ -70,6 +70,9 @@ export type Led = {
 	tidigareFart: number,
 	tidigareSpelarfart: number,
 	spar: { Vector3 },
+	dorr: BasePart?,
+	dorrUt: Vector3?,
+	dorrsteg: number,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -180,6 +183,43 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		end
 	end
 	local bx, by = tomt(pivot.Position)
+
+	--[[ ── BOXDÖRREN SOM WAYPOINT ──────────────────────────────────────
+
+		Mätt i Studio: hästen kilade sig mot `Boxfront MB 5` och norra
+		skiljeväggen med `MoveDirection = 0`. Hon är 1,85 m lång och
+		öppningen 1,20 m bred, och `MoveTo` styr RAKT mot målet — från ett
+		hörn i facket går den linjen genom panelen.
+
+		Spårföljningen räcker inte här: brödsmulorna ligger rätt, men hon
+		måste RIKTA UPP kroppen mot öppningen innan hon går igenom. Därför
+		två delmål — först en punkt rakt innanför dörren, sedan en rakt
+		utanför. Två punkter, ingen vägsökning.
+
+		Dörren letas upp EN gång, vid start, och bara om hon faktiskt står
+		i en box. Leds hon på öppen yta finns ingen dörr och hela grenen
+		hoppas över. ]]
+	local narmasteDorr, narmast = nil, 3.2 * M
+	local anlaggning = workspace:FindFirstChild("Anläggning")
+	if anlaggning then
+		for _, d in ipairs(anlaggning:GetDescendants()) do
+			if d:IsA("BasePart") and d:GetAttribute("UBRFBoxdorr") == true then
+				local avst = (d.Position - pivot.Position).Magnitude
+				if avst < narmast then narmasteDorr, narmast = d, avst end
+			end
+		end
+	end
+	local dorrUt: Vector3? = nil
+	if narmasteDorr then
+		--[[ `Langs` säger vilken axel fronten löper i; `Utat` åt vilket
+			håll gången ligger. Båda sätts av `Anlaggningen`. ]]
+		local langs = narmasteDorr:GetAttribute("Langs")
+		local utat = tonumber(narmasteDorr:GetAttribute("Utat")) or 1
+		dorrUt = if langs == "Z"
+			then Vector3.new(utat, 0, 0)
+			else Vector3.new(0, 0, utat)
+	end
+
 	local hastHum = (modell :: any):FindFirstChildOfClass("Humanoid")
 	local tidigareFart = hastHum and hastHum.WalkSpeed or 0
 	if hastHum then
@@ -210,6 +250,9 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		malNatt = false,
 		boxX = bx, boxY = by,
 		spar = {},
+		dorr = narmasteDorr,
+		dorrUt = dorrUt,
+		dorrsteg = 1,
 	}
 	LedService._sync(player)
 	return true, nil
@@ -343,6 +386,23 @@ local function steg(_dt: number)
 				break
 			end
 		end
+
+		--[[ Så länge hon inte lämnat boxen går dörren före spåret. Steg 1
+			ställer henne rakt innanför öppningen, steg 2 tar henne ut. ]]
+		local viaDorr = false
+		if not l.lamnatBox and l.dorr and l.dorrUt and l.dorr.Parent then
+			viaDorr = true
+			local ut1 = l.dorr.Position - l.dorrUt * (1.3 * M)
+			local ut2 = l.dorr.Position + l.dorrUt * (2.2 * M)
+			if l.dorrsteg == 1 then
+				if avstandM(pivot.Position, ut1) < 0.9 then
+					l.dorrsteg = 2
+				else
+					bakom = ut1
+				end
+			end
+			if l.dorrsteg == 2 then bakom = ut2 end
+		end
 		local tillMal = avstandM(pivot.Position, bakom)
 
 		--[[ Hon får skynda på inom SKRITTENS eget band när hon hamnat
@@ -354,8 +414,22 @@ local function steg(_dt: number)
 			hum.WalkSpeed = m_s * M
 		end
 
-		--[[ HYSTERES. Se noten överst: två trösklar, inte en. ]]
-		if l.gar then
+		--[[ HYSTERESEN GÄLLER FÖLJANDET, INTE DÖRREN.
+
+			Dödzonen finns för att hon inte ska pendla kring en punkt som
+			rör sig med spelaren. En waypoint rör sig inte: den ska nås.
+			Mätt i Studio stod hon still 1,19 m från delmålet, eftersom
+			1,19 < startröskeln 1,8 — och kom därför aldrig ut ur boxen.
+			Vid dörren går hon tills hon är framme. ]]
+		if viaDorr then
+			if tillMal > 0.35 then
+				l.gar = true
+				hum:MoveTo(Vector3.new(bakom.X, pivot.Position.Y, bakom.Z))
+			else
+				l.gar = false
+				hum:Move(Vector3.zero, false)
+			end
+		elseif l.gar then
 			if tillMal < STOPP_R then
 				l.gar = false
 				hum:Move(Vector3.zero, false)
