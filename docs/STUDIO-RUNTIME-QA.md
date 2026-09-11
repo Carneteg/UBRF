@@ -20,17 +20,20 @@ efter den.
 | Identitet | Värde | Vad det är |
 |---|---|---|
 | **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `86662d173c5204ed3d63f86b7e76d0a487ce7eaa` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `b6afc634ace47186fa78ddb84ee0b11360e0b62a50026fc8d3a5e3486b845c8b` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **artifact source SHA** | `b0265bb41faf5bc7995ba56ca1d8fd87bf506bb3` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `f2f1d3ac332ec547238313f6734395d331403a883d7cde6041021468f9dab083` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-86662d1/UBRFFirstPlayable.rbxlx` |
-| storlek | 964 405 byte, 65 instanser |
+| fil i repot | `roblox/releases/first-playable-place-b0265bb/UBRFFirstPlayable.rbxlx` |
+| storlek | 966 840 byte, 65 instanser |
 | determinism | ombyggd ur samma källa, byte-identisk |
 
-> **Den här artefakten ersätter både `…-9b5a570` och `…-1e8b207`.** Den är
+> **Den här artefakten ersätter `…-86662d1` (`b6afc634…`) och allt före
+> den.** I varje föregångare färdades hästen med svansen före — ridd, ledd
+> och driven. Kör inte en äldre fil; § 9 faller på den, och den faller av en
+> orsak som redan är rättad. Den är
 > den första som bär ALLT: locomotion-rättelsen (`Humanoid.RootPart`),
 > boxdörrarna, lektionskortets lokalisering och den fysiska utrustningen.
 > `…-1e8b207` var halv — den saknade locomotion-rättelsen och hade fallit på
@@ -59,7 +62,7 @@ efter den.
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-86662d1\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-b0265bb\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -73,7 +76,7 @@ git fetch origin
 git checkout claude/first-playable-20260910
 git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-86662d1\UBRFFirstPlayable.rbxlx" SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-b0265bb\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
 Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
@@ -88,7 +91,7 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=86662d173c5204ed3d63f86b7e76d0a487ce7eaa
+FIRST_PLAYABLE_SHA=b0265bb41faf5bc7995ba56ca1d8fd87bf506bb3
 FIRST_PLAYABLE_PREFLIGHT: PASS
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3367 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
@@ -377,6 +380,32 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 
 ## 9. Kärnloopen
 
+> ### FÖRST AV ALLT: går hon FRAMÅT?
+>
+> Det här är det enda som är nytt i den här artefakten, och det är skälet
+> till att den finns. I varje föregångare färdades ekipaget med svansen
+> före — ridd, ledd och driven — för att orienteringen skrevs med motsatt
+> konvention mot rörelsen. Kontrollera med ögonen innan du mäter något
+> annat:
+>
+> | Mätning | Förväntat |
+> |---|---|
+> | ridd framåt | **huvudet före, svansen bakom.** `TRAVEL · LookVector` = +1,00 |
+> | ledd | samma, på varje rörelseram |
+> | driven (serverns `Move`) | samma |
+> | tangent **D** | hästen svänger **höger** |
+> | tangent **A** | hästen svänger **vänster** |
+> | kroppens lutning i bågen | hon lägger sig **inåt** i svängen, inte utåt |
+>
+> Under kontakt med ett staket eller en boxfront går prickprodukten ned
+> (uppmätt −0,42…−0,50): hon står och trycker mot hindret och glider i
+> sidled medan hon fortsatt tittar in i det. Det är fysik, inte konvention.
+> **På fria ramar ska den vara +1,00 utan undantag.**
+>
+> Ser du svansen före: stoppa körningen och rapportera det direkt. Då är
+> det inte QA som fattas, utan en regression i `MovementController` eller
+> `LedService`.
+
 > ### `ride` — kvittera kortet FÖRST
 >
 > Förra körningen föll här: hästen rörde sig 0,00 studs. Rotorsaken är inte
@@ -450,7 +479,7 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 86662d17… — rbxlx b6afc634ace47186fa78ddb84ee0b11360e0b62a50026fc8d3a5e3486b845c8b — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source b0265bb4… — rbxlx f2f1d3ac332ec547238313f6734395d331403a883d7cde6041021468f9dab083 — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
