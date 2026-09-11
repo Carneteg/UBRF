@@ -211,7 +211,25 @@ nära `box.varld`?", vilket är att jämföra ett tal med sig självt. Sexton av
 trettiotre stod i gången. Kontrollera därför i Studio att varje häst står
 **innanför en boxfront**, inte bara på rätt koordinat.
 
-## 6. Utrustning — sadel/tack ska finnas fysiskt
+## 6. Utrustning — sadeln och tränset som FYSISKA saker
+
+**NY I DEN HÄR ARTEFAKTEN. Aldrig runtime-testad.** Före den här byggen var
+utrustningssteget ett tillståndsbyte: man tryckte på en HUD-rad vid hästen
+och var sadlad. Nu hänger sadeln och tränset i världen och måste hämtas.
+
+### Var de hänger — och varför inte i sadelkammaren
+
+På **hästens egen boxfront**. Källan är
+`references/buildings/stall/KORT.md` § Boxarna från gången, ur filmen: *"På
+fronterna hänger sadlar med underlag, täcken, grimmor, träns och benskydd —
+mycket saker, tätt."*
+
+Sadelkammaren är **inte** platsen, och det är ett källbeslut, inte en
+förenkling: `stall-inne-03-sadelkammaren.jpg` visar **inga sadelbockar** —
+säkerhetsvästar på krokrader och en hylla med stövlar — och
+`docs/F02-B-INREDNINGSMATRIS.md` har redan fällt sadlar där som
+`REFERENCE GAP`. Att bygga sadelbockar i det rummet hade varit att hitta på
+en UBRF-detalj. Rummets egen inredning står kvar oförändrad:
 
 | Plats | Delar | Läge (x, y) |
 |---|---|---|
@@ -219,7 +237,36 @@ trettiotre stod i gången. Kontrollera därför i Studio att varje häst står
 | `sadel_stovelhylla` | 1 | (161.40, 117.25) |
 | `sadel_vastkrokar` | 2 | (158.42, 117.25) |
 
-Skötselsteget som kräver utrustning ska ha en fysisk källa att gå till.
+### Dagens häst — Blackrock Jack
+
+| | Tomtkoordinat (x, y) |
+|---|---|
+| boxen (box 31, rad MB, gång B) | (163.68, 77.60) |
+| boxfronten mot gång B | (165.53, 77.60) |
+| **sadeln** (`Sadel_blackrock_jack`) | (165.81, 76.76) |
+| **tränset** (`Trans_blackrock_jack`) | (165.81, 78.44) |
+
+Sakerna ligger i `workspace.Utrustning`, taggade `Utrustning`, med
+attributen `HastId` och `UtrSort`. Formen är spelabstraktion — filmen mäter
+ingen sadel — men läget härleds ur boxen och är inte skrivet för hand.
+
+### Körlista
+
+| # | Gör | Förväntat |
+|---|---|---|
+| 6a | läs Output vid start | `[Utrustning] 66 saker hänger på boxfronterna` |
+| 6b | gå till Jacks boxfront | två saker hänger där, i gångens höjd, utan att blockera gången |
+| 6c | sikta på dem | prompt **Ta med dig** / *Pick up* med objektet **Sadel med underlägg** respektive **Träns** (`en-us`: *Saddle with numnah* / *Bridle*) |
+| 6d | sikta på en ANNAN hästs boxfront | **ingen prompt** — bara din egen hästs utrustning får en |
+| 6e | hämta sadeln | den följer med på kroppen, synligt |
+| 6f | gör hovarna, tryck sedan sadelsteget UTAN att ha hämtat | nekas med *du har ingen sadel med dig* |
+| 6g | samma steg med sadeln i handen | går igenom |
+| 6h | när `Gör i ordning` är klar | sadeln **försvinner från armen** — den sitter på hästen |
+| 6i | tryck `Led till ridhuset` utan träns | nekas med *du har inget träns med dig* |
+| 6j | HUD:ens hjälprad när fasen kräver en sak | *Sadeln hänger på boxfronten där Blackrock Jack står — hämta den.* och, när sadeln redan är hämtad, raden *Du bär: Sadel med underlägg* |
+
+**Följ 6f–6j utan utvecklarkunskap**: instruktionen på skärmen ska räcka.
+Behöver du gissa var sadeln finns är det ett fynd, inte ett handhavandefel.
 
 ## 7. Skyltar — kanoniska ankare
 
