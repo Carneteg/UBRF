@@ -1767,6 +1767,70 @@ do
 		table.concat(tr4, ", "))
 end
 
+--[[ ══ §9 `ride`: HALT → SKRITT → HALT, MED VERKLIG FÖRFLYTTNING ══════
+
+	Lokal Studio-QA, §9: uppsutten häst, `gaitUp = true` når rörelselagret,
+	och hästen rör sig **0,00 studs på 3,6 s**. `Gait` stannar på `halt`,
+	`WalkSpeed = 0,00`, medan `Humanoid.MoveDirection` blir 1,00.
+
+	Filens övriga gångartsprov mäter `loco.gait` och `loco.speed`. Inget av
+	dem mäter det spelaren faktiskt upplever: **att hästen flyttar sig**.
+	Den här kedjan gör det, hela vägen ut till riggens position, och den är
+	skriven för att kunna bli röd av precis det Studio såg. ]]
+print("\n§9 ride — hästen ska faktiskt lämna platsen")
+do
+	--[[ Två vägar ur halt, båda giltiga enligt kontraktet: gångartsknappen
+		och W. Studio-felet gav noll på båda. ]]
+	local fall = {
+		{ namn = "gångartsknappen ur halt", o = { gaitUp = true } },
+		{ namn = "W ur halt", o = { forward = 1 } },
+	}
+	for _, f in ipairs(fall) do
+		local mc = newMC()
+		check(("start: %s börjar i halt"):format(f.namn),
+			mc.loco.gait == "halt", mc.loco.gait)
+
+		--[[ Flanken ges EN bildruta, precis som inputlagret levererar den,
+			och sedan hålls avsikten. En impuls som måste hållas inne vore
+			ett annat fel. ]]
+		local forsta = { forward = f.o.forward or 0, gaitUp = f.o.gaitUp }
+		mc:step(intent(forsta), 1 / 60)
+		local strackaM = runMoving(mc, 3.6, { forward = f.o.forward or 0 }, 1 / 60)
+
+		check(("%s: gångarten lämnar halt"):format(f.namn),
+			mc.loco.gait ~= "halt",
+			("gait = %s, targetGait = %s, beddGangart = %s")
+				:format(tostring(mc.loco.gait), tostring(mc.loco.targetGait),
+					tostring(mc.loco.beddGangart)))
+		check(("%s: WalkSpeed är positiv"):format(f.namn),
+			mc.rig.humanoid.WalkSpeed > 0,
+			("WalkSpeed = %.2f"):format(mc.rig.humanoid.WalkSpeed))
+		--[[ Skritt är ~1,6 m/s; på 3,6 s ska hon ha lämnat platsen med god
+			marginal. Tröskeln är lågt satt med flit — provet ska fånga
+			NOLL, inte gradera tempot. Det gör `gangart`-proven ovan. ]]
+		check(("%s: hästen har FAKTISKT flyttat sig"):format(f.namn),
+			strackaM > 1.0,
+			("%.2f m på 3,6 s"):format(strackaM))
+	end
+
+	--[[ …och tillbaka ned. En häst som inte går att stanna är lika trasig
+		som en som inte går att starta. ]]
+	do
+		local mc = newMC()
+		mc:step(intent({ gaitUp = true }), 1 / 60)
+		runMoving(mc, 3.0, {}, 1 / 60)
+		local uppe = mc.loco.gait
+		mc:step(intent({ gaitDown = true }), 1 / 60)
+		runMoving(mc, 3.0, {}, 1 / 60)
+		check("gångarten går ned igen, hela vägen till halt",
+			uppe ~= "halt" and mc.loco.gait == "halt",
+			("%s → %s"):format(tostring(uppe), tostring(mc.loco.gait)))
+		check("och då står hon still",
+			mc.rig.humanoid.WalkSpeed < 0.5,
+			("WalkSpeed = %.2f"):format(mc.rig.humanoid.WalkSpeed))
+	end
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

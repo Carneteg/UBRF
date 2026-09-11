@@ -476,6 +476,66 @@ do
 		end
 	end
 
+
+	--[[ ══ §9 `ride` GENOM DEN RIKTIGA LOOPEN ═══════════════════════════
+
+		Lokal Studio-QA, §9: uppsutten häst, `gaitUp = true` når
+		rörelselagret, och hästen rör sig **0,00 studs på 3,6 s**.
+
+		`movement.spec` driver `MovementController` DIREKT och bevisar att
+		den tar hästen ur halt och 4,4 m framåt. Controllern är alltså inte
+		trasig — och just därför kunde felet ligga kvar: **ingen spec körde
+		den riktiga ridloopen.** Den har två grenar, och den ena kastar
+		avsikten:
+
+		    if LektionController.vantar() or LektionController.replayAktiv() then
+		        Input.consume()          -- flankerna nollställs … och kastas
+		        return                   -- movement:step körs ALDRIG
+		    end
+
+		Att `Input.consume()` körs varje bildruta bevisar därför ingenting
+		om att hästen drivs — den körs i BÅDA grenarna. Här mäts i stället
+		`WalkSpeed` på riggen efter att den riktiga loopen kört sina
+		bildrutor, och hela kontraktet mäts: pausen ska hålla, och den ska
+		SLÄPPA.
+
+		MÄTT: kortet väntar inte vid uppsittningen — det kommer EN bildruta
+		in i ritten. Det var därför en avläsning vid uppsittning visade
+		`vantar = false` och ändå fryst häst. ]]
+	do
+		prova("vid uppsittningen väntar inget kort ännu",
+			LektionController.vantar() == false,
+			("(vantar %s)"):format(tostring(LektionController.vantar())))
+
+		--[[ Gångartsknappen genom produktionens egen väg in, inte genom en
+			hemmagjord intent. ]]
+		local d0 = drivningar
+		Input.touchGait(true)
+		ridBildrutor(2.5)
+
+		prova("kortet tar över ritten en bildruta in",
+			LektionController.vantar() == true,
+			("(vantar %s · %d drivningar)"):format(
+				tostring(LektionController.vantar()), drivningar - d0))
+		--[[ PAUSEN SKA HÅLLA. Rider hon vidare bakom kortet blir det
+			försök spelaren just läser om ogiltigt medan hon läser. ]]
+		prova("och medan kortet väntar står hästen still",
+			hum.WalkSpeed == 0,
+			("(WalkSpeed %.2f)"):format(hum.WalkSpeed))
+
+		--[[ …OCH DEN SKA SLÄPPA. Det är den här raden som hade fällt en
+			häst som inte gick att rida: gick hon inte igång efter att
+			kortet kvitterats vore loopen bruten, inte pausande. ]]
+		local slapptes = LektionController.fortsatt()
+		local d1 = drivningar
+		Input.touchGait(true)
+		ridBildrutor(2.5)
+		prova("när kortet kvitteras rider hon igång på riktigt",
+			slapptes == true and hum.WalkSpeed > 0 and drivningar - d1 > 60,
+			("(kvitterat %s · WalkSpeed %.2f · %d drivningar)"):format(
+				tostring(slapptes), hum.WalkSpeed, drivningar - d1))
+	end
+
 	--[[ Kort som visats efter en övning UTAN inspelning, och hur många av
 	     dem som ändå erbjöd "Se ritten". Räknas i `tillOvning` eftersom det
 	     är den som passerar de oinspelade övningarna. ]]
