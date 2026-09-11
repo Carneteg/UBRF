@@ -226,6 +226,26 @@ const ANL = {
 
   /* Markytor ritas i ordning — senare vinner. */
   mark: [
+    /* OMGIVNINGEN — `[ANTAGANDE]`, och den finns för att tomten inte ska
+       sluta i ett stup.
+
+       Mätt 2026-09-11 i Studio, efter att den främmande baseplaten tagits
+       bort: marken var EXAKT tomtrektangeln 0..210 x 0..170, med en hård
+       kant åt alla fyra håll. Spelaren gick rakt norrut och hamnade på
+       y = 173,3 med ingenting under sig — hon föll ur världen. Så länge
+       Roblox standardplan låg kvar under allt var kanten maskerad; utan
+       den är den ett verkligt rymningshål.
+
+       Att det finns MARK runt tomten är inte ett antagande — UBRF ligger i
+       ett landskap, och siteplanen listar åker, skogsbryn och två vägar.
+       Vad den innehåller är det: det här är ett platt grässkikt och inget
+       annat, medvetet anspråkslöst, och ska ersättas av riktig omgivning
+       av miljöägaren. Det ligger FÖRST i listan, alltså underst, så att
+       varje verklig markyta vinner över det.
+
+       120 m åt varje håll: tillräckligt för att gränsen inte ska vara
+       nåbar från något ställe en spelare har anledning att vara på. */
+    {typ:"gras",  rekt:{x:-120, y:-120, w:450, h:410}},
     {typ:"gras",  rekt:{x:0,   y:0,   w:210, h:170}},
     {typ:"aker",  rekt:{x:9,   y:20,  w:99,  h:100}},  // åkrarna öster om Enköpingsvägen
     {typ:"asfalt",rekt:{x:2,   y:0,   w:5,   h:170}},  // Enköpingsvägen i väster
@@ -502,8 +522,32 @@ const ANL = {
     /* `sandkant` = staketet omsluter en sandyta och har därför den grova
        syllen i marknivå som håller sanden på plats (banan-01). Hagarna
        saknar den — där möter staketet gräs. */
-    {typ:"tra", sandkant:true, p:rektRunt(UTEBANA)},     // uteridbanan
-    {typ:"tra", sandkant:true, p:rektRunt(PADDOCK)},  // paddocken bredvid
+    /* GRINDARNA I UTERIDBANAN OCH PADDOCKEN — `[ANTAGANDE]` om LÄGET,
+       inte om att de finns.
+
+       Funnet 2026-09-11 när staketens fysik rättades: så länge inget
+       liggande virke kolliderade spelade det ingen roll att de här två
+       inhägnaderna saknade öppning. När toppregeln började spärra blev
+       uteridbanan en försluten låda — man kom varken in eller ut, och
+       gångbarhetsgrinden (mark.spec) föll på att sandytan inte gick att
+       nå från spawnen.
+
+       ATT det finns en infart är inte ett antagande: en ridbana och en
+       paddock utan öppning kan inte användas, och hagarna Ö1/Ö2 har redan
+       sina grindar. VAR den sitter är det — `references/SITEPLAN.md` för
+       fortfarande "Var exakt hagarnas grindar sitter" på listan över vad
+       som är kvar att kontrollera på plats, och hämtgrinden vid 178/79 är
+       av samma skäl ett antagande.
+
+       Läget följer ANKOMSTEN, inte en bild: uteridbanans grind står mitt
+       på SÖDRA långsidan, den som vetter mot husen och planen framför
+       klubbgaveln. Paddockens står på SÖDRA kortsidan i liv med gången
+       öster om stallet (x 175–178), den väg man faktiskt kommer från.
+       Bredden 2,4 m är samma som hagarnas grindar. */
+    {typ:"tra", sandkant:true, p:rektRunt(UTEBANA),
+     grindar:[{p:[UTEBANA.x + UTEBANA.w / 2, UTEBANA.y], bredd:2.4}]},  // uteridbanan
+    {typ:"tra", sandkant:true, p:rektRunt(PADDOCK),
+     grindar:[{p:[176.5, PADDOCK.y], bredd:2.4}]},  // paddocken bredvid
     /* GRINDARNA ÄR RIKTIGA ÖPPNINGAR (Tobias produkttest 2026-09-06,
        blocker 1). Staketen var slutna polygoner medan `hamtHage.grind`
        bara var en interaktionsmarkör, och `vandringKollision()` gjorde

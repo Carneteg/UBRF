@@ -93,62 +93,61 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 		start ~= nil and start:GetAttribute("MotDorr") == "stall N dorrgul",
 		start and tostring(start:GetAttribute("MotDorr")) or "ingen spawn")
 
-	--[[ 2d INGET FRÄMMANDE MARKPLAN.
+	--[[ 2d FRÄMMANDE MARKPLAN.
 
-		Samma skäl som 2b, och samma sorts fel. 2b finns för att en
-		QA-/legacy-SPAWN inte får vinna över den avsedda. Det här finns för
-		att ett QA-/legacy-MARKPLAN inte får vinna över den avsedda marken —
-		och det har hänt: mätt i en Rojo-place 17:01 låg `Baseplate`
-		2048 × 2048 studs med överkant Y 0,000, medan UBRF-markens högsta
-		lager slutar på Y −0,018. Spelaren gick alltså på rutnätet ÖVERALLT,
-		683 m i varje riktning, och hela anläggningens mark var maskerad.
+		Mätt i Studio under P0-C: `Workspace.Baseplate`, 2048 x 16 x 2048
+		studs, låg med ovansidan på y = 0,000 medan UBRF:s högsta marklager
+		slutar på y = -0,018. Rutnätet vann alltså som golv ÖVERALLT — på
+		gården, i stallet, och 300 m utanför tomten — och hela den byggda
+		marken var maskerad. Preflighten släppte igenom det: den fällde en
+		främmande SpawnLocation men kände inte till ett främmande markplan.
 
-		Marken ligger under noll med flit, så att husgolven på 0 vinner. Det
-		betyder att VARJE place med en default-baseplate maskerar världen, och
-		det ska preflighten säga i klartext i stället för att släppa in en
-		spelare i en värld som ser rätt ut och inte är det.
+		Marken ligger medvetet under noll för att husgolven på 0 ska vinna.
+		Det gör varje place med en kvarglömd baseplate tyst fel, och det är
+		precis det en fail-closed grind ska fånga.
 
-		REGELN ÄR FOTAVTRYCK PLUS ÖVERKANT, och inte ägarskap.
+		Regeln är storleken: ingen UBRF-del utanför `Anläggning` har någon
+		vågrät utbredning i närheten av det här. Roblox standardbaseplate är
+		2048 x 2048; tröskeln 120 studs (40 m) ligger en tiopotens under
+		den och långt över allt eget. Sökvägen skrivs ut — den som ska rensa
+		ska slippa leta. ]]
+	local MARK_TROSKEL = 120
+	local frammande: { string } = {}
+	local anlaggning = workspace:FindFirstChild("Anläggning")
+	for _, d in ipairs(workspace:GetChildren()) do
+		--[[ `Terrain` räknas inte här. Den ÄR en BasePart och rapporterar
+			2044 x 2044 studs även när den är helt tom, så storleksregeln
+			hade fällt varje place i världen. Terrängen mäts på sin faktiska
+			utbredning i 2e i stället — mätt: den här raden flaggade
+			`Workspace.Terrain` i en place utan en enda voxel. ]]
+		if d:IsA("BasePart") and not d:IsA("Terrain") and d.CanCollide
+			and (anlaggning == nil or not d:IsDescendantOf(anlaggning))
+			and d.Size.X >= MARK_TROSKEL and d.Size.Z >= MARK_TROSKEL then
+			table.insert(frammande, ("%s (%.0f x %.0f studs, ovansida y=%.3f)")
+				:format(d:GetFullName(), d.Size.X, d.Size.Z, d.Position.Y + d.Size.Y / 2))
+		end
+	end
+	rad(ut, "2d inget främmande markplan", #frammande == 0,
+		if #frammande == 0 then "inga plan över 120 studs utanför anläggningen"
+		else table.concat(frammande, "; "))
 
-		Att fråga "ligger delen utanför `Anläggning`?" ser rimligt ut och
-		duger inte: UBRF:s EGEN mark är också stora kolliderande plattor, och
-		hierarkin skiljer sig mellan en byggd place och en bänk. En sådan
-		regel flaggar spelets egen mark.
-
-		Det som FAKTISKT skiljer dem är höjden, och det är en avsiktlig
-		egenskap i bygget: markens lager slutar UNDER noll, så att husgolven
-		på 0 vinner över dem. En default-baseplate slutar på exakt 0,000.
-		Gränsen dras därför strax under noll.
-
-		Premissen mäts på raden efter, så att den inte kan tystna: höjs
-		marken till 0 blir 2e röd, och det är rätt — då går en baseplate inte
-		längre att skilja från marken och den här kontrollen är blind.
-
-		Hästarna, utrustningen och avatarerna klarar gränsen av sig själva:
-		ingen av dem är hundra studs bred. ]]
-	local STOR_SIDA = 100          -- studs; 33 m, långt över allt vi bygger
-	local MARKTAK = -0.01          -- strax under noll
-	local frammande, vartTak = {}, -math.huge
-	for _, d in ipairs(workspace:GetDescendants()) do
-		if d:IsA("BasePart") and d.CanCollide
-			and d.Size.X >= STOR_SIDA and d.Size.Z >= STOR_SIDA then
-			local topp = d.Position.Y + d.Size.Y / 2
-			if topp >= MARKTAK then
-				table.insert(frammande, ("%s %.0f×%.0f, överkant Y %.3f"):format(
-					d:GetFullName(), d.Size.X, d.Size.Z, topp))
-			elseif topp > vartTak then
-				vartTak = topp
+	--[[ 2e TERRÄNG. Samma fel, annan form: en enda terrängkloss under
+		världen gör samma sak som en baseplate. UBRF bygger ingen terräng
+		alls, så varje voxel är främmande. ]]
+	local terrangOk, terrangDetalj = true, "ingen terräng"
+	do
+		local t = workspace:FindFirstChildOfClass("Terrain")
+		if t then
+			local e = t.MaxExtents
+			local vol = (e.Max - e.Min)
+			if vol.X > 0 or vol.Y > 0 or vol.Z > 0 then
+				terrangOk = false
+				terrangDetalj = ("terräng finns: %.0f x %.0f x %.0f studs")
+					:format(vol.X, vol.Y, vol.Z)
 			end
 		end
 	end
-	rad(ut, "2d inget främmande markplan maskerar UBRF-marken",
-		#frammande == 0,
-		if #frammande > 0 then table.concat(frammande, "; ")
-			else "ingen stor kolliderande yta med överkant över marken")
-	rad(ut, "2e UBRF-marken ligger under noll, så 2d går att skilja",
-		vartTak > -math.huge and vartTak < MARKTAK,
-		if vartTak > -math.huge then ("högsta marklager Y %.3f"):format(vartTak)
-			else "ingen mark hittad")
+	rad(ut, "2e ingen främmande terräng", terrangOk, terrangDetalj)
 
 	--[[ 3. Dörrkontrakt: verklig interaktion, inte en gul markör. ]]
 	local okDorr, DorrService = pcall(function()

@@ -78,10 +78,6 @@ SPELBARHET = BYGGE + [
     ("UBRFSprak",    "game/UBRFSprak.luau"),
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("DorrService",  "src/server/DorrService.luau"),
-    #[[ Preflighten har ALDRIG korts i en spec — den har bara matts i en
-    #   korande place. Dess markplanskontroll (2d) provas darfor mot den
-    #   byggda varlden i spelbarhet.spec. ]]
-    ("Preflight",    "src/server/Preflight.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("HastRigg",     "src/server/HastRigg.luau"),
@@ -89,6 +85,10 @@ SPELBARHET = BYGGE + [
     #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
     #   och far inte ha var sin kopia av hennes matt. ]]
     ("Varldsmatning", "tests/varldsmatning.luau"),
+    #[[ Preflighten matas pa den BYGGDA varlden: en ren UBRF ska passera
+    #   markplansgrinden, och en kvarglomd baseplate ska falla den. Utan
+    #   varlden hade specen bara kunnat prova den tomma vagen. ]]
+    ("Preflight",    "src/server/Preflight.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
@@ -575,6 +575,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ Manifestet behover varlden, tjansterna och speldatan — samma bank
     #   som spelbarheten. ]]
     elif "varldsmanifest" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
+    elif "preflight" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "topologi" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
