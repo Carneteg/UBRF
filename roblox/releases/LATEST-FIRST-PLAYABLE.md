@@ -1,5 +1,27 @@
 # Vilken fil ska testas? — canonical pekare
 
+> ## ⛔ STOPP — filen nedan har sex kända fel
+>
+> Tobias fysiska Studio-test av `6a0e5d7` hittade sex produktfel
+> (arbetsordern på PR #162, 05:28). Fem är rättade i källträdet, ett
+> väntar på ett produktbeslut. **Ingen ny `.rbxlx` byggs förrän hela
+> listan är klar** — det är releasepolicyn i samma order.
+>
+> Filen nedan står kvar som den senast BYGGDA, inte som den som ska
+> provas. Öppnar du den möter du:
+>
+> | | |
+> |---|---|
+> | P0-1 | en grind som verkligheten saknar (väntar på beslut) |
+> | P0-2 | utrustningssteget utan anvisning till sadelkammaren |
+> | P0-3 | instruktionen ligger kvar när du går därifrån |
+> | P1-4 | gräs syns inne i byggnaderna |
+> | P0-5 | stallet är tomt — bara en häst byggs |
+> | P0-6 | elva av fjorton dörrar går inte att gå igenom |
+>
+> Nästa mapp får sin egen SHA och en egen rad här.
+
+
 ## ✅ Filen att öppna
 
 ```
