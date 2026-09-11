@@ -445,6 +445,18 @@ Sprak.text = {
 		sv = "Nästa övning",
 		en = "Next exercise",
 	},
+	["ugneta.borja_lektionen"] = {
+		sv = "Fortsätt för att börja lektionen",
+		en = "Continue to start the lesson",
+	},
+	["ugneta.ej_bedomd.rubrik"] = {
+		sv = "Försöket kunde inte bedömas",
+		en = "The attempt could not be assessed",
+	},
+	["ugneta.ej_bedomd.punkt"] = {
+		sv = "Det fanns inte tillräckligt mätt underlag den här gången.",
+		en = "There was not enough measured data this time.",
+	},
 	["ugneta.forsok"] = {
 		sv = "Försök %d",
 		en = "Attempt %d",

@@ -54,6 +54,10 @@ local UgnetaController = require(script.Parent.UgnetaController)
 local UgnetaGestalt = require(script.Parent.UgnetaGestalt)
 local ReplayController = require(script.Parent.ReplayController)
 local Inspelning = require(game:GetService("ReplicatedStorage").HorseCore.Inspelning)
+--[[ Kortets knapptext kommer ur språkkatalogen. Den stod hårdkodad på
+	svenska i logiken, vilket gav en engelsk spelare svenska ord — se noten
+	vid `presentera`. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 
 local LektionController = {}
 
@@ -256,11 +260,25 @@ end
 
 --[[ Presentationen av övningen. Kortet, men INTE mitt under ridningen:
      det visas innan försöket börjar och spelaren stänger det själv
-     genom att starta. ]]
+     genom att starta.
+
+     KNAPPEN SÄGER VAD DEN GÖR (produktbeslut 13:29). Den sa "Börja", och
+     det räckte inte: ridloopen fryser hästen medan kortet väntar, så en
+     spelare som satt upp och gav framåt möttes av en häst som inte rörde
+     sig — utan att något förklarade varför. Lokal Studio-QA rapporterade
+     det som ett rörelsefel i §9, och rotorsaken var det här kortet.
+
+     Pausen står kvar; den skyddar försöket från att bli ogiltigt medan
+     spelaren läser. Det som ändrats är att orsaken syns.
+
+     Texten kommer dessutom ur SPRÅKKATALOGEN och inte som en svensk
+     litteral i logiken. Den stod hårdkodad här, vilket gav en engelsk
+     spelare ordet "Börja" — samma felklass som dörrarnas `ActionText`. ]]
 local function presentera(p: Lektion.Pass)
 	local o = Lektion.ovning(p)
 	if not o then return end
-	UgnetaController.visa(o.rubrik, o.punkter, true, "Börja")
+	UgnetaController.visa(o.rubrik, o.punkter, true,
+		Sprak.t("ugneta.borja_lektionen"))
 	lage = "presentation"
 end
 
@@ -329,9 +347,12 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 		     slut utan ett ord. Kortet säger därför exakt det som är
 		     sant, varken mer eller mindre, och väntar på spelaren som
 		     alla andra kort. ]]
-		UgnetaController.visa("Försöket kunde inte bedömas",
-			{ "Det fanns inte tillräckligt mätt underlag den här gången." },
-			true, if p.forsokNr < 2 then "Prova igen" else "Nästa övning")
+		--[[ Ur katalogen, av samma skäl som presentationens knapp ovan:
+			de här fyra strängarna stod hårdkodade på svenska i logiken. ]]
+		UgnetaController.visa(Sprak.t("ugneta.ej_bedomd.rubrik"),
+			{ Sprak.t("ugneta.ej_bedomd.punkt") },
+			true, if p.forsokNr < 2 then Sprak.t("ugneta.prova_igen")
+				else Sprak.t("ugneta.nasta_ovning"))
 		lage = "efter"
 	end
 	liveCd, liveSagt = 0, ""

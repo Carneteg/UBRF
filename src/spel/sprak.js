@@ -196,6 +196,22 @@ const SPRAK = {
   "ugneta.jamnare_forsok": { sv: "Jämnare försök. Behåll samma känsla.",
     en: "A steadier attempt. Keep the same feel." },
   "ugneta.nasta_ovning": { sv: "Nästa övning", en: "Next exercise" },
+
+  /* ── KORTET SOM PAUSAR RITTEN (produktbeslut 13:29) ──────────────────
+     Ridloopen fryser hästen medan ett lektionskort väntar — med flit: hon
+     ska inte rida vidare bakom ett oläst kort. Men knappen sa bara
+     "Börja", och den var dessutom HÅRDKODAD SVENSKA i logiken.
+
+     För spelaren blev det en häst som inte rör sig utan att något säger
+     varför, och för en engelsk spelare ett svenskt ord. Knappen säger nu
+     vad som faktiskt händer när man trycker. */
+  "ugneta.borja_lektionen": { sv: "Fortsätt för att börja lektionen",
+    en: "Continue to start the lesson" },
+  "ugneta.ej_bedomd.rubrik": { sv: "Försöket kunde inte bedömas",
+    en: "The attempt could not be assessed" },
+  "ugneta.ej_bedomd.punkt": {
+    sv: "Det fanns inte tillräckligt mätt underlag den här gången.",
+    en: "There was not enough measured data this time." },
   "ugneta.forsok": { sv: "Försök %d", en: "Attempt %d" },
   /* Dimensionsorden läraren pekar på. Ridtermer, men korta och entydiga —
      de hör till gränssnittet och inte till undervisningstexten, som står

@@ -517,6 +517,28 @@ do
 			LektionController.vantar() == true,
 			("(vantar %s · %d drivningar)"):format(
 				tostring(LektionController.vantar()), drivningar - d0))
+
+		--[[ KORTET SKA SÄGA VARFÖR (produktbeslut 13:29). Pausen får finnas
+			— men inte som en oförklarad fryst häst. Knappen ska säga vad ett
+			tryck gör, och den ska göra det på spelarens språk: den stod
+			hårdkodad som "Börja" och gav en engelsk spelare ett svenskt ord. ]]
+		do
+			local kn = hitta("UgnetaKnapp") or hitta("Knapp")
+			local txt = kn and kn.Text or ""
+			prova("kortets knapp förklarar att den startar lektionen",
+				txt:find(Sprak.iSprak("sv", "ugneta.borja_lektionen"), 1, true) ~= nil,
+				('("%s")'):format(txt))
+
+			--[[ …och på engelska. Samma mätning, andra locale — annars är
+				det bara en svensk konstant som råkar stämma. ]]
+			local fore = Sprak.eget()
+			Sprak.satLocale("en-us")
+			local en = Sprak.t("ugneta.borja_lektionen")
+			prova("och samma knapp finns på engelska",
+				en == "Continue to start the lesson" and en ~= Sprak.iSprak("sv", "ugneta.borja_lektionen"),
+				('("%s")'):format(en))
+			Sprak.satLocale(fore)
+		end
 		--[[ PAUSEN SKA HÅLLA. Rider hon vidare bakom kortet blir det
 			försök spelaren just läser om ogiltigt medan hon läser. ]]
 		prova("och medan kortet väntar står hästen still",
