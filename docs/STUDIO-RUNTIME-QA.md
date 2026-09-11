@@ -20,14 +20,14 @@ efter den.
 | Identitet | Värde | Vad det är |
 |---|---|---|
 | **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `41b829c29faef86123b5af1cc4feb60d92f878bb` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `50bf743cf50f081f560e560ff08e342fafaec3cb939469dbed611e083b1c55a3` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **artifact source SHA** | `c5984d0753db54f8031431173d2937642938c5db` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `6d42222fc95fa252de8b562ef8e635304504fb4b84a7eaf9a4fb27e69e6b86cf` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-41b829c/UBRFFirstPlayable.rbxlx` |
-| storlek | 910 411 byte, 64 instanser |
+| fil i repot | `roblox/releases/first-playable-place-c5984d0/UBRFFirstPlayable.rbxlx` |
+| storlek | 911 612 byte, 64 instanser |
 | determinism | ombyggd ur samma källa, byte-identisk |
 
 > **Den här artefakten ersätter både `…-9b5a570` och `…-1e8b207`.** Den är
@@ -59,7 +59,7 @@ efter den.
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-41b829c\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-c5984d0\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -73,7 +73,7 @@ git fetch origin
 git checkout claude/first-playable-20260910
 git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-41b829c\UBRFFirstPlayable.rbxlx" SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-c5984d0\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
 Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
@@ -88,7 +88,7 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=41b829c29faef86123b5af1cc4feb60d92f878bb
+FIRST_PLAYABLE_SHA=c5984d0753db54f8031431173d2937642938c5db
 FIRST_PLAYABLE_PREFLIGHT: PASS
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3309 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
@@ -423,7 +423,7 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 41b829c2… — rbxlx 50bf743cf50f081f560e560ff08e342fafaec3cb939469dbed611e083b1c55a3 — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source c5984d07… — rbxlx 6d42222fc95fa252de8b562ef8e635304504fb4b84a7eaf9a4fb27e69e6b86cf — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
