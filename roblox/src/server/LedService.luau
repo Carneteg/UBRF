@@ -134,12 +134,17 @@ end
 local VAND_FULL   = math.rad(40)   -- under detta kursfel: full fart
 local VAND_STOPP  = math.rad(75)   -- över detta: vänd på stället, gå inte
 
+--[[ KURSEN ÄR BLICKRIKTNINGEN, samma definition som
+	`MovementController` använder: `heading = atan2(Look.X, Look.Z)`, och
+	därmed är `(sin h, 0, cos h)` exakt `LookVector`.
+
+	Förut lästes kursen som `ToOrientation().Y`, alltså den vinkel man
+	skickar till `CFrame.Angles` — vars blickriktning är den MOTSATTA. Med
+	`framat()` nedan gav det en häst som leddes med svansen före: mätt i
+	Studio låg huvudet 3,32 studs BAKOM färdriktningen. ]]
 local function kurs(pivot: BasePart): number
-	local _, y = pivot.CFrame:ToOrientation()
-	--[[ `MovementController` skriver kursen som CFrame.Angles(0, h, 0) och
-		räknar framåt som (sin h, 0, cos h). Samma konvention här, annars
-		pekar en ledd häst åt andra hållet än en riden. ]]
-	return y
+	local look = pivot.CFrame.LookVector
+	return math.atan2(look.X, look.Z)
 end
 
 local function framat(h: number): Vector3
@@ -161,7 +166,10 @@ local function vridMot(pivot: BasePart, onskad: number, fartMS: number, dt: numb
 	end
 
 	local steg = math.clamp(fel, -omega * dt, omega * dt)
-	pivot.CFrame = CFrame.new(pivot.CFrame.Position) * CFrame.Angles(0, nu + steg, 0)
+	--[[ Blickriktningen skrivs DIREKT, inte via en vinkel vars
+		teckenkonvention går att missa. Positionen rörs inte. ]]
+	local p = pivot.CFrame.Position
+	pivot.CFrame = CFrame.lookAt(p, p + framat(nu + steg), Vector3.yAxis)
 	return math.abs(fel - steg)
 end
 

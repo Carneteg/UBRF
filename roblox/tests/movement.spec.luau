@@ -100,7 +100,15 @@ do
 		local h0 = mc.loco.heading
 		run(mc, hold, { forward = 1, steer = 1 })
 		run(mc, 0.6, { forward = 1 })              -- låt svängen dö ut
-		return math.abs(mc.loco.heading - h0)
+		--[[ KORTASTE VINKELSKILLNADEN, inte differensen rakt av.
+
+			`loco.heading` wrappas med `% 2pi`. En liten sväng ÅT DET
+			NEGATIVA HÅLLET gav därför 6,20 rad i stället för 0,08 —
+			mätfelet satt i provet och doldes bara av att svängen råkade
+			gå åt det positiva hållet. Det syntes när svängens tecken
+			rättades med hästens blickriktning. ]]
+		local d = (mc.loco.heading - h0 + math.pi) % (2 * math.pi) - math.pi
+		return math.abs(d)
 	end
 	local kort, lang = headingAfterTap(0.08), headingAfterTap(0.50)
 	local kvot = lang / math.max(kort, 1e-6)
