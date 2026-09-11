@@ -437,7 +437,21 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     stegaRitt() innan stepRide() uppdaterar gångarten. ]]
 	local svangGait = Gaits.get(loco.gait)
 	local kappaCeiling = M.CurvatureMax * svangGait.turn * (0.70 + 0.60 * stats.Agility)
-	local kappaWanted = steer * kappaCeiling
+	--[[ ── SVÄNGENS TECKEN ──────────────────────────────────────────
+
+	     `heading = atan2(Look.X, Look.Z)` är en VÄNSTERHÄNT bäring: ökar
+	     kursen vrids blicken från +Z mot +X, och det är åt ryttarens
+	     VÄNSTER. En positiv styrning är tangent D, alltså höger.
+
+	     Tecknet vänds därför här, vid källan, så att kurvaturen,
+	     vridtakten OCH kroppens lutning vänder tillsammans. Vänds det
+	     längre ned — på kursintegrationen — svänger hästen rätt men lägger
+	     sig åt fel håll i bågen.
+
+	     `hj.styrning` rörs inte: den är ryttarens hjälp och ska fortsätta
+	     betyda höger för D, så att `bojSida` och vikten säger samma sak
+	     som hästen gör. ]]
+	local kappaWanted = -steer * kappaCeiling
 	--[[ ── HÄSTEN FALLER IN (G02-B punkt 2) ───────────────────────────
 	     Den enda plats där hästens tillstånd ändrar VAR hon hamnar och
 	     inte bara vad hon får för betyg. En häst som tappat balansen i en
@@ -477,7 +491,7 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     när hästen går, så den kan aldrig ge en pivot under ritt. ]]
 	if speedAbs < M.TurnInPlaceBelow then
 		local andel = 1 - speedAbs / M.TurnInPlaceBelow
-		loco.turnRate += steer * M.TurnInPlaceRate
+		loco.turnRate -= steer * M.TurnInPlaceRate
 			* (0.70 + 0.60 * stats.Agility) * andel
 	end
 	loco.heading = (loco.heading + loco.turnRate * dt) % (2 * math.pi)
@@ -637,8 +651,29 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     så det finns ingen snärt att dämpa här. Att i stället slå på
 	     AutoRotate igen vore att lämna vridtakten till Roblox, och det är
 	     precis den fordonskänsla gaten ska bort ifrån. ]]
+	--[[ ── KURSEN SKRIVS SOM BLICKRIKTNING ────────────────────────────
+
+	     Rad 106 DEFINIERAR kursen ur blickriktningen:
+	         heading = atan2(LookVector.X, LookVector.Z)
+	     och därmed är `(sin heading, 0, cos heading)` exakt `LookVector`.
+	     `forwardVector` ovan följer den definitionen.
+
+	     Den här raden gjorde det INTE. `CFrame.Angles(0, h, 0)` har
+	     `LookVector = (-sin h, 0, -cos h)`, alltså rakt motsatt den kurs
+	     som just räknats fram — och från den bildrutan var de två oense
+	     för alltid. Mätt i Studio: ekipaget färdades med svansen före,
+	     ridd (ryttarens LookVector -1,00 mot färdriktningen), ledd och
+	     driven. Riggen var oskyldig: `HastRigg` bygger hals, huvud och man
+	     på lokalt -Z och svansen på +Z, alltså Roblox egen konvention.
+
+	     `CFrame.lookAt` skriver blickriktningen DIREKT i stället för via
+	     en vinkel vars teckenkonvention går att missa. Positionen lämnas
+	     orörd — `Humanoid:Move` sköter förflyttningen — och uppvektorn är
+	     lodrät, så kroppens lutning ligger kvar i `rootJoint.C0` precis
+	     som förut. ]]
 	local root = rig.root
-	root.CFrame = CFrame.new(root.CFrame.Position) * CFrame.Angles(0, loco.heading, 0)
+	root.CFrame = CFrame.lookAt(root.CFrame.Position,
+		root.CFrame.Position + forwardVector, Vector3.yAxis)
 
 	if hum then
 		--[[ Vändning på stället: farten noll, men kursen ändras ändå av

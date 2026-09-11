@@ -34,6 +34,22 @@ RunService._server = true
 local M = 3
 local function vec(x, y, z) return Vector3.new(x, y, z) end
 
+--[[ KURSEN LÄSES SOM BLICKRIKTNING, samma definition som tjänsten och
+	`MovementController`: `heading = atan2(Look.X, Look.Z)`, alltså är
+	`(sin h, 0, cos h)` exakt `LookVector`.
+
+	Specen läste förut `ToOrientation().Y` — vinkeln man skickar till
+	`CFrame.Angles`, vars blickriktning är den MOTSATTA. Den mätte alltså
+	den felvända konventionen och blev grön på en häst som gick baklänges. ]]
+local function kursAv(cf)
+	local look = cf.LookVector
+	return math.atan2(look.X, look.Z)
+end
+local function framatAv(cf)
+	local h = kursAv(cf)
+	return Vector3.new(math.sin(h), 0, math.cos(h))
+end
+
 --[[ En karaktär: det tjänsten faktiskt läser. ]]
 local function nyKaraktar(pos)
 	local k = Instance.new("Model")
@@ -167,8 +183,7 @@ check("och hon får skrittfart, inte noll", hastHum.WalkSpeed > 0,
 --[[ HON GÅR DIT HON PEKAR. Riktningen som skickas ska vara hästens EGEN
 	framåtvektor, inte fågelvägen till målpunkten. ]]
 if dir then
-	local _, kursen = hastKropp.CFrame:ToOrientation()
-	local framatV = Vector3.new(math.sin(kursen), 0, math.cos(kursen))
+	local framatV = framatAv(hastKropp.CFrame)
 	local prick = dir.X * framatV.X + dir.Z * framatV.Z
 	check("ordern går i hästens egen riktning, inte i sidled",
 		prick > 0.99, string.format("prickprodukt %.4f", prick))
@@ -279,10 +294,10 @@ do
 		vrida sig ett kvarts varv för att kunna följa. ]]
 	kropp4.CFrame = CFrame.new(varld(140, 70)) * CFrame.Angles(0, 0, 0)
 	rot4.CFrame = CFrame.new(varld(134, 70))
-	local _, kurs0 = kropp4.CFrame:ToOrientation()
+	local kurs0 = kursAv(kropp4.CFrame)
 
 	LedService._steg(1 / 30)
-	local _, kurs1 = kropp4.CFrame:ToOrientation()
+	local kurs1 = kursAv(kropp4.CFrame)
 	check("ledningen äger kursen — hästen vrider sig",
 		math.abs(kurs1 - kurs0) > 1e-4,
 		string.format("%.4f rad på en bildruta", math.abs(kurs1 - kurs0)))
@@ -304,14 +319,32 @@ do
 	--[[ Och hon ska vrida sig ÄNDA FRAM och sedan gå. Utan den här raden
 		kunde tjänsten bara vrida, aldrig komma iväg. ]]
 	for _ = 1, 90 do LedService._steg(1 / 30) end
-	local _, kurs2 = kropp4.CFrame:ToOrientation()
-	local framatV = Vector3.new(math.sin(kurs2), 0, math.cos(kurs2))
+	local framatV = framatAv(kropp4.CFrame)
 	local mot = rot4.Position - kropp4.Position
 	local langd = math.sqrt(mot.X * mot.X + mot.Z * mot.Z)
 	local prick = (mot.X * framatV.X + mot.Z * framatV.Z) / math.max(langd, 1e-6)
 	check("hon vänder sig ända fram till rätt kurs och går sedan",
 		prick > 0.9 and hum4.WalkSpeed > 0,
 		string.format("prickprodukt %.3f, fart %.2f studs/s", prick, hum4.WalkSpeed))
+
+	--[[ ══ FÄRDRIKTNINGEN MOT BLICKRIKTNINGEN ═══════════════════════
+
+		Invarianten hela konventionsrättelsen handlar om: hästen ska gå
+		ÅT DET HÅLL HON TITTAR. Mätt i Studio före rättelsen var
+		prickprodukten -1,00 — ekipaget färdades med svansen före, ridd
+		såväl som ledd, och ryttarens blickriktning låg -1,00 mot färden.
+
+		Den här raden kan bara bli grön om ordern och blickriktningen
+		pekar åt samma håll. ]]
+	local order = hum4._moveDir
+	if order then
+		local look = kropp4.CFrame.LookVector
+		local prickLook = order.X * look.X + order.Z * look.Z
+		check("hästen går ÅT DET HÅLL HON TITTAR (travel · LookVector > 0)",
+			prickLook > 0.99, string.format("prickprodukt %.4f", prickLook))
+	else
+		check("hästen får en rörelseorder att mäta mot", false, "ingen order")
+	end
 
 	--[[ NÄTVERKSÄGARSKAPET. Mätt i Studio: en oriden häst intill en
 		spelare ägs AUTOMATISKT av den klienten, och serverns order når då
