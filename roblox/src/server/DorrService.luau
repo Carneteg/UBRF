@@ -170,6 +170,19 @@ function DorrService.dorrar(): { BasePart }
 	return ut
 end
 
+--[[ Boxdörrarna. Egen lista av samma skäl som noten i `start()`. ]]
+function DorrService.boxdorrar(): { BasePart }
+	local ut = {}
+	local rot = anlaggning()
+	if not rot then return ut end
+	for _, d in ipairs(rot:GetDescendants()) do
+		if d:IsA("BasePart") and d:GetAttribute("UBRFBoxdorr") == true then
+			table.insert(ut, d)
+		end
+	end
+	return ut
+end
+
 function DorrService.start()
 	local funna = DorrService.dorrar()
 	if #funna == 0 then
@@ -185,6 +198,18 @@ function DorrService.start()
 		rustaDorr(blad)
 	end
 	print(("[Dörr] %d dörrar fick interaktion"):format(#funna))
+
+	--[[ Boxdörrarna riggas med SAMMA mekanik men räknas för sig.
+
+		De hör inte till `dorrar()`: den listan är fasadens genomgångar och
+		bär kontraktet "13 blad + 1 deklarerad icke-passage". Att lägga
+		trettiotre boxdörrar där hade brutit det utan att någon dörr blev
+		fel — därför en egen lista och en egen rad i outputen. ]]
+	local boxar = DorrService.boxdorrar()
+	for _, blad in ipairs(boxar) do
+		rustaDorr(blad)
+	end
+	print(("[Box] %d boxdörrar fick interaktion"):format(#boxar))
 end
 
 -- För preflight och specar: går dörren att öppna, och släpper den igenom?

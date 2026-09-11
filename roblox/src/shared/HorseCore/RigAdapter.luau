@@ -56,7 +56,11 @@ end
      hölje-hitbox som ändrar form med animationen, och då studsar hästen
      mot marken när benen rör sig. ]]
 local function resolveRoot(model: Model): BasePart?
-	for _, key in { "BodyCollider", "HumanoidRootPart", "Root" } do
+	--[[ `HumanoidRootPart` FÖRST: det är namnet Roblox själv binder
+	     `Humanoid.RootPart` till, och sedan #162:s locomotion-P0 är det
+	     också namnet `HastRigg` bygger. `BodyCollider` ligger kvar för
+	     externt byggda riggar som följer HORSE-MODEL-SPEC:s äldre namn. ]]
+	for _, key in { "HumanoidRootPart", "BodyCollider", "Root" } do
 		local found = findByName(model, key)
 		if found and found:IsA("BasePart") then
 			return found

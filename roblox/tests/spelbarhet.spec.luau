@@ -453,9 +453,29 @@ check("RigAdapter.build() lyckas mot riggen", byggd ~= nil,
 	felmeddelande or "ingen fel")
 
 if byggd then
-	check("riggen har en fysisk rot (BodyCollider)",
-		byggd.root ~= nil and byggd.root.Name == "BodyCollider",
+	--[[ LOCOMOTION-P0 (#162, lokal Studio-QA på 9b5a570).
+
+		Roten MÅSTE heta exakt `HumanoidRootPart`. Roblox binder
+		`Humanoid.RootPart` till den syskondelen och ingen annan; hette den
+		`BodyCollider` blev RootPart nil, `FloorMaterial` blev `Air` och
+		hästen rörde sig 0,00 studs trots `WalkSpeed=4.93`.
+
+		Den här mätningen blir röd i exakt det fallet — den är skriven för
+		att fånga just namnet, inte bara "någon rot finns". ]]
+	check("rotdelen heter HumanoidRootPart (Roblox binder bara det namnet)",
+		byggd.root ~= nil and byggd.root.Name == "HumanoidRootPart",
 		byggd.root and byggd.root.Name or "ingen")
+	--[[ Roblox letar rotdelen bland modellens DIREKTA barn, inte i hela
+		trädet. Ligger den i en undermapp binder motorn den aldrig. ]]
+	check("rotdelen är ett direkt barn till modellen (syskon till Humanoid)",
+		rigg:FindFirstChild("HumanoidRootPart") == byggd.root,
+		tostring(rigg:FindFirstChild("HumanoidRootPart")))
+	check("rotdelen är modellens PrimaryPart",
+		(rigg :: any).PrimaryPart ~= nil and (rigg :: any).PrimaryPart == byggd.root)
+	check("HipHeight är satt — annars sjunker kroppen i marken",
+		byggd.humanoid ~= nil and (byggd.humanoid :: any).HipHeight ~= nil
+			and (byggd.humanoid :: any).HipHeight > 0,
+		byggd.humanoid and tostring((byggd.humanoid :: any).HipHeight) or "ingen humanoid")
 	check("roten kolliderar — hästen finns fysiskt",
 		byggd.root ~= nil and byggd.root.CanCollide == true)
 	check("riggen har Humanoid (markkontakt)", byggd.humanoid ~= nil)

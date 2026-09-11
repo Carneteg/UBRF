@@ -1609,14 +1609,50 @@ local function byggStallInre(model: Model, base: CFrame)
 					x0, 0, o.y + par[2], rad.djup, BF.heldelH, 0.08,
 					BF.heldel, Enum.Material.Metal)
 			end
-			-- Den täta panelen mot gången, och kappregeln ovanpå den.
+			--[[ Den täta panelen mot gången, kappregeln ovanpå den — och
+				BOXDÖRREN, som fronten saknade.
+
+				Panelen byggdes förut i ETT stycke över hela fackets bredd.
+				Det gjorde varje box förseglad: hästen kunde fysiskt inte gå
+				ut, och `leda` kunde aldrig bli sann på riktigt. Mätt i
+				Studio på 9b5a570 och rojo-live.
+
+				Nu delas panelen och kappregeln så att fackets bortre ände
+				blir en öppning, och i öppningen hänger ett dörrblad som går
+				att svänga upp. Måtten kommer ur `BF.dorr` i den delade
+				datan; se noten där för vad som är verifierat och vad som är
+				antagande. Finns ingen `dorr` i datan byggs fronten hel som
+				förut — en äldre datafil blir inte trasig av det här. ]]
 			local fx = if rad.vetter > 0 then x0 + rad.djup - 0.06 else x0
+			local frontY0 = o.y + f.y0 + 0.08
+			local frontL = S.boxB - 0.16
+			local dorrB = if BF.dorr then math.min(BF.dorr.bredd, frontL - 0.30) else 0
+			local fastL = frontL - dorrB
+
 			BK.box(model, base, "Boxfront " .. namn,
-				fx, 0, o.y + f.y0 + 0.08, 0.06, BF.heldelH, S.boxB - 0.16,
+				fx, 0, frontY0, 0.06, BF.heldelH, fastL,
 				BF.heldel, Enum.Material.Metal)
 			BK.box(model, base, "Kappregel " .. namn,
-				fx - 0.02, BF.ramZ, o.y + f.y0 + 0.08, 0.10, 0.10, S.boxB - 0.16,
+				fx - 0.02, BF.ramZ, frontY0, 0.10, 0.10, fastL,
 				BF.ram, Enum.Material.Metal)
+
+			if dorrB > 0 then
+				--[[ Bladet är lika högt som barriären bredvid — panel plus
+					kappregel — så en stängd box är lika tät som förut.
+					`Langs`/`Bredd`/`Utat` är samma attributform som
+					fasadens dörrblad, så `DorrService` kan svänga det med
+					kod som redan är beprövad. ]]
+				local blad = BK.box(model, base, "Boxdörr " .. namn,
+					fx, 0, frontY0 + fastL, 0.06, BF.ramZ + 0.10, dorrB,
+					BF.heldel, Enum.Material.Metal)
+				blad:SetAttribute("UBRFBoxdorr", true)
+				blad:SetAttribute("Box", namn)
+				blad:SetAttribute("Rad", rad.id)
+				blad:SetAttribute("Langs", "Z")
+				blad:SetAttribute("Bredd", dorrB)
+				blad:SetAttribute("Hojd", BF.ramZ + 0.10)
+				blad:SetAttribute("Utat", rad.vetter)
+			end
 			-- Ändstolparna, upp till överliggaren.
 			for _, zy in ipairs({ f.y0 + 0.08, f.y1 - 0.08 }) do
 				local st = BK.box(model, base, "Frontstolpe " .. namn,

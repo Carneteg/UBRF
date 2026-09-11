@@ -101,6 +101,7 @@ local function avstandTillHast(vy: any): number?
 	local rot = tecken and tecken:FindFirstChild("HumanoidRootPart")
 	local modell = hastModell(vy and vy.hastId)
 	local pivot = modell and ((modell :: any).PrimaryPart
+		or modell:FindFirstChild("HumanoidRootPart")
 		or modell:FindFirstChild("BodyCollider"))
 	if not rot or not pivot then return nil end
 	return ((rot :: any).Position - (pivot :: any).Position).Magnitude

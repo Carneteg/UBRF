@@ -1893,6 +1893,44 @@ do
 			.. " m mot verandans kant " .. (K.bredd / 2))
 end
 
+
+--[[ ── BOXDÖRREN (#162, blockerare 2: fysisk ledning) ─────────────────
+
+	Fronten byggdes i ETT stycke över hela fackets bredd, och då var varje
+	box förseglad. Mätt i Studio: `Boxfront MB 5` var en solid skiva
+	0,06 x 1,35 x 3,34 m utan öppning, och hästen kunde fysiskt inte lämna
+	sin box. Hela den övriga rutten var fri — gången 2,58 m, E-porten
+	3,60 m — så fronten var det ENDA hindret.
+
+	Mätningarna nedan blir röda om någon bygger ihop fronten igen: att
+	dörren finns per fack, att den är bred nog för hästen, och att den
+	fasta panelen faktiskt KRYMPT med dörrens bredd. Den sista är den som
+	fångar en dörr som lagts ovanpå en hel panel. ]]
+do
+	local BFD = (UBRFKomplex.identitet.stall.boxfront :: any).dorr
+	check("boxdörrens mått finns i den delade datan", BFD ~= nil and BFD.bredd > 0,
+		BFD and tostring(BFD.bredd) or "saknas")
+	if BFD then
+		local fronter = raknaNamn("Boxfront ")
+		local dorrar = raknaNamn("Boxdörr ")
+		check("varje boxfack har en boxdörr", dorrar == fronter,
+			string.format("%d dörrar mot %d fronter", dorrar, fronter))
+
+		--[[ Hästen är 0,62 m bred. En dörr som inte rymmer henne är lika
+			stängd som ingen dörr alls. ]]
+		local d = forstaNamn("Boxdörr ")
+		check("boxdörren är bredare än hästen (0,62 m)",
+			d ~= nil and math.max(d.Size.X, d.Size.Z) / 3 >= 0.62 + 0.20,
+			d and string.format("%.2f m", math.max(d.Size.X, d.Size.Z) / 3) or "ingen")
+
+		local f = forstaNamn("Boxfront ")
+		local helBredd = UBRFKomplex.stall.boxB - 0.16
+		check("den fasta panelen har krympt med dörrens bredd",
+			f ~= nil and math.abs(math.max(f.Size.X, f.Size.Z) / 3 - (helBredd - BFD.bredd)) < 0.05,
+			f and string.format("%.2f m, väntat %.2f", math.max(f.Size.X, f.Size.Z) / 3,
+				helBredd - BFD.bredd) or "ingen")
+	end
+end
 if fails > 0 then
 	print(string.format("\n%d FEL", fails))
 	error("bygge.spec: " .. fails .. " fel")

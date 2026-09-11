@@ -820,7 +820,32 @@ const IDENTITET = {
        däremellan jämnt. */
     boxfront:{heldel:"#454A4F", ram:"#9A9B93",
               heldelH:1.35, ramZ:1.38, stolpH:2.15, toppregelZ:2.20,
-              reglar:5, regelD:0.04},
+              reglar:5, regelD:0.04,
+              /* BOXDÖRREN. Fronten byggdes tidigare som en obruten panel, och
+                 då var varje box FÖRSEGLAD: lokal Studio-mätning visade
+                 `Boxfront MB 5` som en solid skiva 0,06 x 1,35 x 3,34 m utan
+                 öppning, och hästen kunde fysiskt inte lämna sin box. Hela
+                 den övriga rutten är fri — gången 2,58 m, W-porten 2,40 m,
+                 hästgången 2,90 m — så det här var det enda hindret.
+
+                 VERIFIERAT ur referenserna, inte påhittat:
+                 · att varje box HAR en dörr mot gången — KORT.md: "Varje box
+                   har sitt dörrslag ritat ut mot gången",
+                 · att den slår UT i gången — stall-inne-06 visar en box
+                   inifrån med dörren öppen, svängd ut mot gången,
+                 · konstruktionen: tät panel nedtill, galvad ram med reglar
+                   över — samma som resten av fronten (i05, i06).
+
+                 `[REFERENCE GAP]` står kvar oförändrad: dörrbladets rutnät
+                 och VILKEN sektion av varje box som är dörr går inte att
+                 läsa ur bilderna. Den läses därför inte per box.
+
+                 `[ANTAGANDE]`: bredden 1,20 m och att dörren sitter i
+                 fackets bortre ände mot skiljeväggen. 1,20 m är ett vanligt
+                 boxdörrsmått och ryms med marginal i fackets 3,34 m; läget
+                 vid skiljeväggen ger gångjärnet samma stolpe som bilden
+                 visar. Båda ska ersättas när måttet går att läsa. */
+              dorr:{bredd:1.20, vidSkiljevagg:true}},
     /* Balkongen och spiraltrappan på klubbgaveln — stall-fasad-04/05.
        Balkongen sitter mitt för sin dörr, alltså i gavelns mitt. */
     balkong:{z:4.55, bredd:2.2, djup:1.10, rackeH:0.92},
