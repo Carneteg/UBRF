@@ -820,6 +820,60 @@ local function byggStaket(model: Model, base: CFrame)
 	end
 end
 
+--[[ ══ SKYLTARNA UR PROPS ══════════════════════════════════════════════
+
+	Blockerare ur Tobias tredje Studio-test, punkt 4: skylten
+	UPPLANDS-BRO RYTTARFÖRENING saknas i Roblox trots att den ligger i
+	källkanon. Det är ett PARITETSFEL, inte ett designönskemål.
+
+	Orsaken var bredare än en skylt. `G.props` har 26 poster — skyltar,
+	silon, flaggan, vägvisaren, stenhästarna, balarna, busskylten — och
+	Roblox byggde EN typ av dem: `mast`. Webben ritar dem alla.
+
+	Här byggs de som är SKYLTAR, alltså det ordern gäller. Måtten portas
+	ur webbens `v3dTextPanel`-anrop i `src/varld3d.js` — 5,0 × 0,7 m på
+	3,4 m för `skylt`, 1,6 × 0,4 m på 3,0 m för `cafeskylt`, vriden
+	`atan2(norm.x, norm.y)`. Inget hittas på: läge, normal och text
+	kommer ur samma exporterade data webben läser.
+
+	Texten står som ATTRIBUT, precis som sponsorskyltarna gör sedan
+	tidigare — Roblox ritar inte text på en del utan en SurfaceGui, och
+	att införa en sådan här vore att byta renderingsteknik i en
+	paritetsrättelse.
+
+	De övriga proptyperna är fortfarande obyggda. Det är miljöarbete och
+	redovisas som ett mätt fynd i stället för att smygas in här. ]]
+local SKYLTMATT: { [string]: { b: number, h: number, y: number } } = {
+	skylt = { b = 5.0, h = 0.7, y = 3.4 },
+	cafeskylt = { b = 1.6, h = 0.4, y = 3.0 },
+}
+local SKYLTTEXT: { [string]: string } = {
+	cafeskylt = "CAFÉ KRUBBAN",
+}
+
+local function byggSkyltar(model: Model, base: CFrame)
+	for _, p in ipairs(G.props or {}) do
+		local matt = SKYLTMATT[p.typ]
+		if matt then
+			local x, z = p.pos[1], p.pos[2]
+			local n = p.norm or { 0, -1 }
+			local vin = math.atan2(n[1], n[2])
+			local del = Instance.new("Part")
+			del.Name = "Skylt " .. tostring(p.typ)
+			del.Anchored = true
+			del.CanCollide = false
+			del.Size = Vector3.new(matt.b * BK.M, matt.h * BK.M, 0.08 * BK.M)
+			del.CFrame = base * CFrame.new(x * BK.M, matt.y * BK.M, z * BK.M)
+				* CFrame.Angles(0, vin, 0)
+			del.Color = Color3.fromRGB(239, 232, 216)
+			del.Material = Enum.Material.SmoothPlastic
+			del:SetAttribute("Text", SKYLTTEXT[p.typ] or tostring(p.text or ""))
+			del:SetAttribute("Propstyp", tostring(p.typ))
+			del.Parent = model
+		end
+	end
+end
+
 -- Belysningsmasterna runt uteridbanan. Dubbel armatur på en tvärarm — se den
 -- närmaste masten i references/omnejd/banan-03. Lägena står i G.props.
 local function byggMaster(model: Model, base: CFrame)
@@ -2540,6 +2594,7 @@ byggStallIdentitet(model, base)
 byggRidhusIdentitet(model, base)
 byggStaket(model, base)
 byggMaster(model, base)
+byggSkyltar(model, base)
 if QA_MARKORER then byggDorrmarkorer(model, base) end
 byggSpawn(model, base)
 

@@ -604,6 +604,104 @@ for _, iv in ipairs(INTERIORER) do
 	check(("%s: inget marklager ligger överst inomhus"):format(iv.id), #gras == 0, detalj)
 end
 
+--[[ ══ 7b. SKYLTPARITET — KANON SOM INTE BYGGS ÄR INTE BYGGD ═══════════
+
+	Blockerare ur Tobias tredje Studio-test: skylten UPPLANDS-BRO
+	RYTTARFÖRENING saknas i Roblox trots att den ligger i källkanon och i
+	den exporterade anläggningsdatan. Ett paritetsfel, inte ett
+	designönskemål.
+
+	Regeln: varje skylt i `G.props` ska finnas som en byggd del med sin
+	text. Provet läser EXPORTEN och letar i den BYGGDA världen — inte
+	tvärtom. Ett prov som utgår från det byggda kan aldrig se det som
+	aldrig byggdes. ]]
+print("\n7b. Skyltparitet — varje kanonisk skylt finns i världen")
+
+local SKYLTTYPER = { skylt = true, cafeskylt = true }
+local function byggdaSkyltar()
+	local ut = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		local t = d:GetAttribute("Propstyp")
+		if typeof(t) == "string" then table.insert(ut, d) end
+	end
+	return ut
+end
+local function saknadeSkyltar()
+	local byggda = byggdaSkyltar()
+	local ut = {}
+	for _, pr in ipairs(G.props or {}) do
+		if SKYLTTYPER[pr.typ] then
+			local x, z = pr.pos[1], pr.pos[2]
+			local hittad = false
+			for _, d in ipairs(byggda) do
+				local cx, cz = BuildKit.tomtkoord(bas, d.CFrame.Position)
+				if math.abs(cx - x) < 0.5 and math.abs(cz - z) < 0.5
+					and d:GetAttribute("Propstyp") == pr.typ then
+					hittad = true
+				end
+			end
+			if not hittad then
+				table.insert(ut, ("%s vid (%.1f, %.1f)"):format(pr.typ, x, z))
+			end
+		end
+	end
+	return ut
+end
+
+do
+	local vantade = 0
+	for _, pr in ipairs(G.props or {}) do
+		if SKYLTTYPER[pr.typ] then vantade += 1 end
+	end
+	local saknade = saknadeSkyltar()
+	check("varje kanonisk skylt i exporten finns som byggd del",
+		vantade > 0 and #saknade == 0,
+		#saknade == 0 and ("%d av %d"):format(vantade, vantade)
+			or ("saknas: " .. table.concat(saknade, " · ")))
+
+	--[[ Och texten ska följa med — en tom skylt är inte skylten. ]]
+	local utanText = {}
+	for _, d in ipairs(byggdaSkyltar()) do
+		local t = d:GetAttribute("Text")
+		if typeof(t) ~= "string" or t == "" then
+			table.insert(utanText, d.Name)
+		end
+	end
+	check("och varje byggd skylt bär sin text",
+		#utanText == 0,
+		#utanText == 0 and "alla har text" or table.concat(utanText, ", "))
+	for _, d in ipairs(byggdaSkyltar()) do
+		matning(("skylt: %s"):format(tostring(d:GetAttribute("Propstyp"))),
+			("\"%s\""):format(tostring(d:GetAttribute("Text"))))
+	end
+end
+
+--[[ ── OCH RESTEN AV REKVISITAN, SOM MÄTNING ───────────────────────────
+
+	Skyltarna är det ordern gäller, men felet är bredare: `G.props` har 26
+	poster och Roblox byggde EN typ av dem. Det här är en MÄTNING och inte
+	en grind — rekvisitan är miljöarbete, och att göra den till en röd
+	grind här vore att ta över någon annans leverans i smyg. Men den ska
+	synas, för den är mätt och den är verklig. ]]
+do
+	local byggdaTyper = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		local t = d:GetAttribute("Propstyp")
+		if typeof(t) == "string" then byggdaTyper[t] = true end
+	end
+	byggdaTyper.mast = true   -- masterna byggs av byggMaster, utan attribut
+	local saknade, antal = {}, {}
+	for _, pr in ipairs(G.props or {}) do
+		if not byggdaTyper[pr.typ] then
+			antal[pr.typ] = (antal[pr.typ] or 0) + 1
+		end
+	end
+	for t, n2 in pairs(antal) do table.insert(saknade, ("%s×%d"):format(t, n2)) end
+	table.sort(saknade)
+	matning("rekvisita i exporten som Roblox ännu inte bygger",
+		#saknade == 0 and "ingen" or table.concat(saknade, " · "))
+end
+
 --[[ ══ 8. MUTATIONERNA — VARJE REGEL SKA GÅ ATT FÄLLA ═══════════════════
 
 	Ordern, punkt 8: gör medvetet trasigt och kräv RÖTT. Utan den här
@@ -689,6 +787,14 @@ do
 		hinder:Destroy()
 		raknaOm()
 	end
+end
+
+--[[ M7: riv den kanoniska skylten. ]]
+do
+	for _, d in ipairs(byggdaSkyltar()) do d:Destroy() end
+	check("M7: en riven kanonisk skylt fäller skyltpariteten",
+		#saknadeSkyltar() > 0,
+		("%d skyltar saknas efter rivningen"):format(#saknadeSkyltar()))
 end
 
 --[[ M6: lägg in en falsk grind — ett dörrblad utan öppning i kanon. ]]

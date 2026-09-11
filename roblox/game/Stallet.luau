@@ -47,11 +47,43 @@ function Stallet.box(n: number)
 	local plats = (n - 1) % S.antalBoxar + 1
 	local rad = S.rader[radIndex]
 
-	--[[ Boxens djup mäts från radens x0 och åt det håll raden vetter.
-		vetter = 1 betyder att boxen ligger i positiv x från x0. ]]
+	--[[ BOXENS KROPP LIGGER ALLTID [x0, x0 + djup] — `vetter` säger vilken
+		SIDA fronten sitter på, inte åt vilket håll boxen sträcker sig.
+
+		Den här raden löd förut `x0 + rad.vetter * rad.djup / 2`, och för de
+		två rader som vetter åt −x (MA och E) hamnade mittpunkten då på FEL
+		sida om x0 — mitt i gången. Sexton av trettiotre hästar stod alltså
+		i stallgången i stället för i sin box, och boxmarkören med dem.
+
+		Att det är kroppen och inte vändningen som avgör syns i bygget:
+		`byggBoxrader` lägger radens kropp på `x0 .. x0 + djup` oavsett
+		`vetter` och använder `vetter` bara för att välja `fx`, frontens
+		x-läge. Gångarna i `S.gangar` ligger dessutom mellan raderna, och
+		den gamla formeln lade mittpunkten precis där.
+
+		Fångat av `topologi.spec`, som frågar vilken ZON en punkt ligger i
+		i stället för att jämföra ett tal med sig självt. ]]
 	local x0 = rad.x0
-	local xMitt = x0 + rad.vetter * rad.djup / 2
-	local yMitt = S.boxStartY + (plats - 0.5) * S.boxB
+	local xMitt = x0 + rad.djup / 2
+
+	--[[ LÄNGS raden läses facken, inte en jämn stege.
+
+		`S.boxStartY + (plats - 0.5) * S.boxB` antar tretton lika breda
+		fack från stallets södra ände. Rad W har TOLV: `S.brott` tar bort
+		ett fack där hästgången korsar raden, och `S.fack.W` saknar det
+		spannet. Den jämna stegen räknade därför fel för varje plats efter
+		brottet, och en häst hamnade mitt i hästgångens passage.
+
+		Facken är samma lista bygget lägger boxväggarna av (`GEO.boxfack`
+		läser den), så det här är inte en andra sanning utan densamma.
+
+		Saknas facket finns ingen box på platsen, och då sägs det — en
+		påhittad koordinat hade varit värre än ett nil. ]]
+	local fack = (S.fack or {})[rad.id]
+	local f = fack and fack[plats]
+	if fack and not f then return nil end
+	local yMitt = if f then (f.y0 + f.y1) / 2
+		else S.boxStartY + (plats - 0.5) * S.boxB
 
 	return {
 		nummer = n,

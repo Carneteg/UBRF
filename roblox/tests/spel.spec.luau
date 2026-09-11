@@ -89,15 +89,45 @@ do
 		halva stallet utanför väggen, och det märks inte förrän någon står
 		i Studio och undrar var hästarna tog vägen. ]]
 	local utanfor = 0
+	--[[ NUMRERINGEN HAR HÅL, och det är inte ett fel.
+
+		Boxnumret är `rad × antalBoxar + plats`, en jämn stege över fyra
+		rader à tretton platser. Rad W har bara TOLV fack: `S.brott` tar
+		bort ett där hästgången korsar raden. Platsen finns alltså i
+		numreringen men inte i stallet, och `Stallet.box` svarar nil på
+		den — ett påhittat läge mitt i hästgångens passage hade varit
+		värre, och det var precis vad den gjorde förut.
+
+		Provet räknar därför hålen i stället för att kliva i dem. ]]
+	local hal = 0
 	for n = 1, antal do
 		local b = Stallet.box(n)
-		if b.lokal.x < 0 or b.lokal.x > S.bredd
+		if b == nil then
+			hal += 1
+		elseif b.lokal.x < 0 or b.lokal.x > S.bredd
 			or b.lokal.y < 0 or b.lokal.y > S.langd then
 			utanfor += 1
 		end
 	end
 	check("alla boxar ligger inom stallets fotavtryck", utanfor == 0,
 		utanfor .. " utanför av " .. antal)
+	check("hålen i numreringen motsvarar brotten i raderna",
+		hal == #(S.brott or {}),
+		("%d hål mot %d brott"):format(hal, #(S.brott or {})))
+
+	--[[ Och det som faktiskt räknas: varje häst som får ett boxnummer ska
+		få en box. Ett hål i numreringen får aldrig drabba en spelare. ]]
+	do
+		local utanBox = {}
+		for _, id in ipairs(UBRFSpel.ordning) do
+			local nr = Stallet.boxNummerFor(id)
+			if nr and Stallet.box(nr) == nil then table.insert(utanBox, id) end
+		end
+		check("varje häst med ett boxnummer får en box",
+			#utanBox == 0,
+			#utanBox == 0 and ("%d hästar"):format(#UBRFSpel.ordning)
+				or table.concat(utanBox, ", "))
+	end
 
 	--[[ Världskoordinaten ska vara lokal + origo. Testet finns för att den
 		förväxlingen redan hänt en gång i det här repot. ]]

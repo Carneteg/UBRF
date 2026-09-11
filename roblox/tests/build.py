@@ -526,6 +526,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ PHYSICAL_WORLD_COHERENCE_GATE: varlden PLUS tjansterna. Den behover
     #   samma bank som spelbarheten -- byggd varld, DorrService, Stallet och
     #   HastRigg -- och star fore "spel" av samma skal som spelbarheten. ]]
+    #[[ Topologigrinden mater ZONER i den byggda varlden och behover samma
+    #   bank som spelbarheten. ]]
+    elif "topologi" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "varldskoherens" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     #[[ HUD-koherensen (PHYSICAL_WORLD_COHERENCE punkt 1, 3 och 6) behover
