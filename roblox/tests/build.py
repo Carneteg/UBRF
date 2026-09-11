@@ -81,6 +81,10 @@ SPELBARHET = BYGGE + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("HastRigg",     "src/server/HastRigg.luau"),
+    #[[ TESTMODUL, inte produktionskod: avatarens matt och
+    #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
+    #   och far inte ha var sin kopia av hennes matt. ]]
+    ("Varldsmatning", "tests/varldsmatning.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning

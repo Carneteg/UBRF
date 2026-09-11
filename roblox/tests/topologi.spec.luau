@@ -224,6 +224,171 @@ do
 		#okand == 0 and "inga" or table.concat(okand, " · "))
 end
 
+--[[ ══ SPELRESAN SOM EN GRAF ══════════════════════════════════════════
+
+	Processändringen 05:42, punkt 4: "Spelresan ska simuleras som en
+	faktisk traversalgraph. Inte bara service/state-tester."
+
+	    spawn → rätt entré → stallgång → rätt häst → utrustning
+	          → ut ur stall → gård → ridhus → ridbana → tillbaka
+
+	Varje KANT mäts i konfigurationsrymden — samma avatar som dörrarna
+	mäts med, ur `varldsmatning` — och varje MÅL kontrolleras mot sin
+	ZON. Ett koordinatavstånd hade sagt att målet är nära; det här säger
+	att man kommer dit, och att det man kommer till är rätt sorts plats. ]]
+print("\nSpelresan — varje kant gången, varje mål i rätt zon")
+
+local alla = Varldsmatning.lador(modell, bas)
+local CELL = Varldsmatning.CELL
+
+--[[ Punkten strax innanför en öppning, räknad ur samma geometri bygget
+	ritar öppningen ur. ]]
+local function innanfor(husId, sida, typ)
+	local hus
+	for _, b in ipairs(G.byggnader) do if b.id == husId then hus = b end end
+	for _, o in ipairs((hus and hus.oppningar) or {}) do
+		if o.sida == sida and o.typ == typ and (o.z0 or 0) <= 0.001 then
+			local mx, mz = Geometri.oppningsMitt(hus.rekt, o.sida, o.u, o.b)
+			local dx = if sida == "E" then -0.9 elseif sida == "W" then 0.9 else 0
+			local dz = if sida == "N" then -0.9 elseif sida == "S" then 0.9 else 0
+			return { x = mx + dx, y = mz + dz },
+				{ x = mx - dx, y = mz - dz }
+		end
+	end
+	return nil, nil
+end
+
+--[[ RESAN GÅS MED DÖRRARNA ANVÄNDBARA.
+
+	En stängd dörr spärrar — det är dess uppgift, och `varldskoherens`
+	mäter just den halvan. Spelresan handlar om något annat: kommer man
+	fram när man använder dörrarna som de är gjorda för? Dörrbladen tas
+	därför ur kartan, precis som `DorrService` tar dem ur kollisionen när
+	någon öppnar.
+
+	Att lämna dem kvar hade mätt en spelare som vägrar röra handtag. ]]
+local utanDorrar = {}
+for _, l in ipairs(alla) do
+	if l.del:GetAttribute("UBRFDorr") ~= true then table.insert(utanDorrar, l) end
+end
+
+local function ganger(fran, till)
+	if not fran or not till then return nil, "punkt saknas" end
+	local x0 = math.min(fran.x, till.x) - 12
+	local x1 = math.max(fran.x, till.x) + 12
+	local z0 = math.min(fran.y, till.y) - 12
+	local z1 = math.max(fran.y, till.y) + 12
+	local k = Varldsmatning.karta(utanDorrar, x0, z0, x1, z1)
+	return Varldsmatning.sok(k, fran, till)
+end
+
+do
+	--[[ Spawnen läses ur den byggda världen, inte ur datan: det är DÄR
+		spelaren faktiskt hamnar. ]]
+	local spawn = nil
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d.ClassName == "SpawnLocation" then spawn = d end
+	end
+	local spos = nil
+	if spawn then
+		local sx, sz = BuildKit.tomtkoord(bas, spawn.CFrame.Position)
+		spos = { x = sx, y = sz }
+	end
+
+	local stallInne = select(1, innanfor("stall", "N", "dorrgul"))
+	local stallUte = select(2, innanfor("stall", "N", "dorrgul"))
+	local gardInne, gardUte = innanfor("stall", "W", "dorrgul")
+	local ridhusInne = select(1, innanfor("ridhus", "W", "dorrvit"))
+
+	--[[ Hästen: den gångyta som ligger närmast hennes box och är nådd —
+		samma kontrakt promptens räckvidd ger. ]]
+	local box = (Stallet :: any).boxFor((Stallet :: any).FORSTA_DAGEN_HAST)
+	local hastPunkt = nil
+	if box and box.varld then
+		local k = Varldsmatning.karta(alla, box.varld.x - 8, box.varld.y - 8,
+			box.varld.x + 8, box.varld.y + 8)
+		local bast = nil
+		local bx, bz = k.cellFor(box.varld.x, box.varld.y)
+		for dz = -24, 24 do
+			for dx = -24, 24 do
+				local ix, iz = bx + dx, bz + dz
+				if Varldsmatning.gangbar(k, ix, iz) then
+					local px, pz = k.mitt(ix, iz)
+					local _, sort = zonFor(px, pz)
+					if sort == "gang" then
+						local d2 = (px - box.varld.x) ^ 2 + (pz - box.varld.y) ^ 2
+						if bast == nil or d2 < bast then
+							bast = d2
+							hastPunkt = { x = px, y = pz }
+						end
+					end
+				end
+			end
+		end
+	end
+
+	--[[ Utrustningsplatsen: sadelkammarens mitt ur inredningen. ]]
+	local utrPunkt = nil
+	do
+		local sx, sz, n = 0, 0, 0
+		for _, d in ipairs(modell:GetDescendants()) do
+			local id = d:GetAttribute("Inredning")
+			if typeof(id) == "string" and string.sub(id, 1, 6) == "sadel_" then
+				local cx, cz = BuildKit.tomtkoord(bas, d.CFrame.Position)
+				sx, sz, n = sx + cx, sz + cz, n + 1
+			end
+		end
+		if n > 0 then utrPunkt = { x = sx / n, y = sz / n } end
+	end
+
+	--[[ Ridbanans mitt. ]]
+	local banPunkt = { x = Ro.x + R.bana.x + R.bana.w / 2,
+		y = Ro.y + R.bana.y + R.bana.h / 2 }
+
+	local resa = {
+		{ "spawn → innanför stallets nordentré", spos, stallInne, "gang" },
+		{ "stallgången → gångytan vid dagens häst", stallInne, hastPunkt, "gang" },
+		{ "hästen → utrustningsplatsen", hastPunkt, utrPunkt, "gang" },
+		{ "utrustningen → ut genom västdörren till gården", utrPunkt, gardUte, "gard" },
+		{ "gården → innanför ridhusets entré", gardUte, ridhusInne, "entre" },
+		{ "entrédelen → ridbanan", ridhusInne, banPunkt, "bana" },
+	}
+
+	--[[ ÅTERVÄGEN ÄR SAMMA KANTER BAKLÄNGES, och den mäts så.
+
+		Första versionen hade en egen kant "ridbanan → tillbaka till
+		hästen". Den föll, och inte på världen: sökningens region är en
+		omslutande låda kring start och mål, och den verkliga vägen går
+		NORRUT till entrédelen först — långt utanför lådan. Provet mätte
+		alltså sin egen region.
+
+		Eftervården sker vid hästen, och vägen dit är resan baklänges. Var
+		kant provas därför i BÅDA riktningar, vilket dessutom är vad ordern
+		kräver av varje kritisk portal. ]]
+
+	for _, r in ipairs(resa) do
+		local namn, fran, till, vantadSort = r[1], r[2], r[3], r[4]
+		local steg, varfor = ganger(fran, till)
+		local tillbaka = ganger(till, fran)
+		--[[ En if-uttryck ger ETT värde i Luau; `zonFor` ger två. Första
+			versionen skrev `local _, sort = if till then zonFor(...) else
+			nil, "saknas"` och fick då alltid "saknas" — provet mätte sin
+			egen syntax i stället för världen. ]]
+		local sort = "saknas"
+		if till then
+			local _, s2 = zonFor(till.x, till.y)
+			sort = s2
+		end
+		check(namn,
+			steg ~= nil and tillbaka ~= nil and sort == vantadSort,
+			("%s · tillbaka %s · målzon %s (väntat %s)"):format(
+				steg and ("%d celler, %.1f m"):format(steg, steg * CELL)
+					or ("STOPP: " .. tostring(varfor)),
+				tillbaka and "ja" or "NEJ",
+				tostring(sort), vantadSort))
+	end
+end
+
 --[[ ══ HÄSTARNA STÅR I BOXAR, INTE I GÅNGEN ════════════════════════════
 
 	Ordern (processändringen 05:42, punkt 5): "hästspel-build utan minst en
@@ -314,6 +479,44 @@ do
 		check("MT2: en portal med samma zon på båda sidor fälls",
 			uz == iz, ("%s ⟷ %s"):format(uz, iz))
 		table.remove(zoner, 1)
+	end
+end
+
+--[[ MT4: mura igen en kant i spelresan — en kolliderande vägg mitt i
+	vägen mellan gården och ridhusets entré. Ordern nämner den två gånger:
+	"placera kolliderande vägg 0,5–1 m bakom en dörr" och "stäng ridhusets
+	entré med sarg/vägg". ]]
+do
+	local gardUte = select(2, innanfor("stall", "W", "dorrgul"))
+	local ridhusInne = select(1, innanfor("ridhus", "W", "dorrvit"))
+	if gardUte and ridhusInne then
+		local innan = ganger(gardUte, ridhusInne)
+		--[[ Muren läggs tvärs hela gården, från mark till över avatarhöjd. ]]
+		local mur = Instance.new("Part")
+		mur.Name = "MUTATION mur"
+		mur.Anchored = true
+		mur.Size = Vector3.new(1 * M, 4 * M, 120 * M)
+		local mx = (gardUte.x + ridhusInne.x) / 2
+		mur.CFrame = bas * BuildKit.tomtlage(mx, 2, (gardUte.y + ridhusInne.y) / 2)
+		mur.Parent = modell
+		--[[ Lådlistan byggs om: `utanDorrar` är en ögonblicksbild. ]]
+		local nyAlla = Varldsmatning.lador(modell, bas)
+		local nyUtan = {}
+		for _, l in ipairs(nyAlla) do
+			if l.del:GetAttribute("UBRFDorr") ~= true then table.insert(nyUtan, l) end
+		end
+		local x0 = math.min(gardUte.x, ridhusInne.x) - 12
+		local x1 = math.max(gardUte.x, ridhusInne.x) + 12
+		local z0 = math.min(gardUte.y, ridhusInne.y) - 12
+		local z1 = math.max(gardUte.y, ridhusInne.y) + 12
+		local k = Varldsmatning.karta(nyUtan, x0, z0, x1, z1)
+		local efter = Varldsmatning.sok(k, gardUte, ridhusInne)
+		check("MT4: en mur tvärs gården fäller kanten gård → ridhusets entré",
+			innan ~= nil and efter == nil,
+			("före %s · efter %s"):format(
+				innan and (innan .. " celler") or "ingen väg",
+				efter and (efter .. " celler") or "ingen väg"))
+		mur:Destroy()
 	end
 end
 
