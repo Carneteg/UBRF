@@ -150,11 +150,19 @@
     },
     {
       "id": "stall_brott_hastgang",
-      "vad": "Hästförbindelsen bryter bara västra boxraden (inte hela huset), på hästgångens höjd",
+      "vad": "Hästförbindelsen bryter västra boxraden på hästgångens höjd, och mittraderna och östra raden fortsätter obrutna FÖRBI just den höjden — ingen korridor tvärs huset",
       "varde": true,
       "kalla": "PLAN stall-plan1-utrymning.jpg; SITEPLAN (gången ligger där stallets tvärkorridor mynnar)",
       "konfidens": "VERIFIED_PLAN_OR_PHOTO",
-      "prov": "(() => { const S=STALLINNE, b=S.brott&&S.brott[0], d=S.dorrar.find(x=>x.id==='hastgang'); return !!b && b.rad==='W' && S.brott.length===1 && d.pos[1]>=b.y0-0.01 && d.pos[1]<=b.y1+0.01; })()"
+      "prov": "(() => { const S=STALLINNE, b=(S.brott||[]).find(x=>x.rad==='W'), d=S.dorrar.find(x=>x.id==='hastgang'); if(!b||!d) return false; const korsar=r=>(S.brott||[]).some(x=>x.rad===r && x.y1>b.y0+0.01 && x.y0<b.y1-0.01); return d.pos[1]>=b.y0-0.01 && d.pos[1]<=b.y1+0.01 && !korsar('MA') && !korsar('MB') && !korsar('E'); })()"
+    },
+    {
+      "id": "stall_brott_ostport",
+      "vad": "Östra skjutporten mot hagarna mynnar i en passage genom östra boxraden in i gång B — inte i ett bås och inte i en vägg — och mittraderna är obrutna på den höjden",
+      "varde": true,
+      "kalla": "PRODUKTBESLUT Tobias fysiska Studio-test 2026-09-11 (PR #162, 06:35): porten leder i builden in i ett bås, vilket är FEL, och ska leda till stallgången. Porten själv är läst i Street View (references/buildings/stall/KORT.md); passagen bakom den följer av att porten finns — en port i en långsidesvägg med obruten boxrad innanför vore omöjlig. Läge och bredd ärver portens [antagande].",
+      "konfidens": "PRODUCT_OWNER_VERIFIED",
+      "prov": "(() => { const S=STALLINNE, b=(S.brott||[]).find(x=>x.rad==='E'), o=ANL.byggnader.find(x=>x.id==='stall').oppningar.find(x=>x.sida==='E' && x.typ==='portbla'); if(!b||!o) return false; const korsar=r=>(S.brott||[]).some(x=>x.rad===r && x.y1>b.y0+0.01 && x.y0<b.y1-0.01); return Math.abs(b.y0-o.u)<0.01 && Math.abs(b.y1-(o.u+o.b))<0.01 && !korsar('MA') && !korsar('MB'); })()"
     },
     {
       "id": "stall_entre_samma_dorr",

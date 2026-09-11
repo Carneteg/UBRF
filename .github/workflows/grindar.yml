@@ -98,6 +98,16 @@ jobs:
           if [ -f tools/handighetsgrind.mjs ]; then node tools/handighetsgrind.mjs
           else echo "hoppar: tools/handighetsgrind.mjs finns inte i denna branch"; fi
 
+      # PRE_TOBIAS_FIRST_PLAYABLE_GATE (processändringen på #162, 05:42).
+      # Samlingsgrinden kör undergrindarna en gång till i ett svep och
+      # producerar release evidence bundle + WORLD_MANIFEST. Den ligger
+      # HÄR, efter specarna, därför att den ska vara det sista svaret på
+      # frågan "får Tobias en ny .rbxlx?" — och den är fail closed.
+      - name: PRE_TOBIAS_FIRST_PLAYABLE_GATE
+        run: |
+          if [ -f tools/pre-tobias-grind.py ]; then python3 tools/pre-tobias-grind.py
+          else echo "hoppar: tools/pre-tobias-grind.py finns inte i denna branch"; fi
+
       - name: Referenschecksummor
         run: |
           if [ -f references/CHECKSUMS.sha256 ]; then

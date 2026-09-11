@@ -769,6 +769,14 @@ local function __nyInstans(klass)
 		end
 	end
 	if klass == "TextButton" then inst.Activated = __signal() end
+	--[[ `ProximityPrompt.Triggered` — samma skäl som Activated ovan.
+	     Utan den gick `DorrService.start()` inte att köra i den här
+	     banken, och därmed gick promptens TEXT inte att mäta. En grind
+	     som inte kan köra tjänsten kan inte se vad spelaren läser. ]]
+	if klass == "ProximityPrompt" then
+		inst.Triggered = __signal()
+		inst.ObjectText, inst.ActionText = "", ""
+	end
 	--[[ ── SITSEN ────────────────────────────────────────────────────────
 	     `Seat:Sit(humanoid)` gör tre saker i Roblox: den skapar en `Weld`
 	     som heter SeatWeld under sitsen, sätter `Occupant`, och sätter

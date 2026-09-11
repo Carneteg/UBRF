@@ -299,6 +299,10 @@ do
 	local stallUte = select(2, innanfor("stall", "N", "dorrgul"))
 	local gardInne, gardUte = innanfor("stall", "W", "dorrgul")
 	local ridhusInne = select(1, innanfor("ridhus", "W", "dorrvit"))
+	--[[ ÖSTRA SKJUTPORTEN mot hagarna. Tobias gick fram till den i Studio
+		och kom in i ett bås. Den ligger med i resan permanent: en port som
+		inte leder vidare in i stallet är en port som inte finns. ]]
+	local ostInne = select(1, innanfor("stall", "E", "portbla"))
 
 	--[[ Hästen: den gångyta som ligger närmast hennes box och är nådd —
 		samma kontrakt promptens räckvidd ger. ]]
@@ -348,6 +352,7 @@ do
 	local resa = {
 		{ "spawn → innanför stallets nordentré", spos, stallInne, "gang" },
 		{ "stallgången → gångytan vid dagens häst", stallInne, hastPunkt, "gang" },
+		{ "östra skjutporten → gångytan vid dagens häst", ostInne, hastPunkt, "gang" },
 		{ "hästen → utrustningsplatsen", hastPunkt, utrPunkt, "gang" },
 		{ "utrustningen → ut genom västdörren till gården", utrPunkt, gardUte, "gard" },
 		{ "gården → innanför ridhusets entré", gardUte, ridhusInne, "entre" },
@@ -512,6 +517,101 @@ do
 		local k = Varldsmatning.karta(nyUtan, x0, z0, x1, z1)
 		local efter = Varldsmatning.sok(k, gardUte, ridhusInne)
 		check("MT4: en mur tvärs gården fäller kanten gård → ridhusets entré",
+			innan ~= nil and efter == nil,
+			("före %s · efter %s"):format(
+				innan and (innan .. " celler") or "ingen väg",
+				efter and (efter .. " celler") or "ingen väg"))
+		mur:Destroy()
+	end
+end
+
+--[[ MT5: ÖSTRA SKJUTPORTEN LEDER IN I ETT BÅS — Tobias fynd, ordagrant.
+
+	Porten fanns i fasaden men östra boxraden var obruten bakom den, så man
+	kom in i box E.9. Mutationen lägger tillbaka precis de boxmoduler
+	brottet tar bort och frågar om porten då mynnar i ett bås.
+
+	Den skiljer sig från MT1 på en punkt som spelar roll: MT1 flyttar en
+	zon för att prova regeln, den här återskapar den FELAKTIGA KÄLLDATAN.
+	Går den inte att göra röd har grinden inte fångat Tobias fel — den har
+	bara råkat vara grön. ]]
+do
+	local radE = nil
+	for _, r in ipairs(S.rader or {}) do if r.id == "E" then radE = r end end
+	local brottE = nil
+	for _, b in ipairs(S.brott or {}) do if b.rad == "E" then brottE = b end end
+	local port = nil
+	for _, pt in ipairs(portaler) do
+		if pt.hus == "stall" and pt.typ == "portbla" and pt.sida == "E" then port = pt end
+	end
+	if radE and brottE and port then
+		local lagda = 0
+		for k = 0, S.antalBoxar - 1 do
+			local y0 = S.boxStartY + k * S.boxB
+			if y0 + S.boxB > brottE.y0 + 0.01 and y0 < brottE.y1 - 0.01 then
+				table.insert(zoner, 1, { id = ("MUTATION.box.E.%d"):format(k + 1), sort = "box",
+					x0 = So.x + radE.x0, x1 = So.x + radE.x0 + radE.djup,
+					y0 = So.y + y0, y1 = So.y + y0 + S.boxB })
+				lagda += 1
+			end
+		end
+		local _, us, _, is = zonerFor(port)
+		check("MT5: östra skjutporten mynnar i ett bås om brottet tas bort",
+			us == "box" or is == "box",
+			("%d moduler tillbaka · %s / %s"):format(lagda, us, is))
+		for _ = 1, lagda do table.remove(zoner, 1) end
+	end
+end
+
+--[[ MT6: ÖSTRA SKJUTPORTEN LEDER TILL EN VÄGG — ordern, punkt 3:
+	"port -> vägg/dead-end ska ge RED". En kolliderande vägg 0,8 m innanför
+	porten ska fälla kanten port → gång B. ]]
+do
+	local ostIn = select(1, innanfor("stall", "E", "portbla"))
+	--[[ Målet är gång B rakt innanför porten, inte nordentrén.
+
+		Första versionen gick till nordentrén och blev GRÖN med muren kvar:
+		vägen gick ut genom porten, runt huset och in genom norra dörren.
+		Den mätte alltså att huset har fler än en dörr — sant, och inte det
+		muren handlar om. Kanten som ska falla är den korta: från porten in
+		i gången utan att lämna byggnaden. ]]
+	local gangB = nil
+	if S.gangar and S.gangar.B then
+		gangB = { x = So.x + (S.gangar.B.x0 + S.gangar.B.x1) / 2,
+			y = ostIn and ostIn.y or 0 }
+	end
+	if ostIn and gangB then
+		local innan = ganger(ostIn, gangB)
+		local mur = Instance.new("Part")
+		mur.Name = "MUTATION ostportsmur"
+		mur.Anchored = true
+		--[[ Muren mäts ur BROTTET, inte ur dörren. Hålet i raden är så brett
+			som de boxmoduler brottet skär — sju meter, inte portens 3,6 —
+			och en mur i portens bredd gick att gå runt. ]]
+		local bE2 = nil
+		for _, b in ipairs(S.brott or {}) do if b.rad == "E" then bE2 = b end end
+		local h0, h1 = bE2.y0, bE2.y1
+		for k = 0, S.antalBoxar - 1 do
+			local m0 = S.boxStartY + k * S.boxB
+			if m0 + S.boxB > bE2.y0 + 0.01 and m0 < bE2.y1 - 0.01 then
+				h0, h1 = math.min(h0, m0), math.max(h1, m0 + S.boxB)
+			end
+		end
+		mur.Size = Vector3.new(0.4 * M, 4 * M, (h1 - h0 + 2) * M)
+		mur.CFrame = bas * BuildKit.tomtlage(ostIn.x - 0.8, 2, So.y + (h0 + h1) / 2)
+		mur.Parent = modell
+		local nyAlla = Varldsmatning.lador(modell, bas)
+		local nyUtan = {}
+		for _, l in ipairs(nyAlla) do
+			if l.del:GetAttribute("UBRFDorr") ~= true then table.insert(nyUtan, l) end
+		end
+		local x0 = math.min(ostIn.x, gangB.x) - 12
+		local x1 = math.max(ostIn.x, gangB.x) + 12
+		local z0 = math.min(ostIn.y, gangB.y) - 12
+		local z1 = math.max(ostIn.y, gangB.y) + 12
+		local k = Varldsmatning.karta(nyUtan, x0, z0, x1, z1)
+		local efter = Varldsmatning.sok(k, ostIn, gangB)
+		check("MT6: en vägg 0,8 m innanför östra skjutporten fäller kanten port → gång B",
 			innan ~= nil and efter == nil,
 			("före %s · efter %s"):format(
 				innan and (innan .. " celler") or "ingen väg",

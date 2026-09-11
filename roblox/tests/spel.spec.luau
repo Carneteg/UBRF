@@ -111,9 +111,25 @@ do
 	end
 	check("alla boxar ligger inom stallets fotavtryck", utanfor == 0,
 		utanfor .. " utanför av " .. antal)
-	check("hålen i numreringen motsvarar brotten i raderna",
-		hal == #(S.brott or {}),
-		("%d hål mot %d brott"):format(hal, #(S.brott or {})))
+	--[[ Hålen ska vara precis de boxmoduler brotten skär igenom — inte ett
+		per brott. Östra skjutportens brott är 3,6 m mot modulens 3,5 och
+		tar två platser, och den gamla ett-per-brott-regeln gjorde en riktig
+		rättelse till ett falskt fel. ]]
+	local vantade = 0
+	for _, rad in ipairs(S.rader) do
+		for k = 0, S.antalBoxar - 1 do
+			local y0 = S.boxStartY + k * S.boxB
+			for _, b in ipairs(S.brott or {}) do
+				if b.rad == rad.id and y0 + S.boxB > b.y0 + 0.01 and y0 < b.y1 - 0.01 then
+					vantade += 1
+					break
+				end
+			end
+		end
+	end
+	check("hålen i numreringen motsvarar de boxmoduler brotten skär",
+		hal == vantade,
+		("%d hål mot %d skurna moduler i %d brott"):format(hal, vantade, #(S.brott or {})))
 
 	--[[ Och det som faktiskt räknas: varje häst som får ett boxnummer ska
 		få en box. Ett hål i numreringen får aldrig drabba en spelare. ]]

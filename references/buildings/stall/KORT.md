@@ -355,6 +355,25 @@ fonden.
   skull och låg i tvärkorridorens västra ände, alltså där gången nu går.
   Skjutporten på östra långsidan mot hagarna står kvar — den är läst i
   Street View.
+- **Östra skjutporten bryter östra boxraden.** Tobias gick fram till porten i
+  Studio 2026-09-11 och kom in i ett **bås**: porten fanns i fasaden, men raden
+  innanför var obruten. Produktbeslutet på PR #162 är att porten ska mynna i
+  stallgången, inte i box E.9 och inte i en vägg.
+
+  Passagen är en **härledning, inte ett mått**: en port i en långsidesvägg med
+  en boxrad tätt innanför kan inte finnas om raden är obruten — då vore porten
+  omöjlig, inte bara obekväm. Porten är läst i Street View; att det finns en
+  passage bakom den följer av att porten finns. Brottets läge och bredd ärver
+  därför portens `[antagande]`, ingenting mer, och **passagens insida är
+  `[REFERENCE GAP]`**.
+
+  Två boxfack faller, inte ett: portens 3,6 m ryms inte i en 3,5 m boxmodul.
+  Östra raden har därför **elva** boxar mot västras tolv och mittradernas
+  tretton. **Mittraderna rörs inte** — planen har ingen korridor tvärs huset,
+  och två brott i var sin ytterrad, på olika höjd, är inte en sådan.
+
+  Två östfönster (u 33,3 och 36,8) låg inuti portens 34,35–37,95 och ritades
+  ändå. De byggs inte längre: fönsterrytmen gäller där det finns vägg.
 - Förstukvisten på västra långsidan, ~6 m från norra gaveln
 - Marknivå: plant
 

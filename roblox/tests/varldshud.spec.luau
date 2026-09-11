@@ -184,6 +184,65 @@ do
 	PreparationController.uppdateraKontext()
 end
 
+--[[ ── 7. INGEN INTERN ETIKETT NÅR SPELAREN ──────────────────────────
+	Ordern punkt 7 räknar upp "intern etikett (`dorrgul`) till spelare"
+	bland de fynd som ska bli permanent regression. Felet är rättat i
+	`DorrService.objektFor`, men rättningen har aldrig haft en grind:
+	texten kunde glida tillbaka utan att något blev rött.
+
+	Tokenen är datans egna ord för en öppning — de säger färg och
+	fabrikat, inte vad saken heter på svenska. Ingen av dem får stå i en
+	prompt. ]]
+print("\n7. Datans egna ord stannar i datan")
+do
+	local TOKEN = { "dorrgul", "dorrvit", "dorrmork", "dorr", "portbla", "portplat",
+		"portsilver", "valv", "rund", "fonster" }
+	DorrService.start()
+	local prompts = {}
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d.ClassName == "ProximityPrompt" then table.insert(prompts, d) end
+	end
+	local function lackor(): { string }
+		local ut = {}
+		for _, pr in ipairs(prompts) do
+			for _, falt in ipairs({ "ObjectText", "ActionText" }) do
+				local txt = string.lower(tostring((pr :: any)[falt]))
+				for _, t in ipairs(TOKEN) do
+					if string.find(txt, t, 1, true) then
+						table.insert(ut, ("%s.%s = %q"):format(pr.Parent and pr.Parent.Name or "?", falt, (pr :: any)[falt]))
+					end
+				end
+			end
+		end
+		return ut
+	end
+	local nu = lackor()
+	check("ingen prompt skriver datans interna typnamn",
+		#nu == 0 and #prompts > 0,
+		#nu == 0 and ("%d prompts, inga tokenläckor"):format(#prompts)
+			or table.concat(nu, " · "))
+
+	--[[ MUTATIONEN: skriv tillbaka felet på EN prompt. Kan grinden inte bli
+		röd av det har den inte fångat fyndet — den har bara råkat vara
+		grön. ]]
+	local offer, gammalText = nil, nil
+	for _, pr in ipairs(prompts) do
+		local blad = pr.Parent
+		local typ = blad and blad:GetAttribute("Oppningstyp")
+		if typeof(typ) == "string" then
+			offer, gammalText = pr, pr.ObjectText
+			pr.ObjectText = typ
+			break
+		end
+	end
+	if offer then
+		check("MUTATION: en prompt som skriver `Oppningstyp` rakt av fälls",
+			#lackor() > 0,
+			("satte ObjectText = %q → %d läcka(or)"):format(offer.ObjectText, #lackor()))
+		offer.ObjectText = gammalText
+	end
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	print("PHYSICAL_WORLD_COHERENCE (HUD): FAIL")

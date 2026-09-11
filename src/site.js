@@ -142,6 +142,18 @@ const GANG_DJUP  = 3.5;                                    // `[ASSUMPTION]`
 
 const STALL_BOXAR = 12;      // sex söder om tvärkorridoren, sex norr
 
+/* ÖSTRA SKJUTPORTEN mot hagarna. Läget och bredden är lästa ur en Street
+   View-bild på avstånd (`references/buildings/stall/KORT.md`, "en stor
+   skjutport i blågrått ungefär mitt på längden") — `[antagande]` för både
+   u och b, `VERIFIED` bara för att porten FINNS.
+
+   Talen bor här och inte i öppningslistan därför att de styr TRE saker som
+   inte får glida isär: fasadöppningen, brottet i östra boxraden innanför,
+   och de fönster som annars hamnar inuti porten. Tobias fysiska Studio-test
+   visade vad glidningen kostar — porten mynnade rakt in i ett bås. */
+const OSTPORT_U = 34.35;     // från södra gaveln, `[antagande]`
+const OSTPORT_B = 3.6;       // `[antagande]`
+
 /* ══ TRÄNINGSYTORNA ════════════════════════════════════════════════════
    Review 06 blocker 2: lös det här REALITY-FIRST, inte UTEBANA-first.
 
@@ -198,7 +210,13 @@ function stallFonster(sida){
   const ut=[];
   for(let i=0;i<STALL_BOXAR;i++){
     const s=10.4+3.5*i+1.75;                    // avstånd från klubbgaveln i norr
-    ut.push({sida, u:sida==="W"?sV(s):STALL_LANGD-s, b:1.15, h:1.55, z0:1.55, typ:"valv"});
+    const u=sida==="W"?sV(s):STALL_LANGD-s, b=1.15;
+    /* Ett fönster kan inte sitta INNE i en port. Två av östsidans
+       valvfönster (u 33,3 och 36,8) låg i skjutportens 34,35–37,95 och
+       ritades ändå — det ena helt inuti porten, det andra 0,1 m in i den.
+       Rytmen är låst, men rytmen gäller där det finns vägg. */
+    if(sida==="E" && u+b>OSTPORT_U+0.01 && u<OSTPORT_U+OSTPORT_B-0.01) continue;
+    ut.push({sida, u, b, h:1.55, z0:1.55, typ:"valv"});
   }
   return ut;
 }
@@ -357,8 +375,9 @@ const ANL = {
           samma avstånd som de hade där. */
        {sida:"N", u:10.5-1.6-0.66/2, b:0.66, h:0.66, z0:1.78, typ:"rund"},
        {sida:"N", u:10.5+1.6-0.66/2, b:0.66, h:0.66, z0:1.78, typ:"rund"},
-       /* Stora skjutporten mitt på östra långsidan, mot hagarna. */
-       {sida:"E", u:34.35, b:3.6, h:3.2, z0:0, typ:"portbla"},
+       /* Stora skjutporten mitt på östra långsidan, mot hagarna. Samma två
+          tal som brottet i östra boxraden innanför — en port, en passage. */
+       {sida:"E", u:OSTPORT_U, b:OSTPORT_B, h:3.2, z0:0, typ:"portbla"},
        /* Södra gaveln mot gårdsplanen: servicedelens två entrédörrar
           under vita skärmtak, valvfönster och trappdörren uppe
           (Street View från infartsvägen). */
@@ -1044,9 +1063,27 @@ const STALLINNE = {
      yttre inte kan glida isär: det är EN förbindelse, inte två. Fasaden är
      låst; planens 29,15–31,25 ligger 0,8 m söder om dörrens 28,35–30,75,
      inom planbildens skalfel. `PLAN` för läget, dörrbredden `ASSUMPTION`. */
+  /* ÖSTRA SKJUTPORTEN BRYTER ÖSTRA BOXRADEN — av samma skäl, och funnet
+     på samma sätt: Tobias gick fram till porten i Studio och kom in i ett
+     bås. Produktbeslutet på PR #162 (06:35) är att porten ska mynna i
+     stallgången, inte i box E.9 och inte i en vägg.
+
+     Det är en HÄRLEDNING, inte ett mått: en port i en långsidesvägg med
+     en boxrad innanför kan inte finnas om raden är obruten — då vore
+     porten omöjlig, inte bara obekväm. Porten är läst i Street View;
+     passagen bakom den följer av att porten finns. Brottets läge och
+     bredd ärver därför portens `[antagande]`, ingenting mer.
+
+     Två boxfack faller, inte ett: portens 3,6 m ryms inte i en 3,5 m
+     boxmodul. `boxfack()` tar bort varje fack som skär brottet, så
+     östra raden får elva boxar mot västras tolv och mittradernas tretton.
+
+     MITTRADERNA RÖRS INTE. Planen har ingen korridor tvärs huset, och två
+     brott i ytterraderna är inte en sådan — de mynnar i var sin gång. */
   brott:[{rad:"W", id:"hastgang",
           y0:GANG_FASTE+GANG_DJUP-0.55-2.4-STALL_Y,
-          y1:GANG_FASTE+GANG_DJUP-0.55-STALL_Y}],
+          y1:GANG_FASTE+GANG_DJUP-0.55-STALL_Y},
+         {rad:"E", id:"ostport", y0:OSTPORT_U, y1:OSTPORT_U+OSTPORT_B}],
   /* Fylls ur STALL_BAND nedan: rader med x0/boxDjup, gångar med x0/x1. */
   rader:[], gangar:{},
   /* Spelets hästar står i gång A, den man kommer in i från
@@ -1486,7 +1523,19 @@ STALLINNE.gangytor = (()=>{
     const rad=S.rader.find(r=>r.id===b.rad);
     const x0=rad.vetter>0 ? 0.4 : rad.x0-DORRGAP;
     const x1=rad.vetter>0 ? rad.x0+rad.djup+DORRGAP : S.bredd-0.4;
-    g.push({x:x0, y:b.y0, w:x1-x0, h:b.y1-b.y0});
+    /* Ytan är lika bred som det HÅL raden faktiskt får, inte som dörren.
+       `boxfack()` tar bort varje boxmodul brottet skär, och skiljeväggarna
+       byggs per fack — så golvet mellan de två kvarvarande facken är öppet
+       i hela den bredden. Stod ytan kvar på dörrens mått blev en remsa
+       gångbart golv utan zon, och en mur tvärs dörrens bredd spärrade
+       ingenting: man gick runt den i den odeklarerade remsan. Mätt, inte
+       gissat — det var så mutation MT6 föll första gången. */
+    let y0=b.y0, y1=b.y1;
+    for(let k=0;k<S.antalBoxar;k++){
+      const m0=S.boxStartY+k*S.boxB, m1=m0+S.boxB;
+      if(m1>b.y0+0.01 && m0<b.y1-0.01){ y0=Math.min(y0,m0); y1=Math.max(y1,m1); }
+    }
+    g.push({x:x0, y:y0, w:x1-x0, h:y1-y0});
   }
   /* TVÄRKORRIDOREN mellan boxhallen och klubbdelen: från brandväggen vid
      klubbY upp till den genomgående väggen. Planen ritar utrymningsvägar

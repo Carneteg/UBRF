@@ -615,11 +615,32 @@ do
 		local nW, nMA = #Geometri.boxfack(S, rader.W), #Geometri.boxfack(S, rader.MA)
 		check("västra raden har ett fack färre än mittraden",
 			nW == nMA - 1, string.format("W %d, MA %d", nW, nMA))
-		check("mittraderna och östra raden är obrutna, lika många fack som planen",
-			nMA == S.antalBoxar and #Geometri.boxfack(S, rader.MB) == S.antalBoxar
-				and #Geometri.boxfack(S, rader.E) == S.antalBoxar,
-			string.format("MA %d, MB %d, E %d mot %d", nMA,
-				#Geometri.boxfack(S, rader.MB), #Geometri.boxfack(S, rader.E), S.antalBoxar))
+		--[[ MITTRADERNA är obrutna. Det är planens mätta fakta och den
+			hårda regeln: ingen korridor tvärs huset.
+
+			ÖSTRA raden räknades hit fram till 2026-09-11. Tobias gick fram
+			till den östra skjutporten i Studio och kom in i ett BÅS — porten
+			fanns i fasaden men hade ingen passage bakom sig. Produktbeslutet
+			på PR #162 är att den ska mynna i stallgången. Två ytterrader med
+			var sitt brott mot var sin gång är inte en tvärkorridor: den
+			kontrolleras nedan, rad för rad. ]]
+		check("mittraderna är obrutna, lika många fack som planen",
+			nMA == S.antalBoxar and #Geometri.boxfack(S, rader.MB) == S.antalBoxar,
+			string.format("MA %d, MB %d mot %d", nMA,
+				#Geometri.boxfack(S, rader.MB), S.antalBoxar))
+		--[[ Och att de två brotten inte möts i en genomgående korridor:
+			de ligger på olika höjd, med obruten boxrad mellan sig. ]]
+		local bW, bE = nil, nil
+		for _, x in ipairs(S.brott) do
+			if x.rad == "W" then bW = x elseif x.rad == "E" then bE = x end
+		end
+		check("östra raden har ett brott, och det ligger vid skjutporten",
+			bE ~= nil and bE.id == "ostport",
+			bE and string.format("brott %.2f–%.2f", bE.y0, bE.y1) or "inget brott i E")
+		check("de två brotten ligger inte i liv med varandra — ingen korridor tvärs huset",
+			bW ~= nil and bE ~= nil and (bE.y0 >= bW.y1 - 0.01 or bW.y0 >= bE.y1 - 0.01),
+			bW and bE and string.format("W %.2f–%.2f, E %.2f–%.2f",
+				bW.y0, bW.y1, bE.y0, bE.y1) or "brott saknas")
 		--[[ Mätt i det byggda: ingen boxfront i W-raden står i brottet, och
 			minst en boxfront i mittraden gör det — annars är raden inte obruten. ]]
 		local iW, iMA = 0, 0
@@ -631,6 +652,20 @@ do
 		end
 		check("ingen boxfront står i hästförbindelsens brott i västra raden", iW == 0, iW .. " fronter")
 		check("mittraden fortsätter obruten förbi brottet", iMA >= 1, iMA .. " fronter")
+		--[[ Samma mätning för östra skjutporten: ingen boxfront i brottet,
+			och mittraden MB obruten förbi det. Det är den byggda sidan av
+			Tobias fynd — en front kvar i porten är ett bås bakom porten. ]]
+		if bE then
+			local iE, iMB = 0, 0
+			for _, d in ipairs(delar) do
+				local f = fot(d)
+				local ov = f.y < S.origo.y + bE.y1 - 0.05 and f.y + f.h > S.origo.y + bE.y0 + 0.05
+				if ov and string.find(d.Name, "Boxfront E", 1, true) then iE += 1 end
+				if ov and string.find(d.Name, "Boxfront MB", 1, true) then iMB += 1 end
+			end
+			check("ingen boxfront står i östra skjutportens brott", iE == 0, iE .. " fronter")
+			check("mittraden MB fortsätter obruten förbi östportens brott", iMB >= 1, iMB .. " fronter")
+		end
 		--[[ Brottet och fasadens hästgångsdörr är EN förbindelse: dörren in
 			till stallet (`dorrar.hastgang`) står inne i brottet. ]]
 		local hd = nil
@@ -638,9 +673,11 @@ do
 		check("hästgångens dörr står i brottet",
 			hd ~= nil and hd.pos[2] > b.y0 and hd.pos[2] < b.y1,
 			hd and string.format("dörr y %.2f, brott %.2f–%.2f", hd.pos[2], b.y0, b.y1) or "ingen dörr")
+		local nE = #Geometri.boxfack(S, rader.E)
 		check("webbens facklista och Roblox regel ger samma fack",
-			S.fack ~= nil and #S.fack.W == nW and #S.fack.MA == nMA,
-			S.fack and string.format("webb W %d MA %d", #S.fack.W, #S.fack.MA) or "inget fack-fält")
+			S.fack ~= nil and #S.fack.W == nW and #S.fack.MA == nMA and #S.fack.E == nE,
+			S.fack and string.format("webb W %d MA %d E %d, regel W %d MA %d E %d",
+				#S.fack.W, #S.fack.MA, #S.fack.E, nW, nMA, nE) or "inget fack-fält")
 	end
 end
 

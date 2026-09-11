@@ -268,14 +268,27 @@ end
 
 for _, rad in ipairs(S.rader) do
 	local fack = Geometri.boxfack(S, rad)
-	-- Antalet fack per rad ska vara precis så många som planen säger, minus
-	-- de brott hästförbindelsen gör i just den raden. Testet hade "#fack < 11"
-	-- hårdkodat en gång; en gräns som inte läser datan mäter inte datan.
-	local brott = 0
-	for _, b in ipairs(S.brott or {}) do if b.rad == rad.id then brott += 1 end end
-	check(string.format("rad %s: lika många fack som planen har boxar, minus radens brott", rad.id),
-		#fack == S.antalBoxar - brott,
-		string.format("%d fack mot %d − %d", #fack, S.antalBoxar, brott))
+	--[[ Antalet fack per rad ska vara precis så många som planen säger, minus
+		de BOXMODULER radens egna brott skär igenom. Testet hade "#fack < 11"
+		hårdkodat en gång; en gräns som inte läser datan mäter inte datan.
+
+		Och det räknade sedan ETT fack per brott, vilket höll bara så länge
+		varje brott var smalare än en boxmodul. Östra skjutporten är 3,6 m
+		och modulen 3,5 — den tar två. Den regeln fällde en riktig rättelse
+		som falskt fel, så nu mäts brottets BREDD mot modulrastret. ]]
+	local borta = 0
+	for k = 0, S.antalBoxar - 1 do
+		local y0 = S.boxStartY + k * S.boxB
+		for _, b in ipairs(S.brott or {}) do
+			if b.rad == rad.id and y0 + S.boxB > b.y0 + 0.01 and y0 < b.y1 - 0.01 then
+				borta += 1
+				break
+			end
+		end
+	end
+	check(string.format("rad %s: lika många fack som planen har boxar, minus de moduler brotten skär", rad.id),
+		#fack == S.antalBoxar - borta,
+		string.format("%d fack mot %d − %d", #fack, S.antalBoxar, borta))
 	check(string.format("rad %s: facken ryms mellan service och klubbdel", rad.id),
 		#fack > 0 and fack[1].y0 >= S.boxStartY - 0.001
 			and fack[#fack].y1 <= S.klubbY + 0.001,
