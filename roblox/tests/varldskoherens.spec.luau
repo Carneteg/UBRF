@@ -207,10 +207,26 @@ end
 	att BLADET flyttade sig, inte att det finns en väg. ]]
 print("\n4. TRAVERSAL — varje uppmärkt dörr, i båda riktningar")
 
-local blad = {}
-for _, d in ipairs(modell:GetDescendants()) do
-	if d:GetAttribute("UBRFDorr") == true then table.insert(blad, d) end
+--[[ Skanningarna är funktioner och inte listor: mutationerna längst ned
+	ändrar världen, och då måste mätningen göras om mot den ändrade
+	världen — inte mot ett minne av den gamla. ]]
+local function scanBlad()
+	local ut = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d:GetAttribute("UBRFDorr") == true then table.insert(ut, d) end
+	end
+	return ut
 end
+local function scanDeklarerade()
+	local ut = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		if typeof(d:GetAttribute("IngenPassage")) == "string" then
+			table.insert(ut, d)
+		end
+	end
+	return ut
+end
+local blad = scanBlad()
 check("världen har uppmärkta dörrblad att prova", #blad > 0, ("%d blad"):format(#blad))
 
 --[[ `Utat` pekar ut från fasaden längs den axel väggen INTE löper i:
@@ -338,11 +354,7 @@ for _, bg in ipairs(G.byggnader) do
 		if not arFonster(o.typ) and (o.z0 or 0) <= 0.001 then genomgaende += 1 end
 	end
 end
-local deklarerade = {}
-for _, d in ipairs(modell:GetDescendants()) do
-	local skal = d:GetAttribute("IngenPassage")
-	if typeof(skal) == "string" then table.insert(deklarerade, d) end
-end
+local deklarerade = scanDeklarerade()
 check("varje genomgående öppning är antingen en dörr eller en deklarerad icke-passage",
 	#blad + #deklarerade == genomgaende,
 	("%d uppmärkta + %d deklarerade = %d mot %d genomgående öppningar i datan")
@@ -396,12 +408,29 @@ for id in pairs((UBRFSpelData :: any).hastar or {}) do table.insert(roster, id) 
 table.sort(roster)
 check("rostern har hästar att placera", #roster > 0, ("%d kanoniska hästar"):format(#roster))
 
-local saknas, felplacerade = {}, {}
+--[[ Rostern mäts om vid varje anrop: mutationen river en modell, och en
+	lista tagen i förväg hade inte märkt det. ]]
+local function iVarldenNu()
+	local ut = {}
+	for _, d in ipairs(workspace:GetDescendants()) do
+		local hid = d:GetAttribute("HorseId")
+		if hid then ut[tostring(hid)] = d end
+	end
+	return ut
+end
+local function saknadeHastar()
+	local finns = iVarldenNu()
+	local ut = {}
+	for _, id in ipairs(roster) do
+		if not finns[id] then table.insert(ut, id) end
+	end
+	return ut
+end
+
+local saknas, felplacerade = saknadeHastar(), {}
 for _, id in ipairs(roster) do
 	local m = iVarlden[id]
-	if not m then
-		table.insert(saknas, id)
-	else
+	if m then
 		local box = (Stallet :: any).boxFor(id)
 		local p = (m :: any).PrimaryPart or (m :: any):FindFirstChild("BodyCollider")
 		if box and box.varld and p then
@@ -420,6 +449,93 @@ check("varje kanonisk häst finns som modell i workspace",
 check("och står i sin egen box", #felplacerade == 0,
 	#felplacerade == 0 and "alla inom 2 m från boxens mitt"
 		or table.concat(felplacerade, " · "))
+
+--[[ ══ 3. UTRUSTNINGEN FINNS FYSISKT, OCH GÅR ATT NÅ ═══════════════════
+
+	Ordern, punkt 3: "skötsel-/utrustningssteg har nödvändiga fysiska
+	objekt eller tydligt avsedd interaktionspunkt i rätt miljö."
+
+	P0-2: spelaren ska göra hästen redo, men miljön saknade en begriplig
+	sadel-/utrustningskontext.
+
+	Mätt: utrustningsplatsen FINNS — sadelkammaren i stallets klubbdel,
+	byggd ur `G.inredning` med västkrokar och stövelhylla. Det som saknas
+	är inte geometri utan en väg och en anvisning. Grinden kräver därför
+	det som går att kräva utan att hitta på UBRF-detaljer:
+
+	  a) det finns en fysisk utrustningsplats i den byggda världen,
+	  b) den ligger inne i en byggnad, inte på en gräsmatta,
+	  c) och den går att GÅ till från hästens box.
+
+	Att spelet dessutom ska PEKA dit är ett designbeslut — antingen leds
+	spelaren till sadelkammaren, eller så ställs en sadel vid boxen, och
+	det senare vore ny inredning i en interiör som är fidelity-styrd.
+	Beslutet ligger hos Tobias och står i PR-kommentaren. ]]
+print("\n3. Utrustningen finns fysiskt och går att nå")
+
+local function utrustningsdelar()
+	local ut = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		local id = d:GetAttribute("Inredning")
+		if typeof(id) == "string" and string.sub(id, 1, 6) == "sadel_" then
+			table.insert(ut, d)
+		end
+	end
+	return ut
+end
+local utrustning = utrustningsdelar()
+check("det finns en fysisk utrustningsplats i den byggda världen",
+	#utrustning > 0, ("%d delar märkta sadel_*"):format(#utrustning))
+
+if #utrustning > 0 then
+	local sx, sz, n = 0, 0, 0
+	for _, d in ipairs(utrustning) do
+		local cx, cz = BuildKit.tomtkoord(bas, d.CFrame.Position)
+		sx, sz, n = sx + cx, sz + cz, n + 1
+	end
+	local mx, mz = sx / n, sz / n
+
+	local inne = nil
+	for _, b in ipairs(G.byggnader) do
+		local r = b.rekt
+		if mx >= r.x and mx <= r.x + r.w and mz >= r.y and mz <= r.y + r.h then
+			inne = b.id
+		end
+	end
+	check("och den ligger inne i en byggnad", inne ~= nil,
+		("(%.1f, %.1f) i %s"):format(mx, mz, tostring(inne)))
+
+	--[[ Vägen ENTRÉN → utrustningsplatsen, mätt i samma konfigurationsrymd
+		som dörrarna. Ett avstånd hade sagt att det är nära; det här säger
+		att det GÅR.
+
+		Starten är punkten strax innanför stallets ockragula nordentré —
+		samma punkt END_TO_END använder, och den enda som är GIVEN: en cell
+		kan vara gångbar utan att vara nåbar, och boxens insida är precis
+		det (boxfronten står emellan, och så ska det vara). Att starta i
+		"närmaste gångbara cell vid boxen" hade kunnat starta inne i boxen
+		och mätt en väg ingen kan gå. ]]
+	local stall2, dorr2 = nil, nil
+	for _, b in ipairs(G.byggnader) do if b.id == "stall" then stall2 = b end end
+	for _, o in ipairs((stall2 and stall2.oppningar) or {}) do
+		if o.sida == "N" and o.typ == "dorrgul" then dorr2 = o end
+	end
+	if stall2 and dorr2 then
+		local dmx, dmz = Geometri.oppningsMitt(stall2.rekt, "N", dorr2.u, dorr2.b)
+		local innanfor = { x = dmx, y = dmz - 0.9 }
+		local mal = { x = mx, y = mz }
+		local x0 = math.min(innanfor.x, mal.x) - 12
+		local x1 = math.max(innanfor.x, mal.x) + 12
+		local z0 = math.min(innanfor.y, mal.y) - 12
+		local z1 = math.max(innanfor.y, mal.y) + 12
+		local k = karta(x0, z0, x1, z1)
+		local steg, varfor = sok(k, innanfor, mal)
+		check("och den går att GÅ till från stallets entré",
+			steg ~= nil,
+			steg and ("%d celler (%.1f m)"):format(steg, steg * CELL)
+				or tostring(varfor))
+	end
+end
 
 --[[ ══ 5. INTERIÖRERNA HAR GOLV — INGET GRÄS BLÖDER IGENOM ═══════════════
 
@@ -449,7 +565,7 @@ for _, b in ipairs(G.byggnader) do
 end
 
 local STEGM = 1.0
-for _, iv in ipairs(INTERIORER) do
+local function markOverst(iv)
 	local gras, provade = {}, 0
 	local r = iv.r
 	local x = r.x + 1.0
@@ -465,6 +581,11 @@ for _, iv in ipairs(INTERIORER) do
 		end
 		x += STEGM
 	end
+	return gras, provade
+end
+
+for _, iv in ipairs(INTERIORER) do
+	local gras, provade = markOverst(iv)
 	local detalj = ("%d punkter provade"):format(provade)
 	if #gras > 0 then
 		local x0, x1, z0, z1 = 1e9, -1e9, 1e9, -1e9
@@ -481,6 +602,110 @@ for _, iv in ipairs(INTERIORER) do
 			:format(#gras, provade, x0, x1, z0, z1, table.concat(tn, " · "))
 	end
 	check(("%s: inget marklager ligger överst inomhus"):format(iv.id), #gras == 0, detalj)
+end
+
+--[[ ══ 8. MUTATIONERNA — VARJE REGEL SKA GÅ ATT FÄLLA ═══════════════════
+
+	Ordern, punkt 8: gör medvetet trasigt och kräv RÖTT. Utan den här
+	sektionen vet ingen om reglerna ovan MÄTER något — och den här grinden
+	finns just för att tre gröna grindar en gång släppte igenom en
+	spegelvänd värld.
+
+	Mutationerna körs SIST och städas inte upp: de river delar ur den
+	byggda världen, och allt som skulle mätas mot en hel värld är redan
+	mätt. `alla` (lådorna) är däremot en ögonblicksbild, så varje mutation
+	som ska synas där skriver om den.
+
+	FEM AV SEX LIGGER HÄR. Den sjätte — "låt HUD-steg ligga kvar efter att
+	spelaren lämnat target-range" — kräver klienten och ligger därför i
+	`varldshud.spec`, där den körs som sin egen kontroll: med räckvidden
+	satt till oändligt får spelaren ALDRIG bli "borta", och då ska
+	rubriken stå kvar. Utan den mäter HUD-provet bara att rubriken byter,
+	inte att den byter av rätt skäl. ]]
+print("\n8. MUTATIONER — varje regel ska gå att fälla (M4 ligger i varldshud.spec)")
+
+local function raknaOm()
+	local ut = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
+			local c, s2 = d.CFrame.Position, d.Size
+			local cx, cz = BuildKit.tomtkoord(bas, c)
+			table.insert(ut, {
+				namn = d.Name, del = d,
+				x0 = cx - s2.X / (2 * M), x1 = cx + s2.X / (2 * M),
+				z0 = cz - s2.Z / (2 * M), z1 = cz + s2.Z / (2 * M),
+				y0 = (c.Y - s2.Y / 2) / M, y1 = (c.Y + s2.Y / 2) / M,
+			})
+		end
+	end
+	alla = ut
+end
+
+--[[ M1: ta bort hästmodellen, lämna rosterdatan intakt. ]]
+do
+	local forst = iVarldenNu()[roster[1]]
+	if forst then forst:Destroy() end
+	check("M1: en riven hästmodell fäller närvaroregeln",
+		#saknadeHastar() > 0,
+		("%d saknas efter att %s revs"):format(#saknadeHastar(), tostring(roster[1])))
+end
+
+--[[ M3: ta bort utrustningsplatsen, lämna skötselsteget kvar. ]]
+do
+	for _, d in ipairs(utrustningsdelar()) do d:Destroy() end
+	check("M3: en riven utrustningsplats fäller utrustningsregeln",
+		#utrustningsdelar() == 0,
+		("%d delar kvar"):format(#utrustningsdelar()))
+end
+
+--[[ M5: ta bort ett interiört golv så att marken syns igenom. ]]
+do
+	local stallrekt = nil
+	for _, b in ipairs(G.byggnader) do if b.id == "stall" then stallrekt = b.rekt end end
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d.Name == "stall grund" then d:Destroy() end
+	end
+	raknaOm()
+	local gras, provade = markOverst({ id = "stall", r = stallrekt })
+	check("M5: utan stallets golv ligger marken överst inomhus",
+		#gras > 0, ("%d av %d punkter"):format(#gras, provade))
+end
+
+--[[ M2: lämna prompten, spärra passagen med kollision. ]]
+do
+	local prov = scanBlad()[1]
+	if prov then
+		local c = prov.CFrame.Position
+		local hinder = Instance.new("Part")
+		hinder.Name = "MUTATION spärr"
+		hinder.Anchored = true
+		hinder.Size = Vector3.new(6 * M, 3 * M, 3 * M)
+		hinder.CFrame = CFrame.new(c)
+		hinder.Parent = modell
+		raknaOm()
+		local ok = provaPassage(prov)
+		check("M2: en spärrad passage fäller traversalregeln trots att prompten finns",
+			ok == false, ("%s spärrad"):format(idFor(prov)))
+		hinder:Destroy()
+		raknaOm()
+	end
+end
+
+--[[ M6: lägg in en falsk grind — ett dörrblad utan öppning i kanon. ]]
+do
+	local falsk = Instance.new("Part")
+	falsk.Name = "MUTATION falsk grind"
+	falsk.Anchored = true
+	falsk.Size = Vector3.new(1, 1, 1)
+	falsk.CFrame = CFrame.new(0, 0, 0)
+	falsk:SetAttribute("UBRFDorr", true)
+	falsk:SetAttribute("Oppningstyp", "portpahittad")
+	falsk.Parent = modell
+	local b2, d2 = scanBlad(), scanDeklarerade()
+	check("M6: en falsk grind fäller öppningskontraktet",
+		#b2 + #d2 ~= genomgaende,
+		("%d + %d mot %d genomgående i datan"):format(#b2, #d2, genomgaende))
+	falsk:Destroy()
 end
 
 if fails > 0 then
