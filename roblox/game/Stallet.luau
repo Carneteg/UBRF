@@ -32,7 +32,20 @@ local S = G.stall
 Stallet.FORSTA_DAGEN_HAST = "blackrock_jack"
 
 --[[ Boxrutnätet härleds ur stalldatan i stället för att räknas upp:
-	fyra rader × antalBoxar per rad. Ändras stallet följer boxarna med. ]]
+	fyra rader × antalBoxar per rad. Ändras stallet följer boxarna med.
+
+	OBS: DET HÄR ÄR NUMRERINGSRYMDEN, INTE ANTALET BOXAR SOM FINNS.
+
+	Talet är 52 (4 × 13) medan världen bygger 49 fack, och skillnaden
+	rapporterades som en odiagnostiserad diskrepans i runtime-QA:n. Den är
+	inte en bugg: `S.brott` skär två passager genom raderna, och de facken
+	finns inte. `hastgang` tar ett fack ur rad W (12 kvar) och `ostport` två
+	ur rad E (11 kvar) — 13 + 13 + 12 + 11 = 49.
+
+	`box(n)` returnerar därför `nil` för just de tre numren, med flit: en
+	påhittad koordinat hade varit värre än ett nil. Den som räknar boxar ska
+	räkna `S.fack`, inte det här talet. Förhållandet mäts i
+	`spelbarhet.spec` så att det inte kan glida tyst. ]]
 function Stallet.boxantal(): number
 	return #S.rader * S.antalBoxar
 end

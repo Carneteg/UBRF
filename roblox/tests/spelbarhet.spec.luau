@@ -568,6 +568,56 @@ do
 		("%d lägen%s"):format(antal, #fel > 0 and (" — " .. table.concat(fel, "; ")) or ""))
 end
 
+--[[ ══ 52 MOT 49 BOXAR — DIAGNOSTISERAT, INTE ETT FEL ═════════════════
+
+	Runtime-QA:n rapporterade diskrepansen som odiagnostiserad: datan säger
+	52 boxar, världen bygger 49. Den mäts här i stället för att förklaras i
+	en kommentar någon kan glömma uppdatera.
+
+	`Stallet.boxantal()` är NUMRERINGSRYMDEN — fyra rader gånger tretton
+	platser. `S.brott` skär två passager genom raderna, och de facken finns
+	inte, så `box(n)` ger nil för dem. Skillnaden ska vara exakt så stor som
+	brotten gör den. ]]
+print("\n── Boxräkningen: numreringsrymd mot byggda fack ──")
+do
+	local S = UBRFKomplex.stall
+	local rutnat = Stallet.boxantal()
+	local verkliga, perRad = 0, {}
+	for _, rad in ipairs(S.rader) do
+		local n = #((S.fack or {})[rad.id] or {})
+		verkliga += n
+		table.insert(perRad, ("%s=%d"):format(rad.id, n))
+	end
+
+	local utanBox = {}
+	for n = 1, rutnat do
+		if not Stallet.box(n) then table.insert(utanBox, n) end
+	end
+
+	check("numreringsrymden är rader × platser",
+		rutnat == #S.rader * S.antalBoxar, tostring(rutnat))
+	check("de verkliga facken är färre, och det är brotten som gör det",
+		verkliga < rutnat and rutnat - verkliga == #utanBox,
+		("rutnät %d, fack %d (%s), nil %d"):format(rutnat, verkliga,
+			table.concat(perRad, " "), #utanBox))
+	--[[ Och varje nil-nummer ska ligga i ett fack som ett brott faktiskt
+		skär. En box som försvunnit av något ANNAT skäl ska inte gå igenom
+		den här mätningen. ]]
+	local oforklarade = {}
+	for _, n in ipairs(utanBox) do
+		local radIndex = math.floor((n - 1) / S.antalBoxar) + 1
+		local rad = S.rader[radIndex]
+		local trafffad = false
+		for _, b in ipairs(S.brott or {}) do
+			if rad and b.rad == rad.id then trafffad = true end
+		end
+		if not trafffad then table.insert(oforklarade, n) end
+	end
+	check("varje saknad box ligger i en rad som ett brott skär",
+		#oforklarade == 0,
+		#oforklarade > 0 and table.concat(oforklarade, ", ") or "inga oförklarade")
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	os.exit(1)
