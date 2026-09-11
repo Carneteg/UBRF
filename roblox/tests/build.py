@@ -85,6 +85,10 @@ SPELBARHET = BYGGE + [
     #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
     #   och far inte ha var sin kopia av hennes matt. ]]
     ("Varldsmatning", "tests/varldsmatning.luau"),
+    #[[ Preflighten matas pa den BYGGDA varlden: en ren UBRF ska passera
+    #   markplansgrinden, och en kvarglomd baseplate ska falla den. Utan
+    #   varlden hade specen bara kunnat prova den tomma vagen. ]]
+    ("Preflight",    "src/server/Preflight.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
@@ -551,6 +555,8 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ Manifestet behover varlden, tjansterna och speldatan — samma bank
     #   som spelbarheten. ]]
     elif "varldsmanifest" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
+    elif "preflight" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "topologi" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"

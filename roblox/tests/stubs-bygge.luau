@@ -302,6 +302,27 @@ local function instance(klass)
 			for _, b in ipairs(self.Children) do table.insert(ut, b) end
 			return ut
 		end,
+		--[[ `IsDescendantOf` och `GetFullName` kom till med
+		     markplansgrinden: den skiljer anläggningens EGNA delar från
+		     främmande, och den skriver ut sökvägen så att den som ska rensa
+		     slipper leta. Utan dem kunde regeln inte mätas här. ]]
+		IsDescendantOf = function(self, mojlig)
+			local p = rawget(self, "__parent")
+			while p do
+				if p == mojlig then return true end
+				p = rawget(p, "__parent")
+			end
+			return false
+		end,
+		GetFullName = function(self)
+			local delar = { self.Name }
+			local p = rawget(self, "__parent")
+			while p do
+				table.insert(delar, 1, p.Name)
+				p = rawget(p, "__parent")
+			end
+			return table.concat(delar, ".")
+		end,
 		GetDescendants = function(self)
 			local ut = {}
 			local function ner(nod)
@@ -325,8 +346,15 @@ local function instance(klass)
 		IsA = function(self, fragad)
 			if self.ClassName == fragad then return true end
 			if fragad == "BasePart" then
+				--[[ `Terrain` ÄR en BasePart i Roblox, och det spelade roll:
+					preflightens markplansregel läser `Size`, och en TOM
+					terräng rapporterar 2044 x 2044 studs. Stubben sa nej
+					och lät därför en falsk positiv passera bänken — den
+					fälldes först i en riktig place. En stubb som är
+					snällare än motorn mäter fel sak. ]]
 				return self.ClassName == "Part" or self.ClassName == "SpawnLocation"
 					or self.ClassName == "MeshPart" or self.ClassName == "WedgePart"
+					or self.ClassName == "Terrain"
 			end
 			return false
 		end,
@@ -399,6 +427,12 @@ local __tjanster = {
 	     är redan inlinade som lokala variabler — men den måste FINNAS,
 	     annars kastar GetService innan en enda mätning gjorts. ]]
 	ReplicatedStorage = instance("ReplicatedStorage"),
+	--[[ Preflighten mäter BUILDEN och frågar därför efter paketets egna
+	     hyllor. De ska vara TOMMA här: en preflight som blir grön i bänken
+	     mäter ingenting, och det är just den sortens falska PASS grinden
+	     finns för att hindra. Specen läser bara markplansraden. ]]
+	ServerScriptService = instance("ServerScriptService"),
+	StarterPlayer = instance("StarterPlayer"),
 	CollectionService = {
 		--[[ #162: HastRigg taggar hästen; utan AddTag i stubben kan riggen
 		     inte byggas i bänken och då kan dess kontrakt inte mätas. ]]

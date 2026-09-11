@@ -611,7 +611,8 @@ local function byggRidhusIdentitet(model: Model, base: CFrame)
 		for _, sida in ipairs({ -1, 1 }) do
 			local fall = Instance.new("Part")
 			fall.Name = "Ridhus takfall"; fall.Anchored = true
-			fall.CanCollide = false
+			--[[ Innertaket spärrar — se noten vid klubbdelens innertak. ]]
+			fall.CanCollide = true
 			fall.Color = TF.plat; fall.Material = Enum.Material.Metal
 			fall.Size = Vector3.new(BK.M * takL, BK.M * TS.platT,
 				BK.M * (R.langd + 0.6))
@@ -762,25 +763,61 @@ local function byggStaket(model: Model, base: CFrame)
 				local x0 = math.min(a[1], b[1])
 				local z0 = math.min(a[2], b[2])
 
-				-- Liggande virke: (namn, mitthöjd, höjd, djup, färg, material)
+				--[[ ── VAD I ETT STAKET SOM FAKTISKT SPÄRRAR ──────────────
+
+					Mätt i P0-A: ALLT liggande virke bar `CanCollide = false`,
+					så bara stolparna spärrade — med 2,60 m mellan sig. En
+					häst är 0,62 m bred. Hagarna höll alltså ingenting: man
+					gick, och hästen gick, rakt emellan stolparna.
+
+					Det är inte en fråga om osynliga väggar utan om vilken
+					del av staketet som är virke. Toppregeln är 13 x 9 cm
+					och sandsyllen 26 x 11 cm — grovt virke man inte går
+					igenom. Eltråden är 2,5 mm och ISOLERAR, den spärrar
+					inte: att göra en tråd solid vore just den grova
+					lösningen som inte ska väljas när riktig geometri
+					räcker.
+
+					Toppregeln ligger på 1,235–1,365 m. Hästens hölje står
+					på 0,67–1,45 m och spelarens bål på ungefär samma höjd,
+					så regeln tar dem båda. Grindarna är redan bortskurna ur
+					sträckorna av `staketSegment()`, alltså blir öppningarna
+					öppna även nu.
+
+					Sista kolumnen säger om delen spärrar. ]]
+				-- Liggande virke: (namn, mitthöjd, höjd, djup, färg, material, spärrar)
 				local liggande = {}
 				if st.typ == "tra" then
 					local T = S.toppregel
 					table.insert(liggande, { "Staketets toppregel", T.z, T.h, T.d,
-						farg.regel, Enum.Material.WoodPlanks })
+						farg.regel, Enum.Material.WoodPlanks, true })
 					if st.sandkant then
 						local Y = S.sandsyll
 						table.insert(liggande, { "Sandsyll", Y.z, Y.h, Y.d,
-							Color3.fromRGB(156, 138, 110), Enum.Material.Wood })
+							Color3.fromRGB(156, 138, 110), Enum.Material.Wood, true })
 					end
 					for _, y in ipairs(S.tradar) do
 						table.insert(liggande, { "Eltrad", y, S.tradTjocklek, S.tradTjocklek,
-							Color3.fromRGB(58, 54, 46), Enum.Material.Metal })
+							Color3.fromRGB(58, 54, 46), Enum.Material.Metal, false })
 					end
 				else
+					--[[ `el` är tomtgräns och SPÄRRAR. `rail` är vägledande
+						och gör det inte.
+
+						Klassningen följer datans egen beskrivning: rail är
+						"låg falurödmålad trärail (parkering/lekhage)" — en
+						markering, inte en inhägnad. Mätt när den gjordes
+						spärrande: railen framför klubbgaveln ligger på
+						y = 121,5, alltså INNE i stallets klubbdel, och en
+						solid rail där stänger entréhallen. Att den ligger
+						inne i huset är ett placeringsfel som hör till
+						miljöägaren; att göra den genomsläpplig för att
+						dölja det vore fel väg. Den spärrar inte därför att
+						den inte ska spärra. ]]
+					local sparrar = st.typ == "el"
 					for _, y in ipairs(reglar) do
 						table.insert(liggande, { "Staketregel " .. st.typ, y, 0.10, 0.05,
-							farg.regel, Enum.Material.WoodPlanks })
+							farg.regel, Enum.Material.WoodPlanks, sparrar })
 					end
 				end
 
@@ -792,7 +829,7 @@ local function byggStaket(model: Model, base: CFrame)
 					local pz = if langsX then z0 - djup / 2 else z0
 					local r = BK.box(model, base, namn,
 						px, y - hojd / 2, pz, w, hojd, d, L[5], L[6])
-					r.CanCollide = false
+					r.CanCollide = L[7] == true
 				end
 
 				local n = math.max(1, math.floor(len / delning + 0.5))
@@ -1669,9 +1706,21 @@ local function byggStallInre(model: Model, base: CFrame)
 					S.boxB - 0.30, BF.ram, Enum.Material.Metal)
 				r.CanCollide = false
 			end
-			BK.box(model, base, "Överliggare " .. namn,
+			--[[ ÖVERLIGGAREN KOLLIDERAR INTE, och det är en rättelse.
+
+				Mätt i Studio: den är 14 x 10 cm och sitter på 2,20 m — en
+				dekorativ topplist över boxfronten som ingenting i spelet kan
+				röra. Spelaren hoppar 2,40 m, och listen var den enda stege som
+				ledde upp på stallets innerväggar: stolpe 2,30 m -> `Tvärvägg`
+				3,40 m, mätt med riktig karaktär (landade på 3,55 m).
+
+				Frontens reglar bär redan `CanCollide = false` av samma skäl.
+				Barriären är `Boxfront` och `Frontstolpe`; listen bar aldrig
+				någon spärr. ]]
+			local ol = BK.box(model, base, "Överliggare " .. namn,
 				fx - 0.04, BF.toppregelZ, o.y + f.y0 + 0.08, 0.14, 0.10,
 				S.boxB - 0.16, BF.ram, Enum.Material.Metal)
+			ol.CanCollide = false
 		end
 	end
 
@@ -1706,6 +1755,20 @@ local function byggStallInre(model: Model, base: CFrame)
 		gy = gy or S.klubbY
 		local tak = BK.box(model, base, "Klubbdelens innertak", o.x, 2.8, o.y + gy, S.bredd, 0.10, S.langd - gy,
 			Color3.fromRGB(244, 242, 236), Enum.Material.SmoothPlastic)
+		--[[ KLUBBDELENS INNERTAK SPÄRRAR INTE, och det är ett eget beslut.
+
+			Det är ett UNDERTAK på 2,80 m — under klubbväggarnas krön på
+			3,40 m — och det bidrar därför ingenting till takrymningen: det
+			som tar headroomet ovanför innerväggarna är `Stalltak plåt` på
+			3,73–4,93 m. Mätt: med undertaket solitt föll
+			END_TO_END-spelbarheten på att gångytan innanför entrén inte
+			längre var nåbar. Ytan ligger i bandet där mätningen väljer golv
+			(under `MAXGOLV` 3,0 m), och ett undertak som kan bli golv är
+			inte en förbättring.
+
+			Delen bär dessutom `Genomsiktlig`, alltså tonas den bort för
+			kameran. Ett tak som försvinner för ögat men står emot kroppen
+			är två sanningar om samma yta. ]]
 		tak.CanCollide = false
 		tak:SetAttribute("Genomsiktlig", true)
 	end
@@ -1731,7 +1794,8 @@ local function byggStallInre(model: Model, base: CFrame)
 	local mx = o.x + halvB
 	for _, sida in ipairs({ -1, 1 }) do
 		local p = Instance.new("Part")
-		p.Name = "Stalltak plåt"; p.Anchored = true; p.CanCollide = false
+		--[[ Innertaket spärrar — se noten vid klubbdelens innertak. ]]
+		p.Name = "Stalltak plåt"; p.Anchored = true; p.CanCollide = true
 		p.Color = SG.takplat; p.Material = Enum.Material.Metal
 		p.Size = Vector3.new(BK.M * takL, BK.M * 0.12, BK.M * langd)
 		p.CFrame = base

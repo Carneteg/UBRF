@@ -659,6 +659,57 @@ do
 			if overlappar and string.find(d.Name, "Boxfront W", 1, true) then iW += 1 end
 			if overlappar and string.find(d.Name, "Boxfront MA", 1, true) then iMA += 1 end
 		end
+		--[[ ══ 52 MOT 49 ═══════════════════════════════════════════════
+
+			Rapporterat som "tre saknas, odiagnostiserat" i P0-D. Det är
+			ingen brist: den nominella rutan är 13 fack x 4 rader = 52, och
+			de tre som inte byggs är EXAKT de moduler de två brotten skär.
+
+			   W  modul 7      hästförbindelsen, 2,40 m
+			   E  modul 8, 9   östra skjutporten, 3,60 m — en port som inte
+			                   ryms i en 3,50 m modul tar två
+
+			Mätningen räknar ut vilka modulnummer som saknas ur geometrin i
+			stället för att skriva talet 49. Flyttas ett brott ändras
+			numren, och då faller den här raden i stället för att en
+			diskrepans upptäcks av en människa ett halvår senare. ]]
+		local MODULER = { W = {}, MA = {}, MB = {}, E = {} }
+		for _, r in ipairs(S.rader) do
+			local finns = {}
+			for _, f in ipairs(Geometri.boxfack(S, r)) do
+				finns[math.floor((f.y0 - S.boxStartY) / S.boxB + 0.5) + 1] = true
+			end
+			for k = 1, S.antalBoxar do
+				if not finns[k] then table.insert(MODULER[r.id], k) end
+			end
+		end
+		local byggda = 0
+		for _, r in ipairs(S.rader) do byggda += #Geometri.boxfack(S, r) end
+		check("nominellt 13 x 4 = 52 boxmoduler",
+			S.antalBoxar * #S.rader == 52,
+			string.format("%d x %d", S.antalBoxar, #S.rader))
+		check("hästförbindelsen tar modul 7 ur västra raden",
+			#MODULER.W == 1 and MODULER.W[1] == 7,
+			"W saknar " .. (table.concat(MODULER.W, ", ") ~= "" and table.concat(MODULER.W, ", ") or "inget"))
+		check("skjutporten tar modul 8 och 9 ur östra raden",
+			#MODULER.E == 2 and MODULER.E[1] == 8 and MODULER.E[2] == 9,
+			"E saknar " .. (table.concat(MODULER.E, ", ") ~= "" and table.concat(MODULER.E, ", ") or "inget"))
+		check("mittraderna tappar ingen modul",
+			#MODULER.MA == 0 and #MODULER.MB == 0,
+			string.format("MA saknar %d, MB saknar %d", #MODULER.MA, #MODULER.MB))
+		check("52 minus de tre brutna modulerna är 49 byggda fack",
+			byggda == 52 - 3, string.format("%d byggda", byggda))
+
+		--[[ Och den byggda världen ska ha lika många boxdörrar som fack.
+			En dörr utan fack eller ett fack utan dörr är samma sorts
+			diskrepans, bara åt andra hållet. ]]
+		local dorrar = 0
+		for _, d in ipairs(delar) do
+			if d:GetAttribute("UBRFBoxdorr") == true then dorrar += 1 end
+		end
+		check("en boxdörr per byggt fack", dorrar == byggda,
+			string.format("%d dörrar mot %d fack", dorrar, byggda))
+
 		check("ingen boxfront står i hästförbindelsens brott i västra raden", iW == 0, iW .. " fronter")
 		check("mittraden fortsätter obruten förbi brottet", iMA >= 1, iMA .. " fronter")
 		--[[ Samma mätning för östra skjutporten: ingen boxfront i brottet,

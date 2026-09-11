@@ -644,6 +644,127 @@ end
 	satt till oändligt får spelaren ALDRIG bli "borta", och då ska
 	rubriken stå kvar. Utan den mäter HUD-provet bara att rubriken byter,
 	inte att den byter av rätt skäl. ]]
+print("\n9. STAKETEN — vad som spärrar, och vad som bara syns")
+
+--[[ ══ STAKETENS FYSIK ════════════════════════════════════════════════
+
+	Mätt i P0-A: ALLT liggande virke bar `CanCollide = false`. Bara
+	stolparna spärrade, och de står 2,60 m isär. En häst är 0,62 m bred.
+	Hagarna höll alltså ingenting alls — hästen gick rakt emellan
+	stolparna, och det gjorde spelaren också.
+
+	STAKETEN HAR OLIKA UPPGIFTER, och mätningen skiljer på dem:
+
+	  `tra`   inhägnad — uteridbanan, paddocken och de två hagarna.
+	          SKA hålla häst och spelare.
+	  `el`    tomtgräns mot åkern. SKA hålla.
+	  `rail`  låg rail vid klubbgaveln och lekhagen. Vägledande, men den
+	          är virke: man går inte igenom en rail.
+
+	Eltråden är 2,5 mm och isolerar — den spärrar inte, och att göra en
+	tråd solid vore just den grova lösningen som inte ska väljas när
+	riktig geometri räcker. Toppregeln är 13 x 9 cm; den gör jobbet.
+
+	HÖJDEN ÄR DET SOM AVGÖR. Hästens hölje står på 0,67–1,45 m. En regel
+	som inte skär det bandet stoppar ingen häst, hur solid den än är. ]]
+
+local HAST_UNDER, HAST_OVER = 0.67, 1.45   -- hästens hölje i meter
+do
+	local sparrar, oppna = {}, {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		local n = d.Name
+		if n == "Staketets toppregel" or n == "Sandsyll" or n == "Eltrad"
+			or n:sub(1, 12) == "Staketregel " or n:sub(1, 14) == "Staketstolpe " then
+			local m = if d.CanCollide then sparrar else oppna
+			m[n] = (m[n] or 0) + 1
+		end
+	end
+	local function antal(t, n) return t[n] or 0 end
+
+	check("toppregeln spärrar", antal(sparrar, "Staketets toppregel") > 0
+		and antal(oppna, "Staketets toppregel") == 0,
+		string.format("%d spärrar, %d öppna", antal(sparrar, "Staketets toppregel"),
+			antal(oppna, "Staketets toppregel")))
+	check("sandsyllen spärrar", antal(sparrar, "Sandsyll") > 0
+		and antal(oppna, "Sandsyll") == 0,
+		string.format("%d spärrar, %d öppna", antal(sparrar, "Sandsyll"),
+			antal(oppna, "Sandsyll")))
+	--[[ Tomtgränsen mot åkern spärrar; den vägledande railen gör det inte.
+		Klassningen står i `Anlaggningen` med sitt skäl. ]]
+	check("tomtgränsen (el) spärrar",
+		antal(sparrar, "Staketregel el") > 0 and antal(oppna, "Staketregel el") == 0,
+		string.format("%d spärrar, %d öppna", antal(sparrar, "Staketregel el"),
+			antal(oppna, "Staketregel el")))
+	check("den vägledande railen spärrar inte",
+		antal(sparrar, "Staketregel rail") == 0 and antal(oppna, "Staketregel rail") > 0,
+		string.format("%d spärrar, %d öppna", antal(sparrar, "Staketregel rail"),
+			antal(oppna, "Staketregel rail")))
+	--[[ Och tråden ska INTE spärra: en 2,5 mm ledning är ingen barriär. ]]
+	check("eltråden spärrar inte — den isolerar", antal(sparrar, "Eltrad") == 0
+		and antal(oppna, "Eltrad") > 0,
+		string.format("%d spärrar, %d öppna", antal(sparrar, "Eltrad"),
+			antal(oppna, "Eltrad")))
+end
+
+--[[ Räcker det? Mätningen ovan säger att virket kolliderar. Den här
+	säger att det kolliderar PÅ RÄTT HÖJD, och att det inte finns någon
+	lucka mellan stolparna som en häst går igenom. ]]
+do
+	local traReglar, felHojd = 0, 0
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d.Name == "Staketets toppregel" then
+			traReglar += 1
+			local under = (d.Position.Y - d.Size.Y / 2) / M
+			local over = (d.Position.Y + d.Size.Y / 2) / M
+			if over < HAST_UNDER or under > HAST_OVER then felHojd += 1 end
+		end
+	end
+	check("toppregeln skär hästens hölje på varje sträcka",
+		traReglar > 0 and felHojd == 0,
+		string.format("%d sträckor, %d på fel höjd", traReglar, felHojd))
+end
+
+--[[ GRINDARNA SKA FORTFARANDE VARA ÖPPNA. En inhägnad som håller för
+	att den är helt sluten är ingen inhägnad, den är en låda — och hela
+	poängen med blockerare 1 var att spelaren ska komma IN till hästarna.
+
+	Mätt på det BYGGDA: ingen kolliderande regel får korsa grindens punkt.
+	Först nu betyder det något — innan spärrade reglarna ändå ingenting,
+	så en grind som byggdes igen hade sett likadan ut. ]]
+do
+	local grindar = {}
+	for _, st in ipairs(G.staket or {}) do
+		for _, gr in ipairs(st.grindar or {}) do table.insert(grindar, gr) end
+	end
+	check("hagarna har sina grindar i datan", #grindar >= 2, #grindar .. " grindar")
+
+	local tappta = {}
+	for _, gr in ipairs(grindar) do
+		local gx, gz = gr.p[1], gr.p[2]
+		local itvaren = 0
+		for _, d in ipairs(modell:GetDescendants()) do
+			local regel = d.Name == "Staketets toppregel"
+				or d.Name:sub(1, 12) == "Staketregel "
+			if regel and d:IsA("BasePart") and d.CanCollide then
+				local p = d.Position
+				local x0 = (p.X - d.Size.X / 2) / M
+				local x1 = (p.X + d.Size.X / 2) / M
+				local y0 = 170 - (p.Z + d.Size.Z / 2) / M
+				local y1 = 170 - (p.Z - d.Size.Z / 2) / M
+				if gx > x0 + 0.05 and gx < x1 - 0.05
+					and gz > y0 + 0.05 and gz < y1 - 0.05 then
+					itvaren += 1
+				end
+			end
+		end
+		if itvaren > 0 then
+			table.insert(tappta, string.format("(%.0f,%.0f): %d reglar", gx, gz, itvaren))
+		end
+	end
+	check("ingen grind är igenbyggd av en spärrande regel", #tappta == 0,
+		#tappta > 0 and table.concat(tappta, "; ") or "alla grindar öppna")
+end
+
 print("\n8. MUTATIONER — varje regel ska gå att fälla (M4 ligger i varldshud.spec)")
 
 local function raknaOm()

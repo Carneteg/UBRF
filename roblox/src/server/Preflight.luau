@@ -93,6 +93,62 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 		start ~= nil and start:GetAttribute("MotDorr") == "stall N dorrgul",
 		start and tostring(start:GetAttribute("MotDorr")) or "ingen spawn")
 
+	--[[ 2d FRÄMMANDE MARKPLAN.
+
+		Mätt i Studio under P0-C: `Workspace.Baseplate`, 2048 x 16 x 2048
+		studs, låg med ovansidan på y = 0,000 medan UBRF:s högsta marklager
+		slutar på y = -0,018. Rutnätet vann alltså som golv ÖVERALLT — på
+		gården, i stallet, och 300 m utanför tomten — och hela den byggda
+		marken var maskerad. Preflighten släppte igenom det: den fällde en
+		främmande SpawnLocation men kände inte till ett främmande markplan.
+
+		Marken ligger medvetet under noll för att husgolven på 0 ska vinna.
+		Det gör varje place med en kvarglömd baseplate tyst fel, och det är
+		precis det en fail-closed grind ska fånga.
+
+		Regeln är storleken: ingen UBRF-del utanför `Anläggning` har någon
+		vågrät utbredning i närheten av det här. Roblox standardbaseplate är
+		2048 x 2048; tröskeln 120 studs (40 m) ligger en tiopotens under
+		den och långt över allt eget. Sökvägen skrivs ut — den som ska rensa
+		ska slippa leta. ]]
+	local MARK_TROSKEL = 120
+	local frammande: { string } = {}
+	local anlaggning = workspace:FindFirstChild("Anläggning")
+	for _, d in ipairs(workspace:GetChildren()) do
+		--[[ `Terrain` räknas inte här. Den ÄR en BasePart och rapporterar
+			2044 x 2044 studs även när den är helt tom, så storleksregeln
+			hade fällt varje place i världen. Terrängen mäts på sin faktiska
+			utbredning i 2e i stället — mätt: den här raden flaggade
+			`Workspace.Terrain` i en place utan en enda voxel. ]]
+		if d:IsA("BasePart") and not d:IsA("Terrain") and d.CanCollide
+			and (anlaggning == nil or not d:IsDescendantOf(anlaggning))
+			and d.Size.X >= MARK_TROSKEL and d.Size.Z >= MARK_TROSKEL then
+			table.insert(frammande, ("%s (%.0f x %.0f studs, ovansida y=%.3f)")
+				:format(d:GetFullName(), d.Size.X, d.Size.Z, d.Position.Y + d.Size.Y / 2))
+		end
+	end
+	rad(ut, "2d inget främmande markplan", #frammande == 0,
+		if #frammande == 0 then "inga plan över 120 studs utanför anläggningen"
+		else table.concat(frammande, "; "))
+
+	--[[ 2e TERRÄNG. Samma fel, annan form: en enda terrängkloss under
+		världen gör samma sak som en baseplate. UBRF bygger ingen terräng
+		alls, så varje voxel är främmande. ]]
+	local terrangOk, terrangDetalj = true, "ingen terräng"
+	do
+		local t = workspace:FindFirstChildOfClass("Terrain")
+		if t then
+			local e = t.MaxExtents
+			local vol = (e.Max - e.Min)
+			if vol.X > 0 or vol.Y > 0 or vol.Z > 0 then
+				terrangOk = false
+				terrangDetalj = ("terräng finns: %.0f x %.0f x %.0f studs")
+					:format(vol.X, vol.Y, vol.Z)
+			end
+		end
+	end
+	rad(ut, "2e ingen främmande terräng", terrangOk, terrangDetalj)
+
 	--[[ 3. Dörrkontrakt: verklig interaktion, inte en gul markör. ]]
 	local okDorr, DorrService = pcall(function()
 		return require((ServerScriptService :: any).Horse.DorrService)

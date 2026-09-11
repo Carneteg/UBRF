@@ -502,8 +502,32 @@ const ANL = {
     /* `sandkant` = staketet omsluter en sandyta och har därför den grova
        syllen i marknivå som håller sanden på plats (banan-01). Hagarna
        saknar den — där möter staketet gräs. */
-    {typ:"tra", sandkant:true, p:rektRunt(UTEBANA)},     // uteridbanan
-    {typ:"tra", sandkant:true, p:rektRunt(PADDOCK)},  // paddocken bredvid
+    /* GRINDARNA I UTERIDBANAN OCH PADDOCKEN — `[ANTAGANDE]` om LÄGET,
+       inte om att de finns.
+
+       Funnet 2026-09-11 när staketens fysik rättades: så länge inget
+       liggande virke kolliderade spelade det ingen roll att de här två
+       inhägnaderna saknade öppning. När toppregeln började spärra blev
+       uteridbanan en försluten låda — man kom varken in eller ut, och
+       gångbarhetsgrinden (mark.spec) föll på att sandytan inte gick att
+       nå från spawnen.
+
+       ATT det finns en infart är inte ett antagande: en ridbana och en
+       paddock utan öppning kan inte användas, och hagarna Ö1/Ö2 har redan
+       sina grindar. VAR den sitter är det — `references/SITEPLAN.md` för
+       fortfarande "Var exakt hagarnas grindar sitter" på listan över vad
+       som är kvar att kontrollera på plats, och hämtgrinden vid 178/79 är
+       av samma skäl ett antagande.
+
+       Läget följer ANKOMSTEN, inte en bild: uteridbanans grind står mitt
+       på SÖDRA långsidan, den som vetter mot husen och planen framför
+       klubbgaveln. Paddockens står på SÖDRA kortsidan i liv med gången
+       öster om stallet (x 175–178), den väg man faktiskt kommer från.
+       Bredden 2,4 m är samma som hagarnas grindar. */
+    {typ:"tra", sandkant:true, p:rektRunt(UTEBANA),
+     grindar:[{p:[UTEBANA.x + UTEBANA.w / 2, UTEBANA.y], bredd:2.4}]},  // uteridbanan
+    {typ:"tra", sandkant:true, p:rektRunt(PADDOCK),
+     grindar:[{p:[176.5, PADDOCK.y], bredd:2.4}]},  // paddocken bredvid
     /* GRINDARNA ÄR RIKTIGA ÖPPNINGAR (Tobias produkttest 2026-09-06,
        blocker 1). Staketen var slutna polygoner medan `hamtHage.grind`
        bara var en interaktionsmarkör, och `vandringKollision()` gjorde
