@@ -1905,6 +1905,10 @@ return {
 				toppregelZ = 2.2,
 				reglar = 5,
 				regelD = 0.04,
+				dorr = {
+					bredd = 1.2,
+					vidSkiljevagg = true,
+				},
 			},
 			balkong = {
 				z = 4.55,
