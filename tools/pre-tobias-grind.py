@@ -161,7 +161,8 @@ def main():
 
     UT.mkdir(parents=True, exist_ok=True)
     if man is not None:
-        (UT / "WORLD_MANIFEST.json").write_text(json.dumps(man, indent=2, ensure_ascii=False) + "\n")
+        (UT / "WORLD_MANIFEST.json").write_text(
+            json.dumps(man, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     skriv_rapport(resultat, man, allt_gront, arg.place)
     print("=" * 64)
@@ -263,7 +264,11 @@ def skriv_rapport(resultat, man, allt_gront, place):
              "exakt de modulerna. Samma bevisvärde, men det är ett **argument** och "
              "inte en mätning ur filen.\n")
 
-    (UT / "RAPPORT.md").write_text("\n".join(r) + "\n")
+    #[[ encoding="utf-8" är inte kosmetik: Windows default är cp1252, och
+    #   rapporten bär både ❌ och svenska tecken. Utan den kraschar
+    #   skrivningen med UnicodeEncodeError och grinden kan inte rapportera
+    #   alls på den maskin som ska köra Studio-QA:n. Mätt där, inte gissat. ]]
+    (UT / "RAPPORT.md").write_text("\n".join(r) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

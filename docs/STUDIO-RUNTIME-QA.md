@@ -11,33 +11,59 @@
 
 ## 0. Identitet — kontrollera FÖRE allt annat
 
+**TRE identiteter, och de är olika tal.** Att blanda ihop dem gjorde den här
+listan osatisfierbar i sin första version: §0 pinnade artefakten byggd ur
+`0a1b0323`, medan §1 krävde `93d596f5` — commiten som *mätte* placen, inte den
+som *byggde* den. En fil kan inte innehålla SHA:n för en commit som skapades
+efter den.
+
+| Identitet | Värde | Vad det är |
+|---|---|---|
+| **PR / current head** | `3aab5b7…` (flyttas av docs-patchar) | grenens spets. Säger vilken version av *den här listan* du läser. |
+| **artifact source SHA** | `0a1b0323fd2b77224c88388e4b11227c66745ff0` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `574d613abedc6dd84bf7a4d85cf39209819d378a0143278c9ddfd4bbe2f15bec` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+
 | | |
 |---|---|
-| head | `93d596f55b86de06c9de2d188753cb7b141712ad` |
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil | `roblox/releases/first-playable-place-0a1b032/UBRFFirstPlayable.rbxlx` |
-| SHA256 | `574d613abedc6dd84bf7a4d85cf39209819d378a0143278c9ddfd4bbe2f15bec` |
+| fil i repot | `roblox/releases/first-playable-place-0a1b032/UBRFFirstPlayable.rbxlx` |
 | storlek | 850 282 byte, 62 instanser |
+
+### Filen som ska öppnas i Studio
+
+MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
+
+```
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-0a1b032\UBRFFirstPlayable.rbxlx
+```
+
+> ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
+> byte-identisk med release `6a0e5d7` — två releaser bakom — och lades på
+> skrivbordet innan den pinnade byggdes. Den bygger 11 dörrar, 6 gångytor och
+> **en enda häst**. Det var precis det den första lokala körningen fastnade på.
 
 ```powershell
 cd "C:\Users\Tobias Carneteg\Desktop\UBRF"
 git fetch origin
 git checkout claude/first-playable-20260910
-git reset --hard 93d596f5
+git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile roblox\releases\first-playable-place-0a1b032\UBRFFirstPlayable.rbxlx SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-0a1b032\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
-Stämmer inte SHA256 är det **fel fil** — stoppa där. Saknas `robloxstudio` i
-`claude mcp list` är det **fel klient**: MCP:n är registrerad för Claude Code,
-inte för Claude Desktop.
+Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
+**fel fil** — stoppa där. Kontrollera den mot filen Studio faktiskt har öppen,
+inte mot den i repot: det var skillnaden mellan dem som fällde första försöket.
+
+Saknas `robloxstudio` i `claude mcp list` är det **fel klient**: MCP:n är
+registrerad för Claude Code, inte för Claude Desktop.
 
 ## 1. Startup och preflight
 
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=93d596f55b86de06c9de2d188753cb7b141712ad
+FIRST_PLAYABLE_SHA=0a1b0323fd2b77224c88388e4b11227c66745ff0
 FIRST_PLAYABLE_PREFLIGHT: PASS
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3305 objekt
 OK  Världen vänd till högerhänt (norr = −Z): 3313 delar speglade
@@ -202,7 +228,7 @@ finns i kanon och på webben. Den ska synas.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — head 93d596f5 — rbxlx 574d613a… — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 0a1b0323… — rbxlx 574d613abedc6dd84bf7a4d85cf39209819d378a0143278c9ddfd4bbe2f15bec — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
