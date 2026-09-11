@@ -173,6 +173,32 @@ Momentknapparna är 44 px höga (`PreparationController.TRAFFYTA`).
 Fasraderna ovanför dem är **inte** tryckbara — de är en lägesvisning, och
 behöver därför inte samma yta.
 
+### Var HUD:en ligger (PO-order 09:36)
+
+Skötsel-HUD:en är **två ytor med olika livslängd**, inte en panel:
+
+| yta | plats | när |
+|---|---|---|
+| spåraren | uppe till höger, hopfälld 300×60 px | alltid |
+| spåraren utfälld | samma hörn, högst 45 % av skärmhöjden | när spelaren fäller ut den |
+| interaktionspanelen | centralt nedtill, högst 420×300 px | **bara** medan spelaren står inom räckhåll och har något att välja på |
+
+Hopfälld visar spåraren målet och `3/5`. Hela huvudraden är växlingsknappen
+— 44 px, ett tryck var som helst på rubriken. Utfälld lägger den till
+faslistan (som rullar när den inte ryms) och en kort hjälptext.
+
+`PreparationController.SIKTRUTA` är kontraktet i tal: mitten av skärmen
+(x 0,30–0,70, y 0,25–0,85), där avataren står och dit man tittar. Den
+**hopfällda** spåraren får aldrig gå in i den, och `varldshud.spec` mäter
+det på iPad (liggande och stående), laptop, skrivbord och telefon. Den
+utfällda spåraren och interaktionspanelen får — båda är tillfälliga och
+båda är spelarens eget beslut.
+
+Spåraren börjar under `KontrollHjalp`s `?`-knapp: topbarens inset + 12 px
+marginal + 48 px knapp + 8 px luft. Modulerna känner inte varandra, så
+`klient.spec` mäter i stället att rutorna inte krockar — i skärmens
+koordinater, eftersom de två ScreenGui:erna hanterar topbaren olika.
+
 ## Not tested
 
 Matrisen är läst ur källan och provad headless. Att tangenterna känns

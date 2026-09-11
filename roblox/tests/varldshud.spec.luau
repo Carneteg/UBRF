@@ -111,6 +111,9 @@ Players.LocalPlayer.Character = karaktar
 
 local state = Preparation.nyState(hastId, 1)
 local vy = Preparation.vy(state, "preparing", 1, hastnamn)
+--[[ Avsnitt 8 mäter spårarens framstegsruta mot vyns egna faser och
+	behöver därför samma vy som ritades. ]]
+local senasteVyForProv = vy
 PreparationController.tillampa(vy)
 PreparationController.uppdateraKontext()
 
@@ -241,6 +244,178 @@ do
 			("satte ObjectText = %q → %d läcka(or)"):format(offer.ObjectText, #lackor()))
 		offer.ObjectText = gammalText
 	end
+end
+
+--[[ ── 8. HUD:EN SKYMMER INTE SPELET ────────────────────────────────
+
+	PO-order 09:36. Quest-/HUD-panelen låg mitt på skärmen nedtill, 92 %
+	bred och 300 px hög, och den låg där hela tiden — med hela steglistan
+	och alla stora val uppe även när spelaren inte höll på med någonting.
+	Den skymde hästen, avataren och sikten framåt.
+
+	Ordern har fyra krav, och de mäts var för sig här:
+
+	  a  spåraren sitter uppe till HÖGER,
+	  b  den är HOPFÄLLD som standard och går att fälla ut och ihop igen,
+	  c  hopfälld går den aldrig in i siktrutan — på någon av de skärmar
+	     familjen spelar på,
+	  d  de STORA VALEN finns bara medan spelaren faktiskt interagerar.
+
+	Talen läses ur `PreparationController.layout()`, som är samma räkning
+	panelen ritas med, och de synliga lägena ur de BYGGDA instanserna. Ett
+	prov som hade burit sin egen kopia av layouten hade kunnat vara grönt
+	medan skärmen visade något annat. ]]
+print("\n8. HUD:en skymmer inte spelet")
+do
+	local cam = game:GetService("Workspace").CurrentCamera
+	local vpFore = cam.ViewportSize
+	local ytor = PreparationController._ytor()
+
+	local function vid(b, h)
+		cam.ViewportSize = { _typ = "Vector2", X = b, Y = h }
+		PreparationController.tillampaLayout()
+		return PreparationController.layout()
+	end
+	--[[ Skär två rutor varandra? Kant i kant räknas inte som överlapp. ]]
+	local function skar(a, b)
+		return a.x0 < b.x1 and b.x0 < a.x1 and a.y0 < b.y1 and b.y0 < a.y1
+	end
+
+	--[[ a. UPPE TILL HÖGER. ]]
+	local L = vid(1920, 1080)
+	check("spåraren sitter uppe till höger, inte mitt på skärmen nedtill",
+		L.kompakt.x1 <= L.vpBredd and L.kompakt.x0 > L.vpBredd * 0.5
+			and L.kompakt.y1 < L.vpHojd * 0.5,
+		("ruta %d,%d–%d,%d av %d×%d"):format(L.kompakt.x0, L.kompakt.y0,
+			L.kompakt.x1, L.kompakt.y1, L.vpBredd, L.vpHojd))
+
+	--[[ b. HOPFÄLLD SOM STANDARD, och den går att fälla. ]]
+	check("den är hopfälld som standard",
+		PreparationController._utvidgad() == false
+			and ytor.steg.Visible == false and ytor.hjalp.Visible == false,
+		("utvidgad %s · steglista %s · hjälptext %s"):format(
+			tostring(PreparationController._utvidgad()),
+			tostring(ytor.steg.Visible), tostring(ytor.hjalp.Visible)))
+	check("växlingen är en riktig knapp med full träffyta",
+		ytor.vaxla ~= nil and ytor.vaxla.ClassName == "TextButton"
+			and ytor.vaxla.Size.Y.Offset >= PreparationController.TRAFFYTA,
+		("%s · %d px hög"):format(tostring(ytor.vaxla and ytor.vaxla.ClassName),
+			ytor.vaxla and ytor.vaxla.Size.Y.Offset or -1))
+
+	ytor.vaxla.Activated:Fire()
+	local Lut = PreparationController.layout()
+	check("ett tryck fäller UT den: stegen och hjälptexten kommer fram",
+		PreparationController._utvidgad() == true
+			and ytor.steg.Visible == true and ytor.hjalp.Visible == true
+			and Lut.sparare.y1 > Lut.kompakt.y1,
+		("%d px hög utfälld mot %d px hopfälld, %d steg"):format(
+			Lut.sparare.y1 - Lut.sparare.y0,
+			Lut.kompakt.y1 - Lut.kompakt.y0, Lut.antalSteg))
+	ytor.vaxla.Activated:Fire()
+	check("och ett tryck till fäller ihop den igen",
+		PreparationController._utvidgad() == false
+			and ytor.steg.Visible == false,
+		("utvidgad %s"):format(tostring(PreparationController._utvidgad())))
+
+	--[[ c. SIKTRUTAN — på varje skärm familjen spelar på. ]]
+	local skarmar = {
+		{ namn = "iPad landskap 1024×768", b = 1024, h = 768 },
+		{ namn = "iPad porträtt 768×1024", b = 768, h = 1024 },
+		{ namn = "laptop 1440×900", b = 1440, h = 900 },
+		{ namn = "skrivbord 1920×1080", b = 1920, h = 1080 },
+		{ namn = "telefon 390×844", b = 390, h = 844 },
+	}
+	for _, sk in ipairs(skarmar) do
+		local m = vid(sk.b, sk.h)
+		check(("hopfälld skymmer den inget på %s"):format(sk.namn),
+			not skar(m.kompakt, m.sikt),
+			("spårare %d,%d–%d,%d · sikt %d,%d–%d,%d"):format(
+				m.kompakt.x0, m.kompakt.y0, m.kompakt.x1, m.kompakt.y1,
+				m.sikt.x0, m.sikt.y0, m.sikt.x1, m.sikt.y1))
+	end
+
+	--[[ MUTATIONEN: kan mätningen ÖVER HUVUD TAGET bli röd?
+
+		En "skär inte"-kontroll är grön av sig själv så fort någon av
+		rutorna råkar hamna utanför. Här krymps skärmen till en höjd ingen
+		spelar på (320×200). Då NÅR den hopfällda spåraren ned i siktrutan,
+		och skärningen ska slå till. Blir den inte röd mäter raderna ovan
+		ingenting. ]]
+	do
+		local m = vid(320, 200)
+		check("MUTATION: på en 320×200-skärm når spåraren ned i siktrutan — mätningen kan bli röd",
+			skar(m.kompakt, m.sikt),
+			("spårare %d,%d–%d,%d · sikt %d,%d–%d,%d"):format(
+				m.kompakt.x0, m.kompakt.y0, m.kompakt.x1, m.kompakt.y1,
+				m.sikt.x0, m.sikt.y0, m.sikt.x1, m.sikt.y1))
+	end
+
+	--[[ Interaktionspanelen FÅR vara central — det är ordens egen
+		formulering, och den gäller bara medan man håller på. Mäts för att
+		skillnaden mot spåraren ska vara avsiktlig och inte en slump. ]]
+	local mi = vid(1024, 768)
+	check("interaktionspanelen ligger däremot centralt — tillfälligt, som ordern säger",
+		skar(mi.interaktion, mi.sikt),
+		("interaktion %d,%d–%d,%d"):format(mi.interaktion.x0, mi.interaktion.y0,
+			mi.interaktion.x1, mi.interaktion.y1))
+
+	cam.ViewportSize = vpFore
+	PreparationController.tillampaLayout()
+
+	--[[ d. DE STORA VALEN HÖR TILL STUNDEN.
+
+		Samma kropp och samma häst som i avsnitt 6. Vid hästen ska valen
+		finnas; fyra räckvidder bort ska de inte finnas alls — inte gråa,
+		inte kvar, utan borta med panelen de bor i. ]]
+	kropp.CFrame = CFrame.new(rot.CFrame.Position)
+	PreparationController.uppdateraKontext()
+	PreparationController.tillampa(Preparation.vy(state, "preparing", 2, hastnamn))
+	local valVid = #PreparationController._synligaMoment()
+	check("vid hästen finns de stora valen, och de ligger i interaktionspanelen",
+		valVid > 0 and ytor.interaktion.Visible == true,
+		("%d val · panel %s"):format(valVid, tostring(ytor.interaktion.Visible)))
+
+	--[[ Framstegen är riktiga tal ur vyn, inte en dekoration. ]]
+	do
+		local klara, totalt = PreparationController._framsteg()
+		check("spåraren räknar framsteg ur vyns egna faser",
+			totalt == #(senasteVyForProv.steg or {}) and totalt > 0
+				and klara >= 0 and klara <= totalt,
+			("%d/%d mot %d faser i vyn"):format(klara, totalt,
+				#(senasteVyForProv.steg or {})))
+		check("och rutan visar samma tal som räkningen",
+			ytor.framsteg.Text == ("%d/%d"):format(klara, totalt),
+			('"%s"'):format(tostring(ytor.framsteg.Text)))
+	end
+
+	kropp.CFrame = CFrame.new((rot.CFrame.Position) + Vector3.new(RACKVIDD * 4, 0, 0))
+	PreparationController.uppdateraKontext()
+	check("fyra räckvidder bort är de stora valen BORTA, inte bara gråa",
+		#PreparationController._synligaMoment() == 0
+			and ytor.interaktion.Visible == false,
+		("%d val · panel %s"):format(#PreparationController._synligaMoment(),
+			tostring(ytor.interaktion.Visible)))
+	check("men spåraren står kvar och säger vad som gäller",
+		ytor.sparare.Visible ~= false and ytor.rubrik.Text ~= "",
+		('"%s"'):format(tostring(ytor.rubrik.Text)))
+
+	--[[ MUTATIONEN: valen får inte tas bort av något ANNAT än räckvidden.
+		Med oändlig räckvidd är spelaren aldrig borta, och då ska panelen
+		stå kvar trots att kroppen står 48 studs bort. Faller den ändå är
+		det inte avståndet regeln mäter. ]]
+	do
+		local sant = Config.STEG_RACKVIDD
+		Config.STEG_RACKVIDD = math.huge
+		PreparationController.uppdateraKontext()
+		Config.STEG_RACKVIDD = sant
+		check("MUTATION: med oändlig räckvidd står valen kvar — det är avståndet som styr dem",
+			#PreparationController._synligaMoment() > 0
+				and ytor.interaktion.Visible == true,
+			("%d val 48 studs bort"):format(#PreparationController._synligaMoment()))
+	end
+
+	kropp.CFrame = CFrame.new(rot.CFrame.Position)
+	PreparationController.uppdateraKontext()
 end
 
 if fails > 0 then

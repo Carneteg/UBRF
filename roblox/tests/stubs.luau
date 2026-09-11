@@ -165,6 +165,7 @@ Enum = {
 	Font = { Gotham = 1, GothamBold = 2, SourceSans = 3, SourceSansBold = 4 },
 	TextXAlignment = { Left = 1, Center = 2, Right = 3 },
 	TextYAlignment = { Top = 1, Center = 2, Bottom = 3 },
+	TextTruncate = { None = 0, AtEnd = 1, SplitWord = 2 },
 	SizeConstraint = { RelativeXY = 1, RelativeXX = 2, RelativeYY = 3 },
 	FillDirection = { Horizontal = 1, Vertical = 2 },
 	SortOrder = { Name = 1, Custom = 2, LayoutOrder = 3 },
@@ -386,6 +387,12 @@ local __services = {
 	     sant for att mata att panelen da INTE startar av sig sjalv. ]]
 	GuiService = {
 		ReducedMotionEnabled = false,
+		--[[ Topbaren tar 36 px överst pa en riktig klient. Talet stod inte
+		     har forut, och da matte HUD-grinden inset noll — alltsa ett
+		     hornet som ar tommare an spelarens. ]]
+		GetGuiInset = function()
+			return Vector2.new(0, 36), Vector2.new(0, 0)
+		end,
 	},
 	ContextActionService = {
 		_bound = {},

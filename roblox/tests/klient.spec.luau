@@ -1176,6 +1176,52 @@ do
 			("(synlig %s)"):format(tostring(knapp.Visible)))
 	end
 
+	--[[ ══ TVÅ YTOR I SAMMA HÖRN ═══════════════════════════════════════
+		`?`-knappen och skötselspårarens huvud bor båda uppe till höger, och
+		de ritas av var sin modul som inte känner till varandra:
+		`PreparationController` reserverar bandet med ett TAL, inte med ett
+		`require` — bankerna som kör den laddar inte alltid `KontrollHjalp`.
+
+		Talet mäts därför här, mot den knapp som faktiskt byggdes. Och det
+		mäts i SKÄRMENS koordinater, inte i var sitt GUI-utrymme:
+		`?`-knappens ScreenGui respekterar topbaren (`IgnoreGuiInset` av)
+		medan spårarens ignorerar den, så knappen hamnar en topbar längre
+		ned än dess egna tal säger. Glider talen isär ligger `?` över
+		rubriken hos spelaren. ]]
+	if knapp then
+		local vp = game:GetService("Workspace").CurrentCamera.ViewportSize
+		local inset = 0
+		local hamta = (game:GetService("GuiService") :: any).GetGuiInset
+		if type(hamta) == "function" then
+			local topp = hamta(game:GetService("GuiService"))
+			if topp and type(topp.Y) == "number" then inset = topp.Y end
+		end
+		--[[ Knappen är ankrad i övre HÖGRA hörnet (AnchorPoint 1,0), så
+			dess högerkant är positionen och vänsterkanten en bredd in. ]]
+		local hx1 = vp.X * knapp.Position.X.Scale + knapp.Position.X.Offset
+		local hy0 = inset + vp.Y * knapp.Position.Y.Scale + knapp.Position.Y.Offset
+		local h = { x0 = hx1 - knapp.Size.X.Offset, y0 = hy0,
+			x1 = hx1, y1 = hy0 + knapp.Size.Y.Offset }
+		local sp = PreparationController.layout().kompakt
+		local krockar = sp.x0 < h.x1 and h.x0 < sp.x1
+			and sp.y0 < h.y1 and h.y0 < sp.y1
+		prova("?-knappen och skötselspåraren ligger inte över varandra",
+			not krockar,
+			("(? %d,%d–%d,%d · spårare %d,%d–%d,%d)"):format(
+				h.x0, h.y0, h.x1, h.y1, sp.x0, sp.y0, sp.x1, sp.y1))
+		--[[ MUTATIONEN: kan mätningen bli röd? Lägg knappen där spåraren
+			står. Krockar den inte ens då mäter raden ingenting. ]]
+		local gammalY = knapp.Position
+		knapp.Position = UDim2.new(1, -12, 0, sp.y0 - inset + 4)
+		local hy0b = inset + vp.Y * knapp.Position.Y.Scale + knapp.Position.Y.Offset
+		local hb = { x0 = hx1 - knapp.Size.X.Offset, y0 = hy0b,
+			x1 = hx1, y1 = hy0b + knapp.Size.Y.Offset }
+		prova("MUTATION: flyttas ?-knappen ned i spåraren fälls mätningen",
+			sp.x0 < hb.x1 and hb.x0 < sp.x1 and sp.y0 < hb.y1 and hb.y0 < sp.y1,
+			("(? %d,%d–%d,%d)"):format(hb.x0, hb.y0, hb.x1, hb.y1))
+		knapp.Position = gammalY
+	end
+
 	--[[ Hjälpen ska tala om SIN EGEN väg in, och rätt väg för rätt
 		inmatning. En rad som säger "H" till en spelare utan tangentbord är
 		precis det problemet raden beskriver. ]]

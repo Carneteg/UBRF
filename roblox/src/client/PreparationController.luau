@@ -11,6 +11,14 @@
 	mobilen — Tobias familj spelar på iPad, och en HUD som kräver 900 px är
 	inte spelbar för dem.
 
+	── TVÅ YTOR, INTE EN PANEL (PO-order 09:36) ─────────────────────
+
+	Allt det här ritas på två ytor med olika livslängd: SPÅRAREN uppe till
+	höger, som alltid finns och normalt är hopfälld, och INTERAKTIONS-
+	PANELEN, som bara finns medan spelaren faktiskt står vid hästen och har
+	något att välja på. Se noten vid `SIKTRUTA` längre ned för skälet och
+	för kontraktet i tal.
+
 	── TVÅ LISTOR, INTE TVÅ HUD:AR (#161) ───────────────────────────
 
 	Panelen visar numera fyra olika saker, men aldrig mer än en i taget:
@@ -99,11 +107,70 @@ local function avstandTillHast(vy: any): number?
 end
 
 
+local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")
+
+--[[ ══ TVÅ YTOR MED OLIKA LIVSLÄNGD (PO-order 09:36) ═══════════════════
+
+	Panelen låg mitt på skärmen nedtill, 92 % bred och 300 px hög, och den
+	låg där hela tiden. Den skymde hästen, avataren och sikten framåt, och
+	den visade hela steglistan OCH alla stora val även när spelaren inte
+	höll på med någonting alls.
+
+	Samma innehåll ritas nu på två ytor som lever olika länge:
+
+	  SPÅRAREN        uppe till höger, alltid, liten. HOPFÄLLD visar den
+	                  målet och `3/5`; UTFÄLLD målet, stegen och en kort
+	                  hjälptext. Spelaren fäller själv, och valet står kvar.
+	  INTERAKTIONEN   de stora valen. Finns BARA medan spelaren står vid
+	                  hästen och faktiskt har något att välja på — och får
+	                  då vara stor och central, för då ÄR den spelet.
+
+	SIKTRUTAN är kontraktet i tal: mitten av skärmen, där avataren står och
+	dit man tittar. Den HOPFÄLLDA spåraren får aldrig gå in i den. Den
+	utfällda och interaktionspanelen får — båda är tillfälliga och båda är
+	spelarens eget beslut. Grinden mäter det på de skärmar familjen
+	faktiskt spelar på; talen här är enda källan. ]]
+PreparationController.SIKTRUTA = { x0 = 0.30, x1 = 0.70, y0 = 0.25, y1 = 0.85 }
+
+local MARGINAL = 12
+--[[ Bandet allra överst till höger är UPPTAGET: `KontrollHjalp` ritar sin
+	runda `?`-knapp där på pek-klienter, 48 px med 12 px marginal. Spåraren
+	börjar under den.
+
+	Talet står här och inte som ett `require` — bankerna som kör den här
+	filen laddar inte alltid `KontrollHjalp`, och ett require som bara
+	finns ibland är en krasch som väntar. `klient.spec` MÄTER i stället att
+	de två ytorna aldrig går i varandra; glider talen isär blir det rött
+	där, inte hos spelaren. ]]
+local HJALPKNAPP = 48
+local SPARARE_ANDEL = 0.30
+local SPARARE_MIN = 132
+local SPARARE_MAX = 300
+--[[ Utfälld får spåraren ta högst så här stor del av skärmhöjden. Det är
+	steglistan som ger vika när det inte räcker: hellre en lista som rullar
+	än en panel som växer ned över spelet. ]]
+local SPARARE_TAK = 0.45
+local INNER = 8
+local STEGRAD = 22
+local HJALP_HOJD = 34
+local GAP = 6
+
 local gui: ScreenGui? = nil
-local radBehallare: Frame? = nil
-local momentBehallare: Frame? = nil
+--[[ SPÅRAREN. ]]
+local sparare: Frame? = nil
+local huvudKnapp: TextButton? = nil
 local rubrik: TextLabel? = nil
+local framsteg: TextLabel? = nil
+local pil: TextLabel? = nil
+local stegLista: ScrollingFrame? = nil
 local hjalp: TextLabel? = nil
+--[[ INTERAKTIONEN. ]]
+local interaktion: Frame? = nil
+local instruktion: TextLabel? = nil
+local momentBehallare: Frame? = nil
+
+local radBehallare: Frame? = nil
 local rader: { [string]: { ram: Frame, bock: TextLabel, namn: TextLabel } } = {}
 local momentRader: { [string]: TextButton } = {}
 --[[ En aktiv `Activated`-anslutning per momentknapp. Se `momentRad`. ]]
@@ -122,6 +189,17 @@ local rita
 	att gråa ut knappen medan svaret är på väg — inte för att gissa utfallet. ]]
 local vantarPa: string? = nil
 
+--[[ HOPFÄLLD ÄR STANDARD. Läget är spelarens och överlever varje
+	omritning: en HUD som fäller ihop sig själv mitt i ett moment tar
+	tillbaka ett beslut spelaren just fattade. ]]
+local utvidgad = false
+--[[ Det läge som senast ritades. Enda syftet är att fälla UT spåraren EN
+	gång när spelet går in i ett läge som inte har något att trycka på men
+	allt att förklara — välfärdsstoppet, passet sparat, väntar på hästen.
+	Där är texten hela innehållet, och en hopfälld panel hade dolt det enda
+	som fanns att säga. Sedan är läget spelarens igen. ]]
+local senasteLage: string? = nil
+
 local FARG_KLAR = Color3.fromRGB(127, 180, 137)
 local FARG_TUR = Color3.fromRGB(214, 174, 60)
 local FARG_VILAR = Color3.fromRGB(120, 124, 128)
@@ -132,6 +210,156 @@ local FARG_TEXT = Color3.fromRGB(238, 240, 242)
 	ska kunna läsa samma tal som knappen ritas med. ]]
 PreparationController.TRAFFYTA = 44
 
+--[[ Topbarens höjd. Spårarens ScreenGui ignorerar inseten (`IgnoreGuiInset`)
+	och räknar alltså i hela viewportens koordinater, medan `KontrollHjalp`
+	INTE gör det — dess `?`-knapp hamnar därför 36 px längre ned på skärmen
+	än dess egna tal säger. Räknades inseten inte in här skulle knappen
+	ligga över spårarens rubrik på varje riktig klient, och en grind med
+	inset noll hade aldrig sett det.
+
+	Egenskapen finns inte överallt: ett explicit typtest, inget pcall. ]]
+local function guiInset(): number
+	local f = (GuiService :: any).GetGuiInset
+	if type(f) ~= "function" then return 0 end
+	local topp = f(GuiService)
+	if topp and type(topp.Y) == "number" then return topp.Y end
+	return 0
+end
+
+--[[ Överkanten spåraren får börja på: under topbaren, under `?`-knappen
+	och med luft emellan. `klient.spec` mäter att det stämmer mot den knapp
+	som faktiskt byggdes. ]]
+local function toppband(): number
+	return guiInset() + MARGINAL + HJALPKNAPP + GAP
+end
+
+--[[ Viewporten i pixlar. Saknas kameran — vilket den gör i vissa
+	uppstartslägen — antas ett skrivbord hellre än noll: en nolla hade gett
+	en panel utan bredd och en siktruta utan innehåll. ]]
+local function viewport(): (number, number)
+	local cam = Workspace.CurrentCamera
+	local vp = cam and (cam :: any).ViewportSize
+	if vp and type(vp.X) == "number" and type(vp.Y) == "number"
+		and vp.X > 0 and vp.Y > 0 then
+		return vp.X, vp.Y
+	end
+	return 1280, 720
+end
+
+--[[ Ren räkning: spårarens ruta i pixlar, utan att bygga en enda Instance.
+	Provet läser SAMMA funktion som `tillampaLayout` sedan ritar med — två
+	räkningar hade kunnat glida isär, och då hade grinden mätt sin egen
+	kopia av layouten i stället för HUD:ens. ]]
+local function spararLayout(antalSteg: number, ut: boolean): { [string]: number }
+	local B, H = viewport()
+	local bredd = math.clamp(math.floor(B * SPARARE_ANDEL), SPARARE_MIN, SPARARE_MAX)
+	bredd = math.min(bredd, math.max(80, math.floor(B - 2 * MARGINAL)))
+	local x = B - MARGINAL - bredd
+	local y = toppband()
+	local kompakt = 2 * INNER + PreparationController.TRAFFYTA
+	if not ut then
+		return { x = x, y = y, bredd = bredd, hojd = kompakt, stegHojd = 0,
+			kompakt = kompakt, vpBredd = B, vpHojd = H }
+	end
+	local tak = math.floor(H * SPARARE_TAK) - y - MARGINAL
+	local fast = kompakt + GAP + GAP + HJALP_HOJD
+	local stegHojd = 0
+	if antalSteg > 0 then
+		--[[ Minst en rad syns alltid. Ryms inte fler rullar listan; att
+			klippa listan utan att gå att rulla hade gjort de sista stegen
+			osynliga, och det var precis felet den gamla panelen hade. ]]
+		stegHojd = math.max(STEGRAD, math.min(antalSteg * STEGRAD, tak - fast))
+	end
+	local hojd = fast + stegHojd - (if antalSteg > 0 then 0 else GAP)
+	return { x = x, y = y, bredd = bredd, hojd = hojd, stegHojd = stegHojd,
+		kompakt = kompakt, vpBredd = B, vpHojd = H }
+end
+
+--[[ Interaktionspanelens ruta. Den får vara central och stor — men bara
+	medan den finns, och den finns bara under interaktionen. ]]
+local function interaktionsLayout(): { [string]: number }
+	local B, H = viewport()
+	local bredd = math.min(math.floor(B * 0.92), 420)
+	local hojd = math.min(math.floor(H * 0.42), 300)
+	return { bredd = bredd, hojd = hojd, vpBredd = B, vpHojd = H,
+		x = math.floor((B - bredd) / 2), y = H - MARGINAL - hojd }
+end
+
+--[[ Layouten som tal, för prov och felsökning. Ren avläsning — den bygger
+	ingenting och ändrar ingenting. ]]
+function PreparationController.layout(): { [string]: any }
+	local antal = 0
+	for _, r in pairs(rader) do
+		if r.ram.Visible then antal += 1 end
+	end
+	local S = spararLayout(antal, utvidgad)
+	local K = spararLayout(antal, false)
+	local I = interaktionsLayout()
+	return {
+		sparare = { x0 = S.x, y0 = S.y, x1 = S.x + S.bredd, y1 = S.y + S.hojd },
+		kompakt = { x0 = K.x, y0 = K.y, x1 = K.x + K.bredd, y1 = K.y + K.kompakt },
+		interaktion = { x0 = I.x, y0 = I.y, x1 = I.x + I.bredd, y1 = I.y + I.hojd },
+		sikt = {
+			x0 = S.vpBredd * PreparationController.SIKTRUTA.x0,
+			x1 = S.vpBredd * PreparationController.SIKTRUTA.x1,
+			y0 = S.vpHojd * PreparationController.SIKTRUTA.y0,
+			y1 = S.vpHojd * PreparationController.SIKTRUTA.y1,
+		},
+		vpBredd = S.vpBredd, vpHojd = S.vpHojd,
+		utvidgad = utvidgad, stegHojd = S.stegHojd, antalSteg = antal,
+	}
+end
+
+--[[ Ritar om ytorna efter den skärm som faktiskt finns. Publik för att
+	provet ska kunna kalla den efter att ha ändrat viewporten — samma väg
+	en skärmrotation tar. ]]
+function PreparationController.tillampaLayout()
+	local s = sparare
+	if not s then return end
+	local L = PreparationController.layout()
+	s.Position = UDim2.fromOffset(L.sparare.x0, L.sparare.y0)
+	s.Size = UDim2.fromOffset(L.sparare.x1 - L.sparare.x0,
+		L.sparare.y1 - L.sparare.y0)
+	if stegLista then
+		stegLista.Size = UDim2.new(1, 0, 0, L.stegHojd)
+		stegLista.Visible = utvidgad and L.stegHojd > 0
+	end
+	if hjalp then
+		hjalp.Visible = utvidgad
+	end
+	if pil then
+		pil.Text = if utvidgad then "▴" else "▾"
+	end
+	local p = interaktion
+	if p then
+		p.Position = UDim2.fromOffset(L.interaktion.x0, L.interaktion.y0)
+		p.Size = UDim2.fromOffset(L.interaktion.x1 - L.interaktion.x0,
+			L.interaktion.y1 - L.interaktion.y0)
+	end
+end
+
+--[[ Fäller ut eller ihop spåraren. Knappen i huvudet gör detta och inget
+	annat, och provet går samma väg. ]]
+function PreparationController.vaxla()
+	utvidgad = not utvidgad
+	PreparationController.tillampaLayout()
+end
+
+function PreparationController._utvidgad(): boolean
+	return utvidgad
+end
+
+--[[ De byggda ytorna själva, för grinden. Provet läser RIKTIGA instanser
+	— storlek, synlighet, knappen det trycker på — och inte en rapport
+	modulen skriver om sig själv. En sådan rapport kan vara sann medan
+	skärmen visar något annat, och det är exakt den sortens fel den här
+	grinden finns för. ]]
+function PreparationController._ytor(): { [string]: any }
+	return { sparare = sparare, vaxla = huvudKnapp, steg = stegLista,
+		hjalp = hjalp, interaktion = interaktion, rubrik = rubrik,
+		framsteg = framsteg }
+end
+
 local function bygg()
 	if gui then return end
 	local g = Instance.new("ScreenGui")
@@ -141,80 +369,173 @@ local function bygg()
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	--[[ Skalan är i procent av skärmen med ett tak i pixlar: på en telefon
-		får panelen ta 92 % av bredden, på en 4K-skärm ska den inte bli en
-		halvmeter bred.
+	-- ── SPÅRAREN ────────────────────────────────────────────────────
+	local sp = Instance.new("Frame")
+	sp.Name = "Sparare"
+	sp.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
+	--[[ Lätt. Den ligger över spelet hela tiden och ska läsas i förbifarten,
+		inte konkurrera med det. ]]
+	sp.BackgroundTransparency = 0.35
+	sp.BorderSizePixel = 0
+	sp.Parent = g
+	sparare = sp
 
-		Höjden växte från 190 till 300 px när momenten kom till: fasraden
-		och momentraden ligger under varandra, och en panel som klipper av
-		momentlistan hade gjort de sista momenten omöjliga att trycka på. ]]
-	panel.Size = UDim2.new(0.92, 0, 0, 300)
-	panel.SizeConstraint = Enum.SizeConstraint.RelativeXX
-	panel.Position = UDim2.new(0.5, 0, 1, -12)
-	panel.AnchorPoint = Vector2.new(0.5, 1)
-	panel.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
-	panel.BackgroundTransparency = 0.15
-	panel.BorderSizePixel = 0
-	panel.Parent = g
+	local sphorn = Instance.new("UICorner")
+	sphorn.CornerRadius = UDim.new(0, 10)
+	sphorn.Parent = sp
 
-	local max = Instance.new("UISizeConstraint")
-	max.MaxSize = Vector2.new(420, 380)
-	max.MinSize = Vector2.new(240, 220)
-	max.Parent = panel
+	local sppad = Instance.new("UIPadding")
+	sppad.PaddingTop = UDim.new(0, INNER)
+	sppad.PaddingBottom = UDim.new(0, INNER)
+	sppad.PaddingLeft = UDim.new(0, INNER)
+	sppad.PaddingRight = UDim.new(0, INNER)
+	sppad.Parent = sp
 
-	local horn = Instance.new("UICorner")
-	horn.CornerRadius = UDim.new(0, 10)
-	horn.Parent = panel
-
-	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 10)
-	pad.PaddingBottom = UDim.new(0, 10)
-	pad.PaddingLeft = UDim.new(0, 12)
-	pad.PaddingRight = UDim.new(0, 12)
-	pad.Parent = panel
+	--[[ HELA HUVUDRADEN är knappen. Ett fingertryck var som helst på
+		rubriken fäller ut eller ihop, och träffytan blir 44 px utan att
+		en separat liten chevron ska behöva träffas. ]]
+	local hk = Instance.new("TextButton")
+	hk.Name = "Vaxla"
+	hk.Size = UDim2.new(1, 0, 0, PreparationController.TRAFFYTA)
+	hk.BackgroundTransparency = 1
+	hk.AutoButtonColor = false
+	hk.Text = ""
+	hk.Parent = sp
+	huvudKnapp = hk
 
 	local r = Instance.new("TextLabel")
 	r.Name = "Rubrik"
-	r.Size = UDim2.new(1, 0, 0, 20)
+	r.Size = UDim2.new(1, -64, 1, 0)
 	r.BackgroundTransparency = 1
 	r.Font = Enum.Font.GothamBold
-	r.TextSize = 15
+	r.TextSize = 14
 	r.TextXAlignment = Enum.TextXAlignment.Left
+	r.TextTruncate = Enum.TextTruncate.AtEnd
 	r.TextColor3 = FARG_TEXT
 	r.Text = Sprak.t("hud.gor_i_ordning")
-	r.Parent = panel
+	r.Parent = hk
 	rubrik = r
 
-	local lista = Instance.new("Frame")
+	local fs = Instance.new("TextLabel")
+	fs.Name = "Framsteg"
+	fs.AnchorPoint = Vector2.new(1, 0)
+	fs.Position = UDim2.new(1, -20, 0, 0)
+	fs.Size = UDim2.new(0, 42, 1, 0)
+	fs.BackgroundTransparency = 1
+	fs.Font = Enum.Font.GothamBold
+	fs.TextSize = 13
+	fs.TextXAlignment = Enum.TextXAlignment.Right
+	fs.TextColor3 = FARG_TUR
+	fs.Text = ""
+	fs.Parent = hk
+	framsteg = fs
+
+	local pl = Instance.new("TextLabel")
+	pl.Name = "Pil"
+	pl.AnchorPoint = Vector2.new(1, 0)
+	pl.Position = UDim2.new(1, 0, 0, 0)
+	pl.Size = UDim2.new(0, 16, 1, 0)
+	pl.BackgroundTransparency = 1
+	pl.Font = Enum.Font.GothamBold
+	pl.TextSize = 14
+	pl.TextColor3 = FARG_VILAR
+	pl.Text = "▾"
+	pl.Parent = hk
+	pil = pl
+
+	hk.Activated:Connect(function() PreparationController.vaxla() end)
+
+	--[[ Faserna rullar: på en liten skärm ryms inte fem rader under
+		huvudet utan att panelen växer ned i siktrutan. ]]
+	local lista = Instance.new("ScrollingFrame")
 	lista.Name = "Steg"
-	lista.Position = UDim2.new(0, 0, 0, 24)
-	lista.Size = UDim2.new(1, 0, 0, 100)
+	lista.Position = UDim2.new(0, 0, 0, PreparationController.TRAFFYTA + GAP)
+	lista.Size = UDim2.new(1, 0, 0, 0)
 	lista.BackgroundTransparency = 1
-	lista.Parent = panel
+	lista.BorderSizePixel = 0
+	lista.ScrollBarThickness = 3
+	lista.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	lista.CanvasSize = UDim2.new(0, 0, 0, 0)
+	lista.Visible = false
+	lista.Parent = sp
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Vertical
 	layout.Padding = UDim.new(0, 2)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = lista
-	radBehallare = lista
+	stegLista = lista :: any
+	radBehallare = lista :: any
 
-	--[[ Momenten scrollar. Ryktningen har sex och iordningställandet åtta;
+	local h = Instance.new("TextLabel")
+	h.Name = "Hjalp"
+	h.AnchorPoint = Vector2.new(0, 1)
+	h.Position = UDim2.new(0, 0, 1, 0)
+	h.Size = UDim2.new(1, 0, 0, HJALP_HOJD)
+	h.BackgroundTransparency = 1
+	h.Font = Enum.Font.Gotham
+	h.TextSize = 12
+	h.TextWrapped = true
+	h.TextXAlignment = Enum.TextXAlignment.Left
+	h.TextYAlignment = Enum.TextYAlignment.Bottom
+	h.TextColor3 = Color3.fromRGB(186, 190, 194)
+	h.Text = ""
+	h.Visible = false
+	h.Parent = sp
+	hjalp = h
+
+	-- ── INTERAKTIONEN ───────────────────────────────────────────────
+	local ip = Instance.new("Frame")
+	ip.Name = "Interaktion"
+	ip.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
+	ip.BackgroundTransparency = 0.1
+	ip.BorderSizePixel = 0
+	ip.Visible = false
+	ip.Parent = g
+	interaktion = ip
+
+	local iphorn = Instance.new("UICorner")
+	iphorn.CornerRadius = UDim.new(0, 10)
+	iphorn.Parent = ip
+
+	local ippad = Instance.new("UIPadding")
+	ippad.PaddingTop = UDim.new(0, 10)
+	ippad.PaddingBottom = UDim.new(0, 10)
+	ippad.PaddingLeft = UDim.new(0, 12)
+	ippad.PaddingRight = UDim.new(0, 12)
+	ippad.Parent = ip
+
+	--[[ Samma text som spårarens hjälprad, på det ställe spelaren tittar
+		medan hon väljer. Servern skriver sitt nej hit, och det är hela
+		skälet till att den finns: ett avslag som bara stod i en hopfälld
+		panel hade aldrig blivit läst. ]]
+	local ins = Instance.new("TextLabel")
+	ins.Name = "Instruktion"
+	ins.Size = UDim2.new(1, 0, 0, 36)
+	ins.BackgroundTransparency = 1
+	ins.Font = Enum.Font.GothamBold
+	ins.TextSize = 14
+	ins.TextWrapped = true
+	ins.TextXAlignment = Enum.TextXAlignment.Left
+	ins.TextColor3 = FARG_TEXT
+	ins.Text = ""
+	ins.Parent = ip
+	instruktion = ins
+
+	--[[ Momenten rullar. Ryktningen har sex och iordningställandet åtta;
 		på en telefon i liggande läge ryms de inte alla, och en lista som
 		klipps av utan att gå att rulla är en lista där de sista stegen inte
 		finns. ScrollBarThickness 4 för att stapeln inte ska äta träffytan. ]]
 	local mlista = Instance.new("ScrollingFrame")
 	mlista.Name = "Moment"
-	mlista.Position = UDim2.new(0, 0, 0, 128)
-	mlista.Size = UDim2.new(1, 0, 1, -152)
+	mlista.Position = UDim2.new(0, 0, 0, 42)
+	mlista.Size = UDim2.new(1, 0, 1, -42)
 	mlista.BackgroundTransparency = 1
 	mlista.BorderSizePixel = 0
 	mlista.ScrollBarThickness = 4
 	mlista.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	mlista.CanvasSize = UDim2.new(0, 0, 0, 0)
-	mlista.Parent = panel
+	mlista.Parent = ip
 
 	local mlayout = Instance.new("UIListLayout")
 	mlayout.FillDirection = Enum.FillDirection.Vertical
@@ -223,21 +544,18 @@ local function bygg()
 	mlayout.Parent = mlista
 	momentBehallare = mlista :: any
 
-	local h = Instance.new("TextLabel")
-	h.Name = "Hjalp"
-	h.Position = UDim2.new(0, 0, 1, -24)
-	h.Size = UDim2.new(1, 0, 0, 24)
-	h.BackgroundTransparency = 1
-	h.Font = Enum.Font.Gotham
-	h.TextSize = 12
-	h.TextWrapped = true
-	h.TextXAlignment = Enum.TextXAlignment.Left
-	h.TextColor3 = Color3.fromRGB(186, 190, 194)
-	h.Text = ""
-	h.Parent = panel
-	hjalp = h
-
 	gui = g
+	PreparationController.tillampaLayout()
+
+	--[[ Skärmen kan ändra storlek medan HUD:en står uppe: rotation på en
+		iPad, ett fönster som dras. Layouten räknas om då. Signalen finns
+		inte på alla klienter — ett explicit typtest, inget pcall. ]]
+	local cam = Workspace.CurrentCamera
+	if cam and type((cam :: any).GetPropertyChangedSignal) == "function" then
+		(cam :: any):GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			PreparationController.tillampaLayout()
+		end)
+	end
 end
 
 --[[ En fasrad. LÄGESVISNING, inte en knapp — se filhuvudet. ]]
@@ -344,7 +662,11 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 	knapp.Text = (if m.klar then "✓  " else "")  .. m.namn
 
 	if utomRackhall and not m.klar then
-		--[[ Kvar att läsa, inte att trycka på. ]]
+		--[[ Död knapp. Sedan PO-ordern 09:36 GÖMS hela interaktionspanelen
+			när spelaren är utom räckhåll, så den här stilen når normalt
+			ingen skärm — den står kvar som fail-safe: skulle panelen av
+			något skäl ändå visas får knappen inte se ut som ett löfte
+			servern samtidigt nekar. ]]
 		knapp.TextColor3 = FARG_VILAR
 		knapp.BackgroundColor3 = Color3.fromRGB(30, 31, 33)
 		knapp.AutoButtonColor = false
@@ -447,6 +769,68 @@ local function passRaknat(): boolean
 	return senastePass ~= nil and senastePass.lage == "recorded"
 end
 
+--[[ Framstegen som två tal: avklarade av totalt. Faserna är målet under
+	skötseln; i eftervården är det passets egna moment som räknas, för då
+	finns inga faser kvar att göra. ]]
+local function raknaFramsteg(): (number, number)
+	local klara, totalt = 0, 0
+	if iEftervard() and senastePass then
+		for _, m in ipairs(senastePass.moment or {}) do
+			totalt += 1
+			if m.klar then klara += 1 end
+		end
+	elseif senasteVy then
+		for _, s in ipairs(senasteVy.steg or {}) do
+			totalt += 1
+			if s.klar then klara += 1 end
+		end
+	end
+	return klara, totalt
+end
+
+function PreparationController._framsteg(): (number, number)
+	return raknaFramsteg()
+end
+
+--[[ HÅLLER SPELAREN PÅ MED NÅGOT JUST NU?
+
+	Två villkor, båda nödvändiga: det finns något att välja på, och hon är
+	inom räckhåll för hästen. Annars finns interaktionspanelen inte alls.
+
+	Det är hela PO-ordern om de stora valen: de hör till STUNDEN, inte till
+	skärmen. Räckvidden är serverns egen (`utomRackhall`), samma gräns som
+	avgör om ett moment ens går att trycka på — HUD:en hittar alltså ingen
+	ny regel på, den slutar bara rita det den redan visste var omöjligt. ]]
+local function interaktionPagar(antalVal: number): boolean
+	return antalVal > 0 and not utomRackhall
+end
+
+--[[ SLUTET PÅ VARJE VY, på ett ställe.
+
+	Alla fem grenar i `rita` hamnar här, och det är avsiktligt: läget,
+	hjälptexten, framstegen, interaktionspanelens existens och layouten
+	hänger ihop, och fem kopior av den kopplingen hade glidit isär vid
+	första ändringen — precis som rubriken och servern gjorde i P0-3. ]]
+local function avsluta(lage: string, antalVal: number, ledtext: string,
+	synlig: boolean)
+	--[[ Ett läge utan något att trycka på men med något att förklara
+		fäller UT spåraren EN gång. Sedan är läget spelarens igen. ]]
+	if lage ~= senasteLage then
+		senasteLage = lage
+		if antalVal == 0 and ledtext ~= "" then utvidgad = true end
+	end
+	if hjalp then hjalp.Text = ledtext end
+	if instruktion then instruktion.Text = ledtext end
+	local h = interaktion
+	if h then h.Visible = interaktionPagar(antalVal) end
+	local klara, totalt = raknaFramsteg()
+	if framsteg then
+		framsteg.Text = if totalt > 0 then ("%d/%d"):format(klara, totalt) else ""
+	end
+	PreparationController.tillampaLayout()
+	if gui then gui.Enabled = synlig end
+end
+
 function rita(vy: any)
 	bygg()
 	senasteVy = vy
@@ -475,8 +859,7 @@ function rita(vy: any)
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.lararen_tar_over") end
-		if hjalp then hjalp.Text = lokalKanon(vy.stoppad) end
-		if gui then gui.Enabled = true end
+		avsluta("stoppad", 0, lokalKanon(vy.stoppad), true)
 		return
 	end
 
@@ -496,8 +879,7 @@ function rita(vy: any)
 		end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.du_hittade_nagot") end
-		if hjalp then hjalp.Text = lokalKanon(vy.fynd) end
-		if gui then gui.Enabled = true end
+		avsluta("fynd", #vy.svar, lokalKanon(vy.fynd), true)
 		return
 	end
 
@@ -518,8 +900,7 @@ function rita(vy: any)
 		end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.ta_hand_om_henne") end
-		if hjalp then hjalp.Text = text end
-		if gui then gui.Enabled = true end
+		avsluta("eftervard", #(senastePass.moment or {}), text, true)
 		return
 	end
 
@@ -532,10 +913,7 @@ function rita(vy: any)
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.passet_sparat") end
-		if hjalp then
-			hjalp.Text = Sprak.t("hud.bra_jobbat")
-		end
-		if gui then gui.Enabled = true end
+		avsluta("raknat", 0, Sprak.t("hud.bra_jobbat"), true)
 		return
 	end
 
@@ -552,22 +930,23 @@ function rita(vy: any)
 	end
 	doljOanvanda(anvanda)
 
+	local lage, ledtext = "skotsel", momenttext
 	if vy.status == "waiting_model" then
+		lage, ledtext = "vantar", Sprak.t("hud.hast_inte_i_varlden")
 		if rubrik then rubrik.Text = Sprak.t("hud.vantar_pa_hast") end
-		if hjalp then hjalp.Text = Sprak.t("hud.hast_inte_i_varlden") end
 	elseif vy.status == "riding" then
+		lage, ledtext = "rider", ""
 		if rubrik then rubrik.Text = Sprak.t("hud.du_rider") end
-		if hjalp then hjalp.Text = "" end
 	elseif vy.redo then
+		lage, ledtext = "redo", Sprak.t("hud.kolla_gjorden")
 		if rubrik then rubrik.Text = Sprak.t("hud.klar_sitt_upp") end
-		if hjalp then hjalp.Text = Sprak.t("hud.kolla_gjorden") end
 	else
 		local fasnamn = nil
 		for _, steg in ipairs(vy.steg or {}) do
 			if steg.id == vy.nasta then fasnamn = lokaltSteg(steg).namn end
 		end
+		lage = "skotsel:" .. tostring(vy.nasta)
 		if rubrik then rubrik.Text = fasnamn or Sprak.t("hud.gor_i_ordning") end
-		if hjalp then hjalp.Text = momenttext end
 	end
 
 	--[[ RUBRIKEN PEKAR TILLBAKA när hästen är utom räckhåll. Den skrivs
@@ -587,7 +966,7 @@ function rita(vy: any)
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och
 		det är hela skillnaden mot före #161: en spelare som satt av mötte
 		förut en tom skärm, och passet tog aldrig slut. ]]
-	if gui then gui.Enabled = vy.status ~= "riding" end
+	avsluta(lage, #(vy.moment or {}), ledtext, vy.status ~= "riding")
 end
 
 --[[ Körs av klientens loop. Ritar bara om när kontexten FAKTISKT byter —
@@ -676,8 +1055,13 @@ local function skicka(nyckel: string, remote: string, ...)
 	task.spawn(function()
 		local ok, skal, extra = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
 		vantarPa = nil
-		if not ok and hjalp then
-			hjalp.Text = PreparationController.skalText(skal, extra)
+		if not ok then
+			--[[ Nejet skrivs på BÅDA ytorna. Spelaren tittar på
+				interaktionspanelen när hon just tryckt; ett avslag som bara
+				stod i en hopfälld spårare hade aldrig blivit läst. ]]
+			local text = PreparationController.skalText(skal, extra)
+			if hjalp then hjalp.Text = text end
+			if instruktion then instruktion.Text = text end
 		end
 	end)
 end
@@ -705,8 +1089,13 @@ end
 
 --[[ Provkrokar: vad HUD:en faktiskt ritade. Provet läser dem i stället för
 	att bygga en egen uppfattning om vad som borde ha ritats. ]]
+--[[ De moment spelaren FAKTISKT ser. Knapparna bor i
+	interaktionspanelen, och är den gömd finns de inte på skärmen —
+	att räkna dem ändå hade gjort grinden till en mätning av
+	instanser i stället för av spelarens vy. ]]
 function PreparationController._synligaMoment(): { string }
 	local ut = {}
+	if not (interaktion and interaktion.Visible) then return ut end
 	for id, knapp in pairs(momentRader) do
 		if knapp.Visible then table.insert(ut, id) end
 	end
@@ -731,11 +1120,15 @@ function PreparationController._ritadText(): { string }
 	local ut = {}
 	if rubrik then table.insert(ut, rubrik.Text) end
 	if hjalp then table.insert(ut, hjalp.Text) end
+	if instruktion and interaktion and interaktion.Visible then
+		table.insert(ut, instruktion.Text)
+	end
 	for _, r in pairs(rader) do
 		if r.ram.Visible then table.insert(ut, r.namn.Text) end
 	end
-	for _, knapp in pairs(momentRader) do
-		if knapp.Visible then table.insert(ut, knapp.Text) end
+	for _, id in ipairs(PreparationController._synligaMoment()) do
+		local knapp = momentRader[id]
+		if knapp then table.insert(ut, knapp.Text) end
 	end
 	return ut
 end
