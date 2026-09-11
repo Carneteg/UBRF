@@ -47,6 +47,17 @@ local function gorFas(state, fasId, hastId)
 	while true do
 		local m = Preparation.nastaMoment(state, fasId)
 		if not m then break end
+	--[[ SEDAN 16:21-ORDERN kräver sadelstegen och ledandet att spelaren
+		BÄR sadeln respektive tränset. Reglerna är rena, och den här filen
+		mäter rena regler — så hämtningen görs genom `taUtrustning`, samma
+		funktion tjänsten kallar när spelaren plockat ner saken från
+		boxfronten. ATT det krävs mäts av sina egna fall längre ned, och att
+		det krävs ett FYSISKT föremål vid rätt häst mäts i
+		`integration.spec` mot en byggd sak i världen. ]]
+	local kravd = Preparation.kraverUtrustning(fasId, (m and m.id) or fasId)
+	if kravd and not Preparation.barUtrustning(state, kravd) then
+		Preparation.taUtrustning(state, kravd)
+	end
 		local mok, mskal = Preparation.utforMoment(state, fasId, m.id, hastId)
 		if not mok then return false, mskal end
 	end

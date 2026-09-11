@@ -89,6 +89,11 @@ export type State = {
 	--[[ Välfärdsstoppet: texten om varför arbetet är avbrutet. Icke-nil
 		betyder att hästen inte får sättas i arbete. ]]
 	stoppad: string?,
+	--[[ Vad spelaren FAKTISKT har hämtat och bär på. Sätts bara av servern
+		när hon plockat ner saken från sin hästs boxfront; klienten kan inte
+		skicka den. Utan den här går sadelstegen och ledandet inte att göra
+		— se `kraverUtrustning`. ]]
+	utrustning: { [string]: boolean },
 }
 
 --[[ Index i fasordningen, eller nil för ett okänt id. Slås upp linjärt över
@@ -375,6 +380,7 @@ function Preparation.nyState(hastId: string, pass: number?): State
 		fyndSett = false,
 		fyndRapporterat = false,
 		stoppad = nil,
+		utrustning = {},
 	}
 end
 
@@ -614,6 +620,58 @@ function Preparation.provaSteg(state: State, fasId: string, hastId: string): (bo
 	return true, nil
 end
 
+--[[ ── UTRUSTNINGEN SOM ETT FYSISKT VILLKOR ────────────────────────
+
+	Före det här var sadlingen ett abstrakt tillståndsbyte: spelaren stod
+	vid hästen, tryckte på ett HUD-steg, och sadeln fanns. Ingen sadel hade
+	rörts, ingen hade hämtats, och steget gick lika bra att kvittera av en
+	spelare som aldrig sett en sadel.
+
+	Nu KRÄVER två saker att spelaren bär med sig rätt sak:
+
+	  · sadelstegen i `iordning` (`utr:1..4`) kräver SADELN,
+	  · ledandet (`leda`) kräver TRÄNSET.
+
+	Att tränset hänger på ledandet och inte på ett eget sadelsteg är läst ur
+	kanonen, inte hittat på: `src/spel/skotsel.js` har inget påtagningssteg
+	för tränset, men eftervården har "Ta av tränset" med meningen "Grimma på
+	först, sedan tränset av. Hon ska aldrig stå lös i gången." Tränset sitter
+	alltså på när hon leds. Ett nytt undervisningssteg hade varit att skriva
+	om skötselkanonen, och det är ett produktbeslut, inte en integration.
+
+	Regeln är ren och står här och inte i tjänsten: den ska gå att fälla
+	utan Studio. ]]
+function Preparation.kraverUtrustning(fasId: string, momentId: string): string?
+	if fasId == "iordning" and string.match(tostring(momentId), "^utr:%d+$") then
+		return "sadel"
+	end
+	if fasId == "leda" then
+		return "trans"
+	end
+	return nil
+end
+
+function Preparation.barUtrustning(state: State, sort: string): boolean
+	local u = state.utrustning
+	return type(u) == "table" and u[sort] == true
+end
+
+--[[ Plockar upp en sak. Returnerar (ok, skäl): servern äger AVSTÅNDET och
+	VILKEN häst saken hör till — det kräver instanser — men "bär jag den
+	redan?" är en regel och bor här, så dubbelinteraktionen går att fälla
+	i bänken. ]]
+function Preparation.taUtrustning(state: State, sort: string): (boolean, string?)
+	if sort ~= "sadel" and sort ~= "trans" then
+		return false, "utr.okand_sak"
+	end
+	if Preparation.barUtrustning(state, sort) then
+		return false, "utr.redan_hamtad"
+	end
+	state.utrustning = state.utrustning or {}
+	state.utrustning[sort] = true
+	return true, nil
+end
+
 --[[ ── MOMENTPROVNINGEN ────────────────────────────────────────────
 
 	Den här är den som klienten faktiskt kör mot, och den är därför också
@@ -658,6 +716,18 @@ function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 	if lagsta and moment.steg > lagsta then
 		local pa_tur = Preparation.nastaMoment(state, fasId)
 		return false, "forb.fel_tur", Preparation.kanontext(if pa_tur then pa_tur.namn else nil)
+	end
+
+	--[[ 9. UTRUSTNINGEN MÅSTE VARA HÄMTAD. Sist av nejen med flit: hit
+		kommer bara ett försök som redan är rätt häst, rätt fas, rätt tur
+		och rätt moment, och då är "du har inte sadeln med dig" det enda
+		som återstår att säga. Låg den tidigare hade den varit oprovbar —
+		turordningen hade avvisat försöket ändå, precis som fyndspärren en
+		gång var dold bakom "fel tur". ]]
+	local kravd = Preparation.kraverUtrustning(fasId, momentId)
+	if kravd and not Preparation.barUtrustning(state, kravd) then
+		return false, (if kravd == "sadel" then "forb.sadeln_inte_hamtad"
+			else "forb.transet_inte_hamtat"), moment
 	end
 
 	return true, nil, moment
@@ -831,7 +901,8 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 	if not state then
 		return { status = status, hastId = nil, hastnamn = nil, steg = {}, nasta = nil,
 			moment = {}, nastaMoment = nil, fynd = nil, svar = {},
-			stoppad = nil, redo = false, rev = rev or 0 }
+			stoppad = nil, redo = false, rev = rev or 0,
+			utrustning = {}, kraver = nil }
 	end
 	local steg = {}
 	for _, f in ipairs(Preparation.stegFaser()) do
@@ -887,6 +958,16 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 		stoppad = state.stoppad,
 		redo = Preparation.redo(state),
 		rev = rev or 0,
+		--[[ Vad spelaren BÄR, och vad steget på tur KRÄVER att hon bär.
+			HUD:en ska kunna säga "hämta sadeln på hennes boxfront" utan att
+			själv veta vilka moment som kräver vad — regeln står på ett
+			ställe, här, och vyn bär svaret. ]]
+		utrustning = {
+			sadel = Preparation.barUtrustning(state, "sadel"),
+			trans = Preparation.barUtrustning(state, "trans"),
+		},
+		kraver = if nastaFas then Preparation.kraverUtrustning(nastaFas.id,
+			tostring(nastaM or nastaFas.id)) else nil,
 	}
 end
 

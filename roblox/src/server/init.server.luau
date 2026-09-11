@@ -10,6 +10,7 @@ local StallService = require(script.StallService)
 local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
 local HastRigg = require(script.HastRigg)
+local UtrustningRigg = require(script.UtrustningRigg)
 local Preflight = require(script.Preflight)
 
 --[[ Ordningen är ett beroende, inte en smaksak: GameplayService registrerar
@@ -120,6 +121,13 @@ end)
 	blackrock_jack i datan och `bind()` fick aldrig en modell. ]]
 kritisk("Jack-riggen", function()
 	if HastRigg.start() == nil then error("hästen byggdes inte") end
+end)
+
+--[[ Sadlarna och tränsen på boxfronterna. Efter hästarna, för att de hänger
+	på hästarnas boxar — men de är sina egna modeller och inte en del av
+	riggen: en sadel som ligger i hästmodellen hade följt med hästen ut. ]]
+kritisk("utrustningen på boxfronterna", function()
+	if UtrustningRigg.start() <= 0 then error("ingen utrustning hänger på plats") end
 end)
 
 kritisk("SparService", SparService.start)

@@ -505,6 +505,86 @@ do
 	PreparationController.uppdateraKontext()
 end
 
+--[[ ══ 9. HUD:EN PEKAR UT UTRUSTNINGEN ═══════════════════════════════
+
+	16:21-ordern punkt 1: "UI/HUD måste peka mot [utrustningen] när
+	utrustningsfasen börjar. Spelaren ska inte gissa."
+
+	Mätningen är därför inte att en flagga står rätt utan att HJÄLPRADEN
+	spelaren läser byter från momentets text till var saken hänger — och
+	att den slutar göra det när saken är hämtad.
+
+	Att PLATSEN är hästens boxfront, och varför den inte är sadelkammaren,
+	står i `UtrustningRigg` och mäts av `utrustning.spec`. ]]
+print("\n── 9. Utrustningen: HUD:en säger var sadeln hänger ──")
+do
+	local ytor = PreparationController._ytor()
+	local u = Preparation.nyState(hastId, 1)
+	--[[ Fram till sadelsteget: allt före `iordning`, sedan de fyra hovarna.
+		Ingen genväg — samma väg spelaren går, så att momentet på tur
+		faktiskt ÄR ett utrustningssteg. ]]
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		if fas.id == "iordning" then break end
+		while true do
+			local m = Preparation.nastaMoment(u, fas.id)
+			if not m then break end
+			Preparation.utforMoment(u, fas.id, m.id, hastId)
+		end
+	end
+	for _ = 1, 4 do
+		local m = Preparation.nastaMoment(u, "iordning")
+		if m and string.match(m.id, "^hov:") then
+			Preparation.utforMoment(u, "iordning", m.id, hastId)
+		end
+	end
+
+	local vyU = Preparation.vy(u, "preparing", 40, hastnamn)
+	check("vyn står på ett utrustningssteg och kräver sadeln",
+		vyU.kraver == "sadel", tostring(vyU.kraver))
+
+	kropp.CFrame = CFrame.new(rot.CFrame.Position)
+	PreparationController.uppdateraKontext()
+	PreparationController.tillampa(vyU)
+	local hjalpUtan = tostring(ytor.hjalp.Text)
+	check("HUD:en säger var sadeln hänger i stället för att be om ett steg",
+		hjalpUtan == Sprak.t("utr.hamta_sadel", hastnamn),
+		('"%s"'):format(hjalpUtan))
+	check("och hästens namn står i den, så spelaren vet VILKEN boxfront",
+		string.find(hjalpUtan, hastnamn, 1, true) ~= nil)
+
+	--[[ MED SADELN I HANDEN ska raden återgå till momentets egen text —
+		annars hade instruktionen blivit kvar och pekat på en sadel som
+		redan ligger på ryttarens arm. ]]
+	Preparation.taUtrustning(u, "sadel")
+	local vyMed = Preparation.vy(u, "preparing", 41, hastnamn)
+	PreparationController.tillampa(vyMed)
+	local hjalpMed = tostring(ytor.hjalp.Text)
+	check("med sadeln hämtad står momentets egen text där igen",
+		hjalpMed ~= hjalpUtan and hjalpMed ~= "",
+		('"%s"'):format(hjalpMed))
+
+	--[[ ...och när tränset saknas vid ledandet säger den DET, med det hon
+		redan bär redovisat. ]]
+	while true do
+		local m = Preparation.nastaMoment(u, "iordning")
+		if not m then break end
+		Preparation.utforMoment(u, "iordning", m.id, hastId)
+	end
+	local vyLeda = Preparation.vy(u, "preparing", 42, hastnamn)
+	check("vid ledandet kräver vyn tränset", vyLeda.kraver == "trans",
+		tostring(vyLeda.kraver))
+	PreparationController.tillampa(vyLeda)
+	local hjalpLeda = tostring(ytor.hjalp.Text)
+	check("HUD:en ber om tränset och redovisar att sadeln redan är hämtad",
+		string.find(hjalpLeda, Sprak.t("utr.hamta_trans", hastnamn), 1, true) ~= nil
+			and string.find(hjalpLeda, Sprak.t("utr.sadel"), 1, true) ~= nil,
+		('"%s"'):format(hjalpLeda))
+
+	--[[ Tillbaka till vyn avsnitten före mätte. ]]
+	PreparationController.tillampa(vy)
+	PreparationController.uppdateraKontext()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	print("PHYSICAL_WORLD_COHERENCE (HUD): FAIL")

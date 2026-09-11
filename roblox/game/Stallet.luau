@@ -85,13 +85,73 @@ function Stallet.box(n: number)
 	local yMitt = if f then (f.y0 + f.y1) / 2
 		else S.boxStartY + (plats - 0.5) * S.boxB
 
+	--[[ BOXFRONTENS YTTERSIDA — den sida som vetter mot gången.
+
+		Kroppen ligger alltid [x0, x0 + djup]; `vetter` säger vilken ände
+		fronten sitter i. Bygget lägger frontpanelen med `fx` och tjockleken
+		0,06 in mot boxen, så den yta spelaren ser från gången ligger på
+		`x0 + djup` respektive `x0`. Talet härleds därför ur samma två fält
+		bygget läser och skrivs inte av här.
+
+		Det här är ANKARET för allt som hänger på fronten. ]]
+	local fx = if rad.vetter > 0 then x0 + rad.djup else x0
+
 	return {
 		nummer = n,
 		rad = rad.id,
 		plats = plats,
 		gang = rad.gang,
+		vetter = rad.vetter,
 		lokal = { x = xMitt, y = yMitt },
 		varld = { x = S.origo.x + xMitt, y = S.origo.y + yMitt },
+		front = { x = fx, y = yMitt },
+		frontVarld = { x = S.origo.x + fx, y = S.origo.y + yMitt },
+	}
+end
+
+--[[ ── UTRUSTNINGEN PÅ BOXFRONTEN ─────────────────────────────────────
+
+	`references/buildings/stall/KORT.md` § Boxarna från gången, ur filmen:
+
+	    "På fronterna hänger sadlar med underlag, täcken, grimmor, träns
+	     och benskydd — mycket saker, tätt."
+
+	Det är den ENDA verifierade platsen i UBRF där sadlar och träns finns.
+	Sadelkammarens egen bild (`stall-inne-03-sadelkammaren.jpg`) visar
+	uttryckligen INGA sadelbockar — bara säkerhetsvästar på krokrader och en
+	hylla med stövlar — och F02-B har redan fällt det som `REFERENCE GAP`.
+	Att ställa sadelbockar där hade varit att hitta på en UBRF-detalj för att
+	fylla ett hål, och det får inte göras.
+
+	Så: dagens sadel och träns hänger på DIN hästs egen boxfront, och det är
+	dit spelaren skickas.
+
+	HUR LÅNGT UT och VAR LÄNGS fronten är spelabstraktion — filmen mäter
+	ingenting — men de är härledda ur boxens egen bredd i stället för
+	skrivna som lösa tal, så de följer med om stallet ändras. ]]
+local UT_AVSTAND = 0.28          -- hur långt ut i gången krokarna sticker
+local UT_SARPUNKT = 0.24         -- andel av boxbredden mellan sadel och träns
+
+--[[ Var hänger `sort` ("sadel" / "trans") för den här hästen?
+
+	Ren geometri, inga instanser: platsen ska gå att prova utan Studio, och
+	riggen ska inte kunna ha en egen mening om var utrustningen sitter. ]]
+function Stallet.utrustningsplats(hastId: string, sort: string)
+	local box = Stallet.boxFor(hastId)
+	if not box then return nil end
+	if sort ~= "sadel" and sort ~= "trans" then return nil end
+
+	local sar = S.boxB * UT_SARPUNKT
+	local dy = if sort == "sadel" then -sar else sar
+
+	return {
+		nummer = box.nummer,
+		rad = box.rad,
+		gang = box.gang,
+		vetter = box.vetter,
+		lokal = { x = box.front.x + box.vetter * UT_AVSTAND, y = box.front.y + dy },
+		varld = { x = box.frontVarld.x + box.vetter * UT_AVSTAND,
+			y = box.frontVarld.y + dy },
 	}
 end
 

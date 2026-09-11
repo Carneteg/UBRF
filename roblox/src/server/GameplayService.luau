@@ -214,6 +214,107 @@ local function narvaro(player: Player): (boolean, string?)
 	return true, nil
 end
 
+--[[ ── UTRUSTNINGEN SOM EN FYSISK HANDLING ───────────────────────────
+
+	Ordern 16:21: "Utrustningssteget får inte kunna slutföras genom att
+	trycka på en HUD-knapp vid hästen. Servern ska kräva rätt häst och rätt
+	föremål/tillstånd."
+
+	Vägen är därför: hänga på boxfronten → plockas ner HÄR, av servern, med
+	avståndet mätt mot SAKEN → bäras synligt på avataren → och först då
+	släpper `Preparation` fram sadelstegen (`utr:1..4`) respektive ledandet.
+
+	Klienten skickar en modell, inte ett tillstånd. Den kan inte säga "jag
+	bär en sadel"; den kan bara säga "jag vill ta den där", och varje led i
+	svaret räknas ut här. ]]
+
+--[[ Bär saken synligt på avataren. Den hänger stilla på fronten tills
+	någon tar den, och sitter sedan i handen tills den är på hästen. ]]
+local function baraMed(player: Player, modell: Model): boolean
+	local karaktar = player.Character
+	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart")) then return false end
+	local pivot = modell.PrimaryPart or modell:FindFirstChildWhichIsA("BasePart")
+	if not pivot then return false end
+
+	--[[ Vid HÖGER sida i midjehöjd, som man bär en sadel över armen. Talen
+		är spelabstraktion och står i studs, som resten av riggen. ]]
+	modell:PivotTo(rot.CFrame * CFrame.new(2.2, -0.4, -0.6))
+	for _, d in modell:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = false
+			d.CanCollide = false
+			d.Massless = true
+			local w = Instance.new("WeldConstraint")
+			w.Name = "Svets"
+			w.Part0 = rot
+			w.Part1 = d
+			w.Parent = d
+		end
+	end
+	modell.Parent = karaktar
+	modell:SetAttribute("Bars", true)
+	return true
+end
+
+--[[ Saken är på hästen nu — den ska inte fortsätta hänga på ryttaren. ]]
+local function lagg_pa(player: Player, sort: string)
+	local karaktar = player.Character
+	if not karaktar then return end
+	for _, d in karaktar:GetChildren() do
+		if d:IsA("Model") and d:GetAttribute("UtrSort") == sort
+			and d:GetAttribute("Bars") == true then
+			d:Destroy()
+		end
+	end
+end
+
+--[[ Plocka ner sadeln eller tränset från boxfronten. ]]
+function GameplayService.hamta(player: Player, modell: any): (boolean, string?)
+	local s = state[player]
+	if not s then
+		return false, "spel.ingen_hast"
+	end
+	if typeof(modell) ~= "Instance" or not modell:IsA("Model") then
+		return false, "utr.okand_sak"
+	end
+	local sort = modell:GetAttribute("UtrSort")
+	local tillhor = modell:GetAttribute("HastId")
+	if typeof(sort) ~= "string" or typeof(tillhor) ~= "string" then
+		return false, "utr.okand_sak"
+	end
+	--[[ RÄTT HÄST. En sadel på grannens boxfront är grannens sadel, och
+		det säger servern — inte HUD:en, som en klient kan kringgå. ]]
+	if tillhor ~= s.hastId then
+		return false, "utr.fel_hast"
+	end
+	if modell:GetAttribute("Bars") == true then
+		--[[ Någon annan bär den redan. Kan bara hända med två spelare på
+			samma häst, men då ska svaret vara ett nej och inte en andra
+			kopia av samma sadel. ]]
+		return false, "utr.redan_hamtad"
+	end
+	--[[ AVSTÅNDET MÄTS MOT SAKEN, inte mot hästen. Annars gick sadeln att
+		hämta från andra sidan boxfronten utan att gå dit. ]]
+	if not avstandOk(player, modell) then
+		return false, "utr.for_langt"
+	end
+
+	--[[ Regeln "bär jag den redan?" står i `Preparation` och prövas där. ]]
+	local ok, avslag = Preparation.taUtrustning(s, sort)
+	if not ok then
+		return false, avslag
+	end
+	if not baraMed(player, modell) then
+		--[[ Ingen avatar att hänga den på — då har ingenting hämtats, och
+			tillståndet får inte stå kvar som om det hade det. ]]
+		s.utrustning[sort] = nil
+		return false, "utr.ingen_plats"
+	end
+	skicka(player)
+	return true, nil
+end
+
 --[[ Ett skötselmoment. ENDA vägen framåt i förberedelsen sedan #161.
 
 	Den gamla `GameplayService.utfor(player, fasId)` — ett tryck, en hel
@@ -232,6 +333,15 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 	local s = state[player]
 
 	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId)
+	--[[ När sadelfasen är hel sitter sadeln på hästen, och när hon är ledd
+		sitter tränset på henne. Då ska de inte fortsätta hänga på ryttarens
+		arm — en spelare som rider omkring med en sadel i handen ser ut som
+		en bugg, och är det. ]]
+	if ok and fasId == "iordning" and Preparation.fasKlar(s, "iordning") then
+		lagg_pa(player, "sadel")
+	elseif ok and fasId == "leda" and Preparation.fasKlar(s, "leda") then
+		lagg_pa(player, "trans")
+	end
 	skicka(player)
 	return ok, avslag
 end
@@ -412,6 +522,10 @@ function GameplayService.start()
 
 	Net.get("PreparationMoment").OnServerInvoke = function(player, fasId, momentId)
 		return GameplayService.moment(player, fasId, momentId)
+	end
+
+	Net.get("HamtaUtrustning").OnServerInvoke = function(player, modell)
+		return GameplayService.hamta(player, modell)
 	end
 	Net.get("PreparationSvar").OnServerInvoke = function(player, svarId)
 		return GameplayService.svara(player, svarId)

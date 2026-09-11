@@ -135,14 +135,52 @@ local function stadaSession(s)
 	RunService._server = false
 end
 
+--[[ ── UTRUSTNINGEN SOM EN SAK I VÄRLDEN ────────────────────────────
+
+	Sadeln och tränset byggs av PRODUKTIONENS egen byggare, så attributen
+	provet läser är attributen spelaren möter. Det enda banken gör om är
+	LÄGET: `UtrustningRigg` hänger saken på hästens verkliga boxfront i den
+	byggda anläggningen, och den finns inte här. Provet flyttar den därför
+	inom räckhåll — eller låter bli, när det är avståndet som mäts.
+
+	Att boxfronten är RÄTT plats mäts på annat håll (`utrustning.spec`), mot
+	`Stallet.utrustningsplats` och den byggda världen. ]]
+local function hangUpp(hastId, sort, pos)
+	local m = UtrustningRigg.bygg(hastId, sort, CFrame.new(vec(0, 0, 0)))
+	if not m then return nil end
+	--[[ Stubbens `PivotTo` flyttar ingen del, så läget sätts på delarna. ]]
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then d.CFrame = CFrame.new(pos) end
+	end
+	return m
+end
+
 --[[ Hela skötseln genom TJÄNSTEN, moment för moment. Inget anrop går
-	direkt till `Preparation`: det är skillnaden mot forberedelse.spec. ]]
+	direkt till `Preparation`: det är skillnaden mot forberedelse.spec.
+
+	SEDAN 16:21-ORDERN hämtar den också utrustningen, och det är med flit
+	inte gömt i en hjälpfunktion som sätter ett tillstånd: den går samma väg
+	spelaren går — saken hänger i världen, `GameplayService.hamta` prövar
+	rätt häst och avståndet, och först därefter släpper momentet igenom. Går
+	hämtningen inte igenom faller hela kedjan här, med skälet. ]]
 local function skotselGenomTjansten(spelare)
 	for _, fas in ipairs(Preparation.stegFaser()) do
 		while true do
 			local s = GameplayService.stateFor(spelare)
 			local m = Preparation.nastaMoment(s, fas.id)
 			if not m then break end
+			local kravd = Preparation.kraverUtrustning(fas.id, m.id)
+			if kravd and not Preparation.barUtrustning(s, kravd) then
+				local rot = spelare.Character and spelare.Character:FindFirstChild("HumanoidRootPart")
+				local sak = hangUpp(s.hastId, kravd, rot and rot.Position or vec(0, 0, 0))
+				if not sak then
+					return false, string.format("%s: utrustningen kunde inte byggas", kravd)
+				end
+				local okH, skalH = GameplayService.hamta(spelare, sak)
+				if not okH then
+					return false, string.format("hämta %s: %s", kravd, tostring(skalH))
+				end
+			end
 			local ok, skal = GameplayService.moment(spelare, fas.id, m.id)
 			if not ok then
 				return false, string.format("%s/%s: %s", fas.id, m.id, tostring(skal))

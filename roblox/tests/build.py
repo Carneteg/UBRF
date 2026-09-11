@@ -152,6 +152,9 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
+    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
+    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -220,6 +223,9 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
+    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
+    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -289,6 +295,9 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
+    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
+    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -376,6 +385,8 @@ KLIENT = SPEL + [
     ("TouchControls",       "src/client/TouchControls.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
+    #[[ Sadeln och transet pa boxfronten. Bara init.client require:ar den. ]]
+    ("UtrustningController", "src/client/UtrustningController.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
@@ -418,6 +429,9 @@ KOHERENS = GEOMETRI + [
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
+    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
+    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
     ("Init",            "src/client/init.client.luau"),
 ]
@@ -510,6 +524,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     elif "sprak" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "integration" in spec_rel or "roster" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ Utrustningsgrinden (16:21-ordern): sadeln och transet som fysiska
+    #   saker. Behover tjanstestacken OCH riggen, alltsa samma bank som
+    #   integrationen. Ligger FORE "spel"-grenen av samma skal som
+    #   "spelbarhet": strangen far inte falla igenom till speldatans bank. ]]
+    elif "utrustning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "skotselpass" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"

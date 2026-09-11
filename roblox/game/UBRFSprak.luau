@@ -241,6 +241,62 @@ Sprak.text = {
 		sv = "Utrustning %d/%d",
 		en = "Tack %d/%d",
 	},
+	["forb.sadeln_inte_hamtad"] = {
+		sv = "du har ingen sadel med dig",
+		en = "you are not carrying a saddle",
+	},
+	["forb.transet_inte_hamtat"] = {
+		sv = "du har inget träns med dig",
+		en = "you are not carrying a bridle",
+	},
+	["utr.sadel"] = {
+		sv = "Sadel med underlägg",
+		en = "Saddle with numnah",
+	},
+	["utr.trans"] = {
+		sv = "Träns",
+		en = "Bridle",
+	},
+	["utr.ta"] = {
+		sv = "Ta med dig",
+		en = "Pick up",
+	},
+	["utr.okand_sak"] = {
+		sv = "det där är ingen utrustning",
+		en = "that is not equipment",
+	},
+	["utr.redan_hamtad"] = {
+		sv = "du har den redan med dig",
+		en = "you are already carrying it",
+	},
+	["utr.fel_hast"] = {
+		sv = "det är inte din hästs utrustning",
+		en = "that is not your horse's equipment",
+	},
+	["utr.for_langt"] = {
+		sv = "du står för långt ifrån",
+		en = "you are standing too far away",
+	},
+	["utr.ingen_plats"] = {
+		sv = "utrustningen är inte på plats",
+		en = "the equipment is not in place",
+	},
+	["utr.hamta_sadel"] = {
+		sv = "Sadeln hänger på boxfronten där %s står — hämta den.",
+		en = "The saddle hangs on the box front where %s is standing — go and get it.",
+	},
+	["utr.hamta_trans"] = {
+		sv = "Tränset hänger på boxfronten där %s står — hämta det.",
+		en = "The bridle hangs on the box front where %s is standing — go and get it.",
+	},
+	["utr.hamta_utan_namn"] = {
+		sv = "Utrustningen hänger på din hästs boxfront — hämta den.",
+		en = "The equipment hangs on your horse's box front — go and get it.",
+	},
+	["utr.bar"] = {
+		sv = "Du bär: %s",
+		en = "Carrying: %s",
+	},
 	["hud.gor_i_ordning"] = {
 		sv = "Gör i ordning din häst",
 		en = "Get your horse ready",

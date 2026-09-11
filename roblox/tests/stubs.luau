@@ -820,10 +820,10 @@ local function __nyInstans(klass)
 	--[[ Klientloopen sitter av om riggen inte längre står i världen. Utan
 	     den här kunde den vägen aldrig köras i bänken. ]]
 	function inst:IsDescendantOf(mojligForfader)
-		local f = rawget(self, "Parent")
+		local f = self.Parent
 		while f do
 			if f == mojligForfader then return true end
-			f = rawget(f, "Parent") or (type(f) == "table" and f.Parent) or nil
+			f = f.Parent
 		end
 		return false
 	end
@@ -843,12 +843,14 @@ local function __nyInstans(klass)
 		return ut
 	end
 	function inst:Destroy()
-		local far = rawget(self, "Parent")
-		if far and far._barn then
-			for i, b in ipairs(far._barn) do
-				if b == self then table.remove(far._barn, i) break end
-			end
-		end
+		local far = self.Parent
+		--[[ ...OCH `Parent` BLIR nil. Roblox gör det, stubben gjorde det
+		     inte, och skillnaden är mätbar: en spec som frågar "bär hon
+		     fortfarande sadeln?" läste `sak.Parent == karaktären` och fick
+		     JA om en förstörd sak, trots att den var borta ur barnlistan.
+		     Ett prov som inte kan se att något städats bort kan heller inte
+		     fälla en städning som uteblir. ]]
+		if far then self.Parent = nil end
 	end
 	if klass == "TextButton" then inst.Activated = __signal() end
 	--[[ `ProximityPrompt.Triggered` — samma skäl som Activated ovan.
@@ -922,7 +924,7 @@ local function __nyInstans(klass)
 			if type(namn) ~= "string" or namn == "" then namn = rawget(nod, "ClassName") end
 			if type(namn) ~= "string" then break end
 			table.insert(led, 1, namn)
-			nod = rawget(nod, "Parent")
+			nod = nod.Parent
 		end
 		return table.concat(led, ".")
 	end
@@ -954,6 +956,7 @@ local function __nyInstans(klass)
 
 	return setmetatable(inst, {
 		__index = function(t, k)
+			if k == "Parent" then return rawget(t, "_p").Parent end
 			if __BEVAKADE[k] then return rawget(t, "_p")[k] end
 			--[[ `Position` är inget eget fält på en riktig BasePart: den
 			     läses ur CFrame. Koden som mäter avstånd till en häst
@@ -967,6 +970,41 @@ local function __nyInstans(klass)
 			return nil
 		end,
 		__newindex = function(t, k, v)
+			--[[ FÖRÄLDERN LIGGER I SKUGGTABELLEN, inte som en rå nyckel.
+
+			     Skälet är Luas egen semantik: `__newindex` fyrar BARA när
+			     nyckeln saknas i tabellen. Låg `Parent` rått blev alltså
+			     bara den FÖRSTA föräldern registrerad — en sak som flyttas
+			     (sadeln som plockas ner från boxfronten och hamnar på
+			     ryttaren) stod kvar i sin gamla förälders barnlista och
+			     dök aldrig upp i den nyas. `GetChildren` såg den inte, och
+			     en städning som letar efter den kunde inte mätas.
+			     Omflyttningen var med andra ord osynlig i bänken.
+
+			     Nu tas den ur den gamla listan och läggs i den nya, som i
+			     Roblox, och `GetPropertyChangedSignal("Parent")` fyrar. ]]
+			if k == "Parent" then
+				local p = rawget(t, "_p")
+				local gammal = p.Parent
+				if gammal == v then return end
+				if type(gammal) == "table" then
+					local b = rawget(gammal, "_barn")
+					if b then
+						for i, x in ipairs(b) do
+							if x == t then table.remove(b, i) break end
+						end
+					end
+				end
+				p.Parent = v
+				if type(v) == "table" then
+					local b = rawget(v, "_barn")
+					if not b then b = {}; rawset(v, "_barn", b) end
+					table.insert(b, t)
+				end
+				local sig = rawget(t, "_sig").Parent
+				if sig then sig:Fire() end
+				return
+			end
 			if __BEVAKADE[k] then
 				local p = rawget(t, "_p")
 				local gammal = p[k]
@@ -996,20 +1034,38 @@ local function __nyInstans(klass)
 				if sig and gammal ~= v then sig:Fire() end
 				return
 			end
-			if k == "Parent" then
-				rawset(t, "Parent", v)
-				if v and type(v) == "table" then
-					v._barn = v._barn or {}
-					table.insert(v._barn, t)
-				end
-			else
-				rawset(t, k, v)
-			end
+			rawset(t, k, v)
 		end,
 	})
 end
 
 Instance = { new = __nyInstans }
+
+--[[ `typeof` PÅ EN STUBBINSTANS.
+
+     Produktionen vaktar varje remote-argument med
+     `typeof(x) ~= "Instance" or not x:IsA(...)`, och Luaus egen `typeof`
+     säger "table" om en stubbinstans. Vakten har därför varit OMÄTBAR i
+     bänken: en spec som skickade en riktig (stubbad) modell fick exakt
+     samma nej som en spec som skickade en sträng — och en vakt som alltid
+     säger nej bevisar ingenting om vad den släpper igenom.
+
+     Det upptäcktes när utrustningshämtningen (16:21-ordern) lades in: hela
+     kedjan föll på `utr.okand_sak` trots att modellen var byggd av
+     produktionens egen byggare.
+
+     En stubbinstans känns igen på att den bär BÅDE `ClassName` och barn-
+     tabellen, och båda ligger med `rawset` i konstruktorn. Vektorer och
+     CFrames är också tabeller men saknar dem, och faller därför igenom
+     till den riktiga `typeof`. ]]
+local __luauTypeof = typeof
+function typeof(v)
+	if type(v) == "table" and rawget(v, "ClassName") ~= nil
+		and rawget(v, "_barn") ~= nil then
+		return "Instance"
+	end
+	return __luauTypeof(v)
+end
 
 --[[ ── Animationsstubbar ───────────────────────────────────────────────
      `__makeRig` lämnar `animator = nil`, och därför har `AnimationController`

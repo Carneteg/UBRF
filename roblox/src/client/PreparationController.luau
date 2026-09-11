@@ -949,6 +949,38 @@ function rita(vy: any)
 		if rubrik then rubrik.Text = fasnamn or Sprak.t("hud.gor_i_ordning") end
 	end
 
+	--[[ UTRUSTNINGEN GÅR FÖRE MOMENTTEXTEN.
+
+		Servern säger i `vy.kraver` vad steget på tur kräver att spelaren
+		BÄR, och i `vy.utrustning` vad hon faktiskt bär. Saknas den skrivs
+		instruktionen om från "lägg på underlägget" till "sadeln hänger på
+		boxfronten där hon står — hämta den", för det första går inte att
+		göra förrän det andra är gjort.
+
+		Utan den här raden stod spelaren vid hästen och tryckte på ett steg
+		som servern avvisade, utan att HUD:en någonsin hade sagt var sadeln
+		fanns. Det var den blockerande luckan: hon skulle inte behöva gissa.
+
+		`lage` bär med sig vad som krävs, så att HUD:en ritas om i samma
+		stund saken är hämtad. ]]
+	local kraver = vy.kraver
+	local bar = (vy.utrustning or {})[tostring(kraver or "")] == true
+	if kraver and not bar and vy.status ~= "riding" and not vy.stoppad then
+		ledtext = if hastnamn
+			then Sprak.t(if kraver == "sadel" then "utr.hamta_sadel"
+				else "utr.hamta_trans", hastnamn)
+			else Sprak.t("utr.hamta_utan_namn")
+		--[[ Bär hon redan den ANDRA saken sägs det — annars ser "hämta
+			tränset" ut som om sadeln inte heller var hämtad. ]]
+		local iHand = {}
+		if (vy.utrustning or {}).sadel then table.insert(iHand, Sprak.t("utr.sadel")) end
+		if (vy.utrustning or {}).trans then table.insert(iHand, Sprak.t("utr.trans")) end
+		if #iHand > 0 then
+			ledtext = ledtext .. "\n" .. Sprak.t("utr.bar", table.concat(iHand, ", "))
+		end
+		lage = lage .. ":hamta:" .. tostring(kraver)
+	end
+
 	--[[ RUBRIKEN PEKAR TILLBAKA när hästen är utom räckhåll. Den skrivs
 		SIST och över allt annat: vilket läge vyn än beskriver är det inte
 		det som gäller för spelaren just nu, och en instruktion man inte
