@@ -263,6 +263,12 @@ Sakerna ligger i `workspace.Utrustning`, taggade `Utrustning`, med
 attributen `HastId` och `UtrSort`. Formen är spelabstraktion — filmen mäter
 ingen sadel — men läget härleds ur boxen och är inte skrivet för hand.
 
+> **Boxdörren delar fronten.** Sedan `27e5c2a` har varje boxfack en 1,20 m
+> dörr i fackets bortre ände. Sadeln och tränset hänger på den **täta
+> panelen**, aldrig i dörröppningen — det mäts mot de faktiskt byggda
+> delarna i `spelbarhet.spec` (66 lägen). Ser du en sadel stå i dörrgapet är
+> det ett fynd: härledningen har glidit.
+
 ### Körlista
 
 | # | Gör | Förväntat |
@@ -373,6 +379,36 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 >
 > Mätt headless: WalkSpeed 0,00 medan kortet väntar → 9,83 efter kvittering.
 > Rör hon sig INTE efter kvittering är det ett riktigt runtime-fel.
+
+> ### Och rotdelen är rättad sedan `9b5a570`
+>
+> På `9b5a570` föll punkt 5 av ett ANNAT skäl än pausen: hästens
+> `Humanoid.RootPart` var `nil`, för kollidern hette `BodyCollider` och
+> ingen del hette `HumanoidRootPart`. Utan rot fanns inget golv
+> (`FloorMaterial = Air`) och ingen gångkraft lades på — `WalkSpeed` blev
+> positiv men ingenting hände.
+>
+> Rättat i generatorn (`50e5ed9`): roten heter `HumanoidRootPart` och
+> `HipHeight` sätts till benhöjden. Kontrollera i Output/Explorer:
+>
+> | Fält | Förväntat |
+> |---|---|
+> | `Humanoid.RootPart` | `HumanoidRootPart` — **inte** `nil` |
+> | `HipHeight` | `2.01` |
+> | `FloorMaterial` uppsutten på mark | `Concrete` / `Plastic` — **inte** `Air` |
+> | `AssemblyLinearVelocity` under skritt | ≈ `WalkSpeed`, inte `0.001` |
+>
+> **Rid på ridbanan, inte i boxen.** I boxen går hon tills kroppen möter
+> väggen — ~2,5 studs — och det är boxens mått, inte ett rörelsefel.
+
+> ### Ledandet är fortfarande INTE fysisk gameplay
+>
+> Det som är gjort: rutten box → gång → port → ridbana är mätt framkomlig,
+> boxdörrarna finns, och `leda` kräver nu att spelaren **bär tränset**.
+>
+> Det som INTE är gjort: hästen **följer inte spelaren**, och `leda` har
+> ingen zonkontroll — steget kan bli sant med hästen kvar i boxen. Blockerare
+> 2 står alltså öppen. Rapportera det som känt, inte som ett nytt fynd.
 
 `mount -> ride -> dismount -> death -> respawn -> remount -> aftercare -> save`
 
