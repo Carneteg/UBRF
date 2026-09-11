@@ -22,6 +22,24 @@
 
 Determinism: ombyggd ur samma källa, **byte-identisk**.
 
+> ### PRE_TOBIAS_PHYSICAL_GATE: PASS på den här artefaktens källa
+>
+> Den fysiska världsgaten kördes klar på `464d15c`, och `86662d1` —
+> källheaden som byggde den här filen — **innehåller** den commiten. Alla
+> fem punkter gröna: takrymning, 52 mot 49, markplansgrind, staketfysik och
+> adversariell genomspelning.
+>
+> Den sista P0-punkten är därmed också körd: **uppsutten häst mot
+> inhägnad**, tolv fall mot tre stakettyper (`tra` med syll, `tra` utan
+> syll, `el`). Alla slutna sektioner höll med 0,00 m genomträngningsdjup,
+> båda grindarna släppte igenom, största förflyttning mellan bildrutor
+> 0,029–0,034 m (ingen pop-through), ryttaren satt kvar på 0,96 m konstant
+> avstånd hela vägen. **El-staketet håller den uppsuttna hästen** — samma
+> staket som en avsutten spelare kliver över.
+>
+> Ekipaget kördes med spelarens egen inmatning genom `Input.consume()` →
+> `movement:step()`, alltså samma väg som tangenterna, inte förbi ritten.
+
 `PRE_TOBIAS_FIRST_PLAYABLE_GATE --place` mot exakt den här filen: **PASS**,
 tio undergrindar. Världsmanifestet: **3375 delar** (3317 + 49 boxdörrar),
 13 portaler, 33 hästar. Testsviten: **30 specar gröna**.
@@ -138,7 +156,6 @@ skäl går inte igenom.
   ärlighet.
 - **Railen framför klubbgaveln ligger inne i stallets klubbdel** (y = 121,5)
   — miljöägarens att flytta, inte rörd här.
-- **Uppsutten häst mot staket — inte testat.**
 - **Grindarnas exakta lägen** i uteridbana och paddock är `[ANTAGANDE]`;
   `SITEPLAN` har frågan öppen.
 - **Omgivningen utanför tomten** är ett platt grässkikt som ska ersättas.
