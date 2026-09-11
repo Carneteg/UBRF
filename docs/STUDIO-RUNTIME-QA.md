@@ -90,9 +90,9 @@ Studios Output ska bära, i den här ordningen:
 ```
 FIRST_PLAYABLE_SHA=86662d173c5204ed3d63f86b7e76d0a487ce7eaa
 FIRST_PLAYABLE_PREFLIGHT: PASS
-OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3309 objekt
+OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3367 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
-OK  Världen vänd till högerhänt (norr = −Z): 3313 delar speglade
+OK  Världen vänd till högerhänt (norr = −Z): 3371 delar speglade
 [Rigg] 33 av 33 hästar står i sina boxar
 [Dörr] 13 dörrar fick interaktion
 ```
@@ -103,15 +103,31 @@ OK  Världen vänd till högerhänt (norr = −Z): 3313 delar speglade
 7 gångytor`, `33 av 33 hästar` och `13 dörrar fick interaktion`. De stämde
 exakt i förra körningen och ska göra det igen.
 
-**OBJEKTRÄKNARNA är det inte.** Förra körningen gav `3293 objekt` och `3301
-delar speglade` i Studio där bänken säger `3305`/`3313` — en konstant
-avvikelse på 12 som ingen har diagnostiserat, och som molnsessionen inte kan
-diagnostisera utan Studio. Talen ovan är **bänkens**. Rapportera avvikelsen
-med de tal Studio faktiskt skriver; fäll inte körningen på dem.
+**OBJEKTRÄKNARNA är det inte.** Talen i blocket ovan är **bänkens för den
+här artefakten**: `3367 objekt`, `3371 delar speglade`, mätt på källa
+`86662d1`. Den enda Studio-körning som finns gjord låg på en äldre artefakt
+(källa `67e7716`) och gav `3293 objekt` / `3301 delar speglade` där bänken på
+samma källa ger `3309`/`3313` — en avvikelse på 16 respektive 12 som ingen har
+diagnostiserat, och som molnsessionen inte kan diagnostisera utan Studio.
+Väntar du dig därför omkring `3351`–`3355` objekt och `3359` speglade i Studio
+är det rimligt, men det är en gissning: rapportera de tal Studio faktiskt
+skriver och fäll inte körningen på dem.
 
-De två SurfaceGui:er och två TextLabels som skyltarna fick i den här
-artefakten är skälet till att objektantalet steg från 3305 till 3309 — de är
-GUI-instanser och inte delar, och därför står `3313 delar speglade` stilla.
+Skillnaden mellan räknarna är räknad och stämmer: `3367 objekt` innehåller
+de två SurfaceGui:er och två TextLabels som skyltarna har, och de är
+GUI-instanser och inte delar. 3367 − 4 GUI = 3363 delar, plus de 8 bitar
+öppningsdelningen lägger till, ger `3371 delar speglade`. Manifestets
+`byggda_delar` 3375 är samma värld räknad efter delningen med GUI:erna
+inräknade (3367 + 8).
+
+**De här talen har varit stale i två artefaktbyten.** De stod kvar på
+`3309`/`3313` — bänken för källa `67e7716` — medan världen växte med 49 delar
+till `59680e4` (3358/3362) och med ytterligare 9 till `86662d1` (3367/3371,
+det extra marklagret). Strukturtalen påverkades inte.
+
+> **Kontroll som inte kostar något:** bänkens tal för vilken källa som helst
+> får du med
+> `cd roblox && python3 tests/build.py tests/forstaplayable.spec.luau && luau tests/.build/forstaplayable.spec.luau | head -3`.
 
 ## 2. Spawn och mark — inget void
 
