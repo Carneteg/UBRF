@@ -501,9 +501,21 @@ const GL={
        seFran ger en spegelvänd bild: öster hamnar till vänster när man
        tittar norrut. Canvasrenderaren i world.js räknar redan höger-
        axeln som (fy, −fx) — öster till höger — och kamBas.hj här nedan
-       gör likadant. Vyn speglas därför i kamerans X, och frontFace är
-       satt till CW i start() eftersom speglingen vänder trianglarnas
-       varvriktning. */
+       gör likadant. Vyn speglas därför i kamerans X.
+
+       VARVRIKTNINGEN GÅR IHOP AV SIG SJÄLV, och raden nedan är därför
+       inte parad med något frontFace-anrop: GEO:s primitiver är lagda
+       MEDURS sett utifrån (kolla +X-sidan i GEO.lada — hörnens kryss-
+       produkt pekar inåt), och speglingen vänder dem till moturs i
+       clip space, vilket är precis vad GL:s standard CCW + cullFace
+       (BACK) väntar sig. Lägger man till gl.frontFace(gl.CW) "för
+       symmetrins skull" kulas alltså FRAMSIDORNA bort.
+
+       Raden ser ut som en egendomlighet och är lätt att städa bort.
+       Gör man det blir hela anläggningen spegelvänd utan att ett enda
+       koordinatprov blir rött — datan är ju rätt, det är vad man SER
+       som blir fel. tools/handighetsgrind.mjs mäter just det, genom de
+       matriser den här funktionen faktiskt sätter. */
     this.vy=M4.mul(M4.skala(-1,1,1),M4.seFran(oga,mal,[0,1,0]));
     this.gl.uniformMatrix4fv(this.u.uProj,false,this.proj);
     this.gl.uniformMatrix4fv(this.u.uVy,false,this.vy);

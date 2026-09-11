@@ -87,6 +87,17 @@ jobs:
           if [ -f roblox/tests/kor.sh ]; then bash roblox/tests/kor.sh
           else echo "hoppar: roblox/tests/kor.sh finns inte i denna branch"; fi
 
+      # Handigheten, webbens halva. roblox/tests/handighet.spec.luau mäter
+      # Roblox i steget ovan; det här mäter webben mot SAMMA ankare ur
+      # SITEPLAN. Båda behövs: en spegling överlever varje koordinatprov
+      # och varje paritetsprov — är båda ytorna speglade likadant är de
+      # överens om att ha fel. Det var precis så Roblox kunde vara
+      # spegelvänt med alla grindar gröna.
+      - name: Handigheten på webben
+        run: |
+          if [ -f tools/handighetsgrind.mjs ]; then node tools/handighetsgrind.mjs
+          else echo "hoppar: tools/handighetsgrind.mjs finns inte i denna branch"; fi
+
       - name: Referenschecksummor
         run: |
           if [ -f references/CHECKSUMS.sha256 ]; then
