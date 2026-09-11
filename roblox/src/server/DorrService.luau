@@ -100,6 +100,19 @@ local function rustaDorr(blad: BasePart)
 	oppna[blad] = false
 	blad.CanCollide = true
 
+	--[[ ÖPPNINGENS MITT, och den ligger INTE i bladet.
+
+		Mätt i Studio, och det kostade en runda: `LedService` siktade på
+		dörrens `Position` för att ställa hästen rakt i öppningen — men ett
+		öppet blad har svängt 85 grader ut i gången, och punkten låg då 1,7 m
+		fel. Hästen fick ett delmål inne i gången i stället för i luckan och
+		stod still 0,98 m därifrån.
+
+		Det STÄNGDA läget är öppningen. Det skrivs en gång, här, och är
+		synligt i Studio — den som undrar var hålet i fronten sitter kan
+		läsa det på bladet i stället för att räkna baklänges ur gångjärnet. ]]
+	blad:SetAttribute("UBRFOppningsmitt", blad.CFrame.Position)
+
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "DorrPrompt"
 	--[[ #162 lokalisering: texten som skapas här är SVENSKA STANDARDEN, och
@@ -210,6 +223,23 @@ function DorrService.start()
 		rustaDorr(blad)
 	end
 	print(("[Box] %d boxdörrar fick interaktion"):format(#boxar))
+end
+
+--[[ Att ställa ett blad i ett bestämt läge.
+
+	Finns för att en MÄTNING ska kunna göra exakt det prompten gör, med
+	samma gångjärn och samma kollision, i stället för att räkna ut bladets
+	öppna läge en andra gång i testkoden. En andra uträkning hade kunnat
+	vara fel utan att någon märkte det — och då mäter provet sin egen
+	geometri i stället för spelets. Gameplayet går fortsatt genom prompten. ]]
+function DorrService.satLage(blad: BasePart, oppen: boolean): boolean
+	if not stangt[blad] then return false end
+	satt(blad, oppen)
+	return true
+end
+
+function DorrService.arOppen(blad: BasePart): boolean
+	return oppna[blad] == true
 end
 
 -- För preflight och specar: går dörren att öppna, och släpper den igenom?

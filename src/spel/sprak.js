@@ -220,6 +220,10 @@ const SPRAK = {
   "led.kvar_i_boxen": { sv: "Hon står kvar i boxen", en: "She is still in her stall" },
   "led.inte_framme": { sv: "Hon är inte framme i ridhuset än",
     en: "She is not in the arena yet" },
+  /* Hon har kilat sig och vägsökningen har gett upp. Eget skäl: spelaren
+     ska förstå att det är GEOMETRIN som stoppar, inte att hon vägrar. */
+  "led.fastnat": { sv: "Hon kommer inte fram där — prova en annan väg",
+    en: "She cannot get through there — try another way" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 
