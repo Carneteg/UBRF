@@ -1,15 +1,13 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-11 17:08 UTC av `tools/pre-tobias-grind.py`.
-
-> ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
+> **PASS** — genererad 2026-09-11 17:09 UTC av `tools/pre-tobias-grind.py`.
 
 
 ## Identitet
 
 | | |
 |---|---|
-| source SHA | `c5984d0753db54f8031431173d2937642938c5db` |
+| source SHA | `c1ece77335b9703bb36ce02773453236614a2100` |
 | gren | `claude/first-playable-20260910` |
 | mätt `.rbxlx` | `roblox/releases/first-playable-place-c5984d0/UBRFFirstPlayable.rbxlx` |
 | `.rbxlx` SHA256 | `6d42222fc95fa252de8b562ef8e635304504fb4b84a7eaf9a4fb27e69e6b86cf` |
