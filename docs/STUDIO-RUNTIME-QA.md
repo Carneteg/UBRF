@@ -19,22 +19,28 @@ efter den.
 
 | Identitet | Värde | Vad det är |
 |---|---|---|
-| **PR / current head** | `3aab5b7…` (flyttas av docs-patchar) | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `0a1b0323fd2b77224c88388e4b11227c66745ff0` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `574d613abedc6dd84bf7a4d85cf39209819d378a0143278c9ddfd4bbe2f15bec` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
+| **artifact source SHA** | `67e7716ed5f00102dbcf28a134270489f439157a` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `9cca0f40e4e67c6a9c1e1d0d4ac73eece3d1eaaa4d0157dba42fb73d87ff36dc` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-0a1b032/UBRFFirstPlayable.rbxlx` |
-| storlek | 850 282 byte, 62 instanser |
+| fil i repot | `roblox/releases/first-playable-place-67e7716/UBRFFirstPlayable.rbxlx` |
+| storlek | 873 337 byte, 62 instanser |
+| determinism | ombyggd ur samma källa, byte-identisk |
+
+> **Den här artefakten ersätter `first-playable-place-0a1b032`.** Den förra
+> kördes igenom §0–§9 den 11 september och gav tre fynd (§2 spawnriktningen,
+> §7 skylttexten, §8 `ActionText`). Alla tre är rättade i källan och finns i
+> den HÄR filen — den gamla är kvar orörd som historik och ska inte öppnas.
 
 ### Filen som ska öppnas i Studio
 
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-0a1b032\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-67e7716\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -48,7 +54,7 @@ git fetch origin
 git checkout claude/first-playable-20260910
 git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-0a1b032\UBRFFirstPlayable.rbxlx" SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-67e7716\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
 Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
@@ -63,15 +69,30 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=0a1b0323fd2b77224c88388e4b11227c66745ff0
+FIRST_PLAYABLE_SHA=67e7716ed5f00102dbcf28a134270489f439157a
 FIRST_PLAYABLE_PREFLIGHT: PASS
-OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3305 objekt
+OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3309 objekt
+OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
 OK  Världen vänd till högerhänt (norr = −Z): 3313 delar speglade
 [Rigg] 33 av 33 hästar står i sina boxar
 [Dörr] 13 dörrar fick interaktion
 ```
 
 `FIRST_PLAYABLE_PREFLIGHT: FAIL` är fail-closed och ska stoppa körningen.
+
+**STRUKTURTALEN är kontraktet**, alltså `8 byggnader, 12 dörrar, 4 boxrader,
+7 gångytor`, `33 av 33 hästar` och `13 dörrar fick interaktion`. De stämde
+exakt i förra körningen och ska göra det igen.
+
+**OBJEKTRÄKNARNA är det inte.** Förra körningen gav `3293 objekt` och `3301
+delar speglade` i Studio där bänken säger `3305`/`3313` — en konstant
+avvikelse på 12 som ingen har diagnostiserat, och som molnsessionen inte kan
+diagnostisera utan Studio. Talen ovan är **bänkens**. Rapportera avvikelsen
+med de tal Studio faktiskt skriver; fäll inte körningen på dem.
+
+De två SurfaceGui:er och två TextLabels som skyltarna fick i den här
+artefakten är skälet till att objektantalet steg från 3305 till 3309 — de är
+GUI-instanser och inte delar, och därför står `3313 delar speglade` stilla.
 
 ## 2. Spawn och mark — inget void
 
@@ -204,6 +225,19 @@ Skötselsteget som kräver utrustning ska ha en fysisk källa att gå till.
 `UPPLANDS-BRO RYTTARFÖRENING` saknades i en tidigare build trots att den
 finns i kanon och på webben. Den ska synas.
 
+**RÄTTAT sedan förra körningen.** Då fanns skivorna på rätt läge med rätt
+text — men bara som ATTRIBUT: noll barn, noll `SurfaceGui` i hela
+`workspace`, alltså en blank benvit platta. Nu bär varje skiva en
+`SurfaceGui` (`Skyltyta`) med en `TextLabel` (`Text`).
+
+Kontrollera tre saker, och det tredje är det som lätt missas:
+
+1. att texten **syns** utifrån, från motsvarande vinkel — skärmbild,
+2. att den står rättvänd och läsbar, inte spegelvänd,
+3. att den vetter **utåt**. Speglingen vänder delens lokala Z, så
+   `SurfaceGui.Face` ska vara `Front` i den byggda världen. Står texten in
+   mot väggen är facebytet i `BuildKit.speglaModell` fel.
+
 ## 8. HUD-kontext och språk
 
 - Vid hästen: momentet på tur går att trycka på.
@@ -212,6 +246,46 @@ finns i kanon och på webben. Den ska synas.
 - Tillbaka vid hästen: HUD:en återgår.
 - Ingen prompt får skriva datans interna typnamn (`dorrgul`, `portbla`, …).
 - Byt locale till `en-us`: alla spelarvända fält på engelska, egennamn kvar.
+
+### 8b. Dörrarnas `ActionText` — RÄTTAT, verifiera igen
+
+Förra körningen: `ActionText` stod kvar på `Öppna`/`Stäng` under `en-us` på
+samtliga 13 dörrar medan `ObjectText` korrekt sa `Door`. Servern skrev över
+klientens översättning.
+
+Under `en-us`, på minst tre dörrar och **efter ett tryck på var och en**:
+
+| | Förväntat |
+|---|---|
+| `ActionText` stängd dörr | `Open` |
+| `ActionText` efter tryck | `Close` |
+| `ActionText` efter tryck igen | `Open` |
+| `ObjectText` | `Door` respektive `Gate` |
+
+Under `sv-se` ska samma fält säga `Öppna`, `Stäng` och `Dörr`/`Port`. Står
+det svenska ord under `en-us` är det samma fel tillbaka.
+
+### 8c. Skötsel-HUD:en — NY LAYOUT, aldrig runtime-testad
+
+PO-ordern 09:36 flyttade quest-/HUD-panelen. Allt nedan är mätt headless och
+är `NOT_TESTED` i runtime — det är den här delen som behöver dig.
+
+| Läge | Förväntat |
+|---|---|
+| normal gång | spåraren uppe till **höger**, ca 300×60 px, halvgenomskinlig |
+| default | **hopfälld**: objective-titel + `n/m` + chevron `▾` |
+| ett tryck på huvudraden | fälls **ut**: titel, faslista (rullar), kort hjälptext, `▴` |
+| ett tryck till | fälls ihop igen, och läget står kvar över nästa vy |
+| vid hästen med val | interaktionspanelen syns centralt nedtill |
+| fyra räckvidder bort | interaktionspanelen **försvinner helt** — inte gråa knappar |
+| tillbaka | den kommer tillbaka |
+
+Och det ordern faktiskt handlar om: **gå och rid** med panelen uppe och se
+efter att centrum, avataren och sikten framåt är fria. Kontrollera på
+skrivbordsfönster och på ett iPad-format om Studio tillåter det.
+
+`?`-knappen (`KontrollHjalp`) bor i samma hörn på pek-klienter. Den ska ligga
+**ovanför** spåraren med luft emellan, aldrig över rubriken.
 
 ## 9. Kärnloopen
 
@@ -228,7 +302,7 @@ finns i kanon och på webben. Den ska synas.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 0a1b0323… — rbxlx 574d613abedc6dd84bf7a4d85cf39209819d378a0143278c9ddfd4bbe2f15bec — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 67e7716e… — rbxlx 9cca0f40e4e67c6a9c1e1d0d4ac73eece3d1eaaa4d0157dba42fb73d87ff36dc — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
