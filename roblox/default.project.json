@@ -19,6 +19,9 @@
       "Stallet": {
         "$path": "game/Stallet.luau"
       },
+      "UBRFSprak": {
+        "$path": "game/UBRFSprak.luau"
+      },
       "UBRFKomplex": {
         "$path": "buildings/UBRFKomplex.luau"
       }

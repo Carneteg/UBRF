@@ -52,7 +52,16 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 	local horse = ServerScriptService:FindFirstChild("Horse")
 	local klient = StarterPlayer:FindFirstChild("StarterPlayerScripts")
 	rad(ut, "1a ReplicatedStorage/HorseCore", finns(ReplicatedStorage, "HorseCore"))
-	for _, namn in ipairs({ "UBRFSpelData", "UBRFSkotsel", "UBRFSpel", "Stallet", "UBRFKomplex" }) do
+	--[[ `UBRFSprak` KOM TILL EFTERÅT, och det var ett verkligt hål.
+		Texttabellen mappades aldrig i `default.project.json`, så den fanns
+		inte i placen och inte i en full Rojo-synk heller. Preflighten
+		rapporterade PASS ändå — den kände inte till modulen — och
+		bänksviten såg ingenting, för testbygget fogar ihop modulerna själv
+		och tar med tabellen. Utan den kastar `require(RS.UBRFSprak)` och
+		`WaitForChild` blockerar: lokaliseringen är död i en place som
+		passerar alla andra grindar. ]]
+	for _, namn in ipairs({ "UBRFSpelData", "UBRFSkotsel", "UBRFSpel", "Stallet",
+			"UBRFKomplex", "UBRFSprak" }) do
 		rad(ut, "1b ReplicatedStorage/" .. namn, finns(ReplicatedStorage, namn))
 	end
 	rad(ut, "1c ServerScriptService/Horse (server-runtime)", horse ~= nil)
@@ -145,7 +154,12 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 
 	--[[ 7. Klient/UI verkligen i builden, inte bara i repot. ]]
 	local horseKlient = klient and klient:FindFirstChild("Horse")
-	for _, namn in ipairs({ "KontrollHjalp", "TouchControls", "Input", "PreparationController" }) do
+	--[[ `Prompttext` saknades i listan. Den är modulen som skriver om
+		världens ProximityPrompts till spelarens språk; utan den står varje
+		prompt kvar på svenska för alla, och preflighten sa PASS ändå. Samma
+		hål som `UBRFSprak` ovan, i klienthalvan. ]]
+	for _, namn in ipairs({ "KontrollHjalp", "TouchControls", "Input",
+			"PreparationController", "Prompttext" }) do
 		rad(ut, "7 StarterPlayerScripts/Horse/" .. namn, finns(horseKlient, namn))
 	end
 

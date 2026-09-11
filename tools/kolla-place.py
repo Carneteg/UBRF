@@ -35,6 +35,16 @@ KRAVS = [
     ("ReplicatedStorage/UBRFSpel", True),
     ("ReplicatedStorage/Stallet", True),
     ("ReplicatedStorage/UBRFKomplex", True),
+    #[[ LOKALISERINGEN (#162). Texttabellen och uppslaget. Tabellen SAKNADES
+    #   i projektfilen: den fanns i repot, genererades av exportoren och
+    #   lastes av hela bansviten -- men mappades aldrig in i placen, sa
+    #   `require(RS.UBRFSprak)` kastade och `WaitForChild` blockerade i
+    #   Studio. Ingen grind sag det, for bankbygget fogar ihop modulerna
+    #   sjalvt. Raden finns for att "koden ar oversatt" och "spelaren ser
+    #   oversattningen" ar tva olika pastaenden. ]]
+    ("ReplicatedStorage/UBRFSprak", True),
+    ("ReplicatedStorage/HorseCore/Sprak", True),
+    ("StarterPlayer/StarterPlayerScripts/Horse/Prompttext", True),
     # 9: build-identiteten
     ("ReplicatedStorage/UBRFBuild", True),
     # 1c: server-runtime
