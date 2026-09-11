@@ -1,17 +1,19 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-11 16:53 UTC av `tools/pre-tobias-grind.py`.
+> **PASS** — genererad 2026-09-11 17:02 UTC av `tools/pre-tobias-grind.py`.
+
+> ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
 
 
 ## Identitet
 
 | | |
 |---|---|
-| source SHA | `e907e3ce6c571a50b58acb0c2d14d31108dcf031` |
+| source SHA | `41b829c29faef86123b5af1cc4feb60d92f878bb` |
 | gren | `claude/first-playable-20260910` |
-| mätt `.rbxlx` | `roblox/releases/first-playable-place-1e8b207/UBRFFirstPlayable.rbxlx` |
-| `.rbxlx` SHA256 | `db3d7577e0880d2824b699b25874a0cc99690f29a2a28d3eb9f0d2f525082381` |
-| storlek | 902019 byte |
+| mätt `.rbxlx` | `roblox/releases/first-playable-place-41b829c/UBRFFirstPlayable.rbxlx` |
+| `.rbxlx` SHA256 | `50bf743cf50f081f560e560ff08e342fafaec3cb939469dbed611e083b1c55a3` |
+| storlek | 910411 byte |
 
 ## Undergrindarna
 
@@ -31,7 +33,7 @@
 
 | | |
 |---|---|
-| byggda delar | 3317 |
+| byggda delar | 3366 |
 | marklager | 15 bärande, 0 dekor |
 | fysiska hästar | 33 / 33 |
 | utrustningsplatser | 3 |
