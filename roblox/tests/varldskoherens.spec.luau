@@ -535,6 +535,69 @@ do
 		matning(("skylt: %s"):format(tostring(d:GetAttribute("Propstyp"))),
 			("\"%s\""):format(tostring(d:GetAttribute("Text"))))
 	end
+
+	--[[ ══ OCH TEXTEN SKA SYNAS ═══════════════════════════════════════
+
+		Mätningen ovan är inte nog, och det avslöjades i Studio. Attributet
+		fanns, läget var rätt, kontrollen var grön — och skylten var en
+		BLANK benvit skiva på fasaden. Båda skivorna hade noll barn, och
+		hela `workspace` hade noll `SurfaceGui`. Roblox ritar ingen text på
+		en del utan en; webben ritar sin, så det var också en
+		paritetsavvikelse.
+
+		Här mäts det som spelaren faktiskt kan läsa: att skivan bär en
+		`SurfaceGui` med en `TextLabel`, och att etiketten säger samma sak
+		som attributet — inte något annat och inte ingenting. ]]
+	local utanYta = {}
+	for _, d in ipairs(byggdaSkyltar()) do
+		local yta = d:FindFirstChild("Skyltyta")
+		local etikett = yta and yta:FindFirstChild("Text")
+		if not yta or not etikett or etikett.Text ~= d:GetAttribute("Text") then
+			table.insert(utanYta, ("%s (%s)"):format(d.Name,
+				if not yta then "ingen SurfaceGui"
+				elseif not etikett then "ingen TextLabel"
+				else ("text %q"):format(tostring(etikett.Text))))
+		end
+	end
+	check("och texten RENDERAS — SurfaceGui med etikett, inte bara ett attribut",
+		#utanYta == 0,
+		#utanYta == 0 and ("%d skyltar, alla med läsbar text"):format(
+			#byggdaSkyltar()) or table.concat(utanYta, " · "))
+
+	--[[ VÄND ÅT RÄTT HÅLL. `speglaCF` vänder delens lokala Z, så en yta på
+		`Back` före speglingen sitter på `Front` efter — och gör den inte
+		det står texten vänd in i väggen. Mäts mot propens egen normal,
+		speglad på samma sätt som världen: (nx, ny) → (nx, −ny). ]]
+	local felvand = {}
+	for _, pr in ipairs(G.props or {}) do
+		if SKYLTTYPER[pr.typ] then
+			local d
+			for _, b in ipairs(byggdaSkyltar()) do
+				if b:GetAttribute("Propstyp") == pr.typ then d = b end
+			end
+			local yta = d and d:FindFirstChild("Skyltyta")
+			if yta then
+				--[[ Delens lokala +Z i världen, ur den girning speglingen
+					lämnade efter sig. ]]
+				local th = d.CFrame.Yaw or 0
+				local zx, zz = math.sin(th), math.cos(th)
+				--[[ `Front` = −Z, `Back` = +Z. ]]
+				local tecken = if yta.Face == Enum.NormalId.Front then -1 else 1
+				local n = pr.norm or { 0, -1 }
+				local nl = math.sqrt(n[1] * n[1] + n[2] * n[2])
+				--[[ Världen är speglad i nord-axeln: site (nx, ny) blir
+					(nx, −ny). ]]
+				local dot = (tecken * zx * n[1] + tecken * zz * (-n[2])) / math.max(nl, 1e-9)
+				if dot < 0.9 then
+					table.insert(felvand, ("%s: dot %.3f"):format(pr.typ, dot))
+				end
+			end
+		end
+	end
+	check("och den vetter UTÅT, inte in i väggen",
+		#felvand == 0,
+		#felvand == 0 and "båda skyltarna vända rätt"
+			or table.concat(felvand, " · "))
 end
 
 --[[ ── OCH RESTEN AV REKVISITAN, SOM MÄTNING ───────────────────────────

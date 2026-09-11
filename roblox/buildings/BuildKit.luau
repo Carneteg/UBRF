@@ -52,6 +52,26 @@ end
 	Konjugeringen är återigen en ROTATION (det(M R M) = det R = 1), så
 	svängda delar följer med korrekt i stället för att bli inverterade.
 
+	VAD KONJUGERINGEN KOSTAR, och det är inte gratis. En äkta spegling
+	mappar varje riktning `u` till `M u`, alltså axlarna till kolumnerna i
+	`M R`. Men `det(M R) = −1` — en spegling gör ett högerhänt system
+	vänsterhänt, och en `CFrame` måste vara en rotation. Någon lokal axel
+	måste vändas tillbaka, och `M R M` = `(M R) · M` vänder **lokala Z**.
+
+	Det betyder att LookVector kommer ut vänd. För en låda syns det inte:
+	en `Part` är symmetrisk kring sitt eget Z-plan. Det syns bara på något
+	vars lokala Z BÄR MENING — formen på en kil, blickriktningen på en
+	spawn — och för sådana behövs ett halvt varv tillbaka. `speglaModell`
+	lägger på det, och listan där är den fullständiga listan över vad i
+	anläggningen som inte är Z-symmetriskt.
+
+	Alternativet vore att vända lokala X i stället (`M R X`). Det bevarar
+	LookVector, men då blir en orotterad del `R_y(π)` i stället för
+	orotterad — och HELA kontraktet i `tomtlage` bygger på att den speglade
+	`PrimaryPart` bidrar med en ren förskjutning. Mätt: allt som placeras
+	efter speglingen, alla 33 hästar inräknade, hamnar då ~350 m fel.
+	Konjugeringen stannar därför, och undantagen namnges.
+
 	`D` är tomtens djup i studs. Reflektionen sker alltså om tomtens mitt,
 	vilket håller världen kvar i samma positiva ruta — allt som råkar anta
 	positiva koordinater fungerar som förut. ]]
@@ -79,28 +99,67 @@ end
 --[[ Speglar en färdigbyggd modell. Storlekar rörs inte: de är mått i
 	delens eget system och en reflektion ändrar dem inte.
 
-	KILEN ÄR UNDANTAGET, och det är inte en detalj. En `Part` är
-	symmetrisk kring sitt eget Z-plan, så att sätta den speglade
-	rotationen räcker. En `WedgePart` är det INTE: den är ett triangulärt
-	prisma med sluttningen längs sin lokala Z. Konjugeringen M R M ovan
-	placerar kilen som om formen också vore spegelvänd, men formen följer
-	inte med — takets gavelspetsar hade pekat åt fel håll.
+	── DET SOM INTE ÄR Z-SYMMETRISKT ────────────────────────────────
 
-	Kilen är däremot symmetrisk kring sitt lokala X-plan, och för en sådan
-	form är en Z-spegling samma sak som ett halvt varv kring Y:
+	`speglaCF` vänder lokala Z (se noten där). En `Part` är symmetrisk
+	kring sitt eget Z-plan, så för den syns det inte. Två saker i
+	anläggningen är det inte, och båda får samma korrigering: ett halvt
+	varv kring Y.
+
+	KILEN. En `WedgePart` är ett triangulärt prisma med sluttningen längs
+	sin lokala Z. Konjugeringen placerar den som om formen också vore
+	spegelvänd, men formen följer inte med — takets gavelspetsar pekade åt
+	fel håll. Kilen är däremot symmetrisk kring sitt lokala X-plan, och
+	för en sådan form är en Z-spegling samma sak som ett halvt varv:
 
 	    (x, y, z) → (x, y, −z)   är för en X-symmetrisk form
 	    (x, y, z) → (−x, y, −z)  sett som mängd
 
-	Därför får kilen ett extra yaw på π, och då stämmer geometrin exakt. ]]
+	SPAWNEN. En `SpawnLocation` har ingen form att tala om — men dess
+	BLICKRIKTNING bär mening, och LookVector är just lokala −Z. Spawnen
+	byggs med `CFrame.lookAt` mot stallets entrédörr och kom ändå upp med
+	ryggen mot den: exakt 180°, mätt i Studio (`dot = −1.000000`), i fyra
+	builds i rad. Riktningen var rätt när den skrevs; speglingen vände
+	den.
+
+	Det här var osynligt för varje grind i sviten, för alla mätte LÄGE och
+	STORLEK — och de är oförändrade av ett halvt varv. `forstaplayable`
+	mäter numera riktningen.
+
+	Listan är uttömmande för det anläggningen faktiskt bygger. Tillkommer
+	en klass vars lokala Z betyder något — en `SurfaceGui`-bärande skylt
+	som ska läsas från ett bestämt håll, en stol, en kamera — hör den
+	hemma här. ]]
 function BuildKit.speglaModell(model: Model, djupMeter: number): number
 	local djupStuds = djupMeter * BuildKit.M
 	local n = 0
 	for _, d in ipairs(model:GetDescendants()) do
+		--[[ EN YTA SOM SKA LÄSAS FRÅN ETT BESTÄMT HÅLL. En `SurfaceGui`
+			sitter på en NAMNGIVEN sida av sin del, och speglingen vänder
+			delens lokala Z — alltså byter Front och Back fysisk sida.
+			Utan det här bytet hamnar skyltens text vänd in i väggen. ]]
+		if d.ClassName == "SurfaceGui" then
+			if d.Face == Enum.NormalId.Front then
+				d.Face = Enum.NormalId.Back
+			elseif d.Face == Enum.NormalId.Back then
+				d.Face = Enum.NormalId.Front
+			end
+		end
 		if d.CFrame ~= nil and d.Size ~= nil then
 			local cf = BuildKit.speglaCF(d.CFrame, djupStuds)
 			if d.ClassName == "WedgePart" then
 				cf = cf * CFrame.Angles(0, math.pi, 0)
+			elseif d.ClassName == "SpawnLocation" then
+				--[[ Spawnen får sin riktning SATT, inte korrigerad med ett
+					halvt varv. Ett halvt varv ger samma frame, men det här
+					säger vad det handlar om: den speglade blickriktningen
+					är `M u`, alltså originalets riktning med vänt Z. Att
+					skriva det som ett `lookAt` gör det dessutom läsbart för
+					samma ögon som skrev `lookAt` i `Anlaggningen`. ]]
+				local u = d.CFrame.LookVector
+				local har = cf.Position
+				cf = CFrame.lookAt(har,
+					har + Vector3.new(u.X, u.Y, -u.Z))
 			end
 			d.CFrame = cf
 			n += 1

@@ -32,7 +32,16 @@ local modell = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
 print("Byggskriptet kördes utan fel")
 check("modellen finns i workspace", modell ~= nil)
 
-local delar = modell:GetDescendants()
+--[[ DELARNA, alltså det som har en kropp i världen. Filtret är nytt och
+	det behövdes: skyltarna bär sedan #162 en `SurfaceGui` med en
+	`TextLabel`, och de har varken `CFrame` eller `CanCollide` — men en
+	`UDim2` som `Size`. Utan filtret räknade `fot()` `UDim2.X / 2` och en
+	etikett kunde spärra en gångrutt. Varje `fot`-anrop i den här specen
+	förutsätter en del; nu får den bara delar. ]]
+local delar = {}
+for _, d in ipairs(modell:GetDescendants()) do
+	if d.CFrame ~= nil and d.Size ~= nil then table.insert(delar, d) end
+end
 check("den byggde faktiskt något", #delar > 200, #delar .. " delar")
 
 --[[ Delarnas fotavtryck i METER, tillbaka i KARTANS koordinater.

@@ -106,8 +106,19 @@ local function rustaDorr(blad: BasePart)
 		nyckeln intill är den klienten skriver om den med (`Prompttext`).
 		En prompt replikeras till alla spelare och kan därför inte ha en
 		spelares språk på servern. Skulle klientmodulen fattas ser spelaren
-		svenska — inte en tom prompt. ]]
-	prompt.ActionText = "Öppna"
+		svenska — inte en tom prompt.
+
+		TEXTEN FÖRST, NYCKELN SIST. Ordningen är inte kosmetisk: klienten
+		översätter när ATTRIBUTET ändras, så en serverskrivning efter
+		attributet skriver över översättningen och replikerar sitt svenska
+		ord till en engelsk spelare. Det var precis vad `Triggered` gjorde
+		(se noten där), och `ObjectText` klarade sig bara för att servern
+		aldrig rör den efter riggningen.
+
+		Standardtexten hämtas dessutom ur KATALOGEN och inte som en
+		bokstavlig sträng, av samma skäl som `objektFor` gör det: två
+		stavningar av samma ord kan glida isär. ]]
+	prompt.ActionText = Sprak.iSprak("sv", "dorr.oppna")
 	prompt:SetAttribute("SprakNyckel", "dorr.oppna")
 	local objekttext, objektnyckel = objektFor(blad)
 	prompt.ObjectText = objekttext
@@ -127,11 +138,20 @@ local function rustaDorr(blad: BasePart)
 	prompt.Triggered:Connect(function()
 		local nu = not oppna[blad]
 		satt(blad, nu)
-		--[[ Nyckeln FÖRST, texten sedan: klientens `Prompttext` lyssnar på
-			attributet, och en svensk standardtext intill gör att prompten
-			är läsbar även utan klientmodulen. ]]
-		prompt:SetAttribute("SprakNyckel", if nu then "dorr.stang" else "dorr.oppna")
-		prompt.ActionText = if nu then "Stäng" else "Öppna"
+		--[[ TEXTEN FÖRST, NYCKELN SIST — och det här är rättelsen.
+
+			Förut stod det tvärtom, med motiveringen att klienten lyssnar på
+			attributet. Men serverns skrivning av `ActionText` REPLIKERAR,
+			och den kom efter klientens översättning: en spelare på `en-us`
+			läste `Öppna` och `Stäng` på samtliga tretton dörrar, medan
+			`ObjectText` bredvid stod korrekt på `Door`. Mätt i Studio.
+
+			Nu sätts den svenska standarden först och attributet sist, så
+			att klientens omskrivning är den sista som händer. `Prompttext`
+			skriver dessutom om sig själv om någon ändå hinner före. ]]
+		local nyckel = if nu then "dorr.stang" else "dorr.oppna"
+		prompt.ActionText = Sprak.iSprak("sv", nyckel)
+		prompt:SetAttribute("SprakNyckel", nyckel)
 	end)
 end
 

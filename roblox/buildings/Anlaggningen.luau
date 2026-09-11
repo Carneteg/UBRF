@@ -836,10 +836,24 @@ end
 	`atan2(norm.x, norm.y)`. Inget hittas på: läge, normal och text
 	kommer ur samma exporterade data webben läser.
 
-	Texten står som ATTRIBUT, precis som sponsorskyltarna gör sedan
-	tidigare — Roblox ritar inte text på en del utan en SurfaceGui, och
-	att införa en sådan här vore att byta renderingsteknik i en
-	paritetsrättelse.
+	TEXTEN RENDERAS, sedan den lokala Studio-körningens §7. Den stod förut
+	bara som ATTRIBUT, med motiveringen att en `SurfaceGui` vore att byta
+	renderingsteknik i en paritetsrättelse. Runtime-mätningen avgjorde
+	frågan: båda skivorna hade **noll** barn, hela `workspace` hade noll
+	`SurfaceGui`, och skylten var en blank benvit platta på ridhusets
+	fasad. Webben ritar texten; Roblox gjorde det inte.
+
+	En `SurfaceGui` med en `TextLabel` ÄR vägen att skriva text på en del i
+	Roblox — det är inte en ny teknik, det är den enda. Orden kommer ur
+	samma kanon som förut och hittas inte på här.
+
+	FACE:EN ÄR INTE GODTYCKLIG. Delen vrids `atan2(n[1], n[2])`, vilket
+	lägger dess lokala +Z längs propens utåtriktade normal — alltså är
+	`Back` den utåtvända sidan medan modellen ännu står i kartans ram.
+	Speglingen vänder lokala Z (se `BuildKit.speglaCF`), och `speglaModell`
+	byter därför Front mot Back så att texten blir kvar på samma FYSISKA
+	sida. Utan det bytet hade skylten haft sin text vänd in i väggen — och
+	det är samma felklass som spawnen råkade ut för.
 
 	De övriga proptyperna är fortfarande obyggda. Det är miljöarbete och
 	redovisas som ett mätt fynd i stället för att smygas in här. ]]
@@ -867,9 +881,35 @@ local function byggSkyltar(model: Model, base: CFrame)
 				* CFrame.Angles(0, vin, 0)
 			del.Color = Color3.fromRGB(239, 232, 216)
 			del.Material = Enum.Material.SmoothPlastic
-			del:SetAttribute("Text", SKYLTTEXT[p.typ] or tostring(p.text or ""))
+			local text = SKYLTTEXT[p.typ] or tostring(p.text or "")
+			del:SetAttribute("Text", text)
 			del:SetAttribute("Propstyp", tostring(p.typ))
 			del.Parent = model
+
+			local yta = Instance.new("SurfaceGui")
+			yta.Name = "Skyltyta"
+			--[[ `Back` = lokala +Z = normalens håll, före speglingen. ]]
+			yta.Face = Enum.NormalId.Back
+			yta.AlwaysOnTop = false
+			--[[ Fast pixeltäthet: skylten ska vara lika läsbar på 5 m som
+				på 1,6 m, och en `SurfaceGui` utan den här skalar texten
+				efter delens studs. ]]
+			yta.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			yta.PixelsPerStud = 40
+			yta.Parent = del
+
+			local etikett = Instance.new("TextLabel")
+			etikett.Name = "Text"
+			etikett.Size = UDim2.new(1, 0, 1, 0)
+			etikett.BackgroundTransparency = 1
+			etikett.Font = Enum.Font.GothamBold
+			--[[ Skalad text: skivorna är 5,0 × 0,7 m och 1,6 × 0,4 m, och
+				ett fast `TextSize` hade fyllt den ena och spillt ur den
+				andra. ]]
+			etikett.TextScaled = true
+			etikett.TextColor3 = Color3.fromRGB(38, 42, 46)
+			etikett.Text = text
+			etikett.Parent = yta
 		end
 	end
 end

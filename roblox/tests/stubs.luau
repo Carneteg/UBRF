@@ -97,6 +97,30 @@ local function cframe(pos, look, yaw, pitch, roll)
 	     vinklarna, sa den svarar med dem i samma ordning. G02-D laser yaw
 	     har for att spela in at vilket hall hasten stod. ]]
 	c.ToOrientation = function(self) return self.Pitch or 0, self.Yaw or 0, self.Roll or 0 end
+	--[[ ROTATIONSMATRISEN, sa langt bankan har en.
+
+	     `BuildKit.speglaCF` har tva grenar: en riktig matrisgren, som ar den
+	     Studio kor, och en girningsfallback for stubbar. Bankan foll alltid
+	     till fallbacken — alltsa provades aldrig den kod som faktiskt bygger
+	     varlden, och spawnens 180-gradersfel kunde inte upptackas har.
+
+	     Nu svarar stubben med en riktig matris for REN GIRNING, vilket ar
+	     allt anlaggningen lagger pa platta delar. Bar delen lutning eller
+	     rullning svarar den med ingenting alls, och da tar speglingen sin
+	     fallback precis som forut — hellre en arlig lucka an en matris
+	     stubben inte kan sta for. ]]
+	c.GetComponents = function(self)
+		if math.abs(self.Pitch or 0) > 1e-9 or math.abs(self.Roll or 0) > 1e-9 then
+			return
+		end
+		local th = self.Yaw or 0
+		local ct, st = math.cos(th), math.sin(th)
+		local p = self.Position or vec()
+		return p.X, p.Y, p.Z,
+			ct, 0, st,
+			0, 1, 0,
+			-st, 0, ct
+	end
 	c.__mul = function(a, b)
 		--[[ FÖRFLYTTNINGEN räknas, inte bara vinklarna. Förut svarade
 		     `a * b` med `a.Position` oavsett vad b var, och då hamnade
@@ -121,11 +145,37 @@ CFrame = {
 	     `CFrame.new(vector3)`. Stubben tog bara den andra, så en modul som
 	     placerar en del med tal — hela HastRigg — fick ett tal där en
 	     Vector3 skulle stå, och multiplikationen gick sönder på `off.X`. ]]
-	new = function(a, b, c)
-		if type(a) == "number" then return cframe(vec(a, b or 0, c or 0)) end
+	new = function(a, b, c, ...)
+		if type(a) == "number" then
+			local m = { ... }
+			--[[ TOLVTALSFORMEN: `CFrame.new(x, y, z, R00 … R22)`. Stubben
+			     tog bara tre tal och kastade tyst bort rotationen, sa
+			     `speglaCF`:s matrisgren gav en ovriden del har medan den
+			     gav en vriden i Studio. Girningen las nu ur matrisen
+			     (R02 = sin, R22 = cos) och blickriktningen ur tredje
+			     kolumnen, precis som i Roblox: LookVector = -kolumn 2. ]]
+			if #m >= 9 then
+				local r02, r12, r22 = m[3], m[6], m[9]
+				return cframe(vec(a, b or 0, c or 0),
+					vec(-r02, -r12, -r22), math.atan2(r02, r22))
+			end
+			return cframe(vec(a, b or 0, c or 0))
+		end
 		return cframe(a)
 	end,
-	lookAt = function(a, b) return cframe(a, b) end,
+	--[[ `lookAt(har, dit)` gav forut MALPUNKTEN som LookVector. Det ar inte
+	     en riktning, och darfor kunde ingen grind fraga at vilket hall
+	     spawnen vetter. Nu raknas en riktig enhetsriktning, och girningen
+	     satts sa att den stammer med den: for R_y(th) ar
+	     LookVector = (-sin th, 0, -cos th). ]]
+	lookAt = function(a, b)
+		local dx, dy, dz = (b.X or 0) - (a.X or 0), (b.Y or 0) - (a.Y or 0),
+			(b.Z or 0) - (a.Z or 0)
+		local L = math.sqrt(dx * dx + dy * dy + dz * dz)
+		if L < 1e-9 then return cframe(a) end
+		dx, dy, dz = dx / L, dy / L, dz / L
+		return cframe(a, vec(dx, dy, dz), math.atan2(-dx, -dz))
+	end,
 	Angles = function(x, y, z) return cframe(nil, nil, y or 0, x or 0, z or 0) end,
 	identity = cframe(),
 	fromMatrix = function(p) return cframe(p) end,
@@ -143,7 +193,10 @@ Enum = {
 	UserInputType = { Gamepad1 = 1 },
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
-	NormalId = { Top = 1 },
+	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter
+	     dem, och utan bada kunde bytet varken goras eller matas. ]]
+	NormalId = { Top = 1, Front = 2, Back = 3 },
+	SurfaceGuiSizingMode = { FixedSize = 1, PixelsPerStud = 2 },
 	--[[ HastRigg satter Top/BottomSurface pa riggens delar, och RiderController
 	     bygger IKControl. Uppraknade, inte en __index som svarar pa allt: samma
 	     skal som Material ovan. ]]
@@ -682,12 +735,17 @@ __signal_ny = __signal
 local __BEVAKADE = {
 	Occupant = true, Sit = true, Health = true, SeatPart = true,
 	PlatformStand = true,
+	--[[ Prompttexten bevakas sedan #162:s lokaliseringsfynd. `Prompttext`
+	     havdar oversattningen igen om nagon skriver over den, och utan en
+	     signal har kunde bankan inte se vare sig overskrivningen eller
+	     rattelsen. ]]
+	ActionText = true, ObjectText = true,
 }
 
 local function __nyInstans(klass)
 	local inst = {
 		ClassName = klass, Name = "", AnimationId = "",
-		_barn = {}, _attr = {}, _p = {}, _sig = {}, Parent = nil,
+		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
 	}
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
 	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
@@ -697,7 +755,24 @@ local function __nyInstans(klass)
 		return self._sig[egenskap]
 	end
 	function inst:GetAttribute(k) return self._attr[k] end
-	function inst:SetAttribute(k, v) self._attr[k] = v end
+	--[[ ATTRIBUTSIGNALEN, som saknades helt.
+
+	     `Prompttext` ar byggd kring den: servern satter en NYCKEL, klienten
+	     skriver texten nar nyckeln andras. Utan signalen har kunde modulen
+	     aldrig kora i bankan, och darfor kunde tretton dorrar sta pa svenska
+	     for en engelsk spelare med hela sviten gron.
+
+	     Samma semantik som Roblox: den fyrar nar vardet ANDRAS. ]]
+	function inst:GetAttributeChangedSignal(k)
+		self._asig[k] = self._asig[k] or __signal()
+		return self._asig[k]
+	end
+	function inst:SetAttribute(k, v)
+		local gammal = self._attr[k]
+		self._attr[k] = v
+		local sig = self._asig[k]
+		if sig and gammal ~= v then sig:Fire() end
+	end
 	--[[ `FindFirstChild(namn, rekursivt)` — andra argumentet fanns inte, och
 	     det spelade roll: `RigAdapter.findByName` söker REKURSIVT, och
 	     riggens leder sitter under kroppsdelen. Utan rekursionen svarade
@@ -782,7 +857,13 @@ local function __nyInstans(klass)
 	     som inte kan köra tjänsten kan inte se vad spelaren läser. ]]
 	if klass == "ProximityPrompt" then
 		inst.Triggered = __signal()
-		inst.ObjectText, inst.ActionText = "", ""
+		--[[ Texterna satts i SKUGGTABELLEN, inte som rakt falt. Lua kallar
+		     `__newindex` bara nar nyckeln SAKNAS i tabellen: ett rawset har
+		     hade gjort varje senare skrivning osynlig for
+		     `GetPropertyChangedSignal`, och da kunde `Prompttext`
+		     inte hora nar nagon skriver over oversattningen. Felet var
+		     tyst: proven las ratt varde och missade bara signalen. ]]
+		inst._p.ObjectText, inst._p.ActionText = "", ""
 	end
 	--[[ ── SITSEN ────────────────────────────────────────────────────────
 	     `Seat:Sit(humanoid)` gör tre saker i Roblox: den skapar en `Weld`

@@ -246,6 +246,93 @@ do
 	end
 end
 
+--[[ ── 7b. DÖRRENS HANDLINGSTEXT PÅ SPELARENS SPRÅK ─────────────────
+
+	Lokal Studio-QA, §8: `ProximityPrompt.ActionText` stod kvar på `Öppna`
+	och `Stäng` under `en-us` på SAMTLIGA tretton dörrar, medan `ObjectText`
+	bredvid stod korrekt på `Door`. Att objektet översattes bevisade att
+	`Prompttext` kördes — det var handlingen som skrevs över.
+
+	Orsaken är ORDNINGEN. Klienten översätter när ATTRIBUTET ändras;
+	`DorrService` satte attributet först och skrev sedan över `ActionText`
+	med en hårdkodad svensk sträng. Serverns skrivning replikerar och kom
+	sist.
+
+	VARFÖR INGEN GRIND SÅG DET. Bänken hade ingen `GetAttributeChangedSignal`
+	alls, så `Prompttext` kunde aldrig köras här — modulen var omätt, och
+	ordningen mellan två skrivningar går inte att mäta utan den. Signalen
+	finns nu i stubben, och det här provet driver den riktiga klientmodulen
+	mot den riktiga servertjänsten. ]]
+print("\n7b. Dörren talar spelarens språk")
+do
+	local prompts = {}
+	for _, blad in ipairs(DorrService.dorrar()) do
+		local pr = blad:FindFirstChild("DorrPrompt")
+		if pr then table.insert(prompts, pr) end
+	end
+	check("det finns dörrprompter att mäta", #prompts > 0,
+		("%d st"):format(#prompts))
+
+	local fore = Sprak.eget()
+	Sprak.satLocale("en-us")
+	--[[ Klientmodulen startas EFTER att locale bytts, precis som en engelsk
+		spelares klient gör. ]]
+	Prompttext.start()
+
+	local function svenska(): { string }
+		local ut = {}
+		for _, pr in ipairs(prompts) do
+			if pr.ActionText ~= Sprak.iSprak("en", pr:GetAttribute("SprakNyckel")) then
+				table.insert(ut, ("%s=%q"):format(
+					tostring(pr:GetAttribute("SprakNyckel")), tostring(pr.ActionText)))
+			end
+		end
+		return ut
+	end
+
+	local kvar = svenska()
+	check("varje dörr säger Open, inte Öppna, på en-us",
+		#kvar == 0,
+		#kvar == 0 and ("%d prompts, alla översatta"):format(#prompts)
+			or table.concat(kvar, " · "))
+
+	--[[ OCH EFTER ETT TRYCK. Det var där felet satt: `Triggered` skrev om
+		texten, och en dörr som öppnats sa `Stäng` till en engelsk spelare
+		resten av sessionen. ]]
+	local en = prompts[1]
+	en.Triggered:Fire()
+	check("och efter ett tryck står det Close, inte Stäng",
+		en.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		('nyckel %s → "%s"'):format(tostring(en:GetAttribute("SprakNyckel")),
+			tostring(en.ActionText)))
+	en.Triggered:Fire()
+	check("och tillbaka till Open när den stängs",
+		en.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		('nyckel %s → "%s"'):format(tostring(en:GetAttribute("SprakNyckel")),
+			tostring(en.ActionText)))
+
+	--[[ MUTATIONEN: skriv över texten EFTER attributet, precis som den
+		gamla ordningen gjorde. Håller rättelsen i `Prompttext` — som
+		hävdar översättningen tillbaka — ska den mätningen ändå bli grön,
+		och då är det försvaret som mäts. Blir den svensk är grinden
+		blind. ]]
+	do
+		en.ActionText = "Öppna"
+		check("MUTATION: en överskrivning med svensk text hävdas tillbaka",
+			en.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+			('efter överskrivning: "%s"'):format(tostring(en.ActionText)))
+	end
+
+	--[[ …och att provet mäter en SKILLNAD: på svenska ska det stå Öppna. ]]
+	Sprak.satLocale("sv-se")
+	Prompttext.skrivOm(en)
+	check("på sv-se står det Öppna igen — provet mäter språket, inte en konstant",
+		en.ActionText == Sprak.iSprak("sv", "dorr.oppna"),
+		('"%s"'):format(tostring(en.ActionText)))
+	Sprak.satLocale(fore)
+	Prompttext.skrivOm(en)
+end
+
 --[[ ── 8. HUD:EN SKYMMER INTE SPELET ────────────────────────────────
 
 	PO-order 09:36. Quest-/HUD-panelen låg mitt på skärmen nedtill, 92 %

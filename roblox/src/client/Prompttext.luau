@@ -24,8 +24,15 @@ local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Prompttext = {}
 
 local kopplade: { [Instance]: boolean } = {}
+--[[ Skrivskydd mot ekot: `skriv` sätter `ActionText`, vilket väcker
+	lyssnaren nedan, som kallar `skriv` igen. Roblox fyrar inte signalen när
+	värdet är oförändrat, så det skulle stanna av sig självt — men en gång
+	för mycket per prompt och bildruta är en gång för mycket. ]]
+local skriver: { [Instance]: boolean } = {}
 
 local function skriv(prompt: ProximityPrompt)
+	if skriver[prompt] then return end
+	skriver[prompt] = true
 	local handling = prompt:GetAttribute("SprakNyckel")
 	local objekt = prompt:GetAttribute("SprakObjekt")
 	local arg = prompt:GetAttribute("SprakArg")
@@ -41,6 +48,7 @@ local function skriv(prompt: ProximityPrompt)
 			prompt.ObjectText = Sprak.t(objekt)
 		end
 	end
+	skriver[prompt] = nil
 end
 
 local function koppla(inst: Instance)
@@ -51,6 +59,17 @@ local function koppla(inst: Instance)
 	inst:GetAttributeChangedSignal("SprakNyckel"):Connect(function() skriv(inst) end)
 	inst:GetAttributeChangedSignal("SprakObjekt"):Connect(function() skriv(inst) end)
 	inst:GetAttributeChangedSignal("SprakArg"):Connect(function() skriv(inst) end)
+	--[[ …OCH om någon skriver över texten igen.
+
+		Servern skriver en svensk standardtext på varje prompt så att den
+		går att läsa utan den här modulen. Den skrivningen replikerar, och
+		den kan landa EFTER översättningen — det var så tretton dörrar kom
+		att säga `Öppna` till en engelsk spelare trots att nyckeln bredvid
+		var rätt. Ordningen är rättad i `DorrService`, men den här modulen
+		ska inte behöva lita på att varje framtida skrivare gör rätt:
+		hävdar någon en annan text hävdar vi översättningen tillbaka. ]]
+	inst:GetPropertyChangedSignal("ActionText"):Connect(function() skriv(inst) end)
+	inst:GetPropertyChangedSignal("ObjectText"):Connect(function() skriv(inst) end)
 end
 
 --[[ Provkrok: skriver om EN prompt. Låter grinden mäta samma funktion som

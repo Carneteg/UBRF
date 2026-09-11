@@ -83,14 +83,32 @@ Color3 = {
 	new = function(r, g, b) return { R = r or 0, G = g or 0, B = b or 0 } end,
 }
 
-local function cframe(pos, yaw)
+local function cframe(pos, yaw, look)
 	local c = { Position = pos or vec(), Yaw = yaw or 0 }
-	c.LookVector = vec(math.sin(c.Yaw), 0, math.cos(c.Yaw))
+	--[[ BLICKRIKTNINGEN, med Roblox tecken. Det stod `(sin, 0, cos)` har,
+	     alltsa MOTSATT riktning mot vad en riktig CFrame ger: for R_y(th)
+	     ar LookVector = (-sin th, 0, -cos th), eftersom den ar minus tredje
+	     kolumnen. Tillsammans med ett `lookAt` som kastade bort malpunkten
+	     gjorde det spawnens riktning omatbar i bankan — och det ar just den
+	     riktningen som kom ut 180 grader fel i fyra Studio-builds. ]]
+	c.LookVector = look or vec(-math.sin(c.Yaw), 0, -math.cos(c.Yaw))
+	--[[ Rotationsmatrisen for ren girning. `BuildKit.speglaCF` har tva
+	     grenar, och utan den har foll bankan alltid till girningsfallbacken
+	     — alltsa provades aldrig den kod Studio faktiskt kor. ]]
+	c.GetComponents = function(self)
+		local th = self.Yaw or 0
+		local ct, st = math.cos(th), math.sin(th)
+		local p = self.Position or vec()
+		return p.X, p.Y, p.Z, ct, 0, st, 0, 1, 0, -st, 0, ct
+	end
 	c.__mul = function(a, b)
 		-- Rotera b:s förskjutning med a:s yaw och lägg till. Det är allt
 		-- byggnaderna behöver: de står axelriktade, och rotY är 0.
 		local s, co = math.sin(a.Yaw), math.cos(a.Yaw)
 		local p = b.Position
+		--[[ Girningen summeras, och blickriktningen HARLEDS ur summan.
+		     Att bara bara `a.LookVector` vidare gjorde ett halvt varv
+		     osynligt — och ett halvt varv var precis felet. ]]
 		return cframe(vec(a.Position.X + p.X * co + p.Z * s,
 			a.Position.Y + p.Y,
 			a.Position.Z - p.X * s + p.Z * co), a.Yaw + b.Yaw)
@@ -99,12 +117,34 @@ local function cframe(pos, yaw)
 end
 
 CFrame = {
-	new = function(a, b, c)
-		if type(a) == "number" then return cframe(vec(a, b, c)) end
+	new = function(a, b, c, ...)
+		if type(a) == "number" then
+			local m = { ... }
+			--[[ Tolvtalsformen `CFrame.new(x, y, z, R00 … R22)`. Stubben tog
+			     bara tre tal och kastade tyst rotationen: `speglaCF`:s
+			     matrisgren gav en ovriden del har och en vriden i Studio. ]]
+			if #m >= 9 then
+				local r02, r12, r22 = m[3], m[6], m[9]
+				return cframe(vec(a, b, c), math.atan2(r02, r22),
+					vec(-r02, -r12, -r22))
+			end
+			return cframe(vec(a, b, c))
+		end
 		return cframe(a)
 	end,
 	Angles = function(_, y, _) return cframe(nil, y or 0) end,
-	lookAt = function(from, to) return cframe(from) end,
+	--[[ `lookAt` gav forut bara `from` tillbaka — malpunkten foll bort, och
+	     med den hela riktningen. Nu raknas en riktig enhetsriktning och en
+	     girning som stammer med den. ]]
+	lookAt = function(from, to)
+		local dx = (to.X or 0) - (from.X or 0)
+		local dy = (to.Y or 0) - (from.Y or 0)
+		local dz = (to.Z or 0) - (from.Z or 0)
+		local L = math.sqrt(dx * dx + dy * dy + dz * dz)
+		if L < 1e-9 then return cframe(from) end
+		dx, dy, dz = dx / L, dy / L, dz / L
+		return cframe(from, math.atan2(-dx, -dz), vec(dx, dy, dz))
+	end,
 	identity = cframe(),
 }
 
@@ -127,6 +167,10 @@ Enum = setmetatable({
 --[[ UDim/UDim2 baras bara vidare; panelen laser dem aldrig tillbaka. Racker
 	for att bevisa att den BYGGS, inte for att bevisa hur den ser ut. ]]
 UDim = { new = function(skala, offset) return { Scale = skala or 0, Offset = offset or 0 } end }
+Enum.NormalId = Enum.NormalId or { Top = 1, Front = 2, Back = 3 }
+Enum.SurfaceGuiSizingMode = Enum.SurfaceGuiSizingMode or
+	{ FixedSize = 1, PixelsPerStud = 2 }
+
 UDim2 = {
 	new = function(xs, xo, ys, yo)
 		return { X = { Scale = xs or 0, Offset = xo or 0 },
@@ -152,13 +196,33 @@ local function signal()
 	}
 end
 
+--[[ GRAFIKLAGRET ÄR INTE DELAR. En `TextLabel` har en `UDim2` som Size,
+     ingen `CFrame` och ingen `CanCollide` alls i Roblox; stubben gav varje
+     instans alla tre. Världssvepen plockar ut delar på olika sätt — några
+     med `d.CFrame and d.Size`, andra med bara `d.CanCollide` — och med de
+     defaulterna tog de skyltarnas text för en vägg: en räknade
+     `UDim2.X / 2`, en annan lät etiketten spärra en gångrutt.
+
+     Klasserna nedan får därför INGEN av de tre, precis som i Roblox.
+     Listan är den som faktiskt byggs i anläggningen; tillkommer fler
+     GUI-klasser hör de hemma här. ]]
+local __UTAN_CFRAME = {
+	SurfaceGui = true, BillboardGui = true, ScreenGui = true,
+	TextLabel = true, TextButton = true, Frame = true, ImageLabel = true,
+	ScrollingFrame = true, UIListLayout = true, UICorner = true,
+	UIPadding = true, UISizeConstraint = true,
+}
+
 local function instance(klass)
 	local barn = {}
 	local attr = {}
 	local i
 	i = {
 		ClassName = klass, Name = klass, Children = barn,
-		Size = vec(), CFrame = cframe(), Transparency = 0, CanCollide = true,
+		Size = if __UTAN_CFRAME[klass] then nil else vec(),
+		CFrame = if __UTAN_CFRAME[klass] then nil else cframe(),
+		Transparency = 0,
+		CanCollide = if __UTAN_CFRAME[klass] then nil else true,
 		--[[ #162: en Motor6D har en `C0`. Utan den föll riggkontraktet på
 		     `setRiderLean`, alltså på mätverktyget och inte på koden. ]]
 		C0 = if klass == "Motor6D" then cframe() else nil,

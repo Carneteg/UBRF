@@ -168,6 +168,39 @@ if start and dorr and K then
 		math.abs(pz - dz) <= 4.0, ("%.2f m"):format(math.abs(pz - dz)))
 	check("spawnen syns inte i granskade bilder (genomskinlig)",
 		start.Transparency >= 1)
+
+	--[[ ══ RIKTNINGEN — DEN ANDRA MÄTNINGEN SOM SAKNADES ═══════════════
+
+		Tobias spawnade med RYGGEN mot stallets entrédörr, i fyra builds i
+		rad, och varje mätning här var grön. Skälet är att alla mätte LÄGE:
+		hur nära golvets mitt spawnen stod, hur väl den låg i linje med
+		dörren, hur långt det var dit. Och läget var hela tiden rätt.
+
+		`Anlaggningen` bygger riktningen med `CFrame.lookAt` mot dörren —
+		korrekt när den skrivs. Sedan speglas modellen till den högerhända
+		världen, och `M R M` vänder lokala Z, alltså LookVector. En låda är
+		symmetrisk kring sitt Z-plan så ingenting annat syntes; en spawn är
+		det inte.
+
+		Här mäts blickriktningen mot dörren som ett skalärprodukt, i
+		världens koordinater och på den SPEGLADE modellen — samma sak den
+		lokala Studio-körningen mätte till `dot = −1.000000`. ]]
+	local dorrX, dorrZ = Geometri.oppningsMitt(r, "N", dorr.u, dorr.b)
+	local mot = BuildKit.tomtlage(dorrX, 0, dorrZ)
+	local dit = (bas * mot).Position
+	local har = start.CFrame.Position
+	local vx, vz = dit.X - har.X, dit.Z - har.Z
+	local vlen = math.sqrt(vx * vx + vz * vz)
+	local lv = start.CFrame.LookVector
+	local llen = math.sqrt(lv.X * lv.X + lv.Z * lv.Z)
+	local dot = if vlen > 1e-6 and llen > 1e-6
+		then (lv.X * vx + lv.Z * vz) / (llen * vlen) else 0
+	--[[ 0,95 ≈ 18° fel. Rakare än så behöver det inte vara — spawnen ska
+		SE dörren, inte träffa den på millimetern. Men ett halvt varv ger
+		−1 och kan omöjligt smyga igenom. ]]
+	check("spawnen SER entrédörren — inte bara står i linje med den",
+		dot >= 0.95,
+		("dot = %.6f (%.1f° fel)"):format(dot, math.deg(math.acos(math.clamp(dot, -1, 1)))))
 end
 
 --[[ ══ DEN MÄTNING SOM SAKNADES ═════════════════════════════════════════
