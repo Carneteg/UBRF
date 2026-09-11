@@ -84,6 +84,10 @@ function Stallet.box(n: number)
 	if fack and not f then return nil end
 	local yMitt = if f then (f.y0 + f.y1) / 2
 		else S.boxStartY + (plats - 0.5) * S.boxB
+	--[[ Fackets ändar behövs för att veta var frontens TÄTA panel slutar och
+		boxdörren börjar — se `utrustningsplats`. ]]
+	local yLag = if f then f.y0 else yMitt - S.boxB / 2
+	local yHog = if f then f.y1 else yMitt + S.boxB / 2
 
 	--[[ BOXFRONTENS YTTERSIDA — den sida som vetter mot gången.
 
@@ -106,6 +110,7 @@ function Stallet.box(n: number)
 		varld = { x = S.origo.x + xMitt, y = S.origo.y + yMitt },
 		front = { x = fx, y = yMitt },
 		frontVarld = { x = S.origo.x + fx, y = S.origo.y + yMitt },
+		fack = { y0 = yLag, y1 = yHog },
 	}
 end
 
@@ -126,32 +131,48 @@ end
 	Så: dagens sadel och träns hänger på DIN hästs egen boxfront, och det är
 	dit spelaren skickas.
 
-	HUR LÅNGT UT och VAR LÄNGS fronten är spelabstraktion — filmen mäter
-	ingenting — men de är härledda ur boxens egen bredd i stället för
-	skrivna som lösa tal, så de följer med om stallet ändras. ]]
+	HUR LÅNGT UT är spelabstraktion — filmen mäter ingenting. VAR LÄNGS
+	fronten är det inte: sakerna hänger på den TÄTA PANELEN, aldrig i
+	boxdörrens öppning. En sadel i dörrgapet hade sett ut som en sadel i
+	vägen, och hade stått där hästen ska gå ut. ]]
 local UT_AVSTAND = 0.28          -- hur långt ut i gången krokarna sticker
-local UT_SARPUNKT = 0.24         -- andel av boxbredden mellan sadel och träns
+local PANELMARGINAL = 0.08       -- samma marginal fronten byggs med
 
 --[[ Var hänger `sort` ("sadel" / "trans") för den här hästen?
 
 	Ren geometri, inga instanser: platsen ska gå att prova utan Studio, och
-	riggen ska inte kunna ha en egen mening om var utrustningen sitter. ]]
+	riggen ska inte kunna ha en egen mening om var utrustningen sitter.
+
+	PANELENS UTBREDNING RÄKNAS UR SAMMA TVÅ FÄLT BYGGET LÄSER — `S.boxB` och
+	`boxfront.dorr.bredd`. Det är ändå en härledning på två ställen, så den
+	VAKTAS av en mätning mot den byggda världen i `spelbarhet.spec`: varje
+	sak ska ligga inom sin boxfronts panel och utanför sin boxdörr. Skulle
+	bygget flytta dörren blir mätningen röd, inte tyst fel. ]]
 function Stallet.utrustningsplats(hastId: string, sort: string)
 	local box = Stallet.boxFor(hastId)
 	if not box then return nil end
 	if sort ~= "sadel" and sort ~= "trans" then return nil end
 
-	local sar = S.boxB * UT_SARPUNKT
-	local dy = if sort == "sadel" then -sar else sar
+	local BF = (G.identitet and G.identitet.stall and G.identitet.stall.boxfront) or {}
+	local frontL = S.boxB - 2 * PANELMARGINAL
+	local dorrB = if BF.dorr then math.min(BF.dorr.bredd, frontL - 0.30) else 0
+	local fastL = frontL - dorrB
+
+	--[[ Panelen börjar i fackets lägre ände; dörren tar dess bortre del.
+		Sadeln på första tredjedelen av panelen, tränset på andra — två
+		lägen med luft emellan, båda på tät panel. ]]
+	local panelStart = box.fack.y0 + PANELMARGINAL
+	local del = if sort == "sadel" then 1 else 2
+	local y = panelStart + fastL * del / 3
 
 	return {
 		nummer = box.nummer,
 		rad = box.rad,
 		gang = box.gang,
 		vetter = box.vetter,
-		lokal = { x = box.front.x + box.vetter * UT_AVSTAND, y = box.front.y + dy },
+		lokal = { x = box.front.x + box.vetter * UT_AVSTAND, y = y },
 		varld = { x = box.frontVarld.x + box.vetter * UT_AVSTAND,
-			y = box.frontVarld.y + dy },
+			y = S.origo.y + y },
 	}
 end
 

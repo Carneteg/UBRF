@@ -502,6 +502,72 @@ if byggd then
 	check("setRiderLean kastar inte mot en riktig Seat-rigg", okLutning)
 end
 
+--[[ ══ UTRUSTNINGEN HÄNGER PÅ TÄT PANEL, INTE I BOXDÖRREN ══════════════
+
+	`Stallet.utrustningsplats` räknar ut var sadeln och tränset hänger ur
+	`S.boxB` och `boxfront.dorr.bredd`. `Anlaggningen` delar fronten kring
+	dörrgapet ur exakt samma två fält — men det är ändå en härledning på två
+	ställen, och en sådan går isär tyst.
+
+	Därför MÄTS den här mot det som faktiskt byggts: varje sak ska ligga inom
+	sin boxfronts panel och utanför sin boxdörr. Flyttar bygget dörren, eller
+	byter den ände den sitter i, blir den här röd i stället för att en sadel
+	hamnar i öppningen hästen ska gå ut genom.
+
+	Att en sadel i dörrgapet är ett riktigt fel och inte en skönhetsfråga:
+	dörren är den enda vägen ut ur boxen, mätt i Studio. ]]
+print("\n── Utrustningen mot boxfrontens faktiska delar ──")
+do
+	--[[ Delarna slås upp på NAMN, som bygget sätter dem: "Boxfront MB 5".
+		Läget räknas om till tomtkoordinater med samma funktion resten av
+		specen använder. ]]
+	local delFor = {}
+	for _, d in ipairs(modell:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local sort, box = string.match(d.Name, "^(Box%a+) (.+)$")
+			if sort == "Boxfront" or sort == "Boxdörr" then
+				local _, cz = BuildKit.tomtkoord(bas, d.Position)
+				--[[ Delen löper i Z; halva dess Z-mått åt vardera sidan om
+					mitten ger dess utbredning längs gången. ]]
+				local halv = d.Size.Z / 2 / BuildKit.M
+				delFor[sort .. "|" .. box] = { y0 = cz - halv, y1 = cz + halv }
+			end
+		end
+	end
+
+	local antal, fel = 0, {}
+	for _, hastId in ipairs(UBRFSpel.ordning or {}) do
+		local box = Stallet.boxFor(hastId)
+		if box then
+			local nyckel = box.rad .. " " .. box.plats
+			local panel = delFor["Boxfront|" .. nyckel]
+			local dorr = delFor["Boxdörr|" .. nyckel]
+			for _, sort in ipairs({ "sadel", "trans" }) do
+				local plats = Stallet.utrustningsplats(hastId, sort)
+				antal += 1
+				if not plats then
+					table.insert(fel, hastId .. "/" .. sort .. ": ingen plats")
+				elseif not panel then
+					table.insert(fel, ("%s: ingen Boxfront %s byggd"):format(hastId, nyckel))
+				else
+					local y = plats.varld.y
+					if y < panel.y0 - 0.01 or y > panel.y1 + 0.01 then
+						table.insert(fel, ("%s/%s: %.2f utanför panelen %.2f–%.2f")
+							:format(hastId, sort, y, panel.y0, panel.y1))
+					end
+					if dorr and y > dorr.y0 + 0.01 and y < dorr.y1 - 0.01 then
+						table.insert(fel, ("%s/%s: %.2f INNE i boxdörren %.2f–%.2f")
+							:format(hastId, sort, y, dorr.y0, dorr.y1))
+					end
+				end
+			end
+		end
+	end
+	check("varje sadel och träns hänger på tät panel, utanför boxdörren",
+		antal > 0 and #fel == 0,
+		("%d lägen%s"):format(antal, #fel > 0 and (" — " .. table.concat(fel, "; ")) or ""))
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	os.exit(1)
