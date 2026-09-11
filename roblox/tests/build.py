@@ -354,6 +354,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   annars i speldatans bank utan BuildKit och Anlaggningen — samma
     #   genomfallning som kommentaren om "forberedelse" varnar for. Den
     #   traffade mig direkt: forsta korningen dog pa `BuildKit.M` som nil. ]]
+    #[[ PHYSICAL_WORLD_COHERENCE_GATE: varlden PLUS tjansterna. Den behover
+    #   samma bank som spelbarheten -- byggd varld, DorrService, Stallet och
+    #   HastRigg -- och star fore "spel" av samma skal som spelbarheten. ]]
+    elif "varldskoherens" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "spelbarhet" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "spel" in spec_rel:
