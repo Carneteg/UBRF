@@ -180,7 +180,12 @@ def skriv_rapport(resultat, man, allt_gront, place):
     """Release evidence bundle, punkt 8 i ordern."""
     huvud = git("rev-parse", "HEAD")
     gren = git("rev-parse", "--abbrev-ref", "HEAD")
-    smutsigt = git("status", "--porcelain")
+    #[[ Grindens EGEN utdata räknas inte som en smutsig arbetskatalog. Den
+    #   skrivs av den här körningen, varje gång — räknades den med stod
+    #   varningen alltid tänd, och en varning som alltid lyser är ingen
+    #   varning. Allt annat räknas. ]]
+    smutsigt = "\n".join(r for r in git("status", "--porcelain").splitlines()
+                         if "qa/pre-tobias" not in r).strip()
     r = []
     r.append("# PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle\n")
     r.append(f"> **{'PASS' if allt_gront else 'FAIL'}** — genererad "
