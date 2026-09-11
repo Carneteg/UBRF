@@ -32,6 +32,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HorseCore = require(ReplicatedStorage.HorseCore)
 local Net = HorseCore.Networking
+local Gaits = require(ReplicatedStorage.HorseCore.Gaits)
 
 local LedService = {}
 
@@ -45,6 +46,20 @@ local STOPP_R    = 1.0         -- m: innanför detta står hon still
 local START_R    = 1.8         -- m: utanför detta går hon igen (hysteres)
 local KOPPEL     = 9.0         -- m: längre bort och kopplet släpper
 
+--[[ EN LEDD HÄST SKRITTAR. Farten hämtas ur gångartskanonen och skrivs
+	inte av som ett tal: `Gaits.DATA.walk.norm` är skrittens nominella
+	fart i m/s och är samma siffra ridningen räknar med.
+
+	Varför det behövs: en oriden häst har `WalkSpeed = 0` — `HorseService`
+	nollar den när ryttaren stiger av, och klientens MovementController
+	sätter den bara medan någon rider. Mätt i Studio gav `MoveTo` då en
+	riktning men noll förflyttning. Ledningen måste alltså ge henne en
+	fart, och lämna tillbaka den när kopplet släpper. ]]
+local function skrittfart(): number
+	local w = Gaits.DATA and Gaits.DATA.walk
+	return ((w and w.norm) or 1.45) * M
+end
+
 export type Led = {
 	modell: Model,
 	hastId: string,
@@ -52,6 +67,9 @@ export type Led = {
 	lamnatBox: boolean,    -- har hon FYSISKT varit utanför boxen?
 	malNatt: boolean,      -- har hon FYSISKT varit i målzonen?
 	boxX: number, boxY: number,
+	tidigareFart: number,
+	tidigareSpelarfart: number,
+	spar: { Vector3 },
 }
 
 local ledd: { [Player]: Led } = {}
@@ -162,13 +180,36 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		end
 	end
 	local bx, by = tomt(pivot.Position)
+	local hastHum = (modell :: any):FindFirstChildOfClass("Humanoid")
+	local tidigareFart = hastHum and hastHum.WalkSpeed or 0
+	if hastHum then
+		hastHum.WalkSpeed = skrittfart()
+	end
+	--[[ MAN SPRINGER INTE MED EN HÄST I HANDEN.
+
+		Roblox default är 16 studs/s — 5,3 m/s, alltså språng. En skrittande
+		häst går 1,45 m/s. Mätt i Studio: spelaren drog ifrån 22 m på fyra
+		sekunder, kopplet löste ut som det ska, och ledningen blev därmed
+		oanvändbar.
+
+		Spelaren går därför i ledningstakt så länge hon leder, och får sin
+		egen fart tillbaka när hon släpper. Marginalen gör att hon kan gå
+		före utan att hästen halkar efter. ]]
+	local spelarHum2 = karaktar and karaktar:FindFirstChildOfClass("Humanoid")
+	local tidigareSpelarfart = spelarHum2 and spelarHum2.WalkSpeed or 16
+	if spelarHum2 then
+		spelarHum2.WalkSpeed = skrittfart() * 1.15
+	end
 	ledd[player] = {
+		tidigareFart = tidigareFart,
+		tidigareSpelarfart = tidigareSpelarfart,
 		modell = modell,
 		hastId = tostring(modell:GetAttribute("HorseId") or ""),
 		gar = false,
 		lamnatBox = false,
 		malNatt = false,
 		boxX = bx, boxY = by,
+		spar = {},
 	}
 	LedService._sync(player)
 	return true, nil
@@ -186,6 +227,17 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 	local hum = l.modell:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum:Move(Vector3.zero, false)
+		--[[ Farten tillbaka som den var. Lämnas den kvar står en släppt
+			häst och skrittar iväg av sig själv nästa gång något rör
+			hennes Humanoid. ]]
+		hum.WalkSpeed = l.tidigareFart
+	end
+	--[[ Spelarens egen fart tillbaka. Utan den går hon kvar i
+		ledningstakt resten av passet. ]]
+	local karaktar2 = player.Character
+	local spelarHum3 = karaktar2 and karaktar2:FindFirstChildOfClass("Humanoid")
+	if spelarHum3 then
+		spelarHum3.WalkSpeed = l.tidigareSpelarfart
 	end
 	ledd[player] = nil
 	LedService._sync(player, skal)
@@ -249,11 +301,58 @@ local function steg(_dt: number)
 			LedService._sync(player)
 		end
 
-		--[[ Målpunkten: bakom spelaren, i den riktning hon tittar. Hästen
-			hamnar därmed vid hennes axel när hon går, och bakom henne när
-			hon vänder sig om — samma plats som man faktiskt leder från. ]]
+		--[[ HÄSTEN GÅR I SPELARENS SPÅR, inte mot en punkt bakom henne.
+
+			En rak linje till en punkt bakom spelaren fungerar på öppen
+			yta men inte genom en dörr: mätt i Studio kilade sig hästen
+			fast mot `Boxfront MB 5` och norra skiljeväggen med
+			`MoveDirection = 0`, för att linjen gick genom väggen.
+			Boxdörren är 1,20 m och hästen 1,85 m lång — hon måste rikta
+			upp sig mot öppningen, inte skära hörnet.
+
+			Spåret löser det utan vägsökning: spelaren gick ju själv genom
+			dörren. Vi sparar hennes senaste lägen och skickar hästen till
+			den äldsta brödsmulan som ligger minst FOLJ_BAKOM bort. Då
+			följer hon vägen som fungerade i stället för fågelvägen.
+
+			Ringbufferten är kort med flit — den ska bära genom en dörr,
+			inte minnas en rundtur. ]]
+		local spar = l.spar
+		local senaste = spar[#spar]
+		--[[ ETT HOPP ÄR INGEN VÄG. Flyttas spelaren långt på en bildruta —
+			respawn, en spec som ställer henne någon annanstans — är spåret
+			dit inte gångbart, och hästen skulle skickas till en punkt hon
+			aldrig kan nå. Då kastas spåret. ]]
+		if senaste and (senaste - rot.Position).Magnitude > 3.0 * M then
+			table.clear(spar)
+			senaste = nil
+		end
+		if not senaste or (senaste - rot.Position).Magnitude > 0.6 * M then
+			table.insert(spar, rot.Position)
+			if #spar > 40 then table.remove(spar, 1) end
+		end
+		--[[ Smulor längre bort än kopplet hör inte hit heller. ]]
+		while #spar > 0 and avstandM(spar[1], rot.Position) > KOPPEL do
+			table.remove(spar, 1)
+		end
+
 		local bakom = rot.Position - rot.CFrame.LookVector * (FOLJ_BAKOM * M)
+		for i = 1, #spar do
+			if avstandM(spar[i], rot.Position) >= FOLJ_BAKOM then
+				bakom = spar[i]
+				break
+			end
+		end
 		local tillMal = avstandM(pivot.Position, bakom)
+
+		--[[ Hon får skynda på inom SKRITTENS eget band när hon hamnat
+			efter. Bandet kommer ur `Gaits`; hon börjar aldrig trava. ]]
+		if hum.WalkSpeed > 0 then
+			local w = Gaits.DATA and Gaits.DATA.walk
+			local lag = math.clamp((avst - FOLJ_BAKOM) / 4.0, 0, 1)
+			local m_s = ((w and w.norm) or 1.45) + lag * (((w and w.max) or 2.0) - ((w and w.norm) or 1.45))
+			hum.WalkSpeed = m_s * M
+		end
 
 		--[[ HYSTERES. Se noten överst: två trösklar, inte en. ]]
 		if l.gar then
@@ -262,6 +361,11 @@ local function steg(_dt: number)
 				hum:Move(Vector3.zero, false)
 			else
 				hum:MoveTo(Vector3.new(bakom.X, pivot.Position.Y, bakom.Z))
+				--[[ Passerad brödsmula tas bort, annars går hon tillbaka
+					till den om hon råkar komma nära igen. ]]
+				if #l.spar > 0 and avstandM(pivot.Position, l.spar[1]) < 1.2 then
+					table.remove(l.spar, 1)
+				end
 			end
 		else
 			if tillMal > START_R then
