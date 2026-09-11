@@ -26,6 +26,7 @@
 	vägg för att hinna ikapp — och spelaren ska få veta varför.
 ]]
 
+local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,6 +34,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HorseCore = require(ReplicatedStorage.HorseCore)
 local Net = HorseCore.Networking
 local Gaits = require(ReplicatedStorage.HorseCore.Gaits)
+local Config = require(ReplicatedStorage.HorseCore.Config)
 
 local LedService = {}
 
@@ -45,6 +47,43 @@ local FOLJ_BAKOM = 2.4         -- m: hästens målpunkt bakom spelaren
 local STOPP_R    = 1.0         -- m: innanför detta står hon still
 local START_R    = 1.8         -- m: utanför detta går hon igen (hysteres)
 local KOPPEL     = 9.0         -- m: längre bort och kopplet släpper
+
+--[[ ══ NAVIGERINGEN — PathfindingService som LOKAL RESERV ═══════════════
+
+	Godkänd snävt av PO efter att tre billigare vägar mätts bort: bredare
+	dörr (vändutrymmet fanns redan — 3,50 x 3,62 m mot en vändcirkel på
+	1,85 m), dörr-waypoint (hon kilade sig på yaw −141° med
+	MoveDirection 0), och att det skulle vara ett lokomotionsfel (Gate 1
+	mätte 75,66 m förflyttning).
+
+	DEN ERSÄTTER INGENTING. Spårföljningen, hysteresen, farterna, kopplet
+	och alla nej-vägar står kvar. Planeraren kopplas in bara när hon är i
+	trångt läge eller har slutat komma framåt, och släpper så fort hon är
+	fri igen.
+
+	AGENTEN MÅTTSÄTTS UR HÄSTENS EGET KOLLISIONSHÖLJE, inte ur Roblox
+	standardvärden. En avvikelse måste förklaras, och här finns en:
+
+	  PathfindingService modellerar agenten som en CYLINDER. Hästens
+	  hölje är 1,86 x 2,34 x 5,55 studs — en avlång kropp. Sätts radien
+	  till halva LÄNGDEN (2,775) krävs en öppning bredare än 5,55 studs,
+	  och boxdörren är 3,60. Planeraren hade då svarat "ingen väg" på en
+	  dörr hästen fysiskt ryms igenom, eftersom hon passerar på längden.
+
+	  Bindande mått för en dörr är alltså kroppens BREDD. Radien sätts
+	  till halva bredden, 0,93 studs, vilket lämnar 0,87 studs marginal
+	  mot dörrens halva bredd. Höjden är mankhöjden: HipHeight 2,01 plus
+	  kroppens 2,34 = 4,35 studs.
+
+	Hon hoppar inte och klättrar inte när hon leds. ]]
+local NAV_RADIE_FAKTOR = 0.5   -- av kroppens BREDD, se noten ovan
+local NAV_VAGPUNKT     = 2.5   -- studs mellan vägpunkter; tätare än standard 4
+local NAV_NA_VAGPUNKT  = 1.6   -- studs: så nära räknas en vägpunkt som nådd
+local NAV_STILLA       = 1.2   -- s utan framsteg innan planeraren kopplas in
+local NAV_OMPLAN_PAUS  = 1.0   -- s: kortaste tid mellan två planeringar
+local NAV_MAX_PLANER   = 6     -- fler än så och vi ger upp i stället för att mala
+local NAV_FASTNAT      = 8.0   -- s helt stilla trots order: kopplet släpper
+local NAV_ANKARE       = 0.25  -- m hon måste förflytta sig för att räknas som i rörelse
 
 --[[ EN LEDD HÄST SKRITTAR. Farten hämtas ur gångartskanonen och skrivs
 	inte av som ett tal: `Gaits.DATA.walk.norm` är skrittens nominella
@@ -60,6 +99,72 @@ local function skrittfart(): number
 	return ((w and w.norm) or 1.45) * M
 end
 
+--[[ ══ VRIDNINGEN — LEDNINGEN ÄGER DEN ═══════════════════════════════
+
+	MÄTT I STUDIO, och det här är den verkliga blockeraren: hästen kunde
+	inte vrida sig. `HorseService` sätter `AutoRotate = false` på varenda
+	häst — 33 av 33 — med motiveringen att spelet äger vridningen, och
+	under ritt är det sant: `MovementController` skriver kursen på roten
+	varje bildruta. Men den modulen kör bara för den som SITTER UPP. En
+	oriden häst hade därmed ingen som vred henne alls.
+
+	Följden var precis det som mättes om och om igen: hon gick mot dörren
+	MED SIDAN FÖRE. Kroppen är 1,85 m lång och 0,62 m bred, öppningen
+	1,20 m — bredsidan går aldrig igenom, hur rätt vägpunkten än ligger.
+	Därav `MoveDirection = 0` mot `Boxfront MB 5`, och därav att varken
+	dörr-waypointen eller vägsökningen hjälpte: båda pekade rätt, men
+	kroppen pekade fel.
+
+	LEDNINGEN ÄGER DÄRFÖR KURSEN så länge hon leds, på exakt samma sätt
+	som `MovementController` gör under ritt: bara rotation, aldrig läge.
+	Förflyttningen sköter Humanoiden, höjden sköter fysiken. Att i stället
+	slå på `AutoRotate` hade lämnat vridtakten till Roblox, och det är den
+	fordonskänsla gaten uttryckligen ska bort ifrån.
+
+	VRIDTAKTEN KOMMER UR KANON, inte ur ett tal här: `CurvatureMax` gånger
+	tempot medan hon går (0,42 × 1,45 = 0,61 rad/s, alltså 2,4 m radie —
+	samma båge som ridningen), och `TurnInPlaceRate` när hon nästan står
+	stilla. En häst som står får vrida sig; en häst i rörelse får det inte
+	snurra på fläcken.
+
+	OCH HON GÅR DIT HON PEKAR. `Humanoid:Move` med hennes egen framåtvektor
+	i stället för `MoveTo` mot punkten: annars går hon i sidled mot målet
+	med kroppen kvar på tvären, vilket är exakt det som kilade fast henne.
+	Är kursfelet stort går hon inte alls utan vänder först. ]]
+local VAND_FULL   = math.rad(40)   -- under detta kursfel: full fart
+local VAND_STOPP  = math.rad(75)   -- över detta: vänd på stället, gå inte
+
+local function kurs(pivot: BasePart): number
+	local _, y = pivot.CFrame:ToOrientation()
+	--[[ `MovementController` skriver kursen som CFrame.Angles(0, h, 0) och
+		räknar framåt som (sin h, 0, cos h). Samma konvention här, annars
+		pekar en ledd häst åt andra hållet än en riden. ]]
+	return y
+end
+
+local function framat(h: number): Vector3
+	return Vector3.new(math.sin(h), 0, math.cos(h))
+end
+
+--[[ Vrid roten mot `onskad` med kanonens takt, och svara hur stort
+	kursfelet var EFTER vridningen. Position rörs inte. ]]
+local function vridMot(pivot: BasePart, onskad: number, fartMS: number, dt: number): number
+	local nu = kurs(pivot)
+	local fel = (onskad - nu + math.pi) % (2 * math.pi) - math.pi
+
+	local MO = Config.MOVEMENT
+	local omega = (MO.CurvatureMax :: number) * fartMS
+	local underGrans = (MO.TurnInPlaceBelow :: number)
+	if fartMS < underGrans then
+		local andel = 1 - fartMS / underGrans
+		omega = math.max(omega, (MO.TurnInPlaceRate :: number) * andel)
+	end
+
+	local steg = math.clamp(fel, -omega * dt, omega * dt)
+	pivot.CFrame = CFrame.new(pivot.CFrame.Position) * CFrame.Angles(0, nu + steg, 0)
+	return math.abs(fel - steg)
+end
+
 export type Led = {
 	modell: Model,
 	hastId: string,
@@ -69,7 +174,23 @@ export type Led = {
 	boxX: number, boxY: number,
 	tidigareFart: number,
 	tidigareSpelarfart: number,
+	tidigareAgare: Player?,
+	tidigareAuto: boolean,
 	spar: { Vector3 },
+	dorr: BasePart?,
+	dorrMitt: Vector3?,
+	dorrUt: Vector3?,
+	dorrsteg: number,
+	-- navigeringen
+	navVag: { Vector3 },
+	navIx: number,
+	navPlaner: number,
+	navSenast: number,
+	planerar: boolean,
+	tid: number,
+	stillaSedan: number,
+	badGa: boolean,
+	ankare: Vector3,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -180,10 +301,84 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		end
 	end
 	local bx, by = tomt(pivot.Position)
+
+	--[[ ── BOXDÖRREN SOM WAYPOINT ──────────────────────────────────────
+
+		Mätt i Studio: hästen kilade sig mot `Boxfront MB 5` och norra
+		skiljeväggen med `MoveDirection = 0`. Hon är 1,85 m lång och
+		öppningen 1,20 m bred, och `MoveTo` styr RAKT mot målet — från ett
+		hörn i facket går den linjen genom panelen.
+
+		Spårföljningen räcker inte här: brödsmulorna ligger rätt, men hon
+		måste RIKTA UPP kroppen mot öppningen innan hon går igenom. Därför
+		två delmål — först en punkt rakt innanför dörren, sedan en rakt
+		utanför. Två punkter, ingen vägsökning.
+
+		Dörren letas upp EN gång, vid start, och bara om hon faktiskt står
+		i en box. Leds hon på öppen yta finns ingen dörr och hela grenen
+		hoppas över.
+
+		PUNKTEN ÄR ÖPPNINGENS, INTE BLADETS. Ett öppet blad har svängt 85
+		grader ut i gången: mätt i Studio låg dörrens `Position` då 1,7 m
+		fel, och hästen fick ett delmål mitt i gången i stället för i luckan.
+		`DorrService` skriver det stängda läget som `UBRFOppningsmitt` vid
+		riggningen, och det är hålet i fronten. ]]
+	local function oppningsmitt(d: BasePart): Vector3
+		local m = d:GetAttribute("UBRFOppningsmitt")
+		return if typeof(m) == "Vector3" then m else d.Position
+	end
+	local narmasteDorr, narmast = nil, 3.2 * M
+	local anlaggning = workspace:FindFirstChild("Anläggning")
+	if anlaggning then
+		for _, d in ipairs(anlaggning:GetDescendants()) do
+			if d:IsA("BasePart") and d:GetAttribute("UBRFBoxdorr") == true then
+				local avst = (oppningsmitt(d) - pivot.Position).Magnitude
+				if avst < narmast then narmasteDorr, narmast = d, avst end
+			end
+		end
+	end
+	local dorrMitt: Vector3? = nil
+	local dorrUt: Vector3? = nil
+	if narmasteDorr then
+		dorrMitt = oppningsmitt(narmasteDorr)
+		--[[ `Langs` säger vilken axel fronten löper i; `Utat` åt vilket
+			håll gången ligger. Båda sätts av `Anlaggningen`. ]]
+		local langs = narmasteDorr:GetAttribute("Langs")
+		local utat = tonumber(narmasteDorr:GetAttribute("Utat")) or 1
+		dorrUt = if langs == "Z"
+			then Vector3.new(utat, 0, 0)
+			else Vector3.new(0, 0, utat)
+	end
+
 	local hastHum = (modell :: any):FindFirstChildOfClass("Humanoid")
 	local tidigareFart = hastHum and hastHum.WalkSpeed or 0
 	if hastHum then
 		hastHum.WalkSpeed = skrittfart()
+	end
+
+	--[[ NÄTVERKSÄGARSKAPET MÅSTE TILL SERVERN MEDAN HON LEDS.
+
+		Mätt i Studio: en oriden häst intill en spelare ägs AUTOMATISKT av
+		den spelaren — Roblox delar ut oankrade delar till närmaste klient.
+		Servern räknade alltså ut en kurs som klienten omedelbart skrev
+		över, och ordern att gå nådde aldrig fram: `MoveDirection = 0` och
+		noll förflyttning, med spelaren stående bredvid.
+
+		Ledningen är serverauktoritär, så simuleringen ska ligga på servern
+		medan den pågår. Ryttarens ägarskap är en annan sak och rörs inte:
+		`HorseService` ger det vid uppsittning, och sitter man upp mitt i
+		ledningen släpper ledningen först. Läget före sparas och lämnas
+		tillbaka — annars hade en ledd häst blivit permanent serversimulerad
+		och ridningen fått tillbaka den halvsekunds fördröjning som
+		ägarskapet finns för att slippa. ]]
+	local tidigareAgare: Player? = nil
+	local tidigareAuto = false
+	if pivot:IsA("BasePart") then
+		pcall(function()
+			tidigareAuto = pivot:GetNetworkOwnershipAuto()
+			if not tidigareAuto then tidigareAgare = pivot:GetNetworkOwner() end
+			pivot:SetNetworkOwner(nil)
+		end)
 	end
 	--[[ MAN SPRINGER INTE MED EN HÄST I HANDEN.
 
@@ -209,7 +404,15 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		lamnatBox = false,
 		malNatt = false,
 		boxX = bx, boxY = by,
+		dorrMitt = dorrMitt,
+		tidigareAgare = tidigareAgare,
+		tidigareAuto = tidigareAuto,
 		spar = {},
+		dorr = narmasteDorr,
+		dorrUt = dorrUt,
+		dorrsteg = 1,
+		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
+		stillaSedan = 0, badGa = false, ankare = pivot.Position,
 	}
 	LedService._sync(player)
 	return true, nil
@@ -232,6 +435,18 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 			hennes Humanoid. ]]
 		hum.WalkSpeed = l.tidigareFart
 	end
+	--[[ Ägarskapet tillbaka som det var. ]]
+	local pivot = l.modell.PrimaryPart
+	if pivot then
+		pcall(function()
+			if l.tidigareAuto then
+				pivot:SetNetworkOwnershipAuto()
+			else
+				pivot:SetNetworkOwner(l.tidigareAgare)
+			end
+		end)
+	end
+
 	--[[ Spelarens egen fart tillbaka. Utan den går hon kvar i
 		ledningstakt resten av passet. ]]
 	local karaktar2 = player.Character
@@ -254,6 +469,103 @@ function LedService._sync(player: Player, skal: string?)
 		malNatt = l ~= nil and l.malNatt or false,
 		skal = skal,
 	})
+end
+
+--[[ ── Planeraren ──────────────────────────────────────────────────
+	Ett anrop, en väg, och sedan går hon på den med sin egen Humanoid.
+	Ingen väg per bildruta: `NAV_OMPLAN_PAUS` och `NAV_MAX_PLANER` finns
+	för att en blockerad häst inte ska mala servern. ]]
+local function agentparametrar(pivot: BasePart)
+	return {
+		AgentRadius = pivot.Size.X * NAV_RADIE_FAKTOR,
+		AgentHeight = 2.01 + pivot.Size.Y,
+		AgentCanJump = false,
+		AgentCanClimb = false,
+		WaypointSpacing = NAV_VAGPUNKT,
+	}
+end
+
+--[[ Tiden räknas i BILDRUTOR, inte i väggklocka. `os.clock` gjorde
+	omplaneringspausen omätbar: en spec kör tusen bildrutor på någon
+	millisekund, så pausen slog alltid till och taket kunde aldrig nås —
+	precis den gren som ska hindra en blockerad häst från att mala servern
+	var alltså den enda som inte gick att pröva. ]]
+local function planera(l: Led, pivot: BasePart, mal: Vector3)
+	--[[ VÄGBERÄKNINGEN FÅR INTE LIGGA I BILDRUTAN.
+
+		Mätt på plats: `ComputeAsync` tar 94 ms för boxutgången och 100 ms
+		för hela den kanoniska rutten. Anropet YIELDAR, och `steg` körs ur
+		Heartbeat — en beräkning mitt i loopen sköt alltså upp resten av de
+		ledda hästarna den bildrutan OCH lät nästa Heartbeat starta ett nytt
+		`steg` medan det förra stod och väntade. Två samtidiga steg som
+		skriver på samma tillstånd är inget man felsöker i efterhand.
+
+		Nu läggs beräkningen i en egen tråd och bildrutan går vidare. En
+		flagga håller EN beräkning i luften per häst: utan den hade
+		omplaneringspausen kunnat kringgås av en beräkning som ännu inte
+		svarat. Hon fortsätter under tiden på spåret — det är sämre än en
+		väg, men det är att röra sig. ]]
+	if l.planerar then return end
+	if l.tid - l.navSenast < NAV_OMPLAN_PAUS then return end
+	if l.navPlaner >= NAV_MAX_PLANER then return end
+	l.navSenast = l.tid
+	l.navPlaner += 1
+	l.planerar = true
+
+	local param = agentparametrar(pivot)
+	local start = pivot.Position
+	task.spawn(function()
+		local vag = PathfindingService:CreatePath(param)
+		local ok = pcall(function()
+			vag:ComputeAsync(start, mal)
+		end)
+		l.planerar = false
+		if not ok or vag.Status ~= Enum.PathStatus.Success then
+			table.clear(l.navVag)
+			l.navIx = 1
+			return
+		end
+		table.clear(l.navVag)
+		for _, w in ipairs(vag:GetWaypoints()) do
+			table.insert(l.navVag, w.Position)
+		end
+		--[[ Första vägpunkten ligger i hästens egen fot; att gå dit är att
+			stå still. ]]
+		l.navIx = math.min(2, #l.navVag)
+	end)
+end
+
+local function navigerar(l: Led): boolean
+	return #l.navVag > 0 and l.navIx <= #l.navVag
+end
+
+--[[ ETT ENDA STÄLLE VRIDER OCH DRIVER HENNE. Allt nedanför väljer bara
+	MÅLPUNKTEN. Förut gick `MoveTo` från tre ställen, och det är därför
+	kroppens riktning aldrig hade någon ägare alls.
+
+	`Humanoid:Move` med hennes EGEN framåtvektor, inte `MoveTo` mot punkten:
+	`MoveTo` skjuter kroppen rakt mot målet oavsett hur den står, och en
+	häst som går i sidled in i en 1,20 m dörr fastnar. Nu går hon dit hon
+	pekar, och pekar hon fel vänder hon först. ]]
+local function styrMot(pivot: BasePart, hum: Humanoid, mal: Vector3,
+	onskadFartMS: number, dt: number): boolean
+	local d = Vector3.new(mal.X - pivot.Position.X, 0, mal.Z - pivot.Position.Z)
+	if d.Magnitude < 0.05 then
+		hum:Move(Vector3.zero, false)
+		return false
+	end
+	local fartMS = pivot.AssemblyLinearVelocity.Magnitude / M
+	local kvar = vridMot(pivot, math.atan2(d.X, d.Z), fartMS, dt)
+	--[[ Är kursfelet stort VÄNDER HON FÖRST. Att gå framåt på tvären är
+		precis det som kilade fast henne i boxen. ]]
+	local andel = math.clamp((VAND_STOPP - kvar) / (VAND_STOPP - VAND_FULL), 0, 1)
+	hum.WalkSpeed = onskadFartMS * andel * M
+	if andel <= 0 then
+		hum:Move(Vector3.zero, false)
+		return false
+	end
+	hum:Move(framat(kurs(pivot)), false)
+	return true
 end
 
 --[[ ── Följandet ────────────────────────────────────────────────────
@@ -335,42 +647,185 @@ local function steg(_dt: number)
 		while #spar > 0 and avstandM(spar[1], rot.Position) > KOPPEL do
 			table.remove(spar, 1)
 		end
+		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
+			HON STÅR STILL.
 
+			Mätt i Studio, mitt i stallgången: gallringen låg förut inne i
+			grenen som bara körs medan hon GÅR. Hon stannade därför en gång
+			med den äldsta smulan under sig, och då låg målpunkten inom
+			dödzonen — vilket gjorde att hon stod kvar, vilket gjorde att
+			smulan aldrig gallrades. Spelaren 6,1 m bort, hästen blickstilla,
+			och ingenting i tillståndet såg trasigt ut. En lås-i-sig-själv. ]]
+		--[[ RADIEN ÄR START_R, INTE ETT MINDRE TAL, och det är hela poängen.
+
+			Gallringen låg på 1,2 m medan hysteresen börjar gå först vid 1,8 m.
+			En smula som hamnade i bandet däremellan var varken förbrukad eller
+			värd att gå till: mätt i Studio, söder om boxraderna, stod hästen
+			stilla 1,21 m från sin egen brödsmula med spelaren 6,30 m bort och
+			rörde ingenting alls. Samma sorts glapp som dörrens delmål hade.
+
+			En punkt hon inte tänker gå till får alltså inte vara hennes mål. ]]
+		while #spar > 1 and avstandM(pivot.Position, spar[1]) < START_R do
+			table.remove(spar, 1)
+		end
+
+		--[[ MÅLPUNKTEN FÅR ALDRIG LIGGA I DÖDZONEN.
+
+			Smulan ska ligga minst FOLJ_BAKOM bakom spelaren — det är
+			följavståndet — OCH minst START_R från hästen själv. Det andra
+			villkoret är rättelsen: en smula närmare än så är en punkt hon
+			aldrig tänker gå till, och att sikta på den är att stå still.
+			Mätt i Studio, söder om boxraderna: hästen stod 1,21 m från sin
+			egen smula med spelaren 6,30 m bort, rörde ingenting, och inget
+			i tillståndet såg trasigt ut. Duger ingen smula tas punkten
+			bakom spelaren i stället. ]]
 		local bakom = rot.Position - rot.CFrame.LookVector * (FOLJ_BAKOM * M)
 		for i = 1, #spar do
-			if avstandM(spar[i], rot.Position) >= FOLJ_BAKOM then
+			if avstandM(spar[i], rot.Position) >= FOLJ_BAKOM
+				and avstandM(spar[i], pivot.Position) >= START_R then
 				bakom = spar[i]
 				break
 			end
 		end
+
+		--[[ Så länge hon inte lämnat boxen går dörren före spåret. Steg 1
+			ställer henne rakt innanför öppningen, steg 2 tar henne ut. ]]
+		local viaDorr = false
+		if not l.lamnatBox and l.dorr and l.dorrMitt and l.dorrUt and l.dorr.Parent then
+			viaDorr = true
+			local ut1 = l.dorrMitt - l.dorrUt * (1.3 * M)
+			local ut2 = l.dorrMitt + l.dorrUt * (2.2 * M)
+			--[[ DELMÅLET SKA NÅS, OCH DET KRÄVER EN RADIE UTANFÖR DÖDZONEN.
+				Radien stod på 0,9 m medan hysteresen börjar gå först vid 1,8 m:
+				mätt i Studio hamnade hästen 0,98 m från punkten, alltså i
+				glappet mellan "för nära för att gå" och "för långt för att
+				vara framme", och stod där. Radien måste vara större än
+				START_R, annars finns bandet kvar. ]]
+			if l.dorrsteg == 1 then
+				if avstandM(pivot.Position, ut1) < START_R + 0.4 then
+					l.dorrsteg = 2
+				else
+					bakom = ut1
+				end
+			end
+			if l.dorrsteg == 2 then bakom = ut2 end
+		end
 		local tillMal = avstandM(pivot.Position, bakom)
 
 		--[[ Hon får skynda på inom SKRITTENS eget band när hon hamnat
-			efter. Bandet kommer ur `Gaits`; hon börjar aldrig trava. ]]
-		if hum.WalkSpeed > 0 then
-			local w = Gaits.DATA and Gaits.DATA.walk
-			local lag = math.clamp((avst - FOLJ_BAKOM) / 4.0, 0, 1)
-			local m_s = ((w and w.norm) or 1.45) + lag * (((w and w.max) or 2.0) - ((w and w.norm) or 1.45))
-			hum.WalkSpeed = m_s * M
+			efter. Bandet kommer ur `Gaits`; hon börjar aldrig trava.
+
+			FARTEN SKRIVS INTE HÄR. Den lämnas till `styrMot`, som sänker den
+			när kursfelet är stort: en häst som behöver vända ska vända, inte
+			gå framåt på tvären. Förut satt raden här bakom `WalkSpeed > 0`,
+			som aldrig kunde bli sann igen om något nollat farten. ]]
+		local gang = Gaits.DATA and Gaits.DATA.walk
+		local lag = math.clamp((avst - FOLJ_BAKOM) / 4.0, 0, 1)
+		local onskadFart = ((gang and gang.norm) or 1.45)
+			+ lag * (((gang and gang.max) or 2.0) - ((gang and gang.norm) or 1.45))
+
+		--[[ ── KOMMER HON FRAMÅT? ──────────────────────────────────────
+
+			MÄTT PÅ KROPPEN, inte på ett avstånd som krymper. Villkoret var
+			förut "minskar inte avståndet till målet", och det ljuger på två
+			sätt: målpunkten rör sig med spelaren, och under en vändning på
+			stället krymper inget avstånd fast hon gör precis rätt.
+
+			Nu räknas hon som stillastående bara när hon FICK ORDER ATT GÅ
+			och ändå inte KOM NÅGONSTANS. Står hon i dödzonen, eller vänder
+			sig innan hon går, är det inte att ha fastnat.
+
+			MÄTT SOM FÖRFLYTTNING, inte som hastighet. Hastigheten ljuger:
+			en häst som ankrats fast — ett prov där hon bevisligen inte kan
+			röra sig ur fläcken — rapporterade 1,59 studs/s, och stillamåttet
+			nollställdes varje bildruta. Ett ankare i världen och ett krav på
+			att hon faktiskt LÄMNAR det kan inte ljuga på samma sätt. ]]
+		l.tid += _dt
+		if l.badGa then
+			if avstandM(pivot.Position, l.ankare) > NAV_ANKARE then
+				l.ankare = pivot.Position
+				l.stillaSedan = 0
+			else
+				l.stillaSedan += _dt
+			end
+		else
+			l.ankare = pivot.Position
+			l.stillaSedan = 0
+		end
+		l.badGa = false
+		local trangt = not l.lamnatBox and l.dorr ~= nil
+		local behoverVag = (trangt or l.stillaSedan > NAV_STILLA) and tillMal > STOPP_R
+
+		--[[ EN VÄG SOM INTE BÄR SKA KASTAS.
+
+			Mätt i Studio, vid södra änden av MA-raden: hon låg på en
+			vägpunkt hon inte kunde nå, kilad mot fronthörnet, med full
+			skrittfart och noll hastighet. Stillaståendet mättes bara när
+			hon INTE navigerade, så ingenting planerade om — hon stod i 24
+			sekunder och tillståndet såg friskt ut. En väg som inte bär
+			måste kunna överges. ]]
+		if l.stillaSedan > NAV_STILLA and navigerar(l) then
+			table.clear(l.navVag)
+			l.navIx = 1
 		end
 
-		--[[ HYSTERES. Se noten överst: två trösklar, inte en. ]]
+		if behoverVag and not navigerar(l) then
+			planera(l, pivot, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z))
+		end
+
+		--[[ FASTNAT PÅ RIKTIGT. Planeraren har gett upp och hon rör sig
+			fortfarande inte: då ska kopplet SLÄPPA med ett eget skäl i
+			stället för att hon ska stå och mala. Spelaren får veta det och
+			kan leda henne en annan väg. ]]
+		if l.stillaSedan > NAV_FASTNAT and l.navPlaner >= NAV_MAX_PLANER then
+			LedService.slapp(player, "led.fastnat")
+			continue
+		end
+
+		--[[ ── PÅ VÄG ────────────────────────────────────────────────── ]]
+		if navigerar(l) then
+			local wp = l.navVag[l.navIx]
+			if (Vector3.new(wp.X, 0, wp.Z) - Vector3.new(pivot.Position.X, 0, pivot.Position.Z)).Magnitude
+				< NAV_NA_VAGPUNKT then
+				l.navIx += 1
+				l.stillaSedan = 0
+			end
+			if navigerar(l) then
+				local w = l.navVag[l.navIx]
+				l.gar = true
+				l.badGa = styrMot(pivot, hum, Vector3.new(w.X, pivot.Position.Y, w.Z),
+					onskadFart, _dt)
+			else
+				--[[ Vägen är slut. Tillbaka till spårföljningen; blev hon
+					ändå inte fri märks det som stillastående igen. ]]
+				table.clear(l.navVag)
+				l.navIx = 1
+				l.stillaSedan = 0
+			end
+			continue
+		end
+
+		--[[ Fri igen: nollställ planeringsräknaren så nästa trånga läge
+			får sina egna försök. ]]
+		if l.lamnatBox and l.stillaSedan == 0 then l.navPlaner = 0 end
+
+		--[[ HYSTERESEN GÄLLER FÖLJANDET.
+
+			Dödzonen finns för att hon inte ska pendla kring en punkt som
+			rör sig med spelaren. ]]
 		if l.gar then
 			if tillMal < STOPP_R then
 				l.gar = false
 				hum:Move(Vector3.zero, false)
 			else
-				hum:MoveTo(Vector3.new(bakom.X, pivot.Position.Y, bakom.Z))
-				--[[ Passerad brödsmula tas bort, annars går hon tillbaka
-					till den om hon råkar komma nära igen. ]]
-				if #l.spar > 0 and avstandM(pivot.Position, l.spar[1]) < 1.2 then
-					table.remove(l.spar, 1)
-				end
+				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
+					onskadFart, _dt)
 			end
 		else
 			if tillMal > START_R then
 				l.gar = true
-				hum:MoveTo(Vector3.new(bakom.X, pivot.Position.Y, bakom.Z))
+				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
+					onskadFart, _dt)
 			end
 		end
 	end

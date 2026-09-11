@@ -188,6 +188,7 @@ end }
 Enum = {
 	RaycastFilterType = { Exclude = 1 },
 	HumanoidStateType = { Freefall = 1, Jumping = 2, Running = 3, Landed = 4 },
+	PathStatus = { Success = 1, NoPath = 2, ClosestNoPath = 3 },
 	KeyCode = setmetatable({}, { __index = function(_, k) return k end }),
 	UserInputState = { Begin = 1, End = 2 },
 	UserInputType = { Gamepad1 = 1 },
@@ -645,9 +646,28 @@ __services.DataStoreService = {
 	end,
 }
 
+--[[ PathfindingService: LedService använder den som lokal reserv när
+     hästen sitter fast. Stubben RÄKNAR INTE ut någon väg — den speglar
+     ANROPET, så en spec kan mäta att agenten måttsätts ur hästens eget
+     hölje och inte ur Roblox standardvärden. `Status` är avsiktligt
+     `NoPath`: bänken har ingen navmesh, och en spec ska inte kunna tro
+     att den mätt en riktig väg. ]]
+__senastePathParams = nil
+local __pathfinding = {
+	CreatePath = function(_, params)
+		__senastePathParams = params
+		return {
+			Status = Enum.PathStatus.NoPath,
+			ComputeAsync = function() end,
+			GetWaypoints = function() return {} end,
+		}
+	end,
+}
+
 game = {
 	GetService = function(_, name)
 		if name == "ReplicatedStorage" then return __rs end
+		if name == "PathfindingService" then return __pathfinding end
 		return assert(__services[name], "ingen stub för tjänsten " .. name)
 	end,
 	Players = __services.Players,
@@ -954,6 +974,30 @@ local function __nyInstans(klass)
 	if klass == "RemoteFunction" then
 		inst.OnServerInvoke = nil
 	end
+	--[[ NATVERKSAGARSKAPET.
+
+	     Mätt i Studio: en oriden häst intill en spelare ags AUTOMATISKT av
+	     den klienten, och da nar serverns order aldrig fram. `LedService`
+	     tar darfor agarskapet medan hon leds och lamnar tillbaka det. Utan
+	     de har metoderna kunde banken inte se skillnad pa en tjanst som gor
+	     det och en som inte gor det — och det var precis den skillnaden som
+	     holl hasten stilla. ]]
+	function inst:SetNetworkOwner(agare)
+		rawset(self, "_agare", agare)
+		rawset(self, "_agareAuto", false)
+	end
+	function inst:SetNetworkOwnershipAuto()
+		rawset(self, "_agare", nil)
+		rawset(self, "_agareAuto", true)
+	end
+	function inst:GetNetworkOwner() return rawget(self, "_agare") end
+	function inst:GetNetworkOwnershipAuto()
+		local a = rawget(self, "_agareAuto")
+		--[[ Roblox startar i automatiskt lage. ]]
+		if a == nil then return true end
+		return a
+	end
+
 	--[[ Parent sätts via metatabell så att barnlistan hålls i takt; koden
 	     skriver `x.Parent = y` och förväntar sig att y ser x. ]]
 	--[[ De bevakade egenskaperna får sina startvärden genom skuggtabellen,
@@ -975,6 +1019,10 @@ local function __nyInstans(klass)
 				local cf = rawget(t, "CFrame")
 				return cf and cf.Position or nil
 			end
+			--[[ En del som aldrig rort sig har nollhastighet, inte nil.
+			     `LedService` laser den for att veta om hasten STAR — en
+			     stillastaende hast far vrida sig, en gaende inte. ]]
+			if k == "AssemblyLinearVelocity" then return vec() end
 			return nil
 		end,
 		__newindex = function(t, k, v)

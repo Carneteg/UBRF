@@ -565,6 +565,10 @@ Sprak.text = {
 		sv = "Hon är inte framme i ridhuset än",
 		en = "She is not in the arena yet",
 	},
+	["led.fastnat"] = {
+		sv = "Hon kommer inte fram där — prova en annan väg",
+		en = "She cannot get through there — try another way",
+	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",
 		en = "Halt → walk",
