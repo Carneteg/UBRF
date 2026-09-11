@@ -10,7 +10,14 @@ First Playable behover, i ratt tjanst och med kod i sig.
 Punkt 10, fail closed: saknas nagot blir det exit 1 och `FIRST_PLAYABLE_
 PREFLIGHT: FAIL` med vad som saknas. Franvaro av ett PASS ar inte ett PASS.
 
-    python3 tools/kolla-place.py
+    python3 tools/kolla-place.py                  # bygger och mater en ny place
+    python3 tools/kolla-place.py <fil.rbxlx>      # mater en PINNAD fil
+
+Filargumentet fanns inte forst, och den luckan bet: jag korde
+`kolla-place.py <release>` och rapporterade "PASS pa den genererade filen"
+— men skriptet byggde en NY place i en temp-katalog och matte den. Svaret
+var sant om koden och osant om filen jag pastod att jag matt. En pinnad
+release ska kunna matas som den ar.
 """
 import pathlib
 import subprocess
@@ -95,17 +102,61 @@ def hitta(rot, vag: str):
     return nod
 
 
+def kallmappning() -> dict:
+    """Modulnamn -> fil pa disk, ur samma projektfil som byggaren laser."""
+    import json
+    projekt = json.loads((ROT / "roblox" / "default.project.json").read_text(encoding="utf-8"))
+    ut = {}
+
+    def gang(nod, bas: pathlib.Path):
+        for nyckel, varde in nod.items():
+            if nyckel.startswith("$"):
+                continue
+            if isinstance(varde, dict) and "$path" in varde:
+                vag = bas / varde["$path"]
+                if vag.is_file():
+                    ut[nyckel] = vag
+                else:
+                    #[[ En katalogs `init.*.luau` blir instansen med
+                    #   KATALOGENS NAMN I PROJEKTFILEN, inte katalogens eget
+                    #   namn pa disk: `src/server/init.server.luau` heter
+                    #   `Horse` i placen. Forsta versionen tog mappnamnet och
+                    #   letade efter "server" — som forstas inte fanns. ]]
+                    for f in vag.rglob("*.luau"):
+                        stam = f.stem.split(".")[0]
+                        ut[nyckel if stam == "init" else stam] = f
+            elif isinstance(varde, dict):
+                gang(varde, bas)
+
+    gang(projekt["tree"], ROT / "roblox")
+    return ut
+
+
 def main() -> int:
+    given = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    if given is not None and not given.is_file():
+        print(f"FIRST_PLAYABLE_PREFLIGHT: FAIL — {given} finns inte")
+        return 1
     with tempfile.TemporaryDirectory() as tmp:
-        ut = pathlib.Path(tmp) / "prov.rbxlx"
-        r = subprocess.run([sys.executable, str(ROT / "tools" / "bygg-place.py"),
-                            "--ut", str(ut)], capture_output=True, text=True)
-        if r.returncode != 0:
-            print(r.stdout + r.stderr, end="")
-            print("\nFIRST_PLAYABLE_PREFLIGHT: FAIL — placen gick inte att bygga")
-            return 1
+        if given is not None:
+            ut = given
+            print(f"  Mater den PINNADE filen {given}")
+        else:
+            ut = pathlib.Path(tmp) / "prov.rbxlx"
+            r = subprocess.run([sys.executable, str(ROT / "tools" / "bygg-place.py"),
+                                "--ut", str(ut)], capture_output=True, text=True)
+            if r.returncode != 0:
+                print(r.stdout + r.stderr, end="")
+                print("\nFIRST_PLAYABLE_PREFLIGHT: FAIL — placen gick inte att bygga")
+                return 1
 
         rot = ET.parse(ut).getroot()
+        #[[ Varje inbaddad modul och dess kallkod, for nyttolastjamforelsen. ]]
+        kod_i_placen = {}
+        for it in rot.iter("Item"):
+            k = it.find("Properties/ProtectedString[@name='Source']")
+            if k is not None:
+                kod_i_placen[namn(it)] = k.text or ""
         fel = []
         for vag, med_kod in KRAVS:
             nod = hitta(rot, vag)
@@ -186,6 +237,36 @@ def main() -> int:
         else:
             fel.append("StallService.MaxActivationDistance ar inte 8 — spelbarhetsgrinden matar fel")
             print("  FEL  StallService.MaxActivationDistance ar inte langre 8")
+
+        #[[ NYTTOLASTEN AR SAMMA KOD SOM GRINDARNA KORDE.
+
+        #   Grindarna mater kallan pa disk; spelaren far nyttolasten i
+        #   .rbxlx-filen. Att de ar samma sak har varit ett ANTAGANDE, och
+        #   just det antagandet bar hela raden "E2E ar gron, alltsa bar
+        #   marken" — en place byggd ur en aldre eller halvsparad kallfil
+        #   hade passerat varje matning anda.
+        #
+        #   Jamforelsen ar ordagrann pa varje inbaddad modul mot filen den
+        #   kom ur. Ett tecken isar och det ar inte samma bygge. ]]
+        avvikande = []
+        kallor = kallmappning()
+        jamforda = 0
+        for modul, kalla in sorted(kallor.items()):
+            if modul not in kod_i_placen:
+                avvikande.append(f"{modul}: finns inte i placen")
+                continue
+            jamforda += 1
+            i_filen = kalla.read_text(encoding="utf-8")
+            if kod_i_placen[modul] != i_filen:
+                avvikande.append(f"{modul}: {len(kod_i_placen[modul])} tecken i placen mot "
+                                 f"{len(i_filen)} i {kalla.relative_to(ROT)}")
+        if avvikande:
+            for a in avvikande:
+                fel.append("nyttolasten avviker fran kallan — " + a)
+                print(f"  FEL  nyttolast {a}")
+        else:
+            print(f"  OK   nyttolasten ar ordagrant samma kod som grindarna korde "
+                  f"({jamforda} moduler jamforda)")
 
     if fel:
         print(f"\nFIRST_PLAYABLE_PREFLIGHT: FAIL — {len(fel)} saknas:")

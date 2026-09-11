@@ -40,6 +40,11 @@ const SPRAK = {
   "dorr.oppna": { sv: "Öppna", en: "Open" },
   "dorr.stang": { sv: "Stäng", en: "Close" },
   "dorr.objekt": { sv: "Dörr", en: "Door" },
+  /* Stora skjut-/slagportar. Öppningstypen i geometrin skiljer `port*` från
+     `dorr*`, och den skillnaden är verklig — porten till ridhuset är inte en
+     dörr. Färgen i tokenet (`portbla`) är däremot bara färg och säger
+     ingenting spelaren behöver läsa. */
+  "dorr.port": { sv: "Port", en: "Gate" },
   "stall.titta_in": { sv: "Titta in", en: "Look in" },
   "stall.star_har": { sv: "%s står här", en: "%s is in here" },
   "interaktion.sitt_upp": { sv: "Sitt upp", en: "Mount" },

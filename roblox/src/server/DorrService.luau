@@ -27,6 +27,11 @@
 	är det enda som skrivs tillbaka.
 ]]
 
+--[[ Språkkatalogen: den svenska STANDARDTEXTEN på prompten kommer ur
+	katalogen, inte ur en sträng här, så att den och nyckeln klienten skriver
+	om den med aldrig kan glida isär. ]]
+local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+
 local DorrService = {}
 
 local OPPEN_VINKEL = 85         -- grader; 90 låter bladet ligga i väggens liv
@@ -67,13 +72,26 @@ local function satt(blad: BasePart, vidoppen: boolean)
 	oppna[blad] = vidoppen
 end
 
-local function textFor(blad: BasePart): string
+--[[ Vad prompten kallar öppningen — och vilken språknyckel som hör till.
+
+	Raden hette förut `textFor` och returnerade `Etikett`, som i sin tur var
+	öppningens TYP ur geometrin. Spelaren läste alltså "dorrgul" ovanför
+	"Öppna". Ingen öppning i datan har en riktig etikett, så det gällde
+	varenda dörr i världen.
+
+	Nu härleds texten ur typen: `port*` är de stora portarna, allt annat är
+	en dörr. Färgen i tokenet är bara färg. Ett verkligt `Etikett` (ett namn
+	i världen, om datan någon gång får ett) vinner och översätts inte. ]]
+local function objektFor(blad: BasePart): (string, string?)
 	local etikett = blad:GetAttribute("Etikett")
-	local byggnad = blad:GetAttribute("Byggnad")
 	if typeof(etikett) == "string" and etikett ~= "" then
-		return etikett
+		return etikett, nil
 	end
-	return if typeof(byggnad) == "string" then byggnad else "Dörr"
+	local typ = blad:GetAttribute("Oppningstyp")
+	if typeof(typ) == "string" and string.sub(typ, 1, 4) == "port" then
+		return Sprak.iSprak("sv", "dorr.port"), "dorr.port"
+	end
+	return Sprak.iSprak("sv", "dorr.objekt"), "dorr.objekt"
 end
 
 local function rustaDorr(blad: BasePart)
@@ -91,11 +109,12 @@ local function rustaDorr(blad: BasePart)
 		svenska — inte en tom prompt. ]]
 	prompt.ActionText = "Öppna"
 	prompt:SetAttribute("SprakNyckel", "dorr.oppna")
-	prompt.ObjectText = textFor(blad)
-	--[[ Byggnadens/dörrens egen etikett är ett namn i världen och översätts
-		inte; bara det generiska "Dörr" har en nyckel. ]]
-	if prompt.ObjectText == "Dörr" then
-		prompt:SetAttribute("SprakObjekt", "dorr.objekt")
+	local objekttext, objektnyckel = objektFor(blad)
+	prompt.ObjectText = objekttext
+	--[[ Ett verkligt namn i världen översätts inte och får därför ingen
+		nyckel; det generiska ordet får det. ]]
+	if objektnyckel then
+		prompt:SetAttribute("SprakObjekt", objektnyckel)
 	end
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = RACKVIDD

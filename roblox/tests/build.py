@@ -42,6 +42,11 @@ SPELBARHET = None  # satts efter SPEL, se nedan
 #   dorrkontraktet ur #162 kan matas i samma korning som bygget. Det ar
 #   den enda vagen att fa evidens for att dorren oppnas utan Studio. ]]
 FORSTAPLAYABLE = BYGGE + [
+    #[[ Sprakuppslaget: DorrService laser promptens svenska standardtext ur
+    #   katalogen sa att texten och nyckeln inte kan glida isar. Bada maste
+    #   darfor ligga FORE tjansten i bunten. ]]
+    ("UBRFSprak",   "game/UBRFSprak.luau"),
+    ("Sprak",       "src/shared/HorseCore/Sprak.luau"),
     ("DorrService", "src/server/DorrService.luau"),
 ]
 
@@ -70,6 +75,8 @@ SPELBARHET = BYGGE + [
     ("UBRFSkotsel",  "game/UBRFSkotsel.luau"),
     ("UBRFSpel",     "game/UBRFSpel.luau"),
     ("Stallet",      "game/Stallet.luau"),
+    ("UBRFSprak",    "game/UBRFSprak.luau"),
+    ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("DorrService",  "src/server/DorrService.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
@@ -355,6 +362,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = SIKT, "tests/stubs-bygge.luau"
     elif "qa" in spec_rel:
         moduler, stubbar = QA, "tests/stubs-bygge.luau"
+    #[[ Markgrinden (P0 efter det fysiska testet): varlden och inget mer.
+    #   Den mater STOD over hela tomten, inte gangbarhet mellan vaggar, och
+    #   behover darfor varken speldata eller tjanster. Ingen annan spec har
+    #   "mark" i namnet, sa grenen kan sta har. ]]
+    elif "mark" in spec_rel:
+        moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     elif "forstaplayable" in spec_rel:
         moduler, stubbar = FORSTAPLAYABLE, "tests/stubs-bygge.luau"
     elif "bygge" in spec_rel:

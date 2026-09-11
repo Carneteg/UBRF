@@ -201,6 +201,55 @@ end
 
 check("varje dörrblad fick en ProximityPrompt", medPrompt == #blad,
 	("%d av %d"):format(medPrompt, #blad))
+
+--[[ ── PROMPTEN LÄCKER INGET INTERNT TOKEN ───────────────────────────────
+
+	Ur Tobias skärmdump från det fysiska testet: prompten skrev "dorrgul"
+	ovanför "Öppna". `dorrgul` är öppningens TYP i geometrin — färgen på
+	stalldörren — och ingenting en spelare ska läsa.
+
+	Det gällde inte bara den dörren. Ingen öppning i `UBRFKomplex` har en
+	riktig `label`, så etiketten föll tillbaka på typen för VARENDA dörr i
+	världen. Mätningen läser därför alla prompter och jämför mot de
+	faktiska typerna i geometrin — inte mot en handskriven lista. ]]
+do
+	local typer = {}
+	for _, b in ipairs(UBRFKomplex.byggnader) do
+		for _, o in ipairs(b.oppningar or {}) do
+			if typeof(o.typ) == "string" then typer[o.typ] = true end
+		end
+	end
+	local lackta, utanNyckel, objekttexter = {}, {}, {}
+	for _, d in ipairs(blad) do
+		local prompt = d:FindFirstChildOfClass("ProximityPrompt")
+		if prompt then
+			local ot = tostring(prompt.ObjectText)
+			objekttexter[ot] = (objekttexter[ot] or 0) + 1
+			if typer[ot] then table.insert(lackta, ot) end
+			local nyckel = prompt:GetAttribute("SprakObjekt")
+			if typeof(nyckel) ~= "string" or not Sprak.finns(nyckel) then
+				table.insert(utanNyckel, ot)
+			end
+		end
+	end
+	local lista = {}
+	for text, antal in pairs(objekttexter) do
+		table.insert(lista, ("%s ×%d"):format(text, antal))
+	end
+	table.sort(lista)
+	check("ingen dörrprompt visar geometrins interna typ", #lackta == 0,
+		#lackta > 0 and ("läckta token: " .. table.concat(lackta, ", "))
+			or table.concat(lista, " · "))
+	check("och varje dörrprompt bär en nyckel som finns i katalogen",
+		#utanNyckel == 0,
+		#utanNyckel > 0 and table.concat(utanNyckel, ", ")
+			or (#blad .. " prompter"))
+	--[[ Porten och dörren är olika saker i verkligheten och ska vara det i
+		texten. Att bara mäta "inget token" hade gått att klara med att
+		kalla allt "Dörr". ]]
+	check("porten och dörren har olika ord", #lista >= 2,
+		table.concat(lista, " · "))
+end
 check("dörren slutar kollidera när den öppnas", oppnade == #blad,
 	("%d av %d"):format(oppnade, #blad))
 check("dörren går tillbaka till exakt sitt stängda läge", aterstallda == #blad,

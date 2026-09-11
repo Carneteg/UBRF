@@ -21,6 +21,10 @@ Sprak.text = {
 		sv = "Dörr",
 		en = "Door",
 	},
+	["dorr.port"] = {
+		sv = "Port",
+		en = "Gate",
+	},
 	["stall.titta_in"] = {
 		sv = "Titta in",
 		en = "Look in",

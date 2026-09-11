@@ -98,13 +98,36 @@ local function garIgenom(o): boolean
 	return not arFonster(o.typ) and (o.z0 or 0) <= 0.001
 end
 
+--[[ ── MARKEN BÄR ──────────────────────────────────────────────────
+
+	P0 ur Tobias fysiska Studio-test: spawnen låg rätt, men den som gick
+	ut från förstukvisten föll genom marken och dog. Orsaken stod på en
+	rad här: varje marklager byggdes med `CanCollide = false`. Marken var
+	DEKOR. Det som bar spelaren var husens golv — och utanför dem fanns
+	ingenting.
+
+	Att alla sex marktyper är gångbara är inte ett antagande: gräs, grus,
+	asfalt, sand, betong och åker är de ytor anläggningen faktiskt består
+	av, och en spelare som leder en häst mellan stallet och ridhuset går
+	på dem. Listan är ändå EXPLICIT, inte ett globalt `true`: ett
+	dekorlager som läggs till i framtiden ska tas bort ur den med ett
+	beslut, inte ärva gångbarhet av misstag.
+
+	Lådans ovansida ligger på y = 0 (byggd från -MARKT med tjockleken
+	MARKT), samma nivå som husgolven, så ytorna möts utan steg. ]]
+local GANGBAR_MARK: { [string]: boolean } = {
+	gras = true, grus = true, asfalt = true, sand = true,
+	betong = true, aker = true,
+}
+
 local function byggMark(model: Model, base: CFrame)
 	for _, m in ipairs(G.mark) do
 		local p = BK.box(model, base, "Mark " .. m.typ,
 			m.rekt.x, -MARKT, m.rekt.y, m.rekt.w, MARKT, m.rekt.h,
 			MARKFARG[m.typ] or Color3.fromRGB(120, 120, 120),
 			MARKMATERIAL[m.typ] or Enum.Material.Ground)
-		p.CanCollide = false
+		p.CanCollide = GANGBAR_MARK[m.typ] == true
+		p:SetAttribute("UBRFMark", m.typ)
 	end
 end
 
@@ -134,7 +157,17 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 			blad:SetAttribute("Hojd", o.h)
 			blad:SetAttribute("Langs", along)
 			blad:SetAttribute("Utat", side)
-			blad:SetAttribute("Etikett", namn)
+			--[[ ÖPPNINGSTYPEN ÄR INTERN och går till logiken, inte till
+				spelaren. `Etikett` bar förut `o.typ`, så prompten skrev
+				"dorrgul" ovanför "Öppna" — ett geometritoken i spelarens
+				gränssnitt. Ingen öppning i datan har en riktig `label`, så
+				ALLA dörrar läckte sitt token, inte bara den Tobias såg.
+				`DorrService` väljer nu en människoläsbar, översatt text ur
+				typen i stället. ]]
+			blad:SetAttribute("Oppningstyp", o.typ)
+			if typeof(o.label) == "string" and o.label ~= "" then
+				blad:SetAttribute("Etikett", namn)
+			end
 		end
 	end
 
