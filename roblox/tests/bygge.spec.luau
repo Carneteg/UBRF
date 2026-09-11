@@ -1862,15 +1862,36 @@ end
 print("\nHela modellen")
 
 do
-	-- Ingenting ska ha hamnat utanför tomten. En del som gör det betyder att
-	-- något räknats i studs där det skulle vara meter, eller tvärtom.
-	local ute = 0
+	--[[ Ingenting ska ha hamnat utanför tomten. En del som gör det betyder
+		att något räknats i studs där det skulle vara meter, eller tvärtom.
+
+		UNDANTAGET ÄR OMGIVNINGEN, och det är ett enda lager. Marken var
+		exakt tomtrektangeln, och mätt i Studio gick spelaren rakt norrut
+		ut över kanten och föll ur världen — så länge Roblox baseplate låg
+		kvar under allt var stupet maskerat. Grässkiktet utanför finns för
+		att det inte ska finnas en kant, och det får därför ligga utanför.
+
+		Undantaget är NAMNGIVET och räknat: blir de två, eller får något
+		annat hamna utanför, faller raden ändå. ]]
+	local ute, omgivning = 0, 0
+	local utanfor = {}
 	for _, d in ipairs(delar) do
 		local f = fot(d)
 		if f.x < -5 or f.y < -5 or f.x + f.w > UBRFKomplex.bredd + 5
-			or f.y + f.h > UBRFKomplex.djup + 5 then ute += 1 end
+			or f.y + f.h > UBRFKomplex.djup + 5 then
+			--[[ Omgivningen känns igen på att den omsluter HELA tomten. ]]
+			if f.x <= 0 and f.y <= 0 and f.x + f.w >= UBRFKomplex.bredd
+				and f.y + f.h >= UBRFKomplex.djup then
+				omgivning += 1
+			else
+				ute += 1
+				if #utanfor < 4 then table.insert(utanfor, d.Name) end
+			end
+		end
 	end
-	check("ingen del hamnade utanför tomten", ute == 0, ute .. " utanför")
+	check("ingen del hamnade utanför tomten", ute == 0,
+		ute == 0 and "bara omgivningen" or (ute .. " utanför: " .. table.concat(utanfor, ", ")))
+	check("omgivningen är ETT lager, inte flera", omgivning == 1, omgivning .. " lager")
 end
 
 do

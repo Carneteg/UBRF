@@ -226,6 +226,26 @@ const ANL = {
 
   /* Markytor ritas i ordning — senare vinner. */
   mark: [
+    /* OMGIVNINGEN — `[ANTAGANDE]`, och den finns för att tomten inte ska
+       sluta i ett stup.
+
+       Mätt 2026-09-11 i Studio, efter att den främmande baseplaten tagits
+       bort: marken var EXAKT tomtrektangeln 0..210 x 0..170, med en hård
+       kant åt alla fyra håll. Spelaren gick rakt norrut och hamnade på
+       y = 173,3 med ingenting under sig — hon föll ur världen. Så länge
+       Roblox standardplan låg kvar under allt var kanten maskerad; utan
+       den är den ett verkligt rymningshål.
+
+       Att det finns MARK runt tomten är inte ett antagande — UBRF ligger i
+       ett landskap, och siteplanen listar åker, skogsbryn och två vägar.
+       Vad den innehåller är det: det här är ett platt grässkikt och inget
+       annat, medvetet anspråkslöst, och ska ersättas av riktig omgivning
+       av miljöägaren. Det ligger FÖRST i listan, alltså underst, så att
+       varje verklig markyta vinner över det.
+
+       120 m åt varje håll: tillräckligt för att gränsen inte ska vara
+       nåbar från något ställe en spelare har anledning att vara på. */
+    {typ:"gras",  rekt:{x:-120, y:-120, w:450, h:410}},
     {typ:"gras",  rekt:{x:0,   y:0,   w:210, h:170}},
     {typ:"aker",  rekt:{x:9,   y:20,  w:99,  h:100}},  // åkrarna öster om Enköpingsvägen
     {typ:"asfalt",rekt:{x:2,   y:0,   w:5,   h:170}},  // Enköpingsvägen i väster

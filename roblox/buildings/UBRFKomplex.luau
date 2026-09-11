@@ -22,6 +22,15 @@ return {
 		{
 			typ = "gras",
 			rekt = {
+				x = -120,
+				y = -120,
+				w = 450,
+				h = 410,
+			},
+		},
+		{
+			typ = "gras",
+			rekt = {
 				x = 0,
 				y = 0,
 				w = 210,
