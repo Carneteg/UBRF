@@ -37,6 +37,11 @@ Determinism: ombyggd ur samma källa, **byte-identisk**.
 tio undergrindar, världsmanifestet oförändrat mot föregående artefakt
 (3317 delar, 13 portaler, 33 hästar).
 
+> `qa/pre-tobias/RAPPORT.md` skriver `source SHA: e907e3ce…`. Det är headen
+> som **mätte** filen, inte den som byggde den — rapporten stämplar sitt eget
+> körläge. Talet som ska matcha Studios `FIRST_PLAYABLE_SHA` är `1e8b2075…`
+> i tabellen ovan.
+
 ## Varför den här finns — den blockerande produktluckan 16:21
 
 Utrustningssteget var ett **abstrakt tillståndsbyte**. `GameplayService.
