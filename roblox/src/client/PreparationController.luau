@@ -50,6 +50,55 @@ local PreparationController = {}
 
 local player = Players.LocalPlayer
 
+--[[ ══ KONTEXTEN — HUD:EN FÅR INTE LOVA VAD SPELAREN INTE KAN GÖRA ══════
+
+	P0-3 ur Tobias andra Studio-test: "Greet her calmly" låg kvar medan han
+	stod någon annanstans i anläggningen. Servern nekade samtidigt samma
+	handling med `spel.for_langt` — alltså sa gränssnittet en sak och
+	spelet en annan, och det är spelaren som får skulden för det.
+
+	Gränsen är SERVERNS: `Core.Config.STEG_RACKVIDD`, samma tal
+	`GameplayService.avstandOk` mäter mot. Klienten beslutar ingenting; den
+	visar bara samma sanning i förväg. Skulle talen glida isär vore HUD:en
+	lögnaktig igen, och därför står talet på ETT ställe.
+
+	Är hästen utom räckhåll pekar rubriken tillbaka till henne och
+	momentknapparna slutar vara knappar. Instruktionen försvinner inte —
+	spelaren ska se vad som står på tur — men den utger sig inte längre för
+	att vara något att trycka på här. ]]
+local CollectionService = game:GetService("CollectionService")
+--[[ Läses vid ANROP, inte vid inladdning: talet ska gå att trimma i
+	Studio utan att klienten startas om, och en kopia tagen en gång är
+	precis den sortens andra sanning som lät HUD:en och servern glida
+	isär från början. ]]
+local function rackvidd(): number
+	return Core.Config.STEG_RACKVIDD
+end
+local utomRackhall = false
+
+local function hastModell(hastId: any): Model?
+	if type(hastId) ~= "string" then return nil end
+	for _, m in ipairs(CollectionService:GetTagged("Horse")) do
+		if m:GetAttribute("HorseId") == hastId then return m end
+	end
+	return nil
+end
+
+--[[ Avståndet till den tilldelade hästen, eller nil när frågan inte går
+	att ställa (ingen kropp, ingen häst i världen än). Nil betyder INTE
+	"för långt": de lägena har sina egna rubriker, och att skriva "gå
+	tillbaka" till någon som inte fått en häst vore en ny lögn. ]]
+local function avstandTillHast(vy: any): number?
+	local tecken = player.Character
+	local rot = tecken and tecken:FindFirstChild("HumanoidRootPart")
+	local modell = hastModell(vy and vy.hastId)
+	local pivot = modell and ((modell :: any).PrimaryPart
+		or modell:FindFirstChild("BodyCollider"))
+	if not rot or not pivot then return nil end
+	return ((rot :: any).Position - (pivot :: any).Position).Magnitude
+end
+
+
 local gui: ScreenGui? = nil
 local radBehallare: Frame? = nil
 local momentBehallare: Frame? = nil
@@ -281,11 +330,28 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 		när den kopplar om. ]]
 	local gammal = momentKoppling[m.id]
 	if gammal then gammal:Disconnect() end
-	momentKoppling[m.id] = knapp.Activated:Connect(skicka)
+	--[[ Utom räckhåll kopplas ingen lyssnare alls. Att koppla en som
+		skickar och låta servern neka hade gett spelaren ett nej på något
+		HUD:en själv redan visste var omöjligt. ]]
+	if utomRackhall then
+		momentKoppling[m.id] = nil
+	else
+		momentKoppling[m.id] = knapp.Activated:Connect(skicka)
+	end
 
 	knapp.LayoutOrder = ordning
 	knapp.Visible = true
 	knapp.Text = (if m.klar then "✓  " else "")  .. m.namn
+
+	if utomRackhall and not m.klar then
+		--[[ Kvar att läsa, inte att trycka på. ]]
+		knapp.TextColor3 = FARG_VILAR
+		knapp.BackgroundColor3 = Color3.fromRGB(30, 31, 33)
+		knapp.AutoButtonColor = false
+		knapp.Active = false
+		return
+	end
+	knapp.Active = true
 
 	if m.klar then
 		knapp.TextColor3 = FARG_KLAR
@@ -504,10 +570,43 @@ function rita(vy: any)
 		if hjalp then hjalp.Text = momenttext end
 	end
 
+	--[[ RUBRIKEN PEKAR TILLBAKA när hästen är utom räckhåll. Den skrivs
+		SIST och över allt annat: vilket läge vyn än beskriver är det inte
+		det som gäller för spelaren just nu, och en instruktion man inte
+		kan följa är värre än ingen. Lägen som inte handlar om att göra
+		något vid hästen (välfärdsstopp, passet sparat, man rider) rörs
+		inte — de har inget att lova. ]]
+	if utomRackhall and rubrik
+		and vy.status ~= "riding" and vy.status ~= "welfare_stop"
+		and not passRaknat() then
+		rubrik.Text = if hastnamn
+			then Sprak.t("hud.ga_tillbaka", hastnamn)
+			else Sprak.t("hud.ga_tillbaka_utan_namn")
+	end
+
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och
 		det är hela skillnaden mot före #161: en spelare som satt av mötte
 		förut en tom skärm, och passet tog aldrig slut. ]]
 	if gui then gui.Enabled = vy.status ~= "riding" end
+end
+
+--[[ Körs av klientens loop. Ritar bara om när kontexten FAKTISKT byter —
+	en HUD som byggs om varje bildruta är en HUD som flimrar. ]]
+function PreparationController.uppdateraKontext()
+	local d = avstandTillHast(senasteVy)
+	local nu = d ~= nil and d > rackvidd()
+	if nu ~= utomRackhall then
+		utomRackhall = nu
+		if senasteVy then rita(senasteVy) end
+	end
+end
+
+--[[ Provets fönster in. Grinden ska mäta samma tillstånd spelaren ser. ]]
+function PreparationController._utomRackhall(): boolean
+	return utomRackhall
+end
+function PreparationController._momentGarAttTrycka(id: string): boolean
+	return momentKoppling[id] ~= nil
 end
 
 --[[ ── AVSIKTERNA UT ────────────────────────────────────────────────

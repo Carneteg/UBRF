@@ -160,6 +160,21 @@ Config.MOVEMENT = {
 --[[ ── Studs per meter ──────────────────────────────────────────────
      All spellogik räknar i meter för att matcha den befintliga
      ridmodellen. Roblox räknar i studs. Omräkningen sker på ett ställe. ]]
+--[[ ── RÄCKVIDD FÖR SKÖTSELMOMENT ───────────────────────────────────
+     Så nära hästen man måste stå för att få göra ett steg, i studs.
+
+     Talet låg i `GameplayService` och var serverns ensamma sanning — och
+     det var rätt så länge bara servern behövde det. P0-3 i Tobias andra
+     Studio-test ändrade det: HUD:en visade "Greet her calmly" medan
+     spelaren stod någon annanstans, alltså lovade den en handling servern
+     samtidigt nekade. För att HUD:en ska kunna säga sanningen måste
+     klienten känna SAMMA gräns, och två kopior av ett tal är en gräns som
+     glider.
+
+     12 studs är valt: närmare än uppsittningens 14, och samma tal som den
+     tidigare S2-specen använde. Game feel avgörs i Studio, inte här. ]]
+Config.STEG_RACKVIDD = 12
+
 Config.STUDS_PER_METRE = 3.0
 
 function Config.toStuds(metres: number): number

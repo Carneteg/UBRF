@@ -55,8 +55,13 @@ local TAG = "Horse"
 	Senior review fällde motsägelsen på #61.
 
 	12 studs är valt: faktiskt närmare än uppsittningens 14, och samma tal som
-	den tidigare S2-specen använde. Game feel avgörs i Studio, inte här. ]]
-local STEG_RACKVIDD = 12
+	den tidigare S2-specen använde. Game feel avgörs i Studio, inte här.
+
+	SEDAN P0-3 STÅR TALET I `Config`. Klienten behöver samma gräns för att
+	HUD:en ska kunna säga sanningen om vad som går att göra, och två
+	kopior av ett tal är en gräns som glider isär. Servern äger fortfarande
+	BESLUTET — klienten får aldrig skicka med sitt eget avstånd. ]]
+local STEG_RACKVIDD = Core.Config.STEG_RACKVIDD
 
 --[[ Hur många pass en häst vilar efter ett rapporterat fynd. Talet är
 	litet med flit: en familjespelare ska märka att hästen är borta ur

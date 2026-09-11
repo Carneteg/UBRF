@@ -222,6 +222,13 @@ PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
 PreparationController.start()
+--[[ P0-3: HUD:ens KONTEXT stegas av sin egen loop, inte av ridloopen längst
+     ned — den återvänder direkt när man inte rider, och det är precis då
+     frågan "står jag vid min häst?" spelar roll. Heartbeat räcker: det är
+     ett avståndsmått, och HUD:en ritas bara om när svaret FAKTISKT byter. ]]
+RunService.Heartbeat:Connect(function()
+	PreparationController.uppdateraKontext()
+end)
 --[[ G02-C: Ugnetas lärar-UX byggs vid uppstart så att den finns när
      första ritten börjar. Själva LEKTIONEN startas av `mount` och stegas
      av loopen längst ned — HUD:en är ytan, LektionController är kedjan. ]]

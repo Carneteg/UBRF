@@ -141,6 +141,16 @@ const SPRAK = {
     en: "Check the girth one last time." },
   "hud.gick_inte_nu": { sv: "Det gick inte just nu", en: "That did not work just now" },
 
+  /* ── KONTEXTEN (P0-3) ───────────────────────────────────────────────
+     HUD:en visade "Hälsa lugnt" medan spelaren stod någon annanstans i
+     anläggningen. Instruktionen lovade alltså en handling servern
+     samtidigt nekade med `spel.for_langt`. Rubriken pekar nu tillbaka i
+     stället, och hästens EGENNAMN sätts in som argument — det översätts
+     aldrig. */
+  "hud.ga_tillbaka": { sv: "Gå tillbaka till %s", en: "Go back to %s" },
+  "hud.ga_tillbaka_utan_namn": { sv: "Gå tillbaka till din häst",
+    en: "Go back to your horse" },
+
   /* ── Hjälpen och kontrollerna (KontrollHjalp) ─────────────────────── */
   "hjalp.rubrik": { sv: "Kontroller", en: "Controls" },
   "hjalp.styrkors_upp": { sv: "Styrkors upp", en: "D-pad up" },

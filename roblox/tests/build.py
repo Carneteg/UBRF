@@ -151,6 +151,144 @@ INTEGRATION = FORBEREDELSE + [
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
+# QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
+# att stalla kameran mot, och Vyer for att veta vilka vyerna ar.
+QA = BYGGE + [
+    ("Vyer",    "buildings/Vyer.luau"),
+    ("QAPanel", "buildings/QAPanel.luau"),
+]
+
+# Siktgrinden (issue #78) provar de fasta reviewkamerorna i Vyer mot det
+# byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
+SIKT = QA + [
+    ("Genomsikt", "src/client/Genomsikt.luau"),
+]
+
+# Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
+# exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
+# rorelsemoduler behovs inte -- Preparation ror dem inte.
+# HorseService ar med for att uppsittningsgrindens INKOPPLING ska ga att prova,
+# inte bara dess regel: specen registrerar en grind och kor riktiga tryMount.
+# Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
+FORBEREDELSE = SPEL + [
+    ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Config",       "src/shared/HorseCore/Config.luau"),
+    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
+    # och laser den tilldelade hastens profil (blocker 1).
+    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",         "src/shared/HorseCore/Svar.luau"),
+    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    # #161: skotselns moment, passets eftervard och sparschemat. Rena
+    # datamoduler; de ligger fore tjansterna for att SparService require:ar
+    # Sparning och GameplayService require:ar bada.
+    ("Pass",         "src/shared/HorseCore/Pass.luau"),
+    ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
+    ("Networking",   "src/shared/HorseCore/Networking.luau"),
+    ("HorseService", "src/server/HorseService.luau"),
+    # SparService FORE StallService: StallService.hastminnen laser saven ur
+    # den. Ordningen ar samma som init.server.luau har.
+    ("SparService",  "src/server/SparService.luau"),
+    ("StallService", "src/server/StallService.luau"),
+    # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
+    ("InteractionController", "src/client/InteractionController.luau"),
+    ("PreparationController", "src/client/PreparationController.luau"),
+    # StateMachine + MovementController ligger med sedan blocker 2 i senior
+    # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
+    # controller med den hast Stallet faktiskt delar ut, inte genom
+    # direktanrop av svarsmodellen.
+    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
+    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    ("MovementController", "src/client/MovementController.luau"),
+    # GameplayService laddas SIST och ar poangen med hela listan: utan den
+    # bevisade specen bara att HorseService-kroken fungerar, inte att
+    # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
+    ("GameplayService", "src/server/GameplayService.luau"),
+]
+
+#[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
+#
+#   Skillnaden mot FORBEREDELSE ar VAD kedjan mats MOT: har byggs den
+#   RIKTIGA riggen ur HastRigg, med en riktig Seat, och skotseln,
+#   uppsittningen, doden, respawnen och passet gar genom tjansterna mot
+#   just den modellen. Forberedelsebanken matte reglerna; den har mater
+#   att spelaren kan ga igenom dagen. ]]
+INTEGRATION = FORBEREDELSE + [
+    ("HastRigg",        "src/server/HastRigg.luau"),
+    ("RiderController", "src/client/RiderController.luau"),
+]
+
+
+# QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
+# att stalla kameran mot, och Vyer for att veta vilka vyerna ar.
+QA = BYGGE + [
+    ("Vyer",    "buildings/Vyer.luau"),
+    ("QAPanel", "buildings/QAPanel.luau"),
+]
+
+# Siktgrinden (issue #78) provar de fasta reviewkamerorna i Vyer mot det
+# byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
+SIKT = QA + [
+    ("Genomsikt", "src/client/Genomsikt.luau"),
+]
+
+# Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
+# exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
+# rorelsemoduler behovs inte -- Preparation ror dem inte.
+# HorseService ar med for att uppsittningsgrindens INKOPPLING ska ga att prova,
+# inte bara dess regel: specen registrerar en grind och kor riktiga tryMount.
+# Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
+FORBEREDELSE = SPEL + [
+    ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Config",       "src/shared/HorseCore/Config.luau"),
+    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
+    # och laser den tilldelade hastens profil (blocker 1).
+    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
+    ("Svar",         "src/shared/HorseCore/Svar.luau"),
+    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
+    # #161: skotselns moment, passets eftervard och sparschemat. Rena
+    # datamoduler; de ligger fore tjansterna for att SparService require:ar
+    # Sparning och GameplayService require:ar bada.
+    ("Pass",         "src/shared/HorseCore/Pass.luau"),
+    ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
+    ("Networking",   "src/shared/HorseCore/Networking.luau"),
+    ("HorseService", "src/server/HorseService.luau"),
+    # SparService FORE StallService: StallService.hastminnen laser saven ur
+    # den. Ordningen ar samma som init.server.luau har.
+    ("SparService",  "src/server/SparService.luau"),
+    ("StallService", "src/server/StallService.luau"),
+    # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
+    ("InteractionController", "src/client/InteractionController.luau"),
+    ("PreparationController", "src/client/PreparationController.luau"),
+    # StateMachine + MovementController ligger med sedan blocker 2 i senior
+    # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
+    # controller med den hast Stallet faktiskt delar ut, inte genom
+    # direktanrop av svarsmodellen.
+    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
+    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
+    ("MovementController", "src/client/MovementController.luau"),
+    # GameplayService laddas SIST och ar poangen med hela listan: utan den
+    # bevisade specen bara att HorseService-kroken fungerar, inte att
+    # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
+    ("GameplayService", "src/server/GameplayService.luau"),
+]
+
+#[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
+#
+#   Skillnaden mot FORBEREDELSE ar VAD kedjan mats MOT: har byggs den
+#   RIKTIGA riggen ur HastRigg, med en riktig Seat, och skotseln,
+#   uppsittningen, doden, respawnen och passet gar genom tjansterna mot
+#   just den modellen. Forberedelsebanken matte reglerna; den har mater
+#   att spelaren kan ga igenom dagen. ]]
+INTEGRATION = FORBEREDELSE + [
+    ("HastRigg",        "src/server/HastRigg.luau"),
+    ("RiderController", "src/client/RiderController.luau"),
+]
+
+
 # Paritetsspecen jamfor Roblox gangarter och telemetri mot webbens
 # exporterade ridkanon. Den behover ingen rorelsemodul: den mater kontrakt,
 # inte fysik.
@@ -247,6 +385,37 @@ KLIENT = SPEL + [
     ("Debug",               "src/client/Debug.luau"),
     ("Genomsikt",           "src/client/Genomsikt.luau"),
     ("Init",                "src/client/init.client.luau"),
+]
+
+#[[ KOHERENSBANKEN (#162 PHYSICAL_WORLD_COHERENCE punkt 1, 3 och 6).
+#
+#   Skillnaden mot alla andra bankar: har finns BADE den byggda varlden,
+#   HELA serverstacken och KLIENTENS init.client.luau i samma korning. Det
+#   ar vad ordern menar med "actual place": HUD:ens kontext ska matas mot
+#   spelarens lage i en riktig varld, genom den loop produktionen faktiskt
+#   kopplar — inte genom ett direktanrop av den funktion loopen borde ha
+#   anropat.
+#
+#   Varlden ligger FORST, av samma skal som i init.server.luau: tjansterna
+#   satter markorer i den och letar dorrblad i den. `Init` ligger SIST och
+#   returnerar ingenting, precis som Anlaggningen. ]]
+def _utan(lista, namn):
+    return [m for m in lista if m[0] not in namn]
+
+_KLIENTDELEN = _utan(KLIENT, {"Geometri", "UBRFKomplex", "Init"})
+KOHERENS = GEOMETRI + [
+    ("BuildKit",     "buildings/BuildKit.luau"),
+    ("Anlaggningen", "buildings/Anlaggningen.luau"),
+] + _KLIENTDELEN + _utan([
+    ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),
+    ("HorseService",    "src/server/HorseService.luau"),
+    ("SparService",     "src/server/SparService.luau"),
+    ("StallService",    "src/server/StallService.luau"),
+    ("GameplayService", "src/server/GameplayService.luau"),
+    ("DorrService",     "src/server/DorrService.luau"),
+    ("HastRigg",        "src/server/HastRigg.luau"),
+], {m[0] for m in _KLIENTDELEN}) + [
+    ("Init",            "src/client/init.client.luau"),
 ]
 
 MODULER = [
@@ -359,6 +528,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   HastRigg -- och star fore "spel" av samma skal som spelbarheten. ]]
     elif "varldskoherens" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
+    #[[ HUD-koherensen (PHYSICAL_WORLD_COHERENCE punkt 1, 3 och 6) behover
+    #   BADE den byggda varlden och klientens HUD. Den bunten ar
+    #   integrationsbanken PLUS varlden, och den kor pa de RIKA stubbarna
+    #   eftersom PreparationController ritar GUI. ]]
+    elif "varldshud" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "spelbarhet" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "spel" in spec_rel:

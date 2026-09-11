@@ -289,6 +289,14 @@ Sprak.text = {
 		sv = "Det gick inte just nu",
 		en = "That did not work just now",
 	},
+	["hud.ga_tillbaka"] = {
+		sv = "Gå tillbaka till %s",
+		en = "Go back to %s",
+	},
+	["hud.ga_tillbaka_utan_namn"] = {
+		sv = "Gå tillbaka till din häst",
+		en = "Go back to your horse",
+	},
 	["hjalp.rubrik"] = {
 		sv = "Kontroller",
 		en = "Controls",
