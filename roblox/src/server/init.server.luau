@@ -10,6 +10,7 @@ local StallService = require(script.StallService)
 local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
 local LedService = require(script.LedService)
+local TackService = require(script.TackService)
 local HastRigg = require(script.HastRigg)
 local Preflight = require(script.Preflight)
 

@@ -38,6 +38,7 @@ local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 local Pass = require(ReplicatedStorage.HorseCore.Pass)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local LedService = require(script.Parent.LedService)
+local TackService = require(script.Parent.TackService)
 local Komplex = require(ReplicatedStorage.UBRFKomplex)
 local Net = Core.Networking
 
@@ -73,6 +74,10 @@ local VILA_PASS = 2
 local state: { [Player]: Preparation.State } = {}
 local passState: { [Player]: Pass.State } = {}
 local bunden: { [Player]: Model } = {}
+--[[ Sadelkammarens val per spelare: `{ sadel = hastId, trans = hastId }`.
+	Tomt betyder "tog sin egen" — webben låter en spelare gå direkt till
+	boxen utan att passera sadelkammaren, och då är utrustningen hennes. ]]
+local valdUtrustning: { [Player]: { [string]: string } } = {}
 
 --[[ Ett strikt växande serienummer per spelare. Varje vy servern skickar —
 	spontan sync eller svar på handskakningen — bär sitt nummer, så att
@@ -253,9 +258,64 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 		end
 	end
 
+	--[[ ── UTRUSTNINGEN SKA FINNAS PÅ HÄSTEN, INTE I EN BOOLEAN ──────
+
+		Blockerare 5. Ett `utr:`-moment satte förut `state.gjorda` och
+		ingenting annat: ingen del skapades, och uppsittningsgrinden kunde
+		bara pröva att booleanen fanns. En häst som aldrig sett en sadel
+		satt man upp på precis som en sadlad.
+
+		Nu byggs den FYSISKA delen FÖRST, och momentet kvitteras bara om
+		den faktiskt kom på plats. Nekar `TackService` — fel häst, fel
+		utrustning, för långt bort, redan påsatt — kvitteras ingenting, och
+		logiskt och fysiskt kan därför inte glida isär.
+
+		Stegen 3 och 4 (sadelbommen, gjorden) lägger inget nytt på hästen;
+		de är handgrepp på den sadel som redan ligger där. De prövas mot
+		att den gör det. ]]
+	local steg = tonumber(momentId:match("^utr:(%d+)$"))
+	if fasId == "iordning" and steg then
+		local modell = bunden[player]
+		if not modell then return false, "spel.ingen_hast" end
+		local kraver = TackService.kraver(steg)
+		if kraver and not TackService.harTack(modell, kraver) then
+			return false, if kraver == "sadel" then "tack.saknar_sadel" else "tack.saknar_underlagg"
+		end
+		local typ = TackService.fysiskFor(steg)
+		if typ then
+			--[[ Utrustningen tillhör spelarens egen häst. Kommer valet
+				från sadelkammaren skickas det med `valdUtrustning`; har
+				spelaren inte valt något tas hennes egen, som på webben
+				när man går direkt till boxen. ]]
+			local vald = valdUtrustning[player]
+			local ok, skal = TackService.satPa(player, modell, typ,
+				vald and vald[typ] or nil, modell)
+			if not ok then
+				skicka(player)
+				return false, skal
+			end
+		end
+	end
+
 	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId)
 	skicka(player)
 	return ok, avslag
+end
+
+--[[ Sadelkammarens val: vilken hästs sadel och träns spelaren tagit med
+	sig. Webbens `visaSadelkammare` gör samma val, och samma fel går att
+	göra — utrustningen prövas mot hästen när den sätts på. ]]
+function GameplayService.valjUtrustning(player: Player, typ: string, hastId: string?): (boolean, string?)
+	if typ ~= "sadel" and typ ~= "trans" then
+		return false, "tack.okand_utrustning"
+	end
+	valdUtrustning[player] = valdUtrustning[player] or {}
+	valdUtrustning[player][typ] = hastId
+	return true
+end
+
+function GameplayService.valdFor(player: Player): { [string]: string }?
+	return valdUtrustning[player]
 end
 
 --[[ Svaret på ett fynd. Rätt svar stoppar arbetet, sparar hästens vila och
@@ -400,6 +460,16 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 		if not far then
 			return false, skalPass or "spel.redan_ridit"
 		end
+	end
+	--[[ ── UPPSITTNINGEN PRÖVAS MOT DET FYSISKA ───────────────────────
+
+		`Preparation.provaModell` ovan prövar att momenten är gjorda. Den
+		här raden prövar att utrustningen FINNS PÅ HÄSTEN, läst ur
+		modellen och inte ur ett tillstånd. Skulle de två någonsin säga
+		olika — en spoofad kvittering, ett halvt bygge — vinner världen. ]]
+	local klar, tackSkal = TackService.ridklar(modell)
+	if not klar then
+		return false, tackSkal
 	end
 	return true, nil
 end

@@ -135,6 +135,10 @@ return {
 			t = "Gjorda i tre tag, med en paus emellan. Aldrig allt på en gång.",
 			tEn = "Do up the girth in three stages, with a pause between each. Never all at once.",
 		},
+		{
+			t = "Träns på sist. Grimman ner runt halsen, bettet mot munnen med tummen i mungipan — vänta tills hon öppnar.",
+			tEn = "Bridle last. Headcollar down around her neck, bit to her mouth with your thumb in the corner — wait until she opens.",
+		},
 	},
 	visitation = {
 		punkter = {
@@ -249,9 +253,9 @@ return {
 			namn = "Gör i ordning",
 			krav = true,
 			sitt = false,
-			text = "Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag.",
+			text = "Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag, träns på sist.",
 			namnEn = "Get her ready",
-			textEn = "Pick out all four hooves, put on the numnah and saddle, and do up the girth in three stages.",
+			textEn = "Pick out all four hooves, put on the numnah and saddle, do up the girth in three stages, and bridle her last.",
 		},
 		{
 			id = "leda",

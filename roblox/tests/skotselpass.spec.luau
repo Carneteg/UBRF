@@ -1401,11 +1401,32 @@ do
 	local hastId = StallService.hastIdFor(spelare)
 	check("spelaren har en tilldelad häst", hastId ~= nil, tostring(hastId))
 
-	--[[ Riggen står i världen med rätt identitet. ]]
-	local modell = Instance.new("Model")
-	modell.Name = "Hast"
-	modell:SetAttribute("HorseId", hastId)
+	--[[ EN RIKTIG RIGG, inte en tom modell.
+
+		Passets livscykel börjar med ett mount, och sedan blockerare 5
+		kräver uppsittningen att sadel och träns FINNS PÅ HÄSTEN. En
+		kroppslös modell kan inte bära utrustning, så provet bygger riggen
+		ur `HastRigg` — samma väg produktionen går — och sadlar henne med
+		den tjänst som äger utrustningen. ]]
+	local modell = HastRigg.bygg(hastId, tostring(hastId), CFrame.new(Vector3.new(0, 0, 0)))
+	modell.Parent = workspace
 	game:GetService("CollectionService"):AddTag(modell, "Horse")
+
+	--[[ Spelaren måste stå vid hästen för att kunna sadla henne. ]]
+	do
+		local k = Instance.new("Model")
+		k.Name = "Prov"
+		local rot = Instance.new("Part")
+		rot.Name = "HumanoidRootPart"
+		rot.Size = Vector3.new(2, 2, 1)
+		rot.CFrame = modell.PrimaryPart.CFrame * CFrame.new(3, 0, 0)
+		rot.Parent = k
+		local h = Instance.new("Humanoid")
+		h.Name = "Humanoid"
+		h.Parent = k
+		k.Parent = workspace
+		spelare.Character = k
+	end
 	GameplayService.bind(spelare)
 	check("modellen är bunden", GameplayService.modellFor(spelare) == modell)
 
@@ -1419,6 +1440,14 @@ do
 
 	--[[ ── 1. BASLINJEN ───────────────────────────────────────────
 		Servern säger ja, och klientens panel ska säga det samma. ]]
+	--[[ UTRUSTNINGEN PÅ, FYSISKT, genom tjänsten. Grinden nedan prövar
+		att delarna finns på hästen — inte att ett moment kvitterats. ]]
+	for _, typ in ipairs({ "underlagg", "sadel", "trans" }) do
+		local tok, tskal = TackService.satPa(spelare, modell, typ, nil, modell)
+		check("utrustningen " .. typ .. " går på", tok, tostring(tskal))
+	end
+	check("och då är hon ridklar", TackService.ridklar(modell))
+
 	local okFore, skalFore = GameplayService.farSittaUpp(spelare, modell)
 	check("servern släpper upp en förberedd spelare", okFore, tostring(skalFore))
 

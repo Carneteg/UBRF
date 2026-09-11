@@ -34,10 +34,17 @@ end
 
 	Specen behöver ändå ofta komma FÖRBI en fas för att prova något som
 	ligger efter den. Den här hjälparen gör det genom att utföra fasens
-	moment ETT I TAGET med `Preparation.utforMoment` — alltså exakt den
-	väg `GameplayService.moment` går. Den är en genväg i PROVET, inte i
-	produktionen, och den kan inte gömma ett ordningsfel: faller ett
-	moment returnerar den momentets eget avslag.
+	moment ETT I TAGET med `Preparation.utforMoment`. Den är en genväg i
+	PROVET, inte i produktionen, och den kan inte gömma ett ordningsfel:
+	faller ett moment returnerar den momentets eget avslag.
+
+	GENVÄGEN BYGGER INGEN UTRUSTNING. `GameplayService.moment` gör mer än
+	`Preparation.utforMoment` sedan blockerare 5: den bygger den fysiska
+	sadeln, underlägget och tränset, och kvitterar momentet bara om delen
+	kom på plats. Ett prov som vill sitta upp måste därför sadla på
+	riktigt — se `sadlaPaRiktigt()` nedan. Att låta genvägen sätta
+	booleanen och kalla hästen sadlad vore precis det hål blockerare 5
+	stängde.
 
 	Returnerar (ok, skäl) med samma form som den gamla `utfor`, så att
 	provets äldre fall mäter samma sak som förut. ]]
@@ -499,10 +506,27 @@ do
 	local okD, skalD = GameplayService.farSittaUpp(spelare, dubblett)
 	check("en obunden modell med samma id avvisas ÄVEN när allt är gjort",
 		not okD and skalD == "spel.inte_din_hast", tostring(skalD))
+	--[[ ── FÖRBEREDELSEN SLÄPPER IGENOM — UTRUSTNINGEN GÖR DET INTE ──
+
+		Blockerare 5 lade till ett villkor EFTER förberedelsens: sadel och
+		träns ska FINNAS PÅ HÄSTEN, läst ur modellen.
+
+		Modellen här är avsiktligt kroppslös (`PrimaryPart = nil`) — provet
+		mäter grindarnas LOGIK, inte en byggd häst. Den kan alltså inte
+		bära någon utrustning, och uppsittningen ska därför nekas. Det som
+		bevisas är att förberedelsegrinden inte längre är den som stoppar:
+		skälet är utrustningens, inte `pass.aterstar`.
+
+		Att den fysiska utrustningen faktiskt går att sätta på en RIKTIG
+		rigg mäts i `integration.spec`, där en sådan finns. ]]
+	check("hästen utan kropp bär ingen utrustning",
+		not TackService.ridklar(modell))
 	local ok2, skal2 = HorseService.tryMount(spelare, modell)
-	check("färdig förberedelse släpps igenom av den RIKTIGA grinden",
-		not ok2 and skal2 == "hast.oregistrerad",
-		"grinden passerade; mount-logiken svarade: " .. tostring(skal2))
+	check("förberedelsegrinden är inte längre den som stoppar",
+		skal2 ~= "pass.aterstar" and skal2 ~= "forb.inte_din_hast",
+		"tryMount svarade: " .. tostring(skal2))
+	check("det som återstår är den FYSISKA utrustningen",
+		skal2 == "tack.saknar_sadel", tostring(skal2))
 
 	game:GetService("RunService")._server = false
 end

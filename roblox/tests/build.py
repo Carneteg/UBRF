@@ -146,6 +146,10 @@ FORBEREDELSE = SPEL + [
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -217,6 +221,10 @@ FORBEREDELSE = SPEL + [
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -289,6 +297,10 @@ FORBEREDELSE = SPEL + [
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -430,6 +442,10 @@ KOHERENS = GEOMETRI + [
     ("StallService",    "src/server/StallService.luau"),
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
@@ -523,7 +539,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   efter faller den igenom till KLIENT dar GameplayService inte finns. ]]
     #[[ Ledningsspecen behover tjanstestacken: LedService och
     #   GameplayService. Samma bunt som integration. ]]
-    if "ledning" in spec_rel:
+    #[[ Tackspecen behover riggen OCH tjansterna: den bygger en riktig
+    #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
+    if "tack" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "ledning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "sprak-en" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
@@ -531,8 +551,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "integration" in spec_rel or "roster" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ Skotselpass flyttades till INTEGRATION nar blockerare 5 lade
+    #   utrustningen fysiskt i uppsittningsgrinden: passets livscykel
+    #   borjar med ett mount, och ett mount kraver nu en RIKTIG rigg att
+    #   sadla. INTEGRATION ar FORBEREDELSE plus riggen, sa inget tappas. ]]
     elif "skotselpass" in spec_rel:
-        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:

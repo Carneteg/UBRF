@@ -52,9 +52,9 @@ const FASER=[
    namnEn:"Groom",
    textEn:"Curry comb, dandy brush, soft brush. The head with the soft brush only."},
   {id:"iordning",namn:"Gör i ordning", krav:true,  sitt:false,
-   text:"Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag.",
+   text:"Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag, träns på sist.",
    namnEn:"Get her ready",
-   textEn:"Pick out all four hooves, put on the numnah and saddle, and do up the girth in three stages."},
+   textEn:"Pick out all four hooves, put on the numnah and saddle, do up the girth in three stages, and bridle her last."},
   {id:"leda",    namn:"Led till ridhuset", krav:true, sitt:false,
    text:"Led från vänster sida, vid bogen, med tyglarna över halsen. Hon går bredvid dig — inte efter, inte före.",
    namnEn:"Lead her to the arena",
@@ -201,6 +201,18 @@ const SADELFAS=[
    tEn:"Fasten the numnah to the saddle and lift it up into the gullet — the withers must be clear."},
   {t:"Gjorda i tre tag, med en paus emellan. Aldrig allt på en gång.",
    tEn:"Do up the girth in three stages, with a pause between each. Never all at once."},
+  /* TRÄNSNINGEN. Tillagd 2026-09-11 och redovisad som ett tillägg, inte
+     som ett fynd: EFTERVARD har sedan länge ett eget `trans`-moment
+     ("Ta av tränset"), medan påtagningen aldrig fanns som steg. Att ta av
+     något man aldrig satt på är en asymmetri i listan, och `leda` säger
+     redan "med tyglarna över halsen" — alltså förutsätter kanon att
+     tränset sitter på när hästen leds.
+
+     Innehållet är allmän hästkunskap, som resten av filen, och ingen
+     UBRF-detalj: grimman hålls kvar runt halsen medan tränset träs, och
+     bettet tas emot i stället för att tryckas in. */
+  {t:"Träns på sist. Grimman ner runt halsen, bettet mot munnen med tummen i mungipan — vänta tills hon öppnar.",
+   tEn:"Bridle last. Headcollar down around her neck, bit to her mouth with your thumb in the corner — wait until she opens."},
 ];
 
 const VISITPUNKT=[

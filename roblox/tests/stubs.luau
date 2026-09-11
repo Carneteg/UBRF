@@ -1016,6 +1016,17 @@ local function __nyInstans(klass)
 				local cf = rawget(t, "CFrame")
 				return cf and cf.Position or nil
 			end
+			--[[ `Attachment.WorldCFrame` är fästpunktens läge i världen:
+			     värddelens CFrame gånger punktens egen. Utrustningen byggs
+			     mot den — utan den kunde bänken inte se skillnad på ett
+			     träns på huvudet och ett träns i origo. ]]
+			if k == "WorldCFrame" and rawget(t, "ClassName") == "Attachment" then
+				local egen = rawget(t, "CFrame")
+				local vard = rawget(t, "Parent")
+				local vardCF = vard and rawget(vard, "CFrame")
+				if vardCF and egen then return vardCF * egen end
+				return egen
+			end
 			--[[ En del som aldrig rort sig har nollhastighet, inte nil.
 			     `LedService` laser den for att veta om hasten STAR — en
 			     stillastaende hast far vrida sig, en gaende inte. ]]

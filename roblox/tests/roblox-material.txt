@@ -20,6 +20,10 @@ Fabric
 Glass
 Grass
 Ground
+# Leather kom till med utrustningen (#162 blockerare 5): sadel, träns och
+# tyglar. Namnet finns i Roblox sedan materialuppdateringen och är det enda
+# som läser som läder på håll — Fabric blir tyg och Wood blir planka.
+Leather
 LeafyGrass
 Metal
 Mud
