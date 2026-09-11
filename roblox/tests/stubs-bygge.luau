@@ -336,6 +336,27 @@ local function instance(klass)
 			end
 			return nil
 		end,
+		--[[ `IsDescendantOf` och `GetFullName` saknades. Preflightens
+		     markplanskontroll behöver båda: den frågar om en stor
+		     kolliderande yta ligger UTANFÖR anläggningen, och namnger den i
+		     rapporten så att den som felsöker vet vilken del det är. Utan
+		     dem gick kontrollen inte att mäta här. ]]
+		IsDescendantOf = function(self, mojligForfader)
+			local f = self.Parent
+			while f do
+				if f == mojligForfader then return true end
+				f = f.Parent
+			end
+			return false
+		end,
+		GetFullName = function(self)
+			local delar, nod = { self.Name }, self.Parent
+			while nod do
+				table.insert(delar, 1, tostring(nod.Name or "?"))
+				nod = nod.Parent
+			end
+			return table.concat(delar, ".")
+		end,
 	}
 	return setmetatable(i, {
 		--[[ `Position` är inte ett eget fält på en riktig BasePart heller —
@@ -399,6 +420,19 @@ local __tjanster = {
 	     är redan inlinade som lokala variabler — men den måste FINNAS,
 	     annars kastar GetService innan en enda mätning gjorts. ]]
 	ReplicatedStorage = instance("ReplicatedStorage"),
+	--[[ `ServerScriptService` fanns inte, och det är hela skälet till att
+	     `Preflight` ALDRIG har körts i en spec: modulen hämtar tjänsten på
+	     rad ett, så den gick inte ens att ladda i bänken. Preflighten är den
+	     som avgör om en spelare släpps in i placen, och den har alltså varit
+	     omätbar utanför Studio — vilket är precis hur ett helt främmande
+	     markplan kunde maskera världen utan att någon grind sa något.
+
+	     Den byggs som en riktig (stubbad) instans, så `Horse`-mappen och
+	     `Varld`-mappen kan hängas under den av det prov som behöver dem. ]]
+	ServerScriptService = instance("ServerScriptService"),
+	--[[ ...och `StarterPlayer`, av samma skäl: preflighten letar
+	     klientruntimen där (rad 1d). ]]
+	StarterPlayer = instance("StarterPlayer"),
 	CollectionService = {
 		--[[ #162: HastRigg taggar hästen; utan AddTag i stubben kan riggen
 		     inte byggas i bänken och då kan dess kontrakt inte mätas. ]]

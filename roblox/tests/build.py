@@ -78,6 +78,10 @@ SPELBARHET = BYGGE + [
     ("UBRFSprak",    "game/UBRFSprak.luau"),
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("DorrService",  "src/server/DorrService.luau"),
+    #[[ Preflighten har ALDRIG korts i en spec — den har bara matts i en
+    #   korande place. Dess markplanskontroll (2d) provas darfor mot den
+    #   byggda varlden i spelbarhet.spec. ]]
+    ("Preflight",    "src/server/Preflight.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("HastRigg",     "src/server/HastRigg.luau"),

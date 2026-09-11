@@ -93,6 +93,63 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 		start ~= nil and start:GetAttribute("MotDorr") == "stall N dorrgul",
 		start and tostring(start:GetAttribute("MotDorr")) or "ingen spawn")
 
+	--[[ 2d INGET FRÄMMANDE MARKPLAN.
+
+		Samma skäl som 2b, och samma sorts fel. 2b finns för att en
+		QA-/legacy-SPAWN inte får vinna över den avsedda. Det här finns för
+		att ett QA-/legacy-MARKPLAN inte får vinna över den avsedda marken —
+		och det har hänt: mätt i en Rojo-place 17:01 låg `Baseplate`
+		2048 × 2048 studs med överkant Y 0,000, medan UBRF-markens högsta
+		lager slutar på Y −0,018. Spelaren gick alltså på rutnätet ÖVERALLT,
+		683 m i varje riktning, och hela anläggningens mark var maskerad.
+
+		Marken ligger under noll med flit, så att husgolven på 0 vinner. Det
+		betyder att VARJE place med en default-baseplate maskerar världen, och
+		det ska preflighten säga i klartext i stället för att släppa in en
+		spelare i en värld som ser rätt ut och inte är det.
+
+		REGELN ÄR FOTAVTRYCK PLUS ÖVERKANT, och inte ägarskap.
+
+		Att fråga "ligger delen utanför `Anläggning`?" ser rimligt ut och
+		duger inte: UBRF:s EGEN mark är också stora kolliderande plattor, och
+		hierarkin skiljer sig mellan en byggd place och en bänk. En sådan
+		regel flaggar spelets egen mark.
+
+		Det som FAKTISKT skiljer dem är höjden, och det är en avsiktlig
+		egenskap i bygget: markens lager slutar UNDER noll, så att husgolven
+		på 0 vinner över dem. En default-baseplate slutar på exakt 0,000.
+		Gränsen dras därför strax under noll.
+
+		Premissen mäts på raden efter, så att den inte kan tystna: höjs
+		marken till 0 blir 2e röd, och det är rätt — då går en baseplate inte
+		längre att skilja från marken och den här kontrollen är blind.
+
+		Hästarna, utrustningen och avatarerna klarar gränsen av sig själva:
+		ingen av dem är hundra studs bred. ]]
+	local STOR_SIDA = 100          -- studs; 33 m, långt över allt vi bygger
+	local MARKTAK = -0.01          -- strax under noll
+	local frammande, vartTak = {}, -math.huge
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d:IsA("BasePart") and d.CanCollide
+			and d.Size.X >= STOR_SIDA and d.Size.Z >= STOR_SIDA then
+			local topp = d.Position.Y + d.Size.Y / 2
+			if topp >= MARKTAK then
+				table.insert(frammande, ("%s %.0f×%.0f, överkant Y %.3f"):format(
+					d:GetFullName(), d.Size.X, d.Size.Z, topp))
+			elseif topp > vartTak then
+				vartTak = topp
+			end
+		end
+	end
+	rad(ut, "2d inget främmande markplan maskerar UBRF-marken",
+		#frammande == 0,
+		if #frammande > 0 then table.concat(frammande, "; ")
+			else "ingen stor kolliderande yta med överkant över marken")
+	rad(ut, "2e UBRF-marken ligger under noll, så 2d går att skilja",
+		vartTak > -math.huge and vartTak < MARKTAK,
+		if vartTak > -math.huge then ("högsta marklager Y %.3f"):format(vartTak)
+			else "ingen mark hittad")
+
 	--[[ 3. Dörrkontrakt: verklig interaktion, inte en gul markör. ]]
 	local okDorr, DorrService = pcall(function()
 		return require((ServerScriptService :: any).Horse.DorrService)
