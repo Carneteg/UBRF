@@ -490,6 +490,63 @@ do
 		#ejSvenska > 0 and table.concat(ejSvenska, " · ") or "alla skiljer sig")
 end
 
+
+--[[ ── LEKTIONSKORTET PÅ EN-US (#162, lokal Studio-QA på 9b5a570) ──────
+
+	Mätt i runtime: kortets ram var engelsk ("UGNETA · RIDING INSTRUCTOR",
+	"Continue to start the lesson") medan rubriken och BÅDA punkterna var
+	svenska — "Halt → skritt", "Titta dit du ska.", "En tydlig skänkel —
+	vänta på svaret." De låg som literaler i `RidKanon.OVNINGAR` och nådde
+	aldrig katalogen.
+
+	Den här mätningen fäller exakt det: varje övning i kanonens ORDNING
+	måste ha rubrik och punkter i katalogen, den engelska raden får inte
+	bära svenska tecken, och den måste faktiskt SKILJA SIG från den svenska.
+	Utan det sista går en oöversatt sträng igenom bara för att den råkar
+	sakna å, ä och ö. ]]
+do
+	--[[ `Sprak` och `RidKanon` är redan inlinade av build.py. ]]
+	local UG = RidKanon.UGNETA
+	local saknade, svenska, osarskilda = {}, {}, {}
+	local provade = 0
+	for _, ovId in ipairs((UG and UG.ORDNING) or {}) do
+		for _, del in ipairs({ "rubrik", "p1", "p2" }) do
+			local nyckel = ("ugneta.ovning.%s.%s"):format(ovId, del)
+			if not Sprak.finns(nyckel) then
+				table.insert(saknade, nyckel)
+			else
+				provade += 1
+				local en = Sprak.iSprak("en", nyckel)
+				local sv = Sprak.iSprak("sv", nyckel)
+				if string.find(en, SVENSKA_TECKEN) then
+					table.insert(svenska, nyckel .. " = " .. en)
+				end
+				if en == sv then table.insert(osarskilda, nyckel) end
+			end
+		end
+	end
+	check("lektionskortets övningar finns i katalogen", #saknade == 0,
+		#saknade > 0 and table.concat(saknade, " · ") or (provade .. " strängar"))
+	check("den engelska korttexten bär inga svenska tecken", #svenska == 0,
+		#svenska > 0 and table.concat(svenska, " · ") or "rena")
+	check("kortets engelska skiljer sig faktiskt från svenskan", #osarskilda == 0,
+		#osarskilda > 0 and table.concat(osarskilda, " · ") or "alla översatta")
+
+	--[[ Observationerna efter ett försök byggdes som svenska mallar i
+		UgnetaController. Samma krav på dem. ]]
+	local obsSaknade, obsSvenska = {}, {}
+	for _, sort in ipairs({ "battre", "kvar", "bra", "jobba" }) do
+		local nyckel = "ugneta.obs." .. sort
+		if not Sprak.finns(nyckel) then
+			table.insert(obsSaknade, nyckel)
+		elseif string.find(Sprak.iSprak("en", nyckel), SVENSKA_TECKEN) then
+			table.insert(obsSvenska, nyckel)
+		end
+	end
+	check("observationsmallarna finns i katalogen och är engelska på en",
+		#obsSaknade == 0 and #obsSvenska == 0,
+		table.concat(obsSaknade, " · ") .. table.concat(obsSvenska, " · "))
+end
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

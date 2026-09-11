@@ -277,7 +277,24 @@ end
 local function presentera(p: Lektion.Pass)
 	local o = Lektion.ovning(p)
 	if not o then return end
-	UgnetaController.visa(o.rubrik, o.punkter, true,
+	--[[ Rubriken och punkterna hämtas ur SPRÅKKATALOGEN, inte ur kanonens
+	     svenska literaler. `RidKanon.OVNINGAR` är övningens sanning och rörs
+	     inte; det som visas för spelaren är dess översatta yta.
+
+	     Saknas nyckeln faller den tillbaka på kanonen, så en NY övning i
+	     `src/larare.js` blir spelbar direkt i stället för att bli tom —
+	     samma hållning som `Preparation.moment` har för en ny fas. ]]
+	local ovId = Lektion.ovningId(p)
+	local function kortText(del: string, reserv: string): string
+		local nyckel = "ugneta.ovning." .. tostring(ovId) .. "." .. del
+		if ovId and Sprak.finns(nyckel) then return Sprak.t(nyckel) end
+		return reserv
+	end
+	local punkter = {}
+	for i, reserv in ipairs(o.punkter) do
+		punkter[i] = kortText("p" .. i, reserv)
+	end
+	UgnetaController.visa(kortText("rubrik", o.rubrik), punkter, true,
 		Sprak.t("ugneta.borja_lektionen"))
 	lage = "presentation"
 end

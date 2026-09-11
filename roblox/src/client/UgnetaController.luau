@@ -421,15 +421,13 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 	local punkter = {}
 	for _, o in obs do
 		local ord = DIM_ORD[o.dim] or o.dim
-		if o.sort == "battre" then
-			table.insert(punkter, `Bättre {ord} den här gången.`)
-		elseif o.sort == "kvar" then
-			table.insert(punkter, `Fortsätt med {ord}.`)
-		elseif o.sort == "bra" then
-			table.insert(punkter, `Bra {ord}.`)
-		else
-			table.insert(punkter, `Jobba på {ord}.`)
-		end
+		--[[ Mallarna låg som svenska literaler här och följde aldrig med
+		     locale. Nu är de nycklar som alla andra spelarvända fält. ]]
+		local nyckel = if o.sort == "battre" then "ugneta.obs.battre"
+			elseif o.sort == "kvar" then "ugneta.obs.kvar"
+			elseif o.sort == "bra" then "ugneta.obs.bra"
+			else "ugneta.obs.jobba"
+		table.insert(punkter, Sprak.t(nyckel, ord))
 	end
 	if #punkter == 0 then table.insert(punkter, Sprak.t("ugneta.jamnare_forsok")) end
 	local forsta = fore == nil

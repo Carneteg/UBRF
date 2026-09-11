@@ -197,6 +197,47 @@ const SPRAK = {
     en: "A steadier attempt. Keep the same feel." },
   "ugneta.nasta_ovning": { sv: "Nästa övning", en: "Next exercise" },
 
+  /* LEKTIONSKORTETS ÖVNINGAR.
+
+     Låg som svenska literaler i `src/larare.js` / `RidKanon.OVNINGAR` och
+     renderades rakt av. Lokal Studio-QA på 9b5a570 mätte det: under en-US
+     var kortets ram engelsk medan rubriken och båda punkterna var svenska
+     — samma felklass som dörrarnas `ActionText` i 67e7716.
+
+     Kanonen i `larare.js` är kvar som den är; den är övningens SANNING.
+     Det här är dess spelarvända yta, och den hör hemma här. */
+  "ugneta.ovning.halt_skritt.rubrik": { sv: "Halt → skritt", en: "Halt → walk" },
+  "ugneta.ovning.halt_skritt.p1": { sv: "Titta dit du ska.", en: "Look where you are going." },
+  "ugneta.ovning.halt_skritt.p2": { sv: "En tydlig skänkel — vänta på svaret.",
+    en: "One clear leg aid — then wait for the answer." },
+  "ugneta.ovning.skritt_trav.rubrik": { sv: "Skritt → trav", en: "Walk → trot" },
+  "ugneta.ovning.skritt_trav.p1": { sv: "Behåll lugn kontakt.", en: "Keep a calm contact." },
+  "ugneta.ovning.skritt_trav.p2": { sv: "Driv en gång tydligt fram i trav.",
+    en: "Ask once, clearly, into trot." },
+  "ugneta.ovning.storvolt.rubrik": { sv: "20 m volt", en: "20 m circle" },
+  "ugneta.ovning.storvolt.p1": { sv: "Titta runt volten.", en: "Look around the circle." },
+  "ugneta.ovning.storvolt.p2": { sv: "Inre skänkel — yttre tygel håller storleken.",
+    en: "Inside leg — the outside rein keeps the size." },
+  "ugneta.ovning.horn.rubrik": { sv: "Rid genom hörnet", en: "Ride through the corner" },
+  "ugneta.ovning.horn.p1": { sv: "Behåll samma rytm.", en: "Keep the same rhythm." },
+  "ugneta.ovning.horn.p2": { sv: "Balansera före hörnet — inte mitt i.",
+    en: "Balance before the corner — not in the middle of it." },
+  "ugneta.ovning.trav_skritt.rubrik": { sv: "Trav → skritt", en: "Trot → walk" },
+  "ugneta.ovning.trav_skritt.p1": { sv: "Sitt ner och förbered.", en: "Sit down and prepare." },
+  "ugneta.ovning.trav_skritt.p2": { sv: "Behåll skänkeln genom övergången.",
+    en: "Keep the leg through the transition." },
+  "ugneta.ovning.galoppfattning.rubrik": { sv: "Galoppfattning", en: "Striking off into canter" },
+  "ugneta.ovning.galoppfattning.p1": { sv: "Balansera först.", en: "Balance first." },
+  "ugneta.ovning.galoppfattning.p2": { sv: "Be tydligt — och låt hästen svara.",
+    en: "Ask clearly — and let the horse answer." },
+
+  /* Observationerna efter ett försök. Byggdes förut som svenska
+     mallsträngar direkt i UgnetaController. */
+  "ugneta.obs.battre": { sv: "Bättre %s den här gången.", en: "Better %s this time." },
+  "ugneta.obs.kvar": { sv: "Fortsätt med %s.", en: "Keep working on %s." },
+  "ugneta.obs.bra": { sv: "Bra %s.", en: "Good %s." },
+  "ugneta.obs.jobba": { sv: "Jobba på %s.", en: "Work on %s." },
+
   /* ── KORTET SOM PAUSAR RITTEN (produktbeslut 13:29) ──────────────────
      Ridloopen fryser hästen medan ett lektionskort väntar — med flit: hon
      ska inte rida vidare bakom ett oläst kort. Men knappen sa bara
