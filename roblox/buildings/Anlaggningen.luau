@@ -2425,6 +2425,22 @@ print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d o
 -- ETT komplex härifrån, inte som två fristående lador.
 -- BK.cameraLike(base, 148, 130, 148, 106)
 
+--[[ ══ VÄNDNINGEN ═══════════════════════════════════════════════════════
+
+	Världen byggs i KARTANS koordinater (+x öster, +y norr) och vänds sedan
+	EN gång till en högerhänt Y-upp-värld där norr är −Z. Se `BuildKit.
+	speglaCF` för varför det måste vara en reflektion och inte en rotation,
+	och varför den görs som ett efterpass i stället för en rad per ställe.
+
+	Raden är hela rättelsen av P0:t "interiörerna är spegelvända" ur Tobias
+	fysiska Studio-test. `roblox/tests/handighet.spec.luau` mäter utfallet
+	mot `references/SITEPLAN.md`s ankomstvy. ]]
+do
+	local n = BK.speglaModell(model, G.djup)
+	print(("OK  Världen vänd till högerhänt (norr = −Z): %d delar speglade")
+		:format(n))
+end
+
 --[[ ══ RETURVÄRDET ═══════════════════════════════════════════════════════
 
 	Den här filen är ett SKRIPT som körs för sin verkan, men i en place

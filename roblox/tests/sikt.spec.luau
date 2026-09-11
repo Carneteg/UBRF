@@ -38,12 +38,18 @@ for _, d in ipairs(modell:GetDescendants()) do
 	if d.CFrame and d.Size then table.insert(delar, d) end
 end
 
--- Delens låda i METER.
+--[[ Delens låda i METER, i KARTANS koordinater — samma ram som Vyer
+	räknar kamerorna i. Världen byggs i kartans ram och vänds en gång till
+	en högerhänt Y-upp-värld där norr är −Z (`BuildKit.tomtlage`);
+	`BuildKit.tomtkoord` är vägen tillbaka. Utan den skulle strålen gå
+	genom en spegelbild av huset och skymningsprovet mäta fel vägg. ]]
+local bas = (modell :: any).PrimaryPart.CFrame
 local function lada(d)
 	local p, s = d.CFrame.Position, d.Size
-	return { x0 = (p.X - s.X / 2) / M, x1 = (p.X + s.X / 2) / M,
+	local cx, cy = BuildKit.tomtkoord(bas, p)
+	return { x0 = cx - s.X / (2 * M), x1 = cx + s.X / (2 * M),
 		z0 = (p.Y - s.Y / 2) / M, z1 = (p.Y + s.Y / 2) / M,
-		y0 = (p.Z - s.Z / 2) / M, y1 = (p.Z + s.Z / 2) / M }
+		y0 = cy - s.Z / (2 * M), y1 = cy + s.Z / (2 * M) }
 end
 
 -- Skär sträckan o + t·d, t ∈ (0, tMax), lådan? (slab-test)

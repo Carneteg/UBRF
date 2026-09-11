@@ -68,7 +68,16 @@ local function satMarkor(player: Player, dagens: any): Model?
 	del.CanQuery = false
 	del.Transparency = 1
 	del.Size = Vector3.new(1, 2, 1)
-	del.CFrame = b * CFrame.new(dagens.box.varld.x * M, 1 * M, dagens.box.varld.y * M)
+	--[[ VÄNDA VÄRLDEN: site-y är norr på kartan, och världen är en
+		högerhänt avbild av kartan där norr är −Z. Relativt anläggningens
+		`PrimaryPart` — som speglas med resten — blir omräkningen därför
+		ett enda teckenbyte. Härledningen står en gång, i
+		`BuildKit.tomtlage`; den här filen kan inte require:a BuildKit
+		(den ligger i en annan gren av ServerScriptService och saknas i
+		integrationsbänken), så tecknet står här, med samma namn att söka
+		på. Felaktigt tecken fälls av `spelbarhet.spec`, som mäter var
+		markören och hästen faktiskt hamnar i det byggda stallet. ]]
+	del.CFrame = b * CFrame.new(dagens.box.varld.x * M, 1 * M, -dagens.box.varld.y * M)
 	del.Parent = modell
 
 	local prompt = Instance.new("ProximityPrompt")

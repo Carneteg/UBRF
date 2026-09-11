@@ -117,11 +117,14 @@ local K = UBRFKomplex.identitet.stall.forstukvist
 check("stallets ockragula nordentré finns i geometrin", dorr ~= nil)
 check("förstukvisten finns i geometrin", K ~= nil)
 
-local origo = UBRFKomplex.origo or { x = 0, y = 0 }
+--[[ Spawnens läge läses tillbaka till KARTANS koordinater. Världen byggs
+	i kartans ram och vänds en gång till en högerhänt Y-upp-värld där norr
+	är −Z (`BuildKit.tomtlage`); `BuildKit.tomtkoord` är vägen tillbaka.
+	Utan den hade det här provet jämfört en spegelbild mot geometrin. ]]
+local bas = (modell :: any).PrimaryPart.CFrame
 local px, pz, py
 if start then
-	px = start.CFrame.Position.X / M - (origo.x or 0)
-	pz = start.CFrame.Position.Z / M - (origo.y or 0)
+	px, pz = BuildKit.tomtkoord(bas, start.CFrame.Position)
 	py = start.CFrame.Position.Y / M
 end
 
@@ -158,7 +161,7 @@ if start then
 	for _, d in ipairs(modell:GetDescendants()) do
 		if d.CFrame and d.Size and d ~= start and d.CanCollide ~= false then
 			local c, s = d.CFrame.Position, d.Size
-			local cx, cz = c.X / M - (origo.x or 0), c.Z / M - (origo.y or 0)
+			local cx, cz = BuildKit.tomtkoord(bas, c)
 			if math.abs(cx - px) <= s.X / (2 * M) + 0.01
 				and math.abs(cz - pz) <= s.Z / (2 * M) + 0.01 then
 				local topp = (c.Y + s.Y / 2) / M

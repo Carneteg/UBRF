@@ -22,6 +22,125 @@ local function newPart(model: Model, name: string, size: Vector3, cf: CFrame, co
 	return p
 end
 
+--[[ ══ SPEGLINGEN — SITE-KARTAN BLIR EN VÄRLD ═══════════════════════════
+
+	Tobias fysiska Studio-test: interiörerna såg spegelvända ut. De var
+	det, och mer än så — HELA världen var speglad, på båda plattformarna.
+
+	`src/site.js` rad 3: "origo i sydväst, +x öster, +y norr". Det är en
+	KARTA. Roblox är högerhänt med Y uppåt och −Z framåt. Mappar man
+	site-y rakt på +Z vänder man kartan:
+
+	    höger = blick × upp
+	    ser man söderut (blick = −Z) blir höger = +X = ÖSTER
+	    men på en karta har man VÄSTER till höger när man ser söderut
+
+	Ingen rotation lagar det — rotationer bevarar handighet. Bara en
+	reflektion vänder den, och den kanoniska mappningen från en karta till
+	en Y-upp-värld är norr = −Z.
+
+	VARFÖR ETT EFTERPASS OCH INTE EN RAD I `box`. Världen byggs inte bara
+	av `box`: det finns takvinklar, egna `CFrame.Angles`, dörrblad som
+	svänger och en spawn som ser mot en dörr. Ett teckenbyte per ställe
+	hade blivit ett trettiotal chanser att missa ett. Reflektionen görs
+	därför EN gång, på den färdiga modellen, som en riktig
+	koordinattransform:
+
+	    läge       (x, y, z) → (x, y, D − z)
+	    rotation   R → M R M   med M = diag(1, 1, −1)
+
+	Konjugeringen är återigen en ROTATION (det(M R M) = det R = 1), så
+	svängda delar följer med korrekt i stället för att bli inverterade.
+
+	`D` är tomtens djup i studs. Reflektionen sker alltså om tomtens mitt,
+	vilket håller världen kvar i samma positiva ruta — allt som råkar anta
+	positiva koordinater fungerar som förut. ]]
+function BuildKit.speglaCF(cf: CFrame, djupStuds: number): CFrame
+	local p = cf.Position
+	local nz = djupStuds - p.Z
+	--[[ Riktiga Roblox-CFrames bär hela rotationsmatrisen. Byggbänkens
+		stubbe bär bara position och yaw — och för en Z-spegling blir en
+		Y-rotation helt enkelt negerad, vilket är precis vad den grenen
+		gör. Båda vägarna uttrycker samma transform. ]]
+	local ok, komp = pcall(function() return { cf:GetComponents() } end)
+	if ok and komp and #komp >= 12 then
+		local r00, r01, r02 = komp[4], komp[5], komp[6]
+		local r10, r11, r12 = komp[7], komp[8], komp[9]
+		local r20, r21, r22 = komp[10], komp[11], komp[12]
+		return CFrame.new(p.X, p.Y, nz,
+			r00, r01, -r02,
+			r10, r11, -r12,
+			-r20, -r21, r22)
+	end
+	return CFrame.new(Vector3.new(p.X, p.Y, nz))
+		* CFrame.Angles(0, -((cf :: any).Yaw or 0), 0)
+end
+
+--[[ Speglar en färdigbyggd modell. Storlekar rörs inte: de är mått i
+	delens eget system och en reflektion ändrar dem inte.
+
+	KILEN ÄR UNDANTAGET, och det är inte en detalj. En `Part` är
+	symmetrisk kring sitt eget Z-plan, så att sätta den speglade
+	rotationen räcker. En `WedgePart` är det INTE: den är ett triangulärt
+	prisma med sluttningen längs sin lokala Z. Konjugeringen M R M ovan
+	placerar kilen som om formen också vore spegelvänd, men formen följer
+	inte med — takets gavelspetsar hade pekat åt fel håll.
+
+	Kilen är däremot symmetrisk kring sitt lokala X-plan, och för en sådan
+	form är en Z-spegling samma sak som ett halvt varv kring Y:
+
+	    (x, y, z) → (x, y, −z)   är för en X-symmetrisk form
+	    (x, y, z) → (−x, y, −z)  sett som mängd
+
+	Därför får kilen ett extra yaw på π, och då stämmer geometrin exakt. ]]
+function BuildKit.speglaModell(model: Model, djupMeter: number): number
+	local djupStuds = djupMeter * BuildKit.M
+	local n = 0
+	for _, d in ipairs(model:GetDescendants()) do
+		if d.CFrame ~= nil and d.Size ~= nil then
+			local cf = BuildKit.speglaCF(d.CFrame, djupStuds)
+			if d.ClassName == "WedgePart" then
+				cf = cf * CFrame.Angles(0, math.pi, 0)
+			end
+			d.CFrame = cf
+			n += 1
+		end
+	end
+	return n
+end
+
+--[[ ══ TOMTEN SEDD FRÅN DEN VÄNDA VÄRLDEN ═══════════════════════════════
+
+	Allt som placeras EFTER bygget — boxmarkören, hästen, kamerorna — ligger
+	relativt komplexets `PrimaryPart`. Den delen speglas med resten, och
+	DÄRFÖR blir omräkningen en enda teckenändring, oavsett var på kartan
+	anläggningen står och hur den är vriden:
+
+	    en punkt låg på  bas * (x, h, y)
+	    efter speglingen S ligger den på  S(bas * (x, h, y))
+	                                    = (S·bas) * K * (x, h, y)
+	    med K = diag(1, 1, −1), alltså  bas' * (x, h, −y)
+
+	`bas'` är den speglade `PrimaryPart`. Site-koordinaten är alltså
+	oförändrad — det är BARA tecknet på nord-axeln som vänder. Det är hela
+	handighetsbytet, uttryckt en gång.
+
+	Site-kanon (`references/SITEPLAN.md`, `src/site.js`) rörs inte: den
+	fortsätter ha +y norr. Kartan är facit; världen är dess högerhänta
+	avbild. ]]
+function BuildKit.tomtlage(xSite: number, hojd: number, ySite: number): CFrame
+	return CFrame.new(xSite * BuildKit.M, hojd * BuildKit.M, -ySite * BuildKit.M)
+end
+
+--[[ Vägen tillbaka: en världspunkt → site-koordinater i meter. Används av
+	proven, som mäter det BYGGDA och måste kunna jämföra med kartan.
+	Anläggningen byggs orotterad (rotY = 0 i `newBuilding`-anropet), så
+	basen bidrar med en ren förskjutning. ]]
+function BuildKit.tomtkoord(bas: CFrame, p: Vector3): (number, number)
+	local b = bas.Position
+	return (p.X - b.X) / BuildKit.M, -(p.Z - b.Z) / BuildKit.M
+end
+
 -- Skapar/ersätter modellen. origin = världsposition för SV-hörnet (studs), rotY i grader.
 function BuildKit.newBuilding(name: string, origin: Vector3, rotY: number?, meta: {[string]: any}?): (Model, CFrame)
 	local folder = workspace:FindFirstChild("Anläggning") or Instance.new("Folder")
@@ -136,8 +255,13 @@ end
 	valbar; utan den beter sig anropet exakt som forut. ]]
 function BuildKit.cameraLike(base: CFrame, x: number, z: number, tx: number, tz: number, eyeH: number?, aimH: number?)
 	local cam = workspace.CurrentCamera
-	local from = base * CFrame.new(studs(x), studs(eyeH or 1.6), studs(z))
-	local to = base * CFrame.new(studs(tx), studs(aimH or 2.5), studs(tz))
+	--[[ Kamerorna ställs EFTER att världen vänts, och `tomtlage` är den
+		enda omräkningen från karta till vänd värld. Att låta kameran
+		räkna själv hade gjort varje vy till ett eget tillfälle att missa
+		tecknet — och en vy som tittar åt fel håll ser ut som en byggfel
+		i stället för som ett kamerafel. ]]
+	local from = base * BuildKit.tomtlage(x, eyeH or 1.6, z)
+	local to = base * BuildKit.tomtlage(tx, aimH or 2.5, tz)
 	cam.CameraType = Enum.CameraType.Scriptable
 	cam.CFrame = CFrame.lookAt(from.Position, to.Position)
 end

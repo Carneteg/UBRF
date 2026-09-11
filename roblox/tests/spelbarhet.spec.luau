@@ -75,16 +75,24 @@ local function mitt(ix, iz)
 end
 local function idx(ix, iz) return (iz - 1) * NX + ix end
 
---[[ Delarnas lådor i METER, i tomtens koordinater. `origo` dras av så att
-	måtten kan jämföras med geometrin i UBRFKomplex direkt. ]]
+--[[ Delarnas lådor i METER, i TOMTENS koordinater — samma ram som
+	UBRFKomplex, `references/SITEPLAN.md` och boxarnas lägen.
+
+	Världen byggs i kartans ram och vänds en gång till en högerhänt
+	Y-upp-värld där norr är −Z (`BuildKit.tomtlage`). `BuildKit.tomtkoord`
+	är vägen tillbaka. Räknade provet om på egen hand skulle hela rutnätet
+	ligga spegelvänt mot boxarna, och en nåbarhetsmätning i en spegelvänd
+	karta säger ingenting om spelet. ]]
+local bas = (modell :: any).PrimaryPart.CFrame
 local lador = {}
 for _, d in ipairs(modell:GetDescendants()) do
 	if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
 		local c, s = d.CFrame.Position, d.Size
+		local cx, cz = BuildKit.tomtkoord(bas, c)
 		table.insert(lador, {
 			namn = d.Name,
-			x0 = c.X / M - origo.x - s.X / (2 * M), x1 = c.X / M - origo.x + s.X / (2 * M),
-			z0 = c.Z / M - origo.y - s.Z / (2 * M), z1 = c.Z / M - origo.y + s.Z / (2 * M),
+			x0 = cx - s.X / (2 * M), x1 = cx + s.X / (2 * M),
+			z0 = cz - s.Z / (2 * M), z1 = cz + s.Z / (2 * M),
 			y0 = (c.Y - s.Y / 2) / M, y1 = (c.Y + s.Y / 2) / M,
 			del = d,
 		})
@@ -248,7 +256,8 @@ check("spawnen finns i den byggda världen", spawn ~= nil)
 local spos
 if spawn then
 	local p = spawn.CFrame.Position
-	spos = { x = p.X / M - origo.x, y = p.Z / M - origo.y, h = p.Y / M }
+	local sx0, sy0 = BuildKit.tomtkoord(bas, p)
+	spos = { x = sx0, y = sy0, h = p.Y / M }
 	local sx, sz = cellFor(spos.x, spos.y)
 	local i = idx(sx, sz)
 	local G, B = STANGT.golv, STANGT.blockerad
@@ -307,8 +316,8 @@ check("dörrbladet har en ProximityPrompt", prompt ~= nil)
 
 if prompt and utanfor and blad then
 	local bp = blad.CFrame.Position
-	local avst = math.sqrt((bp.X / M - origo.x - utanfor.x) ^ 2
-		+ (bp.Z / M - origo.y - utanfor.y) ^ 2)
+	local bx, bz = BuildKit.tomtkoord(bas, bp)
+	local avst = math.sqrt((bx - utanfor.x) ^ 2 + (bz - utanfor.y) ^ 2)
 	--[[ Prompten mäts i studs i Roblox; jämförelsen görs i meter. ]]
 	check("prompten går att nå från gångytan utanför",
 		avst * M <= prompt.MaxActivationDistance,

@@ -241,8 +241,17 @@ function JackRigg.start(): Model?
 		warn("[Rigg] Anläggningen är inte byggd — hästen skulle hamna i tomrummet.")
 		return nil
 	end
+	--[[ VÄNDA VÄRLDEN: site-y är norr på kartan, och världen är en
+		högerhänt avbild av kartan där norr är −Z. Relativt anläggningens
+		`PrimaryPart` — som speglas med resten — blir omräkningen därför
+		ett enda teckenbyte. Härledningen står en gång, i
+		`BuildKit.tomtlage`; den här filen kan inte require:a BuildKit
+		(den ligger i en annan gren av ServerScriptService och saknas i
+		integrationsbänken), så tecknet står här, med samma namn att söka
+		på. Felaktigt tecken fälls av `spelbarhet.spec`, som mäter var
+		markören och hästen faktiskt hamnar i det byggda stallet. ]]
 	local bas = ((komplex :: any).PrimaryPart :: BasePart).CFrame
-		* CFrame.new(box.varld.x * M, 0, box.varld.y * M)
+		* CFrame.new(box.varld.x * M, 0, -box.varld.y * M)
 
 	local modell = JackRigg.bygg(hastId, namn, bas)
 	modell.Parent = workspace

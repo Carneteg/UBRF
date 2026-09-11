@@ -35,10 +35,21 @@ check("modellen finns i workspace", modell ~= nil)
 local delar = modell:GetDescendants()
 check("den byggde faktiskt något", #delar > 200, #delar .. " delar")
 
--- Delarnas fotavtryck i METER, tillbaka i spelets koordinater.
+--[[ Delarnas fotavtryck i METER, tillbaka i KARTANS koordinater.
+
+	Världen byggs i kartans ram och vänds sedan en gång till en högerhänt
+	Y-upp-värld där norr är −Z (se `BuildKit.tomtlage`). Vägen tillbaka går
+	genom `BuildKit.tomtkoord`, så att provet läser samma ram som
+	`references/SITEPLAN.md` och `src/site.js` — annars hade varje
+	nord–syd-jämförelse här mätt en spegelbild.
+
+	Nordkanten och sydkanten byter plats i och med vändningen: den lägsta
+	site-y:n ligger nu på delens STÖRSTA världs-Z. ]]
+local bas = (modell :: any).PrimaryPart.CFrame
 local function fot(d)
 	local p, s = d.CFrame.Position, d.Size
-	return { x = (p.X - s.X / 2) / M, y = (p.Z - s.Z / 2) / M,
+	local x, y = BuildKit.tomtkoord(bas, Vector3.new(p.X - s.X / 2, 0, p.Z + s.Z / 2))
+	return { x = x, y = y,
 		w = s.X / M, h = s.Z / M,
 		z0 = (p.Y - s.Y / 2) / M, z1 = (p.Y + s.Y / 2) / M }
 end

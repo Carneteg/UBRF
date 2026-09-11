@@ -59,9 +59,8 @@ local function check(namn, villkor, detalj)
 	end
 end
 
-local M = BuildKit.M
+local G = UBRFKomplex
 local modell = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
-local origo = UBRFKomplex.origo or { x = 0, y = 0 }
 
 --[[ Byggnadens mitt i VÄRLDEN, läst ur dess grundplatta. Grunden byggs av
 	`byggHus` med byggnadens id i namnet och är den enda delen som med
@@ -75,17 +74,113 @@ local function husmitt(id: string): Vector3?
 	return nil
 end
 
---[[ En punkt i världen ur site-koordinater — samma väg BuildKit går, så
-	att provet inte uppfinner en egen mappning. ]]
-local function varldspunkt(x: number, y: number): Vector3
-	return Vector3.new((x + origo.x) * M, 0, (y + origo.y) * M)
+--[[ ══ MAPPNINGEN MÄTS, DEN ANTAS ALDRIG ════════════════════════════════
+
+	Första versionen räknade om site → värld med produktionens EGEN
+	funktion. Det gjorde provet värdelöst: kopplade man bort speglingen
+	vände både världen och provets ram, och grinden förblev grön. Ett prov
+	som följer med felet mäter ingenting — och den fällan är precis den
+	ordern varnar för när den säger att specen inte får rättas för att
+	matcha buggen.
+
+	Nu LÄSES mappningen ur den byggda världen. Varje byggnad har en känd
+	mittpunkt på kartan (`rekt` i UBRFKomplex, samma tal `byggHus` bygger
+	grundplattan av) och en mätbar mittpunkt i världen. Paren bestämmer
+	den affina avbildningen:
+
+	    X = aX·x + bX·y + cX
+	    Z = aZ·x + bZ·y + cZ
+
+	Tre par löser den exakt; resten KONTROLLERAR att den stämmer, alltså
+	att bygget inte förvrängt kartan. Ur lösningen faller norr och öster ut
+	som MÄTVÄRDEN, och det är dem kompassregeln prövas mot. ]]
+local par: { { id: string, x: number, y: number, X: number, Z: number } } = {}
+for _, b in ipairs(G.byggnader) do
+	local p = husmitt(b.id)
+	if p then
+		table.insert(par, {
+			id = b.id,
+			x = b.rekt.x + b.rekt.w / 2,
+			y = b.rekt.y + b.rekt.h / 2,
+			X = p.X, Z = p.Z,
+		})
+	end
 end
+
+--[[ Tre par som spänner upp en riktig triangel. Största arean ger den
+	stabilaste lösningen; tre hus på rad hade gett en singulär matris. ]]
+local function area2(a, b, c): number
+	return math.abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x))
+end
+local A, B, C = nil, nil, nil
+local storst = 0
+for i = 1, #par do
+	for j = i + 1, #par do
+		for k = j + 1, #par do
+			local s = area2(par[i], par[j], par[k])
+			if s > storst then storst, A, B, C = s, par[i], par[j], par[k] end
+		end
+	end
+end
+
+print("\n── Mappningen, mätt ur den byggda världen ──")
+check("tre hus spänner upp en yta att lösa avbildningen ur",
+	A ~= nil and storst > 1,
+	if A then ("%s · %s · %s (area %.0f m²)"):format(A.id, B.id, C.id, storst / 2)
+		else ("bara %d hus hittades"):format(#par))
+
+local aX, bX, cX, aZ, bZ, cZ = 1, 0, 0, 0, 1, 0
+if A and B and C then
+	local dx2, dy2 = B.x - A.x, B.y - A.y
+	local dx3, dy3 = C.x - A.x, C.y - A.y
+	local det = dx2 * dy3 - dy2 * dx3
+	local function los(f1: number, f2: number, f3: number): (number, number, number)
+		local g2, g3 = f2 - f1, f3 - f1
+		local a = (g2 * dy3 - g3 * dy2) / det
+		local b = (g3 * dx2 - g2 * dx3) / det
+		return a, b, f1 - a * A.x - b * A.y
+	end
+	aX, bX, cX = los(A.X, B.X, C.X)
+	aZ, bZ, cZ = los(A.Z, B.Z, C.Z)
+end
+
+local function varldspunkt(x: number, y: number): Vector3
+	return Vector3.new(aX * x + bX * y + cX, 0, aZ * x + bZ * y + cZ)
+end
+
+--[[ Stämmer den lösta avbildningen för ALLA hus? Gör den inte det är
+	kartan förvrängd i bygget, och då säger resten av provet ingenting om
+	verkligheten. ]]
+do
+	local varst, varstId = 0, "-"
+	for _, q in ipairs(par) do
+		local p = varldspunkt(q.x, q.y)
+		local d = math.sqrt((p.X - q.X) ^ 2 + (p.Z - q.Z) ^ 2)
+		if d > varst then varst, varstId = d, q.id end
+	end
+	check(("avbildningen stämmer för alla %d husen — kartan är inte förvrängd"):format(#par),
+		#par >= 4 and varst < 0.5,
+		("största avvikelse %.3f studs (%s)"):format(varst, varstId))
+end
+
+--[[ Blickriktningar i VÄRLDEN, hämtade ur den MÄTTA avbildningen: site +y
+	är norr på kartan, och kolumnen (bX, bZ) säger vart norr tog vägen i
+	bygget. Att skriva Vector3.new(0, 0, -1) här hade varit att anta svaret
+	på den enda fråga provet ställer. ]]
+local function normerad(x: number, z: number)
+	local l = math.sqrt(x * x + z * z)
+	if l < 1e-9 then return { x = 0, z = 0 } end
+	return { x = x / l, z = z / l }
+end
+local NORR = normerad(bX, bZ)
+local SODER = { x = -NORR.x, z = -NORR.z }
+local OSTER = normerad(aX, aZ)
 
 --[[ ── REGELN ────────────────────────────────────────────────────────────
 	Är A till vänster om B för en betraktare som ser i riktningen `blick`?
 	`höger = blick × upp` i ett högerhänt system; A är till vänster när
 	(A − B) pekar MOT vänster, alltså har negativ komponent längs höger. ]]
---[[ Krysprodukten skrivs ut för hand: bänkens Vector3 är en stubbe utan
+--[[ Kryssprodukten skrivs ut för hand: bänkens Vector3 är en stubbe utan
 	`Cross`/`Unit`, och att provet skulle bero på stubbens finesser vore en
 	egen sorts osäkerhet. Med upp = (0,1,0) är
 
@@ -101,20 +196,6 @@ local function arVanster(a, b, blick): (boolean, number)
 	local proj = (a.X - b.X) * hx + (a.Z - b.Z) * hz
 	return proj < 0, proj
 end
-
---[[ Blickriktningar i VÄRLDEN, härledda ur mappningen: site +y är norr,
-	och `varldspunkt` visar vart norr tar vägen. Att räkna ut dem i stället
-	för att skriva Vector3.new(0,0,-1) är hela poängen — en ändrad mappning
-	ska synas här, inte döljas av en hårdkodad riktning. ]]
-local function riktning(x0, y0, x1, y1)
-	local a, b = varldspunkt(x0, y0), varldspunkt(x1, y1)
-	local dx, dz = b.X - a.X, b.Z - a.Z
-	local l = math.sqrt(dx * dx + dz * dz)
-	return { x = dx / l, z = dz / l }
-end
-local NORR = riktning(0, 0, 0, 1)
-local SODER = { x = -NORR.x, z = -NORR.z }
-local OSTER = riktning(0, 0, 1, 0)
 
 print("\n── Handigheten i den byggda världen ──")
 print(("   norr i världen  = (%.1f, %.1f)"):format(NORR.x, NORR.z))

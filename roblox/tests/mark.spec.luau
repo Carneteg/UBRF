@@ -31,7 +31,11 @@ end
 
 local M = BuildKit.M
 local modell = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
-local origo = UBRFKomplex.origo or { x = 0, y = 0 }
+--[[ Kartans ram. Världen byggs i den och vänds en gång till en högerhänt
+	Y-upp-värld där norr är −Z (`BuildKit.tomtlage`); `BuildKit.tomtkoord`
+	är vägen tillbaka. Provet mäter markens bärighet i SITE-koordinater,
+	samma tal som `UBRFKomplex.mark` och `references/SITEPLAN.md`. ]]
+local bas = (modell :: any).PrimaryPart.CFrame
 
 local MAXGOLV = 3.0    -- högre än så är ett tak, inte ett golv
 local UNDER   = -0.05  -- lite slack neråt: marklagrets ovansida ligger på 0
@@ -42,10 +46,11 @@ local lador = {}
 for _, d in ipairs(modell:GetDescendants()) do
 	if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
 		local c, s = d.CFrame.Position, d.Size
+		local cx, cz = BuildKit.tomtkoord(bas, c)
 		table.insert(lador, {
 			namn = d.Name,
-			x0 = c.X / M - origo.x - s.X / (2 * M), x1 = c.X / M - origo.x + s.X / (2 * M),
-			z0 = c.Z / M - origo.y - s.Z / (2 * M), z1 = c.Z / M - origo.y + s.Z / (2 * M),
+			x0 = cx - s.X / (2 * M), x1 = cx + s.X / (2 * M),
+			z0 = cz - s.Z / (2 * M), z1 = cz + s.Z / (2 * M),
 			y1 = (c.Y + s.Y / 2) / M,
 		})
 	end
@@ -168,8 +173,7 @@ do
 	check("spawnen finns och är märkt UBRFStart", spawn ~= nil,
 		spawn and spawn.Name or "ingen")
 	if spawn then
-		local sx = spawn.CFrame.Position.X / M - origo.x
-		local sz = spawn.CFrame.Position.Z / M - origo.y
+		local sx, sz = BuildKit.tomtkoord(bas, spawn.CFrame.Position)
 		check("spawnen själv står på något", stodI(sx, sz) ~= nil,
 			("(%.1f, %.1f)"):format(sx, sz))
 		local hal = {}
@@ -225,8 +229,10 @@ do
 			spawn = d
 		end
 	end
-	local startIx = if spawn then math.floor((spawn.CFrame.Position.X / M - origo.x) / RUTA) else 0
-	local startIz = if spawn then math.floor((spawn.CFrame.Position.Z / M - origo.y) / RUTA) else 0
+	local spawnX, spawnY = 0, 0
+	if spawn then spawnX, spawnY = BuildKit.tomtkoord(bas, spawn.CFrame.Position) end
+	local startIx = math.floor(spawnX / RUTA)
+	local startIz = math.floor(spawnY / RUTA)
 	local ko = { { startIx, startIz } }
 	nadd[nyckel(startIx, startIz)] = true
 	local raknare = 0
