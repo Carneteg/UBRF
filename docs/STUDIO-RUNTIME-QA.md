@@ -20,14 +20,14 @@ efter den.
 | Identitet | Värde | Vad det är |
 |---|---|---|
 | **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `c5984d0753db54f8031431173d2937642938c5db` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `6d42222fc95fa252de8b562ef8e635304504fb4b84a7eaf9a4fb27e69e6b86cf` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **artifact source SHA** | `59680e43c78e81c481eb075d4562f45892411619` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `f8e12bac825a6842456d4f218ad92650034d533f4b9d63cbbd826bbfa1718c29` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-c5984d0/UBRFFirstPlayable.rbxlx` |
-| storlek | 911 612 byte, 64 instanser |
+| fil i repot | `roblox/releases/first-playable-place-59680e4/UBRFFirstPlayable.rbxlx` |
+| storlek | 960 928 byte, 65 instanser |
 | determinism | ombyggd ur samma källa, byte-identisk |
 
 > **Den här artefakten ersätter både `…-9b5a570` och `…-1e8b207`.** Den är
@@ -59,7 +59,7 @@ efter den.
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-c5984d0\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-59680e4\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -73,7 +73,7 @@ git fetch origin
 git checkout claude/first-playable-20260910
 git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-c5984d0\UBRFFirstPlayable.rbxlx" SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-59680e4\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
 Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
@@ -88,7 +88,7 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=c5984d0753db54f8031431173d2937642938c5db
+FIRST_PLAYABLE_SHA=59680e43c78e81c481eb075d4562f45892411619
 FIRST_PLAYABLE_PREFLIGHT: PASS
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3309 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
@@ -401,14 +401,25 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 > **Rid på ridbanan, inte i boxen.** I boxen går hon tills kroppen möter
 > väggen — ~2,5 studs — och det är boxens mått, inte ett rörelsefel.
 
-> ### Ledandet är fortfarande INTE fysisk gameplay
+> ### LEDANDET ÄR FYSISK GAMEPLAY SEDAN `2e246d4` — och aldrig runtime-testat i en ARTEFAKT
 >
-> Det som är gjort: rutten box → gång → port → ridbana är mätt framkomlig,
-> boxdörrarna finns, och `leda` kräver nu att spelaren **bär tränset**.
+> Gaten är körd och grön i en Rojo-live-session, inte på en pinnad `.rbxlx`.
+> Kontraktet att mäta här:
 >
-> Det som INTE är gjort: hästen **följer inte spelaren**, och `leda` har
-> ingen zonkontroll — steget kan bli sant med hästen kvar i boxen. Blockerare
-> 2 står alltså öppen. Rapportera det som känt, inte som ett nytt fynd.
+> | Steg | Förväntat |
+> |---|---|
+> | prompt vid hästen | egen prompt **L**, skild från uppsittningens |
+> | börja leda utan träns | nekas — tränset kommer före ledningen |
+> | med tränset | hon **vrider sig** mot öppningen och går ut, inte med sidan före |
+> | ut ur boxen | 1,7–8,2 s beroende på startriktning |
+> | följning i gången | 2,4–6,9 m avstånd, inget ryck, hon stannar när du stannar |
+> | `leda`-steget | går INTE igenom förrän hon faktiskt är i ridbanan |
+> | gå ifrån henne | kopplet släpper med `led.tappade_bort` |
+> | hon kommer inte fram | `led.fastnat` efter ~15 s |
+>
+> Kvarstår som känt, rapportera inte som nytt: följavståndet ~4,2 m är game
+> feel (Tobias beslut), hästen kan blockera gången när hon står på tvären,
+> och flera ledda hästar samtidigt är inte testat.
 
 `mount -> ride -> dismount -> death -> respawn -> remount -> aftercare -> save`
 
@@ -423,7 +434,7 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source c5984d07… — rbxlx 6d42222fc95fa252de8b562ef8e635304504fb4b84a7eaf9a4fb27e69e6b86cf — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 59680e43… — rbxlx f8e12bac825a6842456d4f218ad92650034d533f4b9d63cbbd826bbfa1718c29 — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
