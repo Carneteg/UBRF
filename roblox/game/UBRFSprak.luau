@@ -445,6 +445,70 @@ Sprak.text = {
 		sv = "Nästa övning",
 		en = "Next exercise",
 	},
+	["led.borja"] = {
+		sv = "Led hästen",
+		en = "Lead the horse",
+	},
+	["led.slapp"] = {
+		sv = "Släpp hästen",
+		en = "Let go",
+	},
+	["led.leder"] = {
+		sv = "Du leder %s",
+		en = "You are leading %s",
+	},
+	["led.ingen_hast"] = {
+		sv = "Ingen häst att leda",
+		en = "No horse to lead",
+	},
+	["led.fel_hast"] = {
+		sv = "Det är inte din häst",
+		en = "That is not your horse",
+	},
+	["led.ingen_karaktar"] = {
+		sv = "Ingen karaktär",
+		en = "No character",
+	},
+	["led.rider"] = {
+		sv = "Du sitter upp — du rider, du leder inte",
+		en = "You are mounted — you are riding, not leading",
+	},
+	["led.hast_saknar_kropp"] = {
+		sv = "Hästen har ingen kropp att följa med",
+		en = "The horse has no body to follow with",
+	},
+	["led.for_langt"] = {
+		sv = "Gå fram till henne först",
+		en = "Walk up to her first",
+	},
+	["led.leder_redan"] = {
+		sv = "Du leder redan",
+		en = "You are already leading",
+	},
+	["led.leder_inte"] = {
+		sv = "Du leder ingen häst",
+		en = "You are not leading a horse",
+	},
+	["led.upptagen"] = {
+		sv = "Någon annan leder henne",
+		en = "Someone else is leading her",
+	},
+	["led.tappade_bort"] = {
+		sv = "Hon kom efter — gå tillbaka och ta henne igen",
+		en = "She fell behind — go back and take her again",
+	},
+	["led.tappad"] = {
+		sv = "Du tappade henne",
+		en = "You lost her",
+	},
+	["led.kvar_i_boxen"] = {
+		sv = "Hon står kvar i boxen",
+		en = "She is still in her stall",
+	},
+	["led.inte_framme"] = {
+		sv = "Hon är inte framme i ridhuset än",
+		en = "She is not in the arena yet",
+	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",
 		en = "Halt → walk",

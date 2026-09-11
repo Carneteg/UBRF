@@ -9,6 +9,7 @@ local HorseService = require(script.HorseService)
 local StallService = require(script.StallService)
 local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
+local LedService = require(script.LedService)
 local HastRigg = require(script.HastRigg)
 local Preflight = require(script.Preflight)
 
@@ -127,6 +128,7 @@ kritisk("HorseService", HorseService.start)
 kritisk("StallService", StallService.start)
 kritisk("GameplayService", GameplayService.start)
 kritisk("DorrService", DorrService.start)
+kritisk("LedService", LedService.start)
 
 --[[ ══ CRITICAL_STARTUP_GATE ═════════════════════════════════════════════
 

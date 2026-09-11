@@ -902,6 +902,14 @@ local function __nyInstans(klass)
 		inst.Died = __signal()
 		inst.Health = 100
 		inst.Sit = false
+		--[[ `MoveTo`/`Move` finns för att LedService styr hästen med dem.
+		     Stubben SPEGLAR bara ordern — ingen fysik, ingen förflyttning —
+		     så en spec kan mäta VART tjänsten sa åt hästen att gå. Flyttade
+		     stubben delen själv hade specen mätt stubben. ]]
+		inst._moveMal = nil
+		inst._moveDir = nil
+		function inst:MoveTo(p) self._moveMal = p end
+		function inst:Move(dir) self._moveDir = dir end
 	end
 	if klass == "Model" then
 		--[[ Modellen flyttas med `PivotTo` av både uppsittningen och

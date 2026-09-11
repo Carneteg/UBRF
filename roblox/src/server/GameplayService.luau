@@ -37,6 +37,8 @@ local Core = require(ReplicatedStorage.HorseCore)
 local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 local Pass = require(ReplicatedStorage.HorseCore.Pass)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
+local LedService = require(script.Parent.LedService)
+local Komplex = require(ReplicatedStorage.UBRFKomplex)
 local Net = Core.Networking
 
 local HorseService = require(script.Parent.HorseService)
@@ -231,6 +233,26 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 	end
 	local s = state[player]
 
+	--[[ ── `leda` KRÄVER ATT HON FAKTISKT ÄR LEDD DIT ────────────────
+
+		Blockerare 2: steget blev sant så fort spelaren tryckte, och mätt
+		i Studio stod hästen kvar i box 31 genom hela förberedelsen.
+		En knapptryckning är inte ett bevis på att något hänt i världen.
+
+		Nu prövas två FYSISKA villkor, båda satta av `LedService` ur
+		hästens verkliga position och aldrig av något i gränssnittet:
+		att hon lämnat boxen, och att hon nått ridbanan. Ordningen på
+		nejen är medveten — står hon kvar i boxen är det det spelaren
+		behöver höra, inte att hon inte är framme. ]]
+	if fasId == "leda" then
+		if not LedService.harLamnatBox(player) then
+			return false, "led.kvar_i_boxen"
+		end
+		if LedService.malzon() ~= nil and not LedService.harNattMal(player) then
+			return false, "led.inte_framme"
+		end
+	end
+
 	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId)
 	skicka(player)
 	return ok, avslag
@@ -393,6 +415,36 @@ end
 
 function GameplayService.start()
 	HorseService.setMountGate(GameplayService.farSittaUpp)
+
+	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
+
+		Målzonen är RIDBANAN, inte "utanför stallet". Källan säger att
+		hästen leds inomhus mellan stallet och ridhuset, och `leda`-fasens
+		egen text är "Led till ridhuset" — steget är inte gjort förrän hon
+		faktiskt står där.
+
+		Rektangeln räknas ur den delade datan (ridhusets rekt plus banans
+		lokala rekt) och skrivs inte av som tal här. Ändras banan i
+		`src/site.js` följer zonen med. ]]
+	local hus, bana
+	for _, b in ipairs(Komplex.byggnader) do
+		if b.id == "ridhus" then hus = b end
+	end
+	bana = Komplex.ridhus and Komplex.ridhus.bana
+	if hus and bana then
+		LedService.satMalzon({
+			x = hus.rekt.x + bana.x, y = hus.rekt.y + bana.y,
+			w = bana.w, h = bana.h,
+		})
+	else
+		warn("[Led] Ridbanans rektangel saknas i datan — leda kan inte zonprövas.")
+	end
+
+	--[[ Vilken häst spelaren FÅR leda är skötselns fråga, inte
+		ledningens. Kroken svarar med den bundna modellen. ]]
+	LedService.satRattHastKrok(function(player)
+		return bunden[player] or GameplayService.bind(player)
+	end)
 
 	--[[ Uppsittningen och avsittningen driver passets läge. De hakas på
 		`HorseService` i stället för att `GameplayService` skulle lyssna på
