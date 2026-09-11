@@ -35,7 +35,11 @@ function VM.lador(modell, bas)
 	local M = BuildKit.M
 	local ut = {}
 	for _, d in ipairs(modell:GetDescendants()) do
-		if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
+		--[[ `d:IsA("BasePart")` och inte `d.CFrame`: i Luau KASTAR indexering
+			av en egenskap klassen inte har. Vakten var osund och fungerade
+			av en slump tills skyltarna fick en `SurfaceGui` — då föll
+			världsbygget i Studio. Se `BuildKit.speglaModell`. ]]
+		if d:IsA("BasePart") and d.CanCollide ~= false and d.Transparency ~= 1 then
 			local c, s = d.CFrame.Position, d.Size
 			local cx, cz = BuildKit.tomtkoord(bas, c)
 			table.insert(ut, {

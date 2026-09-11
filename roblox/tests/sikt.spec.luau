@@ -35,7 +35,7 @@ local M = BuildKit.M
 local modell = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
 local delar = {}
 for _, d in ipairs(modell:GetDescendants()) do
-	if d.CFrame and d.Size then table.insert(delar, d) end
+	if d:IsA("BasePart") then table.insert(delar, d) end
 end
 
 --[[ Delens låda i METER, i KARTANS koordinater — samma ram som Vyer

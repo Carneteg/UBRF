@@ -86,7 +86,7 @@ local function idx(ix, iz) return (iz - 1) * NX + ix end
 local bas = (modell :: any).PrimaryPart.CFrame
 local lador = {}
 for _, d in ipairs(modell:GetDescendants()) do
-	if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
+	if d:IsA("BasePart") and d.CanCollide ~= false and d.Transparency ~= 1 then
 		local c, s = d.CFrame.Position, d.Size
 		local cx, cz = BuildKit.tomtkoord(bas, c)
 		table.insert(lador, {

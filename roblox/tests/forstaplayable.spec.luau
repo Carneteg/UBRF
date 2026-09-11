@@ -35,7 +35,7 @@ local M = BuildKit.M
 local modell = workspace:FindFirstChild("Anläggning"):FindFirstChild("UBRF")
 local delar = {}
 for _, d in ipairs(modell:GetDescendants()) do
-	if d.CFrame and d.Size then table.insert(delar, d) end
+	if d:IsA("BasePart") then table.insert(delar, d) end
 end
 
 local function arFonsterTyp(typ)
@@ -217,7 +217,7 @@ if start then
 	local FALLHOJD = 0.5
 	local basta, namn = nil, nil
 	for _, d in ipairs(modell:GetDescendants()) do
-		if d.CFrame and d.Size and d ~= start and d.CanCollide ~= false then
+		if d:IsA("BasePart") and d ~= start and d.CanCollide ~= false then
 			local c, s = d.CFrame.Position, d.Size
 			local cx, cz = BuildKit.tomtkoord(bas, c)
 			if math.abs(cx - px) <= s.X / (2 * M) + 0.01

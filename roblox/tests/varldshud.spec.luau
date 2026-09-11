@@ -73,7 +73,7 @@ if rot then
 	local p = rot.CFrame.Position
 	local under, namn = nil, nil
 	for _, d in ipairs(modell:GetDescendants()) do
-		if d.CFrame and d.Size and d.CanCollide ~= false then
+		if d:IsA("BasePart") and d.CanCollide ~= false then
 			local c, s = d.CFrame.Position, d.Size
 			local y1 = (c.Y + s.Y / 2)
 			if math.abs(p.X - c.X) <= s.X / 2 and math.abs(p.Z - c.Z) <= s.Z / 2

@@ -44,7 +44,7 @@ local UNDER   = -0.05  -- lite slack neråt: marklagrets ovansida ligger på 0
 	som spelbarhetsgrinden gör — en yta som inte kolliderar bär ingen. ]]
 local lador = {}
 for _, d in ipairs(modell:GetDescendants()) do
-	if d.CFrame and d.Size and d.CanCollide ~= false and d.Transparency ~= 1 then
+	if d:IsA("BasePart") and d.CanCollide ~= false and d.Transparency ~= 1 then
 		local c, s = d.CFrame.Position, d.Size
 		local cx, cz = BuildKit.tomtkoord(bas, c)
 		table.insert(lador, {

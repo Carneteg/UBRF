@@ -196,14 +196,30 @@ local function signal()
 	}
 end
 
---[[ GRAFIKLAGRET ÄR INTE DELAR. En `TextLabel` har en `UDim2` som Size,
-     ingen `CFrame` och ingen `CanCollide` alls i Roblox; stubben gav varje
-     instans alla tre. Världssvepen plockar ut delar på olika sätt — några
-     med `d.CFrame and d.Size`, andra med bara `d.CanCollide` — och med de
-     defaulterna tog de skyltarnas text för en vägg: en räknade
-     `UDim2.X / 2`, en annan lät etiketten spärra en gångrutt.
+--[[ GRAFIKLAGRET ÄR INTE DELAR — OCH ATT LÄSA DERAS `CFrame` KASTAR.
 
-     Klasserna nedan får därför INGEN av de tre, precis som i Roblox.
+     Det här är rättat två gånger, och andra gången är den som betyder något.
+
+     Första gången gav stubben varje instans `CFrame`, `Size` och
+     `CanCollide`. Världssvepen plockar ut delar på olika sätt — några med
+     `d.CFrame and d.Size`, andra med bara `d.CanCollide` — och med de
+     defaulterna tog de skyltarnas text för en vägg: en räknade `UDim2.X / 2`,
+     en annan lät etiketten spärra en gångrutt. Klasserna nedan fick då
+     ingen av de tre, och stubben svarade `nil`.
+
+     DET VAR FEL, och Studio visade det: i Luau **kastar** indexering av en
+     egenskap som inte finns på klassen. Den ger inte `nil`.
+
+         CFrame is not a valid member of SurfaceGui "…Skylt skylt.Skyltyta"
+
+     Vakten `if d.CFrame and d.Size` är alltså osund för varje icke-`BasePart`
+     — den fungerade av en slump så länge modellen bara innehöll delar. Med
+     `nil` i bänken och ett kast i Studio kunde bänken aldrig se det, och
+     världsbygget föll i runtime med grön svit.
+
+     Nu KASTAR bänken likadant, med samma meddelande. Den sunda formen är
+     `d:IsA("BasePart")`, och den är billig att skriva.
+
      Listan är den som faktiskt byggs i anläggningen; tillkommer fler
      GUI-klasser hör de hemma här. ]]
 local __UTAN_CFRAME = {
@@ -212,6 +228,15 @@ local __UTAN_CFRAME = {
 	ScrollingFrame = true, UIListLayout = true, UICorner = true,
 	UIPadding = true, UISizeConstraint = true,
 }
+--[[ Egenskaper som klassen inte HAR, och som därför kastar vid läsning.
+     `Size` står inte här för TextLabel och liknande: de har en `Size`, den
+     är bara en `UDim2`. En `SurfaceGui` har ingen alls. ]]
+local __SAKNAS = {
+	CFrame = true, CanCollide = true, Anchored = true, Position = true,
+}
+local __SAKNAR_SIZE = { SurfaceGui = true, BillboardGui = true,
+	ScreenGui = true, UIListLayout = true, UICorner = true,
+	UIPadding = true, UISizeConstraint = true }
 
 local function instance(klass)
 	local barn = {}
@@ -223,6 +248,8 @@ local function instance(klass)
 		CFrame = if __UTAN_CFRAME[klass] then nil else cframe(),
 		Transparency = 0,
 		CanCollide = if __UTAN_CFRAME[klass] then nil else true,
+		--[[ GUI-klasserna ovan får inga fält alls för de egenskaperna, och
+		     `__index` kastar när någon läser dem. ]]
 		--[[ #162: en Motor6D har en `C0`. Utan den föll riggkontraktet på
 		     `setRiderLean`, alltså på mätverktyget och inte på koden. ]]
 		C0 = if klass == "Motor6D" then cframe() else nil,
@@ -316,6 +343,14 @@ local function instance(klass)
 		     placerar något genom att MÄTA mellan två byggda delar fick då
 		     nil i stället för ett läge. ]]
 		__index = function(_, k)
+			--[[ Samma kast som Roblox, med samma meddelande. Se noten vid
+			     `__UTAN_CFRAME`: den här raden är hela skillnaden mellan en
+			     bänk som kan se vakten och en som inte kan. ]]
+			if __UTAN_CFRAME[klass]
+				and (__SAKNAS[k] or (k == "Size" and __SAKNAR_SIZE[klass])) then
+				error(("%s is not a valid member of %s \"%s\"")
+					:format(k, klass, tostring(rawget(i, "Name"))), 2)
+			end
 			if k == "Position" then
 				local cf = rawget(i, "CFrame")
 				return cf and cf.Position or vec()

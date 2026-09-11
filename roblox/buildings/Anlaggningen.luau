@@ -2701,7 +2701,12 @@ do
 
 				local attRiva = {}
 				for _, d in ipairs(model:GetDescendants()) do
-					if d.CFrame and d.Size and d.CanCollide ~= false
+					--[[ `d:IsA("BasePart")` och inte `d.CFrame` — se noten i
+						`BuildKit.speglaModell`. Att läsa en egenskap klassen
+						inte har KASTAR i Luau, och den här loopen går över
+						ALLA descendants: skyltarnas `SurfaceGui` fällde hela
+						världsbygget härifrån. ]]
+					if d:IsA("BasePart") and d.CanCollide ~= false
 						and d:GetAttribute("UBRFMark") == nil
 						--[[ Dörrbladen själva rörs inte — varken de som bär
 							prompt eller de som deklarerats som icke-passage.

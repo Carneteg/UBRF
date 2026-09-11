@@ -40,7 +40,7 @@ check("modellen finns i workspace", modell ~= nil)
 	förutsätter en del; nu får den bara delar. ]]
 local delar = {}
 for _, d in ipairs(modell:GetDescendants()) do
-	if d.CFrame ~= nil and d.Size ~= nil then table.insert(delar, d) end
+	if d:IsA("BasePart") then table.insert(delar, d) end
 end
 check("den byggde faktiskt något", #delar > 200, #delar .. " delar")
 
@@ -81,7 +81,7 @@ end
 local function spannFor(namn)
 	local n, summa, lo, hi = 0, 0, 1e9, -1e9
 	for _, d in ipairs(delar) do
-		if d.Name == namn and d.CFrame and d.Size then
+		if d.Name == namn and d:IsA("BasePart") then
 			local f = fot(d)
 			local langs = math.max(f.w, f.h)
 			local mitt = if f.w > f.h then f.x + f.w / 2 else f.y + f.h / 2

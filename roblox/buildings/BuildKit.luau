@@ -133,6 +133,21 @@ end
 function BuildKit.speglaModell(model: Model, djupMeter: number): number
 	local djupStuds = djupMeter * BuildKit.M
 	local n = 0
+	--[[ ── VAKTEN ÄR `IsA`, INTE `d.CFrame` ────────────────────────────
+
+		Det stod `if d.CFrame ~= nil and d.Size ~= nil` här, och det är
+		OSUNT: i Luau **kastar** indexering av en egenskap som inte finns på
+		klassen — den ger inte `nil`. Vakten fungerade av en slump så länge
+		modellen bara innehöll delar.
+
+		Skyltarnas `SurfaceGui` blev den första icke-`BasePart` loopen nådde,
+		och då föll hela världsbygget i Studio:
+
+		    CFrame is not a valid member of SurfaceGui "…Skylt skylt.Skyltyta"
+
+		Samma osunda vakt fanns i `Anlaggningen`s öppningspass, som körs före
+		det här. Båda är rättade; rättas bara den ena flyttar kraschen bara
+		hit. Bänken kastar numera likadant, så det går att mäta. ]]
 	for _, d in ipairs(model:GetDescendants()) do
 		--[[ EN YTA SOM SKA LÄSAS FRÅN ETT BESTÄMT HÅLL. En `SurfaceGui`
 			sitter på en NAMNGIVEN sida av sin del, och speglingen vänder
@@ -145,7 +160,7 @@ function BuildKit.speglaModell(model: Model, djupMeter: number): number
 				d.Face = Enum.NormalId.Front
 			end
 		end
-		if d.CFrame ~= nil and d.Size ~= nil then
+		if d:IsA("BasePart") then
 			local cf = BuildKit.speglaCF(d.CFrame, djupStuds)
 			if d.ClassName == "WedgePart" then
 				cf = cf * CFrame.Angles(0, math.pi, 0)
