@@ -48,7 +48,7 @@ local function del(foralder: Instance, namn: string, storlek: Vector3,
 	p.CFrame = cf
 	p.Color = farg
 	p.Anchored = false
-	p.CanCollide = false        -- bara BodyCollider kolliderar
+	p.CanCollide = false        -- bara rotdelen kolliderar
 	p.Massless = true
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
@@ -70,10 +70,26 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	local modell = Instance.new("Model")
 	modell.Name = namn
 
-	--[[ BodyCollider ÄR hästen fysiskt. Den enda delen som kolliderar, och
-		den `RigAdapter.resolveRoot` letar efter först. ]]
+	--[[ Kroppen ÄR hästen fysiskt: den enda delen som kolliderar.
+
+		NAMNET ÄR ETT MOTORKRAV, inte en smaksak. Roblox binder
+		`Humanoid.RootPart` till den syskondel som heter EXAKT
+		`HumanoidRootPart` — ingen annan. Den här delen hette
+		`BodyCollider` (projektets eget namn ur `HORSE-MODEL-SPEC.md`), och
+		då blev `Humanoid.RootPart` nil. Utan rot hittar Humanoiden inget
+		golv (`FloorMaterial = Air`) och lägger aldrig på någon gångkraft:
+		lokal Studio-QA på `9b5a570` mätte `gait=walk`, `WalkSpeed=4.93`,
+		`MoveDirection=1.00` och 0,00 studs förflyttning på 3,2 sekunder.
+
+		Falsifierat i runtime: enbart namnbytet band roten, `FloorMaterial`
+		gick `Air -> Concrete` och hästen gick 2,49 studs. Det här är den
+		rättelsen i källan.
+
+		`RigAdapter.resolveRoot` letar `HumanoidRootPart` först och
+		`BodyCollider` därefter, så externt byggda riggar med det gamla
+		namnet fungerar fortfarande. ]]
 	local kropp = Instance.new("Part")
-	kropp.Name = "BodyCollider"
+	kropp.Name = "HumanoidRootPart"
 	kropp.Size = Vector3.new(KROPP_B * M, KROPP_H * M, KROPP_L * M)
 	kropp.CFrame = bas * CFrame.new(0, (BEN_H + KROPP_H / 2) * M, 0)
 	kropp.Transparency = 1
@@ -86,6 +102,12 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 		RigAdapter rekommenderar. Utan den faller `build()` tillbaka på
 		AnimationController, som kräver egen fysik vi inte levererar. ]]
 	local humanoid = Instance.new("Humanoid")
+	--[[ HipHeight är avståndet från marken till rotdelens UNDERSIDA. Roten
+		är kroppen, och kroppen ska stå på benen — alltså benhöjden.
+		Lämnas den 0 sjunker kroppen ner i marken när roten väl är bunden,
+		och `HORSE-MODEL-SPEC.md` säger samma sak: mankhöjd minus halva
+		kroppshöjden. ]]
+	humanoid.HipHeight = BEN_H * M
 	humanoid.Parent = modell
 	local animator = Instance.new("Animator")
 	animator.Parent = humanoid
@@ -123,7 +145,7 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 		kropp.CFrame * CFrame.new(0, 0.10 * M, (KROPP_L / 2) * M), FARG_MAN)
 	svets(synlig, svans, "TailWeld")
 
-	--[[ Fyra ben. De kolliderar inte: markkontakten sitter i BodyCollider,
+	--[[ Fyra ben. De kolliderar inte: markkontakten sitter i rotdelen,
 		och kolliderande ben hade bråkat med Humanoids egen markmodell. ]]
 	for _, b in ipairs({
 		{ "LegFL", -1, -1 }, { "LegFR", 1, -1 }, { "LegBL", -1, 1 }, { "LegBR", 1, 1 },
