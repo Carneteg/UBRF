@@ -54,6 +54,63 @@ local function fot(d)
 		z0 = (p.Y - s.Y / 2) / M, z1 = (p.Y + s.Y / 2) / M }
 end
 
+--[[ ── EN STRUKTUR MÄTS SOM SPANN, INTE SOM ANTAL DELAR ────────────────
+
+	Flera prov här räknade DELAR med ett visst namn som mått på en
+	struktur: "panelen byggdes på EN långsida" var `antal == 1`. Det höll
+	så länge varje vägg var precis en låda.
+
+	P0-6 ändrade det. En genomgående port måste vara fri hela vägen, också
+	från det som står innanför väggen, så `Övre långvägg`, `Väggläkt` och
+	sargen delas numera vid portarna. Antalet delar säger därför ingenting
+	längre — men LÄNGDEN gör det, och den säger dessutom mer: strukturen
+	ska täcka hela sin sida UTOM vid de öppningar som står i kanon.
+
+	`spannFor` läser exakta namn (inte delsträngar, som `raknaNamn`) och
+	ger antal, summerad längd och yttre utsträckning längs strukturens egen
+	långaxel. ]]
+local function spannFor(namn)
+	local n, summa, lo, hi = 0, 0, 1e9, -1e9
+	for _, d in ipairs(delar) do
+		if d.Name == namn and d.CFrame and d.Size then
+			local f = fot(d)
+			local langs = math.max(f.w, f.h)
+			local mitt = if f.w > f.h then f.x + f.w / 2 else f.y + f.h / 2
+			n += 1
+			summa += langs
+			lo = math.min(lo, mitt - langs / 2)
+			hi = math.max(hi, mitt + langs / 2)
+		end
+	end
+	if n == 0 then return { n = 0, summa = 0, lo = 0, hi = 0, spann = 0 } end
+	return { n = n, summa = summa, lo = lo, hi = hi, spann = hi - lo }
+end
+
+--[[ Summan av de genomgående öppningarna på en sida som ligger inom ett
+	givet spann. Talen kommer ur UBRFKomplex, inte ur bygget. ]]
+local function oppningsbredd(husId, sida, lo, hi)
+	local hus
+	for _, b in ipairs(UBRFKomplex.byggnader) do
+		if b.id == husId then hus = b end
+	end
+	local summa = 0
+	for _, o in ipairs((hus and hus.oppningar) or {}) do
+		--[[ Fönsterprovet står utskrivet här: `arFonsterTyp` deklareras
+			längre ned i filen, och en local som deklareras EFTER en funktion
+			är inte samma namn inuti den. Första versionen kallade därför en
+			nil och specen dog mitt i. ]]
+		local fonster = o.typ == "fonster" or o.typ == "rund" or o.typ == "valv"
+		if o.sida == sida and not fonster and (o.z0 or 0) <= 0.001 then
+			local x, z, al = Geometri.oppningsHorn(hus.rekt, o.sida, o.u, o.b)
+			local a0 = if al == "X" then x else z
+			local a1 = a0 + o.b
+			a0, a1 = math.max(a0, lo), math.min(a1, hi)
+			if a1 > a0 then summa += a1 - a0 end
+		end
+	end
+	return summa
+end
+
 local function raknaNamn(monster)
 	local n = 0
 	for _, d in ipairs(delar) do
@@ -97,17 +154,75 @@ local function vagglangd(namn, along)
 	return s
 end
 
+--[[ ── OCH GRANNENS DÖRR ÄR OCKSÅ EN LUCKA ────────────────────────────
+
+	P0-6 ur Tobias andra Studio-test. Hästgången — passagen mellan stallet
+	och ridhuset — har inga egna öppningar i datan, för den ÄR en passage:
+	ridhusets `portbla` i öster och stallets `portbla` i väster är dess
+	ändar, och de ligger exakt mitt för varandra. Hästgångens egna väggar
+	stod ändå kvar mellan dem, och det här provet var GRÖNT hela tiden
+	eftersom det bara räknade byggnadens EGNA öppningar.
+
+	Regeln är därför utvidgad, av samma skäl som stod här från början —
+	"en igenmurad dörr är exakt felet Tobias hittade": möts två väggplan
+	går en genomgående öppning i den ena genom BÅDA. Talen kommer ur
+	`UBRFKomplex`, inte ur byggkoden; provet räknar själv. ]]
+local VAGGMOTE_M = 0.6
+
+local function vaggplanFor(r, sida)
+	if sida == "S" then return r.y, "X"
+	elseif sida == "N" then return r.y + r.h, "X"
+	elseif sida == "W" then return r.x, "Z"
+	else return r.x + r.w, "Z" end
+end
+
+--[[ Spannen längs väggens egen axel, grannarnas inräknade och klippta mot
+	väggens utsträckning. Union, så att två sammanfallande öppningar inte
+	räknas dubbelt. ]]
+local function luckspann(b, sida)
+	local plan, along = vaggplanFor(b.rekt, sida)
+	local minA = if along == "X" then b.rekt.x else b.rekt.y
+	local maxA = minA + (if along == "X" then b.rekt.w else b.rekt.h)
+
+	local spann = {}
+	local function las(hus, s2)
+		for _, o in ipairs(hus.oppningar or {}) do
+			if o.sida == s2 and not arFonsterTyp(o.typ) and (o.z0 or 0) <= 0.001 then
+				local x, z, al = Geometri.oppningsHorn(hus.rekt, o.sida, o.u, o.b)
+				local a0 = if al == "X" then x else z
+				local a1 = a0 + o.b
+				a0, a1 = math.max(a0, minA), math.min(a1, maxA)
+				if a1 > a0 then table.insert(spann, { a0, a1 }) end
+			end
+		end
+	end
+	las(b, sida)
+	for _, granne in ipairs(UBRFKomplex.byggnader) do
+		if granne.id ~= b.id then
+			for _, s2 in ipairs({ "N", "S", "E", "W" }) do
+				local plan2, along2 = vaggplanFor(granne.rekt, s2)
+				if along2 == along and math.abs(plan2 - plan) <= VAGGMOTE_M then
+					las(granne, s2)
+				end
+			end
+		end
+	end
+
+	table.sort(spann, function(p, q) return p[1] < q[1] end)
+	local summa, kant = 0, -1e9
+	for _, sp in ipairs(spann) do
+		local a0 = math.max(sp[1], kant)
+		if sp[2] > a0 then summa += sp[2] - a0; kant = sp[2] end
+	end
+	return summa
+end
+
 local SIDNAMN = { S = "syd", N = "norr", W = "vast", E = "ost" }
 for _, b in ipairs(UBRFKomplex.byggnader) do
 	for _, sida in ipairs({ "S", "N", "W", "E" }) do
 		local along = if sida == "S" or sida == "N" then "X" else "Z"
 		local hel = if along == "X" then b.rekt.w else b.rekt.h
-		local hal = 0
-		for _, o in ipairs(b.oppningar or {}) do
-			if o.sida == sida and not arFonsterTyp(o.typ) and (o.z0 or 0) <= 0.001 then
-				hal += o.b
-			end
-		end
+		local hal = luckspann(b, sida)
 		local namn = b.id .. " " .. SIDNAMN[sida]
 		local matt = vagglangd(namn, along)
 		check(("%s: %s är sluten utom i sina dörrar"):format(b.id, SIDNAMN[sida]),
@@ -734,9 +849,21 @@ end
 	SPELABSTRAKTION (ingen bild visar en grind; bredden vald) och ska
 	byggas MÄRKT som sådan: en markördel med klass och fidelity som
 	attribut, okolliderande. Testet mäter märkningen, inte verkligheten. ]]
-check("sargen byggdes i två stycken i norr, med spelets gap emellan",
-	raknaNamn("Sarg norr väst") == 1 and raknaNamn("Sarg norr öst") == 1
-		and raknaNamn("Sarg syd") == 1)
+do
+	local syd = spannFor("Sarg syd")
+	local port = oppningsbredd("ridhus", "S", syd.lo, syd.hi)
+	check("sargen byggdes i två stycken i norr, med spelets gap emellan",
+		raknaNamn("Sarg norr väst") == 1 and raknaNamn("Sarg norr öst") == 1
+			and syd.n >= 1,
+		("norr: %d + %d delar · syd: %d delar")
+			:format(raknaNamn("Sarg norr väst"), raknaNamn("Sarg norr öst"), syd.n))
+	--[[ Södra sargen är hel UTOM där gaveln har sin port. Den luckan är
+		inte spelets — porten står i kanon — och utan den är porten en
+		målad panel med en sarg bakom. ]]
+	check("södra sargen är hel utom vid gavelns port",
+		math.abs(syd.summa - (syd.spann - port)) < 0.05,
+		("%.2f m sarg över %.2f m, port %.2f m"):format(syd.summa, syd.spann, port))
+end
 do
 	local m = forstaNamn("Spelabstraktion sargport")
 	check("spelets sargport är byggd som märkt SPELABSTRAKTION, inte som fidelity",
@@ -745,19 +872,27 @@ do
 		m and tostring(m:GetAttribute("Klass")) or "markör saknas")
 end
 
-check("östra sargen byggdes i två delar, med grinden emellan",
-	raknaNamn("Sarg öst syd") == 1 and raknaNamn("Sarg öst norr") == 1
-		and raknaNamn("Sarg öst") == 2,
-	"annars är hästgången dekoration")
+do
+	local syd, norr = spannFor("Sarg öst syd"), spannFor("Sarg öst norr")
+	local port = oppningsbredd("ridhus", "E", syd.lo, syd.hi)
+		+ oppningsbredd("ridhus", "E", norr.lo, norr.hi)
+	check("östra sargen byggdes i två delar, med grinden emellan",
+		syd.n >= 1 and norr.n >= 1,
+		("syd %d delar, norr %d delar — annars är hästgången dekoration")
+			:format(syd.n, norr.n))
+	check("och båda delarna är hela utom vid långsidans portar",
+		math.abs((syd.summa + norr.summa)
+			- ((syd.spann + norr.spann) - port)) < 0.05,
+		("%.2f m sarg över %.2f m, portar %.2f m")
+			:format(syd.summa + norr.summa, syd.spann + norr.spann, port))
+end
 
 do
 	-- Grinden ska vara ett verkligt gap, inte två delar som möts.
-	local syd, norr = nil, nil
-	for _, d in ipairs(delar) do
-		if d.Name == "Sarg öst syd" then syd = fot(d) end
-		if d.Name == "Sarg öst norr" then norr = fot(d) end
-	end
-	local gap = if syd and norr then (norr.y - (syd.y + syd.h)) else -1
+	--[[ Sargen kan numera vara delad vid portarna, så gapet mäts mellan
+		delarnas YTTERKANTER och inte mellan två godtyckligt valda lådor. ]]
+	local syd, norr = spannFor("Sarg öst syd"), spannFor("Sarg öst norr")
+	local gap = if syd.n > 0 and norr.n > 0 then (norr.lo - syd.hi) else -1
 	check("grinden är ett verkligt gap i sargen", gap > 2.5,
 		string.format("%.2f m", gap))
 end
@@ -1389,21 +1524,60 @@ do
 	do
 		local O = I.ridhus.ovreVagg
 		local R2 = UBRFKomplex.ridhus
+		--[[ EN långsida mäts numera som att alla delar står på SAMMA
+			tvärläge, inte som att de är en enda låda: porten delar väggen,
+			och en delad vägg är fortfarande en vägg. ]]
+		local panel = spannFor("Övre långvägg")
+		local sidor = {}
+		for _, d in ipairs(delar) do
+			if d.Name == "Övre långvägg" then
+				sidor[("%.2f"):format(fot(d).x)] = true
+			end
+		end
+		local antalSidor = 0
+		for _ in pairs(sidor) do antalSidor += 1 end
 		check("den rostbruna panelen byggdes på EN långsida",
-			raknaNamn("Övre långvägg") == 1,
-			raknaNamn("Övre långvägg") .. " väggar")
-		check("väggläkten följer panelen, inte båda sidor",
-			raknaNamn("Väggläkt") == O.listar,
-			raknaNamn("Väggläkt") .. " av " .. O.listar)
+			panel.n >= 1 and antalSidor == 1,
+			("%d delar på %d tvärläge(n)"):format(panel.n, antalSidor))
 
-		local v = forstaNamn("Övre långvägg")
-		local f = v and fot(v)
+		local portar = oppningsbredd("ridhus", O.sida, panel.lo, panel.hi)
+		local lakt = spannFor("Väggläkt")
+		--[[ "Följer panelen, inte båda sidor" mäts som RADER och SIDA, inte
+			som en summerad längd. En läkt som råkar ligga i en ports höjd
+			delas vid porten och en som ligger över den gör det inte, så
+			summan beror på portarnas höjder — vilket inte är det som
+			provas här. Raderna och tvärläget är det. ]]
+		local laktSidor, laktHojder = {}, {}
+		for _, d in ipairs(delar) do
+			if d.Name == "Väggläkt" then
+				laktSidor[("%.2f"):format(fot(d).x)] = true
+				laktHojder[("%.2f"):format(fot(d).z0)] = true
+			end
+		end
+		local antalLaktSidor, antalRader = 0, 0
+		for _ in pairs(laktSidor) do antalLaktSidor += 1 end
+		for _ in pairs(laktHojder) do antalRader += 1 end
+		check("väggläkten följer panelen, inte båda sidor",
+			antalLaktSidor == 1 and antalRader == O.listar
+				and math.abs(lakt.spann - panel.spann) < 0.2,
+			("%d rader på %d tvärläge(n), spann %.2f m mot panelens %.2f m")
+				:format(antalRader, antalLaktSidor, lakt.spann, panel.spann))
+
 		--[[ Omgranskat 2026-09-03: panelen går hörn till hörn längs hela
-			hallens långsida (ridhus-inne-31, -17), fram till entrédelen. ]]
+			hallens långsida (ridhus-inne-31, -17), fram till entrédelen.
+			Utsträckningen ska alltså vara hela långsidan, och den TÄCKTA
+			längden hela långsidan minus kanons portar. ]]
 		check("panelen täcker hallens hela långsida, A-gaveln → entrédelen",
-			f ~= nil and math.abs(f.h - (O.y1 - O.y0)) < 0.2
-				and math.abs(f.h - (R2.langd - R2.entre)) < 0.2,
-			f and string.format("%.1f m av hallens %.1f", f.h, R2.langd - R2.entre) or "saknas")
+			panel.n >= 1 and math.abs(panel.spann - (O.y1 - O.y0)) < 0.2
+				and math.abs(panel.spann - (R2.langd - R2.entre)) < 0.2
+				and math.abs(panel.summa - (panel.spann - portar)) < 0.1,
+			("%.1f m av hallens %.1f, täckt %.1f m (portar %.1f m)")
+				:format(panel.spann, R2.langd - R2.entre, panel.summa, portar))
+
+		local f = { x = panel.lo, y = panel.lo, h = panel.spann }
+		for _, d in ipairs(delar) do
+			if d.Name == "Övre långvägg" then f = fot(d) break end
+		end
 
 		--[[ LOKALA koordinater. Första versionen jämförde f.x (världsläge,
 			~118) mot bredd/2 (~12,5) och föll fast bygget var riktigt — samma

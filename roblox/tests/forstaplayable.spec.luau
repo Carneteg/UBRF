@@ -61,8 +61,33 @@ local blad = {}
 for _, d in ipairs(delar) do
 	if d:GetAttribute("UBRFDorr") == true then table.insert(blad, d) end
 end
-check("varje genomgående fasadöppning har ett uppmärkt dörrblad",
-	#blad == vantadeDorrar, ("%d blad mot %d öppningar"):format(#blad, vantadeDorrar))
+--[[ P0-6 ur Tobias andra Studio-test: en prompt får inte lova en passage
+	som inte finns. En genomgående öppning som är blockerad av något som
+	inte går att frigöra utan att hitta på geometri märks därför INTE som
+	dörr, utan deklareras som icke-passage med ett skäl (se
+	`ICKE_PASSAGER` i Anlaggningen.luau). Kontraktet är tvåsidigt, så att
+	det inte går att bli grön genom att sluta märka upp dörrar:
+
+	    uppmärkta + deklarerade = alla genomgående öppningar
+
+	Att de deklarerade FAKTISKT är blockerade mäts i varldskoherens.spec,
+	som har vägsökningen. ]]
+local deklarerade = {}
+for _, d in ipairs(delar) do
+	if typeof(d:GetAttribute("IngenPassage")) == "string" then
+		table.insert(deklarerade, d)
+	end
+end
+check("varje genomgående fasadöppning är en uppmärkt dörr eller en deklarerad icke-passage",
+	#blad + #deklarerade == vantadeDorrar,
+	("%d blad + %d deklarerade = %d mot %d öppningar")
+		:format(#blad, #deklarerade, #blad + #deklarerade, vantadeDorrar))
+for _, d in ipairs(deklarerade) do
+	print(("       icke-passage: %s %s %s — %s"):format(
+		tostring(d:GetAttribute("Byggnad")), tostring(d:GetAttribute("Sida")),
+		tostring(d:GetAttribute("Oppningstyp")),
+		tostring(d:GetAttribute("IngenPassage")):sub(1, 90)))
+end
 check("det finns fasaddörrar att märka upp alls", vantadeDorrar > 0,
 	("%d st (och %d fönster som INTE ska märkas)"):format(vantadeDorrar, vantadeFonster))
 

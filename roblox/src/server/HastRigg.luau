@@ -202,45 +202,59 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	return modell
 end
 
---[[ Första dagens häst, på sin plats i stallet.
+--[[ ══ HÄSTARNA PÅ SINA PLATSER ═══════════════════════════════════════
 
-	Identiteten läses ur den delade sanningen: `Stallet.FORSTA_DAGEN_HAST`
-	och `UBRFSpelData.hastar`. Läget ur `Stallet.boxFor`. Inget skrivs här. ]]
-function JackRigg.start(): Model?
-	local okStall, Stallet = pcall(function()
-		return require((ReplicatedStorage :: any):WaitForChild("Stallet"))
+	P0-5 ur Tobias andra Studio-test: stallet är tomt.
+
+	Det var sant, och rostergrinden såg det inte. Den riggar trettiotre
+	hästar EN I TAGET i en testbänk, mäter dem och river dem — den bevisar
+	att riggen går att bygga, aldrig att någon står i stallet. Produktionen
+	byggde en enda häst: första dagens.
+
+	Identiteterna läses ur den delade sanningen (`UBRFSpelData.hastar`),
+	lägena ur `Stallet.boxFor`. Inget hittas på här: en häst utan box i
+	datan får ingen påhittad plats, den rapporteras. ]]
+
+--[[ Modulerna läses utan `WaitForChild`. Det här är SERVERKOD, och på
+	servern finns ReplicatedStorage-barnen redan när skriptet körs —
+	väntan fanns för klientens skull och gjorde samtidigt modulen omöjlig
+	att köra i testbänken, som inte har en replikeringsgraf. ]]
+local function delad(namn: string)
+	local ok, m = pcall(function()
+		if namn == "Stallet" then return require(ReplicatedStorage.Stallet) end
+		return require(ReplicatedStorage.UBRFSpelData)
 	end)
-	if not okStall then
-		warn("[Rigg] Stallet saknas i ReplicatedStorage — ingen häst byggd.")
-		return nil
-	end
+	if not ok then return nil end
+	return m
+end
 
-	local hastId = (Stallet :: any).FORSTA_DAGEN_HAST
-	local box = (Stallet :: any).boxFor(hastId)
-	if not box or not box.varld then
-		warn(("[Rigg] %s har ingen box med världskoordinater — ingen häst byggd.")
-			:format(tostring(hastId)))
-		return nil
-	end
+local function namnFor(hastId: string): string
+	local Data = delad("UBRFSpelData")
+	local h = Data and ((Data :: any).hastar or {})[hastId]
+	if h and h.namn then return tostring(h.namn) end
+	return tostring(hastId)
+end
 
-	local namn = tostring(hastId)
-	local okData, Data = pcall(function()
-		return require((ReplicatedStorage :: any):WaitForChild("UBRFSpelData"))
-	end)
-	if okData then
-		local h = ((Data :: any).hastar or {})[hastId]
-		if h and h.namn then namn = tostring(h.namn) end
-	end
-
-	--[[ Golvet i stallet ligger på anläggningens nollnivå; hästen ställs
-		med hovarna där. Anläggningens modell bär transformen, så läget
-		räknas relativt den och inte mot världens origo. ]]
+--[[ Anläggningens bas. Lägena räknas relativt den, inte mot världens
+	origo, eftersom modellen bär transformen. ]]
+local function anlaggningsbas(): CFrame?
 	local folder = workspace:FindFirstChild("Anläggning")
 	local komplex = folder and folder:FindFirstChild("UBRF")
-	if not komplex or not (komplex :: any).PrimaryPart then
-		warn("[Rigg] Anläggningen är inte byggd — hästen skulle hamna i tomrummet.")
-		return nil
-	end
+	if not komplex or not (komplex :: any).PrimaryPart then return nil end
+	return ((komplex :: any).PrimaryPart :: BasePart).CFrame
+end
+
+--[[ En häst i sin egen box. Returnerar modellen, eller nil med ett skäl. ]]
+function JackRigg.placera(hastId: string): (Model?, string?)
+	local Stallet = delad("Stallet")
+	if not Stallet then return nil, "Stallet saknas i ReplicatedStorage" end
+
+	local box = (Stallet :: any).boxFor(hastId)
+	if not box or not box.varld then return nil, "ingen box i datan" end
+
+	local bas = anlaggningsbas()
+	if not bas then return nil, "anläggningen är inte byggd" end
+
 	--[[ VÄNDA VÄRLDEN: site-y är norr på kartan, och världen är en
 		högerhänt avbild av kartan där norr är −Z. Relativt anläggningens
 		`PrimaryPart` — som speglas med resten — blir omräkningen därför
@@ -250,17 +264,57 @@ function JackRigg.start(): Model?
 		integrationsbänken), så tecknet står här, med samma namn att söka
 		på. Felaktigt tecken fälls av `spelbarhet.spec`, som mäter var
 		markören och hästen faktiskt hamnar i det byggda stallet. ]]
-	local bas = ((komplex :: any).PrimaryPart :: BasePart).CFrame
-		* CFrame.new(box.varld.x * M, 0, -box.varld.y * M)
+	local lage = bas * CFrame.new(box.varld.x * M, 0, -box.varld.y * M)
 
-	local modell = JackRigg.bygg(hastId, namn, bas)
+	local modell = JackRigg.bygg(hastId, namnFor(hastId), lage)
 	modell.Parent = workspace
 	--[[ Taggen SIST: HorseService lyssnar på `GetInstanceAddedSignal`, och
 		en halvbyggd modell ska inte kunna registreras. ]]
 	CollectionService:AddTag(modell, TAG)
-	print(("[Rigg] %s (%s) står i box %d"):format(namn, tostring(hastId),
-		tonumber(box.nummer) or 0))
-	return modell
+	return modell, nil
+end
+
+--[[ Hela stallet. Första dagens häst returneras separat eftersom
+	startkontraktet i `init.server.luau` hänger på just den: utan henne kan
+	spelaren inte börja, och då ska starten säga det. ]]
+function JackRigg.start(): Model?
+	local Stallet = delad("Stallet")
+	if not Stallet then
+		warn("[Rigg] Stallet saknas i ReplicatedStorage — ingen häst byggd.")
+		return nil
+	end
+	local Data = delad("UBRFSpelData")
+	local hastar = (Data and (Data :: any).hastar) or {}
+
+	--[[ Ordningen är `Spel.ordning` där den finns: samma ordning som
+		boxfördelningen räknas ur, så att utskriften går att jämföra med
+		stallplanen. Annars sorterade id:n — aldrig pairs-ordning, som är
+		olika mellan körningar. ]]
+	local ids = {}
+	for id in pairs(hastar) do table.insert(ids, id) end
+	table.sort(ids)
+
+	local forsta: Model? = nil
+	local byggda, utanBox = 0, {}
+	for _, id in ipairs(ids) do
+		local m, varfor = JackRigg.placera(id)
+		if m then
+			byggda += 1
+			if id == (Stallet :: any).FORSTA_DAGEN_HAST then forsta = m end
+		else
+			table.insert(utanBox, ("%s (%s)"):format(id, tostring(varfor)))
+		end
+	end
+
+	print(("[Rigg] %d av %d hästar står i sina boxar"):format(byggda, #ids))
+	if #utanBox > 0 then
+		warn(("[Rigg] utan plats: %s"):format(table.concat(utanBox, ", ")))
+	end
+	if not forsta then
+		warn(("[Rigg] första dagens häst (%s) kom inte på plats.")
+			:format(tostring((Stallet :: any).FORSTA_DAGEN_HAST)))
+	end
+	return forsta
 end
 
 return JackRigg

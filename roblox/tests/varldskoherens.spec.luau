@@ -216,107 +216,153 @@ check("världen har uppmärkta dörrblad att prova", #blad > 0, ("%d blad"):form
 --[[ `Utat` pekar ut från fasaden längs den axel väggen INTE löper i:
 	along == "X" ⇒ normalen är kartans y-axel, annars x-axeln.
 	Talen kommer ur `Geometri.oppningsHorn`, samma källa bygget använder. ]]
+--[[ `Utat` pekar ut från fasaden längs den axel väggen INTE löper i:
+	along == "X" ⇒ normalen är kartans y-axel, annars x-axeln.
+	Talen kommer ur `Geometri.oppningsHorn`, samma källa bygget använder. ]]
 local UT = 0.9        -- mer än väggens 0,3 m, så punkterna hamnar på var sin sida
-local misslyckade = {}
-for _, b in ipairs(blad) do
+
+local function idFor(b)
+	return ("%s %s %s"):format(tostring(b:GetAttribute("Byggnad")),
+		tostring(b:GetAttribute("Sida")), tostring(b:GetAttribute("Oppningstyp")))
+end
+
+--[[ Går det att gå igenom? Returnerar (ok, text, karta, mittpunkt).
+
+	Kontraktet ur ordern, punkt 4: approach → open → passage clearance →
+	avatar kan gå igenom → andra sidan har bärande mark → kan återvända.
+	Stängd dörr ska dessutom SPÄRRA — annars mäter provet inte dörren. ]]
+local function provaPassage(b)
 	local c = b.CFrame.Position
 	local cx, cz = BuildKit.tomtkoord(bas, c)
 	local along = b:GetAttribute("Langs")
 	local utat = b:GetAttribute("Utat") or 1
-	local hus = tostring(b:GetAttribute("Byggnad"))
-	local sida = tostring(b:GetAttribute("Sida"))
-	local id = ("%s %s %s"):format(hus, sida, tostring(b:GetAttribute("Oppningstyp")))
-
 	local nx, nz = 0, 0
 	if along == "X" then nz = utat else nx = utat end
+
 	local ute = { x = cx + nx * UT, y = cz + nz * UT }
 	local inne = { x = cx - nx * UT, y = cz - nz * UT }
-
 	local R = 8.0
 	local x0 = math.min(ute.x, inne.x) - R
 	local x1 = math.max(ute.x, inne.x) + R
 	local z0 = math.min(ute.y, inne.y) - R
 	local z1 = math.max(ute.y, inne.y) + R
 
-	--[[ STÄNGD: bladet kolliderar, och då ska det INTE gå att passera.
-		Utan den halvan mäter provet inte dörren — en vägg med ett hål
-		bredvid hade också blivit grön. ]]
 	local kStangd = karta(x0, z0, x1, z1)
 	local nStangd = sok(kStangd, ute, inne)
-
-	--[[ ÖPPEN: kartan byggs om UTAN bladet, med samma funktion. Att frita
-		bladets celler hade mätt min egen approximation. ]]
 	local kOppen = karta(x0, z0, x1, z1, b)
 	local ut2in, varfor = sok(kOppen, ute, inne)
 	local in2ut = sok(kOppen, inne, ute)
-
-	local kUteGolv = kOppen.golv[kOppen.idx(kOppen.cellFor(ute.x, ute.y))]
-	local kInneGolv = kOppen.golv[kOppen.idx(kOppen.cellFor(inne.x, inne.y))]
-
-	--[[ VEM spärrar? En grind som bara säger "ingen väg" tvingar nästa
-		person att bygga om felsökningen från noll. Kartan ritas ur SAMMA
-		rutnät som sökningen använder — annars felsöker man en annan värld
-		än den som fälldes. ]]
-	if ut2in == nil then
-		local ccx, ccz = kOppen.cellFor(cx, cz)
-		local dlangs = if along == "X" then 1 else 0
-		print("      karta kring öppningen (. gångbar, # blockerad, ' ' inget golv, D dörrmitt)")
-		for a = -6, 6 do
-			local rad = ""
-			for bq = -8, 8 do
-				local ix = ccx + (if dlangs == 1 then bq else a)
-				local iz = ccz + (if dlangs == 1 then a else bq)
-				local i = kOppen.idx(ix, iz)
-				local t = " "
-				if ix >= 1 and iz >= 1 and ix <= kOppen.NX and iz <= kOppen.NZ then
-					t = if kOppen.golv[i] == nil then " "
-						elseif kOppen.blockerad[i] then "#" else "."
-				end
-				if a == 0 and bq == 0 then t = "D" end
-				rad = rad .. t
-			end
-			print("      |" .. rad .. "|")
-		end
-		--[[ Och VILKA delar som täcker cellerna rakt igenom öppningen. ]]
-		for a = -3, 3 do
-			local ix = ccx + (if dlangs == 1 then 0 else a)
-			local iz = ccz + (if dlangs == 1 then a else 0)
-			if ix >= 1 and iz >= 1 and ix <= kOppen.NX and iz <= kOppen.NZ then
-				local mx, mz = kOppen.mitt(ix, iz)
-				local i = kOppen.idx(ix, iz)
-				local namn = {}
-				local g2 = kOppen.golv[i]
-				for _, l in ipairs(alla) do
-					if l.del ~= b and g2 ~= nil
-						and mx >= l.x0 - RADIE and mx <= l.x1 + RADIE
-						and mz >= l.z0 - RADIE and mz <= l.z1 + RADIE
-						and l.y1 > g2 + STEG and l.y0 < g2 + HOJD then
-						table.insert(namn, ("%s[y %.2f–%.2f]"):format(l.namn, l.y0, l.y1))
-					end
-				end
-				print(("      rad %+d (%.2f, %.2f) golv %s: %s"):format(a, mx, mz,
-					g2 and ("%.2f"):format(g2) or "—",
-					#namn > 0 and table.concat(namn, " · ") or "FRI"))
-			end
-		end
-	end
+	local golvUte = kOppen.golv[kOppen.idx(kOppen.cellFor(ute.x, ute.y))]
+	local golvInne = kOppen.golv[kOppen.idx(kOppen.cellFor(inne.x, inne.y))]
 
 	local ok = ut2in ~= nil and in2ut ~= nil
-		and kUteGolv ~= nil and kInneGolv ~= nil
-	if not ok then
-		table.insert(misslyckade, {
-			id = id, varfor = varfor or "—",
-			ute = kUteGolv, inne = kInneGolv, stangd = nStangd,
-			k = kOppen, punkt = ute,
-		})
-	end
-	matning(("%-28s"):format(id), ("stängd %s · öppen %s · mark ute %s inne %s")
-		:format(
-			nStangd and ("PASSERBAR (" .. nStangd .. ")") or "spärrad",
-			ut2in and ("ut→in " .. ut2in .. " celler") or ("STOPP: " .. tostring(varfor)),
-			kUteGolv and ("%.2f"):format(kUteGolv) or "SAKNAS",
-			kInneGolv and ("%.2f"):format(kInneGolv) or "SAKNAS"))
+		and golvUte ~= nil and golvInne ~= nil
+	local text = ("stängd %s · öppen %s · mark ute %s inne %s"):format(
+		nStangd and ("PASSERBAR (" .. nStangd .. ")") or "spärrad",
+		ut2in and ("ut→in " .. ut2in .. " celler") or ("STOPP: " .. tostring(varfor)),
+		golvUte and ("%.2f"):format(golvUte) or "SAKNAS",
+		golvInne and ("%.2f"):format(golvInne) or "SAKNAS")
+	return ok, text, kOppen, { x = cx, z = cz, nx = nx, nz = nz, along = along }
 end
+
+--[[ Kartan kring en öppning som föll, ritad ur SAMMA rutnät som sökningen
+	använde. En grind som bara säger "ingen väg" tvingar nästa person att
+	bygga om felsökningen från noll. ]]
+local function skrivKarta(k, m)
+	local ccx, ccz = k.cellFor(m.x, m.z)
+	local dlangs = if m.along == "X" then 1 else 0
+	print("      karta kring öppningen (. gångbar, # blockerad, ' ' inget golv, D dörrmitt)")
+	for a = -6, 6 do
+		local rad = ""
+		for bq = -8, 8 do
+			local ix = ccx + (if dlangs == 1 then bq else a)
+			local iz = ccz + (if dlangs == 1 then a else bq)
+			local i = k.idx(ix, iz)
+			local t = " "
+			if ix >= 1 and iz >= 1 and ix <= k.NX and iz <= k.NZ then
+				t = if k.golv[i] == nil then " "
+					elseif k.blockerad[i] then "#" else "."
+			end
+			if a == 0 and bq == 0 then t = "D" end
+			rad = rad .. t
+		end
+		print("      |" .. rad .. "|")
+	end
+	for a = -3, 3 do
+		local ix = ccx + (if dlangs == 1 then 0 else a)
+		local iz = ccz + (if dlangs == 1 then a else 0)
+		if ix >= 1 and iz >= 1 and ix <= k.NX and iz <= k.NZ then
+			local mx, mz = k.mitt(ix, iz)
+			local i = k.idx(ix, iz)
+			local g2 = k.golv[i]
+			local namn = {}
+			for _, l in ipairs(alla) do
+				if g2 ~= nil
+					and mx >= l.x0 - RADIE and mx <= l.x1 + RADIE
+					and mz >= l.z0 - RADIE and mz <= l.z1 + RADIE
+					and l.y1 > g2 + STEG and l.y0 < g2 + HOJD then
+					table.insert(namn, ("%s[y %.2f–%.2f]"):format(l.namn, l.y0, l.y1))
+				end
+			end
+			print(("      rad %+d (%.2f, %.2f) golv %s: %s"):format(a, mx, mz,
+				g2 and ("%.2f"):format(g2) or "—",
+				#namn > 0 and table.concat(namn, " · ") or "FRI"))
+		end
+	end
+end
+
+local misslyckade = {}
+for _, b in ipairs(blad) do
+	local ok, text, k, m = provaPassage(b)
+	matning(("%-28s"):format(idFor(b)), text)
+	if not ok then
+		table.insert(misslyckade, idFor(b))
+		skrivKarta(k, m)
+	end
+end
+
+--[[ ══ OCH INGEN ÖPPNING FÅR TYSTNA ═══════════════════════════════════
+
+	Utan den här halvan går grinden ovan att göra grön genom att sluta
+	märka upp dörrar. Kontraktet är därför tvåsidigt:
+
+	  varje genomgående öppning i datan är ANTINGEN ett uppmärkt,
+	  passerbart dörrblad ELLER en deklarerad icke-passage med ett skäl,
+
+	och en deklarerad icke-passage måste dessutom VARA blockerad. En rad i
+	listan som inte behövs är en rad som döljer en dörr som fungerar. ]]
+local function arFonster(typ) return typ == "fonster" or typ == "rund" or typ == "valv" end
+local genomgaende = 0
+for _, bg in ipairs(G.byggnader) do
+	for _, o in ipairs(bg.oppningar or {}) do
+		if not arFonster(o.typ) and (o.z0 or 0) <= 0.001 then genomgaende += 1 end
+	end
+end
+local deklarerade = {}
+for _, d in ipairs(modell:GetDescendants()) do
+	local skal = d:GetAttribute("IngenPassage")
+	if typeof(skal) == "string" then table.insert(deklarerade, d) end
+end
+check("varje genomgående öppning är antingen en dörr eller en deklarerad icke-passage",
+	#blad + #deklarerade == genomgaende,
+	("%d uppmärkta + %d deklarerade = %d mot %d genomgående öppningar i datan")
+		:format(#blad, #deklarerade, #blad + #deklarerade, genomgaende))
+
+for _, d in ipairs(deklarerade) do
+	local id = ("%s %s %s"):format(tostring(d:GetAttribute("Byggnad")),
+		tostring(d:GetAttribute("Sida")), tostring(d:GetAttribute("Oppningstyp")))
+	matning(("icke-passage: %s"):format(id),
+		tostring(d:GetAttribute("IngenPassage")):sub(1, 120))
+end
+local onodiga = {}
+for _, d in ipairs(deklarerade) do
+	local ok = provaPassage(d)
+	if ok then table.insert(onodiga, idFor(d)) end
+end
+check("varje deklarerad icke-passage är faktiskt blockerad — ingen onödig rad",
+	#onodiga == 0,
+	#onodiga == 0 and ("%d deklarerade, alla blockerade"):format(#deklarerade)
+		or ("dessa GÅR att passera och ska inte vara deklarerade: " .. table.concat(onodiga, ", ")))
 
 check("varje dörr går att gå igenom i BÅDA riktningar när den är öppen",
 	#misslyckade == 0,

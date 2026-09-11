@@ -269,21 +269,50 @@ do
 			or ("%d punkter nådda från spawnen"):format(raknare))
 end
 
---[[ ══ 5. MARKEN LIGGER I ETT PLAN ═══════════════════════════════════════
-	Två marklager på olika höjd hade gett ett osynligt steg mitt på gården.
-	Ovansidan ska vara samma för alla. ]]
+--[[ ══ 5. MARKEN LIGGER I ETT PLAN — OCH UNDER GOLVEN ══════════════════
+
+	Första versionen krävde att alla marklager hade EXAKT samma ovansida.
+	Avsikten var rätt — inget osynligt steg mitt på gården — men kravet var
+	för starkt, och P1-4 i Tobias andra Studio-test visade varför: femton
+	coplanära ytor är odefinierade för djupbufferten. Gräsmattan täcker
+	hela tomten och låg i samma plan som grusplanen, så renderaren visade
+	en slumpmässig blandning, och inne i husen blev gräset det man såg.
+
+	Kravet är därför nu det som avsikten egentligen var:
+
+	  1. ingen höjdskillnad mellan två marklager får vara ett STEG
+	     (avatarens tröskel är 0,55 m; marginalen här är 0,05 m),
+	  2. och HELA marken ligger under husgolvens nivå 0, så att ett golv
+	     alltid vinner inomhus.
+
+	Det är en svagare regel på punkt 1 och en ny, starkare regel på punkt
+	2 — och det är punkt 2 som fångar felet Tobias såg. ]]
 do
-	local hojder = {}
+	local hojder, lista = {}, {}
 	for _, d in ipairs(modell:GetDescendants()) do
 		if d.GetAttribute and typeof(d:GetAttribute("UBRFMark")) == "string" then
 			local y = (d.CFrame.Position.Y + d.Size.Y / 2) / M
+			table.insert(lista, y)
 			hojder[("%.3f"):format(y)] = true
 		end
 	end
-	local lista = {}
-	for h in pairs(hojder) do table.insert(lista, h) end
-	check("alla marklager har samma ovansida — inget steg på gården",
-		#lista == 1, table.concat(lista, ", "))
+	table.sort(lista)
+	local lagst, hogst = lista[1], lista[#lista]
+	check("inget marklager bildar ett steg mot ett annat",
+		#lista > 0 and (hogst - lagst) <= 0.05,
+		("%d lager, %.3f m till %.3f m (spann %.3f m)")
+			:format(#lista, lagst or 0, hogst or 0, (hogst or 0) - (lagst or 0)))
+	check("och hela marken ligger UNDER husgolven, så inget gräs kan ligga överst inomhus",
+		#lista > 0 and hogst < 0,
+		("högsta marklager %.3f m mot husgolvens 0"):format(hogst or 0))
+
+	--[[ Att lagren dessutom har SKILDA nivåer är vad som gör ordningen
+		entydig för djupbufferten. Lika nivåer är inte ett steg, men de är
+		det som gav fläckarna av gräs på grusplanen. ]]
+	local unika = 0
+	for _ in pairs(hojder) do unika += 1 end
+	check("varje marklager har sin egen nivå — ingen coplanär z-fight",
+		unika == #lista, ("%d nivåer för %d lager"):format(unika, #lista))
 end
 
 if fails > 0 then

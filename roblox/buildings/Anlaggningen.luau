@@ -54,6 +54,7 @@ local YTOR = G.interiorytor     -- F02-C: delade interiörmaterial, inte en andr
 local QA_MARKORER = UBRF_QA_MARKORER == true
 
 local VAGGT = 0.3               -- väggtjocklek, rendering
+local M3 = BK.M                 -- studs per meter, för passen som läser byggd geometri
 local MARKT = 0.2               -- marklagrets tjocklek
 
 local MARKFARG: { [string]: Color3 } = {
@@ -113,22 +114,81 @@ end
 	dekorlager som läggs till i framtiden ska tas bort ur den med ett
 	beslut, inte ärva gångbarhet av misstag.
 
-	Lådans ovansida ligger på y = 0 (byggd från -MARKT med tjockleken
-	MARKT), samma nivå som husgolven, så ytorna möts utan steg. ]]
+	── OCH MARKEN LIGGER UNDER GOLVEN ──────────────────────────────────
+
+	P1-4 ur Tobias andra Studio-test: gräs syns inne i byggnaderna.
+
+	Mätt, inte gissat: 1416 av 1748 provade punkter inne i ridhuset och
+	1188 av 1292 i stallet hade ett MARKLAGER överst. Två orsaker, båda på
+	en rad var.
+
+	1. Alla femton marklager låg på EXAKT samma nivå — ovansidan y = 0.
+	   Gräsmattan täcker hela tomten (210×170 m) och ligger alltså under
+	   grusplanen, sanden och åkern. Coplanära ytor är odefinierade för
+	   djupbufferten: renderaren visar en slumpmässig blandning, och det
+	   syns som fläckar av gräs mitt i grusplanen.
+
+	2. Husens grundplattor toppade också på y = 0, samma nivå igen. Inne i
+	   ett hus fanns alltså ingen yta som var högre än gräset.
+
+	Lagren staplas nu i datans ordning med en millimeter mellan sig och
+	HELA stapeln ligger under noll. Översta marklagret toppar på -0,005 m;
+	husens grundplattor står kvar på 0. Då finns det en entydig ordning:
+	senare marklager vinner över tidigare, och varje husgolv vinner över
+	all mark. Steget in genom en dörr blir en halv centimeter.
+
+	Detta rör INTE vilken mark som ligger var — bara i vilken ordning
+	ytorna staplas. Ingen rektangel flyttas. ]]
 local GANGBAR_MARK: { [string]: boolean } = {
 	gras = true, grus = true, asfalt = true, sand = true,
 	betong = true, aker = true,
 }
+local MARKSTEG = 0.001          -- mellanrum mellan två marklager
+local MARKTOPP = -0.02          -- det understa lagrets ovansida
 
 local function byggMark(model: Model, base: CFrame)
-	for _, m in ipairs(G.mark) do
+	for i, m in ipairs(G.mark) do
+		local topp = MARKTOPP + (i - 1) * MARKSTEG
 		local p = BK.box(model, base, "Mark " .. m.typ,
-			m.rekt.x, -MARKT, m.rekt.y, m.rekt.w, MARKT, m.rekt.h,
+			m.rekt.x, topp - MARKT, m.rekt.y, m.rekt.w, MARKT, m.rekt.h,
 			MARKFARG[m.typ] or Color3.fromRGB(120, 120, 120),
 			MARKMATERIAL[m.typ] or Enum.Material.Ground)
 		p.CanCollide = GANGBAR_MARK[m.typ] == true
 		p:SetAttribute("UBRFMark", m.typ)
 	end
+end
+
+--[[ ══ ÖPPNINGAR SOM INTE ÄR PASSAGER ══════════════════════════════════
+
+	P0-6 säger att ingen prompt får lova en passage som inte finns. Det
+	lämnar två vägar när en öppning är blockerad: frigör passagen, eller
+	sluta lova den. Den första är gjord ovan för allt som går att frigöra
+	utan att hitta på geometri. Den här listan är den andra vägen, och den
+	är AVSIKTLIGT obekväm: varje rad måste ha ett skäl, och
+	`varldskoherens.spec` kräver dessutom att raden BEHÖVS — en öppning som
+	går att passera får inte stå här.
+
+	Öppningen byggs som förut; den syns i fasaden, för den finns i
+	verkligheten. Den bär bara ingen prompt. ]]
+local ICKE_PASSAGER: { { byggnad: string, sida: string, typ: string, u: number, skal: string } } = {
+	{
+		byggnad = "ridhus", sida = "W", typ = "dorr", u = 40,
+		skal = "[REFERENCE GAP] Öppningen ligger bakom läktarens bänkrader. "
+			.. "Att såga hål i läktaren för att dörren ska gå att använda vore "
+			.. "påhittad geometri. VILKEN långsida läktaren ligger på är ännu "
+			.. "inte avgjord (se noten i buildings/Vyer.luau); visar sig den "
+			.. "ligga på östra sidan blir den här dörren fri och raden ska bort.",
+	},
+}
+
+local function ickePassage(b, o): string?
+	for _, r in ipairs(ICKE_PASSAGER) do
+		if r.byggnad == b.id and r.sida == o.sida and r.typ == o.typ
+			and math.abs(r.u - o.u) < 0.01 then
+			return r.skal
+		end
+	end
+	return nil
 end
 
 local function byggOppning(model: Model, base: CFrame, b, o)
@@ -149,7 +209,15 @@ local function byggOppning(model: Model, base: CFrame, b, o)
 			"dorrvit" (flera dörrar delar namn). Attribut, inte tagg: den här
 			filen körs också i byggbänkens stubbar, där CollectionService inte
 			finns. Måtten kommer ur öppningen — inget nytt hittas på. ]]
-		if garIgenom(o) then
+		local skal = ickePassage(b, o)
+		if skal then
+			--[[ Syns i fasaden, lovar ingenting. Skälet står som attribut
+				så att det går att läsa i Studio utan att leta i koden. ]]
+			blad:SetAttribute("IngenPassage", skal)
+			blad:SetAttribute("Byggnad", b.id)
+			blad:SetAttribute("Sida", o.sida)
+			blad:SetAttribute("Oppningstyp", o.typ)
+		elseif garIgenom(o) then
 			blad:SetAttribute("UBRFDorr", true)
 			blad:SetAttribute("Byggnad", b.id)
 			blad:SetAttribute("Sida", o.sida)
@@ -235,7 +303,39 @@ end
 	`oppningsHorn` räknar N och W baklänges, så spannet måste hämtas därifrån
 	och inte räknas ut på nytt här — det är precis den detalj som annars
 	lägger luckan i fel ände av fasaden. ]]
-local function luckor(b, sida: string): { { number } }
+--[[ Var ligger väggen, och längs vilken axel löper den? ]]
+local function vaggplan(r, sida: string): (number, string)
+	if sida == "S" then return r.y, "X"
+	elseif sida == "N" then return r.y + r.h, "X"
+	elseif sida == "W" then return r.x, "Z"
+	else return r.x + r.w, "Z" end
+end
+
+--[[ ── EN ÖPPNING I GRANNENS VÄGG ÄR EN ÖPPNING OCKSÅ HÄR ───────────────
+
+	P0-6 ur Tobias andra Studio-test: "Gate/Öppna visas men spelaren kommer
+	inte ut."
+
+	Hästgången — hela skälet till att man kan leda hästen mellan stallet
+	och ridhuset — byggdes som en sluten låda. Den har inga egna öppningar
+	i datan, för den ÄR en passage: det är ridhusets `portbla` i öster och
+	stallets `portbla` i väster som är dess ändar. De två portarna ligger
+	dessutom exakt mitt för varandra, y 83,4–85,8 båda två.
+
+	Ridhuset fick sin lucka, stallet sin, och hästgångens egna väggar stod
+	kvar mellan dem. Två portar, tre väggar, ingen väg.
+
+	Regeln här är härledd, inte påhittad: möts två byggnaders väggar och
+	den ena har en genomgående öppning, så går den öppningen genom BÅDA.
+	Ingen ny öppning skapas, ingen flyttas — grannens lucka kopieras till
+	den vägg som annars murar igen den.
+
+	Toleransen är 0,6 m: väggarna är 0,3 m tjocka och möts liv mot liv, så
+	två väggplan som hör ihop ligger alltid närmare än så, och två som
+	inte hör ihop längre bort. ]]
+local VAGGMOTE = 0.6
+
+local function egnaLuckor(b, sida: string): { { number } }
 	local ut = {}
 	for _, o in ipairs(b.oppningar or {}) do
 		if o.sida == sida and garIgenom(o) then
@@ -243,6 +343,33 @@ local function luckor(b, sida: string): { { number } }
 			table.insert(ut, { (if along == "X" then x else z), o.b, o.h })
 		end
 	end
+	return ut
+end
+
+local function luckor(b, sida: string): { { number } }
+	local ut = egnaLuckor(b, sida)
+
+	local plan, along = vaggplan(b.rekt, sida)
+	local minA = if along == "X" then b.rekt.x else b.rekt.y
+	local maxA = minA + (if along == "X" then b.rekt.w else b.rekt.h)
+
+	for _, granne in ipairs(G.byggnader) do
+		if granne.id ~= b.id then
+			for _, s2 in ipairs({ "N", "S", "E", "W" }) do
+				local plan2, along2 = vaggplan(granne.rekt, s2)
+				if along2 == along and math.abs(plan2 - plan) <= VAGGMOTE then
+					for _, l in ipairs(egnaLuckor(granne, s2)) do
+						--[[ Bara den del av grannens lucka som faktiskt
+							ligger längs den här väggen. ]]
+						if l[1] + l[2] > minA and l[1] < maxA then
+							table.insert(ut, { l[1], l[2], l[3] })
+						end
+					end
+				end
+			end
+		end
+	end
+
 	table.sort(ut, function(p, q) return p[1] < q[1] end)
 	return ut
 end
@@ -2424,6 +2551,126 @@ print(("OK UBRF byggd: %d byggnader, %d dörrar, %d boxrader, %d gångytor, %d o
 -- hästgången, samma vy som webbversionen verifieras mot. Husen ska läsa som
 -- ETT komplex härifrån, inte som två fristående lador.
 -- BK.cameraLike(base, 148, 130, 148, 106)
+
+--[[ ══ EN ÖPPNING SKA VARA ÖPPEN ══════════════════════════════════════
+
+	P0-6 ur Tobias andra Studio-test: "Gate/Öppna visas men spelaren kommer
+	inte ut."
+
+	Fasaden fick sina luckor i en tidigare rättelse, och grannens vägg i
+	den ovanför. Kvar stod det som byggs INNANFÖR väggen och råkar löpa
+	förbi en port: ridhusets `Övre långvägg` (1,45–4,60 m) och `Väggläkt`
+	längs östra långsidan, och sargen runt banan. En port på 2,6 m med en
+	vägg som börjar på 1,45 m innanför är ingen port.
+
+	Det här passet river det som står I öppningen och bygger tillbaka det
+	som står utanför. Det är alltså ingen ny öppning — öppningens läge,
+	bredd och höjd kommer ur samma `b.oppningar` som resten, och bara den
+	volym en människa måste passera genom frigörs.
+
+	TRE GRÄNSER, för att passet inte ska bli ett trubbigt vapen:
+
+	  1. bara TUNNA delar (högst 0,6 m tvärs väggen) — en vägg, en läkt,
+	     en sarg. En läktare eller en möbel är tjockare och lämnas kvar;
+	     att såga hål i läktaren för att en bakdörr ska gå att använda vore
+	     att hitta på geometri.
+	  2. bara inom 1,0 m från väggplanet, alltså där väggen står.
+	  3. bara upp till öppningens egen höjd. Det som ligger över blir kvar
+	     som överstycke.
+
+	Delar som INTE kan frigöras inom de gränserna rapporteras, och
+	`varldskoherens.spec` kräver att varje sådan öppning står i den
+	deklarerade listan över icke-spelbara öppningar med ett skäl. En port
+	man inte kan gå igenom får inte bära en prompt. ]]
+do
+	local TUNN, KLYV = 0.6, 1.0
+
+	local function lada(d)
+		local c, sz = d.CFrame.Position, d.Size
+		return {
+			x0 = (c.X - sz.X / 2) / M3, x1 = (c.X + sz.X / 2) / M3,
+			y0 = (c.Y - sz.Y / 2) / M3, y1 = (c.Y + sz.Y / 2) / M3,
+			z0 = (c.Z - sz.Z / 2) / M3, z1 = (c.Z + sz.Z / 2) / M3,
+		}
+	end
+
+	local frigjorda, rivna = 0, 0
+	for _, b in ipairs(G.byggnader) do
+		for _, o in ipairs(b.oppningar or {}) do
+			if garIgenom(o) then
+				local x, z, along = GEO.oppningsHorn(b.rekt, o.sida, o.u, o.b)
+				local a0 = if along == "X" then x else z
+				local a1 = a0 + o.b
+				local plan = if along == "X" then z else x
+				local hojd = o.h
+
+				local attRiva = {}
+				for _, d in ipairs(model:GetDescendants()) do
+					if d.CFrame and d.Size and d.CanCollide ~= false
+						and d:GetAttribute("UBRFMark") == nil
+						--[[ Dörrbladen själva rörs inte — varken de som bär
+							prompt eller de som deklarerats som icke-passage.
+							Bladet ÄR öppningen; att dela det vore att riva
+							dörren för att komma igenom den. ]]
+						and d:GetAttribute("Oppningstyp") == nil
+						--[[ INREDNING SÅGAS ALDRIG. Står en soffa eller en
+							växt i en dörröppning är det datan som är fel,
+							inte möbeln som ska delas — och att flytta möbler
+							för att lösa ett spelproblem är uttryckligen
+							förbjudet. `varldskoherens.spec` fäller i stället
+							öppningen, och då syns det. ]]
+						and d:GetAttribute("Inredning") == nil
+						and not string.find(d.Name, " grund", 1, true) then
+						local l = lada(d)
+						local tvarl = if along == "X" then l.z0 else l.x0
+						local tvarh = if along == "X" then l.z1 else l.x1
+						local langsl = if along == "X" then l.x0 else l.z0
+						local langsh = if along == "X" then l.x1 else l.z1
+						if (tvarh - tvarl) <= TUNN
+							and tvarh > plan - KLYV and tvarl < plan + KLYV
+							and langsh > a0 + 0.01 and langsl < a1 - 0.01
+							and l.y0 < hojd - 0.01 and l.y1 > 0.01 then
+							table.insert(attRiva, { d = d, l = l,
+								langsl = langsl, langsh = langsh,
+								tvarl = tvarl, tvarh = tvarh })
+						end
+					end
+				end
+
+				for _, t in ipairs(attRiva) do
+					local d, l = t.d, t.l
+					local farg, mtrl = d.Color, d.Material
+					local namn = d.Name
+					local function bit(nm, al, ah, y0, y1)
+						if ah - al <= 0.001 or y1 - y0 <= 0.001 then return end
+						if along == "X" then
+							BK.box(model, base, nm, al, y0, t.tvarl,
+								ah - al, y1 - y0, t.tvarh - t.tvarl, farg, mtrl)
+						else
+							BK.box(model, base, nm, t.tvarl, y0, al,
+								t.tvarh - t.tvarl, y1 - y0, ah - al, farg, mtrl)
+						end
+						frigjorda += 1
+					end
+					bit(namn, t.langsl, math.min(t.langsh, a0), l.y0, l.y1)
+					bit(namn, math.max(t.langsl, a1), t.langsh, l.y0, l.y1)
+					--[[ Överstycket: det som låg ovanför öppningen blir kvar,
+						och heter som överstycken gör i `vaggMedLuckor`. Ett
+						överstycke är inte en bit av väggen — den som räknar
+						väggsegment ska inte råka räkna med det. ]]
+					if l.y1 > hojd then
+						bit(namn .. " överstycke",
+							math.max(t.langsl, a0), math.min(t.langsh, a1), hojd, l.y1)
+					end
+					d:Destroy()
+					rivna += 1
+				end
+			end
+		end
+	end
+	print(("OK  Öppningarna frigjorda: %d delar delade till %d bitar")
+		:format(rivna, frigjorda))
+end
 
 --[[ ══ VÄNDNINGEN ═══════════════════════════════════════════════════════
 
