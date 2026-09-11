@@ -366,6 +366,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   Den mater STOD over hela tomten, inte gangbarhet mellan vaggar, och
     #   behover darfor varken speldata eller tjanster. Ingen annan spec har
     #   "mark" i namnet, sa grenen kan sta har. ]]
+    #[[ Handighetsgrinden: samma bank som markgrinden — den byggda varlden
+    #   och inget mer. Ingen annan spec har "handighet" i namnet. ]]
+    elif "handighet" in spec_rel:
+        moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     elif "mark" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     elif "forstaplayable" in spec_rel:
