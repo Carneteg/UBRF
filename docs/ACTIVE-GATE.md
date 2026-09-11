@@ -1,6 +1,6 @@
 # Active Gate
 
-Current active implementation: **P0 Grandstand / Läktare — issue #81, PR #114**
+Current active implementation: **First Playable stabilization — issue #161 / PR #162**
 
 Primary builder: **Claude**
 Review: **ChatGPT**
@@ -8,80 +8,62 @@ Product acceptance: **Tobias**
 
 Mandatory delivery chain:
 
-> **CLAUDE BUILDS → CHATGPT REVIEWS → TOBIAS ACCEPTS**
+> **CLAUDE BUILDS → AUTOMATED + STUDIO PRE-TOBIAS GATES → CHATGPT REVIEWS → TOBIAS ACCEPTS**
 
 ## Current priority
 
-Claude's active work is now **PR #114 / issue #81**. G02-C / PR #119 is `PRODUCT_ACCEPTED` and merged at `9f15475f4137984238325bd533a068684f9daa85`.
+The previous P0 grandstand gate (#81 / PR #114) is **PRODUCT_ACCEPTED and merged** on `main` in `e65675dfe3584f5654aab3280d53692fe9b17f1a`. It is no longer the active implementation gate.
 
-Do not start unrelated work while the grandstand P0 is active.
+The active priority order is now:
 
-### Grandstand product requirement
+1. **P0 safety / basic playability** — no void deaths, broken startup, blocked entrances, impossible exits or dead-end critical routes.
+2. **Topology / traversal correctness** — doors and gates must lead to the correct real-world zone; no portal may lead into a box or wall when the real route is a corridor/pass-through.
+3. **First-day core loop** — spawn → stable → assigned horse → care/equipment → yard → arena → ride → return/aftercare → save/reconnect.
+4. **Environment fidelity** — orientation/handedness, canonical signs, props, floor/terrain boundaries and real UBRF spatial truth.
+5. **Polish** — presentation, feel and non-blocking visual refinement.
 
-The web and Roblox experiences must agree on the same physical grandstand truth:
+Do not start unrelated feature work while these First Playable blockers remain open.
 
-- player can walk from ground level onto the grandstand without teleporting,
-- avatar visibly rises with collision/floor height,
-- steps are physically readable and walkable with keyboard and touch/joystick,
-- deck stays opaque under the player,
-- no yellow/transparent debug abstraction geometry in product view,
-- player can move at least 10 m along the grandstand walkway,
-- judge booth and seating must not block the usable walkway,
-- exterior UBRF geometry stays locked unless a verified source requires a change,
-- Vercel is the only UBRF preview/deploy path.
+## Hard pre-Tobias release bar
 
-### Known root cause from failed attempts
+No new `.rbxlx` may be presented to Tobias until the exact candidate has passed the complete `PRE_TOBIAS_FIRST_PLAYABLE_GATE`.
 
-The previous implementation proved that internal collision/path tests are not enough when rendering reads different state.
+At minimum this combines:
 
-Claude must preserve these lessons:
+- `FIRST_PLAYABLE_PREFLIGHT`
+- `END_TO_END_PLAYABILITY_GATE`
+- `NO_VOID_BASIC_PLAYABILITY_GATE`
+- `BUILDING_TOPOLOGY_TRAVERSAL_GATE`
+- `PHYSICAL_WORLD_COHERENCE_GATE`
+- localization and full-horse roster gates
+- artifact/source identity checks
 
-1. `v3dFigurKloss` must use the same vertical player state as collision/camera (`o.y` / `VD.pz`), not hard-coded Y=0.
-2. Review/debug geometry such as the yellow transparent stair abstractions must be dev/debug-only, never product-visible.
-3. Canonical stair/deck geometry must live in the canonical site/world model, not as a late runtime patch.
-4. Rendering, collision, camera and avatar height must be verified together in the actual player-facing path.
-5. Web and Roblox must share the same intent/geometry contract rather than parallel truths.
+Every real defect found by Tobias in a previous Studio build must become a permanent regression/mutation test where technically possible.
 
-The direct wrapper patch in `src/mobil.js` from the earlier #114 experiment is temporary evidence, not the desired final architecture. Claude should consolidate the real fix into the canonical implementation.
+## Roblox Studio MCP role
 
-## Required Claude handshake
+A local Roblox Studio MCP is available on Tobias's Windows machine through `@chrrxs/robloxstudio-mcp` v3.1.3. It is intentionally local-only and cannot be reached from cloud Claude sessions.
 
-A GitHub mention alone is not proof that the active Claude session received the task.
+Therefore:
 
-Before implementation begins, Claude must post in PR #114:
+- cloud Claude may implement, analyze and prepare candidates,
+- **local Claude Code + Roblox Studio MCP is the pre-Tobias runtime/physical QA executor**,
+- a cloud-only green CI result is not sufficient to authorize Tobias testing,
+- the local Studio pass must run against the exact candidate/source SHA and record failures before handoff.
 
-`CLAUDE_ACK #114 — base/head <SHA> — scope: P0 läktare, fysisk trappa, korrekt avatarhöjd/sikt, web+Roblox`
+Do not rely on any `roblox-game` Claude skill until it has been audited against the Chrrxs 3.x MCP API; the old skill may contain obsolete 2.x tool names.
 
-Only after that ACK is the handoff considered delivered.
+## Branch / PR hygiene
 
-When ready for review Claude must post:
+Do **not** keep extending a long stack of PRs based on other unmerged PR branches.
 
-- exact HEAD SHA,
-- Changed,
-- Tested,
-- Falsified,
-- Not tested,
-- Remaining risk,
-- human-test requirements,
-- `READY_FOR_CHATGPT_REVIEW`.
+For the First Playable stabilization:
 
-No merge before ChatGPT review and Tobias product test.
-
-## Accepted / follow-up work
-
-### G02-C / PR #119
-
-`PRODUCT_ACCEPTED` by Tobias and merged. Issue #84 is closed.
-
-Known accepted follow-up debt is tracked in **issue #126**:
-- full Roblox Ugneta production wiring,
-- physical Ugneta coach at the arena fence in Roblox.
-
-Issue #126 is not the active P0 and must wait until the grandstand is resolved unless Tobias explicitly reprioritizes it.
-
-### PR #116 — Lydia pronoun
-
-Separate technically green language decision. Do not spend active implementation cycles on it unless Tobias reprioritizes it.
+- consolidate the required accepted/fixed work into one clean integration line,
+- do not merge the stale `chatgpt/fix-doors-spawn` branch wholesale into `main`,
+- selectively recover only still-needed commits/changes after comparing them to current First Playable work,
+- do not create new stacked PRs above the current unresolved chain,
+- no merge to `main` before ChatGPT review and Tobias product acceptance where required.
 
 ## Source-of-truth rule
 
