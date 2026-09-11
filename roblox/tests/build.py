@@ -89,6 +89,10 @@ SPELBARHET = BYGGE + [
     #   markplansgrinden, och en kvarglomd baseplate ska falla den. Utan
     #   varlden hade specen bara kunnat prova den tomma vagen. ]]
     ("Preflight",    "src/server/Preflight.luau"),
+    #[[ Utrustningen som hanger pa boxfronterna. Den behover den BYGGDA
+    #   varlden for att veta var fronterna star, och varldskoherensen
+    #   mater att den hamnar i gangen och inte inne i boxen. ]]
+    ("TackForradService", "src/server/TackForradService.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning

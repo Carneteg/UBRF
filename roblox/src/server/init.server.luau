@@ -11,6 +11,7 @@ local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
 local LedService = require(script.LedService)
 local TackService = require(script.TackService)
+local TackForradService = require(script.TackForradService)
 local HastRigg = require(script.HastRigg)
 local Preflight = require(script.Preflight)
 
@@ -130,6 +131,12 @@ kritisk("StallService", StallService.start)
 kritisk("GameplayService", GameplayService.start)
 kritisk("DorrService", DorrService.start)
 kritisk("LedService", LedService.start)
+--[[ Utrustningen hängs upp EFTER GameplayService: prompten lämnar sitt val
+     dit, och tjänsten tar emot anroparen som argument i stället för att
+     requira tillbaka. Ordningen är alltså ett beroende, inte en smaksak. ]]
+kritisk("TackForradService", function()
+	TackForradService.start(GameplayService.valjUtrustning)
+end)
 
 --[[ ══ CRITICAL_STARTUP_GATE ═════════════════════════════════════════════
 

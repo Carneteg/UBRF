@@ -283,13 +283,32 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 		end
 		local typ = TackService.fysiskFor(steg)
 		if typ then
-			--[[ Utrustningen tillhör spelarens egen häst. Kommer valet
-				från sadelkammaren skickas det med `valdUtrustning`; har
-				spelaren inte valt något tas hennes egen, som på webben
-				när man går direkt till boxen. ]]
+			--[[ UTRUSTNINGEN MÅSTE VARA HÄMTAD. Webben gör samma sak och
+				med samma innebörd: `sysslor.js:239` vägrar öppna
+				"visitera, rykta, kratsa, sadla" utan `G.utrustning`, med
+				texten att hästens sadel hänger på sin egen plats.
+
+				Här är den platsen boxfronten (`TackForradService`), och
+				kravet är det som gör felvalet möjligt att GÖRA. Föll det
+				här kravet bort togs utrustningen tyst från spelarens egen
+				häst, och då kan man inte ta fel sadel ens om man vill —
+				webbens hela pedagogik ligger i att man kan. ]]
+			--[[ UNDERLÄGGET HÖR TILL SADELN och hämtas med den. Både
+				verkligheten och webben säger det: stallkortet skriver
+				"sadlar med underlag" om det som hänger på fronten, och
+				webbens sadelkammare har en bygel per häst, inte en bygel
+				för sadeln och en till för schabraket. Det är därför
+				`TackForradService` bygger underlägget i samma upphängning
+				— och därför valet slås upp på sadeln här. ]]
+			local valNyckel = if typ == "underlagg" then "sadel" else typ
 			local vald = valdUtrustning[player]
+			local utrustningId = vald and vald[valNyckel]
+			if utrustningId == nil then
+				skicka(player)
+				return false, "tack.hamta_forst"
+			end
 			local ok, skal = TackService.satPa(player, modell, typ,
-				vald and vald[typ] or nil, modell)
+				utrustningId, modell)
 			if not ok then
 				skicka(player)
 				return false, skal

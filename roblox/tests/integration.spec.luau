@@ -165,6 +165,17 @@ local function skotselGenomTjansten(spelare)
 				LedService._steg(1 / 30)
 			end
 		end
+		--[[ UTRUSTNINGEN HÄMTAS FÖRST, som på webben (`sysslor.js:239`).
+			Sedan blockerare 5 vägrar `GameplayService.moment` ett
+			`utr:`-steg utan hämtad utrustning, och det är avsiktligt: utan
+			kravet tas hästens egen sadel tyst och felvalet blir omöjligt
+			att göra. I spelet gör spelaren det här vid boxfronten
+			(`TackForradService`); här drivs samma väg genom tjänsten. ]]
+		if fas.id == "iordning" then
+			local s0 = GameplayService.stateFor(spelare)
+			GameplayService.valjUtrustning(spelare, "sadel", s0.hastId)
+			GameplayService.valjUtrustning(spelare, "trans", s0.hastId)
+		end
 		while true do
 			local s = GameplayService.stateFor(spelare)
 			local m = Preparation.nastaMoment(s, fas.id)
@@ -282,6 +293,93 @@ do
 	check("   och uppsittning på fel häst nekas", okFel == false, tostring(skalFel))
 	Taggar:RemoveTag(annan, "Horse")
 	annan:Destroy()
+	stadaSession(S)
+end
+
+--[[ ══ g) UTRUSTNINGEN SOM INTE ÄR HÄMTAD ═════════════════════════════
+
+	Blockerare 5, och den mätning som gör felutrustningen SPELBAR i stället
+	för bara implementerad.
+
+	Webben vägrar öppna "visitera, rykta, kratsa, sadla" utan `G.utrustning`
+	(`sysslor.js:239`): hästens sadel hänger på sin egen plats och man måste
+	gå och hämta den. Roblox gör nu samma sak, och kravet är inte kosmetik —
+	fölle det bort skulle `TackService.satPa` tyst få spelarens egen häst som
+	ägare, och då går felvalet INTE att göra. Hela webbens pedagogik ligger i
+	att det går.
+
+	Kedjan som mäts: hämta först → rätt utrustning på → fel hästs sadel nekad
+	med webbens skäl och räknad som `G.felUtrustning`. ]]
+print("")
+print("── Punkt 8g: utrustningen måste hämtas, och kan hämtas fel ──")
+do
+	local S = nySession("Utrustning", 9203)
+	stall(S.spelare, vec(6, 0, 0))
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		if fas.id == "iordning" then break end
+		while true do
+			local m = Preparation.nastaMoment(GameplayService.stateFor(S.spelare), fas.id)
+			if not m then break end
+			if not GameplayService.moment(S.spelare, fas.id, m.id) then break end
+		end
+	end
+	--[[ HOVARNA FÖRST. `iordning` börjar med fyra `hov:`-moment och först
+		därefter kommer `utr:`-stegen — sadeln läggs inte på innan man
+		krupit under henne. Kravet på hämtad utrustning gäller bara
+		`utr:`-stegen, så hovarna ska gå igenom UTAN någon utrustning alls;
+		gör de inte det sitter spärren på fel moment. ]]
+	local hovar = 0
+	while true do
+		local m = Preparation.nastaMoment(GameplayService.stateFor(S.spelare), "iordning")
+		if not m or m.id:match("^utr:") then break end
+		if not GameplayService.moment(S.spelare, "iordning", m.id) then break end
+		hovar += 1
+	end
+	check("hovarna går igenom utan utrustning — spärren sitter på utr:",
+		hovar == #UBRFSkotsel.hovar, ("%d av %d"):format(hovar, #UBRFSkotsel.hovar))
+
+	local forsta = Preparation.nastaMoment(GameplayService.stateFor(S.spelare), "iordning")
+	check("och utrustningssteget står på tur", forsta ~= nil and forsta.id == "utr:1",
+		forsta and forsta.id or "inget moment")
+
+	local okU, skalU = GameplayService.moment(S.spelare, "iordning", forsta.id)
+	check("g) att sadla utan hämtad utrustning nekas", okU == false, tostring(skalU))
+	check("   och nejet säger just det, på en nyckel som finns",
+		skalU == "tack.hamta_forst" and Sprak.finns(skalU), tostring(skalU))
+	check("   och ingenting ligger på hästen",
+		TackService.harTack(S.modell, "underlagg") == false)
+
+	--[[ Hämtad — det här är vad prompten på boxfronten gör. ]]
+	GameplayService.valjUtrustning(S.spelare, "sadel", S.hastId)
+	GameplayService.valjUtrustning(S.spelare, "trans", S.hastId)
+	local okU2, skalU2 = GameplayService.moment(S.spelare, "iordning", forsta.id)
+	check("   men går igenom när utrustningen är hämtad", okU2 == true, tostring(skalU2))
+	check("   och underlägget ligger nu FYSISKT på henne",
+		TackService.harTack(S.modell, "underlagg") == true)
+
+	--[[ FEL HÄSTS SADEL — hämtad vid grannens boxfront. ]]
+	local grannId
+	for _, id in ipairs(UBRFSpel.ordning) do
+		if id ~= S.hastId then grannId = id break end
+	end
+	local fore = TackService.felAntal(S.spelare)
+	GameplayService.valjUtrustning(S.spelare, "sadel", grannId)
+	local sadelMoment = Preparation.nastaMoment(GameplayService.stateFor(S.spelare), "iordning")
+	local okF, skalF = GameplayService.moment(S.spelare, "iordning", sadelMoment.id)
+	check("   grannens sadel nekas", okF == false, tostring(skalF))
+	check("   med webbens skäl: den är formad efter en annan rygg",
+		skalF == "tack.fel_sadel" and Sprak.finns(skalF), tostring(skalF))
+	check("   felet RÄKNAS, som G.felUtrustning",
+		TackService.felAntal(S.spelare) == fore + 1,
+		("%d -> %d"):format(fore, TackService.felAntal(S.spelare)))
+	check("   och ingen sadel ligger på hästen",
+		TackService.harTack(S.modell, "sadel") == false)
+
+	GameplayService.valjUtrustning(S.spelare, "sadel", S.hastId)
+	local okR = GameplayService.moment(S.spelare, "iordning", sadelMoment.id)
+	check("   rätt sadel går på", okR == true)
+	check("   och ligger då FYSISKT på henne",
+		TackService.harTack(S.modell, "sadel") == true)
 	stadaSession(S)
 end
 
