@@ -3,19 +3,23 @@
 ## ✅ Filen att öppna
 
 ```
-roblox/releases/first-playable-place-6039d6b/UBRFFirstPlayable.rbxlx
+roblox/releases/first-playable-place-6a0e5d7/UBRFFirstPlayable.rbxlx
 ```
 
-<https://github.com/Carneteg/UBRF/raw/13157377e772484325246885197f038d7463d4a8/roblox/releases/first-playable-place-6039d6b/UBRFFirstPlayable.rbxlx>
+<https://github.com/Carneteg/UBRF/raw/21ae96a8c5faa46a419a33cfe75e77885a171b92/roblox/releases/first-playable-place-6a0e5d7/UBRFFirstPlayable.rbxlx>
+
+> **Ladda ner med högerklick → "Spara länk som…".** GitHub serverar rå-URL:en
+> som `text/plain` utan `Content-Disposition`, så en vanlig klickning VISAR
+> filen i webbläsaren i stället för att spara den. Sparar du den sidan får du
+> inte en `.rbxlx` — och det är då Studio säger att formatet inte känns igen.
 
 | Fält | Värde |
 |---|---|
-| **Källkod (source SHA)** | `6039d6b15db7ef4aa2ca4264c2f24ca707caf980` |
-| **Commit som INNEHÅLLER filen (release commit SHA)** | `13157377e772484325246885197f038d7463d4a8` |
-| **SHA256** | `bfd69eb1528e2daa90bba84a90b5c3267f21488430dbe96387258c80a5aa8703` |
-| **Storlek** | 817 235 byte · 62 instanser |
-| **Build-identitet i placen** | `UBRFBuild.sha = 6039d6b…` |
-| **Nedladdning kontrollerad** | `HTTP 200`, 817 235 byte, SHA256 stämmer mot filen i repot |
+| **Källkod (source SHA)** | `6a0e5d72e6ec6b6bdfa51ac2363df743b7a8e422` |
+| **Commit som INNEHÅLLER filen (release commit SHA)** | `21ae96a8c5faa46a419a33cfe75e77885a171b92` |
+| **SHA256** | `5595d6ed6696e5cc8e377c8ea7fe637b0523c7410fbdb65cb5995ff9fe1febdd` |
+| **Storlek** | 827 690 byte · 62 instanser |
+| **Build-identitet i placen** | `UBRFBuild.sha = 6a0e5d7…` |
 
 > ### ⚠️ Det här är INTE produktacceptans
 >
@@ -26,18 +30,47 @@ roblox/releases/first-playable-place-6039d6b/UBRFFirstPlayable.rbxlx
 > vilken fil som är **rätt fil att prova**, ingenting om att den är
 > godkänd. **Tom ruta betyder inte PASS.**
 
+## Varför pekaren flyttades hit
+
+Föregångaren `6039d6b` är **spegelvänd**, precis som Tobias fysiska
+Studio-test sa. Inte bara interiörerna — hela världen. `src/site.js` är en
+KARTA (+x öster, +y norr); Roblox är högerhänt med Y uppåt, och mappar man
+site-y rakt på +Z vänder man kartan. Världen vänds nu en gång till
+norr = −Z.
+
+Ingen befintlig grind kunde se det: ett koordinatprov överlever en
+spegling (datan ÄR rätt), och paritetsproven jämför webben med Roblox —
+är båda speglade likadant är de överens om att ha fel. Webben visade sig
+aldrig ha varit speglad, så avvikelsen fanns bara på Roblox-sidan.
+`roblox/tests/handighet.spec.luau` och `tools/handighetsgrind.mjs` mäter
+nu handigheten på var sin yta.
+
 ## Vad maskinen faktiskt mätte
 
 | Grind | Utfall |
 |---|---|
-| `FIRST_PLAYABLE_PREFLIGHT` — **pakethalvan** | PASS |
+| `FIRST_PLAYABLE_PREFLIGHT` — **pakethalvan** | PASS — 54 moduler jämförda ordagrant mot disk |
 | `FIRST_PLAYABLE_PREFLIGHT` — **runtime-halvan** | **EJ PROVAD utanför Studio** (se nedan) |
+| `handighet.spec` (Roblox) | PASS — kompassen, ankomstvyn, 3 ankare per hus |
+| `handighetsgrind.mjs` (webb) | PASS — samma ankare, andra ytan |
+| `mark.spec` | PASS |
 | `END_TO_END_PLAYABILITY_GATE` | PASS, alla gröna |
 | First Playable-kontrakten | PASS, alla gröna |
+| Siktgrinden | PASS |
 | Roster | PASS — 33 av 33 riggade, ridna och unika |
 | Lokalisering `sv-SE` + `en-US` | PASS — 33 vyer och 16 nej-vägar på engelska |
-| Hela Luau-sviten | 23/23 specar |
-| Nyttolasten i den genererade XML:en | 25 moduler: värld, server, klient, delat, data, `UBRFSprak`, `Sprak`, `Prompttext`, identitet |
+| Hela Luau-sviten | **25/25 specar** |
+
+## Det här ska granskas med ögonen
+
+Vändningen är mätt, inte sedd:
+
+1. **Ankomsten.** Från grusplanen vid husens norra gavlar ska ridhuset
+   ligga till HÖGER och stallet till VÄNSTER (`references/SITEPLAN.md`
+   rad 22–23).
+2. **Stallgången** mot IMG_0159–0162.
+3. **Ridhuset inifrån** — läktaren, panelen och domarbåset. Det var den
+   spegelvändningen du såg.
 
 ## Den viktigaste kvarvarande luckan
 
@@ -83,6 +116,7 @@ Förklaringen som gavs då — inloggning eller `main` — var fel.
 | `first-playable-place-14a0a6e` | returvärdet rättat, men levererad innan spelbarheten mättes |
 | `first-playable-place-46231de` | sanktionen **återtagen**: placen saknade hästmodell |
 | `first-playable-place-e9a37ff` | provbygge med hästen — men byggt FÖRE lokaliseringen, och utan texttabellen i nyttolasten |
+| `first-playable-place-6039d6b` | lokaliseringen och marken lagade — men **hela världen spegelvänd** (norr låg på +Z) |
 
 Ingen mapp regenereras på plats. Var och en är pinnad till sin source-SHA
 så att det går att se exakt vad som levererades när.
