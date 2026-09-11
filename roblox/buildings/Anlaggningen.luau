@@ -2580,8 +2580,16 @@ local function byggRidhusInre(model: Model, base: CFrame)
 					local namn = "Fasaddörr inifrån " .. op.sida .. " u" .. tostring(op.u)
 					local function del(suffix, du, z0, dz, w, hh, d, farg, mat)
 						-- du längs dörren, dz inåt från väggens insida
-						local x = if langsX then cx + du - w / 2 else cx + inn * dz - d / 2
-						local y = if langsX then cy + inn * dz - d / 2 else cy + du - w / 2
+						--[[ `cx`/`cy` räknas i BYGGNADSLOKALA meter, men `BK.box` tar
+							tomtkoordinater relativt `base`. Utan husets origo landade
+							hela gruppen vid tomtens nollpunkt: mätt i runtime låg de
+							17 W-delarna på x 0,17–0,22 och de 17 N-delarna på
+							x 15,7–21,9, medan ridhuset står på x 118–143. Trettiofyra
+							synliga delar stod alltså ute på tomma fältet, 70–118 m fel.
+							Syskonkoden i samma funktion adderar `o.x`/`o.y`; den här
+							raden gjorde det inte. ]]
+						local x = o.x + (if langsX then cx + du - w / 2 else cx + inn * dz - d / 2)
+						local y = o.y + (if langsX then cy + inn * dz - d / 2 else cy + du - w / 2)
 						local q = BK.box(model, base, namn .. suffix, x, z0, y, if langsX then w else d, hh, if langsX then d else w, farg, mat)
 						q.CanCollide = false
 						return q
