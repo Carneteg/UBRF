@@ -140,6 +140,10 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	self.rang = RidKanon.START.RANG
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
+	--[[ HALT-LÅSET. Se `_targetGait`: pekskärmens HALT ska hålla noll även
+	     med tummen kvar på spaken. Falskt på skrivbordet, alltid — det
+	     tänds bara av en NAMNGIVEN halt, och namn finns bara på pekytan. ]]
+	self.haltLas = false
 	self.curvature = 0         -- aktuell kurvatur, 1/m
 	self.lastPos = nil         -- förra bildrutans läge, driver fasen
 	return self
@@ -181,6 +185,27 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	local namngiven = intent.gaitTo
 	if namngiven then
 		index = Gaits.index(namngiven)
+		--[[ HALT tänder låset; varje ANNAN namngiven gångart släcker det.
+		     Att välja skritt/trav/galopp ÄR att be om att gå igen, och då
+		     ska låset inte ligga kvar och kväva nästa begäran. ]]
+		self.haltLas = (namngiven == "halt")
+	end
+
+	--[[ ── HALT-LÅSET SLÄPPS AV EN NY BEGÄRAN, INTE AV TIDEN ──────────
+
+	     Tobias produktbeslut: HALT ska nå och HÅLLA noll även om tummen
+	     ligger kvar på spaken. Utan lås gällde halten en enda bildruta —
+	     mätt: `ws` gick aldrig under 4,93 med spaken framme, och gångarten
+	     var tillbaka i skritt efter 0,75 s.
+
+	     Låset släpps när spaken FAKTISKT gått tillbaka. Tröskeln är samma
+	     0.5 som "framåtutslag ur halt startar skritt" nedan använder — det
+	     är filens definition av "hon ber om att gå", och två olika svar på
+	     den frågan i samma funktion hade varit ett fel i sig. Nästa gång
+	     hon för spaken framåt är det alltså en NY begäran, och den startar
+	     skritt precis som förut. ]]
+	if self.haltLas and intent.forward <= 0.5 then
+		self.haltLas = false
 	end
 
 	if intent.gaitUp then index += 1 end
@@ -210,7 +235,7 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	     bildruta knappen trycktes; släpper hon inte spaken ber den om
 	     skritt igen nästa bildruta, vilket är precis vad en skänkel som
 	     ligger kvar ska betyda. ]]
-	if intent.forward > 0.5 and index <= 1 and not namngiven then
+	if intent.forward > 0.5 and index <= 1 and not namngiven and not self.haltLas then
 		index = 2                                   -- W ur halt startar skritt
 	elseif intent.forward < -0.5 then
 		index -= 1                                   -- S rullar ned en gångart
@@ -730,6 +755,9 @@ end
 function MovementController:release()
 	self.steerInput = 0
 	self.curvature = 0
+	--[[ Låset får inte överleva ritten: nästa uppsittning ska inte börja
+	     med en halt hon inte bett om. ]]
+	self.haltLas = false
 	self._ov = nil
 	self.lastPos = nil
 	local hum = self.rig.humanoid
