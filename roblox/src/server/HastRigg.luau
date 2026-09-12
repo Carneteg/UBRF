@@ -451,20 +451,46 @@ local function befintlig(hastId: string): Model?
 	return nil
 end
 
---[[ Seedar boken ur det som FAKTISKT står i världen. Utan det här vet
-	bygget ingenting om hästar som följde med den sparade platsen, och
-	kollisionen upptäcks aldrig. ]]
-function JackRigg.lasInBefintliga()
-	local Stallet = delad("Stallet")
-	if not Stallet then return end
-	table.clear(boxAgare)
+--[[ ══ STARTSANERING ═══════════════════════════════════════════════
+
+	Tobias produktbeslut. En häst som ligger SPARAD i platsen är inte en
+	häst — den är gammalt världstillstånd. Riggen, skripten och det
+	visuella lagret kan vara från en annan version, och att behålla den
+	vore att låta en förorenad plats tyst överleva.
+
+	Vid start rivs därför varje modell med ett KANONISKT hästid, och hela
+	besättningen byggs om ur källan. Ett taggat objekt med ett id vi inte
+	känner igen är inte vårt och lämnas i fred — men det sägs i loggen.
+
+	Saneringen gäller BARA starten, före att någon spelare hunnit röra
+	något. Under drift är svaret det motsatta: en levande häst rivs
+	aldrig, `placera` avvisar dubbletten med "redan byggd". Se
+	invariant 1. ]]
+function JackRigg.saneraBefintliga(): number
+	local Data = delad("UBRFSpelData")
+	local kanoniska = (Data and (Data :: any).hastar) or {}
+	local rivna, frammande = 0, {}
 	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
 		local id = m:GetAttribute("HorseId")
-		if typeof(id) == "string" and m:IsDescendantOf(workspace) then
-			local n = (Stallet :: any).boxNummerFor(id)
-			if n then boxAgare[n] = id end
+		if m:IsDescendantOf(workspace) then
+			if typeof(id) == "string" and kanoniska[id] then
+				warn(("[Rigg] SANERING: %s låg redan i platsen (%s) — rivs "
+					.. "och byggs om ur källan."):format(id, m:GetFullName()))
+				m:Destroy()
+				rivna += 1
+			else
+				table.insert(frammande, m:GetFullName())
+			end
 		end
 	end
+	if #frammande > 0 then
+		warn(("[Rigg] %d taggade objekt utan kanoniskt hästid lämnades "
+			.. "orörda: %s"):format(#frammande, table.concat(frammande, ", ")))
+	end
+	--[[ Boken nollas med världen: efter saneringen finns inga reserverade
+		boxar, för det finns inga hästar. ]]
+	table.clear(boxAgare)
+	return rivna
 end
 
 --[[ Nästa lediga box framåt från `n`, deterministiskt och utan slump —
@@ -598,15 +624,11 @@ function JackRigg.start(): Model?
 	for id in pairs(hastar) do table.insert(ids, id) end
 	table.sort(ids)
 
-	--[[ Läs in vad som REDAN står i världen innan något byggs. En sparad
-		plats med hästmodeller kvar i sig är hela skälet till att
-		invarianten finns; upptäcks de inte här upptäcks de aldrig. ]]
-	JackRigg.lasInBefintliga()
-	local fore = 0
-	for _ in pairs(boxAgare) do fore += 1 end
-	if fore > 0 then
-		warn(("[Rigg] %d hästar stod redan i världen innan bygget. De "
-			.. "byggs inte om; deras boxar är reserverade."):format(fore))
+	--[[ SANERA FÖRST, BYGG SEDAN. En sparad plats med hästmodeller kvar i
+		sig är hela skälet till att det här steget finns. ]]
+	local rivna = JackRigg.saneraBefintliga()
+	if rivna > 0 then
+		warn(("[Rigg] %d hästar låg sparade i platsen och har byggts om."):format(rivna))
 	end
 
 	local forsta: Model? = nil
