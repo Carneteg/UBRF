@@ -433,6 +433,20 @@ Sprak.text = {
 	--[[ Hjälpens pekrader pekar på YTOR, inte på en enskild knapp:
 	     gångarten väljs numera på en av de namngivna knapparna, och
 	     blicken vrids genom att dra på högra halvan av skärmen. ]]
+	--[[ Vilken häst som är MIN. Hästens namn är ett egennamn och skickas
+	     som argument — det översätts aldrig. ]]
+	["stall.din_hast"] = {
+		sv = "DIN HÄST",
+		en = "YOUR HORSE",
+	},
+	["stall.idag_rider_du"] = {
+		sv = "Idag rider du %s — box %s.",
+		en = "Today you ride %s — stall %s.",
+	},
+	["stall.idag_rider_du_utan_box"] = {
+		sv = "Idag rider du %s.",
+		en = "Today you ride %s.",
+	},
 	["touch.gangartsknappar"] = {
 		sv = "Gångartsknapparna",
 		en = "The gait buttons",
