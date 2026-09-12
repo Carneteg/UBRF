@@ -89,6 +89,10 @@ SPELBARHET = BYGGE + [
     #   markplansgrinden, och en kvarglomd baseplate ska falla den. Utan
     #   varlden hade specen bara kunnat prova den tomma vagen. ]]
     ("Preflight",    "src/server/Preflight.luau"),
+    #[[ Utrustningen som hanger pa boxfronterna. Den behover den BYGGDA
+    #   varlden for att veta var fronterna star, och varldskoherensen
+    #   mater att den hamnar i gangen och inte inne i boxen. ]]
+    ("TackForradService", "src/server/TackForradService.luau"),
 ]
 
 # QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
@@ -146,6 +150,10 @@ FORBEREDELSE = SPEL + [
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -161,7 +169,6 @@ INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
     #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
     #   startar, sa attributen i provet ar produktionens attribut. ]]
-    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -220,6 +227,10 @@ FORBEREDELSE = SPEL + [
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -235,7 +246,6 @@ INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
     #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
     #   startar, sa attributen i provet ar produktionens attribut. ]]
-    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -295,6 +305,10 @@ FORBEREDELSE = SPEL + [
     # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -310,7 +324,6 @@ INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
     #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
     #   startar, sa attributen i provet ar produktionens attribut. ]]
-    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -399,7 +412,6 @@ KLIENT = SPEL + [
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     #[[ Sadeln och transet pa boxfronten. Bara init.client require:ar den. ]]
-    ("UtrustningController", "src/client/UtrustningController.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
@@ -441,13 +453,16 @@ KOHERENS = GEOMETRI + [
     ("StallService",    "src/server/StallService.luau"),
     #[[ LedService laddas FORE GameplayService: den senare require:ar
     #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
+    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
+    #   GameplayService, som prover utrustningen fysiskt. ]]
+    ("TackRigg",       "src/server/TackRigg.luau"),
+    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
     #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
     #   startar, sa attributen i provet ar produktionens attribut. ]]
-    ("UtrustningRigg",  "src/server/UtrustningRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
     ("Init",            "src/client/init.client.luau"),
 ]
@@ -537,7 +552,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   efter faller den igenom till KLIENT dar GameplayService inte finns. ]]
     #[[ Ledningsspecen behover tjanstestacken: LedService och
     #   GameplayService. Samma bunt som integration. ]]
-    if "ledning" in spec_rel:
+    #[[ Tackspecen behover riggen OCH tjansterna: den bygger en riktig
+    #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
+    if "tack" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "ledning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "sprak-en" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
@@ -545,14 +564,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "integration" in spec_rel or "roster" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
-    #[[ Utrustningsgrinden (16:21-ordern): sadeln och transet som fysiska
-    #   saker. Behover tjanstestacken OCH riggen, alltsa samma bank som
-    #   integrationen. Ligger FORE "spel"-grenen av samma skal som
-    #   "spelbarhet": strangen far inte falla igenom till speldatans bank. ]]
-    elif "utrustning" in spec_rel:
-        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ Skotselpass flyttades till INTEGRATION nar blockerare 5 lade
+    #   utrustningen fysiskt i uppsittningsgrinden: passets livscykel
+    #   borjar med ett mount, och ett mount kraver nu en RIKTIG rigg att
+    #   sadla. INTEGRATION ar FORBEREDELSE plus riggen, sa inget tappas. ]]
     elif "skotselpass" in spec_rel:
-        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:

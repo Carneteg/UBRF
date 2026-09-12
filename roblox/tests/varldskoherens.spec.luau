@@ -398,6 +398,98 @@ if #utrustning > 0 then
 	end
 end
 
+--[[ ══ 3b. VARJE HÄSTS EGEN SADEL OCH EGET TRÄNS ═══════════════════════
+
+	Sektion 3 ovan mäter sadelkammaren, och den var ärlig om vad den INTE
+	mäter: "Det som saknas är inte geometri utan en väg och en anvisning."
+	Auditen inför blockerare 5 kallade rubriken vilseledande, och det var
+	den — den heter "utrustningen finns fysiskt" men mätte västkrokrad och
+	stövelhylla. Ingen sadel fanns i världen alls.
+
+	Nu gör den det, på hästens egen boxfront, enligt
+	`references/buildings/stall/KORT.md:305`. Det som mäts här är det som
+	gör webbens felutrustningspedagogik SPELBAR på Roblox:
+
+	  a) varje kanonisk häst har sin egen utrustning upphängd,
+	  b) den hänger i GÅNGEN och inte inne i boxen,
+	  c) den bär hästens namn, alltså webbens namnskylt,
+	  d) och att ta den ger DEN hästens utrustning — även när det är fel
+	     häst, för annars går felet inte att göra.
+
+	Punkt b är den som kan gå sönder tyst: boxkroppen ligger alltid
+	[x0, x0+djup] och `vetter` säger bara vilken SIDA fronten sitter på.
+	Räknas det om fel hamnar utrustningen inne i boxen för de två rader som
+	vetter åt −x — samma felklass som en gång satte sexton hästar i
+	stallgången. ]]
+print("")
+print("3b. Varje hästs egen sadel och eget träns")
+
+local taget = {}
+TackForradService.start(function(spelare, typ, hastId)
+	taget[typ] = hastId
+	return true
+end)
+
+check("varje kanonisk häst har sin utrustning upphängd",
+	TackForradService.antal() == #UBRFSpel.ordning,
+	("%d av %d"):format(TackForradService.antal(), #UBRFSpel.ordning))
+
+local iBoxen, utanNamn, langtFranFronten = {}, {}, {}
+for _, id in ipairs(UBRFSpel.ordning) do
+	local l = TackForradService.lage(id)
+	local m = TackForradService.forHast(id)
+	if l and m then
+		local rad = nil
+		for _, r in ipairs(G.stall.rader) do if r.id == l.rad then rad = r end end
+		local box = Stallet.boxFor(id)
+		local origoX = box.varld.x - box.lokal.x
+		local lokalX = l.x - origoX
+		--[[ BOXKROPPEN, inte frontens sida. ]]
+		if lokalX >= rad.x0 and lokalX <= rad.x0 + rad.djup then
+			table.insert(iBoxen, id)
+		end
+		local frontX = rad.x0 + (if rad.vetter > 0 then rad.djup else 0)
+		if math.abs(lokalX - frontX) > 0.6 then
+			table.insert(langtFranFronten, ("%s %.2f m"):format(id, lokalX - frontX))
+		end
+		local prompt = m.PrimaryPart and m.PrimaryPart:FindFirstChildOfClass("ProximityPrompt")
+		local namn = UBRFSpel.hastar[id].namn
+		if not (prompt and prompt:GetAttribute("SprakArg") == namn
+			and prompt:GetAttribute("SprakNyckel") == "tack.ta_utrustning") then
+			table.insert(utanNamn, id)
+		end
+	else
+		table.insert(iBoxen, id .. " (saknas)")
+	end
+end
+check("och den hänger i gången, inte inne i boxen", #iBoxen == 0,
+	#iBoxen == 0 and ("%d hästar, ingen innanför boxkroppen"):format(#UBRFSpel.ordning)
+		or table.concat(iBoxen, " · "))
+check("tätt mot fronten, som på fotot", #langtFranFronten == 0,
+	#langtFranFronten == 0 and "alla inom 0,60 m från frontplanet"
+		or table.concat(langtFranFronten, " · "))
+check("och den bär hästens namn — webbens namnskylt", #utanNamn == 0,
+	#utanNamn == 0 and ("%d namngivna prompter"):format(#UBRFSpel.ordning)
+		or table.concat(utanNamn, " · "))
+
+--[[ ROUTINGEN. Står man vid Jacks front får man JACKS utrustning; står man
+	vid grannens får man grannens. Det andra fallet är det som gör webbens
+	felutrustning möjlig att GÖRA på Roblox, och utan det vore
+	`TackService.satPa`s felgren onåbar i spel. ]]
+local jag = UBRFSpel.ordning[19]      -- blackrock_jack
+local granne = UBRFSpel.ordning[1]
+local spelare = { Name = "Koherens" }
+taget = {}
+TackForradService.tag(spelare, jag)
+check("att ta vid sin egen front ger den egna hästens utrustning",
+	taget.sadel == jag and taget.trans == jag,
+	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+taget = {}
+TackForradService.tag(spelare, granne)
+check("och vid grannens front ger GRANNENS — felvalet går att göra",
+	taget.sadel == granne and taget.trans == granne,
+	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+
 --[[ ══ 5. INTERIÖRERNA HAR GOLV — INGET GRÄS BLÖDER IGENOM ═══════════════
 
 	Ordern, punkt 5: "ingen utomhusmark får blöda genom spelbar interiör."

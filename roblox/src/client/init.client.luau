@@ -33,7 +33,6 @@ local EffectsController = require(script.EffectsController)
 local RiderController = require(script.RiderController)
 local InteractionController = require(script.InteractionController)
 local PreparationController = require(script.PreparationController)
-local UtrustningController = require(script.UtrustningController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
@@ -94,7 +93,6 @@ local function dismount()
 	KontrollHjalp.dolj()
 	Debug.clear()
 	InteractionController.setEnabled(true)
-	UtrustningController.setEnabled(true)
 	ride = nil
 end
 
@@ -177,7 +175,6 @@ local function mount(model: Model)
 	     häst man klivit av. ]]
 	TouchControls.mount(Input, { dismount = begarAvsittning })
 	InteractionController.setEnabled(false)
-	UtrustningController.setEnabled(false)
 	Debug.attach(rig, stats)
 
 	--[[ G02-C: lektionen börjar när man sitter upp i ridhuset. Ugneta
@@ -223,17 +220,6 @@ end)
      initierad klient fick aldrig sin "Sitt upp"-prompt. ]]
 PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
-	UtrustningController.uppdatera()
-end)
---[[ Utrustningen på boxfronten. Samma skäl som ovan för att den hänger på
-     vyn: hästen tilldelas efter att sadlarna redan hänger i världen, och
-     utan omräkningen får spelaren aldrig prompten på SIN sadel. ]]
-UtrustningController.start(function()
-	return PreparationController.hastId()
-end, function()
-	--[[ En hämtad sak ändrar vad HUD:en ska säga härnäst; servern skickar en
-	     ny vy, men den egna omräkningen gör att prompten försvinner direkt. ]]
-	UtrustningController.uppdatera()
 end)
 PreparationController.start()
 --[[ P0-3: HUD:ens KONTEXT stegas av sin egen loop, inte av ridloopen längst

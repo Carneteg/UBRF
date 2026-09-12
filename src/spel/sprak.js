@@ -133,24 +133,8 @@ const SPRAK = {
     en: "you are not carrying a bridle" },
 
   /* ── Utrustningen på boxfronten ────────────────────────────────────── */
-  "utr.sadel": { sv: "Sadel med underlägg", en: "Saddle with numnah" },
-  "utr.trans": { sv: "Träns", en: "Bridle" },
-  "utr.ta": { sv: "Ta med dig", en: "Pick up" },
-  "utr.okand_sak": { sv: "det där är ingen utrustning", en: "that is not equipment" },
-  "utr.redan_hamtad": { sv: "du har den redan med dig", en: "you are already carrying it" },
-  "utr.fel_hast": { sv: "det är inte din hästs utrustning",
-    en: "that is not your horse's equipment" },
-  "utr.for_langt": { sv: "du står för långt ifrån", en: "you are standing too far away" },
-  "utr.ingen_plats": { sv: "utrustningen är inte på plats", en: "the equipment is not in place" },
   /* Instruktionen när utrustningsfasen börjar: spelaren ska aldrig behöva
      gissa var sadeln finns. */
-  "utr.hamta_sadel": { sv: "Sadeln hänger på boxfronten där %s står — hämta den.",
-    en: "The saddle hangs on the box front where %s is standing — go and get it." },
-  "utr.hamta_trans": { sv: "Tränset hänger på boxfronten där %s står — hämta det.",
-    en: "The bridle hangs on the box front where %s is standing — go and get it." },
-  "utr.hamta_utan_namn": { sv: "Utrustningen hänger på din hästs boxfront — hämta den.",
-    en: "The equipment hangs on your horse's box front — go and get it." },
-  "utr.bar": { sv: "Du bär: %s", en: "Carrying: %s" },
 
   /* ── Skötsel-HUD:en (PreparationController) ────────────────────────── */
   "hud.gor_i_ordning": { sv: "Gör i ordning din häst", en: "Get your horse ready" },
@@ -252,6 +236,46 @@ const SPRAK = {
      ska förstå att det är GEOMETRIN som stoppar, inte att hon vägrar. */
   "led.fastnat": { sv: "Hon kommer inte fram där — prova en annan väg",
     en: "She cannot get through there — try another way" },
+
+  /* UTRUSTNINGEN. Skälen till fel sadel och fel träns är webbens egna ur
+     `visaSadelkammare` — de FÖRKLARAR varför utrustningen hör till en
+     bestämd häst, och det är själva lärandet. Ett "fel sadel" utan skäl
+     hade gjort momentet till ett minnestest. */
+  "tack.fel_sadel": {
+    sv: "Fel sadel — den är formad efter en annan rygg. På fel häst trycker den på manken eller på njurarna",
+    en: "Wrong saddle — it is shaped to another back. On the wrong horse it presses on the withers or the kidneys" },
+  "tack.fel_trans": {
+    sv: "Fel träns — det är inställt efter ett annat huvud. Bettet hamnar för högt eller för lågt och skaver i mungiporna",
+    en: "Wrong bridle — it is fitted to another head. The bit sits too high or too low and chafes the corners of her mouth" },
+  "tack.fel_hast": { sv: "Det är inte din häst", en: "That is not your horse" },
+  "tack.redan_pa": { sv: "Den sitter redan på", en: "That is already on" },
+  "tack.sadeln_forst": { sv: "Sadeln först", en: "The saddle first" },
+  "tack.underlagget_forst": { sv: "Underlägget först — sadeln ligger på det",
+    en: "The numnah first — the saddle goes on top of it" },
+  "tack.transet_forst": { sv: "Tränset av först", en: "Take the bridle off first" },
+  "tack.saknar_sadel": { sv: "Hon är inte sadlad än", en: "She is not saddled yet" },
+  "tack.saknar_underlagg": { sv: "Underlägget ligger inte på", en: "The numnah is not on" },
+  "tack.saknar_trans": { sv: "Hon är inte tränsad än", en: "She is not bridled yet" },
+  "tack.for_langt": { sv: "Gå fram till henne först", en: "Walk up to her first" },
+  "tack.inget_pa": { sv: "Det sitter inget sådant på henne", en: "She has none of that on" },
+  "tack.ingen_hast": { sv: "Ingen häst att utrusta", en: "No horse to tack up" },
+  "tack.ingen_karaktar": { sv: "Du är inte i världen", en: "You are not in the world" },
+  "tack.hast_saknar_kropp": { sv: "Hästen saknar kropp att utrusta",
+    en: "The horse has no body to tack up" },
+  "tack.ingen_rigg": { sv: "Hästen saknar fästpunkter för utrustning",
+    en: "The horse has no attachment points for tack" },
+  "tack.okand_utrustning": { sv: "Sådan utrustning finns inte", en: "There is no such equipment" },
+  /* Ett bygge som inte gick fram ska SÄGA det, inte tyst lämna en häst
+     som ser osadlad ut men räknas som sadlad. */
+  "tack.kunde_inte_byggas": { sv: "Utrustningen kom inte på plats — försök igen",
+    en: "The tack did not go on — try again" },
+  /* UPPHÄNGNINGEN PÅ BOXFRONTEN. Prompten och dess undertext, och nejet när
+     spelaren inte har hämtat utrustningen. De låg bara i Roblox-katalogen
+     efter `30f3d90`; paritetsgrinden fällde det. */
+  "tack.ta_utrustning": { sv: "Ta sadel och träns", en: "Take the saddle and bridle" },
+  "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
+  "tack.hamta_forst": { sv: "Du har varken sadel eller träns här — de hänger på boxfronten",
+    en: "You have neither saddle nor bridle with you — they hang on the stall front" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 

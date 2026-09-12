@@ -98,7 +98,7 @@ function Stallet.box(n: number)
 	local yMitt = if f then (f.y0 + f.y1) / 2
 		else S.boxStartY + (plats - 0.5) * S.boxB
 	--[[ Fackets ändar behövs för att veta var frontens TÄTA panel slutar och
-		boxdörren börjar — se `utrustningsplats`. ]]
+		boxdörren börjar. ]]
 	local yLag = if f then f.y0 else yMitt - S.boxB / 2
 	local yHog = if f then f.y1 else yMitt + S.boxB / 2
 
@@ -203,43 +203,6 @@ function Stallet.boxdorr(hastId: string)
 	}
 end
 
---[[ Var hänger `sort` ("sadel" / "trans") för den här hästen?
-
-	Ren geometri, inga instanser: platsen ska gå att prova utan Studio, och
-	riggen ska inte kunna ha en egen mening om var utrustningen sitter.
-
-	PANELENS UTBREDNING RÄKNAS UR SAMMA TVÅ FÄLT BYGGET LÄSER — `S.boxB` och
-	`boxfront.dorr.bredd`. Det är ändå en härledning på två ställen, så den
-	VAKTAS av en mätning mot den byggda världen i `spelbarhet.spec`: varje
-	sak ska ligga inom sin boxfronts panel och utanför sin boxdörr. Skulle
-	bygget flytta dörren blir mätningen röd, inte tyst fel. ]]
-function Stallet.utrustningsplats(hastId: string, sort: string)
-	local box = Stallet.boxFor(hastId)
-	if not box then return nil end
-	if sort ~= "sadel" and sort ~= "trans" then return nil end
-
-	local BF = (G.identitet and G.identitet.stall and G.identitet.stall.boxfront) or {}
-	local frontL = S.boxB - 2 * PANELMARGINAL
-	local dorrB = if BF.dorr then math.min(BF.dorr.bredd, frontL - 0.30) else 0
-	local fastL = frontL - dorrB
-
-	--[[ Panelen börjar i fackets lägre ände; dörren tar dess bortre del.
-		Sadeln på första tredjedelen av panelen, tränset på andra — två
-		lägen med luft emellan, båda på tät panel. ]]
-	local panelStart = box.fack.y0 + PANELMARGINAL
-	local del = if sort == "sadel" then 1 else 2
-	local y = panelStart + fastL * del / 3
-
-	return {
-		nummer = box.nummer,
-		rad = box.rad,
-		gang = box.gang,
-		vetter = box.vetter,
-		lokal = { x = box.front.x + box.vetter * UT_AVSTAND, y = y },
-		varld = { x = box.frontVarld.x + box.vetter * UT_AVSTAND,
-			y = S.origo.y + y },
-	}
-end
 
 --[[ Hästarnas boxar sprids över raderna i stället för att fylla en rad i
 	taget. Annars står alla sjutton i rad W och stallets andra halva är tom,

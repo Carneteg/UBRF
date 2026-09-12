@@ -23,11 +23,62 @@ local RigAdapter = {}
 
 --[[ Attachment-punkter. Alla frivilliga utom Saddle. ]]
 local ATTACHMENTS = {
-	"RiderSeat", "SaddleAttachment", "Saddle",
+	"RiderSeat", "SaddleAttachment", "Saddle", "BridleAttachment",
 	"LeftReinAttachment", "RightReinAttachment",
 	"LeftStirrupAttachment", "RightStirrupAttachment",
 	"LeadRope", "HoofFL", "HoofFR", "HoofRL", "HoofRR",
 }
+
+--[[ ══ DET ANATOMISKA GRÄNSSNITTET ═══════════════════════════════════
+
+	Utrustningen frågar EFTER KROPPSDEL, inte efter en modellstruktur.
+	`TackRigg` vet att en sadel hör på ryggen och ett träns på huvudet;
+	den vet ingenting om att just den här hästen är byggd av lådor.
+
+	Det är hela poängen inför `HORSE_VISUAL_QUALITY_GATE`: en ny hästrigg
+	behöver bara bära de här fyra punkterna på rätt kroppsdelar, så
+	fungerar tack-gameplayet oförändrat. Byter man ut modellen mot ett
+	riktigt nät flyttar punkterna med nätet — inte med koden.
+
+	Fästpunkten bär också sin VÄRDDEL: det är den delen utrustningen
+	svetsas i, och det är därför ett träns följer huvudet när hästen
+	sänker det i stället för att hänga kvar i luften framför bålen. ]]
+local ANATOMI = {
+	sadel = "SaddleAttachment",       -- ryggen, bakom bogbladet
+	trans = "BridleAttachment",       -- huvudet, nackstyckets läge
+	tygelV = "LeftReinAttachment",    -- bettet, vänster mungipa
+	tygelH = "RightReinAttachment",   -- bettet, höger mungipa
+	bygelV = "LeftStirrupAttachment", -- sadelns vänstra bygel
+	bygelH = "RightStirrupAttachment",
+}
+
+--[[ RYTTARENS PLATS LIGGER INTE HÄR, och det är med flit. Sitsen är en
+	`Seat` — en BasePart som ryttaren svetsas i — inte en `Attachment`, och
+	den når man som `rig.seat`. Att lägga den i samma uppslag hade gjort
+	`tackfaste()` till en funktion som ibland svarar med en fästpunkt och
+	ibland med en kroppsdel. ]]
+
+--[[ Fästpunkten för en anatomisk plats. Svarar nil när riggen saknar
+	den — en rigg utan huvudpunkt ska ge ett tydligt nej, inte ett träns
+	fastsvetsat i bålen. ]]
+function RigAdapter.tackfaste(rig: Types.Rig, plats: string): Attachment?
+	local namn = ANATOMI[plats]
+	if not namn then return nil end
+	return rig.attachments[namn]
+end
+
+--[[ Vilka anatomiska platser riggen faktiskt bär. Grindar och specar
+	läser den här i stället för att gissa på namn. ]]
+function RigAdapter.tackplatser(rig: Types.Rig): { string }
+	local ut = {}
+	for plats in pairs(ANATOMI) do
+		if rig.attachments[ANATOMI[plats]] then table.insert(ut, plats) end
+	end
+	table.sort(ut)
+	return ut
+end
+
+RigAdapter.ANATOMI = ANATOMI
 
 --[[ Ben som koden får röra procedurellt. Alla frivilliga — animationen
      bär rörelsen, de här är bara till för blick, öron och svans. Saknas

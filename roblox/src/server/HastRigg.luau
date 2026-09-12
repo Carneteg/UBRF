@@ -192,23 +192,47 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 		bärande svets och sitsen hade lossnat från hästen. ]]
 	svets(kropp, sits, "SitsFaste")
 
-	--[[ Attachmentpunkterna. Specen är strikt här: sadel, tyglar och
-		stigbyglar är det utrustning och ryttarpose hänger på. ]]
-	local fasten = Instance.new("Folder")
-	fasten.Name = "Attachments"
-	fasten.Parent = modell
-	local function fast(namn: string, offset: CFrame)
+	--[[ ══ ANATOMISKA FÄSTPUNKTER ═══════════════════════════════════
+
+		Utrustningen och ryttarposen hänger här. Punkterna sitter på den
+		KROPPSDEL de hör till, inte på en gemensam låda — det är hela
+		skillnaden mellan ett träns som följer huvudet och ett som hänger i
+		luften framför hästen.
+
+		TVÅ FEL RÄTTADE 2026-09-11:
+
+		1. Tygelpunkterna satt på `kropp`, inte på huvudet. Specen är
+		   uttrycklig: `HORSE-MODEL-SPEC.md:140` — "Sätt tygelpunkterna på
+		   huvudets ben, inte på BodyCollider. Då följer händerna med när
+		   hästen sänker huvudet, vilket är hela poängen med tyglar."
+		   De ligger nu i bettets läge, i huvudets mungipor.
+
+		2. En `Folder` vid namn `Attachments` skapades, parentades på
+		   modellen och användes ALDRIG — varje attachment hamnade på
+		   `kropp`. Den är borta. En `Attachment` måste ligga på en
+		   `BasePart` för att ha någon `WorldCFrame`; en mapp kan inte
+		   vara gränssnittet. Gränssnittet är i stället namnen nedan, och
+		   `RigAdapter.tackfaste()` slår upp dem. En framtida hästrigg
+		   behöver bara bära samma namn på rätt kroppsdelar. ]]
+	local function fast(vardpart: BasePart, namn: string, offset: CFrame)
 		local a = Instance.new("Attachment")
 		a.Name = namn
 		a.CFrame = offset
-		a.Parent = kropp
+		a.Parent = vardpart
 		return a
 	end
-	fast("SaddleAttachment", CFrame.new(0, (KROPP_H / 2) * M, 0))
-	fast("LeftReinAttachment", CFrame.new(-0.18 * M, 0.30 * M, -(KROPP_L / 2) * M))
-	fast("RightReinAttachment", CFrame.new(0.18 * M, 0.30 * M, -(KROPP_L / 2) * M))
-	fast("LeftStirrupAttachment", CFrame.new(-(KROPP_B / 2) * M, 0, 0))
-	fast("RightStirrupAttachment", CFrame.new((KROPP_B / 2) * M, 0, 0))
+	--[[ RYGGEN: sadelläget, mitt på bålen, på kroppens ovansida. ]]
+	fast(kropp, "SaddleAttachment", CFrame.new(0, (KROPP_H / 2) * M, 0))
+	--[[ HUVUDET: tränsets läge, på huvudets mitt. Huvudets lokala -Z är
+		nosen (delen byggs framåt ur halsen), så nackstycket ligger en bit
+		bakåt och uppåt från mitten. ]]
+	fast(huvud, "BridleAttachment", CFrame.new(0, 0.06 * M, 0.06 * M))
+	--[[ BETTET: tygelpunkterna i mungiporna, på var sin sida om nosen. ]]
+	fast(huvud, "LeftReinAttachment", CFrame.new(-0.14 * M, -0.04 * M, -0.20 * M))
+	fast(huvud, "RightReinAttachment", CFrame.new(0.14 * M, -0.04 * M, -0.20 * M))
+	--[[ STIGBYGLARNA hänger i sadeln och hör därför till bålen. ]]
+	fast(kropp, "LeftStirrupAttachment", CFrame.new(-(KROPP_B / 2) * M, 0, 0))
+	fast(kropp, "RightStirrupAttachment", CFrame.new((KROPP_B / 2) * M, 0, 0))
 
 	for _, konf in ipairs({ "HorseStats", "GaitConfig", "AnimationConfig" }) do
 		local c = Instance.new("Configuration")

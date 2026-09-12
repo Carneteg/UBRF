@@ -10,8 +10,9 @@ local StallService = require(script.StallService)
 local GameplayService = require(script.GameplayService)
 local DorrService = require(script.DorrService)
 local LedService = require(script.LedService)
+local TackService = require(script.TackService)
+local TackForradService = require(script.TackForradService)
 local HastRigg = require(script.HastRigg)
-local UtrustningRigg = require(script.UtrustningRigg)
 local Preflight = require(script.Preflight)
 
 --[[ Ordningen är ett beroende, inte en smaksak: GameplayService registrerar
@@ -124,19 +125,18 @@ kritisk("Jack-riggen", function()
 	if HastRigg.start() == nil then error("hästen byggdes inte") end
 end)
 
---[[ Sadlarna och tränsen på boxfronterna. Efter hästarna, för att de hänger
-	på hästarnas boxar — men de är sina egna modeller och inte en del av
-	riggen: en sadel som ligger i hästmodellen hade följt med hästen ut. ]]
-kritisk("utrustningen på boxfronterna", function()
-	if UtrustningRigg.start() <= 0 then error("ingen utrustning hänger på plats") end
-end)
-
 kritisk("SparService", SparService.start)
 kritisk("HorseService", HorseService.start)
 kritisk("StallService", StallService.start)
 kritisk("GameplayService", GameplayService.start)
 kritisk("DorrService", DorrService.start)
 kritisk("LedService", LedService.start)
+--[[ Utrustningen hängs upp EFTER GameplayService: prompten lämnar sitt val
+     dit, och tjänsten tar emot anroparen som argument i stället för att
+     requira tillbaka. Ordningen är alltså ett beroende, inte en smaksak. ]]
+kritisk("TackForradService", function()
+	TackForradService.start(GameplayService.valjUtrustning)
+end)
 
 --[[ ══ CRITICAL_STARTUP_GATE ═════════════════════════════════════════════
 
