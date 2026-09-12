@@ -360,7 +360,7 @@ function TouchControls.mount(input: any, hooks: {
 	         GALOPP y -11..41    avklippt
 	     Fyra av fem gångartsknappar gick alltså inte att träffa.
 
-	     Svaret är INTE en egen telefonlayout — samma två gallren, samma
+	     Svaret är INTE en egen telefonlayout — samma två galler, samma
 	     ordning, samma plats. Talen skalas mot den höjd blocket faktiskt
 	     behöver (två galler + mellanrum + marginal ≈ 380), och taket är 1
 	     så att surfplattan är exakt som förut. ]]
