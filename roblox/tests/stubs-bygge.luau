@@ -262,6 +262,18 @@ local function instance(klass)
 		     trycka på dörren, och då är den enda evidensen för att den
 		     öppnas Studio — som ingen agent här kommer åt. ]]
 		Triggered = signal(),
+		--[[ `GetPropertyChangedSignal` finns på varje Instance i Roblox.
+		     Byggstubben saknade den, och `HastRigg`s vakt mot att hästen
+		     sätter sig på sin EGEN sits kunde därför inte ens byggas här.
+		     Signalerna sparas per egenskap så att samma namn ger samma
+		     signal två gånger — annars kan ingen fyra den i ett prov. ]]
+		_egenskapsSignaler = {},
+		GetPropertyChangedSignal = function(self, egenskap)
+			local t = rawget(self, "_egenskapsSignaler")
+			if not t then t = {}; rawset(self, "_egenskapsSignaler", t) end
+			if not t[egenskap] then t[egenskap] = signal() end
+			return t[egenskap]
+		end,
 		--[[ #162: `RigAdapter.findByName` anropar
 		     `model:FindFirstChild(namn, true)` — REKURSIVT. Stubben ignorerade
 		     andra argumentet, så leder och attachmentpunkter som ligger under

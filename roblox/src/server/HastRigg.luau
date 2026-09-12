@@ -31,6 +31,7 @@ local TAG = "Horse"
 local M = 3                     -- studs per meter, som BuildKit.M
 
 local HastVisual = require(script.Parent.HastVisual)
+local Utseende = require(ReplicatedStorage.HorseCore.Utseende)
 
 --[[ ══ VILKA HÄSTAR SOM BÄR ETT RIKTIGT NÄT ═══════════════════════
 
@@ -53,12 +54,29 @@ local function visuellProfil(hastId: string): string?
 	return STANDARDPROFIL
 end
 
---[[ Kategori D är ponny upp till 1,48 m i mankhöjd. Datan ger ingen
-	mankhöjd för Jack (`mankhojd = nil`), så kroppen byggs på kategorins
-	övre del. Det är en SPELABSTRAKTION och ingen mätning. ]]
-local MANKHOJD = 1.45
-local KROPP_L, KROPP_B, KROPP_H = 1.85, 0.62, 0.78
-local BEN_H = MANKHOJD - KROPP_H          -- marken till kroppens undersida
+--[[ ══ KROPPENS GRUNDFORM ══════════════════════════════════════════
+
+	Talen nedan beskriver en kategori D-ponny på 1,45 m: Blackrock Jacks
+	mått, och länge hela rostens. De är en SPELABSTRAKTION och ingen
+	mätning av ett verkligt djur.
+
+	══ VARFÖR DE NU SKALAS PER HÄST ═══════════════════════════════════
+
+	Efter rosterkonverteringen bar varje häst sitt eget UTSEENDE — Marabou
+	1,27 m, Allan 1,78 — men samma FYSISKA hölje. Uppmätt var `HipHeight`
+	2,01 studs för var och en av de trettiotre, alltså byggd ur den här
+	1,45:an. Allans kollisionslåda var en ponnys, och den lilla ponnyns
+	var en varmblodshästs.
+
+	Det syntes inte förrän man mätte, men det är fel på riktigt: hur stort
+	utrymme en häst tar i en box, hur nära en vägg hon kan stå och var
+	ryttaren hamnar är alla frågor om KROPPEN, inte om nätet.
+
+	Grundformen skalas därför linjärt med hästens egen mankhöjd. Formen är
+	densamma — en häst är inte en annan form för att hon är högre — och
+	proportionerna kommer ur den enda mätta hästen vi har. ]]
+local GRUND_MANKHOJD = 1.45
+local GRUND_L, GRUND_B, GRUND_H = 1.85, 0.62, 0.78
 
 local FARG_KROPP = Color3.fromRGB(92, 68, 52)
 local FARG_MAN = Color3.fromRGB(46, 34, 26)
@@ -88,8 +106,31 @@ local function svets(a: BasePart, b: BasePart, namn: string): WeldConstraint
 	return w
 end
 
---[[ Bygger riggen vid `bas` (världs-CFrame, hästens mitt i marknivå). ]]
-function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
+--[[ Kroppens mått för en häst med mankhöjden `mankhojd` (meter).
+	Egen funktion för att provet ska kunna läsa SAMMA räkning som riggen
+	byggs med — två räkningar hade kunnat glida isär. ]]
+function JackRigg.kroppsmatt(mankhojd: number?): { [string]: number }
+	local h = if type(mankhojd) == "number" and mankhojd > 0.5 and mankhojd < 2.5
+		then mankhojd else GRUND_MANKHOJD
+	local k = h / GRUND_MANKHOJD
+	local kroppH = GRUND_H * k
+	return {
+		mankhojd = h, skala = k,
+		L = GRUND_L * k, B = GRUND_B * k, H = kroppH,
+		--[[ Marken till kroppens undersida. Att den räknas som mankhöjd
+			MINUS kroppshöjd och inte skalas för sig är vad som håller
+			hovarna på marken: benlängden är det som blir över. ]]
+		benH = h - kroppH,
+	}
+end
+
+--[[ Bygger riggen vid `bas` (världs-CFrame, hästens mitt i marknivå).
+	`mankhojd` är hästens egen, i meter; utelämnad blir det grundformen. ]]
+function JackRigg.bygg(hastId: string, namn: string, bas: CFrame,
+	mankhojd: number?): Model
+	local matt = JackRigg.kroppsmatt(mankhojd)
+	local KROPP_L, KROPP_B, KROPP_H = matt.L, matt.B, matt.H
+	local BEN_H = matt.benH
 	local modell = Instance.new("Model")
 	modell.Name = namn
 
@@ -207,6 +248,21 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	sits.CanCollide = false
 	sits.Massless = true
 	sits.Anchored = false
+	--[[ SITSEN FÅNGAR INGEN GENOM BERÖRING. En `Seat` sätter av sig själv
+		varje `Humanoid` vars kropp NUDDAR den, och sitsen sitter fastsvetsad
+		ovanpå hästens egen rot — alltså mitt i hennes egen kropp.
+
+		Uppsittningen går inte den vägen: `HorseService.tryMount` anropar
+		`seat:Sit(humanoid)` rakt, och `Sit` bryr sig inte om `CanTouch`.
+		Beröringsvägen har därför ingen uppgift alls i det här spelet, och
+		det enda den gör är att låta hästen sätta sig på sig själv.
+
+		Mätt i Studio med beröringen kvar: vakten nedan kastade ut henne,
+		kropparna rörde varandra igen i nästa bildruta, och hon satte sig
+		på nytt — `Occupant` satt, en ny `SeatWeld`, och hon rörde sig
+		1,21 studs på fyra sekunder med full order att gå. Vakten räckte
+		alltså inte ensam: kontakten måste också upphöra att betyda något. ]]
+	sits.CanTouch = false
 	sits.Parent = modell
 	--[[ Namnet är INTE "SeatWeld": Roblox skapar själv en `Weld` med det
 		namnet under sitsen när någon sätter sig, och `HorseService.dismount`
@@ -214,6 +270,42 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 		samma rigg är en fälla — avsittningen kunde få tag i riggens
 		bärande svets och sitsen hade lossnat från hästen. ]]
 	svets(kropp, sits, "SitsFaste")
+
+	--[[ ══ HÄSTEN FÅR ALDRIG SITTA PÅ SIN EGEN SITS ═══════════════════
+
+		En `Seat` fångar VARJE `Humanoid` vars kropp rör den — den frågar
+		inte vems humanoid det är. Sitsen sitter fastsvetsad ovanpå hästens
+		egen rot, och rör de två varandra sätter hästen sig på sig själv:
+
+		    Humanoid.Sit = true · SeatPart = RiderSeat
+		    HumanoidStateType.Seated · FloorMaterial = Air
+
+		En sittande humanoid svävar och slutar lyda `Move`. Uppmätt under
+		rosterprovet: åtta hästar som ställdes om hamnade i det läget, tre
+		av dem gick inte att få ur det utan att svetsen revs för hand.
+
+		Att det inte händer under vanlig ridning är sant men inte ett
+		skydd. Det räcker att en häst flyttas — en respawn, en världsladdning,
+		en framtida hage — för att hon ska kunna landa i sin egen sits, och
+		då står hon svävande och obrukbar tills någon startar om platsen.
+
+		Vakten nedan lyssnar på sitsens EGEN signal och kastar ut varje
+		occupant som hör hemma i den här hästen. Den rör inte spelaren:
+		ryttarens humanoid bor i hennes karaktär, inte i hästmodellen. ]]
+	sits:GetPropertyChangedSignal("Occupant"):Connect(function()
+		local o = sits.Occupant
+		if not o then return end
+		--[[ Är det hästens egen humanoid — alltså en som bor i den här
+			modellen — ska den ut. Allt annat är en ryttare. ]]
+		if not o:IsDescendantOf(modell) then return end
+		--[[ Roblox svetsar fast den som satt sig; `Sit = false` ensamt
+			släpper inte svetsen, och då blir hon kvar i luften. ]]
+		local w = sits:FindFirstChild("SeatWeld")
+		if w then w:Destroy() end
+		o.Sit = false
+		o:ChangeState(Enum.HumanoidStateType.GettingUp)
+		warn(("[Rigg] %s satte sig på sin egen sits och kastades ut"):format(namn))
+	end)
 
 	--[[ ══ ANATOMISKA FÄSTPUNKTER ═══════════════════════════════════
 
@@ -352,7 +444,11 @@ function JackRigg.placera(hastId: string): (Model?, string?)
 		markören och hästen faktiskt hamnar i det byggda stallet. ]]
 	local lage = bas * CFrame.new(box.varld.x * M, 0, -box.varld.y * M)
 
-	local modell = JackRigg.bygg(hastId, namnFor(hastId), lage)
+	--[[ Hästens egen mankhöjd, ur samma karta som utseendet läser: en
+		häst ska vara lika stor fysiskt som hon är visuellt. ]]
+	local hd = dataFor(hastId)
+	local egenHojd = Utseende.mankhojd(hd or {})
+	local modell = JackRigg.bygg(hastId, namnFor(hastId), lage, egenHojd)
 
 	--[[ ══ DET VISUELLA LAGRET ═══════════════════════════════════════
 

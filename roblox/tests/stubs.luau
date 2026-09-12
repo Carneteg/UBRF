@@ -210,7 +210,12 @@ CFrame = {
 }
 
 RaycastParams = { new = function()
-	return { FilterType = 0, FilterDescendantsInstances = {} }
+	--[[ `RespectCanCollide` star med for att `Markkontakt` MATER PA DEN:
+	     skillnaden mellan en stral som traffar allt och en som bara traffar
+	     det som bar AR lagrets tjocklek. En stub utan faltet hade latit
+	     mattningen ge noll utan att provet markte det. ]]
+	return { FilterType = 0, FilterDescendantsInstances = {},
+		RespectCanCollide = false }
 end }
 
 Enum = {
@@ -280,8 +285,16 @@ function warn(...)
 	table.insert(__varningar, table.concat({ ... }, " "))
 end
 
+--[[ EN SPEC FAR LAGGA UNDERLAG UNDER BANKEN. Standard ar fortfarande plan
+     mark pa y 0; satts `__markyta` svarar strålen det provet bestammer, och
+     da kan ett dekorlager utan kollision mätas pa riktigt. ]]
+__markyta = nil
+
 workspace = {
-	Raycast = function(_, origin, dir)
+	Raycast = function(_, origin, dir, params)
+		if __markyta then
+			return __markyta(origin, dir, params)
+		end
 		--[[ Plan mark under hästen. Sluttningar testas separat om det
 		     behövs; hit finns för att grounded ska bli sant. ]]
 		return { Position = vec(origin.X, 0, origin.Z), Normal = vec(0, 1, 0),
@@ -958,6 +971,14 @@ local function __nyInstans(klass)
 		inst._moveDir = nil
 		function inst:MoveTo(p) self._moveMal = p end
 		function inst:Move(dir) self._moveDir = dir end
+		--[[ `ChangeState` speglas på samma sätt: stubben har ingen fysik,
+		     men `HastRigg`s vakt mot att hästen sätter sig på sin egen
+		     sits reser henne med den, och utan metoden kunde grinden inte
+		     ens köra. Det SENASTE tillståndet sparas så att ett prov kan
+		     mäta att hon faktiskt restes. ]]
+		inst._tillstand = nil
+		function inst:ChangeState(t) self._tillstand = t end
+		function inst:GetState() return self._tillstand end
 	end
 	if klass == "Model" then
 		--[[ Modellen flyttas med `PivotTo` av både uppsittningen och

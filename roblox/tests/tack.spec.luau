@@ -435,6 +435,64 @@ do
 			kvar and #kvar:GetChildren() or 0))
 end
 
+--[[ ══ HÄSTEN FÅR ALDRIG SITTA PÅ SIN EGEN SITS ═══════════════════════
+
+	En `Seat` fångar varje `Humanoid` vars kropp rör den, och sitsen sitter
+	fastsvetsad ovanpå hästens egen rot. Uppmätt under rosterprovet: åtta
+	hästar som ställdes om hamnade i sin egen sits —
+
+	    Humanoid.Sit = true · SeatPart = RiderSeat
+	    HumanoidStateType.Seated · FloorMaterial = Air
+
+	— och en sittande humanoid svävar och slutar lyda `Move`. Tre av de
+	åtta gick inte att få loss utan att svetsen revs för hand.
+
+	Att det inte händer under vanlig ridning är sant men är inget skydd.
+	Vakten mäts därför här, mot den signal Roblox själv fyrar. ]]
+print("\n── Hästen kan inte sätta sig på sin egen sits ──")
+
+do
+	local sits = hast:FindFirstChild("RiderSeat")
+	local hastHum = hast:FindFirstChildOfClass("Humanoid")
+	check("hästen har en sits och en humanoid", sits ~= nil and hastHum ~= nil)
+
+	--[[ FÖRSTA SPÄRREN: sitsen får inte fånga någon genom beröring alls.
+		Mätt i Studio med beröringen kvar satte hon sig OM i nästa bildruta
+		efter att vakten kastat ut henne, och kom 1,21 studs på fyra
+		sekunder med full order att gå. Uppsittningen går ändå inte den
+		vägen — `HorseService.tryMount` anropar `seat:Sit()` rakt. ]]
+	check("sitsen fångar ingen genom beröring", sits.CanTouch == false,
+		("CanTouch=%s"):format(tostring(sits.CanTouch)))
+
+	--[[ Så här ser det ut när Roblox har satt hästen i hennes egen sits:
+		occupant satt, en `SeatWeld` skapad, och `Sit` sann. ]]
+	local weld = Instance.new("Weld")
+	weld.Name = "SeatWeld"
+	weld.Parent = sits
+	hastHum.Sit = true
+	sits.Occupant = hastHum
+	sits:GetPropertyChangedSignal("Occupant"):Fire()
+
+	check("vakten släpper svetsen", sits:FindFirstChild("SeatWeld") == nil)
+	check("och reser henne igen", hastHum.Sit == false,
+		("Sit=%s"):format(tostring(hastHum.Sit)))
+
+	--[[ RYTTAREN SKA FORTFARANDE SLÄPPAS IGENOM. Vakten får bara kasta ut
+		humanoider som bor i HÄSTMODELLEN; en ryttare bor i sin karaktär.
+		Utan den skillnaden hade rättningen gjort hästen omöjlig att rida. ]]
+	local ryttare = spelare.Character:FindFirstChildOfClass("Humanoid")
+	local ryttarWeld = Instance.new("Weld")
+	ryttarWeld.Name = "SeatWeld"
+	ryttarWeld.Parent = sits
+	ryttare.Sit = true
+	sits.Occupant = ryttare
+	sits:GetPropertyChangedSignal("Occupant"):Fire()
+
+	check("ryttarens svets rörs INTE", sits:FindFirstChild("SeatWeld") ~= nil)
+	check("och ryttaren sitter kvar", ryttare.Sit == true,
+		("Sit=%s"):format(tostring(ryttare.Sit)))
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

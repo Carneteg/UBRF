@@ -172,6 +172,10 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
+    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
+    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
+    # samma rakning som servern kor, inte en avskrift av den.
+    ("Markkontakt",     "src/server/Markkontakt.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -250,6 +254,10 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
+    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
+    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
+    # samma rakning som servern kor, inte en avskrift av den.
+    ("Markkontakt",     "src/server/Markkontakt.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -329,6 +337,10 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
+    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
+    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
+    # samma rakning som servern kor, inte en avskrift av den.
+    ("Markkontakt",     "src/server/Markkontakt.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -564,7 +576,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   GameplayService. Samma bunt som integration. ]]
     #[[ Tackspecen behover riggen OCH tjansterna: den bygger en riktig
     #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
-    if "tack" in spec_rel:
+    #[[ Hojdspecen bygger RIKTIGA riggar i tre storlekar och kor
+    #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
+    if "hasthojd" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
