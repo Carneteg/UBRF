@@ -20,14 +20,14 @@ efter den.
 | Identitet | Värde | Vad det är |
 |---|---|---|
 | **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `b0265bb41faf5bc7995ba56ca1d8fd87bf506bb3` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `f2f1d3ac332ec547238313f6734395d331403a883d7cde6041021468f9dab083` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **artifact source SHA** | `637ab037a2758e248b52ba8b9a9e8d816e05d3c6` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `2ae44a456899d4a849f4725487a973880838b18f8a4f50a90dcb7d3ae0ecea9b` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-b0265bb/UBRFFirstPlayable.rbxlx` |
-| storlek | 966 840 byte, 65 instanser |
+| fil i repot | `roblox/releases/first-playable-place-637ab03/UBRFFirstPlayable.rbxlx` |
+| storlek | 984 514 byte, 66 instanser |
 | determinism | ombyggd ur samma källa, byte-identisk |
 
 > **Den här artefakten ersätter `…-86662d1` (`b6afc634…`) och allt före
@@ -62,7 +62,7 @@ efter den.
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-b0265bb\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-637ab03\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -91,13 +91,14 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=b0265bb41faf5bc7995ba56ca1d8fd87bf506bb3
+FIRST_PLAYABLE_SHA=637ab037a2758e248b52ba8b9a9e8d816e05d3c6
 FIRST_PLAYABLE_PREFLIGHT: PASS
 OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3367 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
 OK  Världen vänd till högerhänt (norr = −Z): 3371 delar speglade
 [Rigg] 33 av 33 hästar står i sina boxar
 [Dörr] 13 dörrar fick interaktion
+[Tack] Utrustning upphängd på 33 av 33 boxfronter.
 ```
 
 `FIRST_PLAYABLE_PREFLIGHT: FAIL` är fail-closed och ska stoppa körningen.
@@ -245,66 +246,52 @@ trettiotre stod i gången. Kontrollera därför i Studio att varje häst står
 
 ## 6. Utrustning — sadeln och tränset som FYSISKA saker
 
-**NY I DEN HÄR ARTEFAKTEN. Aldrig runtime-testad.** Före den här byggen var
-utrustningssteget ett tillståndsbyte: man tryckte på en HUD-rad vid hästen
-och var sadlad. Nu hänger sadeln och tränset i världen och måste hämtas.
+**BYTT SYSTEM I DEN HÄR ARTEFAKTEN.** Utrustningen är inte längre ett
+tillståndsbyte, och den är inte heller det system som låg i `f2f1d3ac…`.
+Produktbeslut 1 (`docs/BESLUT-162-TACK.md`) pekar ut `TackForradService`, och
+det är det som står här. Skillnaden mot förra artefakten: utrustningen
+**sitter fysiskt på hästen** när den är påsatt — tretton delar — och
+ägarskapet är ett attribut på delen, inte en flagga i serverns tillstånd.
 
-### Var de hänger — och varför inte i sadelkammaren
+### Var den hänger — och varför inte i sadelkammaren
 
-På **hästens egen boxfront**. Källan är
-`references/buildings/stall/KORT.md` § Boxarna från gången, ur filmen: *"På
-fronterna hänger sadlar med underlag, täcken, grimmor, träns och benskydd —
-mycket saker, tätt."*
+På **hästens egen boxfront**, en upphängning per häst med hennes namn i
+prompten. Källan är `references/buildings/stall/KORT.md` § Boxarna från
+gången: *"På fronterna hänger sadlar med underlag, täcken, grimmor, träns
+och benskydd — mycket saker, tätt."* Sadelkammarens egen referensbild visar
+stövlar och täcken, inga sadlar.
 
-Sadelkammaren är **inte** platsen, och det är ett källbeslut, inte en
-förenkling: `stall-inne-03-sadelkammaren.jpg` visar **inga sadelbockar** —
-säkerhetsvästar på krokrader och en hylla med stövlar — och
-`docs/F02-B-INREDNINGSMATRIS.md` har redan fällt sadlar där som
-`REFERENCE GAP`. Att bygga sadelbockar i det rummet hade varit att hitta på
-en UBRF-detalj. Rummets egen inredning står kvar oförändrad:
-
-| Plats | Delar | Läge (x, y) |
-|---|---|---|
-| `sadel_dorr_teori` | 3 | (159.90, 119.34) |
-| `sadel_stovelhylla` | 1 | (161.40, 117.25) |
-| `sadel_vastkrokar` | 2 | (158.42, 117.25) |
-
-### Dagens häst — Blackrock Jack
-
-| | Tomtkoordinat (x, y) |
-|---|---|
-| boxen (box 31, rad MB, gång B) | (163.68, 77.60) |
-| boxfronten mot gång B | (165.53, 77.60) |
-| **sadeln** (`Sadel_blackrock_jack`) | (165.81, 76.76) |
-| **tränset** (`Trans_blackrock_jack`) | (165.81, 78.44) |
-
-Sakerna ligger i `workspace.Utrustning`, taggade `Utrustning`, med
-attributen `HastId` och `UtrSort`. Formen är spelabstraktion — filmen mäter
-ingen sadel — men läget härleds ur boxen och är inte skrivet för hand.
-
-> **Boxdörren delar fronten.** Sedan `27e5c2a` har varje boxfack en 1,20 m
-> dörr i fackets bortre ände. Sadeln och tränset hänger på den **täta
-> panelen**, aldrig i dörröppningen — det mäts mot de faktiskt byggda
-> delarna i `spelbarhet.spec` (66 lägen). Ser du en sadel stå i dörrgapet är
-> det ett fynd: härledningen har glidit.
+> **Boxdörren delar fronten.** Varje boxfack har en 1,20 m dörr i fackets
+> bortre ände. Upphängningen ligger på den **täta panelen**, aldrig i
+> dörröppningen — mätt mot de faktiskt byggda delarna i `spelbarhet.spec`,
+> 33 upphängningar, och falsifierat. Ser du en sadel i dörrgapet är det ett
+> fynd: härledningen har glidit.
 
 ### Körlista
 
 | # | Gör | Förväntat |
 |---|---|---|
-| 6a | läs Output vid start | `[Utrustning] 66 saker hänger på boxfronterna` |
-| 6b | gå till Jacks boxfront | två saker hänger där, i gångens höjd, utan att blockera gången |
-| 6c | sikta på dem | prompt **Ta med dig** / *Pick up* med objektet **Sadel med underlägg** respektive **Träns** (`en-us`: *Saddle with numnah* / *Bridle*) |
-| 6d | sikta på en ANNAN hästs boxfront | **ingen prompt** — bara din egen hästs utrustning får en |
-| 6e | hämta sadeln | den följer med på kroppen, synligt |
-| 6f | gör hovarna, tryck sedan sadelsteget UTAN att ha hämtat | nekas med *du har ingen sadel med dig* |
-| 6g | samma steg med sadeln i handen | går igenom |
-| 6h | när `Gör i ordning` är klar | sadeln **försvinner från armen** — den sitter på hästen |
-| 6i | tryck `Led till ridhuset` utan träns | nekas med *du har inget träns med dig* |
-| 6j | HUD:ens hjälprad när fasen kräver en sak | *Sadeln hänger på boxfronten där Blackrock Jack står — hämta den.* och, när sadeln redan är hämtad, raden *Du bär: Sadel med underlägg* |
+| 6a | läs Output vid start | `[Tack] Utrustning upphängd på 33 av 33 boxfronter.` |
+| 6b | gå till din hästs boxfront | utrustningen hänger i gångens höjd, på gångsidan av fronten, utan att blockera gången |
+| 6c | sikta på den | prompt **Ta sadel och träns** med undertexten **«Hästens namn»s sadel och träns** (`en-us`: *Take the saddle and bridle* / *«Name»'s saddle and bridle*) |
+| 6d | tryck på ett utrustningssteg UTAN att ha hämtat | nekas: *Du har varken sadel eller träns här — de hänger på boxfronten* |
+| 6e | hämta vid din egen front | du bär nu både sadel och träns |
+| 6f | gå till en ANNAN hästs front och hämta där | **du får med dig grannens utrustning.** Det ska gå — att kunna ta fel är poängen |
+| 6g | försök sadla din häst med grannens sadel | nekas: *Fel sadel — den är formad efter en annan rygg. På fel häst trycker den på manken eller på njurarna* |
+| 6h | hämta rätt utrustning och gör de fem sadelstegen | underlägg → sadel → två prövningar → träns. Fel ordning nekas: *Underlägget först — sadeln ligger på det*, *Sadeln först*, *Tränset av först* |
+| 6i | titta på hästen efteråt | underlägg, sadel med fram- och bakvalv, gjord, två stigbyglar, träns med nosgrimma och två tyglar — **tretton delar**, och de följer henne när hon rör sig |
+| 6j | försök sätta på något som redan sitter | *Den sitter redan på* |
+| 6k | stå långt ifrån och försök | *Gå fram till henne först* (över 4 m) |
+| 6l | försök sitta upp på en otränsad häst | nekas: *Hon är inte tränsad än* — grinden läser världen, inte en flagga |
 
-**Följ 6f–6j utan utvecklarkunskap**: instruktionen på skärmen ska räcka.
-Behöver du gissa var sadeln finns är det ett fynd, inte ett handhavandefel.
+**Följ 6d–6l utan utvecklarkunskap**: instruktionen på skärmen ska räcka.
+Behöver du gissa var utrustningen finns är det ett fynd, inte ett
+handhavandefel.
+
+**Det som INTE finns, med avsikt:** fel utrustning kostar ingen dagsform.
+Produktbeslut 2 säger att straffet inte implementeras nu — Roblox har inget
+dagsformssystem, och att uppfinna ett Roblox-only vore fel. Felet går att
+göra, nekas, förklaras och räknas. Saknad dagsform är alltså inte ett fynd.
 
 ## 7. Skyltar — kanoniska ankare
 
@@ -479,7 +466,7 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source b0265bb4… — rbxlx f2f1d3ac332ec547238313f6734395d331403a883d7cde6041021468f9dab083 — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 637ab037… — rbxlx 2ae44a456899d4a849f4725487a973880838b18f8a4f50a90dcb7d3ae0ecea9b — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |
