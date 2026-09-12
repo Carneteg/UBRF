@@ -38,6 +38,7 @@ local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon
      kommer ur RidKanon.UGNETA och är svensk kanon — se översättningsskulden
      i src/spel/sprak.js. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+local TouchControls = require(script.Parent.TouchControls)
 
 local UgnetaController = {}
 
@@ -404,6 +405,30 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 	bygg()
 	local k, r = kort, kortRubrik
 	if not k or not r then return end
+
+	--[[ ── KORTET VIKER FÖR REGLAGEN ──────────────────────────────────
+
+		Kortet är centrerat och 92 % brett, max 640. På iPad ryms det:
+		reglagen bor på x 961..1155 och kortet slutar på 909. På iPhone i
+		landskap är skärmen 749 bred, kortet blir ändå 640 och lägger sig
+		rakt över knappraden — mätt: SAKTA, SITT AV, HOPP, TYGEL, PARAD och
+		DJUP SITS skymdes alla av `Kort`.
+
+		Regeln nedan rör INTE surfplattan: ryms kortet centrerat innanför
+		den fria ytan står det kvar exakt där det stod. Bara när det inte
+		ryms krymper det och centreras i det som är kvar. ]]
+	do
+		local foralder = k.Parent :: GuiObject
+		local W = foralder and foralder.AbsoluteSize.X or 0
+		if W > 0 then
+			local fritt = W - TouchControls.reglageBredd()
+			local bredd = math.min(640, 0.92 * W, math.max(160, fritt - 32))
+			local centrum = if W / 2 + bredd / 2 <= fritt then W / 2 else fritt / 2
+			k.Size = UDim2.new(0, math.floor(bredd), 0, 170)
+			k.Position = UDim2.new(0, math.floor(centrum), 1, -14)
+		end
+	end
+
 	r.Text = rubrik
 	for i, p in kortPunkter do
 		local txt = punkter[i]

@@ -19,6 +19,7 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 
 --[[ #162: knapparnas etiketter kommer ur språkkanonen — samma nycklar
      som KontrollHjalp beskriver dem med. ]]
@@ -88,6 +89,15 @@ local Input = nil :: any            -- sätts av mount, för att undvika cykel
      `blickSist` är fingrets förra läge. Allt som skickas vidare är
      SKILLNADEN mot det, så det första nedslaget aldrig kan rycka
      kameran till en absolut vinkel. ]]
+--[[ Hur brett reglagen tar i högerkanten, inklusive luft. Lektionskortet
+	läser den för att aldrig lägga sig över gångartsknapparna. Noll när
+	pekreglagen inte är uppe — skrivbordet reserverar ingenting. ]]
+local reglageBredd = 0
+
+function TouchControls.reglageBredd(): number
+	return reglageBredd
+end
+
 local blickFinger: InputObject? = nil
 local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
@@ -133,6 +143,20 @@ local function nyKnapp(namn: string, text: string, parent: Instance,
 	b.TextColor3 = Color3.fromRGB(236, 232, 222)
 	b.TextSize = 15
 	b.Font = Enum.Font.GothamMedium
+	--[[ ── ETIKETTEN KRYMPER, DEN BRYTS INTE MITT I ORDET ────────────
+
+		`TextWrapped` ensam bryter var som helst när ordet är bredare än
+		knappen. Mätt på iPhone 13 i landskap, knappar 73 px breda:
+		"HALF-HALT" blev "HALF-HAL / T" och "DISMOUNT" blev "DISMOUN / T".
+
+		`TextScaled` med ett tak låter texten SKALA NED i stället. Två ord
+		får fortfarande bryta på mellanslaget — "DEEP SEAT" på två rader är
+		läsbart — men ett ord bryts aldrig mitt itu. ]]
+	b.TextScaled = true
+	local tak = Instance.new("UITextSizeConstraint")
+	tak.MaxTextSize = 15
+	tak.MinTextSize = 8
+	tak.Parent = b
 	b.BorderSizePixel = 0
 	b.Parent = parent
 	local horn = Instance.new("UICorner")
@@ -322,6 +346,42 @@ function TouchControls.mount(input: any, hooks: {
 
 	--[[ BLICKYTAN FÖRST, så att allt annat hamnar ovanpå den. Den täcker
 	     högra två tredjedelarna; vänstra tredjedelen är spakens. ]]
+	--[[ ══ EN LAYOUT, TRE SKÄRMHÖJDER ══════════════════════════════
+
+	     Reglagen låg i fasta pixlar räknade från nederkanten: gångarterna
+	     på `1, -380`. Det förutsätter att det FINNS 380 px. iPad i
+	     landskap har 761 och klarar det; iPhone 13 i landskap har 309, och
+	     då hamnar raden ovanför skärmkanten.
+
+	     Mätt på iPhone 13 landskap före den här raden:
+	         HALT   y -71..-19   helt utanför
+	         SKRITT y -71..-19   helt utanför
+	         TRAV   y -11..41    avklippt
+	         GALOPP y -11..41    avklippt
+	     Fyra av fem gångartsknappar gick alltså inte att träffa.
+
+	     Svaret är INTE en egen telefonlayout — samma två gallren, samma
+	     ordning, samma plats. Talen skalas mot den höjd blocket faktiskt
+	     behöver (två galler + mellanrum + marginal ≈ 380), och taket är 1
+	     så att surfplattan är exakt som förut. ]]
+	--[[ `AbsoluteSize` kan vara noll bildrutan en ScreenGui fick förälder.
+	     Kameran vet ändå, och GUI-ytan är vyporten minus topbarens inset. ]]
+	local kam = workspace.CurrentCamera
+	local vyH = if kam then kam.ViewportSize.Y - GuiService:GetGuiInset().Y else 0
+	local skarmH = math.max(g.AbsoluteSize.Y, vyH)
+	--[[ 390 och inte 380: varje `px()` avrundar för sig, och summan av
+	     avrundningarna sköt blocket 1 px över kanten på iPhone. Nämnaren
+	     bär marginalen i stället för att varje tal gör det. ]]
+	local skala = if skarmH > 0 then math.clamp(skarmH / 390, 0.62, 1) else 1
+	local function px(n: number): number
+		return math.floor(n * skala + 0.5)
+	end
+	local KB, KH = px(92), px(52)
+	local PADX, PADY = px(10), px(8)
+	local GALLER_B, GALLER_H = KB * 2 + PADX, KH * 3 + PADY * 2
+	local KANT = px(24)
+	reglageBredd = GALLER_B + KANT + px(12)
+
 	blickHook = hooks.blick
 	local blickyta = nyRam("Blickyta", g)
 	blickyta.Size = UDim2.new(0.66, 0, 1, 0)
@@ -336,8 +396,9 @@ function TouchControls.mount(input: any, hooks: {
 	--[[ Spaken nere till vänster, knapparna nere till höger: samma sida som
 	     webbversionen lägger dem, och samma sida som tummarna faktiskt är. ]]
 	local bas = nyRam("Spak", g)
-	bas.Size = UDim2.fromOffset(TouchControls.RADIE * 2, TouchControls.RADIE * 2)
-	bas.Position = UDim2.new(0, 24, 1, -(TouchControls.RADIE * 2) - 28)
+	local spakR = px(TouchControls.RADIE)
+	bas.Size = UDim2.fromOffset(spakR * 2, spakR * 2)
+	bas.Position = UDim2.new(0, KANT, 1, -(spakR * 2) - px(28))
 	bas.BackgroundTransparency = 0.55
 	bas.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
 	local basHorn = Instance.new("UICorner")
@@ -384,11 +445,12 @@ function TouchControls.mount(input: any, hooks: {
 	     `MovementController:_targetGait` gör om det till samma index och
 	     samma tak som förut. ]]
 	local gangrad = nyRam("Gangarter", g)
-	gangrad.Size = UDim2.fromOffset(194, 172)
-	gangrad.Position = UDim2.new(1, -218, 1, -380)
+	gangrad.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
+	gangrad.Position = UDim2.new(1, -(GALLER_B + KANT), 1,
+		-(GALLER_H * 2 + px(12) + KANT))
 	local grad = Instance.new("UIGridLayout")
-	grad.CellSize = UDim2.fromOffset(92, 52)
-	grad.CellPadding = UDim2.fromOffset(10, 8)
+	grad.CellSize = UDim2.fromOffset(KB, KH)
+	grad.CellPadding = UDim2.fromOffset(PADX, PADY)
 	grad.FillDirectionMaxCells = 2
 	--[[ `SortOrder` är `Name` som standard, och då står gångarterna i
 	     bokstavsordning: galopp, halt, sakta, skritt, trav. Mätt precis
@@ -401,7 +463,7 @@ function TouchControls.mount(input: any, hooks: {
 
 	local gangKnapp: { [string]: TextButton } = {}
 	local function nyGang(namn: string, nyckel: string, gait: string, ordning: number)
-		local b = nyKnapp(namn, Sprak.t(nyckel), gangrad, 92, 52)
+		local b = nyKnapp(namn, Sprak.t(nyckel), gangrad, KB, KH)
 		b.LayoutOrder = ordning
 		b.MouseButton1Click:Connect(function() Input.touchGaitTo(gait) end)
 		gangKnapp[gait] = b
@@ -420,7 +482,7 @@ function TouchControls.mount(input: any, hooks: {
 	     "ett steg ned härifrån", vilket är vad en ryttare menar med att
 	     sakta. Den delar knappordning med de namngivna för att raden ska
 	     läsas som en skala från lugnast till snabbast och tillbaka. ]]
-	local sakta = nyKnapp("Sakta", Sprak.t("touch.sakta"), gangrad, 92, 52)
+	local sakta = nyKnapp("Sakta", Sprak.t("touch.sakta"), gangrad, KB, KH)
 	sakta.LayoutOrder = 5
 	sakta.MouseButton1Click:Connect(function() Input.touchGait(false) end)
 
@@ -448,19 +510,19 @@ function TouchControls.mount(input: any, hooks: {
 
 	--[[ HJÄLPERNA i två kolumner. ]]
 	local knappar = nyRam("Knappar", g)
-	knappar.Size = UDim2.fromOffset(194, 172)
-	knappar.Position = UDim2.new(1, -218, 1, -196)
+	knappar.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
+	knappar.Position = UDim2.new(1, -(GALLER_B + KANT), 1, -(GALLER_H + KANT))
 	local rad = Instance.new("UIGridLayout")
-	rad.CellSize = UDim2.fromOffset(92, 52)
-	rad.CellPadding = UDim2.fromOffset(10, 8)
+	rad.CellSize = UDim2.fromOffset(KB, KH)
+	rad.CellPadding = UDim2.fromOffset(PADX, PADY)
 	rad.FillDirectionMaxCells = 2
 	rad.SortOrder = Enum.SortOrder.LayoutOrder
 	rad.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	rad.VerticalAlignment = Enum.VerticalAlignment.Bottom
 	rad.Parent = knappar
 
-	local av = nyKnapp("Av", Sprak.t("touch.sitt_av"), knappar, 92, 52)
-	local hoppa = nyKnapp("Hoppa", Sprak.t("touch.hoppa"), knappar, 92, 52)
+	local av = nyKnapp("Av", Sprak.t("touch.sitt_av"), knappar, KB, KH)
+	local hoppa = nyKnapp("Hoppa", Sprak.t("touch.hoppa"), knappar, KB, KH)
 	--[[ ▲ FRAMÅT och ▼ LUGNARE finns inte längre som egna knappar på
 	     pekskärmen: gångartsraden nedanför säger samma sak med namn i
 	     stället för pilar, och SAKTA är exakt samma relativa steg ned som
@@ -470,13 +532,13 @@ function TouchControls.mount(input: any, hooks: {
 	     är yttertygelstödet — och därmed hästens balans i svängen —
 	     stängt för hela den plattformen. Webben har samma två på sin
 	     pekskärm (HALVHALT-knappen och tygeln). ]]
-	local tygel = nyKnapp("Tygel", Sprak.t("touch.tygel"), knappar, 92, 52)
-	local parad = nyKnapp("Parad", Sprak.t("touch.halvhalt"), knappar, 92, 52)
+	local tygel = nyKnapp("Tygel", Sprak.t("touch.tygel"), knappar, KB, KH)
+	local parad = nyKnapp("Parad", Sprak.t("touch.halvhalt"), knappar, KB, KH)
 	--[[ Sitsen: hålls, som tygeln. Djup sits bär bågen — se
 	     SVAR.BALANS_VIKT. Utan knappen kan en spelare med pekskärm inte
 	     stödja volten med sätet, och då är den delen av modellen stängd
 	     för hela plattformen. ]]
-	local sits = nyKnapp("Sits", Sprak.t("touch.djup_sits"), knappar, 92, 52)
+	local sits = nyKnapp("Sits", Sprak.t("touch.djup_sits"), knappar, KB, KH)
 	tygel.LayoutOrder, sits.LayoutOrder, parad.LayoutOrder = 1, 2, 3
 	hoppa.LayoutOrder, av.LayoutOrder = 4, 5
 
@@ -508,6 +570,7 @@ function TouchControls.unmount()
 	--[[ Blicken och gångartslyset hör till EN ritt. Lämnas de kvar pekar
 	     kopplingen på en häst man klivit av, och nästa uppsittning hade
 	     börjat med förra rittens finger fortfarande "nere". ]]
+	reglageBredd = 0
 	blickFinger, blickSist, blickHook = nil, nil, nil
 	if gaitKoppling then
 		gaitKoppling:Disconnect()

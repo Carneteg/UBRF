@@ -324,7 +324,22 @@ local function fyll()
 	     har en rad mer än skrivbordet måste den räknas här, där listan är
 	     känd, och inte på `#RADER`. ]]
 	if panel then
-		panel.Size = UDim2.new(0, 250, 0, 34 + #lista * 21 + 60)
+		--[[ …och den måste RYMMAS. iPhone 13 i landskap har 309 px GUI-höjd;
+			elva rader à 21 px blev 325 och stack ut nedanför skärmen. Går
+			den inte in krymper radavståndet i stället för att panelen
+			växer ut ur bild. Surfplattan når aldrig hit: 325 < 761. ]]
+		local yta = panel.Parent :: GuiObject
+		local tillg = (if yta then yta.AbsoluteSize.Y else 0) - 24
+		local pitch = 21
+		local h = 34 + #lista * pitch + 60
+		if tillg > 120 and h > tillg then
+			pitch = math.max(14, math.floor((tillg - 94) / math.max(#lista, 1)))
+			h = 34 + #lista * pitch + 60
+		end
+		panel.Size = UDim2.new(0, 250, 0, h)
+		for i, l in ipairs(rader) do
+			l.Position = UDim2.fromOffset(10, 34 + (i - 1) * pitch)
+		end
 	end
 	for i, l in ipairs(rader) do
 		local r = lista[i]
