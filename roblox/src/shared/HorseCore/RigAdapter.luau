@@ -26,6 +26,7 @@ local ATTACHMENTS = {
 	"RiderSeat", "SaddleAttachment", "Saddle", "BridleAttachment",
 	"LeftReinAttachment", "RightReinAttachment",
 	"LeftStirrupAttachment", "RightStirrupAttachment",
+	"LeftHandAttachment", "RightHandAttachment",
 	"LeadRope", "HoofFL", "HoofFR", "HoofRL", "HoofRR",
 }
 
@@ -50,6 +51,15 @@ local ANATOMI = {
 	tygelH = "RightReinAttachment",   -- bettet, höger mungipa
 	bygelV = "LeftStirrupAttachment", -- sadelns vänstra bygel
 	bygelH = "RightStirrupAttachment",
+	--[[ HANDLÄGET: där ryttaren HÅLLER tyglarna, över manken strax
+		framför sadeln. Det är inte samma sak som bettet.
+
+		Punkten finns för att tygeln ska ha två ändar med varsin verklig
+		plats — bettet i munnen och handen över manken — i stället för att
+		ritas rakt ut i luften, och för att ryttarens hand-IK ska ha något
+		att sikta på som inte drar henne framstupa över hästens hals. ]]
+	handV = "LeftHandAttachment",
+	handH = "RightHandAttachment",
 }
 
 --[[ RYTTARENS PLATS LIGGER INTE HÄR, och det är med flit. Sitsen är en

@@ -104,11 +104,55 @@ local function ogonpunkt(): (Vector3?, BasePart?)
 	return head.Position + head.CFrame.LookVector * (head.Size.Z * 0.5), head
 end
 
---[[ Ditt eget huvud sitter runt objektivet i sadeln, och ett huvud som
+--[[ ══ DITT EGET HUVUD ═══════════════════════════════════════════════
+
+     Ditt eget huvud sitter runt objektivet i sadeln, och ett huvud som
      ritas ovanpå kameran är bara en vägg. Det tonas bort med
      `LocalTransparencyModifier` — bara på den här klienten, precis som
      Genomsikt gör med väggar. Resten av kroppen lämnas: armar, händer,
-     tyglar och ben är vad man SKA se från sadeln. ]]
+     tyglar och ben är vad man SKA se från sadeln.
+
+     ══ VARFÖR TONNINGEN RÄKNAS UR AVSTÅNDET OCH INTE UR KAMERALÄGET ══
+
+     Första versionen tonade ur `vb`, kameralägets egen vikt: 0 i sadeln,
+     1 på bommen. Uppmätt uppsutten i spel:
+
+         HUVUD Transparency=0.000  LocalTransparencyModifier=1.000
+         KAMERA->HUVUD 0.570 studs
+         varje ANNAN kroppsdel     LocalTransparencyModifier=0.000
+
+     Huvudet var alltså varken borttaget, flyttat, skymt eller offer för
+     någon förstapersonshantering i Roblox. Vi gömde det själva — och vi
+     gömde det utifrån ett ABSTRAKT läge i stället för utifrån var kameran
+     faktiskt stod. Det ger fel i båda riktningarna: står kameran redan
+     flera studs bakom huvudet men vikten inte hunnit ikapp ser man en
+     ryttare utan huvud, och slutar `step()` köras utan att `release()`
+     hinner köra blir huvudet kvar borta i alla andra lägen också.
+
+     Nu mäts det som frågan faktiskt gäller: HUR LÅNGT KAMERAN STÅR FRÅN
+     HUVUDET. Innanför huvudets egen radie är det en vägg och tonas bort;
+     ett par radier ut kan man se det och då ska det synas. Gränserna
+     räknas ur delens egen storlek, så ett annat avatarhuvud följer med.
+
+     Det gör regeln självrättande: varje bildruta där kameran KAN se
+     huvudet visas det, oavsett vilket läge, vilken övergång eller vilket
+     avbrott som ledde dit. ]]
+local HUVUD_DOLT = 1.15    -- innanför radie x detta: helt borta
+local HUVUD_SYNS = 2.40    -- utanför radie x detta: helt synligt
+
+--[[ Hur synligt det egna huvudet ska vara när kameran står `avstand`
+     studs från det. Egen funktion för att provet ska kunna visa den röd
+     utan att starta en kamera. ]]
+function CameraController.huvudsynlighet(avstand: number, radie: number): number
+	local lag = radie * HUVUD_DOLT
+	local hog = radie * HUVUD_SYNS
+	if hog <= lag then return if avstand > lag then 1 else 0 end
+	local t = math.clamp((avstand - lag) / (hog - lag), 0, 1)
+	--[[ Mjuk i båda ändar (`smoothstep`) så att bytet inte poppar mitt i
+	     en övergång — samma kurva som förut, men på rätt storhet. ]]
+	return t * t * (3 - 2 * t)
+end
+
 function CameraController:_egetHuvud(alfa: number, head: BasePart?)
 	local player = game:GetService("Players").LocalPlayer
 	local character = player and player.Character
@@ -236,14 +280,21 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 		lage, fokus, fov = bomLage, bomFokus, self.fov
 	end
 
-	--[[ Eget huvud: borta i sadeln, tillbaka på bommen, tonat däremellan
-	     så att bytet inte poppar mitt i en övergång. Vikten är kamerans
-	     EGEN — den kan alltså inte glida ur synk med var kameran står. ]]
-	local p = math.clamp((vb - 0.30) / 0.40, 0, 1)
-	self:_egetHuvud(p * p * (3 - 2 * p), head)
-
 	self.camera.CFrame = CFrame.lookAt(lage, fokus)
 	self.camera.FieldOfView = fov
+
+	--[[ Eget huvud: räknas EFTER att kameran flyttats, mot den position
+	     som faktiskt ritas den här bildrutan. Se blocket vid
+	     `huvudsynlighet` för varför det inte längre läser kameraläget. ]]
+	if head then
+		local radie = head.Size.Magnitude * 0.5
+		local avstand = (lage - head.Position).Magnitude
+		self:_egetHuvud(CameraController.huvudsynlighet(avstand, radie), head)
+	else
+		--[[ Ingen karaktär att gömma — men det som redan gömts ska tillbaka,
+		     annars överlever en bortonad del sin egen anledning. ]]
+		self:_aterstallHuvud()
+	end
 	--[[ Läget sparas för specarna och för Debug: EN sanning om vad kameran
 	     gör, avläst där den faktiskt gör det. ]]
 	self.vikt = vb

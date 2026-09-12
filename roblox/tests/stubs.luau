@@ -121,7 +121,35 @@ local function cframe(pos, look, yaw, pitch, roll)
 			0, 1, 0,
 			-st, 0, ct
 	end
+	--[[ VARLDSPUNKT -> EGET RUM. Exakt inversen av `__mul` nedan, for
+	     samma rena girning: [ca sa; -sa ca] har inversen [ca -sa; sa ca].
+	     `TackRigg` laser bygelpunkten i sadelns rum for att kunna spanna
+	     stiglader dit foten faktiskt hamnar, och transet laser bettet i
+	     nosryggens rum for att fa huvudets egna matt. Utan den kunde
+	     banken inte prova nagot av det. ]]
+	c.PointToObjectSpace = function(self, p)
+		local ap = self.Position or vec()
+		local ca, sa = math.cos(self.Yaw or 0), math.sin(self.Yaw or 0)
+		local dx, dy, dz = (p.X or 0) - ap.X, (p.Y or 0) - ap.Y, (p.Z or 0) - ap.Z
+		return vec(dx * ca - dz * sa, dy, dx * sa + dz * ca)
+	end
+	c.PointToWorldSpace = function(self, p)
+		return (self * CFrame.new(p)).Position
+	end
 	c.__mul = function(a, b)
+		--[[ `CFrame * Vector3` ar en PUNKT i varlden, inte en ny CFrame.
+		     Stubben svarade forut med en CFrame aven har, sa varje modul
+		     som raknade om en lokal punkt till varlden — `TackRigg`s
+		     spann-delar, till exempel — fick tillbaka nagot som inte gick
+		     att mata. En Vector3-stubbe saknar `Position`; det ar
+		     skillnaden mellan de tva fallen. ]]
+		if b ~= nil and b.Position == nil and b.X ~= nil then
+			local ca, sa = math.cos(a.Yaw or 0), math.sin(a.Yaw or 0)
+			local ap = a.Position or vec()
+			return vec(ap.X + b.X * ca + b.Z * sa,
+				ap.Y + b.Y,
+				ap.Z - b.X * sa + b.Z * ca)
+		end
 		--[[ FÖRFLYTTNINGEN räknas, inte bara vinklarna. Förut svarade
 		     `a * b` med `a.Position` oavsett vad b var, och då hamnade
 		     varje del som placeras relativt en annan — hela HastRiggs
@@ -1026,6 +1054,14 @@ local function __nyInstans(klass)
 				local vardCF = vard and rawget(vard, "CFrame")
 				if vardCF and egen then return vardCF * egen end
 				return egen
+			end
+			--[[ `Attachment.WorldPosition` ar samma sak, bara punkten.
+			     Tillkom nar `TackRigg` borjade SPANNA delar mellan tva
+			     riggpunkter — kindstycke, stiglader, tygel — i stallet for
+			     att rita lador med gissad langd. ]]
+			if k == "WorldPosition" and rawget(t, "ClassName") == "Attachment" then
+				local w = t.WorldCFrame
+				return w and w.Position or nil
 			end
 			--[[ En del som aldrig rort sig har nollhastighet, inte nil.
 			     `LedService` laser den for att veta om hasten STAR — en

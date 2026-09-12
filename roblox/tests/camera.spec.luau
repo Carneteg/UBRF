@@ -228,6 +228,58 @@ do
 		Kameralage.las(cam.lage).vikt == 0 and not Kameralage.aktiv(cam.lage))
 end
 
+--[[ ══ DET EGNA HUVUDET ═══════════════════════════════════════════════
+
+	Uppmätt uppsutten i spel, före rättningen:
+
+	    HUVUD Transparency=0.000  LocalTransparencyModifier=1.000
+	    KAMERA->HUVUD 0.570 studs
+	    varje ANNAN kroppsdel     LocalTransparencyModifier=0.000
+
+	Huvudet var varken borttaget, flyttat eller skymt — vi gömde det
+	själva, och vi gömde det utifrån kameralägets VIKT i stället för
+	utifrån var kameran faktiskt stod. Vikten är ett abstrakt tal; den
+	kan stå på noll medan kameran redan glidit flera studs bakom
+	ryttaren, och då ser man en ryttare utan huvud.
+
+	Regeln är nu en ren funktion av avståndet, och därför mätbar utan
+	kamera, karaktär eller häst. ]]
+print("\n── Det egna huvudet tonas ur AVSTÅNDET ──")
+do
+	--[[ Ett riktigt R15-huvud: uppmätt (1,16 · 1,11 · 1,14). ]]
+	local radie = Vector3.new(1.16, 1.11, 1.14).Magnitude * 0.5
+	local f = CameraController.huvudsynlighet
+
+	--[[ Den uppmätta förstapersonssituationen: objektivet sitter inuti
+		huvudet. Då ÄR huvudet en vägg och ska bort. ]]
+	check("kameran inuti huvudet: huvudet borta", f(0.57, radie) == 0,
+		string.format("synlighet %.3f vid 0,57 studs", f(0.57, radie)))
+	--[[ Och det som var felet: en kamera som står ute bakom ryttaren ska
+		visa huvudet, oavsett vilket läge kameran råkar vara på väg till. ]]
+	check("kameran ute bakom ryttaren: huvudet syns", f(6.0, radie) == 1,
+		string.format("synlighet %.3f vid 6,0 studs", f(6.0, radie)))
+	check("och på granskningsavstånd syns det också", f(12.0, radie) == 1)
+
+	--[[ Övergången ska vara monoton och mjuk i båda ändar — annars poppar
+		huvudet fram mitt i en kamerarörelse. ]]
+	local forra, monoton = -1, true
+	for i = 0, 40 do
+		local v = f(i * 0.25, radie)
+		if v < forra - 1e-9 then monoton = false end
+		forra = v
+	end
+	check("synligheten växer monotont med avståndet", monoton)
+	local d0 = math.abs(f(radie * 1.15 + 0.01, radie) - f(radie * 1.15, radie))
+	local d1 = math.abs(f(radie * 2.40, radie) - f(radie * 2.40 - 0.01, radie))
+	check("kurvan planar ut i båda ändarna", d0 < 0.01 and d1 < 0.01,
+		string.format("lutning %.5f vid start, %.5f vid slut", d0, d1))
+
+	--[[ Ett annat avatarhuvud ska ge samma BETEENDE, inte samma tal: det
+		är därför gränserna räknas ur delens egen storlek. ]]
+	local litet = radie * 0.5
+	check("ett mindre huvud slocknar närmare", f(0.57, litet) > f(0.57, radie))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

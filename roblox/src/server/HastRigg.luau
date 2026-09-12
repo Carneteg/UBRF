@@ -245,6 +245,14 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	--[[ STIGBYGLARNA hänger i sadeln och hör därför till bålen. ]]
 	fast(kropp, "LeftStirrupAttachment", CFrame.new(-(KROPP_B / 2) * M, 0, 0))
 	fast(kropp, "RightStirrupAttachment", CFrame.new((KROPP_B / 2) * M, 0, 0))
+	--[[ HANDLÄGET: där ryttaren håller tyglarna, över manken strax framför
+		och ovanför sadeln. Punkten är ryttarpose-rättningen efter den
+		visuella granskningen av K3: händerna sköttes förut av IK mot
+		BETTET, som ligger i hästens mun, och det vred överkroppen
+		framstupa. Lådriggen bär samma punkt så att posen blir densamma
+		oavsett om hästen har nät eller lådor. ]]
+	fast(kropp, "LeftHandAttachment", CFrame.new(-0.10 * M, (KROPP_H / 2 + 0.20) * M, -0.20 * M))
+	fast(kropp, "RightHandAttachment", CFrame.new(0.10 * M, (KROPP_H / 2 + 0.20) * M, -0.20 * M))
 
 	for _, konf in ipairs({ "HorseStats", "GaitConfig", "AnimationConfig" }) do
 		local c = Instance.new("Configuration")

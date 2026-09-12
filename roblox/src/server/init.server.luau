@@ -12,6 +12,7 @@ local DorrService = require(script.DorrService)
 local LedService = require(script.LedService)
 local TackService = require(script.TackService)
 local TackForradService = require(script.TackForradService)
+local Belysning = require(script.Belysning)
 local HastRigg = require(script.HastRigg)
 local Preflight = require(script.Preflight)
 
@@ -137,6 +138,12 @@ kritisk("LedService", LedService.start)
 kritisk("TackForradService", function()
 	TackForradService.start(GameplayService.valjUtrustning)
 end)
+
+--[[ Belysningen EFTER världsbygget: modulen letar upp armaturerna som
+     Anlaggningen redan ställt dit och hänger ljuskällor i dem. Den rör
+     ingen geometri. Faller den blir det mörkt, inte ospelbart — därav
+     `fas` och inte `kritisk`. ]]
+fas("belysningen", Belysning.start)
 
 --[[ ══ CRITICAL_STARTUP_GATE ═════════════════════════════════════════════
 

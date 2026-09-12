@@ -7,10 +7,14 @@
 	Den rör inte rörelsen. Inte ledningen. Inte tackets tillstånd. Inte
 	uppsittningsgrinden. Inte kollisionshöljet.
 
-	`HastRigg` bygger fortfarande hästen: `HumanoidRootPart` är den enda
-	delen som kolliderar, Humanoiden bär `HipHeight`, och de anatomiska
+	`HastRigg` bygger fortfarande hästen: `HumanoidRootPart` är kroppens
+	kollisionshölje, Humanoiden bär `HipHeight`, och de anatomiska
 	fästpunkterna bär utrustningen. Allt det är låst mark sedan
 	blockerare 5 och `HORSE_FORWARD_CONVENTION`.
+
+	Modulen lägger till EN sak i kollisionen: ett `Huvudskydd`, en andra
+	förenklad låda som täcker hals och huvud där nätet sträcker sig utanför
+	kroppens hölje. Nätet självt kolliderar aldrig. Se noten vid bygget.
 
 	Det den här modulen gör är att byta ut INNEHÅLLET i `Visual`-mappen:
 	lådorna åker ut, ett riktigt nät åker in, och de anatomiska
@@ -173,7 +177,8 @@ function HastVisual.montera(hast: Model, mall: Model, profilNamn: string): (bool
 	end
 
 	--[[ Nätet syns, kolliderar aldrig och väger ingenting. Kollisionen är
-		och förblir `HumanoidRootPart`. ]]
+		och förblir förenklade lådor: kroppen i `HumanoidRootPart`, hals och
+		huvud i `Huvudskydd`. ]]
 	for _, d in ipairs(natet:GetDescendants()) do
 		if d:IsA("BasePart") then
 			d.CanCollide = false
@@ -192,7 +197,116 @@ function HastVisual.montera(hast: Model, mall: Model, profilNamn: string): (bool
 	w.Part1 = natRot
 	w.Parent = natRot
 
+	--[[ ══ HUVUDETS KOLLISIONSSKYDD ═══════════════════════════════════
+
+		Uppmätt på den monterade hästen: nätet sträcker sig **1,27 studs
+		(0,42 m) framför** `HumanoidRootPart` och 0,82 studs bakom den.
+		I sidled ligger det innanför (0,02 studs). Följden syntes direkt i
+		spel — nosen gick igenom stallväggen innan kroppen tog emot.
+
+		Kollisionen är fortfarande FÖRENKLAD: en andra låda, inte nätet.
+		Den täcker överhänget fram och upp, alltså hals och huvud, och
+		lämnar benhöjden orörd — då ändras varken boxens utrymme, dörrarnas
+		bredd eller de låsta inhägnadsproven, som alla mäter kroppen.
+
+		Lådan räknas ur den faktiska mätningen av nätet, inte ur en
+		konstant: byts modellen följer skyddet med. ]]
+	local minZ, maxY, maxX = math.huge, -math.huge, 0
+	for _, d in ipairs(natet:GetDescendants()) do
+		if d:IsA("BasePart") then
+			for _, hx in ipairs({ -0.5, 0.5 }) do
+				for _, hy in ipairs({ -0.5, 0.5 }) do
+					for _, hz in ipairs({ -0.5, 0.5 }) do
+						local q = rot.CFrame:PointToObjectSpace(
+							d.CFrame * Vector3.new(d.Size.X * hx, d.Size.Y * hy, d.Size.Z * hz))
+						minZ = math.min(minZ, q.Z)
+						maxY = math.max(maxY, q.Y)
+						maxX = math.max(maxX, math.abs(q.X))
+					end
+				end
+			end
+		end
+	end
+	local gammalt = hast:FindFirstChild("Huvudskydd")
+	if gammalt then gammalt:Destroy() end
+	local framkant = -rot.Size.Z / 2
+	if minZ < framkant - 0.05 then
+		local djup = framkant - minZ
+		local hojd = math.max(maxY - rot.Size.Y / 2, 0.4)
+		local skydd = Instance.new("Part")
+		skydd.Name = "Huvudskydd"
+		--[[ Smalare än kroppen: skyddet ska ta emot mot en vägg rakt fram,
+			inte fastna i en dörrpost i sidled. ]]
+		skydd.Size = Vector3.new(math.min(maxX * 1.6, rot.Size.X * 0.75), hojd + rot.Size.Y * 0.5, djup)
+		skydd.CFrame = rot.CFrame * CFrame.new(0, rot.Size.Y * 0.25 + hojd * 0.5, framkant - djup / 2)
+		skydd.Transparency = 1
+		skydd.CanCollide = true
+		skydd.CanQuery = false
+		skydd.CanTouch = false
+		skydd.Massless = true
+		skydd.Anchored = false
+		skydd.Parent = hast
+		local sw = Instance.new("WeldConstraint")
+		sw.Name = "HuvudskyddWeld"
+		sw.Part0 = rot
+		sw.Part1 = skydd
+		sw.Parent = skydd
+	end
+
 	local flyttade = flyttaFasten(hast, natet, p, skala)
+
+	--[[ ══ HUVUDETS VERKLIGA FORM, SOM DATA ═══════════════════════════
+
+		`TackRigg` byggde tränset ur `Head`-delens egen storlek. På K3 är
+		`Head` bara en sjundedel av huvudet — modellen delar upp det i Head
+		plus fyra `HeadS` och två öron — och delen mäter 0,76 x 1,24 x 1,16
+		medan hela huvudet mäter 1,14 x 1,99 x 1,87. Följden såg man i
+		närbild: nackstycke, pannband och nosgrimma låg INNE i nätet.
+
+		Formen mäts därför här, där nätet ändå just monterats, och skrivs
+		som attribut på tränsets värddel i FÄSTPUNKTENS eget rum. `TackRigg`
+		läser dem när de finns och faller annars tillbaka på delens
+		storlek — vilket är rätt svar för en lådhäst, där huvudet ÄR en
+		del. ]]
+	local transA = hast:FindFirstChild("BridleAttachment", true)
+	if transA and transA:IsA("Attachment") and transA.Parent
+		and transA.Parent:IsA("BasePart") and p.huvuddelar then
+		local bas = transA.WorldCFrame
+		local hmn = Vector3.new(math.huge, math.huge, math.huge)
+		local hmx = -hmn
+		local traffar = 0
+		for _, d in ipairs(natet:GetDescendants()) do
+			if d:IsA("BasePart") then
+				local med = false
+				for _, namn in ipairs(p.huvuddelar) do
+					if d.Name:find(namn, 1, true) == 1 then med = true end
+				end
+				if med then
+					traffar += 1
+					for _, hx in ipairs({ -0.5, 0.5 }) do
+						for _, hy in ipairs({ -0.5, 0.5 }) do
+							for _, hz in ipairs({ -0.5, 0.5 }) do
+								local q = bas:PointToObjectSpace(
+									d.CFrame * Vector3.new(d.Size.X * hx, d.Size.Y * hy, d.Size.Z * hz))
+								hmn = Vector3.new(math.min(hmn.X, q.X), math.min(hmn.Y, q.Y), math.min(hmn.Z, q.Z))
+								hmx = Vector3.new(math.max(hmx.X, q.X), math.max(hmx.Y, q.Y), math.max(hmx.Z, q.Z))
+							end
+						end
+					end
+				end
+			end
+		end
+		if traffar > 0 then
+			local vardDel = transA.Parent :: BasePart
+			--[[ Halva bredden tas symmetriskt: lådhörnen på ett vridet nät
+				ger en skev min/max, och ett träns ska inte ärva den skevheten. ]]
+			vardDel:SetAttribute("UBRFHuvudX", math.max(math.abs(hmn.X), math.abs(hmx.X)))
+			vardDel:SetAttribute("UBRFHuvudY0", hmn.Y)
+			vardDel:SetAttribute("UBRFHuvudY1", hmx.Y)
+			vardDel:SetAttribute("UBRFHuvudZ0", hmn.Z)
+			vardDel:SetAttribute("UBRFHuvudZ1", hmx.Z)
+		end
+	end
 
 	--[[ SITSEN flyttas till nätets rygg så att ryttaren hamnar i sadeln
 		och inte i luften. Sitsen är fortfarande gameplay — den byter bara

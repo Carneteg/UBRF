@@ -44,6 +44,15 @@ local PROFILER: { [string]: any } = {
 		framkropp = "UpperBody",
 		bakkropp = "LowerBody",
 		huvud = "Head",
+		--[[ HELA huvudet, inte bara leden. `Head` är en BIT: modellen delar
+			upp huvudet i Head plus fyra `HeadS` och två öron. Delen mäter
+			0,76 x 1,24 x 1,16 medan hela huvudet mäter 1,14 x 1,99 x 1,87 —
+			och ett träns byggt på delens mått hamnade INNE i nätet.
+
+			`HastVisual` mäter de här delarnas samlade utsträckning när nätet
+			monteras och skriver den som attribut, så `TackRigg` kan bygga
+			ett träns som passar huvudet i stället för en sjundedel av det. ]]
+		huvuddelar = { "Head", "HeadS", "LEar", "REar" },
 		hals = { "N1", "N2", "N3", "N4" },
 		svans = "Tail",
 		framben = {
@@ -86,9 +95,60 @@ local PROFILER: { [string]: any } = {
 			SaddleAttachment       = { vard = "UpperBody", cf = CFrame.new(0, 0.72, 1.35) },
 			--[[ BYGLARNA hänger nedanför sadeln mot bålen. De används som
 				IK-mål för ryttarens fötter; `TackRigg` bygger själva
-				stigbyglarna i sadeln och rör inte de här. ]]
-			LeftStirrupAttachment  = { vard = "UpperBody", cf = CFrame.new(-0.750, -0.400, -0.452) },
-			RightStirrupAttachment = { vard = "UpperBody", cf = CFrame.new(0.750, -0.400, -0.452) },
+				stigbyglarna i sadeln och rör inte de här.
+
+				FLYTTADE efter den visuella granskningen. Originalets läge
+				var modellens eget, och det låg uppmätt
+
+				    ±0,564 ut · 0,843 NED · 1,356 studs FRAM
+
+				från sadelpunkten. En och en tredjedels stud framför sadeln
+				är mer än halva bålen: ryttarens fötter drogs fram mot
+				bogen, och benet hamnade långt framför henne. Det var den
+				ena halvan av "ryttaren sitter för långt fram".
+
+				Nu hänger de ±0,95 ut, 0,55 ned och 0,05 studs fram från
+				sadelpunkten.
+
+				HÖJDEN ÄR FRAMSÖKT, inte vald. Första försöket la dem 1,35
+				studs ned — anatomiskt rätt, men UTOM RÄCKHÅLL: uppmätt satt
+				ryttarens fot då kvar på (−0,50 · +0,22 · −1,50), alltså
+				1,57 studs ÖVER bygeln, och stigläderet hängde ensamt under
+				buken. En Roblox-ryttare sitter med höften 1,74 studs över
+				sadelpunkten och har knappt 2,9 studs ben; en bygel 1,35 ned
+				kräver nästan raka ben och IK ger upp före det.
+
+				0,55 ned ger en böjd knäled som en ryttare faktiskt har, och
+				foten når fram.
+
+				BREDDEN flyttades ut från ±0,62 till ±0,95 studs av samma
+				sorts skäl: uppmätt är bålen 0,86 studs halvbred vid sadeln,
+				och en fot på 0,62 hamnade INNANFÖR sadelns egen flik. En
+				ryttares ben ligger utanpå fliken, inte mellan den och
+				hästen. Talen nedan är lägena omräknade till modellens egna
+				enheter (skalan är 0,7526 studs per enhet). ]]
+			LeftStirrupAttachment  = { vard = "UpperBody", cf = CFrame.new(-1.262, -0.011, 1.284) },
+			RightStirrupAttachment = { vard = "UpperBody", cf = CFrame.new(1.262, -0.011, 1.284) },
+			--[[ HÄNDERNA. NY punkt, och den andra halvan av samma problem.
+
+				Ryttarens händer hade tidigare BETTET som IK-mål. Bettet
+				ligger 3,3 studs fram och 1,5 studs ned från sadeln — det
+				är hästens mun. Att dra en sittande ryttares händer dit
+				vrider hela överkroppen framåt, och det är exakt de 45
+				grader granskningen såg.
+
+				En ryttare håller tyglarna ÖVER MANKEN, strax framför och
+				ovanför sadeln, med böjd armbåge. Tygeln är det som spänner
+				mellan handen och bettet — inte armen. Punkterna ligger
+				därför 0,62 upp och 0,62 studs fram från sadelpunkten, och
+				`TackRigg.byggTyglar` drar tygeln hit.
+
+				BREDDEN är framsökt: ±0,30 låg innanför ryttarens egna axlar,
+				och handen stannade uppmätt 0,91 studs utanför målet — tygeln
+				slutade alltså bredvid handen i stället för i den. ±0,55 är
+				där handen faktiskt hamnar. ]]
+			LeftHandAttachment     = { vard = "UpperBody", cf = CFrame.new(-0.731, 1.544, 0.526) },
+			RightHandAttachment    = { vard = "UpperBody", cf = CFrame.new(0.731, 1.544, 0.526) },
 			--[[ TRÄNSET. `Head` är bara en BIT av huvudet — modellen delar
 				upp det i Head plus fyra `HeadS` och två öron — så en punkt
 				satt mot `Head`s egen låda hamnar på kinden. Uppmätt ligger
@@ -159,6 +219,10 @@ function Riggprofiler.leder(hast: Instance): { [string]: any }?
 	return {
 		profil = p,
 		natet = natet,
+		--[[ Bålen: den led kroppens gung och vaggning skrivs på. Utan den
+			går benen men kroppen står stilla, och då läses gången som en
+			marionett. ]]
+		bal = led(p.bal),
 		huvud = led(p.huvud),
 		hals = kedja(p.hals),
 		svans = led(p.svans),

@@ -21,10 +21,29 @@ local RigAdapter = Core.RigAdapter
 local RiderController = {}
 RiderController.__index = RiderController
 
---[[ Vilken IK-kedja som ska nå vilken punkt på hästen. ]]
+--[[ Vilken IK-kedja som ska nå vilken punkt på hästen.
+
+	══ HÄNDERNA SIKTAR PÅ HANDLÄGET, INTE PÅ BETTET ═══════════════════
+
+	Förut stod `LeftReinAttachment`/`RightReinAttachment` här — alltså
+	BETTET, i hästens mun. Uppmätt på K3 ligger bettet 3,3 studs framför
+	och 1,5 studs under sadelpunkten. IK drar handen dit, handen drar
+	underarmen, underarmen överarmen och till slut hela överkroppen: det
+	är den framstupa ryttaren granskningen såg, cirka 45 grader framåt,
+	sittande på manken i stället för i sadeln.
+
+	Felet var inte IK-vikten utan MÅLET. En ryttare sträcker sig inte
+	efter bettet; hon håller tyglarna över manken med böjd armbåge, och
+	det är TYGELN som spänner mellan handen och bettet. Kedjorna siktar
+	därför på `handV`/`handH` — en punkt som ligger strax framför och
+	ovanför sadeln — och `TackRigg.byggTyglar` drar tygeln från bettet
+	hit, så att bilden hänger ihop.
+
+	Fotmålen är oförändrade som NAMN. Punkterna de pekar på har däremot
+	flyttats bakåt i `Riggprofiler`; se motiveringen där. ]]
 local CHAINS = {
-	{ name = "LeftHand",  endEffector = "LeftHand",  target = "LeftReinAttachment",     chainRoot = "LeftUpperArm" },
-	{ name = "RightHand", endEffector = "RightHand", target = "RightReinAttachment",    chainRoot = "RightUpperArm" },
+	{ name = "LeftHand",  endEffector = "LeftHand",  target = "LeftHandAttachment",     chainRoot = "LeftUpperArm" },
+	{ name = "RightHand", endEffector = "RightHand", target = "RightHandAttachment",    chainRoot = "RightUpperArm" },
 	{ name = "LeftFoot",  endEffector = "LeftFoot",  target = "LeftStirrupAttachment",  chainRoot = "LeftUpperLeg" },
 	{ name = "RightFoot", endEffector = "RightFoot", target = "RightStirrupAttachment", chainRoot = "RightUpperLeg" },
 }

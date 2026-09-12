@@ -335,6 +335,106 @@ do
 	check("tränset rivet -> inte ridklar längre", not TackService.ridklar(hast))
 end
 
+--[[ ══ GEOMETRIN MÅSTE VARA HÄSTENS, INTE LÅDANS ════════════════════
+
+	Den visuella granskningen av K3 fällde utrustningen på TRE punkter,
+	och alla tre var samma fel: måtten var absoluta meter som en gång
+	passade lådhästen.
+
+	  · tränset var en brun PLANKA tvärs genom kinden — nosgrimman var
+	    bredare än hela huvudet,
+	  · gjorden var en KLOSS under bålen och gick inte runt den,
+	  · tyglarna slutade i LUFTEN bakom bettet.
+
+	Mätningarna nedan är skrivna så att var och en av de tre kan bli röd
+	igen. Falsifiering: sätt tillbaka `hb * 2.9` till `0.32 * M` i
+	nosgrimman och den första faller; ta bort ringen och den andra
+	faller; peka tygeln på en fast punkt och den tredje faller. ]]
+print("\n── Utrustningen håller hästens egna mått ──")
+do
+	nollstall()
+	TackService.satPa(spelare, hast, "underlagg", nil, hast)
+	TackService.satPa(spelare, hast, "sadel", nil, hast)
+	TackService.satPa(spelare, hast, "trans", nil, hast)
+	local mapp = hast:FindFirstChild("Tack")
+	local huvud = hast:FindFirstChild("Head", true)
+	check("tacket ligger i hästmodellen", mapp ~= nil and huvud ~= nil)
+
+	--[[ 1. INGEN TRÄNSDEL FÅR VARA BREDARE ÄN HUVUDET. Det är precis den
+		mätning som hade fällt plankan genom kinden. ]]
+	local bredast, bredastNamn = 0, "-"
+	local transdelar = 0
+	for _, d in ipairs(mapp:GetChildren()) do
+		if d:IsA("BasePart") and (d.Name == "Träns" or d.Name:find("Tränsets ", 1, true) == 1) then
+			transdelar += 1
+			if d.Size.X > bredast then bredast, bredastNamn = d.Size.X, d.Name end
+		end
+	end
+	check("tränset är byggt av flera delar", transdelar >= 6, tostring(transdelar) .. " delar")
+	check("ingen tränsdel är bredare än huvudet", bredast <= huvud.Size.X,
+		string.format("%s %.3f mot huvudets %.3f", bredastNamn, bredast, huvud.Size.X))
+
+	--[[ 2. GJORDEN GÅR RUNT BÅLEN. Ett band runt något har segment på
+		BÅDA sidor OCH under — en kloss under bålen har bara det sista. ]]
+	local sadelA = hast:FindFirstChild("SaddleAttachment", true)
+	local vanster, hoger, under = false, false, false
+	for _, d in ipairs(mapp:GetChildren()) do
+		if d:IsA("BasePart") and d.Name == "Sadelns gjord" then
+			local p = sadelA.WorldCFrame:PointToObjectSpace(d.Position)
+			if p.X < -0.3 then vanster = true end
+			if p.X > 0.3 then hoger = true end
+			if p.Y < -1.5 and math.abs(p.X) < 0.5 then under = true end
+		end
+	end
+	check("gjorden har segment på vänster sida", vanster)
+	check("gjorden har segment på höger sida", hoger)
+	check("gjorden går under bålen", under)
+
+	--[[ 3. TYGELN SLUTAR I EN HAND. Delens längd ska vara avståndet mellan
+		bettet och handpunkten — inte en konstant. ]]
+	local bett = hast:FindFirstChild("LeftReinAttachment", true)
+	local hand = hast:FindFirstChild("LeftHandAttachment", true)
+	check("riggen bär ryttarens handläge", hand ~= nil)
+	local tygel
+	for _, d in ipairs(mapp:GetChildren()) do
+		if d:IsA("BasePart") and d.Name == "Tygel" then tygel = tygel or d end
+	end
+	--[[ LÄNGDEN ensam räcker inte som mätning: en tygel som pekar åt fel
+		håll kan ha rätt längd. Det som mäts är ÄNDPUNKTEN — delens läge
+		plus halva längden längs dess egen blickriktning — och den ska
+		ligga i handen. Falsifierat: låter man tygeln falla tillbaka på en
+		fast punkt framför sadeln blir längden fortfarande nästan rätt,
+		men änden hamnar 0,4 studs fel och den här raden blir röd. ]]
+	local vantad = bett and hand and (hand.WorldPosition - bett.WorldPosition).Magnitude or -1
+	local ande = tygel and (tygel.Position + tygel.CFrame.LookVector * (tygel.Size.Z / 2))
+	local miss = (ande and hand) and (ande - hand.WorldPosition).Magnitude or 1e9
+	check("tygeln slutar i ryttarens hand", miss < 0.10,
+		tygel and string.format("%.3f studs fel, längd %.3f mot bett->hand %.3f",
+			miss, tygel.Size.Z, vantad) or "ingen tygel")
+
+	--[[ 4. HANDLÄGET ÄR INTE BETTET. Det var hela ryttarposefelet: IK drog
+		handen mot munnen, och överkroppen följde med. ]]
+	check("handläget ligger närmare sadeln än bettet gör",
+		hand ~= nil and bett ~= nil and sadelA ~= nil
+			and (hand.WorldPosition - sadelA.WorldPosition).Magnitude
+				< (bett.WorldPosition - sadelA.WorldPosition).Magnitude,
+		hand and bett and sadelA and string.format("hand %.2f, bett %.2f",
+			(hand.WorldPosition - sadelA.WorldPosition).Magnitude,
+			(bett.WorldPosition - sadelA.WorldPosition).Magnitude) or "-")
+
+	--[[ 5. OCH ALLT SKA FORTFARANDE GÅ ATT TA AV. Den nya geometrin har
+		fler delar; kontraktet är att inte en enda blir kvar. ]]
+	local fore = #mapp:GetChildren()
+	TackService.taAv(spelare, hast, "trans")
+	TackService.taAv(spelare, hast, "sadel")
+	TackService.taAv(spelare, hast, "underlagg")
+	local kvar = hast:FindFirstChild("Tack")
+	check("hela utrustningen går av utan rester",
+		kvar == nil or #kvar:GetChildren() == 0,
+		string.format("%d delar på, %d kvar", fore,
+			kvar and #kvar:GetChildren() or 0))
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit
