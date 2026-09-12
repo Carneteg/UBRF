@@ -367,6 +367,29 @@ RunService.RenderStepped:Connect(function(dt)
 	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
 	if LektionController.vantar() or LektionController.replayAktiv() then
 		Input.consume()
+		--[[ ══ PAUSEN MÅSTE STANNA HÄSTEN, INTE BARA SLUTA STYRA HENNE ══
+
+		     Stycket ovanför säger "hästen stegas inte", och det stämde —
+		     men att sluta stega henne är inte att stanna henne.
+		     `movement:step` är enda stället som skriver `Humanoid.WalkSpeed`
+		     och `Humanoid:Move`. Hoppas den över ligger BÅDA kvar på
+		     förra bildrutans värden, och Roblox humanoid fortsätter gå på
+		     dem. Hästen red alltså vidare bakom kortet ändå — utan att
+		     spelaren kunde styra henne.
+
+		     Mätt i Studio, ridd, med kortet uppe och spelaren utan kontroll:
+		         kurs låst 0,0°, WalkSpeed 4,35, D utan verkan
+		         (427,16 · 173,44) -> (427,16 · 161,24) = 12,2 studs på 4,6 s
+		     och i ett hörn i stället: noll förflyttning, noll kursändring,
+		     full hjälp given — hon stod och tryckte mot sargen. Det är det
+		     här som såg ut som "locomotion är död": hon svarar inte, för
+		     ingen läser spelarens hjälper, och hon står still för att en
+		     vägg tog emot — inte för att pausen höll.
+
+		     `release()` finns redan och gör precis det pausen behöver:
+		     nollar WalkSpeed, skickar `Move(0)`, släpper styrutslag och
+		     kroppslutning. Ingen ny rörelsekod, ingen ny trimning. ]]
+		ride.movement:release()
 		local loco = ride.movement.loco
 		ride.animation:step(loco, dt)
 		ride.rider:step(loco, dt)
