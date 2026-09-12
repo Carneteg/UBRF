@@ -422,13 +422,102 @@ local function anlaggningsbas(): CFrame?
 	return ((komplex :: any).PrimaryPart :: BasePart).CFrame
 end
 
+--[[ ══ EN HÄST → EN BOX, EN BOX → EN HÄST ═══════════════════════════
+
+	Invarianten som saknades. `placera` byggde förut alltid en ny modell och
+	föräldrade den till workspace, utan att fråga om hästen redan stod där.
+	Det gör bygget beroende av att platsen är TOM från hästar — och en
+	sparad plats som råkar ha hästmodeller kvar i sig ger då TVÅ hästar i
+	varje box, en sparad och en nybyggd.
+
+	Mätt: ett andra `placera("kennedy")` byggde en andra Kennedy 1,8 studs
+	från den första, i samma box. 33 hästar blev 34.
+
+	Boken förs här och inte i `start()`, för `placera` är enda stället som
+	bygger. En invariant som bor någon annanstans än vid handlingen den
+	vaktar är en invariant som går att gå förbi. ]]
+local boxAgare: { [number]: string } = {}
+
+--[[ Står hästen redan i världen? Läses ur TAGGEN och inte ur ett eget
+	register: en modell som ligger sparad i platsen har aldrig passerat
+	någon räknare här, och det är precis den sorten vi letar efter. ]]
+local function befintlig(hastId: string): Model?
+	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
+		if m:IsA("Model") and m:GetAttribute("HorseId") == hastId
+			and m:IsDescendantOf(workspace) then
+			return m :: Model
+		end
+	end
+	return nil
+end
+
+--[[ Seedar boken ur det som FAKTISKT står i världen. Utan det här vet
+	bygget ingenting om hästar som följde med den sparade platsen, och
+	kollisionen upptäcks aldrig. ]]
+function JackRigg.lasInBefintliga()
+	local Stallet = delad("Stallet")
+	if not Stallet then return end
+	table.clear(boxAgare)
+	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
+		local id = m:GetAttribute("HorseId")
+		if typeof(id) == "string" and m:IsDescendantOf(workspace) then
+			local n = (Stallet :: any).boxNummerFor(id)
+			if n then boxAgare[n] = id end
+		end
+	end
+end
+
+--[[ Nästa lediga box framåt från `n`, deterministiskt och utan slump —
+	samma princip som `Stallet.tilldelaLedig` använder för hästar. Finns
+	ingen ledig alls returneras nil, och då byggs ingen häst: hellre en
+	häst som saknas och syns i loggen än två som står i varandra. ]]
+local function nastaLediga(Stallet: any, fran: number): number?
+	local antal = Stallet.boxantal()
+	for steg = 1, antal do
+		local n = ((fran - 1 + steg) % antal) + 1
+		if boxAgare[n] == nil and Stallet.box(n) ~= nil then return n end
+	end
+	return nil
+end
+
 --[[ En häst i sin egen box. Returnerar modellen, eller nil med ett skäl. ]]
 function JackRigg.placera(hastId: string): (Model?, string?)
 	local Stallet = delad("Stallet")
 	if not Stallet then return nil, "Stallet saknas i ReplicatedStorage" end
 
+	--[[ INVARIANT 1: EN HÄST → EN MODELL. En andra kopia av samma individ
+		är aldrig rätt svar — att flytta henne till en ledig box hade gett
+		två Kennedy i stallet i stället för två i samma box. ]]
+	local redan = befintlig(hastId)
+	if redan then
+		warn(("[Rigg] DUBBLETT: %s står redan i världen (%s). Bygger ingen "
+			.. "andra kopia."):format(hastId, redan:GetFullName()))
+		return nil, "redan byggd"
+	end
+
 	local box = (Stallet :: any).boxFor(hastId)
 	if not box or not box.varld then return nil, "ingen box i datan" end
+
+	--[[ INVARIANT 2: EN BOX → EN HÄST. Två OLIKA hästar på samma box löses
+		deterministiskt framåt, och båda namnen och boxen står i loggen —
+		aldrig en tyst stapling. ]]
+	local nummer = box.nummer
+	local sittande = boxAgare[nummer]
+	if sittande and sittande ~= hastId then
+		local ledig = nastaLediga(Stallet, nummer)
+		if not ledig then
+			warn(("[Rigg] KROCK: %s och %s pekar båda på box %d, och ingen "
+				.. "box är ledig. %s byggs inte."):format(
+				sittande, hastId, nummer, hastId))
+			return nil, "boxkrock utan ledig box"
+		end
+		local nyBox = (Stallet :: any).box(ledig)
+		warn(("[Rigg] KROCK: %s och %s pekar båda på box %d. %s flyttas "
+			.. "till box %d (rad %s, plats %d)."):format(
+			sittande, hastId, nummer, hastId, ledig,
+			tostring(nyBox.rad), nyBox.plats))
+		box, nummer = nyBox, ledig
+	end
 
 	local bas = anlaggningsbas()
 	if not bas then return nil, "anläggningen är inte byggd" end
@@ -479,6 +568,10 @@ function JackRigg.placera(hastId: string): (Model?, string?)
 	end
 
 	modell.Parent = workspace
+	--[[ Boxen bokförs när hästen FAKTISKT står i den, inte när vi bestämde
+		oss. Bokförs den tidigare reserverar ett misslyckat bygge en box åt
+		en häst som inte finns. ]]
+	boxAgare[nummer] = hastId
 	--[[ Taggen SIST: HorseService lyssnar på `GetInstanceAddedSignal`, och
 		en halvbyggd modell ska inte kunna registreras. ]]
 	CollectionService:AddTag(modell, TAG)
@@ -505,6 +598,17 @@ function JackRigg.start(): Model?
 	for id in pairs(hastar) do table.insert(ids, id) end
 	table.sort(ids)
 
+	--[[ Läs in vad som REDAN står i världen innan något byggs. En sparad
+		plats med hästmodeller kvar i sig är hela skälet till att
+		invarianten finns; upptäcks de inte här upptäcks de aldrig. ]]
+	JackRigg.lasInBefintliga()
+	local fore = 0
+	for _ in pairs(boxAgare) do fore += 1 end
+	if fore > 0 then
+		warn(("[Rigg] %d hästar stod redan i världen innan bygget. De "
+			.. "byggs inte om; deras boxar är reserverade."):format(fore))
+	end
+
 	local forsta: Model? = nil
 	local byggda, utanBox = 0, {}
 	for _, id in ipairs(ids) do
@@ -520,6 +624,39 @@ function JackRigg.start(): Model?
 	print(("[Rigg] %d av %d hästar står i sina boxar"):format(byggda, #ids))
 	if #utanBox > 0 then
 		warn(("[Rigg] utan plats: %s"):format(table.concat(utanBox, ", ")))
+	end
+
+	--[[ ── EFTERKONTROLL ──────────────────────────────────────────────
+		Boken ovan hindrar krocken; den här raden BEVISAR att den gjorde
+		det, mätt på världen och inte på räknaren. ]]
+	local perId: { [string]: string } = {}
+	local perBox: { [number]: string } = {}
+	local brott = 0
+	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
+		local id = m:GetAttribute("HorseId")
+		if typeof(id) == "string" and m:IsDescendantOf(workspace) then
+			if perId[id] then
+				brott += 1
+				warn(("[Rigg] INVARIANT BRUTEN — samma häst två gånger: %s "
+					.. "(%s och %s)"):format(id, perId[id], m:GetFullName()))
+			else
+				perId[id] = m:GetFullName()
+			end
+			local n = (Stallet :: any).boxNummerFor(id)
+			if n then
+				if perBox[n] and perBox[n] ~= id then
+					brott += 1
+					warn(("[Rigg] INVARIANT BRUTEN — box %d delas av %s och %s")
+						:format(n, perBox[n], id))
+				end
+				perBox[n] = id
+			end
+		end
+	end
+	if brott == 0 then
+		print("[Rigg] invariant håller: en häst → en box, en box → en häst.")
+	else
+		warn(("[Rigg] %d invariantbrott kvar efter bygget."):format(brott))
 	end
 	if not forsta then
 		warn(("[Rigg] första dagens häst (%s) kom inte på plats.")
