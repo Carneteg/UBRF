@@ -358,6 +358,34 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 			else Vector3.new(0, 0, utat)
 	end
 
+	--[[ ══ STÅR HON ÖVER HUVUD TAGET I EN BOX? ═════════════════════════
+
+		Stycket ovanför säger att dörren letas upp "bara om hon faktiskt
+		står i en box". Det var en avsikt, inte en kontroll: enda villkoret
+		var att NÅGON boxdörr låg inom 3,2 m. I en stallgång kantad av
+		boxar är det alltid sant, och därför fick en häst som redan stod i
+		gången ett delmål INNE i närmaste främmande box.
+
+		Mätt i runtime-acceptansen: hon stod i gång B på (499,9 · 265,6),
+		drygt 4,8 m ur sin egen box, med `lamnatBox = false`, `dorrsteg = 2`
+		och kursen (−0,59 · −0,81) rakt in i `Boxfront MB 7`. Gången är
+		7,75 studs och hennes kropp 5,55 — på snedden kilar hon fast,
+		`MoveDirection` går till 0, planeraren gör slut på sina omplaneringar
+		och kopplet släpper med `led.fastnat`.
+
+		`Utat` pekar ut mot gången. Ligger hon på den sidan av öppningen är
+		hon redan ute, och då finns ingen box att ta sig ur: dörrgrenen
+		hoppas över och `lamnatBox` är sann från början. Exakt i luckan
+		(punkt 0) räknas som inne, så den som står mitt i öppningen får
+		behålla sin utgång. ]]
+	local iBox = false
+	if dorrMitt and dorrUt then
+		iBox = (pivot.Position - dorrMitt):Dot(dorrUt) <= 0
+	end
+	if not iBox then
+		narmasteDorr, dorrMitt, dorrUt = nil, nil, nil
+	end
+
 	local hastHum = (modell :: any):FindFirstChildOfClass("Humanoid")
 	local tidigareFart = hastHum and hastHum.WalkSpeed or 0
 	if hastHum then
@@ -409,7 +437,10 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		modell = modell,
 		hastId = tostring(modell:GetAttribute("HorseId") or ""),
 		gar = false,
-		lamnatBox = false,
+		--[[ Står hon redan i gången finns ingen box kvar att lämna. Då är
+			flaggan sann direkt, och `boxX`/`boxY` nedan konsulteras aldrig
+			— de gäller bara så länge hon faktiskt är kvar i facket. ]]
+		lamnatBox = not iBox,
 		malNatt = false,
 		boxX = bx, boxY = by,
 		dorrMitt = dorrMitt,
