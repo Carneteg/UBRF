@@ -1257,6 +1257,13 @@ function PreparationController.redo(): boolean
 	return senasteVy ~= nil and senasteVy.redo == true
 end
 
+--[[ Vilket steg spelaren STÅR PÅ. Ledningens prompt hänger på den:
+	`redo` blir sant först när ALLA faser är avbockade, och `leda` är en av
+	dem — så `redo` kan aldrig vara det som öppnar ledningen. ]]
+function PreparationController.nastaFas(): string?
+	return senasteVy and senasteVy.nasta or nil
+end
+
 function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
 end

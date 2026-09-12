@@ -237,6 +237,16 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	if model:GetAttribute("HorseId") ~= id then return false end
 	return PreparationController.redo()
 end)
+--[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
+	Se noten i `InteractionController.farVisasLed`: den gamla regeln låste
+	loopen, eftersom `leda` måste vara avbockad för att `redo` ska bli sant
+	och kopplet måste fästas för att `leda` ska kunna bockas av. ]]
+InteractionController.setLedCheck(function(model: Model): boolean
+	local id = PreparationController.hastId()
+	if not id then return false end
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return PreparationController.nastaFas() == "leda"
+end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
      runda 2: handskakningens svar kommer inte som en `PreparationSync`, så
