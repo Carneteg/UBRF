@@ -306,6 +306,26 @@ end
 
 local function fyll()
 	local lista = KontrollHjalp.rader()
+	--[[ ── PANELEN MÅSTE VARA SÅ HÖG SOM SITT INNEHÅLL ────────────────
+
+	     Höjden räknades på `44 * (#RADER + 2)` — ett tal som inte hade
+	     något med radernas verkliga mått att göra. Raderna är 21 px och
+	     börjar på 34, så panelen blev flera hundra pixlar för hög och bar
+	     ett tomrum mellan sista raden och stängknappen.
+
+	     På iPad var det inte bara fult. Panelen visas AV SIG SJÄLV vid
+	     första uppsittningen, och med den gamla höjden hamnade
+	     stängknappen ovanpå spaken: mätt `GetGuiObjectsAtPosition(90, 611)`
+	     -> `StangHjalp<Panel> | Panel<UBRFKontroller> | Spak<HorseTouch>`.
+	     Första gången en spelare la tummen på spaken tog hon alltså i
+	     hjälpens stängknapp i stället för att styra.
+
+	     Nu följer höjden raderna som faktiskt ritas — och eftersom touch
+	     har en rad mer än skrivbordet måste den räknas här, där listan är
+	     känd, och inte på `#RADER`. ]]
+	if panel then
+		panel.Size = UDim2.new(0, 250, 0, 34 + #lista * 21 + 60)
+	end
 	for i, l in ipairs(rader) do
 		local r = lista[i]
 		if r then
