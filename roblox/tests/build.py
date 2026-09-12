@@ -81,6 +81,7 @@ SPELBARHET = BYGGE + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("HastRigg",     "src/server/HastRigg.luau"),
     #[[ TESTMODUL, inte produktionskod: avatarens matt och
     #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
@@ -120,6 +121,7 @@ FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
@@ -197,6 +199,7 @@ FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
@@ -275,6 +278,7 @@ FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
@@ -384,6 +388,7 @@ KLIENT = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
@@ -451,6 +456,7 @@ KOHERENS = GEOMETRI + [
 ] + _KLIENTDELEN + _utan([
     ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler",    "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende",    "src/shared/HorseCore/Utseende.luau"),
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
@@ -476,6 +482,7 @@ MODULER = [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # RidKanon och Telemetri ligger fore MovementController: movement.spec
@@ -652,7 +659,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
-                                "Riggprofiler",
+                                "Riggprofiler", "Utseende",
                     "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
                     "Inspelning", "Kameralage", "Pass", "Sparning"):
             delar.append(f"__Core.{namn} = {namn}\n")

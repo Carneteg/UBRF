@@ -585,6 +585,14 @@ Sprak.text = {
 		sv = "Utrustningen kom inte på plats — försök igen",
 		en = "The tack did not go on — try again",
 	},
+	["hud.visa_alla"] = {
+		sv = "Visa alla %d val",
+		en = "Show all %d options",
+	},
+	["hud.visa_mindre"] = {
+		sv = "Visa mindre",
+		en = "Show less",
+	},
 	["tack.ta_utrustning"] = {
 		sv = "Ta sadel och träns",
 		en = "Take the saddle and bridle",
@@ -594,8 +602,8 @@ Sprak.text = {
 		en = "%s's saddle and bridle",
 	},
 	["tack.hamta_forst"] = {
-		sv = "Du har varken sadel eller träns här — de hänger på boxfronten",
-		en = "You have neither saddle nor bridle with you — they hang on the stall front",
+		sv = "Sadel och träns hänger på boxfronten — hämta dem först",
+		en = "Saddle and bridle hang on the stall front — fetch them first",
 	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",

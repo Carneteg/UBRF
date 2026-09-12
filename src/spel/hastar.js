@@ -67,6 +67,50 @@ const LEGACY_GAMEPLAY={
   dexter:{kanslighet:.60,framatbjudning:.90,forlatande:.52,skygghet:.22,hoppkapacitet:.88,hopplust:.90,tyngd:.18,utbildning:.62,maxhojd:1.00,farg:"#2E2A26",man:"#151311",tecken:{blas:false,strumpor:[1,0,1,0]}},
 };
 
+/* ══════════════════════════════════════════════════════════════════
+   UTSEENDET SOM ÄR AVLÄST UR UBRF:s EGNA FOTON
+
+   Supabase `public.hastar` har identitet, ras, mankhöjd, kategori,
+   import och beskrivning — men INGEN kolumn för färg eller tecken.
+   Färgerna i LEGACY_GAMEPLAY ovan är därför märkta `visuellStatus:
+   "ASSUMPTION"`, och det är ärligt: de är valda, inte avlästa.
+
+   Men raden har ett fält till: `bild_url`. Varje häst i rostern har ett
+   foto på ubrf.se, och `CLAUDE.md` är uttrycklig — "Bilder och filmer är
+   specifikation, inte inspiration". Färgerna nedan är AVLÄSTA ur de
+   fotona, och bara de fält som faktiskt syns i bilden står här.
+
+   Det som INTE syns i fotot står inte här. Alla fyra bilderna är
+   huvud-/halsporträtt, så benens tecken går inte att avgöra på tre av
+   dem; de får rostern standardvärde och är märkta nedan. Att skriva
+   "inga strumpor" som ett faktum vore att hitta på.
+
+   `utseendeKalla:"FOTO"` betyder att färgen är avläst ur bilden som
+   `bild_url` pekar på. Utan fältet gäller `visuellStatus:"ASSUMPTION"`
+   som förut. ── */
+const UTSEENDE_FOTO={
+  /* Mörkbrun, nästan svart, svart man. Inga vita tecken på huvudet.
+     Benen syns inte i bilden. */
+  blackrock_jack:{farg:"#3A2A22",man:"#1C1512",mule:"#2A1F1A",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"], osett:["strumpor"]},
+  /* Fjordhäst, brunblakk: sandfärgad kropp, mörk mule, och den upprätta
+     tvåfärgade manen med mörk mittstrimma (midtstol) som rasen alltid
+     har. Inga vita tecken. */
+  toblerone:{farg:"#C8A96B",man:"#E6DCC6",manKarna:"#4A3A2A",mule:"#4A4440",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","manKarna","mule","blas"], osett:["strumpor"]},
+  /* Haflinger: gyllenfux med ljus (flaxen) man och en bred vit bläs hela
+     vägen ned till en rosa mule. */
+  westside:{farg:"#C98B4E",man:"#F0E6D2",mule:"#C79A8E",
+    tecken:{blas:true,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"], osett:["strumpor"]},
+  /* Mörk brun med svart man. Inga vita tecken i ansiktet. */
+  allan:{farg:"#4A3324",man:"#241A12",mule:"#332419",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"], osett:["strumpor"]},
+};
+
 const SOURCE_GAMEPLAY={
   // Källan säger att Bing inte hoppar. Den säger inget om hans motivation.
   bing:{hoppkapacitet:0,flaggor:{hoppar_inte:true}},
@@ -144,6 +188,7 @@ const HORSES={};
 for(const fakta of HASTFAKTA){
   const legacy=LEGACY_GAMEPLAY[fakta.id];
   const source=SOURCE_GAMEPLAY[fakta.id];
+  const foto=UTSEENDE_FOTO[fakta.id];
   HORSES[fakta.id]={
     ...fakta,
     kategori:fakta.typ==="hast"?"hast":(fakta.kategoriKalla||"C"),
@@ -157,7 +202,11 @@ for(const fakta of HASTFAKTA){
        DEKLARERAD frånvaro av evidens, inte en tilldelning. */
     profil:PROFIL[fakta.id]||"skolhast",
     profilStatus:PROFIL[fakta.id]?"KALLTEXT":"SAKNAR_KALLA",
-    visuellStatus:"ASSUMPTION",
+    ...(foto?{farg:foto.farg,man:foto.man,mule:foto.mule,
+      manKarna:foto.manKarna||null,tecken:foto.tecken}:{}),
+    visuellStatus:foto?"FOTO":"ASSUMPTION",
+    utseendeSett:foto?foto.sett:[],
+    utseendeOsett:foto?foto.osett:["farg","man","blas","strumpor"],
     pronomen:harledPronomen(fakta.besk),
   };
 }

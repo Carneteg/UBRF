@@ -28,6 +28,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Riggprofiler = require(ReplicatedStorage.HorseCore.Riggprofiler)
+local Utseende = require(ReplicatedStorage.HorseCore.Utseende)
 
 local HastVisual = {}
 
@@ -84,6 +85,109 @@ local function hitta(modell: Instance, namn: string): BasePart?
 	return (d and d:IsA("BasePart")) and d or nil
 end
 
+--[[ ══ KLASSNINGEN ═════════════════════════════════════════════════
+
+	Varje nätdel får ett attribut som säger vilken anatomisk grupp den
+	hör till. Klassningen läser modellens EGNA ursprungsfärger — se
+	`utseende` i profilen — och körs EN gång, innan något målas om.
+
+	Attributet är avsiktligt kvar på delen efteråt: det gör en omklädsel
+	möjlig utan att montera om nätet, och det går att läsa i Studio när
+	någon undrar varför ett ben blev vitt. ]]
+local function hex(f: Color3): string
+	return ("%02X%02X%02X"):format(
+		math.floor(f.R * 255 + 0.5), math.floor(f.G * 255 + 0.5),
+		math.floor(f.B * 255 + 0.5))
+end
+
+local function klassaDelar(natet: Model, u: any, rot: BasePart): { [string]: number }
+	--[[ Vilket ben hör en viss del till? Byggs en gång ur profilen. ]]
+	local benFor: { [string]: string } = {}
+	for ben, delar in pairs(u.ben or {}) do
+		for _, namn in ipairs(delar) do benFor[namn] = ben end
+	end
+	local rakna: { [string]: number } = {}
+	for _, d in ipairs(natet:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency < 1 then
+			local h = hex(d.Color)
+			local grupp: string? = nil
+			if h == u.kropp then grupp = "kropp"
+			elseif h == u.skugga then grupp = "skugga"
+			elseif h == u.man then grupp = "man"
+			elseif h == u.mule then grupp = "mule"
+			elseif h == u.tecken then
+				--[[ Vitt tecken: bläs om det sitter högt, strumpa om det
+					sitter lågt. Höjden är i rotens rum. ]]
+				local y = rot.CFrame:PointToObjectSpace(d.Position).Y
+				grupp = if y > (u.blasHojd or 0) then "blas" else "strumpa"
+			elseif h == u.mork then
+				grupp = if d.Name == u.hov then "hov" else "mork"
+			end
+			--[[ Kotan hör till sitt ben även när den är mörk: får hästen
+				en strumpa ska den gå hela vägen ned. ]]
+			local ben = benFor[d.Name]
+			if ben then
+				d:SetAttribute("UBRFBen", ben)
+				if grupp == "mork" or grupp == "strumpa" then grupp = "strumpa" end
+			end
+			if grupp then
+				d:SetAttribute("UBRFGrupp", grupp)
+				rakna[grupp] = (rakna[grupp] or 0) + 1
+			end
+		end
+	end
+	return rakna
+end
+
+--[[ ══ OMKLÄDSELN ═══════════════════════════════════════════════════
+
+	Målar en redan klassad häst. Skild från monteringen med flit: en
+	häst ska kunna byta klädsel — ett täcke, en annan årstid, en rättad
+	avläsning — utan att nätet byggs om.
+
+	Delar utan grupp lämnas i fred. Det är rätt svar: en del vi inte har
+	klassat är en del vi inte vet något om, och att måla den brun vore
+	att gissa. ]]
+function HastVisual.klaPa(hast: Model, kladsel: { [string]: any }): { [string]: number }
+	local visual = hast:FindFirstChild("Visual")
+	local natet = visual and visual:FindFirstChild("Nät")
+	if not natet then return {} end
+	local skugga = Color3.new(kladsel.kropp.R * 0.88, kladsel.kropp.G * 0.88,
+		kladsel.kropp.B * 0.88)
+	local VIT = Color3.fromRGB(240, 237, 230)
+	local rakna: { [string]: number } = {}
+	for _, d in ipairs(natet:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local g = d:GetAttribute("UBRFGrupp")
+			local ben = d:GetAttribute("UBRFBen")
+			local farg: Color3? = nil
+			if g == "kropp" then farg = kladsel.kropp
+			elseif g == "skugga" then farg = skugga
+			elseif g == "man" then
+				farg = if d.Name == "N2S" and kladsel.manKarna
+					then kladsel.manKarna else kladsel.man
+			elseif g == "mule" then farg = kladsel.mule
+			elseif g == "blas" then
+				--[[ Ingen bläs? Då är pannan päls, inte vit. Delen finns
+					kvar — den är en del av nätet — men den slutar lysa. ]]
+				farg = if kladsel.blas then VIT else kladsel.kropp
+			elseif g == "strumpa" then
+				local har = ben ~= nil and kladsel.strumpor[ben] == true
+				--[[ Utan strumpa följer skenbenet pälsen. Det är den
+					rättningen som tar bort K3:s inbakade vita pololindor:
+					de var aldrig en textur, bara fyra ljusgrå delar. ]]
+				farg = if har then VIT else kladsel.kropp
+			elseif g == "hov" then farg = kladsel.hov
+			end
+			if farg then
+				d.Color = farg
+				rakna[g :: string] = (rakna[g :: string] or 0) + 1
+			end
+		end
+	end
+	return rakna
+end
+
 --[[ Fästpunkterna flyttas till NÄTETS kroppsdelar, och det är hela
 	poängen: `TackRigg` svetsar utrustningen i fästpunktens värddel, så
 	det är värddelen som avgör om tränset följer huvudet eller hänger
@@ -113,7 +217,8 @@ end
 
 --[[ Monterar ett visuellt nät på en spelhäst. Svarar false och ett skäl
 	när något saknas; hästen fungerar då vidare med lådorna. ]]
-function HastVisual.montera(hast: Model, mall: Model, profilNamn: string): (boolean, string?)
+function HastVisual.montera(hast: Model, mall: Model, profilNamn: string,
+	hastdata: { [string]: any }?): (boolean, string?)
 	local p = Riggprofiler.profil(profilNamn)
 	if not p then return false, "okänd profil " .. tostring(profilNamn) end
 	local rot = hast:FindFirstChild("HumanoidRootPart")
@@ -132,8 +237,15 @@ function HastVisual.montera(hast: Model, mall: Model, profilNamn: string): (bool
 
 	local natet = mall:Clone()
 	natet.Name = "Nät"
-	--[[ SKALAN UR MÄTNINGEN, inte ur en magisk konstant. ]]
-	local skala = (MANKHOJD * M) / p.mankhojd
+	--[[ SKALAN UR HÄSTENS EGEN MANKHÖJD, inte ur en konstant.
+
+		Förut skalades varje nät till 1,45 m — kategori D-ponny, alltså
+		Blackrock Jacks mått. Allan är 178 cm i källan och Marabou är en
+		kategori B-ponny; att ge dem samma höjd hade gjort ridskolan till
+		trettiotre exemplar av samma djur. `Utseende.mankhojd` säger både
+		höjden och varifrån den kommer. ]]
+	local kladsel = Utseende.for_(hastdata)
+	local skala = (kladsel.mankhojd * M) / p.mankhojd
 	natet:ScaleTo(skala)
 
 	local natRot = hitta(natet, p.rot)
@@ -252,6 +364,18 @@ function HastVisual.montera(hast: Model, mall: Model, profilNamn: string): (bool
 		sw.Part1 = skydd
 		sw.Parent = skydd
 	end
+
+	--[[ ══ KLÄDSELN ═════════════════════════════════════════════════
+
+		Grupperna klassas ur modellens EGNA ursprungsfärger — se
+		`utseende` i profilen för varför — och klassningen skrivs som
+		attribut på delen. Att klassa FÖRE målningen är hela poängen: när
+		pälsen väl bytt färg går den inte att känna igen på sin färg
+		längre, och en omkörning hade då klassat om allt fel. ]]
+	if p.utseende then
+		klassaDelar(natet, p.utseende, rot)
+	end
+	HastVisual.klaPa(hast, kladsel)
 
 	local flyttade = flyttaFasten(hast, natet, p, skala)
 

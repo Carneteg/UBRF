@@ -129,28 +129,108 @@ end
      ryttare utan huvud, och slutar `step()` köras utan att `release()`
      hinner köra blir huvudet kvar borta i alla andra lägen också.
 
-     Nu mäts det som frågan faktiskt gäller: HUR LÅNGT KAMERAN STÅR FRÅN
-     HUVUDET. Innanför huvudets egen radie är det en vägg och tonas bort;
-     ett par radier ut kan man se det och då ska det synas. Gränserna
-     räknas ur delens egen storlek, så ett annat avatarhuvud följer med.
+     Nu mäts det som frågan faktiskt gäller: VAR KAMERAN STÅR I
+     FÖRHÅLLANDE TILL HUVUDET. Gränserna räknas ur delens egna mått, så
+     ett annat avatarhuvud följer med.
 
      Det gör regeln självrättande: varje bildruta där kameran KAN se
      huvudet visas det, oavsett vilket läge, vilken övergång eller vilket
-     avbrott som ledde dit. ]]
-local HUVUD_DOLT = 1.15    -- innanför radie x detta: helt borta
-local HUVUD_SYNS = 2.40    -- utanför radie x detta: helt synligt
+     avbrott som ledde dit.
 
---[[ Hur synligt det egna huvudet ska vara när kameran står `avstand`
-     studs från det. Egen funktion för att provet ska kunna visa den röd
-     utan att starta en kamera. ]]
-function CameraController.huvudsynlighet(avstand: number, radie: number): number
-	local lag = radie * HUVUD_DOLT
-	local hog = radie * HUVUD_SYNS
-	if hog <= lag then return if avstand > lag then 1 else 0 end
-	local t = math.clamp((avstand - lag) / (hog - lag), 0, 1)
+     ══ OCH VARFÖR AVSTÅNDET RÄKNAS MOT LÅDAN, INTE MOT EN RADIE ══════
+
+     Första rättningen mätte avståndet mot `Size.Magnitude / 2`. Det är
+     rymddiagonalen och alltså den STÖRSTA radie ett huvud har: för ett
+     R15-huvud på 1,16 x 1,11 x 1,14 blir den 0,98 studs, medan huvudet
+     bara sträcker sig 0,58 studs ut åt något håll. Med marginalerna
+     ovanpå var huvudet helt borta ut till 1,13 studs och fullt synligt
+     först på 2,35 — kameran kunde alltså stå en hel stud UTANFÖR huvudet
+     och ändå rita det osynligt. Det var kvar av samma bugg, bara i en
+     mindre form, och Tobias såg den i nästa skärmbild.
+
+     Regeln är enkel och ska vara det: ÄR KAMERAN UTANFÖR HUVUDET SKA
+     HUVUDET SYNAS. Därför mäts nu kamerans läge i HUVUDETS EGET RUM mot
+     huvudets halva mått — en låda, inte en sfär. Är den innanför lådan
+     plus objektivets egen marginal är huvudet en vägg och tonas bort;
+     är den utanför syns det, med en kort övergång som bara finns för att
+     bytet inte ska poppa.
+
+     Marginalen är kamerans nära klippplan plus lite: står objektivet
+     precis i huvudets framkant — vilket är exakt var sadelvyns ögonpunkt
+     ligger — ser man insidan av sitt eget huvud, och då hjälper det inte
+     att man tekniskt sett är utanför med en hundradel. ]]
+local HUVUD_MARGINAL = 0.25   -- studs utanför lådan som fortfarande räknas som inuti
+local HUVUD_OVERGANG = 0.35   -- studs därefter innan huvudet är helt synligt
+
+--[[ Hur synligt det egna huvudet ska vara när kameran står i `lokal`,
+     uttryckt i huvudets eget rum, och huvudet är `matt` stort.
+
+     Ren funktion utan Instance: provet kan visa den röd utan att starta
+     vare sig kamera, karaktär eller häst. ]]
+function CameraController.huvudsynlighet(lokal: Vector3, matt: Vector3): number
+	--[[ Hur långt UTANFÖR lådan punkten ligger, längs den axel där den
+	     sticker ut minst. Noll eller mindre betyder inuti. ]]
+	local ut = math.max(
+		math.abs(lokal.X) - matt.X / 2,
+		math.abs(lokal.Y) - matt.Y / 2,
+		math.abs(lokal.Z) - matt.Z / 2)
+	local t = math.clamp((ut - HUVUD_MARGINAL) / HUVUD_OVERGANG, 0, 1)
 	--[[ Mjuk i båda ändar (`smoothstep`) så att bytet inte poppar mitt i
-	     en övergång — samma kurva som förut, men på rätt storhet. ]]
+	     en kamerarörelse. ]]
 	return t * t * (3 - 2 * t)
+end
+
+--[[ ══ VAKTEN: ETT GÖMT HUVUD MÅSTE KUNNA KOMMA TILLBAKA SJÄLVT ══════
+
+	Regeln ovan räknas i `step()`. Den är rätt så länge `step()` körs —
+	men `LocalTransparencyModifier` är ett TILLSTÅND, inte en ritning:
+	slutar någon skriva det ligger sista värdet kvar för evigt.
+
+	Och uppsutten ridning är FÖRSTAPERSON i varje vy. Kameran står i
+	ögonpunkten, huvudet är korrekt gömt, och ryttaren syns aldrig i
+	bild — så länge kameran är kamerans. Den enda situation där man ser
+	en ryttare utan huvud är alltså när kameran INTE längre styrs av
+	modulen: en frusen bildruta, ett avbrutet spelprov, en kamera som
+	flyttats utifrån. Då slutade `step()` köra medan huvudet råkade vara
+	gömt, och ingenting tänder det igen.
+
+	Det är den kvarvarande buggen, och den går inte att rätta i `step()`
+	— den handlar just om att `step()` inte kör. Vakten nedan gör det:
+	har ingen skrivit huvudets synlighet på en halv sekund lämnas det
+	tillbaka som det var.
+
+	En enda `Heartbeat` för hela modulen, kopplad först när något
+	faktiskt gömts. Kostar ingenting när ingen rider. ]]
+local VAKT_TYST = 0.5   -- sekunder utan skrivning innan huvudet lämnas tillbaka
+local vakt: RBXScriptConnection? = nil
+local vaktar: { [any]: number } = {}
+
+local function vaktaHuvud(self: any)
+	vaktar[self] = os.clock()
+	if vakt then return end
+	vakt = RunService.Heartbeat:Connect(function()
+		local nu = os.clock()
+		local kvar = false
+		for ctrl, sist in pairs(vaktar) do
+			if nu - sist > VAKT_TYST then
+				ctrl:_aterstallHuvud()
+				vaktar[ctrl] = nil
+			else
+				kvar = true
+			end
+		end
+		if not kvar and vakt then
+			vakt:Disconnect()
+			vakt = nil
+		end
+	end)
+end
+
+--[[ Hur länge ett gömt huvud får ligga gömt utan att någon skriver om
+	det. Egen funktion för att provet ska kunna läsa samma tal som
+	vakten använder. ]]
+function CameraController.vakttystnad(): number
+	return VAKT_TYST
 end
 
 function CameraController:_egetHuvud(alfa: number, head: BasePart?)
@@ -176,6 +256,12 @@ function CameraController:_egetHuvud(alfa: number, head: BasePart?)
 		if self.dolda[del] == nil then self.dolda[del] = del.LocalTransparencyModifier end
 		del.LocalTransparencyModifier = 1 - alfa
 	end
+	--[[ Vakten vet nu att någon skrev. Se noten vid `vaktaHuvud`. ]]
+	if alfa < 1 then
+		vaktaHuvud(self)
+	elseif vaktar[self] then
+		vaktar[self] = nil
+	end
 end
 
 function CameraController:_aterstallHuvud()
@@ -184,6 +270,7 @@ function CameraController:_aterstallHuvud()
 	end
 	table.clear(self.dolda)
 end
+
 
 --[[ ── Kameralägets API ─────────────────────────────────────────────
      Finns för att DEL 2 ska kunna be om en vinkel utan att röra kameran
@@ -287,9 +374,8 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 	     som faktiskt ritas den här bildrutan. Se blocket vid
 	     `huvudsynlighet` för varför det inte längre läser kameraläget. ]]
 	if head then
-		local radie = head.Size.Magnitude * 0.5
-		local avstand = (lage - head.Position).Magnitude
-		self:_egetHuvud(CameraController.huvudsynlighet(avstand, radie), head)
+		local lokal = head.CFrame:PointToObjectSpace(lage)
+		self:_egetHuvud(CameraController.huvudsynlighet(lokal, head.Size), head)
 	else
 		--[[ Ingen karaktär att gömma — men det som redan gömts ska tillbaka,
 		     annars överlever en bortonad del sin egen anledning. ]]

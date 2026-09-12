@@ -63,6 +63,56 @@ local PROFILER: { [string]: any } = {
 			v = { "LThigh", "LLeg", "LAnkle", "LFoot" },
 			h = { "RThigh", "RLeg", "RAnkle", "RFoot" },
 		},
+		--[[ ══ UTSEENDEGRUPPERNA ═══════════════════════════════════════
+
+			K3 har INGA texturer. Varje av de fyrtio delarna är enfärgad,
+			och modellören har redan färgkodat anatomin åt oss:
+
+			    #7C5C46  päls          kropp, hals, huvud, öron, lår, bogar
+			    #70533F  päls i skugga underarm och underben
+			    #4A3629  man och svans N1S..N3S, Tail, pannlugg
+			    #564236  mule
+			    #CACBD1  vitt tecken   fyra skenben OCH en bläs i pannan
+			    #1B2A35  mörkt         hovar, kotor, ögonband
+
+			Det betyder att hästen går att klä om per kroppsdel utan att
+			röra ett enda nät — och att de fyra skenbenen och pannpartiet
+			ÄR strumpor och bläs, färdiga att styras av `tecken` i
+			rostern. Modellen är byggd för precis den variationen.
+
+			Grupperna hittas alltså genom modellens EGNA ursprungsfärger,
+			inte genom en namnlista: en namnlista hade blivit fel så fort
+			modellören döpte om en del, medan färgkodningen är hans egen
+			avsikt. Klassningen görs en gång vid monteringen, INNAN något
+			målas om, och skrivs som attribut på delen.
+
+			Vitt tecken skiljs på höjd: över manken är det en bläs, under
+			buken är det en strumpa. Talet är i rotens rum. ]]
+		utseende = {
+			kropp    = "7C5C46",
+			skugga   = "70533F",
+			man      = "4A3629",
+			mule     = "564236",
+			tecken   = "CACBD1",
+			mork     = "1B2A35",
+			--[[ Över den här höjden i rotens rum är ett vitt tecken en
+				bläs; under den är det en strumpa. Bläsen sitter på
+				y ≈ 1,37 och skenbenen på y ≈ −2,2. ]]
+			blasHojd = 0.0,
+			--[[ Vilket ben ett skenben hör till, i rosterns egen
+				benföljd. Namnen är K3:s; kartan är profilens jobb. ]]
+			ben = {
+				framV = { "LMetacarpal", "LHand" },
+				framH = { "RMetacarpal", "RHand" },
+				bakV  = { "LAnkle", "LFoot" },
+				bakH  = { "RAnkle", "RFoot" },
+			},
+			hov = "Hoof",
+			--[[ Manens MITTSEGMENT bär fjordhästens mörka strimma. Bara
+				den delen: strimman går längs kammen, inte över hela
+				manen. ]]
+			manKarna = "N2S",
+		},
 		--[[ Det som INTE är häst och rivs vid städningen.
 
 			`BodyPosition` och `BodyGyro` är inte kosmetik utan kvarlevor

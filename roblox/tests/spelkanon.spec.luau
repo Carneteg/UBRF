@@ -46,8 +46,20 @@ local function neutralTuning(h)
 		and h.tyngd == 0.4
 		and h.utbildning == 0.6
 		and h.maxhojd == 0.8
-		and h.fjader == nil
-		and h.tecken == nil
+end
+
+--[[ `tecken` och `fjader` är PRESENTATION, inte gameplay-tuning.
+
+	Raden låg förut i `neutralTuning` ovan, och den föll så fort Westside
+	fick en avläst bläs ur UBRF:s eget foto. Det var provet som mätte fel
+	sak: grinden finns för att en häst inte ska ärva gammal PÅHITTAD
+	ridkänsla, och en vit bläs på en haflinger är varken ridkänsla eller
+	påhittad. Fälten prövas i stället för vad de är — och att de bara
+	finns på hästar vars färg faktiskt ÄR avläst. ]]
+local function presentationHarKalla(h)
+	if h == nil then return false end
+	if h.tecken == nil and h.fjader == nil and h.mule == nil then return true end
+	return h.visuellStatus == "FOTO" or h.farg ~= nil
 end
 
 local lady = UBRFSpel.hastar.lady
@@ -65,6 +77,11 @@ check("Westside är Haflinger C-ponny",
 	westside and (tostring(westside.fodd) .. " / " .. tostring(westside.ras)) or "saknas")
 check("Westside återanvänder inte gammal felaktig gameplay-tuning",
 	neutralTuning(westside))
+check("Westsides utseende är avläst ur UBRF:s eget foto, inte påhittat",
+	westside ~= nil and westside.visuellStatus == "FOTO"
+		and westside.tecken ~= nil and westside.tecken.blas == true,
+	westside and tostring(westside.visuellStatus) or "saknas")
+check("och presentationsfälten har en källa", presentationHarKalla(westside))
 
 local kennedy = UBRFSpel.hastar.kennedy
 check("Kennedy är D-ponny född 2019",

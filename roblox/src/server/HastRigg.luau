@@ -39,7 +39,20 @@ local HastVisual = require(script.Parent.HastVisual)
 	godkänt utseendet. Listan är avsiktligt en lista och inte ett villkor —
 	att läsa vilka som är bytta ska inte kräva att man tänker efter. ]]
 local VISUELL: { [string]: string } = {
+	--[[ FYRA hästar, inte trettiotre, och de tre nya är valda för att
+		göra variationen PRÖVBAR — inte för att de är lätta:
+
+		  toblerone  fjordhäst, kategori C  — blakk päls, tvåfärgad man
+		  westside   haflinger, kategori C  — fux, ljus man, bred bläs
+		  allan      svenskt varmblod, 178 cm i KÄLLAN — störst i rostern
+
+		Var och en skiljer sig från Jack på minst två av de axlar ordern
+		räknar upp: färg, tecken och storlek. Utseendet kommer ur hästens
+		egen rad, inte ur en kopia av Jack. ]]
 	blackrock_jack = "k3",
+	toblerone = "k3",
+	westside = "k3",
+	allan = "k3",
 }
 
 --[[ Kategori D är ponny upp till 1,48 m i mankhöjd. Datan ger ingen
@@ -301,6 +314,15 @@ local function namnFor(hastId: string): string
 	return tostring(hastId)
 end
 
+--[[ Hästens egen rad ur den delade sanningen. Det visuella lagret läser
+	färg, tecken och mankhöjd ur den — inte ur en kopia av Jack. Saknas
+	raden får hästen rosterns standardutseende, och `Utseende` säger att
+	den gjorde det. ]]
+local function dataFor(hastId: string): { [string]: any }?
+	local Data = delad("UBRFSpelData")
+	return Data and ((Data :: any).hastar or {})[hastId] or nil
+end
+
 --[[ Anläggningens bas. Lägena räknas relativt den, inte mot världens
 	origo, eftersom modellen bär transformen. ]]
 local function anlaggningsbas(): CFrame?
@@ -350,7 +372,7 @@ function JackRigg.placera(hastId: string): (Model?, string?)
 		local ok, skal = pcall(function()
 			local mall = HastVisual.mall(profil)
 			if not mall then return "mallen saknas: ServerStorage.HastVisualer." .. profil end
-			local monterad, m = HastVisual.montera(modell, mall, profil)
+			local monterad, m = HastVisual.montera(modell, mall, profil, dataFor(hastId))
 			return if monterad then nil else m
 		end)
 		if not ok then

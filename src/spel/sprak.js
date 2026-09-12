@@ -257,6 +257,21 @@ const SPRAK = {
      som ser osadlad ut men räknas som sadlad. */
   "tack.kunde_inte_byggas": { sv: "Utrustningen kom inte på plats — försök igen",
     en: "The tack did not go on — try again" },
+  /* UTRUSTNINGEN PÅ BOXFRONTEN. De tre nycklarna lades vid blockerare 5
+     direkt i den GENERERADE `roblox/game/UBRFSprak.luau` och aldrig här.
+     Nästa export tog bort dem igen, och `integration.spec` föll på
+     `Sprak.finns("tack.hamta_forst")` — vilket är precis vad den grinden
+     finns för. Källan är den här filen; det generade följer den. */
+  /* HUD:ENS EGNA KONTROLLER. Växlingen i interaktionspanelen skrevs
+     först som en svensk literal i klientkoden, och den stod kvar på
+     svenska i ett engelskt gränssnitt. Samma regel som all annan
+     spelartext: nyckel i katalogen, inte en sträng i en modul. */
+  "hud.visa_alla": { sv: "Visa alla %d val", en: "Show all %d options" },
+  "hud.visa_mindre": { sv: "Visa mindre", en: "Show less" },
+  "tack.ta_utrustning": { sv: "Ta sadel och träns", en: "Take the saddle and bridle" },
+  "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
+  "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
+    en: "Saddle and bridle hang on the stall front — fetch them first" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 

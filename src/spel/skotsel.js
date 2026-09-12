@@ -40,29 +40,29 @@
    den avslutande fasen: den utförs inte, den LÅSER UPP uppsittningen. */
 const FASER=[
   {id:"halsa",   namn:"Hälsa lugnt",   krav:false, sitt:false,
-   text:"Gå fram från sidan där hon ser dig och säg till innan du rör henne. Aldrig rakt bakifrån.",
+   text:"Gå fram från sidan. Säg hennes namn innan du rör henne.",
    namnEn:"Greet her calmly",
-   textEn:"Walk up from the side where she can see you, and speak to her before you touch her. Never straight from behind."},
+   textEn:"Walk up from the side. Say her name before you touch her."},
   {id:"visitera",namn:"Visitera",      krav:true,  sitt:false,
-   text:"Ögon, mungipor, sadelläge, gjordläge och ben. Hittar du något: säg till ridläraren.",
+   text:"Kolla ögon, mun, sadelläge, gjordläge och ben.",
    namnEn:"Check her over",
-   textEn:"Eyes, corners of the mouth, saddle area, girth area and legs. If you find something: tell the instructor."},
+   textEn:"Check eyes, mouth, saddle area, girth area and legs."},
   {id:"rykta",   namn:"Rykta",         krav:true,  sitt:false,
-   text:"Skrapa, kardborste, mjuk borste. Huvudet bara med den mjuka.",
+   text:"Skrapa, kardborste, mjuk borste. Huvudet bara mjukt.",
    namnEn:"Groom",
-   textEn:"Curry comb, dandy brush, soft brush. The head with the soft brush only."},
+   textEn:"Curry comb, dandy brush, soft brush. Head soft brush only."},
   {id:"iordning",namn:"Gör i ordning", krav:true,  sitt:false,
-   text:"Kratsa alla fyra hovarna, lägg på underlägg och sadel, gjorda i tre tag, träns på sist.",
+   text:"Kratsa alla fyra hovar. Sedan underlägg, sadel, gjord och träns.",
    namnEn:"Get her ready",
-   textEn:"Pick out all four hooves, put on the numnah and saddle, do up the girth in three stages, and bridle her last."},
+   textEn:"Pick out all four hooves. Then numnah, saddle, girth and bridle."},
   {id:"leda",    namn:"Led till ridhuset", krav:true, sitt:false,
-   text:"Led från vänster sida, vid bogen, med tyglarna över halsen. Hon går bredvid dig — inte efter, inte före.",
+   text:"Led från vänster sida, vid bogen. Tyglarna över halsen.",
    namnEn:"Lead her to the arena",
-   textEn:"Lead from her left side, level with her shoulder, with the reins over her neck. She walks beside you — not behind, not in front."},
+   textEn:"Lead from her left side, at her shoulder. Reins over her neck."},
   {id:"sittupp", namn:"Sitt upp",      krav:false, sitt:true,
-   text:"Först nu. Kontrollera gjorden en sista gång och sitt upp från vänster.",
+   text:"Kontrollera gjorden. Sitt upp från vänster.",
    namnEn:"Mount",
-   textEn:"Not until now. Check the girth one last time and mount from the left."},
+   textEn:"Check the girth. Mount from the left."},
 ];
 
 /* ── HÄLSNINGEN ─────────────────────────────────────────────────────
@@ -78,17 +78,17 @@ const FASER=[
    fel som gör ont. */
 const HALSNING=[
   {t:"Framifrån, och säg hennes namn", ratt:true,
-   svar:"Hon lyfter huvudet och ser på dig. Nu vet hon att du är här.",
+   svar:"Bra. Nu vet hon att du är där.",
    tEn:"From the front, saying her name",
-   svarEn:"She lifts her head and looks at you. Now she knows you are here."},
+   svarEn:"Good. Now she knows you are there."},
   {t:"Från sidan vid bogen, med handen på halsen", ratt:true,
-   svar:"Bra. Hon känner handen innan hon ser dig — och du står där hon kan se dig.",
+   svar:"Bra. Handen först, och du står där hon ser dig.",
    tEn:"From the side at her shoulder, with a hand on her neck",
-   svarEn:"Good. She feels your hand before she sees you — and you are standing where she can see you."},
+   svarEn:"Good. Hand first, and you stand where she can see you."},
   {t:"Rakt bakifrån, tyst", ratt:false,
-   svar:"Hon rycker till och slår upp huvudet. Bakifrån ser hon dig inte, och en häst som blir överrumplad sparkar först och tittar sedan.",
+   svar:"Hon skräms. Gå aldrig rakt bakifrån.",
    tEn:"Straight from behind, without a word",
-   svarEn:"She startles and throws her head up. She cannot see you from behind, and a horse that is taken by surprise kicks first and looks afterwards."},
+   svarEn:"She startles. Never approach straight from behind."},
 ];
 
 /* ── HOVARNA ────────────────────────────────────────────────────────
@@ -103,21 +103,21 @@ const HALSNING=[
    src/scen3d.js. */
 const HOVAR=[
   {id:"vf", namn:"Vänster fram",
-   text:"Stå vänd bakåt, stryk ner längs benet och be om foten. Kratsa från trakten mot tån.",
+   text:"Stå vänd bakåt. Stryk ner längs benet och be om foten.",
    namnEn:"Left fore",
-   textEn:"Stand facing her tail, run your hand down the leg and ask for the foot. Pick from the heel towards the toe."},
+   textEn:"Face her tail. Run your hand down the leg and ask for the foot."},
   {id:"vb", namn:"Vänster bak",
-   text:"Håll handen på hennes höft hela vägen ner så hon vet var du är.",
+   text:"Håll handen på höften hela vägen ner.",
    namnEn:"Left hind",
-   textEn:"Keep your hand on her hip the whole way down so she knows where you are."},
+   textEn:"Keep your hand on her hip all the way down."},
   {id:"hb", namn:"Höger bak",
-   text:"Gå runt framför henne, aldrig tätt bakom. Samma grepp på andra sidan.",
+   text:"Gå runt framför henne. Samma grepp på andra sidan.",
    namnEn:"Right hind",
-   textEn:"Walk around in front of her, never close behind her. The same hold on the other side."},
+   textEn:"Walk around in front of her. Same hold on the other side."},
   {id:"hf", namn:"Höger fram",
-   text:"Sista hoven. Titta efter sten i strålfårorna innan du släpper ner foten.",
+   text:"Sista hoven. Leta efter sten innan du släpper ner foten.",
    namnEn:"Right fore",
-   textEn:"The last hoof. Look for stones in the clefts beside the frog before you set the foot down."},
+   textEn:"Last hoof. Look for stones before you set the foot down."},
 ];
 
 /* ── EFTERVÅRDEN ────────────────────────────────────────────────────
@@ -137,25 +137,25 @@ const HOVAR=[
    hästkunskap som resten av filen. */
 const EFTERVARD=[
   {id:"gjord",  namn:"Lossa gjorden",
-   text:"Lossa några hål direkt. Sadeln ligger kvar en stund till — ryggen ska få komma tillbaka långsamt.",
+   text:"Lossa gjorden några hål. Låt sadeln ligga kvar.",
    namnEn:"Loosen the girth",
-   textEn:"Loosen it a few holes straight away. The saddle stays on a while longer — her back should come back slowly."},
+   textEn:"Loosen the girth a few holes. Leave the saddle on."},
   {id:"sadel",  namn:"Ta av sadeln",
-   text:"Sadel och underlägg av. Lägg handen på ryggen: den ska vara jämnt varm, utan ömma fläckar.",
+   text:"Ta av sadel och underlägg. Känn efter ömma fläckar.",
    namnEn:"Take off the saddle",
-   textEn:"Saddle and numnah off. Lay your hand on her back: it should be evenly warm, with no sore spots."},
+   textEn:"Take off saddle and numnah. Feel her back for sore spots."},
   {id:"trans",  namn:"Ta av tränset",
-   text:"Grimma på först, sedan tränset av. Hon ska aldrig stå lös i gången.",
+   text:"Grimma på först, sedan tränset av.",
    namnEn:"Take off the bridle",
-   textEn:"Headcollar on first, then the bridle off. She must never stand loose in the aisle."},
+   textEn:"Headcollar on first, then the bridle off."},
   {id:"ben",    namn:"Känn igenom benen",
-   text:"Nu, medan de är varma. En värme eller svullnad som inte fanns i morse ska ridläraren få veta om.",
+   text:"Känn igenom benen nu, medan de är varma.",
    namnEn:"Feel her legs over",
-   textEn:"Now, while they are still warm. Any heat or swelling that was not there this morning is for the instructor to know about."},
+   textEn:"Feel her legs now, while they are still warm."},
   {id:"vatten", namn:"Vatten och hö",
-   text:"När andningen gått ner. Hö på golvet och rent vatten — och ett tack innan du går.",
+   text:"Ge hö och rent vatten. Säg tack innan du går.",
    namnEn:"Water and hay",
-   textEn:"Once her breathing has settled. Hay on the floor and clean water — and a thank you before you leave."},
+   textEn:"Give hay and clean water. Say thank you before you go."},
 ];
 
 const RYKTZON=[
@@ -169,17 +169,17 @@ const RYKTZON=[
 
 const RYKTREDSKAP=[
   {id:"skrapa",namn:"Gummiskrapa",kort:"cirklar",farg:"#7FB489",
-   text:"Cirklar på musklerna. Aldrig över ben eller huvud.",
+   text:"Cirklar på musklerna. Inte på ben eller huvud.",
    namnEn:"Rubber curry comb", kortEn:"circles",
-   textEn:"Circles on the muscles. Never over legs or head."},
+   textEn:"Circles on the muscles. Not on legs or head."},
   {id:"hard",  namn:"Kardborste", kort:"korta drag",farg:"#D6AE3C",
-   text:"Korta drag med hårets riktning — bakåt.",
+   text:"Korta drag bakåt, med håret.",
    namnEn:"Dandy brush", kortEn:"short strokes",
-   textEn:"Short strokes with the lie of the coat — backwards."},
+   textEn:"Short strokes backwards, with the coat."},
   {id:"mjuk",  namn:"Mjuk borste",kort:"långa drag",farg:"#BFD4DE",
-   text:"Långa drag, hela kroppen och benen.",
+   text:"Långa drag över hela hästen.",
    namnEn:"Soft brush", kortEn:"long strokes",
-   textEn:"Long strokes, the whole body and the legs."},
+   textEn:"Long strokes over the whole horse."},
 ];
 
 /* Vilka redskap varje zon kräver. Huvudet tål bara den mjuka. */
@@ -193,14 +193,14 @@ const RYKTZONNAMN={kropp:"kropp", ben:"ben", huvud:"huvud"};
 const RYKTZONNAMN_EN={kropp:"body", ben:"legs", huvud:"head"};
 
 const SADELFAS=[
-  {t:"Lägg underlägget högt på manken och skjut det bakåt i hårets riktning.",
-   tEn:"Lay the numnah high on the withers and slide it back with the lie of the coat."},
-  {t:"Lägg sadeln lite för långt fram och skjut den bakåt på plats, bakom bogbladet.",
-   tEn:"Set the saddle a little too far forward and slide it back into place, behind the shoulder blade."},
-  {t:"Klicka i sadelbommen och lyft upp underlägget — manken ska vara fri.",
-   tEn:"Fasten the numnah to the saddle and lift it up into the gullet — the withers must be clear."},
-  {t:"Gjorda i tre tag, med en paus emellan. Aldrig allt på en gång.",
-   tEn:"Do up the girth in three stages, with a pause between each. Never all at once."},
+  {t:"Lägg underlägget högt på manken. Skjut det bakåt.",
+   tEn:"Lay the numnah high on the withers. Slide it back."},
+  {t:"Lägg sadeln för långt fram. Skjut den bakåt, bakom bogbladet.",
+   tEn:"Set the saddle too far forward. Slide it back, behind the shoulder."},
+  {t:"Lyft upp underlägget i bommen. Manken ska vara fri.",
+   tEn:"Lift the numnah into the gullet. Keep the withers clear."},
+  {t:"Dra gjorden i tre tag, med paus emellan.",
+   tEn:"Do up the girth in three stages, with a pause between."},
   /* TRÄNSNINGEN. Tillagd 2026-09-11 och redovisad som ett tillägg, inte
      som ett fynd: EFTERVARD har sedan länge ett eget `trans`-moment
      ("Ta av tränset"), medan påtagningen aldrig fanns som steg. Att ta av
@@ -211,39 +211,39 @@ const SADELFAS=[
      Innehållet är allmän hästkunskap, som resten av filen, och ingen
      UBRF-detalj: grimman hålls kvar runt halsen medan tränset träs, och
      bettet tas emot i stället för att tryckas in. */
-  {t:"Träns på sist. Grimman ner runt halsen, bettet mot munnen med tummen i mungipan — vänta tills hon öppnar.",
-   tEn:"Bridle last. Headcollar down around her neck, bit to her mouth with your thumb in the corner — wait until she opens."},
+  {t:"Träns på sist. Tummen i mungipan — vänta tills hon öppnar.",
+   tEn:"Bridle last. Thumb in her mouth corner — wait until she opens."},
 ];
 
 const VISITPUNKT=[
   {id:"ogon", x:0.250,y:0.283, namn:"Ögon och nos",
-   ok:"Klara ögon, torr nos. %N ser dig i ögonen — hon är pigg idag.",
+   ok:"Klara ögon, torr nos.",
    namnEn:"Eyes and nose",
-   okEn:"Clear eyes, dry nose. %N looks you in the eye — she is bright today."},
+   okEn:"Clear eyes, dry nose."},
   {id:"mun",  x:0.267,y:0.330, namn:"Mungiporna",
-   ok:"Mjuka och hela. Bettet har inte skavt sedan sist.",
+   ok:"Mungiporna är hela.",
    namnEn:"Corners of the mouth",
-   okEn:"Soft and unbroken. The bit has not rubbed since last time."},
+   okEn:"The corners of her mouth are sound."},
   {id:"sadel",x:0.560,y:0.335, namn:"Sadelläget",
-   ok:"Slät och sval rygg. %N står still när du trycker — inget ömmar.",
+   ok:"Ryggen är sval och slät.",
    namnEn:"Saddle area",
-   okEn:"Smooth, cool back. %N stands still when you press — nothing is sore."},
+   okEn:"Her back is cool and smooth."},
   {id:"gjord",x:0.500,y:0.560, namn:"Gjordläget",
-   ok:"Ingen svullnad bakom bogen. Huden är len där gjorden ska gå.",
+   ok:"Ingen svullnad bakom bogen.",
    namnEn:"Girth area",
-   okEn:"No swelling behind the shoulder. The skin is smooth where the girth will lie."},
+   okEn:"No swelling behind the shoulder."},
   {id:"ben",  x:0.455,y:0.720, namn:"Benen",
-   ok:"Svala och tunna hela vägen ner. %N lyfter foten innan du hinner be om det.",
+   ok:"Benen är svala och tunna.",
    namnEn:"Legs",
-   okEn:"Cool and clean all the way down. %N lifts the foot before you can even ask."},
+   okEn:"Her legs are cool and clean."},
 ];
 
 const VISITFYND={
-  ogon: "Nosen rinner och ögonen är lite matta.",
-  mun:  "En liten sårskorpa i vänstra mungipan.",
-  sadel:"En varm, öm fläck mitt där sadeln ska ligga.",
-  gjord:"Huden är röd och skavd efter gjorden.",
-  ben:  "Höger framben är varmare än det vänstra.",
+  ogon: "Rinnande nos och matta ögon.",
+  mun:  "Sårskorpa i vänstra mungipan.",
+  sadel:"Varm, öm fläck där sadeln ska ligga.",
+  gjord:"Röd, skavd hud efter gjorden.",
+  ben:  "Höger framben är varmare än vänster.",
 };
 
 /* Fynden på engelska. De är det spelaren LÄSER när hästen inte får gå —
@@ -251,10 +251,10 @@ const VISITFYND={
    kod. Meningen får inte tunnas ut i översättningen: ett fynd ska låta
    lika allvarligt på båda språken. */
 const VISITFYND_EN={
-  ogon: "Her nose is running and her eyes are a little dull.",
-  mun:  "A small scab in the left corner of her mouth.",
-  sadel:"A warm, sore spot right where the saddle goes.",
-  gjord:"The skin is red and rubbed where the girth sits.",
+  ogon: "Runny nose and dull eyes.",
+  mun:  "A scab in her left mouth corner.",
+  sadel:"A warm, sore spot where the saddle goes.",
+  gjord:"Red, rubbed skin where the girth sits.",
   ben:  "The right foreleg is warmer than the left.",
 };
 

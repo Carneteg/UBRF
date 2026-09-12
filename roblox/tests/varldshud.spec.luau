@@ -437,14 +437,74 @@ do
 				m.sikt.x0, m.sikt.y0, m.sikt.x1, m.sikt.y1))
 	end
 
-	--[[ Interaktionspanelen FÅR vara central — det är ordens egen
-		formulering, och den gäller bara medan man håller på. Mäts för att
-		skillnaden mot spåraren ska vara avsiktlig och inte en slump. ]]
+	--[[ ══ INTERAKTIONSPANELEN LIGGER I ETT HÖRN ══════════════════════
+
+		Den här grinden mätte tidigare motsatsen — "interaktionspanelen
+		ligger däremot centralt — tillfälligt, som ordern säger" — och den
+		var grön därför att panelen var 420 x 300 px mitt på nederkanten.
+
+		Tobias order 2026-09-12 ersätter den äldre formuleringen: panelen
+		ska ligga i ett hörn, vara kompakt som standard, och aldrig i onödan
+		skymma häst, ryttare, dörrar, prompter eller vägen framåt.
+
+		Mätningen är därför vänd. "Inte skymma i onödan" görs till ett tal:
+		panelens överlapp med siktrutan får vara högst tre procent av
+		siktrutans yta, på varje skärm familjen faktiskt spelar på. Kant i
+		kant i ett hörn är tillåtet; en panel över hästen är det inte. ]]
+	local function yta(a)
+		return math.max(0, a.x1 - a.x0) * math.max(0, a.y1 - a.y0)
+	end
+	local function overlapp(a, b)
+		local bx = math.max(0, math.min(a.x1, b.x1) - math.max(a.x0, b.x0))
+		local by = math.max(0, math.min(a.y1, b.y1) - math.max(a.y0, b.y0))
+		return bx * by
+	end
+	for _, sk in ipairs(skarmar) do
+		local m = vid(sk.b, sk.h)
+		local del = overlapp(m.interaktion, m.sikt) / math.max(1, yta(m.sikt))
+		check(("interaktionspanelen skymmer nästan inget på %s"):format(sk.namn),
+			del < 0.03,
+			("%.1f %% av siktrutan · panel %d,%d–%d,%d"):format(del * 100,
+				m.interaktion.x0, m.interaktion.y0, m.interaktion.x1, m.interaktion.y1))
+	end
+
 	local mi = vid(1024, 768)
-	check("interaktionspanelen ligger däremot centralt — tillfälligt, som ordern säger",
-		skar(mi.interaktion, mi.sikt),
-		("interaktion %d,%d–%d,%d"):format(mi.interaktion.x0, mi.interaktion.y0,
-			mi.interaktion.x1, mi.interaktion.y1))
+	check("panelen sitter i NEDRE VÄNSTRA hörnet",
+		mi.interaktion.x0 < mi.vpBredd * 0.25
+			and mi.interaktion.y1 > mi.vpHojd * 0.9,
+		("%d,%d–%d,%d av %d×%d"):format(mi.interaktion.x0, mi.interaktion.y0,
+			mi.interaktion.x1, mi.interaktion.y1, mi.vpBredd, mi.vpHojd))
+
+	--[[ INGEN TOM PANEL FÖR ETT KORT MEDDELANDE. Höjden ska följa
+		innehållet, alltså växa när valen fälls ut och krympa när de fälls
+		in. En fast höjd ger samma tal i båda lägena. ]]
+	check("panelen är HOPFÄLLD som standard och visar det val som står på tur",
+		mi.interaktionUt == false and mi.interaktionVisade <= 1,
+		("utfälld %s · %d av %d val visade"):format(tostring(mi.interaktionUt),
+			mi.interaktionVisade, mi.interaktionVal))
+	local hopfalld = mi.interaktion.y1 - mi.interaktion.y0
+
+	--[[ MUTATIONEN: en panel med FAST höjd hade gett samma tal i båda
+		lägena, och då mäter raden ovanför ingenting. Den här jämför de två
+		lägena mot varandra. ]]
+	if ytor.interaktionVaxla and ytor.interaktionVaxla.Visible then
+		PreparationController._vaxlaInteraktion()
+		local mu = PreparationController.layout()
+		check("ett tryck fäller UT den, och panelen växer med innehållet",
+			mu.interaktionUt == true and mu.interaktionVisade > 1
+				and (mu.interaktion.y1 - mu.interaktion.y0) > hopfalld,
+			("%d px utfälld mot %d px hopfälld · %d val"):format(
+				mu.interaktion.y1 - mu.interaktion.y0, hopfalld, mu.interaktionVisade))
+		PreparationController._vaxlaInteraktion()
+		local mk = PreparationController.layout()
+		check("och ett tryck till fäller ihop den igen",
+			mk.interaktionUt == false
+				and (mk.interaktion.y1 - mk.interaktion.y0) == hopfalld,
+			("%d px"):format(mk.interaktion.y1 - mk.interaktion.y0))
+	else
+		check("växlingen finns när det finns mer än ett val", false,
+			"ingen växlingsknapp — vyn hade " .. tostring(mi.interaktionVal) .. " val")
+	end
 
 	cam.ViewportSize = vpFore
 	PreparationController.tillampaLayout()
