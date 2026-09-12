@@ -345,6 +345,10 @@ Sprak.text = {
 		sv = "Lägre gångart",
 		en = "Slower gait",
 	},
+	["hjalp.blick"] = {
+		sv = "Se dig omkring",
+		en = "Look around",
+	},
 	["hjalp.tygel"] = {
 		sv = "Tygel (kontakt)",
 		en = "Rein (contact)",
@@ -397,9 +401,45 @@ Sprak.text = {
 		sv = "▼ LUGNARE",
 		en = "▼ SLOWER",
 	},
+	--[[ Namngivna gångartsknappar för pekskärmen. Gångartsnamnen är
+	     ridtermer och står kvar på svenska även i den engelska raden —
+	     "skritt/trav/galopp" är vad en ryttare säger, och webbens
+	     gångartsetiketter gör likadant. HALT och SAKTA är dock vanliga
+	     ord och översätts. ]]
+	["touch.skritt"] = {
+		sv = "SKRITT",
+		en = "WALK",
+	},
+	["touch.trav"] = {
+		sv = "TRAV",
+		en = "TROT",
+	},
+	["touch.galopp"] = {
+		sv = "GALOPP",
+		en = "CANTER",
+	},
+	["touch.sakta"] = {
+		sv = "SAKTA",
+		en = "SLOWER",
+	},
+	["touch.halt"] = {
+		sv = "HALT",
+		en = "HALT",
+	},
 	["touch.framat"] = {
 		sv = "▲ FRAMÅT",
 		en = "▲ FORWARD",
+	},
+	--[[ Hjälpens pekrader pekar på YTOR, inte på en enskild knapp:
+	     gångarten väljs numera på en av de namngivna knapparna, och
+	     blicken vrids genom att dra på högra halvan av skärmen. ]]
+	["touch.gangartsknappar"] = {
+		sv = "Gångartsknapparna",
+		en = "The gait buttons",
+	},
+	["touch.blickytan"] = {
+		sv = "Dra på högra halvan",
+		en = "Drag on the right half",
 	},
 	["touch.tygel"] = {
 		sv = "TYGEL",

@@ -1025,11 +1025,27 @@ do
 				pad["Högre gångart"] == "R1" and pad["Hoppa"] == "A",
 				('("%s" / "%s")'):format(tostring(pad["Högre gångart"]),
 					tostring(pad["Hoppa"])))
+			--[[ #162 iPad: pekytan har inte längre ▲ FRAMÅT. Gångarten väljs
+			     på en NAMNGIVEN knapp, och hjälpen pekar därför på
+			     knappgruppen. Raden mäter fortfarande samma sak — att
+			     pekenheten får det den faktiskt ser på skärmen. ]]
 			prova("en ren pekenhet får skärmknapparnas egna etiketter",
-				pek["Hoppa"] == "HOPP" and pek["Högre gångart"] == "▲ FRAMÅT"
+				pek["Hoppa"] == "HOPP"
+					and pek["Högre gångart"] == "Gångartsknapparna"
+					and pek["Lägre gångart"] == "SAKTA"
 					and pek["Tygel (kontakt)"] == "TYGEL",
-				('("%s" · "%s")'):format(tostring(pek["Hoppa"]),
-					tostring(pek["Högre gångart"])))
+				('("%s" · "%s" · "%s")'):format(tostring(pek["Hoppa"]),
+					tostring(pek["Högre gångart"]), tostring(pek["Lägre gångart"])))
+
+			--[[ Den fria blicken finns BARA på pekytan. En rad utan reglage
+			     på skrivbordet hade varit en handling spelaren inte kan
+			     utföra; `bara`-fältet i RADER är det som håller den borta. ]]
+			prova("blicken står i pekenhetens hjälp men inte på skrivbordet",
+				pek["Se dig omkring"] == "Dra på högra halvan"
+					and tgb["Se dig omkring"] == nil
+					and pad["Se dig omkring"] == nil,
+				('("%s" · tgb=%s)'):format(tostring(pek["Se dig omkring"]),
+					tostring(tgb["Se dig omkring"])))
 			do
 				--[[ …och ingen rad för touch får bära en ensam versal
 				     bokstav, alltså en tangent. ]]

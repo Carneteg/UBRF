@@ -152,8 +152,17 @@ local RADER = {
 	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
 	{ nyckel = "hjalp.framat_bakat", tgb = "W / S", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
 	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
-	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.framat" },
-	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.lugnare" },
+	--[[ #162 iPad: pekytan har inte längre ▲/▼ som huvudreglage — gångarten
+	     väljs på en NAMNGIVEN knapp (HALT/SKRITT/TRAV/GALOPP). Raderna pekar
+	     därför på knappgruppen i stället för på en knapp som inte ritas
+	     längre; en hjälp som namnger ett reglage spelaren inte kan se är
+	     precis det fel `pek`-kolumnen finns för att undvika. ]]
+	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.gangartsknappar" },
+	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.sakta" },
+	--[[ Blicken finns bara på pekytan: tangentbord och handkontroll har
+	     ingen fri blick i den här kameran, och `bara` håller raden borta
+	     därifrån hellre än att visa en handling utan reglage. ]]
+	{ nyckel = "hjalp.blick", bara = "touch", pek = "touch.blickytan" },
 	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2", pek = "touch.tygel" },
 	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B",  pek = "touch.halvhalt" },
 	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2", pek = "touch.djup_sits" },
@@ -212,12 +221,15 @@ function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 	local sort = KontrollHjalp.inmatning()
 	local ut = {}
 	for _, r in RADER do
-		local reglage =
-			if sort == "tangentbord" then r.tgb
-			elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
-			elseif sort == "touch" then reglageText(r.pek)
-			else ""
-		table.insert(ut, { vad = radText(r), reglage = reglage })
+		--[[ En rad med `bara` hör hemma på EN inmatning. ]]
+		if (r :: any).bara == nil or (r :: any).bara == sort then
+			local reglage =
+				if sort == "tangentbord" then r.tgb
+				elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
+				elseif sort == "touch" then reglageText(r.pek)
+				else ""
+			table.insert(ut, { vad = radText(r), reglage = reglage })
+		end
 	end
 	return ut
 end

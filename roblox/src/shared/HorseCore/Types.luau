@@ -20,6 +20,12 @@ export type Intent = {
 	steer: number,       -- -1..1, vänster..höger
 	gaitUp: boolean,     -- begär högre gångart
 	gaitDown: boolean,
+	--[[ NAMNGIVEN GÅNGART, för pekskärmens SKRITT/TRAV/GALOPP/HALT.
+	     Nil i vanliga fall; då gäller de relativa stegen ovan precis som
+	     förut. Den är en BEGÄRAN om en plats i samma trappa som `gaitUp`
+	     och `gaitDown` stegar i — inte en andra rörelsemodell. Taken i
+	     `_targetGait` gäller lika mycket för den. ]]
+	gaitTo: string?,
 	jump: boolean,
 	--[[ G02-B punkt 1: TYGELN och PARADEN som egna avsikter.
 

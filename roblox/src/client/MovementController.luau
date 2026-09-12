@@ -169,6 +169,20 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	     ta bort det. ]]
 	local index = Gaits.index(self.loco.beddGangart or self.loco.targetGait)
 
+	--[[ ══ NAMNGIVEN GÅNGART (pekskärmens SKRITT/TRAV/GALOPP/HALT) ═════
+
+	     Knappen begär en PLATS i samma trappa som stegen nedan rör sig i.
+	     Den ersätter alltså utgångspunkten, inte systemet: taken, paraden
+	     och uthålligheten nedan gäller exakt som förut, och den relativa
+	     ▼ SAKTA fortsätter vara ett steg neråt.
+
+	     Att den ligger FÖRE stegen är med flit: trycker man SKRITT och
+	     ▲ i samma bildruta menar man skritt och sedan upp. ]]
+	local namngiven = intent.gaitTo
+	if namngiven then
+		index = Gaits.index(namngiven)
+	end
+
 	if intent.gaitUp then index += 1 end
 	if intent.gaitDown then index -= 1 end
 	--[[ PARADEN ÄR EN NEDÅTGÅENDE HJÄLP (G02-B punkt 1), inte bara en
@@ -184,7 +198,19 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	if paradFlank == nil then paradFlank = (intent.parad or 0) > 0 end
 	if paradFlank then index -= 1 end
 
-	if intent.forward > 0.5 and index <= 1 then
+	--[[ HALT-KNAPPEN MÅSTE VINNA ÖVER "W ur halt startar skritt".
+
+	     Raden nedan finns för att ett framåtutslag ur stillastående ska
+	     betyda "gå". På pekskärmen håller tummen ofta kvar spaken när man
+	     trycker HALT med den andra handen, och då hade halten upphävts i
+	     samma bildruta som den begärdes — mätt: ▼ med spaken framme kom
+	     aldrig under skritt.
+
+	     En UTTALAD begäran går före en underförstådd. Den gäller bara den
+	     bildruta knappen trycktes; släpper hon inte spaken ber den om
+	     skritt igen nästa bildruta, vilket är precis vad en skänkel som
+	     ligger kvar ska betyda. ]]
+	if intent.forward > 0.5 and index <= 1 and not namngiven then
 		index = 2                                   -- W ur halt startar skritt
 	elseif intent.forward < -0.5 then
 		index -= 1                                   -- S rullar ned en gångart

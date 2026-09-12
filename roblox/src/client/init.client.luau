@@ -177,7 +177,17 @@ local function mount(model: Model)
 	     spelare vid tangentbordet ska inte få en spak över bilden. De river
 	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
 	     häst man klivit av. ]]
-	TouchControls.mount(Input, { dismount = begarAvsittning })
+	--[[ `blick` går till kameran och INGEN ANNANSTANS: pekytan vrider
+	     bilden, inte hästen. `modell` används bara för att gångartsraden
+	     ska kunna lysa på den gångart hästen faktiskt går i. ]]
+	TouchControls.mount(Input, {
+		dismount = begarAvsittning,
+		blick = function(dYaw, dPitch)
+			local r = ride
+			if r then r.camera:vridBlick(dYaw, dPitch) end
+		end,
+		modell = model,
+	})
 	InteractionController.setEnabled(false)
 	Debug.attach(rig, stats)
 

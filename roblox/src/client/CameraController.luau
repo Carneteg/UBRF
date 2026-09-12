@@ -73,6 +73,23 @@ function CameraController.new(rig: Types.Rig)
 	self.height = 5.2
 	self.fov = Config.CAMERA.BaseFov
 	self.yaw = math.atan2(rig.root.CFrame.LookVector.X, rig.root.CFrame.LookVector.Z)
+	--[[ ══ RYTTARENS EGEN BLICK ════════════════════════════════════════
+
+	     `self.yaw` följer HÄSTENS kurs och ska fortsätta göra det — det
+	     är den som gör att svängar läses som svängar. Det här är ett
+	     TILLÄGG ovanpå den: hur långt ryttaren vridit huvudet i
+	     förhållande till färdriktningen.
+
+	     Att det är en offset och inte en egen kurs är hela poängen:
+	     vrider hästen sig följer bilden med, och ryttaren behåller sin
+	     blickriktning i förhållande till hästen. Den nollställs aldrig av
+	     sig själv — ett släppt finger ska lämna kameran stilla, inte dra
+	     tillbaka den.
+
+	     Den rör BARA kameran. `loco.heading` och styrningen är orörda, så
+	     att titta åt sidan svänger inte hästen. ]]
+	self.lookYaw = 0
+	self.lookPitch = 0
 	self.previousType = self.camera.CameraType
 	self.previousFov = self.camera.FieldOfView
 	self.camera.CameraType = Enum.CameraType.Scriptable
@@ -286,6 +303,24 @@ function CameraController:nollstallLage(orsak: string?): boolean
 	return Kameralage.nollstall(self.lage, orsak)
 end
 
+--[[ ── RYTTARENS BLICK ──────────────────────────────────────────────
+
+     Pekytan drar hit. Båda värdena är RELATIVA — kameran flyttas från
+     där den redan står — så det första fingret på skärmen aldrig kan
+     rycka bilden till ett absolut läge.
+
+     `dYaw` i radianer, `dPitch` i studs som fokuspunkten lyfts. Höjden
+     har ett tak åt båda håll: ryttaren tittar sig omkring, hon tittar
+     inte rakt upp i taket eller rakt ned i marken. ]]
+local BLICK_UPP = 7      -- studs som blicken får lyftas
+local BLICK_NED = 4      -- studs som den får sänkas
+
+function CameraController:vridBlick(dYaw: number, dPitch: number)
+	if dYaw ~= dYaw or dPitch ~= dPitch then return end   -- NaN-vakt
+	self.lookYaw = (self.lookYaw + dYaw + math.pi) % (2 * math.pi) - math.pi
+	self.lookPitch = math.clamp(self.lookPitch + dPitch, -BLICK_NED, BLICK_UPP)
+end
+
 function CameraController:step(loco: Types.Locomotion, dt: number)
 	local gait = Gaits.get(loco.gait)
 	local C = Config.CAMERA
@@ -308,7 +343,10 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 	local w = math.clamp(KL.vikt, 0, 1)
 	local yawTau = S.YawTau + (C.YawTau - S.YawTau) * w
 	self.yaw = smoothAngle(self.yaw, loco.heading, yawTau, dt)
-	local heading = self.yaw
+	--[[ Ryttarens blick läggs på hästens kurs EFTER utjämningen: annars
+	     hade utjämningen dragit tillbaka den mot hästens kurs och
+	     blicken hade glidit iväg av sig själv. ]]
+	local heading = self.yaw + self.lookYaw
 	local framat = Vector3.new(math.sin(heading), 0, math.cos(heading))
 	local back = -framat
 	local right = Vector3.new(math.cos(heading), 0, -math.sin(heading))
@@ -324,7 +362,11 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 	local bomBak = if KL.yaw ~= 0
 		then Vector3.new(-math.sin(heading + KL.yaw), 0, -math.cos(heading + KL.yaw))
 		else back
-	local bomFokus = root.Position + Vector3.new(0, 2, 0) + framat * (C.LookAhead * KL.blick)
+	--[[ Blickens höjd. `lookPitch` är studs som fokuspunkten lyfts eller
+	     sänks — inte en vinkel — så att den verkar likadant oavsett hur
+	     långt bak bommen råkar ligga i gångarten. ]]
+	local bomFokus = root.Position + Vector3.new(0, 2 + self.lookPitch, 0)
+		+ framat * (C.LookAhead * KL.blick)
 	local bomLage = root.Position + bomBak * self.dist + Vector3.new(0, self.height, 0) + trail
 
 	--[[ Håll bommen ur väggar: en strålkastning från hästen ut mot
@@ -358,7 +400,8 @@ function CameraController:step(loco: Types.Locomotion, dt: number)
 		--[[ Blicken siktar framåt och något nedåt, så att både hästens hals
 		     och vägen framför henne ligger i bild. Fallet är litet — en
 		     ryttare tittar dit hon ska, inte ner i manen. ]]
-		local sadelFokus = sadelLage + framat * S.LookAhead - Vector3.new(0, S.Fall, 0)
+		local sadelFokus = sadelLage + framat * S.LookAhead
+			- Vector3.new(0, S.Fall - self.lookPitch, 0)
 		lage = sadelLage:Lerp(bomLage, vb)
 		fokus = sadelFokus:Lerp(bomFokus, vb)
 		fov = S.Fov + (self.fov - S.Fov) * vb
