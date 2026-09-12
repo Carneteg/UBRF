@@ -578,7 +578,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
     #[[ Hojdspecen bygger RIKTIGA riggar i tre storlekar och kor
     #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
-    if "hasthojd" in spec_rel:
+    if "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"

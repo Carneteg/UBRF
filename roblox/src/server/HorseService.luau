@@ -377,6 +377,151 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 	return true, nil
 end
 
+--[[ ══ AVSITTNINGENS PLATS ════════════════════════════════════════════
+
+	══ VAD SOM MÄTTES ════════════════════════════════════════════════
+
+	Avsittningen skrev `character:PivotTo(...)` 4,5 studs åt vänster och
+	3 studs upp. Uppmätt i Studio efteråt, både mitt på öppen ridbana och
+	intill sargen:
+
+	    hästen (399.94 3.36 280.00) · ryttaren (400.00 7.59 280.00)
+	    sidsteg 0.06 studs · höjd över hästroten +4.24 · Floor Plastic
+
+	Hon stod alltså PÅ HÄSTRYGGEN — `FloorMaterial` var hästen själv.
+	Flytten tog inte, och det är en tidsfråga och ingen räknefråga:
+	`Humanoid.Sit = false` reser henne inte i samma bildruta. Så länge
+	`seat.Occupant` fortfarande pekar på henne äger sitsen hennes läge, och
+	Roblox skriver tillbaka det efter vår `PivotTo`. Att riva `SeatWeld`
+	själv hjälper inte — sitsen gör en ny så länge occupanten sitter kvar.
+
+	══ VAD SOM GÖRS I STÄLLET ════════════════════════════════════════
+
+	Platsen räknas ur HÄSTENS EGEN GEOMETRI — aldrig ur en världskoordinat
+	— och prövas mot marken och mot det som står i vägen innan hon
+	placeras. Sedan placeras hon TVÅ gånger: en gång direkt, och en gång
+	till när sitsen faktiskt har släppt. Den andra är den som håller.
+
+	Vänster först, för det är så man sitter av. Är vänster sidan upptagen
+	tas höger, och därefter går listan utåt från vänstersidan — snett bak,
+	snett fram, rakt bak — vilket ÄR regeln "närmaste säkra läge". ]]
+
+--[[ Fri luft mellan ryttarens kropp och hästens, i studs. ]]
+local AVSITT_MARGINAL = 0.6
+--[[ Marksökningen börjar så här högt över kandidatpunkten och går så här
+	långt ned. Taket måste vara högre än ett trappsteg och lägre än en
+	läktarrad, annars hittas fel golv. ]]
+local AVSITT_TAK, AVSITT_DJUP = 6, 24
+--[[ Marken vid avsittningen får skilja så här mycket från marken under
+	hästen. Utan gränsen kunde hon sättas av ned i ett dike eller upp på
+	en sarg som råkade ligga i strålens väg. ]]
+local AVSITT_FALL = 5
+--[[ Lådan som prövas mot hinder är ryttarens rotdel plus lite luft: en
+	fot får inte nöta mot en boxfront, och huvudet inte mot en kappregel. ]]
+local AVSITT_LADA = Vector3.new(0.4, 1.6, 0.4)
+--[[ Så många bildrutor väntar den andra placeringen på att sitsen ska
+	släppa. Ett tak och inte en klocka: en spec har ingen riktig tid. ]]
+local AVSITT_VANTA = 30
+
+--[[ Kandidatriktningar i HÄSTENS EGET RUM: x åt höger, z bakåt. Inga
+	världskoordinater — vänder hästen sig vänder platserna med henne. ]]
+local AVSITT_RIKTNINGAR: { { number } } = {
+	{ -1, 0 },              -- vänster: så man sitter av
+	{ 1, 0 },               -- höger: när vänster är blockerad
+	{ -1, 1 }, { 1, 1 },    -- snett bakom
+	{ -1, -1 }, { 1, -1 },  -- snett framför
+	{ 0, 1 },               -- rakt bakom
+}
+
+local function markhojd(p: Vector3, utanfor: { Instance }): number?
+	local rp = RaycastParams.new()
+	rp.FilterType = Enum.RaycastFilterType.Exclude
+	rp.FilterDescendantsInstances = utanfor
+	--[[ Bara det som BÄR duger som mark. Ridbanans sand är ett dekorlager
+		utan kollision — se `Markkontakt` — och att sätta av på den vore
+		att sätta av i luften. ]]
+	rp.RespectCanCollide = true
+	local traff = workspace:Raycast(p + Vector3.new(0, AVSITT_TAK, 0),
+		Vector3.new(0, -AVSITT_DJUP, 0), rp)
+	return if traff then traff.Position.Y else nil
+end
+
+local function ledigt(cf: CFrame, storlek: Vector3, utanfor: { Instance }): boolean
+	local op = OverlapParams.new()
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = utanfor
+	for _, d in ipairs(workspace:GetPartBoundsInBox(cf, storlek, op)) do
+		if d.CanCollide then return false end
+	end
+	return true
+end
+
+--[[ Var ryttaren ska hamna. Publik för att provet ska kunna läsa SAMMA
+	räkning som avsittningen använder — två räkningar kan glida isär.
+
+	Svarar också VILKEN regel som gav platsen, så ett prov kan skilja
+	"vänster var fri" från "vänster var blockerad" utan att gissa ur
+	koordinater. ]]
+function HorseService._avsittningsplats(modell: Model, karaktar: Model): (CFrame?, string?)
+	local rot = modell.PrimaryPart or modell:FindFirstChild("HumanoidRootPart")
+	local krot = karaktar:FindFirstChild("HumanoidRootPart")
+	local hum = karaktar:FindFirstChildOfClass("Humanoid")
+	if not (rot and rot:IsA("BasePart") and krot and krot:IsA("BasePart") and hum) then
+		return nil, "avsitt.ingen_kropp"
+	end
+
+	local ut = math.max(krot.Size.X, krot.Size.Z) / 2 + AVSITT_MARGINAL
+	--[[ HÄSTEN ÄR ETT HINDER, inte ett golv. Hon undantas därför ur
+		marksökningen — annars blir hennes egen rygg "mark" — men INTE ur
+		hinderprövningen, som är hela poängen med att inte hamna i henne. ]]
+	local utanKar: { Instance } = { karaktar }
+	local utanBada: { Instance } = { karaktar, modell }
+	local hastMark = markhojd(rot.Position, utanBada)
+
+	--[[ Två varv: första kräver fri plats, andra nöjer sig med mark.
+		Andra varvet finns för att hon ALDRIG ska bli kvar på ryggen —
+		står hon trångt får Roblox knuffa ut henne, och det är bättre än
+		att hon blir stående ovanpå hästen. ]]
+	for varv = 1, 2 do
+		for _, r in ipairs(AVSITT_RIKTNINGAR) do
+			local lokal = CFrame.new(
+				r[1] * (rot.Size.X / 2 + ut), 0, r[2] * (rot.Size.Z / 2 + ut))
+			local punkt = (rot.CFrame * lokal).Position
+			local mark = markhojd(punkt, utanBada)
+			local rimlig = mark ~= nil
+				and (hastMark == nil or math.abs(mark - hastMark) <= AVSITT_FALL)
+			if rimlig then
+				local y = (mark :: number) + krot.Size.Y / 2 + hum.HipHeight
+				local cf = CFrame.lookAt(Vector3.new(punkt.X, y, punkt.Z),
+					Vector3.new(rot.Position.X, y, rot.Position.Z))
+				if varv == 2 or ledigt(cf, krot.Size + AVSITT_LADA, utanKar) then
+					local skal = if varv == 2 then "avsitt.trangt"
+						elseif r[1] < 0 and r[2] == 0 then "avsitt.vanster"
+						elseif r[1] > 0 and r[2] == 0 then "avsitt.hoger"
+						else "avsitt.narmaste"
+					return cf, skal
+				end
+			end
+		end
+	end
+	return nil, "avsitt.ingen_plats"
+end
+
+local function stallAv(modell: Model, karaktar: Model)
+	local krot = karaktar:FindFirstChild("HumanoidRootPart")
+	if not (krot and krot:IsA("BasePart")) then return end
+	local cf = HorseService._avsittningsplats(modell, karaktar)
+	if not cf then
+		warn(("[Horse] Ingen fri avsittningsplats vid %s"):format(modell.Name))
+		return
+	end
+	karaktar:PivotTo(cf)
+	--[[ FARTEN NOLLAS. Ryttaren har hästens hastighet i kroppen när hon
+		lossnar, och en flytt utan nollning slänger iväg henne. ]]
+	krot.AssemblyLinearVelocity = Vector3.zero
+	krot.AssemblyAngularVelocity = Vector3.zero
+end
+
 function HorseService.dismount(player: Player): boolean
 	local model = byRider[player]
 	if not model then return false end
@@ -402,21 +547,60 @@ function HorseService.dismount(player: Player): boolean
 			if weld then weld:Destroy() end
 		end
 	end
+	if humanoid then
+		humanoid.PlatformStand = false
+	end
+
+	--[[ TILLSTÅNDET STÄDAS FÖRE KROPPEN PLACERAS.
+
+		`setRider(session, nil)` nollar `byRider`, `RiderUserId` och
+		nätverksägaren. Den låg förut SIST, efter placeringen, och det gjorde
+		den fördröjda placeringen nedan omöjlig att lita på: `task.spawn`
+		börjar köra direkt, alltså mitt i den här funktionen, och dess vakt
+		"har hon hunnit sätta sig igen?" läste då ett `byRider` som
+		fortfarande pekade på hästen hon just klev av. Vakten sa ja varje
+		gång och placeringen hoppades över.
+
+		Ordningen är dessutom den riktigare: vem som rider vad är ett
+		LOGISKT tillstånd, var kroppen står är ett fysiskt. Det logiska ska
+		vara sant först. ]]
+	setRider(session, nil)
+
 	if character then
 		local root = character:FindFirstChild("HumanoidRootPart")
 		if root then
 			local weld = root:FindFirstChild("HorseMount")
 			if weld then weld:Destroy() end
-			-- Sätt av åt vänster, som man gör i verkligheten.
-			local side = session.rig.root.CFrame * CFrame.new(-4.5, 0, 0)
-			character:PivotTo(CFrame.new(side.Position + Vector3.new(0, 3, 0)))
 		end
+		local modell = session.rig.model
+		local seat = session.rig.seat
+		--[[ Direkt, så att den som mäter i samma bildruta ser rätt läge. ]]
+		stallAv(modell, character)
+		--[[ OCH EN GÅNG TILL NÄR SITSEN FAKTISKT HAR SLÄPPT. Den andra
+			gången är den som håller: så länge `seat.Occupant` pekar på
+			ryttaren äger sitsen hennes läge och skriver tillbaka det efter
+			vår flytt. Se noten vid `AVSITT_MARGINAL`. ]]
+		task.spawn(function()
+			for _ = 1, AVSITT_VANTA do
+				local kvar = (humanoid ~= nil and humanoid.Sit)
+					or (seat ~= nil and humanoid ~= nil and seat.Occupant == humanoid)
+				if not kvar then break end
+				task.wait()
+			end
+			--[[ Hann karaktären eller hästen försvinna under väntan är det
+				inget kvar att placera — avsittningen kan ha kommit ur
+				`CharacterRemoving`. ]]
+			if not (character.Parent and modell.Parent) then return end
+			--[[ OCH HANN HON SÄTTA SIG IGEN ÄR HON INTE VÅR ATT FLYTTA.
+				En halv sekund räcker gott för att kliva upp på nästa häst,
+				och en sen placering hade då ryckt ner henne på marken
+				mitt i uppsittningen. Två frågor, båda om NUET: sitter hon
+				på något, och är hon registrerad som ryttare någonstans. ]]
+			if humanoid and humanoid.Sit then return end
+			if byRider[player] then return end
+			stallAv(modell, character)
+		end)
 	end
-	if humanoid then
-		humanoid.PlatformStand = false
-	end
-
-	setRider(session, nil)
 	return true
 end
 
