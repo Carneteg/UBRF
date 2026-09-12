@@ -204,6 +204,42 @@ export type Led = {
 local ledd: { [Player]: Led } = {}
 local hakar: { [string]: (Player, Led) -> () } = {}
 
+--[[ ══ DET UPPNÅDDA ÖVERLEVER KOPPLET ═══════════════════════════════════
+
+	`lamnatBox` och `malNatt` är inte kopplets tillstånd — de är sådant som
+	HÄNT och inte kan hända ogjort. De låg ändå bara i `ledd[player]`, och
+	`slapp` tömmer den posten. Att leda hästen hela vägen till ridhuset och
+	sedan släppa kopplet — alltså det spelaren faktiskt gör när hon är
+	framme — nollade därför beviset för att hon varit framme.
+
+	Mätt i runtime: hästen stod i målzonen (`iRekt` = true på
+	(419,1 · 257,0)), men `harLamnatBox` och `harNattMal` svarade båda
+	false efter `LedSlapp`, och `PreparationMoment("leda")` svarade
+	`led.kvar_i_boxen` — "kvar i boxen" om en häst som står i ridhuset.
+
+	Därför bokförs det uppnådda här, per spelare OCH per häst. Per häst
+	för att en ny häst ska börja om från noll: byter spelaren häst är det
+	en ny ledning som ska gå hela vägen igen. ]]
+type Uppnatt = { hastId: string, lamnatBox: boolean, malNatt: boolean }
+local uppnatt: { [Player]: Uppnatt } = {}
+
+local function noteraUppnatt(player: Player, hastId: string, falt: string)
+	local u = uppnatt[player]
+	if not u or u.hastId ~= hastId then
+		u = { hastId = hastId, lamnatBox = false, malNatt = false }
+		uppnatt[player] = u
+	end
+	(u :: any)[falt] = true
+end
+
+--[[ Har spelaren uppnått det här med DEN HÄR hästen? `hastId` är nil när
+	frågan gäller "vilken häst som helst", vilket är vad de publika
+	frågorna nedan gör: de känner bara spelaren. ]]
+local function harUppnatt(player: Player, falt: string): boolean
+	local u = uppnatt[player]
+	return u ~= nil and (u :: any)[falt] == true
+end
+
 --[[ ── Koordinater ──────────────────────────────────────────────────
 	Samma omräkning som BuildKit.tomtkoord, men utan att kräva
 	anläggningens bas: världen byggs alltid med tomtens origo i (0, 0,
@@ -244,12 +280,14 @@ end
 	att hon råkar backa tillbaka en halvmeter. ]]
 function LedService.harLamnatBox(player: Player): boolean
 	local l = ledd[player]
-	return l ~= nil and l.lamnatBox
+	if l ~= nil and l.lamnatBox then return true end
+	return harUppnatt(player, "lamnatBox")
 end
 
 function LedService.harNattMal(player: Player): boolean
 	local l = ledd[player]
-	return l ~= nil and l.malNatt
+	if l ~= nil and l.malNatt then return true end
+	return harUppnatt(player, "malNatt")
 end
 
 --[[ Målzonen. Sätts av den som äger gameplayet (GameplayService) så att
@@ -644,11 +682,13 @@ local function steg(_dt: number)
 			local x, y = tomt(pivot.Position)
 			if math.sqrt((x - l.boxX) ^ 2 + (y - l.boxY) ^ 2) > 2.5 then
 				l.lamnatBox = true
+				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
 			end
 		end
 		if malzon and not l.malNatt and LedService.iRekt(pivot.Position, malzon) then
 			l.malNatt = true
+			noteraUppnatt(player, l.hastId, "malNatt")
 			LedService._sync(player)
 		end
 
@@ -884,6 +924,10 @@ function LedService.start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		if ledd[player] then LedService.slapp(player, "led.tappad") end
+		--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
+			Lämnas den kvar läcker den, och nästa spelare på samma
+			Player-objekt hade ärvt någon annans framsteg. ]]
+		uppnatt[player] = nil
 	end)
 
 	RunService.Heartbeat:Connect(steg)
@@ -910,6 +954,7 @@ end
 --[[ För specar: nollställ utan att röra spelare. ]]
 function LedService._glomForProv()
 	for p in pairs(ledd) do ledd[p] = nil end
+	for p in pairs(uppnatt) do uppnatt[p] = nil end
 	malzon = nil
 end
 
