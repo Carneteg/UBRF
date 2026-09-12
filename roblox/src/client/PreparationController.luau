@@ -325,6 +325,39 @@ local function textrader(text: string, bredd: number): number
 	return math.max(1, math.ceil(tecken / perRad))
 end
 
+--[[ ══ ROBLOX EGNA PEKREGLAGE ═══════════════════════════════════════
+
+	Tobias produktbeslut: spelaren ska KUNNA GÅ medan skötseln pågår, och
+	skötselpanelen ska därför flytta på sig i stället för att reglagen
+	stängs av.
+
+	Panelen låg på `x = MARGINAL`, alltså nere till vänster — precis där
+	Robloxs dynamiska spak bor. Mätt på iPad i landskap:
+
+	    Interaktion      x  12..328   y 638..749
+	    ThumbstickStart  x  58..206   y 575..723
+
+	Knapparna låg alltså ovanpå spaken. Måtten läses ur `TouchGui` i
+	stället för att skrivas av: spaken flyttar sig mellan enheter, och ett
+	tal här hade blivit fel på nästa skärm. Finns inga pekreglage — hela
+	skrivbordet — är svaret noll och layouten är oförändrad. ]]
+local function pekreglagensKanter(): (number, number)
+	local pg = player and player:FindFirstChildOfClass("PlayerGui")
+	local tg = pg and pg:FindFirstChild("TouchGui")
+	if not tg then return 0, math.huge end
+	local spak = tg:FindFirstChild("ThumbstickStart", true)
+	local hopp = tg:FindFirstChild("JumpButton", true)
+	local hoger = 0
+	if spak and spak:IsA("GuiObject") and spak.Visible then
+		hoger = spak.AbsolutePosition.X + spak.AbsoluteSize.X
+	end
+	local vanster = math.huge
+	if hopp and hopp:IsA("GuiObject") and hopp.Visible then
+		vanster = hopp.AbsolutePosition.X
+	end
+	return hoger, vanster
+end
+
 local function interaktionsLayout(antalVal: number, rader: number,
 	ut: boolean): { [string]: number }
 	local B, H = viewport()
@@ -350,9 +383,21 @@ local function interaktionsLayout(antalVal: number, rader: number,
 		listHojd = math.max(PreparationController.TRAFFYTA, listHojd - (hojd - tak))
 		hojd = 2 * INNER + textHojd + GAP + listHojd + vaxling
 	end
+	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger` noll
+		och raden ger `MARGINAL` — samma läge som förut. ]]
+	local spakHoger, hoppVanster = pekreglagensKanter()
+	local x = MARGINAL
+	if spakHoger > 0 then
+		x = math.max(MARGINAL, spakHoger + MARGINAL)
+		--[[ Och aldrig in i hoppknappen. Får panelen inte plats mellan de
+			två krymper den hellre än lägger sig över något. ]]
+		local hogerTak = math.min(B - MARGINAL, hoppVanster - MARGINAL)
+		if x + bredd > hogerTak then
+			bredd = math.max(120, hogerTak - x)
+		end
+	end
 	return { bredd = bredd, hojd = hojd, vpBredd = B, vpHojd = H,
-		--[[ NERE TILL VÄNSTER. ]]
-		x = MARGINAL, y = H - MARGINAL - hojd,
+		x = x, y = H - MARGINAL - hojd,
 		textHojd = textHojd, listHojd = listHojd, visade = visade,
 		vaxling = vaxling }
 end
