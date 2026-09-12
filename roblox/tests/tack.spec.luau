@@ -201,6 +201,51 @@ do
 	check("och hon är därmed inte ridklar", not TackService.ridklar(hast))
 end
 
+print("")
+print("── Avtagningen lämnar ingenting kvar ──")
+
+do
+	--[[ Hittat i den kanoniska genomspelningen efter blockerare 5, inte av
+		ett prov: tränset revs och sattes på igen, och hästen bar 14 delar
+		i stället för 13. Höger tygel var svetsad i HUVUDET i stället för i
+		vänster tygel, och `taAv` river bara den bärande delen plus det som
+		sitter i HENNE. Den överlevde alltså varje avtagning och blev kvar
+		hängande vid munnen.
+
+		Provet räknar delar över en hel av-och-på-cykel. Ett antal som
+		VÄXER är det enda som skiljer "allt följde med" från "något blev
+		kvar" — en typkontroll hade sagt ja åt båda. ]]
+	nollstall()
+	for _, typ in ipairs({ "underlagg", "sadel", "trans" }) do
+		TackService.satPa(spelare, hast, typ, nil, hast)
+	end
+	local function antal()
+		local f = hast:FindFirstChild("Tack")
+		return f and #f:GetChildren() or 0
+	end
+	local fullt = antal()
+	check("full utrustning är ett bestämt antal delar", fullt > 0, tostring(fullt))
+
+	TackService.taAv(spelare, hast, "trans")
+	local utan = antal()
+	check("tränset av -> inget träns och inga tyglar kvar",
+		not TackService.transad(hast) and TackRigg.hittaDel(hast, "tygel") == nil,
+		("%d delar kvar"):format(utan))
+	local kvarTygel = 0
+	for _, d in ipairs((hast:FindFirstChild("Tack") or hast):GetChildren()) do
+		if d:IsA("BasePart") and d.Name == "Tygel" then kvarTygel += 1 end
+	end
+	check("ingen ensam tygel hänger kvar vid munnen", kvarTygel == 0,
+		("%d tyglar kvar"):format(kvarTygel))
+
+	TackService.satPa(spelare, hast, "trans", nil, hast)
+	check("tränset på igen ger SAMMA antal delar, inte fler",
+		antal() == fullt, ("%d -> %d -> %d"):format(fullt, utan, antal()))
+
+	TackService.taAvAllt(hast)
+	check("allt av lämnar ingenting kvar", antal() == 0, ("%d delar"):format(antal()))
+end
+
 print("\n── Negativa fall ──")
 
 do

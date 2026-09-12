@@ -200,13 +200,26 @@ function TackRigg.byggTyglar(modell: Model, rig: Types.Rig, hastId: string): Bas
 	local hogerA = RigAdapter.tackfaste(rig, "tygelH")
 	if not (vansterA and hogerA and vard) then return nil end
 	local f = TackRigg.mapp(modell, true) :: Folder
+	--[[ HÖGER TYGEL SVETSAS I VÄNSTER, inte i huvudet.
+
+		Fysiskt är det samma sak — vänster tygel sitter i sin tur i huvudet
+		— men `taAv` river en typ genom att ta den BÄRANDE delen och allt
+		utan eget `UBRFTack` som är svetsat i HENNE. Satt höger tygel i
+		huvudet blev den aldrig upphämtad: den överlevde avtagningen och
+		hängde kvar i luften vid hästens mun, och nästa tränsning byggde
+		ett nytt par ovanpå den.
+
+		Hittat i den kanoniska genomspelningen efter blockerare 5, när
+		tränset revs och sattes på igen: 13 delar in, 14 delar ut. ]]
 	local forsta: BasePart? = nil
 	for _, a in ipairs({ vansterA, hogerA }) do
 		local tygel = del(f, "Tygel",
 			Vector3.new(0.03 * M, 0.03 * M, 0.70 * M),
 			a.WorldCFrame * CFrame.new(0, 0.04 * M, 0.36 * M), LADER_MORK)
-		svets(vard, tygel, "TackWeld")
-		if not forsta then
+		if forsta then
+			svets(forsta, tygel, "TackWeld")
+		else
+			svets(vard, tygel, "TackWeld")
 			forsta = tygel
 			tygel:SetAttribute("UBRFTack", "tygel")
 			tygel:SetAttribute("ForHast", hastId)

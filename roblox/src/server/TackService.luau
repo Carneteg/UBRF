@@ -216,11 +216,23 @@ function TackService.taAv(player: Player, modell: Model?, typ: string): (boolean
 	return true
 end
 
---[[ Allt av, i kanonordning. Används när passet avslutas. ]]
+--[[ Allt av, i kanonordning. Används när passet avslutas.
+
+	SVEPET PÅ SLUTET är inte ett bälte till hängslena utan en rättelse.
+	`TackRigg.taAv` river en typ genom att ta den BÄRANDE delen och det som
+	är svetsat i henne. Har den bärande delen försvunnit på något annat
+	sätt — ett halvt bygge som städades, en rigg som byttes — hittar den
+	ingenting, och sadelns valv, gjord och stigbyglar blir kvar hängande på
+	en häst som spelet påstår är avsadlad.
+
+	Funktionen heter ALLT av. Då ska den betyda det, och det enda sättet
+	att mena det är att mappen är tom efteråt. ]]
 function TackService.taAvAllt(modell: Model)
 	for _, typ in ipairs({ "tygel", "trans", "sadel", "underlagg" }) do
 		pcall(function() TackRigg.taAv(modell, typ) end)
 	end
+	local f = TackRigg.mapp(modell)
+	if f then f:Destroy() end
 end
 
 Players.PlayerRemoving:Connect(function(player)
