@@ -28,6 +28,8 @@ local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 
 local Sprak = require(ReplicatedStorage.HorseCore.Sprak)
+local Stallet = require(ReplicatedStorage.Stallet)
+local PreparationController = require(script.Parent.PreparationController)
 
 local DinHast = {}
 
@@ -222,50 +224,78 @@ function DinHast.satDold(v: boolean)
 	dold = v
 end
 
+--[[ ── VARIFRÅN SVARET KOMMER ──────────────────────────────────────
+
+	Det stod först en `MinHast:InvokeServer()` här. Den HÄNGDE i
+	flerspelarläge: anropet återvände aldrig, `dagens` blev aldrig satt,
+	och varken raden eller skylten byggdes. Mätt med två spelare inne —
+	skylten saknades helt hos båda.
+
+	Den behövdes inte heller. Klienten har redan allt:
+
+	  · `PreparationController` får hästens id i sin vanliga vy,
+	  · namnet står på modellen i världen,
+	  · `Stallet` ligger i ReplicatedStorage och räknar boxnumret ur
+	    samma data som servern använder.
+
+	Ingen rundtur, inget att hänga på, och ett svar som kommer lika fort
+	som förberedelsevyn. ]]
+local function lasAssignment(): boolean
+	local id = PreparationController.hastId()
+	if type(id) ~= "string" then return false end
+	if dagens and dagens.id == id then return true end
+	local modell = hastModell(id)
+	local namn = modell and (modell:GetAttribute("HorseName") or modell.Name) or id
+	local ok, nummer = pcall(function() return Stallet.boxNummerFor(id) end)
+	dagens = { id = id, namn = namn, box = if ok then nummer else nil }
+
+	local rad = hudRad
+	if rad then
+		rad.Text = if dagens.box
+			then Sprak.t("stall.idag_rider_du", tostring(namn), tostring(dagens.box))
+			else Sprak.t("stall.idag_rider_du_utan_box", tostring(namn))
+	end
+	if modell then byggSkylt(modell) end
+	slackAndrasMarkorer()
+	return true
+end
+
 function DinHast.start()
 	byggHud()
-	task.spawn(function()
-		local fraga = ReplicatedStorage:WaitForChild("MinHast", 30)
-		if not fraga then return end
-		--[[ Servern svarar nil tills sparfilen landat — se `MinHast`. Då
-			frågar vi igen i stället för att ge upp. ]]
-		for _ = 1, 60 do
-			local ok, svar = pcall(function()
-				return (fraga :: RemoteFunction):InvokeServer()
-			end)
-			if ok and type(svar) == "table" and svar.id then
-				dagens = svar
-				break
-			end
-			task.wait(1)
+	--[[ Andra spelares boxmarkörer dyker upp när DE kommer in, alltså
+		också efter att vi själva är igång. Att bara släcka en gång vid
+		start hade missat varje spelare som anslöt senare. ]]
+	workspace.ChildAdded:Connect(function(inst)
+		if inst.Name:sub(1, 10) == "Boxmarkor_" then
+			task.defer(slackAndrasMarkorer)
 		end
-		if not dagens then return end
+	end)
 
-		local rad = hudRad
-		if rad then
-			local box = dagens.box and dagens.box.nummer
-			rad.Text = if box
-				then Sprak.t("stall.idag_rider_du", tostring(dagens.namn), tostring(box))
-				else Sprak.t("stall.idag_rider_du_utan_box", tostring(dagens.namn))
+	if loop then loop:Disconnect() end
+	local sedan, sedanSvep = 0, 0
+	loop = RunService.Heartbeat:Connect(function(dt)
+		sedan += dt
+		sedanSvep += dt
+		--[[ `ChildAdded` ensam räckte inte: markörerna rivs och byggs om
+			när servern delar ut hästar, och en markör som återskapades i
+			samma bildruta som vårt första svep blev kvar tänd. Mätt med två
+			spelare inne — Player2 såg fortfarande Player1:s prompt.
+
+			Ett svep i sekunden är billigt och självläkande, och gör
+			ordningen mellan spelarnas inloggning likgiltig. ]]
+		if sedanSvep >= 1 then
+			sedanSvep = 0
+			slackAndrasMarkorer()
 		end
-
-		local modell = hastModell(dagens.id)
-		if modell then byggSkylt(modell) end
-		slackAndrasMarkorer()
-
-		if loop then loop:Disconnect() end
-		local sedan = 0
-		loop = RunService.Heartbeat:Connect(function(dt)
-			sedan += dt
-			--[[ Fem gånger i sekunden räcker för ett avståndsmått. ]]
-			if sedan < 0.2 then return end
-			sedan = 0
-			if not skylt and dagens then
-				local m = hastModell(dagens.id)
-				if m then byggSkylt(m) end
-			end
-			steg()
-		end)
+		--[[ Fem gånger i sekunden räcker för ett avståndsmått. ]]
+		if sedan < 0.2 then return end
+		sedan = 0
+		if not lasAssignment() then return end
+		if not skylt and dagens then
+			local m = hastModell(dagens.id)
+			if m then byggSkylt(m) end
+		end
+		steg()
 	end)
 end
 
