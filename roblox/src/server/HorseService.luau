@@ -507,6 +507,34 @@ function HorseService._avsittningsplats(modell: Model, karaktar: Model): (CFrame
 	return nil, "avsitt.ingen_plats"
 end
 
+local STANNA_HJARTSLAG = 8
+
+local function stannaHast(session: Session)
+	local hum = session.rig.humanoid
+	local root = session.rig.root
+	local function noll()
+		if hum and hum.Parent then
+			hum.WalkSpeed = 0
+			hum:Move(Vector3.zero, false)
+			hum.Jump = false
+		end
+		if root.Parent then
+			root.AssemblyLinearVelocity = Vector3.zero
+			root.AssemblyAngularVelocity = Vector3.zero
+		end
+	end
+	noll()
+	session.rig.model:SetAttribute("Gait", "halt")
+	session.rig.model:SetAttribute("Speed", 0)
+	task.spawn(function()
+		for _ = 1, STANNA_HJARTSLAG do
+			RunService.Heartbeat:Wait()
+			if session.rider ~= nil then return end
+			noll()
+		end
+	end)
+end
+
 local function stallAv(modell: Model, karaktar: Model)
 	local krot = karaktar:FindFirstChild("HumanoidRootPart")
 	if not (krot and krot:IsA("BasePart")) then return end
@@ -578,6 +606,7 @@ function HorseService.dismount(player: Player): boolean
 		LOGISKT tillstånd, var kroppen står är ett fysiskt. Det logiska ska
 		vara sant först. ]]
 	setRider(session, nil)
+	stannaHast(session)
 
 	if character then
 		local root = character:FindFirstChild("HumanoidRootPart")
