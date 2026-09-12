@@ -493,6 +493,26 @@ local function bygg()
 	g.Name = "UBRFForberedelse"
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
+	--[[ ══ ÖVER ROBLOX EGNA PEKREGLAGE ═════════════════════════════════
+
+	     `DisplayOrder` låg på 0, och det gör `TouchGui` också. Vid lika
+	     ordning vinner Roblox, och på en pekskärm ligger den dynamiska
+	     spaken som en osynlig träffyta över hela nedre vänstra hörnet —
+	     alltså precis där skötselpanelen står.
+
+	     Mätt på iPad Air i landskap, samma synliga panel, bara ordningen
+	     ändrad:
+	         DisplayOrder 0  → översta träffen på momentknappen var
+	                           `ThumbstickStart` — knappen gick inte att
+	                           trycka på
+	         DisplayOrder 10 → översta träffen var `halsa1`, alltså
+	                           knappen själv
+	     Utan det här kan en iPad-spelare inte hälsa, rykta eller sadla,
+	     och kommer därmed aldrig ens fram till uppsittningen.
+
+	     10 ligger över `TouchGui` (0) och över ridningens egen
+	     `HorseTouch` (8), men under hjälpknappen (16). ]]
+	g.DisplayOrder = 10
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 

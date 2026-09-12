@@ -118,6 +118,14 @@ local function bygg()
 	g.Name = "UBRFUgneta"
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
+	--[[ Samma skäl som skötselpanelen: vid lika `DisplayOrder` vinner
+	     Roblox `TouchGui`, och lektionskortets knapp hamnade under den
+	     dynamiska spakens osynliga träffyta. Mätt på iPad Air:
+	         [DynamicThumbstickUIModifier > DynamicThumbstickFrame >
+	          TouchControlFrame > Knapp]
+	     alltså fjärde i stacken — kortet gick inte att kvittera, och det
+	     är enda vägen in i lektionen. Med 10 ligger `Knapp` överst. ]]
+	g.DisplayOrder = 10
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 	--[[ Sätts HÄR, inte i slutet: vakten `if gui then return end` ovan
@@ -237,7 +245,25 @@ local function bygg()
 	kn.Name = "Knapp"
 	kn.AutoButtonColor = true
 	kn.LayoutOrder = 9
-	kn.Size = UDim2.new(0, 108, 0, 22)
+	--[[ ══ KNAPPEN VAR SMALARE ÄN SIN EGEN TEXT ════════════════════════
+
+	     108×22 var en fast storlek, men texten sätts per kort och är
+	     olika lång. Mätt på iPad Air i landskap: `TextBounds.X` = 157 mot
+	     knappens 108 för "Continue to start the lesson  (R)" — texten
+	     klipptes mitt i ordet, och det här är den ENDA vägen vidare i
+	     lektionen. 22 px höjd är dessutom under det som går att träffa
+	     med en tumme; 44 är golvet man brukar räkna med.
+
+	     `AutomaticSize.X` låter pillret växa med sin text i stället för
+	     att texten ska krympas eller kapas, så översättningar av olika
+	     längd får plats utan att någon måste räkna pixlar. Bredden blir
+	     ett minimum i stället för ett tak. ]]
+	kn.Size = UDim2.new(0, 108, 0, 40)
+	kn.AutomaticSize = Enum.AutomaticSize.X
+	local knPad = Instance.new("UIPadding")
+	knPad.PaddingLeft = UDim.new(0, 16)
+	knPad.PaddingRight = UDim.new(0, 16)
+	knPad.Parent = kn
 	kn.BackgroundColor3 = FARG_GULD
 	kn.TextColor3 = Color3.fromRGB(23, 20, 10)
 	kn.Font = Enum.Font.GothamBold
@@ -259,7 +285,14 @@ local function bygg()
 		x.Name = namn
 		x.AutoButtonColor = true
 		x.LayoutOrder = ordning
-		x.Size = UDim2.new(0, 108, 0, 22)
+		--[[ Samma skäl som huvudknappen ovan: texten är olika lång per
+		     kort och per språk, och 22 px är inte ett tumgrepp. ]]
+		x.Size = UDim2.new(0, 108, 0, 40)
+		x.AutomaticSize = Enum.AutomaticSize.X
+		local xPad = Instance.new("UIPadding")
+		xPad.PaddingLeft = UDim.new(0, 16)
+		xPad.PaddingRight = UDim.new(0, 16)
+		xPad.Parent = x
 		x.BackgroundColor3 = Color3.fromRGB(60, 72, 68)
 		x.TextColor3 = FARG_TEXT
 		x.Font = Enum.Font.GothamBold

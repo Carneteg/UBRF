@@ -93,8 +93,19 @@ local function nyKnapp(namn: string, text: string, parent: Instance): TextButton
 	b.Text = text
 	b.AutoButtonColor = false
 	--[[ 44 px är golvet för ett touchmål, och 56 är vad en tumme vill ha
-	     när man samtidigt håller i telefonen med samma hand. ]]
-	b.Size = UDim2.fromOffset(64, 56)
+	     när man samtidigt håller i telefonen med samma hand.
+
+	     BREDDEN VAR 64 OCH TEXTEN FICK INTE PLATS. Mätt i landskap på
+	     iPad Air, `TextBounds.X` mot knappens bredd:
+	         ▲ FORWARD 86 · HALF-HALT 78 · DISMOUNT 76 · DEEP SEAT 76
+	         ▼ SLOWER 73   mot 64 px — fem av sju spillde över kanten
+	     och klipptes mot skärmkanten, eftersom `TextScaled` är false och
+	     ingenting klipper. 92 px rymmer den längsta med luft kvar, ligger
+	     fortfarande innanför knappramens 150, och ger tummen ett STÖRRE
+	     mål — inte ett mindre. `TextWrapped` finns för översättningar som
+	     är längre än de engelska. ]]
+	b.Size = UDim2.fromOffset(92, 56)
+	b.TextWrapped = true
 	b.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
 	b.BackgroundTransparency = 0.18
 	b.TextColor3 = Color3.fromRGB(236, 232, 222)
@@ -160,14 +171,48 @@ end
      till fots i stallet som vanligt. ]]
 local styrningAv = false
 local function egnaReglage(pa: boolean)
+	--[[ ══ DET HÄR STYCKET STÄNGDE INGENTING ═══════════════════════════
+
+	     Stycket ovanför beskriver avsikten. Koden nådde den aldrig:
+	     `PlayerScripts` innehåller ingen `PlayerModule` i den här placen —
+	     mätt i en simulerad iPad Air, där barnen var `RbxCharacterSounds`,
+	     `Horse` och MCP-bryggan. `if not modul then return end` tog alltså
+	     varje gång, och Roblox egna pekreglage låg kvar hela ritten.
+
+	     VAD DET KOSTADE, mätt i landskap 1179×819:
+	       `DynamicThumbstickFrame` 572×607 vid (−100 · 254) — en osynlig
+	       träffyta över hela nedre vänstra halvan. Lektionskortets
+	       "Continue"-knapp hamnade FJÄRDE i stacken under den:
+	           [DynamicThumbstickUIModifier > DynamicThumbstickFrame >
+	            TouchControlFrame > Knapp]
+	       Spelaren kunde alltså inte starta lektionen på iPad alls.
+	       `ThumbstickStart` 148×148 låg ovanpå vår egen spak, och
+	       `JumpButton` 120×120 under DEEP SEAT och REIN.
+
+	     `UserInputService.ModalEnabled` är Roblox egen väg att göra just
+	     det här, och den gör det utan att leta reda på en modul som inte
+	     finns: satt till true släcks pekreglagen (mätt: `TouchGui.Enabled`
+	     gick själv till false, och kortets knapp blev överst igen).
+
+	     Den sätts BARA härifrån, och hit kommer man bara på en pekenhet —
+	     `mount` returnerar tidigt när `TouchEnabled` är falskt. Skrivbordet
+	     rörs alltså inte. ]]
+	local UIS = UserInputService
+	UIS.ModalEnabled = not pa
+
+	--[[ Modulvägen står kvar för de klienter som HAR en PlayerModule: där
+	     gör den samma sak en nivå närmare källan. Saknas den är
+	     `ModalEnabled` ovan hela rättelsen. ]]
 	local scripts = Players.LocalPlayer:FindFirstChild("PlayerScripts")
 	local modul = scripts and scripts:FindFirstChild("PlayerModule")
-	if not modul then return end
-	local ok, controls = pcall(function()
-		return (require(modul) :: any):GetControls()
-	end)
-	if not ok or not controls then return end
-	if pa then controls:Enable() else controls:Disable() end
+	if modul then
+		local ok, controls = pcall(function()
+			return (require(modul) :: any):GetControls()
+		end)
+		if ok and controls then
+			if pa then controls:Enable() else controls:Disable() end
+		end
+	end
 	styrningAv = not pa
 end
 
