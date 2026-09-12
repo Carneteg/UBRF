@@ -695,12 +695,31 @@ function uppdateraProt(){
   /* Höjden ur banan, inte hårdkodad — Klass 2 och 3 rids på 0,75 och
      0,85 m och protokollet påstod 0,60 hela ritten. */
   const hojd=((BANA&&BANA.hojd)||0.60).toFixed(2).replace(".",",");
-  let rows=`<div class="lbl" style="margin-bottom:6px">Protokoll · ${hojd} m</div>`;
-  rows+=`<div class="r"><span>Hinder</span><b>${Math.min(G.nastaHinder,6)} / 6</b></div>`;
-  rows+=`<div class="r ${dom.hinderfel?"bad":""}"><span>Fel</span><b>${dom.hinderfel}</b></div>`;
-  rows+=`<div class="r"><span>Olydnader</span><b>${dom.olydnader}</b></div>`;
-  rows+=`<div class="r"><span>Tid</span><b>${(G.t-G.banStart).toFixed(0)} s</b></div>`;
-  el.innerHTML=rows;
+
+  el.textContent="";
+
+  const lbl=document.createElement("div");
+  lbl.className="lbl";
+  lbl.style.marginBottom="6px";
+  lbl.textContent=`Protokoll · ${hojd} m`;
+  el.appendChild(lbl);
+
+  const createRow=(label,value,isBad)=>{
+    const row=document.createElement("div");
+    row.className="r"+(isBad?" bad":"");
+    const span=document.createElement("span");
+    span.textContent=label;
+    const b=document.createElement("b");
+    b.textContent=value;
+    row.appendChild(span);
+    row.appendChild(b);
+    return row;
+  };
+
+  el.appendChild(createRow("Hinder",`${Math.min(G.nastaHinder,6)} / 6`,false));
+  el.appendChild(createRow("Fel",dom.hinderfel,dom.hinderfel));
+  el.appendChild(createRow("Olydnader",dom.olydnader,false));
+  el.appendChild(createRow("Tid",`${(G.t-G.banStart).toFixed(0)} s`,false));
 }
 function flash(txt){const f=document.getElementById("faults");
   f.textContent=txt;f.style.opacity=1;f.style.transform="translate(-50%,-50%) scale(1.06)";
