@@ -515,11 +515,24 @@ local function stallAv(modell: Model, karaktar: Model)
 		warn(("[Horse] Ingen fri avsittningsplats vid %s"):format(modell.Name))
 		return
 	end
+	local spelare = Players:GetPlayerFromCharacter(karaktar)
+	--[[ Klientägarskapet skriver annars tillbaka ryttaren till sitsens läge
+		bildrutan efter serverns PivotTo. Håll kroppen på servern kort över
+		placeringen och lämna sedan tillbaka den till spelaren. ]]
+	pcall(function() krot:SetNetworkOwner(nil) end)
 	karaktar:PivotTo(cf)
 	--[[ FARTEN NOLLAS. Ryttaren har hästens hastighet i kroppen när hon
 		lossnar, och en flytt utan nollning slänger iväg henne. ]]
 	krot.AssemblyLinearVelocity = Vector3.zero
 	krot.AssemblyAngularVelocity = Vector3.zero
+	if spelare then
+		task.spawn(function()
+			for _ = 1, 8 do RunService.Heartbeat:Wait() end
+			if krot.Parent and spelare.Parent and spelare.Character == karaktar then
+				pcall(function() krot:SetNetworkOwner(spelare) end)
+			end
+		end)
+	end
 end
 
 function HorseService.dismount(player: Player): boolean
