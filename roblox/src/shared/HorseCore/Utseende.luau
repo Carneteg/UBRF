@@ -92,6 +92,19 @@ end
 	ha den där på båda ytorna. ]]
 Utseende.BENFOLJD = { "framV", "framH", "bakV", "bakH" }
 
+--[[ De tre ansiktsteckningarnas form, som andelar av pannpartiets EGNA
+	mått och läge. `skala` multiplicerar delens storlek, `hoj` flyttar
+	den uppåt i andelar av dess egen höjd.
+
+	Talen är valda mot fotona: en stjärna täcker ungefär en tredjedel av
+	pannans bredd och sitter högt; en bläs är smal men full längd; en
+	bred bläs är nästan lika bred som nosryggen. ]]
+Utseende.BLASFORM = {
+	stjarna = { skala = Vector3.new(0.42, 0.34, 0.55), hoj = 0.30 },
+	bles    = { skala = Vector3.new(0.55, 1.00, 1.00), hoj = 0.00 },
+	bred    = { skala = Vector3.new(1.05, 1.00, 1.00), hoj = 0.00 },
+}
+
 --[[ Den visuella konfigurationen för en häst.
 
 	Svarar ALLTID med ett fullständigt svar: varje fält har ett värde och
@@ -119,6 +132,28 @@ function Utseende.for_(hast: { [string]: any }?): { [string]: any }
 		strumpor[namn] = (type(rada) == "table" and rada[i] == 1) or false
 	end
 
+	--[[ ══ ANSIKTETS TECKEN ══════════════════════════════════════════
+
+		Rostern hade en boolean: bläs eller inte. Fotona visar tre olika
+		saker, och skillnaden syns på tio meters håll:
+
+		    stjarna  en liten vit fläck i pannan   (Curiretto, Mac Kenzie)
+		    bles     en smal strimma hela vägen ned (Hamilton, Larry, Lothar)
+		    bred     ett brett fält över hela nosen (Kay z, Marabou, Tess)
+
+		`BLASFORM` säger hur den delen ska formas och sitta, i andelar av
+		delens EGET ursprungsmått — inte i studs. En annan hästmodell med
+		ett annat pannparti får då samma tre former utan att någon räknar
+		om något.
+
+		`true` från en äldre rad läses som `bles`: det var vad ordet
+		betydde innan formerna fanns. ]]
+	local blasform = tecken.blas
+	if blasform == true then blasform = "bles" end
+	if blasform ~= "stjarna" and blasform ~= "bles" and blasform ~= "bred" then
+		blasform = nil
+	end
+
 	return {
 		mankhojd = hojd,
 		mankhojdStuds = hojd * M,
@@ -130,8 +165,16 @@ function Utseende.for_(hast: { [string]: any }?): { [string]: any }
 		manKarna = if typeof(h.manKarna) == "Color3" then h.manKarna else nil,
 		mule = mule,
 		hov = Utseende.STANDARD_HOV,
-		blas = tecken.blas == true,
+		blas = blasform ~= nil,
+		blasform = blasform,
+		--[[ Formen som tal: skala och läge relativt pannpartiets eget
+			ursprungsmått. `HastVisual` behöver aldrig veta vad en stjärna
+			är, bara hur stor den ska vara. ]]
+		blasmatt = if blasform then Utseende.BLASFORM[blasform] else nil,
 		strumpor = strumpor,
+		--[[ Ett mönster kameran inte kan rita men fotot visade — Berras
+			skäck. Bärs vidare i stället för att tappas bort. ]]
+		monster = h.monster,
 		--[[ Hovskägg. Ligger i rostern som `fjader` och hör till de tunga
 			raserna; det ritas inte än i Roblox men följer med i svaret så
 			att den dagen kan komma utan att kartan skrivs om. ]]

@@ -148,7 +148,13 @@ end
 	Delar utan grupp lämnas i fred. Det är rätt svar: en del vi inte har
 	klassat är en del vi inte vet något om, och att måla den brun vore
 	att gissa. ]]
-function HastVisual.klaPa(hast: Model, kladsel: { [string]: any }): { [string]: number }
+--[[ `profil` skickas in i stället för att slås upp: `klaPa` körs mitt i
+	monteringen, och attributet som `Riggprofiler.forHast` läser sätts
+	först när hela hästen är klar. En uppslagning här svarade nil, och
+	mankstrimman byggdes därför aldrig. Utifrån — en omklädsel i efterhand
+	— går profilen att hämta som vanligt. ]]
+function HastVisual.klaPa(hast: Model, kladsel: { [string]: any },
+	profil: any?): { [string]: number }
 	local visual = hast:FindFirstChild("Visual")
 	local natet = visual and visual:FindFirstChild("Nät")
 	if not natet then return {} end
@@ -164,13 +170,39 @@ function HastVisual.klaPa(hast: Model, kladsel: { [string]: any }): { [string]: 
 			if g == "kropp" then farg = kladsel.kropp
 			elseif g == "skugga" then farg = skugga
 			elseif g == "man" then
-				farg = if d.Name == "N2S" and kladsel.manKarna
-					then kladsel.manKarna else kladsel.man
+				--[[ HELA manen bär manfärgen. Mittstrimman är en egen
+					remsa längs kammen — se `_mankstrimma` — och inte ett
+					mörkfärgat mansegment: det blev en fläck. ]]
+				farg = kladsel.man
 			elseif g == "mule" then farg = kladsel.mule
 			elseif g == "blas" then
 				--[[ Ingen bläs? Då är pannan päls, inte vit. Delen finns
-					kvar — den är en del av nätet — men den slutar lysa. ]]
+					kvar — den är en del av nätet — men den slutar lysa.
+
+					FINNS det en, formas delen efter vilken sorts teckning
+					fotot visade: en stjärna är liten och sitter högt, en
+					bläs är smal och full längd, en bred bläs täcker nästan
+					hela nosryggen. Måtten är andelar av delens EGET
+					ursprungsmått, som sparas första gången. ]]
 				farg = if kladsel.blas then VIT else kladsel.kropp
+				local urStorlek = d:GetAttribute("UBRFUrStorlek")
+				if urStorlek == nil then
+					d:SetAttribute("UBRFUrStorlek", d.Size)
+					urStorlek = d.Size
+				end
+				local m = kladsel.blasmatt
+				if m then
+					d.Size = (urStorlek :: Vector3) * m.skala
+					local urCF = d:GetAttribute("UBRFUrCFrame")
+					if urCF == nil then
+						d:SetAttribute("UBRFUrCFrame", d.CFrame)
+						urCF = d.CFrame
+					end
+					d.CFrame = (urCF :: CFrame)
+						* CFrame.new(0, (urStorlek :: Vector3).Y * m.hoj, 0)
+				else
+					d.Size = urStorlek :: Vector3
+				end
 			elseif g == "strumpa" then
 				local har = ben ~= nil and kladsel.strumpor[ben] == true
 				--[[ Utan strumpa följer skenbenet pälsen. Det är den
@@ -185,7 +217,66 @@ function HastVisual.klaPa(hast: Model, kladsel: { [string]: any }): { [string]: 
 			end
 		end
 	end
+	rakna.strimma = HastVisual._mankstrimma(hast, natet :: Model, kladsel,
+		profil or Riggprofiler.forHast(hast))
 	return rakna
+end
+
+--[[ ══ MANKSTRIMMAN ═══════════════════════════════════════════════════
+
+	Fjordhästens midtstol: en smal mörk remsa längs kammens mitt, inne i
+	den ljusa upprätta manen. K3 har ingen del där — manslabbarna sitter
+	alla på höger sida — så remsan byggs som svetsade delar per
+	halssegment, precis som utrustningen byggs.
+
+	Den byggs BARA när hästens egen rad bär `manKarna`, alltså när fotot
+	visade en tvåfärgad man. För alla andra rivs den om den finns: en
+	omklädsel ska kunna ta bort lika väl som lägga till. ]]
+function HastVisual._mankstrimma(hast: Model, natet: Model,
+	kladsel: { [string]: any }, p: any?): number
+	local gammal = natet:FindFirstChild("Mankstrimma")
+	if gammal then gammal:Destroy() end
+	local karna = kladsel.manKarna
+	if not karna then return 0 end
+	--[[ Strimman hör till utseendegrupperna och ligger därför i
+		`utseende`, bredvid de andra kroppsdelskartorna. ]]
+	local spec = p and p.utseende and p.utseende.mankstrimma
+	if not spec then return 0 end
+
+	local mapp = Instance.new("Folder")
+	mapp.Name = "Mankstrimma"
+	mapp.Parent = natet
+
+	local n = 0
+	for _, namn in ipairs(spec.leder) do
+		local led = natet:FindFirstChild(namn, true)
+		if led and led:IsA("BasePart") then
+			local d = Instance.new("Part")
+			d.Name = "Strimma " .. namn
+			--[[ Smal i sidled, tunn radiellt, lika lång som halsdelen:
+				tillsammans bildar de fyra en obruten linje längs kammen. ]]
+			d.Size = Vector3.new(led.Size.X * spec.bredd,
+				led.Size.Y * spec.tjocklek, led.Size.Z * 0.98)
+			d.CFrame = led.CFrame * CFrame.new(0, led.Size.Y * spec.hojd, 0)
+			d.Color = karna
+			d.Material = Enum.Material.Sand
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+			d.TopSurface = Enum.SurfaceType.Smooth
+			d.BottomSurface = Enum.SurfaceType.Smooth
+			d.Parent = mapp
+			local w = Instance.new("WeldConstraint")
+			w.Name = "StrimmaWeld"
+			w.Part0 = led
+			w.Part1 = d
+			w.Parent = d
+			n += 1
+		end
+	end
+	return n
 end
 
 --[[ Fästpunkterna flyttas till NÄTETS kroppsdelar, och det är hela
@@ -375,7 +466,7 @@ function HastVisual.montera(hast: Model, mall: Model, profilNamn: string,
 	if p.utseende then
 		klassaDelar(natet, p.utseende, rot)
 	end
-	HastVisual.klaPa(hast, kladsel)
+	HastVisual.klaPa(hast, kladsel, p)
 
 	local flyttade = flyttaFasten(hast, natet, p, skala)
 

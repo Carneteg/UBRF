@@ -79,7 +79,7 @@ check("Westside återanvänder inte gammal felaktig gameplay-tuning",
 	neutralTuning(westside))
 check("Westsides utseende är avläst ur UBRF:s eget foto, inte påhittat",
 	westside ~= nil and westside.visuellStatus == "FOTO"
-		and westside.tecken ~= nil and westside.tecken.blas == true,
+		and westside.tecken ~= nil and westside.tecken.blas == "bred",
 	westside and tostring(westside.visuellStatus) or "saknas")
 check("och presentationsfälten har en källa", presentationHarKalla(westside))
 

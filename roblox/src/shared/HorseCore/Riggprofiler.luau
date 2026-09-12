@@ -108,10 +108,35 @@ local PROFILER: { [string]: any } = {
 				bakH  = { "RAnkle", "RFoot" },
 			},
 			hov = "Hoof",
-			--[[ Manens MITTSEGMENT bär fjordhästens mörka strimma. Bara
-				den delen: strimman går längs kammen, inte över hela
-				manen. ]]
-			manKarna = "N2S",
+			--[[ ══ FJORDHÄSTENS MITTSTRIMMA ═══════════════════════════
+
+				Första försöket färgade manens MITTSEGMENT (`N2S`) mörkt.
+				Det blev en fläck, inte en strimma — och uppmätt är det
+				inte konstigt: K3:s manslabbar sitter alla på hästens
+				HÖGRA sida (x ≈ +0,3), det finns ingen man på vänster sida
+				och ingen del alls längs kammens mitt.
+
+				En fjordhästs midtstol går längs HELA kammen, mitt i den
+				upprätta manen. Den ritas därför som en egen smal remsa
+				per halssegment, i x = 0 och strax ovanför halsens
+				ovankant — samma sorts svetsade del som utrustningen
+				använder, inte ny rasgeometri. Remsan byggs BARA för
+				hästar vars foto faktiskt visar en tvåfärgad man.
+
+				`bredd` och `hojd` är andelar av halsdelens egna mått, så
+				strimman följer med när hästen skalas. ]]
+			mankstrimma = {
+				leder = { "N1", "N2", "N3", "N4" },
+				--[[ Framsökt i två steg. 0,16 x 0,10 på höjd 0,46 la
+					remsan OVANPÅ manen och den läste som en rad klossar.
+					0,13 x 0,065 på 0,42 lägger den INNE i manen, där bara
+					linjen längs kammen syns — vilket är vad en midtstol
+					är. Andelar av halsdelens egna mått, så den följer med
+					när hästen skalas. ]]
+				bredd = 0.13,
+				tjocklek = 0.065,
+				hojd = 0.42,
+			},
 		},
 		--[[ Det som INTE är häst och rivs vid städningen.
 

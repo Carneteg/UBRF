@@ -53,6 +53,23 @@ local VISUELL: { [string]: string } = {
 	toblerone = "k3",
 	westside = "k3",
 	allan = "k3",
+	--[[ FEM TILL, valda för att pröva variationen där den är svårast —
+		inte för att de är lätta:
+
+		  cosmo    170 cm ljus skimmel      — ljusaste pälsen i rostern
+		  marabou  kategori B, 1,27 m       — MINST av alla trettiotre
+		  lothar   mörkbrun, smal bläs OCH  — enda hästen vars benens
+		           två vita bakben            tecken går att avgöra
+		  kay_z    fux, BRED bläs, rosa mule — bredaste ansiktsteckningen
+		  tess     nästan svart + bred bläs  — största kontrasten
+
+		Tillsammans med de fyra tidigare spänner de 1,27 till 1,78 m,
+		vitt till nästan svart, och alla tre ansiktsteckningar. ]]
+	cosmo = "k3",
+	marabou = "k3",
+	lothar = "k3",
+	kay_z = "k3",
+	tess = "k3",
 }
 
 --[[ Kategori D är ponny upp till 1,48 m i mankhöjd. Datan ger ingen

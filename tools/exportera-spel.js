@@ -359,6 +359,10 @@ for (const [id, h] of Object.entries(HORSES)) {
      är rätt svar för en häst vi inte har läst av. */
   if (h.mule) o.mule = h.mule;
   if (h.manKarna) o.manKarna = h.manKarna;
+  /* `monster` bär en observation Roblox INTE kan rita — Berras skäck.
+     Den följer med ändå: en avläst egenskap ska inte gå förlorad bara
+     för att en rigg saknar geometri för den. */
+  if (h.monster) o.monster = h.monster;
   if (h.visuellStatus && h.visuellStatus !== "ASSUMPTION") {
     o.visuellStatus = h.visuellStatus;
   }
