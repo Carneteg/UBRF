@@ -363,6 +363,7 @@ for (const [id, h] of Object.entries(HORSES)) {
      Den följer med ändå: en avläst egenskap ska inte gå förlorad bara
      för att en rigg saknar geometri för den. */
   if (h.monster) o.monster = h.monster;
+  if (h.monsterFarg) o.monsterFarg = h.monsterFarg;
   if (h.visuellStatus && h.visuellStatus !== "ASSUMPTION") {
     o.visuellStatus = h.visuellStatus;
   }

@@ -103,9 +103,10 @@ const UTSEENDE_FOTO={
      färg per kroppsdel. Färgen nedan är den DOMINERANDE (vit) med
      mörk man, och `monster` bär observationen så att den inte går
      förlorad. Berra konverteras därför inte i det här steget. */
-  berra:{farg:"#E4E2DE",man:"#4A4B50",mule:"#9A8079",monster:"skack",
+  berra:{farg:"#E4E2DE",man:"#4A4B50",mule:"#9A8079",
+    monster:"skack",monsterFarg:"#55565A",
     tecken:{blas:"bred",strumpor:[1,1,1,1]},
-    sett:["farg","man","mule","blas","strumpor","monster"],osett:[]},
+    sett:["farg","man","mule","blas","strumpor","monster","monsterFarg"],osett:[]},
   /* Mörkbrun, svart man, inga vita tecken. */
   bing:{farg:"#4A3226",man:"#2A1D16",mule:"#4A3B32",
     tecken:{blas:false,strumpor:[0,0,0,0]},
@@ -336,7 +337,8 @@ for(const fakta of HASTFAKTA){
     profilStatus:PROFIL[fakta.id]?"KALLTEXT":"SAKNAR_KALLA",
     ...(foto?{farg:foto.farg,man:foto.man,mule:foto.mule,
       manKarna:foto.manKarna||null,tecken:foto.tecken,
-      monster:foto.monster||null,strumporSedda:foto.strumporSedda||null}:{}),
+      monster:foto.monster||null,monsterFarg:foto.monsterFarg||null,
+      strumporSedda:foto.strumporSedda||null}:{}),
     visuellStatus:foto?"FOTO":"ASSUMPTION",
     utseendeSett:foto?foto.sett:[],
     utseendeOsett:foto?foto.osett:["farg","man","blas","strumpor"],

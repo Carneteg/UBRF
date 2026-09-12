@@ -32,45 +32,26 @@ local M = 3                     -- studs per meter, som BuildKit.M
 
 local HastVisual = require(script.Parent.HastVisual)
 
---[[ VILKA HÄSTAR SOM BÄR ETT RIKTIGT NÄT.
+--[[ ══ VILKA HÄSTAR SOM BÄR ETT RIKTIGT NÄT ═══════════════════════
 
-	Prototypsteget i HORSE_VISUAL_QUALITY_GATE: EN häst, och det är
-	kanonresans egen. De andra trettiotvå står kvar i lådor tills Tobias
-	godkänt utseendet. Listan är avsiktligt en lista och inte ett villkor —
-	att läsa vilka som är bytta ska inte kräva att man tänker efter. ]]
-local VISUELL: { [string]: string } = {
-	--[[ FYRA hästar, inte trettiotre, och de tre nya är valda för att
-		göra variationen PRÖVBAR — inte för att de är lätta:
+	Hela rostern, sedan Tobias godkände K3 som bas.
 
-		  toblerone  fjordhäst, kategori C  — blakk päls, tvåfärgad man
-		  westside   haflinger, kategori C  — fux, ljus man, bred bläs
-		  allan      svenskt varmblod, 178 cm i KÄLLAN — störst i rostern
+	Det här VAR en lista, och listan var rätt så länge den beskrev ett
+	undantag: en häst av trettiotre, sedan fyra, sedan nio. Nu är nätet
+	regeln och lådan undantaget — och då ska koden säga det, inte rada
+	upp trettiotre identiska rader som alla betyder "som alla andra".
 
-		Var och en skiljer sig från Jack på minst två av de axlar ordern
-		räknar upp: färg, tecken och storlek. Utseendet kommer ur hästens
-		egen rad, inte ur en kopia av Jack. ]]
-	blackrock_jack = "k3",
-	toblerone = "k3",
-	westside = "k3",
-	allan = "k3",
-	--[[ FEM TILL, valda för att pröva variationen där den är svårast —
-		inte för att de är lätta:
+	`UTAN_NAT` finns för att undantaget ska gå att skriva ned den dag det
+	behövs, med ett skäl. Den är tom idag, och det är själva poängen. ]]
+local STANDARDPROFIL = "k3"
+local UTAN_NAT: { [string]: string } = {}
 
-		  cosmo    170 cm ljus skimmel      — ljusaste pälsen i rostern
-		  marabou  kategori B, 1,27 m       — MINST av alla trettiotre
-		  lothar   mörkbrun, smal bläs OCH  — enda hästen vars benens
-		           två vita bakben            tecken går att avgöra
-		  kay_z    fux, BRED bläs, rosa mule — bredaste ansiktsteckningen
-		  tess     nästan svart + bred bläs  — största kontrasten
-
-		Tillsammans med de fyra tidigare spänner de 1,27 till 1,78 m,
-		vitt till nästan svart, och alla tre ansiktsteckningar. ]]
-	cosmo = "k3",
-	marabou = "k3",
-	lothar = "k3",
-	kay_z = "k3",
-	tess = "k3",
-}
+--[[ Vilken visuell profil en häst ska bära, och varför. Svarar nil när
+	hästen med flit ska stå kvar i lådor. ]]
+local function visuellProfil(hastId: string): string?
+	if UTAN_NAT[hastId] then return nil end
+	return STANDARDPROFIL
+end
 
 --[[ Kategori D är ponny upp till 1,48 m i mankhöjd. Datan ger ingen
 	mankhöjd för Jack (`mankhojd = nil`), så kroppen byggs på kategorins
@@ -384,7 +365,7 @@ function JackRigg.placera(hastId: string): (Model?, string?)
 		HorseService aldrig ser en halvbyggd häst, och den sker i en pcall:
 		ett visuellt lager får aldrig kunna fälla spelbarheten. Faller det
 		står hästen kvar i lådor och Output säger varför. ]]
-	local profil = VISUELL[hastId]
+	local profil = visuellProfil(hastId)
 	if profil then
 		local ok, skal = pcall(function()
 			local mall = HastVisual.mall(profil)

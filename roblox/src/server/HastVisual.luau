@@ -161,14 +161,35 @@ function HastVisual.klaPa(hast: Model, kladsel: { [string]: any },
 	local skugga = Color3.new(kladsel.kropp.R * 0.88, kladsel.kropp.G * 0.88,
 		kladsel.kropp.B * 0.88)
 	local VIT = Color3.fromRGB(240, 237, 230)
+
+	--[[ ══ SKÄCKEN ══════════════════════════════════════════════════
+
+		Bär hästen ett mönster är pälsen inte en färg utan två fält, och
+		vilka kroppsdelar som hör till det mörka fältet står i profilen
+		— det är modellberoende och hör inte hemma i rostern.
+
+		Uppslaget byggs en gång per omklädsel. Saknas mönster är det tomt
+		och varje rad nedan beter sig precis som förut. ]]
+	local morktFalt: { [string]: boolean } = {}
+	local p = if profil then profil else Riggprofiler.forHast(hast)
+	if kladsel.monster == "skack" and p and p.utseende and p.utseende.skack then
+		for _, namn in ipairs(p.utseende.skack.mork) do morktFalt[namn] = true end
+	end
+	local function palsFarg(d: BasePart): Color3
+		if morktFalt[d.Name] then return kladsel.monsterFarg end
+		return if kladsel.monster then VIT else kladsel.kropp
+	end
 	local rakna: { [string]: number } = {}
 	for _, d in ipairs(natet:GetDescendants()) do
 		if d:IsA("BasePart") then
 			local g = d:GetAttribute("UBRFGrupp")
 			local ben = d:GetAttribute("UBRFBen")
 			local farg: Color3? = nil
-			if g == "kropp" then farg = kladsel.kropp
-			elseif g == "skugga" then farg = skugga
+			if g == "kropp" then farg = palsFarg(d)
+			elseif g == "skugga" then
+				--[[ Skuggpartierna är underarm och underben. På en skäck
+					följer de benens fält, inte en nyans av pälsen. ]]
+				farg = if kladsel.monster then palsFarg(d) else skugga
 			elseif g == "man" then
 				--[[ HELA manen bär manfärgen. Mittstrimman är en egen
 					remsa längs kammen — se `_mankstrimma` — och inte ett
@@ -184,7 +205,7 @@ function HastVisual.klaPa(hast: Model, kladsel: { [string]: any },
 					bläs är smal och full längd, en bred bläs täcker nästan
 					hela nosryggen. Måtten är andelar av delens EGET
 					ursprungsmått, som sparas första gången. ]]
-				farg = if kladsel.blas then VIT else kladsel.kropp
+				farg = if kladsel.blas then VIT else palsFarg(d)
 				local urStorlek = d:GetAttribute("UBRFUrStorlek")
 				if urStorlek == nil then
 					d:SetAttribute("UBRFUrStorlek", d.Size)
@@ -208,7 +229,7 @@ function HastVisual.klaPa(hast: Model, kladsel: { [string]: any },
 				--[[ Utan strumpa följer skenbenet pälsen. Det är den
 					rättningen som tar bort K3:s inbakade vita pololindor:
 					de var aldrig en textur, bara fyra ljusgrå delar. ]]
-				farg = if har then VIT else kladsel.kropp
+				farg = if har then VIT else palsFarg(d)
 			elseif g == "hov" then farg = kladsel.hov
 			end
 			if farg then

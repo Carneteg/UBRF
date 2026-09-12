@@ -76,6 +76,9 @@ end
 Utseende.STANDARD_KROPP = Color3.fromRGB(114, 83, 59)
 Utseende.STANDARD_MAN = Color3.fromRGB(47, 33, 24)
 Utseende.STANDARD_HOV = Color3.fromRGB(27, 42, 53)
+--[[ Skäckens mörka fält när raden inte säger något annat. Grått, inte
+	svart: en skäck med kolsvarta fält är en annan häst. ]]
+Utseende.STANDARD_MONSTER = Color3.fromRGB(85, 86, 90)
 
 --[[ Mulen är mörkare än pälsen på nästan varje häst. Saknas ett avläst
 	värde härleds den ur pälsen i stället för att hittas på: samma färg,
@@ -172,9 +175,16 @@ function Utseende.for_(hast: { [string]: any }?): { [string]: any }
 			är, bara hur stor den ska vara. ]]
 		blasmatt = if blasform then Utseende.BLASFORM[blasform] else nil,
 		strumpor = strumpor,
-		--[[ Ett mönster kameran inte kan rita men fotot visade — Berras
-			skäck. Bärs vidare i stället för att tappas bort. ]]
+		--[[ MÖNSTRET. `skack` betyder att hästen bär stora fält i två
+			färger i stället för en enfärgad päls. `kropp` är då det
+			LJUSA fältet och `monsterFarg` det mörka; vilka kroppsdelar
+			som är vilka står i riggprofilen, för det är modellberoende.
+
+			Berra är enda hästen i rostern med ett mönster, och det är
+			avläst ur hennes egen bild — inte ur rasen. ]]
 		monster = h.monster,
+		monsterFarg = if typeof(h.monsterFarg) == "Color3" then h.monsterFarg
+			else Utseende.STANDARD_MONSTER,
 		--[[ Hovskägg. Ligger i rostern som `fjader` och hör till de tunga
 			raserna; det ritas inte än i Roblox men följer med i svaret så
 			att den dagen kan komma utan att kartan skrivs om. ]]

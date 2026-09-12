@@ -108,6 +108,29 @@ local PROFILER: { [string]: any } = {
 				bakH  = { "RAnkle", "RFoot" },
 			},
 			hov = "Hoof",
+			--[[ ══ SKÄCKENS FÄLT ═══════════════════════════════════════
+
+				Berra är skäck: stora vita fält över mörkgrått, mörkt
+				huvud och hals, vita ben. K3 har ingen textur att måla ett
+				mönster i — men den har fyrtio ENFÄRGADE kroppsdelar, och
+				ett skäckmönster ÄR fält.
+
+				Listan säger vilka delar som bär den MÖRKA färgen. Resten
+				av kroppen blir vit. Det ger inte fotots exakta fläckar —
+				det ska det inte heller — men det ger samma sorts häst:
+				mörkt huvud och hals, mörk bakdel, vit bål och vita ben.
+
+				Delarna är valda mot Berras egen bild: huvudet och halsen
+				är mörka hela vägen, bogen och bålens framdel vita, ett
+				mörkt fält över korset, och benen vita.
+
+				Ingen ny geometri. Bara en annan färg på delar som redan
+				finns — precis som resten av utseendelagret. ]]
+			skack = {
+				mork = { "Head", "HeadS", "LEar", "REar",
+					"N1", "N2", "N3", "N4",
+					"LowerBody", "LThigh", "RThigh", "Tail" },
+			},
 			--[[ ══ FJORDHÄSTENS MITTSTRIMMA ═══════════════════════════
 
 				Första försöket färgade manens MITTSEGMENT (`N2S`) mörkt.
