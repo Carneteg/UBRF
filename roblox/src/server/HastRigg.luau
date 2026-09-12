@@ -30,6 +30,18 @@ local JackRigg = {}
 local TAG = "Horse"
 local M = 3                     -- studs per meter, som BuildKit.M
 
+local HastVisual = require(script.Parent.HastVisual)
+
+--[[ VILKA HÄSTAR SOM BÄR ETT RIKTIGT NÄT.
+
+	Prototypsteget i HORSE_VISUAL_QUALITY_GATE: EN häst, och det är
+	kanonresans egen. De andra trettiotvå står kvar i lådor tills Tobias
+	godkänt utseendet. Listan är avsiktligt en lista och inte ett villkor —
+	att läsa vilka som är bytta ska inte kräva att man tänker efter. ]]
+local VISUELL: { [string]: string } = {
+	blackrock_jack = "k3",
+}
+
 --[[ Kategori D är ponny upp till 1,48 m i mankhöjd. Datan ger ingen
 	mankhöjd för Jack (`mankhojd = nil`), så kroppen byggs på kategorins
 	övre del. Det är en SPELABSTRAKTION och ingen mätning. ]]
@@ -313,6 +325,35 @@ function JackRigg.placera(hastId: string): (Model?, string?)
 	local lage = bas * CFrame.new(box.varld.x * M, 0, -box.varld.y * M)
 
 	local modell = JackRigg.bygg(hastId, namnFor(hastId), lage)
+
+	--[[ ══ DET VISUELLA LAGRET ═══════════════════════════════════════
+
+		HORSE_VISUAL_QUALITY_GATE, prototypsteget. Bara de hästar som står
+		i `VISUELL` får ett riktigt nät; resten behåller lådorna. Det är
+		med flit: ordern säger EN häst, och en lista är enklare att lita på
+		än ett villkor.
+
+		Monteringen sker FÖRE `Parent = workspace` och före taggen, så att
+		HorseService aldrig ser en halvbyggd häst, och den sker i en pcall:
+		ett visuellt lager får aldrig kunna fälla spelbarheten. Faller det
+		står hästen kvar i lådor och Output säger varför. ]]
+	local profil = VISUELL[hastId]
+	if profil then
+		local ok, skal = pcall(function()
+			local mall = HastVisual.mall(profil)
+			if not mall then return "mallen saknas: ServerStorage.HastVisualer." .. profil end
+			local monterad, m = HastVisual.montera(modell, mall, profil)
+			return if monterad then nil else m
+		end)
+		if not ok then
+			warn(("[Rigg] visuellt lager föll för %s: %s"):format(hastId, tostring(skal)))
+		elseif skal ~= nil then
+			warn(("[Rigg] %s behåller lådorna: %s"):format(hastId, tostring(skal)))
+		else
+			print(("[Rigg] %s bär nu profilen %q"):format(hastId, profil))
+		end
+	end
+
 	modell.Parent = workspace
 	--[[ Taggen SIST: HorseService lyssnar på `GetInstanceAddedSignal`, och
 		en halvbyggd modell ska inte kunna registreras. ]]

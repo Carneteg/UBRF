@@ -26,6 +26,10 @@ local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemet
 local Input = require(script.Input)
 local TouchControls = require(script.TouchControls)
 local MovementController = require(script.MovementController)
+--[[ HORSE_VISUAL_QUALITY_GATE: benen på de hästar som bär ett riktigt nät
+     drivs procedurellt härifrån. Modulen rör bara `Motor6D.Transform`,
+     som är lokalt och oreplikerat — den kan inte påverka lokomotionen. ]]
+local HastGang = require(script.HastGang)
 local AnimationController = require(script.AnimationController)
 local CameraController = require(script.CameraController)
 local SoundController = require(script.SoundController)
@@ -201,6 +205,11 @@ end
 --[[ Inomhusläsbarhet, till fots och till häst: väggar mellan kameran och
      karaktären tonas på den här klienten. ]]
 Genomsikt.start()
+
+--[[ Gånglagret startas EN gång och lever hela sessionen: det animerar alla
+     hästar i sikte, inte bara den man rider. En häst som leds ska röra
+     benen lika mycket som en som bär ryttare. ]]
+HastGang.start()
 
 InteractionController.start(mount)
 
