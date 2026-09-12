@@ -224,8 +224,42 @@ function InteractionController.uppdatera()
 	end
 end
 
+--[[ ══ SERVERN ÄGER LEDNINGEN — OCH SÄGER TILL NÄR DEN UPPHÖR ══════
+
+	Knappen växlade sin text OPTIMISTISKT när spelaren tryckte, och
+	lyssnade sedan aldrig på servern igen. Kopplet kan dock släppa utan att
+	spelaren tryckt: går man för långt (`led.tappade_bort`), fastnar hon
+	(`led.fastnat`), sitter man upp (`led.rider`).
+
+	Mätt i Studio: efter att ha gått ifrån hästen svarade servern
+	`aktiv=nil` medan knappen fortfarande stod på "Let go". Spelaren såg
+	alltså en släpp-knapp för ett koppel som inte fanns, och hade behövt
+	trycka två gånger för att få tag i henne igen — utan att få veta
+	varför.
+
+	`LedService._sync` skickade redan hela sanningen, med skäl. Ingen
+	lyssnade. Nu gör någon det. ]]
+local function lyssnaPaLedningen()
+	local ok, ev = pcall(function() return Net.get("LedSync") end)
+	if not ok or not ev then return end
+	(ev :: RemoteEvent).OnClientEvent:Connect(function(vy)
+		local leder = type(vy) == "table" and vy.leder == true
+		local hastId = if type(vy) == "table" then vy.hastId else nil
+		for model, prompt in pairs(ledKnappar) do
+			local min = leder and model:GetAttribute("HorseId") == hastId
+			ledPrompts[model] = if min then true else nil
+			prompt.ActionText = Sprak.t(if min then "led.slapp" else "led.borja")
+		end
+		if type(vy) == "table" and vy.skal and not leder then
+			warn(("[Led] kopplet släpptes: %s (%s)")
+				:format(Sprak.t(tostring(vy.skal)), tostring(vy.skal)))
+		end
+	end)
+end
+
 function InteractionController.start(mountCallback: (Model) -> ())
 	onMount = mountCallback
+	lyssnaPaLedningen()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then addPrompt(model); addLedPrompt(model) end
 	end
