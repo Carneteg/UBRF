@@ -258,7 +258,9 @@ end
 
 --[[ En rektangel i tomtkoordinater. `iRekt` används både för boxen och
 	för målzonen, så det finns en enda regel för "är hon där". ]]
-export type Rekt = { x: number, y: number, w: number, h: number }
+export type Rekt = { x: number, y: number, w: number, h: number,
+	-- zoner ur exporten bär sin nyckel och sina dörrar (gangzonerUrKomplex)
+	id: string?, dorrar: { string }? }
 
 function LedService.iRekt(p: Vector3, r: Rekt): boolean
 	local x, y = tomt(p)
@@ -313,6 +315,155 @@ function LedService.satGangzoner(zoner: { Rekt }?)
 end
 function LedService.gangzoner(): { Rekt }
 	return gangzoner
+end
+
+--[[ ── ZONERNA UR EXPORTEN — HELA MÄNGDEN, INTE BARA SARGPORTEN ────────
+
+	ChatGPT-review 2026-09-13 20:09 på #167: på 61ccee2 registrerades
+	ENBART spelabstraktionen `sargport`, medan exporten märker sex
+	ridhusdörrar `trafik = "gaende"` som aldrig blev zoner. Det var en
+	andra, tyst sanning om vilka öppningar som räknas — webben stängde
+	huvudentrén för hästen, Roblox lät henne följa rakt igenom.
+
+	Ingen egen koordinattabell. En dörr i exporten är en markör (`pos`)
+	och en `spawn` på andra sidan väggen; fasadöppningarna (`oppningar`
+	med `sida`/`u`/`b`) är husets egna hål, samma data som bygget ritar
+	dem ur. Dörrens sträcka markör→spawn korsar fasadlivet i EN öppning,
+	och den öppningens spann — breddat 0,3 m i sidled och 0,6 m på var
+	sida om livet, samma mått som sargportzonen — är zonen. Inner- och
+	ytterdörr på samma hål ger EN zon. Hittas ingen öppning för en dörr
+	rapporteras det som LUCKA i stället för att gissa mått; en häst-
+	kapabel dörr (`trafik = "hast"`) ger aldrig någon zon.
+
+	Konventionen för u längs fasaden är Geometri.vagg/oppningsHorn
+	(buildings/Geometri.luau) och `vagg` i src/site.js: p0→p1 medurs sett
+	utifrån, så på N och W räknas u mot minskande koordinat. Den skrivs
+	ut här i stället för att require:a Geometri ur ServerScriptService/
+	Varld — och ledning.spec mäter att varje exporterad dörr faktiskt
+	landar i en zon, så en avvikande konvention faller där. ]]
+local ZON_SIDLED, ZON_TVARS = 0.3, 0.6
+
+export type Lucka = { id: string, skal: string }
+
+-- Öppningens spann längs fasaden (tomtkoordinater), fasadlivets läge
+-- tvärs, och om fasaden går längs X (N/S) eller längs Y (E/W).
+local function oppningsSpann(r: Rekt, o: any): (number, number, number, boolean)
+	local u, b = o.u, o.b
+	if o.sida == "S" then return r.x + u, r.x + u + b, r.y, true
+	elseif o.sida == "N" then return r.x + r.w - u - b, r.x + r.w - u, r.y + r.h, true
+	elseif o.sida == "E" then return r.y + u, r.y + u + b, r.x + r.w, false
+	else return r.y + r.h - u - b, r.y + r.h - u, r.x, false end
+end
+
+-- Samma urval som webbens autoDorrar (site.js): dörr eller port i marknivå
+-- som inte är intern mot ett sammanbyggt grannhus.
+local function arDorroppning(o: any): boolean
+	local typ = tostring(o.typ or "")
+	return (typ:sub(1, 4) == "dorr" or typ:sub(1, 4) == "port")
+		and (o.z0 or 0) <= 0.2 and not o.intern
+end
+
+function LedService.gangzonerUrKomplex(K: any): ({ Rekt }, { Lucka })
+	local zoner: { Rekt } = {}
+	local luckor: { Lucka } = {}
+	local perNyckel: { [string]: Rekt } = {}
+	local hus: { [string]: any } = {}
+	for _, b in ipairs(K.byggnader or {}) do hus[b.id] = b end
+	local INNE = { ridhusinne = "ridhus", stallinne = "stall" }
+
+	local function lagg(nyckel: string, dorrId: string, r: Rekt)
+		local z = perNyckel[nyckel]
+		if z == nil then
+			z = r
+			z.id = nyckel
+			z.dorrar = {}
+			perNyckel[nyckel] = z
+			table.insert(zoner, z)
+		end
+		table.insert(z.dorrar :: { string }, dorrId)
+	end
+	local function lucka(d: any, skal: string)
+		table.insert(luckor, { id = tostring(d.id), skal = skal })
+	end
+
+	--[[ Dörrens sträcka a→b (tomtkoordinater) mot husets fasadöppningar. ]]
+	local function provaDorr(d: any, husId: string?, ax: number, ay: number, bx: number?, by: number?)
+		local b = husId and hus[husId]
+		if b == nil then
+			lucka(d, "hör inte till något hus i exporten (mot = " .. tostring(d.mot) .. ")")
+			return
+		end
+		if bx == nil or by == nil then
+			lucka(d, "saknar spawn — ingen sträcka som korsar fasaden")
+			return
+		end
+		for _, o in ipairs(b.oppningar or {}) do
+			if arDorroppning(o) then
+				local s0, s1, liv, langsX = oppningsSpann(b.rekt, o)
+				-- tvärs väggen: t0→t1; längs väggen: k0→k1
+				local t0, t1, k0, k1
+				if langsX then t0, t1, k0, k1 = ay, by, ax, bx else t0, t1, k0, k1 = ax, bx, ay, by end
+				if (t0 - liv) * (t1 - liv) <= 0 and math.abs(t1 - t0) > 1e-6 then
+					local k = k0 + (k1 - k0) * ((liv - t0) / (t1 - t0))
+					if k >= s0 - ZON_SIDLED and k <= s1 + ZON_SIDLED then
+						local r: Rekt = if langsX
+							then { x = s0 - ZON_SIDLED, y = liv - ZON_TVARS,
+								w = (s1 - s0) + 2 * ZON_SIDLED, h = 2 * ZON_TVARS }
+							else { x = liv - ZON_TVARS, y = s0 - ZON_SIDLED,
+								w = 2 * ZON_TVARS, h = (s1 - s0) + 2 * ZON_SIDLED }
+						lagg(string.format("%s/%s/%s", husId, o.sida, tostring(o.u)), tostring(d.id), r)
+						return
+					end
+				end
+			end
+		end
+		lucka(d, "sträckan markör→spawn korsar ingen dörröppning i fasaden på " .. tostring(husId))
+	end
+
+	--[[ Spawn i tomtkoordinater: en dörr mot gården har den redan där, en
+		dörr in i ett hus har den i husets egna mått (origo i sydvästra
+		hörnet, samma som exportens `origo`). ]]
+	local function spawnTomt(d: any): (number?, number?)
+		if d.spawn == nil then return nil, nil end
+		if d.mot == "gard" then return d.spawn.x, d.spawn.y end
+		local inneHus = INNE[d.mot]
+		local inne = inneHus and K[inneHus]
+		local o = (inne and inne.origo) or (inneHus and hus[inneHus] and hus[inneHus].rekt)
+		if o == nil then return nil, nil end
+		return o.x + d.spawn.x, o.y + d.spawn.y
+	end
+
+	-- Gårdens dörrar: markören står i tomtkoordinater.
+	for _, d in ipairs(K.dorrar or {}) do
+		if d.trafik == "gaende" then
+			local sx, sy = spawnTomt(d)
+			provaDorr(d, INNE[d.mot], d.pos[1], d.pos[2], sx, sy)
+		end
+	end
+	-- Husens innerdörrar: markören står i husets mått.
+	for _, husId in ipairs({ "ridhus", "stall" }) do
+		local inne, b = K[husId], hus[husId]
+		if inne and b then
+			local o = inne.origo or b.rekt
+			for _, d in ipairs(inne.dorrar or {}) do
+				if d.trafik == "gaende" then
+					local sx, sy = spawnTomt(d)
+					provaDorr(d, husId, o.x + d.pos[1], o.y + d.pos[2], sx, sy)
+				end
+			end
+		end
+	end
+	-- Spelabstraktionen sargport i norra sargen: gapet, samma marginaler.
+	local sa = K.spelabstraktioner
+	local sp = sa and sa.ridhus and sa.ridhus.sargport
+	local rh = hus.ridhus
+	if sp and rh and sp.trafik == "gaende" then
+		lagg("ridhus/sargport", "sargport", {
+			x = rh.rekt.x + sp.x0 - ZON_SIDLED, y = rh.rekt.y + sp.y - ZON_TVARS,
+			w = (sp.x1 - sp.x0) + 2 * ZON_SIDLED, h = 2 * ZON_TVARS,
+		})
+	end
+	return zoner, luckor
 end
 
 --[[ Korsar sträckan a→b (i tomtkoordinater via iRekt) rektangeln? Provas

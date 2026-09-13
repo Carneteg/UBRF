@@ -536,20 +536,20 @@ function GameplayService.start()
 			x = hus.rekt.x + bana.x, y = hus.rekt.y + bana.y,
 			w = bana.w, h = bana.h,
 		})
-		--[[ Öppningar för GÅENDE, där en ledd häst aldrig går: sargporten
-			i norra sargen (`trafik = "gaende"` i exporten — kanon: hästen
-			kommer in via hästgången och sarggrinden). Zonen är gapet plus
-			0,3 m i sidled och 0,6 m på var sida om sarglinjen. ]]
-		local sa = (Komplex :: any).spelabstraktioner
-		local sp = sa and sa.ridhus and sa.ridhus.sargport
-		if sp and sp.trafik == "gaende" then
-			LedService.satGangzoner({ {
-				x = hus.rekt.x + sp.x0 - 0.3, y = hus.rekt.y + sp.y - 0.6,
-				w = (sp.x1 - sp.x0) + 0.6, h = 1.2,
-			} })
-		end
 	else
 		warn("[Led] Ridbanans rektangel saknas i datan — leda kan inte zonprövas.")
+	end
+	--[[ Öppningar för GÅENDE, där en ledd häst aldrig går: ALLA som
+		exporten märker `trafik = "gaende"` — sargporten i norra sargen
+		och ridhusets dörrar för gående — härledda ur samma export som
+		webben läser (kanon: hästen kommer in via hästgången och
+		sarggrinden). Härledningen och måtten bor i LedService; en dörr
+		som inte går att zonlägga utan gissning rapporteras här i stället
+		för att tystas. ]]
+	local zoner, luckor = LedService.gangzonerUrKomplex(Komplex)
+	LedService.satGangzoner(zoner)
+	for _, l in ipairs(luckor) do
+		warn(string.format("[Led] Öppning för gående utan zon: %s — %s", l.id, l.skal))
 	end
 
 	--[[ Vilken häst spelaren FÅR leda är skötselns fråga, inte

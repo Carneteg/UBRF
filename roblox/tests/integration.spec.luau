@@ -203,6 +203,17 @@ do
 	check("stallet gav en häst och det är första dagens",
 		S.hastId == Stallet.FORSTA_DAGEN_HAST,
 		string.format("%s (väntat %s)", tostring(S.hastId), tostring(Stallet.FORSTA_DAGEN_HAST)))
+	--[[ #167 review 20:09: `GameplayService.start()` ska registrera ALLA
+		öppningar för gående ur exporten, inte bara sargporten. Mäts här
+		eftersom ledning.spec bara ser härledningen, inte att produktionen
+		anropar den. ]]
+	do
+		local ids = {}
+		for _, z in ipairs(LedService.gangzoner()) do ids[z.id or "?"] = true end
+		check("start() registrerade zonerna för gående ur exporten: sargporten OCH huvudentrén",
+			ids["ridhus/sargport"] == true and ids["ridhus/W/9"] == true and #LedService.gangzoner() >= 7,
+			string.format("%d zoner", #LedService.gangzoner()))
+	end
 	check("riggen är byggd med rätt identitet och en riktig sits",
 		S.modell ~= nil and S.modell:GetAttribute("HorseId") == S.hastId
 			and S.modell:FindFirstChild("RiderSeat") ~= nil
