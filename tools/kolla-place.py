@@ -282,11 +282,22 @@ def main() -> int:
     #   (git HEAD i grindens katalog, efter en amend) medan filen sjalv
     #   sade 5e89bcc. Kors HAR, i CI, mot den committade rapporten -- inte
     #   bara i grinden som skrev den. ]]
+    #[[ DEN COMMITTADE rapporten, inte arbetstradets. I CI kor
+    #   PRE_TOBIAS_FIRST_PLAYABLE_GATE fore det har steget UTAN --place och
+    #   skriver da om qa/pre-tobias/RAPPORT.md till "ingen fil matt";
+    #   lastes filen fran disk foll kontrollen pa grindens egen utdata i
+    #   stallet for pa evidensen i git (matt: a17dff5, grindar rod). Det
+    #   som ska provas ar det pastaende som ligger i commiten. ]]
     rapport = ROT / "qa" / "pre-tobias" / "RAPPORT.md"
+    g = subprocess.run(["git", "show", "HEAD:qa/pre-tobias/RAPPORT.md"], cwd=ROT,
+                       capture_output=True, text=True)
+    txt = g.stdout if g.returncode == 0 else (
+        rapport.read_text(encoding="utf-8") if rapport.is_file() else None)
     if utan_rapport:
         print("  --   rapportkontrollen hoppad (grinden skriver rapporten efter det har steget)")
-    elif rapport.is_file():
-        txt = rapport.read_text(encoding="utf-8")
+    elif txt is not None and "ingen fil m" in txt:
+        print("  --   den committade rapporten matte ingen .rbxlx — inget kallhead att prova")
+    elif txt is not None:
         m_fil = re.search(r"\| matt `\.rbxlx` \| `([^`]+)` \|", txt.replace("mätt", "matt"))
         m_sha = re.search(r"artefaktens kallhead[^|]*\| `([0-9a-f]{40})` \|",
                           txt.replace("källhead", "kallhead"))
