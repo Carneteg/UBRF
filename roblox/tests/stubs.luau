@@ -224,7 +224,7 @@ Enum = {
 	PathStatus = { Success = 1, NoPath = 2, ClosestNoPath = 3 },
 	KeyCode = setmetatable({}, { __index = function(_, k) return k end }),
 	UserInputState = { Begin = 1, End = 2 },
-	UserInputType = { Gamepad1 = 1 },
+	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, Keyboard = 4 },
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter
@@ -251,6 +251,13 @@ Enum = {
 	ZIndexBehavior = { Sibling = 1, Global = 2 },
 	Font = { Gotham = 1, GothamBold = 2, SourceSans = 3, SourceSansBold = 4 },
 	TextXAlignment = { Left = 1, Center = 2, Right = 3 },
+	--[[ UIListLayoutens riktningar, och `Touch` som inmatningstyp. Alla tre
+	     saknades, och alla tre behövdes för att `TouchControls.mount()`
+	     skulle gå att köra: gångartstrappan sätter `HorizontalAlignment`
+	     och `VerticalAlignment`, och blickytan släpper igenom bara
+	     `UserInputType.Touch`. ]]
+	HorizontalAlignment = { Left = 1, Center = 2, Right = 3 },
+	VerticalAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	TextYAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	TextTruncate = { None = 0, AtEnd = 1, SplitWord = 2 },
 	SizeConstraint = { RelativeXY = 1, RelativeXX = 2, RelativeYY = 3 },
@@ -330,6 +337,18 @@ workspace = {
 	FindFirstChild = function(self, namn)
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 		return nil
+	end,
+	--[[ `GetChildren` saknades på workspace, och det gjorde en hel
+	     produktionsgren omätbar: `DinHast.slackAndrasMarkorer()` sveper
+	     `workspace:GetChildren()` för att släcka ANDRA spelares
+	     boxmarkörer. Grenen var trippelt omätbar — `ChildAdded` fyrade
+	     inte, `task.defer` fanns inte, och svepet kunde inte räkna upp
+	     barnen. Alla tre är rättade, och `flerspelare.spec` mäter nu att
+	     Player2 inte ser Player1:s prompt. ]]
+	GetChildren = function(self)
+		local ut = {}
+		for _, b in ipairs(self._barn) do table.insert(ut, b) end
+		return ut
 	end,
 	--[[ Genomsikt.start() sveper workspace efter genomsiktliga delar och
 	     lyssnar på nya. Bänken hade varken svepet eller signalen, så
@@ -897,6 +916,15 @@ local function __nyInstans(klass)
 	     på `attempt to index nil with 'Connect'`; en tom stubb hade varit
 	     lika illa, för då kan bänken inte skilja "vi lyssnar" från "vi hör". ]]
 	inst.ChildAdded = __signal()
+	--[[ `InputBegan` / `InputEnded` PÅ EN GUI-YTA. Utan dem gick
+	     `TouchControls.mount()` inte att köra alls i bänken: `kopplaBlick`
+	     dog på `attempt to index nil with 'Connect'`. Följden var att hela
+	     pekmonteringen — blickytan, spaken, knappraden — aldrig byggdes i
+	     ett prov, och att fria blicken därför var helt omätt.
+	     `touch.spec` provar de RENA funktionerna; allt som bor inne i
+	     `mount`s stängning låg utanför. ]]
+	inst.InputBegan = __signal()
+	inst.InputEnded = __signal()
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
 	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
 	     värde — och det är den skillnaden `dismount` bygger på. ]]
@@ -1002,7 +1030,19 @@ local function __nyInstans(klass)
 		     fälla en städning som uteblir. ]]
 		if far then self.Parent = nil end
 	end
-	if klass == "TextButton" then inst.Activated = __signal() end
+	--[[ ...och knappens ÖVRIGA vägar in. `Activated` fanns; pekreglagens
+	     gångartsknappar kopplar `MouseButton1Click`, och utan den dog
+	     `TouchControls.mount()` i `nyGang`. Samma knapp, andra signal. ]]
+	if klass == "TextButton" or klass == "ImageButton" then
+		inst.Activated = __signal()
+		inst.MouseButton1Click = __signal()
+		inst.MouseButton1Down = __signal()
+		inst.MouseButton1Up = __signal()
+		--[[ `MouseLeave` nollar tygeln och sitsen när fingret glider av
+		     knappen — den håll-ned-vägen är hela skillnaden mot en impuls. ]]
+		inst.MouseLeave = __signal()
+		inst.MouseEnter = __signal()
+	end
 	--[[ `ProximityPrompt.Triggered` — samma skäl som Activated ovan.
 	     Utan den gick `DorrService.start()` inte att köra i den här
 	     banken, och därmed gick promptens TEXT inte att mäta. En grind
@@ -1475,6 +1515,19 @@ end
 task = {
 	delay = function(_, fn) __senasteDelay = fn end,
 	spawn = function(fn, ...) fn(...) end,
+	--[[ `defer` KÖRS DIREKT i bänken, och det saknades helt.
+
+	     `DinHast.start()` släcker andra spelares boxmarkörer med
+	     `task.defer(slackAndrasMarkorer)` ur sin `workspace.ChildAdded`-
+	     lyssnare. Grenen har varit dubbelt omätbar: `ChildAdded` fyrade
+	     inte i stubben (rättat tidigare idag), och när den väl gjorde det
+	     dog handlaren på `attempt to call a nil value` här.
+
+	     Roblox kör `defer` i slutet av bildrutan; bänken har ingen
+	     bildruta, så den körs direkt. Skillnaden syns bara för kod som
+	     RÄKNAR på att andra hinner emellan, och den koden ska i så fall
+	     inte använda `defer`. ]]
+	defer = function(fn, ...) fn(...) end,
 	--[[ `wait` är en no-op i bänken. SparService backar av med 1-2-4
 	     sekunder mellan retryförsöken; en riktig väntan hade gjort
 	     felprovet sju sekunder långt utan att mäta något annat än att
