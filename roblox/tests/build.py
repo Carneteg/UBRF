@@ -606,7 +606,9 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   sadla. INTEGRATION ar FORBEREDELSE plus riggen, sa inget tappas. ]]
     elif "skotselpass" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
-    elif "klient" in spec_rel:
+    elif "klient" in spec_rel or "mobillayout" in spec_rel:
+        # mobillayout.spec mater skotsellayouten mot mobilens
+        # rorelsereglage och behover samma klientbank som klient.spec.
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:
         moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"

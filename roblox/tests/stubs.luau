@@ -492,8 +492,31 @@ local __services = {
 			Character = { Name = "Spelare",
 				FindFirstChild = function() return nil end,
 				FindFirstChildOfClass = function() return nil end },
-			FindFirstChild = function() return nil end,
-			FindFirstChildOfClass = function() return nil end,
+			--[[ ...OCH SPELAREN KAN BÄRA BARN, t.ex. en `PlayerGui`.
+
+			     Båda de här svarade hårdkodat nil, och det gjorde en hel
+			     produktionsväg omätbar: skötselpanelens väjning för
+			     mobilens rörelsereglage börjar med
+			     `player:FindFirstChildOfClass("PlayerGui")`, så i bänken
+			     fanns aldrig någon `TouchGui`, väjningen svarade 0 och
+			     GRENEN KÖRDES ALDRIG. Varje grön mätning av
+			     skötsellayouten gällde alltså bara skrivbordet.
+
+			     Nu söks `_barn` som på en riktig instans, så ett prov kan
+			     hänga upp en representativ pekreglagehierarki. ]]
+			_barn = {},
+			FindFirstChild = function(self, namn)
+				for _, b in ipairs(rawget(self, "_barn") or {}) do
+					if b.Name == namn then return b end
+				end
+				return nil
+			end,
+			FindFirstChildOfClass = function(self, klass)
+				for _, b in ipairs(rawget(self, "_barn") or {}) do
+					if b.ClassName == klass then return b end
+				end
+				return nil
+			end,
 			--[[ HUD:en parentas hit. Utan den gick PreparationController inte
 			     att köra alls i bänken. ]]
 			WaitForChild = function(self, namn)
@@ -1191,6 +1214,45 @@ local function __nyInstans(klass)
 			     topplistens inset, vilket bänken inte modellerar). Ett
 			     `GuiObject` räknas ur sin egen `UDim2` mot förälderns yta —
 			     samma formel motorn använder: skala · förälder + offset. ]]
+			--[[ `AbsolutePosition` — ÖVRE VÄNSTRA HÖRNET I PIXLAR.
+
+			     Syskonet till `AbsoluteSize` nedan, och det saknades av
+			     samma skäl: ingen spec hade behövt det förrän
+			     skötsellayoutens väjning skulle mätas.
+			     `pekreglagensKanter()` räknar spakens högerkant som
+			     `AbsolutePosition.X + AbsoluteSize.X`, så utan den här
+			     kunde väjningen varken lyckas eller misslyckas i bänken.
+
+			     Räknas som motorn gör: förälderns hörn plus den egna
+			     `UDim2`-positionen mot förälderns yta, minus
+			     `AnchorPoint` gånger den egna ytan. En `ScreenGui` är
+			     rotytan och ligger i origo. ]]
+			if k == "AbsolutePosition" then
+				local klass = rawget(t, "ClassName")
+				if klass == "ScreenGui" then return Vector2.new(0, 0) end
+				local far = t.Parent
+				if type(far) ~= "table" then return Vector2.new(0, 0) end
+				local farHorn = far.AbsolutePosition
+				local farYta = far.AbsoluteSize
+				local pos = rawget(t, "_p") and rawget(t, "_p").Position
+					or rawget(t, "Position")
+				if not (farHorn and farYta and type(pos) == "table"
+					and pos._typ == "UDim2") then
+					return Vector2.new(0, 0)
+				end
+				local x = farHorn.X + pos.XScale * farYta.X + pos.XOffset
+				local y = farHorn.Y + pos.YScale * farYta.Y + pos.YOffset
+				local ank = rawget(t, "_p") and rawget(t, "_p").AnchorPoint
+					or rawget(t, "AnchorPoint")
+				if type(ank) == "table" and ank._typ == "Vector2" then
+					local egen = t.AbsoluteSize
+					if egen then
+						x -= ank.X * egen.X
+						y -= ank.Y * egen.Y
+					end
+				end
+				return Vector2.new(x, y)
+			end
 			if k == "AbsoluteSize" then
 				local klass = rawget(t, "ClassName")
 				if klass == "ScreenGui" then
