@@ -52,6 +52,7 @@ local Preparation = require(game:GetService("ReplicatedStorage").HorseCore.Prepa
 --[[ #162: spelarens text kommer ur språkkanonen, aldrig ur den här filen.
      Klienten översätter — här är spelarens locale känd. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+local UserInputService = game:GetService("UserInputService")
 local Net = Core.Networking
 
 local PreparationController = {}
@@ -341,6 +342,47 @@ end
 	stället för att skrivas av: spaken flyttar sig mellan enheter, och ett
 	tal här hade blivit fel på nästa skärm. Finns inga pekreglage — hela
 	skrivbordet — är svaret noll och layouten är oförändrad. ]]
+--[[ ══ RÖRELSEREGLAGETS RESERVERADE HÖRN ════════════════════════════════
+
+	Den här funktionen finns därför att uppslaget nedan kan TYSTNA.
+
+	`pekreglagensKanter()` läser Robloxs interna GUI-namn — `TouchGui`,
+	`ThumbstickStart`. Heter spaken något annat (den dynamiska tumspaken),
+	eller är kontrollerna inte skapade än när layouten körs första gången,
+	svarar uppslaget 0 och panelen la sig rakt över spaken. Inget fel
+	kastades, ingenting loggades, och bänken kunde inte se det:
+	`mobillayout.spec` mätte panelen på x 12..328 vid iPhone, iPad OCH
+	skrivbord, alltså alltid oväjd.
+
+	Nu är reserven GOLVET och uppslaget bara en förfining som kan skjuta
+	panelen längre höger — aldrig närmare spaken. Villkoret är
+	`UserInputService.TouchEnabled`, alltså en riktig Roblox-API-fråga om
+	enheten, inte ett namn på ett internt GUI-barn.
+
+	Måtten är projektets egna, samma som reglagen i `TouchControls` ritas
+	med: 66 px radie, 24 px från vänsterkanten, och samma skalregel
+	`clamp(H / 390, 0.62, 1)`. De står som tal HÄR i stället för att
+	require:a `TouchControls`, därför att den modulen inte ligger i alla
+	buntar som bär den här filen — ett require som blir nil i en bunt är
+	precis den tysta fällan noterna i `build.py` varnar för.
+
+	`[antagande]` Robloxs standardspak är inte uppmätt i Studio. Reserven
+	är en modell av det nedre vänstra reglagefältet; exakta mått ska
+	bekräftas på enhet. Är modellen för snäv fångar uppslaget resten, och
+	är den för generös flyttas panelen några pixlar för långt höger —
+	ingen av dem lägger den på spaken.
+
+	Bara HÖGERKANTEN räknas: layouten behöver veta var det är fritt att
+	börja, inte reglagets fulla rektangel. ]]
+local REGLAGE_RADIE = 66        -- spakens yttermått, som TouchControls.RADIE
+local REGLAGE_KANT = 24         -- avstånd från skärmens vänsterkant
+local REGLAGE_REF_H = 390       -- skalans referenshöjd, som i TouchControls
+local function rorelsereservHoger(H: number): number
+	if not UserInputService.TouchEnabled then return 0 end
+	local skala = math.clamp(H / REGLAGE_REF_H, 0.62, 1)
+	return (REGLAGE_KANT + 2 * REGLAGE_RADIE) * skala
+end
+
 local function pekreglagensKanter(): (number, number)
 	local pg = player and player:FindFirstChildOfClass("PlayerGui")
 	local tg = pg and pg:FindFirstChild("TouchGui")
@@ -386,6 +428,11 @@ local function interaktionsLayout(antalVal: number, rader: number,
 	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger` noll
 		och raden ger `MARGINAL` — samma läge som förut. ]]
 	local spakHoger, hoppVanster = pekreglagensKanter()
+	--[[ RESERVEN ÄR GOLVET, uppslaget en förfining. Står den riktiga spaken
+		längre höger än modellen väjer vi för DEN; svarar uppslaget 0 håller
+		reserven ändå panelen borta från hörnet. ]]
+	local reservHoger = rorelsereservHoger(H)
+	if reservHoger > spakHoger then spakHoger = reservHoger end
 	local x = MARGINAL
 	if spakHoger > 0 then
 		x = math.max(MARGINAL, spakHoger + MARGINAL)

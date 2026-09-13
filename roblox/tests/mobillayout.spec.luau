@@ -47,6 +47,7 @@ local function check(vad: string, ok: boolean, extra: any?)
 end
 
 local Players = game:GetService("Players")
+local usv = game:GetService("UserInputService")
 local cam = game:GetService("Workspace").CurrentCamera
 
 --[[ Skärmar familjen faktiskt spelar på. Talen är dem projektet redan
@@ -97,11 +98,21 @@ local function byggTouchGui(spakNamn: string, B: number, H: number)
 	hopp.Visible = true
 	hopp.Parent = tg
 	Players.LocalPlayer._barn = { pg }
+	usv.TouchEnabled = true
 	return spak
+end
+
+--[[ TOUCH PÅ, men INGEN `TouchGui` alls. Det är tidsfallet: reglagen kan
+	vara oskapade när layouten körs första gången, och då finns inget att
+	slå upp. Uppslaget kan aldrig klara det här — bara en reservzon kan. ]]
+local function touchUtanTouchGui()
+	Players.LocalPlayer._barn = {}
+	usv.TouchEnabled = true
 end
 
 local function utanPekreglage()
 	Players.LocalPlayer._barn = {}
+	usv.TouchEnabled = false
 end
 
 local function panelenVid(B: number, H: number)
@@ -173,6 +184,21 @@ for _, spakNamn in ipairs({ "DynamicThumbstickFrame", "ThumbstickFrame" }) do
 	local p = panelenVid(749, 309)
 	local r = reserv(749, 309)
 	check(("iPhone, spaken heter %s: panelen viker ändå"):format(spakNamn),
+		p.x0 >= r.x1 - 0.01,
+		("panel x0 %.0f, reserv slutar %.0f"):format(p.x0, r.x1))
+end
+
+--[[ ══ 2b. RESERVEN MÅSTE KLARA SIG UTAN UPPSLAG ══════════════════════
+	Touch är på men det finns ingen `TouchGui` att läsa. Uppslaget svarar 0
+	av rätt skäl — det finns inget att hitta — och bara en reservzon räddar
+	panelen. Det här fallet är omöjligt att klara med namnuppslag, och det
+	är därför reserven är golvet och inte en fallback. ]]
+print("\n── 2b. Touch på, men reglagen inte skapade än ──")
+for _, sk in ipairs(SKARMAR) do
+	touchUtanTouchGui()
+	local p = panelenVid(sk.B, sk.H)
+	local r = reserv(sk.B, sk.H)
+	check(("%s: panelen viker utan att kunna slå upp spaken"):format(sk.namn),
 		p.x0 >= r.x1 - 0.01,
 		("panel x0 %.0f, reserv slutar %.0f"):format(p.x0, r.x1))
 end
