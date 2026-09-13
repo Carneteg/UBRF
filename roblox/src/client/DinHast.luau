@@ -8,8 +8,8 @@
 
 	Två saker, båda LOKALA:
 
-	  · en rad i HUD:en vid ankomsten — "Idag rider du Blackrock Jack —
-	    box 31" — som svarar på frågan innan man ens gått in i stallet,
+	  · en rad i HUD:en vid ankomsten — "Idag rider du Blackrock Jack" —
+	    som svarar på frågan innan man ens gått in i stallet,
 	  · en liten skylt över hästen själv, så att rätt box går att känna
 	    igen från gången.
 
@@ -28,7 +28,6 @@ local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 
 local Sprak = require(ReplicatedStorage.HorseCore.Sprak)
-local Stallet = require(ReplicatedStorage.Stallet)
 local PreparationController = require(script.Parent.PreparationController)
 
 local DinHast = {}
@@ -231,12 +230,9 @@ end
 	och varken raden eller skylten byggdes. Mätt med två spelare inne —
 	skylten saknades helt hos båda.
 
-	Den behövdes inte heller. Klienten har redan allt:
-
-	  · `PreparationController` får hästens id i sin vanliga vy,
-	  · namnet står på modellen i världen,
-	  · `Stallet` ligger i ReplicatedStorage och räknar boxnumret ur
-	    samma data som servern använder.
+	Den behövdes inte heller. Klienten har redan allt den ska visa:
+	`PreparationController` får hästens id i sin vanliga vy, och namnet
+	står på modellen i världen.
 
 	Ingen rundtur, inget att hänga på, och ett svar som kommer lika fort
 	som förberedelsevyn. ]]
@@ -246,14 +242,11 @@ local function lasAssignment(): boolean
 	if dagens and dagens.id == id then return true end
 	local modell = hastModell(id)
 	local namn = modell and (modell:GetAttribute("HorseName") or modell.Name) or id
-	local ok, nummer = pcall(function() return Stallet.boxNummerFor(id) end)
-	dagens = { id = id, namn = namn, box = if ok then nummer else nil }
+	dagens = { id = id, namn = namn }
 
 	local rad = hudRad
 	if rad then
-		rad.Text = if dagens.box
-			then Sprak.t("stall.idag_rider_du", tostring(namn), tostring(dagens.box))
-			else Sprak.t("stall.idag_rider_du_utan_box", tostring(namn))
+		rad.Text = Sprak.t("stall.idag_rider_du", tostring(namn))
 	end
 	if modell then byggSkylt(modell) end
 	slackAndrasMarkorer()

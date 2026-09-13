@@ -439,11 +439,17 @@ Sprak.text = {
 		sv = "DIN HÄST",
 		en = "YOUR HORSE",
 	},
+	--[[ INGET BOXNUMMER. Raden bar först "— box 31", och det talet gick
+	     inte att para ihop med någonting: mätt i den byggda anläggningen
+	     finns exakt två skyltar med text, "UPPLANDS-BRO RYTTARFÖRENING"
+	     och "CAFÉ KRUBBAN". Ingen box bär vare sig nummer eller namn, och
+	     `MB 5` är ett internt delnamn som aldrig ritas.
+
+	     Fördelningen är dessutom redan märkt [antagande] i `Stallet` — det
+	     finns inget verifierat underlag för UBRF:s riktiga boxnumrering,
+	     och att visa ett påhittat tal som om det vore vägvisning är precis
+	     det kanon förbjuder. Skylten över hästen gör jobbet i stället. ]]
 	["stall.idag_rider_du"] = {
-		sv = "Idag rider du %s — box %s.",
-		en = "Today you ride %s — stall %s.",
-	},
-	["stall.idag_rider_du_utan_box"] = {
 		sv = "Idag rider du %s.",
 		en = "Today you ride %s.",
 	},
