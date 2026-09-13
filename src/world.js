@@ -371,8 +371,18 @@ function vandringKollision(nx,ny,r,fx,fy){
     /* Sargen som väggar. Gapet i norra sargen är SPELABSTRAKTIONEN sargport
        (src/site.js) — inte fidelity; ingen bild visar en grind där. */
     const sp=SPELABSTRAKTIONER.ridhus.sargport;
-    [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,sp.x0,ba.y+ba.h);
-    [nx,ny]=kollideraSeg(nx,ny,r,sp.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    /* MED HÄSTEN VID HANDEN ÄR SARGPORTEN STÄNGD. Den är för folk till
+       fots (`trafik:"gaende"`); hästen kommer in genom hästgången och
+       `sargGrind`. Hästen följer i spelarens spår utan egen kollision,
+       så det är spelaren som måste stoppas — annars leds hon rakt igenom
+       en öppning kanonen säger att hon aldrig går i. Vägsökningen läser
+       samma funktion (NAV byggs om när ledningen börjar eller slutar). */
+    if(G.leder&&sp.trafik==="gaende"){
+      [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    }else{
+      [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,sp.x0,ba.y+ba.h);
+      [nx,ny]=kollideraSeg(nx,ny,r,sp.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    }
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x+ba.w,ba.y);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x,ba.y+ba.h);
     /* Östra långsidan i två stycken: grinden mot hästgången är gapet.
@@ -495,7 +505,7 @@ function vandringKollision(nx,ny,r,fx,fy){
    samma nivåregel (NIVA_STEG) som figuren själv följer. Product Owner
    2026-09-04 15:20: "spelaren kan inte gå upp på läktaren" — gå-hit-
    vägen (pekskärmens/kartvyns primära styrning) slutade bredvid däcket. */
-const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null, nivafri:false};
+const NAV={scen:null, leder:false, cell:1.6, nx:0, ny:0, fri:null, nivafri:false};
 
 function navBygg(){
   const matt=G.scen==="gard" ? [ANL.bredd,ANL.djup]
@@ -528,9 +538,11 @@ function navBygg(){
       NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
     }
   }finally{NAV.nivafri=false;}
-  NAV.scen=G.scen;
+  NAV.scen=G.scen; NAV.leder=!!G.leder;
 }
-function navRedo(){ if(NAV.scen!==G.scen)navBygg(); }
+/* Rutnätet byggs om när scenen byts — och när ledningen börjar eller
+   slutar, för då stänger sargporten (se vandringKollision). */
+function navRedo(){ if(NAV.scen!==G.scen||NAV.leder!==!!G.leder)navBygg(); }
 function navIx(x,y){
   const i=clamp(Math.floor(x/NAV.cell),0,NAV.nx-1);
   const j=clamp(Math.floor(y/NAV.cell),0,NAV.ny-1);
@@ -800,6 +812,16 @@ function hastData(id){
 }
 
 /* ── Interaktion ──────────────────────────────────────────────── */
+/* En dörr för gående (`trafik:"gaende"`, site.js) öppnas inte med hästen
+   vid handen: hästen går in genom hästgången. Samma ord som Roblox
+   (`led.ingang_hast`). */
+function dorrMedHast(d){
+  if(G.leder&&d.trafik==="gaende"){
+    saga("Hästen går in genom hästgången — inte här.",4);
+    return;
+  }
+  gaTill(d.mot,d.spawn);
+}
 function interaktioner(){
   const L=[];
   if(G.scen==="gard"){
@@ -807,7 +829,7 @@ function interaktioner(){
       if(d.mot==="info"){
         L.push({pos:d.pos, text:d.text, gor(){saga(d.info,4);}});
       }else{
-        L.push({pos:d.pos, text:d.text, gor(){gaTill(d.mot,d.spawn);}});
+        L.push({pos:d.pos, text:d.text, gor(){dorrMedHast(d);}});
       }
     }
     /* Med sadlad häst vid handen kan lektionen ridas utomhus:
@@ -850,7 +872,7 @@ function interaktioner(){
   }else if(G.scen==="ridhusinne"){
     const R=RIDHUSINNE;
     for(const d of R.dorrar) L.push({pos:d.pos, text:d.text,
-      gor(){gaTill(d.mot,d.spawn);}});
+      gor(){dorrMedHast(d);}});
     for(const i of R.info) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
     const sp=SPELABSTRAKTIONER.ridhus.sargport, portX=(sp.x0+sp.x1)/2;
     L.push({pos:[portX,R.bana.y+R.bana.h], text:G.leder

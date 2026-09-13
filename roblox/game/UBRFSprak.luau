@@ -541,6 +541,10 @@ Sprak.text = {
 		sv = "Någon annan leder henne",
 		en = "Someone else is leading her",
 	},
+	["led.ingang_hast"] = {
+		sv = "Hästen går in genom hästgången — inte här",
+		en = "The horse goes in through the horse passage — not this way",
+	},
 	["led.tappade_bort"] = {
 		sv = "Hon kom efter — gå tillbaka och ta henne igen",
 		en = "She fell behind — go back and take her again",

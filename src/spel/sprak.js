@@ -246,6 +246,10 @@ const SPRAK = {
   "led.leder_redan": { sv: "Du leder redan", en: "You are already leading" },
   "led.leder_inte": { sv: "Du leder ingen häst", en: "You are not leading a horse" },
   "led.upptagen": { sv: "Någon annan leder henne", en: "Someone else is leading her" },
+  /* Topologiparitet: en ledd häst går aldrig genom en öppning för gående
+     (sargporten, ridhusets entrédörrar). Samma ord på båda ytorna. */
+  "led.ingang_hast": { sv: "Hästen går in genom hästgången — inte här",
+    en: "The horse goes in through the horse passage — not this way" },
   "led.tappade_bort": { sv: "Hon kom efter — gå tillbaka och ta henne igen",
     en: "She fell behind — go back and take her again" },
   "led.tappad": { sv: "Du tappade henne", en: "You lost her" },

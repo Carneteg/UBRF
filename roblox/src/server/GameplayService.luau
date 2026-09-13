@@ -536,6 +536,18 @@ function GameplayService.start()
 			x = hus.rekt.x + bana.x, y = hus.rekt.y + bana.y,
 			w = bana.w, h = bana.h,
 		})
+		--[[ Öppningar för GÅENDE, där en ledd häst aldrig går: sargporten
+			i norra sargen (`trafik = "gaende"` i exporten — kanon: hästen
+			kommer in via hästgången och sarggrinden). Zonen är gapet plus
+			0,3 m i sidled och 0,6 m på var sida om sarglinjen. ]]
+		local sa = (Komplex :: any).spelabstraktioner
+		local sp = sa and sa.ridhus and sa.ridhus.sargport
+		if sp and sp.trafik == "gaende" then
+			LedService.satGangzoner({ {
+				x = hus.rekt.x + sp.x0 - 0.3, y = hus.rekt.y + sp.y - 0.6,
+				w = (sp.x1 - sp.x0) + 0.6, h = 1.2,
+			} })
+		end
 	else
 		warn("[Led] Ridbanans rektangel saknas i datan — leda kan inte zonprövas.")
 	end

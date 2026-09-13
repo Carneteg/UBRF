@@ -384,3 +384,11 @@ jobs:
         run: |
           if [ -f tools/laktartest.mjs ]; then node tools/laktartest.mjs
           else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+      # Topologiparitet (SCV2-03): gångkedjan entré → hall → sargport → bana
+      # till fots, och att en LEDD häst aldrig går genom en öppning för
+      # gående — hästgången och sarggrinden är hästens väg. Låg utanför CI
+      # med ett rött fall på baslinjen; nu står den här.
+      - name: Gångtest — kedjan till fots och hästkapabel cirkulation
+        run: |
+          if [ -f tools/gangtest.mjs ]; then node tools/gangtest.mjs
+          else echo "hoppar: tools/gangtest.mjs finns inte i denna branch"; fi

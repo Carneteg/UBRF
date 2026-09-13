@@ -427,23 +427,29 @@ sektion = "D: hela produktionsvägen";
   await ev(() => { const b = document.getElementById("bLek"); if (b) b.click(); });
   await page.waitForTimeout(400);
 
-  await gaHit(await ev(() => STALLINNE.dorrar.find(d => d.mot === "gard").pos), "stallets utdörr");
+  /* KANONISK RUTT MED HÄSTEN VID HANDEN: hästgången från stallet rakt in
+     på banan (data.js: hästen kommer in via hästgången och sarggrinden).
+     Förut gick provet ut på gården, in genom huvudentrén och genom
+     sargporten — två öppningar för gående. Det var den defekt provet
+     befäste, inte den det skulle fälla. Vägvisaren pekar nu själv på
+     hästgången när man leder; provet går dit den pekar. */
+  const dit = await ev(() => { const v = uppdragVagvisare(); return v && v.viaDorr; });
+  prova("vägvisaren med hästen vid handen pekar på hästgången, inte ut på gården",
+    /hästgången/i.test(dit || ""), `viaDorr: ${JSON.stringify(dit)}`);
+  await gaHit(await ev(() => STALLINNE.dorrar.find(d => d.id === "hastgang").pos), "hästgången");
   const utPrompt = await prompt();
-  steg.push(["stallets utdörr", utPrompt]);
+  steg.push(["hästgången", utPrompt]);
   if (utPrompt) await tryckE();
-  prova("vägen UT ur stallet med hästen vid handen finns (root cause för uppsittningen)",
-    await ev(() => G.scen === "gard"),
-    `prompt vid utdörren: ${JSON.stringify(utPrompt)} · scen ${await ev(() => G.scen)}`);
+  prova("vägen från stallet in i ridhuset med hästen vid handen går genom HÄSTGÅNGEN (root cause för uppsittningen)",
+    await ev(() => G.scen === "ridhusinne"),
+    `prompt vid hästgången: ${JSON.stringify(utPrompt)} · scen ${await ev(() => G.scen)}`);
 
-  if (await ev(() => G.scen === "gard")) {
-    await gaHit(await ev(() => ANL.dorrar.find(d => d.mot === "ridhusinne").pos), "ridhusdörren", 240000);
-    steg.push(["ridhusdörren", await prompt()]);
-    if (await prompt()) await tryckE();
-  }
   let sittUppPrompt = null;
   if (await ev(() => G.scen === "ridhusinne")) {
+    /* Uppsittningspunkten nås INIFRÅN banan (via sarggrinden); målet
+       läggs en meter innanför sargen så att gå-hit siktar på banans sida. */
     await gaHit(await ev(() => { const sp = SPELABSTRAKTIONER.ridhus.sargport;
-      return [(sp.x0 + sp.x1) / 2, RIDHUSINNE.bana.y + RIDHUSINNE.bana.h]; }), "sargporten", 120000);
+      return [(sp.x0 + sp.x1) / 2, RIDHUSINNE.bana.y + RIDHUSINNE.bana.h - 1.0]; }), "sargporten (inifrån banan)", 120000);
     sittUppPrompt = await prompt();
     steg.push(["sargporten", sittUppPrompt]);
     if (sittUppPrompt) await tryckE();

@@ -198,6 +198,7 @@ export type Led = {
 	tid: number,
 	stillaSedan: number,
 	badGa: boolean,
+	hallenAvGangzon: boolean, -- hon står för att en öppning för gående ligger i vägen
 	ankare: Vector3,
 }
 
@@ -295,6 +296,34 @@ end
 local malzon: Rekt? = nil
 function LedService.satMalzon(r: Rekt?)
 	malzon = r
+end
+
+--[[ ── ÖPPNINGAR FÖR GÅENDE — HÄSTEN GÅR INTE DÄR ────────────────────
+
+	Kanonen (src/data.js, site.js vid sargGrind): hästen kommer in i
+	ridhuset via hästgången och grinden i sargens östra långsida;
+	sargporten i norra kortsidan är för folk till fots. Det står i
+	UBRFKomplex.spelabstraktioner som `trafik = "gaende"`, samma källa som
+	webben läser. Hon följer i spelarens spår, så utan den här regeln gick
+	hon rakt igenom gapet efter spelaren — samma defekt som webbens
+	vägvisare hade. `GameplayService` sätter zonerna ur exporten. ]]
+local gangzoner: { Rekt } = {}
+function LedService.satGangzoner(zoner: { Rekt }?)
+	gangzoner = zoner or {}
+end
+function LedService.gangzoner(): { Rekt }
+	return gangzoner
+end
+
+--[[ Korsar sträckan a→b (i tomtkoordinater via iRekt) rektangeln? Provas
+	i steg om 0,25 m — samma grovlek som webbens navKantFri. ]]
+local function korsarZon(a: Vector3, b: Vector3, z: Rekt): boolean
+	local n = math.max(1, math.ceil(avstandM(a, b) / 0.25))
+	for i = 0, n do
+		local t = i / n
+		if LedService.iRekt(a + (b - a) * t, z) then return true end
+	end
+	return false
 end
 function LedService.malzon(): Rekt?
 	return malzon
@@ -502,6 +531,7 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		dorrsteg = 1,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position,
+		hallenAvGangzon = false,
 	}
 	LedService._sync(player)
 	return true, nil
@@ -800,6 +830,29 @@ local function steg(_dt: number)
 				end
 			end
 			if l.dorrsteg == 2 then bakom = ut2 end
+		end
+		--[[ ── ÖPPNINGEN FÖR GÅENDE LIGGER I VÄGEN: HON STÅR ─────────────
+			Ligger målpunkten i en sådan zon, eller vägen dit genom den,
+			går hon inte. Hon säger ifrån EN gång (led.ingang_hast); går
+			spelaren vidare släpper kopplet som vanligt när det sträcks
+			(led.tappade_bort). Se satGangzoner. Falsifierat i
+			tests/ledning.spec.luau: utan `bakom = pivot.Position` går hon
+			genom gapet. ]]
+		local hindrad = false
+		for _, z in ipairs(gangzoner) do
+			if LedService.iRekt(bakom, z) or korsarZon(pivot.Position, bakom, z) then
+				hindrad = true
+				break
+			end
+		end
+		if hindrad then
+			bakom = pivot.Position
+			if not l.hallenAvGangzon then
+				l.hallenAvGangzon = true
+				LedService._sync(player, "led.ingang_hast")
+			end
+		elseif l.hallenAvGangzon then
+			l.hallenAvGangzon = false
 		end
 		local tillMal = avstandM(pivot.Position, bakom)
 

@@ -845,6 +845,7 @@ return {
 				y = 5,
 				rikt = 3.141593,
 			},
+			trafik = "gaende",
 		},
 		{
 			id = "ridhus_n",
@@ -859,6 +860,7 @@ return {
 				y = 73.4,
 				rikt = -1.570796,
 			},
+			trafik = "gaende",
 		},
 		{
 			id = "cafe",
@@ -926,6 +928,7 @@ return {
 				y = 75.58,
 				rikt = -1.570796,
 			},
+			trafik = "gaende",
 		},
 		{
 			id = "ridhus_W_9",
@@ -941,6 +944,7 @@ return {
 				y = 67.18,
 				rikt = 0,
 			},
+			trafik = "gaende",
 		},
 		{
 			id = "ridhus_W_40",
@@ -956,6 +960,7 @@ return {
 				y = 36.63,
 				rikt = 0,
 			},
+			trafik = "gaende",
 		},
 		{
 			id = "ridhus_S_8",
@@ -971,6 +976,7 @@ return {
 				y = 1.6,
 				rikt = 1.570796,
 			},
+			trafik = "gaende",
 		},
 		{
 			id = "stall_E_34",
@@ -1836,6 +1842,7 @@ return {
 				mot = "ridhusinne",
 				inrikt = 3.141593,
 				inne = true,
+				trafik = "hast",
 				spawn = {
 					x = 23.6,
 					y = 42.78,
@@ -2460,6 +2467,7 @@ return {
 		sargGrind = {
 			y0 = 40.88,
 			y1 = 44.68,
+			trafik = "hast",
 		},
 		laktare = {
 			x0 = 0.6,
@@ -2891,6 +2899,7 @@ return {
 					y = 49,
 					rikt = 0,
 				},
+				trafik = "gaende",
 			},
 			{
 				id = "hastgang",
@@ -2900,6 +2909,7 @@ return {
 				},
 				text = "Hästgången — in i stallet",
 				mot = "stallinne",
+				trafik = "hast",
 				spawn = {
 					x = 1.6,
 					y = 29.55,
@@ -2920,6 +2930,7 @@ return {
 					y = 120.1,
 					rikt = 1.570796,
 				},
+				trafik = "gaende",
 			},
 			{
 				id = "ut_ridhus_W_9",
@@ -2935,6 +2946,7 @@ return {
 					y = 109,
 					rikt = 3.141593,
 				},
+				trafik = "gaende",
 			},
 			{
 				id = "ut_ridhus_W_40",
@@ -2950,6 +2962,7 @@ return {
 					y = 78.45,
 					rikt = 3.141593,
 				},
+				trafik = "gaende",
 			},
 			{
 				id = "ut_ridhus_S_8",
@@ -2965,6 +2978,7 @@ return {
 					y = 40.72,
 					rikt = -1.570796,
 				},
+				trafik = "gaende",
 			},
 		},
 		hinder = {
@@ -3033,6 +3047,7 @@ return {
 				x1 = 6.9,
 				y = 65.68,
 				bredd = 2.2,
+				trafik = "gaende",
 				klass = "SPELABSTRAKTION",
 				fidelity = "REFERENCE GAP",
 				motiv = "planens utrymningspilar; ingen bild visar grinden; bredden vald",
@@ -4575,10 +4590,10 @@ return {
 				rum = "hall",
 				typ = "skapbank",
 				pos = {
-					4.45,
-					76.15,
+					6,
+					76.93,
 				},
-				rikt = 3.141593,
+				rikt = -1.570796,
 				matt = {
 					b = 2,
 					d = 0.5,

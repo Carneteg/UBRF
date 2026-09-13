@@ -136,7 +136,7 @@ function uppdragMal(){
       mal:hast, hastId:G.hastId};
   }
   return {id:"sitt_upp", rubrik:`Sitt upp på ${n}`,
-    punkter:["Led hästen till sargporten i ridhuset",
+    punkter:["Genom hästgången från stallet — inte genom entrén",
       "När “Sitt upp” visas: tryck E / Interagera"],
     mal:uppdragUppsittning()};
 }
@@ -145,12 +145,40 @@ function uppdragMal(){
 /* Ligger målet i en annan scen är svaret på "hur tar jag mig dit" inte
    målet självt utan dörren ut. Vägvisaren pekar därför på en punkt i
    den scen spelaren FAKTISKT står i. */
+function uppdragDorrarI(scen){
+  return (scen==="gard"?ANL.dorrar
+    :scen==="stallinne"?STALLINNE.dorrar
+    :(typeof RIDHUSINNE!=="undefined"?RIDHUSINNE.dorrar:[]))||[];
+}
+/* Får den här dörren passeras med hästen vid handen? `trafik:"gaende"`
+   (site.js) är folk till fots; oklassad räknas som tillåten. */
+function uppdragDorrForHast(d){ return d.trafik!=="gaende"; }
+/* ── DÖRREN DIT, MED ELLER UTAN HÄST ──────────────────────────────
+
+   Förut: från gården dörren till målet, annars alltid en dörr ut på
+   gården. Med hästen vid handen blev det stall → gård → huvudentrén →
+   sargporten: hästen leddes genom två öppningar som är för gående, fast
+   hästgången (stallinne ↔ ridhusinne, `trafik:"hast"`) går rakt dit.
+
+   När man leder söks kortaste dörrkedjan mellan scenerna med BARA
+   hästkapabla dörrar (bredd-först över tre scener — ingen ruttabell,
+   datan är dörrarna själva). Till fots är svaret som förut. */
 function uppdragDorrMot(malScen){
+  if(G.leder){
+    const ko=[[G.scen,null]], sedd=new Set([G.scen]);
+    while(ko.length){
+      const [scen,forsta]=ko.shift();
+      for(const d of uppdragDorrarI(scen)){
+        if(d.mot==="info"||!uppdragDorrForHast(d)||sedd.has(d.mot))continue;
+        const f=forsta||d;
+        if(d.mot===malScen)return f;
+        sedd.add(d.mot); ko.push([d.mot,f]);
+      }
+    }
+    return null;
+  }
   const via=(G.scen==="gard")?malScen:"gard";
-  const lista=G.scen==="gard"?ANL.dorrar
-    :G.scen==="stallinne"?STALLINNE.dorrar
-    :(typeof RIDHUSINNE!=="undefined"?RIDHUSINNE.dorrar:[]);
-  return (lista||[]).find(d=>d.mot===via)||null;
+  return uppdragDorrarI(G.scen).find(d=>d.mot===via)||null;
 }
 function uppdragVagvisare(){
   const u=uppdragMal();
