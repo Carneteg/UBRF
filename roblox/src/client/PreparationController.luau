@@ -1178,8 +1178,8 @@ function rita(vy: any)
 		and vy.status ~= "riding" and vy.status ~= "welfare_stop"
 		and not passRaknat() then
 		rubrik.Text = if hastnamn
-			then Sprak.t("hud.ga_tillbaka", hastnamn)
-			else Sprak.t("hud.ga_tillbaka_utan_namn")
+			then Sprak.t("hud.ga_till", hastnamn)
+			else Sprak.t("hud.ga_till_utan_namn")
 	end
 
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och

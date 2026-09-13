@@ -289,13 +289,18 @@ Sprak.text = {
 		sv = "Det gick inte just nu",
 		en = "That did not work just now",
 	},
-	["hud.ga_tillbaka"] = {
-		sv = "Gå tillbaka till %s",
-		en = "Go back to %s",
+	--[[ "Gå TILL", inte "gå tillbaka". Raden skrivs över rubriken så fort
+	     hästen är utom räckhåll — och det gäller också allra första gången,
+	     när spelaren står vid stallets entré och aldrig har träffat henne.
+	     Då är "gå tillbaka" osant: hon har inte varit där. "Gå till" är rätt
+	     både första gången och när man gått ifrån henne mitt i skötseln. ]]
+	["hud.ga_till"] = {
+		sv = "Gå till %s",
+		en = "Go to %s",
 	},
-	["hud.ga_tillbaka_utan_namn"] = {
-		sv = "Gå tillbaka till din häst",
-		en = "Go back to your horse",
+	["hud.ga_till_utan_namn"] = {
+		sv = "Gå till din häst",
+		en = "Go to your horse",
 	},
 	["hjalp.rubrik"] = {
 		sv = "Kontroller",

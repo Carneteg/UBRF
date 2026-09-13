@@ -145,7 +145,7 @@ check("fyra gånger räckvidden bort ÄR hon utom räckhåll",
 	("%d studs bort mot räckvidd %d"):format(RACKVIDD * 4, RACKVIDD))
 
 local rubrikBort = rubrikNu()
-local vantad = Sprak.t("hud.ga_tillbaka", hastnamn)
+local vantad = Sprak.t("hud.ga_till", hastnamn)
 check("och rubriken pekar TILLBAKA till hästen i stället för att ge en order",
 	rubrikBort == vantad,
 	("\"%s\" (väntat \"%s\")"):format(tostring(rubrikBort), tostring(vantad)))
