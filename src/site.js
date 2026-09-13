@@ -563,22 +563,9 @@ const ANL = {
     {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]],
      grindar:[{p:[178,107], bredd:2.4}]},                              // hage Ö2
     {typ:"el",  p:[[112,20],[112,121]]},                               // trådstängsel mot åkern
-    /* RAILEN FRAMFÖR KLUBBGAVELN ÄR BORTTAGEN (Tobias, UBRF-SUP-0061).
-
-       Den låg på y = 121,5 mellan x 155 och 168 — alltså INNE i stallets
-       klubbdel, tvärs över entréhallen. Den syns på Tobias skärmbild som
-       en röd regel med röda stolpar rakt genom golvet innanför dörren.
-
-       Den gjordes en gång genomsläpplig i stället för borttagen, och
-       `Anlaggningen.luau` skrev då ut skälet: placeringen är ett fel som
-       hör till miljöägaren, och att dölja den vore fel väg. Det var rätt
-       analys och fel slutsats — en rail man går igenom är fortfarande en
-       rail man ser, och borttagningen har begärts flera gånger.
-
-       Hela posten är struken här, i den delade källan, så att alla
-       konsumenter (kollision, vägsökning, 3D-bygget, minikartan och
-       Roblox-exporten) tappar den i samma andetag. Utomhusstaketen rörs
-       inte: railen vid lekhagen står kvar nedan, liksom trä och el. */
+    /* Railen framför klubbgaveln är struken (Tobias, SUP-0061): den låg på
+       y 121,5, alltså inne i klubbdelen tvärs över entréhallen. Struken i
+       källan så att alla konsumenter tappar den samtidigt. */
     {typ:"rail",p:[[96,127],[96,136]]},                                // rail vid lekhagen
   ],
   hagar: [ // betande hästar (id ur HORSES) för liv i bilden
