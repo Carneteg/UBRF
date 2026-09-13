@@ -74,7 +74,12 @@ def spec(namn):
 #[[ Undergrindarna, med ordens egna namn. Varje post är
 #   (GRIND, beskrivning, [körningar]) och alla körningar måste bli gröna. ]]
 def grindarna(place):
-    kp = [sys.executable, "tools/kolla-place.py"] + ([place] if place else [])
+    #[[ Rapportkontrollen i kolla-place galler den COMMITTADE rapporten,
+    #   och den har korningen ar pa vag att skriva en ny. Hoppas har;
+    #   sjalvkontrollen i skriv_rapport och CI:s egen kolla-place-korning
+    #   tacker den. Utan flaggan foll grinden pa sin egen forra rapport. ]]
+    kp = ([sys.executable, "tools/kolla-place.py", "--utan-rapportkontroll"]
+          + ([place] if place else []))
     return [
         ("FIRST_PLAYABLE_PREFLIGHT", "placen innehåller allt First Playable behöver",
          [("kolla-place", lambda: kor(kp)), ("forstaplayable", lambda: spec("forstaplayable"))]),

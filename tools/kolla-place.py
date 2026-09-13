@@ -134,7 +134,13 @@ def kallmappning() -> dict:
 
 
 def main() -> int:
-    given = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    #[[ `--utan-rapportkontroll`: pre-tobias-grinden kor det har verktyget
+    #   INNAN den skriver sin rapport, sa den committade rapporten ar da
+    #   per definition den forra. Grinden gor sin egen sjalvkontroll efter
+    #   skrivningen; CI:s fristaende korning behaller kontrollen. ]]
+    utan_rapport = "--utan-rapportkontroll" in sys.argv
+    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    given = pathlib.Path(pos[0]) if pos else None
     if given is not None and not given.is_file():
         print(f"FIRST_PLAYABLE_PREFLIGHT: FAIL — {given} finns inte")
         return 1
@@ -277,7 +283,9 @@ def main() -> int:
     #   sade 5e89bcc. Kors HAR, i CI, mot den committade rapporten -- inte
     #   bara i grinden som skrev den. ]]
     rapport = ROT / "qa" / "pre-tobias" / "RAPPORT.md"
-    if rapport.is_file():
+    if utan_rapport:
+        print("  --   rapportkontrollen hoppad (grinden skriver rapporten efter det har steget)")
+    elif rapport.is_file():
         txt = rapport.read_text(encoding="utf-8")
         m_fil = re.search(r"\| matt `\.rbxlx` \| `([^`]+)` \|", txt.replace("mätt", "matt"))
         m_sha = re.search(r"artefaktens kallhead[^|]*\| `([0-9a-f]{40})` \|",
