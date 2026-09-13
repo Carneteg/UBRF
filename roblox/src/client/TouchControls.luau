@@ -97,10 +97,44 @@ function TouchControls.reglageBredd(): number
 	return reglageBredd
 end
 
+--[[ Var det övre gallret BÖRJAR, i GUI-pixlar uppifrån. `math.huge` när
+	reglagen inte är uppe. Hjälpknappen läser den: på iPhone i landskap
+	når gångartsraden upp till 8 px under topbaren, alltså rakt in i det
+	band där `?` bor — mätt i tests/pekridning.spec.luau: SKRITT och
+	GALOPP låg under `Hjalp` (689..737 · 48..96) och gick inte att träffa,
+	eftersom hjälpens ScreenGui ritar över reglagens. ]]
+local reglageTopp = math.huge
+
+function TouchControls.reglageTopp(): number
+	return reglageTopp
+end
+
 local blickFinger: InputObject? = nil
 local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
 local gaitKoppling: RBXScriptConnection? = nil
+
+--[[ ── KOPPLINGARNA TILL UserInputService ÖVERLEVDE RITTEN ──────────
+
+     `kopplaSpak` och `kopplaBlick` lyssnar på `InputChanged` och
+     `InputEnded` GLOBALT — det måste de, för fingret ska följas utanför
+     sin ram. Men de kopplades utan att sparas, och `unmount` rev bara
+     GUI:t. Varje uppsittning lade alltså fyra nya lyssnare på tjänsten
+     ovanpå de gamla, som fortsatte köra mot rivna ramar.
+
+     Mätt i tests/pekridning.spec.luau: efter sex uppsittningar gav ETT
+     draget blickfinger sex anrop till kamerakroken. Att det inte syntes i
+     Studio beror på att `blickSist` är delad, så de fem extra bar
+     skillnaden noll — tyst, men fem lyssnare för mycket per ritt, och
+     spakens gamla stängningar läste `AbsolutePosition` på en förstörd
+     ram innan den nya skrev rätt värde sist.
+
+     Nu bokförs de här och rivs i `unmount`, som gångartskopplingen. ]]
+local tjanstKopplingar: { RBXScriptConnection } = {}
+local function bokfor(k: RBXScriptConnection): RBXScriptConnection
+	table.insert(tjanstKopplingar, k)
+	return k
+end
 
 --[[ Hur mycket kameran vrids per dragen pixel. Radianer i sidled och
      studs i höjdled; framtagna så att ett tumdrag tvärs över halva
@@ -200,13 +234,13 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 
 	--[[ Rörelsen lyssnas på globalt, inte på ramen: drar man tummen utanför
 	     cirkeln ska styrningen ligga kvar på max i stället för att slockna. ]]
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	bokfor(UserInputService.InputChanged:Connect(function(obj: InputObject)
 		if obj ~= aktivFinger then return end
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
-	end)
-	UserInputService.InputEnded:Connect(function(obj: InputObject)
+	end))
+	bokfor(UserInputService.InputEnded:Connect(function(obj: InputObject)
 		if obj == aktivFinger then slapp() end
-	end)
+	end))
 end
 
 --[[ ── BLICKYTAN ────────────────────────────────────────────────────
@@ -229,7 +263,7 @@ local function kopplaBlick(yta: Frame)
 		blickSist = Vector2.new(obj.Position.X, obj.Position.Y)
 	end)
 
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	bokfor(UserInputService.InputChanged:Connect(function(obj: InputObject)
 		if obj ~= blickFinger then return end
 		local nu = Vector2.new(obj.Position.X, obj.Position.Y)
 		local forra = blickSist or nu
@@ -241,7 +275,7 @@ local function kopplaBlick(yta: Frame)
 			     dra NEDÅT ska sänka blicken — samma håll som fingret. ]]
 			fn(d.X * BLICK_PER_PIXEL_X, -d.Y * BLICK_PER_PIXEL_Y)
 		end
-	end)
+	end))
 
 	--[[ Att släppa nollar BARA fingret. Kameran lämnas där den står —
 	     ingen återfjädring, ingen omcentrering. ]]
@@ -251,7 +285,7 @@ local function kopplaBlick(yta: Frame)
 			blickSist = nil
 		end
 	end
-	UserInputService.InputEnded:Connect(slappBlick)
+	bokfor(UserInputService.InputEnded:Connect(slappBlick))
 end
 
 --[[ Roblox egna pekreglage flyttar KARAKTÄREN. Sitter hon i sadeln blir
@@ -440,6 +474,7 @@ function TouchControls.mount(input: any, hooks: {
 	gangrad.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
 	gangrad.Position = UDim2.new(1, -(GALLER_B + KANT), 1,
 		-(GALLER_H * 2 + px(12) + KANT))
+	reglageTopp = skarmH - (GALLER_H * 2 + px(12) + KANT)
 	local grad = Instance.new("UIGridLayout")
 	grad.CellSize = UDim2.fromOffset(KB, KH)
 	grad.CellPadding = UDim2.fromOffset(PADX, PADY)
@@ -563,11 +598,14 @@ function TouchControls.unmount()
 	     kopplingen på en häst man klivit av, och nästa uppsittning hade
 	     börjat med förra rittens finger fortfarande "nere". ]]
 	reglageBredd = 0
+	reglageTopp = math.huge
 	blickFinger, blickSist, blickHook = nil, nil, nil
 	if gaitKoppling then
 		gaitKoppling:Disconnect()
 		gaitKoppling = nil
 	end
+	for _, k in tjanstKopplingar do k:Disconnect() end
+	table.clear(tjanstKopplingar)
 	if Input then Input.setTouch(0, 0) end
 	if styrningAv then egnaReglage(true) end
 end

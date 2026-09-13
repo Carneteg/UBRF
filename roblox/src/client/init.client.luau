@@ -81,6 +81,7 @@ local function dismount()
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
 	TouchControls.unmount()
+	KontrollHjalp.vikForReglage(0, math.huge)
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -192,6 +193,9 @@ local function mount(model: Model)
 		end,
 		modell = model,
 	})
+	--[[ `?`-knappen viker för gångartsraden där raden når dess band —
+	     iPhone i landskap. Se KontrollHjalp.vikForReglage. ]]
+	KontrollHjalp.vikForReglage(TouchControls.reglageBredd(), TouchControls.reglageTopp())
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
 	Debug.attach(rig, stats)

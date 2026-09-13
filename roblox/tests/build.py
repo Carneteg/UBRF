@@ -608,7 +608,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # hastresan.spec matar samma kedja som integration mot
         # INTEGRATION-banken; se filens egen not om de fyra sommarna.
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
-    elif "klient" in spec_rel or "mobillayout" in spec_rel or "flerspelare" in spec_rel:
+    elif ("klient" in spec_rel or "mobillayout" in spec_rel
+            or "flerspelare" in spec_rel or "pekridning" in spec_rel):
+        # pekridning.spec kor den RIKTIGA TouchControls.mount() genom
+        # init.client och behover darfor hela klientbanken.
         # mobillayout.spec mater skotsellayouten mot mobilens
         # rorelsereglage och behover samma klientbank som klient.spec.
         moduler, stubbar = KLIENT, "tests/stubs.luau"

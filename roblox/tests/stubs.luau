@@ -281,7 +281,31 @@ end
 UDim2 = { new = UDim2_new, fromScale = function(x, y) return UDim2_new(x, 0, y, 0) end,
 	fromOffset = function(x, y) return UDim2_new(0, x, 0, y) end }
 UDim = { new = function(sc, off) return { _typ = "UDim", Scale = sc, Offset = off } end }
-Vector2 = { new = function(x, y) return { _typ = "Vector2", X = x, Y = y } end }
+--[[ `Vector2` MED RÄKNESÄTT. Den var en ren tabell utan metatabell, och
+     det gjorde spakens rörelse omöjlig att köra: `kopplaSpak.centrum()`
+     räknar `bas.AbsolutePosition + bas.AbsoluteSize / 2` och blickytan
+     `nu - forra`. Båda dog på "attempt to perform arithmetic on a table".
+     `mount()` gick alltså att köra, men INGET FINGER kunde någonsin
+     flyttas — spakens hela geometri-till-avsikt-väg låg utanför bänken.
+     Samma räknesätt som `vec` ovan, i två dimensioner. ]]
+local __v2mt = {}
+local function __v2(x, y)
+	return setmetatable({ _typ = "Vector2", X = x, Y = y }, __v2mt)
+end
+__v2mt.__add = function(a, b) return __v2(a.X + b.X, a.Y + b.Y) end
+__v2mt.__sub = function(a, b) return __v2(a.X - b.X, a.Y - b.Y) end
+__v2mt.__mul = function(a, b)
+	if type(b) == "number" then return __v2(a.X * b, a.Y * b) end
+	if type(a) == "number" then return __v2(b.X * a, b.Y * a) end
+	return __v2(a.X * b.X, a.Y * b.Y)
+end
+__v2mt.__div = function(a, b) return __v2(a.X / b, a.Y / b) end
+__v2mt.__unm = function(a) return __v2(-a.X, -a.Y) end
+__v2mt.__index = function(t, k)
+	if k == "Magnitude" then return math.sqrt(t.X * t.X + t.Y * t.Y) end
+	return nil
+end
+Vector2 = { new = __v2 }
 
 --[[ `warn` fanns inte i bänken. Produktionskoden använder den på sina
      nil-vägar — t.ex. när anläggningen inte är byggd — så utan den kraschade
@@ -575,8 +599,16 @@ local __services = {
 		KeyboardEnabled = true,
 		GamepadEnabled = false,
 		InputBegan = __signal(),
-		InputChanged = { Connect = function() return { Disconnect = function() end } end },
-		InputEnded = { Connect = function() return { Disconnect = function() end } end },
+		--[[ `InputChanged` och `InputEnded` VAR ATTRAPPER: `Connect` svarade
+		     med en tom koppling och ingenting kunde fyras. `TouchControls`
+		     lyssnar på båda GLOBALT — det är där spakens finger följs utanför
+		     cirkeln, där spaken släpps och nollar, och där blickfingret
+		     dras. Med attrapperna gick `mount()` att köra men inte att
+		     RÖRA: ingen spec kunde släppa ett finger, så "släpp nollar båda
+		     axlarna" och "blicken tar inte spakens finger" var omätbara.
+		     Nu är de riktiga signaler, som `InputBegan` redan var. ]]
+		InputChanged = __signal(),
+		InputEnded = __signal(),
 	},
 	--[[ GuiService: G02-D:s ridanalys laser ReducedMotionEnabled for att
 	     starta pausad i stallet for att satta igang en markor som ror sig av
@@ -904,6 +936,91 @@ local __BEVAKADE = {
 	     rattelsen. ]]
 	ActionText = true, ObjectText = true,
 }
+
+--[[ ── UIGridLayout I BÄNKEN ───────────────────────────────────────────
+
+     Pekreglagens knappar ligger i två `UIGridLayout`-galler, och gallret
+     är det som ger dem sin plats: knapparna själva har ingen `Position`.
+     Stubben visste inget om det, så ALLA fem gångartsknappar och alla
+     fem hjälpknappar svarade samma `AbsolutePosition` — gallrets övre
+     vänstra hörn. En mätning av "ligger knapparna på varandra?" hade
+     alltså fallit på var enda skärm, och en mätning av "ligger knappen
+     innanför skärmen?" hade bara sett den första cellen.
+
+     Räknas som motorn: cellerna fylls rad för rad, `FillDirectionMaxCells`
+     per rad, i `LayoutOrder` (eller namn) och med `CellPadding` emellan;
+     `HorizontalAlignment`/`VerticalAlignment` lägger hela blocket mot
+     förälderns kant. Barnets yta ÄR `CellSize`, som i Roblox.
+
+     [antagande] Bara `FillDirection.Horizontal` (standardvärdet) är
+     modellerad — ingen produktionskod sätter `Vertical`. Att blocket
+     som helhet (inte varje rad) riktas med alignment är lästs ur
+     Robloxs dokumentation, inte mätt i Studio; i reglagens galler är
+     blocket exakt lika stort som ramen, så förskjutningen är 0 där. ]]
+local function __gridCell(t)
+	local far = t.Parent
+	if type(far) ~= "table" then return nil end
+	local syskon = rawget(far, "_barn")
+	if not syskon then return nil end
+	local galler = nil
+	for _, b in ipairs(syskon) do
+		if rawget(b, "ClassName") == "UIGridLayout" then galler = b break end
+	end
+	if not galler then return nil end
+	local egenKlass = rawget(t, "ClassName") or ""
+	if egenKlass:sub(1, 2) == "UI" then return nil end
+	local cell = rawget(galler, "CellSize")
+	if type(cell) ~= "table" or cell._typ ~= "UDim2" then return nil end
+	local farYta = far.AbsoluteSize
+	if not farYta then return nil end
+	local pad = rawget(galler, "CellPadding")
+	local cw = cell.XScale * farYta.X + cell.XOffset
+	local ch = cell.YScale * farYta.Y + cell.YOffset
+	local pw = if type(pad) == "table" then pad.XScale * farYta.X + pad.XOffset else 0
+	local ph = if type(pad) == "table" then pad.YScale * farYta.Y + pad.YOffset else 0
+
+	local celler = {}
+	for i, b in ipairs(syskon) do
+		local k = rawget(b, "ClassName") or ""
+		if k:sub(1, 2) ~= "UI" then
+			table.insert(celler, { b = b, i = i, ordning = rawget(b, "LayoutOrder") or 0 })
+		end
+	end
+	if rawget(galler, "SortOrder") == Enum.SortOrder.LayoutOrder then
+		table.sort(celler, function(a, b)
+			if a.ordning ~= b.ordning then return a.ordning < b.ordning end
+			return a.i < b.i
+		end)
+	else
+		table.sort(celler, function(a, b)
+			local na, nb = tostring(a.b.Name or ""), tostring(b.b.Name or "")
+			if na ~= nb then return na < nb end
+			return a.i < b.i
+		end)
+	end
+	local plats = nil
+	for n, c in ipairs(celler) do
+		if c.b == t then plats = n break end
+	end
+	if not plats then return nil end
+
+	local perRad = rawget(galler, "FillDirectionMaxCells") or 0
+	if perRad <= 0 then perRad = math.max(1, math.floor((farYta.X + pw) / (cw + pw))) end
+	local kol = (plats - 1) % perRad
+	local rad = math.floor((plats - 1) / perRad)
+	local antalRader = math.ceil(#celler / perRad)
+	local kolAnvanda = math.min(#celler, perRad)
+	local innehallB = kolAnvanda * cw + (kolAnvanda - 1) * pw
+	local innehallH = antalRader * ch + (antalRader - 1) * ph
+	local dx, dy = 0, 0
+	local ha = rawget(galler, "HorizontalAlignment")
+	if ha == Enum.HorizontalAlignment.Right then dx = farYta.X - innehallB
+	elseif ha == Enum.HorizontalAlignment.Center then dx = (farYta.X - innehallB) / 2 end
+	local va = rawget(galler, "VerticalAlignment")
+	if va == Enum.VerticalAlignment.Bottom then dy = farYta.Y - innehallH
+	elseif va == Enum.VerticalAlignment.Center then dy = (farYta.Y - innehallH) / 2 end
+	return { x = dx + kol * (cw + pw), y = dy + rad * (ch + ph), w = cw, h = ch }
+end
 
 local function __nyInstans(klass)
 	local inst = {
@@ -1274,6 +1391,12 @@ local function __nyInstans(klass)
 				if type(far) ~= "table" then return Vector2.new(0, 0) end
 				local farHorn = far.AbsolutePosition
 				local farYta = far.AbsoluteSize
+				--[[ Ett barn i ett `UIGridLayout` får sin plats av gallret,
+				     inte av sin egen `Position`. Se `__gridCell`. ]]
+				local cell = farHorn and __gridCell(t)
+				if cell then
+					return Vector2.new(farHorn.X + cell.x, farHorn.Y + cell.y)
+				end
 				local pos = rawget(t, "_p") and rawget(t, "_p").Position
 					or rawget(t, "Position")
 				if not (farHorn and farYta and type(pos) == "table"
@@ -1297,10 +1420,25 @@ local function __nyInstans(klass)
 				local klass = rawget(t, "ClassName")
 				if klass == "ScreenGui" then
 					local kam = workspace.CurrentCamera
-					return kam and kam.ViewportSize or nil
+					local vy = kam and kam.ViewportSize
+					if not vy then return nil end
+					--[[ TOPBAREN TAS BORT när `IgnoreGuiInset` är falskt
+					     (Robloxs standardvärde). Utan det räknade pekreglagen
+					     sin skala på 309 px i stället för motorns 273 på en
+					     iPhone i landskap — bänken var 36 px snällare än
+					     skärmen, i just den mätning som skulle visa att
+					     knappraden får plats. `GuiService:GetGuiInset()` är
+					     samma tal produktionen själv läser. ]]
+					local ignorerar = rawget(t, "IgnoreGuiInset")
+					if ignorerar == true then return Vector2.new(vy.X, vy.Y) end
+					local inset = game:GetService("GuiService"):GetGuiInset()
+					return Vector2.new(vy.X, vy.Y - inset.Y)
 				end
 				local far = t.Parent
 				local faryta = far and type(far) == "table" and far.AbsoluteSize
+				--[[ ...och sin storlek av `CellSize`, som i Roblox. ]]
+				local cell = faryta and __gridCell(t)
+				if cell then return Vector2.new(cell.w, cell.h) end
 				local storlek = rawget(t, "_p") and rawget(t, "_p").Size
 					or rawget(t, "Size")
 				if faryta and type(storlek) == "table" and storlek._typ == "UDim2" then
