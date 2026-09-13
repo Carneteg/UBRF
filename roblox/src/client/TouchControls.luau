@@ -102,6 +102,27 @@ local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
 local gaitKoppling: RBXScriptConnection? = nil
 
+--[[ ── DE GLOBALA LYSSNARNA MÅSTE SAMLAS IN ─────────────────────────────
+
+	Spaken och blicken lyssnar på `UserInputService`, inte på sina egna
+	ramar, och det är med flit: drar man tummen utanför cirkeln ska
+	styrningen ligga kvar på max i stället för att slockna. Priset är att
+	de INTE dör med `gui:Destroy()` som ramarnas egna `InputBegan` gör.
+
+	Utan den här listan lämnade varje uppsittning fyra odödliga lyssnare
+	efter sig på den signal som fyrar oftast av alla på en pekskärm. Värre
+	än kostnaden: `aktivFinger` är modulens, inte ritten, så vid NÄSTA
+	uppsittning kände de gamla spaklyssnarna igen det nya fingret och
+	skrev `Input.setTouch` — räknat från en riven ram, alltså ett centrum i
+	(0,0) och därmed fullt utslag. Det syntes inte, bara för att Roblox
+	fyrar i kopplingsordning och den levande lyssnaren råkade skriva sist.
+	Att bygga ridningen på den turordningen är inte att bygga den. ]]
+local kopplingar: { RBXScriptConnection } = {}
+
+local function koppla(signal: any, fn: (...any) -> ())
+	table.insert(kopplingar, signal:Connect(fn))
+end
+
 --[[ Hur mycket kameran vrids per dragen pixel. Radianer i sidled och
      studs i höjdled; framtagna så att ett tumdrag tvärs över halva
      skärmen vrider ungefär ett halvt varv. ]]
@@ -166,7 +187,8 @@ end
 
 --[[ Spaken följer fingret som startade den, inte vilket finger som helst:
      annars kapar en tumme på gångartsknappen styrningen mitt i en volt. ]]
-local function kopplaSpak(bas: Frame, knop: Frame)
+--[[ `radie` är den RITADE ringens radie, inte konstanten. Se `mount`. ]]
+local function kopplaSpak(bas: Frame, knop: Frame, radie: number)
 	local function centrum(): Vector2
 		local p, s = bas.AbsolutePosition, bas.AbsoluteSize
 		return p + s / 2
@@ -176,7 +198,7 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 		local c = centrum()
 		local dx, dy = pos.X - c.X, pos.Y - c.Y
 		local len = math.sqrt(dx * dx + dy * dy)
-		local r = TouchControls.RADIE
+		local r = radie
 		if len > r then dx, dy = dx / len * r, dy / len * r end
 		knop.Position = UDim2.new(0.5, dx, 0.5, dy)
 		Input.setTouch(TouchControls.axis(dx, dy, r))
@@ -200,11 +222,11 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 
 	--[[ Rörelsen lyssnas på globalt, inte på ramen: drar man tummen utanför
 	     cirkeln ska styrningen ligga kvar på max i stället för att slockna. ]]
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	koppla(UserInputService.InputChanged, function(obj: InputObject)
 		if obj ~= aktivFinger then return end
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
 	end)
-	UserInputService.InputEnded:Connect(function(obj: InputObject)
+	koppla(UserInputService.InputEnded, function(obj: InputObject)
 		if obj == aktivFinger then slapp() end
 	end)
 end
@@ -229,7 +251,7 @@ local function kopplaBlick(yta: Frame)
 		blickSist = Vector2.new(obj.Position.X, obj.Position.Y)
 	end)
 
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	koppla(UserInputService.InputChanged, function(obj: InputObject)
 		if obj ~= blickFinger then return end
 		local nu = Vector2.new(obj.Position.X, obj.Position.Y)
 		local forra = blickSist or nu
@@ -251,7 +273,7 @@ local function kopplaBlick(yta: Frame)
 			blickSist = nil
 		end
 	end
-	UserInputService.InputEnded:Connect(slappBlick)
+	koppla(UserInputService.InputEnded, slappBlick)
 end
 
 --[[ Roblox egna pekreglage flyttar KARAKTÄREN. Sitter hon i sadeln blir
@@ -397,8 +419,27 @@ function TouchControls.mount(input: any, hooks: {
 	basHorn.CornerRadius = UDim.new(1, 0)
 	basHorn.Parent = bas
 
+	--[[ ══ KNOPPEN OCH RINGEN MÅSTE SKALA IHOP ═══════════════════════════
+
+	     Ringen skalades (`spakR = px(RADIE)`), knoppen och utslagsvägen
+	     gjorde det inte: båda stod kvar på råa 56 och 66. På iPad är
+	     `skala` 1 och allt gick jämnt ut, vilket är hela skälet till att
+	     det aldrig setts.
+
+	     Mätt med modulens egen formel på iPhone 13 i landskap (309 px
+	     brukbar höjd, samma tal som stycket om tre skärmhöjder):
+	         skala 0,79 -> ritad ring radie 52, utslagsväg kvar på 66
+	         knoppen gick alltså 14 px UTANFÖR sin egen ring, och dess
+	         ytterkant 42 px förbi ringkanten
+	     och de tre uppmätta nivåerna hamnade fel på ringen: halvt utslag
+	     — 20 m-volten — låg på 63 % av det man ser, inte på 50 %, och
+	     full volt krävde ett drag en bit utanför ringen.
+
+	     Kurvan rörs inte. `axis` är radie-relativ och får nu den RITADE
+	     radien i stället för konstanten, så samma tumdrag över samma
+	     andel av ringen betyder samma sak på telefon som på iPad. ]]
 	local knop = nyRam("Knop", bas)
-	knop.Size = UDim2.fromOffset(TouchControls.KNAPP, TouchControls.KNAPP)
+	knop.Size = UDim2.fromOffset(px(TouchControls.KNAPP), px(TouchControls.KNAPP))
 	knop.Position = UDim2.fromScale(0.5, 0.5)
 	knop.AnchorPoint = Vector2.new(0.5, 0.5)
 	knop.BackgroundTransparency = 0.1
@@ -549,7 +590,7 @@ function TouchControls.mount(input: any, hooks: {
 	sits.MouseButton1Up:Connect(function() Input.setTouchSeat(0) end)
 	sits.MouseLeave:Connect(function() Input.setTouchSeat(0) end)
 
-	kopplaSpak(bas, knop)
+	kopplaSpak(bas, knop, spakR)
 	egnaReglage(false)
 end
 
@@ -568,6 +609,12 @@ function TouchControls.unmount()
 		gaitKoppling:Disconnect()
 		gaitKoppling = nil
 	end
+	--[[ Noll kvarlämnade globala lyssnare efter varje ritt. Ramarnas egna
+	     `InputBegan` dör med `gui:Destroy()` ovan; de här gör det inte. ]]
+	for _, k in ipairs(kopplingar) do
+		k:Disconnect()
+	end
+	table.clear(kopplingar)
 	if Input then Input.setTouch(0, 0) end
 	if styrningAv then egnaReglage(true) end
 end
