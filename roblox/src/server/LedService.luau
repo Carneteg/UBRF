@@ -857,7 +857,25 @@ local function steg(_dt: number)
 			stället för att hon ska stå och mala. Spelaren får veta det och
 			kan leda henne en annan väg. ]]
 		if l.stillaSedan > NAV_FASTNAT and l.navPlaner >= NAV_MAX_PLANER then
-			LedService.slapp(player, "led.fastnat")
+			--[[ VARFÖR hon inte kommer ut avgör vad spelaren ska få höra.
+
+				"Prova en annan väg" är rätt svar när hon kilat fast i
+				gången — men det är fel svar i det vanligaste fallet av
+				alla: hon står kvar i sin egen box och bladet stänger
+				fortfarande öppningen. Då finns ingen annan väg. Då ska
+				dörren öppnas, och det ska sägas rakt ut.
+
+				Villkoret läser bladets EGEN kollision, inte ett register:
+				`DorrService.satt` skriver `CanCollide = not vidoppen`, så
+				`CanCollide` ÄR det som spärrar öppningen. Att fråga
+				geometrin i stället för en tabell gör att svaret inte kan
+				glida isär från det hästen faktiskt går emot. ]]
+			local stangdBoxdorr = not l.lamnatBox
+				and l.dorr ~= nil
+				and (l.dorr :: BasePart).Parent ~= nil
+				and (l.dorr :: BasePart).CanCollide
+			LedService.slapp(player,
+				if stangdBoxdorr then "led.stangd_boxdorr" else "led.fastnat")
 			continue
 		end
 

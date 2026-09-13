@@ -573,6 +573,14 @@ Sprak.text = {
 		sv = "Hon kommer inte fram där — prova en annan väg",
 		en = "She cannot get through there — try another way",
 	},
+	--[[ Samma hinder som `led.fastnat`, men med det skäl spelaren FAKTISKT
+	     kan göra något åt. Står hon kvar i boxen och bladet är stängt finns
+	     ingen annan väg att prova — dörren ska öppnas, och det säger den
+	     här raden rakt ut i stället för att be henne leta. ]]
+	["led.stangd_boxdorr"] = {
+		sv = "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
+		en = "Her stall door is shut — open her stall door first so she can walk out",
+	},
 	["tack.fel_sadel"] = {
 		sv = "Fel sadel — den är formad efter en annan rygg. På fel häst trycker den på manken eller på njurarna",
 		en = "Wrong saddle — it is shaped to another back. On the wrong horse it presses on the withers or the kidneys",
