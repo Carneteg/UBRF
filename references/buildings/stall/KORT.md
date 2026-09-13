@@ -167,8 +167,44 @@ plats**.
 | Enkel ockragul dörr under litet skärmtak | Norra gaveln | **Långsida V**, 5,6 m från norra gaveln | `[enligt Tobias]` |
 
 Spiraltrappan flyttades samtidigt ut från 2,3 till **3,4 m** från gavelmitten.
-Verandan är 5,2 m bred och nådde ut till 2,6 m; trappan stod mitt i den. 3,4 m
-ger 0,45 m fritt. Arbetsvärde, inte mätning.
+Verandan är 5,2 m bred och nådde ut till 2,6 m; trappan stod mitt i den.
+Arbetsvärde, inte mätning.
+
+#### Känd avvikelse: trappan skär 0,10 m in i verandans takskiva
+
+Den här texten sa tidigare att 3,4 m *"ger 0,45 m fritt"*. **Det stämmer inte.**
+Talet var räknat på halva stegradien och på verandans golv i stället för dess
+tak, och båda termerna var för små:
+
+- trappsteget är en låda med **längden** `radie` (0,70 m) som skjuts ut
+  `radie/2` från spindeln, så det når en **hel** radie ut — inte en halv,
+- verandans bredaste del är inte golvet utan **taket**, `bredd + 0,4`, alltså
+  2,8 m från mitten.
+
+Rätt krav för att sluta överlappa är 2,8 + 0,70 = **3,50 m**. Vid 3,4 m ligger
+trappsteg 12 på höjd 3,03 m och takskivan på 2,95–3,07 m, och i sidled går
+steget **0,10 m in i taket**. Samma överlappning i webben (`src/varld3d.js`)
+och i Roblox (`roblox/buildings/Anlaggningen.luau`) — de bygger ur samma tal.
+
+**Detta är en accepterad avvikelse, inte en obemärkt bugg.** Tobias har
+visuellt godkänt fasaden som den ser ut, och 10 cm mellan ett trappsteg och en
+takskiva på tre meters höjd syns inte på det avstånd anläggningen betraktas
+från. Beslutet 2026-09-02 var att **inte** röra geometrin för det.
+
+Två saker som följer av beslutet och som en framtida agent behöver veta:
+
+1. **Regressionsprovet är blint för felet.** `"verandan står fri från
+   spiraltrappan"` i `roblox/tests/bygge.spec.luau` använder samma två för
+   små termer (`K.bredd / 2 + radie / 2`) och är därför grönt över en verklig
+   kollision. Provet bevisar alltså **inte** att verandan står fri.
+2. **Rättningen är känd och liten** om den någon gång ska göras:
+   `identitet.stall.spiraltrappa.franGavelmitt` 3,4 → minst 3,50, och
+   provets villkor till `K.bredd / 2 + 0.2 + SP.radie`. Ändra båda eller
+   ingen — höjs bara talet står provet kvar blint, rättas bara provet blir
+   grinden röd.
+
+Ändra inte det här på eget initiativ. Fasaden är produktaccepterad i det
+skick den har.
 
 #### ⚠️ Placeringen följer INTE fotografierna
 
