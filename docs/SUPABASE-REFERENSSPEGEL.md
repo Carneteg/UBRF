@@ -1,0 +1,109 @@
+# Supabase-spegel för referensmedia
+
+Redundant, maskinläsbar kopia av UBRF:s käll- och referensmedia i Supabase
+Storage, plus manifestet i `public.reference_assets`.
+
+**GitHub förblir kanoniskt.** Spegeln är redundans, inte en förutsättning:
+fotona, filmerna och planerna är redan build-åtkomliga i repot och
+checksumverifierade. Den här PR:en är därför avsiktligt skild från
+fidelity-arbetet i F02 — ett ansvar per PR.
+
+## Läget
+
+| | |
+|---|---|
+| hink | `reference-assets` i projekt `tdznhaybxmekznasxtts` |
+| synlighet | **privat** |
+| filstorleksgräns | 64 MB |
+| mime-typer | jpeg, png, quicktime, mp4 |
+| objekt i hinken | **0** |
+| manifestrader | 82 |
+| rader med `supabase_storage_path` | **0** |
+
+Att siffran är noll är redovisat, inte glömt.
+
+## Varför inget är uppladdat
+
+Uppladdning kräver en nyckel som går förbi RLS. Den finns inte i
+byggmiljön — mätt, inte antaget:
+
+```
+POST /storage/v1/bucket  med den publicerbara nyckeln
+→ 403  new row violates row-level security policy
+```
+
+**Ingen anon-insert-policy lades in för att komma runt det.** Det hade gjort
+råfilmerna från anläggningen skrivbara för var och en som har den publika
+nyckeln, och den avvägningen är inte en implementationsdetalj.
+
+Nyckeln ska inte klistras in i en PR-tråd, ett repo, ett testutfall eller en
+chattkonversation. Uppladdningen hör hemma i en miljö med en riktig
+hemlighetshantering, och `tools/spegla-referenser.py --ladda-upp` gör hela
+jobbet där.
+
+## Regeln som ligger i schemat
+
+```sql
+check (supabase_storage_path is null or storage_verified_at is not null)
+```
+
+En manifestrad kan alltså inte påstå att en fil är speglad utan att någon
+verifierat objektet. Regeln står i databasen, inte bara i det här dokumentet,
+så nästa agent inte kan sätta en sökväg "så länge" och glömma bort det.
+
+Falsifierad: ett försök att sätta `supabase_storage_path` utan
+`storage_verified_at` avvisas, och räkningen står kvar på 0 rader.
+
+## Verifieringen läser tillbaka objektet
+
+`--ladda-upp` hashar **inte** den lokala filen och kallar resultatet
+verifierat. Den laddar upp, **hämtar tillbaka objektet**, och jämför sha256
+och byteantal mot repots fil. Först då sätts `sha256` och
+`storage_verified_at`.
+
+Skälet är att en lokal hash intygar något som aldrig lämnade maskinen: en
+trunkerad uppladdning, en omkodning i tjänsten eller ett fel i sökvägen hade
+sett likadant ut i loggen. Ett `verified` som bara betyder "jag läste filen
+jag just skickade" är ingen verifiering.
+
+Ett objekt som inte kan läsas tillbaka, eller som skiljer sig, får **ingen**
+manifestrad med sökväg. Schemats check-villkor tillåter ändå inte sökväg utan
+`storage_verified_at`, så de två spärrarna säger samma sak på två ställen.
+
+### Rättelse 2026-09-01: skrivningen fanns inte
+
+Det här avsnittet beskrev länge något som inte hände. `--ladda-upp` laddade
+upp, läste tillbaka, jämförde — och **skrev sedan ut** raderna i stället för
+att skriva dem. Ingenting nådde `public.reference_assets`. Manifestet hade
+alltså förblivit tomt efter en fullt genomförd spegling, medan både det här
+dokumentet och PR-texten påstod att fälten sattes.
+
+Detsamma gällde `--kontrollera`: den gjorde **en** listning med prefix `""`
+och jämförde svaret mot nästlade nycklar som `buildings/stall/…`. Supabase
+list är inte rekursiv — den svarar med det som ligger direkt under sökvägen,
+och mappar kommer tillbaka utan `id`. Kontrollen såg alltså `buildings`,
+`plans`, `video` och kunde aldrig få en träff. Felet var fail-closed: den
+rapporterade varje fil som saknad i stället för att godkänna en trasig spegel.
+Men den kunde heller aldrig gå igenom, inte ens när spegeln var korrekt.
+
+Båda är rättade. Den strukturella orsaken var att **ingen av de två vägarna
+gick att prova**: båda kräver en hemlig nyckel, så ingen grind nådde dem.
+HTTP-gränsen är därför utbruten (`TRANSPORT`), och `tools/prov-spegla.py`
+kör `main()` mot en fejkad Supabase — utan nyckel, utan nätverk. Fejken
+listar **icke-rekursivt**, precis som tjänsten; en fejk som listade rekursivt
+hade provat en tjänst som inte finns och släppt igenom samma fel igen.
+
+## Vad som ska bevisas när spegeln fylls
+
+- objektantal per typ mot `--lista`,
+- sha256 per objekt mätt på det **återlästa** objektet, inte på källfilen,
+- att varje icke-tom `supabase_storage_path` pekar på ett objekt som finns,
+- att inget objekt ligger i hinken utan motsvarande fil i repot,
+
+och allt det **utan** att nyckeln syns någonstans i utdata.
+
+`--kontrollera` jämför åt **tre** håll: filer i repot som saknas i hinken,
+objekt i hinken som ingen fil känns vid, och **manifestrader som pekar på
+objekt som inte finns**. Det tredje hållet är det som schemats check-villkor
+inte kan fånga: villkoret ser bara att båda fälten är satta, aldrig om
+sökvägen leder någonstans.
