@@ -37,7 +37,6 @@ import hashlib
 import json
 import pathlib
 import re
-import re
 import subprocess
 import sys
 
@@ -129,6 +128,24 @@ def git(*a):
     return ut.strip() if ok else "okänd"
 
 
+def bakad_sha(p: pathlib.Path):
+    """Artefaktens EGEN källhead: `sha` i den inbäddade `UBRFBuild`-modulen.
+
+    `bygg-place.py` bakar in källhuvudet som en ModuleScript i
+    ReplicatedStorage, och det är den identitet Studio-QA:n läser
+    (`buildIdentitet()` i init.server). Rapporten ska bära SAMMA tal — inte
+    `git rev-parse HEAD` i den katalog grinden råkar köras i. De två skilde
+    sig åt en gång: grinden kördes på en lokal commit som sedan ändrades
+    (amend), och rapporten pekade på en head som aldrig fanns på GitHub
+    medan filen själv sade `5e89bcc`. Filen är sanningen om filen."""
+    txt = p.read_text(encoding="utf-8")
+    start = txt.find('<string name="Name">UBRFBuild</string>')
+    if start < 0:
+        return None
+    m = re.search(r'\bsha = "([0-9a-f]{40})"', txt[start:start + 4000])
+    return m.group(1) if m else None
+
+
 def rakna_instanser(p: pathlib.Path):
     """Antal `<Item class=...>` i placen, och hur många av dem som är skript.
 
@@ -184,7 +201,8 @@ def main():
         (UT / "WORLD_MANIFEST.json").write_text(
             json.dumps(man, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    skriv_rapport(resultat, man, allt_gront, arg.place)
+    if not skriv_rapport(resultat, man, allt_gront, arg.place):
+        allt_gront = False
     print("=" * 64)
     print(f"PRE_TOBIAS_FIRST_PLAYABLE_GATE: {'PASS' if allt_gront else 'FAIL'}")
     print(f"rapport: {(UT / 'RAPPORT.md').relative_to(ROT)}")
@@ -199,6 +217,9 @@ def rad(namn, varde):
 
 def skriv_rapport(resultat, man, allt_gront, place):
     """Release evidence bundle, punkt 8 i ordern."""
+    #[[ GRINDKÖRARENS commit, inte artefaktens. Artefaktens källhead står i
+    #   filen själv (`bakad_sha`), och det är den som får heta källhead i
+    #   rapporten. HEAD här är bara var rapporten skrevs ifrån. ]]
     huvud = git("rev-parse", "HEAD")
     gren = git("rev-parse", "--abbrev-ref", "HEAD")
     #[[ Grindens EGEN utdata räknas inte som en smutsig arbetskatalog. Den
@@ -220,19 +241,23 @@ def skriv_rapport(resultat, man, allt_gront, place):
 
     r.append("\n## Identitet\n")
     r.append("| | |\n|---|---|")
-    r.append(rad("source SHA", f"`{huvud}`"))
-    r.append(rad("gren", f"`{gren}`"))
+    kallhead = None
     if place:
         p = pathlib.Path(place)
         if p.exists():
+            kallhead = bakad_sha(p)
+            r.append(rad("artefaktens källhead (bakad `UBRFBuild.sha`)",
+                         f"`{kallhead}`" if kallhead else "**SAKNAS i filen**"))
             r.append(rad("mätt `.rbxlx`", f"`{p}`"))
             r.append(rad("`.rbxlx` SHA256", f"`{sha256(p)}`"))
             r.append(rad("storlek", f"{p.stat().st_size} byte"))
             antal, skript = rakna_instanser(p)
             r.append(rad("instanser", f"{antal} (`<Item class=` i filen), varav {skript} skript"))
     else:
-        r.append(rad("release commit", "ingen ny release byggd i den här körningen"))
-        r.append(rad("`.rbxlx` SHA256", "— ingen fil mätt, kör med `--place`"))
+        r.append(rad("artefaktens källhead", "ingen fil mätt i den här körningen, kör med `--place`"))
+        r.append(rad("`.rbxlx` SHA256", "— ingen fil mätt"))
+    r.append(rad("grindkörarens commit (`git HEAD` där rapporten skrevs)", f"`{huvud}`"))
+    r.append(rad("gren", f"`{gren}`"))
 
     r.append("\n## Undergrindarna\n")
     r.append("| Grind | Vad den mäter | Utfall |\n|---|---|---|")
@@ -273,7 +298,12 @@ def skriv_rapport(resultat, man, allt_gront, place):
              "— aldrig statiskt synliga världsproblem.\n")
     r.append("- att `.rbxlx` **öppnar** i Studio och att Play startar")
     r.append("- spelkänsla, kamera, animation och hästbeteende i motorn")
-    r.append("- fysisk input: tangentbord, handkontroll, iPad")
+    r.append("- fysisk input: tangentbord, handkontroll, iPad, **iPhone** "
+             "(tre knappar i bredd 64×44, `?`-knappens plats, spakens knopp i cirkeln)")
+    r.append("- äkta multitouch och Roblox träffrouting — bänken mäter staplings"
+             "kontraktet, inte vilket objekt motorn ger fingret")
+    r.append("- kontroll- och kamerakänsla i handen; mjukvarukontrakten är testade "
+             "(`camera.spec`, `pekridning.spec`), känslan inte")
     r.append("- performance med full värld och hela rostern")
     r.append("- DataStore i skarpt läge, och revisionskollisionen")
     r.append("- visuell granskning av ROBLOX-världen; `CHATGPT_VISUAL_PASS` gäller "
@@ -297,6 +327,23 @@ def skriv_rapport(resultat, man, allt_gront, place):
     #   skrivningen med UnicodeEncodeError och grinden kan inte rapportera
     #   alls på den maskin som ska köra Studio-QA:n. Mätt där, inte gissat. ]]
     (UT / "RAPPORT.md").write_text("\n".join(r) + "\n", encoding="utf-8")
+
+    #[[ SJÄLVKONTROLL: det som skrevs ska vara det filen säger. Läses
+    #   tillbaka ur RAPPORT.md, inte ur variabeln, så att raden som en
+    #   läsare ser är den som provas. Samma kontroll står i
+    #   tools/kolla-place.py, som CI kör mot den committade rapporten. ]]
+    if kallhead is not None:
+        skrivet = (UT / "RAPPORT.md").read_text(encoding="utf-8")
+        m = re.search(r"artefaktens källhead[^|]*\| `([0-9a-f]{40})` \|", skrivet)
+        if not m or m.group(1) != kallhead:
+            print(f"FAIL  rapportens källhead ({m.group(1) if m else 'saknas'}) "
+                  f"≠ bakad UBRFBuild.sha ({kallhead})")
+            return False
+    elif place and pathlib.Path(place).exists():
+        print("FAIL  den mätta filen bär ingen UBRFBuild.sha — rapporten kan inte "
+              "namnge artefaktens källhead")
+        return False
+    return True
 
 
 if __name__ == "__main__":

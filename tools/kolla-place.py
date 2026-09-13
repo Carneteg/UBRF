@@ -20,6 +20,7 @@ var sant om koden och osant om filen jag pastod att jag matt. En pinnad
 release ska kunna matas som den ar.
 """
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -267,6 +268,40 @@ def main() -> int:
         else:
             print(f"  OK   nyttolasten ar ordagrant samma kod som grindarna korde "
                   f"({jamforda} moduler jamforda)")
+
+    #[[ RAPPORTENS KÄLLHEAD ÄR FILENS KÄLLHEAD. qa/pre-tobias/RAPPORT.md
+    #   namnger en matt .rbxlx och dess kallhead; kallhuvudet ska vara
+    #   exakt den `sha` som ar bakad i filens UBRFBuild-modul. Rapporten
+    #   pekade en gang pa en lokal commit som aldrig fanns pa GitHub
+    #   (git HEAD i grindens katalog, efter en amend) medan filen sjalv
+    #   sade 5e89bcc. Kors HAR, i CI, mot den committade rapporten -- inte
+    #   bara i grinden som skrev den. ]]
+    rapport = ROT / "qa" / "pre-tobias" / "RAPPORT.md"
+    if rapport.is_file():
+        txt = rapport.read_text(encoding="utf-8")
+        m_fil = re.search(r"\| matt `\.rbxlx` \| `([^`]+)` \|", txt.replace("mätt", "matt"))
+        m_sha = re.search(r"artefaktens kallhead[^|]*\| `([0-9a-f]{40})` \|",
+                          txt.replace("källhead", "kallhead"))
+        if m_fil and m_sha:
+            fil = ROT / m_fil.group(1)
+            if fil.is_file():
+                ftxt = fil.read_text(encoding="utf-8")
+                start = ftxt.find('<string name="Name">UBRFBuild</string>')
+                m_bakad = re.search(r'\bsha = "([0-9a-f]{40})"', ftxt[start:start + 4000]) if start >= 0 else None
+                bakad = m_bakad.group(1) if m_bakad else None
+                if bakad == m_sha.group(1):
+                    print(f"  OK   rapportens kallhead = bakad UBRFBuild.sha ({bakad[:7]}) i {m_fil.group(1)}")
+                else:
+                    fel.append(f"rapportens kallhead {m_sha.group(1)[:7]} != bakad UBRFBuild.sha "
+                               f"{(bakad or 'saknas')[:7]} i {m_fil.group(1)}")
+                    print(f"  FEL  rapportens kallhead {m_sha.group(1)[:7]} != bakad "
+                          f"UBRFBuild.sha {(bakad or 'saknas')[:7]}")
+            else:
+                fel.append(f"rapporten pekar pa {m_fil.group(1)} som inte finns")
+                print(f"  FEL  rapporten pekar pa {m_fil.group(1)} som inte finns")
+        else:
+            fel.append("rapporten namnger inte artefaktens kallhead ur bakad UBRFBuild.sha")
+            print("  FEL  rapporten namnger inte artefaktens kallhead ur bakad UBRFBuild.sha")
 
     if fel:
         print(f"\nFIRST_PLAYABLE_PREFLIGHT: FAIL — {len(fel)} saknas:")
