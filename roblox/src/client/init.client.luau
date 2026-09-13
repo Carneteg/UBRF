@@ -24,7 +24,6 @@ local Config, RigAdapter, Net = Core.Config, Core.RigAdapter, Core.Networking
 local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemetri)
 
 local Input = require(script.Input)
-local TouchControls = require(script.TouchControls)
 local DinHast = require(script.DinHast)
 local MovementController = require(script.MovementController)
 --[[ HORSE_VISUAL_QUALITY_GATE: benen på de hästar som bär ett riktigt nät
@@ -80,7 +79,6 @@ local function dismount()
 	if not ride then return end
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
-	TouchControls.unmount()
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -177,21 +175,6 @@ local function mount(model: Model)
 	end
 
 	Input.bind()
-	--[[ Pekkontrollerna byggs först här, och bara på en pekenhet: en
-	     spelare vid tangentbordet ska inte få en spak över bilden. De river
-	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
-	     häst man klivit av. ]]
-	--[[ `blick` går till kameran och INGEN ANNANSTANS: pekytan vrider
-	     bilden, inte hästen. `modell` används bara för att gångartsraden
-	     ska kunna lysa på den gångart hästen faktiskt går i. ]]
-	TouchControls.mount(Input, {
-		dismount = begarAvsittning,
-		blick = function(dYaw, dPitch)
-			local r = ride
-			if r then r.camera:vridBlick(dYaw, dPitch) end
-		end,
-		modell = model,
-	})
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
 	Debug.attach(rig, stats)

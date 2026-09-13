@@ -10,7 +10,6 @@ plattformsspecifika kontrollmatrisen."*
 |---|---|
 | Roblox tangent/gamepad | `roblox/src/client/Input.luau` |
 | Roblox uppsittning och lektionsval | `roblox/src/client/init.client.luau` |
-| Roblox pekskärm | `roblox/src/client/TouchControls.luau` |
 | Webb tangentbord | `src/game.js` (`keydown`/`keyup`) |
 | Webb pekskärm | `src/mobil.js` |
 
@@ -83,13 +82,13 @@ tygeln"* respektive *"avsprånget kommer ur anridningen"*.
 
 ## Regler som gäller på båda ytorna
 
-1. **Reglagen följer inmatningen, inte plattformen.** En ren pekenhet får
-   aldrig en bokstav hon inte kan trycka på; en iPad med tangentbord får
-   den. Ordningen är tangentbord → gamepad → touch.
+1. **Reglagen följer inmatningen, inte plattformen.** Ingen får en bokstav
+   hon inte kan trycka på. Ordningen är tangentbord → gamepad; första
+   playable på Roblox är ett skrivbordsspel, och en enhet utan någotdera
+   får handlingarna utan reglagetext i stället för ett påhittat reglage.
 2. **En begäran är en flank, inte en ström.** En hållen gångartsknapp ger
-   **ett** steg. Mätt i `roblox/tests/touch.spec.luau`, inklusive att 120
-   bildrutor inte ger fler begäranden än 10 — bildrutetakten ändrar inte
-   upplevelsen.
+   **ett** steg. Mätt i `roblox/tests/klient.spec.luau`, som driver
+   flanken genom produktionens egen väg in.
 3. **Ingen begäran överlever en avsittning.** `Input.unbind()` nollar även
    `_upEdge`/`_downEdge`. Att den inte gjorde det var ett verkligt fel:
    en spelare som tryckte Shift och satt av fick gångartsbytet på första
@@ -202,18 +201,20 @@ koordinater, eftersom de två ScreenGui:erna hanterar topbaren olika.
 ## Not tested
 
 Matrisen är läst ur källan och provad headless. Att tangenterna känns
-rätt i handen, att gamepadens knappar sitter där fingret väntar sig dem,
-och att pekknapparna går att träffa under en ritt på en riktig iPad är
-`NOT_TESTED` — Studio, fysisk touch och fysisk gamepad är separata
-manuella grindar.
+rätt i handen och att gamepadens knappar sitter där fingret väntar sig
+dem är `NOT_TESTED` — Studio och fysisk gamepad är separata manuella
+grindar.
+
+Roblox-pekskärmen är inte längre en grind. Första playable är ett
+skrivbordsspel; kör Roblox platsen på en telefon via sin egen motor är
+det inget vi bygger för eller mäter mot.
 
 Särskilt `NOT_TESTED` efter #161, och uttryckligen inte omskrivet till
 PASS:
 
 - att `DPadUp` faktiskt fyrar på en fysisk handkontroll (bänken fyrar
-  `InputBegan` själv — den provar bindningen, inte hårdvaran),
-- att `?`-knappen uppe till höger går att träffa med tummen medan man
-  håller i en iPad, och att den inte hamnar under Roblox egen topbar på
-  en enhet med hak,
-- att skötselns momentlista går att rulla och trycka på under ett riktigt
-  pass, med två tummar samtidigt.
+  `InputBegan` själv — den provar bindningen, inte hårdvaran).
+
+De två pekgrindarna som stod här — att `?`-knappen går att träffa med
+tummen på en iPad, och att skötselns momentlista går att rulla med två
+tummar — är strukna. De mätte en yta första playable inte längre har.

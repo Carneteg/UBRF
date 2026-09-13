@@ -214,7 +214,10 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 		världens ProximityPrompts till spelarens språk; utan den står varje
 		prompt kvar på svenska för alla, och preflighten sa PASS ändå. Samma
 		hål som `UBRFSprak` ovan, i klienthalvan. ]]
-	for _, namn in ipairs({ "KontrollHjalp", "TouchControls", "Input",
+	--[[ `TouchControls` stod här tills första playable blev skrivbordsspel.
+		Modulen finns inte längre, och en preflight som kräver den hade
+		fällt starten på en modul ingen ska ha. ]]
+	for _, namn in ipairs({ "KontrollHjalp", "Input",
 			"PreparationController", "Prompttext" }) do
 		rad(ut, "7 StarterPlayerScripts/Horse/" .. namn, finns(horseKlient, namn))
 	end

@@ -4,15 +4,15 @@
 
 	Tobias frågade, och frågan var befogad: reglagen fanns bara i koden.
 	Den här modulen svarar med de reglage som FAKTISKT är bundna, läst ur
-	src/client/Input.luau, src/client/TouchControls.luau och
-	init.client.luau. Ingenting här är påhittat, och ingenting här ÄNDRAR
-	en bindning — ridfysik, hjälpsemantik och hoppmodell rörs inte.
+	src/client/Input.luau och init.client.luau. Ingenting här är påhittat,
+	och ingenting här ÄNDRAR en bindning — ridfysik, hjälpsemantik och
+	hoppmodell rörs inte.
 
 	REGLAGEN FÖLJER INMATNINGEN, inte plattformen. Samma regel som
-	UgnetaController.medLedtext: en ren pekenhet ska aldrig få en bokstav
-	hon inte kan trycka på, och en iPad med tangentbord ska få bokstaven.
-	Ordningen är tangentbord → gamepad → touch, för att det är den
-	inmatning spelaren faktiskt har framför sig.
+	UgnetaController.medLedtext: ingen ska få en bokstav hon inte kan
+	trycka på. Ordningen är tangentbord → gamepad, för att första playable
+	är ett skrivbordsspel; en enhet utan någotdera får handlingarna utan
+	reglagetext i stället för ett påhittat reglage.
 
 	VAD SOM INTE STÅR HÄR: webbens reglage. De skiljer sig verkligt —
 	webben har ingen gångartsknapp (gångarten följer av skänkel och tygel)
@@ -28,7 +28,8 @@
 	det P2-4b, och #161 löser det med tre vägar in, en per inmatning:
 
 	  · tangentbord  `H`, oförändrad,
-	  · pekskärm     en liten permanent `?`-knapp uppe till höger,
+	  · en liten permanent `?`-knapp uppe till höger, som fungerar med mus
+	    lika väl som med finger,
 	  · gamepad      `DPadUp`.
 
 	`DPadUp` är vald för att den är LEDIG, och det är kontrollerat, inte
@@ -40,14 +41,12 @@
 	eller replaybindning har flyttats för att göra plats — det var ett
 	uttryckligt krav i #161.
 
-	`?`-KNAPPEN ÄR EGEN GUI, inte en del av `TouchControls`. Skälet är att
-	`TouchControls` rivs vid avsittning: en hjälpknapp som bara finns i
-	sadeln hade varit borta i stallet, alltså precis när frågan "vad gör
-	jag nu?" är som vanligast. Den ligger uppe till höger, där varken
-	spaken (nere vänster), ridknapparna (nere höger), förberedelse-HUD:en
-	(nere mitten), Ugnetas kort (uppe mitten) eller ridanalysen (uppe
-	vänster) ligger — och därmed blockerar den varken ridkontroller eller
-	replay.
+	`?`-KNAPPEN ÄR EGEN GUI och lever hela sessionen — inte bara i sadeln.
+	En hjälpknapp som försvann vid avsittning hade varit borta i stallet,
+	alltså precis när frågan "vad gör jag nu?" är som vanligast. Den ligger
+	uppe till höger, där varken förberedelse-HUD:en (nere mitten), Ugnetas
+	kort (uppe mitten) eller ridanalysen (uppe vänster) ligger — och därmed
+	blockerar den varken ridkontroller eller replay.
 ]]
 
 local Players = game:GetService("Players")
@@ -117,7 +116,7 @@ local function padNamn(kod: Enum.KeyCode): string
 	return Sprak.t("hjalp.namnlos_knapp", tostring(kod))
 end
 
---[[ RADERNA. `tgb`/`pad`/`pek` är de reglage som är bundna i produktionen:
+--[[ RADERNA. `tgb`/`pad` är de reglage som är bundna i produktionen:
 
      tangentbord  Input.luau: W/S framåt-bakåt, A/D styr, LeftShift gångart
                   upp, LeftControl gångart ner, Q tygel, F parad, Z/C sits,
@@ -125,9 +124,6 @@ end
      gamepad      Input.luau: Thumbstick1 styr och framåt, ButtonR1 gångart
                   upp, ButtonL1 gångart ner, ButtonR2 tygel, ButtonB parad,
                   ButtonL2 sits, ButtonA hopp.
-     touch        TouchControls.luau bygger Spak samt knapparna SITT AV,
-                  ▲ FRAMÅT, ▼ LUGNARE, TYGEL, HALVHALT, DJUP SITS, HOPP.
-                  Texterna nedan är knapparnas EGNA etiketter.
 
      Ändras en bindning ska den här tabellen ändras med den. Provet läser
      Input.luau:s egna KeyCodes och faller när en rad påstår en tangent som
@@ -139,39 +135,29 @@ local RADER = {
 	     som identitet hade en engelsk spelare fått en panel som slog upp
 	     rader på ett språk hon inte läser.
 
-	     `pek` pekar på pekknappens EGEN etikett i språkkanonen
-	     (`touch.*`), samma nyckel som `TouchControls` ritar knappen med.
-	     Två sanningar där vore en instruktion som säger något annat än
-	     knappen den beskriver. ]]
+	     `pek`-kolumnen stod här tills första playable blev ett
+	     skrivbordsspel. Den pekade på pekknapparnas egna etiketter, och de
+	     knapparna ritas inte längre. ]]
 	--[[ `pad` stod "E" här (#162 blockerare 2). `E` är en TANGENT. En spelare
 	     med bara handkontroll läste alltså en instruktion hon inte kunde
 	     följa — och kunde faktiskt inte sitta av alls, för `begarAvsittning`
 	     var bara bunden till `E`. Uppsittningen gick via ProximityPrompt,
 	     så hon kom UPP på hästen och blev kvar där. ]]
 	{ nyckel = "hjalp.sitt_upp_av", tgb = "E",
-	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
-	{ nyckel = "hjalp.framat_bakat", tgb = "W / S", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
-	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
-	--[[ #162 iPad: pekytan har inte längre ▲/▼ som huvudreglage — gångarten
-	     väljs på en NAMNGIVEN knapp (HALT/SKRITT/TRAV/GALOPP). Raderna pekar
-	     därför på knappgruppen i stället för på en knapp som inte ritas
-	     längre; en hjälp som namnger ett reglage spelaren inte kan se är
-	     precis det fel `pek`-kolumnen finns för att undvika. ]]
-	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.gangartsknappar" },
-	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.sakta" },
-	--[[ Blicken finns bara på pekytan: tangentbord och handkontroll har
-	     ingen fri blick i den här kameran, och `bara` håller raden borta
-	     därifrån hellre än att visa en handling utan reglage. ]]
-	{ nyckel = "hjalp.blick", bara = "touch", pek = "touch.blickytan" },
-	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2", pek = "touch.tygel" },
-	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B",  pek = "touch.halvhalt" },
-	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2", pek = "touch.djup_sits" },
-	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A",  pek = "touch.hoppa" },
+	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD) },
+	{ nyckel = "hjalp.framat_bakat", tgb = "W / S", padNyckel = "hjalp.vanster_spak" },
+	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak" },
+	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1" },
+	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1" },
+	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2" },
+	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B" },
+	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2" },
+	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A" },
 	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
 	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
 	     hade varit precis det problemet raden beskriver. ]]
 	{ nyckel = "hjalp.denna_hjalp",  tgb = "H",
-	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),        pek = "?" },
+	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP) },
 }
 
 --[[ Radens text och reglage i spelarens språk. `pek`/`padNyckel` är
@@ -207,10 +193,14 @@ function KontrollHjalp._rad(vad: string): { [string]: string }?
 	return nil
 end
 
+--[[ Första playable är ett SKRIVBORDSSPEL. Pekraden fanns här tills
+     mobilstödet togs bort; kvar är tangentbord och handkontroll, och
+     `okand` för allt annat. Kör Roblox platsen på en telefon ändå via sin
+     egen motor får spelaren handlingarna utan reglagetext, vilket är
+     ärligare än att peka på knappar spelet inte längre ritar. ]]
 function KontrollHjalp.inmatning(): string
 	if UserInputService.KeyboardEnabled then return "tangentbord" end
 	if UserInputService.GamepadEnabled then return "gamepad" end
-	if UserInputService.TouchEnabled then return "touch" end
 	--[[ Ingen känd inmatning: beskriv handlingarna utan reglage hellre än
 	     att gissa en tangent hon kanske inte har. ]]
 	return "okand"
@@ -221,15 +211,11 @@ function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 	local sort = KontrollHjalp.inmatning()
 	local ut = {}
 	for _, r in RADER do
-		--[[ En rad med `bara` hör hemma på EN inmatning. ]]
-		if (r :: any).bara == nil or (r :: any).bara == sort then
-			local reglage =
-				if sort == "tangentbord" then r.tgb
-				elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
-				elseif sort == "touch" then reglageText(r.pek)
-				else ""
-			table.insert(ut, { vad = radText(r), reglage = reglage })
-		end
+		local reglage =
+			if sort == "tangentbord" then r.tgb
+			elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
+			else ""
+		table.insert(ut, { vad = radText(r), reglage = reglage })
 	end
 	return ut
 end
