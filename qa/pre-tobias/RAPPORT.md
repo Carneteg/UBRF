@@ -1,24 +1,27 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-13 15:12 UTC av `tools/pre-tobias-grind.py`.
+> **FAIL** — genererad 2026-09-13 15:40 UTC av `tools/pre-tobias-grind.py`.
+
+> **Ingen ny `.rbxlx` får sanktioneras för Tobias.**
 
 
 ## Identitet
 
 | | |
 |---|---|
-| source SHA | `f655e41fe0ac20f5696bcb21e221d452adc7e994` |
-| gren | `claude/first-playable-20260910` |
+| artefaktens källhead (bakad `UBRFBuild.sha`) | `5e89bcc77e33f6d3e524890bab39c276519d4369` |
 | mätt `.rbxlx` | `roblox/releases/first-playable-place-5e89bcc/UBRFFirstPlayable.rbxlx` |
 | `.rbxlx` SHA256 | `d4a315f15efe24b07d09b9fa9e4494653bcdbf678e3535e7cf0ad8e2d9b7a1d3` |
 | storlek | 1173823 byte |
 | instanser | 73 (`<Item class=` i filen), varav 67 skript |
+| grindkörarens commit (`git HEAD` där rapporten skrevs) | `df6a77105c9478bd0eec62b1651f2ec637261221` |
+| gren | `claude/first-playable-20260910` |
 
 ## Undergrindarna
 
 | Grind | Vad den mäter | Utfall |
 |---|---|---|
-| `FIRST_PLAYABLE_PREFLIGHT` | placen innehåller allt First Playable behöver | **PASS** (kolla-place, forstaplayable) |
+| `FIRST_PLAYABLE_PREFLIGHT` | placen innehåller allt First Playable behöver | **FAIL** (kolla-place ❌, forstaplayable) |
 | `END_TO_END_PLAYABILITY_GATE` | hela spelresan går att gå | **PASS** (spelbarhet) |
 | `NO_VOID_BASIC_PLAYABILITY_GATE` | ingen spelbar yta utan stöd under | **PASS** (mark) |
 | `BUILDING_TOPOLOGY_TRAVERSAL_GATE` | varje portal mynnar i rätt zon | **PASS** (topologi) |
@@ -71,7 +74,9 @@ Ordern, punkt 8: här får bara verklig Roblox-motor och spelkänsla stå — al
 
 - att `.rbxlx` **öppnar** i Studio och att Play startar
 - spelkänsla, kamera, animation och hästbeteende i motorn
-- fysisk input: tangentbord, handkontroll, iPad
+- fysisk input: tangentbord, handkontroll, iPad, **iPhone** (tre knappar i bredd 64×44, `?`-knappens plats, spakens knopp i cirkeln)
+- äkta multitouch och Roblox träffrouting — bänken mäter staplingskontraktet, inte vilket objekt motorn ger fingret
+- kontroll- och kamerakänsla i handen; mjukvarukontrakten är testade (`camera.spec`, `pekridning.spec`), känslan inte
 - performance med full värld och hela rostern
 - DataStore i skarpt läge, och revisionskollisionen
 - visuell granskning av ROBLOX-världen; `CHATGPT_VISUAL_PASS` gäller webbrenderingen, inte den här
