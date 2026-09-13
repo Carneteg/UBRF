@@ -1,8 +1,6 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **FAIL** — genererad 2026-09-13 15:40 UTC av `tools/pre-tobias-grind.py`.
-
-> **Ingen ny `.rbxlx` får sanktioneras för Tobias.**
+> **PASS** — genererad 2026-09-13 15:42 UTC av `tools/pre-tobias-grind.py`.
 
 
 ## Identitet
@@ -14,14 +12,14 @@
 | `.rbxlx` SHA256 | `d4a315f15efe24b07d09b9fa9e4494653bcdbf678e3535e7cf0ad8e2d9b7a1d3` |
 | storlek | 1173823 byte |
 | instanser | 73 (`<Item class=` i filen), varav 67 skript |
-| grindkörarens commit (`git HEAD` där rapporten skrevs) | `df6a77105c9478bd0eec62b1651f2ec637261221` |
+| grindkörarens commit (`git HEAD` där rapporten skrevs) | `4fb64a32fe69b6c5193b72b8300a5016e8895084` |
 | gren | `claude/first-playable-20260910` |
 
 ## Undergrindarna
 
 | Grind | Vad den mäter | Utfall |
 |---|---|---|
-| `FIRST_PLAYABLE_PREFLIGHT` | placen innehåller allt First Playable behöver | **FAIL** (kolla-place ❌, forstaplayable) |
+| `FIRST_PLAYABLE_PREFLIGHT` | placen innehåller allt First Playable behöver | **PASS** (kolla-place, forstaplayable) |
 | `END_TO_END_PLAYABILITY_GATE` | hela spelresan går att gå | **PASS** (spelbarhet) |
 | `NO_VOID_BASIC_PLAYABILITY_GATE` | ingen spelbar yta utan stöd under | **PASS** (mark) |
 | `BUILDING_TOPOLOGY_TRAVERSAL_GATE` | varje portal mynnar i rätt zon | **PASS** (topologi) |
