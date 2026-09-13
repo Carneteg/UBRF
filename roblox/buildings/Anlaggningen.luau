@@ -1724,6 +1724,54 @@ local function byggStallInre(model: Model, base: CFrame)
 		end
 	end
 
+	--[[ ══ RYGGEN MELLAN MA OCH MB (Tobias, UBRF-SUP-0061) ═══════════════
+
+		Facket får skiljeväggar i BÅDA ändar och en front mot gången, men
+		ingen rygg. För W och E gör det ingenting: de står mot husets
+		yttervägg, och den stänger boxen. MA och MB gör det inte.
+
+		Mätt i datan: MA ligger på x0 6,993 med djup 3,738, alltså rygg på
+		10,731 — och MB börjar på exakt 10,731. De två mittraderna står rygg
+		mot rygg mot en gemensam gräns, och mellan dem fanns ingenting alls.
+		Två hästar delade en och samma volym, vilket är precis vad Tobias
+		skärmbild visar.
+
+		`yttervagg` fanns redan i den delade datan och var DÖD: ingen
+		konsument läste flaggan. Den får sin mening här, och det är därför
+		regeln inte hittar på något — den läser det som redan stod skrivet
+		om vilken rad som stänger sig mot huset och vilken som inte gör det.
+
+		EN VÄGG, INTE TVÅ. Byggs den per rad får den gemensamma gränsen två
+		sammanfallande paneler på samma plan — samma z-fighting som
+		`Boxvägg ...b` mot nästa facks `Boxvägg ...` redan lider av. Därför
+		nycklas den på ryggens läge och byggs en gång.
+
+		Höjd och tjocklek följer fackets egna skiljeväggar (`BF.heldelH`,
+		0,08) — samma panel i samma ton, inte ett nytt mått. ]]
+	do
+		local ryggByggd: { [string]: boolean } = {}
+		for _, rad in ipairs(S.rader) do
+			if not rad.yttervagg then
+				--[[ Fronten sitter i `vetter`s riktning; ryggen är motsatt
+					ände av radens djup. ]]
+				local ryggX = rad.x0 + (if rad.vetter > 0 then 0 else rad.djup)
+				local nyckel = string.format("%.3f", ryggX)
+				if not ryggByggd[nyckel] then
+					ryggByggd[nyckel] = true
+					local fack = GEO.boxfack(S, rad)
+					if #fack > 0 then
+						local y0 = fack[1].y0
+						local y1 = fack[#fack].y1
+						BK.box(model, base, "Boxrygg " .. rad.id,
+							o.x + ryggX - 0.04, 0, o.y + y0,
+							0.08, BF.heldelH, y1 - y0,
+							BF.heldel, Enum.Material.Metal)
+					end
+				end
+			end
+		end
+	end
+
 	-- Tvärväggarna ur planen, i bitar med dörrgap där gångarna passerar. Den
 	-- mot klubbdelen är en branddörrsvägg. En obruten vägg här stänger av
 	-- stallgången — byggbänken fällde precis det.
