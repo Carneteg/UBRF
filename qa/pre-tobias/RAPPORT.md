@@ -1,18 +1,20 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-13 15:42 UTC av `tools/pre-tobias-grind.py`.
+> **PASS** — genererad 2026-09-13 20:56 UTC av `tools/pre-tobias-grind.py`.
+
+> ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
 
 
 ## Identitet
 
 | | |
 |---|---|
-| artefaktens källhead (bakad `UBRFBuild.sha`) | `5e89bcc77e33f6d3e524890bab39c276519d4369` |
-| mätt `.rbxlx` | `roblox/releases/first-playable-place-5e89bcc/UBRFFirstPlayable.rbxlx` |
-| `.rbxlx` SHA256 | `d4a315f15efe24b07d09b9fa9e4494653bcdbf678e3535e7cf0ad8e2d9b7a1d3` |
-| storlek | 1173823 byte |
+| artefaktens källhead (bakad `UBRFBuild.sha`) | `91914a73f4257d7a90f925347a473e98fbc9e04f` |
+| mätt `.rbxlx` | `roblox/releases/first-playable-place-91914a7/UBRFFirstPlayable.rbxlx` |
+| `.rbxlx` SHA256 | `4771a340b69a3a986bf56c84ecdcd3edbf208be8add73d8742c2d59195cc115c` |
+| storlek | 1183445 byte |
 | instanser | 73 (`<Item class=` i filen), varav 67 skript |
-| grindkörarens commit (`git HEAD` där rapporten skrevs) | `4fb64a32fe69b6c5193b72b8300a5016e8895084` |
+| grindkörarens commit (`git HEAD` där rapporten skrevs) | `91914a73f4257d7a90f925347a473e98fbc9e04f` |
 | gren | `claude/first-playable-20260910` |
 
 ## Undergrindarna
