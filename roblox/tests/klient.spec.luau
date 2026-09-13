@@ -618,12 +618,34 @@ do
 		drivnaUnderRitt > 0, ("(%d Move-anrop)"):format(drivnaUnderRitt))
 
 	--[[ HÄSTEN STÅR STILLA MEDAN KORTET VÄNTAR. Utan pausen red hon vidare
-	     bakom panelen och försöket hon tittade på hann bli ogiltigt. ]]
+	     bakom panelen och försöket hon tittade på hann bli ogiltigt.
+
+	     MÄTT PÅ FÖRFLYTTNING, INTE PÅ ANTAL `Move`-ANROP. Anropsräknaren var
+	     fel instrument: `MovementController:update()` SKA köra varje bildruta
+	     också i pausen — det är så hon hålls stilla, med `WalkSpeed = 0` och
+	     ett `Move` som nollar styrningen. Uppmätt i pausen: 60 bildrutor gav
+	     60 Move-anrop, 0,0000 studs förflyttning och `WalkSpeed` 0,0000 hela
+	     vägen. Ett anrop som HÅLLER henne stilla och ett som rider vidare
+	     räknas lika av en räknare; sträckan skiljer dem åt.
+
+	     Falsifiering, körd: med pausgrenen i `init.client.luau` urkopplad
+	     föll båda mätningarna på `WalkSpeed 9.8304`. SÄGAS SKA DOCK att det
+	     är `WalkSpeed` som gör jobbet här — stubbhumanoiden integrerar ingen
+	     rörelse, så sträckan står på 0,0000 även utan paus och kan inte bli
+	     röd i bänken. Den står kvar för runtime, där den ÄR det direkta
+	     beviset; i bänken är farten den falsifierbara halvan. ]]
 	do
-		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
-		prova("hästen drivs INTE medan kortet väntar",
-			drivningar == drivnaUnderRitt,
-			("(%d Move-anrop, oförändrat under 60 bildrutor)"):format(drivningar))
+		local p0 = root.CFrame.Position
+		local maxFart = 0
+		for _ = 1, 60 do
+			RunService.RenderStepped:Fire(dt)
+			if hum.WalkSpeed > maxFart then maxFart = hum.WalkSpeed end
+		end
+		local strackan = (root.CFrame.Position - p0).Magnitude
+		prova("hästen rider INTE vidare medan kortet väntar",
+			strackan < 0.01 and maxFart < 0.01,
+			("(%.4f studs · högsta WalkSpeed %.4f under 60 bildrutor)"):format(
+				strackan, maxFart))
 	end
 
 	--[[ SE RITTEN genom fingret — knappens eget Activated. ]]
@@ -672,14 +694,19 @@ do
 			"(0,5× → 1×)")
 	end
 
-	--[[ RIDNINGEN ÄR FRYST ÄVEN MEDAN ANALYSEN STÅR UPPE. Samma räknare,
-	     samma skäl. ]]
+	--[[ RIDNINGEN ÄR FRYST ÄVEN MEDAN ANALYSEN STÅR UPPE. Samma mätning,
+	     samma skäl som ovan: sträckan, inte antalet anrop. ]]
 	do
-		local fore = drivningar
-		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
-		prova("hästen drivs inte bakom ridanalysen",
-			drivningar == fore,
-			("(%d Move-anrop, oförändrat)"):format(drivningar))
+		local p0 = root.CFrame.Position
+		local maxFart = 0
+		for _ = 1, 60 do
+			RunService.RenderStepped:Fire(dt)
+			if hum.WalkSpeed > maxFart then maxFart = hum.WalkSpeed end
+		end
+		local strackan = (root.CFrame.Position - p0).Magnitude
+		prova("hästen rider inte vidare bakom ridanalysen",
+			strackan < 0.01 and maxFart < 0.01,
+			("(%.4f studs · högsta WalkSpeed %.4f)"):format(strackan, maxFart))
 	end
 
 	--[[ TILLBAKA. Tangenten stänger PANELEN, inte kortet bakom den. ]]
@@ -1334,6 +1361,13 @@ end
 
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
+	--[[ ...OCH PROCESSEN SKA FALLA. Specen skrev FEL och avslutade ändå med
+	     kod 0; bara `kor.sh` egen radräkning fällde den. Kör någon specen
+	     direkt — i CI, i en bisect, för hand — såg två röda mätningar ut som
+	     grönt. Samma slut som `ledning.spec` och de andra. ]]
+	local avsluta = (os :: any).exit
+	if avsluta then avsluta(1) end
+	error(("%d mätning(ar) föll."):format(fel), 0)
 else
 	print("\nAlla mätningar gick igenom.")
 end

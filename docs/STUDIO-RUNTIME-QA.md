@@ -20,33 +20,49 @@ efter den.
 | Identitet | Värde | Vad det är |
 |---|---|---|
 | **PR / current head** | flyttas av docs-patchar | grenens spets. Säger vilken version av *den här listan* du läser. |
-| **artifact source SHA** | `9b5a5707842b7b18bec4be435d6e1fe64cd24e59` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
-| **artifact SHA256** | `9f308f7aa3989e79df5b7f2c71b1c3ab288b69c1caa9bcd9a491bc29d19175bc` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
+| **artifact source SHA** | `637ab037a2758e248b52ba8b9a9e8d816e05d3c6` | commiten som **byggde** placen. Ligger bakad i filen som `ReplicatedStorage/UBRFBuild.sha` och är det Studio skriver i Output. |
+| **artifact SHA256** | `2ae44a456899d4a849f4725487a973880838b18f8a4f50a90dcb7d3ae0ecea9b` | filens hash. **Den här är den stabila** — den ändras inte av docs-patchar. |
 
 | | |
 |---|---|
 | gren | `claude/first-playable-20260910`, bas `main` |
-| fil i repot | `roblox/releases/first-playable-place-9b5a570/UBRFFirstPlayable.rbxlx` |
-| storlek | 875 963 byte, 62 instanser |
+| fil i repot | `roblox/releases/first-playable-place-637ab03/UBRFFirstPlayable.rbxlx` |
+| storlek | 984 514 byte, 66 instanser |
 | determinism | ombyggd ur samma källa, byte-identisk |
 
-> **Den här artefakten ersätter `first-playable-place-67e7716`**, som aldrig
-> kom förbi §1: världsbygget kraschade på
-> `CFrame is not a valid member of SurfaceGui`, och ingen spelare släpptes in.
-> Orsaken — en osund vakt `d.CFrame` där `d:IsA("BasePart")` hör hemma — är
-> rättad på fyra ställen. Den och `…-0a1b032` är kvar orörda som historik och
-> ska inte öppnas.
+> **Den här artefakten ersätter `…-86662d1` (`b6afc634…`) och allt före
+> den.** I varje föregångare färdades hästen med svansen före — ridd, ledd
+> och driven. Kör inte en äldre fil; § 9 faller på den, och den faller av en
+> orsak som redan är rättad. Den är
+> den första som bär ALLT: locomotion-rättelsen (`Humanoid.RootPart`),
+> boxdörrarna, lektionskortets lokalisering och den fysiska utrustningen.
+> `…-1e8b207` var halv — den saknade locomotion-rättelsen och hade fallit på
+> punkt 5 med samma orsak som `9b5a570`.
 >
-> §2 spawnriktningen, §7 skylttexten och §8 `ActionText` är rättade sedan
-> `0a1b032` och finns i den här filen. **Inget av dem har ännu kunnat mätas i
-> runtime** — §1 stoppade förra körningen innan de nåddes.
+> Allt som väntade på runtime väntar fortfarande: § 6 (helt ny), § 9 `ride`,
+> § 8b `ActionText` i båda locale, och § 8c HUD-layouten. Ingen av dem har
+> mätts i Studio på någon artefakt ännu.
+>
+> Äldre artefakter (`…-efa341e`, `…-67e7716`, `…-0a1b032`) ligger kvar orörda
+> som historik och ska inte öppnas.
+
+> ### Ladda ner rätt bytes
+>
+> Repot märker sedan den här artefakten `*.rbxlx` som **binärfil** i
+> `.gitattributes`. Utan det konverterar `core.autocrlf=true` radsluten i
+> arbetsträdet på Windows, och då stämmer inte `certutil`-hashen nedan mot
+> tabellen ovan — filen blir inte trasig, men hashen går inte att verifiera.
+>
+> Har du redan en utcheckning med `core.autocrlf=true` ligger de konverterade
+> kopiorna kvar tills filerna ändras. Klona om, eller kör
+> `git rm --cached -r . && git reset --hard`, INNAN du kopierar ut filen.
 
 ### Filen som ska öppnas i Studio
 
 MCP:n kan inte öppna en place-fil. Det här steget är manuellt:
 
 ```
-C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-9b5a570\UBRFFirstPlayable.rbxlx
+C:\Users\Tobias Carneteg\Desktop\UBRF-QA-162\first-playable-place-637ab03\UBRFFirstPlayable.rbxlx
 ```
 
 > ⚠️ **Öppna INTE `Desktop\UBRFFirstPlayable.rbxlx`.** Den kopian är
@@ -60,7 +76,7 @@ git fetch origin
 git checkout claude/first-playable-20260910
 git pull --ff-only
 claude mcp list                      # MÅSTE visa robloxstudio
-certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-9b5a570\UBRFFirstPlayable.rbxlx" SHA256
+certutil -hashfile "$env:USERPROFILE\Desktop\UBRF-QA-162\first-playable-place-b0265bb\UBRFFirstPlayable.rbxlx" SHA256
 ```
 
 Kontrollera **artifact SHA256** mot tabellen ovan. Stämmer den inte är det
@@ -75,13 +91,14 @@ registrerad för Claude Code, inte för Claude Desktop.
 Studios Output ska bära, i den här ordningen:
 
 ```
-FIRST_PLAYABLE_SHA=9b5a5707842b7b18bec4be435d6e1fe64cd24e59
+FIRST_PLAYABLE_SHA=637ab037a2758e248b52ba8b9a9e8d816e05d3c6
 FIRST_PLAYABLE_PREFLIGHT: PASS
-OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3309 objekt
+OK UBRF byggd: 8 byggnader, 12 dörrar, 4 boxrader, 7 gångytor, 3367 objekt
 OK  Öppningarna frigjorda: 8 delar delade till 16 bitar
-OK  Världen vänd till högerhänt (norr = −Z): 3313 delar speglade
+OK  Världen vänd till högerhänt (norr = −Z): 3371 delar speglade
 [Rigg] 33 av 33 hästar står i sina boxar
 [Dörr] 13 dörrar fick interaktion
+[Tack] Utrustning upphängd på 33 av 33 boxfronter.
 ```
 
 `FIRST_PLAYABLE_PREFLIGHT: FAIL` är fail-closed och ska stoppa körningen.
@@ -90,15 +107,31 @@ OK  Världen vänd till högerhänt (norr = −Z): 3313 delar speglade
 7 gångytor`, `33 av 33 hästar` och `13 dörrar fick interaktion`. De stämde
 exakt i förra körningen och ska göra det igen.
 
-**OBJEKTRÄKNARNA är det inte.** Förra körningen gav `3293 objekt` och `3301
-delar speglade` i Studio där bänken säger `3305`/`3313` — en konstant
-avvikelse på 12 som ingen har diagnostiserat, och som molnsessionen inte kan
-diagnostisera utan Studio. Talen ovan är **bänkens**. Rapportera avvikelsen
-med de tal Studio faktiskt skriver; fäll inte körningen på dem.
+**OBJEKTRÄKNARNA är det inte.** Talen i blocket ovan är **bänkens för den
+här artefakten**: `3367 objekt`, `3371 delar speglade`, mätt på källa
+`86662d1`. Den enda Studio-körning som finns gjord låg på en äldre artefakt
+(källa `67e7716`) och gav `3293 objekt` / `3301 delar speglade` där bänken på
+samma källa ger `3309`/`3313` — en avvikelse på 16 respektive 12 som ingen har
+diagnostiserat, och som molnsessionen inte kan diagnostisera utan Studio.
+Väntar du dig därför omkring `3351`–`3355` objekt och `3359` speglade i Studio
+är det rimligt, men det är en gissning: rapportera de tal Studio faktiskt
+skriver och fäll inte körningen på dem.
 
-De två SurfaceGui:er och två TextLabels som skyltarna fick i den här
-artefakten är skälet till att objektantalet steg från 3305 till 3309 — de är
-GUI-instanser och inte delar, och därför står `3313 delar speglade` stilla.
+Skillnaden mellan räknarna är räknad och stämmer: `3367 objekt` innehåller
+de två SurfaceGui:er och två TextLabels som skyltarna har, och de är
+GUI-instanser och inte delar. 3367 − 4 GUI = 3363 delar, plus de 8 bitar
+öppningsdelningen lägger till, ger `3371 delar speglade`. Manifestets
+`byggda_delar` 3375 är samma värld räknad efter delningen med GUI:erna
+inräknade (3367 + 8).
+
+**De här talen har varit stale i två artefaktbyten.** De stod kvar på
+`3309`/`3313` — bänken för källa `67e7716` — medan världen växte med 49 delar
+till `59680e4` (3358/3362) och med ytterligare 9 till `86662d1` (3367/3371,
+det extra marklagret). Strukturtalen påverkades inte.
+
+> **Kontroll som inte kostar något:** bänkens tal för vilken källa som helst
+> får du med
+> `cd roblox && python3 tests/build.py tests/forstaplayable.spec.luau && luau tests/.build/forstaplayable.spec.luau | head -3`.
 
 ## 2. Spawn och mark — inget void
 
@@ -211,15 +244,54 @@ nära `box.varld`?", vilket är att jämföra ett tal med sig självt. Sexton av
 trettiotre stod i gången. Kontrollera därför i Studio att varje häst står
 **innanför en boxfront**, inte bara på rätt koordinat.
 
-## 6. Utrustning — sadel/tack ska finnas fysiskt
+## 6. Utrustning — sadeln och tränset som FYSISKA saker
 
-| Plats | Delar | Läge (x, y) |
+**BYTT SYSTEM I DEN HÄR ARTEFAKTEN.** Utrustningen är inte längre ett
+tillståndsbyte, och den är inte heller det system som låg i `f2f1d3ac…`.
+Produktbeslut 1 (`docs/BESLUT-162-TACK.md`) pekar ut `TackForradService`, och
+det är det som står här. Skillnaden mot förra artefakten: utrustningen
+**sitter fysiskt på hästen** när den är påsatt — tretton delar — och
+ägarskapet är ett attribut på delen, inte en flagga i serverns tillstånd.
+
+### Var den hänger — och varför inte i sadelkammaren
+
+På **hästens egen boxfront**, en upphängning per häst med hennes namn i
+prompten. Källan är `references/buildings/stall/KORT.md` § Boxarna från
+gången: *"På fronterna hänger sadlar med underlag, täcken, grimmor, träns
+och benskydd — mycket saker, tätt."* Sadelkammarens egen referensbild visar
+stövlar och täcken, inga sadlar.
+
+> **Boxdörren delar fronten.** Varje boxfack har en 1,20 m dörr i fackets
+> bortre ände. Upphängningen ligger på den **täta panelen**, aldrig i
+> dörröppningen — mätt mot de faktiskt byggda delarna i `spelbarhet.spec`,
+> 33 upphängningar, och falsifierat. Ser du en sadel i dörrgapet är det ett
+> fynd: härledningen har glidit.
+
+### Körlista
+
+| # | Gör | Förväntat |
 |---|---|---|
-| `sadel_dorr_teori` | 3 | (159.90, 119.34) |
-| `sadel_stovelhylla` | 1 | (161.40, 117.25) |
-| `sadel_vastkrokar` | 2 | (158.42, 117.25) |
+| 6a | läs Output vid start | `[Tack] Utrustning upphängd på 33 av 33 boxfronter.` |
+| 6b | gå till din hästs boxfront | utrustningen hänger i gångens höjd, på gångsidan av fronten, utan att blockera gången |
+| 6c | sikta på den | prompt **Ta sadel och träns** med undertexten **«Hästens namn»s sadel och träns** (`en-us`: *Take the saddle and bridle* / *«Name»'s saddle and bridle*) |
+| 6d | tryck på ett utrustningssteg UTAN att ha hämtat | nekas: *Du har varken sadel eller träns här — de hänger på boxfronten* |
+| 6e | hämta vid din egen front | du bär nu både sadel och träns |
+| 6f | gå till en ANNAN hästs front och hämta där | **du får med dig grannens utrustning.** Det ska gå — att kunna ta fel är poängen |
+| 6g | försök sadla din häst med grannens sadel | nekas: *Fel sadel — den är formad efter en annan rygg. På fel häst trycker den på manken eller på njurarna* |
+| 6h | hämta rätt utrustning och gör de fem sadelstegen | underlägg → sadel → två prövningar → träns. Fel ordning nekas: *Underlägget först — sadeln ligger på det*, *Sadeln först*, *Tränset av först* |
+| 6i | titta på hästen efteråt | underlägg, sadel med fram- och bakvalv, gjord, två stigbyglar, träns med nosgrimma och två tyglar — **tretton delar**, och de följer henne när hon rör sig |
+| 6j | försök sätta på något som redan sitter | *Den sitter redan på* |
+| 6k | stå långt ifrån och försök | *Gå fram till henne först* (över 4 m) |
+| 6l | försök sitta upp på en otränsad häst | nekas: *Hon är inte tränsad än* — grinden läser världen, inte en flagga |
 
-Skötselsteget som kräver utrustning ska ha en fysisk källa att gå till.
+**Följ 6d–6l utan utvecklarkunskap**: instruktionen på skärmen ska räcka.
+Behöver du gissa var utrustningen finns är det ett fynd, inte ett
+handhavandefel.
+
+**Det som INTE finns, med avsikt:** fel utrustning kostar ingen dagsform.
+Produktbeslut 2 säger att straffet inte implementeras nu — Roblox har inget
+dagsformssystem, och att uppfinna ett Roblox-only vore fel. Felet går att
+göra, nekas, förklaras och räknas. Saknad dagsform är alltså inte ett fynd.
 
 ## 7. Skyltar — kanoniska ankare
 
@@ -295,6 +367,32 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 
 ## 9. Kärnloopen
 
+> ### FÖRST AV ALLT: går hon FRAMÅT?
+>
+> Det här är det enda som är nytt i den här artefakten, och det är skälet
+> till att den finns. I varje föregångare färdades ekipaget med svansen
+> före — ridd, ledd och driven — för att orienteringen skrevs med motsatt
+> konvention mot rörelsen. Kontrollera med ögonen innan du mäter något
+> annat:
+>
+> | Mätning | Förväntat |
+> |---|---|
+> | ridd framåt | **huvudet före, svansen bakom.** `TRAVEL · LookVector` = +1,00 |
+> | ledd | samma, på varje rörelseram |
+> | driven (serverns `Move`) | samma |
+> | tangent **D** | hästen svänger **höger** |
+> | tangent **A** | hästen svänger **vänster** |
+> | kroppens lutning i bågen | hon lägger sig **inåt** i svängen, inte utåt |
+>
+> Under kontakt med ett staket eller en boxfront går prickprodukten ned
+> (uppmätt −0,42…−0,50): hon står och trycker mot hindret och glider i
+> sidled medan hon fortsatt tittar in i det. Det är fysik, inte konvention.
+> **På fria ramar ska den vara +1,00 utan undantag.**
+>
+> Ser du svansen före: stoppa körningen och rapportera det direkt. Då är
+> det inte QA som fattas, utan en regression i `MovementController` eller
+> `LedService`.
+
 > ### `ride` — kvittera kortet FÖRST
 >
 > Förra körningen föll här: hästen rörde sig 0,00 studs. Rotorsaken är inte
@@ -314,6 +412,47 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 > Mätt headless: WalkSpeed 0,00 medan kortet väntar → 9,83 efter kvittering.
 > Rör hon sig INTE efter kvittering är det ett riktigt runtime-fel.
 
+> ### Och rotdelen är rättad sedan `9b5a570`
+>
+> På `9b5a570` föll punkt 5 av ett ANNAT skäl än pausen: hästens
+> `Humanoid.RootPart` var `nil`, för kollidern hette `BodyCollider` och
+> ingen del hette `HumanoidRootPart`. Utan rot fanns inget golv
+> (`FloorMaterial = Air`) och ingen gångkraft lades på — `WalkSpeed` blev
+> positiv men ingenting hände.
+>
+> Rättat i generatorn (`50e5ed9`): roten heter `HumanoidRootPart` och
+> `HipHeight` sätts till benhöjden. Kontrollera i Output/Explorer:
+>
+> | Fält | Förväntat |
+> |---|---|
+> | `Humanoid.RootPart` | `HumanoidRootPart` — **inte** `nil` |
+> | `HipHeight` | `2.01` |
+> | `FloorMaterial` uppsutten på mark | `Concrete` / `Plastic` — **inte** `Air` |
+> | `AssemblyLinearVelocity` under skritt | ≈ `WalkSpeed`, inte `0.001` |
+>
+> **Rid på ridbanan, inte i boxen.** I boxen går hon tills kroppen möter
+> väggen — ~2,5 studs — och det är boxens mått, inte ett rörelsefel.
+
+> ### LEDANDET ÄR FYSISK GAMEPLAY SEDAN `2e246d4` — och aldrig runtime-testat i en ARTEFAKT
+>
+> Gaten är körd och grön i en Rojo-live-session, inte på en pinnad `.rbxlx`.
+> Kontraktet att mäta här:
+>
+> | Steg | Förväntat |
+> |---|---|
+> | prompt vid hästen | egen prompt **L**, skild från uppsittningens |
+> | börja leda utan träns | nekas — tränset kommer före ledningen |
+> | med tränset | hon **vrider sig** mot öppningen och går ut, inte med sidan före |
+> | ut ur boxen | 1,7–8,2 s beroende på startriktning |
+> | följning i gången | 2,4–6,9 m avstånd, inget ryck, hon stannar när du stannar |
+> | `leda`-steget | går INTE igenom förrän hon faktiskt är i ridbanan |
+> | gå ifrån henne | kopplet släpper med `led.tappade_bort` |
+> | hon kommer inte fram | `led.fastnat` efter ~15 s |
+>
+> Kvarstår som känt, rapportera inte som nytt: följavståndet ~4,2 m är game
+> feel (Tobias beslut), hästen kan blockera gången när hon står på tvären,
+> och flera ledda hästar samtidigt är inte testat.
+
 `mount -> ride -> dismount -> death -> respawn -> remount -> aftercare -> save`
 
 - Uppsittning ska nekas innan skötseln är gjord (`pass.aterstar`).
@@ -327,7 +466,7 @@ skrivbordsfönster och på ett iPad-format om Studio tillåter det.
 Posta först när allt ovan är kört:
 
 ```
-LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 9b5a5707… — rbxlx 9f308f7aa3989e79df5b7f2c71b1c3ab288b69c1caa9bcd9a491bc29d19175bc — MCP 3.1.3 — Studio runtime PASS
+LOCAL_STUDIO_QA_PASS — pr-head <SHA> — source 637ab037… — rbxlx 2ae44a456899d4a849f4725487a973880838b18f8a4f50a90dcb7d3ae0ecea9b — MCP 3.1.3 — Studio runtime PASS
 ```
 
 Faller något: rapportera `Observed | Root cause | Changed | Falsified |

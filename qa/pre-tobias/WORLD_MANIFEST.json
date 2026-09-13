@@ -1,7 +1,7 @@
 {
-  "byggda_delar": 3317,
+  "byggda_delar": 3375,
   "mark": {
-    "barande": 15,
+    "barande": 16,
     "dekor": 0,
     "lager": [
       {
@@ -10,12 +10,12 @@
         "ovansida": -0.02
       },
       {
-        "typ": "aker",
+        "typ": "gras",
         "bar": true,
         "ovansida": -0.019
       },
       {
-        "typ": "asfalt",
+        "typ": "aker",
         "bar": true,
         "ovansida": -0.018
       },
@@ -25,7 +25,7 @@
         "ovansida": -0.017
       },
       {
-        "typ": "grus",
+        "typ": "asfalt",
         "bar": true,
         "ovansida": -0.016
       },
@@ -65,7 +65,7 @@
         "ovansida": -0.009
       },
       {
-        "typ": "sand",
+        "typ": "grus",
         "bar": true,
         "ovansida": -0.008
       },
@@ -75,9 +75,14 @@
         "ovansida": -0.007
       },
       {
-        "typ": "betong",
+        "typ": "sand",
         "bar": true,
         "ovansida": -0.006
+      },
+      {
+        "typ": "betong",
+        "bar": true,
+        "ovansida": -0.005
       }
     ]
   },

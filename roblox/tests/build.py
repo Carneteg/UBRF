@@ -142,6 +142,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -224,6 +225,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -307,6 +309,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -371,6 +374,12 @@ PARITET = [
     # langt ifran orsaken. Precis sa foll klient-specen i CI (run 34186458506);
     # darfor star de nu i BADA listorna, i beroendeordning.
     ("Inspelning",       "src/shared/HorseCore/Inspelning.luau"),
+    # TouchControls FORE UgnetaController: kortet fragar `reglageBredd()`
+    # for att inte lagga sig over knappraden. Saknades den i den har listan
+    # blev require:t nil -- men felet var OSYNLIGT sa lange banken svarade
+    # nil pa `AbsoluteSize`, for da hoppade koden over hela matningen. Samma
+    # fallgrop som noten vid Inspelning ovan beskriver.
+    ("TouchControls",    "src/client/TouchControls.luau"),
     # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
@@ -429,6 +438,7 @@ KLIENT = SPEL + [
     ("Input",               "src/client/Input.luau"),
     ("TouchControls",       "src/client/TouchControls.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),

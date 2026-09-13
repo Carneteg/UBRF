@@ -1,6 +1,6 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-11 13:32 UTC av `tools/pre-tobias-grind.py`.
+> **PASS** — genererad 2026-09-12 02:21 UTC av `tools/pre-tobias-grind.py`.
 
 > ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
 
@@ -9,11 +9,11 @@
 
 | | |
 |---|---|
-| source SHA | `9b5a5707842b7b18bec4be435d6e1fe64cd24e59` |
+| source SHA | `637ab037a2758e248b52ba8b9a9e8d816e05d3c6` |
 | gren | `claude/first-playable-20260910` |
-| mätt `.rbxlx` | `roblox/releases/first-playable-place-9b5a570/UBRFFirstPlayable.rbxlx` |
-| `.rbxlx` SHA256 | `9f308f7aa3989e79df5b7f2c71b1c3ab288b69c1caa9bcd9a491bc29d19175bc` |
-| storlek | 875963 byte |
+| mätt `.rbxlx` | `roblox/releases/first-playable-place-637ab03/UBRFFirstPlayable.rbxlx` |
+| `.rbxlx` SHA256 | `2ae44a456899d4a849f4725487a973880838b18f8a4f50a90dcb7d3ae0ecea9b` |
+| storlek | 984514 byte |
 
 ## Undergrindarna
 
@@ -33,8 +33,8 @@
 
 | | |
 |---|---|
-| byggda delar | 3317 |
-| marklager | 15 bärande, 0 dekor |
+| byggda delar | 3375 |
+| marklager | 16 bärande, 0 dekor |
 | fysiska hästar | 33 / 33 |
 | utrustningsplatser | 3 |
 | skyltar | UPPLANDS-BRO RYTTARFÖRENING, CAFÉ KRUBBAN |

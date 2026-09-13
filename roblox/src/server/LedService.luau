@@ -416,7 +416,19 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		hoppas över och `lamnatBox` är sann från början. Exakt i luckan
 		(punkt 0) räknas som inne, så den som står mitt i öppningen får
 		behålla sin utgång. ]]
-	local iBox = false
+	--[[ ...MEN "INGEN DÖRR HITTAD" ÄR INTE "HON STÅR REDAN I GÅNGEN".
+
+		Flaggan startade på false och sattes bara när en dörr fanns, och
+		`lamnatBox = not iBox` läste därför avsaknaden av dörr som bevis
+		för att hon var ute. Mätt: i `ledning.spec` finns ingen boxdörr
+		byggd alls, och tjänsten svarade `harLamnatBox() == true` direkt
+		efter `borja()` — innan hästen flyttat en enda studs. Ett delmål
+		som kan vara uppnått innan spelaren gjort något är inget delmål.
+
+		Utan dörrbevis antar vi därför att hon står kvar; loopen nedan
+		mäter ändå den faktiska positionen (> 2,5 m ur facket) och sätter
+		flaggan när hon verkligen gått ut, dörr eller ej. ]]
+	local iBox = true
 	if dorrMitt and dorrUt then
 		iBox = (pivot.Position - dorrMitt):Dot(dorrUt) <= 0
 	end

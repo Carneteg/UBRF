@@ -135,8 +135,15 @@ local function stadaSession(s)
 	RunService._server = false
 end
 
+
 --[[ Hela skötseln genom TJÄNSTEN, moment för moment. Inget anrop går
-	direkt till `Preparation`: det är skillnaden mot forberedelse.spec. ]]
+	direkt till `Preparation`: det är skillnaden mot forberedelse.spec.
+
+	SEDAN 16:21-ORDERN hämtar den också utrustningen, och det är med flit
+	inte gömt i en hjälpfunktion som sätter ett tillstånd: den går samma väg
+	spelaren går — saken hänger i världen, `GameplayService.hamta` prövar
+	rätt häst och avståndet, och först därefter släpper momentet igenom. Går
+	hämtningen inte igenom faller hela kedjan här, med skälet. ]]
 local function skotselGenomTjansten(spelare)
 	for _, fas in ipairs(Preparation.stegFaser()) do
 		--[[ `leda` KRÄVER numera att hästen faktiskt har letts dit (#162

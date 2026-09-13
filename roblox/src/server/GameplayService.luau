@@ -250,6 +250,17 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 		nejen är medveten — står hon kvar i boxen är det det spelaren
 		behöver höra, inte att hon inte är framme. ]]
 	if fasId == "leda" then
+		--[[ TRÄNSET FÖRE LEDNINGEN, och ordningen är inte godtycklig.
+
+			Båda villkoren är nya i samma runda och möttes först här: det
+			ena kräver att spelaren BÄR tränset, det andra att hästen
+			FAKTISKT lämnat sin box. Låg ledningsvillkoret först fick en
+			spelare med tomma händer höra "hon är kvar i boxen" — sant, men
+			obrukbart, för hon leds inte ut otränsad. Man tränsar, sedan
+			leder man.
+
+			Regeln och nyckeln kommer ur `Preparation`; den här raden äger
+			bara TURORDNINGEN mellan de två grindarna. ]]
 		if not LedService.harLamnatBox(player) then
 			return false, "led.kvar_i_boxen"
 		end
@@ -554,6 +565,7 @@ function GameplayService.start()
 	Net.get("PreparationMoment").OnServerInvoke = function(player, fasId, momentId)
 		return GameplayService.moment(player, fasId, momentId)
 	end
+
 	Net.get("PreparationSvar").OnServerInvoke = function(player, svarId)
 		return GameplayService.svara(player, svarId)
 	end

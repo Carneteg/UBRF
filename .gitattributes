@@ -1,0 +1,5 @@
+# Rojo-placen är en binär leverans i allt utom namnet: XML som ska
+# byte-för-byte matcha sin publicerade SHA256. Utan raden nedan konverterar
+# core.autocrlf radsluten i arbetsträdet på Windows, och då går hashen inte
+# att verifiera mot release-mappens README.
+*.rbxlx binary
