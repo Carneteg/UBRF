@@ -25,7 +25,6 @@ local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemet
 
 local Input = require(script.Input)
 local TouchControls = require(script.TouchControls)
-local TouchDiag = require(script.TouchDiag)          -- TOUCHDIAG (tillfällig)
 local DinHast = require(script.DinHast)
 local MovementController = require(script.MovementController)
 --[[ HORSE_VISUAL_QUALITY_GATE: benen på de hästar som bär ett riktigt nät
@@ -82,7 +81,6 @@ local function dismount()
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
 	TouchControls.unmount()
-	TouchDiag.stopp()                                    -- TOUCHDIAG (tillfällig)
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -194,9 +192,6 @@ local function mount(model: Model)
 		end,
 		modell = model,
 	})
-	--[[ TOUCHDIAG (tillfällig): mätrutan för acceptansen på riktig iPad.
-	     `ride` är redan byggd här, så rörelselagret finns att läsa. ]]
-	TouchDiag.start({ movement = ride and ride.movement, modell = model })
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
 	Debug.attach(rig, stats)

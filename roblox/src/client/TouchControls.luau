@@ -24,7 +24,6 @@ local GuiService = game:GetService("GuiService")
 --[[ #162: knapparnas etiketter kommer ur språkkanonen — samma nycklar
      som KontrollHjalp beskriver dem med. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
-local TouchDiag = require(script.Parent.TouchDiag)   -- TOUCHDIAG (tillfällig)
 
 local TouchControls = {}
 
@@ -180,27 +179,22 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 		local r = TouchControls.RADIE
 		if len > r then dx, dy = dx / len * r, dy / len * r end
 		knop.Position = UDim2.new(0.5, dx, 0.5, dy)
-		local ax, ay = TouchControls.axis(dx, dy, r)
-		Input.setTouch(ax, ay)
-		TouchDiag.axlar(ax, ay)                          -- TOUCHDIAG
+		Input.setTouch(TouchControls.axis(dx, dy, r))
 	end
 
 	--[[ Att släppa MÅSTE nolla båda axlarna på en gång. Ett finger som
 	     lyfts mitt i en sväng och lämnar kvar 0,6 styrning är en häst som
 	     fortsätter svänga av sig själv. ]]
-	local function slapp(obj: InputObject?)
-		TouchDiag.hand("spak", obj or aktivFinger, "END")  -- TOUCHDIAG
+	local function slapp()
 		aktivFinger = nil
 		knop.Position = UDim2.fromScale(0.5, 0.5)
 		Input.setTouch(0, 0)
-		TouchDiag.axlar(0, 0)                             -- TOUCHDIAG
 	end
 
 	bas.InputBegan:Connect(function(obj: InputObject)
 		if obj.UserInputType ~= Enum.UserInputType.Touch then return end
 		if aktivFinger then return end
 		aktivFinger = obj
-		TouchDiag.hand("spak", obj, "CLAIM")             -- TOUCHDIAG
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
 	end)
 
@@ -211,7 +205,7 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
 	end)
 	UserInputService.InputEnded:Connect(function(obj: InputObject)
-		if obj == aktivFinger then slapp(obj) end
+		if obj == aktivFinger then slapp() end
 	end)
 end
 
@@ -232,7 +226,6 @@ local function kopplaBlick(yta: Frame)
 		if blickFinger then return end
 		if obj == aktivFinger then return end
 		blickFinger = obj
-		TouchDiag.hand("blick", obj, "CLAIM")            -- TOUCHDIAG
 		blickSist = Vector2.new(obj.Position.X, obj.Position.Y)
 	end)
 
@@ -254,7 +247,6 @@ local function kopplaBlick(yta: Frame)
 	     ingen återfjädring, ingen omcentrering. ]]
 	local function slappBlick(obj: InputObject)
 		if obj == blickFinger then
-			TouchDiag.hand("blick", obj, "END")          -- TOUCHDIAG
 			blickFinger = nil
 			blickSist = nil
 		end
