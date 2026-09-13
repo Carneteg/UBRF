@@ -604,7 +604,9 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   utrustningen fysiskt i uppsittningsgrinden: passets livscykel
     #   borjar med ett mount, och ett mount kraver nu en RIKTIG rigg att
     #   sadla. INTEGRATION ar FORBEREDELSE plus riggen, sa inget tappas. ]]
-    elif "skotselpass" in spec_rel:
+    elif "skotselpass" in spec_rel or "hastresan" in spec_rel:
+        # hastresan.spec matar samma kedja som integration mot
+        # INTEGRATION-banken; se filens egen not om de fyra sommarna.
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "klient" in spec_rel or "mobillayout" in spec_rel:
         # mobillayout.spec mater skotsellayouten mot mobilens
