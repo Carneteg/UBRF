@@ -106,9 +106,7 @@ Roblox-spåret har två delar:
 - `roblox/src/` — hästsystem och gameplay i Luau,
 - `roblox/buildings/` — anläggningens Studio-byggstenar.
 
-Prioritera mjuk/responsiv horse movement, stabil kamera, rena animation transitions, keyboard/gamepad, häst/rider-loop, enkel interaction/collision, responsiv Roblox-UI, performance och UBRF-igenkänning.
-
-**Första playable på Roblox är ett skrivbordsspel** (Tobias produktbeslut 2026-09-13). Den egna pekytan är borttagen: ingen touchspak, inga pekgångartsknappar, ingen pekkamera. Roblox får köra platsen på en telefon via sin egen motor, men det är inget vi bygger för, mäter mot eller grindar på. Webben har kvar sin egen pekyta — se paritetsregeln nedan.
+Prioritera mjuk/responsiv horse movement, stabil kamera, rena animation transitions, keyboard/gamepad/touch, häst/rider-loop, enkel interaction/collision, responsiv Roblox-UI, performance och UBRF-igenkänning.
 
 ### HTML/webb — spelbar parallell distribution
 
@@ -144,7 +142,7 @@ Bygg inte utan uttryckligt beslut:
 - förutsägbar acceleration/inbromsning,
 - kamera får inte göra styrningen trög,
 - keyboard ska inte kännas rått binärt,
-- gamepad ska behålla analog precision — och webbens pekyta likaså,
+- gamepad/touch ska behålla analog precision,
 - frame-rate-oberoende beteende,
 - hästen får aldrig kännas som ett fordon med hästmodell ovanpå.
 

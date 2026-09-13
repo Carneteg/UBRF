@@ -1,16 +1,9 @@
-# Enhetstest First Playable — Roblox Studio
+# Enhetstest First Playable — Roblox Studio och fysisk iPad
 
-> **Pekdelarna är UPPHÄVDA 2026-09-13.** Tobias produktbeslut: första
-> playable är ett skrivbordsspel. Roblox egen mobilyta får köra platsen,
-> men den är inte något vi bygger för och inte en grind. Varje rad nedan
-> som kräver fysisk iPad, iPhone eller pekreglage gäller alltså inte
-> längre — de står kvar som historik över vad #161 en gång levererade,
-> inte som krav att bocka av. Skrivbordsdelarna gäller oförändrat.
-
-Skrivet på arbetsordern i **#161 punkt 5**, och det är den punkten som var
-grinden då: *"När kandidaten är automatiskt grön: leverera ett testpaket
-för Roblox Studio + fysisk iPad."* Kandidaten är automatiskt grön.
-Ingenting i den här filen ändrar kod.
+Skrivet på arbetsordern i **#161 punkt 5**, och det är den punkten som är
+grinden: *"När kandidaten är automatiskt grön: leverera ett testpaket för
+Roblox Studio + fysisk iPad."* Kandidaten är automatiskt grön. Ingenting i
+den här filen ändrar kod.
 
 Systerdokument: `ENHETSTEST-G02-D.md` provade ridkärnan och replayen. Det
 här provar **hela första dagen, skötseln, persistensen och hjälpen** — det
@@ -21,10 +14,10 @@ som #161 byggde och det som CI per definition inte kan nå.
 | Fält | Fyll i |
 |---|---|
 | Build-SHA | `b812f1e302f5ec34a28090dbb1de76b1d640f85d` (eller senare — skriv den du faktiskt testade) |
-| Yta | Roblox Studio · Roblox med handkontroll (pekytorna upphävda 2026-09-13) |
-| Enhet och OS | t.ex. Windows 11, Roblox Studio |
-| Viewport / orientering | t.ex. 1614×853 |
-| Inmatning | tangentbord · gamepad (skriv modell) |
+| Yta | Roblox Studio · Roblox på iPad · Roblox med handkontroll · webb på iPad |
+| Enhet och OS | t.ex. iPad Air 5, iPadOS 18.2 |
+| Viewport / orientering | t.ex. 1180×820 landscape |
+| Inmatning | finger · finger + tangentbord · gamepad (skriv modell) |
 | Studio-build | **place-filen** i `roblox/releases/first-playable-place-*/UBRF-FirstPlayable.rbxlx` — öppna och tryck Play |
 | Preflight i outputen | `FIRST_PLAYABLE_PREFLIGHT: PASS` + `FIRST_PLAYABLE_SHA=…` (står det `FAIL`: **STOPP**, rapportera raderna) |
 | Webbpreview | Vercel-projektet `ubrf`, länken i #162 |
@@ -68,8 +61,8 @@ reglerna håller; den säger ingenting om Roblox riktiga kvoter, throttling,
 trådschemaläggning eller `PlayerAdded`-timing. Hela avsnitt B är därför
 `NOT_TESTED IN LIVE DATASTORE/STUDIO` fram till att någon fyller i det här.
 
-Bänken kör heller ingen fysik. Att `DPadDown` fyrar på en riktig
-handkontroll är inte provat alls.
+Bänken kör heller ingen fysik, och en emulerad pekhändelse är inte ett
+finger. Att `DPadDown` fyrar på en riktig handkontroll är inte provat alls.
 
 ## Så här rapporterar du
 
@@ -168,22 +161,23 @@ lagret: en gammal server ska hellre avstå än gissa.
 5. Kontrollera att inget annat ändrats: hopp (A), halvhalt (B), gångart upp/ner (R1/L1), tygel (R2), sits (L2), lektionen vidare (Y), se ritten (X).
 6. **Hotplug:** dra ur kontrollen mitt i ritten, sätt i igen.
 
-## D. Hjälpen — UPPHÄVD 2026-09-13 i sin pekdel
+## D. Hjälpen på pekskärm
 
-Stod: `?`-knappen skulle gå att träffa med tummen, och hjälpen fick inte
-skymma ridkontrollerna. Knappen finns kvar och fungerar med mus; att träffa
-den med ett finger är inte längre en grind.
+1. Stäng hjälpen. **Förväntat:** `?`-knappen finns kvar och går att träffa.
+2. Träffa den med tummen. 44 px är ett mått, inte ett bevis — känns den för liten, skriv det.
+3. **Förväntat:** hjälpen skymmer inte ridkontrollerna eller replayen.
 
-## E. Touch- och inputlivscykel — UPPHÄVD 2026-09-13
+## E. Touch- och inputlivscykel
 
-Stod: två tummar samtidigt, `touchcancel`, rotation, safe areas, zoom.
-Hela avsnittet mätte den egna pekytan, och den finns inte längre.
-
-Kvar ur avsnittet, för att det gäller varje yta:
-
-1. **Focus loss:** växla bort fönstret mitt i ritten. **Förväntat:**
-   hjälperna släpps, hästen går inte vidare.
-2. Ingen kvarhängande gångart eller hjälp efter avsittning eller respawn.
+1. **Två tummar samtidigt** — spak och en knapp.
+2. Dra fingret **ut ur** en knapp innan du släpper.
+3. `touchcancel`: ett samtal eller notis mitt i ritten.
+4. **Focus loss:** växla app mitt i ritten. **Förväntat:** hjälperna släpps, hästen går inte vidare.
+5. **Rotation** porträtt ↔ landscape mitt i ritten.
+6. **Safe areas** på en telefon med hak.
+7. **Textskalning** i OS, största steget.
+8. Zoom.
+9. Ingen kvarhängande gångart eller hjälp efter avsittning eller respawn.
 
 ## F. Kamera, kropp och rörelse
 

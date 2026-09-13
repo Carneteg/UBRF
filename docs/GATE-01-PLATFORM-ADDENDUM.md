@@ -20,6 +20,7 @@ Gate 01 implementeras därför som ett plattformsparitetsarbete:
 Gate 01 kan inte stängas utan faktisk Roblox Studio-playtest av:
 
 - keyboard,
+- touch där möjligt,
 - skritt/trav/galopp,
 - raka linjer och små korrigeringar,
 - hörn och volt,
