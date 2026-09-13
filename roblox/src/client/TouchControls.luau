@@ -123,6 +123,39 @@ local function koppla(signal: any, fn: (...any) -> ())
 	table.insert(kopplingar, signal:Connect(fn))
 end
 
+--[[ ── NÄR LEKTIONEN VÄNTAR SKA REGLAGEN SE UT ATT VÄNTA ────────────────
+
+	Lektionskortet fryser ridningen med flit: `init.client` kör
+	`Input.consume()` och kastar den medan `LektionController.vantar()` är
+	sant. Det är rätt — man ska inte kunna rida iväg bakom kortet.
+
+	Men reglagen såg likadana ut frysta som igång. Spelaren drog i spaken,
+	hästen stod still, och slutsatsen blev inte "kortet väntar på mig" utan
+	"jag kan inte styra hästen". Det är samma händelse sedd från fel håll,
+	och den kostade oss en P0-rapport.
+
+	Skärmarna nedan är ENBART en bild. `Active` är falskt, så de fångar
+	inga fingrar; ingen knapp ändrar sitt eget utseende; ingen gångart
+	byter läge. Pausen ligger kvar där den hör hemma — i ridloopen — och
+	det här säger bara högt vad den redan gör. ]]
+local pausSkarmar: { Frame } = {}
+local pausad = false
+
+function TouchControls.satPausad(pa: boolean)
+	--[[ Tidigt ute när läget inte ändrats: det här anropas varje bildruta
+	     från ridloopen, och en loop över skärmarna per bildruta vore ett
+	     pris utan motprestation. ]]
+	if pausad == pa then return end
+	pausad = pa
+	for _, s in ipairs(pausSkarmar) do
+		s.Visible = pa
+	end
+end
+
+function TouchControls.arPausad(): boolean
+	return pausad
+end
+
 --[[ Hur mycket kameran vrids per dragen pixel. Radianer i sidled och
      studs i höjdled; framtagna så att ett tumdrag tvärs över halva
      skärmen vrider ungefär ett halvt varv. ]]
@@ -590,6 +623,52 @@ function TouchControls.mount(input: any, hooks: {
 	sits.MouseButton1Up:Connect(function() Input.setTouchSeat(0) end)
 	sits.MouseLeave:Connect(function() Input.setTouchSeat(0) end)
 
+	--[[ ══ PAUSSKÄRMARNA ════════════════════════════════════════════════
+
+	     En per reglagegrupp, ritad OVANPÅ gruppen den hör till. `Active`
+	     är falskt: skärmen tar inga tryck, så knapparna under den svarar
+	     precis som förut och pausen ägs fortfarande av ridloopen. Det enda
+	     som händer här är att spelaren SER att reglagen väntar.
+
+	     Texten hänger på gångartsgallret, för det är där tummen letar när
+	     hästen inte lyder. ]]
+	local function pausSkarm(over: GuiObject, rund: boolean): Frame
+		local s = Instance.new("Frame")
+		s.Name = "Paus"
+		s.Size = UDim2.fromScale(1, 1)
+		s.BackgroundColor3 = Color3.fromRGB(10, 11, 13)
+		s.BackgroundTransparency = 0.45
+		s.BorderSizePixel = 0
+		s.ZIndex = 20
+		s.Active = false
+		s.Visible = false
+		local h = Instance.new("UICorner")
+		h.CornerRadius = if rund then UDim.new(1, 0) else UDim.new(0, 14)
+		h.Parent = s
+		s.Parent = over
+		table.insert(pausSkarmar, s)
+		return s
+	end
+	local gangSkarm = pausSkarm(gangrad, false)
+	pausSkarm(knappar, false)
+	pausSkarm(bas, true)
+
+	local vantetext = Instance.new("TextLabel")
+	vantetext.Name = "Vantar"
+	vantetext.Size = UDim2.fromScale(1, 1)
+	vantetext.BackgroundTransparency = 1
+	vantetext.Font = Enum.Font.GothamBold
+	vantetext.TextColor3 = Color3.fromRGB(236, 232, 222)
+	vantetext.TextWrapped = true
+	vantetext.TextScaled = true
+	vantetext.ZIndex = 21
+	vantetext.Text = Sprak.t("touch.lektionen_vantar")
+	local ttak = Instance.new("UITextSizeConstraint")
+	ttak.MaxTextSize = 12
+	ttak.MinTextSize = 7
+	ttak.Parent = vantetext
+	vantetext.Parent = gangSkarm
+
 	kopplaSpak(bas, knop, spakR)
 	egnaReglage(false)
 end
@@ -615,6 +694,11 @@ function TouchControls.unmount()
 		k:Disconnect()
 	end
 	table.clear(kopplingar)
+	--[[ Skärmarna dog med `gui:Destroy()` ovan; listan pekar annars på
+	     rivna ramar in i nästa ritt, och `pausad` måste tillbaka till
+	     falskt så att nästa uppsittning inte börjar dimmad. ]]
+	table.clear(pausSkarmar)
+	pausad = false
 	if Input then Input.setTouch(0, 0) end
 	if styrningAv then egnaReglage(true) end
 end

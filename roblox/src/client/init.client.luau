@@ -393,6 +393,12 @@ RunService.RenderStepped:Connect(function(dt)
 	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
 	if LektionController.vantar() or LektionController.replayAktiv() then
 		Input.consume()
+		--[[ PAUSEN SKA SYNAS PÅ REGLAGEN. Att frysa hästen utan att säga
+		     det gjorde pausen omöjlig att skilja från trasig styrning —
+		     spelaren drog i spaken, ingenting hände, och rapporten blev
+		     "jag kan inte styra hästen". Anropet är idempotent och
+		     kostar en jämförelse när läget inte ändrats. ]]
+		TouchControls.satPausad(true)
 		--[[ ══ PAUSEN MÅSTE STANNA HÄSTEN, INTE BARA SLUTA STYRA HENNE ══
 
 		     Stycket ovanför säger "hästen stegas inte", och det stämde —
@@ -422,6 +428,9 @@ RunService.RenderStepped:Connect(function(dt)
 		ride.camera:step(loco, dt)
 		return
 	end
+
+	--[[ Pausen släppte: reglagen är spelarens igen och ska se ut så. ]]
+	TouchControls.satPausad(false)
 
 	local intent = Input.consume()
 	ride.movement:step(intent, dt)

@@ -398,6 +398,15 @@ Sprak.text = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
 	},
+	--[[ Texten på den dimmade gångartsrutan när lektionskortet håller
+	     ridningen. Formulerad så att den passar BÅDA korten: det första
+	     säger "Fortsätt för att börja lektionen", det mellan försöken
+	     säger "Prova igen". Att peka på kortet i stället för på ett
+	     knappnamn gör att raden aldrig kan hamna i otakt med kortet. ]]
+	["touch.lektionen_vantar"] = {
+		sv = "Lektionen väntar — tryck på kortet",
+		en = "The lesson is waiting — tap the card",
+	},
 	["touch.hoppa"] = {
 		sv = "HOPP",
 		en = "JUMP",

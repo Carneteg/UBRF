@@ -249,6 +249,43 @@ do
 	check("unmount är ofarlig även när inget är byggt", true)
 end
 
+--[[ ══ PAUSEN SKA SYNAS PÅ REGLAGEN ═══════════════════════════════════
+
+	Lektionskortet fryser ridningen med flit. Reglagen såg likadana ut
+	frysta som igång, och spelaren läste pausen som trasig styrning — det
+	blev en P0-rapport om att hästen inte gick att styra.
+
+	Läget är en ren växel, och det är den som mäts här. Skärmarna själva är
+	Roblox-instanser och byggs bara i `mount`; att `satPausad` fungerar
+	UTAN dem är hela poängen med att den äger sitt eget läge: ridloopen
+	anropar den varje bildruta, också på skrivbordet där det aldrig finns
+	några skärmar att tända. ]]
+print("\n── Pausen är ett eget läge, inte en bieffekt av GUI ──")
+do
+	TouchControls.unmount()
+	check("reglagen börjar opausade", TouchControls.arPausad() == false)
+
+	TouchControls.satPausad(true)
+	check("satPausad(true) pausar", TouchControls.arPausad() == true)
+
+	--[[ Idempotens: ridloopen anropar den VARJE bildruta med samma värde.
+	     Ett andra anrop får varken kasta eller vända läget. ]]
+	TouchControls.satPausad(true)
+	check("andra satPausad(true) ändrar ingenting", TouchControls.arPausad() == true)
+
+	TouchControls.satPausad(false)
+	check("satPausad(false) släpper pausen", TouchControls.arPausad() == false)
+	TouchControls.satPausad(false)
+	check("andra satPausad(false) ändrar ingenting", TouchControls.arPausad() == false)
+
+	--[[ En ritt som slutar mitt i en paus får inte lämna nästa ritt
+	     dimmad: `unmount` nollar läget. ]]
+	TouchControls.satPausad(true)
+	TouchControls.unmount()
+	check("unmount mitt i en paus lämnar inte nästa ritt pausad",
+		TouchControls.arPausad() == false)
+end
+
 --[[ ══ GÅNGARTSBEGÄRAN: ETT STEG PER BEGÄRAN ══════════════════════
 	PO-tillägget på #151: "halt → skritt → trav → galopp och tillbaka ska
 	kunna begäras avsiktligt, ETT STEG PER BEGÄRAN, utan att en hållen
