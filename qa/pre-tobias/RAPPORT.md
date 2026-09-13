@@ -1,19 +1,18 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-13 14:16 UTC av `tools/pre-tobias-grind.py`.
-
-> ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
+> **PASS** — genererad 2026-09-13 15:12 UTC av `tools/pre-tobias-grind.py`.
 
 
 ## Identitet
 
 | | |
 |---|---|
-| source SHA | `5e89bcc77e33f6d3e524890bab39c276519d4369` |
+| source SHA | `f655e41fe0ac20f5696bcb21e221d452adc7e994` |
 | gren | `claude/first-playable-20260910` |
 | mätt `.rbxlx` | `roblox/releases/first-playable-place-5e89bcc/UBRFFirstPlayable.rbxlx` |
 | `.rbxlx` SHA256 | `d4a315f15efe24b07d09b9fa9e4494653bcdbf678e3535e7cf0ad8e2d9b7a1d3` |
 | storlek | 1173823 byte |
+| instanser | 73 (`<Item class=` i filen), varav 67 skript |
 
 ## Undergrindarna
 
@@ -79,5 +78,5 @@ Ordern, punkt 8: här får bara verklig Roblox-motor och spelkänsla stå — al
 
 ## Artefaktkedjan, uttryckligen
 
-Placen är script-only: 62 instanser, noll geometri. Det finns ingen geometri i XML:en att läsa, så kedjan är `tools/kolla-place.py` — de inbäddade modulerna byte-identiska mot disk — plus att grindarna kör exakt de modulerna. Samma bevisvärde, men det är ett **argument** och inte en mätning ur filen.
+Placen är script-only: 73 instanser räknade ur filen (`<Item class=`), varav 67 skript, noll geometri. Det finns ingen geometri i XML:en att läsa, så kedjan är `tools/kolla-place.py` — de inbäddade modulerna byte-identiska mot disk — plus att grindarna kör exakt de modulerna. Samma bevisvärde, men det är ett **argument** och inte en mätning ur filen.
 

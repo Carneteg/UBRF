@@ -19,17 +19,24 @@ Utdata:
 
 ARTEFAKTFRÅGAN, redovisad som det den är: ordern vill att kontrollerna läser
 den genererade `.rbxlx` eller ett manifest deriverat ur den. Placen är
-script-only — 62 instanser, noll geometri — så det finns ingen geometri i
-XML:en att läsa. Kedjan är i stället `kolla-place.py`, som visar att de 54
-inbäddade modulerna är byte-identiska mot disk, plus att grindarna kör exakt
-de modulerna. Det ger samma bevisvärde, men det är ett ARGUMENT och inte en
-mätning ur filen, och det står så både här och i rapporten.
+script-only — noll geometri — så det finns ingen geometri i XML:en att läsa.
+Kedjan är i stället `kolla-place.py`, som visar att de inbäddade modulerna
+är byte-identiska mot disk, plus att grindarna kör exakt de modulerna. Det
+ger samma bevisvärde, men det är ett ARGUMENT och inte en mätning ur filen,
+och det står så både här och i rapporten.
+
+ANTALET INSTANSER MÄTS UR FILEN, inte skrivs för hand. Rapporten sade
+"62 instanser" som en literal från `0a1b032`-tiden, medan placen sedan dess
+växt till 73 — bygg-place skrev 73 vid bygget och README:n sade 73, och
+rapporten sade 62 om samma fil. Nu räknas `<Item class=` i den `.rbxlx`
+som `--place` pekar på, samma räkning som `bygg-place.py` gör vid bygget.
 """
 import argparse
 import datetime
 import hashlib
 import json
 import pathlib
+import re
 import re
 import subprocess
 import sys
@@ -122,6 +129,19 @@ def git(*a):
     return ut.strip() if ok else "okänd"
 
 
+def rakna_instanser(p: pathlib.Path):
+    """Antal `<Item class=...>` i placen, och hur många av dem som är skript.
+
+    Samma räkning som `bygg-place.py` gör när den skriver ut
+    `N instanser` vid bygget: varje `<Item class="…">` är en Roblox-instans,
+    oavsett nivå. Skripten (ModuleScript, Script, LocalScript) räknas för
+    sig eftersom det är dem `kolla-place.py` jämför mot disk."""
+    txt = p.read_text(encoding="utf-8")
+    alla = re.findall(r'<Item class="([^"]+)"', txt)
+    skript = sum(1 for k in alla if k in ("ModuleScript", "Script", "LocalScript"))
+    return len(alla), skript
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--place", help="pinnad .rbxlx att mäta i stället för en ny")
@@ -208,6 +228,8 @@ def skriv_rapport(resultat, man, allt_gront, place):
             r.append(rad("mätt `.rbxlx`", f"`{p}`"))
             r.append(rad("`.rbxlx` SHA256", f"`{sha256(p)}`"))
             r.append(rad("storlek", f"{p.stat().st_size} byte"))
+            antal, skript = rakna_instanser(p)
+            r.append(rad("instanser", f"{antal} (`<Item class=` i filen), varav {skript} skript"))
     else:
         r.append(rad("release commit", "ingen ny release byggd i den här körningen"))
         r.append(rad("`.rbxlx` SHA256", "— ingen fil mätt, kör med `--place`"))
@@ -258,7 +280,13 @@ def skriv_rapport(resultat, man, allt_gront, place):
              "webbrenderingen, inte den här")
 
     r.append("\n## Artefaktkedjan, uttryckligen\n")
-    r.append("Placen är script-only: 62 instanser, noll geometri. Det finns ingen "
+    if place and pathlib.Path(place).exists():
+        antal, skript = rakna_instanser(pathlib.Path(place))
+        instanstext = (f"{antal} instanser räknade ur filen (`<Item class=`), "
+                       f"varav {skript} skript")
+    else:
+        instanstext = "ingen fil mätt i den här körningen"
+    r.append(f"Placen är script-only: {instanstext}, noll geometri. Det finns ingen "
              "geometri i XML:en att läsa, så kedjan är `tools/kolla-place.py` — de "
              "inbäddade modulerna byte-identiska mot disk — plus att grindarna kör "
              "exakt de modulerna. Samma bevisvärde, men det är ett **argument** och "
