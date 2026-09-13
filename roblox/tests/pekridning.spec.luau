@@ -592,11 +592,11 @@ do
 		redan nere hade `if blickFinger then return end` tagit fallet och
 		provet hade inte kunnat falla (falsifierat: så var det först). ]]
 	yta.InputBegan:Fire(F1)
-	F1.Position = Vector2.new(cx + 20, cy - TouchControls.RADIE)
+	F1.Position = Vector2.new(cx, cy - TouchControls.RADIE - 10)
 	usv.InputChanged:Fire(F1)
 	rid(0.1)
 	prova("spakens finger tas inte över av blickytan när blicken är ledig",
-		#blickar == 0 and senaste.forward > 0.9,
+		#blickar == 0 and senaste.forward > 0.95 and senaste.steer == 0,
 		("(blickanrop %d · forward %.2f)"):format(#blickar, senaste.forward))
 
 	local F2 = finger(yr.x0 + 200, yr.y0 + 100 - INSET)
