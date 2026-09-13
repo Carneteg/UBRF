@@ -26,8 +26,9 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Sitt upp / sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` |
 | Framåt / bakåt | `W` / `S` | vänster spak | spaken |
 | Styr | `A` / `D` | vänster spak | spaken |
-| Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
-| Lägre gångart | `LeftControl` | `L1` | `▼ LUGNARE` |
+| Högre gångart | `LeftShift` | `R1` | namngiven: `SKRITT` / `TRAV` / `GALOPP` |
+| Lägre gångart | `LeftControl` | `L1` | `SAKTA` (ett steg ned) |
+| Halt som hålls | `S` (rullar ned) | vänster spak bakåt | `HALT` — låser noll tills spaken släpps eller en gångart väljs |
 | Tygel (kontakt) | `Q` | `R2` | `TYGEL` |
 | Halvhalt (parad) | `F` | `B` | `HALVHALT` |
 | Sits lätt / djup | `Z` / `C` | `L2` | `DJUP SITS` |
@@ -98,6 +99,10 @@ tygeln"* respektive *"avsprånget kommer ur anridningen"*.
    fryses ridningen, och `Input.consume()` körs ändå och kastas så att
    engångsflankerna inte sparas till efter pausen.
 5. **Minst 44 px träffyta** på varje knapp spelaren måste kunna nå.
+   Pekreglagen skalar med skärmhöjden men aldrig under 44 i något led;
+   när två galler om tre rader då inte ryms (iPhone i landskap, 273 px
+   GUI-höjd) läggs knapparna tre i bredd i stället för två. Mäts i
+   `roblox/tests/pekridning.spec.luau`.
 6. **Hjälpen går alltid att öppna igen.** En panel som bara går att stänga
    är en engångsruta, och det var precis felet #153 rapporterade som
    P2-4b: `H` fanns, men på en iPad utan tangentbord fanns ingen väg

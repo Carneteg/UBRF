@@ -214,6 +214,42 @@ local function spakCentrum(gui)
 	return p.X + s.X / 2, p.Y + s.Y / 2, spak
 end
 
+--[[ SPAKENS RITADE KANT ÄR FULLT UTSLAG. Fingret vid cirkelns synliga
+	kant — inte vid någon oskalad konstant — ska ge nästan full avsikt,
+	och knoppen ska ligga innanför det som ritas, också när fingret dras
+	långt utanför. Mäts genom den riktiga `kopplaSpak`-vägen. ]]
+local function provaSpakgeometri(gui, namn)
+	local cx, cy, spak = spakCentrum(gui)
+	local knop = sok(spak, "Knop")
+	local sr = rekt(spak)
+	local spakR = (sr.x1 - sr.x0) / 2
+	local function knopInnanfor()
+		local kr = rekt(knop)
+		return kr.x0 >= sr.x0 - 0.01 and kr.x1 <= sr.x1 + 0.01
+			and kr.y0 >= sr.y0 - 0.01 and kr.y1 <= sr.y1 + 0.01, kr
+	end
+	local F = finger(cx, cy - spakR)
+	spak.InputBegan:Fire(F)
+	rid(0.1)
+	local inne, kr = knopInnanfor()
+	prova(("%s: fingret vid den RITADE kanten (%d px) ger nästan full framåtavsikt"):format(namn, spakR),
+		senaste.forward >= 0.95, ("(forward %.3f)"):format(senaste.forward))
+	prova(("%s: knoppen ligger innanför cirkeln vid kanten"):format(namn), inne,
+		("(knopp y %d..%d i cirkel %d..%d)"):format(kr.y0, kr.y1, sr.y0, sr.y1))
+	F.Position = Vector2.new(cx + 3 * spakR, cy)
+	usv.InputChanged:Fire(F)
+	rid(0.1)
+	local inne2, kr2 = knopInnanfor()
+	prova(("%s: fingret långt utanför — full styrning, knoppen kvar innanför"):format(namn),
+		senaste.steer >= 0.95 and inne2,
+		("(steer %.3f · knopp x %d..%d i %d..%d)"):format(senaste.steer, kr2.x0, kr2.x1, sr.x0, sr.x1))
+	usv.InputEnded:Fire(F)
+	rid(0.1)
+	prova(("%s: släpp nollar och knoppen står i mitten"):format(namn),
+		senaste.forward == 0 and senaste.steer == 0
+			and math.abs((rekt(knop).x0 + rekt(knop).x1) / 2 - (sr.x0 + sr.x1) / 2) < 0.01)
+end
+
 --[[ ══ 1. LAYOUTEN PÅ TVÅ SKÄRMAR ══════════════════════════════════ ]]
 for _, skarm in SKARMAR do
 	print(("\n── 1. %s (%d×%d, GUI-höjd %d) ──"):format(skarm.namn, skarm.B,
@@ -275,6 +311,11 @@ for _, skarm in SKARMAR do
 	prova("varje knapp ligger helt innanför skärmen", #utanfor == 0,
 		if #utanfor > 0 then table.concat(utanfor, " ") else
 			("(minsta knapp %d×%d px)"):format(minB, minH))
+	--[[ `docs/KONTROLLMATRIS.md` regel 5: minst 44 px träffyta på varje
+		knapp spelaren måste kunna nå. Mätt på den byggda knappen, inte på
+		konstanten. ]]
+	prova("varje knapp når 44 px i BÅDA led", minB >= 44 and minH >= 44,
+		("(minsta %d×%d px)"):format(minB, minH))
 
 	--[[ Knapparna får inte ligga på varandra, och inte på spaken. ]]
 	local dubbla = {}
@@ -346,10 +387,11 @@ for _, skarm in SKARMAR do
 	prova("blickytan börjar till höger om spaken", blick.x0 >= spakR.x1 - 0.01,
 		("(blick från %d, spak till %d)"):format(blick.x0, spakR.x1))
 
-	--[[ Spakens ritade radie mot inmatningens. `flytta` klampar mot
-		`TouchControls.RADIE` (66) oavsett hur stor cirkeln ritas. ]]
-	print(("  info spakens ritade radie %d px · inmatningens radie %d px · minsta knapp %d×%d px"):format(
-		(spakR.x1 - spakR.x0) / 2, TouchControls.RADIE, minB, minH))
+	--[[ Spakens ritade radie är också inmatningens — mäts i
+		`provaSpakgeometri`. Här bara talen för rapporten. ]]
+	print(("  info spakens ritade radie %d px · minsta knapp %d×%d px · %d knappar i bredd"):format(
+		(spakR.x1 - spakR.x0) / 2, minB, minH,
+		sok(gui, "Gangarter"):FindFirstChildOfClass("UIGridLayout").FillDirectionMaxCells))
 
 	kvittera()
 	sittAv(gui)
@@ -368,6 +410,7 @@ do
 	rid(0.2)
 	prova("ritten är igång och kortet kvitterat", gui ~= nil
 		and LektionController.vantar() == false)
+	provaSpakgeometri(gui, "iPhone")
 
 	sok(gui, "Trav").MouseButton1Click:Fire()
 	local s1 = rid(2.5)
@@ -484,6 +527,7 @@ do
 	rid(0.2)
 	prova("ritten är igång efter ny uppsittning", gui ~= nil
 		and LektionController.vantar() == false)
+	provaSpakgeometri(gui, "iPad")
 
 	local function enBildruta()
 		if LektionController.vantar() then kvittera() end
