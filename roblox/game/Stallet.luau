@@ -313,16 +313,44 @@ function Stallet.tilldelaLedig(userId: number, upptagna: { [string]: boolean }?,
 	local vilar = vilande or {}
 	if onskad ~= nil then
 		if Spel.hastar[onskad] and not taget[onskad] and not vilar[onskad] then
-			return onskad
+			return onskad, false
 		end
-		return nil
+		--[[ ══ TVÅ SKÄL ATT ÖNSKAN INTE GÅR IGENOM — TVÅ SVAR ═══════════
+
+			Raden här löd `return nil` för BÅDA, och det gjorde en
+			familjeserver oanvändbar: två spelare på sin första dag önskar
+			båda Blackrock Jack, den första får honom, den andra får
+			`INGEN` och kan inte spela alls. Mätt i tvåspelarprovet.
+
+			Skälen är inte jämförbara:
+
+			  VILAR — hästen är avstängd av välfärdsskäl. Det är en REGEL,
+			  och en ersättare bakom regelns rygg vore att kringgå den.
+			  Svaret är fortfarande nil, och spelaren får vänta.
+
+			  UPPTAGEN — en annan spelare håller henne just nu i just den
+			  här servern. Det är en TILLFÄLLIGHET, inte ett omdöme om
+			  hästen, och att låta den blockera hela dagen är fel.
+
+			Är hon bara upptagen faller vi därför igenom till rotationen
+			nedan, som är deterministisk och redan hoppar över upptagna och
+			vilande. Sparfilen rörs inte: önskan räknas fortfarande ur
+			saven, och ersättaren gäller bara den här sessionen. ]]
+		if not Spel.hastar[onskad] or vilar[onskad] then
+			return nil, false
+		end
 	end
 	local start = userId % n
 	for steg = 0, n - 1 do
 		local id = Spel.ordning[(start + steg) % n + 1]
-		if not taget[id] and not vilar[id] then return id end
+		if not taget[id] and not vilar[id] then
+			--[[ Andra värdet säger om det här är en VIKARIE för en önskan
+				som var upptagen — gränssnittet ska kunna säga det rakt ut
+				i stället för att låtsas att det var dagens häst. ]]
+			return id, onskad ~= nil
+		end
 	end
-	return nil
+	return nil, false
 end
 
 --[[ Allt en spelare behöver veta vid ankomsten, i ett svar. ]]
@@ -369,7 +397,7 @@ end
 
 function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?,
 	vilande: { [string]: boolean }?, onskad: string?)
-	local id = Stallet.tilldelaLedig(userId, upptagna, vilande, onskad)
+	local id, vikarie = Stallet.tilldelaLedig(userId, upptagna, vilande, onskad)
 	if not id then return nil end
 	local hast = Spel.hastar[id]
 	if not hast then return nil end
@@ -381,6 +409,9 @@ function Stallet.dagensHast(userId: number, upptagna: { [string]: boolean }?,
 		besk = hast.besk,
 		foder = Spel.foder[id],
 		box = Stallet.boxFor(id),
+		--[[ Vilken häst spelaren EGENTLIGEN skulle ridit, när hon fått en
+			vikarie för att den var upptagen. Nil i vanliga fall. ]]
+		vikarieFor = if vikarie then onskad else nil,
 		--[[ Hästens SPELVÄRDEN följer med tilldelningen (senior re-review
 		     #87, blocker 1). De låg i UBRFSpelData men nådde aldrig den
 		     häst spelaren faktiskt red: `resolveStats` läste bara Studio-

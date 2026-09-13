@@ -74,6 +74,39 @@ local function farVisas(model: Model): boolean
 	return InteractionController.promptSynlig(InteractionController.g01Lage(), redo)
 end
 
+--[[ ══ LEDNINGEN HAR EN EGEN SYNLIGHETSREGEL ════════════════════════
+
+	Uppsittningens prompt ska vara borta tills hästen är REDO — det är
+	hela poängen med förberedelsen. Ledningen fick samma regel, och det
+	låste loopen:
+
+	    för att bocka av `leda` måste hästen fysiskt ha lämnat boxen
+	      → för att hon ska gå måste kopplet fästas med `LedBorja`
+	        → `LedBorja` nås bara via `LedPrompt`
+	          → `LedPrompt` fanns bara när `redo` var sant
+	            → `redo` är `Preparation.nasta(state) == nil`, alltså
+	              sant först när `leda` REDAN är avbockad.
+
+	Mätt i Studio, stående vid sin egen häst med allt utom `leda` klart:
+	`redo=false`, noll prompter i världen. Det fanns alltså ingen väg alls
+	att börja leda — inte bara en otydlig väg, och inte bara på pekskärm.
+
+	Regeln nedan är den lilla: ledningen syns också när `leda` är det steg
+	spelaren står på. Servern äger fortfarande vem som får leda vad
+	(`satRattHastKrok`) och när steget får bockas av — klienten bestämmer
+	bara om knappen ritas. ]]
+local ledFor: ((Model) -> boolean)? = nil
+
+function InteractionController.setLedCheck(fn: ((Model) -> boolean)?)
+	ledFor = fn
+end
+
+local function farVisasLed(model: Model): boolean
+	if farVisas(model) then return true end
+	if InteractionController.g01Lage() ~= true then return false end
+	return ledFor ~= nil and ledFor(model)
+end
+
 function InteractionController.setReadyCheck(fn: ((Model) -> boolean)?)
 	redoFor = fn
 end
@@ -107,6 +140,13 @@ local function addPrompt(model: Model)
 	end)
 
 	prompts[model] = prompt
+end
+
+local function addLedPrompt(model: Model)
+	if ledKnappar[model] then return end
+	if not farVisasLed(model) then return end
+	local rig = RigAdapter.build(model)
+	if not rig then return end
 
 	--[[ ── LEDA (#162 blockerare 2) ──────────────────────────────────
 
@@ -143,18 +183,30 @@ local function addPrompt(model: Model)
 	ledKnappar[model] = led
 end
 
-local function removePrompt(model: Model)
+local function removeMount(model: Model)
 	local prompt = prompts[model]
 	if prompt then
 		prompt:Destroy()
 		prompts[model] = nil
 	end
+end
+
+--[[ Kopplet rivs ALDRIG medan hon faktiskt leds: prompten är spelarens
+	enda väg att släppa igen, och en knapp som försvinner mitt i ledningen
+	hade lämnat henne fast i andra änden av repet. ]]
+local function removeLed(model: Model)
+	if ledPrompts[model] == true then return end
 	local led = ledKnappar[model]
 	if led then
 		led:Destroy()
 		ledKnappar[model] = nil
 		ledPrompts[model] = nil
 	end
+end
+
+local function removePrompt(model: Model)
+	removeMount(model)
+	removeLed(model)
 end
 
 --[[ Räkna om vilka prompter som får finnas.
@@ -166,22 +218,53 @@ end
 function InteractionController.uppdatera()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then
-			if farVisas(model) then
-				addPrompt(model)
-			else
-				removePrompt(model)
-			end
+			if farVisas(model) then addPrompt(model) else removeMount(model) end
+			if farVisasLed(model) then addLedPrompt(model) else removeLed(model) end
 		end
 	end
 end
 
+--[[ ══ SERVERN ÄGER LEDNINGEN — OCH SÄGER TILL NÄR DEN UPPHÖR ══════
+
+	Knappen växlade sin text OPTIMISTISKT när spelaren tryckte, och
+	lyssnade sedan aldrig på servern igen. Kopplet kan dock släppa utan att
+	spelaren tryckt: går man för långt (`led.tappade_bort`), fastnar hon
+	(`led.fastnat`), sitter man upp (`led.rider`).
+
+	Mätt i Studio: efter att ha gått ifrån hästen svarade servern
+	`aktiv=nil` medan knappen fortfarande stod på "Let go". Spelaren såg
+	alltså en släpp-knapp för ett koppel som inte fanns, och hade behövt
+	trycka två gånger för att få tag i henne igen — utan att få veta
+	varför.
+
+	`LedService._sync` skickade redan hela sanningen, med skäl. Ingen
+	lyssnade. Nu gör någon det. ]]
+local function lyssnaPaLedningen()
+	local ok, ev = pcall(function() return Net.get("LedSync") end)
+	if not ok or not ev then return end
+	(ev :: RemoteEvent).OnClientEvent:Connect(function(vy)
+		local leder = type(vy) == "table" and vy.leder == true
+		local hastId = if type(vy) == "table" then vy.hastId else nil
+		for model, prompt in pairs(ledKnappar) do
+			local min = leder and model:GetAttribute("HorseId") == hastId
+			ledPrompts[model] = if min then true else nil
+			prompt.ActionText = Sprak.t(if min then "led.slapp" else "led.borja")
+		end
+		if type(vy) == "table" and vy.skal and not leder then
+			warn(("[Led] kopplet släpptes: %s (%s)")
+				:format(Sprak.t(tostring(vy.skal)), tostring(vy.skal)))
+		end
+	end)
+end
+
 function InteractionController.start(mountCallback: (Model) -> ())
 	onMount = mountCallback
+	lyssnaPaLedningen()
 	for _, model in CollectionService:GetTagged("Horse") do
-		if model:IsA("Model") then addPrompt(model) end
+		if model:IsA("Model") then addPrompt(model); addLedPrompt(model) end
 	end
 	CollectionService:GetInstanceAddedSignal("Horse"):Connect(function(inst)
-		if inst:IsA("Model") then addPrompt(inst) end
+		if inst:IsA("Model") then addPrompt(inst); addLedPrompt(inst) end
 	end)
 	CollectionService:GetInstanceRemovedSignal("Horse"):Connect(function(inst)
 		if inst:IsA("Model") then removePrompt(inst :: Model) end

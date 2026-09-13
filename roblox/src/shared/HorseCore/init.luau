@@ -13,6 +13,9 @@ return {
 	Gaits = require(script.Gaits),
 	StateMachine = require(script.StateMachine),
 	RigAdapter = require(script.RigAdapter),
+	--[[ Vad en viss hästmodell kallar sina kroppsdelar. Delad därför att
+	     servern monterar nätet och klienten animerar benen. ]]
+	Riggprofiler = require(script.Riggprofiler),
 	Networking = require(script.Networking),
 	Telemetri = require(script.Telemetri),
 	RidKanon = require(script.RidKanon),

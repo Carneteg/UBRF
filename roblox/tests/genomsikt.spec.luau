@@ -55,6 +55,19 @@ check("valj ger exakt de skymmande delarna", table.concat(namn, ",") == "kant,me
 -- Sträcka av längd noll: inget skymmer, ingen division med noll.
 check("kameran i karaktären: ingenting tonas", not Genomsikt.skymmer(mellan.Position, mellan.Size, fig, fig))
 
+local tillstand = {}
+local aktiva, slapp = Genomsikt.uppdateraToning(tillstand, { mellan }, 0, 0.10)
+check("ny skymmande del tonas direkt", #aktiva == 1 and aktiva[1] == mellan and #slapp == 0)
+
+aktiva, slapp = Genomsikt.uppdateraToning(tillstand, {}, 0.05, 0.10)
+check("kort kameraglapp behåller toningen",
+	#aktiva == 1 and aktiva[1] == mellan and #slapp == 0)
+
+aktiva, slapp = Genomsikt.uppdateraToning(tillstand, {}, 0.11, 0.10)
+check("toningen släpps efter hysteresfönstret",
+	#aktiva == 0 and #slapp == 1 and slapp[1] == mellan
+		and next(tillstand) == nil)
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

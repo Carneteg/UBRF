@@ -353,6 +353,20 @@ for (const [id, h] of Object.entries(HORSES)) {
   for (const k of GAME_RUNTIME) if (h[k] !== BAS_RUNTIME[k]) o[k] = h[k];
   if (h.fjader !== undefined) o.fjader = h.fjader;
   if (h.tecken !== undefined) o.tecken = h.tecken;
+  /* UTSEENDET SOM ROBLOX FAKTISKT MÅLAR. `mule` och `manKarna` finns bara
+     på de hästar vars färg är AVLÄST ur UBRF:s eget foto; `visuellStatus`
+     säger vilket. Utan dem målar Roblox mule och man i ett stycke, vilket
+     är rätt svar för en häst vi inte har läst av. */
+  if (h.mule) o.mule = h.mule;
+  if (h.manKarna) o.manKarna = h.manKarna;
+  /* `monster` bär en observation Roblox INTE kan rita — Berras skäck.
+     Den följer med ändå: en avläst egenskap ska inte gå förlorad bara
+     för att en rigg saknar geometri för den. */
+  if (h.monster) o.monster = h.monster;
+  if (h.monsterFarg) o.monsterFarg = h.monsterFarg;
+  if (h.visuellStatus && h.visuellStatus !== "ASSUMPTION") {
+    o.visuellStatus = h.visuellStatus;
+  }
   if (h.flaggor && Object.keys(h.flaggor).length) o.flaggor = h.flaggor;
   sparseHorses[id] = o;
 }

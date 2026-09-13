@@ -67,6 +67,9 @@ local state = {
 	touchParad = false,
 	_upEdge = false,
 	_downEdge = false,
+	--[[ Namnet på en begärd gångart, eller nil. Deklareras här för att
+	     `--!strict` ska känna fältet; `consume` nollar det varje bildruta. ]]
+	touchGaitTo = (nil :: string?),
 }
 
 local bound = false
@@ -202,6 +205,7 @@ function Input.consume(): Types.Intent
 		steer = math.clamp(state.steer + padSteer + state.touchSteer, -1, 1),
 		gaitUp = state._upEdge,
 		gaitDown = state._downEdge,
+		gaitTo = state.touchGaitTo,
 		jump = state.jump,
 		rein = math.clamp(state.rein + trigger() + state.touchRein, 0, 1),
 		seat = math.clamp(Input.seatAxis() + seatTrigger() + state.touchSeat, -1, 1),
@@ -209,6 +213,11 @@ function Input.consume(): Types.Intent
 	}
 	state._upEdge, state._downEdge = false, false
 	state._paradEdge, state.touchParad = false, false
+	--[[ Namngiven gångart är en IMPULS som alla andra flanker här: den
+	     verkar i den bildruta den trycktes och sparas inte. Låg den kvar
+	     hade knappen blivit ett läge man måste stänga av, och hästen hade
+	     inte kunnat byta gångart på något annat sätt efteråt. ]]
+	state.touchGaitTo = nil
 	return intent
 end
 
@@ -230,6 +239,11 @@ function Input.touchParad()
 end
 function Input.touchGait(up: boolean)
 	if up then state._upEdge = true else state._downEdge = true end
+end
+--[[ Pekskärmens namngivna gångartsknappar. Namnet är en plats i
+     `Gaits.ORDER`; `_targetGait` gör resten och behåller alla tak. ]]
+function Input.touchGaitTo(namn: string)
+	state.touchGaitTo = namn
 end
 function Input.touchJump()
 	state.jump = true

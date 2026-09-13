@@ -12,6 +12,8 @@ local DorrService = require(script.DorrService)
 local LedService = require(script.LedService)
 local TackService = require(script.TackService)
 local TackForradService = require(script.TackForradService)
+local Belysning = require(script.Belysning)
+local Markkontakt = require(script.Markkontakt)
 local HastRigg = require(script.HastRigg)
 local Preflight = require(script.Preflight)
 
@@ -137,6 +139,18 @@ kritisk("LedService", LedService.start)
 kritisk("TackForradService", function()
 	TackForradService.start(GameplayService.valjUtrustning)
 end)
+
+--[[ Belysningen EFTER världsbygget: modulen letar upp armaturerna som
+     Anlaggningen redan ställt dit och hänger ljuskällor i dem. Den rör
+     ingen geometri. Faller den blir det mörkt, inte ospelbart — därav
+     `fas` och inte `kritisk`. ]]
+fas("belysningen", Belysning.start)
+
+--[[ Markkontakten EFTER hästarna: ridbanans sand är ett dekorlager på
+     0,18 studs utan kollision, och utan den här justeringen står hovarna
+     nere i sanden i stället för på den. Faller den sjunker hovarna sex
+     centimeter — fult, inte ospelbart, alltså `fas` och inte `kritisk`. ]]
+fas("markkontakten", Markkontakt.start)
 
 --[[ ══ CRITICAL_STARTUP_GATE ═════════════════════════════════════════════
 

@@ -38,6 +38,7 @@ local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon
      kommer ur RidKanon.UGNETA och är svensk kanon — se översättningsskulden
      i src/spel/sprak.js. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+local TouchControls = require(script.Parent.TouchControls)
 
 local UgnetaController = {}
 
@@ -118,6 +119,14 @@ local function bygg()
 	g.Name = "UBRFUgneta"
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
+	--[[ Samma skäl som skötselpanelen: vid lika `DisplayOrder` vinner
+	     Roblox `TouchGui`, och lektionskortets knapp hamnade under den
+	     dynamiska spakens osynliga träffyta. Mätt på iPad Air:
+	         [DynamicThumbstickUIModifier > DynamicThumbstickFrame >
+	          TouchControlFrame > Knapp]
+	     alltså fjärde i stacken — kortet gick inte att kvittera, och det
+	     är enda vägen in i lektionen. Med 10 ligger `Knapp` överst. ]]
+	g.DisplayOrder = 10
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 	--[[ Sätts HÄR, inte i slutet: vakten `if gui then return end` ovan
@@ -237,7 +246,25 @@ local function bygg()
 	kn.Name = "Knapp"
 	kn.AutoButtonColor = true
 	kn.LayoutOrder = 9
-	kn.Size = UDim2.new(0, 108, 0, 22)
+	--[[ ══ KNAPPEN VAR SMALARE ÄN SIN EGEN TEXT ════════════════════════
+
+	     108×22 var en fast storlek, men texten sätts per kort och är
+	     olika lång. Mätt på iPad Air i landskap: `TextBounds.X` = 157 mot
+	     knappens 108 för "Continue to start the lesson  (R)" — texten
+	     klipptes mitt i ordet, och det här är den ENDA vägen vidare i
+	     lektionen. 22 px höjd är dessutom under det som går att träffa
+	     med en tumme; 44 är golvet man brukar räkna med.
+
+	     `AutomaticSize.X` låter pillret växa med sin text i stället för
+	     att texten ska krympas eller kapas, så översättningar av olika
+	     längd får plats utan att någon måste räkna pixlar. Bredden blir
+	     ett minimum i stället för ett tak. ]]
+	kn.Size = UDim2.new(0, 108, 0, 40)
+	kn.AutomaticSize = Enum.AutomaticSize.X
+	local knPad = Instance.new("UIPadding")
+	knPad.PaddingLeft = UDim.new(0, 16)
+	knPad.PaddingRight = UDim.new(0, 16)
+	knPad.Parent = kn
 	kn.BackgroundColor3 = FARG_GULD
 	kn.TextColor3 = Color3.fromRGB(23, 20, 10)
 	kn.Font = Enum.Font.GothamBold
@@ -259,7 +286,14 @@ local function bygg()
 		x.Name = namn
 		x.AutoButtonColor = true
 		x.LayoutOrder = ordning
-		x.Size = UDim2.new(0, 108, 0, 22)
+		--[[ Samma skäl som huvudknappen ovan: texten är olika lång per
+		     kort och per språk, och 22 px är inte ett tumgrepp. ]]
+		x.Size = UDim2.new(0, 108, 0, 40)
+		x.AutomaticSize = Enum.AutomaticSize.X
+		local xPad = Instance.new("UIPadding")
+		xPad.PaddingLeft = UDim.new(0, 16)
+		xPad.PaddingRight = UDim.new(0, 16)
+		xPad.Parent = x
 		x.BackgroundColor3 = Color3.fromRGB(60, 72, 68)
 		x.TextColor3 = FARG_TEXT
 		x.Font = Enum.Font.GothamBold
@@ -371,6 +405,30 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 	bygg()
 	local k, r = kort, kortRubrik
 	if not k or not r then return end
+
+	--[[ ── KORTET VIKER FÖR REGLAGEN ──────────────────────────────────
+
+		Kortet är centrerat och 92 % brett, max 640. På iPad ryms det:
+		reglagen bor på x 961..1155 och kortet slutar på 909. På iPhone i
+		landskap är skärmen 749 bred, kortet blir ändå 640 och lägger sig
+		rakt över knappraden — mätt: SAKTA, SITT AV, HOPP, TYGEL, PARAD och
+		DJUP SITS skymdes alla av `Kort`.
+
+		Regeln nedan rör INTE surfplattan: ryms kortet centrerat innanför
+		den fria ytan står det kvar exakt där det stod. Bara när det inte
+		ryms krymper det och centreras i det som är kvar. ]]
+	do
+		local foralder = k.Parent :: GuiObject
+		local W = foralder and foralder.AbsoluteSize.X or 0
+		if W > 0 then
+			local fritt = W - TouchControls.reglageBredd()
+			local bredd = math.min(640, 0.92 * W, math.max(160, fritt - 32))
+			local centrum = if W / 2 + bredd / 2 <= fritt then W / 2 else fritt / 2
+			k.Size = UDim2.new(0, math.floor(bredd), 0, 170)
+			k.Position = UDim2.new(0, math.floor(centrum), 1, -14)
+		end
+	end
+
 	r.Text = rubrik
 	for i, p in kortPunkter do
 		local txt = punkter[i]

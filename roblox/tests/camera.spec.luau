@@ -228,6 +228,146 @@ do
 		Kameralage.las(cam.lage).vikt == 0 and not Kameralage.aktiv(cam.lage))
 end
 
+--[[ ══ DET EGNA HUVUDET ═══════════════════════════════════════════════
+
+	Uppmätt uppsutten i spel, före första rättningen:
+
+	    HUVUD Transparency=0.000  LocalTransparencyModifier=1.000
+	    KAMERA->HUVUD 0.570 studs
+	    varje ANNAN kroppsdel     LocalTransparencyModifier=0.000
+
+	Huvudet var varken borttaget, flyttat eller skymt — vi gömde det
+	själva, och vi gömde det utifrån kameralägets VIKT i stället för
+	utifrån var kameran faktiskt stod.
+
+	FÖRSTA RÄTTNINGEN räknade avståndet mot `Size.Magnitude / 2`, alltså
+	rymddiagonalen: 0,98 studs för ett huvud som bara är 0,58 studs
+	halvbrett. Med marginalerna ovanpå var huvudet helt borta ut till
+	1,13 studs och fullt synligt först på 2,35 — kameran kunde stå en hel
+	stud UTANFÖR huvudet och ändå rita det osynligt. Buggen var alltså
+	kvar, bara mindre, och Tobias såg den i nästa skärmbild.
+
+	Regeln är nu Tobias egen, ordagrant: ÄR KAMERAN UTANFÖR HUVUDET SKA
+	HUVUDET SYNAS. Den mäts mot huvudets LÅDA i huvudets eget rum, och är
+	därför en ren funktion — mätbar utan kamera, karaktär eller häst. ]]
+print("")
+print("── Det egna huvudet: är kameran utanför huvudet SKA det synas ──")
+do
+	--[[ Ett riktigt R15-huvud: uppmätt (1,16 · 1,11 · 1,14). Halva mått
+		alltså 0,58 x 0,555 x 0,57 — och det är DEN gränsen regeln gäller
+		mot, inte rymddiagonalen 0,98 som första rättningen använde. ]]
+	local matt = Vector3.new(1.16, 1.11, 1.14)
+	local f = CameraController.huvudsynlighet
+	local function rakt(z) return Vector3.new(0, 0, -z) end
+
+	--[[ Sadelvyns ögonpunkt ligger i huvudets FRAMKANT (0,57 studs rakt
+		fram). Där ser man insidan av sitt eget huvud, och det ska bort. ]]
+	check("objektivet i huvudets framkant: huvudet borta", f(rakt(0.57), matt) == 0,
+		string.format("synlighet %.3f", f(rakt(0.57), matt)))
+	check("objektivet mitt i huvudet: huvudet borta", f(rakt(0.0), matt) == 0)
+
+	--[[ DET SOM VAR KVAR AV BUGGEN. Med den gamla radien (0,98) var
+		huvudet helt borta ut till 1,13 studs och fullt synligt först på
+		2,35. Kameran kunde alltså stå en hel stud UTANFÖR huvudet och
+		ändå rita det osynligt. De här raderna faller om någon sätter
+		tillbaka en sfärradie. ]]
+	check("1,2 studs bakom huvudet: syns", f(rakt(1.2), matt) == 1,
+		string.format("synlighet %.3f", f(rakt(1.2), matt)))
+	check("1,5 studs bakom huvudet: syns", f(rakt(1.5), matt) == 1)
+	check("2,0 studs bakom huvudet: syns", f(rakt(2.0), matt) == 1)
+
+	--[[ Vanliga spelavstånd — bommen, granskningsvyn, tredjeperson. ]]
+	local allaSyns = true
+	for _, d in ipairs({ 3.0, 6.0, 9.0, 13.9, 20.0 }) do
+		if f(rakt(d), matt) < 1 then allaSyns = false end
+	end
+	check("varje vanligt spelavstånd visar huvudet", allaSyns,
+		"3, 6, 9, 13,9 och 20 studs")
+
+	--[[ Kameran vid sidan av och ovanför räknas likadant: regeln gäller
+		lådan, inte bara ryggriktningen. ]]
+	check("1,2 studs rakt ut åt sidan: syns", f(Vector3.new(1.2, 0, 0), matt) == 1)
+	check("1,2 studs rakt ovanför: syns", f(Vector3.new(0, 1.2, 0), matt) == 1)
+	check("inuti huvudet i sidled: borta", f(Vector3.new(0.3, 0, 0), matt) == 0)
+
+	--[[ Monotont och mjukt i båda ändar, så att bytet inte poppar mitt i
+		en kamerarörelse. ]]
+	local forra, monoton = -1, true
+	for i = 0, 60 do
+		local v = f(rakt(i * 0.05), matt)
+		if v < forra - 1e-9 then monoton = false end
+		forra = v
+	end
+	check("synligheten växer monotont med avståndet", monoton)
+	local d0 = math.abs(f(rakt(0.58 + 0.25 + 0.01), matt) - f(rakt(0.58 + 0.25), matt))
+	check("kurvan planar ut där den börjar", d0 < 0.01,
+		string.format("lutning %.5f", d0))
+
+	--[[ Ett annat avatarhuvud ska ge samma BETEENDE, inte samma tal. ]]
+	local litet = Vector3.new(0.6, 0.6, 0.6)
+	check("ett mindre huvud slocknar närmare", f(rakt(0.57), litet) > f(rakt(0.57), matt))
+end
+
+--[[ ══ VAKTEN: ETT GÖMT HUVUD MÅSTE KOMMA TILLBAKA SJÄLVT ═══════════
+
+	Regeln ovan räknas i `step()`, och `LocalTransparencyModifier` är ett
+	TILLSTÅND: slutar någon skriva det ligger sista värdet kvar.
+
+	Uppsutten ridning är förstaperson i VARJE vy — uppmätt i spel står
+	kameran 0,57 studs från huvudet, alltså i dess framkant, och ryttaren
+	syns aldrig i bild. Den enda situation där man ser en ryttare utan
+	huvud är därför när kameran INTE styrs av modulen: en frusen bildruta,
+	ett avbrutet spelprov, en kamera flyttad utifrån. Det var den bilden
+	Tobias skickade.
+
+	Uppmätt i spel efter rättningen, med `step` avstängd mitt i sadelvyn:
+
+	    0,2 s   LTM 1,00  borta   (inom vaktens tystnad)
+	    0,9 s   LTM 0,00  SYNS    (vakten lämnade tillbaka)
+	    kameran flyttad 7,15 studs ut: LTM 0,00, huvudet syns
+
+	Här provas kontraktet vakten vilar på: att det som gömts går att
+	lämna tillbaka EXAKT som det var. Själva tidtagningen provas i
+	runtime — en `Heartbeat` finns inte i bänken. ]]
+print("")
+print("── Vakten: det som gömts ska gå att lämna tillbaka ──")
+do
+	local cam = newCam()
+	--[[ Ett huvud med ett värde som INTE är noll från början: en nolla
+		hade gjort provet grönt även om återställningen skrev nollor. ]]
+	local karaktar = { Namn = "Karaktar" }
+	--[[ `Parent` är inte dekoration: `_aterstallHuvud` hoppar med flit över
+		delar som lämnat karaktären, och en del utan förälder hade gjort
+		provet grönt av fel skäl. ]]
+	local huvud = { LocalTransparencyModifier = 0.25, Parent = karaktar,
+		Size = Vector3.new(1.16, 1.11, 1.14) }
+	cam.dolda = {}
+	--[[ Samma bokföring som `_egetHuvud` gör: spara det som fanns, skriv
+		det nya. Vi kallar inte metoden direkt — den letar upp spelarens
+		karaktär, och bänken har ingen. ]]
+	cam.dolda[huvud] = huvud.LocalTransparencyModifier
+	huvud.LocalTransparencyModifier = 1
+	check("huvudet är gömt", huvud.LocalTransparencyModifier == 1)
+	check("och det som fanns är bokfört", cam.dolda[huvud] == 0.25)
+
+	cam:_aterstallHuvud()
+	check("vakten lämnar tillbaka EXAKT det som fanns",
+		huvud.LocalTransparencyModifier == 0.25,
+		string.format("%.2f", huvud.LocalTransparencyModifier))
+	local kvar = 0
+	for _ in pairs(cam.dolda) do kvar += 1 end
+	check("och bokföringen är tömd — inget kan lämnas tillbaka två gånger",
+		kvar == 0, tostring(kvar) .. " poster kvar")
+	local _ = karaktar
+
+	--[[ Tystnaden ska vara KORT. En vakt som väntar en sekund hinner
+		visa en ryttare utan huvud i en hel bildruta-serie; en som väntar
+		noll skulle slåss med kameran varje bildruta. ]]
+	local tyst = CameraController.vakttystnad()
+	check("vaktens tystnad är kort men inte noll", tyst > 0.05 and tyst <= 1.0,
+		string.format("%.2f s", tyst))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

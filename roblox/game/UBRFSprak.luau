@@ -33,6 +33,14 @@ Sprak.text = {
 		sv = "%s står här",
 		en = "%s is in here",
 	},
+	["stall.din_hast"] = {
+		sv = "DIN HÄST",
+		en = "YOUR HORSE",
+	},
+	["stall.idag_rider_du"] = {
+		sv = "Idag rider du %s.",
+		en = "Today you ride %s.",
+	},
 	["interaktion.sitt_upp"] = {
 		sv = "Sitt upp",
 		en = "Mount",
@@ -297,13 +305,13 @@ Sprak.text = {
 		sv = "Det gick inte just nu",
 		en = "That did not work just now",
 	},
-	["hud.ga_tillbaka"] = {
-		sv = "Gå tillbaka till %s",
-		en = "Go back to %s",
+	["hud.ga_till"] = {
+		sv = "Gå till %s",
+		en = "Go to %s",
 	},
-	["hud.ga_tillbaka_utan_namn"] = {
-		sv = "Gå tillbaka till din häst",
-		en = "Go back to your horse",
+	["hud.ga_till_utan_namn"] = {
+		sv = "Gå till din häst",
+		en = "Go to your horse",
 	},
 	["hjalp.rubrik"] = {
 		sv = "Kontroller",
@@ -361,6 +369,10 @@ Sprak.text = {
 		sv = "Djupare sits",
 		en = "Deeper seat",
 	},
+	["hjalp.blick"] = {
+		sv = "Se dig omkring",
+		en = "Look around",
+	},
 	["hjalp.denna_hjalp"] = {
 		sv = "Den här hjälpen",
 		en = "This help",
@@ -404,6 +416,34 @@ Sprak.text = {
 	["touch.lugnare"] = {
 		sv = "▼ LUGNARE",
 		en = "▼ SLOWER",
+	},
+	["touch.skritt"] = {
+		sv = "SKRITT",
+		en = "WALK",
+	},
+	["touch.trav"] = {
+		sv = "TRAV",
+		en = "TROT",
+	},
+	["touch.galopp"] = {
+		sv = "GALOPP",
+		en = "CANTER",
+	},
+	["touch.sakta"] = {
+		sv = "SAKTA",
+		en = "SLOWER",
+	},
+	["touch.halt"] = {
+		sv = "HALT",
+		en = "HALT",
+	},
+	["touch.gangartsknappar"] = {
+		sv = "Gångartsknapparna",
+		en = "The gait buttons",
+	},
+	["touch.blickytan"] = {
+		sv = "Dra på högra halvan",
+		en = "Drag on the right half",
 	},
 	["touch.framat"] = {
 		sv = "▲ FRAMÅT",
@@ -513,6 +553,10 @@ Sprak.text = {
 		sv = "Hon står kvar i boxen",
 		en = "She is still in her stall",
 	},
+	["led.stangd_boxdorr"] = {
+		sv = "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
+		en = "Her stall door is shut — open her stall door first so she can walk out",
+	},
 	["led.inte_framme"] = {
 		sv = "Hon är inte framme i ridhuset än",
 		en = "She is not in the arena yet",
@@ -593,6 +637,14 @@ Sprak.text = {
 		sv = "Utrustningen kom inte på plats — försök igen",
 		en = "The tack did not go on — try again",
 	},
+	["hud.visa_alla"] = {
+		sv = "Visa alla %d val",
+		en = "Show all %d options",
+	},
+	["hud.visa_mindre"] = {
+		sv = "Visa mindre",
+		en = "Show less",
+	},
 	["tack.ta_utrustning"] = {
 		sv = "Ta sadel och träns",
 		en = "Take the saddle and bridle",
@@ -602,8 +654,8 @@ Sprak.text = {
 		en = "%s's saddle and bridle",
 	},
 	["tack.hamta_forst"] = {
-		sv = "Du har varken sadel eller träns här — de hänger på boxfronten",
-		en = "You have neither saddle nor bridle with you — they hang on the stall front",
+		sv = "Sadel och träns hänger på boxfronten — hämta dem först",
+		en = "Saddle and bridle hang on the stall front — fetch them first",
 	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",

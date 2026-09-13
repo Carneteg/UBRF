@@ -193,9 +193,11 @@ function StallService.tilldela(player: Player)
 		vilande, onskad)
 	if not dagens then
 		if onskad then
-			warn(("[Stallet] Första dagen skulle ridits på %s, men hon är "
-				.. "upptagen eller vilar. %s får vänta."):format(
-				tostring(onskad), player.Name))
+			--[[ Sedan vikariefixen betyder nil med en önskan EN sak: hästen
+				VILAR. Är hon bara upptagen av någon annan får spelaren en
+				vikarie ur rotationen i stället — se `tilldelaLedig`. ]]
+			warn(("[Stallet] Första dagen skulle ridits på %s, men hon "
+				.. "vilar. %s får vänta."):format(tostring(onskad), player.Name))
 		else
 			warn("[Stallet] Ingen häst kunde tilldelas " .. player.Name
 				.. " — hela stallet är upptaget eller vilar. Spelaren får vänta.")
@@ -209,6 +211,11 @@ function StallService.tilldela(player: Player)
 	local m = satMarkor(player, dagens)
 	if m then markorer[player] = m end
 
+	if dagens.vikarieFor then
+		print(("[Stallet] %s skulle ridit %s, men hon är upptagen i den här "
+			.. "servern. %s rider %s i dag i stället."):format(
+			player.Name, tostring(dagens.vikarieFor), player.Name, dagens.namn))
+	end
 	print(("[Stallet] %s rider %s idag — box %d, rad %s, gång %s."):format(
 		player.Name, dagens.namn, dagens.box.nummer, dagens.box.rad, dagens.box.gang))
 	return dagens

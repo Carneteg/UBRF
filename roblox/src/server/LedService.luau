@@ -204,6 +204,42 @@ export type Led = {
 local ledd: { [Player]: Led } = {}
 local hakar: { [string]: (Player, Led) -> () } = {}
 
+--[[ ══ DET UPPNÅDDA ÖVERLEVER KOPPLET ═══════════════════════════════════
+
+	`lamnatBox` och `malNatt` är inte kopplets tillstånd — de är sådant som
+	HÄNT och inte kan hända ogjort. De låg ändå bara i `ledd[player]`, och
+	`slapp` tömmer den posten. Att leda hästen hela vägen till ridhuset och
+	sedan släppa kopplet — alltså det spelaren faktiskt gör när hon är
+	framme — nollade därför beviset för att hon varit framme.
+
+	Mätt i runtime: hästen stod i målzonen (`iRekt` = true på
+	(419,1 · 257,0)), men `harLamnatBox` och `harNattMal` svarade båda
+	false efter `LedSlapp`, och `PreparationMoment("leda")` svarade
+	`led.kvar_i_boxen` — "kvar i boxen" om en häst som står i ridhuset.
+
+	Därför bokförs det uppnådda här, per spelare OCH per häst. Per häst
+	för att en ny häst ska börja om från noll: byter spelaren häst är det
+	en ny ledning som ska gå hela vägen igen. ]]
+type Uppnatt = { hastId: string, lamnatBox: boolean, malNatt: boolean }
+local uppnatt: { [Player]: Uppnatt } = {}
+
+local function noteraUppnatt(player: Player, hastId: string, falt: string)
+	local u = uppnatt[player]
+	if not u or u.hastId ~= hastId then
+		u = { hastId = hastId, lamnatBox = false, malNatt = false }
+		uppnatt[player] = u
+	end
+	(u :: any)[falt] = true
+end
+
+--[[ Har spelaren uppnått det här med DEN HÄR hästen? `hastId` är nil när
+	frågan gäller "vilken häst som helst", vilket är vad de publika
+	frågorna nedan gör: de känner bara spelaren. ]]
+local function harUppnatt(player: Player, falt: string): boolean
+	local u = uppnatt[player]
+	return u ~= nil and (u :: any)[falt] == true
+end
+
 --[[ ── Koordinater ──────────────────────────────────────────────────
 	Samma omräkning som BuildKit.tomtkoord, men utan att kräva
 	anläggningens bas: världen byggs alltid med tomtens origo i (0, 0,
@@ -244,12 +280,14 @@ end
 	att hon råkar backa tillbaka en halvmeter. ]]
 function LedService.harLamnatBox(player: Player): boolean
 	local l = ledd[player]
-	return l ~= nil and l.lamnatBox
+	if l ~= nil and l.lamnatBox then return true end
+	return harUppnatt(player, "lamnatBox")
 end
 
 function LedService.harNattMal(player: Player): boolean
 	local l = ledd[player]
-	return l ~= nil and l.malNatt
+	if l ~= nil and l.malNatt then return true end
+	return harUppnatt(player, "malNatt")
 end
 
 --[[ Målzonen. Sätts av den som äger gameplayet (GameplayService) så att
@@ -358,6 +396,46 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 			else Vector3.new(0, 0, utat)
 	end
 
+	--[[ ══ STÅR HON ÖVER HUVUD TAGET I EN BOX? ═════════════════════════
+
+		Stycket ovanför säger att dörren letas upp "bara om hon faktiskt
+		står i en box". Det var en avsikt, inte en kontroll: enda villkoret
+		var att NÅGON boxdörr låg inom 3,2 m. I en stallgång kantad av
+		boxar är det alltid sant, och därför fick en häst som redan stod i
+		gången ett delmål INNE i närmaste främmande box.
+
+		Mätt i runtime-acceptansen: hon stod i gång B på (499,9 · 265,6),
+		drygt 4,8 m ur sin egen box, med `lamnatBox = false`, `dorrsteg = 2`
+		och kursen (−0,59 · −0,81) rakt in i `Boxfront MB 7`. Gången är
+		7,75 studs och hennes kropp 5,55 — på snedden kilar hon fast,
+		`MoveDirection` går till 0, planeraren gör slut på sina omplaneringar
+		och kopplet släpper med `led.fastnat`.
+
+		`Utat` pekar ut mot gången. Ligger hon på den sidan av öppningen är
+		hon redan ute, och då finns ingen box att ta sig ur: dörrgrenen
+		hoppas över och `lamnatBox` är sann från början. Exakt i luckan
+		(punkt 0) räknas som inne, så den som står mitt i öppningen får
+		behålla sin utgång. ]]
+	--[[ ...MEN "INGEN DÖRR HITTAD" ÄR INTE "HON STÅR REDAN I GÅNGEN".
+
+		Flaggan startade på false och sattes bara när en dörr fanns, och
+		`lamnatBox = not iBox` läste därför avsaknaden av dörr som bevis
+		för att hon var ute. Mätt: i `ledning.spec` finns ingen boxdörr
+		byggd alls, och tjänsten svarade `harLamnatBox() == true` direkt
+		efter `borja()` — innan hästen flyttat en enda studs. Ett delmål
+		som kan vara uppnått innan spelaren gjort något är inget delmål.
+
+		Utan dörrbevis antar vi därför att hon står kvar; loopen nedan
+		mäter ändå den faktiska positionen (> 2,5 m ur facket) och sätter
+		flaggan när hon verkligen gått ut, dörr eller ej. ]]
+	local iBox = true
+	if dorrMitt and dorrUt then
+		iBox = (pivot.Position - dorrMitt):Dot(dorrUt) <= 0
+	end
+	if not iBox then
+		narmasteDorr, dorrMitt, dorrUt = nil, nil, nil
+	end
+
 	local hastHum = (modell :: any):FindFirstChildOfClass("Humanoid")
 	local tidigareFart = hastHum and hastHum.WalkSpeed or 0
 	if hastHum then
@@ -409,7 +487,10 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		modell = modell,
 		hastId = tostring(modell:GetAttribute("HorseId") or ""),
 		gar = false,
-		lamnatBox = false,
+		--[[ Står hon redan i gången finns ingen box kvar att lämna. Då är
+			flaggan sann direkt, och `boxX`/`boxY` nedan konsulteras aldrig
+			— de gäller bara så länge hon faktiskt är kvar i facket. ]]
+		lamnatBox = not iBox,
 		malNatt = false,
 		boxX = bx, boxY = by,
 		dorrMitt = dorrMitt,
@@ -613,11 +694,13 @@ local function steg(_dt: number)
 			local x, y = tomt(pivot.Position)
 			if math.sqrt((x - l.boxX) ^ 2 + (y - l.boxY) ^ 2) > 2.5 then
 				l.lamnatBox = true
+				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
 			end
 		end
 		if malzon and not l.malNatt and LedService.iRekt(pivot.Position, malzon) then
 			l.malNatt = true
+			noteraUppnatt(player, l.hastId, "malNatt")
 			LedService._sync(player)
 		end
 
@@ -786,7 +869,25 @@ local function steg(_dt: number)
 			stället för att hon ska stå och mala. Spelaren får veta det och
 			kan leda henne en annan väg. ]]
 		if l.stillaSedan > NAV_FASTNAT and l.navPlaner >= NAV_MAX_PLANER then
-			LedService.slapp(player, "led.fastnat")
+			--[[ VARFÖR hon inte kommer ut avgör vad spelaren ska få höra.
+
+				"Prova en annan väg" är rätt svar när hon kilat fast i
+				gången — men det är fel svar i det vanligaste fallet av
+				alla: hon står kvar i sin egen box och bladet stänger
+				fortfarande öppningen. Då finns ingen annan väg. Då ska
+				dörren öppnas, och det ska sägas rakt ut.
+
+				Villkoret läser bladets EGEN kollision, inte ett register:
+				`DorrService.satt` skriver `CanCollide = not vidoppen`, så
+				`CanCollide` ÄR det som spärrar öppningen. Att fråga
+				geometrin i stället för en tabell gör att svaret inte kan
+				glida isär från det hästen faktiskt går emot. ]]
+			local stangdBoxdorr = not l.lamnatBox
+				and l.dorr ~= nil
+				and (l.dorr :: BasePart).Parent ~= nil
+				and (l.dorr :: BasePart).CanCollide
+			LedService.slapp(player,
+				if stangdBoxdorr then "led.stangd_boxdorr" else "led.fastnat")
 			continue
 		end
 
@@ -853,6 +954,10 @@ function LedService.start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		if ledd[player] then LedService.slapp(player, "led.tappad") end
+		--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
+			Lämnas den kvar läcker den, och nästa spelare på samma
+			Player-objekt hade ärvt någon annans framsteg. ]]
+		uppnatt[player] = nil
 	end)
 
 	RunService.Heartbeat:Connect(steg)
@@ -879,6 +984,7 @@ end
 --[[ För specar: nollställ utan att röra spelare. ]]
 function LedService._glomForProv()
 	for p in pairs(ledd) do ledd[p] = nil end
+	for p in pairs(uppnatt) do uppnatt[p] = nil end
 	malzon = nil
 end
 

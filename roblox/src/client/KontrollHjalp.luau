@@ -152,8 +152,17 @@ local RADER = {
 	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
 	{ nyckel = "hjalp.framat_bakat", tgb = "W / S", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
 	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
-	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.framat" },
-	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.lugnare" },
+	--[[ #162 iPad: pekytan har inte längre ▲/▼ som huvudreglage — gångarten
+	     väljs på en NAMNGIVEN knapp (HALT/SKRITT/TRAV/GALOPP). Raderna pekar
+	     därför på knappgruppen i stället för på en knapp som inte ritas
+	     längre; en hjälp som namnger ett reglage spelaren inte kan se är
+	     precis det fel `pek`-kolumnen finns för att undvika. ]]
+	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.gangartsknappar" },
+	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.sakta" },
+	--[[ Blicken finns bara på pekytan: tangentbord och handkontroll har
+	     ingen fri blick i den här kameran, och `bara` håller raden borta
+	     därifrån hellre än att visa en handling utan reglage. ]]
+	{ nyckel = "hjalp.blick", bara = "touch", pek = "touch.blickytan" },
 	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2", pek = "touch.tygel" },
 	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B",  pek = "touch.halvhalt" },
 	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2", pek = "touch.djup_sits" },
@@ -212,12 +221,15 @@ function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 	local sort = KontrollHjalp.inmatning()
 	local ut = {}
 	for _, r in RADER do
-		local reglage =
-			if sort == "tangentbord" then r.tgb
-			elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
-			elseif sort == "touch" then reglageText(r.pek)
-			else ""
-		table.insert(ut, { vad = radText(r), reglage = reglage })
+		--[[ En rad med `bara` hör hemma på EN inmatning. ]]
+		if (r :: any).bara == nil or (r :: any).bara == sort then
+			local reglage =
+				if sort == "tangentbord" then r.tgb
+				elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
+				elseif sort == "touch" then reglageText(r.pek)
+				else ""
+			table.insert(ut, { vad = radText(r), reglage = reglage })
+		end
 	end
 	return ut
 end
@@ -294,6 +306,41 @@ end
 
 local function fyll()
 	local lista = KontrollHjalp.rader()
+	--[[ ── PANELEN MÅSTE VARA SÅ HÖG SOM SITT INNEHÅLL ────────────────
+
+	     Höjden räknades på `44 * (#RADER + 2)` — ett tal som inte hade
+	     något med radernas verkliga mått att göra. Raderna är 21 px och
+	     börjar på 34, så panelen blev flera hundra pixlar för hög och bar
+	     ett tomrum mellan sista raden och stängknappen.
+
+	     På iPad var det inte bara fult. Panelen visas AV SIG SJÄLV vid
+	     första uppsittningen, och med den gamla höjden hamnade
+	     stängknappen ovanpå spaken: mätt `GetGuiObjectsAtPosition(90, 611)`
+	     -> `StangHjalp<Panel> | Panel<UBRFKontroller> | Spak<HorseTouch>`.
+	     Första gången en spelare la tummen på spaken tog hon alltså i
+	     hjälpens stängknapp i stället för att styra.
+
+	     Nu följer höjden raderna som faktiskt ritas — och eftersom touch
+	     har en rad mer än skrivbordet måste den räknas här, där listan är
+	     känd, och inte på `#RADER`. ]]
+	if panel then
+		--[[ …och den måste RYMMAS. iPhone 13 i landskap har 309 px GUI-höjd;
+			elva rader à 21 px blev 325 och stack ut nedanför skärmen. Går
+			den inte in krymper radavståndet i stället för att panelen
+			växer ut ur bild. Surfplattan når aldrig hit: 325 < 761. ]]
+		local yta = panel.Parent :: GuiObject
+		local tillg = (if yta then yta.AbsoluteSize.Y else 0) - 24
+		local pitch = 21
+		local h = 34 + #lista * pitch + 60
+		if tillg > 120 and h > tillg then
+			pitch = math.max(14, math.floor((tillg - 94) / math.max(#lista, 1)))
+			h = 34 + #lista * pitch + 60
+		end
+		panel.Size = UDim2.new(0, 250, 0, h)
+		for i, l in ipairs(rader) do
+			l.Position = UDim2.fromOffset(10, 34 + (i - 1) * pitch)
+		end
+	end
 	for i, l in ipairs(rader) do
 		local r = lista[i]
 		if r then

@@ -47,6 +47,11 @@ const SPRAK = {
   "dorr.port": { sv: "Port", en: "Gate" },
   "stall.titta_in": { sv: "Titta in", en: "Look in" },
   "stall.star_har": { sv: "%s står här", en: "%s is in here" },
+  /* Skylten på spelarens EGEN box, och raden som säger vem hon rider
+     idag. Står bara i Roblox-klienten, men bor i den gemensamma
+     katalogen som allt annat spelaren läser. */
+  "stall.din_hast": { sv: "DIN HÄST", en: "YOUR HORSE" },
+  "stall.idag_rider_du": { sv: "Idag rider du %s.", en: "Today you ride %s." },
   "interaktion.sitt_upp": { sv: "Sitt upp", en: "Mount" },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
@@ -123,18 +128,12 @@ const SPRAK = {
     en: "%s The instructor takes over — she is not to work today. You did exactly the right thing." },
   "forb.inte_din_hast": { sv: "det är inte din häst", en: "that is not your horse" },
   "forb.utrustning_av": { sv: "Utrustning %d/%d", en: "Tack %d/%d" },
-  /* Sadeln och tränset är FYSISKA saker som hänger på hästens boxfront
-     (`references/buildings/stall/KORT.md` § Boxarna från gången). De två
-     nejen nedan är de enda som säger att spelaren står rätt men har
-     händerna tomma. */
+  /* Utrustningen är fysisk: den hänger på sin upphängning tills spelaren
+     hämtar den. Nekandet säger vilken av de två som saknas. */
   "forb.sadeln_inte_hamtad": { sv: "du har ingen sadel med dig",
     en: "you are not carrying a saddle" },
   "forb.transet_inte_hamtat": { sv: "du har inget träns med dig",
     en: "you are not carrying a bridle" },
-
-  /* ── Utrustningen på boxfronten ────────────────────────────────────── */
-  /* Instruktionen när utrustningsfasen börjar: spelaren ska aldrig behöva
-     gissa var sadeln finns. */
 
   /* ── Skötsel-HUD:en (PreparationController) ────────────────────────── */
   "hud.gor_i_ordning": { sv: "Gör i ordning din häst", en: "Get your horse ready" },
@@ -159,9 +158,14 @@ const SPRAK = {
      samtidigt nekade med `spel.for_langt`. Rubriken pekar nu tillbaka i
      stället, och hästens EGENNAMN sätts in som argument — det översätts
      aldrig. */
-  "hud.ga_tillbaka": { sv: "Gå tillbaka till %s", en: "Go back to %s" },
-  "hud.ga_tillbaka_utan_namn": { sv: "Gå tillbaka till din häst",
-    en: "Go back to your horse" },
+  /* "Gå TILL", inte "gå tillbaka". Raden skrivs över rubriken så fort
+     hästen är utom räckhåll — och det gäller också allra första gången,
+     när spelaren står vid stallets entré och aldrig har träffat henne.
+     Då är "gå tillbaka" osant: hon har inte varit där. "Gå till" är rätt
+     både första gången och när man gått ifrån henne mitt i skötseln. */
+  "hud.ga_till": { sv: "Gå till %s", en: "Go to %s" },
+  "hud.ga_till_utan_namn": { sv: "Gå till din häst",
+    en: "Go to your horse" },
 
   /* ── Hjälpen och kontrollerna (KontrollHjalp) ─────────────────────── */
   "hjalp.rubrik": { sv: "Kontroller", en: "Controls" },
@@ -178,6 +182,7 @@ const SPRAK = {
   "hjalp.lagre_gangart": { sv: "Lägre gångart", en: "Slower gait" },
   "hjalp.tygel": { sv: "Tygel (kontakt)", en: "Rein (contact)" },
   "hjalp.djupare_sits": { sv: "Djupare sits", en: "Deeper seat" },
+  "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
   "hjalp.denna_hjalp": { sv: "Den här hjälpen", en: "This help" },
   "hjalp.stang": { sv: "Stäng", en: "Close" },
   "hjalp.stang_tangent": { sv: "Stäng  (%s)", en: "Close  (%s)" },
@@ -193,6 +198,21 @@ const SPRAK = {
   "touch.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
   "touch.hoppa": { sv: "HOPP", en: "JUMP" },
   "touch.lugnare": { sv: "▼ LUGNARE", en: "▼ SLOWER" },
+  /* Namngivna gångartsknappar. Gångartsnamnen är ridtermer och står
+     kvar som sådana i båda språken.
+
+     `touch.halt` är samma ord på svenska och engelska: halt ÄR den
+     internationella dressyrtermen för momentet, inte en oöversatt
+     svenska. Lokaliseringsgrinden i `sprak.spec` har den därför på sin
+     uttryckliga undantagslista — det är det enda undantaget. */
+  "touch.skritt": { sv: "SKRITT", en: "WALK" },
+  "touch.trav": { sv: "TRAV", en: "TROT" },
+  "touch.galopp": { sv: "GALOPP", en: "CANTER" },
+  "touch.sakta": { sv: "SAKTA", en: "SLOWER" },
+  "touch.halt": { sv: "HALT", en: "HALT" },
+  /* Hjälpens beskrivning av pekytorna. */
+  "touch.gangartsknappar": { sv: "Gångartsknapparna", en: "The gait buttons" },
+  "touch.blickytan": { sv: "Dra på högra halvan", en: "Drag on the right half" },
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
   "touch.tygel": { sv: "TYGEL", en: "REIN" },
   "touch.halvhalt": { sv: "HALVHALT", en: "HALF-HALT" },
@@ -230,6 +250,11 @@ const SPRAK = {
     en: "She fell behind — go back and take her again" },
   "led.tappad": { sv: "Du tappade henne", en: "You lost her" },
   "led.kvar_i_boxen": { sv: "Hon står kvar i boxen", en: "She is still in her stall" },
+  /* ...och VARFÖR hon står kvar, när skälet är dörren. "Hon står kvar"
+     utan orsak lämnar spelaren att gissa. */
+  "led.stangd_boxdorr": {
+    sv: "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
+    en: "Her stall door is shut — open her stall door first so she can walk out" },
   "led.inte_framme": { sv: "Hon är inte framme i ridhuset än",
     en: "She is not in the arena yet" },
   /* Hon har kilat sig och vägsökningen har gett upp. Eget skäl: spelaren
@@ -269,13 +294,21 @@ const SPRAK = {
      som ser osadlad ut men räknas som sadlad. */
   "tack.kunde_inte_byggas": { sv: "Utrustningen kom inte på plats — försök igen",
     en: "The tack did not go on — try again" },
-  /* UPPHÄNGNINGEN PÅ BOXFRONTEN. Prompten och dess undertext, och nejet när
-     spelaren inte har hämtat utrustningen. De låg bara i Roblox-katalogen
-     efter `30f3d90`; paritetsgrinden fällde det. */
+  /* UTRUSTNINGEN PÅ BOXFRONTEN. De tre nycklarna lades vid blockerare 5
+     direkt i den GENERERADE `roblox/game/UBRFSprak.luau` och aldrig här.
+     Nästa export tog bort dem igen, och `integration.spec` föll på
+     `Sprak.finns("tack.hamta_forst")` — vilket är precis vad den grinden
+     finns för. Källan är den här filen; det generade följer den. */
+  /* HUD:ENS EGNA KONTROLLER. Växlingen i interaktionspanelen skrevs
+     först som en svensk literal i klientkoden, och den stod kvar på
+     svenska i ett engelskt gränssnitt. Samma regel som all annan
+     spelartext: nyckel i katalogen, inte en sträng i en modul. */
+  "hud.visa_alla": { sv: "Visa alla %d val", en: "Show all %d options" },
+  "hud.visa_mindre": { sv: "Visa mindre", en: "Show less" },
   "tack.ta_utrustning": { sv: "Ta sadel och träns", en: "Take the saddle and bridle" },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
-  "tack.hamta_forst": { sv: "Du har varken sadel eller träns här — de hänger på boxfronten",
-    en: "You have neither saddle nor bridle with you — they hang on the stall front" },
+  "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
+    en: "Saddle and bridle hang on the stall front — fetch them first" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 

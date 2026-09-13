@@ -121,7 +121,35 @@ local function cframe(pos, look, yaw, pitch, roll)
 			0, 1, 0,
 			-st, 0, ct
 	end
+	--[[ VARLDSPUNKT -> EGET RUM. Exakt inversen av `__mul` nedan, for
+	     samma rena girning: [ca sa; -sa ca] har inversen [ca -sa; sa ca].
+	     `TackRigg` laser bygelpunkten i sadelns rum for att kunna spanna
+	     stiglader dit foten faktiskt hamnar, och transet laser bettet i
+	     nosryggens rum for att fa huvudets egna matt. Utan den kunde
+	     banken inte prova nagot av det. ]]
+	c.PointToObjectSpace = function(self, p)
+		local ap = self.Position or vec()
+		local ca, sa = math.cos(self.Yaw or 0), math.sin(self.Yaw or 0)
+		local dx, dy, dz = (p.X or 0) - ap.X, (p.Y or 0) - ap.Y, (p.Z or 0) - ap.Z
+		return vec(dx * ca - dz * sa, dy, dx * sa + dz * ca)
+	end
+	c.PointToWorldSpace = function(self, p)
+		return (self * CFrame.new(p)).Position
+	end
 	c.__mul = function(a, b)
+		--[[ `CFrame * Vector3` ar en PUNKT i varlden, inte en ny CFrame.
+		     Stubben svarade forut med en CFrame aven har, sa varje modul
+		     som raknade om en lokal punkt till varlden — `TackRigg`s
+		     spann-delar, till exempel — fick tillbaka nagot som inte gick
+		     att mata. En Vector3-stubbe saknar `Position`; det ar
+		     skillnaden mellan de tva fallen. ]]
+		if b ~= nil and b.Position == nil and b.X ~= nil then
+			local ca, sa = math.cos(a.Yaw or 0), math.sin(a.Yaw or 0)
+			local ap = a.Position or vec()
+			return vec(ap.X + b.X * ca + b.Z * sa,
+				ap.Y + b.Y,
+				ap.Z - b.X * sa + b.Z * ca)
+		end
 		--[[ FÖRFLYTTNINGEN räknas, inte bara vinklarna. Förut svarade
 		     `a * b` med `a.Position` oavsett vad b var, och då hamnade
 		     varje del som placeras relativt en annan — hela HastRiggs
@@ -182,7 +210,12 @@ CFrame = {
 }
 
 RaycastParams = { new = function()
-	return { FilterType = 0, FilterDescendantsInstances = {} }
+	--[[ `RespectCanCollide` star med for att `Markkontakt` MATER PA DEN:
+	     skillnaden mellan en stral som traffar allt och en som bara traffar
+	     det som bar AR lagrets tjocklek. En stub utan faltet hade latit
+	     mattningen ge noll utan att provet markte det. ]]
+	return { FilterType = 0, FilterDescendantsInstances = {},
+		RespectCanCollide = false }
 end }
 
 Enum = {
@@ -252,8 +285,33 @@ function warn(...)
 	table.insert(__varningar, table.concat({ ... }, " "))
 end
 
+--[[ EN SPEC FAR LAGGA UNDERLAG UNDER BANKEN. Standard ar fortfarande plan
+     mark pa y 0; satts `__markyta` svarar strålen det provet bestammer, och
+     da kan ett dekorlager utan kollision mätas pa riktigt. ]]
+__markyta = nil
+
+--[[ Samma sak for hinderprovningen: avsittningen fragar vad som star i
+     vagen med `GetPartBoundsInBox`, och utan en sadan kan bänken inte
+     prova skillnaden mellan en fri vansterssida och en blockerad. Satts
+     `__delarILada` svarar varlden det provet bestammer; standard ar tomt,
+     alltsa fri plats. ]]
+__delarILada = nil
+
+OverlapParams = { new = function()
+	return { FilterType = 0, FilterDescendantsInstances = {} }
+end }
+
 workspace = {
-	Raycast = function(_, origin, dir)
+	GetPartBoundsInBox = function(_, cf, storlek, params)
+		if __delarILada then
+			return __delarILada(cf, storlek, params)
+		end
+		return {}
+	end,
+	Raycast = function(_, origin, dir, params)
+		if __markyta then
+			return __markyta(origin, dir, params)
+		end
 		--[[ Plan mark under hästen. Sluttningar testas separat om det
 		     behövs; hit finns för att grounded ska bli sant. ]]
 		return { Position = vec(origin.X, 0, origin.Z), Normal = vec(0, 1, 0),
@@ -299,10 +357,38 @@ local function __signal()
 	local sig = { _lyssnare = {} }
 	function sig:Connect(fn)
 		table.insert(self._lyssnare, fn)
-		return { Disconnect = function() end }
+		--[[ `Disconnect` KOPPLAR FAKTISKT BORT. Den var forr en tom funktion,
+		     och da kunde banken inte skilja "stadningen fungerar" fran
+		     "stadningen gor ingenting": `HorseService.slappStadning` river sina
+		     lyssnare forst i avsittningen, men stubben lat dem ligga kvar, och
+		     sitsens Occupant-lyssnare kallade darfor `dismount` en gang till
+		     inifran `dismount`. Ett aterintrade som bara fanns i matverktyget. ]]
+		local sjalv = self
+		return { Disconnect = function()
+			for i, f in ipairs(sjalv._lyssnare) do
+				if f == fn then table.remove(sjalv._lyssnare, i) break end
+			end
+		end }
 	end
 	function sig:Fire(...)
-		for _, fn in ipairs(self._lyssnare) do fn(...) end
+		--[[ Over en KOPIA: en lyssnare som kopplar bort sig sjalv mitt i
+		     fyrningen skulle annars hoppa over nasta i listan. ]]
+		local nu = table.clone(self._lyssnare)
+		for _, fn in ipairs(nu) do fn(...) end
+	end
+	--[[ `Wait()` RETURNERAR DIREKT, och det är en ärlig approximation.
+
+		Bänken har ingen bildruteloop, så det finns inget att vänta på. Den
+		som skriver `for _ = 1, 8 do RunService.Heartbeat:Wait() end` menar
+		"låt åtta bildrutor passera"; här passerar de omedelbart, och koden
+		efter loopen körs med tillståndet som rådde när den startade.
+
+		Sämre än motorn, oändligt mycket bättre än att kasta: utan den dog
+		`HorseService.start()` på `attempt to call missing method 'Wait'`
+		och fyra specar föll på ett fel som bara fanns i mätverktyget.
+		Delta-tiden svaras som 0 — ingen tid gick. ]]
+	function sig:Wait()
+		return 0
 	end
 	--[[ Samma skäl som i __signalTradar: varje `start()` i ett provblock
 		lägger en ny lyssnare, och utan nollställning kör block två med
@@ -329,6 +415,11 @@ end
      `Fire` startar varje lyssnare i en coroutine och lägger de som
      suspenderat i kö. `slutfor()` väcker dem. Provet får därmed hantera
      interleavingen själv, deterministiskt, utan att sova. ]]
+--[[ `workspace` byggs för hand ovanför och kan inte få sin `ChildAdded` i
+     literalen — `__signal` finns inte än där. Den sätts här, och fyras av
+     `Instance.Parent`-sättaren precis som för vanliga instanser. ]]
+workspace.ChildAdded = __signal()
+
 local function __signalTradar()
 	local sig = { _lyssnare = {}, _vantande = {} }
 	function sig:Connect(fn)
@@ -415,6 +506,16 @@ local __services = {
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
+		--[[ Avsittningen använder den för att veta vems kropp den flyttar;
+		     utan den dog `stallAv` på `attempt to call missing method`.
+		     Samma uppslag som motorn: spelaren vars `Character` ÄR modellen.
+		     Ingen match ger nil — en NPC-kropp har ingen spelare. ]]
+		GetPlayerFromCharacter = function(self, karaktar)
+			for _, p in ipairs(self._spelare) do
+				if p.Character == karaktar then return p end
+			end
+			return nil
+		end,
 		--[[ Trådväxlande med flit — se __signalTradar. `PlayerRemoving` är
 		     en vanlig signal: där finns inget yield-fönster att modellera. ]]
 		PlayerAdded = __signalTradar(),
@@ -767,6 +868,12 @@ local function __nyInstans(klass)
 		ClassName = klass, Name = "", AnimationId = "",
 		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
 	}
+	--[[ `ChildAdded` FYRAR NÄR ETT BARN FAKTISKT PARENTAS. `DinHast.start()`
+	     lyssnar på `workspace.ChildAdded` för att släcka andra spelares
+	     boxmarkörer när DE ansluter. Utan signalen dog hela klientingången
+	     på `attempt to index nil with 'Connect'`; en tom stubb hade varit
+	     lika illa, för då kan bänken inte skilja "vi lyssnar" från "vi hör". ]]
+	inst.ChildAdded = __signal()
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
 	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
 	     värde — och det är den skillnaden `dismount` bygger på. ]]
@@ -924,6 +1031,12 @@ local function __nyInstans(klass)
 		inst.Died = __signal()
 		inst.Health = 100
 		inst.Sit = false
+		--[[ `HipHeight` finns pa VARJE Humanoid i Roblox och kan aldrig vara
+		     nil. Stubben saknade den, och avsittningens platsrakning -- som
+		     lagger HipHeight till markhojden -- kastade darfor pa en tom
+		     karaktar. En stub som saknar en egenskap produktionen alltid har
+		     mater inte produktionen. Standardvardet ar R15:s eget. ]]
+		inst.HipHeight = 2
 		--[[ `MoveTo`/`Move` finns för att LedService styr hästen med dem.
 		     Stubben SPEGLAR bara ordern — ingen fysik, ingen förflyttning —
 		     så en spec kan mäta VART tjänsten sa åt hästen att gå. Flyttade
@@ -932,13 +1045,41 @@ local function __nyInstans(klass)
 		inst._moveDir = nil
 		function inst:MoveTo(p) self._moveMal = p end
 		function inst:Move(dir) self._moveDir = dir end
+		--[[ `ChangeState` speglas på samma sätt: stubben har ingen fysik,
+		     men `HastRigg`s vakt mot att hästen sätter sig på sin egen
+		     sits reser henne med den, och utan metoden kunde grinden inte
+		     ens köra. Det SENASTE tillståndet sparas så att ett prov kan
+		     mäta att hon faktiskt restes. ]]
+		inst._tillstand = nil
+		function inst:ChangeState(t) self._tillstand = t end
+		function inst:GetState() return self._tillstand end
 	end
 	if klass == "Model" then
-		--[[ Modellen flyttas med `PivotTo` av både uppsittningen och
-		     avsittningen. Stubben speglar bara att det HÄNDE och vart —
-		     ingen fysik. ]]
-		function inst:PivotTo(cf) self._pivot = cf end
-		function inst:GetPivot() return self._pivot end
+		--[[ Modellen flyttas med `PivotTo` av bade uppsittningen och
+		     avsittningen. Stubben speglar VART -- ingen fysik.
+
+		     Den flyttar ocksa rotdelen. Forst gjorde den bara `_pivot`, och
+		     da matte ett prov pa `HumanoidRootPart.CFrame` ingenting alls:
+		     avsittningen kunde stalla ryttaren var som helst utan att en
+		     enda matning rorde sig. En riktig `PivotTo` FLYTTAR delarna.
+		     Forenklingen ar att bara roten foljer med, inte hela kroppen
+		     med sina inbordes avstand; bankens karaktarer har anda bara
+		     en del som betyder nagot. ]]
+		function inst:PivotTo(cf)
+			self._pivot = cf
+			local rot = rawget(self, "PrimaryPart") or self:FindFirstChild("HumanoidRootPart")
+			if type(rot) == "table" and rawget(rot, "CFrame") ~= nil then
+				rot.CFrame = cf
+			end
+		end
+		function inst:GetPivot()
+			if self._pivot then return self._pivot end
+			local rot = rawget(self, "PrimaryPart") or self:FindFirstChild("HumanoidRootPart")
+			if type(rot) == "table" and rawget(rot, "CFrame") ~= nil then
+				return rot.CFrame
+			end
+			return nil
+		end
 	end
 	--[[ `GetFullName` går uppåt tills något inte längre är en instans.
 	     Bänkens `workspace` är en vanlig tabell utan Name, och en
@@ -1025,10 +1166,55 @@ local function __nyInstans(klass)
 			     träns på huvudet och ett träns i origo. ]]
 			if k == "WorldCFrame" and rawget(t, "ClassName") == "Attachment" then
 				local egen = rawget(t, "CFrame")
-				local vard = rawget(t, "Parent")
+				--[[ FÖRÄLDERN LÄSES GENOM `__index`, inte rått. Sedan
+				     föräldern flyttade in i skuggtabellen gav `rawget` nil
+				     här, och fästpunkten svarade med sitt LOKALA läge som
+				     om det vore världsläget. Tränset byggdes då kring en
+				     nosrygg 5 studs fel, och nosgrimman blev dubbelt så
+				     bred som huvudet — samma planka som `tack.spec`
+				     fäller. Felet fanns bara i mätverktyget. ]]
+				local vard = t.Parent
 				local vardCF = vard and rawget(vard, "CFrame")
 				if vardCF and egen then return vardCF * egen end
 				return egen
+			end
+			--[[ `AbsoluteSize` — YTAN I PIXLAR, och tills nu fanns den inte.
+
+			     Två produktionsvägar läser den för att inte lägga sig
+			     ovanpå reglagen: Ugneta-kortet (`k.Parent.AbsoluteSize.X`)
+			     och hjälppanelen (`yta.AbsoluteSize.Y`). Bänken svarade nil
+			     och båda specarna dog på `attempt to index nil` — mitt i
+			     den mätning som skulle visa att kortet VIKER för knappraden.
+			     En yta utan storlek kan varken rymma eller inte rymma något.
+
+			     `ScreenGui` får kamerans `ViewportSize`, som i Roblox (utan
+			     topplistens inset, vilket bänken inte modellerar). Ett
+			     `GuiObject` räknas ur sin egen `UDim2` mot förälderns yta —
+			     samma formel motorn använder: skala · förälder + offset. ]]
+			if k == "AbsoluteSize" then
+				local klass = rawget(t, "ClassName")
+				if klass == "ScreenGui" then
+					local kam = workspace.CurrentCamera
+					return kam and kam.ViewportSize or nil
+				end
+				local far = t.Parent
+				local faryta = far and type(far) == "table" and far.AbsoluteSize
+				local storlek = rawget(t, "_p") and rawget(t, "_p").Size
+					or rawget(t, "Size")
+				if faryta and type(storlek) == "table" and storlek._typ == "UDim2" then
+					return Vector2.new(
+						storlek.XScale * faryta.X + storlek.XOffset,
+						storlek.YScale * faryta.Y + storlek.YOffset)
+				end
+				return nil
+			end
+			--[[ `Attachment.WorldPosition` ar samma sak, bara punkten.
+			     Tillkom nar `TackRigg` borjade SPANNA delar mellan tva
+			     riggpunkter — kindstycke, stiglader, tygel — i stallet for
+			     att rita lador med gissad langd. ]]
+			if k == "WorldPosition" and rawget(t, "ClassName") == "Attachment" then
+				local w = t.WorldCFrame
+				return w and w.Position or nil
 			end
 			--[[ En del som aldrig rort sig har nollhastighet, inte nil.
 			     `LedService` laser den for att veta om hasten STAR — en
@@ -1067,6 +1253,11 @@ local function __nyInstans(klass)
 					local b = rawget(v, "_barn")
 					if not b then b = {}; rawset(v, "_barn", b) end
 					table.insert(b, t)
+					--[[ ...och den nya föräldern säger till. `DinHast.start()`
+					     lyssnar på `workspace.ChildAdded`; utan den här
+					     raden såg klienten aldrig en häst dyka upp. ]]
+					local ca = rawget(v, "ChildAdded")
+					if ca and ca.Fire then ca:Fire(t) end
 				end
 				local sig = rawget(t, "_sig").Parent
 				if sig then sig:Fire() end

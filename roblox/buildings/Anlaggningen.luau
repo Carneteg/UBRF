@@ -2381,9 +2381,13 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			och bara den översta kom över sargen — 0,25 m på fjorton meters
 			håll. `-01` visar flera rader över sargkrönet. ]]
 		local SO = K.sockelH or 0
+		local SARGT = 0.1
+		local sockelY0 = K.y0 + SARGT
 		if SO > 0 then
-			BK.box(model, base, "Kortändans sockel", o.x + K.x0, 0, o.y + K.y0,
-				br, SO, K.y1 - K.y0, INRE.laktare, Enum.Material.WoodPlanks)
+			--[[ Sockeln börjar bakom sargen. Annars delar de arena-facing
+				plan och flimrar i hoppkameran. ]]
+			BK.box(model, base, "Kortändans sockel", o.x + K.x0, 0, o.y + sockelY0,
+				br, SO, K.y1 - sockelY0, INRE.laktare, Enum.Material.WoodPlanks)
 		end
 		--[[ Bänkarna läser den MÄTTA `K.bank` (#86715B ur -01), inte
 			INRE.laktare. Webben hade #D8C7A4, ljus furu, vilket fotot
@@ -2405,9 +2409,14 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				raderna steg 0,64 m i stället för 0,32 — det syntes först
 				när kedjan upp till C-trapporna provades (2026-09-03). ]]
 			local z0 = if mS then bank + (i - 1) * K.stegD else bank - i * K.stegD
+			local djup = K.stegD
+			if i == 1 then
+				z0 += ut * SARGT
+				djup -= SARGT
+			end
 			BK.box(model, base, "Kortändans steg " .. i,
 				o.x + K.x0, SO,
-				o.y + z0, br, K.stegH * i + 0.1, K.stegD,
+				o.y + z0, br, K.stegH * i + 0.1, djup,
 				K.bank or INRE.laktare, Enum.Material.WoodPlanks)
 		end
 		-- De två trapporna byggs som gångbara STAIR-primitiver ur R.trappor ovan.

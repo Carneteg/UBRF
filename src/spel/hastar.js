@@ -67,6 +67,183 @@ const LEGACY_GAMEPLAY={
   dexter:{kanslighet:.60,framatbjudning:.90,forlatande:.52,skygghet:.22,hoppkapacitet:.88,hopplust:.90,tyngd:.18,utbildning:.62,maxhojd:1.00,farg:"#2E2A26",man:"#151311",tecken:{blas:false,strumpor:[1,0,1,0]}},
 };
 
+/* ══════════════════════════════════════════════════════════════════
+   UTSEENDET SOM ÄR AVLÄST UR UBRF:s EGNA FOTON
+
+   Supabase `public.hastar` har identitet, ras, mankhöjd, kategori,
+   import och beskrivning — men INGEN kolumn för färg eller tecken.
+   Färgerna i LEGACY_GAMEPLAY ovan är därför märkta `visuellStatus:
+   "ASSUMPTION"`, och det är ärligt: de är valda, inte avlästa.
+
+   Men raden har ett fält till: `bild_url`. Varje häst i rostern har ett
+   foto på ubrf.se, och `CLAUDE.md` är uttrycklig — "Bilder och filmer är
+   specifikation, inte inspiration". Färgerna nedan är AVLÄSTA ur de
+   fotona, och bara de fält som faktiskt syns i bilden står här.
+
+   Det som INTE syns i fotot står inte här. Alla fyra bilderna är
+   huvud-/halsporträtt, så benens tecken går inte att avgöra på tre av
+   dem; de får rostern standardvärde och är märkta nedan. Att skriva
+   "inga strumpor" som ett faktum vore att hitta på.
+
+   `utseendeKalla:"FOTO"` betyder att färgen är avläst ur bilden som
+   `bild_url` pekar på. Utan fältet gäller `visuellStatus:"ASSUMPTION"`
+   som förut. ── */
+const UTSEENDE_FOTO={
+  /* ── VARMBLOD OCH HÄSTAR ──────────────────────────────────────── */
+  /* Isabell: gyllene päls, ljus man, bred bläs ned till en mörk mule. */
+  air:{farg:"#C99A5E",man:"#EFE5D2",mule:"#5A5150",
+    tecken:{blas:"bred",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Mörkbrun med svart man. Inga vita tecken i ansiktet. */
+  allan:{farg:"#4A3324",man:"#241A12",mule:"#332419",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* SKÄCK — stora vita fält över mörkgrått, vita ben. Mönstret syns
+     tydligt men K3 har ingen geometri för fläckar: hästen kläs i en
+     färg per kroppsdel. Färgen nedan är den DOMINERANDE (vit) med
+     mörk man, och `monster` bär observationen så att den inte går
+     förlorad. Berra konverteras därför inte i det här steget. */
+  berra:{farg:"#E4E2DE",man:"#4A4B50",mule:"#9A8079",
+    monster:"skack",monsterFarg:"#55565A",
+    tecken:{blas:"bred",strumpor:[1,1,1,1]},
+    sett:["farg","man","mule","blas","strumpor","monster","monsterFarg"],osett:[]},
+  /* Mörkbrun, svart man, inga vita tecken. */
+  bing:{farg:"#4A3226",man:"#2A1D16",mule:"#4A3B32",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Äppelskimmel: ljusgrå med äpplen, mörkgrå man, mörka underben. */
+  conor:{farg:"#A8AAAC",man:"#4E5257",mule:"#9A9394",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* Ljus skimmel, nästan vit med mörka stänk. Ingen bläs går att
+     urskilja — hela ansiktet är ljust. */
+  cosmo:{farg:"#DCDCD8",man:"#8A8B8E",mule:"#5C5450",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Ljus brun, svart man, ingen vit teckning. */
+  crokino:{farg:"#8C4F2C",man:"#221A16",mule:"#4A4340",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Brun med en liten vit STJÄRNA i pannan — smal, inte en bläs. */
+  curiretto:{farg:"#8E4A28",man:"#2A2320",mule:"#423A36",
+    tecken:{blas:"stjarna",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Brun, svart man, ingen vit teckning. */
+  fay:{farg:"#7A4A2C",man:"#211A18",mule:"#4E463E",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Brun med svart man och en smal vit BLÄS hela vägen ned till en
+     ljus mule. */
+  hamilton:{farg:"#8A4A2A",man:"#221B18",mule:"#C9A89C",
+    tecken:{blas:"bles",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Freiberger, brun med mörk man. Pannan skyms av luggen: om det
+     finns en stjärna går den inte att avgöra. */
+  hjartat:{farg:"#8A4A2E",man:"#4A4038",mule:"#5A544E",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule"],osett:["blas","strumpor"]},
+  /* Fux med ljusare man och en mycket BRED bläs ned till rosa mule. */
+  kay_z:{farg:"#96522C",man:"#B07A50",mule:"#D9B0A4",
+    tecken:{blas:"bred",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Brun med svart man och en smal vit bläs. */
+  larry:{farg:"#7E4429",man:"#1F1815",mule:"#45403E",
+    tecken:{blas:"bles",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Mörkbrun, svart man, smal bläs — OCH två höga vita strumpor på
+     BÅDA BAKBENEN. Hela hästen syns i bild, benen inkluderade. */
+  lothar:{farg:"#3B2A22",man:"#171310",mule:"#3A2E28",
+    tecken:{blas:"bles",strumpor:[0,0,1,1]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* Ljus skimmel med ljusgrå man. Ingen urskiljbar ansiktsteckning. */
+  oska:{farg:"#DEDCD6",man:"#C8C2B6",mule:"#5A524E",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Mörkbrun med mörkgrå man, ingen vit teckning. */
+  puma:{farg:"#4A3427",man:"#4A4642",mule:"#6A645E",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Brun med svart man och smal bläs ned till rosa mule. TVÅ vita
+     underben syns tydligt — men hästen står vänd mot kameran och
+     VILKA ben de tillhör går inte att avgöra. Placeringen är därför
+     osedd, och inga strumpor ritas: att gissa ben vore att hitta på. */
+  sune:{farg:"#6E4530",man:"#1E1815",mule:"#D4B1A4",
+    tecken:{blas:"bles",strumpor:[0,0,0,0]},strumporSedda:2,
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Nästan svart med en BRED vit bläs ned till rosa mule. */
+  tess:{farg:"#241C18",man:"#14100E",mule:"#E0C3B8",
+    tecken:{blas:"bred",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+
+  /* ── PONNYER ──────────────────────────────────────────────────── */
+  /* Mörkbrun, nästan svart, svart man. Inga vita tecken på huvudet. */
+  blackrock_jack:{farg:"#3A2A22",man:"#1C1512",mule:"#2A1F1A",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Vit skimmel med vit man. Benen syns; inga urskiljbara strumpor —
+     på en vit häst är en vit strumpa inte en teckning. */
+  lydia:{farg:"#E4E2DB",man:"#EDEBE4",mule:"#4A4644",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* Vit/ljusgrå med ljusgrå man. Hela ansiktet ljust. */
+  dante:{farg:"#E2E1DC",man:"#CFCBC3",mule:"#5A5350",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* Äppelskimmel med SVART man och mörka underben. */
+  dexter:{farg:"#A4A6A8",man:"#26242A",mule:"#64605E",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* New Forest: fux med ljusare, rödblond man. */
+  garnit:{farg:"#8E4C2E",man:"#A0755A",mule:"#3E3A38",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Brun med ljusgrå man och en vit bläs ned till ljus mule. Benen
+     står i högt gräs. */
+  jessy:{farg:"#8E5232",man:"#9A8F86",mule:"#D8D2C8",
+    tecken:{blas:"bles",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Ljus skimmel med mörk man och lugg. */
+  kennedy:{farg:"#E0DED8",man:"#5A4C44",mule:"#55504C",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Connemara, vit skimmel med vit man. Benen syns. */
+  lady:{farg:"#E6E4DE",man:"#F0EEE8",mule:"#4E4A48",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* Brun med mörk man och en liten vit STJÄRNA i pannan. */
+  mac_kenzie:{farg:"#8A5030",man:"#322822",mule:"#4A4440",
+    tecken:{blas:"stjarna",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Svensk ridponny, kategori B — minst i rostern. Fux med rödblond
+     man och en mycket BRED bläs ned till rosa mule. */
+  marabou:{farg:"#9A5A34",man:"#A8623A",mule:"#D5AE9E",
+    tecken:{blas:"bred",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Connemara, gulbrun med mörk man. */
+  replay:{farg:"#A06B3E",man:"#3A2A20",mule:"#6A5A4E",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Fjordhäst, brunblakk: sandfärgad kropp, mörk mule, och den
+     upprätta tvåfärgade manen med mörk mittstrimma (midtstol) som
+     syns tydligt i bilden. Inga vita tecken. */
+  toblerone:{farg:"#C8A96B",man:"#E6DCC6",manKarna:"#4A3A2A",mule:"#4A4440",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","manKarna","mule","blas"],osett:["strumpor"]},
+  /* Connemara, vit skimmel med vit man och gråskär mule. */
+  trixie:{farg:"#E8E6DF",man:"#EFEDE6",mule:"#8A7B74",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+  /* Ljus skimmel med mörkgrå man och svans. Benen syns. */
+  troy:{farg:"#DCDAD4",man:"#5A6066",mule:"#4E4A48",
+    tecken:{blas:false,strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas","strumpor"],osett:[]},
+  /* Haflinger: gyllenfux med ljus (flaxen) man och en bred vit bläs
+     hela vägen ned till en rosa mule. */
+  westside:{farg:"#C98B4E",man:"#F0E6D2",mule:"#C79A8E",
+    tecken:{blas:"bred",strumpor:[0,0,0,0]},
+    sett:["farg","man","mule","blas"],osett:["strumpor"]},
+};
+
 const SOURCE_GAMEPLAY={
   // Källan säger att Bing inte hoppar. Den säger inget om hans motivation.
   bing:{hoppkapacitet:0,flaggor:{hoppar_inte:true}},
@@ -144,6 +321,7 @@ const HORSES={};
 for(const fakta of HASTFAKTA){
   const legacy=LEGACY_GAMEPLAY[fakta.id];
   const source=SOURCE_GAMEPLAY[fakta.id];
+  const foto=UTSEENDE_FOTO[fakta.id];
   HORSES[fakta.id]={
     ...fakta,
     kategori:fakta.typ==="hast"?"hast":(fakta.kategoriKalla||"C"),
@@ -157,7 +335,13 @@ for(const fakta of HASTFAKTA){
        DEKLARERAD frånvaro av evidens, inte en tilldelning. */
     profil:PROFIL[fakta.id]||"skolhast",
     profilStatus:PROFIL[fakta.id]?"KALLTEXT":"SAKNAR_KALLA",
-    visuellStatus:"ASSUMPTION",
+    ...(foto?{farg:foto.farg,man:foto.man,mule:foto.mule,
+      manKarna:foto.manKarna||null,tecken:foto.tecken,
+      monster:foto.monster||null,monsterFarg:foto.monsterFarg||null,
+      strumporSedda:foto.strumporSedda||null}:{}),
+    visuellStatus:foto?"FOTO":"ASSUMPTION",
+    utseendeSett:foto?foto.sett:[],
+    utseendeOsett:foto?foto.osett:["farg","man","blas","strumpor"],
     pronomen:harledPronomen(fakta.besk),
   };
 }

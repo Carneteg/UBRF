@@ -80,6 +80,8 @@ SPELBARHET = BYGGE + [
     ("DorrService",  "src/server/DorrService.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("HastRigg",     "src/server/HastRigg.luau"),
     #[[ TESTMODUL, inte produktionskod: avatarens matt och
     #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
@@ -106,6 +108,7 @@ QA = BYGGE + [
 # byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
 SIKT = QA + [
     ("Genomsikt", "src/client/Genomsikt.luau"),
+    ("HastGang", "src/client/HastGang.luau"),
 ]
 
 # Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
@@ -117,6 +120,8 @@ SIKT = QA + [
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
@@ -137,6 +142,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -167,8 +173,10 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
-    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
-    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
+    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
+    # samma rakning som servern kor, inte en avskrift av den.
+    ("Markkontakt",     "src/server/Markkontakt.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -183,6 +191,7 @@ QA = BYGGE + [
 # byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
 SIKT = QA + [
     ("Genomsikt", "src/client/Genomsikt.luau"),
+    ("HastGang", "src/client/HastGang.luau"),
 ]
 
 # Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
@@ -194,6 +203,8 @@ SIKT = QA + [
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
@@ -214,6 +225,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -244,8 +256,10 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
-    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
-    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
+    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
+    # samma rakning som servern kor, inte en avskrift av den.
+    ("Markkontakt",     "src/server/Markkontakt.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -261,6 +275,7 @@ QA = BYGGE + [
 # byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
 SIKT = QA + [
     ("Genomsikt", "src/client/Genomsikt.luau"),
+    ("HastGang", "src/client/HastGang.luau"),
 ]
 
 # Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
@@ -272,6 +287,8 @@ SIKT = QA + [
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
@@ -292,6 +309,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -322,8 +340,10 @@ FORBEREDELSE = SPEL + [
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
     ("HastRigg",        "src/server/HastRigg.luau"),
-    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
-    #   startar, sa attributen i provet ar produktionens attribut. ]]
+    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
+    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
+    # samma rakning som servern kor, inte en avskrift av den.
+    ("Markkontakt",     "src/server/Markkontakt.luau"),
     ("RiderController", "src/client/RiderController.luau"),
 ]
 
@@ -354,6 +374,12 @@ PARITET = [
     # langt ifran orsaken. Precis sa foll klient-specen i CI (run 34186458506);
     # darfor star de nu i BADA listorna, i beroendeordning.
     ("Inspelning",       "src/shared/HorseCore/Inspelning.luau"),
+    # TouchControls FORE UgnetaController: kortet fragar `reglageBredd()`
+    # for att inte lagga sig over knappraden. Saknades den i den har listan
+    # blev require:t nil -- men felet var OSYNLIGT sa lange banken svarade
+    # nil pa `AbsoluteSize`, for da hoppade koden over hela matningen. Samma
+    # fallgrop som noten vid Inspelning ovan beskriver.
+    ("TouchControls",    "src/client/TouchControls.luau"),
     # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
@@ -382,6 +408,8 @@ GESTALT = BYGGE + [
 KLIENT = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
@@ -410,8 +438,8 @@ KLIENT = SPEL + [
     ("Input",               "src/client/Input.luau"),
     ("TouchControls",       "src/client/TouchControls.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
-    #[[ Sadeln och transet pa boxfronten. Bara init.client require:ar den. ]]
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
@@ -424,6 +452,7 @@ KLIENT = SPEL + [
     ("Prompttext",          "src/client/Prompttext.luau"),
     ("Debug",               "src/client/Debug.luau"),
     ("Genomsikt",           "src/client/Genomsikt.luau"),
+    ("HastGang",            "src/client/HastGang.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
@@ -448,6 +477,8 @@ KOHERENS = GEOMETRI + [
     ("Anlaggningen", "buildings/Anlaggningen.luau"),
 ] + _KLIENTDELEN + _utan([
     ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler",    "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende",    "src/shared/HorseCore/Utseende.luau"),
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
@@ -461,8 +492,6 @@ KOHERENS = GEOMETRI + [
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
-    #[[ Sadeln och transet pa boxfronten: samma byggare produktionen
-    #   startar, sa attributen i provet ar produktionens attribut. ]]
 ], {m[0] for m in _KLIENTDELEN}) + [
     ("Init",            "src/client/init.client.luau"),
 ]
@@ -474,6 +503,8 @@ MODULER = [
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
+    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
     # RidKanon och Telemetri ligger fore MovementController: movement.spec
@@ -494,6 +525,7 @@ MODULER = [
     ("Input",              "src/client/Input.luau"),
     ("TouchControls",      "src/client/TouchControls.luau"),
     ("Genomsikt",          "src/client/Genomsikt.luau"),
+    ("HastGang",           "src/client/HastGang.luau"),
 ]
 
 # require-formerna som förekommer i koden, till modulnamn.
@@ -554,7 +586,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   GameplayService. Samma bunt som integration. ]]
     #[[ Tackspecen behover riggen OCH tjansterna: den bygger en riktig
     #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
-    if "tack" in spec_rel:
+    #[[ Hojdspecen bygger RIKTIGA riggar i tre storlekar och kor
+    #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
+    if "hasthojd" in spec_rel or "avsittning" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
@@ -649,6 +685,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
         if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
+                                "Riggprofiler", "Utseende",
                     "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
                     "Inspelning", "Kameralage", "Pass", "Sparning"):
             delar.append(f"__Core.{namn} = {namn}\n")

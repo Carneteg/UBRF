@@ -24,6 +24,7 @@ Genomsikt.TONING = 0.78     -- LocalTransparencyModifier på skymmande delar
 Genomsikt.MARGINAL = 1.0    -- studs runt delens fotavtryck
 Genomsikt.STEG = 0.7        -- studs mellan provpunkterna
 Genomsikt.SLUTMARGINAL = 1.2 -- studs före karaktären där provningen slutar
+Genomsikt.SLAPP_TID = 0.12  -- kort glapp får inte blinka opakt/transparent
 
 --[[ Står delen (position, storlek) mellan `fran` och `till` i planet? ]]
 function Genomsikt.skymmer(pos: Vector3, size: Vector3, fran: Vector3, till: Vector3, marginal: number?): boolean
@@ -55,6 +56,34 @@ function Genomsikt.valj(delar: { any }, fran: Vector3, till: Vector3, marginal: 
 	return ut
 end
 
+--[[ Håller kvar toningen en kort stund efter sista träffen.
+
+     I ridhuset kan kameran guppa över gränsen när ryttaren hoppar. Utan
+     hysteres byter samma läktar-/väggdel då 0 → 0.78 → 0 varje
+     RenderStepped, vilket läses som flimmer. ]]
+function Genomsikt.uppdateraToning(
+	senast: { [any]: number },
+	valda: { any },
+	tid: number,
+	slappTid: number?
+): ({ any }, { any })
+	for _, d in ipairs(valda) do
+		senast[d] = tid
+	end
+	local hall = slappTid or Genomsikt.SLAPP_TID
+	local aktiva = {}
+	local slapp = {}
+	for d, sist in pairs(senast) do
+		if tid - sist <= hall then
+			table.insert(aktiva, d)
+		else
+			senast[d] = nil
+			table.insert(slapp, d)
+		end
+	end
+	return aktiva, slapp
+end
+
 --[[ Kopplar in toningen på klienten. Kandidaterna samlas en gång och fylls
      på när anläggningen växer; en full genomsökning per bildruta hade
      kostat mer än själva provningen. ]]
@@ -72,16 +101,22 @@ function Genomsikt.start()
 	for _, d in ipairs(Workspace:GetDescendants()) do kandidat(d) end
 	Workspace.DescendantAdded:Connect(kandidat)
 
-	local tonade: { BasePart } = {}
-	RunService.RenderStepped:Connect(function()
+	local senastTond: { [BasePart]: number } = {}
+	local tid = 0
+	RunService.RenderStepped:Connect(function(dt)
+		tid += dt
 		local cam = Workspace.CurrentCamera
 		local char = Players.LocalPlayer.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
 		if not cam or not root then return end
 		local nya = Genomsikt.valj(kandidater, cam.CFrame.Position, (root :: BasePart).Position)
-		for _, d in ipairs(tonade) do d.LocalTransparencyModifier = 0 end
-		for _, d in ipairs(nya) do d.LocalTransparencyModifier = Genomsikt.TONING end
-		tonade = nya
+		local aktiva, slapp = Genomsikt.uppdateraToning(senastTond, nya, tid)
+		for _, d in ipairs(slapp) do
+			if d.Parent then d.LocalTransparencyModifier = 0 end
+		end
+		for _, d in ipairs(aktiva) do
+			if d.Parent then d.LocalTransparencyModifier = Genomsikt.TONING end
+		end
 	end)
 end
 

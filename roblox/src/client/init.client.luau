@@ -25,7 +25,12 @@ local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemet
 
 local Input = require(script.Input)
 local TouchControls = require(script.TouchControls)
+local DinHast = require(script.DinHast)
 local MovementController = require(script.MovementController)
+--[[ HORSE_VISUAL_QUALITY_GATE: benen på de hästar som bär ett riktigt nät
+     drivs procedurellt härifrån. Modulen rör bara `Motor6D.Transform`,
+     som är lokalt och oreplikerat — den kan inte påverka lokomotionen. ]]
+local HastGang = require(script.HastGang)
 local AnimationController = require(script.AnimationController)
 local CameraController = require(script.CameraController)
 local SoundController = require(script.SoundController)
@@ -93,6 +98,9 @@ local function dismount()
 	KontrollHjalp.dolj()
 	Debug.clear()
 	InteractionController.setEnabled(true)
+	--[[ Skylten svarar på "vilken av dem?". Den frågan är inte aktuell
+		medan man sitter på henne. ]]
+	DinHast.satDold(false)
 	ride = nil
 end
 
@@ -173,8 +181,19 @@ local function mount(model: Model)
 	     spelare vid tangentbordet ska inte få en spak över bilden. De river
 	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
 	     häst man klivit av. ]]
-	TouchControls.mount(Input, { dismount = begarAvsittning })
+	--[[ `blick` går till kameran och INGEN ANNANSTANS: pekytan vrider
+	     bilden, inte hästen. `modell` används bara för att gångartsraden
+	     ska kunna lysa på den gångart hästen faktiskt går i. ]]
+	TouchControls.mount(Input, {
+		dismount = begarAvsittning,
+		blick = function(dYaw, dPitch)
+			local r = ride
+			if r then r.camera:vridBlick(dYaw, dPitch) end
+		end,
+		modell = model,
+	})
 	InteractionController.setEnabled(false)
+	DinHast.satDold(true)
 	Debug.attach(rig, stats)
 
 	--[[ G02-C: lektionen börjar när man sitter upp i ridhuset. Ugneta
@@ -202,6 +221,11 @@ end
      karaktären tonas på den här klienten. ]]
 Genomsikt.start()
 
+--[[ Gånglagret startas EN gång och lever hela sessionen: det animerar alla
+     hästar i sikte, inte bara den man rider. En häst som leds ska röra
+     benen lika mycket som en som bär ryttare. ]]
+HastGang.start()
+
 InteractionController.start(mount)
 
 --[[ Förberedelsen. Prompten "Sitt upp" får bara finnas på den häst servern
@@ -213,6 +237,16 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	if model:GetAttribute("HorseId") ~= id then return false end
 	return PreparationController.redo()
 end)
+--[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
+	Se noten i `InteractionController.farVisasLed`: den gamla regeln låste
+	loopen, eftersom `leda` måste vara avbockad för att `redo` ska bli sant
+	och kopplet måste fästas för att `leda` ska kunna bockas av. ]]
+InteractionController.setLedCheck(function(model: Model): boolean
+	local id = PreparationController.hastId()
+	if not id then return false end
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return PreparationController.nastaFas() == "leda"
+end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
      runda 2: handskakningens svar kommer inte som en `PreparationSync`, så
@@ -222,6 +256,7 @@ PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
 PreparationController.start()
+DinHast.start()
 --[[ P0-3: HUD:ens KONTEXT stegas av sin egen loop, inte av ridloopen längst
      ned — den återvänder direkt när man inte rider, och det är precis då
      frågan "står jag vid min häst?" spelar roll. Heartbeat räcker: det är
@@ -358,6 +393,29 @@ RunService.RenderStepped:Connect(function(dt)
 	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
 	if LektionController.vantar() or LektionController.replayAktiv() then
 		Input.consume()
+		--[[ ══ PAUSEN MÅSTE STANNA HÄSTEN, INTE BARA SLUTA STYRA HENNE ══
+
+		     Stycket ovanför säger "hästen stegas inte", och det stämde —
+		     men att sluta stega henne är inte att stanna henne.
+		     `movement:step` är enda stället som skriver `Humanoid.WalkSpeed`
+		     och `Humanoid:Move`. Hoppas den över ligger BÅDA kvar på
+		     förra bildrutans värden, och Roblox humanoid fortsätter gå på
+		     dem. Hästen red alltså vidare bakom kortet ändå — utan att
+		     spelaren kunde styra henne.
+
+		     Mätt i Studio, ridd, med kortet uppe och spelaren utan kontroll:
+		         kurs låst 0,0°, WalkSpeed 4,35, D utan verkan
+		         (427,16 · 173,44) -> (427,16 · 161,24) = 12,2 studs på 4,6 s
+		     och i ett hörn i stället: noll förflyttning, noll kursändring,
+		     full hjälp given — hon stod och tryckte mot sargen. Det är det
+		     här som såg ut som "locomotion är död": hon svarar inte, för
+		     ingen läser spelarens hjälper, och hon står still för att en
+		     vägg tog emot — inte för att pausen höll.
+
+		     `release()` finns redan och gör precis det pausen behöver:
+		     nollar WalkSpeed, skickar `Move(0)`, släpper styrutslag och
+		     kroppslutning. Ingen ny rörelsekod, ingen ny trimning. ]]
+		ride.movement:release()
 		local loco = ride.movement.loco
 		ride.animation:step(loco, dt)
 		ride.rider:step(loco, dt)

@@ -124,14 +124,20 @@ local GuiService = game:GetService("GuiService")
 	                  målet och `3/5`; UTFÄLLD målet, stegen och en kort
 	                  hjälptext. Spelaren fäller själv, och valet står kvar.
 	  INTERAKTIONEN   de stora valen. Finns BARA medan spelaren står vid
-	                  hästen och faktiskt har något att välja på — och får
-	                  då vara stor och central, för då ÄR den spelet.
+	                  hästen och faktiskt har något att välja på — och
+	                  ligger i NEDRE VÄNSTRA hörnet, hopfälld som standard.
+	                  Se noten vid `INTERAKTION_BREDD`.
 
 	SIKTRUTAN är kontraktet i tal: mitten av skärmen, där avataren står och
-	dit man tittar. Den HOPFÄLLDA spåraren får aldrig gå in i den. Den
-	utfällda och interaktionspanelen får — båda är tillfälliga och båda är
-	spelarens eget beslut. Grinden mäter det på de skärmar familjen
-	faktiskt spelar på; talen här är enda källan. ]]
+	dit man tittar. VARKEN den hopfällda spåraren eller interaktionspanelen
+	får gå in i den i onödan. Den UTFÄLLDA spåraren får — den är spelarens
+	eget beslut och varar bara medan hon läser.
+
+	Den äldre formuleringen här sa att interaktionspanelen "får vara stor
+	och central, för då ÄR den spelet". Tobias order 2026-09-12 ersätter
+	den: panelen ska ligga i ett hörn och aldrig i onödan skymma häst,
+	ryttare, dörrar, prompter eller vägen framåt. Grinden mäter det på de
+	skärmar familjen faktiskt spelar på; talen här är enda källan. ]]
 PreparationController.SIKTRUTA = { x0 = 0.30, x1 = 0.70, y0 = 0.25, y1 = 0.85 }
 
 local MARGINAL = 12
@@ -154,6 +160,25 @@ local SPARARE_MAX = 300
 local SPARARE_TAK = 0.45
 local INNER = 8
 local STEGRAD = 22
+--[[ ══ INTERAKTIONSPANELEN ═══════════════════════════════════════════
+
+	Panelen var 420 x 300 px mitt på skärmens nederkant, oavsett om den
+	bar ett ord eller åtta val. En rad text fick en panel lika stor som
+	hela iordningställandet, och båda låg rakt över hästen.
+
+	Tobias order 2026-09-12 ersätter den äldre "den får vara stor och
+	central": panelen ska ligga i ett HÖRN, vara kompakt som standard, gå
+	att fälla ut och in, och aldrig i onödan skymma häst, ryttare, dörrar,
+	prompter eller vägen framåt.
+
+	Den ligger nu nere till VÄNSTER — spåraren äger uppe till höger,
+	avataren mitten — och höjden RÄKNAS UR INNEHÅLLET: instruktionens
+	verkliga radantal plus de val som faktiskt visas. Det finns alltså
+	ingen tom panel kvar att fylla, för det finns ingen fast höjd. ]]
+local INTERAKTION_BREDD = 316
+local INTERAKTION_RAD = 4            -- luft mellan valen, som UIListLayout
+local INTERAKTION_TEXTRAD = 17       -- en rad instruktionstext
+local INTERAKTION_TAK = 0.52         -- högst så här stor del av skärmhöjden
 local HJALP_HOJD = 34
 local GAP = 6
 
@@ -169,6 +194,7 @@ local hjalp: TextLabel? = nil
 --[[ INTERAKTIONEN. ]]
 local interaktion: Frame? = nil
 local instruktion: TextLabel? = nil
+local interaktionVaxla: TextButton? = nil
 local momentBehallare: Frame? = nil
 
 local radBehallare: Frame? = nil
@@ -194,6 +220,14 @@ local vantarPa: string? = nil
 	omritning: en HUD som fäller ihop sig själv mitt i ett moment tar
 	tillbaka ett beslut spelaren just fattade. ]]
 local utvidgad = false
+--[[ Interaktionspanelens eget läge, skilt från spårarens. Standard är
+	HOPFÄLLD, som ordern säger. Hopfälld visar instruktionen och det val
+	som står på tur — det ÄR målet just nu — plus växlingen. ]]
+local interaktionUt = false
+--[[ Vilka moment den senaste vyn faktiskt innehåller. Skilt från
+	knapparnas `Visible`, som dessutom bär hopfällningen: två betydelser i
+	samma flagga hade gjort räkningen till en gissning. ]]
+local anvandaNu: { [string]: boolean } = {}
 --[[ Det läge som senast ritades. Enda syftet är att fälla UT spåraren EN
 	gång när spelet går in i ett läge som inte har något att trycka på men
 	allt att förklara — välfärdsstoppet, passet sparat, väntar på hästen.
@@ -278,12 +312,94 @@ end
 
 --[[ Interaktionspanelens ruta. Den får vara central och stor — men bara
 	medan den finns, och den finns bara under interaktionen. ]]
-local function interaktionsLayout(): { [string]: number }
+--[[ Hur många rader instruktionstexten tar vid panelens bredd. Ren
+	räkning, för att höjden ska följa innehållet utan att någon läser av
+	en `TextBounds` som bara finns när Roblox redan ritat. ]]
+local function textrader(text: string, bredd: number): number
+	if text == "" then return 0 end
+	--[[ Gotham 14 px ger ungefär 7,4 px per tecken i snitt. Talet är
+		avsiktligt lågt satt: hellre en rad för mycket än en text som
+		klipps. ]]
+	local perRad = math.max(10, math.floor((bredd - 2 * INNER) / 7.4))
+	local tecken = utf8.len(text) or #text
+	return math.max(1, math.ceil(tecken / perRad))
+end
+
+--[[ ══ ROBLOX EGNA PEKREGLAGE ═══════════════════════════════════════
+
+	Tobias produktbeslut: spelaren ska KUNNA GÅ medan skötseln pågår, och
+	skötselpanelen ska därför flytta på sig i stället för att reglagen
+	stängs av.
+
+	Panelen låg på `x = MARGINAL`, alltså nere till vänster — precis där
+	Robloxs dynamiska spak bor. Mätt på iPad i landskap:
+
+	    Interaktion      x  12..328   y 638..749
+	    ThumbstickStart  x  58..206   y 575..723
+
+	Knapparna låg alltså ovanpå spaken. Måtten läses ur `TouchGui` i
+	stället för att skrivas av: spaken flyttar sig mellan enheter, och ett
+	tal här hade blivit fel på nästa skärm. Finns inga pekreglage — hela
+	skrivbordet — är svaret noll och layouten är oförändrad. ]]
+local function pekreglagensKanter(): (number, number)
+	local pg = player and player:FindFirstChildOfClass("PlayerGui")
+	local tg = pg and pg:FindFirstChild("TouchGui")
+	if not tg then return 0, math.huge end
+	local spak = tg:FindFirstChild("ThumbstickStart", true)
+	local hopp = tg:FindFirstChild("JumpButton", true)
+	local hoger = 0
+	if spak and spak:IsA("GuiObject") and spak.Visible then
+		hoger = spak.AbsolutePosition.X + spak.AbsoluteSize.X
+	end
+	local vanster = math.huge
+	if hopp and hopp:IsA("GuiObject") and hopp.Visible then
+		vanster = hopp.AbsolutePosition.X
+	end
+	return hoger, vanster
+end
+
+local function interaktionsLayout(antalVal: number, rader: number,
+	ut: boolean): { [string]: number }
 	local B, H = viewport()
-	local bredd = math.min(math.floor(B * 0.92), 420)
-	local hojd = math.min(math.floor(H * 0.42), 300)
+	local bredd = math.min(INTERAKTION_BREDD, math.max(120, B - 2 * MARGINAL))
+	--[[ HÖJDEN ÄR INNEHÅLLET. Hopfälld visas det val som står på tur; det
+		är objektivet, och det är vad ordern ber om. ]]
+	local visade = if ut then antalVal else math.min(antalVal, 1)
+	local textHojd = rader * INTERAKTION_TEXTRAD
+	local listHojd = 0
+	if visade > 0 then
+		listHojd = visade * PreparationController.TRAFFYTA
+			+ (visade - 1) * INTERAKTION_RAD
+	end
+	--[[ Växlingen ritas bara när det FINNS något att fälla ut. Ett ensamt
+		val ska inte bära en knapp som inte gör något. ]]
+	local vaxling = if antalVal > 1 then GAP + STEGRAD else 0
+	local hojd = 2 * INNER + textHojd
+		+ (if listHojd > 0 then GAP + listHojd else 0) + vaxling
+	--[[ Taket: hellre en lista som rullar än en panel som växer upp över
+		spelet. Det är listan som ger vika, aldrig texten. ]]
+	local tak = math.floor(H * INTERAKTION_TAK)
+	if hojd > tak and listHojd > 0 then
+		listHojd = math.max(PreparationController.TRAFFYTA, listHojd - (hojd - tak))
+		hojd = 2 * INNER + textHojd + GAP + listHojd + vaxling
+	end
+	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger` noll
+		och raden ger `MARGINAL` — samma läge som förut. ]]
+	local spakHoger, hoppVanster = pekreglagensKanter()
+	local x = MARGINAL
+	if spakHoger > 0 then
+		x = math.max(MARGINAL, spakHoger + MARGINAL)
+		--[[ Och aldrig in i hoppknappen. Får panelen inte plats mellan de
+			två krymper den hellre än lägger sig över något. ]]
+		local hogerTak = math.min(B - MARGINAL, hoppVanster - MARGINAL)
+		if x + bredd > hogerTak then
+			bredd = math.max(120, hogerTak - x)
+		end
+	end
 	return { bredd = bredd, hojd = hojd, vpBredd = B, vpHojd = H,
-		x = math.floor((B - bredd) / 2), y = H - MARGINAL - hojd }
+		x = x, y = H - MARGINAL - hojd,
+		textHojd = textHojd, listHojd = listHojd, visade = visade,
+		vaxling = vaxling }
 end
 
 --[[ Layouten som tal, för prov och felsökning. Ren avläsning — den bygger
@@ -295,7 +411,13 @@ function PreparationController.layout(): { [string]: any }
 	end
 	local S = spararLayout(antal, utvidgad)
 	local K = spararLayout(antal, false)
-	local I = interaktionsLayout()
+	local synligaVal = 0
+	for id in pairs(anvandaNu) do
+		if momentRader[id] then synligaVal += 1 end
+	end
+	local ledtext = if instruktion then instruktion.Text else ""
+	local I = interaktionsLayout(synligaVal,
+		textrader(ledtext, INTERAKTION_BREDD), interaktionUt)
 	return {
 		sparare = { x0 = S.x, y0 = S.y, x1 = S.x + S.bredd, y1 = S.y + S.hojd },
 		kompakt = { x0 = K.x, y0 = K.y, x1 = K.x + K.bredd, y1 = K.y + K.kompakt },
@@ -308,6 +430,9 @@ function PreparationController.layout(): { [string]: any }
 		},
 		vpBredd = S.vpBredd, vpHojd = S.vpHojd,
 		utvidgad = utvidgad, stegHojd = S.stegHojd, antalSteg = antal,
+		interaktionUt = interaktionUt, interaktionVal = synligaVal,
+		interaktionVisade = I.visade, interaktionText = I.textHojd,
+		interaktionLista = I.listHojd,
 	}
 end
 
@@ -329,13 +454,47 @@ function PreparationController.tillampaLayout()
 		hjalp.Visible = utvidgad
 	end
 	if pil then
-		pil.Text = if utvidgad then "▴" else "▾"
+		pil.Text = if utvidgad then "▲" else "▼"
 	end
 	local p = interaktion
 	if p then
 		p.Position = UDim2.fromOffset(L.interaktion.x0, L.interaktion.y0)
 		p.Size = UDim2.fromOffset(L.interaktion.x1 - L.interaktion.x0,
 			L.interaktion.y1 - L.interaktion.y0)
+	end
+	if instruktion then
+		instruktion.Size = UDim2.new(1, 0, 0, L.interaktionText)
+	end
+	if momentBehallare then
+		momentBehallare.Position = UDim2.new(0, 0, 0,
+			L.interaktionText + (if L.interaktionLista > 0 then GAP else 0))
+		momentBehallare.Size = UDim2.new(1, 0, 0, L.interaktionLista)
+	end
+	--[[ HOPFÄLLD VISAR DET SOM STÅR PÅ TUR. Raderna sorteras på
+		`LayoutOrder`, och den lägsta är nästa moment. ]]
+	local lagsta, forst = math.huge, nil
+	for id in pairs(anvandaNu) do
+		local k = momentRader[id]
+		if k and k.LayoutOrder < lagsta then lagsta, forst = k.LayoutOrder, k end
+	end
+	for id, knapp in pairs(momentRader) do
+		knapp.Visible = anvandaNu[id] == true
+			and (interaktionUt or knapp == forst)
+	end
+	if interaktionVaxla then
+		interaktionVaxla.Visible = L.interaktionVal > 1
+		--[[ Texten går genom katalogen, inte som en literal. Den stod först
+			som svenska rakt i modulen och blev då svensk också i ett
+			engelskt gränssnitt — precis det språkkanonen finns för.
+
+			Pilen är U+25BC/25B2 och inte U+25BE/25B4: de senare saknas i
+			Gotham och ritades som en tom ruta. Samma sak gällde spårarens
+			egen pil, och den är bytt på samma sätt. ]]
+		interaktionVaxla.Text = if interaktionUt
+			then Sprak.t("hud.visa_mindre") .. "  \u{25B2}"
+			else Sprak.t("hud.visa_alla", L.interaktionVal) .. "  \u{25BC}"
+		interaktionVaxla.Position = UDim2.new(0, 0, 1, -STEGRAD)
+		interaktionVaxla.Size = UDim2.new(1, 0, 0, STEGRAD)
 	end
 end
 
@@ -350,6 +509,17 @@ function PreparationController._utvidgad(): boolean
 	return utvidgad
 end
 
+--[[ Interaktionspanelens läge, och en väg att växla det utan att trycka
+	på knappen. Provet och granskningen behöver båda: `Activated` går inte
+	att fyra utifrån i en riktig klient, och en bild av det utfällda läget
+	ska kunna tas utan att någon sitter med musen. Växlingen går genom
+	SAMMA väg som knappen — det är knappens lyssnare som anropar den. ]]
+function PreparationController._vaxlaInteraktion(): boolean
+	interaktionUt = not interaktionUt
+	PreparationController.tillampaLayout()
+	return interaktionUt
+end
+
 --[[ De byggda ytorna själva, för grinden. Provet läser RIKTIGA instanser
 	— storlek, synlighet, knappen det trycker på — och inte en rapport
 	modulen skriver om sig själv. En sådan rapport kan vara sann medan
@@ -358,7 +528,8 @@ end
 function PreparationController._ytor(): { [string]: any }
 	return { sparare = sparare, vaxla = huvudKnapp, steg = stegLista,
 		hjalp = hjalp, interaktion = interaktion, rubrik = rubrik,
-		framsteg = framsteg }
+		framsteg = framsteg, instruktion = instruktion,
+		interaktionVaxla = interaktionVaxla, moment = momentBehallare }
 end
 
 local function bygg()
@@ -367,6 +538,26 @@ local function bygg()
 	g.Name = "UBRFForberedelse"
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
+	--[[ ══ ÖVER ROBLOX EGNA PEKREGLAGE ═════════════════════════════════
+
+	     `DisplayOrder` låg på 0, och det gör `TouchGui` också. Vid lika
+	     ordning vinner Roblox, och på en pekskärm ligger den dynamiska
+	     spaken som en osynlig träffyta över hela nedre vänstra hörnet —
+	     alltså precis där skötselpanelen står.
+
+	     Mätt på iPad Air i landskap, samma synliga panel, bara ordningen
+	     ändrad:
+	         DisplayOrder 0  → översta träffen på momentknappen var
+	                           `ThumbstickStart` — knappen gick inte att
+	                           trycka på
+	         DisplayOrder 10 → översta träffen var `halsa1`, alltså
+	                           knappen själv
+	     Utan det här kan en iPad-spelare inte hälsa, rykta eller sadla,
+	     och kommer därmed aldrig ens fram till uppsittningen.
+
+	     10 ligger över `TouchGui` (0) och över ridningens egen
+	     `HorseTouch` (8), men under hjälpknappen (16). ]]
+	g.DisplayOrder = 10
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 
@@ -440,7 +631,7 @@ local function bygg()
 	pl.Font = Enum.Font.GothamBold
 	pl.TextSize = 14
 	pl.TextColor3 = FARG_VILAR
-	pl.Text = "▾"
+	pl.Text = "▼"
 	pl.Parent = hk
 	pil = pl
 
@@ -540,10 +731,32 @@ local function bygg()
 
 	local mlayout = Instance.new("UIListLayout")
 	mlayout.FillDirection = Enum.FillDirection.Vertical
-	mlayout.Padding = UDim.new(0, 4)
+	mlayout.Padding = UDim.new(0, INTERAKTION_RAD)
 	mlayout.SortOrder = Enum.SortOrder.LayoutOrder
 	mlayout.Parent = mlista
 	momentBehallare = mlista :: any
+
+	--[[ VÄXLINGEN. Panelen är hopfälld som standard och visar då bara det
+		val som står på tur; den här knappen fäller ut resten. Den finns
+		bara när det finns mer än ett val — se `tillampaLayout`. ]]
+	local iv = Instance.new("TextButton")
+	iv.Name = "InteraktionVaxla"
+	iv.AnchorPoint = Vector2.new(0, 0)
+	iv.Size = UDim2.new(1, 0, 0, STEGRAD)
+	iv.Position = UDim2.new(0, 0, 1, -STEGRAD)
+	iv.BackgroundTransparency = 1
+	iv.AutoButtonColor = false
+	iv.Font = Enum.Font.Gotham
+	iv.TextSize = 12
+	iv.TextXAlignment = Enum.TextXAlignment.Left
+	iv.TextColor3 = FARG_TUR
+	iv.Text = ""
+	iv.Visible = false
+	iv.Parent = ip
+	iv.Activated:Connect(function()
+		PreparationController._vaxlaInteraktion()
+	end)
+	interaktionVaxla = iv
 
 	gui = g
 	PreparationController.tillampaLayout()
@@ -699,6 +912,11 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 end
 
 local function doljOanvanda(anvanda: { [string]: boolean })
+	--[[ Registret först, synligheten sedan. `tillampaLayout` äger den
+		andra halvan: den vet om panelen är hopfälld, och det gör inte
+		den här funktionen. ]]
+	table.clear(anvandaNu)
+	for id in pairs(anvanda) do anvandaNu[id] = true end
 	for id, knapp in pairs(momentRader) do
 		knapp.Visible = anvanda[id] == true
 	end
@@ -960,8 +1178,8 @@ function rita(vy: any)
 		and vy.status ~= "riding" and vy.status ~= "welfare_stop"
 		and not passRaknat() then
 		rubrik.Text = if hastnamn
-			then Sprak.t("hud.ga_tillbaka", hastnamn)
-			else Sprak.t("hud.ga_tillbaka_utan_namn")
+			then Sprak.t("hud.ga_till", hastnamn)
+			else Sprak.t("hud.ga_till_utan_namn")
 	end
 
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och
@@ -1082,6 +1300,13 @@ end
 
 function PreparationController.redo(): boolean
 	return senasteVy ~= nil and senasteVy.redo == true
+end
+
+--[[ Vilket steg spelaren STÅR PÅ. Ledningens prompt hänger på den:
+	`redo` blir sant först när ALLA faser är avbockade, och `leda` är en av
+	dem — så `redo` kan aldrig vara det som öppnar ledningen. ]]
+function PreparationController.nastaFas(): string?
+	return senasteVy and senasteVy.nasta or nil
 end
 
 function PreparationController.hastId(): string?

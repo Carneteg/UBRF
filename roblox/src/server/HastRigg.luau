@@ -30,12 +30,53 @@ local JackRigg = {}
 local TAG = "Horse"
 local M = 3                     -- studs per meter, som BuildKit.M
 
---[[ Kategori D är ponny upp till 1,48 m i mankhöjd. Datan ger ingen
-	mankhöjd för Jack (`mankhojd = nil`), så kroppen byggs på kategorins
-	övre del. Det är en SPELABSTRAKTION och ingen mätning. ]]
-local MANKHOJD = 1.45
-local KROPP_L, KROPP_B, KROPP_H = 1.85, 0.62, 0.78
-local BEN_H = MANKHOJD - KROPP_H          -- marken till kroppens undersida
+local HastVisual = require(script.Parent.HastVisual)
+local Utseende = require(ReplicatedStorage.HorseCore.Utseende)
+
+--[[ ══ VILKA HÄSTAR SOM BÄR ETT RIKTIGT NÄT ═══════════════════════
+
+	Hela rostern, sedan Tobias godkände K3 som bas.
+
+	Det här VAR en lista, och listan var rätt så länge den beskrev ett
+	undantag: en häst av trettiotre, sedan fyra, sedan nio. Nu är nätet
+	regeln och lådan undantaget — och då ska koden säga det, inte rada
+	upp trettiotre identiska rader som alla betyder "som alla andra".
+
+	`UTAN_NAT` finns för att undantaget ska gå att skriva ned den dag det
+	behövs, med ett skäl. Den är tom idag, och det är själva poängen. ]]
+local STANDARDPROFIL = "k3"
+local UTAN_NAT: { [string]: string } = {}
+
+--[[ Vilken visuell profil en häst ska bära, och varför. Svarar nil när
+	hästen med flit ska stå kvar i lådor. ]]
+local function visuellProfil(hastId: string): string?
+	if UTAN_NAT[hastId] then return nil end
+	return STANDARDPROFIL
+end
+
+--[[ ══ KROPPENS GRUNDFORM ══════════════════════════════════════════
+
+	Talen nedan beskriver en kategori D-ponny på 1,45 m: Blackrock Jacks
+	mått, och länge hela rostens. De är en SPELABSTRAKTION och ingen
+	mätning av ett verkligt djur.
+
+	══ VARFÖR DE NU SKALAS PER HÄST ═══════════════════════════════════
+
+	Efter rosterkonverteringen bar varje häst sitt eget UTSEENDE — Marabou
+	1,27 m, Allan 1,78 — men samma FYSISKA hölje. Uppmätt var `HipHeight`
+	2,01 studs för var och en av de trettiotre, alltså byggd ur den här
+	1,45:an. Allans kollisionslåda var en ponnys, och den lilla ponnyns
+	var en varmblodshästs.
+
+	Det syntes inte förrän man mätte, men det är fel på riktigt: hur stort
+	utrymme en häst tar i en box, hur nära en vägg hon kan stå och var
+	ryttaren hamnar är alla frågor om KROPPEN, inte om nätet.
+
+	Grundformen skalas därför linjärt med hästens egen mankhöjd. Formen är
+	densamma — en häst är inte en annan form för att hon är högre — och
+	proportionerna kommer ur den enda mätta hästen vi har. ]]
+local GRUND_MANKHOJD = 1.45
+local GRUND_L, GRUND_B, GRUND_H = 1.85, 0.62, 0.78
 
 local FARG_KROPP = Color3.fromRGB(92, 68, 52)
 local FARG_MAN = Color3.fromRGB(46, 34, 26)
@@ -65,8 +106,31 @@ local function svets(a: BasePart, b: BasePart, namn: string): WeldConstraint
 	return w
 end
 
---[[ Bygger riggen vid `bas` (världs-CFrame, hästens mitt i marknivå). ]]
-function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
+--[[ Kroppens mått för en häst med mankhöjden `mankhojd` (meter).
+	Egen funktion för att provet ska kunna läsa SAMMA räkning som riggen
+	byggs med — två räkningar hade kunnat glida isär. ]]
+function JackRigg.kroppsmatt(mankhojd: number?): { [string]: number }
+	local h = if type(mankhojd) == "number" and mankhojd > 0.5 and mankhojd < 2.5
+		then mankhojd else GRUND_MANKHOJD
+	local k = h / GRUND_MANKHOJD
+	local kroppH = GRUND_H * k
+	return {
+		mankhojd = h, skala = k,
+		L = GRUND_L * k, B = GRUND_B * k, H = kroppH,
+		--[[ Marken till kroppens undersida. Att den räknas som mankhöjd
+			MINUS kroppshöjd och inte skalas för sig är vad som håller
+			hovarna på marken: benlängden är det som blir över. ]]
+		benH = h - kroppH,
+	}
+end
+
+--[[ Bygger riggen vid `bas` (världs-CFrame, hästens mitt i marknivå).
+	`mankhojd` är hästens egen, i meter; utelämnad blir det grundformen. ]]
+function JackRigg.bygg(hastId: string, namn: string, bas: CFrame,
+	mankhojd: number?): Model
+	local matt = JackRigg.kroppsmatt(mankhojd)
+	local KROPP_L, KROPP_B, KROPP_H = matt.L, matt.B, matt.H
+	local BEN_H = matt.benH
 	local modell = Instance.new("Model")
 	modell.Name = namn
 
@@ -184,6 +248,21 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	sits.CanCollide = false
 	sits.Massless = true
 	sits.Anchored = false
+	--[[ SITSEN FÅNGAR INGEN GENOM BERÖRING. En `Seat` sätter av sig själv
+		varje `Humanoid` vars kropp NUDDAR den, och sitsen sitter fastsvetsad
+		ovanpå hästens egen rot — alltså mitt i hennes egen kropp.
+
+		Uppsittningen går inte den vägen: `HorseService.tryMount` anropar
+		`seat:Sit(humanoid)` rakt, och `Sit` bryr sig inte om `CanTouch`.
+		Beröringsvägen har därför ingen uppgift alls i det här spelet, och
+		det enda den gör är att låta hästen sätta sig på sig själv.
+
+		Mätt i Studio med beröringen kvar: vakten nedan kastade ut henne,
+		kropparna rörde varandra igen i nästa bildruta, och hon satte sig
+		på nytt — `Occupant` satt, en ny `SeatWeld`, och hon rörde sig
+		1,21 studs på fyra sekunder med full order att gå. Vakten räckte
+		alltså inte ensam: kontakten måste också upphöra att betyda något. ]]
+	sits.CanTouch = false
 	sits.Parent = modell
 	--[[ Namnet är INTE "SeatWeld": Roblox skapar själv en `Weld` med det
 		namnet under sitsen när någon sätter sig, och `HorseService.dismount`
@@ -191,6 +270,42 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 		samma rigg är en fälla — avsittningen kunde få tag i riggens
 		bärande svets och sitsen hade lossnat från hästen. ]]
 	svets(kropp, sits, "SitsFaste")
+
+	--[[ ══ HÄSTEN FÅR ALDRIG SITTA PÅ SIN EGEN SITS ═══════════════════
+
+		En `Seat` fångar VARJE `Humanoid` vars kropp rör den — den frågar
+		inte vems humanoid det är. Sitsen sitter fastsvetsad ovanpå hästens
+		egen rot, och rör de två varandra sätter hästen sig på sig själv:
+
+		    Humanoid.Sit = true · SeatPart = RiderSeat
+		    HumanoidStateType.Seated · FloorMaterial = Air
+
+		En sittande humanoid svävar och slutar lyda `Move`. Uppmätt under
+		rosterprovet: åtta hästar som ställdes om hamnade i det läget, tre
+		av dem gick inte att få ur det utan att svetsen revs för hand.
+
+		Att det inte händer under vanlig ridning är sant men inte ett
+		skydd. Det räcker att en häst flyttas — en respawn, en världsladdning,
+		en framtida hage — för att hon ska kunna landa i sin egen sits, och
+		då står hon svävande och obrukbar tills någon startar om platsen.
+
+		Vakten nedan lyssnar på sitsens EGEN signal och kastar ut varje
+		occupant som hör hemma i den här hästen. Den rör inte spelaren:
+		ryttarens humanoid bor i hennes karaktär, inte i hästmodellen. ]]
+	sits:GetPropertyChangedSignal("Occupant"):Connect(function()
+		local o = sits.Occupant
+		if not o then return end
+		--[[ Är det hästens egen humanoid — alltså en som bor i den här
+			modellen — ska den ut. Allt annat är en ryttare. ]]
+		if not o:IsDescendantOf(modell) then return end
+		--[[ Roblox svetsar fast den som satt sig; `Sit = false` ensamt
+			släpper inte svetsen, och då blir hon kvar i luften. ]]
+		local w = sits:FindFirstChild("SeatWeld")
+		if w then w:Destroy() end
+		o.Sit = false
+		o:ChangeState(Enum.HumanoidStateType.GettingUp)
+		warn(("[Rigg] %s satte sig på sin egen sits och kastades ut"):format(namn))
+	end)
 
 	--[[ ══ ANATOMISKA FÄSTPUNKTER ═══════════════════════════════════
 
@@ -233,6 +348,14 @@ function JackRigg.bygg(hastId: string, namn: string, bas: CFrame): Model
 	--[[ STIGBYGLARNA hänger i sadeln och hör därför till bålen. ]]
 	fast(kropp, "LeftStirrupAttachment", CFrame.new(-(KROPP_B / 2) * M, 0, 0))
 	fast(kropp, "RightStirrupAttachment", CFrame.new((KROPP_B / 2) * M, 0, 0))
+	--[[ HANDLÄGET: där ryttaren håller tyglarna, över manken strax framför
+		och ovanför sadeln. Punkten är ryttarpose-rättningen efter den
+		visuella granskningen av K3: händerna sköttes förut av IK mot
+		BETTET, som ligger i hästens mun, och det vred överkroppen
+		framstupa. Lådriggen bär samma punkt så att posen blir densamma
+		oavsett om hästen har nät eller lådor. ]]
+	fast(kropp, "LeftHandAttachment", CFrame.new(-0.10 * M, (KROPP_H / 2 + 0.20) * M, -0.20 * M))
+	fast(kropp, "RightHandAttachment", CFrame.new(0.10 * M, (KROPP_H / 2 + 0.20) * M, -0.20 * M))
 
 	for _, konf in ipairs({ "HorseStats", "GaitConfig", "AnimationConfig" }) do
 		local c = Instance.new("Configuration")
@@ -281,6 +404,15 @@ local function namnFor(hastId: string): string
 	return tostring(hastId)
 end
 
+--[[ Hästens egen rad ur den delade sanningen. Det visuella lagret läser
+	färg, tecken och mankhöjd ur den — inte ur en kopia av Jack. Saknas
+	raden får hästen rosterns standardutseende, och `Utseende` säger att
+	den gjorde det. ]]
+local function dataFor(hastId: string): { [string]: any }?
+	local Data = delad("UBRFSpelData")
+	return Data and ((Data :: any).hastar or {})[hastId] or nil
+end
+
 --[[ Anläggningens bas. Lägena räknas relativt den, inte mot världens
 	origo, eftersom modellen bär transformen. ]]
 local function anlaggningsbas(): CFrame?
@@ -290,13 +422,128 @@ local function anlaggningsbas(): CFrame?
 	return ((komplex :: any).PrimaryPart :: BasePart).CFrame
 end
 
+--[[ ══ EN HÄST → EN BOX, EN BOX → EN HÄST ═══════════════════════════
+
+	Invarianten som saknades. `placera` byggde förut alltid en ny modell och
+	föräldrade den till workspace, utan att fråga om hästen redan stod där.
+	Det gör bygget beroende av att platsen är TOM från hästar — och en
+	sparad plats som råkar ha hästmodeller kvar i sig ger då TVÅ hästar i
+	varje box, en sparad och en nybyggd.
+
+	Mätt: ett andra `placera("kennedy")` byggde en andra Kennedy 1,8 studs
+	från den första, i samma box. 33 hästar blev 34.
+
+	Boken förs här och inte i `start()`, för `placera` är enda stället som
+	bygger. En invariant som bor någon annanstans än vid handlingen den
+	vaktar är en invariant som går att gå förbi. ]]
+local boxAgare: { [number]: string } = {}
+
+--[[ Står hästen redan i världen? Läses ur TAGGEN och inte ur ett eget
+	register: en modell som ligger sparad i platsen har aldrig passerat
+	någon räknare här, och det är precis den sorten vi letar efter. ]]
+local function befintlig(hastId: string): Model?
+	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
+		if m:IsA("Model") and m:GetAttribute("HorseId") == hastId
+			and m:IsDescendantOf(workspace) then
+			return m :: Model
+		end
+	end
+	return nil
+end
+
+--[[ ══ STARTSANERING ═══════════════════════════════════════════════
+
+	Tobias produktbeslut. En häst som ligger SPARAD i platsen är inte en
+	häst — den är gammalt världstillstånd. Riggen, skripten och det
+	visuella lagret kan vara från en annan version, och att behålla den
+	vore att låta en förorenad plats tyst överleva.
+
+	Vid start rivs därför varje modell med ett KANONISKT hästid, och hela
+	besättningen byggs om ur källan. Ett taggat objekt med ett id vi inte
+	känner igen är inte vårt och lämnas i fred — men det sägs i loggen.
+
+	Saneringen gäller BARA starten, före att någon spelare hunnit röra
+	något. Under drift är svaret det motsatta: en levande häst rivs
+	aldrig, `placera` avvisar dubbletten med "redan byggd". Se
+	invariant 1. ]]
+function JackRigg.saneraBefintliga(): number
+	local Data = delad("UBRFSpelData")
+	local kanoniska = (Data and (Data :: any).hastar) or {}
+	local rivna, frammande = 0, {}
+	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
+		local id = m:GetAttribute("HorseId")
+		if m:IsDescendantOf(workspace) then
+			if typeof(id) == "string" and kanoniska[id] then
+				warn(("[Rigg] SANERING: %s låg redan i platsen (%s) — rivs "
+					.. "och byggs om ur källan."):format(id, m:GetFullName()))
+				m:Destroy()
+				rivna += 1
+			else
+				table.insert(frammande, m:GetFullName())
+			end
+		end
+	end
+	if #frammande > 0 then
+		warn(("[Rigg] %d taggade objekt utan kanoniskt hästid lämnades "
+			.. "orörda: %s"):format(#frammande, table.concat(frammande, ", ")))
+	end
+	--[[ Boken nollas med världen: efter saneringen finns inga reserverade
+		boxar, för det finns inga hästar. ]]
+	table.clear(boxAgare)
+	return rivna
+end
+
+--[[ Nästa lediga box framåt från `n`, deterministiskt och utan slump —
+	samma princip som `Stallet.tilldelaLedig` använder för hästar. Finns
+	ingen ledig alls returneras nil, och då byggs ingen häst: hellre en
+	häst som saknas och syns i loggen än två som står i varandra. ]]
+local function nastaLediga(Stallet: any, fran: number): number?
+	local antal = Stallet.boxantal()
+	for steg = 1, antal do
+		local n = ((fran - 1 + steg) % antal) + 1
+		if boxAgare[n] == nil and Stallet.box(n) ~= nil then return n end
+	end
+	return nil
+end
+
 --[[ En häst i sin egen box. Returnerar modellen, eller nil med ett skäl. ]]
 function JackRigg.placera(hastId: string): (Model?, string?)
 	local Stallet = delad("Stallet")
 	if not Stallet then return nil, "Stallet saknas i ReplicatedStorage" end
 
+	--[[ INVARIANT 1: EN HÄST → EN MODELL. En andra kopia av samma individ
+		är aldrig rätt svar — att flytta henne till en ledig box hade gett
+		två Kennedy i stallet i stället för två i samma box. ]]
+	local redan = befintlig(hastId)
+	if redan then
+		warn(("[Rigg] DUBBLETT: %s står redan i världen (%s). Bygger ingen "
+			.. "andra kopia."):format(hastId, redan:GetFullName()))
+		return nil, "redan byggd"
+	end
+
 	local box = (Stallet :: any).boxFor(hastId)
 	if not box or not box.varld then return nil, "ingen box i datan" end
+
+	--[[ INVARIANT 2: EN BOX → EN HÄST. Två OLIKA hästar på samma box löses
+		deterministiskt framåt, och båda namnen och boxen står i loggen —
+		aldrig en tyst stapling. ]]
+	local nummer = box.nummer
+	local sittande = boxAgare[nummer]
+	if sittande and sittande ~= hastId then
+		local ledig = nastaLediga(Stallet, nummer)
+		if not ledig then
+			warn(("[Rigg] KROCK: %s och %s pekar båda på box %d, och ingen "
+				.. "box är ledig. %s byggs inte."):format(
+				sittande, hastId, nummer, hastId))
+			return nil, "boxkrock utan ledig box"
+		end
+		local nyBox = (Stallet :: any).box(ledig)
+		warn(("[Rigg] KROCK: %s och %s pekar båda på box %d. %s flyttas "
+			.. "till box %d (rad %s, plats %d)."):format(
+			sittande, hastId, nummer, hastId, ledig,
+			tostring(nyBox.rad), nyBox.plats))
+		box, nummer = nyBox, ledig
+	end
 
 	local bas = anlaggningsbas()
 	if not bas then return nil, "anläggningen är inte byggd" end
@@ -312,8 +559,45 @@ function JackRigg.placera(hastId: string): (Model?, string?)
 		markören och hästen faktiskt hamnar i det byggda stallet. ]]
 	local lage = bas * CFrame.new(box.varld.x * M, 0, -box.varld.y * M)
 
-	local modell = JackRigg.bygg(hastId, namnFor(hastId), lage)
+	--[[ Hästens egen mankhöjd, ur samma karta som utseendet läser: en
+		häst ska vara lika stor fysiskt som hon är visuellt. ]]
+	local hd = dataFor(hastId)
+	local egenHojd = Utseende.mankhojd(hd or {})
+	local modell = JackRigg.bygg(hastId, namnFor(hastId), lage, egenHojd)
+
+	--[[ ══ DET VISUELLA LAGRET ═══════════════════════════════════════
+
+		HORSE_VISUAL_QUALITY_GATE, prototypsteget. Bara de hästar som står
+		i `VISUELL` får ett riktigt nät; resten behåller lådorna. Det är
+		med flit: ordern säger EN häst, och en lista är enklare att lita på
+		än ett villkor.
+
+		Monteringen sker FÖRE `Parent = workspace` och före taggen, så att
+		HorseService aldrig ser en halvbyggd häst, och den sker i en pcall:
+		ett visuellt lager får aldrig kunna fälla spelbarheten. Faller det
+		står hästen kvar i lådor och Output säger varför. ]]
+	local profil = visuellProfil(hastId)
+	if profil then
+		local ok, skal = pcall(function()
+			local mall = HastVisual.mall(profil)
+			if not mall then return "mallen saknas: ServerStorage.HastVisualer." .. profil end
+			local monterad, m = HastVisual.montera(modell, mall, profil, dataFor(hastId))
+			return if monterad then nil else m
+		end)
+		if not ok then
+			warn(("[Rigg] visuellt lager föll för %s: %s"):format(hastId, tostring(skal)))
+		elseif skal ~= nil then
+			warn(("[Rigg] %s behåller lådorna: %s"):format(hastId, tostring(skal)))
+		else
+			print(("[Rigg] %s bär nu profilen %q"):format(hastId, profil))
+		end
+	end
+
 	modell.Parent = workspace
+	--[[ Boxen bokförs när hästen FAKTISKT står i den, inte när vi bestämde
+		oss. Bokförs den tidigare reserverar ett misslyckat bygge en box åt
+		en häst som inte finns. ]]
+	boxAgare[nummer] = hastId
 	--[[ Taggen SIST: HorseService lyssnar på `GetInstanceAddedSignal`, och
 		en halvbyggd modell ska inte kunna registreras. ]]
 	CollectionService:AddTag(modell, TAG)
@@ -340,6 +624,13 @@ function JackRigg.start(): Model?
 	for id in pairs(hastar) do table.insert(ids, id) end
 	table.sort(ids)
 
+	--[[ SANERA FÖRST, BYGG SEDAN. En sparad plats med hästmodeller kvar i
+		sig är hela skälet till att det här steget finns. ]]
+	local rivna = JackRigg.saneraBefintliga()
+	if rivna > 0 then
+		warn(("[Rigg] %d hästar låg sparade i platsen och har byggts om."):format(rivna))
+	end
+
 	local forsta: Model? = nil
 	local byggda, utanBox = 0, {}
 	for _, id in ipairs(ids) do
@@ -355,6 +646,39 @@ function JackRigg.start(): Model?
 	print(("[Rigg] %d av %d hästar står i sina boxar"):format(byggda, #ids))
 	if #utanBox > 0 then
 		warn(("[Rigg] utan plats: %s"):format(table.concat(utanBox, ", ")))
+	end
+
+	--[[ ── EFTERKONTROLL ──────────────────────────────────────────────
+		Boken ovan hindrar krocken; den här raden BEVISAR att den gjorde
+		det, mätt på världen och inte på räknaren. ]]
+	local perId: { [string]: string } = {}
+	local perBox: { [number]: string } = {}
+	local brott = 0
+	for _, m in ipairs(CollectionService:GetTagged(TAG)) do
+		local id = m:GetAttribute("HorseId")
+		if typeof(id) == "string" and m:IsDescendantOf(workspace) then
+			if perId[id] then
+				brott += 1
+				warn(("[Rigg] INVARIANT BRUTEN — samma häst två gånger: %s "
+					.. "(%s och %s)"):format(id, perId[id], m:GetFullName()))
+			else
+				perId[id] = m:GetFullName()
+			end
+			local n = (Stallet :: any).boxNummerFor(id)
+			if n then
+				if perBox[n] and perBox[n] ~= id then
+					brott += 1
+					warn(("[Rigg] INVARIANT BRUTEN — box %d delas av %s och %s")
+						:format(n, perBox[n], id))
+				end
+				perBox[n] = id
+			end
+		end
+	end
+	if brott == 0 then
+		print("[Rigg] invariant håller: en häst → en box, en box → en häst.")
+	else
+		warn(("[Rigg] %d invariantbrott kvar efter bygget."):format(brott))
 	end
 	if not forsta then
 		warn(("[Rigg] första dagens häst (%s) kom inte på plats.")
