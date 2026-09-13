@@ -584,6 +584,21 @@ do
 	local F1 = finger(cx, cy - TouchControls.RADIE)
 	spak.InputBegan:Fire(F1)
 	rid(0.2)
+
+	--[[ Spakfingret glider in över blickytan INNAN något annat finger
+		finns: det är fortfarande spakens finger och får inte bli ett
+		blickfinger. Mäts här, med blicken ledig, för att det är då vakten
+		`obj == aktivFinger` är det enda som skyddar — med ett blickfinger
+		redan nere hade `if blickFinger then return end` tagit fallet och
+		provet hade inte kunnat falla (falsifierat: så var det först). ]]
+	yta.InputBegan:Fire(F1)
+	F1.Position = Vector2.new(cx + 20, cy - TouchControls.RADIE)
+	usv.InputChanged:Fire(F1)
+	rid(0.1)
+	prova("spakens finger tas inte över av blickytan när blicken är ledig",
+		#blickar == 0 and senaste.forward > 0.9,
+		("(blickanrop %d · forward %.2f)"):format(#blickar, senaste.forward))
+
 	local F2 = finger(yr.x0 + 200, yr.y0 + 100 - INSET)
 	yta.InputBegan:Fire(F2)
 	prova("ett andra finger på blickytan vrider inte kameran vid nedslaget",
@@ -613,15 +628,6 @@ do
 	prova("spakfingret styr och rör inte blicken", senaste.steer > 0.9
 		and #blickar == n,
 		("(steer %.2f · blickanrop %d → %d)"):format(senaste.steer, n, #blickar))
-
-	--[[ Spakfingret glider in över blickytan: det är FORTFARANDE spakens
-		finger och får inte bli ett blickfinger. ]]
-	yta.InputBegan:Fire(F1)
-	F1.Position = Vector2.new(cx + TouchControls.RADIE + 40, cy + 10)
-	usv.InputChanged:Fire(F1)
-	rid(0.1)
-	prova("spakens finger tas inte över av blickytan", #blickar == n
-		and senaste.steer > 0.9, ("(blickanrop %d · steer %.2f)"):format(#blickar, senaste.steer))
 
 	--[[ Ett tredje finger medan blickfingret är nere: ignoreras. ]]
 	local F3 = finger(yr.x0 + 300, yr.y0 + 50 - INSET)
