@@ -73,8 +73,14 @@ TouchControls.KNAPP = 56          -- knopens diameter
 
 --[[ ── GUI ─────────────────────────────────────────────────────────────
      Byggs först vid uppsittning, på en pekenhet. Allt nedanför är
-     Roblox-instanser och kan därför bara köras i Studio eller i en klient;
-     mätbänken testar `axis` och `Input`-kontraktet, inte gesterna. ]]
+     Roblox-instanser. Det stod här att bänken bara testar `axis` och
+     `Input`-kontraktet, inte gesterna — det gällde tills stubbarna fick
+     fyrbara `InputChanged`/`InputEnded`, `Vector2`-räknesätt och
+     `UIGridLayout`-celler. Sedan dess kör tests/pekridning.spec.luau den
+     här `mount()` på riktigt genom klientens loop: knapparnas signaler,
+     spakens och blickytans fingrar, HALT-låset, tygeln, avsittningen.
+     Vad bänken INTE kan säga står i specens filhuvud: Roblox egen
+     träffrouting, riktig multitouch och känsla är HARDWARE CHECK. ]]
 local gui: ScreenGui? = nil
 local aktivFinger: InputObject? = nil
 local Input = nil :: any            -- sätts av mount, för att undvika cykel
