@@ -165,10 +165,21 @@ do
 	check("_rad hittar samma rad på den engelska texten",
 		KontrollHjalp._rad("Mount / dismount") ~= nil)
 
-	--[[ Här mättes att pekknappen och hjälpraden sa samma sak. Första
-		playable är ett skrivbordsspel; pekknapparna ritas inte längre och
-		`touch.*` finns inte i kanon. Raden är borta i stället för att
-		mäta en yta spelet inte har. ]]
+	--[[ Pekknappen och hjälpraden om den ska säga SAMMA sak — de läser
+		samma nyckel. En hjälp som säger något annat än knappen den
+		beskriver är värre än ingen hjälp. ]]
+	local pekEn = pa("en-us", function()
+		local ut = {}
+		game:GetService("UserInputService").KeyboardEnabled = false
+		game:GetService("UserInputService").TouchEnabled = true
+		for _, r in ipairs(KontrollHjalp.rader()) do ut[r.vad] = r.reglage end
+		game:GetService("UserInputService").KeyboardEnabled = true
+		game:GetService("UserInputService").TouchEnabled = false
+		return ut
+	end)
+	check("pekreglaget i hjälpen är knappens EGEN engelska etikett",
+		pekEn[Sprak.iSprak("en", "hjalp.sitt_upp_av")] == Sprak.iSprak("en", "touch.sitt_av"),
+		string.format("%q", tostring(pekEn[Sprak.iSprak("en", "hjalp.sitt_upp_av")])))
 end
 
 print("\n── Lärarkortet (Ugneta) ──")

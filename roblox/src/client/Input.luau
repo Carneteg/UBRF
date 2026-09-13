@@ -141,8 +141,8 @@ function Input.unbind()
 	     bildrutan efter nästa uppsittning — hästen bytte gångart av sig
 	     själv innan ryttaren rört en tangent.
 
-	     `_paradEdge` nollades redan; de här två glömdes. Mätt när felet
-	     hittades: tre mätningar föll före den här raden. ]]
+	     `_paradEdge` nollades redan; de här två glömdes. Mätt i
+	     tests/touch.spec.luau: tre mätningar föll före den här raden. ]]
 	state._upEdge, state._downEdge = false, false
 end
 
@@ -221,18 +221,7 @@ function Input.consume(): Types.Intent
 	return intent
 end
 
---[[ ══ INMATNING UTIFRÅN, UTAN TANGENT ════════════════════════════════
-
-     Kanalen byggdes för pekskärmens `TouchControls`, som byggde en spak
-     och knappar och matade in avsikten här. Första playable är numera ett
-     SKRIVBORDSSPEL och den modulen är borta.
-
-     Funktionerna står kvar för att de är en ren, neutral väg in i samma
-     avsiktslager som tangenterna och handkontrollen — provet driver
-     gångartsflanken genom `touchGait`, och en framtida yta (pekskärm igen,
-     en knapp i HUD:en) behöver inte ett eget lager. De är passiva: rör
-     ingen dem står värdena på noll och `consume` lägger till noll.
-
+--[[ För pekskärm: `TouchControls` kallar de här i stället för tangenter.
      Värdena är normaliserade avsikter i −1..1, precis som tangenternas och
      spakens, och läggs till dem i `consume` i stället för att ersätta dem. ]]
 function Input.setTouch(forward: number, steer: number)

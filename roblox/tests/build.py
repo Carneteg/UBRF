@@ -427,6 +427,7 @@ KLIENT = SPEL + [
     ("EffectsController",   "src/client/EffectsController.luau"),
     ("RiderController",     "src/client/RiderController.luau"),
     ("Input",               "src/client/Input.luau"),
+    ("TouchControls",       "src/client/TouchControls.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
@@ -486,7 +487,8 @@ KOHERENS = GEOMETRI + [
 ]
 
 MODULER = [
-    #[[ Samma skal som i PARITET: InteractionController ritar spelartext. ]]
+    #[[ Samma skal som i PARITET: TouchControls och InteractionController
+    #   ritar spelartext. ]]
     ("UBRFSprak",    "game/UBRFSprak.luau"),
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
@@ -511,6 +513,7 @@ MODULER = [
     ("CameraController",   "src/client/CameraController.luau"),
     ("RiderController",    "src/client/RiderController.luau"),
     ("Input",              "src/client/Input.luau"),
+    ("TouchControls",      "src/client/TouchControls.luau"),
     ("Genomsikt",          "src/client/Genomsikt.luau"),
     ("HastGang",           "src/client/HastGang.luau"),
 ]
