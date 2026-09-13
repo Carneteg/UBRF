@@ -30,7 +30,9 @@ För varje steg: ange PASS, FAIL, NOT_TESTED eller NOT_IMPLEMENTED. Notera platt
 7. Avsluta lektionen och genomför tillgängligt efterarbete. Kontrollera att hästens behov och spelarens handlingar får begripliga konsekvenser. Saknat efterarbete registreras som innehållslucka, inte som färdig funktion.
 8. Stäng och öppna igen. Kontrollera befintligt sparande, hästidentitet, framsteg och att gästläget inte kräver kontoskapande. Testa därefter responsivitet och hela centrala loopen på telefon, surfplatta och dator.
 
-Roblox Studio ska köras i verklig runtime. Tangentbord, gamepad och fysisk touch ska särskiljas. Om Studio eller en enhet saknas: NOT_TESTED med konkret reproduktionsunderlag. Webbtester, Luau-stubbar och export får aldrig räknas som ersättning.
+Roblox Studio ska köras i verklig runtime. Tangentbord och gamepad ska särskiljas. Om Studio eller en enhet saknas: NOT_TESTED med konkret reproduktionsunderlag. Webbtester, Luau-stubbar och export får aldrig räknas som ersättning.
+
+Fysisk touch på Roblox är inte längre en grind (2026-09-13): första playable är ett skrivbordsspel. Punkt 8 ovan gäller alltjämt **webben**, som har kvar sin egen pekyta.
 
 ## Beslut om alpha
 

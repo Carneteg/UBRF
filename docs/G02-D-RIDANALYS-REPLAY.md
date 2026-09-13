@@ -236,7 +236,9 @@ en volt — det är Tobias att avgöra.
 - **Game feel i replayen** — om det känns bra att se sin egen ritt är
   Tobias avgörande, inte ett prov.
 
-### Enhetstest — Studio och fysisk iPad
+### Enhetstest — Studio
+
+*(Pekdelen upphävd 2026-09-13: första playable är ett skrivbordsspel.)*
 
 Efter ChatGPTs review av `8413baa` är nästa acceptanssteg ett riktigt
 spelbart bygge på riktig hårdvara. Det fullständiga protokollet, med

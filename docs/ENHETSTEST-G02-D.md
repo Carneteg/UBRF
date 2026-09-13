@@ -1,4 +1,11 @@
-# Enhetstest G02-D — protokoll för Studio och fysisk iPad
+# Enhetstest G02-D — protokoll för Studio
+
+> **Pekdelarna är UPPHÄVDA 2026-09-13.** Tobias produktbeslut: första
+> playable är ett skrivbordsspel, och Roblox egen pekyta är borttagen ur
+> koden. Stegen nedan som kräver fysisk iPad, två tummar eller
+> pekreglage gäller inte längre — de står kvar som historik över vad
+> G02-D en gång mätte. Studio-, tangentbords- och gamepaddelarna gäller
+> oförändrat.
 
 Skrivet på ChatGPTs oberoende review av `8413baa` (2026-09-09 04:22):
 *"Next acceptance work is a real playable build and device test... Record
