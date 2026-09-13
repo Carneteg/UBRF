@@ -1160,12 +1160,35 @@ function rita(vy: any)
 		lage, ledtext = "redo", Sprak.t("hud.kolla_gjorden")
 		if rubrik then rubrik.Text = Sprak.t("hud.klar_sitt_upp") end
 	else
-		local fasnamn = nil
+		local fasnamn, fastext = nil, nil
 		for _, steg in ipairs(vy.steg or {}) do
-			if steg.id == vy.nasta then fasnamn = lokaltSteg(steg).namn end
+			if steg.id == vy.nasta then
+				local ls = lokaltSteg(steg)
+				fasnamn, fastext = ls.namn, ls.text
+			end
 		end
 		lage = "skotsel:" .. tostring(vy.nasta)
 		if rubrik then rubrik.Text = fasnamn or Sprak.t("hud.gor_i_ordning") end
+
+		--[[ EN VAL-FAS LEDS AV FASEN, INTE AV ETT ALTERNATIV.
+
+			`momenttext` är texten hos det moment som står på tur. För en
+			checklista stämmer det: momenten görs i ordning, och nästa moments
+			text är nästa sak att göra. För ett VAL gör den två fel samtidigt.
+
+			`nastaMoment` returnerar första ogjorda RIKTIGA alternativet, och
+			hälsningen har två likvärdigt riktiga — vilket som pekas ut är en
+			slump i kanonens ordning. Och momentets `text` är i ett val inte en
+			instruktion utan `svar`: hästens reaktion EFTER att man valt.
+
+			Följden stod på skärmen: en spelare som just kommit in i spelet,
+			på 0/5 och utan att ha gått ett steg, läste "Bra. Nu vet hon att du
+			är där." om något hon inte gjort — och fick svaret på frågan innan
+			den ställdes. Fasens egen text säger det hon behöver: gå fram från
+			sidan och säg hennes namn. ]]
+		if vy.nasta and Preparation.arVal(vy.nasta) and fastext then
+			ledtext = fastext
+		end
 	end
 
 	--[[ RUBRIKEN PEKAR TILLBAKA när hästen är utom räckhåll. Den skrivs
