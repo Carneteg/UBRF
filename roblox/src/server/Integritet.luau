@@ -10,7 +10,7 @@
 	Två skäl.
 
 	1. `ReplicatedStorage.UBRFBuild` var handplacerad och pekade på en head
-	   53 commits gammal. Preflightens punkt 9 läste den och sa PASS. Grinden
+	   44 commits gammal. Preflightens punkt 9 läste den och sa PASS. Grinden
 	   som ska svara på "vilken kod testas?" svarade alltså med fel svar.
 
 	2. Placen bar kvarglömda objekt som ingen källa äger: främmande importer
@@ -216,7 +216,7 @@ function Integritet.rader(): { Rad }
 	--[[ 9. BUILD-IDENTITET. Fail closed i fyra steg: finns, går att läsa,
 		är genererad, och bär en hash med rätt form. Punkt 9 hade tidigare
 		bara det första steget, och det var därför en handplacerad modul med
-		fel SHA kunde hålla den grön i 53 commits. ]]
+		fel SHA kunde hålla den grön i 44 commits. ]]
 	local id = Integritet.identitet()
 	rad("9a build-identitet finns och går att läsa", id ~= nil,
 		if id then "ReplicatedStorage.UBRFBuild" else "saknas eller trasig")

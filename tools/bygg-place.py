@@ -195,7 +195,7 @@ def main() -> int:
     #
     #   Skalet till att den mappades: en Rojo-synkad place fick forr ingen
     #   identitet alls, sa nagon lade dit en for hand. Den blev kvar och pekade
-    #   pa en head 53 commits gammal medan punkt 9 lyste gront.
+    #   pa en head 44 commits gammal medan punkt 9 lyste gront.
     #
     #   Raden star kvar for den place som byggs ur en gren DAR mappningen inte
     #   finns — men bara da, och identiteten far inte langre hittas pa nar

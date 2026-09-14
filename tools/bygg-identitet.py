@@ -3,8 +3,8 @@
 
 Bakgrund: #171. En live-audit av den anslutna Studio-placen visade att
 `ReplicatedStorage.UBRFBuild` var HANDPLACERAD. Modulen sa sjalv i sin
-kommentar att den var tillfallig, och den pekade pa `3ead609` medan repots
-HEAD stod pa `78b7af8` — 53 commits senare. Preflightens punkt 9 laser den
+kommentar att den var tillfallig, och den pekade pa `3ead609` medan GitHub
+`main` stod pa `7d8fe86` — 44 commits senare. Preflightens punkt 9 laser den
 modulen och rapporterade PASS. Grinden som skulle svara pa "vilken kod
 testas?" svarade alltsa med fel svar, och varje QA-slutsats ur den placen
 vilade pa det.

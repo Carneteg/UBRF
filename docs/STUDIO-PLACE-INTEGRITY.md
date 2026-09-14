@@ -16,8 +16,8 @@ klientens `Horse`, namn för namn. Ändå gick det inte att lita på ett enda
 QA-resultat ur placen.
 
 `ReplicatedStorage.UBRFBuild` var handplacerad. Modulen sa själv i sin
-kommentar att den var tillfällig, och pekade på `3ead609` medan repots HEAD
-stod på `78b7af8` — **53 commits senare**. Preflightens punkt 9 läste den och
+kommentar att den var tillfällig, och pekade på `3ead609` medan GitHub
+`main` stod på `7d8fe86` — **44 commits senare**. Preflightens punkt 9 läste den och
 sa PASS.
 
 Roten var strukturell. `default.project.json` mappade ingen `UBRFBuild` alls,

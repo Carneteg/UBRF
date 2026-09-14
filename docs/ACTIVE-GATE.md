@@ -105,7 +105,7 @@ som därefter ska testas som spel; de små PR:erna ligger kvar som provenance.
 
 Uppdrag från Tobias 2026-09-14 i issue #171: **integritetsgrind för
 build-identitet och place-drift**, på egen feature branch
-`claude/studio-rojo-integritet-20260914` ur `main` @ `78b7af8`.
+`claude/studio-rojo-integritet-ren-20260914` ur GitHub `main` @ `7d8fe86`.
 
 Bakgrunden är en läsande Studio-MCP-audit av den anslutna placen `UBRF`
 (placeId `106030782437053`): Rojo-träden stämde exakt mot repot, men
