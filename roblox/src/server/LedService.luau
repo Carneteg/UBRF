@@ -341,6 +341,27 @@ function LedService.placeraVidMal(player: Player, modell: Model): (boolean, stri
 		return false, "led.kunde_inte_stalla_fram"
 	end
 
+	--[[ ── SPELAREN GÅR MED ──────────────────────────────────────────
+
+		Att LEDA en häst betyder att man går bredvid henne. Första
+		versionen flyttade bara hästen, och mätt i Studio blev följden
+		precis det #182 varnade för: hon försvann 98 studs (32,7 m) till
+		ridhuset medan spelaren stod kvar i stallet.
+
+		Värre än förvirringen var att det bröt kedjan. Varje steg i
+		`GameplayService` prövar `narvaro(player)`, så nästa moment föll
+		på `spel.for_langt` — förberedelsen blev ofullständig och spelaren
+		fick ett nej på en knapp hon just tryckt på.
+
+		Hon ställs vid hästens vänstra sida, där man leder ifrån, och på
+		hästens marknivå. ]]
+	local karaktar = player.Character
+	local hrp = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if hrp and hrp:IsA("BasePart") then
+		local hast = (modell.PrimaryPart :: BasePart).CFrame
+		hrp.CFrame = hast * CFrame.new(-3, 0, 0)
+	end
+
 	local hastId = tostring(modell:GetAttribute("HorseId") or "")
 	noteraUppnatt(player, hastId, "lamnatBox")
 	noteraUppnatt(player, hastId, "malNatt")
