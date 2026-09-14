@@ -416,9 +416,25 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		hoppas över och `lamnatBox` är sann från början. Exakt i luckan
 		(punkt 0) räknas som inne, så den som står mitt i öppningen får
 		behålla sin utgång. ]]
+	--[[ VET VI ÖVER HUVUD TAGET VAR BOXEN ÄR? (#180)
+
+		`iBox` svarade förut på två olika frågor med samma false: "dörren
+		säger att hon står i gången" OCH "det finns ingen dörr att fråga".
+		`lamnatBox = not iBox` gjorde därför det senare till ett påstående
+		om att hon redan lämnat boxen — innan hon rört sig en centimeter.
+
+		Det är fail-open på precis den fråga som ska vara fail-closed.
+		Konsekvensen är inte teoretisk: `PreparationMoment("leda")` kvitterar
+		momentet på `harLamnatBox`, så en box utan modellerad dörr hade
+		godkänt en ledning som aldrig utförts. Samma tysta falska PASS som
+		#162 och #171 handlade om.
+
+		`dorrKand` skiljer de två fallen åt. Fångas FÖRE nollställningen
+		nedan, som annars suddar just det vi frågar om. ]]
+	local dorrKand = dorrMitt ~= nil and dorrUt ~= nil
 	local iBox = false
-	if dorrMitt and dorrUt then
-		iBox = (pivot.Position - dorrMitt):Dot(dorrUt) <= 0
+	if dorrKand then
+		iBox = (pivot.Position - (dorrMitt :: Vector3)):Dot(dorrUt :: Vector3) <= 0
 	end
 	if not iBox then
 		narmasteDorr, dorrMitt, dorrUt = nil, nil, nil
@@ -477,8 +493,14 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		gar = false,
 		--[[ Står hon redan i gången finns ingen box kvar att lämna. Då är
 			flaggan sann direkt, och `boxX`/`boxY` nedan konsulteras aldrig
-			— de gäller bara så länge hon faktiskt är kvar i facket. ]]
-		lamnatBox = not iBox,
+			— de gäller bara så länge hon faktiskt är kvar i facket.
+
+			Men BARA när en dörr faktiskt svarat på frågan (#180). Utan
+			dörr vet tjänsten ingenting om var facket slutar, och då ska
+			den inte påstå något: flaggan är false, och avståndsregeln i
+			`_steg` — som mäter FAKTISK förflyttning från startpunkten och
+			inte behöver någon dörrgeometri — får avgöra när hon är ute. ]]
+		lamnatBox = dorrKand and not iBox,
 		malNatt = false,
 		boxX = bx, boxY = by,
 		dorrMitt = dorrMitt,

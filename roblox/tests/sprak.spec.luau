@@ -60,11 +60,26 @@ do
 
 	--[[ …och att en översättning FAKTISKT är en översättning. En kopierad
 		svensk text i en-fältet är samma fel som ingen översättning, men
-		ser grön ut i räkningen ovan. Egennamn och tangentnamn undantas
-		inte här: katalogen innehåller inga. ]]
+		ser grön ut i räkningen ovan.
+
+		SAMMANFALLANDE TERMER (#180). Raden sa förut att katalogen inte
+		innehåller några undantag. Det stämde när den skrevs. Sedan #179
+		bär katalogen också pekknapparnas gångartsnamn, och där finns ett
+		ord som ÄR samma på båda språken: "halt" är engelska och en ridterm
+		i båda länderna. `en = "HALT"` är alltså en korrekt översättning som
+		råkar se ut som en kopia.
+
+		Undantaget är en uttrycklig lista, inte ett mönster: varje post
+		måste motiveras här. Regeln behåller därmed sin kraft — en
+		oöversatt sträng fastnar fortfarande — utan att tvinga fram en
+		SÄMRE engelsk text bara för att bli grön. ]]
+	local SAMMANFALLER: { [string]: string } = {
+		["touch.halt"] = "halt är samma ord och samma ridterm på båda språken",
+	}
 	local samma = {}
 	for _, nyckel in ipairs(nycklar) do
-		if Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel) then
+		if Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel)
+			and not SAMMANFALLER[nyckel] then
 			table.insert(samma, nyckel)
 		end
 	end

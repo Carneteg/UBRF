@@ -88,11 +88,44 @@ function prova(namn, ok, detalj) {
    Provet går UTIFRÅN in i hagen och sedan UT igen, tvärs den sida
    grinden sitter på. */
 {
+  /* HÄMTHAGENS grind, utpekad ur kanon — inte "första staketet som råkar
+     ha en grind" (#180).
+
+     `find(s => s.grindar && s.grindar.length)` tog uteridbanans grind på
+     [159, 132] och jämförde den mot hämthagens markör [178, 79]. Provet
+     kunde därför aldrig bli grönt, och de tre raderna nedan mätte fel
+     staket i hela sin livstid. Felet syntes inte förrän språkgrinden i
+     #179 slutade stoppa jobbet före det här steget.
+
+     `ANL.hamtHage.grind` ÄR kanonpunkten — samma tal som raden nedan
+     jämför mot. Staketet väljs därför på att det bär just den grinden, och
+     hagen på att kanonpunkten ligger på dess kant. Ingen geometri flyttad;
+     bara rätt objekt utpekat. */
   const g = await page.evaluate(() => {
-    const st = ANL.staket.find(s => s.grindar && s.grindar.length);
-    return { grind: st.grindar[0].p, bredd: st.grindar[0].bredd,
-      hage: ANL.hagar[0].rekt, markor: ANL.hamtHage.grind };
+    const m = ANL.hamtHage.grind;
+    const nara = (p) => Math.hypot(p[0] - m[0], p[1] - m[1]) < 0.01;
+    let st = null, gr = null;
+    for (const s of ANL.staket) {
+      const träff = (s.grindar || []).find((x) => nara(x.p));
+      if (träff) { st = s; gr = träff; break; }
+    }
+    if (!st) return { saknas: true, markor: m };
+    /* Hagen som grinden hör till: den vars rektangel kanonpunkten ligger
+       på kanten av. Ingen fallback med flit — matchar ingen hage ska
+       provet säga ifrån, inte tyst mäta en annan hage. */
+    const pa = (r) => m[0] >= r.x - 0.01 && m[0] <= r.x + r.w + 0.01
+      && m[1] >= r.y - 0.01 && m[1] <= r.y + r.h + 0.01;
+    const hage = (ANL.hagar.find((h) => pa(h.rekt)) || {}).rekt;
+    return { grind: gr.p, bredd: gr.bredd, hage, markor: m };
   });
+  /* Saknas grinden i datan är det INTE samma fel som att den sitter fel,
+     och de följande raderna kan inte mätas alls utan en punkt att gå mot.
+     Raden säger då ifrån och blocket avbryts — hellre ett tydligt fel än
+     en kaskad av kryptiska. */
+  if (g.saknas || !g.hage) {
+    prova("hämthagens grind finns i staketdatan", false,
+      `ingen grind på kanonpunkten [${g.markor}] — de tre gångproven hoppas över`);
+  } else {
   const [gx, gy] = g.grind;
   prova("grinden står på kanonmarkören — ingen ny plats påhittad",
     Math.hypot(gx - g.markor[0], gy - g.markor[1]) < 0.01,
@@ -117,6 +150,7 @@ function prova(namn, ok, detalj) {
   prova("staketet är TÄTT 6 m norr om grinden (negativ kontroll)",
     p.stod && !p.nadde && p.x < gx - 0.2,
     `stod stilla ${p.stod} på x ${p.x}, stoppad före staketlinjen x ${gx}`);
+}
 }
 
 /* ══ 2. HÄSTEN BÖRJAR I BOXEN ══════════════════════════════════════

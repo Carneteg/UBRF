@@ -302,6 +302,17 @@ OverlapParams = { new = function()
 end }
 
 workspace = {
+	--[[ `ChildAdded`/`ChildRemoved` SAKNADES (#180).
+
+	     `DinHast.start` kopplar sig till `workspace.ChildAdded` för att
+	     släcka andra spelares boxmarkörer när de dyker upp — flerspelar-
+	     fixen ur #162. Utan signalen dog `sprak`, `varldshud` och `klient`
+	     på `attempt to index nil with 'Connect'` så fort modulen alls kom
+	     med i bänken.
+
+	     Varje Instance i Roblox har dem. Att bänkens workspace inte hade
+	     det är samma sorts hål som `signal:Wait()` och
+	     `Players:GetPlayerFromCharacter` — harnessen, inte spelet. ]]
 	GetPartBoundsInBox = function(_, cf, storlek, params)
 		if __delarILada then
 			return __delarILada(cf, storlek, params)
@@ -840,6 +851,13 @@ end
      hitta barn, kopplas ur, och (för knappar) ett Activated att ansluta. ]]
 __signal_ny = __signal
 
+--[[ Workspace-signalerna kopplas HAR och inte i tabellen pa rad 304:
+     `workspace` definieras fore `__signal`, sa ett anrop daruppe ger
+     nil och hela bankan dog pa "attempt to call a nil value" —
+     tystare an det ursprungliga felet och i en helt annan fil. ]]
+workspace.ChildAdded = __signal()
+workspace.ChildRemoved = __signal()
+
 --[[ ── BEVAKADE EGENSKAPER ─────────────────────────────────────────────
      Egenskaper som koden både SKRIVER och LYSSNAR på. De ligger i en
      skuggtabell (`_p`) i stället för direkt i instansen, och skälet är en
@@ -864,6 +882,25 @@ local __BEVAKADE = {
 local function __nyInstans(klass)
 	local inst = {
 		ClassName = klass, Name = "", AnimationId = "",
+		--[[ `AbsoluteSize` SAKNADES, och det fällde `ugneta.spec` (#180).
+
+		     `UgnetaController.visaKort` räknar hur mycket fritt utrymme
+		     kortet har:
+
+		         local W = foralder and foralder.AbsoluteSize.X or 0
+
+		     Vakten prövar `foralder` men inte egenskapen. På en riktig
+		     GuiObject BEHÖVER den inte prövas — `AbsoluteSize` finns
+		     alltid — så produktionen är oberörd. Stubben saknade den, och
+		     provet dog på `attempt to index nil with 'X'`.
+
+		     Noll är rätt utgångsvärde: en GUI-instans som aldrig lagts in
+		     i en ritad hierarki har ingen uppmätt storlek, och koden har
+		     redan en `if W > 0`-gren för just det fallet. Ett påhittat
+		     mått här hade fått provet att mäta stubbens tal i stället för
+		     modulens beslut. ]]
+		AbsoluteSize = vec(0, 0, 0),
+		AbsolutePosition = vec(0, 0, 0),
 		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
 	}
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
