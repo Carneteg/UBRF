@@ -36,17 +36,25 @@
 	`references/licenses/roblox-creator-store.md` och i `attribution`
 	nedan, och den följer med i spelets kreditlista.
 
-	══ HJÄLMEN — DEN FÖRSTA KANDIDATEN AVVISAD, DEN ANDRA ANTAGEN ═════
+	══ HJÄLMEN — TVÅ KANDIDATER UR SPEL, DEN TREDJE ANTAGEN ═══════════
 
 	123547958 "Moldenhauer Family Helmet" (2013) innehåller ETT Script
 	(toolbox `instanceCounts.script = 1`) och kan inte hämtas utan
 	inloggning (assetdelivery 401), så skriptet går inte att inspektera.
-	Den avvisades i #170 och står i `AVVISADE` så att den inte kan komma
-	tillbaka utan att ett prov faller. Tobias valde 2026-09-14 05:01 i
-	stället 11611844698 "Adrian Helmet" (cbr44446, 2022): fri, 7 MeshParts,
-	7 808 trianglar, INGA skript, tom beskrivning (inget attributionskrav)
-	— samma prövning som sadeln och tränset, samma utfall: antagen som
-	runtime-kandidat. Laddas den inte ritas primitiven i webbens gröna.
+	Den avvisades i #170. 11611844698 "Adrian Helmet" (cbr44446) klarade
+	prövningen (PO-val 05:01) men ersattes av Tobias 05:02 — den är inte
+	längre kandidat. Båda står i `AVVISADE` så att ingen av dem kan komma
+	tillbaka utan att ett prov faller.
+
+	Den gällande kandidaten är 92445706145003 "rosto do silva 25k"
+	(Bebel_dopix, 2025-04-20): fri (IsPublicDomain, isFree), 4 MeshParts,
+	3 194 trianglar / 9 029 hörn, INGA skript, beskrivningen är titeln
+	(inget attributionskrav), objekttyp Hat/Accessory. Samma prövning som
+	sadeln och tränset, samma utfall: antagen som runtime-kandidat.
+	Butiksbilden visar en svart kupa med hakrem på ett huvud — om huvudet
+	och halsen i bilden är delar av modellen kan inte avgöras headless
+	(assetdelivery 401): HARDWARE CHECK i Studio. Laddas den inte ritas
+	primitiven i webbens gröna.
 
 	══ VISUELL KÄLLA — ASSET ELLER PRIMITIV ═══════════════════════════
 
@@ -93,14 +101,15 @@ local LICENS = "Roblox Creator Store, fri modell (IsPublicDomain, isFree) — 20
 local KATALOG: { Post } = {
 	{
 		typ = "hjalm", barare = "ryttare", faste = "Head",
-		assetId = 11611844698, assetNamn = "Adrian Helmet",
-		skapare = "cbr44446", licens = LICENS,
-		trianglar = 7808, skript = 0,
+		assetId = 92445706145003, assetNamn = "rosto do silva 25k",
+		skapare = "Bebel_dopix", licens = LICENS,
+		trianglar = 3194, skript = 0,
 		visual = "asset",
-		beslut = "ANTAGEN som runtime-kandidat (PO-val 2026-09-14 05:01): 7 MeshParts, "
-			.. "7 808 trianglar, inga skript, fri, inget attributionskrav i titel eller "
-			.. "beskrivning. Passas in i huvudets låda och svetsas i Head. Läge, skala "
-			.. "och klippning mot avataren/kameran är HARDWARE CHECK i Studio.",
+		beslut = "ANTAGEN som runtime-kandidat (PO-val 2026-09-14 05:02): 4 MeshParts, "
+			.. "3 194 trianglar, inga skript, fri, inget attributionskrav i titel eller "
+			.. "beskrivning, objekttyp Hat/Accessory. Passas in i huvudets låda och "
+			.. "svetsas i Head. Läge, skala, klippning mot avataren/kameran och om "
+			.. "modellen bär eget huvud/hals (butiksbilden) är HARDWARE CHECK i Studio.",
 		kravsForRidning = true,
 	},
 	{
@@ -153,7 +162,9 @@ end
 	komma tillbaka tyst genom en redigering. ]]
 Utrustning.AVVISADE = {
 	{ assetId = 123547958, namn = "Moldenhauer Family Helmet", skapare = "skitzochase",
-		skal = "1 Script i modellen, oinspekterbart (assetdelivery 401); 2013. Ersatt av 11611844698 (PO 2026-09-14 05:01)." },
+		skal = "1 Script i modellen, oinspekterbart (assetdelivery 401); 2013. Ersatt (PO 2026-09-14 05:01)." },
+	{ assetId = 11611844698, namn = "Adrian Helmet", skapare = "cbr44446",
+		skal = "Klarade prövningen (0 skript, 7 808 trianglar) men ersatt av Tobias 2026-09-14 05:02 med 92445706145003; inte längre kandidat." },
 }
 
 --[[ Typerna spelaren kan sätta på och ta av genom utrustningspanelen, i

@@ -22,7 +22,8 @@ antagen, var den fästs och om den krävs för att sitta upp.
 | Typ | Asset | Utfall | Skäl |
 |---|---:|---|---|
 | Hjälm | 123547958 | **AVVISAD** → primitiv | Modellen innehåller 1 `Script` (toolbox `instanceCounts.script`). Filen kan inte hämtas utan inloggning (assetdelivery 401), så skriptet kan inte läsas. En fri modell från 2013 med ett oinspekterat skript sätts inte i en familjs spel. Primitiven är grön som webbens ryttarhjälm. |
-| Hjälm | 11611844698 | **ANTAGEN som runtime-kandidat** (PO-val 2026-09-14 05:01, ersätter 123547958) | "Adrian Helmet" av cbr44446 (2022): fri (`IsPublicDomain`, `isFree`), 7 MeshParts, 7 808 trianglar, **0 skript**, tom beskrivning — inget attributionskrav i titel eller beskrivning. Samma prövning som sadel/träns. Laddas i runtime, passas in i huvudets låda (1,25 × 0,9 × 1,3 av `Head`), svetsas i `Head`, kolliderar inte, masslös; primitiven är fallback. Läge/skala/klippning mot avatar och kamera: HARDWARE CHECK. Det avvisade ID:t står i `Utrustning.AVVISADE` och `utrustningsgrind.spec` fäller varje katalogpost som pekar på det. |
+| Hjälm | 11611844698 | **ERSATT** (PO 2026-09-14 05:02) — inte längre kandidat, står i `Utrustning.AVVISADE` | "Adrian Helmet" av cbr44446 (2022): fri, 7 MeshParts, 7 808 trianglar, 0 skript — klarade prövningen och var runtime-kandidat i `6696526` (PO-val 05:01), men Tobias bytte kandidat 05:02. Behålls som beslutsspår; `utrustningsgrind.spec` fäller varje katalogpost som pekar på den. |
+| Hjälm | 92445706145003 | **ANTAGEN som runtime-kandidat** (PO-val 2026-09-14 05:02, enda gällande kandidaten) | "rosto do silva 25k" av Bebel_dopix (2025-04-20): fri (`IsPublicDomain`, `isFree`), 4 MeshParts, 3 194 trianglar / 9 029 hörn, **0 skript** (`hasScripts = false`, `instanceCounts.script = 0`), beskrivningen är titeln — inget attributionskrav; objekttyp Hat/Accessory. Samma prövning som sadel/träns. Laddas i runtime, passas in i huvudets låda (1,25 × 0,9 × 1,3 av `Head`), svetsas i `Head`, kolliderar inte, masslös; primitiven är fallback. Butiksbilden (thumbnails-API) visar en svart kupa med hakrem på ett huvud med hals — `[REFERENCE GAP]` om huvudet/halsen är delar av modellen; kan inte avgöras headless (assetdelivery 401). Läge/skala/klippning mot avatar och kamera samt texturer: HARDWARE CHECK. Båda utmönstrade ID:na står i `Utrustning.AVVISADE` och `utrustningsgrind.spec` fäller varje katalogpost som pekar på dem. |
 | Sadel + underlägg | 9639407836 | **ANTAGEN som runtime-kandidat** | 4 MeshParts, 24 540 trianglar, inga skript, fri. Laddas med `InsertService:LoadAsset`, passas in i primitivens låda (0,44 × 0,30 × 0,62 m) och svetsas i `SaddleAttachment`s värddel. Underlägget ritas fortfarande som primitiv under (modellens egen pad ligger i sadeln). |
 | Träns | 15966015286 | **ANTAGEN som runtime-kandidat** | 1 794 trianglar, inga skript, fri. Passas in i huvudets låda (×1,12) och svetsas i huvudet; tyglarna byggs som förut ur riggens bettpunkter. **Kredit RHS** registrerad. |
 | Hopp | 2780160044 | rekommenderad för Studio-QA, **inte integrerad** | Lägst trianglar (888), inga skript, 92 % upp. Skala, kollision och ridlinje kan inte mätas headless; hindren på banan är i dag kanonplacerade primitiver (`RIDHUSINNE.hinder`). |
@@ -79,11 +80,13 @@ byggd. Prov: `tools/utrustningstest.mjs` (i CI).
   modellen), deras orientering, skala och klippning mot lådhästen och mot
   ett framtida nät. Inpassningen sker mot en låda; en modell med "fram" åt
   fel håll står fel tills en rotation läggs i katalogen.
-- Adrian Helmet (11611844698) i runtime: att `InsertService:LoadAsset`
+- Hjälmen 92445706145003 i runtime: att `InsertService:LoadAsset`
   laddar den i en publicerad upplevelse, dess orientering och läge på
   R15/R6 och skalade avatarer, klippning mot huvud/hår och kameran i
-  tredje person. Inpassningen sker mot huvudets låda; en rotation kan
-  behövas i katalogen.
+  tredje person, texturerna, och om modellen bär eget huvud/hals (som
+  butiksbilden antyder) — då ska `workspace.UBRFUtrustningVisual =
+  "primitiv"` sättas tills katalogen pekar på en ren hjälm. Inpassningen
+  sker mot huvudets låda; en rotation kan behövas i katalogen.
 - Fysisk iPad/iPhone: att raderna nås med fingret utan att träffa spaken.
 - Handkontroll: att `DPadLeft/Right` och `ButtonA` når panelen i Roblox
   klient (bänken fyrar `InputBegan`, inte en riktig kontroll).

@@ -75,23 +75,27 @@ do
 	local hj = Utrustning.post("hjalm")
 	check("hjälmen krävs för ridning (ridskolans regel, datastyrd)",
 		Utrustning.kravsForRidning("hjalm") == true)
-	--[[ PO-val 2026-09-14 05:01: Adrian Helmet ersätter den avvisade
-		kandidaten. Provet spikar ID:t så att en redigering inte kan byta
-		det tyst — och att det avvisade ID:t inte finns någonstans. ]]
-	check("hjälmens Creator Store-modell är 11611844698 Adrian Helmet, antagen utan skript",
-		hj.assetId == 11611844698 and hj.skript == 0 and hj.visual == "asset"
+	--[[ PO-val 2026-09-14 05:02: 92445706145003 ersätter både den avvisade
+		123547958 och den ersatta 11611844698. Provet spikar ID:t så att en
+		redigering inte kan byta det tyst — och att inget av de två
+		utmönstrade ID:na finns i någon katalogpost. ]]
+	check("hjälmens Creator Store-modell är 92445706145003 (rosto do silva 25k), antagen utan skript",
+		hj.assetId == 92445706145003 and hj.skript == 0 and hj.visual == "asset"
 			and hj.beslut:find("ANTAGEN", 1, true) ~= nil, tostring(hj.assetId) .. " " .. tostring(hj.beslut))
 	do
-		local avvisat = false
-		for _, a in ipairs(Utrustning.AVVISADE) do if a.assetId == 123547958 then avvisat = true end end
+		local avvisat, ersatt = false, false
+		for _, a in ipairs(Utrustning.AVVISADE) do
+			if a.assetId == 123547958 then avvisat = true end
+			if a.assetId == 11611844698 then ersatt = true end
+		end
 		local aterkommet = false
 		for _, post in ipairs(Utrustning.katalog()) do
 			for _, a in ipairs(Utrustning.AVVISADE) do
 				if post.assetId == a.assetId then aterkommet = true end
 			end
 		end
-		check("den avvisade hjälmen 123547958 står i AVVISADE och i ingen katalogpost",
-			avvisat and not aterkommet)
+		check("de utmönstrade hjälmarna 123547958 och 11611844698 står i AVVISADE och i ingen katalogpost",
+			avvisat and ersatt and not aterkommet)
 	end
 	local sa, tr = Utrustning.post("sadel"), Utrustning.post("trans")
 	check("sadel och träns är antagna runtime-kandidater utan skript",
@@ -265,14 +269,14 @@ do
 
 	--[[ f) HJÄLMEN laddas samma väg: i huvudets låda, svetsad i Head, med
 		spelarens ägarskap — och ett skript i den avvisar den. ]]
-	InsertService._svar[11611844698] = modellMed({ vec(6, 4, 6), vec(2, 1, 2) })
-	local spH, kH = nySpelare("Adrian", 7004, vec(40, 0, 0))
+	InsertService._svar[92445706145003] = modellMed({ vec(6, 4, 6), vec(2, 1, 2) })
+	local spH, kH = nySpelare("Silva", 7004, vec(40, 0, 0))
 	local okH, skalH = TackService.satPaHjalm(spH)
 	local dH = TackRigg.hittaDel(kH, "hjalm")
 	local wH = dH and dH:FindFirstChildOfClass("WeldConstraint")
-	check("f) Adrian Helmet laddas som hjälmens visual och svetsas i Head",
+	check("f) hjälmen 92445706145003 laddas som hjälmens visual och svetsas i Head",
 		okH and dH ~= nil and dH:GetAttribute("UBRFVisual") == "asset"
-			and dH:GetAttribute("UBRFAssetId") == 11611844698
+			and dH:GetAttribute("UBRFAssetId") == 92445706145003
 			and wH ~= nil and wH.Part0 == kH:FindFirstChild("Head"), tostring(skalH))
 	check("   den bär spelarens ägarskap och räknas som påsatt",
 		dH ~= nil and dH:GetAttribute("ForSpelare") == "7004" and TackService.harHjalm(spH))
@@ -285,7 +289,7 @@ do
 	TackService.taAvHjalm(spH)
 	check("   hjälmen av river hela modellen", TackRigg.hittaDel(kH, "hjalm") == nil
 		and (kH:FindFirstChild("Tack") == nil or #kH:FindFirstChild("Tack"):GetChildren() == 0))
-	InsertService._svar[11611844698] = modellMed({ vec(6, 4, 6) }, true)
+	InsertService._svar[92445706145003] = modellMed({ vec(6, 4, 6) }, true)
 	TackService.satPaHjalm(spH)
 	local dS = TackRigg.hittaDel(kH, "hjalm")
 	check("   en hjälmmodell med Script avvisas — primitiven ritas",

@@ -571,9 +571,9 @@ end
 	lagd i karaktärens egen `Tack`-mapp med `UBRFTack = "hjalm"` och
 	`ForSpelare`, så att `hittaDel`/`taAv` fungerar oförändrat på henne.
 
-	Creator Store-hjälmen ur katalogen (11611844698 "Adrian Helmet",
-	PO-val 2026-09-14) laddas först genom `laddaAsset` och passas in i
-	huvudets låda. Går laddningen inte ritas primitiven, i webbens gröna
+	Creator Store-hjälmen ur katalogen (92445706145003 "rosto do silva
+	25k", PO-val 2026-09-14 05:02) laddas först genom `laddaAsset` och
+	passas in i huvudets låda. Går laddningen inte ritas primitiven, i webbens gröna
 	(`src/world.js` "grön ridhjälm med ventilation"): en kupa över hjässan
 	och ett kort skärmstycke. Måtten kommer ur huvudets egen storlek —
 	R6, R15 och skalade avatarer får samma hjälm i sin egen skala. Ingen
