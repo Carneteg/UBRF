@@ -462,9 +462,25 @@ do
 	     init.client fryser ridningen eller inte. Falsifieringen visade det
 	     — pausen togs bort och provet var fortfarande grönt. ]]
 	local hum = hast:FindFirstChild("Humanoid")
+	--[[ RÄKNAREN MÄTER DRIVNING, INTE ANROP (#180).
+
+	     Raden räknade förut VARJE `Move`. Sedan dess stannar pausen hästen
+	     aktivt: `init.client` kör `ride.movement:release()`, som skickar
+	     `Move(0)` just för att hon inte ska rida vidare på förra bildrutans
+	     WalkSpeed. Ett anrop under pausen är alltså rätt beteende — men
+	     bara om det är ett NOLLDRAG.
+
+	     Provet kraschade innan det kom hit (`DinHast` saknades i bänken),
+	     så ingen såg att villkoret blivit inaktuellt. Nu mäts det som
+	     faktiskt är felet: att hon drivs FRAMÅT bakom panelen. ]]
 	local drivningar = 0
 	local origMove = hum.Move
-	hum.Move = function(self, ...) drivningar += 1; return origMove(self, ...) end
+	hum.Move = function(self, riktning, ...)
+		local r = riktning
+		local fart = r and math.sqrt((r.X or 0) ^ 2 + (r.Z or 0) ^ 2) or 0
+		if fart > 1e-6 then drivningar += 1 end
+		return origMove(self, riktning, ...)
+	end
 	local vinkel = 0
 	local function ridBildrutor(sek)
 		for _ = 1, math.floor(sek / dt) do
@@ -621,9 +637,10 @@ do
 	     bakom panelen och försöket hon tittade på hann bli ogiltigt. ]]
 	do
 		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
-		prova("hästen drivs INTE medan kortet väntar",
-			drivningar == drivnaUnderRitt,
-			("(%d Move-anrop, oförändrat under 60 bildrutor)"):format(drivningar))
+		prova("hästen drivs INTE framåt medan kortet väntar",
+			drivningar == drivnaUnderRitt and hum.WalkSpeed == 0,
+			("(%d framåtdrag, oförändrat under 60 bildrutor · WalkSpeed %s)")
+				:format(drivningar, tostring(hum.WalkSpeed)))
 	end
 
 	--[[ SE RITTEN genom fingret — knappens eget Activated. ]]
@@ -677,9 +694,10 @@ do
 	do
 		local fore = drivningar
 		for _ = 1, 60 do RunService.RenderStepped:Fire(dt) end
-		prova("hästen drivs inte bakom ridanalysen",
-			drivningar == fore,
-			("(%d Move-anrop, oförändrat)"):format(drivningar))
+		prova("hästen drivs inte framåt bakom ridanalysen",
+			drivningar == fore and hum.WalkSpeed == 0,
+			("(%d framåtdrag, oförändrat · WalkSpeed %s)")
+				:format(drivningar, tostring(hum.WalkSpeed)))
 	end
 
 	--[[ TILLBAKA. Tangenten stänger PANELEN, inte kortet bakom den. ]]

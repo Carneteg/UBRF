@@ -450,6 +450,17 @@ KLIENT = SPEL + [
     ("Debug",               "src/client/Debug.luau"),
     ("Genomsikt",           "src/client/Genomsikt.luau"),
     ("HastGang",            "src/client/HastGang.luau"),
+    #[[ #180: `DinHast` SAKNADES HELT i varje bank. Modulen finns i
+    #   src/client/ och require:as av init.client.luau rad 28, men lades
+    #   aldrig till i modullistan har. Varje spec som inlinar klienten fick
+    #   darfor `DinHast = nil` och dog pa `DinHast.start()` — sprak,
+    #   varldshud och klient, alla tre med samma
+    #   "attempt to index nil with 'start'".
+    #
+    #   Bankens modullista foljer inte med automatiskt nar en ny klientfil
+    #   laggs till; produktionen hittar den via `script.DinHast`, banken
+    #   maste fa den namngiven. Det ar ett hal i harnessen, inte i spelet. ]]
+    ("DinHast",             "src/client/DinHast.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
@@ -490,6 +501,8 @@ KOHERENS = GEOMETRI + [
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
+    #[[ #180: samma hal som i KLIENT ovan — se noten dar. ]]
+    ("DinHast",         "src/client/DinHast.luau"),
     ("Init",            "src/client/init.client.luau"),
 ]
 
