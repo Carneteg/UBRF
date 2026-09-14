@@ -75,9 +75,24 @@ do
 	local hj = Utrustning.post("hjalm")
 	check("hjälmen krävs för ridning (ridskolans regel, datastyrd)",
 		Utrustning.kravsForRidning("hjalm") == true)
-	check("hjälmens Creator Store-modell är AVVISAD: ett skript i modellen",
-		hj.assetId == 123547958 and hj.skript == 1 and hj.visual == "primitiv"
-			and hj.beslut:find("AVVISAD", 1, true) ~= nil, tostring(hj.beslut))
+	--[[ PO-val 2026-09-14 05:01: Adrian Helmet ersätter den avvisade
+		kandidaten. Provet spikar ID:t så att en redigering inte kan byta
+		det tyst — och att det avvisade ID:t inte finns någonstans. ]]
+	check("hjälmens Creator Store-modell är 11611844698 Adrian Helmet, antagen utan skript",
+		hj.assetId == 11611844698 and hj.skript == 0 and hj.visual == "asset"
+			and hj.beslut:find("ANTAGEN", 1, true) ~= nil, tostring(hj.assetId) .. " " .. tostring(hj.beslut))
+	do
+		local avvisat = false
+		for _, a in ipairs(Utrustning.AVVISADE) do if a.assetId == 123547958 then avvisat = true end end
+		local aterkommet = false
+		for _, post in ipairs(Utrustning.katalog()) do
+			for _, a in ipairs(Utrustning.AVVISADE) do
+				if post.assetId == a.assetId then aterkommet = true end
+			end
+		end
+		check("den avvisade hjälmen 123547958 står i AVVISADE och i ingen katalogpost",
+			avvisat and not aterkommet)
+	end
 	local sa, tr = Utrustning.post("sadel"), Utrustning.post("trans")
 	check("sadel och träns är antagna runtime-kandidater utan skript",
 		sa.assetId == 9639407836 and sa.skript == 0 and sa.visual == "asset"
@@ -113,7 +128,7 @@ do
 	check("kolliderar inte och väger inget — kameran och rörelsen märker den inte",
 		d ~= nil and d.CanCollide == false and d.Massless == true)
 	check("bär vem den tillhör", d ~= nil and d:GetAttribute("ForSpelare") == "7001")
-	check("primitiv i den här grinden (Creator Store-hjälmen avvisad)",
+	check("utan nåbar modell ritas primitiven — tillståndet är detsamma",
 		d ~= nil and d:GetAttribute("UBRFVisual") == "primitiv")
 	local ok2, skal2 = TackService.satPaHjalm(spelare)
 	check("en andra hjälm nekas", ok2 == false and skal2 == "tack.hjalm_redan_pa", tostring(skal2))
@@ -247,6 +262,35 @@ do
 	check("   tyglarna kom ändå med (de hör till tränset, inte till modellen)",
 		TackRigg.hittaDel(hast, "tygel") ~= nil)
 	TackService.taAvAllt(hast)
+
+	--[[ f) HJÄLMEN laddas samma väg: i huvudets låda, svetsad i Head, med
+		spelarens ägarskap — och ett skript i den avvisar den. ]]
+	InsertService._svar[11611844698] = modellMed({ vec(6, 4, 6), vec(2, 1, 2) })
+	local spH, kH = nySpelare("Adrian", 7004, vec(40, 0, 0))
+	local okH, skalH = TackService.satPaHjalm(spH)
+	local dH = TackRigg.hittaDel(kH, "hjalm")
+	local wH = dH and dH:FindFirstChildOfClass("WeldConstraint")
+	check("f) Adrian Helmet laddas som hjälmens visual och svetsas i Head",
+		okH and dH ~= nil and dH:GetAttribute("UBRFVisual") == "asset"
+			and dH:GetAttribute("UBRFAssetId") == 11611844698
+			and wH ~= nil and wH.Part0 == kH:FindFirstChild("Head"), tostring(skalH))
+	check("   den bär spelarens ägarskap och räknas som påsatt",
+		dH ~= nil and dH:GetAttribute("ForSpelare") == "7004" and TackService.harHjalm(spH))
+	local huvudH = kH:FindFirstChild("Head")
+	check("   passad in i huvudets låda (inte större än 1,25/0,9/1,3 × huvudet)",
+		dH ~= nil and dH.Size.X <= huvudH.Size.X * 1.25 + 0.01 and dH.Size.Y <= huvudH.Size.Y * 0.9 + 0.01
+			and dH.Size.Z <= huvudH.Size.Z * 1.3 + 0.01,
+		dH and string.format("%.2f x %.2f x %.2f", dH.Size.X, dH.Size.Y, dH.Size.Z) or "-")
+	check("   ingen del kolliderar eller väger", dH ~= nil and dH.CanCollide == false and dH.Massless == true)
+	TackService.taAvHjalm(spH)
+	check("   hjälmen av river hela modellen", TackRigg.hittaDel(kH, "hjalm") == nil
+		and (kH:FindFirstChild("Tack") == nil or #kH:FindFirstChild("Tack"):GetChildren() == 0))
+	InsertService._svar[11611844698] = modellMed({ vec(6, 4, 6) }, true)
+	TackService.satPaHjalm(spH)
+	local dS = TackRigg.hittaDel(kH, "hjalm")
+	check("   en hjälmmodell med Script avvisas — primitiven ritas",
+		dS ~= nil and dS:GetAttribute("UBRFVisual") == "primitiv")
+	TackService.taAvHjalm(spH)
 	InsertService._svar = {}
 end
 

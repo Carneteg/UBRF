@@ -571,14 +571,14 @@ end
 	lagd i karaktärens egen `Tack`-mapp med `UBRFTack = "hjalm"` och
 	`ForSpelare`, så att `hittaDel`/`taAv` fungerar oförändrat på henne.
 
-	Primitiv, i webbens gröna (`src/world.js` "grön ridhjälm med
-	ventilation"): en kupa över hjässan och ett kort skärmstycke. Måtten
-	kommer ur huvudets egen storlek — R6, R15 och skalade avatarer får
-	samma hjälm i sin egen skala. Den kolliderar aldrig och är masslös:
-	kameran och rörelsen ska inte märka den.
-
-	Creator Store-hjälmen 123547958 är AVVISAD i katalogen (ett Script i
-	modellen). Byts beslutet laddas den genom samma `laddaAsset`. ]]
+	Creator Store-hjälmen ur katalogen (11611844698 "Adrian Helmet",
+	PO-val 2026-09-14) laddas först genom `laddaAsset` och passas in i
+	huvudets låda. Går laddningen inte ritas primitiven, i webbens gröna
+	(`src/world.js` "grön ridhjälm med ventilation"): en kupa över hjässan
+	och ett kort skärmstycke. Måtten kommer ur huvudets egen storlek —
+	R6, R15 och skalade avatarer får samma hjälm i sin egen skala. Ingen
+	av dem kolliderar eller väger något: kameran och rörelsen ska inte
+	märka hjälmen. ]]
 local HJALM_GRON = Color3.fromRGB(78, 122, 60)
 local HJALM_MORK = Color3.fromRGB(62, 98, 48)
 

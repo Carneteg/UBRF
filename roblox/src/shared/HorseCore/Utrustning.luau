@@ -36,15 +36,17 @@
 	`references/licenses/roblox-creator-store.md` och i `attribution`
 	nedan, och den följer med i spelets kreditlista.
 
-	══ VARFÖR HJÄLMEN ÄR AVVISAD ══════════════════════════════════════
+	══ HJÄLMEN — DEN FÖRSTA KANDIDATEN AVVISAD, DEN ANDRA ANTAGEN ═════
 
 	123547958 "Moldenhauer Family Helmet" (2013) innehåller ETT Script
-	(toolbox `instanceCounts.script = 1`). Modellfilen kan inte hämtas
-	utan inloggning (assetdelivery svarar 401), så skriptet går inte att
-	inspektera här. En fri modell från 2013 med ett oinspekterat skript
-	sätts inte i en familjs spel — den avvisas, och hjälmen ritas som
-	primitiv i webbens gröna färg (`src/world.js` "grön ridhjälm"). Byts
-	beslutet efter Studio-inspektion ändras EN rad här.
+	(toolbox `instanceCounts.script = 1`) och kan inte hämtas utan
+	inloggning (assetdelivery 401), så skriptet går inte att inspektera.
+	Den avvisades i #170 och står i `AVVISADE` så att den inte kan komma
+	tillbaka utan att ett prov faller. Tobias valde 2026-09-14 05:01 i
+	stället 11611844698 "Adrian Helmet" (cbr44446, 2022): fri, 7 MeshParts,
+	7 808 trianglar, INGA skript, tom beskrivning (inget attributionskrav)
+	— samma prövning som sadeln och tränset, samma utfall: antagen som
+	runtime-kandidat. Laddas den inte ritas primitiven i webbens gröna.
 
 	══ VISUELL KÄLLA — ASSET ELLER PRIMITIV ═══════════════════════════
 
@@ -91,13 +93,14 @@ local LICENS = "Roblox Creator Store, fri modell (IsPublicDomain, isFree) — 20
 local KATALOG: { Post } = {
 	{
 		typ = "hjalm", barare = "ryttare", faste = "Head",
-		assetId = 123547958, assetNamn = "Moldenhauer Family Helmet",
-		skapare = "skitzochase", licens = LICENS,
-		trianglar = 2424, skript = 1,
-		visual = "primitiv",
-		beslut = "AVVISAD: modellen innehåller 1 Script som inte kan inspekteras "
-			.. "utan inloggad hämtning (assetdelivery 401); 2013-års fri modell. "
-			.. "Primitiv hjälm i webbens gröna färg.",
+		assetId = 11611844698, assetNamn = "Adrian Helmet",
+		skapare = "cbr44446", licens = LICENS,
+		trianglar = 7808, skript = 0,
+		visual = "asset",
+		beslut = "ANTAGEN som runtime-kandidat (PO-val 2026-09-14 05:01): 7 MeshParts, "
+			.. "7 808 trianglar, inga skript, fri, inget attributionskrav i titel eller "
+			.. "beskrivning. Passas in i huvudets låda och svetsas i Head. Läge, skala "
+			.. "och klippning mot avataren/kameran är HARDWARE CHECK i Studio.",
 		kravsForRidning = true,
 	},
 	{
@@ -144,6 +147,14 @@ end
 function Utrustning.post(typ: string): Post?
 	return perTyp[typ]
 end
+
+--[[ AVVISADE kandidater. Står här så att ett prov kan fälla varje
+	katalogpost som pekar på dem — ett avvisat asset-ID ska inte kunna
+	komma tillbaka tyst genom en redigering. ]]
+Utrustning.AVVISADE = {
+	{ assetId = 123547958, namn = "Moldenhauer Family Helmet", skapare = "skitzochase",
+		skal = "1 Script i modellen, oinspekterbart (assetdelivery 401); 2013. Ersatt av 11611844698 (PO 2026-09-14 05:01)." },
+}
 
 --[[ Typerna spelaren kan sätta på och ta av genom utrustningspanelen, i
 	den ordning panelen visar dem. `tygel` hör till tränset och listas

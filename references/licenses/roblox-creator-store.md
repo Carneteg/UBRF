@@ -16,6 +16,7 @@ då följer vi den.
 | 9639407836 | Race horse saddle and Saddle pad | Josijosi00 | ja (IsPublicDomain) | 0 | 24 540 | antagen som runtime-kandidat (sadel) | — |
 | 15966015286 | Horse bridle [ALWAYS CREDIT RHS FOR IT!] | corvyyn | ja | 0 | 1 794 | antagen som runtime-kandidat (träns) | **"Horse bridle" av corvyyn — credit RHS** (kravet står i titeln; beskrivningen är tom) |
 | 123547958 | Moldenhauer Family Helmet | skitzochase | ja | **1** | 2 424 | **avvisad**: oinspekterbart skript (assetdelivery kräver inloggning) | — |
+| 11611844698 | Adrian Helmet | cbr44446 | ja (IsPublicDomain, isFree) | 0 | 7 808 (7 MeshParts) | **antagen som runtime-kandidat (hjälm)** — PO-val 2026-09-14 05:01, ersätter 123547958; titel och beskrivning utan attributionskrav | — |
 | 2780160044 | horse jump # | horsegirlltu | ja | 0 | 888 | rekommenderad för Studio-QA, inte integrerad | — |
 | 2314446954 | (RC) Horse Jumps | sillyAuraa | ja | 0 | 792 | andrahandsval, inte integrerad | — |
 | 174424237 | SAFE horse jumps | officialgrace | ja | 0 | 7 680 | avvisad tills vidare (tung) | — |
