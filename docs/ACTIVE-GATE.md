@@ -101,6 +101,37 @@ Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
 **Ingen merge till main i det här uppdraget.** Kandidaten är den enda version
 som därefter ska testas som spel; de små PR:erna ligger kvar som provenance.
 
+## Parallellt sanktionerat spår — Studio-/Rojo-integritet (#171)
+
+Uppdrag från Tobias 2026-09-14 i issue #171: **integritetsgrind för
+build-identitet och place-drift**, på egen feature branch
+`claude/studio-rojo-integritet-20260914` ur `main` @ `78b7af8`.
+
+Bakgrunden är en läsande Studio-MCP-audit av den anslutna placen `UBRF`
+(placeId `106030782437053`): Rojo-träden stämde exakt mot repot, men
+`ReplicatedStorage.UBRFBuild` var handplacerad och pekade på en head 53
+commits gammal medan preflightens punkt 9 lyste grönt. QA-evidens ur den
+placen var därför inte trovärdig.
+
+Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna står
+i #171 och är Tobias, inte en builders.
+
+Scope, enligt #171:s egen prioritetsordning:
+
+1. build-identiteten först — genererad, mappad, fail closed,
+2. integritetskontroll som skiljer Rojo-ägt från runtime- och editorartefakter,
+3. klassad och säker policy för Workspace-/ServerStorage-drift, utan blind
+   radering,
+4. regressionstäckning så att inaktuell identitet inte kan ge grön evidens,
+5. live-MCP används **läsande**; destruktiv Studio-städning ingår inte.
+
+Policy och inventering: `docs/STUDIO-PLACE-INTEGRITY.md`.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
+Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
+
+**Ingen merge i det här uppdraget**, och ingen städning i Tobias place.
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114
