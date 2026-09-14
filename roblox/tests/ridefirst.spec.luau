@@ -243,6 +243,167 @@ do
 	check("och den är större än noll", eftAuto > 0, ("%.4f"):format(eftAuto))
 end
 
+
+--[[ ══ GENOM DEN VERKLIGA KEDJAN ═══════════════════════════════════════
+
+	Blocken ovan mäter REGELN. Det här mäter TJÄNSTEN: `GameplayService.ridaNu`
+	med riktiga spelare, riktig rigg, riktig fysisk utrustning och riktig
+	välfärdsgrind.
+
+	Skälet är en bugg som bara syns här. `ridaNu` går genom den riktiga
+	`moment()`-vägen — vilket är rätt för säkerhet, ordning, fysisk sadel
+	och fail-closed — men `utforMoment` skrev `true`, och `egenAndel` läser
+	`true` som "spelaren gjorde detta själv". "Rida nu" gav därmed full
+	omsorgsbonus för arbete spelaren aldrig utförde. Regelprov kunde inte
+	se det: felet uppstod först när tjänsten körde vägen. ]]
+
+local Players = game:GetService("Players")
+local Taggar = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+
+local function nyKaraktar(pos)
+	local k = Instance.new("Model")
+	k.Name = "Karaktar"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Size = Vector3.new(2, 2, 1)
+	rot.CFrame = CFrame.new(pos)
+	rot.Parent = k
+	local hum = Instance.new("Humanoid")
+	hum.Name = "Humanoid"
+	hum.Parent = k
+	local anim = Instance.new("Animator")
+	anim.Name = "Animator"
+	anim.Parent = hum
+	return k, rot, hum
+end
+
+local RIGG = Vector3.new(0, 0, 0)
+
+local function nySession(namn, userId)
+	__datastore.nollstall()
+	Taggar:nollstall()
+	Players.PlayerAdded:nollstall()
+	Players.PlayerRemoving:nollstall()
+	RunService._server = true
+	Players._spelare = {}
+	SparService._glomHookarForProv()
+
+	local k = nyKaraktar(Vector3.new(2, 0, 0))
+	local spelare = { Name = namn, UserId = userId, Character = k,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	SparService._glomForProv(spelare)
+
+	SparService.start()
+	StallService.start()
+	HorseService.start()
+	GameplayService.start()
+
+	Players._spelare = { spelare }
+	Players.PlayerAdded:Fire(spelare)
+	Players.PlayerAdded:slutfor()
+
+	local hastId = StallService.hastIdFor(spelare)
+	local modell = HastRigg.bygg(hastId, hastId, CFrame.new(RIGG))
+	modell.Parent = workspace
+	Taggar:AddTag(modell, "Horse")
+	--[[ Spelaren står intill hästen: `narvaro` mäter avståndet. ]]
+	k:FindFirstChild("HumanoidRootPart").CFrame = CFrame.new(RIGG + Vector3.new(2, 0, 0))
+	return spelare, modell, hastId
+end
+
+print("\n── Verklig kedja: helt orörd häst + «Rida nu» ──")
+
+local sp1, mod1 = nySession("Auto", 9001)
+do
+	local s = GameplayService.stateFor(sp1)
+	check("sessionen har en förberedelse", s ~= nil)
+	GameplayService.ridaNu(sp1)
+	local andel = Preparation.egenAndel(GameplayService.stateFor(sp1))
+	check("stallets arbete ger INGEN omsorgsandel", andel == 0,
+		("%.4f"):format(andel))
+	check("och dagsformen är kanonens standard",
+		math.abs(GameplayService.dagsformFor(sp1) - RidKanon.START.DAGSFORM) < 1e-9,
+		("%.4f"):format(GameplayService.dagsformFor(sp1)))
+end
+
+print("\n── Verklig kedja: blandat pass ──")
+
+local sp2, mod2 = nySession("Blandad", 9002)
+do
+	--[[ Spelaren gör FÖRSTA fasen själv, trycker sedan «Rida nu». ]]
+	local s = GameplayService.stateFor(sp2)
+	local f1 = Preparation.stegFaser()[1]
+	local egnaMoment = 0
+	for _, m in ipairs(Preparation.moment(f1.id)) do
+		if not m.fel and m.id then
+			local ok = GameplayService.moment(sp2, f1.id, m.id)
+			if ok then egnaMoment += 1 end
+			if Preparation.arVal(f1.id) and Preparation.fasKlar(s, f1.id) then break end
+		end
+	end
+	check(("spelaren gjorde %d moment själv i «%s»"):format(egnaMoment, f1.id),
+		egnaMoment > 0)
+	local foreAndel = Preparation.egenAndel(s)
+
+	GameplayService.ridaNu(sp2)
+	local efterAndel = Preparation.egenAndel(s)
+
+	check("spelarens egna moment behåller sitt ägarskap",
+		math.abs(efterAndel - foreAndel) < 1e-9,
+		("%.4f → %.4f"):format(foreAndel, efterAndel))
+	check("andelen ligger mellan 0 och 1", efterAndel > 0 and efterAndel < 1,
+		("%.4f"):format(efterAndel))
+
+	--[[ Ingen rad får stå som `true` utan att spelaren tryckt på den. ]]
+	local falska = {}
+	for _, f in ipairs(Preparation.stegFaser()) do
+		if f.id ~= f1.id then
+			for id, v in pairs(s.gjorda[f.id] or {}) do
+				if v == true then table.insert(falska, f.id .. "/" .. tostring(id)) end
+			end
+		end
+	end
+	check("inget stallmoment är bokfört som spelarens", #falska == 0,
+		#falska == 0 and "-" or table.concat(falska, ", "))
+end
+
+print("\n── Verklig kedja: full manuell skötsel ──")
+
+local sp3, mod3, hast3 = nySession("Manuell", 9003)
+do
+	local s = GameplayService.stateFor(sp3)
+	--[[ Spelaren hämtar sin egen sadel och träns i sadelkammaren. Utan det
+		faller utrustningsstegen på `tack.hamta_forst` — samma krav som i
+		spelet, och samma pedagogik: man kan ta fel hästs sadel. ]]
+	GameplayService.valjUtrustning(sp3, "sadel", hast3)
+	GameplayService.valjUtrustning(sp3, "trans", hast3)
+	for _, f in ipairs(Preparation.stegFaser()) do
+		if f.id ~= "leda" then
+			for _, m in ipairs(Preparation.moment(f.id)) do
+				if not m.fel and m.id then
+					GameplayService.moment(sp3, f.id, m.id)
+					if Preparation.arVal(f.id) and Preparation.fasKlar(s, f.id) then break end
+				end
+			end
+		end
+	end
+	--[[ Ledningen är en fysisk förflyttning; i bänken finns ingen värld att
+		gå i, så flaggan sätts direkt i staten som spelarens arbete. ]]
+	for _, m in ipairs(Preparation.moment("leda")) do
+		if not m.fel and m.id then
+			s.gjorda["leda"] = s.gjorda["leda"] or {}
+			s.gjorda["leda"][m.id] = true
+		end
+	end
+	local andel = Preparation.egenAndel(s)
+	check("full manuell skötsel ger andel 1,0", andel == 1, ("%.6f"):format(andel))
+	check("och dagsformen ligger över standard",
+		GameplayService.dagsformFor(sp3) > RidKanon.START.DAGSFORM,
+		("%.4f mot %.4f"):format(GameplayService.dagsformFor(sp3), RidKanon.START.DAGSFORM))
+end
+
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

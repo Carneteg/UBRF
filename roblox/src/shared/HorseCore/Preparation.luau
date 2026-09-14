@@ -669,13 +669,29 @@ end
 	Returnerar (ok, skäl, handelse) där `handelse` är "fynd" när
 	visitationen just avslöjade något. Servern behöver veta det för att
 	kunna skicka svarsalternativen. ]]
+--[[ VEM UTFÖRDE MOMENTET?
+
+	`utforare` är `"auto"` när STALLET gjorde arbetet åt spelaren, och nil
+	(eller vad som helst annat) när spelaren gjorde det själv.
+
+	Skillnaden är inte kosmetisk. `egenAndel` räknar bara `true`, och den
+	andelen driver omsorgsbonusen. Utan den här parametern gick "Rida nu"
+	genom samma `moment()`-väg som en spelare — vilket är RÄTT för
+	säkerhet, ordning, fysisk sadel och fail-closed — men skrev `true` och
+	gav därmed full omsorgsbonus för arbete spelaren aldrig utförde.
+
+	ETT MANUELLT MOMENT NEDGRADERAS ALDRIG. Har spelaren redan borstat står
+	`true` kvar även om stallet sedan fyller i resten: blandade pass är
+	själva poängen med att förberedelsen är frivillig. ]]
 function Preparation.utforMoment(state: State, fasId: string, momentId: string,
-	hastId: string): (boolean, string?, string?)
+	hastId: string, utforare: string?): (boolean, string?, string?)
 	local ok, skal, moment = Preparation.provaMoment(state, fasId, momentId, hastId)
 	if not ok then return false, skal, nil end
 
 	state.gjorda[fasId] = state.gjorda[fasId] or {}
-	state.gjorda[fasId][momentId] = true
+	if state.gjorda[fasId][momentId] ~= true then
+		state.gjorda[fasId][momentId] = if utforare == "auto" then "auto" else true
+	end
 
 	--[[ Avslöjade det här momentet fyndet? Visitpunktens moment-id är
 		`vis:<punkt>`, och fyndet bär punktens id. ]]

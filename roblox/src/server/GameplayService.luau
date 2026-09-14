@@ -231,7 +231,11 @@ end
 	den var en checklista, och en klient som fick kvittera en fas kunde
 	kvittera alla på fem anrop. Nu går varje steg framåt genom ett moment
 	som `Preparation` prövar mot ordning, avstånd, individ och välfärd. ]]
-function GameplayService.moment(player: Player, fasId: string, momentId: string): (boolean, string?)
+--[[ `utforare` skickas ALDRIG av klienten: remoten längst ned vidarebefordrar
+	bara fas och moment. Den sätts av `ridaNu` när stallet gör arbetet, så
+	att omsorgsbonusen räknar spelarens hand och inte stallets. ]]
+function GameplayService.moment(player: Player, fasId: string, momentId: string,
+	utforare: string?): (boolean, string?)
 	if typeof(fasId) ~= "string" or typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
 	end
@@ -319,7 +323,7 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 		end
 	end
 
-	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId)
+	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
 	skicka(player)
 	return ok, avslag
 end
@@ -378,7 +382,7 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 			local val = Preparation.arVal(f.id)
 			for _, m in ipairs(Preparation.moment(f.id)) do
 				if not m.fel and m.id then
-					local ok, avslag = GameplayService.moment(player, f.id, m.id)
+					local ok, avslag = GameplayService.moment(player, f.id, m.id, "auto")
 					if not ok and avslag ~= "forb.redan_gjort" then
 						skicka(player)
 						return false, avslag
@@ -410,7 +414,7 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	end
 	for _, m in ipairs(Preparation.moment("leda")) do
 		if not m.fel and m.id then
-			local ok, avslag = GameplayService.moment(player, "leda", m.id)
+			local ok, avslag = GameplayService.moment(player, "leda", m.id, "auto")
 			if not ok and avslag ~= "forb.redan_gjort" then
 				skicka(player)
 				return false, avslag

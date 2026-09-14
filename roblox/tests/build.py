@@ -604,7 +604,10 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ #FUN FIRST: ridefirst.spec mater regeln, inte varlden — samma bank
     #   som forberedelsen, dar Preparation, Svar och RidKanon finns. ]]
     if "ridefirst" in spec_rel:
-        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+        #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
+        #   GameplayService.ridaNu-kedjan med rigg, fysisk utrustning och
+        #   valfardsgrind. Agarskapsbuggen syntes inte i ett rent regelprov. ]]
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "spelbuild" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     #[[ #169 P1: StateSync-auktoriteten provas mot TJANSTEN med en riktig
