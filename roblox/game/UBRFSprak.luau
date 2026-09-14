@@ -289,11 +289,6 @@ Sprak.text = {
 		sv = "Det gick inte just nu",
 		en = "That did not work just now",
 	},
-	--[[ "Gå TILL", inte "gå tillbaka". Raden skrivs över rubriken så fort
-	     hästen är utom räckhåll — och det gäller också allra första gången,
-	     när spelaren står vid stallets entré och aldrig har träffat henne.
-	     Då är "gå tillbaka" osant: hon har inte varit där. "Gå till" är rätt
-	     både första gången och när man gått ifrån henne mitt i skötseln. ]]
 	["hud.ga_till"] = {
 		sv = "Gå till %s",
 		en = "Go to %s",
@@ -350,10 +345,6 @@ Sprak.text = {
 		sv = "Lägre gångart",
 		en = "Slower gait",
 	},
-	["hjalp.blick"] = {
-		sv = "Se dig omkring",
-		en = "Look around",
-	},
 	["hjalp.tygel"] = {
 		sv = "Tygel (kontakt)",
 		en = "Rein (contact)",
@@ -406,65 +397,9 @@ Sprak.text = {
 		sv = "▼ LUGNARE",
 		en = "▼ SLOWER",
 	},
-	--[[ Namngivna gångartsknappar för pekskärmen. Gångartsnamnen är
-	     ridtermer och står kvar på svenska även i den engelska raden —
-	     "skritt/trav/galopp" är vad en ryttare säger, och webbens
-	     gångartsetiketter gör likadant. HALT och SAKTA är dock vanliga
-	     ord och översätts. ]]
-	["touch.skritt"] = {
-		sv = "SKRITT",
-		en = "WALK",
-	},
-	["touch.trav"] = {
-		sv = "TRAV",
-		en = "TROT",
-	},
-	["touch.galopp"] = {
-		sv = "GALOPP",
-		en = "CANTER",
-	},
-	["touch.sakta"] = {
-		sv = "SAKTA",
-		en = "SLOWER",
-	},
-	["touch.halt"] = {
-		sv = "HALT",
-		en = "HALT",
-	},
 	["touch.framat"] = {
 		sv = "▲ FRAMÅT",
 		en = "▲ FORWARD",
-	},
-	--[[ Hjälpens pekrader pekar på YTOR, inte på en enskild knapp:
-	     gångarten väljs numera på en av de namngivna knapparna, och
-	     blicken vrids genom att dra på högra halvan av skärmen. ]]
-	--[[ Vilken häst som är MIN. Hästens namn är ett egennamn och skickas
-	     som argument — det översätts aldrig. ]]
-	["stall.din_hast"] = {
-		sv = "DIN HÄST",
-		en = "YOUR HORSE",
-	},
-	--[[ INGET BOXNUMMER. Raden bar först "— box 31", och det talet gick
-	     inte att para ihop med någonting: mätt i den byggda anläggningen
-	     finns exakt två skyltar med text, "UPPLANDS-BRO RYTTARFÖRENING"
-	     och "CAFÉ KRUBBAN". Ingen box bär vare sig nummer eller namn, och
-	     `MB 5` är ett internt delnamn som aldrig ritas.
-
-	     Fördelningen är dessutom redan märkt [antagande] i `Stallet` — det
-	     finns inget verifierat underlag för UBRF:s riktiga boxnumrering,
-	     och att visa ett påhittat tal som om det vore vägvisning är precis
-	     det kanon förbjuder. Skylten över hästen gör jobbet i stället. ]]
-	["stall.idag_rider_du"] = {
-		sv = "Idag rider du %s.",
-		en = "Today you ride %s.",
-	},
-	["touch.gangartsknappar"] = {
-		sv = "Gångartsknapparna",
-		en = "The gait buttons",
-	},
-	["touch.blickytan"] = {
-		sv = "Dra på högra halvan",
-		en = "Drag on the right half",
 	},
 	["touch.tygel"] = {
 		sv = "TYGEL",
@@ -577,14 +512,6 @@ Sprak.text = {
 	["led.fastnat"] = {
 		sv = "Hon kommer inte fram där — prova en annan väg",
 		en = "She cannot get through there — try another way",
-	},
-	--[[ Samma hinder som `led.fastnat`, men med det skäl spelaren FAKTISKT
-	     kan göra något åt. Står hon kvar i boxen och bladet är stängt finns
-	     ingen annan väg att prova — dörren ska öppnas, och det säger den
-	     här raden rakt ut i stället för att be henne leta. ]]
-	["led.stangd_boxdorr"] = {
-		sv = "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
-		en = "Her stall door is shut — open her stall door first so she can walk out",
 	},
 	["tack.fel_sadel"] = {
 		sv = "Fel sadel — den är formad efter en annan rygg. På fel häst trycker den på manken eller på njurarna",
@@ -829,6 +756,50 @@ Sprak.text = {
 	["spar.forsoker_igen"] = {
 		sv = "Kunde inte spara nu. Framstegen ligger kvar och försöks igen.",
 		en = "Could not save just now. Your progress is kept and will be retried.",
+	},
+	["hjalp.blick"] = {
+		sv = "Se dig omkring",
+		en = "Look around",
+	},
+	["touch.skritt"] = {
+		sv = "SKRITT",
+		en = "WALK",
+	},
+	["touch.trav"] = {
+		sv = "TRAV",
+		en = "TROT",
+	},
+	["touch.galopp"] = {
+		sv = "GALOPP",
+		en = "CANTER",
+	},
+	["touch.sakta"] = {
+		sv = "SAKTA",
+		en = "SLOWER",
+	},
+	["touch.halt"] = {
+		sv = "HALT",
+		en = "HALT",
+	},
+	["touch.gangartsknappar"] = {
+		sv = "Gångartsknapparna",
+		en = "The gait buttons",
+	},
+	["touch.blickytan"] = {
+		sv = "Dra på högra halvan",
+		en = "Drag on the right half",
+	},
+	["stall.din_hast"] = {
+		sv = "DIN HÄST",
+		en = "YOUR HORSE",
+	},
+	["stall.idag_rider_du"] = {
+		sv = "Idag rider du %s.",
+		en = "Today you ride %s.",
+	},
+	["led.stangd_boxdorr"] = {
+		sv = "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut",
+		en = "Her stall door is shut — open her stall door first so she can walk out",
 	},
 }
 

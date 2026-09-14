@@ -147,9 +147,8 @@ const SPRAK = {
      samtidigt nekade med `spel.for_langt`. Rubriken pekar nu tillbaka i
      stället, och hästens EGENNAMN sätts in som argument — det översätts
      aldrig. */
-  "hud.ga_tillbaka": { sv: "Gå tillbaka till %s", en: "Go back to %s" },
-  "hud.ga_tillbaka_utan_namn": { sv: "Gå tillbaka till din häst",
-    en: "Go back to your horse" },
+  "hud.ga_till": { sv: "Gå till %s", en: "Go to %s" },
+  "hud.ga_till_utan_namn": { sv: "Gå till din häst", en: "Go to your horse" },
 
   /* ── Hjälpen och kontrollerna (KontrollHjalp) ─────────────────────── */
   "hjalp.rubrik": { sv: "Kontroller", en: "Controls" },
@@ -350,6 +349,25 @@ const SPRAK = {
     en: "Progress is not being saved this session: %s" },
   "spar.forsoker_igen": { sv: "Kunde inte spara nu. Framstegen ligger kvar och försöks igen.",
     en: "Could not save just now. Your progress is kept and will be retried." },
+
+  /* ── Nycklar som låg ENBART i den genererade UBRFSprak.luau (#178) ──
+     De lades till på Roblox-sidan direkt i exportens utdata, aldrig här i
+     källan. Exporten skriver om filen ur den här katalogen, så nästa
+     generering hade RADERAT dem — och med dem pekknapparna som
+     IPAD_RIDING_ACCEPTANCE_PASS behöver. Texterna är överförda ordagrant
+     från den accepterade Roblox-filen; ingenting är nyskrivet här. */
+  "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
+  "touch.skritt": { sv: "SKRITT", en: "WALK" },
+  "touch.trav": { sv: "TRAV", en: "TROT" },
+  "touch.galopp": { sv: "GALOPP", en: "CANTER" },
+  "touch.sakta": { sv: "SAKTA", en: "SLOWER" },
+  "touch.halt": { sv: "HALT", en: "HALT" },
+  "touch.gangartsknappar": { sv: "Gångartsknapparna", en: "The gait buttons" },
+  "touch.blickytan": { sv: "Dra på högra halvan", en: "Drag on the right half" },
+  "stall.din_hast": { sv: "DIN HÄST", en: "YOUR HORSE" },
+  "stall.idag_rider_du": { sv: "Idag rider du %s.", en: "Today you ride %s." },
+  "led.stangd_boxdorr": { sv: "Boxdörren är stängd — öppna hennes boxdörr först, så kan hon gå ut", en: "Her stall door is shut — open her stall door first so she can walk out" },
+
 };
 
 /* ÖVERSÄTTNINGSSKULD, redovisad.
