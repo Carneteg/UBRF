@@ -674,6 +674,35 @@ do
 		("plan %+.2f · spar %d · spelare %.1f,%.1f"):format(
 			plan(bakom), #spar, rotS.Position.X, rotS.Position.Z))
 
+	--[[ ── OCH NYA SMULOR PÅ SAMMA SIDA SKA ÖVERLEVA ──────────────
+
+		Det här är andra halvan, och den halvan saknades i första
+		utkastet. Gallringen låg då i bildruteloopen och körde så länge
+		`lamnatBox` var sann. Men `dorrUt` för en box i MB-raden pekar
+		ÖSTERUT, och hela den södra rutten västerut — gång A, hästgången,
+		ridhuset — ligger därmed på minussidan av samma plan. Gallringen
+		åt alltså upp varenda ny smula resten av vägen, och
+		brödsmulefölningen var i praktiken avstängd. Mätt i Studio: 76
+		träffar över 7 533 bildrutor, och rutten räddades av planeraren,
+		inte av spåret.
+
+		Nu gallras det EN gång, vid övergången. Smulor som skapas
+		EFTERÅT ska ligga kvar även om de hamnar på boxsidan av planet —
+		precis som de gör när rutten fortsätter västerut. ]]
+	for i = 1, 14 do
+		rotS.CFrame = CFrame.new(vec(DX - 2 - i * 0.4, 3, DZ + 6))
+		LedService._steg(1 / 30)
+	end
+	local sent = LedService.lage(spS)
+	local nyaPaBoxsidan = 0
+	for _, c in ipairs(sent and sent.spar or {}) do
+		if plan(c) <= 0 then nyaPaBoxsidan += 1 end
+	end
+	check("NYA smulor väster om dörrplanet överlever — spåret lever vidare",
+		sent ~= nil and nyaPaBoxsidan > 0,
+		sent and ("%d av %d smulor på boxsidan"):format(nyaPaBoxsidan, #sent.spar)
+			or "SLÄPPT")
+
 	anl:Destroy()
 end
 

@@ -821,6 +821,53 @@ local function steg(_dt: number)
 			local x, y = tomt(pivot.Position)
 			if math.sqrt((x - l.boxX) ^ 2 + (y - l.boxY) ^ 2) > 2.5 then
 				l.lamnatBox = true
+
+				--[[ SMULORNA FRÅN INNE I BOXEN FÖRBRUKAS — EN GÅNG, HÄR.
+
+					Mätt i Studio, första divergensen efter boxutgången.
+					Vänsterkolumnen är hästens signerade läge mot
+					boxdörrens plan; `+` är gången och `−` är boxen:
+
+					    häst 500,0 · 272,0  (plan +1.18)   spar = 7
+					    vald smula spar[1]  494,8 · 276,7  (plan −0.56)
+					    häst +1.15 → +0.93 → … → +0.19
+
+					Smulan var spelarens gamla läge från när hon stod inne
+					i boxen. Den vanliga gallringen tar bara smulor närmare
+					än `START_R`; den låg 2,0 m bort, blev kvar, valdes som
+					mål, och drog hästen bakåt in genom dörren hon just
+					kommit ut ur.
+
+					GALLRINGEN SKER EN ENDA GÅNG, i samma bildruta som
+					`lamnatBox` går false → true.
+
+					Ett första försök gallrade i stället varje bildruta så
+					länge `lamnatBox` var sann. Det såg riktigt ut och
+					rutten gick — men `dorrUt` för en box i MB-raden pekar
+					österut, och HELA den södra rutten västerut ligger
+					därmed på minussidan av samma plan. Gallringen åt
+					alltså upp varenda ny smula i gång A, hästgången och
+					ridhuset, och brödsmulefölningen var i praktiken
+					avstängd resten av vägen. Mätt: 76 träffar över 7 533
+					bildrutor i slutpasset. Rutten räddades av att
+					planeraren tog över — inte av att spåret fungerade.
+
+					Här kan det inte hända: efter den här bildrutan läggs
+					nya smulor till som vanligt och väljs som vanligt,
+					oavsett vilken sida om dörrplanet de hamnar på. Bara de
+					som fanns i kön I UTGÅNGSÖGONBLICKET, och som låg på
+					boxsidan, försvinner. ]]
+				if l.dorrMitt and l.dorrUt then
+					local kvar = {}
+					for _, c in ipairs(l.spar) do
+						if (c - l.dorrMitt):Dot(l.dorrUt) > 0 then
+							table.insert(kvar, c)
+						end
+					end
+					table.clear(l.spar)
+					for _, c in ipairs(kvar) do table.insert(l.spar, c) end
+				end
+
 				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
 			end
@@ -887,38 +934,6 @@ local function steg(_dt: number)
 			table.remove(spar, 1)
 		end
 
-		--[[ EN PASSERAD DÖRR GÖR SMULORNA BAKOM DEN FÖRBRUKADE (#182).
-
-			Mätt i Studio på `5bdd45e`, första divergensen efter
-			boxutgången — hästens signerade läge mot dörrplanet i
-			vänsterkolumnen, `+` är gången och `−` är boxen:
-
-			    häst 500,0 · 272,0  (plan +1.18)   spar=7
-			    vald smula spar[1]  494,8 · 276,7  (plan −0.56)
-			    häst 499,9 (+1.15) → 499,3 (+0.93) → 497,1 (+0.19)
-
-			Smulan är spelarens gamla läge från när hon stod INNE i boxen.
-			Gallringen ovan tar bara smulor närmare än `START_R`, och den
-			låg 2,0 m bort — alltså blev den kvar, valdes som mål, och drog
-			hästen bakåt mot dörren hon just kommit ut genom. Hennes plan
-			sjönk monotont i fyrtiosju bildrutor i rad medan spelaren gick
-			söderut. Sedan slog `led.fastnat` till.
-
-			Rättelsen gäller BARA smulor på fel sida om en dörr hon redan
-			passerat. Följningen GENOM dörren rörs inte: så länge
-			`lamnatBox` är falsk äger `viaDorr` målpunkterna, och den här
-			grenen kör inte då. Först när hon är ute blir det som ligger
-			kvar på boxsidan meningslöst — det är inte en väg tillbaka, det
-			är en väg till platsen hon lämnade.
-
-			Villkoret läser dörrens EGET plan, inte en gissad radie: en
-			smula är på fel sida om `(smula − dorrMitt) · dorrUt <= 0`. ]]
-		if l.lamnatBox and l.dorrMitt and l.dorrUt then
-			while #spar > 0
-				and (spar[1] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
-				table.remove(spar, 1)
-			end
-		end
 
 		--[[ MÅLPUNKTEN FÅR ALDRIG LIGGA I DÖDZONEN.
 
