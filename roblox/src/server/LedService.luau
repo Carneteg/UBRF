@@ -887,6 +887,39 @@ local function steg(_dt: number)
 			table.remove(spar, 1)
 		end
 
+		--[[ EN PASSERAD DÖRR GÖR SMULORNA BAKOM DEN FÖRBRUKADE (#182).
+
+			Mätt i Studio på `5bdd45e`, första divergensen efter
+			boxutgången — hästens signerade läge mot dörrplanet i
+			vänsterkolumnen, `+` är gången och `−` är boxen:
+
+			    häst 500,0 · 272,0  (plan +1.18)   spar=7
+			    vald smula spar[1]  494,8 · 276,7  (plan −0.56)
+			    häst 499,9 (+1.15) → 499,3 (+0.93) → 497,1 (+0.19)
+
+			Smulan är spelarens gamla läge från när hon stod INNE i boxen.
+			Gallringen ovan tar bara smulor närmare än `START_R`, och den
+			låg 2,0 m bort — alltså blev den kvar, valdes som mål, och drog
+			hästen bakåt mot dörren hon just kommit ut genom. Hennes plan
+			sjönk monotont i fyrtiosju bildrutor i rad medan spelaren gick
+			söderut. Sedan slog `led.fastnat` till.
+
+			Rättelsen gäller BARA smulor på fel sida om en dörr hon redan
+			passerat. Följningen GENOM dörren rörs inte: så länge
+			`lamnatBox` är falsk äger `viaDorr` målpunkterna, och den här
+			grenen kör inte då. Först när hon är ute blir det som ligger
+			kvar på boxsidan meningslöst — det är inte en väg tillbaka, det
+			är en väg till platsen hon lämnade.
+
+			Villkoret läser dörrens EGET plan, inte en gissad radie: en
+			smula är på fel sida om `(smula − dorrMitt) · dorrUt <= 0`. ]]
+		if l.lamnatBox and l.dorrMitt and l.dorrUt then
+			while #spar > 0
+				and (spar[1] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
+				table.remove(spar, 1)
+			end
+		end
+
 		--[[ MÅLPUNKTEN FÅR ALDRIG LIGGA I DÖDZONEN.
 
 			Smulan ska ligga minst FOLJ_BAKOM bakom spelaren — det är

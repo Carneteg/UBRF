@@ -556,6 +556,127 @@ do
 	__pathSvar = nil
 end
 
+
+--[[ ══ EN PASSERAD DÖRR GÖR SMULORNA BAKOM DEN FÖRBRUKADE (#182) ═══════
+
+	Mätt i Studio på `5bdd45e`, första divergensen efter boxutgången.
+	Vänsterkolumnen är hästens signerade läge mot boxdörrens plan, `+` är
+	gången och `−` är boxen:
+
+	    häst 500,0 · 272,0  (plan +1.18)   spar = 7 smulor
+	    vald smula spar[1]  494,8 · 276,7  (plan −0.56)
+	    häst 499,9 (+1.15) → 499,3 (+0.93) → … → 497,1 (+0.19)
+
+	Smulan var spelarens gamla läge från när hon stod INNE i boxen.
+	Gallringen tar bara smulor närmare än `START_R`; den låg 2,0 m bort och
+	blev därför kvar, valdes som mål, och drog hästen bakåt mot dörren hon
+	just kommit ut genom — fyrtiosju bildrutor i rad med sjunkande plan,
+	medan spelaren gick söderut. Sedan slog `led.fastnat` till.
+
+	Provet bygger en riktig boxdörr med attributen `borja` letar efter,
+	lägger smulor på boxsidan, flyttar hästen ut, och kräver att inget som
+	ligger kvar bakom dörrplanet får vara kvar i kön.
+
+	Följningen GENOM dörren mäts inte bort: så länge `lamnatBox` är falsk
+	äger `viaDorr` målpunkterna och gallringen nedan kör inte alls. ]]
+print("\n── En passerad dörr gör smulorna bakom den förbrukade ──")
+do
+	LedService._glomForProv()
+
+	--[[ Anläggningen med EN boxdörr. `borja` letar i `workspace.Anläggning`
+		efter delar med `UBRFBoxdorr`, och läser `Langs`/`Utat` för att veta
+		åt vilket håll gången ligger. Samma attribut `Anlaggningen` sätter. ]]
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = varld(163.68, 77.60).X + 5.5, varld(163.68, 77.60).Z
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr prov"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hS, kroppS = nyHast("smulhast", vec(DX - 5, 3, DZ))
+	local spS, rotS = nySpelare("Smulryttare", vec(DX - 3, 3, DZ))
+	local ok = LedService.borja(spS, hS, hS)
+	check("ledningen startar med en modellerad boxdörr", ok)
+
+	local lS = LedService.lage(spS)
+	check("dörren hittades och planet är känt",
+		lS ~= nil and lS.dorrMitt ~= nil and lS.dorrUt ~= nil,
+		lS and tostring(lS.dorrMitt) or "-")
+
+	local function plan(p)
+		local l = LedService.lage(spS)
+		if not (l and l.dorrMitt and l.dorrUt) then return 0 end
+		return (p - l.dorrMitt):Dot(l.dorrUt) / M
+	end
+
+	--[[ Spelaren rör sig INNE i boxen så att smulor hamnar på boxsidan. ]]
+	for i = 1, 20 do
+		rotS.CFrame = CFrame.new(vec(DX - 3 - (i % 3), 3, DZ + (i % 4) * 0.5))
+		LedService._steg(1 / 30)
+	end
+	local fore = LedService.lage(spS)
+	local pabox = 0
+	for _, c in ipairs(fore and fore.spar or {}) do
+		if plan(c) <= 0 then pabox += 1 end
+	end
+	check("smulor hamnade på boxsidan medan hon var kvar inne",
+		pabox > 0, ("%d av %d"):format(pabox, #(fore and fore.spar or {})))
+
+	--[[ Hästen går UT genom dörren, och spelaren går ut i gången. ]]
+	kroppS.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	LedService._steg(1 / 30)
+	check("hon räknas som ute ur boxen",
+		LedService.harLamnatBox(spS) == true)
+
+	--[[ Kort sträcka med flit: bänken har ingen fysik, så hästen står
+		kvar hur rätt målet än är. Går spelaren längre än KOPPEL (9 m)
+		släpper leden på `tappade_bort` och provet mäter det i stället för
+		smulorna. Fjorton studs håller oss innanför. ]]
+	for i = 1, 12 do
+		rotS.CFrame = CFrame.new(vec(DX + 4 + i * 0.2, 3, DZ + i * 1.1))
+		LedService._steg(1 / 30)
+	end
+
+	local efter = LedService.lage(spS)
+	local kvar = {}
+	for _, c in ipairs(efter and efter.spar or {}) do
+		if plan(c) <= 0 then table.insert(kvar, string.format("%.1f,%.1f", c.X, c.Z)) end
+	end
+	check("ingen smula bakom den passerade dörren finns kvar i kön",
+		#kvar == 0,
+		(#kvar == 0 and ("%d smulor kvar, alla i gången"):format(#(efter and efter.spar or {})))
+			or table.concat(kvar, " · "))
+
+	--[[ …och hon dras inte bakåt: målet ska ligga på gångsidan. ]]
+	local FOLJ_BAKOM, START_R = 2.4, 1.8
+	local function aM(a, b) return (a - b).Magnitude / M end
+	local spar = efter and efter.spar or {}
+	local bakom = rotS.Position - rotS.CFrame.LookVector * (FOLJ_BAKOM * M)
+	for i = 1, #spar do
+		if aM(spar[i], rotS.Position) >= FOLJ_BAKOM
+			and aM(spar[i], kroppS.Position) >= START_R then
+			bakom = spar[i]
+			break
+		end
+	end
+	check("kopplet håller genom hela utgången",
+		efter ~= nil,
+		efter and ("spar " .. #spar) or "SLÄPPT")
+	check("och det valda målet ligger på gångsidan av dörren",
+		efter ~= nil and plan(bakom) > 0,
+		("plan %+.2f · spar %d · spelare %.1f,%.1f"):format(
+			plan(bakom), #spar, rotS.Position.X, rotS.Position.Z))
+
+	anl:Destroy()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit
