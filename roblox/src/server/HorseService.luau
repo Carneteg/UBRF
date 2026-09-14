@@ -38,12 +38,47 @@ export type Session = {
 	lastExertion: number,
 	lastSync: number,
 	lastPosition: Vector3,
+	--[[ SERVERNS EGEN MÄTNING (#169 P1). `lastPosition` fanns men lästes
+	     aldrig — servern hade alltså ingen egen uppfattning om hur fort
+	     hästen faktiskt rörde sig, och trodde därför på klientens ord när
+	     uthålligheten räknades.
+
+	     `observerad` är planfart i studs/s mätt mellan två hjärtslag på
+	     serversidan. Den är auktoritet för trötthet; klientens påstådda
+	     tempo är presentation. ]]
+	observerad: number,
+	--[[ Skopan för StateSync-takten. `polletter` fylls på med RATE_PAFYLL
+	     per sekund upp till RATE_TAK; varje accepterad händelse kostar en.
+	     Utan den kunde en klient skriva replikerade attribut hur ofta som
+	     helst. ]]
+	polletter: number,
+	lastPollett: number,
 }
 
 local sessions: { [Model]: Session } = {}
 local byRider: { [Player]: Model } = {}
 
 local TAG = "Horse"
+
+--[[ ── StateSync-takten (#169 P1) ───────────────────────────────────────
+
+	Klienten synkar normalt ~10 Hz. Skopan rymmer RATE_TAK händelser och
+	fylls på med RATE_PAFYLL per sekund, alltså 50 % marginal över den
+	normala takten plus en liten burst för hack och omstarter. Spam tar
+	slut på polletter och skrivs inte.
+
+	Medvetet konservativt: en grind som stryper legitim synk skulle kännas
+	som trasig styrning, och då hade den plockats bort i stället för
+	justerats. Hellre för generös än märkbar. ]]
+local RATE_TAK = 6
+local RATE_PAFYLL = 15
+
+--[[ Hur stor positionsförändring mellan två mätningar som fortfarande
+	tolkas som rörelse. Över den är det en teleport, ett respawn eller ett
+	fysikhopp — inte en häst som travar — och mätningen hoppas över i
+	stället för att räknas som fyrsprång i en enda tick. Gallop.max är
+	11 studs/s; tre gånger det är långt över allt hästen kan göra själv. ]]
+local TELEPORT_GRANS = 33
 
 --[[ ── Registrering ────────────────────────────────────────────────── ]]
 
@@ -132,6 +167,9 @@ local function register(model: Model)
 		lastExertion = 0,
 		lastSync = os.clock(),
 		lastPosition = rig.root.Position,
+		observerad = 0,
+		polletter = RATE_TAK,
+		lastPollett = os.clock(),
 	}
 
 	model:SetAttribute("Registered", true)
@@ -220,6 +258,21 @@ local function setRider(session: Session, player: Player?)
 	if player then
 		byRider[player] = session.rig.model
 	end
+
+	--[[ ── SYNKTILLSTÅNDET FÖLJER INTE MED TILL NÄSTA RYTTARE (#169 P1) ──
+	     Polletterna, mätpunkten och den observerade farten hörde till den
+	     förra ryttarens ritt. Utan nollställning kunde en tom skopa göra
+	     att nästa ryttares första synkar tyst släpptes, och en gammal
+	     `lastPosition` ge ett falskt fartutslag i första hjärtslaget —
+	     alltså dränering för en sträcka den nya ryttaren aldrig red.
+
+	     Nollställs vid BÅDE på- och avsittning: sessionen ska aldrig bära
+	     en mätning som hör till någon annan. ]]
+	session.polletter = RATE_TAK
+	session.lastPollett = os.clock()
+	session.lastSync = os.clock()
+	session.lastPosition = session.rig.root.Position
+	session.observerad = 0
 
 	session.rig.model:SetAttribute("RiderUserId", if player then player.UserId else 0)
 
@@ -648,9 +701,61 @@ end
 
 --[[ ── Uthållighet ─────────────────────────────────────────────────── ]]
 
+--[[ Hur fort hästen FAKTISKT rörde sig, mätt på servern (#169 P1).
+
+	Planfart: höjdledet räknas inte, annars hade ett fall eller en trappa
+	läst som galopp. Mätningen skrivs in i sessionen och används av
+	tröttheten nedan.
+
+	Teleporthoppet är inte kosmetik. Utan det ger ett respawn eller en
+	fysikstöt ett enda hjärtslag med hundratals studs/s, och hästen hade
+	tappat energi för en sträcka hon aldrig sprang. ]]
+local function observera(session: Session, dt: number): number
+	local root = session.rig.root
+	if not root or not root.Parent or dt <= 0 then return session.observerad end
+	local nu = root.Position
+	local d = nu - session.lastPosition
+	session.lastPosition = nu
+	local plan = math.sqrt(d.X * d.X + d.Z * d.Z)
+	if plan > TELEPORT_GRANS * dt then
+		--[[ Hoppet förkastas, men positionen är redan uppdaterad: nästa
+		     mätning utgår från det nya läget och inte från det gamla. ]]
+		session.observerad = 0
+		return 0
+	end
+	session.observerad = plan / dt
+	return session.observerad
+end
+
 local function stepStamina(session: Session, dt: number)
 	local stats = session.stats
 	local gaitR = session.rig.model:GetAttribute("Gait") or "halt"
+
+	--[[ ── KLIENTEN ÄGER INTE TRÖTTHETEN (#169 P1) ─────────────────────
+	     `Gait`-attributet skrivs av klientens StateSync. Tröttheten läste
+	     det rakt av, och därför kunde en modifierad klient rapportera
+	     "halt" medan hästen galopperade: servern gav återhämtning åt en
+	     häst i full fart.
+
+	     Nu vägs klientens påstående mot serverns egen mätning, och den
+	     HÖGRE av de två driver energin. Att ljuga nedåt ger ingenting —
+	     mätningen avslöjar farten. Att ljuga uppåt ger bara mer dränering
+	     än man förtjänar, alltså ingen vinst heller.
+
+	     Bara för en RIDEN häst. En lös häst som knuffas av fysiken ska
+	     inte tröttna av det. ]]
+	local energiGangart = gaitR
+	if session.rider then
+		local observerad = observera(session, dt)
+		--[[ Utan `current`: hysteresen finns för att animationen inte ska
+		     flimra, och den får inte kunna hålla kvar ett påstått "halt"
+		     en bit upp i skrittbandet. Auktoriteten mäter på bandet. ]]
+		local sedd = Gaits.forSpeed(observerad)
+		if Gaits.index(sedd) > Gaits.index(gaitR) then
+			energiGangart = sedd
+		end
+	end
+	gaitR = energiGangart
 
 	--[[ ── EN TRÖTTHETSSANNING (senior re-review #87, blocker 3) ───────
 	     Här fanns förut en EGEN uthållighetsmodell: `Gaits.stamina` per
@@ -714,16 +819,58 @@ local function onStateSync(player: Player, gait: string, speed: number)
 	if not session then return end
 	if typeof(gait) ~= "string" or typeof(speed) ~= "number" then return end
 	if not Gaits.BY_NAME[gait] then return end
-	if speed ~= speed or speed < -3 or speed > 15 then return end   -- NaN och orimligt
+	--[[ NaN faller på olikheten mot sig själv; ±inf faller på gränserna. ]]
+	if speed ~= speed or speed < -3 or speed > 15 then return end
+
+	--[[ ── TAKTEN (#169 P1) ────────────────────────────────────────────
+	     Varje accepterad händelse skriver två replikerade attribut. Utan
+	     en gräns kunde en klient göra det tusen gånger i sekunden. Skopan
+	     fylls på i efterhand så att normal 10 Hz aldrig tar slut, och
+	     händelsen släpps helt när den är tom — ingen kö, inget minne att
+	     fylla. ]]
+	local nu = os.clock()
+	session.polletter = math.min(RATE_TAK,
+		session.polletter + (nu - session.lastPollett) * RATE_PAFYLL)
+	session.lastPollett = nu
+	if session.polletter < 1 then return end
+	session.polletter -= 1
+
+	--[[ ── GÅNGART OCH TEMPO MÅSTE HÖRA IHOP (#169 P1) ─────────────────
+	     Paret validerades förut var för sig: "halt" med tempo 11 gick
+	     igenom, för båda låg inom sina egna gränser. Nu måste tempot ligga
+	     i den påstådda gångartens band, med samma hysteres som klienten
+	     själv byter gångart på.
+
+	     BAKÅT ÄR ETT EGET FALL, och det höll på att kosta backningen.
+	     `MovementController` backar med `targetGait == "halt"` och tempo
+	     −ReverseSpeed, alltså −1,1. En regel på `math.abs(speed)` hade
+	     nekat varje legitim backning: 1,1 ligger långt utanför haltbandet.
+	     Bakåt är därför tillåtet ENDAST i halt, och bara ned till
+	     backtempot med marginal. ]]
+	local h = Gaits.HYSTERESIS
+	if speed < 0 then
+		if gait ~= "halt" then return end
+		if -speed > Config.MOVEMENT.ReverseSpeed + h then return end
+	else
+		local band = Gaits.BY_NAME[gait]
+		if speed < band.min - h or speed > band.max + h then return end
+	end
 
 	local ceiling = session.rig.model:GetAttribute("GaitCeiling") or Gaits.SPELBAR_TOPP
 	if Gaits.index(gait) > Gaits.index(ceiling) then
 		gait = ceiling
+		--[[ Taket sänker gångarten, och då måste tempot följa med. Annars
+		     skriver SERVERN själv det motsägelsefulla par den just nekat
+		     klienten — galopptempo under en canter-etikett. ]]
+		if speed > 0 then
+			local tak = Gaits.BY_NAME[gait]
+			speed = math.clamp(speed, tak.min, tak.max)
+		end
 	end
 
 	session.rig.model:SetAttribute("Gait", gait)
 	session.rig.model:SetAttribute("Speed", speed)
-	session.lastSync = os.clock()
+	session.lastSync = nu
 end
 
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]

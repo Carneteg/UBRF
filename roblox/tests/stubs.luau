@@ -376,6 +376,17 @@ local function __signal()
 		local nu = table.clone(self._lyssnare)
 		for _, fn in ipairs(nu) do fn(...) end
 	end
+	--[[ `Wait` SAKNADES, och det gjorde avsittningen omatbar (#169 P1).
+	     `HorseService.stannaHast` kor `RunService.Heartbeat:Wait()` atta
+	     ganger i en `task.spawn`. Stubbens `task.spawn` kor funktionen
+	     synkront, sa kastet slog rakt igenom `dismount` — och
+	     `integration.spec` dog mitt i provet med noll FEL-rader, alltsa
+	     sag ett KRASCH ut som nagot annat an ett fel i banken.
+	     Returnerar 0 sekunders delta: ingen riktig tid gar, men slingan
+	     far lopa klart och avsittningen gar att mata. ]]
+	function sig:Wait()
+		return 0
+	end
 	--[[ Samma skäl som i __signalTradar: varje `start()` i ett provblock
 		lägger en ny lyssnare, och utan nollställning kör block två med
 		block ettas kvar. ]]
@@ -487,6 +498,22 @@ local __services = {
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
+		--[[ `GetPlayerFromCharacter` SAKNADES, och avsittningen kraschade
+		     darfor mitt i `integration.spec` — med noll FEL-rader, sa det
+		     laste som nagot annat an ett hal i banken (#169 P1).
+		     `HorseService` anvander den i stadningen efter en ritt.
+		     Slar upp i samma register som `GetPlayers`, sa provet mater
+		     de spelare specen faktiskt byggt och inte en egen sanning. ]]
+		GetPlayerFromCharacter = function(self, karaktar)
+			if karaktar == nil then return nil end
+			for _, p in ipairs(self._spelare) do
+				if p.Character == karaktar then return p end
+			end
+			if self.LocalPlayer and self.LocalPlayer.Character == karaktar then
+				return self.LocalPlayer
+			end
+			return nil
+		end,
 		--[[ Trådväxlande med flit — se __signalTradar. `PlayerRemoving` är
 		     en vanlig signal: där finns inget yield-fönster att modellera. ]]
 		PlayerAdded = __signalTradar(),
