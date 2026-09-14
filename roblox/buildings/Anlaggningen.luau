@@ -2089,13 +2089,28 @@ local function byggRidhusInre(model: Model, base: CFrame)
 		sp.x0 - b.x, sh, 0.1, INRE.sarg)
 	BK.box(model, base, "Sarg norr öst", o.x + sp.x1, 0, o.y + b.y + b.h,
 		b.x + b.w - sp.x1, sh, 0.1, INRE.sarg)
-	local markor = BK.box(model, base, "Spelabstraktion sargport", o.x + sp.x0, 0, o.y + b.y + b.h - 0.05,
-		sp.x1 - sp.x0, sh, 0.2, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
-	markor.CanCollide = false
-	markor.Transparency = 0.7
-	markor:SetAttribute("Klass", sp.klass)
-	markor:SetAttribute("Fidelity", sp.fidelity)
-	markor:SetAttribute("Motiv", sp.motiv)
+	--[[ MARKÖREN ÄR QA-GEOMETRI (#176). Gapet ovan ÄR sargporten; den här
+		gula genomskinliga plattan är bara etiketten som säger vad gapet är.
+
+		Den byggdes villkorslöst och syntes därför i spelet. Tobias har
+		rapporterat fyra gånger att "grinden" står kvar i ridhuset — och en
+		2,2 × 1,4 m gul neonplatta mitt i sargens öppning läser som just en
+		grind. Läktarlärdom 2 i `docs/ACTIVE-GATE.md` är bindande sedan
+		PR #114 (2026-09-07) och nyare än markörbeslutet (2026-09-03):
+		review-/debuggeometri ska vara dev/debug-only och ALDRIG synlig i
+		produktvyn.
+
+		Samma flagga som dörrmarkörerna. Gapet, sargen och vägen ut på banan
+		är oförändrade — det är etiketten som försvinner, inte passagen. ]]
+	if QA_MARKORER then
+		local markor = BK.box(model, base, "Spelabstraktion sargport", o.x + sp.x0, 0, o.y + b.y + b.h - 0.05,
+			sp.x1 - sp.x0, sh, 0.2, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
+		markor.CanCollide = false
+		markor.Transparency = 0.7
+		markor:SetAttribute("Klass", sp.klass)
+		markor:SetAttribute("Fidelity", sp.fidelity)
+		markor:SetAttribute("Motiv", sp.motiv)
+	end
 
 	--[[ Läktaren längs östra långsidan.
 
@@ -2287,6 +2302,11 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				p:SetAttribute("Fidelity", ls.fidelity)
 				p:SetAttribute("Motiv", ls.motiv)
 			end
+			--[[ ETIKETTEN, inte trappan (#176). Stegen ovan är solida
+				träplankor och byggs alltid — läktaren är PRODUCT_ACCEPTED
+				och måste gå att kliva. Den här gula neonplattan svävar
+				ovanför dem och är QA-geometri; se noten vid sargporten. ]]
+			if QA_MARKORER then
 			local markor = BK.box(model, base, "Spelabstraktion laktarsteg", o.x + ls.x0, ls.z1 + 0.3, o.y + ls.y0,
 				b, 0.12, ls.y1 - ls.y0, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
 			markor.CanCollide = false
@@ -2294,6 +2314,7 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			markor:SetAttribute("Klass", ls.klass)
 			markor:SetAttribute("Fidelity", ls.fidelity)
 			markor:SetAttribute("Motiv", ls.motiv)
+			end
 		end
 	end
 	--[[ SPELETS BÄNKRADSSTEG (G.spelabstraktioner.ridhus.bankradSteg): inte
@@ -2315,6 +2336,8 @@ local function byggRidhusInre(model: Model, base: CFrame)
 				p:SetAttribute("Fidelity", bs.fidelity)
 				p:SetAttribute("Motiv", bs.motiv)
 			end
+			--[[ Etiketten, inte stegen (#176). Samma skäl som ovan. ]]
+			if QA_MARKORER then
 			local markor = BK.box(model, base, "Spelabstraktion bankradsteg", o.x + bs.x0, bs.z1 + 0.3, o.y + bs.y0,
 				bs.x1 - bs.x0, 0.12, b, Color3.fromRGB(214, 174, 60), Enum.Material.Neon)
 			markor.CanCollide = false
@@ -2322,6 +2345,7 @@ local function byggRidhusInre(model: Model, base: CFrame)
 			markor:SetAttribute("Klass", bs.klass)
 			markor:SetAttribute("Fidelity", bs.fidelity)
 			markor:SetAttribute("Motiv", bs.motiv)
+			end
 		end
 	end
 	--[[ ÖVRE GÅNGEN (R.ovreGang): golvet på caféplanet längs banans kant som

@@ -585,7 +585,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
     #[[ Hojdspecen bygger RIKTIGA riggar i tre storlekar och kor
     #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
-    if "hasthojd" in spec_rel or "avsittning" in spec_rel:
+    #[[ #176: spelbygget. Samma varld som bygge.spec, men med QA-flaggan AV
+    #   (se injektionen nedan). Maste sta FORE "bygge", som annars fangar
+    #   den — den ar den enda spec som mater vad SPELAREN ser. ]]
+    if "spelbuild" in spec_rel:
+        moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
+    elif "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
@@ -677,8 +682,16 @@ def bygg(spec_rel: str) -> pathlib.Path:
     delar = [stubbtext]
     #[[ Bankens varld ar QA-varlden: bygge.spec raknar de gula dorrmarkorerna
     #   mot antalet dorrar i datan. Sedan #162 byggs de bara nar flaggan ar
-    #   satt, sa banken satter den. En spelbuild gor det inte. ]]
-    delar.append("local UBRF_QA_MARKORER = true\n")
+    #   satt, sa banken satter den. En spelbuild gor det inte.
+    #
+    #   DARFOR FANNS ETT HAL (#176): varje spec kordes som QA-build, sa
+    #   ingen spec kunde se vad SPELAREN ser. De gula spelabstraktions-
+    #   markorerna byggdes villkorslost och syntes i spelet i manader utan
+    #   att en enda grind kunde mata det. `spelbuild.spec` far darfor
+    #   flaggan AV och ar den enda specen som mater produktvagen. ]]
+    spelbuild = "spelbuild" in spec_rel
+    delar.append("local UBRF_QA_MARKORER = %s\n"
+                 % ("false" if spelbuild else "true"))
     for namn, rel in moduler:
         kropp = inlina(las(rel))
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
