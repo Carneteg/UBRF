@@ -44,6 +44,9 @@ local DEFINITIONS = {
 	LedBorja = "RemoteFunction",           -- klient → server: jag börjar leda den här hästen
 	LedSlapp = "RemoteFunction",           -- klient → server: jag släpper
 	LedSync = "RemoteEvent",               -- server → ägaren: leder jag, och hur långt har hon kommit
+	--[[ RIDE FIRST: "Rida nu". Klienten skickar en avsikt; servern gör
+	     stallets förberedelse och svarar med hela sanningen. ]]
+	RidaNu = "RemoteFunction",             -- klient → server: låt stallet göra i ordning henne
 }
 
 local cache: { [string]: Instance } = {}

@@ -601,7 +601,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ #176: spelbygget. Samma varld som bygge.spec, men med QA-flaggan AV
     #   (se injektionen nedan). Maste sta FORE "bygge", som annars fangar
     #   den — den ar den enda spec som mater vad SPELAREN ser. ]]
-    if "spelbuild" in spec_rel:
+    #[[ #FUN FIRST: ridefirst.spec mater regeln, inte varlden — samma bank
+    #   som forberedelsen, dar Preparation, Svar och RidKanon finns. ]]
+    if "ridefirst" in spec_rel:
+        moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
+    elif "spelbuild" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
     #[[ #169 P1: StateSync-auktoriteten provas mot TJANSTEN med en riktig
     #   rigg — samma bank som integrationen, eftersom spoofen bara gar att

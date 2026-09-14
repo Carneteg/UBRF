@@ -356,6 +356,8 @@ const SPRAK = {
      generering hade RADERAT dem — och med dem pekknapparna som
      IPAD_RIDING_ACCEPTANCE_PASS behöver. Texterna är överförda ordagrant
      från den accepterade Roblox-filen; ingenting är nyskrivet här. */
+  /* RIDE FIRST: knappen som låter stallet göra i ordning henne. */
+  "interaktion.rida_nu": { sv: "Rida nu", en: "Ride now" },
   "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
   "touch.skritt": { sv: "SKRITT", en: "WALK" },
   "touch.trav": { sv: "TRAV", en: "TROT" },

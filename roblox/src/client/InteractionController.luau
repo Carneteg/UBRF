@@ -24,6 +24,9 @@ local prompts: { [Model]: ProximityPrompt } = {}
      och sätts aldrig av en gissning. ]]
 local ledKnappar: { [Model]: ProximityPrompt } = {}
 local ledPrompts: { [Model]: boolean } = {}
+--[[ RIDE FIRST: "Rida nu". Egen knapp, samma mönster som de två ovan. ]]
+local ridaKnappar: { [Model]: ProximityPrompt } = {}
+local ridaCheck: ((Model) -> boolean)? = nil
 local onMount: ((Model) -> ())? = nil
 
 --[[ Får uppsittningsprompten visas för den här modellen?
@@ -215,11 +218,68 @@ end
 	här skulle en spelare som blir klar med förberedelsen aldrig få sin
 	prompt — modellen fanns ju redan när loopen startade — och en som sitter
 	upp skulle behålla den. Anropas när servern skickat ny sanning. ]]
+--[[ ══ «RIDA NU» ══════════════════════════════════════════════════════
+
+	Produktbeslut FUN FIRST / RIDE FIRST. Spelaren kommer för att rida;
+	skötseln ska göra ritten bättre, inte vara en vägspärr.
+
+	Knappen sitter PÅ HÄSTEN och inte i förberedelsekortet. Två skäl, båda
+	praktiska: kortet mäts på pixelnivå av fyra specar och tål inte ett nytt
+	element utan att layoutproven skrivs om, och hästen är ändå där spelaren
+	står när tanken "jag vill rida nu" uppstår.
+
+	Den försvinner så fort förberedelsen är klar — då är `MountPrompt`
+	svaret i stället, och två knappar som gör nästan samma sak vore precis
+	den sortens valfrihet som bromsar. ]]
+local function addRidaPrompt(model: Model)
+	if ridaKnappar[model] then return end
+	if not (ridaCheck and ridaCheck(model)) then return end
+	local rig = RigAdapter.build(model)
+	if not rig then return end
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "RidaNuPrompt"
+	prompt.ActionText = Sprak.t("interaktion.rida_nu")
+	prompt.ObjectText = model:GetAttribute("HorseName") or model.Name
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.R
+	prompt.Parent = rig.root
+
+	prompt.Triggered:Connect(function()
+		local ok, skal = Net.get("RidaNu"):InvokeServer()
+		if not ok then
+			--[[ Nej:et är oftast välfärdsstoppet: stallet såg något på
+				henne idag. Det ska LÄSAS, inte tystas. ]]
+			warn(("[Horse] Rida nu: %s (%s)"):format(
+				Sprak.t(tostring(skal)), tostring(skal)))
+		end
+		InteractionController.uppdatera()
+	end)
+
+	ridaKnappar[model] = prompt
+end
+
+local function removeRida(model: Model)
+	local k = ridaKnappar[model]
+	if k then k:Destroy() end
+	ridaKnappar[model] = nil
+end
+
+--[[ Vem som avgör om knappen får visas. Samma mönster som `setLedCheck`:
+	klienten frågar, gameplaylagret svarar. ]]
+function InteractionController.setRidaCheck(fn: ((Model) -> boolean)?)
+	ridaCheck = fn
+end
+
 function InteractionController.uppdatera()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then
 			if farVisas(model) then addPrompt(model) else removeMount(model) end
 			if farVisasLed(model) then addLedPrompt(model) else removeLed(model) end
+			if ridaCheck and ridaCheck(model) then addRidaPrompt(model)
+			else removeRida(model) end
 		end
 	end
 end

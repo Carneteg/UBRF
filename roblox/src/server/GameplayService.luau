@@ -36,6 +36,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Core = require(ReplicatedStorage.HorseCore)
 local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 local Pass = require(ReplicatedStorage.HorseCore.Pass)
+--[[ Dagsformens kanon. Belöningen för egen skötsel räknas ur samma
+     START-tabell som webben, inte ur en egen konstant. ]]
+local RidKanon = require(ReplicatedStorage.HorseCore.RidKanon)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
@@ -321,6 +324,89 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 	return ok, avslag
 end
 
+--[[ ══ RIDA NU ════════════════════════════════════════════════════════
+
+	Produktbeslut FUN FIRST / RIDE FIRST: spelaren kommer för att rida.
+	Skötseln ska göra ritten bättre — inte vara en vägspärr.
+
+	`ridaNu` är STALLETS förberedelse, inte en genväg förbi den. Hästen ska
+	efteråt vara lika korrekt och säkert förberedd som om spelaren gjort
+	varje moment själv; spelet får aldrig lära ut fel hästhantering för att
+	spara tid.
+
+	Därför går den genom `GameplayService.moment` — samma väg, samma
+	prövningar, samma FYSISKA utrustning. Blockerare 5 i #162 var just att
+	ett `utr:`-moment satte en boolean utan att någon sadel kom på hästen;
+	en egen genväg här hade återinfört det felet i ny form. Det som inte
+	går igenom den riktiga vägen ska inte heller kvitteras.
+
+	Utrustningen väljs åt spelaren först — det är stallet som lagt fram
+	hennes egen sadel, och `TackService.satPa` prövar fortfarande att den
+	hör till rätt häst.
+
+	VAD SOM INTE KRINGGÅS: välfärdsstoppet. Hästens dagstillstånd finns
+	oavsett om någon tittar, och har stallet sett något blir det kvar EXAKT
+	ETT beslut för spelaren — vad gör vi åt det. Ett steg, inte nio, och
+	hästen rids fortfarande inte om hon inte ska ridas. Första passet bär
+	aldrig något fynd, så en ny spelare kommer rakt upp i sadeln. ]]
+function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
+	local naravaro_ok, skal = narvaro(player)
+	if not naravaro_ok then return false, skal end
+	local s = state[player]
+	if not s then return false, "spel.ingen_hast" end
+	local modell = bunden[player]
+	if not modell then return false, "spel.ingen_hast" end
+
+	--[[ Stallet har lagt fram hennes egen utrustning. Valet görs via samma
+		funktion klienten använder, så routingen prövas likadant. ]]
+	GameplayService.valjUtrustning(player, "sadel", s.hastId)
+	GameplayService.valjUtrustning(player, "trans", s.hastId)
+
+	--[[ Momenten i tur och ordning, genom den riktiga vägen. `leda` hoppas
+		över här: den mäter hästens FYSISKA läge i världen och kan inte
+		kvitteras av en knapp — se blockerare 2. Den fasen fylls i av
+		`Preparation.autoForbered` nedan, som är stallets hand, medan den
+		fysiska sanningen om var hon står lämnas orörd. ]]
+	for _, f in ipairs(Preparation.stegFaser()) do
+		if f.id ~= "leda" then
+			for _, m in ipairs(Preparation.moment(f.id)) do
+				if not m.fel and m.id then
+					GameplayService.moment(player, f.id, m.id)
+				end
+				if Preparation.arVal(f.id) and Preparation.fasKlar(s, f.id) then break end
+			end
+		end
+	end
+
+	--[[ Resten — och `leda` — kvitteras som stallets arbete. Fyndet
+		markeras sett men inte besvarat, så beslutet blir spelarens. ]]
+	Preparation.autoForbered(s)
+	skicka(player)
+
+	local klar, varfor, arg = Preparation.provaUppsittning(s, s.hastId)
+	return klar, varfor, arg
+end
+
+--[[ Hästens dagsform vid uppsittning, 0–1.
+
+	BELÖNINGEN FÖR OMSORG. Den som gjort skötseln själv får en märkbart
+	harmoniskare häst; den som valt "Rida nu" får en fullt fungerande ritt.
+	Skillnaden ska läsa som "jag tog extra bra hand om henne" — aldrig som
+	"jag hoppade över, därför fungerar hon dåligt".
+
+	Därför ligger golvet på kanonens egen standarddagsform: `ridaNu` ger
+	exakt den häst spelet annars alltid gett. Egen skötsel lyfter därifrån
+	och uppåt. Ingen väg leder NEDÅT. ]]
+local DAGSFORM_BONUS = 0.25
+
+function GameplayService.dagsformFor(player: Player): number
+	local bas = RidKanon.START.DAGSFORM
+	local s = state[player]
+	if not s then return bas end
+	local andel = Preparation.egenAndel(s)
+	return math.clamp(bas + DAGSFORM_BONUS * andel, 0, 1)
+end
+
 --[[ Sadelkammarens val: vilken hästs sadel och träns spelaren tagit med
 	sig. Webbens `visaSadelkammare` gör samma val, och samma fel går att
 	göra — utrustningen prövas mot hästen när den sätts på. ]]
@@ -504,6 +590,11 @@ end
 
 function GameplayService.start()
 	HorseService.setMountGate(GameplayService.farSittaUpp)
+	--[[ Belöningen för egen skötsel: dagsformen vid uppsittning. ]]
+	HorseService.setDagsformHook(GameplayService.dagsformFor)
+	Net.get("RidaNu").OnServerInvoke = function(player)
+		return GameplayService.ridaNu(player)
+	end
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
 

@@ -890,4 +890,82 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 	}
 end
 
+--[[ ══ RIDE FIRST ═══════════════════════════════════════════════════════
+
+	Produktbeslut: spelaren kommer främst för att RIDA. Skötseln ska göra
+	ridningen bättre, inte stå i vägen för den.
+
+	`autoForbered` är stallets förberedelse: hästen ÄR ryktad, hovarna ÄR
+	kratsade, sadeln ligger rätt. Spelet får aldrig lära ut fel hästhantering
+	för att spara tid, så det här är inte "hoppa över" — det är "någon annan
+	gjorde det, korrekt".
+
+	VÄLFÄRDSSTOPPET ÖVERLEVER. Hästens dagstillstånd (`fynd`) sätts när
+	staten skapas och finns oavsett om spelaren tittar. Fanns något att se
+	har stallet sett det, och `fyndSett` markeras — men INTE `fyndRapporterat`.
+	Kvar blir alltså exakt ett beslut för spelaren: vad gör vi åt det. Ett
+	steg, inte nio, och hästen rids fortfarande inte om hon inte ska ridas.
+
+	Första passet har aldrig något fynd (`fyndFor` returnerar nil för
+	pass 1), så en ny spelare kommer direkt upp i sadeln. ]]
+function Preparation.autoForbered(state: State): (boolean, string?)
+	if not state then return false, "spel.ingen_hast" end
+	for _, f in ipairs(Preparation.stegFaser()) do
+		state.gjorda[f.id] = state.gjorda[f.id] or {}
+		--[[ ETT FELAKTIGT ALTERNATIV FÅR ALDRIG KVITTERAS. `m.fel` är de
+			moment som är fel hästhantering — att markera dem som gjorda
+			vore att låta genvägen lära ut precis det spelet finns för att
+			lära rätt. På en valfas räcker det med ETT riktigt alternativ;
+			`nastaMoment` ser då fasen som klar. ]]
+		local val = Preparation.arVal(f.id)
+		for _, m in ipairs(Preparation.moment(f.id)) do
+			local id = if type(m) == "table" then m.id else m
+			local fel = type(m) == "table" and m.fel
+			if id ~= nil and not fel then
+				--[[ `auto` skiljer stallets hand från spelarens. Belöningen
+					nedan räknar bara det spelaren gjort själv. ]]
+				if state.gjorda[f.id][id] == nil then
+					state.gjorda[f.id][id] = "auto"
+				end
+				if val then break end
+			end
+		end
+		if f.id == "visitera" and state.fynd then
+			state.fyndSett = true
+		end
+		if Preparation.fasKlar(state, f.id) then
+			if not (f.id == "visitera" and state.fynd and not state.fyndRapporterat) then
+				state.klara[f.id] = true
+			end
+		end
+	end
+	return true, nil
+end
+
+--[[ Hur stor del av förberedelsen spelaren gjorde SJÄLV, 0–1.
+
+	`gjorda[fas][moment]` är `true` när spelaren utförde momentet och
+	strängen `"auto"` när stallet gjorde det. Andelen driver dagsformen i
+	`GameplayService.dagsformFor` — omsorg ger en märkbart harmoniskare
+	häst, men den som hoppar över får fortfarande en fullt fungerande ritt. ]]
+function Preparation.egenAndel(state: State?): number
+	if not state then return 0 end
+	local totalt, egna = 0, 0
+	for _, f in ipairs(Preparation.stegFaser()) do
+		for _, m in ipairs(Preparation.moment(f.id)) do
+			local id = if type(m) == "table" then m.id else m
+			local fel = type(m) == "table" and m.fel
+			--[[ Felaktiga alternativ räknas inte in i nämnaren: de SKA inte
+				göras, och en spelare som låter bli ska inte straffas för
+				det i sin andel. ]]
+			if id ~= nil and not fel then
+				totalt += 1
+				if (state.gjorda[f.id] or {})[id] == true then egna += 1 end
+			end
+		end
+	end
+	if totalt == 0 then return 0 end
+	return egna / totalt
+end
+
 return Preparation

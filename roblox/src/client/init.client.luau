@@ -241,6 +241,16 @@ end)
 	Se noten i `InteractionController.farVisasLed`: den gamla regeln låste
 	loopen, eftersom `leda` måste vara avbockad för att `redo` ska bli sant
 	och kopplet måste fästas för att `leda` ska kunna bockas av. ]]
+--[[ RIDE FIRST: «Rida nu» visas så länge förberedelsen ÄTERSTÅR. Är den
+     klar är uppsittningsprompten svaret i stället — två knappar som gör
+     nästan samma sak vore precis den valfrihet som bromsar. ]]
+InteractionController.setRidaCheck(function(model: Model): boolean
+	local id = PreparationController.hastId()
+	if not id then return false end
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return PreparationController.nastaFas() ~= nil
+end)
+
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
