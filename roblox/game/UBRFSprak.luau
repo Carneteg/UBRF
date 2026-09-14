@@ -585,13 +585,17 @@ Sprak.text = {
 		sv = "Utrustningen kom inte på plats — försök igen",
 		en = "The tack did not go on — try again",
 	},
-	["hud.visa_alla"] = {
-		sv = "Visa alla %d val",
-		en = "Show all %d options",
+	["hud.behover_du_hjalp"] = {
+		sv = "Behöver du hjälp?",
+		en = "Need help?",
 	},
 	["hud.visa_mindre"] = {
 		sv = "Visa mindre",
 		en = "Show less",
+	},
+	["hud.bra"] = {
+		sv = "Bra",
+		en = "Good",
 	},
 	["tack.ta_utrustning"] = {
 		sv = "Ta sadel och träns",
