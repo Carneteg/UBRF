@@ -18,12 +18,39 @@ Spel om Upplands-Bro Ryttarförening (ubrf.se), Husbyvägen 1A, Bro. Man rider, 
 
 - spelet ska vara **roligt att spela**,
 - spelaren ska **lära sig verklig hästkunskap genom att göra**,
-- **ansvaret och plikterna kring hästen är gameplay**, inte dekoration,
+- **ansvaret och plikterna kring hästen är gameplay**, inte dekoration — men **manuellt utförande är frivilligt**, se nedan,
 - **UBRF är den verkliga spelplatsen och verkligheten är facit**,
 - **Roblox är primär spelplattform**,
 - **HTML/webb är också en riktig spelbar distribution**, inte bara en intern prototyp.
 
 Webben får användas för snabb iteration, test och delning, men Roblox får aldrig behandlas som en senare port. Samtidigt får webbversionen inte förfalla till en icke-spelbar demo.
+
+## FUN FIRST · RIDE FIRST · LEARN NATURALLY
+
+Produktbeslut 2026-09-14. Spelaren kommer främst för att **rida**.
+Hästkunskapen ska göra ridningen bättre och mer meningsfull — inte stå i
+vägen för den.
+
+Regeln, som ersätter tolkningen att varje plikt måste utföras manuellt:
+
+> Skötsel och ansvar kring hästen är fortsatt meningsfull gameplay, men
+> **manuellt utförande är frivilligt**. Säkerhet och välfärd är det
+> **aldrig**. "Rida nu" betyder att stallet förbereder hästen korrekt åt
+> spelaren; den som väljer att sköta om henne själv får positiva
+> relations- och känsloeffekter — inte befrielse från ett straff.
+
+Vad det innebär i praktiken:
+
+- förberedelser är **bonus, inte barriär**,
+- hästen ska **alltid vara korrekt och säkert förberedd** när ritten börjar,
+  oavsett vem som gjorde arbetet,
+- spelet får **aldrig** lära ut fel hästhantering för att spara tid,
+- välfärdsstopp, säkerhetsgrindar och fysisk sanning om var hästen står
+  gäller **lika hårt** i båda vägarna,
+- belöningen för egen omsorg ska peka **uppåt** — "jag tog extra bra hand om
+  henne", aldrig "jag hoppade över, därför fungerar hon dåligt",
+- den mekaniska bonusen ska hållas **liten** så att frivillig skötsel inte
+  blir en optimeringsplikt.
 
 Hitta aldrig på en UBRF-detalj för att fylla ett hål. Saknas underlag: markera `[REFERENCE GAP]` eller `[antagande]` tills verkligheten kan verifieras.
 

@@ -357,32 +357,68 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	local modell = bunden[player]
 	if not modell then return false, "spel.ingen_hast" end
 
-	--[[ Stallet har lagt fram hennes egen utrustning. Valet görs via samma
-		funktion klienten använder, så routingen prövas likadant. ]]
-	GameplayService.valjUtrustning(player, "sadel", s.hastId)
-	GameplayService.valjUtrustning(player, "trans", s.hastId)
+	--[[ Stallet har lagt fram hennes egen utrustning. ]]
+	local okS = GameplayService.valjUtrustning(player, "sadel", s.hastId)
+	local okT = GameplayService.valjUtrustning(player, "trans", s.hastId)
+	if not (okS and okT) then return false, "tack.okand_utrustning" end
 
-	--[[ Momenten i tur och ordning, genom den riktiga vägen. `leda` hoppas
-		över här: den mäter hästens FYSISKA läge i världen och kan inte
-		kvitteras av en knapp — se blockerare 2. Den fasen fylls i av
-		`Preparation.autoForbered` nedan, som är stallets hand, medan den
-		fysiska sanningen om var hon står lämnas orörd. ]]
+	--[[ ── FAIL CLOSED ────────────────────────────────────────────────
+
+		Varje moment går genom den riktiga vägen, och VARJE returvärde
+		respekteras. Misslyckas ett fysiskt steg — sadeln kom inte på,
+		fel häst, för långt bort — avbryts hela förberedelsen med det
+		riktiga nejet.
+
+		Tidigare fyllde `autoForbered` i resten efteråt och gjorde hästen
+		"klar" ändå. Ett produktfel ska ge ett riktigt nej, inte döljas av
+		auto-state. `forb.redan_gjort` är inget fel: det betyder att
+		spelaren redan hunnit göra momentet själv. ]]
 	for _, f in ipairs(Preparation.stegFaser()) do
 		if f.id ~= "leda" then
+			local val = Preparation.arVal(f.id)
 			for _, m in ipairs(Preparation.moment(f.id)) do
 				if not m.fel and m.id then
-					GameplayService.moment(player, f.id, m.id)
+					local ok, avslag = GameplayService.moment(player, f.id, m.id)
+					if not ok and avslag ~= "forb.redan_gjort" then
+						skicka(player)
+						return false, avslag
+					end
+					--[[ En valfas behöver ETT riktigt alternativ. ]]
+					if val and Preparation.fasKlar(s, f.id) then break end
 				end
-				if Preparation.arVal(f.id) and Preparation.fasKlar(s, f.id) then break end
+			end
+			if not Preparation.fasKlar(s, f.id) then
+				skicka(player)
+				return false, "pass.aterstar", Preparation.kanontext(f.namn)
 			end
 		end
 	end
 
-	--[[ Resten — och `leda` — kvitteras som stallets arbete. Fyndet
-		markeras sett men inte besvarat, så beslutet blir spelarens. ]]
-	Preparation.autoForbered(s)
-	skicka(player)
+	--[[ ── LEDNINGEN ÄR EN VERKLIG FÖRFLYTTNING ───────────────────────
 
+		Stallet leder ut henne på riktigt. `placeraVidMal` flyttar hästen
+		och sätter flaggorna BARA om hon sedan bevisligen står i målzonen.
+
+		Därefter kvitteras `leda` genom den VANLIGA momentvägen, som
+		prövar `LedService.harLamnatBox` och `harNattMal`. Ingen genväg
+		förbi den grinden: står hon kvar i boxen faller momentet, och då
+		blir hästen inte heller uppsittningsklar. ]]
+	local flyttad, flyttfel = LedService.placeraVidMal(player, modell)
+	if not flyttad then
+		skicka(player)
+		return false, flyttfel
+	end
+	for _, m in ipairs(Preparation.moment("leda")) do
+		if not m.fel and m.id then
+			local ok, avslag = GameplayService.moment(player, "leda", m.id)
+			if not ok and avslag ~= "forb.redan_gjort" then
+				skicka(player)
+				return false, avslag
+			end
+		end
+	end
+
+	skicka(player)
 	local klar, varfor, arg = Preparation.provaUppsittning(s, s.hastId)
 	return klar, varfor, arg
 end
@@ -396,8 +432,20 @@ end
 
 	Därför ligger golvet på kanonens egen standarddagsform: `ridaNu` ger
 	exakt den häst spelet annars alltid gett. Egen skötsel lyfter därifrån
-	och uppåt. Ingen väg leder NEDÅT. ]]
-local DAGSFORM_BONUS = 0.25
+	och uppåt. Ingen väg leder NEDÅT.
+
+	STORLEKEN ÄR MEDVETET LITEN. Första versionen gav +0,25 dagsform, vilket
+	lyfte startenergin 0,835 → 0,967 — omkring 16 %. Det är nog för att
+	göra frivillig skötsel till en optimeringsplikt: den som vill ha den
+	bästa hästen MÅSTE då borsta. Precis det den här principen finns för
+	att undvika.
+
+	+0,06 ger ungefär tre procent mer uthållighet. Det räcker för att
+	kännas — hon håller gångarten en aning längre — utan att någon behöver
+	räkna på det. Den stora belöningen ska ligga i hur hon ÄR: lugnare,
+	mjukare i svaret, positivare kroppsspråk. De kanalerna hör till nästa
+	pass; den här raden ska inte växa för att kompensera. ]]
+local DAGSFORM_BONUS = 0.06
 
 function GameplayService.dagsformFor(player: Player): number
 	local bas = RidKanon.START.DAGSFORM

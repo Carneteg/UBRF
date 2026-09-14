@@ -911,6 +911,16 @@ end
 function Preparation.autoForbered(state: State): (boolean, string?)
 	if not state then return false, "spel.ingen_hast" end
 	for _, f in ipairs(Preparation.stegFaser()) do
+		--[[ `leda` RÖRS ALDRIG HÄR. Den fasen mäter var hästen FYSISKT
+			står, och stallets hand kan inte kvittera en förflyttning som
+			inte skett. Den som leder ut henne — spelaren eller stallet —
+			gör det i världen, och `GameplayService.moment` prövar
+			`LedService.harLamnatBox`/`harNattMal` som vanligt.
+
+			Att markera den här som gjord vore samma klass av fel som
+			#162 blockerare 2 och #180: logiskt färdig, fysiskt kvar i
+			boxen. ]]
+		if f.id == "leda" then continue end
 		state.gjorda[f.id] = state.gjorda[f.id] or {}
 		--[[ ETT FELAKTIGT ALTERNATIV FÅR ALDRIG KVITTERAS. `m.fel` är de
 			moment som är fel hästhantering — att markera dem som gjorda
@@ -952,15 +962,35 @@ function Preparation.egenAndel(state: State?): number
 	if not state then return 0 end
 	local totalt, egna = 0, 0
 	for _, f in ipairs(Preparation.stegFaser()) do
-		for _, m in ipairs(Preparation.moment(f.id)) do
-			local id = if type(m) == "table" then m.id else m
-			local fel = type(m) == "table" and m.fel
-			--[[ Felaktiga alternativ räknas inte in i nämnaren: de SKA inte
-				göras, och en spelare som låter bli ska inte straffas för
-				det i sin andel. ]]
-			if id ~= nil and not fel then
-				totalt += 1
-				if (state.gjorda[f.id] or {})[id] == true then egna += 1 end
+		local gjort = state.gjorda[f.id] or {}
+		if Preparation.arVal(f.id) then
+			--[[ ETT VAL ÄR ETT ARBETE, INTE FLERA.
+
+				Alternativen utesluter varandra — spelaren kan omöjligt
+				hälsa både framifrån och bakifrån. Räknades de var för sig
+				kunde perfekt skötsel aldrig nå 1,0, och det gjorde den
+				inte heller: full manuell vård landade på 0,96. Nämnaren
+				ska vara det arbete som FAKTISKT går att utföra rätt. ]]
+			totalt += 1
+			for _, m in ipairs(Preparation.moment(f.id)) do
+				local id = if type(m) == "table" then m.id else m
+				local fel = type(m) == "table" and m.fel
+				if id ~= nil and not fel and gjort[id] == true then
+					egna += 1
+					break
+				end
+			end
+		else
+			for _, m in ipairs(Preparation.moment(f.id)) do
+				local id = if type(m) == "table" then m.id else m
+				local fel = type(m) == "table" and m.fel
+				--[[ Felaktiga alternativ räknas inte in i nämnaren: de SKA
+					inte göras, och en spelare som låter bli ska inte
+					straffas för det i sin andel. ]]
+				if id ~= nil and not fel then
+					totalt += 1
+					if gjort[id] == true then egna += 1 end
+				end
 			end
 		end
 	end

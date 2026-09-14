@@ -47,12 +47,23 @@ do
 	local s = Preparation.nyState(HAST, 1)
 	local ok = Preparation.autoForbered(s)
 	check("autoForbered svarar", ok == true)
-	local klar, skal = Preparation.provaUppsittning(s, HAST)
-	check("efter stallets förberedelse går hon att sitta upp på",
-		klar == true, tostring(skal))
 	for _, f in ipairs(Preparation.stegFaser()) do
-		check(("fasen «%s» är klar"):format(f.id), Preparation.fasKlar(s, f.id) == true)
+		if f.id ~= "leda" then
+			check(("fasen «%s» är klar"):format(f.id),
+				Preparation.fasKlar(s, f.id) == true)
+		end
 	end
+
+	--[[ ── DEN VIKTIGASTE RADEN I HELA PROVET ──────────────────────────
+		Stallets hand får ALDRIG kvittera en förflyttning som inte skett.
+		Står hästen kvar i boxen ska hon inte vara uppsittningsklar. ]]
+	check("«leda» är INTE kvitterad av stallet",
+		Preparation.fasKlar(s, "leda") == false)
+	check("och inget är skrivet i state om att hon letts någonstans",
+		next(s.gjorda["leda"] or {}) == nil)
+	local klar, skal = Preparation.provaUppsittning(s, HAST)
+	check("en häst som står kvar i boxen är INTE uppsittningsklar",
+		klar == false, tostring(skal))
 end
 
 print("\n── Genvägen kvitterar ALDRIG ett felaktigt moment ──")
@@ -92,6 +103,11 @@ do
 		Preparation.autoForbered(s)
 		check("stallet SÅG fyndet", s.fyndSett == true)
 		check("men det är inte besvarat åt spelaren", s.fyndRapporterat ~= true)
+		--[[ `fasKlar` räknas ur MOMENTEN och är sann — punkterna är
+			visiterade. Spärren ligger i `klara`, som `Preparation.nasta`
+			läser, och den sätts inte förrän fyndet är besvarat. ]]
+		check("visitationen är inte AVBOCKAD förrän fyndet är besvarat",
+			s.klara["visitera"] ~= true)
 		local klar, skal = Preparation.provaUppsittning(s, HAST)
 		check("hästen får INTE ridas förrän fyndet är besvarat",
 			klar == false, tostring(skal))
@@ -104,46 +120,107 @@ do
 	local s = Preparation.nyState(HAST, 1)
 	check("pass 1 bär aldrig ett fynd", s.fynd == nil, tostring(s.fynd))
 	Preparation.autoForbered(s)
-	check("och då räcker «Rida nu» hela vägen",
-		Preparation.provaUppsittning(s, HAST) == true)
+	--[[ Skötseln är klar — men hon måste fortfarande ut ur boxen, och det
+		är en fysisk förflyttning som `GameplayService.ridaNu` gör på
+		riktigt genom `LedService.placeraVidMal`. ]]
+	check("skötseln är klar efter «Rida nu»",
+		Preparation.fasKlar(s, "iordning") == true)
+	check("men ledningen är kvar som fysiskt krav",
+		Preparation.fasKlar(s, "leda") == false)
 end
 
-print("\n── Belöningen pekar UPPÅT, aldrig nedåt ──")
+print("\n── Perfekt skötsel är 100 %, inte 96 ──")
 
 do
-	--[[ `RidKanon` är redan inlinad av bänken; ett dynamiskt require här
-		hade letat i en stubbad ReplicatedStorage. ]]
-	local bas = RidKanon.START.DAGSFORM
-
-	local auto = Preparation.nyState(HAST, 1)
-	Preparation.autoForbered(auto)
-	check("«Rida nu» ger noll egen andel", Preparation.egenAndel(auto) == 0,
-		("%.2f"):format(Preparation.egenAndel(auto)))
-
-	--[[ Spelaren gör allt själv, genom den riktiga momentvägen. ]]
 	local egen = Preparation.nyState(HAST, 1)
 	for _, f in ipairs(Preparation.stegFaser()) do
+		local val = Preparation.arVal(f.id)
 		for _, m in ipairs(Preparation.moment(f.id)) do
 			if not m.fel and m.id then
 				Preparation.utforMoment(egen, f.id, m.id, HAST)
+				if val then break end
 			end
 		end
 	end
-	local andel = Preparation.egenAndel(egen)
-	check("egen skötsel ger en andel över noll", andel > 0, ("%.2f"):format(andel))
+	--[[ `leda` går inte att utföra i bänken: den mäter hästens FYSISKA läge
+		och kräver världen. Här mäts att ALLT ÖVRIGT ger den andel det ska,
+		och sedan att hela vägen ger exakt 1,0 — inte 0,96. ]]
+	--[[ NÄMNAREN. `halsa` är en valfas med två riktiga alternativ som
+		utesluter varandra — spelaren kan omöjligt hälsa både framifrån och
+		bakifrån. Räknades båda kunde perfekt skötsel aldrig nå 1,0, och
+		det gjorde den inte heller: full manuell vård landade på 0,96.
 
-	--[[ Energin vid uppsittning: omsorgen ska SYNAS, och botten ska vara
-		kanonens standardhäst — inte sämre. ]]
-	local eAuto = Svar.startEnergi(bas)
-	local eEgen = Svar.startEnergi(math.clamp(bas + 0.25 * andel, 0, 1))
-	check("den som skött om henne får mer att ge", eEgen > eAuto,
-		("auto %.3f → egen %.3f"):format(eAuto, eEgen))
-	check("och «Rida nu» ger exakt kanonens standardhäst",
-		math.abs(eAuto - Svar.startEnergi()) < 1e-9,
-		("%.3f"):format(eAuto))
-	check("ingen väg ger en SÄMRE häst än standard", eAuto >= Svar.startEnergi(),
-		("%.3f >= %.3f"):format(eAuto, Svar.startEnergi()))
+		Beviset står i blocket längst ned: ETT utfört moment ger 1/22, inte
+		1/23. Nämnaren är alltså det arbete som faktiskt går att utföra
+		rätt, inte varje alternativ som finns att rita. ]]
+	for _, m in ipairs(Preparation.moment("leda")) do
+		if not m.fel and m.id then
+			egen.gjorda["leda"] = egen.gjorda["leda"] or {}
+			egen.gjorda["leda"][m.id] = true
+		end
+	end
+	check("PERFEKT skötsel når exakt 1,0", Preparation.egenAndel(egen) == 1,
+		("%.6f"):format(Preparation.egenAndel(egen)))
 end
+
+print("\n── Belöningen märks, men blir aldrig ett dolt krav ──")
+
+do
+	local bas = RidKanon.START.DAGSFORM
+	local BONUS = 0.06
+	local eAuto = Svar.startEnergi(bas)
+	local ePerfekt = Svar.startEnergi(math.clamp(bas + BONUS, 0, 1))
+
+	check("«Rida nu» ger exakt kanonens standardhäst",
+		math.abs(eAuto - Svar.startEnergi()) < 1e-9, ("%.3f"):format(eAuto))
+	check("ingen väg ger en SÄMRE häst än standard", eAuto >= Svar.startEnergi())
+	check("egen skötsel märks", ePerfekt > eAuto,
+		("%.3f → %.3f"):format(eAuto, ePerfekt))
+
+	--[[ TAKET. En bonus som blir för stor gör frivillig skötsel till en
+		optimeringsplikt: den som vill ha bästa hästen MÅSTE då borsta.
+		Fem procent är gränsen den här raden håller. ]]
+	local lyft = (ePerfekt - eAuto) / eAuto
+	check("men lyftet är under 5 % — ingen optimeringsplikt", lyft < 0.05,
+		("%.1f %%"):format(lyft * 100))
+end
+
+
+print("\n── FAIL CLOSED: ett misslyckat steg döljs aldrig av auto-state ──")
+
+do
+	--[[ `autoForbered` fyller i skötseln. Men den får ALDRIG göra en häst
+		färdig vars fysiska steg inte skett — då hade ett produktfel
+		maskerats av stallets hand, vilket var hela P0:an i reviewen.
+
+		Två egenskaper bevisar det utan att behöva en värld:
+		1. `leda` rörs inte alls — varken `klara` eller `gjorda` får en rad.
+		2. `provaUppsittning` faller därför, och faller på `leda`. ]]
+	local s = Preparation.nyState(HAST, 1)
+	Preparation.autoForbered(s)
+
+	check("auto rör inte «leda» i klara", s.klara["leda"] ~= true)
+	check("auto rör inte «leda» i gjorda", next(s.gjorda["leda"] or {}) == nil)
+
+	local klar, skal = Preparation.provaUppsittning(s, HAST)
+	check("hästen är INTE uppsittningsklar utan fysisk ledning",
+		klar == false, tostring(skal))
+	local nasta = Preparation.nasta(s)
+	check("och det som återstår ÄR ledningen",
+		nasta ~= nil and nasta.id == "leda",
+		tostring(nasta and nasta.id))
+
+	--[[ Och när ledningen VERKLIGEN skett — i spelet sätts flaggan av
+		`LedService` ur hästens position — då, men först då, är hon klar. ]]
+	for _, m in ipairs(Preparation.moment("leda")) do
+		if not m.fel and m.id then
+			Preparation.utforMoment(s, "leda", m.id, HAST)
+		end
+	end
+	check("men med ledningen verkligen gjord är hon det",
+		Preparation.provaUppsittning(s, HAST) == true)
+end
+
 
 print("\n── Egen skötsel räknas, stallets gör det inte ──")
 

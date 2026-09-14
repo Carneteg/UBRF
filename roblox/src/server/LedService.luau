@@ -300,6 +300,58 @@ function LedService.malzon(): Rekt?
 	return malzon
 end
 
+--[[ ══ STALLET LEDDE HENNE DIT ═══════════════════════════════════════════
+
+	FUN FIRST / RIDE FIRST: väljer spelaren "Rida nu" gör stallet i ordning
+	hästen — och leder henne också ut. Det är en VERKLIG förflyttning, inte
+	en bock i en tabell.
+
+	Skillnaden är hela poängen. Att markera `leda` som gjort medan hon står
+	kvar i boxen hade återinfört exakt den klass av fel som #162 blockerare 2
+	och #180 handlade om: logiskt färdig, fysiskt kvar. Här flyttas hon
+	först, och flaggorna sätts BARA om `iRekt` sedan säger att hon faktiskt
+	är i målzonen. Går flytten inte igenom sätts ingenting alls.
+
+	Ryttaren får ingen ny position: hon går dit själv. Det stallet gör är
+	att lämna hästen framme, precis som en stallpersonal som ställt fram
+	henne inför lektionen. ]]
+function LedService.placeraVidMal(player: Player, modell: Model): (boolean, string?)
+	if typeof(modell) ~= "Instance" or not modell:IsA("Model") then
+		return false, "spel.ingen_hast"
+	end
+	local zon = malzon
+	if not zon then return false, "led.ingen_malzon" end
+	local pivot = modell.PrimaryPart
+	if not pivot then return false, "spel.ingen_hast" end
+
+	--[[ Mitten av zonen, på hästens nuvarande höjd: zonen är en yta i
+		tomtkoordinater och bär ingen egen Y. ]]
+	--[[ Vägen tillbaka från tomtkoordinater: `tomt()` ovan är
+		`x/M, TOMTDJUP - z/M`, så världen blir `x*M, (TOMTDJUP-y)*M`. ]]
+	local mitt = Vector3.new((zon.x + zon.w / 2) * M, pivot.Position.Y,
+		(TOMTDJUP - (zon.y + zon.h / 2)) * M)
+	local fore = pivot.Position
+	modell:PivotTo(CFrame.new(mitt) * (pivot.CFrame - pivot.Position))
+
+	--[[ BEVISET, inte avsikten. Hamnade hon inte i zonen ska ingenting
+		bokföras — och hon ställs tillbaka, så att ett halvt utfört
+		stallarbete inte lämnar henne mitt i en vägg. ]]
+	if not LedService.iRekt((modell.PrimaryPart :: BasePart).Position, zon) then
+		modell:PivotTo(CFrame.new(fore) * (pivot.CFrame - pivot.Position))
+		return false, "led.kunde_inte_stalla_fram"
+	end
+
+	local hastId = tostring(modell:GetAttribute("HorseId") or "")
+	noteraUppnatt(player, hastId, "lamnatBox")
+	noteraUppnatt(player, hastId, "malNatt")
+	local l = ledd[player]
+	if l and l.modell == modell then
+		l.lamnatBox = true
+		l.malNatt = true
+	end
+	return true, nil
+end
+
 --[[ ── Att börja leda ───────────────────────────────────────────────
 	Varje nej har en egen nyckel. Ett enda "gick inte" hade gjort de
 	negativa fallen omöjliga att skilja åt i ett test. ]]
