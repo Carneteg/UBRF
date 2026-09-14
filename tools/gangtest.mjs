@@ -194,6 +194,73 @@ prova("GÅ-HIT: från banan upp på läktarens rader (via sargporten och stegen;
 q = await tapp(5.0, 60.0, 0, dackX, 60.0, 40000);
 prova("GÅ-HIT: från banans sida bredvid däcket — vägen går via stegen, inte in i kanten", viaSteg(q.vag) && q.z >= lak.L.dackZ - 0.02, `till (${q.x}, ${q.y}) z ${q.z}, via stegen: ${viaSteg(q.vag)}`);
 
+/* ══ LEDD HÄST — hästkapabel cirkulation mot cirkulation för gående ═══
+
+   Kanonen (data.js, site.js vid sargGrind): hästen kommer in i ridhuset
+   via hästgången och grinden i sargens östra långsida; sargporten i norra
+   kortsidan är för folk till fots. Hästen följer i spelarens spår utan
+   egen kollision, så "vilken öppning hästen använder" är "vilken öppning
+   spelaren går genom med hästen vid handen". Det som mäts är alltså
+   spelaren MED häst: datan, kollisionen, vägvisaren, dörrarna och gå-hit.
+
+   Falsifiering: sätt sargport.trafik till "hast" i site.js — L1, L5 och
+   klassningen faller. */
+const tr = await page.evaluate(() => ({
+  sargport: SPELABSTRAKTIONER.ridhus.sargport.trafik,
+  sargGrind: RIDHUSINNE.sargGrind.trafik,
+  hastgangR: RIDHUSINNE.dorrar.find(d => d.id === "hastgang").trafik,
+  hastgangS: STALLINNE.dorrar.find(d => d.id === "hastgang").trafik,
+  ridhusYtter: RIDHUSINNE.dorrar.filter(d => d.id !== "hastgang").map(d => d.trafik),
+  gardIn: ANL.dorrar.filter(d => d.mot === "ridhusinne").map(d => d.trafik),
+}));
+prova("KLASSNING: sargporten är för gående, hästgången och sarggrinden för häst",
+  tr.sargport === "gaende" && tr.sargGrind === "hast" && tr.hastgangR === "hast" && tr.hastgangS === "hast", JSON.stringify(tr));
+prova("KLASSNING: ridhusets övriga dörrar är för gående (kanon: hästen kommer in via hästgången)",
+  tr.ridhusYtter.length > 0 && tr.ridhusYtter.every(t => t === "gaende") && tr.gardIn.length > 0 && tr.gardIn.every(t => t === "gaende"),
+  `ridhus ${JSON.stringify(tr.ridhusYtter)} · gård→ridhus ${JSON.stringify(tr.gardIn)}`);
+
+await page.evaluate(() => { G.hastId = Object.keys(HORSES)[0]; G.hastPlats = "leds"; G.hastMott = true; });
+prova("ledningen är på (G.leder härleds ur hastPlats)", await page.evaluate(() => G.leder === true));
+/* L1. Med hästen vid handen är sargporten stängd: samma väg som fall 3, men figuren stannar vid sargen. */
+p = await ga("ridhusinne", px, dy, "S", q => q.y < info.banaTopp - 3.0, 16000);
+prova("LEDD: sargporten släpper INTE igenom spelaren med hästen vid handen", p.y > info.banaTopp - 0.6,
+  `stannade på y ${p.y} (sargen vid ${info.banaTopp.toFixed(2)})`);
+/* L2. Sarggrinden mot hästgången släpper igenom — från banan österut. */
+const gr = await page.evaluate(() => ({ y0: RIDHUSINNE.sargGrind.y0, y1: RIDHUSINNE.sargGrind.y1, x: RIDHUSINNE.bana.x + RIDHUSINNE.bana.w }));
+p = await ga("ridhusinne", gr.x - 2.0, (gr.y0 + gr.y1) / 2, "O", q => q.x > gr.x + 0.05, 12000);
+prova("LEDD: sarggrinden mot hästgången släpper igenom", p.x > gr.x + 0.05, `till x ${p.x} (sargen vid ${gr.x.toFixed(2)})`);
+/* L3. Vägvisaren: från stallet pekar den på hästgången, inte på en gårdsdörr; från gården på en stalldörr, inte på ridhusets entré. */
+const v3 = await page.evaluate(() => {
+  gaTill("stallinne", { x: 5, y: 30, rikt: 0 }); const a = uppdragDorrMot("ridhusinne");
+  gaTill("gard", { x: 150, y: 100, rikt: 0 }); const b = uppdragDorrMot("ridhusinne");
+  G.skotselRes = { dagsform: 0.7 }; gaTill("stallinne", { x: 5, y: 30, rikt: 0 }); const v = uppdragVagvisare();
+  return { a: a && a.id, aMot: a && a.mot, b: b && b.id, bMot: b && b.mot, via: v && v.viaDorr };
+});
+prova("LEDD: vägvisaren från stallet pekar på hästgången", v3.a === "hastgang" && v3.aMot === "ridhusinne", JSON.stringify(v3));
+prova("LEDD: vägvisaren från gården pekar på en stalldörr, inte på ridhusets entré", v3.bMot === "stallinne", JSON.stringify(v3));
+prova("LEDD: uppsittningsuppdraget säger hästgången som vägen dit", /hästgången/i.test(v3.via || ""), JSON.stringify(v3.via));
+/* L4. Dörrar: huvudentrén från insidan öppnas inte med hästen vid handen; hästgångsdörren gör det. */
+const v4 = await page.evaluate(() => {
+  gaTill("ridhusinne", { x: 1.6, y: 67.18, rikt: 0 });
+  const d = RIDHUSINNE.dorrar.find(d => d.id === "ut_ridhus_W_9"); const I = interaktioner().find(i => i.pos === d.pos); I.gor();
+  const efterEntre = G.scen;
+  gaTill("ridhusinne", { x: 23.6, y: 42.78, rikt: 0 });
+  const h = RIDHUSINNE.dorrar.find(d => d.id === "hastgang"); const J = interaktioner().find(i => i.pos === h.pos); J.gor();
+  return { efterEntre, efterHastgang: G.scen };
+});
+prova("LEDD: huvudentrén öppnas inte med hästen vid handen", v4.efterEntre === "ridhusinne", JSON.stringify(v4));
+prova("LEDD: hästgångsdörren öppnas", v4.efterHastgang === "stallinne", JSON.stringify(v4));
+/* L5. Gå-hit: från entréhallen ut på banan finns ingen väg när man leder (sargporten stängd) — men till fots. */
+const v5 = await page.evaluate(() => {
+  gaTill("ridhusinne", { x: 1.6, y: 67.18, rikt: 0 }); navRedo();
+  const ledd = navVag(2.0, 67.0, 10, 50);
+  G.hastPlats = null; navRedo();
+  const fots = navVag(2.0, 67.0, 10, 50);
+  return { ledd: ledd ? ledd.length : null, fots: fots ? fots.length : null, leder: G.leder };
+});
+prova("LEDD: gå-hit hittar ingen väg från entréhallen ut på banan (sargporten stängd)", v5.ledd === null, JSON.stringify(v5));
+prova("TILL FOTS: gå-hit hittar vägen genom sargporten (som förut)", v5.fots !== null && v5.leder === false, JSON.stringify(v5));
+
 await browser.close(); srv.close();
 const fel = resultat.filter(r => !r.ok).length;
 console.log(fel ? `${fel} FEL` : "ALLA OK");

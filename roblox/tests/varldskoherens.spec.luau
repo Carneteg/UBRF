@@ -425,8 +425,12 @@ print("")
 print("3b. Varje hästs egen sadel och eget träns")
 
 local taget = {}
-TackForradService.start(function(spelare, typ, hastId)
-	taget[typ] = hastId
+local nekaFor = nil
+TackForradService.start(function(spelare, val)
+	for _, hastId in pairs(val) do
+		if hastId == nekaFor then return false, "tack.provnej" end
+	end
+	for typ, hastId in pairs(val) do taget[typ] = hastId end
 	return true
 end)
 
@@ -489,6 +493,38 @@ TackForradService.tag(spelare, granne)
 check("och vid grannens front ger GRANNENS — felvalet går att göra",
 	taget.sadel == granne and taget.trans == granne,
 	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+
+--[[ ATOMISKT OCH ÄRLIGT LOGGAT (#169, #170 blockerare 2). Paret lämnas
+	som ETT val; nekar mottagaren kommer skälet tillbaka, valet är orört
+	och loggen påstår inte att något togs. ]]
+local loggat = {}
+local riktigPrint, riktigWarn = print, warn
+print = function(...) table.insert(loggat, table.concat({ ... }, " ")) end
+warn = function(...) table.insert(loggat, "WARN " .. table.concat({ ... }, " ")) end
+nekaFor = granne
+local okNej, skalNej = TackForradService.tag(spelare, granne, "Grannen")
+nekaFor = nil
+print, warn = riktigPrint, riktigWarn
+check("nekar mottagaren paret kommer skälet tillbaka", okNej == false and skalNej == "tack.provnej",
+	tostring(skalNej))
+check("och valet är orört — fortfarande grannens par från förra greppet, inte blandat",
+	taget.sadel == granne and taget.trans == granne)
+local togLogg, nejLogg = false, false
+for _, rad in ipairs(loggat) do
+	if rad:find("tog Grannens sadel och träns", 1, true) then togLogg = true end
+	if rad:find("WARN", 1, true) and rad:find("fick INTE", 1, true) then nejLogg = true end
+end
+check("loggen påstår INTE att utrustningen togs — den säger nej med skäl", not togLogg and nejLogg,
+	table.concat(loggat, " | "))
+loggat = {}
+print = function(...) table.insert(loggat, table.concat({ ... }, " ")) end
+local okJa = TackForradService.tag(spelare, jag, "Jack")
+print = riktigPrint
+local jaLogg = false
+for _, rad in ipairs(loggat) do if rad:find("tog Jacks sadel och träns", 1, true) then jaLogg = true end end
+check("och först när båda togs loggas det", okJa == true and jaLogg, table.concat(loggat, " | "))
+check("samma grepp två gånger är idempotent", (TackForradService.tag(spelare, jag)) == true
+	and taget.sadel == jag and taget.trans == jag)
 
 --[[ ══ 5. INTERIÖRERNA HAR GOLV — INGET GRÄS BLÖDER IGENOM ═══════════════
 

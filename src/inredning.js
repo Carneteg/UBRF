@@ -423,7 +423,23 @@ const INREDNING = (() => {
       detaljer:{kolumner:4, profil:true, beslag:true, ventilation:false,
                 ram:true, ramfarg:"#EEEDE7", sockelVent:true, ben:true},
       kalla:"ridhus-klubb-20, -21", klass:"FOTO", lage:"ASSUMPTION"},
-    {id:"skap_hoga_v", rum:"hall", typ:"skapbank", pos:[skapX, 76.15], rikt:W,
+    /* ── DE HÖGA SKÅPEN STOD TVÄRS ÖVER RUTTEN ─────────────────────
+
+       Gruppen låg på x 4,2–4,7, y 75,15–77,15 och fortsatte skåpraden ända
+       upp till gaveln. Tillsammans med `skap_v_1` (y 70,05–74,95) blev
+       skåpgången då en återvändsgränd: 0,2 m glipa vid y 75, ingen väg
+       österut norr om y 70. Mätt i tools/gangtest.mjs fall 2 (tvärs över
+       hallen österut vid y 75,7): figuren stannade på x 3,85. Noten ovan
+       säger själv att de gröna hölls "klara av rutten entré → bana
+       (y ≈ 75,7)" — samma rutt som den här gruppen stängde.
+
+       `ridhus-klubb-15`: gången ÖPPNAR sig i fonden — det vita gavelskåpet
+       står fritt mitt i, och de mörkblå höga står bortom det, förskjutna,
+       inte som en fortsättning på raden fram till väggen. Gruppen står
+       därför nu mot norra gaveln öster om stövelbänken, med fronten mot
+       hallen. Läget är fortfarande ASSUMPTION — samma klass som förut —
+       och skåpen är samma skåp. */
+    {id:"skap_hoga_v", rum:"hall", typ:"skapbank", pos:[6.0, 76.93], rikt:Sy,
      matt:{b:2.0, d:0.5, h:1.9}, farg:"#EDEAE0", fargor:["#C9CBCB","#C9CBCB","#C9CBCB","#1F2430","#1F2430"],
       kolliderar:true, ytmaterial:"Metal",
       detaljer:{kolumner:5, profil:true, beslag:true, ventilation:false,

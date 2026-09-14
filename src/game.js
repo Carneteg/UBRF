@@ -199,7 +199,7 @@ function stegaInput(dt){
 const G={
   scen:"meny",vy:"3d",t:0,grupp:"grupp2",plats:"ridhus",tavling:null,
   hastId:null,ride:null,aids:null,skotselRes:null,
-  utrustning:false,lerig:false,spolad:0,felUtrustning:0,hastMott:false,
+  utrustning:false,hjalmPa:false,lerig:false,spolad:0,felUtrustning:0,hastMott:false,
   px:10,py:52,rikt:-Math.PI/2,gaitFas:0,
   dagsform:0.7,sadellage:0.8,stallro:0.9,humor:0.6,
   moment:null,momentIx:0,momentT:0,momentHall:0,momentKlart:false,momentForsok:1,

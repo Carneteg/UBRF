@@ -198,6 +198,7 @@ export type Led = {
 	tid: number,
 	stillaSedan: number,
 	badGa: boolean,
+	hallenAvGangzon: boolean, -- hon står för att en öppning för gående ligger i vägen
 	ankare: Vector3,
 }
 
@@ -257,7 +258,9 @@ end
 
 --[[ En rektangel i tomtkoordinater. `iRekt` används både för boxen och
 	för målzonen, så det finns en enda regel för "är hon där". ]]
-export type Rekt = { x: number, y: number, w: number, h: number }
+export type Rekt = { x: number, y: number, w: number, h: number,
+	-- zoner ur exporten bär sin nyckel och sina dörrar (gangzonerUrKomplex)
+	id: string?, dorrar: { string }? }
 
 function LedService.iRekt(p: Vector3, r: Rekt): boolean
 	local x, y = tomt(p)
@@ -295,6 +298,183 @@ end
 local malzon: Rekt? = nil
 function LedService.satMalzon(r: Rekt?)
 	malzon = r
+end
+
+--[[ ── ÖPPNINGAR FÖR GÅENDE — HÄSTEN GÅR INTE DÄR ────────────────────
+
+	Kanonen (src/data.js, site.js vid sargGrind): hästen kommer in i
+	ridhuset via hästgången och grinden i sargens östra långsida;
+	sargporten i norra kortsidan är för folk till fots. Det står i
+	UBRFKomplex.spelabstraktioner som `trafik = "gaende"`, samma källa som
+	webben läser. Hon följer i spelarens spår, så utan den här regeln gick
+	hon rakt igenom gapet efter spelaren — samma defekt som webbens
+	vägvisare hade. `GameplayService` sätter zonerna ur exporten. ]]
+local gangzoner: { Rekt } = {}
+function LedService.satGangzoner(zoner: { Rekt }?)
+	gangzoner = zoner or {}
+end
+function LedService.gangzoner(): { Rekt }
+	return gangzoner
+end
+
+--[[ ── ZONERNA UR EXPORTEN — HELA MÄNGDEN, INTE BARA SARGPORTEN ────────
+
+	ChatGPT-review 2026-09-13 20:09 på #167: på 61ccee2 registrerades
+	ENBART spelabstraktionen `sargport`, medan exporten märker sex
+	ridhusdörrar `trafik = "gaende"` som aldrig blev zoner. Det var en
+	andra, tyst sanning om vilka öppningar som räknas — webben stängde
+	huvudentrén för hästen, Roblox lät henne följa rakt igenom.
+
+	Ingen egen koordinattabell. En dörr i exporten är en markör (`pos`)
+	och en `spawn` på andra sidan väggen; fasadöppningarna (`oppningar`
+	med `sida`/`u`/`b`) är husets egna hål, samma data som bygget ritar
+	dem ur. Dörrens sträcka markör→spawn korsar fasadlivet i EN öppning,
+	och den öppningens spann — breddat 0,3 m i sidled och 0,6 m på var
+	sida om livet, samma mått som sargportzonen — är zonen. Inner- och
+	ytterdörr på samma hål ger EN zon. Hittas ingen öppning för en dörr
+	rapporteras det som LUCKA i stället för att gissa mått; en häst-
+	kapabel dörr (`trafik = "hast"`) ger aldrig någon zon.
+
+	Konventionen för u längs fasaden är Geometri.vagg/oppningsHorn
+	(buildings/Geometri.luau) och `vagg` i src/site.js: p0→p1 medurs sett
+	utifrån, så på N och W räknas u mot minskande koordinat. Den skrivs
+	ut här i stället för att require:a Geometri ur ServerScriptService/
+	Varld — och ledning.spec mäter att varje exporterad dörr faktiskt
+	landar i en zon, så en avvikande konvention faller där. ]]
+local ZON_SIDLED, ZON_TVARS = 0.3, 0.6
+
+export type Lucka = { id: string, skal: string }
+
+-- Öppningens spann längs fasaden (tomtkoordinater), fasadlivets läge
+-- tvärs, och om fasaden går längs X (N/S) eller längs Y (E/W).
+local function oppningsSpann(r: Rekt, o: any): (number, number, number, boolean)
+	local u, b = o.u, o.b
+	if o.sida == "S" then return r.x + u, r.x + u + b, r.y, true
+	elseif o.sida == "N" then return r.x + r.w - u - b, r.x + r.w - u, r.y + r.h, true
+	elseif o.sida == "E" then return r.y + u, r.y + u + b, r.x + r.w, false
+	else return r.y + r.h - u - b, r.y + r.h - u, r.x, false end
+end
+
+-- Samma urval som webbens autoDorrar (site.js): dörr eller port i marknivå
+-- som inte är intern mot ett sammanbyggt grannhus.
+local function arDorroppning(o: any): boolean
+	local typ = tostring(o.typ or "")
+	return (typ:sub(1, 4) == "dorr" or typ:sub(1, 4) == "port")
+		and (o.z0 or 0) <= 0.2 and not o.intern
+end
+
+function LedService.gangzonerUrKomplex(K: any): ({ Rekt }, { Lucka })
+	local zoner: { Rekt } = {}
+	local luckor: { Lucka } = {}
+	local perNyckel: { [string]: Rekt } = {}
+	local hus: { [string]: any } = {}
+	for _, b in ipairs(K.byggnader or {}) do hus[b.id] = b end
+	local INNE = { ridhusinne = "ridhus", stallinne = "stall" }
+
+	local function lagg(nyckel: string, dorrId: string, r: Rekt)
+		local z = perNyckel[nyckel]
+		if z == nil then
+			z = r
+			z.id = nyckel
+			z.dorrar = {}
+			perNyckel[nyckel] = z
+			table.insert(zoner, z)
+		end
+		table.insert(z.dorrar :: { string }, dorrId)
+	end
+	local function lucka(d: any, skal: string)
+		table.insert(luckor, { id = tostring(d.id), skal = skal })
+	end
+
+	--[[ Dörrens sträcka a→b (tomtkoordinater) mot husets fasadöppningar. ]]
+	local function provaDorr(d: any, husId: string?, ax: number, ay: number, bx: number?, by: number?)
+		local b = husId and hus[husId]
+		if b == nil then
+			lucka(d, "hör inte till något hus i exporten (mot = " .. tostring(d.mot) .. ")")
+			return
+		end
+		if bx == nil or by == nil then
+			lucka(d, "saknar spawn — ingen sträcka som korsar fasaden")
+			return
+		end
+		for _, o in ipairs(b.oppningar or {}) do
+			if arDorroppning(o) then
+				local s0, s1, liv, langsX = oppningsSpann(b.rekt, o)
+				-- tvärs väggen: t0→t1; längs väggen: k0→k1
+				local t0, t1, k0, k1
+				if langsX then t0, t1, k0, k1 = ay, by, ax, bx else t0, t1, k0, k1 = ax, bx, ay, by end
+				if (t0 - liv) * (t1 - liv) <= 0 and math.abs(t1 - t0) > 1e-6 then
+					local k = k0 + (k1 - k0) * ((liv - t0) / (t1 - t0))
+					if k >= s0 - ZON_SIDLED and k <= s1 + ZON_SIDLED then
+						local r: Rekt = if langsX
+							then { x = s0 - ZON_SIDLED, y = liv - ZON_TVARS,
+								w = (s1 - s0) + 2 * ZON_SIDLED, h = 2 * ZON_TVARS }
+							else { x = liv - ZON_TVARS, y = s0 - ZON_SIDLED,
+								w = 2 * ZON_TVARS, h = (s1 - s0) + 2 * ZON_SIDLED }
+						lagg(string.format("%s/%s/%s", husId, o.sida, tostring(o.u)), tostring(d.id), r)
+						return
+					end
+				end
+			end
+		end
+		lucka(d, "sträckan markör→spawn korsar ingen dörröppning i fasaden på " .. tostring(husId))
+	end
+
+	--[[ Spawn i tomtkoordinater: en dörr mot gården har den redan där, en
+		dörr in i ett hus har den i husets egna mått (origo i sydvästra
+		hörnet, samma som exportens `origo`). ]]
+	local function spawnTomt(d: any): (number?, number?)
+		if d.spawn == nil then return nil, nil end
+		if d.mot == "gard" then return d.spawn.x, d.spawn.y end
+		local inneHus = INNE[d.mot]
+		local inne = inneHus and K[inneHus]
+		local o = (inne and inne.origo) or (inneHus and hus[inneHus] and hus[inneHus].rekt)
+		if o == nil then return nil, nil end
+		return o.x + d.spawn.x, o.y + d.spawn.y
+	end
+
+	-- Gårdens dörrar: markören står i tomtkoordinater.
+	for _, d in ipairs(K.dorrar or {}) do
+		if d.trafik == "gaende" then
+			local sx, sy = spawnTomt(d)
+			provaDorr(d, INNE[d.mot], d.pos[1], d.pos[2], sx, sy)
+		end
+	end
+	-- Husens innerdörrar: markören står i husets mått.
+	for _, husId in ipairs({ "ridhus", "stall" }) do
+		local inne, b = K[husId], hus[husId]
+		if inne and b then
+			local o = inne.origo or b.rekt
+			for _, d in ipairs(inne.dorrar or {}) do
+				if d.trafik == "gaende" then
+					local sx, sy = spawnTomt(d)
+					provaDorr(d, husId, o.x + d.pos[1], o.y + d.pos[2], sx, sy)
+				end
+			end
+		end
+	end
+	-- Spelabstraktionen sargport i norra sargen: gapet, samma marginaler.
+	local sa = K.spelabstraktioner
+	local sp = sa and sa.ridhus and sa.ridhus.sargport
+	local rh = hus.ridhus
+	if sp and rh and sp.trafik == "gaende" then
+		lagg("ridhus/sargport", "sargport", {
+			x = rh.rekt.x + sp.x0 - ZON_SIDLED, y = rh.rekt.y + sp.y - ZON_TVARS,
+			w = (sp.x1 - sp.x0) + 2 * ZON_SIDLED, h = 2 * ZON_TVARS,
+		})
+	end
+	return zoner, luckor
+end
+
+--[[ Korsar sträckan a→b (i tomtkoordinater via iRekt) rektangeln? Provas
+	i steg om 0,25 m — samma grovlek som webbens navKantFri. ]]
+local function korsarZon(a: Vector3, b: Vector3, z: Rekt): boolean
+	local n = math.max(1, math.ceil(avstandM(a, b) / 0.25))
+	for i = 0, n do
+		local t = i / n
+		if LedService.iRekt(a + (b - a) * t, z) then return true end
+	end
+	return false
 end
 function LedService.malzon(): Rekt?
 	return malzon
@@ -416,7 +596,19 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		hoppas över och `lamnatBox` är sann från början. Exakt i luckan
 		(punkt 0) räknas som inne, så den som står mitt i öppningen får
 		behålla sin utgång. ]]
-	local iBox = false
+	--[[ ...MEN "INGEN DÖRR HITTAD" ÄR INTE "HON STÅR REDAN I GÅNGEN".
+
+		Flaggan startade på false och sattes bara när en dörr fanns, och
+		`lamnatBox = not iBox` läste därför avsaknaden av dörr som bevis
+		för att hon var ute. Mätt: i `ledning.spec` finns ingen boxdörr
+		byggd alls, och tjänsten svarade `harLamnatBox() == true` direkt
+		efter `borja()` — innan hästen flyttat en enda studs. Ett delmål
+		som kan vara uppnått innan spelaren gjort något är inget delmål.
+
+		Utan dörrbevis antar vi därför att hon står kvar; loopen nedan
+		mäter ändå den faktiska positionen (> 2,5 m ur facket) och sätter
+		flaggan när hon verkligen gått ut, dörr eller ej. ]]
+	local iBox = true
 	if dorrMitt and dorrUt then
 		iBox = (pivot.Position - dorrMitt):Dot(dorrUt) <= 0
 	end
@@ -490,6 +682,7 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		dorrsteg = 1,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position,
+		hallenAvGangzon = false,
 	}
 	LedService._sync(player)
 	return true, nil
@@ -788,6 +981,29 @@ local function steg(_dt: number)
 				end
 			end
 			if l.dorrsteg == 2 then bakom = ut2 end
+		end
+		--[[ ── ÖPPNINGEN FÖR GÅENDE LIGGER I VÄGEN: HON STÅR ─────────────
+			Ligger målpunkten i en sådan zon, eller vägen dit genom den,
+			går hon inte. Hon säger ifrån EN gång (led.ingang_hast); går
+			spelaren vidare släpper kopplet som vanligt när det sträcks
+			(led.tappade_bort). Se satGangzoner. Falsifierat i
+			tests/ledning.spec.luau: utan `bakom = pivot.Position` går hon
+			genom gapet. ]]
+		local hindrad = false
+		for _, z in ipairs(gangzoner) do
+			if LedService.iRekt(bakom, z) or korsarZon(pivot.Position, bakom, z) then
+				hindrad = true
+				break
+			end
+		end
+		if hindrad then
+			bakom = pivot.Position
+			if not l.hallenAvGangzon then
+				l.hallenAvGangzon = true
+				LedService._sync(player, "led.ingang_hast")
+			end
+		elseif l.hallenAvGangzon then
+			l.hallenAvGangzon = false
 		end
 		local tillMal = avstandM(pivot.Position, bakom)
 

@@ -73,8 +73,14 @@ TouchControls.KNAPP = 56          -- knopens diameter
 
 --[[ ── GUI ─────────────────────────────────────────────────────────────
      Byggs först vid uppsittning, på en pekenhet. Allt nedanför är
-     Roblox-instanser och kan därför bara köras i Studio eller i en klient;
-     mätbänken testar `axis` och `Input`-kontraktet, inte gesterna. ]]
+     Roblox-instanser. Det stod här att bänken bara testar `axis` och
+     `Input`-kontraktet, inte gesterna — det gällde tills stubbarna fick
+     fyrbara `InputChanged`/`InputEnded`, `Vector2`-räknesätt och
+     `UIGridLayout`-celler. Sedan dess kör tests/pekridning.spec.luau den
+     här `mount()` på riktigt genom klientens loop: knapparnas signaler,
+     spakens och blickytans fingrar, HALT-låset, tygeln, avsittningen.
+     Vad bänken INTE kan säga står i specens filhuvud: Roblox egen
+     träffrouting, riktig multitouch och känsla är HARDWARE CHECK. ]]
 local gui: ScreenGui? = nil
 local aktivFinger: InputObject? = nil
 local Input = nil :: any            -- sätts av mount, för att undvika cykel
@@ -97,10 +103,44 @@ function TouchControls.reglageBredd(): number
 	return reglageBredd
 end
 
+--[[ Var det övre gallret BÖRJAR, i GUI-pixlar uppifrån. `math.huge` när
+	reglagen inte är uppe. Hjälpknappen läser den: på iPhone i landskap
+	når gångartsraden upp till 8 px under topbaren, alltså rakt in i det
+	band där `?` bor — mätt i tests/pekridning.spec.luau: SKRITT och
+	GALOPP låg under `Hjalp` (689..737 · 48..96) och gick inte att träffa,
+	eftersom hjälpens ScreenGui ritar över reglagens. ]]
+local reglageTopp = math.huge
+
+function TouchControls.reglageTopp(): number
+	return reglageTopp
+end
+
 local blickFinger: InputObject? = nil
 local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
 local gaitKoppling: RBXScriptConnection? = nil
+
+--[[ ── KOPPLINGARNA TILL UserInputService ÖVERLEVDE RITTEN ──────────
+
+     `kopplaSpak` och `kopplaBlick` lyssnar på `InputChanged` och
+     `InputEnded` GLOBALT — det måste de, för fingret ska följas utanför
+     sin ram. Men de kopplades utan att sparas, och `unmount` rev bara
+     GUI:t. Varje uppsittning lade alltså fyra nya lyssnare på tjänsten
+     ovanpå de gamla, som fortsatte köra mot rivna ramar.
+
+     Mätt i tests/pekridning.spec.luau: efter sex uppsittningar gav ETT
+     draget blickfinger sex anrop till kamerakroken. Att det inte syntes i
+     Studio beror på att `blickSist` är delad, så de fem extra bar
+     skillnaden noll — tyst, men fem lyssnare för mycket per ritt, och
+     spakens gamla stängningar läste `AbsolutePosition` på en förstörd
+     ram innan den nya skrev rätt värde sist.
+
+     Nu bokförs de här och rivs i `unmount`, som gångartskopplingen. ]]
+local tjanstKopplingar: { RBXScriptConnection } = {}
+local function bokfor(k: RBXScriptConnection): RBXScriptConnection
+	table.insert(tjanstKopplingar, k)
+	return k
+end
 
 --[[ Hur mycket kameran vrids per dragen pixel. Radianer i sidled och
      studs i höjdled; framtagna så att ett tumdrag tvärs över halva
@@ -166,19 +206,37 @@ end
 
 --[[ Spaken följer fingret som startade den, inte vilket finger som helst:
      annars kapar en tumme på gångartsknappen styrningen mitt i en volt. ]]
-local function kopplaSpak(bas: Frame, knop: Frame)
+--[[ `spakR` är cirkelns RITADE radie och `knopR` knoppens. Båda kommer
+     ur `mount`, skalade med skärmen — inte ur de oskalade konstanterna.
+
+     ══ RITAD RADIE OCH INMATNINGSRADIE VAR TVÅ OLIKA TAL ═══════════════
+
+     `flytta` klampade och normaliserade mot `TouchControls.RADIE` (66)
+     medan cirkeln ritades med `px(66)`, alltså 46 px på iPhone i
+     landskap. Mätt i tests/pekridning.spec.luau: fingret vid cirkelns
+     synliga kant gav forward ≈0,42 — under 0,5-tröskeln som startar
+     skritt ur halt — och knoppen ritades utanför cirkeln. Spelaren fick
+     dra tummen utanför det hon såg för att få full avsikt.
+
+     Nu är det EN radie: fingret vid den ritade kanten är fullt utslag,
+     på varje skärm. Knoppen rör sig proportionellt och når cirkelns
+     innerkant exakt när fingret når dess ytterkant, så den ligger alltid
+     innanför det som ritas. På iPad är `spakR` = 66 som förut, så
+     inmatningen där är oförändrad; bara knoppen slutar sticka ut. ]]
+local function kopplaSpak(bas: Frame, knop: Frame, spakR: number, knopR: number)
 	local function centrum(): Vector2
 		local p, s = bas.AbsolutePosition, bas.AbsoluteSize
 		return p + s / 2
 	end
 
+	local r = math.max(spakR, 1)
+	local knopBana = math.max(spakR - knopR, 1)
 	local function flytta(pos: Vector2)
 		local c = centrum()
 		local dx, dy = pos.X - c.X, pos.Y - c.Y
 		local len = math.sqrt(dx * dx + dy * dy)
-		local r = TouchControls.RADIE
 		if len > r then dx, dy = dx / len * r, dy / len * r end
-		knop.Position = UDim2.new(0.5, dx, 0.5, dy)
+		knop.Position = UDim2.new(0.5, dx * knopBana / r, 0.5, dy * knopBana / r)
 		Input.setTouch(TouchControls.axis(dx, dy, r))
 	end
 
@@ -200,13 +258,13 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 
 	--[[ Rörelsen lyssnas på globalt, inte på ramen: drar man tummen utanför
 	     cirkeln ska styrningen ligga kvar på max i stället för att slockna. ]]
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	bokfor(UserInputService.InputChanged:Connect(function(obj: InputObject)
 		if obj ~= aktivFinger then return end
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
-	end)
-	UserInputService.InputEnded:Connect(function(obj: InputObject)
+	end))
+	bokfor(UserInputService.InputEnded:Connect(function(obj: InputObject)
 		if obj == aktivFinger then slapp() end
-	end)
+	end))
 end
 
 --[[ ── BLICKYTAN ────────────────────────────────────────────────────
@@ -229,7 +287,7 @@ local function kopplaBlick(yta: Frame)
 		blickSist = Vector2.new(obj.Position.X, obj.Position.Y)
 	end)
 
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	bokfor(UserInputService.InputChanged:Connect(function(obj: InputObject)
 		if obj ~= blickFinger then return end
 		local nu = Vector2.new(obj.Position.X, obj.Position.Y)
 		local forra = blickSist or nu
@@ -241,7 +299,7 @@ local function kopplaBlick(yta: Frame)
 			     dra NEDÅT ska sänka blicken — samma håll som fingret. ]]
 			fn(d.X * BLICK_PER_PIXEL_X, -d.Y * BLICK_PER_PIXEL_Y)
 		end
-	end)
+	end))
 
 	--[[ Att släppa nollar BARA fingret. Kameran lämnas där den står —
 	     ingen återfjädring, ingen omcentrering. ]]
@@ -251,7 +309,7 @@ local function kopplaBlick(yta: Frame)
 			blickSist = nil
 		end
 	end
-	UserInputService.InputEnded:Connect(slappBlick)
+	bokfor(UserInputService.InputEnded:Connect(slappBlick))
 end
 
 --[[ Roblox egna pekreglage flyttar KARAKTÄREN. Sitter hon i sadeln blir
@@ -368,10 +426,31 @@ function TouchControls.mount(input: any, hooks: {
 	local function px(n: number): number
 		return math.floor(n * skala + 0.5)
 	end
-	local KB, KH = px(92), px(52)
+	--[[ ══ 44 PX ÄR GOLVET, OCKSÅ NÄR SKALAN VILL UNDER ═══════════════
+
+	     Skalan ovan tog knapphöjden till 36 px på iPhone i landskap —
+	     mätt i tests/pekridning.spec.luau — och `docs/KONTROLLMATRIS.md`
+	     regel 5 kräver 44 på varje knapp spelaren måste kunna nå. Cellen
+	     får därför aldrig skalas under 44 i något led.
+
+	     Men två galler om tre rader à 44 px ryms inte på 273 px: 2·(3·44
+	     + 2·6) + 8 + 17 = 305. Så när blocket inte får plats läggs
+	     knapparna TRE i bredd i stället för två — samma ordning, samma
+	     två galler, två rader vardera — och blocket blir 213 px. iPad
+	     (725 px) behåller två i bredd exakt som förut. ]]
+	local KB, KH = math.max(px(92), 44), math.max(px(52), 44)
 	local PADX, PADY = px(10), px(8)
-	local GALLER_B, GALLER_H = KB * 2 + PADX, KH * 3 + PADY * 2
 	local KANT = px(24)
+	local ANTAL = 5                          -- knappar per galler
+	local perRad = 2
+	local rader = math.ceil(ANTAL / perRad)
+	local GALLER_H = KH * rader + PADY * (rader - 1)
+	if skarmH > 0 and GALLER_H * 2 + px(12) + KANT > skarmH then
+		perRad = 3
+		rader = math.ceil(ANTAL / perRad)
+		GALLER_H = KH * rader + PADY * (rader - 1)
+	end
+	local GALLER_B = KB * perRad + PADX * (perRad - 1)
 	reglageBredd = GALLER_B + KANT + px(12)
 
 	blickHook = hooks.blick
@@ -398,7 +477,8 @@ function TouchControls.mount(input: any, hooks: {
 	basHorn.Parent = bas
 
 	local knop = nyRam("Knop", bas)
-	knop.Size = UDim2.fromOffset(TouchControls.KNAPP, TouchControls.KNAPP)
+	local knopR = px(TouchControls.KNAPP) / 2
+	knop.Size = UDim2.fromOffset(knopR * 2, knopR * 2)
 	knop.Position = UDim2.fromScale(0.5, 0.5)
 	knop.AnchorPoint = Vector2.new(0.5, 0.5)
 	knop.BackgroundTransparency = 0.1
@@ -440,10 +520,11 @@ function TouchControls.mount(input: any, hooks: {
 	gangrad.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
 	gangrad.Position = UDim2.new(1, -(GALLER_B + KANT), 1,
 		-(GALLER_H * 2 + px(12) + KANT))
+	reglageTopp = skarmH - (GALLER_H * 2 + px(12) + KANT)
 	local grad = Instance.new("UIGridLayout")
 	grad.CellSize = UDim2.fromOffset(KB, KH)
 	grad.CellPadding = UDim2.fromOffset(PADX, PADY)
-	grad.FillDirectionMaxCells = 2
+	grad.FillDirectionMaxCells = perRad
 	--[[ `SortOrder` är `Name` som standard, och då står gångarterna i
 	     bokstavsordning: galopp, halt, sakta, skritt, trav. Mätt precis
 	     så på iPad innan den här raden fanns. Trappan ska läsas som en
@@ -507,7 +588,7 @@ function TouchControls.mount(input: any, hooks: {
 	local rad = Instance.new("UIGridLayout")
 	rad.CellSize = UDim2.fromOffset(KB, KH)
 	rad.CellPadding = UDim2.fromOffset(PADX, PADY)
-	rad.FillDirectionMaxCells = 2
+	rad.FillDirectionMaxCells = perRad
 	rad.SortOrder = Enum.SortOrder.LayoutOrder
 	rad.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	rad.VerticalAlignment = Enum.VerticalAlignment.Bottom
@@ -549,7 +630,7 @@ function TouchControls.mount(input: any, hooks: {
 	sits.MouseButton1Up:Connect(function() Input.setTouchSeat(0) end)
 	sits.MouseLeave:Connect(function() Input.setTouchSeat(0) end)
 
-	kopplaSpak(bas, knop)
+	kopplaSpak(bas, knop, spakR, knopR)
 	egnaReglage(false)
 end
 
@@ -563,11 +644,14 @@ function TouchControls.unmount()
 	     kopplingen på en häst man klivit av, och nästa uppsittning hade
 	     börjat med förra rittens finger fortfarande "nere". ]]
 	reglageBredd = 0
+	reglageTopp = math.huge
 	blickFinger, blickSist, blickHook = nil, nil, nil
 	if gaitKoppling then
 		gaitKoppling:Disconnect()
 		gaitKoppling = nil
 	end
+	for _, k in tjanstKopplingar do k:Disconnect() end
+	table.clear(tjanstKopplingar)
 	if Input then Input.setTouch(0, 0) end
 	if styrningAv then egnaReglage(true) end
 end

@@ -1421,6 +1421,11 @@ do
 		rot.Size = Vector3.new(2, 2, 1)
 		rot.CFrame = modell.PrimaryPart.CFrame * CFrame.new(3, 0, 0)
 		rot.Parent = k
+		local huvud = Instance.new("Part")
+		huvud.Name = "Head"
+		huvud.Size = Vector3.new(2, 1, 1)
+		huvud.CFrame = rot.CFrame * CFrame.new(0, 1.5, 0)
+		huvud.Parent = k
 		local h = Instance.new("Humanoid")
 		h.Name = "Humanoid"
 		h.Parent = k
@@ -1447,6 +1452,13 @@ do
 		check("utrustningen " .. typ .. " går på", tok, tostring(tskal))
 	end
 	check("och då är hon ridklar", TackService.ridklar(modell))
+	--[[ RYTTARENS HJÄLM (#165): grinden kräver den. Utan hjälm ska nejet
+		vara hjälmens, med hjälm släpper grinden. ]]
+	local okUtan, skalUtan = GameplayService.farSittaUpp(spelare, modell)
+	check("utan hjälm nekar grinden med hjälmens skäl",
+		okUtan == false and skalUtan == "tack.saknar_hjalm", tostring(skalUtan))
+	local okHj, skalHj = GameplayService.utrustning(spelare, "hjalm", true)
+	check("hjälmen går på genom tjänsten", okHj, tostring(skalHj))
 
 	local okFore, skalFore = GameplayService.farSittaUpp(spelare, modell)
 	check("servern släpper upp en förberedd spelare", okFore, tostring(skalFore))

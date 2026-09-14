@@ -384,3 +384,17 @@ jobs:
         run: |
           if [ -f tools/laktartest.mjs ]; then node tools/laktartest.mjs
           else echo "hoppar: tools/laktartest.mjs finns inte i denna branch"; fi
+      # Topologiparitet (SCV2-03): gångkedjan entré → hall → sargport → bana
+      # till fots, och att en LEDD häst aldrig går genom en öppning för
+      # gående — hästgången och sarggrinden är hästens väg. Låg utanför CI
+      # med ett rött fall på baslinjen; nu står den här.
+      - name: Gångtest — kedjan till fots och hästkapabel cirkulation
+        run: |
+          if [ -f tools/gangtest.mjs ]; then node tools/gangtest.mjs
+          else echo "hoppar: tools/gangtest.mjs finns inte i denna branch"; fi
+      # #165 EQUIPMENT & RIDER GEAR GATE, webbens halva: hjälmen krävs för
+      # att sitta upp, följer med utrustningen och går att ta av/på i boxmenyn.
+      - name: Utrustningstest — hjälmen på webben
+        run: |
+          if [ -f tools/utrustningstest.mjs ]; then node tools/utrustningstest.mjs
+          else echo "hoppar: tools/utrustningstest.mjs finns inte i denna branch"; fi

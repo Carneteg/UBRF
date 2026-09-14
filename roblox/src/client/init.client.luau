@@ -81,6 +81,7 @@ local function dismount()
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
 	TouchControls.unmount()
+	KontrollHjalp.vikForReglage(0, math.huge)
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -192,6 +193,9 @@ local function mount(model: Model)
 		end,
 		modell = model,
 	})
+	--[[ `?`-knappen viker för gångartsraden där raden når dess band —
+	     iPhone i landskap. Se KontrollHjalp.vikForReglage. ]]
+	KontrollHjalp.vikForReglage(TouchControls.reglageBredd(), TouchControls.reglageTopp())
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
 	Debug.attach(rig, stats)
@@ -324,6 +328,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		or input.KeyCode == KontrollHjalp.GAMEPADKNAPP then
 		KontrollHjalp.vaxla()
 		return
+	end
+
+	--[[ PANELENS MARKERING (#165). Bara när man INTE rider: då finns
+	     skötsel-/utrustningspanelen, och då är Input.luau inte bundet, så
+	     ButtonA betyder inte hopp. Bindningarna kommer ur KontrollHjalp
+	     så att hjälpen och matrisen inte kan glida isär från koden. ]]
+	if not ride then
+		local k = input.KeyCode
+		if k == KontrollHjalp.PANEL_FOREGAENDE_TANGENT or k == KontrollHjalp.PANEL_FOREGAENDE_GAMEPAD then
+			PreparationController.valj(-1)
+			return
+		elseif k == KontrollHjalp.PANEL_NASTA_TANGENT or k == KontrollHjalp.PANEL_NASTA_GAMEPAD then
+			PreparationController.valj(1)
+			return
+		elseif k == KontrollHjalp.PANEL_AKTIVERA_TANGENT or k == KontrollHjalp.PANEL_AKTIVERA_GAMEPAD then
+			PreparationController.aktiveraVald()
+			return
+		end
 	end
 
 	if not ride then return end

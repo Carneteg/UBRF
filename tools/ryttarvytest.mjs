@@ -63,6 +63,7 @@ const boot = await ev(() => {
     G.hastPlats = "box";
     G.dagsform = 0.7; G.sadellage = 0.8;      // samma deterministiska värden som ridtest.mjs
     G.ride = nyState(G.dagsform, hastminne(G.hastId).rang, G.sadellage);
+    G.hjalmPa = true;               // #165: sittUpp() kräver hjälmen, som sadelkammaren annars ger
     sittUpp("ridhus");              // hudLage + ridSittUpp + startaLektion, i rätt ordning
     return { ok: true, hast: G.hastId, scen: G.scen, harRide: !!G.ride,
       uppsutten: RID_TILLSTAND.uppsutten };
@@ -284,7 +285,7 @@ console.log("\n── Falsifiering i den riktiga renderaren ──");
 const falskA = await ev(() => {
   /* Tillbaka in i ritten först — avbrottsproven ovan lämnade oss avsutna. */
   const pool = hastpool(G.grupp); sattAktivHast(pool[0]);
-  G.hastMott = true; G.utrustning = true;
+  G.hastMott = true; G.utrustning = true; G.hjalmPa = true;
   visaSkotsel(); overlay(false); ridSittUpp(G.hastId, "ridhus"); startaLektion();
   G.plats = "ridhus"; S3.kam.satt = false;
   /* Fel standard: bommen i stället för sadeln, utan att någon bett om det. */

@@ -376,6 +376,27 @@ local function instance(klass)
 			end
 			return nil
 		end,
+		--[[ `IsDescendantOf` och `GetFullName` saknades. Preflightens
+		     markplanskontroll behöver båda: den frågar om en stor
+		     kolliderande yta ligger UTANFÖR anläggningen, och namnger den i
+		     rapporten så att den som felsöker vet vilken del det är. Utan
+		     dem gick kontrollen inte att mäta här. ]]
+		IsDescendantOf = function(self, mojligForfader)
+			local f = self.Parent
+			while f do
+				if f == mojligForfader then return true end
+				f = f.Parent
+			end
+			return false
+		end,
+		GetFullName = function(self)
+			local delar, nod = { self.Name }, self.Parent
+			while nod do
+				table.insert(delar, 1, tostring(nod.Name or "?"))
+				nod = nod.Parent
+			end
+			return table.concat(delar, ".")
+		end,
 	}
 	return setmetatable(i, {
 		--[[ `Position` är inte ett eget fält på en riktig BasePart heller —
@@ -444,6 +465,9 @@ local __tjanster = {
 	     mäter ingenting, och det är just den sortens falska PASS grinden
 	     finns för att hindra. Specen läser bara markplansraden. ]]
 	ServerScriptService = instance("ServerScriptService"),
+	--[[ ...och `StarterPlayer`, av samma skäl: preflighten letar
+	     klientruntimen där (rad 1d). ]]
+	StarterPlayer = instance("StarterPlayer"),
 	StarterPlayer = instance("StarterPlayer"),
 	CollectionService = {
 		--[[ #162: HastRigg taggar hästen; utan AddTag i stubben kan riggen

@@ -89,9 +89,19 @@ function prova(namn, ok, detalj) {
    grinden sitter på. */
 {
   const g = await page.evaluate(() => {
-    const st = ANL.staket.find(s => s.grindar && s.grindar.length);
+    /* HAGENS staket väljs på HAGENS GEOMETRI, inte på ordningen i listan.
+       Förut stod här `staket.find(s => s.grindar && s.grindar.length)` —
+       "första staketet med en grind". Det var hagen så länge hagarna var
+       de enda inhägnaderna med öppning. När uteridbanan och paddocken fick
+       sina grindar blev det uteridbanan i stället, och provet mätte fel
+       staket: grind [159, 132] mot markören [178, 79]. Tre rader blev röda
+       av att världen blivit MER komplett, inte mindre. */
+    const h = ANL.hagar[0].rekt;
+    const i = (v, m) => Math.abs(v - m) < 0.01;
+    const st = ANL.staket.find(s => (s.grindar || []).length
+      && (s.p || []).some(([x, y]) => i(x, h.x) && i(y, h.y)));
     return { grind: st.grindar[0].p, bredd: st.grindar[0].bredd,
-      hage: ANL.hagar[0].rekt, markor: ANL.hamtHage.grind };
+      hage: h, markor: ANL.hamtHage.grind };
   });
   const [gx, gy] = g.grind;
   prova("grinden står på kanonmarkören — ingen ny plats påhittad",

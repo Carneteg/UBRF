@@ -60,6 +60,13 @@ local function nyKaraktar(pos)
 	rot.Size = vec(2, 2, 1)
 	rot.CFrame = CFrame.new(pos)
 	rot.Parent = k
+	--[[ HUVUDET (#165): hjälmen svetsas i `Head`, och en karaktär utan
+		huvud kan inte ta på sig den — precis som i Roblox. ]]
+	local huvud = Instance.new("Part")
+	huvud.Name = "Head"
+	huvud.Size = vec(2, 1, 1)
+	huvud.CFrame = CFrame.new(pos) * CFrame.new(0, 1.5, 0)
+	huvud.Parent = k
 	local hum = Instance.new("Humanoid")
 	hum.Name = "Humanoid"
 	hum.Parent = k
@@ -135,8 +142,15 @@ local function stadaSession(s)
 	RunService._server = false
 end
 
+
 --[[ Hela skötseln genom TJÄNSTEN, moment för moment. Inget anrop går
-	direkt till `Preparation`: det är skillnaden mot forberedelse.spec. ]]
+	direkt till `Preparation`: det är skillnaden mot forberedelse.spec.
+
+	SEDAN 16:21-ORDERN hämtar den också utrustningen, och det är med flit
+	inte gömt i en hjälpfunktion som sätter ett tillstånd: den går samma väg
+	spelaren går — saken hänger i världen, `GameplayService.hamta` prövar
+	rätt häst och avståndet, och först därefter släpper momentet igenom. Går
+	hämtningen inte igenom faller hela kedjan här, med skälet. ]]
 local function skotselGenomTjansten(spelare)
 	for _, fas in ipairs(Preparation.stegFaser()) do
 		--[[ `leda` KRÄVER numera att hästen faktiskt har letts dit (#162
@@ -186,6 +200,13 @@ local function skotselGenomTjansten(spelare)
 			end
 		end
 	end
+	--[[ HJÄLMEN PÅ (#165). Resan är inte färdig när hästen är i ordning:
+		ryttaren tar på sig hjälmen innan hon sitter upp, och grinden
+		kräver den. Samma väg som panelen — `GameplayService.utrustning`. ]]
+	local okHj, skalHj = GameplayService.utrustning(spelare, "hjalm", true)
+	if not okHj then
+		return false, "hjalm: " .. tostring(skalHj)
+	end
 	return true, nil
 end
 
@@ -196,6 +217,17 @@ do
 	check("stallet gav en häst och det är första dagens",
 		S.hastId == Stallet.FORSTA_DAGEN_HAST,
 		string.format("%s (väntat %s)", tostring(S.hastId), tostring(Stallet.FORSTA_DAGEN_HAST)))
+	--[[ #167 review 20:09: `GameplayService.start()` ska registrera ALLA
+		öppningar för gående ur exporten, inte bara sargporten. Mäts här
+		eftersom ledning.spec bara ser härledningen, inte att produktionen
+		anropar den. ]]
+	do
+		local ids = {}
+		for _, z in ipairs(LedService.gangzoner()) do ids[z.id or "?"] = true end
+		check("start() registrerade zonerna för gående ur exporten: sargporten OCH huvudentrén",
+			ids["ridhus/sargport"] == true and ids["ridhus/W/9"] == true and #LedService.gangzoner() >= 7,
+			string.format("%d zoner", #LedService.gangzoner()))
+	end
 	check("riggen är byggd med rätt identitet och en riktig sits",
 		S.modell ~= nil and S.modell:GetAttribute("HorseId") == S.hastId
 			and S.modell:FindFirstChild("RiderSeat") ~= nil

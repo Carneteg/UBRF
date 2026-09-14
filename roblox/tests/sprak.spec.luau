@@ -60,16 +60,34 @@ do
 
 	--[[ …och att en översättning FAKTISKT är en översättning. En kopierad
 		svensk text i en-fältet är samma fel som ingen översättning, men
-		ser grön ut i räkningen ovan. Egennamn och tangentnamn undantas
-		inte här: katalogen innehåller inga. ]]
-	local samma = {}
+		ser grön ut i räkningen ovan.
+
+		UNDANTAGET, och varför det finns: `touch.halt`. Halt är samma ord i
+		svensk och engelsk dressyr — det är den internationella termen för
+		momentet, inte en oöversatt svenska. Att skriva något annat i
+		en-fältet vore att hitta på en term som ingen ryttare använder, och
+		regeln i CLAUDE.md är att hellre markera än att fylla hålet.
+
+		Listan får inte ruttna: en nyckel som står här och INTE längre är
+		identisk fälls av nästa mätning. Undantaget kan alltså inte bli en
+		bakdörr för framtida oöversatta texter. ]]
+	local IDENTISKA_MED_AVSIKT = { ["touch.halt"] = true }
+	local samma, ostadda = {}, {}
 	for _, nyckel in ipairs(nycklar) do
-		if Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel) then
+		local lika = Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel)
+		if lika and not IDENTISKA_MED_AVSIKT[nyckel] then
 			table.insert(samma, nyckel)
+		end
+	end
+	for nyckel in pairs(IDENTISKA_MED_AVSIKT) do
+		if Sprak.iSprak("sv", nyckel) ~= Sprak.iSprak("en", nyckel) then
+			table.insert(ostadda, nyckel)
 		end
 	end
 	check("ingen engelsk text är en kopia av den svenska", #samma == 0,
 		table.concat(samma, ", "))
+	check("undantagslistan är inte inaktuell", #ostadda == 0,
+		table.concat(ostadda, ", "))
 end
 
 --[[ ══ 2. REGELN ════════════════════════════════════════════════════════ ]]

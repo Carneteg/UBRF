@@ -1,19 +1,19 @@
 # PRE_TOBIAS_FIRST_PLAYABLE_GATE — release evidence bundle
 
-> **PASS** — genererad 2026-09-11 13:32 UTC av `tools/pre-tobias-grind.py`.
-
-> ⚠️ Arbetsträdet har ocommittade ändringar — rapporten gäller alltså inte källkommiten ensam.
+> **PASS** — genererad 2026-09-13 20:57 UTC av `tools/pre-tobias-grind.py`.
 
 
 ## Identitet
 
 | | |
 |---|---|
-| source SHA | `9b5a5707842b7b18bec4be435d6e1fe64cd24e59` |
+| artefaktens källhead (bakad `UBRFBuild.sha`) | `91914a73f4257d7a90f925347a473e98fbc9e04f` |
+| mätt `.rbxlx` | `roblox/releases/first-playable-place-91914a7/UBRFFirstPlayable.rbxlx` |
+| `.rbxlx` SHA256 | `4771a340b69a3a986bf56c84ecdcd3edbf208be8add73d8742c2d59195cc115c` |
+| storlek | 1183445 byte |
+| instanser | 73 (`<Item class=` i filen), varav 67 skript |
+| grindkörarens commit (`git HEAD` där rapporten skrevs) | `37afcfb3d79a1dd2586d255c8cc3988fb8b661ca` |
 | gren | `claude/first-playable-20260910` |
-| mätt `.rbxlx` | `roblox/releases/first-playable-place-9b5a570/UBRFFirstPlayable.rbxlx` |
-| `.rbxlx` SHA256 | `9f308f7aa3989e79df5b7f2c71b1c3ab288b69c1caa9bcd9a491bc29d19175bc` |
-| storlek | 875963 byte |
 
 ## Undergrindarna
 
@@ -33,8 +33,8 @@
 
 | | |
 |---|---|
-| byggda delar | 3317 |
-| marklager | 15 bärande, 0 dekor |
+| byggda delar | 3375 |
+| marklager | 16 bärande, 0 dekor |
 | fysiska hästar | 33 / 33 |
 | utrustningsplatser | 3 |
 | skyltar | UPPLANDS-BRO RYTTARFÖRENING, CAFÉ KRUBBAN |
@@ -72,12 +72,14 @@ Ordern, punkt 8: här får bara verklig Roblox-motor och spelkänsla stå — al
 
 - att `.rbxlx` **öppnar** i Studio och att Play startar
 - spelkänsla, kamera, animation och hästbeteende i motorn
-- fysisk input: tangentbord, handkontroll, iPad
+- fysisk input: tangentbord, handkontroll, iPad, **iPhone** (tre knappar i bredd 64×44, `?`-knappens plats, spakens knopp i cirkeln)
+- äkta multitouch och Roblox träffrouting — bänken mäter staplingskontraktet, inte vilket objekt motorn ger fingret
+- kontroll- och kamerakänsla i handen; mjukvarukontrakten är testade (`camera.spec`, `pekridning.spec`), känslan inte
 - performance med full värld och hela rostern
 - DataStore i skarpt läge, och revisionskollisionen
 - visuell granskning av ROBLOX-världen; `CHATGPT_VISUAL_PASS` gäller webbrenderingen, inte den här
 
 ## Artefaktkedjan, uttryckligen
 
-Placen är script-only: 62 instanser, noll geometri. Det finns ingen geometri i XML:en att läsa, så kedjan är `tools/kolla-place.py` — de inbäddade modulerna byte-identiska mot disk — plus att grindarna kör exakt de modulerna. Samma bevisvärde, men det är ett **argument** och inte en mätning ur filen.
+Placen är script-only: 73 instanser räknade ur filen (`<Item class=`), varav 67 skript, noll geometri. Det finns ingen geometri i XML:en att läsa, så kedjan är `tools/kolla-place.py` — de inbäddade modulerna byte-identiska mot disk — plus att grindarna kör exakt de modulerna. Samma bevisvärde, men det är ett **argument** och inte en mätning ur filen.
 

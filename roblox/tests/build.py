@@ -79,6 +79,7 @@ SPELBARHET = BYGGE + [
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("DorrService",  "src/server/DorrService.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -119,6 +120,7 @@ SIKT = QA + [
 # Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -142,6 +144,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -201,6 +204,7 @@ SIKT = QA + [
 # Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -224,6 +228,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -284,6 +289,7 @@ SIKT = QA + [
 # Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -307,6 +313,7 @@ FORBEREDELSE = SPEL + [
     ("StallService", "src/server/StallService.luau"),
     # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     # StateMachine + MovementController ligger med sedan blocker 2 i senior
     # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
@@ -354,6 +361,7 @@ PARITET = [
     ("UBRFSprak",  "game/UBRFSprak.luau"),
     ("Sprak",      "src/shared/HorseCore/Sprak.luau"),
     ("Types",      "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("Config",     "src/shared/HorseCore/Config.luau"),
     ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
     ("RidKanon",   "src/shared/HorseCore/RidKanon.luau"),
@@ -371,6 +379,12 @@ PARITET = [
     # langt ifran orsaken. Precis sa foll klient-specen i CI (run 34186458506);
     # darfor star de nu i BADA listorna, i beroendeordning.
     ("Inspelning",       "src/shared/HorseCore/Inspelning.luau"),
+    # TouchControls FORE UgnetaController: kortet fragar `reglageBredd()`
+    # for att inte lagga sig over knappraden. Saknades den i den har listan
+    # blev require:t nil -- men felet var OSYNLIGT sa lange banken svarade
+    # nil pa `AbsoluteSize`, for da hoppade koden over hela matningen. Samma
+    # fallgrop som noten vid Inspelning ovan beskriver.
+    ("TouchControls",    "src/client/TouchControls.luau"),
     # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
@@ -398,6 +412,7 @@ GESTALT = BYGGE + [
 # i produktionen.
 KLIENT = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -429,6 +444,7 @@ KLIENT = SPEL + [
     ("Input",               "src/client/Input.luau"),
     ("TouchControls",       "src/client/TouchControls.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
+    ("DinHast", "src/client/DinHast.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
@@ -492,6 +508,7 @@ MODULER = [
     ("UBRFSprak",    "game/UBRFSprak.luau"),
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -580,6 +597,13 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
     if "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #165: utrustningsgrinden (server) och utrustningspanelen (klient).
+    #   Ligger FORE de andra: "utrustning" delar inga delstrangar med dem,
+    #   men ordningen ska inte behova bevisas varje gang nagon laser. ]]
+    elif "utrustningsgrind" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "utrustningspanel" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning" in spec_rel:
@@ -594,9 +618,16 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   utrustningen fysiskt i uppsittningsgrinden: passets livscykel
     #   borjar med ett mount, och ett mount kraver nu en RIKTIG rigg att
     #   sadla. INTEGRATION ar FORBEREDELSE plus riggen, sa inget tappas. ]]
-    elif "skotselpass" in spec_rel:
+    elif "skotselpass" in spec_rel or "hastresan" in spec_rel:
+        # hastresan.spec matar samma kedja som integration mot
+        # INTEGRATION-banken; se filens egen not om de fyra sommarna.
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
-    elif "klient" in spec_rel:
+    elif ("klient" in spec_rel or "mobillayout" in spec_rel
+            or "flerspelare" in spec_rel or "pekridning" in spec_rel):
+        # pekridning.spec kor den RIKTIGA TouchControls.mount() genom
+        # init.client och behover darfor hela klientbanken.
+        # mobillayout.spec mater skotsellayouten mot mobilens
+        # rorelsereglage och behover samma klientbank som klient.spec.
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:
         moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"

@@ -20,6 +20,7 @@ var sant om koden och osant om filen jag pastod att jag matt. En pinnad
 release ska kunna matas som den ar.
 """
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -133,7 +134,13 @@ def kallmappning() -> dict:
 
 
 def main() -> int:
-    given = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else None
+    #[[ `--utan-rapportkontroll`: pre-tobias-grinden kor det har verktyget
+    #   INNAN den skriver sin rapport, sa den committade rapporten ar da
+    #   per definition den forra. Grinden gor sin egen sjalvkontroll efter
+    #   skrivningen; CI:s fristaende korning behaller kontrollen. ]]
+    utan_rapport = "--utan-rapportkontroll" in sys.argv
+    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    given = pathlib.Path(pos[0]) if pos else None
     if given is not None and not given.is_file():
         print(f"FIRST_PLAYABLE_PREFLIGHT: FAIL — {given} finns inte")
         return 1
@@ -267,6 +274,53 @@ def main() -> int:
         else:
             print(f"  OK   nyttolasten ar ordagrant samma kod som grindarna korde "
                   f"({jamforda} moduler jamforda)")
+
+    #[[ RAPPORTENS KÄLLHEAD ÄR FILENS KÄLLHEAD. qa/pre-tobias/RAPPORT.md
+    #   namnger en matt .rbxlx och dess kallhead; kallhuvudet ska vara
+    #   exakt den `sha` som ar bakad i filens UBRFBuild-modul. Rapporten
+    #   pekade en gang pa en lokal commit som aldrig fanns pa GitHub
+    #   (git HEAD i grindens katalog, efter en amend) medan filen sjalv
+    #   sade 5e89bcc. Kors HAR, i CI, mot den committade rapporten -- inte
+    #   bara i grinden som skrev den. ]]
+    #[[ DEN COMMITTADE rapporten, inte arbetstradets. I CI kor
+    #   PRE_TOBIAS_FIRST_PLAYABLE_GATE fore det har steget UTAN --place och
+    #   skriver da om qa/pre-tobias/RAPPORT.md till "ingen fil matt";
+    #   lastes filen fran disk foll kontrollen pa grindens egen utdata i
+    #   stallet for pa evidensen i git (matt: a17dff5, grindar rod). Det
+    #   som ska provas ar det pastaende som ligger i commiten. ]]
+    rapport = ROT / "qa" / "pre-tobias" / "RAPPORT.md"
+    g = subprocess.run(["git", "show", "HEAD:qa/pre-tobias/RAPPORT.md"], cwd=ROT,
+                       capture_output=True, text=True)
+    txt = g.stdout if g.returncode == 0 else (
+        rapport.read_text(encoding="utf-8") if rapport.is_file() else None)
+    if utan_rapport:
+        print("  --   rapportkontrollen hoppad (grinden skriver rapporten efter det har steget)")
+    elif txt is not None and "ingen fil m" in txt:
+        print("  --   den committade rapporten matte ingen .rbxlx — inget kallhead att prova")
+    elif txt is not None:
+        m_fil = re.search(r"\| matt `\.rbxlx` \| `([^`]+)` \|", txt.replace("mätt", "matt"))
+        m_sha = re.search(r"artefaktens kallhead[^|]*\| `([0-9a-f]{40})` \|",
+                          txt.replace("källhead", "kallhead"))
+        if m_fil and m_sha:
+            fil = ROT / m_fil.group(1)
+            if fil.is_file():
+                ftxt = fil.read_text(encoding="utf-8")
+                start = ftxt.find('<string name="Name">UBRFBuild</string>')
+                m_bakad = re.search(r'\bsha = "([0-9a-f]{40})"', ftxt[start:start + 4000]) if start >= 0 else None
+                bakad = m_bakad.group(1) if m_bakad else None
+                if bakad == m_sha.group(1):
+                    print(f"  OK   rapportens kallhead = bakad UBRFBuild.sha ({bakad[:7]}) i {m_fil.group(1)}")
+                else:
+                    fel.append(f"rapportens kallhead {m_sha.group(1)[:7]} != bakad UBRFBuild.sha "
+                               f"{(bakad or 'saknas')[:7]} i {m_fil.group(1)}")
+                    print(f"  FEL  rapportens kallhead {m_sha.group(1)[:7]} != bakad "
+                          f"UBRFBuild.sha {(bakad or 'saknas')[:7]}")
+            else:
+                fel.append(f"rapporten pekar pa {m_fil.group(1)} som inte finns")
+                print(f"  FEL  rapporten pekar pa {m_fil.group(1)} som inte finns")
+        else:
+            fel.append("rapporten namnger inte artefaktens kallhead ur bakad UBRFBuild.sha")
+            print("  FEL  rapporten namnger inte artefaktens kallhead ur bakad UBRFBuild.sha")
 
     if fel:
         print(f"\nFIRST_PLAYABLE_PREFLIGHT: FAIL — {len(fel)} saknas:")

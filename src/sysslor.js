@@ -122,7 +122,10 @@ function visaSadelkammare(){
       return;
     }
     G.utrustning=true;
-    saga(`Sadel, träns och ryktväska med dig. ${h.namn} väntar i boxen.`,3.5);
+    /* #165: hjälmen hänger på din egen krok bredvid — den följer med
+       utrustningen, och kan tas av och på igen i boxmenyn. */
+    G.hjalmPa=true;
+    saga(`Sadel, träns, hjälm och ryktväska med dig. ${h.namn} väntar i boxen.`,3.5);
     overlay(false);
   };
 }
@@ -220,6 +223,9 @@ function visaBoxmeny(){
   <div style="display:grid;gap:10px;margin-top:14px">
     ${G.tackePa?`<button class="btn ghost" id="bTacke" style="justify-content:space-between;width:100%">
       <span>0 · Ta av täcket och häng upp det</span><span class="gold">täcket är på</span></button>`:""}
+    <button class="btn ghost" id="bHjalm" style="justify-content:space-between;width:100%">
+      <span>${G.hjalmPa?"Ta av hjälmen":"Ta på hjälmen"}</span>
+      <span>${G.hjalmPa?'<span class="grn">✓ hjälmen är på</span>':'<span class="dim">krävs för att sitta upp</span>'}</span></button>
     <button class="btn ghost" id="bMocka" style="justify-content:space-between;width:100%">
       <span>1 · Mocka boxen</span><span>${bock(s.mockat)}</span></button>
     <button class="btn ghost" id="bFodra" style="justify-content:space-between;width:100%">
@@ -232,6 +238,9 @@ function visaBoxmeny(){
   const bT=document.getElementById("bTacke");
   if(bT)bT.onclick=()=>{G.tackePa=false;
     saga(`Täcket av och upphängt över boxkanten. ${h.namn} skakar på sig.`,3);visaBoxmeny();};
+  /* #165: hjälmen på och av, samma tillstånd som uppsittningen prövar. */
+  document.getElementById("bHjalm").onclick=()=>{G.hjalmPa=!G.hjalmPa;
+    saga(G.hjalmPa?"Hjälmen på och hakbandet spänt.":"Hjälmen av — ta på den igen innan du sitter upp.",3);visaBoxmeny();};
   document.getElementById("bMocka").onclick=visaMockning;
   document.getElementById("bFodra").onclick=visaFodring;
   document.getElementById("bSkots").onclick=()=>{
@@ -265,6 +274,7 @@ function visaSchema(){
     ${G.lerig||G.spolad>0?rad(!G.lerig,"Spola av leriga ben i spolspiltan"):""}
     ${v.tacke?rad(G.hamtad&&!G.tackePa,"Ta av täcket och häng upp det"):""}
     ${rad(!!G.utrustning,"Hämta sadel och träns i sadelkammaren")}
+    ${rad(!!G.hjalmPa,"Ta på hjälmen")}
     ${rad(s.mockat>=0.99,"Mocka boxen och strö nytt spån")}
     ${rad(s.fodrat>=0.99,"Fodra och vattna efter övningsschemat")}
     ${rad(!!G.skotselRes,"Visitera, rykta, kratsa och sadla")}

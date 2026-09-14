@@ -224,7 +224,7 @@ Enum = {
 	PathStatus = { Success = 1, NoPath = 2, ClosestNoPath = 3 },
 	KeyCode = setmetatable({}, { __index = function(_, k) return k end }),
 	UserInputState = { Begin = 1, End = 2 },
-	UserInputType = { Gamepad1 = 1 },
+	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, Keyboard = 4 },
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter
@@ -251,6 +251,13 @@ Enum = {
 	ZIndexBehavior = { Sibling = 1, Global = 2 },
 	Font = { Gotham = 1, GothamBold = 2, SourceSans = 3, SourceSansBold = 4 },
 	TextXAlignment = { Left = 1, Center = 2, Right = 3 },
+	--[[ UIListLayoutens riktningar, och `Touch` som inmatningstyp. Alla tre
+	     saknades, och alla tre behövdes för att `TouchControls.mount()`
+	     skulle gå att köra: gångartstrappan sätter `HorizontalAlignment`
+	     och `VerticalAlignment`, och blickytan släpper igenom bara
+	     `UserInputType.Touch`. ]]
+	HorizontalAlignment = { Left = 1, Center = 2, Right = 3 },
+	VerticalAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	TextYAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	TextTruncate = { None = 0, AtEnd = 1, SplitWord = 2 },
 	SizeConstraint = { RelativeXY = 1, RelativeXX = 2, RelativeYY = 3 },
@@ -274,7 +281,31 @@ end
 UDim2 = { new = UDim2_new, fromScale = function(x, y) return UDim2_new(x, 0, y, 0) end,
 	fromOffset = function(x, y) return UDim2_new(0, x, 0, y) end }
 UDim = { new = function(sc, off) return { _typ = "UDim", Scale = sc, Offset = off } end }
-Vector2 = { new = function(x, y) return { _typ = "Vector2", X = x, Y = y } end }
+--[[ `Vector2` MED RÄKNESÄTT. Den var en ren tabell utan metatabell, och
+     det gjorde spakens rörelse omöjlig att köra: `kopplaSpak.centrum()`
+     räknar `bas.AbsolutePosition + bas.AbsoluteSize / 2` och blickytan
+     `nu - forra`. Båda dog på "attempt to perform arithmetic on a table".
+     `mount()` gick alltså att köra, men INGET FINGER kunde någonsin
+     flyttas — spakens hela geometri-till-avsikt-väg låg utanför bänken.
+     Samma räknesätt som `vec` ovan, i två dimensioner. ]]
+local __v2mt = {}
+local function __v2(x, y)
+	return setmetatable({ _typ = "Vector2", X = x, Y = y }, __v2mt)
+end
+__v2mt.__add = function(a, b) return __v2(a.X + b.X, a.Y + b.Y) end
+__v2mt.__sub = function(a, b) return __v2(a.X - b.X, a.Y - b.Y) end
+__v2mt.__mul = function(a, b)
+	if type(b) == "number" then return __v2(a.X * b, a.Y * b) end
+	if type(a) == "number" then return __v2(b.X * a, b.Y * a) end
+	return __v2(a.X * b.X, a.Y * b.Y)
+end
+__v2mt.__div = function(a, b) return __v2(a.X / b, a.Y / b) end
+__v2mt.__unm = function(a) return __v2(-a.X, -a.Y) end
+__v2mt.__index = function(t, k)
+	if k == "Magnitude" then return math.sqrt(t.X * t.X + t.Y * t.Y) end
+	return nil
+end
+Vector2 = { new = __v2 }
 
 --[[ `warn` fanns inte i bänken. Produktionskoden använder den på sina
      nil-vägar — t.ex. när anläggningen inte är byggd — så utan den kraschade
@@ -331,6 +362,18 @@ workspace = {
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 		return nil
 	end,
+	--[[ `GetChildren` saknades på workspace, och det gjorde en hel
+	     produktionsgren omätbar: `DinHast.slackAndrasMarkorer()` sveper
+	     `workspace:GetChildren()` för att släcka ANDRA spelares
+	     boxmarkörer. Grenen var trippelt omätbar — `ChildAdded` fyrade
+	     inte, `task.defer` fanns inte, och svepet kunde inte räkna upp
+	     barnen. Alla tre är rättade, och `flerspelare.spec` mäter nu att
+	     Player2 inte ser Player1:s prompt. ]]
+	GetChildren = function(self)
+		local ut = {}
+		for _, b in ipairs(self._barn) do table.insert(ut, b) end
+		return ut
+	end,
 	--[[ Genomsikt.start() sveper workspace efter genomsiktliga delar och
 	     lyssnar på nya. Bänken hade varken svepet eller signalen, så
 	     `start` gick inte att köra — och klientbänken kör hela
@@ -376,6 +419,20 @@ local function __signal()
 		local nu = table.clone(self._lyssnare)
 		for _, fn in ipairs(nu) do fn(...) end
 	end
+	--[[ `Wait()` RETURNERAR DIREKT, och det är en ärlig approximation.
+
+		Bänken har ingen bildruteloop, så det finns inget att vänta på. Den
+		som skriver `for _ = 1, 8 do RunService.Heartbeat:Wait() end` menar
+		"låt åtta bildrutor passera"; här passerar de omedelbart, och koden
+		efter loopen körs med tillståndet som rådde när den startade.
+
+		Sämre än motorn, oändligt mycket bättre än att kasta: utan den dog
+		`HorseService.start()` på `attempt to call missing method 'Wait'`
+		och fyra specar föll på ett fel som bara fanns i mätverktyget.
+		Delta-tiden svaras som 0 — ingen tid gick. ]]
+	function sig:Wait()
+		return 0
+	end
 	--[[ Samma skäl som i __signalTradar: varje `start()` i ett provblock
 		lägger en ny lyssnare, och utan nollställning kör block två med
 		block ettas kvar. ]]
@@ -401,6 +458,11 @@ end
      `Fire` startar varje lyssnare i en coroutine och lägger de som
      suspenderat i kö. `slutfor()` väcker dem. Provet får därmed hantera
      interleavingen själv, deterministiskt, utan att sova. ]]
+--[[ `workspace` byggs för hand ovanför och kan inte få sin `ChildAdded` i
+     literalen — `__signal` finns inte än där. Den sätts här, och fyras av
+     `Instance.Parent`-sättaren precis som för vanliga instanser. ]]
+workspace.ChildAdded = __signal()
+
 local function __signalTradar()
 	local sig = { _lyssnare = {}, _vantande = {} }
 	function sig:Connect(fn)
@@ -473,8 +535,31 @@ local __services = {
 			Character = { Name = "Spelare",
 				FindFirstChild = function() return nil end,
 				FindFirstChildOfClass = function() return nil end },
-			FindFirstChild = function() return nil end,
-			FindFirstChildOfClass = function() return nil end,
+			--[[ ...OCH SPELAREN KAN BÄRA BARN, t.ex. en `PlayerGui`.
+
+			     Båda de här svarade hårdkodat nil, och det gjorde en hel
+			     produktionsväg omätbar: skötselpanelens väjning för
+			     mobilens rörelsereglage börjar med
+			     `player:FindFirstChildOfClass("PlayerGui")`, så i bänken
+			     fanns aldrig någon `TouchGui`, väjningen svarade 0 och
+			     GRENEN KÖRDES ALDRIG. Varje grön mätning av
+			     skötsellayouten gällde alltså bara skrivbordet.
+
+			     Nu söks `_barn` som på en riktig instans, så ett prov kan
+			     hänga upp en representativ pekreglagehierarki. ]]
+			_barn = {},
+			FindFirstChild = function(self, namn)
+				for _, b in ipairs(rawget(self, "_barn") or {}) do
+					if b.Name == namn then return b end
+				end
+				return nil
+			end,
+			FindFirstChildOfClass = function(self, klass)
+				for _, b in ipairs(rawget(self, "_barn") or {}) do
+					if b.ClassName == klass then return b end
+				end
+				return nil
+			end,
 			--[[ HUD:en parentas hit. Utan den gick PreparationController inte
 			     att köra alls i bänken. ]]
 			WaitForChild = function(self, namn)
@@ -487,6 +572,16 @@ local __services = {
 		},
 		_spelare = {},
 		GetPlayers = function(self) return self._spelare end,
+		--[[ Avsittningen använder den för att veta vems kropp den flyttar;
+		     utan den dog `stallAv` på `attempt to call missing method`.
+		     Samma uppslag som motorn: spelaren vars `Character` ÄR modellen.
+		     Ingen match ger nil — en NPC-kropp har ingen spelare. ]]
+		GetPlayerFromCharacter = function(self, karaktar)
+			for _, p in ipairs(self._spelare) do
+				if p.Character == karaktar then return p end
+			end
+			return nil
+		end,
 		--[[ Trådväxlande med flit — se __signalTradar. `PlayerRemoving` är
 		     en vanlig signal: där finns inget yield-fönster att modellera. ]]
 		PlayerAdded = __signalTradar(),
@@ -504,8 +599,16 @@ local __services = {
 		KeyboardEnabled = true,
 		GamepadEnabled = false,
 		InputBegan = __signal(),
-		InputChanged = { Connect = function() return { Disconnect = function() end } end },
-		InputEnded = { Connect = function() return { Disconnect = function() end } end },
+		--[[ `InputChanged` och `InputEnded` VAR ATTRAPPER: `Connect` svarade
+		     med en tom koppling och ingenting kunde fyras. `TouchControls`
+		     lyssnar på båda GLOBALT — det är där spakens finger följs utanför
+		     cirkeln, där spaken släpps och nollar, och där blickfingret
+		     dras. Med attrapperna gick `mount()` att köra men inte att
+		     RÖRA: ingen spec kunde släppa ett finger, så "släpp nollar båda
+		     axlarna" och "blicken tar inte spakens finger" var omätbara.
+		     Nu är de riktiga signaler, som `InputBegan` redan var. ]]
+		InputChanged = __signal(),
+		InputEnded = __signal(),
 	},
 	--[[ GuiService: G02-D:s ridanalys laser ReducedMotionEnabled for att
 	     starta pausad i stallet for att satta igang en markor som ror sig av
@@ -711,6 +814,24 @@ function __butik:UpdateAsync(nyckel, fn)
 	return nytt
 end
 
+--[[ ── InsertService (#165) ─────────────────────────────────────────
+     `TackRigg.laddaAsset` hämtar Creator Store-modeller med
+     `InsertService:LoadAsset`. Bänken kan inte nå Roblox, så stubben
+     svarar med det provet hänger på `_svar[assetId]`: en funktion som
+     bygger en modell, eller ingenting (→ laddningen faller, primitiven
+     ritas). `_anrop` räknar så att ett prov kan se att vägen faktiskt
+     prövades. ]]
+__services.InsertService = {
+	_svar = {},
+	_anrop = {},
+	LoadAsset = function(self, assetId)
+		table.insert(self._anrop, assetId)
+		local f = self._svar[assetId]
+		if f == nil then error("InsertService: ingen stubbad modell för " .. tostring(assetId)) end
+		return f()
+	end,
+}
+
 __services.DataStoreService = {
 	GetDataStore = function(_, _namn)
 		if __datastore.felButik then error("DataStore: ingen API-åtkomst (stub)") end
@@ -834,11 +955,111 @@ local __BEVAKADE = {
 	ActionText = true, ObjectText = true,
 }
 
+--[[ ── UIGridLayout I BÄNKEN ───────────────────────────────────────────
+
+     Pekreglagens knappar ligger i två `UIGridLayout`-galler, och gallret
+     är det som ger dem sin plats: knapparna själva har ingen `Position`.
+     Stubben visste inget om det, så ALLA fem gångartsknappar och alla
+     fem hjälpknappar svarade samma `AbsolutePosition` — gallrets övre
+     vänstra hörn. En mätning av "ligger knapparna på varandra?" hade
+     alltså fallit på var enda skärm, och en mätning av "ligger knappen
+     innanför skärmen?" hade bara sett den första cellen.
+
+     Räknas som motorn: cellerna fylls rad för rad, `FillDirectionMaxCells`
+     per rad, i `LayoutOrder` (eller namn) och med `CellPadding` emellan;
+     `HorizontalAlignment`/`VerticalAlignment` lägger hela blocket mot
+     förälderns kant. Barnets yta ÄR `CellSize`, som i Roblox.
+
+     [antagande] Bara `FillDirection.Horizontal` (standardvärdet) är
+     modellerad — ingen produktionskod sätter `Vertical`. Att blocket
+     som helhet (inte varje rad) riktas med alignment är lästs ur
+     Robloxs dokumentation, inte mätt i Studio; i reglagens galler är
+     blocket exakt lika stort som ramen, så förskjutningen är 0 där. ]]
+local function __gridCell(t)
+	local far = t.Parent
+	if type(far) ~= "table" then return nil end
+	local syskon = rawget(far, "_barn")
+	if not syskon then return nil end
+	local galler = nil
+	for _, b in ipairs(syskon) do
+		if rawget(b, "ClassName") == "UIGridLayout" then galler = b break end
+	end
+	if not galler then return nil end
+	local egenKlass = rawget(t, "ClassName") or ""
+	if egenKlass:sub(1, 2) == "UI" then return nil end
+	local cell = rawget(galler, "CellSize")
+	if type(cell) ~= "table" or cell._typ ~= "UDim2" then return nil end
+	local farYta = far.AbsoluteSize
+	if not farYta then return nil end
+	local pad = rawget(galler, "CellPadding")
+	local cw = cell.XScale * farYta.X + cell.XOffset
+	local ch = cell.YScale * farYta.Y + cell.YOffset
+	local pw = if type(pad) == "table" then pad.XScale * farYta.X + pad.XOffset else 0
+	local ph = if type(pad) == "table" then pad.YScale * farYta.Y + pad.YOffset else 0
+
+	local celler = {}
+	for i, b in ipairs(syskon) do
+		local k = rawget(b, "ClassName") or ""
+		if k:sub(1, 2) ~= "UI" then
+			table.insert(celler, { b = b, i = i, ordning = rawget(b, "LayoutOrder") or 0 })
+		end
+	end
+	if rawget(galler, "SortOrder") == Enum.SortOrder.LayoutOrder then
+		table.sort(celler, function(a, b)
+			if a.ordning ~= b.ordning then return a.ordning < b.ordning end
+			return a.i < b.i
+		end)
+	else
+		table.sort(celler, function(a, b)
+			local na, nb = tostring(a.b.Name or ""), tostring(b.b.Name or "")
+			if na ~= nb then return na < nb end
+			return a.i < b.i
+		end)
+	end
+	local plats = nil
+	for n, c in ipairs(celler) do
+		if c.b == t then plats = n break end
+	end
+	if not plats then return nil end
+
+	local perRad = rawget(galler, "FillDirectionMaxCells") or 0
+	if perRad <= 0 then perRad = math.max(1, math.floor((farYta.X + pw) / (cw + pw))) end
+	local kol = (plats - 1) % perRad
+	local rad = math.floor((plats - 1) / perRad)
+	local antalRader = math.ceil(#celler / perRad)
+	local kolAnvanda = math.min(#celler, perRad)
+	local innehallB = kolAnvanda * cw + (kolAnvanda - 1) * pw
+	local innehallH = antalRader * ch + (antalRader - 1) * ph
+	local dx, dy = 0, 0
+	local ha = rawget(galler, "HorizontalAlignment")
+	if ha == Enum.HorizontalAlignment.Right then dx = farYta.X - innehallB
+	elseif ha == Enum.HorizontalAlignment.Center then dx = (farYta.X - innehallB) / 2 end
+	local va = rawget(galler, "VerticalAlignment")
+	if va == Enum.VerticalAlignment.Bottom then dy = farYta.Y - innehallH
+	elseif va == Enum.VerticalAlignment.Center then dy = (farYta.Y - innehallH) / 2 end
+	return { x = dx + kol * (cw + pw), y = dy + rad * (ch + ph), w = cw, h = ch }
+end
+
 local function __nyInstans(klass)
 	local inst = {
 		ClassName = klass, Name = "", AnimationId = "",
 		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
 	}
+	--[[ `ChildAdded` FYRAR NÄR ETT BARN FAKTISKT PARENTAS. `DinHast.start()`
+	     lyssnar på `workspace.ChildAdded` för att släcka andra spelares
+	     boxmarkörer när DE ansluter. Utan signalen dog hela klientingången
+	     på `attempt to index nil with 'Connect'`; en tom stubb hade varit
+	     lika illa, för då kan bänken inte skilja "vi lyssnar" från "vi hör". ]]
+	inst.ChildAdded = __signal()
+	--[[ `InputBegan` / `InputEnded` PÅ EN GUI-YTA. Utan dem gick
+	     `TouchControls.mount()` inte att köra alls i bänken: `kopplaBlick`
+	     dog på `attempt to index nil with 'Connect'`. Följden var att hela
+	     pekmonteringen — blickytan, spaken, knappraden — aldrig byggdes i
+	     ett prov, och att fria blicken därför var helt omätt.
+	     `touch.spec` provar de RENA funktionerna; allt som bor inne i
+	     `mount`s stängning låg utanför. ]]
+	inst.InputBegan = __signal()
+	inst.InputEnded = __signal()
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
 	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
 	     värde — och det är den skillnaden `dismount` bygger på. ]]
@@ -912,10 +1133,10 @@ local function __nyInstans(klass)
 	--[[ Klientloopen sitter av om riggen inte längre står i världen. Utan
 	     den här kunde den vägen aldrig köras i bänken. ]]
 	function inst:IsDescendantOf(mojligForfader)
-		local f = rawget(self, "Parent")
+		local f = self.Parent
 		while f do
 			if f == mojligForfader then return true end
-			f = rawget(f, "Parent") or (type(f) == "table" and f.Parent) or nil
+			f = f.Parent
 		end
 		return false
 	end
@@ -935,14 +1156,28 @@ local function __nyInstans(klass)
 		return ut
 	end
 	function inst:Destroy()
-		local far = rawget(self, "Parent")
-		if far and far._barn then
-			for i, b in ipairs(far._barn) do
-				if b == self then table.remove(far._barn, i) break end
-			end
-		end
+		local far = self.Parent
+		--[[ ...OCH `Parent` BLIR nil. Roblox gör det, stubben gjorde det
+		     inte, och skillnaden är mätbar: en spec som frågar "bär hon
+		     fortfarande sadeln?" läste `sak.Parent == karaktären` och fick
+		     JA om en förstörd sak, trots att den var borta ur barnlistan.
+		     Ett prov som inte kan se att något städats bort kan heller inte
+		     fälla en städning som uteblir. ]]
+		if far then self.Parent = nil end
 	end
-	if klass == "TextButton" then inst.Activated = __signal() end
+	--[[ ...och knappens ÖVRIGA vägar in. `Activated` fanns; pekreglagens
+	     gångartsknappar kopplar `MouseButton1Click`, och utan den dog
+	     `TouchControls.mount()` i `nyGang`. Samma knapp, andra signal. ]]
+	if klass == "TextButton" or klass == "ImageButton" then
+		inst.Activated = __signal()
+		inst.MouseButton1Click = __signal()
+		inst.MouseButton1Down = __signal()
+		inst.MouseButton1Up = __signal()
+		--[[ `MouseLeave` nollar tygeln och sitsen när fingret glider av
+		     knappen — den håll-ned-vägen är hela skillnaden mot en impuls. ]]
+		inst.MouseLeave = __signal()
+		inst.MouseEnter = __signal()
+	end
 	--[[ `ProximityPrompt.Triggered` — samma skäl som Activated ovan.
 	     Utan den gick `DorrService.start()` inte att köra i den här
 	     banken, och därmed gick promptens TEXT inte att mäta. En grind
@@ -1056,7 +1291,7 @@ local function __nyInstans(klass)
 			if type(namn) ~= "string" or namn == "" then namn = rawget(nod, "ClassName") end
 			if type(namn) ~= "string" then break end
 			table.insert(led, 1, namn)
-			nod = rawget(nod, "Parent")
+			nod = nod.Parent
 		end
 		return table.concat(led, ".")
 	end
@@ -1112,6 +1347,7 @@ local function __nyInstans(klass)
 
 	return setmetatable(inst, {
 		__index = function(t, k)
+			if k == "Parent" then return rawget(t, "_p").Parent end
 			if __BEVAKADE[k] then return rawget(t, "_p")[k] end
 			--[[ `Position` är inget eget fält på en riktig BasePart: den
 			     läses ur CFrame. Koden som mäter avstånd till en häst
@@ -1128,10 +1364,107 @@ local function __nyInstans(klass)
 			     träns på huvudet och ett träns i origo. ]]
 			if k == "WorldCFrame" and rawget(t, "ClassName") == "Attachment" then
 				local egen = rawget(t, "CFrame")
-				local vard = rawget(t, "Parent")
+				--[[ FÖRÄLDERN LÄSES GENOM `__index`, inte rått. Sedan
+				     föräldern flyttade in i skuggtabellen gav `rawget` nil
+				     här, och fästpunkten svarade med sitt LOKALA läge som
+				     om det vore världsläget. Tränset byggdes då kring en
+				     nosrygg 5 studs fel, och nosgrimman blev dubbelt så
+				     bred som huvudet — samma planka som `tack.spec`
+				     fäller. Felet fanns bara i mätverktyget. ]]
+				local vard = t.Parent
 				local vardCF = vard and rawget(vard, "CFrame")
 				if vardCF and egen then return vardCF * egen end
 				return egen
+			end
+			--[[ `AbsoluteSize` — YTAN I PIXLAR, och tills nu fanns den inte.
+
+			     Två produktionsvägar läser den för att inte lägga sig
+			     ovanpå reglagen: Ugneta-kortet (`k.Parent.AbsoluteSize.X`)
+			     och hjälppanelen (`yta.AbsoluteSize.Y`). Bänken svarade nil
+			     och båda specarna dog på `attempt to index nil` — mitt i
+			     den mätning som skulle visa att kortet VIKER för knappraden.
+			     En yta utan storlek kan varken rymma eller inte rymma något.
+
+			     `ScreenGui` får kamerans `ViewportSize`, som i Roblox (utan
+			     topplistens inset, vilket bänken inte modellerar). Ett
+			     `GuiObject` räknas ur sin egen `UDim2` mot förälderns yta —
+			     samma formel motorn använder: skala · förälder + offset. ]]
+			--[[ `AbsolutePosition` — ÖVRE VÄNSTRA HÖRNET I PIXLAR.
+
+			     Syskonet till `AbsoluteSize` nedan, och det saknades av
+			     samma skäl: ingen spec hade behövt det förrän
+			     skötsellayoutens väjning skulle mätas.
+			     `pekreglagensKanter()` räknar spakens högerkant som
+			     `AbsolutePosition.X + AbsoluteSize.X`, så utan den här
+			     kunde väjningen varken lyckas eller misslyckas i bänken.
+
+			     Räknas som motorn gör: förälderns hörn plus den egna
+			     `UDim2`-positionen mot förälderns yta, minus
+			     `AnchorPoint` gånger den egna ytan. En `ScreenGui` är
+			     rotytan och ligger i origo. ]]
+			if k == "AbsolutePosition" then
+				local klass = rawget(t, "ClassName")
+				if klass == "ScreenGui" then return Vector2.new(0, 0) end
+				local far = t.Parent
+				if type(far) ~= "table" then return Vector2.new(0, 0) end
+				local farHorn = far.AbsolutePosition
+				local farYta = far.AbsoluteSize
+				--[[ Ett barn i ett `UIGridLayout` får sin plats av gallret,
+				     inte av sin egen `Position`. Se `__gridCell`. ]]
+				local cell = farHorn and __gridCell(t)
+				if cell then
+					return Vector2.new(farHorn.X + cell.x, farHorn.Y + cell.y)
+				end
+				local pos = rawget(t, "_p") and rawget(t, "_p").Position
+					or rawget(t, "Position")
+				if not (farHorn and farYta and type(pos) == "table"
+					and pos._typ == "UDim2") then
+					return Vector2.new(0, 0)
+				end
+				local x = farHorn.X + pos.XScale * farYta.X + pos.XOffset
+				local y = farHorn.Y + pos.YScale * farYta.Y + pos.YOffset
+				local ank = rawget(t, "_p") and rawget(t, "_p").AnchorPoint
+					or rawget(t, "AnchorPoint")
+				if type(ank) == "table" and ank._typ == "Vector2" then
+					local egen = t.AbsoluteSize
+					if egen then
+						x -= ank.X * egen.X
+						y -= ank.Y * egen.Y
+					end
+				end
+				return Vector2.new(x, y)
+			end
+			if k == "AbsoluteSize" then
+				local klass = rawget(t, "ClassName")
+				if klass == "ScreenGui" then
+					local kam = workspace.CurrentCamera
+					local vy = kam and kam.ViewportSize
+					if not vy then return nil end
+					--[[ TOPBAREN TAS BORT när `IgnoreGuiInset` är falskt
+					     (Robloxs standardvärde). Utan det räknade pekreglagen
+					     sin skala på 309 px i stället för motorns 273 på en
+					     iPhone i landskap — bänken var 36 px snällare än
+					     skärmen, i just den mätning som skulle visa att
+					     knappraden får plats. `GuiService:GetGuiInset()` är
+					     samma tal produktionen själv läser. ]]
+					local ignorerar = rawget(t, "IgnoreGuiInset")
+					if ignorerar == true then return Vector2.new(vy.X, vy.Y) end
+					local inset = game:GetService("GuiService"):GetGuiInset()
+					return Vector2.new(vy.X, vy.Y - inset.Y)
+				end
+				local far = t.Parent
+				local faryta = far and type(far) == "table" and far.AbsoluteSize
+				--[[ ...och sin storlek av `CellSize`, som i Roblox. ]]
+				local cell = faryta and __gridCell(t)
+				if cell then return Vector2.new(cell.w, cell.h) end
+				local storlek = rawget(t, "_p") and rawget(t, "_p").Size
+					or rawget(t, "Size")
+				if faryta and type(storlek) == "table" and storlek._typ == "UDim2" then
+					return Vector2.new(
+						storlek.XScale * faryta.X + storlek.XOffset,
+						storlek.YScale * faryta.Y + storlek.YOffset)
+				end
+				return nil
 			end
 			--[[ `Attachment.WorldPosition` ar samma sak, bara punkten.
 			     Tillkom nar `TackRigg` borjade SPANNA delar mellan tva
@@ -1148,6 +1481,46 @@ local function __nyInstans(klass)
 			return nil
 		end,
 		__newindex = function(t, k, v)
+			--[[ FÖRÄLDERN LIGGER I SKUGGTABELLEN, inte som en rå nyckel.
+
+			     Skälet är Luas egen semantik: `__newindex` fyrar BARA när
+			     nyckeln saknas i tabellen. Låg `Parent` rått blev alltså
+			     bara den FÖRSTA föräldern registrerad — en sak som flyttas
+			     (sadeln som plockas ner från boxfronten och hamnar på
+			     ryttaren) stod kvar i sin gamla förälders barnlista och
+			     dök aldrig upp i den nyas. `GetChildren` såg den inte, och
+			     en städning som letar efter den kunde inte mätas.
+			     Omflyttningen var med andra ord osynlig i bänken.
+
+			     Nu tas den ur den gamla listan och läggs i den nya, som i
+			     Roblox, och `GetPropertyChangedSignal("Parent")` fyrar. ]]
+			if k == "Parent" then
+				local p = rawget(t, "_p")
+				local gammal = p.Parent
+				if gammal == v then return end
+				if type(gammal) == "table" then
+					local b = rawget(gammal, "_barn")
+					if b then
+						for i, x in ipairs(b) do
+							if x == t then table.remove(b, i) break end
+						end
+					end
+				end
+				p.Parent = v
+				if type(v) == "table" then
+					local b = rawget(v, "_barn")
+					if not b then b = {}; rawset(v, "_barn", b) end
+					table.insert(b, t)
+					--[[ ...och den nya föräldern säger till. `DinHast.start()`
+					     lyssnar på `workspace.ChildAdded`; utan den här
+					     raden såg klienten aldrig en häst dyka upp. ]]
+					local ca = rawget(v, "ChildAdded")
+					if ca and ca.Fire then ca:Fire(t) end
+				end
+				local sig = rawget(t, "_sig").Parent
+				if sig then sig:Fire() end
+				return
+			end
 			if __BEVAKADE[k] then
 				local p = rawget(t, "_p")
 				local gammal = p[k]
@@ -1177,20 +1550,38 @@ local function __nyInstans(klass)
 				if sig and gammal ~= v then sig:Fire() end
 				return
 			end
-			if k == "Parent" then
-				rawset(t, "Parent", v)
-				if v and type(v) == "table" then
-					v._barn = v._barn or {}
-					table.insert(v._barn, t)
-				end
-			else
-				rawset(t, k, v)
-			end
+			rawset(t, k, v)
 		end,
 	})
 end
 
 Instance = { new = __nyInstans }
+
+--[[ `typeof` PÅ EN STUBBINSTANS.
+
+     Produktionen vaktar varje remote-argument med
+     `typeof(x) ~= "Instance" or not x:IsA(...)`, och Luaus egen `typeof`
+     säger "table" om en stubbinstans. Vakten har därför varit OMÄTBAR i
+     bänken: en spec som skickade en riktig (stubbad) modell fick exakt
+     samma nej som en spec som skickade en sträng — och en vakt som alltid
+     säger nej bevisar ingenting om vad den släpper igenom.
+
+     Det upptäcktes när utrustningshämtningen (16:21-ordern) lades in: hela
+     kedjan föll på `utr.okand_sak` trots att modellen var byggd av
+     produktionens egen byggare.
+
+     En stubbinstans känns igen på att den bär BÅDE `ClassName` och barn-
+     tabellen, och båda ligger med `rawset` i konstruktorn. Vektorer och
+     CFrames är också tabeller men saknar dem, och faller därför igenom
+     till den riktiga `typeof`. ]]
+local __luauTypeof = typeof
+function typeof(v)
+	if type(v) == "table" and rawget(v, "ClassName") ~= nil
+		and rawget(v, "_barn") ~= nil then
+		return "Instance"
+	end
+	return __luauTypeof(v)
+end
 
 --[[ ── Animationsstubbar ───────────────────────────────────────────────
      `__makeRig` lämnar `animator = nil`, och därför har `AnimationController`
@@ -1280,6 +1671,19 @@ end
 task = {
 	delay = function(_, fn) __senasteDelay = fn end,
 	spawn = function(fn, ...) fn(...) end,
+	--[[ `defer` KÖRS DIREKT i bänken, och det saknades helt.
+
+	     `DinHast.start()` släcker andra spelares boxmarkörer med
+	     `task.defer(slackAndrasMarkorer)` ur sin `workspace.ChildAdded`-
+	     lyssnare. Grenen har varit dubbelt omätbar: `ChildAdded` fyrade
+	     inte i stubben (rättat tidigare idag), och när den väl gjorde det
+	     dog handlaren på `attempt to call a nil value` här.
+
+	     Roblox kör `defer` i slutet av bildrutan; bänken har ingen
+	     bildruta, så den körs direkt. Skillnaden syns bara för kod som
+	     RÄKNAR på att andra hinner emellan, och den koden ska i så fall
+	     inte använda `defer`. ]]
+	defer = function(fn, ...) fn(...) end,
 	--[[ `wait` är en no-op i bänken. SparService backar av med 1-2-4
 	     sekunder mellan retryförsöken; en riktig väntan hade gjort
 	     felprovet sju sekunder långt utan att mäta något annat än att

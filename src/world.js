@@ -371,8 +371,18 @@ function vandringKollision(nx,ny,r,fx,fy){
     /* Sargen som väggar. Gapet i norra sargen är SPELABSTRAKTIONEN sargport
        (src/site.js) — inte fidelity; ingen bild visar en grind där. */
     const sp=SPELABSTRAKTIONER.ridhus.sargport;
-    [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,sp.x0,ba.y+ba.h);
-    [nx,ny]=kollideraSeg(nx,ny,r,sp.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    /* MED HÄSTEN VID HANDEN ÄR SARGPORTEN STÄNGD. Den är för folk till
+       fots (`trafik:"gaende"`); hästen kommer in genom hästgången och
+       `sargGrind`. Hästen följer i spelarens spår utan egen kollision,
+       så det är spelaren som måste stoppas — annars leds hon rakt igenom
+       en öppning kanonen säger att hon aldrig går i. Vägsökningen läser
+       samma funktion (NAV byggs om när ledningen börjar eller slutar). */
+    if(G.leder&&sp.trafik==="gaende"){
+      [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    }else{
+      [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y+ba.h,sp.x0,ba.y+ba.h);
+      [nx,ny]=kollideraSeg(nx,ny,r,sp.x1,ba.y+ba.h,ba.x+ba.w,ba.y+ba.h);
+    }
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x+ba.w,ba.y);
     [nx,ny]=kollideraSeg(nx,ny,r,ba.x,ba.y,ba.x,ba.y+ba.h);
     /* Östra långsidan i två stycken: grinden mot hästgången är gapet.
@@ -495,7 +505,7 @@ function vandringKollision(nx,ny,r,fx,fy){
    samma nivåregel (NIVA_STEG) som figuren själv följer. Product Owner
    2026-09-04 15:20: "spelaren kan inte gå upp på läktaren" — gå-hit-
    vägen (pekskärmens/kartvyns primära styrning) slutade bredvid däcket. */
-const NAV={scen:null, cell:1.6, nx:0, ny:0, fri:null, nivafri:false};
+const NAV={scen:null, leder:false, cell:1.6, nx:0, ny:0, fri:null, nivafri:false};
 
 function navBygg(){
   const matt=G.scen==="gard" ? [ANL.bredd,ANL.djup]
@@ -528,9 +538,11 @@ function navBygg(){
       NAV.fri[j*NAV.nx+i]=(Math.abs(kx-x)<1e-6&&Math.abs(ky-y)<1e-6)?1:0;
     }
   }finally{NAV.nivafri=false;}
-  NAV.scen=G.scen;
+  NAV.scen=G.scen; NAV.leder=!!G.leder;
 }
-function navRedo(){ if(NAV.scen!==G.scen)navBygg(); }
+/* Rutnätet byggs om när scenen byts — och när ledningen börjar eller
+   slutar, för då stänger sargporten (se vandringKollision). */
+function navRedo(){ if(NAV.scen!==G.scen||NAV.leder!==!!G.leder)navBygg(); }
 function navIx(x,y){
   const i=clamp(Math.floor(x/NAV.cell),0,NAV.nx-1);
   const j=clamp(Math.floor(y/NAV.cell),0,NAV.ny-1);
@@ -800,6 +812,16 @@ function hastData(id){
 }
 
 /* ── Interaktion ──────────────────────────────────────────────── */
+/* En dörr för gående (`trafik:"gaende"`, site.js) öppnas inte med hästen
+   vid handen: hästen går in genom hästgången. Samma ord som Roblox
+   (`led.ingang_hast`). */
+function dorrMedHast(d){
+  if(G.leder&&d.trafik==="gaende"){
+    saga("Hästen går in genom hästgången — inte här.",4);
+    return;
+  }
+  gaTill(d.mot,d.spawn);
+}
 function interaktioner(){
   const L=[];
   if(G.scen==="gard"){
@@ -807,7 +829,7 @@ function interaktioner(){
       if(d.mot==="info"){
         L.push({pos:d.pos, text:d.text, gor(){saga(d.info,4);}});
       }else{
-        L.push({pos:d.pos, text:d.text, gor(){gaTill(d.mot,d.spawn);}});
+        L.push({pos:d.pos, text:d.text, gor(){dorrMedHast(d);}});
       }
     }
     /* Med sadlad häst vid handen kan lektionen ridas utomhus:
@@ -850,7 +872,7 @@ function interaktioner(){
   }else if(G.scen==="ridhusinne"){
     const R=RIDHUSINNE;
     for(const d of R.dorrar) L.push({pos:d.pos, text:d.text,
-      gor(){gaTill(d.mot,d.spawn);}});
+      gor(){dorrMedHast(d);}});
     for(const i of R.info) L.push({pos:i.pos, text:i.text, gor(){saga(i.svar,4.5);}});
     const sp=SPELABSTRAKTIONER.ridhus.sargport, portX=(sp.x0+sp.x1)/2;
     L.push({pos:[portX,R.bana.y+R.bana.h], text:G.leder
@@ -1071,7 +1093,7 @@ function startaVandring(){
      hämtningen är inte längre obligatorisk för första ridpasset. */
   G.hastPlats="box";
   G.sysslor={mockat:0,fodrat:0}; G.tackePa=false;
-  G.fangstForsok=false; G.utrustning=false; G.lerig=false; G.spolad=0;
+  G.fangstForsok=false; G.utrustning=false; G.hjalmPa=false; G.lerig=false; G.spolad=0;
   G.hastMott=false;
   // dagens väder — avgör om hästarna går med täcke i hagen
   const v=(G.seed*2654435761>>>0)%100;
@@ -1735,14 +1757,17 @@ function ritaSpelare3D(){
   cx.moveTo(x0-s*0.13,y0-s*0.74+gung);
   cx.quadraticCurveTo(x0-s*0.16,y0-s*0.62+gung,x0-s*0.10,y0-s*0.56+gung);
   cx.lineTo(x0-s*0.05,y0-s*0.62+gung); cx.closePath(); cx.fill();
-  // grön ridhjälm med ventilation
-  cx.fillStyle="#4E7A3C";
-  cx.beginPath(); cx.ellipse(x0,y0-s*0.82+gung,s*0.15,s*0.115,0,Math.PI,0); cx.fill();
-  cx.fillStyle="#3E6230";
-  cx.beginPath(); cx.ellipse(x0,y0-s*0.775+gung,s*0.155,s*0.035,0,0,Math.PI*2); cx.fill();
-  cx.strokeStyle="rgba(240,240,225,.5)"; cx.lineWidth=Math.max(1,s*0.012);
-  cx.beginPath(); cx.moveTo(x0-s*0.07,y0-s*0.90+gung);
-  cx.quadraticCurveTo(x0,y0-s*0.94+gung,x0+s*0.07,y0-s*0.90+gung); cx.stroke();
+  // grön ridhjälm med ventilation — bara när den är PÅ (#165: hjälmen är
+  // spelarens utrustning, `G.hjalmPa`, och krävs för att sitta upp)
+  if(G.hjalmPa){
+    cx.fillStyle="#4E7A3C";
+    cx.beginPath(); cx.ellipse(x0,y0-s*0.82+gung,s*0.15,s*0.115,0,Math.PI,0); cx.fill();
+    cx.fillStyle="#3E6230";
+    cx.beginPath(); cx.ellipse(x0,y0-s*0.775+gung,s*0.155,s*0.035,0,0,Math.PI*2); cx.fill();
+    cx.strokeStyle="rgba(240,240,225,.5)"; cx.lineWidth=Math.max(1,s*0.012);
+    cx.beginPath(); cx.moveTo(x0-s*0.07,y0-s*0.90+gung);
+    cx.quadraticCurveTo(x0,y0-s*0.94+gung,x0+s*0.07,y0-s*0.90+gung); cx.stroke();
+  }
 }
 
 /* ── Gården i 2D (karta) ─────────────────────────────────────── */

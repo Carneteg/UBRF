@@ -1054,7 +1054,7 @@ const live = await page.evaluate(async () => {
   G.hastId = G.hastId || Object.keys(HORSES)[0];
   G.hastPlats = "box";
   G.ride = nyState(G.dagsform, 0.5, G.sadellage);
-  sittUpp("ridhus");
+  G.hjalmPa = true; sittUpp("ridhus");
   await new Promise(r => setTimeout(r, 1200));
   return { forevandring, eftervandring, uppsutten: RID_TILLSTAND.uppsutten, hast: RID_TILLSTAND.hast,
     telemetri: G.telemetri ? { gangart: G.telemetri.gangart, fart: G.telemetri.fart,
@@ -1106,7 +1106,7 @@ const ordning = await page.evaluate(() => {
     hastVidStart = RID_TILLSTAND.hast;
     return original.apply(this, a);
   };
-  try { sittUpp("ridhus"); } finally { window.startaLektion = original; }
+  G.hjalmPa = true; try { sittUpp("ridhus"); } finally { window.startaLektion = original; }
   return { uppsuttenVidStart, hastVidStart };
 });
 prova("uppsittningen är etablerad INNAN lektionen startar (inget första-bildrutefönster)",

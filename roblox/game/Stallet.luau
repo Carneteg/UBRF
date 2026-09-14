@@ -32,7 +32,20 @@ local S = G.stall
 Stallet.FORSTA_DAGEN_HAST = "blackrock_jack"
 
 --[[ Boxrutnätet härleds ur stalldatan i stället för att räknas upp:
-	fyra rader × antalBoxar per rad. Ändras stallet följer boxarna med. ]]
+	fyra rader × antalBoxar per rad. Ändras stallet följer boxarna med.
+
+	OBS: DET HÄR ÄR NUMRERINGSRYMDEN, INTE ANTALET BOXAR SOM FINNS.
+
+	Talet är 52 (4 × 13) medan världen bygger 49 fack, och skillnaden
+	rapporterades som en odiagnostiserad diskrepans i runtime-QA:n. Den är
+	inte en bugg: `S.brott` skär två passager genom raderna, och de facken
+	finns inte. `hastgang` tar ett fack ur rad W (12 kvar) och `ostport` två
+	ur rad E (11 kvar) — 13 + 13 + 12 + 11 = 49.
+
+	`box(n)` returnerar därför `nil` för just de tre numren, med flit: en
+	påhittad koordinat hade varit värre än ett nil. Den som räknar boxar ska
+	räkna `S.fack`, inte det här talet. Förhållandet mäts i
+	`spelbarhet.spec` så att det inte kan glida tyst. ]]
 function Stallet.boxantal(): number
 	return #S.rader * S.antalBoxar
 end
@@ -84,16 +97,112 @@ function Stallet.box(n: number)
 	if fack and not f then return nil end
 	local yMitt = if f then (f.y0 + f.y1) / 2
 		else S.boxStartY + (plats - 0.5) * S.boxB
+	--[[ Fackets ändar behövs för att veta var frontens TÄTA panel slutar och
+		boxdörren börjar. ]]
+	local yLag = if f then f.y0 else yMitt - S.boxB / 2
+	local yHog = if f then f.y1 else yMitt + S.boxB / 2
+
+	--[[ BOXFRONTENS YTTERSIDA — den sida som vetter mot gången.
+
+		Kroppen ligger alltid [x0, x0 + djup]; `vetter` säger vilken ände
+		fronten sitter i. Bygget lägger frontpanelen med `fx` och tjockleken
+		0,06 in mot boxen, så den yta spelaren ser från gången ligger på
+		`x0 + djup` respektive `x0`. Talet härleds därför ur samma två fält
+		bygget läser och skrivs inte av här.
+
+		Det här är ANKARET för allt som hänger på fronten. ]]
+	local fx = if rad.vetter > 0 then x0 + rad.djup else x0
 
 	return {
 		nummer = n,
 		rad = rad.id,
 		plats = plats,
 		gang = rad.gang,
+		vetter = rad.vetter,
 		lokal = { x = xMitt, y = yMitt },
 		varld = { x = S.origo.x + xMitt, y = S.origo.y + yMitt },
+		front = { x = fx, y = yMitt },
+		frontVarld = { x = S.origo.x + fx, y = S.origo.y + yMitt },
+		fack = { y0 = yLag, y1 = yHog },
 	}
 end
+
+--[[ ── UTRUSTNINGEN PÅ BOXFRONTEN ─────────────────────────────────────
+
+	`references/buildings/stall/KORT.md` § Boxarna från gången, ur filmen:
+
+	    "På fronterna hänger sadlar med underlag, täcken, grimmor, träns
+	     och benskydd — mycket saker, tätt."
+
+	Det är den ENDA verifierade platsen i UBRF där sadlar och träns finns.
+	Sadelkammarens egen bild (`stall-inne-03-sadelkammaren.jpg`) visar
+	uttryckligen INGA sadelbockar — bara säkerhetsvästar på krokrader och en
+	hylla med stövlar — och F02-B har redan fällt det som `REFERENCE GAP`.
+	Att ställa sadelbockar där hade varit att hitta på en UBRF-detalj för att
+	fylla ett hål, och det får inte göras.
+
+	Så: dagens sadel och träns hänger på DIN hästs egen boxfront, och det är
+	dit spelaren skickas.
+
+	HUR LÅNGT UT är spelabstraktion — filmen mäter ingenting. VAR LÄNGS
+	fronten är det inte: sakerna hänger på den TÄTA PANELEN, aldrig i
+	boxdörrens öppning. En sadel i dörrgapet hade sett ut som en sadel i
+	vägen, och hade stått där hästen ska gå ut. ]]
+
+local UT_AVSTAND = 0.28          -- hur långt ut i gången krokarna sticker
+local PANELMARGINAL = 0.08       -- samma marginal fronten byggs med
+
+--[[ ── BOXDÖRRENS ÖPPNING ────────────────────────────────────────────
+
+	BOXDÖRRENS MITT, INIFRÅN OCH UTIFRÅN. Ren geometri, ingen instans.
+
+	Den finns för LEDNINGEN. Runtime-mätning 17:14: hästen kilar sig mot
+	`Boxfront MB 5` med `MoveDirection = 0` när hon styrs rakt mot ett mål
+	utanför boxen — en 1,85 m kropp och en 1,20 m öppning kräver att hon
+	riktar upp sig FÖRST, och `Humanoid:MoveTo` styr rakt mot punkten.
+
+	Rättelsen är en dörr-waypoint: styr henne till `inne`, sedan `ute`, och
+	först därefter mot målet. Den här funktionen ger de två punkterna;
+	VEM som använder dem och när är `LedService`:s sak, inte den här filens.
+
+	Talen kommer ur samma två datafält som panelen och utrustningen räknas
+	ur, och `spelbarhet.spec` mäter mitten mot den FAKTISKT byggda
+	`Boxdörr`-delen. Flyttar bygget dörren följer waypointen med. ]]
+local DORR_MARGINAL = 1.10       -- hur långt in/ut punkterna läggs, i meter
+
+function Stallet.boxdorr(hastId: string)
+	local box = Stallet.boxFor(hastId)
+	if not box then return nil end
+
+	local BF = (G.identitet and G.identitet.stall and G.identitet.stall.boxfront) or {}
+	if not BF.dorr then return nil end
+	local frontL = S.boxB - 2 * PANELMARGINAL
+	local dorrB = math.min(BF.dorr.bredd, frontL - 0.30)
+	if dorrB <= 0 then return nil end
+	local fastL = frontL - dorrB
+
+	--[[ Öppningen tar panelens bortre del: den börjar där panelen slutar. ]]
+	local y0 = box.fack.y0 + PANELMARGINAL + fastL
+	local yMitt = y0 + dorrB / 2
+
+	return {
+		nummer = box.nummer,
+		rad = box.rad,
+		gang = box.gang,
+		vetter = box.vetter,
+		bredd = dorrB,
+		--[[ Öppningens utbredning längs gången, för den som vill mäta. ]]
+		span = { y0 = S.origo.y + y0, y1 = S.origo.y + y0 + dorrB },
+		--[[ I öppningens mitt, en dryg meter IN i boxen — dit hästen ska
+			rikta sig innan hon går ut. ]]
+		inne = { x = box.frontVarld.x - box.vetter * DORR_MARGINAL,
+			y = S.origo.y + yMitt },
+		--[[ ...och lika långt UT i gången, på andra sidan öppningen. ]]
+		ute = { x = box.frontVarld.x + box.vetter * DORR_MARGINAL,
+			y = S.origo.y + yMitt },
+	}
+end
+
 
 --[[ Hästarnas boxar sprids över raderna i stället för att fylla en rad i
 	taget. Annars står alla sjutton i rad W och stallets andra halva är tom,

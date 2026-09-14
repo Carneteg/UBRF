@@ -1491,7 +1491,7 @@ const STALLINNE = {
        den, eftersom den inte finns där. */
     {id:"hastgang", pos:[0.9, GANG_FASTE+GANG_DJUP/2-STALL_Y],
      text:"Hästgången — in i ridhuset",
-     mot:"ridhusinne", inrikt:Math.PI, inne:true,
+     mot:"ridhusinne", inrikt:Math.PI, inne:true, trafik:"hast",
      spawn:{x:RIDHUS_BREDD-1.4, y:GANG_FASTE+GANG_DJUP/2-RIDHUS_Y, rikt:Math.PI}},
   ],
   /* Klockan i gångens bortre ände, mot servicedelen. `VERIFIED` i två
@@ -2156,7 +2156,8 @@ const RIDHUSINNE = {
      (GANG_FASTE, GANG_DJUP) — läktaren står på västra sidan och har inget
      gap; det gamla "läktargapet" finns inte. Bredden är vald, inte mätt.
      [ASSUMPTION] */
-  sargGrind:{y0:GANG_FASTE-RIDHUS_Y-0.15, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+0.15},
+  sargGrind:{y0:GANG_FASTE-RIDHUS_Y-0.15, y1:GANG_FASTE+GANG_DJUP-RIDHUS_Y+0.15,
+             trafik:"hast"},
   /* ENTRÉDELEN — Spatial Canon v2 (references/spatial/UBRF-SPATIAL-CANON-v2.json
      § buildings.ridhus; docs/SPATIAL-CANON-V2-IMPLEMENTATION-ORDER.md).
 
@@ -2284,7 +2285,7 @@ const RIDHUSINNE = {
        behöver gå ut på gården. Husen är sammanbyggda. */
     {id:"hastgang", pos:[RIDHUS_BREDD-1.4, GANG_FASTE+GANG_DJUP/2-RIDHUS_Y],
      text:"Hästgången — in i stallet",
-     mot:"stallinne", spawn:{x:1.6, y:GANG_FASTE+GANG_DJUP/2-STALL_Y, rikt:0}},
+     mot:"stallinne", trafik:"hast", spawn:{x:1.6, y:GANG_FASTE+GANG_DJUP/2-STALL_Y, rikt:0}},
     /* Den svarta dörren i norra gaveln: planens utgång 16,1–16,7 m från
        väster, fasadens `u:8.1` → x 15,8–16,9. Enda dörren där plan och
        låst fasad säger samma sak. Den får sin innerdörr av autogeneratorn
@@ -2415,7 +2416,10 @@ STALLINNE.info=[
    (Senior Re-review 2026-09-03, blocker 2.) */
 const SPELABSTRAKTIONER = {
   ridhus: {
-    sargport:{x0:0, x1:0, y:0, bredd:2.2, klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
+    /* `trafik:"gaende"`: öppningen är för folk till fots (noten vid
+       RIDHUSINNE.sargGrind och data.js § dressyrbokstäverna). Hästen kommer
+       in via hästgången och `sargGrind` — en ledd häst går ALDRIG här. */
+    sargport:{x0:0, x1:0, y:0, bredd:2.2, trafik:"gaende", klass:"SPELABSTRAKTION", fidelity:"REFERENCE GAP",
               motiv:"planens utrymningspilar; ingen bild visar grinden; bredden vald"},
     /* `bankradSteg`: spelets steg från entréhallens golv upp till C-blockets
        nedersta bänkrad vid blockets västra ände, så att läktarplanet och
@@ -2620,3 +2624,26 @@ const INTERIORYTOR = Object.freeze({
     kalla:"ridhus-klubb-20-grona-skapen.jpg, IMG_0268.MOV",
     klass:"FOTO", fargKlass:"UPPSKATTNING"}
 });
+
+/* ── TRAFIKKLASS PÅ ÖPPNINGARNA: hästkapabel eller bara för gående ─────
+
+   Kanonen (data.js § dressyrbokstäverna; noten vid RIDHUSINNE.sargGrind):
+   hästen kommer in i ridhuset via HÄSTGÅNGEN och grinden i sargens östra
+   långsida. Sargporten i norra kortsidan är en spelabstraktion för folk
+   till fots, och ridhusets övriga dörrar — huvudentrén under kvisten,
+   gaveldörrarna, durkplåtdörrarna mot gården — är människors vägar in.
+   Det stod i prosa men inte i datan, så vägvisaren skickade en spelare
+   med hästen vid handen ut på gården, in genom huvudentrén och genom
+   sargporten: den enda vägen datan kände till.
+
+   `trafik:"hast"` = en ledd häst får gå här; `trafik:"gaende"` = bara
+   folk till fots. Stallets dörrar lämnas oklassade: hästar leds in och
+   ut genom stalldörrarna (hagen → stallet), och ingen källa säger vilken
+   av dem som INTE är hästens. Oklassad räknas som tillåten. ]]
+   Läses av uppdrag.js (vägvisaren), world.js (kollision, dörrar) och
+   exporteras till Roblox med resten av dörrarna. ── */
+(()=>{
+  if(typeof RIDHUSINNE==="undefined"||typeof ANL==="undefined")return;
+  for(const d of RIDHUSINNE.dorrar) if(d.trafik===undefined) d.trafik=(d.id==="hastgang")?"hast":"gaende";
+  for(const d of ANL.dorrar) if(d.mot==="ridhusinne"&&d.trafik===undefined) d.trafik="gaende";
+})();

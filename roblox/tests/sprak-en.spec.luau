@@ -84,6 +84,13 @@ local function nyKaraktar(pos)
 	rot.Size = vec(2, 2, 1)
 	rot.CFrame = CFrame.new(pos)
 	rot.Parent = k
+	--[[ HUVUDET (#165): hjälmen svetsas i `Head`, och en karaktär utan
+		huvud kan inte ta på sig den — precis som i Roblox. ]]
+	local huvud = Instance.new("Part")
+	huvud.Name = "Head"
+	huvud.Size = vec(2, 1, 1)
+	huvud.CFrame = CFrame.new(pos) * CFrame.new(0, 1.5, 0)
+	huvud.Parent = k
 	local hum = Instance.new("Humanoid")
 	hum.Name = "Humanoid"
 	hum.Parent = k

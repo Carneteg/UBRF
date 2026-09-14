@@ -19,11 +19,17 @@ Utdata:
 
 ARTEFAKTFRÅGAN, redovisad som det den är: ordern vill att kontrollerna läser
 den genererade `.rbxlx` eller ett manifest deriverat ur den. Placen är
-script-only — 62 instanser, noll geometri — så det finns ingen geometri i
-XML:en att läsa. Kedjan är i stället `kolla-place.py`, som visar att de 54
-inbäddade modulerna är byte-identiska mot disk, plus att grindarna kör exakt
-de modulerna. Det ger samma bevisvärde, men det är ett ARGUMENT och inte en
-mätning ur filen, och det står så både här och i rapporten.
+script-only — noll geometri — så det finns ingen geometri i XML:en att läsa.
+Kedjan är i stället `kolla-place.py`, som visar att de inbäddade modulerna
+är byte-identiska mot disk, plus att grindarna kör exakt de modulerna. Det
+ger samma bevisvärde, men det är ett ARGUMENT och inte en mätning ur filen,
+och det står så både här och i rapporten.
+
+ANTALET INSTANSER MÄTS UR FILEN, inte skrivs för hand. Rapporten sade
+"62 instanser" som en literal från `0a1b032`-tiden, medan placen sedan dess
+växt till 73 — bygg-place skrev 73 vid bygget och README:n sade 73, och
+rapporten sade 62 om samma fil. Nu räknas `<Item class=` i den `.rbxlx`
+som `--place` pekar på, samma räkning som `bygg-place.py` gör vid bygget.
 """
 import argparse
 import datetime
@@ -68,7 +74,12 @@ def spec(namn):
 #[[ Undergrindarna, med ordens egna namn. Varje post är
 #   (GRIND, beskrivning, [körningar]) och alla körningar måste bli gröna. ]]
 def grindarna(place):
-    kp = [sys.executable, "tools/kolla-place.py"] + ([place] if place else [])
+    #[[ Rapportkontrollen i kolla-place galler den COMMITTADE rapporten,
+    #   och den har korningen ar pa vag att skriva en ny. Hoppas har;
+    #   sjalvkontrollen i skriv_rapport och CI:s egen kolla-place-korning
+    #   tacker den. Utan flaggan foll grinden pa sin egen forra rapport. ]]
+    kp = ([sys.executable, "tools/kolla-place.py", "--utan-rapportkontroll"]
+          + ([place] if place else []))
     return [
         ("FIRST_PLAYABLE_PREFLIGHT", "placen innehåller allt First Playable behöver",
          [("kolla-place", lambda: kor(kp)), ("forstaplayable", lambda: spec("forstaplayable"))]),
@@ -122,6 +133,37 @@ def git(*a):
     return ut.strip() if ok else "okänd"
 
 
+def bakad_sha(p: pathlib.Path):
+    """Artefaktens EGEN källhead: `sha` i den inbäddade `UBRFBuild`-modulen.
+
+    `bygg-place.py` bakar in källhuvudet som en ModuleScript i
+    ReplicatedStorage, och det är den identitet Studio-QA:n läser
+    (`buildIdentitet()` i init.server). Rapporten ska bära SAMMA tal — inte
+    `git rev-parse HEAD` i den katalog grinden råkar köras i. De två skilde
+    sig åt en gång: grinden kördes på en lokal commit som sedan ändrades
+    (amend), och rapporten pekade på en head som aldrig fanns på GitHub
+    medan filen själv sade `5e89bcc`. Filen är sanningen om filen."""
+    txt = p.read_text(encoding="utf-8")
+    start = txt.find('<string name="Name">UBRFBuild</string>')
+    if start < 0:
+        return None
+    m = re.search(r'\bsha = "([0-9a-f]{40})"', txt[start:start + 4000])
+    return m.group(1) if m else None
+
+
+def rakna_instanser(p: pathlib.Path):
+    """Antal `<Item class=...>` i placen, och hur många av dem som är skript.
+
+    Samma räkning som `bygg-place.py` gör när den skriver ut
+    `N instanser` vid bygget: varje `<Item class="…">` är en Roblox-instans,
+    oavsett nivå. Skripten (ModuleScript, Script, LocalScript) räknas för
+    sig eftersom det är dem `kolla-place.py` jämför mot disk."""
+    txt = p.read_text(encoding="utf-8")
+    alla = re.findall(r'<Item class="([^"]+)"', txt)
+    skript = sum(1 for k in alla if k in ("ModuleScript", "Script", "LocalScript"))
+    return len(alla), skript
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--place", help="pinnad .rbxlx att mäta i stället för en ny")
@@ -164,7 +206,8 @@ def main():
         (UT / "WORLD_MANIFEST.json").write_text(
             json.dumps(man, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    skriv_rapport(resultat, man, allt_gront, arg.place)
+    if not skriv_rapport(resultat, man, allt_gront, arg.place):
+        allt_gront = False
     print("=" * 64)
     print(f"PRE_TOBIAS_FIRST_PLAYABLE_GATE: {'PASS' if allt_gront else 'FAIL'}")
     print(f"rapport: {(UT / 'RAPPORT.md').relative_to(ROT)}")
@@ -179,6 +222,9 @@ def rad(namn, varde):
 
 def skriv_rapport(resultat, man, allt_gront, place):
     """Release evidence bundle, punkt 8 i ordern."""
+    #[[ GRINDKÖRARENS commit, inte artefaktens. Artefaktens källhead står i
+    #   filen själv (`bakad_sha`), och det är den som får heta källhead i
+    #   rapporten. HEAD här är bara var rapporten skrevs ifrån. ]]
     huvud = git("rev-parse", "HEAD")
     gren = git("rev-parse", "--abbrev-ref", "HEAD")
     #[[ Grindens EGEN utdata räknas inte som en smutsig arbetskatalog. Den
@@ -200,17 +246,23 @@ def skriv_rapport(resultat, man, allt_gront, place):
 
     r.append("\n## Identitet\n")
     r.append("| | |\n|---|---|")
-    r.append(rad("source SHA", f"`{huvud}`"))
-    r.append(rad("gren", f"`{gren}`"))
+    kallhead = None
     if place:
         p = pathlib.Path(place)
         if p.exists():
+            kallhead = bakad_sha(p)
+            r.append(rad("artefaktens källhead (bakad `UBRFBuild.sha`)",
+                         f"`{kallhead}`" if kallhead else "**SAKNAS i filen**"))
             r.append(rad("mätt `.rbxlx`", f"`{p}`"))
             r.append(rad("`.rbxlx` SHA256", f"`{sha256(p)}`"))
             r.append(rad("storlek", f"{p.stat().st_size} byte"))
+            antal, skript = rakna_instanser(p)
+            r.append(rad("instanser", f"{antal} (`<Item class=` i filen), varav {skript} skript"))
     else:
-        r.append(rad("release commit", "ingen ny release byggd i den här körningen"))
-        r.append(rad("`.rbxlx` SHA256", "— ingen fil mätt, kör med `--place`"))
+        r.append(rad("artefaktens källhead", "ingen fil mätt i den här körningen, kör med `--place`"))
+        r.append(rad("`.rbxlx` SHA256", "— ingen fil mätt"))
+    r.append(rad("grindkörarens commit (`git HEAD` där rapporten skrevs)", f"`{huvud}`"))
+    r.append(rad("gren", f"`{gren}`"))
 
     r.append("\n## Undergrindarna\n")
     r.append("| Grind | Vad den mäter | Utfall |\n|---|---|---|")
@@ -251,14 +303,25 @@ def skriv_rapport(resultat, man, allt_gront, place):
              "— aldrig statiskt synliga världsproblem.\n")
     r.append("- att `.rbxlx` **öppnar** i Studio och att Play startar")
     r.append("- spelkänsla, kamera, animation och hästbeteende i motorn")
-    r.append("- fysisk input: tangentbord, handkontroll, iPad")
+    r.append("- fysisk input: tangentbord, handkontroll, iPad, **iPhone** "
+             "(tre knappar i bredd 64×44, `?`-knappens plats, spakens knopp i cirkeln)")
+    r.append("- äkta multitouch och Roblox träffrouting — bänken mäter staplings"
+             "kontraktet, inte vilket objekt motorn ger fingret")
+    r.append("- kontroll- och kamerakänsla i handen; mjukvarukontrakten är testade "
+             "(`camera.spec`, `pekridning.spec`), känslan inte")
     r.append("- performance med full värld och hela rostern")
     r.append("- DataStore i skarpt läge, och revisionskollisionen")
     r.append("- visuell granskning av ROBLOX-världen; `CHATGPT_VISUAL_PASS` gäller "
              "webbrenderingen, inte den här")
 
     r.append("\n## Artefaktkedjan, uttryckligen\n")
-    r.append("Placen är script-only: 62 instanser, noll geometri. Det finns ingen "
+    if place and pathlib.Path(place).exists():
+        antal, skript = rakna_instanser(pathlib.Path(place))
+        instanstext = (f"{antal} instanser räknade ur filen (`<Item class=`), "
+                       f"varav {skript} skript")
+    else:
+        instanstext = "ingen fil mätt i den här körningen"
+    r.append(f"Placen är script-only: {instanstext}, noll geometri. Det finns ingen "
              "geometri i XML:en att läsa, så kedjan är `tools/kolla-place.py` — de "
              "inbäddade modulerna byte-identiska mot disk — plus att grindarna kör "
              "exakt de modulerna. Samma bevisvärde, men det är ett **argument** och "
@@ -269,6 +332,23 @@ def skriv_rapport(resultat, man, allt_gront, place):
     #   skrivningen med UnicodeEncodeError och grinden kan inte rapportera
     #   alls på den maskin som ska köra Studio-QA:n. Mätt där, inte gissat. ]]
     (UT / "RAPPORT.md").write_text("\n".join(r) + "\n", encoding="utf-8")
+
+    #[[ SJÄLVKONTROLL: det som skrevs ska vara det filen säger. Läses
+    #   tillbaka ur RAPPORT.md, inte ur variabeln, så att raden som en
+    #   läsare ser är den som provas. Samma kontroll står i
+    #   tools/kolla-place.py, som CI kör mot den committade rapporten. ]]
+    if kallhead is not None:
+        skrivet = (UT / "RAPPORT.md").read_text(encoding="utf-8")
+        m = re.search(r"artefaktens källhead[^|]*\| `([0-9a-f]{40})` \|", skrivet)
+        if not m or m.group(1) != kallhead:
+            print(f"FAIL  rapportens källhead ({m.group(1) if m else 'saknas'}) "
+                  f"≠ bakad UBRFBuild.sha ({kallhead})")
+            return False
+    elif place and pathlib.Path(place).exists():
+        print("FAIL  den mätta filen bär ingen UBRFBuild.sha — rapporten kan inte "
+              "namnge artefaktens källhead")
+        return False
+    return True
 
 
 if __name__ == "__main__":

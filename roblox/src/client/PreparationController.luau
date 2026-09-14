@@ -52,6 +52,7 @@ local Preparation = require(game:GetService("ReplicatedStorage").HorseCore.Prepa
 --[[ #162: spelarens text kommer ur språkkanonen, aldrig ur den här filen.
      Klienten översätter — här är spelarens locale känd. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
+local UserInputService = game:GetService("UserInputService")
 local Net = Core.Networking
 
 local PreparationController = {}
@@ -202,6 +203,14 @@ local rader: { [string]: { ram: Frame, bock: TextLabel, namn: TextLabel } } = {}
 local momentRader: { [string]: TextButton } = {}
 --[[ En aktiv `Activated`-anslutning per momentknapp. Se `momentRad`. ]]
 local momentKoppling: { [string]: RBXScriptConnection } = {}
+--[[ Samma avsikt som `Activated` skickar, nåbar utan mus (#165): pil/
+	styrkors flyttar en markering mellan knapparna och Enter/A utför den.
+	Det är INTE en andra väg till servern — det är knappens egen `skicka`,
+	sparad så att tangentbord och handkontroll trycker på samma knapp
+	som fingret. ]]
+local momentSkicka: { [string]: () -> () } = {}
+local valdId: string? = nil
+local markering: UIStroke? = nil
 local senasteVy: any = nil
 local senastePass: any = nil
 --[[ Revisionen på det som faktiskt ritats. `nil` = ingenting ritat än.
@@ -341,6 +350,47 @@ end
 	stället för att skrivas av: spaken flyttar sig mellan enheter, och ett
 	tal här hade blivit fel på nästa skärm. Finns inga pekreglage — hela
 	skrivbordet — är svaret noll och layouten är oförändrad. ]]
+--[[ ══ RÖRELSEREGLAGETS RESERVERADE HÖRN ════════════════════════════════
+
+	Den här funktionen finns därför att uppslaget nedan kan TYSTNA.
+
+	`pekreglagensKanter()` läser Robloxs interna GUI-namn — `TouchGui`,
+	`ThumbstickStart`. Heter spaken något annat (den dynamiska tumspaken),
+	eller är kontrollerna inte skapade än när layouten körs första gången,
+	svarar uppslaget 0 och panelen la sig rakt över spaken. Inget fel
+	kastades, ingenting loggades, och bänken kunde inte se det:
+	`mobillayout.spec` mätte panelen på x 12..328 vid iPhone, iPad OCH
+	skrivbord, alltså alltid oväjd.
+
+	Nu är reserven GOLVET och uppslaget bara en förfining som kan skjuta
+	panelen längre höger — aldrig närmare spaken. Villkoret är
+	`UserInputService.TouchEnabled`, alltså en riktig Roblox-API-fråga om
+	enheten, inte ett namn på ett internt GUI-barn.
+
+	Måtten är projektets egna, samma som reglagen i `TouchControls` ritas
+	med: 66 px radie, 24 px från vänsterkanten, och samma skalregel
+	`clamp(H / 390, 0.62, 1)`. De står som tal HÄR i stället för att
+	require:a `TouchControls`, därför att den modulen inte ligger i alla
+	buntar som bär den här filen — ett require som blir nil i en bunt är
+	precis den tysta fällan noterna i `build.py` varnar för.
+
+	`[antagande]` Robloxs standardspak är inte uppmätt i Studio. Reserven
+	är en modell av det nedre vänstra reglagefältet; exakta mått ska
+	bekräftas på enhet. Är modellen för snäv fångar uppslaget resten, och
+	är den för generös flyttas panelen några pixlar för långt höger —
+	ingen av dem lägger den på spaken.
+
+	Bara HÖGERKANTEN räknas: layouten behöver veta var det är fritt att
+	börja, inte reglagets fulla rektangel. ]]
+local REGLAGE_RADIE = 66        -- spakens yttermått, som TouchControls.RADIE
+local REGLAGE_KANT = 24         -- avstånd från skärmens vänsterkant
+local REGLAGE_REF_H = 390       -- skalans referenshöjd, som i TouchControls
+local function rorelsereservHoger(H: number): number
+	if not UserInputService.TouchEnabled then return 0 end
+	local skala = math.clamp(H / REGLAGE_REF_H, 0.62, 1)
+	return (REGLAGE_KANT + 2 * REGLAGE_RADIE) * skala
+end
+
 local function pekreglagensKanter(): (number, number)
 	local pg = player and player:FindFirstChildOfClass("PlayerGui")
 	local tg = pg and pg:FindFirstChild("TouchGui")
@@ -386,6 +436,11 @@ local function interaktionsLayout(antalVal: number, rader: number,
 	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger` noll
 		och raden ger `MARGINAL` — samma läge som förut. ]]
 	local spakHoger, hoppVanster = pekreglagensKanter()
+	--[[ RESERVEN ÄR GOLVET, uppslaget en förfining. Står den riktiga spaken
+		längre höger än modellen väjer vi för DEN; svarar uppslaget 0 håller
+		reserven ändå panelen borta från hörnet. ]]
+	local reservHoger = rorelsereservHoger(H)
+	if reservHoger > spakHoger then spakHoger = reservHoger end
 	local x = MARGINAL
 	if spakHoger > 0 then
 		x = math.max(MARGINAL, spakHoger + MARGINAL)
@@ -867,8 +922,10 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 		HUD:en själv redan visste var omöjligt. ]]
 	if utomRackhall then
 		momentKoppling[m.id] = nil
+		momentSkicka[m.id] = nil
 	else
 		momentKoppling[m.id] = knapp.Activated:Connect(skicka)
+		momentSkicka[m.id] = skicka
 	end
 
 	knapp.LayoutOrder = ordning
@@ -911,6 +968,118 @@ local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> 
 	end
 end
 
+--[[ ── UTRUSTNINGSRADERNA (#165) ─────────────────────────────────────
+
+	Hjälm på/av, sadel av, träns av — ritade ur `vy.utrustning`, som servern
+	läser ur VÄRLDEN (delarna på hästen, hjälmen i karaktären). Raderna är
+	vanliga momentknappar: 44 px, samma stil, samma väg ut (`skicka`), så
+	pekskärm, mus, tangentbord och handkontroll når dem på samma sätt som
+	resten av panelen. Påsättning av sadel och träns är momenten `utr:1..5`
+	som redan står i listan; här finns bara det som INTE hade en knapp:
+	hjälmen, och att ta av igen. ]]
+local UTR_ORDNING = 100
+local function utrustningsRader(vy: any, anvanda: { [string]: boolean },
+	medHjalm: boolean, medAv: boolean): number
+	local u = vy and vy.utrustning
+	if type(u) ~= "table" then return 0 end
+	local antal = 0
+	local function rad(id: string, nyckel: string, typ: string, pa: boolean)
+		anvanda[id] = true
+		antal += 1
+		momentRad({ id = id, namn = Sprak.t(nyckel), text = "", klar = false, fel = false },
+			UTR_ORDNING + antal, false, function()
+				PreparationController.utrustning(typ, pa)
+			end)
+	end
+	if medHjalm then
+		if u.hjalm then rad("utr:hjalm_av", "tack.hjalm_av", "hjalm", false)
+		else rad("utr:hjalm_pa", "tack.hjalm_pa", "hjalm", true) end
+	end
+	if medAv then
+		if u.sadel then rad("utr:sadel_av", "tack.sadel_av", "sadel", false) end
+		if u.trans then rad("utr:trans_av", "tack.trans_av", "trans", false) end
+	end
+	return antal
+end
+
+--[[ ── MARKERINGEN — SAMMA KNAPP UTAN MUS (#165 enhetsparitet) ───────
+
+	Skötselns och utrustningens knappar var bara nåbara med finger eller
+	mus. En handkontroll- eller tangentbordsspelare stod vid hästen utan
+	att kunna trycka på något. Markeringen går mellan de SYNLIGA,
+	tryckbara knapparna i layoutordning; `aktiveraVald` kör knappens egen
+	`skicka`. Bindningarna ligger i `init.client.luau` och namnges i
+	`KontrollHjalp`; här finns bara flytten. ]]
+local function tryckbaraIdn(): { string }
+	local lista = {}
+	--[[ Ingen panel — inget att markera. Medan man rider är HUD:en släckt
+		och knapparna får inte gå att trycka på i blindo. ]]
+	if not (gui and gui.Enabled and interaktion and interaktion.Visible) then return lista end
+	for id, knapp in pairs(momentRader) do
+		if knapp.Visible and momentSkicka[id] ~= nil then
+			table.insert(lista, { id = id, ordning = knapp.LayoutOrder })
+		end
+	end
+	table.sort(lista, function(a, b) return a.ordning < b.ordning end)
+	local ut = {}
+	for _, r in ipairs(lista) do table.insert(ut, r.id) end
+	return ut
+end
+
+local function markera(id: string?)
+	valdId = id
+	if markering then markering.Parent = nil end
+	if not id then return end
+	local knapp = momentRader[id]
+	if not knapp then return end
+	if not markering then
+		local m = Instance.new("UIStroke")
+		m.Name = "Markering"
+		m.Thickness = 2
+		m.Color = FARG_TUR
+		markering = m
+	end
+	(markering :: UIStroke).Parent = knapp
+end
+
+--[[ Flyttar markeringen `delta` steg (−1/+1) och svarar med det valda
+	id:t. Utan markering börjar första trycket på första knappen. ]]
+function PreparationController.valj(delta: number): string?
+	--[[ En hopfälld panel visar bara det som står på tur. Den som går
+		med pil eller styrkors ska se alla val — utan att kunna trycka på
+		"Visa alla", som är en musknapp. Första flytten fäller ut. ]]
+	if not interaktionUt then
+		interaktionUt = true
+		PreparationController.tillampaLayout()
+	end
+	local idn = tryckbaraIdn()
+	if #idn == 0 then markera(nil) return nil end
+	local i = 0
+	for k, id in ipairs(idn) do if id == valdId then i = k end end
+	if i == 0 then
+		i = if delta < 0 then #idn else 1
+	else
+		i = ((i - 1 + delta) % #idn) + 1
+	end
+	markera(idn[i])
+	return valdId
+end
+
+--[[ Trycker på den markerade knappen — exakt vad fingret hade gjort. ]]
+function PreparationController.aktiveraVald(): boolean
+	local id = valdId
+	if not id then return false end
+	local knapp = momentRader[id]
+	local skicka = momentSkicka[id]
+	if not (knapp and knapp.Visible and skicka) then return false end
+	skicka()
+	return true
+end
+
+function PreparationController._vald(): string?
+	return valdId
+end
+
 local function doljOanvanda(anvanda: { [string]: boolean })
 	--[[ Registret först, synligheten sedan. `tillampaLayout` äger den
 		andra halvan: den vet om panelen är hopfälld, och det gör inte
@@ -920,6 +1089,8 @@ local function doljOanvanda(anvanda: { [string]: boolean })
 	for id, knapp in pairs(momentRader) do
 		knapp.Visible = anvanda[id] == true
 	end
+	--[[ En markering på en knapp som inte längre visas släpps. ]]
+	if valdId and not (anvanda[valdId] and momentSkicka[valdId]) then markera(nil) end
 end
 
 --[[ Observatörer som körs EFTER att en ny vy tagits emot och skrivits ned.
@@ -1117,9 +1288,12 @@ function rita(vy: any)
 			end)
 			if m.id == nasta then text = lm.text or "" end
 		end
+		--[[ Hjälmen av efter ritten hör till att lämna tillbaka utrustningen;
+			sadel och träns tas av genom eftervårdens egna moment ovan. ]]
+		local extra = utrustningsRader(vy, anvanda, true, false)
 		doljOanvanda(anvanda)
 		if rubrik then rubrik.Text = Sprak.t("hud.ta_hand_om_henne") end
-		avsluta("eftervard", #(senastePass.moment or {}), text, true)
+		avsluta("eftervard", #(senastePass.moment or {}) + extra, text, true)
 		return
 	end
 
@@ -1147,6 +1321,9 @@ function rita(vy: any)
 		end)
 		if m.id == nasta then momenttext = lm.text or "" end
 	end
+	--[[ Utrustningen (#165): hjälmen på/av alltid när man står vid
+		hästen och inte rider; sadel/träns AV när de sitter på. ]]
+	local utrAntal = if vy.status == "riding" then 0 else utrustningsRader(vy, anvanda, true, true)
 	doljOanvanda(anvanda)
 
 	local lage, ledtext = "skotsel", momenttext
@@ -1185,7 +1362,7 @@ function rita(vy: any)
 	--[[ HUD:en göms medan man rider — men INTE när eftervården väntar, och
 		det är hela skillnaden mot före #161: en spelare som satt av mötte
 		förut en tom skärm, och passet tog aldrig slut. ]]
-	avsluta(lage, #(vy.moment or {}), ledtext, vy.status ~= "riding")
+	avsluta(lage, #(vy.moment or {}) + utrAntal, ledtext, vy.status ~= "riding")
 end
 
 --[[ Körs av klientens loop. Ritar bara om när kontexten FAKTISKT byter —
@@ -1292,6 +1469,11 @@ end
 
 function PreparationController.svara(svarId: string)
 	skicka(svarId, "PreparationSvar", svarId)
+end
+
+--[[ Hjälm på/av, sadel/träns av (#165). Samma väg som momenten. ]]
+function PreparationController.utrustning(typ: string, pa: boolean)
+	skicka("utr:" .. typ .. (if pa then ":pa" else ":av"), "Utrustning", typ, pa)
 end
 
 function PreparationController.eftervard(momentId: string)

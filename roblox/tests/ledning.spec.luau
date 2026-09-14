@@ -437,6 +437,209 @@ do
 		l2 == nil or l2.navPlaner <= 6,
 		l2 and tostring(l2.navPlaner) or "ledningen släppte")
 end
+--[[ ══ ÖPPNINGAR FÖR GÅENDE — TOPOLOGIPARITET ═══════════════════════
+
+	Kanonen: hästen kommer in via hästgången och sarggrinden; sargporten är
+	för folk till fots (`trafik = "gaende"`). Webben stänger sargporten i
+	kollisionen när man leder; här får tjänsten samma regel: ligger
+	målpunkten i en sådan zon, eller vägen dit genom den, STÅR hon och
+	säger ifrån en gång. Zonen är samma rektangel GameplayService bygger
+	ur exporten: ridhusets origo (118 · 41,82) + sargportens x 4,7–6,9 vid
+	sarglinjen y 65,68 → x 122,4–125,2, y 106,9–108,1.
+
+	Falsifiering: ta bort raden `bakom = pivot.Position` i steg → hon får
+	en rörelseriktning genom gapet och den första mätningen faller. ]]
+print("\n── Öppningar för gående: hon står vid sargporten ──")
+do
+	LedService._glomForProv()
+	LedService.satGangzoner(nil)
+	--[[ Bänkens `CFrame.new(pos)` blickar mot +Z (söder i tomten); hon
+		vänds norrut med lookAt så att "vänd först"-regeln i styrMot inte
+		är det som håller henne — det är zonen som ska mätas. ]]
+	local hZ, kZ, humZ = nyHast("air_italia", varld(123.8, 104.5))
+	kZ.CFrame = CFrame.lookAt(varld(123.8, 104.5), varld(123.8, 110.0), Vector3.yAxis)
+	local spZ, rotZ = nySpelare("Anders", varld(123.8, 103.5))
+	local okZ = LedService.borja(spZ, hZ, hZ)
+	check("ledningen började inne på banan", okZ == true)
+	--[[ Spelaren har gått norrut genom sargporten, ut i hallen: 5 m före
+		hästen, med gapet emellan. Utan zon följer hon efter. ]]
+	rotZ.CFrame = CFrame.new(varld(123.8, 109.5))
+	humZ._moveDir = nil
+	LedService._steg(1 / 30)
+	local utanZon = humZ._moveDir
+	check("UTAN zon: hon får order att gå efter spelaren genom gapet",
+		utanZon ~= nil and utanZon.Magnitude > 0.5,
+		utanZon and string.format("%.2f", utanZon.Magnitude) or "nil")
+
+	--[[ Med zonen ur exporten står hon. ]]
+	local ev = Networking.get("LedSync")
+	local fore = #ev._skickat
+	LedService.satGangzoner({ { x = 122.4, y = 106.9, w = 3.1, h = 1.2 } })
+	kZ.CFrame = CFrame.lookAt(varld(123.8, 104.5), varld(123.8, 110.0), Vector3.yAxis)
+	humZ._moveDir = nil
+	LedService._steg(1 / 30)
+	local medZon = humZ._moveDir
+	check("MED zon: målpunkten ligger i sargporten — hon får INGEN framåtorder",
+		medZon == nil or medZon.Magnitude < 0.01,
+		medZon and string.format("%.2f", medZon.Magnitude) or "nil")
+	local sista = ev._skickat[#ev._skickat]
+	local nytt = sista and sista[2]
+	check("och tjänsten säger ifrån med led.ingang_hast",
+		#ev._skickat > fore and type(nytt) == "table" and nytt.skal == "led.ingang_hast",
+		type(nytt) == "table" and tostring(nytt.skal) or "ingen LedSync")
+	local efterEn = #ev._skickat
+	LedService._steg(1 / 30)
+	LedService._steg(1 / 30)
+	check("men bara EN gång — inte varje bildruta", #ev._skickat == efterEn,
+		string.format("%d → %d", efterEn, #ev._skickat))
+	--[[ Går spelaren vidare sträcks kopplet och släpper som vanligt. ]]
+	rotZ.CFrame = CFrame.new(varld(123.8, 118.0))
+	LedService._steg(1 / 30)
+	check("går spelaren vidare släpper kopplet på vanligt sätt",
+		LedService.aktiv(spZ) == nil)
+	--[[ Sarggrinden är för häst: samma uppställning tvärs ÖSTRA sargen
+		(x 142,4, y 82,7–86,5) utan zon där — hon följer. ]]
+	local hG, kG, humG = nyHast("marabou_2", varld(140.0, 84.6))
+	kG.CFrame = CFrame.lookAt(varld(140.0, 84.6), varld(150.0, 84.6), Vector3.yAxis)
+	local spG, rotG = nySpelare("Bertil", varld(141.0, 84.6))
+	LedService.borja(spG, hG, hG)
+	rotG.CFrame = CFrame.new(varld(146.0, 84.6))
+	humG._moveDir = nil
+	LedService._steg(1 / 30)
+	local viaGrind = humG._moveDir
+	check("sarggrinden (för häst) hindrar inte: hon följer österut ut i hästgången",
+		viaGrind ~= nil and viaGrind.Magnitude > 0.5,
+		viaGrind and string.format("%.2f", viaGrind.Magnitude) or "nil")
+	LedService.satGangzoner(nil)
+end
+
+--[[ ══ HELA MÄNGDEN UR EXPORTEN — INTE BARA SARGPORTEN ══════════════════
+
+	ChatGPT-review 2026-09-13 20:09 på #167: på 61ccee2 registrerade
+	GameplayService bara spelabstraktionen `sargport`, fast exporten märker
+	sex ridhusdörrar `trafik = "gaende"`. Provet ovan mätte en handskriven
+	zon och kunde inte se det. Här härleds zonerna ur den RIKTIGA exporten
+	(`UBRFKomplex`, samma modul produktionen require:ar), och mätningarna
+	namnger det som ordern kräver: sargporten, huvudentrén (dubbeldörrarna
+	under kvisten, W u 9 — samma dörr som webbens gangtest L4 använder) och
+	att hästgången/sarggrinden förblir öppna.
+
+	Falsifiering: byt `trafik` på `ridhus_W_9`/`ut_ridhus_W_9` till "hast"
+	i exporten → "huvudentrén är en zon" och "hon står vid huvudentrén"
+	faller. Ta bort härledningen ur GameplayService → integration.spec
+	Punkt 7 faller. ]]
+print("\n── Öppningar för gående: hela mängden ur exporten ──")
+do
+	LedService._glomForProv()
+	local zoner, luckor = LedService.gangzonerUrKomplex(UBRFKomplex)
+	local luckText = {}
+	for _, l in ipairs(luckor) do table.insert(luckText, l.id .. ": " .. l.skal) end
+	check("varje öppning för gående i exporten fick en zon — inga luckor",
+		#luckor == 0, table.concat(luckText, " | "))
+
+	--[[ Den generiska regeln: VARJE dörr som exporten märker "gaende" står
+		i någon zons dörrlista, och ingen dörr märkt "hast" gör det. ]]
+	local iZon = {}
+	for _, z in ipairs(zoner) do
+		for _, id in ipairs(z.dorrar or {}) do iZon[id] = z.id end
+	end
+	local saknade, hastIZon, antalGaende = {}, {}, 0
+	local function gaIgenom(lista)
+		for _, d in ipairs(lista or {}) do
+			if d.trafik == "gaende" then
+				antalGaende += 1
+				if iZon[d.id] == nil then table.insert(saknade, d.id) end
+			elseif d.trafik == "hast" and iZon[d.id] ~= nil then
+				table.insert(hastIZon, d.id)
+			end
+		end
+	end
+	gaIgenom(UBRFKomplex.dorrar)
+	gaIgenom(UBRFKomplex.ridhus and UBRFKomplex.ridhus.dorrar)
+	gaIgenom(UBRFKomplex.stall and UBRFKomplex.stall.dorrar)
+	check("exporten har dörrar för gående att pröva mot", antalGaende >= 6, tostring(antalGaende))
+	check("varje exporterad dörr för gående ligger i en zon", #saknade == 0,
+		#saknade > 0 and table.concat(saknade, ",") or string.format("%d dörrar", antalGaende))
+	check("ingen hästkapabel dörr ligger i någon zon", #hastIZon == 0, table.concat(hastIZon, ","))
+
+	--[[ Namngivna: det ordern kräver. ]]
+	local perId = {}
+	for _, z in ipairs(zoner) do perId[z.id] = z end
+	check("sargporten (spelabstraktionen) är en zon", perId["ridhus/sargport"] ~= nil)
+	local entre = perId["ridhus/W/9"]
+	check("huvudentrén (W u 9, dubbeldörrarna under kvisten) är en zon — ur fasadöppningen, inte en egen tabell",
+		entre ~= nil and iZon["ridhus_W_9"] == "ridhus/W/9" and iZon["ut_ridhus_W_9"] == "ridhus/W/9",
+		entre and string.format("x %.2f..%.2f y %.2f..%.2f", entre.x, entre.x + entre.w, entre.y, entre.y + entre.h) or "saknas")
+	check("huvudentréns zon ligger i västra fasadlivet (x 118) och spänner öppningen u 9..11 (y 108..110)",
+		entre ~= nil and math.abs(entre.x + entre.w / 2 - 118) < 0.01
+			and entre.y < 108.0 + 0.01 and entre.y + entre.h > 110.0 - 0.01)
+	check("minst sju zoner: sargporten och sex fasadöppningar", #zoner >= 7, tostring(#zoner))
+	--[[ Hästgången (E u 41,58, intern, trafik hast) och sarggrinden (östra
+		sargen y 82,7–86,5) har ingen zon: punkten mitt i hästgångens dörr
+		ligger utanför alla. ]]
+	local iHastgang = false
+	for _, z in ipairs(zoner) do
+		if LedService.iRekt(varld(143.0, 84.6), z) then iHastgang = true end
+		if z.id:find("E/41.58", 1, true) then iHastgang = true end
+	end
+	check("hästgången är INTE en zon", not iHastgang)
+
+	--[[ Beteendet med den riktiga mängden: hon står vid huvudentrén. Hon
+		står inne i hallen med blicken västerut, spelaren går ut genom
+		dubbeldörrarna. ]]
+	LedService.satGangzoner(zoner)
+	local hE, kE, humE = nyHast("air_italia", varld(121.5, 109.0))
+	kE.CFrame = CFrame.lookAt(varld(121.5, 109.0), varld(115.0, 109.0), Vector3.yAxis)
+	local spE, rotE = nySpelare("Cecilia", varld(120.5, 109.0))
+	check("ledningen började i entréhallen", LedService.borja(spE, hE, hE) == true)
+	local ev = Networking.get("LedSync")
+	local fore = #ev._skickat
+	rotE.CFrame = CFrame.new(varld(115.5, 109.0))
+	humE._moveDir = nil
+	LedService._steg(1 / 30)
+	local vidEntre = humE._moveDir
+	check("hon står vid huvudentrén: ingen framåtorder genom dubbeldörrarna",
+		vidEntre == nil or vidEntre.Magnitude < 0.01,
+		vidEntre and string.format("%.2f", vidEntre.Magnitude) or "nil")
+	local sista = ev._skickat[#ev._skickat]
+	local nytt = sista and sista[2]
+	check("och säger ifrån med led.ingang_hast",
+		#ev._skickat > fore and type(nytt) == "table" and nytt.skal == "led.ingang_hast",
+		type(nytt) == "table" and tostring(nytt.skal) or "ingen LedSync")
+	rotE.CFrame = CFrame.new(varld(105.0, 109.0))
+	LedService._steg(1 / 30)
+	--[[ Utan zonerna hade hon följt — samma uppställning, tomma zoner. ]]
+	LedService._glomForProv()
+	LedService.satGangzoner(nil)
+	local hU, kU, humU = nyHast("air_italia", varld(121.5, 109.0))
+	kU.CFrame = CFrame.lookAt(varld(121.5, 109.0), varld(115.0, 109.0), Vector3.yAxis)
+	local spU, rotU = nySpelare("Doris", varld(120.5, 109.0))
+	LedService.borja(spU, hU, hU)
+	rotU.CFrame = CFrame.new(varld(115.5, 109.0))
+	humU._moveDir = nil
+	LedService._steg(1 / 30)
+	local utan = humU._moveDir
+	check("kontroll: UTAN zonerna får hon order genom samma dörr (mätningen kan bli röd)",
+		utan ~= nil and utan.Magnitude > 0.5,
+		utan and string.format("%.2f", utan.Magnitude) or "nil")
+
+	--[[ Hästens egen väg förblir öppen med den riktiga mängden: sarggrinden
+		österut mot hästgången. ]]
+	LedService.satGangzoner(zoner)
+	local hH, kH, humH = nyHast("marabou_2", varld(140.0, 84.6))
+	kH.CFrame = CFrame.lookAt(varld(140.0, 84.6), varld(150.0, 84.6), Vector3.yAxis)
+	local spH, rotH = nySpelare("Erik", varld(141.0, 84.6))
+	LedService.borja(spH, hH, hH)
+	rotH.CFrame = CFrame.new(varld(146.0, 84.6))
+	humH._moveDir = nil
+	LedService._steg(1 / 30)
+	local viaHastgang = humH._moveDir
+	check("med hela mängden: sarggrinden och hästgången släpper henne igenom österut",
+		viaHastgang ~= nil and viaHastgang.Magnitude > 0.5,
+		viaHastgang and string.format("%.2f", viaHastgang.Magnitude) or "nil")
+	LedService.satGangzoner(nil)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

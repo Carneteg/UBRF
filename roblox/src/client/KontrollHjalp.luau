@@ -94,6 +94,20 @@ KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
      ändras. ]]
 KontrollHjalp.AVSITTNING_GAMEPAD = Enum.KeyCode.DPadDown
 
+--[[ PANELENS MARKERING (#165 enhetsparitet). Skötselns och utrustningens
+     knappar nås utan mus: styrkors vänster/höger flyttar markeringen,
+     A trycker. Kvar av styrkorset efter hjälp (upp) och avsittning (ned)
+     är just vänster och höger. `ButtonA` är hoppet — men bara medan man
+     rider (`Input.bind` sker i uppsittningen), och panelen finns bara
+     när man inte rider; de två möts aldrig. Tangentbordet får pil upp/
+     ned och Enter av samma skäl: inga av dem är bundna i ridningen. ]]
+KontrollHjalp.PANEL_FOREGAENDE_GAMEPAD = Enum.KeyCode.DPadLeft
+KontrollHjalp.PANEL_NASTA_GAMEPAD = Enum.KeyCode.DPadRight
+KontrollHjalp.PANEL_AKTIVERA_GAMEPAD = Enum.KeyCode.ButtonA
+KontrollHjalp.PANEL_FOREGAENDE_TANGENT = Enum.KeyCode.Up
+KontrollHjalp.PANEL_NASTA_TANGENT = Enum.KeyCode.Down
+KontrollHjalp.PANEL_AKTIVERA_TANGENT = Enum.KeyCode.Return
+
 --[[ LEDTEXTEN HÄRLEDS UR BINDNINGEN, inte skriven för hand vid sidan om.
 
      Blockerare 2 var två fel i samma rad: bindningen saknades OCH raden
@@ -170,6 +184,9 @@ local RADER = {
 	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
 	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
 	     hade varit precis det problemet raden beskriver. ]]
+	--[[ #165: skötselns och utrustningens knappar utan mus. Reglagen är
+	     råa tecken, inte nycklar — de översätts inte, de är knappar. ]]
+	{ nyckel = "hjalp.utrustning",   tgb = "↑ ↓ + Enter", pad = "◀ ▶ + A", pek = "touch.panelknapparna" },
 	{ nyckel = "hjalp.denna_hjalp",  tgb = "H",
 	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),        pek = "?" },
 }
@@ -376,6 +393,32 @@ end
      följer inmatningen, inte plattformen. ]]
 local KNAPPSTORLEK = 48
 
+--[[ ── `?` VIKER FÖR PEKREGLAGEN ─────────────────────────────────────
+
+     Knappen bor uppe till höger. Pekreglagens gångartsrad bor nere till
+     höger — men på en iPhone i landskap är "nere" 273 px högt, och raden
+     når upp till 8 px under topbaren. Mätt i tests/pekridning.spec.luau
+     före den här raden: SKRITT och GALOPP låg under `?` (689..737 ·
+     48..96), och eftersom hjälpens ScreenGui ritar ÖVER reglagens tog
+     `?` varje tryck på dem. Två av fem gångarter gick inte att välja.
+
+     Regeln är samma som lektionskortets mot `reglageBredd()`: knappen
+     står kvar exakt där den stod så länge reglagen inte når dess band,
+     och flyttar sig först då — så surfplattan, där raden börjar 345 px
+     ned, ser ingen skillnad. `init.client` anropar vid upp- och
+     avsittning; modulen håller inget eget öga på reglagen. ]]
+local reglageVik = 0
+local function placeraOppna()
+	local b = oppnaKnapp
+	if b then b.Position = UDim2.new(1, -12 - reglageVik, 0, 12) end
+end
+
+function KontrollHjalp.vikForReglage(bredd: number, topp: number)
+	local band = 12 + KNAPPSTORLEK + 8
+	reglageVik = if topp < band then bredd else 0
+	placeraOppna()
+end
+
 local function byggOppna()
 	if oppnaGui then return end
 	if UserInputService.KeyboardEnabled and not UserInputService.TouchEnabled then
@@ -397,7 +440,6 @@ local function byggOppna()
 	local b = Instance.new("TextButton")
 	b.Name = "Hjalp"
 	b.AnchorPoint = Vector2.new(1, 0)
-	b.Position = UDim2.new(1, -12, 0, 12)
 	b.Size = UDim2.fromOffset(KNAPPSTORLEK, KNAPPSTORLEK)
 	b.BackgroundColor3 = FARG_MORK
 	b.BackgroundTransparency = 0.12
@@ -413,6 +455,7 @@ local function byggOppna()
 	horn.Parent = b
 	b.Activated:Connect(function() KontrollHjalp.vaxla() end)
 	oppnaKnapp = b
+	placeraOppna()
 end
 
 --[[ Knappen göms medan panelen står uppe: panelen har sin egen `Stäng`, och

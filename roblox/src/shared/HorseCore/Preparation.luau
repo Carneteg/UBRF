@@ -614,6 +614,27 @@ function Preparation.provaSteg(state: State, fasId: string, hastId: string): (bo
 	return true, nil
 end
 
+--[[ ── UTRUSTNINGEN SOM ETT FYSISKT VILLKOR ────────────────────────
+
+	Före det här var sadlingen ett abstrakt tillståndsbyte: spelaren stod
+	vid hästen, tryckte på ett HUD-steg, och sadeln fanns. Ingen sadel hade
+	rörts, ingen hade hämtats, och steget gick lika bra att kvittera av en
+	spelare som aldrig sett en sadel.
+
+	Nu KRÄVER två saker att spelaren bär med sig rätt sak:
+
+	  · sadelstegen i `iordning` (`utr:1..4`) kräver SADELN,
+	  · ledandet (`leda`) kräver TRÄNSET.
+
+	Att tränset hänger på ledandet och inte på ett eget sadelsteg är läst ur
+	kanonen, inte hittat på: `src/spel/skotsel.js` har inget påtagningssteg
+	för tränset, men eftervården har "Ta av tränset" med meningen "Grimma på
+	först, sedan tränset av. Hon ska aldrig stå lös i gången." Tränset sitter
+	alltså på när hon leds. Ett nytt undervisningssteg hade varit att skriva
+	om skötselkanonen, och det är ett produktbeslut, inte en integration.
+
+	Regeln är ren och står här och inte i tjänsten: den ska gå att fälla
+	utan Studio. ]]
 --[[ ── MOMENTPROVNINGEN ────────────────────────────────────────────
 
 	Den här är den som klienten faktiskt kör mot, och den är därför också
@@ -660,6 +681,12 @@ function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 		return false, "forb.fel_tur", Preparation.kanontext(if pa_tur then pa_tur.namn else nil)
 	end
 
+	--[[ 9. UTRUSTNINGEN MÅSTE VARA HÄMTAD. Sist av nejen med flit: hit
+		kommer bara ett försök som redan är rätt häst, rätt fas, rätt tur
+		och rätt moment, och då är "du har inte sadeln med dig" det enda
+		som återstår att säga. Låg den tidigare hade den varit oprovbar —
+		turordningen hade avvisat försöket ändå, precis som fyndspärren en
+		gång var dold bakom "fel tur". ]]
 	return true, nil, moment
 end
 
@@ -696,6 +723,31 @@ function Preparation.utforMoment(state: State, fasId: string, momentId: string,
 		state.klara[fasId] = true
 	end
 	return true, nil, handelse
+end
+
+--[[ ── ATT TA AV IGEN — MOMENTEN FÖLJER DEN FYSISKA SANNINGEN ────────
+
+	EQUIPMENT GATE (#165, krav 5): spelaren ska kunna ångra en påsättning
+	utan att logga om. Tar hon av sadeln FYSISKT (`TackService.taAv`) får
+	checklistan inte stå kvar och påstå att sadelstegen är gjorda — då
+	hade logiskt och fysiskt glidit isär åt andra hållet än blockerare 5
+	handlade om. Sadeln bär stegen 1–4 (underlägg, sadel, bom, gjord),
+	tränset steg 5. `iordning` blir ogjord igen tills momenten görs om.
+	Svarar true om något faktiskt ångrades. ]]
+function Preparation.angraUtrustning(state: State, typ: string): boolean
+	local gjort = state.gjorda["iordning"]
+	if not gjort then return false end
+	local steg = if typ == "sadel" then { 1, 2, 3, 4 } elseif typ == "trans" then { 5 } else {}
+	local angrat = false
+	for _, i in ipairs(steg) do
+		local id = "utr:" .. i
+		if gjort[id] then
+			gjort[id] = nil
+			angrat = true
+		end
+	end
+	if angrat then state.klara["iordning"] = nil end
+	return angrat
 end
 
 --[[ Svaret på ett fynd. Rätt svar STOPPAR arbetet — det är inte ett fel,
