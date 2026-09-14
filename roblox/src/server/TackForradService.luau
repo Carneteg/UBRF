@@ -58,7 +58,7 @@ local METALL     = Color3.fromRGB(154, 155, 147)
 
 --[[ Vem som tar emot valet. Skickas in av `start()` så att tjänsten går
 	att prova utan hela GameplayService. ]]
-local mottagare: ((Player, string, string?) -> (boolean, string?))? = nil
+local mottagare: ((Player, { [string]: string? }) -> (boolean, string?))? = nil
 
 local function bas(): CFrame?
 	local modell = workspace:FindFirstChild(ANLAGGNING)
@@ -127,14 +127,23 @@ end
 	INGEN PRÖVNING AV VEM UTRUSTNINGEN TILLHÖR HÄR. Att kunna ta fel hästs
 	sadel ÄR poängen; felet ska mötas när utrustningen sätts på hästen, med
 	skälet, precis som på webben. ]]
-function TackForradService.tag(spelare: Player, hastId: string, namn: string?): boolean
+--[[ ETT GREPP, ETT VAL (#169, #170 blockerare 2). Sadel och träns lämnas
+	som ett par till mottagaren, som prövar båda innan något skrivs.
+	Förut var det två anrop, och loggen skrev "tog sadel och träns"
+	oavsett svaren. Nu loggas det bara när båda faktiskt togs, och ett
+	nej kommer tillbaka med sitt skäl. ]]
+function TackForradService.tag(spelare: Player, hastId: string, namn: string?): (boolean, string?)
 	local f = mottagare
-	if not f then return false end
-	local okS = f(spelare, "sadel", hastId)
-	local okT = f(spelare, "trans", hastId)
-	print(("[Tack] %s tog %ss sadel och träns."):format(
-		spelare.Name, namn or hastId))
-	return okS == true and okT == true
+	if not f then return false, "tack.ingen_mottagare" end
+	local ok, skal = f(spelare, { sadel = hastId, trans = hastId })
+	if ok == true then
+		print(("[Tack] %s tog %ss sadel och träns."):format(
+			spelare.Name, namn or hastId))
+		return true
+	end
+	warn(("[Tack] %s fick INTE %ss utrustning: %s"):format(
+		spelare.Name, namn or hastId, tostring(skal)))
+	return false, skal
 end
 
 --[[ En hästs utrustning på hennes front: sadeln med underlägget under sig,
@@ -218,7 +227,7 @@ function TackForradService.forHast(hastId: string): Model?
 	return nil
 end
 
-function TackForradService.start(ta: ((Player, string, string?) -> (boolean, string?))?)
+function TackForradService.start(ta: ((Player, { [string]: string? }) -> (boolean, string?))?)
 	mottagare = ta
 
 	local b = bas()

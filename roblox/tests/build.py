@@ -79,6 +79,7 @@ SPELBARHET = BYGGE + [
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("DorrService",  "src/server/DorrService.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -119,6 +120,7 @@ SIKT = QA + [
 # Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -202,6 +204,7 @@ SIKT = QA + [
 # Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -286,6 +289,7 @@ SIKT = QA + [
 # Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
 FORBEREDELSE = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -357,6 +361,7 @@ PARITET = [
     ("UBRFSprak",  "game/UBRFSprak.luau"),
     ("Sprak",      "src/shared/HorseCore/Sprak.luau"),
     ("Types",      "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("Config",     "src/shared/HorseCore/Config.luau"),
     ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
     ("RidKanon",   "src/shared/HorseCore/RidKanon.luau"),
@@ -407,6 +412,7 @@ GESTALT = BYGGE + [
 # i produktionen.
 KLIENT = SPEL + [
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -502,6 +508,7 @@ MODULER = [
     ("UBRFSprak",    "game/UBRFSprak.luau"),
     ("Sprak",        "src/shared/HorseCore/Sprak.luau"),
     ("Types",        "src/shared/HorseCore/Types.luau"),
+    ("Utrustning",   "src/shared/HorseCore/Utrustning.luau"),
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
@@ -590,6 +597,13 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
     if "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #165: utrustningsgrinden (server) och utrustningspanelen (klient).
+    #   Ligger FORE de andra: "utrustning" delar inga delstrangar med dem,
+    #   men ordningen ska inte behova bevisas varje gang nagon laser. ]]
+    elif "utrustningsgrind" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    elif "utrustningspanel" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning" in spec_rel:

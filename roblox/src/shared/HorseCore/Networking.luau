@@ -41,6 +41,7 @@ local DEFINITIONS = {
 	PreparationSvar = "RemoteFunction",    -- klient → server: mitt svar på ett fynd
 	PassSync = "RemoteEvent",              -- server → ägaren: passets läge och eftervård
 	PassMoment = "RemoteFunction",         -- klient → server: ett eftervårdsmoment
+	Utrustning = "RemoteFunction",         -- klient → server: hjälm på/av, sadel/träns av (#165)
 	--[[ Ledningen. Samma princip: en avsikt, aldrig ett tillstånd. ]]
 	LedBorja = "RemoteFunction",           -- klient → server: jag börjar leda den här hästen
 	LedSlapp = "RemoteFunction",           -- klient → server: jag släpper

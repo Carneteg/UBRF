@@ -39,11 +39,13 @@ local Pass = require(ReplicatedStorage.HorseCore.Pass)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
+local Utrustning = require(ReplicatedStorage.HorseCore.Utrustning)
 local Komplex = require(ReplicatedStorage.UBRFKomplex)
 local Net = Core.Networking
 
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
+local Spel = require(ReplicatedStorage.UBRFSpel)
 local SparService = require(script.Parent.SparService)
 
 local GameplayService = {}
@@ -78,6 +80,13 @@ local bunden: { [Player]: Model } = {}
 	Tomt betyder "tog sin egen" — webben låter en spelare gå direkt till
 	boxen utan att passera sadelkammaren, och då är utrustningen hennes. ]]
 local valdUtrustning: { [Player]: { [string]: string } } = {}
+--[[ HJÄLMVALET (#165). Hjälmen är en fysisk del i karaktären, och en
+	karaktär som dör tar den med sig. Spelaren VALDE att ha den på, och
+	valet ska överleva en respawn — annars står hon nekad vid hästen av
+	ett skäl hon redan åtgärdat. Det här är inte ett register över vad
+	som SITTER PÅ (det läser `TackService` ur världen); det är minnet av
+	vad hon bad om, och det används bara för att sätta tillbaka delen. ]]
+local hjalmVal: { [Player]: boolean } = {}
 
 --[[ Ett strikt växande serienummer per spelare. Varje vy servern skickar —
 	spontan sync eller svar på handskakningen — bär sitt nummer, så att
@@ -126,12 +135,29 @@ local function status(player: Player): string
 	return if Preparation.redo(s) then Preparation.STATUS.REDO else Preparation.STATUS.FORBEREDER
 end
 
+--[[ UTRUSTNINGENS TILLSTÅND I VYN (#165). Läst ur världen — delarna på
+	hästen och hjälmen i karaktären — aldrig ur en tabell. Klienten ritar
+	panelens utrustningsrader ur det här och ingenting annat. ]]
+local function utrustningFor(player: Player)
+	local m = bunden[player]
+	return {
+		hjalm = TackService.harHjalm(player),
+		hjalmKravs = Utrustning.kravsForRidning("hjalm"),
+		underlagg = m ~= nil and TackService.harTack(m, "underlagg"),
+		sadel = m ~= nil and TackService.sadlad(m),
+		trans = m ~= nil and TackService.transad(m),
+		rider = HorseService.horseOf(player) ~= nil,
+	}
+end
+
 local function vyFor(player: Player)
 	--[[ Hästens egennamn följer med så att klienten kan sätta in det där
 		kanonen skriver `%N`. Det översätts aldrig. ]]
 	local dagens = StallService.hastFor(player)
-	return Preparation.vy(state[player], status(player), nastaRev(player),
+	local vy = Preparation.vy(state[player], status(player), nastaRev(player),
 		if dagens then dagens.namn else nil)
+	vy.utrustning = utrustningFor(player)
+	return vy
 end
 
 --[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte
@@ -335,13 +361,55 @@ end
 --[[ Sadelkammarens val: vilken hästs sadel och träns spelaren tagit med
 	sig. Webbens `visaSadelkammare` gör samma val, och samma fel går att
 	göra — utrustningen prövas mot hästen när den sätts på. ]]
+--[[ ATOMISKT (#169, #170 blockerare 2). Boxfrontens prompt ger sadel OCH
+	träns i ett grepp. Förut skrevs de i två anrop; nekades det andra
+	stod spelaren med den ena hästens sadel och den andras träns. Nu
+	prövas HELA valet först och skrivs som EN tabell sist — eller inte
+	alls. Ett nekat val lämnar det föregående paret orört.
+
+	Prövningen är den sadelkammaren gör: utrustningen måste tillhöra en
+	häst som finns i stallet. Att den kan tillhöra FEL häst är poängen
+	(webbens felval); det möts av `TackService.satPa` på hästen. ]]
+function GameplayService.valjUtrustningPar(player: Player, val: { [string]: string? }): (boolean, string?)
+	if type(val) ~= "table" then
+		return false, "tack.okand_utrustning"
+	end
+	local nytt: { [string]: string } = {}
+	local antal = 0
+	for typ, hastId in pairs(val) do
+		if typ ~= "sadel" and typ ~= "trans" then
+			return false, "tack.okand_utrustning"
+		end
+		if hastId ~= nil then
+			if type(hastId) ~= "string" or Spel.hastar[hastId] == nil then
+				return false, "tack.okand_hast"
+			end
+			nytt[typ] = hastId
+		end
+		antal += 1
+	end
+	if antal == 0 then
+		return false, "tack.okand_utrustning"
+	end
+	local gammalt = valdUtrustning[player] or {}
+	local sammanslaget: { [string]: string } = {}
+	for typ, hastId in pairs(gammalt) do sammanslaget[typ] = hastId end
+	for typ, _ in pairs(val) do sammanslaget[typ] = nytt[typ] end
+	valdUtrustning[player] = sammanslaget
+	return true
+end
+
 function GameplayService.valjUtrustning(player: Player, typ: string, hastId: string?): (boolean, string?)
 	if typ ~= "sadel" and typ ~= "trans" then
 		return false, "tack.okand_utrustning"
 	end
-	valdUtrustning[player] = valdUtrustning[player] or {}
-	valdUtrustning[player][typ] = hastId
-	return true
+	if hastId == nil then
+		--[[ Att lämna tillbaka en typ är en enda skrivning och kan inte
+			bli halv; `{ [typ] = nil }` vore en tom tabell. ]]
+		if valdUtrustning[player] then valdUtrustning[player][typ] = nil end
+		return true
+	end
+	return GameplayService.valjUtrustningPar(player, { [typ] = hastId })
 end
 
 function GameplayService.valdFor(player: Player): { [string]: string }?
@@ -385,6 +453,14 @@ end
 
 --[[ ── Passet ──────────────────────────────────────────────────────── ]]
 
+--[[ Vilka delar ett eftervårdsmoment tar av hästen, i den ordning de
+	tas. Sadeln tar underlägget med sig (kanon: "Ta av sadel och
+	underlägg"); tyglarna följer tränset inne i `TackService.taAv`. ]]
+local FYSISK_EFTERVARD: { [string]: { string } } = {
+	sadel = { "sadel", "underlagg" },
+	trans = { "trans" },
+}
+
 function GameplayService.eftervard(player: Player, momentId: string): (boolean, string?)
 	if typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
@@ -400,12 +476,126 @@ function GameplayService.eftervard(player: Player, momentId: string): (boolean, 
 		return false, skal
 	end
 
+	--[[ ── EFTERVÅRDEN TAR AV PÅ RIKTIGT — OCH KVITTERAR SIST (#165, #170) ──
+		"Ta av sadeln" och "Ta av tränset" kvitterades förut i `Pass` utan
+		att någon del lämnade hästen: ingen produktionskod anropade
+		`TackService.taAv`, så hon stod sadlad genom hela natten och
+		nästa dags `utr:2` nekades med "den sitter redan på".
+
+		Första rättelsen (#165) rev delen — men EFTER kvittot, och utan
+		att läsa svaret. Då kunde momentet stå som gjort medan sadeln
+		eller underlägget satt kvar (hästen borta, avtagningen nekad,
+		andra halvan av sadel+underlägg misslyckad): logiskt och fysiskt
+		gled isär åt andra hållet än blockerare 5. Nu är ordningen den
+		som `utforMoment` redan har för påsättningen:
+
+		  1. får momentet göras nu?          (`Pass.farUtfora`, inget kvitto)
+		  2. handgreppet på hästen            (`TackService.taAv`, per del)
+		  3. läs världen: är allt av?         (annars `tack.sitter_kvar`)
+		  4. kvittera                         (`Pass.utfor`)
+
+		Nekas något i 1–3 kvitteras ingenting, spelaren får skälet och
+		kan göra om momentet. Sadeln tar underlägget med sig, som kanon
+		säger ("Ta av sadel och underlägg"). ]]
+	local far, skalFar, extra = Pass.farUtfora(p, momentId)
+	if not far then
+		skicka(player)
+		skickaPass(player)
+		return false, skalFar, extra
+	end
+	local fysiskt = FYSISK_EFTERVARD[momentId]
+	if fysiskt then
+		local modell = bunden[player]
+		if not (modell and modell.Parent ~= nil) then
+			skicka(player)
+			skickaPass(player)
+			return false, "tack.ingen_hast"
+		end
+		for _, typ in ipairs(fysiskt) do
+			if TackService.harTack(modell, typ) then
+				local okAv, skalAv = TackService.taAv(player, modell, typ)
+				if not okAv then
+					skicka(player)
+					skickaPass(player)
+					return false, skalAv
+				end
+			end
+		end
+		for _, typ in ipairs(fysiskt) do
+			if TackService.harTack(modell, typ) then
+				skicka(player)
+				skickaPass(player)
+				return false, "tack.sitter_kvar"
+			end
+		end
+	end
 	local ok, avslag = Pass.utfor(p, momentId)
 	if ok and Pass.farAvsluta(p) then
 		GameplayService.avslutaPass(player)
 	end
+	skicka(player)
 	skickaPass(player)
 	return ok, avslag
+end
+
+--[[ ── UTRUSTNINGSPANELEN — PÅ OCH AV GENOM SAMMA TILLSTÅND (#165) ──
+
+	Ordern 03:40/03:46: hjälm, sadel och träns ska gå att sätta på OCH ta
+	av på varje enhet, genom ett tillstånd, med möjlighet att ångra ett
+	misstag utan att logga om. Panelen är inte ett andra system:
+
+	  · hjälm på/av    → `TackService.satPaHjalm`/`taAvHjalm` (spelarens
+	                     egen del),
+	  · sadel/träns AV → `TackService.taAv` på hästen, och därefter
+	                     `Preparation.angraUtrustning` så att checklistan
+	                     följer världen,
+	  · sadel/träns PÅ → går INTE här. Påsättningen är momenten `utr:1..5`
+	                     i skötseln, i kanonens ordning, och de har redan
+	                     sina knappar. En andra väg på hade varit precis
+	                     det parallella system ordern förbjuder.
+
+	Ingenting byts medan man sitter upp: hjälmen av på hästryggen är det
+	första en ridlärare stoppar, och sadeln kan inte tas av under en
+	ryttare. ]]
+function GameplayService.utrustning(player: Player, typ: string, pa: boolean): (boolean, string?)
+	if typeof(typ) ~= "string" or typeof(pa) ~= "boolean" then
+		return false, "tack.okand_utrustning"
+	end
+	local kand = false
+	for _, t in ipairs(Utrustning.PANEL) do if t == typ then kand = true end end
+	if not kand then return false, "tack.okand_utrustning" end
+	if HorseService.horseOf(player) ~= nil then
+		return false, "tack.sitter_upp"
+	end
+
+	if typ == "hjalm" then
+		local ok, skal = if pa then TackService.satPaHjalm(player) else TackService.taAvHjalm(player)
+		if ok then hjalmVal[player] = pa end
+		skicka(player)
+		return ok, skal
+	end
+
+	if pa then
+		return false, "tack.pa_via_momenten"
+	end
+	--[[ Sadeln och tränset tas av vid hästen, som allt annat. ]]
+	local naravaro_ok, skal = narvaro(player)
+	if not naravaro_ok then
+		return false, skal
+	end
+	local modell = bunden[player]
+	if not modell then return false, "spel.ingen_hast" end
+	local ok, skalAv = TackService.taAv(player, modell, typ)
+	if not ok then
+		return false, skalAv
+	end
+	if typ == "sadel" then
+		TackService.taAv(player, modell, "underlagg")
+	end
+	local s = state[player]
+	if s then Preparation.angraUtrustning(s, typ) end
+	skicka(player)
+	return true, nil
 end
 
 --[[ Avslutar och RÄKNAR passet. Fail-closed genom `Pass.farAvsluta`, och
@@ -501,12 +691,18 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 	if not klar then
 		return false, tackSkal
 	end
+	--[[ …OCH RYTTAREN (#165): hjälmen, om katalogen kräver den. ]]
+	local ryttareOk, hjalmSkal = TackService.ryttareKlar(player)
+	if not ryttareOk then
+		return false, hjalmSkal
+	end
 	return true, nil
 end
 
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
 local function glom(player: Player)
+	hjalmVal[player] = nil
 	state[player] = nil
 	passState[player] = nil
 	bunden[player] = nil
@@ -584,6 +780,9 @@ function GameplayService.start()
 	Net.get("PassMoment").OnServerInvoke = function(player, momentId)
 		return GameplayService.eftervard(player, momentId)
 	end
+	Net.get("Utrustning").OnServerInvoke = function(player, typ, pa)
+		return GameplayService.utrustning(player, typ, pa)
+	end
 
 	--[[ `PreparationStep` finns kvar i nätkontraktet men gör inget mer än
 		att säga ifrån. Att ta bort den helt hade gjort att en klient från
@@ -627,8 +826,22 @@ function GameplayService.start()
 		bindningen sker. ]]
 	SparService.efterLaddning(function(player)
 		GameplayService.bind(player)
-		player.CharacterAdded:Connect(function()
+		player.CharacterAdded:Connect(function(karaktar)
 			GameplayService.bind(player)
+			--[[ HJÄLMEN TILLBAKA efter respawn (#165), om hon hade den på.
+				Huvudet kan komma en bildruta efter modellen; vänta på det
+				men blockera aldrig bindningen. ]]
+			if hjalmVal[player] then
+				task.spawn(function()
+					if not (karaktar and karaktar:FindFirstChild("Head")) then
+						pcall(function() (karaktar :: any):WaitForChild("Head", 5) end)
+					end
+					if hjalmVal[player] and not TackService.harHjalm(player) then
+						TackService.satPaHjalm(player)
+						skicka(player)
+					end
+				end)
+			end
 		end)
 	end)
 	--[[ Ingen `GetPlayers()`-loop här heller (#162 re-review): den band mot

@@ -28,6 +28,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RigAdapter = require(ReplicatedStorage.HorseCore.RigAdapter)
 local Types = require(ReplicatedStorage.HorseCore.Types)
+local Utrustning = require(ReplicatedStorage.HorseCore.Utrustning)
 
 local TackRigg = {}
 
@@ -75,6 +76,176 @@ end
 
 --[[ Mappen som håller en hästs utrustning. En per häst, skapad först när
 	något faktiskt sätts på — en tom mapp är inte ett tillstånd. ]]
+--[[ ══ CREATOR STORE-MODELLER — EN VISUELL KÄLLA, SAMMA TILLSTÅND ═════
+
+	EQUIPMENT GATE (#165). Katalogen (`HorseCore/Utrustning`) pekar ut en
+	fri modell per typ och om den är antagen. Här laddas den, passas in i
+	primitivens egen låda och svetsas i samma värddel som primitiven — och
+	läggs PLATT i `Tack`-mappen med samma attribut, så att `hittaDel`,
+	`taAv` och `TackService` inte kan se skillnad på en laddad modell och
+	en låda. Går något fel ritas primitiven. Utseendet är aldrig sanningen.
+
+	INGA SKRIPT, INGET AKTIVT. En laddad modell som bär något utanför
+	vitlistan av inerta klasser (`TILLATNA_BEHALLS`/`TILLATNA_LOSES_UPP`
+	nedan) förstörs hel i stället för att rensas: att rensa det man inte
+	läst är att gissa vad resten gjorde. Primitiven ritas.
+
+	Studio-QA kan tvinga primitiven utan kodändring:
+	  workspace:SetAttribute("UBRFUtrustningVisual", "primitiv")   ]]
+local SKRIPT = { Script = true, LocalScript = true, ModuleScript = true }
+
+--[[ VITLISTAN (#170 blockerare 3, QA 05:45/05:50). Att avvisa skript
+	räckte inte: allt annat som hängde under delarna — prompter,
+	klickdetektorer, ljud, partiklar, krafter, ljus, säten — följde med
+	när delarna flyttades ur den laddade behållaren, och hjälmens
+	hierarki kan inte läsas headless. Nu prövas HELA hierarkin mot en
+	vitlista av inerta klasser, och bär modellen en enda instans utanför
+	den avvisas HELA modellen — primitiven ritas. Ingen rensning: att
+	plocka bort det aktiva ur en modell man inte läst är att gissa vad
+	resten gjorde, samma skäl som för skript.
+
+	  BEHÅLLS  — synlig geometri och det som bara beskriver den:
+	             BaseParts, Attachment (utan barn, prövas som alla andra),
+	             meshar, SurfaceAppearance, Decal, Texture.
+	  LÖSES UPP — inerta behållare och svetsar: de bär inget beteende,
+	             men delarna plattas ut i `Tack`-mappen och svetsas om av
+	             oss, så de förstörs efter flytten.
+	  ALLT ANNAT → avvisa. Det som inte står här finns inte i spelet. ]]
+local TILLATNA_BEHALLS = {
+	Attachment = true,
+	SpecialMesh = true, FileMesh = true, BlockMesh = true, CylinderMesh = true,
+	SurfaceAppearance = true,
+	Decal = true, Texture = true,
+}
+local TILLATNA_LOSES_UPP = {
+	Model = true, Folder = true, Accessory = true, Hat = true,
+	WeldConstraint = true, Weld = true, ManualWeld = true, Motor6D = true, Snap = true,
+}
+--[[ BaseParts som INTE är bara geometri: säten sätter spelare, spawn-
+	platser flyttar dem. De ärver BasePart men är beteende, och fäller
+	modellen. ]]
+local FORBJUDNA_DELAR = {
+	Seat = true, VehicleSeat = true, SkateboardPlatform = true, SpawnLocation = true, Terrain = true,
+}
+
+--[[ Sant om hela hierarkin är inert; annars falskt och klassnamnet som
+	fällde den. Skript räknas här också (de stod redan under avvisning). ]]
+local function inert(laddat: Instance): (boolean, string?)
+	for _, d in ipairs(laddat:GetDescendants()) do
+		local k = d.ClassName
+		if SKRIPT[k] or FORBJUDNA_DELAR[k] then return false, k end
+		if not (d:IsA("BasePart") or TILLATNA_BEHALLS[k] or TILLATNA_LOSES_UPP[k]) then
+			return false, k
+		end
+	end
+	return true, nil
+end
+
+local function losUpp(del: Instance)
+	for _, barn in ipairs(del:GetChildren()) do
+		if TILLATNA_LOSES_UPP[barn.ClassName] then barn:Destroy() end
+	end
+end
+
+local function visualOverride(): string?
+	local ok, v = pcall(function()
+		return (workspace :: any):GetAttribute("UBRFUtrustningVisual")
+	end)
+	if ok and type(v) == "string" then return v end
+	return nil
+end
+
+local function insertService(): any?
+	local ok, tj = pcall(function() return game:GetService("InsertService") end)
+	if ok and tj ~= nil then return tj end
+	return nil
+end
+
+--[[ Lådan (studs) modellen passas in i, per typ: samma yttermått som
+	primitiven ritar. Tränsets låda är huvudet självt. ]]
+local LADA: { [string]: Vector3 } = {
+	sadel = Vector3.new(0.44 * M, 0.30 * M, 0.62 * M),
+}
+
+function TackRigg.laddaAsset(modell: Model, typ: string, vard: BasePart,
+	mitt: CFrame, lada: Vector3, hastId: string): BasePart?
+	local post = Utrustning.post(typ)
+	if not post or not post.assetId then return nil end
+	if Utrustning.visualFor(typ, visualOverride()) ~= "asset" then return nil end
+	local tj = insertService()
+	if not tj then return nil end
+	local ok, laddat = pcall(function() return tj:LoadAsset(post.assetId) end)
+	--[[ `typeof` säger "Instance" i Studio och "table" i bänken; det som
+		krävs är en behållare som kan räkna upp sina ättlingar. ]]
+	if not ok or laddat == nil or type((laddat :: any).GetDescendants) ~= "function" then
+		return nil
+	end
+
+	local arInert, fallde = inert(laddat)
+	if not arInert then
+		warn(("[Tack] %s: modellen %d avvisad — bär %s utanför vitlistan; primitiven ritas.")
+			:format(typ, post.assetId, tostring(fallde)))
+		laddat:Destroy()
+		return nil
+	end
+	local delar: { BasePart } = {}
+	for _, d in ipairs(laddat:GetDescendants()) do
+		if d:IsA("BasePart") then table.insert(delar, d :: BasePart) end
+	end
+	if #delar == 0 then
+		laddat:Destroy()
+		return nil
+	end
+
+	--[[ Modellens egen låda, ur delarnas lägen och storlekar. ]]
+	local lo, hi = nil, nil
+	for _, d in ipairs(delar) do
+		local p, h = d.Position, d.Size / 2
+		local a, b = p - h, p + h
+		lo = if lo then Vector3.new(math.min(lo.X, a.X), math.min(lo.Y, a.Y), math.min(lo.Z, a.Z)) else a
+		hi = if hi then Vector3.new(math.max(hi.X, b.X), math.max(hi.Y, b.Y), math.max(hi.Z, b.Z)) else b
+	end
+	local storlek = (hi :: Vector3) - (lo :: Vector3)
+	local centrum = ((lo :: Vector3) + (hi :: Vector3)) / 2
+	local skala = math.min(
+		lada.X / math.max(storlek.X, 0.001),
+		lada.Y / math.max(storlek.Y, 0.001),
+		lada.Z / math.max(storlek.Z, 0.001))
+	if not (skala > 0 and skala < math.huge) then
+		laddat:Destroy()
+		return nil
+	end
+
+	--[[ Den största delen bär tillståndet; resten svetsas i den, precis
+		som sadelns valv svetsas i sitsen. ]]
+	table.sort(delar, function(a, b) return a.Size.Magnitude > b.Size.Magnitude end)
+	local f = TackRigg.mapp(modell, true) :: Folder
+	local rot = delar[1]
+	for _, d in ipairs(delar) do
+		losUpp(d)
+		local rel = (d.Position - centrum) * skala
+		local rotation = (d.CFrame :: any).Rotation or CFrame.new()
+		d.Size = d.Size * skala
+		d.CFrame = mitt * CFrame.new(rel) * rotation
+		d.Anchored = false
+		d.CanCollide = false
+		d.CanQuery = false
+		d.CanTouch = false
+		d.Massless = true
+		d.Parent = f
+	end
+	rot:SetAttribute("UBRFTack", typ)
+	rot:SetAttribute("ForHast", hastId)
+	rot:SetAttribute("UBRFVisual", "asset")
+	rot:SetAttribute("UBRFAssetId", post.assetId)
+	svets(vard, rot, "TackWeld")
+	for _, d in ipairs(delar) do
+		if d ~= rot then svets(rot, d, "TackWeld") end
+	end
+	laddat:Destroy()
+	return rot
+end
+
 function TackRigg.mapp(modell: Model, skapa: boolean?): Folder?
 	local f = modell:FindFirstChild("Tack")
 	if f and f:IsA("Folder") then return f end
@@ -216,10 +387,17 @@ function TackRigg.byggSadel(modell: Model, rig: Types.Rig, hastId: string): Base
 	local f = TackRigg.mapp(modell, true) :: Folder
 	local bas = a.WorldCFrame * CFrame.new(0, 0.055 * M, 0)
 
+	--[[ Creator Store-sadeln först, om katalogen antagit den; lådans mitt
+		ligger halva lådhöjden över sadelns bas. Faller den ritas lådorna. ]]
+	local laddad = TackRigg.laddaAsset(modell, "sadel", vard,
+		bas * CFrame.new(0, LADA.sadel.Y / 2 - 0.03 * M, 0), LADA.sadel, hastId)
+	if laddad then return laddad end
+
 	local sits = del(f, "Sadel",
 		Vector3.new(0.40 * M, 0.055 * M, 0.46 * M), bas, LADER)
 	sits:SetAttribute("UBRFTack", "sadel")
 	sits:SetAttribute("ForHast", hastId)
+	sits:SetAttribute("UBRFVisual", "primitiv")
 	svets(vard, sits, "TackWeld")
 	local function ihop(d: BasePart?) if d then svets(sits, d, "TackWeld") end end
 
@@ -339,11 +517,18 @@ function TackRigg.byggTrans(modell: Model, rig: Types.Rig, hastId: string): Base
 		tränset, och den som helt saknades förut. Alla mått nedan är
 		andelar av huvudets uppmätta form, inte meter: ett annat huvud får
 		ett träns som passar det utan att någon rör den här filen. ]]
+	--[[ Creator Store-tränset först, om katalogen antagit det: lådan är
+		huvudet självt, en aning större så att remmarna ligger utanpå. ]]
+	local laddadTrans = TackRigg.laddaAsset(modell, "trans", vard,
+		vard.CFrame, vard.Size * 1.12, hastId)
+	if laddadTrans then return laddadTrans end
+
 	local nack = del(f, "Träns",
 		Vector3.new(HX * 1.75, 0.05, 0.14),
 		bas * CFrame.new(0, HY1 * 0.55, HZ1 * 0.53), LADER)
 	nack:SetAttribute("UBRFTack", "trans")
 	nack:SetAttribute("ForHast", hastId)
+	nack:SetAttribute("UBRFVisual", "primitiv")
 	svets(vard, nack, "TackWeld")
 	local function ihop(d: BasePart?) if d then svets(nack, d, "TackWeld") end end
 
@@ -436,6 +621,55 @@ function TackRigg.byggTyglar(modell: Model, rig: Types.Rig, hastId: string): Bas
 		end
 	end
 	return forsta
+end
+
+--[[ ══ RYTTARENS HJÄLM ══════════════════════════════════════════════
+
+	Sitter på SPELAREN, inte på hästen: svetsad i karaktärens `Head` och
+	lagd i karaktärens egen `Tack`-mapp med `UBRFTack = "hjalm"` och
+	`ForSpelare`, så att `hittaDel`/`taAv` fungerar oförändrat på henne.
+
+	Creator Store-hjälmen ur katalogen (92445706145003 "rosto do silva
+	25k", PO-val 2026-09-14 05:02) laddas först genom `laddaAsset` och
+	passas in i huvudets låda. Går laddningen inte ritas primitiven, i webbens gröna
+	(`src/world.js` "grön ridhjälm med ventilation"): en kupa över hjässan
+	och ett kort skärmstycke. Måtten kommer ur huvudets egen storlek —
+	R6, R15 och skalade avatarer får samma hjälm i sin egen skala. Ingen
+	av dem kolliderar eller väger något: kameran och rörelsen ska inte
+	märka hjälmen. ]]
+local HJALM_GRON = Color3.fromRGB(78, 122, 60)
+local HJALM_MORK = Color3.fromRGB(62, 98, 48)
+
+function TackRigg.byggHjalm(karaktar: Model, spelarId: string): BasePart?
+	local huvud = karaktar:FindFirstChild("Head")
+	if not (huvud and huvud:IsA("BasePart")) then return nil end
+	local f = TackRigg.mapp(karaktar, true) :: Folder
+	local h = (huvud :: BasePart).Size
+	local bas = (huvud :: BasePart).CFrame
+
+	local laddad = TackRigg.laddaAsset(karaktar, "hjalm", huvud :: BasePart,
+		bas * CFrame.new(0, h.Y * 0.35, 0), Vector3.new(h.X * 1.25, h.Y * 0.9, h.Z * 1.3), spelarId)
+	if laddad then
+		laddad:SetAttribute("ForSpelare", spelarId)
+		return laddad
+	end
+
+	--[[ Kupan: en aning bredare än huvudet, halva höjden, förskjuten upp
+		så att underkanten ligger strax ovanför ögonen. ]]
+	local kupa = del(f, "Hjälm",
+		Vector3.new(h.X * 1.18, h.Y * 0.62, h.Z * 1.18),
+		bas * CFrame.new(0, h.Y * 0.36, 0), HJALM_GRON, Enum.Material.SmoothPlastic)
+	kupa:SetAttribute("UBRFTack", "hjalm")
+	kupa:SetAttribute("ForSpelare", spelarId)
+	kupa:SetAttribute("UBRFVisual", "primitiv")
+	svets(huvud :: BasePart, kupa, "TackWeld")
+	--[[ Skärmen framåt (−Z i karaktärens rum är framåt). ]]
+	local skarm = del(f, "Hjälmens skärm",
+		Vector3.new(h.X * 1.0, h.Y * 0.06, h.Z * 0.32),
+		bas * CFrame.new(0, h.Y * 0.12, -h.Z * 0.66) * CFrame.Angles(math.rad(-8), 0, 0),
+		HJALM_MORK, Enum.Material.SmoothPlastic)
+	svets(kupa, skarm, "TackWeld")
+	return kupa
 end
 
 TackRigg.BYGGARE = {

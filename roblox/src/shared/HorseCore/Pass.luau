@@ -208,7 +208,13 @@ end
 
 --[[ Ett eftervårdsmoment. Samma tre nej som förberedelsens moment, av
 	samma skäl: fel läge, redan gjort, fel tur. ]]
-function Pass.utfor(state: State, momentId: string): (boolean, string?)
+--[[ FÅR momentet göras nu? Samma prövning som `utfor`, utan att något
+	kvitteras. Finns för att eftervårdens fysiska del ("ta av sadeln") ska
+	kunna prövas i rätt ordning INNAN den utförs: först får-jag, sedan
+	handgreppet på hästen, sist kvittot. Gjordes kvittot först och
+	handgreppet sedan kunde momentet stå som gjort medan sadeln satt kvar
+	(#170 blockerare 1). ]]
+function Pass.farUtfora(state: State, momentId: string): (boolean, string?, string?)
 	if state.lage ~= Pass.LAGE.EFTERVARD then
 		if state.lage == Pass.LAGE.RIDER then
 			return false, "pass.sitt_av_forst"
@@ -232,6 +238,14 @@ function Pass.utfor(state: State, momentId: string): (boolean, string?)
 			språkgrinden kan skilja "engelsk ram runt redovisad svensk
 			kanontext" från "rå svenska som ingen deklarerat". ]]
 		return false, "pass.fel_tur", Kanon.kanontext(pa_tur.namn)
+	end
+	return true, nil
+end
+
+function Pass.utfor(state: State, momentId: string): (boolean, string?, string?)
+	local far, skal, extra = Pass.farUtfora(state, momentId)
+	if not far then
+		return false, skal, extra
 	end
 	state.gjorda[momentId] = true
 	if Pass.nastaMoment(state) == nil then

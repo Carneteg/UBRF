@@ -397,6 +397,10 @@ Sprak.text = {
 		sv = "Hoppa",
 		en = "Jump",
 	},
+	["hjalp.utrustning"] = {
+		sv = "Skötsel och utrustning",
+		en = "Care and gear",
+	},
 	["hjalp.spaken"] = {
 		sv = "Spaken",
 		en = "The stick",
@@ -440,6 +444,10 @@ Sprak.text = {
 	["touch.gangartsknappar"] = {
 		sv = "Gångartsknapparna",
 		en = "The gait buttons",
+	},
+	["touch.panelknapparna"] = {
+		sv = "Knapparna i panelen",
+		en = "The buttons in the panel",
 	},
 	["touch.blickytan"] = {
 		sv = "Dra på högra halvan",
@@ -589,6 +597,18 @@ Sprak.text = {
 		sv = "Sadeln först",
 		en = "The saddle first",
 	},
+	["tack.sitter_kvar"] = {
+		sv = "Den sitter fortfarande på — gör om momentet",
+		en = "It is still on — do the step again",
+	},
+	["tack.okand_hast"] = {
+		sv = "Den hästen finns inte i stallet",
+		en = "That horse is not in the stable",
+	},
+	["tack.ingen_mottagare"] = {
+		sv = "Utrustningen kan inte tas just nu",
+		en = "The tack cannot be taken right now",
+	},
 	["tack.underlagget_forst"] = {
 		sv = "Underlägget först — sadeln ligger på det",
 		en = "The numnah first — the saddle goes on top of it",
@@ -660,6 +680,46 @@ Sprak.text = {
 	["tack.hamta_forst"] = {
 		sv = "Sadel och träns hänger på boxfronten — hämta dem först",
 		en = "Saddle and bridle hang on the stall front — fetch them first",
+	},
+	["tack.saknar_hjalm"] = {
+		sv = "Hjälmen på innan du sitter upp",
+		en = "Helmet on before you mount",
+	},
+	["tack.hjalm_pa"] = {
+		sv = "Ta på hjälmen",
+		en = "Put the helmet on",
+	},
+	["tack.hjalm_av"] = {
+		sv = "Ta av hjälmen",
+		en = "Take the helmet off",
+	},
+	["tack.sadel_av"] = {
+		sv = "Ta av sadeln",
+		en = "Take the saddle off",
+	},
+	["tack.trans_av"] = {
+		sv = "Ta av tränset",
+		en = "Take the bridle off",
+	},
+	["tack.hjalm_redan_pa"] = {
+		sv = "Hjälmen sitter redan på",
+		en = "The helmet is already on",
+	},
+	["tack.ingen_hjalm"] = {
+		sv = "Du har ingen hjälm på",
+		en = "You have no helmet on",
+	},
+	["tack.sitter_upp"] = {
+		sv = "Sitt av först",
+		en = "Dismount first",
+	},
+	["tack.pa_via_momenten"] = {
+		sv = "Sadla och tränsa genom momenten, i ordning",
+		en = "Tack up through the steps, in order",
+	},
+	["hud.utrustning"] = {
+		sv = "Utrustning",
+		en = "Gear",
 	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",

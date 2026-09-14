@@ -725,6 +725,31 @@ function Preparation.utforMoment(state: State, fasId: string, momentId: string,
 	return true, nil, handelse
 end
 
+--[[ ── ATT TA AV IGEN — MOMENTEN FÖLJER DEN FYSISKA SANNINGEN ────────
+
+	EQUIPMENT GATE (#165, krav 5): spelaren ska kunna ångra en påsättning
+	utan att logga om. Tar hon av sadeln FYSISKT (`TackService.taAv`) får
+	checklistan inte stå kvar och påstå att sadelstegen är gjorda — då
+	hade logiskt och fysiskt glidit isär åt andra hållet än blockerare 5
+	handlade om. Sadeln bär stegen 1–4 (underlägg, sadel, bom, gjord),
+	tränset steg 5. `iordning` blir ogjord igen tills momenten görs om.
+	Svarar true om något faktiskt ångrades. ]]
+function Preparation.angraUtrustning(state: State, typ: string): boolean
+	local gjort = state.gjorda["iordning"]
+	if not gjort then return false end
+	local steg = if typ == "sadel" then { 1, 2, 3, 4 } elseif typ == "trans" then { 5 } else {}
+	local angrat = false
+	for _, i in ipairs(steg) do
+		local id = "utr:" .. i
+		if gjort[id] then
+			gjort[id] = nil
+			angrat = true
+		end
+	end
+	if angrat then state.klara["iordning"] = nil end
+	return angrat
+end
+
 --[[ Svaret på ett fynd. Rätt svar STOPPAR arbetet — det är inte ett fel,
 	det är momentet. Fel svar avvisas och fyndet står kvar öppet. ]]
 function Preparation.svaraFynd(state: State, svarId: string): (boolean, string?)

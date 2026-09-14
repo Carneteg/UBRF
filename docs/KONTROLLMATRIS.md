@@ -37,9 +37,11 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Se ritten (ridanalys) | `T` | `X` | *Se ritten* |
 | Gå vidare | `G` | — | *Gå vidare* |
 | Kontrollhjälp — öppna/stäng | `H` | `DPadUp` | `?`-knappen uppe till höger |
+| Panelens markering (#165) | `↑` / `↓` flyttar, `Enter` trycker; första flytten fäller ut panelen | `DPadLeft` / `DPadRight` flyttar, `A` trycker — bara när man inte rider (`ButtonA` är hopp först efter `Input.bind`) | — (knapparna trycks direkt) |
 | Kontrollhjälp — stäng | `H` | `DPadUp` | panelens *Stäng* |
-| Skötselmoment | — | — | momentknapparna i skötsel-HUD:en |
-| Eftervårdsmoment | — | — | samma knappar, efter avsittning |
+| Skötselmoment | mus, eller `↑` / `↓` + `Enter` (#165) | `DPadLeft` / `DPadRight` + `A` (#165) | momentknapparna i skötsel-HUD:en |
+| Eftervårdsmoment | samma | samma | samma knappar, efter avsittning |
+| Hjälm på / av, sadel av, träns av | knappen i panelen — mus eller `↑` / `↓` + `Enter` | `DPadLeft` / `DPadRight` + `A` | knappen i panelen (44 px) |
 
 ## Webb
 

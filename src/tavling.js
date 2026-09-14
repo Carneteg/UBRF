@@ -87,6 +87,13 @@ function visaTavlingsval(){
 
 /* ── Uppsittning — ett ställe för alla tre platserna ──────────── */
 function sittUpp(plats){
+  /* #165: ingen rider utan hjälm. Samma nyckel och samma regel som
+     Roblox (`TackService.ryttareKlar`). Hjälmen tas på i boxmenyn eller
+     följer med utrustningen från sadelkammaren. */
+  if(!G.hjalmPa){
+    saga(typeof sprakText==="function"?sprakText("tack.saknar_hjalm",typeof sprakFor==="function"?sprakFor():"sv"):"Hjälmen på innan du sitter upp",3.5);
+    return;
+  }
   if(G.tavling){
     const ratt=G.tavling.typ==="hoppning"?"ridhus":"utebana";
     if(plats!==ratt){
