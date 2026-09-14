@@ -590,6 +590,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   den — den ar den enda spec som mater vad SPELAREN ser. ]]
     if "spelbuild" in spec_rel:
         moduler, stubbar = BYGGE, "tests/stubs-bygge.luau"
+    #[[ #169 P1: StateSync-auktoriteten provas mot TJANSTEN med en riktig
+    #   rigg — samma bank som integrationen, eftersom spoofen bara gar att
+    #   mata om hasten faktiskt kan flyttas i varlden. ]]
+    elif "statesync" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "tack" in spec_rel:
