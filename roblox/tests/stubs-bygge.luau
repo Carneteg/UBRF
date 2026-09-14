@@ -410,6 +410,23 @@ end
 
 Instance = { new = function(klass) return instance(klass) end }
 
+--[[ #171: `Integritet.identitet()` läser build-identiteten med `require()`
+	på en INSTANS den hittat i ReplicatedStorage. Det är ett dynamiskt
+	anrop, så byggfilen skriver inte om det till ett modulnamn, och
+	luau-CLI:t kan inte requira en stubbad ModuleScript.
+
+	Bänken lär därför `require` att svara på stubbar som bär `__modul`.
+	Sömmen ligger HÄR och inte i `Integritet`: produktionskoden ska inte ha
+	en gren som bara finns för provet — då mäter provet till slut sin egen
+	testväg i stället för den kod som kör i Studio. ]]
+local __riktigRequire = require
+require = function(mal)
+	if type(mal) == "table" and rawget(mal, "__modul") ~= nil then
+		return rawget(mal, "__modul")
+	end
+	return __riktigRequire(mal)
+end
+
 workspace = instance("Workspace")
 workspace.Name = "Workspace"
 workspace.CurrentCamera = { CFrame = cframe(), CameraType = 1 }
@@ -445,6 +462,11 @@ local __tjanster = {
 	     finns för att hindra. Specen läser bara markplansraden. ]]
 	ServerScriptService = instance("ServerScriptService"),
 	StarterPlayer = instance("StarterPlayer"),
+	--[[ #171: `Integritet` inventerar ServerStorage också — där låg
+	     `__MCPGeneratedModels`, `__HastGranskning` och en gammal
+	     UBRF-backup i den granskade placen. Hyllan ska vara TOM här av
+	     samma skäl som de två ovan. ]]
+	ServerStorage = instance("ServerStorage"),
 	CollectionService = {
 		--[[ #162: HastRigg taggar hästen; utan AddTag i stubben kan riggen
 		     inte byggas i bänken och då kan dess kontrakt inte mätas. ]]
