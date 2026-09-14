@@ -662,7 +662,35 @@ end
 	millisekund, så pausen slog alltid till och taket kunde aldrig nås —
 	precis den gren som ska hindra en blockerad häst från att mala servern
 	var alltså den enda som inte gick att pröva. ]]
-local function planera(l: Led, pivot: BasePart, mal: Vector3)
+--[[ RESERVMÅLET ÄR RÄTTELSEN (#182).
+
+	Mätt i Studio på `ad44dfe`, första divergensen efter boxutgången:
+
+	    spar = 1 punkt          gallringen tömmer spåret när hon går nära
+	    källa = fallback        `rot.Position - LookVector * FOLJ_BAKOM*M`
+	    mål   = 494,1 · 269,4   krockar med INGENTING
+	    ComputeAsync(mål)       → NoPath, 0 vägpunkter
+	    ComputeAsync(spelaren)  → Success, 2 vägpunkter   SAMMA bildruta
+
+	Fallbackpunkten ligger 7,2 studs rakt bakom spelarens blickriktning.
+	Står hon vänd mot hästen i en box hamnar den punkten inne i boxradens
+	fotavtryck bakom fronten — gångbar yta tar slut där, men ingenting
+	KROCKAR, så inget i tillståndet ser trasigt ut.
+
+	Alla sex omplaneringarna fick samma omöjliga mål, `navVag` förblev tom,
+	och kopplet släppte med `led.fastnat` vid 16,6 studs — långt inom
+	kopplet. Hästen stod blickstilla på samma decimal i 7,8 sekunder.
+
+	Rättelsen är INTE att sluta följa brödsmulorna: genom dörrar är spåret
+	det enda som bär, och `viaDorr` äger fortfarande sina delmål. Rättelsen
+	är att ett ONÅBART mål inte ska få kosta ett helt planeringsförsök när
+	det finns ett mål vi VET är nåbart — spelaren själv, som hästen leds av
+	och som per definition står på gångbar yta.
+
+	Reserven prövas i SAMMA försök, inte som ett sjunde. Taket
+	`NAV_MAX_PLANER` finns för att en blockerad häst inte ska mala servern,
+	och det skyddet ska inte urholkas. ]]
+local function planera(l: Led, pivot: BasePart, mal: Vector3, reserv: Vector3?)
 	--[[ VÄGBERÄKNINGEN FÅR INTE LIGGA I BILDRUTAN.
 
 		Mätt på plats: `ComputeAsync` tar 94 ms för boxutgången och 100 ms
@@ -687,12 +715,28 @@ local function planera(l: Led, pivot: BasePart, mal: Vector3)
 	local param = agentparametrar(pivot)
 	local start = pivot.Position
 	task.spawn(function()
-		local vag = PathfindingService:CreatePath(param)
-		local ok = pcall(function()
-			vag:ComputeAsync(start, mal)
-		end)
+		local function berakna(till: Vector3)
+			local v = PathfindingService:CreatePath(param)
+			local ok = pcall(function()
+				v:ComputeAsync(start, till)
+			end)
+			if ok and v.Status == Enum.PathStatus.Success then return v end
+			return nil
+		end
+
+		local vag = berakna(mal)
+		--[[ Bar inte det valda målet, prova det vi vet bär. Se noten över
+			`planera`: ett mål utanför navmeshen ska inte kunna förbruka
+			alla omplaneringar och få henne dödförklarad som fastnad. ]]
+		if vag == nil and reserv ~= nil then
+			vag = berakna(reserv)
+		end
+
+		--[[ Flaggan släpps FÖRST när båda försöken är gjorda — annars kunde
+			omplaneringspausen kringgås av en beräkning som ännu inte
+			svarat, vilket är precis vad flaggan finns för att hindra. ]]
 		l.planerar = false
-		if not ok or vag.Status ~= Enum.PathStatus.Success then
+		if vag == nil then
 			table.clear(l.navVag)
 			l.navIx = 1
 			return
@@ -944,7 +988,12 @@ local function steg(_dt: number)
 		end
 
 		if behoverVag and not navigerar(l) then
-			planera(l, pivot, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z))
+			--[[ Reserven är SPELARENS EGEN punkt: hon leder hästen, alltså
+				står hon på gångbar yta. Höjden tas ur hästen, precis som
+				för huvudmålet, så att båda snappar mot samma navmesh. ]]
+			planera(l, pivot,
+				Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
+				Vector3.new(rot.Position.X, pivot.Position.Y, rot.Position.Z))
 		end
 
 		--[[ FASTNAT PÅ RIKTIGT. Planeraren har gett upp och hon rör sig

@@ -763,14 +763,35 @@ __services.DataStoreService = {
      `NoPath`: bänken har ingen navmesh, och en spec ska inte kunna tro
      att den mätt en riktig väg. ]]
 __senastePathParams = nil
+--[[ MALEN registreras ocksa (#182). Ratelsen i `planera` provar ett
+     RESERVMAL nar det valda malet inte bar, och det gar bara att mata om
+     stubben minns VILKA punkter som begardes — inte bara att nagon
+     begarde en vag. `__pathSvar` later en spec bestamma utfallet per mal
+     och darmed spela upp exakt den situation som fangades i Studio. ]]
+__pathMal = {}
+__pathSvar = nil
 local __pathfinding = {
 	CreatePath = function(_, params)
 		__senastePathParams = params
-		return {
-			Status = Enum.PathStatus.NoPath,
-			ComputeAsync = function() end,
-			GetWaypoints = function() return {} end,
-		}
+		local denna = { Status = Enum.PathStatus.NoPath, vagpunkter = {} }
+		denna.ComputeAsync = function(_, start, till)
+			table.insert(__pathMal, till)
+			if __pathSvar then
+				local svar = __pathSvar(start, till)
+				if svar then
+					denna.Status = Enum.PathStatus.Success
+					denna.vagpunkter = svar
+				end
+			end
+		end
+		denna.GetWaypoints = function()
+			local ut = {}
+			for _, p in ipairs(denna.vagpunkter) do
+				table.insert(ut, { Position = p })
+			end
+			return ut
+		end
+		return denna
 	end,
 }
 

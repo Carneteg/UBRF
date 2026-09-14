@@ -437,6 +437,125 @@ do
 		l2 == nil or l2.navPlaner <= 6,
 		l2 and tostring(l2.navPlaner) or "ledningen släppte")
 end
+
+--[[ ══ ETT ONÅBART MÅL FÅR INTE DÖDFÖRKLARA HENNE (#182) ═══════════════
+
+	Mätt i Studio på `ad44dfe`, första divergensen efter boxutgången:
+
+	    spar = 1 punkt          gallringen tömmer spåret när hon går nära
+	    mål = 494,1 · 269,4     `rot.Position - LookVector * FOLJ_BAKOM*M`
+	    ComputeAsync(mål)       → NoPath, 0 vägpunkter
+	    ComputeAsync(spelaren)  → Success, 2 vägpunkter   SAMMA bildruta
+	    mål krockar med         INGENTING
+
+	Fallbackpunkten låg inne i boxradens fotavtryck bakom fronten. Gångbar
+	yta tog slut där, men ingenting krockade — så inget i tillståndet såg
+	trasigt ut. Alla sex omplaneringarna fick samma omöjliga mål, `navVag`
+	förblev tom, och kopplet släppte med `led.fastnat` vid 16,6 studs.
+
+	Provet spelar upp exakt den situationen: pathfinding-stubben säger NEJ
+	till varje mål UTOM spelarens egen punkt. Utan reservmålet står hästen
+	utan väg; med det får hon en.
+
+	Det här är inte ett prov på att brödsmulorna slutat gälla — de äger
+	fortfarande vägen genom dörren. Det är ett prov på att ETT dåligt mål
+	inte ska kosta hela planeringsbudgeten. ]]
+print("\n── Ett onåbart mål dödförklarar inte hästen ──")
+do
+	LedService._glomForProv()
+	local h7, kropp7 = nyHast("reservhast", varld(140, 70))
+	local sp7, rot7 = nySpelare("Reservryttare", varld(140.5, 70))
+
+	--[[ Spelaren står ETT stycke bort så att hon behöver gå, och vänd så
+		att fallbackpunkten hamnar någon annanstans än på henne själv. ]]
+	rot7.CFrame = CFrame.new(varld(143, 70), varld(140, 70))
+
+	local ok = LedService.borja(sp7, h7, h7)
+	check("ledningen startar", ok)
+
+	--[[ STUBBEN ÄR VÄRLDEN. Bara spelarens egen punkt bär; allt annat är
+		utanför navmeshen, precis som fallbacken var i Studio. ]]
+	__pathMal = {}
+	__pathSvar = function(_, till)
+		if (till - rot7.Position).Magnitude < 4 then
+			return { rot7.Position }
+		end
+		return nil
+	end
+
+	--[[ MÄT UNDER TIDEN, inte efteråt. Bänken har ingen fysik, så hon
+		står still hur bra vägen än är — och `steg` kastar med flit en väg
+		som inte bär (`stillaSedan > NAV_STILLA`). Att läsa `navVag` vid
+		steg 80 mäter därför städningen, inte planeringen. Det som ska
+		bevisas är att hon FICK en väg. ]]
+	local mestVag = 0
+	for _ = 1, 80 do
+		LedService._steg(1 / 30)
+		local li = LedService.lage(sp7)
+		if li and #li.navVag > mestVag then mestVag = #li.navVag end
+	end
+
+	local l7 = LedService.lage(sp7)
+	check("kopplet håller — hon dödförklaras inte som fastnad",
+		l7 ~= nil,
+		l7 and "aktiv" or "SLÄPPT")
+
+	--[[ Bad hon om reserven? Två olika mål i samma försök är hela
+		rättelsen; ett enda mål betyder att den inte prövades. ]]
+	local olika = {}
+	for _, m in ipairs(__pathMal) do
+		local sedd = false
+		for _, o in ipairs(olika) do
+			if (o - m).Magnitude < 0.01 then sedd = true end
+		end
+		if not sedd then table.insert(olika, m) end
+	end
+	check("planeraren prövade mer än ett mål",
+		#olika >= 2,
+		("%d anrop, %d olika mål"):format(#__pathMal, #olika))
+
+	local badOmSpelaren = false
+	for _, m in ipairs(__pathMal) do
+		if (m - rot7.Position).Magnitude < 4 then badOmSpelaren = true end
+	end
+	check("och ett av dem var spelarens egen punkt", badOmSpelaren)
+
+	check("hon fick en väg trots att det valda målet inte bar",
+		mestVag > 0,
+		("som mest %d vägpunkter"):format(mestVag))
+
+	--[[ MUTATIONEN: utan reservmålet finns ingen väg att få.
+
+		Samma uppspelning, men stubben säger nej till ALLT. Då ska hon bli
+		utan väg — annars mäter raderna ovan inte reserven utan något som
+		råkar lyckas ändå. ]]
+	LedService._glomForProv()
+	local h8, kropp8 = nyHast("nekadhast", varld(150, 70))
+	local sp8, rot8 = nySpelare("Nekadryttare", varld(150.5, 70))
+	rot8.CFrame = CFrame.new(varld(153, 70), varld(150, 70))
+	LedService.borja(sp8, h8, h8)
+	__pathMal = {}
+	__pathSvar = function() return nil end
+	local mestVag8 = 0
+	for _ = 1, 80 do
+		LedService._steg(1 / 30)
+		local li = LedService.lage(sp8)
+		if li and #li.navVag > mestVag8 then mestVag8 = #li.navVag end
+	end
+	local l8 = LedService.lage(sp8)
+	check("MUTATION: nekas VARJE mål blir hon utan väg — provet mäter reserven",
+		mestVag8 == 0,
+		("som mest %d vägpunkter"):format(mestVag8))
+
+	--[[ Och taket står kvar: reserven prövas i SAMMA försök, inte som ett
+		sjunde. En blockerad häst ska fortfarande inte mala servern. ]]
+	check("planeringstaket är inte urholkat",
+		l8 == nil or l8.navPlaner <= 6,
+		l8 and tostring(l8.navPlaner) or "släppt")
+
+	__pathSvar = nil
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit
