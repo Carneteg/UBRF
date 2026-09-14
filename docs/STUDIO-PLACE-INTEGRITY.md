@@ -183,7 +183,7 @@ leden ser likadana ut inifrån Studio:
 | fall | var sanningen fastnat | hur det syns |
 |---|---|---|
 | **1 · repot** | arbetsträdet är inaktuellt | `bygg-identitet.py --kontrollera` är röd |
-| **2 · Rojos VFS** | `rojo serve` serverar en gammal fil trots färsk disk | bara mätbar på Rojos egen API |
+| **2 · Rojos VFS** | `rojo serve` serverar något annat än disken | bara mätbar på Rojos egen API |
 | **3 · require-cache** | långlivad edit-VM cachar en äldre modul | `require()` ≠ `.Source` i samma VM |
 
 Fall 3 har vi tagit fel på två gånger — #173 och #175 stängdes båda som
@@ -214,10 +214,18 @@ lägre än antalet mappade filer täcker mätningen inte allt, och då är punkt
 
 - **Alla lika** → fall 2 är uteslutet. Kör Studio-raderna verktyget skriver
   ut och skilj fall 3 från en instans som slutat ta emot patchar.
-- **Någon olik** → fall 2. Disken är färsk, servern har inte läst om filen.
-  **Åtgärd: starta om `rojo serve`. Aldrig en kodändring.** Att generera om
-  en fil för att "få den att synka" döljer bara att servern slutat lyssna,
-  och nästa gång är det en fil ingen kontrollerar.
+- **Någon olik** → fall 2. Mätningen säger att servern ligger efter, men
+  **inte varför**. Kör om efter några sekunder: försvinner avvikelsen var
+  det synklatens. **Består den** är servertillståndet inaktuellt — starta
+  då om rätt `rojo serve`. **Aldrig en kodändring.** Att generera om en fil
+  för att "få den att synka" döljer bara att servern inte levererar, och
+  nästa gång är det en fil ingen kontrollerar.
+
+  En omstart kopplar ned Rojo-pluginet, och det **återansluter inte av sig
+  självt**. Mätt i #188: servern var grön 68/68 direkt efter omstarten
+  medan placen stod kvar på det gamla innehållet tills någon tryckte
+  Connect i Studio. Punkt 9 är alltså inte färdigmätt förrän pluginet är
+  uppkopplat igen.
 
 Verktyget är **ingen CI-grind** och ska inte bli en. Det kräver en körande
 lokal server; på en byggagent finns ingen, och en grind som alltid är röd
@@ -243,9 +251,16 @@ den inte att läsa om.
 
 **Det drabbade en sökväg, inte bevakningen.** Samtidigt var 67 andra
 mappade filer identiska, och en mutation av
-`src/shared/HorseCore/Gaits.luau` synkades av servern inom sekunder. Det
-är alltså en tappad filbevakningshändelse för
-`roblox/game/UBRFBuild.luau`, inte en död watcher.
+`src/shared/HorseCore/Gaits.luau` synkades av servern inom sekunder. Just
+den här incidenten klassificerades därför som en **tappad
+filbevakningshändelse** för `roblox/game/UBRFBuild.luau` — avvikelsen
+bestod över en riktig bytediff — och inte som en död watcher. Den
+slutsatsen hör till incidenten; verktyget drar den inte generellt, se
+`Rutinen` ovan.
+
+**Åtgärden verifierad:** `rojo serve` startades om (ny PID, samma port
+34872, samma projektfil) och verktyget gick från `67 lika · 1 olika` till
+`68 lika · 0 olika · 0 oparade` på första körningen efteråt.
 
 Falsifiering: sattes diskens innehåll till exakt det servern serverade blev
 verktyget grönt (68 av 68). Riktningen "ser den en annan fil än

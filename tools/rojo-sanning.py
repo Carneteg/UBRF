@@ -6,11 +6,15 @@ mappade kallor. Nar den raden blir rod finns det TRE oberoende stallen
 sanningen kan ha fastnat pa, och de ser LIKADANA UT inifran Studio:
 
   1. REPOT ar inaktuellt      — `bygg-identitet.py --kontrollera` ar rod.
-  2. ROJOS VFS ar inaktuell   — `rojo serve` serverar en gammal fil trots
-                                att disken ar farsk. En tappad
-                                filbevakningshandelse: servern laser aldrig
-                                om filen, och Studio far troget fel
-                                innehall utan att nagot ser trasigt ut.
+  2. ROJOS VFS ar inaktuell   — `rojo serve` serverar nagot annat an
+                                disken. Studio far da troget fel innehall
+                                utan att nagot ser trasigt ut. VARFOR
+                                servern hamnat dar sager matningen inte:
+                                det kan vara en tappad
+                                filbevakningshandelse, men ocksa helt
+                                vanlig synklatens eller annat lokalt
+                                servertillstand. Skillnaden avgors av om
+                                avvikelsen BESTAR.
   3. STUDIOS require-CACHE    — `require()` i en langlivad edit-VM ger ett
                                 tredje, annu aldre varde medan `.Source` ar
                                 ratt.
@@ -19,8 +23,10 @@ Fall 3 tog jag fel pa tva ganger (#173, #175) genom att lasa `require()` i
 stallet for `.Source`. I #188 sag det ut som fall 3 igen — men det VAR
 fall 2: servern serverade `45c0effe…` fran 10:41 medan disken hade
 `4437b24e…`, och den reagerade inte heller pa en ny skrivning till filen.
-Samtidigt var 65 andra mappade filer korrekta i samma server, sa handelsen
-tappades for EN sokvag, inte for hela bevakningen.
+Just DEN incidenten klassificerades darfor som en tappad
+filbevakningshandelse for en sokvag: avvikelsen bestod over en riktig
+bytediff, medan 67 andra mappade filer fortsatte synka. Den slutsatsen
+horde till incidenten — verktyget drar den inte generellt.
 
 Skillnaden gar inte att gissa, och den gar inte att se inifran Studio: dar
 ar fall 2 och 3 omojliga att skilja at, eftersom Studio omojligt kan veta
@@ -29,7 +35,7 @@ mer an den blivit skickad. Den maste matas pa ROJOS EGEN API.
 Vad skriptet gor:
 
   - fragar den korande servern vad den serverar for VARJE mappad
-    scriptinstans — inte bara UBRFBuild, for samma tappade handelse kan
+    scriptinstans — inte bara UBRFBuild, for samma sorts avvikelse kan
     traffa vilken fil som helst, och da ar det nasta grind som ljuger,
   - parar ihop instans och fil genom PROJEKTTRADET, inte genom filnamn,
   - jamfor LF-normaliserat innehall, byte for byte,
@@ -38,9 +44,11 @@ Vad skriptet gor:
 Kor:   python3 tools/rojo-sanning.py [--port 34872] [--tyst]
 Exit:  0 nar allt Rojo serverar ar identiskt med disken, annars 1.
 
-Atgard vid fall 2: starta om `rojo serve`. Aldrig en kodandring — att
-generera om en fil for att "fa den att synka" doljer bara att servern
-slutat lyssna, och nasta gang ar det en fil ingen kontrollerar.
+Atgard vid fall 2: kor om efter nagra sekunder. BESTAR avvikelsen ar
+servertillstandet inaktuellt — starta da om ratt `rojo serve`. Aldrig en
+kodandring: att generera om en fil for att "fa den att synka" doljer bara
+att servern inte levererar, och nasta gang ar det en fil ingen
+kontrollerar.
 """
 import argparse
 import hashlib
@@ -302,10 +310,11 @@ def main() -> int:
           % (lika, len(olika), len(oklara)))
     if olika:
         print("   FALL 2: `rojo serve` serverar annat an disken.")
-        print("   Disken ar farsk och servern har inte last om filen — en")
-        print("   tappad filbevakningshandelse i den korande servern.")
         print("   Det ar varken ett repo-fel eller en produktbugg.")
-        print("   Atgard: starta om `rojo serve`. Ingen kodandring.")
+        print("   Matningen sager INTE varfor servern ligger efter. Kor om")
+        print("   efter nagra sekunder: forsvinner avvikelsen var det bara")
+        print("   synklatens. BESTAR den ar servertillstandet inaktuellt —")
+        print("   starta da om ratt `rojo serve`. Ingen kodandring.")
         return 1
     if oklara:
         print("   Inga avvikelser, men %d fil(er) gick inte att para." % len(oklara))
