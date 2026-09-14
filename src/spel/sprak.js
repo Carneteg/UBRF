@@ -189,6 +189,9 @@ const SPRAK = {
   "hjalp.styr": { sv: "Styr", en: "Steer" },
   "hjalp.halvhalt": { sv: "Halvhalt", en: "Half-halt" },
   "hjalp.hoppa": { sv: "Hoppa", en: "Jump" },
+  /* #165: skötselns och utrustningens knappar nås utan mus på skrivbord
+     och handkontroll — raden säger hur. */
+  "hjalp.utrustning": { sv: "Skötsel och utrustning", en: "Care and gear" },
   "hjalp.spaken": { sv: "Spaken", en: "The stick" },
   "hjalp.pek": { sv: "pek", en: "touch" },
 
@@ -212,6 +215,7 @@ const SPRAK = {
   "touch.halt": { sv: "HALT", en: "HALT" },
   /* Hjälpens beskrivning av pekytorna. */
   "touch.gangartsknappar": { sv: "Gångartsknapparna", en: "The gait buttons" },
+  "touch.panelknapparna": { sv: "Knapparna i panelen", en: "The buttons in the panel" },
   "touch.blickytan": { sv: "Dra på högra halvan", en: "Drag on the right half" },
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
   "touch.tygel": { sv: "TYGEL", en: "REIN" },
@@ -313,6 +317,20 @@ const SPRAK = {
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },
+  /* EQUIPMENT & RIDER GEAR GATE (#165): hjälmen är spelarens egen
+     utrustning, och sadel/träns går att ta av igen i vanligt spel. Samma
+     nycklar på båda ytorna. */
+  "tack.saknar_hjalm": { sv: "Hjälmen på innan du sitter upp", en: "Helmet on before you mount" },
+  "tack.hjalm_pa": { sv: "Ta på hjälmen", en: "Put the helmet on" },
+  "tack.hjalm_av": { sv: "Ta av hjälmen", en: "Take the helmet off" },
+  "tack.sadel_av": { sv: "Ta av sadeln", en: "Take the saddle off" },
+  "tack.trans_av": { sv: "Ta av tränset", en: "Take the bridle off" },
+  "tack.hjalm_redan_pa": { sv: "Hjälmen sitter redan på", en: "The helmet is already on" },
+  "tack.ingen_hjalm": { sv: "Du har ingen hjälm på", en: "You have no helmet on" },
+  "tack.sitter_upp": { sv: "Sitt av först", en: "Dismount first" },
+  "tack.pa_via_momenten": { sv: "Sadla och tränsa genom momenten, i ordning",
+    en: "Tack up through the steps, in order" },
+  "hud.utrustning": { sv: "Utrustning", en: "Gear" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 

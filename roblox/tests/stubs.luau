@@ -814,6 +814,24 @@ function __butik:UpdateAsync(nyckel, fn)
 	return nytt
 end
 
+--[[ ── InsertService (#165) ─────────────────────────────────────────
+     `TackRigg.laddaAsset` hämtar Creator Store-modeller med
+     `InsertService:LoadAsset`. Bänken kan inte nå Roblox, så stubben
+     svarar med det provet hänger på `_svar[assetId]`: en funktion som
+     bygger en modell, eller ingenting (→ laddningen faller, primitiven
+     ritas). `_anrop` räknar så att ett prov kan se att vägen faktiskt
+     prövades. ]]
+__services.InsertService = {
+	_svar = {},
+	_anrop = {},
+	LoadAsset = function(self, assetId)
+		table.insert(self._anrop, assetId)
+		local f = self._svar[assetId]
+		if f == nil then error("InsertService: ingen stubbad modell för " .. tostring(assetId)) end
+		return f()
+	end,
+}
+
 __services.DataStoreService = {
 	GetDataStore = function(_, _namn)
 		if __datastore.felButik then error("DataStore: ingen API-åtkomst (stub)") end

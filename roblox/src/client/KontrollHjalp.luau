@@ -94,6 +94,20 @@ KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
      ändras. ]]
 KontrollHjalp.AVSITTNING_GAMEPAD = Enum.KeyCode.DPadDown
 
+--[[ PANELENS MARKERING (#165 enhetsparitet). Skötselns och utrustningens
+     knappar nås utan mus: styrkors vänster/höger flyttar markeringen,
+     A trycker. Kvar av styrkorset efter hjälp (upp) och avsittning (ned)
+     är just vänster och höger. `ButtonA` är hoppet — men bara medan man
+     rider (`Input.bind` sker i uppsittningen), och panelen finns bara
+     när man inte rider; de två möts aldrig. Tangentbordet får pil upp/
+     ned och Enter av samma skäl: inga av dem är bundna i ridningen. ]]
+KontrollHjalp.PANEL_FOREGAENDE_GAMEPAD = Enum.KeyCode.DPadLeft
+KontrollHjalp.PANEL_NASTA_GAMEPAD = Enum.KeyCode.DPadRight
+KontrollHjalp.PANEL_AKTIVERA_GAMEPAD = Enum.KeyCode.ButtonA
+KontrollHjalp.PANEL_FOREGAENDE_TANGENT = Enum.KeyCode.Up
+KontrollHjalp.PANEL_NASTA_TANGENT = Enum.KeyCode.Down
+KontrollHjalp.PANEL_AKTIVERA_TANGENT = Enum.KeyCode.Return
+
 --[[ LEDTEXTEN HÄRLEDS UR BINDNINGEN, inte skriven för hand vid sidan om.
 
      Blockerare 2 var två fel i samma rad: bindningen saknades OCH raden
@@ -170,6 +184,9 @@ local RADER = {
 	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
 	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
 	     hade varit precis det problemet raden beskriver. ]]
+	--[[ #165: skötselns och utrustningens knappar utan mus. Reglagen är
+	     råa tecken, inte nycklar — de översätts inte, de är knappar. ]]
+	{ nyckel = "hjalp.utrustning",   tgb = "↑ ↓ + Enter", pad = "◀ ▶ + A", pek = "touch.panelknapparna" },
 	{ nyckel = "hjalp.denna_hjalp",  tgb = "H",
 	  pad = padNamn(KontrollHjalp.GAMEPADKNAPP),        pek = "?" },
 }

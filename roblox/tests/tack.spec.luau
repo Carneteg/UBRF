@@ -299,19 +299,28 @@ do
 	local o10, s10 = TackService.satPa(spelare, nil, "sadel", nil, nil)
 	check("ingen häst alls nekas", o10 == false and s10 == "tack.ingen_hast", tostring(s10))
 
-	--[[ ATT TA AV I FEL ORDNING. Eftervården säger "sadeln av innan
-		tränset, annars står hon lös med sadeln kvar". ]]
+	--[[ ATT TA AV — I KANONENS ORDNING (#165). `UBRFSkotsel.eftervard`
+		säger gjord → sadel → träns: sadeln lyfts av MEDAN hon står
+		tränsad (man håller henne i tränset), sedan grimma på och tränset
+		av. Provet här sade förut tvärtom ("tränset av först") och
+		TackService följde provet — ingen produktionskod anropade `taAv`,
+		så motsägelsen mot kanon syntes aldrig. Det enda fysiska tvånget
+		är att underlägget ligger UNDER sadeln. ]]
 	nollstall()
 	TackService.satPa(spelare, hast, "underlagg", nil, hast)
 	TackService.satPa(spelare, hast, "sadel", nil, hast)
 	TackService.satPa(spelare, hast, "trans", nil, hast)
+	local o11u, s11u = TackService.taAv(spelare, hast, "underlagg")
+	check("underlägget kan inte dras ut under sadeln",
+		o11u == false and s11u == "tack.sadeln_forst", tostring(s11u))
 	local o11, s11 = TackService.taAv(spelare, hast, "sadel")
-	check("sadeln av under tränset nekas", o11 == false and s11 == "tack.transet_forst",
-		tostring(s11))
+	check("sadeln av medan hon är tränsad GÅR — kanon: sadeln före tränset",
+		o11 == true, tostring(s11))
+	check("och tränset sitter kvar", TackService.transad(hast))
 	local o12 = TackService.taAv(spelare, hast, "trans")
-	check("tränset av först går", o12)
-	local o13 = TackService.taAv(spelare, hast, "sadel")
-	check("och sedan sadeln", o13)
+	check("sedan tränset av", o12)
+	local o12u = TackService.taAv(spelare, hast, "underlagg")
+	check("och underlägget när sadeln är borta", o12u)
 	local o14, s14 = TackService.taAv(spelare, hast, "sadel")
 	check("att ta av något som inte sitter på nekas",
 		o14 == false and s14 == "tack.inget_pa", tostring(s14))

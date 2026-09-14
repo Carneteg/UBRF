@@ -168,7 +168,7 @@ sektion = "B–C: kedjan";
     VD.px = b.dorr[0]; VD.py = b.dorr[1] - 1.5; interagera();
     steg.push({ id: uppdragMal().id, mal: uppdragMal().mal.pos.slice() });
     /* 2. Utrustningen hämtas. */
-    G.utrustning = true;
+    G.utrustning = true; G.hjalmPa = true;
     steg.push({ id: uppdragMal().id, mal: uppdragMal().mal.pos.slice() });
     /* 3. Skötseln klar och hästen leds. */
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds";
@@ -226,7 +226,7 @@ sektion = "F: kort text";
     const b = hittaBox(G.hastId);
     gaTill("stallinne", { x: b.dorr[0], y: b.dorr[1] - 8, rikt: 0 }); las();
     VD.px = b.dorr[0]; VD.py = b.dorr[1] - 1.5; interagera(); las();
-    G.utrustning = true; las();
+    G.utrustning = true; G.hjalmPa = true; las();
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds"; las();
     return lagen;
   });
@@ -325,7 +325,7 @@ sektion = "hästbytet";
   const st = await ev(() => {
     startaVandring(); visaTilldelning(); overlay(false);
     const gammal = G.hastId;
-    G.hastMott = true; G.utrustning = true; G.felUtrustning = 2;
+    G.hastMott = true; G.utrustning = true; G.hjalmPa = true; G.felUtrustning = 2;
     G.skotselRes = { dagsform: 0.7 }; G.hastPlats = "leds";
     G.sysslor = { mockat: 1, fodrat: 1 }; G.tackePa = true; G.lerig = true;
     const ny = valbaraHastar().find(id => id !== gammal);

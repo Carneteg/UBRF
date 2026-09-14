@@ -107,7 +107,7 @@ async function stallIn(lage) {
     G.hastId = l.hastId === undefined ? G.hastId : l.hastId;
     if (l.hastPlats !== undefined) G.hastPlats = l.hastPlats;
     if (l.skotsel !== undefined) G.skotselRes = l.skotsel ? { dagsform: 0.6, sadellage: 0.6, risker: [], omdome: "prov" } : null;
-    if (l.utrustning !== undefined) G.utrustning = l.utrustning;
+    if (l.utrustning !== undefined) { G.utrustning = l.utrustning; G.hjalmPa = l.utrustning; }
     if (l.hastMott !== undefined) G.hastMott = l.hastMott;
     const sp = SPELABSTRAKTIONER.ridhus.sargport, R = RIDHUSINNE;
     gaTill("ridhusinne", { x: (sp.x0 + sp.x1) / 2, y: R.bana.y + R.bana.h + 1.0, rikt: -Math.PI / 2 });

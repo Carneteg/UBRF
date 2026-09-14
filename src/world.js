@@ -1093,7 +1093,7 @@ function startaVandring(){
      hämtningen är inte längre obligatorisk för första ridpasset. */
   G.hastPlats="box";
   G.sysslor={mockat:0,fodrat:0}; G.tackePa=false;
-  G.fangstForsok=false; G.utrustning=false; G.lerig=false; G.spolad=0;
+  G.fangstForsok=false; G.utrustning=false; G.hjalmPa=false; G.lerig=false; G.spolad=0;
   G.hastMott=false;
   // dagens väder — avgör om hästarna går med täcke i hagen
   const v=(G.seed*2654435761>>>0)%100;
@@ -1757,14 +1757,17 @@ function ritaSpelare3D(){
   cx.moveTo(x0-s*0.13,y0-s*0.74+gung);
   cx.quadraticCurveTo(x0-s*0.16,y0-s*0.62+gung,x0-s*0.10,y0-s*0.56+gung);
   cx.lineTo(x0-s*0.05,y0-s*0.62+gung); cx.closePath(); cx.fill();
-  // grön ridhjälm med ventilation
-  cx.fillStyle="#4E7A3C";
-  cx.beginPath(); cx.ellipse(x0,y0-s*0.82+gung,s*0.15,s*0.115,0,Math.PI,0); cx.fill();
-  cx.fillStyle="#3E6230";
-  cx.beginPath(); cx.ellipse(x0,y0-s*0.775+gung,s*0.155,s*0.035,0,0,Math.PI*2); cx.fill();
-  cx.strokeStyle="rgba(240,240,225,.5)"; cx.lineWidth=Math.max(1,s*0.012);
-  cx.beginPath(); cx.moveTo(x0-s*0.07,y0-s*0.90+gung);
-  cx.quadraticCurveTo(x0,y0-s*0.94+gung,x0+s*0.07,y0-s*0.90+gung); cx.stroke();
+  // grön ridhjälm med ventilation — bara när den är PÅ (#165: hjälmen är
+  // spelarens utrustning, `G.hjalmPa`, och krävs för att sitta upp)
+  if(G.hjalmPa){
+    cx.fillStyle="#4E7A3C";
+    cx.beginPath(); cx.ellipse(x0,y0-s*0.82+gung,s*0.15,s*0.115,0,Math.PI,0); cx.fill();
+    cx.fillStyle="#3E6230";
+    cx.beginPath(); cx.ellipse(x0,y0-s*0.775+gung,s*0.155,s*0.035,0,0,Math.PI*2); cx.fill();
+    cx.strokeStyle="rgba(240,240,225,.5)"; cx.lineWidth=Math.max(1,s*0.012);
+    cx.beginPath(); cx.moveTo(x0-s*0.07,y0-s*0.90+gung);
+    cx.quadraticCurveTo(x0,y0-s*0.94+gung,x0+s*0.07,y0-s*0.90+gung); cx.stroke();
+  }
 }
 
 /* ── Gården i 2D (karta) ─────────────────────────────────────── */

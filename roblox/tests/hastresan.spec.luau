@@ -73,6 +73,13 @@ local function nyKaraktar(pos)
 	rot.Size = vec(2, 2, 1)
 	rot.CFrame = CFrame.new(pos)
 	rot.Parent = k
+	--[[ HUVUDET (#165): hjälmen svetsas i `Head`, och en karaktär utan
+		huvud kan inte ta på sig den — precis som i Roblox. ]]
+	local huvud = Instance.new("Part")
+	huvud.Name = "Head"
+	huvud.Size = vec(2, 1, 1)
+	huvud.CFrame = CFrame.new(pos) * CFrame.new(0, 1.5, 0)
+	huvud.Parent = k
 	local hum = Instance.new("Humanoid")
 	hum.Name = "Humanoid"
 	hum.Parent = k
@@ -204,6 +211,13 @@ local function skotselGenomTjansten(spelare)
 				return false, string.format("%s/%s: %s", fas.id, m.id, tostring(skal))
 			end
 		end
+	end
+	--[[ HJÄLMEN PÅ (#165). Resan är inte färdig när hästen är i ordning:
+		ryttaren tar på sig hjälmen innan hon sitter upp, och grinden
+		kräver den. Samma väg som panelen — `GameplayService.utrustning`. ]]
+	local okHj, skalHj = GameplayService.utrustning(spelare, "hjalm", true)
+	if not okHj then
+		return false, "hjalm: " .. tostring(skalHj)
 	end
 	return true, nil
 end

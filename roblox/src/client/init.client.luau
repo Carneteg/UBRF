@@ -330,6 +330,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		return
 	end
 
+	--[[ PANELENS MARKERING (#165). Bara när man INTE rider: då finns
+	     skötsel-/utrustningspanelen, och då är Input.luau inte bundet, så
+	     ButtonA betyder inte hopp. Bindningarna kommer ur KontrollHjalp
+	     så att hjälpen och matrisen inte kan glida isär från koden. ]]
+	if not ride then
+		local k = input.KeyCode
+		if k == KontrollHjalp.PANEL_FOREGAENDE_TANGENT or k == KontrollHjalp.PANEL_FOREGAENDE_GAMEPAD then
+			PreparationController.valj(-1)
+			return
+		elseif k == KontrollHjalp.PANEL_NASTA_TANGENT or k == KontrollHjalp.PANEL_NASTA_GAMEPAD then
+			PreparationController.valj(1)
+			return
+		elseif k == KontrollHjalp.PANEL_AKTIVERA_TANGENT or k == KontrollHjalp.PANEL_AKTIVERA_GAMEPAD then
+			PreparationController.aktiveraVald()
+			return
+		end
+	end
+
 	if not ride then return end
 	--[[ G02-C: spelaren går vidare i lektionen. R och gamepadens Y är
 	     valda för att de INTE är bundna i ridningen — Input.luau tar

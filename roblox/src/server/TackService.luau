@@ -38,6 +38,7 @@ local HorseCore = require(ReplicatedStorage.HorseCore)
 local RigAdapter = HorseCore.RigAdapter
 local Skotsel = require(ReplicatedStorage.UBRFSkotsel)
 local TackRigg = require(script.Parent.TackRigg)
+local Utrustning = require(ReplicatedStorage.HorseCore.Utrustning)
 
 local TackService = {}
 
@@ -97,6 +98,55 @@ end
 function TackService.ridklar(modell: Model): (boolean, string?)
 	if not TackService.sadlad(modell) then return false, "tack.saknar_sadel" end
 	if not TackService.transad(modell) then return false, "tack.saknar_trans" end
+	return true
+end
+
+--[[ ── RYTTARENS EGEN UTRUSTNING — HJÄLMEN ─────────────────────────
+
+	EQUIPMENT GATE (#165). Hjälmen är spelarens, inte hästens, och bor i
+	hennes karaktär: en fysisk del i karaktärens `Tack`-mapp med
+	`UBRFTack = "hjalm"`. Samma regel som för sadeln — tillståndet ÄR
+	delen. Ridskolans regel är att ingen rider utan hjälm; om det krävs
+	för att sitta upp avgörs av katalogen (`kravsForRidning`), inte här. ]]
+local function karaktarFor(player: Player): Model?
+	local k = player.Character
+	if k and (k :: any).IsA and k:IsA("Model") then return k end
+	return nil
+end
+
+function TackService.harHjalm(player: Player): boolean
+	local k = karaktarFor(player)
+	if not k then return false end
+	local d = TackRigg.hittaDel(k, "hjalm")
+	if not d then return false end
+	return tostring(d:GetAttribute("ForSpelare") or "") == tostring(player.UserId)
+end
+
+function TackService.satPaHjalm(player: Player): (boolean, string?)
+	local k = karaktarFor(player)
+	if not k then return false, "tack.ingen_karaktar" end
+	if TackService.harHjalm(player) then return false, "tack.hjalm_redan_pa" end
+	local ok, del = pcall(TackRigg.byggHjalm, k, tostring(player.UserId))
+	if not ok or del == nil then
+		pcall(function() TackRigg.taAv(k, "hjalm") end)
+		return false, "tack.kunde_inte_byggas"
+	end
+	return true
+end
+
+function TackService.taAvHjalm(player: Player): (boolean, string?)
+	local k = karaktarFor(player)
+	if not k then return false, "tack.ingen_karaktar" end
+	if not TackService.harHjalm(player) then return false, "tack.ingen_hjalm" end
+	TackRigg.taAv(k, "hjalm")
+	return true
+end
+
+--[[ Allt RYTTAREN ska ha på innan hon får sitta upp. ]]
+function TackService.ryttareKlar(player: Player): (boolean, string?)
+	if Utrustning.kravsForRidning("hjalm") and not TackService.harHjalm(player) then
+		return false, "tack.saknar_hjalm"
+	end
 	return true
 end
 
@@ -201,12 +251,14 @@ function TackService.taAv(player: Player, modell: Model?, typ: string): (boolean
 	if TackRigg.hittaDel(m, typ) == nil then
 		return false, "tack.inget_pa"
 	end
-	--[[ SADELN KAN INTE TAS AV UNDER TRÄNSET i kanonordningen: eftervården
-		säger "sadeln av innan tränset, annars står hon lös med sadeln
-		kvar". Att ta av underlägget under sadeln är samma sak. ]]
-	if typ == "sadel" and TackService.transad(m) then
-		return false, "tack.transet_forst"
-	end
+	--[[ KANONORDNINGEN VID AVTAGNING är gjord → sadel → träns
+		(`UBRFSkotsel.eftervard`: "Ta av sadeln" står FÖRE "Grimma på
+		först, sedan tränset av"). Sadeln får alltså tas av medan hon är
+		tränsad — man håller henne i tränset medan man lyfter av sadeln.
+		Regeln som stod här förut ("tränset av först") sade tvärtom mot
+		kanon, och ingen produktionskod anropade `taAv`, så det syntes
+		aldrig. Det enda fysiska tvånget är att underlägget ligger UNDER
+		sadeln: det kan inte dras ut med sadeln kvar. ]]
 	if typ == "underlagg" and TackService.sadlad(m) then
 		return false, "tack.sadeln_forst"
 	end
