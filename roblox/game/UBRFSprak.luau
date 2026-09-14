@@ -757,6 +757,10 @@ Sprak.text = {
 		sv = "Kunde inte spara nu. Framstegen ligger kvar och försöks igen.",
 		en = "Could not save just now. Your progress is kept and will be retried.",
 	},
+	["interaktion.rida_nu"] = {
+		sv = "Rida nu",
+		en = "Ride now",
+	},
 	["hjalp.blick"] = {
 		sv = "Se dig omkring",
 		en = "Look around",

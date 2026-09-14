@@ -60,6 +60,9 @@ local byRider: { [Player]: Model } = {}
 
 local TAG = "Horse"
 
+--[[ Dagsformskroken, deklarerad har för att `setRider` ska se den. ]]
+local dagsformHook: ((Player) -> number)? = nil
+
 --[[ ── StateSync-takten (#169 P1) ───────────────────────────────────────
 
 	Klienten synkar normalt ~10 Hz. Skopan rymmer RATE_TAK händelser och
@@ -268,6 +271,15 @@ local function setRider(session: Session, player: Player?)
 
 	     Nollställs vid BÅDE på- och avsittning: sessionen ska aldrig bära
 	     en mätning som hör till någon annan. ]]
+	--[[ Dagsformen avgörs NÄR hon sätts upp på, inte när hon registreras:
+		skötseln sker mellan de två, och det är den som ska synas. ]]
+	if player and dagsformHook then
+		local ok, d = pcall(dagsformHook, player)
+		if ok and typeof(d) == "number" then
+			session.energi = Svar.startEnergi(math.clamp(d, 0, 1))
+		end
+	end
+
 	session.polletter = RATE_TAK
 	session.lastPollett = os.clock()
 	session.lastSync = os.clock()
@@ -336,6 +348,19 @@ end
 	fel i den ska inte kunna hindra en avsittning, och därför är anropet
 	inkapslat i pcall. En spökryttare som sitter kvar för att en HUD
 	kastade vore värre än en HUD som visar fel. ]]
+--[[ DAGSFORMSKROKEN (FUN FIRST / RIDE FIRST).
+
+	Hästens dagsform vid uppsittning. `GameplayService` registrerar den och
+	svarar med ett tal 0–1 ur hur mycket av skötseln spelaren gjort själv.
+
+	Kroken finns av samma skäl som `mountGate`: hästsystemet ska gå att köra
+	utan gameplaylagret. Ingen krok registrerad = kanonens standarddagsform,
+	alltså exakt den häst spelet alltid gett. Belöningen kan bara lyfta
+	därifrån — aldrig sänka. ]]
+function HorseService.setDagsformHook(hook: ((Player) -> number)?)
+	dagsformHook = hook
+end
+
 function HorseService.setRiderHook(hook: ((Player, boolean) -> ())?)
 	riderHook = hook
 end

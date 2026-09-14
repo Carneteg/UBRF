@@ -36,6 +36,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Core = require(ReplicatedStorage.HorseCore)
 local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 local Pass = require(ReplicatedStorage.HorseCore.Pass)
+--[[ Dagsformens kanon. Belöningen för egen skötsel räknas ur samma
+     START-tabell som webben, inte ur en egen konstant. ]]
+local RidKanon = require(ReplicatedStorage.HorseCore.RidKanon)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
@@ -228,7 +231,11 @@ end
 	den var en checklista, och en klient som fick kvittera en fas kunde
 	kvittera alla på fem anrop. Nu går varje steg framåt genom ett moment
 	som `Preparation` prövar mot ordning, avstånd, individ och välfärd. ]]
-function GameplayService.moment(player: Player, fasId: string, momentId: string): (boolean, string?)
+--[[ `utforare` skickas ALDRIG av klienten: remoten längst ned vidarebefordrar
+	bara fas och moment. Den sätts av `ridaNu` när stallet gör arbetet, så
+	att omsorgsbonusen räknar spelarens hand och inte stallets. ]]
+function GameplayService.moment(player: Player, fasId: string, momentId: string,
+	utforare: string?): (boolean, string?)
 	if typeof(fasId) ~= "string" or typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
 	end
@@ -316,9 +323,140 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string)
 		end
 	end
 
-	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId)
+	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
 	skicka(player)
 	return ok, avslag
+end
+
+--[[ ══ RIDA NU ════════════════════════════════════════════════════════
+
+	Produktbeslut FUN FIRST / RIDE FIRST: spelaren kommer för att rida.
+	Skötseln ska göra ritten bättre — inte vara en vägspärr.
+
+	`ridaNu` är STALLETS förberedelse, inte en genväg förbi den. Hästen ska
+	efteråt vara lika korrekt och säkert förberedd som om spelaren gjort
+	varje moment själv; spelet får aldrig lära ut fel hästhantering för att
+	spara tid.
+
+	Därför går den genom `GameplayService.moment` — samma väg, samma
+	prövningar, samma FYSISKA utrustning. Blockerare 5 i #162 var just att
+	ett `utr:`-moment satte en boolean utan att någon sadel kom på hästen;
+	en egen genväg här hade återinfört det felet i ny form. Det som inte
+	går igenom den riktiga vägen ska inte heller kvitteras.
+
+	Utrustningen väljs åt spelaren först — det är stallet som lagt fram
+	hennes egen sadel, och `TackService.satPa` prövar fortfarande att den
+	hör till rätt häst.
+
+	VAD SOM INTE KRINGGÅS: välfärdsstoppet. Hästens dagstillstånd finns
+	oavsett om någon tittar, och har stallet sett något blir det kvar EXAKT
+	ETT beslut för spelaren — vad gör vi åt det. Ett steg, inte nio, och
+	hästen rids fortfarande inte om hon inte ska ridas. Första passet bär
+	aldrig något fynd, så en ny spelare kommer rakt upp i sadeln. ]]
+function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
+	local naravaro_ok, skal = narvaro(player)
+	if not naravaro_ok then return false, skal end
+	local s = state[player]
+	if not s then return false, "spel.ingen_hast" end
+	local modell = bunden[player]
+	if not modell then return false, "spel.ingen_hast" end
+
+	--[[ Stallet har lagt fram hennes egen utrustning. ]]
+	local okS = GameplayService.valjUtrustning(player, "sadel", s.hastId)
+	local okT = GameplayService.valjUtrustning(player, "trans", s.hastId)
+	if not (okS and okT) then return false, "tack.okand_utrustning" end
+
+	--[[ ── FAIL CLOSED ────────────────────────────────────────────────
+
+		Varje moment går genom den riktiga vägen, och VARJE returvärde
+		respekteras. Misslyckas ett fysiskt steg — sadeln kom inte på,
+		fel häst, för långt bort — avbryts hela förberedelsen med det
+		riktiga nejet.
+
+		Tidigare fyllde `autoForbered` i resten efteråt och gjorde hästen
+		"klar" ändå. Ett produktfel ska ge ett riktigt nej, inte döljas av
+		auto-state. `forb.redan_gjort` är inget fel: det betyder att
+		spelaren redan hunnit göra momentet själv. ]]
+	for _, f in ipairs(Preparation.stegFaser()) do
+		if f.id ~= "leda" then
+			local val = Preparation.arVal(f.id)
+			for _, m in ipairs(Preparation.moment(f.id)) do
+				if not m.fel and m.id then
+					local ok, avslag = GameplayService.moment(player, f.id, m.id, "auto")
+					if not ok and avslag ~= "forb.redan_gjort" then
+						skicka(player)
+						return false, avslag
+					end
+					--[[ En valfas behöver ETT riktigt alternativ. ]]
+					if val and Preparation.fasKlar(s, f.id) then break end
+				end
+			end
+			if not Preparation.fasKlar(s, f.id) then
+				skicka(player)
+				return false, "pass.aterstar", Preparation.kanontext(f.namn)
+			end
+		end
+	end
+
+	--[[ ── LEDNINGEN ÄR EN VERKLIG FÖRFLYTTNING ───────────────────────
+
+		Stallet leder ut henne på riktigt. `placeraVidMal` flyttar hästen
+		och sätter flaggorna BARA om hon sedan bevisligen står i målzonen.
+
+		Därefter kvitteras `leda` genom den VANLIGA momentvägen, som
+		prövar `LedService.harLamnatBox` och `harNattMal`. Ingen genväg
+		förbi den grinden: står hon kvar i boxen faller momentet, och då
+		blir hästen inte heller uppsittningsklar. ]]
+	local flyttad, flyttfel = LedService.placeraVidMal(player, modell)
+	if not flyttad then
+		skicka(player)
+		return false, flyttfel
+	end
+	for _, m in ipairs(Preparation.moment("leda")) do
+		if not m.fel and m.id then
+			local ok, avslag = GameplayService.moment(player, "leda", m.id, "auto")
+			if not ok and avslag ~= "forb.redan_gjort" then
+				skicka(player)
+				return false, avslag
+			end
+		end
+	end
+
+	skicka(player)
+	local klar, varfor, arg = Preparation.provaUppsittning(s, s.hastId)
+	return klar, varfor, arg
+end
+
+--[[ Hästens dagsform vid uppsittning, 0–1.
+
+	BELÖNINGEN FÖR OMSORG. Den som gjort skötseln själv får en märkbart
+	harmoniskare häst; den som valt "Rida nu" får en fullt fungerande ritt.
+	Skillnaden ska läsa som "jag tog extra bra hand om henne" — aldrig som
+	"jag hoppade över, därför fungerar hon dåligt".
+
+	Därför ligger golvet på kanonens egen standarddagsform: `ridaNu` ger
+	exakt den häst spelet annars alltid gett. Egen skötsel lyfter därifrån
+	och uppåt. Ingen väg leder NEDÅT.
+
+	STORLEKEN ÄR MEDVETET LITEN. Första versionen gav +0,25 dagsform, vilket
+	lyfte startenergin 0,835 → 0,967 — omkring 16 %. Det är nog för att
+	göra frivillig skötsel till en optimeringsplikt: den som vill ha den
+	bästa hästen MÅSTE då borsta. Precis det den här principen finns för
+	att undvika.
+
+	+0,06 ger ungefär tre procent mer uthållighet. Det räcker för att
+	kännas — hon håller gångarten en aning längre — utan att någon behöver
+	räkna på det. Den stora belöningen ska ligga i hur hon ÄR: lugnare,
+	mjukare i svaret, positivare kroppsspråk. De kanalerna hör till nästa
+	pass; den här raden ska inte växa för att kompensera. ]]
+local DAGSFORM_BONUS = 0.06
+
+function GameplayService.dagsformFor(player: Player): number
+	local bas = RidKanon.START.DAGSFORM
+	local s = state[player]
+	if not s then return bas end
+	local andel = Preparation.egenAndel(s)
+	return math.clamp(bas + DAGSFORM_BONUS * andel, 0, 1)
 end
 
 --[[ Sadelkammarens val: vilken hästs sadel och träns spelaren tagit med
@@ -504,6 +642,11 @@ end
 
 function GameplayService.start()
 	HorseService.setMountGate(GameplayService.farSittaUpp)
+	--[[ Belöningen för egen skötsel: dagsformen vid uppsittning. ]]
+	HorseService.setDagsformHook(GameplayService.dagsformFor)
+	Net.get("RidaNu").OnServerInvoke = function(player)
+		return GameplayService.ridaNu(player)
+	end
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
 
