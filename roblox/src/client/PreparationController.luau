@@ -182,6 +182,43 @@ local INTERAKTION_TAK = 0.52         -- högst så här stor del av skärmhöjde
 local HJALP_HOJD = 34
 local GAP = 6
 
+--[[ ══ EN SAK I TAGET (#185) ════════════════════════════════════════
+
+	Produktordern: `1 uppgift → 1 handling → direkt feedback → nästa
+	uppgift`. Tre saker i den här filen bröt mot den, och de mäts nu var
+	för sig i `forberedelse.spec`:
+
+	  1. HOPFÄLLD VISADE FEL RAD. Panelen valde raden med lägst
+	     `LayoutOrder`, alltså listans FÖRSTA moment — inte det som stod på
+	     tur. Iordningställandet har nio moment i fast ordning; så fort
+	     vänster fram var kratsad visade panelen en avbockad hov medan
+	     servern väntade på nästa. Spelaren läste alltså en instruktion hon
+	     just utfört. Raden väljs nu på `nastaMoment`, samma tal servern
+	     släpper fram.
+
+	  2. "VISA ALLA 9 VAL" LÅG I HUVUDFLÖDET. En gul rad längst ned i
+	     panelen bjöd in till att fälla ut hela checklistan — precis det
+	     ordern kallar nio saker samtidigt. Kontrollen är nu ett diskret
+	     `?` uppe i panelens hörn: samma växling, men den frågar i stället
+	     för att erbjuda, och den tar ingen egen höjd (se `HJALPRUTA`).
+
+	  3. INGEN KVITTENS. Ett lyckat moment gav ingen bekräftelse alls;
+	     nästa instruktion bara ersatte den förra. Nu står ett kort `✓` en
+	     stund innan vyn går vidare av sig själv — ingen "Nästa"-knapp,
+	     för det finns inget för spelaren att besluta.
+
+	Hästkunskapen är oförändrad. Det här är presentation: samma moment,
+	samma ordning, samma serverregler. ]]
+--[[ `?`-rutan i panelens övre högra hörn. Samma tal som en momentknapp:
+	ordern förbjuder små träffytor, och en diskret kontroll får vara tyst
+	i FÄRG men aldrig i yta. Den delar rad med instruktionen och kostar
+	därför ingen egen höjd — den gamla växlingsraden längst ned gjorde
+	det, och den var dessutom bara 22 px hög. ]]
+local HJALPRUTA = 44
+--[[ Hur länge kvittensen står kvar innan vyn ritas om utan den. Publik för
+	att provet ska mäta samma tal som spelaren ser. ]]
+PreparationController.BEKRAFTELSE_TID = 1.2
+
 local gui: ScreenGui? = nil
 --[[ SPÅRAREN. ]]
 local sparare: Frame? = nil
@@ -228,6 +265,28 @@ local interaktionUt = false
 	knapparnas `Visible`, som dessutom bär hopfällningen: två betydelser i
 	samma flagga hade gjort räkningen till en gissning. ]]
 local anvandaNu: { [string]: boolean } = {}
+--[[ DET SOM STÅR PÅ TUR, ur den vy som senast ritades. Hopfälld visar
+	precis den här raden och ingen annan. Är den `nil` — en vy utan tur,
+	till exempel fyndets svar — faller panelen tillbaka på den lägsta
+	`LayoutOrder`, vilket är det gamla beteendet. ]]
+local paTurNu: string? = nil
+--[[ Är raderna ALTERNATIV (hälsningen, fyndets svar) i stället för en
+	checklista? Härleds ur vyn själv: ett `fel`-märkt alternativ finns bara
+	i en valfas. Används för att kalla hjälpen vid dess rätta namn — en
+	checklista fälls ut, ett val har inget mer att visa. ]]
+local arValNu = false
+--[[ Ska ALLA rader visas trots att panelen är hopfälld? Sant bara för
+	fyndets svar. Det är den enda vy som inte har något "på tur": den
+	ställer en fråga, och en fråga med ett enda synligt svar är ingen
+	fråga. Skötselns faser går aldrig hit — där finns alltid ett moment
+	servern släpper fram, och det är det ordern vill se ensamt. ]]
+local allaNu = false
+--[[ KVITTENSEN. Sätts när servern sagt ja till ett moment och står kvar
+	`BEKRAFTELSE_TID` sekunder, även genom de omritningar serverns nya vy
+	utlöser. `bekraftelseNr` gör att en andra kvittens hinner före den
+	förstas nedräkning utan att den förra släcker den nya. ]]
+local bekraftelse: string? = nil
+local bekraftelseNr = 0
 --[[ Det läge som senast ritades. Enda syftet är att fälla UT spåraren EN
 	gång när spelet går in i ett läge som inte har något att trycka på men
 	allt att förklara — välfärdsstoppet, passet sparat, väntar på hästen.
@@ -359,29 +418,34 @@ local function pekreglagensKanter(): (number, number)
 end
 
 local function interaktionsLayout(antalVal: number, rader: number,
-	ut: boolean): { [string]: number }
+	ut: boolean, alla: boolean): { [string]: number }
 	local B, H = viewport()
 	local bredd = math.min(INTERAKTION_BREDD, math.max(120, B - 2 * MARGINAL))
-	--[[ HÖJDEN ÄR INNEHÅLLET. Hopfälld visas det val som står på tur; det
-		är objektivet, och det är vad ordern ber om. ]]
-	local visade = if ut then antalVal else math.min(antalVal, 1)
+	--[[ HÖJDEN ÄR INNEHÅLLET. Hopfälld visas EN sak: den som står på tur.
+		Det är ordern, och det är hela skillnaden mot att lägga fram nio. ]]
+	local visade = if ut or alla then antalVal else math.min(antalVal, 1)
+	--[[ HJÄLPEN DELAR RAD MED INSTRUKTIONEN. Huvudet är därför det högsta
+		av texten och `?`-rutan — inte summan. Den gamla växlingsraden låg
+		längst ned och lade 28 px på varje panel, i varje läge; ordern om
+		att hjälpen inte får dominera huvudflödet handlar om plats lika
+		mycket som om ord. Rutan finns bara när det FINNS något mer att
+		visa: ett ensamt moment har ingen checklista bakom sig. ]]
+	local hjalpSyns = antalVal > 1 and not alla
 	local textHojd = rader * INTERAKTION_TEXTRAD
+	local huvud = math.max(textHojd, if hjalpSyns then HJALPRUTA else 0)
 	local listHojd = 0
 	if visade > 0 then
 		listHojd = visade * PreparationController.TRAFFYTA
 			+ (visade - 1) * INTERAKTION_RAD
 	end
-	--[[ Växlingen ritas bara när det FINNS något att fälla ut. Ett ensamt
-		val ska inte bära en knapp som inte gör något. ]]
-	local vaxling = if antalVal > 1 then GAP + STEGRAD else 0
-	local hojd = 2 * INNER + textHojd
-		+ (if listHojd > 0 then GAP + listHojd else 0) + vaxling
+	local hojd = 2 * INNER + huvud
+		+ (if listHojd > 0 then GAP + listHojd else 0)
 	--[[ Taket: hellre en lista som rullar än en panel som växer upp över
 		spelet. Det är listan som ger vika, aldrig texten. ]]
 	local tak = math.floor(H * INTERAKTION_TAK)
 	if hojd > tak and listHojd > 0 then
 		listHojd = math.max(PreparationController.TRAFFYTA, listHojd - (hojd - tak))
-		hojd = 2 * INNER + textHojd + GAP + listHojd + vaxling
+		hojd = 2 * INNER + huvud + GAP + listHojd
 	end
 	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger` noll
 		och raden ger `MARGINAL` — samma läge som förut. ]]
@@ -398,8 +462,8 @@ local function interaktionsLayout(antalVal: number, rader: number,
 	end
 	return { bredd = bredd, hojd = hojd, vpBredd = B, vpHojd = H,
 		x = x, y = H - MARGINAL - hojd,
-		textHojd = textHojd, listHojd = listHojd, visade = visade,
-		vaxling = vaxling }
+		textHojd = huvud, radHojd = textHojd, listHojd = listHojd,
+		visade = visade, hjalpSyns = if hjalpSyns then 1 else 0 }
 end
 
 --[[ Layouten som tal, för prov och felsökning. Ren avläsning — den bygger
@@ -416,8 +480,13 @@ function PreparationController.layout(): { [string]: any }
 		if momentRader[id] then synligaVal += 1 end
 	end
 	local ledtext = if instruktion then instruktion.Text else ""
+	--[[ `?`-rutan äter av instruktionens första rader. Bredden räknas med
+		avdraget så snart rutan finns — hellre en rad för mycket än en
+		instruktion som löper in under knappen. ]]
+	local textBredd = INTERAKTION_BREDD
+		- (if synligaVal > 1 and not allaNu then HJALPRUTA + GAP else 0)
 	local I = interaktionsLayout(synligaVal,
-		textrader(ledtext, INTERAKTION_BREDD), interaktionUt)
+		textrader(ledtext, textBredd), interaktionUt, allaNu)
 	return {
 		sparare = { x0 = S.x, y0 = S.y, x1 = S.x + S.bredd, y1 = S.y + S.hojd },
 		kompakt = { x0 = K.x, y0 = K.y, x1 = K.x + K.bredd, y1 = K.y + K.kompakt },
@@ -432,7 +501,8 @@ function PreparationController.layout(): { [string]: any }
 		utvidgad = utvidgad, stegHojd = S.stegHojd, antalSteg = antal,
 		interaktionUt = interaktionUt, interaktionVal = synligaVal,
 		interaktionVisade = I.visade, interaktionText = I.textHojd,
-		interaktionLista = I.listHojd,
+		interaktionLista = I.listHojd, interaktionHjalp = I.hjalpSyns == 1,
+		interaktionPaTur = paTurNu, interaktionArVal = arValNu,
 	}
 end
 
@@ -462,39 +532,65 @@ function PreparationController.tillampaLayout()
 		p.Size = UDim2.fromOffset(L.interaktion.x1 - L.interaktion.x0,
 			L.interaktion.y1 - L.interaktion.y0)
 	end
-	if instruktion then
-		instruktion.Size = UDim2.new(1, 0, 0, L.interaktionText)
-	end
 	if momentBehallare then
 		momentBehallare.Position = UDim2.new(0, 0, 0,
 			L.interaktionText + (if L.interaktionLista > 0 then GAP else 0))
 		momentBehallare.Size = UDim2.new(1, 0, 0, L.interaktionLista)
 	end
-	--[[ HOPFÄLLD VISAR DET SOM STÅR PÅ TUR. Raderna sorteras på
-		`LayoutOrder`, och den lägsta är nästa moment. ]]
+	--[[ HOPFÄLLD VISAR DET SOM STÅR PÅ TUR — och det är `nastaMoment`,
+		inte listans första rad.
+
+		Skillnaden är hela #185. `LayoutOrder` är kanonens ORDNING, och de
+		avbockade momenten ligger kvar i listan: så fort vänster fram var
+		kratsad pekade "lägst LayoutOrder" på en hov med bock medan servern
+		väntade på vänster bak. Spelaren läste en instruktion hon redan
+		utfört, och den enda knappen som fanns svarade `forb.redan_gjort`.
+
+		`paTurNu` kommer ur vyn servern skickade. Saknas den — fyndets svar
+		har ingen tur — faller valet tillbaka på lägsta `LayoutOrder`, som
+		förut. ]]
 	local lagsta, forst = math.huge, nil
 	for id in pairs(anvandaNu) do
 		local k = momentRader[id]
 		if k and k.LayoutOrder < lagsta then lagsta, forst = k.LayoutOrder, k end
 	end
+	local paTur = if paTurNu and anvandaNu[paTurNu] then momentRader[paTurNu] else nil
+	local enda = paTur or forst
 	for id, knapp in pairs(momentRader) do
 		knapp.Visible = anvandaNu[id] == true
-			and (interaktionUt or knapp == forst)
+			and (interaktionUt or allaNu or knapp == enda)
 	end
 	if interaktionVaxla then
-		interaktionVaxla.Visible = L.interaktionVal > 1
-		--[[ Texten går genom katalogen, inte som en literal. Den stod först
-			som svenska rakt i modulen och blev då svensk också i ett
-			engelskt gränssnitt — precis det språkkanonen finns för.
+		--[[ DEN FRIVILLIGA HJÄLPEN, och ingenting mer.
 
-			Pilen är U+25BC/25B2 och inte U+25BE/25B4: de senare saknas i
-			Gotham och ritades som en tom ruta. Samma sak gällde spårarens
-			egen pil, och den är bytt på samma sätt. ]]
-		interaktionVaxla.Text = if interaktionUt
-			then Sprak.t("hud.visa_mindre") .. "  \u{25B2}"
-			else Sprak.t("hud.visa_alla", L.interaktionVal) .. "  \u{25BC}"
-		interaktionVaxla.Position = UDim2.new(0, 0, 1, -STEGRAD)
-		interaktionVaxla.Size = UDim2.new(1, 0, 0, STEGRAD)
+			Knappen hette förut "Visa alla 9 val" och låg som en gul rad
+			tvärs över panelens nederkant. Den var en INBJUDAN att lägga
+			fram hela checklistan, alltså precis det ordern river ut. Den
+			är nu ett `?` i hörnet: samma växling, men den frågar i stället
+			för att erbjuda, och den tar ingen egen höjd — se `HJALPRUTA`.
+
+			Utfälld bär den en pil tillbaka i stället för ett frågetecken:
+			då är frågan redan ställd. U+25B2 och inte U+25B4, för det
+			senare saknas i Gotham och ritas som en tom ruta.
+
+			Den LÄSBARA frasen ligger kvar i katalogen och hängs på knappen
+			som attribut. Ett `?` utan ord är diskret på skärmen men tyst
+			också för den som behöver texten uppläst. ]]
+		interaktionVaxla.Visible = L.interaktionHjalp
+		interaktionVaxla.Text = if interaktionUt then "\u{25B2}" else "?"
+		interaktionVaxla.TextColor3 = if interaktionUt then FARG_TEXT else FARG_VILAR
+		interaktionVaxla.Position = UDim2.new(1, -HJALPRUTA, 0, 0)
+		interaktionVaxla.Size = UDim2.new(0, HJALPRUTA, 0, HJALPRUTA)
+		interaktionVaxla:SetAttribute("Etikett", if interaktionUt
+			then Sprak.t("hud.visa_mindre")
+			else Sprak.t("hud.behover_du_hjalp"))
+	end
+	if instruktion then
+		--[[ Instruktionen slutar där `?`-rutan börjar. Utan avdraget löper
+			sista ordet in under knappen på varje panel som har en. ]]
+		instruktion.Size = UDim2.new(1,
+			-(if L.interaktionHjalp then HJALPRUTA + GAP else 0),
+			0, L.interaktionText)
 	end
 end
 
@@ -703,6 +799,10 @@ local function bygg()
 		panel hade aldrig blivit läst. ]]
 	local ins = Instance.new("TextLabel")
 	ins.Name = "Instruktion"
+	--[[ Texten börjar UPPTILL. Huvudet är minst `HJALPRUTA` högt så snart
+		`?` finns, och en centrerad rad hade då glidit ned från knappen den
+		hör ihop med. ]]
+	ins.TextYAlignment = Enum.TextYAlignment.Top
 	ins.Size = UDim2.new(1, 0, 0, 36)
 	ins.BackgroundTransparency = 1
 	ins.Font = Enum.Font.GothamBold
@@ -736,21 +836,26 @@ local function bygg()
 	mlayout.Parent = mlista
 	momentBehallare = mlista :: any
 
-	--[[ VÄXLINGEN. Panelen är hopfälld som standard och visar då bara det
-		val som står på tur; den här knappen fäller ut resten. Den finns
-		bara när det finns mer än ett val — se `tillampaLayout`. ]]
+	--[[ HJÄLPEN. Panelen är hopfälld som standard och visar då EN sak: den
+		som står på tur. Den här knappen är vägen till hela checklistan —
+		frivillig, diskret och i hörnet, aldrig en rad tvärs över flödet.
+		Den finns bara när det finns mer än ett moment; se `tillampaLayout`
+		för läge, storlek och text. ]]
 	local iv = Instance.new("TextButton")
 	iv.Name = "InteraktionVaxla"
 	iv.AnchorPoint = Vector2.new(0, 0)
-	iv.Size = UDim2.new(1, 0, 0, STEGRAD)
-	iv.Position = UDim2.new(0, 0, 1, -STEGRAD)
+	iv.Size = UDim2.new(0, HJALPRUTA, 0, HJALPRUTA)
+	iv.Position = UDim2.new(1, -HJALPRUTA, 0, 0)
 	iv.BackgroundTransparency = 1
 	iv.AutoButtonColor = false
-	iv.Font = Enum.Font.Gotham
-	iv.TextSize = 12
-	iv.TextXAlignment = Enum.TextXAlignment.Left
-	iv.TextColor3 = FARG_TUR
-	iv.Text = ""
+	iv.Font = Enum.Font.GothamBold
+	--[[ Ett ensamt `?` måste vara läsbart på en iPad i solljus utan att bli
+		en skylt. 18 px i en 44 px ruta är tecknet litet och TRÄFFYTAN full
+		— ordern förbjuder små träffytor, inte små tecken. ]]
+	iv.TextSize = 18
+	iv.TextXAlignment = Enum.TextXAlignment.Center
+	iv.TextColor3 = FARG_VILAR
+	iv.Text = "?"
 	iv.Visible = false
 	iv.Parent = ip
 	iv.Activated:Connect(function()
@@ -1038,6 +1143,14 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 		senasteLage = lage
 		if antalVal == 0 and ledtext ~= "" then utvidgad = true end
 	end
+	--[[ KVITTENSEN GÅR FÖRE INSTRUKTIONEN, men bara ett ögonblick.
+
+		Serverns nya vy kommer inom någon bildruta efter ett lyckat moment,
+		och den ritar om panelen med NÄSTA instruktion. Utan den här raden
+		hade kvittensen skrivits över innan spelaren hunnit läsa den — hon
+		hade sett listan hoppa ett steg och aldrig fått veta att det hon
+		gjorde var rätt. `visaBekraftelse` släcker den själv efteråt. ]]
+	if bekraftelse then ledtext = bekraftelse end
 	if hjalp then hjalp.Text = ledtext end
 	if instruktion then instruktion.Text = ledtext end
 	local h = interaktion
@@ -1050,9 +1163,53 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 	if gui then gui.Enabled = synlig end
 end
 
+--[[ ── DIREKT FEEDBACK ─────────────────────────────────────────────
+
+	`1 uppgift → 1 handling → direkt feedback → nästa uppgift`.
+
+	Servern svarar `(true)` på ett lyckat moment och skickar sedan en ny vy
+	— ingen text. Det gjorde de tre första leden osynliga: instruktionen
+	byttes ut, och det var allt spelaren fick. Kvittensen skrivs därför
+	här, på klienten, av det momentet som just gick igenom.
+
+	AVANCERINGEN ÄR FORTFARANDE SERVERNS. Ingen "Nästa"-knapp läggs till:
+	det finns ingenting för spelaren att besluta mellan två moment, och en
+	knapp som bara betyder "jag har läst" är en handling till per uppgift.
+	Nedräkningen ritar om samma vy utan kvittensen, och då står nästa
+	instruktion där av sig själv. ]]
+local function visaBekraftelse(text: string?)
+	if type(text) ~= "string" or text == "" then return end
+	bekraftelse = text
+	bekraftelseNr += 1
+	local nr = bekraftelseNr
+	if instruktion then instruktion.Text = text end
+	if hjalp then hjalp.Text = text end
+	PreparationController.tillampaLayout()
+	task.delay(PreparationController.BEKRAFTELSE_TID, function()
+		--[[ En andra kvittens hinner före den förstas nedräkning när
+			spelaren trycker snabbt. Numret gör att bara den SENASTE
+			nedräkningen får släcka. ]]
+		if bekraftelseNr ~= nr then return end
+		bekraftelse = nil
+		if senasteVy then rita(senasteVy) end
+	end)
+end
+
+--[[ Provets fönster in: står en kvittens uppe, och vilken? ]]
+function PreparationController._bekraftelse(): string?
+	return bekraftelse
+end
+
 function rita(vy: any)
 	bygg()
 	senasteVy = vy
+
+	--[[ Turen, valläget och "visa allt" hör till den vy som ritas NU.
+		Nollställs här så att en gren som inte sätter dem aldrig ärver
+		föregående vys tur — en tur som pekar på ett moment den här vyn
+		inte har är samma sak som ingen tur alls, men den syns senare och
+		är svårare att läsa. ]]
+	paTurNu, arValNu, allaNu = nil, false, false
 
 	local anvanda: { [string]: boolean } = {}
 
@@ -1091,6 +1248,12 @@ function rita(vy: any)
 	end
 
 	if vy.svar and #vy.svar > 0 then
+		--[[ FRÅGAN BEHÖVER SINA SVAR. Hopfälld visar panelen annars bara
+			det första alternativet — "Säg till ridläraren" — och då är
+			fyndet inget val längre utan en knapp att trycka bort. Det är
+			raka motsatsen till ordern: en handling, ja, men inte spelarens
+			egen. Här väger alternativen tyngre än höjden. ]]
+		arValNu, allaNu = true, true
 		for i, s in ipairs(vy.svar) do
 			anvanda[s.id] = true
 			momentRad(lokalt({ id = s.id, namn = s.namn, klar = false, fel = s.fel }),
@@ -1108,6 +1271,7 @@ function rita(vy: any)
 	if iEftervard() then
 		for _, r in pairs(rader) do r.ram.Visible = false end
 		local nasta = senastePass.nastaMoment
+		paTurNu = nasta
 		local text = ""
 		for i, m in ipairs(senastePass.moment or {}) do
 			anvanda[m.id] = true
@@ -1138,9 +1302,11 @@ function rita(vy: any)
 
 	--[[ ── 4. SKÖTSELN ────────────────────────────────────────────── ]]
 	local nasta = vy.nastaMoment
+	paTurNu = nasta
 	local momenttext = ""
 	for i, m in ipairs(vy.moment or {}) do
 		anvanda[m.id] = true
+		if m.fel then arValNu = true end
 		local lm = lokalt(m)
 		momentRad(lm, i, m.id == nasta, function()
 			PreparationController.begar(vy.nasta, m.id)
@@ -1148,6 +1314,27 @@ function rita(vy: any)
 		if m.id == nasta then momenttext = lm.text or "" end
 	end
 	doljOanvanda(anvanda)
+
+	--[[ VAD SKA DET STÅ I INSTRUKTIONEN?
+
+		För en CHECKLISTA är momentets egen text instruktionen: "Lyft upp
+		underlägget i bommen. Manken ska vara fri." Den säger vad man gör
+		härnäst, och det är precis vad raden ska säga.
+
+		För en VALFAS är den det inte. Hälsningens `text` är kanonens SVAR
+		på ett val — "Bra. Nu vet hon att du är där." — och den stod som
+		instruktion INNAN spelaren valt. Panelen gratulerade alltså till
+		något som ännu inte hänt, och frågan som faktiskt gällde ("Gå fram
+		från sidan. Säg hennes namn innan du rör henne.") fanns bara i
+		fasens egen text, som ingen yta visade. Nu är fasens text frågan
+		och momentets text kvittensen — se `visaBekraftelse`. ]]
+	if arValNu then
+		for _, steg in ipairs(vy.steg or {}) do
+			if steg.id == vy.nasta then
+				momenttext = lokaltSteg(steg).text or momenttext
+			end
+		end
+	end
 
 	local lage, ledtext = "skotsel", momenttext
 	if vy.status == "waiting_model" then
@@ -1267,17 +1454,51 @@ function PreparationController.skalText(skal: any, extra: any?): string
 	return skal
 end
 
-local function skicka(nyckel: string, remote: string, ...)
+--[[ Kvittensen för det moment som är på väg iväg. Läses INNAN anropet:
+	efter svaret har servern redan skickat en ny vy, och då är momentet
+	avbockat och listan kan ha bytt fas. ]]
+local function kvittens(lista: any, momentId: string): string
+	for _, m in ipairs(lista or {}) do
+		if m.id == momentId then
+			--[[ En VALFAS bär kanonens egen konsekvens som text — "Bra. Nu
+				vet hon att du är där." Den är redan formulerad som svar på
+				en handling och säger mer än ett generiskt ord.
+
+				En CHECKLISTA bär i stället nästa instruktion som text, och
+				att upprepa den man just följt vore ingen kvittens alls.
+				Där räcker det korta ordet. ]]
+			if m.fel == true or arValNu then
+				local t = Preparation.momentPaSprak(m, Sprak.eget(),
+					senasteVy and senasteVy.hastnamn).text
+				if type(t) == "string" and t ~= "" then
+					return "\u{2713}  " .. t
+				end
+			end
+			break
+		end
+	end
+	return "\u{2713}  " .. Sprak.t("hud.bra")
+end
+
+local function skicka(nyckel: string, remote: string, bekrafta: string?, ...)
 	if vantarPa then return end
 	vantarPa = nyckel
 	local args = table.pack(...)
 	task.spawn(function()
 		local ok, skal, extra = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
 		vantarPa = nil
-		if not ok then
+		if ok then
+			visaBekraftelse(bekrafta)
+		else
 			--[[ Nejet skrivs på BÅDA ytorna. Spelaren tittar på
 				interaktionspanelen när hon just tryckt; ett avslag som bara
 				stod i en hopfälld spårare hade aldrig blivit läst. ]]
+			--[[ Ett NEJ släcker en kvittens som råkar stå kvar. Annars
+				hade panelen kunnat visa ett bock-svar på ett moment
+				servern just avvisat — och det är den sortens lögn HUD:en
+				blivit rättad för förut. ]]
+			bekraftelse = nil
+			bekraftelseNr += 1
 			local text = PreparationController.skalText(skal, extra)
 			if hjalp then hjalp.Text = text end
 			if instruktion then instruktion.Text = text end
@@ -1287,15 +1508,22 @@ end
 
 function PreparationController.begar(fasId: string?, momentId: string?)
 	if not fasId or not momentId then return end
-	skicka(momentId, "PreparationMoment", fasId, momentId)
+	skicka(momentId, "PreparationMoment",
+		kvittens(senasteVy and senasteVy.moment, momentId), fasId, momentId)
 end
 
 function PreparationController.svara(svarId: string)
-	skicka(svarId, "PreparationSvar", svarId)
+	--[[ Fyndets svar har ingen egen kanontext — alternativens `text` är
+		tom — så kvittensen är det korta ordet. Det RÄTTA svaret är dessutom
+		"säg till ridläraren", och där är bekräftelsen att man gjorde rätt
+		som sa till, inte en beskrivning av vad som händer sedan. ]]
+	skicka(svarId, "PreparationSvar",
+		"\u{2713}  " .. Sprak.t("hud.bra"), svarId)
 end
 
 function PreparationController.eftervard(momentId: string)
-	skicka(momentId, "PassMoment", momentId)
+	skicka(momentId, "PassMoment",
+		kvittens(senastePass and senastePass.moment, momentId), momentId)
 end
 
 function PreparationController.redo(): boolean

@@ -265,8 +265,16 @@ const SPRAK = {
      först som en svensk literal i klientkoden, och den stod kvar på
      svenska i ett engelskt gränssnitt. Samma regel som all annan
      spelartext: nyckel i katalogen, inte en sträng i en modul. */
-  "hud.visa_alla": { sv: "Visa alla %d val", en: "Show all %d options" },
+  /* "Visa alla %d val" ÄR BORTTAGEN (#185). Den var inbjudan till nio
+     samtidiga alternativ i iordningställandet, och produktordern river ut
+     just det mönstret: spelaren ska normalt se EN uppgift. Kontrollen
+     finns kvar, men som ett diskret `?` — frågan, inte erbjudandet. */
+  "hud.behover_du_hjalp": { sv: "Behöver du hjälp?", en: "Need help?" },
   "hud.visa_mindre": { sv: "Visa mindre", en: "Show less" },
+  /* Kvittensen efter ett moment som gick igenom. Kort med flit: den ska
+     hinna läsas innan nästa instruktion tar plats, inte läsas i stället
+     för den. */
+  "hud.bra": { sv: "Bra", en: "Good" },
   "tack.ta_utrustning": { sv: "Ta sadel och träns", en: "Take the saddle and bridle" },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
