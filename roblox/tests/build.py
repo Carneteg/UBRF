@@ -87,6 +87,13 @@ SPELBARHET = BYGGE + [
     #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
     #   och far inte ha var sin kopia av hennes matt. ]]
     ("Varldsmatning", "tests/varldsmatning.luau"),
+    #[[ #171: identiteten och integritetsgrinden. Networking ligger fore
+    #   Integritet eftersom facit over fjarrobjekten lases DARIFRAN och inte
+    #   ur en egen kopia, och Integritet fore Preflight eftersom punkt 9 och
+    #   10 ar dess rader. ]]
+    ("Networking",   "src/shared/HorseCore/Networking.luau"),
+    ("UBRFBuild",    "game/UBRFBuild.luau"),
+    ("Integritet",   "src/server/Integritet.luau"),
     #[[ Preflighten matas pa den BYGGDA varlden: en ren UBRF ska passera
     #   markplansgrinden, och en kvarglomd baseplate ska falla den. Utan
     #   varlden hade specen bara kunnat prova den tomma vagen. ]]
@@ -620,6 +627,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     elif "varldsmanifest" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "preflight" in spec_rel:
+        moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
+    #[[ #171: integritetsgrinden mater preflightens punkt 9 och 10 och
+    #   behover darfor samma bank som preflighten — inklusive Networking,
+    #   den genererade UBRFBuild och Integritet. ]]
+    elif "integritet" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "topologi" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"

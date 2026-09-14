@@ -43,6 +43,18 @@ jobs:
           if [ -f tools/kolla-material.py ]; then python3 tools/kolla-material.py
           else echo "hoppar: tools/kolla-material.py finns inte i denna branch"; fi
 
+      # Build-identiteten (#171). Den läsande Studio-auditen fann att
+      # ReplicatedStorage.UBRFBuild var handplacerad och pekade på en head 53
+      # commits gammal medan preflightens punkt 9 lyste grönt. En place kan
+      # inte räkna om hashen över sin egen källkod, så FÄRSKHETEN måste mätas
+      # här: identiteten i repot mot filerna default.project.json mappar.
+      # Punkt 9a–9d i preflighten mäter form och ursprung; den här raden
+      # mäter att innehållet stämmer.
+      - name: Build-identitet aktuell — UBRFBuild mot mappade källor
+        run: |
+          if [ -f tools/bygg-identitet.py ]; then python3 tools/bygg-identitet.py --kontrollera
+          else echo "hoppar: tools/bygg-identitet.py finns inte i denna branch"; fi
+
       - name: Speldata i synk — src/spel/ mot Roblox-modulerna
         run: |
           if [ -f tools/exportera-spel.js ]; then node tools/exportera-spel.js --kontrollera

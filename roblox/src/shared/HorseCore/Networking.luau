@@ -82,6 +82,26 @@ function Networking.get(name: string): any
 	return existing
 end
 
+--[[ Facit över vilka fjärrobjekt som SKA finnas, utlämnat för
+     `Integritet.luau` (#171).
+
+     Kopian är avsiktlig: integritetsgrinden ska kunna läsa listan utan att
+     kunna ändra den. Och den ska läsa DEN HÄR listan — inte en egen kopia.
+     En andra namnlista hade blivit en andra sanning, och då mäter grinden
+     till slut sig själv i stället för koden.
+
+     Varför det behövs: `folder()` och `get()` återanvänder det som redan
+     ligger i ReplicatedStorage. Det är rätt i drift, men det betyder att ett
+     borttaget eller omdöpt fjärrobjekt ligger kvar osynligt i en sparad
+     place. Utan facit går den skillnaden inte att mäta. ]]
+function Networking.definitioner(): { [string]: string }
+	local kopia: { [string]: string } = {}
+	for namn, klass in DEFINITIONS do
+		kopia[namn] = klass
+	end
+	return kopia
+end
+
 --[[ Servern kallar den här en gång vid start så att allt finns innan
      första klienten frågar efter det. ]]
 function Networking.init()
