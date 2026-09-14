@@ -69,21 +69,30 @@ Rekommendation: **noll** hopp integreras i den här gaten; `2780160044`
 
 ## Importsanering — vad som får följa med en Creator Store-modell
 
-`TackRigg.laddaAsset` avvisar hela modellen om den bär Script/LocalScript/
-ModuleScript (primitiven ritas). Av det som inte är skript överlever bara
-**synlig geometri** (#170 blockerare 3): BaseParts, och under dem enbart
-`Attachment`, `SpecialMesh`/`FileMesh`/`BlockMesh`/`CylinderMesh`,
-`SurfaceAppearance`, `Decal`, `Texture` — en vitlista (`TILLATNA_BARN`),
-inte en svartlista. Prompter, klickdetektorer, ljud, eld/rök/partiklar,
-ljus, beams, highlights, krafter, constraints, nästlade modeller och allt
-annat förstörs innan delarna flyttas till `Tack`-mappen, och de tillåtna
-instanserna får inga egna barn (en `Attachment` kan bära en
-`ParticleEmitter`). Alla delar är dessutom CanCollide/CanQuery/CanTouch av
-och masslösa. Provet `utrustningsgrind.spec` g) laddar ett elakt fixtur
-med elva aktiva icke-skript-klasser och kräver att ingen når karaktären
-eller hästen. Det som inte står på vitlistan finns inte i spelet — det är
-därför hjälmens oinspekterbara hierarki (assetdelivery 401) är
-acceptabel att ladda.
+`TackRigg.laddaAsset` prövar **hela hierarkin** mot en vitlista av inerta
+klasser (#170 blockerare 3, QA 05:45/05:50). Bär modellen en enda instans
+utanför den — skript, prompter, klickdetektorer, ljud, eld/rök/partiklar,
+ljus, beams, trails, highlights, säten, krafter, constraints, Humanoid,
+animationer … — avvisas **hela modellen** och primitiven ritas. Ingen
+rensning: att plocka bort det aktiva ur en modell man inte läst är att
+gissa vad resten gjorde. Vitlistan:
+
+- **behålls** — BaseParts, `Attachment`, `SpecialMesh`/`FileMesh`/
+  `BlockMesh`/`CylinderMesh`, `SurfaceAppearance`, `Decal`, `Texture`;
+- **löses upp** (accepteras men förstörs efter flytten, eftersom delarna
+  plattas ut i `Tack`-mappen och svetsas om av oss) — `Model`, `Folder`,
+  `Accessory`, `Hat`, `WeldConstraint`, `Weld`, `ManualWeld`, `Motor6D`,
+  `Snap`.
+
+Alla delar är dessutom CanCollide/CanQuery/CanTouch av och masslösa.
+Provet `utrustningsgrind.spec` g) laddar ett elakt fixtur med elva aktiva
+icke-skript-klasser (avvisas, primitiv, inget når karaktären eller
+hästen), prövar 19 aktiva klasser en i taget (var och en fäller modellen
+ensam) och h) ett inert fixtur (accepteras: yta, fäste och textur
+behålls, behållare och gammal svets löses upp). Det som inte står på
+vitlistan finns inte i spelet — det är därför hjälmens oinspekterbara
+hierarki (assetdelivery 401) är acceptabel att *försöka* ladda: bär den
+något aktivt syns primitiven, inte hjälmen (HARDWARE CHECK).
 
 ## Enhetsparitet — equip och unequip per inmatning
 

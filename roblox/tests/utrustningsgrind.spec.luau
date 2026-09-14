@@ -348,47 +348,88 @@ do
 	--[[ g) VITLISTAN (#170 blockerare 3). En modell utan skript men med
 		prompt, klick, ljud, eld, kraft, ljus, beam, highlight, en
 		partikelkälla under en Attachment, en nästlad Model med
-		LinearVelocity och en nästlad del med eget ljud. Inget av det
-		får nå karaktären eller hästen; ytan och fästet får. ]]
+		LinearVelocity och en nästlad del med eget ljud. HELA modellen
+		avvisas — primitiven ritas — och inget av det når karaktären. ]]
 	InsertService._svar[92445706145003] = modellMed({ vec(6, 4, 6), vec(2, 1, 2) }, false, true)
 	local okG, skalG = TackService.satPaHjalm(spH)
 	local dG = TackRigg.hittaDel(kH, "hjalm")
 	local elakaK = elakaUnder(kH)
-	check("g) elakt hjälmfixtur laddas ändå som asset (inga skript i det)",
-		okG and dG ~= nil and dG:GetAttribute("UBRFVisual") == "asset", tostring(skalG))
-	check("   men ingen aktiv icke-skript-instans överlever in i karaktären",
+	check("g) elakt hjälmfixtur (aktiva icke-skript-ättlingar) avvisas helt — primitiven ritas",
+		okG and dG ~= nil and dG:GetAttribute("UBRFVisual") == "primitiv", tostring(skalG)
+			.. " " .. tostring(dG and dG:GetAttribute("UBRFVisual")))
+	check("   och ingen aktiv instans når karaktären",
 		#elakaK == 0, #elakaK == 0 and "rent" or table.concat(elakaK, " · "))
-	local ytaK, fasteK, fasteBarn = nil, nil, -1
+	TackService.taAvHjalm(spH)
+
+	--[[ varje enskild aktiv klass fäller modellen på egen hand ]]
+	local fallda = {}
+	for _, klass in ipairs({ "ProximityPrompt", "ClickDetector", "Sound", "Fire", "ParticleEmitter",
+		"BodyVelocity", "LinearVelocity", "PointLight", "Beam", "Trail", "Highlight", "Seat", "VehicleSeat",
+		"TouchTransmitter", "Humanoid", "SpringConstraint", "RopeConstraint", "AlignPosition", "Animation" }) do
+		InsertService._svar[92445706145003] = function()
+			local m = Instance.new("Model")
+			local p = Instance.new("MeshPart"); p.Name = "Del1"; p.Size = vec(6, 4, 6)
+			p.CFrame = CFrame.new(vec(0, 0, 0)); p.Anchored = true; p.Parent = m
+			local a = Instance.new(klass); a.Name = "Elak"; a.Parent = p
+			return m
+		end
+		TackService.satPaHjalm(spH)
+		local d1 = TackRigg.hittaDel(kH, "hjalm")
+		if not (d1 and d1:GetAttribute("UBRFVisual") == "primitiv" and #elakaUnder(kH) == 0) then
+			table.insert(fallda, klass)
+		end
+		TackService.taAvHjalm(spH)
+	end
+	check("   var och en av 19 aktiva klasser fäller modellen ensam", #fallda == 0,
+		#fallda == 0 and "alla avvisade" or ("släppte igenom: " .. table.concat(fallda, ", ")))
+
+	--[[ h) ett SNÄLLT fixtur — bara inerta klasser — laddas som asset:
+		SurfaceAppearance och tom Attachment behålls, en Accessory-
+		behållare och en WeldConstraint löses upp, nästlad del plattas. ]]
+	InsertService._svar[92445706145003] = function()
+		local m = Instance.new("Model")
+		local acc = Instance.new("Accessory"); acc.Name = "Hatt"; acc.Parent = m
+		local p = Instance.new("MeshPart"); p.Name = "Handle"; p.Size = vec(6, 4, 6)
+		p.CFrame = CFrame.new(vec(0, 0, 0)); p.Anchored = true; p.Parent = acc
+		local yta = Instance.new("SurfaceAppearance"); yta.Name = "Yta"; yta.Parent = p
+		local fast = Instance.new("Attachment"); fast.Name = "Fäste"; fast.Parent = p
+		local w = Instance.new("WeldConstraint"); w.Name = "GammalSvets"; w.Parent = p
+		local rem = Instance.new("Part"); rem.Name = "Rem"; rem.Size = vec(2, 1, 2); rem.CFrame = CFrame.new(vec(0, 3, 0)); rem.Parent = p
+		local tex = Instance.new("Texture"); tex.Name = "Läder"; tex.Parent = rem
+		return m
+	end
+	local okHh, skalHh = TackService.satPaHjalm(spH)
+	local dHh = TackRigg.hittaDel(kH, "hjalm")
+	local ytaK, fasteK, svetsGammal, texK, remK = nil, nil, nil, nil, nil
+	local f = kH:FindFirstChild("Tack")
 	for _, d in ipairs(kH:GetDescendants()) do
 		if d.ClassName == "SurfaceAppearance" then ytaK = d end
-		if d.ClassName == "Attachment" and d.Name == "Fäste" then fasteK = d; fasteBarn = #d:GetChildren() end
+		if d.ClassName == "Attachment" and d.Name == "Fäste" then fasteK = d end
+		if d.Name == "GammalSvets" then svetsGammal = d end
+		if d.ClassName == "Texture" then texK = d end
+		if d.Name == "Rem" and d.Parent == f then remK = d end
 	end
-	check("   synlig geometri överlever: SurfaceAppearance och Attachment finns kvar",
-		ytaK ~= nil and fasteK ~= nil)
-	check("   och Attachment har inga egna barn (partikelkällan är borta)", fasteBarn == 0, tostring(fasteBarn))
-	local delarK = 0
-	for _, d in ipairs(kH:GetDescendants()) do
-		if d:IsA("BasePart") and d:GetAttribute("UBRFTack") == nil and d.Name:match("^Del") then delarK += 1 end
-	end
-	check("   den nästlade delen plattades ut till Tack-mappen som geometri",
-		TackRigg.hittaDel(kH, "hjalm") ~= nil and (function()
-			local f = kH:FindFirstChild("Tack")
-			if not f then return false end
-			for _, d in ipairs(f:GetChildren()) do if d.Name == "Del9" then return true end end
-			return false
-		end)())
+	check("h) ett inert fixtur (Accessory, yta, fäste, svets, textur, nästlad del) laddas som asset",
+		okHh and dHh ~= nil and dHh:GetAttribute("UBRFVisual") == "asset", tostring(skalHh))
+	check("   SurfaceAppearance, Attachment och Texture behålls", ytaK ~= nil and fasteK ~= nil and texK ~= nil)
+	check("   den gamla svetsen är upplöst (vi svetsar om själva)", svetsGammal == nil)
+	check("   och den nästlade delen ligger platt i Tack-mappen", remK ~= nil)
+	check("   inga behållare följer med", (function()
+		for _, d in ipairs(kH:GetDescendants()) do
+			if d.ClassName == "Accessory" or d.ClassName == "Model" then return false end
+		end
+		return true
+	end)())
 	TackService.taAvHjalm(spH)
-	check("   hjälmen av river även det sanerade", elakaUnder(kH) ~= nil
-		and (kH:FindFirstChild("Tack") == nil or #kH:FindFirstChild("Tack"):GetChildren() == 0))
 
-	--[[ samma fixtur som sadel på hästen ]]
+	--[[ samma elaka fixtur som sadel på hästen → primitiv ]]
 	InsertService._svar[9639407836] = modellMed({ vec(10, 4, 14) }, false, true)
 	TackService.satPa(spelare3, hast, "underlagg", nil, hast)
 	local okGS = TackService.satPa(spelare3, hast, "sadel", nil, hast)
 	local elakaH = elakaUnder(hast)
-	check("   och samma sanering på hästen: sadeln laddas, inget aktivt följer med",
+	check("   och på hästen: elak sadelmodell avvisas, primitiven ritas, inget aktivt följer med",
 		okGS and TackRigg.hittaDel(hast, "sadel") ~= nil
-			and TackRigg.hittaDel(hast, "sadel"):GetAttribute("UBRFVisual") == "asset" and #elakaH == 0,
+			and TackRigg.hittaDel(hast, "sadel"):GetAttribute("UBRFVisual") == "primitiv" and #elakaH == 0,
 		#elakaH == 0 and "rent" or table.concat(elakaH, " · "))
 	TackService.taAvAllt(hast)
 	InsertService._svar = {}

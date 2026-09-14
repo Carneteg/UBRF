@@ -85,42 +85,65 @@ end
 	`taAv` och `TackService` inte kan se skillnad på en laddad modell och
 	en låda. Går något fel ritas primitiven. Utseendet är aldrig sanningen.
 
-	INGA SKRIPT. En laddad modell som bär Script/LocalScript/ModuleScript
-	förstörs i stället för att rensas: att rensa ett skript man inte läst
-	är att gissa vad det gjorde. Och av det som INTE är skript får bara
-	synlig geometri följa med (`TILLATNA_BARN` nedan) — resten förstörs.
+	INGA SKRIPT, INGET AKTIVT. En laddad modell som bär något utanför
+	vitlistan av inerta klasser (`TILLATNA_BEHALLS`/`TILLATNA_LOSES_UPP`
+	nedan) förstörs hel i stället för att rensas: att rensa det man inte
+	läst är att gissa vad resten gjorde. Primitiven ritas.
 
 	Studio-QA kan tvinga primitiven utan kodändring:
 	  workspace:SetAttribute("UBRFUtrustningVisual", "primitiv")   ]]
 local SKRIPT = { Script = true, LocalScript = true, ModuleScript = true }
 
---[[ VITLISTAN (#170 blockerare 3). Att avvisa skript räckte inte: allt
-	annat som hängde under delarna — prompter, klickdetektorer, ljud,
-	partiklar, krafter, constraints, ljus — följde med när delarna
-	flyttades ur den laddade behållaren, och hjälmens hierarki kan inte
-	läsas headless. Nu får bara SYNLIG GEOMETRI överleva importen:
-	BaseParts, och under dem enbart klasserna här. Allt annat förstörs,
-	och de tillåtna får inga egna barn (en Attachment kan bära en
-	ParticleEmitter). Det som inte står här finns inte i spelet. ]]
-local TILLATNA_BARN = {
+--[[ VITLISTAN (#170 blockerare 3, QA 05:45/05:50). Att avvisa skript
+	räckte inte: allt annat som hängde under delarna — prompter,
+	klickdetektorer, ljud, partiklar, krafter, ljus, säten — följde med
+	när delarna flyttades ur den laddade behållaren, och hjälmens
+	hierarki kan inte läsas headless. Nu prövas HELA hierarkin mot en
+	vitlista av inerta klasser, och bär modellen en enda instans utanför
+	den avvisas HELA modellen — primitiven ritas. Ingen rensning: att
+	plocka bort det aktiva ur en modell man inte läst är att gissa vad
+	resten gjorde, samma skäl som för skript.
+
+	  BEHÅLLS  — synlig geometri och det som bara beskriver den:
+	             BaseParts, Attachment (utan barn, prövas som alla andra),
+	             meshar, SurfaceAppearance, Decal, Texture.
+	  LÖSES UPP — inerta behållare och svetsar: de bär inget beteende,
+	             men delarna plattas ut i `Tack`-mappen och svetsas om av
+	             oss, så de förstörs efter flytten.
+	  ALLT ANNAT → avvisa. Det som inte står här finns inte i spelet. ]]
+local TILLATNA_BEHALLS = {
 	Attachment = true,
 	SpecialMesh = true, FileMesh = true, BlockMesh = true, CylinderMesh = true,
 	SurfaceAppearance = true,
 	Decal = true, Texture = true,
 }
+local TILLATNA_LOSES_UPP = {
+	Model = true, Folder = true, Accessory = true, Hat = true,
+	WeldConstraint = true, Weld = true, ManualWeld = true, Motor6D = true, Snap = true,
+}
+--[[ BaseParts som INTE är bara geometri: säten sätter spelare, spawn-
+	platser flyttar dem. De ärver BasePart men är beteende, och fäller
+	modellen. ]]
+local FORBJUDNA_DELAR = {
+	Seat = true, VehicleSeat = true, SkateboardPlatform = true, SpawnLocation = true, Terrain = true,
+}
 
-local function sanera(del: Instance)
-	for _, barn in ipairs(del:GetChildren()) do
-		if barn:IsA("BasePart") then
-			--[[ Delar under delar plattas ut av anroparen; deras egna
-				barn saneras när de själva passerar här. ]]
-		elseif TILLATNA_BARN[barn.ClassName] then
-			for _, barnbarn in ipairs(barn:GetChildren()) do
-				barnbarn:Destroy()
-			end
-		else
-			barn:Destroy()
+--[[ Sant om hela hierarkin är inert; annars falskt och klassnamnet som
+	fällde den. Skript räknas här också (de stod redan under avvisning). ]]
+local function inert(laddat: Instance): (boolean, string?)
+	for _, d in ipairs(laddat:GetDescendants()) do
+		local k = d.ClassName
+		if SKRIPT[k] or FORBJUDNA_DELAR[k] then return false, k end
+		if not (d:IsA("BasePart") or TILLATNA_BEHALLS[k] or TILLATNA_LOSES_UPP[k]) then
+			return false, k
 		end
+	end
+	return true, nil
+end
+
+local function losUpp(del: Instance)
+	for _, barn in ipairs(del:GetChildren()) do
+		if TILLATNA_LOSES_UPP[barn.ClassName] then barn:Destroy() end
 	end
 end
 
@@ -158,12 +181,15 @@ function TackRigg.laddaAsset(modell: Model, typ: string, vard: BasePart,
 		return nil
 	end
 
+	local arInert, fallde = inert(laddat)
+	if not arInert then
+		warn(("[Tack] %s: modellen %d avvisad — bär %s utanför vitlistan; primitiven ritas.")
+			:format(typ, post.assetId, tostring(fallde)))
+		laddat:Destroy()
+		return nil
+	end
 	local delar: { BasePart } = {}
 	for _, d in ipairs(laddat:GetDescendants()) do
-		if SKRIPT[d.ClassName] then
-			laddat:Destroy()
-			return nil
-		end
 		if d:IsA("BasePart") then table.insert(delar, d :: BasePart) end
 	end
 	if #delar == 0 then
@@ -196,7 +222,7 @@ function TackRigg.laddaAsset(modell: Model, typ: string, vard: BasePart,
 	local f = TackRigg.mapp(modell, true) :: Folder
 	local rot = delar[1]
 	for _, d in ipairs(delar) do
-		sanera(d)
+		losUpp(d)
 		local rel = (d.Position - centrum) * skala
 		local rotation = (d.CFrame :: any).Rotation or CFrame.new()
 		d.Size = d.Size * skala
