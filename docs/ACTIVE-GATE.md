@@ -109,7 +109,7 @@ build-identitet och place-drift**, på egen feature branch
 
 Bakgrunden är en läsande Studio-MCP-audit av den anslutna placen `UBRF`
 (placeId `106030782437053`): Rojo-träden stämde exakt mot repot, men
-`ReplicatedStorage.UBRFBuild` var handplacerad och pekade på en head 53
+`ReplicatedStorage.UBRFBuild` var handplacerad och pekade på en head 44
 commits gammal medan preflightens punkt 9 lyste grönt. QA-evidens ur den
 placen var därför inte trovärdig.
 

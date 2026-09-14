@@ -40,7 +40,7 @@ local Integritet = require(script.Parent.Integritet)
 	.rbxlx får samma sanning.
 
 	#171 rättade hålet: modulen var inte mappad alls, så en Rojo-place fick
-	ingen identitet och någon lade dit en för hand. Den pekade på en head 53
+	ingen identitet och någon lade dit en för hand. Den pekade på en head 44
 	commits gammal och höll punkt 9 grön hela vägen.
 
 	Det som RAPPORTERAS här är upplysning. Det som GATAS står i
@@ -259,7 +259,7 @@ function Preflight.kor(varldenFinns: boolean)
 
 	--[[ Punkt 9 låg tidigare HÄR, som ett efterhandspåslag utanför
 		mätningen: den fällde bara på att `sha` saknades helt. En
-		handplacerad modul med FEL sha passerade alltså, och gjorde det i 53
+		handplacerad modul med FEL sha passerade alltså, och gjorde det i 44
 		commits (#171). Raderna 9a–9d ligger nu i `matningar` och mäts som
 		allt annat — därför står det ingen identitetskontroll kvar här. ]]
 

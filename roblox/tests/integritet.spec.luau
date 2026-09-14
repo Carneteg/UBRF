@@ -4,7 +4,7 @@
 
 	Den läsande Studio-auditen fann det obehagliga: Rojo-träden stämde exakt
 	mot repot, och ändå var inget QA-resultat ur placen trovärdigt.
-	`ReplicatedStorage.UBRFBuild` var handplacerad, pekade på en head 53
+	`ReplicatedStorage.UBRFBuild` var handplacerad, pekade på en head 44
 	commits gammal, och preflightens punkt 9 sa PASS ändå.
 
 	Punkt 9 mätte nämligen bara EN sak: att fältet `sha` fanns. En modul med
