@@ -24,6 +24,9 @@
       },
       "UBRFKomplex": {
         "$path": "buildings/UBRFKomplex.luau"
+      },
+      "UBRFBuild": {
+        "$path": "game/UBRFBuild.luau"
       }
     },
     "ServerScriptService": {

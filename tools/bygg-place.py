@@ -188,8 +188,21 @@ def main() -> int:
         f'\tmiljo_sha = "{sha}",\n'
         '\tvag = "tools/bygg-place.py ur roblox/default.project.json",\n'
         "}\n")
+    #[[ #171: identiteten ar numera en MAPPAD fil, roblox/game/UBRFBuild.luau,
+    #   genererad av tools/bygg-identitet.py. Da kommer den in via tradet
+    #   ovan som vilken annan modul som helst, och den har raden skulle lagga
+    #   dit en ANDRA med samma namn.
+    #
+    #   Skalet till att den mappades: en Rojo-synkad place fick forr ingen
+    #   identitet alls, sa nagon lade dit en for hand. Den blev kvar och pekade
+    #   pa en head 53 commits gammal medan punkt 9 lyste gront.
+    #
+    #   Raden star kvar for den place som byggs ur en gren DAR mappningen inte
+    #   finns — men bara da, och identiteten far inte langre hittas pa nar
+    #   filen finns. ]]
     for nod in rotnoder:
-        if nod.namn == "ReplicatedStorage":
+        if nod.namn == "ReplicatedStorage" and \
+                not any(b.namn == "UBRFBuild" for b in nod.barn):
             nod.barn.append(Nod("ModuleScript", "UBRFBuild", identitet))
 
     #[[ En place MASTE ha en Workspace. Projektfilen namner ingen, for Rojo
