@@ -563,7 +563,9 @@ const ANL = {
     {typ:"tra", p:[[178,97],[206,97],[206,117],[178,117],[178,97]],
      grindar:[{p:[178,107], bredd:2.4}]},                              // hage Ö2
     {typ:"el",  p:[[112,20],[112,121]]},                               // trådstängsel mot åkern
-    {typ:"rail",p:[[155,121.5],[168,121.5]]},                          // rail framför klubbgaveln
+    /* Railen framför klubbgaveln är struken (Tobias, SUP-0061): den låg på
+       y 121,5, alltså inne i klubbdelen tvärs över entréhallen. Struken i
+       källan så att alla konsumenter tappar den samtidigt. */
     {typ:"rail",p:[[96,127],[96,136]]},                                // rail vid lekhagen
   ],
   hagar: [ // betande hästar (id ur HORSES) för liv i bilden

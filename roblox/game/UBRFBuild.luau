@@ -10,12 +10,12 @@
 	sitt eget commit-SHA, sa det faltet ligger alltid minst ett steg
 	efter. Gata aldrig pa det. ]]
 return {
-	kallhash = "2b7fd06466c4ef4b004a9fd6760812979f8a97826bf2dfe33a5f3e53e1d0bcdf",
+	kallhash = "a3e1f7e9f811572210119da34bdbd87b52a574748c3240f4c0db6b4040f7e63b",
 	lage = "rojo",
 	kallor = 67,
-	sha = "d38eb1554d0082e1242e0ed889a04247b8c8fd1d",
-	miljo_sha = "d38eb1554d0082e1242e0ed889a04247b8c8fd1d",
-	genererad = "2026-09-14T07:29:14Z",
+	sha = "8efb78dfd59f6df060cc960bed78610a8d77fabc",
+	miljo_sha = "8efb78dfd59f6df060cc960bed78610a8d77fabc",
+	genererad = "2026-09-14T08:22:43Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
