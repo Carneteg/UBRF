@@ -87,11 +87,42 @@ end
 
 	INGA SKRIPT. En laddad modell som bär Script/LocalScript/ModuleScript
 	förstörs i stället för att rensas: att rensa ett skript man inte läst
-	är att gissa vad det gjorde. Katalogen avvisar hjälmen av det skälet.
+	är att gissa vad det gjorde. Och av det som INTE är skript får bara
+	synlig geometri följa med (`TILLATNA_BARN` nedan) — resten förstörs.
 
 	Studio-QA kan tvinga primitiven utan kodändring:
 	  workspace:SetAttribute("UBRFUtrustningVisual", "primitiv")   ]]
 local SKRIPT = { Script = true, LocalScript = true, ModuleScript = true }
+
+--[[ VITLISTAN (#170 blockerare 3). Att avvisa skript räckte inte: allt
+	annat som hängde under delarna — prompter, klickdetektorer, ljud,
+	partiklar, krafter, constraints, ljus — följde med när delarna
+	flyttades ur den laddade behållaren, och hjälmens hierarki kan inte
+	läsas headless. Nu får bara SYNLIG GEOMETRI överleva importen:
+	BaseParts, och under dem enbart klasserna här. Allt annat förstörs,
+	och de tillåtna får inga egna barn (en Attachment kan bära en
+	ParticleEmitter). Det som inte står här finns inte i spelet. ]]
+local TILLATNA_BARN = {
+	Attachment = true,
+	SpecialMesh = true, FileMesh = true, BlockMesh = true, CylinderMesh = true,
+	SurfaceAppearance = true,
+	Decal = true, Texture = true,
+}
+
+local function sanera(del: Instance)
+	for _, barn in ipairs(del:GetChildren()) do
+		if barn:IsA("BasePart") then
+			--[[ Delar under delar plattas ut av anroparen; deras egna
+				barn saneras när de själva passerar här. ]]
+		elseif TILLATNA_BARN[barn.ClassName] then
+			for _, barnbarn in ipairs(barn:GetChildren()) do
+				barnbarn:Destroy()
+			end
+		else
+			barn:Destroy()
+		end
+	end
+end
 
 local function visualOverride(): string?
 	local ok, v = pcall(function()
@@ -165,6 +196,7 @@ function TackRigg.laddaAsset(modell: Model, typ: string, vard: BasePart,
 	local f = TackRigg.mapp(modell, true) :: Folder
 	local rot = delar[1]
 	for _, d in ipairs(delar) do
+		sanera(d)
 		local rel = (d.Position - centrum) * skala
 		local rotation = (d.CFrame :: any).Rotation or CFrame.new()
 		d.Size = d.Size * skala

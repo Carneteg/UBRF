@@ -47,10 +47,43 @@ Rekommendation: **noll** hopp integreras i den här gaten; `2780160044`
   sadeln får lyftas av medan hon är tränsad. Underlägget kan inte dras ut
   under sadeln.
 - Eftervårdens "Ta av sadeln"/"Ta av tränset" tar av på riktigt (före #165
-  lämnade de delarna kvar på hästen).
+  lämnade de delarna kvar på hästen) — och **kvitterar sist** (#170
+  blockerare 1): först får-jag (`Pass.farUtfora`, inget kvitto), sedan
+  handgreppet per del (`TackService.taAv`), sedan läser servern världen
+  (sitter något kvar → `tack.sitter_kvar`), och först då `Pass.utfor`.
+  Är hästen borta nekas momentet med `tack.ingen_hast`. Ett nekat moment
+  kvitteras aldrig och kan göras om utan omloggning. Samma ordning som
+  påsättningen (`utforMoment`): logiskt kan inte gå före fysiskt åt något
+  håll.
+- Boxfrontens prompt lämnar **sadel och träns som ett par** till
+  `GameplayService.valjUtrustningPar` (#169, #170 blockerare 2): hela
+  valet prövas (kända typer, hästen finns i stallet) innan något skrivs,
+  och skrivs sedan som en tabell. Nekas valet är det föregående paret
+  orört, skälet kommer tillbaka (`tack.okand_hast` / `tack.okand_utrustning`)
+  och `TackForradService.tag` loggar "tog" bara när båda togs — annars en
+  varning med skälet. Att paret kan vara **fel hästs** är fortfarande
+  poängen (webbens felval) och möts av `TackService.satPa` på hästen.
 - Ingenting byts på hästryggen (`tack.sitter_upp`).
 - Hjälmen kommer tillbaka efter respawn om spelaren hade den på.
 - Studio-QA kan tvinga primitiverna: `workspace:SetAttribute("UBRFUtrustningVisual", "primitiv")`.
+
+## Importsanering — vad som får följa med en Creator Store-modell
+
+`TackRigg.laddaAsset` avvisar hela modellen om den bär Script/LocalScript/
+ModuleScript (primitiven ritas). Av det som inte är skript överlever bara
+**synlig geometri** (#170 blockerare 3): BaseParts, och under dem enbart
+`Attachment`, `SpecialMesh`/`FileMesh`/`BlockMesh`/`CylinderMesh`,
+`SurfaceAppearance`, `Decal`, `Texture` — en vitlista (`TILLATNA_BARN`),
+inte en svartlista. Prompter, klickdetektorer, ljud, eld/rök/partiklar,
+ljus, beams, highlights, krafter, constraints, nästlade modeller och allt
+annat förstörs innan delarna flyttas till `Tack`-mappen, och de tillåtna
+instanserna får inga egna barn (en `Attachment` kan bära en
+`ParticleEmitter`). Alla delar är dessutom CanCollide/CanQuery/CanTouch av
+och masslösa. Provet `utrustningsgrind.spec` g) laddar ett elakt fixtur
+med elva aktiva icke-skript-klasser och kräver att ingen når karaktären
+eller hästen. Det som inte står på vitlistan finns inte i spelet — det är
+därför hjälmens oinspekterbara hierarki (assetdelivery 401) är
+acceptabel att ladda.
 
 ## Enhetsparitet — equip och unequip per inmatning
 

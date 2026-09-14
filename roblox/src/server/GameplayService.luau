@@ -45,6 +45,7 @@ local Net = Core.Networking
 
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
+local Spel = require(ReplicatedStorage.UBRFSpel)
 local SparService = require(script.Parent.SparService)
 
 local GameplayService = {}
@@ -360,13 +361,55 @@ end
 --[[ Sadelkammarens val: vilken hästs sadel och träns spelaren tagit med
 	sig. Webbens `visaSadelkammare` gör samma val, och samma fel går att
 	göra — utrustningen prövas mot hästen när den sätts på. ]]
+--[[ ATOMISKT (#169, #170 blockerare 2). Boxfrontens prompt ger sadel OCH
+	träns i ett grepp. Förut skrevs de i två anrop; nekades det andra
+	stod spelaren med den ena hästens sadel och den andras träns. Nu
+	prövas HELA valet först och skrivs som EN tabell sist — eller inte
+	alls. Ett nekat val lämnar det föregående paret orört.
+
+	Prövningen är den sadelkammaren gör: utrustningen måste tillhöra en
+	häst som finns i stallet. Att den kan tillhöra FEL häst är poängen
+	(webbens felval); det möts av `TackService.satPa` på hästen. ]]
+function GameplayService.valjUtrustningPar(player: Player, val: { [string]: string? }): (boolean, string?)
+	if type(val) ~= "table" then
+		return false, "tack.okand_utrustning"
+	end
+	local nytt: { [string]: string } = {}
+	local antal = 0
+	for typ, hastId in pairs(val) do
+		if typ ~= "sadel" and typ ~= "trans" then
+			return false, "tack.okand_utrustning"
+		end
+		if hastId ~= nil then
+			if type(hastId) ~= "string" or Spel.hastar[hastId] == nil then
+				return false, "tack.okand_hast"
+			end
+			nytt[typ] = hastId
+		end
+		antal += 1
+	end
+	if antal == 0 then
+		return false, "tack.okand_utrustning"
+	end
+	local gammalt = valdUtrustning[player] or {}
+	local sammanslaget: { [string]: string } = {}
+	for typ, hastId in pairs(gammalt) do sammanslaget[typ] = hastId end
+	for typ, _ in pairs(val) do sammanslaget[typ] = nytt[typ] end
+	valdUtrustning[player] = sammanslaget
+	return true
+end
+
 function GameplayService.valjUtrustning(player: Player, typ: string, hastId: string?): (boolean, string?)
 	if typ ~= "sadel" and typ ~= "trans" then
 		return false, "tack.okand_utrustning"
 	end
-	valdUtrustning[player] = valdUtrustning[player] or {}
-	valdUtrustning[player][typ] = hastId
-	return true
+	if hastId == nil then
+		--[[ Att lämna tillbaka en typ är en enda skrivning och kan inte
+			bli halv; `{ [typ] = nil }` vore en tom tabell. ]]
+		if valdUtrustning[player] then valdUtrustning[player][typ] = nil end
+		return true
+	end
+	return GameplayService.valjUtrustningPar(player, { [typ] = hastId })
 end
 
 function GameplayService.valdFor(player: Player): { [string]: string }?
@@ -410,6 +453,14 @@ end
 
 --[[ ── Passet ──────────────────────────────────────────────────────── ]]
 
+--[[ Vilka delar ett eftervårdsmoment tar av hästen, i den ordning de
+	tas. Sadeln tar underlägget med sig (kanon: "Ta av sadel och
+	underlägg"); tyglarna följer tränset inne i `TackService.taAv`. ]]
+local FYSISK_EFTERVARD: { [string]: { string } } = {
+	sadel = { "sadel", "underlagg" },
+	trans = { "trans" },
+}
+
 function GameplayService.eftervard(player: Player, momentId: string): (boolean, string?)
 	if typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
@@ -425,28 +476,62 @@ function GameplayService.eftervard(player: Player, momentId: string): (boolean, 
 		return false, skal
 	end
 
-	local ok, avslag = Pass.utfor(p, momentId)
-	--[[ ── EFTERVÅRDEN TAR AV PÅ RIKTIGT (#165) ─────────────────────
+	--[[ ── EFTERVÅRDEN TAR AV PÅ RIKTIGT — OCH KVITTERAR SIST (#165, #170) ──
 		"Ta av sadeln" och "Ta av tränset" kvitterades förut i `Pass` utan
 		att någon del lämnade hästen: ingen produktionskod anropade
 		`TackService.taAv`, så hon stod sadlad genom hela natten och
-		nästa dags `utr:2` nekades med "den sitter redan på". Nu river
-		momentet delen — sadeln tar underlägget med sig, som kanon säger
-		("Ta av sadel och underlägg") — och `skicka` låter HUD:en läsa
-		det ur världen. ]]
-	if ok then
+		nästa dags `utr:2` nekades med "den sitter redan på".
+
+		Första rättelsen (#165) rev delen — men EFTER kvittot, och utan
+		att läsa svaret. Då kunde momentet stå som gjort medan sadeln
+		eller underlägget satt kvar (hästen borta, avtagningen nekad,
+		andra halvan av sadel+underlägg misslyckad): logiskt och fysiskt
+		gled isär åt andra hållet än blockerare 5. Nu är ordningen den
+		som `utforMoment` redan har för påsättningen:
+
+		  1. får momentet göras nu?          (`Pass.farUtfora`, inget kvitto)
+		  2. handgreppet på hästen            (`TackService.taAv`, per del)
+		  3. läs världen: är allt av?         (annars `tack.sitter_kvar`)
+		  4. kvittera                         (`Pass.utfor`)
+
+		Nekas något i 1–3 kvitteras ingenting, spelaren får skälet och
+		kan göra om momentet. Sadeln tar underlägget med sig, som kanon
+		säger ("Ta av sadel och underlägg"). ]]
+	local far, skalFar, extra = Pass.farUtfora(p, momentId)
+	if not far then
+		skicka(player)
+		skickaPass(player)
+		return false, skalFar, extra
+	end
+	local fysiskt = FYSISK_EFTERVARD[momentId]
+	if fysiskt then
 		local modell = bunden[player]
-		if modell then
-			if momentId == "sadel" then
-				TackService.taAv(player, modell, "sadel")
-				TackService.taAv(player, modell, "underlagg")
-			elseif momentId == "trans" then
-				TackService.taAv(player, modell, "trans")
+		if not (modell and modell.Parent ~= nil) then
+			skicka(player)
+			skickaPass(player)
+			return false, "tack.ingen_hast"
+		end
+		for _, typ in ipairs(fysiskt) do
+			if TackService.harTack(modell, typ) then
+				local okAv, skalAv = TackService.taAv(player, modell, typ)
+				if not okAv then
+					skicka(player)
+					skickaPass(player)
+					return false, skalAv
+				end
 			end
 		end
-		if Pass.farAvsluta(p) then
-			GameplayService.avslutaPass(player)
+		for _, typ in ipairs(fysiskt) do
+			if TackService.harTack(modell, typ) then
+				skicka(player)
+				skickaPass(player)
+				return false, "tack.sitter_kvar"
+			end
 		end
+	end
+	local ok, avslag = Pass.utfor(p, momentId)
+	if ok and Pass.farAvsluta(p) then
+		GameplayService.avslutaPass(player)
 	end
 	skicka(player)
 	skickaPass(player)

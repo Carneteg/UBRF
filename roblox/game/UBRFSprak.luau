@@ -597,6 +597,18 @@ Sprak.text = {
 		sv = "Sadeln först",
 		en = "The saddle first",
 	},
+	["tack.sitter_kvar"] = {
+		sv = "Den sitter fortfarande på — gör om momentet",
+		en = "It is still on — do the step again",
+	},
+	["tack.okand_hast"] = {
+		sv = "Den hästen finns inte i stallet",
+		en = "That horse is not in the stable",
+	},
+	["tack.ingen_mottagare"] = {
+		sv = "Utrustningen kan inte tas just nu",
+		en = "The tack cannot be taken right now",
+	},
 	["tack.underlagget_forst"] = {
 		sv = "Underlägget först — sadeln ligger på det",
 		en = "The numnah first — the saddle goes on top of it",

@@ -156,7 +156,13 @@ local hast = HastRigg.bygg("blackrock_jack", "Blackrock Jack", CFrame.new(vec(30
 hast.Parent = workspace
 local spelare3, _, rot3 = nySpelare("Modell", 7003, vec(33, 0, 0))
 
-local function modellMed(delar, medSkript)
+--[[ Klasser som INTE är skript men ändå gör saker i världen: prompter,
+	klick, ljud, eld, partiklar, krafter. Ett elakt fixtur bär en av varje
+	under delarna, plus två tillåtna (SurfaceAppearance, Attachment) som
+	SKA överleva — fast utan egna barn. ]]
+local AKTIVA = { "ProximityPrompt", "ClickDetector", "Sound", "Fire", "BodyVelocity",
+	"PointLight", "Beam", "Highlight", "TouchTransmitter" }
+local function modellMed(delar, medSkript, medAktiva)
 	return function()
 		local m = Instance.new("Model")
 		m.Name = "Laddad"
@@ -168,6 +174,36 @@ local function modellMed(delar, medSkript)
 			p.Anchored = true
 			p.CanCollide = true
 			p.Parent = m
+			if medAktiva and i == 1 then
+				for _, klass in ipairs(AKTIVA) do
+					local a = Instance.new(klass)
+					a.Name = "Elak" .. klass
+					a.Parent = p
+				end
+				local yta = Instance.new("SurfaceAppearance")
+				yta.Name = "Yta"
+				yta.Parent = p
+				local fast = Instance.new("Attachment")
+				fast.Name = "Fäste"
+				fast.Parent = p
+				local rok = Instance.new("ParticleEmitter")
+				rok.Name = "ElakParticleEmitter"
+				rok.Parent = fast
+				local inre = Instance.new("Model")
+				inre.Name = "Inre"
+				inre.Parent = p
+				local kraft = Instance.new("LinearVelocity")
+				kraft.Name = "ElakLinearVelocity"
+				kraft.Parent = inre
+				local del9 = Instance.new("Part")
+				del9.Name = "Del9"
+				del9.Size = vec(1, 1, 1)
+				del9.CFrame = CFrame.new(vec(0, 3, 0))
+				del9.Parent = inre
+				local ljud9 = Instance.new("Sound")
+				ljud9.Name = "ElakSoundNested"
+				ljud9.Parent = del9
+			end
 		end
 		if medSkript then
 			local sk = Instance.new("Script")
@@ -176,6 +212,19 @@ local function modellMed(delar, medSkript)
 		end
 		return m
 	end
+end
+local function elakaUnder(rot)
+	local hittade = {}
+	for _, d in ipairs(rot:GetDescendants()) do
+		local k = d.ClassName
+		if k == "ProximityPrompt" or k == "ClickDetector" or k == "Sound" or k == "Fire"
+			or k == "BodyVelocity" or k == "PointLight" or k == "Beam" or k == "Highlight"
+			or k == "TouchTransmitter" or k == "ParticleEmitter" or k == "LinearVelocity"
+			or k == "Model" or k == "Script" or k == "LocalScript" or k == "ModuleScript" then
+			table.insert(hittade, k .. ":" .. tostring(d.Name))
+		end
+	end
+	return hittade
 end
 local function antalDelar()
 	local f = hast:FindFirstChild("Tack")
@@ -295,6 +344,53 @@ do
 	check("   en hjälmmodell med Script avvisas — primitiven ritas",
 		dS ~= nil and dS:GetAttribute("UBRFVisual") == "primitiv")
 	TackService.taAvHjalm(spH)
+
+	--[[ g) VITLISTAN (#170 blockerare 3). En modell utan skript men med
+		prompt, klick, ljud, eld, kraft, ljus, beam, highlight, en
+		partikelkälla under en Attachment, en nästlad Model med
+		LinearVelocity och en nästlad del med eget ljud. Inget av det
+		får nå karaktären eller hästen; ytan och fästet får. ]]
+	InsertService._svar[92445706145003] = modellMed({ vec(6, 4, 6), vec(2, 1, 2) }, false, true)
+	local okG, skalG = TackService.satPaHjalm(spH)
+	local dG = TackRigg.hittaDel(kH, "hjalm")
+	local elakaK = elakaUnder(kH)
+	check("g) elakt hjälmfixtur laddas ändå som asset (inga skript i det)",
+		okG and dG ~= nil and dG:GetAttribute("UBRFVisual") == "asset", tostring(skalG))
+	check("   men ingen aktiv icke-skript-instans överlever in i karaktären",
+		#elakaK == 0, #elakaK == 0 and "rent" or table.concat(elakaK, " · "))
+	local ytaK, fasteK, fasteBarn = nil, nil, -1
+	for _, d in ipairs(kH:GetDescendants()) do
+		if d.ClassName == "SurfaceAppearance" then ytaK = d end
+		if d.ClassName == "Attachment" and d.Name == "Fäste" then fasteK = d; fasteBarn = #d:GetChildren() end
+	end
+	check("   synlig geometri överlever: SurfaceAppearance och Attachment finns kvar",
+		ytaK ~= nil and fasteK ~= nil)
+	check("   och Attachment har inga egna barn (partikelkällan är borta)", fasteBarn == 0, tostring(fasteBarn))
+	local delarK = 0
+	for _, d in ipairs(kH:GetDescendants()) do
+		if d:IsA("BasePart") and d:GetAttribute("UBRFTack") == nil and d.Name:match("^Del") then delarK += 1 end
+	end
+	check("   den nästlade delen plattades ut till Tack-mappen som geometri",
+		TackRigg.hittaDel(kH, "hjalm") ~= nil and (function()
+			local f = kH:FindFirstChild("Tack")
+			if not f then return false end
+			for _, d in ipairs(f:GetChildren()) do if d.Name == "Del9" then return true end end
+			return false
+		end)())
+	TackService.taAvHjalm(spH)
+	check("   hjälmen av river även det sanerade", elakaUnder(kH) ~= nil
+		and (kH:FindFirstChild("Tack") == nil or #kH:FindFirstChild("Tack"):GetChildren() == 0))
+
+	--[[ samma fixtur som sadel på hästen ]]
+	InsertService._svar[9639407836] = modellMed({ vec(10, 4, 14) }, false, true)
+	TackService.satPa(spelare3, hast, "underlagg", nil, hast)
+	local okGS = TackService.satPa(spelare3, hast, "sadel", nil, hast)
+	local elakaH = elakaUnder(hast)
+	check("   och samma sanering på hästen: sadeln laddas, inget aktivt följer med",
+		okGS and TackRigg.hittaDel(hast, "sadel") ~= nil
+			and TackRigg.hittaDel(hast, "sadel"):GetAttribute("UBRFVisual") == "asset" and #elakaH == 0,
+		#elakaH == 0 and "rent" or table.concat(elakaH, " · "))
+	TackService.taAvAllt(hast)
 	InsertService._svar = {}
 end
 
@@ -451,6 +547,125 @@ do
 	S.spelare.Character = k3
 	S.spelare.CharacterAdded:Fire(k3)
 	check("   men inte om hon tagit av den", not TackService.harHjalm(S.spelare))
+end
+
+-- ══ 4f. EFTERVÅRDEN KVITTERAR SIST (#170 blockerare 1) ═══════════════
+print("\n── 4f. Eftervården: får-jag → handgrepp → världen → kvitto ──")
+do
+	local S = nySession("Sist", 7012)
+	local okS, skalS = skotsel(S.spelare)
+	check("f) förberedelsen klar för en andra ryttare", okS == true, tostring(skalS))
+	GameplayService.utrustning(S.spelare, "hjalm", true)
+	check("   hon sitter upp", (HorseService.tryMount(S.spelare, S.modell)) == true)
+	HorseService.dismount(S.spelare)
+	local p = GameplayService.passFor(S.spelare)
+	check("   passet är i eftervården", p ~= nil and p.lage == Pass.LAGE.EFTERVARD)
+
+	--[[ i) fel tur: tränset före sadeln. Prövningen ligger FÖRE handgreppet,
+		så tränset ska sitta kvar och inget vara kvitterat. ]]
+	local okI, skalI = GameplayService.eftervard(S.spelare, "trans")
+	check("i) fel moment nekas INNAN något tas av", okI == false and skalI == "pass.fel_tur"
+		and TackService.transad(S.modell) and p.gjorda.trans == nil, tostring(skalI))
+	--[[ momenten före sadeln (gjorden m.fl.) görs i kanonordning; de rör
+		inget fysiskt och ska gå igenom. ]]
+	local fram = true
+	while true do
+		local n = Pass.nastaMoment(p)
+		if not n or n.id == "sadel" then break end
+		local okN, skalN = GameplayService.eftervard(S.spelare, n.id)
+		if not okN then fram = false; print("   moment " .. n.id .. " nekades: " .. tostring(skalN)); break end
+	end
+	check("   momenten före sadeln gjorda, sadeln står på tur", fram and Pass.nastaMoment(p) ~= nil
+		and Pass.nastaMoment(p).id == "sadel" and TackService.sadlad(S.modell))
+
+	--[[ ii) hästen är borta. ]]
+	local far = S.modell.Parent
+	S.modell.Parent = nil
+	local okII, skalII = GameplayService.eftervard(S.spelare, "sadel")
+	S.modell.Parent = far
+	check("ii) hästen borta → 'Ta av sadeln' nekas med skäl och kvitteras inte",
+		okII == false and skalII == "tack.ingen_hast" and p.gjorda.sadel == nil
+			and TackService.sadlad(S.modell), tostring(skalII))
+
+	--[[ iii) andra halvan av sadel+underlägg misslyckas: riggen tar inte
+		underlägget. Sadeln är av, underlägget kvar — momentet får INTE
+		stå som gjort, och spelaren får ett skäl. ]]
+	local riktigTaAv = TackRigg.taAv
+	TackRigg.taAv = function(m, typ)
+		if typ == "underlagg" then return end
+		return riktigTaAv(m, typ)
+	end
+	local okIII, skalIII = GameplayService.eftervard(S.spelare, "sadel")
+	TackRigg.taAv = riktigTaAv
+	check("iii) underlägget sitter kvar → momentet nekas med tack.sitter_kvar och kvitteras inte",
+		okIII == false and skalIII == "tack.sitter_kvar" and p.gjorda.sadel == nil,
+		tostring(skalIII))
+	check("   världen: sadeln av, underlägget kvar — och HUD:en får läsa det",
+		not TackService.sadlad(S.modell) and TackService.harTack(S.modell, "underlagg"))
+	local vyIII = sistaSync(S.spelare)
+	check("   vyn säger sadel av, underlägg kvar", vyIII ~= nil and vyIII.utrustning.sadel == false
+		and vyIII.utrustning.underlagg == true)
+
+	--[[ iv) återhämtning utan omloggning: gör om momentet. ]]
+	local okIV, skalIV = GameplayService.eftervard(S.spelare, "sadel")
+	check("iv) momentet går att göra om — nu går underlägget av och momentet kvitteras",
+		okIV == true and p.gjorda.sadel == true and not TackService.harTack(S.modell, "underlagg"),
+		tostring(skalIV))
+	check("   och 'redan gjort' nekas utan att röra hästen",
+		select(2, GameplayService.eftervard(S.spelare, "sadel")) == "pass.redan_gjort")
+
+	--[[ v) avtagningen nekar (TackService säger nej) → inget kvitto. ]]
+	local riktigTackTaAv = TackService.taAv
+	TackService.taAv = function(pl, m, typ) return false, "tack.provnej" end
+	local okV, skalV = GameplayService.eftervard(S.spelare, "trans")
+	TackService.taAv = riktigTackTaAv
+	check("v) nekad avtagning → skälet tillbaka, tränset kvar, inget kvitto",
+		okV == false and skalV == "tack.provnej" and TackService.transad(S.modell) and p.gjorda.trans == nil,
+		tostring(skalV))
+	local okVI = GameplayService.eftervard(S.spelare, "trans")
+	check("   och därefter går tränset av på riktigt", okVI == true and not TackService.transad(S.modell)
+		and p.gjorda.trans == true)
+end
+
+-- ══ 5. BOXFRONTENS PAR ÄR ATOMISKT (#169, #170 blockerare 2) ══════════
+print("\n── 5. Sadel och träns som ett val: allt eller inget ──")
+do
+	local a = { Name = "Anna", UserId = 7021 }
+	local b = { Name = "Bea", UserId = 7022 }
+	local jack, granne = "blackrock_jack", UBRFSpel.ordning[1]
+	check("5) ett giltigt par tas", (GameplayService.valjUtrustningPar(a, { sadel = jack, trans = jack })) == true)
+	local v = GameplayService.valdFor(a)
+	check("   och båda pekar på hästen", v ~= nil and v.sadel == jack and v.trans == jack)
+
+	local okX, skalX = GameplayService.valjUtrustningPar(a, { sadel = granne, trans = "finns_inte" })
+	v = GameplayService.valdFor(a)
+	check("   sadel giltig + träns okänd → hela valet nekas", okX == false and skalX == "tack.okand_hast", tostring(skalX))
+	check("   och det föregående paret är orört — inte blandat", v.sadel == jack and v.trans == jack,
+		("sadel %s · träns %s"):format(tostring(v.sadel), tostring(v.trans)))
+	local okY, skalY = GameplayService.valjUtrustningPar(a, { sadel = jack, grimma = jack })
+	check("   okänd utrustningstyp nekar hela valet", okY == false and skalY == "tack.okand_utrustning", tostring(skalY))
+	check("   tomt val nekas", (GameplayService.valjUtrustningPar(a, {})) == false)
+	check("   icke-tabell nekas", (GameplayService.valjUtrustningPar(a, "sadel")) == false)
+	v = GameplayService.valdFor(a)
+	check("   fortfarande orört", v.sadel == jack and v.trans == jack)
+
+	check("   grannens par tas i ett grepp", (GameplayService.valjUtrustningPar(a, { sadel = granne, trans = granne })) == true)
+	v = GameplayService.valdFor(a)
+	check("   och ersätter det förra som ett par", v.sadel == granne and v.trans == granne)
+	GameplayService.valjUtrustningPar(a, { sadel = granne, trans = granne })
+	v = GameplayService.valdFor(a)
+	check("   samma val två gånger är idempotent", v.sadel == granne and v.trans == granne)
+
+	GameplayService.valjUtrustningPar(b, { sadel = jack, trans = jack })
+	local va, vb = GameplayService.valdFor(a), GameplayService.valdFor(b)
+	check("   en annan spelares val rör inte den förstas", va.sadel == granne and va.trans == granne
+		and vb.sadel == jack and vb.trans == jack)
+	check("   det gamla enkelanropet går genom samma prövning",
+		select(2, GameplayService.valjUtrustning(a, "sadel", "finns_inte")) == "tack.okand_hast"
+			and GameplayService.valdFor(a).sadel == granne)
+	check("   och kan lämna tillbaka (nil) utan att röra den andra",
+		(GameplayService.valjUtrustning(a, "sadel", nil)) == true
+			and GameplayService.valdFor(a).sadel == nil and GameplayService.valdFor(a).trans == granne)
 end
 
 if fails > 0 then
