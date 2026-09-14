@@ -33,15 +33,21 @@ local function finns(foralder: Instance?, namn: string): boolean
 	return foralder ~= nil and foralder:FindFirstChild(namn) ~= nil
 end
 
---[[ Buildens identitet. Skrivs av tools/bygg-place.py som en modul i
-	ReplicatedStorage. Saknas den vet vi inte vad som testas, och då är det
-	inte ett PASS — det var hela poängen med punkt 9. ]]
+local Integritet = require(script.Parent.Integritet)
+
+--[[ Buildens identitet. Genereras av tools/bygg-identitet.py och mappas in
+	av `default.project.json`, så att BÅDE en Rojo-synkad place och en byggd
+	.rbxlx får samma sanning.
+
+	#171 rättade hålet: modulen var inte mappad alls, så en Rojo-place fick
+	ingen identitet och någon lade dit en för hand. Den pekade på en head 53
+	commits gammal och höll punkt 9 grön hela vägen.
+
+	Det som RAPPORTERAS här är upplysning. Det som GATAS står i
+	`Integritet.rader()` 9a–9d. ]]
 local function buildIdentitet(): (string, string)
-	local m = ReplicatedStorage:FindFirstChild("UBRFBuild")
-	if not m or not m:IsA("ModuleScript") then return "OKÄND", "OKÄND" end
-	local ok, data = pcall(require, m)
-	if not ok or typeof(data) ~= "table" then return "OKÄND", "OKÄND" end
-	local d = data :: any
+	local d = Integritet.identitet()
+	if not d then return "OKÄND", "OKÄND" end
 	return tostring(d.sha or "OKÄND"), tostring(d.miljo_sha or d.sha or "OKÄND")
 end
 
@@ -224,6 +230,14 @@ function Preflight.matningar(varldenFinns: boolean): { Rad }
 		mäts bara att tjänsten finns och svarar, inte att den lyckas skriva. ]]
 	rad(ut, "8 SparService finns i builden", finns(horse, "SparService"))
 
+	--[[ 9 och 10: build-identitet och kvarglömda runtime-artefakter (#171).
+		Raderna byggs av `Integritet` och läggs in HÄR i stället för i `kor`,
+		så att de mäts av samma väg som allt annat — en rad som bara finns i
+		utskriften går inte att prova, och punkt 9 satt tidigare just där. ]]
+	for _, r in ipairs(Integritet.rader()) do
+		rad(ut, r.namn, r.ok, r.detalj)
+	end
+
 	return ut
 end
 
@@ -243,11 +257,11 @@ function Preflight.kor(varldenFinns: boolean)
 		end
 	end
 
-	--[[ Okänd build är ett fel i sig: då vet ingen vad som testades. ]]
-	if sha == "OKÄND" then
-		table.insert(fel, "9 build-identitet (ReplicatedStorage.UBRFBuild)")
-		warn("  SAKNAS  9 build-identitet — går inte att veta vilken head som testas")
-	end
+	--[[ Punkt 9 låg tidigare HÄR, som ett efterhandspåslag utanför
+		mätningen: den fällde bara på att `sha` saknades helt. En
+		handplacerad modul med FEL sha passerade alltså, och gjorde det i 53
+		commits (#171). Raderna 9a–9d ligger nu i `matningar` och mäts som
+		allt annat — därför står det ingen identitetskontroll kvar här. ]]
 
 	local flagga = ReplicatedStorage:FindFirstChild("UBRFPreflight")
 	if not flagga then
