@@ -777,6 +777,174 @@ do
 	anl:Destroy()
 end
 
+
+--[[ ══ HON GÅR UT I GÅNGEN, INTE TVÄRS ÖVER DEN (#182) ═════════════════
+
+	Mätt i Studio på `6350c15`, bildruta 237:
+
+	    boxdörr MB 5      x 496,49        gång B  x 496,6 .. 504,3
+	    gammalt ut2       x 503,09        hästens collider 6,82 studs
+	    häst 500,29 · 273,98  kurs 90°
+	    kontakt: Workspace.Anläggning.UBRF.Boxdörr E 5
+
+	Delmålet låg 1,2 studs från MOTSATTA radens front. Hon kördes rakt
+	tvärs över en gång som är 0,9 studs bredare än hon är lång, kilade
+	fast, och kopplet släppte på `led.fastnat` med en giltig väg hon inte
+	kunde bära.
+
+	Provet mäter KURSEN: med dörren öppen åt +x och spelaren i +z ska hon
+	svänga mellan de två riktningarna, inte rakt ut. Rakt ut är 90°; längs
+	gången är 0°; det nya delmålet ligger däremellan.
+
+	Båda gångriktningarna provas — spelaren på var sida om dörren — för
+	att svängen ska följa VART hon ska och inte en konstant. ]]
+print("\n── Hon går ut i gången, inte tvärs över den ──")
+do
+	local function prova(motZ: number, namn: string)
+		LedService._glomForProv()
+		local anl = Instance.new("Model")
+		anl.Name = "Anläggning"
+		anl.Parent = workspace
+		local DX, DZ = 600, 400
+		local blad = Instance.new("Part")
+		blad.Name = "Boxdörr sväng"
+		blad.Size = vec(0.18, 4.44, 3.60)
+		blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+		blad:SetAttribute("UBRFBoxdorr", true)
+		blad:SetAttribute("Langs", "Z")
+		blad:SetAttribute("Utat", 1)
+		blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+		blad.Parent = anl
+
+		--[[ Hästen inne i boxen, vänd rakt ut mot dörren. ]]
+		local h, kropp = nyHast("svänghäst" .. namn, vec(DX - 4, 3, DZ))
+		--[[ Inom räckhåll — `borja` nekar annars — men tydligt på en sida
+			om dörren, så att gångriktningen går att avgöra. ]]
+		local sp, rot = nySpelare("Svängryttare" .. namn, vec(DX + 2, 3, DZ + motZ * 4))
+		local ok, skal = LedService.borja(sp, h, h)
+		if not ok then anl:Destroy() return false, nil, 0, tostring(skal) end
+
+		--[[ Kör dörrsekvensen tills hon är förbi steg 1. ]]
+		--[[ Vridtakten kommer ur kanon och är medvetet lugn; 40 bildrutor
+			räcker bara till halva svängen åt det längre hållet, och då
+			mäter provet vägen dit i stället för målet. ]]
+		for _ = 1, 140 do LedService._steg(1 / 30) end
+		local l = LedService.lage(sp)
+		local kurs = math.deg(kursAv(kropp.CFrame))
+		local info = string.format("dsteg=%s spelare z%+.1f häst %.1f,%.1f",
+			l and tostring(l.dorrsteg) or "-", rot.Position.Z - DZ,
+			kropp.Position.X - DX, kropp.Position.Z - DZ)
+		anl:Destroy()
+		return ok, l, kurs, info
+	end
+
+	--[[ Spelaren SÖDER om dörren (+z). ]]
+	local okA, lA, kursA, skalA = prova(1, "A")
+	check("ledningen startar med boxdörr (spelaren i +z)", okA == true, tostring(skalA))
+	check("hästen svänger MOT gången, inte rakt tvärs över den",
+		lA ~= nil and kursA > 5 and kursA < 85,
+		("kurs %.1f° · %s"):format(kursA, tostring(skalA)))
+
+	--[[ Spelaren NORR om dörren (−z): svängen ska gå åt andra hållet. ]]
+	local okB, lB, kursB, skalB = prova(-1, "B")
+	check("ledningen startar med boxdörr (spelaren i −z)", okB == true, tostring(skalB))
+	check("och åt andra hållet när hon ska åt andra hållet",
+		lB ~= nil and kursB > 95 and kursB < 175,
+		("kurs %.1f° · %s"):format(kursB, tostring(skalB)))
+
+	check("de två riktningarna ger OLIKA kurs — svängen följer målet",
+		math.abs(kursA - kursB) > 20,
+		("%.1f° mot %.1f°"):format(kursA, kursB))
+end
+
+
+--[[ ══ DEN SOM STÅR I DÖRREN PEKAR INTE ÅT NÅGOT HÅLL (#194) ═══════════
+
+	Mätt i Studio på `b934ddb`, och det var den verkliga orsaken till att
+	boxutgången kostade tre sekunder och kopplet:
+
+	    spelaren  −0.02 studs längs gången  ->  mot −1  ->  ut2 NORRUT
+	    spelaren  +0.00 studs längs gången  ->  mot +1  ->  ut2 SÖDERUT
+
+	Provet ovan ställer spelaren FYRA studs åt ena hållet, och där är
+	tecknet välbestämt. Men den som leder en häst ut ur en box står i
+	öppningen, och då är projektionen på gångens riktning noll. Tecknet
+	avgjordes av fysikjitter, och delmålet hamnade 1,2 m åt fel håll lika
+	ofta som åt rätt. Hästen lämnade dörren på kurs 127,7° medan rutten bar
+	≈ −6°, och fick vrida 133° medan spelaren gick ifrån henne.
+
+	Två mätningar, och båda saknades:
+
+	1. MÅLZONEN avgör när spelarens läge inte gör det. Hon ska ledas ut åt
+	   det håll hon faktiskt ska gå.
+	2. TECKNET FÅR INTE VIPPA. Två spelarlägen som skiljer 0,04 studs ska
+	   ge SAMMA sväng. Det är den raden som blir röd med det gamla
+	   villkoret. ]]
+print("\n── Den som står i dörren pekar inte åt något håll ──")
+do
+	--[[ Samma dörr som provet ovan, men spelaren står I öppningen och
+		målzonen ligger tydligt åt ett håll längs gången. ]]
+	local function provaZon(spelarOffsetZ, zonY, namn)
+		LedService._glomForProv()
+		local anl = Instance.new("Model")
+		anl.Name = "Anläggning"
+		anl.Parent = workspace
+		local DX, DZ = 600, 400
+		local blad = Instance.new("Part")
+		blad.Name = "Boxdörr zonsväng"
+		blad.Size = vec(0.18, 4.44, 3.60)
+		blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+		blad:SetAttribute("UBRFBoxdorr", true)
+		blad:SetAttribute("Langs", "Z")
+		blad:SetAttribute("Utat", 1)
+		blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+		blad.Parent = anl
+
+		--[[ Målzonen i TOMTKOORDINATER, som `GameplayService` sätter den.
+			Dörren ligger på tomt-y = 170 − 400/3 ≈ 36,7; en zon norr eller
+			söder om det ger ett entydigt tecken längs gången. ]]
+		LedService.satMalzon({ x = 190, y = zonY, w = 10, h = 10 })
+
+		local h, kropp = nyHast("zonhäst" .. namn, vec(DX - 4, 3, DZ))
+		--[[ I ÖPPNINGEN: offsetten är bråkdelar av en studs. ]]
+		local sp, rot = nySpelare("Zonryttare" .. namn, vec(DX + 2, 3, DZ + spelarOffsetZ))
+		local ok, skal = LedService.borja(sp, h, h)
+		if not ok then anl:Destroy() LedService.satMalzon(nil) return false, 0, tostring(skal) end
+		for _ = 1, 140 do LedService._steg(1 / 30) end
+		local kurs = math.deg(kursAv(kropp.CFrame))
+		local info = ("spelare z%+.2f · zon y=%.0f · häst %.1f,%.1f"):format(
+			rot.Position.Z - DZ, zonY, kropp.Position.X - DX, kropp.Position.Z - DZ)
+		anl:Destroy()
+		LedService.satMalzon(nil)
+		return ok, kurs, info
+	end
+
+	--[[ Zonen SÖDER om dörren i världen (+z, alltså lägre tomt-y). ]]
+	local okS, kursS, infoS = provaZon(0, 20, "S")
+	check("spelaren i öppningen, målzonen söderut → hon svänger söderut",
+		okS and kursS > 5 and kursS < 85, ("kurs %.1f° · %s"):format(kursS, infoS))
+
+	--[[ Zonen NORR om dörren (−z, högre tomt-y). ]]
+	local okN, kursN, infoN = provaZon(0, 55, "N")
+	check("spelaren i öppningen, målzonen norrut → hon svänger norrut",
+		okN and kursN > 95 and kursN < 175, ("kurs %.1f° · %s"):format(kursN, infoN))
+
+	check("målzonen avgör svängen när spelarens läge inte gör det",
+		math.abs(kursS - kursN) > 20, ("%.1f° mot %.1f°"):format(kursS, kursN))
+
+	--[[ ── OCH TECKNET FÅR INTE VIPPA PÅ HUNDRADELAR ──────────────────
+
+		Det här är raden som faller med det gamla villkoret. Två lägen som
+		skiljer 0,04 studs — mindre än en hovbredd — låg på var sin sida om
+		`>= 0` och gav delmål 2,4 m från varandra. Nu ligger båda innanför
+		halva öppningen, så målzonen avgör, och svängen blir densamma. ]]
+	local _, kursMinus, infoMinus = provaZon(-0.02, 20, "J1")
+	local _, kursPlus, infoPlus = provaZon(0.02, 20, "J2")
+	check("±0,02 studs i öppningen ger SAMMA sväng — tecknet vippar inte",
+		math.abs(kursMinus - kursPlus) < 5,
+		("%.1f° mot %.1f°  ·  %s  ·  %s"):format(kursMinus, kursPlus, infoMinus, infoPlus))
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit
