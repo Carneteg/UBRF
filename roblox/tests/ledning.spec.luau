@@ -415,12 +415,39 @@ do
 	check("planeraren anropades med agentparametrar", pp ~= nil)
 	if pp then
 		check("AgentRadius kommer ur kroppens BREDD, inte längden",
-			math.abs(pp.AgentRadius - kropp2.Size.X * 0.5) < 0.01,
+			pp.AgentRadius >= kropp2.Size.X * 0.5
+				and pp.AgentRadius < kropp2.Size.Z * 0.5,
 			string.format("%.3f studs (bredd/2 = %.3f, längd/2 = %.3f)",
 				pp.AgentRadius, kropp2.Size.X * 0.5, kropp2.Size.Z * 0.5))
 		check("AgentRadius ryms i boxdörrens 3,60 studs",
 			pp.AgentRadius * 2 < 3.60,
 			string.format("diameter %.2f studs", pp.AgentRadius * 2))
+
+		--[[ ══ RADIEN SKA UTESLUTA KLUBBDELENS BRANDDÖRRAR (#190) ═══════
+
+			De två talen nedan är MÄTTA i Studio på `a1826fc` med
+			binärsökning på `AgentRadius`, inte valda här:
+
+			  klubbdelen -> gång B, genom branddörrarna   bär <= 1,000
+			  kanoniska hästrutten box MB 5 -> ridbanan   bär <= 1,521
+
+			Klubbdelen är uppehållsrum, pentry, sadelkammare, teorisal och
+			WC bakom en branddörr — en människoväg. Hästen ska ledas genom
+			hästgången, inte genom klubbrummet.
+
+			Med den gamla radien, exakt halva bredden (0,930), låg agenten
+			UNDER 1,000 och planeraren fick lov att träda en häst genom en
+			0,88 m bred branddörr. Den här mätningen är hela #190: sänks
+			radien tillbaka dit blir raden röd. Höjs den förbi 1,521
+			stängs den riktiga hästrutten, och då blir den också röd. ]]
+		local KLUBBDELEN_BAR_UPP_TILL = 1.000
+		local HASTRUTTEN_BAR_UPP_TILL = 1.521
+		check("AgentRadius utesluter klubbdelens branddörrar",
+			pp.AgentRadius > KLUBBDELEN_BAR_UPP_TILL,
+			string.format("%.3f > %.3f", pp.AgentRadius, KLUBBDELEN_BAR_UPP_TILL))
+		check("…utan att stänga den kanoniska hästrutten",
+			pp.AgentRadius <= HASTRUTTEN_BAR_UPP_TILL,
+			string.format("%.3f <= %.3f", pp.AgentRadius, HASTRUTTEN_BAR_UPP_TILL))
 		check("AgentHeight är mankhöjden: HipHeight plus kroppen",
 			math.abs(pp.AgentHeight - (2.01 + kropp2.Size.Y)) < 0.01,
 			string.format("%.2f studs", pp.AgentHeight))
