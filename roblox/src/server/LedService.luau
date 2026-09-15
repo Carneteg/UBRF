@@ -991,7 +991,71 @@ local function steg(_dt: number)
 				tecknet väljs efter var spelaren står. Ingen gissad
 				koordinat: båda talen kommer ur dörrens egen geometri. ]]
 			local langs = Vector3.new(-l.dorrUt.Z, 0, l.dorrUt.X)
-			local mot = if langs:Dot(rot.Position - l.dorrMitt) >= 0 then 1 else -1
+			--[[ ══ TECKNET FÅR INTE AVGÖRAS AV SJU MILLIMETER ══════════════
+
+				Mätt i Studio på `b934ddb`, och det här är den verkliga
+				orsaken till att boxutgången kostade tre sekunder:
+
+				    spelaren  −0.02 studs längs gången  ->  mot −1
+				    spelaren  +0.00 studs längs gången  ->  mot +1
+				    mot −1  ->  ut2 tomt (166.70, 79.87)   NORRUT
+				    mot +1  ->  ut2 tomt (166.70, 77.47)   SÖDERUT
+
+				`mot` läste spelarens läge LÄNGS gången, projicerat på
+				dörrens mitt. Men den som leder en häst ut ur en box står i
+				öppningen — och där är projektionen noll. Tecknet avgjordes
+				alltså av fysikjitter på hundradels studs, och sköt delmålet
+				1,2 m åt FEL håll lika ofta som åt rätt.
+
+				Följden, mätt bildruta för bildruta: planeraren fick det
+				norra delmålet, la en väg dit, och körde den hela vägen ut
+				— hästen lämnade dörren på kurs 127,7° medan rutten bar
+				≈ −6°. `mot` rättade sig visserligen själv nästa bildruta när
+				spelaren gått en decimeter, men då fanns redan en giltig väg,
+				och `navigerar(l)` styr mot vägpunkten och hoppar över
+				delmålet. Hon gick alltså färdigt en väg till fel plats.
+
+				Sedan kostade rättningen 133° vridning: `styrMot` sätter
+				`andel = 0` över `VAND_STOPP`, så hon stod still 1,35 s och
+				kröp därefter i 0,3–0,4 m/s medan spelaren gick 1,67 m/s.
+				Separationen växte ~1,25 m/s och kopplet släppte på
+				`led.tappade_bort` vid 9,0 m — utan att hästen gjort något
+				annat än att lyda.
+
+				RÄTTELSEN RÖR INTE geometrin, kopplet eller vridtakten. Den
+				byter bara ut myntkastet mot ett stabilt tecken:
+
+				1. står spelaren TYDLIGT åt ena hållet gäller hon, precis som
+				   förr — #194:s avsikt är oförändrad där den var definierad,
+				2. står hon i öppningen säger hennes läge ingenting, och då
+				   används MÅLZONEN: hästen ska ledas ut åt det håll hon
+				   faktiskt ska gå. Det är också så man leder en häst.
+				3. finns ingen målzon behålls det gamla beteendet.
+
+				"Tydligt" mäts ur dörrens EGEN bredd, inte ur ett valt tal:
+				halva öppningen. För MB 5 är bladet 3,60 studs längs gången,
+				alltså 1,80 studs. Innanför det står man i dörren. ]]
+			local langsSpelare = langs:Dot(rot.Position - l.dorrMitt)
+			local dorrBredd = math.abs((l.dorr :: BasePart).Size.X * langs.X)
+				+ math.abs((l.dorr :: BasePart).Size.Z * langs.Z)
+			local mot
+			if math.abs(langsSpelare) > dorrBredd * 0.5 then
+				mot = if langsSpelare >= 0 then 1 else -1
+			else
+				--[[ Målzonens mitt, samma omräkning som `placeraVidMal`. ]]
+				local langsMal = 0
+				if malzon then
+					local z = malzon :: Rekt
+					local mittV = Vector3.new((z.x + z.w / 2) * M, l.dorrMitt.Y,
+						(TOMTDJUP - (z.y + z.h / 2)) * M)
+					langsMal = langs:Dot(mittV - l.dorrMitt)
+				end
+				if math.abs(langsMal) > dorrBredd * 0.5 then
+					mot = if langsMal >= 0 then 1 else -1
+				else
+					mot = if langsSpelare >= 0 then 1 else -1
+				end
+			end
 			local ut2 = l.dorrMitt
 				+ l.dorrUt * (1.2 * M)
 				+ langs * (mot * 1.2 * M)
