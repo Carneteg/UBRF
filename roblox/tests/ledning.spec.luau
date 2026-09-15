@@ -777,6 +777,86 @@ do
 	anl:Destroy()
 end
 
+
+--[[ ══ HON GÅR UT I GÅNGEN, INTE TVÄRS ÖVER DEN (#182) ═════════════════
+
+	Mätt i Studio på `6350c15`, bildruta 237:
+
+	    boxdörr MB 5      x 496,49        gång B  x 496,6 .. 504,3
+	    gammalt ut2       x 503,09        hästens collider 6,82 studs
+	    häst 500,29 · 273,98  kurs 90°
+	    kontakt: Workspace.Anläggning.UBRF.Boxdörr E 5
+
+	Delmålet låg 1,2 studs från MOTSATTA radens front. Hon kördes rakt
+	tvärs över en gång som är 0,9 studs bredare än hon är lång, kilade
+	fast, och kopplet släppte på `led.fastnat` med en giltig väg hon inte
+	kunde bära.
+
+	Provet mäter KURSEN: med dörren öppen åt +x och spelaren i +z ska hon
+	svänga mellan de två riktningarna, inte rakt ut. Rakt ut är 90°; längs
+	gången är 0°; det nya delmålet ligger däremellan.
+
+	Båda gångriktningarna provas — spelaren på var sida om dörren — för
+	att svängen ska följa VART hon ska och inte en konstant. ]]
+print("\n── Hon går ut i gången, inte tvärs över den ──")
+do
+	local function prova(motZ: number, namn: string)
+		LedService._glomForProv()
+		local anl = Instance.new("Model")
+		anl.Name = "Anläggning"
+		anl.Parent = workspace
+		local DX, DZ = 600, 400
+		local blad = Instance.new("Part")
+		blad.Name = "Boxdörr sväng"
+		blad.Size = vec(0.18, 4.44, 3.60)
+		blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+		blad:SetAttribute("UBRFBoxdorr", true)
+		blad:SetAttribute("Langs", "Z")
+		blad:SetAttribute("Utat", 1)
+		blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+		blad.Parent = anl
+
+		--[[ Hästen inne i boxen, vänd rakt ut mot dörren. ]]
+		local h, kropp = nyHast("svänghäst" .. namn, vec(DX - 4, 3, DZ))
+		--[[ Inom räckhåll — `borja` nekar annars — men tydligt på en sida
+			om dörren, så att gångriktningen går att avgöra. ]]
+		local sp, rot = nySpelare("Svängryttare" .. namn, vec(DX + 2, 3, DZ + motZ * 4))
+		local ok, skal = LedService.borja(sp, h, h)
+		if not ok then anl:Destroy() return false, nil, 0, tostring(skal) end
+
+		--[[ Kör dörrsekvensen tills hon är förbi steg 1. ]]
+		--[[ Vridtakten kommer ur kanon och är medvetet lugn; 40 bildrutor
+			räcker bara till halva svängen åt det längre hållet, och då
+			mäter provet vägen dit i stället för målet. ]]
+		for _ = 1, 140 do LedService._steg(1 / 30) end
+		local l = LedService.lage(sp)
+		local kurs = math.deg(kursAv(kropp.CFrame))
+		local info = string.format("dsteg=%s spelare z%+.1f häst %.1f,%.1f",
+			l and tostring(l.dorrsteg) or "-", rot.Position.Z - DZ,
+			kropp.Position.X - DX, kropp.Position.Z - DZ)
+		anl:Destroy()
+		return ok, l, kurs, info
+	end
+
+	--[[ Spelaren SÖDER om dörren (+z). ]]
+	local okA, lA, kursA, skalA = prova(1, "A")
+	check("ledningen startar med boxdörr (spelaren i +z)", okA == true, tostring(skalA))
+	check("hästen svänger MOT gången, inte rakt tvärs över den",
+		lA ~= nil and kursA > 5 and kursA < 85,
+		("kurs %.1f° · %s"):format(kursA, tostring(skalA)))
+
+	--[[ Spelaren NORR om dörren (−z): svängen ska gå åt andra hållet. ]]
+	local okB, lB, kursB, skalB = prova(-1, "B")
+	check("ledningen startar med boxdörr (spelaren i −z)", okB == true, tostring(skalB))
+	check("och åt andra hållet när hon ska åt andra hållet",
+		lB ~= nil and kursB > 95 and kursB < 175,
+		("kurs %.1f° · %s"):format(kursB, tostring(skalB)))
+
+	check("de två riktningarna ger OLIKA kurs — svängen följer målet",
+		math.abs(kursA - kursB) > 20,
+		("%.1f° mot %.1f°"):format(kursA, kursB))
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

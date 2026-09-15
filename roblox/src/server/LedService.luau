@@ -960,7 +960,41 @@ local function steg(_dt: number)
 		if not l.lamnatBox and l.dorr and l.dorrMitt and l.dorrUt and l.dorr.Parent then
 			viaDorr = true
 			local ut1 = l.dorrMitt - l.dorrUt * (1.3 * M)
-			local ut2 = l.dorrMitt + l.dorrUt * (2.2 * M)
+			--[[ UT I GÅNGEN — INTE TVÄRS ÖVER DEN (#182).
+
+				`ut2` låg rakt ut från dörren, 2,2 m. Mätt i Studio:
+
+				    boxdörr MB 5      x 496,49
+				    ut2               x 503,09
+				    gång B            x 496,6 .. 504,3   (7,75 studs bred)
+				    hästens collider  6,82 studs lång
+
+				Delmålet låg alltså 1,2 studs från MOTSATTA radens front,
+				och hon kördes rakt tvärs över en gång som är 0,9 studs
+				bredare än hon är lång. Bildruta 237 i diagnosloggen:
+				hästen på 500,29 · 273,98, kurs 90°, i kontakt med
+				`Workspace.Anläggning.UBRF.Boxdörr E 5` — kilad tvärs i
+				gången med en giltig väg hon inte kunde bära.
+
+				Collidern är inte för grov: bara två delar kolliderar,
+				`HumanoidRootPart` och `Huvudskydd`, och skyddet finns med
+				flit för att huvudet inte ska gå genom väggar. Det är
+				delmålet som är fel.
+
+				Nu går andra steget ut till GÅNGENS MITT och samtidigt ett
+				stycke LÄNGS gången, åt det håll hon ska. Då svänger hon
+				vid dörren i stället för att köra in i väggen mitt emot —
+				vilket också är så man leder en häst ut ur en box: ut, och
+				sedan med i gångens riktning.
+
+				Riktningen längs gången är dörrnormalen vriden 90°, och
+				tecknet väljs efter var spelaren står. Ingen gissad
+				koordinat: båda talen kommer ur dörrens egen geometri. ]]
+			local langs = Vector3.new(-l.dorrUt.Z, 0, l.dorrUt.X)
+			local mot = if langs:Dot(rot.Position - l.dorrMitt) >= 0 then 1 else -1
+			local ut2 = l.dorrMitt
+				+ l.dorrUt * (1.2 * M)
+				+ langs * (mot * 1.2 * M)
 			--[[ DELMÅLET SKA NÅS, OCH DET KRÄVER EN RADIE UTANFÖR DÖDZONEN.
 				Radien stod på 0,9 m medan hysteresen börjar gå först vid 1,8 m:
 				mätt i Studio hamnade hästen 0,98 m från punkten, alltså i
