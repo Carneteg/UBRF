@@ -76,7 +76,39 @@ local KOPPEL     = 9.0         -- m: längre bort och kopplet släpper
 	  kroppens 2,34 = 4,35 studs.
 
 	Hon hoppar inte och klättrar inte när hon leds. ]]
+--[[ ══ RADIEN MÅSTE UTESLUTA MÄNNISKODÖRRARNA (#190) ═══════════════════
+
+	Halva kroppsbredden ensam räcker inte, och det är #190:s sidofynd.
+	Mätt i Studio på `a1826fc`, med binärsökning på `AgentRadius`:
+
+	  klubbdelens branddörrar, 0,88 m och 1,06 m     bär radie <= 1,000
+	  hela sträckan klubbdelen -> gång B             bär radie <= 1,000
+	  kanoniska hästrutten box MB 5 -> ridbanan      bär radie <= 1,521
+	  gång A -> W-passagen -> hästgången             bär radie <= 1,581
+
+	Med enbart halva bredden (0,930) ligger agenten UNDER 1,000, och
+	planeraren får därmed lov att träda en häst genom klubbdelens
+	branddörrar — med 0,070 studs, alltså 2,3 cm, till godo. Klubbdelen är
+	uppehållsrum, pentry, sadelkammare, teorisal och WC, avskild från
+	stallgången med en branddörr (`references/buildings/stall/KORT.md`,
+	`stall-entre-12.jpg`). Den är en människoväg. Hästen leds inomhus via
+	hästgången till ridhuset, inte genom klubbrummet.
+
+	Det här är alltså inte att göra hästen smalare eller bredare än hon är:
+	det är att sluta påstå att en korridor exakt lika bred som hennes kropp
+	är en väg hon kan ledas genom. Hon är 5,55 studs LÅNG; en gång utan
+	mån åt sidorna ger henne ingenstans att svänga — vilket #194 mätte i
+	praktiken.
+
+	Fönstret mellan de två mätningarna är (1,000 .. 1,521]. Värdet nedan
+	lägger sig mitt i det: 0,930 + 0,320 = 1,250, med 0,250 studs marginal
+	ned till människodörrarna och 0,271 upp till hästruttens tak.
+
+	Kontrollerat: samtliga 49 boxutgångar bär 1,250 lika väl som 0,930.
+	Halva LÄNGDEN (2,775) är fortfarande fel av skälet i noten ovan — en
+	sådan radie hade krävt en öppning bredare än hela hennes kropp. ]]
 local NAV_RADIE_FAKTOR = 0.5   -- av kroppens BREDD, se noten ovan
+local NAV_RADIE_MAN    = 0.32  -- studs fri mån utöver kroppen, se noten ovan
 local NAV_VAGPUNKT     = 2.5   -- studs mellan vägpunkter; tätare än standard 4
 local NAV_NA_VAGPUNKT  = 1.6   -- studs: så nära räknas en vägpunkt som nådd
 local NAV_STILLA       = 1.2   -- s utan framsteg innan planeraren kopplas in
@@ -649,7 +681,7 @@ end
 	för att en blockerad häst inte ska mala servern. ]]
 local function agentparametrar(pivot: BasePart)
 	return {
-		AgentRadius = pivot.Size.X * NAV_RADIE_FAKTOR,
+		AgentRadius = pivot.Size.X * NAV_RADIE_FAKTOR + NAV_RADIE_MAN,
 		AgentHeight = 2.01 + pivot.Size.Y,
 		AgentCanJump = false,
 		AgentCanClimb = false,
