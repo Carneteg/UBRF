@@ -703,6 +703,77 @@ do
 		sent and ("%d av %d smulor på boxsidan"):format(nyaPaBoxsidan, #sent.spar)
 			or "SLÄPPT")
 
+	--[[ ══ OCH DET RÄCKER INTE ATT RÄKNA DEM ════════════════════════════
+
+		Raden ovan går inte att lita på, och det är hela poängen med den
+		här: den är GRÖN även med den förkastade gallringen.
+
+		Ordningen i `steg` är gallring först, spårpåfyllning sedan. Gallras
+		det varje bildruta så länge `lamnatBox` är sann, försvinner alla
+		boxsidiga smulor i början av bildrutan — och så lägger spårlogiken
+		till spelarens NUVARANDE läge i slutet av samma bildruta. Står hon
+		på boxsidan är den nya smulan också boxsidig, och antalet är
+		därmed 1 när mätningen tittar. `> 0` är uppfyllt utan att en enda
+		smula har överlevt någonting.
+
+		Mätt: mutationen som flyttar tillbaka gallringen till varje
+		bildruta gav 37/37 gröna i hela sviten. Regressionen `b7fcf42`
+		rättade gick alltså att återinföra utan att någon grind blev röd.
+
+		DET SOM FAKTISKT SKILJER DE TVÅ FORMERNA ÅT ÄR ÖVERLEVNAD ÖVER
+		TID. En enda smula, utpekad medan hon går, ska finnas kvar flera
+		bildrutor senare. Med engångsgallringen ligger den kvar; med
+		varje-bildrute-formen är den borta nästa bildruta.
+
+		Smulan väljs så att de VANLIGA gallringsreglerna inte kan ta den
+		och göra provet grönt av fel skäl: den ska ligga längre bort än
+		`START_R` från hästen (annars äts den som "framme vid smulan") och
+		långt innanför `KOPPEL` från spelaren (annars äts den som
+		bortglömd). Båda marginalerna mäts ut nedan i stället för att
+		antas. ]]
+	local START_R_M, KOPPEL_M = 1.8, 9.0
+	local function metar(c)
+		return aM(c, kroppS.Position), aM(c, rotS.Position)
+	end
+	local markerad, mHast, mSpelare = nil, 0, 0
+	for _, c in ipairs(sent and sent.spar or {}) do
+		local dHast, dSpelare = metar(c)
+		if plan(c) <= 0 and dHast > START_R_M and dSpelare < KOPPEL_M - 2 then
+			markerad, mHast, mSpelare = c, dHast, dSpelare
+			break
+		end
+	end
+	check("en boxsidig smula finns att peka ut, utanför de vanliga gallringsreglerna",
+		markerad ~= nil,
+		markerad and ("häst %.2f m (> %.1f) · spelare %.2f m (< %.1f)"):format(
+			mHast, START_R_M, mSpelare, KOPPEL_M) or "ingen kandidat")
+
+	--[[ Spelaren går vidare VÄSTERUT — alltså djupare in på boxsidan av
+		planet — så att den utpekade smulan inte längre är den nyaste. Kort
+		sträcka: kopplet ska hålla, annars mäter provet ett släpp. ]]
+	for i = 15, 22 do
+		rotS.CFrame = CFrame.new(vec(DX - 2 - i * 0.4, 3, DZ + 6))
+		LedService._steg(1 / 30)
+	end
+	local efterat = LedService.lage(spS)
+	local kvarKvar = false
+	for _, c in ipairs(efterat and efterat.spar or {}) do
+		if markerad and (c - markerad).Magnitude < 0.01 then kvarKvar = true end
+	end
+	local boxsidiga = 0
+	for _, c in ipairs(efterat and efterat.spar or {}) do
+		if plan(c) <= 0 then boxsidiga += 1 end
+	end
+	check("en smula skapad EFTER utgången finns kvar åtta bildrutor senare",
+		efterat ~= nil and markerad ~= nil and kvarKvar,
+		efterat and ("%d smulor, %d på boxsidan"):format(#efterat.spar, boxsidiga)
+			or "SLÄPPT")
+
+	--[[ Och de ska vara FLERA. Varje-bildrute-formen kan som mest lämna
+		den enda smula som lades till efter gallringen i samma bildruta. ]]
+	check("flera boxsidiga smulor samtidigt — spåret byggs på, inte nollas",
+		boxsidiga > 1, ("%d på boxsidan"):format(boxsidiga))
+
 	anl:Destroy()
 end
 
