@@ -556,6 +556,227 @@ do
 	__pathSvar = nil
 end
 
+
+--[[ ══ EN PASSERAD DÖRR GÖR SMULORNA BAKOM DEN FÖRBRUKADE (#182) ═══════
+
+	Mätt i Studio på `5bdd45e`, första divergensen efter boxutgången.
+	Vänsterkolumnen är hästens signerade läge mot boxdörrens plan, `+` är
+	gången och `−` är boxen:
+
+	    häst 500,0 · 272,0  (plan +1.18)   spar = 7 smulor
+	    vald smula spar[1]  494,8 · 276,7  (plan −0.56)
+	    häst 499,9 (+1.15) → 499,3 (+0.93) → … → 497,1 (+0.19)
+
+	Smulan var spelarens gamla läge från när hon stod INNE i boxen.
+	Gallringen tar bara smulor närmare än `START_R`; den låg 2,0 m bort och
+	blev därför kvar, valdes som mål, och drog hästen bakåt mot dörren hon
+	just kommit ut genom — fyrtiosju bildrutor i rad med sjunkande plan,
+	medan spelaren gick söderut. Sedan slog `led.fastnat` till.
+
+	Provet bygger en riktig boxdörr med attributen `borja` letar efter,
+	lägger smulor på boxsidan, flyttar hästen ut, och kräver att inget som
+	ligger kvar bakom dörrplanet får vara kvar i kön.
+
+	Följningen GENOM dörren mäts inte bort: så länge `lamnatBox` är falsk
+	äger `viaDorr` målpunkterna och gallringen nedan kör inte alls. ]]
+print("\n── En passerad dörr gör smulorna bakom den förbrukade ──")
+do
+	LedService._glomForProv()
+
+	--[[ Anläggningen med EN boxdörr. `borja` letar i `workspace.Anläggning`
+		efter delar med `UBRFBoxdorr`, och läser `Langs`/`Utat` för att veta
+		åt vilket håll gången ligger. Samma attribut `Anlaggningen` sätter. ]]
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = varld(163.68, 77.60).X + 5.5, varld(163.68, 77.60).Z
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr prov"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hS, kroppS = nyHast("smulhast", vec(DX - 5, 3, DZ))
+	local spS, rotS = nySpelare("Smulryttare", vec(DX - 3, 3, DZ))
+	local ok = LedService.borja(spS, hS, hS)
+	check("ledningen startar med en modellerad boxdörr", ok)
+
+	local lS = LedService.lage(spS)
+	check("dörren hittades och planet är känt",
+		lS ~= nil and lS.dorrMitt ~= nil and lS.dorrUt ~= nil,
+		lS and tostring(lS.dorrMitt) or "-")
+
+	local function plan(p)
+		local l = LedService.lage(spS)
+		if not (l and l.dorrMitt and l.dorrUt) then return 0 end
+		return (p - l.dorrMitt):Dot(l.dorrUt) / M
+	end
+
+	--[[ Spelaren rör sig INNE i boxen så att smulor hamnar på boxsidan. ]]
+	for i = 1, 20 do
+		rotS.CFrame = CFrame.new(vec(DX - 3 - (i % 3), 3, DZ + (i % 4) * 0.5))
+		LedService._steg(1 / 30)
+	end
+	local fore = LedService.lage(spS)
+	local pabox = 0
+	for _, c in ipairs(fore and fore.spar or {}) do
+		if plan(c) <= 0 then pabox += 1 end
+	end
+	check("smulor hamnade på boxsidan medan hon var kvar inne",
+		pabox > 0, ("%d av %d"):format(pabox, #(fore and fore.spar or {})))
+
+	--[[ Hästen går UT genom dörren, och spelaren går ut i gången. ]]
+	kroppS.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	LedService._steg(1 / 30)
+	check("hon räknas som ute ur boxen",
+		LedService.harLamnatBox(spS) == true)
+
+	--[[ Kort sträcka med flit: bänken har ingen fysik, så hästen står
+		kvar hur rätt målet än är. Går spelaren längre än KOPPEL (9 m)
+		släpper leden på `tappade_bort` och provet mäter det i stället för
+		smulorna. Fjorton studs håller oss innanför. ]]
+	for i = 1, 12 do
+		rotS.CFrame = CFrame.new(vec(DX + 4 + i * 0.2, 3, DZ + i * 1.1))
+		LedService._steg(1 / 30)
+	end
+
+	local efter = LedService.lage(spS)
+	local kvar = {}
+	for _, c in ipairs(efter and efter.spar or {}) do
+		if plan(c) <= 0 then table.insert(kvar, string.format("%.1f,%.1f", c.X, c.Z)) end
+	end
+	check("ingen smula bakom den passerade dörren finns kvar i kön",
+		#kvar == 0,
+		(#kvar == 0 and ("%d smulor kvar, alla i gången"):format(#(efter and efter.spar or {})))
+			or table.concat(kvar, " · "))
+
+	--[[ …och hon dras inte bakåt: målet ska ligga på gångsidan. ]]
+	local FOLJ_BAKOM, START_R = 2.4, 1.8
+	local function aM(a, b) return (a - b).Magnitude / M end
+	local spar = efter and efter.spar or {}
+	local bakom = rotS.Position - rotS.CFrame.LookVector * (FOLJ_BAKOM * M)
+	for i = 1, #spar do
+		if aM(spar[i], rotS.Position) >= FOLJ_BAKOM
+			and aM(spar[i], kroppS.Position) >= START_R then
+			bakom = spar[i]
+			break
+		end
+	end
+	check("kopplet håller genom hela utgången",
+		efter ~= nil,
+		efter and ("spar " .. #spar) or "SLÄPPT")
+	check("och det valda målet ligger på gångsidan av dörren",
+		efter ~= nil and plan(bakom) > 0,
+		("plan %+.2f · spar %d · spelare %.1f,%.1f"):format(
+			plan(bakom), #spar, rotS.Position.X, rotS.Position.Z))
+
+	--[[ ── OCH NYA SMULOR PÅ SAMMA SIDA SKA ÖVERLEVA ──────────────
+
+		Det här är andra halvan, och den halvan saknades i första
+		utkastet. Gallringen låg då i bildruteloopen och körde så länge
+		`lamnatBox` var sann. Men `dorrUt` för en box i MB-raden pekar
+		ÖSTERUT, och hela den södra rutten västerut — gång A, hästgången,
+		ridhuset — ligger därmed på minussidan av samma plan. Gallringen
+		åt alltså upp varenda ny smula resten av vägen, och
+		brödsmulefölningen var i praktiken avstängd. Mätt i Studio: 76
+		träffar över 7 533 bildrutor, och rutten räddades av planeraren,
+		inte av spåret.
+
+		Nu gallras det EN gång, vid övergången. Smulor som skapas
+		EFTERÅT ska ligga kvar även om de hamnar på boxsidan av planet —
+		precis som de gör när rutten fortsätter västerut. ]]
+	for i = 1, 14 do
+		rotS.CFrame = CFrame.new(vec(DX - 2 - i * 0.4, 3, DZ + 6))
+		LedService._steg(1 / 30)
+	end
+	local sent = LedService.lage(spS)
+	local nyaPaBoxsidan = 0
+	for _, c in ipairs(sent and sent.spar or {}) do
+		if plan(c) <= 0 then nyaPaBoxsidan += 1 end
+	end
+	check("NYA smulor väster om dörrplanet överlever — spåret lever vidare",
+		sent ~= nil and nyaPaBoxsidan > 0,
+		sent and ("%d av %d smulor på boxsidan"):format(nyaPaBoxsidan, #sent.spar)
+			or "SLÄPPT")
+
+	--[[ ══ OCH DET RÄCKER INTE ATT RÄKNA DEM ════════════════════════════
+
+		Raden ovan går inte att lita på, och det är hela poängen med den
+		här: den är GRÖN även med den förkastade gallringen.
+
+		Ordningen i `steg` är gallring först, spårpåfyllning sedan. Gallras
+		det varje bildruta så länge `lamnatBox` är sann, försvinner alla
+		boxsidiga smulor i början av bildrutan — och så lägger spårlogiken
+		till spelarens NUVARANDE läge i slutet av samma bildruta. Står hon
+		på boxsidan är den nya smulan också boxsidig, och antalet är
+		därmed 1 när mätningen tittar. `> 0` är uppfyllt utan att en enda
+		smula har överlevt någonting.
+
+		Mätt: mutationen som flyttar tillbaka gallringen till varje
+		bildruta gav 37/37 gröna i hela sviten. Regressionen `b7fcf42`
+		rättade gick alltså att återinföra utan att någon grind blev röd.
+
+		DET SOM FAKTISKT SKILJER DE TVÅ FORMERNA ÅT ÄR ÖVERLEVNAD ÖVER
+		TID. En enda smula, utpekad medan hon går, ska finnas kvar flera
+		bildrutor senare. Med engångsgallringen ligger den kvar; med
+		varje-bildrute-formen är den borta nästa bildruta.
+
+		Smulan väljs så att de VANLIGA gallringsreglerna inte kan ta den
+		och göra provet grönt av fel skäl: den ska ligga längre bort än
+		`START_R` från hästen (annars äts den som "framme vid smulan") och
+		långt innanför `KOPPEL` från spelaren (annars äts den som
+		bortglömd). Båda marginalerna mäts ut nedan i stället för att
+		antas. ]]
+	local START_R_M, KOPPEL_M = 1.8, 9.0
+	local function metar(c)
+		return aM(c, kroppS.Position), aM(c, rotS.Position)
+	end
+	local markerad, mHast, mSpelare = nil, 0, 0
+	for _, c in ipairs(sent and sent.spar or {}) do
+		local dHast, dSpelare = metar(c)
+		if plan(c) <= 0 and dHast > START_R_M and dSpelare < KOPPEL_M - 2 then
+			markerad, mHast, mSpelare = c, dHast, dSpelare
+			break
+		end
+	end
+	check("en boxsidig smula finns att peka ut, utanför de vanliga gallringsreglerna",
+		markerad ~= nil,
+		markerad and ("häst %.2f m (> %.1f) · spelare %.2f m (< %.1f)"):format(
+			mHast, START_R_M, mSpelare, KOPPEL_M) or "ingen kandidat")
+
+	--[[ Spelaren går vidare VÄSTERUT — alltså djupare in på boxsidan av
+		planet — så att den utpekade smulan inte längre är den nyaste. Kort
+		sträcka: kopplet ska hålla, annars mäter provet ett släpp. ]]
+	for i = 15, 22 do
+		rotS.CFrame = CFrame.new(vec(DX - 2 - i * 0.4, 3, DZ + 6))
+		LedService._steg(1 / 30)
+	end
+	local efterat = LedService.lage(spS)
+	local kvarKvar = false
+	for _, c in ipairs(efterat and efterat.spar or {}) do
+		if markerad and (c - markerad).Magnitude < 0.01 then kvarKvar = true end
+	end
+	local boxsidiga = 0
+	for _, c in ipairs(efterat and efterat.spar or {}) do
+		if plan(c) <= 0 then boxsidiga += 1 end
+	end
+	check("en smula skapad EFTER utgången finns kvar åtta bildrutor senare",
+		efterat ~= nil and markerad ~= nil and kvarKvar,
+		efterat and ("%d smulor, %d på boxsidan"):format(#efterat.spar, boxsidiga)
+			or "SLÄPPT")
+
+	--[[ Och de ska vara FLERA. Varje-bildrute-formen kan som mest lämna
+		den enda smula som lades till efter gallringen i samma bildruta. ]]
+	check("flera boxsidiga smulor samtidigt — spåret byggs på, inte nollas",
+		boxsidiga > 1, ("%d på boxsidan"):format(boxsidiga))
+
+	anl:Destroy()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

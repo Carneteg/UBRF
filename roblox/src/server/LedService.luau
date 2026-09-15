@@ -821,6 +821,53 @@ local function steg(_dt: number)
 			local x, y = tomt(pivot.Position)
 			if math.sqrt((x - l.boxX) ^ 2 + (y - l.boxY) ^ 2) > 2.5 then
 				l.lamnatBox = true
+
+				--[[ SMULORNA FRÅN INNE I BOXEN FÖRBRUKAS — EN GÅNG, HÄR.
+
+					Mätt i Studio, första divergensen efter boxutgången.
+					Vänsterkolumnen är hästens signerade läge mot
+					boxdörrens plan; `+` är gången och `−` är boxen:
+
+					    häst 500,0 · 272,0  (plan +1.18)   spar = 7
+					    vald smula spar[1]  494,8 · 276,7  (plan −0.56)
+					    häst +1.15 → +0.93 → … → +0.19
+
+					Smulan var spelarens gamla läge från när hon stod inne
+					i boxen. Den vanliga gallringen tar bara smulor närmare
+					än `START_R`; den låg 2,0 m bort, blev kvar, valdes som
+					mål, och drog hästen bakåt in genom dörren hon just
+					kommit ut ur.
+
+					GALLRINGEN SKER EN ENDA GÅNG, i samma bildruta som
+					`lamnatBox` går false → true.
+
+					Ett första försök gallrade i stället varje bildruta så
+					länge `lamnatBox` var sann. Det såg riktigt ut och
+					rutten gick — men `dorrUt` för en box i MB-raden pekar
+					österut, och HELA den södra rutten västerut ligger
+					därmed på minussidan av samma plan. Gallringen åt
+					alltså upp varenda ny smula i gång A, hästgången och
+					ridhuset, och brödsmulefölningen var i praktiken
+					avstängd resten av vägen. Mätt: 76 träffar över 7 533
+					bildrutor i slutpasset. Rutten räddades av att
+					planeraren tog över — inte av att spåret fungerade.
+
+					Här kan det inte hända: efter den här bildrutan läggs
+					nya smulor till som vanligt och väljs som vanligt,
+					oavsett vilken sida om dörrplanet de hamnar på. Bara de
+					som fanns i kön I UTGÅNGSÖGONBLICKET, och som låg på
+					boxsidan, försvinner. ]]
+				if l.dorrMitt and l.dorrUt then
+					local kvar = {}
+					for _, c in ipairs(l.spar) do
+						if (c - l.dorrMitt):Dot(l.dorrUt) > 0 then
+							table.insert(kvar, c)
+						end
+					end
+					table.clear(l.spar)
+					for _, c in ipairs(kvar) do table.insert(l.spar, c) end
+				end
+
 				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
 			end
@@ -886,6 +933,7 @@ local function steg(_dt: number)
 		while #spar > 1 and avstandM(pivot.Position, spar[1]) < START_R do
 			table.remove(spar, 1)
 		end
+
 
 		--[[ MÅLPUNKTEN FÅR ALDRIG LIGGA I DÖDZONEN.
 
