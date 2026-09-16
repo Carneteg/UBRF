@@ -251,6 +251,12 @@ InteractionController.setRidaCheck(function(model: Model): boolean
 	return PreparationController.nastaFas() ~= nil
 end)
 
+--[[ Nejet från «Rida nu» ska läsas av SPELAREN, inte av Output-fönstret.
+	Panelen äger meddelanderaden; knappen skickar dit sitt skäl. ]]
+InteractionController.setAvslagVisare(function(skal: any)
+	PreparationController.visaAvslagFor(skal)
+end)
+
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end

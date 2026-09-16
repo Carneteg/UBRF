@@ -1427,6 +1427,20 @@ local function visaAvslag(text: string?)
 	end)
 end
 
+--[[ NEJET ÄR PANELENS, OCH DÄRFÖR FÅR ANDRA SKICKA HIT SITT.
+
+	`Rida nu` sitter på en ProximityPrompt i `InteractionController`, som
+	skrev sitt avslag med `warn()` — alltså i Output-fönstret. Kommentaren
+	där sa "det ska LÄSAS, inte tystas", men en `warn` ser bara den som har
+	Studio öppet. Spelaren tryckte på knappen och fick ingenting.
+
+	Panelen äger redan spelarens meddelanderad. Den här funktionen är hela
+	kopplingen: den som har ett nej att visa skickar en NYCKEL, och panelen
+	översätter och visar det med samma livstid som sina egna. ]]
+function PreparationController.visaAvslagFor(skal: any, extra: any?)
+	visaAvslag(PreparationController.skalText(skal, extra))
+end
+
 --[[ Provets fönster in: står en kvittens uppe, och vilken? ]]
 function PreparationController._bekraftelse(): string?
 	return bekraftelse

@@ -1143,6 +1143,30 @@ do
 			return true
 		end
 		PC.begar("iordning", PC._synligaMoment()[1])
+		--[[ OCH ANDRA KNAPPAR FÅR SKICKA HIT SITT NEJ (#202 punkt 2).
+
+			`Rida nu` sitter på en ProximityPrompt i `InteractionController`
+			och skrev sitt avslag med `warn()` — synligt i Output, osynligt
+			för spelaren. `visaAvslagFor` är kopplingen; provet mäter att
+			den hamnar på samma rad, med samma livstid. ]]
+		PC.visaAvslagFor("spel.redan_redo")
+		check("ett nej från Rida nu-knappen syns i panelen",
+			ytor.instruktion.Text == PC.skalText("spel.redan_redo")
+				and PC._avslag() == PC.skalText("spel.redan_redo"),
+			("[%s]"):format(tostring(ytor.instruktion.Text)))
+		visa(st)
+		check("och det överlever serverns vy precis som de andra",
+			ytor.instruktion.Text == PC.skalText("spel.redan_redo"),
+			("[%s]"):format(tostring(ytor.instruktion.Text)))
+		if type(__senasteDelay) == "function" then __senasteDelay() end
+
+		moment.InvokeServer = function() return false, "tack.hamta_forst" end
+		PC.begar("iordning", PC._synligaMoment()[1])
+		moment.InvokeServer = function(_, fasId, momentId)
+			Preparation.utforMoment(st, fasId, momentId, "cosmo")
+			return true
+		end
+		PC.begar("iordning", PC._synligaMoment()[1])
 		check("ett godkänt moment släcker nejet och kvitterar i stället",
 			PC._avslag() == nil and type(PC._bekraftelse()) == "string",
 			("avslag [%s] · kvittens [%s]"):format(
