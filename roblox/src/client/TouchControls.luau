@@ -93,6 +93,45 @@ local Input = nil :: any            -- sätts av mount, för att undvika cykel
 	pekreglagen inte är uppe — skrivbordet reserverar ingenting. ]]
 local reglageBredd = 0
 
+--[[ ══ LAYOUTEN RÄKNAS UR SKÄRMHÖJDEN — OCH HÖJDEN KAN ÄNDRAS (#208) ══
+
+	`skala` nedan finns för att en låg skärm inte ska skjuta gångartsraden
+	ur bild. Räkningen gjordes vid uppsittningen och aldrig igen. Vred
+	spelaren plattan efteråt behöll reglagen sin gamla skala.
+
+	Mätt i Studio på `754f2cc`, monterat på en hög yta och sedan vridet
+	till iPhone 13 i landskap (749x367):
+
+	    HALT   y -71..-19   helt utanför
+	    SKRITT y -71..-19   helt utanför
+	    TRAV   y -11..41    avklippt
+	    GALOPP y -11..41    avklippt
+
+	Det är exakt de tal noten i `mount` citerar som det gamla felet.
+
+	TRE SAKER SOM MÅSTE STÄMMA, och som ett första försök missade:
+
+	1. Ett enhetsbyte ger FLERA storleksändringar. Diagnos på `4d740b6`:
+	   `1375x974 -> 1281x953 -> 749x309`, två händelser på 50 ms. Bygger
+	   man om per händelse bygger man om i onödan.
+	2. Ombyggnaden ÄNDRAR SJÄLV storleken — en ny ScreenGui får förälder
+	   och fyrar signalen igen. Utan en terminerande vakt bygger den om
+	   varje bildruta, för alltid.
+	3. Bara HÖJDEN styr layouten. Bredden hanteras redan av ankringen i
+	   högerkanten (`UDim2.new(1, -…)`), så en bredare skärm behöver
+	   ingen ombyggnad alls.
+
+	`byggdHojd` löser alla tre på en gång: den bär den höjd layouten
+	FAKTISKT räknades ur, och ombyggnaden hoppas över när höjden är
+	oförändrad. Efter en ombyggnad är den lika med den nya höjden, så
+	den nya ytans egen händelse är en tom retur — ingen loop, ingen
+	pollning, ingen väntan. ]]
+local byggdHojd = 0
+local senasteInput: any = nil
+local senasteHooks: any = nil
+local ytaKoppling: RBXScriptConnection? = nil
+local planerad = false
+
 function TouchControls.reglageBredd(): number
 	return reglageBredd
 end
@@ -312,6 +351,17 @@ end
      är hästen, och används bara för att visa vilken gångart som är
      aktiv. Båda är valfria, så en anropare som inte bryr sig om dem
      fortfarande fungerar. ]]
+--[[ Den höjd layouten räknas ur. EN funktion, så att lyssnaren och
+	`mount` aldrig kan svara olika på samma fråga.
+
+	`AbsoluteSize` kan vara noll bildrutan en ScreenGui fick förälder.
+	Kameran vet ändå, och GUI-ytan är vyporten minus topbarens inset. ]]
+local function layouthojd(g: ScreenGui): number
+	local kam = workspace.CurrentCamera
+	local vyH = if kam then kam.ViewportSize.Y - GuiService:GetGuiInset().Y else 0
+	return math.max(g.AbsoluteSize.Y, vyH)
+end
+
 function TouchControls.mount(input: any, hooks: {
 	dismount: () -> (),
 	blick: ((number, number) -> ())?,
@@ -320,6 +370,7 @@ function TouchControls.mount(input: any, hooks: {
 	if gui then return end
 	if not UserInputService.TouchEnabled then return end
 	Input = input
+	senasteInput, senasteHooks = input, hooks
 
 	local spelare = Players.LocalPlayer
 	local mapp = spelare:FindFirstChildOfClass("PlayerGui")
@@ -335,6 +386,24 @@ function TouchControls.mount(input: any, hooks: {
 	     skapas först — alltså underst. ]]
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = mapp
+	--[[ Vridning, delad skärm, fönsterändring. Se noten vid `byggdHojd`. ]]
+	if ytaKoppling then ytaKoppling:Disconnect() end
+	ytaKoppling = g:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		if gui ~= g then return end
+		if layouthojd(g) == byggdHojd then return end
+		--[[ Flera händelser i samma bildruta ska ge EN ombyggnad. ]]
+		if planerad then return end
+		planerad = true
+		task.defer(function()
+			planerad = false
+			if gui ~= g then return end
+			if layouthojd(g) == byggdHojd then return end
+			local i, h = senasteInput, senasteHooks
+			if not (i and h) then return end
+			TouchControls.unmount()
+			TouchControls.mount(i, h)
+		end)
+	end)
 
 	--[[ BLICKYTAN FÖRST, så att allt annat hamnar ovanpå den. Den täcker
 	     högra två tredjedelarna; vänstra tredjedelen är spakens. ]]
@@ -358,9 +427,8 @@ function TouchControls.mount(input: any, hooks: {
 	     så att surfplattan är exakt som förut. ]]
 	--[[ `AbsoluteSize` kan vara noll bildrutan en ScreenGui fick förälder.
 	     Kameran vet ändå, och GUI-ytan är vyporten minus topbarens inset. ]]
-	local kam = workspace.CurrentCamera
-	local vyH = if kam then kam.ViewportSize.Y - GuiService:GetGuiInset().Y else 0
-	local skarmH = math.max(g.AbsoluteSize.Y, vyH)
+	local skarmH = layouthojd(g)
+	byggdHojd = skarmH
 	--[[ 390 och inte 380: varje `px()` avrundar för sig, och summan av
 	     avrundningarna sköt blocket 1 px över kanten på iPhone. Nämnaren
 	     bär marginalen i stället för att varje tal gör det. ]]
@@ -568,6 +636,13 @@ function TouchControls.unmount()
 		gaitKoppling:Disconnect()
 		gaitKoppling = nil
 	end
+	if ytaKoppling then
+		ytaKoppling:Disconnect()
+		ytaKoppling = nil
+	end
+	--[[ Nollas så att nästa `mount` alltid räknar om, oavsett vilken yta
+		den monteras på. ]]
+	byggdHojd = 0
 	if Input then Input.setTouch(0, 0) end
 	if styrningAv then egnaReglage(true) end
 end

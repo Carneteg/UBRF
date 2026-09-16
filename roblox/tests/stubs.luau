@@ -256,6 +256,11 @@ Enum = {
 	SizeConstraint = { RelativeXY = 1, RelativeXX = 2, RelativeYY = 3 },
 	FillDirection = { Horizontal = 1, Vertical = 2 },
 	SortOrder = { Name = 1, Custom = 2, LayoutOrder = 3 },
+	--[[ Layoutobjektens justering. `TouchControls.mount` ankrar bada
+	     gallren i hogerkanten och nederkanten; utan enumen gick
+	     monteringen inte att kora i banken (#208). ]]
+	HorizontalAlignment = { Left = 1, Center = 2, Right = 3 },
+	VerticalAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	AutomaticSize = { None = 0, X = 1, Y = 2, XY = 3 },
 }
 
@@ -1056,7 +1061,32 @@ local function __nyInstans(klass)
 			end
 		end
 	end
-	if klass == "TextButton" then inst.Activated = __signal() end
+	if klass == "TextButton" then
+		inst.Activated = __signal()
+		--[[ `MouseButton1Click` — gangartsknapparna i `TouchControls`
+		     kopplar den, inte `Activated`. Utan den gick monteringen inte
+		     att kora i banken (#208). ]]
+		inst.MouseButton1Click = __signal()
+		inst.MouseButton1Down = __signal()
+		inst.MouseButton1Up = __signal()
+		--[[ `MouseLeave` slapper tygeln och sitsen nar fingret glider av
+		     knappen; `TouchControls` kopplar den pa bada. ]]
+		inst.MouseLeave = __signal()
+		inst.MouseEnter = __signal()
+	end
+	--[[ `GuiObject.InputBegan` — samma skäl som `Activated` ovan.
+
+	     `TouchControls.mount` kopplar spaken och blickytan med
+	     `bas.InputBegan` respektive `yta.InputBegan`. Utan signalen gick
+	     hela monteringen inte att köra i den här banken, och därmed gick
+	     reglagens LAYOUT inte att mäta — vilket är precis vad #208
+	     behöver kunna göra. ]]
+	if klass == "Frame" or klass == "TextButton" or klass == "TextLabel"
+		or klass == "ScrollingFrame" or klass == "ImageLabel" then
+		inst.InputBegan = __signal()
+		inst.InputChanged = __signal()
+		inst.InputEnded = __signal()
+	end
 	--[[ `ProximityPrompt.Triggered` — samma skäl som Activated ovan.
 	     Utan den gick `DorrService.start()` inte att köra i den här
 	     banken, och därmed gick promptens TEXT inte att mäta. En grind
@@ -1394,6 +1424,11 @@ end
 task = {
 	delay = function(_, fn) __senasteDelay = fn end,
 	spawn = function(fn, ...) fn(...) end,
+	--[[ `defer` kor direkt i banken, precis som `spawn`. I Roblox skjuts
+	     den till bildrutans slut; det som provas ar VAD den gor, inte NAR.
+	     `TouchControls` anvander den for att slå ihop flera
+	     storleksandringar i samma bildruta till en ombyggnad (#208). ]]
+	defer = function(fn, ...) fn(...) end,
 	--[[ `wait` är en no-op i bänken. SparService backar av med 1-2-4
 	     sekunder mellan retryförsöken; en riktig väntan hade gjort
 	     felprovet sju sekunder långt utan att mäta något annat än att
