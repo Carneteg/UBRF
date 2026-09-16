@@ -496,11 +496,40 @@ local __services = {
 				FindFirstChild = function() return nil end,
 				FindFirstChildOfClass = function() return nil end },
 			FindFirstChild = function() return nil end,
-			FindFirstChildOfClass = function() return nil end,
+			--[[ `FindFirstChildOfClass("PlayerGui")` svarade NIL, och det gjorde
+			     att en hel produktionsväg aldrig kunde köras i bänken:
+			     `PreparationController.pekreglagensKanter` frågar just så efter
+			     spelarens GUI för att hitta Robloxs egen spak, och fick alltid
+			     nej. Varje mätning som kallade sig "iPad landskap" körde alltså
+			     SKRIVBORDSGRENEN — koden som håller panelen borta från
+			     rörelsereglagen var omätt (#185).
+
+			     Svaret är samma mapp `WaitForChild` bygger, inte en andra. Den
+			     är tom tills ett prov lägger något i `_barn`, så alla äldre
+			     specar får fortfarande noll pekreglage och exakt samma
+			     layout som förut. ]]
+			FindFirstChildOfClass = function(self, klassnamn)
+				if klassnamn == "PlayerGui" then return rawget(self, "_gui") end
+				return nil
+			end,
 			--[[ HUD:en parentas hit. Utan den gick PreparationController inte
 			     att köra alls i bänken. ]]
 			WaitForChild = function(self, namn)
-				self._gui = self._gui or { Name = namn, _barn = {} }
+				self._gui = self._gui or { Name = namn, _barn = {},
+					--[[ Rekursivt som riktiga instanser: pekreglagen sitter
+					     under `TouchGui`, inte direkt under `PlayerGui`. ]]
+					FindFirstChild = function(self2, sokt, rekursivt)
+						for _, b in ipairs(self2._barn) do
+							if b.Name == sokt then return b end
+						end
+						if rekursivt then
+							for _, b in ipairs(self2._barn) do
+								local traff = b.FindFirstChild and b:FindFirstChild(sokt, true)
+								if traff then return traff end
+							end
+						end
+						return nil
+					end }
 				return self._gui
 			end,
 			--[[ Karaktären kan försvinna mitt i en ritt. Klienten sitter av

@@ -1191,6 +1191,207 @@ do
 		cam.ViewportSize = foreVp
 		PC.tillampaLayout()
 	end
+
+	--[[ ══ PEKREGLAGEN — PANELEN FÅR INTE LIGGA DÄR MAN GÅR ═══════════
+
+		#185:s acceptanslista har en rad blocket ovanför INTE mäter:
+
+		  "verify desktop + iPad-landscape layout does not obscure
+		   movement/riding controls."
+
+		Raden ovanför mäter siktrutan — hästen — inte reglagen. Och värre:
+		den KAN inte mäta dem, för den kör aldrig den gren som handlar om
+		dem.
+
+		`PreparationController.pekreglagensKanter()` är produktionens svar
+		på just den ordern (#162): panelen flyttar sig i sidled i stället
+		för att reglagen stängs av. Den frågar
+		`player:FindFirstChildOfClass("PlayerGui")` efter `TouchGui`.
+		Bänken svarade **nil** på den frågan, i varje spec — alltså
+		`spakHöger = 0`, alltså skrivbordsgrenen. Mätningen "iPad landskap
+		1024x768" ovanför mäter därför en iPad UTAN pekreglage, vilket
+		ingen iPad är.
+
+		Skillnaden är inte teoretisk. Samma vy, samma skärm:
+
+		    utan pekreglage   panel x  12..328
+		    med pekreglage    panel x 218..534
+
+		Det högra läget hade aldrig passerat en grind förrän nu.
+
+		Rutorna nedan är UPPMÄTTA, inte valda. Källan står i tabellen. ]]
+	do
+		local PG = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+		local cam = game:GetService("Workspace").CurrentCamera
+		local foreVp = cam.ViewportSize
+
+		--[[ Bygger Robloxs egen pekyta med de rutor en riktig klient har.
+
+			Reglagen ligger INTE direkt under `TouchGui` — de sitter i en
+			ram därunder, och produktionen söker därför rekursivt. En
+			platt bänk hade gjort den rekursionen omätbar: tar man bort
+			`true` ur sökningen förblir en platt bänk grön medan en riktig
+			klient tappar reglagen helt och panelen lägger sig över dem.
+			Nivån här är därför på riktigt, inte bekväm. ]]
+		local function pekreglage(spak, hopp)
+			PG._barn = {}
+			if not spak and not hopp then return end
+			local tg = Instance.new("Folder")
+			tg.Name = "TouchGui"
+			local ram = Instance.new("Folder")
+			ram.Name = "TouchControlFrame"
+			ram.Parent = tg
+			local function ruta(namn, r, forlader)
+				if not r then return end
+				local f = Instance.new("Frame")
+				f.Name = namn
+				f.Visible = true
+				f.AbsolutePosition = Vector2.new(r.x0, r.y0)
+				f.AbsoluteSize = Vector2.new(r.x1 - r.x0, r.y1 - r.y0)
+				f.Parent = forlader
+				return f
+			end
+			local spakram = Instance.new("Folder")
+			spakram.Name = "DynamicThumbstickFrame"
+			spakram.Parent = ram
+			ruta("ThumbstickStart", spak, spakram)
+			ruta("JumpButton", hopp, ram)
+			table.insert(PG._barn, tg)
+		end
+
+		local function skar(a, b)
+			return a.x0 < b.x1 and b.x0 < a.x1 and a.y0 < b.y1 and b.y0 < a.y1
+		end
+		local function andelAvSikt(m)
+			local bx = math.max(0, math.min(m.interaktion.x1, m.sikt.x1)
+				- math.max(m.interaktion.x0, m.sikt.x0))
+			local by = math.max(0, math.min(m.interaktion.y1, m.sikt.y1)
+				- math.max(m.interaktion.y0, m.sikt.y0))
+			return (bx * by)
+				/ math.max(1, (m.sikt.x1 - m.sikt.x0) * (m.sikt.y1 - m.sikt.y0))
+		end
+		local function vid(b, h)
+			cam.ViewportSize = { _typ = "Vector2", X = b, Y = h }
+			PC.tillampaLayout()
+			return PC.layout()
+		end
+
+		--[[ Den tätaste vyn — iordningställandets nio moment — står kvar i
+			`st` från blocket ovanför. Samma vy som ordern pekar ut. ]]
+		visa(st)
+
+		--[[ ── ENHETERNA ───────────────────────────────────────────────
+			`kalla` är inte prydnad: ett tal utan källa är ett påhittat
+			tal, och då mäter raderna nedan ingenting om verkligheten. ]]
+		local ENHETER = {
+			{
+				namn = "iPad landskap 1024x768", b = 1024, h = 768,
+				spak = { x0 = 58, x1 = 206, y0 = 575, y1 = 723 },
+				hopp = nil,
+				kalla = "#162, uppmätt på iPad i landskap",
+			},
+		}
+
+		for _, e in ipairs(ENHETER) do
+			--[[ ANKARET. Utan det mäter raderna efteråt ingenting: ligger
+				panelens NORMALA läge redan bredvid spaken finns det inget
+				för produktionskoden att lösa, och "skär inte" hade varit
+				grönt av sig själv. ]]
+			pekreglage(nil, nil)
+			local utan = vid(e.b, e.h)
+			check(("ANKARE %s: utan flytten hamnar panelen PÅ spaken"):format(e.namn),
+				skar(utan.interaktion, e.spak),
+				("panel x %d..%d · spak x %d..%d · källa: %s"):format(
+					utan.interaktion.x0, utan.interaktion.x1,
+					e.spak.x0, e.spak.x1, e.kalla))
+
+			pekreglage(e.spak, e.hopp)
+			local m = vid(e.b, e.h)
+
+			check(("%s: panelen ligger inte över spaken"):format(e.namn),
+				not skar(m.interaktion, e.spak),
+				("panel x %d..%d y %d..%d · spak x %d..%d y %d..%d"):format(
+					m.interaktion.x0, m.interaktion.x1,
+					m.interaktion.y0, m.interaktion.y1,
+					e.spak.x0, e.spak.x1, e.spak.y0, e.spak.y1))
+
+			if e.hopp then
+				check(("%s: panelen ligger inte över hoppknappen"):format(e.namn),
+					not skar(m.interaktion, e.hopp),
+					("panel x %d..%d · hopp x %d..%d"):format(
+						m.interaktion.x0, m.interaktion.x1,
+						e.hopp.x0, e.hopp.x1))
+			end
+
+			--[[ …OCH INTE HELLER IN ÖVER HÄSTEN. Att kliva undan från
+				reglagen får inte lösas genom att lägga sig mitt i bilden;
+				då har en order bara bytts mot en annan. Samma tre procent
+				som `varldshud.spec` mäter. ]]
+			check(("%s: och den kryper inte in över hästen i stället"):format(e.namn),
+				andelAvSikt(m) < 0.03,
+				("%.1f %% av siktrutan"):format(andelAvSikt(m) * 100))
+
+			--[[ Läsbarheten och träffytan överlever flytten. En panel som
+				klämts ihop till en remsa är inte en instruktion. ]]
+			check(("%s: panelen är fortfarande läsbart bred"):format(e.namn),
+				(m.interaktion.x1 - m.interaktion.x0) >= 240,
+				("%d px bred"):format(m.interaktion.x1 - m.interaktion.x0))
+			for _, id in ipairs(PC._synligaMoment()) do
+				local k = ytor.moment:FindFirstChild(id)
+				check(("%s: träffytan för %s överlever flytten"):format(e.namn, id),
+					k ~= nil and k.Size.Y.Offset >= PC.TRAFFYTA,
+					("%d px"):format(k and k.Size.Y.Offset or -1))
+			end
+		end
+
+		--[[ ── HOPPKNAPPEN KLÄMMER, DEN SKYMS INTE ────────────────────
+			Rutorna här är KONSTRUERADE, och det står de för: de mäter
+			inte en enhet utan en REGEL — att panelen hellre krymper än
+			lägger sig över hoppknappen. Utan den här raden är
+			`hogerTak`-grenen i `interaktionsLayout` oprövad kod. ]]
+		do
+			local spak = { x0 = 40, x1 = 200, y0 = 500, y1 = 640 }
+			local hopp = { x0 = 420, x1 = 540, y0 = 500, y1 = 620 }
+			pekreglage(spak, hopp)
+			local m = vid(1024, 768)
+			check("hoppknappen klämmer panelen i stället för att hamna under den",
+				not skar(m.interaktion, hopp) and not skar(m.interaktion, spak)
+					and (m.interaktion.x1 - m.interaktion.x0) < 316,
+				("panel x %d..%d (%d px) · spak x %d..%d · hopp x %d..%d"):format(
+					m.interaktion.x0, m.interaktion.x1,
+					m.interaktion.x1 - m.interaktion.x0,
+					spak.x0, spak.x1, hopp.x0, hopp.x1))
+		end
+
+		--[[ ── ETT SLÄCKT REGLAGE FLYTTAR INGENTING ───────────────────
+			`Visible = false` betyder att reglaget inte finns för
+			spelaren. Läste koden rutan ändå skulle panelen hoppa i sidled
+			varje gång Roblox släckte spaken. ]]
+		do
+			pekreglage({ x0 = 58, x1 = 206, y0 = 575, y1 = 723 }, nil)
+			local tg = PG:FindFirstChild("TouchGui")
+			tg:FindFirstChild("ThumbstickStart", true).Visible = false
+			local m = vid(1024, 768)
+			check("en släckt spak flyttar inte panelen",
+				m.interaktion.x0 == 12,
+				("panel x %d..%d"):format(m.interaktion.x0, m.interaktion.x1))
+		end
+
+		--[[ Skrivbordet ska vara oförändrat: ingen pekyta, inget att väja
+			för, samma läge som före #162. ]]
+		do
+			pekreglage(nil, nil)
+			local m = vid(1920, 1080)
+			check("skrivbordet står kvar i nedre vänstra hörnet",
+				m.interaktion.x0 == 12 and m.interaktion.y1 > 1080 * 0.9,
+				("panel %d,%d–%d,%d"):format(m.interaktion.x0, m.interaktion.y0,
+					m.interaktion.x1, m.interaktion.y1))
+		end
+
+		pekreglage(nil, nil)
+		cam.ViewportSize = foreVp
+		PC.tillampaLayout()
+	end
 end
 
 if fails > 0 then
