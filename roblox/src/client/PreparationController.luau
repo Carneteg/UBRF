@@ -458,10 +458,68 @@ local function pekreglagensKanter(): (number, number)
 	return hoger, vanster
 end
 
-local function interaktionsLayout(antalVal: number, rader: number,
-	ut: boolean, alla: boolean): { [string]: number }
+--[[ ══ ETT HÖRN, ELLER ETT BAND ═══════════════════════════════════
+
+	Panelen var ett hörn på varje skärm, 316 px bred. På en iPad är det
+	27 % av bilden och den ligger under hästen. På en telefon i LANDSKAP
+	är samma panel 42 % av bilden — och då ligger den inte under henne,
+	den ligger framför henne. Avläst ur en levande iPhone 13-klient
+	(749 × 367): 20,9 % av siktrutan mot de 3 % kontraktet ger.
+
+	Orsaken är att panelen räknas i PIXLAR medan siktrutan räknas i
+	ANDELAR. Samma 110 px är 10 % av en skrivbordshöjd och 30 % av en
+	telefons.
+
+	Ren geometri, samma skärm: under siktrutan finns 55 px, och en
+	STAPLAD panel — text ovanför en 44 px träffyta — kan inte bli lägre
+	än ~100 px. Det finns alltså ingen bredd som räddar hörnet. Att bara
+	krympa det gör texten smalare, radbrytningarna fler och panelen
+	HÖGRE; hela tabellen är mätt innan den här formen valdes.
+
+	På tvären finns däremot gott om plats: mellan spaken och
+	hoppknappen ligger 527 px oanvända. Panelen blir därför ett BAND
+	längs nederkanten när hörnet inte får plats — instruktionen till
+	vänster, handlingen till höger, i stället för på varandra. Då räcker
+	44 px plus luft, och bandet hamnar UNDER siktrutan i stället för i
+	den.
+
+	Regeln är responsiv och härledd, inte en enhetsregel: bandet används
+	när hörnet skulle ta mer av siktrutan än kontraktet tillåter, och
+	bara när bandet tar mindre. En iPad når 0,8 % och behåller alltså
+	sitt hörn pixel för pixel; en telefon i landskap byter form. Ingen
+	rad i koden nämner en modell.
+
+	Utfälld hjälp är undantaget: då är listan lång, och lång är spelarens
+	eget beslut. Den staplas som förut. ]]
+--[[ Så stor del av siktrutan panelen får ta innan den byter form. Samma
+	tal som `varldshud.spec` mäter hörnet mot — kontraktet, inte ett nytt
+	tal. ]]
+local SIKT_BUDGET = 0.03
+--[[ Bandets handlingskolumn: en andel av bandet, aldrig smalare än två
+	träffytor. Resten är instruktionens. ]]
+local BAND_RADANDEL = 0.38
+--[[ Ett band som inte rymmer en läsbar instruktion är inget band. Under
+	det här faller vi tillbaka på hörnet, hur trångt det än är. ]]
+local BAND_MINSTA_TEXT = 150
+
+--[[ Siktrutan i pixlar. `SIKTRUTA` är enda källan till talen. ]]
+local function siktrutan(B: number, H: number)
+	local S = PreparationController.SIKTRUTA
+	return { x0 = B * S.x0, x1 = B * S.x1, y0 = H * S.y0, y1 = H * S.y1 }
+end
+
+--[[ Hur stor del av siktrutan en ruta tar. Ren räkning. ]]
+local function andelAvSikt(x: number, y: number, bredd: number, hojd: number,
+	B: number, H: number): number
+	local s = siktrutan(B, H)
+	local bx = math.max(0, math.min(x + bredd, s.x1) - math.max(x, s.x0))
+	local by = math.max(0, math.min(y + hojd, s.y1) - math.max(y, s.y0))
+	return (bx * by) / math.max(1, (s.x1 - s.x0) * (s.y1 - s.y0))
+end
+
+local function interaktionsLayout(antalVal: number, ledtext: string,
+	ut: boolean, alla: boolean): { [string]: any }
 	local B, H = viewport()
-	local bredd = math.min(INTERAKTION_BREDD, math.max(120, B - 2 * MARGINAL))
 	--[[ HÖJDEN ÄR INNEHÅLLET. Hopfälld visas EN sak: den som står på tur.
 		Det är ordern, och det är hela skillnaden mot att lägga fram nio. ]]
 	local visade = if ut or alla then antalVal else math.min(antalVal, 1)
@@ -472,39 +530,90 @@ local function interaktionsLayout(antalVal: number, rader: number,
 		mycket som om ord. Rutan finns bara när det FINNS något mer att
 		visa: ett ensamt moment har ingen checklista bakom sig. ]]
 	local hjalpSyns = antalVal > 1 and not alla
-	local textHojd = rader * INTERAKTION_TEXTRAD
-	local huvud = math.max(textHojd, if hjalpSyns then HJALPRUTA else 0)
-	local listHojd = 0
-	if visade > 0 then
-		listHojd = visade * PreparationController.TRAFFYTA
-			+ (visade - 1) * INTERAKTION_RAD
-	end
-	local hojd = 2 * INNER + huvud
-		+ (if listHojd > 0 then GAP + listHojd else 0)
-	--[[ Taket: hellre en lista som rullar än en panel som växer upp över
-		spelet. Det är listan som ger vika, aldrig texten. ]]
-	local tak = math.floor(H * INTERAKTION_TAK)
-	if hojd > tak and listHojd > 0 then
-		listHojd = math.max(PreparationController.TRAFFYTA, listHojd - (hojd - tak))
-		hojd = 2 * INNER + huvud + GAP + listHojd
-	end
-	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger` noll
-		och raden ger `MARGINAL` — samma läge som förut. ]]
+	local hjalpB = if hjalpSyns then HJALPRUTA + GAP else 0
+
+	--[[ NERE, OCH TILL HÖGER OM SPAKEN. På skrivbordet är `spakHoger`
+		noll och raden ger `MARGINAL` — samma läge som förut. ]]
 	local spakHoger, hoppVanster = pekreglagensKanter()
 	local x = MARGINAL
-	if spakHoger > 0 then
-		x = math.max(MARGINAL, spakHoger + MARGINAL)
-		--[[ Och aldrig in i hoppknappen. Får panelen inte plats mellan de
-			två krymper den hellre än lägger sig över något. ]]
-		local hogerTak = math.min(B - MARGINAL, hoppVanster - MARGINAL)
-		if x + bredd > hogerTak then
+	if spakHoger > 0 then x = math.max(MARGINAL, spakHoger + MARGINAL) end
+	--[[ Och aldrig in i hoppknappen. ]]
+	local hogerTak = math.min(B - MARGINAL, hoppVanster - MARGINAL)
+
+	local function listhojdFor(n: number): number
+		if n <= 0 then return 0 end
+		return n * PreparationController.TRAFFYTA + (n - 1) * INTERAKTION_RAD
+	end
+
+	--[[ ── FORM A: HÖRNET ─────────────────────────────────────────── ]]
+	local function hornet()
+		local bredd = math.min(INTERAKTION_BREDD, math.max(120, B - 2 * MARGINAL))
+		--[[ Får panelen inte plats mellan spaken och hoppknappen krymper
+			den hellre än lägger sig över något. ]]
+		if spakHoger > 0 and x + bredd > hogerTak then
 			bredd = math.max(120, hogerTak - x)
 		end
+		local textBredd = bredd - hjalpB
+		local textHojd = textrader(ledtext, textBredd) * INTERAKTION_TEXTRAD
+		local huvud = math.max(textHojd, if hjalpSyns then HJALPRUTA else 0)
+		local listHojd = listhojdFor(visade)
+		local hojd = 2 * INNER + huvud
+			+ (if listHojd > 0 then GAP + listHojd else 0)
+		--[[ Taket: hellre en lista som rullar än en panel som växer upp
+			över spelet. Det är listan som ger vika, aldrig texten. ]]
+		local tak = math.floor(H * INTERAKTION_TAK)
+		if hojd > tak and listHojd > 0 then
+			listHojd = math.max(PreparationController.TRAFFYTA,
+				listHojd - (hojd - tak))
+			hojd = 2 * INNER + huvud + GAP + listHojd
+		end
+		return { bredd = bredd, hojd = hojd, x = x, y = H - MARGINAL - hojd,
+			textHojd = huvud, radHojd = textHojd, listHojd = listHojd,
+			textBredd = textBredd, radBredd = bredd, band = 0 }
 	end
-	return { bredd = bredd, hojd = hojd, vpBredd = B, vpHojd = H,
-		x = x, y = H - MARGINAL - hojd,
-		textHojd = huvud, radHojd = textHojd, listHojd = listHojd,
-		visade = visade, hjalpSyns = if hjalpSyns then 1 else 0 }
+
+	--[[ ── FORM B: BANDET ─────────────────────────────────────────── ]]
+	local function bandet()
+		local bredd = hogerTak - x
+		local radBredd = math.max(2 * PreparationController.TRAFFYTA,
+			math.floor((bredd - hjalpB) * BAND_RADANDEL))
+		local textBredd = bredd - hjalpB - radBredd - GAP
+		if textBredd < BAND_MINSTA_TEXT then return nil end
+		local textHojd = textrader(ledtext, textBredd) * INTERAKTION_TEXTRAD
+		local listHojd = listhojdFor(visade)
+		local huvud = math.max(textHojd, if hjalpSyns then HJALPRUTA else 0)
+		local hojd = 2 * INNER + math.max(huvud, listHojd)
+		--[[ Bandet ligger AN mot nederkanten. Marginalen under det är den
+			enda plats som finns kvar under siktrutan; ett band som lämnar
+			12 px där hamnar 12 px längre upp — i den. ]]
+		return { bredd = bredd, hojd = hojd, x = x, y = H - hojd,
+			textHojd = huvud, radHojd = textHojd, listHojd = listHojd,
+			textBredd = textBredd, radBredd = radBredd, band = 1 }
+	end
+
+	local vald = hornet()
+	--[[ Bandet prövas bara när hörnet faktiskt bryter kontraktet, och
+		väljs bara när det tar MINDRE av siktrutan än hörnet gör.
+
+		Den jämförelsen är inte en artighet — den är det som håller den
+		UTFÄLLDA listan kvar i hörnet. Nio rader är 428 px, och ett band
+		med nio rader är högre än en telefon i landskap: det skulle täcka
+		hela skärmen. Jämförelsen ser det och väljer hörnet. En separat
+		`if not utfälld`-grind hade sagt samma sak en gång till, och den
+		dubbleringen gjorde båda omätbara — tog man bort den ena höll den
+		andra, och tvärtom. ]]
+	local hornAndel = andelAvSikt(vald.x, vald.y, vald.bredd, vald.hojd, B, H)
+	if hornAndel > SIKT_BUDGET then
+		local b = bandet()
+		if b and andelAvSikt(b.x, b.y, b.bredd, b.hojd, B, H) < hornAndel then
+			vald = b
+		end
+	end
+
+	vald.vpBredd, vald.vpHojd = B, H
+	vald.visade = visade
+	vald.hjalpSyns = if hjalpSyns then 1 else 0
+	return vald
 end
 
 --[[ Layouten som tal, för prov och felsökning. Ren avläsning — den bygger
@@ -521,13 +630,11 @@ function PreparationController.layout(): { [string]: any }
 		if momentRader[id] then synligaVal += 1 end
 	end
 	local ledtext = if instruktion then instruktion.Text else ""
-	--[[ `?`-rutan äter av instruktionens första rader. Bredden räknas med
-		avdraget så snart rutan finns — hellre en rad för mycket än en
-		instruktion som löper in under knappen. ]]
-	local textBredd = INTERAKTION_BREDD
-		- (if synligaVal > 1 and not allaNu then HJALPRUTA + GAP else 0)
-	local I = interaktionsLayout(synligaVal,
-		textrader(ledtext, textBredd), interaktionUt, allaNu)
+	--[[ Texten skickas in HEL. Radantalet räknades förut här ute, mot
+		konstanten 316 — och det gick så länge panelen alltid var 316 bred.
+		Nu väljer layouten både form och bredd, och radbrytningen måste
+		räknas mot den bredd som faktiskt blev. ]]
+	local I = interaktionsLayout(synligaVal, ledtext, interaktionUt, allaNu)
 	return {
 		sparare = { x0 = S.x, y0 = S.y, x1 = S.x + S.bredd, y1 = S.y + S.hojd },
 		kompakt = { x0 = K.x, y0 = K.y, x1 = K.x + K.bredd, y1 = K.y + K.kompakt },
@@ -543,6 +650,8 @@ function PreparationController.layout(): { [string]: any }
 		interaktionUt = interaktionUt, interaktionVal = synligaVal,
 		interaktionVisade = I.visade, interaktionText = I.textHojd,
 		interaktionLista = I.listHojd, interaktionHjalp = I.hjalpSyns == 1,
+		interaktionBand = I.band == 1, interaktionTextBredd = I.textBredd,
+		interaktionRadBredd = I.radBredd,
 		interaktionPaTur = paTurNu, interaktionArVal = arValNu,
 	}
 end
@@ -574,9 +683,19 @@ function PreparationController.tillampaLayout()
 			L.interaktion.y1 - L.interaktion.y0)
 	end
 	if momentBehallare then
-		momentBehallare.Position = UDim2.new(0, 0, 0,
-			L.interaktionText + (if L.interaktionLista > 0 then GAP else 0))
-		momentBehallare.Size = UDim2.new(1, 0, 0, L.interaktionLista)
+		--[[ I HÖRNET ligger raderna UNDER texten; i BANDET bredvid den.
+			Samma instanser, samma innehåll — bara en annan plats, och
+			platsen kommer ur layouten, inte härifrån. ]]
+		if L.interaktionBand then
+			momentBehallare.Position =
+				UDim2.new(0, L.interaktionTextBredd + GAP, 0, 0)
+			momentBehallare.Size =
+				UDim2.new(0, L.interaktionRadBredd, 0, L.interaktionLista)
+		else
+			momentBehallare.Position = UDim2.new(0, 0, 0,
+				L.interaktionText + (if L.interaktionLista > 0 then GAP else 0))
+			momentBehallare.Size = UDim2.new(1, 0, 0, L.interaktionLista)
+		end
 	end
 	--[[ HOPFÄLLD VISAR DET SOM STÅR PÅ TUR — och det är `nastaMoment`,
 		inte listans första rad.
@@ -628,10 +747,14 @@ function PreparationController.tillampaLayout()
 	end
 	if instruktion then
 		--[[ Instruktionen slutar där `?`-rutan börjar. Utan avdraget löper
-			sista ordet in under knappen på varje panel som har en. ]]
-		instruktion.Size = UDim2.new(1,
-			-(if L.interaktionHjalp then HJALPRUTA + GAP else 0),
-			0, L.interaktionText)
+			sista ordet in under knappen på varje panel som har en. I
+			bandet slutar den i stället där handlingskolumnen börjar, och
+			den centreras lodrätt mot träffytan bredvid. ]]
+		instruktion.Size = UDim2.fromOffset(L.interaktionTextBredd,
+			L.interaktionText)
+		instruktion.TextYAlignment = if L.interaktionBand
+			then Enum.TextYAlignment.Center
+			else Enum.TextYAlignment.Top
 	end
 end
 

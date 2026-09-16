@@ -1418,43 +1418,127 @@ do
 				("panel x %d..%d"):format(m.interaktion.x0, m.interaktion.x1))
 		end
 
-		--[[ ── TELEFON I LANDSKAP: MÄTT, INTE GRINDAT ─────────────────
+		--[[ ── TELEFON I LANDSKAP: HÖRNET BLIR ETT BAND ──────────────
 
-			Det här är ett FYND, rapporterat i #185, och det står här som
-			ett tal i loggen i stället för som en grind. Skälet är att
-			göra det omöjligt att tappa bort — inte att smyga in en
-			regel.
+			Fyndet: på iPhone 13 i landskap tog hörnpanelen 20,9 % av
+			siktrutan — sju gånger kontraktet. Panelen räknas i pixlar,
+			siktrutan i andelar, och 110 px är 30 % av en 367 px hög
+			skärm.
 
-			På iPhone 13 i landskap är panelen 316 px bred på en 749 px
-			skärm, alltså 42 % av bilden. Avläst ur en levande klient:
+			Rutorna är avlästa ur en levande klient, inte valda. Bandet
+			är inte en telefonregel: det väljs när hörnet bryter
+			kontraktet och bandet är bättre, vilket iPaden aldrig gör.
 
-			    utan flytten   panel x  12..328    8,9 % av siktrutan
-			    med flytten    panel x 115..431   17,8 % av siktrutan
+			MUTATIONEN ligger inbyggd i första raden: mätningen visar
+			först vad HÖRNET hade kostat på samma skärm. Går den siffran
+			under budgeten mäter resten ingenting. ]]
+		do
+			local spak = { x0 = 29, x1 = 103, y0 = 216, y1 = 290 }
+			local hopp = { x0 = 654, x1 = 724, y0 = 219, y1 = 289 }
+			pekreglage(spak, hopp)
+			local m = vid(749, 367)
 
-			Båda ligger över de tre procent `varldshud.spec` kräver av de
-			skärmar den mäter — men den listan har bara telefon i
-			PORTRÄTT, och panelen har aldrig skalats efter skärmbredd.
-			Att rätta det ändrar panelens geometri för riktiga spelare,
-			och den ändringen är Tobias, inte min. ]]
+			--[[ Vad hörnet HADE kostat: samma innehåll, 316 px brett, på
+				samma plats till höger om spaken. Räknat, inte gissat. ]]
+			local sikt = (m.sikt.x1 - m.sikt.x0) * (m.sikt.y1 - m.sikt.y0)
+			local function andel(x0, x1, y0, y1)
+				local bx = math.max(0, math.min(x1, m.sikt.x1) - math.max(x0, m.sikt.x0))
+				local by = math.max(0, math.min(y1, m.sikt.y1) - math.max(y0, m.sikt.y0))
+				return (bx * by) / math.max(1, sikt)
+			end
+			local hornAndel = andel(115, 115 + 316, 367 - 12 - 110, 367 - 12)
+			check("MUTATION: hörnet hade tagit långt mer än budgeten här — "
+				.. "annars mäter bandet ingenting",
+				hornAndel > 0.03 * 3,
+				("hörnet: %.1f %% av siktrutan"):format(hornAndel * 100))
+
+			check("telefon i landskap: panelen är ett BAND, inte ett hörn",
+				m.interaktionBand == true,
+				("band %s · panel x %d..%d y %d..%d (%d x %d px)"):format(
+					tostring(m.interaktionBand),
+					m.interaktion.x0, m.interaktion.x1,
+					m.interaktion.y0, m.interaktion.y1,
+					m.interaktion.x1 - m.interaktion.x0,
+					m.interaktion.y1 - m.interaktion.y0))
+			check("telefon i landskap: siktrutan är tillbaka inom kontraktet",
+				andel(m.interaktion.x0, m.interaktion.x1,
+					m.interaktion.y0, m.interaktion.y1) < 0.03,
+				("%.1f %% mot hörnets %.1f %%"):format(
+					andel(m.interaktion.x0, m.interaktion.x1,
+						m.interaktion.y0, m.interaktion.y1) * 100,
+					hornAndel * 100))
+			check("telefon i landskap: bandet ligger inte över spaken",
+				not skar(m.interaktion, spak),
+				("panel x %d..%d y %d..%d · spak x %d..%d y %d..%d"):format(
+					m.interaktion.x0, m.interaktion.x1,
+					m.interaktion.y0, m.interaktion.y1,
+					spak.x0, spak.x1, spak.y0, spak.y1))
+			check("telefon i landskap: bandet ligger inte över hoppknappen",
+				not skar(m.interaktion, hopp),
+				("panel x %d..%d · hopp x %d..%d"):format(
+					m.interaktion.x0, m.interaktion.x1, hopp.x0, hopp.x1))
+			check("telefon i landskap: instruktionen har läsbar bredd kvar",
+				m.interaktionTextBredd >= 150,
+				("%d px text · %d px handling"):format(
+					m.interaktionTextBredd, m.interaktionRadBredd))
+			check("telefon i landskap: EN uppgift i taget gäller fortfarande",
+				m.interaktionVisade == 1 and m.interaktionVal == 9,
+				("%d av %d val synliga"):format(m.interaktionVisade, m.interaktionVal))
+			for _, id in ipairs(PC._synligaMoment()) do
+				local k = ytor.moment:FindFirstChild(id)
+				check(("telefon i landskap: träffytan för %s är kvar på 44 px"):format(id),
+					k ~= nil and k.Size.Y.Offset >= PC.TRAFFYTA,
+					("%d px"):format(k and k.Size.Y.Offset or -1))
+			end
+			--[[ Bandet är brett men LÅGT. Ytan är det som skymmer, inte
+				bredden, och den ska inte ha växt. ]]
+			local bandyta = (m.interaktion.x1 - m.interaktion.x0)
+				* (m.interaktion.y1 - m.interaktion.y0)
+			check("telefon i landskap: bandet tar inte mer av skärmen än hörnet gjorde",
+				bandyta <= 316 * 110,
+				("band %d px² mot hörnets %d px² · %d %% av skärmen"):format(
+					bandyta, 316 * 110, math.floor(100 * bandyta / (749 * 367) + 0.5)))
+		end
+
+		--[[ ── BANDET RÄKNAR MOT SIN EGEN TEXTKOLUMN ────────────────
+			Radbrytningen räknades förut mot konstanten 316 — panelens
+			enda bredd. Nu är bredden vald, och bandets textkolumn är
+			290 px, inte 316. En instruktion som ryms på två rader vid
+			316 men behöver tre vid 290 ska alltså göra bandet HÖGRE.
+			Räknas den mot konstanten står höjden still, och då är det
+			sista ordet borta under handlingskolumnen. ]]
 		do
 			pekreglage({ x0 = 29, x1 = 103, y0 = 216, y1 = 290 },
 				{ x0 = 654, x1 = 724, y0 = 219, y1 = 289 })
-			local m = vid(749, 367)
-			local bx = math.max(0, math.min(m.interaktion.x1, m.sikt.x1)
-				- math.max(m.interaktion.x0, m.sikt.x0))
-			local by = math.max(0, math.min(m.interaktion.y1, m.sikt.y1)
-				- math.max(m.interaktion.y0, m.sikt.y0))
-			print(("  MÄTT  iPhone 13 landskap 749x367: panel x %d..%d, %d px "
-				.. "= %d %% av skärmbredden, %.1f %% av siktrutan (FYND, se #185)")
-				:format(m.interaktion.x0, m.interaktion.x1,
-					m.interaktion.x1 - m.interaktion.x0,
-					math.floor(100 * (m.interaktion.x1 - m.interaktion.x0) / 749 + 0.5),
-					100 * (bx * by)
-						/ math.max(1, (m.sikt.x1 - m.sikt.x0) * (m.sikt.y1 - m.sikt.y0))))
-			check("telefonen i landskap: panelen ligger ändå inte över reglagen",
-				m.interaktion.x0 >= 103 and m.interaktion.x1 <= 654,
-				("panel x %d..%d · spak slutar 103 · hopp börjar 654"):format(
-					m.interaktion.x0, m.interaktion.x1))
+			local kort = vid(749, 367)
+			local kortHojd = kort.interaktion.y1 - kort.interaktion.y0
+			local fore = ytor.instruktion.Text
+			ytor.instruktion.Text = string.rep("a", 78)
+			local lang = vid(749, 367)
+			local langHojd = lang.interaktion.y1 - lang.interaktion.y0
+			ytor.instruktion.Text = fore
+			vid(749, 367)
+			check("bandet växer när texten inte ryms i DESS kolumn, inte i 316 px",
+				langHojd > kortHojd and lang.interaktionBand == true,
+				("%d px vid 78 tecken mot %d px vid %d · textkolumn %d px"):format(
+					langHojd, kortHojd, utf8.len(fore) or #fore,
+					lang.interaktionTextBredd))
+		end
+
+		--[[ Och den utfällda hjälpen staplas fortfarande: en lång lista är
+			spelarens eget beslut, och ett band med nio rader vore inget
+			band. ]]
+		do
+			pekreglage({ x0 = 29, x1 = 103, y0 = 216, y1 = 290 },
+				{ x0 = 654, x1 = 724, y0 = 219, y1 = 289 })
+			vid(749, 367)
+			PC._vaxlaInteraktion()
+			local mu = PC.layout()
+			check("telefon i landskap: utfälld hjälp staplas, den bandas inte",
+				mu.interaktionBand == false and mu.interaktionVisade > 1,
+				("band %s · %d rader"):format(tostring(mu.interaktionBand),
+					mu.interaktionVisade))
+			PC._vaxlaInteraktion()
 		end
 
 		--[[ Skrivbordet ska vara oförändrat: ingen pekyta, inget att väja
