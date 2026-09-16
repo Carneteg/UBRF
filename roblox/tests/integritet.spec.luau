@@ -487,6 +487,27 @@ do
 	check("och säger 'inga' när det inte finns något",
 		e2 ~= nil and string.find(tostring(e2.detalj), "inga") ~= nil,
 		e2 and tostring(e2.detalj) or "-")
+
+	--[[ ── OSPÅRAT SOM KODEN LÄSER ────────────────────────────────────
+
+		`ServerStorage.HastVisualer` är ospårad — ingen Rojo-väg pekar på
+		den — och samtidigt läser `HastVisual.mall` den vid varje hästbygge.
+		Utan mallen faller inte spelet, men varenda häst går tillbaka till
+		lådor, tyst. Städpolicyn säger "utred, radera inte", och den som
+		utreder måste kunna se skillnaden mot en backup ingen rör. ]]
+	local mall = Instance.new("Folder")
+	mall.Name = "HastVisualer"
+	mall.Parent = SS
+	local e3 = matning("10e")
+	check("ett ospårat objekt koden LÄSER märks ut, inte bara namnges",
+		e3 ~= nil and string.find(tostring(e3.detalj), "KRÄVS AV") ~= nil,
+		e3 and tostring(e3.detalj) or "-")
+	check("och märkningen pekar ut raden i koden",
+		e3 ~= nil and string.find(tostring(e3.detalj), "HastVisual.luau") ~= nil,
+		e3 and tostring(e3.detalj) or "-")
+	check("men den fäller fortfarande ingenting", e3 ~= nil and e3.ok == true,
+		e3 and tostring(e3.ok) or "-")
+	mall:Destroy()
 end
 
 if fails > 0 then

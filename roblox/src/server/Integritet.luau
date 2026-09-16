@@ -108,6 +108,26 @@ local RUNTIME: { [string]: { [string]: string } } = {
 	RAPPORTERAR och aldrig fäller; den som vill dölja något behöver inte
 	anstränga sig så mycket. Skulle en regel någon gång användas av en
 	FÄLLANDE rad måste den prövas om. ]]
+--[[ ── OSPÅRAT SOM KODEN ÄNDÅ LÄSER ────────────────────────────────────
+
+	"Ospårad" betyder att ingen KÄLLFIL äger objektet. Det betyder inte att
+	ingen behöver det. `ServerStorage.HastVisualer` är precis den sortens
+	sak: ingen Rojo-väg pekar på den, och ändå läser `HastVisual.mall` den
+	vid varje hästbygge. Utan mallen faller inte spelet — men varenda häst
+	går tillbaka till lådor, tyst.
+
+	Städpolicyn i `docs/STUDIO-PLACE-INTEGRITY.md` säger "utred, radera
+	inte", och den som utreder behöver se skillnaden mellan en 3 477 objekt
+	stor backup ingen rör och en mallmapp koden är beroende av. Raden skrev
+	tidigare ut dem sida vid sida, som samma sak.
+
+	Ett namn får bara stå här med en rad i koden bakom sig. ]]
+local KODBEROENDE: { [string]: { [string]: string } } = {
+	ServerStorage = {
+		HastVisualer = "server/HastVisual.luau:37 — mallarna för hästarnas nät",
+	},
+}
+
 type Runtimeregel = { kalla: string, prov: (Instance) -> boolean }
 
 local RUNTIMEREGLER: { [string]: { Runtimeregel } } = {
@@ -424,14 +444,28 @@ function Integritet.rader(): { Rad }
 		sjutton objekt ingen källa äger låg kvar. Raden är därför grön och
 		ALLTID närvarande: antalet och namnen står i utskriften, varje
 		körning, så att ingen behöver gissa. ]]
+	--[[ Namnet får med sig sitt kodberoende, om det har ett. Utan den
+		markeringen läser listan som en raderingslista. ]]
+	local function namnge(tjanst: string, namn: { string }): { string }
+		local ut2: { string } = {}
+		local beroenden = KODBEROENDE[tjanst] or {}
+		for _, n in ipairs(namn) do
+			local kalla = beroenden[n]
+			table.insert(ut2, if kalla then ("%s (KRÄVS AV %s)"):format(n, kalla) else n)
+		end
+		return ut2
+	end
+
 	local wsOsp = Integritet.osparade("Workspace")
 	local ssOsp = Integritet.osparade("ServerStorage")
 	local delar = {}
 	if #wsOsp > 0 then
-		table.insert(delar, ("Workspace %d: %s"):format(#wsOsp, table.concat(wsOsp, ", ")))
+		table.insert(delar, ("Workspace %d: %s"):format(
+			#wsOsp, table.concat(namnge("Workspace", wsOsp), ", ")))
 	end
 	if #ssOsp > 0 then
-		table.insert(delar, ("ServerStorage %d: %s"):format(#ssOsp, table.concat(ssOsp, ", ")))
+		table.insert(delar, ("ServerStorage %d: %s"):format(
+			#ssOsp, table.concat(namnge("ServerStorage", ssOsp), ", ")))
 	end
 	rad("10e ospårat i Workspace/ServerStorage — redovisat, inte fällt", true,
 		if #delar == 0 then "inga" else table.concat(delar, " · "))
