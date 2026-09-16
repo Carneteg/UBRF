@@ -358,3 +358,213 @@ egna mått. Det är inget nödläge.
   renderade svart för varje framing, även för den accepterade anläggningen.
 - **Licenstext.** Creator Store-API:t returnerar ingen licensuppgift.
 - **Hoppkandidaterna.** Fortfarande utanför — separat arena-/miljögate.
+
+
+---
+
+# Tredje passet: kandidaterna öppnade — och bilden avgjorde
+
+Tobias slog manuellt på **Experience Settings > Security > Allow Loading Third
+Party Assets**. Därmed gick de fyra blockerade kandidaterna att granska.
+
+Mätt 2026-09-16 på `main` `541fa4aca1e0b8c14d11a3b92046a8b360779700`.
+`rojo-sanning.py` 68 lika · 0 olika · 0 oparade, `bygg-identitet.py
+--kontrollera` grön, `kor.sh` 37/37.
+
+**Inställningens läge: `ON` under hela passet**, verifierat funktionellt —
+`insert_asset 4505046158` gick igenom, vilket det inte gjorde före. Jag har
+inte rört den och lämnar den `ON` enligt ordern.
+
+## Domarna, tredje passet
+
+| kategori | kandidat | asset | dom |
+|---|---|---:|---|
+| sadel | Working horse saddle | `4505046158` | **FAIL** |
+| sadel | Sadles | `8709973262` | **FAIL** |
+| hjälm | uspp riding helmet | `15860424841` | **BLOCKED_FOR_RIGHTS** |
+| träns | Horse Halter | `15057288717` | **FAIL som träns** |
+
+**Alla tre kategorier: `NO_VIABLE_CANDIDATE`.**
+
+Och det viktigaste av allt: **den tekniskt bästa kandidaten föll på bilden.**
+Talen sa "bäst i fältet". Bilden sa Napoleonkrigen.
+
+## Måttstocken, mätt på en riktig häst i runtime
+
+`Rida nu` på Blackrock Jack, `TackRigg`s egna delar:
+
+```
+Underlägg            1.32 x 0.07 x 1.80 studs   (0.44 x 0.02 x 0.60 m)
+Sadel                1.20 x 0.17 x 1.38 studs   (0.40 x 0.06 x 0.46 m)
+Sadelns gjord        0.62 x 0.10 x 0.33 studs
+Träns                1.13 x 0.05 x 0.14 studs
+Tränsets pannband    1.11 x 0.06 x 0.06 studs
+hästen                2.23 x 5.27 x 7.64 studs
+ryttarens huvud       1.16 x 1.11 x 1.14 studs
+```
+
+Hästarna är olika stora — Oska mäter 2.09 × 2.63 × 6.24 i bålen mot Jacks
+1.86 × 2.34 × 5.55. Det är därför `Riggprofiler` finns, och det är därför en
+färdig modell med **fast** storlek är ett problem och inte en detalj.
+
+## 1 · `4505046158` Working horse saddle — FAIL
+
+| | uppmätt |
+|---|---|
+| geometri | 9 `Part`, **0 meshar**, 108 trianglar |
+| mått | 4.00 × 5.41 × 4.36 studs (1.33 × 1.80 × 1.45 m) |
+| flaggor | CanCollide **9/9** · CanQuery **9/9** · CanTouch **9/9** · Massless **0/9** · Anchored **9/9** |
+| material | Fabric ×7, Metal ×2 |
+| texturer/decals | inga |
+| skript / PackageLinks | 0 / 0 |
+| attachments | inga · ingen `PrimaryPart` |
+
+**Budgeten är utmärkt** — 108 trianglar är en fjärdedel av vår hela
+utrustning. Allt annat är fel.
+
+**Den bär en `Seat`.** En `Seat` på 2.61 × 0.05 × 3.07 studs ligger i modellen.
+Det är ingen tredjepartskod, men det är ett **funktionellt gameplay-objekt**:
+Roblox svetsar fast den som rör den. Vår uppsittning ägs av `HorseService`
+med serverauktoritet, och en lös sits på hästen är en väg runt den. Den
+skulle behöva rivas — och att den finns säger vad modellen är byggd för.
+
+**Skalan är fel i en annan riktning än förra passets.** 4.00 studs bred mot
+hästens bål på 2.23 — nästan dubbelt så bred som hästen — och 3.3 gånger vår
+egen sadel.
+
+**Visuellt** (bild tagen i karantänscenen): en grov brun **låda** med öppen
+ovansida. Den läser som ett tråg eller ett flak, inte som en sadel.
+
+## 2 · `8709973262` Sadles — FAIL, och det är den intressanta domen
+
+| | uppmätt |
+|---|---|
+| geometri | 2 `MeshPart`, samma mesh (`rbxassetid://6906416080`), **564 trianglar totalt** |
+| mått per del | 4.03 × 3.78 × 3.12 studs (1.34 × 1.26 × 1.04 m) |
+| flaggor | CanCollide **0/2** · CanQuery 2/2 · CanTouch **0/2** · Massless **2/2** · Anchored **0/2** |
+| material | Fabric |
+| texturer | **2 — den enda texturerade kandidaten** |
+| skript / PackageLinks | 0 / 0 |
+
+**På pappret är den bäst i hela gaten.** 282 trianglar per sadel — mot vår
+hela utrustning på ~444 och mot första passets 24 540. Trettiotre hästar
+skulle kosta 9 306 trianglar. Flaggorna är nästan vår policy redan: bara
+`CanQuery` står kvar. `MeshPart` skalar rent, till skillnad från en union.
+
+**Och sedan tittade jag på den.**
+
+Det är ingen engelsk ridsadel. Det är en **napoleonsk kavallerisadel**:
+leopardfäll över sitsen, schabrak i mörkblått med röd och guldfärgad bård,
+**kejserlig örn och krona** broderade på båda sidor.
+
+Det är inte en detalj man skalar bort. `CLAUDE.md` är hårdast just här:
+anläggningen ska kännas igen, verkligheten är facit, och **stiliserat betyder
+förenklat — inte påhittat**. En husarsadel med kejsarörn på en lektionsponny
+i Bro är påhittat innehåll av precis den sort regeln finns för att stoppa.
+
+**Dom: FAIL på produktsanning.** Tekniskt hade den räckt. Det är därför det
+visuella steget inte är en formalitet.
+
+Heraldiken är historisk och inte ett modernt varumärke, så det är ingen
+IP-blockerare — men det är främmande ornamentik på varje häst i stallet.
+
+## 3 · `15860424841` uspp riding helmet — BLOCKED_FOR_RIGHTS
+
+| | uppmätt |
+|---|---|
+| geometri | 15 delar: **8 `UnionOperation`**, 1 `MeshPart`, 1 `SpecialMesh`, 5 `Part` |
+| trianglar | 5 554 |
+| mått | 2.00 × 1.69 × 1.73 studs mot ryttarens huvud 1.16 × 1.11 × 1.14 → **1,7× huvudbredden** |
+| flaggor | CanCollide 1/15 · CanQuery **15/15** · CanTouch **15/15** · Massless **0/15** · Anchored **15/15** |
+| decals | **1 — `rbxassetid://15812851953`** |
+| attachments | 2 · `PrimaryPart` satt |
+| skript / PackageLinks | 0 / 0 |
+
+**Bilden avgör, och den gissar ingenting.** Det är en **polishjälm för
+motorcykel**: vit och blå kåpa, svart hakrem, **skärm med guldfärgad snodd**
+och ett **guldfärgat polisemblem** fram. Assetens eget namn säger "motor and
+horse".
+
+Det är uniform och myndighetsinsignier — någon annans märke, på UBRF:s
+ryttare. Ordern säger att USPP-frågan inte får gissas bort. Den gissas inte:
+den är fotograferad.
+
+Tekniskt är den dessutom svag för vårt bruk: åtta unioner är den dyraste
+geometriklassen på mobil och den som skalar sämst, alla femton delarna är
+ankrade, och ingen är massless.
+
+## 4 · `15057288717` Horse Halter — FAIL som träns
+
+| | uppmätt |
+|---|---|
+| geometri | 2 `MeshPart` (`default`, `rings`), 6 722 trianglar |
+| mått | 1.75 × 2.31 × 1.42 studs (0.58 × 0.77 × 0.47 m) |
+| flaggor | CanCollide 2/2 · CanQuery 2/2 · CanTouch 2/2 · Massless **0/2** · Anchored 0/2 |
+| texturer/decals | inga |
+| attachments | inga · ingen `PrimaryPart` |
+| skript / PackageLinks | 0 / 0 |
+
+**Det är en grimma, och en grimma är inte ett träns.** Ordern säger det rakt
+ut, och bilden bekräftar produkten: ett blått nylongrimma med metallringar,
+utan bett, utan tyglar, utan pannband på tränsets vis.
+
+Rättigheterna är de renaste i hela gaten — uppladdaren skriver att hon gjort
+den själv i Blender, och det finns inget märke på den. **Den hör hemma i en
+annan order:** ledning (#200) använder grimma och grimskaft i verkligheten,
+och då är 6 722 trianglar ett tal att väga mot vad den ersätter, inte mot
+tränset.
+
+## Sammanfattning: varför ingen av dem
+
+| | budget | flaggor | skala | rättigheter | produkt |
+|---|---|---|---|---|---|
+| `4505046158` | ✔ 108 | ✘ allt fel + `Seat` | ✘ 1,8× hästen | ✔ | ✘ låda |
+| `8709973262` | ✔ 282/sadel | ✔ nästan | ✘ 3,3× | ✔ | ✘ **napoleonsk kavalleri** |
+| `15860424841` | ~ 5 554 | ✘ ankrad | ~ 1,7× huvudet | ✘ **polisemblem** | ✘ motorcykelhjälm |
+| `15057288717` | ✘ 6 722 | ✘ ej massless | ✔ rimlig | ✔ | ✘ grimma, inte träns |
+
+## Vad passet faktiskt visade
+
+**Fri-asset-korpusen för ridutrustning är inte byggd för en svensk
+ridskola.** Fyra bredare sökningar och sju granskade kandidater över tre pass
+har gett: en stulen återuppladdning, två med kreditkrav som inte går att
+verifiera, tre med skript, en polisuniform, en napoleonsk kavallerisadel, en
+låda och en grimma.
+
+Det som faktiskt fungerar i dag är `TackRigg`: **37 delar, ~444 trianglar,
+noll kolliderande, alla massless, byggd ur varje hästs egna mått**. Ingen av
+de sju kandidaterna slår den på helheten, och bara en slog den på budget.
+
+**Rekommendationen är därför inte en till assetjakt.** Vill Tobias ha
+mesh-kvalitet på utrustningen är vägen antingen en beställd/egen modell som
+följer stallkortet, eller en riktad sökning efter *engelsk* dressyr-/
+hoppsadel utan märken — med produktsanningen som första filter, inte som
+sista.
+
+## Städning och slutläge
+
+Karantänen `ServerStorage.__EquipmentGate_Karantan` och granskningsscenen
+`Workspace.__GranskningsScen` är borttagna, och de fjorton kopior av
+kandidaterna som hamnade i `Workspace` under passet är städade — de fyra
+rotnamnen `Horse saddle`, `Sadles`, `helmet` och `halter` finns inte kvar.
+
+**En avvikelse ska redovisas:** `Workspace` hade **19** barn före passet och
+har **26** efter min städning. De sju nya heter `LV cap` ×3, `Scene` ×2 och
+två till `Model` — **inga av dem är mina**; jag satte bara in de fyra
+kandidaterna, och de är borta. De ser ut som verktygsinföranden från Studio
+under samma fönster. Enligt #171/#209 klassar jag och raderar inte: de står
+nu i punkt 10e:s lista nästa gång preflighten kör.
+
+`Workspace.AllowThirdPartySales` är oförändrad (`false`).
+*Allow Loading Third Party Assets* lämnas **`ON`** enligt ordern.
+
+### `NOT_TESTED`, tredje passet
+
+- **Slutlig visuell och produktmässig bedömning.** Bilderna är tagna och
+  beskrivna, men om en napoleonsk kavallerisadel eller ett polisemblem är
+  acceptabelt är Tobias beslut, inte mitt.
+- **Prestanda på riktig mobil.** Trianglarna är räknade, inte spelade.
+- **Fästbarhet i praktiken.** Ingen kandidat har monterats på en häst — det
+  vore produktionsintegration, och ordern förbjuder den.
+- **Licenstext.** Creator Store-API:t returnerar ingen licensuppgift.
+- **Hoppkandidaterna.** Fortfarande utanför — separat arena-/miljögate.
