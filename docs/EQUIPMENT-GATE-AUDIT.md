@@ -213,3 +213,148 @@ namnger, och de rördes inte.
 - **Prestanda uppmätt på riktig mobil.** Trianglarna är räknade, inte
   spelade. Tobias fysiska gate gäller fortfarande.
 - **Hoppkandidaterna.** Utanför det här passet enligt ordern.
+
+
+---
+
+# Andra passet: jakten på ersättare
+
+Ordern efter PR #212: de tre ursprungliga är avvisade eller blockerade — hitta
+bättre kandidater, minst två tekniskt trovärdiga per kategori **om butiken
+faktiskt har dem**, och `NO_VIABLE_CANDIDATE` är ett bättre svar än en sänkt
+ribba.
+
+Mätt 2026-09-16 på `main` `541fa4aca1e0b8c14d11a3b92046a8b360779700`.
+`bygg-identitet.py --kontrollera` grön, `rojo-sanning.py` 68 lika · 0 olika ·
+0 oparade, `kor.sh` 37/37.
+
+## Domarna, andra passet
+
+| kategori | kandidat | asset | dom |
+|---|---|---:|---|
+| sadel | Race horse saddle (återuppladdad) | `82966041045527` | **FAIL + BLOCKED_FOR_RIGHTS** |
+| sadel | horse hanging saddle decoration (CREDIT RHS) | `16245590175` | **BLOCKED_FOR_RIGHTS** |
+| sadel | Working horse saddle | `4505046158` | **NO_VIABLE_CANDIDATE** (kunde inte granskas) |
+| sadel | Sadles | `8709973262` | **NO_VIABLE_CANDIDATE** (kunde inte granskas) |
+| träns | Horse with tack | `8512123329` | **FAIL + BLOCKED_FOR_RIGHTS** |
+| träns | Horse Halter | `15057288717` | **NO_VIABLE_CANDIDATE** (kunde inte granskas) |
+| hjälm | USPP Riding Helmet | `15813214956` | **FAIL** |
+| hjälm | Helmet (Everest) | `16690671412` | **FAIL** |
+| hjälm | uspp riding helmet (motor and horse) | `15860424841` | **NO_VIABLE_CANDIDATE** (kunde inte granskas) |
+
+**Ingen kategori fick en `PASS_FOR_PROTOTYPE`.** Det beror inte på att ribban
+är för hög — det beror på två olika saker, och de ska hållas isär.
+
+## Det som föll på egna meriter
+
+**`82966041045527` — en återuppladdning, och det syns i talen.** Samma namn
+som den avvisade `9639407836`, **exakt samma trianglar och hörn** (24 540 /
+16 586), men en annan uppladdare (`AidenHunter1919`), fyra år senare
+(2026-09-11 mot 2022-05-15) — **och sex skript som originalet inte har**.
+
+Det är signaturen för en stulen asset med kod påhängd. Den ska inte in i
+spelet, och den hade dessutom fallit på exakt samma skala och budget som
+originalet.
+
+**`16245590175` — samma okontrollerbara kreditkrav.** Titeln säger *CREDIT
+RHS*, uppladdaren är samma `corvyyn` som tränset i första passet, och vem RHS
+är går fortfarande inte att fastställa. 20 000 trianglar, och det är dessutom
+en **dekoration** — en sadel som hänger på en vägg, inte en sadel som sitter
+på en häst.
+
+**`8512123329` "Horse with tack"** — 32 694 trianglar, 35 MeshParts, **2
+skript**, 5 animationer och 19 decals. Beskrivningen säger *"made by cookie
+and me"*: delat upphovsmanskap där andra halvan bara heter "cookie". Det är
+en hel häst med utrustning, inte utrustning, och den bär kod.
+
+**`15813214956` "USPP Riding Helmet" — femton skript.** Metadata räcker för
+domen; ingen granskning behövdes.
+
+**`16690671412` "Helmet"** — skriptfri och 7 242 trianglar, men det är en
+**Everest-hjälm**, alltså klättring. Fel produkt för en ridskola. Att den
+tekniskt går att bära gör den inte till en ridhjälm.
+
+## Det som INTE gick att granska — och varför
+
+Fyra kandidater föll inte på sina meriter. De gick inte att öppna.
+
+```
+insert_asset 9639407836 (första passets sadel)   -> success
+insert_asset 4505046158                          -> Failed to load asset:
+insert_asset 8709973262                             User is not authorized to
+insert_asset 15057288717                            access Asset. To load public
+insert_asset 15860424841                            Creator Store assets that you
+                                                    do not own, enable "Allow
+                                                    Loading Third Party Assets"
+                                                    in Game Settings > Security.
+```
+
+Kontrollmätningen är den översta raden: **den asset Tobias själv hämtade
+2026-09-13 går att sätta in**, alla nya gör det inte. Slutsatsen —
+`[antagande]`, för jag kan inte läsa kontots inventarium — är att de tre
+ursprungliga redan ligger i kontots ägo, medan allt annat räknas som
+tredjepartsinnehåll.
+
+**Placen har alltså "Allow Loading Third Party Assets" AV**, och det är en
+säkerhetsinställning i Tobias produktionsplace. Att slå på den ändrar vad den
+KÖRANDE spelet får ladda, inte bara vad jag får titta på. **Jag har inte rört
+den**, och den är inte min att röra.
+
+Utan granskning går det inte att mäta det krav 4 och 5 i ordern kräver —
+dimensioner mot hästens rigg, `Anchored`/`CanCollide`/`CanQuery`/`CanTouch`/
+`Massless`, material, texturer, attachments. Och utan de måtten får ingen
+kandidat ett `PASS_FOR_PROTOTYPE`. Ordern säger uttryckligen: tvinga inte
+fram ett godkännande.
+
+## De tre som förtjänar en omgranskning
+
+För första gången i den här gaten finns kandidater i **rätt budgetklass**.
+Vår hela procedurella utrustning är ~444 trianglar per häst:
+
+| kandidat | trianglar | skript | uppladdare | not |
+|---|---:|---:|---|---|
+| `4505046158` Working horse saddle | **108** | 0 | TiredTato | inga MeshParts alls — ser ut att vara byggd av delar |
+| `8709973262` Sadles | **564** | 0 | IoannisKomnenos | 2 MeshParts |
+| `15860424841` uspp riding helmet | 5 554 | 0 | BillActual | 1 MeshPart, **1 decal** |
+| `15057288717` Horse Halter | 6 722 | 0 | MeriTheLegume | grimma, inte träns; beskrivningen säger att hon gjort den själv i Blender |
+
+De två första är de första sadelkandidaterna som över huvud taget ligger nära
+vår egen budget — `4505046158` är **en fjärdedel** av vad vi bygger själva i
+dag, mot `9639407836`:s femtiofem gånger.
+
+Två varningar som gäller redan innan granskningen:
+
+- **`15860424841` bär en decal, och "USPP" är någon annans märke.** En
+  ridhjälm med en främmande grupps insignier på UBRF:s ryttare är en
+  visuell och rättighetsmässig fråga, inte bara en teknisk.
+- **`15057288717` är en grimma, inte ett träns.** Den hör till ledning
+  (#200), inte till uppsittning. Som *tränskandidat* är den fel produkt;
+  som grimma kan den bli intressant i en annan order.
+
+## Rekommendation
+
+**Ingen prototyporder ännu**, för ingen kandidat har nått
+`PASS_FOR_PROTOTYPE`.
+
+Det som skulle låsa upp passet är **ett** beslut från Tobias: att slå på
+*Allow Loading Third Party Assets* i Game Settings > Security för placen, med
+vetskapen om att det påverkar vad spelet får ladda i drift och inte bara vad
+en audit får se. Sägs ja kan de fyra kandidaterna ovan granskas i karantän på
+samma sätt som första passets tre, och `4505046158` och `8709973262` är de
+som förtjänar att mätas först.
+
+Sägs nej står gaten still på visuals, och dagens procedurella utrustning är
+fortfarande den som gäller — den är korrekt, billig och byggd ur varje hästs
+egna mått. Det är inget nödläge.
+
+### `NOT_TESTED`, andra passet
+
+- **Hierarki, flaggor, mått, material och texturer** för `4505046158`,
+  `8709973262`, `15057288717` och `15860424841`. Blockerat, se ovan.
+- **Kontots inventarium.** Jag kan inte läsa vilka assets kontot äger; att de
+  tre ursprungliga går att sätta in och inga andra är en **mätning**, men
+  förklaringen är ett antagande.
+- **Visuellt skick.** Samma begränsning som i första passet: Studios viewport
+  renderade svart för varje framing, även för den accepterade anläggningen.
+- **Licenstext.** Creator Store-API:t returnerar ingen licensuppgift.
+- **Hoppkandidaterna.** Fortfarande utanför — separat arena-/miljögate.
