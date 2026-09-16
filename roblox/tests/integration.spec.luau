@@ -380,6 +380,69 @@ do
 	check("   rätt sadel går på", okR == true)
 	check("   och ligger då FYSISKT på henne",
 		TackService.harTack(S.modell, "sadel") == true)
+
+	--[[ ── HÄMTNINGEN ÄR ETT PAR (#169) ────────────────────────────────
+
+		Sadel och träns hämtas tillsammans på boxfronten, och ett par är
+		inte ett par om halva bytet gick igenom. `valjPar` prövar därför
+		ALLA delar innan någon skrivs.
+
+		Mätt på `a096d68`, innan rättelsen, genom `TackForradService`
+		egen söm med en mottagare som nekade tränset:
+
+		    FÖRE:  sadel=gammal_hast  trans=gammal_hast
+		    EFTER: sadel=ny_hast      trans=gammal_hast   <- blandat par
+
+		Raderna nedan mäter båda halvorna av garantin: att ett par skrivs
+		HELT, och att en del som INTE håller inte skriver någonting alls.
+		Den andra är den som går röd om någon flyttar tillbaka skrivningen
+		före prövningen. ]]
+	GameplayService.valjPar(S.spelare, S.hastId)
+	local valt = GameplayService.valdFor(S.spelare)
+	check("   «hämta utrustning» skriver HELA paret",
+		valt ~= nil and valt.sadel == S.hastId and valt.trans == S.hastId,
+		valt and ("sadel %s · träns %s"):format(tostring(valt.sadel), tostring(valt.trans)) or "-")
+
+	local okG, skalG = GameplayService.valjUtrustning(S.spelare, "grimskaft", grannId)
+	local efter = GameplayService.valdFor(S.spelare)
+	local extra = {}
+	for nyckel in pairs(efter) do
+		if nyckel ~= "sadel" and nyckel ~= "trans" then table.insert(extra, nyckel) end
+	end
+	check("   en del som inte håller skriver INGENTING",
+		okG == false and skalG == "tack.okand_utrustning"
+			and efter.sadel == S.hastId and efter.trans == S.hastId
+			and #extra == 0,
+		("%s · sadel %s · träns %s · extra [%s]"):format(tostring(skalG),
+			tostring(efter.sadel), tostring(efter.trans), table.concat(extra, ",")))
+
+	--[[ ETT OGILTIGT ID FÄLLER HELA PARET, och får inte skriva halva.
+		Tom sträng har rätt typ och betyder ingenting — det är just den
+		sortens värde som en klient kan skicka och en typkontroll släppa
+		förbi. Raden går röd om skrivningen flyttas in i prövningsslingan. ]]
+	local okTom, skalTom = GameplayService.valjPar(S.spelare, "")
+	local kvar = GameplayService.valdFor(S.spelare)
+	check("   ett ogiltigt id skriver ingen halva av paret",
+		okTom == false and skalTom == "tack.okand_utrustning"
+			and kvar.sadel == S.hastId and kvar.trans == S.hastId,
+		("%s · sadel %s · träns %s"):format(tostring(skalTom),
+			tostring(kvar.sadel), tostring(kvar.trans)))
+
+	--[[ ── EN SPELARES VAL NÅR INTE EN ANNANS (#169) ───────────────────
+
+		Valet bokförs per spelare. Provet bygger en andra spelare i samma
+		värld och mäter att hennes hämtning inte rör den förstas — och att
+		den förstas inte rör hennes. ]]
+	local spelare2 = nySpelare("Granne", 4242, vec(9, 0, 0))
+	GameplayService.valjPar(spelare2, grannId)
+	local v1 = GameplayService.valdFor(S.spelare)
+	local v2 = GameplayService.valdFor(spelare2)
+	check("   en annan spelares hämtning rör inte min",
+		v1.sadel == S.hastId and v1.trans == S.hastId,
+		("sadel %s · träns %s"):format(tostring(v1.sadel), tostring(v1.trans)))
+	check("   och min rör inte hennes",
+		v2.sadel == grannId and v2.trans == grannId,
+		("sadel %s · träns %s"):format(tostring(v2.sadel), tostring(v2.trans)))
 	stadaSession(S)
 end
 

@@ -384,10 +384,10 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 		return false, "spel.redan_redo"
 	end
 
-	--[[ Stallet har lagt fram hennes egen utrustning. ]]
-	local okS = GameplayService.valjUtrustning(player, "sadel", s.hastId)
-	local okT = GameplayService.valjUtrustning(player, "trans", s.hastId)
-	if not (okS and okT) then return false, "tack.okand_utrustning" end
+	--[[ Stallet har lagt fram hennes egen utrustning — som ett par, av
+		samma skäl som boxfronten gör det. ]]
+	local okPar, skalPar = GameplayService.valjPar(player, s.hastId)
+	if not okPar then return false, skalPar or "tack.okand_utrustning" end
 
 	--[[ ── FAIL CLOSED ────────────────────────────────────────────────
 
@@ -491,13 +491,65 @@ end
 
 --[[ Sadelkammarens val: vilken hästs sadel och träns spelaren tagit med
 	sig. Webbens `visaSadelkammare` gör samma val, och samma fel går att
-	göra — utrustningen prövas mot hästen när den sätts på. ]]
-function GameplayService.valjUtrustning(player: Player, typ: string, hastId: string?): (boolean, string?)
+	göra — utrustningen prövas mot hästen när den sätts på.
+
+	── PRÖVNINGEN ÄR SKILD FRÅN SKRIVNINGEN (#169) ──────────────────────
+
+	Sadel och träns hämtas TILLSAMMANS, och ett par är inte ett par om
+	halva bytet gick igenom. Förut skrevs de av två oberoende anrop: det
+	första committade, det andra kunde neka, och spelaren stod med den nya
+	hästens sadel och den gamlas träns.
+
+	Mätt på `a096d68` genom modulens egen söm, med en mottagare som nekar
+	tränset — alltså precis det Equipment Gate är på väg att införa:
+
+	    FÖRE:  sadel=gammal_hast  trans=gammal_hast
+	    tag() returnerade: false
+	    EFTER: sadel=ny_hast      trans=gammal_hast   <- blandat par
+
+	Därför: `prova` svarar utan att röra något, `skriv` rör utan att fråga.
+	Ett par prövas HELT innan något skrivs. Skrivningen är rena
+	tabellskrivningar och kan inte falla halvvägs, så rollback behövs inte —
+	men ordningen gör att den inte heller kan behövas. Växer prövningen
+	(reservation, fas, avstånd, lagersaldo) ärver paret det automatiskt. ]]
+local function provaVal(_player: Player, typ: string, hastId: string?): (boolean, string?)
 	if typ ~= "sadel" and typ ~= "trans" then
 		return false, "tack.okand_utrustning"
 	end
+	--[[ ID:t prövas, inte bara dess TYP (#169). En tom sträng har rätt typ
+		och betyder ingenting; `moment` hade sedan läst den som en hämtad
+		utrustning och skickat den vidare till `TackService.satPa`, där den
+		aldrig kan matcha en häst. Nejet hör hemma där valet görs. ]]
+	if typeof(hastId) ~= "string" or hastId == "" then
+		return false, "tack.okand_utrustning"
+	end
+	return true
+end
+
+local function skrivVal(player: Player, typ: string, hastId: string?)
 	valdUtrustning[player] = valdUtrustning[player] or {}
 	valdUtrustning[player][typ] = hastId
+end
+
+function GameplayService.valjUtrustning(player: Player, typ: string, hastId: string?): (boolean, string?)
+	local ok, skal = provaVal(player, typ, hastId)
+	if not ok then return false, skal end
+	skrivVal(player, typ, hastId)
+	return true
+end
+
+--[[ Hela hämtningen: sadel OCH träns, eller ingetdera. Den väg
+	`TackForradService` tar, och den väg `ridaNu` tar — samma garanti på
+	båda ställena, för det är samma par. ]]
+function GameplayService.valjPar(player: Player, hastId: string?): (boolean, string?)
+	local delar = { "sadel", "trans" }
+	for _, typ in ipairs(delar) do
+		local ok, skal = provaVal(player, typ, hastId)
+		if not ok then return false, skal end
+	end
+	for _, typ in ipairs(delar) do
+		skrivVal(player, typ, hastId)
+	end
 	return true
 end
 

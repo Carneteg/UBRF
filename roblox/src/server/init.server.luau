@@ -137,7 +137,7 @@ kritisk("LedService", LedService.start)
      dit, och tjänsten tar emot anroparen som argument i stället för att
      requira tillbaka. Ordningen är alltså ett beroende, inte en smaksak. ]]
 kritisk("TackForradService", function()
-	TackForradService.start(GameplayService.valjUtrustning)
+	TackForradService.start(GameplayService.valjPar)
 end)
 
 --[[ Belysningen EFTER världsbygget: modulen letar upp armaturerna som
