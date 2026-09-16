@@ -93,7 +93,7 @@ det är det rad 10a och 10b nu mäter.
 | `Terrain`, `Camera` | kanonisk | motorns egna |
 | `SADDLE`, `Saddle`, `ew bridle` ×2, `Western Bridle` | **ospårad** | sannolika Creator Store-importer för tack-referens |
 | `ThanksgivingHelmet`, `Joe's hairAccessory` | **ospårad** | avatartillbehör, inget med UBRF att göra |
-| fem namnlösa `Model`, `rosto`, lös `Union` | **ospårad** | okänt ursprung |
+| fem namnlösa `Model`, `rosto`, lös `Union` | **ospårad** | Toolbox-innehåll, se #215 nedan — `rosto` bär samma `Scene`/`LV cap` som familjen där |
 | `Model` med `Lee enfield é`, `WW2`, `kll`, `ko` | **ospårad, främmande** | uppenbart orelaterat till en ridanläggning |
 | `Jumps` | **ospårad** | hinder — kan vara avsett arbetsmaterial, se nedan |
 
@@ -428,3 +428,90 @@ vad placen faktiskt bär.
 
 Ingenting raderades. Ingen geometri rördes. Klassningen är läsande, precis
 som städpolicyn ovan kräver, och vad som ska bort är Tobias beslut.
+
+
+## #215 — de sju objekten som dök upp under utrustningsauditen
+
+Mätt 2026-09-16 på `main` `bd70f1097acbe5786f10accd201e60e57583fd0a`.
+Preflighten före och efter: **38 mätningar, 0 röda**.
+
+`Workspace` gick från **19** toppnivåbarn till **26** under passet i #165.
+Frågan var vem som lagt dit dem, och svaret är mätt, inte gissat.
+
+### Vad de är
+
+Nio objekt i placen tillhör en och samma familj av fria Toolbox-modeller:
+`LV cap` ×3 (lösa `MeshPart`), `Scene` ×2 och fyra `Model` som innehåller
+`Scene`/`PERSONAGEM`-delar. Två Creator Store-listningar matchar dem
+**strukturellt exakt**:
+
+```
+135146153534189  "CAP QUE O OTARIO ACHO QUE EU COPIEI DELE"
+                 -> en MeshPart som heter LV cap
+
+98854808330375   "Scene"
+                 -> Scene/{PERSONAGEM.002, PERSONAGEM.003, PERSONAGEM.171, LV cap}
+```
+
+Den andra är instans för instans samma träd som `Workspace.Scene` i placen.
+
+De hänger **4–5 m över gräset** (13–15 studs mätt med raycast), är ankrade och
+kolliderande, och ligger staplade på varandra kring `tomt(99, 155)` och
+`tomt(99–104, 176–204)`. Den nedersta i en av staplarna är
+`Workspace.rosto.Scene.LV cap` — alltså **samma familj som redan fanns i
+placen före sessionen**, och på samma plats. Det ser ut som upprepade
+Toolbox-införanden vid samma kameraläge, vid olika tillfällen.
+
+### Vad de INTE är
+
+De kommer inte från agentens verktygskedja. Det är mätt, en gång per verktyg,
+med räkning av `Workspace`-barn före och efter:
+
+| verktyg | resultat |
+|---|---|
+| `search_assets` (sökning) | 26 → 26 |
+| `preview_asset` (förhandsgranskning) | 26 → 26 |
+| `insert_asset` till `ServerStorage` | 26 → 26 |
+| klon till en `Workspace`-mapp och `Destroy` av mappen | 26 → 27 → 26 |
+
+Sista raden är hela sekvensen från #165:s tredje pass, återspelad: den lämnar
+ingenting efter sig. Kandidaterna som auditerades hette dessutom `Horse
+saddle`, `Sadles`, `helmet` och `halter` — inget av de nio heter något av det,
+och alla fyra är borttagna.
+
+### Vad som INTE går att fastställa
+
+**Vilka av de nio som är nya.** Baslinjen på 19 registrerade bara *namn*, och
+den innehöll redan fem `Model`. Fyra av dagens sju `Model` tillhör
+`PERSONAGEM`-familjen, vilket betyder att minst en fanns där före — men
+instanser bär inga tidsstämplar, så den exakta uppdelningen går inte att mäta
+i efterhand. Nettot `+7` är säkert; fördelningen inuti är det inte.
+
+**Om de ligger i den sparade placen.** De finns i edit-datamodellen och
+överlever en play-cykel (mätt: 26 barn före, 26 efter start och stopp). Om de
+är sparade till disk går inte att läsa härifrån.
+
+### Klassning och beslut
+
+`Integritet.klassificera` säger `ospårad`, och punkt 10e listar dem — nu 21
+namn i `Workspace`. **Grinden gjorde exakt det den ska**: den var tyst om
+sådant här före #209, och det var därför driften kunde växa oupptäckt. Att
+frågan över huvud taget ställdes är radens förtjänst.
+
+**Ingenting är raderat.** #171:s regel gäller: klassa först, radera bara det
+som bevisats icke-kanoniskt, och aldrig blint. Provenienssen är nu bevisad
+(fritt Toolbox-innehåll utan koppling till UBRF), men **städning kräver ett
+eget uttryckligt beslut från Tobias** — det här dokumentet auktoriserar inget.
+
+Om beslutet blir städning gäller städpolicyn ovan: karantän först, kör
+grinderna, radera sist.
+
+### Inställningen för tredjepartsassets
+
+Slagen PÅ av Tobias 17:19 för #165:s tredje pass, och **AV igen** när auditen
+var klar. Båda lägena är verifierade funktionellt på samma asset:
+
+```
+PÅ   insert_asset 18632903662 -> success
+AV   insert_asset 18632903662 -> "User is not authorized to access Asset"
+```
