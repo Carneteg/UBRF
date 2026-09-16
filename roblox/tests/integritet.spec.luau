@@ -373,6 +373,72 @@ do
 	behallare:Destroy()
 end
 
+--[[ ══ SERVERNS EGNA OBJEKT I Workspace ÄR RUNTIME, INTE DRIFT (#171) ══
+
+	`RUNTIME` slår upp på namn. Workspace fylls av objekt vars namn kommer ur
+	speldata eller ur spelaren — hästarna heter som hästarna, boxmarkörer och
+	karaktärer som den som loggade in — så namnuppslag når dem aldrig.
+
+	Utan reglerna blev 10e obrukbar i drift. Mätt i en levande server-VM på
+	`203357f`: 49 namngivna objekt, varav 34 serverns egna. Provet pinnar
+	varje regel mot den kod som bevisligen skapar objektet, och pinnar lika
+	viktigt att en FRÄMMANDE modell fortfarande är ospårad. ]]
+print("\n── Serverns egna objekt i Workspace klassas som runtime ──")
+
+do
+	local Players = game:GetService("Players")
+	local CS = game:GetService("CollectionService")
+	sattIdentitet(UBRFBuild)
+
+	local function nyModell(namn)
+		local m = Instance.new("Model")
+		m.Name = namn
+		m.Parent = workspace
+		return m
+	end
+
+	--[[ Hästen: HastRigg/HastVisual taggar varje byggd modell `Horse`. ]]
+	local hast = nyModell("Bränntomts Lydia")
+	CS:AddTag(hast, "Horse")
+	check("en häst med taggen Horse klassas som runtime",
+		Integritet.klassificera("Workspace", hast) == "runtime",
+		Integritet.klassificera("Workspace", hast))
+
+	--[[ Boxmarkörerna: StallService bygger dem per spelare. ]]
+	local markor = nyModell("Boxmarkor_SagaAberg")
+	check("boxmarkörerna klassas som runtime",
+		Integritet.klassificera("Workspace", markor) == "runtime",
+		Integritet.klassificera("Workspace", markor))
+
+	--[[ Karaktären: Players äger den, inte någon källfil. ]]
+	local karaktar = nyModell("SagaAberg")
+	--[[ `_spelare` är bänkens register, samma söm `GetPlayerFromCharacter`
+		slår upp i. Provet mäter alltså exakt den fråga modulen ställer. ]]
+	table.insert(Players._spelare, { Name = "SagaAberg", Character = karaktar })
+	check("spelarens egen karaktär klassas som runtime",
+		Integritet.klassificera("Workspace", karaktar) == "runtime",
+		Integritet.klassificera("Workspace", karaktar))
+
+	--[[ OCH DET SOM FAKTISKT ÄR DRIFT SKA LIGGA KVAR. Utan den här
+		mätningen hade reglerna kunnat svälja allt. ]]
+	local framling = nyModell("ew bridle")
+	check("en främmande modell är fortfarande ospårad",
+		Integritet.klassificera("Workspace", framling) == "ospårad",
+		Integritet.klassificera("Workspace", framling))
+
+	local namngivna = table.concat(Integritet.osparade("Workspace"), ", ")
+	check("10e namnger driften och INTE serverns egna",
+		string.find(namngivna, "ew bridle") ~= nil
+			and string.find(namngivna, "Lydia") == nil
+			and string.find(namngivna, "Boxmarkor_") == nil,
+		namngivna)
+
+	hast:Destroy()
+	markor:Destroy()
+	karaktar:Destroy()
+	framling:Destroy()
+end
+
 --[[ ══ 10d/10e: OSPÅRAT UTANFÖR ReplicatedStorage (#171) ═══════════════
 
 	Mätt på `a5a4b71` i den anslutna placen: Workspace bar 15 ospårade

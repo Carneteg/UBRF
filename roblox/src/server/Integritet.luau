@@ -86,6 +86,59 @@ local RUNTIME: { [string]: { [string]: string } } = {
 	},
 }
 
+--[[ ── RUNTIME SOM INTE GÅR ATT KÄNNA IGEN PÅ NAMNET ────────────────────
+
+	`RUNTIME` ovan slår upp på namn, och det räcker för det servern bygger på
+	en fast plats. Workspace fylls dessutom av objekt vars namn kommer ur
+	SPELDATA eller ur spelaren: varje häst heter som hästen, och boxmarkörer
+	och karaktärer heter som den som loggade in. Namnuppslag kan alltså aldrig
+	fånga dem.
+
+	Utan de här reglerna blev punkt 10e obrukbar i drift. Mätt i en levande
+	server-VM på `203357f`: raden namngav 49 ospårade objekt i Workspace, men
+	34 av dem var serverns egna — 33 hästar, en karaktär och en uppsättning
+	boxmarkörer. De 15 som blir kvar är den faktiska driften, och det är den
+	siffran raden finns för att visa.
+
+	Varje regel pekar ut sin källa i koden. En regel utan en rad som bevisligen
+	skapar objektet hör inte hemma här: då är gissningen tillbaka.
+
+	REGLERNA ÄR AVSIKTLIGT SVAGA MOT FÖRFALSKNING — en främmande modell som
+	taggar sig `Horse` läses som runtime. Det är acceptabelt just för att 10e
+	RAPPORTERAR och aldrig fäller; den som vill dölja något behöver inte
+	anstränga sig så mycket. Skulle en regel någon gång användas av en
+	FÄLLANDE rad måste den prövas om. ]]
+type Runtimeregel = { kalla: string, prov: (Instance) -> boolean }
+
+local RUNTIMEREGLER: { [string]: { Runtimeregel } } = {
+	Workspace = {
+		{
+			kalla = "server/HastRigg.luau + HastVisual.luau (taggen Horse)",
+			prov = function(inst)
+				local ok, taggad = pcall(function()
+					return game:GetService("CollectionService"):HasTag(inst, "Horse")
+				end)
+				return ok and taggad == true
+			end,
+		},
+		{
+			kalla = "server/StallService.luau:62 (Boxmarkor_<spelare>)",
+			prov = function(inst)
+				return inst.Name:sub(1, 10) == "Boxmarkor_"
+			end,
+		},
+		{
+			kalla = "Players — spelarens egen karaktär",
+			prov = function(inst)
+				local ok, spelare = pcall(function()
+					return game:GetService("Players"):GetPlayerFromCharacter(inst)
+				end)
+				return ok and spelare ~= nil
+			end,
+		},
+	},
+}
+
 --[[ Motorns egna barn i Workspace. De finns i varje place och ägs varken
 	av Rojo eller av oss. ]]
 local MOTORKLASSER = { Terrain = true, Camera = true }
@@ -126,6 +179,9 @@ function Integritet.klassificera(tjanst: string, barn: Instance): Klass
 	if rojoAgda(tjanst)[barn.Name] then return "kanonisk" end
 	local runtime = RUNTIME[tjanst]
 	if runtime and runtime[barn.Name] then return "runtime" end
+	for _, regel in ipairs(RUNTIMEREGLER[tjanst] or {}) do
+		if regel.prov(barn) then return "runtime" end
+	end
 	if arVerktyg(barn.Name) then return "verktyg" end
 	return "ospårad"
 end
