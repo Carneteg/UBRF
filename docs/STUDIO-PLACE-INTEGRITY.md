@@ -515,3 +515,102 @@ var klar. Båda lägena är verifierade funktionellt på samma asset:
 PÅ   insert_asset 18632903662 -> success
 AV   insert_asset 18632903662 -> "User is not authorized to access Asset"
 ```
+
+
+### Städningen, utförd 2026-09-16
+
+Tobias auktoriserade städning av **enbart** den bevisade Toolbox-familjen.
+Utfört på `main` `e75151ae481711c952e0d3af33d1c0b856376db2`.
+
+**Matchningen gjordes strukturellt, inte på namn.** Ett delträd räknades som
+familj bara om VARJE `BasePart` i det heter `LV cap` eller börjar med
+`PERSONAGEM`, **och** varje `MeshId` finns i de fyra som de två bevisade
+listningarna använder. En enda främmande del räckte för att lämna trädet
+orört — ordern var uttrycklig om att inte gissa.
+
+**Fem objekt matchade exakt och är borttagna:**
+
+```
+Workspace.Scene   [Model]     4 delar   pos(297, 16, -18)
+Workspace.Scene   [Model]     4 delar   pos(297, 14, -18)
+Workspace.LV cap  [MeshPart]  1 del     pos(297, 15,  43)
+Workspace.LV cap  [MeshPart]  1 del     pos(297, 16,  42)
+Workspace.LV cap  [MeshPart]  1 del     pos(297, 15,  41)
+```
+
+De flyttades först till `ServerStorage.__Stadning215_Karantan`, grinderna
+kördes med dem i karantän, och de raderades först när allt var grönt.
+Karantänmappen är borttagen.
+
+**Fyra objekt i samma släkt lämnades orörda**, för att de bär en del utanför
+den bevisade signaturen:
+
+| objekt | delen utanför |
+|---|---|
+| `Workspace.Model` ×4 | `unnamed.056` (mesh `16611595881`) |
+| `Workspace.rosto` och dess `Scene` | `Curva` (mesh `120048019098636`) |
+
+De **kan** höra till samma familj, men det går inte att bevisa utan att öppna
+tredjepartsladdning igen, och den ska vara av. De står kvar i punkt 10e:s
+lista och kräver ett eget beslut.
+
+**Före och efter:**
+
+```
+Workspace toppnivå        26 -> 21
+10e ospårat i Workspace   21 -> 16
+preflight                 38 mätningar, 0 röda, före OCH efter
+Anläggning.UBRF           3 350 delar, oförändrat
+hästar                    33/33
+Tackförråd                33 upphängningar
+kor.sh                    37/37 · build-identitet exit 0
+```
+
+Kvar i 10e efter städningen: `Jumps`, sju `Model`, `SADDLE`, `Saddle`,
+`ThanksgivingHelmet`, `Union`, `Western Bridle`, `ew bridle` ×2, `rosto` —
+alla oförändrade, alla fortfarande Tobias beslut.
+
+### Not om tredjepartsinställningen — och om att mäta rätt sak
+
+Under städningen såg det ut som att `Allow Loading Third Party Assets` hade
+slagits på igen: `insert_asset` fortsatte sätta in assets efter att den
+stängts. **Den slutsatsen var fel**, och rättelsen är värd att stå kvar här,
+för felet är lätt att göra om.
+
+Samma fem assets prövades i samma minut på två vägar:
+
+| asset | MCP `insert_asset` | `InsertService:LoadAsset` (skriptvägen) |
+|---:|---|---|
+| `15732091807` | **lyckades** | **NEKAD** |
+| `16690671412` | **lyckades** | **NEKAD** |
+| `8512123329` | NEKAD | NEKAD |
+| `15057288717` | lyckades | lyckades |
+| `4505046158` | lyckades | lyckades |
+
+**Två assets som skriptvägen nekar laddar `insert_asset` ändå.** Verktyget går
+alltså inte genom placens tredjepartsgrind, utan en plugin-/Open
+Cloud-privilegierad väg. Att en insättning lyckas där är därför **inget bevis**
+för att inställningen är på.
+
+De tre raderna som lyckas på båda vägarna motsäger inte det:
+
+- `15057288717` och `4505046158` är precis de som sattes in medan flaggan var
+  på. Att hämta en gratis Creator Store-sak lägger den i kontots ägo, och en
+  **ägd** asset laddar oavsett inställningen. Samma sak gäller `9639407836`,
+  `8709973262` och `18632903662`.
+- `8512123329` nekas på **båda** vägarna — en assetspecifik spärr, inte en
+  placeinställning. Den är också den enda i uppsättningen som bär
+  `Animation`-objekt, och en annan användares animationer går inte att ladda
+  alls.
+
+**Slutsatsen:** UI:t är facit. Med flaggan av nekar spelets egen väg
+icke-ägda tredjepartsassets, vilket var hela poängen med att stänga den.
+
+Två saker följer av det, och båda är värda att komma ihåg:
+
+1. **En audit som ska begränsas av flaggan måste sondera med
+   `InsertService:LoadAsset`**, inte med `insert_asset`. Annars mäter man
+   verktygets rättigheter i stället för placens.
+2. **Assets som en gång hämtats in ligger kvar i kontots ägo** och laddas även
+   med flaggan av. Att rensa dem är en inventarieåtgärd hos Tobias, inte en
+   placeinställning.
