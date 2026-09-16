@@ -385,6 +385,122 @@ do
 end
 
 print("")
+
+--[[ ══ REGLAGEN BYGGS OM NÄR SKÄRMHÖJDEN ÄNDRAS (#208) ═════════════════
+
+	`skala` i `mount` finns för att en låg skärm inte ska skjuta
+	gångartsraden ur bild. Räkningen gjordes vid uppsittningen och aldrig
+	igen, så en vridning efteråt lämnade kvar den gamla skalan.
+
+	Mätt i Studio på `754f2cc`, monterat på iPad Pro 13in och sedan vridet
+	till iPhone 13 i landskap (749x367):
+
+	    HALT   y -71..-19   helt utanför
+	    SKRITT y -71..-19   helt utanför
+	    TRAV   y -11..41    avklippt
+	    GALOPP y -11..41    avklippt
+
+	Exakt de tal noten i `mount` citerar som det gamla felet.
+
+	Diagnosen före rättelsen, på `4d740b6`: lyssnaren FYRAR, två gånger per
+	enhetsbyte (`1375x974 -> 1281x953 -> 749x309`), och `gui == g` är sant
+	båda gångerna. Mekanismen var alltså aldrig problemet — det som saknades
+	var att någon räknade om. ]]
+print("\n── Reglagen byggs om när skärmhöjden ändras ──")
+do
+	local UIS = game:GetService("UserInputService")
+	local spelare = game:GetService("Players").LocalPlayer
+	local kam = workspace.CurrentCamera
+	local foreTouch = UIS.TouchEnabled
+	local foreVy = kam.ViewportSize
+	UIS.TouchEnabled = true
+
+	--[[ Bänkens PlayerGui skapas först när någon frågar efter den med
+		`WaitForChild`, precis som `init.client` gör. ]]
+	spelare:WaitForChild("PlayerGui")
+	local function montera(hojd)
+		kam.ViewportSize = { _typ = "Vector2", X = 1180, Y = hojd }
+		TouchControls.mount(Input, { dismount = function() end })
+	end
+
+	--[[ Hög yta först: surfplattans skala, alltså taket 1. ]]
+	montera(1000)
+	local bredPlatta = TouchControls.reglageBredd()
+	check("reglagen monterades på den höga ytan", bredPlatta > 0,
+		("reglageBredd %d"):format(bredPlatta))
+
+	local gui = spelare:FindFirstChildOfClass("PlayerGui")
+	local ht
+	for _, g in ipairs(gui._barn or {}) do
+		if g.Name == "HorseTouch" then ht = g end
+	end
+	check("det finns EN uppsättning reglage", ht ~= nil)
+
+	--[[ Och så krymper ytan, som vid en vridning. Bänkens `AbsoluteSize`
+		är ett rått fält, så provet fyrar signalen självt — att det är RÄTT
+		signal modulen lyssnar på pinnas av raden nedan. ]]
+	check("modulen lyssnar på ytans storlek",
+		ht ~= nil and ht._sig ~= nil and ht._sig.AbsoluteSize ~= nil,
+		"GetPropertyChangedSignal(\"AbsoluteSize\")")
+
+	--[[ 345 − 36 px inset = 309, samma hojd iPhone 13 i landskap gav i
+		Studio. 390 ar namnaren i `mount`, sa skalan blir 0,79 mot
+		surfplattans 1,0 — hade jag valt en hojd nara 390 hade provet varit
+		gront utan att mata nagot. ]]
+	kam.ViewportSize = { _typ = "Vector2", X = 749, Y = 345 }
+	if ht then ht:GetPropertyChangedSignal("AbsoluteSize"):Fire() end
+	--[[ Ombyggnaden ligger i en `task.defer`; bänken kör den direkt. ]]
+	task.wait()
+	local smalTelefon = TouchControls.reglageBredd()
+	check("reglagen byggdes OM när höjden krympte — inte kvar i gammal skala",
+		smalTelefon > 0 and smalTelefon < bredPlatta,
+		("%d -> %d"):format(bredPlatta, smalTelefon))
+
+	--[[ Och tillbaka upp igen: regeln är symmetrisk. ]]
+	kam.ViewportSize = { _typ = "Vector2", X = 1180, Y = 1000 }
+	local ht2 = nil
+	for _, g in ipairs(gui._barn or {}) do
+		if g.Name == "HorseTouch" then ht2 = g end
+	end
+	if ht2 then ht2:GetPropertyChangedSignal("AbsoluteSize"):Fire() end
+	task.wait()
+	check("och tillbaka när ytan växer igen",
+		TouchControls.reglageBredd() == bredPlatta,
+		("%d (var %d)"):format(TouchControls.reglageBredd(), bredPlatta))
+
+	--[[ SAMMA HÖJD FÅR INTE GE EN OMBYGGNAD. Utan den vakten bygger den
+		nya ytans egen storlekshändelse om igen, varje bildruta, för alltid. ]]
+	local fore = TouchControls.reglageBredd()
+	local ht3 = nil
+	for _, g in ipairs(gui._barn or {}) do
+		if g.Name == "HorseTouch" then ht3 = g end
+	end
+	local byggdeOm = false
+	if ht3 then
+		local gammal = ht3
+		ht3:GetPropertyChangedSignal("AbsoluteSize"):Fire()
+		task.wait()
+		for _, g in ipairs(gui._barn or {}) do
+			if g.Name == "HorseTouch" and g ~= gammal then byggdeOm = true end
+		end
+	end
+	check("oförändrad höjd bygger INTE om — ingen loop",
+		not byggdeOm and TouchControls.reglageBredd() == fore,
+		("byggde om: %s · bredd %d"):format(tostring(byggdeOm), TouchControls.reglageBredd()))
+
+	--[[ Och det ska fortfarande bara finnas EN uppsättning. ]]
+	local antal = 0
+	for _, g in ipairs(gui._barn or {}) do
+		if g.Name == "HorseTouch" then antal += 1 end
+	end
+	check("efter alla ombyggnader finns exakt EN uppsättning reglage",
+		antal == 1, ("%d st"):format(antal))
+
+	TouchControls.unmount()
+	UIS.TouchEnabled = foreTouch
+	kam.ViewportSize = foreVy
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else
