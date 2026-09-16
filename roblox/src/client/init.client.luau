@@ -253,8 +253,8 @@ end)
 
 --[[ Nejet från «Rida nu» ska läsas av SPELAREN, inte av Output-fönstret.
 	Panelen äger meddelanderaden; knappen skickar dit sitt skäl. ]]
-InteractionController.setAvslagVisare(function(skal: any)
-	PreparationController.visaAvslagFor(skal)
+InteractionController.setAvslagVisare(function(skal: any, extra: any?)
+	PreparationController.visaAvslagFor(skal, extra)
 end)
 
 InteractionController.setLedCheck(function(model: Model): boolean
