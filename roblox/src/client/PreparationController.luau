@@ -399,7 +399,48 @@ end
 	Knapparna låg alltså ovanpå spaken. Måtten läses ur `TouchGui` i
 	stället för att skrivas av: spaken flyttar sig mellan enheter, och ett
 	tal här hade blivit fel på nästa skärm. Finns inga pekreglage — hela
-	skrivbordet — är svaret noll och layouten är oförändrad. ]]
+	skrivbordet — är svaret noll och layouten är oförändrad.
+
+	══ ETT SLÄCKT REGLAGE TAR INGEN PLATS ═════════════════════════════
+
+	`spak.Visible` räckte inte, och det syntes först i en levande klient.
+
+	Spelet släcker Robloxs egna reglage självt medan man rider:
+	`TouchControls.egnaReglage` sätter `UserInputService.ModalEnabled`,
+	och Roblox svarar med `TouchGui.Enabled = false`. Men Roblox rör inte
+	barnens `Visible` när det händer. Mätt på en iPad Air i landskap,
+	samma klient, tre avläsningar i rad:
+
+	    reglagen på           Enabled=true   ThumbstickStart.Visible=true
+	    ModalEnabled = true   Enabled=FALSE  ThumbstickStart.Visible=true
+	    ModalEnabled = false  Enabled=true   ThumbstickStart.Visible=true
+
+	Spaken var alltså borta ur bilden i mittenraden — och panelen stod
+	kvar på x 218 i stället för att gå tillbaka till 12. Den väjde för
+	något spelaren inte kunde se, och gav bort 206 px av skärmen till
+	ingenting. På en telefon i landskap är det skillnaden mellan 8,9 %
+	och 17,8 % av siktrutan.
+
+	Ett reglage räknas därför bara om det ÄR på skärmen: synligt självt,
+	synligt hela vägen upp genom sina föräldrar, och i en yta som är
+	påslagen. ]]
+
+--[[ Är `o` faktiskt synlig för spelaren, hela vägen upp till och med
+	ytan den ritas i? `Enabled` finns bara på en `LayerCollector`; ett
+	explicit typtest, inget pcall — samma regel som `guiInset`. ]]
+local function paSkarmen(o: Instance?, yta: Instance): boolean
+	if not o or not o:IsA("GuiObject") or not o.Visible then return false end
+	local n: Instance? = o.Parent
+	while n do
+		if n:IsA("GuiObject") and not n.Visible then return false end
+		if n == yta then break end
+		n = n.Parent
+	end
+	local pa = (yta :: any).Enabled
+	if type(pa) == "boolean" then return pa end
+	return true
+end
+
 local function pekreglagensKanter(): (number, number)
 	local pg = player and player:FindFirstChildOfClass("PlayerGui")
 	local tg = pg and pg:FindFirstChild("TouchGui")
@@ -407,12 +448,12 @@ local function pekreglagensKanter(): (number, number)
 	local spak = tg:FindFirstChild("ThumbstickStart", true)
 	local hopp = tg:FindFirstChild("JumpButton", true)
 	local hoger = 0
-	if spak and spak:IsA("GuiObject") and spak.Visible then
-		hoger = spak.AbsolutePosition.X + spak.AbsoluteSize.X
+	if paSkarmen(spak, tg) then
+		hoger = (spak :: any).AbsolutePosition.X + (spak :: any).AbsoluteSize.X
 	end
 	local vanster = math.huge
-	if hopp and hopp:IsA("GuiObject") and hopp.Visible then
-		vanster = hopp.AbsolutePosition.X
+	if paSkarmen(hopp, tg) then
+		vanster = (hopp :: any).AbsolutePosition.X
 	end
 	return hoger, vanster
 end

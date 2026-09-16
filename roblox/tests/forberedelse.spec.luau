@@ -1235,14 +1235,16 @@ do
 			Nivån här är därför på riktigt, inte bekväm. ]]
 		local function pekreglage(spak, hopp)
 			PG._barn = {}
-			if not spak and not hopp then return end
-			local tg = Instance.new("Folder")
+			if not spak and not hopp then return nil end
+			local tg = Instance.new("ScreenGui")
 			tg.Name = "TouchGui"
-			local ram = Instance.new("Folder")
+			tg.Enabled = true
+			local ram = Instance.new("Frame")
 			ram.Name = "TouchControlFrame"
+			ram.Visible = true
 			ram.Parent = tg
 			local function ruta(namn, r, forlader)
-				if not r then return end
+				if not r then return nil end
 				local f = Instance.new("Frame")
 				f.Name = namn
 				f.Visible = true
@@ -1251,12 +1253,14 @@ do
 				f.Parent = forlader
 				return f
 			end
-			local spakram = Instance.new("Folder")
+			local spakram = Instance.new("Frame")
 			spakram.Name = "DynamicThumbstickFrame"
+			spakram.Visible = true
 			spakram.Parent = ram
 			ruta("ThumbstickStart", spak, spakram)
 			ruta("JumpButton", hopp, ram)
 			table.insert(PG._barn, tg)
+			return tg
 		end
 
 		local function skar(a, b)
@@ -1289,6 +1293,18 @@ do
 				spak = { x0 = 58, x1 = 206, y0 = 575, y1 = 723 },
 				hopp = nil,
 				kalla = "#162, uppmätt på iPad i landskap",
+			},
+			{
+				namn = "iPad Air 5 landskap 1179x819", b = 1179, h = 819,
+				spak = { x0 = 58, x1 = 206, y0 = 575, y1 = 723 },
+				hopp = { x0 = 1009, x1 = 1129, y0 = 551, y1 = 671 },
+				kalla = "#185, avläst ur levande Studio-klient 2026-09-16",
+			},
+			{
+				namn = "iPad 9 landskap 1080x810", b = 1080, h = 810,
+				spak = { x0 = 58, x1 = 206, y0 = 566, y1 = 714 },
+				hopp = { x0 = 910, x1 = 1030, y0 = 542, y1 = 662 },
+				kalla = "#185, avläst ur levande Studio-klient 2026-09-16",
 			},
 		}
 
@@ -1363,18 +1379,82 @@ do
 					spak.x0, spak.x1, hopp.x0, hopp.x1))
 		end
 
-		--[[ ── ETT SLÄCKT REGLAGE FLYTTAR INGENTING ───────────────────
-			`Visible = false` betyder att reglaget inte finns för
-			spelaren. Läste koden rutan ändå skulle panelen hoppa i sidled
-			varje gång Roblox släckte spaken. ]]
+		--[[ ── ETT SLÄCKT REGLAGE TAR INGEN PLATS ──────────────────────
+			Tre sätt att ta bort spaken ur bilden. Panelen ska gå tillbaka
+			till hörnet i alla tre, för i alla tre finns det inget för
+			spelaren att väja för.
+
+			Den mellersta — `TouchGui.Enabled = false` — är den som
+			faktiskt hände. Spelet släcker reglagen självt under ritt
+			(`TouchControls.egnaReglage` → `ModalEnabled`), och Roblox
+			nollställer INTE barnens `Visible` när det sker: mätt i en
+			levande iPad-klient stod `ThumbstickStart.Visible = true` med
+			`TouchGui.Enabled = false`, och panelen stod kvar på 218. ]]
+		local SPAK = { x0 = 58, x1 = 206, y0 = 575, y1 = 723 }
 		do
-			pekreglage({ x0 = 58, x1 = 206, y0 = 575, y1 = 723 }, nil)
-			local tg = PG:FindFirstChild("TouchGui")
+			local tg = pekreglage(SPAK, nil)
 			tg:FindFirstChild("ThumbstickStart", true).Visible = false
 			local m = vid(1024, 768)
 			check("en släckt spak flyttar inte panelen",
 				m.interaktion.x0 == 12,
 				("panel x %d..%d"):format(m.interaktion.x0, m.interaktion.x1))
+		end
+		do
+			local tg = pekreglage(SPAK, nil)
+			tg.Enabled = false
+			local m = vid(1024, 768)
+			check("en AVSTÄNGD pekyta flyttar inte panelen, trots synlig spak",
+				m.interaktion.x0 == 12,
+				("panel x %d..%d · ThumbstickStart.Visible = %s"):format(
+					m.interaktion.x0, m.interaktion.x1,
+					tostring(tg:FindFirstChild("ThumbstickStart", true).Visible)))
+		end
+		do
+			local tg = pekreglage(SPAK, nil)
+			tg:FindFirstChild("DynamicThumbstickFrame", true).Visible = false
+			local m = vid(1024, 768)
+			check("en släckt FÖRÄLDERRAM flyttar inte panelen heller",
+				m.interaktion.x0 == 12,
+				("panel x %d..%d"):format(m.interaktion.x0, m.interaktion.x1))
+		end
+
+		--[[ ── TELEFON I LANDSKAP: MÄTT, INTE GRINDAT ─────────────────
+
+			Det här är ett FYND, rapporterat i #185, och det står här som
+			ett tal i loggen i stället för som en grind. Skälet är att
+			göra det omöjligt att tappa bort — inte att smyga in en
+			regel.
+
+			På iPhone 13 i landskap är panelen 316 px bred på en 749 px
+			skärm, alltså 42 % av bilden. Avläst ur en levande klient:
+
+			    utan flytten   panel x  12..328    8,9 % av siktrutan
+			    med flytten    panel x 115..431   17,8 % av siktrutan
+
+			Båda ligger över de tre procent `varldshud.spec` kräver av de
+			skärmar den mäter — men den listan har bara telefon i
+			PORTRÄTT, och panelen har aldrig skalats efter skärmbredd.
+			Att rätta det ändrar panelens geometri för riktiga spelare,
+			och den ändringen är Tobias, inte min. ]]
+		do
+			pekreglage({ x0 = 29, x1 = 103, y0 = 216, y1 = 290 },
+				{ x0 = 654, x1 = 724, y0 = 219, y1 = 289 })
+			local m = vid(749, 367)
+			local bx = math.max(0, math.min(m.interaktion.x1, m.sikt.x1)
+				- math.max(m.interaktion.x0, m.sikt.x0))
+			local by = math.max(0, math.min(m.interaktion.y1, m.sikt.y1)
+				- math.max(m.interaktion.y0, m.sikt.y0))
+			print(("  MÄTT  iPhone 13 landskap 749x367: panel x %d..%d, %d px "
+				.. "= %d %% av skärmbredden, %.1f %% av siktrutan (FYND, se #185)")
+				:format(m.interaktion.x0, m.interaktion.x1,
+					m.interaktion.x1 - m.interaktion.x0,
+					math.floor(100 * (m.interaktion.x1 - m.interaktion.x0) / 749 + 0.5),
+					100 * (bx * by)
+						/ math.max(1, (m.sikt.x1 - m.sikt.x0) * (m.sikt.y1 - m.sikt.y0))))
+			check("telefonen i landskap: panelen ligger ändå inte över reglagen",
+				m.interaktion.x0 >= 103 and m.interaktion.x1 <= 654,
+				("panel x %d..%d · spak slutar 103 · hopp börjar 654"):format(
+					m.interaktion.x0, m.interaktion.x1))
 		end
 
 		--[[ Skrivbordet ska vara oförändrat: ingen pekyta, inget att väja
