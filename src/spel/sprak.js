@@ -79,6 +79,7 @@ const SPRAK = {
   "spel.inget_pass": { sv: "Du har inget pass igång", en: "You have no session going" },
   "spel.ingen_sparning": { sv: "Sparningen är inte igång", en: "Saving is not running" },
   "spel.inte_din_hast": { sv: "Det är inte din häst", en: "That is not your horse" },
+  "spel.redan_redo": { sv: "Hon står redan färdig", en: "She is already ready" },
   "spel.redan_ridit": { sv: "Du har redan ridit idag", en: "You have already ridden today" },
   "spel.gammal_klient": { sv: "Skötseln görs moment för moment nu — uppdatera klienten.",
     en: "Care is done step by step now — please update your client." },
