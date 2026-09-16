@@ -570,8 +570,47 @@ Kvar i 10e efter städningen: `Jumps`, sju `Model`, `SADDLE`, `Saddle`,
 `ThanksgivingHelmet`, `Union`, `Western Bridle`, `ew bridle` ×2, `rosto` —
 alla oförändrade, alla fortfarande Tobias beslut.
 
-**Not om inställningen.** Ordern sa att tredjepartsassets skulle förbli
-**AV**. Funktionellt uppmätt under passet: den var AV 17:45, och **PÅ igen**
-när städningen var klar — två olika assets gick att sätta in. Jag har inte
-rört någon Experience Setting och kan inte heller göra det; flaggan är inte
-skriptbar. **Den behöver slås av för hand.**
+### Not om tredjepartsinställningen — och om att mäta rätt sak
+
+Under städningen såg det ut som att `Allow Loading Third Party Assets` hade
+slagits på igen: `insert_asset` fortsatte sätta in assets efter att den
+stängts. **Den slutsatsen var fel**, och rättelsen är värd att stå kvar här,
+för felet är lätt att göra om.
+
+Samma fem assets prövades i samma minut på två vägar:
+
+| asset | MCP `insert_asset` | `InsertService:LoadAsset` (skriptvägen) |
+|---:|---|---|
+| `15732091807` | **lyckades** | **NEKAD** |
+| `16690671412` | **lyckades** | **NEKAD** |
+| `8512123329` | NEKAD | NEKAD |
+| `15057288717` | lyckades | lyckades |
+| `4505046158` | lyckades | lyckades |
+
+**Två assets som skriptvägen nekar laddar `insert_asset` ändå.** Verktyget går
+alltså inte genom placens tredjepartsgrind, utan en plugin-/Open
+Cloud-privilegierad väg. Att en insättning lyckas där är därför **inget bevis**
+för att inställningen är på.
+
+De tre raderna som lyckas på båda vägarna motsäger inte det:
+
+- `15057288717` och `4505046158` är precis de som sattes in medan flaggan var
+  på. Att hämta en gratis Creator Store-sak lägger den i kontots ägo, och en
+  **ägd** asset laddar oavsett inställningen. Samma sak gäller `9639407836`,
+  `8709973262` och `18632903662`.
+- `8512123329` nekas på **båda** vägarna — en assetspecifik spärr, inte en
+  placeinställning. Den är också den enda i uppsättningen som bär
+  `Animation`-objekt, och en annan användares animationer går inte att ladda
+  alls.
+
+**Slutsatsen:** UI:t är facit. Med flaggan av nekar spelets egen väg
+icke-ägda tredjepartsassets, vilket var hela poängen med att stänga den.
+
+Två saker följer av det, och båda är värda att komma ihåg:
+
+1. **En audit som ska begränsas av flaggan måste sondera med
+   `InsertService:LoadAsset`**, inte med `insert_asset`. Annars mäter man
+   verktygets rättigheter i stället för placens.
+2. **Assets som en gång hämtats in ligger kvar i kontots ägo** och laddas även
+   med flaggan av. Att rensa dem är en inventarieåtgärd hos Tobias, inte en
+   placeinställning.
