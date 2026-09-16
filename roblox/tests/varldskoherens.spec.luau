@@ -424,9 +424,15 @@ end
 print("")
 print("3b. Varje hästs egen sadel och eget träns")
 
+--[[ MOTTAGAREN TAR HELA PARET (#169). `init.server.luau` kopplar in
+	`GameplayService.valjPar` här; provet härmar den, och `neka` låter
+	mätningen nedan stänga tränset — exakt det Equipment Gate inför. ]]
 local taget = {}
-TackForradService.start(function(spelare, typ, hastId)
-	taget[typ] = hastId
+local neka: string? = nil
+TackForradService.start(function(spelare, hastId)
+	if neka then return false, neka end
+	taget.sadel = hastId
+	taget.trans = hastId
 	return true
 end)
 
@@ -489,6 +495,39 @@ TackForradService.tag(spelare, granne)
 check("och vid grannens front ger GRANNENS — felvalet går att göra",
 	taget.sadel == granne and taget.trans == granne,
 	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+
+--[[ ── HÄMTNINGEN ÄR ETT PAR, INTE TVÅ HALVOR (#169) ──────────────────
+
+	Sadel och träns hämtas tillsammans. Förut skrevs de av två oberoende
+	anrop: sadeln committades, och ett nej på tränset lämnade spelaren med
+	den nya hästens sadel och den gamlas träns. Mätt på `a096d68` genom
+	samma söm som här:
+
+	    FÖRE:  sadel=gammal_hast  trans=gammal_hast
+	    EFTER: sadel=ny_hast      trans=gammal_hast
+
+	I dag kan ingen av halvorna neka — `valjPar` prövar bara typnamnet, och
+	det är hårdkodat. Mätningen ställer därför frågan genom mottagaren, som
+	är exakt det ställe Equipment Gate lägger sina nya nej på. Faller
+	prövningen efter första skrivningen igen blir de två raderna röda. ]]
+taget = { sadel = jag, trans = jag }
+neka = "tack.trans_nekat"
+local nekadOk = TackForradService.tag(spelare, granne)
+check("ett nekat par lämnar det GAMLA paret orört",
+	taget.sadel == jag and taget.trans == jag,
+	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+check("och tag() säger nej, inte ja", nekadOk == false, tostring(nekadOk))
+neka = nil
+
+--[[ IDEMPOTENS. Samma hämtning två gånger ska ge samma par, inte ett
+	halvt byte. ]]
+taget = {}
+TackForradService.tag(spelare, granne)
+local forsta = ("%s/%s"):format(tostring(taget.sadel), tostring(taget.trans))
+TackForradService.tag(spelare, granne)
+local andra = ("%s/%s"):format(tostring(taget.sadel), tostring(taget.trans))
+check("upprepad hämtning är idempotent", forsta == andra and taget.sadel == granne,
+	("%s -> %s"):format(forsta, andra))
 
 --[[ ══ 5. INTERIÖRERNA HAR GOLV — INGET GRÄS BLÖDER IGENOM ═══════════════
 
