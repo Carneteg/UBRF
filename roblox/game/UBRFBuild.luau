@@ -8,14 +8,18 @@
 
 	`sha` ar UPPLYSNING, inte grind. En committad fil kan inte kanna
 	sitt eget commit-SHA, sa det faltet ligger alltid minst ett steg
-	efter. Gata aldrig pa det. ]]
+	efter. Gata aldrig pa det.
+
+	`kallor` ar antalet mappade kallfiler. Placen kan rakna om DET
+	sjalv — instanser gar att rakna utan att lasa `Source`, vilket ett
+	spelskript inte far. Se Integritet.kallantal och punkt 9e. ]]
 return {
-	kallhash = "9878332d0d6a8e720a96158b96fcc5933bef9ac5eb5610e19e7a3b588e30931f",
+	kallhash = "99f769428c82cdcd796f09902ef959c703995f65457313596fc2b87aa12f2e33",
 	lage = "rojo",
 	kallor = 67,
-	sha = "4d740b6be47c938ee7ab180ef7c3ace1317c55eb",
-	miljo_sha = "4d740b6be47c938ee7ab180ef7c3ace1317c55eb",
-	genererad = "2026-09-16T13:09:27Z",
+	sha = "8bdda526bc71afc78f75a52a9256ad1fcde074af",
+	miljo_sha = "8bdda526bc71afc78f75a52a9256ad1fcde074af",
+	genererad = "2026-09-16T13:54:52Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
@@ -24,5 +28,25 @@ return {
 		ReplicatedStorage = { "HorseCore", "Stallet", "UBRFBuild", "UBRFKomplex", "UBRFSkotsel", "UBRFSpel", "UBRFSpelData", "UBRFSprak" },
 		ServerScriptService = { "Horse", "Varld" },
 		StarterPlayer = { "StarterPlayerScripts" },
+	},
+
+	--[[ De exakta vagar Rojo FYLLER med kallfiler. Punkt 9e
+		raknar skriptobjekt just har och ingen annanstans: en
+		`$className`-behallare som `StarterPlayerScripts` delas
+		med motorns egna skript, och de ar inte kallor. ]]
+	kallrotter = {
+		"ReplicatedStorage.HorseCore",
+		"ReplicatedStorage.Stallet",
+		"ReplicatedStorage.UBRFBuild",
+		"ReplicatedStorage.UBRFKomplex",
+		"ReplicatedStorage.UBRFSkotsel",
+		"ReplicatedStorage.UBRFSpel",
+		"ReplicatedStorage.UBRFSpelData",
+		"ReplicatedStorage.UBRFSprak",
+		"ServerScriptService.Horse",
+		"ServerScriptService.Varld.Anlaggningen",
+		"ServerScriptService.Varld.BuildKit",
+		"ServerScriptService.Varld.Geometri",
+		"StarterPlayer.StarterPlayerScripts.Horse",
 	},
 }

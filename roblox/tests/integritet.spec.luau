@@ -261,6 +261,255 @@ do
 	sattIdentitet(UBRFBuild)
 end
 
+
+--[[ ══ 9e: IDENTITETEN MÅSTE BESKRIVA PLACENS EGNA KÄLLOR (#171) ═══════
+
+	9a–9d prövar att identiteten finns, är genererad och har rätt form. Ingen
+	av dem prövar att den beskriver den här placens kod. En identitet ur ett
+	annat källäge går igenom alla fyra.
+
+	MÅTTET ÄR ANTALET SKRIPTOBJEKT, inte deras innehåll, och det är ett
+	medvetet andrahandsval. Det ideala måttet är `kallhash`, men det kräver
+	`ModuleScript.Source` — och ett spelskript får inte läsa `Source`
+	(`lacking capability PluginOrOpenCloud`, uppmätt i server-VM på
+	`a5a4b71`). Antalet går däremot att räkna utan läsrätt.
+
+	Provet mäter det raden lovar: tillagda och borttagna källor fälls,
+	identitetsmodulen räknas inte med i sin egen summa, MOTORNS EGNA SKRIPT
+	bredvid en Rojo-rot räknas inte alls, och en identitet utan listan är
+	"kan inte mätas" — aldrig grön. Att en REDIGERAD fil glider igenom är
+	känt och står i modulens egen not; det försvaret ligger i
+	`bygg-identitet.py --kontrollera` i CI. ]]
+print("\n── 9e: placen bär lika många källor som identiteten räknade ──")
+
+do
+	local SSS = game:GetService("ServerScriptService")
+	--[[ Behållaren är MEDVETET inte en Rojo-rot. Den speglar
+		`StarterPlayerScripts`: en mapp Rojo delar med motorn. Roten är
+		`ProvKalla` inuti den, precis som `StarterPlayerScripts.Horse`. ]]
+	local behallare = Instance.new("Folder")
+	behallare.Name = "ProvBehallare"
+	behallare.Parent = SSS
+	local rot = Instance.new("Folder")
+	rot.Name = "ProvKalla"
+	rot.Parent = behallare
+	local function nyKalla(namn, foralder)
+		local m = Instance.new("ModuleScript")
+		m.Name = namn
+		m.Parent = foralder or rot
+		return m
+	end
+	nyKalla("EnModul")
+	nyKalla("TvaModul")
+
+	--[[ Listan pekar ut BÅDE provroten och identitetsmodulen. Det senare är
+		poängen med mätningen om `UBRFBuild`: den ligger i en Rojo-rot och
+		skulle räknas med om undantaget saknades. ]]
+	local function identitetMed(antal)
+		sattIdentitet({
+			kallhash = string.rep("b", 64), lage = "rojo", kallor = antal,
+			rojo = { ServerScriptService = { "ProvBehallare" } },
+			kallrotter = {
+				"ServerScriptService.ProvBehallare.ProvKalla",
+				"ReplicatedStorage.UBRFBuild",
+			},
+		})
+	end
+
+	identitetMed(2)
+	local r = matning("9e")
+	check("preflighten mäter 9e", r ~= nil, r and r.namn or "ingen 9e-rad")
+	check("rätt antal ger grönt", r ~= nil and r.ok == true,
+		r and tostring(r.detalj) or "-")
+
+	local bygget = RS:FindFirstChild("UBRFBuild")
+	check("identitetsmodulen räknas INTE med i sitt eget antal",
+		bygget ~= nil and bygget:IsA("LuaSourceContainer") and r ~= nil and r.ok == true,
+		r and tostring(r.detalj) or "-")
+
+	--[[ MOTORNS EGNA SKRIPT. Roblox lägger `RbxCharacterSounds` med barn i
+		`StarterPlayerScripts` vid speltest — bredvid Rojo-roten, inte i
+		den. En räkning som utgår från behållaren fällde grinden på dem: 69
+		mot 67 i en levande server-VM. Det får inte hända igen. ]]
+	local motorn = Instance.new("LocalScript")
+	motorn.Name = "RbxCharacterSounds"
+	motorn.Parent = behallare
+	nyKalla("AtomicBinding", motorn)
+	local rM = matning("9e")
+	check("motorns egna skript bredvid roten räknas INTE som källor",
+		rM ~= nil and rM.ok == true, rM and tostring(rM.detalj) or "-")
+
+	--[[ En källa LÄGGS TILL i roten utan att identiteten räknas om — precis
+		det som händer när någon synkar en gren över en place. ]]
+	local extra = nyKalla("TreModul")
+	local r2 = matning("9e")
+	check("en källa som TILLKOMMIT sedan identiteten räknades FÄLLER grinden",
+		r2 ~= nil and r2.ok == false, r2 and tostring(r2.detalj) or "-")
+	check("och felet säger åt vilket håll det skiljer",
+		r2 ~= nil and string.find(tostring(r2.detalj), "+1") ~= nil,
+		r2 and tostring(r2.detalj) or "-")
+
+	--[[ Och åt andra hållet: en källa som försvunnit ur placen. ]]
+	extra:Destroy()
+	rot:FindFirstChild("TvaModul"):Destroy()
+	local r3 = matning("9e")
+	check("en källa som FÖRSVUNNIT fäller också grinden",
+		r3 ~= nil and r3.ok == false, r3 and tostring(r3.detalj) or "-")
+	check("och felet säger att placen har färre",
+		r3 ~= nil and string.find(tostring(r3.detalj), "-1") ~= nil,
+		r3 and tostring(r3.detalj) or "-")
+
+	--[[ En identitet utan listan är genererad av ett äldre verktyg. Då är
+		svaret "kan inte mätas" — och det får inte vara grönt. ]]
+	nyKalla("TvaModul")
+	sattIdentitet({
+		kallhash = string.rep("b", 64), lage = "rojo", kallor = 2,
+		rojo = { ServerScriptService = { "ProvBehallare" } },
+	})
+	local r4 = matning("9e")
+	check("en identitet UTAN kallrotter är inte grön",
+		r4 ~= nil and r4.ok == false, r4 and tostring(r4.detalj) or "-")
+
+	behallare:Destroy()
+end
+
+--[[ ══ SERVERNS EGNA OBJEKT I Workspace ÄR RUNTIME, INTE DRIFT (#171) ══
+
+	`RUNTIME` slår upp på namn. Workspace fylls av objekt vars namn kommer ur
+	speldata eller ur spelaren — hästarna heter som hästarna, boxmarkörer och
+	karaktärer som den som loggade in — så namnuppslag når dem aldrig.
+
+	Utan reglerna blev 10e obrukbar i drift. Mätt i en levande server-VM på
+	`203357f`: 49 namngivna objekt, varav 34 serverns egna. Provet pinnar
+	varje regel mot den kod som bevisligen skapar objektet, och pinnar lika
+	viktigt att en FRÄMMANDE modell fortfarande är ospårad. ]]
+print("\n── Serverns egna objekt i Workspace klassas som runtime ──")
+
+do
+	local Players = game:GetService("Players")
+	local CS = game:GetService("CollectionService")
+	sattIdentitet(UBRFBuild)
+
+	local function nyModell(namn)
+		local m = Instance.new("Model")
+		m.Name = namn
+		m.Parent = workspace
+		return m
+	end
+
+	--[[ Hästen: HastRigg/HastVisual taggar varje byggd modell `Horse`. ]]
+	local hast = nyModell("Bränntomts Lydia")
+	CS:AddTag(hast, "Horse")
+	check("en häst med taggen Horse klassas som runtime",
+		Integritet.klassificera("Workspace", hast) == "runtime",
+		Integritet.klassificera("Workspace", hast))
+
+	--[[ Boxmarkörerna: StallService bygger dem per spelare. ]]
+	local markor = nyModell("Boxmarkor_SagaAberg")
+	check("boxmarkörerna klassas som runtime",
+		Integritet.klassificera("Workspace", markor) == "runtime",
+		Integritet.klassificera("Workspace", markor))
+
+	--[[ Karaktären: Players äger den, inte någon källfil. ]]
+	local karaktar = nyModell("SagaAberg")
+	--[[ `_spelare` är bänkens register, samma söm `GetPlayerFromCharacter`
+		slår upp i. Provet mäter alltså exakt den fråga modulen ställer. ]]
+	table.insert(Players._spelare, { Name = "SagaAberg", Character = karaktar })
+	check("spelarens egen karaktär klassas som runtime",
+		Integritet.klassificera("Workspace", karaktar) == "runtime",
+		Integritet.klassificera("Workspace", karaktar))
+
+	--[[ OCH DET SOM FAKTISKT ÄR DRIFT SKA LIGGA KVAR. Utan den här
+		mätningen hade reglerna kunnat svälja allt. ]]
+	local framling = nyModell("ew bridle")
+	check("en främmande modell är fortfarande ospårad",
+		Integritet.klassificera("Workspace", framling) == "ospårad",
+		Integritet.klassificera("Workspace", framling))
+
+	local namngivna = table.concat(Integritet.osparade("Workspace"), ", ")
+	check("10e namnger driften och INTE serverns egna",
+		string.find(namngivna, "ew bridle") ~= nil
+			and string.find(namngivna, "Lydia") == nil
+			and string.find(namngivna, "Boxmarkor_") == nil,
+		namngivna)
+
+	hast:Destroy()
+	markor:Destroy()
+	karaktar:Destroy()
+	framling:Destroy()
+end
+
+--[[ ══ 10d/10e: OSPÅRAT UTANFÖR ReplicatedStorage (#171) ═══════════════
+
+	Mätt på `a5a4b71` i den anslutna placen: Workspace bar 15 ospårade
+	objekt och ServerStorage 2, varav `UBRF_BACKUP_SUP0062` med 3 477
+	ättlingar. Grinden var tyst om samtliga — den tittade bara i
+	ReplicatedStorage. ]]
+print("\n── 10d/10e: ospårat utanför ReplicatedStorage ──")
+
+do
+	local SSS = game:GetService("ServerScriptService")
+	local SS = game:GetService("ServerStorage")
+	sattIdentitet(UBRFBuild)
+
+	local d = matning("10d")
+	check("preflighten mäter 10d", d ~= nil, d and d.namn or "ingen 10d-rad")
+	check("ren ServerScriptService är grön", d ~= nil and d.ok == true,
+		d and tostring(d.detalj) or "-")
+
+	--[[ Ett skript i ServerScriptService NÅR RUNTIME. Samma hårdhet som
+		10c, och samma skäl. ]]
+	local inkrakt = Instance.new("Folder")
+	inkrakt.Name = "NagotSomIngenAger"
+	inkrakt.Parent = SSS
+	local d2 = matning("10d")
+	check("ospårat i ServerScriptService FÄLLER grinden",
+		d2 ~= nil and d2.ok == false, d2 and tostring(d2.detalj) or "-")
+	check("och felet namnger det", d2 ~= nil
+		and string.find(tostring(d2.detalj), "NagotSomIngenAger") ~= nil,
+		d2 and tostring(d2.detalj) or "-")
+	inkrakt:Destroy()
+
+	--[[ 10e RAPPORTERAR. Den ska vara grön — men aldrig tyst. ]]
+	local skrot = Instance.new("Folder")
+	skrot.Name = "KvarglomdImport"
+	skrot.Parent = SS
+	local e = matning("10e")
+	check("preflighten mäter 10e", e ~= nil, e and e.namn or "ingen 10e-rad")
+	check("10e fäller INTE på kvarglömt i ServerStorage",
+		e ~= nil and e.ok == true, e and tostring(e.detalj) or "-")
+	check("men den NAMNGER det — tystnaden var felet",
+		e ~= nil and string.find(tostring(e.detalj), "KvarglomdImport") ~= nil,
+		e and tostring(e.detalj) or "-")
+	skrot:Destroy()
+
+	local e2 = matning("10e")
+	check("och säger 'inga' när det inte finns något",
+		e2 ~= nil and string.find(tostring(e2.detalj), "inga") ~= nil,
+		e2 and tostring(e2.detalj) or "-")
+
+	--[[ ── OSPÅRAT SOM KODEN LÄSER ────────────────────────────────────
+
+		`ServerStorage.HastVisualer` är ospårad — ingen Rojo-väg pekar på
+		den — och samtidigt läser `HastVisual.mall` den vid varje hästbygge.
+		Utan mallen faller inte spelet, men varenda häst går tillbaka till
+		lådor, tyst. Städpolicyn säger "utred, radera inte", och den som
+		utreder måste kunna se skillnaden mot en backup ingen rör. ]]
+	local mall = Instance.new("Folder")
+	mall.Name = "HastVisualer"
+	mall.Parent = SS
+	local e3 = matning("10e")
+	check("ett ospårat objekt koden LÄSER märks ut, inte bara namnges",
+		e3 ~= nil and string.find(tostring(e3.detalj), "KRÄVS AV") ~= nil,
+		e3 and tostring(e3.detalj) or "-")
+	check("och märkningen pekar ut raden i koden",
+		e3 ~= nil and string.find(tostring(e3.detalj), "HastVisual.luau") ~= nil,
+		e3 and tostring(e3.detalj) or "-")
+	check("men den fäller fortfarande ingenting", e3 ~= nil and e3.ok == true,
+		e3 and tostring(e3.ok) or "-")
+	mall:Destroy()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

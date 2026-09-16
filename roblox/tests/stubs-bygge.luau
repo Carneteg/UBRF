@@ -368,6 +368,16 @@ local function instance(klass)
 					or self.ClassName == "MeshPart" or self.ClassName == "WedgePart"
 					or self.ClassName == "Terrain"
 			end
+			--[[ `LuaSourceContainer` ar basklassen for allt som bar kallkod.
+				`Integritet.kallantal` RAKNAR den over de Rojo-agda traden for
+				att kunna svara pa om identiteten beskriver placens EGEN kod
+				(#171). Den raknar just instanser, inte tecken, darfor att ett
+				spelskript inte far lasa `Source`. Utan arvet svarade banken 0
+				kallor, och provet matte stubben i stallet for grinden. ]]
+			if fragad == "LuaSourceContainer" then
+				return self.ClassName == "ModuleScript" or self.ClassName == "Script"
+					or self.ClassName == "LocalScript"
+			end
 			return false
 		end,
 		FindFirstChildOfClass = function(self, klass)
@@ -449,7 +459,24 @@ local __tjanster = {
 	RunService = { IsStudio = function() return false end,
 	               IsClient = function() return false end,
 	               IsServer = function() return true end },
-	Players = { LocalPlayer = nil },
+	--[[ Spelarregistret behovdes for #171:s runtimeregler. `Integritet`
+	     fragar `GetPlayerFromCharacter` for att skilja spelarens egen
+	     karaktar i Workspace fran en frammande modell — utan uppslaget
+	     svarade banken alltid nej, och regeln kunde inte matas alls.
+	     `_spelare` ar samma som i `stubs.luau`: provet lagger sin spelare
+	     dar, och uppslaget slar i just det registret. ]]
+	Players = {
+		LocalPlayer = nil,
+		_spelare = {},
+		GetPlayers = function(self) return self._spelare end,
+		GetPlayerFromCharacter = function(self, karaktar)
+			if karaktar == nil then return nil end
+			for _, sp in ipairs(self._spelare) do
+				if sp.Character == karaktar then return sp end
+			end
+			return nil
+		end,
+	},
 	CoreGui = instance("CoreGui"),
 	--[[ #162: spelbarhetsbänken kör UBRFSpel, som hämtar ReplicatedStorage
 	     vid require. Tjänsten behöver inte innehålla något här — modulerna

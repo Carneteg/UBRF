@@ -86,6 +86,79 @@ local RUNTIME: { [string]: { [string]: string } } = {
 	},
 }
 
+--[[ ── RUNTIME SOM INTE GÅR ATT KÄNNA IGEN PÅ NAMNET ────────────────────
+
+	`RUNTIME` ovan slår upp på namn, och det räcker för det servern bygger på
+	en fast plats. Workspace fylls dessutom av objekt vars namn kommer ur
+	SPELDATA eller ur spelaren: varje häst heter som hästen, och boxmarkörer
+	och karaktärer heter som den som loggade in. Namnuppslag kan alltså aldrig
+	fånga dem.
+
+	Utan de här reglerna blev punkt 10e obrukbar i drift. Mätt i en levande
+	server-VM på `203357f`: raden namngav 49 ospårade objekt i Workspace, men
+	34 av dem var serverns egna — 33 hästar, en karaktär och en uppsättning
+	boxmarkörer. De 15 som blir kvar är den faktiska driften, och det är den
+	siffran raden finns för att visa.
+
+	Varje regel pekar ut sin källa i koden. En regel utan en rad som bevisligen
+	skapar objektet hör inte hemma här: då är gissningen tillbaka.
+
+	REGLERNA ÄR AVSIKTLIGT SVAGA MOT FÖRFALSKNING — en främmande modell som
+	taggar sig `Horse` läses som runtime. Det är acceptabelt just för att 10e
+	RAPPORTERAR och aldrig fäller; den som vill dölja något behöver inte
+	anstränga sig så mycket. Skulle en regel någon gång användas av en
+	FÄLLANDE rad måste den prövas om. ]]
+--[[ ── OSPÅRAT SOM KODEN ÄNDÅ LÄSER ────────────────────────────────────
+
+	"Ospårad" betyder att ingen KÄLLFIL äger objektet. Det betyder inte att
+	ingen behöver det. `ServerStorage.HastVisualer` är precis den sortens
+	sak: ingen Rojo-väg pekar på den, och ändå läser `HastVisual.mall` den
+	vid varje hästbygge. Utan mallen faller inte spelet — men varenda häst
+	går tillbaka till lådor, tyst.
+
+	Städpolicyn i `docs/STUDIO-PLACE-INTEGRITY.md` säger "utred, radera
+	inte", och den som utreder behöver se skillnaden mellan en 3 477 objekt
+	stor backup ingen rör och en mallmapp koden är beroende av. Raden skrev
+	tidigare ut dem sida vid sida, som samma sak.
+
+	Ett namn får bara stå här med en rad i koden bakom sig. ]]
+local KODBEROENDE: { [string]: { [string]: string } } = {
+	ServerStorage = {
+		HastVisualer = "server/HastVisual.luau:37 — mallarna för hästarnas nät",
+	},
+}
+
+type Runtimeregel = { kalla: string, prov: (Instance) -> boolean }
+
+local RUNTIMEREGLER: { [string]: { Runtimeregel } } = {
+	Workspace = {
+		{
+			kalla = "server/HastRigg.luau + HastVisual.luau (taggen Horse)",
+			prov = function(inst)
+				local ok, taggad = pcall(function()
+					return game:GetService("CollectionService"):HasTag(inst, "Horse")
+				end)
+				return ok and taggad == true
+			end,
+		},
+		{
+			kalla = "server/StallService.luau:62 (Boxmarkor_<spelare>)",
+			prov = function(inst)
+				return inst.Name:sub(1, 10) == "Boxmarkor_"
+			end,
+		},
+		{
+			kalla = "Players — spelarens egen karaktär",
+			prov = function(inst)
+				local ok, spelare = pcall(function()
+					return game:GetService("Players"):GetPlayerFromCharacter(inst)
+				end)
+				return ok and spelare ~= nil
+			end,
+		},
+	},
+}
+
 --[[ Motorns egna barn i Workspace. De finns i varje place och ägs varken
 	av Rojo eller av oss. ]]
 local MOTORKLASSER = { Terrain = true, Camera = true }
@@ -126,6 +199,9 @@ function Integritet.klassificera(tjanst: string, barn: Instance): Klass
 	if rojoAgda(tjanst)[barn.Name] then return "kanonisk" end
 	local runtime = RUNTIME[tjanst]
 	if runtime and runtime[barn.Name] then return "runtime" end
+	for _, regel in ipairs(RUNTIMEREGLER[tjanst] or {}) do
+		if regel.prov(barn) then return "runtime" end
+	end
 	if arVerktyg(barn.Name) then return "verktyg" end
 	return "ospårad"
 end
@@ -202,6 +278,76 @@ function Integritet.osparade(tjanst: string): { string }
 	return ut
 end
 
+--[[ ══ BESKRIVER IDENTITETEN KODEN SOM FAKTISKT LIGGER HÄR? (#171) ═════
+
+	9a–9d prövar att identiteten FINNS, är GENERERAD och har rätt FORM. Ingen
+	av dem prövar att den beskriver den här placens källor. En identitet som
+	genererats ur ett annat källäge — en gren, en äldre commit, en place som
+	tappat Rojo mitt i ett pass — går igenom alla fyra.
+
+	DET IDEALA MÅTTET GÅR INTE ATT TA. `kallhash` är beviset, och placen bär
+	källorna i `ModuleScript.Source`. Men ett SPELSKRIPT FÅR INTE LÄSA
+	`Source`. Uppmätt i en levande server-VM på `a5a4b71`:
+
+	    ServerScriptService.Horse.Integritet:247 function kallbytes
+	    The current thread cannot read 'Source'
+	    (lacking capability PluginOrOpenCloud)
+
+	Ett första försök summerade just `#Source` och föll därför exakt där
+	grinden bor. Talet stämde — 1 234 328 i både repo och place, mätt från
+	edit-kontexten — men det går inte att nå från runtime, och en mätning som
+	bara fungerar i verktyget mäter inte grinden.
+
+	DET SOM GÅR ATT RÄKNA ÄR INSTANSERNA. `IsA` och `GetDescendants` kräver
+	ingen läsrätt på källan. Antalet Rojo-ägda skriptobjekt i placen ska vara
+	exakt `kallor` — identiteten själv oräknad, av samma skäl som generatorn
+	utesluter den ur hashen.
+
+	RÄKNINGEN GÅR PÅ `kallrotter`, INTE PÅ `rojo`. `rojo` säger vilka
+	toppnivåinstanser som är källstyrda och räcker för att klassa skräp
+	bredvid dem, men `StarterPlayerScripts` är en behållare Rojo delar med
+	motorn: vid speltest lägger Roblox sina egna `RbxCharacterSounds` och
+	`AtomicBinding` där. Mätt i en levande server-VM på `e5ba1ae`, med den
+	grova listan: **69 mot identitetens 67 — två falska larm**, båda motorns
+	egna. `kallrotter` är i stället varje `$path` i projektfilen med sin fulla
+	väg, så bara det Rojo faktiskt fyller räknas.
+
+	SVAGARE ÄN HASHEN, och det ska sägas rakt ut: en fil som redigeras utan
+	att läggas till eller tas bort glider igenom. Den fångar tillagda och
+	borttagna källor, och en place som synkats från ett annat projektträd.
+	Resten måste försvaras utanför placen — `bygg-identitet.py --kontrollera`
+	i CI räknar om hashen på riktigt. ]]
+function Integritet.kallantal(): number?
+	local id = Integritet.identitet()
+	if not id then return nil end
+	local rotter = (id :: any).kallrotter
+	--[[ Saknas listan är identiteten genererad av ett äldre verktyg. Då är
+		svaret "kan inte mätas" — aldrig ett tal som råkar stämma. ]]
+	if typeof(rotter) ~= "table" then return nil end
+	local bygget = ReplicatedStorage:FindFirstChild("UBRFBuild")
+	local antal = 0
+	for _, vag in ipairs(rotter) do
+		local nod: Instance? = nil
+		for led in tostring(vag):gmatch("[^%.]+") do
+			if nod == nil then
+				local ok, tjansten = pcall(game.GetService, game, led)
+				nod = if ok then tjansten else nil
+			else
+				nod = (nod :: Instance):FindFirstChild(led)
+			end
+			if nod == nil then break end
+		end
+		if nod then
+			local function rakna(d: Instance)
+				if d:IsA("LuaSourceContainer") and d ~= bygget then antal += 1 end
+			end
+			rakna(nod)
+			for _, d in ipairs(nod:GetDescendants()) do rakna(d) end
+		end
+	end
+	return antal
+end
+
 --[[ Raderna som Preflighten lägger in. Samma form som dess egna: namn, ok,
 	detalj — så att specen kan läsa dem ur tjänstens utdata i stället för att
 	göra om villkoret. ]]
@@ -236,6 +382,21 @@ function Integritet.rader(): { Rad }
 		id ~= nil and typeof(id.kallor) == "number" and (id.kallor :: number) > 0,
 		if id then tostring(id.kallor) else "-")
 
+	--[[ 9e är den som gör de fyra ovan till mer än en formkontroll. Se noten
+		vid `Integritet.kallantal` för vad den kan och inte kan fånga. Saknas
+		talet i identiteten är den genererad av ett äldre verktyg — och då är
+		svaret "kan inte mätas", inte "grönt". ]]
+	local vantad = id and id.kallor
+	local faktisk = Integritet.kallantal()
+	rad("9e placen bär lika många källor som identiteten räknade",
+		typeof(vantad) == "number" and faktisk ~= nil and faktisk == vantad,
+		if typeof(vantad) ~= "number" then
+			"identiteten bär ingen kallor — kan inte mätas"
+		elseif faktisk == nil then "identiteten bär ingen kallrotter — kan inte mätas"
+		elseif faktisk == vantad then ("%d skriptobjekt"):format(faktisk)
+		else ("placen har %d, identiteten säger %d (%+d)"):format(
+			faktisk, vantad :: number, faktisk - (vantad :: number)))
+
 	--[[ 10. KVARGLÖMDA RUNTIME-ARTEFAKTER. ]]
 	local okanda = Integritet.okandaRemotes()
 	rad("10a inga okända fjärrobjekt i HorseRemotes",
@@ -255,6 +416,59 @@ function Integritet.rader(): { Rad }
 	local osparade = Integritet.osparade("ReplicatedStorage")
 	rad("10c inget ospårat i ReplicatedStorage", #osparade == 0,
 		if #osparade == 0 then "-" else table.concat(osparade, ", "))
+
+	--[[ 10d ServerScriptService är den andra tjänsten där en ospårad sak
+		NÅR RUNTIME: ett skript där körs. Samma skäl som 10c, och samma
+		hårdhet. ]]
+	local osparadeSSS = Integritet.osparade("ServerScriptService")
+	rad("10d inget ospårat i ServerScriptService", #osparadeSSS == 0,
+		if #osparadeSSS == 0 then "-" else table.concat(osparadeSSS, ", "))
+
+	--[[ ── 10e RAPPORTERAR, FÄLLER INTE ─────────────────────────────────
+
+		Workspace och ServerStorage bär i dag sådant ingen källa äger:
+		importerade modeller i Workspace-roten, och stora artefakter i
+		ServerStorage. Mätt på `a5a4b71`:
+
+		    Workspace       15 ospårade (Jumps, SADDLE, fem Model, …)
+		    ServerStorage    2 ospårade (HastVisualer 85 ättlingar,
+		                     UBRF_BACKUP_SUP0062 3 477 ättlingar)
+
+		Ingen av dem når runtime av sig själv, och #171 är uttrycklig: klassa
+		först, radera bara det som bevisats icke-kanoniskt, aldrig blint. Att
+		fälla grinden på dem hade gjort den permanent röd tills någon städar
+		— och modulens egen not säger varför det är fel väg.
+
+		MEN TYSTNAD VAR DET SOM GJORDE EVIDENSEN OPÅLITLIG. Före den här
+		raden kunde en grön preflight läsas som "placen är ren" medan
+		sjutton objekt ingen källa äger låg kvar. Raden är därför grön och
+		ALLTID närvarande: antalet och namnen står i utskriften, varje
+		körning, så att ingen behöver gissa. ]]
+	--[[ Namnet får med sig sitt kodberoende, om det har ett. Utan den
+		markeringen läser listan som en raderingslista. ]]
+	local function namnge(tjanst: string, namn: { string }): { string }
+		local ut2: { string } = {}
+		local beroenden = KODBEROENDE[tjanst] or {}
+		for _, n in ipairs(namn) do
+			local kalla = beroenden[n]
+			table.insert(ut2, if kalla then ("%s (KRÄVS AV %s)"):format(n, kalla) else n)
+		end
+		return ut2
+	end
+
+	local wsOsp = Integritet.osparade("Workspace")
+	local ssOsp = Integritet.osparade("ServerStorage")
+	local delar = {}
+	if #wsOsp > 0 then
+		table.insert(delar, ("Workspace %d: %s"):format(
+			#wsOsp, table.concat(namnge("Workspace", wsOsp), ", ")))
+	end
+	if #ssOsp > 0 then
+		table.insert(delar, ("ServerStorage %d: %s"):format(
+			#ssOsp, table.concat(namnge("ServerStorage", ssOsp), ", ")))
+	end
+	rad("10e ospårat i Workspace/ServerStorage — redovisat, inte fällt", true,
+		if #delar == 0 then "inga" else table.concat(delar, " · "))
 
 	return ut
 end

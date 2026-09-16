@@ -154,6 +154,41 @@ def sha_nu():
         return "OKAND"
 
 
+def kallrotter(trad):
+    """Exakta instansvagar som Rojo fyller med kallfiler.
+
+    `rojo_agarskap` ar grovt med flit: den svarar pa vilka TOPPNIVAINSTANSER
+    per tjanst som ar kallstyrda, och det racker for att klassa skrap bredvid
+    dem. Den racker INTE for att rakna kallor. `StarterPlayerScripts` ar en
+    `$className`-behallare, inte en `$path` — motorn lagger sina egna skript
+    (`RbxCharacterSounds`) i samma mapp vid speltest, och en rakning som utgar
+    fran toppnivan raknar da med dem. Uppmatt i en levande server-VM: 69
+    skriptobjekt mot identitetens 67, alltsa tva falska larm.
+
+    Den har listan ar i stallet varje `$path`-nod med sin fulla vag. Bara det
+    Rojo faktiskt fyller raknas, och motorns injektioner bredvid hamnar
+    utanfor.
+    """
+    ut = []
+
+    def ga(nod, vag):
+        if not isinstance(nod, dict):
+            return
+        if isinstance(nod.get("$path"), str) and vag:
+            ut.append(".".join(vag))
+            return
+        for nyckel, varde in nod.items():
+            if not nyckel.startswith("$"):
+                ga(varde, vag + [nyckel])
+
+    ga(trad, [])
+    return sorted(set(ut))
+
+
+def rotter_luau(rotter):
+    return "\n".join('\t\t"%s",' % r for r in rotter)
+
+
 def rojo_luau(agarskap):
     rader = []
     for tjanst in sorted(agarskap):
@@ -162,7 +197,7 @@ def rojo_luau(agarskap):
     return "\n".join(rader)
 
 
-def modultext(hash_, sha, lage, antal, nu, agarskap):
+def modultext(hash_, sha, lage, antal, nu, agarskap, rotter):
     return (
         "--!strict\n"
         "--[[ GENERERAD av tools/bygg-identitet.py — andra inte har.\n"
@@ -174,7 +209,11 @@ def modultext(hash_, sha, lage, antal, nu, agarskap):
         "\n"
         "\t`sha` ar UPPLYSNING, inte grind. En committad fil kan inte kanna\n"
         "\tsitt eget commit-SHA, sa det faltet ligger alltid minst ett steg\n"
-        "\tefter. Gata aldrig pa det. ]]\n"
+        "\tefter. Gata aldrig pa det.\n"
+        "\n"
+        "\t`kallor` ar antalet mappade kallfiler. Placen kan rakna om DET\n"
+        "\tsjalv — instanser gar att rakna utan att lasa `Source`, vilket ett\n"
+        "\tspelskript inte far. Se Integritet.kallantal och punkt 9e. ]]\n"
         "return {\n"
         f'\tkallhash = "{hash_}",\n'
         f'\tlage = "{lage}",\n'
@@ -188,6 +227,14 @@ def modultext(hash_, sha, lage, antal, nu, agarskap):
         "\t\tfran runtime-skapat och frammande med den har listan. ]]\n"
         "\trojo = {\n"
         + rojo_luau(agarskap) + "\n"
+        "\t},\n"
+        "\n"
+        "\t--[[ De exakta vagar Rojo FYLLER med kallfiler. Punkt 9e\n"
+        "\t\traknar skriptobjekt just har och ingen annanstans: en\n"
+        "\t\t`$className`-behallare som `StarterPlayerScripts` delas\n"
+        "\t\tmed motorns egna skript, och de ar inte kallor. ]]\n"
+        "\tkallrotter = {\n"
+        + rotter_luau(rotter) + "\n"
         "\t},\n"
         "}\n")
 
@@ -234,7 +281,8 @@ def main():
 
     text = modultext(nu_hash, sha_nu(), args.lage, len(filer),
                      datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-                     rojo_agarskap(projekt["tree"]))
+                     rojo_agarskap(projekt["tree"]),
+                     kallrotter(projekt["tree"]))
     MAL.parent.mkdir(parents=True, exist_ok=True)
     MAL.write_text(text, encoding="utf-8")
     print(f"{MAL.relative_to(ROT)}: kallhash {nu_hash} ur {len(filer)} filer")

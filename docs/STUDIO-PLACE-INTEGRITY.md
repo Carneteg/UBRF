@@ -105,7 +105,7 @@ Ingenting här är Rojo-mappat. Tjänsten ingår inte i projektfilen alls.
 |---|---|---|
 | `__MCPGeneratedModels`, `__HastGranskning` | verktyg | MCP-/granskningsspår |
 | `__Rojo_SessionLock` | verktyg | Rojo håller den medan `serve` kör |
-| `HastVisualer` | **ospårad** | 1 barn, ogranskat innehåll |
+| `HastVisualer` | **ospårad, men koden läser den** | `HastVisual.mall` hämtar hästarnas nätmallar här. Raderas den går varje häst tillbaka till lådor — tyst. Se omauditen nedan. |
 | `UBRF_BACKUP_SUP0062` | **ospårad** | 9 barn, ogranskat innehåll |
 
 ## Städpolicy
@@ -294,3 +294,137 @@ Auditen som ligger till grund för tabellerna ovan läste:
 `UBRF_BACKUP_SUP0062` (9 barn), i `__HastGranskning` (6 barn) eller i
 `HastVisualer` (1 barn). Klassningen av de fyra vilar på deras namn och
 placering, inte på deras innehåll.
+
+
+## Omaudit 2026-09-16 — vad som fortfarande reproducerar
+
+Ordern i #171 var uttrycklig: mät om det NUVARANDE läget, anta inte att de
+gamla fynden står kvar, och dokumentera det som redan är löst med evidens i
+stället för att bygga om det.
+
+Mätt på `main` `a5a4b71` i den anslutna placen, och sedan om på den här
+grenens head.
+
+### Löst sedan dokumentet skrevs
+
+**Identiteten är inte längre handplacerad.** `ReplicatedStorage.UBRFBuild`
+i placen bär samma `kallhash` som `tools/bygg-identitet.py` räknar ur
+arbetsträdet, och `lage = "rojo"`. Punkt 9a–9d är gröna av rätt skäl, inte
+av en välvillig default. Fyndet byggs alltså inte om; det redovisas som
+åtgärdat.
+
+**Fjärrobjekten är rena.** 10a och 10b gröna: varje objekt i `HorseRemotes`
+finns i `Networking.definitioner()` och har rätt klass.
+
+### Kvarstod, och var osynligt för grinden
+
+Grinden tittade bara i `ReplicatedStorage`. Den sa alltså ingenting om
+`ServerScriptService`, `Workspace` eller `ServerStorage` — och en grön
+preflight gick att läsa som "placen är ren" medan sjutton objekt ingen källa
+äger låg kvar, `UBRF_BACKUP_SUP0062` med 3 477 ättlingar bland dem.
+
+Därför: **10d fäller** ospårat i `ServerScriptService` (det är den andra
+tjänsten där ospårad kod faktiskt *kör*), och **10e rapporterar utan att
+fälla** för `Workspace` och `ServerStorage`. Att fälla på dem hade gjort
+grinden permanent röd tills någon städar, och en grind som alltid är röd
+slutar man läsa.
+
+### En place kan inte verifiera sin egen källkod
+
+Det här är omauditens viktigaste fynd, och det begränsar vad punkt 9 någonsin
+kan bli.
+
+`kallhash` är det riktiga beviset, och placen bär källorna i
+`ModuleScript.Source`. Men **ett spelskript får inte läsa `Source`.** Uppmätt
+i en levande server-VM:
+
+```
+ServerScriptService.Horse.Integritet:247 function kallbytes
+The current thread cannot read 'Source' (lacking capability PluginOrOpenCloud)
+```
+
+Ett första försök summerade just `#Source` över de Rojo-ägda träden. Talet
+stämde — 1 234 328 tecken i både repo och place — men det var mätt från
+**edit**-kontexten, där ett plugin får läsa. I runtime, alltså exakt där
+preflighten kör, går det inte alls.
+
+Slutsatsen är strukturell och står kvar i modulen: **hashförsvaret måste bo
+utanför placen.** `bygg-identitet.py --kontrollera` i CI räknar om den på
+riktigt; `rojo-sanning.py` täcker fall 2. Det placen själv kan göra är att
+räkna INSTANSER, och det är vad punkt 9e gör.
+
+### Punkt 9e — vad den kan och inte kan
+
+9e räknar Rojo-ägda skriptobjekt i placen och jämför mot identitetens
+`kallor`. `IsA` och `GetDescendants` kräver ingen läsrätt på källan.
+
+Den fångar **tillagda och borttagna källor**, och en place som synkats från
+ett annat projektträd. Den fångar **inte** en fil som redigerats utan att
+läggas till eller tas bort. Det står utskrivet i modulen och upprepas här,
+för att ingen ska läsa ett grönt 9e som "placen kör exakt den här koden".
+
+**Räkningen går på `kallrotter`, inte på `rojo`.** Identiteten bär sedan den
+här grenen båda: `rojo` är den grova toppnivålistan klassningen behöver,
+`kallrotter` är varje `$path` i projektfilen med sin fulla instansväg.
+
+Skälet mättes fram. `StarterPlayerScripts` är en behållare Rojo **delar med
+motorn**: vid speltest lägger Roblox sina egna `RbxCharacterSounds` och
+`AtomicBinding` där. Med den grova listan blev raden röd i en levande
+server-VM — **69 mot identitetens 67** — utan att något var fel. Med
+`kallrotter`: 67 mot 67.
+
+### Serverns egna objekt i Workspace är runtime, inte drift
+
+`RUNTIME` slår upp på namn. Workspace fylls dessutom av objekt vars namn
+kommer ur speldata eller ur spelaren, och namnuppslag kan aldrig nå dem.
+
+Mätt i en levande server-VM innan reglerna fanns: 10e namngav **49** ospårade
+objekt i Workspace. 34 av dem var serverns egna — 33 hästar, en spelarkaraktär
+och en uppsättning boxmarkörer.
+
+`RUNTIMEREGLER` prövar därför ett villkor per objekt, och varje regel pekar
+ut den rad som bevisligen skapar det:
+
+| regel | källa |
+|---|---|
+| taggen `Horse` | `server/HastRigg.luau`, `server/HastVisual.luau` |
+| namnprefixet `Boxmarkor_` | `server/StallService.luau:62` |
+| `Players:GetPlayerFromCharacter` | spelarens egen karaktär |
+
+Reglerna är **avsiktligt svaga mot förfalskning** — en främmande modell som
+taggar sig `Horse` läses som runtime. Det är acceptabelt just för att 10e
+rapporterar och aldrig fäller. Skulle en fällande rad någon gång vilja
+använda dem måste de prövas om.
+
+Efteråt, samma VM: **14 i Workspace, 2 i ServerStorage.** Edit-läget visar
+15 i Workspace; skillnaden är `Joe's hairAccessory`, som karaktären plockar
+upp vid speltest.
+
+### Ospårat betyder inte umbärligt
+
+`ServerStorage.HastVisualer` är ospårad — ingen Rojo-väg pekar på den — och
+samtidigt läser `HastVisual.mall` den vid **varje** hästbygge. Utan mallen
+faller inte spelet; varje häst går tillbaka till lådor, tyst.
+
+Raden skrev tidigare ut den sida vid sida med en 3 477 objekt stor backup
+ingen rör, som om det vore samma sak. 10e märker den nu:
+
+```
+ServerStorage 2: HastVisualer (KRÄVS AV server/HastVisual.luau:37 — mallarna
+för hästarnas nät), UBRF_BACKUP_SUP0062
+```
+
+Ett namn får bara stå i den tabellen med en rad i koden bakom sig.
+
+### Require-cachen i edit-VM:en, igen
+
+Fall 3 i tabellen ovan reproducerades under arbetet och ska nämnas, eftersom
+det kostade tid: modulens källa i placen innehöll `function
+Integritet.kallbytes`, medan `require()` i samma edit-VM returnerade en
+tabell **utan** den nyckeln. Läs `.Source`, inte `require()`, när frågan är
+vad placen faktiskt bär.
+
+### Vad som INTE gjordes
+
+Ingenting raderades. Ingen geometri rördes. Klassningen är läsande, precis
+som städpolicyn ovan kräver, och vad som ska bort är Tobias beslut.
