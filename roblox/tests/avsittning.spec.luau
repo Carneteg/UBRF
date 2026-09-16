@@ -275,6 +275,26 @@ kar.PivotTo = egenPivot
 check("kroppen placerades två gånger: direkt och när sitsen släppte",
 	flyttar == 2, string.format("%d placeringar", flyttar))
 check("hon sitter av", okNed == true)
+
+--[[ ── NEJET SKA GÅ ATT LÄSA (#202 punkt 3) ────────────────────────────
+
+	`DismountRequest` ger returen vidare till klienten, som skriver
+	`skalText(skal)`. Föll skälet ut som `nil` fick spelaren den generiska
+	"det gick inte nu" — hon fick veta att något inte gick, men inte vad.
+	Allt annat i kedjan bär en namngiven nyckel.
+
+	Mätt i Studio på `e6a674c`:  andra DismountRequest -> ok=false, skal=nil
+
+	Dubbel avsittning är i sig inget fel; det är bara nejet som ska gå att
+	läsa. ]]
+local okNed2, skalNed2 = HorseService.dismount(spelare)
+check("en andra avsittning nekas", okNed2 == false, tostring(okNed2))
+check("och den säger VARFÖR — inte nil",
+	type(skalNed2) == "string" and skalNed2 ~= "",
+	("[%s]"):format(tostring(skalNed2)))
+check("skälet är en riktig språknyckel spelaren kan få läst",
+	skalNed2 == "pass.rider_inte" and Sprak.finns(skalNed2) == true,
+	("%s · finns=%s"):format(tostring(skalNed2), tostring(Sprak.finns(skalNed2))))
 check("Humanoid.Sit är falskt", khum.Sit == false, tostring(khum.Sit))
 check("sitsen är tom", sits.Occupant == nil, tostring(sits.Occupant))
 check("sitsens egen SeatWeld är borta", sits:FindFirstChild("SeatWeld") == nil)

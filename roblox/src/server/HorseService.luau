@@ -641,11 +641,30 @@ local function stallAv(modell: Model, karaktar: Model)
 	end
 end
 
-function HorseService.dismount(player: Player): boolean
+--[[ Avsittningen svarar med ett SKÄL när den nekar (#202 punkt 3).
+
+	Förut föll båda nejen ut som ett naket `false`. `DismountRequest` ger
+	det vidare till klienten, som skriver `skalText(nil)` — alltså den
+	generiska "det gick inte nu" — och spelaren fick veta att något inte
+	gick, men inte vad. Allt annat i den här kedjan bär en namngiven nyckel;
+	det här var det enda hålet.
+
+	Mätt i Studio på `e6a674c`:
+
+	    DismountRequest              -> ok=true
+	    DismountRequest igen         -> ok=false  skal=nil     <- hålet
+
+	Dubbel avsittning är i sig inget fel — `Pass` säger det uttryckligen, och
+	sitsens `Occupant`-lyssnare kan nå hit strax efter spelarens egen
+	begäran. Det som ändras är bara att nejet går att läsa. ]]
+function HorseService.dismount(player: Player): (boolean, string?)
 	local model = byRider[player]
-	if not model then return false end
+	if not model then return false, "pass.rider_inte" end
 	local session = sessions[model]
-	if not session then return false end
+	--[[ Ryttaren är bokförd men sessionen är borta: ett trasigt läge, inte
+		"du rider inte". Egen nyckel, så att de två går att skilja åt i en
+		logg. ]]
+	if not session then return false, "hast.oregistrerad" end
 
 	--[[ Kopplingarna rivs FÖRST. Annars fyrar Occupant-lyssnaren när vi
 		själva reser ryttaren och anropar `dismount` igen mitt i. ]]
@@ -721,7 +740,7 @@ function HorseService.dismount(player: Player): boolean
 			stallAv(modell, character)
 		end)
 	end
-	return true
+	return true, nil
 end
 
 --[[ ── Uthållighet ─────────────────────────────────────────────────── ]]

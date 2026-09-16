@@ -1087,6 +1087,67 @@ do
 				and ytor.instruktion.Text == PC.skalText("spel.for_langt"),
 			("[%s] · [%s]"):format(tostring(PC._bekraftelse()),
 				tostring(ytor.instruktion.Text)))
+		--[[ ── OCH NEJET ÖVERLEVER SERVERNS NYA VY (#201/#202) ─────────
+
+			Det här är raden som faller med den gamla formen. Kvittensen
+			ovan mäts redan mot en vy-push; avslaget mättes aldrig mot en,
+			och skrev därför rakt på etiketterna.
+
+			`GameplayService.moment` anropar `skicka(player)` FÖRE
+			`return false` i flera grenar — bland annat den som svarar
+			`tack.hamta_forst`. Vyn landar då i samma bildruta och ritade
+			om panelen med den gamla instruktionen ovanpå nejet. Mätt i
+			Studio på `e6a674c`: instruktionen var oförändrad före och
+			efter, medan ett nej UTAN vy-push syntes.
+
+			Servern ska fortsätta skicka sin vy. Det som ändrats är att
+			nejet är ett tillstånd renderaren läser, precis som jat. ]]
+		local avslagstext = PC.skalText("tack.hamta_forst")
+		moment.InvokeServer = function() return false, "tack.hamta_forst" end
+		PC.begar("iordning", PC._synligaMoment()[1])
+		check("nejet står i panelen innan vyn kommer",
+			ytor.instruktion.Text == avslagstext,
+			("[%s]"):format(tostring(ytor.instruktion.Text)))
+		check("och det är ett TILLSTÅND, inte en etikettskrivning",
+			PC._avslag() == avslagstext,
+			("[%s]"):format(tostring(PC._avslag())))
+		visa(st)
+		check("serverns nya vy skriver INTE över nejet",
+			ytor.instruktion.Text == avslagstext,
+			("[%s]"):format(tostring(ytor.instruktion.Text)))
+		visa(st)
+		visa(st)
+		check("inte heller efter flera omritningar",
+			ytor.instruktion.Text == avslagstext,
+			("[%s]"):format(tostring(ytor.instruktion.Text)))
+		check("och hjälpraden bär samma text",
+			ytor.hjalp == nil or ytor.hjalp.Text == avslagstext,
+			("[%s]"):format(ytor.hjalp and tostring(ytor.hjalp.Text) or "-"))
+
+		--[[ …och nejet släpper av sig självt, så att nästa instruktion
+			kommer tillbaka utan att något trycks. ]]
+		check("nedräkningen för nejet finns", type(__senasteDelay) == "function")
+		__senasteDelay()
+		check("efter nedräkningen står instruktionen där igen",
+			PC._avslag() == nil and ytor.instruktion.Text ~= avslagstext
+				and ytor.instruktion.Text ~= "",
+			("[%s]"):format(tostring(ytor.instruktion.Text)))
+
+		--[[ ETT JA SLÄCKER ETT STÅENDE NEJ. Gjorde hon om momentet och det
+			gick igenom är nejet inte längre sant. ]]
+		moment.InvokeServer = function() return false, "tack.hamta_forst" end
+		PC.begar("iordning", PC._synligaMoment()[1])
+		check("det står ett nej att släcka", PC._avslag() == avslagstext)
+		moment.InvokeServer = function(_, fasId, momentId)
+			Preparation.utforMoment(st, fasId, momentId, "cosmo")
+			return true
+		end
+		PC.begar("iordning", PC._synligaMoment()[1])
+		check("ett godkänt moment släcker nejet och kvitterar i stället",
+			PC._avslag() == nil and type(PC._bekraftelse()) == "string",
+			("avslag [%s] · kvittens [%s]"):format(
+				tostring(PC._avslag()), tostring(PC._bekraftelse())))
+
 		moment.InvokeServer = fore
 		if type(__senasteDelay) == "function" then __senasteDelay() end
 	end

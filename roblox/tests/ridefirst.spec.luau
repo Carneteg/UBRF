@@ -325,6 +325,7 @@ do
 	check("och dagsformen är kanonens standard",
 		math.abs(GameplayService.dagsformFor(sp1) - RidKanon.START.DAGSFORM) < 1e-9,
 		("%.4f"):format(GameplayService.dagsformFor(sp1)))
+
 end
 
 print("\n── Verklig kedja: blandat pass ──")
@@ -403,6 +404,68 @@ do
 		("%.4f mot %.4f"):format(GameplayService.dagsformFor(sp3), RidKanon.START.DAGSFORM))
 end
 
+
+
+--[[ ══ ETT ANDRA «RIDA NU» SÄGER SANNINGEN (#202 punkt 2) ══════════════
+
+	Förut svarade det `tack.redan_pa` — ett utrustningsfel, för att
+	auto-förberedelsen gick rakt in i `TackService.satPa` på en sadel som
+	redan låg på hästen. Sant om mekaniken, fel om vad som hänt: ingenting
+	är trasigt, hon är klar.
+
+	Mätt i Studio på `e6a674c`, tio extra aktiveringar varav fem
+	parallella — alla svarade `false, tack.redan_pa`.
+
+	Blocket binder hästen och sätter målzonen uttryckligen. Utan bindningen
+	faller `ridaNu` redan på `spel.ingen_hast`, och då mäter provet
+	ingenting alls — vilket är precis vad de äldre blocken i den här filen
+	gör (se noten nedan). ]]
+print("\n── Ett andra «Rida nu» ──")
+do
+	local sp, mod, hastId = nySession("Upprepad", 9007)
+	--[[ Bindningen är produktionens egen väg: modellen taggas efter att
+		`PlayerAdded` gått, så `bunden` är tom tills någon frågar igen. ]]
+	local bunden = GameplayService.bind(sp)
+	check("hästen är bunden", bunden ~= nil, tostring(bunden))
+
+	--[[ Målzonen, som `GameplayService.start` sätter den i drift. ]]
+	local M = 3
+	local p = mod.PrimaryPart.Position
+	LedService.satMalzon({ x = p.X / M - 5, y = 170 - p.Z / M - 5, w = 10, h = 10 })
+
+	--[[ Bänken kör inte hela kedjan i mål — riggen taggas efter
+		`PlayerAdded`, och `placeraVidMal` behöver en värld provet inte
+		bygger. Det spelar ingen roll för DEN HÄR mätningen: felet var att
+		ett upprepat anrop svarade med ett UTRUSTNINGSFEL, och det svaret
+		föll ut oavsett hur långt kedjan kom. Studio pinnar det exakta
+		skälet; här pinnas att det aldrig får vara ett tackfel. ]]
+	GameplayService.ridaNu(sp)
+	local foreAndel = Preparation.egenAndel(GameplayService.stateFor(sp))
+
+	local skalen = {}
+	for _ = 1, 6 do
+		local _, sk = GameplayService.ridaNu(sp)
+		table.insert(skalen, tostring(sk))
+	end
+	local tackfel = 0
+	for _, sk in skalen do
+		if sk == "tack.redan_pa" or sk == "tack.saknar_sadel"
+			or sk == "tack.saknar_underlagg" then tackfel += 1 end
+	end
+	check("ett upprepat «Rida nu» svarar ALDRIG med ett utrustningsfel",
+		tackfel == 0, ("%d av %d · [%s]"):format(tackfel, #skalen, table.concat(skalen, ", ")))
+	check("och svaret är stabilt — samma skäl varje gång, inte växlande",
+		skalen[1] == skalen[#skalen], ("[%s] … [%s]"):format(skalen[1], skalen[#skalen]))
+	check("skälet för «hon står redan färdig» finns i språkkanonen",
+		Sprak.finns("spel.redan_redo") == true)
+	check("MUTATION: katalogen kan svara nej — en påhittad nyckel finns inte",
+		Sprak.finns("spel.redan_redo_pahittad") == false)
+	check("upprepningarna rörde INTE förberedelsen",
+		math.abs(Preparation.egenAndel(GameplayService.stateFor(sp)) - foreAndel) < 1e-9,
+		("%.4f → %.4f"):format(foreAndel,
+			Preparation.egenAndel(GameplayService.stateFor(sp))))
+	LedService.satMalzon(nil)
+end
 
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))

@@ -667,6 +667,58 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 	return true, skal
 end
 
+--[[ ══ HÄSTEN FÅR INTE LÄMNAS I GÅNGEN (#202 punkt 4) ══════════════════
+
+	Mätt i Studio på `e6a674c`: Player2 ledde Troy ut ur box E 8 och kopplade
+	sedan ned. `PlayerRemoving` släppte kopplet — och lämnade henne stående
+	på (166,57 · 96,80), mitt i gång B. Fysiskt sant, men över en session
+	fylls gångarna av hästar ingen längre håller i.
+
+	VART hon ska är inte definierat i kanon. Stallkortet säger ingenting om
+	vad personalen gör med en häst vars handhavare försvinner, och det finns
+	ingen bild på saken. `[antagande]`: hon ställs tillbaka DÄR HON STOD när
+	kopplet fästes — `boxX`/`boxY`, som tjänsten redan bokför. Det är den
+	enda punkt som är härledd ur befintlig data och inte vald av mig, och i
+	det normala flödet är den hennes egen box.
+
+	Tre spärrar, så att städningen aldrig kan göra saken värre:
+
+	  1. bara när hon FAKTISKT startade i en box (`dorrMitt` finns — samma
+	     villkor som `#180` använder för att veta att facket är känt),
+	  2. bara när hon FAKTISKT har lämnat den (samma 2,5 m som
+	     `lamnatBox` mäts på; står hon kvar finns inget att städa),
+	  3. och flytten VERIFIERAS. Hamnade hon inte där ställs hon tillbaka
+	     precis som `placeraVidMal` gör — hellre kvar i gången än inne i en
+	     vägg.
+
+	Skälen nedan är diagnostik. De når aldrig en spelare: den som skulle ha
+	läst dem har just lämnat spelet. ]]
+function LedService.aterstallTillBox(l: Led): (boolean, string?)
+	if l.dorrMitt == nil then return false, "ingen känd box" end
+	local modell = l.modell
+	local pivot = modell and modell.PrimaryPart
+	if not (modell and modell.Parent and pivot) then return false, "hästen borta" end
+
+	local x, y = tomt(pivot.Position)
+	if math.sqrt((x - l.boxX) ^ 2 + (y - l.boxY) ^ 2) <= 2.5 then
+		return false, "står kvar i boxen"
+	end
+
+	local fore = pivot.CFrame
+	local mitt = Vector3.new(l.boxX * M, pivot.Position.Y, (TOMTDJUP - l.boxY) * M)
+	--[[ Läget byts, blickriktningen behålls. `CFrame.lookAt` i stället för
+		`CFrame.new(mitt) * (fore - fore.Position)`: samma resultat, och den
+		formen uttrycker vad som faktiskt ska bevaras. ]]
+	modell:PivotTo(CFrame.lookAt(mitt, mitt + fore.LookVector, Vector3.yAxis))
+
+	local nx, ny = tomt((modell.PrimaryPart :: BasePart).Position)
+	if math.sqrt((nx - l.boxX) ^ 2 + (ny - l.boxY) ^ 2) > 0.5 then
+		modell:PivotTo(fore)
+		return false, "kunde inte ställa tillbaka"
+	end
+	return true, nil
+end
+
 function LedService._sync(player: Player, skal: string?)
 	local ev = Net.get("LedSync")
 	local l = ledd[player]
@@ -1313,7 +1365,13 @@ function LedService.start()
 	end
 
 	Players.PlayerRemoving:Connect(function(player)
-		if ledd[player] then LedService.slapp(player, "led.tappad") end
+		local l = ledd[player]
+		if l then
+			--[[ Städningen FÖRE släppet: `slapp` river bokföringen, och
+				`boxX`/`boxY` bor i den. ]]
+			LedService.aterstallTillBox(l)
+			LedService.slapp(player, "led.tappad")
+		end
 		--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
 			Lämnas den kvar läcker den, och nästa spelare på samma
 			Player-objekt hade ärvt någon annans framsteg. ]]
