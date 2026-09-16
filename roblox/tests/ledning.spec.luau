@@ -1095,7 +1095,7 @@ do
 	--[[ Ut i gången, längre än de 2,5 m som `lamnatBox` mäts på. ]]
 	kropp.CFrame = CFrame.new(vec(900 + 8, 3, 300))
 	local lamnad = kropp.Position
-	local stadat, stadskal = LedService.aterstallTillBox(LedService.lage(sp))
+	local stadat, stadskal = LedService.aterstallTillBox(LedService.boxminne(sp))
 	check("städningen körde", stadat == true, tostring(stadskal))
 	check("hästen står tillbaka där kopplet fästes",
 		(kropp.Position - start).Magnitude < 0.5 * 3,
@@ -1109,7 +1109,7 @@ do
 	--[[ b. Hon står kvar i boxen. Då finns inget att städa. ]]
 	local anl2, h2, kropp2, sp2 = uppstallning("B")
 	local kvar = kropp2.Position
-	local stadat2, skal2 = LedService.aterstallTillBox(LedService.lage(sp2))
+	local stadat2, skal2 = LedService.aterstallTillBox(LedService.boxminne(sp2))
 	check("en häst som står kvar i boxen städas INTE",
 		stadat2 == false, tostring(skal2))
 	check("och hon flyttades inte en millimeter",
@@ -1130,10 +1130,29 @@ do
 	Players.PlayerRemoving:Fire(sp3)
 	if Players.PlayerRemoving.slutfor then Players.PlayerRemoving:slutfor() end
 	check("PlayerRemoving släpper kopplet", LedService.lage(sp3) == nil)
+	check("och minnet är rivet — bokföringen är sessionsbunden",
+		LedService.boxminne(sp3) == nil)
 	check("OCH ställer tillbaka hästen — inte bara släpper henne",
 		(kropp3.Position - start3).Magnitude < 0.5 * 3,
 		("%.2f studs från startpunkten"):format((kropp3.Position - start3).Magnitude))
 	anl3:Destroy()
+
+	--[[ d. DET VANLIGA FÖRLOPPET: kopplet har redan släppt när spelaren
+		stänger spelet. Hon blir efter, `led.tappade_bort` fyrar, spelaren
+		ger upp. Mätt i Studio på `5c70963`: `Led.aktiv = nil` medan hon
+		stod 3,44 m ut i gång A, och första rättelsen städade aldrig. ]]
+	local anl4, h4, kropp4, sp4 = uppstallning("D")
+	local start4 = kropp4.Position
+	kropp4.CFrame = CFrame.new(vec(900 + 8, 3, 300))
+	LedService.slapp(sp4, "led.tappade_bort")
+	check("kopplet har släppt innan nedkopplingen", LedService.lage(sp4) == nil)
+	check("men minnet finns kvar", LedService.boxminne(sp4) ~= nil)
+	Players.PlayerRemoving:Fire(sp4)
+	if Players.PlayerRemoving.slutfor then Players.PlayerRemoving:slutfor() end
+	check("hästen ställs tillbaka ÄVEN när kopplet redan släppt",
+		(kropp4.Position - start4).Magnitude < 0.5 * 3,
+		("%.2f studs från startpunkten"):format((kropp4.Position - start4).Magnitude))
+	anl4:Destroy()
 end
 
 if fails > 0 then
