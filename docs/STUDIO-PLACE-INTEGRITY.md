@@ -515,3 +515,63 @@ var klar. Båda lägena är verifierade funktionellt på samma asset:
 PÅ   insert_asset 18632903662 -> success
 AV   insert_asset 18632903662 -> "User is not authorized to access Asset"
 ```
+
+
+### Städningen, utförd 2026-09-16
+
+Tobias auktoriserade städning av **enbart** den bevisade Toolbox-familjen.
+Utfört på `main` `e75151ae481711c952e0d3af33d1c0b856376db2`.
+
+**Matchningen gjordes strukturellt, inte på namn.** Ett delträd räknades som
+familj bara om VARJE `BasePart` i det heter `LV cap` eller börjar med
+`PERSONAGEM`, **och** varje `MeshId` finns i de fyra som de två bevisade
+listningarna använder. En enda främmande del räckte för att lämna trädet
+orört — ordern var uttrycklig om att inte gissa.
+
+**Fem objekt matchade exakt och är borttagna:**
+
+```
+Workspace.Scene   [Model]     4 delar   pos(297, 16, -18)
+Workspace.Scene   [Model]     4 delar   pos(297, 14, -18)
+Workspace.LV cap  [MeshPart]  1 del     pos(297, 15,  43)
+Workspace.LV cap  [MeshPart]  1 del     pos(297, 16,  42)
+Workspace.LV cap  [MeshPart]  1 del     pos(297, 15,  41)
+```
+
+De flyttades först till `ServerStorage.__Stadning215_Karantan`, grinderna
+kördes med dem i karantän, och de raderades först när allt var grönt.
+Karantänmappen är borttagen.
+
+**Fyra objekt i samma släkt lämnades orörda**, för att de bär en del utanför
+den bevisade signaturen:
+
+| objekt | delen utanför |
+|---|---|
+| `Workspace.Model` ×4 | `unnamed.056` (mesh `16611595881`) |
+| `Workspace.rosto` och dess `Scene` | `Curva` (mesh `120048019098636`) |
+
+De **kan** höra till samma familj, men det går inte att bevisa utan att öppna
+tredjepartsladdning igen, och den ska vara av. De står kvar i punkt 10e:s
+lista och kräver ett eget beslut.
+
+**Före och efter:**
+
+```
+Workspace toppnivå        26 -> 21
+10e ospårat i Workspace   21 -> 16
+preflight                 38 mätningar, 0 röda, före OCH efter
+Anläggning.UBRF           3 350 delar, oförändrat
+hästar                    33/33
+Tackförråd                33 upphängningar
+kor.sh                    37/37 · build-identitet exit 0
+```
+
+Kvar i 10e efter städningen: `Jumps`, sju `Model`, `SADDLE`, `Saddle`,
+`ThanksgivingHelmet`, `Union`, `Western Bridle`, `ew bridle` ×2, `rosto` —
+alla oförändrade, alla fortfarande Tobias beslut.
+
+**Not om inställningen.** Ordern sa att tredjepartsassets skulle förbli
+**AV**. Funktionellt uppmätt under passet: den var AV 17:45, och **PÅ igen**
+när städningen var klar — två olika assets gick att sätta in. Jag har inte
+rört någon Experience Setting och kan inte heller göra det; flaggan är inte
+skriptbar. **Den behöver slås av för hand.**
