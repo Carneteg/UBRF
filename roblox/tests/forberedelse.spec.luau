@@ -1172,6 +1172,147 @@ do
 			("avslag [%s] · kvittens [%s]"):format(
 				tostring(PC._avslag()), tostring(PC._bekraftelse())))
 
+
+		--[[ ══ OCH BÅDA HÄSTKNAPPARNA (#204) ══════════════════════════
+
+			`MountPrompt` och `LedPrompt` skickade sina avslag till `warn()`.
+			Mätt i Studio på `c30f1ff`, fyra olika nej — panelen oförändrad i
+			samtliga:
+
+			    MountRequest, oförberedd   false · pass.aterstar
+			    LedBorja, för långt bort    false · led.for_langt
+			    MountRequest, annans häst   false · spel.inte_din_hast
+			    LedBorja, annans häst       false · led.fel_hast
+
+			Provet bygger de RIKTIGA prompterna genom
+			`InteractionController.uppdatera` och fyrar deras `Triggered`. ]]
+		local Taggar = game:GetService("CollectionService")
+		local RSt = game:GetService("ReplicatedStorage")
+		local IC = InteractionController
+
+		local function nyPromptHast(namn)
+			local m = Instance.new("Model")
+			m.Name = namn
+			m:SetAttribute("HorseId", namn)
+			local rot = Instance.new("Part")
+			rot.Name = "HumanoidRootPart"
+			rot.Size = Vector3.new(1.86, 2.34, 5.55)
+			rot.Parent = m
+			m.PrimaryPart = rot
+			local hum = Instance.new("Humanoid")
+			hum.Name = "Humanoid"
+			hum.Parent = m
+			m.Parent = workspace
+			Taggar:AddTag(m, "Horse")
+			return m
+		end
+
+		RSt:SetAttribute("G01Enabled", true)
+		IC.setReadyCheck(function() return true end)
+		IC.setLedCheck(function() return true end)
+		IC.setRidaCheck(function() return false end)
+		local visade = {}
+		IC.setAvslagVisare(function(skal, extra)
+			table.insert(visade, { skal = skal, extra = extra })
+			PC.visaAvslagFor(skal, extra)
+		end)
+
+		--[[ `Networking.get` skapar fjärrobjektet bara på servern; på
+			klienten väntar den på att det ska replikeras. Banken är
+			klient, så de två remotes provet behöver skapas här — samma
+			knep som blocket ovan använder för `PreparationMoment`. ]]
+		game:GetService("RunService")._server = true
+		Networking.get("MountRequest")
+		Networking.get("LedBorja")
+		game:GetService("RunService")._server = false
+
+		local hastM = nyPromptHast("provhast204")
+		IC.uppdatera()
+		local mountPrompt, ledPrompt
+		for _, d in hastM:GetDescendants() do
+			if d.Name == "MountPrompt" then mountPrompt = d end
+			if d.Name == "LedPrompt" then ledPrompt = d end
+		end
+		check("MountPrompt byggdes av den riktiga controllern", mountPrompt ~= nil)
+		check("LedPrompt byggdes av den riktiga controllern", ledPrompt ~= nil)
+
+		--[[ a. ÄGARSKAP — fail-closed ska vara oförändrat och LÄSBART. ]]
+		if mountPrompt then
+			local mr = Networking.get("MountRequest")
+			local mrFore = mr.InvokeServer
+			mr.InvokeServer = function() return false, "spel.inte_din_hast" end
+			visade = {}
+			mountPrompt.Triggered:Fire()
+			task.wait()
+			check("ett nekat MountPrompt skickar skälet till spelarens yta",
+				#visade == 1 and visade[1].skal == "spel.inte_din_hast",
+				("%d anrop · [%s]"):format(#visade, visade[1] and tostring(visade[1].skal) or "-"))
+			check("och texten står i panelen",
+				ytor.instruktion.Text == PC.skalText("spel.inte_din_hast"),
+				("[%s]"):format(tostring(ytor.instruktion.Text)))
+			visa(st)
+			check("nejet överlever serverns vy",
+				ytor.instruktion.Text == PC.skalText("spel.inte_din_hast"),
+				("[%s]"):format(tostring(ytor.instruktion.Text)))
+			if type(__senasteDelay) == "function" then __senasteDelay() end
+
+			--[[ b. ARGUMENTET FÅR INTE TAPPAS. `pass.aterstar` är "%s
+				remains"; utan serverns tredje returvärde läser spelaren
+				formatsträngen rå. Det här är raden som faller om någon
+				tar bort `extra` ur handlaren. ]]
+			mr.InvokeServer = function() return false, "pass.aterstar", "kanon:Hälsa lugnt" end
+			visade = {}
+			mountPrompt.Triggered:Fire()
+			task.wait()
+			check("serverns tredje returvärde följer med till ytan",
+				#visade == 1 and visade[1].extra == "kanon:Hälsa lugnt",
+				("[%s]"):format(visade[1] and tostring(visade[1].extra) or "-"))
+			check("och spelaren läser en ifylld mening, inte en formatsträng",
+				string.find(ytor.instruktion.Text, "%%s") == nil
+					and ytor.instruktion.Text ~= "",
+				("[%s]"):format(tostring(ytor.instruktion.Text)))
+			if type(__senasteDelay) == "function" then __senasteDelay() end
+
+			--[[ c. ETT JA VISAR INGET NEJ. ]]
+			mr.InvokeServer = function() return true end
+			visade = {}
+			local foreJa = ytor.instruktion.Text
+			mountPrompt.Triggered:Fire()
+			task.wait()
+			check("en LYCKAD uppsittning visar inget avslag alls",
+				#visade == 0 and PC._avslag() == nil,
+				("%d anrop · avslag [%s]"):format(#visade, tostring(PC._avslag())))
+			mr.InvokeServer = mrFore
+		end
+
+		--[[ d. LEDNINGEN, samma väg. ]]
+		if ledPrompt then
+			local lb = Networking.get("LedBorja")
+			local lbFore = lb.InvokeServer
+			lb.InvokeServer = function() return false, "led.for_langt" end
+			visade = {}
+			ledPrompt.Triggered:Fire()
+			task.wait()
+			check("ett nekat LedPrompt skickar skälet till spelarens yta",
+				#visade == 1 and visade[1].skal == "led.for_langt",
+				("%d anrop · [%s]"):format(#visade, visade[1] and tostring(visade[1].skal) or "-"))
+			check("och texten står i panelen",
+				ytor.instruktion.Text == PC.skalText("led.for_langt"),
+				("[%s]"):format(tostring(ytor.instruktion.Text)))
+			if type(__senasteDelay) == "function" then __senasteDelay() end
+
+			lb.InvokeServer = function() return true end
+			visade = {}
+			ledPrompt.Triggered:Fire()
+			task.wait()
+			check("en LYCKAD ledning visar inget avslag alls",
+				#visade == 0 and PC._avslag() == nil,
+				("%d anrop · avslag [%s]"):format(#visade, tostring(PC._avslag())))
+			lb.InvokeServer = lbFore
+		end
+		IC.setAvslagVisare(nil)
+		hastM:Destroy()
+
 		moment.InvokeServer = fore
 		if type(__senasteDelay) == "function" then __senasteDelay() end
 	end

@@ -98,7 +98,7 @@ end
 	spelaren står på. Servern äger fortfarande vem som får leda vad
 	(`satRattHastKrok`) och när steget får bockas av — klienten bestämmer
 	bara om knappen ritas. ]]
-local avslagVisare: ((any) -> ())? = nil
+local avslagVisare: ((any, any?) -> ())? = nil
 local ledFor: ((Model) -> boolean)? = nil
 
 function InteractionController.setLedCheck(fn: ((Model) -> boolean)?)
@@ -131,13 +131,35 @@ local function addPrompt(model: Model)
 	prompt.Parent = rig.attachments.Saddle or rig.root
 
 	prompt.Triggered:Connect(function()
-		local ok, reason = Net.get("MountRequest"):InvokeServer(model)
+		--[[ TRE RETURVÄRDEN, INTE TVÅ (#204).
+
+			`GameplayService.farSittaUpp` svarar `(false, skal, arg)`, och
+			argumentet är inte kosmetik: `pass.aterstar` är formatsträngen
+			"%s remains" och fyndets välfärdsstopp är en engelsk RAM runt
+			en svensk mening ur skötselkanonen. Handlaren tog bara två
+			värden, så det tredje föll på golvet.
+
+			Mätt i Studio på `c30f1ff`, före rättelsen:
+
+			    server -> ok=false skal=pass.aterstar arg=kanon:Hälsa lugnt
+			    skalText(skal, nil) = "%s remains"    <- ofylld
+
+			Hade nejet bara routats vidare utan argumentet hade spelaren
+			fått läsa "%s remains". ]]
+		local ok, reason, extra = Net.get("MountRequest"):InvokeServer(model)
 		if ok and onMount then
 			onMount(model)
 		elseif not ok then
 			--[[ Skälet är en språknyckel sedan #162. Loggen skriver båda:
 				nyckeln för den som felsöker, texten för den som läser
-				vad spelaren faktiskt fick se. ]]
+				vad spelaren faktiskt fick se.
+
+				OCH LOGGEN ÄR INTE SPELAREN (#204). `warn` går till Output-
+				fönstret; den som står vid hästen ser ingenting. Mätt i
+				Studio på `c30f1ff`: fyra olika avslag, panelen oförändrad
+				i alla fyra. Skälet går nu till samma meddelanderad som
+				#203 gav förberedelsen. ]]
+			if avslagVisare then avslagVisare(reason, extra) end
 			warn(("[Horse] Kunde inte sitta upp: %s (%s)"):format(
 				Sprak.t(tostring(reason)), tostring(reason)))
 		end
@@ -173,14 +195,33 @@ local function addLedPrompt(model: Model)
 
 	led.Triggered:Connect(function()
 		local leder = ledPrompts[model] == true
-		local remote = if leder then "LedSlapp" else "LedBorja"
-		local ok, skal = if leder
-			then Net.get(remote):InvokeServer()
-			else Net.get(remote):InvokeServer(model)
+		--[[ ETT if-else-UTTRYCK BÄR BARA ETT VÄRDE (#204).
+
+			Raden såg ut att ta emot `(ok, skal)` från båda grenarna, men
+			`if a then f() else g()` är ett UTTRYCK i Luau och trunkeras
+			till sitt första värde. `skal` var därför alltid `nil` — och
+			det syntes inte så länge nejet ändå bara gick till `warn`, som
+			skriver "nil" utan att någon reagerar.
+
+			Mätt i banken när avslaget routades till panelen: spelaren fick
+			"Det gick inte just nu" i stället för "Walk up to her first".
+
+			Ett `if`-STATEMENT bär båda värdena. ]]
+		local ok, skal
+		if leder then
+			ok, skal = Net.get("LedSlapp"):InvokeServer()
+		else
+			ok, skal = Net.get("LedBorja"):InvokeServer(model)
+		end
 		if ok then
 			ledPrompts[model] = not leder
 			led.ActionText = Sprak.t(if ledPrompts[model] then "led.slapp" else "led.borja")
 		else
+			--[[ Samma sak här (#204): `led.for_langt` och `led.fel_hast`
+				är sådant spelaren behöver veta, inte sådant som hör hemma
+				i Output. Mätt i Studio på `c30f1ff`: panelen oförändrad
+				vid båda. ]]
+			if avslagVisare then avslagVisare(skal) end
 			warn(("[Led] %s (%s)"):format(Sprak.t(tostring(skal)), tostring(skal)))
 		end
 	end)
@@ -288,7 +329,7 @@ end
 --[[ Vem som VISAR ett nej för spelaren. Samma mönster igen: den här filen
 	äger knappen, förberedelsepanelen äger meddelanderaden, och kopplingen
 	görs i `init.client` i stället för att de två ska känna varandra. ]]
-function InteractionController.setAvslagVisare(fn: ((any) -> ())?)
+function InteractionController.setAvslagVisare(fn: ((any, any?) -> ())?)
 	avslagVisare = fn
 end
 
