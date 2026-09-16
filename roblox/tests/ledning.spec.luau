@@ -827,6 +827,12 @@ end
 	att svängen ska följa VART hon ska och inte en konstant. ]]
 print("\n── Hon går ut i gången, inte tvärs över den ──")
 do
+	--[[ Mäter DELMÅLET, inte kursen. Kursen är en släpande avbildning av
+		delmålet: den kan stämma av fel skäl, och den kan vara rätt medan
+		punkten hon siktar på ligger i en vägg — vilket är exakt det #182
+		mätte i Studio på `fe7ac37`.
+
+		Som i blocket nedan mäts båda sidor om dörrplanet i en körning. ]]
 	local function prova(motZ: number, namn: string)
 		LedService._glomForProv()
 		local anl = Instance.new("Model")
@@ -849,39 +855,59 @@ do
 			om dörren, så att gångriktningen går att avgöra. ]]
 		local sp, rot = nySpelare("Svängryttare" .. namn, vec(DX + 2, 3, DZ + motZ * 4))
 		local ok, skal = LedService.borja(sp, h, h)
-		if not ok then anl:Destroy() return false, nil, 0, tostring(skal) end
+		if not ok then
+			anl:Destroy()
+			return false, nil, nil, tostring(skal)
+		end
 
 		--[[ Kör dörrsekvensen tills hon är förbi steg 1. ]]
-		--[[ Vridtakten kommer ur kanon och är medvetet lugn; 40 bildrutor
-			räcker bara till halva svängen åt det längre hållet, och då
-			mäter provet vägen dit i stället för målet. ]]
 		for _ = 1, 140 do LedService._steg(1 / 30) end
 		local l = LedService.lage(sp)
-		local kurs = math.deg(kursAv(kropp.CFrame))
-		local info = string.format("dsteg=%s spelare z%+.1f häst %.1f,%.1f",
-			l and tostring(l.dorrsteg) or "-", rot.Position.Z - DZ,
-			kropp.Position.X - DX, kropp.Position.Z - DZ)
+		local inne = l and l.delmal and { ut = l.delmal.X - DX, langs = l.delmal.Z - DZ } or nil
+		local dsteg = l and l.dorrsteg or -1
+
+		--[[ Hon kliver ut genom öppningen — kortare än 2,5 m, så
+			`lamnatBox` är fortfarande falsk och dörrgrenen kvar. ]]
+		kropp.CFrame = CFrame.new(vec(DX + 1, 3, DZ))
+		LedService._steg(1 / 30)
+		l = LedService.lage(sp)
+		local ute = l and l.delmal and { ut = l.delmal.X - DX, langs = l.delmal.Z - DZ } or nil
+		local info = ("dsteg=%d spelare z%+.1f"):format(dsteg, rot.Position.Z - DZ)
 		anl:Destroy()
-		return ok, l, kurs, info
+		return ok, inne, ute, info
 	end
 
+	--[[ Gång B är 7,75 studs bred; motsatta radens front ligger alltså
+		7,75 studs ut från dörrplanet. Delmålet får inte ligga där. ]]
+	local GANGBREDD = 7.75
+	local HALVA = 3.60 / 2
+
 	--[[ Spelaren SÖDER om dörren (+z). ]]
-	local okA, lA, kursA, skalA = prova(1, "A")
-	check("ledningen startar med boxdörr (spelaren i +z)", okA == true, tostring(skalA))
+	local okA, inneA, uteA, infoA = prova(1, "A")
+	check("ledningen startar med boxdörr (spelaren i +z)", okA == true, tostring(infoA))
+	check("delmålet ligger INTE vid motsatta radens front",
+		uteA ~= nil and uteA.ut < GANGBREDD - 2.0,
+		uteA and ("ut %+.2f av gångens %.2f · %s"):format(uteA.ut, GANGBREDD, infoA) or "inget delmål")
+	check("inne i boxen siktar hon genom öppningen, inte förbi karmen",
+		inneA ~= nil and math.abs(inneA.langs) <= HALVA,
+		inneA and ("längs %+.2f av halva öppningen %.2f"):format(inneA.langs, HALVA) or "inget delmål")
 	check("hästen svänger MOT gången, inte rakt tvärs över den",
-		lA ~= nil and kursA > 5 and kursA < 85,
-		("kurs %.1f° · %s"):format(kursA, tostring(skalA)))
+		uteA ~= nil and uteA.langs > HALVA,
+		uteA and ("ut %+.2f längs %+.2f · %s"):format(uteA.ut, uteA.langs, infoA) or "inget delmål")
 
 	--[[ Spelaren NORR om dörren (−z): svängen ska gå åt andra hållet. ]]
-	local okB, lB, kursB, skalB = prova(-1, "B")
-	check("ledningen startar med boxdörr (spelaren i −z)", okB == true, tostring(skalB))
+	local okB, inneB, uteB, infoB = prova(-1, "B")
+	check("ledningen startar med boxdörr (spelaren i −z)", okB == true, tostring(infoB))
 	check("och åt andra hållet när hon ska åt andra hållet",
-		lB ~= nil and kursB > 95 and kursB < 175,
-		("kurs %.1f° · %s"):format(kursB, tostring(skalB)))
-
-	check("de två riktningarna ger OLIKA kurs — svängen följer målet",
-		math.abs(kursA - kursB) > 20,
-		("%.1f° mot %.1f°"):format(kursA, kursB))
+		uteB ~= nil and uteB.langs < -HALVA,
+		uteB and ("ut %+.2f längs %+.2f · %s"):format(uteB.ut, uteB.langs, infoB) or "inget delmål")
+	check("de två riktningarna ger OLIKA delmål — svängen följer målet",
+		uteA ~= nil and uteB ~= nil and uteA.langs * uteB.langs < 0,
+		(uteA and uteB) and ("längs %+.2f mot %+.2f"):format(uteA.langs, uteB.langs) or "inget delmål")
+	check("men inne i boxen är de LIKA — karmen går före svängen",
+		inneA ~= nil and inneB ~= nil
+			and math.abs(inneA.langs) < 0.01 and math.abs(inneB.langs) < 0.01,
+		(inneA and inneB) and ("längs %+.2f mot %+.2f"):format(inneA.langs, inneB.langs) or "inget delmål")
 end
 
 
@@ -911,6 +937,16 @@ print("\n── Den som står i dörren pekar inte åt något håll ──")
 do
 	--[[ Samma dörr som provet ovan, men spelaren står I öppningen och
 		målzonen ligger tydligt åt ett håll längs gången. ]]
+	--[[ Provet mäter DELMÅLET på båda sidor om dörrplanet i EN körning.
+
+		Att bara mäta inne i boxen räcker inte längre, och det är #182:s
+		fynd: delmålets offset LÄNGS gången är 1,2 m medan öppningens halva
+		bredd är 0,60 m, så innanför karmen pekar delmålet alltid utanför
+		hålet. Först när hon passerat dörrplanet är offseten fri att gälla.
+
+		Hästen flyttas därför i provet, från 4 studs innanför till 1 studs
+		utanför — kortare än de 2,5 m som gör `lamnatBox` sann, så
+		dörrgrenen är kvar i båda mätningarna. ]]
 	local function provaZon(spelarOffsetZ, zonY, namn)
 		LedService._glomForProv()
 		local anl = Instance.new("Model")
@@ -936,40 +972,86 @@ do
 		--[[ I ÖPPNINGEN: offsetten är bråkdelar av en studs. ]]
 		local sp, rot = nySpelare("Zonryttare" .. namn, vec(DX + 2, 3, DZ + spelarOffsetZ))
 		local ok, skal = LedService.borja(sp, h, h)
-		if not ok then anl:Destroy() LedService.satMalzon(nil) return false, 0, tostring(skal) end
+		if not ok then
+			anl:Destroy()
+			LedService.satMalzon(nil)
+			return false, nil, nil, tostring(skal)
+		end
 		for _ = 1, 140 do LedService._steg(1 / 30) end
-		local kurs = math.deg(kursAv(kropp.CFrame))
-		local info = ("spelare z%+.2f · zon y=%.0f · häst %.1f,%.1f"):format(
-			rot.Position.Z - DZ, zonY, kropp.Position.X - DX, kropp.Position.Z - DZ)
+		local l = LedService.lage(sp)
+		local inne = l and l.delmal and { ut = l.delmal.X - DX, langs = l.delmal.Z - DZ } or nil
+		local dsteg = l and l.dorrsteg or -1
+
+		--[[ Hon kliver ut genom öppningen. Provet flyttar henne; tjänsten
+			ska svara på var hon FAKTISKT är. ]]
+		kropp.CFrame = CFrame.new(vec(DX + 1, 3, DZ))
+		LedService._steg(1 / 30)
+		l = LedService.lage(sp)
+		local ute = l and l.delmal and { ut = l.delmal.X - DX, langs = l.delmal.Z - DZ } or nil
+		local info = ("spelare z%+.2f · zon y=%.0f · dsteg=%d"):format(
+			rot.Position.Z - DZ, zonY, dsteg)
 		anl:Destroy()
 		LedService.satMalzon(nil)
-		return ok, kurs, info
+		return ok, inne, ute, info
 	end
 
-	--[[ Zonen SÖDER om dörren i världen (+z, alltså lägre tomt-y). ]]
-	local okS, kursS, infoS = provaZon(0, 20, "S")
-	check("spelaren i öppningen, målzonen söderut → hon svänger söderut",
-		okS and kursS > 5 and kursS < 85, ("kurs %.1f° · %s"):format(kursS, infoS))
+	--[[ Halva öppningen, ur bladets egen bredd — samma tal tjänsten
+		använder för att avgöra om spelaren står "tydligt" åt ett håll. ]]
+	local HALVA = 3.60 / 2
+
+	--[[ ── #182: INNE I BOXEN SIKTAR HON GENOM HÅLET ──────────────────
+
+		Mätt i Studio på `fe7ac37`, box MB 5 med dörren öppen: strålen från
+		hästen till det gamla delmålet blockeras av `Boxfront MB 5` på
+		1,36 m, medan strålen till dörrmitten och rakt ut är fri. Hon stod
+		med kurs 88,0°, WalkSpeed 4,3 och flyttade sig 1,23 m på 7,5 s.
+
+		Raden nedan är den som blir röd utan rättelsen: den gamla formen
+		ger |längs| = 3,6 studs mot öppningens halva bredd 1,8. ]]
+	local okS, inneS, uteS, infoS = provaZon(0, 20, "S")
+	check("ledningen startar med boxdörr och målzon", okS == true, tostring(infoS))
+	check("inne i boxen ligger delmålet INNANFÖR öppningen",
+		inneS ~= nil and math.abs(inneS.langs) <= HALVA,
+		inneS and ("längs %+.2f av halva öppningen %.2f · ut %+.2f · %s"):format(
+			inneS.langs, HALVA, inneS.ut, infoS) or "inget delmål")
+	check("inne i boxen siktar hon rakt ut genom dörren",
+		inneS ~= nil and inneS.ut > 0 and math.abs(inneS.langs) < 0.01,
+		inneS and ("ut %+.2f längs %+.2f"):format(inneS.ut, inneS.langs) or "inget delmål")
+
+	--[[ ── #194: UTE I GÅNGEN AVGÖR MÅLZONEN SVÄNGEN ──────────────────
+
+		Oförändrad avsikt, mätt där den nu gäller. Zonen SÖDER om dörren i
+		världen (+z, alltså lägre tomt-y) ska ge ett delmål söderut. ]]
+	check("ute i gången, målzonen söderut → delmålet går söderut",
+		uteS ~= nil and uteS.langs > HALVA,
+		uteS and ("längs %+.2f · %s"):format(uteS.langs, infoS) or "inget delmål")
 
 	--[[ Zonen NORR om dörren (−z, högre tomt-y). ]]
-	local okN, kursN, infoN = provaZon(0, 55, "N")
-	check("spelaren i öppningen, målzonen norrut → hon svänger norrut",
-		okN and kursN > 95 and kursN < 175, ("kurs %.1f° · %s"):format(kursN, infoN))
-
+	local _, inneN, uteN, infoN = provaZon(0, 55, "N")
+	check("ute i gången, målzonen norrut → delmålet går norrut",
+		uteN ~= nil and uteN.langs < -HALVA,
+		uteN and ("längs %+.2f · %s"):format(uteN.langs, infoN) or "inget delmål")
 	check("målzonen avgör svängen när spelarens läge inte gör det",
-		math.abs(kursS - kursN) > 20, ("%.1f° mot %.1f°"):format(kursS, kursN))
+		uteS ~= nil and uteN ~= nil and uteS.langs * uteN.langs < 0,
+		(uteS and uteN) and ("längs %+.2f mot %+.2f"):format(uteS.langs, uteN.langs) or "inget delmål")
+	check("och samma zon ger samma svar på båda sidor om planet",
+		inneN ~= nil and math.abs(inneN.langs) < 0.01,
+		inneN and ("inne längs %+.2f"):format(inneN.langs) or "inget delmål")
 
-	--[[ ── OCH TECKNET FÅR INTE VIPPA PÅ HUNDRADELAR ──────────────────
+	--[[ ── OCH TECKNET FÅR INTE VIPPA PÅ HUNDRADELAR (#194) ───────────
 
-		Det här är raden som faller med det gamla villkoret. Två lägen som
-		skiljer 0,04 studs — mindre än en hovbredd — låg på var sin sida om
-		`>= 0` och gav delmål 2,4 m från varandra. Nu ligger båda innanför
-		halva öppningen, så målzonen avgör, och svängen blir densamma. ]]
-	local _, kursMinus, infoMinus = provaZon(-0.02, 20, "J1")
-	local _, kursPlus, infoPlus = provaZon(0.02, 20, "J2")
+		Två lägen som skiljer 0,04 studs — mindre än en hovbredd — låg på
+		var sin sida om `>= 0` och gav delmål 2,4 m från varandra. ]]
+	local _, _, uteMinus, infoMinus = provaZon(-0.02, 20, "J1")
+	local _, _, utePlus, infoPlus = provaZon(0.02, 20, "J2")
 	check("±0,02 studs i öppningen ger SAMMA sväng — tecknet vippar inte",
-		math.abs(kursMinus - kursPlus) < 5,
-		("%.1f° mot %.1f°  ·  %s  ·  %s"):format(kursMinus, kursPlus, infoMinus, infoPlus))
+		uteMinus ~= nil and utePlus ~= nil
+			and uteMinus.langs * utePlus.langs > 0
+			and math.abs(uteMinus.langs - utePlus.langs) < 0.1,
+		(uteMinus and utePlus)
+			and ("längs %+.2f mot %+.2f  ·  %s  ·  %s"):format(
+				uteMinus.langs, utePlus.langs, infoMinus, infoPlus)
+			or "inget delmål")
 end
 
 if fails > 0 then

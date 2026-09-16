@@ -221,6 +221,9 @@ export type Led = {
 	dorrMitt: Vector3?,
 	dorrUt: Vector3?,
 	dorrsteg: number,
+	--[[ Punkten hon faktiskt styr mot den här bildrutan. Skrivs av `steg`
+		varje bildruta och läses av prov och runtimemätning. ]]
+	delmal: Vector3?,
 	-- navigeringen
 	navVag: { Vector3 },
 	navIx: number,
@@ -615,6 +618,7 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		dorr = narmasteDorr,
 		dorrUt = dorrUt,
 		dorrsteg = 1,
+		delmal = nil,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position,
 	}
@@ -1088,9 +1092,49 @@ local function steg(_dt: number)
 					mot = if langsSpelare >= 0 then 1 else -1
 				end
 			end
-			local ut2 = l.dorrMitt
-				+ l.dorrUt * (1.2 * M)
-				+ langs * (mot * 1.2 * M)
+			--[[ ══ SVÄNGEN BÖRJAR I GÅNGEN, INTE INNE I BOXEN ═════════════
+
+				Mätt i Studio på `fe7ac37`, box MB 5 med dörren ÖPPEN,
+				spelaren gående söderut:
+
+				    öppningen längs gången   y 78,07 .. 79,27  (1,20 m)
+				    ut2 (mot = +1)                (166,70 · 77,47)
+				    hästen                        (164,11 · 77,56)
+
+				    strålen häst -> ut2        BLOCKERAD av Boxfront MB 5
+				                               på 1,36 m
+				    strålen häst -> dörrmitt   FRI
+				    strålen häst -> rakt ut     FRI
+				    ut2 (mot = −1)             BLOCKERAD av bladet, 2,46 m
+
+				Offseten LÄNGS gången är 1,2 m; öppningens HALVA bredd är
+				0,60 m. Delmålet hamnar alltså alltid utanför karmen — åt
+				BÅDA hållen. Det gör ingen skada så länge planeraren har en
+				väg, för `navigerar(l)` styr då mot vägpunkten och rör inte
+				delmålet. Men `dorrsteg` slår om till 2 redan 1,1 m innanför
+				öppningen (`ut1` ligger 1,3 m in och radien är `START_R` +
+				0,4), och när planeraren gett upp efter `NAV_MAX_PLANER`
+				återstår bara den raka styrningen — rakt in i fronten.
+
+				Loggen, samma körning, bildruta 1409 och framåt:
+
+				    häst (164,11 · 77,56) kurs 88,0°  WalkSpeed 4,3
+				    navVag tom · navPlaner 6 · stillaSedan 3,28 -> 7,96
+				    förflyttning 1,23 m på 7,5 s medan spelaren gick 11,09
+
+				Hon står alltså med rätt kurs, full skrittorder och noll
+				hastighet tills `led.fastnat` släpper — eller, om spelaren
+				hinner längre bort först, `led.tappade_bort` vid 9,0 m.
+
+				#194 valde TECKNET på `mot` rätt. Det som fattades är att
+				offseten inte får läggas på förrän hon är UTE: så leder man
+				också en häst — rakt ut genom öppningen, och sedan med i
+				gångens riktning. `utRakt` är dörrens egen normal och bär
+				ingen gissad koordinat; `ut2` är oförändrad och gäller från
+				och med det ögonblick hon passerat dörrplanet. ]]
+			local utRakt = l.dorrMitt + l.dorrUt * (1.2 * M)
+			local ut2 = utRakt + langs * (mot * 1.2 * M)
+			local igenomDorren = (pivot.Position - l.dorrMitt):Dot(l.dorrUt) > 0
 			--[[ DELMÅLET SKA NÅS, OCH DET KRÄVER EN RADIE UTANFÖR DÖDZONEN.
 				Radien stod på 0,9 m medan hysteresen börjar gå först vid 1,8 m:
 				mätt i Studio hamnade hästen 0,98 m från punkten, alltså i
@@ -1104,8 +1148,14 @@ local function steg(_dt: number)
 					bakom = ut1
 				end
 			end
-			if l.dorrsteg == 2 then bakom = ut2 end
+			if l.dorrsteg == 2 then
+				bakom = if igenomDorren then ut2 else utRakt
+			end
 		end
+		--[[ Delmålet som faktiskt styr henne, synligt för prov och för den
+			som mäter i runtime. Utan det gick fyndet ovan bara att se som
+			ett symtom: rätt kurs, full fart, noll förflyttning. ]]
+		l.delmal = bakom
 		local tillMal = avstandM(pivot.Position, bakom)
 
 		--[[ Hon får skynda på inom SKRITTENS eget band när hon hamnat
