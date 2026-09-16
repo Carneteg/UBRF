@@ -174,7 +174,11 @@ def modultext(hash_, sha, lage, antal, nu, agarskap):
         "\n"
         "\t`sha` ar UPPLYSNING, inte grind. En committad fil kan inte kanna\n"
         "\tsitt eget commit-SHA, sa det faltet ligger alltid minst ett steg\n"
-        "\tefter. Gata aldrig pa det. ]]\n"
+        "\tefter. Gata aldrig pa det.\n"
+        "\n"
+        "\t`kallor` ar antalet mappade kallfiler. Placen kan rakna om DET\n"
+        "\tsjalv — instanser gar att rakna utan att lasa `Source`, vilket ett\n"
+        "\tspelskript inte far. Se Integritet.kallantal och punkt 9e. ]]\n"
         "return {\n"
         f'\tkallhash = "{hash_}",\n'
         f'\tlage = "{lage}",\n'

@@ -202,6 +202,67 @@ function Integritet.osparade(tjanst: string): { string }
 	return ut
 end
 
+--[[ ══ BESKRIVER IDENTITETEN KODEN SOM FAKTISKT LIGGER HÄR? (#171) ═════
+
+	9a–9d prövar att identiteten FINNS, är GENERERAD och har rätt FORM. Ingen
+	av dem prövar att den beskriver den här placens källor. En identitet som
+	genererats ur ett annat källäge — en gren, en äldre commit, en place som
+	tappat Rojo mitt i ett pass — går igenom alla fyra.
+
+	DET IDEALA MÅTTET GÅR INTE ATT TA. `kallhash` är beviset, och placen bär
+	källorna i `ModuleScript.Source`. Men ett SPELSKRIPT FÅR INTE LÄSA
+	`Source`. Uppmätt i en levande server-VM på `a5a4b71`:
+
+	    ServerScriptService.Horse.Integritet:247 function kallbytes
+	    The current thread cannot read 'Source'
+	    (lacking capability PluginOrOpenCloud)
+
+	Ett första försök summerade just `#Source` och föll därför exakt där
+	grinden bor. Talet stämde — 1 234 328 i både repo och place, mätt från
+	edit-kontexten — men det går inte att nå från runtime, och en mätning som
+	bara fungerar i verktyget mäter inte grinden.
+
+	DET SOM GÅR ATT RÄKNA ÄR INSTANSERNA. `IsA` och `GetDescendants` kräver
+	ingen läsrätt på källan. Antalet Rojo-ägda skriptobjekt i placen ska vara
+	exakt `kallor` — identiteten själv oräknad, av samma skäl som generatorn
+	utesluter den ur hashen. Uppmätt på `a5a4b71`: 68 skriptobjekt, minus
+	`UBRFBuild` = 67, mot identitetens `kallor = 67`.
+
+	SVAGARE ÄN HASHEN, och det ska sägas rakt ut: en fil som redigeras utan
+	att läggas till eller tas bort glider igenom. Den fångar tillagda och
+	borttagna källor, och en place som synkats från ett annat projektträd.
+	Resten måste försvaras utanför placen — `bygg-identitet.py --kontrollera`
+	i CI räknar om hashen på riktigt. ]]
+function Integritet.kallantal(): number?
+	local id = Integritet.identitet()
+	if not id then return nil end
+	local karta = id.rojo :: any
+	if typeof(karta) ~= "table" then return nil end
+	local tjanster: { [string]: Instance } = {
+		ReplicatedStorage = ReplicatedStorage,
+		ServerScriptService = ServerScriptService,
+		StarterPlayer = StarterPlayer,
+	}
+	local bygget = ReplicatedStorage:FindFirstChild("UBRFBuild")
+	local antal = 0
+	local function rakna(d: Instance)
+		if d:IsA("LuaSourceContainer") and d ~= bygget then antal += 1 end
+	end
+	for tjanstnamn, lista in pairs(karta) do
+		local tjansten = tjanster[tostring(tjanstnamn)]
+		if tjansten and typeof(lista) == "table" then
+			for _, namn in ipairs(lista) do
+				local rot = tjansten:FindFirstChild(tostring(namn))
+				if rot then
+					rakna(rot)
+					for _, d in ipairs(rot:GetDescendants()) do rakna(d) end
+				end
+			end
+		end
+	end
+	return antal
+end
+
 --[[ Raderna som Preflighten lägger in. Samma form som dess egna: namn, ok,
 	detalj — så att specen kan läsa dem ur tjänstens utdata i stället för att
 	göra om villkoret. ]]
@@ -236,6 +297,21 @@ function Integritet.rader(): { Rad }
 		id ~= nil and typeof(id.kallor) == "number" and (id.kallor :: number) > 0,
 		if id then tostring(id.kallor) else "-")
 
+	--[[ 9e är den som gör de fyra ovan till mer än en formkontroll. Se noten
+		vid `Integritet.kallantal` för vad den kan och inte kan fånga. Saknas
+		talet i identiteten är den genererad av ett äldre verktyg — och då är
+		svaret "kan inte mätas", inte "grönt". ]]
+	local vantad = id and id.kallor
+	local faktisk = Integritet.kallantal()
+	rad("9e placen bär lika många källor som identiteten räknade",
+		typeof(vantad) == "number" and faktisk ~= nil and faktisk == vantad,
+		if typeof(vantad) ~= "number" then
+			"identiteten bär ingen kallor — kan inte mätas"
+		elseif faktisk == nil then "identiteten går inte att läsa"
+		elseif faktisk == vantad then ("%d skriptobjekt"):format(faktisk)
+		else ("placen har %d, identiteten säger %d (%+d)"):format(
+			faktisk, vantad :: number, faktisk - (vantad :: number)))
+
 	--[[ 10. KVARGLÖMDA RUNTIME-ARTEFAKTER. ]]
 	local okanda = Integritet.okandaRemotes()
 	rad("10a inga okända fjärrobjekt i HorseRemotes",
@@ -255,6 +331,45 @@ function Integritet.rader(): { Rad }
 	local osparade = Integritet.osparade("ReplicatedStorage")
 	rad("10c inget ospårat i ReplicatedStorage", #osparade == 0,
 		if #osparade == 0 then "-" else table.concat(osparade, ", "))
+
+	--[[ 10d ServerScriptService är den andra tjänsten där en ospårad sak
+		NÅR RUNTIME: ett skript där körs. Samma skäl som 10c, och samma
+		hårdhet. ]]
+	local osparadeSSS = Integritet.osparade("ServerScriptService")
+	rad("10d inget ospårat i ServerScriptService", #osparadeSSS == 0,
+		if #osparadeSSS == 0 then "-" else table.concat(osparadeSSS, ", "))
+
+	--[[ ── 10e RAPPORTERAR, FÄLLER INTE ─────────────────────────────────
+
+		Workspace och ServerStorage bär i dag sådant ingen källa äger:
+		importerade modeller i Workspace-roten, och stora artefakter i
+		ServerStorage. Mätt på `a5a4b71`:
+
+		    Workspace       15 ospårade (Jumps, SADDLE, fem Model, …)
+		    ServerStorage    2 ospårade (HastVisualer 85 ättlingar,
+		                     UBRF_BACKUP_SUP0062 3 477 ättlingar)
+
+		Ingen av dem når runtime av sig själv, och #171 är uttrycklig: klassa
+		först, radera bara det som bevisats icke-kanoniskt, aldrig blint. Att
+		fälla grinden på dem hade gjort den permanent röd tills någon städar
+		— och modulens egen not säger varför det är fel väg.
+
+		MEN TYSTNAD VAR DET SOM GJORDE EVIDENSEN OPÅLITLIG. Före den här
+		raden kunde en grön preflight läsas som "placen är ren" medan
+		sjutton objekt ingen källa äger låg kvar. Raden är därför grön och
+		ALLTID närvarande: antalet och namnen står i utskriften, varje
+		körning, så att ingen behöver gissa. ]]
+	local wsOsp = Integritet.osparade("Workspace")
+	local ssOsp = Integritet.osparade("ServerStorage")
+	local delar = {}
+	if #wsOsp > 0 then
+		table.insert(delar, ("Workspace %d: %s"):format(#wsOsp, table.concat(wsOsp, ", ")))
+	end
+	if #ssOsp > 0 then
+		table.insert(delar, ("ServerStorage %d: %s"):format(#ssOsp, table.concat(ssOsp, ", ")))
+	end
+	rad("10e ospårat i Workspace/ServerStorage — redovisat, inte fällt", true,
+		if #delar == 0 then "inga" else table.concat(delar, " · "))
 
 	return ut
 end

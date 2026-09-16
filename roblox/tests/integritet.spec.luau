@@ -261,6 +261,152 @@ do
 	sattIdentitet(UBRFBuild)
 end
 
+
+--[[ ══ 9e: IDENTITETEN MÅSTE BESKRIVA PLACENS EGNA KÄLLOR (#171) ═══════
+
+	9a–9d prövar att identiteten finns, är genererad och har rätt form. Ingen
+	av dem prövar att den beskriver den här placens kod. En identitet ur ett
+	annat källäge går igenom alla fyra.
+
+	MÅTTET ÄR ANTALET SKRIPTOBJEKT, inte deras innehåll, och det är ett
+	medvetet andrahandsval. Det ideala måttet är `kallhash`, men det kräver
+	`ModuleScript.Source` — och ett spelskript får inte läsa `Source`
+	(`lacking capability PluginOrOpenCloud`, uppmätt i server-VM på
+	`a5a4b71`). Antalet går däremot att räkna utan läsrätt.
+
+	Provet mäter därför exakt det raden lovar: tillagda och borttagna källor
+	fälls, identitetsmodulen räknas inte med i sin egen summa, och en
+	identitet utan talet är "kan inte mätas" — aldrig grön. Att en REDIGERAD
+	fil glider igenom är känt och står i modulens egen not; det försvaret
+	ligger i `bygg-identitet.py --kontrollera` i CI. ]]
+print("\n── 9e: placen bär lika många källor som identiteten räknade ──")
+
+do
+	local SSS = game:GetService("ServerScriptService")
+	--[[ Ett litet Rojo-ägt träd med känt antal, så att provet mäter ETT tal
+		det självt bestämt — inte hela bänkens innehåll. ]]
+	local mapp = Instance.new("Folder")
+	mapp.Name = "ProvKalla"
+	mapp.Parent = SSS
+	local function nyKalla(namn)
+		local m = Instance.new("ModuleScript")
+		m.Name = namn
+		m.Parent = mapp
+		return m
+	end
+	nyKalla("EnModul")
+	nyKalla("TvaModul")
+
+	--[[ Kartan pekar ut BÅDE provträdet och identitetsmodulen. Det senare är
+		poängen med sista mätningen: `UBRFBuild` ligger i en Rojo-ägd rot och
+		skulle räknas med om undantaget saknades. ]]
+	local function identitetMed(antal)
+		sattIdentitet({
+			kallhash = string.rep("b", 64), lage = "rojo", kallor = antal,
+			rojo = {
+				ServerScriptService = { "ProvKalla" },
+				ReplicatedStorage = { "UBRFBuild" },
+			},
+		})
+	end
+
+	identitetMed(2)
+	local r = matning("9e")
+	check("preflighten mäter 9e", r ~= nil, r and r.namn or "ingen 9e-rad")
+	check("rätt antal ger grönt", r ~= nil and r.ok == true,
+		r and tostring(r.detalj) or "-")
+
+	--[[ Identiteten räknas aldrig med i sin egen summa — den gröna raden
+		ovan togs med `UBRFBuild` i kartan och antalet 2, inte 3. ]]
+	local bygget = RS:FindFirstChild("UBRFBuild")
+	check("identitetsmodulen räknas INTE med i sitt eget antal",
+		bygget ~= nil and bygget:IsA("LuaSourceContainer") and r ~= nil and r.ok == true,
+		r and tostring(r.detalj) or "-")
+
+	--[[ En källa LÄGGS TILL i placen utan att identiteten räknas om — precis
+		det som händer när någon synkar en gren över en place. ]]
+	local extra = nyKalla("TreModul")
+	local r2 = matning("9e")
+	check("en källa som TILLKOMMIT sedan identiteten räknades FÄLLER grinden",
+		r2 ~= nil and r2.ok == false, r2 and tostring(r2.detalj) or "-")
+	check("och felet säger åt vilket håll det skiljer",
+		r2 ~= nil and string.find(tostring(r2.detalj), "+1") ~= nil,
+		r2 and tostring(r2.detalj) or "-")
+
+	--[[ Och åt andra hållet: en källa som försvunnit ur placen. ]]
+	extra:Destroy()
+	mapp:FindFirstChild("TvaModul"):Destroy()
+	local r3 = matning("9e")
+	check("en källa som FÖRSVUNNIT fäller också grinden",
+		r3 ~= nil and r3.ok == false, r3 and tostring(r3.detalj) or "-")
+	check("och felet säger att placen har färre",
+		r3 ~= nil and string.find(tostring(r3.detalj), "-1") ~= nil,
+		r3 and tostring(r3.detalj) or "-")
+
+	--[[ En identitet utan talet är genererad av ett äldre verktyg. Då är
+		svaret "kan inte mätas" — och det får inte vara grönt. ]]
+	nyKalla("TvaModul")
+	sattIdentitet({
+		kallhash = string.rep("b", 64), lage = "rojo",
+		rojo = { ServerScriptService = { "ProvKalla" } },
+	})
+	local r4 = matning("9e")
+	check("en identitet UTAN kallor är inte grön",
+		r4 ~= nil and r4.ok == false, r4 and tostring(r4.detalj) or "-")
+
+	mapp:Destroy()
+end
+
+--[[ ══ 10d/10e: OSPÅRAT UTANFÖR ReplicatedStorage (#171) ═══════════════
+
+	Mätt på `a5a4b71` i den anslutna placen: Workspace bar 15 ospårade
+	objekt och ServerStorage 2, varav `UBRF_BACKUP_SUP0062` med 3 477
+	ättlingar. Grinden var tyst om samtliga — den tittade bara i
+	ReplicatedStorage. ]]
+print("\n── 10d/10e: ospårat utanför ReplicatedStorage ──")
+
+do
+	local SSS = game:GetService("ServerScriptService")
+	local SS = game:GetService("ServerStorage")
+	sattIdentitet(UBRFBuild)
+
+	local d = matning("10d")
+	check("preflighten mäter 10d", d ~= nil, d and d.namn or "ingen 10d-rad")
+	check("ren ServerScriptService är grön", d ~= nil and d.ok == true,
+		d and tostring(d.detalj) or "-")
+
+	--[[ Ett skript i ServerScriptService NÅR RUNTIME. Samma hårdhet som
+		10c, och samma skäl. ]]
+	local inkrakt = Instance.new("Folder")
+	inkrakt.Name = "NagotSomIngenAger"
+	inkrakt.Parent = SSS
+	local d2 = matning("10d")
+	check("ospårat i ServerScriptService FÄLLER grinden",
+		d2 ~= nil and d2.ok == false, d2 and tostring(d2.detalj) or "-")
+	check("och felet namnger det", d2 ~= nil
+		and string.find(tostring(d2.detalj), "NagotSomIngenAger") ~= nil,
+		d2 and tostring(d2.detalj) or "-")
+	inkrakt:Destroy()
+
+	--[[ 10e RAPPORTERAR. Den ska vara grön — men aldrig tyst. ]]
+	local skrot = Instance.new("Folder")
+	skrot.Name = "KvarglomdImport"
+	skrot.Parent = SS
+	local e = matning("10e")
+	check("preflighten mäter 10e", e ~= nil, e and e.namn or "ingen 10e-rad")
+	check("10e fäller INTE på kvarglömt i ServerStorage",
+		e ~= nil and e.ok == true, e and tostring(e.detalj) or "-")
+	check("men den NAMNGER det — tystnaden var felet",
+		e ~= nil and string.find(tostring(e.detalj), "KvarglomdImport") ~= nil,
+		e and tostring(e.detalj) or "-")
+	skrot:Destroy()
+
+	local e2 = matning("10e")
+	check("och säger 'inga' när det inte finns något",
+		e2 ~= nil and string.find(tostring(e2.detalj), "inga") ~= nil,
+		e2 and tostring(e2.detalj) or "-")
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

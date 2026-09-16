@@ -1023,6 +1023,16 @@ local function __nyInstans(klass)
 			return self.ClassName == "Frame" or self.ClassName == "TextLabel"
 				or self.ClassName == "TextButton"
 		end
+		--[[ `LuaSourceContainer` ar basklassen for allt som bar kallkod.
+		     `Integritet.kallantal` RAKNAR den over de Rojo-agda traden for att
+		     kunna svara pa om identiteten beskriver placens EGEN kod (#171).
+		     Den raknar just instanser, inte tecken, darfor att ett spelskript
+		     inte far lasa `Source`. Utan arvet svarade banken 0 kallor, och
+		     provet matte stubben i stallet for grinden. ]]
+		if klassnamn == "LuaSourceContainer" then
+			return self.ClassName == "ModuleScript" or self.ClassName == "Script"
+				or self.ClassName == "LocalScript"
+		end
 		return false
 	end
 	--[[ Riktiga instanser kan räkna upp sina barn. Det behövdes när
