@@ -274,38 +274,44 @@ end
 	(`lacking capability PluginOrOpenCloud`, uppmätt i server-VM på
 	`a5a4b71`). Antalet går däremot att räkna utan läsrätt.
 
-	Provet mäter därför exakt det raden lovar: tillagda och borttagna källor
-	fälls, identitetsmodulen räknas inte med i sin egen summa, och en
-	identitet utan talet är "kan inte mätas" — aldrig grön. Att en REDIGERAD
-	fil glider igenom är känt och står i modulens egen not; det försvaret
-	ligger i `bygg-identitet.py --kontrollera` i CI. ]]
+	Provet mäter det raden lovar: tillagda och borttagna källor fälls,
+	identitetsmodulen räknas inte med i sin egen summa, MOTORNS EGNA SKRIPT
+	bredvid en Rojo-rot räknas inte alls, och en identitet utan listan är
+	"kan inte mätas" — aldrig grön. Att en REDIGERAD fil glider igenom är
+	känt och står i modulens egen not; det försvaret ligger i
+	`bygg-identitet.py --kontrollera` i CI. ]]
 print("\n── 9e: placen bär lika många källor som identiteten räknade ──")
 
 do
 	local SSS = game:GetService("ServerScriptService")
-	--[[ Ett litet Rojo-ägt träd med känt antal, så att provet mäter ETT tal
-		det självt bestämt — inte hela bänkens innehåll. ]]
-	local mapp = Instance.new("Folder")
-	mapp.Name = "ProvKalla"
-	mapp.Parent = SSS
-	local function nyKalla(namn)
+	--[[ Behållaren är MEDVETET inte en Rojo-rot. Den speglar
+		`StarterPlayerScripts`: en mapp Rojo delar med motorn. Roten är
+		`ProvKalla` inuti den, precis som `StarterPlayerScripts.Horse`. ]]
+	local behallare = Instance.new("Folder")
+	behallare.Name = "ProvBehallare"
+	behallare.Parent = SSS
+	local rot = Instance.new("Folder")
+	rot.Name = "ProvKalla"
+	rot.Parent = behallare
+	local function nyKalla(namn, foralder)
 		local m = Instance.new("ModuleScript")
 		m.Name = namn
-		m.Parent = mapp
+		m.Parent = foralder or rot
 		return m
 	end
 	nyKalla("EnModul")
 	nyKalla("TvaModul")
 
-	--[[ Kartan pekar ut BÅDE provträdet och identitetsmodulen. Det senare är
-		poängen med sista mätningen: `UBRFBuild` ligger i en Rojo-ägd rot och
+	--[[ Listan pekar ut BÅDE provroten och identitetsmodulen. Det senare är
+		poängen med mätningen om `UBRFBuild`: den ligger i en Rojo-rot och
 		skulle räknas med om undantaget saknades. ]]
 	local function identitetMed(antal)
 		sattIdentitet({
 			kallhash = string.rep("b", 64), lage = "rojo", kallor = antal,
-			rojo = {
-				ServerScriptService = { "ProvKalla" },
-				ReplicatedStorage = { "UBRFBuild" },
+			rojo = { ServerScriptService = { "ProvBehallare" } },
+			kallrotter = {
+				"ServerScriptService.ProvBehallare.ProvKalla",
+				"ReplicatedStorage.UBRFBuild",
 			},
 		})
 	end
@@ -316,14 +322,24 @@ do
 	check("rätt antal ger grönt", r ~= nil and r.ok == true,
 		r and tostring(r.detalj) or "-")
 
-	--[[ Identiteten räknas aldrig med i sin egen summa — den gröna raden
-		ovan togs med `UBRFBuild` i kartan och antalet 2, inte 3. ]]
 	local bygget = RS:FindFirstChild("UBRFBuild")
 	check("identitetsmodulen räknas INTE med i sitt eget antal",
 		bygget ~= nil and bygget:IsA("LuaSourceContainer") and r ~= nil and r.ok == true,
 		r and tostring(r.detalj) or "-")
 
-	--[[ En källa LÄGGS TILL i placen utan att identiteten räknas om — precis
+	--[[ MOTORNS EGNA SKRIPT. Roblox lägger `RbxCharacterSounds` med barn i
+		`StarterPlayerScripts` vid speltest — bredvid Rojo-roten, inte i
+		den. En räkning som utgår från behållaren fällde grinden på dem: 69
+		mot 67 i en levande server-VM. Det får inte hända igen. ]]
+	local motorn = Instance.new("LocalScript")
+	motorn.Name = "RbxCharacterSounds"
+	motorn.Parent = behallare
+	nyKalla("AtomicBinding", motorn)
+	local rM = matning("9e")
+	check("motorns egna skript bredvid roten räknas INTE som källor",
+		rM ~= nil and rM.ok == true, rM and tostring(rM.detalj) or "-")
+
+	--[[ En källa LÄGGS TILL i roten utan att identiteten räknas om — precis
 		det som händer när någon synkar en gren över en place. ]]
 	local extra = nyKalla("TreModul")
 	local r2 = matning("9e")
@@ -335,7 +351,7 @@ do
 
 	--[[ Och åt andra hållet: en källa som försvunnit ur placen. ]]
 	extra:Destroy()
-	mapp:FindFirstChild("TvaModul"):Destroy()
+	rot:FindFirstChild("TvaModul"):Destroy()
 	local r3 = matning("9e")
 	check("en källa som FÖRSVUNNIT fäller också grinden",
 		r3 ~= nil and r3.ok == false, r3 and tostring(r3.detalj) or "-")
@@ -343,18 +359,18 @@ do
 		r3 ~= nil and string.find(tostring(r3.detalj), "-1") ~= nil,
 		r3 and tostring(r3.detalj) or "-")
 
-	--[[ En identitet utan talet är genererad av ett äldre verktyg. Då är
+	--[[ En identitet utan listan är genererad av ett äldre verktyg. Då är
 		svaret "kan inte mätas" — och det får inte vara grönt. ]]
 	nyKalla("TvaModul")
 	sattIdentitet({
-		kallhash = string.rep("b", 64), lage = "rojo",
-		rojo = { ServerScriptService = { "ProvKalla" } },
+		kallhash = string.rep("b", 64), lage = "rojo", kallor = 2,
+		rojo = { ServerScriptService = { "ProvBehallare" } },
 	})
 	local r4 = matning("9e")
-	check("en identitet UTAN kallor är inte grön",
+	check("en identitet UTAN kallrotter är inte grön",
 		r4 ~= nil and r4.ok == false, r4 and tostring(r4.detalj) or "-")
 
-	mapp:Destroy()
+	behallare:Destroy()
 end
 
 --[[ ══ 10d/10e: OSPÅRAT UTANFÖR ReplicatedStorage (#171) ═══════════════

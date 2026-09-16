@@ -14,12 +14,12 @@
 	sjalv — instanser gar att rakna utan att lasa `Source`, vilket ett
 	spelskript inte far. Se Integritet.kallantal och punkt 9e. ]]
 return {
-	kallhash = "dd0a29b82926323bf6b45f4d823f6de81040712e9b56ee987e525ae7ae272d3c",
+	kallhash = "03503b01c8cdd66679b1afcc51900fbe1f7e5d60923695f21f7950ae782aedcd",
 	lage = "rojo",
 	kallor = 67,
-	sha = "a5a4b71e7e07f9285106287508f39a068c2b957b",
-	miljo_sha = "a5a4b71e7e07f9285106287508f39a068c2b957b",
-	genererad = "2026-09-16T13:48:51Z",
+	sha = "e5ba1ae91022d8352be18bd03e76c20eb6ddfa96",
+	miljo_sha = "e5ba1ae91022d8352be18bd03e76c20eb6ddfa96",
+	genererad = "2026-09-16T13:51:38Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
@@ -28,5 +28,25 @@ return {
 		ReplicatedStorage = { "HorseCore", "Stallet", "UBRFBuild", "UBRFKomplex", "UBRFSkotsel", "UBRFSpel", "UBRFSpelData", "UBRFSprak" },
 		ServerScriptService = { "Horse", "Varld" },
 		StarterPlayer = { "StarterPlayerScripts" },
+	},
+
+	--[[ De exakta vagar Rojo FYLLER med kallfiler. Punkt 9e
+		raknar skriptobjekt just har och ingen annanstans: en
+		`$className`-behallare som `StarterPlayerScripts` delas
+		med motorns egna skript, och de ar inte kallor. ]]
+	kallrotter = {
+		"ReplicatedStorage.HorseCore",
+		"ReplicatedStorage.Stallet",
+		"ReplicatedStorage.UBRFBuild",
+		"ReplicatedStorage.UBRFKomplex",
+		"ReplicatedStorage.UBRFSkotsel",
+		"ReplicatedStorage.UBRFSpel",
+		"ReplicatedStorage.UBRFSpelData",
+		"ReplicatedStorage.UBRFSprak",
+		"ServerScriptService.Horse",
+		"ServerScriptService.Varld.Anlaggningen",
+		"ServerScriptService.Varld.BuildKit",
+		"ServerScriptService.Varld.Geometri",
+		"StarterPlayer.StarterPlayerScripts.Horse",
 	},
 }

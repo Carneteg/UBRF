@@ -225,8 +225,16 @@ end
 	DET SOM GÅR ATT RÄKNA ÄR INSTANSERNA. `IsA` och `GetDescendants` kräver
 	ingen läsrätt på källan. Antalet Rojo-ägda skriptobjekt i placen ska vara
 	exakt `kallor` — identiteten själv oräknad, av samma skäl som generatorn
-	utesluter den ur hashen. Uppmätt på `a5a4b71`: 68 skriptobjekt, minus
-	`UBRFBuild` = 67, mot identitetens `kallor = 67`.
+	utesluter den ur hashen.
+
+	RÄKNINGEN GÅR PÅ `kallrotter`, INTE PÅ `rojo`. `rojo` säger vilka
+	toppnivåinstanser som är källstyrda och räcker för att klassa skräp
+	bredvid dem, men `StarterPlayerScripts` är en behållare Rojo delar med
+	motorn: vid speltest lägger Roblox sina egna `RbxCharacterSounds` och
+	`AtomicBinding` där. Mätt i en levande server-VM på `e5ba1ae`, med den
+	grova listan: **69 mot identitetens 67 — två falska larm**, båda motorns
+	egna. `kallrotter` är i stället varje `$path` i projektfilen med sin fulla
+	väg, så bara det Rojo faktiskt fyller räknas.
 
 	SVAGARE ÄN HASHEN, och det ska sägas rakt ut: en fil som redigeras utan
 	att läggas till eller tas bort glider igenom. Den fångar tillagda och
@@ -236,28 +244,29 @@ end
 function Integritet.kallantal(): number?
 	local id = Integritet.identitet()
 	if not id then return nil end
-	local karta = id.rojo :: any
-	if typeof(karta) ~= "table" then return nil end
-	local tjanster: { [string]: Instance } = {
-		ReplicatedStorage = ReplicatedStorage,
-		ServerScriptService = ServerScriptService,
-		StarterPlayer = StarterPlayer,
-	}
+	local rotter = (id :: any).kallrotter
+	--[[ Saknas listan är identiteten genererad av ett äldre verktyg. Då är
+		svaret "kan inte mätas" — aldrig ett tal som råkar stämma. ]]
+	if typeof(rotter) ~= "table" then return nil end
 	local bygget = ReplicatedStorage:FindFirstChild("UBRFBuild")
 	local antal = 0
-	local function rakna(d: Instance)
-		if d:IsA("LuaSourceContainer") and d ~= bygget then antal += 1 end
-	end
-	for tjanstnamn, lista in pairs(karta) do
-		local tjansten = tjanster[tostring(tjanstnamn)]
-		if tjansten and typeof(lista) == "table" then
-			for _, namn in ipairs(lista) do
-				local rot = tjansten:FindFirstChild(tostring(namn))
-				if rot then
-					rakna(rot)
-					for _, d in ipairs(rot:GetDescendants()) do rakna(d) end
-				end
+	for _, vag in ipairs(rotter) do
+		local nod: Instance? = nil
+		for led in tostring(vag):gmatch("[^%.]+") do
+			if nod == nil then
+				local ok, tjansten = pcall(game.GetService, game, led)
+				nod = if ok then tjansten else nil
+			else
+				nod = (nod :: Instance):FindFirstChild(led)
 			end
+			if nod == nil then break end
+		end
+		if nod then
+			local function rakna(d: Instance)
+				if d:IsA("LuaSourceContainer") and d ~= bygget then antal += 1 end
+			end
+			rakna(nod)
+			for _, d in ipairs(nod:GetDescendants()) do rakna(d) end
 		end
 	end
 	return antal
@@ -307,7 +316,7 @@ function Integritet.rader(): { Rad }
 		typeof(vantad) == "number" and faktisk ~= nil and faktisk == vantad,
 		if typeof(vantad) ~= "number" then
 			"identiteten bär ingen kallor — kan inte mätas"
-		elseif faktisk == nil then "identiteten går inte att läsa"
+		elseif faktisk == nil then "identiteten bär ingen kallrotter — kan inte mätas"
 		elseif faktisk == vantad then ("%d skriptobjekt"):format(faktisk)
 		else ("placen har %d, identiteten säger %d (%+d)"):format(
 			faktisk, vantad :: number, faktisk - (vantad :: number)))
