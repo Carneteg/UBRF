@@ -361,6 +361,29 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	local modell = bunden[player]
 	if not modell then return false, "spel.ingen_hast" end
 
+	--[[ ══ HON STÅR REDAN FÄRDIG (#202 punkt 2) ═══════════════════════
+
+		Ett andra "Rida nu" svarade `tack.redan_pa` — alltså ett
+		utrustningsfel, för att auto-förberedelsen nedan gick rakt in i
+		`TackService.satPa` på en sadel som redan låg på hästen. Sant om
+		mekaniken, fel om vad som hänt: ingenting är trasigt, hon är klar.
+
+		Mätt i Studio på `e6a674c`, tio extra aktiveringar varav fem
+		parallella:
+
+		    RidaNu #2..#11  ->  false, tack.redan_pa
+
+		Spelaren möter det sällan, för prompten förbrukas efter lyckad
+		aktivering — men den som når fjärranropet på något annat sätt får
+		ett svar som pekar på fel sak.
+
+		Frågan ställs till samma regel som uppsittningen använder, inte till
+		en egen kopia. Idempotensen är oförändrad: det första anropet gör
+		jobbet, alla följande rör ingenting. ]]
+	if select(1, Preparation.provaUppsittning(s, s.hastId)) then
+		return false, "spel.redan_redo"
+	end
+
 	--[[ Stallet har lagt fram hennes egen utrustning. ]]
 	local okS = GameplayService.valjUtrustning(player, "sadel", s.hastId)
 	local okT = GameplayService.valjUtrustning(player, "trans", s.hastId)
@@ -383,7 +406,14 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 			for _, m in ipairs(Preparation.moment(f.id)) do
 				if not m.fel and m.id then
 					local ok, avslag = GameplayService.moment(player, f.id, m.id, "auto")
-					if not ok and avslag ~= "forb.redan_gjort" then
+					--[[ `tack.redan_pa` är samma sort som `forb.redan_gjort`: inte
+						ett fel, utan ett moment som redan är utfört. Utan den här
+						raden svarade ett andra «Rida nu» med ett UTRUSTNINGSFEL på
+						en häst som bara var färdig — se noten vid `spel.redan_redo`
+						ovan. Fail-closed är oförändrat: allt ANNAT nej avbryter
+						fortfarande hela förberedelsen. ]]
+					if not ok and avslag ~= "forb.redan_gjort"
+							and avslag ~= "tack.redan_pa" then
 						skicka(player)
 						return false, avslag
 					end

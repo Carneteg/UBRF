@@ -113,6 +113,10 @@ Sprak.text = {
 		sv = "Det är inte din häst",
 		en = "That is not your horse",
 	},
+	["spel.redan_redo"] = {
+		sv = "Hon står redan färdig",
+		en = "She is already ready",
+	},
 	["spel.redan_ridit"] = {
 		sv = "Du har redan ridit idag",
 		en = "You have already ridden today",

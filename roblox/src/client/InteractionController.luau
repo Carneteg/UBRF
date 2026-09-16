@@ -98,6 +98,7 @@ end
 	spelaren står på. Servern äger fortfarande vem som får leda vad
 	(`satRattHastKrok`) och när steget får bockas av — klienten bestämmer
 	bara om knappen ritas. ]]
+local avslagVisare: ((any) -> ())? = nil
 local ledFor: ((Model) -> boolean)? = nil
 
 function InteractionController.setLedCheck(fn: ((Model) -> boolean)?)
@@ -251,7 +252,18 @@ local function addRidaPrompt(model: Model)
 		local ok, skal = Net.get("RidaNu"):InvokeServer()
 		if not ok then
 			--[[ Nej:et är oftast välfärdsstoppet: stallet såg något på
-				henne idag. Det ska LÄSAS, inte tystas. ]]
+				henne idag. Det ska LÄSAS, inte tystas.
+
+				OCH `warn` ÄR ATT TYSTA DET (#202). Raden nedan låg ensam
+				här och skrev i Output-fönstret — synligt för den som har
+				Studio öppet, osynligt för spelaren. Mätt i Studio på
+				`e6a674c`: ett andra "Rida nu" svarade `tack.redan_pa` och
+				panelen sa ingenting alls.
+
+				Nu går skälet till den yta spelaren tittar på. `warn`
+				står kvar för den som felsöker; nyckeln bredvid texten är
+				vad loggen är till för. ]]
+			if avslagVisare then avslagVisare(skal) end
 			warn(("[Horse] Rida nu: %s (%s)"):format(
 				Sprak.t(tostring(skal)), tostring(skal)))
 		end
@@ -271,6 +283,13 @@ end
 	klienten frågar, gameplaylagret svarar. ]]
 function InteractionController.setRidaCheck(fn: ((Model) -> boolean)?)
 	ridaCheck = fn
+end
+
+--[[ Vem som VISAR ett nej för spelaren. Samma mönster igen: den här filen
+	äger knappen, förberedelsepanelen äger meddelanderaden, och kopplingen
+	görs i `init.client` i stället för att de två ska känna varandra. ]]
+function InteractionController.setAvslagVisare(fn: ((any) -> ())?)
+	avslagVisare = fn
 end
 
 function InteractionController.uppdatera()

@@ -237,6 +237,19 @@ export type Led = {
 }
 
 local ledd: { [Player]: Led } = {}
+
+export type Boxminne = {
+	modell: Model,
+	boxX: number,
+	boxY: number,
+	dorrKand: boolean,
+}
+
+--[[ Vad spelaren SENAST ledde, kvar efter att kopplet släppt. Rivs i
+	`PlayerRemoving` — bokföringen är sessionsbunden av samma skäl som
+	`uppnatt`. ]]
+local senasteLedning: { [Player]: Boxminne } = {}
+
 local hakar: { [string]: (Player, Led) -> () } = {}
 
 --[[ ══ DET UPPNÅDDA ÖVERLEVER KOPPLET ═══════════════════════════════════
@@ -622,6 +635,12 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position,
 	}
+	--[[ Minnet som överlever släppet, se `aterstallTillBox`. ]]
+	senasteLedning[player] = {
+		modell = modell,
+		boxX = bx, boxY = by,
+		dorrKand = dorrMitt ~= nil,
+	}
 	LedService._sync(player)
 	return true, nil
 end
@@ -665,6 +684,78 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 	ledd[player] = nil
 	LedService._sync(player, skal)
 	return true, skal
+end
+
+--[[ ══ HÄSTEN FÅR INTE LÄMNAS I GÅNGEN (#202 punkt 4) ══════════════════
+
+	Mätt i Studio på `e6a674c`: Player2 ledde Troy ut ur box E 8 och kopplade
+	sedan ned. Hon lämnades stående på (166,57 · 96,80), mitt i gång B.
+	Fysiskt sant, men över en session fylls gångarna av hästar ingen längre
+	håller i.
+
+	OCH KOPPLET HADE REDAN SLÄPPT. Det är hela poängen med `senasteLedning`
+	nedan. Första rättelsen städade bara när `ledd[player]` fanns kvar vid
+	nedkopplingen — men det vanliga förloppet är det omvända: hon blir
+	efter, kopplet släpper på `led.tappade_bort`, spelaren ger upp och
+	stänger spelet. Mätt om i Studio på `5c70963`: `Led.aktiv = nil` medan
+	hon stod 3,44 m ut i gång A. Städningen fyrade aldrig.
+
+	Minnet överlever därför släppet och rivs först när spelaren är borta.
+
+	VART hon ska är inte definierat i kanon. Stallkortet säger ingenting om
+	vad personalen gör med en häst vars handhavare försvinner, och det finns
+	ingen bild på saken. `[antagande]`: hon ställs tillbaka DÄR HON STOD när
+	kopplet fästes — `boxX`/`boxY`, som tjänsten redan bokför. Det är den
+	enda punkt som är härledd ur befintlig data och inte vald av mig, och i
+	det normala flödet är den hennes egen box.
+
+	Tre spärrar, så att städningen aldrig kan göra saken värre:
+
+	  1. bara när hon FAKTISKT startade i en box (`dorrKand` — samma villkor
+	     som `#180` använder för att veta att facket är känt),
+	  2. bara när hon FAKTISKT har lämnat den (samma 2,5 m som `lamnatBox`
+	     mäts på; står hon kvar finns inget att städa),
+	  3. och flytten VERIFIERAS. Hamnade hon inte där ställs hon tillbaka
+	     precis som `placeraVidMal` gör — hellre kvar i gången än inne i en
+	     vägg.
+
+	Skälen nedan är diagnostik. De når aldrig en spelare: den som skulle ha
+	läst dem har just lämnat spelet. ]]
+function LedService.aterstallTillBox(minne: Boxminne?): (boolean, string?)
+	if minne == nil then return false, "ingen ledning" end
+	if not minne.dorrKand then return false, "ingen känd box" end
+	local modell = minne.modell
+	local pivot = modell and modell.PrimaryPart
+	if not (modell and modell.Parent and pivot) then return false, "hästen borta" end
+
+	local x, y = tomt(pivot.Position)
+	if math.sqrt((x - minne.boxX) ^ 2 + (y - minne.boxY) ^ 2) <= 2.5 then
+		return false, "står kvar i boxen"
+	end
+
+	local fore = pivot.CFrame
+	local mitt = Vector3.new(minne.boxX * M, pivot.Position.Y,
+		(TOMTDJUP - minne.boxY) * M)
+	--[[ Läget byts, blickriktningen behålls. `CFrame.lookAt` i stället för
+		`CFrame.new(mitt) * (fore - fore.Position)`: samma resultat, och den
+		formen uttrycker vad som faktiskt ska bevaras. ]]
+	modell:PivotTo(CFrame.lookAt(mitt, mitt + fore.LookVector, Vector3.yAxis))
+
+	local nx, ny = tomt((modell.PrimaryPart :: BasePart).Position)
+	if math.sqrt((nx - minne.boxX) ^ 2 + (ny - minne.boxY) ^ 2) > 0.5 then
+		modell:PivotTo(fore)
+		return false, "kunde inte ställa tillbaka"
+	end
+	return true, nil
+end
+
+--[[ Vad tjänsten minns om spelarens senaste ledning. Provets fönster in. ]]
+function LedService.boxminne(player: Player): Boxminne?
+	return senasteLedning[player]
+end
+
+function LedService._glomBoxminne(player: Player)
+	senasteLedning[player] = nil
 end
 
 function LedService._sync(player: Player, skal: string?)
@@ -1314,6 +1405,10 @@ function LedService.start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		if ledd[player] then LedService.slapp(player, "led.tappad") end
+		--[[ Städningen läser MINNET, inte den aktiva ledningen: kopplet har
+			oftast släppt långt innan spelaren stänger spelet. ]]
+		LedService.aterstallTillBox(senasteLedning[player])
+		senasteLedning[player] = nil
 		--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
 			Lämnas den kvar läcker den, och nästa spelare på samma
 			Player-objekt hade ärvt någon annans framsteg. ]]

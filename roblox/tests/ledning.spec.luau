@@ -1054,6 +1054,107 @@ do
 			or "inget delmål")
 end
 
+
+--[[ ══ HÄSTEN LÄMNAS INTE I GÅNGEN (#202 punkt 4) ═════════════════════
+
+	Mätt i Studio på `e6a674c`: Player2 ledde Troy ut ur box E 8 och
+	kopplade sedan ned. `PlayerRemoving` släppte kopplet — och lämnade henne
+	stående på (166,57 · 96,80), mitt i gång B.
+
+	`aterstallTillBox` ställer henne tillbaka där hon stod när kopplet
+	fästes. Provet mäter alla tre spärrarna, inte bara det lyckade fallet:
+	utan dem hade städningen kunnat flytta en häst som aldrig varit i en
+	box, eller en som står kvar i sin. ]]
+print("\n── Hästen lämnas inte i gången ──")
+do
+	local function uppstallning(namn)
+		LedService._glomForProv()
+		local anl = Instance.new("Model")
+		anl.Name = "Anläggning"
+		anl.Parent = workspace
+		local DX, DZ = 900, 300
+		local blad = Instance.new("Part")
+		blad.Name = "Boxdörr städ"
+		blad.Size = vec(0.18, 4.44, 3.60)
+		blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+		blad:SetAttribute("UBRFBoxdorr", true)
+		blad:SetAttribute("Langs", "Z")
+		blad:SetAttribute("Utat", 1)
+		blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+		blad.Parent = anl
+		local h, kropp = nyHast("städhäst" .. namn, vec(DX - 4, 3, DZ))
+		local sp = nySpelare("Städryttare" .. namn, vec(DX + 2, 3, DZ))
+		local ok, skal = LedService.borja(sp, h, h)
+		return anl, h, kropp, sp, ok, skal
+	end
+
+	--[[ a. Hon har letts ut i gången. Då ska hon tillbaka. ]]
+	local anl, h, kropp, sp, ok, skal = uppstallning("A")
+	check("ledningen startade", ok == true, tostring(skal))
+	local start = kropp.Position
+	--[[ Ut i gången, längre än de 2,5 m som `lamnatBox` mäts på. ]]
+	kropp.CFrame = CFrame.new(vec(900 + 8, 3, 300))
+	local lamnad = kropp.Position
+	local stadat, stadskal = LedService.aterstallTillBox(LedService.boxminne(sp))
+	check("städningen körde", stadat == true, tostring(stadskal))
+	check("hästen står tillbaka där kopplet fästes",
+		(kropp.Position - start).Magnitude < 0.5 * 3,
+		("%.2f studs från startpunkten, %.2f studs från gången"):format(
+			(kropp.Position - start).Magnitude, (kropp.Position - lamnad).Magnitude))
+	check("och hon står INTE kvar i gången",
+		(kropp.Position - lamnad).Magnitude > 2.0 * 3,
+		("%.2f studs"):format((kropp.Position - lamnad).Magnitude))
+	anl:Destroy()
+
+	--[[ b. Hon står kvar i boxen. Då finns inget att städa. ]]
+	local anl2, h2, kropp2, sp2 = uppstallning("B")
+	local kvar = kropp2.Position
+	local stadat2, skal2 = LedService.aterstallTillBox(LedService.boxminne(sp2))
+	check("en häst som står kvar i boxen städas INTE",
+		stadat2 == false, tostring(skal2))
+	check("och hon flyttades inte en millimeter",
+		(kropp2.Position - kvar).Magnitude < 1e-6,
+		("%.6f studs"):format((kropp2.Position - kvar).Magnitude))
+	anl2:Destroy()
+
+	--[[ c. Hela vägen genom `PlayerRemoving` — den kroken är det som
+		faktiskt kör i drift, och den var tom på städning. Utan den här
+		raden mäter provet bara funktionen, inte att någon anropar den.
+
+		`start()` körs EN gång, här, och först nu: den kopplar Heartbeat och
+		fjärrobjekt, och blocken ovan ska köra utan dem. ]]
+	LedService.start()
+	local anl3, h3, kropp3, sp3 = uppstallning("C")
+	local start3 = kropp3.Position
+	kropp3.CFrame = CFrame.new(vec(900 + 8, 3, 300))
+	Players.PlayerRemoving:Fire(sp3)
+	if Players.PlayerRemoving.slutfor then Players.PlayerRemoving:slutfor() end
+	check("PlayerRemoving släpper kopplet", LedService.lage(sp3) == nil)
+	check("och minnet är rivet — bokföringen är sessionsbunden",
+		LedService.boxminne(sp3) == nil)
+	check("OCH ställer tillbaka hästen — inte bara släpper henne",
+		(kropp3.Position - start3).Magnitude < 0.5 * 3,
+		("%.2f studs från startpunkten"):format((kropp3.Position - start3).Magnitude))
+	anl3:Destroy()
+
+	--[[ d. DET VANLIGA FÖRLOPPET: kopplet har redan släppt när spelaren
+		stänger spelet. Hon blir efter, `led.tappade_bort` fyrar, spelaren
+		ger upp. Mätt i Studio på `5c70963`: `Led.aktiv = nil` medan hon
+		stod 3,44 m ut i gång A, och första rättelsen städade aldrig. ]]
+	local anl4, h4, kropp4, sp4 = uppstallning("D")
+	local start4 = kropp4.Position
+	kropp4.CFrame = CFrame.new(vec(900 + 8, 3, 300))
+	LedService.slapp(sp4, "led.tappade_bort")
+	check("kopplet har släppt innan nedkopplingen", LedService.lage(sp4) == nil)
+	check("men minnet finns kvar", LedService.boxminne(sp4) ~= nil)
+	Players.PlayerRemoving:Fire(sp4)
+	if Players.PlayerRemoving.slutfor then Players.PlayerRemoving:slutfor() end
+	check("hästen ställs tillbaka ÄVEN när kopplet redan släppt",
+		(kropp4.Position - start4).Magnitude < 0.5 * 3,
+		("%.2f studs från startpunkten"):format((kropp4.Position - start4).Magnitude))
+	anl4:Destroy()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

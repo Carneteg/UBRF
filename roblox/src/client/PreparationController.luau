@@ -218,6 +218,11 @@ local HJALPRUTA = 44
 --[[ Hur länge kvittensen står kvar innan vyn ritas om utan den. Publik för
 	att provet ska mäta samma tal som spelaren ser. ]]
 PreparationController.BEKRAFTELSE_TID = 1.2
+--[[ Och hur länge NEJET står kvar. Längre än jat: en kvittens bekräftar
+	något spelaren just gjorde och som hon såg hända, medan ett nej ber
+	henne göra något annat — hämta sadeln, öppna dörren — och det ska hinna
+	läsas innan instruktionen kommer tillbaka. ]]
+PreparationController.AVSLAG_TID = 3.0
 
 local gui: ScreenGui? = nil
 --[[ SPÅRAREN. ]]
@@ -287,6 +292,36 @@ local allaNu = false
 	förstas nedräkning utan att den förra släcker den nya. ]]
 local bekraftelse: string? = nil
 local bekraftelseNr = 0
+--[[ ══ NEJET ÄR OCKSÅ ETT MEDDELANDE, INTE EN ETIKETTSKRIVNING (#201) ═══
+
+	Kvittensen ovan är ett TILLSTÅND som `avsluta` läser varje omritning.
+	Därför överlever den serverns nya vy — noten där säger precis varför den
+	måste göra det.
+
+	Avslaget fick aldrig samma behandling. Det skrev rakt på `instruktion`
+	och `hjalp`, och `GameplayService.moment` anropar `skicka(player)` FÖRE
+	`return false` i flera grenar. Vyn landar då i samma bildruta och ritar
+	om panelen med den gamla instruktionen ovanpå nejet.
+
+	Mätt i Studio på `e6a674c`, spelaren intill sin häst utan hämtad sadel:
+
+	    serverns svar på utr:1  ->  false, tack.hamta_forst
+	    skalText(skal)           =  "Saddle and bridle hang on the stall
+	                                 front — fetch them first"
+	    instruktionen FÖRE       =  "Walk up from the side…"
+	    instruktionen EFTER      =  "Walk up from the side…"   <- nejet borta
+
+	Och falsifieringen, ett nej som servern lämnar UTAN vy-push
+	(`led.kvar_i_boxen`, som returnerar före `skicka`):
+
+	    instruktionen EFTER      =  "She is still in her stall"   <- syns
+
+	Rättelsen lägger alltså inte till en väntan eller en andra text. Den ger
+	nejet SAMMA ägare som jat redan har: ett tillstånd som renderaren läser.
+	Servern får fortsätta skicka sin nya vy precis som förut — vyn är sann,
+	och den ska landa. ]]
+local avslag: string? = nil
+local avslagNr = 0
 --[[ Det läge som senast ritades. Enda syftet är att fälla UT spåraren EN
 	gång när spelet går in i ett läge som inte har något att trycka på men
 	allt att förklara — välfärdsstoppet, passet sparat, väntar på hästen.
@@ -1315,6 +1350,11 @@ local function avsluta(lage: string, antalVal: number, ledtext: string,
 		hade sett listan hoppa ett steg och aldrig fått veta att det hon
 		gjorde var rätt. `visaBekraftelse` släcker den själv efteråt. ]]
 	if bekraftelse then ledtext = bekraftelse end
+	--[[ NEJET GÅR FÖRE KVITTENSEN. De kan aldrig stå uppe samtidigt —
+		`visaAvslag` och `visaBekraftelse` släcker varandra — men ordningen
+		skrivs ut ändå, så att en framtida tredje sort inte hamnar i en
+		tvetydig rad. ]]
+	if avslag then ledtext = avslag end
 	if hjalp then hjalp.Text = ledtext end
 	if instruktion then instruktion.Text = ledtext end
 	local h = interaktion
@@ -1343,6 +1383,10 @@ end
 	instruktion där av sig själv. ]]
 local function visaBekraftelse(text: string?)
 	if type(text) ~= "string" or text == "" then return end
+	--[[ Ett JA släcker ett nej som står kvar: gjorde hon om momentet och
+		det gick igenom är nejet inte längre sant. ]]
+	avslag = nil
+	avslagNr += 1
 	bekraftelse = text
 	bekraftelseNr += 1
 	local nr = bekraftelseNr
@@ -1359,9 +1403,53 @@ local function visaBekraftelse(text: string?)
 	end)
 end
 
+--[[ NEJET, med samma mekanik som kvittensen ovan.
+
+	`avslagNr` gör att ett andra nej hinner före det förstas nedräkning utan
+	att den förra släcker det nya — samma skäl som `bekraftelseNr`. ]]
+local function visaAvslag(text: string?)
+	if type(text) ~= "string" or text == "" then return end
+	--[[ Ett NEJ släcker en kvittens som råkar stå kvar. Annars hade panelen
+		kunnat visa ett bock-svar på ett moment servern just avvisat — och
+		det är den sortens lögn HUD:en blivit rättad för förut. ]]
+	bekraftelse = nil
+	bekraftelseNr += 1
+	avslag = text
+	avslagNr += 1
+	local nr = avslagNr
+	if instruktion then instruktion.Text = text end
+	if hjalp then hjalp.Text = text end
+	PreparationController.tillampaLayout()
+	task.delay(PreparationController.AVSLAG_TID, function()
+		if avslagNr ~= nr then return end
+		avslag = nil
+		if senasteVy then rita(senasteVy) end
+	end)
+end
+
+--[[ NEJET ÄR PANELENS, OCH DÄRFÖR FÅR ANDRA SKICKA HIT SITT.
+
+	`Rida nu` sitter på en ProximityPrompt i `InteractionController`, som
+	skrev sitt avslag med `warn()` — alltså i Output-fönstret. Kommentaren
+	där sa "det ska LÄSAS, inte tystas", men en `warn` ser bara den som har
+	Studio öppet. Spelaren tryckte på knappen och fick ingenting.
+
+	Panelen äger redan spelarens meddelanderad. Den här funktionen är hela
+	kopplingen: den som har ett nej att visa skickar en NYCKEL, och panelen
+	översätter och visar det med samma livstid som sina egna. ]]
+function PreparationController.visaAvslagFor(skal: any, extra: any?)
+	visaAvslag(PreparationController.skalText(skal, extra))
+end
+
 --[[ Provets fönster in: står en kvittens uppe, och vilken? ]]
 function PreparationController._bekraftelse(): string?
 	return bekraftelse
+end
+
+--[[ Och står ett nej uppe? Provet läser det som HUD:en faktiskt bär, inte
+	det servern råkade svara. ]]
+function PreparationController._avslag(): string?
+	return avslag
 end
 
 function rita(vy: any)
@@ -1657,15 +1745,11 @@ local function skicka(nyckel: string, remote: string, bekrafta: string?, ...)
 			--[[ Nejet skrivs på BÅDA ytorna. Spelaren tittar på
 				interaktionspanelen när hon just tryckt; ett avslag som bara
 				stod i en hopfälld spårare hade aldrig blivit läst. ]]
-			--[[ Ett NEJ släcker en kvittens som råkar stå kvar. Annars
-				hade panelen kunnat visa ett bock-svar på ett moment
-				servern just avvisat — och det är den sortens lögn HUD:en
-				blivit rättad för förut. ]]
-			bekraftelse = nil
-			bekraftelseNr += 1
-			local text = PreparationController.skalText(skal, extra)
-			if hjalp then hjalp.Text = text end
-			if instruktion then instruktion.Text = text end
+			--[[ Genom `visaAvslag`, inte rakt på etiketterna: servern skickar
+				en ny vy i samma bildruta i flera av de här grenarna, och en
+				etikettskrivning hade varit borta innan spelaren läst den.
+				Se noten vid `avslag`. ]]
+			visaAvslag(PreparationController.skalText(skal, extra))
 		end
 	end)
 end
