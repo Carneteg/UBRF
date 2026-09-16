@@ -477,6 +477,82 @@ do
 end
 
 print("")
+
+--[[ ══ KORTET LÄGGS UT OM NÄR YTAN ÄNDRAS (#206) ══════════════════════
+
+	Regeln som håller kortet borta från pekreglagen fanns redan, och den
+	är oförändrad. Felet var att den kördes EN gång, när kortet visades.
+	Ett kort som låg uppe när spelaren vred på plattan behöll sin gamla
+	geometri — medan reglagen, som är ankrade i högerkanten, flyttade sig
+	in under det.
+
+	Mätt i Studio på `754f2cc`, emulerad iPad, samma kort hela tiden:
+
+	    iPad Pro 13in 1376x1032   kort x 367..1007   inget överlapp
+	    -> iPad 9     1080x 810   kort x 367..1007   SITT AV 100 % täckt
+	    träffprov på SITT AV: 0 av 66 punkter nådde knappen
+
+	Den som vred plattan medan ett lektionskort låg uppe kunde alltså inte
+	längre sitta av. ]]
+print("\n── Kortet läggs ut om när ytan ändras ──")
+do
+	--[[ Samma väg som resten av filen: stubbens GUI-träd, inte PlayerGui. ]]
+	local g = hitta("UBRFUgneta")
+	check("lektionsytan är byggd", g ~= nil)
+	local k = hitta("Kort")
+	check("kortet finns", k ~= nil)
+
+	if g and k then
+		--[[ Stor yta först. Kortet visas och läggs ut. ]]
+		g.AbsoluteSize = Vector3.new(1376, 1032, 0)
+		UgnetaController.visa("Prov", { "rad" }, true, "Igen", false, false)
+		local bredStorlek = k.Size.X.Offset
+		local bredMitt = k.Position.X.Offset
+		check("kortet lades ut mot den breda ytan",
+			bredStorlek > 0 and bredMitt > 0,
+			("bredd %d · mitt %d"):format(bredStorlek, bredMitt))
+
+		--[[ Och så krymper ytan, precis som när plattan vrids. Kortet
+			ligger kvar uppe; ingen visar ett nytt.
+
+			Bänkens `AbsoluteSize` är ett rått fält, så en tilldelning
+			fyrar ingen signal — provet fyrar den därför själv. Att det är
+			RÄTT signal modulen lyssnar på pinnas av raden nedan, som
+			läser stubbens eget signalregister. ]]
+		check("modulen lyssnar på ytans storlek",
+			g._sig ~= nil and g._sig.AbsoluteSize ~= nil,
+			"GetPropertyChangedSignal(\"AbsoluteSize\")")
+		g.AbsoluteSize = Vector3.new(1080, 810, 0)
+		g:GetPropertyChangedSignal("AbsoluteSize"):Fire()
+		local smalStorlek = k.Size.X.Offset
+		local smalMitt = k.Position.X.Offset
+		check("kortet lades ut OM när ytan krympte — inte kvar i gammal geometri",
+			smalMitt ~= bredMitt or smalStorlek ~= bredStorlek,
+			("bredd %d -> %d · mitt %d -> %d"):format(bredStorlek, smalStorlek, bredMitt, smalMitt))
+		check("och det nya läget håller sig innanför den smala ytan",
+			smalMitt + smalStorlek / 2 <= 1080,
+			("hogerkant %d av 1080"):format(smalMitt + smalStorlek // 2))
+
+		--[[ Och tillbaka igen: regeln ska vara symmetrisk, inte en
+			engångskrympning. ]]
+		g.AbsoluteSize = Vector3.new(1376, 1032, 0)
+		g:GetPropertyChangedSignal("AbsoluteSize"):Fire()
+		check("och ut igen när ytan växer tillbaka",
+			k.Position.X.Offset == bredMitt and k.Size.X.Offset == bredStorlek,
+			("mitt %d (var %d) · bredd %d (var %d)"):format(
+				k.Position.X.Offset, bredMitt, k.Size.X.Offset, bredStorlek))
+
+		--[[ Ett DOLT kort räknas inte om i onödan. ]]
+		UgnetaController.dolj()
+		local doldMitt = k.Position.X.Offset
+		g.AbsoluteSize = Vector3.new(800, 600, 0)
+		g:GetPropertyChangedSignal("AbsoluteSize"):Fire()
+		check("ett dolt kort räknas inte om",
+			k.Position.X.Offset == doldMitt,
+			("mitt %d"):format(k.Position.X.Offset))
+	end
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

@@ -379,6 +379,12 @@ PARITET = [
     # darfor star de nu i BADA listorna, i beroendeordning.
     ("Inspelning",       "src/shared/HorseCore/Inspelning.luau"),
     # ... och larar-UX:en pa Roblox provas mot samma kontrakt.
+    #[[ TouchControls FORE UgnetaController: lararkortet fragar
+    #   `TouchControls.reglageBredd()` for att veta hur mycket fritt
+    #   utrymme det har. Modulen saknades har, och det syntes inte sa lange
+    #   banken alltid hade AbsoluteSize 0 — da hoppade `if W > 0` over
+    #   anropet. #206:s prov satter en riktig bredd, och da ar den nil. ]]
+    ("TouchControls",    "src/client/TouchControls.luau"),
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),

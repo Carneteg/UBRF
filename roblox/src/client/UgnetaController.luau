@@ -113,6 +113,45 @@ local DIM_ORD = setmetatable({}, {
 local liveTid = 0
 local liveSagt = ""
 
+--[[ ══ UTLÄGGNINGEN MÅSTE KÖRAS OM NÄR YTAN ÄNDRAS (#206) ═══════════
+
+	Regeln nedan var rätt från början och rörs inte. Felet var att den
+	kördes EN gång, när kortet visades, och aldrig igen. Ett kort som låg
+	uppe när spelaren vred på plattan behöll sin gamla geometri — och
+	reglagen, som är ankrade i högerkanten, flyttade sig in under det.
+
+	Mätt i Studio på `754f2cc`, emulerad iPad, kortet uppe hela tiden:
+
+	    iPad Pro 13in 1376x1032   kort x 367..1007   inget överlapp
+	    -> iPad 9     1080x 810   kort x 367..1007   SITT AV 100 % täckt
+
+	    träffprov på SITT AV: 0 av 66 punkter når knappen
+
+	Alltså: den som vrider plattan medan ett lektionskort ligger uppe kan
+	inte längre sitta av. TYGEL och PARAD hade 0 px kvar att träffa, och
+	HOPP och DJUP SITS 49 px mot golvet 44.
+
+	Utläggningen är bruten ut hit och körs nu både när kortet visas och när
+	ytan ändrar storlek. Ingen ny regel, ingen ny layout, inget nytt system
+	— samma tal, körda vid rätt tillfällen. ]]
+local function laggUtKort()
+	local k = kort
+	if not k then return end
+	local foralder = k.Parent :: GuiObject
+	local W = foralder and foralder.AbsoluteSize.X or 0
+	if W <= 0 then return end
+	local fritt = W - TouchControls.reglageBredd()
+	local bredd = math.min(640, 0.92 * W, math.max(160, fritt - 32))
+	local centrum = if W / 2 + bredd / 2 <= fritt then W / 2 else fritt / 2
+	k.Size = UDim2.new(0, math.floor(bredd), 0, 170)
+	k.Position = UDim2.new(0, math.floor(centrum), 1, -14)
+end
+
+--[[ Provets fönster in: lägg ut kortet igen utan att visa ett nytt. ]]
+function UgnetaController._laggUtKort()
+	laggUtKort()
+end
+
 local function bygg()
 	if gui then return end
 	local g = Instance.new("ScreenGui")
@@ -133,6 +172,19 @@ local function bygg()
 	     läser den, och utan tilldelningen byggde varje anrop en ny HUD
 	     ovanpå den förra. Specen fångade två "Live" i samma ScreenGui. ]]
 	gui = g
+	--[[ ── OCH OM YTAN ÄNDRAR STORLEK (#206) ─────────────────────────
+
+		Vridning, delad skärm och fönsterändring. Kortet ligger i absoluta
+		offset och följer därför INTE med av sig självt, medan reglagen är
+		ankrade i högerkanten och gör det. Utan den här raden hamnar de på
+		varandra — se noten vid `laggUtKort`.
+
+		Villkoret `k.Visible` är med för att ett dolt kort inte ska räknas
+		om i onödan; det läggs ändå ut när det visas. ]]
+	g:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		local k = kort
+		if k and k.Visible then laggUtKort() end
+	end)
 
 	--[[ LIVE-CHIPET. Uppe i kanten, aldrig över ridvägen, och utan
 		porträtt eller rubrik — det är skillnaden mot kortet. ]]
@@ -400,6 +452,7 @@ function UgnetaController.sakerhetTarOver()
 end
 
 --[[ ── Kortet mellan försöken ─────────────────────────────────── ]]
+
 local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 	knappText: string?, replay: boolean?, vidare: boolean?)
 	bygg()
@@ -417,17 +470,7 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 		Regeln nedan rör INTE surfplattan: ryms kortet centrerat innanför
 		den fria ytan står det kvar exakt där det stod. Bara när det inte
 		ryms krymper det och centreras i det som är kvar. ]]
-	do
-		local foralder = k.Parent :: GuiObject
-		local W = foralder and foralder.AbsoluteSize.X or 0
-		if W > 0 then
-			local fritt = W - TouchControls.reglageBredd()
-			local bredd = math.min(640, 0.92 * W, math.max(160, fritt - 32))
-			local centrum = if W / 2 + bredd / 2 <= fritt then W / 2 else fritt / 2
-			k.Size = UDim2.new(0, math.floor(bredd), 0, 170)
-			k.Position = UDim2.new(0, math.floor(centrum), 1, -14)
-		end
-	end
+	laggUtKort()
 
 	r.Text = rubrik
 	for i, p in kortPunkter do
