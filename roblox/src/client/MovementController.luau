@@ -140,10 +140,20 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	self.rang = RidKanon.START.RANG
 	self.slopePitch = 0
 	self.steerInput = 0        -- rampat styrutslag, se _steer nedan
-	--[[ HALT-LÅSET. Se `_targetGait`: pekskärmens HALT ska hålla noll även
-	     med tummen kvar på spaken. Falskt på skrivbordet, alltid — det
-	     tänds bara av en NAMNGIVEN halt, och namn finns bara på pekytan. ]]
-	self.haltLas = false
+	--[[ RYGGA ÄR EN PINNE I TRAPPAN, inte ett spakutslag.
+
+	     Arkitekturbeslut 2026-09-17: stegen går
+	         Rygga ↔ Halt ↔ Skritt ↔ Trav ↔ Galopp
+	     och BROMS ur halt är alltså ett steg NED till rygga, precis som
+	     BROMS ur trav är ett steg ned till skritt.
+
+	     Pinnen bor här och inte i `Gaits.ORDER`. Att skjuta in den där
+	     hade flyttat varje index med ett — taket, uthålligheten,
+	     serverns validering och paritetsprovet läser alla `Gaits.index`,
+	     och ingen av dem handlar om rygga. Trappan är trappstegen; den
+	     här flaggan är det enda steget som saknar en egen gångartsrad,
+	     för hon RYGGAR i halt. Det gjorde hon före beslutet också. ]]
+	self.ryggar = false
 	self.curvature = 0         -- aktuell kurvatur, 1/m
 	self.lastPos = nil         -- förra bildrutans läge, driver fasen
 	return self
@@ -161,52 +171,36 @@ function MovementController:_steer(raw: number, dt: number): number
 	return self.steerInput
 end
 
---[[ Vilken gångart spelaren begär. W från stillastående startar skritt,
-     Shift/Ctrl stegar, S rullar ned och backar till slut. Spelaren väljer
-     alltså gångart, aldrig ett exakt tempo — det är skillnaden mot en
-     gaspedal, och det är därför hästen känns som en häst. ]]
+--[[ Vilken gångart spelaren begär. DRIV stegar upp, BROMS stegar ned,
+     och ett steg ned ur halt är rygga. Spelaren väljer alltså gångart,
+     aldrig ett exakt tempo — det är skillnaden mot en gaspedal, och det
+     är därför hästen känns som en häst.
+
+     INGEN AV VÄGARNA HIT ÄR ETT HÅLLET REGLAGE längre. Det var två förut:
+     `intent.gaitTo` (pekytans namngivna knappar) och `intent.forward`
+     (W ur halt startade skritt, S rullade ned). Båda är borta. En hjälp
+     är en impuls; att hålla en knapp är inte att rida. ]]
+local RYGGA = 0                              -- pinnen under `Gaits.index("halt")`
 function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolean?): string
-	--[[ Stegar från den gångart ryttaren SENAST BAD OM, inte från den
-	     hästen hunnit svara på (G02-B punkt 2). Två snabba tryck ska ge
-	     två steg även om hästen ännu inte börjat på det första — annars
-	     äter svarstiden upp hjälper, och den ska skjuta svaret i tid, inte
-	     ta bort det. ]]
 	local index = Gaits.index(self.loco.beddGangart or self.loco.targetGait)
+	--[[ Stegar från den gångart ryttaren SENAST BAD OM, inte från den
+	     hästen hunnit svara på (G02-B punkt 2). Två hjälper ska ge två steg
+	     även om hästen ännu inte börjat på det första — annars äter
+	     svarstiden upp hjälper, och den ska skjuta svaret i tid, inte ta
+	     bort det. Spärren i `Input` är det som skiljer två hjälper från
+	     hamrande; den här raden är det som gör att båda räknas. ]]
+	if self.ryggar then index = RYGGA end
 
-	--[[ ══ NAMNGIVEN GÅNGART (pekskärmens SKRITT/TRAV/GALOPP/HALT) ═════
+	--[[ HÄR LÅG DEN NAMNGIVNA GÅNGARTEN och HALT-LÅSET.
 
-	     Knappen begär en PLATS i samma trappa som stegen nedan rör sig i.
-	     Den ersätter alltså utgångspunkten, inte systemet: taken, paraden
-	     och uthålligheten nedan gäller exakt som förut, och den relativa
-	     ▼ SAKTA fortsätter vara ett steg neråt.
+	     `intent.gaitTo` bar pekytans HALT/SKRITT/TRAV/GALOPP: en begäran om
+	     en PLATS i trappan i stället för ett steg. Låset fanns för att den
+	     namngivna halten annars upphävdes av samma bildrutas framåtutslag.
 
-	     Att den ligger FÖRE stegen är med flit: trycker man SKRITT och
-	     ▲ i samma bildruta menar man skritt och sedan upp. ]]
-	local namngiven = intent.gaitTo
-	if namngiven then
-		index = Gaits.index(namngiven)
-		--[[ HALT tänder låset; varje ANNAN namngiven gångart släcker det.
-		     Att välja skritt/trav/galopp ÄR att be om att gå igen, och då
-		     ska låset inte ligga kvar och kväva nästa begäran. ]]
-		self.haltLas = (namngiven == "halt")
-	end
-
-	--[[ ── HALT-LÅSET SLÄPPS AV EN NY BEGÄRAN, INTE AV TIDEN ──────────
-
-	     Tobias produktbeslut: HALT ska nå och HÅLLA noll även om tummen
-	     ligger kvar på spaken. Utan lås gällde halten en enda bildruta —
-	     mätt: `ws` gick aldrig under 4,93 med spaken framme, och gångarten
-	     var tillbaka i skritt efter 0,75 s.
-
-	     Låset släpps när spaken FAKTISKT gått tillbaka. Tröskeln är samma
-	     0.5 som "framåtutslag ur halt startar skritt" nedan använder — det
-	     är filens definition av "hon ber om att gå", och två olika svar på
-	     den frågan i samma funktion hade varit ett fel i sig. Nästa gång
-	     hon för spaken framåt är det alltså en NY begäran, och den startar
-	     skritt precis som förut. ]]
-	if self.haltLas and intent.forward <= 0.5 then
-		self.haltLas = false
-	end
+	     Båda är borta med panelen. Trappan stegas nu på ett enda sätt, av
+	     ett enda slags händelse, från alla tre inmatningsslagen — och då
+	     finns varken en plats att hoppa till eller ett utslag att låsa
+	     emot. Det är en regel mindre, inte en regel flyttad. ]]
 
 	if intent.gaitUp then index += 1 end
 	if intent.gaitDown then index -= 1 end
@@ -223,31 +217,32 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	if paradFlank == nil then paradFlank = (intent.parad or 0) > 0 end
 	if paradFlank then index -= 1 end
 
-	--[[ HALT-KNAPPEN MÅSTE VINNA ÖVER "W ur halt startar skritt".
+	--[[ FRAMÅTAXELN VÄLJER INTE LÄNGRE GÅNGART.
 
-	     Raden nedan finns för att ett framåtutslag ur stillastående ska
-	     betyda "gå". På pekskärmen håller tummen ofta kvar spaken när man
-	     trycker HALT med den andra handen, och då hade halten upphävts i
-	     samma bildruta som den begärdes — mätt: ▼ med spaken framme kom
-	     aldrig under skritt.
+	     Här stod två rader: ett framåtutslag ur halt startade skritt, och
+	     ett bakåtutslag rullade ned ett steg. De gjorde spaken och W till
+	     en gaspedal med gångartsbyten inbyggda, och de var skälet att
+	     HALT behövde ett lås för att över huvud taget nå noll.
 
-	     En UTTALAD begäran går före en underförstådd. Den gäller bara den
-	     bildruta knappen trycktes; släpper hon inte spaken ber den om
-	     skritt igen nästa bildruta, vilket är precis vad en skänkel som
-	     ligger kvar ska betyda. ]]
-	if intent.forward > 0.5 and index <= 1 and not namngiven and not self.haltLas then
-		index = 2                                   -- W ur halt startar skritt
-	elseif intent.forward < -0.5 then
-		index -= 1                                   -- S rullar ned en gångart
-	end
+	     `intent.forward` finns kvar och gör fortfarande en sak: den
+	     skjuter tempot INOM gångartens band, i `step()`. Att välja band
+	     och att röra sig inom det är två olika beslut, och det är först
+	     nu de är två. ]]
 
 	--[[ Två tak, och det yttre går inte att förhandla bort: uthålligheten
 	     kan sänka spelarens tak, men ingenting kan höja det över
 	     Gaits.SPELBAR_TOPP. Utan min() här hade en felaktig eller
 	     manipulerad GaitCeiling från servern öppnat fyrsprånget. ]]
 	local ceilingIndex = math.min(Gaits.index(self.ceiling), Gaits.index(Gaits.SPELBAR_TOPP))
-	index = math.clamp(index, 1, ceilingIndex)
-	return Gaits.byIndex(index)
+	--[[ GOLVET ÄR RYGGA, inte halt. Taket är oförändrat — rygga är ett
+	     steg NED och kan aldrig öppna en gångart uthålligheten stängt. ]]
+	index = math.clamp(index, RYGGA, ceilingIndex)
+	self.ryggar = (index == RYGGA)
+	--[[ Rygga har ingen egen gångartsrad: hon ryggar i halt, och allt som
+	     läser gångarten — animation, ljud, kamera, serverns validering —
+	     ska fortsätta läsa "halt". Det är `self.ryggar` som bär pinnen,
+	     och `step()` är det enda som frågar efter den. ]]
+	return Gaits.byIndex(math.max(index, 1))
 end
 
 function MovementController:step(intent: Types.Intent, dt: number)
@@ -426,7 +421,17 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	--[[ ── Tempo ──────────────────────────────────────────────────────
 	     Målet är gångartens hemtempo, med ett litet spann som ryttaren kan
 	     skjuta inom. Hästen får aldrig ligga still mellan två gångarter. ]]
-	local reverse = loco.targetGait == "halt" and intent.forward < -0.5
+	--[[ RYGGNINGEN ÄR TRAPPANS NEDERSTA PINNE, och den läses härifrån.
+	     Förut var den ett hållet bakåtutslag; nu är den ett läge man
+	     stegat ned i och stegar upp ur.
+
+	     `targetGait == "halt"` står kvar som VILLKOR och inte som
+	     definition. Mellan en begäran och hästens svar kan pinnen vara
+	     rygga medan hon fortfarande GÅR — två snabba BROMS ur skritt
+	     hinner dit — och då skulle ett rent `self.ryggar` ha låtit henne
+	     backa i skrittempo. Hon ryggar när hon både är ombedd att rygga
+	     och faktiskt står. ]]
+	local reverse = self.ryggar and loco.targetGait == "halt"
 	local target = if reverse then -M.ReverseSpeed else gait.norm
 	if not reverse and gait.norm > 0 then
 		target += intent.forward * (gait.max - gait.norm) * 0.35
@@ -755,9 +760,9 @@ end
 function MovementController:release()
 	self.steerInput = 0
 	self.curvature = 0
-	--[[ Låset får inte överleva ritten: nästa uppsittning ska inte börja
-	     med en halt hon inte bett om. ]]
-	self.haltLas = false
+	--[[ Pinnen får inte överleva ritten: nästa uppsittning ska inte börja
+	     med en häst som backar utan att någon bett om det. ]]
+	self.ryggar = false
 	self._ov = nil
 	self.lastPos = nil
 	local hum = self.rig.humanoid

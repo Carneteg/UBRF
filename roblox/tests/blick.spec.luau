@@ -129,7 +129,7 @@ end
 
 local function stillaIntent(i)
 	return i.forward == 0 and i.steer == 0 and i.rein == 0 and i.seat == 0
-		and i.gaitUp == false and i.gaitDown == false and i.gaitTo == nil
+		and i.gaitUp == false and i.gaitDown == false
 		and i.jump == false and i.parad == 0
 end
 
@@ -321,14 +321,25 @@ do
 	slapp(fb)
 	check("släppt blick lämnar också Input stilla", stillaIntent(Input.consume()))
 
-	--[[ Gångartsknapparna: ett tryck på GALOPP är ett tryck på GALOPP. ]]
+	--[[ ══ DRIV-KNAPPEN ÄR CAS EGEN, INTE VÅR ═══════════════════════════
+
+	     Här låg `barn(barn(ht, "Gangarter"), "Galopp")`. Den knappen finns
+	     inte längre: panelen revs 2026-09-17 och trappan stegas av
+	     `ActionDriv`/`ActionBroms`, som `ContextActionService` ritar.
+
+	     Mätningen är densamma i sak — ett tryck på reglaget ska nå
+	     `Input` och INTE starta en blick — men den går genom handlingen.
+	     Att den ligger kvar i blickprovet är med flit: reglagen och
+	     blickytan delar skärm, och den som ritar dem i fel ordning får
+	     precis den här buggen tillbaka. ]]
 	local ht = barn(playerGui, "HorseTouch")
-	local galopp = barn(barn(ht, "Gangarter"), "Galopp")
+	check("pekytan bygger ingen egen gångartspanel längre",
+		barn(ht, "Gangarter") == nil and barn(ht, "Knappar") == nil)
 	tomLogg()
-	galopp.MouseButton1Click:Fire()
+	check("DRIV går fram genom CAS", __handling(Input.DRIV) == true)
 	local ig = Input.consume()
-	check("ett tryck på GALOPP begär galopp", ig.gaitTo == "canter",
-		string.format("(gaitTo %s)", tostring(ig.gaitTo)))
+	check("ett tryck på DRIV stegar trappan uppåt", ig.gaitUp == true,
+		string.format("(gaitUp %s)", tostring(ig.gaitUp)))
 	check("och startar ingen blick", #logg == 0)
 end
 

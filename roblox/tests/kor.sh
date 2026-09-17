@@ -20,7 +20,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus"
+SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
@@ -33,6 +33,14 @@ fi
 # Skannern laser ALL Luau-kall.
 if ! python3 ../tools/kolla-material.py; then
   echo "MATERIALKONTROLLEN MISSLYCKADES"
+  exit 1
+fi
+# Grind 4 i kontraktet for kontextuell rid-UX: panelens kod ska vara BORTA
+# ur kallan, inte slackt. Den maste lasa filerna pa disk -- en Luau-bank ser
+# bara det som kompilerats in, och `Visible = false` kompilerar lika fint
+# som en rivning. Kors har, tillsammans med den andra kallskannern.
+if ! python3 ../tools/kolla-reglagepanel.py; then
+  echo "REGLAGEPANELGRINDEN MISSLYCKADES"
   exit 1
 fi
 

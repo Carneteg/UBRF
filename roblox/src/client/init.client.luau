@@ -18,6 +18,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Config, RigAdapter, Net = Core.Config, Core.RigAdapter, Core.Networking
@@ -81,6 +82,10 @@ local function dismount()
 	if not ride then return end
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
+	--[[ Avsittningens handling rivs med ritten, av samma skäl som `E`
+	     förut satt bakom `if not ride`: tangenten ska vara fri till fots.
+	     `UnbindAction` river också pekknappen. ]]
+	ContextActionService:UnbindAction(Input.AVSITT)
 	TouchControls.unmount()
 	ride.movement:release()
 	ride.animation:release()
@@ -180,20 +185,32 @@ local function mount(model: Model)
 	end
 
 	Input.bind()
+	--[[ AVSITTNINGEN ÄR EN KONTEXTUELL HANDLING (#233, arkitekturbeslut
+	     2026-09-17). Den låg förut i `InputBegan`-lyssnaren längst ned,
+	     och pekytan hade en egen `SITT AV`-knapp i panelen. Panelen är
+	     riven, och en tangentlyssnare kan inte ge en iPad någon knapp.
+
+	     `ContextActionService` ger alla tre ytorna samma handling: `E`,
+	     styrkorset ned, och en pekknapp som `TouchControls` kläder. Den
+	     binds vid uppsittningen och rivs vid avsittningen, så att `E` är
+	     fri till fots — det var den förut också, genom `if not ride`. ]]
+	ContextActionService:BindAction(Input.AVSITT,
+		function(_, inputState: Enum.UserInputState)
+			if inputState == Enum.UserInputState.Begin then begarAvsittning() end
+			return Enum.ContextActionResult.Sink
+		end, true, Enum.KeyCode.E, KontrollHjalp.AVSITTNING_GAMEPAD)
 	--[[ Pekkontrollerna byggs först här, och bara på en pekenhet: en
 	     spelare vid tangentbordet ska inte få en spak över bilden. De river
 	     sig själva i `dismount`, så de kan aldrig ligga kvar och styra en
 	     häst man klivit av. ]]
 	--[[ `blick` går till kameran och INGEN ANNANSTANS: pekytan vrider
-	     bilden, inte hästen. `modell` används bara för att gångartsraden
-	     ska kunna lysa på den gångart hästen faktiskt går i. ]]
+	     bilden, inte hästen. ]]
 	TouchControls.mount(Input, {
 		dismount = begarAvsittning,
 		blick = function(dYaw, dPitch)
 			local r = ride
 			if r then r.camera:vridBlick(dYaw, dPitch) end
 		end,
-		modell = model,
 		--[[ #227: hjälpknappen viker undan för reglagen på en telefon i
 		     landskap. Reserven rapporteras härifrån, i samma andetag som
 		     reglagen byggs, byggs om (#208) eller rivs. ]]
@@ -485,15 +502,11 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	--[[ H och styrkorset hanteras ovanför `not ride`-grinden — se noten
 	     där. Tangenten är fri: Input.luau tar W A S D, Space, Shift, Ctrl,
 	     Q, F, Z, C och spakarna, och E/R/T/G är tagna här. ]]
-	--[[ AVSITTNING PÅ BÅDA YTORNA (#162 blockerare 2). `E` var enda vägen
-	     ned, och den finns inte på en handkontroll: en gamepadspelare kom
-	     upp genom ProximityPrompten och satt sedan fast. Knappen kommer ur
-	     `KontrollHjalp.AVSITTNING_GAMEPAD` så att bindningen, hjälptexten
-	     och kontrollmatrisen inte kan glida isär. ]]
-	if input.KeyCode == Enum.KeyCode.E
-		or input.KeyCode == KontrollHjalp.AVSITTNING_GAMEPAD then
-		begarAvsittning()
-	end
+	--[[ AVSITTNINGEN LIGGER INTE LÄNGRE HÄR. `E` och styrkorset ned är
+	     `Input.AVSITT` i `mount()` ovan — en `ContextActionService`-
+	     handling, samma på alla tre ytorna, och den enda som kan ge en
+	     iPad en knapp. Tangenterna är oförändrade; det som ändrats är vem
+	     som äger dem. #162 blockerare 2 mäts fortsatt av klientprovet. ]]
 end)
 
 player.CharacterRemoving:Connect(dismount)

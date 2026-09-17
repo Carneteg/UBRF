@@ -184,23 +184,39 @@ local RADER = {
 	     så hon kom UPP på hästen och blev kvar där. ]]
 	{ nyckel = "hjalp.sitt_upp_av", tgb = "E",
 	  pad = padNamn(KontrollHjalp.AVSITTNING_GAMEPAD),   pek = "touch.sitt_av" },
-	{ nyckel = "hjalp.framat_bakat", tgb = "W / S", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
+	--[[ ══ DRIV OCH BROMS ═══════════════════════════════════════════════
+
+	     Arkitekturbeslut 2026-09-17. Raden "framåt/bakåt" är borta: W och S
+	     driver ingen axel längre, de ÄR de två handlingarna. Att beskriva
+	     dem som två olika saker hade varit precis den glidning mellan
+	     hjälptext och bindning som `pek`-kolumnen finns för att stoppa.
+
+	     Samma handling på alla tre ytorna, alltså samma rad — och `pek`
+	     pekar nu på en knapp som faktiskt ritas, för `ContextActionService`
+	     ritar den med exakt den etiketten. ]]
+	{ nyckel = "hjalp.hogre_gangart", tgb = "W / ↑", pad = "R1", pek = "touch.driv" },
+	{ nyckel = "hjalp.lagre_gangart", tgb = "S / ↓", pad = "L1", pek = "touch.broms" },
 	{ nyckel = "hjalp.styr",         tgb = "A / D", padNyckel = "hjalp.vanster_spak", pek = "hjalp.spaken" },
-	--[[ #162 iPad: pekytan har inte längre ▲/▼ som huvudreglage — gångarten
-	     väljs på en NAMNGIVEN knapp (HALT/SKRITT/TRAV/GALOPP). Raderna pekar
-	     därför på knappgruppen i stället för på en knapp som inte ritas
-	     längre; en hjälp som namnger ett reglage spelaren inte kan se är
-	     precis det fel `pek`-kolumnen finns för att undvika. ]]
-	{ nyckel = "hjalp.hogre_gangart", tgb = "Shift", pad = "R1", pek = "touch.gangartsknappar" },
-	{ nyckel = "hjalp.lagre_gangart", tgb = "Ctrl",  pad = "L1", pek = "touch.sakta" },
 	--[[ Blicken finns bara på pekytan: tangentbord och handkontroll har
 	     ingen fri blick i den här kameran, och `bara` håller raden borta
 	     därifrån hellre än att visa en handling utan reglage. ]]
 	{ nyckel = "hjalp.blick", bara = "touch", pek = "touch.blickytan" },
-	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2", pek = "touch.tygel" },
-	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B",  pek = "touch.halvhalt" },
-	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2", pek = "touch.djup_sits" },
-	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A",  pek = "touch.hoppa" },
+	--[[ ── HJÄLPERNA HAR INGEN PEKKNAPP LÄNGRE ────────────────────────
+
+	     `pek` är borttagen på de fyra raderna nedan, inte utbytt. Tygeln,
+	     halvhalten, sitsen och hoppet låg i panelen som revs 2026-09-17,
+	     och de har ännu ingen kontextuell handling. `pek`-kolumnen ska
+	     peka på ett reglage som FINNS; en nyckel till en knapp ingen
+	     ritar är sämre än tystnad, och det är hela skälet kolumnen finns.
+
+	     [ÖPPEN FRÅGA TILL PRODUKTÄGAREN] Utan dem är hela balansmodellen
+	     — yttertygelstöd, halvhalt, djup sits — stängd på en ren
+	     pekenhet. Vägen tillbaka är fyra `BindAction` till, inte en ny
+	     panel. Beslutet är inte mitt. ]]
+	{ nyckel = "hjalp.tygel",        tgb = "Q",      pad = "R2" },
+	{ nyckel = "hjalp.halvhalt",     tgb = "F",      pad = "B" },
+	{ nyckel = "hjalp.djupare_sits", tgb = "Z / C",  pad = "L2" },
+	{ nyckel = "hjalp.hoppa",        tgb = "Space",  pad = "A" },
 	--[[ #161: hjälpen kan öppnas igen på varje yta, och står därför i sin
 	     egen hjälp. En rad som säger "H" till en spelare utan tangentbord
 	     hade varit precis det problemet raden beskriver. ]]
@@ -262,7 +278,20 @@ function KontrollHjalp.rader(): { { vad: string, reglage: string } }
 				elseif sort == "gamepad" then (r.pad or reglageText(r.padNyckel))
 				elseif sort == "touch" then reglageText(r.pek)
 				else ""
-			table.insert(ut, { vad = radText(r), reglage = reglage })
+			--[[ EN RAD UTAN REGLAGE HÖR INTE HEMMA I HJÄLPEN.
+
+			     Sedan panelen revs 2026-09-17 har fyra hjälper — tygel,
+			     halvhalt, sits och hopp — ingen pekknapp alls. `pek` är
+			     då nil, och raden skrevs ut med en TOM reglagekolumn: en
+			     handling utan svar på "hur?". Det är exakt samma fel som
+			     `bara = "touch"` finns för att undvika, bara åt andra
+			     hållet.
+
+			     Tystnad är ärligare än en tom kolumn. Dyker knappen upp
+			     igen kommer raden tillbaka av sig själv. ]]
+			if reglage ~= nil and reglage ~= "" then
+				table.insert(ut, { vad = radText(r), reglage = reglage })
+			end
 		end
 	end
 	return ut

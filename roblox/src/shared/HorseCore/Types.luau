@@ -16,16 +16,16 @@ export type State =
 
 --[[ Vad ryttaren ber om. Aldrig ett kommando — hästen förhandlar. ]]
 export type Intent = {
-	forward: number,     -- -1..1, W framåt, S ned i gångart och bakåt
+	forward: number,     -- -1..1, tempot INOM gångartens band (spak/pad)
 	steer: number,       -- -1..1, vänster..höger
-	gaitUp: boolean,     -- begär högre gångart
-	gaitDown: boolean,
-	--[[ NAMNGIVEN GÅNGART, för pekskärmens SKRITT/TRAV/GALOPP/HALT.
-	     Nil i vanliga fall; då gäller de relativa stegen ovan precis som
-	     förut. Den är en BEGÄRAN om en plats i samma trappa som `gaitUp`
-	     och `gaitDown` stegar i — inte en andra rörelsemodell. Taken i
-	     `_targetGait` gäller lika mycket för den. ]]
-	gaitTo: string?,
+	gaitUp: boolean,     -- DRIV: ett steg upp i trappan, impuls
+	gaitDown: boolean,   -- BROMS: ett steg ned; ur halt är det rygga
+	--[[ `gaitTo` ÄR BORTA (arkitekturbeslut 2026-09-17). Fältet bar
+	     pekytans namngivna gångartsknappar: en begäran om en PLATS i
+	     trappan i stället för ett steg i den. Panelen är riven och
+	     trappan stegas nu bara av `gaitUp`/`gaitDown` — DRIV och BROMS —
+	     från alla tre inmatningsslagen. En avsikt mindre, inte en avsikt
+	     flyttad. ]]
 	jump: boolean,
 	--[[ G02-B punkt 1: TYGELN och PARADEN som egna avsikter.
 

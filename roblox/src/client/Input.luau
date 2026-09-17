@@ -1,13 +1,37 @@
 --!strict
 --[[
-	Inmatningen — tangenter, gamepad och peksk��rm till en Intent.
+	Inmatningen — tangenter, gamepad och pekskärm till en Intent.
 
 	Ingen spellogik här. Modulen översätter knappar till avsikt och inget
 	annat, så att styrningen går att binda om utan att rörelsen rörs.
 
-	W  framåt          S  ned i gångart, sedan stopp, sedan backa
-	A/D styr           Shift  upp en gångart     Ctrl  ned en gångart
-	Space hoppa        E  sitt upp/av
+	══ DRIV OCH BROMS ═══════════════════════════════════════════════════
+
+	Arkitekturbeslut 2026-09-17: ridningen har TVÅ kontextuella handlingar
+	och inga egna knappar. `ActionDriv` och `ActionBroms` binds i
+	`ContextActionService` med `createTouchButton = true`, så att samma två
+	handlingar är W/↑ vid tangentbordet, R1/L1 på handkontrollen och två av
+	Roblox EGNA pekknappar på iPad. En egen `TextButton` i en egen
+	`ScreenGui` är uttryckligen förbjuden — det var precis den panel som
+	föll på fysisk QA.
+
+	Båda är IMPULSER. Ett tryck är en hjälp, alltså ETT steg i trappan
+
+	    Rygga ↔ Halt ↔ Skritt ↔ Trav ↔ Galopp
+
+	— aldrig en gaspedal man håller inne. Hästen fortsätter i gångarten
+	utan att spelaren rör något: `MovementController` håller gångartens
+	hemtempo, och det gjorde den redan. Det är därför impulsmodellen
+	fungerar utan att rörelsen skrivs om.
+
+	W OCH S SKRIVER INTE LÄNGRE I `forward`. Framåtaxeln är kvar, men den
+	är spakens och handkontrollens, och den flyttar tempot INOM gångartens
+	band — den väljer ingen gångart längre. Att en tangent både valde
+	gångart och sköt tempot var det som gjorde skrivbordet och pekytan
+	till två olika spel.
+
+	A/D styr          Space hoppa       Q tygel      F halvhalt
+	Z/C sits          E sitt upp/av
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -26,8 +50,9 @@ local state = {
 	steer = 0,
 	touchForward = 0,
 	touchSteer = 0,
-	gaitUp = false,
-	gaitDown = false,
+	--[[ `gaitUp`/`gaitDown` som HÅLLNA tillstånd är borta. De fanns för
+	     att Shift och Ctrl var knappar man kunde ligga kvar på; nu är
+	     båda handlingarna impulser, och det enda som finns är flanken. ]]
 	jump = false,
 	--[[ G02-B: TYGELN och PARADEN. `rein` är kontakten (Q eller höger
 	     avtryckare — den senare analog, så halvt utslag ger halv
@@ -67,16 +92,25 @@ local state = {
 	touchParad = false,
 	_upEdge = false,
 	_downEdge = false,
-	--[[ Namnet på en begärd gångart, eller nil. Deklareras här för att
-	     `--!strict` ska känna fältet; `consume` nollar det varje bildruta. ]]
-	touchGaitTo = (nil :: string?),
+	--[[ IMPULSSPÄRREN. Kontraktet kräver 0,5–0,8 s per handling, så att
+	     den som hamrar på DRIV inte kan hoppa halt → galopp på tre
+	     bildrutor. Spärren är PER HANDLING och inte gemensam: att bromsa
+	     direkt efter ett driv är en riktig ridning — hon gav för mycket
+	     och tar tillbaka — medan två driv i rad är att spamma.
+
+	     `-math.huge` gör första trycket fritt oavsett när klockan står. ]]
+	_drivSenast = -math.huge,
+	_bromsSenast = -math.huge,
 }
 
 local bound = false
 
+--[[ W OCH S ÄR BORTA HÄRIFRÅN MED FLIT. De är `ActionDriv` och
+     `ActionBroms` nedan, alltså impulser i gångartstrappan. Låg de kvar
+     här hade ett tryck gjort två saker samtidigt — bytt gångart OCH
+     skjutit tempot — och det var precis vad som gjorde trappan omöjlig
+     att stega ett steg i taget. ]]
 local KEY_ACTIONS = {
-	[Enum.KeyCode.W] = function(v) state.forward = if v then 1 else (if state.forward > 0 then 0 else state.forward) end,
-	[Enum.KeyCode.S] = function(v) state.forward = if v then -1 else (if state.forward < 0 then 0 else state.forward) end,
 	[Enum.KeyCode.A] = function(v) state.steer = if v then -1 else (if state.steer < 0 then 0 else state.steer) end,
 	[Enum.KeyCode.D] = function(v) state.steer = if v then 1 else (if state.steer > 0 then 0 else state.steer) end,
 }
@@ -88,13 +122,7 @@ local function onInput(_, inputState: Enum.UserInputState, obj: InputObject)
 		action(pressed)
 		return Enum.ContextActionResult.Sink
 	end
-	if obj.KeyCode == Enum.KeyCode.LeftShift or obj.KeyCode == Enum.KeyCode.ButtonR1 then
-		if pressed and not state.gaitUp then state._upEdge = true end
-		state.gaitUp = pressed
-	elseif obj.KeyCode == Enum.KeyCode.LeftControl or obj.KeyCode == Enum.KeyCode.ButtonL1 then
-		if pressed and not state.gaitDown then state._downEdge = true end
-		state.gaitDown = pressed
-	elseif obj.KeyCode == Enum.KeyCode.Space or obj.KeyCode == Enum.KeyCode.ButtonA then
+	if obj.KeyCode == Enum.KeyCode.Space or obj.KeyCode == Enum.KeyCode.ButtonA then
 		state.jump = pressed
 	elseif obj.KeyCode == Enum.KeyCode.Q then
 		--[[ Tangenten är av eller på; avtryckaren nedan är analog och
@@ -113,27 +141,126 @@ local function onInput(_, inputState: Enum.UserInputState, obj: InputObject)
 	return Enum.ContextActionResult.Sink
 end
 
+--[[ ══ DE TVÅ KONTEXTUELLA HANDLINGARNA ═══════════════════════════════
+
+     Namnen är kontraktets, ordagrant, för att en grind ska kunna leta
+     efter dem och för att `ContextActionService` ska kunna adressera dem
+     utifrån — `SetTitle`, `SetPosition` och `GetButton` tar alla
+     handlingens namn. ]]
+Input.DRIV = "ActionDriv"
+Input.BROMS = "ActionBroms"
+--[[ Avsittningen är ingen ridhjälp och binds inte här — `init.client`
+     äger den, för det är där `begarAvsittning` finns. Namnet står
+     ändå hos de andra två, så att `TouchControls` kan klä knappen
+     utan att känna till klientens huvudskript. ]]
+Input.AVSITT = "ActionSittAv"
+
+--[[ Spärren, i sekunder. Kontraktet ger spannet 0,5–0,8; 0,60 ligger i
+     mitten. Lägre och hamrandet går igenom, högre och en ärlig
+     nedstegring från galopp till halt börjar kännas som att knappen
+     hänger sig. ]]
+Input.IMPULS_SPARR = 0.60
+
+--[[ Klockan är utbytbar, och det är enda skälet den har ett namn.
+
+     Spärren är en TIDSREGEL. Ett prov som inte kan flytta tiden kan bara
+     mäta halva den — att andra trycket stoppas — aldrig att det släpps
+     igenom när tiden gått. Med den här raden kan provet mäta båda
+     halvorna utan att sviten sover en sekund per mätning. ]]
+Input._klocka = os.clock
+
+--[[ En impuls i trappan, spärrad. Returnerar om den faktiskt gick in, så
+     att både provet och ett framtida ljud-/haptiklager kan skilja "hon
+     gav en hjälp" från "hon hamrade". ]]
+local function impuls(upp: boolean): boolean
+	local nu = Input._klocka()
+	local senast = if upp then state._drivSenast else state._bromsSenast
+	if nu - senast < Input.IMPULS_SPARR then
+		return false
+	end
+	if upp then
+		state._drivSenast = nu
+		state._upEdge = true
+	else
+		state._bromsSenast = nu
+		state._downEdge = true
+	end
+	return true
+end
+
+function Input.drivImpuls(): boolean
+	return impuls(true)
+end
+function Input.bromsImpuls(): boolean
+	return impuls(false)
+end
+
+--[[ Nollar spärren. Anropas vid av- och uppsittning: den som satt av mitt
+     i en spärr ska inte sitta upp och få första hjälpen slukad. ]]
+function Input.nollaImpulsSparr()
+	state._drivSenast, state._bromsSenast = -math.huge, -math.huge
+end
+
+--[[ Handlingarna tar BARA `Begin`. Ett släpp är inte en hjälp, och
+     `Change` finns inte på en tangent. Att svara `Sink` på alla tre är
+     ändå rätt: handlingen äger knappen så länge den är bunden. ]]
+local function onDriv(_, inputState: Enum.UserInputState, _obj: InputObject)
+	if inputState == Enum.UserInputState.Begin then Input.drivImpuls() end
+	return Enum.ContextActionResult.Sink
+end
+local function onBroms(_, inputState: Enum.UserInputState, _obj: InputObject)
+	if inputState == Enum.UserInputState.Begin then Input.bromsImpuls() end
+	return Enum.ContextActionResult.Sink
+end
+
 function Input.bind()
 	if bound then return end
 	bound = true
+	--[[ SPÄRREN NOLLAS I `unbind`, INTE HÄR.
+
+	     Ett anrop stod på den här raden också. Det gjorde ingenting:
+	     avsittningen går alltid genom `unbind`, och en första uppsittning
+	     möter `-math.huge`. Falsifieringen visade det — mutationen som tog
+	     bort raden lämnade sviten grön, och en rad som inte går att göra
+	     röd är antingen otäckt eller överflödig.
+
+	     Här var den överflödig, och då är svaret att ta bort den, inte att
+	     skriva ett prov som låtsas att den behövs. ]]
+	--[[ W/S och ↑/↓ är kontraktets tangenter. Shift och Ctrl följer med
+	     som SAMMA handling — de var gångartsstegen före det här beslutet,
+	     och en spelare som lärt sig dem ska inte tappa dem för att
+	     knappen bytt namn. De ritar ingen egen pekknapp; en handling ger
+	     en knapp hur många tangenter den än lyssnar på. ]]
+	ContextActionService:BindAction(Input.DRIV, onDriv, true,
+		Enum.KeyCode.W, Enum.KeyCode.Up, Enum.KeyCode.LeftShift,
+		Enum.KeyCode.ButtonR1)
+	ContextActionService:BindAction(Input.BROMS, onBroms, true,
+		Enum.KeyCode.S, Enum.KeyCode.Down, Enum.KeyCode.LeftControl,
+		Enum.KeyCode.ButtonL1)
+	--[[ Resten av ridningen: styrning, hopp och hjälperna. Ingen av dem
+	     ritar en pekknapp (`false`), och det är avsiktligt — pekytan har
+	     spaken för styrningen, och hjälperna är en öppen fråga till
+	     produktägaren, inte något jag lägger tillbaka på eget initiativ. ]]
 	ContextActionService:BindAction("HorseControl", onInput, false,
-		Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D,
-		Enum.KeyCode.Space, Enum.KeyCode.LeftShift, Enum.KeyCode.LeftControl,
-		Enum.KeyCode.Q, Enum.KeyCode.F, Enum.KeyCode.Z, Enum.KeyCode.C,
-		Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonR1, Enum.KeyCode.ButtonL1,
-		Enum.KeyCode.ButtonB)
+		Enum.KeyCode.A, Enum.KeyCode.D,
+		Enum.KeyCode.Space, Enum.KeyCode.Q, Enum.KeyCode.F,
+		Enum.KeyCode.Z, Enum.KeyCode.C,
+		Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonB)
 end
 
 function Input.unbind()
 	if not bound then return end
 	bound = false
+	ContextActionService:UnbindAction(Input.DRIV)
+	ContextActionService:UnbindAction(Input.BROMS)
 	ContextActionService:UnbindAction("HorseControl")
+	Input.nollaImpulsSparr()
 	state.forward, state.steer = 0, 0
 	state.touchForward, state.touchSteer = 0, 0
 	state.rein, state.touchRein = 0, 0
 	state.seatLight, state.seatDeep, state.touchSeat = false, false, 0
 	state.paradHeld, state._paradEdge, state.touchParad = false, false, false
-	state.gaitUp, state.gaitDown, state.jump = false, false, false
+	state.jump = false
 	--[[ FLANKERNA MÅSTE MED. `gaitUp`/`gaitDown` är hållna tillstånd;
 	     `_upEdge`/`_downEdge` är den OBEHANDLADE begäran, och den låg kvar
 	     här. En spelare som tryckte Shift och sedan satt av innan
@@ -205,7 +332,6 @@ function Input.consume(): Types.Intent
 		steer = math.clamp(state.steer + padSteer + state.touchSteer, -1, 1),
 		gaitUp = state._upEdge,
 		gaitDown = state._downEdge,
-		gaitTo = state.touchGaitTo,
 		jump = state.jump,
 		rein = math.clamp(state.rein + trigger() + state.touchRein, 0, 1),
 		seat = math.clamp(Input.seatAxis() + seatTrigger() + state.touchSeat, -1, 1),
@@ -213,11 +339,6 @@ function Input.consume(): Types.Intent
 	}
 	state._upEdge, state._downEdge = false, false
 	state._paradEdge, state.touchParad = false, false
-	--[[ Namngiven gångart är en IMPULS som alla andra flanker här: den
-	     verkar i den bildruta den trycktes och sparas inte. Låg den kvar
-	     hade knappen blivit ett läge man måste stänga av, och hästen hade
-	     inte kunnat byta gångart på något annat sätt efteråt. ]]
-	state.touchGaitTo = nil
 	return intent
 end
 
@@ -237,14 +358,12 @@ end
 function Input.touchParad()
 	state.touchParad = true
 end
-function Input.touchGait(up: boolean)
-	if up then state._upEdge = true else state._downEdge = true end
-end
---[[ Pekskärmens namngivna gångartsknappar. Namnet är en plats i
-     `Gaits.ORDER`; `_targetGait` gör resten och behåller alla tak. ]]
-function Input.touchGaitTo(namn: string)
-	state.touchGaitTo = namn
-end
+--[[ `touchGait` och `touchGaitTo` är borta. Pekytans namngivna
+     gångartsknappar fanns bakom dem, och de knapparna finns inte längre:
+     DRIV och BROMS är samma två handlingar på alla tre inmatningsslagen,
+     och de går genom `drivImpuls`/`bromsImpuls` ovan — med spärren. En
+     kvarlämnad ospärrad väg in i trappan hade varit en tyst väg runt
+     hela beslutet. ]]
 function Input.touchJump()
 	state.jump = true
 	task.delay(0.15, function() state.jump = false end)

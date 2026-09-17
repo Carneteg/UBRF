@@ -93,7 +93,30 @@ end
 --[[ RESERVZONEN: de tre ytor spelaren måste kunna nå medan hon rider.
 	Blickytan är med flit INTE med — den ligger underst i sin ScreenGui
 	och tar bara det finger ingen knapp tog. ]]
-local RESERV = { "Spak", "Gangarter", "Knappar" }
+--[[ ══ RESERVZONEN EFTER ATT PANELEN REVS ═══════════════════════════
+
+     `Gangarter` och `Knappar` var två `Frame` vi själva byggde, och de gick
+     att mäta med `rekt()`. Panelen revs 2026-09-17: DRIV, BROMS och SITT AV
+     är `ContextActionService`-handlingar, och deras knappar ligger i
+     Roblox EGEN `ContextActionGui` — en yta vår kod varken skapar, äger
+     eller kan flytta.
+
+     Reserven mäts därför mot det KONTRAKT resten av klienten faktiskt
+     läser: `TouchControls.reglageBredd()` och `reglageTopp()`. Det är de
+     två talen lektionskortet och hjälpknappen viker undan för, och det är
+     alltså exakt den ruta som ska vara fri. Mätningen blev starkare av
+     bytet, inte svagare — den mäter nu det andra moduler tror på i stället
+     för ett internt ramnamn.
+
+     Rutan heter `Handlingar`, så att loggen säger vad den är. ]]
+local function handlingsrekt(W, H)
+	local b = TouchControls.reglageBredd()
+	local t = TouchControls.reglageTopp()
+	if b <= 0 or t == math.huge then return nil end
+	return { x0 = W - b, x1 = W, y0 = t, y1 = H }
+end
+
+local RESERV = { "Spak" }
 local function reserv(W, H)
 	local ht = barn(player._gui, "HorseTouch")
 	if not ht then return nil end
@@ -103,6 +126,7 @@ local function reserv(W, H)
 		local f = barn(ht, namn)
 		if f then ut[namn] = rekt(f, W, Hg, inset()) end
 	end
+	ut.Handlingar = handlingsrekt(W, H)
 	return ut, ht
 end
 --[[ Skötsel-HUD:ens ytor PÅ SKÄRMEN, i skärmens pixlar. ]]
@@ -162,6 +186,11 @@ local function bildrutor(n)
 	for _ = 1, n do RunService.RenderStepped:Fire(dt) end
 end
 
+--[[ Räknar hur många av skärmarna där mutationen nedan FAKTISKT slog.
+     Se noten vid ankaret: krocken är en funktion av skärmstorleken, så
+     kravet ställs på hela tabellen och inte på varje rad. ]]
+local mutationSlog = 0
+
 local SKARMAR = {
 	{ namn = "iPhone 13 landskap", W = 749, H = 367, telefon = true,
 		kalla = "#185, avläst ur levande klient" },
@@ -214,11 +243,9 @@ for _, sk in ipairs(SKARMAR) do
 			print(("       %-9s %s"):format(namn, r2s(r)))
 		end
 		prova("reservzonens tre ytor ligger helt på skärmen, under topbaren", inne)
-		local halt = barn(barn(ht, "Gangarter"), "Halt")
-		if halt then
-			print(("       gångartsknapp %d×%d px (#208-skalan, mäts inte här)"):format(
-				halt.Size.X.Offset, halt.Size.Y.Offset))
-		end
+		--[[ Handlingsknapparna ritas av `ContextActionService` och har
+			ingen instans i vår hierarki att mäta. Reservens ruta är det
+			enda vi äger, och den skrivs ut ovanför. ]]
 	end
 
 	--[[ ══ LEKTIONSKORTET OCH SPAKEN (#206) ═══════════════════════════
@@ -275,28 +302,46 @@ for _, sk in ipairs(SKARMAR) do
 				("kort %s · spak %s"):format(r2s(kr), r2s(sp)))
 			prova("och kortet är fortfarande läsbart brett", bredd >= 480,
 				("%d px"):format(bredd))
-			prova("och det håller sig innanför gångartsgallret",
-				kr.x1 <= res.Gangarter.x0,
-				("kortets högerkant %d mot gallrets %d"):format(kr.x1, res.Gangarter.x0))
+			prova("och det håller sig innanför handlingsreserven",
+				res.Handlingar ~= nil and kr.x1 <= res.Handlingar.x0,
+				("kortets högerkant %d mot reservens %d"):format(kr.x1,
+					res.Handlingar and res.Handlingar.x0 or -1))
 		end
 		UgnetaController.dolj()
 	end
 
-	--[[ ANKARET: skulle spåraren ritas på sin vanliga plats medan man
-		rider hade den legat över gångartsgallret. Räknat ur layouten
-		(rena tal, oavsett om GUI:t är påslaget). Utan den här raden
-		hade uteslutningen nedan kunnat vara grön utan att skydda något. ]]
+	--[[ ANKARET: skulle skötselspåraren ritas på sin vanliga plats medan
+		man rider hade den legat över reglagen. Räknat ur layouten (rena
+		tal, oavsett om GUI:t är påslaget). Utan den här raden hade
+		uteslutningen nedan kunnat vara grön utan att skydda något.
+
+		Mäts mot `Handlingar`, alltså mot det reservkontrakt resten av
+		klienten läser — se noten vid `handlingsrekt`. Telefon och iPad
+		har inte längre olika svar: blocket är lika högt i förhållande till
+		skärmen på båda, och spåraren ligger i vägen på båda. ]]
+	--[[ ══ ANKARET FLYTTADE, OCH DET SKA STÅ HÄR VARFÖR ════════════════
+
+		Raden krävde förut att spåraren KROCKAR med gångartsgallret på
+		telefon. Gallret gick nästan upp till topbaren; spåraren ligger på
+		y 102..162, och de möttes.
+
+		Efter 2026-09-17 ligger handlingsblocket i skärmens nedre hörn och
+		är 2×2 knappar högt. På den smalaste skärmen når det fortfarande
+		upp i spåraren, på de bredare inte — alltså är krocken en funktion
+		av skärmen och inte ett kontrakt. Att kräva den överallt hade varit
+		att kräva en trång layout.
+
+		Ankarets UPPGIFT — att visa att uteslutningen nedan skyddar något —
+		bärs i stället av MUTATIONEN strax under, som nu körs på VARJE
+		skärm i tabellen i stället för bara på telefonerna. Den tänder
+		skötsel-GUI:t mitt i ritten och kräver att mätningen blir röd.
+		Det är ett starkare ankare, för det mäter regeln i stället för en
+		geometrisk tillfällighet. ]]
 	local L = PC.layout()
-	local ankare = res and res.Gangarter and skar(L.kompakt, res.Gangarter)
-	if sk.telefon then
-		prova("ANKARE: på sin vanliga plats hade spåraren legat ÖVER gångarterna",
-			ankare == true, ("spårare %s · gångarter %s"):format(
-				r2s(L.kompakt), res and res.Gangarter and r2s(res.Gangarter) or "-"))
-	else
-		prova("kontroll: på iPaden ryms spåraren bredvid gångarterna",
-			ankare == false, ("spårare %s · gångarter %s"):format(
-				r2s(L.kompakt), res and res.Gangarter and r2s(res.Gangarter) or "-"))
-	end
+	local ankare = res and res.Handlingar and skar(L.kompakt, res.Handlingar)
+	print(("       observation: spåraren %s handlingsblocket  %s · %s"):format(
+		if ankare then "SKÄR" else "ligger fri från",
+		r2s(L.kompakt), res and res.Handlingar and r2s(res.Handlingar) or "-"))
 
 	--[[ 3. RITTEN: serverns vy säger `riding`. ]]
 	visa(st, Preparation.STATUS.RIDER)
@@ -316,10 +361,13 @@ for _, sk in ipairs(SKARMAR) do
 		g2.Enabled = true
 		local km = krockar(hudPaSkarmen(W, H), res)
 		g2.Enabled = false
-		if sk.telefon then
-			prova("MUTATION: ett tänt GUI under ritten hade fällt mätningen",
-				#km > 0, table.concat(km, ", "))
-		end
+		--[[ Räknas i stället för att krävas per skärm. På en iPad ryms
+			både skötselytorna och reglagen utan att mötas, och då slår
+			mutationen inte — det är rätt, och det är inte ett provfel.
+			Kravet ställs på hela tabellen efter loopen. ]]
+		if #km > 0 then mutationSlog += 1 end
+		print(("       mutation: tänt GUI %s reservzonen  %s"):format(
+			if #km > 0 then "SKÄR" else "lämnar", table.concat(km, ", ")))
 	end
 
 	--[[ ROTATION mitt i ritten: en ny layout får inte tända HUD:en. ]]
@@ -347,12 +395,25 @@ for _, sk in ipairs(SKARMAR) do
 	--[[ OBSERVATION, inte krav (#221 gäller skötselpanelen): `?`-knappen i
 		KontrollHjalp bor också uppe till höger, 48 px med 12 px marginal,
 		i en ScreenGui som respekterar topbaren. ]]
-	if res and res.Gangarter then
+	if res and res.Handlingar then
 		local hj = { x0 = W - 12 - 48, x1 = W - 12, y0 = inset() + 12, y1 = inset() + 60 }
-		print(("       observation: ?-knappen %s %s gångarterna"):format(
-			r2s(hj), if skar(hj, res.Gangarter) then "SKÄR" else "ligger fri från"))
+		print(("       observation: ?-knappen %s %s handlingsblocket"):format(
+			r2s(hj), if skar(hj, res.Handlingar) then "SKÄR" else "ligger fri från"))
 	end
 end
+
+--[[ ══ ANKARET FÖR HELA TABELLEN ══════════════════════════════════════
+
+     Raden "ingen skötselyta på skärmen ligger över reservzonen" är grön
+     därför att skötsel-GUI:t är SLÄCKT under ritten. Utan ett ankare vore
+     den grön också om reservzonen låg i ett tomt hörn.
+
+     Ankaret är mutationen: tänds GUI:t mitt i ritten ska mätningen falla.
+     Den slår inte på varje skärm — en iPad har plats för båda — men den
+     måste slå på MINST EN, annars mäter uteslutningen ingenting alls. ]]
+print("")
+prova("ANKARE: mutationen slog på minst en skärm i tabellen",
+	mutationSlog > 0, ("(%d av %d skärmar)"):format(mutationSlog, #SKARMAR))
 
 UIS.TouchEnabled = foreTouch
 cam.ViewportSize = foreVp

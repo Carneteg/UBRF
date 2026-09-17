@@ -20,6 +20,10 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
+--[[ Pekknapparna är `ContextActionService` egna. Modulen SKAPAR ingen av
+     dem — den sätter titel, plats och genomskinlighet på knappar tjänsten
+     redan äger. Se noten vid `nyKnapp`, som är borta. ]]
+local ContextActionService = game:GetService("ContextActionService")
 
 --[[ #162: knapparnas etiketter kommer ur språkkanonen — samma nycklar
      som KontrollHjalp beskriver dem med. ]]
@@ -182,7 +186,6 @@ end
 local blickFinger: InputObject? = nil
 local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
-local gaitKoppling: RBXScriptConnection? = nil
 
 --[[ Hur mycket kameran vrids per dragen pixel. Radianer i sidled och
      studs i höjdled; framtagna så att ett tumdrag tvärs över halva
@@ -199,52 +202,15 @@ local function nyRam(namn: string, parent: Instance): Frame
 	return f
 end
 
-local function nyKnapp(namn: string, text: string, parent: Instance,
-	bredd: number?, hojd: number?): TextButton
-	local b = Instance.new("TextButton")
-	b.Name = namn
-	b.Text = text
-	b.AutoButtonColor = false
-	--[[ 44 px är golvet för ett touchmål, och 56 är vad en tumme vill ha
-	     när man samtidigt håller i telefonen med samma hand.
+--[[ `nyKnapp` ÄR BORTA, och det är inte en förenkling utan hela
+     beslutet. Den byggde panelens tio `TextButton` i vår egen
+     `ScreenGui`. Arkitekturbeslutet 2026-09-17 förbjuder uttryckligen
+     just den konstruktionen för ridningens reglage: DRIV, BROMS och
+     avsittningen är `ContextActionService`-handlingar, och knapparna är
+     Roblox egna. Se `stallInHandlingar` i `mount`.
 
-	     BREDDEN VAR 64 OCH TEXTEN FICK INTE PLATS. Mätt i landskap på
-	     iPad Air, `TextBounds.X` mot knappens bredd:
-	         ▲ FORWARD 86 · HALF-HALT 78 · DISMOUNT 76 · DEEP SEAT 76
-	         ▼ SLOWER 73   mot 64 px — fem av sju spillde över kanten
-	     och klipptes mot skärmkanten, eftersom `TextScaled` är false och
-	     ingenting klipper. 92 px rymmer den längsta med luft kvar, ligger
-	     fortfarande innanför knappramens 150, och ger tummen ett STÖRRE
-	     mål — inte ett mindre. `TextWrapped` finns för översättningar som
-	     är längre än de engelska. ]]
-	b.Size = UDim2.fromOffset(bredd or 92, hojd or 56)
-	b.TextWrapped = true
-	b.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
-	b.BackgroundTransparency = 0.18
-	b.TextColor3 = Color3.fromRGB(236, 232, 222)
-	b.TextSize = 15
-	b.Font = Enum.Font.GothamMedium
-	--[[ ── ETIKETTEN KRYMPER, DEN BRYTS INTE MITT I ORDET ────────────
-
-		`TextWrapped` ensam bryter var som helst när ordet är bredare än
-		knappen. Mätt på iPhone 13 i landskap, knappar 73 px breda:
-		"HALF-HALT" blev "HALF-HAL / T" och "DISMOUNT" blev "DISMOUN / T".
-
-		`TextScaled` med ett tak låter texten SKALA NED i stället. Två ord
-		får fortfarande bryta på mellanslaget — "DEEP SEAT" på två rader är
-		läsbart — men ett ord bryts aldrig mitt itu. ]]
-	b.TextScaled = true
-	local tak = Instance.new("UITextSizeConstraint")
-	tak.MaxTextSize = 15
-	tak.MinTextSize = 8
-	tak.Parent = b
-	b.BorderSizePixel = 0
-	b.Parent = parent
-	local horn = Instance.new("UICorner")
-	horn.CornerRadius = UDim.new(0, 14)
-	horn.Parent = b
-	return b
-end
+     Spaken och blickytan är `Frame`, inte knappar, och står kvar. De är
+     styrning och kamera — inte det reglageblock som föll på QA. ]]
 
 --[[ Spaken följer fingret som startade den, inte vilket finger som helst:
      annars kapar en tumme på gångartsknappen styrningen mitt i en volt. ]]
@@ -390,10 +356,8 @@ end
 
 --[[ `hooks.dismount` kallas när spelaren trycker på avsittningsknappen —
      pekskärmen har ingen E-tangent att trycka på. ]]
---[[ `blick` får skillnaden i radianer och studs från blickytan; `modell`
-     är hästen, och används bara för att visa vilken gångart som är
-     aktiv. Båda är valfria, så en anropare som inte bryr sig om dem
-     fortfarande fungerar. ]]
+--[[ `blick` får skillnaden i radianer och studs från blickytan. Den är
+     valfri, så en anropare som inte bryr sig om kameran fungerar ändå. ]]
 --[[ Den höjd layouten räknas ur. EN funktion, så att lyssnaren och
 	`mount` aldrig kan svara olika på samma fråga.
 
@@ -412,7 +376,9 @@ end
 function TouchControls.mount(input: any, hooks: {
 	dismount: () -> (),
 	blick: ((number, number) -> ())?,
-	modell: Instance?,
+	--[[ `modell` är borta. Den fanns bara för att gångartsraden skulle
+	     kunna lysa på den gångart hästen faktiskt gick i, och raden finns
+	     inte längre. ]]
 	efterLayout: ((number, number) -> ())?,
 })
 	if gui then return end
@@ -484,11 +450,9 @@ function TouchControls.mount(input: any, hooks: {
 	local function px(n: number): number
 		return math.floor(n * skala + 0.5)
 	end
-	local KB, KH = px(92), px(52)
-	local PADX, PADY = px(10), px(8)
-	local GALLER_B, GALLER_H = KB * 2 + PADX, KH * 3 + PADY * 2
+	--[[ Gallermåtten är borta med panelen. Kvar är kantmarginalen, som
+	     spaken, blickytan och de två handlingarna delar. ]]
 	local KANT = px(24)
-	reglageBredd = GALLER_B + KANT + px(12)
 
 	blickHook = hooks.blick
 	local blickyta = nyRam("Blickyta", g)
@@ -526,174 +490,141 @@ function TouchControls.mount(input: any, hooks: {
 	knopHorn.CornerRadius = UDim.new(1, 0)
 	knopHorn.Parent = knop
 
-	--[[ ══ EN KOMPAKT LANDSKAPSLAYOUT ═══════════════════════════════════
+	--[[ ══ DE TVÅ KONTEXTUELLA KNAPPARNA ══════════════════════════════
 
-	     Den gamla var EN lodrät stapel till höger. Med de namngivna
-	     gångarterna hade den blivit tolv knappar på rad: mätt rymde
-	     ramen 344 px medan sju knappar redan krävde 7·56 + 6·10 = 452.
-	     Att bara förlänga den hade skjutit knappar ur bild.
+	     HÄR LÅG PANELEN. Tio namngivna `TextButton` i två galler nere till
+	     höger — HALT, SKRITT, TRAV, GALOPP, SAKTA i det ena; TYGEL, SITS,
+	     HALVHALT, HOPPA, SITT AV i det andra. Fysisk QA på iPad 2026-09-17
+	     underkände dem: det var en PC-simulators reglagepanel, inte en
+	     ridyta. De var därefter släckta med `MINIMAL_UI`; arkitekturbeslutet
+	     samma dag säger att de ska vara BORTA ur källan, inte osynliga.
 
-	     Nu ligger de i två 2-kolumnsgaller, båda ankrade i högerkanten,
-	     båda 194 px breda (2·92 + 10) och 172 px höga (3·52 + 2·8):
+	     I deras ställe finns två handlingar, och Roblox ritar dem själv:
 
-	         HJÄLPERNA nederst: tygel, sits, halvhalt, hopp, avsittning.
-	         GÅNGARTERNA ovanför: halt, skritt, trav, galopp, sakta.
+	         DRIV   ett steg UPP i trappan
+	         BROMS  ett steg NED, och ett steg till är rygga
 
-	     Total höjd i högerkanten: 24 + 172 + 12 + 172 = 380 px av 768 på
-	     den lägsta iPad:en i landskap.
+	     `Input.bind()` band dem med `createTouchButton = true` innan den
+	     här modulen monterades — ordningen är init.client:s, och den är
+	     med flit: knappen måste finnas innan vi kan klä den.
 
-	     EN VÅGRÄT GÅNGARTSRAD PROVADES FÖRST och föll på mätning: 462 px
-	     bred längst ned lade GALOPP och HALT under lektionskortet, som
-	     står på (270 · 577) och är 640×170. Träffprovet sa `overst=Kort`
-	     för båda. Kortet äger mitten; reglagen håller sig i kanten.
+	     VI RITAR INGEN AV DEM. Det enda som görs här är `SetTitle`,
+	     `SetPosition` och genomskinlighet på knappar `ContextActionService`
+	     äger. Det är skillnaden mot panelen, och det är den skillnaden
+	     kontraktet handlar om. ]]
 
-	     Mitten lämnas alltså fri — hästen, banan och lektionstexten ska
-	     synas, och spaken har hela vänsterkanten för sig. ]]
+	--[[ Knappens sida och luften runt blocket, i samma skalade pixlar som
+	     spaken. 86 px är större än panelens 52 — färre knappar får vara
+	     större, och tummen som ska ge en hjälp mitt i en volt vill ha ett
+	     stort mål. ]]
+	local KD = px(86)
+	local LUFT = px(12)
+	--[[ ── TRE KNAPPAR I ETT 2×2, INTE EN STAPEL PÅ TRE ────────────────
 
-	--[[ GÅNGARTERNA. Namngivna knappar, inte bara ▲/▼: en ryttare tänker
-	     "trav", inte "ett steg upp". De stegar i samma trappa som
-	     tangenterna — `Input.touchGaitTo` lämnar ett namn, och
-	     `MovementController:_targetGait` gör om det till samma index och
-	     samma tak som förut. ]]
-	--[[ ══ AVSTÄNGDA I VÄNTAN PÅ TVÅKNAPPSSYSTEMET ═══════════════════
+	              [SITT AV] [DRIV ]
+	                        [BROMS]
 
-	     Produktbeslut 2026-09-17, efter fysisk QA på iPad: skärmen är
-	     överbelamrad. Tio namngivna knappar i två block nere till höger är
-	     en PC-simulators reglagepanel, inte en iPad-yta.
+	     EN LODRÄT STAPEL PROVADES FÖRST och föll på mätning, av exakt
+	     samma skäl som gångartsraden föll i #227: tre knappar à 86 px med
+	     luft emellan är 294 px, och #208-skalan ger 249 px på iPhone 13 i
+	     landskap där hela GUI-ytan är 331. Reserven sträckte sig då upp
+	     till y = 62 och hjälpknappens `?` (y 48..96) låg rakt i den.
 
-	     Det smarta tvåknappssystemet — driv och broms via
-	     `ContextActionService` — byggs i eget scope (#233/#17). Tills dess
-	     är de här ytorna SLÄCKTA, inte borttagna: logiken bakom dem är
-	     oförändrad och mätt av `touch.spec`, och `Input.touchGaitTo`
-	     fungerar precis som förut. Det som ändras är att ingen ritar dem.
+	     Ett 2×2 är hälften så högt (156 px) och lämnar hörnet fritt.
 
-	     `SITT AV` är UNDANTAGEN med flit. Den är inte ett reglage utan
-	     enda vägen AV hästen på en ren pekenhet — #162 blockerare 2 var
-	     just att en sådan väg saknades. Att släcka den hade låst in
-	     spelaren i sadeln, och då går ledningen inte att testa alls.
+	     DRIV och BROMS står i HÖGERKOLUMNEN, ovanför varandra, där
+	     högertummen vilar — upp är upp. Avsittningen ligger diagonalt
+	     längst bort från BROMS, alltså i den ruta tummen når sist. Det är
+	     medvetet: BROMS är den knapp man hamrar på, och en felträff ska
+	     inte kasta av ryttaren. ]]
+	local BLOCK_B = KD * 2 + LUFT
+	local BLOCK_H = KD * 2 + LUFT
+	reglageBredd = KANT + BLOCK_B + LUFT
+	reglageTopp = skarmH - (BLOCK_H + KANT)
 
-	     En rad, ett beslut, lätt att återställa. ]]
-	local MINIMAL_UI = true
+	--[[ Klär en handlings pekknapp. Allt går genom `ContextActionService`
+	     — `SetTitle` och `SetPosition` är kontraktets, och `GetButton` är
+	     vägen till de två egenskaper CAS inte har en setter för: storleken
+	     och genomskinligheten.
 
-	local gangrad = nyRam("Gangarter", g)
-	gangrad.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
-	gangrad.Position = UDim2.new(1, -(GALLER_B + KANT), 1,
-		-(GALLER_H * 2 + px(12) + KANT))
-	reglageTopp = skarmH - (GALLER_H * 2 + px(12) + KANT)
-	local grad = Instance.new("UIGridLayout")
-	grad.CellSize = UDim2.fromOffset(KB, KH)
-	grad.CellPadding = UDim2.fromOffset(PADX, PADY)
-	grad.FillDirectionMaxCells = 2
-	--[[ `SortOrder` är `Name` som standard, och då står gångarterna i
-	     bokstavsordning: galopp, halt, sakta, skritt, trav. Mätt precis
-	     så på iPad innan den här raden fanns. Trappan ska läsas som en
-	     trappa, alltså efter `LayoutOrder`. ]]
-	grad.SortOrder = Enum.SortOrder.LayoutOrder
-	grad.HorizontalAlignment = Enum.HorizontalAlignment.Right
-	grad.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	grad.Parent = gangrad
-
-	local gangKnapp: { [string]: TextButton } = {}
-	local function nyGang(namn: string, nyckel: string, gait: string, ordning: number)
-		local b = nyKnapp(namn, Sprak.t(nyckel), gangrad, KB, KH)
-		b.LayoutOrder = ordning
-		b.MouseButton1Click:Connect(function() Input.touchGaitTo(gait) end)
-		gangKnapp[gait] = b
-		b.Visible = not MINIMAL_UI
-		return b
-	end
-	--[[ Ordningen läses rad för rad och går från stillastående till
-	     snabbast, med SAKTA sist som handlingen tillbaka nedåt:
-	         HALT   SKRITT
-	         TRAV   GALOPP
-	         SAKTA ]]
-	nyGang("Halt", "touch.halt", "halt", 1)
-	nyGang("Skritt", "touch.skritt", "walk", 2)
-	nyGang("Trav", "touch.trav", "trot", 3)
-	nyGang("Galopp", "touch.galopp", "canter", 4)
-	--[[ SAKTA är med flit RELATIV och inte en plats i trappan: den är
-	     "ett steg ned härifrån", vilket är vad en ryttare menar med att
-	     sakta. Den delar knappordning med de namngivna för att raden ska
-	     läsas som en skala från lugnast till snabbast och tillbaka. ]]
-	local sakta = nyKnapp("Sakta", Sprak.t("touch.sakta"), gangrad, KB, KH)
-	sakta.LayoutOrder = 5
-	sakta.MouseButton1Click:Connect(function() Input.touchGait(false) end)
-	sakta.Visible = not MINIMAL_UI
-
-	--[[ VILKEN GÅNGART ÄR AKTIV. Läses ur hästens egen `Gait`-attribut,
-	     alltså samma sanning som allt annat visar — knapparna håller
-	     inget eget läge som kan glida isär från hästen. ]]
-	local function malaAktiv(gait: string?)
-		for namn, b in pairs(gangKnapp) do
-			local pa = (namn == gait)
-			b.BackgroundColor3 = if pa then Color3.fromRGB(214, 174, 60)
-				else Color3.fromRGB(24, 27, 33)
-			b.TextColor3 = if pa then Color3.fromRGB(28, 24, 12)
-				else Color3.fromRGB(236, 232, 222)
-			b.BackgroundTransparency = if pa then 0.05 else 0.18
+	     `GetButton` svarar nil på skrivbordet, där ingen pekknapp skapades.
+	     Det är inte ett fel — det är hela skälet att modulen bara monteras
+	     på en pekenhet — så titeln sätts ändå och resten hoppas över. ]]
+	local function klaHandling(handling: string, titel: string,
+		franHoger: number, franBotten: number, genomskin: number)
+		ContextActionService:SetTitle(handling, titel)
+		--[[ Ankrat i skärmens nedre högra hörn, räknat inåt och uppåt.
+		     Ankringen är knappens egen; positionen är det CAS-anrop
+		     kontraktet pekar ut. ]]
+		ContextActionService:SetPosition(handling,
+			UDim2.new(1, -(KANT + franHoger), 1, -(KANT + franBotten)))
+		local b = ContextActionService:GetButton(handling)
+		if not b then return end
+		b.AnchorPoint = Vector2.new(1, 1)
+		b.Size = UDim2.fromOffset(KD, KD)
+		--[[ Genomskinlighet, inte en solid platta: kontraktet säger att
+		     knapparna ska ligga ÖVER ridningen utan att skymma den. ]]
+		b.BackgroundTransparency = genomskin
+		b.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
+		b.AutoButtonColor = false
+		if b:IsA("ImageButton") then
+			b.ImageTransparency = 1
 		end
-		--[[ SAKTA är en handling, inte ett läge, och lyser därför aldrig. ]]
-	end
-	local modell = hooks.modell
-	if modell then
-		malaAktiv(modell:GetAttribute("Gait") :: string?)
-		gaitKoppling = modell:GetAttributeChangedSignal("Gait"):Connect(function()
-			malaAktiv(modell:GetAttribute("Gait") :: string?)
-		end)
+		local horn = b:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
+		horn.CornerRadius = UDim.new(1, 0)
+		horn.Parent = b
 	end
 
-	--[[ HJÄLPERNA i två kolumner. ]]
-	local knappar = nyRam("Knappar", g)
-	knappar.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
-	knappar.Position = UDim2.new(1, -(GALLER_B + KANT), 1, -(GALLER_H + KANT))
-	local rad = Instance.new("UIGridLayout")
-	rad.CellSize = UDim2.fromOffset(KB, KH)
-	rad.CellPadding = UDim2.fromOffset(PADX, PADY)
-	rad.FillDirectionMaxCells = 2
-	rad.SortOrder = Enum.SortOrder.LayoutOrder
-	rad.HorizontalAlignment = Enum.HorizontalAlignment.Right
-	rad.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	rad.Parent = knappar
+	--[[ BROMS underst, DRIV ovanför. Tummen vilar lägst, och den hjälp man
+	     ger oftast under en lektion är den som saktar ned. ]]
+	klaHandling(Input.BROMS, Sprak.t("touch.broms"), 0, 0, 0.25)
+	klaHandling(Input.DRIV, Sprak.t("touch.driv"), 0, KD + LUFT, 0.25)
+	--[[ Avsittningen är svagare och sitter längst från tummen — den ska
+	     vara hittbar, inte lättryckt. ]]
+	--[[ Avsittningen är INTE ett reglage — den är enda vägen av hästen på
+	     en ren pekenhet. #162 blockerare 2 var precis att en sådan väg
+	     saknades: uppsittningen gick via en ProximityPrompt, avsittningen
+	     låg bara på `E`, och en spelare utan tangentbord blev kvar i
+	     sadeln. Panelens `SITT AV` löste det; när panelen rivs måste vägen
+	     följa med, och den enda tillåtna vägen är en handling till.
 
-	local av = nyKnapp("Av", Sprak.t("touch.sitt_av"), knappar, KB, KH)
-	local hoppa = nyKnapp("Hoppa", Sprak.t("touch.hoppa"), knappar, KB, KH)
-	--[[ ▲ FRAMÅT och ▼ LUGNARE finns inte längre som egna knappar på
-	     pekskärmen: gångartsraden nedanför säger samma sak med namn i
-	     stället för pilar, och SAKTA är exakt samma relativa steg ned som
-	     ▼ var. Tangentbordets Shift/Ctrl är orörda. ]]
-	--[[ G02-B: TYGELN och PARADEN på pekskärmen. Utan dem kan en spelare
-	     med pekskärm varken hålla kontakten eller ge en halvhalt, och då
-	     är yttertygelstödet — och därmed hästens balans i svängen —
-	     stängt för hela den plattformen. Webben har samma två på sin
-	     pekskärm (HALVHALT-knappen och tygeln). ]]
-	local tygel = nyKnapp("Tygel", Sprak.t("touch.tygel"), knappar, KB, KH)
-	local parad = nyKnapp("Parad", Sprak.t("touch.halvhalt"), knappar, KB, KH)
-	--[[ Sitsen: hålls, som tygeln. Djup sits bär bågen — se
-	     SVAR.BALANS_VIKT. Utan knappen kan en spelare med pekskärm inte
-	     stödja volten med sätet, och då är den delen av modellen stängd
-	     för hela plattformen. ]]
-	local sits = nyKnapp("Sits", Sprak.t("touch.djup_sits"), knappar, KB, KH)
-	tygel.LayoutOrder, sits.LayoutOrder, parad.LayoutOrder = 1, 2, 3
-	hoppa.LayoutOrder, av.LayoutOrder = 4, 5
-	--[[ Allt utom SITT AV slacks, se noten vid `MINIMAL_UI`. ]]
-	for _, k in ipairs({ tygel, sits, parad, hoppa }) do
-		k.Visible = not MINIMAL_UI
+	     `init.client` BINDER den — där ligger `begarAvsittning` — och den
+	     är bunden hela ritten, också på skrivbordet. Här kläs den bara,
+	     svagare och längst från tummen: den ska vara hittbar, inte
+	     lättryckt. ]]
+	klaHandling(Input.AVSITT, Sprak.t("touch.sitt_av"), KD + LUFT, KD + LUFT, 0.55)
+
+	--[[ ══ EN VAKT MOT `ModalEnabled`, OCH EN MÄTPUNKT ════════════════
+
+	     `egnaReglage(false)` nedan sätter `UserInputService.ModalEnabled`
+	     för att släcka Roblox EGNA pekreglage — thumbsticken och
+	     hoppknappen, som annars drar i samma kropp som vår spak (se noten
+	     där). Den raden släcker `TouchGui`.
+
+	     `ContextActionService` ritar sina knappar i en ANNAN yta,
+	     `ContextActionGui`, och den ska inte beröras. Jag har läst det,
+	     inte MÄTT det: bänken har ingen CoreGui och Studio har inte varit
+	     tillgängligt i den här sessionen.
+
+	     Det är den enda okända som kan göra iPad helt ostyrbar — knapparna
+	     finns, men ingen ser dem — så vakten står här. Den gör ingenting i
+	     normalfallet; blir ytan släckt tänds den igen, och `warn` gör att
+	     Studio-QA kan SVARA på frågan i stället för att gissa.
+
+	     Rapporteras som NOT_TESTED tills någon kört den på en enhet. ]]
+	local function sakerstallSynlighet(handling: string)
+		local b = ContextActionService:GetButton(handling)
+		if not b then return end
+		local yta = b:FindFirstAncestorWhichIsA("ScreenGui")
+		if yta and yta.Enabled == false then
+			yta.Enabled = true
+			warn(("[UBRF] %s var släckt av en annan yta — tänd igen (%s)")
+				:format(handling, yta.Name))
+		end
 	end
-
-	hoppa.MouseButton1Click:Connect(function() Input.touchJump() end)
-	av.MouseButton1Click:Connect(hooks.dismount)
-
-	--[[ Tygeln HÅLLS — kontakten är ett tillstånd, inte en händelse — och
-	     paraden är en impuls, precis som flanken på F. Att göra tvärtom
-	     hade gett en tygel man knäpper på och en halvhalt man kan hålla
-	     inne, och ingetdera är ridning. ]]
-	tygel.MouseButton1Down:Connect(function() Input.setTouchRein(1) end)
-	tygel.MouseButton1Up:Connect(function() Input.setTouchRein(0) end)
-	tygel.MouseLeave:Connect(function() Input.setTouchRein(0) end)
-	parad.MouseButton1Click:Connect(function() Input.touchParad() end)
-	sits.MouseButton1Down:Connect(function() Input.setTouchSeat(1) end)
-	sits.MouseButton1Up:Connect(function() Input.setTouchSeat(0) end)
-	sits.MouseLeave:Connect(function() Input.setTouchSeat(0) end)
+	for _, h in ipairs({ Input.DRIV, Input.BROMS, Input.AVSITT }) do
+		sakerstallSynlighet(h)
+	end
 
 	kopplaSpak(bas, knop)
 	egnaReglage(false)
@@ -707,17 +638,17 @@ function TouchControls.unmount()
 		gui = nil
 	end
 	aktivFinger = nil
-	--[[ Blicken och gångartslyset hör till EN ritt. Lämnas de kvar pekar
-	     kopplingen på en häst man klivit av, och nästa uppsittning hade
-	     börjat med förra rittens finger fortfarande "nere". ]]
+	--[[ Blicken hör till EN ritt. Lämnas fingret kvar hade nästa
+	     uppsittning börjat med förra rittens finger fortfarande "nere".
+
+	     DE TRE HANDLINGARNA RIVS INTE HÄR. `Input.unbind` river DRIV och
+	     BROMS, `init.client` river avsittningen — de är bundna på alla
+	     ytor, och pekytan är bara en av dem. Att riva dem härifrån hade
+	     kopplat ur skrivbordets tangenter när en pekyta försvann. ]]
 	reglageBredd = 0
 	spakBredd = 0
 	reglageTopp = math.huge
 	blickFinger, blickSist, blickHook = nil, nil, nil
-	if gaitKoppling then
-		gaitKoppling:Disconnect()
-		gaitKoppling = nil
-	end
 	if ytaKoppling then
 		ytaKoppling:Disconnect()
 		ytaKoppling = nil

@@ -25,7 +25,7 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Handling | Tangentbord | Gamepad | Pekskärm |
 |---|---|---|---|
 | Sitt upp (knappen på hästen) | `E` | `ButtonX` | tryck på knappen |
-| Sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` |
+| Sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` (CAS-handling) |
 | Rida nu (knappen på hästen) | `R` | `DPadRight` (styrkors höger) | tryck på knappen |
 | Led / släpp hästen | `L` | `DPadLeft` (styrkors vänster) | tryck på knappen |
 | Sadla hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
@@ -34,14 +34,14 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Ta tränset (boxfronten) | `T` | `ButtonB` | tryck på knappen |
 | Titta in i boxen | `V` | `ButtonL2` | tryck på knappen |
 | Öppna / stäng dörr | `X` | `ButtonR3` | tryck på knappen |
-| Framåt / bakåt | `W` / `S` | vänster spak | spaken |
+| **DRIV** — ett steg upp i trappan | `W` / `↑` (även `LeftShift`) | `R1` | `DRIV` |
+| **BROMS** — ett steg ned; ur halt: rygga | `S` / `↓` (även `LeftControl`) | `L1` | `BROMS` |
 | Styr | `A` / `D` | vänster spak | spaken |
-| Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
-| Lägre gångart | `LeftControl` | `L1` | `▼ LUGNARE` |
-| Tygel (kontakt) | `Q` | `R2` | `TYGEL` |
-| Halvhalt (parad) | `F` | `B` | `HALVHALT` |
-| Sits lätt / djup | `Z` / `C` | `L2` | `DJUP SITS` |
-| Hoppa | `Space` | `A` | `HOPP` |
+| Tempo inom gångartens band | — | vänster spak | spaken |
+| Tygel (kontakt) | `Q` | `R2` | *ingen knapp* |
+| Halvhalt (parad) | `F` | `B` | *ingen knapp* |
+| Sits lätt / djup | `Z` / `C` | `L2` | *ingen knapp* |
+| Hoppa | `Space` | `A` | *ingen knapp* |
 | Lektionen vidare | `R` | `Y` | kortets knapp |
 | Se ritten (ridanalys) | `T` | `X` | *Se ritten* |
 | Gå vidare | `G` | — | *Gå vidare* |
@@ -91,6 +91,79 @@ Kontrollhjälpen på båda ytorna säger detta rakt ut i stället för att
 uppfinna en tangent: raderna står med texten *"följer skänkeln och
 tygeln"* respektive *"avsprånget kommer ur anridningen"*.
 
+## Kontextuell rid-UX — DRIV och BROMS
+
+Arkitekturbeslut och Acceptance Contract **2026-09-17**, efter fysisk QA på
+iPad. Före beslutet hade ridningen **tio** namngivna knappar i två galler
+nere till höger, byggda som `TextButton` i vår egen `ScreenGui`. Det var en
+PC-simulators reglagepanel på en surfplatta, och den föll på QA.
+
+Ridningen har nu **två handlingar och en utgång**, alla i
+`ContextActionService`:
+
+| Handling | Namn i koden | Bunden av | Pekknapp |
+|---|---|---|---|
+| Driv | `ActionDriv` | `Input.bind()` | ja, CAS ritar den |
+| Broms | `ActionBroms` | `Input.bind()` | ja, CAS ritar den |
+| Sitt av | `ActionSittAv` | `init.client` vid uppsittning | ja, CAS ritar den |
+
+**Vi ritar ingen av dem.** `TouchControls` sätter titel, plats och
+genomskinlighet på knappar tjänsten äger, och bygger inte en enda egen
+knapp. Kontraktet förbjuder uttryckligen en egen `TextButton`/`ImageButton`
+för ridningens reglage, och `tools/kolla-reglagepanel.py` läser källan och
+faller om panelen kryper tillbaka.
+
+### Trappan
+
+    Rygga  ↔  Halt  ↔  Skritt  ↔  Trav  ↔  Galopp
+
+Ett tryck är **en hjälp och ett steg**. Ingen knapp hålls inne, varken för
+att byta gångart eller för att fortsätta: hästen bär gångartens hemtempo
+själv. `intent.forward` finns kvar men skjuter bara tempot **inom** bandet
+— den väljer ingen gångart, och den startar ingenting ur halt.
+
+**Rygga bor inte i `Gaits.ORDER`.** Pinnen är `MovementController.ryggar`.
+Att skjuta in den i ordningen hade flyttat varje index med ett, och taket,
+uthålligheten, serverns validering och paritetsprovet läser alla
+`Gaits.index`. Hon ryggar i halt — det gjorde hon före beslutet också.
+
+### Spärren
+
+`Input.IMPULS_SPARR` = **0,60 s**, inom kontraktets spann 0,5–0,8. Den är
+**per handling**: att ge för mycket och genast ta tillbaka är ridning, att
+hamra på samma hjälp är det inte. Klockan är utbytbar (`Input._klocka`) så
+att provet kan mäta båda halvorna — att andra trycket stoppas, och att
+spärren faktiskt släpper när tiden gått.
+
+### Vad pekytan tappade, och vad som står öppet
+
+Tygel, halvhalt, sits och hopp hade var sin knapp i panelen och har ingen
+nu. `KontrollHjalp` tiger om dem på en pekenhet i stället för att namnge en
+knapp som inte finns — en rad utan reglage listas inte alls.
+
+> **[ÖPPEN FRÅGA — produktägaren]** Utan de fyra är balansmodellen
+> — yttertygelstöd, halvhalt, djup sits — stängd på en ren pekenhet.
+> Vägen tillbaka är fyra `BindAction` till, inte en ny panel.
+
+> **[ÖPPEN FRÅGA — arkitekten]** `loco.gait` säger `"walk"` medan hon
+> ryggar, därför att `StateMachine` räknar gångarten ur
+> `Gaits.forSpeed(math.abs(speed))`. Raden är äldre än det här kontraktet;
+> det som ändrats är att ryggningen nu är ett läge man stannar i i stället
+> för ett hållet utslag, så etiketten ligger kvar. Animation, ljud och damm
+> läser `loco.gait`. Rättelsen hör hemma i rörelsemodellens kärna och
+> ligger utanför den här gatens scope.
+
+### Paritet mot webben
+
+Webbens `GANGORDNING` är `["halt","skritt","trav","galopp"]` och har ingen
+egen rygga-pinne; där backar hästen i halten som en **följd**, och
+`src/ovningar.js` beskriver det som ett fel ("Hästen backar i halten: för
+mycket hand, för lite säte"). Förmågan är alltså densamma på båda ytorna —
+hon kan backa, i halt — och det som skiljer är **vägen in**: ett steg i
+trappan på Roblox, ett hållet utslag på webben. Inmatningsadaptern får vara
+plattformsspecifik enligt paritetsregeln; **trappan som regel bör porteras
+till webben** i ett eget beslut, och det har inte fattats här.
+
 ## Regler som gäller på båda ytorna
 
 1. **Reglagen följer inmatningen, inte plattformen.** En ren pekenhet får
@@ -99,7 +172,8 @@ tygeln"* respektive *"avsprånget kommer ur anridningen"*.
 2. **En begäran är en flank, inte en ström.** En hållen gångartsknapp ger
    **ett** steg. Mätt i `roblox/tests/touch.spec.luau`, inklusive att 120
    bildrutor inte ger fler begäranden än 10 — bildrutetakten ändrar inte
-   upplevelsen.
+   upplevelsen. Sedan 2026-09-17 gäller dessutom att **tio tryck på samma
+   bildruta ger ett steg**: spärren, mätt i `driv-broms.spec.luau`.
 3. **Ingen begäran överlever en avsittning.** `Input.unbind()` nollar även
    `_upEdge`/`_downEdge`. Att den inte gjorde det var ett verkligt fel:
    en spelare som tryckte Shift och satt av fick gångartsbytet på första
@@ -129,7 +203,7 @@ huvudboken, inte de tre rader man råkar titta på:
 | `ButtonL1` | `TackForradService.luau` | **ta sadeln** (boxfronten) | på marken |
 | `ButtonL2` | `StallService.luau` | **titta in** (boxmarkören) | på marken |
 | `ButtonR3` | `DorrService.luau` | **dörr** | **alltid** |
-| `ButtonR1` / `ButtonL1` | `Input.luau` | gångart upp / ner | i sadeln |
+| `ButtonR1` / `ButtonL1` | `Input.luau` | **DRIV** / **BROMS** | i sadeln |
 | `ButtonR2` | `Input.luau` | tygel | i sadeln |
 | `ButtonL2` | `Input.luau` | sits | i sadeln |
 | `ButtonY` | `init.client.luau` | lektionen vidare | i sadeln |

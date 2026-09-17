@@ -64,8 +64,24 @@ end
 
 --[[ EN VERKLIG TANGENTTRYCKNING. Samma signal Roblox fyrar, med
 	gameProcessedEvent = false — provet rör inte LektionController. ]]
+--[[ Ett tangenttryck går dit tangenten FAKTISKT hör hemma.
+
+     Hjälparen sköt förut allt genom `UserInputService.InputBegan`. Det var
+     sant så länge klientens huvudskript ägde varje tangent; efter
+     arkitekturbeslutet 2026-09-17 ligger avsittningen i en
+     `ContextActionService`-handling, och `E` går aldrig till `InputBegan`
+     i Roblox när en bunden handling sinkar den.
+
+     `__key` slår upp ägande handling och returnerar falskt när ingen har
+     tangenten — då, och bara då, går trycket den gamla vägen. Provet
+     mäter alltså samma kedja som spelaren kör. ]]
 local function tryck(tangent)
-	UserInputService.InputBegan:Fire({ KeyCode = Enum.KeyCode[tangent] }, false)
+	local kod = Enum.KeyCode[tangent]
+	if __key(kod, true) then
+		__key(kod, false)
+		return
+	end
+	UserInputService.InputBegan:Fire({ KeyCode = kod }, false)
 end
 
 --[[ SITT UPP genom produktionens egen väg. ]]
@@ -523,10 +539,12 @@ do
 			LektionController.vantar() == false,
 			("(vantar %s)"):format(tostring(LektionController.vantar())))
 
-		--[[ Gångartsknappen genom produktionens egen väg in, inte genom en
-			hemmagjord intent. ]]
+		--[[ DRIV genom produktionens egen väg in, inte genom en hemmagjord
+			intent. Hette `Input.touchGait(true)` fram till
+			arkitekturbeslutet 2026-09-17; handlingen är densamma, men det
+			finns bara EN väg in i trappan nu och den är spärrad. ]]
 		local d0 = drivningar
-		Input.touchGait(true)
+		Input.drivImpuls()
 		ridBildrutor(2.5)
 
 		prova("kortet tar över ritten en bildruta in",
@@ -566,7 +584,11 @@ do
 			kortet kvitterats vore loopen bruten, inte pausande. ]]
 		local slapptes = LektionController.fortsatt()
 		local d1 = drivningar
-		Input.touchGait(true)
+		--[[ Spärren nollas först: provet har just gett en DRIV några
+			hundradelar sedan, och den här mätningen handlar om kortet —
+			inte om spärren, som mäts för sig i `touch.spec`. ]]
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
 		ridBildrutor(2.5)
 		prova("när kortet kvitteras rider hon igång på riktigt",
 			slapptes == true and hum.WalkSpeed > 0 and drivningar - d1 > 60,
@@ -1030,30 +1052,45 @@ do
 			prova("hjälpen svarar hur man sitter upp",
 				tgb["Sitt upp / sitt av"] == "E",
 				('("%s")'):format(tostring(tgb["Sitt upp / sitt av"])))
+			--[[ Raderna hette "Högre gångart"/"Lägre gångart" och svarade
+			     Shift/Ctrl. Efter arkitekturbeslutet 2026-09-17 är de DRIV
+			     och BROMS, och kontraktets tangenter är W och S. Shift och
+			     Ctrl lyssnar fortfarande — de ligger på SAMMA handling —
+			     men hjälpen ska namnge det kontraktet lovar. ]]
 			prova("…hur man byter gångart",
-				tgb["Högre gångart"] == "Shift" and tgb["Lägre gångart"] == "Ctrl",
-				('("%s" / "%s")'):format(tostring(tgb["Högre gångart"]),
-					tostring(tgb["Lägre gångart"])))
+				tgb["Ett steg upp i gångarterna"] == "W / ↑" and tgb["Ett steg ned — ur halt: rygga"] == "S / ↓",
+				('("%s" / "%s")'):format(tostring(tgb["Ett steg upp i gångarterna"]),
+					tostring(tgb["Ett steg ned — ur halt: rygga"])))
 			prova("…och hur man hoppar",
 				tgb["Hoppa"] == "Space", ('("%s")'):format(tostring(tgb["Hoppa"])))
 
 			--[[ REGLAGEN FÖLJER INMATNINGEN. En ren pekenhet får aldrig en
 			     bokstav hon inte kan trycka på. ]]
 			prova("gamepad får sina egna reglage, inte tangenter",
-				pad["Högre gångart"] == "R1" and pad["Hoppa"] == "A",
-				('("%s" / "%s")'):format(tostring(pad["Högre gångart"]),
+				pad["Ett steg upp i gångarterna"] == "R1" and pad["Hoppa"] == "A",
+				('("%s" / "%s")'):format(tostring(pad["Ett steg upp i gångarterna"]),
 					tostring(pad["Hoppa"])))
-			--[[ #162 iPad: pekytan har inte längre ▲ FRAMÅT. Gångarten väljs
-			     på en NAMNGIVEN knapp, och hjälpen pekar därför på
-			     knappgruppen. Raden mäter fortfarande samma sak — att
-			     pekenheten får det den faktiskt ser på skärmen. ]]
+			--[[ PEKENHETEN FÅR BARA DET SOM FAKTISKT RITAS.
+
+			     Panelen revs 2026-09-17. Kvar på skärmen finns tre
+			     `ContextActionService`-knappar — DRIV, BROMS och SITT AV —
+			     samt spaken och blickytan. Hoppet, tygeln, halvhalten och
+			     sitsen har INGEN pekknapp, och hjälpen ska tiga om dem
+			     hellre än att namnge en knapp som inte finns.
+
+			     [ÖPPEN FRÅGA] Att de saknas är en produktfråga, inte ett
+			     provfel. Mätningen är skriven så att den blir röd den dag
+			     någon lägger tillbaka en knapp utan att beskriva den. ]]
 			prova("en ren pekenhet får skärmknapparnas egna etiketter",
-				pek["Hoppa"] == "HOPP"
-					and pek["Högre gångart"] == "Gångartsknapparna"
-					and pek["Lägre gångart"] == "SAKTA"
-					and pek["Tygel (kontakt)"] == "TYGEL",
-				('("%s" · "%s" · "%s")'):format(tostring(pek["Hoppa"]),
-					tostring(pek["Högre gångart"]), tostring(pek["Lägre gångart"])))
+				pek["Ett steg upp i gångarterna"] == "DRIV" and pek["Ett steg ned — ur halt: rygga"] == "BROMS"
+					and pek["Sitt upp / sitt av"] == "SITT AV",
+				('("%s" · "%s" · "%s")'):format(tostring(pek["Ett steg upp i gångarterna"]),
+					tostring(pek["Ett steg ned — ur halt: rygga"]), tostring(pek["Sitt upp / sitt av"])))
+			prova("och tiger om de hjälper som inte har någon pekknapp",
+				pek["Hoppa"] == nil and pek["Tygel (kontakt)"] == nil
+					and pek["Halvhalt"] == nil,
+				('(hopp %s · tygel %s)'):format(tostring(pek["Hoppa"]),
+					tostring(pek["Tygel (kontakt)"])))
 
 			--[[ Den fria blicken finns BARA på pekytan. En rad utan reglage
 			     på skrivbordet hade varit en handling spelaren inte kan
@@ -1091,6 +1128,12 @@ do
 				     att Input.luau fungerar, inte att hjälpen talar sanning,
 				     och en hjälp som pekade på fel tangent hade passerat. ]]
 				local NAMN = {
+					--[[ Hjälpen namnger numera kontraktets tangenter för
+					     DRIV och BROMS. Shift och Ctrl står kvar i listan
+					     därför att de ligger på samma handling och en
+					     framtida hjälptext kan peka på dem igen. ]]
+					["W / ↑"] = Enum.KeyCode.W,
+					["S / ↓"] = Enum.KeyCode.S,
 					["Shift"] = Enum.KeyCode.LeftShift,
 					["Ctrl"] = Enum.KeyCode.LeftControl,
 					["Space"] = Enum.KeyCode.Space,
@@ -1098,23 +1141,28 @@ do
 					["F"] = Enum.KeyCode.F,
 					["E"] = Enum.KeyCode.E,
 				}
+				--[[ Trycket går genom `__key`, som slår upp ÄGANDE handling
+				     i CAS. Den gamla raden sköt allt i `HorseControl`, och
+				     efter att DRIV och BROMS blev egna handlingar hade den
+				     mätt att `HorseControl` sväljer W — inte att trappan
+				     rörde sig. Grön av fel skäl, alltså. ]]
 				local function fyraEnligtHjalpen(vad)
 					local kod = NAMN[tgb[vad]]
 					if not kod then return nil end
-					ca("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+					if not __key(kod, true) then return nil end
 					local i = Input.consume()
-					ca("HorseControl", Enum.UserInputState.End, { KeyCode = kod })
+					__key(kod, false)
 					return i
 				end
-				local upp = fyraEnligtHjalpen("Högre gångart")
-				local ner = fyraEnligtHjalpen("Lägre gångart")
+				local upp = fyraEnligtHjalpen("Ett steg upp i gångarterna")
+				local ner = fyraEnligtHjalpen("Ett steg ned — ur halt: rygga")
 				local hopp = fyraEnligtHjalpen("Hoppa")
 				local tygel = fyraEnligtHjalpen("Tygel (kontakt)")
-				prova("tangenten hjälpen anger för HÖGRE gångart gör det också",
+				prova("tangenten hjälpen anger för DRIV gör det också",
 					upp ~= nil and upp.gaitUp == true,
-					('("%s" → gaitUp %s)'):format(tostring(tgb["Högre gångart"]),
+					('("%s" → gaitUp %s)'):format(tostring(tgb["Ett steg upp i gångarterna"]),
 						tostring(upp and upp.gaitUp)))
-				prova("…och den för LÄGRE gångart",
+				prova("…och den för BROMS",
 					ner ~= nil and ner.gaitDown == true,
 					('("%s" → gaitDown %s)'):format(tostring(tgb["Lägre gångart"]),
 						tostring(ner and ner.gaitDown)))
@@ -1262,7 +1310,13 @@ do
 			tostring(avrad and avrad.tgb)))
 
 	--[[ OCH DEN SITTER AV. Uppsittning genom produktionens MountChanged,
-		avsittning genom klientens InputBegan — inga direktanrop. ]]
+		avsittning genom den handling som äger knappen — inga direktanrop.
+
+		Gick förut genom `UserInputService.InputBegan`. Avsittningen är
+		sedan arkitekturbeslutet 2026-09-17 en
+		`ContextActionService`-handling (`Input.AVSITT`), bunden vid
+		uppsittningen och riven vid avsittningen, och det är den bindningen
+		som ger iPad en knapp alls. `__key` går samma väg som spelaren. ]]
 	do
 		local fjarr2 = Net.get("DismountRequest")
 		local gammal = fjarr2.InvokeServer
@@ -1271,10 +1325,16 @@ do
 
 		Net.get("MountChanged").OnClientEvent:Fire(hast, player)
 		bildrutor(1)
-		UserInputService.InputBegan:Fire(
-			{ KeyCode = KontrollHjalp.AVSITTNING_GAMEPAD }, false)
+		local cas = game:GetService("ContextActionService")
+		prova("avsittningen är bunden som handling medan hon rider",
+			cas._bound[Input.AVSITT] ~= nil)
+		prova("och handlingen ritar en pekknapp",
+			cas:GetButton(Input.AVSITT) ~= nil)
+		local nadde = __key(KontrollHjalp.AVSITTNING_GAMEPAD, true)
 		prova("gamepadknappen begär avsittning",
-			anrop == 1, ("(%d anrop)"):format(anrop))
+			nadde == true and anrop == 1, ("(%d anrop)"):format(anrop))
+		prova("och handlingen är riven efter avsittningen — E är fri till fots",
+			cas._bound[Input.AVSITT] == nil)
 
 		fjarr2.InvokeServer = gammal
 	end

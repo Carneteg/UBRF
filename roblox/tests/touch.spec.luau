@@ -25,10 +25,33 @@ end
 local R = TouchControls.RADIE
 
 --[[ Nollställ mellan mätningarna: Input är en modul med delat tillstånd. ]]
+--[[ ══ EN STYRD KLOCKA ═══════════════════════════════════════════════
+
+     DRIV och BROMS har en spärr på `Input.IMPULS_SPARR` sekunder, och den
+     är hela poängen med impulsmodellen: ett tryck ska vara EN hjälp, inte
+     tre steg i trappan för den som hamrar.
+
+     En spärr som bara går att mäta med riktig tid går bara att mäta åt ett
+     håll — att andra trycket stoppas. Att det SLÄPPS IGENOM när tiden gått
+     hade krävt att sviten sover 0,6 s per mätning. Klockan är därför
+     utbytbar i `Input`, och provet flyttar den själv. ]]
+local klocka = 1000.0
+Input._klocka = function() return klocka end
+local function ticka(sekunder: number)
+	klocka += sekunder
+end
+--[[ Ett steg längre fram än spärren, så nästa impuls garanterat går in. ]]
+local function efterSparren()
+	ticka(Input.IMPULS_SPARR + 0.01)
+end
+
 local function nollstall()
 	Input.unbind()
 	__setStick(nil)
 	Input.bind()
+	--[[ `bind` nollar spärren till `-math.huge`; klockan flyttas ändå
+	     framåt så att inget prov ärver föregående provs tidslinje. ]]
+	efterSparren()
 end
 
 print("\n── Spaken är analog, inte fyra knappar i en cirkel ──")
@@ -103,20 +126,25 @@ end
 print("\n── Gångart och hopp ──")
 do
 	nollstall()
-	Input.touchGait(true)
+	check("DRIV går in", Input.drivImpuls() == true)
 	local a = Input.consume()
 	local b = Input.consume()
 	check("ett tryck uppåt ger exakt ett gångartsbyte",
 		a.gaitUp and not b.gaitUp)
-	Input.touchGait(false)
+	--[[ BROMS direkt efter DRIV ska gå igenom. Spärren är PER HANDLING:
+	     att ta tillbaka en hjälp man nyss gav är ridning, att hamra på
+	     samma hjälp är det inte. ]]
+	check("BROMS går in direkt efter DRIV — spärren är per handling",
+		Input.bromsImpuls() == true)
 	local c = Input.consume()
 	local d = Input.consume()
 	check("ett tryck nedåt ger exakt ett gångartsbyte",
 		c.gaitDown and not d.gaitDown)
 	--[[ Ett tryck ska bäras av exakt en bildruta och sedan vara borta. Utan
-	     flanktriggningen skulle en gångartsknapp rusa genom skritt–trav–
-	     galopp så länge flaggan låg kvar. ]]
-	Input.touchGait(true)
+	     flanktriggningen skulle en hjälp rusa genom skritt–trav–galopp så
+	     länge flaggan låg kvar. ]]
+	efterSparren()
+	Input.drivImpuls()
 	local barande, efterat = 0, 0
 	for i = 1, 31 do
 		if Input.consume().gaitUp then
@@ -186,16 +214,41 @@ end
 
 print("\n── Ingen regression för tangent och gamepad ──")
 do
+	--[[ W SKRIVER INTE LÄNGRE I FRAMÅTAXELN (arkitekturbeslut 2026-09-17).
+	     Den är DRIV, alltså ett steg i trappan. Provet mäter BÅDA halvorna
+	     av bytet i samma andetag: att axeln står still och att trappan
+	     rörde sig. Bara den första hade varit grön också om W helt enkelt
+	     slutat göra något. ]]
 	nollstall()
 	__key(Enum.KeyCode.W, true)
 	__key(Enum.KeyCode.D, true)
 	local i = Input.consume()
-	check("W och D fungerar som förut", i.forward == 1 and i.steer == 1,
-		string.format("(forward %.1f, steer %.1f)", i.forward, i.steer))
+	check("W rör inte framåtaxeln — den är DRIV numera",
+		i.forward == 0, string.format("(forward %.1f)", i.forward))
+	check("och W gav faktiskt en DRIV-impuls", i.gaitUp == true)
+	check("D styr som förut", i.steer == 1,
+		string.format("(steer %.1f)", i.steer))
 	__key(Enum.KeyCode.W, false)
 	__key(Enum.KeyCode.D, false)
 	local sl = Input.consume()
 	check("och släpper till noll", sl.forward == 0 and sl.steer == 0)
+
+	--[[ S likadant, åt andra hållet. ]]
+	nollstall()
+	__key(Enum.KeyCode.S, true)
+	local ned = Input.consume()
+	check("S rör inte framåtaxeln heller", ned.forward == 0,
+		string.format("(forward %.1f)", ned.forward))
+	check("och S gav en BROMS-impuls", ned.gaitDown == true)
+
+	--[[ PILTANGENTERNA är kontraktets andra par och måste vara bundna.
+	     Utan mätningen hade en spelare som lärt sig ↑/↓ mött tystnad. ]]
+	nollstall()
+	check("↑ är bunden", __key(Enum.KeyCode.Up, true) == true)
+	check("och ger DRIV", Input.consume().gaitUp == true)
+	efterSparren()
+	check("↓ är bunden", __key(Enum.KeyCode.Down, true) == true)
+	check("och ger BROMS", Input.consume().gaitDown == true)
 
 	nollstall()
 	__setStick(0.5, 0.5)
@@ -237,7 +290,7 @@ print("\n── Avsittning lämnar ingenting kvar ──")
 do
 	nollstall()
 	Input.setTouch(TouchControls.axis(R, -R, R))
-	Input.touchGait(true)
+	Input.drivImpuls()
 	Input.unbind()
 	local efter = Input.consume()
 	check("unbind nollar pekaxlarna, inte bara tangenterna",
@@ -259,12 +312,12 @@ end
 	och räknar hur många begäranden inputlagret lämnar ifrån sig. ]]
 print("\n── Gångartsbegäran: en flank, inte en ström ──")
 do
-	local ca = game:GetService("ContextActionService")
+	--[[ Tangenterna gar genom __key, som slar upp AGANDE handling i CAS. ]]
 	local function ned(kod)
-		ca._bound.HorseControl("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+		__key(kod, true)
 	end
 	local function upp(kod)
-		ca._bound.HorseControl("HorseControl", Enum.UserInputState.End, { KeyCode = kod })
+		__key(kod, false)
 	end
 
 	nollstall()
@@ -279,13 +332,16 @@ do
 	upp(Enum.KeyCode.LeftShift)
 
 	--[[ En NY begäran efter släpp ska gå igenom — annars vore hästen låst
-	     i en gångart efter första bytet. ]]
+	     i en gångart efter första bytet. NU KRÄVS ATT TIDEN GÅTT: spärren
+	     är det som skiljer en andra hjälp från hamrande, och provet flyttar
+	     därför klockan i stället för att bara släppa knappen. ]]
 	nollstall()
 	ned(Enum.KeyCode.LeftShift); local a = Input.consume().gaitUp
 	upp(Enum.KeyCode.LeftShift); Input.consume()
+	efterSparren()
 	ned(Enum.KeyCode.LeftShift); local b = Input.consume().gaitUp
 	upp(Enum.KeyCode.LeftShift)
-	check("ett nytt tryck efter släpp ger en ny begäran",
+	check("ett nytt tryck efter släpp och spärr ger en ny begäran",
 		a == true and b == true, string.format("(%s, %s)", tostring(a), tostring(b)))
 
 	--[[ Ner-vägen mäts likadant: tillbaka genom gångarterna. ]]
@@ -299,11 +355,10 @@ do
 		ner == 1, string.format("(%d begäranden)", ner))
 	upp(Enum.KeyCode.LeftControl)
 
-	--[[ Pekskärmen går genom samma flank. Ett tryck = en begäran, och
-	     knappen som hålls nere kan inte skicka en ström: TouchControls
-	     kopplar den till Click, inte till Down. ]]
+	--[[ Pekytans knapp går genom SAMMA handling som tangenten. Det är hela
+	     arkitekturbeslutet: en handling, tre inmatningsslag, en spärr. ]]
 	nollstall()
-	Input.touchGait(true)
+	check("DRIV finns som handling i CAS", __handling(Input.DRIV) == true)
 	local pek = 0
 	for _ = 1, 10 do
 		if Input.consume().gaitUp then pek += 1 end
@@ -324,6 +379,66 @@ do
 		snabb == 1, string.format("(%d begäranden på 120 bildrutor)", snabb))
 end
 
+--[[ ══ SPÄRREN: ETT TRYCK ÄR EN HJÄLP ══════════════════════════════════
+
+     Kontraktets punkt 3: "Implementera en kort debounce (0.5–0.8 sekunder)
+     per handling för att förhindra att spelaren hoppar över gångarter
+     genom att spamma knappen."
+
+     Tre saker måste stämma, och två av dem går bara att mäta med en styrd
+     klocka. Ett prov som bara mäter att andra trycket stoppas är grönt
+     också om spärren aldrig släpper — alltså om knappen är trasig. ]]
+print("\n── Spärren mellan två hjälper ──")
+do
+	check("spärren ligger i kontraktets spann 0,5–0,8 s",
+		Input.IMPULS_SPARR >= 0.5 and Input.IMPULS_SPARR <= 0.8,
+		string.format("(%.2f s)", Input.IMPULS_SPARR))
+
+	--[[ 1. HAMRANDE GER ETT STEG. Tio tryck på samma bildruta är precis
+	     vad spelaren gör när hon vill komma iväg fort. ]]
+	nollstall()
+	local inne = 0
+	for _ = 1, 10 do
+		if Input.drivImpuls() then inne += 1 end
+	end
+	check("tio tryck på noll sekunder ger EN hjälp",
+		inne == 1, string.format("(%d gick in)", inne))
+	local rutor = 0
+	for _ = 1, 10 do
+		if Input.consume().gaitUp then rutor += 1 end
+	end
+	check("och trappan ser bara ett steg",
+		rutor == 1, string.format("(%d flanker)", rutor))
+
+	--[[ 2. STRAX FÖRE SPÄRRENS SLUT ÄR FORTFARANDE FÖR TIDIGT. ]]
+	nollstall()
+	check("första hjälpen går in", Input.drivImpuls() == true)
+	ticka(Input.IMPULS_SPARR - 0.01)
+	check("en hundradel före spärrens slut är det fortfarande hamrande",
+		Input.drivImpuls() == false)
+
+	--[[ 3. OCH STRAX EFTER SLÄPPS DEN IGENOM. Utan den här mätningen kan
+	     provet inte skilja en spärr från en trasig knapp. ]]
+	ticka(0.02)
+	check("en hundradel efter spärrens slut är det en ny hjälp",
+		Input.drivImpuls() == true)
+
+	--[[ 4. SPÄRREN ÄR PER HANDLING, INTE GEMENSAM. Att ge för mycket och
+	     genast ta tillbaka är ridning; det får inte kosta en halv sekund. ]]
+	nollstall()
+	check("DRIV går in", Input.drivImpuls() == true)
+	check("BROMS samma bildruta går också in", Input.bromsImpuls() == true)
+	check("men ett andra DRIV gör det inte", Input.drivImpuls() == false)
+
+	--[[ 5. EN AVSITTNING NOLLAR SPÄRREN. Den som satt av mitt i en spärr
+	     ska inte sitta upp och få sin första hjälp slukad. ]]
+	Input.drivImpuls()
+	Input.unbind()
+	Input.bind()
+	check("första hjälpen efter en ny uppsittning går in",
+		Input.drivImpuls() == true)
+end
+
 --[[ ══ INGEN FASTNAD INPUT ÖVER EN AV- OCH UPPSITTNING ═════════════
 	PO-tillägget: "ingen fastnad input vid focus loss, multitouch,
 	scenbyte, upp-/avsittning, respawn eller när en panel öppnas/stängs."
@@ -335,9 +450,9 @@ end
 	rört en tangent. Mätt här. ]]
 print("\n── Av- och uppsittning lämnar ingen begäran kvar ──")
 do
-	local ca = game:GetService("ContextActionService")
+	--[[ Tangenterna gar genom __key, som slar upp AGANDE handling i CAS. ]]
 	local function ned(kod)
-		ca._bound.HorseControl("HorseControl", Enum.UserInputState.Begin, { KeyCode = kod })
+		__key(kod, true)
 	end
 
 	nollstall()
@@ -354,9 +469,9 @@ do
 	check("och inte heller neråt",
 		Input.consume().gaitDown == false, "(gaitDown)")
 
-	--[[ Samma sak från pekskärmen. ]]
+	--[[ Samma sak från pekytans knapp, alltså genom CAS. ]]
 	nollstall()
-	Input.touchGait(true)
+	__handling(Input.DRIV)
 	Input.unbind(); Input.bind()
 	check("ett fingertryck strax före avsittningen fyrar inte efteråt",
 		Input.consume().gaitUp == false, "(gaitUp)")

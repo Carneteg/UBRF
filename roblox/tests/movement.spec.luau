@@ -36,6 +36,22 @@ local function newMC()
 	return MovementController.new(__makeRig(), STATS)
 end
 
+--[[ ══ EN DRIV-IMPULS SÄTTER IGÅNG HENNE ═════════════════════════════
+
+     Arkitekturbeslutet 2026-09-17 tog bort regeln "framåtutslag ur halt
+     startar skritt". `forward` skjuter tempot INOM gångartens band och
+     väljer ingen gångart; trappan stegas av DRIV och BROMS.
+
+     Proven nedan skrev `{ forward = 1 }` och menade "hon går". De menar
+     det fortfarande, men vägen dit är en hjälp och inte en gaspedal, och
+     hjälparen säger det i klartext på varje ställe.
+
+     `driv()` är EN bildruta med impulsen, precis som en knapptryckning. ]]
+local function driv(mc, dt)
+	mc:step(intent({ gaitUp = true }), dt or 1 / 60)
+	return mc
+end
+
 --[[ ── En rigg som faktiskt förflyttar sig ────────────────────────────
      `run` ovan låter roten stå still: Humanoid finns inte här, så ingen
      flyttar den. Det räcker för att mäta styrning och gångarter, men inte
@@ -162,8 +178,12 @@ do
 	local mc = newMC()
 	local t, dt, tider = 0, 1 / 60, {}
 	local mal = { walk = false, trot = false }
+	--[[ Första bildrutan är DRIV ur halt; bytet till trav är en andra
+	     DRIV vid t = 3. Klockan startar med den första hjälpen, precis
+	     som förut — det var `forward = 1` som var hjälpen då. ]]
 	for _ = 1, 60 * 12 do
-		mc:step(intent({ forward = 1, gaitUp = (t > 3 and t < 3 + dt) }), dt)
+		mc:step(intent({ forward = 1,
+			gaitUp = (t < dt) or (t > 3 and t < 3 + dt) }), dt)
 		t += dt
 		if not mal.walk and mc.loco.speed > 1.40 then mal.walk = t end
 		if not mal.trot and mc.loco.speed > 3.10 then mal.trot = t end
@@ -190,7 +210,8 @@ do
 	local dt = 1 / 240
 	local function varmUpp()
 		local mc = newMC()
-		run(mc, 3.0, { forward = 1 })       -- upp i skritt och låt tempot sätta sig
+		driv(mc, dt)                        -- DRIV ur halt
+		run(mc, 3.0, { forward = 1 }, dt)   -- och låt tempot sätta sig
 		return mc
 	end
 	--[[ Steg 1: vad ÄR full sväng i den här gångarten? ]]
@@ -695,6 +716,7 @@ do
 	local ritt = Telemetri.sittUpp(Telemetri.nyRitt(), "bandit", "ridhus")
 
 	local mc = newMC()
+	driv(mc)                            -- DRIV ur halt, se noten vid `driv`
 	runMoving(mc, 6, { forward = 1, steer = 0.6 })
 	local loco = mc.loco
 	Telemetri.foljGangart(ritt, loco.gait)
@@ -917,10 +939,15 @@ do
 	--[[ Neutral häst: Acceleration 0,5 och lugnt temperament ger skalan
 	     1,0, precis som webbens normaltyngd 0,4. ]]
 	--[[ steg = 0 betyder att förloppet som klockas är halt→skritt, och då
-	     får ekipaget INTE värmas upp med forward = 1 först: W ur halt
-	     startar skritt av sig själv, och då klockas nästa förlopp i
-	     stället. Första versionen gjorde det och mätte 0,95 s — vilket
-	     är skritt→trav, inte halt→skritt. ]]
+	     får ekipaget INTE värmas upp först — annars klockas nästa förlopp
+	     i stället. Första versionen gjorde det och mätte 0,95 s, vilket är
+	     skritt→trav.
+
+	     Noten sa förut att W ur halt startar skritt "av sig själv". Det
+	     gjorde den fram till arkitekturbeslutet 2026-09-17; nu är W en
+	     DRIV-impuls som alla andra, och `forward` startar ingenting. Att
+	     uppvärmningen ändå är fel för steg = 0 beror på uppstegningen,
+	     inte längre på framåtaxeln. ]]
 	local function klocka(steg, ned)
 		local mc = newMC()
 		if steg > 0 then
@@ -1242,8 +1269,15 @@ do
 	end
 
 	kor({}, 2.0)                                    notera("halt")
-	kor({ forward = 1 }, 3.0)                       notera("skritt")
-	kor({ forward = 1 }, 6.0)                       notera("håll skritt")
+	--[[ DRIV ur halt. Stod `{ forward = 1 }` här fram till
+	     arkitekturbeslutet 2026-09-17; framåtaxeln startar ingenting
+	     längre, och hjälpen är en impuls. ]]
+	kor({ forward = 1, gaitUp = true }, 3.0)        notera("skritt")
+	--[[ HÅLLET är nu den starkaste mätningen i slicen: sex sekunder UTAN
+	     någon som helst impuls, och hon ska fortfarande skritta. Det är
+	     kontraktets punkt "ingen hålla-in-knapp krävs för fortsatt
+	     rörelse", mätt på den riktiga controllern. ]]
+	kor({}, 6.0)                                    notera("håll skritt")
 	kor({ forward = 1, gaitUp = true }, 3.0)        notera("trav")
 	kor({ forward = 1, steer = 1 }, 4.0)            notera("volt")
 	kor({ forward = 1 }, 2.0)
@@ -1285,10 +1319,14 @@ do
 		uppe == true and ritt.uppsutten == false and rattKedja and olagliga == 0,
 		string.format("uppsutten %s → %s, moment %s, %d olagliga",
 			tostring(uppe), tostring(ritt.uppsutten), table.concat(g, " → "), olagliga))
-	--[[ Hållet: sex sekunder med samma avsikt ska inte flytta henne. ]]
-	check("slicen: hästen BÄR skritten genom hela hållet",
-		moment[2].gangart == "walk" and moment[3].gangart == "walk",
-		string.format("efter W %s %.2f m/s, sex sekunder senare %s %.2f m/s",
+	--[[ HÅLLET UTAN HÅLLEN KNAPP. Sex sekunder med en TOM avsikt — ingen
+	     impuls, inget framåtutslag — och hon ska både gå kvar i skritt och
+	     ha tempo kvar. Farten mäts med, för utan den vore provet grönt
+	     också om hon stod stilla med etiketten "walk". ]]
+	check("slicen: hästen BÄR skritten genom hela hållet, utan hållen knapp",
+		moment[2].gangart == "walk" and moment[3].gangart == "walk"
+			and (moment[3].fart or 0) > 0.9,
+		string.format("efter DRIV %s %.2f m/s, sex sekunder utan inmatning %s %.2f m/s",
 			moment[2].gangart, moment[2].fart or -1, moment[3].gangart, moment[3].fart or -1))
 	--[[ Telemetrin ska bära hela vägen. ]]
 	local telOk = true
@@ -1396,8 +1434,25 @@ do
 		run(mc, 480, { forward = 1 }, 1 / 60)
 		local efterArbete, gangEfter = mc.loco.energi, mc.loco.gait
 		local staminaEfter = mc.loco.stamina
-		run(mc, 4, { forward = -1, gaitDown = true }, 1 / 60)
+		--[[ NED TILL HALT, TVÅ BROMS — inte en hållen `gaitDown`.
+
+		     Raden var `run(mc, 4, { forward = -1, gaitDown = true })`, och
+		     den upprepade flanken 240 gånger. Det var ofarligt när trappan
+		     slutade i halt; efter arkitekturbeslutet 2026-09-17 finns
+		     RYGGA under halt, och 240 bromsimpulser tog henne dit och lät
+		     henne backa i fem minuter. Vilan mättes då på en häst i
+		     arbete, och provet blev rött av rätt skäl.
+
+		     En impuls är en bildruta. Två steg från trav är halt. ]]
+		mc:step(intent({ gaitDown = true }), 1 / 60)
+		run(mc, 2, {}, 1 / 60)
+		mc:step(intent({ gaitDown = true }), 1 / 60)
 		run(mc, 300, {}, 1 / 60)
+		check("hon vilar i halt, inte i rygga",
+			mc.loco.gait == "halt" and mc.ryggar == false
+				and math.abs(mc.loco.speed) < 0.05,
+			string.format("(%s, ryggar %s, %.2f m/s)", mc.loco.gait,
+				tostring(mc.ryggar), mc.loco.speed))
 		check("energin tär av arbete och kommer tillbaka i halt",
 			efterArbete < fore - 0.15 and gangEfter == gangFore
 				and mc.loco.energi > efterArbete + 0.05
@@ -1789,9 +1844,17 @@ print("\n§9 ride — hästen ska faktiskt lämna platsen")
 do
 	--[[ Två vägar ur halt, båda giltiga enligt kontraktet: gångartsknappen
 		och W. Studio-felet gav noll på båda. ]]
+	--[[ DE TVÅ VÄGARNA VAR "gångartsknappen" OCH "W". Efter
+	     arkitekturbeslutet 2026-09-17 är de samma väg: W ÄR DRIV. Att låta
+	     raden stå kvar hade varit ett prov som mäter en regel spelet inte
+	     har — och den regeln var en gaspedal.
+
+	     Fallen är därför DRIV och DRIV-UTAN-FRAMÅTUTSLAG. Det andra är
+	     det som faktiskt bytt: hon ska lämna platsen med noll på
+	     framåtaxeln, alltså utan att någon håller något inne. ]]
 	local fall = {
-		{ namn = "gångartsknappen ur halt", o = { gaitUp = true } },
-		{ namn = "W ur halt", o = { forward = 1 } },
+		{ namn = "DRIV ur halt, med framåtutslag", o = { gaitUp = true, forward = 1 } },
+		{ namn = "DRIV ur halt, utan att hålla något", o = { gaitUp = true } },
 	}
 	for _, f in ipairs(fall) do
 		local mc = newMC()
