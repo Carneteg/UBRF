@@ -304,6 +304,13 @@ const SPRAK = {
   "tack.sadel_for": { sv: "%s sadel", en: "%s saddle" },
   "tack.redan_tagen": { sv: "Någon annan bär den redan",
     en: "Someone else is already carrying it" },
+  /* FAIL-CLOSED (#235 review). Servern far aldrig slappa igenom en
+     hamtning den inte kunnat MATA. Saknas boxfronten finns ingen plats
+     att mata avstandet fran, och da ar svaret nej — inte ja. */
+  "tack.ingen_front": { sv: "Utrustningen går inte att nå just nu",
+    en: "The equipment cannot be reached right now" },
+  "tack.front_slapper_inte": { sv: "Sadeln sitter fast på boxfronten — försök igen",
+    en: "The saddle is stuck on the stall front — try again" },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },

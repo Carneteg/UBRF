@@ -244,6 +244,75 @@ do
 	GameplayService.slappBuret(fjarde)
 end
 
+--[[ ── FAIL-CLOSED OCH ATOMICITET ──────────────────────────────────
+
+	Tre fynd ur senior review av `0b86f48`. Alla tre var felvagar: de syns
+	inte nar allt fungerar, och det ar precis darfor de behover egna prov.
+
+	Den gemensamma regeln: ETT NEJ FAR INTE LAMNA SPAR. Sager servern nej
+	ska varlden se ut exakt som innan — ingen sadel i handerna, ingen
+	agare, inget val i `valdUtrustning`. Ett halvt utfort `WORLD -> HELD`
+	ar varre an ett rent nej, for resten av spelet laser sedan det halva
+	som sanning. ]]
+
+local function ingetSpar(vem, karaktar, hastId, varfor)
+	check(varfor .. ": ingen buren sadel i handerna",
+		TackRigg.hittaBuren(karaktar, "sadel") == nil,
+		tostring(TackRigg.hittaBuren(karaktar, "sadel")))
+	check(varfor .. ": ingen agare i registret",
+		GameplayService.barasAv("sadel", hastId) == nil,
+		tostring(GameplayService.barasAv("sadel", hastId)))
+	local val = GameplayService.valdFor(vem)
+	check(varfor .. ": inget val i valdUtrustning",
+		val == nil or val.sadel == nil,
+		tostring(val and val.sadel))
+end
+
+print("\n── Fail-closed: ingen front att mata avstandet fran ──")
+
+do
+	local femte, kar5 = nySpelare("Fas1e", 9305, vid + Vector3.new(2, 0, 0))
+	Players._spelare = { femte }
+
+	--[[ En hast utan boxfront. Forut lod provet `if plats and ...`, och
+		utan plats HOPPADE servern over avstandet och slappte igenom
+		hamtningen. En validering som tiger nar den inte kan mata ar ingen
+		validering — svaret ska vara nej. ]]
+	local ok, skal = TackForradService.tagSadel(femte, "hast-utan-front", "Spoket")
+	check("en hamtning utan fysisk front nekas", ok == false, tostring(skal))
+	check("och nejet sager varfor — inte «for langt», utan «ingen front»",
+		skal == "tack.ingen_front", tostring(skal))
+	ingetSpar(femte, kar5, "hast-utan-front", "ingen front")
+end
+
+print("\n── Fail-closed: fronten slapper inte sin sadel ──")
+
+do
+	local sjatte, kar6 = nySpelare("Fas1f", 9306, vid + Vector3.new(2, 0, 0))
+	Players._spelare = { sjatte }
+
+	--[[ `satSynlig` returnerade sitt svar och ingen lyssnade. Gick
+		slackningen fel kunde spelaren sta i HELD med sadeln kvar synlig
+		pa kroken — tva sadlar for ogat, en i state. Har rivs gruppen bort
+		sa att slackningen MASTE falla. ]]
+	local modell6 = TackForradService.forHast(HAST)
+	local sadelgrupp
+	for _, g in ipairs(modell6:GetChildren()) do
+		if g:IsA("Model") and g:GetAttribute("UBRFForrad") == "sadel" then sadelgrupp = g end
+	end
+	check("sadelgruppen finns att riva", sadelgrupp ~= nil)
+	sadelgrupp:Destroy()
+
+	local ok, skal = TackForradService.tagSadel(sjatte, HAST, "Trixie")
+	check("pickup nekas nar fronten inte slapper", ok == false, tostring(skal))
+	check("och nejet sager varfor", skal == "tack.front_slapper_inte", tostring(skal))
+
+	--[[ ROLLBACK. Den burna sadeln HANN byggas innan slackningen foll, och
+		maste darfor rivas igen. Blir den kvar star spelaren med en sadel
+		hon aldrig fick — den orphan reviewen pekade pa. ]]
+	ingetSpar(sjatte, kar6, HAST, "fronten slapper inte")
+end
+
 RunService._server = false
 
 if fails > 0 then

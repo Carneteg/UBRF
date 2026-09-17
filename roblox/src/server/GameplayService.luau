@@ -712,10 +712,17 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 		kunna neka en hamtning fran andra sidan garden. ]]
 	local karaktar = player.Character
 	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart")) then return false, "tack.ingen_karaktar" end
+
+	--[[ FAIL-CLOSED (#235 review). Forut lod provet `if plats and ...`:
+		fanns ingen front, eller ingen `PrimaryPart` att mata fran, HOPPADE
+		servern over avstandsprovet och slappte igenom hamtningen. En
+		auktoritativ validering som tiger nar den inte kan mata ar ingen
+		validering. Saknas platsen ar svaret nej. ]]
 	local modell = TackForradService.forHast(id)
 	local plats = modell and modell.PrimaryPart
-	if not (rot and rot:IsA("BasePart")) then return false, "tack.ingen_karaktar" end
-	if plats and (rot.Position - plats.Position).Magnitude > STEG_RACKVIDD then
+	if not (plats and plats:IsA("BasePart")) then return false, "tack.ingen_front" end
+	if (rot.Position - plats.Position).Magnitude > STEG_RACKVIDD then
 		return false, "spel.for_langt"
 	end
 
@@ -726,12 +733,39 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 	if agare == player then return true end
 	if agare ~= nil and kvarInne(agare) then return false, "tack.redan_tagen" end
 
-	skrivVal(player, t, id)
+	--[[ ── EN TRANSAKTION, I DEN HAR ORDNINGEN ────────────────────────
+
+		validera -> bygg den burna sadeln -> slack den pa fronten -> committa
+
+		Forut skrevs valet FORST och den fysiska delen byggdes sedan. Gick
+		bygget fel stod `valdUtrustning` kvar och pastod att spelaren hade
+		sadeln hon aldrig fick — stale state som resten av spelet sedan
+		lasar som sanning. Och frontens slackning ignorerade sitt eget
+		svar, sa hon kunde sta i HELD med sadeln kvar synlig pa kroken.
+
+		Nu andras ingenting bestaende forran badadera lyckats, och det som
+		hann bli gjort rullas tillbaka nar nagot faller. ]]
+	local bar_redan = TackService.barBuren(player, t) == id
 	if not TackService.satBuren(player, t, id) then
 		return false, "tack.kunde_inte_byggas"
 	end
+
+	--[[ `satSynlig` ar allt-eller-inget: den nekar pa en saknad grupp INNAN
+		den rort nagot, sa ett falskt svar betyder att fronten star orord. ]]
+	if not TackForradService.satSynlig(id, t, false) then
+		--[[ ROLLBACK. Bara det VI byggde tas bort: bar hon redan delen nar
+			vi kom lamnar vi den, for da har vi inte skapat den och ska
+			inte heller riva den. ]]
+		if not bar_redan then
+			pcall(function() TackService.slappBuren(player, t) end)
+		end
+		return false, "tack.front_slapper_inte"
+	end
+
+	--[[ COMMIT. Forst nu finns det en fysisk sadel i handerna och en tom
+		krok pa fronten — alltsa forst nu ar `WORLD -> HELD` sant. ]]
+	skrivVal(player, t, id)
 	burenAv[nyckel] = player
-	TackForradService.satSynlig(id, t, false)
 	skicka(player)
 	return true
 end
