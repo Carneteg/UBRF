@@ -171,6 +171,11 @@ do
 	check("och tyglarna hänger i HUVUDET",
 		tyglsvets ~= nil and tyglsvets.Part0 == huvud,
 		tyglsvets and tostring(tyglsvets.Part0 and tyglsvets.Part0.Name) or "-")
+	--[[ SADELN FÖRST, som eftervarden säger (#211). Blocket tog förut
+		tränset med sadeln kvar på henne; det gick bara så länge spärren
+		i `taAv` stod tvärtemot kanon. Det som mäts här är fortfarande
+		tyglarna, inte ordningen — ordningen har sitt eget block. ]]
+	TackService.taAv(spelare, hast, "sadel")
 	TackService.taAv(spelare, hast, "trans")
 	check("tränset av tar tyglarna med sig",
 		TackRigg.hittaDel(hast, "tygel") == nil)
@@ -226,9 +231,16 @@ do
 	local fullt = antal()
 	check("full utrustning är ett bestämt antal delar", fullt > 0, tostring(fullt))
 
+	--[[ CYKELN GÅR NUMERA I KANONORDNING (#211): sadel, underlägg, träns
+		av — och hela utrustningen på igen. Blocket tog förut bara tränset
+		fram och tillbaka, vilket krävde den gamla omvända spärren. Att
+		räkna över HELA cykeln mäter mer än förut, inte mindre: växer
+		antalet någonstans i kedjan syns det här. ]]
+	TackService.taAv(spelare, hast, "sadel")
+	TackService.taAv(spelare, hast, "underlagg")
 	TackService.taAv(spelare, hast, "trans")
 	local utan = antal()
-	check("tränset av -> inget träns och inga tyglar kvar",
+	check("hela utrustningen av -> inget träns och inga tyglar kvar",
 		not TackService.transad(hast) and TackRigg.hittaDel(hast, "tygel") == nil,
 		("%d delar kvar"):format(utan))
 	local kvarTygel = 0
@@ -238,8 +250,10 @@ do
 	check("ingen ensam tygel hänger kvar vid munnen", kvarTygel == 0,
 		("%d tyglar kvar"):format(kvarTygel))
 
-	TackService.satPa(spelare, hast, "trans", nil, hast)
-	check("tränset på igen ger SAMMA antal delar, inte fler",
+	for _, typ in ipairs({ "underlagg", "sadel", "trans" }) do
+		TackService.satPa(spelare, hast, typ, nil, hast)
+	end
+	check("allt på igen ger SAMMA antal delar, inte fler",
 		antal() == fullt, ("%d -> %d -> %d"):format(fullt, utan, antal()))
 
 	TackService.taAvAllt(hast)
@@ -299,22 +313,94 @@ do
 	local o10, s10 = TackService.satPa(spelare, nil, "sadel", nil, nil)
 	check("ingen häst alls nekas", o10 == false and s10 == "tack.ingen_hast", tostring(s10))
 
-	--[[ ATT TA AV I FEL ORDNING. Eftervården säger "sadeln av innan
-		tränset, annars står hon lös med sadeln kvar". ]]
+	--[[ ══ ATT TA AV I FEL ORDNING (#211) ═══════════════════════════════
+
+		RÄTTELSE. Blocket mätte förut motsatsen till sin egen kommentar:
+		det krävde tränset av FÖRST och kallade det kanon. Kanon säger
+		tvärtom, och säger det på tre ställen som alla vaktas:
+
+		  · `src/spel/skotsel.js`: "sadeln av innan tränset, annars står
+		    hon lös med sadeln kvar",
+		  · `EFTERVARD` listar `sadel` (moment 2) före `trans` (moment 3),
+		  · ordningsgrinden i `tools/exportera-spel.js` faller om de två
+		    byter plats.
+
+		Med den gamla spärren var den kanoniska eftervården omöjlig att
+		utföra: vid sadelmomentet sitter tränset alltid kvar, så varje
+		avsadling hade nekats. Kravet sänks inte här — det byter håll, och
+		lika många nej mäts som förut. ]]
 	nollstall()
 	TackService.satPa(spelare, hast, "underlagg", nil, hast)
 	TackService.satPa(spelare, hast, "sadel", nil, hast)
 	TackService.satPa(spelare, hast, "trans", nil, hast)
-	local o11, s11 = TackService.taAv(spelare, hast, "sadel")
-	check("sadeln av under tränset nekas", o11 == false and s11 == "tack.transet_forst",
-		tostring(s11))
-	local o12 = TackService.taAv(spelare, hast, "trans")
-	check("tränset av först går", o12)
-	local o13 = TackService.taAv(spelare, hast, "sadel")
-	check("och sedan sadeln", o13)
+	local o11, s11 = TackService.taAv(spelare, hast, "trans")
+	check("tränset av under sadeln nekas — det är tränset som håller henne",
+		o11 == false and s11 == "tack.sadeln_av_forst", tostring(s11))
+	local o11b, s11b = TackService.taAv(spelare, hast, "underlagg")
+	check("underlägget under sadeln nekas",
+		o11b == false and s11b == "tack.sadeln_forst", tostring(s11b))
+	local o12, s12 = TackService.taAv(spelare, hast, "sadel")
+	check("sadeln av först går, med tränset kvar på henne", o12 == true, tostring(s12))
+	check("och underlägget ligger kvar tills det tas självt",
+		TackService.harTack(hast, "underlagg") == true)
+	local o12b = TackService.taAv(spelare, hast, "underlagg")
+	check("underlägget går av när sadeln är borta", o12b == true)
+	local o13 = TackService.taAv(spelare, hast, "trans")
+	check("och sedan tränset", o13)
+	check("tyglarna följde med tränset av",
+		TackRigg.hittaDel(hast, "tygel") == nil)
 	local o14, s14 = TackService.taAv(spelare, hast, "sadel")
 	check("att ta av något som inte sitter på nekas",
 		o14 == false and s14 == "tack.inget_pa", tostring(s14))
+end
+
+--[[ ══ EFTERVÅRDENS FYSISKA MOTSVARIGHET ══════════════════════════════
+
+	Kartan `momentId → delar` får inte vara en egen parallell lista över
+	eftervården. Proven läser KANONEN och kräver att kartan följer den:
+	varje id som kartan känner ska finnas i `UBRFSkotsel.eftervard`, och
+	de moment kanon beskriver som "låt sadeln ligga kvar" eller som inte
+	rör utrustning alls ska inte ha någon del. ]]
+print("\n── Eftervårdens moment mot den fysiska utrustningen ──")
+
+do
+	local kanonId = {}
+	for _, e in ipairs(UBRFSkotsel.eftervard) do kanonId[e.id] = true end
+
+	local okanda = {}
+	for _, id in ipairs({ "sadel", "trans" }) do
+		if not kanonId[id] then table.insert(okanda, id) end
+		if TackService.eftervardsDelar(id) == nil then
+			table.insert(okanda, id .. " (ingen del)")
+		end
+	end
+	check("de två moment som rör utrustning finns i kanon och har delar",
+		#okanda == 0, table.concat(okanda, ", "))
+
+	local sadelDelar = TackService.eftervardsDelar("sadel")
+	check("sadelmomentet tar sadel OCH underlägg, i den ordningen",
+		#sadelDelar == 2 and sadelDelar[1] == "sadel" and sadelDelar[2] == "underlagg",
+		table.concat(sadelDelar, ","))
+	local transDelar = TackService.eftervardsDelar("trans")
+	check("tränsmomentet tar tränset — tyglarna följer med i taAv",
+		#transDelar == 1 and transDelar[1] == "trans", table.concat(transDelar, ","))
+
+	--[[ KANON SÄGER "Låt sadeln ligga kvar" om gjorden. Får `gjord` en
+		fysisk del börjar spelet ta av sadeln ett moment för tidigt. ]]
+	local utan = {}
+	for _, id in ipairs({ "gjord", "ben", "vatten" }) do
+		if TackService.eftervardsDelar(id) ~= nil then table.insert(utan, id) end
+	end
+	check("gjorden, benen och vattnet rör ingen utrustning", #utan == 0,
+		table.concat(utan, ", "))
+
+	--[[ Och kartan får inte känna ett moment kanon inte har. ]]
+	local pahittade = {}
+	for _, id in ipairs({ "sadel", "trans", "gjord", "ben", "vatten" }) do
+		if not kanonId[id] then table.insert(pahittade, id) end
+	end
+	check("provet självt räknar bara moment som finns i kanon",
+		#pahittade == 0, table.concat(pahittade, ", "))
 end
 
 print("\n── Uppsittningen prövar det FYSISKA ──")
@@ -425,9 +511,10 @@ do
 	--[[ 5. OCH ALLT SKA FORTFARANDE GÅ ATT TA AV. Den nya geometrin har
 		fler delar; kontraktet är att inte en enda blir kvar. ]]
 	local fore = #mapp:GetChildren()
-	TackService.taAv(spelare, hast, "trans")
+	--[[ I KANONORDNING (#211): sadeln av innan tränset. ]]
 	TackService.taAv(spelare, hast, "sadel")
 	TackService.taAv(spelare, hast, "underlagg")
+	TackService.taAv(spelare, hast, "trans")
 	local kvar = hast:FindFirstChild("Tack")
 	check("hela utrustningen går av utan rester",
 		kvar == nil or #kvar:GetChildren() == 0,

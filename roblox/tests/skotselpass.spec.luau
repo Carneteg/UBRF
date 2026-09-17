@@ -415,6 +415,87 @@ do
 		q.gjorda[moment[1].id] == true and q.lage == Pass.LAGE.EFTERVARD)
 end
 
+--[[ ══ FRÅGAN OCH SVARET FÅR INTE GLIDA ISÄR (#211) ═══════════════════
+
+	`Pass.farUtfora` finns för att servern ska kunna ta av utrustning i
+	samma handling som den bockar av momentet, utan att ändra något om
+	regeln sedan nekar. Värdet av det hänger helt på att frågan ger exakt
+	samma svar som `utfor` — får `utfor` en egen kopia av ett villkor är
+	den fysiska avtagningen plötsligt styrd av en annan regel än den som
+	kvitterar momentet.
+
+	Provet kör BÅDA över varje läge och varje moment och kräver att de
+	säger likadant, inklusive skälet och argumentet. ]]
+print("\n── Frågan `farUtfora` säger exakt det `utfor` gör ──")
+do
+	local moment = Pass.moment()
+
+	--[[ Varje läge passet kan vara i, och ett moment ur varje position i
+		listan: på tur, längre fram, redan gjort, och ett id som inte
+		finns alls. ]]
+	local avvikelser = {}
+	local function jamfor(namn, bygg, momentId)
+		--[[ TVÅ tillstånd i samma läge: frågan ställs på det ena, svaret
+			tas på det andra. Delade de ett tillstånd hade `utfor` ändrat
+			det frågan just läste. ]]
+		local a, b = bygg(), bygg()
+		local fa, fs, farg = Pass.farUtfora(a, momentId)
+		local ua, us, uarg = Pass.utfor(b, momentId)
+		if fa ~= ua or fs ~= us or farg ~= uarg then
+			table.insert(avvikelser, string.format(
+				"%s/%s: fråga %s,%s,%s ≠ svar %s,%s,%s", namn, momentId,
+				tostring(fa), tostring(fs), tostring(farg),
+				tostring(ua), tostring(us), tostring(uarg)))
+		end
+	end
+
+	local function fore() return Pass.nyState("cosmo", "p1") end
+	local function rider()
+		local st = Pass.nyState("cosmo", "p2")
+		Pass.vidUppsittning(st)
+		return st
+	end
+	local function eftervard()
+		local st = rider()
+		Pass.vidAvsittning(st)
+		return st
+	end
+	local function halvvags()
+		local st = eftervard()
+		Pass.utfor(st, moment[1].id)
+		return st
+	end
+	local function klart()
+		local st = eftervard()
+		for _, m in ipairs(moment) do Pass.utfor(st, m.id) end
+		return st
+	end
+
+	for _, lage in ipairs({
+		{ "fore", fore }, { "rider", rider }, { "eftervard", eftervard },
+		{ "halvvags", halvvags }, { "klart", klart },
+	}) do
+		for _, m in ipairs(moment) do
+			jamfor(lage[1], lage[2], m.id)
+		end
+		jamfor(lage[1], lage[2], "utr:sadel")
+	end
+	check("frågan och svaret ger samma resultat i varje läge",
+		#avvikelser == 0, table.concat(avvikelser, " · "))
+
+	--[[ OCH FRÅGAN ÄNDRAR INGENTING. Det är hela dess uppgift. ]]
+	local st = halvvags()
+	local fore_lage, fore_antal = st.lage, 0
+	for _, g in pairs(st.gjorda) do if g then fore_antal += 1 end end
+	Pass.farUtfora(st, moment[2].id)
+	Pass.farUtfora(st, moment[5].id)
+	local efter_antal = 0
+	for _, g in pairs(st.gjorda) do if g then efter_antal += 1 end end
+	check("och frågan bockar inte av något", st.lage == fore_lage
+		and efter_antal == fore_antal,
+		string.format("%s/%d -> %s/%d", fore_lage, fore_antal, st.lage, efter_antal))
+end
+
 print("\n── Sparschemat: version, migration och idempotens ──")
 do
 	local tom, notering = Sparning.migrera(nil)

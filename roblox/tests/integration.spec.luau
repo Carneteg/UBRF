@@ -764,6 +764,215 @@ do
 	stadaSession(T)
 end
 
+--[[ ══ PUNKT 12: EFTERVÅRDEN TAR AV UTRUSTNINGEN PÅ RIKTIGT (#211) ═════
+
+	`TackService.taAv` och `taAvAllt` fanns sedan blockerare 5, men ingen
+	levande väg anropade dem. Eftervårdens moment satte `state.gjorda` och
+	ingenting annat — precis som `utr:`-momenten gjorde före blockerare 5,
+	fast åt andra hållet: passvyn sa "Ta av sadeln  ✓" medan sadel,
+	underlägg, träns och tyglar låg kvar på hästen för alltid.
+
+	Punkt 11 ovan mäter att passet RÄKNAS. Den här punkten mäter att
+	VÄRLDEN följde med, och den mäter det där felet faktiskt kunde bo: mot
+	den riktiga riggen, genom tjänsten, moment för moment.
+
+	KONTROLLGRUPPEN är en andra häst inom räckhåll, fullt utrustad, som
+	ingen är bunden till. Rör eftervården henne är avtagningen inte knuten
+	till spelarens egen häst, och då spelar det ingen roll att varje
+	enskilt nej stämmer. ]]
+print("\n── Punkt 12: eftervården tar av utrustningen på riktigt ──")
+do
+	local S = nySession("Avtackling", 9207)
+	local ok, skal = skotselGenomTjansten(S.spelare)
+	check("skötseln är gjord", ok, tostring(skal))
+
+	--[[ EN ANNAN HÄST, granne med spelarens och lika utrustad. Hon taggas
+		INTE `Horse`: bindningen ska inte kunna få syn på henne. ]]
+	local pivot = S.modell.PrimaryPart
+	local annan = HastRigg.bygg("marabou", "Marabou",
+		CFrame.new(pivot.Position + vec(8, 0, 0)))
+	annan.Parent = workspace
+	for _, typ in ipairs({ "underlagg", "sadel", "trans" }) do
+		TackService.satPa(S.spelare, annan, typ, "marabou", annan)
+	end
+	check("grannhästen är också utrustad",
+		TackService.sadlad(annan) and TackService.transad(annan))
+
+	check("uppsittningen går igenom", (HorseService.tryMount(S.spelare, S.modell)) == true)
+	check("och hästen bär sin utrustning när ritten börjar",
+		TackService.sadlad(S.modell) and TackService.transad(S.modell))
+	check("avsittningen går igenom", HorseService.dismount(S.spelare) == true)
+
+	--[[ AVSITTNINGEN SJÄLV FÅR INTE TA AV NÅGOT. Utrustningen tas av i
+		eftervården, av spelaren, och en avsittning är inte ett avslutat
+		pass — hon får sitta upp igen så länge inget moment är gjort. ]]
+	check("avsittningen lämnar utrustningen kvar",
+		TackService.sadlad(S.modell) and TackService.transad(S.modell))
+
+	local function id(n) return Pass.moment()[n].id end
+
+	--[[ 1. GJORDEN. Kanon: "Lossa gjorden några hål. Låt sadeln ligga
+		kvar." Tar spelet av sadeln här lär det ut fel sak. ]]
+	check("första momentet är gjorden", id(1) == "gjord", id(1))
+	local okG, skalG = GameplayService.eftervard(S.spelare, id(1))
+	check("gjorden lossas", okG == true, tostring(skalG))
+	check("och sadeln ligger KVAR, som kanon säger",
+		TackService.sadlad(S.modell) and TackService.harTack(S.modell, "underlagg"))
+
+	--[[ 2. FEL TUR. Ett moment längre fram ska nekas — och nejet ska bära
+		VILKET moment som står på tur. Argumentet föll bort före #211 och
+		spelaren fick se ett bokstavligt "%s". ]]
+	local okFel, skalFel, argFel = GameplayService.eftervard(S.spelare, id(4))
+	check("ett moment ur tur nekas", okFel == false and skalFel == "pass.fel_tur",
+		tostring(skalFel))
+	check("och nejet bär vilket moment som står på tur",
+		type(argFel) == "string" and Pass.arKanontext(argFel), tostring(argFel))
+	check("det nekade momentet rörde ingen utrustning",
+		TackService.sadlad(S.modell) and TackService.transad(S.modell))
+
+	--[[ 3. ETT OKÄNT MOMENT. En klient som hittar på ett id ska varken få
+		ett kvitto eller röra hästen. ]]
+	local okOk, skalOk = GameplayService.eftervard(S.spelare, "utr:sadel")
+	check("ett påhittat moment-id nekas",
+		okOk == false and skalOk == "pass.okant_moment", tostring(skalOk))
+	check("och rörde inte heller något",
+		TackService.sadlad(S.modell) and TackService.transad(S.modell))
+
+	--[[ 3b. FRÅN LÄKTAREN. Man tar av sadeln vid hästen. Går spelaren
+		ifrån mitt i eftervarden ska momentet nekas — och ingenting på
+		hästen får röras på vägen. ]]
+	local nara = S.spelare.Character:FindFirstChild("HumanoidRootPart").Position
+	stall(S.spelare, nara + vec(400, 0, 0))
+	local okFjarr, skalFjarr = GameplayService.eftervard(S.spelare, id(2))
+	check("eftervarden går inte att göra från andra sidan gården",
+		okFjarr == false and skalFjarr == "spel.for_langt", tostring(skalFjarr))
+	check("och hästen bär fortfarande allt",
+		TackService.sadlad(S.modell) and TackService.transad(S.modell))
+	stall(S.spelare, nara)
+
+	--[[ 3c. FEL SPELARE. En spelare tjänsten inte känner har inget pass,
+		och kan därför inte komma åt någon annans häst — `momentId` är det
+		enda klienten skickar, och VILKEN häst det gäller slår servern upp
+		i sin egen bindning. ]]
+	local framling = nySpelare("Framling", 9299, pivot.Position + vec(4, 0, 0))
+	local okFramling, skalFramling = GameplayService.eftervard(framling, id(2))
+	check("en spelare utan pass nekas", okFramling == false
+		and skalFramling == "spel.inget_pass", tostring(skalFramling))
+	check("och den andres häst är orörd",
+		TackService.sadlad(S.modell) and TackService.transad(S.modell))
+
+	--[[ 4. SADELN. Kanon: "Ta av sadel och underlägg." BÅDA delarna, och
+		tränset kvar — det är det som håller henne. ]]
+	check("andra momentet är sadeln", id(2) == "sadel", id(2))
+	local okS, skalS = GameplayService.eftervard(S.spelare, id(2))
+	check("sadeln tas av", okS == true, tostring(skalS))
+	check("sadeln är FYSISKT borta ur hästmodellen",
+		TackRigg.hittaDel(S.modell, "sadel") == nil)
+	check("och underlägget med den, som kanon säger",
+		TackRigg.hittaDel(S.modell, "underlagg") == nil)
+	check("men tränset sitter kvar — annars står hon lös",
+		TackService.transad(S.modell))
+
+	--[[ 5. IDEMPOTENS. Samma moment en gång till — en omsändning, ett
+		dubbeltryck — får varken kvitteras eller kasta. ]]
+	local okOm, skalOm = GameplayService.eftervard(S.spelare, id(2))
+	check("samma moment igen nekas", okOm == false and skalOm == "pass.redan_gjort",
+		tostring(skalOm))
+	check("och tränset är fortfarande kvar efter omsändningen",
+		TackService.transad(S.modell))
+
+	--[[ 6. INVALID COMPLETION. Passet får inte gå att avsluta mitt i
+		eftervården — `Pass.farAvsluta` är fail-closed. ]]
+	local okAvsl, skalAvsl = GameplayService.avslutaPass(S.spelare)
+	check("passet går inte att avsluta mitt i eftervården",
+		okAvsl == false and skalAvsl == "pass.aterstar", tostring(skalAvsl))
+
+	--[[ 7. TRÄNSET. Kanon: "Grimma på först, sedan tränset av." Tyglarna
+		följer med, av samma skäl som de följde med på. ]]
+	check("tredje momentet är tränset", id(3) == "trans", id(3))
+	local okT, skalT = GameplayService.eftervard(S.spelare, id(3))
+	check("tränset tas av", okT == true, tostring(skalT))
+	check("tränset är FYSISKT borta", TackRigg.hittaDel(S.modell, "trans") == nil)
+	check("och tyglarna med det", TackRigg.hittaDel(S.modell, "tygel") == nil)
+
+	--[[ 8. RESTEN AV EFTERVÅRDEN, och då ska passet räknas. ]]
+	for i = 4, #Pass.moment() do
+		local okR, skalR = GameplayService.eftervard(S.spelare, id(i))
+		check("eftervårdsmoment " .. i .. " går igenom", okR == true, tostring(skalR))
+	end
+	check("passet är räknat",
+		GameplayService.passFor(S.spelare).lage == Pass.LAGE.RAKNAT,
+		tostring(GameplayService.passFor(S.spelare).lage))
+
+	--[[ 9. INGENTING KVAR. Inte "sadeln av" utan INGENTING: `TackRigg.taAv`
+		river den bärande delen och det som är svetsat i henne, och en rest
+		som blir kvar hänger på en häst spelet påstår är avsadlad. ]]
+	local mapp = S.modell:FindFirstChild("Tack")
+	local kvar = mapp and #mapp:GetChildren() or 0
+	check("hästen bär ingen utrustning alls efter eftervården", kvar == 0,
+		("%d delar kvar"):format(kvar))
+	check("och tjänsten läser samma sak ur världen",
+		not TackService.sadlad(S.modell) and not TackService.transad(S.modell))
+
+	--[[ 10. KONTROLLGRUPPEN. Grannhästen stod inom räckhåll hela tiden. ]]
+	check("grannhästen bär fortfarande HELA sin utrustning",
+		TackService.sadlad(annan) and TackService.transad(annan)
+			and TackService.harTack(annan, "underlagg"),
+		("sadel %s · träns %s · underlägg %s"):format(
+			tostring(TackService.sadlad(annan)), tostring(TackService.transad(annan)),
+			tostring(TackService.harTack(annan, "underlagg"))))
+
+	annan:Destroy()
+	stadaSession(S)
+end
+
+--[[ ══ PUNKT 12b: EN UTRUSTNING SOM REDAN ÄR AV LÅSER INTE DAGEN ══════
+
+	Momentets mening är att utrustningen ska vara AV när det är gjort —
+	inte att just det här anropet var det som lyfte den. Ligger den redan
+	av är världen redan sann.
+
+	Skillnaden är inte teoretisk, och den är fail-closed åt fel håll om
+	man tar fel: `Pass.farAvsluta` släpper bara igenom ett pass där VARJE
+	moment är gjort. Nekas sadelmomentet för att sadeln saknas står
+	spelaren kvar i en eftervård hon inte kan bli klar med, med en dag som
+	aldrig räknas — och hon har inte gjort något fel.
+
+	Provet river sadeln ur världen på samma sätt som `tack.spec` gör: en
+	del som försvinner ska tillståndet följa med i samma ögonblick, för
+	det finns inget register som kan minnas henne. ]]
+print("\n── Punkt 12b: en utrustning som redan är av låser inte dagen ──")
+do
+	local S = nySession("Reven", 9208)
+	local ok, skal = skotselGenomTjansten(S.spelare)
+	check("skötseln är gjord", ok, tostring(skal))
+	check("uppsittningen går igenom", (HorseService.tryMount(S.spelare, S.modell)) == true)
+	check("avsittningen går igenom", HorseService.dismount(S.spelare) == true)
+
+	local moment = Pass.moment()
+	check("gjorden lossas", (GameplayService.eftervard(S.spelare, moment[1].id)) == true)
+
+	--[[ SADELN FÖRSVINNER UR VÄRLDEN mellan två moment. ]]
+	TackRigg.hittaDel(S.modell, "sadel"):Destroy()
+	check("hästen är inte längre sadlad", not TackService.sadlad(S.modell))
+
+	local okS, skalS = GameplayService.eftervard(S.spelare, moment[2].id)
+	check("sadelmomentet går ändå igenom — annars låses eftervården",
+		okS == true, tostring(skalS))
+	check("och underlägget togs av som vanligt",
+		TackRigg.hittaDel(S.modell, "underlagg") == nil)
+
+	for i = 3, #moment do
+		GameplayService.eftervard(S.spelare, moment[i].id)
+	end
+	check("dagen går att räkna färdigt",
+		GameplayService.passFor(S.spelare).lage == Pass.LAGE.RAKNAT,
+		tostring(GameplayService.passFor(S.spelare).lage))
+	local mapp = S.modell:FindFirstChild("Tack")
+	check("och hästen står utan utrustning", (mapp and #mapp:GetChildren() or 0) == 0)
+	stadaSession(S)
+end
+
 --[[ `os.exit` finns INTE i luau-CLI:t (den är nil). Ett anrop rakt ut gav
 	en "attempt to call a nil value" i loggen i stället för ett läsbart
 	slut — rött blev det, men av fel anledning i texten. Här används den
