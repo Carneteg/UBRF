@@ -541,9 +541,9 @@ Sprak.text = {
 		sv = "Underlägget först — sadeln ligger på det",
 		en = "The numnah first — the saddle goes on top of it",
 	},
-	["tack.transet_forst"] = {
-		sv = "Tränset av först",
-		en = "Take the bridle off first",
+	["tack.sadeln_av_forst"] = {
+		sv = "Sadeln av först — tränset håller henne så länge",
+		en = "Take the saddle off first — the bridle holds her meanwhile",
 	},
 	["tack.saknar_sadel"] = {
 		sv = "Hon är inte sadlad än",

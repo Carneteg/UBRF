@@ -73,6 +73,31 @@ function TackService.kraver(steg: number): string?
 	return STEG_KRAVER[steg]
 end
 
+--[[ EFTERVÅRDENS FYSISKA MOTSVARIGHET.
+
+	Samma sorts karta som `STEG_DEL` ovan, och här av samma skäl: vilket
+	moment som rör vilken del på hästen hör hemma på ETT ställe, och det
+	stället är tjänsten som äger utrustningen.
+
+	`Skotsel.eftervard` är kanon och listar fem moment. Två av dem rör
+	något som faktiskt ligger på henne:
+
+	  sadel  "Ta av sadel och underlägg"        → båda, i den ordningen
+	  trans  "Grimma på först, sedan tränset av" → tränset; tyglarna
+	         följer med i `taAv`, som de följde med på
+
+	`gjord` lossar gjorden medan sadeln LIGGER KVAR — kanon säger det
+	uttryckligen — och `ben` och `vatten` rör ingen utrustning alls. De
+	har därför ingen fysisk del, och får inte hitta på en. ]]
+local EFTERVARD_DEL: { [string]: { string } } = {
+	sadel = { "sadel", "underlagg" },
+	trans = { "trans" },
+}
+
+function TackService.eftervardsDelar(momentId: string): { string }?
+	return EFTERVARD_DEL[momentId]
+end
+
 --[[ ── VÄRLDENS EGEN SANNING ──────────────────────────────────────── ]]
 
 --[[ Bär hästen den här utrustningen, och tillhör den HENNE? En del med
@@ -201,11 +226,28 @@ function TackService.taAv(player: Player, modell: Model?, typ: string): (boolean
 	if TackRigg.hittaDel(m, typ) == nil then
 		return false, "tack.inget_pa"
 	end
-	--[[ SADELN KAN INTE TAS AV UNDER TRÄNSET i kanonordningen: eftervården
-		säger "sadeln av innan tränset, annars står hon lös med sadeln
-		kvar". Att ta av underlägget under sadeln är samma sak. ]]
-	if typ == "sadel" and TackService.transad(m) then
-		return false, "tack.transet_forst"
+	--[[ ── ORDNINGEN AV ÄR EFTERVÅRDENS, INTE PÅSÄTTNINGENS BAKLÄNGES ──
+
+		Rättelse i #211. Spärren stod förut tvärtom — den nekade SADELN
+		under tränset med `tack.transet_forst` — medan dess egen kommentar
+		citerade kanon rätt. Följden var att den kanoniska eftervården var
+		omöjlig att utföra: `UBRFSkotsel.eftervard` tar sadeln i moment 2
+		och tränset i moment 3, så vid sadelmomentet sitter tränset alltid
+		kvar, och varje avsadling hade nekats.
+
+		Kanon, vaktad av ordningsgrinden i `tools/exportera-spel.js`:
+
+		  gjord   "Lossa gjorden några hål. Låt sadeln ligga kvar."
+		  sadel   "Ta av sadel och underlägg."
+		  trans   "Grimma på först, sedan tränset av."
+
+		Skälet står i `src/spel/skotsel.js`: sadeln av innan tränset,
+		annars står hon lös med sadeln kvar. Tränset är alltså det som
+		HÅLLER henne medan sadeln lyfts av, och grimman kommer på innan
+		det tas av. Underlägget ligger under sadeln och kan inte tas
+		först — den spärren var och förblir rätt. ]]
+	if typ == "trans" and TackService.sadlad(m) then
+		return false, "tack.sadeln_av_forst"
 	end
 	if typ == "underlagg" and TackService.sadlad(m) then
 		return false, "tack.sadeln_forst"

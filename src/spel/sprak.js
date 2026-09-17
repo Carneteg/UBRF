@@ -240,7 +240,12 @@ const SPRAK = {
   "tack.sadeln_forst": { sv: "Sadeln först", en: "The saddle first" },
   "tack.underlagget_forst": { sv: "Underlägget först — sadeln ligger på det",
     en: "The numnah first — the saddle goes on top of it" },
-  "tack.transet_forst": { sv: "Tränset av först", en: "Take the bridle off first" },
+  /* ORDNINGEN AV kommer ur EFTERVARD härovan i `skotsel.js`: sadeln av
+     innan tränset, annars står hon lös med sadeln kvar. Tränset är alltså
+     kvar på henne när sadeln lyfts av, och det är inte påsättningens
+     ordning baklänges. */
+  "tack.sadeln_av_forst": { sv: "Sadeln av först — tränset håller henne så länge",
+    en: "Take the saddle off first — the bridle holds her meanwhile" },
   "tack.saknar_sadel": { sv: "Hon är inte sadlad än", en: "She is not saddled yet" },
   "tack.saknar_underlagg": { sv: "Underlägget ligger inte på", en: "The numnah is not on" },
   "tack.saknar_trans": { sv: "Hon är inte tränsad än", en: "She is not bridled yet" },

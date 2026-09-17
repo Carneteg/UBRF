@@ -594,7 +594,7 @@ end
 
 --[[ ── Passet ──────────────────────────────────────────────────────── ]]
 
-function GameplayService.eftervard(player: Player, momentId: string): (boolean, string?)
+function GameplayService.eftervard(player: Player, momentId: string): (boolean, string?, string?)
 	if typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
 	end
@@ -609,12 +609,66 @@ function GameplayService.eftervard(player: Player, momentId: string): (boolean, 
 		return false, skal
 	end
 
-	local ok, avslag = Pass.utfor(p, momentId)
+	--[[ ── UTRUSTNINGEN TAS AV PÅ RIKTIGT (#211) ──────────────────────
+
+		Eftervårdens moment satte förut `state.gjorda` och ingenting
+		annat. Det är samma fel som blockerare 5 på förberedelsens sida,
+		fast åt andra hållet: `TackService.taAv` och `taAvAllt` fanns men
+		ingen levande väg anropade dem, så en avslutad ritt lämnade sadel,
+		underlägg, träns och tyglar kvar på hästen för alltid medan
+		passvyn sa "Ta av sadeln  ✓".
+
+		Kedjan är därför densamma som i `moment` ovan, och av samma skäl:
+
+		  1. REGELN FRÅGAS FÖRST, utan att något ändras. `farUtfora` är
+		     `utfor` utan avbockningen — se noten i `Pass`. Lyftes sadeln
+		     av och regeln sedan nekade momentet stod hon avsadlad med
+		     momentet ogjort.
+		  2. DEN FYSISKA DELEN TAS AV, ur den bundna modellen. `momentId`
+		     kommer från klienten men slås upp i kanon; VILKEN häst och
+		     VILKEN del det gäller väljer servern. Ingen klient kan peka
+		     ut en annan hästs utrustning.
+		  3. FÖRST DÄREFTER bockas momentet av.
+
+		`tack.inget_pa` är inget fel här. Momentets mening är att
+		utrustningen ska vara AV när det är gjort, och ligger den redan av
+		— en omsändning, en del som revs ur världen, en häst som aldrig
+		blev sadlad — är världen redan sann. Att neka då hade låst
+		eftervården, och med den passet: `Pass.farAvsluta` är
+		fail-closed. ]]
+	local far, farSkal, farArg = Pass.farUtfora(p, momentId)
+	if not far then
+		--[[ VYN SKICKAS ÄVEN NÄR SVARET ÄR NEJ. Så gjorde raden förut —
+			`skickaPass` låg efter `Pass.utfor` och kördes på båda utfallen
+			— och en klient som drivit isär rättas då av samma tryck som
+			gav henne nejet. Att låta det tidiga nejet smita förbi hade
+			varit en regression, inte en förenkling. ]]
+		skickaPass(player)
+		return false, farSkal, farArg
+	end
+	local delar = TackService.eftervardsDelar(momentId)
+	if delar then
+		local modell = bunden[player]
+		if not modell then return false, "spel.ingen_hast" end
+		for _, typ in ipairs(delar) do
+			local okAv, skalAv = TackService.taAv(player, modell, typ)
+			if not okAv and skalAv ~= "tack.inget_pa" then
+				skickaPass(player)
+				return false, skalAv
+			end
+		end
+	end
+
+	--[[ TREDJE VÄRDET FÖLJER MED. `pass.fel_tur` bär momentets namn som
+		argument, och raden kastade bort det — spelaren fick se ett
+		bokstavligt "%s" i stället för vilket moment som stod på tur.
+		Samma rättelse som gjordes i `HorseService.tryMount`. ]]
+	local ok, avslag, arg = Pass.utfor(p, momentId)
 	if ok and Pass.farAvsluta(p) then
 		GameplayService.avslutaPass(player)
 	end
 	skickaPass(player)
-	return ok, avslag
+	return ok, avslag, arg
 end
 
 --[[ Avslutar och RÄKNAR passet. Fail-closed genom `Pass.farAvsluta`, och
@@ -635,6 +689,36 @@ function GameplayService.avslutaPass(player: Player): (boolean, string?)
 	local ok, skal = Pass.farAvsluta(p)
 	if not ok then
 		return false, skal
+	end
+
+	--[[ ── DAGEN SLUTAR MED EN TOM HÄST (#211) ────────────────────────
+
+		Svepet är inte ett hängsle till eftervårdens moment — de har redan
+		tagit av sadeln, underlägget och tränset, annars står vi inte här:
+		`Pass.farAvsluta` är fail-closed och släpper bara igenom ett pass
+		där varje moment är gjort. Det städar RESTER, och `taAvAllt` finns
+		för just det, med sitt eget skäl skrivet i `TackService`:
+
+		  `TackRigg.taAv` river den BÄRANDE delen och det som är svetsat i
+		  henne. Har den bärande delen försvunnit på något annat sätt — en
+		  rigg som byttes, ett halvt bygge som städades, en del som revs
+		  ur världen — hittar den ingenting, och sadelns valv, gjord och
+		  stigbyglar blir kvar hängande på en häst som spelet påstår är
+		  avsadlad.
+
+		Mätt i `integration.spec` punkt 12b: rivs sadeldelen mellan två
+		moment går dagen att räkna färdigt, men hästen bar rester tills
+		svepet lades här.
+
+		INGEN RYTTARE UPPE. Ett stoppat pass kan nå hit från ett annat
+		läge än eftervården (`Pass.vidValfardsstopp` sätter KLART direkt),
+		och att lyfta av en sadel under en ryttare vore precis den
+		motsägelse mellan tillstånd och värld som `TackService` finns för
+		att omöjliggöra. Villkoret är en spärr, inte en mätpunkt: ingen
+		känd väg når hit med någon i sadeln. ]]
+	local modell = bunden[player]
+	if modell and HorseService.horseOf(player) == nil then
+		TackService.taAvAllt(modell)
 	end
 
 	local save = SparService.save(player)
