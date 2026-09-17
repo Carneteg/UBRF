@@ -621,6 +621,18 @@ Sprak.text = {
 		sv = "Ta sadel och träns",
 		en = "Take the saddle and bridle",
 	},
+	["tack.ta_sadeln"] = {
+		sv = "Ta sadeln",
+		en = "Take the saddle",
+	},
+	["tack.sadel_for"] = {
+		sv = "%s sadel",
+		en = "%s saddle",
+	},
+	["tack.redan_tagen"] = {
+		sv = "Någon annan bär den redan",
+		en = "Someone else is already carrying it",
+	},
 	["tack.utrustning_for"] = {
 		sv = "%ss sadel och träns",
 		en = "%s's saddle and bridle",

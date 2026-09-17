@@ -166,6 +166,9 @@ FORBEREDELSE = SPEL + [
     #   GameplayService, som prover utrustningen fysiskt. ]]
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
+    #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
+    #   numera require:ar den for att kunna slacka en tagen sadel. ]]
+    ("TackForradService", "src/server/TackForradService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -506,6 +509,9 @@ KOHERENS = GEOMETRI + [
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
+    #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
+    #   numera require:ar den for att slacka en tagen sadel. ]]
+    ("TackForradService", "src/server/TackForradService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
@@ -631,6 +637,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ FORE den bredare "tack"-grenen: strangen "tack-fas1" INNEHALLER
+    #   "tack", och hamnade annars i integrationsbanken utan varld. Samma
+    #   genomfallning som noten om "spelbarhet" varnar for. ]]
+    elif "tack-fas1" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning" in spec_rel:

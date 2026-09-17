@@ -298,6 +298,12 @@ const SPRAK = {
      för den. */
   "hud.bra": { sv: "Bra", en: "Good" },
   "tack.ta_utrustning": { sv: "Ta sadel och träns", en: "Take the saddle and bridle" },
+  /* #235 FAS 1: sadeln hamtas for sig. Tranget far sin egen text i
+     FAS 3 — tills dess hanger det kvar utan prompt, avsiktligt. */
+  "tack.ta_sadeln": { sv: "Ta sadeln", en: "Take the saddle" },
+  "tack.sadel_for": { sv: "%s sadel", en: "%s saddle" },
+  "tack.redan_tagen": { sv: "Någon annan bär den redan",
+    en: "Someone else is already carrying it" },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },

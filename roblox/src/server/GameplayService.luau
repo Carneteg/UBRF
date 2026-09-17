@@ -47,6 +47,10 @@ local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
+--[[ #235 FAS 1: fronten ager den fysiska upphangningen, den har filen
+	ager vem som bar vad. Ingen cirkel — forradet tar sin mottagare som
+	parameter och kanner inte den har modulen. ]]
+local TackForradService = require(script.Parent.TackForradService)
 local Komplex = require(ReplicatedStorage.UBRFKomplex)
 local Net = Core.Networking
 
@@ -638,6 +642,100 @@ function GameplayService.valjPar(player: Player, hastId: string?): (boolean, str
 	return true
 end
 
+--[[ ══ EN UTRUSTNING I TAGET, MED AGARE (#235 FAS 1) ═════════════════
+
+	FAS 1 ar «SADEL: WORLD -> HELD», och den overgangen ska ga att
+	falsifiera ensam. `valjPar` ovan star kvar for `ridaNu`, dar stallet
+	gor i ordning hela hasten; boxfronten gar hit.
+
+	TRE SAKER SOM `valjPar` INTE GJORDE:
+
+	  1. EN typ. Tranget rors inte.
+	  2. AGARSKAP. Tva spelare far inte bara samma sadel. Registret nedan
+	     ar serverns, och nyckeln ar hastens id plus typen — alltsa den
+	     fysiska sadeln pa den fronten, inte «en sadel».
+	  3. Utrustningen LAMNAR fronten. Annars star den bade i handerna och
+	     pa kroken, och spelaren ser tva.
+
+	Ingen `Tool`, ingen `Backpack`, ingen klientauktoritativ state: den
+	burna delen svetsas server-side i `TackRigg.byggBuren`, och det enda
+	klienten far ar resultatet. ]]
+local burenAv: { [string]: Player } = {}
+
+local function agarnyckel(typ: string, hastId: string): string
+	return hastId .. "/" .. typ
+end
+
+--[[ Slapper allt den har spelaren bar. Anropas nar hon lamnar, nar
+	karaktaren forsvinner och nar passet tar slut — annars later registret
+	en sadel vara tagen for alltid av nagon som inte finns kvar. ]]
+function GameplayService.slappBuret(player: Player)
+	for nyckel, agare in pairs(burenAv) do
+		if agare == player then
+			burenAv[nyckel] = nil
+			local hastId, typ = nyckel:match("^(.+)/([^/]+)$")
+			if hastId and typ then
+				pcall(function() TackForradService.satSynlig(hastId, typ, true) end)
+			end
+		end
+	end
+	pcall(function() TackService.slappAllBuren(player) end)
+end
+
+--[[ AR HON KVAR? En `Player` som lamnat har `Parent == nil`, men det ar
+	inte hela sanningen: `PlayerRemoving` hinner fyra innan foraldern
+	nollas, och en bank har inga foraldrar alls. `Players:GetPlayers()` ar
+	tjanstens egen lista och det som faktiskt avgor om agaren finns kvar.
+	Utan det hade en levande agare sett ut som en gengangare, och den
+	andra spelaren hade fatt ta sadeln ur handerna pa henne. ]]
+local function kvarInne(p: Player): boolean
+	if p.Parent ~= nil then return true end
+	for _, q in ipairs(Players:GetPlayers()) do
+		if q == p then return true end
+	end
+	return false
+end
+
+--[[ Vem bar den har fronten utrustning? Provets fonster in. ]]
+function GameplayService.barasAv(typ: string, hastId: string): Player?
+	return burenAv[agarnyckel(typ, hastId)]
+end
+
+function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): (boolean, string?)
+	local t = typ or "sadel"
+	local ok, skal = provaVal(player, t, hastId)
+	if not ok then return false, skal end
+	local id = hastId :: string
+
+	--[[ NARHETEN ar serverns, inte promptens. En prompt har sin egen
+		rackvidd, men den ar klientens presentation — servern maste sjalv
+		kunna neka en hamtning fran andra sidan garden. ]]
+	local karaktar = player.Character
+	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	local modell = TackForradService.forHast(id)
+	local plats = modell and modell.PrimaryPart
+	if not (rot and rot:IsA("BasePart")) then return false, "tack.ingen_karaktar" end
+	if plats and (rot.Position - plats.Position).Magnitude > STEG_RACKVIDD then
+		return false, "spel.for_langt"
+	end
+
+	--[[ AGARSKAPET. Bar hon den redan ar svaret ja utan att nagot andras
+		— ett andra tryck far inte bygga en andra sadel. ]]
+	local nyckel = agarnyckel(t, id)
+	local agare = burenAv[nyckel]
+	if agare == player then return true end
+	if agare ~= nil and kvarInne(agare) then return false, "tack.redan_tagen" end
+
+	skrivVal(player, t, id)
+	if not TackService.satBuren(player, t, id) then
+		return false, "tack.kunde_inte_byggas"
+	end
+	burenAv[nyckel] = player
+	TackForradService.satSynlig(id, t, false)
+	skicka(player)
+	return true
+end
+
 function GameplayService.valdFor(player: Player): { [string]: string }?
 	return valdUtrustning[player]
 end
@@ -885,6 +983,10 @@ end
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
 local function glom(player: Player)
+	--[[ #235 FAS 1: en spelare som gar far inte lamna en sadel «tagen»
+		for alltid. Registret slapps och fronten far tillbaka sin
+		utrustning — inga orphans, varken i state eller i varlden. ]]
+	GameplayService.slappBuret(player)
 	state[player] = nil
 	passState[player] = nil
 	bunden[player] = nil

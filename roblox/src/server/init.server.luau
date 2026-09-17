@@ -137,7 +137,9 @@ kritisk("LedService", LedService.start)
      dit, och tjänsten tar emot anroparen som argument i stället för att
      requira tillbaka. Ordningen är alltså ett beroende, inte en smaksak. ]]
 kritisk("TackForradService", function()
-	TackForradService.start(GameplayService.valjPar)
+	--[[ #235 FAS 1: boxfronten hamtar EN typ, inte paret. `valjPar` star
+		kvar for `ridaNu`, dar stallet gor i ordning hela hasten. ]]
+	TackForradService.start(GameplayService.valjEn)
 end)
 
 --[[ Belysningen EFTER världsbygget: modulen letar upp armaturerna som
