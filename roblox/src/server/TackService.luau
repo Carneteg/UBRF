@@ -73,6 +73,18 @@ function TackService.kraver(steg: number): string?
 	return STEG_KRAVER[steg]
 end
 
+--[[ EFTERVÅRDEN (#211): vilka fysiska delar ett eftervårdsmoment tar av.
+	Kanon (`eftervard` i `UBRFSkotsel`) skriver "Ta av sadeln — ta av
+	sadel och underlägg" och "Ta av tränset". Avtagningen är alltså ett
+	MANUELLT moment i passet, inte något som sker av sig självt vid
+	avsittningen. Tyglarna följer tränset, se `taAv`. Kopplingen står
+	här, bredvid påsättningens, så att båda läser samma kanon. ]]
+local MOMENT_AV = { sadel = { "sadel", "underlagg" }, trans = { "trans" } }
+
+function TackService.avtagningFor(momentId: string): { string }?
+	return MOMENT_AV[momentId]
+end
+
 --[[ ── VÄRLDENS EGEN SANNING ──────────────────────────────────────── ]]
 
 --[[ Bär hästen den här utrustningen, och tillhör den HENNE? En del med
@@ -201,11 +213,15 @@ function TackService.taAv(player: Player, modell: Model?, typ: string): (boolean
 	if TackRigg.hittaDel(m, typ) == nil then
 		return false, "tack.inget_pa"
 	end
-	--[[ SADELN KAN INTE TAS AV UNDER TRÄNSET i kanonordningen: eftervården
-		säger "sadeln av innan tränset, annars står hon lös med sadeln
-		kvar". Att ta av underlägget under sadeln är samma sak. ]]
-	if typ == "sadel" and TackService.transad(m) then
-		return false, "tack.transet_forst"
+	--[[ KANONORDNINGEN VID AVTAGNING: eftervården säger "sadeln av innan
+		tränset, annars står hon lös med sadeln kvar", och momenten står i
+		den ordningen — "Ta av sadeln" före "Ta av tränset". Tränset får
+		alltså inte av så länge sadeln ligger på. (Spärren stod tidigare
+		TVÄRTOM och nekade sadeln under tränset, vilket gjorde kanonens
+		ordning omöjlig — rättad i #211.) Underlägget ligger under sadeln
+		och kan inte tas av först. ]]
+	if typ == "trans" and TackService.sadlad(m) then
+		return false, "tack.sadeln_forst"
 	end
 	if typ == "underlagg" and TackService.sadlad(m) then
 		return false, "tack.sadeln_forst"
@@ -216,7 +232,10 @@ function TackService.taAv(player: Player, modell: Model?, typ: string): (boolean
 	return true
 end
 
---[[ Allt av, i kanonordning. Används när passet avslutas.
+--[[ Allt av, i kanonordning. Används när passet avslutas
+	(`GameplayService.avslutaPass`, #211) — ett svep som ska vara en
+	no-op efter en fullständig eftervård och en rättelse efter ett
+	välfärdsstopp, där passet räknas utan att momenten gjorts.
 
 	SVEPET PÅ SLUTET är inte ett bälte till hängslena utan en rättelse.
 	`TackRigg.taAv` river en typ genom att ta den BÄRANDE delen och det som

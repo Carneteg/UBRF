@@ -246,6 +246,7 @@ const SPRAK = {
   "tack.saknar_trans": { sv: "Hon är inte tränsad än", en: "She is not bridled yet" },
   "tack.for_langt": { sv: "Gå fram till henne först", en: "Walk up to her first" },
   "tack.inget_pa": { sv: "Det sitter inget sådant på henne", en: "She has none of that on" },
+  "tack.sitter_kvar": { sv: "Den sitter fortfarande på henne", en: "It is still on her" },
   "tack.ingen_hast": { sv: "Ingen häst att utrusta", en: "No horse to tack up" },
   "tack.ingen_karaktar": { sv: "Du är inte i världen", en: "You are not in the world" },
   "tack.hast_saknar_kropp": { sv: "Hästen saknar kropp att utrusta",

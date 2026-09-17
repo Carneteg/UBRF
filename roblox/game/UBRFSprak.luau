@@ -565,6 +565,10 @@ Sprak.text = {
 		sv = "Det sitter inget sådant på henne",
 		en = "She has none of that on",
 	},
+	["tack.sitter_kvar"] = {
+		sv = "Den sitter fortfarande på henne",
+		en = "It is still on her",
+	},
 	["tack.ingen_hast"] = {
 		sv = "Ingen häst att utrusta",
 		en = "No horse to tack up",

@@ -171,6 +171,9 @@ do
 	check("och tyglarna hänger i HUVUDET",
 		tyglsvets ~= nil and tyglsvets.Part0 == huvud,
 		tyglsvets and tostring(tyglsvets.Part0 and tyglsvets.Part0.Name) or "-")
+	--[[ Kanonordningen (#211): sadeln av före tränset. ]]
+	TackService.taAv(spelare, hast, "sadel")
+	TackService.taAv(spelare, hast, "underlagg")
 	TackService.taAv(spelare, hast, "trans")
 	check("tränset av tar tyglarna med sig",
 		TackRigg.hittaDel(hast, "tygel") == nil)
@@ -226,6 +229,9 @@ do
 	local fullt = antal()
 	check("full utrustning är ett bestämt antal delar", fullt > 0, tostring(fullt))
 
+	--[[ Kanonordningen (#211): sadeln och underlägget av före tränset. ]]
+	TackService.taAv(spelare, hast, "sadel")
+	TackService.taAv(spelare, hast, "underlagg")
 	TackService.taAv(spelare, hast, "trans")
 	local utan = antal()
 	check("tränset av -> inget träns och inga tyglar kvar",
@@ -238,8 +244,10 @@ do
 	check("ingen ensam tygel hänger kvar vid munnen", kvarTygel == 0,
 		("%d tyglar kvar"):format(kvarTygel))
 
-	TackService.satPa(spelare, hast, "trans", nil, hast)
-	check("tränset på igen ger SAMMA antal delar, inte fler",
+	for _, typ in ipairs({ "underlagg", "sadel", "trans" }) do
+		TackService.satPa(spelare, hast, typ, nil, hast)
+	end
+	check("utrustningen på igen ger SAMMA antal delar, inte fler",
 		antal() == fullt, ("%d -> %d -> %d"):format(fullt, utan, antal()))
 
 	TackService.taAvAllt(hast)
@@ -300,18 +308,27 @@ do
 	check("ingen häst alls nekas", o10 == false and s10 == "tack.ingen_hast", tostring(s10))
 
 	--[[ ATT TA AV I FEL ORDNING. Eftervården säger "sadeln av innan
-		tränset, annars står hon lös med sadeln kvar". ]]
+		tränset, annars står hon lös med sadeln kvar", och kanonens moment
+		står i den ordningen: "Ta av sadeln" FÖRE "Ta av tränset". (#211:
+		spärren stod tidigare tvärtom och nekade sadeln under tränset —
+		det här provet mäter nu kanonens ordning.) ]]
 	nollstall()
 	TackService.satPa(spelare, hast, "underlagg", nil, hast)
 	TackService.satPa(spelare, hast, "sadel", nil, hast)
 	TackService.satPa(spelare, hast, "trans", nil, hast)
-	local o11, s11 = TackService.taAv(spelare, hast, "sadel")
-	check("sadeln av under tränset nekas", o11 == false and s11 == "tack.transet_forst",
+	local o11, s11 = TackService.taAv(spelare, hast, "trans")
+	check("tränset av under sadeln nekas", o11 == false and s11 == "tack.sadeln_forst",
 		tostring(s11))
-	local o12 = TackService.taAv(spelare, hast, "trans")
-	check("tränset av först går", o12)
-	local o13 = TackService.taAv(spelare, hast, "sadel")
-	check("och sedan sadeln", o13)
+	local o11b, s11b = TackService.taAv(spelare, hast, "underlagg")
+	check("underlägget av under sadeln nekas", o11b == false and s11b == "tack.sadeln_forst",
+		tostring(s11b))
+	local o12 = TackService.taAv(spelare, hast, "sadel")
+	check("sadeln av först går — medan tränset sitter på", o12 and TackService.transad(hast))
+	local o12b = TackService.taAv(spelare, hast, "underlagg")
+	check("och underlägget efter sadeln", o12b)
+	local o13 = TackService.taAv(spelare, hast, "trans")
+	check("och sedan tränset", o13)
+	check("tyglarna följde tränset av", TackRigg.hittaDel(hast, "tygel") == nil)
 	local o14, s14 = TackService.taAv(spelare, hast, "sadel")
 	check("att ta av något som inte sitter på nekas",
 		o14 == false and s14 == "tack.inget_pa", tostring(s14))
@@ -425,9 +442,9 @@ do
 	--[[ 5. OCH ALLT SKA FORTFARANDE GÅ ATT TA AV. Den nya geometrin har
 		fler delar; kontraktet är att inte en enda blir kvar. ]]
 	local fore = #mapp:GetChildren()
-	TackService.taAv(spelare, hast, "trans")
 	TackService.taAv(spelare, hast, "sadel")
 	TackService.taAv(spelare, hast, "underlagg")
+	TackService.taAv(spelare, hast, "trans")
 	local kvar = hast:FindFirstChild("Tack")
 	check("hela utrustningen går av utan rester",
 		kvar == nil or #kvar:GetChildren() == 0,

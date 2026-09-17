@@ -42,6 +42,7 @@ local RidKanon = require(ReplicatedStorage.HorseCore.RidKanon)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
+local TackRigg = require(script.Parent.TackRigg)
 local Komplex = require(ReplicatedStorage.UBRFKomplex)
 local Net = Core.Networking
 
@@ -609,6 +610,43 @@ function GameplayService.eftervard(player: Player, momentId: string): (boolean, 
 		return false, skal
 	end
 
+	--[[ PRÖVAS FÖRST, KVITTERAS SIST (#211). Mellan dem ligger det
+		fysiska: "Ta av sadeln" och "Ta av tränset" tar FAKTISKT av
+		delarna från den bundna hästen, genom samma tjänst som satte på
+		dem. Nekas momentet av passets regel rörs ingenting; misslyckas
+		avtagningen kvitteras ingenting. Världen och passet får inte säga
+		olika, och det enda sättet att mena det är att kvitteringen
+		kommer efter delarna är borta.
+
+		Avtagningen sker ALDRIG av sig själv vid avsittningen: kanon gör
+		den till ett manuellt moment i eftervården, och en transient
+		avsittning före eftervården ska lämna hästen ridklar. ]]
+	local far, avslagFar, arg = Pass.farUtfora(p, momentId)
+	if not far then
+		skickaPass(player)
+		return false, avslagFar, arg
+	end
+	local delar = TackService.avtagningFor(momentId)
+	if delar then
+		local modell = bunden[player]
+		if not (modell and modell.Parent) then
+			return false, "tack.ingen_hast"
+		end
+		for _, typ in ipairs(delar) do
+			if TackService.harTack(modell, typ) then
+				local avOk, avSkal = TackService.taAv(player, modell, typ)
+				if not avOk then
+					return false, avSkal
+				end
+			end
+		end
+		for _, typ in ipairs(delar) do
+			if TackRigg.hittaDel(modell, typ) ~= nil then
+				return false, "tack.sitter_kvar"
+			end
+		end
+	end
+
 	local ok, avslag = Pass.utfor(p, momentId)
 	if ok and Pass.farAvsluta(p) then
 		GameplayService.avslutaPass(player)
@@ -635,6 +673,17 @@ function GameplayService.avslutaPass(player: Player): (boolean, string?)
 	local ok, skal = Pass.farAvsluta(p)
 	if not ok then
 		return false, skal
+	end
+
+	--[[ INGET LIGGER KVAR NÄR PASSET RÄKNAS (#211). Efter en fullständig
+		eftervård är det här en no-op: momenten tog redan av delarna.
+		Efter ett välfärdsstopp — som räknar passet utan eftervård — är
+		det rättelsen som gör att hästen inte står med ett halvt påsatt
+		underlägg i en server där hon lever vidare. Svepet är
+		idempotent och rör bara den bundna hästen. ]]
+	local modell = bunden[player]
+	if modell and modell.Parent then
+		TackService.taAvAllt(modell)
 	end
 
 	local save = SparService.save(player)
