@@ -1,0 +1,5 @@
+# Roblox-placer (.rbxlx) är bevarade evidensartefakter (#218/#219). De får
+# aldrig normaliseras av radslutskonvertering: en checkout med core.autocrlf
+# eller en framtida `* text=auto`-regel skulle ge en annan fil än den som
+# Tobias accepterade. `binary` = -text -diff -merge.
+*.rbxlx binary
