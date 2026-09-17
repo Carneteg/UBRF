@@ -152,6 +152,14 @@ jobs:
           if [ -f tools/kolla-place.py ]; then python3 tools/kolla-place.py
           else echo "hoppar: tools/kolla-place.py finns inte i denna branch"; fi
 
+      # EVIDENS_PLACE (#219). Den bevarade First Playable-placen från #218 ska
+      # vara byte för byte den Tobias accepterade, och .gitattributes-regeln
+      # som hindrar radslutsnormalisering ska fortfarande gälla.
+      - name: Bevarad First Playable-place är oförändrad
+        run: |
+          if [ -f tools/kolla-evidens-place.py ]; then python3 tools/kolla-evidens-place.py
+          else echo "hoppar: tools/kolla-evidens-place.py finns inte i denna branch"; fi
+
       # END_TO_END_PLAYABILITY_GATE (#162, ChatGPT-processreview 16:31).
       # Mäter en gångbar kedja spawn → entrédörr → in → gången vid Jacks
       # box, collision-aware med avatarens footprint över den FAKTISKT
