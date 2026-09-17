@@ -426,7 +426,10 @@ end
 	ETT beslut för spelaren — vad gör vi åt det. Ett steg, inte nio, och
 	hästen rids fortfarande inte om hon inte ska ridas. Första passet bär
 	aldrig något fynd, så en ny spelare kommer rakt upp i sadeln. ]]
-function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
+--[[ Sjalva handlingen. Loggen ligger i skalet nedan — «Rida nu» har ett
+	dussin vagar ut, och en loggrad per return hade garanterat glidit
+	isar fran koden. ]]
+local function ridaNuInre(player: Player): (boolean, string?, string?)
 	local naravaro_ok, skal = narvaro(player)
 	if not naravaro_ok then return false, skal end
 	local s = state[player]
@@ -528,6 +531,23 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	skicka(player)
 	local klar, varfor, arg = Preparation.provaUppsittning(s, s.hastId)
 	return klar, varfor, arg
+end
+
+function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
+	--[[ #182 del 2: loggevidens. «Rida nu» ar genvagen forbi hela
+		forberedelsen, och nar den nekar vill man veta VILKEN hast och
+		VILKET steg som sa nej — inte bara att det blev nej. ]]
+	local s0 = state[player]
+	local id = s0 and s0.hastId or nil
+	local ok, varfor, arg = ridaNuInre(player)
+	if ok then
+		print(("[Led] %s · %s · RidaNu"):format(
+			tostring(player.Name), tostring(id or "-")))
+	else
+		warn(("[Led] %s · %s · RidaNu NEKAD: %s"):format(
+			tostring(player.Name), tostring(id or "-"), tostring(varfor)))
+	end
+	return ok, varfor, arg
 end
 
 --[[ Hästens dagsform vid uppsittning, 0–1.
@@ -1360,6 +1380,14 @@ function GameplayService.start()
 
 	--[[ Vilken häst spelaren FÅR leda är skötselns fråga, inte
 		ledningens. Kroken svarar med den bundna modellen. ]]
+	--[[ #182 del 2: och VEM som sitter pa henne. `HorseService` ager
+		sessionerna; `LedService` fragar genom kroken i stallet for
+		att fa ett eget beroende. ]]
+	LedService.satRidenKrok(function(modell)
+		local sess = HorseService.sessionFor(modell)
+		return sess ~= nil and sess.rider ~= nil
+	end)
+
 	LedService.satRattHastKrok(function(player)
 		return bunden[player] or GameplayService.bind(player)
 	end)

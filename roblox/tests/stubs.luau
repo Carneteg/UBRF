@@ -85,6 +85,22 @@ Color3 = {
 	new = function(r, g, b) return { R = r or 0, G = g or 0, B = b or 0 } end,
 }
 
+--[[ `ColorSequence` — en fargskala over en `Beam` eller partikel.
+     Ledrepet (#182 del 2) ar en Beam, och utan den har stubben kunde
+     `LedService.borja` inte ens KORA i bankan: hela ledningskedjan blev
+     omatbar for att en fargkonstruktor saknades. En stubb som inte
+     kanner till ett API tystar inte provet, den doljer produktionen.
+
+     Bara det bankan behover: ett varde som gar att lasa tillbaka. ]]
+ColorSequenceKeypoint = {
+	new = function(tid, farg) return { Time = tid or 0, Value = farg } end,
+}
+ColorSequence = {
+	new = function(a, b)
+		return { Keypoints = { { Time = 0, Value = a }, { Time = 1, Value = b or a } } }
+	end,
+}
+
 local function cframe(pos, look, yaw, pitch, roll)
 	local c = { Position = pos or vec(), LookVector = look or vec(0, 0, 1),
 		Yaw = yaw or 0, Pitch = pitch or 0, Roll = roll or 0 }
@@ -223,6 +239,20 @@ Enum = {
 	HumanoidStateType = { Freefall = 1, Jumping = 2, Running = 3, Landed = 4 },
 	PathStatus = { Success = 1, NoPath = 2, ClosestNoPath = 3 },
 	KeyCode = setmetatable({}, { __index = function(_, k) return k end }),
+	--[[ `ProximityPromptExclusivity` — vilken prompt som visas nar flera
+	     delar knapp. Roblox STANDARD ar `OnePerButton`, och det ar precis
+	     den standarden som gjorde fyra handlingar pa `E` till en synlig
+	     och tre osynliga (#235, #182 del 3). Utan enumen i bankan gick
+	     regeln inte att mata alls. ]]
+	--[[ `OrientationAlignmentMode` — om `AlignOrientation` styr mot EN
+	     fastpunkt (en riktning) eller mot tva (kopiera en annan kropp).
+	     Ledningen anvander `OneAttachment`: hasten ska peka dit hon gar,
+	     inte kopiera spelarens vridning. ]]
+	OrientationAlignmentMode = setmetatable({},
+		{ __index = function(_, k) return k end }),
+	ProximityPromptExclusivity = setmetatable({},
+		{ __index = function(_, k) return k end }),
+
 	UserInputState = { Begin = 1, End = 2 },
 	--[[ #220: `Touch` tillkom med blickspecen. TouchControls sorterar
 	     varje nedslag pa `UserInputType`, och utan enumen jamforde banken
@@ -1314,11 +1344,52 @@ local function __nyInstans(klass)
 		     kraschar klientens egen väg i bänken. ]]
 		function inst:FireServer(...) table.insert(self._skickat, { ... }) end
 		function inst:InvokeServer(...) table.insert(self._skickat, { ... }); return true end
-		function inst:FireClient(spelare, ...) table.insert(self._skickat, { spelare, ... }) end
-		function inst:FireAllClients(...) table.insert(self._skickat, { ... }) end
+		--[[ FireClient LEVERERAR (#182 del 2). Forut bokfordes anropet bara
+		     i `_skickat`, och `OnClientEvent` fyrade aldrig. Det gjorde
+		     hela server->klient-riktningen omojlig att mata: `LedSync` ar
+		     den enda vagen servern har att saga "kopplet slapptes", och en
+		     bank dar den signalen inte kommer fram kan inte skilja en
+		     tjanst som skickar den fran en som glomt.
+
+		     Bokforingen star kvar — prov som laser `_skickat` fungerar som
+		     forut — men nu gar signalen ocksa fram. ]]
+		function inst:FireClient(spelare, ...)
+			table.insert(self._skickat, { spelare, ... })
+			local Pl = game:GetService("Players")
+			local mig = Pl and rawget(Pl, "LocalPlayer")
+			--[[ Bankan har en klient. Ar mottagaren den — eller vet vi
+			     inte vem klienten ar — levereras nyttolasten. ]]
+			if mig == nil or spelare == nil or spelare == mig then
+				self.OnClientEvent:Fire(...)
+			end
+		end
+		function inst:FireAllClients(...)
+			table.insert(self._skickat, { ... })
+			self.OnClientEvent:Fire(...)
+		end
 	end
 	if klass == "RemoteFunction" then
 		inst.OnServerInvoke = nil
+		inst._skickat = {}
+		--[[ INVOKESERVER NAR FRAM (#182 del 2). `RemoteFunction` hade ingen
+		     `InvokeServer` alls, och `RemoteEvent`s variant svarade `true`
+		     utan att nagonsin rora serverns handlare.
+
+		     Integrationsprovet for ledningen far uttryckligen INTE mocka
+		     bort `LedBorja`. Da maste bankan faktiskt koppla klientens
+		     anrop till `OnServerInvoke` — annars mater provet stubben och
+		     sager ingenting om att kedjan haller.
+
+		     Spelaren som forsta argument ar riktig API-form: servern far
+		     alltid veta VEM som anropade. Bankan har en klient, och det ar
+		     `Players.LocalPlayer`. ]]
+		function inst:InvokeServer(...)
+			table.insert(self._skickat, { ... })
+			local handlare = rawget(self, "OnServerInvoke")
+			if type(handlare) ~= "function" then return true end
+			local Pl = game:GetService("Players")
+			return handlare(Pl and rawget(Pl, "LocalPlayer"), ...)
+		end
 	end
 	--[[ NATVERKSAGARSKAPET.
 

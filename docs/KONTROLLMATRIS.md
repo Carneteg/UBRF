@@ -30,8 +30,10 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Led / släpp hästen | `L` | `DPadLeft` (styrkors vänster) | tryck på knappen |
 | Sadla hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
 | Tränsa hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
-| Ta sadeln (boxfronten) | `E` | `ButtonX` | tryck på knappen |
+| Ta sadeln (boxfronten) | `G` | `ButtonL1` | tryck på knappen |
 | Ta tränset (boxfronten) | `T` | `ButtonB` | tryck på knappen |
+| Titta in i boxen | `V` | `ButtonL2` | tryck på knappen |
+| Öppna / stäng dörr | `X` | `ButtonR3` | tryck på knappen |
 | Framåt / bakåt | `W` / `S` | vänster spak | spaken |
 | Styr | `A` / `D` | vänster spak | spaken |
 | Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
@@ -123,6 +125,10 @@ huvudboken, inte de tre rader man råkar titta på:
 | `Thumbstick1` | `Input.luau` | styrning och framåt | i sadeln |
 | `ButtonA` | `Input.luau` | hopp | i sadeln |
 | `ButtonB` | `Input.luau` | halvhalt | i sadeln |
+| `ButtonB` | `TackForradService.luau` | **ta tränset** (boxfronten) | på marken |
+| `ButtonL1` | `TackForradService.luau` | **ta sadeln** (boxfronten) | på marken |
+| `ButtonL2` | `StallService.luau` | **titta in** (boxmarkören) | på marken |
+| `ButtonR3` | `DorrService.luau` | **dörr** | **alltid** |
 | `ButtonR1` / `ButtonL1` | `Input.luau` | gångart upp / ner | i sadeln |
 | `ButtonR2` | `Input.luau` | tygel | i sadeln |
 | `ButtonL2` | `Input.luau` | sits | i sadeln |
@@ -220,18 +226,56 @@ Sadeln behåller Roblox standardvärde (`E` / `ButtonX`); tränset får `T` och
 byggt precis det #235 rapporterade: flera prompter i djupet där bara den
 närmaste går att nå.
 
-### Handkontrollens budget är slut
+### Handkontrollens budget är slut — och vad som återstår
 
 Efter FAS 3 är varenda knapp på handkontrollen bunden, och **fem av
 bindningarna på marken bärs av kontextregeln** i stället för av ledigt
-utrymme. Bara tumstickornas klick (`ButtonL3` / `ButtonR3`) är obundna, och
-de är dåliga träffytor för en handling man gör ofta.
+utrymme. Efter #182 del 3 är `ButtonR3` dörrens, och **`ButtonL3` är den enda
+obundna knappen som återstår** — en tumsticksklick, dålig träffyta
+för något man gör ofta.
 
 Det är inte ett fel i dag — varje delning är mätt i båda riktningarna — men
 det är ett **tak**. Nästa knapp på marken har ingen plats att ta, och då är
 frågan en annan: en kontextuell «gör i ordning»-knapp som gör nästa steg i
 kedjan, i stället för en knapp per moment. Det beslutet ligger utanför
 #235 och är flaggat i FAS 3-rapporten.
+
+### Promptkonkurrensen — mätt, inte gissad (#182 del 3)
+
+`promptkonflikt.spec.luau` bygger hela anläggningen och ställer en spelare
+vid sin egen boxfront. Mätningen där:
+
+> **elva prompter inom räckhåll samtidigt**, byggda av fem filer som inte
+> känner varandra — tre dörrar, två grannboxars sadlar, två tränsen,
+> hästens fyra egna. **Sex av dem delade `E`.**
+
+Roblox standard `Exclusivity = OnePerButton` visar bara den **närmaste**
+av flera på samma knapp. Fem av de sex fanns alltså utan att spelaren
+kunde se att de fanns. Det är den andra halvan av #235:s rotorsak — den
+första var att promptlagret inte renderade alls på telefon.
+
+**Två ändringar, och båda behövs:**
+
+1. **`Exclusivity = AlwaysShow` på varje prompt.** Ingenting döljs.
+2. **Distinkt knapp per HANDLING.** Samma handling på olika föremål — tre
+   dörrar, två sadlar — delar knapp med flit: närheten avgör, och det är
+   så en världsprompt ska fungera. Två OLIKA handlingar får aldrig dela,
+   för då kan spelaren inte välja utan att gå.
+
+**Dörren är den enda prompten som lever i båda lägena.** Man öppnar en
+dörr både till fots och från hästryggen, så den kan inte bära
+kontextregeln — det finns inget läge där den är släckt. Roblox standard
+`E`/`ButtonX` var därför en verklig krock: `E` är **avsittning** i sadeln
+och `ButtonX` är **se ritten**. Att öppna en dörr från hästryggen hade
+gjort båda sakerna i samma tryck.
+
+Dörren får därför `X` och `ButtonR3` — de enda som är lediga i hela
+matrisen, i båda lägena. Just för att den är den enda som behöver det
+kunde `MountPrompt` behålla sitt `E`/`ButtonX`.
+
+Alla övriga markprompter bär kontextregeln mot en bindning som bara lever
+i sadeln, och `promptkonflikt.spec` mäter att ingen av dem krockar med en
+annan handling där spelaren faktiskt står.
 
 ### Avsittningen (#162 blockerare 2)
 

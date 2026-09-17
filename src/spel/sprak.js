@@ -229,6 +229,10 @@ const SPRAK = {
   "led.for_langt": { sv: "Gå fram till henne först", en: "Walk up to her first" },
   "led.leder_redan": { sv: "Du leder redan", en: "You are already leading" },
   "led.leder_inte": { sv: "Du leder ingen häst", en: "You are not leading a horse" },
+  /* #182 del 2: hasten bars redan av en ryttare. Skilt fran
+     `led.rider`, som ar att SPELAREN sitter upp — tva olika fel som
+     hade blivit omojliga att skilja at med samma text. */
+  "led.rids": { sv: "Hon rids just nu", en: "She is being ridden right now" },
   "led.upptagen": { sv: "Någon annan leder henne", en: "Someone else is leading her" },
   "led.tappade_bort": { sv: "Hon kom efter — gå tillbaka och ta henne igen",
     en: "She fell behind — go back and take her again" },

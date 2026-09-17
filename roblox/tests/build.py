@@ -644,6 +644,13 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ FORE den bredare "ledning"-grenen: "ledning-integration"
+    #   INNEHALLER "ledning" och hamnade annars i integrationsbanken,
+    #   som saknar bade varlden och klientens InteractionController. ]]
+    elif "promptkonflikt" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "ledning-integration" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "sprak-en" in spec_rel:

@@ -509,6 +509,10 @@ Sprak.text = {
 		sv = "Du leder ingen häst",
 		en = "You are not leading a horse",
 	},
+	["led.rids"] = {
+		sv = "Hon rids just nu",
+		en = "She is being ridden right now",
+	},
 	["led.upptagen"] = {
 		sv = "Någon annan leder henne",
 		en = "Someone else is leading her",

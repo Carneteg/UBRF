@@ -203,6 +203,12 @@ local function stallIn(prompt: ProximityPrompt)
 	prompt.ClickablePrompt = true
 	local pad = InteractionController.GAMEPAD[prompt.Name]
 	if pad then prompt.GamepadKeyCode = pad end
+	--[[ INGEN KNAPP FAR DOLJA EN ANNAN (#182 del 3). `OnePerButton` ar
+		Roblox standard, och den visar bara den NARMASTE av flera pa
+		samma knapp. Matt i den byggda varlden stod elva prompter inom
+		rackhall vid en boxfront och sex delade `E` — fem av dem fanns
+		utan att spelaren kunde se det. ]]
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 	prompt.Enabled = promptarPa
 end
 

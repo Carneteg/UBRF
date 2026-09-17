@@ -173,29 +173,64 @@ print("\n── Följandet ──")
 rot.CFrame = CFrame.new(varld(132, 60))
 hastKropp.CFrame = CFrame.new(varld(132, 66))
 LedService._steg(1 / 30)
-local dir = hastHum._moveDir
-check("tjänsten ger hästen en rörelseriktning när avståndet växer",
-	dir ~= nil and dir.Magnitude > 0.5,
-	dir and string.format("%.2f", dir.Magnitude) or "nil")
-check("och hon får skrittfart, inte noll", hastHum.WalkSpeed > 0,
-	string.format("%.2f studs/s", hastHum.WalkSpeed))
+--[[ ══ FÖLJNINGEN ÄR CONSTRAINTS NU (#182 del 2) ═══════════════════
 
---[[ HON GÅR DIT HON PEKAR. Riktningen som skickas ska vara hästens EGEN
-	framåtvektor, inte fågelvägen till målpunkten. ]]
-if dir then
-	local framatV = framatAv(hastKropp.CFrame)
-	local prick = dir.X * framatV.X + dir.Z * framatV.Z
-	check("ordern går i hästens egen riktning, inte i sidled",
+	Mätningarna här mätte förut `Humanoid:Move` och `WalkSpeed`. Den
+	aktueringen finns inte längre: arkitekturkontraktet i #235 FAS 4 kräver
+	`AlignPosition` + `AlignOrientation`, och förbjuder uttryckligen
+	loopreglering — `Humanoid:Move` varje bildruta och direkt skrivning av
+	`CFrame` var två av de förbjudna sakerna.
+
+	Det som mäts är därför inte längre en rörelseorder utan REGULATORN:
+	att den är påslagen, att den drar mot rätt punkt, och att den slås av
+	i dödzonen. Att Roblox sedan flyttar henne är fysikmotorns jobb och
+	kan inte mätas i en bänk utan fysik — det är en Studio-grind. ]]
+local rigg = LedService.riggFor(spelare)
+check("följriggen byggdes när ledningen började", rigg ~= nil)
+check("och den har båda regulatorerna, ingen tredje",
+	rigg ~= nil and rigg.drag ~= nil and rigg.vrid ~= nil)
+check("dragets fästpunkt sitter på hästen, målet på spelaren",
+	rigg ~= nil and rigg.hastfast ~= nil and rigg.mal ~= nil
+		and rigg.hastfast.Parent == hastKropp
+		and rigg.mal.Parent == rot,
+	rigg and ("%s / %s"):format(
+		tostring(rigg.hastfast and rigg.hastfast.Parent and rigg.hastfast.Parent.Name),
+		tostring(rigg.mal and rigg.mal.Parent and rigg.mal.Parent.Name)) or "-")
+check("draget är MJUKT, inte stelt — hon dras, teleporteras inte",
+	rigg ~= nil and rigg.drag.RigidityEnabled == false)
+
+check("regulatorn är påslagen när avståndet växer",
+	rigg ~= nil and rigg.drag.Enabled == true)
+check("och hon får skrittfart, inte noll",
+	rigg ~= nil and rigg.drag.MaxVelocity > 0,
+	rigg and string.format("%.2f studs/s", rigg.drag.MaxVelocity) or "-")
+
+--[[ HON PEKAR DIT HON GÅR. `AlignOrientation` får en kurs ur
+	färdriktningen, inte ur spelarens kropp — en häst som kopierat
+	ryttarens vridning hade gått i sidled genom dörren. ]]
+if rigg then
+	local mot = Vector3.new(rigg.mal.WorldPosition.X - hastKropp.Position.X, 0,
+		rigg.mal.WorldPosition.Z - hastKropp.Position.Z)
+	local kurs = rigg.vrid.CFrame and rigg.vrid.CFrame.LookVector
+	local prick = kurs and mot.Magnitude > 0.01
+		and (kurs.X * mot.Unit.X + kurs.Z * mot.Unit.Z) or -1
+	check("kursen pekar mot målpunkten, inte i sidled",
 		prick > 0.99, string.format("prickprodukt %.4f", prick))
 end
 
---[[ HYSTERESEN: står hon nära nog ska hon STÅ, inte pendla. ]]
+--[[ HYSTERESEN: står hon nära nog ska hon STÅ, inte pendla.
+
+	MED CONSTRAINTS RÄCKER DET INTE att sluta flytta målet — draget hade
+	fortsatt skjuta mot den sista punkten för evigt. Regulatorn måste
+	SLÄCKAS. ]]
 hastKropp.CFrame = CFrame.new(rot.Position - vec(0, 0, 2.2 * M))
-hastHum._moveDir = nil
 LedService._steg(1 / 30)
 LedService._steg(1 / 30)
-check("innanför dödzonen får hon order att STÅ, inte att gå",
-	hastHum._moveDir ~= nil, tostring(hastHum._moveDir))
+check("innanför dödzonen är draget AVSLAGET, inte bara omriktat",
+	rigg ~= nil and rigg.drag.Enabled == false,
+	rigg and tostring(rigg.drag.Enabled) or "-")
+check("och kursregulatorn med den",
+	rigg ~= nil and rigg.vrid.Enabled == false)
 
 --[[ HON FÅR INTE LÅSA SIG PÅ SITT EGET SPÅR.
 
@@ -229,14 +264,19 @@ do
 		spelaren långt borta. Precis så stod hon i stallet. ]]
 	kropp5.CFrame = CFrame.new(l5.spar[1] + Vector3.new(1.4 * M, 0, 0))
 	l5.gar = false
-	hum5.WalkSpeed = 0
-	--[[ 90 bildrutor: hon hinner vända sig först — det SKA ta tid — och
-		sedan gå. Kravet är att hon kommer iväg, inte att hon gör det i
-		samma bildruta. ]]
+	--[[ 90 bildrutor: kravet är att hon KOMMER IVÄG, inte att hon gör det
+		i samma bildruta.
+
+		MÄTT PÅ REGULATORN, inte på `WalkSpeed`: följningen är constraints
+		sedan #182 del 2, och `WalkSpeed` rör inte längre en ledd häst. ]]
 	for _ = 1, 90 do LedService._steg(1 / 30) end
+	local rigg5 = LedService.riggFor(sp5)
 	check("hon låser sig inte i glappet vid sin egen brödsmula",
-		l5.gar == true and hum5.WalkSpeed > 0,
-		string.format("gar=%s fart %.2f", tostring(l5.gar), hum5.WalkSpeed))
+		l5.gar == true and rigg5 ~= nil and rigg5.drag.Enabled == true
+			and rigg5.drag.MaxVelocity > 0,
+		string.format("gar=%s drag=%s fart %.2f", tostring(l5.gar),
+			tostring(rigg5 and rigg5.drag.Enabled),
+			rigg5 and rigg5.drag.MaxVelocity or -1))
 	if LedService.lage(sp5) then LedService.slapp(sp5) end
 end
 
@@ -297,53 +337,69 @@ do
 	local kurs0 = kursAv(kropp4.CFrame)
 
 	LedService._steg(1 / 30)
-	local kurs1 = kursAv(kropp4.CFrame)
-	check("ledningen äger kursen — hästen vrider sig",
-		math.abs(kurs1 - kurs0) > 1e-4,
-		string.format("%.4f rad på en bildruta", math.abs(kurs1 - kurs0)))
 
-	--[[ VRIDTAKTEN KOMMER UR KANON, inte ur ett tal i tjänsten.
-		`TurnInPlaceRate` är takten en STÅENDE häst får vrida sig i. Faller
-		den här mätningen har någon satt en egen siffra. ]]
-	local takt = math.abs(kurs1 - kurs0) * 30
-	check("vridtakten är kanonens, inte en egen siffra",
-		math.abs(takt - Config.MOVEMENT.TurnInPlaceRate) < 0.02,
-		string.format("%.3f rad/s mot kanonens %.3f", takt,
-			Config.MOVEMENT.TurnInPlaceRate))
+	--[[ ══ KURSEN ÄR EN REGULATOR NU, INTE EN CFRAME-SKRIVNING ═══════
 
-	--[[ MED KROPPEN PÅ TVÄREN GÅR HON INTE. Ett kvarts varv fel och full
-		fart framåt är exakt det som kilade fast henne. ]]
-	check("med stort kursfel vänder hon först och går inte",
-		hum4.WalkSpeed == 0, string.format("%.2f studs/s", hum4.WalkSpeed))
+		Mätningarna här mätte förut att `LedService` skrev `pivot.CFrame`
+		med kanonens `TurnInPlaceRate`, och att `WalkSpeed` var noll tills
+		hon vänt färdigt.
 
-	--[[ Och hon ska vrida sig ÄNDA FRAM och sedan gå. Utan den här raden
-		kunde tjänsten bara vrida, aldrig komma iväg. ]]
+		BÅDA MEKANISMERNA ÄR BORTA MED FLIT. Arkitekturkontraktet i #235
+		FAS 4 förbjuder direkt CFrame-skrivning, och vändtröskeln fanns
+		bara för att `Humanoid:Move` sköt kroppen rakt fram oavsett hur den
+		stod. `AlignOrientation` vrider henne kontinuerligt MEDAN
+		`AlignPosition` drar, så hon kan inte längre gå i sidled in i en
+		dörrkarm — problemet vändtröskeln löste uppstår inte.
+
+		Det som mäts är därför att kursen ÄGS av ledningen och pekar rätt,
+		och att vridningen är mjuk. Hur fort hon faktiskt vrider sig är
+		fysikmotorns svar på `Responsiveness` och `MaxTorque`, och det är
+		en Studio-grind. ]]
+	local rigg4 = LedService.riggFor(sp4)
+	check("ledningen äger kursen — regulatorn är påslagen",
+		rigg4 ~= nil and rigg4.vrid.Enabled == true)
+	check("vridningen är MJUK, inte ett snäpp",
+		rigg4 ~= nil and rigg4.vrid.RigidityEnabled == false)
+	check("och den styr mot EN riktning, inte mot spelarens kropp",
+		rigg4 ~= nil
+			and rigg4.vrid.Mode == Enum.OrientationAlignmentMode.OneAttachment,
+		rigg4 and tostring(rigg4.vrid.Mode) or "-")
+
+	--[[ KURSEN PEKAR MOT SPELAREN. Invarianten hela
+		konventionsrättelsen handlade om: hästen ska gå ÅT DET HÅLL HON
+		TITTAR. Mätt i Studio före rättelsen var prickprodukten -1,00 —
+		ekipaget färdades med svansen före.
+
+		Nu läses den ur regulatorns egen målkurs, som är det ledningen
+		FAKTISKT beordrar. ]]
 	for _ = 1, 90 do LedService._steg(1 / 30) end
-	local framatV = framatAv(kropp4.CFrame)
-	local mot = rot4.Position - kropp4.Position
-	local langd = math.sqrt(mot.X * mot.X + mot.Z * mot.Z)
-	local prick = (mot.X * framatV.X + mot.Z * framatV.Z) / math.max(langd, 1e-6)
-	check("hon vänder sig ända fram till rätt kurs och går sedan",
-		prick > 0.9 and hum4.WalkSpeed > 0,
-		string.format("prickprodukt %.3f, fart %.2f studs/s", prick, hum4.WalkSpeed))
+	if rigg4 then
+		local mot = rot4.Position - kropp4.Position
+		local langd = math.sqrt(mot.X * mot.X + mot.Z * mot.Z)
+		local look = rigg4.vrid.CFrame and rigg4.vrid.CFrame.LookVector
+		local prick = look and langd > 1e-6
+			and (mot.X * look.X + mot.Z * look.Z) / langd or -1
+		check("den beordrade kursen pekar MOT spelaren, inte från",
+			prick > 0.9, string.format("prickprodukt %.3f", prick))
+		check("och draget är påslaget — hon ska faktiskt iväg",
+			rigg4.drag.Enabled == true and rigg4.drag.MaxVelocity > 0,
+			string.format("%.2f studs/s", rigg4.drag.MaxVelocity))
+	end
 
-	--[[ ══ FÄRDRIKTNINGEN MOT BLICKRIKTNINGEN ═══════════════════════
-
-		Invarianten hela konventionsrättelsen handlar om: hästen ska gå
-		ÅT DET HÅLL HON TITTAR. Mätt i Studio före rättelsen var
-		prickprodukten -1,00 — ekipaget färdades med svansen före, ridd
-		såväl som ledd, och ryttarens blickriktning låg -1,00 mot färden.
-
-		Den här raden kan bara bli grön om ordern och blickriktningen
-		pekar åt samma håll. ]]
-	local order = hum4._moveDir
-	if order then
-		local look = kropp4.CFrame.LookVector
-		local prickLook = order.X * look.X + order.Z * look.Z
-		check("hästen går ÅT DET HÅLL HON TITTAR (travel · LookVector > 0)",
-			prickLook > 0.99, string.format("prickprodukt %.4f", prickLook))
-	else
-		check("hästen får en rörelseorder att mäta mot", false, "ingen order")
+	--[[ INGEN PARALLELL REGLERING. Kontraktet förbjuder en andra kraft om
+		samma mål — `VectorForce`, `BodyVelocity`, en dragande
+		`RopeConstraint`. Provet letar i hästen efter allt sådant. ]]
+	do
+		local forbjudna = {}
+		for _, d in ipairs(kropp4:GetChildren()) do
+			local k = tostring(d.ClassName)
+			if k == "VectorForce" or k == "BodyVelocity" or k == "BodyPosition"
+				or k == "BodyGyro" or k == "RopeConstraint" or k == "LinearVelocity" then
+				table.insert(forbjudna, k)
+			end
+		end
+		check("ingen andra regulator drar i samma häst", #forbjudna == 0,
+			table.concat(forbjudna, " "))
 	end
 
 	--[[ NÄTVERKSÄGARSKAPET. Mätt i Studio: en oriden häst intill en

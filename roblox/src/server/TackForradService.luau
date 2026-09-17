@@ -250,6 +250,13 @@ local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string
 	prompt.MaxActivationDistance = 8
 	prompt.RequiresLineOfSight = false
 	prompt.ClickablePrompt = true
+	--[[ EGEN KNAPP (#182 del 3). Sadeln delade `E` med boxdorren och
+		uppsittningen, och de tre ar natbara samtidigt vid boxen.
+		`G` och `ButtonL1` ar «ga vidare» respektive gangart ned — bada
+		lever bara i sadeln, och utrustning hamtar man till fots. ]]
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+	prompt.KeyboardKeyCode = Enum.KeyCode.G
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonL1
 	prompt.Parent = sadel
 
 	prompt.Triggered:Connect(function(spelare)
@@ -280,6 +287,7 @@ local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string
 	transPrompt.MaxActivationDistance = 8
 	transPrompt.RequiresLineOfSight = false
 	transPrompt.ClickablePrompt = true
+	transPrompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 	transPrompt.KeyboardKeyCode = Enum.KeyCode.T
 	transPrompt.GamepadKeyCode = Enum.KeyCode.ButtonB
 	transPrompt.Parent = trans

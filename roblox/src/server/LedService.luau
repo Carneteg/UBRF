@@ -48,6 +48,46 @@ local STOPP_R    = 1.0         -- m: innanför detta står hon still
 local START_R    = 1.8         -- m: utanför detta går hon igen (hysteres)
 local KOPPEL     = 9.0         -- m: längre bort och kopplet släpper
 
+--[[ ══ SAKERHETSKOPPLET: NORMAL / CATCH-UP / RELEASE (#182 del 2) ═══
+
+	Kopplet slapptes forut pa AVSTAND ENSAMT. En enda bildruta dar
+	fysiken kastade henne — en teleport, en respawn, en kollision mot en
+	dorrkarm — rackte darfor for att tappa hasten, fast ingenting
+	verkligt hant.
+
+	Tre lagen i stallet, och slappet kraver BADE avstand OCH tid:
+
+	  NORMAL     under CATCHUP_R — hon foljer i lugn takt
+	  CATCH-UP   mellan CATCHUP_R och KOPPEL — hon far mer fart for att
+	             hinna ifatt, men kopplet haller
+	  RELEASE    over KOPPEL i mer an KOPPEL_TID sekunder i strack
+
+	Tiden ar det som gor skillnad pa «spelaren sprang ifran henne» och
+	«en bildruta ljog». Ett fysikhack ska inte kunna slita kopplet. ]]
+local CATCHUP_R  = 5.0         -- m: harifran far hon mer fart for att hinna ifatt
+local KOPPEL_TID = 0.75        -- s: sa lange maste hon vara for langt bort
+
+--[[ ══ FOLJNINGEN AR CONSTRAINTS, INTE EN LOOP (#182 del 2) ═════════
+
+	Arkitekturkontraktet i #235 FAS 4 ar bindande: `AlignPosition` och
+	`AlignOrientation` mot serverskapade fastpunkter, `RigidityEnabled`
+	av, konservativa varden, och INGEN parallell reglering — ingen
+	`VectorForce`, ingen `RopeConstraint` som drar, ingen loopad
+	`PivotTo` och ingen direkt CFrame-skrivning.
+
+	Forut gjorde `styrMot` tva forbjudna saker i samma andetag: den
+	skrev `pivot.CFrame` direkt for att vrida henne, och den korde
+	`Humanoid:Move` varje bildruta for att driva henne. Bada ar
+	loopreglering, och bada slogs mot Roblox egen fysik.
+
+	VARDENA ar avsiktligt trubbiga. De ar tuningvarden, inte kanon, och
+	ska stallas in mot kansla i Studio — inte raknas fram har. ]]
+local ALIGN_KRAFT   = 24000    -- N: rackligt for en hast, inte for en bil
+local ALIGN_SVAR    = 12       -- Responsiveness: mjukt, inte ryckigt
+local ALIGN_VRID    = 8000     -- Nm: vridmomentet for kursen
+local ALIGN_VRIDSVAR = 8       -- Responsiveness for kursen
+
+
 --[[ ══ NAVIGERINGEN — PathfindingService som LOKAL RESERV ═══════════════
 
 	Godkänd snävt av PO efter att tre billigare vägar mätts bort: bredare
@@ -439,7 +479,203 @@ end
 --[[ ── Att börja leda ───────────────────────────────────────────────
 	Varje nej har en egen nyckel. Ett enda "gick inte" hade gjort de
 	negativa fallen omöjliga att skilja åt i ett test. ]]
-function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolean, string?)
+--[[ ══ LOGGEVIDENS (#182 del 2) ════════════════════════════════════
+
+	SPARSAM MEN ANVANDBAR. Raden ska svara pa de tre fragor man faktiskt
+	har nar nagot gatt fel i Studio eller i en spelares session:
+
+	    VEM, VILKEN HAST, och VAD SOM HANDE — med skal nar svaret ar nej.
+
+	Hastens id ar med i VARJE rad, for det ar den enda nyckeln som binder
+	ihop `LedBorja`, `LedSync` och `_steg` i samma logg. Ett nej utan id
+	gar inte att folja tillbaka till en hast.
+
+	INGEN LOOP-LOGG. `_steg` kor varje bildruta; en rad dar hade dranktt
+	allt annat. Bara OVERGANGARNA loggas — start, slut, frankoppling. ]]
+local function logg(player: Player, handling: string, hastId: string?, skal: string?)
+	local vem = tostring((player :: any) and (player :: any).Name or "?")
+	local vilken = if hastId ~= nil and hastId ~= "" then hastId else "-"
+	if skal ~= nil then
+		warn(("[Led] %s · %s · %s NEKAD: %s"):format(vem, vilken, handling, tostring(skal)))
+	else
+		print(("[Led] %s · %s · %s"):format(vem, vilken, handling))
+	end
+end
+
+--[[ ══ FOLJRIGGEN: TVA FASTPUNKTER OCH TVA REGULATORER ═════════════
+
+	`LeadTargetAttachment` sitter pa SPELARENS `HumanoidRootPart`, pa hennes
+	HOGRA sida och nagot bakom. Det ar inte en detalj: det ar det som gor
+	att spelaren gar vid hastens VANSTRA sida, som man leder en hast.
+
+	`LeadRootAttachment` sitter pa hastens root.
+
+	`AlignPosition` drar roten mot malet, `AlignOrientation` vrider kursen.
+	Ingen tredje reglering finns, och det ar hela poangen — tva krafter om
+	samma mal ar det som ger studs och oscillation.
+
+	MALPUNKTEN FLYTTAS, INTE FASTPUNKTENS FORALDER. `styrMot` skriver
+	`WorldPosition` pa targetfastet varje bildruta. Normalt ar det punkten
+	vid spelarens hogra hoft; nar sparfoljningen sager att hon maste runda
+	en dorrkarm ar det brodsmulan i stallet. Fastpunkten hanger kvar dar
+	kontraktet sager att den ska hanga, men vad den PEKAR PA ags av
+	foljningen. ]]
+local function byggFoljrigg(karaktar: Model, modell: Model): { [string]: any }?
+	local rot = karaktar:FindFirstChild("HumanoidRootPart")
+	local pivot = modell.PrimaryPart
+	if not (rot and rot:IsA("BasePart") and pivot) then return nil end
+
+	local mal = Instance.new("Attachment")
+	mal.Name = "LeadTargetAttachment"
+	--[[ Hoger sida, nagot bakom: `+X` ar hoger, `+Z` ar bakat i Roblox. ]]
+	mal.Position = Vector3.new(0.9 * M, 0, 0.6 * M)
+	mal.Parent = rot
+
+	local hastfast = Instance.new("Attachment")
+	hastfast.Name = "LeadRootAttachment"
+	hastfast.Parent = pivot
+
+	local drag = Instance.new("AlignPosition")
+	drag.Name = "UBRFLedDrag"
+	drag.Attachment0 = hastfast
+	drag.Attachment1 = mal
+	--[[ INTE STEL. En stel `AlignPosition` teleporterar henne dit; det ar
+		precis den «hasten ar ett fordon»-kansla kontraktet forbjuder. ]]
+	drag.RigidityEnabled = false
+	drag.MaxForce = ALIGN_KRAFT
+	drag.Responsiveness = ALIGN_SVAR
+	drag.MaxVelocity = skrittfart()
+	--[[ Planet ager vi inte: hon ska inte lyftas mot marken. ]]
+	drag.ApplyAtCenterOfMass = true
+	drag.Enabled = false
+	drag.Parent = pivot
+
+	local vrid = Instance.new("AlignOrientation")
+	vrid.Name = "UBRFLedVrid"
+	vrid.Attachment0 = hastfast
+	vrid.RigidityEnabled = false
+	vrid.MaxTorque = ALIGN_VRID
+	vrid.Responsiveness = ALIGN_VRIDSVAR
+	--[[ En RIKTNING, inte en andra fastpunkt: hon ska peka dit hon gar,
+		inte kopiera spelarens kropp. ]]
+	vrid.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	vrid.Enabled = false
+	vrid.Parent = pivot
+
+	return { mal = mal, hastfast = hastfast, drag = drag, vrid = vrid }
+end
+
+local function rivFoljrigg(l: any)
+	local r = l and l.rigg
+	if not r then return end
+	for _, namn in ipairs({ "drag", "vrid", "mal", "hastfast" }) do
+		local d = r[namn]
+		if d then pcall(function() d:Destroy() end) end
+	end
+	l.rigg = nil
+end
+
+--[[ Provets fonster in. ]]
+function LedService.riggFor(player: Player): { [string]: any }?
+	local l = ledd[player]
+	return l and l.rigg or nil
+end
+
+--[[ ══ LEDREPET (#182 del 2) ═══════════════════════════════════════
+
+	Spelaren ska SE att hon leder, inte bara laesa det. Repet gar fran
+	hennes hand till hastens huvud sa lange servern sager att ledningen
+	pagar, och forsvinner i samma andetag som den upphor.
+
+	DET AR EN `Beam`, INTE EN `RopeConstraint`, och det ar ett medvetet
+	val av tva skal:
+
+	  1. ARKITEKTURORDERN I #235 forbjuder uttryckligen `RopeConstraint`
+	     som primar locomotion. Ett rep som DRAR skulle dessutom sla sig
+	     mot `_steg`, som ar den auktoritativa foljningen — tva krafter om
+	     samma mal ar exakt det som ger studs och oscillation.
+	  2. En `Beam` har ingen fysik alls. Den kan darfor aldrig paverka vart
+	     hasten gar, hur fort hon gar eller om hon fastnar. Repet ar
+	     presentation; `LedService._steg` ar sanningen.
+
+	Kurvan gor att repet HANGER i stallet for att sta spikrakt, vilket ar
+	sa ett koppel ser ut nar hasten foljer lugnt bredvid.
+
+	EN RIVNINGSPUNKT. `rivRep` anropas fran `slapp`, och varje avslut —
+	manuellt slapp, for langt, fastnat, uppsittning, spelaren gar, hasten
+	forsvinner — gar genom `slapp`. Det ar darfor repet inte kan bli kvar
+	hangande i luften efter en hast som inte finns. ]]
+
+--[[ Var pa hasten repet ska sitta. Transets nackstycke forst — det ar dit
+	ett koppel faktiskt kopplas — sedan huvudet, sist kroppen. Ingen av
+	dem far antas finnas. ]]
+local function hastfaste(modell: Model): BasePart?
+	for _, namn in ipairs({ "Head", "Bone_Head_01", "Neck01" }) do
+		local d = modell:FindFirstChild(namn, true)
+		if d and d:IsA("BasePart") then return d end
+	end
+	return modell.PrimaryPart
+end
+
+local function handfaste(karaktar: Model): BasePart?
+	for _, namn in ipairs({ "RightHand", "RightLowerArm", "UpperTorso", "HumanoidRootPart" }) do
+		local d = karaktar:FindFirstChild(namn)
+		if d and d:IsA("BasePart") then return d end
+	end
+	return nil
+end
+
+local function byggRep(karaktar: Model, modell: Model): { [string]: any }?
+	local hand = handfaste(karaktar)
+	local huvud = hastfaste(modell)
+	if not (hand and huvud) then return nil end
+
+	local a0 = Instance.new("Attachment")
+	a0.Name = "UBRFLedrepHand"
+	a0.Parent = hand
+	local a1 = Instance.new("Attachment")
+	a1.Name = "UBRFLedrepHast"
+	a1.Parent = huvud
+
+	local beam = Instance.new("Beam")
+	beam.Name = "UBRFLedrep"
+	beam.Attachment0 = a0
+	beam.Attachment1 = a1
+	beam.Width0 = 0.06 * M
+	beam.Width1 = 0.06 * M
+	beam.FaceCamera = true
+	beam.Color = ColorSequence.new(Color3.fromRGB(122, 102, 78))
+	beam.LightInfluence = 1
+	--[[ Repet HANGER. Kurvorna pekar nedat i ledningens riktning, sa att
+		det bagnar som ett koppel i stallet for att sta spant. ]]
+	beam.CurveSize0 = -0.18 * M
+	beam.CurveSize1 = -0.18 * M
+	beam.Segments = 12
+	beam.Parent = a0
+
+	return { beam = beam, a0 = a0, a1 = a1 }
+end
+
+local function rivRep(l: any)
+	local rep = l and l.rep
+	if not rep then return end
+	for _, namn in ipairs({ "beam", "a0", "a1" }) do
+		local d = rep[namn]
+		if d then pcall(function() d:Destroy() end) end
+	end
+	l.rep = nil
+end
+
+--[[ Provets fonster in: hanger det ett rep mellan spelaren och hasten? ]]
+function LedService.repFor(player: Player): Instance?
+	local l = ledd[player]
+	return l and l.rep and l.rep.beam or nil
+end
+
+--[[ Sjalva provningen. Loggen ligger i skalet nedan, sa att varje nej —
+	och det ar tio stycken — kommer ut i loggen utan att tio rader
+	behover halla sig synkade med tio `return`. ]]
+local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean, string?)
 	--[[ `IsA` i stället för `typeof`: bänkens stubbinstanser rapporterar
 		"table", och en typeof-vakt hade gjort tjänsten omöjlig att mäta
 		utan att säga något om produktionen. Att modellen svarar på `IsA`
@@ -481,6 +717,16 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		FAS 2:s sadelgrind laser SAMMA register. ]]
 	if LedService.ledsAv(modell) ~= nil then
 		return false, "led.upptagen"
+	end
+
+	--[[ EN UPPSUTTEN HAST LEDS INTE (#182 del 2). Kroken svarar ur
+		`HorseService` egna sessioner — samma falt uppsittningen laser
+		nar den nekar med `hast.upptagen`. Utan den har grinden gick en
+		hast med ryttare att koppla i, och da hade tva spelare styrt
+		samma djur at olika hall. ]]
+	local riden = hakar.riden
+	if riden ~= nil and riden(modell) == true then
+		return false, "led.rids"
 	end
 	local bx, by = tomt(pivot.Position)
 
@@ -650,6 +896,14 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position,
 	}
+	--[[ REPET (#182 del 2). Byggs SIST, nar tillstandet finns: ett rep
+		utan en ledning bakom sig vore en lognaktig bild. ]]
+	ledd[player].rep = byggRep(karaktar, modell)
+	--[[ OCH FOLJRIGGEN. Det ar den som faktiskt flyttar henne; repet
+		ovan ar bilden av det. ]]
+	ledd[player].rigg = byggFoljrigg(karaktar, modell)
+	ledd[player].forLangtSedan = 0
+
 	--[[ Minnet som överlever släppet, se `aterstallTillBox`. ]]
 	senasteLedning[player] = {
 		modell = modell,
@@ -658,6 +912,20 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 	}
 	LedService._sync(player)
 	return true, nil
+end
+
+function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolean, string?)
+	--[[ ID:T LASES FORE FORSOKET. Nekas det finns ingen ledning att
+		fraga efteraat, och ett nej utan hast gar inte att folja
+		tillbaka i loggen. ]]
+	local id: string? = nil
+	if modell ~= nil and (modell :: any).GetAttribute ~= nil then
+		local ok, v = pcall(function() return modell:GetAttribute("HorseId") end)
+		if ok and v ~= nil then id = tostring(v) end
+	end
+	local ok, skal = borjaInre(player, modell, ratt)
+	logg(player, "LedBorja", id, if ok then nil else tostring(skal))
+	return ok, skal
 end
 
 --[[ Att sluta leda. `skal` är nil när spelaren själv släpper och en
@@ -669,6 +937,13 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 	end
 	--[[ Hästen ska STÅ, inte fortsätta mot sitt sista mål. Utan den här
 		raden gick hon vidare några meter efter att kopplet släppt. ]]
+	--[[ REPET FORST. Det ar det spelaren SER, och det ska vara borta
+		i samma ogonblick ledningen upphor — vilket avslut det an ar.
+		Alla vagar ut gar genom den har funktionen, sa det racker med
+		en rivningspunkt. ]]
+	rivRep(l)
+	rivFoljrigg(l)
+
 	local hum = l.modell:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum:Move(Vector3.zero, false)
@@ -697,6 +972,15 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 		spelarHum3.WalkSpeed = l.tidigareSpelarfart
 	end
 	ledd[player] = nil
+	--[[ MANUELLT SLAPP eller AUTOMATISK FRANKOPPLING? `skal` ar nil nar
+		spelaren sjalv slappte och en nyckel nar kopplet, doden eller
+		uppsittningen gjorde det. Loggen skiljer dem at, for det ar
+		precis den skillnaden man vill veta efterat. ]]
+	if skal ~= nil then
+		logg(player, "frankoppling", l.hastId, tostring(skal))
+	else
+		logg(player, "LedSlapp", l.hastId, nil)
+	end
 	LedService._sync(player, skal)
 	return true, skal
 end
@@ -905,24 +1189,61 @@ end
 	`MoveTo` skjuter kroppen rakt mot målet oavsett hur den står, och en
 	häst som går i sidled in i en 1,20 m dörr fastnar. Nu går hon dit hon
 	pekar, och pekar hon fel vänder hon först. ]]
+--[[ ETT ENDA STALLE DRIVER HENNE, och det ar tva constraints.
+
+	Allt nedanfor valjer bara MALPUNKTEN; den har funktionen ar det enda
+	som ror fysiken.
+
+	FORUT GJORDE DEN TVA FORBJUDNA SAKER: `vridMot` skrev `pivot.CFrame`
+	direkt for att vrida henne, och `Humanoid:Move` korde varje bildruta
+	for att driva henne. Bada ar loopreglering, bada slogs mot Roblox egen
+	fysik, och bada ar uttryckligen forbjudna av arkitekturkontraktet i
+	#235 FAS 4.
+
+	Nu satts malet och regulatorerna far gora jobbet:
+
+	  · `AlignPosition` drar roten mot `LeadTargetAttachment`
+	  · `AlignOrientation` vrider kursen mot fardriktningen
+
+	`onskadFartMS` blir `MaxVelocity`, inte `WalkSpeed`. Det ar samma
+	storhet — hur fort hon FAR ga — men den ager nu constrainten i stallet
+	for en Humanoid som ocksa styrs av annat.
+
+	INGEN VANDTROSKEL LANGRE. `VAND_STOPP`/`VAND_FULL` fanns for att
+	`Humanoid:Move` sköt kroppen rakt fram oavsett hur den stod, sa hon
+	maste vanda forst for att inte ga in i dorrkarmen pa tvaren.
+	`AlignOrientation` vrider henne kontinuerligt medan `AlignPosition`
+	drar, sa problemet uppstar inte. Kursen ar mjuk och kan inte snappa. ]]
 local function styrMot(pivot: BasePart, hum: Humanoid, mal: Vector3,
-	onskadFartMS: number, dt: number): boolean
+	onskadFartMS: number, dt: number, rigg: { [string]: any }?): boolean
+	--[[ Utan rigg finns ingen foljning. Det ar ett fel, inte ett lage att
+		tyst falla tillbaka fran — en tyst reserv hade dolt att kontraktet
+		inte holls. ]]
+	if not rigg then return false end
+	local drag, vrid, malfast = rigg.drag, rigg.vrid, rigg.mal
+	if not (drag and vrid and malfast) then return false end
+
 	local d = Vector3.new(mal.X - pivot.Position.X, 0, mal.Z - pivot.Position.Z)
 	if d.Magnitude < 0.05 then
-		hum:Move(Vector3.zero, false)
+		drag.Enabled = false
+		vrid.Enabled = false
 		return false
 	end
-	local fartMS = pivot.AssemblyLinearVelocity.Magnitude / M
-	local kvar = vridMot(pivot, math.atan2(d.X, d.Z), fartMS, dt)
-	--[[ Är kursfelet stort VÄNDER HON FÖRST. Att gå framåt på tvären är
-		precis det som kilade fast henne i boxen. ]]
-	local andel = math.clamp((VAND_STOPP - kvar) / (VAND_STOPP - VAND_FULL), 0, 1)
-	hum.WalkSpeed = onskadFartMS * andel * M
-	if andel <= 0 then
-		hum:Move(Vector3.zero, false)
-		return false
-	end
-	hum:Move(framat(kurs(pivot)), false)
+
+	--[[ MALET. Fastpunkten hanger kvar pa spelaren dar kontraktet sager,
+		men vad den PEKAR PA ags av foljningen — normalt hennes hogra hoft,
+		och brodsmulan nar en dorr ska rundas. ]]
+	malfast.WorldPosition = Vector3.new(mal.X, pivot.Position.Y, mal.Z)
+
+	drag.MaxVelocity = onskadFartMS * M
+	drag.Enabled = true
+
+	--[[ Hon ska peka DIT HON GAR. `CFrame.lookAt` ur riktningen, inte ur
+		spelarens kropp: en hast som kopierat ryttarens vridning hade gatt
+		i sidled genom dorren. ]]
+	local kurspunkt = pivot.Position + d.Unit
+	vrid.CFrame = CFrame.lookAt(pivot.Position, kurspunkt, Vector3.yAxis)
+	vrid.Enabled = true
 	return true
 end
 
@@ -951,10 +1272,24 @@ local function steg(_dt: number)
 			continue
 		end
 
+		--[[ ── SAKERHETSKOPPLET: NORMAL / CATCH-UP / RELEASE ──────────
+
+			Slappet kravde forut bara AVSTAND. En enda bildruta dar fysiken
+			kastade henne — teleport, respawn, en karm — rackte darfor for
+			att tappa hasten fast ingenting verkligt hant.
+
+			Nu kravs avstand OCH tid, och emellan finns ett catch-up-lage
+			dar hon far mer fart for att hinna ifatt i stallet for att
+			slappas. ]]
 		local avst = avstandM(rot.Position, pivot.Position)
 		if avst > KOPPEL then
-			LedService.slapp(player, "led.tappade_bort")
-			continue
+			l.forLangtSedan = (l.forLangtSedan or 0) + _dt
+			if l.forLangtSedan >= KOPPEL_TID then
+				LedService.slapp(player, "led.tappade_bort")
+				continue
+			end
+		else
+			l.forLangtSedan = 0
 		end
 
 		--[[ Har hon lämnat boxen? Mäts på FAKTISK position, inte på att
@@ -1267,14 +1602,27 @@ local function steg(_dt: number)
 		--[[ Hon får skynda på inom SKRITTENS eget band när hon hamnat
 			efter. Bandet kommer ur `Gaits`; hon börjar aldrig trava.
 
-			FARTEN SKRIVS INTE HÄR. Den lämnas till `styrMot`, som sänker den
-			när kursfelet är stort: en häst som behöver vända ska vända, inte
-			gå framåt på tvären. Förut satt raden här bakom `WalkSpeed > 0`,
-			som aldrig kunde bli sann igen om något nollat farten. ]]
+			FARTEN SKRIVS INTE HAR. Den lamnas till `styrMot`, som satter
+			den som `MaxVelocity` pa `AlignPosition`. Forut sankte `styrMot`
+			ocksa farten vid stora kursfel, for att `Humanoid:Move` skot
+			kroppen rakt fram oavsett hur den stod. `AlignOrientation`
+			vrider henne kontinuerligt medan hon dras, sa den troskeln
+			behovs inte langre. ]]
+		--[[ ── KOPPLETS TRE LAGEN, UTTRYCKLIGA ────────────────────────
+
+			NORMAL    under CATCHUP_R: skrittfart, hon foljer lugnt.
+			CATCH-UP  over CATCHUP_R: farten rampas mot gangartens max sa
+					  att hon hinner ifatt i stallet for att slappas.
+			RELEASE   ligger ovan, pa avstand OCH tid.
+
+			Rampen ar mjuk med flit: ett troskelhopp hade gett ett ryck i
+			`MaxVelocity` mitt i en skritt. ]]
 		local gang = Gaits.DATA and Gaits.DATA.walk
-		local lag = math.clamp((avst - FOLJ_BAKOM) / 4.0, 0, 1)
-		local onskadFart = ((gang and gang.norm) or 1.45)
-			+ lag * (((gang and gang.max) or 2.0) - ((gang and gang.norm) or 1.45))
+		local normalfart = (gang and gang.norm) or 1.45
+		local maxfart = (gang and gang.max) or 2.0
+		local lag = math.clamp((avst - CATCHUP_R) / (KOPPEL - CATCHUP_R), 0, 1)
+		l.kopplingslage = if lag > 0 then "catchup" else "normal"
+		local onskadFart = normalfart + lag * (maxfart - normalfart)
 
 		--[[ ── KOMMER HON FRAMÅT? ──────────────────────────────────────
 
@@ -1369,7 +1717,7 @@ local function steg(_dt: number)
 				local w = l.navVag[l.navIx]
 				l.gar = true
 				l.badGa = styrMot(pivot, hum, Vector3.new(w.X, pivot.Position.Y, w.Z),
-					onskadFart, _dt)
+					onskadFart, _dt, l.rigg)
 			else
 				--[[ Vägen är slut. Tillbaka till spårföljningen; blev hon
 					ändå inte fri märks det som stillastående igen. ]]
@@ -1391,16 +1739,26 @@ local function steg(_dt: number)
 		if l.gar then
 			if tillMal < STOPP_R then
 				l.gar = false
-				hum:Move(Vector3.zero, false)
+				--[[ DODZONEN SLACKER REGULATORERNA. Att bara sluta flytta
+					malet hade latit `AlignPosition` fortsatta dra mot den
+					sista punkten — och da star hon och skjuter mot den
+					for evigt. Hysteresen ar mellan STOPP_R och START_R. ]]
+				if l.rigg then
+					if l.rigg.drag then l.rigg.drag.Enabled = false end
+					if l.rigg.vrid then l.rigg.vrid.Enabled = false end
+				end
 			else
+				--[[ CATCH-UP. Har hon halkat efter far hon mer fart — inte
+					en annan gangart, bara ratt att ta igen. Kopplet haller.
+					Regeln ar samma i bada grenarna nedan. ]]
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt)
+					onskadFart, _dt, l.rigg)
 			end
 		else
 			if tillMal > START_R then
 				l.gar = true
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt)
+					onskadFart, _dt, l.rigg)
 			end
 		end
 	end
@@ -1439,6 +1797,21 @@ end
 	själv: då hade den behövt känna till skötseln. ]]
 function LedService.satRattHastKrok(f: ((Player, Model?) -> Model?)?)
 	hakar.ratt = f :: any
+end
+
+--[[ RIDS HON JUST NU? Samma monster och samma skal som kroken ovan:
+	`HorseService` ager sessionerna, och `LedService` ska inte behova
+	kanna till uppsittningen for att veta att en hast med ryttare inte
+	gar att leda.
+
+	EN KROK OCH INTE ETT REQUIRE, for att tjansternas ordning i
+	bankarna da hade blivit ett dolt beroende. `GameplayService` kanner
+	redan bada och kopplar ihop dem.
+
+	Regeln ar verklig: pa en uppsutten hast sitter redan nagon, och
+	ingen leder en hast som bars av en ryttare. ]]
+function LedService.satRidenKrok(f: ((Model) -> boolean)?)
+	hakar.riden = f :: any
 end
 
 --[[ För specar: kör EN bildruta explicit.
