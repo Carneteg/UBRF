@@ -54,6 +54,19 @@ local Preparation = require(game:GetService("ReplicatedStorage").HorseCore.Prepa
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Net = Core.Networking
 
+--[[ ══ REN SKARM FOR FYSIKTESTET (#182, PO-beslut 2026-09-17) ═══════
+
+     "Jag vill ha en helt ren skarm dar bara Roblox inbyggda funktioner
+     (och Ugnetas chatt) syns."
+
+     Ytan slacks pa `ScreenGui`-niva. Ingenting rivs, ingen logik andras
+     och inga matningar paverkas — provens ramar, etiketter och rader
+     finns kvar precis som forut. En rad tillbaka och den ar uppe igen.
+
+     Se samma konstant i `TouchControls`, `DinHast`,
+     `PreparationController` och `KontrollHjalp`. ]]
+local MINIMAL_UI = true
+
 local PreparationController = {}
 
 local player = Players.LocalPlayer
@@ -853,6 +866,7 @@ local function bygg()
 	     10 ligger över `TouchGui` (0) och över ridningens egen
 	     `HorseTouch` (8), men under hjälpknappen (16). ]]
 	g.DisplayOrder = 10
+	g.Enabled = not MINIMAL_UI
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 

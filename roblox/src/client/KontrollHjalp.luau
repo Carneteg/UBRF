@@ -72,6 +72,19 @@ local UserInputService = game:GetService("UserInputService")
      `RADER` nedan för varför nyckeln och inte texten är radens identitet. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 
+--[[ ══ REN SKARM FOR FYSIKTESTET (#182, PO-beslut 2026-09-17) ═══════
+
+     "Jag vill ha en helt ren skarm dar bara Roblox inbyggda funktioner
+     (och Ugnetas chatt) syns."
+
+     Ytan slacks pa `ScreenGui`-niva. Ingenting rivs, ingen logik andras
+     och inga matningar paverkas — provens ramar, etiketter och rader
+     finns kvar precis som forut. En rad tillbaka och den ar uppe igen.
+
+     Se samma konstant i `TouchControls`, `DinHast`,
+     `PreparationController` och `KontrollHjalp`. ]]
+local MINIMAL_UI = true
+
 local KontrollHjalp = {}
 
 local player = Players.LocalPlayer
@@ -262,6 +275,7 @@ local function bygg()
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
 	g.DisplayOrder = 15
+	g.Enabled = not MINIMAL_UI
 	g.Enabled = false
 	g.Parent = player:WaitForChild("PlayerGui")
 	gui = g
@@ -440,6 +454,7 @@ local function byggOppna()
 	--[[ Under ridanalysen (20) men över kontrollpanelen (15): panelen ska
 	     kunna ligga över knappen utan att knappen försvinner bakom den. ]]
 	g.DisplayOrder = 16
+	g.Enabled = not MINIMAL_UI
 	g.Parent = player:WaitForChild("PlayerGui")
 	oppnaGui = g
 

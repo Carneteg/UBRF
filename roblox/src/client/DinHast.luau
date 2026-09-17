@@ -30,6 +30,19 @@ local CollectionService = game:GetService("CollectionService")
 local Sprak = require(ReplicatedStorage.HorseCore.Sprak)
 local PreparationController = require(script.Parent.PreparationController)
 
+--[[ ══ REN SKARM FOR FYSIKTESTET (#182, PO-beslut 2026-09-17) ═══════
+
+     "Jag vill ha en helt ren skarm dar bara Roblox inbyggda funktioner
+     (och Ugnetas chatt) syns."
+
+     Ytan slacks pa `ScreenGui`-niva. Ingenting rivs, ingen logik andras
+     och inga matningar paverkas — provens ramar, etiketter och rader
+     finns kvar precis som forut. En rad tillbaka och den ar uppe igen.
+
+     Se samma konstant i `TouchControls`, `DinHast`,
+     `PreparationController` och `KontrollHjalp`. ]]
+local MINIMAL_UI = true
+
 local DinHast = {}
 
 local spelare = Players.LocalPlayer
@@ -120,6 +133,7 @@ local function byggHud()
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = false
 	g.DisplayOrder = 6
+	g.Enabled = not MINIMAL_UI
 	g.Parent = spelare:WaitForChild("PlayerGui")
 	hudGui = g
 
