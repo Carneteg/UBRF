@@ -174,6 +174,26 @@ do
 	local ok2, skal2 = GameplayService.sadla(spelare, MODELL)
 	check("«Sadla» går igenom", ok2 == true, tostring(skal2))
 
+	--[[ OCH OM DEN INTE GICK IGENOM får den inte ha lämnat halvfärdigt
+		arbete efter sig. Det enda som kan falla mellan underlägget och
+		sadeln är själva bygget, och den vägen går inte att nå inifrån
+		världen — den provas genom mutation (G12), och det är HÄR nätet
+		sitter.
+
+		DET VAR MIN EGEN FALSIFIERING SOM KRÄVDE DET: mutationen som tog
+		bort rollbacken kom först ut GRÖN, eftersom ingen mätning nådde
+		grenen. En gren inget prov kan röra är ingen grind. ]]
+	if not ok2 then
+		check("bygget föll: inget underlägg ligger kvar på hästen",
+			TackService.harTack(MODELL, "underlagg") == false,
+			tostring(TackService.harTack(MODELL, "underlagg")))
+		check("bygget föll: hästen är inte halvsadlad",
+			TackService.sadlad(MODELL) == false)
+		check("bygget föll: sadeln är tillbaka i spelarens händer",
+			TackService.barBuren(spelare, "sadel") == HAST,
+			tostring(TackService.barBuren(spelare, "sadel")))
+	end
+
 	--[[ DEN FYSISKA SANNINGEN, inte ett register. ]]
 	check("sadeln ligger nu FYSISKT på hästen",
 		TackService.sadlad(MODELL) == true)

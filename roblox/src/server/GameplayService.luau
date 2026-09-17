@@ -899,7 +899,13 @@ function GameplayService.sadla(player: Player, modell: Model?): (boolean, string
 		return TackService.satPa(player, m, "sadel", bar, m)
 	end
 
-	if TackService.sadlad(m) then return false, "tack.redan_pa" end
+	--[[ DUBBEL PASATTNING agas av `satPa`, inte av ett andra prov har.
+		Har lag forut en egen `sadlad`-grind, och min egen falsifiering
+		visade att den var overflodig: mutationen som tog bort den kom
+		ut GRON, for `satPa` nekar redan med samma skal via
+		`TackRigg.hittaDel`. Tva sanningar om vad «sadlad» betyder ar
+		precis det `TackService` finns for att omojliggora, sa den
+		redundanta halvan ar borta. Provet mater fortfarande nejet. ]]
 
 	--[[ UNDERLAGGET FORST, och bara om det inte redan ligger dar. Det
 		slapper INTE den burna sadeln — `BARBARA` sager att bara sadel och
@@ -926,7 +932,19 @@ function GameplayService.sadla(player: Player, modell: Model?): (boolean, string
 	--[[ OCH VARLDEN AR SANNINGEN. Samma regel som momentkvittensen och
 		uppsittningsgrinden laser: `satPa` svarar ja nar bygget gick fram,
 		men foll delen bort daremellan ar hon inte sadlad. Da ska sadeln
-		tillbaka i handerna — inte forsvinna. ]]
+		tillbaka i handerna — inte forsvinna.
+
+		GRENEN AR I DAG ONABAR, och min egen falsifiering visade det:
+		mutationen som tog bort hela provet kom ut GRON. Vagen dit kraver
+		att `satPa` svarar ja medan delen INTE finns, och det intraffar
+		bara om nagot river henne mellan tva rader.
+
+		Den star kvar anda, av samma skal som momentflodets egen rad nagra
+		hundra rader upp — den ar precedensen, inte ett nytt pahitt. Ett
+		«sadlad» som inte gar att se i varlden ar precis den motsagelse
+		`TackService` finns for att omojliggora, och nasta fas flyttar fler
+		delar mellan hander och rygg. Redovisad som kand svag mutation i
+		stallet for att raknas bort. ]]
 	if not TackService.harTack(m, "sadel") then
 		pcall(function() TackRigg.taAv(m, "sadel") end)
 		angraUnderlagget()
