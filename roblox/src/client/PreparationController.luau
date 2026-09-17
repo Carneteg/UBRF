@@ -1441,6 +1441,14 @@ function PreparationController.visaAvslagFor(skal: any, extra: any?)
 	visaAvslag(PreparationController.skalText(skal, extra))
 end
 
+--[[ En KVITTENS utifran (#182). Ledningen ager ingen egen meddelanderad
+	och ska inte bygga en; den lanar panelens, precis som avslagen redan
+	gor. Texten ar fardigformaterad av anroparen — den har filen
+	oversatter inte nagon annans handling. ]]
+function PreparationController.visaBekraftelseFor(text: any)
+	if type(text) == "string" and text ~= "" then visaBekraftelse(text) end
+end
+
 --[[ Provets fönster in: står en kvittens uppe, och vilken? ]]
 function PreparationController._bekraftelse(): string?
 	return bekraftelse

@@ -39,6 +39,19 @@ local hudGui: ScreenGui? = nil
 local hudRad: TextLabel? = nil
 local loop: RBXScriptConnection? = nil
 local dold = false
+--[[ ── DEN BESTAENDE STATUSRADEN UNDER LEDNINGEN (#182) ──────────────
+
+	Human-QA sag att ingenting pa skarmen sa att ledningen pagick: enda
+	skillnaden var att en knapptext bytt ord. En kvittens racker inte —
+	den slocknar — och en ny HUD hade varit ett parallellt system.
+
+	HUD-raden finns redan och ar ledig just da: den svarar pa "vem ska jag
+	rida", och medan man leder henne ar den fragan besvarad. Raden bar
+	darfor ledningens status i stallet for att slackas, och aterfar sin
+	vanliga text nar kopplet slapper.
+
+	Ett falt, satt fran EN plats (`InteractionController.satLeder`). ]]
+local ledNamn: string? = nil
 
 local FARG_GULD = Color3.fromRGB(214, 174, 60)
 local FARG_TEXT = Color3.fromRGB(236, 232, 222)
@@ -191,6 +204,17 @@ local function steg()
 	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
 	local modell = hastModell(dagens.id)
 
+	--[[ LEDNINGEN VINNER OVER BADE `dold` OCH AVSTANDET. Skylten over
+		hasten slacks som vanligt — man star ju bredvid henne — men raden
+		ska STA KVAR sa lange kopplet sitter i. ]]
+	if ledNamn then
+		if b then b.Enabled = false end
+		if rad then
+			rad.Text = Sprak.t("led.leder", ledNamn)
+			rad.Visible = true
+		end
+		return
+	end
 	if dold or not modell or not rot then
 		if b then b.Enabled = false end
 		if rad then rad.Visible = false end
@@ -221,6 +245,26 @@ end
 --[[ Under ritten och medan man leder är frågan besvarad. ]]
 function DinHast.satDold(v: boolean)
 	dold = v
+end
+
+--[[ `namn` = hasten spelaren leder, eller nil nar kopplet slapper.
+	Skriver raden direkt sa att den syns i samma bildruta som kvittensen,
+	i stallet for att vanta pa nasta `steg()`. ]]
+function DinHast.satLedstatus(namn: string?)
+	ledNamn = namn
+	local rad = hudRad
+	if not rad then return end
+	if namn then
+		rad.Text = Sprak.t("led.leder", namn)
+		rad.Visible = true
+	elseif dagens then
+		rad.Text = Sprak.t("stall.idag_rider_du", tostring(dagens.namn))
+	end
+end
+
+--[[ Provets fonster in. ]]
+function DinHast._ledstatus(): string?
+	return ledNamn
 end
 
 --[[ ── VARIFRÅN SVARET KOMMER ──────────────────────────────────────

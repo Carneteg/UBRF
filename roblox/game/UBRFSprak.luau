@@ -461,6 +461,18 @@ Sprak.text = {
 		sv = "Du leder %s",
 		en = "You are leading %s",
 	},
+	["led.borja_namn"] = {
+		sv = "Led %s",
+		en = "Lead %s",
+	},
+	["led.slapp_namn"] = {
+		sv = "Släpp %s",
+		en = "Let go of %s",
+	},
+	["led.slutade"] = {
+		sv = "Du slutade leda %s",
+		en = "You stopped leading %s",
+	},
 	["led.ingen_hast"] = {
 		sv = "Ingen häst att leda",
 		en = "No horse to lead",

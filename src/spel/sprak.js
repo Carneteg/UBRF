@@ -203,6 +203,18 @@ const SPRAK = {
   "led.borja": { sv: "Led hästen", en: "Lead the horse" },
   "led.slapp": { sv: "Släpp hästen", en: "Let go" },
   "led.leder": { sv: "Du leder %s", en: "You are leading %s" },
+  /* HANDLINGEN BÄR HÄSTENS NAMN (#182 human-QA).
+     "Led hästen" och "Rida nu" stod på samma punkt på riggen och målade
+     över varandra; spelaren såg bara den ena. Att flytta isär dem är halva
+     rättelsen — den andra halvan är att handlingen SÄGER vilken häst den
+     gäller, så att den går att skilja från uppsittningen utan att läsa
+     objektraden under. Namnet är ett egennamn och översätts aldrig. */
+  "led.borja_namn": { sv: "Led %s", en: "Lead %s" },
+  "led.slapp_namn": { sv: "Släpp %s", en: "Let go of %s" },
+  /* Avslutet ska kvitteras lika tydligt som starten. Utan den här raden
+     var enda skillnaden mellan "leder" och "leder inte" att en knapptext
+     bytt ord — och det är precis vad human-QA inte kunde se. */
+  "led.slutade": { sv: "Du slutade leda %s", en: "You stopped leading %s" },
   "led.ingen_hast": { sv: "Ingen häst att leda", en: "No horse to lead" },
   "led.fel_hast": { sv: "Det är inte din häst", en: "That is not your horse" },
   "led.ingen_karaktar": { sv: "Ingen karaktär", en: "No character" },

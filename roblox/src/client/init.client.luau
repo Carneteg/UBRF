@@ -257,6 +257,19 @@ end)
 
 --[[ Nejet från «Rida nu» ska läsas av SPELAREN, inte av Output-fönstret.
 	Panelen äger meddelanderaden; knappen skickar dit sitt skäl. ]]
+--[[ #182: kvittensen och den bestaende statusraden. Knapparna ager
+	ingen text-yta sjalva — panelen ager meddelanderaden och `DinHast`
+	statusraden, precis som avslagen redan var kopplade. ]]
+InteractionController.setBekraftelseVisare(function(text: any)
+	PreparationController.visaBekraftelseFor(text)
+end)
+
+InteractionController.setLedStatus(function(model: Model?)
+	DinHast.satLedstatus(if model
+		then tostring(model:GetAttribute("HorseName") or model.Name)
+		else nil)
+end)
+
 InteractionController.setAvslagVisare(function(skal: any, extra: any?)
 	PreparationController.visaAvslagFor(skal, extra)
 end)

@@ -29,6 +29,130 @@ local ridaKnappar: { [Model]: ProximityPrompt } = {}
 local ridaCheck: ((Model) -> boolean)? = nil
 local onMount: ((Model) -> ())? = nil
 
+--[[ ══ TRE KNAPPAR PÅ SAMMA HÄST FÅR INTE LIGGA PÅ VARANDRA (#182) ═════
+
+	`MountPrompt` sitter på sadelpunkten, `LedPrompt` och `RidaNuPrompt` på
+	riggens rot. De tre punkterna ligger inom någon decimeter från varandra
+	på en häst, alltså ritas prompterna i praktiken PÅ SAMMA STÄLLE på
+	skärmen. Spelaren läste den översta och visste inte att det fanns fler.
+
+	Vilka kombinationer som faktiskt kan stå uppe samtidigt, läst ur
+	villkoren i den här filen och ur `init.client.luau`:
+
+	  redo                    -> MountPrompt + LedPrompt
+	  `leda` är spelarens tur -> LedPrompt   + RidaNuPrompt
+	  legacy (`G01Enabled`
+	    uttryckligen false)   -> alla tre
+
+	Rättelsen är INTE att gömma någon av dem — varje knapp är en riktig
+	handling — utan att lägga dem i en kolumn med en fast ordning.
+
+	ORDNINGEN ÄR PRODUKTORDNING, inte alfabetisk: FUN FIRST / RIDE FIRST
+	säger att spelaren kommer för att rida. "Sitt upp" ligger därför överst
+	när den finns, "Rida nu" är genvägen dit, och "Led" — den frivilliga
+	omsorgen — ligger underst. Ingen av dem är dold, och ingen av dem
+	kräver att spelaren gissar.
+
+	STEGET ÄR MÄTT MOT ETT KRAV, inte valt fritt: `docs/KONTROLLMATRIS.md`
+	regel 5 säger minst 44 px träffyta på varje knapp spelaren måste kunna
+	nå, och en ProximityPrompt ÄR tryckbar på pekskärm
+	(`ClickablePrompt`). Två prompter närmare varandra än 44 px går alltså
+	inte att träffa var för sig med ett finger. 64 px ger marginal för
+	promptens egen höjd.
+
+	Att den exakta pixelhöjden i Studio SER bra ut är en mänsklig grind —
+	bänken kan mäta avståndet och ordningen, inte hur det ser ut. ]]
+InteractionController.PROMPT_STEG = 64
+
+--[[ Ett nej, en kvittens, och den beständiga statusraden. Den här filen
+	äger knapparna; panelen äger meddelanderaden och `DinHast` äger
+	statusraden. Kopplingen görs i `init.client.luau` — samma mönster som
+	`setAvslagVisare` redan hade. ]]
+local bekraftelseVisare: ((any, any?) -> ())? = nil
+local ledStatus: ((Model?) -> ())? = nil
+--[[ VILKEN HÄST KLIENTEN TROR ATT HON LEDER. Ett enda fält, och varje
+	övergång går genom `satLeder`. Det är det som gör "leder inte → leder
+	→ leder inte" till en mätbar kedja i stället för tre oberoende
+	knapptexter som råkade stämma. ]]
+local lederNu: Model? = nil
+
+--[[ Hastens egennamn. Ett stalle, sa att de tre knapparna aldrig kan
+	kalla samma hast olika saker. Oversatts aldrig. ]]
+local function hastnamn(model: Model): string
+	return tostring(model:GetAttribute("HorseName") or model.Name)
+end
+
+--[[ Var i kolumnen en knapp hamnar. Produktordning, inte alfabetisk:
+	uppsittningen overst, genvagen dit i mitten, den frivilliga omsorgen
+	underst. Se noten vid `PROMPT_STEG`. ]]
+local PROMPT_RAD = { MountPrompt = -1, RidaNuPrompt = 0, LedPrompt = 1 }
+
+local function laggIKolumn(prompt: ProximityPrompt)
+	local rad = PROMPT_RAD[prompt.Name] or 0
+	prompt.UIOffset = Vector2.new(0, rad * InteractionController.PROMPT_STEG)
+end
+
+--[[ Vad ledknappen ska heta just nu, med hastens namn i sig. ]]
+local function ledtext(model: Model, leder: boolean): string
+	return Sprak.t(if leder then "led.slapp_namn" else "led.borja_namn", hastnamn(model))
+end
+
+--[[ ══ EN ENDA OVERGANG (#182) ═══════════════════════════════════════
+
+	"leder inte -> leder -> leder inte" gick forut att harleda bara ur tre
+	oberoende stallen: knappens text, `ledPrompts`-tabellen och serverns
+	sync. De kunde saga olika, och human-QA sag exakt det: knappen bytte
+	ord men ingenting annat pa skarmen andrades.
+
+	Nu gar VARJE overgang genom den har funktionen, och den gor tre saker
+	i samma andetag:
+
+	  1. knapptexterna pa ALLA hastar rattas,
+	  2. den bestaende statusraden tands eller slacks,
+	  3. en kvittens visas — en gang, vid sjalva bytet.
+
+	`ny` ar hasten spelaren leder nu, eller nil. Anropas bade fran
+	knappens eget svar och fran serverns `LedSync`, sa att de tva aldrig
+	kan glida isar. ]]
+local function satLeder(ny: Model?)
+	local forra = lederNu
+	lederNu = ny
+
+	for model, prompt in pairs(ledKnappar) do
+		prompt.ActionText = ledtext(model, model == ny)
+	end
+
+	local status = ledStatus
+	if status then status(ny) end
+
+	if forra ~= ny then
+		local visa = bekraftelseVisare
+		if visa then
+			if ny then
+				visa(Sprak.t("led.leder", hastnamn(ny)))
+			elseif forra then
+				visa(Sprak.t("led.slutade", hastnamn(forra)))
+			end
+		end
+	end
+end
+
+--[[ Provets fonster in: vilken hast tror klienten att hon leder? ]]
+function InteractionController._lederNu(): Model?
+	return lederNu
+end
+
+--[[ Vem som visar en KVITTENS, och vem som bar den bestaende statusraden.
+	Samma monster som `setAvslagVisare`: den har filen ager knapparna,
+	panelen ager meddelanderaden, `DinHast` ager statusraden. ]]
+function InteractionController.setBekraftelseVisare(fn: ((any, any?) -> ())?)
+	bekraftelseVisare = fn
+end
+
+function InteractionController.setLedStatus(fn: ((Model?) -> ())?)
+	ledStatus = fn
+end
+
 --[[ Får uppsittningsprompten visas för den här modellen?
 
 	Krav 8: `G01Enabled == nil` vid klientjoin får INTE ge en uppsittnings-
@@ -128,7 +252,14 @@ local function addPrompt(model: Model)
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
+	--[[ TANGENT, FINGER OCH HANDKONTROLL (#182). `E` ar Roblox standard
+		och lamnas; `ClickablePrompt` ar det som gor knappen tryckbar med
+		ett finger, och `GamepadKeyCode` ger den en EGEN knapp sa att
+		uppsittning, genvag och ledning inte delar `ButtonX`. ]]
+	prompt.ClickablePrompt = true
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
 	prompt.Parent = rig.attachments.Saddle or rig.root
+	laggIKolumn(prompt)
 
 	prompt.Triggered:Connect(function()
 		--[[ TRE RETURVÄRDEN, INTE TVÅ (#204).
@@ -185,13 +316,19 @@ local function addLedPrompt(model: Model)
 		den avgör ingenting själv. ]]
 	local led = Instance.new("ProximityPrompt")
 	led.Name = "LedPrompt"
-	led.ActionText = Sprak.t("led.borja")
-	led.ObjectText = model:GetAttribute("HorseName") or model.Name
+	--[[ HANDLINGEN BAR HASTENS NAMN. "Led hasten" gick inte att skilja
+		fran "Rida nu" nar de lag pa varandra; "Led Trixie" gor det, utan
+		att spelaren behover lasa objektraden under. ]]
+	led.ActionText = ledtext(model, false)
+	led.ObjectText = hastnamn(model)
 	led.HoldDuration = 0.2
 	led.MaxActivationDistance = 12
 	led.RequiresLineOfSight = false
 	led.KeyboardKeyCode = Enum.KeyCode.L
+	led.ClickablePrompt = true
+	led.GamepadKeyCode = Enum.KeyCode.ButtonY
 	led.Parent = rig.root
+	laggIKolumn(led)
 
 	led.Triggered:Connect(function()
 		local leder = ledPrompts[model] == true
@@ -214,8 +351,11 @@ local function addLedPrompt(model: Model)
 			ok, skal = Net.get("LedBorja"):InvokeServer(model)
 		end
 		if ok then
-			ledPrompts[model] = not leder
-			led.ActionText = Sprak.t(if ledPrompts[model] then "led.slapp" else "led.borja")
+			ledPrompts[model] = if leder then nil else true
+			--[[ EN VAG IN. Texten sattes forut har och en gang till i
+				`LedSync`; nu gor `satLeder` bada, plus statusraden och
+				kvittensen. Se noten vid funktionen. ]]
+			satLeder(if leder then nil else model)
 		else
 			--[[ Samma sak här (#204): `led.for_langt` och `led.fel_hast`
 				är sådant spelaren behöver veta, inte sådant som hör hemma
@@ -287,7 +427,10 @@ local function addRidaPrompt(model: Model)
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
 	prompt.KeyboardKeyCode = Enum.KeyCode.R
+	prompt.ClickablePrompt = true
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonB
 	prompt.Parent = rig.root
+	laggIKolumn(prompt)
 
 	prompt.Triggered:Connect(function()
 		local ok, skal = Net.get("RidaNu"):InvokeServer()
@@ -365,11 +508,17 @@ local function lyssnaPaLedningen()
 	(ev :: RemoteEvent).OnClientEvent:Connect(function(vy)
 		local leder = type(vy) == "table" and vy.leder == true
 		local hastId = if type(vy) == "table" then vy.hastId else nil
-		for model, prompt in pairs(ledKnappar) do
-			local min = leder and model:GetAttribute("HorseId") == hastId
-			ledPrompts[model] = if min then true else nil
-			prompt.ActionText = Sprak.t(if min then "led.slapp" else "led.borja")
+		local min: Model? = nil
+		for model in pairs(ledKnappar) do
+			local ar = leder and model:GetAttribute("HorseId") == hastId
+			ledPrompts[model] = if ar then true else nil
+			if ar then min = model end
 		end
+		--[[ SERVERN AR SANNINGEN, ocksa nar kopplet slapper utan att
+			spelaren tryckt: for langt bort, fastnat, satte sig upp. Samma
+			overgang som knappen anvander, sa att status och kvittens
+			kommer aven da. ]]
+		satLeder(min)
 		if type(vy) == "table" and vy.skal and not leder then
 			warn(("[Led] kopplet släpptes: %s (%s)")
 				:format(Sprak.t(tostring(vy.skal)), tostring(vy.skal)))
