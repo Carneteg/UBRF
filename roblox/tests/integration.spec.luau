@@ -292,6 +292,10 @@ do
 	local okFel, skalFel = HorseService.tryMount(S.spelare, annan)
 	check("   och uppsittning på fel häst nekas", okFel == false, tostring(skalFel))
 	Taggar:RemoveTag(annan, "Horse")
+	check("och bindningen rördes inte av att hon stod där",
+		GameplayService.modellFor(S.spelare) == S.modell)
+
+	Taggar:RemoveTag(annan, "Horse")
 	annan:Destroy()
 	stadaSession(S)
 end
@@ -786,12 +790,17 @@ do
 	local ok, skal = skotselGenomTjansten(S.spelare)
 	check("skötseln är gjord", ok, tostring(skal))
 
-	--[[ EN ANNAN HÄST, granne med spelarens och lika utrustad. Hon taggas
-		INTE `Horse`: bindningen ska inte kunna få syn på henne. ]]
+	--[[ EN ANNAN HÄST, granne med spelarens och lika utrustad. Hon är
+		TAGGAD och registrerad som vilken häst som helst i världen — det
+		är poängen: en avtagning som letar rätt på "en häst med en sadel"
+		i stället för på SPELARENS häst hittar henne. Stallet kan inte ge
+		henne till spelaren — hennes `HorseId` är ett annat än den
+		tilldelade — så bindningen rörs inte av att hon står där. ]]
 	local pivot = S.modell.PrimaryPart
 	local annan = HastRigg.bygg("marabou", "Marabou",
 		CFrame.new(pivot.Position + vec(8, 0, 0)))
 	annan.Parent = workspace
+	Taggar:AddTag(annan, "Horse")
 	for _, typ in ipairs({ "underlagg", "sadel", "trans" }) do
 		TackService.satPa(S.spelare, annan, typ, "marabou", annan)
 	end
