@@ -136,6 +136,36 @@ function TouchControls.reglageBredd(): number
 	return reglageBredd
 end
 
+--[[ Hur brett SPAKEN tar i vänsterkanten, inklusive luft (#206).
+
+	Reserven har varit ensidig: `reglageBredd` ovan höll lektionskortet
+	borta från gångarterna och hjälparna i högerkanten, men ingenting
+	höll det borta från spaken i vänsterkanten. `UgnetaController`
+	centrerar kortet i det fria utrymmet, och när det inte räcker till
+	sköts kortet åt VÄNSTER — rakt ut över spaken.
+
+	Mätt i Studio på `cdfe061`, emulerad iPad i landskap, kortet uppe och
+	ryttaren uppsutten, träffprov över spakens bas (70 punkter):
+
+	    1024x768  kort x  76..716  överlapp 80 px  spaken når 20 av 70
+	    1080x810  kort x 105..745  överlapp 51 px  spaken når 34 av 70
+	    1180x820  kort x 269..909  överlapp  0 px  spaken når 54 av 70
+
+	De tappade punkterna svarade `Kort`, `Rubrik`, `Punkt1`, `Punkt2` och
+	`Knapp` — alltsa kortet, som ligger i en ScreenGui med högre
+	`DisplayOrder` (10 mot 8) och därför vinner fingret. Ett tumnedslag i
+	spakens högra halva startar då ingen styrning alls, utan träffar
+	kortet — i värsta fall dess kvitteringsknapp.
+
+	Talet räknas här, av samma rader som ritar spaken, av exakt samma skäl
+	som `reglageBredd`: ingen annan modul ska bära en kopia av layouten.
+	Noll när pekreglagen inte är uppe — skrivbordet reserverar ingenting. ]]
+local spakBredd = 0
+
+function TouchControls.spakBredd(): number
+	return spakBredd
+end
+
 --[[ Var det övre gallret BÖRJAR, i GUI-pixlar uppifrån (samma yta som
 	`reglageBredd`: viewporten minus topbaren). `math.huge` när reglagen inte
 	är uppe. Hjälpknappen läser den (#227): på en telefon i landskap trycker
@@ -477,6 +507,9 @@ function TouchControls.mount(input: any, hooks: {
 	local spakR = px(TouchControls.RADIE)
 	bas.Size = UDim2.fromOffset(spakR * 2, spakR * 2)
 	bas.Position = UDim2.new(0, KANT, 1, -(spakR * 2) - px(28))
+	--[[ Vänsterkantens reserv: kanten, spaken och lika mycket luft som
+		högerkanten får. Se noten vid `spakBredd`. ]]
+	spakBredd = KANT + spakR * 2 + px(12)
 	bas.BackgroundTransparency = 0.55
 	bas.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
 	local basHorn = Instance.new("UICorner")
@@ -652,6 +685,7 @@ function TouchControls.unmount()
 	     kopplingen på en häst man klivit av, och nästa uppsittning hade
 	     börjat med förra rittens finger fortfarande "nere". ]]
 	reglageBredd = 0
+	spakBredd = 0
 	reglageTopp = math.huge
 	blickFinger, blickSist, blickHook = nil, nil, nil
 	if gaitKoppling then

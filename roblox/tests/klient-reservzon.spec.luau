@@ -171,6 +171,13 @@ local SKARMAR = {
 		kalla = "klient.spec 'liten telefon 320×568'" },
 	{ namn = "iPad landskap 1024×768", W = 1024, H = 768, telefon = false,
 		kalla = "forberedelse.spec/klient.spec" },
+	--[[ #206: de två iPad-ytorna där lektionskortet mättes ligga över
+		spaken respektive inte göra det. Båda avlästa ur Studios egna
+		enhetsprofiler i emulering. ]]
+	{ namn = "iPad 9 landskap 1080×810", W = 1080, H = 810, telefon = false,
+		kalla = "#206, Studio-emulering ipad_9th_generation" },
+	{ namn = "iPad Air landskap 1180×820", W = 1180, H = 820, telefon = false,
+		kalla = "#206, Studio-emulering ipad_air_5th_generation" },
 }
 
 local foreTouch, foreVp = UIS.TouchEnabled, cam.ViewportSize
@@ -212,6 +219,67 @@ for _, sk in ipairs(SKARMAR) do
 			print(("       gångartsknapp %d×%d px (#208-skalan, mäts inte här)"):format(
 				halt.Size.X.Offset, halt.Size.Y.Offset))
 		end
+	end
+
+	--[[ ══ LEKTIONSKORTET OCH SPAKEN (#206) ═══════════════════════════
+
+		Reserven har varit ensidig. `TouchControls.reglageBredd()` höll
+		kortet borta från gångarterna och hjälparna i högerkanten; ingenting
+		höll det borta från spaken i vänsterkanten. Och eftersom
+		`laggUtKort` skjuter kortet åt VÄNSTER när mitten inte räcker till,
+		sköt den det rakt ut över spaken.
+
+		Mätt i Studio på `cdfe061`, emulerad iPad i landskap, kortet uppe
+		och ryttaren uppsutten — träffprov över spakens bas, 70 punkter:
+
+		    1024×768  kort x  76..716  överlapp 80 px  spaken nådde 20/70
+		    1080×810  kort x 105..745  överlapp 51 px  spaken nådde 34/70
+		    1180×820  kort x 269..909  överlapp  0 px  spaken nådde 54/70
+
+		De tappade punkterna svarade `Kort`, `Rubrik`, `Punkt1`, `Punkt2`
+		och `Knapp` — kortet ligger i en ScreenGui med högre `DisplayOrder`
+		(10 mot 8) och vinner därför fingret. Ett tumnedslag i spakens
+		högra halva startade alltså ingen styrning alls.
+
+		PÅ TELEFON är det inte ett fel som rättas här utan den redan
+		dokumenterade 568×320-konflikten: där ryms inte både ett läsbart
+		kort och en fri spak. Regeln avstår därför från vänsterreserven när
+		kortet skulle bli smalare än `KORT_LASBAR`, och telefonen får exakt
+		den layout den hade. Provet mäter det som två skilda krav. ]]
+	local ug = barn(player._gui, "UBRFUgneta")
+	local kortRam = ug and barn(ug, "Kort")
+	if res and ug and kortRam then
+		--[[ `UBRFUgneta` ignorerar topbaren, så dess ruta räknas mot hela
+			viewporten. Kortet är dessutom ankrat (0.5, 1): `Position.X` är
+			MITTEN, inte vänsterkanten. Bänken har ingen layoutmotor, så
+			ankaret räknas här — som Roblox gör det. ]]
+		ug.AbsoluteSize = { _typ = "Vector2", X = W, Y = H }
+		UgnetaController.visa("Prov", { "rad" }, true, "Igen", false, false)
+		UgnetaController._laggUtKort()
+		local mitt = kortRam.Position.X.Offset
+		local bredd = kortRam.Size.X.Offset
+		local kr = { x0 = mitt - bredd / 2, x1 = mitt + bredd / 2,
+			y0 = H - 14 - kortRam.Size.Y.Offset, y1 = H - 14 }
+		local sp = res.Spak
+		local krock = skar(kr, sp)
+		print(("       kort %s · spak %s"):format(r2s(kr), r2s(sp)))
+
+		if sk.telefon then
+			--[[ OBSERVATION, inte krav: telefonens trångmål är
+				568×320-konflikten och löses inte i #206. Raden finns för
+				att en framtida ändring ska SYNAS i loggen. ]]
+			print(("       observation: kortet %s spaken på telefon")
+				:format(if krock then "TÄCKER" else "lämnar"))
+		else
+			prova("surfplatta: lektionskortet lämnar spaken fri", krock == false,
+				("kort %s · spak %s"):format(r2s(kr), r2s(sp)))
+			prova("och kortet är fortfarande läsbart brett", bredd >= 480,
+				("%d px"):format(bredd))
+			prova("och det håller sig innanför gångartsgallret",
+				kr.x1 <= res.Gangarter.x0,
+				("kortets högerkant %d mot gallrets %d"):format(kr.x1, res.Gangarter.x0))
+		end
+		UgnetaController.dolj()
 	end
 
 	--[[ ANKARET: skulle spåraren ritas på sin vanliga plats medan man
