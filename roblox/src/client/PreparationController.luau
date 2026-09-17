@@ -54,6 +54,19 @@ local Preparation = require(game:GetService("ReplicatedStorage").HorseCore.Prepa
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local Net = Core.Networking
 
+--[[ ══ REN SKARM FOR FYSIKTESTET (#182, PO-beslut 2026-09-17) ═══════
+
+     "Jag vill ha en helt ren skarm dar bara Roblox inbyggda funktioner
+     (och Ugnetas chatt) syns."
+
+     Ytan slacks pa `ScreenGui`-niva. Ingenting rivs, ingen logik andras
+     och inga matningar paverkas — provens ramar, etiketter och rader
+     finns kvar precis som forut. En rad tillbaka och den ar uppe igen.
+
+     Se samma konstant i `TouchControls`, `DinHast`,
+     `PreparationController` och `KontrollHjalp`. ]]
+local MINIMAL_UI = true
+
 local PreparationController = {}
 
 local player = Players.LocalPlayer
@@ -853,6 +866,7 @@ local function bygg()
 	     10 ligger över `TouchGui` (0) och över ridningens egen
 	     `HorseTouch` (8), men under hjälpknappen (16). ]]
 	g.DisplayOrder = 10
+	g.Enabled = not MINIMAL_UI
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	g.Parent = player:WaitForChild("PlayerGui")
 
@@ -1441,6 +1455,14 @@ function PreparationController.visaAvslagFor(skal: any, extra: any?)
 	visaAvslag(PreparationController.skalText(skal, extra))
 end
 
+--[[ En KVITTENS utifran (#182). Ledningen ager ingen egen meddelanderad
+	och ska inte bygga en; den lanar panelens, precis som avslagen redan
+	gor. Texten ar fardigformaterad av anroparen — den har filen
+	oversatter inte nagon annans handling. ]]
+function PreparationController.visaBekraftelseFor(text: any)
+	if type(text) == "string" and text ~= "" then visaBekraftelse(text) end
+end
+
 --[[ Provets fönster in: står en kvittens uppe, och vilken? ]]
 function PreparationController._bekraftelse(): string?
 	return bekraftelse
@@ -1732,6 +1754,29 @@ local function kvittens(lista: any, momentId: string): string
 	return "\u{2713}  " .. Sprak.t("hud.bra")
 end
 
+--[[ ── KVITTENSEN KAN KOMMA FRÅN SERVERN (#182) ──────────────────────
+
+	Vilket utrustningssteg som lägger vilken del på hästen vet
+	`TackService`, och bara den. Klienten kunde därför skriva "Bra" men
+	inte "Sadeln sitter på Trixie" — och det var precis den kvittensen som
+	saknades: ingenting namngav vare sig delen eller hästen, så spelaren
+	fick ingen bekräftelse på att sadeln faktiskt kommit på plats.
+
+	SERVERN SKICKAR NYCKLAR, ALDRIG FÄRDIG TEXT. Språket är klientens, och
+	en server som formaterade texten hade skrivit sitt eget språk till alla
+	spelare — samma fel som #162 rev ut ur nejen. Saknas eller går nyckeln
+	inte att slå upp faller kvittensen tillbaka på den som räknades fram
+	före anropet; en okänd nyckel ska inte kunna tysta feedbacken. ]]
+local function serverKvittens(skal: any, extra: any): string?
+	if type(skal) ~= "string" or skal == "" or not Sprak.finns(skal) then return nil end
+	if type(extra) ~= "table" then return nil end
+	local del = extra.del
+	if type(del) ~= "string" or not Sprak.finns(del) then return nil end
+	local hast = extra.hast
+	if type(hast) ~= "string" or hast == "" then return nil end
+	return "\u{2713}  " .. Sprak.t(skal, Sprak.t(del), hast)
+end
+
 local function skicka(nyckel: string, remote: string, bekrafta: string?, ...)
 	if vantarPa then return end
 	vantarPa = nyckel
@@ -1740,7 +1785,7 @@ local function skicka(nyckel: string, remote: string, bekrafta: string?, ...)
 		local ok, skal, extra = Net.get(remote):InvokeServer(table.unpack(args, 1, args.n))
 		vantarPa = nil
 		if ok then
-			visaBekraftelse(bekrafta)
+			visaBekraftelse(serverKvittens(skal, extra) or bekrafta)
 		else
 			--[[ Nejet skrivs på BÅDA ytorna. Spelaren tittar på
 				interaktionspanelen när hon just tryckt; ett avslag som bara
@@ -1787,6 +1832,13 @@ end
 
 function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
+end
+
+--[[ Vad SERVERN säger att spelaren bär (#182). Klienten räknar inte ut
+	det själv — `DinHast` ritar bara det vyn redan innehåller, av samma
+	skäl som `hastId` ovan läses härifrån och inte ur en egen fråga. ]]
+function PreparationController.burenUtrustning(): any
+	return senasteVy and senasteVy.burenUtrustning or nil
 end
 
 --[[ Provkrokar: vad HUD:en faktiskt ritade. Provet läser dem i stället för

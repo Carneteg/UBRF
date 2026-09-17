@@ -166,6 +166,9 @@ FORBEREDELSE = SPEL + [
     #   GameplayService, som prover utrustningen fysiskt. ]]
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
+    #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
+    #   numera require:ar den for att kunna slacka en tagen sadel. ]]
+    ("TackForradService", "src/server/TackForradService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -467,6 +470,9 @@ KLIENT = SPEL + [
     #   laggs till; produktionen hittar den via `script.DinHast`, banken
     #   maste fa den namngiven. Det ar ett hal i harnessen, inte i spelet. ]]
     ("DinHast",             "src/client/DinHast.luau"),
+    #[[ #235: den gemensamma touchytan. Som DinHast ovan maste den
+    #   namnges har - banken hittar den inte sjalv. ]]
+    ("Naromrade",           "src/client/Naromrade.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
@@ -503,6 +509,9 @@ KOHERENS = GEOMETRI + [
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
+    #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
+    #   numera require:ar den for att slacka en tagen sadel. ]]
+    ("TackForradService", "src/server/TackForradService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
     ("DorrService",     "src/server/DorrService.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
@@ -601,7 +610,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ Ledningsspecen behover tjanstestacken: LedService och
     #   GameplayService. Samma bunt som integration. ]]
     #[[ Tackspecen behover riggen OCH tjansterna: den bygger en riktig
-    #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
+    #   hast ur HastRigg och satter fysisk utrustning pa henne.
+    #   `buren-tack.spec` (#182) fangas av samma gren och SKA gora det:
+    #   den mater utrustningen mellan boxfronten och hasten och behover
+    #   exakt samma bunt. `klient-burenstatus.spec` far daremot KLIENT
+    #   via "klient"-grenen langre ned — den mater HUD-raden, inte
+    #   tjansterna, och DinHast finns bara i klientbunten. ]]
     #[[ Hojdspecen bygger RIKTIGA riggar i tre storlekar och kor
     #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
     #[[ #176: spelbygget. Samma varld som bygge.spec, men med QA-flaggan AV
@@ -623,8 +637,20 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ FORE den bredare "tack"-grenen: strangen "tack-fas1" INNEHALLER
+    #   "tack", och hamnade annars i integrationsbanken utan varld. Samma
+    #   genomfallning som noten om "spelbarhet" varnar for. ]]
+    elif "tack-fas1" in spec_rel or "tack-fas2" in spec_rel or "tack-fas3" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ FORE den bredare "ledning"-grenen: "ledning-integration"
+    #   INNEHALLER "ledning" och hamnade annars i integrationsbanken,
+    #   som saknar bade varlden och klientens InteractionController. ]]
+    elif "promptkonflikt" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    elif "ledning-integration" in spec_rel:
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "sprak-en" in spec_rel:

@@ -72,6 +72,19 @@ local UserInputService = game:GetService("UserInputService")
      `RADER` nedan för varför nyckeln och inte texten är radens identitet. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 
+--[[ ══ REN SKARM FOR FYSIKTESTET (#182, PO-beslut 2026-09-17) ═══════
+
+     "Jag vill ha en helt ren skarm dar bara Roblox inbyggda funktioner
+     (och Ugnetas chatt) syns."
+
+     Ytan slacks pa `ScreenGui`-niva. Ingenting rivs, ingen logik andras
+     och inga matningar paverkas — provens ramar, etiketter och rader
+     finns kvar precis som forut. En rad tillbaka och den ar uppe igen.
+
+     Se samma konstant i `TouchControls`, `DinHast`,
+     `PreparationController` och `KontrollHjalp`. ]]
+local MINIMAL_UI = true
+
 local KontrollHjalp = {}
 
 local player = Players.LocalPlayer
@@ -101,8 +114,14 @@ KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
      LEDIG, kontrollerat mot hela `roblox/src`:
        Input.luau       Thumbstick1, ButtonA/B, R1/L1, R2/L2
        init.client      ButtonY (lektionen), ButtonX (se ritten), DPadUp (hjälp)
-     Kvar av styrkorset: ned, vänster, höger. `ButtonStart`/`ButtonSelect`
-     rörs inte — Roblox har egna menyer på dem.
+     `ButtonStart`/`ButtonSelect` rörs inte — Roblox har egna menyer på dem.
+
+     STYRKORSET ÄR SEDAN #182 FULLT: vänster och höger gick till hästens
+     två nya prompter, «Led …» och «Rida nu»
+     (`InteractionController.GAMEPAD`). De här två är alltså inte längre
+     "resten av styrkorset" utan de två som är låsta.
+     `docs/KONTROLLMATRIS.md` bär hela huvudboken och
+     `klient-ledprompt.spec` mäter den mot källan.
 
      Styrkors ned parar sig dessutom med styrkors upp: hjälpen upp, av
      hästen ned. Ingen befintlig rid-, hopp-, replay- eller hjälpbindning
@@ -256,6 +275,7 @@ local function bygg()
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
 	g.DisplayOrder = 15
+	g.Enabled = not MINIMAL_UI
 	g.Enabled = false
 	g.Parent = player:WaitForChild("PlayerGui")
 	gui = g
@@ -434,6 +454,7 @@ local function byggOppna()
 	--[[ Under ridanalysen (20) men över kontrollpanelen (15): panelen ska
 	     kunna ligga över knappen utan att knappen försvinner bakom den. ]]
 	g.DisplayOrder = 16
+	g.Enabled = not MINIMAL_UI
 	g.Parent = player:WaitForChild("PlayerGui")
 	oppnaGui = g
 

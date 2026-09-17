@@ -37,6 +37,10 @@ Sprak.text = {
 		sv = "Sitt upp",
 		en = "Mount",
 	},
+	["interaktion.anvand"] = {
+		sv = "Anvand",
+		en = "Use",
+	},
 	["interaktion.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
@@ -461,6 +465,18 @@ Sprak.text = {
 		sv = "Du leder %s",
 		en = "You are leading %s",
 	},
+	["led.borja_namn"] = {
+		sv = "Led %s",
+		en = "Lead %s",
+	},
+	["led.slapp_namn"] = {
+		sv = "Släpp %s",
+		en = "Let go of %s",
+	},
+	["led.slutade"] = {
+		sv = "Du slutade leda %s",
+		en = "You stopped leading %s",
+	},
 	["led.ingen_hast"] = {
 		sv = "Ingen häst att leda",
 		en = "No horse to lead",
@@ -492,6 +508,10 @@ Sprak.text = {
 	["led.leder_inte"] = {
 		sv = "Du leder ingen häst",
 		en = "You are not leading a horse",
+	},
+	["led.rids"] = {
+		sv = "Hon rids just nu",
+		en = "She is being ridden right now",
 	},
 	["led.upptagen"] = {
 		sv = "Någon annan leder henne",
@@ -605,6 +625,42 @@ Sprak.text = {
 		sv = "Ta sadel och träns",
 		en = "Take the saddle and bridle",
 	},
+	["tack.ta_sadeln"] = {
+		sv = "Ta sadeln",
+		en = "Take the saddle",
+	},
+	["tack.sadel_for"] = {
+		sv = "%s sadel",
+		en = "%s saddle",
+	},
+	["tack.ta_transet"] = {
+		sv = "Ta tränset",
+		en = "Take the bridle",
+	},
+	["tack.trans_for"] = {
+		sv = "%s träns",
+		en = "%s bridle",
+	},
+	["tack.bar_inget_trans"] = {
+		sv = "Du bär inget träns — hämta hennes på boxfronten först",
+		en = "You are not carrying a bridle — fetch hers from the stall front first",
+	},
+	["tack.redan_tagen"] = {
+		sv = "Någon annan bär den redan",
+		en = "Someone else is already carrying it",
+	},
+	["tack.ingen_front"] = {
+		sv = "Utrustningen går inte att nå just nu",
+		en = "The equipment cannot be reached right now",
+	},
+	["tack.front_slapper_inte"] = {
+		sv = "Sadeln sitter fast på boxfronten — försök igen",
+		en = "The saddle is stuck on the stall front — try again",
+	},
+	["tack.bar_redan_annan"] = {
+		sv = "Du bär redan en annan hästs sadel — lämna tillbaka den först",
+		en = "You are already carrying another horse's saddle — put it back first",
+	},
 	["tack.utrustning_for"] = {
 		sv = "%ss sadel och träns",
 		en = "%s's saddle and bridle",
@@ -612,6 +668,50 @@ Sprak.text = {
 	["tack.hamta_forst"] = {
 		sv = "Sadel och träns hänger på boxfronten — hämta dem först",
 		en = "Saddle and bridle hang on the stall front — fetch them first",
+	},
+	["tack.bar_par"] = {
+		sv = "Du bär %ss sadel och träns",
+		en = "You are carrying %s's saddle and bridle",
+	},
+	["tack.bar_sadel"] = {
+		sv = "Du bär %ss sadel",
+		en = "You are carrying %s's saddle",
+	},
+	["tack.bar_trans"] = {
+		sv = "Du bär %ss träns",
+		en = "You are carrying %s's bridle",
+	},
+	["tack.del_underlagg"] = {
+		sv = "Underlägget",
+		en = "The numnah",
+	},
+	["tack.del_sadel"] = {
+		sv = "Sadeln",
+		en = "The saddle",
+	},
+	["tack.del_trans"] = {
+		sv = "Tränset",
+		en = "The bridle",
+	},
+	["tack.pa_plats"] = {
+		sv = "%s sitter på %s",
+		en = "%s is on %s",
+	},
+	["tack.leds_nu"] = {
+		sv = "Hon leds just nu — släpp henne först",
+		en = "She is being led right now — let her go first",
+	},
+	["tack.rids_nu"] = {
+		sv = "Hon är uppsutten — sitt av först",
+		en = "She is being ridden — dismount first",
+	},
+	["tack.inte_pa_fronten"] = {
+		sv = "Den hänger inte på boxfronten längre",
+		en = "It is no longer hanging on the stall front",
+	},
+	["tack.bar_ingen_sadel"] = {
+		sv = "Du bär ingen sadel — hämta hennes på boxfronten först",
+		en = "You are not carrying a saddle — fetch hers from the stall front first",
 	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",
@@ -768,6 +868,14 @@ Sprak.text = {
 	["interaktion.rida_nu"] = {
 		sv = "Rida nu",
 		en = "Ride now",
+	},
+	["interaktion.sadla_namn"] = {
+		sv = "Sadla %s",
+		en = "Saddle %s",
+	},
+	["interaktion.transa_namn"] = {
+		sv = "Tränsa %s",
+		en = "Bridle %s",
 	},
 	["hjalp.blick"] = {
 		sv = "Se dig omkring",

@@ -429,10 +429,12 @@ print("3b. Varje hästs egen sadel och eget träns")
 	mätningen nedan stänga tränset — exakt det Equipment Gate inför. ]]
 local taget = {}
 local neka: string? = nil
-TackForradService.start(function(spelare, hastId)
+--[[ MOTTAGAREN TAR EN TYP I TAGET (#235 FAS 1). Den tog forut hela paret;
+	nu ror boxfronten bara det den fick i `typ`, och tranget lamnas at
+	FAS 3. Provet harmar `GameplayService.valjEn`. ]]
+TackForradService.start(function(spelare, hastId, typ)
 	if neka then return false, neka end
-	taget.sadel = hastId
-	taget.trans = hastId
+	taget[typ or "sadel"] = hastId
 	return true
 end)
 
@@ -458,10 +460,14 @@ for _, id in ipairs(UBRFSpel.ordning) do
 		if math.abs(lokalX - frontX) > 0.6 then
 			table.insert(langtFranFronten, ("%s %.2f m"):format(id, lokalX - frontX))
 		end
+		--[[ NYCKELN BYTTE NAMN I #235 FAS 1, inte kravet: hamtningen delades
+			upp sa att «Ta sadeln» bara ror sadeln, och tranget hanger kvar
+			utan prompt till FAS 3. Namnskylten — `SprakArg` med hastens
+			egennamn — ar precis lika obligatorisk som forut. ]]
 		local prompt = m.PrimaryPart and m.PrimaryPart:FindFirstChildOfClass("ProximityPrompt")
 		local namn = UBRFSpel.hastar[id].namn
 		if not (prompt and prompt:GetAttribute("SprakArg") == namn
-			and prompt:GetAttribute("SprakNyckel") == "tack.ta_utrustning") then
+			and prompt:GetAttribute("SprakNyckel") == "tack.ta_sadeln") then
 			table.insert(utanNamn, id)
 		end
 	else
@@ -486,46 +492,44 @@ local jag = UBRFSpel.ordning[19]      -- blackrock_jack
 local granne = UBRFSpel.ordning[1]
 local spelare = { Name = "Koherens" }
 taget = {}
-TackForradService.tag(spelare, jag)
-check("att ta vid sin egen front ger den egna hästens utrustning",
-	taget.sadel == jag and taget.trans == jag,
-	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+TackForradService.tagSadel(spelare, jag)
+check("att ta vid sin egen front ger den egna hästens sadel",
+	taget.sadel == jag,
+	("sadel %s"):format(tostring(taget.sadel)))
+--[[ #235 FAS 1: TRANGET SKA LIGGA KVAR. Det ar hela poangen med att dela
+	upp hamtningen, och utan den har raden hade en atersammanslagning
+	kunnat smyga tillbaka utan att nagot blev rott. ]]
+check("och tränset rörs INTE — det hör till FAS 3",
+	taget.trans == nil, tostring(taget.trans))
 taget = {}
-TackForradService.tag(spelare, granne)
+TackForradService.tagSadel(spelare, granne)
 check("och vid grannens front ger GRANNENS — felvalet går att göra",
-	taget.sadel == granne and taget.trans == granne,
-	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
+	taget.sadel == granne,
+	("sadel %s"):format(tostring(taget.sadel)))
 
---[[ ── HÄMTNINGEN ÄR ETT PAR, INTE TVÅ HALVOR (#169) ──────────────────
+--[[ ── ETT NEJ SKA INTE SKRIVA NAGOT (#169, omformulerat for FAS 1) ───
 
-	Sadel och träns hämtas tillsammans. Förut skrevs de av två oberoende
-	anrop: sadeln committades, och ett nej på tränset lämnade spelaren med
-	den nya hästens sadel och den gamlas träns. Mätt på `a096d68` genom
-	samma söm som här:
+	Sadel och trans hamtades forut tillsammans, och provet matte att ett
+	nej pa andra halvan inte lamnade ett blandat par. #235 FAS 1 delar upp
+	hamtningen, sa det paret finns inte langre — men kravet bakom det gor
+	det: en hamtning som nekas far inte skriva nagonting alls.
 
-	    FÖRE:  sadel=gammal_hast  trans=gammal_hast
-	    EFTER: sadel=ny_hast      trans=gammal_hast
-
-	I dag kan ingen av halvorna neka — `valjPar` prövar bara typnamnet, och
-	det är hårdkodat. Mätningen ställer därför frågan genom mottagaren, som
-	är exakt det ställe Equipment Gate lägger sina nya nej på. Faller
-	prövningen efter första skrivningen igen blir de två raderna röda. ]]
-taget = { sadel = jag, trans = jag }
-neka = "tack.trans_nekat"
-local nekadOk = TackForradService.tag(spelare, granne)
-check("ett nekat par lämnar det GAMLA paret orört",
-	taget.sadel == jag and taget.trans == jag,
-	("sadel %s · träns %s"):format(tostring(taget.sadel), tostring(taget.trans)))
-check("och tag() säger nej, inte ja", nekadOk == false, tostring(nekadOk))
+	Mattningen stalls darfor genom mottagaren, som ar exakt det stalle
+	Equipment Gate lagger sina nya nej pa. ]]
+taget = { sadel = jag }
+neka = "tack.redan_tagen"
+local nekadOk = TackForradService.tagSadel(spelare, granne)
+check("ett nekat uttag lamnar den GAMLA sadeln orord",
+	taget.sadel == jag, tostring(taget.sadel))
+check("och tagSadel() sager nej, inte ja", nekadOk == false, tostring(nekadOk))
 neka = nil
 
---[[ IDEMPOTENS. Samma hämtning två gånger ska ge samma par, inte ett
-	halvt byte. ]]
+--[[ IDEMPOTENS. Samma hamtning tva ganger ska ge samma sadel. ]]
 taget = {}
-TackForradService.tag(spelare, granne)
-local forsta = ("%s/%s"):format(tostring(taget.sadel), tostring(taget.trans))
-TackForradService.tag(spelare, granne)
-local andra = ("%s/%s"):format(tostring(taget.sadel), tostring(taget.trans))
+TackForradService.tagSadel(spelare, granne)
+local forsta = tostring(taget.sadel)
+TackForradService.tagSadel(spelare, granne)
+local andra = tostring(taget.sadel)
 check("upprepad hämtning är idempotent", forsta == andra and taget.sadel == granne,
 	("%s -> %s"):format(forsta, andra))
 

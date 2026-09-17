@@ -142,6 +142,25 @@ local function rustaDorr(blad: BasePart)
 	end
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = RACKVIDD
+	prompt.ClickablePrompt = true
+	--[[ ══ KNAPPEN (#182 del 3) ══════════════════════════════════════
+
+		DORREN AR DEN ENDA PROMPTEN SOM LEVER I BADA LAGEN. Man oppnar
+		en dorr bade till fots och fran hastryggen, och det ar darfor
+		den inte kan bara kontextregeln som alla andra markprompter
+		gor: det finns inget lage dar den ar slackt.
+
+		Roblox standard `E` / `ButtonX` var darfor en verklig krock:
+		`E` ar AVSITTNING i sadeln och `ButtonX` ar «se ritten». Att
+		oppna en dorr fran hastryggen hade gjort bada sakerna i samma
+		tryck.
+
+		`X` och `ButtonR3` ar de enda som ar lediga i HELA
+		kontrollmatrisen, i bada lagen. Dorren far dem, just for att
+		den ar den enda som behover det. ]]
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+	prompt.KeyboardKeyCode = Enum.KeyCode.X
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonR3
 	--[[ Utan siktlinjekrav: bladet står i sin egen lucka och skymmer sig
 		själv från vissa vinklar, och då försvann prompten där man faktiskt
 		står — vilket är just det Tobias råkade ut för. ]]

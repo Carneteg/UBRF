@@ -830,6 +830,65 @@ function Preparation.provaModell(state: State?, modellHastId): (boolean, string?
 	return Preparation.provaUppsittning(state, state.hastId)
 end
 
+--[[ ── VAD SPELAREN BÄR (#182) ─────────────────────────────────────
+
+	Sadeln och tränset hämtas på boxfronten och läggs på hästen några
+	moment senare. Däremellan fanns de bara som ett id i `GameplayService`
+	egen valtabell, och ingenting — varken HUD eller värld — sa att
+	spelaren gick omkring med dem.
+
+	REGELN ÄR HÄRLEDD, INTE BOKFÖRD. Utrustningen är BUREN så länge den är
+	hämtad men ännu inte sitter på hästen. Ett eget "bär"-tillstånd hade
+	varit ett tredje register vid sidan av de två som redan finns — valet
+	och den fysiska delen — och det är precis den dubbla sanningen
+	`TackService` skrevs för att omöjliggöra. Läggs sadeln på slocknar
+	statusen av sig själv; rivs delen ur världen tänds den igen.
+
+	  `vald`     { sadel = hastId?, trans = hastId? } — vad som hämtats.
+	  `paHasten` { sadel = boolean, trans = boolean } — vad som FYSISKT
+	             ligger på hästen, läst ur världen av anroparen. Modulen
+	             rör aldrig en instans själv.
+	  `namnFor`  hastId → egennamn, som funktion eller tabell.
+
+	NAMNET ÄR UTRUSTNINGENS HÄST, inte spelarens. Tog hon fel sadel ska
+	statusraden säga VEMS den är — det är samma pedagogik som
+	`tack.fel_sadel`, och att skriva spelarens egen häst där hade dolt
+	precis det misstag momentet finns för att lära ut.
+
+	ETT BLANDAT PAR namnger den första delen i kanonordning och lämnar
+	den andra onämnd. Det är en medveten begränsning och inte ett
+	förbiseende: `valjPar` — den enda vägen boxfronten och «Rida nu»
+	använder — skriver alltid båda till samma häst, så ett blandat par
+	kan bara uppstå genom `valjUtrustning`, som ingen levande yta
+	anropar. Skulle den få en anropare hör en riktig gruppering hit. ]]
+local BURNA = { "sadel", "trans" }
+
+function Preparation.buren(vald: any, paHasten: any, namnFor: any)
+	if type(vald) ~= "table" then return nil end
+	local pa = if type(paHasten) == "table" then paHasten else {}
+	local agare: string? = nil
+	local delar = {}
+	for _, typ in ipairs(BURNA) do
+		local id = vald[typ]
+		if type(id) == "string" and id ~= "" and pa[typ] ~= true then
+			if agare == nil then agare = id end
+			if id == agare then table.insert(delar, typ) end
+		end
+	end
+	if agare == nil or #delar == 0 then return nil end
+	local namn: any = nil
+	if type(namnFor) == "function" then
+		namn = namnFor(agare)
+	elseif type(namnFor) == "table" then
+		namn = namnFor[agare]
+	end
+	return {
+		hastId = agare,
+		hastnamn = if type(namn) == "string" and namn ~= "" then namn else agare,
+		delar = delar,
+	}
+end
+
 --[[ Det klienten ska visa. Servern skickar hela den här tabellen; klienten
 	räknar inte ut någon del av den själv.
 
@@ -843,11 +902,17 @@ end
 	(`moment.js`); Roblox gjorde det aldrig, så spelaren läste ett
 	bokstavligt "%N" i HUD:en. Namnet översätts inte — det är verklighetens
 	namn på en verklig häst. ]]
-function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: string?)
+--[[ `buren` är `Preparation.buren`s svar och följer med av samma skäl som
+	`hastnamn`: klienten ska aldrig räkna ut någon del av vyn själv. Den
+	ligger med ÄVEN i den tomma grenen — en spelare kan ha hämtat sadel
+	och träns innan riggen strömmat in, och `waiting_model` får inte
+	släcka en status som fortfarande är sann. ]]
+function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: string?,
+	buren: any?)
 	if not state then
 		return { status = status, hastId = nil, hastnamn = nil, steg = {}, nasta = nil,
 			moment = {}, nastaMoment = nil, fynd = nil, svar = {},
-			stoppad = nil, redo = false, rev = rev or 0 }
+			stoppad = nil, redo = false, burenUtrustning = buren, rev = rev or 0 }
 	end
 	local steg = {}
 	for _, f in ipairs(Preparation.stegFaser()) do
@@ -902,6 +967,7 @@ function Preparation.vy(state: State?, status: string, rev: number?, hastnamn: s
 		svar = svar,
 		stoppad = state.stoppad,
 		redo = Preparation.redo(state),
+		burenUtrustning = buren,
 		rev = rev or 0,
 	}
 end

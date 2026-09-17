@@ -26,6 +26,7 @@ local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemet
 local Input = require(script.Input)
 local TouchControls = require(script.TouchControls)
 local DinHast = require(script.DinHast)
+local Naromrade = require(script.Naromrade)
 local MovementController = require(script.MovementController)
 --[[ HORSE_VISUAL_QUALITY_GATE: benen på de hästar som bär ett riktigt nät
      drivs procedurellt härifrån. Modulen rör bara `Motor6D.Transform`,
@@ -101,6 +102,8 @@ local function dismount()
 	--[[ Skylten svarar på "vilken av dem?". Den frågan är inte aktuell
 		medan man sitter på henne. ]]
 	DinHast.satDold(false)
+	--[[ #235: till fots agar naromradet skarmen igen. ]]
+	Naromrade.satRider(false)
 	ride = nil
 end
 
@@ -198,6 +201,8 @@ local function mount(model: Model)
 	})
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
+	--[[ #235: medan man rider ager `TouchControls` skarmen. ]]
+	Naromrade.satRider(true)
 	Debug.attach(rig, stats)
 
 	--[[ G02-C: lektionen börjar när man sitter upp i ridhuset. Ugneta
@@ -257,15 +262,42 @@ end)
 
 --[[ Nejet från «Rida nu» ska läsas av SPELAREN, inte av Output-fönstret.
 	Panelen äger meddelanderaden; knappen skickar dit sitt skäl. ]]
+--[[ #182: kvittensen och den bestaende statusraden. Knapparna ager
+	ingen text-yta sjalva — panelen ager meddelanderaden och `DinHast`
+	statusraden, precis som avslagen redan var kopplade. ]]
+InteractionController.setBekraftelseVisare(function(text: any)
+	PreparationController.visaBekraftelseFor(text)
+end)
+
+InteractionController.setLedStatus(function(model: Model?)
+	DinHast.satLedstatus(if model
+		then tostring(model:GetAttribute("HorseName") or model.Name)
+		else nil)
+end)
+
 InteractionController.setAvslagVisare(function(skal: any, extra: any?)
 	PreparationController.visaAvslagFor(skal, extra)
 end)
 
+--[[ ══ RIDE FIRST: LEDNINGEN AR INTE LAST BAKOM TEORIN ═══════════════
+
+     Produktbeslut 2026-09-17, efter fysisk QA. Villkoret lod förut
+     `nastaFas() == "leda"` — alltså fas FEM av fem. Spelaren kunde inte
+     röra hästen förrän hon hälsat, visiterat, ryktat och gjort i ordning,
+     och fick ingen som helst indikation om varför ledknappen saknades.
+
+     Det bröt mot FUN FIRST / RIDE FIRST: skötseln ska göra ritten bättre,
+     inte vara en vägspärr. Att leda sin häst är dessutom en av de
+     handlingar man naturligast vill göra direkt.
+
+     KLIENTEN RITAR NU KNAPPEN på spelarens egen häst, oavsett fas.
+     SERVERN AVGÖR FORTFARANDE ALLT annat — rätt häst, avstånd, om hon
+     leds av någon annan, om hon rids, om spelaren redan leder. Den här
+     raden flyttar ingen behörighet; den slutar bara gömma knappen. ]]
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
-	if model:GetAttribute("HorseId") ~= id then return false end
-	return PreparationController.nastaFas() == "leda"
+	return model:GetAttribute("HorseId") == id
 end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
@@ -275,8 +307,74 @@ end)
 PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
+--[[ #182: den beständiga statusraden för buren utrustning. Driven av
+     SERVERNS vy och inte av boxfrontens knapptryck, av exakt samma skäl
+     som ledningens rad lyssnar på `LedSync`: hämtningen kan ändras av
+     något annat än det senaste trycket — «Rida nu» hämtar också, och
+     varje påsatt del släcker sin egen del av raden — och två vägar in
+     hade kunnat glida isär. ]]
+PreparationController.vidNyVy(function(vy: any)
+	DinHast.satBurenstatus(if type(vy) == "table" then vy.burenUtrustning else nil)
+end)
+
+--[[ #235 FAS 2: «Sadla». Knappen far bara finnas nar spelaren FAKTISKT
+     bar sadeln, och servern ar den enda som vet det.
+
+     `vy.burenUtrustning` ar redan precis den sanningen och behover ingen
+     ny kanal: `Preparation.buren` drar bort det som redan ligger pa
+     hasten, sa «sadel» star kvar i listan exakt sa lange den ar i
+     handerna. Nar servern byggt den pa ryggen forsvinner den ur listan i
+     samma sync, och knappen med den.
+
+     Det ar samma val som ledningens statusrad gjorde: LYSSNA PA SERVERNS
+     VY, inte pa det senaste knapptrycket. Tva vagar in hade kunnat glida
+     isar — och «Rida nu» hamtar ocksa utrustning, utan att ga via
+     sadelknappen. ]]
+local barSadelNu = false
+--[[ #235 FAS 3: transet foljer samma vag. Listan bar bada delarna, och
+     `Preparation.buren` drar bort det som redan sitter pa hasten — sa
+     varje del star kvar exakt sa lange den ar i handerna. ]]
+local barTransNu = false
+PreparationController.vidNyVy(function(vy: any)
+	local buren = if type(vy) == "table" then vy.burenUtrustning else nil
+	local har, harTrans = false, false
+	if type(buren) == "table" then
+		for _, typ in ipairs(buren.delar or {}) do
+			if tostring(typ) == "sadel" then har = true end
+			if tostring(typ) == "trans" then harTrans = true end
+		end
+	end
+	barSadelNu = har
+	barTransNu = harTrans
+	--[[ OCH RITA OM DIREKT. `vidNyVy`-hookarna kors i den ordning de
+	     registrerats, och promptuppdateringen ovan star FORE den har — sa
+	     utan raden nedan hade sadelknappen alltid speglat FOREGAENDE sync.
+	     Spelaren hade sett knappen forst efter nasta serverbesked, och den
+	     hade statt kvar ett varv efter att sadeln lagts pa. ]]
+	InteractionController.uppdatera()
+end)
+InteractionController.setSadlaCheck(function(model: Model): boolean
+	if not barSadelNu then return false end
+	local id = PreparationController.hastId()
+	if not id then return false end
+	return model:GetAttribute("HorseId") == id
+end)
+
+--[[ #235 FAS 3. Samma fraga, en annan del. Att knapparna inte kan vara
+     uppe samtidigt avgors inte har utan av KANON: transet kraver att hon
+     ar sadlad, och nar hon ar det har `burenUtrustning` redan slappt
+     sadeln. Servern bar regeln (`tack.sadeln_forst`); den har raden ritar
+     bara knappen. ]]
+InteractionController.setTransaCheck(function(model: Model): boolean
+	if not barTransNu then return false end
+	local id = PreparationController.hastId()
+	if not id then return false end
+	return model:GetAttribute("HorseId") == id
+end)
 PreparationController.start()
 DinHast.start()
+--[[ #235: den gemensamma touchytan. Returnerar direkt utan pekskarm. ]]
+Naromrade.start()
 --[[ P0-3: HUD:ens KONTEXT stegas av sin egen loop, inte av ridloopen längst
      ned — den återvänder direkt när man inte rider, och det är precis då
      frågan "står jag vid min häst?" spelar roll. Heartbeat räcker: det är
@@ -336,10 +434,15 @@ UserInputService.InputBegan:Connect(function(input, processed)
 
 	     `DPadUp` är gamepadens väg in, kontrollerat ledig: Input.luau tar
 	     Thumbstick1, ButtonA/B/R1/L1/R2/L2 och den här filen tar
-	     ButtonY/ButtonX. Styrkorset rörs av ingen av dem, och till
-	     skillnad från ButtonStart/ButtonSelect är det inte reserverat av
-	     Roblox egna menyer. Ingen befintlig rid-, hopp- eller
-	     replaybindning har flyttats. ]]
+	     ButtonY/ButtonX. Till skillnad från ButtonStart/ButtonSelect är
+	     det inte reserverat av Roblox egna menyer. Ingen befintlig rid-,
+	     hopp- eller replaybindning har flyttats.
+
+	     STYRKORSET ÄR NUMERA FULLT (#182 omtag): ned är avsittningen,
+	     vänster och höger är hästens två nya prompter
+	     (`InteractionController.GAMEPAD`). Hjälpen är den ENDA bindningen
+	     som lever i båda lägena — den ligger ju före `not ride`-grinden —
+	     och just därför får ingen prompt röra `DPadUp`. ]]
 	if input.KeyCode == Enum.KeyCode.H
 		or input.KeyCode == KontrollHjalp.GAMEPADKNAPP then
 		KontrollHjalp.vaxla()

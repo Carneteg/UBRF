@@ -555,6 +555,26 @@ function TouchControls.mount(input: any, hooks: {
 	     tangenterna — `Input.touchGaitTo` lämnar ett namn, och
 	     `MovementController:_targetGait` gör om det till samma index och
 	     samma tak som förut. ]]
+	--[[ ══ AVSTÄNGDA I VÄNTAN PÅ TVÅKNAPPSSYSTEMET ═══════════════════
+
+	     Produktbeslut 2026-09-17, efter fysisk QA på iPad: skärmen är
+	     överbelamrad. Tio namngivna knappar i två block nere till höger är
+	     en PC-simulators reglagepanel, inte en iPad-yta.
+
+	     Det smarta tvåknappssystemet — driv och broms via
+	     `ContextActionService` — byggs i eget scope (#233/#17). Tills dess
+	     är de här ytorna SLÄCKTA, inte borttagna: logiken bakom dem är
+	     oförändrad och mätt av `touch.spec`, och `Input.touchGaitTo`
+	     fungerar precis som förut. Det som ändras är att ingen ritar dem.
+
+	     `SITT AV` är UNDANTAGEN med flit. Den är inte ett reglage utan
+	     enda vägen AV hästen på en ren pekenhet — #162 blockerare 2 var
+	     just att en sådan väg saknades. Att släcka den hade låst in
+	     spelaren i sadeln, och då går ledningen inte att testa alls.
+
+	     En rad, ett beslut, lätt att återställa. ]]
+	local MINIMAL_UI = true
+
 	local gangrad = nyRam("Gangarter", g)
 	gangrad.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
 	gangrad.Position = UDim2.new(1, -(GALLER_B + KANT), 1,
@@ -579,6 +599,7 @@ function TouchControls.mount(input: any, hooks: {
 		b.LayoutOrder = ordning
 		b.MouseButton1Click:Connect(function() Input.touchGaitTo(gait) end)
 		gangKnapp[gait] = b
+		b.Visible = not MINIMAL_UI
 		return b
 	end
 	--[[ Ordningen läses rad för rad och går från stillastående till
@@ -597,6 +618,7 @@ function TouchControls.mount(input: any, hooks: {
 	local sakta = nyKnapp("Sakta", Sprak.t("touch.sakta"), gangrad, KB, KH)
 	sakta.LayoutOrder = 5
 	sakta.MouseButton1Click:Connect(function() Input.touchGait(false) end)
+	sakta.Visible = not MINIMAL_UI
 
 	--[[ VILKEN GÅNGART ÄR AKTIV. Läses ur hästens egen `Gait`-attribut,
 	     alltså samma sanning som allt annat visar — knapparna håller
@@ -653,6 +675,10 @@ function TouchControls.mount(input: any, hooks: {
 	local sits = nyKnapp("Sits", Sprak.t("touch.djup_sits"), knappar, KB, KH)
 	tygel.LayoutOrder, sits.LayoutOrder, parad.LayoutOrder = 1, 2, 3
 	hoppa.LayoutOrder, av.LayoutOrder = 4, 5
+	--[[ Allt utom SITT AV slacks, se noten vid `MINIMAL_UI`. ]]
+	for _, k in ipairs({ tygel, sits, parad, hoppa }) do
+		k.Visible = not MINIMAL_UI
+	end
 
 	hoppa.MouseButton1Click:Connect(function() Input.touchJump() end)
 	av.MouseButton1Click:Connect(hooks.dismount)

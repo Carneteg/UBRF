@@ -48,6 +48,10 @@ const SPRAK = {
   "stall.titta_in": { sv: "Titta in", en: "Look in" },
   "stall.star_har": { sv: "%s står här", en: "%s is in here" },
   "interaktion.sitt_upp": { sv: "Sitt upp", en: "Mount" },
+  /* NAROMRADETS reservetikett (#235). En prompt utan egen ActionText
+     ska anda ga att trycka pa; raden far da det neutrala ordet i
+     stallet for en tom knapp. */
+  "interaktion.anvand": { sv: "Anvand", en: "Use" },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
   /* Utrustningsstegets namn är en RÄKNARE, inte kanon: "Utrustning 2/4"
@@ -203,6 +207,18 @@ const SPRAK = {
   "led.borja": { sv: "Led hästen", en: "Lead the horse" },
   "led.slapp": { sv: "Släpp hästen", en: "Let go" },
   "led.leder": { sv: "Du leder %s", en: "You are leading %s" },
+  /* HANDLINGEN BÄR HÄSTENS NAMN (#182 human-QA).
+     "Led hästen" och "Rida nu" stod på samma punkt på riggen och målade
+     över varandra; spelaren såg bara den ena. Att flytta isär dem är halva
+     rättelsen — den andra halvan är att handlingen SÄGER vilken häst den
+     gäller, så att den går att skilja från uppsittningen utan att läsa
+     objektraden under. Namnet är ett egennamn och översätts aldrig. */
+  "led.borja_namn": { sv: "Led %s", en: "Lead %s" },
+  "led.slapp_namn": { sv: "Släpp %s", en: "Let go of %s" },
+  /* Avslutet ska kvitteras lika tydligt som starten. Utan den här raden
+     var enda skillnaden mellan "leder" och "leder inte" att en knapptext
+     bytt ord — och det är precis vad human-QA inte kunde se. */
+  "led.slutade": { sv: "Du slutade leda %s", en: "You stopped leading %s" },
   "led.ingen_hast": { sv: "Ingen häst att leda", en: "No horse to lead" },
   "led.fel_hast": { sv: "Det är inte din häst", en: "That is not your horse" },
   "led.ingen_karaktar": { sv: "Ingen karaktär", en: "No character" },
@@ -213,6 +229,10 @@ const SPRAK = {
   "led.for_langt": { sv: "Gå fram till henne först", en: "Walk up to her first" },
   "led.leder_redan": { sv: "Du leder redan", en: "You are already leading" },
   "led.leder_inte": { sv: "Du leder ingen häst", en: "You are not leading a horse" },
+  /* #182 del 2: hasten bars redan av en ryttare. Skilt fran
+     `led.rider`, som ar att SPELAREN sitter upp — tva olika fel som
+     hade blivit omojliga att skilja at med samma text. */
+  "led.rids": { sv: "Hon rids just nu", en: "She is being ridden right now" },
   "led.upptagen": { sv: "Någon annan leder henne", en: "Someone else is leading her" },
   "led.tappade_bort": { sv: "Hon kom efter — gå tillbaka och ta henne igen",
     en: "She fell behind — go back and take her again" },
@@ -282,9 +302,80 @@ const SPRAK = {
      för den. */
   "hud.bra": { sv: "Bra", en: "Good" },
   "tack.ta_utrustning": { sv: "Ta sadel och träns", en: "Take the saddle and bridle" },
+  /* #235 FAS 1: sadeln hamtas for sig. Tranget far sin egen text i
+     FAS 3 — tills dess hanger det kvar utan prompt, avsiktligt. */
+  "tack.ta_sadeln": { sv: "Ta sadeln", en: "Take the saddle" },
+  "tack.sadel_for": { sv: "%s sadel", en: "%s saddle" },
+  /* #235 FAS 3: transet far sin egen hamtning och sin egen pasattning,
+     samma state-machine som sadeln. */
+  "tack.ta_transet": { sv: "Ta tränset", en: "Take the bridle" },
+  "tack.trans_for": { sv: "%s träns", en: "%s bridle" },
+  "tack.bar_inget_trans": { sv: "Du bär inget träns — hämta hennes på boxfronten först",
+    en: "You are not carrying a bridle — fetch hers from the stall front first" },
+  "tack.redan_tagen": { sv: "Någon annan bär den redan",
+    en: "Someone else is already carrying it" },
+  /* FAIL-CLOSED (#235 review). Servern far aldrig slappa igenom en
+     hamtning den inte kunnat MATA. Saknas boxfronten finns ingen plats
+     att mata avstandet fran, och da ar svaret nej — inte ja. */
+  "tack.ingen_front": { sv: "Utrustningen går inte att nå just nu",
+    en: "The equipment cannot be reached right now" },
+  "tack.front_slapper_inte": { sv: "Sadeln sitter fast på boxfronten — försök igen",
+    en: "The saddle is stuck on the stall front — try again" },
+  /* EN SADEL I TAGET (#235 review 2). `satBuren` ar byggd for att BYTA
+     ut en buren del mot en annan hasts — men da lag den forsta hastens
+     agarpost kvar och hennes front forblev slackt. FAS 1 nekar i
+     stallet, innan nagot andras. */
+  "tack.bar_redan_annan": { sv: "Du bär redan en annan hästs sadel — lämna tillbaka den först",
+    en: "You are already carrying another horse's saddle — put it back first" },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },
+
+  /* VAD SPELAREN BÄR MELLAN BOXFRONTEN OCH HÄSTEN (#182).
+
+     Hämtningen var enbart en tabellskrivning på servern: ingenting på
+     skärmen och ingenting i världen sa att spelaren gick omkring med en
+     sadel. Raden är avsiktligt en STATUS och inte en kvittens — den ska
+     stå kvar så länge utrustningen bärs, inte blinka förbi.
+
+     Hästens namn är ett egennamn och översätts aldrig. Genitivet skrivs
+     som `%ss` av samma skäl som i `tack.utrustning_for` ovan. */
+  "tack.bar_par": { sv: "Du bär %ss sadel och träns",
+    en: "You are carrying %s's saddle and bridle" },
+  "tack.bar_sadel": { sv: "Du bär %ss sadel", en: "You are carrying %s's saddle" },
+  "tack.bar_trans": { sv: "Du bär %ss träns", en: "You are carrying %s's bridle" },
+
+  /* KVITTENSEN NÄR EN DEL FAKTISKT KOM PÅ HÄSTEN (#182).
+
+     "Bra" sa varken vad som hände eller med vilken häst. Delens namn är
+     en egen nyckel därför att SERVERN vet vilket utrustningssteg som ger
+     vilken del — klienten ska inte räkna ut den kopplingen en gång till
+     — medan språket är klientens. Servern skickar alltså nycklarna, inte
+     färdig text. */
+  "tack.del_underlagg": { sv: "Underlägget", en: "The numnah" },
+  "tack.del_sadel": { sv: "Sadeln", en: "The saddle" },
+  "tack.del_trans": { sv: "Tränset", en: "The bridle" },
+  "tack.pa_plats": { sv: "%s sitter på %s", en: "%s is on %s" },
+  /* #235 FAS 2. Nejen som bara FAS 2 kan ge: hon bar ingenting att
+     sadla med, eller hon bar en sadel som hor till en annan hast an
+     den hon star vid. Den andra ar avsiktligt mojlig att gora — att
+     kunna ta fel sadel ar hela den pedagogiska poangen, och nejet ska
+     da saga vad som ar fel, inte bara neka. */
+  /* #235 FAS 2 hittade halet: nar sadeln flyttat fran fronten till
+     hastens rygg star kroken tom — men hamtningen slapptes anda
+     igenom och praglade en ANDRA sadel ur tomma luften. */
+  /* #235 FAS 2 review: HASTENS EGET TILLSTAND. Att klienten slacker
+     knappen ar presentation; servern maste aga regeln. En hast som
+     leds star inte still att sadla, och en uppsutten har redan en
+     ryttare pa ryggen. */
+  "tack.leds_nu": { sv: "Hon leds just nu — släpp henne först",
+    en: "She is being led right now — let her go first" },
+  "tack.rids_nu": { sv: "Hon är uppsutten — sitt av först",
+    en: "She is being ridden — dismount first" },
+  "tack.inte_pa_fronten": { sv: "Den hänger inte på boxfronten längre",
+    en: "It is no longer hanging on the stall front" },
+  "tack.bar_ingen_sadel": { sv: "Du bär ingen sadel — hämta hennes på boxfronten först",
+    en: "You are not carrying a saddle — fetch hers from the stall front first" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 
@@ -372,6 +463,14 @@ const SPRAK = {
      från den accepterade Roblox-filen; ingenting är nyskrivet här. */
   /* RIDE FIRST: knappen som låter stallet göra i ordning henne. */
   "interaktion.rida_nu": { sv: "Rida nu", en: "Ride now" },
+  /* #235 FAS 2: SADEL `HELD -> EQUIPPED`. Hastens namn star i sjalva
+     handlingen, samma beslut som `led.borja_namn` i #182 — fyra knappar
+     pa samma hast far aldrig kalla henne olika saker. */
+  "interaktion.sadla_namn": { sv: "Sadla %s", en: "Saddle %s" },
+  /* #235 FAS 3. Kanon lagger transet SIST, sa knappen finns forst nar
+     hon ar sadlad — och da ar sadelknappen borta. De tva delar darfor
+     plats och tangent utan att nagonsin kunna vara uppe samtidigt. */
+  "interaktion.transa_namn": { sv: "Tränsa %s", en: "Bridle %s" },
   "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
   "touch.skritt": { sv: "SKRITT", en: "WALK" },
   "touch.trav": { sv: "TRAV", en: "TROT" },

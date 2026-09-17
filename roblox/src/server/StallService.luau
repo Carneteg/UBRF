@@ -93,6 +93,21 @@ local function satMarkor(player: Player, dagens: any): Model?
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 8
 	prompt.RequiresLineOfSight = false
+	prompt.ClickablePrompt = true
+	--[[ ══ KNAPPEN (#182 del 3) ═══════════════════════════════════════
+
+		Roblox standard ar `E` / `ButtonX` och `Exclusivity = OnePerButton`.
+		Matt i den byggda varlden, en spelare vid sin egen boxfront: ELVA
+		prompter inom rackhall samtidigt, dar sex delade `E`. Av dem visades
+		EN — de ovriga fanns, men spelaren kunde inte se att de fanns.
+
+		`AlwaysShow` gor att alla syns. Distinkt knapp gor att ratt en gar
+		att valja. Bada behovs; ingen racker sjalv. ]]
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+	--[[ `V` och `ButtonL2` ar sitsen, som bara lever i sadeln. Att
+		titta in i boxen gor man till fots. ]]
+	prompt.KeyboardKeyCode = Enum.KeyCode.V
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonL2
 	prompt.Parent = del
 
 	prompt.Triggered:Connect(function(spelare)

@@ -10,6 +10,7 @@ plattformsspecifika kontrollmatrisen."*
 |---|---|
 | Roblox tangent/gamepad | `roblox/src/client/Input.luau` |
 | Roblox uppsittning och lektionsval | `roblox/src/client/init.client.luau` |
+| Roblox knappar på hästen | `roblox/src/client/InteractionController.luau` |
 | Roblox pekskärm | `roblox/src/client/TouchControls.luau` |
 | Webb tangentbord | `src/game.js` (`keydown`/`keyup`) |
 | Webb pekskärm | `src/mobil.js` |
@@ -23,7 +24,16 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 
 | Handling | Tangentbord | Gamepad | Pekskärm |
 |---|---|---|---|
-| Sitt upp / sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` |
+| Sitt upp (knappen på hästen) | `E` | `ButtonX` | tryck på knappen |
+| Sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` |
+| Rida nu (knappen på hästen) | `R` | `DPadRight` (styrkors höger) | tryck på knappen |
+| Led / släpp hästen | `L` | `DPadLeft` (styrkors vänster) | tryck på knappen |
+| Sadla hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
+| Tränsa hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
+| Ta sadeln (boxfronten) | `G` | `ButtonL1` | tryck på knappen |
+| Ta tränset (boxfronten) | `T` | `ButtonB` | tryck på knappen |
+| Titta in i boxen | `V` | `ButtonL2` | tryck på knappen |
+| Öppna / stäng dörr | `X` | `ButtonR3` | tryck på knappen |
 | Framåt / bakåt | `W` / `S` | vänster spak | spaken |
 | Styr | `A` / `D` | vänster spak | spaken |
 | Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
@@ -107,23 +117,165 @@ tygeln"* respektive *"avsprånget kommer ur anridningen"*.
 
 `DPadUp` valdes för #161 (hjälpen) och `DPadDown` för #162 blockerare 2
 (avsittningen) därför att de är **lediga**, och det är kontrollerat mot
-källan, inte antaget:
+källan, inte antaget. Sedan #182 är hela huvudboken följande — och den är
+huvudboken, inte de tre rader man råkar titta på:
 
-| Bunden | Av | Till |
-|---|---|---|
-| `Thumbstick1` | `Input.luau` | styrning och framåt |
-| `ButtonA` | `Input.luau` | hopp |
-| `ButtonB` | `Input.luau` | halvhalt |
-| `ButtonR1` / `ButtonL1` | `Input.luau` | gångart upp / ner |
-| `ButtonR2` | `Input.luau` | tygel |
-| `ButtonL2` | `Input.luau` | sits |
-| `ButtonY` | `init.client.luau` | lektionen vidare |
-| `ButtonX` | `init.client.luau` | se ritten |
+| Bunden | Av | Till | Lever när |
+|---|---|---|---|
+| `Thumbstick1` | `Input.luau` | styrning och framåt | i sadeln |
+| `ButtonA` | `Input.luau` | hopp | i sadeln |
+| `ButtonB` | `Input.luau` | halvhalt | i sadeln |
+| `ButtonB` | `TackForradService.luau` | **ta tränset** (boxfronten) | på marken |
+| `ButtonL1` | `TackForradService.luau` | **ta sadeln** (boxfronten) | på marken |
+| `ButtonL2` | `StallService.luau` | **titta in** (boxmarkören) | på marken |
+| `ButtonR3` | `DorrService.luau` | **dörr** | **alltid** |
+| `ButtonR1` / `ButtonL1` | `Input.luau` | gångart upp / ner | i sadeln |
+| `ButtonR2` | `Input.luau` | tygel | i sadeln |
+| `ButtonL2` | `Input.luau` | sits | i sadeln |
+| `ButtonY` | `init.client.luau` | lektionen vidare | i sadeln |
+| `ButtonX` | `init.client.luau` | se ritten | i sadeln |
+| `ButtonX` | `InteractionController.luau` | **sitt upp** (prompten) | på marken |
+| `DPadDown` | `init.client.luau` | sitt av | i sadeln |
+| `DPadRight` | `InteractionController.luau` | **rida nu** (prompten) | på marken |
+| `DPadLeft` | `InteractionController.luau` | **led / släpp** (prompten) | på marken |
+| `DPadUp` | `KontrollHjalp` via `init.client.luau` | kontrollhjälpen | **alltid** |
+| `ButtonY` | `InteractionController.luau` | **sadla** (prompten) | på marken |
+| `ButtonY` | `InteractionController.luau` | **tränsa** (prompten) | på marken |
+| `ButtonB` | `TackForradService.luau` | **ta tränset** (boxfronten) | på marken |
 
-Styrkorset rörs av ingen av dem. `ButtonStart` och `ButtonSelect`
-valdes bort trots att de också är obundna i UBRF: de är reserverade av
-Roblox egna menyer på konsol, och en hjälpknapp som ibland öppnar
-Roblox-menyn i stället är sämre än ingen.
+`ButtonStart` och `ButtonSelect` valdes bort trots att de också är
+obundna i UBRF: de är reserverade av Roblox egna menyer på konsol, och en
+hjälpknapp som ibland öppnar Roblox-menyn i stället är sämre än ingen.
+
+## Kontextregeln — varför `ButtonX` och `ButtonY` står två gånger
+
+Efter #182 finns **tre knappar på hästen**: sitt upp, rida nu och led.
+De är ProximityPrompts, och en ProximityPrompt kräver bara närhet — alltså
+räcker det inte att knapparna skiljer sig från varandra, de måste hålla mot
+tabellen ovan. Första utkastet gav dem `ButtonX`/`ButtonY`/`ButtonB`, som
+var unika inbördes och samtidigt var *se ritten*, *lektionen vidare* och
+*halvhalt*. Det fyndet är hela skälet till avsnittet du läser.
+
+Regeln som gäller, och som mäts i båda riktningarna:
+
+1. **Knapparna på hästen lever bara på marken.**
+   `InteractionController.setEnabled(false)` körs vid uppsittning och
+   gäller **alla tre** prompttabellerna — inte bara uppsittningens, vilket
+   var den faktiska buggen. Läget sparas, så en prompt som byggs *medan*
+   spelaren rider föds avstängd.
+2. **Ridningens reglage lever bara i sadeln.** `Input.bind()` vid
+   uppsittning, `Input.unbind()` vid avsittning, och init.clients *se
+   ritten*, *lektionen vidare* och *gå vidare* ligger alla efter
+   `if not ride then return end`.
+3. **Det som lever i båda lägena får ingen prompt röra.** Hjälpens
+   `DPadUp` ligger före `not ride`-grinden med flit (#161) och är därför
+   låst.
+
+`ButtonX` får därför stå två gånger: det är Roblox **eget standardvärde**
+för en ProximityPrompt — sätter man ingenting blir det ButtonX ändå, så
+knappen går inte att slippa, bara att flytta — och de två betydelserna kan
+enligt regel 1 och 2 aldrig vara uppe samtidigt.
+
+**Tangentbordet har alltid fungerat så här**: `E` är både uppsittningsprompt
+och avsittning, `R` är både *rida nu* och *lektionen vidare*. Skillnaden är
+att regel 1 var *påstådd* men inte sann före #182:s omtag — `R` i sadeln
+fyrade faktiskt «Rida nu» också, eftersom bara uppsittningsprompten
+stängdes av. Samma rättelse stänger tangentbordets hål och gamepadens.
+
+Provet `roblox/tests/klient-ledprompt.spec.luau` bygger huvudboken **ur
+källan** — det fyrar kandidatknapparna genom `Input.luau`s egen bindning
+och genom klientens egen `InputBegan`, i båda lägena — och faller om en
+promptknapp krockar med något som lever samtidigt.
+
+### `ButtonY` och `F` — sadelknappen (#235 FAS 2)
+
+Efter FAS 2 finns **fyra** knappar på hästen. Styrkorset var slut: vänster
+och höger gick till de två som var nya i #182, och upp/ned är låst sedan
+#161/#162. Sadelknappen står därför på `ButtonY` och `F` — «lektionen
+vidare» respektive «halvhalt», som **båda bara lever i sadeln**.
+
+Det är samma kontextregel som redan bär `ButtonX` och `R`, och den är inte
+gratis: «Sadla» finns bara när spelaren står på marken **och bär hästens
+sadel**, och `setEnabled` släcker numera **alla fyra** prompttabellerna.
+Den raden är hela delningens bärande vägg — glöms en tabell där blir
+`ButtonY` både «Sadla» och «lektionen vidare» i samma tryck, vilket är
+exakt det fynd som fällde första utkastet till #182.
+
+`klient-ledprompt.spec.luau` mäter det i båda riktningarna: den bygger
+huvudboken ur källan, kontrollerar att sadelknappens andra betydelse bara
+lever i sadeln, och att alla fyra knapparna är avstängda där.
+
+### Tränset — två delningar till (#235 FAS 3)
+
+**På hästen** delar «Tränsa» rad, tangent och knapp med «Sadla». Det är
+kanon som bär den delningen, inte en kontextregel om lägen: tränset kräver
+att hon är sadlad (`tack.sadeln_forst`), och sadelknappen finns bara så
+länge hon är osadlad. De kan alltså aldrig vara uppe samtidigt.
+
+Vinsten är att kolumnen på hästen stannar på **fyra rader** i stället för
+fem. På en telefon i landskap är det skillnaden mellan en lista och en vägg.
+
+Servern äger regeln; `tack-fas3.spec.luau` mäter nejet på en osadlad häst,
+och `klient-ledprompt.spec.luau` mäter att controllern bygger **en knapp i
+taget** när bara en av frågorna svarar ja.
+
+**På boxfronten** gäller motsatsen: sadeln och tränset hänger på samma
+front och är inom räckhåll **samtidigt**. De får därför inte dela tangent.
+Sadeln behåller Roblox standardvärde (`E` / `ButtonX`); tränset får `T` och
+`ButtonB`, som båda bara lever i sadeln. Delade de standardvärdet hade vi
+byggt precis det #235 rapporterade: flera prompter i djupet där bara den
+närmaste går att nå.
+
+### Handkontrollens budget är slut — och vad som återstår
+
+Efter FAS 3 är varenda knapp på handkontrollen bunden, och **fem av
+bindningarna på marken bärs av kontextregeln** i stället för av ledigt
+utrymme. Efter #182 del 3 är `ButtonR3` dörrens, och **`ButtonL3` är den enda
+obundna knappen som återstår** — en tumsticksklick, dålig träffyta
+för något man gör ofta.
+
+Det är inte ett fel i dag — varje delning är mätt i båda riktningarna — men
+det är ett **tak**. Nästa knapp på marken har ingen plats att ta, och då är
+frågan en annan: en kontextuell «gör i ordning»-knapp som gör nästa steg i
+kedjan, i stället för en knapp per moment. Det beslutet ligger utanför
+#235 och är flaggat i FAS 3-rapporten.
+
+### Promptkonkurrensen — mätt, inte gissad (#182 del 3)
+
+`promptkonflikt.spec.luau` bygger hela anläggningen och ställer en spelare
+vid sin egen boxfront. Mätningen där:
+
+> **elva prompter inom räckhåll samtidigt**, byggda av fem filer som inte
+> känner varandra — tre dörrar, två grannboxars sadlar, två tränsen,
+> hästens fyra egna. **Sex av dem delade `E`.**
+
+Roblox standard `Exclusivity = OnePerButton` visar bara den **närmaste**
+av flera på samma knapp. Fem av de sex fanns alltså utan att spelaren
+kunde se att de fanns. Det är den andra halvan av #235:s rotorsak — den
+första var att promptlagret inte renderade alls på telefon.
+
+**Två ändringar, och båda behövs:**
+
+1. **`Exclusivity = AlwaysShow` på varje prompt.** Ingenting döljs.
+2. **Distinkt knapp per HANDLING.** Samma handling på olika föremål — tre
+   dörrar, två sadlar — delar knapp med flit: närheten avgör, och det är
+   så en världsprompt ska fungera. Två OLIKA handlingar får aldrig dela,
+   för då kan spelaren inte välja utan att gå.
+
+**Dörren är den enda prompten som lever i båda lägena.** Man öppnar en
+dörr både till fots och från hästryggen, så den kan inte bära
+kontextregeln — det finns inget läge där den är släckt. Roblox standard
+`E`/`ButtonX` var därför en verklig krock: `E` är **avsittning** i sadeln
+och `ButtonX` är **se ritten**. Att öppna en dörr från hästryggen hade
+gjort båda sakerna i samma tryck.
+
+Dörren får därför `X` och `ButtonR3` — de enda som är lediga i hela
+matrisen, i båda lägena. Just för att den är den enda som behöver det
+kunde `MountPrompt` behålla sitt `E`/`ButtonX`.
+
+Alla övriga markprompter bär kontextregeln mot en bindning som bara lever
+i sadeln, och `promptkonflikt.spec` mäter att ingen av dem krockar med en
+annan handling där spelaren faktiskt står.
 
 ### Avsittningen (#162 blockerare 2)
 
@@ -217,3 +369,13 @@ PASS:
   en enhet med hak,
 - att skötselns momentlista går att rulla och trycka på under ett riktigt
   pass, med två tummar samtidigt.
+
+Och efter #182, uttryckligen `NOT_TESTED`:
+
+- att Roblox **egen prompt-UI ritar en styrkorssymbol** för `DPadLeft` och
+  `DPadRight`. Bänken har ingen rendering; den mäter bindningen, inte
+  glyfen. Ritas ingen symbol är knappen fortfarande rätt bunden, men
+  spelaren får läsa sig till den — det är en Studio-grind,
+- att de tre knapparnas 64 px-kolumn ser åtskild ut på dator och iPad,
+- att styrkors vänster/höger faktiskt fyrar prompten på en **fysisk**
+  handkontroll.

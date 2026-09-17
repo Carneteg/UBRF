@@ -445,6 +445,121 @@ TackRigg.BYGGARE = {
 	tygel = TackRigg.byggTyglar,
 }
 
+--[[ ══ DET SPELAREN BÄR (#182) ═══════════════════════════════════════
+
+	Sadeln och tränset hämtas på boxfronten och ligger sedan i spelarens
+	händer tills de läggs på hästen. Ingenting visade det: utrustningen
+	fanns bara som ett id i en servertabell, och human-QA såg därför en
+	spelare som gick tomhänt från boxfronten till hästen.
+
+	DELARNA BYGGS HÄR OCH INTE I ETT NYTT INVENTARIESYSTEM. Skälet är
+	filens eget: utrustningen ÄR de fysiska delarna. Samma `del()`-
+	hjälpare, samma färger, samma svets och samma regel att ingenting
+	kolliderar — en buren sadel får aldrig knuffa spelaren eller ändra
+	hennes kollisionshölje, precis som en påsatt sadel inte får ändra
+	hästens.
+
+	`UBRFBuren` och inte `UBRFTack` som attribut, med flit: `hittaDel`
+	och `taAv` letar i hästens `Tack`-mapp, och en buren del får aldrig
+	kunna förväxlas med en påsatt. Det är samma skäl som håller isär
+	`Tack` och `BurenTack` som mappar.
+
+	GEOMETRIN ÄR PROTOTYP, precis som hästens utrustning. Måtten är
+	boxfrontens (`TackForradService`), alltså den sadel och det träns
+	spelaren just tog ned från sin egen hästs upphängning. ]]
+local BUREN_MAPP = "BurenTack"
+
+--[[ Var på spelaren utrustningen hänger. R15 har `UpperTorso`, R6 `Torso`,
+	och roten finns alltid — också i bänken, som inte har någon avatar.
+	Fallbacken är inte en gissning: roten ÄR karaktärens bärande del. ]]
+local function barande(karaktar: Model): BasePart?
+	for _, namn in ipairs({ "UpperTorso", "Torso", "HumanoidRootPart" }) do
+		local d = karaktar:FindFirstChild(namn)
+		if d and d:IsA("BasePart") then return d end
+	end
+	return nil
+end
+
+function TackRigg.burenMapp(karaktar: Model, skapa: boolean?): Folder?
+	local f = karaktar:FindFirstChild(BUREN_MAPP)
+	if f and f:IsA("Folder") then return f end
+	if not skapa then return nil end
+	local ny = Instance.new("Folder")
+	ny.Name = BUREN_MAPP
+	ny.Parent = karaktar
+	return ny
+end
+
+--[[ Den burna delen av en viss typ. Läser VÄRLDEN, som allt annat här. ]]
+function TackRigg.hittaBuren(karaktar: Model, typ: string): BasePart?
+	local f = TackRigg.burenMapp(karaktar)
+	if not f then return nil end
+	for _, d in ipairs(f:GetChildren()) do
+		if d:IsA("BasePart") and d:GetAttribute("UBRFBuren") == typ then
+			return d
+		end
+	end
+	return nil
+end
+
+--[[ UNDERLÄGGET FÖLJER SADELN och tyglarna följer tränset, på samma sätt
+	som de gör på hästen: de hämtas i samma upphängning och är inte egna
+	moment i kanon. De får därför inget eget `UBRFBuren` — de rivs med
+	den bärande delen, exakt som `taAv`s kontrakt på hästsidan. ]]
+function TackRigg.byggBuren(karaktar: Model, typ: string, hastId: string): BasePart?
+	local vard = barande(karaktar)
+	if not vard then return nil end
+	if TackRigg.hittaBuren(karaktar, typ) then return nil end
+	local f = TackRigg.burenMapp(karaktar, true) :: Folder
+	local bas = vard.CFrame
+
+	local bar: BasePart? = nil
+	if typ == "sadel" then
+		--[[ Buren framför kroppen, som man bär en sadel: valvet mot magen
+			och underlägget under den. ]]
+		bar = del(f, "Buren sadel", Vector3.new(0.34 * M, 0.30 * M, 0.52 * M),
+			bas * CFrame.new(0, -0.22 * M, -0.34 * M), LADER)
+		local under = del(f, "Buret underlägg", Vector3.new(0.10 * M, 0.26 * M, 0.56 * M),
+			bas * CFrame.new(0, -0.35 * M, -0.34 * M), FILT, Enum.Material.Fabric)
+		svets(bar :: BasePart, under, "BurenWeld")
+	elseif typ == "trans" then
+		--[[ Över axeln, med tyglarna hängande — så bärs ett träns. ]]
+		bar = del(f, "Buret träns", Vector3.new(0.05 * M, 0.40 * M, 0.26 * M),
+			bas * CFrame.new(0.26 * M, 0.12 * M, -0.04 * M), LADER)
+		local tyglar = del(f, "Burna tyglar", Vector3.new(0.04 * M, 0.30 * M, 0.16 * M),
+			bas * CFrame.new(0.26 * M, -0.12 * M, -0.04 * M), LADER_MORK)
+		svets(bar :: BasePart, tyglar, "BurenWeld")
+	else
+		return nil
+	end
+
+	local b = bar :: BasePart
+	b:SetAttribute("UBRFBuren", typ)
+	b:SetAttribute("ForHast", hastId)
+	svets(vard, b, "BurenWeld")
+	return b
+end
+
+--[[ Lägger man sadeln på hästen ska den lämna händerna. Samma rivning som
+	`taAv`: den bärande delen och det som är svetsat i henne utan eget
+	`UBRFBuren`. Tom mapp städas bort — en tom mapp är inte ett tillstånd. ]]
+function TackRigg.slappBuren(karaktar: Model, typ: string): boolean
+	local f = TackRigg.burenMapp(karaktar)
+	if not f then return false end
+	local bar = TackRigg.hittaBuren(karaktar, typ)
+	if not bar then return false end
+	local rivs = { bar }
+	for _, d in ipairs(f:GetChildren()) do
+		if d:IsA("BasePart") and d:GetAttribute("UBRFBuren") == nil then
+			local w = d:FindFirstChildOfClass("WeldConstraint")
+			if w and w.Part0 == bar then table.insert(rivs, d) end
+		end
+	end
+	for _, d in ipairs(rivs) do d:Destroy() end
+	if #f:GetChildren() == 0 then f:Destroy() end
+	return true
+end
+
 --[[ Tar av en typ, med allt som hänger i den. Sadeln tar sina valv, sin
 	gjord och sina stigbyglar med sig — de är svetsade i henne. ]]
 function TackRigg.taAv(modell: Model, typ: string): boolean

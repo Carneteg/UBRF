@@ -40,8 +40,24 @@ local Pass = require(ReplicatedStorage.HorseCore.Pass)
      START-tabell som webben, inte ur en egen konstant. ]]
 local RidKanon = require(ReplicatedStorage.HorseCore.RidKanon)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
+--[[ Rosterns egennamn. Utrustningen kan tillhöra en ANNAN häst än den
+	spelaren rider — det är hela poängen med att man kan ta fel sadel — och
+	då räcker inte `StallService.hastFor`. Namnet slås upp i samma
+	genererade kanon som resten av spelet läser. ]]
+local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
+--[[ #182: ledningen oppnar boxdorren i samma tryck. Se `satDorrKrok`.
+	`DorrService` ager dorrarna; den har raden ar bara kopplingen. ]]
+local DorrService = require(script.Parent.DorrService)
 local TackService = require(script.Parent.TackService)
+--[[ #235 FAS 2: rollbacken river en halvlagd del direkt. `TackService`
+	har ingen vag som tar av UTAN eftervardens ordningsgrindar, och de
+	grindarna hor inte hemma i en angring. ]]
+local TackRigg = require(script.Parent.TackRigg)
+--[[ #235 FAS 1: fronten ager den fysiska upphangningen, den har filen
+	ager vem som bar vad. Ingen cirkel — forradet tar sin mottagare som
+	parameter och kanner inte den har modulen. ]]
+local TackForradService = require(script.Parent.TackForradService)
 local Komplex = require(ReplicatedStorage.UBRFKomplex)
 local Net = Core.Networking
 
@@ -129,12 +145,35 @@ local function status(player: Player): string
 	return if Preparation.redo(s) then Preparation.STATUS.REDO else Preparation.STATUS.FORBEREDER
 end
 
+--[[ En hästs egennamn ur rostern. Okänt id ger nil, inte en gissning. ]]
+local function hastnamnFor(hastId: string?): string?
+	if type(hastId) ~= "string" or hastId == "" then return nil end
+	local h = Spel.hastar[hastId]
+	return if h and type(h.namn) == "string" then h.namn else nil
+end
+
+--[[ Vad spelaren BÄR just nu (#182). Regeln ligger i `Preparation.buren`
+	och är ren; den här funktionen gör det enda tjänsten äger — läser
+	VÄRLDEN för att svara på vad som redan ligger på hästen.
+
+	Ingen bunden modell betyder att ingenting kan sitta på: en hämtad
+	sadel är då fortfarande buren, och `waiting_model` ska inte släcka en
+	status som är sann. ]]
+local function burenFor(player: Player)
+	local modell = bunden[player]
+	local paHasten = {
+		sadel = modell ~= nil and TackService.sadlad(modell),
+		trans = modell ~= nil and TackService.transad(modell),
+	}
+	return Preparation.buren(valdUtrustning[player], paHasten, hastnamnFor)
+end
+
 local function vyFor(player: Player)
 	--[[ Hästens egennamn följer med så att klienten kan sätta in det där
 		kanonen skriver `%N`. Det översätts aldrig. ]]
 	local dagens = StallService.hastFor(player)
 	return Preparation.vy(state[player], status(player), nastaRev(player),
-		if dagens then dagens.namn else nil)
+		if dagens then dagens.namn else nil, burenFor(player))
 end
 
 --[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte
@@ -234,8 +273,18 @@ end
 --[[ `utforare` skickas ALDRIG av klienten: remoten längst ned vidarebefordrar
 	bara fas och moment. Den sätts av `ridaNu` när stallet gör arbetet, så
 	att omsorgsbonusen räknar spelarens hand och inte stallets. ]]
+--[[ KVITTENSENS NYCKLAR (#182). Vilket utrustningssteg som lägger vilken
+	del på hästen vet `TackService` och bara den — klienten ska inte räkna
+	ut kopplingen en gång till. Servern skickar därför NYCKELN och dess
+	argument; texten sätts på klienten, där spelarens språk finns. ]]
+local DEL_NYCKEL: { [string]: string } = {
+	underlagg = "tack.del_underlagg",
+	sadel = "tack.del_sadel",
+	trans = "tack.del_trans",
+}
+
 function GameplayService.moment(player: Player, fasId: string, momentId: string,
-	utforare: string?): (boolean, string?)
+	utforare: string?): (boolean, string?, any?)
 	if typeof(fasId) ~= "string" or typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
 	end
@@ -280,6 +329,10 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 		Stegen 3 och 4 (sadelbommen, gjorden) lägger inget nytt på hästen;
 		de är handgrepp på den sadel som redan ligger där. De prövas mot
 		att den gör det. ]]
+	--[[ Vilken del det här momentet lade på hästen, som språknyckel. Satt
+		bara när en FYSISK del faktiskt kom på plats — kvittensen namnger
+		aldrig något som inte sitter där. ]]
+	local pasattDel: string? = nil
 	local steg = tonumber(momentId:match("^utr:(%d+)$"))
 	if fasId == "iordning" and steg then
 		local modell = bunden[player]
@@ -320,11 +373,34 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 				skicka(player)
 				return false, skal
 			end
+			--[[ ── OCH DEN SKA FAKTISKT SITTA DÄR (#182) ──────────────
+				`satPa` svarar ja när bygget gick fram, men VÄRLDEN är
+				sanningen — det är samma regel uppsittningsgrinden läser
+				genom `TackService.ridklar`. Föll delen bort mellan bygget
+				och den här raden ska momentet inte kvitteras: en kvittens
+				som namnger en sadel som inte ligger på hästen vore precis
+				den motsägelse `TackService` finns för att omöjliggöra. ]]
+			if not TackService.harTack(modell, typ) then
+				skicka(player)
+				return false, "tack.kunde_inte_byggas"
+			end
+			pasattDel = DEL_NYCKEL[typ]
 		end
 	end
 
 	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
 	skicka(player)
+	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
+		och tredje värde — samma kanal som nejen redan använder — så att
+		klienten inte behöver en egen väg in för ett lyckat moment. Bara
+		när något faktiskt kom på henne; ett vanligt moment kvitteras som
+		förut av klientens egen text. ]]
+	if ok and pasattDel then
+		return true, "tack.pa_plats", {
+			del = pasattDel,
+			hast = hastnamnFor(s.hastId) or s.hastId,
+		}
+	end
 	return ok, avslag
 end
 
@@ -353,7 +429,10 @@ end
 	ETT beslut för spelaren — vad gör vi åt det. Ett steg, inte nio, och
 	hästen rids fortfarande inte om hon inte ska ridas. Första passet bär
 	aldrig något fynd, så en ny spelare kommer rakt upp i sadeln. ]]
-function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
+--[[ Sjalva handlingen. Loggen ligger i skalet nedan — «Rida nu» har ett
+	dussin vagar ut, och en loggrad per return hade garanterat glidit
+	isar fran koden. ]]
+local function ridaNuInre(player: Player): (boolean, string?, string?)
 	local naravaro_ok, skal = narvaro(player)
 	if not naravaro_ok then return false, skal end
 	local s = state[player]
@@ -457,6 +536,23 @@ function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
 	return klar, varfor, arg
 end
 
+function GameplayService.ridaNu(player: Player): (boolean, string?, string?)
+	--[[ #182 del 2: loggevidens. «Rida nu» ar genvagen forbi hela
+		forberedelsen, och nar den nekar vill man veta VILKEN hast och
+		VILKET steg som sa nej — inte bara att det blev nej. ]]
+	local s0 = state[player]
+	local id = s0 and s0.hastId or nil
+	local ok, varfor, arg = ridaNuInre(player)
+	if ok then
+		print(("[Led] %s · %s · RidaNu"):format(
+			tostring(player.Name), tostring(id or "-")))
+	else
+		warn(("[Led] %s · %s · RidaNu NEKAD: %s"):format(
+			tostring(player.Name), tostring(id or "-"), tostring(varfor)))
+	end
+	return ok, varfor, arg
+end
+
 --[[ Hästens dagsform vid uppsittning, 0–1.
 
 	BELÖNINGEN FÖR OMSORG. Den som gjort skötseln själv får en märkbart
@@ -550,11 +646,437 @@ function GameplayService.valjPar(player: Player, hastId: string?): (boolean, str
 	for _, typ in ipairs(delar) do
 		skrivVal(player, typ, hastId)
 	end
+	--[[ ── DET SPELAREN TOG SKA SYNAS (#182) ──────────────────────────
+
+		Hämtningen var fram till nu enbart två tabellskrivningar: inget i
+		världen, inget i HUD:en. Human-QA tryckte på boxfrontens prompt
+		och kunde inte se att något hänt alls.
+
+		Två rader, båda nödvändiga och båda på ETT ställe:
+
+		  · den fysiska delen läggs i spelarens händer,
+		  · vyn går ut, så att den beständiga statusraden tänds i samma
+		    andetag.
+
+		`skicka` anropas här och inte hos anroparen av samma skäl som
+		atomiciteten flyttades hit i #169: boxfronten och «Rida nu» är
+		två anropare av samma hämtning, och en garanti som ligger hos
+		anroparen finns bara så länge alla kommer ihåg den. ]]
+	for _, typ in ipairs(delar) do
+		TackService.satBuren(player, typ, hastId)
+	end
+	skicka(player)
+	return true
+end
+
+--[[ ══ EN UTRUSTNING I TAGET, MED AGARE (#235 FAS 1) ═════════════════
+
+	FAS 1 ar «SADEL: WORLD -> HELD», och den overgangen ska ga att
+	falsifiera ensam. `valjPar` ovan star kvar for `ridaNu`, dar stallet
+	gor i ordning hela hasten; boxfronten gar hit.
+
+	TRE SAKER SOM `valjPar` INTE GJORDE:
+
+	  1. EN typ. Tranget rors inte.
+	  2. AGARSKAP. Tva spelare far inte bara samma sadel. Registret nedan
+	     ar serverns, och nyckeln ar hastens id plus typen — alltsa den
+	     fysiska sadeln pa den fronten, inte «en sadel».
+	  3. Utrustningen LAMNAR fronten. Annars star den bade i handerna och
+	     pa kroken, och spelaren ser tva.
+
+	Ingen `Tool`, ingen `Backpack`, ingen klientauktoritativ state: den
+	burna delen svetsas server-side i `TackRigg.byggBuren`, och det enda
+	klienten far ar resultatet. ]]
+local burenAv: { [string]: Player } = {}
+
+local function agarnyckel(typ: string, hastId: string): string
+	return hastId .. "/" .. typ
+end
+
+--[[ Slapper allt den har spelaren bar. Anropas nar hon lamnar, nar
+	karaktaren forsvinner och nar passet tar slut — annars later registret
+	en sadel vara tagen for alltid av nagon som inte finns kvar. ]]
+function GameplayService.slappBuret(player: Player)
+	for nyckel, agare in pairs(burenAv) do
+		if agare == player then
+			burenAv[nyckel] = nil
+			local hastId, typ = nyckel:match("^(.+)/([^/]+)$")
+			if hastId and typ then
+				pcall(function() TackForradService.satSynlig(hastId, typ, true) end)
+			end
+		end
+	end
+	pcall(function() TackService.slappAllBuren(player) end)
+end
+
+--[[ AR HON KVAR? En `Player` som lamnat har `Parent == nil`, men det ar
+	inte hela sanningen: `PlayerRemoving` hinner fyra innan foraldern
+	nollas, och en bank har inga foraldrar alls. `Players:GetPlayers()` ar
+	tjanstens egen lista och det som faktiskt avgor om agaren finns kvar.
+	Utan det hade en levande agare sett ut som en gengangare, och den
+	andra spelaren hade fatt ta sadeln ur handerna pa henne. ]]
+local function kvarInne(p: Player): boolean
+	if p.Parent ~= nil then return true end
+	for _, q in ipairs(Players:GetPlayers()) do
+		if q == p then return true end
+	end
+	return false
+end
+
+--[[ Vem bar den har fronten utrustning? Provets fonster in. ]]
+function GameplayService.barasAv(typ: string, hastId: string): Player?
+	return burenAv[agarnyckel(typ, hastId)]
+end
+
+function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): (boolean, string?)
+	local t = typ or "sadel"
+	local ok, skal = provaVal(player, t, hastId)
+	if not ok then return false, skal end
+	local id = hastId :: string
+
+	--[[ NARHETEN ar serverns, inte promptens. En prompt har sin egen
+		rackvidd, men den ar klientens presentation — servern maste sjalv
+		kunna neka en hamtning fran andra sidan garden. ]]
+	local karaktar = player.Character
+	local rot = karaktar and karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart")) then return false, "tack.ingen_karaktar" end
+
+	--[[ FAIL-CLOSED (#235 review). Forut lod provet `if plats and ...`:
+		fanns ingen front, eller ingen `PrimaryPart` att mata fran, HOPPADE
+		servern over avstandsprovet och slappte igenom hamtningen. En
+		auktoritativ validering som tiger nar den inte kan mata ar ingen
+		validering. Saknas platsen ar svaret nej. ]]
+	local modell = TackForradService.forHast(id)
+	local plats = modell and modell.PrimaryPart
+	if not (plats and plats:IsA("BasePart")) then return false, "tack.ingen_front" end
+	if (rot.Position - plats.Position).Magnitude > STEG_RACKVIDD then
+		return false, "spel.for_langt"
+	end
+
+	--[[ AGARSKAPET. Bar hon den redan ar svaret ja utan att nagot andras
+		— ett andra tryck far inte bygga en andra sadel. ]]
+	local nyckel = agarnyckel(t, id)
+	local agare = burenAv[nyckel]
+	if agare == player then return true end
+	if agare ~= nil and kvarInne(agare) then return false, "tack.redan_tagen" end
+
+	--[[ EN SADEL I TAGET (#235 review 2). `TackService.satBuren` ar
+		uttryckligen byggd for att BYTA ut en buren sadel mot en annan
+		hasts. Gjorde vi det har lag den FORSTA hastens agarpost kvar och
+		hennes front forblev slackt — hennes sadel last for alla, i
+		handerna pa ingen.
+
+		FAS 1 loser det genom att inte tillata bytet. Ingen swap-logik,
+		inget att rulla tillbaka: nejet kommer INNAN nagot andras, och
+		spelaren far lamna tillbaka sadeln hon bar forst. ]]
+	--[[ DEN MASTE FAKTISKT HANGA DAR (#235 FAS 2). Agarskapet ovan
+		skyddar mot att TVA spelare bar samma sadel, men inte mot att
+		den inte finns kvar att ta: nar FAS 2 flyttat sadeln till
+		hastens rygg star kroken tom och agarposten ar slappt — och
+		da slapptes hamtningen igenom och praglade en ANDRA sadel ur
+		tomma luften. Det fann FAS 2:s eget prov.
+
+		Grinden ar medvetet smal: den galler bara nar gruppen FINNS
+		och sager att delen inte hanger dar. Saknas hela gruppen ar
+		det ett annat fel, och det bars av `tack.front_slapper_inte`
+		nere i transaktionen. ]]
+	if TackForradService.harPlats(id, t)
+		and TackForradService.paFronten(id, t) == false then
+		return false, "tack.inte_pa_fronten"
+	end
+
+	local barNu = TackService.barBuren(player, t)
+	if barNu ~= nil and barNu ~= id then return false, "tack.bar_redan_annan" end
+
+	--[[ ── EN TRANSAKTION, I DEN HAR ORDNINGEN ────────────────────────
+
+		validera -> bygg den burna sadeln -> slack den pa fronten -> committa
+
+		Forut skrevs valet FORST och den fysiska delen byggdes sedan. Gick
+		bygget fel stod `valdUtrustning` kvar och pastod att spelaren hade
+		sadeln hon aldrig fick — stale state som resten av spelet sedan
+		lasar som sanning. Och frontens slackning ignorerade sitt eget
+		svar, sa hon kunde sta i HELD med sadeln kvar synlig pa kroken.
+
+		Nu andras ingenting bestaende forran badadera lyckats, och det som
+		hann bli gjort rullas tillbaka nar nagot faller. ]]
+	local bar_redan = barNu == id
+	if not TackService.satBuren(player, t, id) then
+		return false, "tack.kunde_inte_byggas"
+	end
+
+	--[[ `satSynlig` ar allt-eller-inget: den nekar pa en saknad grupp INNAN
+		den rort nagot, sa ett falskt svar betyder att fronten star orord. ]]
+	if not TackForradService.satSynlig(id, t, false) then
+		--[[ ROLLBACK. Bara det VI byggde tas bort: bar hon redan delen nar
+			vi kom lamnar vi den, for da har vi inte skapat den och ska
+			inte heller riva den. Det speglar `satBuren`, som returnerar
+			true utan att bygga nagot nar id:t ar detsamma.
+
+			`bar_redan` AR I DAG ONABAR. Min egen falsifiering visade det:
+			mutationen `bar_redan = false` kom ut GRON. Vagen dit kraver
+			att hon fysiskt bar just den har sadeln utan att sta i
+			registret, och bade `slappBuret` och `glom` rensar bada
+			halvorna tillsammans — plus att grinden ovan nu nekar all
+			annan buren sadel.
+
+			Grenen star kvar anda, for den ar parad med `satBuren`s egen
+			gren och blir levande i det ogonblick FAS 2 tillater ett byte.
+			Att ta bort den nu vore att flytta felet till den som bygger
+			bytet. Den redovisas som en kand svag mutation i stallet for
+			att gommas. ]]
+		if not bar_redan then
+			pcall(function() TackService.slappBuren(player, t) end)
+		end
+		return false, "tack.front_slapper_inte"
+	end
+
+	--[[ COMMIT. Forst nu finns det en fysisk sadel i handerna och en tom
+		krok pa fronten — alltsa forst nu ar `WORLD -> HELD` sant. ]]
+	skrivVal(player, t, id)
+	burenAv[nyckel] = player
+	skicka(player)
 	return true
 end
 
 function GameplayService.valdFor(player: Player): { [string]: string }?
 	return valdUtrustning[player]
+end
+
+--[[ ══ FAS 2: SADEL `HELD -> EQUIPPED` (#235) ════════════════════════
+
+	FAS 1 lamnade spelaren med en sadel i handerna och ingen vag att lagga
+	den pa hasten. Det har ar den vagen, och ingenting mer: tranget hor
+	till FAS 3 och ledningen till FAS 4.
+
+	ORDNINGEN ar densamma som i FAS 1, av samma skal:
+
+	    validera -> lagg underlagget -> bygg sadeln -> bekrafta varlden
+	              -> committa agandet
+
+	Ingenting bestaende andras forran allt lyckats, och det som hann bli
+	gjort rullas tillbaka nar nagot faller.
+
+	VARFOR `satPa` OCH INTE EN EGEN VAG: `TackService.satPa` ar redan den
+	serverauktoritativa pasattningen — den ager fel-hast, fel-sadel med
+	felraknare, dubbelpasattning, ordningen, avstandet, bygget och att den
+	burna delen slapps NAR delen sitter. Att skriva en andra vag bredvid
+	den hade gett tva sanningar om vad "sadlad" betyder, och det ar precis
+	det `TackService` finns for att omojliggora.
+
+	DET HAR LAGRET TILLFOR TRE SAKER som `satPa` inte kan veta:
+
+	  1. att utrustningens identitet lases ur det spelaren FYSISKT BAR,
+	     inte ur `valdUtrustning`. Registret ar en avsikt; handerna ar ett
+	     faktum, och FAS 2:s hela poang ar att flytta ett fysiskt foremal.
+	  2. UNDERLAGGET. Kanon lagger det under sadeln, och `satPa` nekar
+	     darfor sadeln utan det. Det hanger i samma upphangning och hamtas
+	     med sadeln — alltsa hor det till samma handling. Utan det kunde
+	     «Sadla» aldrig lyckas.
+	  3. AGANDET. Sadeln ligger nu pa hasten, inte pa boxfronten, sa
+	     agarposten ska slappas UTAN att fronten tands igen.
+
+	INGEN FLYTT AV MODELLEN, och det ar ett medvetet avsteg fran ordens
+	ordalydelse «flytta modellen till hastens SaddleAttachment». Den burna
+	sadeln ar en forenklad rekvisita — ett valv och ett underlagg man bar
+	framfor magen — medan den pasatta ar sadel, gjord och stigbyglar pa en
+	rygg. Att flytta den forsta till ryggen hade gett fel form pa hasten.
+	`TackRigg` bygger darfor den pasatta delen och river den burna, vilket
+	ger SAMMA observerbara garantier: ingen dubblett hos spelaren, ingen pa
+	boxfronten, en fysisk del svetsad i hastriggen server-side. Avsteget ar
+	redovisat i rapporten, inte gomt. ]]
+
+--[[ Slapper agandet UTAN att hanga tillbaka nagot pa fronten.
+
+	Skillnaden mot `slappBuret` ar hela poangen: dar slapper spelaren
+	utrustningen och den ska tillbaka pa kroken. Har har den flyttat till
+	HASTEN, och en front som tandes igen hade visat en andra sadel
+	hangande bredvid den som redan ligger pa ryggen. ]]
+function GameplayService.slappAgande(typ: string, hastId: string)
+	burenAv[agarnyckel(typ, hastId)] = nil
+end
+
+function GameplayService.sadla(player: Player, modell: Model?): (boolean, string?)
+	--[[ HASTEN. Klientens modell ar en fraga, inte ett pastaende: allt
+		nedan provas mot varlden och mot vad spelaren faktiskt bar. ]]
+	if typeof(modell) ~= "Instance" and type(modell) ~= "table" then
+		return false, "tack.ingen_hast"
+	end
+	local m = modell :: Model
+	if not (m and (m :: any).IsA and m:IsA("Model")) then
+		return false, "tack.ingen_hast"
+	end
+	local hastId = tostring(m:GetAttribute("HorseId") or "")
+	if hastId == "" then return false, "tack.ingen_hast" end
+
+	--[[ HANDERNA AR FACIT. Bar hon ingen sadel finns ingenting att sadla
+		med, hur mycket `valdUtrustning` an pastar. ]]
+	local bar = TackService.barBuren(player, "sadel")
+	if bar == nil then return false, "tack.bar_ingen_sadel" end
+
+	--[[ HASTENS EGET TILLSTAND (#235 FAS 2 review). Ordern kraver att
+		SERVERN validerar horse-state, och att klienten slacker knappen
+		i vissa lagen ar presentation — inte en regel.
+
+		Sanningen hamtas dar den redan bor: `LedService` vet vem som
+		leder henne, `HorseService` vem som sitter pa henne. Ingen ny
+		boolean, ingen parallell tabell — tva sanningar om var hasten ar
+		vore precis det fel hela fasindelningen finns for att undvika.
+
+		OCH FORE ALLT FYSISKT. Nejet ligger over bade underlagget och
+		bygget, sa en ledd hast kan inte fa ett halvt ekipage pa sig.
+
+		Regeln ar verklig och inte teknisk: en hast som gar i kopplet
+		star inte still att sadla, och pa en uppsutten sitter redan
+		nagon. ]]
+	if LedService.ledsAv(m) ~= nil then return false, "tack.leds_nu" end
+	local session = HorseService.sessionFor(m)
+	if session ~= nil and session.rider ~= nil then
+		return false, "tack.rids_nu"
+	end
+
+	--[[ FEL SADEL SKA GA ATT GORA. Att kunna ta fel sadel ar hela den
+		pedagogiska poangen — webbens sadelkammare gor likadant — och
+		`satPa` bar bade nejet och felraknaren. Anropet nedan ror inget
+		annat: det returnerar innan nagon del byggs. ]]
+	if bar ~= hastId then
+		return TackService.satPa(player, m, "sadel", bar, m)
+	end
+
+	--[[ DUBBEL PASATTNING agas av `satPa`, inte av ett andra prov har.
+		Har lag forut en egen `sadlad`-grind, och min egen falsifiering
+		visade att den var overflodig: mutationen som tog bort den kom
+		ut GRON, for `satPa` nekar redan med samma skal via
+		`TackRigg.hittaDel`. Tva sanningar om vad «sadlad» betyder ar
+		precis det `TackService` finns for att omojliggora, sa den
+		redundanta halvan ar borta. Provet mater fortfarande nejet. ]]
+
+	--[[ UNDERLAGGET FORST, och bara om det inte redan ligger dar. Det
+		slapper INTE den burna sadeln — `BARBARA` sager att bara sadel och
+		trans bars — sa ett fel harifran lamnar handerna ororda. ]]
+	local la_underlagg = false
+	if not TackService.harTack(m, "underlagg") then
+		local okU, skalU = TackService.satPa(player, m, "underlagg", bar, m)
+		if not okU then return false, skalU end
+		la_underlagg = true
+	end
+
+	local function angraUnderlagget()
+		if la_underlagg then
+			pcall(function() TackRigg.taAv(m, "underlagg") end)
+		end
+	end
+
+	local okS, skalS = TackService.satPa(player, m, "sadel", bar, m)
+	if not okS then
+		angraUnderlagget()
+		return false, skalS
+	end
+
+	--[[ OCH VARLDEN AR SANNINGEN. Samma regel som momentkvittensen och
+		uppsittningsgrinden laser: `satPa` svarar ja nar bygget gick fram,
+		men foll delen bort daremellan ar hon inte sadlad. Da ska sadeln
+		tillbaka i handerna — inte forsvinna.
+
+		GRENEN AR I DAG ONABAR, och min egen falsifiering visade det:
+		mutationen som tog bort hela provet kom ut GRON. Vagen dit kraver
+		att `satPa` svarar ja medan delen INTE finns, och det intraffar
+		bara om nagot river henne mellan tva rader.
+
+		Den star kvar anda, av samma skal som momentflodets egen rad nagra
+		hundra rader upp — den ar precedensen, inte ett nytt pahitt. Ett
+		«sadlad» som inte gar att se i varlden ar precis den motsagelse
+		`TackService` finns for att omojliggora, och nasta fas flyttar fler
+		delar mellan hander och rygg. Redovisad som kand svag mutation i
+		stallet for att raknas bort. ]]
+	if not TackService.harTack(m, "sadel") then
+		pcall(function() TackRigg.taAv(m, "sadel") end)
+		angraUnderlagget()
+		pcall(function() TackService.satBuren(player, "sadel", hastId) end)
+		return false, "tack.kunde_inte_byggas"
+	end
+
+	--[[ COMMIT. Forst nu ligger sadeln fysiskt pa hasten och ar borta ur
+		handerna — alltsa forst nu ar `HELD -> EQUIPPED` sant. ]]
+	GameplayService.slappAgande("sadel", hastId)
+	skicka(player)
+	return true, "tack.pa_plats"
+end
+
+--[[ ══ FAS 3: TRANS `HELD -> EQUIPPED` (#235) ════════════════════════
+
+	SAMMA state-machine som sadeln, mot huvudet i stallet for ryggen.
+	Ordern sager uttryckligen «ingen separat speciallosning», och det ar
+	darfor den har funktionen ar sa kort: allt som ar GEMENSAMT bor redan
+	i `TackService.satPa`, och det enda som skiljer ar typen.
+
+	TVA SAKER SKILJER TRANSET FRAN SADELN, och bada ar kanon:
+
+	  1. ORDNINGEN. Transet kommer SIST. `satPa` nekar det pa en osadlad
+	     hast med `tack.sadeln_forst`, och den regeln ar inte teknisk —
+	     man sadlar forst och transar sedan, for sa gor man.
+	  2. TYGLARNA foljer med. De sitter i bettet och ar inget eget moment
+	     i kanon; `satPa` bygger och river dem med transet, och rullar
+	     tillbaka bada om nagon av dem faller.
+
+	Inget underlagg har, av samma skal: det hor till sadeln. ]]
+function GameplayService.transa(player: Player, modell: Model?): (boolean, string?)
+	if typeof(modell) ~= "Instance" and type(modell) ~= "table" then
+		return false, "tack.ingen_hast"
+	end
+	local m = modell :: Model
+	if not (m and (m :: any).IsA and m:IsA("Model")) then
+		return false, "tack.ingen_hast"
+	end
+	local hastId = tostring(m:GetAttribute("HorseId") or "")
+	if hastId == "" then return false, "tack.ingen_hast" end
+
+	local bar = TackService.barBuren(player, "trans")
+	if bar == nil then return false, "tack.bar_inget_trans" end
+
+	--[[ HASTENS EGET TILLSTAND, samma grind som sadeln fick i reviewen av
+		`e08515f`. En hast som gar i kopplet star inte still att transa —
+		och pa en uppsutten sitter redan nagon. ]]
+	if LedService.ledsAv(m) ~= nil then return false, "tack.leds_nu" end
+	local session = HorseService.sessionFor(m)
+	if session ~= nil and session.rider ~= nil then
+		return false, "tack.rids_nu"
+	end
+
+	--[[ FEL TRANS SKA GA ATT GORA, precis som fel sadel. `satPa` bar bade
+		nejet (`tack.fel_trans`) och felraknaren, och returnerar innan
+		nagon del byggs. ]]
+	if bar ~= hastId then
+		return TackService.satPa(player, m, "trans", bar, m)
+	end
+
+	local okT, skalT = TackService.satPa(player, m, "trans", bar, m)
+	if not okT then return false, skalT end
+
+	--[[ OCH VARLDEN AR SANNINGEN. Samma ONABARA forsvarsrad som sadelns
+		(se noten dar), och min falsifiering gav samma svar: mutationen
+		som tog bort tyglarna ur provet kom ut GRON.
+
+		Skalet ar att `satPa` redan river BADA om tyglarna faller — det
+		ar bevisat, mutation T7 ar rod. Raden har ar alltsa ett andra
+		lager over ett forsta som haller.
+
+		Den star kvar av samma skal som sadelns: momentflodet har samma
+		rad, och ett «transad» som inte gar att se i varlden ar precis den
+		motsagelse `TackService` finns for att omojliggora. Att den
+		dessutom kraver TYGLARNA ar inte kosmetik — `leda` forutsatter dem
+		(«med tyglarna over halsen»), och ett trans utan tyglar ar inte
+		det tillstand spelet pastar. Redovisad som kand svag mutation. ]]
+	if not (TackService.harTack(m, "trans") and TackService.harTack(m, "tygel")) then
+		pcall(function() TackRigg.taAv(m, "tygel") end)
+		pcall(function() TackRigg.taAv(m, "trans") end)
+		pcall(function() TackService.satBuren(player, "trans", hastId) end)
+		return false, "tack.kunde_inte_byggas"
+	end
+
+	GameplayService.slappAgande("trans", hastId)
+	skicka(player)
+	return true, "tack.pa_plats"
 end
 
 --[[ Svaret på ett fynd. Rätt svar stoppar arbetet, sparar hästens vila och
@@ -800,10 +1322,20 @@ end
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
 local function glom(player: Player)
+	--[[ #235 FAS 1: en spelare som gar far inte lamna en sadel «tagen»
+		for alltid. Registret slapps och fronten far tillbaka sin
+		utrustning — inga orphans, varken i state eller i varlden. ]]
+	GameplayService.slappBuret(player)
 	state[player] = nil
 	passState[player] = nil
 	bunden[player] = nil
 	revision[player] = nil
+	--[[ HÄMTNINGEN GLÖMS MED RESTEN (#182). Tabellen levde kvar efter att
+		spelaren lämnat: en ny session på samma `Player`-objekt hade ärvt
+		gårdagens sadelval, och `burenFor` hade då tänt statusraden för en
+		utrustning ingen hämtat. Delarna i händerna dör med karaktären;
+		valet gjorde det inte. ]]
+	valdUtrustning[player] = nil
 end
 
 function GameplayService.start()
@@ -812,6 +1344,17 @@ function GameplayService.start()
 	HorseService.setDagsformHook(GameplayService.dagsformFor)
 	Net.get("RidaNu").OnServerInvoke = function(player)
 		return GameplayService.ridaNu(player)
+	end
+
+	--[[ #235 FAS 2. Samma monster som `RidaNu`: klienten skickar en
+		avsikt, servern svarar med hela sanningen. ]]
+	Net.get("SadlaHast").OnServerInvoke = function(player, modell)
+		return GameplayService.sadla(player, modell)
+	end
+
+	--[[ #235 FAS 3: samma monster, en annan typ. ]]
+	Net.get("TransaHast").OnServerInvoke = function(player, modell)
+		return GameplayService.transa(player, modell)
 	end
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
@@ -840,6 +1383,21 @@ function GameplayService.start()
 
 	--[[ Vilken häst spelaren FÅR leda är skötselns fråga, inte
 		ledningens. Kroken svarar med den bundna modellen. ]]
+	--[[ #182 del 2: och VEM som sitter pa henne. `HorseService` ager
+		sessionerna; `LedService` fragar genom kroken i stallet for
+		att fa ett eget beroende. ]]
+	--[[ #182: stalldorren hor till ledningen, inte till ett eget tryck.
+		`DorrService` ager dorrarna; kroken later `LedService` be om
+		att den oppnas utan att kanna till dem. ]]
+	LedService.satDorrKrok(function(blad)
+		return DorrService.satLage(blad, true)
+	end)
+
+	LedService.satRidenKrok(function(modell)
+		local sess = HorseService.sessionFor(modell)
+		return sess ~= nil and sess.rider ~= nil
+	end)
+
 	LedService.satRattHastKrok(function(player)
 		return bunden[player] or GameplayService.bind(player)
 	end)

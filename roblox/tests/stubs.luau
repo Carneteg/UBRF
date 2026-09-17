@@ -85,6 +85,22 @@ Color3 = {
 	new = function(r, g, b) return { R = r or 0, G = g or 0, B = b or 0 } end,
 }
 
+--[[ `ColorSequence` — en fargskala over en `Beam` eller partikel.
+     Ledrepet (#182 del 2) ar en Beam, och utan den har stubben kunde
+     `LedService.borja` inte ens KORA i bankan: hela ledningskedjan blev
+     omatbar for att en fargkonstruktor saknades. En stubb som inte
+     kanner till ett API tystar inte provet, den doljer produktionen.
+
+     Bara det bankan behover: ett varde som gar att lasa tillbaka. ]]
+ColorSequenceKeypoint = {
+	new = function(tid, farg) return { Time = tid or 0, Value = farg } end,
+}
+ColorSequence = {
+	new = function(a, b)
+		return { Keypoints = { { Time = 0, Value = a }, { Time = 1, Value = b or a } } }
+	end,
+}
+
 local function cframe(pos, look, yaw, pitch, roll)
 	local c = { Position = pos or vec(), LookVector = look or vec(0, 0, 1),
 		Yaw = yaw or 0, Pitch = pitch or 0, Roll = roll or 0 }
@@ -223,6 +239,20 @@ Enum = {
 	HumanoidStateType = { Freefall = 1, Jumping = 2, Running = 3, Landed = 4 },
 	PathStatus = { Success = 1, NoPath = 2, ClosestNoPath = 3 },
 	KeyCode = setmetatable({}, { __index = function(_, k) return k end }),
+	--[[ `ProximityPromptExclusivity` — vilken prompt som visas nar flera
+	     delar knapp. Roblox STANDARD ar `OnePerButton`, och det ar precis
+	     den standarden som gjorde fyra handlingar pa `E` till en synlig
+	     och tre osynliga (#235, #182 del 3). Utan enumen i bankan gick
+	     regeln inte att mata alls. ]]
+	--[[ `OrientationAlignmentMode` — om `AlignOrientation` styr mot EN
+	     fastpunkt (en riktning) eller mot tva (kopiera en annan kropp).
+	     Ledningen anvander `OneAttachment`: hasten ska peka dit hon gar,
+	     inte kopiera spelarens vridning. ]]
+	OrientationAlignmentMode = setmetatable({},
+		{ __index = function(_, k) return k end }),
+	ProximityPromptExclusivity = setmetatable({},
+		{ __index = function(_, k) return k end }),
+
 	UserInputState = { Begin = 1, End = 2 },
 	--[[ #220: `Touch` tillkom med blickspecen. TouchControls sorterar
 	     varje nedslag pa `UserInputType`, och utan enumen jamforde banken
@@ -376,6 +406,20 @@ workspace = {
 	FindFirstChild = function(self, namn)
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 		return nil
+	end,
+	--[[ `GetChildren` SAKNADES, och hålet är samma klass som `ChildAdded`
+	     ovan (#180): ingen spec hade drivit `DinHast`s Heartbeat-loop, så
+	     svepet efter andra spelares boxmarkörer kördes aldrig i bänken.
+	     `klient-burenstatus.spec` kör den loopen — och dog direkt på
+	     "attempt to call missing method 'GetChildren' of table".
+
+	     Varje Instance i Roblox har den, och den returnerar en NY lista;
+	     att lämna ut `_barn` självt hade låtit en anropare mutera
+	     världen genom sitt eget svep. Harnessen, inte spelet. ]]
+	GetChildren = function(self)
+		local ut = {}
+		for _, b in ipairs(self._barn or {}) do table.insert(ut, b) end
+		return ut
 	end,
 	--[[ Genomsikt.start() sveper workspace efter genomsiktliga delar och
 	     lyssnar på nya. Bänken hade varken svepet eller signalen, så
@@ -1136,8 +1180,47 @@ local function __nyInstans(klass)
 	     Utan den gick `DorrService.start()` inte att köra i den här
 	     banken, och därmed gick promptens TEXT inte att mäta. En grind
 	     som inte kan köra tjänsten kan inte se vad spelaren läser. ]]
+	--[[ `Attachment.WorldPosition` ar fastpunktens lage i VARLDEN, alltso
+	     vardelens lage plus fastpunktens egen forskjutning. Uppsittningens
+	     prompt hanger i sadelpunkten, och utan det har ar den osynlig for
+	     allt som letar prompter pa avstand (`Naromrade`, #235). ]]
+	if klass == "Attachment" then
+		inst.Position = Vector3.new(0, 0, 0)
+	end
 	if klass == "ProximityPrompt" then
 		inst.Triggered = __signal()
+		--[[ `Enabled` och `ClickablePrompt` ar TRUE som standard i Roblox.
+		     Stubben satte dem inte alls, och da laste varje prov `nil` —
+		     falskt. Produktionskod som filtrerar pa `p.Enabled`
+		     (`Naromrade`, #235) sallade darfor bort precis allt i banken
+		     medan den fungerade i spelet. En stubb som avviker fran API:et
+		     gor proven till matningar av stubben.
+		     Varden satts som VANLIGA falt och inte i `_p`: skuggtabellen
+		     lases bara tillbaka for nycklar i `__BEVAKADE`, sa ett varde
+		     dar hade varit osynligt — vilket var precis vad forsta
+		     rattelsen rakade gora. ]]
+		inst.Enabled = true
+		inst.ClickablePrompt = true
+		--[[ `InputHoldBegin`/`InputHoldEnd` ar spelarens EGEN vag in i en
+		     prompt: tangenten, handkontrollknappen och fingret gar alla
+		     genom dem, och `Triggered` fyrar nar hallet natt
+		     `HoldDuration`. `Naromrade` (#235) trycker samma vag for att
+		     inte bygga en parallell gameplayvag — utan de har metoderna
+		     gick just den vagen inte att mata.
+		     Ett hall som slapps for tidigt fyrar INTE, precis som i
+		     Roblox: det ar skillnaden mellan ett tryck och en angrad
+		     beroring. ]]
+		function inst:InputHoldBegin()
+			rawset(self, "_hallSedan", os.clock())
+		end
+		function inst:InputHoldEnd()
+			local start = rawget(self, "_hallSedan")
+			rawset(self, "_hallSedan", nil)
+			if start == nil then return end
+			local hold = self.HoldDuration or 0
+			if hold > 0 and (os.clock() - start) < hold then return end
+			self.Triggered:Fire()
+		end
 		--[[ Texterna satts i SKUGGTABELLEN, inte som rakt falt. Lua kallar
 		     `__newindex` bara nar nyckeln SAKNAS i tabellen: ett rawset har
 		     hade gjort varje senare skrivning osynlig for
@@ -1261,11 +1344,52 @@ local function __nyInstans(klass)
 		     kraschar klientens egen väg i bänken. ]]
 		function inst:FireServer(...) table.insert(self._skickat, { ... }) end
 		function inst:InvokeServer(...) table.insert(self._skickat, { ... }); return true end
-		function inst:FireClient(spelare, ...) table.insert(self._skickat, { spelare, ... }) end
-		function inst:FireAllClients(...) table.insert(self._skickat, { ... }) end
+		--[[ FireClient LEVERERAR (#182 del 2). Forut bokfordes anropet bara
+		     i `_skickat`, och `OnClientEvent` fyrade aldrig. Det gjorde
+		     hela server->klient-riktningen omojlig att mata: `LedSync` ar
+		     den enda vagen servern har att saga "kopplet slapptes", och en
+		     bank dar den signalen inte kommer fram kan inte skilja en
+		     tjanst som skickar den fran en som glomt.
+
+		     Bokforingen star kvar — prov som laser `_skickat` fungerar som
+		     forut — men nu gar signalen ocksa fram. ]]
+		function inst:FireClient(spelare, ...)
+			table.insert(self._skickat, { spelare, ... })
+			local Pl = game:GetService("Players")
+			local mig = Pl and rawget(Pl, "LocalPlayer")
+			--[[ Bankan har en klient. Ar mottagaren den — eller vet vi
+			     inte vem klienten ar — levereras nyttolasten. ]]
+			if mig == nil or spelare == nil or spelare == mig then
+				self.OnClientEvent:Fire(...)
+			end
+		end
+		function inst:FireAllClients(...)
+			table.insert(self._skickat, { ... })
+			self.OnClientEvent:Fire(...)
+		end
 	end
 	if klass == "RemoteFunction" then
 		inst.OnServerInvoke = nil
+		inst._skickat = {}
+		--[[ INVOKESERVER NAR FRAM (#182 del 2). `RemoteFunction` hade ingen
+		     `InvokeServer` alls, och `RemoteEvent`s variant svarade `true`
+		     utan att nagonsin rora serverns handlare.
+
+		     Integrationsprovet for ledningen far uttryckligen INTE mocka
+		     bort `LedBorja`. Da maste bankan faktiskt koppla klientens
+		     anrop till `OnServerInvoke` — annars mater provet stubben och
+		     sager ingenting om att kedjan haller.
+
+		     Spelaren som forsta argument ar riktig API-form: servern far
+		     alltid veta VEM som anropade. Bankan har en klient, och det ar
+		     `Players.LocalPlayer`. ]]
+		function inst:InvokeServer(...)
+			table.insert(self._skickat, { ... })
+			local handlare = rawget(self, "OnServerInvoke")
+			if type(handlare) ~= "function" then return true end
+			local Pl = game:GetService("Players")
+			return handlare(Pl and rawget(Pl, "LocalPlayer"), ...)
+		end
 	end
 	--[[ NATVERKSAGARSKAPET.
 
@@ -1307,6 +1431,12 @@ local function __nyInstans(klass)
 			     (`GameplayService.avstandOk`, `HorseService.tryMount`)
 			     läser just `Position`, och en rigg som bara satt sin
 			     CFrame gav då nil. Samma härledning som byggstubbarna. ]]
+			if k == "WorldPosition" and rawget(t, "ClassName") == "Attachment" then
+				local f = rawget(t, "Parent")
+				local egen = rawget(t, "Position") or Vector3.new(0, 0, 0)
+				if f and f.Position then return f.Position + egen end
+				return egen
+			end
 			if k == "Position" then
 				local cf = rawget(t, "CFrame")
 				return cf and cf.Position or nil
