@@ -67,6 +67,20 @@ local KOPPEL     = 9.0         -- m: längre bort och kopplet släpper
 local CATCHUP_R  = 5.0         -- m: harifran far hon mer fart for att hinna ifatt
 local KOPPEL_TID = 0.75        -- s: sa lange maste hon vara for langt bort
 
+--[[ HUR LANGT MALPUNKTEN FAR AVVIKA FRAN SPELAREN (#182 del 2, villkor
+	ur arkitektreviewen). Spelaren ar den SEMANTISKA destinationen; att
+	malet far flyttas till en brodsmula ar en routing-detalj som finns
+	for att hasten ska runda dorrkarmen i stallet for att ga in i den.
+
+	Utan tak kunde en gammal smula ligga var som helst i ringbufferten
+	och dra henne at ett hall spelaren inte ar. Taket gor avvikelsen
+	till just en detalj: den kan kroka vagen, aldrig byta mal.
+
+	Satt strax under kopplets slapp-avstand — ett mal som ligger langre
+	bort an kopplet racker ar per definition orimligt. ]]
+local MAL_AVVIK  = 7.0         -- m: sa langt fran spelaren far malpunkten ligga
+
+
 --[[ ══ FOLJNINGEN AR CONSTRAINTS, INTE EN LOOP (#182 del 2) ═════════
 
 	Arkitekturkontraktet i #235 FAS 4 ar bindande: `AlignPosition` och
@@ -203,47 +217,38 @@ end
 	i stället för `MoveTo` mot punkten: annars går hon i sidled mot målet
 	med kroppen kvar på tvären, vilket är exakt det som kilade fast henne.
 	Är kursfelet stort går hon inte alls utan vänder först. ]]
-local VAND_FULL   = math.rad(40)   -- under detta kursfel: full fart
-local VAND_STOPP  = math.rad(75)   -- över detta: vänd på stället, gå inte
-
 --[[ KURSEN ÄR BLICKRIKTNINGEN, samma definition som
 	`MovementController` använder: `heading = atan2(Look.X, Look.Z)`, och
 	därmed är `(sin h, 0, cos h)` exakt `LookVector`.
 
 	Förut lästes kursen som `ToOrientation().Y`, alltså den vinkel man
-	skickar till `CFrame.Angles` — vars blickriktning är den MOTSATTA. Med
-	`framat()` nedan gav det en häst som leddes med svansen före: mätt i
-	Studio låg huvudet 3,32 studs BAKOM färdriktningen. ]]
+	skickar till `CFrame.Angles` — vars blickriktning är den MOTSATTA. Det
+	gav en häst som leddes med svansen före: mätt i Studio låg huvudet
+	3,32 studs BAKOM färdriktningen.
+
+	`kurs` läses fortfarande, av spårföljningen och av dörrlogiken. Den
+	SKRIVER ingenting. ]]
 local function kurs(pivot: BasePart): number
 	local look = pivot.CFrame.LookVector
 	return math.atan2(look.X, look.Z)
 end
 
-local function framat(h: number): Vector3
-	return Vector3.new(math.sin(h), 0, math.cos(h))
-end
+--[[ ══ BORTTAGET MED FLIT: `vridMot`, `framat`, `VAND_FULL`, `VAND_STOPP`
 
---[[ Vrid roten mot `onskad` med kanonens takt, och svara hur stort
-	kursfelet var EFTER vridningen. Position rörs inte. ]]
-local function vridMot(pivot: BasePart, onskad: number, fartMS: number, dt: number): number
-	local nu = kurs(pivot)
-	local fel = (onskad - nu + math.pi) % (2 * math.pi) - math.pi
+	De hörde till den gamla aktueringen. `vridMot` skrev `pivot.CFrame`
+	direkt varje bildruta för att vrida henne, och vändtrösklarna fanns
+	för att `Humanoid:Move` sköt kroppen rakt fram oavsett hur den stod —
+	en häst med kroppen på tvären gick in i dörrkarmen, så hon fick inte
+	gå förrän hon vänt.
 
-	local MO = Config.MOVEMENT
-	local omega = (MO.CurvatureMax :: number) * fartMS
-	local underGrans = (MO.TurnInPlaceBelow :: number)
-	if fartMS < underGrans then
-		local andel = 1 - fartMS / underGrans
-		omega = math.max(omega, (MO.TurnInPlaceRate :: number) * andel)
-	end
+	`AlignOrientation` vrider henne kontinuerligt MEDAN `AlignPosition`
+	drar. Problemet vändtröskeln löste kan inte uppstå, och direkt
+	CFrame-skrivning i en runtime-loop är uttryckligen förbjuden av
+	arkitekturkontraktet i #235 FAS 4.
 
-	local steg = math.clamp(fel, -omega * dt, omega * dt)
-	--[[ Blickriktningen skrivs DIREKT, inte via en vinkel vars
-		teckenkonvention går att missa. Positionen rörs inte. ]]
-	local p = pivot.CFrame.Position
-	pivot.CFrame = CFrame.lookAt(p, p + framat(nu + steg), Vector3.yAxis)
-	return math.abs(fel - steg)
-end
+	DE LIGGER INTE KVAR SOM DÖD KOD. En oanvänd funktion som skriver
+	CFrame är en inbjudan att anropa den igen, och nästa läsare ser inte
+	att den bröt kontraktet. Kvar finns bara `kurs`, som läser. ]]
 
 export type Led = {
 	modell: Model,
@@ -1214,8 +1219,61 @@ end
 	maste vanda forst for att inte ga in i dorrkarmen pa tvaren.
 	`AlignOrientation` vrider henne kontinuerligt medan `AlignPosition`
 	drar, sa problemet uppstar inte. Kursen ar mjuk och kan inte snappa. ]]
+--[[ INAKTUELLA SMULOR GALLRAS (#182 del 2, arkitektens villkor).
+
+	Gränsen är `MAL_AVVIK` och inte `KOPPEL`: en smula som ligger längre
+	bort än målpunkten får ligga kan aldrig bli ett mål ändå, och ska då
+	inte ligga kvar och fördröja de smulor som kan.
+
+	DET ÄR OCKSÅ STALENESS-REGELN när spelaren byter riktning. Vänder hon
+	tvärt hamnar de gamla smulorna snabbt utanför taket och faller bort, i
+	stället för att dra hästen dit hon nyss var.
+
+	EGEN FUNKTION AV SAMMA SKÄL SOM `klampMal`: inbakad i loopen kom
+	mutationen som tog bort den ut GRÖN — spårgrenen kräver att hästen
+	lämnat en box, och inget bänkscenario nådde dit. En regel som bara går
+	att mäta genom ett scenario man inte kan bygga är obevisad. ]]
+local function gallraSpar(spar: { Vector3 }, rotPos: Vector3)
+	while #spar > 0 and avstandM(spar[1], rotPos) > MAL_AVVIK do
+		table.remove(spar, 1)
+	end
+end
+
+--[[ Provets fönster in. ]]
+function LedService._gallraSpar(spar: { Vector3 }, rotPos: Vector3)
+	gallraSpar(spar, rotPos)
+end
+
+--[[ TAKET PÅ MÅLPUNKTENS AVVIKELSE (#182 del 2, arkitektens villkor).
+
+	Målet får KROKA VÄGEN, aldrig byta mål. Ligger punkten längre än
+	`MAL_AVVIK` från spelaren dras den tillbaka mot henne längs samma
+	riktning — routingen behålls, men spelaren förblir destinationen.
+
+	EGEN FUNKTION, INTE INBAKAD I `styrMot`, och det är inte kosmetik. Min
+	egen falsifiering visade varför: mutationen som tog bort taket kom ut
+	GRÖN, eftersom spårgrenen kräver att hästen lämnat en box och inget
+	scenario i bänken nådde dit. En regel som bara går att mäta genom ett
+	scenario man inte kan bygga är obevisad.
+
+	Som ren funktion går den att pröva direkt, med vilket läge som helst. ]]
+local function klampMal(mal: Vector3, spelarPos: Vector3?, y: number): Vector3
+	local punkt = Vector3.new(mal.X, y, mal.Z)
+	if not spelarPos then return punkt end
+	local fran = Vector3.new(punkt.X - spelarPos.X, 0, punkt.Z - spelarPos.Z)
+	if fran.Magnitude / M <= MAL_AVVIK then return punkt end
+	local klamd = spelarPos + fran.Unit * (MAL_AVVIK * M)
+	return Vector3.new(klamd.X, y, klamd.Z)
+end
+
+--[[ Provets fönster in: taket går att pröva utan att bygga ett scenario. ]]
+function LedService._klampMal(mal: Vector3, spelarPos: Vector3?, y: number): Vector3
+	return klampMal(mal, spelarPos, y)
+end
+
 local function styrMot(pivot: BasePart, hum: Humanoid, mal: Vector3,
-	onskadFartMS: number, dt: number, rigg: { [string]: any }?): boolean
+	onskadFartMS: number, dt: number, rigg: { [string]: any }?,
+	spelarPos: Vector3?): boolean
 	--[[ Utan rigg finns ingen foljning. Det ar ett fel, inte ett lage att
 		tyst falla tillbaka fran — en tyst reserv hade dolt att kontraktet
 		inte holls. ]]
@@ -1233,7 +1291,8 @@ local function styrMot(pivot: BasePart, hum: Humanoid, mal: Vector3,
 	--[[ MALET. Fastpunkten hanger kvar pa spelaren dar kontraktet sager,
 		men vad den PEKAR PA ags av foljningen — normalt hennes hogra hoft,
 		och brodsmulan nar en dorr ska rundas. ]]
-	malfast.WorldPosition = Vector3.new(mal.X, pivot.Position.Y, mal.Z)
+	local punkt = klampMal(mal, spelarPos, pivot.Position.Y)
+	malfast.WorldPosition = punkt
 
 	drag.MaxVelocity = onskadFartMS * M
 	drag.Enabled = true
@@ -1241,7 +1300,11 @@ local function styrMot(pivot: BasePart, hum: Humanoid, mal: Vector3,
 	--[[ Hon ska peka DIT HON GAR. `CFrame.lookAt` ur riktningen, inte ur
 		spelarens kropp: en hast som kopierat ryttarens vridning hade gatt
 		i sidled genom dorren. ]]
-	local kurspunkt = pivot.Position + d.Unit
+	--[[ Kursen foljer den KLAMDA punkten, inte den obegransade: hon ska
+		peka dit hon faktiskt dras. ]]
+	local dk = Vector3.new(punkt.X - pivot.Position.X, 0, punkt.Z - pivot.Position.Z)
+	if dk.Magnitude < 0.05 then dk = d end
+	local kurspunkt = pivot.Position + dk.Unit
 	vrid.CFrame = CFrame.lookAt(pivot.Position, kurspunkt, Vector3.yAxis)
 	vrid.Enabled = true
 	return true
@@ -1386,9 +1449,16 @@ local function steg(_dt: number)
 			if #spar > 40 then table.remove(spar, 1) end
 		end
 		--[[ Smulor längre bort än kopplet hör inte hit heller. ]]
-		while #spar > 0 and avstandM(spar[1], rot.Position) > KOPPEL do
-			table.remove(spar, 1)
-		end
+		--[[ INAKTUELLA SMULOR KASSERAS. Gransen ar `MAL_AVVIK` och inte
+			`KOPPEL`: en smula som ligger langre bort an malpunkten far
+			ligga kan aldrig bli ett mal anda, och da ska den inte ligga
+			kvar och fordroja de smulor som kan.
+
+			DET AR OCKSA STALENESS-REGELN nar spelaren byter riktning:
+			vander hon tvart hamnar de gamla smulorna snabbt utanfor
+			taket och faller bort, i stallet for att dra hasten dit hon
+			nyss var. ]]
+		gallraSpar(spar, rot.Position)
 		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
 			HON STÅR STILL.
 
@@ -1717,7 +1787,7 @@ local function steg(_dt: number)
 				local w = l.navVag[l.navIx]
 				l.gar = true
 				l.badGa = styrMot(pivot, hum, Vector3.new(w.X, pivot.Position.Y, w.Z),
-					onskadFart, _dt, l.rigg)
+					onskadFart, _dt, l.rigg, rot.Position)
 			else
 				--[[ Vägen är slut. Tillbaka till spårföljningen; blev hon
 					ändå inte fri märks det som stillastående igen. ]]
@@ -1752,13 +1822,13 @@ local function steg(_dt: number)
 					en annan gangart, bara ratt att ta igen. Kopplet haller.
 					Regeln ar samma i bada grenarna nedan. ]]
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt, l.rigg)
+					onskadFart, _dt, l.rigg, rot.Position)
 			end
 		else
 			if tillMal > START_R then
 				l.gar = true
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt, l.rigg)
+					onskadFart, _dt, l.rigg, rot.Position)
 			end
 		end
 	end

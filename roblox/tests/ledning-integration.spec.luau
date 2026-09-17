@@ -544,6 +544,279 @@ do
 		minPrompt and minPrompt.ActionText or "-")
 end
 
+print("\n── Arkitektens villkor för de två undantagen ──")
+
+do
+	--[[ Arkitekten gav två PRELIMINÄRA undantag — Beam-repet och den
+		dynamiska målpunkten — villkorade av att kod OCH tester bevisar en
+		lista påståenden. Varje villkor har en egen mätning här, i samma
+		ordning som reviewen räknar upp dem. ]]
+	RunService._server = true
+	rot.CFrame = CFrame.new(MIN.PrimaryPart.Position + Vector3.new(1.0 * M, 0, 0))
+	local ok = LedService.borja(spelare, MIN, MIN)
+	check("ledningen startar för villkorsprovet", ok == true)
+
+	local rigg = LedService.riggFor(spelare)
+	local rep = LedService.repFor(spelare)
+
+	print("  · Undantag 1 — det visuella ledrepet")
+
+	--[[ 1a. AlignPosition är den ENDA translationsaktuatorn. Inte "ingen
+		förbjuden klass finns" — utan att det finns EXAKT EN, och att den
+		är vår. ]]
+	do
+		local dragare = {}
+		for _, d in ipairs(MIN:GetDescendants()) do
+			local k = tostring(d.ClassName)
+			if k == "AlignPosition" or k == "VectorForce" or k == "BodyVelocity"
+				or k == "BodyPosition" or k == "LinearVelocity"
+				or k == "BodyThrust" or k == "RopeConstraint" then
+				table.insert(dragare, ("%s(%s)"):format(k, d.Name))
+			end
+		end
+		check("exakt EN translationsaktuator i hästen, och den är ledningens",
+			#dragare == 1 and dragare[1] == "AlignPosition(UBRFLedDrag)",
+			table.concat(dragare, " "))
+	end
+
+	--[[ 1b. Beam saknar fysisk påverkan. En `Beam` ärver inte
+		`Constraint` — den kan inte ha Attachment-driven kraft alls. Provet
+		mäter klassen OCH att repet inte är en constraint. ]]
+	check("repet är en Beam", rep ~= nil and rep.ClassName == "Beam",
+		rep and tostring(rep.ClassName) or "inget")
+	check("och alltså ingen constraint som kan dra",
+		rep ~= nil and rep:IsA("Constraint") == false)
+
+	--[[ 1c. Beam och dess attachments skapas SERVER-SIDE. Provet kör
+		`LedService.borja` med `RunService._server = true`, och ingenting
+		på klientsidan har rört repet — det byggdes i serverns anrop. ]]
+	check("repet och dess fästpunkter finns efter serverns anrop",
+		rep ~= nil and rep.Attachment0 ~= nil and rep.Attachment1 ~= nil)
+	check("och de sitter i världen, inte i en klientmapp",
+		rep ~= nil and rep:IsDescendantOf(workspace))
+
+	print("  · Undantag 2 — den dynamiska målpunkten")
+
+	--[[ 2a. Spelaren är fortfarande den SEMANTISKA destinationen:
+		målpunkten får aldrig avvika mer än taket från henne. Provet
+		tvingar fram avvikelsen genom att fylla spåret och sedan mäta. ]]
+	do
+		local varst = 0
+		for i = 1, 60 do
+			rot.CFrame = CFrame.new(MIN.PrimaryPart.Position
+				+ Vector3.new(math.cos(i * 0.4) * 5 * M, 0, math.sin(i * 0.4) * 5 * M))
+			LedService._steg(1 / 30)
+			if rigg and rigg.mal then
+				local d = rigg.mal.WorldPosition - rot.Position
+				local plan = math.sqrt(d.X * d.X + d.Z * d.Z) / M
+				if plan > varst then varst = plan end
+			end
+		end
+		check("målpunkten avviker aldrig mer än taket från spelaren",
+			varst <= 7.05, ("värst %.2f m, tak 7.00"):format(varst))
+
+		--[[ OCH TAKET PRÖVAS DIREKT, inte genom ett scenario.
+
+			Min egen falsifiering visade varför: mutationen som tog bort
+			taket kom ut GRÖN. Spårgrenen kräver att hästen lämnat en box,
+			och den här specens hästar har aldrig stått i en. Ett scenario
+			som inte går att bygga bevisar ingenting.
+
+			`LedService._klampMal` är samma funktion `styrMot` använder, och
+			går att pröva med vilket läge som helst. ]]
+		local spelarP = Vector3.new(0, 3, 0)
+		local langtbort = Vector3.new(40 * M, 3, 0)
+		local klamd = LedService._klampMal(langtbort, spelarP, 3)
+		local avstand = (Vector3.new(klamd.X, 0, klamd.Z)
+			- Vector3.new(spelarP.X, 0, spelarP.Z)).Magnitude / M
+		check("en målpunkt 40 m bort klamps till taket",
+			avstand <= 7.05 and avstand >= 6.95, ("%.2f m"):format(avstand))
+
+		--[[ RIKTNINGEN BEHÅLLS — det är det som gör att routingen
+			fortfarande kan kroka vägen. Punkten dras in, den vrids inte. ]]
+		local riktning = (Vector3.new(klamd.X - spelarP.X, 0, klamd.Z - spelarP.Z)).Unit
+		local original = (Vector3.new(langtbort.X - spelarP.X, 0, langtbort.Z - spelarP.Z)).Unit
+		check("och riktningen mot den behålls — vägen krokas, målet byts inte",
+			(riktning - original).Magnitude < 1e-3,
+			("%.6f"):format((riktning - original).Magnitude))
+
+		--[[ En punkt INNANFÖR taket rörs inte alls. ]]
+		local nara = Vector3.new(3 * M, 3, 0)
+		local orord = LedService._klampMal(nara, spelarP, 3)
+		check("en punkt innanför taket lämnas orörd",
+			(orord - Vector3.new(nara.X, 3, nara.Z)).Magnitude < 1e-6)
+
+		--[[ STALENESS: en smula bortom taket gallras ur spåret. Spårgrenen
+			kräver att hon lämnat boxen, så provet sätter den flaggan —
+			samma fält `_steg` själv sätter när hon fysiskt gått ut. ]]
+		local l = LedService.lage(spelare)
+		if l then
+			l.lamnatBox = true
+			l.spar = { rot.Position + Vector3.new(2 * M, 0, 0),
+				rot.Position + Vector3.new(40 * M, 0, 0) }
+			LedService._steg(1 / 30)
+			local kvar = 0
+			for _, sm in ipairs(l.spar) do
+				local dd = sm - rot.Position
+				if math.sqrt(dd.X * dd.X + dd.Z * dd.Z) / M > 7.05 then kvar += 1 end
+			end
+			check("inaktuella smulor gallras ur spåret",
+				kvar == 0, ("%d kvar bortom taket"):format(kvar))
+
+			--[[ OCH REGELN PRÖVAS DIREKT, av samma skäl som taket ovan:
+				spårgrenen kräver att hästen lämnat en box, och mutationen
+				som tog bort gallringen kom ut GRÖN när den bara mättes
+				genom ett scenario. ]]
+			local ref = Vector3.new(0, 3, 0)
+			local trad = {
+				ref + Vector3.new(40 * M, 0, 0),
+				ref + Vector3.new(2 * M, 0, 0),
+				ref + Vector3.new(1 * M, 0, 0),
+			}
+			LedService._gallraSpar(trad, ref)
+			check("en smula bortom taket gallras ur spåret direkt",
+				#trad == 2, ('%d kvar av 3'):format(#trad))
+			local narast = { ref + Vector3.new(2 * M, 0, 0) }
+			LedService._gallraSpar(narast, ref)
+			check("men en smula innanför taket rörs inte", #narast == 1)
+		end
+	end
+
+	--[[ 2b. INGEN RUNTIME-LOOP SKRIVER HÄSTENS CFrame.
+
+		Den starkaste mätningen i hela provet, och den är möjlig just för
+		att bänken saknar fysik: körs `_steg` sextio gånger utan att någon
+		annan rör hästen, ska hennes CFrame vara BIT FÖR BIT densamma.
+		Skrev loopen CFrame eller kallade `PivotTo` skulle den ha flyttat
+		sig — det var precis vad den gamla `vridMot` gjorde. ]]
+	do
+		--[[ MEDAN HON FAKTISKT FÖLJER, inte i dödzonen. Står hon stilla
+			returnerar `styrMot` tidigt, och då hade mätningen varit
+			sann av sig själv — min falsifiering visade precis det:
+			mutationen som skrev CFrame i loopen igen kom ut GRÖN.
+			Spelaren ställs långt bort så att draget är påslaget. ]]
+		rot.CFrame = CFrame.new(MIN.PrimaryPart.Position + Vector3.new(4 * M, 0, 0))
+		--[[ REFERENSEN TAS FÖRE FÖRSTA STEGET.
+
+			Första versionen steg en bildruta först, för att få draget
+			påslaget — och missade därmed mutationen: en loop som skriver
+			CFrame hinner rikta upp henne i just det steget, och sedan
+			ligger hon still. Referensen måste tas innan loopen fått röra
+			henne över huvud taget. ]]
+		local fore = MIN.PrimaryPart.CFrame
+		for _ = 1, 60 do LedService._steg(1 / 30) end
+		local efter = MIN.PrimaryPart.CFrame
+		local flyttad = (efter.Position - fore.Position).Magnitude
+		local vriden = (efter.LookVector - fore.LookVector).Magnitude
+		check("draget slogs på under provet — hon FÖLJDE",
+			rigg ~= nil and rigg.drag.Enabled == true)
+		check("ingen runtime-loop skriver hästens position",
+			flyttad < 1e-6, ("%.9f studs"):format(flyttad))
+		check("och ingen skriver hennes kurs heller",
+			vriden < 1e-6, ("%.9f"):format(vriden))
+	end
+
+	--[[ 2c. Hästen flyttas ENDAST genom mjuka constraints. Båda är
+		`RigidityEnabled = false`; en stel constraint teleporterar. ]]
+	check("båda regulatorerna är mjuka",
+		rigg ~= nil and rigg.drag.RigidityEnabled == false
+			and rigg.vrid.RigidityEnabled == false)
+
+	--[[ 2d. Safety release vid blockerad eller orimlig rutt. Hon står
+		still trots att spelaren är långt bort — det är definitionen av
+		fastnat — och kopplet ska släppa av sig självt. ]]
+	do
+		local l = LedService.lage(spelare)
+		check("ledningen pågår innan blockeringsprovet", l ~= nil)
+		rot.CFrame = CFrame.new(MIN.PrimaryPart.Position + Vector3.new(6 * M, 0, 0))
+		--[[ Hästen rör sig inte ur fläcken — bänken har ingen fysik, så
+			det är exakt vad en blockerad häst gör i verkligheten. ]]
+		for _ = 1, 400 do LedService._steg(1 / 30) end
+		check("en häst som inte kommer någonstans släpps av servern",
+			LedService.aktiv(spelare) == nil,
+			tostring(LedService.aktiv(spelare)))
+		check("och riggen är riven med den",
+			LedService.riggFor(spelare) == nil)
+		check("liksom repet", LedService.repFor(spelare) == nil)
+	end
+
+	RunService._server = false
+end
+
+print("\n── Varje väg ut river både rep och rigg ──")
+
+do
+	--[[ Arkitektens villkor: SAMTLIGA exit paths ska ta bort Beam och
+		attachments. Provet går igenom dem en i taget i stället för att
+		lita på att de alla råkar gå genom `slapp`.
+
+		`led.rider` (uppsittning) mäts inte här utan i FAS 2-provet, där
+		sessionen finns att sätta en ryttare i. ]]
+	local function startaOm()
+		RunService._server = true
+		rot.CFrame = CFrame.new(MIN.PrimaryPart.Position + Vector3.new(1.0 * M, 0, 0))
+		local ok = LedService.borja(spelare, MIN, MIN)
+		RunService._server = false
+		return ok
+	end
+
+	local function stadat(varfor)
+		RunService._server = true
+		local kvar = {}
+		for _, d in ipairs(workspace:GetDescendants()) do
+			local k = tostring(d.ClassName)
+			if d.Name == "UBRFLedrep" or d.Name == "UBRFLedrepHand"
+				or d.Name == "UBRFLedrepHast" or d.Name == "LeadTargetAttachment"
+				or d.Name == "LeadRootAttachment"
+				or k == "AlignPosition" or k == "AlignOrientation" then
+				table.insert(kvar, ("%s(%s)"):format(k, d.Name))
+			end
+		end
+		check(varfor .. ": inga instanser kvar", #kvar == 0,
+			table.concat(kvar, " "))
+		RunService._server = false
+	end
+
+	--[[ 1. MANUELLT SLÄPP. ]]
+	check("manuellt släpp: ledningen startade", startaOm() == true)
+	RunService._server = true
+	LedService.slapp(spelare)
+	RunService._server = false
+	stadat("manuellt släpp")
+
+	--[[ 2. FÖR LÅNGT BORT, över tid. ]]
+	check("för långt bort: ledningen startade", startaOm() == true)
+	RunService._server = true
+	rot.CFrame = CFrame.new(MIN.PrimaryPart.Position + Vector3.new(60 * M, 0, 0))
+	for _ = 1, 40 do LedService._steg(1 / 30) end
+	check("för långt bort: servern kopplade loss",
+		LedService.aktiv(spelare) == nil)
+	RunService._server = false
+	stadat("för långt bort")
+
+	--[[ 3. HÄSTEN FÖRSVINNER ur världen mitt i ledningen. ]]
+	check("hästen försvinner: ledningen startade", startaOm() == true)
+	RunService._server = true
+	local foralder = MIN.Parent
+	MIN.Parent = nil
+	LedService._steg(1 / 30)
+	check("hästen försvinner: servern kopplade loss",
+		LedService.aktiv(spelare) == nil)
+	MIN.Parent = foralder
+	RunService._server = false
+	stadat("hästen försvinner")
+
+	--[[ 4. SPELAREN LÄMNAR SPELET. ]]
+	check("spelaren lämnar: ledningen startade", startaOm() == true)
+	RunService._server = true
+	Players.PlayerRemoving:Fire(spelare)
+	task.wait()
+	check("spelaren lämnar: ledningen är borta",
+		LedService.aktiv(spelare) == nil)
+	RunService._server = false
+	stadat("spelaren lämnar")
+end
+
 print("\n── Ingenting av den förra hästen ligger kvar ──")
 
 do
