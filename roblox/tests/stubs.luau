@@ -224,7 +224,11 @@ Enum = {
 	PathStatus = { Success = 1, NoPath = 2, ClosestNoPath = 3 },
 	KeyCode = setmetatable({}, { __index = function(_, k) return k end }),
 	UserInputState = { Begin = 1, End = 2 },
-	UserInputType = { Gamepad1 = 1 },
+	--[[ #220: `Touch` tillkom med blickspecen. TouchControls sorterar
+	     varje nedslag pa `UserInputType`, och utan enumen jamforde banken
+	     mot nil — ett pekfinger och en mus var da samma sak. De tva
+	     mus-typerna finns for att kunna mata att en mus AVVISAS. ]]
+	UserInputType = { Gamepad1 = 1, Touch = 2, MouseButton1 = 3, MouseMovement = 4 },
 	ContextActionResult = { Sink = 1 },
 	CameraType = { Scriptable = 1, Custom = 2 },
 	--[[ Front och Back tillkom med skyltarnas SurfaceGui: speglingen byter
@@ -279,7 +283,33 @@ end
 UDim2 = { new = UDim2_new, fromScale = function(x, y) return UDim2_new(x, 0, y, 0) end,
 	fromOffset = function(x, y) return UDim2_new(0, x, 0, y) end }
 UDim = { new = function(sc, off) return { _typ = "UDim", Scale = sc, Offset = off } end }
-Vector2 = { new = function(x, y) return { _typ = "Vector2", X = x, Y = y } end }
+--[[ #220: Vector2 fick RAKNESATT. Blickytan i TouchControls raknar
+     skillnaden mellan tva fingerlagen (`nu - forra`) och spaken summerar
+     `AbsolutePosition + AbsoluteSize / 2`. Utan operatorerna gick ingen
+     gest att driva genom banken. Faltformen `{ _typ, X, Y }` ar oforandrad,
+     sa aldre prov som bygger en platt tabell for hand fungerar som forut. ]]
+local __V2 = {}
+__V2.__index = function(t, k)
+	if k == "Magnitude" then return math.sqrt(t.X * t.X + t.Y * t.Y) end
+	return rawget(__V2, k)
+end
+local function __v2(x, y)
+	return setmetatable({ _typ = "Vector2", X = x, Y = y }, __V2)
+end
+__V2.__add = function(a, b) return __v2(a.X + b.X, a.Y + b.Y) end
+__V2.__sub = function(a, b) return __v2(a.X - b.X, a.Y - b.Y) end
+__V2.__unm = function(a) return __v2(-a.X, -a.Y) end
+__V2.__mul = function(a, b)
+	if type(a) == "number" then return __v2(a * b.X, a * b.Y) end
+	if type(b) == "number" then return __v2(a.X * b, a.Y * b) end
+	return __v2(a.X * b.X, a.Y * b.Y)
+end
+__V2.__div = function(a, b)
+	if type(b) == "number" then return __v2(a.X / b, a.Y / b) end
+	return __v2(a.X / b.X, a.Y / b.Y)
+end
+__V2.__eq = function(a, b) return a.X == b.X and a.Y == b.Y end
+Vector2 = { new = __v2, zero = __v2(0, 0) }
 
 --[[ `warn` fanns inte i bänken. Produktionskoden använder den på sina
      nil-vägar — t.ex. när anläggningen inte är byggd — så utan den kraschade
@@ -576,8 +606,13 @@ local __services = {
 		KeyboardEnabled = true,
 		GamepadEnabled = false,
 		InputBegan = __signal(),
-		InputChanged = { Connect = function() return { Disconnect = function() end } end },
-		InputEnded = { Connect = function() return { Disconnect = function() end } end },
+		--[[ #220: `InputChanged` och `InputEnded` slangde forut sin callback.
+		     TouchControls lyssnar pa dem GLOBALT — ett finger som dras utanfor
+		     spaken eller blickytan ska fortfarande folja — sa utan riktiga
+		     signaler gick varken spakens eller blickens rorelse att driva.
+		     Ingen stub fyrar dem sjalv; det gor bara det prov som vill. ]]
+		InputChanged = __signal(),
+		InputEnded = __signal(),
 	},
 	--[[ GuiService: G02-D:s ridanalys laser ReducedMotionEnabled for att
 	     starta pausad i stallet for att satta igang en markor som ror sig av
