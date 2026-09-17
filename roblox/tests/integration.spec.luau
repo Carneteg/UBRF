@@ -831,9 +831,18 @@ do
 	--[[ 2. FEL TUR. Ett moment längre fram ska nekas — och nejet ska bära
 		VILKET moment som står på tur. Argumentet föll bort före #211 och
 		spelaren fick se ett bokstavligt "%s". ]]
+	--[[ VYN SKA GÅ UT ÄVEN NÄR SVARET ÄR NEJ. Så gjorde tjänsten före
+		#211 — `skickaPass` låg efter `Pass.utfor` och kördes på båda
+		utfållen — och en klient som drivit isär rättas då av samma tryck
+		som gav henne nejet. Räknat på fjärrobjektets `_skickat`. ]]
+	local passSync = Networking.get("PassSync")
+	local foreSync = #passSync._skickat
 	local okFel, skalFel, argFel = GameplayService.eftervard(S.spelare, id(4))
 	check("ett moment ur tur nekas", okFel == false and skalFel == "pass.fel_tur",
 		tostring(skalFel))
+	check("och servern skickade en ny passvy trots nejet",
+		#passSync._skickat > foreSync,
+		("%d → %d"):format(foreSync, #passSync._skickat))
 	check("och nejet bär vilket moment som står på tur",
 		type(argFel) == "string" and Pass.arKanontext(argFel), tostring(argFel))
 	check("det nekade momentet rörde ingen utrustning",
