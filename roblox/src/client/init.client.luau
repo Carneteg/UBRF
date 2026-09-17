@@ -191,6 +191,10 @@ local function mount(model: Model)
 			if r then r.camera:vridBlick(dYaw, dPitch) end
 		end,
 		modell = model,
+		--[[ #227: hjälpknappen viker undan för reglagen på en telefon i
+		     landskap. Reserven rapporteras härifrån, i samma andetag som
+		     reglagen byggs, byggs om (#208) eller rivs. ]]
+		efterLayout = KontrollHjalp.reservAndrad,
 	})
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
