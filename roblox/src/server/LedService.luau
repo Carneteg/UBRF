@@ -913,6 +913,12 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 	--[[ OCH FOLJRIGGEN. Det ar den som faktiskt flyttar henne; repet
 		ovan ar bilden av det. ]]
 	ledd[player].rigg = byggFoljrigg(karaktar, modell)
+	--[[ OCH DORREN. Se noten vid `satDorrKrok`: ett tryck, inte tva.
+		Bara nar hon faktiskt star kvar i facket — star hon redan i
+		gangen finns ingen dorr att oppna, och da ska ingen oppnas. ]]
+	if not ledd[player].lamnatBox and narmasteDorr and hakar.dorr then
+		pcall(function() (hakar.dorr :: any)(narmasteDorr) end)
+	end
 	ledd[player].forLangtSedan = 0
 
 	--[[ Minnet som överlever släppet, se `aterstallTillBox`. ]]
@@ -1916,6 +1922,29 @@ end
 	ingen leder en hast som bars av en ryttare. ]]
 function LedService.satRidenKrok(f: ((Model) -> boolean)?)
 	hakar.riden = f :: any
+end
+
+--[[ ETT TRYCK, INTE TVA (#182, PO-beslut efter QA 2026-09-17).
+
+	Spelaren tryckte «Led», och ingenting hande: hasten star i sin box
+	bakom en STANGD dorr, och dorren ar ett eget tryck pa en egen
+	prompt. Matt i Studio stod draget avstangt i 120 bildrutor av 120 —
+	hon drevs aldrig, och inget pa skarmen forklarade varfor.
+
+	Att oppna boxdorren ar inte ett eget beslut nar man ska leda ut
+	henne. Det ar samma handling: man oppnar dorren OCH tar henne ut.
+	Servern gor darfor bada nar ledningen borjar.
+
+	EN KROK OCH INTE ETT REQUIRE, av samma skal som de tva ovan:
+	`DorrService` ager dorrarna, och `LedService` ska inte behova kanna
+	till dem for att kunna leda. `GameplayService` kanner bada.
+
+	GEOMETRIN AR INTE PROBLEMET, och det ar matt: oppningen ar 3,60
+	studs (1,20 m) och hasten 1,86 studs (0,62 m) bred — nastan en
+	hastbredd fri pa var sida. En OPPEN dorr har dessutom redan
+	`CanCollide = false`. Det var den STANGDA dorren som holl henne. ]]
+function LedService.satDorrKrok(f: ((BasePart) -> boolean)?)
+	hakar.dorr = f :: any
 end
 
 --[[ För specar: kör EN bildruta explicit.

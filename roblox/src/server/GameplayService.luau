@@ -46,6 +46,9 @@ local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 	genererade kanon som resten av spelet läser. ]]
 local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
+--[[ #182: ledningen oppnar boxdorren i samma tryck. Se `satDorrKrok`.
+	`DorrService` ager dorrarna; den har raden ar bara kopplingen. ]]
+local DorrService = require(script.Parent.DorrService)
 local TackService = require(script.Parent.TackService)
 --[[ #235 FAS 2: rollbacken river en halvlagd del direkt. `TackService`
 	har ingen vag som tar av UTAN eftervardens ordningsgrindar, och de
@@ -1383,6 +1386,13 @@ function GameplayService.start()
 	--[[ #182 del 2: och VEM som sitter pa henne. `HorseService` ager
 		sessionerna; `LedService` fragar genom kroken i stallet for
 		att fa ett eget beroende. ]]
+	--[[ #182: stalldorren hor till ledningen, inte till ett eget tryck.
+		`DorrService` ager dorrarna; kroken later `LedService` be om
+		att den oppnas utan att kanna till dem. ]]
+	LedService.satDorrKrok(function(blad)
+		return DorrService.satLage(blad, true)
+	end)
+
 	LedService.satRidenKrok(function(modell)
 		local sess = HorseService.sessionFor(modell)
 		return sess ~= nil and sess.rider ~= nil
