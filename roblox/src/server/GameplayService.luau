@@ -639,9 +639,9 @@ function GameplayService.eftervard(player: Player, momentId: string): (boolean, 
 	local far, farSkal, farArg = Pass.farUtfora(p, momentId)
 	if not far then
 		--[[ VYN SKICKAS ÄVEN NÄR SVARET ÄR NEJ. Så gjorde raden förut —
-			`skickaPass` låg efter `Pass.utfor` och kördes på båda utfållen
+			`skickaPass` låg efter `Pass.utfor` och kördes på båda utfallen
 			— och en klient som drivit isär rättas då av samma tryck som
-			gav henne nejet. Att låta det tidiga nejet småsmyga förbi hade
+			gav henne nejet. Att låta det tidiga nejet smita förbi hade
 			varit en regression, inte en förenkling. ]]
 		skickaPass(player)
 		return false, farSkal, farArg

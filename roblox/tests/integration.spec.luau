@@ -833,7 +833,7 @@ do
 		spelaren fick se ett bokstavligt "%s". ]]
 	--[[ VYN SKA GÅ UT ÄVEN NÄR SVARET ÄR NEJ. Så gjorde tjänsten före
 		#211 — `skickaPass` låg efter `Pass.utfor` och kördes på båda
-		utfållen — och en klient som drivit isär rättas då av samma tryck
+		utfallen — och en klient som drivit isär rättas då av samma tryck
 		som gav henne nejet. Räknat på fjärrobjektets `_skickat`. ]]
 	local passSync = Networking.get("PassSync")
 	local foreSync = #passSync._skickat
