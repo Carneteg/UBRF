@@ -767,7 +767,21 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 	if not TackForradService.satSynlig(id, t, false) then
 		--[[ ROLLBACK. Bara det VI byggde tas bort: bar hon redan delen nar
 			vi kom lamnar vi den, for da har vi inte skapat den och ska
-			inte heller riva den. ]]
+			inte heller riva den. Det speglar `satBuren`, som returnerar
+			true utan att bygga nagot nar id:t ar detsamma.
+
+			`bar_redan` AR I DAG ONABAR. Min egen falsifiering visade det:
+			mutationen `bar_redan = false` kom ut GRON. Vagen dit kraver
+			att hon fysiskt bar just den har sadeln utan att sta i
+			registret, och bade `slappBuret` och `glom` rensar bada
+			halvorna tillsammans — plus att grinden ovan nu nekar all
+			annan buren sadel.
+
+			Grenen star kvar anda, for den ar parad med `satBuren`s egen
+			gren och blir levande i det ogonblick FAS 2 tillater ett byte.
+			Att ta bort den nu vore att flytta felet till den som bygger
+			bytet. Den redovisas som en kand svag mutation i stallet for
+			att gommas. ]]
 		if not bar_redan then
 			pcall(function() TackService.slappBuren(player, t) end)
 		end
