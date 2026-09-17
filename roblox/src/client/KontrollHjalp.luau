@@ -44,10 +44,25 @@
 	`TouchControls` rivs vid avsittning: en hjälpknapp som bara finns i
 	sadeln hade varit borta i stallet, alltså precis när frågan "vad gör
 	jag nu?" är som vanligast. Den ligger uppe till höger, där varken
-	spaken (nere vänster), ridknapparna (nere höger), förberedelse-HUD:en
-	(nere mitten), Ugnetas kort (uppe mitten) eller ridanalysen (uppe
-	vänster) ligger — och därmed blockerar den varken ridkontroller eller
-	replay.
+	spaken (nere vänster), förberedelse-HUD:en (nere mitten), Ugnetas kort
+	(uppe mitten) eller ridanalysen (uppe vänster) ligger.
+
+	── RIDKNAPPARNA NÅR HÖRNET PÅ EN TELEFON (#227) ─────────────────────
+
+	"Ridknapparna nere höger" stämde på iPad. På en telefon i landskap
+	trycker #208-skalan ihop de två gallren tills gångartsraden börjar
+	9 px under topbaren (iPhone 13, 749×367) — och `?` (DisplayOrder 16)
+	låg då rakt över HALT/SKRITT (HorseTouch, 8): mätt i
+	tests/klient-reservzon.spec till x 689..737 · y 48..96 mot
+	gångarterna x 565..729 · y 45..191, på alla tre telefonstorlekarna.
+
+	Knappen VIKER därför undan för reserven i stället för att hörnet
+	antas ledigt: `TouchControls` rapporterar reservens bredd och överkant
+	genom `efterLayout` varje gång reglagen byggs, byggs om eller rivs,
+	och `placeraOppna` lägger `?` till vänster om reserven bara när
+	reserven faktiskt når upp i knappens band. En iPad, där gallren
+	börjar långt under, får hörnet oförändrat pixel för pixel. Inga
+	koordinater är skrivna av — talen kommer ur reglagens egen layout.
 ]]
 
 local Players = game:GetService("Players")
@@ -375,6 +390,34 @@ end
      saknar tangentbord. Samma regel som resten av modulen — reglagen
      följer inmatningen, inte plattformen. ]]
 local KNAPPSTORLEK = 48
+local KNAPPMARGINAL = 12
+
+--[[ Ridreserven, som `TouchControls` senast rapporterade den: bredden på
+	bandet i högerkanten och var dess övre galler börjar, i GUI-pixlar
+	under topbaren — samma yta som knappens egen ScreenGui. Noll och
+	oändligt när reglagen inte är uppe. ]]
+local reservBredd = 0
+local reservTopp = math.huge
+
+--[[ Hörnet, eller till vänster om reserven när reserven når upp i
+	knappens band. Ren regel ur geometrin, inget enhetsvillkor. ]]
+local function placeraOppna()
+	local b = oppnaKnapp
+	if not b then return end
+	local knappBotten = KNAPPMARGINAL + KNAPPSTORLEK
+	if reservBredd > 0 and reservTopp < knappBotten then
+		b.Position = UDim2.new(1, -(reservBredd + KNAPPMARGINAL), 0, KNAPPMARGINAL)
+	else
+		b.Position = UDim2.new(1, -KNAPPMARGINAL, 0, KNAPPMARGINAL)
+	end
+end
+
+--[[ Anropas av `TouchControls` (genom `init.client`) med reservens bredd
+	och överkant. Se filhuvudet. ]]
+function KontrollHjalp.reservAndrad(bredd: number, topp: number)
+	reservBredd, reservTopp = bredd, topp
+	placeraOppna()
+end
 
 local function byggOppna()
 	if oppnaGui then return end
@@ -397,7 +440,6 @@ local function byggOppna()
 	local b = Instance.new("TextButton")
 	b.Name = "Hjalp"
 	b.AnchorPoint = Vector2.new(1, 0)
-	b.Position = UDim2.new(1, -12, 0, 12)
 	b.Size = UDim2.fromOffset(KNAPPSTORLEK, KNAPPSTORLEK)
 	b.BackgroundColor3 = FARG_MORK
 	b.BackgroundTransparency = 0.12
@@ -413,6 +455,7 @@ local function byggOppna()
 	horn.Parent = b
 	b.Activated:Connect(function() KontrollHjalp.vaxla() end)
 	oppnaKnapp = b
+	placeraOppna()
 end
 
 --[[ Knappen göms medan panelen står uppe: panelen har sin egen `Stäng`, och

@@ -136,6 +136,19 @@ function TouchControls.reglageBredd(): number
 	return reglageBredd
 end
 
+--[[ Var det övre gallret BÖRJAR, i GUI-pixlar uppifrån (samma yta som
+	`reglageBredd`: viewporten minus topbaren). `math.huge` när reglagen inte
+	är uppe. Hjälpknappen läser den (#227): på en telefon i landskap trycker
+	skalan ovan ihop gallren tills gångartsraden når nästan upp till
+	topbaren — mätt på iPhone 13 i landskap till 9 px — alltså rakt in i
+	det band där `?` bor. Talet räknas här, av samma rader som ritar
+	gallret, så att ingen annan modul behöver en egen kopia av layouten. ]]
+local reglageTopp = math.huge
+
+function TouchControls.reglageTopp(): number
+	return reglageTopp
+end
+
 local blickFinger: InputObject? = nil
 local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
@@ -362,10 +375,15 @@ local function layouthojd(g: ScreenGui): number
 	return math.max(g.AbsoluteSize.Y, vyH)
 end
 
+--[[ `efterLayout` kallas när reglagen byggts, byggts om eller rivits, med
+	reservens bredd och överkant (`reglageBredd`, `reglageTopp`). Den som
+	delar skärmkant med reglagen — hjälpknappen — lägger sig rätt i samma
+	andetag, i stället för att gissa när #208-ombyggnaden är klar. ]]
 function TouchControls.mount(input: any, hooks: {
 	dismount: () -> (),
 	blick: ((number, number) -> ())?,
 	modell: Instance?,
+	efterLayout: ((number, number) -> ())?,
 })
 	if gui then return end
 	if not UserInputService.TouchEnabled then return end
@@ -508,6 +526,7 @@ function TouchControls.mount(input: any, hooks: {
 	gangrad.Size = UDim2.fromOffset(GALLER_B, GALLER_H)
 	gangrad.Position = UDim2.new(1, -(GALLER_B + KANT), 1,
 		-(GALLER_H * 2 + px(12) + KANT))
+	reglageTopp = skarmH - (GALLER_H * 2 + px(12) + KANT)
 	local grad = Instance.new("UIGridLayout")
 	grad.CellSize = UDim2.fromOffset(KB, KH)
 	grad.CellPadding = UDim2.fromOffset(PADX, PADY)
@@ -619,6 +638,8 @@ function TouchControls.mount(input: any, hooks: {
 
 	kopplaSpak(bas, knop)
 	egnaReglage(false)
+	local efter = hooks.efterLayout
+	if efter then efter(reglageBredd, reglageTopp) end
 end
 
 function TouchControls.unmount()
@@ -631,6 +652,7 @@ function TouchControls.unmount()
 	     kopplingen på en häst man klivit av, och nästa uppsittning hade
 	     börjat med förra rittens finger fortfarande "nere". ]]
 	reglageBredd = 0
+	reglageTopp = math.huge
 	blickFinger, blickSist, blickHook = nil, nil, nil
 	if gaitKoppling then
 		gaitKoppling:Disconnect()
@@ -645,6 +667,10 @@ function TouchControls.unmount()
 	byggdHojd = 0
 	if Input then Input.setTouch(0, 0) end
 	if styrningAv then egnaReglage(true) end
+	--[[ Reserven är borta: den som vek undan för den får hörnet tillbaka. ]]
+	local h = senasteHooks
+	local efter = h and h.efterLayout
+	if efter then efter(0, math.huge) end
 end
 
 function TouchControls.isActive(): boolean
