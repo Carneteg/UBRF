@@ -134,15 +134,73 @@ local liveSagt = ""
 	Utläggningen är bruten ut hit och körs nu både när kortet visas och när
 	ytan ändrar storlek. Ingen ny regel, ingen ny layout, inget nytt system
 	— samma tal, körda vid rätt tillfällen. ]]
+--[[ Smalaste kort som fortfarande är ett kort och inte en remsa. Samma
+	tal som golvet i `bredd` nedan har haft sedan början. ]]
+local KORT_MIN = 160
+
+--[[ Under den här bredden är kortet inte längre värt att behålla
+	vänsterreserven för — se noten i `laggUtKort`. ]]
+local KORT_LASBAR = 480
+
 local function laggUtKort()
 	local k = kort
 	if not k then return end
 	local foralder = k.Parent :: GuiObject
 	local W = foralder and foralder.AbsoluteSize.X or 0
 	if W <= 0 then return end
-	local fritt = W - TouchControls.reglageBredd()
-	local bredd = math.min(640, 0.92 * W, math.max(160, fritt - 32))
-	local centrum = if W / 2 + bredd / 2 <= fritt then W / 2 else fritt / 2
+	--[[ ── RESERVEN HAR TVÅ KANTER, INTE EN (#206) ────────────────────
+
+		Regeln har alltid vikt undan för gångarterna och hjälparna i
+		högerkanten. Den vek ALDRIG undan för spaken i vänsterkanten —
+		och eftersom den skjuter kortet åt vänster när mitten inte räcker
+		till, sköt den det rakt ut över spaken.
+
+		Mätt i Studio på `cdfe061`, emulerad iPad i landskap med kortet
+		uppe och ryttaren uppsutten — träffprov över spakens bas:
+
+		    1024x768  överlapp 80 px  spaken når 20 av 70 punkter
+		    1080x810  överlapp 51 px  spaken når 34 av 70 punkter
+		    1180x820  överlapp  0 px  spaken når 54 av 70 punkter
+
+		Brännpunkten är ren geometri: kortet får plats mitt på skärmen
+		så länge `W/2 + bredd/2 <= fritt`. Under ungefär 1100 px bredd
+		håller det inte längre, och då centreras kortet i `fritt` — vars
+		vänsterkant var skärmens egen, alltså spakens.
+
+		Nu är spannet [vänster, höger] i stället för [0, höger].
+
+		FALLBACK, för att telefonen inte ska bli sämre (krav 7): blir
+		spannet för smalt för ett läsbart kort räknas layouten som förut,
+		utan vänsterreserv. En liten skärm ska hellre ha ett kort som
+		delar plats med spaken än ett kort som inte går att läsa — den
+		avvägningen är 568x320-konflikten, och den rörs inte här. ]]
+	local hoger = W - TouchControls.reglageBredd()
+	local vanster = TouchControls.spakBredd()
+	--[[ VÄNSTERRESERVEN KOSTAR BREDD, och på en liten skärm kostar den
+		för mycket. `KORT_LASBAR` är gränsen där kortet fortfarande är ett
+		kort: håller reserven kvar den, tillämpas den; gör den inte det
+		räknas layouten EXAKT som förut.
+
+		Talet är valt för att dra gränsen mellan surfplatta och telefon,
+		och det är avsiktligt att den hamnar där. Räknat på kanonens egna
+		provskärmar:
+
+		    1024x768  iPad      kort 640 -> 594  reserven tillämpas
+		    1080x810  iPad      kort 640 -> 640  reserven tillämpas
+		    1180x820  iPad      kort 640 -> 640  oförändrat, låg redan rätt
+		     844x390  iPhone 13 kort skulle bli 475  reserven UTEBLIR
+		     568x320  liten tel kort skulle bli 269  reserven UTEBLIR
+
+		Telefonerna får alltså exakt den layout de hade. Att spaken ligger
+		under kortet där är samma 568x320-avvägning som redan är
+		dokumenterad som en produktkonflikt, och den löses inte här. ]]
+	local reserverad = math.min(640, 0.92 * W, math.max(KORT_MIN, (hoger - vanster) - 32))
+	if reserverad < KORT_LASBAR then vanster = 0 end
+	local fritt = hoger - vanster
+	local bredd = math.min(640, 0.92 * W, math.max(KORT_MIN, fritt - 32))
+	local centrum = if W / 2 - bredd / 2 >= vanster and W / 2 + bredd / 2 <= hoger
+		then W / 2
+		else vanster + fritt / 2
 	k.Size = UDim2.new(0, math.floor(bredd), 0, 170)
 	k.Position = UDim2.new(0, math.floor(centrum), 1, -14)
 end
