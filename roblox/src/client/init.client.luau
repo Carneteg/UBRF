@@ -279,11 +279,25 @@ InteractionController.setAvslagVisare(function(skal: any, extra: any?)
 	PreparationController.visaAvslagFor(skal, extra)
 end)
 
+--[[ ══ RIDE FIRST: LEDNINGEN AR INTE LAST BAKOM TEORIN ═══════════════
+
+     Produktbeslut 2026-09-17, efter fysisk QA. Villkoret lod förut
+     `nastaFas() == "leda"` — alltså fas FEM av fem. Spelaren kunde inte
+     röra hästen förrän hon hälsat, visiterat, ryktat och gjort i ordning,
+     och fick ingen som helst indikation om varför ledknappen saknades.
+
+     Det bröt mot FUN FIRST / RIDE FIRST: skötseln ska göra ritten bättre,
+     inte vara en vägspärr. Att leda sin häst är dessutom en av de
+     handlingar man naturligast vill göra direkt.
+
+     KLIENTEN RITAR NU KNAPPEN på spelarens egen häst, oavsett fas.
+     SERVERN AVGÖR FORTFARANDE ALLT annat — rätt häst, avstånd, om hon
+     leds av någon annan, om hon rids, om spelaren redan leder. Den här
+     raden flyttar ingen behörighet; den slutar bara gömma knappen. ]]
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
-	if model:GetAttribute("HorseId") ~= id then return false end
-	return PreparationController.nastaFas() == "leda"
+	return model:GetAttribute("HorseId") == id
 end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
