@@ -53,6 +53,7 @@ local DEFINITIONS = {
 		 bygget. Modellen i argumentet är alltså en FRÅGA, inte ett
 		 påstående. ]]
 	SadlaHast = "RemoteFunction",          -- klient → server: lägg sadeln jag bär på den här hästen
+	TransaHast = "RemoteFunction",         -- klient -> server: lagg transet jag bar pa den har hasten
 }
 
 local cache: { [string]: Instance } = {}

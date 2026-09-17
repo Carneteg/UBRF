@@ -629,6 +629,18 @@ Sprak.text = {
 		sv = "%s sadel",
 		en = "%s saddle",
 	},
+	["tack.ta_transet"] = {
+		sv = "Ta tränset",
+		en = "Take the bridle",
+	},
+	["tack.trans_for"] = {
+		sv = "%s träns",
+		en = "%s bridle",
+	},
+	["tack.bar_inget_trans"] = {
+		sv = "Du bär inget träns — hämta hennes på boxfronten först",
+		en = "You are not carrying a bridle — fetch hers from the stall front first",
+	},
 	["tack.redan_tagen"] = {
 		sv = "Någon annan bär den redan",
 		en = "Someone else is already carrying it",
@@ -856,6 +868,10 @@ Sprak.text = {
 	["interaktion.sadla_namn"] = {
 		sv = "Sadla %s",
 		en = "Saddle %s",
+	},
+	["interaktion.transa_namn"] = {
+		sv = "Tränsa %s",
+		en = "Bridle %s",
 	},
 	["hjalp.blick"] = {
 		sv = "Se dig omkring",

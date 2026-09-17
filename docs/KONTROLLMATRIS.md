@@ -29,6 +29,9 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Rida nu (knappen på hästen) | `R` | `DPadRight` (styrkors höger) | tryck på knappen |
 | Led / släpp hästen | `L` | `DPadLeft` (styrkors vänster) | tryck på knappen |
 | Sadla hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
+| Tränsa hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
+| Ta sadeln (boxfronten) | `E` | `ButtonX` | tryck på knappen |
+| Ta tränset (boxfronten) | `T` | `ButtonB` | tryck på knappen |
 | Framåt / bakåt | `W` / `S` | vänster spak | spaken |
 | Styr | `A` / `D` | vänster spak | spaken |
 | Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
@@ -131,6 +134,8 @@ huvudboken, inte de tre rader man råkar titta på:
 | `DPadLeft` | `InteractionController.luau` | **led / släpp** (prompten) | på marken |
 | `DPadUp` | `KontrollHjalp` via `init.client.luau` | kontrollhjälpen | **alltid** |
 | `ButtonY` | `InteractionController.luau` | **sadla** (prompten) | på marken |
+| `ButtonY` | `InteractionController.luau` | **tränsa** (prompten) | på marken |
+| `ButtonB` | `TackForradService.luau` | **ta tränset** (boxfronten) | på marken |
 
 `ButtonStart` och `ButtonSelect` valdes bort trots att de också är
 obundna i UBRF: de är reserverade av Roblox egna menyer på konsol, och en
@@ -193,6 +198,40 @@ exakt det fynd som fällde första utkastet till #182.
 `klient-ledprompt.spec.luau` mäter det i båda riktningarna: den bygger
 huvudboken ur källan, kontrollerar att sadelknappens andra betydelse bara
 lever i sadeln, och att alla fyra knapparna är avstängda där.
+
+### Tränset — två delningar till (#235 FAS 3)
+
+**På hästen** delar «Tränsa» rad, tangent och knapp med «Sadla». Det är
+kanon som bär den delningen, inte en kontextregel om lägen: tränset kräver
+att hon är sadlad (`tack.sadeln_forst`), och sadelknappen finns bara så
+länge hon är osadlad. De kan alltså aldrig vara uppe samtidigt.
+
+Vinsten är att kolumnen på hästen stannar på **fyra rader** i stället för
+fem. På en telefon i landskap är det skillnaden mellan en lista och en vägg.
+
+Servern äger regeln; `tack-fas3.spec.luau` mäter nejet på en osadlad häst,
+och `klient-ledprompt.spec.luau` mäter att controllern bygger **en knapp i
+taget** när bara en av frågorna svarar ja.
+
+**På boxfronten** gäller motsatsen: sadeln och tränset hänger på samma
+front och är inom räckhåll **samtidigt**. De får därför inte dela tangent.
+Sadeln behåller Roblox standardvärde (`E` / `ButtonX`); tränset får `T` och
+`ButtonB`, som båda bara lever i sadeln. Delade de standardvärdet hade vi
+byggt precis det #235 rapporterade: flera prompter i djupet där bara den
+närmaste går att nå.
+
+### Handkontrollens budget är slut
+
+Efter FAS 3 är varenda knapp på handkontrollen bunden, och **fem av
+bindningarna på marken bärs av kontextregeln** i stället för av ledigt
+utrymme. Bara tumstickornas klick (`ButtonL3` / `ButtonR3`) är obundna, och
+de är dåliga träffytor för en handling man gör ofta.
+
+Det är inte ett fel i dag — varje delning är mätt i båda riktningarna — men
+det är ett **tak**. Nästa knapp på marken har ingen plats att ta, och då är
+frågan en annan: en kontextuell «gör i ordning»-knapp som gör nästa steg i
+kedjan, i stället för en knapp per moment. Det beslutet ligger utanför
+#235 och är flaggat i FAS 3-rapporten.
 
 ### Avsittningen (#162 blockerare 2)
 

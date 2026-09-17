@@ -317,15 +317,21 @@ end)
      isar — och «Rida nu» hamtar ocksa utrustning, utan att ga via
      sadelknappen. ]]
 local barSadelNu = false
+--[[ #235 FAS 3: transet foljer samma vag. Listan bar bada delarna, och
+     `Preparation.buren` drar bort det som redan sitter pa hasten — sa
+     varje del star kvar exakt sa lange den ar i handerna. ]]
+local barTransNu = false
 PreparationController.vidNyVy(function(vy: any)
 	local buren = if type(vy) == "table" then vy.burenUtrustning else nil
-	local har = false
+	local har, harTrans = false, false
 	if type(buren) == "table" then
 		for _, typ in ipairs(buren.delar or {}) do
 			if tostring(typ) == "sadel" then har = true end
+			if tostring(typ) == "trans" then harTrans = true end
 		end
 	end
 	barSadelNu = har
+	barTransNu = harTrans
 	--[[ OCH RITA OM DIREKT. `vidNyVy`-hookarna kors i den ordning de
 	     registrerats, och promptuppdateringen ovan star FORE den har — sa
 	     utan raden nedan hade sadelknappen alltid speglat FOREGAENDE sync.
@@ -335,6 +341,18 @@ PreparationController.vidNyVy(function(vy: any)
 end)
 InteractionController.setSadlaCheck(function(model: Model): boolean
 	if not barSadelNu then return false end
+	local id = PreparationController.hastId()
+	if not id then return false end
+	return model:GetAttribute("HorseId") == id
+end)
+
+--[[ #235 FAS 3. Samma fraga, en annan del. Att knapparna inte kan vara
+     uppe samtidigt avgors inte har utan av KANON: transet kraver att hon
+     ar sadlad, och nar hon ar det har `burenUtrustning` redan slappt
+     sadeln. Servern bar regeln (`tack.sadeln_forst`); den har raden ritar
+     bara knappen. ]]
+InteractionController.setTransaCheck(function(model: Model): boolean
+	if not barTransNu then return false end
 	local id = PreparationController.hastId()
 	if not id then return false end
 	return model:GetAttribute("HorseId") == id

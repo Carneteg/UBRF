@@ -163,6 +163,22 @@ function TackForradService.tagSadel(spelare: Player, hastId: string, namn: strin
 	return false, skal
 end
 
+--[[ TRANSET (#235 FAS 3). Samma vag, samma mottagare, en annan typ.
+	Att skriva en andra mottagare hade gett tva sanningar om vad en
+	hamtning ar; det enda som skiljer ar strangen. ]]
+function TackForradService.tagTrans(spelare: Player, hastId: string, namn: string?): (boolean, string?)
+	local f = mottagare
+	if not f then return false, "tack.ingen_mottagare" end
+	local ok, skal = f(spelare, hastId, "trans")
+	if ok == true then
+		print(("[Tack] %s tog %ss trans."):format(spelare.Name, namn or hastId))
+		return true
+	end
+	warn(("[Tack] %s fick INTE %ss trans: %s"):format(
+		spelare.Name, namn or hastId, tostring(skal)))
+	return false, skal
+end
+
 --[[ En hästs utrustning på hennes front: sadeln med underlägget under sig,
 	tränset på egen krok bredvid — så som fotot visar dem, tätt. ]]
 local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string): Model?
@@ -238,6 +254,38 @@ local function hangUpp(foralder: Folder, b: CFrame, hastId: string, namn: string
 
 	prompt.Triggered:Connect(function(spelare)
 		TackForradService.tagSadel(spelare, hastId, namn)
+	end)
+
+	--[[ ── TRANSETS EGEN PROMPT (#235 FAS 3) ─────────────────────
+
+		Samma state-machine som sadeln, en egen handling. Den viktiga
+		skillnaden mot att bara kopiera raderna ovan ar TANGENTEN.
+
+		Bada hanger pa samma front och ar inom rackhall samtidigt. Lat
+		de dela Roblox standardvarde (`E` / `ButtonX`) hade vi byggt
+		precis det #235 rapporterade: flera prompter i djupet dar bara
+		den narmaste gar att na, och spelaren far gissa vilken.
+
+		`T` for trans ar mnemoniskt och delas med «se ritten», som bara
+		lever i sadeln; `ButtonB` ar halvhalten, ocksa bara i sadeln.
+		Samma kontextregel som `docs/KONTROLLMATRIS.md` redan bar. ]]
+	local transPrompt = Instance.new("ProximityPrompt")
+	transPrompt.Name = "TransPrompt"
+	transPrompt.ActionText = "Ta transet"
+	transPrompt:SetAttribute("SprakNyckel", "tack.ta_transet")
+	transPrompt.ObjectText = namn .. "s trans"
+	transPrompt:SetAttribute("SprakObjekt", "tack.trans_for")
+	transPrompt:SetAttribute("SprakArg", namn)
+	transPrompt.HoldDuration = 0
+	transPrompt.MaxActivationDistance = 8
+	transPrompt.RequiresLineOfSight = false
+	transPrompt.ClickablePrompt = true
+	transPrompt.KeyboardKeyCode = Enum.KeyCode.T
+	transPrompt.GamepadKeyCode = Enum.KeyCode.ButtonB
+	transPrompt.Parent = trans
+
+	transPrompt.Triggered:Connect(function(spelare)
+		TackForradService.tagTrans(spelare, hastId, namn)
 	end)
 
 	modell.PrimaryPart = sadel

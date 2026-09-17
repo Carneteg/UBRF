@@ -980,6 +980,72 @@ function GameplayService.sadla(player: Player, modell: Model?): (boolean, string
 	return true, "tack.pa_plats"
 end
 
+--[[ ══ FAS 3: TRANS `HELD -> EQUIPPED` (#235) ════════════════════════
+
+	SAMMA state-machine som sadeln, mot huvudet i stallet for ryggen.
+	Ordern sager uttryckligen «ingen separat speciallosning», och det ar
+	darfor den har funktionen ar sa kort: allt som ar GEMENSAMT bor redan
+	i `TackService.satPa`, och det enda som skiljer ar typen.
+
+	TVA SAKER SKILJER TRANSET FRAN SADELN, och bada ar kanon:
+
+	  1. ORDNINGEN. Transet kommer SIST. `satPa` nekar det pa en osadlad
+	     hast med `tack.sadeln_forst`, och den regeln ar inte teknisk —
+	     man sadlar forst och transar sedan, for sa gor man.
+	  2. TYGLARNA foljer med. De sitter i bettet och ar inget eget moment
+	     i kanon; `satPa` bygger och river dem med transet, och rullar
+	     tillbaka bada om nagon av dem faller.
+
+	Inget underlagg har, av samma skal: det hor till sadeln. ]]
+function GameplayService.transa(player: Player, modell: Model?): (boolean, string?)
+	if typeof(modell) ~= "Instance" and type(modell) ~= "table" then
+		return false, "tack.ingen_hast"
+	end
+	local m = modell :: Model
+	if not (m and (m :: any).IsA and m:IsA("Model")) then
+		return false, "tack.ingen_hast"
+	end
+	local hastId = tostring(m:GetAttribute("HorseId") or "")
+	if hastId == "" then return false, "tack.ingen_hast" end
+
+	local bar = TackService.barBuren(player, "trans")
+	if bar == nil then return false, "tack.bar_inget_trans" end
+
+	--[[ HASTENS EGET TILLSTAND, samma grind som sadeln fick i reviewen av
+		`e08515f`. En hast som gar i kopplet star inte still att transa —
+		och pa en uppsutten sitter redan nagon. ]]
+	if LedService.ledsAv(m) ~= nil then return false, "tack.leds_nu" end
+	local session = HorseService.sessionFor(m)
+	if session ~= nil and session.rider ~= nil then
+		return false, "tack.rids_nu"
+	end
+
+	--[[ FEL TRANS SKA GA ATT GORA, precis som fel sadel. `satPa` bar bade
+		nejet (`tack.fel_trans`) och felraknaren, och returnerar innan
+		nagon del byggs. ]]
+	if bar ~= hastId then
+		return TackService.satPa(player, m, "trans", bar, m)
+	end
+
+	local okT, skalT = TackService.satPa(player, m, "trans", bar, m)
+	if not okT then return false, skalT end
+
+	--[[ OCH VARLDEN AR SANNINGEN. Samma onabara forsvarsrad som sadelns,
+		med samma precedens i momentflodet — och har bar den dessutom
+		TYGLARNA: ett trans utan tyglar ar inte det tillstand spelet
+		pastar, och `leda` forutsatter dem. ]]
+	if not (TackService.harTack(m, "trans") and TackService.harTack(m, "tygel")) then
+		pcall(function() TackRigg.taAv(m, "tygel") end)
+		pcall(function() TackRigg.taAv(m, "trans") end)
+		pcall(function() TackService.satBuren(player, "trans", hastId) end)
+		return false, "tack.kunde_inte_byggas"
+	end
+
+	GameplayService.slappAgande("trans", hastId)
+	skicka(player)
+	return true, "tack.pa_plats"
+end
+
 --[[ Svaret på ett fynd. Rätt svar stoppar arbetet, sparar hästens vila och
 	räknar passet — spelaren gjorde precis det momentet lär ut, och ska inte
 	förlora dagen på det. ]]
@@ -1251,6 +1317,11 @@ function GameplayService.start()
 		avsikt, servern svarar med hela sanningen. ]]
 	Net.get("SadlaHast").OnServerInvoke = function(player, modell)
 		return GameplayService.sadla(player, modell)
+	end
+
+	--[[ #235 FAS 3: samma monster, en annan typ. ]]
+	Net.get("TransaHast").OnServerInvoke = function(player, modell)
+		return GameplayService.transa(player, modell)
 	end
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────

@@ -59,7 +59,8 @@ local function promptar(modell)
 	local ut = {}
 	for _, d in ipairs(modell:GetDescendants()) do
 		if d.Name == "MountPrompt" or d.Name == "LedPrompt"
-		or d.Name == "RidaNuPrompt" or d.Name == "SadlaPrompt" then
+		or d.Name == "RidaNuPrompt" or d.Name == "SadlaPrompt"
+		or d.Name == "TransaPrompt" then
 			ut[d.Name] = d
 		end
 	end
@@ -75,6 +76,7 @@ Networking.get("LedSlapp")
 Networking.get("LedSync")
 --[[ #235 FAS 2: sadelknappens egen fjarr. ]]
 Networking.get("SadlaHast")
+Networking.get("TransaHast")
 RunService._server = false
 
 RSt:SetAttribute("G01Enabled", true)
@@ -82,6 +84,8 @@ IC.setReadyCheck(function() return true end)
 IC.setLedCheck(function() return true end)
 IC.setRidaCheck(function() return true end)
 IC.setSadlaCheck(function() return true end)
+--[[ #235 FAS 3: transets knapp. Vaxlas i sitt eget avsnitt nedan. ]]
+IC.setTransaCheck(function() return true end)
 
 --[[ Kvittenser och statusrad fångas här i stället för att gå till HUD:en,
 	så att provet mäter VAD som skickas och inte hur det ritas. ]]
@@ -199,6 +203,64 @@ do
 			p.SadlaPrompt.GamepadKeyCode == IC.GAMEPAD.SadlaPrompt,
 			tostring(p.SadlaPrompt.GamepadKeyCode))
 	end
+end
+
+print("\n── Den femte knappen: «Tränsa» delar plats med «Sadla» (#235 FAS 3) ──")
+
+do
+	--[[ DE TVÅ DELAR RAD OCH KNAPP, och det är inte slarv utan kanon:
+		tränset kräver att hon är sadlad, och sadelknappen finns bara så
+		länge hon är osadlad.
+
+		DEN REGELN ÄGS AV SERVERN och mäts i `tack-fas3.spec` («Tränsa»
+		nekas på en osadlad häst med `tack.sadeln_forst`). Det här provet
+		mäter den andra halvan: att controllern verkligen bygger EN knapp
+		i taget när bara en av frågorna svarar ja. Två knappar på samma
+		rad med samma tangent vore annars precis det #182 rapporterade. ]]
+	check("de två bär samma handkontrollsknapp",
+		IC.GAMEPAD.TransaPrompt == IC.GAMEPAD.SadlaPrompt,
+		("%s vs %s"):format(tostring(IC.GAMEPAD.SadlaPrompt),
+			tostring(IC.GAMEPAD.TransaPrompt)))
+
+	local delad = nyHast("delad", "Delad")
+
+	--[[ BARA SADELN. ]]
+	IC.setTransaCheck(function() return false end)
+	IC.uppdatera()
+	local pA = promptar(delad)
+	check("när bara sadelfrågan svarar ja finns BARA sadelknappen",
+		pA.SadlaPrompt ~= nil and pA.TransaPrompt == nil,
+		("sadla %s · transa %s"):format(tostring(pA.SadlaPrompt ~= nil),
+			tostring(pA.TransaPrompt ~= nil)))
+
+	--[[ BARA TRÄNSET. ]]
+	IC.setSadlaCheck(function() return false end)
+	IC.setTransaCheck(function() return true end)
+	IC.uppdatera()
+	local pB = promptar(delad)
+	check("och tvärtom när bara tränsfrågan svarar ja",
+		pB.TransaPrompt ~= nil and pB.SadlaPrompt == nil,
+		("sadla %s · transa %s"):format(tostring(pB.SadlaPrompt ~= nil),
+			tostring(pB.TransaPrompt ~= nil)))
+
+	if pB.TransaPrompt then
+		check("tränsknappen bär hästens namn i handlingen",
+			pB.TransaPrompt.ActionText:find("Delad") ~= nil,
+			pB.TransaPrompt.ActionText)
+		check("den går att trycka på med ett finger",
+			pB.TransaPrompt.ClickablePrompt == true)
+		check("tangenten är F, samma som sadelknappens",
+			pB.TransaPrompt.KeyboardKeyCode == Enum.KeyCode.F,
+			tostring(pB.TransaPrompt.KeyboardKeyCode))
+		check("och den ligger på sadelknappens rad",
+			p.SadlaPrompt ~= nil
+				and pB.TransaPrompt.UIOffset.Y == p.SadlaPrompt.UIOffset.Y,
+			("%d vs %s"):format(pB.TransaPrompt.UIOffset.Y,
+				tostring(p.SadlaPrompt and p.SadlaPrompt.UIOffset.Y)))
+	end
+
+	IC.setSadlaCheck(function() return true end)
+	IC.uppdatera()
 end
 
 print("\n── Tangent, finger och handkontroll ──")
@@ -534,6 +596,7 @@ do
 		{ "rida nu", IC.GAMEPAD.RidaNuPrompt },
 		{ "led", IC.GAMEPAD.LedPrompt },
 		{ "sadla", IC.GAMEPAD.SadlaPrompt },
+		{ "transa", IC.GAMEPAD.TransaPrompt },
 	}
 
 	local iRidningen = {}
@@ -606,7 +669,8 @@ do
 		delningen vilar pa att `setEnabled` slacker ocksa den — annars
 		vore «Sadla» och «lektionen vidare» samma tryck i sadeln. Den
 		har listan ar darfor fyra namn, inte tre. ]]
-	local TRE = { "MountPrompt", "RidaNuPrompt", "LedPrompt", "SadlaPrompt" }
+	local TRE = { "MountPrompt", "RidaNuPrompt", "LedPrompt", "SadlaPrompt",
+		"TransaPrompt" }
 	local pMin = promptar(hast)
 	local kvarPa = {}
 	for _, namn in ipairs(TRE) do
@@ -616,7 +680,7 @@ do
 			table.insert(kvarPa, namn)
 		end
 	end
-	check("i sadeln är ALLA fyra knapparna på hästen avstängda", #kvarPa == 0,
+	check("i sadeln är ALLA FEM knapparna på hästen avstängda", #kvarPa == 0,
 		table.concat(kvarPa, " "))
 
 	--[[ …också de som byggs MEDAN hon rider. `uppdatera()` körs under
@@ -646,7 +710,7 @@ do
 			table.insert(slacktaEfter, namn)
 		end
 	end
-	check("och alla fyra tänds igen när spelaren sitter av", #slacktaEfter == 0,
+	check("och alla fem tänds igen när spelaren sitter av", #slacktaEfter == 0,
 		table.concat(slacktaEfter, " "))
 
 	LC.fortsatt, LC.replay = ursprung.fortsatt, ursprung.replay

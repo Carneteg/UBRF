@@ -125,16 +125,27 @@ do
 	check("sadeln är en egen grupp", sadelgrupp ~= nil)
 	check("tränset är en egen grupp", transgrupp ~= nil)
 
-	--[[ EN PROMPT, EN HANDLING. Fanns det två skulle FAS 1 och FAS 3 gå
-		att göra i samma tryck igen. ]]
+	--[[ EN PROMPT PER HANDLING — det är regeln, och den är oförändrad.
+
+		Fram till FAS 3 stod här «exakt EN prompt», eftersom tränset ännu
+		inte fått sin. Nu har det det, och kravet är därför exakt TVÅ: en
+		för sadeln och en för tränset. Det som aldrig får komma tillbaka
+		är den gamla prompten som hämtade HELA PARET i ett tryck — då gick
+		FAS 1 och FAS 3 att göra samtidigt, och ingen av dem gick att
+		falsifiera för sig.
+
+		Att de två inte krockar med varandra på tangent och handkontroll
+		mäts i `tack-fas3.spec`. ]]
 	local promptar = {}
 	if modell then
 		for _, d in ipairs(modell:GetDescendants()) do
 			if d:IsA("ProximityPrompt") then table.insert(promptar, d.Name) end
 		end
 	end
-	check("det finns exakt EN prompt på fronten — tränsets kommer i FAS 3",
-		#promptar == 1 and promptar[1] == "SadelPrompt",
+	table.sort(promptar)
+	check("det finns exakt TVÅ prompter på fronten — en per handling",
+		#promptar == 2 and promptar[1] == "SadelPrompt"
+			and promptar[2] == "TransPrompt",
 		table.concat(promptar, ", "))
 end
 

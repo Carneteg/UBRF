@@ -640,7 +640,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ FORE den bredare "tack"-grenen: strangen "tack-fas1" INNEHALLER
     #   "tack", och hamnade annars i integrationsbanken utan varld. Samma
     #   genomfallning som noten om "spelbarhet" varnar for. ]]
-    elif "tack-fas1" in spec_rel or "tack-fas2" in spec_rel:
+    elif "tack-fas1" in spec_rel or "tack-fas2" in spec_rel or "tack-fas3" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "tack" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"

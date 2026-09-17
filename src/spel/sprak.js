@@ -302,6 +302,12 @@ const SPRAK = {
      FAS 3 — tills dess hanger det kvar utan prompt, avsiktligt. */
   "tack.ta_sadeln": { sv: "Ta sadeln", en: "Take the saddle" },
   "tack.sadel_for": { sv: "%s sadel", en: "%s saddle" },
+  /* #235 FAS 3: transet far sin egen hamtning och sin egen pasattning,
+     samma state-machine som sadeln. */
+  "tack.ta_transet": { sv: "Ta tränset", en: "Take the bridle" },
+  "tack.trans_for": { sv: "%s träns", en: "%s bridle" },
+  "tack.bar_inget_trans": { sv: "Du bär inget träns — hämta hennes på boxfronten först",
+    en: "You are not carrying a bridle — fetch hers from the stall front first" },
   "tack.redan_tagen": { sv: "Någon annan bär den redan",
     en: "Someone else is already carrying it" },
   /* FAIL-CLOSED (#235 review). Servern far aldrig slappa igenom en
@@ -457,6 +463,10 @@ const SPRAK = {
      handlingen, samma beslut som `led.borja_namn` i #182 — fyra knappar
      pa samma hast far aldrig kalla henne olika saker. */
   "interaktion.sadla_namn": { sv: "Sadla %s", en: "Saddle %s" },
+  /* #235 FAS 3. Kanon lagger transet SIST, sa knappen finns forst nar
+     hon ar sadlad — och da ar sadelknappen borta. De tva delar darfor
+     plats och tangent utan att nagonsin kunna vara uppe samtidigt. */
+  "interaktion.transa_namn": { sv: "Tränsa %s", en: "Bridle %s" },
   "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
   "touch.skritt": { sv: "SKRITT", en: "WALK" },
   "touch.trav": { sv: "TRAV", en: "TROT" },

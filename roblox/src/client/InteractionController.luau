@@ -31,6 +31,9 @@ local ridaCheck: ((Model) -> boolean)? = nil
 	en fråga utåt om den får ritas. ]]
 local sadlaKnappar: { [Model]: ProximityPrompt } = {}
 local sadlaCheck: ((Model) -> boolean)? = nil
+--[[ #235 FAS 3: transets knapp. Egen tabell, samma monster. ]]
+local transaKnappar: { [Model]: ProximityPrompt } = {}
+local transaCheck: ((Model) -> boolean)? = nil
 local onMount: ((Model) -> ())? = nil
 
 --[[ ══ TRE KNAPPAR PÅ SAMMA HÄST FÅR INTE LIGGA PÅ VARANDRA (#182) ═════
@@ -90,7 +93,7 @@ end
 	uppsittningen overst, genvagen dit i mitten, den frivilliga omsorgen
 	underst. Se noten vid `PROMPT_STEG`. ]]
 local PROMPT_RAD = { MountPrompt = -1, RidaNuPrompt = 0, LedPrompt = 1,
-	SadlaPrompt = 2 }
+	SadlaPrompt = 2, TransaPrompt = 2 }
 
 --[[ ══ HANDKONTROLLEN: EN PLATS, MOT HELA KONTROLLMATRISEN ═══════════════
 
@@ -167,6 +170,16 @@ InteractionController.GAMEPAD = {
 		faller om nagot svarar i fel lage. Det var just den matningen
 		som saknades nar ButtonX/Y/B forsta gangen valdes fel. ]]
 	SadlaPrompt = Enum.KeyCode.ButtonY,
+	--[[ #235 FAS 3: SAMMA plats och SAMMA knapp som sadelknappen, och
+		det ar inte slarv utan kanon. Transet kommer SIST: `satPa` nekar
+		det pa en osadlad hast, och sadelknappen finns bara sa lange
+		hon ar osadlad. De tva kan darfor aldrig vara uppe samtidigt —
+		och provet mater just det i stallet for att lita pa det.
+
+		Vinsten ar att kolumnen stannar pa fyra rader i stallet for fem.
+		Pa en telefon i landskap ar det skillnaden mellan en lista och
+		en vagg. ]]
+	TransaPrompt = Enum.KeyCode.ButtonY,
 }
 
 --[[ ÄR PROMPTERNA UPPE? Ett fält, inte en engångsslinga.
@@ -639,6 +652,61 @@ function InteractionController.setSadlaCheck(fn: ((Model) -> boolean)?)
 	sadlaCheck = fn
 end
 
+--[[ ══ «TRANSA» (#235 FAS 3) ═══════════════════════════════════════
+
+	Samma regel som «Sadla», ett steg senare i kedjan: knappen finns
+	bara nar spelaren bar den har hastens trans, och forsvinner nar det
+	sitter pa huvudet. Servern prover fortfarande allt — ratt trans,
+	ratt hast, avstand, hastens tillstand och att sadeln ligger pa
+	forst. ]]
+local function addTransaPrompt(model: Model)
+	if transaKnappar[model] then return end
+	if not (transaCheck and transaCheck(model)) then return end
+	local rig = RigAdapter.build(model)
+	if not rig then return end
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "TransaPrompt"
+	prompt.ActionText = Sprak.t("interaktion.transa_namn", hastnamn(model))
+	prompt.ObjectText = hastnamn(model)
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.F
+	--[[ PA HUVUDET, inte pa ryggen: det ar dit transet ska. Faller
+		fastpunkten bort tar roten over sa att handlingen aldrig blir
+		onabar. ]]
+	prompt.Parent = rig.attachments.BridleAttachment or rig.attachments.Head or rig.root
+	stallIn(prompt)
+
+	prompt.Triggered:Connect(function()
+		local ok, skal = Net.get("TransaHast"):InvokeServer(model)
+		if ok then
+			if bekraftelseVisare then
+				bekraftelseVisare(skal or "tack.pa_plats", {
+					del = Sprak.t("tack.del_trans"),
+					hast = hastnamn(model),
+				})
+			end
+		elseif avslagVisare then
+			avslagVisare(skal)
+		end
+		InteractionController.uppdatera()
+	end)
+
+	transaKnappar[model] = prompt
+end
+
+local function removeTransa(model: Model)
+	local k = transaKnappar[model]
+	if k then k:Destroy() end
+	transaKnappar[model] = nil
+end
+
+function InteractionController.setTransaCheck(fn: ((Model) -> boolean)?)
+	transaCheck = fn
+end
+
 function InteractionController.uppdatera()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then
@@ -648,6 +716,8 @@ function InteractionController.uppdatera()
 			else removeRida(model) end
 			if sadlaCheck and sadlaCheck(model) then addSadlaPrompt(model)
 			else removeSadla(model) end
+			if transaCheck and transaCheck(model) then addTransaPrompt(model)
+			else removeTransa(model) end
 		end
 	end
 end
@@ -732,6 +802,7 @@ function InteractionController.setEnabled(enabled: boolean)
 		`ButtonY` hade da varit bade «Sadla» och «lektionen vidare»
 		samtidigt. Kontextregeln vid `GAMEPAD` vilar pa den har raden. ]]
 	for _, prompt in sadlaKnappar do prompt.Enabled = enabled end
+	for _, prompt in transaKnappar do prompt.Enabled = enabled end
 end
 
 return InteractionController
