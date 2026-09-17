@@ -665,6 +665,13 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   sadla. INTEGRATION ar FORBEREDELSE plus riggen, sa inget tappas. ]]
     elif "skotselpass" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ Kontraktsgrinden for DRIV/BROMS mater KEDJAN Input ->
+    #   MovementController -> TouchControls och behover darfor hela
+    #   klientbunten. Grenen star fore "klient" av ren tydlighet: namnet
+    #   innehaller inte strangen, och en lasare ska inte behova rakna ut
+    #   vilken bunt den hamnar i. ]]
+    elif "driv-broms" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "klient" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:

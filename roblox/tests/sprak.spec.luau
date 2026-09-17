@@ -73,9 +73,12 @@ do
 		måste motiveras här. Regeln behåller därmed sin kraft — en
 		oöversatt sträng fastnar fortfarande — utan att tvinga fram en
 		SÄMRE engelsk text bara för att bli grön. ]]
-	local SAMMANFALLER: { [string]: string } = {
-		["touch.halt"] = "halt är samma ord och samma ridterm på båda språken",
-	}
+	--[[ Listan är TOM sedan 2026-09-17. `touch.halt` var dess enda post,
+	     och den knappen finns inte längre — gångarten väljs med DRIV och
+	     BROMS, vars etiketter ("DRIV"/"GO", "BROMS"/"SLOW") är riktiga
+	     översättningar. En tom lista är starkast möjliga läge för regeln:
+	     varje sammanfallande sträng är nu ett fynd. ]]
+	local SAMMANFALLER: { [string]: string } = {}
 	local samma = {}
 	for _, nyckel in ipairs(nycklar) do
 		if Sprak.iSprak("sv", nyckel) == Sprak.iSprak("en", nyckel)

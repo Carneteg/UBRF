@@ -163,11 +163,13 @@ const SPRAK = {
   "hjalp.styrkors_hoger": { sv: "Styrkors höger", en: "D-pad right" },
   "hjalp.namnlos_knapp": { sv: "(namnlös knapp: %s)", en: "(unnamed button: %s)" },
   "hjalp.sitt_upp_av": { sv: "Sitt upp / sitt av", en: "Mount / dismount" },
-  "hjalp.framat_bakat": { sv: "Framåt / bakåt", en: "Forward / back" },
   "hjalp.vanster_hoger": { sv: "Vänster / höger", en: "Left / right" },
   "hjalp.vanster_spak": { sv: "Vänster spak", en: "Left stick" },
-  "hjalp.hogre_gangart": { sv: "Högre gångart", en: "Faster gait" },
-  "hjalp.lagre_gangart": { sv: "Lägre gångart", en: "Slower gait" },
+  "hjalp.hogre_gangart": { sv: "Ett steg upp i gångarterna", en: "One step up the gaits" },
+  /* "ett steg ned" och inte "lagre gangart": ur halt ar steget RYGGA,
+     och en hjalptext som lovar en langsammare gangart hade varit fel
+     precis dar spelaren behover den mest. */
+  "hjalp.lagre_gangart": { sv: "Ett steg ned — ur halt: rygga", en: "One step down — from halt: back up" },
   "hjalp.tygel": { sv: "Tygel (kontakt)", en: "Rein (contact)" },
   "hjalp.djupare_sits": { sv: "Djupare sits", en: "Deeper seat" },
   "hjalp.denna_hjalp": { sv: "Den här hjälpen", en: "This help" },
@@ -182,13 +184,12 @@ const SPRAK = {
   /* ── Pekknapparnas EGNA etiketter (TouchControls) ──────────────────
      Versalerna hör till knappen: de är små ytor på en telefonskärm och
      läses i förbifarten. Samma form i båda språken. */
+  /* SITT AV ar kvar nar de ovriga touch-etiketterna forsvann med panelen:
+     den ar inget reglage utan enda vagen AV hasten pa en ren pekenhet
+     (#162 blockerare 2). Den ar numera en ContextActionService-handling. */
   "touch.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
-  "touch.hoppa": { sv: "HOPP", en: "JUMP" },
   "touch.lugnare": { sv: "▼ LUGNARE", en: "▼ SLOWER" },
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
-  "touch.tygel": { sv: "TYGEL", en: "REIN" },
-  "touch.halvhalt": { sv: "HALVHALT", en: "HALF-HALT" },
-  "touch.djup_sits": { sv: "DJUP SITS", en: "DEEP SEAT" },
 
   /* ── Ugneta, ridläraren ────────────────────────────────────────────── */
   "ugneta.rubrik": { sv: "UGNETA · RIDINSTRUKTÖR", en: "UGNETA · RIDING INSTRUCTOR" },
@@ -472,12 +473,16 @@ const SPRAK = {
      plats och tangent utan att nagonsin kunna vara uppe samtidigt. */
   "interaktion.transa_namn": { sv: "Tränsa %s", en: "Bridle %s" },
   "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
-  "touch.skritt": { sv: "SKRITT", en: "WALK" },
-  "touch.trav": { sv: "TRAV", en: "TROT" },
-  "touch.galopp": { sv: "GALOPP", en: "CANTER" },
-  "touch.sakta": { sv: "SAKTA", en: "SLOWER" },
-  "touch.halt": { sv: "HALT", en: "HALT" },
-  "touch.gangartsknappar": { sv: "Gångartsknapparna", en: "The gait buttons" },
+  /* DRIV och BROMS ersatter de fem namngivna gangartsknapparna
+     (arkitekturbeslut 2026-09-17). Etiketterna ar VERSALER darfor att de
+     star pa en ContextActionService-knapp som ar 86 px i kvadrat: ett ord
+     i taget, last pa en armlangds avstand, mitt i en volt.
+
+     "DRIV" ar ridtermen for framatdrivande hjalp och "BROMS" ar det ord en
+     nyborjare faktiskt tanker. Att blanda ar med flit: knappen ska laras
+     in av den som aldrig ridit och kannas ratt for den som gjort det. */
+  "touch.driv": { sv: "DRIV", en: "GO" },
+  "touch.broms": { sv: "BROMS", en: "SLOW" },
   "touch.blickytan": { sv: "Dra på högra halvan", en: "Drag on the right half" },
   "stall.din_hast": { sv: "DIN HÄST", en: "YOUR HORSE" },
   "stall.idag_rider_du": { sv: "Idag rider du %s.", en: "Today you ride %s." },

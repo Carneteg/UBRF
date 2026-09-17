@@ -671,10 +671,58 @@ local __services = {
 			return Vector2.new(0, 36), Vector2.new(0, 0)
 		end,
 	},
+	--[[ CAS-stubben bar forut bara handlaren. Efter arkitekturbeslutet
+	     2026-09-17 ar tjansten sjalva reglaget: `createTouchButton`
+	     avgor OM en pekknapp finns, `SetTitle`/`SetPosition` VAR och VAD
+	     den sager, och `GetButton` ar enda vagen at storlek och
+	     genomskinlighet. En stubb som slanger bort allt utom handlaren
+	     kan inte mata nagot av det — och da gar kontraktets fyra grindar
+	     inte att prova alls.
+
+	     `_knapp` skapas BARA nar `createTouchButton` ar sant, precis som
+	     i Roblox. Det ar den detaljen som gor "ritas knappen?" till en
+	     riktig matning i stallet for ett antagande. ]]
 	ContextActionService = {
 		_bound = {},
-		BindAction = function(self, namn, fn) self._bound[namn] = fn end,
-		UnbindAction = function(self, namn) self._bound[namn] = nil end,
+		_knappar = {},
+		_titel = {},
+		_plats = {},
+		BindAction = function(self, namn, fn, pekknapp, ...)
+			self._bound[namn] = fn
+			self._knappar[namn] = nil
+			if pekknapp then
+				--[[ Knappen far en RIKTIG foralder, som i Roblox: CAS lagger
+				     sina pekknappar i en egen `ContextActionGui` under
+				     PlayerGui. Utan foraldern gick vakten mot `ModalEnabled`
+				     i `TouchControls` inte att mata — den letar uppat efter
+				     ytan och hade alltid hittat nil. ]]
+				local Pl = game:GetService("Players")
+				local spelare = Pl and rawget(Pl, "LocalPlayer")
+				local mapp = spelare and spelare:FindFirstChildOfClass("PlayerGui")
+				local yta = mapp and mapp:FindFirstChild("ContextActionGui")
+				if mapp and not yta then
+					yta = Instance.new("ScreenGui")
+					yta.Name = "ContextActionGui"
+					yta.Parent = mapp
+				end
+				local b = Instance.new("ImageButton")
+				b.Name = "ContextActionButton"
+				rawset(b, "_cas", namn)
+				b.Parent = yta
+				self._knappar[namn] = b
+			end
+			self._bound[namn .. "@tangenter"] = { ... }
+		end,
+		UnbindAction = function(self, namn)
+			self._bound[namn] = nil
+			self._bound[namn .. "@tangenter"] = nil
+			self._knappar[namn] = nil
+			self._titel[namn] = nil
+			self._plats[namn] = nil
+		end,
+		SetTitle = function(self, namn, titel) self._titel[namn] = titel end,
+		SetPosition = function(self, namn, plats) self._plats[namn] = plats end,
+		GetButton = function(self, namn) return self._knappar[namn] end,
 	},
 	TweenService = { Create = function() return { Play = function() end } end },
 	Debris = { AddItem = function() end },
@@ -1092,6 +1140,19 @@ local function __nyInstans(klass)
 	--[[ `IsA` svarar bara på den egna klassen och de få basklasser koden
 	     faktiskt frågar efter. Ingen full arvshierarki: en mock som svarar
 	     ja på allt hade gjort varje IsA-grind meningslös. ]]
+	--[[ `FindFirstAncestorWhichIsA` saknades. `TouchControls` anvander den
+	     for att kontrollera att `ContextActionService` egen yta ar tand
+	     innan den lamnar over kontrollen — se vakten mot `ModalEnabled`
+	     dar. Utan metoden i stubben kraschade klientbanken i stallet for
+	     att mata vakten. ]]
+	function inst:FindFirstAncestorWhichIsA(klassnamn)
+		local f = self.Parent
+		while f do
+			if f.IsA and f:IsA(klassnamn) then return f end
+			f = f.Parent
+		end
+		return nil
+	end
 	function inst:IsA(klassnamn)
 		if klassnamn == self.ClassName then return true end
 		if klassnamn == "BasePart" then
@@ -1582,13 +1643,41 @@ function __setStick(x, y)
 	usv._pad = { { KeyCode = Enum.KeyCode.Thumbstick1, Position = vec(x, y, 0) } }
 end
 
---[[ Skickar en tangenthändelse genom den bindning Input.bind() la upp. ]]
+--[[ Skickar en tangenthändelse genom den bindning som FAKTISKT äger
+     tangenten.
+
+     Hjälparen slog förut alltid i `HorseControl`. Efter att DRIV och
+     BROMS blev egna handlingar hade det gjort varje mätning av dem grön
+     av fel skäl: `HorseControl` sinkar allt den får och hade svalt W utan
+     att någon trappa rörts. Nu slås tangenten upp i den lista
+     `BindAction` sparade, alltså samma väg som Roblox väljer handling. ]]
 function __key(kod, nere)
-	local fn = game:GetService("ContextActionService")._bound.HorseControl
-	if not fn then return end
-	fn("HorseControl",
-		if nere then Enum.UserInputState.Begin else Enum.UserInputState.End,
-		{ KeyCode = kod })
+	local cas = game:GetService("ContextActionService")
+	local lage = if nere then Enum.UserInputState.Begin else Enum.UserInputState.End
+	for namn, fn in pairs(cas._bound) do
+		if type(fn) == "function" then
+			local tangenter = cas._bound[namn .. "@tangenter"]
+			if tangenter then
+				for _, t in ipairs(tangenter) do
+					if t == kod then
+						fn(namn, lage, { KeyCode = kod })
+						return true
+					end
+				end
+			end
+		end
+	end
+	return false
+end
+
+--[[ Trycker DRIV eller BROMS genom CAS, alltså exakt spelarens väg, och
+     svarar om impulsen gick in eller slukades av spärren. ]]
+function __handling(namn)
+	local cas = game:GetService("ContextActionService")
+	local fn = cas._bound[namn]
+	if not fn then return false end
+	fn(namn, Enum.UserInputState.Begin, { KeyCode = Enum.KeyCode.Unknown })
+	return true
 end
 
 --[[ `spawn` kör SYNKRONT i bänken. Det är med flit: provet ska kunna mäta

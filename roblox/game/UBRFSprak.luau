@@ -333,10 +333,6 @@ Sprak.text = {
 		sv = "Sitt upp / sitt av",
 		en = "Mount / dismount",
 	},
-	["hjalp.framat_bakat"] = {
-		sv = "Framåt / bakåt",
-		en = "Forward / back",
-	},
 	["hjalp.vanster_hoger"] = {
 		sv = "Vänster / höger",
 		en = "Left / right",
@@ -346,12 +342,12 @@ Sprak.text = {
 		en = "Left stick",
 	},
 	["hjalp.hogre_gangart"] = {
-		sv = "Högre gångart",
-		en = "Faster gait",
+		sv = "Ett steg upp i gångarterna",
+		en = "One step up the gaits",
 	},
 	["hjalp.lagre_gangart"] = {
-		sv = "Lägre gångart",
-		en = "Slower gait",
+		sv = "Ett steg ned — ur halt: rygga",
+		en = "One step down — from halt: back up",
 	},
 	["hjalp.tygel"] = {
 		sv = "Tygel (kontakt)",
@@ -397,10 +393,6 @@ Sprak.text = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
 	},
-	["touch.hoppa"] = {
-		sv = "HOPP",
-		en = "JUMP",
-	},
 	["touch.lugnare"] = {
 		sv = "▼ LUGNARE",
 		en = "▼ SLOWER",
@@ -408,18 +400,6 @@ Sprak.text = {
 	["touch.framat"] = {
 		sv = "▲ FRAMÅT",
 		en = "▲ FORWARD",
-	},
-	["touch.tygel"] = {
-		sv = "TYGEL",
-		en = "REIN",
-	},
-	["touch.halvhalt"] = {
-		sv = "HALVHALT",
-		en = "HALF-HALT",
-	},
-	["touch.djup_sits"] = {
-		sv = "DJUP SITS",
-		en = "DEEP SEAT",
 	},
 	["ugneta.rubrik"] = {
 		sv = "UGNETA · RIDINSTRUKTÖR",
@@ -881,29 +861,13 @@ Sprak.text = {
 		sv = "Se dig omkring",
 		en = "Look around",
 	},
-	["touch.skritt"] = {
-		sv = "SKRITT",
-		en = "WALK",
+	["touch.driv"] = {
+		sv = "DRIV",
+		en = "GO",
 	},
-	["touch.trav"] = {
-		sv = "TRAV",
-		en = "TROT",
-	},
-	["touch.galopp"] = {
-		sv = "GALOPP",
-		en = "CANTER",
-	},
-	["touch.sakta"] = {
-		sv = "SAKTA",
-		en = "SLOWER",
-	},
-	["touch.halt"] = {
-		sv = "HALT",
-		en = "HALT",
-	},
-	["touch.gangartsknappar"] = {
-		sv = "Gångartsknapparna",
-		en = "The gait buttons",
+	["touch.broms"] = {
+		sv = "BROMS",
+		en = "SLOW",
 	},
 	["touch.blickytan"] = {
 		sv = "Dra på högra halvan",
