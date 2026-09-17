@@ -26,6 +26,7 @@ local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemet
 local Input = require(script.Input)
 local TouchControls = require(script.TouchControls)
 local DinHast = require(script.DinHast)
+local Naromrade = require(script.Naromrade)
 local MovementController = require(script.MovementController)
 --[[ HORSE_VISUAL_QUALITY_GATE: benen på de hästar som bär ett riktigt nät
      drivs procedurellt härifrån. Modulen rör bara `Motor6D.Transform`,
@@ -101,6 +102,8 @@ local function dismount()
 	--[[ Skylten svarar på "vilken av dem?". Den frågan är inte aktuell
 		medan man sitter på henne. ]]
 	DinHast.satDold(false)
+	--[[ #235: till fots agar naromradet skarmen igen. ]]
+	Naromrade.satRider(false)
 	ride = nil
 end
 
@@ -198,6 +201,8 @@ local function mount(model: Model)
 	})
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
+	--[[ #235: medan man rider ager `TouchControls` skarmen. ]]
+	Naromrade.satRider(true)
 	Debug.attach(rig, stats)
 
 	--[[ G02-C: lektionen börjar när man sitter upp i ridhuset. Ugneta
@@ -288,8 +293,19 @@ end)
 PreparationController.vidNyVy(function()
 	InteractionController.uppdatera()
 end)
+--[[ #182: den beständiga statusraden för buren utrustning. Driven av
+     SERVERNS vy och inte av boxfrontens knapptryck, av exakt samma skäl
+     som ledningens rad lyssnar på `LedSync`: hämtningen kan ändras av
+     något annat än det senaste trycket — «Rida nu» hämtar också, och
+     varje påsatt del släcker sin egen del av raden — och två vägar in
+     hade kunnat glida isär. ]]
+PreparationController.vidNyVy(function(vy: any)
+	DinHast.satBurenstatus(if type(vy) == "table" then vy.burenUtrustning else nil)
+end)
 PreparationController.start()
 DinHast.start()
+--[[ #235: den gemensamma touchytan. Returnerar direkt utan pekskarm. ]]
+Naromrade.start()
 --[[ P0-3: HUD:ens KONTEXT stegas av sin egen loop, inte av ridloopen längst
      ned — den återvänder direkt när man inte rider, och det är precis då
      frågan "står jag vid min häst?" spelar roll. Heartbeat räcker: det är

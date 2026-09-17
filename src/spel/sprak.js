@@ -48,6 +48,10 @@ const SPRAK = {
   "stall.titta_in": { sv: "Titta in", en: "Look in" },
   "stall.star_har": { sv: "%s står här", en: "%s is in here" },
   "interaktion.sitt_upp": { sv: "Sitt upp", en: "Mount" },
+  /* NAROMRADETS reservetikett (#235). En prompt utan egen ActionText
+     ska anda ga att trycka pa; raden far da det neutrala ordet i
+     stallet for en tom knapp. */
+  "interaktion.anvand": { sv: "Anvand", en: "Use" },
   "interaktion.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
 
   /* Utrustningsstegets namn är en RÄKNARE, inte kanon: "Utrustning 2/4"
@@ -297,6 +301,32 @@ const SPRAK = {
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },
+
+  /* VAD SPELAREN BÄR MELLAN BOXFRONTEN OCH HÄSTEN (#182).
+
+     Hämtningen var enbart en tabellskrivning på servern: ingenting på
+     skärmen och ingenting i världen sa att spelaren gick omkring med en
+     sadel. Raden är avsiktligt en STATUS och inte en kvittens — den ska
+     stå kvar så länge utrustningen bärs, inte blinka förbi.
+
+     Hästens namn är ett egennamn och översätts aldrig. Genitivet skrivs
+     som `%ss` av samma skäl som i `tack.utrustning_for` ovan. */
+  "tack.bar_par": { sv: "Du bär %ss sadel och träns",
+    en: "You are carrying %s's saddle and bridle" },
+  "tack.bar_sadel": { sv: "Du bär %ss sadel", en: "You are carrying %s's saddle" },
+  "tack.bar_trans": { sv: "Du bär %ss träns", en: "You are carrying %s's bridle" },
+
+  /* KVITTENSEN NÄR EN DEL FAKTISKT KOM PÅ HÄSTEN (#182).
+
+     "Bra" sa varken vad som hände eller med vilken häst. Delens namn är
+     en egen nyckel därför att SERVERN vet vilket utrustningssteg som ger
+     vilken del — klienten ska inte räkna ut den kopplingen en gång till
+     — medan språket är klientens. Servern skickar alltså nycklarna, inte
+     färdig text. */
+  "tack.del_underlagg": { sv: "Underlägget", en: "The numnah" },
+  "tack.del_sadel": { sv: "Sadeln", en: "The saddle" },
+  "tack.del_trans": { sv: "Tränset", en: "The bridle" },
+  "tack.pa_plats": { sv: "%s sitter på %s", en: "%s is on %s" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 

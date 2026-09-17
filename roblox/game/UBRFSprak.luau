@@ -37,6 +37,10 @@ Sprak.text = {
 		sv = "Sitt upp",
 		en = "Mount",
 	},
+	["interaktion.anvand"] = {
+		sv = "Anvand",
+		en = "Use",
+	},
 	["interaktion.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",
@@ -624,6 +628,34 @@ Sprak.text = {
 	["tack.hamta_forst"] = {
 		sv = "Sadel och träns hänger på boxfronten — hämta dem först",
 		en = "Saddle and bridle hang on the stall front — fetch them first",
+	},
+	["tack.bar_par"] = {
+		sv = "Du bär %ss sadel och träns",
+		en = "You are carrying %s's saddle and bridle",
+	},
+	["tack.bar_sadel"] = {
+		sv = "Du bär %ss sadel",
+		en = "You are carrying %s's saddle",
+	},
+	["tack.bar_trans"] = {
+		sv = "Du bär %ss träns",
+		en = "You are carrying %s's bridle",
+	},
+	["tack.del_underlagg"] = {
+		sv = "Underlägget",
+		en = "The numnah",
+	},
+	["tack.del_sadel"] = {
+		sv = "Sadeln",
+		en = "The saddle",
+	},
+	["tack.del_trans"] = {
+		sv = "Tränset",
+		en = "The bridle",
+	},
+	["tack.pa_plats"] = {
+		sv = "%s sitter på %s",
+		en = "%s is on %s",
 	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",

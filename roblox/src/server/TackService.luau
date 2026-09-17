@@ -125,6 +125,65 @@ function TackService.ridklar(modell: Model): (boolean, string?)
 	return true
 end
 
+--[[ ── DET SPELAREN BÄR MELLAN BOXFRONTEN OCH HÄSTEN (#182) ───────────
+
+	Samma doktrin som resten av filen, och därför inget register: den
+	burna delen ligger i spelarens karaktär, och `barBuren()` läser den
+	där. Hämtningens VAL bor kvar i `GameplayService.valdUtrustning` —
+	det är serverns auktoritativa sanning om vilken hästs utrustning
+	spelaren tog — och delarna här är dess SYNLIGA form. Att låta dem
+	vara sanningen i stället hade gjort en riven del till en tyst
+	avhämtning.
+
+	Bara sadeln och tränset går att bära. Underlägget och tyglarna
+	hämtas i samma upphängning och följer sin bärande del, precis som
+	de gör när de sitter på hästen. ]]
+local BARBARA: { [string]: boolean } = { sadel = true, trans = true }
+
+local function karaktarFor(player: Player): Model?
+	local k = (player :: any).Character
+	if typeof(k) ~= "Instance" and type(k) ~= "table" then return nil end
+	if not (k and (k :: any).IsA and k:IsA("Model")) then return nil end
+	return k :: Model
+end
+
+--[[ Vilken hästs utrustning spelaren bär av den här typen, eller nil. ]]
+function TackService.barBuren(player: Player, typ: string): string?
+	local k = karaktarFor(player)
+	if not k then return nil end
+	local d = TackRigg.hittaBuren(k, typ)
+	if not d then return nil end
+	local id = tostring(d:GetAttribute("ForHast") or "")
+	return if id ~= "" then id else nil
+end
+
+--[[ Lägger utrustningen i spelarens händer. Samma id igen rör ingenting;
+	ett NYTT id byter ut delen, för då har spelaren gått tillbaka till en
+	annan boxfront och tagit en annan hästs sadel. ]]
+function TackService.satBuren(player: Player, typ: string, hastId: string?): boolean
+	if not BARBARA[typ] then return false end
+	local k = karaktarFor(player)
+	if not k then return false end
+	if type(hastId) ~= "string" or hastId == "" then return false end
+	if TackService.barBuren(player, typ) == hastId then return true end
+	TackRigg.slappBuren(k, typ)
+	return TackRigg.byggBuren(k, typ, hastId) ~= nil
+end
+
+function TackService.slappBuren(player: Player, typ: string): boolean
+	local k = karaktarFor(player)
+	if not k then return false end
+	return TackRigg.slappBuren(k, typ)
+end
+
+--[[ Allt ur händerna. Används när passet avslutas och när utrustningen
+	byts ut i klump. ]]
+function TackService.slappAllBuren(player: Player)
+	for typ in pairs(BARBARA) do
+		pcall(function() TackService.slappBuren(player, typ) end)
+	end
+end
+
 --[[ ── ATT SÄTTA PÅ ───────────────────────────────────────────────── ]]
 
 --[[ Felräknaren, webbens `G.felUtrustning`. Per spelare och pass. ]]
@@ -214,6 +273,18 @@ function TackService.satPa(player: Player, modell: Model?, typ: string,
 			pcall(function() TackRigg.taAv(m, "trans") end)
 			return false, "tack.kunde_inte_byggas"
 		end
+	end
+
+	--[[ DEN BURNA DELEN FLYTTAR TILL HÄSTEN (#182). Sadeln lämnar
+		händerna när den läggs på ryggen, tränset när det sitter på
+		huvudet. SIST, av samma skäl som bygget ligger sist: släpptes
+		den innan delen var på plats hade ett misslyckat bygge lämnat
+		spelaren tomhänt med en osadlad häst.
+
+		Underlägget släpper INTE sadeln — det ligger under henne, och
+		spelaren bär sadeln vidare tills den är på. ]]
+	if BARBARA[typ] then
+		pcall(function() TackService.slappBuren(player, typ) end)
 	end
 	return true
 end

@@ -467,6 +467,9 @@ KLIENT = SPEL + [
     #   laggs till; produktionen hittar den via `script.DinHast`, banken
     #   maste fa den namngiven. Det ar ett hal i harnessen, inte i spelet. ]]
     ("DinHast",             "src/client/DinHast.luau"),
+    #[[ #235: den gemensamma touchytan. Som DinHast ovan maste den
+    #   namnges har - banken hittar den inte sjalv. ]]
+    ("Naromrade",           "src/client/Naromrade.luau"),
     ("Init",                "src/client/init.client.luau"),
 ]
 
@@ -601,7 +604,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ Ledningsspecen behover tjanstestacken: LedService och
     #   GameplayService. Samma bunt som integration. ]]
     #[[ Tackspecen behover riggen OCH tjansterna: den bygger en riktig
-    #   hast ur HastRigg och satter fysisk utrustning pa henne. ]]
+    #   hast ur HastRigg och satter fysisk utrustning pa henne.
+    #   `buren-tack.spec` (#182) fangas av samma gren och SKA gora det:
+    #   den mater utrustningen mellan boxfronten och hasten och behover
+    #   exakt samma bunt. `klient-burenstatus.spec` far daremot KLIENT
+    #   via "klient"-grenen langre ned — den mater HUD-raden, inte
+    #   tjansterna, och DinHast finns bara i klientbunten. ]]
     #[[ Hojdspecen bygger RIKTIGA riggar i tre storlekar och kor
     #   markkontaktens egen rakning; samma bunt som tackspecen. ]]
     #[[ #176: spelbygget. Samma varld som bygge.spec, men med QA-flaggan AV

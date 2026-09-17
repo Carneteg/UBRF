@@ -37,6 +37,7 @@ local dagens: any = nil
 local skylt: BillboardGui? = nil
 local hudGui: ScreenGui? = nil
 local hudRad: TextLabel? = nil
+local burenRad: TextLabel? = nil
 local loop: RBXScriptConnection? = nil
 local dold = false
 --[[ ── DEN BESTAENDE STATUSRADEN UNDER LEDNINGEN (#182) ──────────────
@@ -52,6 +53,25 @@ local dold = false
 
 	Ett falt, satt fran EN plats (`InteractionController.satLeder`). ]]
 local ledNamn: string? = nil
+--[[ ── DEN BESTÄENDE STATUSRADEN FÖR BUREN UTRUSTNING (#182) ─────────
+
+	Sadeln och tränset hämtas på boxfronten och läggs på hästen flera
+	moment senare. Däremellan sa ingenting på skärmen att spelaren gick
+	omkring med dem — och en kvittens räcker inte, den slocknar.
+
+	EGEN RAD OCH INTE LEDNINGENS. De två tillstånden kan stå samtidigt:
+	man kan mycket väl leda henne med tränset redan påsatt och sadeln
+	kvar i handen. Skrevs de i samma etikett hade det ena tyst målat över
+	det andra, vilket är exakt den klass av fel ledningens rad byggdes
+	för att rätta.
+
+	DEN ÄR DISKRET, med flit. Statusen är ett svar på "vad har jag med
+	mig", inte en uppmaning — den ligger under den första raden, i mindre
+	grad och svagare, och tar aldrig plats från instruktionen.
+
+	Fältet speglar SERVERNS vy (`vy.burenUtrustning`) och sätts från EN
+	plats, precis som `ledNamn`. ]]
+local burenText: string? = nil
 
 local FARG_GULD = Color3.fromRGB(214, 174, 60)
 local FARG_TEXT = Color3.fromRGB(236, 232, 222)
@@ -132,6 +152,72 @@ local function byggHud()
 	tak.Parent = l
 	l.TextScaled = true
 	hudRad = l
+
+	--[[ Den burna utrustningens rad, under den första. Mindre, svagare och
+		smalare — se noten vid `burenText`. Den byggs alltid, också när
+		spelaren inte bär något: en rad som skapas först vid behov hade
+		fött sig själv mitt i en bildruta, och då är ordningen mot resten
+		av HUD:en inte längre given. ]]
+	local b = Instance.new("TextLabel")
+	b.Name = "BurenRad"
+	b.AnchorPoint = Vector2.new(0, 0)
+	b.Position = UDim2.fromOffset(12, 44)
+	b.Size = UDim2.fromOffset(300, 22)
+	b.BackgroundColor3 = Color3.fromRGB(8, 10, 14)
+	b.BackgroundTransparency = 0.45
+	b.TextColor3 = FARG_TEXT
+	b.TextTransparency = 0.2
+	b.Font = Enum.Font.Gotham
+	b.TextSize = 12
+	b.TextXAlignment = Enum.TextXAlignment.Left
+	b.Text = ""
+	b.Visible = false
+	b.Parent = g
+	local bpad = Instance.new("UIPadding")
+	bpad.PaddingLeft = UDim.new(0, 10)
+	bpad.PaddingRight = UDim.new(0, 10)
+	bpad.Parent = b
+	local bc = Instance.new("UICorner")
+	bc.CornerRadius = UDim.new(0, 6)
+	bc.Parent = b
+	local btak = Instance.new("UITextSizeConstraint")
+	btak.MaxTextSize = 12
+	btak.MinTextSize = 8
+	btak.Parent = b
+	b.TextScaled = true
+	burenRad = b
+end
+
+--[[ Texten för en buren utrustning, eller nil. `buren` är serverns
+	`vy.burenUtrustning`: `{ hastnamn, delar = { "sadel", "trans" } }`.
+
+	Tre nycklar och inte en sammansättning: "sadel och träns" böjs olika
+	på olika språk, och en klient som limmar ihop två ord bygger en
+	översättning som katalogen inte kan se. ]]
+local function burenTextFor(buren: any): string?
+	if type(buren) ~= "table" then return nil end
+	local namn = buren.hastnamn
+	if type(namn) ~= "string" or namn == "" then return nil end
+	local har = {}
+	for _, typ in ipairs(buren.delar or {}) do har[tostring(typ)] = true end
+	if har.sadel and har.trans then return Sprak.t("tack.bar_par", namn) end
+	if har.sadel then return Sprak.t("tack.bar_sadel", namn) end
+	if har.trans then return Sprak.t("tack.bar_trans", namn) end
+	return nil
+end
+
+--[[ Skriver raden ur `burenText`. Under ritten är frågan besvarad — då
+	sitter utrustningen på hästen — så `dold` släcker den, precis som den
+	släcker skylten. ]]
+local function ritaBuren()
+	local rad = burenRad
+	if not rad then return end
+	if dold or not burenText then
+		rad.Visible = false
+		return
+	end
+	rad.Text = burenText
+	rad.Visible = true
 end
 
 local function byggSkylt(modell: Model)
@@ -262,9 +348,23 @@ function DinHast.satLedstatus(namn: string?)
 	end
 end
 
+--[[ `buren` = serverns `vy.burenUtrustning`, eller nil nar spelaren inte
+	bar nagot. Skriver raden direkt sa att den tands i samma bildruta som
+	hamtningen, i stallet for att vanta pa nasta `steg()`. ]]
+function DinHast.satBurenstatus(buren: any)
+	burenText = burenTextFor(buren)
+	ritaBuren()
+end
+
 --[[ Provets fonster in. ]]
 function DinHast._ledstatus(): string?
 	return ledNamn
+end
+
+function DinHast._burenstatus(): string?
+	local rad = burenRad
+	if not (rad and rad.Visible) then return nil end
+	return rad.Text
 end
 
 --[[ ── VARIFRÅN SVARET KOMMER ──────────────────────────────────────
@@ -327,6 +427,11 @@ function DinHast.start()
 		--[[ Fem gånger i sekunden räcker för ett avståndsmått. ]]
 		if sedan < 0.2 then return end
 		sedan = 0
+		--[[ FÖRE `lasAssignment`. Statusen om buren utrustning är sann
+			också innan riggen strömmat in — servern skickar den i
+			`waiting_model` av just det skälet — och raden hade annars
+			släckts av ett `return` som handlar om något helt annat. ]]
+		ritaBuren()
 		if not lasAssignment() then return end
 		if not skylt and dagens then
 			local m = hastModell(dagens.id)
@@ -341,6 +446,8 @@ function DinHast.stopp()
 	if skylt then skylt:Destroy(); skylt = nil end
 	if hudGui then hudGui:Destroy(); hudGui = nil end
 	hudRad = nil
+	burenRad = nil
+	burenText = nil
 	dagens = nil
 end
 

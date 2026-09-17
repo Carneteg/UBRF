@@ -377,6 +377,20 @@ workspace = {
 		for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 		return nil
 	end,
+	--[[ `GetChildren` SAKNADES, och hålet är samma klass som `ChildAdded`
+	     ovan (#180): ingen spec hade drivit `DinHast`s Heartbeat-loop, så
+	     svepet efter andra spelares boxmarkörer kördes aldrig i bänken.
+	     `klient-burenstatus.spec` kör den loopen — och dog direkt på
+	     "attempt to call missing method 'GetChildren' of table".
+
+	     Varje Instance i Roblox har den, och den returnerar en NY lista;
+	     att lämna ut `_barn` självt hade låtit en anropare mutera
+	     världen genom sitt eget svep. Harnessen, inte spelet. ]]
+	GetChildren = function(self)
+		local ut = {}
+		for _, b in ipairs(self._barn or {}) do table.insert(ut, b) end
+		return ut
+	end,
 	--[[ Genomsikt.start() sveper workspace efter genomsiktliga delar och
 	     lyssnar på nya. Bänken hade varken svepet eller signalen, så
 	     `start` gick inte att köra — och klientbänken kör hela
@@ -1136,8 +1150,47 @@ local function __nyInstans(klass)
 	     Utan den gick `DorrService.start()` inte att köra i den här
 	     banken, och därmed gick promptens TEXT inte att mäta. En grind
 	     som inte kan köra tjänsten kan inte se vad spelaren läser. ]]
+	--[[ `Attachment.WorldPosition` ar fastpunktens lage i VARLDEN, alltso
+	     vardelens lage plus fastpunktens egen forskjutning. Uppsittningens
+	     prompt hanger i sadelpunkten, och utan det har ar den osynlig for
+	     allt som letar prompter pa avstand (`Naromrade`, #235). ]]
+	if klass == "Attachment" then
+		inst.Position = Vector3.new(0, 0, 0)
+	end
 	if klass == "ProximityPrompt" then
 		inst.Triggered = __signal()
+		--[[ `Enabled` och `ClickablePrompt` ar TRUE som standard i Roblox.
+		     Stubben satte dem inte alls, och da laste varje prov `nil` —
+		     falskt. Produktionskod som filtrerar pa `p.Enabled`
+		     (`Naromrade`, #235) sallade darfor bort precis allt i banken
+		     medan den fungerade i spelet. En stubb som avviker fran API:et
+		     gor proven till matningar av stubben.
+		     Varden satts som VANLIGA falt och inte i `_p`: skuggtabellen
+		     lases bara tillbaka for nycklar i `__BEVAKADE`, sa ett varde
+		     dar hade varit osynligt — vilket var precis vad forsta
+		     rattelsen rakade gora. ]]
+		inst.Enabled = true
+		inst.ClickablePrompt = true
+		--[[ `InputHoldBegin`/`InputHoldEnd` ar spelarens EGEN vag in i en
+		     prompt: tangenten, handkontrollknappen och fingret gar alla
+		     genom dem, och `Triggered` fyrar nar hallet natt
+		     `HoldDuration`. `Naromrade` (#235) trycker samma vag for att
+		     inte bygga en parallell gameplayvag — utan de har metoderna
+		     gick just den vagen inte att mata.
+		     Ett hall som slapps for tidigt fyrar INTE, precis som i
+		     Roblox: det ar skillnaden mellan ett tryck och en angrad
+		     beroring. ]]
+		function inst:InputHoldBegin()
+			rawset(self, "_hallSedan", os.clock())
+		end
+		function inst:InputHoldEnd()
+			local start = rawget(self, "_hallSedan")
+			rawset(self, "_hallSedan", nil)
+			if start == nil then return end
+			local hold = self.HoldDuration or 0
+			if hold > 0 and (os.clock() - start) < hold then return end
+			self.Triggered:Fire()
+		end
 		--[[ Texterna satts i SKUGGTABELLEN, inte som rakt falt. Lua kallar
 		     `__newindex` bara nar nyckeln SAKNAS i tabellen: ett rawset har
 		     hade gjort varje senare skrivning osynlig for
@@ -1307,6 +1360,12 @@ local function __nyInstans(klass)
 			     (`GameplayService.avstandOk`, `HorseService.tryMount`)
 			     läser just `Position`, och en rigg som bara satt sin
 			     CFrame gav då nil. Samma härledning som byggstubbarna. ]]
+			if k == "WorldPosition" and rawget(t, "ClassName") == "Attachment" then
+				local f = rawget(t, "Parent")
+				local egen = rawget(t, "Position") or Vector3.new(0, 0, 0)
+				if f and f.Position then return f.Position + egen end
+				return egen
+			end
 			if k == "Position" then
 				local cf = rawget(t, "CFrame")
 				return cf and cf.Position or nil

@@ -40,6 +40,11 @@ local Pass = require(ReplicatedStorage.HorseCore.Pass)
      START-tabell som webben, inte ur en egen konstant. ]]
 local RidKanon = require(ReplicatedStorage.HorseCore.RidKanon)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
+--[[ Rosterns egennamn. Utrustningen kan tillhöra en ANNAN häst än den
+	spelaren rider — det är hela poängen med att man kan ta fel sadel — och
+	då räcker inte `StallService.hastFor`. Namnet slås upp i samma
+	genererade kanon som resten av spelet läser. ]]
+local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
 local Komplex = require(ReplicatedStorage.UBRFKomplex)
@@ -129,12 +134,35 @@ local function status(player: Player): string
 	return if Preparation.redo(s) then Preparation.STATUS.REDO else Preparation.STATUS.FORBEREDER
 end
 
+--[[ En hästs egennamn ur rostern. Okänt id ger nil, inte en gissning. ]]
+local function hastnamnFor(hastId: string?): string?
+	if type(hastId) ~= "string" or hastId == "" then return nil end
+	local h = Spel.hastar[hastId]
+	return if h and type(h.namn) == "string" then h.namn else nil
+end
+
+--[[ Vad spelaren BÄR just nu (#182). Regeln ligger i `Preparation.buren`
+	och är ren; den här funktionen gör det enda tjänsten äger — läser
+	VÄRLDEN för att svara på vad som redan ligger på hästen.
+
+	Ingen bunden modell betyder att ingenting kan sitta på: en hämtad
+	sadel är då fortfarande buren, och `waiting_model` ska inte släcka en
+	status som är sann. ]]
+local function burenFor(player: Player)
+	local modell = bunden[player]
+	local paHasten = {
+		sadel = modell ~= nil and TackService.sadlad(modell),
+		trans = modell ~= nil and TackService.transad(modell),
+	}
+	return Preparation.buren(valdUtrustning[player], paHasten, hastnamnFor)
+end
+
 local function vyFor(player: Player)
 	--[[ Hästens egennamn följer med så att klienten kan sätta in det där
 		kanonen skriver `%N`. Det översätts aldrig. ]]
 	local dagens = StallService.hastFor(player)
 	return Preparation.vy(state[player], status(player), nastaRev(player),
-		if dagens then dagens.namn else nil)
+		if dagens then dagens.namn else nil, burenFor(player))
 end
 
 --[[ Spontan sanning till ägaren. Den kan gå förlorad om klienten ännu inte
@@ -234,8 +262,18 @@ end
 --[[ `utforare` skickas ALDRIG av klienten: remoten längst ned vidarebefordrar
 	bara fas och moment. Den sätts av `ridaNu` när stallet gör arbetet, så
 	att omsorgsbonusen räknar spelarens hand och inte stallets. ]]
+--[[ KVITTENSENS NYCKLAR (#182). Vilket utrustningssteg som lägger vilken
+	del på hästen vet `TackService` och bara den — klienten ska inte räkna
+	ut kopplingen en gång till. Servern skickar därför NYCKELN och dess
+	argument; texten sätts på klienten, där spelarens språk finns. ]]
+local DEL_NYCKEL: { [string]: string } = {
+	underlagg = "tack.del_underlagg",
+	sadel = "tack.del_sadel",
+	trans = "tack.del_trans",
+}
+
 function GameplayService.moment(player: Player, fasId: string, momentId: string,
-	utforare: string?): (boolean, string?)
+	utforare: string?): (boolean, string?, any?)
 	if typeof(fasId) ~= "string" or typeof(momentId) ~= "string" then
 		return false, "spel.ogiltigt_steg"
 	end
@@ -280,6 +318,10 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 		Stegen 3 och 4 (sadelbommen, gjorden) lägger inget nytt på hästen;
 		de är handgrepp på den sadel som redan ligger där. De prövas mot
 		att den gör det. ]]
+	--[[ Vilken del det här momentet lade på hästen, som språknyckel. Satt
+		bara när en FYSISK del faktiskt kom på plats — kvittensen namnger
+		aldrig något som inte sitter där. ]]
+	local pasattDel: string? = nil
 	local steg = tonumber(momentId:match("^utr:(%d+)$"))
 	if fasId == "iordning" and steg then
 		local modell = bunden[player]
@@ -320,11 +362,34 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 				skicka(player)
 				return false, skal
 			end
+			--[[ ── OCH DEN SKA FAKTISKT SITTA DÄR (#182) ──────────────
+				`satPa` svarar ja när bygget gick fram, men VÄRLDEN är
+				sanningen — det är samma regel uppsittningsgrinden läser
+				genom `TackService.ridklar`. Föll delen bort mellan bygget
+				och den här raden ska momentet inte kvitteras: en kvittens
+				som namnger en sadel som inte ligger på hästen vore precis
+				den motsägelse `TackService` finns för att omöjliggöra. ]]
+			if not TackService.harTack(modell, typ) then
+				skicka(player)
+				return false, "tack.kunde_inte_byggas"
+			end
+			pasattDel = DEL_NYCKEL[typ]
 		end
 	end
 
 	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
 	skicka(player)
+	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
+		och tredje värde — samma kanal som nejen redan använder — så att
+		klienten inte behöver en egen väg in för ett lyckat moment. Bara
+		när något faktiskt kom på henne; ett vanligt moment kvitteras som
+		förut av klientens egen text. ]]
+	if ok and pasattDel then
+		return true, "tack.pa_plats", {
+			del = pasattDel,
+			hast = hastnamnFor(s.hastId) or s.hastId,
+		}
+	end
 	return ok, avslag
 end
 
@@ -550,6 +615,26 @@ function GameplayService.valjPar(player: Player, hastId: string?): (boolean, str
 	for _, typ in ipairs(delar) do
 		skrivVal(player, typ, hastId)
 	end
+	--[[ ── DET SPELAREN TOG SKA SYNAS (#182) ──────────────────────────
+
+		Hämtningen var fram till nu enbart två tabellskrivningar: inget i
+		världen, inget i HUD:en. Human-QA tryckte på boxfrontens prompt
+		och kunde inte se att något hänt alls.
+
+		Två rader, båda nödvändiga och båda på ETT ställe:
+
+		  · den fysiska delen läggs i spelarens händer,
+		  · vyn går ut, så att den beständiga statusraden tänds i samma
+		    andetag.
+
+		`skicka` anropas här och inte hos anroparen av samma skäl som
+		atomiciteten flyttades hit i #169: boxfronten och «Rida nu» är
+		två anropare av samma hämtning, och en garanti som ligger hos
+		anroparen finns bara så länge alla kommer ihåg den. ]]
+	for _, typ in ipairs(delar) do
+		TackService.satBuren(player, typ, hastId)
+	end
+	skicka(player)
 	return true
 end
 
@@ -804,6 +889,12 @@ local function glom(player: Player)
 	passState[player] = nil
 	bunden[player] = nil
 	revision[player] = nil
+	--[[ HÄMTNINGEN GLÖMS MED RESTEN (#182). Tabellen levde kvar efter att
+		spelaren lämnat: en ny session på samma `Player`-objekt hade ärvt
+		gårdagens sadelval, och `burenFor` hade då tänt statusraden för en
+		utrustning ingen hämtat. Delarna i händerna dör med karaktären;
+		valet gjorde det inte. ]]
+	valdUtrustning[player] = nil
 end
 
 function GameplayService.start()
