@@ -154,7 +154,14 @@ do
 			table.concat(ejKlick, ", "))
 
 		--[[ Delade knappar på handkontrollen är samma fel som delad plats
-			på skärmen: spelaren kan inte välja. ]]
+			på skärmen: spelaren kan inte välja.
+
+			DEN HÄR MÄTNINGEN RÄCKTE INTE, och det är hela skälet till
+			avsnittet «Handkontrollen mot HELA kontrollmatrisen» längst ned.
+			Tre knappar kan vara olika VARANDRA och ändå vara «se ritten»,
+			«lektionen vidare» och «halvhalt» — vilket var precis vad de
+			blev. Raden står kvar för att den mäter något verkligt; den är
+			bara inte tillräcklig. ]]
 		local gp = {}
 		local krock = {}
 		for _, x in ipairs(alla) do
@@ -164,6 +171,19 @@ do
 		end
 		check("de tre har var sin knapp på handkontrollen", #krock == 0,
 			table.concat(krock, ", "))
+
+		--[[ …och knapparna är DE SOM STÅR I KÄLLAN. Utan den här raden
+			kunde `InteractionController.GAMEPAD` vara en dekoration som
+			matrisen och provet läser medan prompterna bär något annat. ]]
+		local avvik = {}
+		for _, x in ipairs(alla) do
+			if x.GamepadKeyCode ~= IC.GAMEPAD[x.Name] then
+				table.insert(avvik, ("%s %s≠%s"):format(x.Name,
+					tostring(x.GamepadKeyCode), tostring(IC.GAMEPAD[x.Name])))
+			end
+		end
+		check("knapparna bär det GAMEPAD-tabellen säger", #avvik == 0,
+			table.concat(avvik, " "))
 
 		check("ledningen har en egen tangent (L), skild från E och R",
 			tostring(p.LedPrompt.KeyboardKeyCode):find("L") ~= nil
@@ -280,6 +300,280 @@ do
 		p.LedPrompt.Triggered:Fire()
 		task.wait()
 	end
+end
+
+--[[ ══ HANDKONTROLLEN MOT HELA KONTROLLMATRISEN ══════════════════════════
+
+	Blockerande fynd i senior review av `e57314e`: de tre prompterna fick
+	`ButtonX`, `ButtonY` och `ButtonB`, som är «se ritten», «lektionen
+	vidare» och «halvhalt». Provet ovan kunde inte se det, eftersom det
+	bara jämförde de tre knapparna med varandra.
+
+	Det här avsnittet bygger i stället HELA huvudboken ur källan och mäter
+	promptknapparna mot den. Ingenting nedan är en avskrift av
+	`docs/KONTROLLMATRIS.md`:
+
+	  · ridningens knappar FYRAS genom `Input.luau`s egen bindning och
+	    läses ur `Input.consume()` — både knapparna och de analoga axlarna,
+	  · init.clients knappar fyras genom klientens EGEN `InputBegan` och
+	    läses på vad de faktiskt anropade,
+	  · hjälpens och avsittningens knappar läses ur `KontrollHjalp`, som är
+	    den publika källan till just dem.
+
+	Och kontraktet mäts i BÅDA lägena, för det är kontextregeln som bär
+	`ButtonX`: knapparna på hästen lever bara på marken, ridningens reglage
+	bara i sadeln.
+
+	VAD BÄNKEN INTE KAN: den har ingen prompt-motor. Att Roblox VÄGRAR
+	fyra en `Enabled = false`-prompt är enginens beteende, inte vårt — här
+	mäts att flaggan är satt. Att styrkorssymbolen faktiskt ritas i
+	prompten är `NOT_TESTED` och står så i PR-texten. ]]
+
+print("\n── Handkontrollen mot HELA kontrollmatrisen ──")
+
+do
+	local Players = game:GetService("Players")
+	local usv = game:GetService("UserInputService")
+	local spelare = Players.LocalPlayer
+
+	--[[ Varje knapp en handkontroll har. Listan är kandidater att PRÖVA,
+		inte ett facit över vem som äger vad — ägarskapet härleds nedan. ]]
+	local KANDIDATER = {
+		"ButtonA", "ButtonB", "ButtonX", "ButtonY",
+		"ButtonR1", "ButtonL1", "ButtonR2", "ButtonL2",
+		"ButtonR3", "ButtonL3",
+		"DPadUp", "DPadDown", "DPadLeft", "DPadRight",
+		"ButtonStart", "ButtonSelect", "Thumbstick1", "Thumbstick2",
+	}
+
+	local function rort(i)
+		return i.forward ~= 0 or i.steer ~= 0 or i.gaitUp or i.gaitDown
+			or i.jump or i.rein ~= 0 or i.seat ~= 0 or i.parad ~= 0
+			or i.gaitTo ~= nil
+	end
+
+	--[[ ── 1. RIDNINGENS KNAPPAR, ur Input.luau ─────────────────────────
+		Varje kandidat fyras som knapp OCH som analog axel: tygeln, sitsen
+		och spaken läses ur `GetGamepadState` och syns inte i bindningen. ]]
+	local huvudbok = {}
+	Input.bind()
+	for _, namn in ipairs(KANDIDATER) do
+		local kod = Enum.KeyCode[namn]
+
+		Input.consume()
+		__key(kod, true)
+		local somKnapp = Input.consume()
+		__key(kod, false)
+		Input.consume()
+		if rort(somKnapp) then huvudbok[kod] = "ridning (i sadeln)" end
+
+		usv._pad = { { KeyCode = kod, Position = Vector3.new(1, 1, 1) } }
+		local somAxel = Input.consume()
+		usv._pad = {}
+		Input.consume()
+		if rort(somAxel) then huvudbok[kod] = "ridning (i sadeln)" end
+	end
+	Input.unbind()
+
+	check("ridningens gamepadknappar gick att härleda ur Input.luau",
+		huvudbok[Enum.KeyCode.ButtonA] ~= nil
+			and huvudbok[Enum.KeyCode.ButtonB] ~= nil
+			and huvudbok[Enum.KeyCode.ButtonR2] ~= nil
+			and huvudbok[Enum.KeyCode.Thumbstick1] ~= nil,
+		"(hopp, halvhalt, tygel och spak hittade)")
+
+	--[[ ── 2. DE TVÅ SOM LÄSES UR SIN EGEN MODUL ────────────────────────
+		Hjälpen och avsittningen är publika konstanter just för att de ska
+		gå att läsa här. De fyras INTE i loopen nedan: avsittningen river
+		ritten mitt i mätningen, och hjälpen är redan provad i
+		klient.spec. ]]
+	huvudbok[KontrollHjalp.GAMEPADKNAPP] = "kontrollhjälpen (lever ALLTID)"
+	huvudbok[KontrollHjalp.AVSITTNING_GAMEPAD] = "avsittning (i sadeln)"
+
+	--[[ ── 3. INIT.CLIENTS KNAPPAR, genom klientens egen InputBegan ─────
+		Lektionen och ridanalysen svarar bara när något väntar, så de
+		patchas till räknare. Det är inte en genväg förbi produktionen:
+		anropen kommer fortfarande ur klientens lyssnare. ]]
+	local LC = LektionController
+	local ursprung = {
+		fortsatt = LC.fortsatt, replay = LC.replay,
+		gaVidare = LC.gaVidare, replayAktiv = LC.replayAktiv,
+	}
+	local traffad = nil
+	LC.replayAktiv = function() return false end
+	LC.fortsatt = function() traffad = "lektionen vidare"; return false end
+	LC.replay = function() traffad = "se ritten"; return false end
+	LC.gaVidare = function() traffad = "gå vidare"; return false end
+
+	local function svepKlienten(lage)
+		local funna = {}
+		for _, namn in ipairs(KANDIDATER) do
+			local kod = Enum.KeyCode[namn]
+			--[[ Hjälpen och avsittningen hoppas över — se noten vid 2. ]]
+			if kod ~= KontrollHjalp.GAMEPADKNAPP
+				and kod ~= KontrollHjalp.AVSITTNING_GAMEPAD then
+				traffad = nil
+				usv.InputBegan:Fire({ KeyCode = kod }, false)
+				if traffad then
+					funna[kod] = ("%s (%s)"):format(traffad, lage)
+					huvudbok[kod] = funna[kod]
+				end
+			end
+		end
+		return funna
+	end
+
+	--[[ PÅ MARKEN, alltså precis där de tre knapparna på hästen lever. ]]
+	local paMarken = svepKlienten("på marken")
+	local antalMark = 0
+	for _ in pairs(paMarken) do antalMark += 1 end
+	check("ingen av init.clients knappar svarar när spelaren står på marken",
+		antalMark == 0, ("%d svarade"):format(antalMark))
+
+	--[[ I SADELN. Uppsittningen går genom produktionens MountChanged, inte
+		genom ett direktanrop av `mount`. ]]
+	local bamse = __makeHastModell("Bamse")
+	bamse:SetAttribute("HorseId", "bamse")
+	bamse:SetAttribute("HorseName", "Bamse")
+	bamse.Parent = workspace
+	Taggar:AddTag(bamse, "Horse")
+	IC.uppdatera()
+
+	Networking.get("MountChanged").OnClientEvent:Fire(bamse, spelare)
+	task.wait()
+
+	local iSadeln = svepKlienten("i sadeln")
+	check("«se ritten» och «lektionen vidare» svarar däremot i sadeln",
+		iSadeln[Enum.KeyCode.ButtonX] ~= nil
+			and iSadeln[Enum.KeyCode.ButtonY] ~= nil,
+		("X %s · Y %s"):format(tostring(iSadeln[Enum.KeyCode.ButtonX]),
+			tostring(iSadeln[Enum.KeyCode.ButtonY])))
+
+	print("\n  Härledd huvudbok:")
+	for _, namn in ipairs(KANDIDATER) do
+		local kod = Enum.KeyCode[namn]
+		if huvudbok[kod] then
+			print(("    %-14s %s"):format(namn, huvudbok[kod]))
+		end
+	end
+	print("")
+
+	--[[ ── 4. KNAPPARNA PÅ HÄSTEN MOT HUVUDBOKEN ────────────────────────
+
+		Regeln, i tre mätningar:
+
+		  a) ingen promptknapp får vara RIDNINGENS — den lever i sadeln,
+		     men `Input.luau` är också det lager som «halvhalt» ligger i,
+		     och en promptknapp där vore exakt det blockerande fyndet,
+		  b) ingen promptknapp får vara den som lever i BÅDA lägena
+		     (hjälpen), för då finns ingen kontext som skiljer dem,
+		  c) ingen promptknapp får svara på något medan spelaren står PÅ
+		     MARKEN, alltså i det läge prompten faktiskt går att trycka. ]]
+	local pa = {
+		{ "sitt upp", IC.GAMEPAD.MountPrompt },
+		{ "rida nu", IC.GAMEPAD.RidaNuPrompt },
+		{ "led", IC.GAMEPAD.LedPrompt },
+	}
+
+	local iRidningen = {}
+	for _, x in ipairs(pa) do
+		if huvudbok[x[2]] == "ridning (i sadeln)" then
+			table.insert(iRidningen, ("%s=%s"):format(x[1], tostring(x[2])))
+		end
+	end
+	check("ingen knapp på hästen är en av ridningens (halvhalt, hopp, tygel…)",
+		#iRidningen == 0, table.concat(iRidningen, " "))
+
+	local motHjalpen = {}
+	for _, x in ipairs(pa) do
+		if x[2] == KontrollHjalp.GAMEPADKNAPP then
+			table.insert(motHjalpen, x[1])
+		end
+	end
+	check("ingen knapp på hästen är hjälpens — den enda som lever i båda lägena",
+		#motHjalpen == 0, table.concat(motHjalpen, " "))
+
+	local krockarPaMarken = {}
+	for _, x in ipairs(pa) do
+		if paMarken[x[2]] then
+			table.insert(krockarPaMarken, ("%s→%s"):format(x[1], paMarken[x[2]]))
+		end
+	end
+	check("ingen knapp på hästen gör något ANNAT där hon står, på marken",
+		#krockarPaMarken == 0, table.concat(krockarPaMarken, " "))
+
+	--[[ De två NYA knapparna ska vara lediga i hela huvudboken, i båda
+		lägena. Bara uppsittningens `ButtonX` — Roblox eget standardvärde
+		för en ProximityPrompt — delas, och den delningen bärs av
+		kontextregeln som mäts i 5 nedan. ]]
+	local ejLediga = {}
+	for _, x in ipairs({ pa[2], pa[3] }) do
+		if huvudbok[x[2]] then
+			table.insert(ejLediga, ("%s=%s→%s"):format(x[1], tostring(x[2]),
+				huvudbok[x[2]]))
+		end
+	end
+	check("«rida nu» och «led» står på knappar som är lediga i HELA matrisen",
+		#ejLediga == 0, table.concat(ejLediga, " "))
+
+	check("uppsittningens delade knapp är delad med något som bara lever i sadeln",
+		huvudbok[IC.GAMEPAD.MountPrompt] == nil
+			or huvudbok[IC.GAMEPAD.MountPrompt]:find("i sadeln") ~= nil,
+		("%s → %s"):format(tostring(IC.GAMEPAD.MountPrompt),
+			tostring(huvudbok[IC.GAMEPAD.MountPrompt])))
+
+	--[[ ── 5. KONTEXTREGELN, den som bär delningen ──────────────────────
+
+		`setEnabled` tog förut BARA uppsittningens tabell. Led- och
+		rida-knapparna stod alltså kvar påslagna i sadeln, och en
+		ProximityPrompt kräver bara närhet — närmare hästen än på hennes
+		rygg kommer man inte. Det gällde tangentbordet lika hårt: `R` för
+		«lektionen vidare» fyrade «Rida nu» i samma tryck. ]]
+	local TRE = { "MountPrompt", "RidaNuPrompt", "LedPrompt" }
+	local pMin = promptar(hast)
+	local kvarPa = {}
+	for _, namn in ipairs(TRE) do
+		--[[ En SAKNAD knapp får inte räknas som avstängd — då hade
+			mätningen blivit grön av att prompten inte fanns. ]]
+		if pMin[namn] == nil or pMin[namn].Enabled ~= false then
+			table.insert(kvarPa, namn)
+		end
+	end
+	check("i sadeln är ALLA tre knapparna på hästen avstängda", #kvarPa == 0,
+		table.concat(kvarPa, " "))
+
+	--[[ …också de som byggs MEDAN hon rider. `uppdatera()` körs under
+		ritten, och en knapp som föds påslagen är samma hål igen. ]]
+	local sen = nyHast("sent", "Senkommen")
+	IC.uppdatera()
+	local pSen = promptar(sen)
+	local sentPa = {}
+	for _, namn in ipairs(TRE) do
+		if pSen[namn] and pSen[namn].Enabled ~= false then
+			table.insert(sentPa, namn)
+		end
+	end
+	check("en knapp som byggs MITT i ritten föds avstängd",
+		pSen.MountPrompt ~= nil and #sentPa == 0,
+		("byggd %s · påslagna: %s"):format(tostring(pSen.MountPrompt ~= nil),
+			table.concat(sentPa, " ")))
+
+	--[[ …och de tänds igen när ritten är slut. En grind som stänger utan
+		att öppna är samma engångsruta som #161 rättade för hjälpen. ]]
+	spelare.CharacterRemoving:Fire(spelare.Character)
+	task.wait()
+	local pEfter = promptar(hast)
+	local slacktaEfter = {}
+	for _, namn in ipairs(TRE) do
+		if pEfter[namn] == nil or pEfter[namn].Enabled ~= true then
+			table.insert(slacktaEfter, namn)
+		end
+	end
+	check("och alla tre tänds igen när spelaren sitter av", #slacktaEfter == 0,
+		table.concat(slacktaEfter, " "))
+
+	LC.fortsatt, LC.replay = ursprung.fortsatt, ursprung.replay
+	LC.gaVidare, LC.replayAktiv = ursprung.gaVidare, ursprung.replayAktiv
 end
 
 if fails > 0 then

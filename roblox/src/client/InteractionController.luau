@@ -87,9 +87,90 @@ end
 	underst. Se noten vid `PROMPT_STEG`. ]]
 local PROMPT_RAD = { MountPrompt = -1, RidaNuPrompt = 0, LedPrompt = 1 }
 
-local function laggIKolumn(prompt: ProximityPrompt)
+--[[ ══ HANDKONTROLLEN: EN PLATS, MOT HELA KONTROLLMATRISEN ═══════════════
+
+	Första rättelsen av #182 gav de tre prompterna var sin knapp — X, Y och
+	B — och provade bara att de skilde sig från VARANDRA. De tre var alltså
+	unika inbördes och kolliderade samtidigt med varsin global bindning:
+
+	  `ButtonX`  init.client.luau  «Se ritten»
+	  `ButtonY`  init.client.luau  «Lektionen vidare»
+	  `ButtonB`  Input.luau        halvhalt
+
+	Ett prov som bara jämför tre knappar med varandra kan inte se det. Hela
+	`docs/KONTROLLMATRIS.md` är facit, inte de tre raderna.
+
+	REGELN SOM GÄLLER HÄR, och som `klient-ledprompt.spec` mäter i båda
+	riktningarna:
+
+	  1. Prompterna lever BARA när spelaren INTE sitter upp. `setEnabled`
+	     nedan är den grinden, och den gäller numera alla tre tabellerna —
+	     inte bara uppsittningens, som var hela buggen.
+	  2. Ridningens reglage lever BARA när hon SITTER UPP. `Input.bind()`
+	     körs vid uppsittning och `Input.unbind()` vid avsittning, och
+	     init.client.luau:s «Se ritten», «Lektionen vidare» och «Gå vidare»
+	     ligger alla efter `if not ride then return end`.
+	  3. Det som lever i BÅDA lägena — hjälpens `DPadUp` — får ingen prompt
+	     röra. `DPadDown` (avsittning) är ride-grindad men lämnas ändå i
+	     fred: styrkorsets par upp/ned är ett läst beslut ur #161/#162.
+
+	VALET AV KNAPPAR följer av det. Lediga i hela matrisen är bara styrkors
+	vänster och höger, och de går till de två knappar som är NYA på hästen:
+
+	  `DPadRight`  «Rida nu»  — höger är vidare, ut och rid
+	  `DPadLeft`   «Led …»    — vänster är att stanna kvar och sköta om
+
+	`MountPrompt` behåller `ButtonX`. Tre skäl, i den ordningen:
+
+	  · det är Roblox EGET standardvärde för en ProximityPrompt. Sätter vi
+	    ingenting blir det ButtonX ändå — knappen går alltså inte att
+	    "slippa", bara att flytta,
+	  · det är den knapp en Roblox-spelare redan har i fingret för varje
+	    prompt i varje annat spel, och uppsittningen är den viktigaste
+	    knappen på hästen,
+	  · «Se ritten» går inte att nå från marken (`not ride`-grinden) och
+	    prompten går inte att nå från sadeln (regel 1) — de två kan alltså
+	    aldrig vara uppe samtidigt, och provet mäter just det i stället för
+	    att lita på att de inte krockar.
+
+	Samma kontextregel bär redan TANGENTBORDET, och det är inget nytt
+	påfund: `E` är både uppsittningsprompt och avsittning, och `R` är både
+	«Rida nu» och «Lektionen vidare». De har fungerat hela tiden av exakt
+	det skäl som regel 1 och 2 beskriver — men regel 1 var i praktiken
+	bruten, så `R` i sadeln fyrade FAKTISKT «Rida nu» också. Rättelsen
+	nedan stänger tangentbordets hål i samma andetag som gamepadens.
+
+	Ändras något här ska `docs/KONTROLLMATRIS.md` ändras med det. Tabellen
+	är publik för att provet och matrisen ska kunna läsa beslutet ur källan
+	i stället för ur en avskrift — samma skäl som `KontrollHjalp.GAMEPADKNAPP`. ]]
+InteractionController.GAMEPAD = {
+	MountPrompt = Enum.KeyCode.ButtonX,
+	RidaNuPrompt = Enum.KeyCode.DPadRight,
+	LedPrompt = Enum.KeyCode.DPadLeft,
+}
+
+--[[ ÄR PROMPTERNA UPPE? Ett fält, inte en engångsslinga.
+
+	`setEnabled` var förut en ren loop över de prompter som RÅKADE finnas
+	när den anropades. En knapp som byggdes efteråt — och `uppdatera()`
+	bygger knappar medan spelaren rider — föddes med `Enabled = true` och
+	stod alltså kvar mitt i ritten. Läget måste bokföras för att kunna
+	gälla också det som ännu inte finns. ]]
+local promptarPa = true
+
+--[[ Allt som är GEMENSAMT för de tre knapparna, på ett ställe: platsen i
+	kolumnen, fingret, handkontrollen och om knappen alls är uppe. Låg de
+	utspridda på tre skapelseställen kunde de tre glida isär — och det var
+	precis så `setEnabled` kom att gälla en av tre. ]]
+local function stallIn(prompt: ProximityPrompt)
 	local rad = PROMPT_RAD[prompt.Name] or 0
 	prompt.UIOffset = Vector2.new(0, rad * InteractionController.PROMPT_STEG)
+	--[[ `ClickablePrompt` är det som gör knappen tryckbar med ett finger.
+		Utan den finns ingen väg in på en ren pekenhet. ]]
+	prompt.ClickablePrompt = true
+	local pad = InteractionController.GAMEPAD[prompt.Name]
+	if pad then prompt.GamepadKeyCode = pad end
+	prompt.Enabled = promptarPa
 end
 
 --[[ Vad ledknappen ska heta just nu, med hastens namn i sig. ]]
@@ -253,13 +334,10 @@ local function addPrompt(model: Model)
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
 	--[[ TANGENT, FINGER OCH HANDKONTROLL (#182). `E` ar Roblox standard
-		och lamnas; `ClickablePrompt` ar det som gor knappen tryckbar med
-		ett finger, och `GamepadKeyCode` ger den en EGEN knapp sa att
-		uppsittning, genvag och ledning inte delar `ButtonX`. ]]
-	prompt.ClickablePrompt = true
-	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+		och lamnas; fingret och handkontrollen satts av `stallIn`, som ager
+		hela den gemensamma delen — se noten vid `GAMEPAD`. ]]
 	prompt.Parent = rig.attachments.Saddle or rig.root
-	laggIKolumn(prompt)
+	stallIn(prompt)
 
 	prompt.Triggered:Connect(function()
 		--[[ TRE RETURVÄRDEN, INTE TVÅ (#204).
@@ -325,10 +403,8 @@ local function addLedPrompt(model: Model)
 	led.MaxActivationDistance = 12
 	led.RequiresLineOfSight = false
 	led.KeyboardKeyCode = Enum.KeyCode.L
-	led.ClickablePrompt = true
-	led.GamepadKeyCode = Enum.KeyCode.ButtonY
 	led.Parent = rig.root
-	laggIKolumn(led)
+	stallIn(led)
 
 	led.Triggered:Connect(function()
 		local leder = ledPrompts[model] == true
@@ -426,11 +502,12 @@ local function addRidaPrompt(model: Model)
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
+	--[[ `R` DELAS MED «Lektionen vidare», och det går bara ihop så länge
+		regel 1 vid `GAMEPAD` håller: knappen är avstängd i sadeln, och
+		lektionen svarar inte från marken. ]]
 	prompt.KeyboardKeyCode = Enum.KeyCode.R
-	prompt.ClickablePrompt = true
-	prompt.GamepadKeyCode = Enum.KeyCode.ButtonB
 	prompt.Parent = rig.root
-	laggIKolumn(prompt)
+	stallIn(prompt)
 
 	prompt.Triggered:Connect(function()
 		local ok, skal = Net.get("RidaNu"):InvokeServer()
@@ -540,10 +617,26 @@ function InteractionController.start(mountCallback: (Model) -> ())
 	end)
 end
 
+--[[ ══ EN RITT SLÄCKER ALLA KNAPPAR PÅ HÄSTEN — INTE BARA EN AV TRE ══════
+
+	Den här funktionen tog förut bara `prompts`, alltså uppsittningen.
+	`ledKnappar` och `ridaKnappar` stod kvar PÅ medan spelaren red, och en
+	ProximityPrompt kräver bara närhet — närmare hästen än i sadeln kommer
+	man inte. En ryttare som tryckte `R` för att gå vidare i lektionen
+	fyrade därför «Rida nu» i samma tryck, och `ButtonY` för lektionen
+	fyrade ledningens knapp.
+
+	DET ÄR OCKSÅ HELA GRUNDEN för att `MountPrompt` får dela `ButtonX` med
+	«Se ritten»: regel 1 vid `GAMEPAD` är sann först när den här grinden
+	gäller alla tre. Innan dess var den ett påstående.
+
+	Läget sparas i `promptarPa` så att det också gäller knappar som byggs
+	EFTERÅT — `uppdatera()` kör medan man rider. ]]
 function InteractionController.setEnabled(enabled: boolean)
-	for _, prompt in prompts do
-		prompt.Enabled = enabled
-	end
+	promptarPa = enabled
+	for _, prompt in prompts do prompt.Enabled = enabled end
+	for _, prompt in ledKnappar do prompt.Enabled = enabled end
+	for _, prompt in ridaKnappar do prompt.Enabled = enabled end
 end
 
 return InteractionController

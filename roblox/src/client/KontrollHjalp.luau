@@ -101,8 +101,14 @@ KontrollHjalp.GAMEPADKNAPP = Enum.KeyCode.DPadUp
      LEDIG, kontrollerat mot hela `roblox/src`:
        Input.luau       Thumbstick1, ButtonA/B, R1/L1, R2/L2
        init.client      ButtonY (lektionen), ButtonX (se ritten), DPadUp (hjälp)
-     Kvar av styrkorset: ned, vänster, höger. `ButtonStart`/`ButtonSelect`
-     rörs inte — Roblox har egna menyer på dem.
+     `ButtonStart`/`ButtonSelect` rörs inte — Roblox har egna menyer på dem.
+
+     STYRKORSET ÄR SEDAN #182 FULLT: vänster och höger gick till hästens
+     två nya prompter, «Led …» och «Rida nu»
+     (`InteractionController.GAMEPAD`). De här två är alltså inte längre
+     "resten av styrkorset" utan de två som är låsta.
+     `docs/KONTROLLMATRIS.md` bär hela huvudboken och
+     `klient-ledprompt.spec` mäter den mot källan.
 
      Styrkors ned parar sig dessutom med styrkors upp: hjälpen upp, av
      hästen ned. Ingen befintlig rid-, hopp-, replay- eller hjälpbindning

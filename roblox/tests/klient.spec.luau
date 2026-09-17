@@ -1205,6 +1205,19 @@ do
 		[Enum.KeyCode.ButtonR2] = "tygel", [Enum.KeyCode.ButtonL2] = "sits",
 		[Enum.KeyCode.Thumbstick1] = "styrning",
 	}
+	--[[ …OCH KNAPPARNA PÅ HÄSTEN (#182 omtag). De läses ur controllern och
+		skrivs inte av: hjälpen lever i BÅDA lägena — den ligger med flit
+		före `not ride`-grinden — så en prompt som tar hjälpens knapp har
+		ingen kontext som skiljer dem åt. Avsittningen är ride-grindad, men
+		styrkorsets par upp/ned är ett läst beslut ur #161/#162 och ska inte
+		tyst bli något annat.
+
+		`klient-ledprompt.spec` mäter promptknapparna mot HELA huvudboken;
+		de här två raderna är den andra riktningen — att hjälpens och
+		avsittningens egna knappar inte blir tagna av en ny prompt. ]]
+	for namn, kod in pairs(InteractionController.GAMEPAD) do
+		tagna[kod] = ("knappen på hästen: %s"):format(namn)
+	end
 	prova("gamepadknappen är inte redan tagen av ridningen",
 		tagna[KontrollHjalp.GAMEPADKNAPP] == nil,
 		("(%s → %s)"):format(tostring(KontrollHjalp.GAMEPADKNAPP),

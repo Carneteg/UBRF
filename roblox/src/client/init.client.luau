@@ -349,10 +349,15 @@ UserInputService.InputBegan:Connect(function(input, processed)
 
 	     `DPadUp` är gamepadens väg in, kontrollerat ledig: Input.luau tar
 	     Thumbstick1, ButtonA/B/R1/L1/R2/L2 och den här filen tar
-	     ButtonY/ButtonX. Styrkorset rörs av ingen av dem, och till
-	     skillnad från ButtonStart/ButtonSelect är det inte reserverat av
-	     Roblox egna menyer. Ingen befintlig rid-, hopp- eller
-	     replaybindning har flyttats. ]]
+	     ButtonY/ButtonX. Till skillnad från ButtonStart/ButtonSelect är
+	     det inte reserverat av Roblox egna menyer. Ingen befintlig rid-,
+	     hopp- eller replaybindning har flyttats.
+
+	     STYRKORSET ÄR NUMERA FULLT (#182 omtag): ned är avsittningen,
+	     vänster och höger är hästens två nya prompter
+	     (`InteractionController.GAMEPAD`). Hjälpen är den ENDA bindningen
+	     som lever i båda lägena — den ligger ju före `not ride`-grinden —
+	     och just därför får ingen prompt röra `DPadUp`. ]]
 	if input.KeyCode == Enum.KeyCode.H
 		or input.KeyCode == KontrollHjalp.GAMEPADKNAPP then
 		KontrollHjalp.vaxla()
