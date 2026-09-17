@@ -323,6 +323,21 @@ function LedService.lage(player: Player): Led?
 	return ledd[player]
 end
 
+--[[ LEDS DEN HAR HASTEN AV NAGON? Registret ar per SPELARE, och fragan
+	"vem leder henne" fanns darfor bara som en inbaddad loop inne i
+	`borja`. #235 FAS 2 behover samma sanning utifran — en hast som leds
+	far inte sadlas — och en andra loop nagon annanstans hade varit en
+	andra sanning om vad "ledd" betyder.
+
+	`borja` anropar numera den har, sa det finns EN loop och ett svar. ]]
+function LedService.ledsAv(modell: Model?): Player?
+	if modell == nil then return nil end
+	for annan, l in pairs(ledd) do
+		if l.modell == modell then return annan end
+	end
+	return nil
+end
+
 --[[ Har hästen fysiskt lämnat sin box? Sätts av loopen när hon faktiskt
 	är utanför, och nollställs aldrig — steget ska inte kunna ångras av
 	att hon råkar backa tillbaka en halvmeter. ]]
@@ -462,10 +477,10 @@ function LedService.borja(player: Player, modell: Model?, ratt: Model?): (boolea
 		return false, "led.leder_redan"
 	end
 	--[[ Två spelare kan inte leda samma häst. ]]
-	for annan, l in pairs(ledd) do
-		if l.modell == modell then
-			return false, "led.upptagen"
-		end
+	--[[ Fragan stalls genom `ledsAv` sa att den har regeln och #235
+		FAS 2:s sadelgrind laser SAMMA register. ]]
+	if LedService.ledsAv(modell) ~= nil then
+		return false, "led.upptagen"
 	end
 	local bx, by = tomt(pivot.Position)
 

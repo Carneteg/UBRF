@@ -354,6 +354,14 @@ const SPRAK = {
   /* #235 FAS 2 hittade halet: nar sadeln flyttat fran fronten till
      hastens rygg star kroken tom — men hamtningen slapptes anda
      igenom och praglade en ANDRA sadel ur tomma luften. */
+  /* #235 FAS 2 review: HASTENS EGET TILLSTAND. Att klienten slacker
+     knappen ar presentation; servern maste aga regeln. En hast som
+     leds star inte still att sadla, och en uppsutten har redan en
+     ryttare pa ryggen. */
+  "tack.leds_nu": { sv: "Hon leds just nu — släpp henne först",
+    en: "She is being led right now — let her go first" },
+  "tack.rids_nu": { sv: "Hon är uppsutten — sitt av först",
+    en: "She is being ridden — dismount first" },
   "tack.inte_pa_fronten": { sv: "Den hänger inte på boxfronten längre",
     en: "It is no longer hanging on the stall front" },
   "tack.bar_ingen_sadel": { sv: "Du bär ingen sadel — hämta hennes på boxfronten först",

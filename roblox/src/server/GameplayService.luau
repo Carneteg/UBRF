@@ -891,6 +891,27 @@ function GameplayService.sadla(player: Player, modell: Model?): (boolean, string
 	local bar = TackService.barBuren(player, "sadel")
 	if bar == nil then return false, "tack.bar_ingen_sadel" end
 
+	--[[ HASTENS EGET TILLSTAND (#235 FAS 2 review). Ordern kraver att
+		SERVERN validerar horse-state, och att klienten slacker knappen
+		i vissa lagen ar presentation — inte en regel.
+
+		Sanningen hamtas dar den redan bor: `LedService` vet vem som
+		leder henne, `HorseService` vem som sitter pa henne. Ingen ny
+		boolean, ingen parallell tabell — tva sanningar om var hasten ar
+		vore precis det fel hela fasindelningen finns for att undvika.
+
+		OCH FORE ALLT FYSISKT. Nejet ligger over bade underlagget och
+		bygget, sa en ledd hast kan inte fa ett halvt ekipage pa sig.
+
+		Regeln ar verklig och inte teknisk: en hast som gar i kopplet
+		star inte still att sadla, och pa en uppsutten sitter redan
+		nagon. ]]
+	if LedService.ledsAv(m) ~= nil then return false, "tack.leds_nu" end
+	local session = HorseService.sessionFor(m)
+	if session ~= nil and session.rider ~= nil then
+		return false, "tack.rids_nu"
+	end
+
 	--[[ FEL SADEL SKA GA ATT GORA. Att kunna ta fel sadel ar hela den
 		pedagogiska poangen — webbens sadelkammare gor likadant — och
 		`satPa` bar bade nejet och felraknaren. Anropet nedan ror inget

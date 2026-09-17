@@ -386,6 +386,97 @@ do
 	end
 end
 
+print("\n── Hästens eget tillstånd: leds eller rids ──")
+
+do
+	--[[ FYND UR SENIOR REVIEW AV `e08515f`. Att `InteractionController`
+		släcker knappen i vissa klientlägen är presentation, inte en
+		regel. Servern måste äga den — och provet går därför genom
+		`LedService` och `HorseService` egna register, inte genom en
+		knapp.
+
+		Regeln är verklig och inte teknisk: en häst som går i kopplet står
+		inte still att sadla, och på en uppsutten sitter redan någon. ]]
+	local staId = ordning[4] or ordning[2]
+	local staModell = hastar[staId]
+	check("det finns en osadlad häst att prova tillstånden på",
+		staModell ~= nil and TackService.sadlad(staModell) == false,
+		tostring(staId))
+
+	if staModell and not TackService.sadlad(staModell) then
+		local frontPos = TackForradService.forHast(staId).PrimaryPart.Position
+		local hon, karHon, rotHon = nySpelare("Fas2f", 9406, frontPos + Vector3.new(2, 0, 0))
+		Players._spelare = { hon }
+		check("hon hämtar hennes sadel",
+			TackForradService.tagSadel(hon, staId, "Hon") == true)
+
+		local staPos = (staModell.PrimaryPart
+			or staModell:FindFirstChildWhichIsA("BasePart")).Position
+		rotHon.CFrame = CFrame.new(staPos + Vector3.new(2, 0, 0))
+
+		--[[ ── LEDS ── Kopplet sätts genom `LedService.borja`, alltså
+			produktionens egen väg. En påhittad flagga hade mätt provet. ]]
+		local okLed, skalLed = LedService.borja(hon, staModell, staModell)
+		check("ledningen startar", okLed == true, tostring(skalLed))
+		check("och servern vet vem som leder henne",
+			LedService.ledsAv(staModell) == hon)
+
+		local ok, skal = GameplayService.sadla(hon, staModell)
+		check("en häst som LEDS går inte att sadla", ok == false, tostring(skal))
+		check("och nejet säger varför", skal == "tack.leds_nu", tostring(skal))
+
+		--[[ INGENTING FYSISKT FÅR HA HÄNT. Inte ens underlägget — nejet
+			ligger med flit ovanför hela transaktionen. ]]
+		check("leds: inget underlägg hann läggas på henne",
+			TackService.harTack(staModell, "underlagg") == false)
+		check("leds: hon är inte halvsadlad",
+			TackService.sadlad(staModell) == false)
+		check("leds: sadeln ligger kvar i spelarens händer",
+			TackService.barBuren(hon, "sadel") == staId,
+			tostring(TackService.barBuren(hon, "sadel")))
+		check("leds: ägarposten är kvar hos henne — inget committades",
+			GameplayService.barasAv("sadel", staId) == hon)
+		check("leds: boxfronten står fortfarande tom",
+			TackForradService.paFronten(staId, "sadel") == false)
+
+		LedService.slapp(hon)
+		check("när kopplet släpper går det att sadla igen",
+			LedService.ledsAv(staModell) == nil)
+
+		--[[ ── RIDS ── Sessionen är `HorseService` egen sanning, samma
+			fält som `hast.upptagen` läser vid uppsittning. ]]
+		--[[ Sessionen skapas av `HorseService` egen registrering, som i
+			produktion körs när en Horse-taggad modell dyker upp.
+			`_registerForProv` kallar SAMMA kod — den duplicerar den
+			inte — så `session.rider` nedan är fältet uppsittningen
+			faktiskt sätter, inte en provattrapp. ]]
+		HorseService._registerForProv(staModell)
+		local sess = HorseService.sessionFor(staModell)
+		check("hästen har en session att sätta en ryttare i", sess ~= nil)
+		if sess then
+			sess.rider = hon
+			local ok2, skal2 = GameplayService.sadla(hon, staModell)
+			check("en häst som RIDS går inte att sadla", ok2 == false, tostring(skal2))
+			check("och nejet säger varför", skal2 == "tack.rids_nu", tostring(skal2))
+			check("rids: inget underlägg hann läggas på henne",
+				TackService.harTack(staModell, "underlagg") == false)
+			check("rids: hon är inte halvsadlad",
+				TackService.sadlad(staModell) == false)
+			check("rids: sadeln ligger kvar i spelarens händer",
+				TackService.barBuren(hon, "sadel") == staId)
+			check("rids: boxfronten står fortfarande tom",
+				TackForradService.paFronten(staId, "sadel") == false)
+			sess.rider = nil
+		end
+
+		--[[ OCH NÄR BÅDA SLÄPPT gär det igenom. Ett nej som inte går att
+			ta sig ur är en återvändsgränd, inte en regel. ]]
+		local ok3, skal3 = GameplayService.sadla(hon, staModell)
+		check("med hästen fri går sadlingen igenom", ok3 == true, tostring(skal3))
+		check("och nu ligger sadeln på henne", TackService.sadlad(staModell) == true)
+	end
+end
+
 print("\n── Reset och disconnect efter en LYCKAD sadling ──")
 
 do

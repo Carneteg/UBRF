@@ -681,6 +681,14 @@ Sprak.text = {
 		sv = "%s sitter på %s",
 		en = "%s is on %s",
 	},
+	["tack.leds_nu"] = {
+		sv = "Hon leds just nu — släpp henne först",
+		en = "She is being led right now — let her go first",
+	},
+	["tack.rids_nu"] = {
+		sv = "Hon är uppsutten — sitt av först",
+		en = "She is being ridden — dismount first",
+	},
 	["tack.inte_pa_fronten"] = {
 		sv = "Den hänger inte på boxfronten längre",
 		en = "It is no longer hanging on the stall front",
