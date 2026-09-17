@@ -47,6 +47,10 @@ local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local Spel = require(ReplicatedStorage.UBRFSpel)
 local LedService = require(script.Parent.LedService)
 local TackService = require(script.Parent.TackService)
+--[[ #235 FAS 2: rollbacken river en halvlagd del direkt. `TackService`
+	har ingen vag som tar av UTAN eftervardens ordningsgrindar, och de
+	grindarna hor inte hemma i en angring. ]]
+local TackRigg = require(script.Parent.TackRigg)
 --[[ #235 FAS 1: fronten ager den fysiska upphangningen, den har filen
 	ager vem som bar vad. Ingen cirkel — forradet tar sin mottagare som
 	parameter och kanner inte den har modulen. ]]
@@ -742,6 +746,22 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 		FAS 1 loser det genom att inte tillata bytet. Ingen swap-logik,
 		inget att rulla tillbaka: nejet kommer INNAN nagot andras, och
 		spelaren far lamna tillbaka sadeln hon bar forst. ]]
+	--[[ DEN MASTE FAKTISKT HANGA DAR (#235 FAS 2). Agarskapet ovan
+		skyddar mot att TVA spelare bar samma sadel, men inte mot att
+		den inte finns kvar att ta: nar FAS 2 flyttat sadeln till
+		hastens rygg star kroken tom och agarposten ar slappt — och
+		da slapptes hamtningen igenom och praglade en ANDRA sadel ur
+		tomma luften. Det fann FAS 2:s eget prov.
+
+		Grinden ar medvetet smal: den galler bara nar gruppen FINNS
+		och sager att delen inte hanger dar. Saknas hela gruppen ar
+		det ett annat fel, och det bars av `tack.front_slapper_inte`
+		nere i transaktionen. ]]
+	if TackForradService.harPlats(id, t)
+		and TackForradService.paFronten(id, t) == false then
+		return false, "tack.inte_pa_fronten"
+	end
+
 	local barNu = TackService.barBuren(player, t)
 	if barNu ~= nil and barNu ~= id then return false, "tack.bar_redan_annan" end
 
@@ -798,6 +818,127 @@ end
 
 function GameplayService.valdFor(player: Player): { [string]: string }?
 	return valdUtrustning[player]
+end
+
+--[[ ══ FAS 2: SADEL `HELD -> EQUIPPED` (#235) ════════════════════════
+
+	FAS 1 lamnade spelaren med en sadel i handerna och ingen vag att lagga
+	den pa hasten. Det har ar den vagen, och ingenting mer: tranget hor
+	till FAS 3 och ledningen till FAS 4.
+
+	ORDNINGEN ar densamma som i FAS 1, av samma skal:
+
+	    validera -> lagg underlagget -> bygg sadeln -> bekrafta varlden
+	              -> committa agandet
+
+	Ingenting bestaende andras forran allt lyckats, och det som hann bli
+	gjort rullas tillbaka nar nagot faller.
+
+	VARFOR `satPa` OCH INTE EN EGEN VAG: `TackService.satPa` ar redan den
+	serverauktoritativa pasattningen — den ager fel-hast, fel-sadel med
+	felraknare, dubbelpasattning, ordningen, avstandet, bygget och att den
+	burna delen slapps NAR delen sitter. Att skriva en andra vag bredvid
+	den hade gett tva sanningar om vad "sadlad" betyder, och det ar precis
+	det `TackService` finns for att omojliggora.
+
+	DET HAR LAGRET TILLFOR TRE SAKER som `satPa` inte kan veta:
+
+	  1. att utrustningens identitet lases ur det spelaren FYSISKT BAR,
+	     inte ur `valdUtrustning`. Registret ar en avsikt; handerna ar ett
+	     faktum, och FAS 2:s hela poang ar att flytta ett fysiskt foremal.
+	  2. UNDERLAGGET. Kanon lagger det under sadeln, och `satPa` nekar
+	     darfor sadeln utan det. Det hanger i samma upphangning och hamtas
+	     med sadeln — alltsa hor det till samma handling. Utan det kunde
+	     «Sadla» aldrig lyckas.
+	  3. AGANDET. Sadeln ligger nu pa hasten, inte pa boxfronten, sa
+	     agarposten ska slappas UTAN att fronten tands igen.
+
+	INGEN FLYTT AV MODELLEN, och det ar ett medvetet avsteg fran ordens
+	ordalydelse «flytta modellen till hastens SaddleAttachment». Den burna
+	sadeln ar en forenklad rekvisita — ett valv och ett underlagg man bar
+	framfor magen — medan den pasatta ar sadel, gjord och stigbyglar pa en
+	rygg. Att flytta den forsta till ryggen hade gett fel form pa hasten.
+	`TackRigg` bygger darfor den pasatta delen och river den burna, vilket
+	ger SAMMA observerbara garantier: ingen dubblett hos spelaren, ingen pa
+	boxfronten, en fysisk del svetsad i hastriggen server-side. Avsteget ar
+	redovisat i rapporten, inte gomt. ]]
+
+--[[ Slapper agandet UTAN att hanga tillbaka nagot pa fronten.
+
+	Skillnaden mot `slappBuret` ar hela poangen: dar slapper spelaren
+	utrustningen och den ska tillbaka pa kroken. Har har den flyttat till
+	HASTEN, och en front som tandes igen hade visat en andra sadel
+	hangande bredvid den som redan ligger pa ryggen. ]]
+function GameplayService.slappAgande(typ: string, hastId: string)
+	burenAv[agarnyckel(typ, hastId)] = nil
+end
+
+function GameplayService.sadla(player: Player, modell: Model?): (boolean, string?)
+	--[[ HASTEN. Klientens modell ar en fraga, inte ett pastaende: allt
+		nedan provas mot varlden och mot vad spelaren faktiskt bar. ]]
+	if typeof(modell) ~= "Instance" and type(modell) ~= "table" then
+		return false, "tack.ingen_hast"
+	end
+	local m = modell :: Model
+	if not (m and (m :: any).IsA and m:IsA("Model")) then
+		return false, "tack.ingen_hast"
+	end
+	local hastId = tostring(m:GetAttribute("HorseId") or "")
+	if hastId == "" then return false, "tack.ingen_hast" end
+
+	--[[ HANDERNA AR FACIT. Bar hon ingen sadel finns ingenting att sadla
+		med, hur mycket `valdUtrustning` an pastar. ]]
+	local bar = TackService.barBuren(player, "sadel")
+	if bar == nil then return false, "tack.bar_ingen_sadel" end
+
+	--[[ FEL SADEL SKA GA ATT GORA. Att kunna ta fel sadel ar hela den
+		pedagogiska poangen — webbens sadelkammare gor likadant — och
+		`satPa` bar bade nejet och felraknaren. Anropet nedan ror inget
+		annat: det returnerar innan nagon del byggs. ]]
+	if bar ~= hastId then
+		return TackService.satPa(player, m, "sadel", bar, m)
+	end
+
+	if TackService.sadlad(m) then return false, "tack.redan_pa" end
+
+	--[[ UNDERLAGGET FORST, och bara om det inte redan ligger dar. Det
+		slapper INTE den burna sadeln — `BARBARA` sager att bara sadel och
+		trans bars — sa ett fel harifran lamnar handerna ororda. ]]
+	local la_underlagg = false
+	if not TackService.harTack(m, "underlagg") then
+		local okU, skalU = TackService.satPa(player, m, "underlagg", bar, m)
+		if not okU then return false, skalU end
+		la_underlagg = true
+	end
+
+	local function angraUnderlagget()
+		if la_underlagg then
+			pcall(function() TackRigg.taAv(m, "underlagg") end)
+		end
+	end
+
+	local okS, skalS = TackService.satPa(player, m, "sadel", bar, m)
+	if not okS then
+		angraUnderlagget()
+		return false, skalS
+	end
+
+	--[[ OCH VARLDEN AR SANNINGEN. Samma regel som momentkvittensen och
+		uppsittningsgrinden laser: `satPa` svarar ja nar bygget gick fram,
+		men foll delen bort daremellan ar hon inte sadlad. Da ska sadeln
+		tillbaka i handerna — inte forsvinna. ]]
+	if not TackService.harTack(m, "sadel") then
+		pcall(function() TackRigg.taAv(m, "sadel") end)
+		angraUnderlagget()
+		pcall(function() TackService.satBuren(player, "sadel", hastId) end)
+		return false, "tack.kunde_inte_byggas"
+	end
+
+	--[[ COMMIT. Forst nu ligger sadeln fysiskt pa hasten och ar borta ur
+		handerna — alltsa forst nu ar `HELD -> EQUIPPED` sant. ]]
+	GameplayService.slappAgande("sadel", hastId)
+	skicka(player)
+	return true, "tack.pa_plats"
 end
 
 --[[ Svaret på ett fynd. Rätt svar stoppar arbetet, sparar hästens vila och
@@ -1065,6 +1206,12 @@ function GameplayService.start()
 	HorseService.setDagsformHook(GameplayService.dagsformFor)
 	Net.get("RidaNu").OnServerInvoke = function(player)
 		return GameplayService.ridaNu(player)
+	end
+
+	--[[ #235 FAS 2. Samma monster som `RidaNu`: klienten skickar en
+		avsikt, servern svarar med hela sanningen. ]]
+	Net.get("SadlaHast").OnServerInvoke = function(player, modell)
+		return GameplayService.sadla(player, modell)
 	end
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────

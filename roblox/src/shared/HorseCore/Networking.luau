@@ -47,6 +47,12 @@ local DEFINITIONS = {
 	--[[ RIDE FIRST: "Rida nu". Klienten skickar en avsikt; servern gör
 	     stallets förberedelse och svarar med hela sanningen. ]]
 	RidaNu = "RemoteFunction",             -- klient → server: låt stallet göra i ordning henne
+	--[[ #235 FAS 2: SADEL `HELD -> EQUIPPED`. Klienten pekar ut vilken
+		 häst hon står vid; servern äger allt annat — att hon verkligen bär
+		 sadeln, att den är RÄTT hästs, avståndet, ordningen och själva
+		 bygget. Modellen i argumentet är alltså en FRÅGA, inte ett
+		 påstående. ]]
+	SadlaHast = "RemoteFunction",          -- klient → server: lägg sadeln jag bär på den här hästen
 }
 
 local cache: { [string]: Instance } = {}

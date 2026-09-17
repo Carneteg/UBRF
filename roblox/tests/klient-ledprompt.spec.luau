@@ -58,7 +58,8 @@ end
 local function promptar(modell)
 	local ut = {}
 	for _, d in ipairs(modell:GetDescendants()) do
-		if d.Name == "MountPrompt" or d.Name == "LedPrompt" or d.Name == "RidaNuPrompt" then
+		if d.Name == "MountPrompt" or d.Name == "LedPrompt"
+		or d.Name == "RidaNuPrompt" or d.Name == "SadlaPrompt" then
 			ut[d.Name] = d
 		end
 	end
@@ -72,12 +73,15 @@ Networking.get("MountRequest")
 Networking.get("LedBorja")
 Networking.get("LedSlapp")
 Networking.get("LedSync")
+--[[ #235 FAS 2: sadelknappens egen fjarr. ]]
+Networking.get("SadlaHast")
 RunService._server = false
 
 RSt:SetAttribute("G01Enabled", true)
 IC.setReadyCheck(function() return true end)
 IC.setLedCheck(function() return true end)
 IC.setRidaCheck(function() return true end)
+IC.setSadlaCheck(function() return true end)
 
 --[[ Kvittenser och statusrad fångas här i stället för att gå till HUD:en,
 	så att provet mäter VAD som skickas och inte hur det ritas. ]]
@@ -138,6 +142,62 @@ do
 		check("ordningen är sitt upp → rida nu → led, uppifrån och ned",
 			y.mount < y.rida and y.rida < y.led,
 			("%d < %d < %d"):format(y.mount, y.rida, y.led))
+	end
+end
+
+print("\n── Den fjärde knappen: «Sadla» (#235 FAS 2) ──")
+
+do
+	check("sadelknappen byggdes", p.SadlaPrompt ~= nil)
+
+	if p.SadlaPrompt and p.MountPrompt and p.LedPrompt and p.RidaNuPrompt then
+		--[[ SAMMA PROV SOM DE TRE, utsträckt till fyra. En fjärde knapp
+			som lades på någon annans rad hade återinfört exakt det
+			human-QA rapporterade i #182: knappar ovanpå varandra. ]]
+		local y = {
+			mount = p.MountPrompt.UIOffset.Y,
+			rida = p.RidaNuPrompt.UIOffset.Y,
+			led = p.LedPrompt.UIOffset.Y,
+			sadla = p.SadlaPrompt.UIOffset.Y,
+		}
+		local unika = {}
+		for _, v in pairs(y) do unika[v] = true end
+		local antal = 0
+		for _ in pairs(unika) do antal += 1 end
+		check("de FYRA ligger på fyra olika höjder", antal == 4,
+			("mount %d · rida %d · led %d · sadla %d"):format(
+				y.mount, y.rida, y.led, y.sadla))
+
+		local trangt = {}
+		for namn, v in pairs(y) do
+			if namn ~= "sadla" and math.abs(v - y.sadla) < 44 then
+				table.insert(trangt, ("sadla×%s=%d"):format(namn,
+					math.abs(v - y.sadla)))
+			end
+		end
+		check("sadelknappen ligger minst 44 px från var och en av de tre",
+			#trangt == 0, table.concat(trangt, " "))
+
+		--[[ UNDERST. Den är den handling som finns först när man BÄR
+			sadeln, alltså tidigast i kedjan — men kolumnen är ordnad
+			efter hur nära ritten handlingen står, inte efter tid. ]]
+		check("den hamnar underst i kolumnen", y.sadla > y.led,
+			("%d > %d"):format(y.sadla, y.led))
+
+		check("den går att trycka på med ett finger",
+			p.SadlaPrompt.ClickablePrompt == true)
+		check("och bär hästens namn i själva handlingen",
+			p.SadlaPrompt.ActionText:find("Trixie") ~= nil,
+			p.SadlaPrompt.ActionText)
+
+		--[[ TANGENTEN. `F` delas med halvhalten, som bara lever i sadeln —
+			samma kontextregel som bär `R` för «Rida nu». Att den faktiskt
+			HÅLLER mäts i matrisavsnittet längre ned. ]]
+		check("tangenten är F", p.SadlaPrompt.KeyboardKeyCode == Enum.KeyCode.F,
+			tostring(p.SadlaPrompt.KeyboardKeyCode))
+		check("handkontrollen bär det GAMEPAD-tabellen säger",
+			p.SadlaPrompt.GamepadKeyCode == IC.GAMEPAD.SadlaPrompt,
+			tostring(p.SadlaPrompt.GamepadKeyCode))
 	end
 end
 
@@ -473,6 +533,7 @@ do
 		{ "sitt upp", IC.GAMEPAD.MountPrompt },
 		{ "rida nu", IC.GAMEPAD.RidaNuPrompt },
 		{ "led", IC.GAMEPAD.LedPrompt },
+		{ "sadla", IC.GAMEPAD.SadlaPrompt },
 	}
 
 	local iRidningen = {}
@@ -516,6 +577,18 @@ do
 	check("«rida nu» och «led» står på knappar som är lediga i HELA matrisen",
 		#ejLediga == 0, table.concat(ejLediga, " "))
 
+	--[[ #235 FAS 2: «Sadla» delar `ButtonY` med «lektionen vidare», och
+		delningen bars av EXAKT samma kontextregel som uppsittningens.
+		Matningen ar darfor densamma: den andra betydelsen maste leva
+		BARA i sadeln. Star den nagon annanstans faller provet, och
+		det ar den matning som saknades nar ButtonX/Y/B valdes fel
+		forsta gangen. ]]
+	check("sadelknappens delade knapp är delad med något som bara lever i sadeln",
+		huvudbok[IC.GAMEPAD.SadlaPrompt] == nil
+			or huvudbok[IC.GAMEPAD.SadlaPrompt]:find("i sadeln") ~= nil,
+		("%s → %s"):format(tostring(IC.GAMEPAD.SadlaPrompt),
+			tostring(huvudbok[IC.GAMEPAD.SadlaPrompt])))
+
 	check("uppsittningens delade knapp är delad med något som bara lever i sadeln",
 		huvudbok[IC.GAMEPAD.MountPrompt] == nil
 			or huvudbok[IC.GAMEPAD.MountPrompt]:find("i sadeln") ~= nil,
@@ -529,7 +602,11 @@ do
 		ProximityPrompt kräver bara närhet — närmare hästen än på hennes
 		rygg kommer man inte. Det gällde tangentbordet lika hårt: `R` för
 		«lektionen vidare» fyrade «Rida nu» i samma tryck. ]]
-	local TRE = { "MountPrompt", "RidaNuPrompt", "LedPrompt" }
+	--[[ #235 FAS 2 la till en FJARDE knapp, och den bar `ButtonY`. Hela
+		delningen vilar pa att `setEnabled` slacker ocksa den — annars
+		vore «Sadla» och «lektionen vidare» samma tryck i sadeln. Den
+		har listan ar darfor fyra namn, inte tre. ]]
+	local TRE = { "MountPrompt", "RidaNuPrompt", "LedPrompt", "SadlaPrompt" }
 	local pMin = promptar(hast)
 	local kvarPa = {}
 	for _, namn in ipairs(TRE) do
@@ -539,7 +616,7 @@ do
 			table.insert(kvarPa, namn)
 		end
 	end
-	check("i sadeln är ALLA tre knapparna på hästen avstängda", #kvarPa == 0,
+	check("i sadeln är ALLA fyra knapparna på hästen avstängda", #kvarPa == 0,
 		table.concat(kvarPa, " "))
 
 	--[[ …också de som byggs MEDAN hon rider. `uppdatera()` körs under
@@ -569,7 +646,7 @@ do
 			table.insert(slacktaEfter, namn)
 		end
 	end
-	check("och alla tre tänds igen när spelaren sitter av", #slacktaEfter == 0,
+	check("och alla fyra tänds igen när spelaren sitter av", #slacktaEfter == 0,
 		table.concat(slacktaEfter, " "))
 
 	LC.fortsatt, LC.replay = ursprung.fortsatt, ursprung.replay

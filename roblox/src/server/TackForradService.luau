@@ -284,6 +284,16 @@ end
 
 --[[ Hanger utrustningen kvar pa fronten? Provets och tjanstens gemensamma
 	fraga — lasen ur VARLDEN, inte ur ett register. ]]
+--[[ FINNS UPPHANGNINGEN ALLS? Skild fran `paFronten`, som svarar pa om
+	delen HANGER dar. De tva ar olika fragor: en saknad grupp ar ett
+	byggfel, en tom krok ar ett normalt lage — sadeln ligger da pa
+	hasten. #235 FAS 2 behover kunna skilja dem at for att neka en
+	hamtning fran en TOM krok utan att samtidigt sla undan benen pa
+	FAS 1:s prov for en SAKNAD grupp. ]]
+function TackForradService.harPlats(hastId: string, typ: string): boolean
+	return grupp(hastId, typ) ~= nil
+end
+
 function TackForradService.paFronten(hastId: string, typ: string): boolean
 	local g = grupp(hastId, typ)
 	if not g then return false end

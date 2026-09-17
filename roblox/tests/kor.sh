@@ -20,7 +20,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridefirst tack tack-fas1 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus"
+SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridefirst tack tack-fas1 tack-fas2 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then

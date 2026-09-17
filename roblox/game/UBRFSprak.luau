@@ -681,6 +681,14 @@ Sprak.text = {
 		sv = "%s sitter på %s",
 		en = "%s is on %s",
 	},
+	["tack.inte_pa_fronten"] = {
+		sv = "Den hänger inte på boxfronten längre",
+		en = "It is no longer hanging on the stall front",
+	},
+	["tack.bar_ingen_sadel"] = {
+		sv = "Du bär ingen sadel — hämta hennes på boxfronten först",
+		en = "You are not carrying a saddle — fetch hers from the stall front first",
+	},
 	["ugneta.ovning.halt_skritt.rubrik"] = {
 		sv = "Halt → skritt",
 		en = "Halt → walk",
@@ -836,6 +844,10 @@ Sprak.text = {
 	["interaktion.rida_nu"] = {
 		sv = "Rida nu",
 		en = "Ride now",
+	},
+	["interaktion.sadla_namn"] = {
+		sv = "Sadla %s",
+		en = "Saddle %s",
 	},
 	["hjalp.blick"] = {
 		sv = "Se dig omkring",

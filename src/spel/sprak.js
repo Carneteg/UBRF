@@ -346,6 +346,18 @@ const SPRAK = {
   "tack.del_sadel": { sv: "Sadeln", en: "The saddle" },
   "tack.del_trans": { sv: "Tränset", en: "The bridle" },
   "tack.pa_plats": { sv: "%s sitter på %s", en: "%s is on %s" },
+  /* #235 FAS 2. Nejen som bara FAS 2 kan ge: hon bar ingenting att
+     sadla med, eller hon bar en sadel som hor till en annan hast an
+     den hon star vid. Den andra ar avsiktligt mojlig att gora — att
+     kunna ta fel sadel ar hela den pedagogiska poangen, och nejet ska
+     da saga vad som ar fel, inte bara neka. */
+  /* #235 FAS 2 hittade halet: nar sadeln flyttat fran fronten till
+     hastens rygg star kroken tom — men hamtningen slapptes anda
+     igenom och praglade en ANDRA sadel ur tomma luften. */
+  "tack.inte_pa_fronten": { sv: "Den hänger inte på boxfronten längre",
+    en: "It is no longer hanging on the stall front" },
+  "tack.bar_ingen_sadel": { sv: "Du bär ingen sadel — hämta hennes på boxfronten först",
+    en: "You are not carrying a saddle — fetch hers from the stall front first" },
 
   /* LEKTIONSKORTETS ÖVNINGAR.
 
@@ -433,6 +445,10 @@ const SPRAK = {
      från den accepterade Roblox-filen; ingenting är nyskrivet här. */
   /* RIDE FIRST: knappen som låter stallet göra i ordning henne. */
   "interaktion.rida_nu": { sv: "Rida nu", en: "Ride now" },
+  /* #235 FAS 2: SADEL `HELD -> EQUIPPED`. Hastens namn star i sjalva
+     handlingen, samma beslut som `led.borja_namn` i #182 — fyra knappar
+     pa samma hast far aldrig kalla henne olika saker. */
+  "interaktion.sadla_namn": { sv: "Sadla %s", en: "Saddle %s" },
   "hjalp.blick": { sv: "Se dig omkring", en: "Look around" },
   "touch.skritt": { sv: "SKRITT", en: "WALK" },
   "touch.trav": { sv: "TRAV", en: "TROT" },

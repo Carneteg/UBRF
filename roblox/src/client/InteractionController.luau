@@ -27,6 +27,10 @@ local ledPrompts: { [Model]: boolean } = {}
 --[[ RIDE FIRST: "Rida nu". Egen knapp, samma mönster som de två ovan. ]]
 local ridaKnappar: { [Model]: ProximityPrompt } = {}
 local ridaCheck: ((Model) -> boolean)? = nil
+--[[ #235 FAS 2: «Sadla». Samma mönster igen — en tabell för knapparna och
+	en fråga utåt om den får ritas. ]]
+local sadlaKnappar: { [Model]: ProximityPrompt } = {}
+local sadlaCheck: ((Model) -> boolean)? = nil
 local onMount: ((Model) -> ())? = nil
 
 --[[ ══ TRE KNAPPAR PÅ SAMMA HÄST FÅR INTE LIGGA PÅ VARANDRA (#182) ═════
@@ -85,7 +89,8 @@ end
 --[[ Var i kolumnen en knapp hamnar. Produktordning, inte alfabetisk:
 	uppsittningen overst, genvagen dit i mitten, den frivilliga omsorgen
 	underst. Se noten vid `PROMPT_STEG`. ]]
-local PROMPT_RAD = { MountPrompt = -1, RidaNuPrompt = 0, LedPrompt = 1 }
+local PROMPT_RAD = { MountPrompt = -1, RidaNuPrompt = 0, LedPrompt = 1,
+	SadlaPrompt = 2 }
 
 --[[ ══ HANDKONTROLLEN: EN PLATS, MOT HELA KONTROLLMATRISEN ═══════════════
 
@@ -147,6 +152,21 @@ InteractionController.GAMEPAD = {
 	MountPrompt = Enum.KeyCode.ButtonX,
 	RidaNuPrompt = Enum.KeyCode.DPadRight,
 	LedPrompt = Enum.KeyCode.DPadLeft,
+	--[[ #235 FAS 2. Styrkorset ar slut — vanster och hoger gick till
+		de tva knappar som var nya i #182, och upp/ned ar last sedan
+		#161/#162. `ButtonY` valjs pa KONTEXTREGELN, inte pa att den
+		vore obunden: den ar «lektionen vidare» i `init.client.luau`,
+		och den raden ligger efter `if not ride then return end`.
+		«Sadla» lever bara nar spelaren star pa marken och BAR sadeln
+		— alltsa nar hon inte sitter upp — sa de tva kan aldrig vara
+		uppe samtidigt.
+
+		Det ar exakt samma argument som redan bar `ButtonX` (sitt upp /
+		se ritten) och tangenten `R` (rida nu / lektionen vidare). Det
+		gor det inte gratis: provet fyrar knappen i BADA lagena och
+		faller om nagot svarar i fel lage. Det var just den matningen
+		som saknades nar ButtonX/Y/B forsta gangen valdes fel. ]]
+	SadlaPrompt = Enum.KeyCode.ButtonY,
 }
 
 --[[ ÄR PROMPTERNA UPPE? Ett fält, inte en engångsslinga.
@@ -553,6 +573,72 @@ function InteractionController.setAvslagVisare(fn: ((any, any?) -> ())?)
 	avslagVisare = fn
 end
 
+--[[ ══ «SADLA» (#235 FAS 2) ══════════════════════════════════════════
+
+	Knappen finns BARA nar spelaren faktiskt bar den har hastens sadel, och
+	den forsvinner i samma ogonblick sadeln ligger pa ryggen. Den ar alltsa
+	inte ett lage man kan sta i utan en handling som finns nar den gar att
+	gora — samma regel som «Rida nu», som forsvinner nar forberedelsen ar
+	klar.
+
+	KNAPPEN AVGOR INGENTING. `sadlaCheck` sager bara om den ritas; servern
+	prover fortfarande att hon bar sadeln, att det ar RATT hasts sadel, att
+	hasten inte redan ar sadlad och att hon star tillrackligt nara. Fel
+	sadel ska ga att FORSOKA — det ar poangen — och nejet kommer da
+	darifran. ]]
+local function addSadlaPrompt(model: Model)
+	if sadlaKnappar[model] then return end
+	if not (sadlaCheck and sadlaCheck(model)) then return end
+	local rig = RigAdapter.build(model)
+	if not rig then return end
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "SadlaPrompt"
+	prompt.ActionText = Sprak.t("interaktion.sadla_namn", hastnamn(model))
+	prompt.ObjectText = hastnamn(model)
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	--[[ `F` DELAS MED halvhalten, som bara lever i sadeln. Samma
+		kontextregel som bar `R` for «Rida nu» — se noten vid `GAMEPAD`. ]]
+	prompt.KeyboardKeyCode = Enum.KeyCode.F
+	--[[ PA RYGGEN, inte pa roten: det ar dit sadeln ska, och knappen ska
+		peka pa platsen den handlar om. Faller sadelpunkten bort tar roten
+		over sa att handlingen aldrig blir onabar. ]]
+	prompt.Parent = rig.attachments.Saddle or rig.root
+	stallIn(prompt)
+
+	prompt.Triggered:Connect(function()
+		local ok, skal = Net.get("SadlaHast"):InvokeServer(model)
+		if ok then
+			if bekraftelseVisare then
+				bekraftelseVisare(skal or "tack.pa_plats", {
+					del = Sprak.t("tack.del_sadel"),
+					hast = hastnamn(model),
+				})
+			end
+		elseif avslagVisare then
+			avslagVisare(skal)
+		end
+		--[[ Knappen ska forsvinna nar sadeln ligger dar. Servern har redan
+			skickat ny sanning; den har raden ar for det TRYCK som inte
+			andrade nagot, sa kolumnen inte star kvar och ljuger. ]]
+		InteractionController.uppdatera()
+	end)
+
+	sadlaKnappar[model] = prompt
+end
+
+local function removeSadla(model: Model)
+	local k = sadlaKnappar[model]
+	if k then k:Destroy() end
+	sadlaKnappar[model] = nil
+end
+
+function InteractionController.setSadlaCheck(fn: ((Model) -> boolean)?)
+	sadlaCheck = fn
+end
+
 function InteractionController.uppdatera()
 	for _, model in CollectionService:GetTagged("Horse") do
 		if model:IsA("Model") then
@@ -560,6 +646,8 @@ function InteractionController.uppdatera()
 			if farVisasLed(model) then addLedPrompt(model) else removeLed(model) end
 			if ridaCheck and ridaCheck(model) then addRidaPrompt(model)
 			else removeRida(model) end
+			if sadlaCheck and sadlaCheck(model) then addSadlaPrompt(model)
+			else removeSadla(model) end
 		end
 	end
 end
@@ -637,6 +725,13 @@ function InteractionController.setEnabled(enabled: boolean)
 	for _, prompt in prompts do prompt.Enabled = enabled end
 	for _, prompt in ledKnappar do prompt.Enabled = enabled end
 	for _, prompt in ridaKnappar do prompt.Enabled = enabled end
+	--[[ #235 FAS 2: OCH DEN FJARDE TABELLEN. Att `setEnabled` bara tog
+		uppsittningens var den faktiska buggen i #182 — «Rida nu» och «Led»
+		stod kvar pasla i sadeln och `R` fyrade tva saker i samma tryck. En
+		ny knapp som glomdes har hade aterinfort exakt det felet, och
+		`ButtonY` hade da varit bade «Sadla» och «lektionen vidare»
+		samtidigt. Kontextregeln vid `GAMEPAD` vilar pa den har raden. ]]
+	for _, prompt in sadlaKnappar do prompt.Enabled = enabled end
 end
 
 return InteractionController

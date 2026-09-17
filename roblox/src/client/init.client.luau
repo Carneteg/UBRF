@@ -302,6 +302,43 @@ end)
 PreparationController.vidNyVy(function(vy: any)
 	DinHast.satBurenstatus(if type(vy) == "table" then vy.burenUtrustning else nil)
 end)
+
+--[[ #235 FAS 2: «Sadla». Knappen far bara finnas nar spelaren FAKTISKT
+     bar sadeln, och servern ar den enda som vet det.
+
+     `vy.burenUtrustning` ar redan precis den sanningen och behover ingen
+     ny kanal: `Preparation.buren` drar bort det som redan ligger pa
+     hasten, sa «sadel» star kvar i listan exakt sa lange den ar i
+     handerna. Nar servern byggt den pa ryggen forsvinner den ur listan i
+     samma sync, och knappen med den.
+
+     Det ar samma val som ledningens statusrad gjorde: LYSSNA PA SERVERNS
+     VY, inte pa det senaste knapptrycket. Tva vagar in hade kunnat glida
+     isar — och «Rida nu» hamtar ocksa utrustning, utan att ga via
+     sadelknappen. ]]
+local barSadelNu = false
+PreparationController.vidNyVy(function(vy: any)
+	local buren = if type(vy) == "table" then vy.burenUtrustning else nil
+	local har = false
+	if type(buren) == "table" then
+		for _, typ in ipairs(buren.delar or {}) do
+			if tostring(typ) == "sadel" then har = true end
+		end
+	end
+	barSadelNu = har
+	--[[ OCH RITA OM DIREKT. `vidNyVy`-hookarna kors i den ordning de
+	     registrerats, och promptuppdateringen ovan star FORE den har — sa
+	     utan raden nedan hade sadelknappen alltid speglat FOREGAENDE sync.
+	     Spelaren hade sett knappen forst efter nasta serverbesked, och den
+	     hade statt kvar ett varv efter att sadeln lagts pa. ]]
+	InteractionController.uppdatera()
+end)
+InteractionController.setSadlaCheck(function(model: Model): boolean
+	if not barSadelNu then return false end
+	local id = PreparationController.hastId()
+	if not id then return false end
+	return model:GetAttribute("HorseId") == id
+end)
 PreparationController.start()
 DinHast.start()
 --[[ #235: den gemensamma touchytan. Returnerar direkt utan pekskarm. ]]

@@ -28,6 +28,7 @@ provet fyrar hjälpens egen tangent och läser vad `Input.luau` gjorde.
 | Sitt av | `E` | `DPadDown` (styrkors ned) | `SITT AV` |
 | Rida nu (knappen på hästen) | `R` | `DPadRight` (styrkors höger) | tryck på knappen |
 | Led / släpp hästen | `L` | `DPadLeft` (styrkors vänster) | tryck på knappen |
+| Sadla hästen (knappen på hästen) | `F` | `ButtonY` | tryck på knappen |
 | Framåt / bakåt | `W` / `S` | vänster spak | spaken |
 | Styr | `A` / `D` | vänster spak | spaken |
 | Högre gångart | `LeftShift` | `R1` | `▲ FRAMÅT` |
@@ -129,12 +130,13 @@ huvudboken, inte de tre rader man råkar titta på:
 | `DPadRight` | `InteractionController.luau` | **rida nu** (prompten) | på marken |
 | `DPadLeft` | `InteractionController.luau` | **led / släpp** (prompten) | på marken |
 | `DPadUp` | `KontrollHjalp` via `init.client.luau` | kontrollhjälpen | **alltid** |
+| `ButtonY` | `InteractionController.luau` | **sadla** (prompten) | på marken |
 
 `ButtonStart` och `ButtonSelect` valdes bort trots att de också är
 obundna i UBRF: de är reserverade av Roblox egna menyer på konsol, och en
 hjälpknapp som ibland öppnar Roblox-menyn i stället är sämre än ingen.
 
-## Kontextregeln — varför `ButtonX` står två gånger
+## Kontextregeln — varför `ButtonX` och `ButtonY` står två gånger
 
 Efter #182 finns **tre knappar på hästen**: sitt upp, rida nu och led.
 De är ProximityPrompts, och en ProximityPrompt kräver bara närhet — alltså
@@ -173,6 +175,24 @@ Provet `roblox/tests/klient-ledprompt.spec.luau` bygger huvudboken **ur
 källan** — det fyrar kandidatknapparna genom `Input.luau`s egen bindning
 och genom klientens egen `InputBegan`, i båda lägena — och faller om en
 promptknapp krockar med något som lever samtidigt.
+
+### `ButtonY` och `F` — sadelknappen (#235 FAS 2)
+
+Efter FAS 2 finns **fyra** knappar på hästen. Styrkorset var slut: vänster
+och höger gick till de två som var nya i #182, och upp/ned är låst sedan
+#161/#162. Sadelknappen står därför på `ButtonY` och `F` — «lektionen
+vidare» respektive «halvhalt», som **båda bara lever i sadeln**.
+
+Det är samma kontextregel som redan bär `ButtonX` och `R`, och den är inte
+gratis: «Sadla» finns bara när spelaren står på marken **och bär hästens
+sadel**, och `setEnabled` släcker numera **alla fyra** prompttabellerna.
+Den raden är hela delningens bärande vägg — glöms en tabell där blir
+`ButtonY` både «Sadla» och «lektionen vidare» i samma tryck, vilket är
+exakt det fynd som fällde första utkastet till #182.
+
+`klient-ledprompt.spec.luau` mäter det i båda riktningarna: den bygger
+huvudboken ur källan, kontrollerar att sadelknappens andra betydelse bara
+lever i sadeln, och att alla fyra knapparna är avstängda där.
 
 ### Avsittningen (#162 blockerare 2)
 
