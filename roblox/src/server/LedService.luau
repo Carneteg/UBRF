@@ -80,6 +80,12 @@ local KOPPEL_TID = 0.75        -- s: sa lange maste hon vara for langt bort
 	bort an kopplet racker ar per definition orimligt. ]]
 local MAL_AVVIK  = 7.0         -- m: sa langt fran spelaren far malpunkten ligga
 
+--[[ Hur mycket snabbare spelaren gar an hasten SKRITTAR. Marginalen
+	finns for att hon ska kunna ga fore utan att kopplet strammar — men
+	den maste ligga hos HASTENS tak ocksa, annars ar den en sparr.
+	Se noten vid fartrampen i `steg`. ]]
+local LEDNINGSTAKT = 1.15
+
 
 --[[ ══ FOLJNINGEN AR CONSTRAINTS, INTE EN LOOP (#182 del 2) ═════════
 
@@ -870,7 +876,7 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 	local spelarHum2 = karaktar and karaktar:FindFirstChildOfClass("Humanoid")
 	local tidigareSpelarfart = spelarHum2 and spelarHum2.WalkSpeed or 16
 	if spelarHum2 then
-		spelarHum2.WalkSpeed = skrittfart() * 1.15
+		spelarHum2.WalkSpeed = skrittfart() * LEDNINGSTAKT
 	end
 	ledd[player] = {
 		tidigareFart = tidigareFart,
@@ -1690,9 +1696,37 @@ local function steg(_dt: number)
 		local gang = Gaits.DATA and Gaits.DATA.walk
 		local normalfart = (gang and gang.norm) or 1.45
 		local maxfart = (gang and gang.max) or 2.0
-		local lag = math.clamp((avst - CATCHUP_R) / (KOPPEL - CATCHUP_R), 0, 1)
+		--[[ ── DET HAR VAR VARFOR HON INTE FOLJDE (QA 2026-09-17) ──────
+
+			Matt i Studio: spelaren gick 11,5 studs pa tre sekunder, hasten
+			1,0. Draget var pasalaget hela tiden, hon var oankrad, rorde
+			ingenting och en ren `AlignPosition` flyttade henne utan
+			problem. Det var inte kraften, inte humanoiden och inte
+			geometrin.
+
+			DET VAR ARITMETIKEN. `borja` ger spelaren `skrittfart() * 1.15`
+			= 5,0 studs/s sa att hon ska kunna ga fore utan att hasten
+			halkar efter. Hastens `MaxVelocity` var samtidigt skrittfarten
+			sjalv, 4,35 studs/s. Spelaren var alltsa PER KONSTRUKTION 15 %
+			snabbare an hastens tak — hon kunde inte hinna ifatt, bara
+			tappa mark, tills kopplet slappte.
+
+			I den gamla aktueringen doldes det: `WalkSpeed` var en onskan
+			som humanoiden fick overskrida i praktiken. En `MaxVelocity` ar
+			ett HART tak, och da blev marginalen till en spärr.
+
+			TVA RATTELSER:
+
+			  1. Hastens tak far aldrig understiga spelarens ledningstakt.
+			     Marginalen ska ligga hos HENNE, inte mot henne.
+			  2. Catch-up borjar vid foljavstandet, inte vid 5 m. Att vanta
+			     tills hon ar 15 studs efter ar att vanta tills det redan
+			     ser trasigt ut. ]]
+		local lag = math.clamp((avst - FOLJ_BAKOM) / (CATCHUP_R - FOLJ_BAKOM), 0, 1)
 		l.kopplingslage = if lag > 0 then "catchup" else "normal"
 		local onskadFart = normalfart + lag * (maxfart - normalfart)
+		--[[ GOLVET: aldrig langsammare an den som leder henne. ]]
+		onskadFart = math.max(onskadFart, LEDNINGSTAKT * normalfart)
 
 		--[[ ── KOMMER HON FRAMÅT? ──────────────────────────────────────
 
