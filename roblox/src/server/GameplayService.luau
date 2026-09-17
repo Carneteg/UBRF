@@ -733,6 +733,18 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 	if agare == player then return true end
 	if agare ~= nil and kvarInne(agare) then return false, "tack.redan_tagen" end
 
+	--[[ EN SADEL I TAGET (#235 review 2). `TackService.satBuren` ar
+		uttryckligen byggd for att BYTA ut en buren sadel mot en annan
+		hasts. Gjorde vi det har lag den FORSTA hastens agarpost kvar och
+		hennes front forblev slackt — hennes sadel last for alla, i
+		handerna pa ingen.
+
+		FAS 1 loser det genom att inte tillata bytet. Ingen swap-logik,
+		inget att rulla tillbaka: nejet kommer INNAN nagot andras, och
+		spelaren far lamna tillbaka sadeln hon bar forst. ]]
+	local barNu = TackService.barBuren(player, t)
+	if barNu ~= nil and barNu ~= id then return false, "tack.bar_redan_annan" end
+
 	--[[ ── EN TRANSAKTION, I DEN HAR ORDNINGEN ────────────────────────
 
 		validera -> bygg den burna sadeln -> slack den pa fronten -> committa
@@ -745,7 +757,7 @@ function GameplayService.valjEn(player: Player, hastId: string?, typ: string?): 
 
 		Nu andras ingenting bestaende forran badadera lyckats, och det som
 		hann bli gjort rullas tillbaka nar nagot faller. ]]
-	local bar_redan = TackService.barBuren(player, t) == id
+	local bar_redan = barNu == id
 	if not TackService.satBuren(player, t, id) then
 		return false, "tack.kunde_inte_byggas"
 	end

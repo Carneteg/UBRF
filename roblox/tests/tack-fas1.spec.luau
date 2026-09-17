@@ -293,6 +293,83 @@ end
 	ar varre an ett rent nej, for resten av spelet laser sedan det halva
 	som sanning. ]]
 
+print("\n── En sadel i taget: bytet far inte lamna den forsta last ──")
+
+do
+	--[[ FYNDET UR REVIEW 2. `TackService.satBuren` ar uttryckligen byggd
+		for att BYTA ut en buren sadel mot en annan hasts. Gjorde `valjEn`
+		det lag den FORSTA hastens agarpost kvar och hennes front forblev
+		slackt: hennes sadel last for alla, i handerna pa ingen.
+
+		Provet gar hela vagen — tar den forsta sadeln, gar till en annan
+		box, forsoker igen — och mater sedan BADA hastarna. Ett prov som
+		bara sett den nya hasten hade missat precis det som var fel. ]]
+	local mapp = TackForradService.mapp()
+	local annanId, annanModell
+	if mapp then
+		for _, m in ipairs(mapp:GetChildren()) do
+			local fh = m:IsA("Model") and tostring(m:GetAttribute("ForHast") or "")
+			if fh and fh ~= "" and fh ~= HAST and m.PrimaryPart then
+				annanId, annanModell = fh, m
+				break
+			end
+		end
+	end
+	check("det finns en andra hast med egen boxfront att prova mot",
+		annanId ~= nil, tostring(annanId))
+
+	local sjunde, kar7, rot7 = nySpelare("Fas1g", 9307, vid + Vector3.new(2, 0, 0))
+	Players._spelare = { sjunde }
+
+	local ok1 = TackForradService.tagSadel(sjunde, HAST, "Trixie")
+	check("hon tar forst Trixies sadel", ok1 == true)
+
+	--[[ OCH GAR TILL DEN ANDRA BOXEN. Utan flytten nekas hon av avstandet
+		och provet hade matt fel regel. ]]
+	rot7.CFrame = CFrame.new(annanModell.PrimaryPart.Position + Vector3.new(2, 0, 0))
+
+	local ok2, skal2 = TackForradService.tagSadel(sjunde, annanId, "Den andra")
+	check("den andra hastens sadel nekas", ok2 == false, tostring(skal2))
+	check("och nejet sager varfor", skal2 == "tack.bar_redan_annan", tostring(skal2))
+
+	--[[ INGENTING FAR HA ANDRATS. Varken hos den hon bar eller hos den
+		hon inte fick. ]]
+	check("Trixies sadel ar fortfarande fysiskt i handerna",
+		TackService.barBuren(sjunde, "sadel") == HAST,
+		tostring(TackService.barBuren(sjunde, "sadel")))
+	check("Trixies front ar fortfarande tom",
+		TackForradService.paFronten(HAST, "sadel") == false)
+	check("den andra hastens sadel hanger kvar synlig pa sin front",
+		TackForradService.paFronten(annanId, "sadel") == true)
+	check("den andra hasten har ingen agare",
+		GameplayService.barasAv("sadel", annanId) == nil,
+		tostring(GameplayService.barasAv("sadel", annanId)))
+
+	--[[ EXAKT EN AGARNYCKEL. Rakningen gar over ALLA boxfronter, inte bara
+		de tva provet kanner vid namn — en stale post nagon annanstans ar
+		lika mycket en last sadel. ]]
+	local mina = {}
+	if mapp then
+		for _, m in ipairs(mapp:GetChildren()) do
+			local fh = m:IsA("Model") and tostring(m:GetAttribute("ForHast") or "")
+			if fh and fh ~= "" and GameplayService.barasAv("sadel", fh) == sjunde then
+				table.insert(mina, fh)
+			end
+		end
+	end
+	check("spelaren ager exakt EN sadel i hela stallet", #mina == 1,
+		("%d: %s"):format(#mina, table.concat(mina, ", ")))
+
+	--[[ OCH HON KAN LAMNA TILLBAKA OCH TA DEN ANDRA. Annars vore nejet en
+		atervandsgrand i stallet for en regel. ]]
+	GameplayService.slappBuret(sjunde)
+	check("nar hon lamnat tillbaka hanger Trixies sadel pa fronten igen",
+		TackForradService.paFronten(HAST, "sadel") == true)
+	local ok3, skal3 = TackForradService.tagSadel(sjunde, annanId, "Den andra")
+	check("och da gar den andra hastens sadel att ta", ok3 == true, tostring(skal3))
+	GameplayService.slappBuret(sjunde)
+end
+
 print("\n── Fail-closed: ingen front att mata avstandet fran ──")
 
 do

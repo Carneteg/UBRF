@@ -311,6 +311,12 @@ const SPRAK = {
     en: "The equipment cannot be reached right now" },
   "tack.front_slapper_inte": { sv: "Sadeln sitter fast på boxfronten — försök igen",
     en: "The saddle is stuck on the stall front — try again" },
+  /* EN SADEL I TAGET (#235 review 2). `satBuren` ar byggd for att BYTA
+     ut en buren del mot en annan hasts — men da lag den forsta hastens
+     agarpost kvar och hennes front forblev slackt. FAS 1 nekar i
+     stallet, innan nagot andras. */
+  "tack.bar_redan_annan": { sv: "Du bär redan en annan hästs sadel — lämna tillbaka den först",
+    en: "You are already carrying another horse's saddle — put it back first" },
   "tack.utrustning_for": { sv: "%ss sadel och träns", en: "%s's saddle and bridle" },
   "tack.hamta_forst": { sv: "Sadel och träns hänger på boxfronten — hämta dem först",
     en: "Saddle and bridle hang on the stall front — fetch them first" },

@@ -641,6 +641,10 @@ Sprak.text = {
 		sv = "Sadeln sitter fast på boxfronten — försök igen",
 		en = "The saddle is stuck on the stall front — try again",
 	},
+	["tack.bar_redan_annan"] = {
+		sv = "Du bär redan en annan hästs sadel — lämna tillbaka den först",
+		en = "You are already carrying another horse's saddle — put it back first",
+	},
 	["tack.utrustning_for"] = {
 		sv = "%ss sadel och träns",
 		en = "%s's saddle and bridle",
