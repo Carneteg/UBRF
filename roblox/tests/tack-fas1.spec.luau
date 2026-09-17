@@ -85,6 +85,32 @@ local modell = TackForradService.forHast(HAST)
 local vid = modell and modell.PrimaryPart and modell.PrimaryPart.Position
 	or Vector3.new(0, 0, 0)
 
+--[[ ETT NEJ FAR INTE LAMNA SPAR.
+
+	Den gemensamma regeln bakom reviewens tre fynd. Sager servern nej ska
+	varlden se ut exakt som innan: ingen sadel i handerna, ingen agare i
+	registret, inget val i `valdUtrustning` — och, dar fronten finns kvar
+	att titta pa, sadeln fortfarande synlig pa kroken.
+
+	Ett halvt utfort `WORLD -> HELD` ar varre an ett rent nej, for resten
+	av spelet laser sedan det halva som sanning. ]]
+local function ingetSpar(vem, karaktar, hastId, varfor, frontKvar)
+	check(varfor .. ": ingen buren sadel i handerna",
+		TackRigg.hittaBuren(karaktar, "sadel") == nil,
+		tostring(TackRigg.hittaBuren(karaktar, "sadel")))
+	check(varfor .. ": ingen agare i registret",
+		GameplayService.barasAv("sadel", hastId) == nil,
+		tostring(GameplayService.barasAv("sadel", hastId)))
+	local val = GameplayService.valdFor(vem)
+	check(varfor .. ": inget val i valdUtrustning",
+		val == nil or val.sadel == nil,
+		tostring(val and val.sadel))
+	if frontKvar then
+		check(varfor .. ": sadeln hanger kvar pa fronten",
+			TackForradService.paFronten(hastId, "sadel") == true)
+	end
+end
+
 print("\n── Upphängningen är två grupper, inte sex lösa delar ──")
 
 do
@@ -125,6 +151,18 @@ do
 
 	local ok, skal = TackForradService.tagSadel(spelare, HAST, "Trixie")
 	check("«Ta sadeln» går igenom", ok == true, tostring(skal))
+
+	--[[ OCH OM DEN INTE GICK IGENOM far den inte ha lamnat halvfardigt
+		state efter sig. Reviewen bad uttryckligen om ett prov som tvingar
+		`satBuren` att falla och kontrollerar att varken val, agarskap
+		eller front hunnit andras. Den vagen gar inte att na inifran
+		varlden — `satBuren` faller bara nar karaktaren saknas, och det
+		nekas redan tidigare — sa den provas genom mutation (R5), och det
+		ar HAR natet sitter. Tyst nar allt fungerar, rott nar bygget
+		faller och nagot anda committats. ]]
+	if not ok then
+		ingetSpar(spelare, karaktar, HAST, "bygget foll", true)
+	end
 
 	check("sadeln bärs nu av spelaren, serverauktoritärt",
 		TackService.barBuren(spelare, "sadel") == HAST,
@@ -254,19 +292,6 @@ end
 	agare, inget val i `valdUtrustning`. Ett halvt utfort `WORLD -> HELD`
 	ar varre an ett rent nej, for resten av spelet laser sedan det halva
 	som sanning. ]]
-
-local function ingetSpar(vem, karaktar, hastId, varfor)
-	check(varfor .. ": ingen buren sadel i handerna",
-		TackRigg.hittaBuren(karaktar, "sadel") == nil,
-		tostring(TackRigg.hittaBuren(karaktar, "sadel")))
-	check(varfor .. ": ingen agare i registret",
-		GameplayService.barasAv("sadel", hastId) == nil,
-		tostring(GameplayService.barasAv("sadel", hastId)))
-	local val = GameplayService.valdFor(vem)
-	check(varfor .. ": inget val i valdUtrustning",
-		val == nil or val.sadel == nil,
-		tostring(val and val.sadel))
-end
 
 print("\n── Fail-closed: ingen front att mata avstandet fran ──")
 
