@@ -231,6 +231,26 @@ do
 	local ok, skal = GameplayService.transa(spelare, MODELL)
 	check("«Tränsa» går igenom nu", ok == true, tostring(skal))
 
+	--[[ OCH OM BYGGET FALLER får ingenting ha committats. Vägen dit går
+		inte att nå inifrån världen — den provas genom mutation — och det
+		är HÄR nätet sitter. Tyst när allt fungerar, rött när tränset
+		säger ja utan att sitta någonstans.
+
+		Ordern kräver falsifiering av «build/weld-fel», och utan det här
+		hade den mutationen bara visat att svaret blev nej — inte att
+		världen och registret lämnades orörda. ]]
+	if not ok then
+		check("bygget föll: inget träns på hästen",
+			TackService.transad(MODELL) == false)
+		check("bygget föll: inga tyglar kvar",
+			TackService.harTack(MODELL, "tygel") == false)
+		check("bygget föll: tränset är tillbaka i händerna",
+			TackService.barBuren(spelare, "trans") == HAST,
+			tostring(TackService.barBuren(spelare, "trans")))
+		check("bygget föll: ägarposten är kvar hos henne",
+			GameplayService.barasAv("trans", HAST) == spelare)
+	end
+
 	check("tränset sitter FYSISKT på hästen",
 		TackService.transad(MODELL) == true)
 	check("och TYGLARNA följde med — «leda» förutsätter dem",
@@ -377,6 +397,134 @@ do
 		end
 		GameplayService.slappBuret(hon)
 	end
+end
+
+print("\n── Två spelare, samma träns ──")
+
+do
+	local delaId = ordning[4]
+	check("det finns en fjärde häst med träns kvar på kroken",
+		delaId ~= nil and TackForradService.paFronten(delaId, "trans") == true,
+		tostring(delaId))
+
+	if delaId then
+		local front = TackForradService.forHast(delaId).PrimaryPart.Position
+		local a, karA = nySpelare("Fas3d", 9504, front + Vector3.new(2, 0, 0))
+		local b, karB = nySpelare("Fas3e", 9505, front + Vector3.new(3, 0, 0))
+		Players._spelare = { a, b }
+
+		check("den första tar tränset",
+			TackForradService.tagTrans(a, delaId, "Hon") == true)
+		local ok, skal = TackForradService.tagTrans(b, delaId, "Hon")
+		check("den andra nekas", ok == false, tostring(skal))
+		check("och nejet säger att någon annan bär det",
+			skal == "tack.redan_tagen", tostring(skal))
+		check("hon bär inget träns",
+			TackService.barBuren(b, "trans") == nil,
+			tostring(TackService.barBuren(b, "trans")))
+		check("den första bär det fortfarande",
+			GameplayService.barasAv("trans", delaId) == a)
+
+		--[[ ── RESET/DISCONNECT MEDAN HON BÄR DET ──────────────────────
+
+			Skilt från provet längst ned, som mäter en spelare som lämnar
+			EFTER att tränset satts på. Här går hon mitt i: tränset är i
+			händerna och sitter ingenstans. Då ska kroken få tillbaka det
+			— annars är det låst för alltid av någon som inte finns. ]]
+		Players.PlayerRemoving:Fire(a)
+		task.wait()
+
+		check("när hon lämnar spelet hänger tränset tillbaka på kroken",
+			TackForradService.paFronten(delaId, "trans") == true)
+		check("registret släppte det",
+			GameplayService.barasAv("trans", delaId) == nil,
+			tostring(GameplayService.barasAv("trans", delaId)))
+		check("och ingen orphan ligger kvar i hennes karaktär",
+			TackRigg.hittaBuren(karA, "trans") == nil,
+			tostring(TackRigg.hittaBuren(karA, "trans")))
+
+		Players._spelare = { b }
+		check("och nästa spelare kan ta det efteråt",
+			TackForradService.tagTrans(b, delaId, "Hon") == true)
+		GameplayService.slappBuret(b)
+	end
+end
+
+print("\n── Saknad rigg: ingen anchor att svetsa i ──")
+
+do
+	--[[ Ordern kräver falsifiering av «saknad anchor/rigg». Den går att
+		nå inifrån världen: en Horse-taggad modell UTAN riggens
+		fästpunkter har ingen `BridleAttachment` att svetsa tränset i,
+		och `RigAdapter.build` svarar därför nej.
+
+		Servern ska då neka — inte kasta, och inte bygga ett träns som
+		hänger i luften framför bålen. ]]
+	local naken = Instance.new("Model")
+	naken.Name = "Naken"
+	naken:SetAttribute("HorseId", "naken")
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Size = Vector3.new(1.86, 2.34, 5.55)
+	rot.CFrame = CFrame.new(vidHast + Vector3.new(20, 0, 0))
+	rot.Parent = naken
+	naken.PrimaryPart = rot
+	local hum = Instance.new("Humanoid")
+	hum.Name = "Humanoid"
+	hum.Parent = naken
+	naken.Parent = workspace
+
+	--[[ HON MÅSTE SE SADLAD UT, annars kommer nejet från kanonordningen
+		(`tack.sadeln_forst`) och provet mäter fel regel igen — precis som
+		avståndsmätningen gjorde innan den rättades. En riktig sadling går
+		inte, för den kräver också en rigg; provet märker därför en del
+		som «sadel» på det sätt `TackRigg.hittaDel` läser. ]]
+	local tackmapp = Instance.new("Folder")
+	tackmapp.Name = "Tack"
+	tackmapp.Parent = naken
+	local fejksadel = Instance.new("Part")
+	fejksadel.Name = "Sadel"
+	fejksadel:SetAttribute("UBRFTack", "sadel")
+	--[[ `harTack` kraver ocksa att delen HOR till just den hasten. ]]
+	fejksadel:SetAttribute("ForHast", "naken")
+	fejksadel.Parent = tackmapp
+	check("modellen räknas som sadlad", TackService.sadlad(naken) == true)
+
+	local hon, karHon = nySpelare("Fas3f", 9506, vidHast + Vector3.new(22, 0, 0))
+	Players._spelare = { hon }
+	--[[ Hon bär ett träns som hör till den nakna modellen, så att nejet
+		inte kan komma från «fel träns». ]]
+	TackService.satBuren(hon, "trans", "naken")
+	check("hon bär ett träns för den nakna modellen",
+		TackService.barBuren(hon, "trans") == "naken")
+
+	local ok, skal = pcall(function()
+		return { GameplayService.transa(hon, naken) }
+	end)
+	check("servern kastar inte på en hästmodell utan rigg", ok == true,
+		tostring(skal))
+	if ok then
+		check("den nekar i stället", skal[1] == false, tostring(skal[2]))
+		--[[ OCH NEJET KOMMER FRÅN BYGGET, inte från ordningen. Utan den
+			här raden hade provet varit grönt av fel skäl — precis som
+			avståndsmätningen var innan den rättades.
+
+			SKÄLET ÄR `tack.kunde_inte_byggas` och INTE `tack.ingen_rigg`:
+			`RigAdapter.build` lyckas på en modell med en rot, den saknar
+			bara fästpunkterna. Det är `TackRigg.byggTrans` som faller när
+			`BridleAttachment` inte finns — alltså exakt det «saknad
+			anchor»-fall ordern kräver, och det failar stängt. ]]
+		check("och nejet kommer från bygget mot en saknad anchor",
+			skal[2] == "tack.kunde_inte_byggas", tostring(skal[2]))
+		check("och tränset ligger kvar i händerna",
+			TackService.barBuren(hon, "trans") == "naken")
+		check("ingen del byggdes på den nakna modellen",
+			TackRigg.hittaDel(naken, "trans") == nil)
+		check("och inga tyglar heller",
+			TackRigg.hittaDel(naken, "tygel") == nil)
+	end
+	GameplayService.slappBuret(hon)
+	naken:Destroy()
 end
 
 print("\n── Reset och disconnect efter en LYCKAD tränsning ──")
