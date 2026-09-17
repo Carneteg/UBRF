@@ -1030,10 +1030,20 @@ function GameplayService.transa(player: Player, modell: Model?): (boolean, strin
 	local okT, skalT = TackService.satPa(player, m, "trans", bar, m)
 	if not okT then return false, skalT end
 
-	--[[ OCH VARLDEN AR SANNINGEN. Samma onabara forsvarsrad som sadelns,
-		med samma precedens i momentflodet — och har bar den dessutom
-		TYGLARNA: ett trans utan tyglar ar inte det tillstand spelet
-		pastar, och `leda` forutsatter dem. ]]
+	--[[ OCH VARLDEN AR SANNINGEN. Samma ONABARA forsvarsrad som sadelns
+		(se noten dar), och min falsifiering gav samma svar: mutationen
+		som tog bort tyglarna ur provet kom ut GRON.
+
+		Skalet ar att `satPa` redan river BADA om tyglarna faller — det
+		ar bevisat, mutation T7 ar rod. Raden har ar alltsa ett andra
+		lager over ett forsta som haller.
+
+		Den star kvar av samma skal som sadelns: momentflodet har samma
+		rad, och ett «transad» som inte gar att se i varlden ar precis den
+		motsagelse `TackService` finns for att omojliggora. Att den
+		dessutom kraver TYGLARNA ar inte kosmetik — `leda` forutsatter dem
+		(«med tyglarna over halsen»), och ett trans utan tyglar ar inte
+		det tillstand spelet pastar. Redovisad som kand svag mutation. ]]
 	if not (TackService.harTack(m, "trans") and TackService.harTack(m, "tygel")) then
 		pcall(function() TackRigg.taAv(m, "tygel") end)
 		pcall(function() TackRigg.taAv(m, "trans") end)
