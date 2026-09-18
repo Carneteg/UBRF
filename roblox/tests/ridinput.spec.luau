@@ -691,6 +691,45 @@ do
 		mc.loco.beddGangart == "walk", mc.loco.beddGangart)
 end
 
+do
+	--[[ MARKET MASTE FINNAS NAR `MountChanged` FYRAR.
+
+	     Det har ar buggen i mitt eget forsta utkast, matt i stallet for
+	     kommenterad. Market lag da ENBART i `tryMount`-returen, men
+	     `MountChanged` fyras INNE i `setRider` och alltsa fore den returen.
+	     Klientens lyssnare anropar `mount(model)` utan marke, sa en ritt
+	     som startade den vagen fick `rittId = nil` och servern nekade varje
+	     hjalp: hasten svarade inte langre pa DRIV eller BROMS.
+
+	     ORDNINGEN ar det som mats, inte bara att attributet finns.
+	     Lyssnaren laser attributet i samma ogonblick signalen kommer -- ar
+	     det satt efterat ser den nil, precis som en riktig klient hade
+	     gjort. ]]
+	local settNarSignalenKom = false
+	local koppling = Networking.get("MountChanged").OnClientEvent:Connect(function(m)
+		settNarSignalenKom = m:GetAttribute("RidSession") ~= nil
+	end)
+
+	HorseService.dismount(spelare)
+	local _ok, _s, markeC = HorseService.tryMount(spelare, modell)
+	if koppling and koppling.Disconnect then koppling:Disconnect() end
+
+	check("RidSession ar satt REDAN nar MountChanged fyrar",
+		settNarSignalenKom == true, tostring(settNarSignalenKom))
+	check("och attributet ar samma marke som handskakningen gav",
+		modell:GetAttribute("RidSession") == markeC,
+		("attribut %s / retur %s"):format(
+			tostring(modell:GetAttribute("RidSession")), tostring(markeC)))
+
+	HorseService.dismount(spelare)
+	check("och det nollas vid avsittning - ingen ritt, inget marke",
+		modell:GetAttribute("RidSession") == nil,
+		tostring(modell:GetAttribute("RidSession")))
+
+	local _ok2, _s2, markeD = HorseService.tryMount(spelare, modell)
+	rittMarke = markeD
+end
+
 print("\n== Sparren mats med riktig tid ==")
 
 do
