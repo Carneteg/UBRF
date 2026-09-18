@@ -157,6 +157,42 @@ Config.MOVEMENT = {
 	ProbeDepth = 8,        -- studs, markavkänningens räckvidd
 }
 
+--[[ ── RYGGNINGENS TAKT (#233, ryggningsljudet) ────────────────────
+
+     UPPMÄTT UTGÅNGSLÄGE, inte antaget. Ryggningen var TYST, och det var
+     två oberoende saker som gjorde den det:
+
+       `Gaits.cycleLength("halt")` är 0, så `loco.phase` slutade växa,
+       `Gaits.get("halt").steps` är 0, så ljudlagret hoppade över slaget.
+
+     Före #239 klampade hon i SKRITTENS takt medan hon backade — fel
+     takt, men inte tyst. Rättelsen där flyttade etiketten till halt och
+     tystnaden följde med. Det var en känd bieffekt, redovisad i #239,
+     och det här är dess order.
+
+     TVÅ SLAG PER CYKEL, OCH DET ÄR HÄSTKUNSKAP, inte en ljudsmak.
+     Ryggningen är en tvåtaktig diagonal gångart: hästen går bakåt i
+     diagonala par, som i trav. Fyra slag hade varit skrittens takt
+     baklänges, och spelet får aldrig lära ut fel hästhantering för att
+     det låter fylligare.
+
+     CYKELLÄNGDEN ÄR SPELKÄNSLA och alltså ett [antagande] tills Tobias
+     hört den. 1,40 m per diagonalpar vid backtempot 1,1 m/s ger
+     1,1 / 1,40 × 2 ≈ 1,6 hovslag i sekunden — en tydligt långsammare,
+     mer deliberat takt än skrittens 2,7 slag/s vid samma fart. Kortare
+     steg än skritten är också det ridmässigt riktiga: en häst som ryggar
+     tar korta, bestämda steg, inte fulla skrittsteg baklänges.
+
+     Talen står HÄR och inte i `Gaits`. Rygga har ingen gångartsrad och
+     ska inte få en: en femte rad i `Gaits.BY_NAME` hade kunnat nås av
+     `forSpeed`, och en rad i `Gaits.ORDER` hade flyttat varje index —
+     taket, uthålligheten, serverns validering och paritetsprovet läser
+     alla `Gaits.index`. Pinnen bor i `Ridtrappa`, takten här. ]]
+Config.RYGGNING = {
+	CycleLength = 1.40,  -- meter per diagonalpar
+	Steps = 2,           -- hovnedslag per cykel — tvåtaktig diagonal
+}
+
 --[[ ── RIDINPUTENS TAKT (#233, Fas 4b) ─────────────────────────────
      Impulsspärren låg i `Input.IMPULS_SPARR` på klienten, och det var
      rätt så länge spärren bara var UX: den hindrade hamrande på den yta

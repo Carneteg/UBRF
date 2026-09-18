@@ -36,6 +36,10 @@ function SoundController.new(rig: Types.Rig, stats: { [string]: any })
 	self.temperament = Config.TEMPERAMENTS[stats.Temperament] or Config.TEMPERAMENTS.Calm
 	self.config = rig.model:FindFirstChild("Sounds")
 	self.lastPhase = 0
+	--[[ Slagräknarens minne. `lastBeats = 0` betyder "ingen takt igång",
+	     alltså seedas nästa rörelse utan att fyra ett slag. ]]
+	self.lastBeats = 0
+	self.lastIndex = 0
 	self.surface = "Grass"
 	self.nextVocal = os.clock() + 12
 	self.pool = {} :: { [string]: Sound }
@@ -68,12 +72,51 @@ end
 function SoundController:step(loco: Types.Locomotion, dt: number)
 	--[[ Ett hovslag varje gång fasen passerar en delning. Antalet delningar
 	     är gångartens takt: skritt fyra, trav två, galopp tre, fyrsprång fyra. ]]
+	--[[ RYGGNINGEN HAR EN EGEN TAKT (#233).
+
+	     `Gaits.get("halt").steps` är 0, och hon ryggar i halt — så den
+	     här raden hoppade över slaget och ryggningen var tyst. Det var
+	     den ena av tystnadens två orsaker; den andra var att fasen inte
+	     växte, och den sitter i `MovementController`.
+
+	     TVÅ SLAG, inte fyra: ryggningen är en tvåtaktig diagonal gångart.
+	     Talet står i `Config.RYGGNING` tillsammans med cykellängden, så
+	     att takt och steglängd inte kan glida isär — de är två halvor av
+	     samma kadens och hör ihop på ett ställe.
+
+	     `loco.ryggar` speglar den `reverse` som driver rörelsen, alltså
+	     samma sanning som benen. Ingen egen gångartsstate här. ]]
 	local gait = Gaits.get(loco.gait)
-	if gait.steps > 0 and loco.grounded and not loco.airborne then
-		local beats = gait.steps
-		local now = math.floor(loco.phase * beats)
-		local before = math.floor(self.lastPhase * beats)
-		if now ~= before then
+	local steps = if loco.ryggar then Config.RYGGNING.Steps else gait.steps
+
+	--[[ ── TAKTBYTET FÅR INTE GE ETT EXTRA SLAG ────────────────────────
+
+	     Raden jämförde förut `floor(phase × beats)` mot
+	     `floor(lastPhase × beats)` med DAGENS `beats`. Det höll så länge
+	     takten var konstant, men ryggningen byter den: 2 slag blir 4 när
+	     hon stegar upp i skritt, och då mäts förra bildrutans fas mot en
+	     delning den aldrig levde i. Uppmätt: ett fasvärde på 0,45 som
+	     växer till 0,55 ger `before = 1, now = 2` med fyra delningar —
+	     ett hovslag som ingen häst tog.
+
+	     Slagindexet bärs därför självt, och när takten ändras SÄTTS det
+	     OM utan att fyra. Det gör övergången halt ↔ rygga ↔ skritt ren i
+	     båda riktningarna, vilket är precis vad acceptanskravet om
+	     "inga dubbla eller kvarhängande steg" begär. ]]
+	local rullar = steps > 0 and loco.grounded and not loco.airborne
+	if not rullar then
+		--[[ Tystnad nollar minnet. Annars ligger ett gammalt slagindex
+		     kvar och kan fyra på första bildrutan hon börjar röra sig
+		     igen — ett kvarhängande steg ur förra rörelsen. ]]
+		self.lastBeats = 0
+	else
+		local index = math.floor(loco.phase * steps)
+		if self.lastBeats ~= steps then
+			--[[ Ny takt: seed, inget slag. ]]
+			self.lastBeats = steps
+			self.lastIndex = index
+		elseif index ~= self.lastIndex then
+			self.lastIndex = index
 			self:_hoof()
 		end
 	end
