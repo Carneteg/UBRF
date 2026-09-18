@@ -59,6 +59,18 @@ export type Locomotion = {
 	targetGait: GaitName,
 	state: State,
 	phase: number,       -- 0..1 inom gångartens cykel, driver ljud och damm
+	--[[ Ryggar hon just nu? (#233, ryggningsljudet.)
+
+	     Rygga har ingen egen gångartsrad — hon ryggar i HALT, och `gait`
+	     ska fortsätta läsa "halt" för animation, kamera och serverns
+	     validering. Pinnen bars därför bara av `MovementController`s egna
+	     `self.ryggar`, och presentationslagren kunde inte se den.
+
+	     Fältet är INTE en andra gångartssanning: det speglar exakt den
+	     `reverse` som driver den faktiska rörelsen i samma bildruta, och
+	     den är i sin tur reconcilad mot serverns replikerade `Ryggar`.
+	     Ett ställe räknar, resten läser. ]]
+	ryggar: boolean,
 	airborne: boolean,
 	grounded: boolean,
 	slope: Vector3,      -- markens normal, utjämnad

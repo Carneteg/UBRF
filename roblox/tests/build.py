@@ -553,6 +553,9 @@ MODULER = [
     ("AnimationController", "src/client/AnimationController.luau"),
     ("CameraController",   "src/client/CameraController.luau"),
     ("RiderController",    "src/client/RiderController.luau"),
+    #[[ #233 ryggningsljudet: hovtakten mats i ljud.spec, och den maste
+    #   ga genom SoundController:step -- inte genom en avskrift. ]]
+    ("SoundController",    "src/client/SoundController.luau"),
     ("Input",              "src/client/Input.luau"),
     ("TouchControls",      "src/client/TouchControls.luau"),
     ("Genomsikt",          "src/client/Genomsikt.luau"),

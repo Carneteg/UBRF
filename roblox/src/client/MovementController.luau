@@ -112,7 +112,7 @@ function MovementController.new(rig: Types.Rig, stats: { [string]: any })
 	self.loco = {
 		speed = 0, heading = heading, turnRate = 0, lean = 0,
 		gait = "halt", targetGait = "halt", state = "Idle",
-		phase = 0, airborne = false, grounded = true,
+		phase = 0, ryggar = false, airborne = false, grounded = true,
 		slope = Vector3.yAxis, stamina = stats.MaxStamina,
 		--[[ G02-B punkt 2. `beddGangart` är vad ryttaren bad om,
 		     `targetGait` vad hästen svarat på — under svarstiden skiljer
@@ -491,6 +491,13 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	     backa i skrittempo. Hon ryggar när hon både är ombedd att rygga
 	     och faktiskt står. ]]
 	local reverse = self.ryggar and loco.targetGait == "halt"
+	--[[ PRESENTATIONSLAGREN FÅR SE RYGGNINGEN (#233, ryggningsljudet).
+
+	     `reverse` är villkoret som faktiskt driver rörelsen bakåt, och
+	     det är därför det och inte `self.ryggar` som speglas ut. Mellan
+	     en begäran och hästens svar kan pinnen vara rygga medan hon
+	     fortfarande går framåt — ljudet ska följa benen, inte begäran. ]]
+	loco.ryggar = reverse
 	local target = if reverse then -M.ReverseSpeed else gait.norm
 	if not reverse and gait.norm > 0 then
 		target += intent.forward * (gait.max - gait.norm) * 0.35
@@ -768,7 +775,20 @@ function MovementController:step(intent: Types.Intent, dt: number)
 	local pos = rig.root.Position
 	local moved = if self.lastPos then (pos - self.lastPos).Magnitude else 0
 	self.lastPos = pos
-	local cycle = Gaits.cycleLength(loco.gait)
+	--[[ RYGGNINGEN HAR EN EGEN CYKEL (#233, ryggningsljudet).
+
+	     `Gaits.cycleLength("halt")` är 0, så fasen slutade växa så fort
+	     hon backade — och en fas som står stilla ger inga hovslag hur
+	     ljudlagret än räknar. Det var den ena av tystnadens två orsaker;
+	     den andra satt i `SoundController`.
+
+	     `moved` är en längd UTAN tecken, precis som kommentaren vid
+	     `Config.STATE_ANIMATION` säger. Det är rätt här: fasen ska växa
+	     med tillryggalagd sträcka oavsett riktning. Det är just därför
+	     `BackUp`-klippet går på klockan och inte på fasen — men ljudet
+	     ska följa marken, och då behöver fasen ticka. ]]
+	local cycle = if loco.ryggar then Config.RYGGNING.CycleLength
+		else Gaits.cycleLength(loco.gait)
 	if cycle > 0 then
 		loco.phase = (loco.phase + (moved / Config.STUDS_PER_METRE) / cycle) % 1
 	end
