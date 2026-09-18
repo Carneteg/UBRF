@@ -63,6 +63,9 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Sprak = require(ReplicatedStorage.HorseCore.Sprak)
+--[[ #246 E: skötselpanelens ruta, så att listan aldrig lägger sig över
+     den. Ren avläsning — PreparationController äger måtten. ]]
+local PreparationController = require(script.Parent.PreparationController)
 
 local Naromrade = {}
 
@@ -92,19 +95,61 @@ local koppling: RBXScriptConnection? = nil
 local sedan = 0
 local rider = false
 local senaste: { ProximityPrompt } = {}
+--[[ #246 C: prompter vars EGNA UI vi släckt, och stilen de hade innan.
+     Nyckeln är prompten själv, så att en som försvinner ur världen tas
+     med av skräpsamlaren utan att lämna en post efter sig. ]]
+local slackta: { [ProximityPrompt]: any } = {}
 
 --[[ Vad raden ska heta. Promptens egen `ActionText` är redan spelarens
 	språk — den sätts av tjänsterna ur språkkanonen — och `ObjectText`
 	säger vilken häst eller dörr det gäller. Två rader som annars vore
 	identiska ("Öppna", "Öppna") blir åtskilda av objektet. ]]
+--[[ ── ETIKETTEN SÄGER SAKEN EN GÅNG (#246 E) ─────────────────────────
+
+	QA 2026-09-18 läste rader som `Take the saddle — Trixie saddle`. Ordet
+	står två gånger, och den andra halvan bär bara EN ny upplysning:
+	vems sadel det är.
+
+	Regeln nedan tar bort de ord ur objektet som handlingen redan sagt, och
+	behåller resten. `Trixie saddle` blir `Trixie`, `Trixies sadel` blir
+	`Trixies`. Blir ingenting kvar — objektet sa inget nytt — utelämnas
+	hela ledet.
+
+	VARFÖR INTE RÄTTA `ObjectText` I TJÄNSTEN I STÄLLET: texten används
+	också av Roblox egen prompt, där handlingen står på en EGEN rad och
+	upprepningen därför inte finns. Att korta den där hade gjort prompten
+	fattigare för att en lista har ont om plats. Sammanfogningen är listans
+	problem, och löses här. ]]
+local function ord(txt: string): { string }
+	local ut = {}
+	for o in string.gmatch(txt, "[^%s]+") do table.insert(ut, o) end
+	return ut
+end
+
+--[[ Jämför på gemener och utan skiljetecken i kanten, så att "sadeln",
+	"Sadeln" och "sadeln," räknas som samma ord. Böjningen tas INTE bort:
+	"sadel" och "sadeln" är olika ord här, och att slå ihop dem hade krävt
+	en stamform per språk — en regel som tyst börjar gissa. ]]
+local function nyckelord(o: string): string
+	return string.lower((string.gsub(o, "^[%p]*(.-)[%p]*$", "%1")))
+end
+
+function Naromrade.kortEtikett(handling: string, objekt: string?): string
+	if objekt == nil or objekt == "" then return handling end
+	local sagt = {}
+	for _, o in ord(handling) do sagt[nyckelord(o)] = true end
+	local kvar = {}
+	for _, o in ord(objekt) do
+		if not sagt[nyckelord(o)] then table.insert(kvar, o) end
+	end
+	if #kvar == 0 then return handling end
+	return ("%s — %s"):format(handling, table.concat(kvar, " "))
+end
+
 local function etikett(p: ProximityPrompt): string
 	local handling = p.ActionText
 	if handling == nil or handling == "" then handling = Sprak.t("interaktion.anvand") end
-	local objekt = p.ObjectText
-	if objekt ~= nil and objekt ~= "" then
-		return ("%s — %s"):format(handling, objekt)
-	end
-	return handling
+	return Naromrade.kortEtikett(handling, p.ObjectText)
 end
 
 --[[ Var prompten sitter i världen. En prompt kan hänga i en `Attachment`
@@ -122,9 +167,56 @@ end
 
 	Ren funktion av världen och ett läge — inga instanser skapas — så att
 	den går att mäta i bänken utan att någon GUI behöver finnas. ]]
-function Naromrade.nara(fran: Vector3, sok: { Instance }): { ProximityPrompt }
+--[[ ── VILKEN HÄST HÖR PROMPTEN TILL? (#246 D) ─────────────────────────
+
+	Hästens rigg bär `HorseId` (satt av `HastRigg`), och boxfrontens förråd
+	bär `ForHast` (satt av `TackForradService`). Uppslaget går uppåt i
+	trädet från prompten och stannar vid det första svaret.
+
+	Inget nytt attribut behövde införas, och ingen ny kanal: de två fanns
+	redan, av andra skäl. Hittas inget är prompten inte hästbunden — en
+	dörr, till exempel — och det är ett giltigt svar, inte ett fel. ]]
+function Naromrade.hastFor(p: Instance): string?
+	local nod: Instance? = p.Parent
+	local varv = 0
+	--[[ Sökningen stannar vid `workspace`. Ingenting ovanför roten kan
+	     vara en häst eller ett förråd, och varvtaket är en enkel spärr mot
+	     ett träd som av något skäl pekar i ring. ]]
+	while nod ~= nil and nod ~= workspace and varv < 12 do
+		local h = nod:GetAttribute("HorseId")
+		if type(h) ~= "string" then h = nod:GetAttribute("ForHast") end
+		if type(h) == "string" and h ~= "" then return h end
+		nod = nod.Parent
+		varv += 1
+	end
+	return nil
+end
+
+--[[ ── PRIORITERINGEN ÄR SEMANTISK, INTE BARA AVSTÅND (#246 D) ─────────
+
+	QA 2026-09-18: listan fylldes av andra hästars sadlar och av dörrar,
+	medan dagens hästs nästa steg trängdes undan. Avståndet ensamt räcker
+	inte — boxfronterna står tätt, och grannens sadel kan mycket väl vara
+	närmare än den egna.
+
+	Tre klasser, i den ordning spelaren menar dem:
+
+	    1  dagens häst och hennes utrustning
+	    2  det som inte hör till någon häst — dörrar, och liknande
+	    3  en ANNAN hästs utrustning
+
+	Klass 3 tas bort helt så snart spelaren HAR en tilldelad häst: ordern
+	är uttrycklig om att andra hästars sadlar inte får fylla listan. Har
+	hon ingen tilldelad häst ännu står allt kvar — då vet spelet inte bättre
+	än spelaren, och att gissa vore värre än att visa.
+
+	Inom en klass gäller avståndet precis som förut. Dörrar försvinner
+	alltså inte; de hamnar efter hästens steg i stället för före det. ]]
+function Naromrade.nara(fran: Vector3, sok: { Instance },
+	minHast: string?, tak: number?): { ProximityPrompt }
 	local ut: { ProximityPrompt } = {}
 	local avstand: { [ProximityPrompt]: number } = {}
+	local klass: { [ProximityPrompt]: number } = {}
 	for _, rot in ipairs(sok) do
 		for _, d in ipairs(rot:GetDescendants()) do
 			if d:IsA("ProximityPrompt") and d.Enabled then
@@ -132,18 +224,31 @@ function Naromrade.nara(fran: Vector3, sok: { Instance }): { ProximityPrompt }
 				if p then
 					local a = (p - fran).Magnitude
 					if a <= d.MaxActivationDistance then
-						table.insert(ut, d)
-						avstand[d] = a
+						local h = Naromrade.hastFor(d)
+						local k = if h == nil then 2
+							elseif minHast ~= nil and h == minHast then 1
+							elseif minHast == nil then 2
+							else 3
+						--[[ En annan hästs utrustning tas INTE med alls när
+						     spelaren har en egen. ]]
+						if k ~= 3 then
+							table.insert(ut, d)
+							avstand[d] = a
+							klass[d] = k
+						end
 					end
 				end
 			end
 		end
 	end
-	table.sort(ut, function(a, b) return avstand[a] < avstand[b] end)
-	--[[ Taket klipps EFTER sorteringen: det som är närmast är det
-		spelaren menar, och det får aldrig trängas bort av något längre
-		bort som råkade hittas först. ]]
-	while #ut > MAX_RADER do table.remove(ut) end
+	table.sort(ut, function(a, b)
+		if klass[a] ~= klass[b] then return klass[a] < klass[b] end
+		return avstand[a] < avstand[b]
+	end)
+	--[[ Taket klipps EFTER sorteringen: det spelaren menar får aldrig
+		trängas bort av något som råkade hittas först. ]]
+	local n = math.max(1, math.min(tak or MAX_RADER, MAX_RADER))
+	while #ut > n do table.remove(ut) end
 	return ut
 end
 
@@ -188,6 +293,64 @@ local function tryck(p: ProximityPrompt)
 	end
 end
 
+--[[ ── EN INTERAKTIONSYTA, INTE TVÅ (#246 C) ──────────────────────────
+
+	QA 2026-09-18: `UBRFNaromrade` visade upp till fem skärmknappar SAMTIDIGT
+	som Roblox egna prompt-knappar renderades för samma handlingar. Två ytor
+	för samma sak, och den ena ligger i djupet där tummen inte når.
+
+	Lösningen rör inte aktiveringen. `Style = Custom` släcker Robloxs
+	inbyggda UI och INGENTING annat — `InputHoldBegin`, `HoldDuration`,
+	avståndskravet och serverns handlare är oförändrade. Prompten förblir
+	den auktoritära vägen; det är bara dess bild som tas bort, och bara på
+	de prompter listan själv ritar en rad för.
+
+	ÅTERSTÄLLNINGEN ÄR HALVA REGELN. En prompt som glidit ur listan måste få
+	tillbaka sin bild, annars blir den osynlig för den som går därifrån och
+	sedan kommer tillbaka utan lista — till exempel när ridningen tar över
+	skärmen. Stilen den hade sparas därför undan, och sätts tillbaka.
+
+	SKRIVBORD OCH HANDKONTROLL RÖRS INTE: hela modulen startar aldrig utan
+	`TouchEnabled`, så ingenting här kan nå en PC-spelare. ]]
+--[[ STILEN SPARAS I EN TABELL, INTE RAKT AV.
+
+	`slackta[p] = p.Style` såg riktigt ut och lagrade ingenting: en
+	tilldelning av `nil` tar bort nyckeln. Registret blev därför tomt,
+	`tandIgen` hittade aldrig något att återställa, och varje prompt
+	släcktes om på nytt varje bildruta utan att någonsin tändas.
+
+	Provet fångade det direkt — `_slackta()` svarade 0 medan stilen
+	bevisligen var satt. En inpackad post kan aldrig vara nil, och
+	därmed kan medlemskapet i registret inte glida isär från stilen det
+	bär. ]]
+local function slack(p: ProximityPrompt)
+	if slackta[p] ~= nil then return end
+	slackta[p] = { stil = p.Style }
+	p.Style = Enum.ProximityPromptStyle.Custom
+end
+
+local function tandIgen(p: ProximityPrompt)
+	local post = slackta[p]
+	if post == nil then return end
+	slackta[p] = nil
+	--[[ En prompt som lämnat världen ska inte skrivas på. ]]
+	if p.Parent ~= nil then p.Style = post.stil end
+end
+
+local function tandAllaIgen()
+	for p, post in pairs(slackta) do
+		if p.Parent ~= nil then p.Style = post.stil end
+	end
+	table.clear(slackta)
+end
+
+--[[ Provets fönster in. ]]
+function Naromrade._slackta(): number
+	local n = 0
+	for _ in pairs(slackta) do n += 1 end
+	return n
+end
+
 local function bygg()
 	if gui then return end
 	local spelare = Players.LocalPlayer
@@ -229,6 +392,42 @@ local function bygg()
 	end
 end
 
+--[[ ── HUR MÅNGA RADER RYMS? (#246 E) ──────────────────────────────────
+
+	Listan och skötselpanelen bor i SAMMA hörn, nere till vänster. Panelen
+	är ankrad i nederkanten och växer uppåt med sitt innehåll — upp till
+	52 % av skärmhöjden. QA 2026-09-18 såg dem ligga över varandra.
+
+	Taket räknas därför ur den plats som FAKTISKT är ledig ovanför panelen,
+	inte ur ett fast tal. Måtten kommer från den som äger dem
+	(`PreparationController.interaktionsruta`), av samma skäl som
+	`TouchControls.reglageBredd` finns: två moduler som räknar samma layout
+	glider isär, och glidningen syns först som ett överlapp på en telefon.
+
+	Räknat på kanonens provskärmar, med en panel på 150 px:
+
+	    1180x820  iPad landskap   ledigt 654  -> 5 rader (taket)
+	    1080x810  iPad landskap   ledigt 644  -> 5 rader
+	     810x1080 iPad porträtt   ledigt 914  -> 5 rader
+	     844x390  iPhone landskap ledigt 224  -> 3 rader
+	     568x320  liten telefon   ledigt 154  -> 2 rader
+
+	MINST EN RAD, alltid. En skärm som inte rymmer någonting är fortfarande
+	en skärm spelaren ska kunna handla på, och nödvändiga handlingar måste
+	förbli åtkomliga — då är det panelen som får dela plats, inte listan som
+	försvinner. Prioriteringen i `nara` gör att den enda raden är rätt rad. ]]
+function Naromrade.radplatser(): number
+	local g = gui
+	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
+	if h <= 0 then return MAX_RADER end
+	local golv = h
+	local ruta = PreparationController.interaktionsruta()
+	if ruta and ruta.y0 then golv = math.min(golv, ruta.y0) end
+	local ledigt = golv - KANT - LUFT
+	local n = math.floor(ledigt / (KNAPP_H + LUFT))
+	return math.clamp(n, 1, MAX_RADER)
+end
+
 local function rita()
 	local f = ram
 	if not f then return end
@@ -242,10 +441,34 @@ local function rita()
 	if rider or not (rot and rot:IsA("BasePart")) then
 		senaste = {}
 		for _, b in ipairs(rader) do b.Visible = false end
+		--[[ Ingen lista — då ska Roblox egna prompter tillbaka, annars blir
+		     de osynliga för någon som inte längre har en rad att trycka på. ]]
+		tandAllaIgen()
 		return
 	end
 
-	senaste = Naromrade.nara((rot :: BasePart).Position, { workspace })
+	--[[ #246 D: dagens häst styr ordningen. `hastId` är klientens egen
+	     avläsning av samma tilldelning servern gjort — ingen ny kanal. ]]
+	local minHast = PreparationController.hastId()
+	local platser = Naromrade.radplatser()
+	senaste = Naromrade.nara((rot :: BasePart).Position, { workspace },
+		minHast, platser)
+	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
+	     kvar över panelen och äter tryck som inte hör listan till. ]]
+	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
+	f.Position = UDim2.new(0, KANT, 1, -(platser * (KNAPP_H + LUFT)) - KANT)
+
+	--[[ #246 C: släck Robloxs egen bild för de handlingar listan visar,
+	     och bara för dem. Ordningen spelar roll — tänd först det som lämnat
+	     listan, släck sedan det som står i den — annars kan en prompt som
+	     ligger kvar hinna tändas och släckas i samma bildruta. ]]
+	local kvar: { [ProximityPrompt]: boolean } = {}
+	for _, p in ipairs(senaste) do kvar[p] = true end
+	for p in pairs(slackta) do
+		if not kvar[p] then tandIgen(p) end
+	end
+	for _, p in ipairs(senaste) do slack(p) end
+
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
 		if p then
@@ -293,6 +516,8 @@ function Naromrade.start()
 end
 
 function Naromrade.stopp()
+	--[[ Lämna aldrig en släckt prompt efter sig. ]]
+	tandAllaIgen()
 	if koppling then
 		koppling:Disconnect()
 		koppling = nil

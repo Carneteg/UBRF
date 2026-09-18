@@ -211,6 +211,285 @@ do
 	N.stopp()
 end
 
+--[[ ══ #246 C: EN INTERAKTIONSYTA PÅ TOUCH ═══════════════════════════
+
+	QA 2026-09-18: `UBRFNaromrade` visade upp till fem skärmknappar samtidigt
+	som Roblox EGNA prompt-knappar renderades för samma handlingar.
+
+	Kravet är precist: prompten ska förbli den auktoritära
+	aktiveringsvägen, och bara den konkurrerande BILDEN får döljas. Provet
+	mäter därför tre saker — att bilden släcks, att aktiveringen överlever
+	släckningen, och att den tänds igen när raden försvinner. ]]
+print("\n── En interaktionsyta på touch ──")
+do
+	for _, d in ipairs(workspace:GetChildren()) do
+		if d:IsA("BasePart") then d:Destroy() end
+	end
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local kar = Instance.new("Model")
+	kar.Name = "Spelare"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Position = Vector3.new(0, 0, 0)
+	rot.Parent = kar
+	kar.Parent = workspace
+	Players.LocalPlayer.Character = kar
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+
+	local sadel = nyPrompt("Sadel", "Ta sadeln", "Trixies sadel", Vector3.new(3, 0, 0))
+	check("prompten börjar med Roblox egen stil",
+		sadel.Style == Enum.ProximityPromptStyle.Default
+			or sadel.Style == nil, tostring(sadel.Style))
+	N.satRider(false)
+
+	check("listan ritar en rad för handlingen", #N._rader() == 1,
+		("%d rader"):format(#N._rader()))
+	check("och Robloxs EGNA bild för samma handling är släckt",
+		sadel.Style == Enum.ProximityPromptStyle.Custom,
+		tostring(sadel.Style))
+	check("exakt en prompt är släckt, inte fler", N._slackta() == 1,
+		("%d"):format(N._slackta()))
+
+	--[[ AKTIVERINGEN ÖVERLEVER. Det är hela skillnaden mot att stänga av
+	     prompten: `Enabled` är orörd, och trycket går fram som förut. ]]
+	check("prompten är fortfarande PÅ — bara dess bild är borta",
+		sadel.Enabled == true)
+	local fyrade = 0
+	sadel.Triggered:Connect(function() fyrade += 1 end)
+	N._tryckPa(1)
+	task.wait()
+	check("och den går fortfarande att aktivera genom sin egen väg",
+		fyrade == 1, tostring(fyrade))
+
+	--[[ TÄNDS IGEN när raden försvinner. En prompt som blev osynlig och
+	     stannade så vore ett sämre fel än det vi rättar: spelaren som går
+	     därifrån skulle möta en handling utan knapp. ]]
+	N.satRider(true)
+	check("under ritten är listan släckt och bilden tillbaka",
+		#N._rader() == 0 and sadel.Style == Enum.ProximityPromptStyle.Default
+			and N._slackta() == 0,
+		("rader %d · stil %s · släckta %d"):format(#N._rader(),
+			tostring(sadel.Style), N._slackta()))
+	N.satRider(false)
+	check("och släcks igen när listan kommer tillbaka",
+		sadel.Style == Enum.ProximityPromptStyle.Custom, tostring(sadel.Style))
+
+	--[[ …och `stopp` får inte lämna en släckt prompt efter sig. ]]
+	N.stopp()
+	check("stopp lämnar ingen släckt prompt kvar",
+		sadel.Style == Enum.ProximityPromptStyle.Default and N._slackta() == 0,
+		("stil %s · släckta %d"):format(tostring(sadel.Style), N._slackta()))
+
+	--[[ SKRIVBORDET RÖRS INTE: utan pekskärm startar modulen aldrig, så
+	     ingen prompt kan bli släckt där. ]]
+	UIS.TouchEnabled = false
+	N.start()
+	check("utan pekskärm släcks ingen prompt alls", N._slackta() == 0,
+		("%d"):format(N._slackta()))
+	UIS.TouchEnabled = true
+	N.stopp()
+	if sadel.Parent then sadel.Parent:Destroy() end
+end
+
+--[[ ══ #246 D: PRIORITERINGEN ÄR SEMANTISK ═══════════════════════════
+
+	Fysisk Studio-QA 2026-09-18: "Andra hästars utrustning (Marabou/
+	MacKenzie) och flera dörrar konkurrerar med dagens häst", och
+	"närområdeslistan" fylldes av dem.
+
+	Avståndet ensamt räcker inte som ordning — boxfronterna står tätt, och
+	grannens sadel kan mycket väl vara NÄRMARE än den egna. Provet ställer
+	därför upp precis den fällan: grannens sadel närmast, den egna längst
+	bort, en dörr däremellan. ]]
+print("\n── Dagens häst går först, grannens utrustning bort ──")
+do
+	--[[ Ett förråd som tjänsten bygger det: modellen bär `ForHast`. ]]
+	local function forrad(hastId, namn, handling, objekt, lage)
+		local m = Instance.new("Model")
+		m.Name = "Forrad_" .. hastId
+		m:SetAttribute("ForHast", hastId)
+		m.Parent = workspace
+		local del = Instance.new("Part")
+		del.Name = namn
+		del.Position = lage
+		del.Parent = m
+		local pr = Instance.new("ProximityPrompt")
+		pr.Name = namn .. "Prompt"
+		pr.ActionText = handling
+		pr.ObjectText = objekt or ""
+		pr.MaxActivationDistance = 8
+		pr.RequiresLineOfSight = false
+		pr.Parent = del
+		return pr
+	end
+
+	--[[ Grannens sadel ligger NÄRMAST — det är hela fällan. ]]
+	local grannen = forrad("marabou", "MarabouSadel", "Ta sadeln", "Marabous sadel",
+		Vector3.new(1.0, 0, 0))
+	local granne2 = forrad("mackenzie", "MacKenzieSadel", "Ta sadeln",
+		"MacKenzies sadel", Vector3.new(1.5, 0, 0))
+	local dorr = nyPrompt("BoxdorrD", "Öppna", "MB 7", Vector3.new(3, 0, 0))
+	local egen = forrad("trixie", "TrixieSadel", "Ta sadeln", "Trixies sadel",
+		Vector3.new(6.5, 0, 0))
+
+	check("hästuppslaget hittar förrådets ForHast",
+		N.hastFor(egen) == "trixie" and N.hastFor(grannen) == "marabou",
+		("%s / %s"):format(tostring(N.hastFor(egen)), tostring(N.hastFor(grannen))))
+	check("och en dörr hör inte till någon häst", N.hastFor(dorr) == nil,
+		tostring(N.hastFor(dorr)))
+
+	--[[ UTAN tilldelad häst vet spelet inte bättre än spelaren: allt står
+	     kvar, och avståndet får bestämma som förut. ]]
+	local utan = N.nara(HAR, { workspace }, nil, 5)
+	local harGranne = false
+	for _, pr in ipairs(utan) do
+		if N.hastFor(pr) == "marabou" then harGranne = true end
+	end
+	check("utan tilldelad häst filtreras ingenting bort", harGranne == true)
+
+	--[[ MED tilldelad häst: hennes steg först, grannarnas borta. ]]
+	local med = N.nara(HAR, { workspace }, "trixie", 5)
+	check("dagens hästs handling står FÖRST, trots att den ligger längst bort",
+		med[1] == egen, tostring(med[1] and med[1].ObjectText))
+	local grannarKvar = 0
+	for _, pr in ipairs(med) do
+		local h = N.hastFor(pr)
+		if h ~= nil and h ~= "trixie" then grannarKvar += 1 end
+	end
+	check("och ingen annan hästs utrustning finns kvar i listan",
+		grannarKvar == 0, ("%d kvar"):format(grannarKvar))
+
+	--[[ Dörren trängs INTE bort — den hamnar efter hästens steg. Ordern är
+	     uttrycklig: nödvändiga dörrhandlingar får visas när de är
+	     relevanta, men inte tränga undan nästa obligatoriska steg. ]]
+	local harDorr = false
+	for _, pr in ipairs(med) do if pr == dorr then harDorr = true end end
+	check("dörren är kvar, men efter hästens steg",
+		harDorr == true and med[1] ~= dorr)
+
+	--[[ TAKET respekteras och räknas EFTER sorteringen. ]]
+	local smalt = N.nara(HAR, { workspace }, "trixie", 1)
+	check("med bara en radplats är den raden dagens hästs",
+		#smalt == 1 and smalt[1] == egen,
+		("%d rader"):format(#smalt))
+
+	for _, pr in ipairs({ grannen, granne2, egen }) do
+		if pr.Parent and pr.Parent.Parent then pr.Parent.Parent:Destroy() end
+	end
+	if dorr.Parent then dorr.Parent:Destroy() end
+end
+
+--[[ ══ #246 E: ETIKETTEN SÄGER SAKEN EN GÅNG ══════════════════════════
+	QA läste rader som `Take the saddle — Trixie saddle`. ]]
+print("\n── Etiketten utan dubblering ──")
+do
+	check("det QA såg blir kort och entydigt",
+		N.kortEtikett("Take the saddle", "Trixie saddle") == "Take the saddle — Trixie",
+		("%q"):format(N.kortEtikett("Take the saddle", "Trixie saddle")))
+	check("och på svenska",
+		N.kortEtikett("Ta sadeln", "Trixies sadeln") == "Ta sadeln — Trixies",
+		("%q"):format(N.kortEtikett("Ta sadeln", "Trixies sadeln")))
+	--[[ Säger objektet inget nytt utelämnas hela ledet. ]]
+	check("ett objekt som bara upprepar handlingen faller bort",
+		N.kortEtikett("Öppna", "Öppna") == "Öppna",
+		("%q"):format(N.kortEtikett("Öppna", "Öppna")))
+	--[[ …men det som SKILJER två rader åt får aldrig falla bort. ]]
+	check("och det som skiljer två dörrar åt står kvar",
+		N.kortEtikett("Öppna", "MB 7") == "Öppna — MB 7",
+		("%q"):format(N.kortEtikett("Öppna", "MB 7")))
+	check("tomt objekt ger bara handlingen",
+		N.kortEtikett("Sitt upp", "") == "Sitt upp"
+			and N.kortEtikett("Sitt upp", nil) == "Sitt upp")
+end
+
+--[[ ══ #246 E: LISTAN OCH SKÖTSELPANELEN DELAR HÖRN ══════════════════
+
+	QA 2026-09-18: "Närområdeslistan överlappar skötselns instruktion/
+	feedback nere till vänster."
+
+	Båda är ankrade nere till vänster. Panelen växer uppåt med sitt
+	innehåll; listan växer uppåt med antalet rader. Ordern räknar upp fem
+	viewports som ska provas, och kravet är att de ALDRIG överlappar —
+	samtidigt som nödvändiga handlingar förblir åtkomliga.
+
+	Provet matar in panelens ruta och mäter listans svar. Reglerna som
+	läser rutan är oförändrade; det är dem mätningen gäller. ]]
+print("\n── Fem viewports: listan viker för skötselpanelen ──")
+do
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+	local yta = Players.LocalPlayer._gui and (function()
+		local function sok(nod)
+			if type(nod) ~= "table" then return nil end
+			if nod.Name == "UBRFNaromrade" then return nod end
+			for _, b in ipairs(nod._barn or {}) do
+				local t = sok(b)
+				if t then return t end
+			end
+			return nil
+		end
+		return sok(Players.LocalPlayer._gui)
+	end)() or nil
+	check("närområdets yta är byggd", yta ~= nil)
+
+	--[[ Kanonens provskärmar, med panelen på 150 px — en instruktionsrad
+	     plus ett par val, alltså en vardaglig höjd och inte ett värsta
+	     fall. Y-värdet är panelens ÖVERKANT. ]]
+	local PANEL = 150
+	local ytor = {
+		{ namn = "liten telefon 568x320", b = 568, h = 320 },
+		{ namn = "iPhone 13 landskap 844x390", b = 844, h = 390 },
+		{ namn = "iPad porträtt 810x1080", b = 810, h = 1080 },
+		{ namn = "iPad landskap 1080x810", b = 1080, h = 810 },
+		{ namn = "iPad landskap 1180x820", b = 1180, h = 820 },
+	}
+	local allaFria, allaMinstEn, rader_ = true, true, {}
+	for _, v in ipairs(ytor) do
+		yta.AbsoluteSize = Vector3.new(v.b, v.h, 0)
+		PreparationController._satRutaForProv({
+			x0 = 16, y0 = v.h - PANEL, x1 = 16 + 316, y1 = v.h })
+		local n = N.radplatser()
+		--[[ Listans överkant = golvet minus radernas höjd. Golvet är
+		     panelens överkant; ryms raderna ovanför den syns ingenting av
+		     den ena i den andra. ]]
+		local listHojd = n * (52 + 8)
+		local listUnderkant = v.h - 16
+		local panelOverkant = v.h - PANEL
+		if listUnderkant > panelOverkant then
+			--[[ Listan är ankrad i nederkanten som förut; det som avgör är
+			     att RADERNA får plats ovanför panelen. ]]
+			if (listUnderkant - listHojd) < 0 then allaFria = false end
+		end
+		if n < 1 then allaMinstEn = false end
+		if n * (52 + 8) + 16 + 8 > v.h then allaFria = false end
+		table.insert(rader_, ("%s -> %d rader"):format(v.namn, n))
+	end
+	check("listan håller sig innanför skärmen på alla fem ytorna", allaFria,
+		table.concat(rader_, " · "))
+	check("och det finns alltid minst en rad att handla på", allaMinstEn)
+
+	--[[ EN HÖG PANEL ÄTER RADER — det är hela poängen. Utan panel ska
+	     taket vara det gamla. ]]
+	yta.AbsoluteSize = Vector3.new(1080, 810, 0)
+	PreparationController._satRutaForProv(nil)
+	local utan = N.radplatser()
+	PreparationController._satRutaForProv({ x0 = 16, y0 = 200, x1 = 332, y1 = 810 })
+	local med = N.radplatser()
+	check("en hög skötselpanel minskar antalet rader", med < utan,
+		("utan panel %d · med panel %d"):format(utan, med))
+	check("och utan panel är taket kanonens fem", utan == 5, ("%d"):format(utan))
+
+	PreparationController._satRutaForProv(nil)
+	N.stopp()
+	UIS.TouchEnabled = false
+end
+
 print("\n── Skrivbordet rörs inte ──")
 
 do

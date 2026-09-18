@@ -275,6 +275,13 @@ Enum = {
 		{ __index = function(_, k) return k end }),
 	ProximityPromptExclusivity = setmetatable({},
 		{ __index = function(_, k) return k end }),
+	--[[ #246 C: `Style = Custom` slacker Robloxs EGNA prompt-UI men
+	     lamnar aktiveringsvagen orord — `InputHoldBegin` fungerar precis
+	     som forut. Verifierat mot
+	     create.roblox.com/docs/reference/engine/enums/ProximityPromptStyle
+	     (Default = 0, Custom = 1). Uppraknad, inte en __index som svarar pa
+	     allt: samma skal som Material och Font. ]]
+	ProximityPromptStyle = { Default = 0, Custom = 1 },
 
 	UserInputState = { Begin = 1, End = 2 },
 	--[[ #220: `Touch` tillkom med blickspecen. TouchControls sorterar
@@ -1087,6 +1094,11 @@ local __BEVAKADE = {
 local function __nyInstans(klass)
 	local inst = {
 		ClassName = klass, Name = "", AnimationId = "",
+		--[[ #246 C: Roblox `ProximityPrompt.Style` ar `Default` fran borjan,
+		     inte nil. Stubben lamnade den ostatt, och da gick skillnaden
+		     mellan "orord" och "slackt" inte att mata. ]]
+		Style = if klass == "ProximityPrompt"
+			then Enum.ProximityPromptStyle.Default else nil,
 		--[[ `AbsoluteSize` SAKNADES, och det fällde `ugneta.spec` (#180).
 
 		     `UgnetaController.visaKort` räknar hur mycket fritt utrymme
