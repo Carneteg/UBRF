@@ -121,6 +121,143 @@ do
 		string.find(utan, "%%s") ~= nil, ("%q"):format(utan))
 end
 
+--[[ ══ DET EXAKTA QA-SCENARIOT (#246 B) ═══════════════════════════════
+
+	Ordern säger: falsifiera exakt scenariot. Alltså inte en förenkling,
+	utan den sekvens Studio-loggen visar:
+
+	    1. spelaren står vid boxområdet,
+	    2. hon TAR dagens hästs sadel ur boxfronten,
+	    3. hon startar LEDNING,
+	    4. hon trycker «Rida nu».
+
+	Att den här sekvensen över huvud taget går att köra i bänken är nytt.
+	Tre hål stod i vägen och är rättade i samma gren: `TackForradService`
+	saknades i integrationsbunten, `typeof` var ostubbad så
+	`placeraVidMal` alltid nekade, och `CFrame - Vector3` saknades så
+	samma funktion kraschade när vakten väl släppte igenom.
+
+	KRAVET ur acceptance contract B:
+
+	  "Den ska antingen slutföra återstående giltiga moment och göra
+	   hästen redo, eller neka med en specifik, begriplig nästa handling.
+	   Ett generiskt «fel tur» utan användbar väg vidare är inte
+	   accepterat."
+
+	Provet mäter därför inte ETT utfall utan att utfallet tillhör den
+	tillåtna mängden — och att ett nej faktiskt bär en läsbar nästa
+	handling. ]]
+print("\n── Exakt QA-sekvens: sadel tagen, ledning igång, Rida nu ──")
+
+local Players = game:GetService("Players")
+local Taggar = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+
+local function nyKaraktar(pos)
+	local k = Instance.new("Model")
+	k.Name = "Karaktar"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Size = Vector3.new(2, 2, 1)
+	rot.CFrame = CFrame.new(pos)
+	rot.Parent = k
+	local hum = Instance.new("Humanoid")
+	hum.Name = "Humanoid"
+	hum.Parent = k
+	local anim = Instance.new("Animator")
+	anim.Name = "Animator"
+	anim.Parent = hum
+	k.Parent = workspace
+	return k
+end
+
+--[[ Flyttar spelaren dit hon måste stå. `narvaro` och `tagSadel` mäter
+	båda avstånd, och ett nej av den anledningen mäter inte förberedelsen. ]]
+local function stallDig(sp, pos)
+	sp.Character:FindFirstChild("HumanoidRootPart").CFrame =
+		CFrame.new(pos + Vector3.new(2, 0, 0))
+end
+
+do
+	__datastore.nollstall()
+	Taggar:nollstall()
+	Players.PlayerAdded:nollstall()
+	Players.PlayerRemoving:nollstall()
+	RunService._server = true
+	Players._spelare = {}
+	SparService._glomHookarForProv()
+
+	--[[ Boxfronterna hängs av tjänsten, som i produktionen. ]]
+	TackForradService.start(GameplayService.valjEn)
+
+	local k = nyKaraktar(Vector3.new(2, 0, 0))
+	local sp = { Name = "QA", UserId = 9246, Character = k,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	SparService._glomForProv(sp)
+	SparService.start()
+	StallService.start()
+	HorseService.start()
+	GameplayService.start()
+	Players._spelare = { sp }
+	Players.PlayerAdded:Fire(sp)
+	Players.PlayerAdded:slutfor()
+
+	local hastId = StallService.hastIdFor(sp)
+	local mod = HastRigg.bygg(hastId, hastId, CFrame.new(Vector3.new(0, 0, 0)))
+	mod.Parent = workspace
+	Taggar:AddTag(mod, "Horse")
+	check("spelaren har fått dagens häst", hastId ~= nil, tostring(hastId))
+	check("och hästen är bunden", GameplayService.bind(sp) ~= nil)
+
+	--[[ Målzonen, som `GameplayService.start` sätter den i drift. ]]
+	local M = 3
+	local hp = mod.PrimaryPart.Position
+	LedService.satMalzon({ x = hp.X / M - 5, y = 170 - hp.Z / M - 5, w = 10, h = 10 })
+
+	--[[ STEG 2: sadeln ur boxfronten. ]]
+	local front = TackForradService.forHast(hastId)
+	check("dagens häst har en boxfront med sadel",
+		front ~= nil and TackForradService.paFronten(hastId, "sadel") == true)
+	if front and front.PrimaryPart then stallDig(sp, front.PrimaryPart.Position) end
+	local togSadel, sadelSkal = TackForradService.tagSadel(sp, hastId)
+	check("«Ta sadeln» går igenom", togSadel == true, tostring(sadelSkal))
+	check("och sadeln bärs i handen",
+		TackService.barBuren(sp, "sadel") ~= nil)
+
+	--[[ STEG 3: ledningen startar. ]]
+	stallDig(sp, hp)
+	local ledOk, ledSkal = LedService.borja(sp, mod)
+	check("ledningen startar", ledOk == true, tostring(ledSkal))
+
+	--[[ STEG 4: «Rida nu», med sadeln buren och ledningen igång. ]]
+	local ok, skal, arg = GameplayService.ridaNu(sp)
+	local text = if ok then "" else PreparationController.skalText(skal, arg)
+	print(("       [QA] RidaNu -> ok=%s skal=%s arg=%s"):format(
+		tostring(ok), tostring(skal), tostring(arg)))
+
+	check("«Rida nu» från delvis förberedd häst ger ett användbart utfall",
+		ok == true or (type(skal) == "string" and skal ~= ""
+			and text ~= "" and string.find(text, "%%s") == nil),
+		("ok=%s skal=%s text=%q"):format(tostring(ok), tostring(skal), text))
+
+	--[[ Gick det igenom ska hästen VERKLIGEN vara redo — inte bara
+	     avbockad. Regeln är densamma som uppsittningen använder. ]]
+	if ok then
+		local redo = Preparation.provaUppsittning(GameplayService.stateFor(sp), hastId)
+		check("och hästen är faktiskt uppsittningsklar", redo == true,
+			tostring(redo))
+	end
+
+	--[[ IDEMPOTENS: ett andra tryck rör ingenting och svarar stabilt. ]]
+	local ok2, skal2 = GameplayService.ridaNu(sp)
+	check("ett andra «Rida nu» svarar stabilt, aldrig med ett utrustningsfel",
+		skal2 ~= "tack.redan_pa" and skal2 ~= "tack.saknar_sadel"
+			and (tostring(skal) == tostring(skal2)
+				or (ok == true and skal2 == "spel.redan_redo")),
+		("1: %s/%s   2: %s/%s"):format(tostring(ok), tostring(skal),
+			tostring(ok2), tostring(skal2)))
+end
+
 --[[ ══ SPELARENS TEXT — DE TVÅ KRAVEN UR PRECISERINGEN ══════════════
 
 	Arkitekturpreciseringen 2026-09-18 på #246 är uttrycklig om vem som

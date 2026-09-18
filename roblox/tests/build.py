@@ -478,7 +478,12 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   star FORST sa att den inte kan falla igenom till MODULER, dar
     #   varken Preparation eller Sprak finns. ]]
     if "ridanu" in spec_rel:
-        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+        #[[ KOHERENS: varlden PLUS tjansterna. QA-sekvensen i #246 borjar
+        #   med att spelaren TAR sadeln ur boxfronten, och fronterna hangs
+        #   av `TackForradService` pa den BYGGDA varlden. Utan hus svarar
+        #   `tagSadel` med `tack.ingen_mottagare`, och da mater provet sin
+        #   egen avsaknad av varld i stallet for spelarens vag. ]]
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ #FUN FIRST: ridefirst.spec mater regeln, inte varlden — samma bank
     #   som forberedelsen, dar Preparation, Svar och RidKanon finns. ]]
     elif "ridefirst" in spec_rel:
