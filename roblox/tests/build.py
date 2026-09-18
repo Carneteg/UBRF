@@ -486,6 +486,17 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ #FUN FIRST: ridefirst.spec mater regeln, inte varlden — samma bank
     #   som forberedelsen, dar Preparation, Svar och RidKanon finns. ]]
+    #[[ #248 Fas A: tavlingsklader-katalogen ar en REN datamodul utan
+    #   beroenden — ingen varld, inga tjanster, ingen klient. Den far
+    #   darfor sin EGEN minimala bunt med bara modulen i. En storre bunt
+    #   hade dolt om katalogen borjat krava nagot den inte ska krava.
+    #
+    #   `elif`, inte `if`: efter merge av #249 ar `ridanu` forsta grenen
+    #   i kedjan. Ett andra `if` hade brutit kedjan och gjort varje gren
+    #   under den oåtkomlig. ]]
+    elif "tavlingsklader" in spec_rel:
+        moduler = [("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau")]
+        stubbar = "tests/stubs.luau"
     elif "ridefirst" in spec_rel:
         #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
         #   GameplayService.ridaNu-kedjan med rigg, fysisk utrustning och
