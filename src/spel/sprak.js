@@ -112,6 +112,12 @@ const SPRAK = {
     en: "mounting is not a preparation step" },
   "forb.redan_gjort": { sv: "redan gjort", en: "already done" },
   "forb.fel_tur": { sv: "fel tur — %s står på tur", en: "wrong turn — %s is next" },
+  // Fallback när ett avslag med %s saknar sitt argument (#246 A). Den
+  // säger samma sak som nyckeln den fyller — nästa steg i HÄSTENS
+  // förberedelse — och inför ingen annan betydelse: "fel tur" handlar om
+  // ordningen i förberedelsen, aldrig om att en annan ryttare väntar.
+  "forb.nasta_steget": { sv: "nästa steg i förberedelsen",
+    en: "the next preparation step" },
   "forb.inget_kvar": { sv: "inget kvar", en: "nothing left" },
   "forb.nagot_annat": { sv: "något annat", en: "something else" },
   "forb.okant_moment": { sv: "okänt moment", en: "unknown step" },

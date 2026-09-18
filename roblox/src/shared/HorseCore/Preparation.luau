@@ -626,8 +626,18 @@ end
 	  8.   fel tur INOM fasen, alltså ett högre `steg` än det lägsta ogjorda. ]]
 function Preparation.provaMoment(state: State, fasId: string, momentId: string,
 	hastId: string): (boolean, string?, any?)
-	local ok, skal = Preparation.provaSteg(state, fasId, hastId)
-	if not ok then return false, skal, nil end
+	--[[ TREDJE VÄRDET FÖLJER MED (#246 A). Raden tog emot två värden av
+	     tre, och `provaSteg` lämnar namnet på den fas som står på tur som
+	     det tredje. Utan det fick spelaren se ett bokstavligt "%s" —
+	     precis det Studio-QA:n 2026-09-18 rapporterade:
+
+	         [Horse] Rida nu: wrong turn — %s is next (forb.fel_tur)
+
+	     Samma felklass är rättad två gånger förut i repot, i
+	     `HorseService.tryMount` och i `Pass.utfor`. Den här gången var det
+	     förberedelsen. ]]
+	local ok, skal, stegArg = Preparation.provaSteg(state, fasId, hastId)
+	if not ok then return false, skal, stegArg end
 
 	local moment = nil
 	for _, m in ipairs(Preparation.moment(fasId)) do
@@ -685,8 +695,15 @@ end
 	själva poängen med att förberedelsen är frivillig. ]]
 function Preparation.utforMoment(state: State, fasId: string, momentId: string,
 	hastId: string, utforare: string?): (boolean, string?, string?)
+	--[[ Det tredje värdet är överlagrat med flit: på JA är det momentet,
+	     på NEJ är det avslagets argument. Raden nollade det på nej-vägen
+	     och bröt därmed kedjan ett led efter `provaMoment` (#246 A). ]]
 	local ok, skal, moment = Preparation.provaMoment(state, fasId, momentId, hastId)
-	if not ok then return false, skal, nil end
+	if not ok then
+		--[[ Bara en STRÄNG går vidare. På `moment.fel` är tredje värdet
+		     momenttabellen, och den hör inte hemma i en spelartext. ]]
+		return false, skal, if type(moment) == "string" then moment else nil
+	end
 
 	state.gjorda[fasId] = state.gjorda[fasId] or {}
 	if state.gjorda[fasId][momentId] ~= true then

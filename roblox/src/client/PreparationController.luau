@@ -248,6 +248,7 @@ local stegLista: ScrollingFrame? = nil
 local hjalp: TextLabel? = nil
 --[[ INTERAKTIONEN. ]]
 local interaktion: Frame? = nil
+local senasteRuta: { [string]: number }? = nil
 local instruktion: TextLabel? = nil
 local interaktionVaxla: TextButton? = nil
 local momentBehallare: Frame? = nil
@@ -729,6 +730,21 @@ function PreparationController.tillampaLayout()
 		p.Position = UDim2.fromOffset(L.interaktion.x0, L.interaktion.y0)
 		p.Size = UDim2.fromOffset(L.interaktion.x1 - L.interaktion.x0,
 			L.interaktion.y1 - L.interaktion.y0)
+		--[[ ── RUTAN SPARAS ÅT DEN SOM DELAR HÖRNET (#246 E) ──────────
+
+			Panelen är ankrad NERE TILL VÄNSTER och växer uppåt med sitt
+			innehåll — upp till 52 % av skärmhöjden. Närområdeslistan bor i
+			samma hörn, och QA 2026-09-18 såg dem ligga över varandra.
+
+			Samma lösning som `TouchControls.reglageBredd` redan använder:
+			den som äger måtten räknar dem EN gång och lämnar dem vidare.
+			Ett andra ställe som räknar om panelens höjd hade blivit en
+			andra sanning, och den som glider isär syns först som ett
+			överlapp på en telefon. ]]
+		senasteRuta = if p.Visible
+			then { x0 = L.interaktion.x0, y0 = L.interaktion.y0,
+				x1 = L.interaktion.x1, y1 = L.interaktion.y1 }
+			else nil
 	end
 	if momentBehallare then
 		--[[ I HÖRNET ligger raderna UNDER texten; i BANDET bredvid den.
@@ -1704,6 +1720,21 @@ local function kanonPaEgetSprak(text: string): string
 	return ut
 end
 
+--[[ Interaktionspanelens ruta i GUI-pixlar, eller nil när den inte syns.
+	Ren avläsning: den sätts där panelen faktiskt läggs ut, och ingen
+	annan modul räknar om den. ]]
+function PreparationController.interaktionsruta(): { [string]: number }?
+	return senasteRuta
+end
+
+--[[ Provets fönster in. Panelens ruta räknas ur en layout som kräver hela
+	skötselvyn; den som mäter en ANNAN moduls hänsyn till rutan ska slippa
+	bygga upp den. Hooken sätter bara geometrin — reglerna som läser den är
+	oförändrade, och det är dem provet mäter. ]]
+function PreparationController._satRutaForProv(r: { [string]: number }?)
+	senasteRuta = r
+end
+
 function PreparationController.skalText(skal: any, extra: any?): string
 	if type(skal) ~= "string" or skal == "" then
 		return Sprak.t("hud.gick_inte_nu")
@@ -1723,7 +1754,33 @@ function PreparationController.skalText(skal: any, extra: any?): string
 		elseif type(arg) == "string" and Sprak.finns(arg) then
 			arg = Sprak.t(arg)
 		end
-		return if arg ~= nil then Sprak.t(skal, arg) else Sprak.t(skal)
+		if arg ~= nil then return Sprak.t(skal, arg) end
+		--[[ ── ARGUMENTET SAKNAS HELT (#246 A) ───────────────────────────
+
+			Kedjan bär numera `arg` hela vägen, men den här funktionen är
+			SISTA ledet före spelarens öga, och den ska inte förutsätta att
+			alla framtida vägar in gör rätt. Ett nej vars formatsträng bär
+			ett `%s` och som kommer utan argument renderade förut det
+			bokstavligt — det var exakt vad Studio-QA:n läste:
+
+			    [Horse] Rida nu: wrong turn — %s is next (forb.fel_tur)
+
+			Fallbacken säger SAMMA SAK som nyckeln den fyller, bara
+			ospecifikt: nästa steg i hästens förberedelse. Den hittar inte
+			på en annan betydelse — "fel tur" handlar om ordningen i
+			förberedelsen, aldrig om att någon annan ryttare väntar.
+
+			Andra formatdirektiv än `%s` (till exempel `%d`) hör inte hemma
+			i ett avslagsskäl, och för dem finns ingen ärlig fyllning. Då
+			är det generiska nejet mer sant än en påhittad siffra. ]]
+		local utan = Sprak.t(skal)
+		if string.find(utan, "%%s") ~= nil then
+			return Sprak.t(skal, Sprak.t("forb.nasta_steget"))
+		end
+		if string.find(utan, "%%[%a]") ~= nil then
+			return Sprak.t("hud.gick_inte_nu")
+		end
+		return utan
 	end
 	return skal
 end
@@ -1832,6 +1889,15 @@ end
 
 function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
+end
+
+--[[ Provets fönster in. Tilldelningen kommer ur serverns vy; den som
+	mäter en ANNAN moduls hänsyn till dagens häst ska slippa bygga upp hela
+	vyn. Hooken sätter bara identiteten — reglerna som läser den är
+	oförändrade, och det är dem provet mäter. ]]
+function PreparationController._satHastIdForProv(id: string?)
+	senasteVy = if id == nil then senasteVy else (senasteVy or {}) :: any
+	if senasteVy ~= nil then (senasteVy :: any).hastId = id end
 end
 
 --[[ Vad SERVERN säger att spelaren bär (#182). Klienten räknar inte ut

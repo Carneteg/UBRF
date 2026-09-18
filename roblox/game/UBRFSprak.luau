@@ -205,6 +205,10 @@ Sprak.text = {
 		sv = "fel tur — %s står på tur",
 		en = "wrong turn — %s is next",
 	},
+	["forb.nasta_steget"] = {
+		sv = "nästa steg i förberedelsen",
+		en = "the next preparation step",
+	},
 	["forb.inget_kvar"] = {
 		sv = "inget kvar",
 		en = "nothing left",

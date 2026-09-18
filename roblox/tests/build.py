@@ -168,175 +168,17 @@ FORBEREDELSE = SPEL + [
     ("TackRigg",       "src/server/TackRigg.luau"),
     ("TackService",    "src/server/TackService.luau"),
     #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
-    #   numera require:ar den for att kunna slacka en tagen sadel. ]]
+    #   require:ar den for att kunna slacka en tagen sadel.
+    #
+    #   RADEN LAG I EN DOD KOPIA (#246). `FORBEREDELSE` var definierad TRE
+    #   ganger i den har filen, och bara den sista levde — Python later den
+    #   sista tilldelningen vinna. #235:s tillagg gjordes i den FORSTA, och
+    #   kordes darfor aldrig. Foljden var att `TackForradService` var nil i
+    #   varje spec som anvander integrationsbunten, alltsa i hela
+    #   forberedelsekedjan, och att QA-scenariot i #246 inte gick att mata
+    #   i banken alls. Dubbletterna ar borttagna; det finns nu EN definition
+    #   av varje bunt. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
-    ("LedService",     "src/server/LedService.luau"),
-    ("GameplayService", "src/server/GameplayService.luau"),
-]
-
-#[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
-#
-#   Skillnaden mot FORBEREDELSE ar VAD kedjan mats MOT: har byggs den
-#   RIKTIGA riggen ur HastRigg, med en riktig Seat, och skotseln,
-#   uppsittningen, doden, respawnen och passet gar genom tjansterna mot
-#   just den modellen. Forberedelsebanken matte reglerna; den har mater
-#   att spelaren kan ga igenom dagen. ]]
-INTEGRATION = FORBEREDELSE + [
-    ("HastRigg",        "src/server/HastRigg.luau"),
-    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
-    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
-    # samma rakning som servern kor, inte en avskrift av den.
-    ("Markkontakt",     "src/server/Markkontakt.luau"),
-    ("RiderController", "src/client/RiderController.luau"),
-]
-
-# QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
-# att stalla kameran mot, och Vyer for att veta vilka vyerna ar.
-QA = BYGGE + [
-    ("Vyer",    "buildings/Vyer.luau"),
-    ("QAPanel", "buildings/QAPanel.luau"),
-]
-
-# Siktgrinden (issue #78) provar de fasta reviewkamerorna i Vyer mot det
-# byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
-SIKT = QA + [
-    ("Genomsikt", "src/client/Genomsikt.luau"),
-    ("HastGang", "src/client/HastGang.luau"),
-]
-
-# Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
-# exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
-# rorelsemoduler behovs inte -- Preparation ror dem inte.
-# HorseService ar med for att uppsittningsgrindens INKOPPLING ska ga att prova,
-# inte bara dess regel: specen registrerar en grind och kor riktiga tryMount.
-# Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
-FORBEREDELSE = SPEL + [
-    ("Types",        "src/shared/HorseCore/Types.luau"),
-    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
-    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
-    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
-    ("Config",       "src/shared/HorseCore/Config.luau"),
-    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
-    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
-    # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
-    # och laser den tilldelade hastens profil (blocker 1).
-    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
-    ("Svar",         "src/shared/HorseCore/Svar.luau"),
-    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
-    # #161: skotselns moment, passets eftervard och sparschemat. Rena
-    # datamoduler; de ligger fore tjansterna for att SparService require:ar
-    # Sparning och GameplayService require:ar bada.
-    ("Pass",         "src/shared/HorseCore/Pass.luau"),
-    ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
-    ("Networking",   "src/shared/HorseCore/Networking.luau"),
-    ("HorseService", "src/server/HorseService.luau"),
-    # SparService FORE StallService: StallService.hastminnen laser saven ur
-    # den. Ordningen ar samma som init.server.luau har.
-    ("SparService",  "src/server/SparService.luau"),
-    ("StallService", "src/server/StallService.luau"),
-    # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
-    ("InteractionController", "src/client/InteractionController.luau"),
-    ("PreparationController", "src/client/PreparationController.luau"),
-    # StateMachine + MovementController ligger med sedan blocker 2 i senior
-    # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
-    # controller med den hast Stallet faktiskt delar ut, inte genom
-    # direktanrop av svarsmodellen.
-    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
-    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
-    ("MovementController", "src/client/MovementController.luau"),
-    # GameplayService laddas SIST och ar poangen med hela listan: utan den
-    # bevisade specen bara att HorseService-kroken fungerar, inte att
-    # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
-    #[[ LedService laddas FORE GameplayService: den senare require:ar
-    #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
-    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
-    #   GameplayService, som prover utrustningen fysiskt. ]]
-    ("TackRigg",       "src/server/TackRigg.luau"),
-    ("TackService",    "src/server/TackService.luau"),
-    ("LedService",     "src/server/LedService.luau"),
-    ("GameplayService", "src/server/GameplayService.luau"),
-]
-
-#[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
-#
-#   Skillnaden mot FORBEREDELSE ar VAD kedjan mats MOT: har byggs den
-#   RIKTIGA riggen ur HastRigg, med en riktig Seat, och skotseln,
-#   uppsittningen, doden, respawnen och passet gar genom tjansterna mot
-#   just den modellen. Forberedelsebanken matte reglerna; den har mater
-#   att spelaren kan ga igenom dagen. ]]
-INTEGRATION = FORBEREDELSE + [
-    ("HastRigg",        "src/server/HastRigg.luau"),
-    # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
-    # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
-    # samma rakning som servern kor, inte en avskrift av den.
-    ("Markkontakt",     "src/server/Markkontakt.luau"),
-    ("RiderController", "src/client/RiderController.luau"),
-]
-
-
-# QA-panelen provas ovanpa hela bygget: den behover en fardigbyggd anlaggning
-# att stalla kameran mot, och Vyer for att veta vilka vyerna ar.
-QA = BYGGE + [
-    ("Vyer",    "buildings/Vyer.luau"),
-    ("QAPanel", "buildings/QAPanel.luau"),
-]
-
-# Siktgrinden (issue #78) provar de fasta reviewkamerorna i Vyer mot det
-# byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
-SIKT = QA + [
-    ("Genomsikt", "src/client/Genomsikt.luau"),
-    ("HastGang", "src/client/HastGang.luau"),
-]
-
-# Forberedelsen provas ovanpa speldatan: reglerna laser fasordningen ur den
-# exporterade skotseln, och reservationen ligger i Stallet. Hastsystemets
-# rorelsemoduler behovs inte -- Preparation ror dem inte.
-# HorseService ar med for att uppsittningsgrindens INKOPPLING ska ga att prova,
-# inte bara dess regel: specen registrerar en grind och kor riktiga tryMount.
-# Config/Gaits/RigAdapter maste ligga fore, de fylls in i __Core i den ordningen.
-FORBEREDELSE = SPEL + [
-    ("Types",        "src/shared/HorseCore/Types.luau"),
-    ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
-    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
-    ("Utseende", "src/shared/HorseCore/Utseende.luau"),
-    ("Config",       "src/shared/HorseCore/Config.luau"),
-    ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
-    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
-    # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
-    # och laser den tilldelade hastens profil (blocker 1).
-    ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
-    ("Svar",         "src/shared/HorseCore/Svar.luau"),
-    ("Preparation",  "src/shared/HorseCore/Preparation.luau"),
-    # #161: skotselns moment, passets eftervard och sparschemat. Rena
-    # datamoduler; de ligger fore tjansterna for att SparService require:ar
-    # Sparning och GameplayService require:ar bada.
-    ("Pass",         "src/shared/HorseCore/Pass.luau"),
-    ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
-    ("Networking",   "src/shared/HorseCore/Networking.luau"),
-    ("HorseService", "src/server/HorseService.luau"),
-    # SparService FORE StallService: StallService.hastminnen laser saven ur
-    # den. Ordningen ar samma som init.server.luau har.
-    ("SparService",  "src/server/SparService.luau"),
-    ("StallService", "src/server/StallService.luau"),
-    # Klientsidan: prompt-beslutet (krav 8) provas har, inte i en lokal funktion.
-    ("InteractionController", "src/client/InteractionController.luau"),
-    ("PreparationController", "src/client/PreparationController.luau"),
-    # StateMachine + MovementController ligger med sedan blocker 2 i senior
-    # re-review av #87: cross-platform-scenariot spelas upp genom en RIKTIG
-    # controller med den hast Stallet faktiskt delar ut, inte genom
-    # direktanrop av svarsmodellen.
-    ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
-    ("StateMachine", "src/shared/HorseCore/StateMachine.luau"),
-    ("MovementController", "src/client/MovementController.luau"),
-    # GameplayService laddas SIST och ar poangen med hela listan: utan den
-    # bevisade specen bara att HorseService-kroken fungerar, inte att
-    # produktionen faktiskt registrerar GameplayService.farSittaUpp i den.
-    #[[ LedService laddas FORE GameplayService: den senare require:ar
-    #   den, och grinden pa "leda" ar hela poangen med blockerare 2. ]]
-    #[[ TackRigg FORE TackService (som require:ar den) och bada FORE
-    #   GameplayService, som prover utrustningen fysiskt. ]]
-    ("TackRigg",       "src/server/TackRigg.luau"),
-    ("TackService",    "src/server/TackService.luau"),
     ("LedService",     "src/server/LedService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
@@ -630,9 +472,21 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ #176: spelbygget. Samma varld som bygge.spec, men med QA-flaggan AV
     #   (se injektionen nedan). Maste sta FORE "bygge", som annars fangar
     #   den — den ar den enda spec som mater vad SPELAREN ser. ]]
+    #[[ #246 A: avslagets argument genom hela forberedelsekedjan. Samma
+    #   bunt som ridefirst — den mater REGELN i Preparation plus tjansten,
+    #   och den behover darfor bade modulen och GameplayService. Grenen
+    #   star FORST sa att den inte kan falla igenom till MODULER, dar
+    #   varken Preparation eller Sprak finns. ]]
+    if "ridanu" in spec_rel:
+        #[[ KOHERENS: varlden PLUS tjansterna. QA-sekvensen i #246 borjar
+        #   med att spelaren TAR sadeln ur boxfronten, och fronterna hangs
+        #   av `TackForradService` pa den BYGGDA varlden. Utan hus svarar
+        #   `tagSadel` med `tack.ingen_mottagare`, och da mater provet sin
+        #   egen avsaknad av varld i stallet for spelarens vag. ]]
+        moduler, stubbar = KOHERENS, "tests/stubs.luau"
     #[[ #FUN FIRST: ridefirst.spec mater regeln, inte varlden — samma bank
     #   som forberedelsen, dar Preparation, Svar och RidKanon finns. ]]
-    if "ridefirst" in spec_rel:
+    elif "ridefirst" in spec_rel:
         #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
         #   GameplayService.ridaNu-kedjan med rigg, fysisk utrustning och
         #   valfardsgrind. Agarskapsbuggen syntes inte i ett rent regelprov. ]]

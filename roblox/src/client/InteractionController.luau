@@ -557,7 +557,21 @@ local function addRidaPrompt(model: Model)
 	stallIn(prompt)
 
 	prompt.Triggered:Connect(function()
-		local ok, skal = Net.get("RidaNu"):InvokeServer()
+		--[[ TRE VÄRDEN, INTE TVÅ (#246 A).
+
+		     Exakt samma fel som `MountRequest` ovan hade, och som noten
+		     där beskriver — men här var det aldrig rättat. Raden tog
+		     `ok, skal` av serverns `(boolean, string?, string?)`, så
+		     argumentet föll på golvet hos den SISTA mottagaren i kedjan.
+
+		     Studio-QA 2026-09-18, touch, Trixie sadlad och ledning igång:
+
+		         server -> ok=false skal=forb.fel_tur arg=kanon:Hälsa lugnt
+		         spelaren ser  "wrong turn — %s is next"
+
+		     Att bara rätta servern hade inte hjälpt: nejet passerar här
+		     sist, och en kedja är hel först när varje led bär vidare. ]]
+		local ok, skal, arg = Net.get("RidaNu"):InvokeServer()
 		if not ok then
 			--[[ Nej:et är oftast välfärdsstoppet: stallet såg något på
 				henne idag. Det ska LÄSAS, inte tystas.
@@ -571,9 +585,14 @@ local function addRidaPrompt(model: Model)
 				Nu går skälet till den yta spelaren tittar på. `warn`
 				står kvar för den som felsöker; nyckeln bredvid texten är
 				vad loggen är till för. ]]
-			if avslagVisare then avslagVisare(skal) end
+			if avslagVisare then avslagVisare(skal, arg) end
+			--[[ Loggen ska visa DET SPELAREN SER, annars ljuger den för den
+			     som felsöker. Argumentet följer därför med hit också — det
+			     var den här raden som skrev "%s" i QA-loggen. ]]
 			warn(("[Horse] Rida nu: %s (%s)"):format(
-				Sprak.t(tostring(skal)), tostring(skal)))
+				if arg ~= nil then Sprak.t(tostring(skal), arg)
+					else Sprak.t(tostring(skal)),
+				tostring(skal)))
 		end
 		InteractionController.uppdatera()
 	end)
