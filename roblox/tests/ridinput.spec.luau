@@ -217,6 +217,38 @@ do
 end
 
 do
+	--[[ SKOPAN ar inte overflodig bredvid sparren, och det ar inte
+	     uppenbart -- jag trodde sjalv tvartom tills mutationen matte det.
+
+	     Sparren mats mot `sisteHjalp`, som bara uppdateras nar ett steg
+	     faktiskt ACCEPTERAS. Ett NEKAT steg lamnar den orord, och da
+	     slapper sparren igenom nasta paket ocksa. En klient som star vid
+	     taket och spammar DRIV far alltsa varje paket anda fram till
+	     `replikera` -- tre attributskrivningar och ett `FireClient` per
+	     paket, sa fort natet orkar leverera dem.
+
+	     Skopan ar det enda som stoppar den forstarkningen. Utan den ar
+	     avslaget billigare for angriparen an for servern.
+
+	     Matningen raknar paket pa tradet, inte gangarter: det ar ARBETET
+	     som ar hotat har, inte sanningen. ]]
+	local remote = Networking.get("RidTillstand")
+	modell:SetAttribute("GaitCeiling", "trot")
+	session.stegIndex = Gaits.index("trot")
+	vanta(Config.RIDINPUT.ImpulsSparr)
+	session.intentPolletter = Config.RIDINPUT.SkopaTak
+	remote._skickat = {}
+	for i = 1, 200 do
+		avsikt(spelare, "driv", i)
+	end
+	check("spam vid taket forstarkas inte till 200 serversvar",
+		#remote._skickat <= Config.RIDINPUT.SkopaTak,
+		("%d svar pa 200 avsikter, skopa %d"):format(
+			#remote._skickat, Config.RIDINPUT.SkopaTak))
+	modell:SetAttribute("GaitCeiling", Gaits.SPELBAR_TOPP)
+end
+
+do
 	--[[ Och den arliga takten far inte strypas. En grind som ater
 	     legitima hjalper laser som trasig styrning, och hade plockats bort
 	     i stallet for justerats. ]]
