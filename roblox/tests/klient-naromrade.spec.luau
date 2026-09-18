@@ -474,6 +474,23 @@ do
 		table.concat(rader_, " · "))
 	check("och det finns alltid minst en rad att handla på", allaMinstEn)
 
+	--[[ GOLVET PRÖVAS DÄR DET FAKTISKT BINDER.
+
+	     Raden ovan var tom som bevis: på de fem ytorna blir svaret aldrig
+	     under två, så en mutation som tog bort golvet kom ut GRÖN
+	     (falsifiering M7). Ett prov som inte kan bli rött är ingen grind.
+
+	     Här äter panelen hela höjden — ett verkligt fall på en liten
+	     telefon i landskap med en utvidgad skötselpanel. Då ska listan
+	     hellre dela plats med panelen än försvinna: nödvändiga handlingar
+	     ska förbli åtkomliga, och prioriteringen i `nara` gör att den enda
+	     raden är rätt rad. ]]
+	yta.AbsoluteSize = Vector3.new(568, 320, 0)
+	PreparationController._satRutaForProv({ x0 = 16, y0 = 4, x1 = 332, y1 = 320 })
+	local trangt = N.radplatser()
+	check("en panel som äter hela höjden lämnar ändå EN rad",
+		trangt == 1, ("%d rader"):format(trangt))
+
 	--[[ EN HÖG PANEL ÄTER RADER — det är hela poängen. Utan panel ska
 	     taket vara det gamla. ]]
 	yta.AbsoluteSize = Vector3.new(1080, 810, 0)
