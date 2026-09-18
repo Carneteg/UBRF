@@ -212,11 +212,25 @@ end
 
 	Inom en klass gäller avståndet precis som förut. Dörrar försvinner
 	alltså inte; de hamnar efter hästens steg i stället för före det. ]]
-function Naromrade.nara(fran: Vector3, sok: { Instance },
-	minHast: string?, tak: number?): { ProximityPrompt }
+--[[ ── ALLT INOM RÄCKVIDD, UTAN URVAL ────────────────────────────────
+
+	Touch-adaptern ÄGER promptbilderna i närområdet — inte bara bilderna
+	för de handlingar den råkar få plats att rita en rad för. Den här
+	funktionen svarar på den frågan, och bara den: vad ligger inom sin egen
+	aktiveringsräckvidd just nu, närmast först.
+
+	SKILD FRÅN URVALET MED FLIT (senior review av `c3f48c7`). Första
+	utkastet släckte bara de prompter som fick en RAD. Följden i QA-
+	scenariot: telefonen rymmer två rader, sex prompter ligger inom
+	räckvidd, och de fyra som inte fick en rad — grannhästarnas utrustning
+	som filtreras bort, och dörrarna som blir overflow — behöll Roblox egna
+	flytande knappar. Spelaren mötte alltså fortfarande listan PLUS knappar
+	i djupet, vilket är precis den röra #246 finns för att ta bort.
+
+	Jag läste kontraktets "för samma handling" snävt. Kravet är en yta. ]]
+function Naromrade.iRackvidd(fran: Vector3, sok: { Instance }): { ProximityPrompt }
 	local ut: { ProximityPrompt } = {}
 	local avstand: { [ProximityPrompt]: number } = {}
-	local klass: { [ProximityPrompt]: number } = {}
 	for _, rot in ipairs(sok) do
 		for _, d in ipairs(rot:GetDescendants()) do
 			if d:IsA("ProximityPrompt") and d.Enabled then
@@ -224,26 +238,64 @@ function Naromrade.nara(fran: Vector3, sok: { Instance },
 				if p then
 					local a = (p - fran).Magnitude
 					if a <= d.MaxActivationDistance then
-						local h = Naromrade.hastFor(d)
-						local k = if h == nil then 2
-							elseif minHast ~= nil and h == minHast then 1
-							elseif minHast == nil then 2
-							else 3
-						--[[ En annan hästs utrustning tas INTE med alls när
-						     spelaren har en egen. ]]
-						if k ~= 3 then
-							table.insert(ut, d)
-							avstand[d] = a
-							klass[d] = k
-						end
+						table.insert(ut, d)
+						avstand[d] = a
 					end
 				end
 			end
 		end
 	end
+	table.sort(ut, function(a, b) return avstand[a] < avstand[b] end)
+	return ut
+end
+
+--[[ ── PRIORITERINGEN ÄR SEMANTISK, INTE BARA AVSTÅND (#246 D) ─────────
+
+	QA 2026-09-18: listan fylldes av andra hästars sadlar och av dörrar,
+	medan dagens hästs nästa steg trängdes undan. Avståndet ensamt räcker
+	inte — boxfronterna står tätt, och grannens sadel kan mycket väl vara
+	närmare än den egna.
+
+	Tre klasser, i den ordning spelaren menar dem:
+
+	    1  dagens häst och hennes utrustning
+	    2  det som inte hör till någon häst — dörrar, och liknande
+	    3  en ANNAN hästs utrustning
+
+	Klass 3 tas bort helt så snart spelaren HAR en tilldelad häst: ordern
+	är uttrycklig om att andra hästars sadlar inte får fylla listan. Har
+	hon ingen tilldelad häst ännu står allt kvar — då vet spelet inte bättre
+	än spelaren, och att gissa vore värre än att visa.
+
+	Inom en klass gäller avståndet precis som förut: rangen kommer ur
+	`iRackvidd`, som redan sorterat närmast först. Dörrar försvinner alltså
+	inte; de hamnar efter hästens steg i stället för före det.
+
+	URVALET STYR RADERNA — INTE VILKA BILDER SOM SLÄCKS. Se noten ovan. ]]
+function Naromrade.nara(fran: Vector3, sok: { Instance },
+	minHast: string?, tak: number?): { ProximityPrompt }
+	local alla = Naromrade.iRackvidd(fran, sok)
+	local rang: { [ProximityPrompt]: number } = {}
+	for i, d in ipairs(alla) do rang[d] = i end
+
+	local ut: { ProximityPrompt } = {}
+	local klass: { [ProximityPrompt]: number } = {}
+	for _, d in ipairs(alla) do
+		local h = Naromrade.hastFor(d)
+		local k = if h == nil then 2
+			elseif minHast ~= nil and h == minHast then 1
+			elseif minHast == nil then 2
+			else 3
+		--[[ En annan hästs utrustning får ingen RAD när spelaren har en
+		     egen. Dess bild släcks ändå — `rita` läser `iRackvidd`. ]]
+		if k ~= 3 then
+			table.insert(ut, d)
+			klass[d] = k
+		end
+	end
 	table.sort(ut, function(a, b)
 		if klass[a] ~= klass[b] then return klass[a] < klass[b] end
-		return avstand[a] < avstand[b]
+		return rang[a] < rang[b]
 	end)
 	--[[ Taket klipps EFTER sorteringen: det spelaren menar får aldrig
 		trängas bort av något som råkade hittas först. ]]
@@ -451,6 +503,9 @@ local function rita()
 	     avläsning av samma tilldelning servern gjort — ingen ny kanal. ]]
 	local minHast = PreparationController.hastId()
 	local platser = Naromrade.radplatser()
+	--[[ Två frågor, två svar: vad ÄR i närheten, och vad ska bli rader.
+	     Den första styr släckningen, den andra listan. ]]
+	local alla = Naromrade.iRackvidd((rot :: BasePart).Position, { workspace })
 	senaste = Naromrade.nara((rot :: BasePart).Position, { workspace },
 		minHast, platser)
 	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
@@ -458,16 +513,27 @@ local function rita()
 	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
 	f.Position = UDim2.new(0, KANT, 1, -(platser * (KNAPP_H + LUFT)) - KANT)
 
-	--[[ #246 C: släck Robloxs egen bild för de handlingar listan visar,
-	     och bara för dem. Ordningen spelar roll — tänd först det som lämnat
-	     listan, släck sedan det som står i den — annars kan en prompt som
-	     ligger kvar hinna tändas och släckas i samma bildruta. ]]
-	local kvar: { [ProximityPrompt]: boolean } = {}
-	for _, p in ipairs(senaste) do kvar[p] = true end
+	--[[ ── #246 C: ALLT INOM RÄCKVIDD SLÄCKS, INTE BARA RADERNA ──────
+
+		Senior review av `c3f48c7`: första utkastet släckte bara de
+		prompter som fick en rad. De som inte fick plats — och grannhästens
+		utrustning, som filtreras bort ur listan — behöll Roblox egna
+		flytande knappar. Ytan var alltså fortfarande dubbel, och just den
+		rörigheten är vad ordern beskriver.
+
+		Gränsen går vid RÄCKVIDDEN, inte vid urvalet: det touch-adaptern
+		äger är närområdets bilder. Vilka av dem som blir rader är en annan
+		fråga, och den avgörs av `nara`.
+
+		Ordningen spelar roll — tänd först det som lämnat räckvidden, släck
+		sedan det som är kvar — annars kan en prompt som ligger kvar hinna
+		tändas och släckas i samma bildruta. ]]
+	local inom: { [ProximityPrompt]: boolean } = {}
+	for _, p in ipairs(alla) do inom[p] = true end
 	for p in pairs(slackta) do
-		if not kvar[p] then tandIgen(p) end
+		if not inom[p] then tandIgen(p) end
 	end
-	for _, p in ipairs(senaste) do slack(p) end
+	for _, p in ipairs(alla) do slack(p) end
 
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
