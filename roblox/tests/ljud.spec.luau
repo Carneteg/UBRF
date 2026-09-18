@@ -148,6 +148,45 @@ do
 	check("ryggningen ar tvataktig", Config.RYGGNING.Steps == 2,
 		("%d slag per cykel"):format(Config.RYGGNING.Steps))
 end
+print("\n-- 2b. Flaggan foljer BENEN, inte begaran --")
+
+do
+	--[[ DET SMALA FONSTRET, och skalet att `loco.ryggar` speglar `reverse`
+	     och inte `self.ryggar`.
+
+	     Tva snabba BROMS ur skritt satter trappans pinne i rygga MEDAN
+	     hasten fortfarande gar framat: forsta hjalpen startar hennes svar
+	     mot halt, andra flyttar pinnen ned i rygga, och `targetGait` star
+	     kvar i "walk" tills svarstiden gatt ut.
+
+	     Speglade flaggan begaran hade ljudet bytt till ryggningstakt pa ben
+	     som fortfarande skrittade framat - fel takt pa ratt rorelse. ]]
+	local mc, sc = nyttEkipage()
+	mc:step(intent({ gaitUp = true }), 1 / 60)
+	kor(mc, sc, 2.5, { forward = 1 })
+	check("hon skrittar", mc.loco.gait == "walk", mc.loco.gait)
+
+	--[[ Tva hjalper i tat foljd - spakens sparr ligger i `Input` och ar
+	     inte med har. Det ar just det fallet som skapar fonstret. ]]
+	mc:step(intent({ gaitDown = true }), 1 / 60)
+	mc:step(intent({ gaitDown = true }), 1 / 60)
+
+	check("pinnen star i rygga", mc.ryggar == true, tostring(mc.ryggar))
+	check("men hasten har annu inte svarat - hon gar fortfarande",
+		mc.loco.targetGait == "walk", mc.loco.targetGait)
+	check("2b. flaggan ar FALSK medan benen gar framat",
+		mc.loco.ryggar == false,
+		("loco.ryggar=%s vid %.2f m/s"):format(
+			tostring(mc.loco.ryggar), mc.loco.speed))
+
+	--[[ Och nar svaret kommer ska den sla om. ]]
+	kor(mc, sc, 3.0)
+	check("och SANN nar hon faktiskt backar",
+		mc.loco.ryggar == true and mc.loco.speed < -0.5,
+		("loco.ryggar=%s vid %.2f m/s"):format(
+			tostring(mc.loco.ryggar), mc.loco.speed))
+end
+
 
 print("\n-- 3. Halt UTAN ryggning ar fortsatt tyst --")
 
