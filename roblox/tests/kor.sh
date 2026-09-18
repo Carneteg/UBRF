@@ -20,7 +20,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag"
+SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
@@ -41,6 +41,20 @@ fi
 # som en rivning. Kors har, tillsammans med den andra kallskannern.
 if ! python3 ../tools/kolla-reglagepanel.py; then
   echo "REGLAGEPANELGRINDEN MISSLYCKADES"
+  exit 1
+fi
+# #248 Fas A: tavlingskladernas katalog ska finnas EN gang. En kopierad
+# ID-tabell i UI eller server kompilerar lika fint som ingen, sa den
+# regeln maste lasas ur kallan. Samma skal som raden ovan.
+if ! python3 ../tools/kolla-tavlingsklader.py; then
+  echo "TAVLINGSKLADERGRINDEN MISSLYCKADES"
+  exit 1
+fi
+# …och grinden sjalv provas i BADA riktningarna: en kopierad ID-literal
+# ska ge rott, en laglig konsument som laser katalogens publika falt ska
+# ge gront. Den andra riktningen ar den som gav CHANGES_REQUESTED pa 250.
+if ! python3 ../tools/testa-kolla-tavlingsklader.py; then
+  echo "GRINDPROVET FOR TAVLINGSKLADER MISSLYCKADES"
   exit 1
 fi
 
