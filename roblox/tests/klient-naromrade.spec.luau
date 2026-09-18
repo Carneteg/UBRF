@@ -507,6 +507,164 @@ do
 	UIS.TouchEnabled = false
 end
 
+--[[ ══ #246 C, OMTAG: OVERFLOW OCH BORTFILTRERADE ════════════════════
+
+	Senior review av `c3f48c7` (CHANGES_REQUESTED): första utkastet släckte
+	bara promptbilderna för de handlingar som fick en RAD. I QA-scenariot
+	rymmer telefonen två rader medan fem eller fler prompter ligger inom
+	räckvidd — de som inte fick plats, och grannhästens utrustning som
+	filtreras bort, behöll Roblox egna flytande knappar. Ytan var alltså
+	fortfarande dubbel.
+
+	Provet ställer upp exakt den bilden och mäter reviewens sex krav. ]]
+print("\n── Sex prompter, två radplatser: ingen dubbel yta ──")
+do
+	for _, d in ipairs(workspace:GetChildren()) do d:Destroy() end
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local kar = Instance.new("Model")
+	kar.Name = "Spelare"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Position = Vector3.new(0, 0, 0)
+	rot.Parent = kar
+	kar.Parent = workspace
+	Players.LocalPlayer.Character = kar
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+
+	local function forrad(hastId, namn, handling, objekt, lage)
+		local m = Instance.new("Model")
+		m.Name = "Forrad_" .. namn
+		m:SetAttribute("ForHast", hastId)
+		m.Parent = workspace
+		local del = Instance.new("Part")
+		del.Name = namn
+		del.Position = lage
+		del.Parent = m
+		local pr = Instance.new("ProximityPrompt")
+		pr.Name = namn .. "Prompt"
+		pr.ActionText = handling
+		pr.ObjectText = objekt
+		pr.MaxActivationDistance = 8
+		pr.RequiresLineOfSight = false
+		pr.Parent = del
+		return pr
+	end
+
+	--[[ Grannarnas utrustning NÄRMAST — de ska filtreras bort ur listan
+	     men ändå få sina bilder släckta. ]]
+	local granne1 = forrad("marabou", "MarabouSadel", "Ta sadeln",
+		"Marabous sadel", Vector3.new(1, 0, 0))
+	local granne2 = forrad("mackenzie", "MacKenzieSadel", "Ta sadeln",
+		"MacKenzies sadel", Vector3.new(1.5, 0, 0))
+	--[[ Dagens häst: två handlingar, som ska bli de två raderna. ]]
+	local egen1 = forrad("trixie", "TrixieSadel", "Ta sadeln", "Trixies sadel",
+		Vector3.new(4, 0, 0))
+	local egen2 = forrad("trixie", "TrixieTrans", "Ta tränset", "Trixies träns",
+		Vector3.new(4.5, 0, 0))
+	--[[ Två dörrar, som blir overflow när bara två platser finns. ]]
+	local dorr1 = nyPrompt("DorrA", "Öppna", "MB 7", Vector3.new(2, 0, 0))
+	local dorr2 = nyPrompt("DorrB", "Öppna", "E 7", Vector3.new(2.2, 0, 0))
+	local allaSex = { granne1, granne2, egen1, egen2, dorr1, dorr2 }
+
+	local yta = (function()
+		local function sok(nod)
+			if type(nod) ~= "table" then return nil end
+			if nod.Name == "UBRFNaromrade" then return nod end
+			for _, b in ipairs(nod._barn or {}) do
+				local t = sok(b)
+				if t then return t end
+			end
+			return nil
+		end
+		return sok(Players.LocalPlayer._gui)
+	end)()
+	--[[ Radkapacitet 2: liten telefon i landskap med en skötselpanel uppe. ]]
+	yta.AbsoluteSize = Vector3.new(844, 390, 0)
+	PreparationController._satRutaForProv({ x0 = 16, y0 = 190, x1 = 332, y1 = 390 })
+	PreparationController._satHastIdForProv("trixie")
+	check("radkapaciteten är 2 på den här ytan", N.radplatser() == 2,
+		("%d"):format(N.radplatser()))
+
+	N.satRider(false)
+
+	local inom = N.iRackvidd(Vector3.new(0, 0, 0), { workspace })
+	check("sex prompter ligger inom aktiveringsavstånd", #inom == 6,
+		("%d"):format(#inom))
+
+	local synliga = N._rader()
+	check("exakt två listknappar syns", #synliga == 2,
+		("%d: %s"):format(#synliga, table.concat(synliga, " | ")))
+	local badeEgna = (synliga[1] or ""):find("Trixie") ~= nil
+		and (synliga[2] or ""):find("Trixie") ~= nil
+	check("och båda raderna är dagens hästs prioriterade handlingar",
+		badeEgna, table.concat(synliga, " | "))
+
+	--[[ INGEN av de sex behåller Robloxs egna UI — varken overflow
+	     (dörrarna) eller de bortfiltrerade (grannarnas). ]]
+	local kvarNative = {}
+	for _, pr in ipairs(allaSex) do
+		if pr.Style ~= Enum.ProximityPromptStyle.Custom then
+			table.insert(kvarNative, pr.Name)
+		end
+	end
+	check("ingen prompt inom räckvidd behåller Roblox standard-UI",
+		#kvarNative == 0, table.concat(kvarNative, ", "))
+	check("och alla sex står i registret, inte bara de två raderna",
+		N._slackta() == 6, ("%d"):format(N._slackta()))
+
+	--[[ AKTIVERINGEN är orörd på en bortfiltrerad prompt: ingen rad, men
+	     promptens egen väg fungerar precis som förut. ]]
+	check("en bortfiltrerad prompt är fortfarande aktiverbar",
+		granne1.Enabled == true and granne1.MaxActivationDistance == 8)
+	local grannFyrade = 0
+	granne1.Triggered:Connect(function() grannFyrade += 1 end)
+	granne1:InputHoldBegin()
+	granne1:InputHoldEnd()
+	task.wait()
+	check("och dess egen väg utlöser precis som förut", grannFyrade == 1,
+		tostring(grannFyrade))
+
+	--[[ Spelaren går därifrån: alla stilar tillbaka. ]]
+	rot.Position = Vector3.new(500, 0, 500)
+	N.satRider(false)
+	local ateAlla = true
+	for _, pr in ipairs(allaSex) do
+		if pr.Style ~= Enum.ProximityPromptStyle.Default then ateAlla = false end
+	end
+	check("när spelaren lämnat området är varje stil återställd",
+		ateAlla and N._slackta() == 0,
+		("släckta kvar: %d"):format(N._slackta()))
+
+	rot.Position = Vector3.new(0, 0, 0)
+	N.satRider(false)
+	check("de släcks igen när hon kommer tillbaka", N._slackta() == 6,
+		("%d"):format(N._slackta()))
+	N.stopp()
+	local efterStopp = true
+	for _, pr in ipairs(allaSex) do
+		if pr.Style ~= Enum.ProximityPromptStyle.Default then efterStopp = false end
+	end
+	check("och stopp lämnar ingen släckt prompt kvar",
+		efterStopp and N._slackta() == 0, ("%d"):format(N._slackta()))
+
+	--[[ PC-vägen är orörd: utan pekskärm släcks ingenting. ]]
+	UIS.TouchEnabled = false
+	N.start()
+	local pcOrord = true
+	for _, pr in ipairs(allaSex) do
+		if pr.Style ~= Enum.ProximityPromptStyle.Default then pcOrord = false end
+	end
+	check("PC-vägen är orörd — ingen prompt släckt, ingen lista byggd",
+		pcOrord and N._slackta() == 0 and #N._rader() == 0)
+	N.stopp()
+
+	PreparationController._satRutaForProv(nil)
+	PreparationController._satHastIdForProv(nil)
+end
+
 print("\n── Skrivbordet rörs inte ──")
 
 do

@@ -1891,6 +1891,15 @@ function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
 end
 
+--[[ Provets fönster in. Tilldelningen kommer ur serverns vy; den som
+	mäter en ANNAN moduls hänsyn till dagens häst ska slippa bygga upp hela
+	vyn. Hooken sätter bara identiteten — reglerna som läser den är
+	oförändrade, och det är dem provet mäter. ]]
+function PreparationController._satHastIdForProv(id: string?)
+	senasteVy = if id == nil then senasteVy else (senasteVy or {}) :: any
+	if senasteVy ~= nil then (senasteVy :: any).hastId = id end
+end
+
 --[[ Vad SERVERN säger att spelaren bär (#182). Klienten räknar inte ut
 	det själv — `DinHast` ritar bara det vyn redan innehåller, av samma
 	skäl som `hastId` ovan läses härifrån och inte ur en egen fråga. ]]
