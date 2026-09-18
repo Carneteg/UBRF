@@ -84,6 +84,25 @@ export type Session = {
 	     en hjälpspam får inte kunna strypa fartsynken. ]]
 	intentPolletter: number,
 	intentSenast: number,
+	--[[ ── RITTENS IDENTITET (#233, ChatGPT-review av #241) ─────────────
+	     Reviewen fällde första utkastet på att ett ridpaket inte var
+	     bundet till den ritt det skapades i. `session.rider == player`
+	     skiljer inte två ritter med SAMMA spelare: en fördröjd avsikt
+	     från ritt A kunde landa efter avsittning och ny uppsittning och
+	     accepteras mot ritt B — eller mot en helt annan häst, eftersom
+	     `byRider` då pekar någon annanstans. Sekvensvakten hjälpte inte:
+	     `nollstallRitt` nollar räknaren vid varje uppsittning, så det
+	     gamla numret läste som färskt.
+
+	     `rittId` är serverns eget märke på EN ritt, och `nil` när ingen
+	     rider. Klienten får det replikerat och skickar tillbaka det med
+	     varje avsikt; servern jämför innan sekvens, spärr eller tillstånd
+	     rörs.
+
+	     Märket är ingen nyckel och behöver inte vara det. Servern LITAR
+	     aldrig på det — den MATCHAR det. Hästen slås ändå upp ur `byRider`
+	     på avsändaren, så en annan spelares märke öppnar ingenting. ]]
+	rittId: string?,
 }
 
 local sessions: { [Model]: Session } = {}
@@ -309,6 +328,21 @@ local riderHook: ((Player, boolean) -> ())? = nil
      Funktionen är den ENDA som skriver gångartsattributen. Det är med
      flit: så länge det finns exakt ett ställe går det att läsa av vem som
      äger sanningen, och `grep` svarar på frågan. ]]
+--[[ Ett märke per ritt.
+
+     Löpnumret gör det unikt, slumpdelen gör det ogissbart nog att en
+     klient inte kan tala om en ritt den inte fått märket till. `os.clock`
+     blandas in så att två serverstarter inte ger samma serie — `Random`
+     finns inte i bänkens stubbar, och kravet här är färskhet, inte
+     kryptografi. ]]
+local nastaRitt = 0
+local function nyttRittId(): string
+	nastaRitt += 1
+	return ("r%d-%x-%x"):format(nastaRitt,
+		math.floor(os.clock() * 1e6) % 0xffffff,
+		math.random(0, 0xffffff))
+end
+
 local function replikera(session: Session)
 	local model = session.rig.model
 	local gangart = Ridtrappa.gangart(session.stegIndex)
@@ -320,7 +354,15 @@ local function replikera(session: Session)
 	model:SetAttribute("RidVersion", session.ridVersion)
 
 	if session.rider then
+		--[[ SVARET BÄR SIN EGEN IDENTITET (ChatGPT-review av #241).
+		     `version` ordnar paket INOM en hästsession; den säger
+		     ingenting om VILKEN ritt eller vilken häst svaret gäller. Ett
+		     sent svar från ritt A kunde därför rätta en klient som hunnit
+		     sitta upp på ritt B. Hästen och rittmärket följer nu med, och
+		     klienten reconcilar bara när båda stämmer. ]]
 		Net.get("RidTillstand"):FireClient(session.rider, {
+			hast = model,
+			ritt = session.rittId,
 			gangart = gangart,
 			ryggar = ryggar,
 			version = session.ridVersion,
@@ -383,6 +425,28 @@ local function setRider(session: Session, player: Player?)
 	     är redan satt, så `replikera` når den nya ryttaren med hennes
 	     utgångsläge i stället för att den förra får ett sista svar. ]]
 	nollstallRitt(session)
+	session.rittId = if player then nyttRittId() else nil
+	--[[ ── MÄRKET REPLIKERAS, OCH DET ÄR INTE EN BEKVÄMLIGHET ──────────
+	     Första utkastet lämnade märket ENBART i `tryMount`-returen. Det
+	     var en trasig leverans, och felet är värt att stå kvar:
+
+	     `MountChanged` fyras några rader ned i den HÄR funktionen, alltså
+	     INNE i `tryMount` och före dess return. Klientens
+	     `MountChanged`-lyssnare anropar `mount(model)` — utan märke. En
+	     ritt som startade den vägen hade fått `rittId = nil`, och då hade
+	     servern nekat varje hjälp: hästen hade slutat svara på DRIV och
+	     BROMS helt. `klient.spec` monterar just den vägen.
+
+	     Attributet är därför sanningen, och det sätts FÖRE `MountChanged`
+	     så att varje väg in i ritten hittar ett märke. Handskakningens
+	     retur är kvar som tidig antydan för det fönster där attributet
+	     ännu inte replikerat.
+
+	     Att märket syns för alla är ofarligt och värt att säga uttryckligen:
+	     det ger ingen makt. Servern slår ändå upp hästen ur `byRider` på
+	     AVSÄNDAREN, så en annan spelares märke öppnar ingenting. Märket är
+	     en färskhetsstämpel, inte en nyckel. ]]
+	session.rig.model:SetAttribute("RidSession", session.rittId)
 	replikera(session)
 
 	session.rig.model:SetAttribute("RiderUserId", if player then player.UserId else 0)
@@ -551,7 +615,13 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 		end))
 	end
 	stadning[player] = kopplingar
-	return true, nil
+	--[[ RITTMÄRKET LÄMNAS OCKSÅ I HANDSKAKNINGEN (ChatGPT-review av
+	     #241). Tredje värdet är `extra`, som bara läses på AVSLAG — där
+	     bär det ett språkargument. På ja-vägen var det oanvänt.
+
+	     Attributet `RidSession` är sanningen; det här är den tidiga
+	     antydan, för det fönster där attributet ännu inte replikerat. ]]
+	return true, nil, session.rittId
 end
 
 --[[ ══ AVSITTNINGENS PLATS ════════════════════════════════════════════
@@ -1019,7 +1089,7 @@ end
      bandbreddskostnad för den som spammar. Den ärliga klienten behöver
      inget skäl — den behöver SANNINGEN, och den får den genom
      `replikera`, som är samma väg som ett accepterat steg. ]]
-local function onRidingIntent(player: Player, handling: any, sekvens: any)
+local function onRidingIntent(player: Player, rittId: any, handling: any, sekvens: any)
 	--[[ 1. RIDER HON ÖVER HUVUD TAGET, och i så fall vad?
 
 	     Hästen står medvetet INTE i argumentet. Servern slår upp den ur
@@ -1036,8 +1106,23 @@ local function onRidingIntent(player: Player, handling: any, sekvens: any)
 	     för att träffa den som råkar stå i den ena. ]]
 	if session.rider ~= player then return end
 
-	--[[ 2. SKOPAN. Före allt annat arbete, och före valideringen: en
-	     spammare ska kosta en jämförelse, inte en genomgång. ]]
+	--[[ 2. RITTEN. FÖRE skopan, sekvensen, spärren och tillståndet.
+
+	     Ordningen är kravet ur ChatGPT-reviewen av #241, och den är inte
+	     formell: varenda grind under den här raden har ett MINNE som
+	     skrivs — skopan töms, sekvensen räknas upp, spärren flyttas.
+	     Prövades märket efter dem kunde ett paket från en gammal ritt
+	     fortfarande förbruka den nya rittens polletter eller flytta dess
+	     spärr, även om steget till slut nekades.
+
+	     Nil-märket är det viktiga fallet och inte en bivakt: mellan
+	     avsittning och nästa uppsittning är `session.rittId` nil, och då
+	     matchar ingen sträng. Ett fördröjt paket har inget att träffa. ]]
+	if typeof(rittId) ~= "string" then return end
+	if session.rittId == nil or rittId ~= session.rittId then return end
+
+	--[[ 3. SKOPAN. En spammare ska kosta en jämförelse, inte en
+	     genomgång. ]]
 	local nu = os.clock()
 	session.intentPolletter = math.min(Config.RIDINPUT.SkopaTak,
 		session.intentPolletter + (nu - session.intentSenast) * Config.RIDINPUT.SkopaPafyll)
@@ -1045,7 +1130,7 @@ local function onRidingIntent(player: Player, handling: any, sekvens: any)
 	if session.intentPolletter < 1 then return end
 	session.intentPolletter -= 1
 
-	--[[ 3. PAYLOADEN. Ordförrådet är två ord och ingenting annat. ]]
+	--[[ 4. PAYLOADEN. Ordförrådet är två ord och ingenting annat. ]]
 	if not Ridtrappa.arHandling(handling) then return end
 
 	--[[ Sekvensen är frivillig — en klient som inte dedupliceras skickar
@@ -1063,7 +1148,7 @@ local function onRidingIntent(player: Player, handling: any, sekvens: any)
 		if sekvens <= session.sekvens then return end
 	end
 
-	--[[ 4. IMPULSSPÄRREN — serverns, inte klientens.
+	--[[ 5. IMPULSSPÄRREN — serverns, inte klientens.
 
 	     Klientens `Input.IMPULS_SPARR` finns kvar och gör samma sak den
 	     alltid gjort, men den är presentation: den som byter ut sin klient
@@ -1074,7 +1159,7 @@ local function onRidingIntent(player: Player, handling: any, sekvens: any)
 	local sparr = Config.RIDINPUT.ImpulsSparr - Config.RIDINPUT.ServerMarginal
 	if nu - session.sisteHjalp < sparr then return end
 
-	--[[ 5. STEGET. Ett, aldrig fler, och aldrig förbi taket uppåt.
+	--[[ 6. STEGET. Ett, aldrig fler, och aldrig förbi taket uppåt.
 
 	     `Ridtrappa.steg` returnerar oförändrat index när steget inte får
 	     tas — mot taket uppåt, mot rygga nedåt. Då har ingenting hänt, och

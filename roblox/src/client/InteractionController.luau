@@ -34,7 +34,9 @@ local sadlaCheck: ((Model) -> boolean)? = nil
 --[[ #235 FAS 3: transets knapp. Egen tabell, samma monster. ]]
 local transaKnappar: { [Model]: ProximityPrompt } = {}
 local transaCheck: ((Model) -> boolean)? = nil
-local onMount: ((Model) -> ())? = nil
+--[[ Andra argumentet ar rittmarket ur uppsittningshandskakningen
+     (#233, ChatGPT-review av #241). ]]
+local onMount: ((Model, string?) -> ())? = nil
 
 --[[ ══ TRE KNAPPAR PÅ SAMMA HÄST FÅR INTE LIGGA PÅ VARANDRA (#182) ═════
 
@@ -396,7 +398,13 @@ local function addPrompt(model: Model)
 			fått läsa "%s remains". ]]
 		local ok, reason, extra = Net.get("MountRequest"):InvokeServer(model)
 		if ok and onMount then
-			onMount(model)
+			--[[ `extra` bär SKÄLETS ARGUMENT på avslag och RITTMÄRKET på ja
+			     (#233, ChatGPT-review av #241). De två kan inte förväxlas:
+			     grenarna är åtskilda av `ok`, och ingen av dem läser det
+			     andras värde. Märket måste följa med hit, för det är
+			     `init.client` som skickar avsikterna och alltså den som
+			     behöver kunna tala om vilken ritt de hör till. ]]
+			onMount(model, extra)
 		elseif not ok then
 			--[[ Skälet är en språknyckel sedan #162. Loggen skriver båda:
 				nyckeln för den som felsöker, texten för den som läser

@@ -1423,6 +1423,49 @@ do
 	usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
 end
 
+--[[ ══ RITTMÄRKET NÅR RITTEN OAVSETT VILKEN VÄG SOM MONTERADE DEN ══
+
+     #233 Fas 4b band varje `RidingIntent` till ett rittmärke. Första
+     utkastet levererade märket ENBART i `tryMount`-returen, och det var
+     en trasig leverans:
+
+       serverns `setRider` fyrar `MountChanged` INNE i `tryMount`, alltså
+       före dess return. Klientens `MountChanged`-lyssnare anropar
+       `mount(model)` utan märke.
+
+     En ritt som startade den vägen fick `rittId = nil`, och då nekade
+     servern VARJE hjälp: hästen svarade inte längre på DRIV eller BROMS.
+     Det är den väg den här specen själv monterar, och ingen mätning såg
+     det.
+
+     Märket replikeras nu som attributet `RidSession` på hästen, satt före
+     `MountChanged`. Provet nedan monterar precis som resten av specen gör
+     — genom `MountChanged` och ingenting annat — och mäter att avsikten
+     som når tråden faktiskt BÄR märket. ]]
+do
+	local remote = Net.get("RidingIntent")
+
+	--[[ Servern har satt märket före `MountChanged`. Här gör bänken
+	     detsamma, eftersom `HorseService` inte ligger i den här bunten. ]]
+	hast:SetAttribute("RidSession", "r7-provritt")
+	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+
+	remote._skickat = {}
+	Input.drivImpuls()
+	for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+
+	local sista = remote._skickat[#remote._skickat]
+	prova("en DRIV efter MountChanged-uppsittning når tråden",
+		sista ~= nil,
+		("(%d paket)"):format(#remote._skickat))
+	prova("och avsikten bär rittmärket — inte nil",
+		sista ~= nil and sista[1] == "r7-provritt",
+		("(märke %s)"):format(tostring(sista and sista[1])))
+	prova("handlingen är semantisk, inte en gångart",
+		sista ~= nil and (sista[2] == "driv" or sista[2] == "broms"),
+		("(handling %s)"):format(tostring(sista and sista[2])))
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else

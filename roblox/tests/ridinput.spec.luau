@@ -92,8 +92,14 @@ end
 
 --[[ Produktionens väg in. Klienten gör `FireServer(handling, sekvens)`;
      `OnServerEvent` är samma signal på andra sidan. ]]
-local function avsikt(spelare, handling, sekvens)
-	Networking.get("RidingIntent").OnServerEvent:Fire(spelare, handling, sekvens)
+--[[ Rittmarket som klienten fick i uppsittningshandskakningen. Provet
+     haller det i en egen variabel av samma skal klienten gor det: ett
+     paket utan ratt marke ska inte na nagon ritt. ]]
+local rittMarke = nil
+
+local function avsikt(spelare, handling, sekvens, marke)
+	Networking.get("RidingIntent").OnServerEvent:Fire(
+		spelare, if marke ~= nil then marke else rittMarke, handling, sekvens)
 end
 
 --[[ VÄNTAR RIKTIG TID. Impulsspärren mäts mot `os.clock()` på servern.
@@ -127,7 +133,14 @@ end
 print("\n== Trappan: ett steg, aldrig tva ==")
 
 local spelare, modell = nyVarld()
-check("ryttaren sitter upp", HorseService.tryMount(spelare, modell) == true)
+--[[ Tredje vardet ur handskakningen ar RITTMARKET (ChatGPT-review av
+     #241). Provet tar emot det precis som klienten gor, och skickar det
+     med varje avsikt. ]]
+local okUpp, _skal, marke = HorseService.tryMount(spelare, modell)
+rittMarke = marke
+check("ryttaren sitter upp", okUpp == true)
+check("och handskakningen lamnade ett rittmarke",
+	typeof(rittMarke) == "string" and #rittMarke > 0, tostring(rittMarke))
 local session = HorseService.sessionFor(modell)
 check("sessionen finns", session ~= nil)
 
@@ -355,9 +368,12 @@ do
 	Taggar:AddTag(hast2, "Horse")
 	local spelare2 = nySpelare("Granne", 202, vec(44, 0, 0))
 	Players._spelare = { spelare, spelare2 }
-	local okTva, skalTva = HorseService.tryMount(spelare2, hast2)
+	local okTva, skalTva, markeTva = HorseService.tryMount(spelare2, hast2)
 	check("den andra ryttaren sitter upp pa sin egen hast",
 		okTva == true, tostring(skalTva))
+	check("och fick ett EGET rittmarke - marken ar inte delade",
+		typeof(markeTva) == "string" and markeTva ~= rittMarke,
+		tostring(markeTva))
 	local session2 = HorseService.sessionFor(hast2)
 
 	session.stegIndex = Gaits.index("walk")
@@ -365,7 +381,7 @@ do
 	for i = 1, 5 do
 		session2.sisteHjalp = -math.huge
 		session2.intentPolletter = Config.RIDINPUT.SkopaTak
-		avsikt(spelare2, "driv", i)
+		avsikt(spelare2, "driv", i, markeTva)
 	end
 	check("9. grannens avsikter ror inte MIN hast",
 		gangart(session) == "walk", gangart(session))
@@ -527,6 +543,152 @@ do
 		mc.loco.beddGangart == "walk", mc.loco.beddGangart)
 
 	modell:SetAttribute("GaitCeiling", Gaits.SPELBAR_TOPP)
+end
+
+print("\n== Sessionsisolering: paket far inte korsa rittgransen ==")
+
+do
+	--[[ CHATGPT-REVIEW AV #241, KRAV 5.
+
+	     Forsta utkastet band inte ett ridpaket till den ritt dar det
+	     skapades. Klienten skickade bara (handling, sekvens) och nollade
+	     sekvensen vid varje uppsittning; servern nollade sin raknare
+	     samtidigt i `nollstallRitt`. Ett FORDROJT `RidingIntent` fran ritt A
+	     kunde darfor landa efter avsittning och ny uppsittning, och
+	     accepteras mot ritt B -- eller mot en annan hast, eftersom `byRider`
+	     da pekade nagon annanstans. `session.rider == player` skiljer inte
+	     tva ritter med SAMMA spelare, och sekvensvakten sag det gamla
+	     numret som farskt just for att raknaren var nollad.
+
+	     Provet spelar upp precis det forloppet: markets varde fran ritt A
+	     sparas, ritten byts, och det gamla paketet slapps in i efterhand. ]]
+
+	--[[ RITT A. Stega upp en pinne sa att det finns ett lage att stora. ]]
+	session.stegIndex = Gaits.index("halt")
+	local markeA = rittMarke
+	steg(spelare, session, "driv")
+	check("ritt A lever och stegar som vanligt",
+		gangart(session) == "walk", gangart(session))
+
+	--[[ Mellanlaget: efter avsittning finns ingen ritt att traffa. ]]
+	check("avsittningen gar igenom", HorseService.dismount(spelare) == true)
+	check("rittmarket ar borta nar ingen rider",
+		session.rittId == nil, tostring(session.rittId))
+
+	session.stegIndex = Gaits.index("halt")
+	session.sisteHjalp = -math.huge
+	session.intentPolletter = Config.RIDINPUT.SkopaTak
+	avsikt(spelare, "driv", 99, markeA)
+	check("ett fordrojt paket mellan tva ritter traffar ingenting",
+		gangart(session) == "halt", gangart(session))
+
+	--[[ RITT B: samma spelare, samma hast, ny ritt. ]]
+	local okB, _skalB, markeB = HorseService.tryMount(spelare, modell)
+	check("ritt B sitter upp", okB == true)
+	check("och fick ett ANNAT marke an ritt A",
+		typeof(markeB) == "string" and markeB ~= markeA,
+		("A %s / B %s"):format(tostring(markeA), tostring(markeB)))
+	rittMarke = markeB
+
+	--[[ DET FALLET REVIEWEN BESKREV. Paketet fran ritt A anlander nu, med
+	     ett sekvensnummer som ar HOGRE an ritt B:s nollstallda raknare --
+	     alltsa exakt det paket som slapptes igenom fore rattelsen. ]]
+	local stegFore = session.stegIndex
+	local sekvensFore = session.sekvens
+	local sparrFore = session.sisteHjalp
+	session.sisteHjalp = -math.huge
+	session.intentPolletter = Config.RIDINPUT.SkopaTak
+	sparrFore = session.sisteHjalp
+	avsikt(spelare, "driv", 99, markeA)
+
+	check("5. ritt A:s paket andrar inte ritt B:s tillstand",
+		session.stegIndex == stegFore,
+		("stegIndex %d -> %d"):format(stegFore, session.stegIndex))
+	check("och inte ritt B:s sekvensraknare",
+		session.sekvens == sekvensFore,
+		("sekvens %s -> %s"):format(tostring(sekvensFore), tostring(session.sekvens)))
+	check("och inte ritt B:s impulssparr",
+		session.sisteHjalp == sparrFore,
+		("sisteHjalp %s"):format(tostring(session.sisteHjalp)))
+
+	--[[ KONTROLLPROVET. Utan det bevisar raderna ovan bara att ingenting
+	     hande -- inte att det var MARKET som stoppade paketet. Samma paket
+	     med ritt B:s marke ska ga igenom. ]]
+	session.sisteHjalp = -math.huge
+	session.intentPolletter = Config.RIDINPUT.SkopaTak
+	avsikt(spelare, "driv", 99, markeB)
+	check("men samma paket med ritt B:s marke gar igenom",
+		session.stegIndex > stegFore,
+		("stegIndex %d -> %d"):format(stegFore, session.stegIndex))
+end
+
+do
+	--[[ OCH MARKET SKA VARA ETT MARKE, inte en formalitet. ]]
+	local fore = session.stegIndex
+	local function nekasMarke(namn, marke)
+		session.stegIndex = fore
+		session.sisteHjalp = -math.huge
+		session.intentPolletter = Config.RIDINPUT.SkopaTak
+		avsikt(spelare, "driv", nil, marke)
+		check(namn, session.stegIndex == fore,
+			("stegIndex %d"):format(session.stegIndex))
+	end
+	nekasMarke("marke som saknas nekas", false)
+	nekasMarke("marke som ar ett tal nekas", 7)
+	nekasMarke("marke som ar en tabell nekas", {})
+	nekasMarke("tomt marke nekas", "")
+	nekasMarke("gissat marke nekas", "r1-0-0")
+end
+
+do
+	--[[ OCH I ANDRA RIKTNINGEN: ett SENT SVAR fran ritt A far inte ratta
+	     en klient som hunnit sitta upp pa ritt B.
+
+	     `version` ordnar paket INOM en hastsession och sager ingenting om
+	     vilken ritt svaret galler. Klienten prover darfor bade hasten och
+	     ritten. Provet bygger klientens grind ur SAMMA villkor som
+	     `init.client` och matar in bade ett gammalt och ett aktuellt
+	     paket, sa att bada riktningarna mats. ]]
+	local mc = MovementController.new(session.rig, session.stats)
+	mc.loco.beddGangart = "trot"
+	mc.loco.targetGait = "trot"
+
+	--[[ Klientens ritt: hasten `modell` och det AKTUELLA market. ]]
+	local aktivHast, aktivRitt = modell, rittMarke
+	local function klientTarEmot(tillstand)
+		if typeof(tillstand) ~= "table" then return false end
+		if tillstand.hast ~= aktivHast then return false end
+		if tillstand.ritt ~= aktivRitt then return false end
+		mc:reconcile(tillstand.gangart, tillstand.ryggar, tillstand.version)
+		return true
+	end
+
+	--[[ Det sena svaret fran ritt A: ratt hast, GAMMALT marke. ]]
+	local sentFranA = { hast = modell, ritt = "r1-gammal-ritt",
+		gangart = "halt", ryggar = false, version = 9999 }
+	check("ett sent RidTillstand fran ritt A avvisas av klienten",
+		klientTarEmot(sentFranA) == false)
+	check("och klientens prediktion ar orord",
+		mc.loco.beddGangart == "trot", mc.loco.beddGangart)
+
+	--[[ En ANNAN hast med RATT marke ska ocksa falla -- hastledet bar
+	     hastbytet, rittledet bar ritt-bytet pa samma hast. ]]
+	local annanHast = { hast = workspace, ritt = aktivRitt,
+		gangart = "halt", ryggar = false, version = 10000 }
+	check("ett svar om en ANNAN hast avvisas ocksa",
+		klientTarEmot(annanHast) == false)
+	check("prediktionen star fortfarande kvar",
+		mc.loco.beddGangart == "trot", mc.loco.beddGangart)
+
+	--[[ KONTROLLPROVET: ratt hast OCH ratt marke gar igenom. Utan det
+	     mater raderna ovan bara att grinden ar stangd, aldrig att den
+	     oppnar. ]]
+	local akta = { hast = modell, ritt = aktivRitt,
+		gangart = "walk", ryggar = false, version = 10001 }
+	check("men ett svar fran den AKTUELLA ritten lyds",
+		klientTarEmot(akta) == true)
+	check("och klienten reconcilade till det",
+		mc.loco.beddGangart == "walk", mc.loco.beddGangart)
 end
 
 print("\n== Sparren mats med riktig tid ==")
