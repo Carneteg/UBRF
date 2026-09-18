@@ -419,6 +419,35 @@ do
 		("(synlig %s · väntar %s)"):format(tostring(knapp and knapp.Visible),
 			tostring(LektionController.vantar())))
 
+	--[[ ══ BANNERN STEGAS UR PRODUKTIONENS EGEN LOOP ════════════════
+
+	     Falsifiering 2026-09-18: en mutation som tog bort
+	     `CoachBanner.steg(dt)` ur `UgnetaController.steg` lämnade den här
+	     specen HELT GRÖN. Skälet var att provet stegade modulen själv,
+	     alltså mätte att tiden GÅR — inte att någon räknar ned den i
+	     spelet. Bannern hade blivit stående för alltid på skärmen och
+	     kontraktets egen spec hade inte sagt ett ord.
+
+	     Nu stegas den på det enda sätt produktionen gör det: genom
+	     lektionen, som klientens RenderStepped anropar. Provet rör inte
+	     `CoachBanner.steg` med sin egen hand här. ]]
+	do
+		local dt, kvar = 1 / 60, CoachBanner.STANDARD_TID + 2 * CoachBanner.FADE + 1
+		while kvar > 0 and CoachBanner.synlig() do
+			LektionController.steg(dt, tele())
+			kvar -= dt
+		end
+		check("bannern tonar ut genom lektionens egen stegning, inte provets",
+			CoachBanner.synlig() == false and LektionController.vantar() == true,
+			("(banner %s · väntar %s)"):format(tostring(CoachBanner.synlig()),
+				tostring(LektionController.vantar())))
+		--[[ …och VALET står kvar. Det är hela skillnaden mot en
+		     nedräkning: texten går, men beslutet är fortfarande hennes. ]]
+		check("men valet står kvar när texten tonat bort",
+			hitta("Val").Visible == true and hitta("Knapp").Visible == true,
+			("(val %s)"):format(tostring(hitta("Val").Visible)))
+	end
+
 	--[[ EFTER ETT FÖRSÖK: återkopplingen ska också hamna i bannern. ]]
 	LektionController.fortsatt()
 	local dt = 1 / 30
