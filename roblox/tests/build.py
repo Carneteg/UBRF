@@ -630,9 +630,16 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #[[ #176: spelbygget. Samma varld som bygge.spec, men med QA-flaggan AV
     #   (se injektionen nedan). Maste sta FORE "bygge", som annars fangar
     #   den — den ar den enda spec som mater vad SPELAREN ser. ]]
+    #[[ #246 A: avslagets argument genom hela forberedelsekedjan. Samma
+    #   bunt som ridefirst — den mater REGELN i Preparation plus tjansten,
+    #   och den behover darfor bade modulen och GameplayService. Grenen
+    #   star FORST sa att den inte kan falla igenom till MODULER, dar
+    #   varken Preparation eller Sprak finns. ]]
+    if "ridanu" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     #[[ #FUN FIRST: ridefirst.spec mater regeln, inte varlden — samma bank
     #   som forberedelsen, dar Preparation, Svar och RidKanon finns. ]]
-    if "ridefirst" in spec_rel:
+    elif "ridefirst" in spec_rel:
         #[[ INTEGRATION, inte FORBEREDELSE: provet kor den VERKLIGA
         #   GameplayService.ridaNu-kedjan med rigg, fysisk utrustning och
         #   valfardsgrind. Agarskapsbuggen syntes inte i ett rent regelprov. ]]

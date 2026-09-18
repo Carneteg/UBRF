@@ -1723,7 +1723,33 @@ function PreparationController.skalText(skal: any, extra: any?): string
 		elseif type(arg) == "string" and Sprak.finns(arg) then
 			arg = Sprak.t(arg)
 		end
-		return if arg ~= nil then Sprak.t(skal, arg) else Sprak.t(skal)
+		if arg ~= nil then return Sprak.t(skal, arg) end
+		--[[ ── ARGUMENTET SAKNAS HELT (#246 A) ───────────────────────────
+
+			Kedjan bär numera `arg` hela vägen, men den här funktionen är
+			SISTA ledet före spelarens öga, och den ska inte förutsätta att
+			alla framtida vägar in gör rätt. Ett nej vars formatsträng bär
+			ett `%s` och som kommer utan argument renderade förut det
+			bokstavligt — det var exakt vad Studio-QA:n läste:
+
+			    [Horse] Rida nu: wrong turn — %s is next (forb.fel_tur)
+
+			Fallbacken säger SAMMA SAK som nyckeln den fyller, bara
+			ospecifikt: nästa steg i hästens förberedelse. Den hittar inte
+			på en annan betydelse — "fel tur" handlar om ordningen i
+			förberedelsen, aldrig om att någon annan ryttare väntar.
+
+			Andra formatdirektiv än `%s` (till exempel `%d`) hör inte hemma
+			i ett avslagsskäl, och för dem finns ingen ärlig fyllning. Då
+			är det generiska nejet mer sant än en påhittad siffra. ]]
+		local utan = Sprak.t(skal)
+		if string.find(utan, "%%s") ~= nil then
+			return Sprak.t(skal, Sprak.t("forb.nasta_steget"))
+		end
+		if string.find(utan, "%%[%a]") ~= nil then
+			return Sprak.t("hud.gick_inte_nu")
+		end
+		return utan
 	end
 	return skal
 end

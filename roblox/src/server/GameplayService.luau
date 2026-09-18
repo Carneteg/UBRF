@@ -388,7 +388,9 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 		end
 	end
 
-	local ok, avslag = Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
+	--[[ TREDJE VÄRDET FÖLJER MED (#246 A). Se noten i `Preparation`. ]]
+	local ok, avslag, avslagArg =
+		Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
 	skicka(player)
 	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
 		och tredje värde — samma kanal som nejen redan använder — så att
@@ -401,7 +403,7 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 			hast = hastnamnFor(s.hastId) or s.hastId,
 		}
 	end
-	return ok, avslag
+	return ok, avslag, avslagArg
 end
 
 --[[ ══ RIDA NU ════════════════════════════════════════════════════════
@@ -484,7 +486,8 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 			local val = Preparation.arVal(f.id)
 			for _, m in ipairs(Preparation.moment(f.id)) do
 				if not m.fel and m.id then
-					local ok, avslag = GameplayService.moment(player, f.id, m.id, "auto")
+					local ok, avslag, avslagArg =
+						GameplayService.moment(player, f.id, m.id, "auto")
 					--[[ `tack.redan_pa` är samma sort som `forb.redan_gjort`: inte
 						ett fel, utan ett moment som redan är utfört. Utan den här
 						raden svarade ett andra «Rida nu» med ett UTRUSTNINGSFEL på
@@ -494,7 +497,12 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 					if not ok and avslag ~= "forb.redan_gjort"
 							and avslag ~= "tack.redan_pa" then
 						skicka(player)
-						return false, avslag
+						--[[ ARGUMENTET MED (#246 A). Den här tidiga returen var
+						     den QA-loggen faktiskt gick igenom: sadeln hämtad,
+						     ledning igång, och ett moment ur fel fas svarade
+						     `forb.fel_tur`. Utan argumentet blev nejet ett
+						     bokstavligt "%s" utan väg vidare. ]]
+						return false, avslag, avslagArg
 					end
 					--[[ En valfas behöver ETT riktigt alternativ. ]]
 					if val and Preparation.fasKlar(s, f.id) then break end
@@ -523,10 +531,11 @@ local function ridaNuInre(player: Player): (boolean, string?, string?)
 	end
 	for _, m in ipairs(Preparation.moment("leda")) do
 		if not m.fel and m.id then
-			local ok, avslag = GameplayService.moment(player, "leda", m.id, "auto")
+			local ok, avslag, avslagArg =
+				GameplayService.moment(player, "leda", m.id, "auto")
 			if not ok and avslag ~= "forb.redan_gjort" then
 				skicka(player)
-				return false, avslag
+				return false, avslag, avslagArg
 			end
 		end
 	end
