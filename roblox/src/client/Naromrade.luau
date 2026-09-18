@@ -66,6 +66,9 @@ local Sprak = require(ReplicatedStorage.HorseCore.Sprak)
 --[[ #246 E: skötselpanelens ruta, så att listan aldrig lägger sig över
      den. Ren avläsning — PreparationController äger måtten. ]]
 local PreparationController = require(script.Parent.PreparationController)
+--[[ #246 QA-blockerare: handlingarnas produktordning. Läses härifrån och
+     skrivs inte av — se noten vid `handlingsrang`. ]]
+local InteractionController = require(script.Parent.InteractionController)
 
 local Naromrade = {}
 
@@ -293,8 +296,25 @@ function Naromrade.nara(fran: Vector3, sok: { Instance },
 			klass[d] = k
 		end
 	end
+	--[[ ── RIDE FIRST GÄLLER OCKSÅ I LISTAN (#246 QA-blockerare) ──────
+
+		Inom en klass avgjorde AVSTÅNDET ensamt, och det räckte inte.
+		Trixies sadel och träns hänger närmare spelaren än hästens egen
+		ridknapp, så "Rida nu" hamnade fjärde av fem — och på en telefon,
+		där två eller tre rader ryms, föll den bort helt. Eftersom
+		touch-ytan äger promptbilderna var den då varken rad eller knapp.
+
+		Produktordningen finns redan accepterad i `InteractionController`:
+		uppsittning överst, genvägen dit i mitten, den frivilliga omsorgen
+		underst. Den läses därifrån. Avståndet avgör fortfarande INOM samma
+		handlingsrang — två dörrar sorteras som förut. ]]
+	local handling: { [ProximityPrompt]: number } = {}
+	for _, d in ipairs(ut) do
+		handling[d] = InteractionController.handlingsrang(d.Name)
+	end
 	table.sort(ut, function(a, b)
 		if klass[a] ~= klass[b] then return klass[a] < klass[b] end
+		if handling[a] ~= handling[b] then return handling[a] < handling[b] end
 		return rang[a] < rang[b]
 	end)
 	--[[ Taket klipps EFTER sorteringen: det spelaren menar får aldrig

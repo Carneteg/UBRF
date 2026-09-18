@@ -665,6 +665,153 @@ do
 	PreparationController._satHastIdForProv(nil)
 end
 
+--[[ ══ RIDE FIRST FÅR INTE TRÄNGAS BORT (#246 QA-blockerare) ═════════
+
+	Tobias fysiska Studio-QA 2026-09-18: "RIDA NU fungerar inte."
+
+	Reproducerat i Studio på `8a3c435`, spelaren 4 studs från Trixie, sju
+	prompter inom räckvidd:
+
+	    kapacitet 5   bridle · saddle · Lead · Ride now · Open
+	    kapacitet 3   bridle · saddle · Lead
+	    kapacitet 2   bridle · saddle
+	    kapacitet 1   bridle
+
+	Sadeln och tränset hänger NÄRMARE spelaren än hästens egen ridknapp,
+	och listan sorterade på avstånd inom klassen. På en telefon ryms två
+	eller tre rader — "Rida nu" fanns alltså inte i listan. Och eftersom
+	touch-ytan äger promptbilderna sedan #246 C var den varken rad eller
+	knapp: Ride First-vägen gick inte att trycka på alls.
+
+	Det är en regression min egen ändring kunde orsaka. Före #246 C hade
+	nativebilden ritats kvar och spelaren kunnat trycka på den i världen.
+
+	Provet ställer upp exakt den geometrin: omsorgshandlingarna närmast,
+	ridvägen längst bort. ]]
+print("\n── Rida nu trängs aldrig bort ──")
+do
+	for _, d in ipairs(workspace:GetChildren()) do d:Destroy() end
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local kar = Instance.new("Model")
+	kar.Name = "Spelare"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Position = Vector3.new(0, 0, 0)
+	rot.Parent = kar
+	kar.Parent = workspace
+	Players.LocalPlayer.Character = kar
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+
+	--[[ Hästen med sina tre handlingar, alla på riggens rot. ]]
+	local hast = Instance.new("Model")
+	hast.Name = "Trixie"
+	hast:SetAttribute("HorseId", "trixie")
+	hast.Parent = workspace
+	local riggrot = Instance.new("Part")
+	riggrot.Name = "HumanoidRootPart"
+	riggrot.Position = Vector3.new(6, 0, 0)          -- LÄNGST BORT
+	riggrot.Parent = hast
+	local function pa(mor, namn, text)
+		local pr = Instance.new("ProximityPrompt")
+		pr.Name = namn
+		pr.ActionText = text
+		pr.ObjectText = "Trixie"
+		pr.MaxActivationDistance = 12
+		pr.RequiresLineOfSight = false
+		pr.Parent = mor
+		return pr
+	end
+	local rida = pa(riggrot, "RidaNuPrompt", "Rida nu")
+	local led = pa(riggrot, "LedPrompt", "Led Trixie")
+
+	--[[ Boxfrontens utrustning — NÄRMAST spelaren, precis som i stallet. ]]
+	local front = Instance.new("Model")
+	front.Name = "Forrad"
+	front:SetAttribute("ForHast", "trixie")
+	front.Parent = workspace
+	local sadeldel = Instance.new("Part")
+	sadeldel.Name = "Sadel"
+	sadeldel.Position = Vector3.new(1, 0, 0)
+	sadeldel.Parent = front
+	local transdel = Instance.new("Part")
+	transdel.Name = "Trans"
+	transdel.Position = Vector3.new(1.5, 0, 0)
+	transdel.Parent = front
+	pa(sadeldel, "SadelPrompt", "Ta sadeln")
+	pa(transdel, "TransPrompt", "Ta tränset")
+
+	PreparationController._satHastIdForProv("trixie")
+
+	--[[ Först: geometrin ÄR den som fällde produkten — ridvägen ligger
+	     längst bort av dagens hästs handlingar. ]]
+	local inom = N.iRackvidd(Vector3.new(0, 0, 0), { workspace })
+	check("alla fyra handlingarna ligger inom räckvidd", #inom == 4,
+		("%d"):format(#inom))
+	local narmast = inom[1]
+	check("och omsorgshandlingen ligger NÄRMAST, som i stallet",
+		narmast ~= nil and narmast.Name == "SadelPrompt",
+		tostring(narmast and narmast.Name))
+
+	--[[ KRAVET: Ride First-vägen får aldrig trängas bort, hur få rader som
+	     än ryms. Produktbeslutet är uttryckligt — RIDA NU ska ALLTID ge
+	     spelaren en fungerande väg till ridning. ]]
+	for _, tak in ipairs({ 1, 2, 3, 5 }) do
+		local lista = N.nara(Vector3.new(0, 0, 0), { workspace }, "trixie", tak)
+		local harRida = false
+		local namn = {}
+		for _, pr in ipairs(lista) do
+			if pr == rida then harRida = true end
+			table.insert(namn, pr.ActionText)
+		end
+		check(("med %d radplats(er) finns Rida nu med"):format(tak), harRida,
+			table.concat(namn, " | "))
+	end
+
+	--[[ …och den ligger FÖRST, före den frivilliga omsorgen. ]]
+	local full = N.nara(Vector3.new(0, 0, 0), { workspace }, "trixie", 5)
+	check("Rida nu står först av dagens hästs handlingar", full[1] == rida,
+		tostring(full[1] and full[1].ActionText))
+	check("och ledningen — den frivilliga omsorgen — kommer efter",
+		full[2] == led, tostring(full[2] and full[2].ActionText))
+
+	--[[ Omsorgen försvinner INTE. Den trängs inte före, men den finns. ]]
+	local harSadel = false
+	for _, pr in ipairs(full) do
+		if pr.Name == "SadelPrompt" then harSadel = true end
+	end
+	check("och sadeln är kvar i listan, bara inte först", harSadel)
+
+	--[[ AVSTÅNDET GÄLLER FORTFARANDE inom samma handlingsrang: sadeln
+	     ligger närmare än tränset och ska stå före det. ]]
+	local sadelIx, transIx
+	for i, pr in ipairs(full) do
+		if pr.Name == "SadelPrompt" then sadelIx = i end
+		if pr.Name == "TransPrompt" then transIx = i end
+	end
+	check("inom samma rang avgör avståndet som förut",
+		sadelIx ~= nil and transIx ~= nil and sadelIx < transIx,
+		("sadel %s · träns %s"):format(tostring(sadelIx), tostring(transIx)))
+
+	--[[ Och nativebilderna är fortsatt släckta för ALLA fyra — det var
+	     #246 C:s krav, och det är just det som gör radens närvaro kritisk. ]]
+	N.satRider(false)
+	local kvarNative = {}
+	for _, pr in ipairs(inom) do
+		if pr.Style ~= Enum.ProximityPromptStyle.Custom then
+			table.insert(kvarNative, pr.Name)
+		end
+	end
+	check("ingen native promptbild är kvar — därför MÅSTE raden finnas",
+		#kvarNative == 0, table.concat(kvarNative, ", "))
+
+	N.stopp()
+	PreparationController._satHastIdForProv(nil)
+	UIS.TouchEnabled = false
+end
+
 print("\n── Skrivbordet rörs inte ──")
 
 do
