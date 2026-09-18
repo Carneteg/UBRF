@@ -152,6 +152,29 @@ local function cframe(pos, look, yaw, pitch, roll)
 	c.PointToWorldSpace = function(self, p)
 		return (self * CFrame.new(p)).Position
 	end
+	--[[ ══ `CFrame ± Vector3` SAKNADES (#246) ═══════════════════════════
+
+	     I Roblox FLYTTAR de en CFrame och lamnar rotationen orord;
+	     `cf - cf.Position` ar det vanliga sattet att plocka ut ENBART
+	     vridningen. `LedService.placeraVidMal` gor precis det:
+
+	         modell:PivotTo(CFrame.new(mitt) * (pivot.CFrame - pivot.Position))
+
+	     Stubben hade ingen `__sub` pa CFrame, sa Lua tog Vector3:ans i
+	     stallet — och den raknade `a.X` pa en CFrame, alltsa nil. Hela
+	     «Rida nu»-genvagens slutfas kraschade darfor i banken sa fort
+	     `typeof`-vakten slapp igenom den. Bada operatorerna finns nu, och
+	     de ror bara positionen. ]]
+	c.__sub = function(a, b)
+		local ap = a.Position or vec()
+		return cframe(vec(ap.X - (b.X or 0), ap.Y - (b.Y or 0), ap.Z - (b.Z or 0)),
+			a.LookVector, a.Yaw or 0, a.Pitch or 0, a.Roll or 0)
+	end
+	c.__add = function(a, b)
+		local ap = a.Position or vec()
+		return cframe(vec(ap.X + (b.X or 0), ap.Y + (b.Y or 0), ap.Z + (b.Z or 0)),
+			a.LookVector, a.Yaw or 0, a.Pitch or 0, a.Roll or 0)
+	end
 	c.__mul = function(a, b)
 		--[[ `CFrame * Vector3` ar en PUNKT i varlden, inte en ny CFrame.
 		     Stubben svarade forut med en CFrame aven har, sa varje modul
@@ -1571,6 +1594,42 @@ local function __nyInstans(klass)
 end
 
 Instance = { new = __nyInstans }
+
+--[[ ══ `typeof` SAKNADES HELT, OCH DET VAR INTE OFARLIGT (#246) ═══════
+
+	Luau-CLI:t har en egen `typeof`, och for en stubbinstans — som ar en
+	vanlig tabell — svarar den "table". Produktionen skriver sina vakter
+	som Roblox kraver:
+
+	    if typeof(modell) ~= "Instance" or not modell:IsA("Model") then
+	        return false, "spel.ingen_hast"
+	    end
+
+	I banken tog den grenen ALLTID. `LedService.placeraVidMal` svarade
+	darfor `spel.ingen_hast` pa varje anrop, och eftersom «Rida nu» gar
+	genom just den funktionen har hela genvagens SLUTFAS aldrig varit
+	matbar i banken. Felet ser ut som ett produktfel i loggen — "du har
+	ingen tilldelad hast" — men ar bankens.
+
+	Det ar precis den sortens tysta halvsanning som gor att en grind kan
+	vara gron i manader medan vagen den pastar sig mata aldrig kors.
+
+	RATTELSEN LIGGER HAR, INTE I PRODUKTIONEN. Att skriva om vakten till
+	`type(x) ~= "table"` hade forsvagat en riktig kontroll for att blidka
+	en stub. Nu svarar banken som Roblox gor i stallet.
+
+	SMALT MED FLIT: bara stubbinstanser mappas om. En stubbad Vector3
+	eller UDim2 bar sitt `_typ` och rors inte, och en vanlig tabell
+	svarar fortfarande "table" — `init.client.luau` bygger en vakt pa
+	just det. ]]
+local __typeof = typeof
+function typeof(v)
+	if type(v) == "table" and rawget(v, "ClassName") ~= nil
+			and rawget(v, "_barn") ~= nil then
+		return "Instance"
+	end
+	return __typeof(v)
+end
 
 --[[ ── Animationsstubbar ───────────────────────────────────────────────
      `__makeRig` lämnar `animator = nil`, och därför har `AnimationController`
