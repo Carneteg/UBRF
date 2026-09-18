@@ -1466,6 +1466,91 @@ do
 		("(handling %s)"):format(tostring(sista and sista[2])))
 end
 
+	--[[ ══ KLIENTENS RITTGRIND, genom produktionens EGEN lyssnare ════
+
+	     `ridinput.spec` mäter serverns sida. Den mäter också klientens
+	     regel, men där är villkoret AVSKRIVET i provet — tas raden bort ur
+	     `init.client` förblir den mätningen grön. Den här mätningen går
+	     genom den riktiga `RidTillstand`-lyssnaren i stället.
+
+	     OBSERVERBARHETEN är tricket. `ride` är en lokal i `init.client` och
+	     går inte att läsa härifrån. Men klienten skickar INGEN avsikt när
+	     trappan inte flyttar sig, och taket är galopp — står hon i galopp
+	     ger ett DRIV alltså tystnad på tråden.
+
+	       reconcile till galopp (rätt ritt)  →  DRIV skickar INGENTING
+	       bogus reconcile till halt (fel ritt, ignoreras)  →  fortfarande
+	       galopp  →  DRIV skickar fortfarande ingenting
+
+	     Hade det falska paketet lytts hade hon stått i halt, och DRIV hade
+	     stegat till skritt och skickat en avsikt. Tystnaden är mätningen. ]]
+	do
+		--[[ EN PAUSAD RITT MÄTER INGENTING: `init.client` kastar avsikten
+		     medan ett kort står uppe, och då vore tystnaden gratis. Vakten
+		     gör provet självvaliderande i stället för falskt grönt. ]]
+		--[[ Kortet kvitteras genom produktionens egen väg — samma anrop
+		     knappen och R gör. `vantar()` är loopens grind; står den kvar
+		     kastas varje avsikt och tystnaden nedan vore gratis. ]]
+		for _ = 1, 6 do
+			if not LektionController.vantar() then break end
+			LektionController.gaVidare()
+			RunService.RenderStepped:Fire(1 / 60)
+		end
+		prova("ritten är inte pausad — annars mäter provet ingenting",
+			LektionController.vantar() == false,
+			("(väntar %s)"):format(tostring(LektionController.vantar())))
+
+		--[[ Egen referens: `remote` ovan lever i ett annat do-block. ]]
+		local remote = Net.get("RidingIntent")
+		local tillstand = Net.get("RidTillstand")
+
+		--[[ 1. RÄTT ritt: klienten ska LYDA och hamna i galopp. ]]
+		tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+			gangart = "canter", ryggar = false, version = 500 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("efter reconcile till galopp skickar DRIV ingen avsikt — taket",
+			#remote._skickat == 0,
+			("(%d paket)"):format(#remote._skickat))
+
+		--[[ 2. FEL ritt: samma häst, gammalt märke. Ska ignoreras. ]]
+		tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r1-gammal-ritt",
+			gangart = "halt", ryggar = false, version = 501 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("ett sent svar från en ANNAN ritt rättar inte klienten",
+			#remote._skickat == 0,
+			("(%d paket)"):format(#remote._skickat))
+
+		--[[ 3. ANNAN häst, rätt märke. Hästledet bär hästbytet. ]]
+		tillstand.OnClientEvent:Fire({ hast = workspace, ritt = "r7-provritt",
+			gangart = "halt", ryggar = false, version = 502 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("och inte ett svar om en ANNAN häst heller",
+			#remote._skickat == 0,
+			("(%d paket)"):format(#remote._skickat))
+
+		--[[ 4. KONTROLLPROVET. Utan det mäter 1-3 bara att klienten är tyst,
+		     aldrig att den kan tala. Rätt häst OCH rätt märke, ned till
+		     skritt: nu SKA ett DRIV gå ut igen. ]]
+		tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+			gangart = "walk", ryggar = false, version = 503 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("men ett svar från den AKTUELLA ritten lyds — DRIV går ut igen",
+			#remote._skickat == 1,
+			("(%d paket)"):format(#remote._skickat))
+	end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else
