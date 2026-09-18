@@ -200,12 +200,17 @@ do
 		string.format("%q", tostring(pekEn[Sprak.iSprak("en", "hjalp.sitt_upp_av")])))
 end
 
-print("\n── Lärarkortet (Ugneta) ──")
+print("\n── Lärarens besked (Ugneta) ──")
 do
-	local svRubrik = pa("sv-se", function() return Sprak.t("ugneta.rubrik") end)
-	local enRubrik = pa("en-us", function() return Sprak.t("ugneta.rubrik") end)
-	check("lärarkortets rubrik byter språk", svRubrik ~= enRubrik,
-		string.format("sv %q · en %q", svRubrik, enRubrik))
+	--[[ #244: `ugneta.rubrik` var avsändarraden i den rivna nederpanelen
+	     och finns inte längre. Provet mäter i stället knappen som ÄR kvar
+	     — lektionens enda väg vidare, och den text en engelsk spelare
+	     annars hade mött på svenska. ]]
+	local svBorja = pa("sv-se", function() return Sprak.t("ugneta.borja_lektionen") end)
+	local enBorja = pa("en-us", function() return Sprak.t("ugneta.borja_lektionen") end)
+	check("knappen in i lektionen byter språk", svBorja ~= enBorja
+			and svBorja ~= "ugneta.borja_lektionen",
+		string.format("sv %q · en %q", svBorja, enBorja))
 	local svForsok = pa("sv-se", function() return Sprak.t("ugneta.forsok", 2) end)
 	local enForsok = pa("en-us", function() return Sprak.t("ugneta.forsok", 2) end)
 	check("försöksnumret formateras i båda språken",

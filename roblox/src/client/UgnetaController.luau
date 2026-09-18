@@ -1,18 +1,35 @@
 --!strict
 --[[ UGNETAS LÄRAR-UX PÅ ROBLOX (G02-C, UX-variant 1 + 3).
 
-	Samma upplevelse som webben, inte en egen tolkning:
-
 	  LIVE under ridning — några ord i ett litet chip ("Mjukare hand",
 	  "Bra rytm", "Precis så"). Ingen panel, ingen textström. Ridningen
 	  ska vinna över UI:t.
 
-	  MELLAN FÖRSÖKEN — kortet. Efter försök 1: högst en sak som var bra,
-	  en att förbättra och ett tydligt "Prova igen". Efter försök 2: en
-	  konkret jämförelse mot försök 1.
+	  MELLAN FÖRSÖKEN — Ugnetas ord i CoachBanner, uppe i kanten, plus de
+	  VAL spelaren har. Efter försök 1: högst en sak som var bra, en att
+	  förbättra och ett tydligt "Prova igen". Efter försök 2: en konkret
+	  jämförelse mot försök 1.
 
 	  SÄKERHET vinner alltid. Ett säkerhetsmeddelande släcker live-chipet
 	  och tar över ytan, precis som på webben.
+
+	── KORTET ÄR RIVET, VALEN ÄR KVAR (#244, PO-beslut 2026-09-18) ────────
+
+	Fram till nu bodde undervisningen i ett bottenankrat kort med
+	avsändarnamn ("UGNETA · RIDINSTRUKTÖR"), rubrikrad och upp till två
+	punktrader — en RPG-lik dialogruta mitt över underlaget där hästen rör
+	sig. Den är borta. Texten ligger i `CoachBanner`, uppe under
+	Roblox-menyn, och tonar ut av sig själv.
+
+	Det som INTE försvann är valen. Kortet bar lektionens enda vägar
+	vidare — "Fortsätt för att börja lektionen", "Prova igen" / "Nästa
+	övning", "Se ritten" och "Gå vidare" — och att de är HANDLINGAR och
+	inte en nedräkning är en uttrycklig rättelse ur senior review av
+	c53a2c7. En banner som tonar ut kan inte bära ett val. Knapparna står
+	därför kvar, men utan ruta omkring sig: en ramlös rad i underkanten.
+
+	Skillnaden mot förut är alltså vad ytan SÄGER, inte vad spelaren KAN.
+	Väntan, progressionen och G02-D:s replayval är oförändrade.
 
 	INGEN PARALLELL SANNING. Vilka dimensioner en övning bedöms på, hur
 	många observationer som får visas och hur de rangordnas kommer ur
@@ -39,6 +56,9 @@ local RidKanon = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon
      i src/spel/sprak.js. ]]
 local Sprak = require(game:GetService("ReplicatedStorage").HorseCore.Sprak)
 local TouchControls = require(script.Parent.TouchControls)
+--[[ #244: undervisningens text bor här numera. Modulen ritar bara det den
+     får — orden kommer fortfarande ur katalogen och kanonen. ]]
+local CoachBanner = require(script.Parent.CoachBanner)
 
 local UgnetaController = {}
 
@@ -46,23 +66,24 @@ local player = Players.LocalPlayer
 
 local gui: ScreenGui? = nil
 local chip: TextLabel? = nil
-local kort: Frame? = nil
-local kortRubrik: TextLabel? = nil
-local kortPunkter: { TextLabel } = {}
+--[[ Knappraden. Ramlös och utan bakgrund: den är en rad val, inte en
+     panel. Frame:en finns bara för att layouten ska ha något att ankra
+     och för att #206:s reserv ska kunna räknas på EN bredd. ]]
+local valrad: Frame? = nil
 local kortKnapp: TextButton? = nil
---[[ G02-D: kortet efter ett försök bär numera TRE vägar vidare, inte en.
+--[[ G02-D: efter ett försök bär raden TRE vägar vidare, inte en.
      Huvudknappen är kvar precis som den var (Prova igen / Nästa övning);
-     de två nya är sidoval och styr därför sina egna knappar:
+     de två andra är sidoval och styr därför sina egna knappar:
 
-       "Se ritten"   öppnar ridanalysen. Den avslutar INTE väntan — kortet
+       "Se ritten"   öppnar ridanalysen. Den avslutar INTE väntan — valet
                      står kvar bakom panelen, och när panelen stängs är
-                     valet fortfarande hennes.
+                     det fortfarande hennes.
        "Gå vidare"   nöjer sig med försöket. Momentet betygsätts ändå;
                      det är omridningen hon hoppar över, inte bedömningen.
 
-     Kortet efter det SISTA försöket får ingen "Gå vidare" — huvudknappen
-     ÄR att gå vidare då, och två knappar för samma sak är ingen valfrihet.
-     Ett kort utan inspelning får ingen "Se ritten": ett val som inte kan
+     Efter det SISTA försöket ges ingen "Gå vidare": huvudknappen ÄR att
+     gå vidare då, och två knappar för samma sak är ingen valfrihet.
+     Ett försök utan inspelning får ingen "Se ritten": ett val som inte kan
      leda någonstans är sämre än inget val. ]]
 local replayKnapp: TextButton? = nil
 local vidareKnapp: TextButton? = nil
@@ -71,14 +92,18 @@ local vidareFn: (() -> ())? = nil
 
 --[[ ÅTERFÖRSÖKET ÄR EN HANDLING, INTE EN SKYLT (senior review av
 	c53a2c7). Knappen var en TextLabel utan input-handler, och lifecyclen
-	gick vidare på en sexsekunderstimer: kortet SÅG ut som ett val men var
+	gick vidare på en sexsekunderstimer: valet SÅG ut som ett val men var
 	en nedräkning. En skylt som ser ut som en knapp är inte en knapp.
 
 	Nu väntar lektionen på spelaren. `vantarPa` ÄR den väntan, och så
 	länge den är sann mäts ingenting — se LektionController.steg. Det är
 	också därför tre ingångar (knapp, tangent, gamepad) går genom EN
 	`fortsatt`: en väntan som kan avslutas på tre ställen skulle kunna
-	avslutas två gånger. ]]
+	avslutas två gånger.
+
+	#244: väntan hänger på VALEN, inte på texten. Bannern tonar ut efter
+	några sekunder; knappen står kvar tills spelaren tryckt. Att låta
+	väntan följa texten hade gjort lektionen till en nedräkning igen. ]]
 local vantarPa = false
 local fortsattFn: (() -> ())? = nil
 
@@ -97,7 +122,7 @@ local FARG_TEXT = Color3.fromRGB(246, 242, 232)
 local LIVE = RidKanon.UGNETA.LIVE
 local LIVE_CD = RidKanon.UGNETA.LIVE_CD
 
---[[ Dimensionsorden bär nycklar; texten hämtas när kortet ritas. ]]
+--[[ Dimensionsorden bär nycklar; texten hämtas när besked ges. ]]
 local DIM_NYCKEL = {
 	linje = "ugneta.dim.linje", rytm = "ugneta.dim.rytm", balans = "ugneta.dim.balans",
 	timing = "ugneta.dim.timing", mjukhet = "ugneta.dim.mjukhet",
@@ -115,10 +140,12 @@ local liveSagt = ""
 
 --[[ ══ UTLÄGGNINGEN MÅSTE KÖRAS OM NÄR YTAN ÄNDRAS (#206) ═══════════
 
-	Regeln nedan var rätt från början och rörs inte. Felet var att den
-	kördes EN gång, när kortet visades, och aldrig igen. Ett kort som låg
-	uppe när spelaren vred på plattan behöll sin gamla geometri — och
-	reglagen, som är ankrade i högerkanten, flyttade sig in under det.
+	Regeln nedan var rätt från början och rörs inte av #244 — den flyttade
+	bara med från kortet till knappraden, som ärvde dess plats i
+	underkanten. Felet den rättar var att den kördes EN gång, när ytan
+	visades, och aldrig igen. Det som låg uppe när spelaren vred på
+	plattan behöll sin gamla geometri — och reglagen, som är ankrade i
+	högerkanten, flyttade sig in under det.
 
 	Mätt i Studio på `754f2cc`, emulerad iPad, kortet uppe hela tiden:
 
@@ -127,33 +154,38 @@ local liveSagt = ""
 
 	    träffprov på SITT AV: 0 av 66 punkter når knappen
 
-	Alltså: den som vrider plattan medan ett lektionskort ligger uppe kan
-	inte längre sitta av. TYGEL och PARAD hade 0 px kvar att träffa, och
+	Alltså: den som vrider plattan medan ett val ligger uppe kan inte
+	längre sitta av. TYGEL och PARAD hade 0 px kvar att träffa, och
 	HOPP och DJUP SITS 49 px mot golvet 44.
 
-	Utläggningen är bruten ut hit och körs nu både när kortet visas och när
+	Utläggningen är bruten ut hit och körs både när raden visas och när
 	ytan ändrar storlek. Ingen ny regel, ingen ny layout, inget nytt system
 	— samma tal, körda vid rätt tillfällen. ]]
---[[ Smalaste kort som fortfarande är ett kort och inte en remsa. Samma
-	tal som golvet i `bredd` nedan har haft sedan början. ]]
-local KORT_MIN = 160
+--[[ Smalast rad som fortfarande rymmer en knapp med text. Samma tal som
+	golvet i `bredd` nedan har haft sedan början. ]]
+local VAL_MIN = 160
 
---[[ Under den här bredden är kortet inte längre värt att behålla
-	vänsterreserven för — se noten i `laggUtKort`. ]]
-local KORT_LASBAR = 480
+--[[ Under den här bredden är raden inte längre värd att behålla
+	vänsterreserven för — se noten i `laggUtVal`. ]]
+local VAL_LASBAR = 480
 
-local function laggUtKort()
-	local k = kort
-	if not k then return end
-	local foralder = k.Parent :: GuiObject
+--[[ Radens höjd. 44 px är tumgreppets golv och gäller knapparna själva;
+	raden är lika hög och inget mer, för att inte lägga en osynlig yta
+	över underlaget. ]]
+local VAL_HOJD = 44
+
+local function laggUtVal()
+	local v = valrad
+	if not v then return end
+	local foralder = v.Parent :: GuiObject
 	local W = foralder and foralder.AbsoluteSize.X or 0
 	if W <= 0 then return end
 	--[[ ── RESERVEN HAR TVÅ KANTER, INTE EN (#206) ────────────────────
 
 		Regeln har alltid vikt undan för gångarterna och hjälparna i
 		högerkanten. Den vek ALDRIG undan för spaken i vänsterkanten —
-		och eftersom den skjuter kortet åt vänster när mitten inte räcker
-		till, sköt den det rakt ut över spaken.
+		och eftersom den skjuter ytan åt vänster när mitten inte räcker
+		till, sköt den den rakt ut över spaken.
 
 		Mätt i Studio på `cdfe061`, emulerad iPad i landskap med kortet
 		uppe och ryttaren uppsutten — träffprov över spakens bas:
@@ -162,52 +194,52 @@ local function laggUtKort()
 		    1080x810  överlapp 51 px  spaken når 34 av 70 punkter
 		    1180x820  överlapp  0 px  spaken når 54 av 70 punkter
 
-		Brännpunkten är ren geometri: kortet får plats mitt på skärmen
+		Brännpunkten är ren geometri: ytan får plats mitt på skärmen
 		så länge `W/2 + bredd/2 <= fritt`. Under ungefär 1100 px bredd
-		håller det inte längre, och då centreras kortet i `fritt` — vars
+		håller det inte längre, och då centreras den i `fritt` — vars
 		vänsterkant var skärmens egen, alltså spakens.
 
 		Nu är spannet [vänster, höger] i stället för [0, höger].
 
 		FALLBACK, för att telefonen inte ska bli sämre (krav 7): blir
-		spannet för smalt för ett läsbart kort räknas layouten som förut,
-		utan vänsterreserv. En liten skärm ska hellre ha ett kort som
-		delar plats med spaken än ett kort som inte går att läsa — den
+		spannet för smalt för en läsbar rad räknas layouten som förut,
+		utan vänsterreserv. En liten skärm ska hellre ha en knapprad som
+		delar plats med spaken än knappar som inte går att träffa — den
 		avvägningen är 568x320-konflikten, och den rörs inte här. ]]
 	local hoger = W - TouchControls.reglageBredd()
 	local vanster = TouchControls.spakBredd()
 	--[[ VÄNSTERRESERVEN KOSTAR BREDD, och på en liten skärm kostar den
-		för mycket. `KORT_LASBAR` är gränsen där kortet fortfarande är ett
-		kort: håller reserven kvar den, tillämpas den; gör den inte det
-		räknas layouten EXAKT som förut.
+		för mycket. `VAL_LASBAR` är gränsen där raden fortfarande rymmer
+		sina knappar: håller reserven kvar den, tillämpas den; gör den
+		inte det räknas layouten EXAKT som förut.
 
 		Talet är valt för att dra gränsen mellan surfplatta och telefon,
 		och det är avsiktligt att den hamnar där. Räknat på kanonens egna
 		provskärmar:
 
-		    1024x768  iPad      kort 640 -> 594  reserven tillämpas
-		    1080x810  iPad      kort 640 -> 640  reserven tillämpas
-		    1180x820  iPad      kort 640 -> 640  oförändrat, låg redan rätt
-		     844x390  iPhone 13 kort skulle bli 475  reserven UTEBLIR
-		     568x320  liten tel kort skulle bli 269  reserven UTEBLIR
+		    1024x768  iPad      rad 640 -> 594  reserven tillämpas
+		    1080x810  iPad      rad 640 -> 640  reserven tillämpas
+		    1180x820  iPad      rad 640 -> 640  oförändrat, låg redan rätt
+		     844x390  iPhone 13 rad skulle bli 475  reserven UTEBLIR
+		     568x320  liten tel rad skulle bli 269  reserven UTEBLIR
 
 		Telefonerna får alltså exakt den layout de hade. Att spaken ligger
-		under kortet där är samma 568x320-avvägning som redan är
+		under raden där är samma 568x320-avvägning som redan är
 		dokumenterad som en produktkonflikt, och den löses inte här. ]]
-	local reserverad = math.min(640, 0.92 * W, math.max(KORT_MIN, (hoger - vanster) - 32))
-	if reserverad < KORT_LASBAR then vanster = 0 end
+	local reserverad = math.min(640, 0.92 * W, math.max(VAL_MIN, (hoger - vanster) - 32))
+	if reserverad < VAL_LASBAR then vanster = 0 end
 	local fritt = hoger - vanster
-	local bredd = math.min(640, 0.92 * W, math.max(KORT_MIN, fritt - 32))
+	local bredd = math.min(640, 0.92 * W, math.max(VAL_MIN, fritt - 32))
 	local centrum = if W / 2 - bredd / 2 >= vanster and W / 2 + bredd / 2 <= hoger
 		then W / 2
 		else vanster + fritt / 2
-	k.Size = UDim2.new(0, math.floor(bredd), 0, 170)
-	k.Position = UDim2.new(0, math.floor(centrum), 1, -14)
+	v.Size = UDim2.new(0, math.floor(bredd), 0, VAL_HOJD)
+	v.Position = UDim2.new(0, math.floor(centrum), 1, -14)
 end
 
---[[ Provets fönster in: lägg ut kortet igen utan att visa ett nytt. ]]
-function UgnetaController._laggUtKort()
-	laggUtKort()
+--[[ Provets fönster in: lägg ut raden igen utan att visa ett nytt besked. ]]
+function UgnetaController._laggUtVal()
+	laggUtVal()
 end
 
 local function bygg()
@@ -217,11 +249,11 @@ local function bygg()
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
 	--[[ Samma skäl som skötselpanelen: vid lika `DisplayOrder` vinner
-	     Roblox `TouchGui`, och lektionskortets knapp hamnade under den
+	     Roblox `TouchGui`, och lektionens knapp hamnade under den
 	     dynamiska spakens osynliga träffyta. Mätt på iPad Air:
 	         [DynamicThumbstickUIModifier > DynamicThumbstickFrame >
 	          TouchControlFrame > Knapp]
-	     alltså fjärde i stacken — kortet gick inte att kvittera, och det
+	     alltså fjärde i stacken — valet gick inte att kvittera, och det
 	     är enda vägen in i lektionen. Med 10 ligger `Knapp` överst. ]]
 	g.DisplayOrder = 10
 	g.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -232,20 +264,29 @@ local function bygg()
 	gui = g
 	--[[ ── OCH OM YTAN ÄNDRAR STORLEK (#206) ─────────────────────────
 
-		Vridning, delad skärm och fönsterändring. Kortet ligger i absoluta
-		offset och följer därför INTE med av sig självt, medan reglagen är
-		ankrade i högerkanten och gör det. Utan den här raden hamnar de på
-		varandra — se noten vid `laggUtKort`.
+		Vridning, delad skärm och fönsterändring. Knappraden ligger i
+		absoluta offset och följer därför INTE med av sig självt, medan
+		reglagen är ankrade i högerkanten och gör det. Utan den här raden
+		hamnar de på varandra — se noten vid `laggUtVal`.
 
-		Villkoret `k.Visible` är med för att ett dolt kort inte ska räknas
-		om i onödan; det läggs ändå ut när det visas. ]]
+		Villkoret `v.Visible` är med för att en dold rad inte ska räknas
+		om i onödan; den läggs ändå ut när den visas. ]]
 	g:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		local k = kort
-		if k and k.Visible then laggUtKort() end
+		local v = valrad
+		if v and v.Visible then laggUtVal() end
 	end)
 
+	--[[ BANNERN. Den bor i den här ytan och bygger ingen egen ScreenGui —
+	     kontraktet i #244 förbjuder en andra. ]]
+	CoachBanner.montera(g)
+
 	--[[ LIVE-CHIPET. Uppe i kanten, aldrig över ridvägen, och utan
-		porträtt eller rubrik — det är skillnaden mot kortet. ]]
+		porträtt eller rubrik — det är skillnaden mot ett besked.
+
+		#244: chipet ligger kvar där det låg, ÖVER bannern. De två krockar
+		inte i tid: chipet kommer bara medan hon rider, bannern bara när
+		lektionen säger något mellan försöken, och `visaBesked` släcker
+		chipet innan bannern skrivs. ]]
 	local c = Instance.new("TextLabel")
 	c.Name = "Live"
 	c.AnchorPoint = Vector2.new(0.5, 0)
@@ -274,91 +315,34 @@ local function bygg()
 	c.Parent = g
 	chip = c
 
-	--[[ KORTET. Visas bara mellan försöken. ]]
-	local k = Instance.new("Frame")
-	k.Name = "Kort"
-	k.AnchorPoint = Vector2.new(0.5, 1)
-	k.Position = UDim2.new(0.5, 0, 1, -14)
-	k.Size = UDim2.new(0.92, 0, 0, 170)
-	k.SizeConstraint = Enum.SizeConstraint.RelativeXX
-	k.BackgroundColor3 = FARG_MORK
-	k.BackgroundTransparency = 0.08
-	k.Visible = false
-	k.ZIndex = 5
-	local kmax = Instance.new("UISizeConstraint")
-	kmax.MaxSize = Vector2.new(640, 260)
-	kmax.Parent = k
-	local kcorner = Instance.new("UICorner")
-	kcorner.CornerRadius = UDim.new(0, 10)
-	kcorner.Parent = k
-	local kstroke = Instance.new("UIStroke")
-	kstroke.Color = FARG_GULD
-	kstroke.Transparency = 0.52
-	kstroke.Parent = k
-	local kpad = Instance.new("UIPadding")
-	kpad.PaddingTop = UDim.new(0, 10)
-	kpad.PaddingBottom = UDim.new(0, 10)
-	kpad.PaddingLeft = UDim.new(0, 13)
-	kpad.PaddingRight = UDim.new(0, 13)
-	kpad.Parent = k
-	local klista = Instance.new("UIListLayout")
-	klista.Padding = UDim.new(0, 3)
-	klista.SortOrder = Enum.SortOrder.LayoutOrder
-	klista.Parent = k
-	k.Parent = g
-	kort = k
-
-	local namn = Instance.new("TextLabel")
-	namn.Name = "Avsandare"
-	namn.LayoutOrder = 1
-	namn.Size = UDim2.new(1, 0, 0, 13)
-	namn.BackgroundTransparency = 1
-	namn.TextXAlignment = Enum.TextXAlignment.Left
-	namn.Font = Enum.Font.RobotoMono
-	namn.TextSize = 11
-	namn.TextColor3 = Color3.fromRGB(231, 200, 107)
-	namn.Text = Sprak.t("ugneta.rubrik")
-	namn.ZIndex = 6
-	namn.Parent = k
-
-	local r = Instance.new("TextLabel")
-	r.Name = "Rubrik"
-	r.LayoutOrder = 2
-	r.Size = UDim2.new(1, 0, 0, 20)
-	r.BackgroundTransparency = 1
-	r.TextXAlignment = Enum.TextXAlignment.Left
-	r.Font = Enum.Font.GothamBold
-	r.TextSize = 16
-	r.TextColor3 = FARG_TEXT
-	r.Text = ""
-	r.ZIndex = 6
-	r.Parent = k
-	kortRubrik = r
-
-	for i = 1, Ugneta.MAX_OBSERVATIONER do
-		local p = Instance.new("TextLabel")
-		p.Name = "Punkt" .. i
-		p.LayoutOrder = 2 + i
-		p.Size = UDim2.new(1, 0, 0, 18)
-		p.BackgroundTransparency = 1
-		p.TextXAlignment = Enum.TextXAlignment.Left
-		p.Font = Enum.Font.Gotham
-		p.TextSize = 14
-		p.TextColor3 = FARG_TEXT
-		p.Text = ""
-		p.Visible = false
-		p.ZIndex = 6
-		p.Parent = k
-		table.insert(kortPunkter, p)
-	end
+	--[[ VALEN. En ramlös rad, inte ett kort: ingen bakgrund, ingen kant,
+	     inget avsändarnamn, ingen rubrik. Bara det spelaren kan göra. ]]
+	local v = Instance.new("Frame")
+	v.Name = "Val"
+	v.AnchorPoint = Vector2.new(0.5, 1)
+	v.Position = UDim2.new(0.5, 0, 1, -14)
+	v.Size = UDim2.new(0, 320, 0, VAL_HOJD)
+	v.BackgroundTransparency = 1
+	v.BorderSizePixel = 0
+	v.Visible = false
+	v.ZIndex = 5
+	local vlista = Instance.new("UIListLayout")
+	vlista.FillDirection = Enum.FillDirection.Horizontal
+	vlista.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	vlista.VerticalAlignment = Enum.VerticalAlignment.Center
+	vlista.Padding = UDim.new(0, 8)
+	vlista.SortOrder = Enum.SortOrder.LayoutOrder
+	vlista.Parent = v
+	v.Parent = g
+	valrad = v
 
 	local kn = Instance.new("TextButton")
 	kn.Name = "Knapp"
 	kn.AutoButtonColor = true
-	kn.LayoutOrder = 9
+	kn.LayoutOrder = 1
 	--[[ ══ KNAPPEN VAR SMALARE ÄN SIN EGEN TEXT ════════════════════════
 
-	     108×22 var en fast storlek, men texten sätts per kort och är
+	     108×22 var en fast storlek, men texten sätts per besked och är
 	     olika lång. Mätt på iPad Air i landskap: `TextBounds.X` = 157 mot
 	     knappens 108 för "Continue to start the lesson  (R)" — texten
 	     klipptes mitt i ordet, och det här är den ENDA vägen vidare i
@@ -385,7 +369,7 @@ local function bygg()
 	local kncorner = Instance.new("UICorner")
 	kncorner.CornerRadius = UDim.new(1, 0)
 	kncorner.Parent = kn
-	kn.Parent = k
+	kn.Parent = v
 	kortKnapp = kn
 
 	--[[ Sidoknapparna. Samma yta, samma träffstorlek, tydligt underordnad
@@ -397,7 +381,7 @@ local function bygg()
 		x.AutoButtonColor = true
 		x.LayoutOrder = ordning
 		--[[ Samma skäl som huvudknappen ovan: texten är olika lång per
-		     kort och per språk, och 22 px är inte ett tumgrepp. ]]
+		     besked och per språk, och 22 px är inte ett tumgrepp. ]]
 		x.Size = UDim2.new(0, 108, 0, 40)
 		x.AutomaticSize = Enum.AutomaticSize.X
 		local xPad = Instance.new("UIPadding")
@@ -414,14 +398,14 @@ local function bygg()
 		local c = Instance.new("UICorner")
 		c.CornerRadius = UDim.new(1, 0)
 		c.Parent = x
-		x.Parent = k
+		x.Parent = v
 		x.Activated:Connect(fn)
 		return x
 	end
-	replayKnapp = sidoKnapp("SeRitten", Sprak.t("ugneta.se_ritten"), 10, function()
+	replayKnapp = sidoKnapp("SeRitten", Sprak.t("ugneta.se_ritten"), 2, function()
 		UgnetaController.replay()
 	end)
-	vidareKnapp = sidoKnapp("GaVidare", Sprak.t("ugneta.ga_vidare"), 11, function()
+	vidareKnapp = sidoKnapp("GaVidare", Sprak.t("ugneta.ga_vidare"), 3, function()
 		UgnetaController.gaVidare()
 	end)
 
@@ -444,6 +428,13 @@ end
 	avgör, inte plattformen: en iPad med tangentbord får ledtexten, en
 	telefon får den inte. Tangenterna är desamma som init.client lyssnar
 	på — R och gamepadens Y.
+
+	#244: ledtexten hör till KNAPPEN och får aldrig följa med in i
+	bannern. Kontraktets krav 3 är uttryckligt — `(R)`, `(H)` eller
+	motsvarande får inte stå i bannerns text — och skälet är att bannern
+	läses på iPad där tangenten inte finns. `visaBesked` skickar därför
+	rubriken rå till `CoachBanner.Show` och kör `medLedtext` bara på
+	knappens egen etikett.
 
 	Webben har ingen motsvarande ledtext, och ska inte ha det: den styrs
 	med mus och finger. Paritetsregeln säger uttryckligen att inputadapter
@@ -475,6 +466,9 @@ function UgnetaController.live(txt: string, bra: boolean)
 end
 
 function UgnetaController.steg(dt: number)
+	--[[ Bannerns visningstid går HÄR, i klientens enda loop. Modulen har
+	     ingen egen timer och ingen `task.delay` — se noten i dess huvud. ]]
+	CoachBanner.steg(dt)
 	if liveTid > 0 then
 		liveTid -= dt
 		if liveTid <= 0 then
@@ -485,18 +479,23 @@ function UgnetaController.steg(dt: number)
 	end
 end
 
---[[ SÄKERHET VINNER. Släcker live-chipet och stänger kortet, så att
+--[[ SÄKERHET VINNER. Släcker live-chipet, bannern och valen, så att
 	"Bra rytm" aldrig står kvar bredvid en varning. ]]
 function UgnetaController.sakerhetTarOver()
 	local c = chip
 	if c then c.Visible = false end
-	local k = kort
-	if k then k.Visible = false end
+	--[[ Bannern släcks DIREKT, utan uttoning att invänta: en text om en
+	     ritt som just avbröts ska inte tona bort i lugn och ro. ]]
+	CoachBanner.Hide()
+	local v = valrad
+	if v then v.Visible = false end
 	--[[ SÄKERHET FÖRE UNDERVISNING. Även sidovalen kastas: ett "Se ritten"
 	     som överlevde avsittningen hade kunnat öppna en analys av en ritt
 	     på en häst som inte finns. ]]
 	replayFn = nil
 	vidareFn = nil
+	local kn = kortKnapp
+	if kn then kn.Visible = false end
 	local rk = replayKnapp
 	if rk then rk.Visible = false end
 	local vk = vidareKnapp
@@ -509,33 +508,43 @@ function UgnetaController.sakerhetTarOver()
 	vantarPa = false
 end
 
---[[ ── Kortet mellan försöken ─────────────────────────────────── ]]
+--[[ ── Beskedet mellan försöken ────────────────────────────────── ]]
 
-local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
+--[[ Punkterna blir bannerns instruktionsrad. De sätts ihop med mellanslag
+	och INTE med radbrytning: bannerns höjd är låst till 52 px av
+	kontraktet, och en andra rad hade vuxit ramen i stället för att kapa
+	texten. Antalet punkter är redan begränsat av `Ugneta.observationer`. ]]
+local function enRad(punkter: { string }): string
+	local rader = {}
+	for _, p in punkter do
+		if p ~= nil and p ~= "" then table.insert(rader, p) end
+	end
+	return table.concat(rader, " ")
+end
+
+local function visaBesked(rubrik: string, punkter: { string }, knapp: boolean,
 	knappText: string?, replay: boolean?, vidare: boolean?)
 	bygg()
-	local k, r = kort, kortRubrik
-	if not k or not r then return end
+	local v = valrad
+	if not v then return end
 
-	--[[ ── KORTET VIKER FÖR REGLAGEN ──────────────────────────────────
+	--[[ TEXTEN UPP, VALEN NER. Bannern får rubriken rå — ingen ledtext,
+	     ingen tangentbokstav; se noten vid `medLedtext`. ]]
+	CoachBanner.Show(rubrik, enRad(punkter))
 
-		Kortet är centrerat och 92 % brett, max 640. På iPad ryms det:
-		reglagen bor på x 961..1155 och kortet slutar på 909. På iPhone i
-		landskap är skärmen 749 bred, kortet blir ändå 640 och lägger sig
+	--[[ ── RADEN VIKER FÖR REGLAGEN ───────────────────────────────────
+
+		Raden är centrerad och 92 % bred, max 640. På iPad ryms den:
+		reglagen bor på x 961..1155 och raden slutar på 909. På iPhone i
+		landskap är skärmen 749 bred, raden blir ändå 640 och lägger sig
 		rakt över knappraden — mätt: SAKTA, SITT AV, HOPP, TYGEL, PARAD och
 		DJUP SITS skymdes alla av `Kort`.
 
-		Regeln nedan rör INTE surfplattan: ryms kortet centrerat innanför
-		den fria ytan står det kvar exakt där det stod. Bara när det inte
-		ryms krymper det och centreras i det som är kvar. ]]
-	laggUtKort()
+		Regeln nedan rör INTE surfplattan: ryms raden centrerad innanför
+		den fria ytan står den kvar exakt där den stod. Bara när den inte
+		ryms krymper den och centreras i det som är kvar. ]]
+	laggUtVal()
 
-	r.Text = rubrik
-	for i, p in kortPunkter do
-		local txt = punkter[i]
-		p.Text = txt or ""
-		p.Visible = txt ~= nil
-	end
 	local kn = kortKnapp
 	if kn then
 		kn.Visible = knapp
@@ -548,27 +557,29 @@ local function visaKort(rubrik: string, punkter: { string }, knapp: boolean,
 	if rk then rk.Visible = replay == true end
 	local vk = vidareKnapp
 	if vk then vk.Visible = vidare == true end
-	--[[ Kortet väntar exakt när det har en knapp. Ett kort utan knapp är
-	     en upplysning, inte ett val. ]]
+	--[[ Lektionen väntar exakt när det FINNS ett val. Ett besked utan
+	     knapp är en upplysning, inte ett val — och då står bara bannern
+	     kvar, som tonar ut av sig själv. ]]
 	vantarPa = knapp
-	k.Visible = true
-	--[[ Kortet hör till pausen mellan försöken. Går ridningen vidare
-		ska det bort — det får aldrig ligga kvar över en aktiv ritt. ]]
+	v.Visible = knapp or replay == true or vidare == true
+	--[[ Beskedet hör till pausen mellan försöken. Går ridningen vidare
+		ska chipet inte stå kvar bredvid det. ]]
 	local c = chip
 	if c then c.Visible = false end
 end
 
---[[ Kortet, öppet för den som kör lektionen. Presentationen av en övning
+--[[ Beskedet, öppet för den som kör lektionen. Presentationen av en övning
 	och återkopplingen efter ett försök är samma yta — skillnaden är vad
 	som står i den, inte vilken ruta den ritas i. ]]
 function UgnetaController.visa(rubrik: string, punkter: { string }, knapp: boolean,
 	knappText: string?, replay: boolean?, vidare: boolean?)
-	visaKort(rubrik, punkter, knapp, knappText, replay, vidare)
+	visaBesked(rubrik, punkter, knapp, knappText, replay, vidare)
 end
 
 function UgnetaController.dolj()
-	local k = kort
-	if k then k.Visible = false end
+	local v = valrad
+	if v then v.Visible = false end
+	CoachBanner.Hide()
 	vantarPa = false
 end
 
@@ -590,13 +601,13 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 	end
 	if #punkter == 0 then table.insert(punkter, Sprak.t("ugneta.jamnare_forsok")) end
 	local forsta = fore == nil
-	--[[ Kortet har alltid en fortsättning nu. Förut fick bara försök 1 en
+	--[[ Beskedet har alltid en fortsättning nu. Förut fick bara försök 1 en
 	     knapp och försök 2 låg kvar tills timern tog det — spelaren hade
 	     inget sätt att säga "klar". ]]
 	--[[ "Se ritten" bara när det FINNS en inspelning av försöket, och
 	     "Gå vidare" bara efter första försöket — efter det sista är
 	     huvudknappen redan vägen vidare. ]]
-	visaKort(if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.forsok", forsokNr),
+	visaBesked(if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.forsok", forsokNr),
 		punkter, true,
 		if forsta then Sprak.t("ugneta.prova_igen") else Sprak.t("ugneta.nasta_ovning"),
 		kanSeRitten == true, forsta)
@@ -604,7 +615,7 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 end
 
 --[[ ── Fortsättningen: spelarens handling ──────────────────────────
-	Kortet mellan försöken stänger inte sig självt. Den som kör lektionen
+	Valet mellan försöken stänger inte sig självt. Den som kör lektionen
 	registrerar vad som ska hända när spelaren väljer att gå vidare. ]]
 function UgnetaController.vidFortsatt(fn: (() -> ())?)
 	fortsattFn = fn
@@ -618,10 +629,11 @@ function UgnetaController.vidVidare(fn: (() -> ())?)
 	vidareFn = fn
 end
 
---[[ SE RITTEN. Öppnar analysen och LÄMNAR KVAR väntan — kortet ligger
-     bakom panelen och valet är fortfarande spelarens när hon stänger den.
-     Returnerar false när det inte finns någon väntan eller ingen ritt att
-     visa, så att tangenten faller igenom till sin vanliga betydelse. ]]
+--[[ SE RITTEN. Öppnar analysen och LÄMNAR KVAR väntan — valen ligger
+     bakom panelen och beslutet är fortfarande spelarens när hon stänger
+     den. Returnerar false när det inte finns någon väntan eller ingen
+     ritt att visa, så att tangenten faller igenom till sin vanliga
+     betydelse. ]]
 function UgnetaController.replay(): boolean
 	if not vantarPa then return false end
 	local fn = replayFn
@@ -639,26 +651,26 @@ function UgnetaController.gaVidare(): boolean
 	local fn = vidareFn
 	if not fn then return false end
 	vantarPa = false
-	local k = kort
-	if k then k.Visible = false end
+	local v = valrad
+	if v then v.Visible = false end
 	fn()
 	return true
 end
 
---[[ Står kortet och väntar på spelaren? ]]
+--[[ Står lektionen och väntar på spelaren? ]]
 function UgnetaController.vantar(): boolean
 	return vantarPa
 end
 
 --[[ Spelaren gick vidare. Returnerar false när det inte fanns någon
-	väntan att avsluta — så att en tangenttryckning utan kort aldrig kan
+	väntan att avsluta — så att en tangenttryckning utan val aldrig kan
 	starta ett försök i smyg, och så att init.client kan låta samma
 	tangent falla igenom till sin vanliga betydelse. ]]
 function UgnetaController.fortsatt(): boolean
 	if not vantarPa then return false end
 	vantarPa = false
-	local k = kort
-	if k then k.Visible = false end
+	local v = valrad
+	if v then v.Visible = false end
 	local fn = fortsattFn
 	if fn then fn() end
 	return true

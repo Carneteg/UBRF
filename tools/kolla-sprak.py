@@ -28,6 +28,11 @@ LOKALISERADE = [
     "roblox/src/client/PreparationController.luau",
     "roblox/src/client/KontrollHjalp.luau",
     "roblox/src/client/UgnetaController.luau",
+    #[[ #244: bannern ritar spelartext. Den har inga egna literaler —
+    #   orden kommer fran den som ropar Show — men listan ar stallet
+    #   dar man TANKER pa saken, och en ny fil som ritar text hor
+    #   hemma har aven nar den ar tom idag. ]]
+    "roblox/src/client/CoachBanner.luau",
     "roblox/src/client/InteractionController.luau",
     "roblox/src/client/TouchControls.luau",
     "roblox/src/client/Prompttext.luau",

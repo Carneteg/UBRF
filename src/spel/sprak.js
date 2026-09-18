@@ -198,7 +198,12 @@ const SPRAK = {
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
 
   /* ── Ugneta, ridläraren ────────────────────────────────────────────── */
-  "ugneta.rubrik": { sv: "UGNETA · RIDINSTRUKTÖR", en: "UGNETA · RIDING INSTRUCTOR" },
+  // "ugneta.rubrik" — avsändarraden i Ugnetas gamla nederpanel. Panelen är
+  // riven (#244): lärartexten ligger i CoachBanner, som inte har någon
+  // avsändarrad. Nyckeln är borttagen i stället för kvarlämnad, av samma
+  // skäl som touch-panelens döda nycklar — en etikett ingen kan se drar
+  // med sig en översättning att underhålla. Webbens egen `.ugneta-namn`
+  // använde den aldrig; den skriver sin sträng direkt i src/larare.js.
   "ugneta.hastens_svar": { sv: "hästens svar", en: "the horse's response" },
   "ugneta.prova_igen": { sv: "Prova igen", en: "Try again" },
   "ugneta.se_ritten": { sv: "Se ritten", en: "Watch the ride" },

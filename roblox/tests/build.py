@@ -234,6 +234,10 @@ PARITET = [
     #   banken alltid hade AbsoluteSize 0 — da hoppade `if W > 0` over
     #   anropet. #206:s prov satter en riktig bredd, och da ar den nil. ]]
     ("TouchControls",    "src/client/TouchControls.luau"),
+    #[[ #244: bannern FORE UgnetaController, som require:ar den. Samma
+    #   regel som hela listan: en modul far bara referera det som star
+    #   over. ]]
+    ("CoachBanner",      "src/client/CoachBanner.luau"),
     ("UgnetaController", "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
@@ -293,6 +297,11 @@ KLIENT = SPEL + [
     ("TouchControls",       "src/client/TouchControls.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
+    #[[ #244: se noten i PARITET. Bannern maste ligga fore den modul som
+    #   require:ar den, i BADA listorna — ligger den bara i en blir
+    #   require:t nil i den andra, och det syns forst som ett
+    #   "attempt to index nil" langt fran orsaken. ]]
+    ("CoachBanner",         "src/client/CoachBanner.luau"),
     ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
@@ -549,6 +558,14 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   klientbunten. Grenen star fore "klient" av ren tydlighet: namnet
     #   innehaller inte strangen, och en lasare ska inte behova rakna ut
     #   vilken bunt den hamnar i. ]]
+    #[[ #244: bannerspecen mater BADE lektionsytan och att den gamla
+    #   hjalprutan ar slackt i en touch-session (kontraktets krav 7).
+    #   `KontrollHjalp` finns bara i klientbunten, sa specen kor dar.
+    #   Grenen star FORE "klient" av samma skal som `driv-broms` nedanfor:
+    #   namnet innehaller inte strangen, och en lasare ska inte behova
+    #   rakna ut vilken bunt den hamnar i. ]]
+    elif "coachbanner" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "driv-broms" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "klient" in spec_rel:

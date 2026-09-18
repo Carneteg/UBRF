@@ -326,6 +326,19 @@ Enum = {
 	HorizontalAlignment = { Left = 1, Center = 2, Right = 3 },
 	VerticalAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	AutomaticSize = { None = 0, X = 1, Y = 2, XY = 3 },
+	--[[ #244: toningens enum. Uppraknade av samma skal som Material och de
+	     ovriga UI-enumen ovan — en __index som svarar pa allt hade latit
+	     `Enum.EasingStyle.Kvadratisk` passera hela sviten och falla forst i
+	     Studio. Namnen ar Roblox egna. ]]
+	EasingStyle = { Linear = 1, Sine = 2, Back = 3, Quad = 4, Quart = 5,
+		Quint = 6, Bounce = 7, Elastic = 8, Exponential = 9, Circular = 10,
+		Cubic = 11 },
+	EasingDirection = { In = 1, Out = 2, InOut = 3 },
+	--[[ `TextTransform` gor MALRADEN i CoachBanner till versaler utan att
+	     texten sjalv skrivs om — viktigt for a, a och o, som `string.upper`
+	     inte nar i UTF-8. ]]
+	TextTransform = { None = 0, UppercaseAll = 1, LowercaseAll = 2,
+		Capitalize = 3 },
 }
 
 --[[ UI-typerna. HUD:en bara skapar dem och läser dem aldrig isär, så de
@@ -578,6 +591,22 @@ local function __signalTradar()
 	return sig
 end
 
+--[[ #244: registret over skapade tweens. Global for att specarna ska na
+     det — precis som `__senasteDelay` och `__taggade`. Ett prov som mater
+     toningen nollstaller det sjalv med `table.clear(__tweens)`. ]]
+__tweens = {}
+
+--[[ `TweenInfo` fanns inte i banken alls: ingen produktionsmodul hade
+     tonat nagot forran CoachBanner. Falten ar Roblox egna namn, sa ett
+     prov kan lasa `info.Time` och `info.EasingStyle` rakt av. ]]
+TweenInfo = {
+	new = function(tid, stil, riktning, upprepningar, omvand, fordrojning)
+		return { _typ = "TweenInfo", Time = tid, EasingStyle = stil,
+			EasingDirection = riktning, RepeatCount = upprepningar or 0,
+			Reverses = omvand or false, DelayTime = fordrojning or 0 }
+	end,
+}
+
 local __services = {
 	ReplicatedStorage = nil,   -- sätts efter att __Core byggts
 	Workspace = workspace,     -- kameran hämtar den som tjänst
@@ -754,7 +783,29 @@ local __services = {
 		SetPosition = function(self, namn, plats) self._plats[namn] = plats end,
 		GetButton = function(self, namn) return self._knappar[namn] end,
 	},
-	TweenService = { Create = function() return { Play = function() end } end },
+	--[[ ══ TWEENSERVICE SOM GAR ATT MATA (#244) ═════════════════════════
+	     Stubben svarade forr med `{ Play = function() end }`, alltsa ett
+	     objekt utan minne. Da gick det att prova ATT nagot tonades, men
+	     inte MED VILKEN tid, easing eller malvarde — och kontraktet for
+	     CoachBanner anger just 0,4 s och Quad.
+	
+	     Varje skapad tween laggs nu i `__tweens` med sitt objekt, sin
+	     TweenInfo och sina malvarden, och den bar ett `Cancel` som markerar
+	     den avbruten. Det ar vad provet behover for att kunna visa att ett
+	     nytt `Show` FAKTISKT avbryter den gamla uttoningen. ]]
+	TweenService = {
+		Create = function(_, objekt, info, mal)
+			local t
+			t = {
+				Instance = objekt, TweenInfo = info, _mal = mal,
+				_spelad = false, _avbruten = false,
+				Play = function(sjalv) (sjalv or t)._spelad = true end,
+				Cancel = function(sjalv) (sjalv or t)._avbruten = true end,
+			}
+			table.insert(__tweens, t)
+			return t
+		end,
+	},
 	Debris = { AddItem = function() end },
 	--[[ Taggregistret var förut tomt och osättbart, och då gick ingen
 	     bindningsregel att prova: `GetTagged` svarade alltid {} och varje
