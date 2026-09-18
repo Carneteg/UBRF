@@ -267,6 +267,61 @@ do
 		end
 	end
 
+	--[[ ══ OCH VAKTEN MÅSTE STÅ EFTER DEN RAD SOM KAN SLÄCKA YTAN ═════
+
+	     Mätningen ovan släcker ytan FÖRE monteringen. Den fångar en yta
+	     som redan var mörk — men det är inte det fall vakten skrevs för.
+
+	     Det befarade fallet är att `egnaReglage(false)` SJÄLV släcker
+	     `ContextActionGui` när den sätter `ModalEnabled`. Och den raden
+	     körs INUTI `mount`. Låg vakten före den kunde den aldrig se sin
+	     egen skada: den läste ytan, fann den tänd, och släcktes den en
+	     rad senare stod iPad utan reglage med hela bänken grön.
+
+	     Provet gör det som bara en fysisk enhet annars kan svara på:
+	     kopplar `ModalEnabled` till precis den skada den misstänks göra,
+	     och mäter att monteringen ändå lämnar ytan tänd. Faller den här
+	     raden har vakten flyttats tillbaka före `egnaReglage`. ]]
+	do
+		local yta = nil
+		for _, g in ipairs(playerGui._barn or {}) do
+			if g.Name == "ContextActionGui" then yta = g end
+		end
+		--[[ NYCKELN MÅSTE BORT FÖRST. En tidigare montering har redan
+		     rawsatt `ModalEnabled` på stubben, och `__newindex` fyrar bara
+		     på en nyckel som SAKNAS. Utan den här raden var provet grönt
+		     utan att ha mätt någonting — kroken kopplades aldrig in. ]]
+		local skugga = { ModalEnabled = rawget(UIS, "ModalEnabled") }
+		rawset(UIS, "ModalEnabled", nil)
+		setmetatable(UIS, {
+			__index = skugga,
+			__newindex = function(t, k, v)
+				if k == "ModalEnabled" then
+					skugga[k] = v
+					--[[ DET BEFARADE BETEENDET, uttryckt som kod: sant
+					     släcker CAS egen yta. Ingen vet ännu om Roblox
+					     gör det — poängen är att vakten ska hålla ÄVEN
+					     om den gör det. ]]
+					if v and yta then yta.Enabled = false end
+				else
+					rawset(t, k, v)
+				end
+			end,
+		})
+
+		TouchControls.unmount()
+		yta.Enabled = true
+		TouchControls.mount(Input, { dismount = function() end })
+		check("ModalEnabled får inte lämna CAS-ytan släckt — vakten står efter den",
+			yta.Enabled == true, ("Enabled=%s, ModalEnabled=%s")
+				:format(tostring(yta.Enabled), tostring(UIS.ModalEnabled)))
+
+		TouchControls.unmount()
+		setmetatable(UIS, nil)
+		UIS.ModalEnabled = skugga.ModalEnabled
+		yta.Enabled = true
+	end
+
 	TouchControls.unmount()
 	CAS:UnbindAction(Input.AVSITT)
 	UIS.TouchEnabled = false
@@ -315,30 +370,59 @@ do
 	check("hon rör sig BAKÅT i rygga", mc.loco.speed < -0.5,
 		("%.2f m/s"):format(mc.loco.speed))
 
-	--[[ ══ [ÖPPEN FRÅGA] ETIKETTEN UNDER RYGGNINGEN ════════════════════
+	--[[ ══ ETIKETTEN UNDER RYGGNINGEN ═══════════════════════════════════
 
-	     `loco.gait` säger "walk" medan hon backar, inte "halt".
+	     HON RYGGAR I HALT, och `loco.gait` ska säga det.
 
-	     Orsaken är `StateMachine:step`, som räknar gångarten ur
-	     `Gaits.forSpeed(math.abs(input.speed), …)`. Beloppet gör −1,10 m/s
-	     till 1,10 m/s, och 1,10 ligger i skrittbandet. Raden är ÄLDRE än
-	     det här kontraktet: ryggningen fanns förut som ett hållet
-	     bakåtutslag i halt, och etiketten var "walk" också då.
+	     Här stod en `[ÖPPEN FRÅGA]` och en `print`: `loco.gait` sa "walk"
+	     medan hon backade, därför att `StateMachine:step` räknade
+	     gångarten ur `Gaits.forSpeed(math.abs(input.speed), …)` och
+	     beloppet gjorde −1,10 m/s till 1,10 — mitt i skrittbandet.
+	     Observationen stämde. Den var bara inte ofarlig.
 
-	     Det som ändrats är hur länge det syns. Förr varade ryggningen så
-	     länge tummen låg på S; nu är den en pinne man stegar in i och
-	     stannar på, och då ligger etiketten kvar. Animation, ljud och damm
-	     läser `loco.gait`, så hon trampar skritt framåt medan hon går
-	     bakåt.
+	     VAD DEN KOSTADE, och det är skälet den är en `check` nu och inte
+	     en `print`: `init.client` sänder `StateSync(loco.gait, loco.speed)`
+	     tio gånger i sekunden, och `HorseService.onStateSync` har regeln
 
-	     JAG RÄTTAR DET INTE HÄR. `StateMachine` är rörelsemodellens kärna
-	     och ligger utanför den här gatens scope; en ändring där rör
-	     animationslagret, ljudet och paritetsprovet. Mätningen står som
-	     OBSERVATION så att fyndet inte tappas bort, och frågan går vidare
-	     till produktägaren och arkitekten. ]]
-	print(("       [ÖPPEN FRÅGA] etiketten under ryggningen: loco.gait = %q"
-		.. " vid %.2f m/s — StateMachine räknar på math.abs(speed)")
-		:format(mc.loco.gait, mc.loco.speed))
+	         if speed < 0 then if gait ~= "halt" then return end
+
+	     Paret på tråden var alltså `("walk", −1.10)`, och servern
+	     FÖRKASTADE varje synk under hela ryggningen. De replikerade
+	     attributen `Gait` och `Speed` frös på det som gällde innan hon
+	     började backa. Serverns egen kommentar säger att klienten backar
+	     med `targetGait == "halt"` — det gör den, men det är inte
+	     `targetGait` som ligger på tråden.
+
+	     Rättelsen ligger i `MovementController`, som redan har en kanal
+	     för precis det här: `faktiskGangart` finns för att ANROPAREN vet
+	     gångarten bättre än tempot gör under ett förlopp. Ryggningen är
+	     samma slags fall. `Gaits.ORDER` är orörd och inget index har
+	     flyttats. ]]
+	check("hon ryggar i HALT — etiketten följer med ned i pinnen",
+		mc.loco.gait == "halt",
+		("loco.gait = %q vid %.2f m/s"):format(mc.loco.gait, mc.loco.speed))
+
+	--[[ KEDJAN HELA VÄGEN UT. Mätningen ovan är etiketten; den här är
+	     vad den betyder på tråden. Regeln är HorseService.onStateSync:
+	     negativt tempo accepteras ENDAST i halt, och bara ned till
+	     backtempot med marginal. Skulle någon flytta etiketten tillbaka
+	     faller den här raden, och den säger varför. ]]
+	local pGait, pSpeed = mc.loco.gait, mc.loco.speed
+	local serverTarEmot = pSpeed >= 0
+		or (pGait == "halt"
+			and -pSpeed <= Config.MOVEMENT.ReverseSpeed + Gaits.HYSTERESIS)
+	check("paret klienten sänder passerar serverns validering",
+		serverTarEmot, ("StateSync(%q, %.2f)"):format(pGait, pSpeed))
+
+	--[[ OCH ANIMATIONEN. `BackUp`-klippet spolas inte av fasen (det har
+	     ingen `phase` i `STATE_ANIMATION`), så takten sätts av
+	     `Gaits.playbackRate(loco.gait, |speed|)`. Med "walk" blev det
+	     1,10 / 1,45 = 0,76 — klippet gick 24 % för långsamt. Halt har
+	     `norm = 0` och ger 1,0, alltså klippets egen takt. ]]
+	check("BackUp-klippet går i sin egen takt, inte skrittets",
+		math.abs(Gaits.playbackRate(mc.loco.gait, math.abs(mc.loco.speed)) - 1) < 1e-6,
+		("playbackRate = %.4f"):format(
+			Gaits.playbackRate(mc.loco.gait, math.abs(mc.loco.speed))))
 
 	--[[ ETT DRIV UR RYGGA ÄR HALT, inte skritt. Ett steg är ett steg
 	     också på vägen upp ur den nedersta pinnen. ]]

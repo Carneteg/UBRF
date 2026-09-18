@@ -654,8 +654,35 @@ function MovementController:step(intent: Types.Intent, dt: number)
 
 	     Etiketten byter en bit in i förloppet — hästen är på väg in i
 	     travet en stund innan travet syns. Samma regel som webben. ]]
+	--[[ RYGGNINGEN ÄR HALT, och etiketten ska säga det.
+
+	     `StateMachine` räknar annars gångarten ur
+	     `Gaits.forSpeed(math.abs(input.speed), …)`, och beloppet gör
+	     −1,10 m/s till 1,10 — mitt i skrittbandet. Hon fick etiketten
+	     "walk" medan hon backade.
+
+	     Det var inte kosmetik. `init.client` sänder
+	     `StateSync(loco.gait, loco.speed)`, och `HorseService.onStateSync`
+	     tar negativt tempo ENDAST i halt. Paret på tråden var
+	     `("walk", −1,10)`, och servern förkastade varje synk under hela
+	     ryggningen — de replikerade `Gait` och `Speed` frös på det som
+	     gällde innan hon började backa. Serverns kommentar säger att
+	     klienten backar med `targetGait == "halt"`; det gör den, men det
+	     är `loco.gait` som ligger på tråden.
+
+	     Kanalen som rättar det finns redan och är den här: gångarten
+	     kommer UTIFRÅN när anroparen vet den bättre än tempot gör.
+	     Ryggningen är samma slags fall som förloppet. `Gaits.ORDER` är
+	     orörd och inget index har flyttats — rygga är fortfarande en
+	     pinne i `MovementController`, inte en rad i tabellen.
+
+	     `reverse` är samma villkor som tempot räknades på ovan, och inte
+	     `self.ryggar` ensamt: mellan begäran och hästens svar kan pinnen
+	     vara rygga medan hon fortfarande GÅR, och då är hon inte i halt. ]]
 	local faktiskGangart = nil
-	if self._ov then
+	if reverse then
+		faktiskGangart = "halt"
+	elseif self._ov then
 		local u = math.clamp(self._ov.t / self._ov.langd, 0, 1)
 		faktiskGangart = if u >= M.Transition.switchAt
 			then loco.targetGait
