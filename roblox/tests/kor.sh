@@ -55,6 +55,12 @@ fi
 # ge gront. Den andra riktningen ar den som gav CHANGES_REQUESTED pa 250.
 if ! python3 ../tools/testa-kolla-tavlingsklader.py; then
   echo "GRINDPROVET FOR TAVLINGSKLADER MISSLYCKADES"
+# Grind 1 och 5 i kontraktet for Coach Banner (#244): Ugnetas gamla
+# nederpanel ska vara BORTA ur kallan, och bannern ska inte ha nagon
+# fordrojd tradd som kan komma tillbaka och slacka ny text. Samma skal
+# som raden ovan -- en Luau-bank ser inte skillnad pa rivet och slackt.
+if ! python3 ../tools/kolla-nederpanel.py; then
+  echo "NEDERPANELGRINDEN MISSLYCKADES"
   exit 1
 fi
 

@@ -151,12 +151,22 @@ do
 
 	local mal = hitta("GoalLabel")
 	local detalj = hitta("InstructionLabel")
-	check("målraden är GothamBold i versaler, 13–14 px, vit",
+	check("målraden är GothamBold, 13–14 px, vit",
 		mal ~= nil and mal.Font == Enum.Font.GothamBold
 			and mal.TextSize >= 13 and mal.TextSize <= 14
-			and mal.TextTransform == Enum.TextTransform.UppercaseAll
 			and arFarg(mal.TextColor3, 255, 255, 255),
 		("(%s · %s px)"):format(tostring(mal and mal.Font), tostring(mal and mal.TextSize)))
+	--[[ …och i VERSALER. Roblox har ingen `TextTransform` på TextLabel —
+	     se noten i CoachBanner — så regeln är modulens egen och mäts som
+	     sådan, med å/ä/ö med i provet: `string.upper` ensam når dem inte. ]]
+	CoachBanner.Show("Halt → skritt och ökning", "detalj", 5)
+	local malText = CoachBanner.text()
+	check("och den renderas i versaler, även å, ä och ö",
+		malText == "HALT → SKRITT OCH ÖKNING",
+		("(%q)"):format(malText))
+	check("medan instruktionsraden lämnas som den skrevs",
+		select(2, CoachBanner.text()) == "detalj",
+		("(%q)"):format(select(2, CoachBanner.text())))
 	check("instruktionsraden är Gotham, 11–12 px, RGB 200,200,205",
 		detalj ~= nil and detalj.Font == Enum.Font.Gotham
 			and detalj.TextSize >= 11 and detalj.TextSize <= 12
@@ -396,7 +406,7 @@ do
 	local mal, detalj = CoachBanner.text()
 	local forsta = Lektion.OVNINGAR[Lektion.ORDNING[1]]
 	check("första övningen presenteras i bannern, med kanonens rubrik",
-		mal == forsta.rubrik and CoachBanner.synlig() == true,
+		mal == CoachBanner.versaler(forsta.rubrik) and CoachBanner.synlig() == true,
 		('("%s" / "%s")'):format(mal, detalj))
 	check("och instruktionsraden är övningens egna punkter",
 		detalj ~= "" and string.find(detalj, forsta.punkter[1], 1, true) ~= nil,

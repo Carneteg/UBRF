@@ -102,7 +102,8 @@ do
 		and string.find(punkter[2], "Jobba på") ~= nil,
 		string.format('("%s" / "%s")', punkter[1] or "-", punkter[2] or "-"))
 	check("målraden och knappen säger Prova igen",
-		mal == "Prova igen" and knapp ~= nil and knapp.Visible == true,
+		mal == CoachBanner.versaler("Prova igen")
+			and knapp ~= nil and knapp.Visible == true,
 		string.format('(mål "%s", knapp %s)', mal,
 			tostring(knapp and knapp.Visible)))
 	--[[ Båda observationerna ska nå spelaren, inte bara den första:
@@ -213,7 +214,7 @@ do
 	local forstaOvning = Lektion.OVNINGAR[Lektion.ORDNING[1]]
 	local presMal = CoachBanner.text()
 	check("första övningen presenteras med kanonens rubrik",
-		presMal == forstaOvning.rubrik,
+		presMal == CoachBanner.versaler(forstaOvning.rubrik),
 		string.format('("%s")', presMal))
 
 	--[[ …och kortet försvinner när hon börjar rida. Ett kort som ligger

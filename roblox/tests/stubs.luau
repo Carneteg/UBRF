@@ -334,11 +334,14 @@ Enum = {
 		Quint = 6, Bounce = 7, Elastic = 8, Exponential = 9, Circular = 10,
 		Cubic = 11 },
 	EasingDirection = { In = 1, Out = 2, InOut = 3 },
-	--[[ `TextTransform` gor MALRADEN i CoachBanner till versaler utan att
-	     texten sjalv skrivs om — viktigt for a, a och o, som `string.upper`
-	     inte nar i UTF-8. ]]
-	TextTransform = { None = 0, UppercaseAll = 1, LowercaseAll = 2,
-		Capitalize = 3 },
+	--[[ HAR STOD `TextTransform` EN STUND, OCH DET VAR ETT FEL.
+	     CoachBanner satte `TextLabel.TextTransform` for att fa versaler,
+	     och stubben svarade snallt ja. Egenskapen finns inte pa TextLabel
+	     (kontrollerat mot create.roblox.com/docs, klassen uppdaterad
+	     2026-09-17) — i Studio hade raden kastat. Versalerna raknas nu i
+	     modulen, och enumen ar borta harifran av samma skal som
+	     `Enum.Material` ar strikt: en mock som svarar ja pa allt flyttar
+	     felet fran sviten till Studio. ]]
 }
 
 --[[ UI-typerna. HUD:en bara skapar dem och läser dem aldrig isär, så de

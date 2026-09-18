@@ -64,6 +64,39 @@ local STROKE_TRANSPARENS = 0.75
 local MAL_FARG = Color3.fromRGB(255, 255, 255)
 local DETALJ_FARG = Color3.fromRGB(200, 200, 205)
 
+--[[ ══ VERSALERNA RÄKNAS HÄR, INTE AV EN EGENSKAP ══════════════════════
+
+	Kontraktet vill ha målraden i versaler. Första utkastet satte
+	`TextLabel.TextTransform = Enum.TextTransform.UppercaseAll` — och den
+	egenskapen FINNS INTE på `TextLabel`. Kontrollerat mot
+	create.roblox.com/docs/reference/engine/classes/TextLabel (uppdaterad
+	2026-09-17): klassen har TextTruncate, TextDirection, TextScaled och
+	TextWrapped, men ingen TextTransform. Raden hade kastat
+	"TextTransform is not a valid member of TextLabel" i Studio och tagit
+	hela lektionsytan med sig.
+
+	Bänken kunde inte se det: stubben hade fått enumen påhittad åt sig. Det
+	är samma lärdom som `Enum.Material` en gång gav — en enum-mock som
+	svarar ja på allt flyttar felet från sviten till Studio.
+
+	`string.upper` ensam räcker inte: den arbetar per byte och lämnar å, ä
+	och ö orörda i UTF-8, vilket hade gett "STOR VOLT" men "ÖKNING" som
+	"öKNING". Tabellen nedan täcker de tecken svensk spelartext faktiskt
+	använder. Pilen → och andra flerbytetecken passerar oförändrade, vilket
+	är rätt: de har ingen versalform. ]]
+local GEMENA_VERSALER = {
+	["å"] = "Å", ["ä"] = "Ä", ["ö"] = "Ö",
+	["é"] = "É", ["è"] = "È", ["ü"] = "Ü", ["á"] = "Á",
+}
+
+local function versaler(txt: string): string
+	local ut = string.upper(txt)
+	for gemen, versal in GEMENA_VERSALER do
+		ut = string.gsub(ut, gemen, versal)
+	end
+	return ut
+end
+
 local INFO_IN = TweenInfo.new(FADE, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local INFO_UT = TweenInfo.new(FADE, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
@@ -167,7 +200,7 @@ end
 	rad som får radbryta hade vuxit ramen i stället för att kapa texten,
 	och då flyttar layouten sig under spelaren mitt i en ritt. ]]
 local function rad(namn: string, ordning: number, font: Enum.Font, storlek: number,
-	farg: Color3, versaler: boolean): TextLabel
+	farg: Color3): TextLabel
 	local l = Instance.new("TextLabel")
 	l.Name = namn
 	l.LayoutOrder = ordning
@@ -180,9 +213,6 @@ local function rad(namn: string, ordning: number, font: Enum.Font, storlek: numb
 	l.TextWrapped = false
 	l.TextTruncate = Enum.TextTruncate.AtEnd
 	l.RichText = false
-	if versaler then
-		l.TextTransform = Enum.TextTransform.UppercaseAll
-	end
 	l.Text = ""
 	l.ZIndex = 8
 	return l
@@ -230,9 +260,9 @@ function CoachBanner.montera(mor: Instance?)
 	lista.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	lista.Parent = r
 
-	local m = rad("GoalLabel", 1, Enum.Font.GothamBold, 13, MAL_FARG, true)
+	local m = rad("GoalLabel", 1, Enum.Font.GothamBold, 13, MAL_FARG)
 	m.Parent = r
-	local d = rad("InstructionLabel", 2, Enum.Font.Gotham, 12, DETALJ_FARG, false)
+	local d = rad("InstructionLabel", 2, Enum.Font.Gotham, 12, DETALJ_FARG)
 	d.Parent = r
 
 	r.Parent = mor
@@ -258,7 +288,9 @@ function CoachBanner.Show(mal: string, detalj: string, duration: number?)
 	local r, m, d = ram, malEtikett, detaljEtikett
 	if not r or not m or not d then return end
 	slapp()
-	m.Text = mal or ""
+	--[[ Målet i versaler, instruktionen som den är. Se noten vid
+	     `versaler` — Roblox har ingen egenskap som gör det åt oss. ]]
+	m.Text = versaler(mal or "")
 	d.Text = detalj or ""
 	kvarTid = duration or STANDARD_TID
 	laggUt()
@@ -370,5 +402,8 @@ CoachBanner.STANDARD_TID = STANDARD_TID
 CoachBanner.HOJD = HOJD
 CoachBanner.TOPP = TOPP
 CoachBanner.bredden = bredden
+--[[ Versalregeln är en RENDERINGSregel, och provet ska kunna mäta den mot
+     kanonens egen rubrik i stället för att skriva av resultatet. ]]
+CoachBanner.versaler = versaler
 
 return CoachBanner
