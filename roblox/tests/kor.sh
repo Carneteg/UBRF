@@ -20,7 +20,7 @@
 # beroende på vilken mutation som råkade ligga kvar i .build/. Bygget hör till
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
-SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader"
+SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader coachbanner"
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then
@@ -55,6 +55,14 @@ fi
 # ge gront. Den andra riktningen ar den som gav CHANGES_REQUESTED pa 250.
 if ! python3 ../tools/testa-kolla-tavlingsklader.py; then
   echo "GRINDPROVET FOR TAVLINGSKLADER MISSLYCKADES"
+  exit 1
+fi
+# Grind 1 och 5 i kontraktet for Coach Banner (#244): Ugnetas gamla
+# nederpanel ska vara BORTA ur kallan, och bannern ska inte ha nagon
+# fordrojd tradd som kan komma tillbaka och slacka ny text. Samma skal
+# som raden ovan -- en Luau-bank ser inte skillnad pa rivet och slackt.
+if ! python3 ../tools/kolla-nederpanel.py; then
+  echo "NEDERPANELGRINDEN MISSLYCKADES"
   exit 1
 fi
 

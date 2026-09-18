@@ -8,7 +8,8 @@
 	den, med samma regler som webben:
 
 	  - live under ridning är NÅGRA ORD, inte ett kort,
-	  - kortet visas mellan försöken, med högst två observationer,
+	  - beskedet mellan försöken visas i CoachBanner (#244), med högst
+	    två observationer,
 	  - efter försök 1 finns "Prova igen",
 	  - säkerhet vinner: live-chipet släcks och kortet stängs,
 	  - bedömningen kommer ur HorseCore/Ugneta, inte ur egna formler.
@@ -78,10 +79,9 @@ do
 		string.format('(Visible %s, "%s")', tostring(chip and chip.Visible),
 			tostring(chip and chip.Text)))
 
-	local kort = hitta("Kort")
-	check("och kortet är INTE uppe under live-feedback",
-		kort ~= nil and kort.Visible == false,
-		string.format("(kortets Visible %s)", tostring(kort and kort.Visible)))
+	check("och bannern är INTE uppe under live-feedback",
+		CoachBanner.synlig() == false,
+		string.format("(bannern %s)", tostring(CoachBanner.synlig())))
 
 	UgnetaController.steg(3.0)
 	check("live-chipet tonar ut av sig självt",
@@ -93,20 +93,25 @@ do
 	local nu = { linje = 0.78, rytm = 0.60, balans = 0.41,
 		timing = 0.5, mjukhet = 0.5, respons = 0.5, tempo = 0.5 }
 	local punkter = UgnetaController.efterForsok("storvolt", nu, nil, 1)
-	local kort = hitta("Kort")
-	local rubrik = hitta("Rubrik")
 	local knapp = hitta("Knapp")
-	check("efter försök 1 visas kortet", kort ~= nil and kort.Visible == true,
-		string.format("(Visible %s)", tostring(kort and kort.Visible)))
+	local mal, detalj = CoachBanner.text()
+	check("efter försök 1 visas beskedet i bannern", CoachBanner.synlig() == true,
+		string.format('("%s" / "%s")', mal, detalj))
 	check("med en sak som var bra och en att förbättra",
 		#punkter == 2 and string.find(punkter[1], "Bra") ~= nil
 		and string.find(punkter[2], "Jobba på") ~= nil,
 		string.format('("%s" / "%s")', punkter[1] or "-", punkter[2] or "-"))
-	check("rubriken och knappen säger Prova igen",
-		rubrik ~= nil and rubrik.Text == "Prova igen"
-		and knapp ~= nil and knapp.Visible == true,
-		string.format('(rubrik "%s", knapp %s)', tostring(rubrik and rubrik.Text),
+	check("målraden och knappen säger Prova igen",
+		mal == CoachBanner.versaler("Prova igen")
+			and knapp ~= nil and knapp.Visible == true,
+		string.format('(mål "%s", knapp %s)', mal,
 			tostring(knapp and knapp.Visible)))
+	--[[ Båda observationerna ska nå spelaren, inte bara den första:
+	     bannerns instruktionsrad bär dem båda. ]]
+	check("och båda observationerna står i instruktionsraden",
+		string.find(detalj, punkter[1], 1, true) ~= nil
+		and string.find(detalj, punkter[2], 1, true) ~= nil,
+		string.format('("%s")', detalj))
 
 	local fore = { linje = 0.40, rytm = 0.50, balans = 0.60 }
 	local nu2 = { linje = 0.62, rytm = 0.52, balans = 0.45 }
@@ -139,13 +144,13 @@ do
 	local chip = hitta("Live")
 	local fore = chip.Visible
 	UgnetaController.sakerhetTarOver()
-	local kort = hitta("Kort")
 	check("ett säkerhetsmeddelande släcker live-chipet",
 		fore == true and chip.Visible == false,
 		string.format("(före %s → efter %s)", tostring(fore), tostring(chip.Visible)))
-	check("och stänger lärarkortet",
-		kort ~= nil and kort.Visible == false,
-		string.format("(Visible %s)", tostring(kort and kort.Visible)))
+	check("och släcker bannern och valen",
+		CoachBanner.synlig() == false and hitta("Val").Visible == false,
+		string.format("(banner %s · val %s)", tostring(CoachBanner.synlig()),
+			tostring(hitta("Val").Visible)))
 end
 
 --[[ ── INGEN PARALLELL SANNING ────────────────────────────────── ]]
@@ -206,11 +211,11 @@ do
 
 	--[[ FÖRSTA STEGET presenterar övningen ur kanonens ordning. ]]
 	LektionController.steg(1 / 30, tele())
-	local rubrik = hitta("Rubrik")
 	local forstaOvning = Lektion.OVNINGAR[Lektion.ORDNING[1]]
+	local presMal = CoachBanner.text()
 	check("första övningen presenteras med kanonens rubrik",
-		rubrik ~= nil and rubrik.Text == forstaOvning.rubrik,
-		string.format('("%s")', rubrik and rubrik.Text or "-"))
+		presMal == CoachBanner.versaler(forstaOvning.rubrik),
+		string.format('("%s")', presMal))
 
 	--[[ …och kortet försvinner när hon börjar rida. Ett kort som ligger
 	     kvar mitt i ritten ÄR variant 2, den som inte valdes. ]]
@@ -221,9 +226,9 @@ do
 		string.format("(väntar %s)", tostring(LektionController.vantar())))
 	LektionController.fortsatt()
 	rid(1)
-	local kort = hitta("Kort")
-	check("kortet är borta när ritten börjat", kort ~= nil and kort.Visible == false,
-		string.format("(Visible %s)", tostring(kort and kort.Visible)))
+	check("valet är borta när ritten börjat",
+		hitta("Val").Visible == false,
+		string.format("(Visible %s)", tostring(hitta("Val").Visible)))
 
 	--[[ LIVE: några ord, valda ur mätningen. Här rids medvetet med hård
 	     hand — mjukheten är den svagaste MÄTTA dimensionen — och då ska
@@ -241,6 +246,12 @@ do
 	     hon säga några ord, inte en rad per sekund. ]]
 	check("hon säger några ord, inte en ström", antal <= 2,
 		string.format("(%d olika på 16 s)", antal))
+	--[[ #244: OCH BANNERN LIGGER INTE KVAR. Den tonar ut efter några
+	     sekunder av sig själv — ingen panel över en aktiv ritt. Det är
+	     skillnaden mot variant 2, den som inte valdes. ]]
+	check("och bannern har tonat bort av sig själv under ritten",
+		CoachBanner.synlig() == false,
+		string.format("(banner %s)", tostring(CoachBanner.synlig())))
 
 	--[[ FÖRSÖK 1 → KORT. Rid klart RESTEN av försöket — inte en godtycklig
 	     stund till. Rider man för länge hinner pausen löpa ut och försök 2
@@ -249,10 +260,10 @@ do
 	rid(Lektion.FORSOK_SEK - LektionController.pass().tid + 0.2,
 		{ mjukhet = 0.30, balans = 0.55 })
 	local knapp = hitta("Knapp")
-	kort = hitta("Kort")
-	check("efter försök 1 kommer kortet av sig självt",
-		kort ~= nil and kort.Visible == true,
-		string.format("(Visible %s)", tostring(kort and kort.Visible)))
+	check("efter försök 1 kommer beskedet av sig självt",
+		CoachBanner.synlig() == true and hitta("Val").Visible == true,
+		string.format("(banner %s · val %s)", tostring(CoachBanner.synlig()),
+			tostring(hitta("Val").Visible)))
 	check("med Prova igen, alltså samma övning en gång till",
 		knapp ~= nil and knapp.Visible == true,
 		string.format("(knapp %s)", tostring(knapp and knapp.Visible)))
@@ -276,10 +287,10 @@ do
 	--[[ FÖRSÖK 2, tydligt bättre. Jämförelsen ska nämna förbättringen. ]]
 	rid(Lektion.FORSOK_SEK + 0.5,
 		{ mjukhet = 0.92, balans = 0.90, svarstid = 0.05, etableringstid = 0.4 })
-	local punkt = hitta("Punkt1")
+	local _, jamforelse = CoachBanner.text()
 	check("efter försök 2 jämförs det mot försök 1",
-		punkt ~= nil and string.find(punkt.Text or "", "Bättre") ~= nil,
-		string.format('("%s")', punkt and punkt.Text or "-"))
+		string.find(jamforelse, "Bättre") ~= nil,
+		string.format('("%s")', jamforelse))
 	LektionController.fortsatt()
 	pass = LektionController.pass()
 	check("och lektionen går vidare till nästa övning",
@@ -312,17 +323,19 @@ do
 		foreChip == true and hitta("Live").Visible == false,
 		string.format("(före %s → efter %s)", tostring(foreChip),
 			tostring(hitta("Live").Visible)))
-	check("och kortet stängs samtidigt",
-		hitta("Kort").Visible == false,
-		string.format("(Visible %s)", tostring(hitta("Kort").Visible)))
+	check("och bannern och valen stängs samtidigt",
+		CoachBanner.synlig() == false and hitta("Val").Visible == false,
+		string.format("(banner %s · val %s)", tostring(CoachBanner.synlig()),
+			tostring(hitta("Val").Visible)))
 	check("ingen lektion pågår efter avbrottet",
 		LektionController.pagar() == false,
 		string.format("(pågår %s)", tostring(LektionController.pagar())))
 	--[[ …och en stegning efter avbrottet får inte väcka något till liv. ]]
 	LektionController.steg(1, tele())
 	check("och en bildruta efter avbrottet visar ingenting",
-		hitta("Kort").Visible == false and hitta("Live").Visible == false,
-		"(kort och chip fortsatt släckta)")
+		CoachBanner.synlig() == false and hitta("Val").Visible == false
+			and hitta("Live").Visible == false,
+		"(banner, val och chip fortsatt släckta)")
 end
 
 --[[ ══ MÄTNINGEN STYR — INTE SLUMPEN, INTE EN KONSTANT ═════════════
@@ -478,13 +491,13 @@ end
 
 print("")
 
---[[ ══ KORTET LÄGGS UT OM NÄR YTAN ÄNDRAS (#206) ══════════════════════
+--[[ ══ VALEN LÄGGS UT OM NÄR YTAN ÄNDRAS (#206) ══════════════════════
 
-	Regeln som håller kortet borta från pekreglagen fanns redan, och den
-	är oförändrad. Felet var att den kördes EN gång, när kortet visades.
-	Ett kort som låg uppe när spelaren vred på plattan behöll sin gamla
-	geometri — medan reglagen, som är ankrade i högerkanten, flyttade sig
-	in under det.
+	Regeln som håller lektionens yta borta från pekreglagen fanns redan,
+	och den är oförändrad. Felet var att den kördes EN gång, när ytan
+	visades. Det som låg uppe när spelaren vred på plattan behöll sin
+	gamla geometri — medan reglagen, som är ankrade i högerkanten,
+	flyttade sig in under det.
 
 	Mätt i Studio på `754f2cc`, emulerad iPad, samma kort hela tiden:
 
@@ -493,27 +506,31 @@ print("")
 	    träffprov på SITT AV: 0 av 66 punkter nådde knappen
 
 	Den som vred plattan medan ett lektionskort låg uppe kunde alltså inte
-	längre sitta av. ]]
-print("\n── Kortet läggs ut om när ytan ändras ──")
+	längre sitta av.
+
+	#244: kortet är rivet, men reserven följde med till KNAPPRADEN som
+	ärvde dess plats i underkanten. Provet mäter därför `Val` i stället
+	för `Kort` — samma regel, samma tal, samma fel den skyddar mot. ]]
+print("\n── Valen läggs ut om när ytan ändras ──")
 do
 	--[[ Samma väg som resten av filen: stubbens GUI-träd, inte PlayerGui. ]]
 	local g = hitta("UBRFUgneta")
 	check("lektionsytan är byggd", g ~= nil)
-	local k = hitta("Kort")
-	check("kortet finns", k ~= nil)
+	local v = hitta("Val")
+	check("knappraden finns", v ~= nil)
 
-	if g and k then
-		--[[ Stor yta först. Kortet visas och läggs ut. ]]
+	if g and v then
+		--[[ Stor yta först. Valen visas och läggs ut. ]]
 		g.AbsoluteSize = Vector3.new(1376, 1032, 0)
 		UgnetaController.visa("Prov", { "rad" }, true, "Igen", false, false)
-		local bredStorlek = k.Size.X.Offset
-		local bredMitt = k.Position.X.Offset
-		check("kortet lades ut mot den breda ytan",
+		local bredStorlek = v.Size.X.Offset
+		local bredMitt = v.Position.X.Offset
+		check("raden lades ut mot den breda ytan",
 			bredStorlek > 0 and bredMitt > 0,
 			("bredd %d · mitt %d"):format(bredStorlek, bredMitt))
 
-		--[[ Och så krymper ytan, precis som när plattan vrids. Kortet
-			ligger kvar uppe; ingen visar ett nytt.
+		--[[ Och så krymper ytan, precis som när plattan vrids. Raden
+			ligger kvar uppe; ingen visar en ny.
 
 			Bänkens `AbsoluteSize` är ett rått fält, så en tilldelning
 			fyrar ingen signal — provet fyrar den därför själv. Att det är
@@ -524,9 +541,9 @@ do
 			"GetPropertyChangedSignal(\"AbsoluteSize\")")
 		g.AbsoluteSize = Vector3.new(1080, 810, 0)
 		g:GetPropertyChangedSignal("AbsoluteSize"):Fire()
-		local smalStorlek = k.Size.X.Offset
-		local smalMitt = k.Position.X.Offset
-		check("kortet lades ut OM när ytan krympte — inte kvar i gammal geometri",
+		local smalStorlek = v.Size.X.Offset
+		local smalMitt = v.Position.X.Offset
+		check("raden lades ut OM när ytan krympte — inte kvar i gammal geometri",
 			smalMitt ~= bredMitt or smalStorlek ~= bredStorlek,
 			("bredd %d -> %d · mitt %d -> %d"):format(bredStorlek, smalStorlek, bredMitt, smalMitt))
 		check("och det nya läget håller sig innanför den smala ytan",
@@ -538,18 +555,18 @@ do
 		g.AbsoluteSize = Vector3.new(1376, 1032, 0)
 		g:GetPropertyChangedSignal("AbsoluteSize"):Fire()
 		check("och ut igen när ytan växer tillbaka",
-			k.Position.X.Offset == bredMitt and k.Size.X.Offset == bredStorlek,
+			v.Position.X.Offset == bredMitt and v.Size.X.Offset == bredStorlek,
 			("mitt %d (var %d) · bredd %d (var %d)"):format(
-				k.Position.X.Offset, bredMitt, k.Size.X.Offset, bredStorlek))
+				v.Position.X.Offset, bredMitt, v.Size.X.Offset, bredStorlek))
 
-		--[[ Ett DOLT kort räknas inte om i onödan. ]]
+		--[[ En DOLD rad räknas inte om i onödan. ]]
 		UgnetaController.dolj()
-		local doldMitt = k.Position.X.Offset
+		local doldMitt = v.Position.X.Offset
 		g.AbsoluteSize = Vector3.new(800, 600, 0)
 		g:GetPropertyChangedSignal("AbsoluteSize"):Fire()
-		check("ett dolt kort räknas inte om",
-			k.Position.X.Offset == doldMitt,
-			("mitt %d"):format(k.Position.X.Offset))
+		check("en dold rad räknas inte om",
+			v.Position.X.Offset == doldMitt,
+			("mitt %d"):format(v.Position.X.Offset))
 	end
 end
 

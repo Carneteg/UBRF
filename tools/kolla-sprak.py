@@ -28,6 +28,11 @@ LOKALISERADE = [
     "roblox/src/client/PreparationController.luau",
     "roblox/src/client/KontrollHjalp.luau",
     "roblox/src/client/UgnetaController.luau",
+    #[[ #244: bannern ritar spelartext. Den har inga egna literaler —
+    #   orden kommer fran den som ropar Show — men listan ar stallet
+    #   dar man TANKER pa saken, och en ny fil som ritar text hor
+    #   hemma har aven nar den ar tom idag. ]]
+    "roblox/src/client/CoachBanner.luau",
     "roblox/src/client/InteractionController.luau",
     "roblox/src/client/TouchControls.luau",
     "roblox/src/client/Prompttext.luau",
@@ -70,6 +75,20 @@ SVENSKA_ORD = re.compile(
 
 def misstankt_svenska(s: str) -> bool:
     """Ser strängen ut som svensk spelartext?"""
+    #[[ ETT ENSAMT TECKEN ÄR INTE SPELARTEXT (#244).
+    #
+    #   `CoachBanner` har en tabell { ["å"] = "Å", ["ä"] = "Ä", … } som gör
+    #   målraden till versaler; Roblox har ingen TextTransform på TextLabel
+    #   och `string.upper` når inte omljuden i UTF-8. Skannern läste varje
+    #   bokstav som svensk spelartext utan nyckel.
+    #
+    #   Regeln är smal med flit: EN grafem, inget mellanslag, alltså en
+    #   BOKSTAV och inte ett ord. "Nej" (tre tecken) faller fortfarande,
+    #   och det ska den. Konsekvensen av regeln om den någon gång har fel
+    #   är att en enbokstavsetikett slipper igenom — och en etikett på ett
+    #   tecken är inget en spelare läser som text. ]]
+    if len(s) == 1:
+        return False
     return bool(SVENSKT.search(s) or (" " in s and SVENSKA_ORD.search(s)))
 STRANG = re.compile(r'"([^"\n]*)"')
 # `Sprak.t("nyckel")`, `Sprak.finns("nyckel")`, `Sprak.forSpelare(p, "nyckel")`

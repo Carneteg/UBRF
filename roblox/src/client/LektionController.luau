@@ -162,6 +162,14 @@ local function fortsattning()
 		Lektion.vidare(p)
 		if p.klar then
 			lage = "ingen"
+			--[[ #244: PASSET ÄR SLUT, OCH DÅ STEGAS INGET MER.
+			     `steg` returnerar direkt när passet är klart, och
+			     bannerns visningstid räknas just där. Utan den här raden
+			     hade den sista texten blivit stående för alltid — inte
+			     för att någon visade den igen, utan för att ingen längre
+			     räknade ned den. Det som stänger lektionen stänger
+			     därför också dess yta. ]]
+			UgnetaController.dolj()
 		elseif p.ix == forra then
 			--[[ SAMMA övning, nytt försök. Spelaren tryckte "Prova igen",
 			     och det ÄR valet att börja om — att sedan visa samma
@@ -198,6 +206,9 @@ function LektionController.start(ridhus: Instance?)
 		inspelare = nil
 		Lektion.hoppaOver(p)
 		lage = if p.klar then "ingen" else "ny"
+		--[[ Samma skäl som i `fortsattning` ovan: ett klart pass stegas
+		     inte längre, så ytan måste stängas här. ]]
+		if p.klar then UgnetaController.dolj() end
 		liveCd, liveSagt = 0, ""
 	end)
 	UgnetaGestalt.visa(ridhus)

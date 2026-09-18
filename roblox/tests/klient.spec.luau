@@ -62,6 +62,18 @@ local function hitta(namn)
 	return sok(gui)
 end
 
+--[[ #244: "lärarytan" är inte längre ETT kort. Undervisningens text bor i
+     CoachBanner uppe i kanten och spelarens val i den ramlösa raden `Val`
+     i underkanten. Frågan provet ställer är oförändrad — står det något
+     kvar på skärmen? — så den ställs till båda. ]]
+local function lararytaSlackt()
+	return CoachBanner.synlig() == false and hitta("Val").Visible == false
+end
+local function lararytaLage()
+	return ("banner %s · val %s"):format(tostring(CoachBanner.synlig()),
+		tostring(hitta("Val").Visible))
+end
+
 --[[ EN VERKLIG TANGENTTRYCKNING. Samma signal Roblox fyrar, med
 	gameProcessedEvent = false — provet rör inte LektionController. ]]
 --[[ Ett tangenttryck går dit tangenten FAKTISKT hör hemma.
@@ -137,12 +149,11 @@ prova("R startar försöket — tangenten går genom klientens inmatning",
 	('(läge "%s")'):format(LektionController.lage()))
 
 bildrutor(Lektion.FORSOK_SEK + 0.5)
-local kort = hitta("Kort")
 knapp = hitta("Knapp")
 pass = LektionController.pass()
-prova("efter försök 1 visas kortet, utan att provet rört controllern",
-	kort ~= nil and kort.Visible == true,
-	("(Visible %s)"):format(tostring(kort and kort.Visible)))
+prova("efter försök 1 kommer beskedet, utan att provet rört controllern",
+	CoachBanner.synlig() == true and hitta("Val").Visible == true,
+	("(%s)"):format(lararytaLage()))
 prova("med en tryckbar Prova igen",
 	knapp ~= nil and knapp.Visible == true
 		and string.find(knapp.Text, "Prova igen", 1, true) ~= nil,
@@ -173,8 +184,15 @@ prova("knappen startar försök 2 — och mätningen nollställs",
 		and pass.prov.n == 0 and LektionController.lage() == "rider",
 	("(övning %d · försök %d · tid %.1f · prov %d)"):format(pass.ix,
 		pass.forsokNr, pass.tid, pass.prov.n))
-prova("och kortet är borta när ritten återupptas",
-	kort.Visible == false, ("(Visible %s)"):format(tostring(kort.Visible)))
+--[[ #244: VALET är borta när ritten återupptas. Bannern får stå kvar och
+	tona ut av sig själv — den ligger i överkanten och skymmer inte
+	underlaget, och att kunna läsa målet under de första sekunderna av
+	försöket är hela poängen med Ride First. Det som ALDRIG får ligga kvar
+	över en aktiv ritt är ett val som väntar. ]]
+prova("och valet är borta när ritten återupptas",
+	hitta("Val").Visible == false and UgnetaController.vantar() == false,
+	("(val %s · väntar %s)"):format(tostring(hitta("Val").Visible),
+		tostring(UgnetaController.vantar())))
 
 bildrutor(Lektion.FORSOK_SEK + 0.5)
 knapp = hitta("Knapp")
@@ -192,11 +210,14 @@ prova("gamepadens Y går vidare till nästa övning",
 	("(övning %d, försök %d)"):format(pass.ix, pass.forsokNr))
 
 bildrutor(1)
-local punkt = hitta("Punkt1")
-prova("nästa övning presenteras",
-	punkt ~= nil and punkt.Text ~= "" and LektionController.lage() == "presentation",
-	('("%s" · läge "%s")'):format(punkt and punkt.Text or "-",
-		LektionController.lage()))
+do
+	local mal, detalj = CoachBanner.text()
+	prova("nästa övning presenteras i bannern",
+		mal ~= "" and detalj ~= "" and CoachBanner.synlig() == true
+			and LektionController.lage() == "presentation",
+		('("%s" / "%s" · läge "%s")'):format(mal, detalj,
+			LektionController.lage()))
+end
 
 --[[ LIVE-CHIPET ska ha kommit någon gång under de två försöken, av sig
 	självt — ingen i provet har anropat `live`. ]]
@@ -216,8 +237,8 @@ prova("karaktären försvinner → ingen lektion pågår",
 	LektionController.pagar() == false,
 	("(pågår %s)"):format(tostring(LektionController.pagar())))
 prova("och lärarytan är släckt",
-	hitta("Kort").Visible == false and hitta("Live").Visible == false,
-	("(kort %s · chip %s)"):format(tostring(hitta("Kort").Visible),
+	lararytaSlackt() and hitta("Live").Visible == false,
+	("(%s · chip %s)"):format(lararytaLage(),
 		tostring(hitta("Live").Visible)))
 --[[ HUD:ens EGEN flagga måste läsas här. `LektionController.vantar()`
 	returnerar false så snart passet är borta, alltså även om HUD:en
@@ -240,9 +261,9 @@ bildrutor(3)
 tryck("R")
 knapp.Activated:Fire()
 prova("en avsutten spelare får ingen undervisning",
-	hitta("Kort").Visible == false and hitta("Live").Visible == false
+	lararytaSlackt() and hitta("Live").Visible == false
 		and LektionController.pagar() == false,
-	"(kort och chip fortsatt släckta, R och knappen utan verkan)")
+	"(banner, val och chip fortsatt släckta, R och knappen utan verkan)")
 
 --[[ ══ SÄKERHET FÖRE SERVERSVAR ═══════════════════════════════════
 	Senior review av b303530, punkt 1. Förut anropades
@@ -261,7 +282,7 @@ do
 	fjarr.InvokeServer = function()
 		spar.anrop += 1
 		spar.pagarVidAnrop = LektionController.pagar()
-		spar.kortVidAnrop = hitta("Kort").Visible
+		spar.kortVidAnrop = not lararytaSlackt()
 		error("serversvar uteblev")
 	end
 
@@ -279,13 +300,13 @@ do
 	prova("serveranropet skedde EFTER den lokala städningen",
 		spar.anrop == 1 and spar.pagarVidAnrop == false
 			and spar.kortVidAnrop == false,
-		("(anrop %d · pågick %s · kort %s)"):format(spar.anrop,
+		("(anrop %d · pågick %s · lärarytan uppe %s)"):format(spar.anrop,
 			tostring(spar.pagarVidAnrop), tostring(spar.kortVidAnrop)))
 	prova("ett uteblivet serversvar återupplivar ingenting",
 		LektionController.pagar() == false
-			and hitta("Kort").Visible == false and hitta("Live").Visible == false
+			and lararytaSlackt() and hitta("Live").Visible == false
 			and LektionController.fortsatt() == false,
-		"(lektion av, kort och chip släckta, ingen väntan kvar)")
+		"(lektion av, lärarytan och chipet släckta, ingen väntan kvar)")
 
 	--[[ UPPREPAD AVSITTNING: varken dubbel städning eller en andra
 	     begäran till servern. ]]
@@ -299,7 +320,7 @@ do
 	tryck("R")
 	bildrutor(2)
 	prova("sent R efter avbrottet startar ingen lektion",
-		LektionController.pagar() == false and hitta("Kort").Visible == false,
+		LektionController.pagar() == false and lararytaSlackt(),
 		"(fortsatt avsutten)")
 end
 
@@ -727,7 +748,7 @@ do
 	prova("R stänger analysen och lämnar valet kvar",
 		LektionController.replayAktiv() == false
 			and UgnetaController.vantar() == true
-			and hitta("Kort").Visible == true,
+			and hitta("Val").Visible == true,
 		("(aktiv %s · väntar %s)"):format(
 			tostring(LektionController.replayAktiv()),
 			tostring(UgnetaController.vantar())))
@@ -758,7 +779,7 @@ do
 	prova("karaktären försvinner → analysen stängs med allt annat",
 		LektionController.replayAktiv() == false
 			and LektionController.pagar() == false
-			and hitta("Kort").Visible == false,
+			and lararytaSlackt(),
 		("(aktiv %s · pågår %s)"):format(
 			tostring(LektionController.replayAktiv()),
 			tostring(LektionController.pagar())))

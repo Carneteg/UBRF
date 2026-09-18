@@ -405,10 +405,6 @@ Sprak.text = {
 		sv = "▲ FRAMÅT",
 		en = "▲ FORWARD",
 	},
-	["ugneta.rubrik"] = {
-		sv = "UGNETA · RIDINSTRUKTÖR",
-		en = "UGNETA · RIDING INSTRUCTOR",
-	},
 	["ugneta.hastens_svar"] = {
 		sv = "hästens svar",
 		en = "the horse's response",
