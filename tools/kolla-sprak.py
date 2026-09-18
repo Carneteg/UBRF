@@ -75,6 +75,20 @@ SVENSKA_ORD = re.compile(
 
 def misstankt_svenska(s: str) -> bool:
     """Ser strängen ut som svensk spelartext?"""
+    #[[ ETT ENSAMT TECKEN ÄR INTE SPELARTEXT (#244).
+    #
+    #   `CoachBanner` har en tabell { ["å"] = "Å", ["ä"] = "Ä", … } som gör
+    #   målraden till versaler; Roblox har ingen TextTransform på TextLabel
+    #   och `string.upper` når inte omljuden i UTF-8. Skannern läste varje
+    #   bokstav som svensk spelartext utan nyckel.
+    #
+    #   Regeln är smal med flit: EN grafem, inget mellanslag, alltså en
+    #   BOKSTAV och inte ett ord. "Nej" (tre tecken) faller fortfarande,
+    #   och det ska den. Konsekvensen av regeln om den någon gång har fel
+    #   är att en enbokstavsetikett slipper igenom — och en etikett på ett
+    #   tecken är inget en spelare läser som text. ]]
+    if len(s) == 1:
+        return False
     return bool(SVENSKT.search(s) or (" " in s and SVENSKA_ORD.search(s)))
 STRANG = re.compile(r'"([^"\n]*)"')
 # `Sprak.t("nyckel")`, `Sprak.finns("nyckel")`, `Sprak.forSpelare(p, "nyckel")`
