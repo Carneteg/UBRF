@@ -275,6 +275,100 @@ do
 		slag() > 0, ("%d slag"):format(slag()))
 end
 
+print("\n-- 7. Sjalva overgangsbildrutan --")
+
+do
+	--[[ HAR DRIVS `SoundController` DIREKT, och det ar avsiktligt.
+
+	     Blocken ovan kor hela ekipaget och mater takt over stracka. Det ar
+	     ratt for kadensen, men det kan inte se ETT extra slag i EN bildruta
+	     -- overskottet forsvinner i tolerans. Det som provas har ar
+	     `step()`:s beslut bildruta for bildruta, och da ar controllerns
+	     eget kontrakt `step(loco, dt)` den riktiga ingangen.
+
+	     Ingen genvag forbi produktionskoden: det ar samma `step` som
+	     ekipaget anropar. ]]
+	local function nyLjud()
+		local rig = __makeRig()
+		rig.model.FindFirstChild = function() return nil end
+		local sc = SoundController.new(rig, STATS)
+		local slag = 0
+		sc._hoof = function() slag += 1 end
+		return sc, function() return slag end
+	end
+
+	local function bild(gangart, ryggar, fas, grounded)
+		return { gait = gangart, ryggar = ryggar, phase = fas,
+			grounded = if grounded == nil then true else grounded,
+			airborne = false, speed = if ryggar then -1.1 else 1.45 }
+	end
+
+	--[[ TAKTBYTET. Ryggningens tva delningar blir skrittens fyra.
+
+	     Fasen 0,20 -> 0,30 korsar INGEN delning i ryggningens takt
+	     (floor(0,4)=0, floor(0,6)=0). I skrittens takt ser det ut som ett
+	     byte (floor(0,8)=0 -> floor(1,2)=1), och den gamla jamforelsen
+	     matte forra bildrutans fas mot DAGENS delningar. Ett hovslag som
+	     ingen hast tog. ]]
+	local sc, slag = nyLjud()
+	sc:step(bild("halt", true, 0.20), 1 / 60)
+	local fore = slag()
+	sc:step(bild("walk", false, 0.30), 1 / 60)
+	check("7. taktbytet rygga -> skritt ger inget slag i bytesbildrutan",
+		slag() == fore, ("%d slag i bytet"):format(slag() - fore))
+
+	--[[ Och den nya takten ska ANDA leva direkt efterat. En seed som
+	     stanger av ljudet vore lika fel som ett extra slag. ]]
+	sc:step(bild("walk", false, 0.55), 1 / 60)
+	check("och skrittakten lever direkt efter bytet",
+		slag() > fore, ("%d slag"):format(slag() - fore))
+end
+
+do
+	--[[ KVARHANGANDE STEG EFTER TYSTNAD.
+
+	     Hon ryggar, stannar i halt en stund, och borjar rygga igen. Under
+	     halten faller inga slag. Nollas inte slagminnet ligger ett gammalt
+	     index kvar, och forsta bildrutan hon ror sig igen jamfors mot det
+	     -- ett steg ur den FORRA rorelsen. ]]
+	local function nyLjud()
+		local rig = __makeRig()
+		rig.model.FindFirstChild = function() return nil end
+		local sc = SoundController.new(rig, STATS)
+		local slag = 0
+		sc._hoof = function() slag += 1 end
+		return sc, function() return slag end
+	end
+	local function bild(gangart, ryggar, fas)
+		return { gait = gangart, ryggar = ryggar, phase = fas,
+			grounded = true, airborne = false,
+			speed = if ryggar then -1.1 else 0 }
+	end
+
+	local sc, slag = nyLjud()
+	sc:step(bild("halt", true, 0.20), 1 / 60)      -- seedar pa index 0
+
+	--[[ Halt utan ryggning: tyst. Fasen star still i verkligheten, men
+	     provet later den ligga kvar dar den var. ]]
+	for _ = 1, 5 do sc:step(bild("halt", false, 0.20), 1 / 60) end
+	local fore = slag()
+
+	--[[ Hon borjar rygga igen, fran en fas som korsat en delning under
+	     tiden hon stod still. Utan nollstallning laser den gamla
+	     jamforelsen det som ett steg. ]]
+	sc:step(bild("halt", true, 0.70), 1 / 60)
+	check("8. inget steg hanger kvar over en tystnad",
+		slag() == fore, ("%d slag vid ateruppstarten"):format(slag() - fore))
+
+	--[[ Kontrollprov: takten kommer igang igen efterat. Fasen 0,70 -> 0,30
+	     ar ett varv runt nollan, och med tva delningar korsar den
+	     delningen vid 0,0 - alltsa ett riktigt hovslag. 0,95 hade legat
+	     kvar i samma halva och inte matt nagot. ]]
+	sc:step(bild("halt", true, 0.30), 1 / 60)
+	check("och ryggningstakten kommer igang igen",
+		slag() > fore, ("%d slag"):format(slag() - fore))
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 	local avsluta = (os :: any).exit
