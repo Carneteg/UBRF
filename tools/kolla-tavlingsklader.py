@@ -35,6 +35,10 @@ ROT = pathlib.Path(__file__).resolve().parent.parent
 KATALOGFIL = "roblox/src/shared/HorseCore/Tavlingsklader.luau"
 SPECFIL = "roblox/tests/tavlingsklader.spec.luau"
 DENNA = "tools/kolla-tavlingsklader.py"
+#[[ Grindens EGET prov bar ett av talen med flit — det ska fanga en grind
+#   som slutat leta, inte spegla den. Darfor undantas det, av samma skal
+#   som specen: facit ligger utanfor det som provas. ]]
+GRINDPROVET = "tools/testa-kolla-tavlingsklader.py"
 
 #[[ De sex talen. De star har EN gang till, och det ar med flit: en grind
 #   som laste talen ur filen den bevakar hade godkant vilken andring som
@@ -46,16 +50,13 @@ ASSET_ID = [
 ]
 
 #[[ Filer som FAR namna talen. Allt annat i repot far inte. ]]
-UNDANTAG = {KATALOGFIL, SPECFIL, DENNA}
+UNDANTAG = {KATALOGFIL, SPECFIL, DENNA, GRINDPROVET}
 
 #[[ Var grinden letar. Hela repot utom det som inte ar kalla. ]]
 SOKMAPPAR = ["roblox", "src", "tools", "game"]
 SUFFIX = {".luau", ".lua", ".js", ".mjs", ".py", ".json", ".ts"}
 HOPPA = {"node_modules", ".build", ".git", "__pycache__", "dist", "releases"}
 
-#[[ En andra katalogdefinition kanns igen pa faltnamnen, inte pa talen:
-#   nagon kan skriva av STRUKTUREN och fylla i talen senare. ]]
-ANDRA_KATALOG = re.compile(r"\bshirtAssetId\b|\bpantsAssetId\b")
 
 
 def kallfiler():
@@ -92,13 +93,6 @@ def main() -> int:
                     f"{rel}:{rad}: asset-id {tal} star utanfor katalogen — "
                     "en kopierad ID-tabell ar precis det kontraktet forbjuder"
                 )
-        traff = ANDRA_KATALOG.search(text)
-        if traff:
-            rad = text[: traff.start()].count("\n") + 1
-            fynd.append(
-                f"{rel}:{rad}: en andra katalogstruktur "
-                "(shirtAssetId/pantsAssetId) — katalogen ska finnas EN gang"
-            )
 
     #[[ FAIL CLOSED. Hittas inte katalogen alls ar grinden inaktuell, och
     #   en grind som tyst slutar mata ar varre an ingen grind. ]]

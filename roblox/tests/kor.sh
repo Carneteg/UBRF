@@ -50,6 +50,13 @@ if ! python3 ../tools/kolla-tavlingsklader.py; then
   echo "TAVLINGSKLADERGRINDEN MISSLYCKADES"
   exit 1
 fi
+# …och grinden sjalv provas i BADA riktningarna: en kopierad ID-literal
+# ska ge rott, en laglig konsument som laser katalogens publika falt ska
+# ge gront. Den andra riktningen ar den som gav CHANGES_REQUESTED pa 250.
+if ! python3 ../tools/testa-kolla-tavlingsklader.py; then
+  echo "GRINDPROVET FOR TAVLINGSKLADER MISSLYCKADES"
+  exit 1
+fi
 
 status=0
 for f in $SPECAR; do
