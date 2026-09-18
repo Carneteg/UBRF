@@ -11,6 +11,10 @@
 return {
 	Config = require(script.Config),
 	Gaits = require(script.Gaits),
+	--[[ Trappan Rygga ↔ Halt ↔ Skritt ↔ Trav ↔ Galopp. Delad därför att
+	     servern äger stegen och klienten predikterar dem — samma trappa
+	     på båda sidor, annars är prediktionen en andra sanning. ]]
+	Ridtrappa = require(script.Ridtrappa),
 	StateMachine = require(script.StateMachine),
 	RigAdapter = require(script.RigAdapter),
 	--[[ Vad en viss hästmodell kallar sina kroppsdelar. Delad därför att

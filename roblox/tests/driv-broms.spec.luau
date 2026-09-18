@@ -596,6 +596,29 @@ do
 		("(flank %s, gångart %s)"):format(tostring(i.gaitUp), mc.loco.gait))
 end
 
+print("\n── 3c. Spärrens tal är kanon, inte klientens eget ──")
+do
+	--[[ #233 Fas 4b. Spärren låg som literalen `0.60` i `Input`, och det
+	     var rätt så länge den bara var UX: den hindrade hamrande på den
+	     yta spelaren själv rörde.
+
+	     Nu äger servern gångarten och mäter samma takt i
+	     `HorseService.onRidingIntent`. Ett eget `0.60` på serversidan hade
+	     varit en andra UX-takt som glider ifrån den här vid första
+	     trimningen — och glidningen hade synts som att hjälper ibland
+	     försvinner, aldrig som en siffra som står fel.
+
+	     Raden mäter att det finns EN källa. Skrivs literalen tillbaka i
+	     `Input` faller den.
+
+	     Serverns egen grind, marginalen och stegmaskinen mäts i
+	     `ridinput.spec`; här mäts bara att klienten läser kanon. ]]
+	check("klientens impulsspärr ÄR Config.RIDINPUT.ImpulsSparr",
+		Input.IMPULS_SPARR == Config.RIDINPUT.ImpulsSparr,
+		("Input %.3f / kanon %.3f"):format(
+			Input.IMPULS_SPARR, Config.RIDINPUT.ImpulsSparr))
+end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else

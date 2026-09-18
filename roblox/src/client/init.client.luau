@@ -22,6 +22,7 @@ local ContextActionService = game:GetService("ContextActionService")
 
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Config, RigAdapter, Net = Core.Config, Core.RigAdapter, Core.Networking
+local Ridtrappa = Core.Ridtrappa
 local Telemetri = require(game:GetService("ReplicatedStorage").HorseCore.Telemetri)
 
 local Input = require(script.Input)
@@ -177,6 +178,12 @@ local function mount(model: Model)
 		ritt = Telemetri.sittUpp(Telemetri.nyRitt(), model.Name, "ridhus"),
 		telemetri = nil :: { [string]: any }?,
 		syncTimer = 0,
+		--[[ #233 Fas 4b. Monotont löpnummer på avsikterna, så att servern
+		     kan kasta ett återspelat paket. Börjar om vid varje
+		     uppsittning, precis som serverns räknare gör i
+		     `nollstallRitt` — de två måste nollas ihop, annars läser
+		     servern den nya rittens första hjälp som en gammal. ]]
+		ridSekvens = 0,
 	}
 
 	local character = player.Character
@@ -433,6 +440,23 @@ Net.get("StaminaSync").OnClientEvent:Connect(function(stamina, max, ceiling, ene
 	end
 end)
 
+--[[ ── SERVERNS ACCEPTERADE GÅNGART (#233 Fas 4b) ─────────────────────
+
+     Svaret på varje avsikt, och på varje gångart uthålligheten sänkt av
+     sig själv. Klienten predikterade steget när knappen trycktes; det här
+     är facit.
+
+     Lyssnaren sitter på MODULNIVÅ och inte i `mount()`, av samma skäl som
+     `StaminaSync` gör det: en lyssnare som kopplas per uppsittning
+     kopplas också EN GÅNG PER uppsittning, och den som glömmer riva den
+     får två. `if ride` är hela grinden som behövs — ett svar som kommer
+     efter avsittningen hör inte till någon ritt och ska falla. ]]
+Net.get("RidTillstand").OnClientEvent:Connect(function(tillstand)
+	if not ride then return end
+	if typeof(tillstand) ~= "table" then return end
+	ride.movement:reconcile(tillstand.gangart, tillstand.ryggar, tillstand.version)
+end)
+
 --[[ Sitt av med E, och alltid om karaktären dör. Lektionens fortsättning
      ligger före avsittningen: den är ett svar på ett kort som står uppe,
      och får aldrig kunna tolkas som något annat. ]]
@@ -560,7 +584,41 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 
 	local intent = Input.consume()
+
+	--[[ ── AVSIKTEN SKICKAS, INTE RESULTATET (#233 Fas 4b) ─────────────
+
+	     Trappans läge läses FÖRE och EFTER `step`. Flyttade ryttarens
+	     hjälp den, är det en avsikt — `driv` uppåt, `broms` nedåt — och
+	     den går på tråden som just det ordet.
+
+	     VARFÖR MÄTT OCH INTE AVLÄST UR `intent`: paraden stegar också ned,
+	     men bara på sin FLANK, och flanken räknas inne i
+	     `MovementController`. Att läsa `intent.parad` här hade krävt en
+	     andra kopia av flanklogiken, och två kopior av en flank är två
+	     flanker. Mätningen fångar alla tre vägarna — DRIV, BROMS och
+	     parad — utan att veta något om dem.
+
+	     `hjalp`-villkoret är inte överflödigt. Trappan kan flytta sig utan
+	     att ryttaren rört något: sjunker uthållighetstaket klampar
+	     `_targetGait` ned av sig själv. Den rörelsen är INTE en avsikt,
+	     och servern gör redan samma sänkning på sin sida — skickades den
+	     som `broms` hade hästen stegat ned två pinnar på en trötthet. ]]
+	local hjalp = intent.gaitUp or intent.gaitDown or (intent.parad or 0) > 0
+	local trappaFore = Ridtrappa.index(
+		ride.movement.loco.beddGangart, ride.movement.ryggar)
+
 	ride.movement:step(intent, dt)
+
+	if hjalp then
+		local trappaEfter = Ridtrappa.index(
+			ride.movement.loco.beddGangart, ride.movement.ryggar)
+		if trappaEfter ~= trappaFore then
+			ride.ridSekvens += 1
+			Net.get("RidingIntent"):FireServer(
+				if trappaEfter > trappaFore then Ridtrappa.DRIV else Ridtrappa.BROMS,
+				ride.ridSekvens)
+		end
+	end
 
 	local loco = ride.movement.loco
 
@@ -592,7 +650,13 @@ RunService.RenderStepped:Connect(function(dt)
 	ride.syncTimer += dt
 	if ride.syncTimer >= 0.1 then
 		ride.syncTimer = 0
-		Net.get("StateSync"):FireServer(loco.gait, loco.speed)
+		--[[ GÅNGARTEN LIGGER INTE LÄNGRE PÅ TRÅDEN (#233 Fas 4b).
+		     Anropet var `FireServer(loco.gait, loco.speed)`, och den
+		     första halvan var hela auktoritetshålet: servern hade ingen
+		     annan källa till vilken gångart hästen var i än klientens
+		     ord. Nu bär remoten farten, som är en OBSERVATION och inte
+		     ett beslut — serverns gångart kommer ur `RidingIntent`. ]]
+		Net.get("StateSync"):FireServer(loco.speed)
 	end
 end)
 

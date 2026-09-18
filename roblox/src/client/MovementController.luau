@@ -30,6 +30,11 @@ local RunService = game:GetService("RunService")
 local Core = require(game:GetService("ReplicatedStorage").HorseCore)
 local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
 local Config, Gaits, RigAdapter = Core.Config, Core.Gaits, Core.RigAdapter
+--[[ Samma trappa servern stegar i. Klienten PREDIKTERAR steget för att
+     knappen ska kännas omedelbar; servern avgör. Två kopior av trappan
+     hade gjort prediktionen till en andra sanning i stället för en
+     gissning som rättas. ]]
+local Ridtrappa = Core.Ridtrappa
 local StateMachine = Core.StateMachine
 local RidKanon, Hjalper, Svar = Core.RidKanon, Core.Hjalper, Core.Svar
 
@@ -180,7 +185,10 @@ end
      `intent.gaitTo` (pekytans namngivna knappar) och `intent.forward`
      (W ur halt startade skritt, S rullade ned). Båda är borta. En hjälp
      är en impuls; att hålla en knapp är inte att rida. ]]
-local RYGGA = 0                              -- pinnen under `Gaits.index("halt")`
+--[[ Pinnen under `Gaits.index("halt")`. Stod som en literal här; sedan
+     #233 Fas 4b kommer den ur den delade trappan, som servern läser ur
+     samma modul. ]]
+local RYGGA = Ridtrappa.RYGGA
 function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolean?): string
 	local index = Gaits.index(self.loco.beddGangart or self.loco.targetGait)
 	--[[ Stegar från den gångart ryttaren SENAST BAD OM, inte från den
@@ -233,7 +241,7 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	     kan sänka spelarens tak, men ingenting kan höja det över
 	     Gaits.SPELBAR_TOPP. Utan min() här hade en felaktig eller
 	     manipulerad GaitCeiling från servern öppnat fyrsprånget. ]]
-	local ceilingIndex = math.min(Gaits.index(self.ceiling), Gaits.index(Gaits.SPELBAR_TOPP))
+	local ceilingIndex = Ridtrappa.takIndex(self.ceiling)
 	--[[ GOLVET ÄR RYGGA, inte halt. Taket är oförändrat — rygga är ett
 	     steg NED och kan aldrig öppna en gångart uthålligheten stängt. ]]
 	index = math.clamp(index, RYGGA, ceilingIndex)
@@ -243,6 +251,57 @@ function MovementController:_targetGait(intent: Types.Intent, paradFlank: boolea
 	     ska fortsätta läsa "halt". Det är `self.ryggar` som bär pinnen,
 	     och `step()` är det enda som frågar efter den. ]]
 	return Gaits.byIndex(math.max(index, 1))
+end
+
+--[[ ── RECONCILE MOT SERVERNS SVAR (#233 Fas 4b) ──────────────────────
+
+     Allt ovanför den här raden är PREDIKTION. Klienten stegar trappan i
+     samma bildruta som knappen trycks, därför att en hjälp som väntar på
+     ett tur-och-retur över nätet inte känns som en hjälp — den känns som
+     att spelet hänger sig. Men prediktionen är en gissning, och servern
+     är facit.
+
+     Tre fall, och bara ett av dem gör något:
+
+       servern höll med        vanligaste fallet — ingen ändring, ingen
+                               ryckighet, ingen kod som körs
+       servern nekade steget   klienten står en pinne fel och dras
+                               tillbaka
+       servern sänkte taket    hästen rullar ned av trötthet utan att
+                               ryttaren bett om det
+
+     VERSIONEN ÄR INTE DEKOR. Nätet garanterar inte ordningen, och ett
+     omkastat paket som lyds skulle dra tillbaka ryttaren till en gångart
+     hon redan lämnat — en rättelse som gör fel. Gamla svar kastas.
+
+     Den VÄNTANDE övergången måste rivas, och det är den subtila delen:
+     `_vantar` bär hästens svarstid på en hjälp som ännu inte börjat
+     verka. Lämnas den kvar fyrar den om en stund och sätter tillbaka
+     precis det `targetGait` servern nyss nekade. Reconcilen hade då
+     hållit i en halv sekund och sedan tyst upphävt sig själv. ]]
+function MovementController:reconcile(gangart: string?, ryggar: boolean?, version: number?)
+	if typeof(gangart) ~= "string" or not Gaits.BY_NAME[gangart] then return end
+	if version ~= nil then
+		if typeof(version) ~= "number" or version ~= version then return end
+		if version <= (self._ridVersion or 0) then return end
+		self._ridVersion = version
+	end
+
+	local loco = self.loco
+	local serverIndex = Ridtrappa.index(gangart, ryggar)
+	local minIndex = Ridtrappa.index(loco.beddGangart or loco.targetGait, self.ryggar)
+	if serverIndex == minIndex then return end
+
+	self.ryggar = Ridtrappa.ryggar(serverIndex)
+	loco.beddGangart = gangart
+	loco.targetGait = gangart
+	--[[ Tempot rörs INTE här. Hästen bromsar eller ökar mot sitt nya mål
+	     med gångartens egen `accel`/`retard` i `step()`, precis som vid en
+	     vanlig övergång. Att skriva `loco.speed` hade varit en teleport i
+	     farten, och det är den sortens ryck som gör att en rättelse känns
+	     som ett fel i stället för som en häst. ]]
+	self._vantar = nil
+	self._ov = nil
 end
 
 function MovementController:step(intent: Types.Intent, dt: number)
