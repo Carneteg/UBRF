@@ -1444,13 +1444,55 @@ end
      som når tråden faktiskt BÄR märket. ]]
 do
 	local remote = Net.get("RidingIntent")
+	local tillstand = Net.get("RidTillstand")
 
 	--[[ Servern har satt märket före `MountChanged`. Här gör bänken
 	     detsamma, eftersom `HorseService` inte ligger i den här bunten. ]]
 	hast:SetAttribute("RidSession", "r7-provritt")
 	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
 
+	--[[ FÖRST AV ALLT, och ordningen är hela poängen: ett svar som kommer
+	     INNAN klienten skickat sin första avsikt ska lydas.
+
+	     Sändningen har en reservläsning av attributet, och den räddar
+	     märket när den första avsikten går ut. Men fram till dess måste
+	     `ride.rittId` redan vara satt, annars förkastar
+	     `RidTillstand`-lyssnaren varje svar i början av ritten — hon
+	     reconcilar inte förrän hon själv hunnit be om något. Det är
+	     `mount()`:s läsning av attributet som håller det, och mäts bara
+	     här.
+
+	     OBSERVERBARHETEN: taket är galopp. Lyddes svaret står hon i galopp,
+	     och då flyttar ett DRIV inte trappan — alltså tystnad på tråden.
+	     Ignorerades det står hon i halt och DRIV skickar en avsikt. ]]
+	tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+		gangart = "canter", ryggar = false, version = 400 })
 	remote._skickat = {}
+	Input.nollaImpulsSparr()
+	Input.drivImpuls()
+	for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+	prova("klienten känner sin ritt REDAN vid uppsittningen",
+		#remote._skickat == 0,
+		("(%d paket)"):format(#remote._skickat))
+
+	--[[ KORTET TAR OVER EN BILDRUTA IN, och en pausad ritt kastar varje
+	     avsikt. Matningen ovan hann fore; harifran maste kortet kvitteras
+	     genom produktionens egen vag, annars mater resten ingenting. ]]
+	for _ = 1, 6 do
+		if not LektionController.vantar() then break end
+		LektionController.gaVidare()
+		RunService.RenderStepped:Fire(1 / 60)
+	end
+	prova("kortet ar kvitterat — ritten gar att mata igen",
+		LektionController.vantar() == false,
+		("(väntar %s)"):format(tostring(LektionController.vantar())))
+
+	--[[ Ned till skritt igen, så att nästa DRIV har någonstans att ta vägen. ]]
+	tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+		gangart = "walk", ryggar = false, version = 401 })
+
+	remote._skickat = {}
+	Input.nollaImpulsSparr()
 	Input.drivImpuls()
 	for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
 
