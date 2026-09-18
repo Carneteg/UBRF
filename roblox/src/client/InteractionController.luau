@@ -97,6 +97,36 @@ end
 local PROMPT_RAD = { MountPrompt = -1, RidaNuPrompt = 0, LedPrompt = 1,
 	SadlaPrompt = 2, TransaPrompt = 2 }
 
+--[[ ── SAMMA ORDNING GÄLLER ÖVERALLT (#246 QA-blockerare) ─────────────
+
+	Tabellen ovan är produktordningen för prompternas kolumn i världen.
+	Närområdeslistan på touch visar SAMMA handlingar, och den sorterade
+	dem på avstånd — vilket lade "Rida nu" fjärde, efter sadel, träns och
+	ledning.
+
+	Mätt i Studio 2026-09-18 på `8a3c435`, spelaren 4 studs från Trixie,
+	sju prompter inom räckvidd:
+
+	    kapacitet 5   bridle · saddle · Lead · Ride now · Open
+	    kapacitet 3   bridle · saddle · Lead
+	    kapacitet 2   bridle · saddle
+	    kapacitet 1   bridle
+
+	På en telefon ryms två eller tre rader. "Rida nu" fanns alltså inte i
+	listan — och dess nativebild var släckt, eftersom touch-ytan äger
+	bilderna. Det gick bokstavligen inte att trycka på Ride First-vägen.
+
+	Ordningen läses därför HÄRIFRÅN och skrivs inte av. Två moduler med
+	var sin uppfattning om vad som är viktigast är precis hur det här
+	felet uppstod. ]]
+function InteractionController.handlingsrang(promptNamn: any): number
+	local r = if type(promptNamn) == "string" then PROMPT_RAD[promptNamn] else nil
+	--[[ Okända prompter — boxfronternas utrustning, dörrar, titthålet —
+	     är kontextuella och hamnar efter de handlingar produktordningen
+	     namnger. De försvinner inte; de trängs inte före. ]]
+	return if r ~= nil then r else 3
+end
+
 --[[ ══ HANDKONTROLLEN: EN PLATS, MOT HELA KONTROLLMATRISEN ═══════════════
 
 	Första rättelsen av #182 gav de tre prompterna var sin knapp — X, Y och
