@@ -23,7 +23,26 @@ local DEFINITIONS = {
 	MountRequest = "RemoteFunction",    -- klient → server: får jag sitta upp?
 	DismountRequest = "RemoteFunction",
 	MountChanged = "RemoteEvent",       -- server → alla: vem rider vad
-	StateSync = "RemoteEvent",          -- klient → server: tempo och gångart
+	--[[ #233 FAS 4b. `StateSync` bar förut PARET (gångart, tempo), och
+	     gångarten på tråden var serverns enda källa till vilken gångart
+	     hästen var i. Det var klientauktoritet med ett rimlighetsfilter:
+	     en manipulerad klient kunde hoppa halt → galopp i ett svep så
+	     länge tempot följde med.
+
+	     Nu bär remoten ETT argument, farten, och gångarten går inte att
+	     skicka. Skillnaden mot att bara ignorera argumentet är att det
+	     här inte går att glömma bort: det finns ingen gångart att läsa. ]]
+	StateSync = "RemoteEvent",          -- klient → server: observerat tempo
+	--[[ Den semantiska avsikten — `driv` eller `broms`, ingenting annat.
+	     Klienten säger vad ryttaren BAD OM; servern avgör vad som händer.
+	     Hästen står inte i argumentet: servern har redan rider→häst-
+	     sessionen och slår upp den själv, och det är därför en spelare
+	     inte kan adressera någon annans häst. ]]
+	RidingIntent = "RemoteEvent",       -- klient → server: driv eller broms
+	--[[ Serverns svar: den ACCEPTERADE gångarten, ryggningsläget och en
+	     version som gör gamla svar ignorerbara. Går till ryttaren; för
+	     åskådare replikeras samma sanning på hästens attribut. ]]
+	RidTillstand = "RemoteEvent",       -- server → ryttaren: accepterat läge
 	StaminaSync = "RemoteEvent",        -- server → ägaren: uthållighet
 	HorseReaction = "RemoteEvent",      -- server → alla: gnägg, stegring, reaktion
 	PreparationStep = "RemoteFunction",  -- klient → server: jag vill göra det här steget

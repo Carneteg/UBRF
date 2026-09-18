@@ -38,6 +38,7 @@ local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
 
 local Types = require(game:GetService("ReplicatedStorage").HorseCore.Types)
+local Config = require(game:GetService("ReplicatedStorage").HorseCore.Config)
 
 local Input = {}
 
@@ -158,8 +159,19 @@ Input.AVSITT = "ActionSittAv"
 --[[ Spärren, i sekunder. Kontraktet ger spannet 0,5–0,8; 0,60 ligger i
      mitten. Lägre och hamrandet går igenom, högre och en ärlig
      nedstegring från galopp till halt börjar kännas som att knappen
-     hänger sig. ]]
-Input.IMPULS_SPARR = 0.60
+     hänger sig.
+
+     TALET BOR INTE HÄR LÄNGRE (#233 Fas 4b). Servern äger gångarten nu
+     och måste mäta samma takt; ett eget `0.60` på serversidan hade varit
+     en andra UX-takt som glider ifrån den här vid första trimningen.
+     Kanon står i `Config.RIDINPUT.ImpulsSparr`, och den här raden är dess
+     klientnamn — kvar för att `TouchControls`, proven och den här modulen
+     redan adresserar spärren under det namnet.
+
+     Spärren är sedan Fas 4b PRESENTATION: den som byter ut sin klient
+     byter också ut den. Det som håller är serverns grind i
+     `HorseService.onRidingIntent`. ]]
+Input.IMPULS_SPARR = Config.RIDINPUT.ImpulsSparr
 
 --[[ Klockan är utbytbar, och det är enda skälet den har ett namn.
 

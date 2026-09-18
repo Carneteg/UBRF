@@ -157,6 +157,37 @@ Config.MOVEMENT = {
 	ProbeDepth = 8,        -- studs, markavkänningens räckvidd
 }
 
+--[[ ── RIDINPUTENS TAKT (#233, Fas 4b) ─────────────────────────────
+     Impulsspärren låg i `Input.IMPULS_SPARR` på klienten, och det var
+     rätt så länge spärren bara var UX: den hindrade hamrande på den yta
+     spelaren själv rörde.
+
+     Fas 4b flyttar auktoriteten till servern, och då behöver servern
+     samma tal. Ett andra `0.60` på serversidan hade varit en andra
+     UX-takt som glider ifrån den första vid första trimningen — precis
+     den sortens dubbla sanning kontraktet förbjuder. Talet står därför
+     HÄR, i delad kod, och `Input` läser det.
+
+     `ServerMarginal` är inte en uppmjukning av regeln utan en
+     erkänd mätskillnad: klientens spärr mäts på klientens klocka och
+     serverns på serverns, och paketen färdas inte lika fort. Två ärliga
+     hjälper 0,60 s isär kan nå servern 0,56 s isär. Utan marginal hade
+     grinden ätit legitima hjälper, och en grind som stryper ärlig
+     ridning läses som trasig styrning och plockas bort i stället för
+     justeras. Marginalen är liten nog att hamrande fortfarande faller:
+     spam ligger på millisekunder, inte på 0,52 s.
+
+     Skopan är samma slags DoS-vakt som `StateSync` redan har. Ärlig
+     ridning ger som mest 1/0,60 ≈ 1,7 avsikter i sekunden; fyra i skopan
+     med sex i påfyllning per sekund är långt över det och långt under
+     vad en spammande klient försöker med. ]]
+Config.RIDINPUT = {
+	ImpulsSparr = 0.60,     -- sekunder mellan två hjälper, kanon
+	ServerMarginal = 0.08,  -- serverns tolerans för nätverksjitter
+	SkopaTak = 4,           -- avsikter i skopan
+	SkopaPafyll = 6,        -- påfyllning per sekund
+}
+
 --[[ ── Studs per meter ──────────────────────────────────────────────
      All spellogik räknar i meter för att matcha den befintliga
      ridmodellen. Roblox räknar i studs. Omräkningen sker på ett ställe. ]]

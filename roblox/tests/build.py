@@ -131,6 +131,7 @@ FORBEREDELSE = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
     # och laser den tilldelade hastens profil (blocker 1).
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
@@ -216,6 +217,7 @@ FORBEREDELSE = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
     # och laser den tilldelade hastens profil (blocker 1).
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
@@ -299,6 +301,7 @@ FORBEREDELSE = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     # HorseService rakner numera energin med G02-B:s kanon (blocker 3),
     # och laser den tilldelade hastens profil (blocker 1).
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
@@ -366,6 +369,7 @@ PARITET = [
     ("Types",      "src/shared/HorseCore/Types.luau"),
     ("Config",     "src/shared/HorseCore/Config.luau"),
     ("Gaits",      "src/shared/HorseCore/Gaits.luau"),
+    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     ("RidKanon",   "src/shared/HorseCore/RidKanon.luau"),
     ("Hjalper",    "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",       "src/shared/HorseCore/Svar.luau"),
@@ -419,6 +423,7 @@ KLIENT = SPEL + [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     ("Hjalper",      "src/shared/HorseCore/Hjalper.luau"),
     ("Svar",         "src/shared/HorseCore/Svar.luau"),
     ("Telemetri",    "src/shared/HorseCore/Telemetri.luau"),
@@ -532,6 +537,7 @@ MODULER = [
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
     ("Config",       "src/shared/HorseCore/Config.luau"),
     ("Gaits",        "src/shared/HorseCore/Gaits.luau"),
+    ("Ridtrappa",    "src/shared/HorseCore/Ridtrappa.luau"),
     # RidKanon och Telemetri ligger fore MovementController: movement.spec
     # provar att en RIKTIG controller-frame producerar underlaget till
     # telemetrin (G02-A, senior review blocker B).
@@ -634,6 +640,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     #   rigg — samma bank som integrationen, eftersom spoofen bara gar att
     #   mata om hasten faktiskt kan flyttas i varlden. ]]
     elif "statesync" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #233 Fas 4b. Samma bank som statesync och av samma skal: den
+    #   auktoritativa vagen gar genom HorseService pa en RIKTIG rigg, och
+    #   reconcile-matningen behover MovementController ur samma bunt. ]]
+    elif "ridinput" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "hasthojd" in spec_rel or "avsittning" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
@@ -763,7 +774,7 @@ def bygg(spec_rel: str) -> pathlib.Path:
         # laser dem ur Core, precis som produktionen gor.
         # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
         # (stubs-bygge.luau) gor inte det: de stubbar huset, inte hastsystemet.
-        if har_core and namn in ("Config", "Gaits", "StateMachine", "RigAdapter",
+        if har_core and namn in ("Config", "Gaits", "Ridtrappa", "StateMachine", "RigAdapter",
                                 "Riggprofiler", "Utseende",
                     "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
                     "Inspelning", "Kameralage", "Pass", "Sparning"):

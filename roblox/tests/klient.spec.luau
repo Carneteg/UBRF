@@ -1423,6 +1423,176 @@ do
 	usv.KeyboardEnabled, usv.GamepadEnabled, usv.TouchEnabled = kb, gp, touch
 end
 
+--[[ ══ RITTMÄRKET NÅR RITTEN OAVSETT VILKEN VÄG SOM MONTERADE DEN ══
+
+     #233 Fas 4b band varje `RidingIntent` till ett rittmärke. Första
+     utkastet levererade märket ENBART i `tryMount`-returen, och det var
+     en trasig leverans:
+
+       serverns `setRider` fyrar `MountChanged` INNE i `tryMount`, alltså
+       före dess return. Klientens `MountChanged`-lyssnare anropar
+       `mount(model)` utan märke.
+
+     En ritt som startade den vägen fick `rittId = nil`, och då nekade
+     servern VARJE hjälp: hästen svarade inte längre på DRIV eller BROMS.
+     Det är den väg den här specen själv monterar, och ingen mätning såg
+     det.
+
+     Märket replikeras nu som attributet `RidSession` på hästen, satt före
+     `MountChanged`. Provet nedan monterar precis som resten av specen gör
+     — genom `MountChanged` och ingenting annat — och mäter att avsikten
+     som når tråden faktiskt BÄR märket. ]]
+do
+	local remote = Net.get("RidingIntent")
+	local tillstand = Net.get("RidTillstand")
+
+	--[[ Servern har satt märket före `MountChanged`. Här gör bänken
+	     detsamma, eftersom `HorseService` inte ligger i den här bunten. ]]
+	hast:SetAttribute("RidSession", "r7-provritt")
+	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+
+	--[[ FÖRST AV ALLT, och ordningen är hela poängen: ett svar som kommer
+	     INNAN klienten skickat sin första avsikt ska lydas.
+
+	     Sändningen har en reservläsning av attributet, och den räddar
+	     märket när den första avsikten går ut. Men fram till dess måste
+	     `ride.rittId` redan vara satt, annars förkastar
+	     `RidTillstand`-lyssnaren varje svar i början av ritten — hon
+	     reconcilar inte förrän hon själv hunnit be om något. Det är
+	     `mount()`:s läsning av attributet som håller det, och mäts bara
+	     här.
+
+	     OBSERVERBARHETEN: taket är galopp. Lyddes svaret står hon i galopp,
+	     och då flyttar ett DRIV inte trappan — alltså tystnad på tråden.
+	     Ignorerades det står hon i halt och DRIV skickar en avsikt. ]]
+	tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+		gangart = "canter", ryggar = false, version = 400 })
+	remote._skickat = {}
+	Input.nollaImpulsSparr()
+	Input.drivImpuls()
+	for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+	prova("klienten känner sin ritt REDAN vid uppsittningen",
+		#remote._skickat == 0,
+		("(%d paket)"):format(#remote._skickat))
+
+	--[[ KORTET TAR OVER EN BILDRUTA IN, och en pausad ritt kastar varje
+	     avsikt. Matningen ovan hann fore; harifran maste kortet kvitteras
+	     genom produktionens egen vag, annars mater resten ingenting. ]]
+	for _ = 1, 6 do
+		if not LektionController.vantar() then break end
+		LektionController.gaVidare()
+		RunService.RenderStepped:Fire(1 / 60)
+	end
+	prova("kortet ar kvitterat — ritten gar att mata igen",
+		LektionController.vantar() == false,
+		("(väntar %s)"):format(tostring(LektionController.vantar())))
+
+	--[[ Ned till skritt igen, så att nästa DRIV har någonstans att ta vägen. ]]
+	tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+		gangart = "walk", ryggar = false, version = 401 })
+
+	remote._skickat = {}
+	Input.nollaImpulsSparr()
+	Input.drivImpuls()
+	for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+
+	local sista = remote._skickat[#remote._skickat]
+	prova("en DRIV efter MountChanged-uppsittning når tråden",
+		sista ~= nil,
+		("(%d paket)"):format(#remote._skickat))
+	prova("och avsikten bär rittmärket — inte nil",
+		sista ~= nil and sista[1] == "r7-provritt",
+		("(märke %s)"):format(tostring(sista and sista[1])))
+	prova("handlingen är semantisk, inte en gångart",
+		sista ~= nil and (sista[2] == "driv" or sista[2] == "broms"),
+		("(handling %s)"):format(tostring(sista and sista[2])))
+end
+
+	--[[ ══ KLIENTENS RITTGRIND, genom produktionens EGEN lyssnare ════
+
+	     `ridinput.spec` mäter serverns sida. Den mäter också klientens
+	     regel, men där är villkoret AVSKRIVET i provet — tas raden bort ur
+	     `init.client` förblir den mätningen grön. Den här mätningen går
+	     genom den riktiga `RidTillstand`-lyssnaren i stället.
+
+	     OBSERVERBARHETEN är tricket. `ride` är en lokal i `init.client` och
+	     går inte att läsa härifrån. Men klienten skickar INGEN avsikt när
+	     trappan inte flyttar sig, och taket är galopp — står hon i galopp
+	     ger ett DRIV alltså tystnad på tråden.
+
+	       reconcile till galopp (rätt ritt)  →  DRIV skickar INGENTING
+	       bogus reconcile till halt (fel ritt, ignoreras)  →  fortfarande
+	       galopp  →  DRIV skickar fortfarande ingenting
+
+	     Hade det falska paketet lytts hade hon stått i halt, och DRIV hade
+	     stegat till skritt och skickat en avsikt. Tystnaden är mätningen. ]]
+	do
+		--[[ EN PAUSAD RITT MÄTER INGENTING: `init.client` kastar avsikten
+		     medan ett kort står uppe, och då vore tystnaden gratis. Vakten
+		     gör provet självvaliderande i stället för falskt grönt. ]]
+		--[[ Kortet kvitteras genom produktionens egen väg — samma anrop
+		     knappen och R gör. `vantar()` är loopens grind; står den kvar
+		     kastas varje avsikt och tystnaden nedan vore gratis. ]]
+		for _ = 1, 6 do
+			if not LektionController.vantar() then break end
+			LektionController.gaVidare()
+			RunService.RenderStepped:Fire(1 / 60)
+		end
+		prova("ritten är inte pausad — annars mäter provet ingenting",
+			LektionController.vantar() == false,
+			("(väntar %s)"):format(tostring(LektionController.vantar())))
+
+		--[[ Egen referens: `remote` ovan lever i ett annat do-block. ]]
+		local remote = Net.get("RidingIntent")
+		local tillstand = Net.get("RidTillstand")
+
+		--[[ 1. RÄTT ritt: klienten ska LYDA och hamna i galopp. ]]
+		tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+			gangart = "canter", ryggar = false, version = 500 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("efter reconcile till galopp skickar DRIV ingen avsikt — taket",
+			#remote._skickat == 0,
+			("(%d paket)"):format(#remote._skickat))
+
+		--[[ 2. FEL ritt: samma häst, gammalt märke. Ska ignoreras. ]]
+		tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r1-gammal-ritt",
+			gangart = "halt", ryggar = false, version = 501 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("ett sent svar från en ANNAN ritt rättar inte klienten",
+			#remote._skickat == 0,
+			("(%d paket)"):format(#remote._skickat))
+
+		--[[ 3. ANNAN häst, rätt märke. Hästledet bär hästbytet. ]]
+		tillstand.OnClientEvent:Fire({ hast = workspace, ritt = "r7-provritt",
+			gangart = "halt", ryggar = false, version = 502 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("och inte ett svar om en ANNAN häst heller",
+			#remote._skickat == 0,
+			("(%d paket)"):format(#remote._skickat))
+
+		--[[ 4. KONTROLLPROVET. Utan det mäter 1-3 bara att klienten är tyst,
+		     aldrig att den kan tala. Rätt häst OCH rätt märke, ned till
+		     skritt: nu SKA ett DRIV gå ut igen. ]]
+		tillstand.OnClientEvent:Fire({ hast = hast, ritt = "r7-provritt",
+			gangart = "walk", ryggar = false, version = 503 })
+		remote._skickat = {}
+		Input.nollaImpulsSparr()
+		Input.drivImpuls()
+		for _ = 1, 4 do RunService.RenderStepped:Fire(1 / 60) end
+		prova("men ett svar från den AKTUELLA ritten lyds — DRIV går ut igen",
+			#remote._skickat == 1,
+			("(%d paket)"):format(#remote._skickat))
+	end
+
 if fel > 0 then
 	print(("\n%d mätningar föll."):format(fel))
 else
