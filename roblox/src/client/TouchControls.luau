@@ -622,12 +622,26 @@ function TouchControls.mount(input: any, hooks: {
 				:format(handling, yta.Name))
 		end
 	end
+	kopplaSpak(bas, knop)
+	egnaReglage(false)
+
+	--[[ VAKTEN STÅR EFTER `egnaReglage`, OCH ORDNINGEN ÄR HELA POÄNGEN.
+
+	     Den låg före. Då läste den ytan, fann den tänd, och gick vidare —
+	     varefter `egnaReglage(false)` satte `ModalEnabled`. Är det den
+	     raden som släcker `ContextActionGui`, vilket är precis det vakten
+	     misstänker, hann vakten aldrig se sin egen skada. Den kunde bara
+	     fånga en yta som var mörk REDAN INNAN monteringen började, och det
+	     är inte det fall som gör en iPad ostyrbar.
+
+	     Mätt i bänken: med `ModalEnabled` kopplad till det befarade
+	     beteendet lämnade den gamla ordningen ytan `Enabled = false` efter
+	     en fullständig montering. Nu tänds den igen, och `warn` gör att
+	     Studio-QA kan SVARA på om raden behövdes. ]]
 	for _, h in ipairs({ Input.DRIV, Input.BROMS, Input.AVSITT }) do
 		sakerstallSynlighet(h)
 	end
 
-	kopplaSpak(bas, knop)
-	egnaReglage(false)
 	local efter = hooks.efterLayout
 	if efter then efter(reglageBredd, reglageTopp) end
 end
