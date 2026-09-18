@@ -791,7 +791,7 @@ local __services = {
 	     objekt utan minne. Da gick det att prova ATT nagot tonades, men
 	     inte MED VILKEN tid, easing eller malvarde — och kontraktet for
 	     CoachBanner anger just 0,4 s och Quad.
-	
+
 	     Varje skapad tween laggs nu i `__tweens` med sitt objekt, sin
 	     TweenInfo och sina malvarden, och den bar ett `Cancel` som markerar
 	     den avbruten. Det ar vad provet behover for att kunna visa att ett
