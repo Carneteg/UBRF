@@ -132,6 +132,43 @@ Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
 
 **Ingen merge i det här uppdraget**, och ingen städning i Tobias place.
 
+## Parallellt sanktionerat spår — Coach Banner (#244)
+
+Uppdrag från Tobias 2026-09-18 i issue #244: **Ugnetas RPG-lika
+nederdialog ersätts av en minimalistisk, toppcentrerad Coach Banner**, på
+egen feature branch `claude/244-coachbanner-20260918` ur GitHub `main` @
+`13fedf6`. Primära ytor är iPad och PC.
+
+Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna
+står i #244 och är Tobias, inte en builders.
+
+**Produktbeslut 2026-09-18, inne i uppdraget.** Beställningens
+acceptanskriterium 1 ("gamla nederpanelen skapas eller visas inte längre")
+och dess eget arkitekturlås ("ingen ändring av … progression") kan inte
+båda hållas bokstavligt: kortet bar lektionens enda vägar vidare
+— *Fortsätt för att börja lektionen*, *Prova igen* / *Nästa övning*,
+*Se ritten* och *Gå vidare* — och att de är handlingar och inte en
+nedräkning är en tidigare senior-review-rättelse (c53a2c7). Tobias avgjorde
+konflikten före implementationen:
+
+> Bannern tar över all pedagogisk text. Panelen rivs. **Valen blir kvar**
+> som en ramlös knapprad utan dialogruta. Väntan, progressionen och
+> G02-D:s replayval är oförändrade.
+
+Rivningen hålls av `tools/kolla-nederpanel.py`, som `roblox/tests/kor.sh`
+kör — en Luau-bänk ser inte skillnad på en riven panel och en släckt.
+
+**Redovisad avvikelse:** kontraktets krav 5 nämner `task.delay`-callbacks.
+`CoachBanner` använder ingen `task.delay` alls; visningstiden räknas i
+klientens enda uppdateringsloop och toningen görs av TweenService. Gamla
+callbacks blir därmed omöjliga genom konstruktion i stället för bevakade,
+och källgrinden håller det så.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
+Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
+
+**Ingen merge i det här uppdraget.**
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114
