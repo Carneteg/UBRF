@@ -196,6 +196,29 @@ do
 end
 
 do
+	--[[ EN IDENTITET SOM INTE ÄR EN TABELL. `require` lyckas — modulen
+		finns och returnerar något — men det den returnerar går inte att
+		indexera. Utan typtestet kastar första uppslaget, och då dör
+		panelen i stället för att säga «okänd».
+
+		Mätningen saknades i första omgången, och falsifieringen
+		visade det: B5 kom ut GRÖN, alltså mätte provet aldrig den
+		vakten. ]]
+	local ater = medBygge(42)
+	local ok, resultat = pcall(function()
+		return Byggidentitet.rader()
+	end)
+	prova("en icke-tabell som identitet kastar inte", ok,
+		if ok then "rader gavs" else tostring(resultat):sub(1, 60))
+	prova("och den ger okänt, inte ett värde",
+		ok and rad(resultat, "bygg.lage") == OKAND,
+		ok and tostring(rad(resultat, "bygg.lage")) or "-")
+	prova("identitet() säger nil för en icke-tabell",
+		Byggidentitet.identitet() == nil)
+	ater()
+end
+
+do
 	--[[ Trasig hash: rätt fält, fel form. 63 tecken och ett icke-hex-tecken
 		är två olika sätt att vara trasig, och båda ska falla. ]]
 	local ater = medBygge({
@@ -435,6 +458,20 @@ do
 		not skar(efter, reserv), ("%s mot %s"):format(r2s(efter), r2s(reserv)))
 	prova("och fortfarande helt på skärmen",
 		efter.x0 >= 0 and efter.x1 <= W, r2s(efter))
+
+	--[[ EN BRED RESERV SOM BÖRJAR UNDER KNAPPENS BAND ska INTE flytta
+		knappen. Det är den andra halvan av regeln, och den saknades:
+		falsifieringen visade att `if true then` — alltså vik alltid
+		undan — kom ut grön, eftersom en reserv med bredd 0 råkar ge
+		samma x som hörnet. Med bredd 200 skiljer de sig med 200 px.
+
+		Reglagen börjar långt under hörnet på en iPad, och där ska
+		knappen stå kvar pixel för pixel. ]]
+	Byggidentitet.reservAndrad(200, 250)
+	local under = rekt(Byggidentitet._knapp(), W, H - inset(), inset())
+	prova("en reserv UNDER bandet flyttar inte knappen",
+		under.x1 == fore.x1 and under.y0 == fore.y0,
+		("%s mot hörnet %s"):format(r2s(under), r2s(fore)))
 
 	--[[ Reserven försvinner vid avsittning: hörnet ska komma tillbaka. ]]
 	Byggidentitet.reservAndrad(0, math.huge)
