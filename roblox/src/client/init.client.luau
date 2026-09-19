@@ -595,8 +595,41 @@ RunService.RenderStepped:Connect(function(dt)
 	     engångsflankerna (gångart upp/ner, parad); låg de kvar hade varje
 	     tryck under pausen fyrat på en gång när pausen släppte. En impuls
 	     ska verka en gång, i den bildruta den gjordes — inte sparas. ]]
-	if LektionController.vantar() or LektionController.replayAktiv() then
-		Input.consume()
+	local intent = Input.consume()
+	--[[ Vad ryttaren bad om den här bildrutan. Räknas FÖRE pausgrenen
+	     sedan #263: grenen behöver veta om det kom en hjälp. Samma
+	     uttryck som förut, bara flyttat hit. ]]
+	local hjalp = intent.gaitUp or intent.gaitDown or (intent.parad or 0) > 0
+
+	--[[ ══ EN HJÄLP ÄR ETT SVAR (#263 P1) ═══════════════════════════
+
+	     Uppmätt i Studio: `vantar()` är SANT i samma ögonblick spelaren
+	     sätter sig upp — First Ride sätter henne i sadeln rakt framför
+	     kortet «Continue to start the lesson». Varje DRIV hon gav
+	     försvann här, tyst: inmatningen gick hela vägen till `consume`
+	     och kastades sedan. Hästen stod kvar i halt och ingenting sa
+	     varför.
+
+	     Det var inte en trasig inmatningskedja. Kedjan var hel —
+	     `drivImpuls` svarade `true`, servern hade `ActionDriv` bunden,
+	     och ett tryck på kortets knapp gav omedelbart `halt → walk`.
+	     Det som fattades var att kortet åt hjälpen.
+
+	     Bänken visste om det och gick runt det: `klient-ridhandlingar`
+	     har en hjälpare `kvitteraKort()` vars kommentar säger att kortet
+	     "kastar varje avsikt tills det kvitteras". Varje spec kvitterade
+	     först och mätte sedan. Ingen mätte spelarens egen väg.
+
+	     Nu besvarar en hjälp kortet OCH verkar i samma bildruta. Det är
+	     det enda rimliga: kortet ber om en skänkelhjälp, och när hon ger
+	     den ska hästen gå — inte be henne trycka en knapp först.
+
+	     REPLAYEN ÄR KVAR SOM HÅRD PAUS. Att titta på sin egen ritt ska
+	     inte gå att avbryta med en tygel, och `movement:release()` gäller
+	     där precis som förut. Skillnaden är bara vad ett VÄNTANDE kort
+	     gör med en hjälp. ]]
+	if LektionController.replayAktiv()
+		or (LektionController.vantar() and not hjalp) then
 		--[[ ══ PAUSEN MÅSTE STANNA HÄSTEN, INTE BARA SLUTA STYRA HENNE ══
 
 		     Stycket ovanför säger "hästen stegas inte", och det stämde —
@@ -627,7 +660,10 @@ RunService.RenderStepped:Connect(function(dt)
 		return
 	end
 
-	local intent = Input.consume()
+	--[[ Hjälpen besvarar kortet. `fortsatt()` gör exakt det knappen gör
+	     och returnerar false när det inte fanns något att kvittera — då
+	     har raden ingen verkan, vilket är rätt. ]]
+	if LektionController.vantar() then LektionController.fortsatt() end
 
 	--[[ ── AVSIKTEN SKICKAS, INTE RESULTATET (#233 Fas 4b) ─────────────
 
@@ -647,7 +683,6 @@ RunService.RenderStepped:Connect(function(dt)
 	     `_targetGait` ned av sig själv. Den rörelsen är INTE en avsikt,
 	     och servern gör redan samma sänkning på sin sida — skickades den
 	     som `broms` hade hästen stegat ned två pinnar på en trötthet. ]]
-	local hjalp = intent.gaitUp or intent.gaitDown or (intent.parad or 0) > 0
 	local trappaFore = Ridtrappa.index(
 		ride.movement.loco.beddGangart, ride.movement.ryggar)
 
