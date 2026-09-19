@@ -1,0 +1,70 @@
+name: Runtime-grind
+
+# #252 DEL C. Nivån mellan stubbarna och människan.
+#
+# Bänken i roblox/tests/ är en handskriven stubbvärld. Den kan inte se
+# saknade instanser, felaktiga instansegenskaper, en weld som inte byggs,
+# fysik som inte följer eller state som inte rivs. Det här jobbet kör
+# spelet i RIKTIG Roblox-motor genom Open Cloud Luau Execution, mot en
+# place byggd ur exakt den här PR:ens head.
+#
+# FAIL CLOSED. Till skillnad från `grindar.yml`, där varje steg är
+# villkorat på att filen finns, är det HÄR jobbet rött så fort någon av
+# sina förutsättningar saknas: nyckeln, universumet, CI-placens id,
+# publiceringen, task-svaret eller rapporten. En grind som hoppar över
+# sig själv när den inte kan mäta är precis den lögn #252 stänger.
+#
+# ┌ OM JOBBET ÄR RÖTT MED «UBRF_CI_PLACE_ID saknas» ────────────────────┐
+# │ Då finns inte CI-placen än. Open Cloud har ingen dokumenterad       │
+# │ Create Place (mätt 2026-09-19), så den skapas en gång — kör         │
+# │ workflowen «CI-place» nedan, eller skapa den för hand i Creator     │
+# │ Dashboard och lägg in id:t som repository variable.                 │
+# │ Grinden pekas ALDRIG om mot startplacen under tiden.                │
+# └─────────────────────────────────────────────────────────────────────┘
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Två tasks mot samma place samtidigt är tillåtet (taket är 10), men två
+# PUBLICERINGAR till samma place är det inte: den andra skriver över den
+# första och då mäter en körning fel bygge. En körning i taget.
+concurrency:
+  group: runtime-grind
+  cancel-in-progress: false
+
+jobs:
+  runtime-grind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Grindens egen falsifiering. Ett fail-closed-kontrakt som aldrig
+      # visats kunna ta är samma lögn som bänken var, en nivå upp — så
+      # varje utgång i drivaren provas här, i båda riktningarna där det
+      # går, innan grinden själv körs. Rör aldrig Open Cloud.
+      - name: Runtime-grindens självprov
+        run: python3 tools/testa-runtime-grind.py
+
+      # Byggbarheten och bindningen till head mäts UTAN Open Cloud, så att
+      # ett fel i paketet syns för sig och inte som ett API-fel. Det här
+      # steget är inte grinden — det säger torrkörningen själv ut.
+      - name: Placen går att bygga ur head, och identiteten är aktuell
+        run: python3 tools/runtime-grind.py --torrkor
+
+      # SJÄLVA GRINDEN. Inget `if: ${{ secrets... }}` — ett saknat secret
+      # ska fälla jobbet, inte tysta det.
+      - name: RUNTIME_GRIND — smoken i riktig Roblox-motor
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 tools/runtime-grind.py
