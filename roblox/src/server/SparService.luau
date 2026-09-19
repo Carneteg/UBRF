@@ -200,6 +200,40 @@ function SparService.anmarkning(player: Player): string?
 	return anmarkning[player]
 end
 
+--[[ ── ÄR LÄSNINGEN BETRODD? (#263 re-review, P1-1) ─────────────────
+
+	`redo` betyder bara att laddningen nått ETT SLUTLÄGE. Den säger
+	ingenting om att slutläget bar riktig data, och skillnaden är inte
+	akademisk: vid saknat datalager, läsfel, framtida sparfil eller en
+	oläsbar rad publicerar `ladda` en `Sparning.tom()` — alltså exakt
+	samma nollpassbild som en verkligt ny spelare har.
+
+	Den som frågar "har hon ridit förut?" får då svaret "nej" om en
+	hämtning strulade, och en spelare med tio pass bakom sig behandlas
+	som nybörjare. #263 kräver uttryckligen motsatsen: saknad, trasig
+	eller oladdad save får aldrig tolkas som `pass == 0`.
+
+	BETRODD ÄR ETT SMALT BEGREPP här, och med flit:
+
+	  `nil`    en ren läsning av en befintlig rad
+	  `"tom"`  ingen rad fanns — hon ÄR ny, och det är ett svar
+
+	Allt annat är ett nej. `"trasig"` nekas trots att `kanSpara` är
+	sant: raden fanns, den gick inte att läsa, och att då kalla henne
+	ny är en gissning åt spelarens fördel om något vi inte vet.
+
+	Funktionen svarar bara på om läsningen går att lita på. VAD som
+	står i saven är frågarens sak. ]]
+local BETRODDA: { [string]: boolean } = { tom = true }
+
+function SparService.betroddLasning(player: Player): boolean
+	if not SparService.redo(player) then return false end
+	if sparade[player] == nil then return false end
+	local a = anmarkning[player]
+	if a == nil then return true end
+	return BETRODDA[a] == true
+end
+
 --[[ ── SKRIVNINGEN ────────────────────────────────────────────────── ]]
 
 --[[ Den längsta av två vilor, nil-säkert. Används BARA på konfliktvägen i

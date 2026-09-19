@@ -149,13 +149,21 @@ end
 	förut, och att gissa åt det hållet skriver över någons progression
 	med en nybörjarupplevelse. Fail closed åt rätt håll. ]]
 function ForstaRitten.galler(player: Player): boolean
-	--[[ SKYDD 1 (arkitekturbeslutet): laddningen ska vara UTTRYCKLIGT
-		klar. `save == nil` rackte inte — en oladdad spelare och en
-		spelare utan pass ser likadana ut har nere, och den forvaxlingen
-		hade gjort `pass == 0` till standardsvaret under hela laddningen.
-		`redo` ar SparServices egen barriar och sags ja forst efter att
-		lasningen returnerat, aven nar den foll. ]]
-	if not SparService.redo(player) then return false end
+	--[[ SKYDD 1, RATTAT EFTER RE-REVIEW AV `d4912c0`.
+	
+		Forsta versionen fragade `SparService.redo`, och det var for
+		svagt. `redo` betyder att laddningen natt ett SLUTLAGE — inte att
+		slutlaget bar riktig data. Vid saknat datalager, lasfel, framtida
+		sparfil eller en olasbar rad publicerar `ladda` en
+		`Sparning.tom()`, alltsa exakt samma nollpassbild som en verkligt
+		ny spelare har. En spelare med tio pass bakom sig hade da fatt
+		nyborjarupplevelsen for att en hamtning strulade.
+	
+		`betroddLasning` ar SparServices eget besked om att lasningen gar
+		att lita pa: en ren rad, eller ingen rad alls. Allt annat ar ett
+		nej. Att fraga DAR och inte har ar poangen — tjanstens egen
+		bedomning av sin egen lasning hor hemma i tjansten. ]]
+	if not SparService.betroddLasning(player) then return false end
 	local save = SparService.save(player)
 	if save == nil then return false end
 	local ok, svar = pcall(function()
@@ -185,6 +193,63 @@ end
 	den har raden hade `vaxKnapp` varit en global `nil` vid anropet, och
 	slingan hade aldrig startat. ]]
 local vaxKnapp: () -> ()
+
+--[[ ══ RIDKLAR KARAKTAR (#263 re-review, P1-3) ════════════════════
+
+	`CharacterAdded` fyrar nar MODELLEN parentas, inte nar den ar
+	komplett. `HumanoidRootPart` och `Humanoid` stromar in efterat.
+
+	Forsta versionen startade hela flodet direkt pa signalen, och
+	ordningen var farlig: `stallFram` flyttade hasten och svarade `true`
+	aven utan rot, utrustningen byggdes, och forst `stallVidHasten`
+	foll. Resultatet blev en flyttad, sadlad hast och en spelare som
+	inte fick en ny chans forran nasta respawn.
+
+	Nu vantar vi BOUNDED pa en ridklar karaktar innan NAGON
+	varldsmutation sker. Bounded, inte for evigt: en karaktar som aldrig
+	blir klar ska ge ett nej med diagnostik, inte en had som star och
+	vantar.
+
+	Granserna raknas i FORSOK och inte i sekunder, for att vantan ska
+	vara deterministisk i bade motorn och banken — bankens `task.wait`
+	ar en no-op, och en klocka som inte gar hade snurrat for evigt. ]]
+local VANTA_FORSOK = 200
+local VANTA_PAUS = 0.05
+
+export type Ridklar = { kar: Model, rot: BasePart, hum: Humanoid }
+
+local function ridklarNu(player: Player): Ridklar?
+	local kar = player.Character
+	if kar == nil then return nil end
+	local rot = kar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart")) then return nil end
+	local hum = kar:FindFirstChildOfClass("Humanoid")
+	if hum == nil then return nil end
+	--[[ LEVANDE. En karaktar som redan dott ska ingen sattas upp pa. ]]
+	if (hum :: any).Health ~= nil and (hum :: any).Health <= 0 then return nil end
+	return { kar = kar, rot = rot :: BasePart, hum = hum }
+end
+
+--[[ Vantar tills karaktaren ar ridklar, eller ger upp. Returnerar ocksa
+	VILKEN karaktar den vantade in, sa att anroparen kan se om hon bytt
+	kropp under tiden. ]]
+local function vantaRidklar(player: Player): Ridklar?
+	for _ = 1, VANTA_FORSOK do
+		--[[ Lamnat spelet mitt i vantan? Da finns ingen att stalla fram.
+
+			`typeof`-vakten ar samma monster som resten av tjansterna
+			anvander: bankens spelare ar en tabell utan `Parent`, och en
+			naken `player.Parent == nil` hade nekat varenda matning. I
+			motorn ar hon en Instance, och da ar kontrollen den riktiga. ]]
+		if typeof(player) == "Instance" and (player :: any).Parent == nil then
+			return nil
+		end
+		local r = ridklarNu(player)
+		if r ~= nil then return r end
+		task.wait(VANTA_PAUS)
+	end
+	return nil
+end
 
 --[[ Ställer spelaren vid hästens vänstra sida. ]]
 local function stallVidHasten(player: Player, modell: Model): boolean
@@ -227,23 +292,39 @@ function ForstaRitten.starta(player: Player): Utfall
 		return { ok = false, steg = "inte_forsta_ritten" }
 	end
 
+	--[[ 1. KARAKTAREN FORST, OCH FORE VARJE MUTATION (P1-3).
+
+		Ingenting i varlden ror sig innan hon har en kropp som gar att
+		satta upp. Faller vantan har ingen hast flyttats och ingen
+		utrustning byggts — se noten vid `vantaRidklar`. ]]
+	local ridklar = vantaRidklar(player)
+	if ridklar == nil then
+		return { ok = false, steg = "ingen_ridklar_karaktar" }
+	end
+
 	--[[ KLOCKAN STARTAR HAR. Se noten vid `varldsbyggeSekunder`: allt
-		First Ride sjalv gor ligger innanfor matningen. ]]
+		First Ride sjalv gor ligger innanfor matningen.
+
+		Den startar EFTER vantan och inte fore: vantan ar Robloxs
+		karaktarsladdning, inte First Rides arbete, och att lagga den pa
+		matningen hade gjort talet till nagot annat an det ordern ber om.
+		Vantan redovisas i stallet for sig nar den drojer. ]]
 	matning[player] = {
 		spelKlar = klocka(),
 		styrtVanster = false, styrtHoger = false,
 		bromsat = false, suttitAv = false,
 	}
 
-	--[[ 1. HÄSTEN. `bind` är enda vägen till modellen och hänger på att
+	--[[ 2. HÄSTEN. `bind` är enda vägen till modellen och hänger på att
 		sparningen landat — därför är hela modulen hakad på
 		`efterLaddning` och inte på `PlayerAdded`. ]]
 	local modell = GameplayService.bind(player)
 	if not modell then
+		matning[player] = nil
 		return { ok = false, steg = "ingen_hast" }
 	end
 
-	--[[ 2. ÄR VÄRLDEN HEL? SKYDD 4, och ordningen är hela poängen.
+	--[[ 3. ÄR VÄRLDEN HEL? SKYDD 4, och ordningen är hela poängen.
 		Prövningen ligger FORE teleporten: faller den efterat star
 		spelaren ensam i ett ridhus utan hast, och arkitekturbeslutet
 		sager uttryckligen att en spelare aldrig ska teleporteras till
@@ -254,6 +335,7 @@ function ForstaRitten.starta(player: Player): Utfall
 		gar att rida, hur ratt allt annat an ser ut. ]]
 	local sess = HorseService.sessionFor(modell)
 	if sess == nil then
+		matning[player] = nil
 		return { ok = false, steg = "hasten_oregistrerad" }
 	end
 	local sits = (sess :: any).rig ~= nil and (sess :: any).rig.seat or nil
@@ -271,34 +353,46 @@ function ForstaRitten.starta(player: Player): Utfall
 	local sitsNamn = sits ~= nil and tostring((sits :: any).Name) or nil
 	if sits == nil or sitsNamn == nil
 		or modell:FindFirstChild(sitsNamn) ~= sits then
+		matning[player] = nil
 		return { ok = false, steg = "riggen_saknar_sits" }
 	end
 	if LedService.malzon() == nil then
+		matning[player] = nil
 		return { ok = false, steg = "ingen_ridhuszon" }
 	end
 
-	--[[ 3. FRAM TILL RIDHUSET. `stallFram` flyttar både häst och
+	--[[ 4. FRAM TILL RIDHUSET. `stallFram` flyttar både häst och
 		ryttare, men bokför INGENTING — se noten där. Hon har inte lett
 		henne, och det ska hennes `leda`-fas fortsätta att veta. ]]
 	local framme, framfel = LedService.stallFram(player, modell)
 	if not framme then
+		matning[player] = nil
 		return { ok = false, steg = "kom_inte_till_ridhuset", skal = framfel }
 	end
 
-	--[[ 4. FÖRBEREDELSEN. Fysisk, inte bokförd. ]]
+	--[[ 5. FÖRBEREDELSEN. Fysisk, inte bokförd. ]]
 	local redo, redofel = forbered(player, modell)
 	if not redo then
+		matning[player] = nil
 		return { ok = false, steg = "forberedelsen_foll", skal = redofel }
 	end
 
-	--[[ 5. INTILL HENNE. `tryMount` kräver `MountRange`, och efter
+	--[[ 6. INTILL HENNE. `tryMount` kräver `MountRange`, och efter
 		`stallFram` står hon redan där — men utrustningsbygget kan ha
 		flyttat pivoten, så avståndet stängs om. ]]
+	--[[ SAMMA KROPP SOM VI VANTADE IN? Bytte hon under tiden — en
+		respawn mitt i flodet — hor arbetet till en karaktar som inte
+		finns langre, och da ska ingen sattas upp pa den. ]]
+	if player.Character ~= ridklar.kar then
+		matning[player] = nil
+		return { ok = false, steg = "karaktaren_byttes" }
+	end
 	if not stallVidHasten(player, modell) then
+		matning[player] = nil
 		return { ok = false, steg = "ingen_karaktar" }
 	end
 
-	--[[ 6. UPP. Samma `tryMount` och samma `farSittaUpp` som alla
+	--[[ 7. UPP. Samma `tryMount` och samma `farSittaUpp` som alla
 		andra. Nekas den sitter ingen upp — inte heller här. ]]
 	local uppe, mskal, marg = HorseService.tryMount(player, modell)
 	if not uppe then
@@ -341,14 +435,48 @@ end
 
 local RunService = game:GetService("RunService")
 
---[[ Studs. Under det ar det mätbrus och sadelryck, inte en hast som
-	gar nagonstans. ]]
-local RORELSE_TROSKEL = 1.5
---[[ Radianer. Ungefar sex grader — mindre an sa ar inte ett styrval. ]]
-local YAW_TROSKEL = 0.1
+--[[ ══ TROSKLARNA, RATTADE EFTER RE-REVIEW AV `d4912c0` ═══════════
+
+	Forsta versionen jamforde varje prov mot det FOREGAENDE och kravde
+	1,5 studs. Med 0,1 s mellan proven betyder det over 15 studs/s —
+	och kanonisk skritt ar 1,45 m/s, alltsa 4,35 studs/s, eller 0,44
+	studs per prov. Normal trav ligger ocksa under.
+
+	Matningen kunde alltsa ALDRIG se en hast som skrittar. Mitt eget
+	prov dolde det genom att flytta hasten tio studs i ett enda prov —
+	ett test som gommer defekten det pastar sig mata.
+
+	Samma fel fanns i yaw: en verklig sving pa nagra grader per prov
+	kasserades, for baslinjen skrevs om varje gang.
+
+	Nu ACKUMULERAS bada over prov. Trosklarna ar darfor sanningar om
+	RORELSEN och inte om samplingstakten:
+
+	  en hast som gatt en studs har gatt nagonstans
+	  en sving pa sex grader ar ett styrval
+
+	Ackumulatorn for yaw ar SIGNERAD per hall, sa att fram och tillbaka
+	inte tar ut varandra — den som svanger vanster och sedan hoger har
+	gjort bada, inte ingetdera. ]]
+local RORELSE_TROSKEL = 1.0
+local YAW_TROSKEL = 0.105
 local TAKT = 0.1
 
-type Prov = { pos: Vector3, yaw: number, gait: string }
+--[[ Utlamnad sa att provet kan stega observationen i SAMMA takt som
+	servern gor, i stallet for att skriva av talet. En kopia hade kunnat
+	glida, och da hade provet matt sin egen takt och inte serverns. ]]
+ForstaRitten.TAKT = TAKT
+
+type Prov = {
+	pos: Vector3,
+	yaw: number,
+	gait: string,
+	--[[ Ackumulatorerna. De lever i provet och inte i `Matning`, for de
+		ar observatorens rakneverk och inte nagot QA ska lasa. ]]
+	gangen: number,
+	svangtVanster: number,
+	svangtHoger: number,
+}
 local forra: { [Player]: Prov } = {}
 local slinga: RBXScriptConnection? = nil
 
@@ -370,27 +498,43 @@ local function observera(player: Player, m: Matning)
 	local pivot = modell.PrimaryPart or modell:FindFirstChildWhichIsA("BasePart")
 	if pivot == nil then return end
 
-	local nu: Prov = {
-		pos = pivot.Position,
-		yaw = yawAv(pivot.CFrame),
-		gait = tostring(modell:GetAttribute("Gait") or "halt"),
-	}
-	local f = forra[player]
-	forra[player] = nu
-	if f == nil then return end
+	local pos = pivot.Position
+	local yaw = yawAv(pivot.CFrame)
+	local gait = tostring(modell:GetAttribute("Gait") or "halt")
 
-	if m.forstaRorelse == nil and (nu.pos - f.pos).Magnitude > RORELSE_TROSKEL then
+	local f = forra[player]
+	if f == nil then
+		forra[player] = { pos = pos, yaw = yaw, gait = gait,
+			gangen = 0, svangtVanster = 0, svangtHoger = 0 }
+		return
+	end
+
+	--[[ ACKUMULERAD STRACKA. En skrittande hast lagger 0,44 studs per
+		prov; efter tva och en halv sekund har hon gatt en studs, och da
+		har hon garanterat gatt nagonstans. ]]
+	f.gangen += (pos - f.pos).Magnitude
+	f.pos = pos
+	if m.forstaRorelse == nil and f.gangen > RORELSE_TROSKEL then
 		m.forstaRorelse = klocka() - m.spelKlar
 		print(("[FirstRide] %s: forsta hastrorelse efter %.1f s")
 			:format(tostring(player.Name), m.forstaRorelse))
 	end
 
-	local dyaw = nu.yaw - f.yaw
-	--[[ Runt +-pi hoppar yaw. Ett hopp ar ingen styrning. ]]
+	--[[ ACKUMULERAD SVANG, per hall. Runt +-pi hoppar yaw; ett hopp ar
+		ingen styrning och kasseras. ]]
+	local dyaw = yaw - f.yaw
+	f.yaw = yaw
 	if math.abs(dyaw) < math.pi then
-		if dyaw > YAW_TROSKEL then m.styrtVanster = true end
-		if dyaw < -YAW_TROSKEL then m.styrtHoger = true end
+		if dyaw > 0 then
+			f.svangtVanster += dyaw
+		else
+			f.svangtHoger -= dyaw
+		end
+		if f.svangtVanster > YAW_TROSKEL then m.styrtVanster = true end
+		if f.svangtHoger > YAW_TROSKEL then m.styrtHoger = true end
 	end
+
+	local nu = { gait = gait }
 
 	if nu.gait ~= f.gait then
 		if m.forstaOvergang == nil then
@@ -402,6 +546,7 @@ local function observera(player: Player, m: Matning)
 		if fore >= 0 and efter >= 0 and efter < fore then
 			m.bromsat = true
 		end
+		f.gait = nu.gait
 	end
 end
 

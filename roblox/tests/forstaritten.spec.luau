@@ -244,6 +244,97 @@ do
 		FR.galler(spelare) == false)
 end
 
+--[[ ══ DE FAKTISKA SPARUTFALLEN (re-review P1-1) ══════════════════
+
+	`redo` betyder bara att laddningen natt ett slutlage. Vid saknat
+	datalager, lasfel, framtida sparfil eller en olasbar rad publicerar
+	`ladda` en `Sparning.tom()` — samma nollpassbild som en verkligt ny
+	spelare. Provet matte forut bara `redo=false` och `save=nil`, och
+	missade alltsa hela den har klassen.
+
+	Har provas UTFALLEN, ett i taget, genom datalagerstubben. ]]
+print("\n-- Sparlasningen maste vara betrodd --")
+do
+	rent()
+	local spelare = nySpelare("Nyspelare")
+	table.insert(Players._spelare, spelare)
+	Players.PlayerAdded:Fire(spelare)
+	check("en verkligt ny spelare har en betrodd lasning",
+		SparService.betroddLasning(spelare) == true,
+		tostring(SparService.anmarkning(spelare)))
+	check("och far First Ride", FR.galler(spelare) == true)
+end
+
+do
+	rent()
+	--[[ INGET DATALAGER. `hamtaButik` faller, och `ladda` publicerar en
+		sessionssave. Den ser ut som noll pass. ]]
+	SparService._glomButikForProv()
+	__datastore.felButik = true
+	local spelare = nySpelare("Utan datalager")
+	table.insert(Players._spelare, spelare)
+	Players.PlayerAdded:Fire(spelare)
+	local save = SparService.save(spelare)
+	check("saven ser ut som noll pass",
+		save ~= nil and save.pass == 0, tostring(save and save.pass))
+	check("men lasningen ar INTE betrodd",
+		SparService.betroddLasning(spelare) == false,
+		tostring(SparService.anmarkning(spelare)))
+	check("och First Ride nekas", FR.galler(spelare) == false)
+	__datastore.felButik = false
+	SparService._glomButikForProv()
+end
+
+do
+	rent()
+	--[[ EN FRAMTIDA SPARFIL. Raden finns men ar skriven av en nyare
+		version; `migrera` ger en tom save och `spar.framtida_sparfil`. ]]
+	local spelare = nySpelare("Framtida")
+	__datastore._data["spelare_" .. spelare.UserId] = { v = 9999, pass = 7 }
+	table.insert(Players._spelare, spelare)
+	Players.PlayerAdded:Fire(spelare)
+	check("anmarkningen ar framtida sparfil",
+		SparService.anmarkning(spelare) == "spar.framtida_sparfil",
+		tostring(SparService.anmarkning(spelare)))
+	check("lasningen ar inte betrodd",
+		SparService.betroddLasning(spelare) == false)
+	check("och First Ride nekas trots noll pass",
+		FR.galler(spelare) == false)
+end
+
+do
+	rent()
+	--[[ EN TRASIG RAD. `kanSpara` blir SANT har — hon maste kunna komma
+		vidare — men vi vet inte om hon ridit forut, och da ar
+		nyborjarupplevelsen en gissning at fel hall. ]]
+	local spelare = nySpelare("Trasig rad")
+	__datastore._data["spelare_" .. spelare.UserId] = "inte en tabell"
+	table.insert(Players._spelare, spelare)
+	Players.PlayerAdded:Fire(spelare)
+	check("anmarkningen ar trasig",
+		SparService.anmarkning(spelare) == "trasig",
+		tostring(SparService.anmarkning(spelare)))
+	check("och lasningen ar inte betrodd trots att hon FAR spara",
+		SparService.betroddLasning(spelare) == false
+			and SparService.kanSpara(spelare) == true)
+	check("First Ride nekas", FR.galler(spelare) == false)
+end
+
+do
+	rent()
+	--[[ EN GILTIG RAD MED NOLL PASS. Den ska SLAPPAS igenom — annars
+		har rattelsen gjort First Ride omojlig for alla. ]]
+	local spelare = nySpelare("Giltig nolla")
+	__datastore._data["spelare_" .. spelare.UserId] =
+		{ v = Sparning.VERSION, pass = 0, rev = 3 }
+	table.insert(Players._spelare, spelare)
+	Players.PlayerAdded:Fire(spelare)
+	check("en giltig rad med noll pass ar betrodd",
+		SparService.betroddLasning(spelare) == true,
+		tostring(SparService.anmarkning(spelare)))
+	check("och far First Ride", FR.galler(spelare) == true)
+end
+
 --[[ ══ 2. HELA VÄGEN UPP ════════════════════════════════════════════ ]]
 print("\n-- En ny spelare hamnar i sadeln --")
 do
@@ -460,17 +551,41 @@ do
 	check("och spelKlar sattes vid startens BÖRJAN, inte efter",
 		m ~= nil and m.spelKlar == 100, tostring(m and m.spelKlar))
 
-	--[[ Hästen flyttas — servern ska SE det utan att klienten säger
-		något. ]]
+	--[[ KANONISK SKRITT, I 0,1-SEKUNDSSTEG.
+
+		Det har provet flyttade forst hasten TIO studs i ett enda prov,
+		och det dolde en riktig defekt: troskeln jamforde mot foregaende
+		prov och krävde over 15 studs/s. En skrittande hast kunde alltsa
+		aldrig passera matningen, och provet var gront anda.
+
+		Nu gar hon i kanonisk skritt — `Gaits.BY_NAME.walk.norm` m/s
+		gange tre studs per meter — och provet skriver inte av en enda
+		siffra. ]]
+	local M = 3
+	local SKRITT = Gaits.BY_NAME.walk.norm * M
+	local STEG = SKRITT * FR.TAKT
+	check("kanonisk skritt ar under den gamla troskeln per prov",
+		STEG < 1.5, ("%.2f studs per prov"):format(STEG))
+
 	local pivot = hast.PrimaryPart
 	FR._observeraForProv()
-	ga(2)
-	pivot.CFrame = pivot.CFrame * CFrame.new(0, 0, -10)
-	FR._observeraForProv()
-	check("servern ser första häströrelsen själv",
-		m.forstaRorelse ~= nil, tostring(m.forstaRorelse))
-	check("och tiden räknas från spelKlar",
-		m.forstaRorelse ~= nil and math.abs(m.forstaRorelse - 2) < 0.001,
+	--[[ Tre sekunder skritt, ett prov var 0,1 s. ]]
+	local prov = 0
+	while m.forstaRorelse == nil and prov < 60 do
+		prov += 1
+		ga(FR.TAKT)
+		pivot.CFrame = pivot.CFrame * CFrame.new(0, 0, -STEG)
+		FR._observeraForProv()
+	end
+	check("servern ser en SKRITTANDE hast",
+		m.forstaRorelse ~= nil,
+		("%d prov (%.1f studs)"):format(prov, prov * STEG))
+	check("och den ser den inom nagra sekunder",
+		m.forstaRorelse ~= nil and m.forstaRorelse < 3,
+		tostring(m.forstaRorelse))
+	check("tiden raknas fran spelKlar",
+		m.forstaRorelse ~= nil
+			and math.abs(m.forstaRorelse - prov * FR.TAKT) < 0.01,
 		tostring(m.forstaRorelse))
 end
 
@@ -481,14 +596,32 @@ do
 	local m = FR.matningFor(spelare)
 	local pivot = hast.PrimaryPart
 	FR._observeraForProv()
-	--[[ Yaw åt båda håll, läst ur hästens egen orientering. ]]
-	pivot.CFrame = pivot.CFrame * CFrame.Angles(0, 0.5, 0)
-	FR._observeraForProv()
-	check("servern ser en sväng åt vänster", m.styrtVanster == true)
-	check("men inte åt höger än", m.styrtHoger == false)
-	pivot.CFrame = pivot.CFrame * CFrame.Angles(0, -0.9, 0)
-	FR._observeraForProv()
-	check("och sedan åt höger", m.styrtHoger == true)
+	--[[ REALISTISK SVANGHASTIGHET, i samma 0,1-sekundssteg.
+
+		Forsta versionen vred hasten ett halvt radian i ETT prov — nara
+		trettio grader pa en tiondel, alltsa ingenting en hast gor. Den
+		matningen holl aven nar ackumuleringen saknades.
+
+		En ridande sving ligger runt 0,5 rad/s, alltsa 0,05 rad per
+		prov: UNDER trosklen, och bara synlig nar den ackumuleras. ]]
+	local SVANG = 0.05
+	check("ett enskilt svangsteg ar under troskeln", SVANG < 0.105)
+
+	for _ = 1, 3 do
+		ga(FR.TAKT)
+		pivot.CFrame = pivot.CFrame * CFrame.Angles(0, SVANG, 0)
+		FR._observeraForProv()
+	end
+	check("tre sma steg at vanster racker nar de ackumuleras",
+		m.styrtVanster == true)
+	check("men hogern ar orord", m.styrtHoger == false)
+
+	for _ = 1, 3 do
+		ga(FR.TAKT)
+		pivot.CFrame = pivot.CFrame * CFrame.Angles(0, -SVANG, 0)
+		FR._observeraForProv()
+	end
+	check("och tre sma steg at hoger syns ocksa", m.styrtHoger == true)
 end
 
 do
@@ -529,6 +662,96 @@ do
 	FR.satVarldsbygge(12.5)
 	check("men går att sätta av startordningen", FR.varldsbygge() == 12.5)
 	FR.satVarldsbygge(nil)
+end
+
+--[[ ══ KARAKTAREN KOMMER I DELAR (re-review P1-3) ═════════════════
+
+	`CharacterAdded` fyrar nar modellen parentas, inte nar den ar
+	komplett. `HumanoidRootPart` och `Humanoid` strommar in efterat.
+
+	Forsta versionen startade flodet direkt: hasten flyttades,
+	utrustningen byggdes, och forst `stallVidHasten` foll. Spelaren fick
+	ingen ny chans forran nasta respawn, och hasten stod flyttad och
+	sadlad utan ryttare.
+
+	Karaktaren har nedan svarar `nil` pa `HumanoidRootPart` de forsta
+	gangerna och lamnar sedan ut den — precis som en kropp som stromma
+	in. ]]
+print("\n-- Karaktaren kommer i delar --")
+do
+	rent()
+	local spelare, kar, hast = uppstallning("Fordrojd", 900)
+	local riktigRot = kar:FindFirstChild("HumanoidRootPart")
+	local riktigHum = kar:FindFirstChildOfClass("Humanoid")
+	check("bankens karaktar har bada delarna",
+		riktigRot ~= nil and riktigHum ~= nil)
+
+	--[[ En kropp som lamnar ut roten forst vid fjarde fragan. ]]
+	local fragor = 0
+	spelare.Character = {
+		Name = "Fordrojd karaktar",
+		FindFirstChild = function(_, namn)
+			if namn ~= "HumanoidRootPart" then return nil end
+			fragor += 1
+			if fragor < 4 then return nil end
+			return riktigRot
+		end,
+		FindFirstChildOfClass = function(_, klass)
+			if klass == "Humanoid" then return riktigHum end
+			return nil
+		end,
+	}
+
+	local hastFore = hast.PrimaryPart.CFrame.Position
+	local utfall = FR.starta(spelare)
+	check("flodet vantar in kroppen och lyckas anda",
+		utfall.ok == true, ("%s %s"):format(utfall.steg, tostring(utfall.skal)))
+	check("och roten fragades flera ganger innan den fanns",
+		fragor >= 4, ("%d fragor"):format(fragor))
+	local _ = hastFore
+end
+
+do
+	rent()
+	local spelare, kar, hast = uppstallning("Aldrig klar", 940)
+	--[[ En kropp som ALDRIG blir ridklar. ]]
+	spelare.Character = {
+		Name = "Halv karaktar",
+		FindFirstChild = function() return nil end,
+		FindFirstChildOfClass = function() return nil end,
+	}
+	local hastFore = hast.PrimaryPart.CFrame.Position
+	local sadladFore = TackService.sadlad(hast)
+
+	local utfall = FR.starta(spelare)
+	check("timeouten ger ett nej med diagnostik",
+		utfall.ok == false and utfall.steg == "ingen_ridklar_karaktar",
+		utfall.steg)
+	--[[ DET VIKTIGA: ingenting i varlden hann mutera. ]]
+	check("hasten star kvar dar hon stod",
+		(hast.PrimaryPart.CFrame.Position - hastFore).Magnitude < 0.001,
+		("flyttades %.2f studs"):format(
+			(hast.PrimaryPart.CFrame.Position - hastFore).Magnitude))
+	check("ingen utrustning byggdes",
+		TackService.sadlad(hast) == sadladFore
+			and TackService.sadlad(hast) == false)
+	check("och ingen sessionspost lamnades",
+		FR.kvarvarande() == 0, ("%d"):format(FR.kvarvarande()))
+end
+
+do
+	rent()
+	local spelare, kar, hast = uppstallning("Dod", 980)
+	local hum = kar:FindFirstChildOfClass("Humanoid")
+	hum.Health = 0
+	local hastFore = hast.PrimaryPart.CFrame.Position
+	local utfall = FR.starta(spelare)
+	check("en dod karaktar ar inte ridklar",
+		utfall.ok == false and utfall.steg == "ingen_ridklar_karaktar",
+		utfall.steg)
+	check("och varlden ar orord",
+		(hast.PrimaryPart.CFrame.Position - hastFore).Magnitude < 0.001
+			and TackService.sadlad(hast) == false)
 end
 
 --[[ ══ 8. CLEANUP ════════════════════════════════════════════════════
