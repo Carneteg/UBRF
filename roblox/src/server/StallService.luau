@@ -22,6 +22,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Stallet = require(ReplicatedStorage.Stallet)
 local Sparning = require(ReplicatedStorage.HorseCore.Sparning)
 local SparService = require(script.Parent.SparService)
+--[[ #259 Gate 1A. `MinHast` ligger utanfor `Networking` (redovisat
+	som #258 P2-4), men den ar en klientanropad fjarrfunktion och far
+	darfor samma takt som de ovriga tolv. Var den BOR ar en annan
+	fraga och ligger utanfor Gate 1A. ]]
+local Skopa = require(script.Parent.Skopa)
 
 local StallService = {}
 
@@ -251,7 +256,11 @@ function StallService.start()
 	local fraga = Instance.new("RemoteFunction")
 	fraga.Name = "MinHast"
 	fraga.Parent = ReplicatedStorage
-	fraga.OnServerInvoke = function(player)
+	--[[ AVSLAGSFORMEN AR HANDLARENS EGEN: `MinHast` svarar med en
+		hastpost eller `nil`. `nil` betyder redan "inget svar an" i det
+		har granssnittet, och det ar ratt svar aven for ett nekat
+		anrop. ]]
+	fraga.OnServerInvoke = Skopa.grind("MinHast", function(player)
 		--[[ Klienten får FRÅGA, aldrig bestämma. Samma regel som
 			uppsittningen redan följer.
 
@@ -270,7 +279,7 @@ function StallService.start()
 			return nil
 		end
 		return StallService.tilldela(player)
-	end
+	end, function() return nil end)
 
 	--[[ TILLDELNINGEN HÄNGER PÅ BARRIÄREN, INTE PÅ `PlayerAdded` (#162
 		blockerare 1). Kopplade den här filen signalen själv kördes den på

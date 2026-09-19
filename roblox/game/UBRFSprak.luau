@@ -117,6 +117,10 @@ Sprak.text = {
 		sv = "Det är inte din häst",
 		en = "That is not your horse",
 	},
+	["takt.for_snabbt"] = {
+		sv = "Det där gick för snabbt — vänta ett ögonblick",
+		en = "That was too quick — wait a moment",
+	},
 	["spel.redan_redo"] = {
 		sv = "Hon står redan färdig",
 		en = "She is already ready",

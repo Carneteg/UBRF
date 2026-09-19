@@ -156,6 +156,10 @@ FORBEREDELSE = SPEL + [
     ("Pass",         "src/shared/HorseCore/Pass.luau"),
     ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
+    #[[ #259 Gate 1A: den delade takten framfor fjarrfunktionerna.
+    #   FORE tjansterna: HorseService, StallService, LedService och
+    #   GameplayService require:ar den alla fyra. ]]
+    ("Skopa",        "src/server/Skopa.luau"),
     ("HorseService", "src/server/HorseService.luau"),
     # SparService FORE StallService: StallService.hastminnen laser saven ur
     # den. Ordningen ar samma som init.server.luau har.
@@ -376,6 +380,10 @@ KOHERENS = GEOMETRI + [
     ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler",    "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende",    "src/shared/HorseCore/Utseende.luau"),
+    #[[ #259 Gate 1A: den delade takten framfor fjarrfunktionerna.
+    #   FORE tjansterna: HorseService, StallService, LedService och
+    #   GameplayService require:ar den alla fyra. ]]
+    ("Skopa",        "src/server/Skopa.luau"),
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
@@ -712,6 +720,15 @@ def valjBunt(spec_rel: str):
         # ugneta.spec provar larar-UX:en ovanpa samma moduler som
         # paritetsspecen: RidKanon, Ugneta och UgnetaController.
         moduler, stubbar = PARITET, "tests/stubs.luau"
+    #[[ #259 Gate 1A: taktgrinden mater HELA kedjan — `Skopa` sjalv, och de
+    #   tva konkreta amplifieringsvagarna ur #258 genom RIKTIGA
+    #   `OnServerInvoke`-handlare i LedService och GameplayService. Den
+    #   behover darfor integrationsbunten, inte en egen minimal.
+    #   Grenen star FORE "forberedelse" av samma skal som `coachbanner`
+    #   star fore "klient": en lasare ska inte behova rakna ut vilken bunt
+    #   ett namn hamnar i. ]]
+    elif "takt" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
     #[[ FORE "spel": strangen "spelbarhet" INNEHALLER "spel", sa den hamnar

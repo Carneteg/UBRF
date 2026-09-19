@@ -4,6 +4,7 @@
 	i rätt ordning, så att det syns var något går fel.
 ]]
 
+local Skopa = require(script.Skopa)
 local SparService = require(script.SparService)
 local HorseService = require(script.HorseService)
 local StallService = require(script.StallService)
@@ -127,6 +128,15 @@ kritisk("Jack-riggen", function()
 	if HastRigg.start() == nil then error("hästen byggdes inte") end
 end)
 
+--[[ TAKTEN FÖRST AV TJÄNSTERNA (#259 Gate 1A).
+
+	`Skopa.start` binder städningen på `PlayerRemoving`. Den ska stå före
+	varje tjänst som kan ta emot en spelare, annars finns ett fönster där
+	en budget kan skapas utan att någon river den. Att den är `kritisk`
+	och inte `fas` är avsiktligt: en server utan takt är en server där
+	varje fjärrfunktion är obegränsad, och det är inte ett läge att
+	släppa in någon i. ]]
+kritisk("Skopa", Skopa.start)
 kritisk("SparService", SparService.start)
 kritisk("HorseService", HorseService.start)
 kritisk("StallService", StallService.start)

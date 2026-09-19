@@ -35,6 +35,11 @@ local HorseCore = require(ReplicatedStorage.HorseCore)
 local Net = HorseCore.Networking
 local Gaits = require(ReplicatedStorage.HorseCore.Gaits)
 local Config = require(ReplicatedStorage.HorseCore.Config)
+--[[ #259 Gate 1A. `LedBorja` var den ena av de tva konkreta
+	vagarna i #258 P1-2: ett anrop med `nil` nekas pa forsta raden i
+	`borjaInre` och skrev anda en `warn` genom `logg`. Grinden ligger
+	nu FORE bada. ]]
+local Skopa = require(script.Parent.Skopa)
 
 local LedService = {}
 
@@ -1877,14 +1882,16 @@ end
 function LedService.start()
 	Net.get("LedSync")
 
-	Net.get("LedBorja").OnServerInvoke = function(player, modell)
-		local hak = hakar.ratt
-		local ratt = hak and hak(player, nil :: any) or nil
-		return LedService.borja(player, modell, ratt)
-	end
-	Net.get("LedSlapp").OnServerInvoke = function(player)
-		return LedService.slapp(player)
-	end
+	Net.get("LedBorja").OnServerInvoke = Skopa.grind("LedBorja",
+		function(player, modell)
+			local hak = hakar.ratt
+			local ratt = hak and hak(player, nil :: any) or nil
+			return LedService.borja(player, modell, ratt)
+		end)
+	Net.get("LedSlapp").OnServerInvoke = Skopa.grind("LedSlapp",
+		function(player)
+			return LedService.slapp(player)
+		end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		if ledd[player] then LedService.slapp(player, "led.tappad") end

@@ -26,6 +26,10 @@ local Svar, RidKanon = Core.Svar, Core.RidKanon
 --[[ Stallet äger den kanoniska hästdatan; HorseService läser den för att
      binda rätt individ till rätt ridkänsla (blocker 1). ]]
 local Stallet = require(game:GetService("ReplicatedStorage").Stallet)
+--[[ #259 Gate 1A: den delade takten framfor fjarrfunktionerna.
+	`StateSync` och `RidingIntent` har sina EGNA skopor nedan — de ar
+	RemoteEvents och deras tal speglas av klientens prediktion. ]]
+local Skopa = require(script.Parent.Skopa)
 
 local HorseService = {}
 
@@ -1280,15 +1284,17 @@ function HorseService.start()
 		if inst:IsA("Model") then unregister(inst :: Model) end
 	end)
 
-	Net.get("MountRequest").OnServerInvoke = function(player, model)
-		if typeof(model) ~= "Instance" or not model:IsA("Model") then
-			return false, "hast.ogiltig"
-		end
-		return HorseService.tryMount(player, model)
-	end
-	Net.get("DismountRequest").OnServerInvoke = function(player)
-		return HorseService.dismount(player)
-	end
+	Net.get("MountRequest").OnServerInvoke = Skopa.grind("MountRequest",
+		function(player, model)
+			if typeof(model) ~= "Instance" or not model:IsA("Model") then
+				return false, "hast.ogiltig"
+			end
+			return HorseService.tryMount(player, model)
+		end)
+	Net.get("DismountRequest").OnServerInvoke = Skopa.grind("DismountRequest",
+		function(player)
+			return HorseService.dismount(player)
+		end)
 	Net.get("StateSync").OnServerEvent:Connect(onStateSync)
 	--[[ #233 Fas 4b. Den semantiska vägen in. Ligger bredvid StateSync med
 	     flit: de två är nu tydligt olika saker — den ena är en AVSIKT som
