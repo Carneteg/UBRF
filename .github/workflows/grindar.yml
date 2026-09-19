@@ -228,6 +228,17 @@ jobs:
           if [ -f tools/kolla-generisk-hast.py ]; then python3 tools/kolla-generisk-hast.py
           else echo "hoppar: tools/kolla-generisk-hast.py finns inte i denna branch"; fi
 
+      # …och grinden själv provas i BÅDA riktningarna (#259 Gate 0). Den
+      # var grön här och röd på Windows, och ingen av färgerna var sann:
+      # undantagslistans nycklar har `/` medan `relative_to` ger `\` på
+      # Windows, så uppslaget matchade aldrig. Ett undantag som inte
+      # träffar något ser likadant ut som ett som inte behövdes — därför
+      # faller grinden numera på det, och därför provas den härifrån.
+      - name: Grindprovet för generisk häststack
+        run: |
+          if [ -f tools/testa-kolla-generisk-hast.py ]; then python3 tools/testa-kolla-generisk-hast.py
+          else echo "hoppar: tools/testa-kolla-generisk-hast.py finns inte i denna branch"; fi
+
       # Sökvägarna (#153 fix 2 / P3-5): verktygen läste repo-roten ur
       # `new URL(".", import.meta.url).pathname`, som ger PROCENTKODAD text.
       # En katalog som heter "UBRF häst" blev "UBRF%20h%C3%A4st" och varje

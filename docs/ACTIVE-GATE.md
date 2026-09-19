@@ -1,298 +1,160 @@
 # Active Gate
 
-Current active implementation: **Sammanhållen produktprovsbaseline — PR #135**
+**Aktiv plan: issue #259 — UBRF Roblox Completion Plan, vägen till First Playable.**
 
-Källleveranser som baselinen är byggd av:
+| | |
+|---|---|
+| Aktiv gate | **Gate 0 — Gemensam sanning** |
+| Bas | `ab0d662e67c04a570f959bc1673c419130ba0c06` (merge av PR #257) |
+| Teknisk baseline | revisionsrapporten i issue #258 |
+| Builder | **Claude** |
+| Review | **ChatGPT** |
+| Acceptans | **Tobias** |
 
-| spår | ägare | PR | SHA |
-|---|---|---|---|
-| Miljö | **Replit** | #134 | `98736e3` (evidenshead), `0848366` (produkt-SHA) |
-| Gameplay | **Claude** | #128 | `f183963` |
-| Governance | ChatGPT | #133 | `cf9c5e1` |
-| Accepterad bas | — | — | `e65675d` |
+Issue #259 är den överordnade produkt- och leveransplanen. Den ersätter den
+tidigare gate-bilden i den här filen, som pekade på PR #135 och en baseline
+från 2026-09-07. Allt som stod här om #135, G02-D, #161, #171 och #244 som
+*aktiva* spår är historik och ligger under Historik och backlog nedan.
 
-Integration: **Claude**
-Review: **ChatGPT**
-Product acceptance: **Tobias**
+`docs/PRODUCT-CANON.md` är fortfarande produktens högsta källa. Den här filen
+registrerar vad som är aktivt — den uppfinner inga krav.
 
-Mandatory delivery chain:
+## Vägen till First Playable
 
-> **TILLDELAD BUILDER BYGGER → CHATGPT REVIEWS → TOBIAS ACCEPTS**
+| Gate | Innehåll | Läge |
+|---|---|---|
+| **G0** | Gemensam sanning: den här filen, och `tools/kolla-generisk-hast.py` plattformsoberoende | **aktiv** |
+| G1 | Säker och användbar interaktionsgrund: rate limiting för klientanropade RemoteFunctions (#258 P1-2), cleanup- och felvägar (#258 P2) | kö |
+| G2 | Golden path till uppsittning: start → tilldelad häst → tack → synlig utrustning → ledning → ridhus → `RIDE NOW`, provad som en kedja | kö |
+| G3 | Uppsutten ridning och game feel: skritt, trav, galopp, broms och yaw på PC och touch; `Gaits` som enda hastighetssanning | kö |
+| G4 | Ride First-pedagogik och UI: coach-banner, temafiltrerad Ugneta-feedback, post-ride summary | kö |
+| G5 | Roblox runtime och enheter: mänsklig QA i Studio, fysisk iPad och iPhone; #258 S1–S7 | kö |
+| G6 | Release candidate: låst commit/place, hela sviten plus den mänskliga checklistan mot samma build | kö |
 
-Rollfördelningen mellan builders står i `docs/ENVIRONMENT-DELIVERY.md`: Replit
-bygger miljön, Claude bygger gameplay och integration. Äldre gate-text som
-utpekar Claude som ensam builder gäller inte.
+En implementations-PR åt gången. Små gates. Ingen självacceptans.
 
-## Current priority
+## First Playable — vad som ska gå att göra
 
-Den sammanhållna baselinen i PR #135 ska bli produktprovbar: en byggd webb och
-en deterministisk Roblox-export ur samma miljö- och spelkanon, relevanta
-regressioner körda på integrations-SHA:t, och en spelbar Vercel-preview.
+En ny spelare ska utan utvecklarhjälp klara hela kedjan på **både PC och
+iPad**: förstå vilken häst som är hennes, gå fram och interagera utan att
+kontrollerna slåss om skärmen, hämta och **synligt bära** sadel och träns,
+utrusta hästen och se utrustningen på modellen, leda henne mjukt ur boxen
+till ridhuset med tydligt tillstånd, använda `RIDE NOW` på en förberedd häst
+utan att solospel kan blockeras av en trasig turordning, rida responsivt på
+servervaliderade avsikter i skritt, trav, galopp och inbromsning, sitta av,
+och få kort begriplig återkoppling.
 
-Acceptance criteria för nästa gate efter #135 skrivs av ChatGPT, inte av en
-builder. Det här dokumentet registrerar vad som är aktivt — det uppfinner inte
-nya krav.
+Ingen rå felkod, mallsträng, tangentbordsinstruktion på touch eller
+blockerande panel får bryta kedjan.
 
-Starta inte orelaterat arbete medan baselinen är aktiv.
+Utomhusridning, hela tävlingsloopen och lång progression ligger **efter**
+den här gaten. Den fullständiga definitionen står i #259.
 
-## Parallellt sanktionerat spår — G02-D
+## Icke förhandlingsbara kvalitetskrav
 
-PO-beslut 2026-09-07 15:12 på #135: **G02-D — ridanalys, positiv feedback och
-replay**, på egen feature branch `claude/g02-d-ridanalys` (PR #138). Spec:
-`docs/RIDANALYS.md` (PR #137 @ `f211617`). Leveransen är en vertikal slice —
-20 m volt plus en övergång — och den ska återanvända befintliga modeller, inte
-bygga ett parallellt bedömningssystem.
+- Servern äger spelstatus, ägarskap, tillåtna övergångar och beständiga värden.
+- Klienten skickar avsikt, aldrig betrodd position eller slutstatus.
+- Lokal presentation får predikteras för respons, men korrigeras mot serverns sanning.
+- Touch är en förstaklassplattform. Kritiska kontroller får inte ligga under
+  CoreGui eller kräva tangentbord.
+- "Show, don't tell": animation, ljud, hästens kropp och diskret coachning
+  före stora HUD-paneler.
+- Inga klientägda CFrame-loopar för locomotion, inga deprecated body movers,
+  ingen parallell gångarts- eller hastighetssanning.
+- Varje rättelse ska ha ett test som **kan bli rött** av den defekt den
+  påstår sig stoppa. Studio- och enhetsberoende påståenden märks
+  `NOT_TESTED` tills mänsklig runtime-QA finns.
 
-Det här spåret är alltså **inte** orelaterat arbete i den mening stycket ovan
-menar: det är beställt av Tobias efter alpha-frysningen, på egen gren, och rör
-inte baselinens kärnfiler i #135.
+## Claudes ändringsmandat i den här planen
 
-Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**. Status och
-paritetsredovisning i `docs/G02-D-RIDANALYS-REPLAY.md`.
+Product Owner har i #259 gett uttryckligt mandat att **ändra, refaktorera,
+ersätta eller ta bort** befintlig kod, tester och konfiguration — även
+korsmodulärt — när det krävs för att nå First Playable. Att en lösning redan
+finns är inte i sig ett skäl att behålla den.
 
-**Integrationsgren 2026-09-09:** `claude/g02-d-integration-20260909`, utgången
-ur #143 @ `87cad71` (senaste P0-integrationen) med `claude/g02-d-ridanalys`
-@ `6bc25fd` inmergad. Grenen bär både P0-inputlagret och G02-D:s lifecycle;
-ingen fil är ersatt i klump. #137 är kvar som acceptanstracker.
+Mandatet omfattar **inte** att merga själv, sätta `PRODUCT_ACCEPTED`, kringgå
+CI eller branch protection, ändra sparad spelardata utan explicit
+migrationsplan, eller expandera First Playable innan kärnloopen är accepterad.
 
-Rutan "Se ritten — frivillig replay: **saknas** på Roblox" i
-paritetstabellen är stängd: `HorseCore/Inspelning.luau` och
-`client/ReplayController.luau` är byggda, inkopplade i `LektionController`
-och `init.client.luau`, och provade genom klientens egen `RenderStepped`.
-Schema och övningsversion exporteras till `RidKanon.INSPELNING`, så webbens
-`ovningsdef.js` är fortsatt enda källa.
-
-**Ingen självskrivande builder-workflow.** `g02-d-complete-builder.yml`
-finns inte på integrationsgrenen och ska inte återinföras: den testade en
-syntetiserad källa, inte den committade. Grindarna är `grindar.yml` och
-`ugneta.yml` — vanlig read-only CI på det utcheckade commit:et.
-
-## Parallellt sanktionerat spår — First Playable Candidate (#161)
-
-PO-beslut 2026-09-10 i issue #161: **First Playable Candidate**, på egen
-feature branch `claude/first-playable-20260910` med draft-PR mot
-`claude/ridspel-stall-omnejd-zo2zce`. Beslutet häver vänteläget för #153:s tre
-återstående punkter — P1-3b Roblox skötselmoment, P1-3c Roblox varaktig
-progression och P2-4b återöppningsbar kontrollhjälp — och slår samman dem med
-de godkända fixarna ur #154, #156, #157, #158 och #159 till EN spelbar version.
-
-Den här filen **registrerar** att spåret är aktivt. Den skriver inga
-acceptanskriterier: de står i #161 och är Tobias, inte en builders.
-
-Integrationens härledning, verifierad mot remote heads före merge:
-
-| PR | gren | head | relation |
-|---|---|---|---|
-| #152 | `claude/g02-e-camera-wip-20260909` | `e5af8fc` | integrationsbas |
-| #154 | `claude/p0-valfard-20260909` | `88067d3` | 2 commits ovanpå `e5af8fc` |
-| #156 | `claude/p2-uppdragsetikett-20260909` | `8b1bc4b` | 1 commit ovanpå `88067d3` |
-| #157 | `claude/p2-replaypanel-20260909` | `6097c3b` | 1 commit ovanpå `88067d3` |
-| #158 | `claude/p2-skaparchips-20260909` | `d2b6366` | 1 commit ovanpå `88067d3` |
-| #159 | `claude/p3-sokvagar-20260909` | `55d38a4` | 1 commit ovanpå `88067d3` |
-
-Riktiga merges med `88067d3` som gemensam förälder. Enda konflikten var
-`.github/workflows/grindar.yml`, där #156/#157/#158 var för sig lade till ett
-jobb sist i samma steglista; alla tre behölls. Ingen filersättning, ingen
-#144-integration, ingen force-push.
-
-Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
-Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
-
-**Ingen merge till main i det här uppdraget.** Kandidaten är den enda version
-som därefter ska testas som spel; de små PR:erna ligger kvar som provenance.
-
-## Parallellt sanktionerat spår — Studio-/Rojo-integritet (#171)
-
-Uppdrag från Tobias 2026-09-14 i issue #171: **integritetsgrind för
-build-identitet och place-drift**, på egen feature branch
-`claude/studio-rojo-integritet-ren-20260914` ur GitHub `main` @ `7d8fe86`.
-
-Bakgrunden är en läsande Studio-MCP-audit av den anslutna placen `UBRF`
-(placeId `106030782437053`): Rojo-träden stämde exakt mot repot, men
-`ReplicatedStorage.UBRFBuild` var handplacerad och pekade på en head 44
-commits gammal medan preflightens punkt 9 lyste grönt. QA-evidens ur den
-placen var därför inte trovärdig.
-
-Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna står
-i #171 och är Tobias, inte en builders.
-
-Scope, enligt #171:s egen prioritetsordning:
-
-1. build-identiteten först — genererad, mappad, fail closed,
-2. integritetskontroll som skiljer Rojo-ägt från runtime- och editorartefakter,
-3. klassad och säker policy för Workspace-/ServerStorage-drift, utan blind
-   radering,
-4. regressionstäckning så att inaktuell identitet inte kan ge grön evidens,
-5. live-MCP används **läsande**; destruktiv Studio-städning ingår inte.
-
-Policy och inventering: `docs/STUDIO-PLACE-INTEGRITY.md`.
-
-Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
-Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
-
-**Ingen merge i det här uppdraget**, och ingen städning i Tobias place.
-
-## Parallellt sanktionerat spår — Coach Banner (#244)
-
-Uppdrag från Tobias 2026-09-18 i issue #244: **Ugnetas RPG-lika
-nederdialog ersätts av en minimalistisk, toppcentrerad Coach Banner**, på
-egen feature branch `claude/244-coachbanner-20260918` ur GitHub `main` @
-`13fedf6`. Primära ytor är iPad och PC.
-
-Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna
-står i #244 och är Tobias, inte en builders.
-
-**Produktbeslut 2026-09-18, inne i uppdraget.** Beställningens
-acceptanskriterium 1 ("gamla nederpanelen skapas eller visas inte längre")
-och dess eget arkitekturlås ("ingen ändring av … progression") kan inte
-båda hållas bokstavligt: kortet bar lektionens enda vägar vidare
-— *Fortsätt för att börja lektionen*, *Prova igen* / *Nästa övning*,
-*Se ritten* och *Gå vidare* — och att de är handlingar och inte en
-nedräkning är en tidigare senior-review-rättelse (c53a2c7). Tobias avgjorde
-konflikten före implementationen:
-
-> Bannern tar över all pedagogisk text. Panelen rivs. **Valen blir kvar**
-> som en ramlös knapprad utan dialogruta. Väntan, progressionen och
-> G02-D:s replayval är oförändrade.
-
-Rivningen hålls av `tools/kolla-nederpanel.py`, som `roblox/tests/kor.sh`
-kör — en Luau-bänk ser inte skillnad på en riven panel och en släckt.
-
-**Redovisad avvikelse:** kontraktets krav 5 nämner `task.delay`-callbacks.
-`CoachBanner` använder ingen `task.delay` alls; visningstiden räknas i
-klientens enda uppdateringsloop och toningen görs av TweenService. Gamla
-callbacks blir därmed omöjliga genom konstruktion i stället för bevakade,
-och källgrinden håller det så.
-
-Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
-Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
-
-**Ingen merge i det här uppdraget.**
-
-## Accepted / merged
-
-### P0 Läktare — issue #81 / PR #114
-
-`PRODUCT_ACCEPTED` av Tobias 2026-09-07 04:25 UTC på
-`a1360bcf2a08fdaa469d489f379f44683b526a56`, mergad till main i `e65675d`.
-Inte längre aktivt arbete.
-
-Lärdomarna från de underkända försöken står kvar och är **bindande** för allt
-kommande arbete som rör rendering, kollision, kamera och avatarhöjd:
-
-1. `v3dFigurKloss` måste använda samma vertikala spelartillstånd som kollision
-   och kamera (`o.y` / `VD.pz`), inte hårdkodad Y=0.
-2. Review-/debuggeometri, som de gula genomskinliga trappabstraktionerna, ska
-   vara dev/debug-only och aldrig synlig i produktvyn.
-3. Kanonisk trapp-/däckgeometri hör hemma i den kanoniska site-/världsmodellen,
-   inte som en sen runtime-patch.
-4. Rendering, kollision, kamera och avatarhöjd ska verifieras tillsammans i den
-   faktiska spelarvägen.
-5. Webb och Roblox ska dela samma avsikts-/geometrikontrakt i stället för att
-   hålla parallella sanningar.
-
-Läktarens produktkrav — gångbar trappa utan teleport, synlig höjdändring,
-läsbara steg med tangentbord och touch, ogenomskinligt däck under spelaren,
-ingen debuggeometri i produktvy, minst 10 m gångväg, fri passage förbi
-domarbåset, låst exteriörgeometri utan verifierad källa — är accepterade och
-skyddas nu av `laktartest`. De får inte regrera.
-
-### G02-C / PR #119
-
-`PRODUCT_ACCEPTED` av Tobias och mergad. Issue #84 stängd.
-
-### G02-C follow-up / issue #126 → PR #128
-
-Uppföljningsskulden i #126 är byggd i PR #128 och satt till
-`READY_FOR_PRODUCT_ACCEPTANCE` av ChatGPT efter oberoende re-review av
-`f183963`. Kvarvarande produktgrind: Tobias Studio-/enhetstest.
+Vid konflikt gäller: Product Owner-beslut i aktuell arbetsorder →
+`docs/PRODUCT-CANON.md` → completion-planen i #259 → verifierat beteende på
+`origin/main` → äldre roadmap-, gate- och PR-text.
 
 ## Required builder handshake
 
 En GitHub-mention är inte i sig bevis för att en builder-session tagit emot
-uppgiften.
-
-Innan implementation börjar ska tilldelad builder posta i den aktuella PR:en:
+uppgiften. Innan implementation börjar ska tilldelad builder posta:
 
 `CLAUDE_ACK #<nr> — base/head <SHA> — scope: <avgränsning>`
 
 (motsvarande för Replit). Först efter den kvittensen räknas handoffen som
 levererad.
 
-När leveransen är klar ska builder posta:
-
-- exakt HEAD SHA,
-- Changed,
-- Tested,
-- Falsified,
-- Not tested,
-- Remaining risk,
-- human-test requirements,
-- `READY_FOR_CHATGPT_REVIEW`.
+När leveransen är klar ska builder posta exakt HEAD-SHA, Changed, Tested,
+Falsified, Not tested, Remaining risk, human-test requirements och
+`READY_FOR_CHATGPT_REVIEW`.
 
 Ingen merge före ChatGPT-review och Tobias produkttest.
 
-## Parallellt sanktionerat spår — Tävlingskläder (#248)
+## Bindande lärdomar som överlever gateskiftet
 
-Uppdrag från Tobias i issue #248, i två beställda faser. Fas A —
-katalogen och valideringsgränsen — är mergad genom PR #250. **Fas B**
-går på egen feature branch `claude/248-tavlingsklader-fasb-20260919`
-ur `origin/main` @ `41fca30`.
+Från den accepterade läktaren (#81 / PR #114). De gäller **allt** kommande
+arbete som rör rendering, kollision, kamera och avatarhöjd:
 
-Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna
-står i #248:s egen Fas B-order och är Tobias, inte en builders.
+1. `v3dFigurKloss` måste använda samma vertikala spelartillstånd som kollision
+   och kamera (`o.y` / `VD.pz`), inte hårdkodad Y=0.
+2. Review- och debuggeometri ska vara dev-only och aldrig synlig i produktvyn.
+3. Kanonisk trapp- och däckgeometri hör hemma i den kanoniska
+   site-/världsmodellen, inte som en sen runtime-patch.
+4. Rendering, kollision, kamera och avatarhöjd verifieras tillsammans i den
+   faktiska spelarvägen.
+5. Webb och Roblox delar samma avsikts- och geometrikontrakt i stället för att
+   hålla parallella sanningar.
 
-Fas B bygger den **serverägda livscykeln**: en tjänst som äger
-per-player-sessionen, verifierar båda katalogposterna innan en avatar
-muteras, och återställer exakt ursprungsläget vid normalt avslut,
-avbrott, död, respawn och frånkoppling. Ordern låser uttryckligen ute
-UI, RemoteEvent, persistence och varje ändring i ridning,
-`GameplayService` eller ledning.
+Läktarens produktkrav är accepterade och skyddas av `laktartest`. De får inte
+regrera.
 
-### Redovisade beslut inne i uppdraget
+## Historik och backlog
 
-**1. Tjänsten startas inte vid boot, och `init.server.luau` är orörd.**
-En tjänst som lyssnar på spelarnas livscykel utan att någon bett om ett
-set är ett låtsat tävlingsläge, och ordern förbjuder just det. Vakterna
-— `CharacterAdded`, `CharacterRemoving`, `Humanoid.Died` och
-`Players.PlayerRemoving` — binds när en session faktiskt börjar och rivs
-när den slutar. Fas B levererar alltså gränsen som den framtida
-tävlingskontexten anropar, inte kontexten.
+Inget av det här är aktiv gate. Raderna finns kvar för att spåren ska gå att
+följa, inte för att de ska plockas upp utan ett nytt Tobias-beslut.
 
-**2. `reason` i `avsluta(player, reason)` styr ingenting i den här
-fasen.** Den valideras och ekas tillbaka till anroparen. Att låta den
-styra beteende hade varit att bygga en kontext som inte är beställd, och
-att tiga om det hade varit att låta en parameter se ut som mer än den är.
+### Landat på `main`
 
-**3. Katalogsidan är `Not tested` och kan inte bli något annat härifrån.**
-Att `MarketplaceService:GetProductInfoAsync` svarar med `AssetTypeId`,
-och att en serverskrivning av `ShirtTemplate` slår igenom på en spelares
-avatar, är läst ur Robloxs dokumentation — inte mätt. Bänken har ingen
-stub för tjänsten, och den ska inte få en: en stub där hade sett ut som
-evidens utan att vara det. Avatarsidan körs däremot mot tjänstens egen
-standardadapter och bänkens generiska `Instance.new`.
+| Spår | PR | Not |
+|---|---|---|
+| Tävlingskläder Fas A och Fas B (#248) | #250, #257 | Fas B `CHATGPT_CODE_REVIEW_PASS` på `9328365`, mergad i `ab0d662` |
+| Coach Banner (#244) | #245 | Nederpanelen riven; hålls av `tools/kolla-nederpanel.py` |
+| Touch-interaktion och ridavsikt (#246, #17) | #243, #249, #251 | |
+| Serverauktoritativ ridinput (#233) | #238, #241, #242 | Gångarten är serverns; `StateSync` bär bara fart |
+| Bänkens självprov fail closed (#252 del A/B) | #255 | |
+| Studio- och Rojo-integritet (#171) | — | `UBRFBuild.luau` och `Integritet.luau` finns på `main`; policy i `docs/STUDIO-PLACE-INTEGRITY.md` |
+| G02-D ridanalys och replay | — | `ReplayController.luau` och `Inspelning.luau` finns på `main` |
 
-Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
-Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
+### Öppna spår som inte är aktiv gate
 
-**Ingen merge i det här uppdraget.**
+| Spår | PR | Läge |
+|---|---|---|
+| UgnetaController Ride First (#234) | **#253**, draft | Öppen draft från `2026-09-19 06:31`, före `ab0d662`. **Rör `docs/ACTIVE-GATE.md`** och registrerade sig själv här som aktivt spår; den registreringen är ersatt av den här filen. Innehållet hör tematiskt till **Gate 4**. |
+| Runtime-grind i riktig motor (#252 del C) | **#256**, draft | Öppen draft från `2026-09-19 07:51`, före `ab0d662`. Hör tematiskt till **Gate 5**. |
+| First Playable Candidate (#161) | — | Målbilden är uppgången i #259. Gren `claude/first-playable-20260910`. |
+| Produktprovsbaseline (#135) och G02-D-integration | #138, #151 m.fl. | Tidigare aktiv gate-bild. Ersatt av #259. |
+| Lydia-pronomenet | #116 | Separat språkbeslut. Inga aktiva cykler utan omprioritering. |
+| Äldre `chatgpt/`- och `replit/`-drafts | #132–#149 m.fl. | Ej triagerade mot #259. |
+
+Både #253 och #256 är äldre än basen och kan inte rebasas in utan ett
+uttryckligt beslut om var i gate-ordningen de hör hemma. Att stänga, rebasa
+eller lyfta in dem som egna gates är Tobias beslut, inte en builders.
 
 ## Vercel
 
-Vercel är den enda UBRF-preview-/deployvägen.
-
-## Separat, ej aktivt
-
-### PR #116 — Lydia-pronomenet
-
-Separat, tekniskt grönt språkbeslut. Lägg inga aktiva implementationscykler på
-det om inte Tobias omprioriterar.
+Vercel är den enda UBRF-preview- och deployvägen.
 
 ## Source-of-truth rule
 
-Om det här dokumentet står i konflikt med en nyare uttrycklig instruktion från
-Tobias vinner Tobias, och filen ska uppdateras omedelbart.
+Står den här filen i konflikt med en nyare uttrycklig instruktion från Tobias
+vinner Tobias, och filen ska uppdateras omedelbart.
 
-Om PR-kommentarer och den här filen säger emot varandra och det inte finns
-någon nyare Tobias-instruktion: stoppa implementationen och red ut uppgiften
-innan du kodar.
+Säger PR-kommentarer och den här filen emot varandra utan att det finns någon
+nyare Tobias-instruktion: stoppa implementationen och red ut uppgiften innan
+du kodar.

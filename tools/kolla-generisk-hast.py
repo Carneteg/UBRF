@@ -25,12 +25,33 @@ DATA = ROT / "roblox/game/UBRFSpelData.luau"
 SKANNADE = ["roblox/src", "roblox/buildings"]
 
 # TILLÅTNA UNDANTAG, med skäl. Ett undantag utan skäl är en tystad grind.
+#
+# NYCKLARNA SKRIVS MED `/`, ALLTID. Se `nyckel()` nedan för varför det inte
+# räcker att skriva dem så.
 UNDANTAG = {
     # Paritetsscenariot i RidKanon är GOLDEN DATA: uppspelningen jämför
     # Roblox mot webbens egen stepRide med de hästar inspelningen gjordes
     # med. Namnen är alltså mätdata, inte en gren i spelets logik.
     "roblox/src/shared/HorseCore/RidKanon.luau": "paritetsscenariots golden data",
 }
+
+
+def nyckel(rel) -> str:
+    """Sökvägen i grindens egen nyckelform: alltid `/`, aldrig `\\`.
+
+    `pathlib.Path.relative_to()` ärver plattformens separator. På Linux ger
+    den `roblox/src/...`, på Windows `roblox\\src\\...`. Undantagslistan ovan
+    skrivs med `/`, så uppslaget `rel in UNDANTAG` missade ALLTID på Windows
+    — och paritetsscenariots golden data rapporterades som hårdkodade
+    hästid. Grinden var grön i CI och röd på utvecklarmaskinen, vilket är
+    det sämsta av två världar: felet syns bara för den som inte kan agera
+    på det, och den som ser det lär sig att ignorera grinden.
+
+    Funktionen finns som en egen, namngiven sak just för att `testa-kolla-
+    generisk-hast.py` ska kunna mäta normaliseringen direkt — på vilken
+    plattform som helst — i stället för att bara kunna mäta den på Windows.
+    """
+    return str(rel).replace("\\", "/")
 
 
 def hastid():
@@ -65,19 +86,45 @@ def main() -> int:
         print(f"FEL  hittade bara {len(ider)} hästid i speldatan — skannern mäter inget")
         return 1
     fynd = []
+    #[[ Varje skannad fil, i nyckelform. Utan den här mängden går det inte
+    #   att skilja "undantaget behövdes inte" från "undantaget träffade
+    #   aldrig något", och det var precis den skillnaden som gjorde
+    #   separatorbuggen osynlig: nyckeln matchade ingenting, och grinden
+    #   rapporterade i stället golden data som en defekt. ]]
+    sedda = set()
+    tystade = {rel: 0 for rel in UNDANTAG}
     for katalog in SKANNADE:
         for fil in sorted((ROT / katalog).rglob("*.luau")):
-            rel = str(fil.relative_to(ROT))
+            rel = nyckel(fil.relative_to(ROT))
+            sedda.add(rel)
             kod = avkommentera(fil.read_text(encoding="utf-8"))
             for i, rad in enumerate(kod.splitlines(), 1):
                 for hid in ider:
                     if f'"{hid}"' in rad:
                         if rel in UNDANTAG:
+                            tystade[rel] += 1
                             continue
                         fynd.append((rel, i, hid, rad.strip()[:90]))
     print(f"  Skannade {len(SKANNADE)} kataloger mot {len(ider)} kanoniska hästid.")
     for rel, skal in UNDANTAG.items():
-        print(f"  Undantag: {rel} — {skal}")
+        print(f"  Undantag: {rel} — {skal} ({tystade[rel]} rader tystade)")
+
+    #[[ ETT UNDANTAG SOM INTE PEKAR PÅ EN SKANNAD FIL ÄR TRASIGT.
+    #
+    #   Felstavat, flyttat, borttaget — eller skrivet i en separatorform
+    #   grinden inte känner igen. Alla fyra ser likadana ut inifrån: ett
+    #   namn som aldrig jämförs med någonting. Att fälla på det är hela
+    #   skälet till att den här raden finns; utan den kan grinden tysta
+    #   fel fil, eller ingen fil, utan att någon märker det. ]]
+    saknade = sorted(rel for rel in UNDANTAG if rel not in sedda)
+    if saknade:
+        print("\nUNDANTAG SOM INTE PEKAR PÅ NÅGON SKANNAD FIL:")
+        for rel in saknade:
+            print(f"  FEL  {rel}  — finns inte bland de skannade filerna")
+        print("  Undantaget tystar alltså ingenting, och grinden mäter inte"
+              " det den påstår.")
+        return 1
+
     if fynd:
         print("\nHÄSTID HÅRDKODAT I RUNTIMEKOD — stacken är inte generisk:")
         for rel, i, hid, rad in fynd:
