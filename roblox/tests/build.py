@@ -10,7 +10,7 @@ byts mot namnen på de moduler som redan laddats.
 
 Kör: python3 roblox/tests/build.py && luau roblox/tests/.build/movement.luau
 """
-import re, sys, pathlib
+import re, sys, pathlib, typing
 
 ROT = pathlib.Path(__file__).resolve().parent.parent      # roblox/
 UT = ROT / "tests" / ".build"
@@ -509,7 +509,16 @@ def inlina(kalla: str, kanda: set, rel: str, spec_rel: str, har_core: bool) -> s
 _BUNTDEF = re.compile(r"^([A-Z][A-Z_]*)\s*=\s", re.M)
 
 
-def kontrolleraBuntdefinitioner(kalla: str | None = None) -> None:
+#[[ `typing.Optional[str]`, INTE `str | None`. Den korta formen ar Python
+#   3.10+ och annoteringen evalueras vid `def`, alltsa redan vid import. Pa
+#   Tobias Windows-maskin (Python 3.7) gjorde den att HELA banken dog i en
+#   TypeError innan en enda spec byggdes — `bash roblox/tests/kor.sh` gick
+#   inte att kora alls. CI kor 3.12 och sag ingenting.
+#
+#   Det ar samma klass av fel som DEL B finns till for: en grind som ar
+#   gron dar den mats och dod dar den behovs. Resten av den har filen har
+#   inga versionsberoende konstruktioner; hall det sa. ]]
+def kontrolleraBuntdefinitioner(kalla: typing.Optional[str] = None) -> None:
     """Varje bunt far definieras EN gang i den har filen. DEL A: FORBEREDELSE
     stod tre ganger, Python lat den sista vinna, och #235:s tillagg hamnade i
     en dod kopia. Det far inte kunna handa tyst igen."""

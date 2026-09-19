@@ -27,7 +27,10 @@ Provet skriver bara i tests/.build/, som kor.sh anda bygger om.
 Kor: python3 tests/testa-build.py   (exit 1 vid fynd)
 """
 import pathlib
+import shutil
+import subprocess
 import sys
+import tempfile
 
 HAR = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HAR))
@@ -175,12 +178,64 @@ def riktiga_buntar_bygger():
         assert f"\nlocal {namn} = (function()\n" in text, f"{namn} saknas i integration"
 
 
+def kontrasten_utan_grinden():
+    #[[ ANDRA HALVAN AV FALSIFIERINGEN.
+    #
+    #   `saknad_modul` visar att bygget FALLER. Det bevisar inte att det
+    #   spelar nagon roll — en grind kan vara rod av ratt skal och anda
+    #   vakta ingenting. Ordern sager "bygget ska falla, INTE specen
+    #   passera", och den andra halvan gar bara att visa genom att stanga
+    #   av grinden och se vad som da hander.
+    #
+    #   Provet bygger darfor samma trasiga bunt med den GAMLA, tysta
+    #   inlina:n — ordagrant beteendet fore #252 — och kor luau pa
+    #   resultatet. Specen ska da skriva "alla grona" med
+    #   `TackForradService = nil`, precis som den gjorde i verkligheten i
+    #   ett dygn (DEL A § 3.3: 134 OK, 0 FEL, 0 deref). Det ar matningen
+    #   som ger grinden dess varde.
+    #
+    #   Bygger i en TEMPORAR katalog: en avsiktligt trasig fil far inte
+    #   ligga kvar i tests/.build/ dar nagon kan kora den av misstag. ]]
+    if shutil.which("luau") is None:
+        raise AssertionError("luau saknas i PATH — kontrasten gar inte att mata har")
+
+    riktig_inlina, riktig_ut = build.inlina, build.UT
+
+    def tyst_inlina(kalla, laddade, rel, spec, har_core=True):
+        """Den gamla inlina:n: byter require mot namnet och fragar aldrig."""
+        return build.REQUIRE.sub(
+            lambda m: next((g for g in m.groups() if g), "__Core"), kalla)
+
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="bankprov-"))
+    try:
+        build.inlina, build.UT = tyst_inlina, tmp
+        mal = build.foga(SPEC, utan(build.INTEGRATION, "TackForradService"), STUBB)
+        text = mal.read_text(encoding="utf-8")
+        assert "\nlocal TackForradService = (function()\n" not in text, \
+            "modulen kom med anda — kontrasten mater fel sak"
+        #[[ encoding="utf-8" med flit: slutraden heter "alla grona" med o,
+        #   och pa en Windows-varddator med cp1252 blir matchningen
+        #   mojibake och provet ser ut att inte ga att visa. ]]
+        kor = subprocess.run(["luau", str(mal)], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", cwd=str(HAR.parent))
+        rader = kor.stdout.splitlines() + kor.stderr.splitlines()
+        felrader = [r for r in rader if r.strip().startswith("FEL")]
+        slutrad = [r for r in rader
+                   if "alla gröna" in r or "Alla mätningar gick igenom" in r]
+        assert kor.returncode == 0, f"luau avslutade med {kor.returncode}"
+        assert not felrader, f"{len(felrader)} FEL: {felrader[:3]}"
+        assert slutrad, "specen nadde aldrig sin slutrad"
+    finally:
+        build.inlina, build.UT = riktig_inlina, riktig_ut
+        shutil.rmtree(str(tmp), ignore_errors=True)
+
+
 if __name__ == "__main__":
     print("BANKENS SJALVPROV (#252 DEL B)")
     for fn in (saknad_modul, fel_ordning, saknad_fil, tom_bunt, noll_produktmoduler,
                dubbel_modul, dubbel_buntdefinition, core_utan_core, require_i_specen,
                kommentar_ar_ingen_require, core_med_core, buntdefinitionerna_i_build_py,
-               riktiga_buntar_bygger):
+               riktiga_buntar_bygger, kontrasten_utan_grinden):
         prov(fn.__name__, fn)
     if fynd:
         print(f"BANKENS SJALVPROV: {len(fynd)} av {gjorda} prov foll")
