@@ -324,6 +324,19 @@ do
 	prova("och knappen göms medan den står uppe",
 		Byggidentitet._knapp().Visible == false)
 
+	--[[ STÄNGKNAPPEN MÅSTE GÅ ATT TRÄFFA MED EN TUMME. En panel som
+		bara går att öppna är en engångsruta — exakt felet #153
+		rapporterade som P2-4b, och golvet står i KONTROLLMATRIS regel
+		5. Mätt på knappen själv, inte på avsikten. ]]
+	local stang = nil
+	for _, b in ipairs(Byggidentitet._panel()._barn or {}) do
+		if b.Name == "StangBygg" then stang = b end
+	end
+	prova("stängknappen finns", stang ~= nil)
+	prova("och är minst 44 px hög",
+		stang ~= nil and stang.Size.Y.Offset >= 44,
+		stang and ("%d×%d"):format(stang.Size.X.Offset, stang.Size.Y.Offset))
+
 	Byggidentitet.dolj()
 	prova("dolj() släcker panelen", Byggidentitet.synlig() == false)
 	prova("och knappen är tillbaka", Byggidentitet._knapp().Visible == true)
