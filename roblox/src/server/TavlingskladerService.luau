@@ -1,0 +1,477 @@
+--!strict
+--[[ TÄVLINGSKLÄDER — DEN SERVERÄGDA LIVSCYKELN (#248 Fas B).
+
+	Fas A gav katalogen: tre set, sex katalogposter, ett ord in. Den här
+	filen är det som tar emot ordet och klär en avatar — och som tar av
+	kläderna igen, exakt, vad som än händer under tiden.
+
+	Tjänsten äger per-player-sessionen och ingenting annat. Den startar
+	ingen tävling, ritar ingen UI, äger ingen RemoteEvent och kopplas
+	inte in i `init.server.luau`. Den är GRÄNSEN som en framtida,
+	serverägd tävlingskontext anropar:
+
+	    local tjanst = TavlingskladerService.nya()
+	    tjanst.starta(player, "white")
+	    tjanst.avsluta(player, "tavling_slut")
+
+	Att den inte startas vid boot är ett beslut, inte en glömska: en
+	tjänst som lyssnar på spelarnas livscykel utan att någon bett om ett
+	set är ett låtsat tävlingsläge, och ordern förbjuder just det.
+	Vakterna binds när en session FAKTISKT börjar och rivs när den slutar.
+
+	══ SÄKERHETSORDNINGEN ════════════════════════════════════════════
+
+	Regeln som hela filen är byggd kring:
+
+	    VERIFIERA BÅDA POSTERNA. SEDAN SKRIV BÅDA LAGREN.
+	    FALLER NÅGOT — LÄGG TILLBAKA ALLT.
+
+	Det är i den ordningen för att spelaren aldrig ska stå halvklädd.
+	Att verifiera tröjan, skriva den, och sedan upptäcka att byxan är
+	borttagen ur katalogen ger en ryttare i tävlingströja och egna byxor
+	— och en sådan avatar går inte att skilja från ett medvetet val.
+
+	FAIL CLOSED genomgående: uppslag som inte svarar, svarar fel typ,
+	svarar utan typ eller kastar ger NEJ och en orörd avatar. Ett `ja`
+	som bygger på tystnad är värre än ett nej.
+
+	══ ÄGARSKAPETS GRÄNS ═════════════════════════════════════════════
+
+	Bara klassiska `Shirt` och `Pants`. Hår, ansikte, kropp, hudton,
+	hjälm och accessoarer är uttryckligen INTE tjänstens. Den läser dem
+	inte, sparar dem inte och rör dem inte.
+
+	══ ADAPTRARNA, OCH VAD DE FAKTISKT ÄR FÖR ════════════════════════
+
+	Två små injicerbara adaptrar: en som frågar Roblox vad en katalogpost
+	är, och en som läser och skriver lagren på en avatar. De finns för
+	att felvägarna ska gå att FÄLLA i en Luau-bänk — ett API-fel, en
+	modererad post, en skrivning som vägrar. Utan dem vore fail
+	closed-kravet ett påstående i en kommentar.
+
+	Avatarsidans standardadapter är så tunn att bänken kan köra den rakt
+	av mot `Instance.new`. Katalogsidans kan den inte: den ringer Roblox.
+
+	[antagande] Att `MarketplaceService:GetProductInfoAsync` svarar med
+	`AssetTypeId`, och att en serverskrivning av `ShirtTemplate` slår
+	igenom på en spelares avatar, är läst ur Robloxs dokumentation —
+	inte mätt härifrån. Det hör till Studio-QA och står som `Not tested`
+	i leveransen. `GetProductInfo` utan `Async` är deprecated och används
+	därför inte.
+
+	Katalogtjänsten hämtas LAT, inne i adaptern, och det är avsiktligt:
+	bänken har ingen stub för den, och den ska inte behöva någon, för
+	den vägen går inte att mäta utan nät. En stub där hade sett ut som
+	evidens utan att vara det.
+]]
+
+local Players = game:GetService("Players")
+
+local Tavlingsklader = require(game:GetService("ReplicatedStorage").HorseCore.Tavlingsklader)
+
+local TavlingskladerService = {}
+
+--[[ ══ TYPER ════════════════════════════════════════════════════════ ]]
+
+--[[ Svaret på "vad är den här katalogposten?". `ok` falskt betyder att
+	frågan inte gick att besvara — nätet, throttling, en borttagen post.
+	`assetTypeId` frånvarande på ett `ok`-svar är också ett nej: en post
+	som inte vill säga vad den är får inte hamna på en spelare. ]]
+export type Uppslag = {
+	ok: boolean,
+	assetTypeId: number?,
+	fel: string?,
+}
+
+export type Katalogadapter = {
+	assetTyp: (assetId: number) -> Uppslag,
+}
+
+--[[ Avataroperationerna, var för sig och utan egen policy. `skrivMall`
+	skapar lagret om det saknas — det är Robloxs eget mönster, och det
+	är också skälet till att `taBort` finns: ett lager som tjänsten
+	SKAPADE måste kunna försvinna igen. ]]
+export type Avataradapter = {
+	lager: (character: Instance, klass: string) -> Instance?,
+	lasMall: (lager: Instance, egenskap: string) -> string,
+	skrivMall: (character: Instance, klass: string, egenskap: string, mall: string) -> boolean,
+	taBort: (character: Instance, klass: string) -> boolean,
+}
+
+export type Adaptrar = {
+	katalog: Katalogadapter?,
+	avatar: Avataradapter?,
+}
+
+type Lagerlage = { fanns: boolean, mall: string }
+
+type Session = {
+	setId: string,
+	character: Instance,
+	--[[ Läget INNAN sessionen började. Sparas EN gång, aldrig om: ett
+		andra `starta` som skrev över den hade gjort tävlingskläderna
+		till spelarens nya "original", och då får hon aldrig tillbaka
+		sina egna. ]]
+	ursprung: { [string]: Lagerlage },
+	kopplingar: { RBXScriptConnection },
+}
+
+--[[ ══ DE TVÅ LAGREN ════════════════════════════════════════════════
+
+	Klass, egenskapsnamn, förväntad `AssetType` och vilket fält i
+	katalogposten talet står i — på ETT ställe. AssetType-talen och
+	asset-id:na kommer båda ur `Tavlingsklader`; den här filen bär inga
+	egna. ]]
+local LAGER = {
+	{
+		klass = "Shirt",
+		egenskap = "ShirtTemplate",
+		assetType = Tavlingsklader.ASSETTYPE_SHIRT,
+		falt = "shirtAssetId",
+	},
+	{
+		klass = "Pants",
+		egenskap = "PantsTemplate",
+		assetType = Tavlingsklader.ASSETTYPE_PANTS,
+		falt = "pantsAssetId",
+	},
+}
+
+--[[ Robloxs ContentId-form för ett plagg. En funktion och inte en
+	formatsträng på sex ställen: formen är en sanning om motorn, och den
+	ska stå en gång. ]]
+function TavlingskladerService.mall(assetId: number): string
+	return ("rbxassetid://%d"):format(assetId)
+end
+
+--[[ ══ STANDARDADAPTRARNA ═══════════════════════════════════════════ ]]
+
+local Standardkatalog: Katalogadapter = {
+	assetTyp = function(assetId: number): Uppslag
+		--[[ Lat hämtning: se filhuvudet. Faller den får uppslaget svara
+			nej som vilket annat fel som helst. ]]
+		local okTjanst, marketplace = pcall(function()
+			return game:GetService("MarketplaceService")
+		end)
+		if not okTjanst or not marketplace then
+			return { ok = false, fel = "MarketplaceService saknas" }
+		end
+		--[[ `GetProductInfoAsync` KASTAR om posten inte finns. Det är
+			dokumenterat beteende, inte en gissning, och därför är pcall
+			här inte defensiv slentrian utan den enda korrekta vägen. ]]
+		local okSvar, svar = pcall(function()
+			return (marketplace :: any):GetProductInfoAsync(assetId, Enum.InfoType.Asset)
+		end)
+		if not okSvar then
+			return { ok = false, fel = tostring(svar) }
+		end
+		if type(svar) ~= "table" then
+			return { ok = false, fel = "oväntat svar" }
+		end
+		local typ = (svar :: any).AssetTypeId
+		if type(typ) ~= "number" then
+			--[[ Ett svar utan typ är inget ja. En modererad eller privat
+				post kan svara med ett halvt objekt. ]]
+			return { ok = false, fel = "svar utan AssetTypeId" }
+		end
+		return { ok = true, assetTypeId = typ }
+	end,
+}
+
+local Standardavatar: Avataradapter = {
+	lager = function(character: Instance, klass: string): Instance?
+		return character:FindFirstChildOfClass(klass)
+	end,
+	lasMall = function(lager: Instance, egenskap: string): string
+		local varde = (lager :: any)[egenskap]
+		return if type(varde) == "string" then varde else ""
+	end,
+	skrivMall = function(character: Instance, klass: string, egenskap: string, mall: string): boolean
+		local l = character:FindFirstChildOfClass(klass)
+		if not l then
+			l = Instance.new(klass)
+			;(l :: any).Name = klass
+			;(l :: any).Parent = character
+		end
+		;(l :: any)[egenskap] = mall
+		return true
+	end,
+	taBort = function(character: Instance, klass: string): boolean
+		local l = character:FindFirstChildOfClass(klass)
+		if l then
+			l:Destroy()
+		end
+		return true
+	end,
+}
+
+TavlingskladerService.STANDARD = {
+	katalog = Standardkatalog,
+	avatar = Standardavatar,
+}
+
+--[[ ══ TJÄNSTEN ═════════════════════════════════════════════════════
+
+	En fabrik och inte en modulglobal. Två skäl, båda praktiska: en
+	provkörning ska inte kunna ärva en annan provkörnings sessioner, och
+	en adapterväxling ska inte vara en global omskrivning som vem som
+	helst kan göra mitt i en match. ]]
+export type Tjanst = {
+	starta: (player: Player, katalogId: any) -> (boolean, string),
+	avsluta: (player: Player, reason: string?) -> (boolean, string, string),
+	aktivt: (player: Player) -> string?,
+	aktivaSpelare: () -> { Player },
+}
+
+function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
+	local katalogadapter: Katalogadapter =
+		(adaptrar and adaptrar.katalog) or Standardkatalog
+	local avataradapter: Avataradapter =
+		(adaptrar and adaptrar.avatar) or Standardavatar
+
+	local sessioner: { [Player]: Session } = {}
+
+	--[[ GENERATIONEN. Uppslaget yieldar, och under den pausen kan
+		spelaren dö, respawna, logga ut eller bli avslutad av kontexten.
+		Tråden som vaknar efteråt bär med sig talet den startade på; har
+		det ändrats hör svaret till en session som inte finns längre, och
+		då skriver den ingenting.
+
+		Varje `starta` och varje `avsluta` räknar upp. Det gör också två
+		överlappande `starta` säkra: den som startade först faller, och
+		det sista anropet vinner. ]]
+	local generation: { [Player]: number } = {}
+
+	local function bumpa(player: Player): number
+		local n = (generation[player] or 0) + 1
+		generation[player] = n
+		return n
+	end
+
+	--[[ Har världen gått vidare sedan vi började? Två frågor, för de
+		fångar olika saker: generationen fångar avslut och konkurrerande
+		start, karaktärsjämförelsen fångar en respawn som skedde innan
+		någon session — och därmed innan någon vakt — fanns. ]]
+	local function inaktuell(player: Player, genFore: number, character: Instance): boolean
+		if generation[player] ~= genFore then
+			return true
+		end
+		return player.Character ~= character
+	end
+
+	local function sakert(fn: any, ...): boolean
+		local ok, svar = pcall(fn, ...)
+		return ok and svar ~= false
+	end
+
+	--[[ Läser av båda lagren som de ligger just nu. `fanns = false`
+		betyder att lagret inte finns — inte att det är tomt. Det är
+		den skillnaden återställningen står och faller med. ]]
+	local function lasLage(character: Instance): { [string]: Lagerlage }
+		local lage: { [string]: Lagerlage } = {}
+		for _, l in ipairs(LAGER) do
+			local okL, inst = pcall(avataradapter.lager, character, l.klass)
+			if okL and inst then
+				local okM, mall = pcall(avataradapter.lasMall, inst, l.egenskap)
+				lage[l.klass] = {
+					fanns = true,
+					mall = if okM and type(mall) == "string" then mall else "",
+				}
+			else
+				lage[l.klass] = { fanns = false, mall = "" }
+			end
+		end
+		return lage
+	end
+
+	--[[ Lägger tillbaka exakt det `lasLage` såg. Ett lager som inte
+		fanns tas BORT igen; att lämna kvar ett tomt `Shirt` vore att
+		ändra avataren i tysthet. ]]
+	local function aterstall(character: Instance, lage: { [string]: Lagerlage }): boolean
+		local allt = true
+		for _, l in ipairs(LAGER) do
+			local f = lage[l.klass]
+			if f and f.fanns then
+				if not sakert(avataradapter.skrivMall, character, l.klass, l.egenskap, f.mall) then
+					allt = false
+				end
+			else
+				if not sakert(avataradapter.taBort, character, l.klass) then
+					allt = false
+				end
+			end
+		end
+		return allt
+	end
+
+	local tjanst = {} :: any
+
+	--[[ Vakterna. Binds när en session börjar, rivs när den slutar —
+		alla fyra. Att `PlayerRemoving` är en av dem, och inte en
+		modulglobal lyssnare som lever för evigt, är samma beslut som att
+		tjänsten inte startas vid boot. ]]
+	local function bindVakter(player: Player, character: Instance): { RBXScriptConnection }
+		local k: { RBXScriptConnection } = {}
+		table.insert(k, player.CharacterAdded:Connect(function()
+			tjanst.avsluta(player, "respawn")
+		end))
+		table.insert(k, player.CharacterRemoving:Connect(function()
+			tjanst.avsluta(player, "karaktar_borta")
+		end))
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			table.insert(k, (humanoid :: any).Died:Connect(function()
+				tjanst.avsluta(player, "dod")
+			end))
+		end
+		table.insert(k, Players.PlayerRemoving:Connect(function(lamnade)
+			if lamnade == player then
+				tjanst.avsluta(player, "lamnade")
+				--[[ Spelaren är borta för gott: även generationen ska bort,
+					annars håller tjänsten en referens till någon som inte
+					spelar längre. ]]
+				generation[player] = nil
+			end
+		end))
+		return k
+	end
+
+	--[[ ── STARTA ───────────────────────────────────────────────────
+
+		Returnerar `(ok, utfall)`. `utfall` är mekaniskt och menat att
+		loggas eller mätas, inte visas: tjänsten äger ingen text som en
+		spelare läser. ]]
+	function tjanst.starta(player: Player, katalogId: any): (boolean, string)
+		if type(player) ~= "table" and typeof(player) ~= "Instance" then
+			return false, "ingen_spelare"
+		end
+
+		--[[ GRÄNSEN. Katalogen avgör, och den gör det FÖRE allt annat:
+			ett asset-id, ett okänt ord eller fel skiftläge ska aldrig
+			hinna bli ett nätanrop. ]]
+		local set = Tavlingsklader.set(katalogId)
+		if not set then
+			return false, "ogiltigt_set"
+		end
+
+		local character = player.Character
+		if not character then
+			return false, "ingen_karaktar"
+		end
+
+		local befintlig = sessioner[player]
+		if befintlig and befintlig.setId == set.id and befintlig.character == character then
+			return true, "oforandrad"
+		end
+
+		local genFore = bumpa(player)
+
+		--[[ STEG 1: BÅDA posterna verifieras. Inget skrivs här. ]]
+		for _, l in ipairs(LAGER) do
+			local assetId = (set :: any)[l.falt]
+			local okA, svar = pcall(katalogadapter.assetTyp, assetId)
+			--[[ Uppslaget kan ha yieldat. Färskheten prövas direkt efter
+				varje anrop, innan svaret används till något. ]]
+			if inaktuell(player, genFore, character) then
+				return false, "inaktuell"
+			end
+			if not okA or type(svar) ~= "table" then
+				return false, "uppslag_kastade"
+			end
+			local uppslag = svar :: Uppslag
+			if not uppslag.ok then
+				return false, "uppslag_nekade"
+			end
+			if uppslag.assetTypeId ~= l.assetType then
+				return false, "fel_assettype"
+			end
+		end
+
+		--[[ STEG 2: skriv båda. `fore` är läget i just det här ögonblicket
+			— rollbackens facit. För en NY session är det också spelarens
+			ursprungsläge; för ett setbyte mitt i en session är det bara
+			rollbackfacit, och ursprunget står kvar orört i sessionen. ]]
+		local fore = lasLage(character)
+		for _, l in ipairs(LAGER) do
+			local assetId = (set :: any)[l.falt]
+			local mall = TavlingskladerService.mall(assetId)
+			if not sakert(avataradapter.skrivMall, character, l.klass, l.egenskap, mall) then
+				aterstall(character, fore)
+				return false, "skrivning_foll"
+			end
+		end
+
+		if befintlig then
+			befintlig.setId = set.id
+		else
+			sessioner[player] = {
+				setId = set.id,
+				character = character,
+				ursprung = fore,
+				kopplingar = bindVakter(player, character),
+			}
+		end
+		return true, "applicerat"
+	end
+
+	--[[ ── AVSLUTA ──────────────────────────────────────────────────
+
+		Returnerar `(ok, utfall, orsak)`. `orsak` är anroparens eget ord
+		— "tavling_slut", "respawn", "lamnade" — och tjänsten ekar det
+		tillbaka i stället för att spara det. Det är HELA vad `reason`
+		gör i den här fasen; den styr ingenting, och att låtsas annat
+		vore att bygga en kontext som inte är beställd. ]]
+	function tjanst.avsluta(player: Player, reason: string?): (boolean, string, string)
+		local orsak = if type(reason) == "string" then reason else "avslutad"
+		if type(player) ~= "table" and typeof(player) ~= "Instance" then
+			return false, "ingen_spelare", orsak
+		end
+
+		local session = sessioner[player]
+
+		--[[ Räknas upp OAVSETT om en session fanns: ett `starta` som just
+			nu ligger och väntar på Roblox ska falla även om det ännu inte
+			hunnit bli en session. ]]
+		bumpa(player)
+
+		if not session then
+			return true, "ingen_session", orsak
+		end
+
+		--[[ Tas ur registret FÖRST. Vakterna kan fyra i varandra — en död
+			följs av en respawn — och ett andra varv ska då hitta noll att
+			göra i stället för att återställa en gång till. ]]
+		sessioner[player] = nil
+		for _, k in ipairs(session.kopplingar) do
+			k:Disconnect()
+		end
+		table.clear(session.kopplingar)
+
+		--[[ DEN GAMLA KROPPEN SKRIVS ALDRIG PÅ NÅGON ANNAN. Har spelaren
+			fått en ny avatar är den redan klädd av Roblox i hennes egna
+			kläder, och tjänsten har ingenting där att göra. ]]
+		if player.Character ~= session.character then
+			return true, "karaktar_borta", orsak
+		end
+
+		local helt = aterstall(session.character, session.ursprung)
+		return true, (if helt then "aterstalld" else "aterstalld_delvis"), orsak
+	end
+
+	function tjanst.aktivt(player: Player): string?
+		local session = sessioner[player]
+		return session and session.setId or nil
+	end
+
+	function tjanst.aktivaSpelare(): { Player }
+		local ut: { Player } = {}
+		for player in pairs(sessioner) do
+			table.insert(ut, player)
+		end
+		return ut
+	end
+
+	return tjanst :: Tjanst
+end
+
+return TavlingskladerService
