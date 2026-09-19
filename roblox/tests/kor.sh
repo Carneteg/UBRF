@@ -21,6 +21,13 @@
 # körningen och görs nu här, varje gång.
 cd "$(dirname "$0")/.." || exit 1
 SPECAR="geometri spel spelkanon forberedelse skotselpass integration ledning ledning-integration promptkonflikt roster sprak sprak-en bygge mark handighet spelbuild forstaplayable preflight integritet statesync ridinput ridefirst tack tack-fas1 tack-fas2 tack-fas3 buren-tack hasthojd avsittning spelbarhet varldskoherens varldshud topologi qa sikt movement camera rider touch ljud driv-broms blick genomsikt paritet ugneta ugneta-gestalt klient klient-reservzon klient-hjalpknapp klient-ledprompt klient-naromrade klient-burenstatus klient-ridhandlingar ridanu-avslag tavlingsklader coachbanner"
+# #252 DEL B: banken provar SIG SJALV forst, i bada riktningarna. En
+# require av en modul som inte ligger i bunten ska falla bygget — inte
+# bli ett tyst nil (DEL A). Faller provet bygger vi inte en enda spec.
+if ! python3 tests/testa-build.py; then
+  echo "BANKENS SJALVPROV MISSLYCKADES"
+  exit 1
+fi
 byggargs=""
 for f in $SPECAR; do byggargs="$byggargs tests/$f.spec.luau"; done
 if ! bygglogg=$(python3 tests/build.py $byggargs 2>&1); then

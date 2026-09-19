@@ -36,7 +36,7 @@ BYGGE = GEOMETRI + [
 #[[ Spelbarhetsbanken: varlden, dorrtjansten OCH speldatan, sa att den
 #   gangbara kedjan spawn -> dorr -> Jacks box kan matas i EN korning.
 #   Det ar den grind som saknades nar Tobias fick hitta felen fysiskt. ]]
-SPELBARHET = None  # satts efter SPEL, se nedan
+#   Definieras efter SPEL, se nedan.
 
 #[[ First Playable-bänken: varlden PLUS dorrtjansten, sa att spawn- och
 #   dorrkontraktet ur #162 kan matas i samma korning som bygget. Det ar
@@ -82,6 +82,7 @@ SPELBARHET = BYGGE + [
     ("RigAdapter",   "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende", "src/shared/HorseCore/Utseende.luau"),
+    ("HastVisual",   "src/server/HastVisual.luau"),
     ("HastRigg",     "src/server/HastRigg.luau"),
     #[[ TESTMODUL, inte produktionskod: avatarens matt och
     #   konfigurationsrymden pa ETT stalle. Tva specar mater samma spelare
@@ -115,6 +116,9 @@ QA = BYGGE + [
 # byggda och behover klientens Genomsikt-regel for att veta vad som tonas.
 SIKT = QA + [
     ("Genomsikt", "src/client/Genomsikt.luau"),
+    #[[ #252 DEL B: HastGang require:ar Riggprofiler (ledernas ordning).
+    #   Den saknades i bunten, sa `Riggprofiler` var nil i sikt.spec. ]]
+    ("Riggprofiler", "src/shared/HorseCore/Riggprofiler.luau"),
     ("HastGang", "src/client/HastGang.luau"),
 ]
 
@@ -180,6 +184,11 @@ FORBEREDELSE = SPEL + [
     #   av varje bunt. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
     ("LedService",     "src/server/LedService.luau"),
+    #[[ #252 DEL B: GameplayService require:ar DorrService (dorrkroken i
+    #   `start`). Raden saknades har, sa `DorrService` var nil i varje spec
+    #   pa forberedelse-/integrationsbunten — tyst, tills banken slutade
+    #   acceptera en require som inte har nagon modul bakom sig. ]]
+    ("DorrService",    "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
 ]
 
@@ -191,6 +200,9 @@ FORBEREDELSE = SPEL + [
 #   just den modellen. Forberedelsebanken matte reglerna; den har mater
 #   att spelaren kan ga igenom dagen. ]]
 INTEGRATION = FORBEREDELSE + [
+    #[[ #252 DEL B: HastRigg require:ar HastVisual (natet i pcall). Modulen
+    #   lag i INGEN bunt, sa `HastVisual` var nil overallt. ]]
+    ("HastVisual",      "src/server/HastVisual.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
     # Markkontakten raknar om HipHeight mot det dekorlager hasten STAR PA.
     # Den ligger i integrationsbunten for att hasthojd.spec ska kunna mata
@@ -368,12 +380,15 @@ KOHERENS = GEOMETRI + [
     #[[ #235 FAS 1: boxfrontens upphangning. FORE GameplayService, som
     #   numera require:ar den for att slacka en tagen sadel. ]]
     ("TackForradService", "src/server/TackForradService.luau"),
-    ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #252 DEL B: DorrService lag EFTER GameplayService, som require:ar
+    #   den — alltsa nil vid laddning. HastVisual saknades helt. DinHast
+    #   stod dessutom tva ganger (en gang via _KLIENTDELEN); den andra ar
+    #   borta, buntar med dubbletter byggs inte langre. ]]
     ("DorrService",     "src/server/DorrService.luau"),
+    ("GameplayService", "src/server/GameplayService.luau"),
+    ("HastVisual",      "src/server/HastVisual.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
-    #[[ #180: samma hal som i KLIENT ovan — se noten dar. ]]
-    ("DinHast",         "src/client/DinHast.luau"),
     ("Init",            "src/client/init.client.luau"),
 ]
 
@@ -441,17 +456,96 @@ def material() -> list:
 
 def las(rel: str) -> str:
     return (ROT / rel).read_text(encoding="utf-8")
-def inlina(kalla: str) -> str:
-    """Byter require-anrop mot modulnamn. HorseCore utan barn blir __Core,
-    tabellen som stubbfilen bygger av de redan laddade modulerna."""
+
+
+class BankFel(SystemExit):
+    """Ett byggfel i banken (#252 DEL B). Arver SystemExit sa att kor.sh far
+    exitkod 1 och texten — inte en Python-traceback — och sa att en spec
+    aldrig kan starta pa en bunt som inte hanger ihop."""
+    def __init__(self, text: str):
+        super().__init__("BANKEN FAIL-CLOSED — " + text)
+
+
+#[[ Kommentarer i Luau: block (`--[[ ... ]]`, `--[=[ ... ]=]`) och rad. En
+#   require som bara star i en kommentar ar ingen require; den varken byts
+#   eller kravs. ]]
+_KOMMENTAR = re.compile(r"--\[(=*)\[.*?\]\1\]|--[^\n]*", re.S)
+
+
+def _kommentarspann(kalla: str) -> list:
+    return [(m.start(), m.end()) for m in _KOMMENTAR.finditer(kalla)]
+
+
+def inlina(kalla: str, kanda: set, rel: str, spec_rel: str, har_core: bool) -> str:
+    """Byter require-anrop mot modulnamn — och FALLER om namnet inte finns.
+
+    Forr blev en require av en modul som saknades i bunten det nakna namnet,
+    alltsa en odefinierad global: `nil`, tyst. DEL A visade vad det kostar
+    (`TackForradService` var nil i 14 specar utan att en rad sa ifran).
+    Nu kraver varje require att modulen ligger FORE den i bunten; HorseCore
+    utan barn blir `__Core` bara om stubbfilen faktiskt bygger ett."""
+    spann = _kommentarspann(kalla)
+
     def byt(m):
-        for g in m.groups():
-            if g:
-                return g
-        return "__Core"
+        if any(a <= m.start() < b for a, b in spann):
+            return m.group(0)
+        namn = next((g for g in m.groups() if g), "__Core")
+        if namn == "__Core":
+            if not har_core:
+                raise BankFel(
+                    f"{spec_rel}: {rel} require:ar HorseCore som helhet (__Core), "
+                    f"men stubbfilen bygger inget __Core. Anvand tests/stubs.luau "
+                    f"eller ta modulen ur bunten.")
+            return namn
+        if namn not in kanda:
+            raise BankFel(
+                f"{spec_rel}: {rel} require:ar `{namn}`, som inte ligger FORE den i bunten.\n"
+                f"  Laddade fore: {', '.join(sorted(kanda)) or '(inga)'}\n"
+                f"  Lagg (\"{namn}\", <sokvag>) i bunten fore {rel}, eller ta bort require:t.")
+        return namn
     return REQUIRE.sub(byt, kalla)
 
-def bygg(spec_rel: str) -> pathlib.Path:
+
+_BUNTDEF = re.compile(r"^([A-Z][A-Z_]*)\s*=\s", re.M)
+
+
+def kontrolleraBuntdefinitioner(kalla: str | None = None) -> None:
+    """Varje bunt far definieras EN gang i den har filen. DEL A: FORBEREDELSE
+    stod tre ganger, Python lat den sista vinna, och #235:s tillagg hamnade i
+    en dod kopia. Det far inte kunna handa tyst igen."""
+    text = kalla if kalla is not None else pathlib.Path(__file__).read_text(encoding="utf-8")
+    antal = {}
+    for m in _BUNTDEF.finditer(text):
+        antal[m.group(1)] = antal.get(m.group(1), 0) + 1
+    dubbla = sorted(n for n, k in antal.items() if k > 1)
+    if dubbla:
+        raise BankFel("bunten definieras mer an en gang i build.py: "
+                      + ", ".join(f"{n} ({antal[n]}x)" for n in dubbla)
+                      + ". Bara den sista tilldelningen lever; ta bort de andra.")
+
+
+_PRODUKT = ("src/", "game/", "buildings/")
+
+
+def kontrolleraBunt(spec_rel: str, moduler) -> None:
+    """Bunten ska vara uttalad och hel: minst en produktmodul, inga
+    dubbletter, och varje deklarerad fil ska finnas."""
+    if not moduler:
+        raise BankFel(f"{spec_rel}: bunten ar tom — en spec utan produktmoduler ar inget prov.")
+    namn = [n for n, _ in moduler]
+    dubbla = sorted({n for n in namn if namn.count(n) > 1})
+    if dubbla:
+        raise BankFel(f"{spec_rel}: bunten deklarerar samma modul mer an en gang: "
+                      + ", ".join(dubbla) + ". Den sista skuggar den forsta; ta bort en.")
+    for n, rel in moduler:
+        if not (ROT / rel).is_file():
+            raise BankFel(f"{spec_rel}: bunten deklarerar {n} = {rel}, men filen finns inte.")
+    if not any(rel.startswith(_PRODUKT) for _, rel in moduler):
+        raise BankFel(f"{spec_rel}: bunten laddar noll produktmoduler "
+                      f"(bara {', '.join(rel for _, rel in moduler)}). Ett tomt pass ar inget pass.")
+
+def valjBunt(spec_rel: str):
+    """Vilken bunt och vilka stubbar en spec far, ur namnet."""
     # Ordningen ar viktig: "forberedelse" far inte falla igenom till MODULER,
     # dar varken UBRFSkotsel eller Stallet finns. Testas forst av det skalet.
     # #161: skotselpass.spec provar skotselns moment, passets eftervard och
@@ -634,6 +728,15 @@ def bygg(spec_rel: str) -> pathlib.Path:
         moduler, stubbar = GEOMETRI, "tests/stubs.luau"
     else:
         moduler, stubbar = MODULER, "tests/stubs.luau"
+    return moduler, stubbar
+
+
+def foga(spec_rel: str, moduler, stubbar: str) -> pathlib.Path:
+    """Fogar ihop stubbar + bunten + specen till EN korbar fil — fail-closed
+    (#252 DEL B): bunten kontrolleras fore, varje require maste ha sin modul
+    fore sig, och efterat maste varje deklarerad modul finnas i utdatan."""
+    kontrolleraBuntdefinitioner()
+    kontrolleraBunt(spec_rel, moduler)
     stubbtext = las(stubbar).replace(
         "local __MATERIAL = {}",
         "local __MATERIAL = { " + ", ".join(f'"{m}"' for m in material()) + " }",
@@ -652,9 +755,11 @@ def bygg(spec_rel: str) -> pathlib.Path:
     spelbuild = "spelbuild" in spec_rel
     delar.append("local UBRF_QA_MARKORER = %s\n"
                  % ("false" if spelbuild else "true"))
+    kanda: set = set()
     for namn, rel in moduler:
-        kropp = inlina(las(rel))
+        kropp = inlina(las(rel), kanda, rel, spec_rel, har_core)
         delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
+        kanda.add(namn)
         # Hjalper/Svar/RidKanon ligger med sedan G02-B: MovementController
         # laser dem ur Core, precis som produktionen gor.
         # ...men bara nar stubbfilen faktiskt bygger ett __Core. Byggstubbarna
@@ -664,11 +769,24 @@ def bygg(spec_rel: str) -> pathlib.Path:
                     "Networking", "RidKanon", "Hjalper", "Svar", "Telemetri",
                     "Inspelning", "Kameralage", "Pass", "Sparning"):
             delar.append(f"__Core.{namn} = {namn}\n")
-    delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{las(spec_rel)}\n")
+    delar.append(f"--[[ ══ {spec_rel} ══ ]]\n{inlina(las(spec_rel), kanda, spec_rel, spec_rel, har_core)}\n")
+    text = "\n".join(delar)
+    #[[ Efterkontroll: varje deklarerad modul ska sta EXAKT en gang i den
+    #   korda filen. Det ar den rad som gor deklarationen till ett kontrakt
+    #   och inte en onskan. ]]
+    for namn, rel in moduler:
+        n = text.count(f"\nlocal {namn} = (function()\n")
+        if n != 1:
+            raise BankFel(f"{spec_rel}: {namn} ({rel}) ar deklarerad i bunten men star "
+                          f"{n} ganger i den korda filen (ska vara 1).")
     UT.mkdir(parents=True, exist_ok=True)
     mal = UT / (pathlib.Path(spec_rel).stem + ".luau")
-    mal.write_text("\n".join(delar), encoding="utf-8")
+    mal.write_text(text, encoding="utf-8")
     return mal
+
+
+def bygg(spec_rel: str) -> pathlib.Path:
+    return foga(spec_rel, *valjBunt(spec_rel))
 
 if __name__ == "__main__":
     specar = sys.argv[1:] or ["tests/movement.spec.luau"]
