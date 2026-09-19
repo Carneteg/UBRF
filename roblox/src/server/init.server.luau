@@ -5,6 +5,7 @@
 ]]
 
 local Skopa = require(script.Skopa)
+local ForstaRitten = require(script.ForstaRitten)
 local SparService = require(script.SparService)
 local HorseService = require(script.HorseService)
 local StallService = require(script.StallService)
@@ -112,10 +113,19 @@ local function kritisk(namn: string, f: () -> ())
 	if not fas(namn, f) then table.insert(kritisktFel, namn) end
 end
 
+--[[ SKYDD 8 i arkitekturbeslutet for #263: varldsbygget ska REDOVISAS
+	separat, sa att 30-sekundersmalet inte kan goras gront genom att
+	starta klockan sent. Bygget sker en gang per server och fore
+	spelaren finns, sa det raknas inte mot hennes tid — men det ska
+	synas, for den som vantar bryr sig inte om vilken halva som var
+	langsam. ]]
+local byggeStart = os.clock()
 kritisk("världsbygget", function()
 	varldenFinns = byggVarlden()
 	if not varldenFinns then error("anläggningen byggdes inte") end
 end)
+local byggeSekunder = os.clock() - byggeStart
+print(("[Horse] Världsbygget tog %.1f s"):format(byggeSekunder))
 
 --[[ Hästen FÖRE HorseService. Tjänsten registrerar `GetTagged("Horse")`
 	vid start; en rigg som taggas efteråt fångas visserligen av
@@ -146,6 +156,17 @@ kritisk("LedService", LedService.start)
 --[[ Utrustningen hängs upp EFTER GameplayService: prompten lämnar sitt val
      dit, och tjänsten tar emot anroparen som argument i stället för att
      requira tillbaka. Ordningen är alltså ett beroende, inte en smaksak. ]]
+--[[ FIRST RIDE SIST BLAND TJANSTERNA (#263 Gate 2A).
+
+	Den hakar pa `SparService.efterLaddning`, och den hooken kors DIREKT
+	for spelare som redan ar redo. Startar den fore `GameplayService`
+	och `LedService` skulle den forsta spelaren mota en `bind` utan
+	tjanster bakom sig. Sist ar alltsa ett beroende, inte en smaksak. ]]
+kritisk("ForstaRitten", function()
+	ForstaRitten.satVarldsbygge(byggeSekunder)
+	ForstaRitten.start()
+end)
+
 kritisk("TackForradService", function()
 	--[[ #235 FAS 1: boxfronten hamtar EN typ, inte paret. `valjPar` star
 		kvar for `ridaNu`, dar stallet gor i ordning hela hasten. ]]

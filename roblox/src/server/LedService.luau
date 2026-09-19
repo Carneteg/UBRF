@@ -434,7 +434,28 @@ end
 	Ryttaren får ingen ny position: hon går dit själv. Det stallet gör är
 	att lämna hästen framme, precis som en stallpersonal som ställt fram
 	henne inför lektionen. ]]
-function LedService.placeraVidMal(player: Player, modell: Model): (boolean, string?)
+--[[ STALL FRAM HAST OCH RYTTARE I MALZONEN — utan att bokfora nagot.
+
+	Bruten ur `placeraVidMal` for #263 Gate 2A. Delningen ar inte
+	kosmetisk: `placeraVidMal` gor TVA saker, och First Ride far bara
+	gora den ena.
+
+	  GEOMETRIN — dar malzonen ligger i varlden, och var hasten och
+	  ryttaren hamnar. Ren fysisk placering.
+
+	  BOKFORINGEN — `noteraUppnatt(lamnatBox, malNatt)`, alltsa beviset
+	  for att SPELAREN ledde henne dit. Det ar en ledningsprestation.
+
+	First Ride flyttar hasten till ridhuset at spelaren; hon har inte
+	lett henne. Skrev den har funktionen flaggorna hade hennes senare
+	`leda`-fas passerat sin fysiska kontroll utan att hon gjort
+	arbetet, och ordern i #263 forbjuder uttryckligen att stallskotsel
+	markeras som utford.
+
+	Geometrin star kvar pa ETT stalle. Tva kopior av samma
+	koordinatmatematik hade varit precis den dubbla sanning kanon
+	forbjuder. ]]
+function LedService.stallFram(player: Player, modell: Model): (boolean, string?)
 	if typeof(modell) ~= "Instance" or not modell:IsA("Model") then
 		return false, "spel.ingen_hast"
 	end
@@ -480,6 +501,19 @@ function LedService.placeraVidMal(player: Player, modell: Model): (boolean, stri
 		local hast = (modell.PrimaryPart :: BasePart).CFrame
 		hrp.CFrame = hast * CFrame.new(-3, 0, 0)
 	end
+
+	return true, nil
+end
+
+--[[ Stall fram HENNE, och bokfor att spelaren tog henne dit.
+
+	Den har ar ledningens och «Rida nu»:s vag: bada ar handlingar dar
+	spelaren bett om eller utfort forflyttningen, och da ar flaggorna
+	sanna. Se noten vid `stallFram` for varfor First Ride inte far
+	anvanda den. ]]
+function LedService.placeraVidMal(player: Player, modell: Model): (boolean, string?)
+	local ok, fel = LedService.stallFram(player, modell)
+	if not ok then return false, fel end
 
 	local hastId = tostring(modell:GetAttribute("HorseId") or "")
 	noteraUppnatt(player, hastId, "lamnatBox")

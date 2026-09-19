@@ -397,6 +397,62 @@ Sprak.text = {
 		sv = "pek",
 		en = "touch",
 	},
+	["bygg.rubrik"] = {
+		sv = "Byggidentitet",
+		en = "Build identity",
+	},
+	["bygg.stang"] = {
+		sv = "Stäng",
+		en = "Close",
+	},
+	["bygg.okand"] = {
+		sv = "okänd",
+		en = "unknown",
+	},
+	["bygg.kallhash"] = {
+		sv = "Källhash",
+		en = "Source hash",
+	},
+	["bygg.kallor"] = {
+		sv = "Källfiler",
+		en = "Source files",
+	},
+	["bygg.lage"] = {
+		sv = "Läge",
+		en = "Mode",
+	},
+	["bygg.genererad"] = {
+		sv = "Genererad",
+		en = "Generated",
+	},
+	["bygg.plats"] = {
+		sv = "Plats",
+		en = "Place",
+	},
+	["bygg.version"] = {
+		sv = "Platsversion",
+		en = "Place version",
+	},
+	["bygg.miljo"] = {
+		sv = "Miljö",
+		en = "Environment",
+	},
+	["bygg.opublicerad"] = {
+		sv = "0 — opublicerad",
+		en = "0 — unpublished",
+	},
+	["bygg.studioversion"] = {
+		sv = "%d — men Studio kör Rojos kod",
+		en = "%d — but Studio runs Rojo's code",
+	},
+	["bygg.studio"] = {
+		sv = "Studio (lokalt)",
+		en = "Studio (local)",
+	},
+	["bygg.server"] = {
+		sv = "Publicerad server",
+		en = "Published server",
+	},
 	["touch.sitt_av"] = {
 		sv = "SITT AV",
 		en = "DISMOUNT",

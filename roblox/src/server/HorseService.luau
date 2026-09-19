@@ -314,8 +314,19 @@ end
 	någonsin monterat en ryttare mot en riktig rigg. Kontraktet mäts nu i
 	`integration.spec.luau` (punkt 9 och 11).
 
-	Kroken får INTE avgöra något — se noten vid `setRiderHook`. ]]
-local riderHook: ((Player, boolean) -> ())? = nil
+	Kroken får INTE avgöra något — se noten vid `riderHooks`. ]]
+--[[ EN LISTA, INTE EN KROK (#263 Gate 2A).
+
+	Faltet var en enda krok, och `GameplayService` hade tagit den.
+	`ForstaRitten` behover samma besked — nar en ryttare sitter av ska
+	dess sessionsstatus rivas — och alternativet hade varit en andra,
+	parallell kroktyp for samma handelse.
+
+	Att det gar att gora sa har utan risk star redan i noten ovan:
+	kroken FAR inte avgora nagot. Den ar en avisering, och en avisering
+	tal flera mottagare. Varje lyssnare kors i egen pcall, sa en som
+	kastar tystar inte nasta. ]]
+local riderHooks: { (Player, boolean) -> () } = {}
 
 --[[ ── REPLIKERINGEN AV DET ACCEPTERADE LÄGET (#233 Fas 4b) ────────────
 
@@ -469,8 +480,7 @@ local function setRider(session: Session, player: Player?)
 
 	--[[ Aviseringen sist, när allt annat är gjort: kroken ska se ett
 		färdigt tillstånd, inte ett halvt. ]]
-	local hook = riderHook
-	if hook then
+	for _, hook in ipairs(riderHooks) do
 		if previous and previous ~= player then
 			local ok, fel = pcall(hook, previous, false)
 			if not ok then warn("[Horse] ryttarkroken (av) kastade: " .. tostring(fel)) end
@@ -528,8 +538,17 @@ function HorseService.setDagsformHook(hook: ((Player) -> number)?)
 	dagsformHook = hook
 end
 
-function HorseService.setRiderHook(hook: ((Player, boolean) -> ())?)
-	riderHook = hook
+--[[ Lagger till en lyssnare. Ersatter INTE de befintliga — se noten vid
+	`riderHooks`. ]]
+function HorseService.lyssnaRyttare(hook: ((Player, boolean) -> ())?)
+	if hook == nil then return end
+	table.insert(riderHooks, hook)
+end
+
+--[[ Provkrok: banken kor `start()` en gang per block, och utan den har
+	arver block tva block ettas lyssnare. ]]
+function HorseService._glomRyttarlyssnareForProv()
+	riderHooks = {}
 end
 
 function HorseService.tryMount(player: Player, model: Model): (boolean, string?, string?)

@@ -44,6 +44,8 @@ local PreparationController = require(script.PreparationController)
 local UgnetaController = require(script.UgnetaController)
 local LektionController = require(script.LektionController)
 local KontrollHjalp = require(script.KontrollHjalp)
+--[[ #263: vilken build sitter jag i? Egen liten yta, se modulhuvudet. ]]
+local Byggidentitet = require(script.Byggidentitet)
 --[[ #162: världens prompter skrivs om till spelarens språk på klienten —
      en ProximityPrompt replikeras till alla och kan inte ha ett språk
      på servern. ]]
@@ -235,7 +237,15 @@ local function mount(model: Model, rittId: string?)
 		--[[ #227: hjälpknappen viker undan för reglagen på en telefon i
 		     landskap. Reserven rapporteras härifrån, i samma andetag som
 		     reglagen byggs, byggs om (#208) eller rivs. ]]
-		efterLayout = KontrollHjalp.reservAndrad,
+		--[[ TVÅ lyssnare, inte en. `Byggidentitet` viker undan för
+		     samma reserv och genom samma kontrakt (#263); slotten bär
+		     en funktion, så de kopplas ihop här i stället för att
+		     `TouchControls` får en lista. Ordningen spelar ingen roll —
+		     båda räknar bara om sin egen knapps plats. ]]
+		efterLayout = function(bredd: number, topp: number)
+			KontrollHjalp.reservAndrad(bredd, topp)
+			Byggidentitet.reservAndrad(bredd, topp)
+		end,
 	})
 	InteractionController.setEnabled(false)
 	DinHast.satDold(true)
@@ -428,6 +438,10 @@ UgnetaController.start()
      bygga den vid uppsittning hade gett samma hål vi just stängde — hjälpen
      ska finnas i stallet också. ]]
 KontrollHjalp.start()
+--[[ #263: byggidentiteten lever hela sessionen, av samma skäl som
+     hjälpknappen — QA ska kunna läsa av builden i stallet också, inte
+     bara i sadeln. ]]
+Byggidentitet.start()
 Prompttext.start()
 
 --[[ Servern talar om när uppsittningen ändras — även när den ändras av

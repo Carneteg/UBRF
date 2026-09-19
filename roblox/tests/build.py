@@ -203,6 +203,9 @@ FORBEREDELSE = SPEL + [
     #   acceptera en require som inte har nagon modul bakom sig. ]]
     ("DorrService",    "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
+    #   GameplayService, HorseService, LedService och TackService. ]]
+    ("ForstaRitten",  "src/server/ForstaRitten.luau"),
 ]
 
 #[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
@@ -320,6 +323,18 @@ KLIENT = SPEL + [
     ("RiderController",     "src/client/RiderController.luau"),
     ("Input",               "src/client/Input.luau"),
     ("TouchControls",       "src/client/TouchControls.luau"),
+    #[[ #263: byggidentiteten. EFTER TouchControls — den viker undan for
+    #   samma reserv och laser den genom `reglageBredd`/`reglageTopp`, sa
+    #   modulen maste ligga over den i bunten. Och FORE init.client, som
+    #   require:ar den; bankens sjalvprov faller annars, vilket det ocksa
+    #   gjorde nar den forst hamnade i PARITET i stallet for har.
+    #
+    #   `UBRFBuild` foljer med: provet jamfor mot den GENERERADE
+    #   `kallhash` och `kallor` i stallet for mot avskrivna tal. En
+    #   avskriven hash hade blivit fel dagen nagon ror en kallfil, och
+    #   provet hade da matt sin egen inaktualitet. ]]
+    ("UBRFBuild",           "game/UBRFBuild.luau"),
+    ("Byggidentitet",       "src/client/Byggidentitet.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     #[[ #244: se noten i PARITET. Bannern maste ligga fore den modul som
@@ -403,6 +418,9 @@ KOHERENS = GEOMETRI + [
     #   borta, buntar med dubbletter byggs inte langre. ]]
     ("DorrService",     "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
+    #   GameplayService, HorseService, LedService och TackService. ]]
+    ("ForstaRitten",  "src/server/ForstaRitten.luau"),
     ("HastVisual",      "src/server/HastVisual.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
@@ -728,6 +746,11 @@ def valjBunt(spec_rel: str):
     #   star fore "klient": en lasare ska inte behova rakna ut vilken bunt
     #   ett namn hamnar i. ]]
     elif "takt" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #263 Gate 2A: First Ride mater HELA vagen — tilldelning, rigg,
+    #   utrustning, malzon och uppsittning genom riktiga tjanster. Samma
+    #   bunt som takt, av samma skal. ]]
+    elif "forstaritten" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"
