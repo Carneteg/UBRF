@@ -657,6 +657,232 @@ do
 	check("avsluta utan session är ofarligt", ok2 == true)
 end
 
+--[[ ══ 13. FRÅNKOPPLING I DE TRE FÖNSTREN ══════════════════════
+
+	Det som CHANGES_REQUESTED på head f9fd7e3 pekade ut: vakterna binds
+	först när en session finns, så under uppslaget fanns ingen som såg
+	att spelaren lämnade. `inaktuell` räcker inte där — generationen är
+	orörd och `player.Character` är fortfarande samma instans, för
+	frånkopplingen syns inte i någon av dem.
+
+	Tre fönster mäts, ett per plats där tråden kan vakna för sent:
+	under uppslaget, under snapshotet och mellan de två skrivningarna.
+	Kravet är detsamma i alla tre — noll avatarskrivningar (eller, i det
+	sista fönstret, noll som blir kvar), noll sessioner, noll lyssnare
+	och noll serverstate.
+
+	RÄKNEVERKET är själva poängen med det första av dem: att avataren
+	SER orörd ut kan bero på att den skrevs och skrevs tillbaka, och det
+	är inte samma sak som att den aldrig rördes. ]]
+print("\n-- Spelaren lämnar innan sessionen hunnit bli till --")
+
+--[[ Standardadaptern med räkneverk på de två SKRIVANDE operationerna och
+	valfria överlägg på de två LÄSANDE. ]]
+local function avatarSomRaknar(overlagg)
+	local standard = S.STANDARD.avatar
+	local a = { skrivningar = 0, borttag = 0 }
+	a.lager = overlagg.lager or standard.lager
+	a.lasMall = overlagg.lasMall or standard.lasMall
+	a.skrivMall = function(karaktar, klass, egenskap, mall)
+		a.skrivningar += 1
+		return standard.skrivMall(karaktar, klass, egenskap, mall)
+	end
+	a.taBort = function(karaktar, klass)
+		a.borttag += 1
+		return standard.taBort(karaktar, klass)
+	end
+	return a
+end
+
+--[[ FÖNSTER 1: mitt i kataloguppslaget, innan någon session finns. ]]
+do
+	rent()
+	local avatar = avatarSomRaknar({})
+	local tjanst = S.nya({ katalog = nyKatalog(allaRatta(), true), avatar = avatar })
+	local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local trad = coroutine.create(function() return tjanst.starta(spelare, "white") end)
+	coroutine.resume(trad)
+	check("ingen session har hunnit bli till under uppslaget",
+		tjanst.aktivt(spelare) == nil)
+	--[[ Vakten ska finnas REDAN HÄR. Utan den mätningen kunde skyddet
+		lika gärna vara en kontroll som görs för sent. ]]
+	check("men en frånkopplingsvakt är bunden under uppslaget",
+		#Players.PlayerRemoving._lyssnare == 1,
+		("%d lyssnare"):format(#Players.PlayerRemoving._lyssnare))
+	Players.PlayerRemoving:Fire(spelare)
+	local sista = {}
+	while coroutine.status(trad) == "suspended" do
+		sista = table.pack(coroutine.resume(trad))
+	end
+	local s, p = buren(karaktar)
+	check("ett uppslag som svarar efter frånkoppling nekas",
+		sista[2] == false, tostring(sista[3]))
+	check("frånkoppling under uppslaget ger NOLL avatarskrivningar",
+		avatar.skrivningar == 0 and avatar.borttag == 0,
+		("%d skrivningar · %d borttag"):format(avatar.skrivningar, avatar.borttag))
+	check("och lämnar avataren exakt intakt",
+		s == "rbxassetid://777001" and p == "rbxassetid://777002",
+		("%s · %s"):format(tostring(s), tostring(p)))
+	check("och skapar ingen session",
+		tjanst.aktivt(spelare) == nil and #tjanst.aktivaSpelare() == 0)
+	check("och lämnar inga lyssnare kvar",
+		#Players.PlayerRemoving._lyssnare == 0
+			and #spelare.CharacterAdded._lyssnare == 0
+			and #spelare.CharacterRemoving._lyssnare == 0,
+		("%d · %d · %d"):format(#Players.PlayerRemoving._lyssnare,
+			#spelare.CharacterAdded._lyssnare, #spelare.CharacterRemoving._lyssnare))
+	check("och inget serverstate om någon som inte spelar längre",
+		tjanst.kvarvarande() == 0, ("%d kvar"):format(tjanst.kvarvarande()))
+end
+
+--[[ Vakten får inte heller överleva en start som slutar på något annat
+	sätt. Ett nekat uppslag är den vanligaste av dem. ]]
+do
+	rent()
+	local svar = allaRatta()
+	svar[T.set("white").pantsAssetId] = { ok = false, fel = "HTTP 500" }
+	local tjanst = tjanstMedKatalog(svar)
+	local spelare = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	tjanst.starta(spelare, "white")
+	check("en nekad start lämnar ingen frånkopplingsvakt kvar",
+		#Players.PlayerRemoving._lyssnare == 0,
+		("%d lyssnare"):format(#Players.PlayerRemoving._lyssnare))
+end
+
+--[[ FÖNSTER 2: mitt i snapshotet, efter uppslaget men före första
+	skrivningen. Läsadaptern är injicerbar och kan yielda i Studio;
+	här lämnar spelaren inifrån just den läsningen. ]]
+do
+	rent()
+	local standard = S.STANDARD.avatar
+	local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local avatar = avatarSomRaknar({ lasMall = function(lager, egenskap)
+		local varde = standard.lasMall(lager, egenskap)
+		Players.PlayerRemoving:Fire(spelare)
+		return varde
+	end })
+	local tjanst = S.nya({ katalog = nyKatalog(allaRatta()), avatar = avatar })
+	local ok, utfall = tjanst.starta(spelare, "white")
+	local s, p = buren(karaktar)
+	check("frånkoppling under snapshotet nekas utan en enda skrivning",
+		ok == false and avatar.skrivningar == 0 and avatar.borttag == 0,
+		("%s · %d skrivningar"):format(tostring(utfall), avatar.skrivningar))
+	check("och lämnar avataren exakt intakt",
+		s == "rbxassetid://777001" and p == "rbxassetid://777002",
+		("%s · %s"):format(tostring(s), tostring(p)))
+	check("och lämnar varken session, lyssnare eller serverstate",
+		tjanst.aktivt(spelare) == nil and #Players.PlayerRemoving._lyssnare == 0
+			and tjanst.kvarvarande() == 0)
+end
+
+--[[ FÖNSTER 3: mellan de två skrivningarna, alltså före
+	sessionsregistreringen. Här HAR tjänsten hunnit skriva, och kravet är
+	därför det andra av de två: ingen session, och plaggen tillbaka. ]]
+do
+	rent()
+	local standard = S.STANDARD.avatar
+	local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local avatar = {
+		lager = standard.lager,
+		lasMall = standard.lasMall,
+		taBort = standard.taBort,
+		skrivMall = function(kropp, klass, egenskap, mall)
+			local r = standard.skrivMall(kropp, klass, egenskap, mall)
+			if klass == "Pants" then Players.PlayerRemoving:Fire(spelare) end
+			return r
+		end,
+	}
+	local tjanst = S.nya({ katalog = nyKatalog(allaRatta()), avatar = avatar })
+	local ok, utfall = tjanst.starta(spelare, "white")
+	local s, p = buren(karaktar)
+	check("frånkoppling mellan skrivningarna registrerar ingen session",
+		ok == false and tjanst.aktivt(spelare) == nil and #tjanst.aktivaSpelare() == 0,
+		tostring(utfall))
+	check("och lägger tillbaka de plagg som hann skrivas",
+		s == "rbxassetid://777001" and p == "rbxassetid://777002",
+		("%s · %s"):format(tostring(s), tostring(p)))
+	check("och lämnar varken lyssnare eller serverstate",
+		#Players.PlayerRemoving._lyssnare == 0 and tjanst.kvarvarande() == 0,
+		("%d lyssnare · %d kvar"):format(#Players.PlayerRemoving._lyssnare,
+			tjanst.kvarvarande()))
+end
+
+--[[ ══ 14. SNAPSHOTET AV ORIGINALKLÄDERNA ÄR FAIL CLOSED ═══════════
+
+	Det andra blockerande fyndet. `lasLage` sväljde fel från båda
+	lagren: ett kast från `lager` blev "plagget fanns inte", ett kast
+	eller ett icke-strängsvar från `lasMall` blev "mallen var tom".
+	Starten fortsätter sedan att klä avataren på den gissningen, och vid
+	avslut tog tjänsten därför bort ett plagg som faktiskt fanns — eller
+	nollade en mall som hade ett värde.
+
+	Kravet: ett oläsbart lager är ett NEJ. Ingen skrivning, ingen
+	session. Räkneverket mäter det första; att avataren ser orörd ut
+	räcker inte som bevis. ]]
+print("\n-- Ett oläsbart lager stoppar starten --")
+do
+	local standard = S.STANDARD.avatar
+	local fall = {
+		{ "lager kastar på tröjan", { lager = function(karaktar, klass)
+			if klass == "Shirt" then error("FindFirstChildOfClass foll") end
+			return standard.lager(karaktar, klass)
+		end } },
+		{ "lager kastar på byxan", { lager = function(karaktar, klass)
+			if klass == "Pants" then error("FindFirstChildOfClass foll") end
+			return standard.lager(karaktar, klass)
+		end } },
+		{ "lasMall kastar", { lasMall = function(lager, egenskap)
+			error("egenskapen gick inte att lasa")
+		end } },
+		{ "lasMall svarar med ett tal", { lasMall = function(lager, egenskap)
+			return 0
+		end } },
+		{ "lasMall svarar med nil", { lasMall = function(lager, egenskap)
+			return nil
+		end } },
+	}
+	for _, f in ipairs(fall) do
+		rent()
+		local avatar = avatarSomRaknar(f[2])
+		local tjanst = S.nya({ katalog = nyKatalog(allaRatta()), avatar = avatar })
+		local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+		local ok, utfall = tjanst.starta(spelare, "white")
+		local s, p = buren(karaktar)
+		check(("%s nekas"):format(f[1]), ok == false, tostring(utfall))
+		check(("%s ger noll avatarskrivningar"):format(f[1]),
+			avatar.skrivningar == 0 and avatar.borttag == 0,
+			("%d skrivningar · %d borttag"):format(avatar.skrivningar, avatar.borttag))
+		check(("%s lämnar avataren exakt intakt"):format(f[1]),
+			s == "rbxassetid://777001" and p == "rbxassetid://777002",
+			("%s · %s"):format(tostring(s), tostring(p)))
+		check(("%s lämnar ingen session"):format(f[1]),
+			tjanst.aktivt(spelare) == nil and #tjanst.aktivaSpelare() == 0)
+		check(("%s lämnar inga lyssnare"):format(f[1]),
+			#Players.PlayerRemoving._lyssnare == 0
+				and #spelare.CharacterAdded._lyssnare == 0,
+			("%d · %d"):format(#Players.PlayerRemoving._lyssnare,
+				#spelare.CharacterAdded._lyssnare))
+	end
+end
+
+--[[ Och motprovet, som håller fail closed från att bli fail always: ett
+	lager som HELT SAKNAS är inget läsfel. Det är ett fullgott snapshot,
+	och det ska fortfarande gå att rida i tävlingskläder utan att äga
+	vare sig tröja eller byxa. ]]
+do
+	rent()
+	local avatar = avatarSomRaknar({})
+	local tjanst = S.nya({ katalog = nyKatalog(allaRatta()), avatar = avatar })
+	local spelare, karaktar = nySpelare("Naken")
+	local ok, utfall = tjanst.starta(spelare, "white")
+	check("ett lager som saknas är fortfarande ett giltigt snapshot",
+		ok == true, tostring(utfall))
+	tjanst.avsluta(spelare, "slut")
+	check("och avslutet lämnar avataren utan lager igen",
+		karaktar:FindFirstChildOfClass("Shirt") == nil
+			and karaktar:FindFirstChildOfClass("Pants") == nil)
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))

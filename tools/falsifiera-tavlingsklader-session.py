@@ -16,6 +16,13 @@ den nya. Skyddet var arkitektur, inte vakt. Provet fick en andra matning
 -- att den lamnade kroppen inte heller skrivs pa -- och bada mutationerna
 faller nu var for sig (F5a och F5b).
 
+ANDRA VANDAN, efter CHANGES_REQUESTED pa head f9fd7e3: de tva P1-fynden
+var livscykelfel som INGEN mutation har kunde ta pa, for det fanns ingen
+matning att fella. F11* muterar frankopplingsvakten som binds fore
+forsta yield, F12* och F13 muterar snapshotets fail closed, och F14/F15
+muterar de tva farskhetsprovningarna kring skrivfasen. Var och en av dem
+ska ge rott pa egen hand.
+
 KOR DEN INTE MED OCOMMITTAT ARBETE I MODULEN. Den skriver om kallan och
 lagger tillbaka den efterat; ett avbrott mitt i lamnar en muterad fil,
 och da ar det commiten som ar raddningen. Skriptet vagrar darfor starta
@@ -66,15 +73,15 @@ VAKT = ('\t\tif player.Character ~= session.character then\n'
 FALS = [
     ("F1 bada posterna verifieras fore forsta skrivningen",
      '\t\t\tif uppslag.assetTypeId ~= l.assetType then\n'
-     '\t\t\t\treturn false, "fel_assettype"\n\t\t\tend\n\t\tend',
+     '\t\t\t\treturn slut(false, "fel_assettype")\n\t\t\tend\n\t\tend',
      '\t\t\tif uppslag.assetTypeId ~= l.assetType then\n'
-     '\t\t\t\treturn false, "fel_assettype"\n\t\t\tend\n'
+     '\t\t\t\treturn slut(false, "fel_assettype")\n\t\t\tend\n'
      '\t\t\tsakert(avataradapter.skrivMall, character, l.klass, l.egenskap,\n'
      '\t\t\t\tTavlingskladerService.mall((set :: any)[l.falt]))\n\t\tend'),
 
     ("F2 en fallen skrivning rullar tillbaka",
-     '\t\t\t\taterstall(character, fore)\n\t\t\t\treturn false, "skrivning_foll"',
-     '\t\t\t\treturn false, "skrivning_foll"'),
+     '\t\t\t\taterstall(character, fore)\n\t\t\t\treturn slut(false, "skrivning_foll")',
+     '\t\t\t\treturn slut(false, "skrivning_foll")'),
 
     ("F3 ett ursprungligen saknat lager tas bort igen",
      '\t\t\telse\n\t\t\t\tif not sakert(avataradapter.taBort, character, l.klass) then\n'
@@ -83,9 +90,8 @@ FALS = [
      '\t\t\t\t\tallt = false\n\t\t\t\tend\n\t\t\tend'),
 
     ("F4 generationsvakten efter ett yield",
-     '\t\t\tif inaktuell(player, genFore, character) then\n'
-     '\t\t\t\treturn false, "inaktuell"\n\t\t\tend',
-     '\t\t\tif false then\n\t\t\t\treturn false, "inaktuell"\n\t\t\tend'),
+     '\t\t\treturn inaktuell(player, genFore, character)\n\t\tend',
+     '\t\t\treturn false\n\t\tend'),
 
     ("F5a vakten: en lamnad kropp skrivs inte pa",
      VAKT,
@@ -118,6 +124,55 @@ FALS = [
     ("F10 sessionen tas ur registret fore aterstallningen",
      '\t\tsessioner[player] = nil\n\t\tfor _, k in ipairs(session.kopplingar) do',
      '\t\tfor _, k in ipairs(session.kopplingar) do'),
+
+    # ── P1 nr 1: frankoppling under ett pagaende kataloguppslag ──
+    ("F11a frankopplingsvakten ser att spelaren lamnar",
+     '\t\t\tif lamnade == player then\n\t\t\t\tlamnad = true\n\t\t\tend',
+     '\t\t\tif false and lamnade == player then\n\t\t\t\tlamnad = true\n\t\t\tend'),
+
+    ("F11b den vaknade traden prover flaggan",
+     '\t\t\tif lamnad then\n\t\t\t\treturn true\n\t\t\tend',
+     '\t\t\tif false then\n\t\t\t\treturn true\n\t\t\tend'),
+
+    ("F11c vakten overlever inte anropet",
+     '\t\t\tfrankoppling:Disconnect()',
+     '\t\t\tlocal _ = frankoppling'),
+
+    ("F11d generationen stadas efter en frankoppling",
+     '\t\t\tif lamnad then\n\t\t\t\tgeneration[player] = nil\n\t\t\tend',
+     '\t\t\tif false then\n\t\t\t\tgeneration[player] = nil\n\t\t\tend'),
+
+    ("F15 farskheten provas fore forsta mutationen",
+     '\t\t\tcheckpoint \u2014 sista st\u00e4llet f\u00f6re en skrivning. ]]\n'
+     '\t\tif avbrutet() then\n\t\t\treturn slut(false, "inaktuell")\n\t\tend',
+     '\t\t\tcheckpoint \u2014 sista st\u00e4llet f\u00f6re en skrivning. ]]\n'
+     '\t\tif false then\n\t\t\treturn slut(false, "inaktuell")\n\t\tend'),
+
+    ("F14 farskheten provas fore sessionsregistreringen",
+     '\t\tif avbrutet() then\n\t\t\tif sessioner[player] == befintlig then\n'
+     '\t\t\t\taterstall(character, fore)\n\t\t\tend\n'
+     '\t\t\treturn slut(false, "inaktuell")\n\t\tend',
+     '\t\tif false then\n\t\t\tif sessioner[player] == befintlig then\n'
+     '\t\t\t\taterstall(character, fore)\n\t\t\tend\n'
+     '\t\t\treturn slut(false, "inaktuell")\n\t\tend'),
+
+    # ── P1 nr 2: snapshotet av originalkladerna ar fail closed ───
+    ("F12a ett kast fran lager blir inte saknat lager",
+     '\t\t\tif not okL then\n\t\t\t\treturn nil\n\t\t\tend\n\t\t\tif inst == nil then',
+     '\t\t\tif not okL then\n\t\t\t\tinst = nil\n\t\t\tend\n\t\t\tif inst == nil then'),
+
+    ("F12b ett kast fran lasMall blir inte tom mall",
+     '\t\t\t\tif not okM or type(mall) ~= "string" then',
+     '\t\t\t\tif type(mall) ~= "string" then'),
+
+    ("F12c ett icke-strangsvar fran lasMall blir inte mall",
+     '\t\t\t\tif not okM or type(mall) ~= "string" then',
+     '\t\t\t\tif not okM then'),
+
+    ("F13 ett olasbart lage stoppar starten",
+     '\t\tlocal fore = lasLage(character)\n\t\tif not fore then\n'
+     '\t\t\treturn slut(false, "lage_olasbart")\n\t\tend',
+     '\t\tlocal fore = lasLage(character) or {}'),
 ]
 
 

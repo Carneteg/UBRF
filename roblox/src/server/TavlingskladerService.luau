@@ -35,6 +35,14 @@
 	svarar utan typ eller kastar ger NEJ och en orörd avatar. Ett `ja`
 	som bygger på tystnad är värre än ett nej.
 
+	Två fönster är särskilt lätta att missa, och båda är stängda här.
+	Det första är spelaren som LÄMNAR medan uppslaget yieldar: vakten
+	för det binds före första yield, inte när sessionen föds, för innan
+	dess finns ingen session att binda den till. Det andra är snapshotet
+	av spelarens egna kläder, som måste kunna MISSLYCKAS — ett snapshot
+	som gissar "fanns inte" eller "var tomt" när lagret inte gick att
+	läsa tar ifrån henne ett plagg vid avslut.
+
 	══ ÄGARSKAPETS GRÄNS ═════════════════════════════════════════════
 
 	Bara klassiska `Shirt` och `Pants`. Hår, ansikte, kropp, hudton,
@@ -221,6 +229,7 @@ export type Tjanst = {
 	avsluta: (player: Player, reason: string?) -> (boolean, string, string),
 	aktivt: (player: Player) -> string?,
 	aktivaSpelare: () -> { Player },
+	kvarvarande: () -> number,
 }
 
 function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
@@ -266,19 +275,36 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 
 	--[[ Läser av båda lagren som de ligger just nu. `fanns = false`
 		betyder att lagret inte finns — inte att det är tomt. Det är
-		den skillnaden återställningen står och faller med. ]]
-	local function lasLage(character: Instance): { [string]: Lagerlage }
+		den skillnaden återställningen står och faller med.
+
+		FAIL CLOSED, och det är hela skälet till frågetecknet i
+		returtypen: ett lager som inte går att läsa ENTYDIGT ger `nil`,
+		inte en gissning. Förut sväljdes både ett kast från `lager` och
+		ett kast eller ett icke-strängsvar från `lasMall`; gissningen
+		blev "lagret fanns inte" respektive "mallen var tom", och båda
+		löpte vidare in i avatarskrivningen. Vid avslut tog tjänsten då
+		bort ett plagg som faktiskt fanns, eller nollade en mall som
+		hade ett värde. Ett snapshot som inte är exakt är inget
+		snapshot — det är ett beslut att ändra spelarens avatar i
+		tysthet.
+
+		Att lagret SAKNAS är däremot ett fullgott svar. Skillnaden mot
+		ett läsfel är precis den här funktionen finns för. ]]
+	local function lasLage(character: Instance): { [string]: Lagerlage }?
 		local lage: { [string]: Lagerlage } = {}
 		for _, l in ipairs(LAGER) do
 			local okL, inst = pcall(avataradapter.lager, character, l.klass)
-			if okL and inst then
-				local okM, mall = pcall(avataradapter.lasMall, inst, l.egenskap)
-				lage[l.klass] = {
-					fanns = true,
-					mall = if okM and type(mall) == "string" then mall else "",
-				}
-			else
+			if not okL then
+				return nil
+			end
+			if inst == nil then
 				lage[l.klass] = { fanns = false, mall = "" }
+			else
+				local okM, mall = pcall(avataradapter.lasMall, inst, l.egenskap)
+				if not okM or type(mall) ~= "string" then
+					return nil
+				end
+				lage[l.klass] = { fanns = true, mall = mall }
 			end
 		end
 		return lage
@@ -366,39 +392,114 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 
 		local genFore = bumpa(player)
 
+		--[[ FRÅNKOPPLINGSVAKTEN, bunden FÖRE första yield.
+
+			`bindVakter` binder sina fyra först när en session finns, och
+			en session finns inte förrän båda uppslagen är klara. Lämnade
+			spelaren mitt i ett uppslag såg alltså ingen det: `inaktuell`
+			prövar generationen och `player.Character`, och under
+			bortkopplingsfönstret kan båda vara oförändrade. Tråden som
+			vaknade efteråt klädde då en spelare som inte fanns kvar,
+			registrerade en session åt henne och lämnade fyra vakter
+			bundna till en borttagen Player.
+
+			Flaggan är ett UPPVÄRDE i det här anropet, inte en post i en
+			tabell: en tjänst som minns frånkopplingar i ett register har
+			bytt en läcka mot en annan. ]]
+		local lamnad = false
+		local frankoppling = Players.PlayerRemoving:Connect(function(lamnade)
+			if lamnade == player then
+				lamnad = true
+			end
+		end)
+
+		--[[ Varje utgång ur `starta` härifrån och ned går genom den här.
+			Vakten ovan får inte överleva anropet, och en spelare som
+			lämnat innan någon session hann bli till ska inte lämna ett
+			generationstal kvar i registret — det finns ingen sessionsvakt
+			som städar det åt henne. ]]
+		local function slut(ok: boolean, utfall: string): (boolean, string)
+			frankoppling:Disconnect()
+			if lamnad then
+				generation[player] = nil
+			end
+			return ok, utfall
+		end
+
+		--[[ Har världen gått vidare på något sätt som gör svaret
+			värdelöst? Frånkopplingen prövas först, för den är den enda av
+			dem som varken syns i generationen eller i karaktären. ]]
+		local function avbrutet(): boolean
+			if lamnad then
+				return true
+			end
+			return inaktuell(player, genFore, character)
+		end
+
 		--[[ STEG 1: BÅDA posterna verifieras. Inget skrivs här. ]]
 		for _, l in ipairs(LAGER) do
 			local assetId = (set :: any)[l.falt]
 			local okA, svar = pcall(katalogadapter.assetTyp, assetId)
 			--[[ Uppslaget kan ha yieldat. Färskheten prövas direkt efter
 				varje anrop, innan svaret används till något. ]]
-			if inaktuell(player, genFore, character) then
-				return false, "inaktuell"
+			if avbrutet() then
+				return slut(false, "inaktuell")
 			end
 			if not okA or type(svar) ~= "table" then
-				return false, "uppslag_kastade"
+				return slut(false, "uppslag_kastade")
 			end
 			local uppslag = svar :: Uppslag
 			if not uppslag.ok then
-				return false, "uppslag_nekade"
+				return slut(false, "uppslag_nekade")
 			end
 			if uppslag.assetTypeId ~= l.assetType then
-				return false, "fel_assettype"
+				return slut(false, "fel_assettype")
 			end
 		end
 
 		--[[ STEG 2: skriv båda. `fore` är läget i just det här ögonblicket
 			— rollbackens facit. För en NY session är det också spelarens
 			ursprungsläge; för ett setbyte mitt i en session är det bara
-			rollbackfacit, och ursprunget står kvar orört i sessionen. ]]
+			rollbackfacit, och ursprunget står kvar orört i sessionen.
+
+			Går läget inte att läsa entydigt skrivs ingenting alls. En
+			rollback mot ett gissat facit är sämre än ett nej: den lämnar
+			spelaren i ett läge hon aldrig var i. ]]
 		local fore = lasLage(character)
+		if not fore then
+			return slut(false, "lage_olasbart")
+		end
+
+		--[[ Sista prövningen FÖRE första mutationen. Läsadaptern är
+			injicerbar och kan yielda, och då är det här — inte uppslagets
+			checkpoint — sista stället före en skrivning. ]]
+		if avbrutet() then
+			return slut(false, "inaktuell")
+		end
+
 		for _, l in ipairs(LAGER) do
 			local assetId = (set :: any)[l.falt]
 			local mall = TavlingskladerService.mall(assetId)
 			if not sakert(avataradapter.skrivMall, character, l.klass, l.egenskap, mall) then
 				aterstall(character, fore)
-				return false, "skrivning_foll"
+				return slut(false, "skrivning_foll")
 			end
+		end
+
+		--[[ Och en prövning FÖRE sessionsregistreringen. En session åt
+			någon som hunnit lämna är precis det fel den här vakten finns
+			för, och skrivadaptern är injicerbar på samma sätt som
+			läsadaptern.
+
+			Rollbacken hoppas över om registret bytts under oss: då har ett
+			`avsluta` redan lagt tillbaka ursprungsläget, och en andra
+			återställning hade satt tillbaka det FÖRRA setets
+			tävlingskläder i stället för spelarens egna. ]]
+		if avbrutet() then
+			if sessioner[player] == befintlig then
+				aterstall(character, fore)
+			end
+			return slut(false, "inaktuell")
 		end
 
 		if befintlig then
@@ -411,7 +512,7 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 				kopplingar = bindVakter(player, character),
 			}
 		end
-		return true, "applicerat"
+		return slut(true, "applicerat")
 	end
 
 	--[[ ── AVSLUTA ──────────────────────────────────────────────────
@@ -469,6 +570,32 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 			table.insert(ut, player)
 		end
 		return ut
+	end
+
+	--[[ Ett MÅTT, ingen spelmekanik: hur många spelare tjänsten
+		fortfarande håller något om — en session eller ett generationstal.
+
+		Den finns för att "ingen referens lämnas kvar efter en
+		frånkoppling" annars bara är ett påstående i en kommentar.
+		Sessionerna går att räkna utifrån med `aktivaSpelare`;
+		generationsregistret gör det inte, och det var just där den
+		läckta referensen låg. ]]
+	function tjanst.kvarvarande(): number
+		local sedda: { [Player]: boolean } = {}
+		local n = 0
+		for player in pairs(sessioner) do
+			if not sedda[player] then
+				sedda[player] = true
+				n += 1
+			end
+		end
+		for player in pairs(generation) do
+			if not sedda[player] then
+				sedda[player] = true
+				n += 1
+			end
+		end
+		return n
 	end
 
 	return tjanst :: Tjanst
