@@ -212,6 +212,20 @@ function LektionController.start(ridhus: Instance?)
 		liveCd, liveSagt = 0, ""
 	end)
 	UgnetaGestalt.visa(ridhus)
+	--[[ ── #234 RIDE FIRST: PASSETS FÖRSTA REPLIK ────────────────────
+
+	     Den läggs HÄR och ingen annanstans, och det är hela §1 i
+	     beställningen: `start` körs av `init.client.mount`, som i sin tur
+	     bara körs på serverns `MountChanged` eller på ett accepterat
+	     `MountRequest`. Klienten startar alltså ingen lektion åt sig
+	     själv, sätter inget `mounted` och kringgår varken ägarskap,
+	     reservation, utrustning eller välfärd — den reagerar på att
+	     servern redan sagt ja.
+
+	     Repliken sägs EN gång per lektion. Vakten mot upprepning vid
+	     StateSync, respawn och reconnect sitter i `UgnetaController`; se
+	     noten vid `startKvitterad` där. ]]
+	UgnetaController.startaPass()
 end
 
 function LektionController.pagar(): boolean
@@ -311,11 +325,33 @@ local function presentera(p: Lektion.Pass)
 end
 
 --[[ ETT STEG. Anropas varje bildruta med ritt-telemetrin. ]]
+--[[ #234: Ugneta vänder sig mot ryttaren. Ren klientpresentation — se
+     `UgnetaGestalt.blickMot`. Anropas FÖRE lektionens egna returer, så att
+     hon fortsätter vrida sig mjukt även medan ett kort står uppe: en figur
+     som fryser mitt i en vridning för att spelaren läser är sämre än ingen
+     vridning alls. ]]
+local function blicken(dt: number, pose: { [string]: any }?)
+	if type(pose) ~= "table" then
+		UgnetaGestalt.blickMot(nil, dt)
+		return
+	end
+	local x, z = pose.x, pose.z
+	if type(x) ~= "number" or type(z) ~= "number" then
+		UgnetaGestalt.blickMot(nil, dt)
+		return
+	end
+	--[[ Höjden spelar ingen roll: hon vrids bara kring Y. Att skicka noll
+	     är därför inte ett antagande om var ryttaren är, utan ett fält
+	     mottagaren inte läser. ]]
+	UgnetaGestalt.blickMot(Vector3.new(x, 0, z), dt)
+end
+
 function LektionController.steg(dt: number, tm: { [string]: any }?,
-	pose: { [string]: any }?)
+	pose: { [string]: any }?, handelseId: string?)
 	local p = pass
 	if not p or p.klar then return end
 	UgnetaController.steg(dt)
+	blicken(dt, pose)
 
 	if lage == "ny" then
 		presentera(p)
@@ -341,6 +377,24 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	     bildrutor, så en snabb klient inte får "mer underlag" än en
 	     långsam på samma ritt. ]]
 	Lektion.matning(p, tm, dt)
+
+	--[[ ── #234 RIDE FIRST: TEMATS EGEN OBSERVATION ───────────────────
+
+	     Den ligger i SAMMA gren som mätningen och läser SAMMA bildruta —
+	     alltså bara när ryttaren faktiskt sitter upp och inget kort står
+	     uppe. Det är avsiktligt: ridningen är fryst medan ett kort väntar,
+	     och en cooldown som tickade bakom kortet hade gjort tystnaden
+	     olika lång beroende på hur snabbt spelaren läser.
+
+	     `handelseId` är märket på ett NYTT serverbekräftat tillstånd.
+	     `init.client` lämnar det bara den bildruta ett paket kom in, och
+	     `UgnetaTema` kastar ett id den redan sett — två paket med samma
+	     version kan alltså inte räknas två gånger.
+
+	     INGEN ANDRA BEDÖMNING. Raden nedan flyttar inget försök, stänger
+	     inget moment och rör inte `Lektion`. Den observerar vanor; `Ugneta`
+	     rangordnar fortfarande försöket alldeles själv längre ned. ]]
+	UgnetaController.ritt(dt, tm, handelseId)
 
 	--[[ LIVE: några ord, och aldrig samma ord två gånger i rad. ]]
 	liveCd -= dt
@@ -388,8 +442,36 @@ end
 
 --[[ Slut på ritten, av vilket skäl som helst. Säkerhet före undervisning:
      chipet släcks, kortet stängs, den väntande fortsättningen kastas och
-     gestalten tas bort. ]]
-function LektionController.avbryt()
+     gestalten tas bort.
+
+     ── #234: VILKA SLUT SOM ÄR ETT AVSLUTAT PASS ────────────────────────
+
+     `orsak` kommer från `init.client`, som är den enda som vet VARFÖR
+     ritten tog slut. Två av skälen är en riktig passövergång och resten
+     är inte det:
+
+       "avsittning"  spelaren bad om att få sitta av. Serveranropet är på
+                     väg; nekar servern kommer `MountChanged` och sätter
+                     upp henne igen, och då startar ett NYTT pass som
+                     stänger rutan (se `UgnetaController.startaPass`).
+       "server"      servern flyttade uppsittningen. Serverns ord ÄR
+                     auktoriteten.
+
+       "respawn"     karaktären försvann. Inget pass avslutades — hon dog
+                     eller laddades om.
+       "rigg"        riggen är borta ur workspace. En säkerhetshändelse.
+       "byte"        en ny uppsittning ersätter den gamla.
+
+     De tre sista får ALDRIG öppna sammanfattningen. Det är kontraktets
+     "inte vid respawn, nätverkskorrigering eller ogiltig dismount", och
+     det avgörs här — inte av en gissning inne i vyn.
+
+     Ett saknat `orsak` behandlas som ogiltigt. Fail closed: en ny
+     anropsväg som glömmer skicka skälet ska ge FÄRRE rutor, inte fler. ]]
+local GILTIGT_SLUT = { avsittning = true, server = true }
+
+function LektionController.avbryt(orsak: string?)
+	local giltig = orsak ~= nil and GILTIGT_SLUT[orsak] == true
 	pass = nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"
@@ -405,6 +487,16 @@ function LektionController.avbryt()
 	UgnetaController.vidReplay(nil)
 	UgnetaController.vidVidare(nil)
 	UgnetaController.sakerhetTarOver()
+	--[[ ── #234: EFTER ────────────────────────────────────────────────
+	     Ligger EFTER `sakerhetTarOver` med flit. Säkerheten släcker chip,
+	     banner, val och reservlogg; först när ytan är ren visas
+	     sammanfattningen. Omvänd ordning hade låtit säkerhetsvägen släcka
+	     rutan den just öppnat.
+
+	     Anropet görs ÄVEN när slutet är ogiltigt — passet ska släppas då
+	     också, och bubbelchattens globala värden lämnas tillbaka. Det är
+	     `avslutaPass` som avgör om något VISAS. ]]
+	UgnetaController.avslutaPass(giltig)
 	UgnetaGestalt.dolj()
 end
 
