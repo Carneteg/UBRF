@@ -92,6 +92,69 @@ if plats and syd and bana then
 			bana.Position.Y + bana.Size.Y / 2))
 end
 
+--[[ ══ BUBBELRÄCKVIDDEN, MÄTT MOT DEN BYGGDA BANAN (#234 §4) ═══════
+
+	`BubbleChatConfiguration.MaxDistance` är 100 studs som standard och
+	mäts FRÅN KAMERAN. Beställningen säger att den ska täcka ridhusets
+	relevanta yta — men också att man ska mäta den faktiska diagonalen
+	och använda det minsta motiverade värdet.
+
+	Mätningen görs här och inte i klientbänken, av exakt samma skäl som
+	hela den här specen finns: talet ska prövas mot delarna som STÅR i
+	workspace, inte mot en andra uppfattning om hur stort ridhuset är.
+
+	Värsta fallet är ryttaren i A-ändens ytterhörn med kameran bakom sig,
+	alltså ännu längre bort. Kamerans avstånd kommer ur `Gaits.camera`,
+	som är samma tal `CameraController` faktiskt använder. ]]
+do
+	local plats = UgnetaGestalt.plats(hus)
+	local b = bana
+	local langd = math.max(b.Size.X, b.Size.Z)
+	local bredd = math.min(b.Size.X, b.Size.Z)
+
+	--[[ Hennes avstånd till A-ändens ytterhörn. `langs` räknas längs
+	     banans långaxel från sargen vid A, `bredd/2` är halva banan ut
+	     mot långsidan. ]]
+	local langs = (plats.pos - syd.Position).Magnitude
+	local hornet = math.sqrt(langs * langs + (bredd / 2) * (bredd / 2))
+
+	--[[ Kameran ligger BAKOM ryttaren i feedbackvinkeln, alltså ännu
+	     längre från Ugneta. Det största avståndet någon gångart använder
+	     är det som räknas. ]]
+	local kamera = 0
+	for _, namn in Gaits.ORDER do
+		local g = Gaits.get(namn)
+		if g and g.camera and type(g.camera.dist) == "number" then
+			kamera = math.max(kamera, g.camera.dist)
+		end
+	end
+	local kravt = hornet + kamera
+
+	prova("banan är byggd och går att mäta",
+		langd > 100 and bredd > 40,
+		("%.1f x %.1f studs"):format(langd, bredd))
+	prova("bubbelräckvidden täcker hela banan med kameran bakom ryttaren",
+		UgnetaTema.BUBBEL_AVSTAND >= kravt,
+		("kanonens %d studs mot uppmätta %.1f (hörn %.1f + kamera %.1f)")
+			:format(UgnetaTema.BUBBEL_AVSTAND, kravt, hornet, kamera))
+	--[[ …och är inte onödigt stor. Beställningen säger uttryckligen
+	     "minsta motiverade värde": varje stud över det gör andra
+	     spelares bubblor synliga längre bort utan att Ugneta blir
+	     läsbarare. 12 studs = 4 m marginal. ]]
+	prova("och den är inte onödigt stor — minsta motiverade värdet",
+		UgnetaTema.BUBBEL_AVSTAND <= kravt + 12,
+		("%d studs mot kravet %.1f"):format(UgnetaTema.BUBBEL_AVSTAND, kravt))
+	prova("minimeringen räcker lika långt — annars blir texten en prick",
+		UgnetaTema.BUBBEL_MINIMERING >= UgnetaTema.BUBBEL_AVSTAND,
+		("%d mot %d studs"):format(UgnetaTema.BUBBEL_MINIMERING,
+			UgnetaTema.BUBBEL_AVSTAND))
+
+	--[[ FALSIFIERING: Roblox standardvärde ska INTE räcka. Gör det det
+	     mäter raderna ovan ingenting. ]]
+	prova("MUTATION: Roblox 100 studs hade inte räckt",
+		100 < kravt, ("100 mot kravet %.1f"):format(kravt))
+end
+
 --[[ Hon ska bort när lektionen slutar. ]]
 UgnetaGestalt.dolj()
 prova("hon försvinner när lektionen avbryts", not UgnetaGestalt.finns(),
