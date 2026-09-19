@@ -47,6 +47,7 @@ local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local UIS = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 
@@ -283,11 +284,43 @@ do
 	prova("en publicerad version skrivs ut som sitt tal",
 		rad(Byggidentitet.rader(), "bygg.version") == "42")
 
+	--[[ I STUDIO FÅR TALET INTE STÅ ENSAMT. Uppmätt på `a8dd254`:
+		Studio rapporterade `PlaceVersion = 294` medan Rojo samtidigt
+		hade synkat in arbetsträdets kod. Talet beskriver `.rbxl`-filens
+		ursprung, inte det som körs — samma fälla som det eftersläpande
+		`sha`, och lika förbjuden.
+
+		Bänkens RunService säger `IsStudio() == false`, så vägen måste
+		tändas här för att gå att mäta. ]]
+	local foreStudio = RunService.IsStudio
+	RunService.IsStudio = function() return true end
+	local iStudio = rad(Byggidentitet.rader(), "bygg.version")
+	prova("i Studio står versionen aldrig ensam",
+		iStudio ~= "42" and iStudio:find("42", 1, true) ~= nil, tostring(iStudio))
+	prova("och den säger uttryckligen att Studio kör annan kod",
+		iStudio == Sprak.t("bygg.studioversion", 42), tostring(iStudio))
+	prova("miljöraden säger Studio i samma läge",
+		rad(Byggidentitet.rader(), "bygg.miljo") == Sprak.t("bygg.studio"),
+		tostring(rad(Byggidentitet.rader(), "bygg.miljo")))
+	RunService.IsStudio = foreStudio
+	prova("och utanför Studio är talet rent igen",
+		rad(Byggidentitet.rader(), "bygg.version") == "42")
+
 	--[[ Miljön. Bänkens RunService säger `IsStudio() == false`, alltså
 		"publicerad server" — och JobId läggs till när den finns.
 		Referensen: JobId "Defaults to an empty string in Studio." ]]
 	game.JobId = ""
 	prova("tom JobId lägger inte till något",
+		rad(Byggidentitet.rader(), "bygg.miljo") == Sprak.t("bygg.server"),
+		tostring(rad(Byggidentitet.rader(), "bygg.miljo")))
+
+	--[[ NOLLSTÄLLD UUID. Uppmätt i en Studio-multiplayerplaytest på
+		`a8dd254`: motorn svarade `00000000-0000-0000-0000-000000000000`,
+		trots att referensen säger "Defaults to an empty string in
+		Studio". Tomhetstestet ensamt släppte igenom «· 00000000» som om
+		det vore ett serverinstans-id. ]]
+	game.JobId = "00000000-0000-0000-0000-000000000000"
+	prova("en nollställd JobId räknas som ingen session",
 		rad(Byggidentitet.rader(), "bygg.miljo") == Sprak.t("bygg.server"),
 		tostring(rad(Byggidentitet.rader(), "bygg.miljo")))
 

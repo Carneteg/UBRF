@@ -441,6 +441,10 @@ Sprak.text = {
 		sv = "0 — opublicerad",
 		en = "0 — unpublished",
 	},
+	["bygg.studioversion"] = {
+		sv = "%d — men Studio kör Rojos kod",
+		en = "%d — but Studio runs Rojo's code",
+	},
 	["bygg.studio"] = {
 		sv = "Studio (lokalt)",
 		en = "Studio (local)",

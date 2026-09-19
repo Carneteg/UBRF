@@ -133,8 +133,21 @@ FALS = [
      '\tlocal namn = Sprak.t("bygg.studio")'),
 
     ("B11 tom JobId skrivs ut ändå", "Byggidentitet",
-     '\tif typeof(j) == "string" and j ~= "" then',
-     '\tif typeof(j) == "string" then'),
+     '\tif typeof(j) ~= "string" or j == "" then return false end',
+     '\tif typeof(j) ~= "string" then return false end'),
+
+    #[[ B11b och B12b kommer ur RUNTIME, inte ur en genomlasning.
+    #   Bada ar fall dar den officiella referensen inte racker, och
+    #   de upptacktes forst nar vyn kordes i Studio pa `a8dd254`:
+    #   JobId var en nollstalld UUID dar docs lovar tom strang, och
+    #   PlaceVersion sa 294 medan Rojo korde arbetstradets kod. ]]
+    ("B11b nollstalld UUID raknas som en session", "Byggidentitet",
+     '\treturn j:match("^[0%-]+$") == nil',
+     '\treturn true'),
+
+    ("B12b Studios PlaceVersion star ensam", "Byggidentitet",
+     '\tif arStudio() then return Sprak.t("bygg.studioversion", v) end',
+     '\tif false then return Sprak.t("bygg.studioversion", v) end'),
 
     #[[ ══ HASHEN I TVA FORMER ════════════════════════════════════ ]]
 

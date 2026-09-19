@@ -174,26 +174,53 @@ local function arStudio(): boolean
 	return f(RunService) == true
 end
 
---[[ Versionen, eller varför den inte finns. Tre utfall och inget tyst
-	fjärde: ett tal, "opublicerad" när motorn säger 0, och "okänd" när
-	egenskapen inte går att läsa alls. ]]
+--[[ Versionen, eller varför den inte säger något. Fyra utfall och
+	inget tyst femte.
+
+	DEN TREDJE ÄR MÄTT, INTE ANTAGEN, och den är viktig. I Studio med
+	Rojo påslaget rapporterade motorn `PlaceVersion = 294` — men 294 är
+	den version `.rbxl`-filen öppnades från, och koden som faktiskt kör
+	är den Rojo just synkat in från arbetsträdet. Talet är alltså sant
+	och samtidigt vilseledande: det beskriver INTE den kod QA sitter
+	och tittar på.
+
+	Det är exakt samma fälla som det eftersläpande `sha`, och #263
+	förbjuder den uttryckligen. Så i Studio skrivs talet ut MED
+	brasklappen. På en publicerad server, där `IsStudio` är falskt,
+	är versionen det den utger sig för att vara. ]]
 local function placeVersion(): string
 	local v = (game :: any).PlaceVersion
 	if typeof(v) ~= "number" then return okand() end
 	if v == 0 then return Sprak.t("bygg.opublicerad") end
+	if arStudio() then return Sprak.t("bygg.studioversion", v) end
 	return ("%d"):format(v)
 end
 
---[[ Miljön: Studio eller publicerad server. `JobId` läggs till när den
-	finns — den namnger den enskilda serverinstansen, vilket är det som
-	skiljer två samtidiga sessioner åt. Tom sträng betyder Studio enligt
-	referensen, och då skriver vi inte ut den. ]]
+--[[ NOLLSTÄLLD UUID ÄR INGEN SESSION, och referensen räckte inte här.
+
+	Docs säger om `JobId`: "Defaults to an empty string in Studio."
+	Det stämde inte i en Studio-multiplayerplaytest, mätt i motorn:
+	där svarade den `00000000-0000-0000-0000-000000000000`, 36 tecken.
+	Tomhetstestet ensamt släppte alltså igenom «· 00000000» som om det
+	vore ett serverinstans-id.
+
+	Både den tomma strängen och nolluppsättningen räknas därför som
+	frånvaro. Ett id som bara består av nollor och bindestreck namnger
+	ingen session — det är motorns sätt att säga att det inte finns
+	någon. ]]
+local function harJobId(j: any): boolean
+	if typeof(j) ~= "string" or j == "" then return false end
+	return j:match("^[0%-]+$") == nil
+end
+
+--[[ Miljön: Studio eller publicerad server, plus serverinstansen när
+	det finns en. Det är den som skiljer två samtidiga sessioner åt. ]]
 local function miljo(): string
 	local namn = if arStudio() then Sprak.t("bygg.studio")
 		else Sprak.t("bygg.server")
 	local j = (game :: any).JobId
-	if typeof(j) == "string" and j ~= "" then
-		return ("%s · %s"):format(namn, j:sub(1, 8))
+	if harJobId(j) then
+		return ("%s · %s"):format(namn, (j :: string):sub(1, 8))
 	end
 	return namn
 end

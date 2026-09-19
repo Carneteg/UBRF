@@ -220,6 +220,10 @@ const SPRAK = {
   /* Motorn säger 0 för varje opublicerad upplevelse. Talet ensamt
      förklarar inte varför, så raden skriver ut skälet. */
   "bygg.opublicerad": { sv: "0 — opublicerad", en: "0 — unpublished" },
+  /* Mätt i motorn: Studio rapporterar den version .rbxl-filen öppnades
+     från, medan Rojo samtidigt synkat in annan kod. Talet är sant och
+     vilseledande på en gång, så det får aldrig stå ensamt. */
+  "bygg.studioversion": { sv: "%d — men Studio kör Rojos kod", en: "%d — but Studio runs Rojo's code" },
   "bygg.studio": { sv: "Studio (lokalt)", en: "Studio (local)" },
   "bygg.server": { sv: "Publicerad server", en: "Published server" },
 
