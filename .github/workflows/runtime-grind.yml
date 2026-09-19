@@ -59,6 +59,15 @@ jobs:
       - name: Placen går att bygga ur head, och identiteten är aktuell
         run: python3 tools/runtime-grind.py --torrkor
 
+      # Läsande inventering, ingen nyckel, inga skrivningar. Ligger före
+      # grinden så att en körning som faller på «UBRF_CI_PLACE_ID saknas»
+      # ändå visar VILKA places upplevelsen har och vilken som är
+      # startplacen. Utan den raden får man ett nej utan en väg vidare.
+      - name: Vilka places har upplevelsen?
+        env:
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+        run: python3 tools/skapa-ci-place.py
+
       # SJÄLVA GRINDEN. Inget `if: ${{ secrets... }}` — ett saknat secret
       # ska fälla jobbet, inte tysta det.
       - name: RUNTIME_GRIND — smoken i riktig Roblox-motor
