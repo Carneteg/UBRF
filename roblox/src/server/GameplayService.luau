@@ -1321,6 +1321,16 @@ local function forstaRittenSlapper(player: Player, modell: Model, s: any,
 	return ok and svar == true
 end
 
+--[[ Provkrok: satter valfardsstoppet i spelarens EGNA tillstand, samma
+	falt som visitationens fynd skriver. Den finns for att ett prov ska
+	kunna mata att First Ride-grenen INTE kringgar stoppet — utan den
+	kom mutationen som tog bort den kontrollen ut gron, och da matte
+	provet inte det villkor som skyddar hasten. ]]
+function GameplayService._stoppaForProv(player: Player, text: string)
+	local s = state[player]
+	if s then (s :: any).stoppad = text end
+end
+
 function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, string?, string?)
 	local s = state[player]
 	--[[ Krav 6 och 7 avgörs av regeln, inte här. Kvar i tjänsten är bara

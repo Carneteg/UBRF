@@ -226,6 +226,24 @@ do
 		FR.galler(spelare) == false)
 end
 
+--[[ SKYDD 1 ISOLERAT. Blocken ovan mäter en spelare som saknar BÅDE
+	save och barriär, och en mutation som tar bort barriärkontrollen
+	hade därför kunnat komma ut grön — `save == nil` fångade den ändå.
+
+	Här finns saven men inte barriären: `SparService.ladda` anropas rakt
+	av, precis som mitt eget första provutkast gjorde, och `redo` sätts
+	bara av `laddaOchStarta`. Det är läget "laddningen pågår", och det
+	är precis det läget skydd 1 finns för. ]]
+do
+	rent()
+	local spelare = nySpelare("Mittiladdningen")
+	SparService.ladda(spelare)
+	check("saven finns", SparService.save(spelare) ~= nil)
+	check("men barriären har inte släppt", SparService.redo(spelare) == false)
+	check("och då får hon INTE First Ride",
+		FR.galler(spelare) == false)
+end
+
 --[[ ══ 2. HELA VÄGEN UPP ════════════════════════════════════════════ ]]
 print("\n-- En ny spelare hamnar i sadeln --")
 do
@@ -296,6 +314,37 @@ do
 	local save = SparService.save(spelare)
 	check("passräknaren står kvar på noll", save.pass == 0,
 		("%d"):format(save.pass))
+end
+
+--[[ ══ VÄLFÄRDSSTOPPET GÄLLER ÄVEN EN NYBÖRJARE ══════════════════
+
+	Den skarpaste mätningen i hela specen. First Ride-grenen ersätter
+	checklistan — och ingenting annat. En häst med ett fynd ska ingen
+	sitta upp på, aldrig, hur ny ryttaren än är.
+
+	Utan den här mätningen kom en mutation som tog bort `s.stoppad`-
+	raden ut GRÖN i falsifieringen. Provet mätte alltså inte det
+	villkor som skyddar hästen. ]]
+print("\n-- Ett välfärdsstopp stoppar även First Ride --")
+do
+	rent()
+	local spelare, kar, hast = uppstallning("Stoppad", 700)
+	--[[ Fyndet sätts i spelarens EGNA tillstånd, samma väg
+		`Preparation.svaraFynd` och visitationen använder. Vyn är
+		serverns, så provet läser den för att bekräfta att stoppet
+		faktiskt sitter. ]]
+	local sync = Networking.get("PreparationSync")
+	GameplayService._stoppaForProv(spelare, "Hon är öm i vänster framben")
+
+	local utfall = FR.starta(spelare)
+	check("First Ride nekas av välfärdsstoppet",
+		utfall.ok == false, utfall.steg)
+	check("och nejet kommer från uppsittningen, inte från något annat",
+		utfall.steg == "uppsittningen_nekades", utfall.steg)
+	check("hon sitter inte upp",
+		hast:GetAttribute("RiderUserId") == nil,
+		tostring(hast:GetAttribute("RiderUserId")))
+	local _ = sync
 end
 
 --[[ ══ 4. SOLO KAN INTE FÅ forb.fel_tur ══════════════════════════════
