@@ -23,6 +23,13 @@ forsta yield, F12* och F13 muterar snapshotets fail closed, och F14/F15
 muterar de tva farskhetsprovningarna kring skrivfasen. Var och en av dem
 ska ge rott pa egen hand.
 
+TREDJE VANDAN: re-reviewen sag att generationstalet lag kvar efter varje
+nekad start och efter varje normalt avslut. Stadningen bygger pa en
+raknare over pagaende starter, och den maste kunna falla at BADA hallen
+-- for lite stadning lacker en Player-referens (F16a, F16e), for mycket
+tar skyddet fran en start som fortfarande ar i luften (F16b, F16c,
+F16d).
+
 KOR DEN INTE MED OCOMMITTAT ARBETE I MODULEN. Den skriver om kallan och
 lagger tillbaka den efterat; ett avbrott mitt i lamnar en muterad fil,
 och da ar det commiten som ar raddningen. Skriptet vagrar darfor starta
@@ -68,7 +75,7 @@ def kor():
 
 
 VAKT = ('\t\tif player.Character ~= session.character then\n'
-        '\t\t\treturn true, "karaktar_borta", orsak\n\t\tend')
+        '\t\t\treturn avslutat("karaktar_borta")\n\t\tend')
 
 FALS = [
     ("F1 bada posterna verifieras fore forsta skrivningen",
@@ -95,7 +102,7 @@ FALS = [
 
     ("F5a vakten: en lamnad kropp skrivs inte pa",
      VAKT,
-     '\t\tif false then\n\t\t\treturn true, "karaktar_borta", orsak\n\t\tend'),
+     '\t\tif false then\n\t\t\treturn avslutat("karaktar_borta")\n\t\tend'),
 
     ("F5b riktningen: aterstallning foljer inte med till ny avatar",
      VAKT + '\n\n\t\tlocal helt = aterstall(session.character, session.ursprung)',
@@ -138,9 +145,28 @@ FALS = [
      '\t\t\tfrankoppling:Disconnect()',
      '\t\t\tlocal _ = frankoppling'),
 
-    ("F11d generationen stadas efter en frankoppling",
-     '\t\t\tif lamnad then\n\t\t\t\tgeneration[player] = nil\n\t\t\tend',
-     '\t\t\tif false then\n\t\t\t\tgeneration[player] = nil\n\t\t\tend'),
+    # ── P1 nr 3: generationsregistret toms nar ingen laser det ──
+    ("F16a generationen stadas nar sista traden ar ute",
+     '\t\tif pagaende[player] == nil then\n\t\t\tgeneration[player] = nil\n\t\tend',
+     '\t\tif false then\n\t\t\tgeneration[player] = nil\n\t\tend'),
+
+    ("F16b stadningen fragar raknaren fore den nollar",
+     '\t\tif pagaende[player] == nil then\n\t\t\tgeneration[player] = nil\n\t\tend',
+     '\t\tif true then\n\t\t\tgeneration[player] = nil\n\t\tend'),
+
+    ("F16c slut raknar ned i stallet for att nolla",
+     '\t\t\tlocal kvar = (pagaende[player] or 1) - 1\n'
+     '\t\t\tif kvar > 0 then\n\t\t\t\tpagaende[player] = kvar\n'
+     '\t\t\telse\n\t\t\t\tpagaende[player] = nil\n\t\t\tend',
+     '\t\t\tpagaende[player] = nil'),
+
+    ("F16d starta raknar upp fore forsta yield",
+     '\t\tpagaende[player] = (pagaende[player] or 0) + 1',
+     '\t\tlocal _ = pagaende'),
+
+    ("F16e avsluta stadar generationen efter sig",
+     '\t\t\tstadaGeneration(player)\n\t\t\treturn true, utfall, orsak',
+     '\t\t\treturn true, utfall, orsak'),
 
     ("F15 farskheten provas fore forsta mutationen",
      '\t\t\tcheckpoint \u2014 sista st\u00e4llet f\u00f6re en skrivning. ]]\n'

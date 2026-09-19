@@ -248,13 +248,45 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 
 		Varje `starta` och varje `avsluta` räknar upp. Det gör också två
 		överlappande `starta` säkra: den som startade först faller, och
-		det sista anropet vinner. ]]
+		det sista anropet vinner.
+
+		INVARIANTEN, och den är hela skälet till `pagaende` nedan:
+
+		    ett generationstal finns bara så länge minst ett `starta`
+		    ligger och väntar på Roblox för just den spelaren.
+
+		Talets enda uppgift är att ogiltigförklara anrop som är i luften.
+		Är inget i luften är det dött viktgods — en stark Player-nyckel i
+		en tabell som ingen längre läser, alltså precis den referens
+		kontraktet förbjuder. Den låg kvar efter varje nekad start och
+		efter varje normalt avslut.
+
+		Att i stället städa "om posten fortfarande är MIN generation"
+		räcker inte, och det är värt att skriva ut varför: med A på 1 och
+		B på 2 båda i luften skulle B:s utgång nolla talet, ett nytt
+		anrop C skulle räkna upp till 1 igen — och A skulle vakna och
+		känna igen sitt eget tal. Ett ÅTERANVÄNT tal är ett osett race.
+		Räknaren gör återanvändning omöjlig: talet nollas först när noll
+		trådar kan läsa det. ]]
 	local generation: { [Player]: number } = {}
+
+	--[[ Hur många `starta` som är i luften för en spelare just nu. Noll
+		skrivs som `nil`, aldrig som 0: en post kvar med värdet noll vore
+		samma läcka en våning ned. ]]
+	local pagaende: { [Player]: number } = {}
 
 	local function bumpa(player: Player): number
 		local n = (generation[player] or 0) + 1
 		generation[player] = n
 		return n
+	end
+
+	--[[ Städar generationen när — och bara när — ingen tråd kan läsa
+		den. Anropas från varje utgång ur `starta` och ur `avsluta`. ]]
+	local function stadaGeneration(player: Player)
+		if pagaende[player] == nil then
+			generation[player] = nil
+		end
 	end
 
 	--[[ Har världen gått vidare sedan vi började? Två frågor, för de
@@ -352,11 +384,12 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 		end
 		table.insert(k, Players.PlayerRemoving:Connect(function(lamnade)
 			if lamnade == player then
+				--[[ Spelaren är borta för gott, och generationen ska bort
+					med henne — men `avsluta` städar den redan, och gör det
+					med räknaren i handen. En ovillkorlig nollning här hade
+					nollat talet mitt under ett pågående uppslag och därmed
+					öppnat återanvändningen som invarianten finns för. ]]
 				tjanst.avsluta(player, "lamnade")
-				--[[ Spelaren är borta för gott: även generationen ska bort,
-					annars håller tjänsten en referens till någon som inte
-					spelar längre. ]]
-				generation[player] = nil
 			end
 		end))
 		return k
@@ -413,16 +446,26 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 			end
 		end)
 
+		--[[ Härifrån och till `slut` är det här anropet i luften. ]]
+		pagaende[player] = (pagaende[player] or 0) + 1
+
 		--[[ Varje utgång ur `starta` härifrån och ned går genom den här.
-			Vakten ovan får inte överleva anropet, och en spelare som
-			lämnat innan någon session hann bli till ska inte lämna ett
-			generationstal kvar i registret — det finns ingen sessionsvakt
-			som städar det åt henne. ]]
+			Vakten ovan får inte överleva anropet, och inte heller
+			generationstalet: hade starten hunnit bli en session finns en
+			sessionsvakt som städar, men en NEKAD start lämnar ingen —
+			varken vid `uppslag_nekade`, `fel_assettype`, `lage_olasbart`
+			eller `skrivning_foll`. Räknaren ned först, sedan städningen,
+			för städaren frågar just räknaren om någon annan tråd
+			fortfarande läser talet. ]]
 		local function slut(ok: boolean, utfall: string): (boolean, string)
 			frankoppling:Disconnect()
-			if lamnad then
-				generation[player] = nil
+			local kvar = (pagaende[player] or 1) - 1
+			if kvar > 0 then
+				pagaende[player] = kvar
+			else
+				pagaende[player] = nil
 			end
+			stadaGeneration(player)
 			return ok, utfall
 		end
 
@@ -535,8 +578,19 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 			hunnit bli en session. ]]
 		bumpa(player)
 
+		--[[ Varje utgång härifrån och ned går genom den här. `bumpa` ovan
+			har precis lagt ett tal i registret som ingen kommer att läsa
+			om inget `starta` är i luften, och då ska det bort igen —
+			annars läcker ett vanligt, lyckat avslut en Player-referens.
+			Städaren frågar räknaren först, så bumpen står kvar så länge
+			en pending start behöver se den. ]]
+		local function avslutat(utfall: string): (boolean, string, string)
+			stadaGeneration(player)
+			return true, utfall, orsak
+		end
+
 		if not session then
-			return true, "ingen_session", orsak
+			return avslutat("ingen_session")
 		end
 
 		--[[ Tas ur registret FÖRST. Vakterna kan fyra i varandra — en död
@@ -552,11 +606,11 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 			fått en ny avatar är den redan klädd av Roblox i hennes egna
 			kläder, och tjänsten har ingenting där att göra. ]]
 		if player.Character ~= session.character then
-			return true, "karaktar_borta", orsak
+			return avslutat("karaktar_borta")
 		end
 
 		local helt = aterstall(session.character, session.ursprung)
-		return true, (if helt then "aterstalld" else "aterstalld_delvis"), orsak
+		return avslutat(if helt then "aterstalld" else "aterstalld_delvis")
 	end
 
 	function tjanst.aktivt(player: Player): string?
@@ -579,22 +633,23 @@ function TavlingskladerService.nya(adaptrar: Adaptrar?): Tjanst
 		frånkoppling" annars bara är ett påstående i en kommentar.
 		Sessionerna går att räkna utifrån med `aktivaSpelare`;
 		generationsregistret gör det inte, och det var just där den
-		läckta referensen låg. ]]
+		läckta referensen låg. Räknaren för pågående starter räknas med
+		av samma skäl: den är en tabell med Player-nycklar, och en sådan
+		som aldrig töms är samma fel en våning ned. ]]
 	function tjanst.kvarvarande(): number
 		local sedda: { [Player]: boolean } = {}
 		local n = 0
-		for player in pairs(sessioner) do
-			if not sedda[player] then
-				sedda[player] = true
-				n += 1
+		local function rakna(register)
+			for player in pairs(register) do
+				if not sedda[player] then
+					sedda[player] = true
+					n += 1
+				end
 			end
 		end
-		for player in pairs(generation) do
-			if not sedda[player] then
-				sedda[player] = true
-				n += 1
-			end
-		end
+		rakna(sessioner)
+		rakna(generation)
+		rakna(pagaende)
 		return n
 	end
 

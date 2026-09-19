@@ -883,6 +883,177 @@ do
 			and karaktar:FindFirstChildOfClass("Pants") == nil)
 end
 
+--[[ ══ 15. GENERATIONSREGISTRET TÖMS ══════════════════════════
+
+	Tredje vandan, ur re-reviewen av head 880a02b: `kvarvarande()` visade
+	sjalv var nasta lacka lag. Generationstalet stadades bara nar spelaren
+	hade LAMNAT. En nekad start lamnade det kvar, och ett vanligt lyckat
+	avslut gjorde det ocksa — en stark Player-nyckel i en tabell ingen
+	langre laser.
+
+	Invarianten som mats här:
+
+	    ett generationstal finns bara så länge minst ett `starta` ligger
+	    och väntar på Roblox för just den spelaren.
+
+	Och den mäts åt BÅDA hållen, för de är olika fel: att städa för
+	lite läcker en referens, att städa för mycket tar skyddet från en
+	start som fortfarande är i luften. Det sista blocket är det hållet. ]]
+print("\n-- Generationen är borta när ingen längre läser den --")
+
+--[[ 1. NEKAD START. Fyra nej som alla gav ett tal i registret förut:
+	uppslaget nekar, fel AssetType, oläsbart snapshot, fallen skrivning.
+	Och samma krav efter en senare `PlayerRemoving` — det fanns ingen
+	sessionsvakt som kunde ha stadat at oss. ]]
+do
+	local standard = S.STANDARD.avatar
+	local vit = T.set("white")
+	local fall = {
+		{ "uppslaget nekar", function()
+			local svar = allaRatta()
+			svar[vit.pantsAssetId] = { ok = false, fel = "HTTP 500" }
+			return S.nya({ katalog = nyKatalog(svar) })
+		end },
+		{ "fel AssetType", function()
+			local svar = allaRatta()
+			svar[vit.shirtAssetId] = { ok = true, assetTypeId = T.ASSETTYPE_PANTS }
+			return S.nya({ katalog = nyKatalog(svar) })
+		end },
+		{ "oläsbart snapshot", function()
+			return S.nya({ katalog = nyKatalog(allaRatta()),
+				avatar = avatarSomRaknar({ lasMall = function()
+					error("egenskapen gick inte att lasa")
+				end }) })
+		end },
+		{ "fallen skrivning", function()
+			return S.nya({ katalog = nyKatalog(allaRatta()),
+				avatar = avatarSomFaller("Pants") })
+		end },
+	}
+	for _, f in ipairs(fall) do
+		rent()
+		local tjanst = f[2]()
+		local spelare = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+		local ok = tjanst.starta(spelare, "white")
+		check(("%s lämnar noll kvarvarande"):format(f[1]),
+			ok == false and tjanst.kvarvarande() == 0,
+			("%d kvar"):format(tjanst.kvarvarande()))
+		--[[ Och det håller även när spelaren senare lämnar: ingen vakt
+			finns kvar som skulle kunna städa i efterhand. ]]
+		Players.PlayerRemoving:Fire(spelare)
+		check(("%s lämnar noll även efter en senare frånkoppling"):format(f[1]),
+			tjanst.kvarvarande() == 0 and #Players.PlayerRemoving._lyssnare == 0,
+			("%d kvar"):format(tjanst.kvarvarande()))
+	end
+	local _ = standard
+end
+
+--[[ 2. NORMAL START + NORMALT AVSLUT. Det vanligaste flodet av alla, och
+	det lackte lika sakert som felvagarna. ]]
+do
+	rent()
+	local tjanst = tjanstMedKatalog(allaRatta())
+	local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	tjanst.starta(spelare, "white")
+	check("en levande session räknas som en kvarvarande spelare",
+		tjanst.kvarvarande() == 1, ("%d kvar"):format(tjanst.kvarvarande()))
+	tjanst.avsluta(spelare, "tavling_slut")
+	local s, p = buren(karaktar)
+	check("ett normalt avslut lämnar noll kvarvarande",
+		tjanst.kvarvarande() == 0, ("%d kvar"):format(tjanst.kvarvarande()))
+	check("och inga lyssnare",
+		#Players.PlayerRemoving._lyssnare == 0
+			and #spelare.CharacterAdded._lyssnare == 0
+			and #spelare.CharacterRemoving._lyssnare == 0,
+		("%d · %d · %d"):format(#Players.PlayerRemoving._lyssnare,
+			#spelare.CharacterAdded._lyssnare, #spelare.CharacterRemoving._lyssnare))
+	check("och återställningen är oförändrad av städningen",
+		s == "rbxassetid://777001" and p == "rbxassetid://777002",
+		("%s · %s"):format(tostring(s), tostring(p)))
+end
+
+--[[ Ett `avsluta` utan session far inte heller lamna nagot efter sig —
+	den vagen bumpar ocksa generationen. ]]
+do
+	rent()
+	local tjanst = tjanstMedKatalog(allaRatta())
+	local spelare = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local ok, utfall = tjanst.avsluta(spelare, "slut")
+	check("ett avslut utan session lämnar noll kvarvarande",
+		ok == true and tjanst.kvarvarande() == 0,
+		("%s · %d kvar"):format(tostring(utfall), tjanst.kvarvarande()))
+end
+
+--[[ 3. TVÅ ÖVERLAPPANDE STARTER. Den äldre avslutas först och ska falla
+	på generationen — men den får inte ta den NYARES skydd med sig i
+	fallet. Det är felet som en naïv "städa alltid" bygger in: talet
+	nollas, och den nyare tråden vaknar och känner inte igen sitt eget
+	tal längre. Den skulle då neka sig själv trots att den är den som
+	ska vinna. ]]
+do
+	rent()
+	local tjanst = tjanstMedKatalog(allaRatta(), true)
+	local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local aldre = coroutine.create(function() return tjanst.starta(spelare, "white") end)
+	coroutine.resume(aldre)
+	local nyare = coroutine.create(function() return tjanst.starta(spelare, "oak") end)
+	coroutine.resume(nyare)
+	check("två starter i luften håller två frånkopplingsvakter",
+		#Players.PlayerRemoving._lyssnare == 2,
+		("%d lyssnare"):format(#Players.PlayerRemoving._lyssnare))
+	local sistaAldre = {}
+	while coroutine.status(aldre) == "suspended" do
+		sistaAldre = table.pack(coroutine.resume(aldre))
+	end
+	check("den äldre av två överlappande starter faller",
+		sistaAldre[2] == false, tostring(sistaAldre[3]))
+	check("och städar inte bort den nyares generation",
+		tjanst.kvarvarande() == 1, ("%d kvar"):format(tjanst.kvarvarande()))
+	local sistaNyare = {}
+	while coroutine.status(nyare) == "suspended" do
+		sistaNyare = table.pack(coroutine.resume(nyare))
+	end
+	local s, p = buren(karaktar)
+	check("den nyare starten överlever att den äldre avslutas",
+		sistaNyare[2] == true and tjanst.aktivt(spelare) == "oak",
+		("%s · %s"):format(tostring(sistaNyare[3]), tostring(tjanst.aktivt(spelare))))
+	check("och det är oak som sitter på avataren",
+		s == S.mall(T.set("oak").shirtAssetId) and p == S.mall(T.set("oak").pantsAssetId),
+		("%s · %s"):format(tostring(s), tostring(p)))
+	tjanst.avsluta(spelare, "slut")
+	check("och när båda är ute är registret tomt",
+		tjanst.kvarvarande() == 0 and #Players.PlayerRemoving._lyssnare == 0,
+		("%d kvar · %d lyssnare"):format(tjanst.kvarvarande(),
+			#Players.PlayerRemoving._lyssnare))
+end
+
+--[[ Och samma sak med en frankoppling i mitten: den aldre traden faller
+	pa sin `lamnad`-flagga, den nyare pa sin, och NAR BADA ar ute ska
+	registret vara tomt — inte en tidigare. ]]
+do
+	rent()
+	local tjanst = tjanstMedKatalog(allaRatta(), true)
+	local spelare, karaktar = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local aldre = coroutine.create(function() return tjanst.starta(spelare, "white") end)
+	coroutine.resume(aldre)
+	local nyare = coroutine.create(function() return tjanst.starta(spelare, "oak") end)
+	coroutine.resume(nyare)
+	Players.PlayerRemoving:Fire(spelare)
+	while coroutine.status(aldre) == "suspended" do coroutine.resume(aldre) end
+	check("en frånkoppling med två starter i luften tömmer inte för tidigt",
+		tjanst.kvarvarande() == 1, ("%d kvar"):format(tjanst.kvarvarande()))
+	while coroutine.status(nyare) == "suspended" do coroutine.resume(nyare) end
+	local s, p = buren(karaktar)
+	check("när båda är ute är registret tomt",
+		tjanst.kvarvarande() == 0 and #tjanst.aktivaSpelare() == 0
+			and #Players.PlayerRemoving._lyssnare == 0,
+		("%d kvar · %d lyssnare"):format(tjanst.kvarvarande(),
+			#Players.PlayerRemoving._lyssnare))
+	check("och ingen av dem skrev på avataren",
+		s == "rbxassetid://777001" and p == "rbxassetid://777002",
+		("%s · %s"):format(tostring(s), tostring(p)))
+end
+
 print("")
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
