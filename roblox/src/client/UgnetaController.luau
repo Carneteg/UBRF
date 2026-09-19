@@ -64,7 +64,7 @@ local CoachBanner = require(script.Parent.CoachBanner)
 
        UgnetaTema        REGELN — temafilter, mönster, cooldown, orsak.
                          Ren logik i HorseCore, utan en enda Instance.
-       UgnetaBubbla      RÖSTEN — bubblan över gestalten och den lokala
+       UgnetaBubbla      REPLIKEN — bubblan över gestalten och den lokala
                          reservloggen. Samma replik på båda ytorna.
        PostRideSummary   EFTERÅT — den lokala sammanfattningen, i samma
                          ScreenGui som bannern.

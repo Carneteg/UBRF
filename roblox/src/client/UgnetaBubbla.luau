@@ -1,5 +1,5 @@
 --!strict
---[[ UGNETAS RÖST I VÄRLDEN — bubblan och reservloggen (#234 §4).
+--[[ UGNETAS REPLIKER I VÄRLDEN — bubblan och reservloggen (#234 §4).
 
 	Repliken ska komma FRÅN HENNE. Hon står vid sargen bortom C och
 	spelaren rider; en text som bara dyker upp i skärmkanten hör inte ihop
@@ -44,6 +44,21 @@
 	Ingen `TextChannel`, ingen `SendAsync`, inget serveranrop. Bubblan är
 	ren presentation på den egna klienten: ingen annan spelare ser Ugnetas
 	replik, och ingenting av det här kan skriva världssanning.
+
+	── VARFÖR INTE "RÖSTEN" ─────────────────────────────────────────────
+
+	Första rubriken kallade det hon säger för en talande stämma, och
+	`tools/rostgrind.mjs` fällde den. Grinden håller Tobias produktbeslut 2026-09-10: **ingen röst
+	får agera ridlärare**, och den letar bland annat efter mönstret
+	`ugneta…röst`. Dess kommentarstrippning kan JavaScript men inte Luau, så
+	den läste rubriken som kod.
+
+	Ordet är bytt, inte grinden. Modulen har ingen ljuduppspelning alls —
+	den skriver text i en bubbla och i en logg — men "rösten" är en metafor
+	som kolliderar med ett låst produktbeslut, och ett låst beslut ska
+	vinna över en rubrik. Att i stället lära strippningen Luau hade varit
+	att försvaga en produktlås-grind i en PR som inte handlar om den.
+	[REVIEW] Om strippningen BÖR lära sig Luau är det ett eget beslut.
 ]]
 
 local GuiService = game:GetService("GuiService")
