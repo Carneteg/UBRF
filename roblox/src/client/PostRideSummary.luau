@@ -189,7 +189,6 @@ local ytsignal: RBXScriptConnection? = nil
 local knappsignal: RBXScriptConnection? = nil
 local levande: { Tween } = {}
 local stangFn: (() -> ())? = nil
-local stanger = false
 local sistaAntal = 0
 local valdFore: any = nil
 
@@ -559,7 +558,6 @@ function PostRideSummary.visa(data: { [string]: any }?)
 	     `GuiService.SelectedObject == nil`. ]]
 	local varOppen = p.Visible == true
 	slapp()
-	stanger = false
 
 	local d = if type(data) == "table" then data else {}
 	local rader = if type(d.telemetri) == "table" then d.telemetri else {}
@@ -633,15 +631,28 @@ function PostRideSummary.oppen(): boolean
 end
 
 --[[ ── STÄNGNINGEN ────────────────────────────────────────────────────
-     Debouncad: ett tryck ger exakt en stängningsavsikt. Städar tweens och
-     lämnar ingen osynlig inputblockerare — panelen är `Visible = false`,
-     och en osynlig `Frame` med `Visible = false` tar inte emot input i
-     Roblox. Knappen är dessutom den enda `Active`/`Selectable` ytan här. ]]
+
+	ETT TRYCK GER EXAKT EN STÄNGNINGSAVSIKT, och gaten är `Visible` —
+	inte en egen flagga bredvid den.
+
+	HÄR STOD EN EGEN `debounce`-BOOLEAN, OCH DEN VAR EN ANDRA SANNING.
+	Falsifieringen avslöjade den: provet "tre snabba tryck ger EN
+	stängning" var GRÖNT även när flaggan togs bort, alltså mätte det
+	aldrig flaggan. Skälet är att `Visible` sätts till false FÖRE
+	`stangFn` körs — det andra och tredje trycket faller redan på raden
+	ovanför, och samma rad stänger dessutom återinträde ur callbacken.
+
+	En vakt som aldrig kan fyra ser ut som säkerhet men är en andra
+	tillståndsvariabel att hålla i synk. Den är borta; kvar är EN gate,
+	och den går att falsifiera — tas raden nedan bort räknar provet två
+	stängningar på tre tryck.
+
+	Städar tweens och lämnar ingen osynlig inputblockerare: en `Frame`
+	med `Visible = false` tar inte emot input i Roblox, och knappen är
+	dessutom den enda `Selectable` ytan här. ]]
 function PostRideSummary.stang(): boolean
 	local p = panel
 	if not p or not p.Visible then return false end
-	if stanger then return false end
-	stanger = true
 	slapp()
 	p.Visible = false
 	;(GuiService :: any).SelectedObject = valdFore
@@ -668,7 +679,6 @@ function PostRideSummary.Destroy()
 	teoriZon, teoriRubrik, teoriRegel, teoriBrod = nil, nil, nil, nil
 	knappBox, knapp, knappSkugga = nil, nil, nil
 	forlader = nil
-	stanger = false
 	sistaAntal = 0
 	valdFore = nil
 end

@@ -311,17 +311,33 @@ do
 		teoriText = { overRubrik = lang, karnregel = lang, brodtext = lang },
 	}))
 	local kommentar, rubrik, regel, brod = PostRideSummary.text()
-	prova("kommentaren kortas till kontraktets gräns",
-		utf8.len(kommentar) <= PostRideSummary.MAX_KOMMENTAR + 1,
-		("(%d av %d tecken)"):format(utf8.len(kommentar), PostRideSummary.MAX_KOMMENTAR))
-	prova("brödtexten likaså",
-		utf8.len(brod) <= PostRideSummary.MAX_BROD + 1,
-		("(%d av %d)"):format(utf8.len(brod), PostRideSummary.MAX_BROD))
+	--[[ GRÄNSERNA ÄR LITERALER HÄR, INTE MODULENS EGNA KONSTANTER.
+
+	     Första utkastet mätte `utf8.len(text) <= MAX_KOMMENTAR + 1`, och
+	     det var en tautologi: falsifieringen satte MAX_KOMMENTAR till
+	     100000 och mätningen följde snällt med och förblev grön. En
+	     mätning som rör sig med det den mäter mäter ingenting.
+
+	     Talen nedan är vad ZONERNA rymmer — kommentarsrutan två rader,
+	     NoteBoxens brödtext tre — och de ska INTE ändras för att en
+	     konstant ändras. Ändras kontraktet ändras de här raderna
+	     medvetet, och det är hela skillnaden. ]]
+	prova("kommentaren kortas till en längd rutan rymmer",
+		utf8.len(kommentar) <= 200,
+		("(%d tecken, tak 200)"):format(utf8.len(kommentar)))
+	prova("brödtexten likaså", utf8.len(brod) <= 320,
+		("(%d tecken, tak 320)"):format(utf8.len(brod)))
 	prova("och de korta raderna likaså",
-		utf8.len(rubrik) <= PostRideSummary.MAX_KORT + 1
-			and utf8.len(regel) <= PostRideSummary.MAX_KORT + 1,
-		("(%d / %d av %d)"):format(utf8.len(rubrik), utf8.len(regel),
-			PostRideSummary.MAX_KORT))
+		utf8.len(rubrik) <= 60 and utf8.len(regel) <= 60,
+		("(%d / %d tecken, tak 60)"):format(utf8.len(rubrik), utf8.len(regel)))
+	--[[ …och konstanterna ligger under de taken. Den här raden binder
+	     ihop de två: modulen får sänka sina gränser fritt, men inte höja
+	     dem förbi vad zonen rymmer. ]]
+	prova("modulens egna gränser ligger innanför zonernas",
+		PostRideSummary.MAX_KOMMENTAR <= 200 and PostRideSummary.MAX_BROD <= 320
+			and PostRideSummary.MAX_KORT <= 60,
+		("(%d / %d / %d)"):format(PostRideSummary.MAX_KOMMENTAR,
+			PostRideSummary.MAX_BROD, PostRideSummary.MAX_KORT))
 	prova("kapningen sker på ett TECKEN — ingen trasig UTF-8",
 		utf8.len(kommentar) ~= nil and utf8.len(brod) ~= nil)
 	prova("zonerna klipper, så en lång rad kan inte nå nästa zon",
@@ -373,8 +389,15 @@ do
 	kn.Activated:Fire()
 	kn.Activated:Fire()
 	kn.Activated:Fire()
+	--[[ Gaten är `Visible`, inte en flagga bredvid den — se noten vid
+	     `PostRideSummary.stang`. Mätningen faller om den raden tas bort,
+	     vilket falsifieringen visade. ]]
 	prova("tre snabba tryck ger EN stängning", stangda == 1,
 		("(%d)"):format(stangda))
+	--[[ Och ett tryck på en REDAN stängd ruta är ingen avsikt alls. ]]
+	kn.Activated:Fire()
+	prova("och ett fjärde tryck efteråt är fortfarande ingen ny avsikt",
+		stangda == 1, ("(%d)"):format(stangda))
 	prova("och rutan är stängd", PostRideSummary.oppen() == false)
 	prova("den lämnar ingen osynlig inputblockerare",
 		hitta("PostRideSummary").Visible == false)
