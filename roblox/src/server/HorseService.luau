@@ -26,6 +26,7 @@ local Svar, RidKanon = Core.Svar, Core.RidKanon
 --[[ Stallet äger den kanoniska hästdatan; HorseService läser den för att
      binda rätt individ till rätt ridkänsla (blocker 1). ]]
 local Stallet = require(game:GetService("ReplicatedStorage").Stallet)
+local Aktor = require(game:GetService("ReplicatedStorage").HorseCore.Aktor)
 
 local HorseService = {}
 
@@ -360,13 +361,16 @@ local function replikera(session: Session)
 		     sent svar från ritt A kunde därför rätta en klient som hunnit
 		     sitta upp på ritt B. Hästen och rittmärket följer nu med, och
 		     klienten reconcilar bara när båda stämmer. ]]
-		Net.get("RidTillstand"):FireClient(session.rider, {
+		local kRid = Aktor.klient(session.rider)
+		if kRid then
+		Net.get("RidTillstand"):FireClient(kRid, {
 			hast = model,
 			ritt = session.rittId,
 			gangart = gangart,
 			ryggar = ryggar,
 			version = session.ridVersion,
 		})
+		end
 	end
 end
 
@@ -461,7 +465,10 @@ local function setRider(session: Session, player: Player?)
 		warn("[Horse] Kunde inte sätta nätverksägare (ankrad eller ej fysisk del?)")
 	end
 
-	Net.get("MountChanged"):FireAllClients(session.rig.model, player)
+	--[[ #252 DEL C: broadcasten bar SPELAREN som nyttolast. En aktor utan
+	     klient gar inte att serialisera over traden, och en session utan
+	     ryttare skickar redan `nil`. Testsatet hamnar i samma gren. ]]
+	Net.get("MountChanged"):FireAllClients(session.rig.model, Aktor.klient(player))
 
 	--[[ Aviseringen sist, när allt annat är gjort: kroken ska se ett
 		färdigt tillstånd, inte ett halvt. ]]
@@ -1054,8 +1061,11 @@ local function stepStamina(session: Session, dt: number)
 		--[[ Fjärde argumentet är energin i sin KANONISKA skala 0–1.
 		     Klienten sätter sin prediktion till den; de tre första är
 		     presentationen, som Debug redan visar. ]]
-		Net.get("StaminaSync"):FireClient(session.rider, visad, stats.MaxStamina,
+		local kSta = Aktor.klient(session.rider)
+		if kSta then
+		Net.get("StaminaSync"):FireClient(kSta, visad, stats.MaxStamina,
 			ceiling, session.energi)
+		end
 	end
 end
 
@@ -1267,6 +1277,36 @@ end
 
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
+--[[ ══ REMOTENS EGEN VALIDERING (#252 DEL C) ══════════════════════════
+
+	`MountRequest` bar sitt eget nej — `hast.ogiltig` — for allt som inte
+	ar en `Model`. Den raden har aldrig korts av nagon spec: bankens prov
+	stubbar `InvokeServer` pa KLIENTSIDAN, och `OnServerInvoke` gar inte
+	att lasa tillbaka ur motorn, sa en anonym funktion dar ar oatkomlig.
+	BANK-AUDIT 2026-09-19 § 7 punkt 3.
+
+	Handlaren har darfor ett namn, och `start()` kopplar exakt den har
+	funktionen till remoten. Runtime-grinden anropar samma funktion, inte
+	en kopia av dess villkor — ett prov som skriver av regeln provar
+	avskriften. ]]
+function HorseService.mountRequest(player: Player, model: Model): (boolean, string?, string?)
+	if typeof(model) ~= "Instance" or not model:IsA("Model") then
+		return false, "hast.ogiltig"
+	end
+	return HorseService.tryMount(player, model)
+end
+
+--[[ ── DEN SOM LAMNAR (#252 DEL C) ────────────────────────────────────
+
+	Samma skal som `GameplayService.lamnar` och `LedService.lamnar`:
+	stadningen efter en spelare som gar ar en av de fyra saker
+	runtime-grinden ska kunna falla pa, och den maste da kunna koras
+	genom produktionens EGEN handlare i stallet for genom en kopia. ]]
+function HorseService.lamnar(player: Player)
+	HorseService.dismount(player)
+	slappStadning(player)
+end
+
 function HorseService.start()
 	Net.init()
 
@@ -1280,12 +1320,14 @@ function HorseService.start()
 		if inst:IsA("Model") then unregister(inst :: Model) end
 	end)
 
-	Net.get("MountRequest").OnServerInvoke = function(player, model)
-		if typeof(model) ~= "Instance" or not model:IsA("Model") then
-			return false, "hast.ogiltig"
-		end
-		return HorseService.tryMount(player, model)
-	end
+	--[[ #252 DEL C: handlaren har ett NAMN. `OnServerInvoke` gar inte att
+	     lasa tillbaka — motorn svarar «you can only set the callback value,
+	     get is not available» — sa en anonym funktion har ar oatkomlig for
+	     varje prov utan klient. Remotens EGEN validering (`hast.ogiltig`)
+	     har darfor aldrig korts i nagon spec; BANK-AUDIT 2026-09-19 § 7
+	     punkt 3. Nu gar den att kora, och det ar samma funktion remoten
+	     skickar vidare till — inte en kopia. ]]
+	Net.get("MountRequest").OnServerInvoke = HorseService.mountRequest
 	Net.get("DismountRequest").OnServerInvoke = function(player)
 		return HorseService.dismount(player)
 	end
@@ -1295,10 +1337,7 @@ function HorseService.start()
 	     ändrar sanning, den andra en OBSERVATION som bara presenteras. ]]
 	Net.get("RidingIntent").OnServerEvent:Connect(onRidingIntent)
 
-	Players.PlayerRemoving:Connect(function(player)
-		HorseService.dismount(player)
-		slappStadning(player)
-	end)
+	Players.PlayerRemoving:Connect(HorseService.lamnar)
 
 	--[[ En loop för alla hästar, inte en per häst. Uthålligheten behöver
 	     inte 60 Hz — fyra gånger i sekunden räcker och kostar nästan inget

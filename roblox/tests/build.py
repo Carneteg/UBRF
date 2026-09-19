@@ -147,6 +147,9 @@ FORBEREDELSE = SPEL + [
     ("Pass",         "src/shared/HorseCore/Pass.luau"),
     ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
+    # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
+    # och LedService fragar den om aktoren har en klient att skicka till.
+    ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("HorseService", "src/server/HorseService.luau"),
     # SparService FORE StallService: StallService.hastminnen laser saven ur
     # den. Ordningen ar samma som init.server.luau har.
@@ -367,6 +370,7 @@ KOHERENS = GEOMETRI + [
     ("RigAdapter",      "src/shared/HorseCore/RigAdapter.luau"),
     ("Riggprofiler",    "src/shared/HorseCore/Riggprofiler.luau"),
     ("Utseende",    "src/shared/HorseCore/Utseende.luau"),
+    ("Aktor",           "src/shared/HorseCore/Aktor.luau"),
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),
