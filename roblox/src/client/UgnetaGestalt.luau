@@ -40,6 +40,19 @@ local GLAS    = Color3.fromRGB(43, 46, 52)
 
 local modell: Model? = nil
 
+--[[ #234: blickens tillstand. Hennes utgangsriktning, navet hon vrids
+     kring och den girning som faktiskt tillampats. Deklarerade HAR och
+     inte vid `blickMot` langre ned: `visa` satter dem, och en local som
+     deklareras efter sin forsta tilldelning blir en global — tyst i
+     vanlig Luau, och tva olika variabler nar modulen sedan laser den. ]]
+local framRikt: Vector3? = nil
+local navet: Vector3? = nil
+local yaw = 0
+local malYaw = 0
+
+--[[ Blickens tidskonstant. Se noten vid `blickMot`. ]]
+local TAU = 0.35
+
 local function del(mor: Model, namn: string, storlek: Vector3, pos: Vector3,
 	farg: Color3): Part
 	local p = Instance.new("Part")
@@ -125,7 +138,74 @@ function UgnetaGestalt.visa(ridhus: Instance?): Model?
 
 	m.PrimaryPart = m:FindFirstChild("Kavaj") :: BasePart?
 	modell = m
+	--[[ #234: blickens utgangslage. Hon STAR redan vant mot A; girningen
+	     nedan raknas som en avvikelse fran den riktningen, inte som en
+	     absolut kompassvinkel. ]]
+	framRikt = fram
+	navet = if m.PrimaryPart then (m.PrimaryPart :: BasePart).Position else p
+	yaw, malYaw = 0, 0
 	return m
+end
+
+--[[ ══ BLICKEN — REN KLIENTPRESENTATION (#234 §4) ═══════════════════════
+
+	Hon ska vanda sig mot den hon undervisar. Tre regler, och alla tre ar
+	begransningar snarare an funktioner:
+
+	  1. HON FLYTTAR SIG INTE. `PivotTo` far exakt den punkt modellen
+	     redan star i (`navet`), plus en girning. Ingen teleport, ingen
+	     forflyttning, ingen hojdandring.
+	  2. HON AGER INGEN VARLDSSANNING. Gestalten byggs av KLIENTEN i
+	     `visa` ovan, delarna ar `Anchored` och `CanCollide = false`, och
+	     ingen `SetNetworkOwner` finns i modulen. Det gar darfor inte att
+	     uppsta natverkskamp om henne: servern kanner inte till modellen.
+	     Hasten, spelaren och anlaggningen ror den har koden inte alls.
+	  3. RORELSEN AR BILDRUTEOBEROENDE. `1 - exp(-dt/TAU)` ger samma
+	     vridning per sekund pa 30 som pa 144 Hz — samma form som
+	     `MovementController.smooth` anvander, av samma skal.
+
+	Malet ar ryttarens lage. Ligger hon praktiskt taget ovanpa punkten
+	behalls forra malet: en riktning ur en nollvektor ar ingen riktning. ]]
+local function vinkel(v: Vector3): number
+	return math.atan2(v.X, v.Z)
+end
+
+--[[ Kortaste vagen mellan tva vinklar. Utan den vrider hon sig 350 grader
+     at fel hall nar malet passerar +/-pi. ]]
+local function kortaste(a: number): number
+	while a > math.pi do a -= 2 * math.pi end
+	while a < -math.pi do a += 2 * math.pi end
+	return a
+end
+
+function UgnetaGestalt.blickMot(mal: Vector3?, dt: number)
+	local m = modell
+	local nav = navet
+	local fram = framRikt
+	if not m or not nav or not fram then return end
+	if mal then
+		local d = Vector3.new(mal.X - nav.X, 0, mal.Z - nav.Z)
+		if d.Magnitude > 1e-3 then
+			malYaw = kortaste(vinkel(d.Unit) - vinkel(fram))
+		end
+	end
+	local d = if type(dt) == "number" and dt > 0 then dt else 0
+	local a = 1 - math.exp(-d / TAU)
+	yaw += kortaste(malYaw - yaw) * a
+	m:PivotTo(CFrame.new(nav) * CFrame.Angles(0, yaw, 0))
+end
+
+--[[ Provets avlasningar: hur mycket hon vridit sig, och vart hon siktar. ]]
+function UgnetaGestalt.yaw(): number
+	return yaw
+end
+
+function UgnetaGestalt.malYaw(): number
+	return malYaw
+end
+
+function UgnetaGestalt.navPunkt(): Vector3?
+	return navet
 end
 
 function UgnetaGestalt.dolj()
@@ -133,6 +213,19 @@ function UgnetaGestalt.dolj()
 		modell:Destroy()
 		modell = nil
 	end
+	framRikt, navet = nil, nil
+	yaw, malYaw = 0, 0
+end
+
+--[[ Delen en bubbla ska hanga over (#234). `TextChatService:DisplayBubble`
+     tar en DEL i figuren nar figuren inte ar en spelarkaraktar — gestalten
+     har ingen `HumanoidRootPart`, som ar
+     `BubbleChatConfiguration.AdorneeName` standard. Ansiktet ar ratt del:
+     bubblan hamnar da vid hennes huvud och inte vid fotterna. ]]
+function UgnetaGestalt.bubbelDel(): Instance?
+	local m = modell
+	if not m then return nil end
+	return m:FindFirstChild("Ansikte")
 end
 
 function UgnetaGestalt.finns(): boolean

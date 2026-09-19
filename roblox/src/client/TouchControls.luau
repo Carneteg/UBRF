@@ -170,6 +170,28 @@ function TouchControls.spakBredd(): number
 	return spakBredd
 end
 
+--[[ Var spaken BÖRJAR, i GUI-pixlar uppifrån (#234). Samma yta och samma
+	skäl som `reglageTopp` nedan, fast för vänsterkanten: Ugnetas lokala
+	replikslogg bor i det vänstra bandet — det enda som varken blickytan
+	(som börjar på 34 % av bredden) eller gångartsknapparna gör anspråk
+	på — och den måste veta var spaken tar vid.
+
+	Räknat med #208-skalan blir bandet olika högt på olika enheter:
+
+	    1920x1080  PC, ingen pekyta   math.huge   loggen får sina tre rader
+	     844x 390  iPhone 13 lands.   spaken 209  tre rader ryms
+	     568x 320  liten telefon      spaken 168  loggen krymper till två
+
+	Talet räknas HÄR, av samma rader som ritar spaken, precis som
+	`reglageBredd` och `reglageTopp`. En kopia av layouten i loggmodulen
+	hade glidit första gången skalan ändrades. `math.huge` när pekreglagen
+	inte är uppe: skrivbordet reserverar ingenting. ]]
+local spakTopp = math.huge
+
+function TouchControls.spakTopp(): number
+	return spakTopp
+end
+
 --[[ Var det övre gallret BÖRJAR, i GUI-pixlar uppifrån (samma yta som
 	`reglageBredd`: viewporten minus topbaren). `math.huge` när reglagen inte
 	är uppe. Hjälpknappen läser den (#227): på en telefon i landskap trycker
@@ -474,6 +496,9 @@ function TouchControls.mount(input: any, hooks: {
 	--[[ Vänsterkantens reserv: kanten, spaken och lika mycket luft som
 		högerkanten får. Se noten vid `spakBredd`. ]]
 	spakBredd = KANT + spakR * 2 + px(12)
+	--[[ ...och var den BORJAR. Samma rad som placerar `bas` ovan, last av
+	     Ugnetas replikslogg (#234). ]]
+	spakTopp = skarmH - (spakR * 2) - px(28)
 	bas.BackgroundTransparency = 0.55
 	bas.BackgroundColor3 = Color3.fromRGB(24, 27, 33)
 	local basHorn = Instance.new("UICorner")
@@ -661,6 +686,7 @@ function TouchControls.unmount()
 	     kopplat ur skrivbordets tangenter när en pekyta försvann. ]]
 	reglageBredd = 0
 	spakBredd = 0
+	spakTopp = math.huge
 	reglageTopp = math.huge
 	blickFinger, blickSist, blickHook = nil, nil, nil
 	if ytaKoppling then
