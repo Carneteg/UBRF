@@ -64,6 +64,9 @@ local Net = Core.Networking
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
 local SparService = require(script.Parent.SparService)
+--[[ #259 Gate 1A: takten framfor de klientanropade fjarrfunktionerna.
+	En delad skopa, inte en per handlare — se `Skopa.luau`. ]]
+local Skopa = require(script.Parent.Skopa)
 
 local GameplayService = {}
 
@@ -1351,20 +1354,20 @@ function GameplayService.start()
 	HorseService.setMountGate(GameplayService.farSittaUpp)
 	--[[ Belöningen för egen skötsel: dagsformen vid uppsittning. ]]
 	HorseService.setDagsformHook(GameplayService.dagsformFor)
-	Net.get("RidaNu").OnServerInvoke = function(player)
+	Net.get("RidaNu").OnServerInvoke = Skopa.grind("RidaNu", function(player)
 		return GameplayService.ridaNu(player)
-	end
+	end)
 
 	--[[ #235 FAS 2. Samma monster som `RidaNu`: klienten skickar en
 		avsikt, servern svarar med hela sanningen. ]]
-	Net.get("SadlaHast").OnServerInvoke = function(player, modell)
+	Net.get("SadlaHast").OnServerInvoke = Skopa.grind("SadlaHast", function(player, modell)
 		return GameplayService.sadla(player, modell)
-	end
+	end)
 
 	--[[ #235 FAS 3: samma monster, en annan typ. ]]
-	Net.get("TransaHast").OnServerInvoke = function(player, modell)
+	Net.get("TransaHast").OnServerInvoke = Skopa.grind("TransaHast", function(player, modell)
 		return GameplayService.transa(player, modell)
-	end
+	end)
 
 	--[[ ── LEDNINGEN (#162 blockerare 2) ──────────────────────────────
 
@@ -1427,24 +1430,28 @@ function GameplayService.start()
 		skickaPass(player)
 	end)
 
-	Net.get("PreparationMoment").OnServerInvoke = function(player, fasId, momentId)
-		return GameplayService.moment(player, fasId, momentId)
-	end
-	Net.get("PreparationSvar").OnServerInvoke = function(player, svarId)
-		return GameplayService.svara(player, svarId)
-	end
-	Net.get("PassMoment").OnServerInvoke = function(player, momentId)
-		return GameplayService.eftervard(player, momentId)
-	end
+	Net.get("PreparationMoment").OnServerInvoke = Skopa.grind("PreparationMoment",
+		function(player, fasId, momentId)
+			return GameplayService.moment(player, fasId, momentId)
+		end)
+	Net.get("PreparationSvar").OnServerInvoke = Skopa.grind("PreparationSvar",
+		function(player, svarId)
+			return GameplayService.svara(player, svarId)
+		end)
+	Net.get("PassMoment").OnServerInvoke = Skopa.grind("PassMoment",
+		function(player, momentId)
+			return GameplayService.eftervard(player, momentId)
+		end)
 
 	--[[ `PreparationStep` finns kvar i nätkontraktet men gör inget mer än
 		att säga ifrån. Att ta bort den helt hade gjort att en klient från
 		en äldre version tyst fick nil tillbaka och stod och väntade; nu får
 		den ett begripligt nej. Fasen går inte att kvittera den vägen — det
 		är hela ändringen i #161. ]]
-	Net.get("PreparationStep").OnServerInvoke = function(_player, _fasId)
-		return false, "spel.gammal_klient"
-	end
+	Net.get("PreparationStep").OnServerInvoke = Skopa.grind("PreparationStep",
+		function(_player, _fasId)
+			return false, "spel.gammal_klient"
+		end)
 
 	--[[ Handskakningen. Klienten anropar den FÖRST efter att den anslutit sin
 		`PreparationSync`-listener, och får hela nuläget i retur. Det gör
@@ -1452,17 +1459,23 @@ function GameplayService.start()
 
 		Svaret bär samma revision som en spontan sync, så om en nyare sync
 		hinner före svaret kastar klienten svaret i stället för att backa. ]]
-	Net.get("PreparationHello").OnServerInvoke = function(player)
-		if not state[player] then
-			GameplayService.bind(player)
-		end
-		--[[ Passvyn skickas som en egen sync i samma andetag. Utan den
-			startade en klient som anslöt mitt i eftervården utan att veta
-			att det fanns en eftervård — samma hål som handskakningen
-			byggdes för att täta på förberedelsen. ]]
-		skickaPass(player)
-		return vyFor(player)
-	end
+	Net.get("PreparationHello").OnServerInvoke = Skopa.grind("PreparationHello",
+		--[[ AVSLAGSFORMEN AR HANDLARENS EGEN. Handskakningen svarar med en
+			VY; klienten gor `if ok and vy then ritaOmNyare(vy) end`. `nil` ar
+			alltsa den form den redan hanterar, och ett `false` hade varit en
+			ny form att lara sig. ]]
+		function(player)
+			if not state[player] then
+				GameplayService.bind(player)
+			end
+			--[[ Passvyn skickas som en egen sync i samma andetag. Utan den
+				startade en klient som anslöt mitt i eftervården utan att veta
+				att det fanns en eftervård — samma hål som handskakningen
+				byggdes för att täta på förberedelsen. ]]
+			skickaPass(player)
+			return vyFor(player)
+		end,
+		function() return nil end)
 
 	--[[ Flaggan är serverns svar på "är loopen igång". Klienten läser den
 		och visar ingen uppsittningsprompt förrän den är sann. Sätts SIST i

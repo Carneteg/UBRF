@@ -83,6 +83,15 @@ const SPRAK = {
   "spel.inget_pass": { sv: "Du har inget pass igång", en: "You have no session going" },
   "spel.ingen_sparning": { sv: "Sparningen är inte igång", en: "Saving is not running" },
   "spel.inte_din_hast": { sv: "Det är inte din häst", en: "That is not your horse" },
+
+  /* ── Takten (Skopa) ─────────────────────────────────────────────────
+     #259 Gate 1A. Serverns fjärrfunktioner har en per-spelare-skopa, och
+     den som trycker fortare än en människa hinner får det här nejet.
+     Texten säger VAD spelaren ska göra — vänta — och inte att hon gjorde
+     något fel: en ärlig spelare på dålig uppkoppling kan nå hit, och hon
+     ska inte läsa en anklagelse. */
+  "takt.for_snabbt": { sv: "Det där gick för snabbt — vänta ett ögonblick",
+    en: "That was too quick — wait a moment" },
   "spel.redan_redo": { sv: "Hon står redan färdig", en: "She is already ready" },
   "spel.redan_ridit": { sv: "Du har redan ridit idag", en: "You have already ridden today" },
   "spel.gammal_klient": { sv: "Skötseln görs moment för moment nu — uppdatera klienten.",
