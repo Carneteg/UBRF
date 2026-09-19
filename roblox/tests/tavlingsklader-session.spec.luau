@@ -434,10 +434,24 @@ do
 		("%s · %s"):format(tostring(s), tostring(p)))
 end
 
+--[[ RESPAWN. Två skilda krav ligger här, och de hålls av två skilda
+	saker — det upptäcktes genom att falsifiera, inte genom att läsa:
+
+	  1. Den NYA avataren rörs inte. Det håller ARKITEKTUREN: en
+	     återställning riktar sig alltid mot den kropp sessionen började
+	     på, aldrig mot `player.Character` som den råkar vara nu. Den
+	     mätningen faller först när BÅDE riktningen och vakten är borta,
+	     och falsifieringen gör precis det.
+
+	  2. Den GAMLA kroppen rörs inte heller. Det håller VAKTEN i
+	     `avsluta`: är kroppen inte längre spelarens skrivs ingenting
+	     alls. Utan den mätningen var vakten omätt — provet var grönt
+	     med vakten borttagen, och ett prov som inte kan bli rött är
+	     ingen evidens. ]]
 do
 	rent()
 	local tjanst = tjanstMedKatalog(allaRatta())
-	local spelare = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
+	local spelare, gammal = nySpelare("Ryttare", "rbxassetid://777001", "rbxassetid://777002")
 	tjanst.starta(spelare, "white")
 	--[[ Respawn: ny kropp, och den nya kroppen bär spelarens EGNA kläder
 		— Roblox klär henne själv. Tjänsten får inte röra dem. ]]
@@ -449,6 +463,11 @@ do
 	check("respawn skriver INTE på den nya avataren",
 		s == "rbxassetid://777050" and p == "rbxassetid://777051",
 		("%s · %s"):format(tostring(s), tostring(p)))
+	local gs, gp = buren(gammal)
+	check("respawn skriver inte heller på den kropp som lämnats",
+		gs == S.mall(T.set("white").shirtAssetId)
+			and gp == S.mall(T.set("white").pantsAssetId),
+		("%s · %s"):format(tostring(gs), tostring(gp)))
 end
 
 do
