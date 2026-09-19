@@ -1661,6 +1661,28 @@ end
 
 Instance = { new = __nyInstans }
 
+--[[ ══ `require` PÅ EN STUBBAD ModuleScript (#263) ═══════════════════
+
+	SAMMA SÖM SOM I `stubs-bygge.luau`, ordagrant och av samma skäl —
+	se noten där. Kort: `Integritet.identitet()` och
+	`Byggidentitet.identitet()` läser build-identiteten med `require()`
+	på en INSTANS de hittat i ReplicatedStorage. Det är ett dynamiskt
+	anrop, så byggfilen skriver inte om det till ett modulnamn, och
+	luau-CLI:t kan inte requira en stubbad ModuleScript.
+
+	Den saknades i DEN HÄR filen, och det syntes först som att den
+	riktiga identiteten lästes som «okänd» i `klient-byggidentitet.spec`
+	— alltså att provet mätte fail closed-vägen och kallade den för den
+	riktiga. Sömmen ligger i bänken och inte i modulen: produktionskoden
+	ska inte ha en gren som bara finns för provet. ]]
+local __riktigRequire = require
+require = function(mal)
+	if type(mal) == "table" and rawget(mal, "__modul") ~= nil then
+		return rawget(mal, "__modul")
+	end
+	return __riktigRequire(mal)
+end
+
 --[[ ══ `typeof` SAKNADES HELT, OCH DET VAR INTE OFARLIGT (#246) ═══════
 
 	Luau-CLI:t har en egen `typeof`, och for en stubbinstans — som ar en

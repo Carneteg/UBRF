@@ -323,6 +323,18 @@ KLIENT = SPEL + [
     ("RiderController",     "src/client/RiderController.luau"),
     ("Input",               "src/client/Input.luau"),
     ("TouchControls",       "src/client/TouchControls.luau"),
+    #[[ #263: byggidentiteten. EFTER TouchControls — den viker undan for
+    #   samma reserv och laser den genom `reglageBredd`/`reglageTopp`, sa
+    #   modulen maste ligga over den i bunten. Och FORE init.client, som
+    #   require:ar den; bankens sjalvprov faller annars, vilket det ocksa
+    #   gjorde nar den forst hamnade i PARITET i stallet for har.
+    #
+    #   `UBRFBuild` foljer med: provet jamfor mot den GENERERADE
+    #   `kallhash` och `kallor` i stallet for mot avskrivna tal. En
+    #   avskriven hash hade blivit fel dagen nagon ror en kallfil, och
+    #   provet hade da matt sin egen inaktualitet. ]]
+    ("UBRFBuild",           "game/UBRFBuild.luau"),
+    ("Byggidentitet",       "src/client/Byggidentitet.luau"),
     ("InteractionController", "src/client/InteractionController.luau"),
     ("PreparationController", "src/client/PreparationController.luau"),
     #[[ #244: se noten i PARITET. Bannern maste ligga fore den modul som

@@ -202,6 +202,27 @@ const SPRAK = {
   /* SITT AV ar kvar nar de ovriga touch-etiketterna forsvann med panelen:
      den ar inget reglage utan enda vagen AV hasten pa en ren pekenhet
      (#162 blockerare 2). Den ar numera en ContextActionService-handling. */
+  /* ── Byggidentiteten (#263) ────────────────────────────────────────
+     Vilken build sitter jag i? Raderna läses av QA på en fysisk enhet,
+     där serverloggen inte är tillgänglig för ett vanligt testkonto.
+     "okänd" är inte en artighet utan ett krav: en saknad identitet får
+     aldrig se ut som en matchad. */
+  "bygg.rubrik": { sv: "Byggidentitet", en: "Build identity" },
+  "bygg.stang": { sv: "Stäng", en: "Close" },
+  "bygg.okand": { sv: "okänd", en: "unknown" },
+  "bygg.kallhash": { sv: "Källhash", en: "Source hash" },
+  "bygg.kallor": { sv: "Källfiler", en: "Source files" },
+  "bygg.lage": { sv: "Läge", en: "Mode" },
+  "bygg.genererad": { sv: "Genererad", en: "Generated" },
+  "bygg.plats": { sv: "Plats", en: "Place" },
+  "bygg.version": { sv: "Platsversion", en: "Place version" },
+  "bygg.miljo": { sv: "Miljö", en: "Environment" },
+  /* Motorn säger 0 för varje opublicerad upplevelse. Talet ensamt
+     förklarar inte varför, så raden skriver ut skälet. */
+  "bygg.opublicerad": { sv: "0 — opublicerad", en: "0 — unpublished" },
+  "bygg.studio": { sv: "Studio (lokalt)", en: "Studio (local)" },
+  "bygg.server": { sv: "Publicerad server", en: "Published server" },
+
   "touch.sitt_av": { sv: "SITT AV", en: "DISMOUNT" },
   "touch.lugnare": { sv: "▼ LUGNARE", en: "▼ SLOWER" },
   "touch.framat": { sv: "▲ FRAMÅT", en: "▲ FORWARD" },
