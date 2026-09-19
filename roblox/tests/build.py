@@ -533,6 +533,22 @@ def kontrolleraBuntdefinitioner(kalla: typing.Optional[str] = None) -> None:
                       + ". Bara den sista tilldelningen lever; ta bort de andra.")
 
 
+def modulblock(namn: str, rel: str, kropp: str) -> str:
+    """Ett modulblock i den ihopfogade filen.
+
+    Egen funktion av ETT skal: falsifierbarhet. Efterkontrollen i `foga` —
+    att varje deklarerad modul star exakt en gang i den KORDA filen — var
+    den enda grinden i kontraktet som gick att koppla ur utan att ett enda
+    prov blev rott, eftersom emissionen lag inbakad i loopen och ingen
+    kunde simulera en emission som tappar en modul. En grind som aldrig
+    visats kunna bli rod ar inte evidens; det ar hela slutsatsen i DEL A,
+    och den galler lika hart for grindarna i den har filen.
+
+    `testa-build.py: deklarerad_men_ej_emitterad` byter ut funktionen och
+    kraver att bygget faller."""
+    return f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n"
+
+
 _PRODUKT = ("src/", "game/", "buildings/")
 
 
@@ -767,7 +783,7 @@ def foga(spec_rel: str, moduler, stubbar: str) -> pathlib.Path:
     kanda: set = set()
     for namn, rel in moduler:
         kropp = inlina(las(rel), kanda, rel, spec_rel, har_core)
-        delar.append(f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n")
+        delar.append(modulblock(namn, rel, kropp))
         kanda.add(namn)
         # Hjalper/Svar/RidKanon ligger med sedan G02-B: MovementController
         # laser dem ur Core, precis som produktionen gor.

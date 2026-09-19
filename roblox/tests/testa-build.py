@@ -178,6 +178,27 @@ def riktiga_buntar_bygger():
         assert f"\nlocal {namn} = (function()\n" in text, f"{namn} saknas i integration"
 
 
+def deklarerad_men_ej_emitterad():
+    #[[ EFTERKONTROLLEN, provad i sin egen riktning.
+    #
+    #   Det ar den grind som ligger narmast DEL A:s fall: modulen STOD i
+    #   listan och kom anda aldrig med i filen som kordes. Har simuleras
+    #   det genom en emission som tappar just den modulen — bunten ar
+    #   oforandrad, utdatan ar det inte.
+    #
+    #   Utan det har provet var efterkontrollen den enda grinden i
+    #   kontraktet som gick att koppla ur utan att nagot blev rott. ]]
+    riktig = build.modulblock
+    try:
+        build.modulblock = (lambda namn, rel, kropp:
+                            "" if namn == "TackForradService"
+                            else riktig(namn, rel, kropp))
+        rott(lambda: build.foga(SPEC, build.INTEGRATION, STUBB),
+             "TackForradService", "deklarerad i bunten")
+    finally:
+        build.modulblock = riktig
+
+
 def kontrasten_utan_grinden():
     #[[ ANDRA HALVAN AV FALSIFIERINGEN.
     #
@@ -235,7 +256,8 @@ if __name__ == "__main__":
     for fn in (saknad_modul, fel_ordning, saknad_fil, tom_bunt, noll_produktmoduler,
                dubbel_modul, dubbel_buntdefinition, core_utan_core, require_i_specen,
                kommentar_ar_ingen_require, core_med_core, buntdefinitionerna_i_build_py,
-               riktiga_buntar_bygger, kontrasten_utan_grinden):
+               riktiga_buntar_bygger, deklarerad_men_ej_emitterad,
+               kontrasten_utan_grinden):
         prov(fn.__name__, fn)
     if fynd:
         print(f"BANKENS SJALVPROV: {len(fynd)} av {gjorda} prov foll")
