@@ -456,6 +456,81 @@ const SPRAK = {
   "ugneta.dim.mjukhet": { sv: "mjukheten", en: "the softness" },
   "ugneta.dim.respons": { sv: "hästens svar", en: "the horse's response" },
   "ugneta.dim.tempo": { sv: "tempot", en: "the tempo" },
+  /* ══ RIDE FIRST: TEMAT, ORSAKSSPRÅKET OCH PASSET (#234) ═════════════
+
+     Tre familjer, och gränsen mellan dem är hela poängen:
+
+       `ugneta.tema.*`      RYTTARENS mönster — något spelaren kan ändra.
+                            Formuleras som en handling, aldrig som en dom.
+       `ugneta.dagsform.*`  HÄSTENS dag — något att anpassa sig till och
+                            inte något spelaren orsakat. Formuleras om
+                            HENNE, med en följdmening om vad ryttaren gör
+                            åt det.
+       `ugneta.teori.*`     efter avsittningen, ur Ridhandboken.
+
+     Att de två första ligger i olika nyckelfamiljer är avsiktligt och
+     mätbart: `ugneta-tema.spec` kontrollerar att en dagsform-observation
+     ALDRIG kan hämta en text ur ryttarfamiljen och tvärtom. En blandning
+     hade varit precis det beställningen förbjuder — att skuldbelägga
+     spelaren för hästens dagsform, eller förklara ett ryttarmisstag med
+     hennes personlighet. */
+  "ugneta.tema.handen.start": { sv: "Idag fokuserar vi på din hand. Rid fram!",
+    en: "Today we focus on your hand. Ride on!" },
+  "ugneta.tema.handen.hard_hand": {
+    sv: "Du tar i lite för hårt. Korta tag, och ge efter emellan.",
+    en: "You are taking a bit too firmly. Short aids, and give in between." },
+  "ugneta.tema.sitsen.start": { sv: "Idag fokuserar vi på din sits. Rid fram!",
+    en: "Today we focus on your seat. Ride on!" },
+  "ugneta.tema.sitsen.tung_sits": {
+    sv: "Du sitter tungt ned. Följ rörelsen i stället för att trycka.",
+    en: "You are sitting heavily down. Follow the movement instead of pushing." },
+  /* HÄSTENS DAG. Ingen skuld, ingen uppmaning att skärpa sig — en
+     upplysning om henne och ett råd om hur man möter den. */
+  "ugneta.dagsform.spand": {
+    sv: "Hon är spänd idag. Det är hennes dagsform — ge henne tid.",
+    en: "She is tense today. That is how she is feeling — give her time." },
+
+  /* ── UR RIDHANDBOKEN ────────────────────────────────────────────────
+     Sammanfattningarna står i `src/ovningar.js` (KUNSKAP), som följer
+     Markus Holsts Ridhandbok. De HITTAS INTE PÅ här och de skrivs inte om
+     för att passa en ruta: nycklarna nedan är utdrag ur samma text, och
+     `kalla` i RidKanon.UGNETA.TEMA pekar ut vilken del de kommer ur. */
+  "ugneta.teori.rubrik": { sv: "UR RIDHANDBOKEN", en: "FROM THE RIDING HANDBOOK" },
+  "ugneta.teori.handen.regel": { sv: "Tygeltag är korta — aldrig hängande.",
+    en: "Rein aids are short — never hanging." },
+  "ugneta.teori.handen.text": {
+    sv: "Handen hör till en mjuk och jämn förbindelse. Skänkeln driver — den "
+      + "som ligger på i varje steg blir brus som hästen lär sig sortera bort. "
+      + "Samma sak gäller handen: en hjälp som ges hela tiden slutar betyda något.",
+    en: "The hand belongs to a soft, even contact. The leg drives — a leg that "
+      + "lies on in every stride becomes noise the horse learns to filter out. "
+      + "The same goes for the hand: an aid given all the time stops meaning anything." },
+  "ugneta.teori.sitsen.regel": { sv: "Axel, höft och häl i lodlinje.",
+    en: "Shoulder, hip and heel in one line." },
+  "ugneta.teori.sitsen.text": {
+    sv: "Den lodräta sitsen är utgångsläget, med underskänkeln stilla. "
+      + "Lättridning avlastar hästens rygg i trav — och du ska sitta på rätt "
+      + "diagonal. Den lätta sitsen hör hemma över bommar och i terräng.",
+    en: "The vertical seat is the starting point, with the lower leg still. "
+      + "Rising trot relieves the horse's back in trot — and you should sit on "
+      + "the correct diagonal. The light seat belongs over poles and out in the field." },
+
+  /* ── EFTER PASSET ───────────────────────────────────────────────────
+     Mätarnas etiketter och vägen tillbaka. Raderna är PRESENTATION av
+     telemetri som redan samlats — de skapar ingen progression, och
+     formuleringarna säger därför "under passet", inte "du gick upp en
+     nivå". */
+  "ugneta.summering.hasten_slappnar": { sv: "Hästen slappnar av",
+    en: "The horse relaxes" },
+  "ugneta.summering.din_mjukhet": { sv: "Din mjukhet", en: "Your softness" },
+  "ugneta.summering.din_balans": { sv: "Din balans", en: "Your balance" },
+  "ugneta.summering.tillbaka": { sv: "Tillbaka till stallet",
+    en: "Back to the stable" },
+  /* RESERVEN. En sammanfattning utan kommentar ska säga något sant om att
+     det saknas underlag — inte stå tom och inte hitta på ett omdöme. */
+  "ugneta.summering.utan_kommentar": {
+    sv: "Vi hann inte se så mycket den här gången.",
+    en: "We did not get to see very much this time." },
 
   /* ── Sparningen: status spelaren ska kunna förstå ──────────────────── */
   "spar.inget_datalager": { sv: "inget datalager", en: "no data store" },

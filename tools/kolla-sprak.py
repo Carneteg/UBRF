@@ -33,6 +33,14 @@ LOKALISERADE = [
     #   dar man TANKER pa saken, och en ny fil som ritar text hor
     #   hemma har aven nar den ar tom idag. ]]
     "roblox/src/client/CoachBanner.luau",
+    #[[ #234: Ride First-lagrets tva ytor. `UgnetaBubbla` bar Ugnetas
+    #   replik till bubblan och reservloggen, `PostRideSummary` ritar
+    #   passets sammanfattning. Ingen av dem har egna literaler — texten
+    #   kommer fran den som ropar, precis som i bannern — men listan ar
+    #   stallet dar man TANKER pa saken, och en ny fil som ritar text hor
+    #   hemma har aven nar den ar tom idag. ]]
+    "roblox/src/client/UgnetaBubbla.luau",
+    "roblox/src/client/PostRideSummary.luau",
     "roblox/src/client/InteractionController.luau",
     "roblox/src/client/TouchControls.luau",
     "roblox/src/client/Prompttext.luau",
