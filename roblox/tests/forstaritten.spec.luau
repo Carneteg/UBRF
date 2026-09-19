@@ -781,6 +781,180 @@ do
 			and TackService.sadlad(hast) == false)
 end
 
+--[[ ══ TVA OVERLAPPANDE FORSOK (re-review av `4fce31d`) ══════════
+
+	Reviewerns reproduktion, kord genom de RIKTIGA `CharacterAdded`-
+	lyssnarna:
+
+	  A vantar pa en ofullstandig kropp. B fyrar, monterar och rider.
+	  A vaknar — och plockade forut upp B:s kropp som sin egen, gjorde
+	  en andra `stallFram` pa den redan ridna hasten, skrev over
+	  matningen och raderade den pa vagen ut.
+
+	Uppmatt fore rattelsen: en extra teleport, hasten ryckt tillbaka
+	tio studs, den aktiva rittens matning borta.
+
+	Provet vaxlar in B mitt i A:s vantan genom A:s egen
+	`FindFirstChild` — det ar den enda platsen bankens no-op-`task.wait`
+	lamnar oss att fla in en handelse pa. ]]
+print("\n-- Tva overlappande startforsok --")
+do
+	rent()
+	local spelare, karA, hast = uppstallning("Overlappande", 1020)
+	local riktigRot = karA:FindFirstChild("HumanoidRootPart")
+	local riktigHum = karA:FindFirstChildOfClass("Humanoid")
+	local karB = nyKaraktar()
+	local rotB = karB:FindFirstChild("HumanoidRootPart")
+	local humB = karB:FindFirstChildOfClass("Humanoid")
+
+	local pollar = 0
+	local vaxlat = false
+	--[[ KROPP A: lamnar aldrig ut sin rot. Vid tredje pollen slapper
+		den in B — samma ogonblick som en respawn skulle. ]]
+	local kroppA
+	kroppA = {
+		Name = "Kropp A",
+		FindFirstChild = function(_, namn)
+			if namn ~= "HumanoidRootPart" then return nil end
+			pollar += 1
+			if pollar == 3 and not vaxlat then
+				vaxlat = true
+				spelare.Character = karB
+				spelare.CharacterAdded:Fire(karB)
+			end
+			return nil
+		end,
+		FindFirstChildOfClass = function() return riktigHum end,
+	}
+	spelare.Character = kroppA
+	--[[ A KORS DIREKT, inte genom lyssnaren. Forsta utkastet fyrade
+		`CharacterAdded` for A och matte sedan ett TREDJE anrop — det
+		nekades av `startad` och inte av polletten, sa provet bevisade
+		inte det det pastod. Nu ar `utfallA` A:s eget svar. ]]
+	local utfallA = FR.starta(spelare)
+
+	--[[ B ska ha monterat genom den riktiga lyssnaren, inifran A:s
+		vantan. ]]
+	local sits = hast:FindFirstChild("RiderSeat")
+	check("B monterade medan A vantade",
+		sits ~= nil and sits.Occupant == humB,
+		tostring(sits and sits.Occupant))
+	local mB = FR.matningFor(spelare)
+	check("och B har en matning", mB ~= nil)
+
+	--[[ Hasten flyttas tio studs, sa att en extra `stallFram` fran A
+		skulle SYNAS. ]]
+	local pivot = hast.PrimaryPart
+	pivot.CFrame = pivot.CFrame * CFrame.new(0, 0, -10)
+	local efterFlytt = pivot.CFrame.Position
+
+	--[[ A:s EGET svar: den sag att den inte langre var det aktiva
+		forsoket och slutade rora bade varlden och state. ]]
+	check("A ger upp nar B tagit registret",
+		utfallA.ok == false and utfallA.steg == "ingen_ridklar_karaktar",
+		utfallA.steg)
+	check("och det var polletten som stoppade den, inte startad-flaggan",
+		vaxlat == true and pollar >= 3,
+		("%d pollar, vaxlat %s"):format(pollar, tostring(vaxlat)))
+	check("A gor INGEN extra teleport",
+		(pivot.CFrame.Position - efterFlytt).Magnitude < 0.001,
+		("hasten flyttades %.2f studs"):format(
+			(pivot.CFrame.Position - efterFlytt).Magnitude))
+	check("och raderar INTE B:s matning",
+		FR.matningFor(spelare) == mB,
+		tostring(FR.matningFor(spelare)))
+	check("B sitter fortfarande upp",
+		sits ~= nil and sits.Occupant == humB)
+	local _ = riktigRot
+	local _ = rotB
+end
+
+do
+	rent()
+	--[[ OMVAND ORDNING: bada vantar, och A aterupptas FORST. Polletten
+		ska da fanga A — B har tagit registret — och B ska lyckas. ]]
+	local spelare, karA, hast = uppstallning("Omvand", 1060)
+	local riktigHum = karA:FindFirstChildOfClass("Humanoid")
+	local karB = nyKaraktar()
+
+	local kroppA = {
+		Name = "Kropp A",
+		FindFirstChild = function() return nil end,
+		FindFirstChildOfClass = function() return riktigHum end,
+	}
+	spelare.Character = kroppA
+	--[[ A startas UTAN att lyssnaren fyrar, sa vi kan styra ordningen. ]]
+	local utfallA = FR.starta(spelare)
+	check("A ger upp nar dess kropp aldrig blir ridklar",
+		utfallA.ok == false and utfallA.steg == "ingen_ridklar_karaktar",
+		utfallA.steg)
+
+	spelare.Character = karB
+	local utfallB = FR.starta(spelare)
+	check("B lyckas efterat", utfallB.ok == true,
+		("%s %s"):format(utfallB.steg, tostring(utfallB.skal)))
+	check("och det finns exakt en matning", FR.kvarvarande() == 1,
+		("%d"):format(FR.kvarvarande()))
+end
+
+do
+	rent()
+	--[[ SAMMA KROPP TVA GANGER ar en dubblett, inte ett nytt lage. ]]
+	local spelare, kar, hast = uppstallning("Dubbelsignal", 1100)
+	local riktigRot = kar:FindFirstChild("HumanoidRootPart")
+	local riktigHum = kar:FindFirstChildOfClass("Humanoid")
+	local andra = nil
+	local kropp
+	kropp = {
+		Name = "Kropp",
+		FindFirstChild = function(_, namn)
+			if namn ~= "HumanoidRootPart" then return nil end
+			if andra == nil then
+				--[[ Mitt i A:s vantan: samma kropp signalerar igen. ]]
+				andra = FR.starta(spelare)
+			end
+			return riktigRot
+		end,
+		FindFirstChildOfClass = function() return riktigHum end,
+	}
+	spelare.Character = kropp
+	local forsta = FR.starta(spelare)
+	check("det andra forsoket pa SAMMA kropp nekas",
+		andra ~= nil and andra.ok == false and andra.steg == "forsok_pagar",
+		tostring(andra and andra.steg))
+	check("och det forsta lyckas anda", forsta.ok == true,
+		("%s %s"):format(forsta.steg, tostring(forsta.skal)))
+end
+
+do
+	rent()
+	--[[ DISCONNECT UNDER VANTAN. Ingen mutation, inget kvar. ]]
+	local spelare, kar, hast = uppstallning("Lamnar mitt i", 1140)
+	local riktigHum = kar:FindFirstChildOfClass("Humanoid")
+	local hastFore = hast.PrimaryPart.CFrame.Position
+	local pollar = 0
+	spelare.Character = {
+		Name = "Kropp som lamnas",
+		FindFirstChild = function()
+			pollar += 1
+			if pollar == 2 then
+				--[[ Hon kopplar ner mitt i vantan. ]]
+				Players.PlayerRemoving:Fire(spelare)
+			end
+			return nil
+		end,
+		FindFirstChildOfClass = function() return riktigHum end,
+	}
+	local utfall = FR.starta(spelare)
+	check("en frankoppling mitt i vantan ger ett nej",
+		utfall.ok == false, utfall.steg)
+	check("hasten star kvar",
+		(hast.PrimaryPart.CFrame.Position - hastFore).Magnitude < 0.001)
+	check("ingen utrustning byggdes", TackService.sadlad(hast) == false)
+	check("och ingenting lamnades kvar",
+		FR.kvarvarande() == 0, ("%d"):format(FR.kvarvarande()))
+end
+
 --[[ ══ 8. CLEANUP ════════════════════════════════════════════════════
 
 	Kriterium 7 och skydd 6. ]]

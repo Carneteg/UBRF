@@ -105,6 +105,35 @@ export type Matning = {
 local matning: { [Player]: Matning } = {}
 local startad: { [Player]: boolean } = {}
 
+--[[ ══ DET AKTIVA FORSOKET (re-review av `4fce31d`, P1) ════════════
+
+	`CharacterAdded` kan fyra igen medan ett tidigare forsok star och
+	vantar. Forsta versionen lopte da isar pa ett satt som var
+	reproducerat i banken:
+
+	  A vantar pa en ofullstandig kropp. B fyrar, monterar, och rider.
+	  A vaknar — och `vantaRidklar` laste om `player.Character` varje
+	  varv, sa A ACCEPTERADE B:s kropp. A gjorde en andra `stallFram`
+	  pa den redan ridna hasten, skrev over `matning[player]`, nekades
+	  av `pass.sitter_redan` och raderade B:s matning pa vagen ut.
+
+	Uppmatt: en extra teleport, hasten ryckt tillbaka tio studs, den
+	aktiva rittens matning borta.
+
+	Den sena `player.Character ~= ridklar.kar`-kontrollen kunde inte
+	fanga det: A hade redan gjort B:s kropp till sin.
+
+	Botemedlet ar en POLLETT. Varje forsok tar ett lopnummer och
+	NAMNGER den kropp det hor till, bada FORE forsta yield. Ett nytt
+	forsok tar registret, och det gamla ser det vid nasta kontroll.
+
+	Regeln i en mening: ett forsok far bara rora varlden och sitt eget
+	state sa lange det fortfarande ar DET AKTIVA forsoket for DEN kropp
+	det startade pa. ]]
+type Forsok = { id: number, kar: Instance }
+local aktivt: { [Player]: Forsok } = {}
+local nastaId = 0
+
 --[[ ══ SKYDD 8: VARIFRAN KLOCKAN GAR ═══════════════════════════════
 
 	Arkitekturbeslutet ar uttryckligt: 30-sekundersmalet far inte kunna
@@ -188,6 +217,22 @@ function ForstaRitten.kvarvarande(): number
 	return n
 end
 
+--[[ Ar det har fortfarande det aktiva forsoket? Anropas efter varje
+	vantan, fore varje mutation, och innan nagon stadning far radera
+	state — ett gammalt forsok far inte stada bort ett nyare forsoks
+	matning. ]]
+local function mitt(player: Player, id: number): boolean
+	local a = aktivt[player]
+	return a ~= nil and a.id == id
+end
+
+--[[ River bara det som DET HAR forsoket ager. ]]
+local function slappMitt(player: Player, id: number)
+	if not mitt(player, id) then return end
+	matning[player] = nil
+	aktivt[player] = nil
+end
+
 --[[ FORHANDSDEKLARERAD. Observatoren bor langre ned — den hor ihop
 	med telemetrin och inte med starten — men `starta` vacker den. Utan
 	den har raden hade `vaxKnapp` varit en global `nil` vid anropet, och
@@ -218,8 +263,7 @@ local VANTA_PAUS = 0.05
 
 export type Ridklar = { kar: Model, rot: BasePart, hum: Humanoid }
 
-local function ridklarNu(player: Player): Ridklar?
-	local kar = player.Character
+local function ridklarNu(kar: Instance?): Ridklar?
 	if kar == nil then return nil end
 	local rot = kar:FindFirstChild("HumanoidRootPart")
 	if not (rot and rot:IsA("BasePart")) then return nil end
@@ -227,13 +271,22 @@ local function ridklarNu(player: Player): Ridklar?
 	if hum == nil then return nil end
 	--[[ LEVANDE. En karaktar som redan dott ska ingen sattas upp pa. ]]
 	if (hum :: any).Health ~= nil and (hum :: any).Health <= 0 then return nil end
-	return { kar = kar, rot = rot :: BasePart, hum = hum }
+	return { kar = kar :: Model, rot = rot :: BasePart, hum = hum }
 end
 
---[[ Vantar tills karaktaren ar ridklar, eller ger upp. Returnerar ocksa
-	VILKEN karaktar den vantade in, sa att anroparen kan se om hon bytt
-	kropp under tiden. ]]
-local function vantaRidklar(player: Player): Ridklar?
+--[[ Vantar tills DEN KROPP forsoket startade pa ar ridklar.
+
+	`kar` skickas in och lases ALDRIG om ur `player.Character`. Det ar
+	hela rattelsen: en vantan som fragar spelaren pa nytt varje varv
+	plockar upp nasta kropp och fortsatter som om den vore sin egen.
+
+	Tre satt att ge upp, och alla tre ar ett nej och inte en paus:
+
+	  spelaren har lamnat
+	  ett nyare forsok har tagit registret  (`mitt`)
+	  kroppen ar inte langre spelarens      (respawn, CharacterRemoving)
+]]
+local function vantaRidklar(player: Player, kar: Instance, id: number): Ridklar?
 	for _ = 1, VANTA_FORSOK do
 		--[[ Lamnat spelet mitt i vantan? Da finns ingen att stalla fram.
 
@@ -244,7 +297,12 @@ local function vantaRidklar(player: Player): Ridklar?
 		if typeof(player) == "Instance" and (player :: any).Parent == nil then
 			return nil
 		end
-		local r = ridklarNu(player)
+		if not mitt(player, id) then return nil end
+		--[[ KROPPEN MASTE FORTFARANDE VARA HENNES. Bytte hon — respawn,
+			CharacterRemoving — hor vantan till en kropp som inte finns,
+			och den ska da inte vaxa in i nasta. ]]
+		if player.Character ~= kar then return nil end
+		local r = ridklarNu(kar)
 		if r ~= nil then return r end
 		task.wait(VANTA_PAUS)
 	end
@@ -292,13 +350,35 @@ function ForstaRitten.starta(player: Player): Utfall
 		return { ok = false, steg = "inte_forsta_ritten" }
 	end
 
-	--[[ 1. KARAKTAREN FORST, OCH FORE VARJE MUTATION (P1-3).
+	--[[ 1. POLLETTEN, FORE FORSTA YIELD.
+
+		Kroppen namnges har och lases aldrig om. Ett nyare forsok tar
+		registret; det gamla ser det vid nasta kontroll och slutar rora
+		bade varlden och sitt state. Se noten vid `aktivt`. ]]
+	local karVidStart = player.Character
+	if karVidStart == nil then
+		return { ok = false, steg = "ingen_karaktar" }
+	end
+	--[[ SAMMA KROPP FAR INTE HA TVA AKTIVA FORSOK. Tva `CharacterAdded`
+		for samma karaktar ar en dubblett, inte ett nytt lage. En NY
+		kropp far daremot ta over — det ar en respawn, och da ar det
+		gamla forsoket inaktuellt. ]]
+	local pagar = aktivt[player]
+	if pagar ~= nil and pagar.kar == karVidStart then
+		return { ok = false, steg = "forsok_pagar" }
+	end
+	nastaId += 1
+	local id = nastaId
+	aktivt[player] = { id = id, kar = karVidStart }
+
+	--[[ 2. KARAKTAREN, OCH FORE VARJE MUTATION (P1-3).
 
 		Ingenting i varlden ror sig innan hon har en kropp som gar att
 		satta upp. Faller vantan har ingen hast flyttats och ingen
 		utrustning byggts — se noten vid `vantaRidklar`. ]]
-	local ridklar = vantaRidklar(player)
+	local ridklar = vantaRidklar(player, karVidStart, id)
 	if ridklar == nil then
+		slappMitt(player, id)
 		return { ok = false, steg = "ingen_ridklar_karaktar" }
 	end
 
@@ -315,16 +395,16 @@ function ForstaRitten.starta(player: Player): Utfall
 		bromsat = false, suttitAv = false,
 	}
 
-	--[[ 2. HÄSTEN. `bind` är enda vägen till modellen och hänger på att
+	--[[ 3. HÄSTEN. `bind` är enda vägen till modellen och hänger på att
 		sparningen landat — därför är hela modulen hakad på
 		`efterLaddning` och inte på `PlayerAdded`. ]]
 	local modell = GameplayService.bind(player)
 	if not modell then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "ingen_hast" }
 	end
 
-	--[[ 3. ÄR VÄRLDEN HEL? SKYDD 4, och ordningen är hela poängen.
+	--[[ 4. ÄR VÄRLDEN HEL? SKYDD 4, och ordningen är hela poängen.
 		Prövningen ligger FORE teleporten: faller den efterat star
 		spelaren ensam i ett ridhus utan hast, och arkitekturbeslutet
 		sager uttryckligen att en spelare aldrig ska teleporteras till
@@ -335,7 +415,7 @@ function ForstaRitten.starta(player: Player): Utfall
 		gar att rida, hur ratt allt annat an ser ut. ]]
 	local sess = HorseService.sessionFor(modell)
 	if sess == nil then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "hasten_oregistrerad" }
 	end
 	local sits = (sess :: any).rig ~= nil and (sess :: any).rig.seat or nil
@@ -353,56 +433,66 @@ function ForstaRitten.starta(player: Player): Utfall
 	local sitsNamn = sits ~= nil and tostring((sits :: any).Name) or nil
 	if sits == nil or sitsNamn == nil
 		or modell:FindFirstChild(sitsNamn) ~= sits then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "riggen_saknar_sits" }
 	end
 	if LedService.malzon() == nil then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "ingen_ridhuszon" }
 	end
 
-	--[[ 4. FRAM TILL RIDHUSET. `stallFram` flyttar både häst och
+	--[[ 5. FRAM TILL RIDHUSET. `stallFram` flyttar både häst och
 		ryttare, men bokför INGENTING — se noten där. Hon har inte lett
 		henne, och det ska hennes `leda`-fas fortsätta att veta. ]]
 	local framme, framfel = LedService.stallFram(player, modell)
 	if not framme then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "kom_inte_till_ridhuset", skal = framfel }
 	end
 
-	--[[ 5. FÖRBEREDELSEN. Fysisk, inte bokförd. ]]
+	--[[ 6. FÖRBEREDELSEN. Fysisk, inte bokförd. ]]
 	local redo, redofel = forbered(player, modell)
 	if not redo then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "forberedelsen_foll", skal = redofel }
 	end
 
-	--[[ 6. INTILL HENNE. `tryMount` kräver `MountRange`, och efter
+	--[[ 7. INTILL HENNE. `tryMount` kräver `MountRange`, och efter
 		`stallFram` står hon redan där — men utrustningsbygget kan ha
 		flyttat pivoten, så avståndet stängs om. ]]
-	--[[ SAMMA KROPP SOM VI VANTADE IN? Bytte hon under tiden — en
-		respawn mitt i flodet — hor arbetet till en karaktar som inte
-		finns langre, och da ska ingen sattas upp pa den. ]]
-	if player.Character ~= ridklar.kar then
-		matning[player] = nil
+	--[[ FORTFARANDE MITT FORSOK, OCH SAMMA KROPP? Bada provas, for de
+		fangar olika saker: polletten fangar ett nyare forsok som redan
+		hunnit montera, karaktarsjamforelsen en respawn som inte hunnit
+		bli ett nytt forsok an. ]]
+	if not mitt(player, id) then
+		return { ok = false, steg = "forsoket_ar_inaktuellt" }
+	end
+	if player.Character ~= karVidStart then
+		slappMitt(player, id)
 		return { ok = false, steg = "karaktaren_byttes" }
 	end
 	if not stallVidHasten(player, modell) then
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "ingen_karaktar" }
 	end
 
-	--[[ 7. UPP. Samma `tryMount` och samma `farSittaUpp` som alla
+	--[[ 8. UPP. Samma `tryMount` och samma `farSittaUpp` som alla
 		andra. Nekas den sitter ingen upp — inte heller här. ]]
 	local uppe, mskal, marg = HorseService.tryMount(player, modell)
 	if not uppe then
 		--[[ Ingen ritt, ingen matning. En halv matning hade sett ut som
 			en ritt som aldrig kom igang. ]]
-		matning[player] = nil
+		slappMitt(player, id)
 		return { ok = false, steg = "uppsittningen_nekades",
 			skal = tostring(mskal or marg or "") }
 	end
 
+	--[[ SISTA KONTROLLEN FORE VI GOR OSS TILL DEN AKTIVA RITTEN.
+		`tryMount` yieldar inte med dagens rigg, men ett forsok som
+		hunnit bli inaktuellt ska inte skriva sig sjalvt till sanning. ]]
+	if not mitt(player, id) then
+		return { ok = false, steg = "forsoket_ar_inaktuellt" }
+	end
 	startad[player] = true
 	vaxKnapp()
 	return { ok = true, steg = "uppsutten" }
@@ -596,12 +686,16 @@ function ForstaRitten.glom(player: Player)
 	startad[player] = nil
 	matning[player] = nil
 	forra[player] = nil
+	--[[ Registret ocksa: ett forsok som star och vantar nar hon lamnar
+		ska se att det inte langre ar aktivt och ge upp. ]]
+	aktivt[player] = nil
 end
 
 function ForstaRitten._nollstallForProv()
 	startad = {}
 	matning = {}
 	forra = {}
+	aktivt = {}
 	if slinga ~= nil then
 		slinga:Disconnect()
 		slinga = nil
@@ -640,6 +734,7 @@ function ForstaRitten.start()
 		startad[player] = nil
 		matning[player] = nil
 		forra[player] = nil
+		aktivt[player] = nil
 	end)
 
 	SparService.efterLaddning(function(player: Player)
