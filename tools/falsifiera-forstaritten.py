@@ -135,9 +135,8 @@ FALS = [
      "\tmatning[player] = {\n\t\tspelKlar = klocka() + 1000,"),
 
     ("F10 cleanup vid frankoppling uteblir", "ForstaRitten",
-     "function ForstaRitten.glom(player: Player)\n"
-     "\tstartad[player] = nil\n\tmatning[player] = nil\n\tforra[player] = nil\nend",
-     "function ForstaRitten.glom(player: Player)\nend"),
+     "\tstartad[player] = nil\n\tmatning[player] = nil\n\tforra[player] = nil",
+     "\tlocal _ = player"),
 
     ("F11 avsittning river inte sessionsstatus (skydd 6)", "ForstaRitten",
      "\t\tForstaRitten.noteraAvsittning(player)\n"
@@ -177,13 +176,54 @@ FALS = [
 
     ("F18 ingen bounded vantan pa ridklar karaktar (P1-3)",
      "ForstaRitten",
-     "\tlocal ridklar = vantaRidklar(player)\n\tif ridklar == nil then\n\t\treturn { ok = false, steg = \"ingen_ridklar_karaktar\" }\n\tend",
-     "\tlocal ridklar = { kar = player.Character }"),
+     "\tlocal ridklar = vantaRidklar(player, karVidStart, id)\n\tif ridklar == nil then",
+     "\tlocal ridklar = { kar = player.Character }\n\tif false then"),
 
-    ("F19 kroppsbyte under vantan upptacks inte (P1-3)",
+    ("F19 kroppsbyte fore mount upptacks inte (P1-3)",
      "ForstaRitten",
-     "\tif player.Character ~= ridklar.kar then",
+     "\tif player.Character ~= karVidStart then",
      "\tif false then"),
+    #[[ ══ RE-REVIEW 2: det gamla forsoket som vaxte in i ny kropp ══
+    #
+    #   F20-F22 provar polletten. F20 ar reviewerns egen reproduktion:
+    #   utan den laser vantan om `player.Character` och tar over nasta
+    #   kropp. ]]
+
+    #[[ F20 OCH F21 TACKER VARANDRA — och en tredje vakt tacker bada.
+    #
+    #   Vanteloopen har tre sparrar:
+    #
+    #     F20  `ridklarNu(kar)` — den NAMNGIVNA kroppen, inte
+    #          `player.Character`
+    #     F21  polletten (`mitt`)
+    #     ...  och `player.Character ~= kar`, som fangar bada
+    #
+    #   Ingen av de tva forsta gar darfor att falla ensam. F20F21
+    #   river ALLA TRE och ar den mutation som visar att skyddet mats.
+    #   Samma monster som F1/F2, och redovisat pa samma satt. ]]
+    ("F20 vantan laser om player.Character (svag, se noten)",
+     "ForstaRitten",
+     "\t\tlocal r = ridklarNu(kar)",
+     "\t\tlocal r = ridklarNu(player.Character)"),
+
+    ("F21 polletten provas inte under vantan (svag, se noten)",
+     "ForstaRitten",
+     "\t\tif not mitt(player, id) then return nil end",
+     "\t\tif false then return nil end"),
+
+    ("F20F21 ALLA TRE sparrarna i vantan rivs",
+     "ForstaRitten",
+     [("\t\tlocal r = ridklarNu(kar)",
+       "\t\tlocal r = ridklarNu(player.Character)"),
+      ("\t\tif not mitt(player, id) then return nil end",
+       "\t\tif false then return nil end"),
+      ("\t\tif player.Character ~= kar then return nil end",
+       "\t\tif false then return nil end")]),
+
+    ("F22 samma kropp far tva aktiva forsok", "ForstaRitten",
+     "\tif pagar ~= nil and pagar.kar == karVidStart then",
+     "\tif false then"),
+
     ("F14 nedvaxlingen raknas inte som broms", "ForstaRitten",
      "\t\tif fore >= 0 and efter >= 0 and efter < fore then\n\t\t\tm.bromsat = true\n\t\tend",
      "\t\tif false then\n\t\t\tm.bromsat = true\n\t\tend"),
