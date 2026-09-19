@@ -232,6 +232,51 @@ När leveransen är klar ska builder posta:
 
 Ingen merge före ChatGPT-review och Tobias produkttest.
 
+## Parallellt sanktionerat spår — Tävlingskläder (#248)
+
+Uppdrag från Tobias i issue #248, i två beställda faser. Fas A —
+katalogen och valideringsgränsen — är mergad genom PR #250. **Fas B**
+går på egen feature branch `claude/248-tavlingsklader-fasb-20260919`
+ur `origin/main` @ `41fca30`.
+
+Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna
+står i #248:s egen Fas B-order och är Tobias, inte en builders.
+
+Fas B bygger den **serverägda livscykeln**: en tjänst som äger
+per-player-sessionen, verifierar båda katalogposterna innan en avatar
+muteras, och återställer exakt ursprungsläget vid normalt avslut,
+avbrott, död, respawn och frånkoppling. Ordern låser uttryckligen ute
+UI, RemoteEvent, persistence och varje ändring i ridning,
+`GameplayService` eller ledning.
+
+### Redovisade beslut inne i uppdraget
+
+**1. Tjänsten startas inte vid boot, och `init.server.luau` är orörd.**
+En tjänst som lyssnar på spelarnas livscykel utan att någon bett om ett
+set är ett låtsat tävlingsläge, och ordern förbjuder just det. Vakterna
+— `CharacterAdded`, `CharacterRemoving`, `Humanoid.Died` och
+`Players.PlayerRemoving` — binds när en session faktiskt börjar och rivs
+när den slutar. Fas B levererar alltså gränsen som den framtida
+tävlingskontexten anropar, inte kontexten.
+
+**2. `reason` i `avsluta(player, reason)` styr ingenting i den här
+fasen.** Den valideras och ekas tillbaka till anroparen. Att låta den
+styra beteende hade varit att bygga en kontext som inte är beställd, och
+att tiga om det hade varit att låta en parameter se ut som mer än den är.
+
+**3. Katalogsidan är `Not tested` och kan inte bli något annat härifrån.**
+Att `MarketplaceService:GetProductInfoAsync` svarar med `AssetTypeId`,
+och att en serverskrivning av `ShirtTemplate` slår igenom på en spelares
+avatar, är läst ur Robloxs dokumentation — inte mätt. Bänken har ingen
+stub för tjänsten, och den ska inte få en: en stub där hade sett ut som
+evidens utan att vara det. Avatarsidan körs däremot mot tjänstens egen
+standardadapter och bänkens generiska `Instance.new`.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
+Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
+
+**Ingen merge i det här uppdraget.**
+
 ## Vercel
 
 Vercel är den enda UBRF-preview-/deployvägen.
