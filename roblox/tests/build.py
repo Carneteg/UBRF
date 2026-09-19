@@ -21,6 +21,15 @@ UT = ROT / "tests" / ".build"
 # behöver därför inte hästsystemets moduler. Den får sin egen lista; att foga
 # ihop hela hästsystemet för att kontrollera var en dörr sitter vore bara
 # långsamt och skulle koppla ihop två spår som inte har med varandra att göra.
+#[[ #248 Fas B: den serveragda livscykeln. Katalogen FORST -- tjansten
+#   require:ar den och far inte ha nagon egen kopia av seten. Ingen varld,
+#   inga andra tjanster: livscykeln ror varken ridning, GameplayService
+#   eller ledning, och en storre bunt hade dolt om den borjade gora det. ]]
+TAVLINGSSESSION = [
+    ("Tavlingsklader",        "src/shared/HorseCore/Tavlingsklader.luau"),
+    ("TavlingskladerService", "src/server/TavlingskladerService.luau"),
+]
+
 GEOMETRI = [
     ("Geometri",    "buildings/Geometri.luau"),
     ("UBRFKomplex", "buildings/UBRFKomplex.luau"),
@@ -622,6 +631,14 @@ def valjBunt(spec_rel: str):
     #   `elif`, inte `if`: efter merge av #249 ar `ridanu` forsta grenen
     #   i kedjan. Ett andra `if` hade brutit kedjan och gjort varje gren
     #   under den oåtkomlig. ]]
+    #[[ #248 Fas B: livscykeln. FORE grenen nedan -- strangen
+    #   "tavlingsklader-session" INNEHALLER "tavlingsklader", och foll
+    #   annars igenom till Fas A:s minimala bunt dar tjansten inte finns.
+    #   Exakt den genomfallning kommentarerna om "forberedelse" och
+    #   "spelbarhet" varnar for. ]]
+    elif "tavlingsklader-session" in spec_rel:
+        moduler = TAVLINGSSESSION
+        stubbar = "tests/stubs.luau"
     elif "tavlingsklader" in spec_rel:
         moduler = [("Tavlingsklader", "src/shared/HorseCore/Tavlingsklader.luau")]
         stubbar = "tests/stubs.luau"
