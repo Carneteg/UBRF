@@ -35,6 +35,7 @@ local HorseCore = require(ReplicatedStorage.HorseCore)
 local Net = HorseCore.Networking
 local Gaits = require(ReplicatedStorage.HorseCore.Gaits)
 local Config = require(ReplicatedStorage.HorseCore.Config)
+local Aktor = require(ReplicatedStorage.HorseCore.Aktor)
 
 local LedService = {}
 
@@ -1075,9 +1076,11 @@ function LedService._glomBoxminne(player: Player)
 end
 
 function LedService._sync(player: Player, skal: string?)
+	local k = Aktor.klient(player)
+	if not k then return end
 	local ev = Net.get("LedSync")
 	local l = ledd[player]
-	ev:FireClient(player, {
+	ev:FireClient(k, {
 		leder = l ~= nil,
 		hastId = l and l.hastId or nil,
 		lamnatBox = l ~= nil and l.lamnatBox or false,
@@ -1886,20 +1889,28 @@ function LedService.start()
 		return LedService.slapp(player)
 	end
 
-	Players.PlayerRemoving:Connect(function(player)
-		if ledd[player] then LedService.slapp(player, "led.tappad") end
-		--[[ Städningen läser MINNET, inte den aktiva ledningen: kopplet har
-			oftast släppt långt innan spelaren stänger spelet. ]]
-		LedService.aterstallTillBox(senasteLedning[player])
-		senasteLedning[player] = nil
-		--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
-			Lämnas den kvar läcker den, och nästa spelare på samma
-			Player-objekt hade ärvt någon annans framsteg. ]]
-		uppnatt[player] = nil
-	end)
+	Players.PlayerRemoving:Connect(LedService.lamnar)
 
 	RunService.Heartbeat:Connect(steg)
 	print("[Led] Ledningen igång")
+end
+
+--[[ ── DEN SOM LAMNAR (#252 DEL C) ────────────────────────────────────
+
+	Samma skal som `GameplayService.lamnar`: stadningen efter en spelare
+	som gar ar en av de fyra sakerna runtime-grinden ska kunna falla pa,
+	och den maste da kunna koras genom produktionens EGEN handlare i
+	stallet for genom en kopia av den. ]]
+function LedService.lamnar(player: Player)
+	if ledd[player] then LedService.slapp(player, "led.tappad") end
+	--[[ Städningen läser MINNET, inte den aktiva ledningen: kopplet har
+		oftast släppt långt innan spelaren stänger spelet. ]]
+	LedService.aterstallTillBox(senasteLedning[player])
+	senasteLedning[player] = nil
+	--[[ Bokföringen är sessionsbunden och hör till spelaren som gick.
+		Lämnas den kvar läcker den, och nästa spelare på samma
+		Player-objekt hade ärvt någon annans framsteg. ]]
+	uppnatt[player] = nil
 end
 
 --[[ Den som äger tilldelningen (GameplayService) lämnar en krok som

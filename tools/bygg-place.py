@@ -25,11 +25,18 @@ ModuleScript har och Script i Rojo:
     fil.client.luau        -> LocalScript
     fil.luau               -> ModuleScript
 """
+#[[ `typing.Optional` och inte `str | None` (#252 DEL C). Samma fel som
+#   DEL B rattade i tests/build.py: PEP 604 kraver Python 3.10, det
+#   evalueras vid IMPORT, och pa Tobias Windows-maskin (3.7) dog hela
+#   filen innan en rad kordes. CI kor 3.12 och sag ingenting.
+#   Runtime-grinden bygger placen med den har filen, sa den maste ga
+#   att kora bade lokalt och i CI. ]]
 import argparse
 import json
 import pathlib
 import subprocess
 import sys
+import typing
 import xml.etree.ElementTree as ET
 
 ROT = pathlib.Path(__file__).resolve().parent.parent
@@ -59,11 +66,11 @@ def stam(fil: pathlib.Path) -> str:
 class Nod:
     """En instans pa vag ut i XML:en."""
 
-    def __init__(self, klass: str, namn: str, kalla: str | None = None):
+    def __init__(self, klass: str, namn: str, kalla: typing.Optional[str] = None):
         self.klass = klass
         self.namn = namn
         self.kalla = kalla
-        self.barn: list["Nod"] = []
+        self.barn = []  # type: typing.List["Nod"]
 
 
 INIT = {
@@ -128,7 +135,7 @@ def cdata(text: str) -> str:
     return "<![CDATA[" + "]]]]><![CDATA[>".join(bitar) + "]]>"
 
 
-def xml_for(nod: Nod, raknare: list[int], djup: int) -> str:
+def xml_for(nod: Nod, raknare: typing.List[int], djup: int) -> str:
     ind = "\t" * djup
     ref = raknare[0]
     raknare[0] += 1
@@ -171,7 +178,7 @@ def main() -> int:
     projekt = json.loads(PROJEKT.read_text(encoding="utf-8"))
     trad = projekt["tree"]
 
-    rotnoder: list[Nod] = []
+    rotnoder = []  # type: typing.List[Nod]
     for nyckel, varde in trad.items():
         if nyckel.startswith("$") or not isinstance(varde, dict):
             continue
