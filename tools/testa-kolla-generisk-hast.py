@@ -148,6 +148,15 @@ def main():
               kod == 1, "exit=%d" % kod)
         check("och namnger filen och hasten",
               "__prov_hardkodad_hast" in text and hid in text)
+        #[[ RADNUMRET AR EN MATNING, INTE DEKOR. Grindens egen docstring
+        #   sager det: `avkommentera` behaller radbrytningarna just for att
+        #   numret ska peka i FILEN och inte i den strippade texten, och
+        #   "ett matverktyg som pekar fel ar varre an inget". Utan den har
+        #   raden var den regeln omatt — en mutation som forskjuter numret
+        #   kom ut gron. Id:t star pa rad 5 i provfilen ovan. ]]
+        check("och pekar pa ratt rad i filen",
+              "__prov_hardkodad_hast.luau:5" in text,
+              "radnumret ska peka i filen, inte i den strippade texten")
     finally:
         if HARDKODAD.exists():
             HARDKODAD.unlink()
