@@ -64,6 +64,21 @@ if ! python3 ../tools/testa-kolla-tavlingsklader.py; then
   echo "GRINDPROVET FOR TAVLINGSKLADER MISSLYCKADES"
   exit 1
 fi
+# #259 Gate 0: en generisk haststack, och grindprovet bakom den.
+#
+# Den har grinden kordes bara i CI. Pa Windows foll den av en
+# separatorbugg i undantagslistan, sa den som korde lokalt lardes att
+# bortse fran den -- och da ar en grind samre an ingen. Nu ar den
+# plattformsoberoende OCH kord harifran, sa den lokala sviten sager
+# samma sak som CI.
+if ! python3 ../tools/kolla-generisk-hast.py; then
+  echo "GENERISK-HAST-GRINDEN MISSLYCKADES"
+  exit 1
+fi
+if ! python3 ../tools/testa-kolla-generisk-hast.py; then
+  echo "GRINDPROVET FOR GENERISK HAST MISSLYCKADES"
+  exit 1
+fi
 # Grind 1 och 5 i kontraktet for Coach Banner (#244): Ugnetas gamla
 # nederpanel ska vara BORTA ur kallan, och bannern ska inte ha nagon
 # fordrojd tradd som kan komma tillbaka och slacka ny text. Samma skal
