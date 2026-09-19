@@ -47,11 +47,13 @@ vm.runInContext(las("src/model.js") + "\n" + las("src/riding/hjalper.js")
   + "\n" + las("src/larare.js"), ctx);
 const { Gait, RID_ORDNING, K, HJALP_KANON, HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON,
   SKOLHAST_PROFILER, SVAR_START, UGNETA_OVNING_DIM, UGNETA_DIM_LABEL,
-  UGNETA_LIVE, UGNETA_DIM_CUE, UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD } =
+  UGNETA_LIVE, UGNETA_DIM_CUE, UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD,
+  UGNETA_TEMA } =
   vm.runInContext("({Gait, RID_ORDNING, K, HJALP_KANON, "
   + "HJALP_FALT, HJALP_HARLEDDA, SVAR_KANON, SKOLHAST_PROFILER, SVAR_START, "
   + "UGNETA_OVNING_DIM, UGNETA_DIM_LABEL, UGNETA_LIVE, UGNETA_DIM_CUE, "
-  + "UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD})", ctx);
+  + "UGNETA_KVALITET, UGNETA_PLATS, UGNETA_OVNINGAR, UGNETA_LIVE_CD, "
+  + "UGNETA_TEMA})", ctx);
 /* G02-D: inspelningens kontrakt. Övningens VERSION är det som avgör om en
    gammal inspelning får jämföras mot en ny definition, och den siffran får
    inte finnas två gånger. Roblox läser den härifrån av exakt samma skäl som
@@ -975,6 +977,35 @@ rader.push("\t},");
     + ", bortomC = " + tal(UGNETA_PLATS.bortomC)
     + ", bredd = " + tal(KB.BANA_BREDD)
     + ", langd = " + tal(KB.BANA_LANGD) + " },");
+}
+/* ── RIDE FIRST-TEMAT (#234) ──────────────────────────────────────
+   Temafilter, mönsterregler, cooldown, orsaksspråket och passets
+   teorihänvisningar. Blocket är NÄSTLAT och skrivs därför med en liten
+   rekursiv serialiserare i stället för trettio handskrivna push-rader:
+   en handskriven avskrift av en nästlad tabell är precis den sortens
+   kopia som glider när en ny tröskel läggs till.
+
+   Ordningen är sorterad per nyckel så att exporten blir DETERMINISTISK —
+   `--kontrollera` jämför text, och en objektordning som varierar hade
+   gjort grinden nyckfull. */
+{
+  const luaVarde = (v, niva) => {
+    const flik = "\t".repeat(niva);
+    if (Array.isArray(v)) return "{ " + v.map(x => luaVarde(x, niva)).join(", ") + " }";
+    if (typeof v === "object" && v !== null) {
+      const rad = ["{"];
+      for (const k of Object.keys(v).sort())
+        rad.push(`${flik}\t${k} = ${luaVarde(v[k], niva + 1)},`);
+      rad.push(flik + "}");
+      return rad.join("\n");
+    }
+    if (typeof v === "number") return tal(v);
+    if (typeof v === "boolean") return v ? "true" : "false";
+    return str(v);
+  };
+  rader.push("\t--[[ #234: Ride First-temat — temafiltret, mönsterreglerna,");
+  rader.push("\t     cooldownen och orsaksspråket. Ur src/larare.js. ]]");
+  rader.push("\tTEMA = " + luaVarde(UGNETA_TEMA, 1) + ",");
 }
 rader.push("}");
 rader.push("");
