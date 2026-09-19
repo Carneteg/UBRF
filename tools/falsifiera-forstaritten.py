@@ -31,6 +31,7 @@ FILER = {
     "ForstaRitten": ROT / "roblox/src/server/ForstaRitten.luau",
     "GameplayService": ROT / "roblox/src/server/GameplayService.luau",
     "LedService": ROT / "roblox/src/server/LedService.luau",
+    "SparService": ROT / "roblox/src/server/SparService.luau",
 }
 
 _ORIG, _CRLF = {}, {}
@@ -107,8 +108,8 @@ FALS = [
      "\t\treturn Sparning.aktuelltPass(save) == 1",
      "\t\treturn true"),
 
-    ("F4 barriaren provas inte (skydd 1)", "ForstaRitten",
-     "\tif not SparService.redo(player) then return false end",
+    ("F4 lasningen provas inte alls (skydd 1)", "ForstaRitten",
+     "\tif not SparService.betroddLasning(player) then return false end",
      "\tif false then return false end"),
 
     ("F5 hasten forbereds inte fysiskt", "ForstaRitten",
@@ -117,15 +118,12 @@ FALS = [
      "\t\t\tlocal _ = typ"),
 
     ("F6 sitsen provas inte fore teleporten", "ForstaRitten",
-     "\tif sits == nil or sitsNamn == nil\n"
-     "\t\tor modell:FindFirstChild(sitsNamn) ~= sits then\n"
-     '\t\treturn { ok = false, steg = "riggen_saknar_sits" }\n\tend',
-     '\tif false then\n\t\treturn { ok = false, steg = "riggen_saknar_sits" }\n\tend'),
+     "\tif sits == nil or sitsNamn == nil\n\t\tor modell:FindFirstChild(sitsNamn) ~= sits then",
+     "\tif false then"),
 
     ("F7 ridhuszonen provas inte", "ForstaRitten",
-     "\tif LedService.malzon() == nil then\n"
-     '\t\treturn { ok = false, steg = "ingen_ridhuszon" }\n\tend',
-     '\tif false then\n\t\treturn { ok = false, steg = "ingen_ridhuszon" }\n\tend'),
+     "\tif LedService.malzon() == nil then",
+     "\tif false then"),
 
     ("F8 idempotensen faller", "ForstaRitten",
      "\tif startad[player] then\n"
@@ -152,9 +150,40 @@ FALS = [
      '\tnoteraUppnatt(player, tostring(modell:GetAttribute("HorseId") or ""), "malNatt")'),
 
     ("F13 servern ser inte hastens rorelse", "ForstaRitten",
-     "\tif m.forstaRorelse == nil and (nu.pos - f.pos).Magnitude > RORELSE_TROSKEL then",
+     "\tif m.forstaRorelse == nil and f.gangen > RORELSE_TROSKEL then",
      "\tif false then"),
 
+    #[[ ══ RE-REVIEW AV `d4912c0` — de tre blockerande fynden ═══════
+    #
+    #   F15-F19 provar rattelserna. De tre forsta (F15, F16, F17) ar de
+    #   som fallde det HAR provet i sin forra form: matningarna dolde
+    #   defekterna i stallet for att mata dem. ]]
+
+    ("F15 lasningen betros utan att provas (P1-1)", "SparService",
+     "\tif not SparService.redo(player) then return false end\n\tif sparade[player] == nil then return false end\n\tlocal a = anmarkning[player]\n\tif a == nil then return true end\n\treturn BETRODDA[a] == true",
+     "\treturn true"),
+
+    ("F16 rorelsen jamfors per prov i stallet for ackumulerat (P1-2)",
+     "ForstaRitten",
+     "\tf.gangen += (pos - f.pos).Magnitude",
+     "\tf.gangen = (pos - f.pos).Magnitude"),
+
+    ("F17 yaw jamfors per prov i stallet for ackumulerat (P1-2)",
+     "ForstaRitten",
+     [("\t\t\tf.svangtVanster += dyaw",
+       "\t\t\tf.svangtVanster = dyaw"),
+      ("\t\t\tf.svangtHoger -= dyaw",
+       "\t\t\tf.svangtHoger = -dyaw")]),
+
+    ("F18 ingen bounded vantan pa ridklar karaktar (P1-3)",
+     "ForstaRitten",
+     "\tlocal ridklar = vantaRidklar(player)\n\tif ridklar == nil then\n\t\treturn { ok = false, steg = \"ingen_ridklar_karaktar\" }\n\tend",
+     "\tlocal ridklar = { kar = player.Character }"),
+
+    ("F19 kroppsbyte under vantan upptacks inte (P1-3)",
+     "ForstaRitten",
+     "\tif player.Character ~= ridklar.kar then",
+     "\tif false then"),
     ("F14 nedvaxlingen raknas inte som broms", "ForstaRitten",
      "\t\tif fore >= 0 and efter >= 0 and efter < fore then\n\t\t\tm.bromsat = true\n\t\tend",
      "\t\tif false then\n\t\t\tm.bromsat = true\n\t\tend"),

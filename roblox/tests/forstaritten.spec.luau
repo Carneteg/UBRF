@@ -741,6 +741,33 @@ end
 
 do
 	rent()
+	local spelare, kar, hast = uppstallning("Kroppsbytare", 960)
+	local riktigRot = kar:FindFirstChild("HumanoidRootPart")
+	local riktigHum = kar:FindFirstChildOfClass("Humanoid")
+	local nyKropp = nyKaraktar()
+	--[[ EN RESPAWN SOM LANDAR MITT I FLODET. Kroppen svarar ridklart —
+		men byter ut spelarens karaktar i samma andetag, precis som en
+		respawn gor. Det arbete som just gjorts hor da till en kropp som
+		inte finns langre. ]]
+	spelare.Character = {
+		Name = "Kropp som byts",
+		FindFirstChild = function() return riktigRot end,
+		FindFirstChildOfClass = function(_, klass)
+			if klass ~= "Humanoid" then return nil end
+			spelare.Character = nyKropp
+			return riktigHum
+		end,
+	}
+	local utfall = FR.starta(spelare)
+	check("ett kroppsbyte under flodet avbryter det",
+		utfall.ok == false and utfall.steg == "karaktaren_byttes",
+		utfall.steg)
+	check("och lamnar ingen sessionspost",
+		FR.kvarvarande() == 0, ("%d"):format(FR.kvarvarande()))
+end
+
+do
+	rent()
 	local spelare, kar, hast = uppstallning("Dod", 980)
 	local hum = kar:FindFirstChildOfClass("Humanoid")
 	hum.Health = 0
