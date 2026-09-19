@@ -203,6 +203,9 @@ FORBEREDELSE = SPEL + [
     #   acceptera en require som inte har nagon modul bakom sig. ]]
     ("DorrService",    "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
+    #   GameplayService, HorseService, LedService och TackService. ]]
+    ("ForstaRitten",  "src/server/ForstaRitten.luau"),
 ]
 
 #[[ INTEGRATIONSBANKEN (#162, END_TO_END punkt 7-11).
@@ -403,6 +406,9 @@ KOHERENS = GEOMETRI + [
     #   borta, buntar med dubbletter byggs inte langre. ]]
     ("DorrService",     "src/server/DorrService.luau"),
     ("GameplayService", "src/server/GameplayService.luau"),
+    #[[ #263 Gate 2A: First Ride. EFTER tjansterna den anropar —
+    #   GameplayService, HorseService, LedService och TackService. ]]
+    ("ForstaRitten",  "src/server/ForstaRitten.luau"),
     ("HastVisual",      "src/server/HastVisual.luau"),
     ("HastRigg",        "src/server/HastRigg.luau"),
 ], {m[0] for m in _KLIENTDELEN}) + [
@@ -728,6 +734,11 @@ def valjBunt(spec_rel: str):
     #   star fore "klient": en lasare ska inte behova rakna ut vilken bunt
     #   ett namn hamnar i. ]]
     elif "takt" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ #263 Gate 2A: First Ride mater HELA vagen — tilldelning, rigg,
+    #   utrustning, malzon och uppsittning genom riktiga tjanster. Samma
+    #   bunt som takt, av samma skal. ]]
+    elif "forstaritten" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "forberedelse" in spec_rel:
         moduler, stubbar = FORBEREDELSE, "tests/stubs.luau"

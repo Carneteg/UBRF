@@ -1292,6 +1292,35 @@ end
 
 --[[ Registreras i `HorseService`. Körs FÖRE all uppsittningslogik, så en
 	oförberedd spelare aldrig hinner bli monterad och sedan kastas av. ]]
+--[[ ── FIRST RIDE-KROKEN (#263 Gate 2A) ────────────────────────────
+
+	`ForstaRitten` registrerar sig har vid start. Kroken svarar pa EN
+	fraga: ar det har spelarens allra forsta ritt, last ur bestandig
+	sparning? Den tar inget klientargument och kan inte satas av en
+	klient. ]]
+local forstaRitten: ((Player, Model) -> boolean)? = nil
+
+function GameplayService.satForstaRitten(fn: ((Player, Model) -> boolean)?)
+	forstaRitten = fn
+end
+
+--[[ Slapper First Ride igenom det har nejet? Se den langa noten inne i
+	`farSittaUpp` for vad som far ersattas och vad som aldrig far det. ]]
+local function forstaRittenSlapper(player: Player, modell: Model, s: any,
+	skal: string?): boolean
+	if forstaRitten == nil then return false end
+	--[[ BARA CHECKLISTAN. `pass.aterstar` ar det enda skal
+		`provaUppsittning` ger for en ogjord fas; varje annat nej ar
+		identitet eller valfard och star kvar. ]]
+	if skal ~= "pass.aterstar" then return false end
+	--[[ VALFARDSSTOPPET, uttryckligen och inte underforstatt. Skulle
+		`provaUppsittning` nagon gang bytta ordning pa sina nej ska den
+		har raden halla anda. ]]
+	if s ~= nil and s.stoppad then return false end
+	local ok, svar = pcall(forstaRitten :: any, player, modell)
+	return ok and svar == true
+end
+
 function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, string?, string?)
 	local s = state[player]
 	--[[ Krav 6 och 7 avgörs av regeln, inte här. Kvar i tjänsten är bara
@@ -1301,7 +1330,38 @@ function GameplayService.farSittaUpp(player: Player, modell: Model): (boolean, s
 		fyndets mening (argument). Se noten i `HorseService.tryMount`. ]]
 	local ok, skal, arg = Preparation.provaModell(s, modell:GetAttribute("HorseId"))
 	if not ok then
-		return false, skal, arg
+		--[[ ══ FIRST RIDE (#263 Gate 2A) ═══════════════════════════════
+
+			Den ENDA vägen upp i sadeln som inte går genom en avbockad
+			checklista, och den är avsiktligt smal.
+
+			Vad den ersätter: `pass.aterstar` — att spelaren själv inte
+			har utfört skötselmomenten. Ingenting annat.
+
+			Vad den INTE ersätter, och varför:
+
+			  `forb.lararen_tar_over` — välfärdsstoppet. En häst med ett
+			  fynd ska ingen sitta upp på, aldrig, oavsett hur ny
+			  ryttaren är. Prövas uttryckligen nedan och inte bara genom
+			  att skälet råkar vara ett annat.
+
+			  `spel.inte_din_hast`, `forb.inte_din_hast`,
+			  `spel.ingen_hast` — identiteten. En ny spelare får sin
+			  tilldelade häst, inte vilken som helst.
+
+			  `TackService.ridklar` längst ned — det FYSISKA. Den raden
+			  körs oförändrat, så hästen måste faktiskt bära sadel och
+			  träns. Kanon är entydig: hästen ska alltid vara korrekt
+			  förberedd när ritten börjar, oavsett vem som gjorde
+			  arbetet, och spelet får aldrig lära ut fel hästhantering
+			  för att spara tid.
+
+			Kroken ägs av `ForstaRitten` och svarar ur beständig
+			sparning, inte ur ett klientargument. Saknas kroken — ingen
+			`ForstaRitten.start()` — är grenen stängd. ]]
+		if not forstaRittenSlapper(player, modell, s, skal) then
+			return false, skal, arg
+		end
 	end
 	if bunden[player] ~= modell then
 		return false, "spel.inte_din_hast"
@@ -1418,7 +1478,7 @@ function GameplayService.start()
 		`HorseService` i stället för att `GameplayService` skulle lyssna på
 		remoten: allt som monterar en ryttare går genom `tryMount`, och en
 		krok på fjärranropet hade missat varje annan väg in. ]]
-	HorseService.setRiderHook(function(player: Player, sitter: boolean)
+	HorseService.lyssnaRyttare(function(player: Player, sitter: boolean)
 		local p = passState[player]
 		if not p then return end
 		if sitter then
