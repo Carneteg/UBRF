@@ -248,6 +248,34 @@ CFrame = {
 	fromMatrix = function(p) return cframe(p) end,
 }
 
+--[[ ══ FONT-DATATYPEN (#234) ══════════════════════════════════════════
+
+     `TextLabel.Font` ar den gamla ENUMEN och har ingen kursiv variant;
+     `TextLabel.FontFace` tar `Font`-DATATYPEN, som bar familj, vikt och
+     stil var for sig. Sammanfattningens Ugneta-rad ar kursiv och maste
+     darfor ga den vagen.
+
+     Kontrollerat mot create.roblox.com/docs/reference/engine/datatypes/Font
+     (uppdaterad 2026-09-18): `Font.new(family, weight, style)` med
+     standarderna `FontWeight.Regular` och `FontStyle.Normal`. Stubben bar
+     de tre falten sa att provet kan LASA att stilen ar kursiv i stallet
+     for att lita pa att raden kordes.
+
+     `Bold` foljer vikten, precis som datatypen beskriver: SemiBold eller
+     tjockare ar fetstil. ]]
+Font = {
+	new = function(familj, vikt, stil)
+		local v = vikt or Enum.FontWeight.Regular
+		return {
+			Family = familj,
+			Weight = v,
+			Style = stil or Enum.FontStyle.Normal,
+			Bold = v == Enum.FontWeight.SemiBold or v == Enum.FontWeight.Bold
+				or v == Enum.FontWeight.ExtraBold or v == Enum.FontWeight.Heavy,
+		}
+	end,
+}
+
 RaycastParams = { new = function()
 	--[[ `RespectCanCollide` star med for att `Markkontakt` MATER PA DEN:
 	     skillnaden mellan en stral som traffar allt och en som bara traffar
@@ -314,6 +342,14 @@ Enum = {
 	     först i Studio. ]]
 	ZIndexBehavior = { Sibling = 1, Global = 2 },
 	Font = { Gotham = 1, GothamBold = 2, SourceSans = 3, SourceSansBold = 4 },
+	--[[ #234: vikten och stilen till `Font`-datatypen ovan. Uppraknade av
+	     samma skal som `Material` och `Font` — namnen ar Roblox egna
+	     (docs/reference/engine/enums/FontWeight respektive FontStyle) och
+	     en __index som svarar pa allt hade latit ett stavfel passera hela
+	     sviten och falla forst i Studio. ]]
+	FontWeight = { Thin = 100, ExtraLight = 200, Light = 300, Regular = 400,
+		Medium = 500, SemiBold = 600, Bold = 700, ExtraBold = 800, Heavy = 900 },
+	FontStyle = { Normal = 0, Italic = 1 },
 	TextXAlignment = { Left = 1, Center = 2, Right = 3 },
 	TextYAlignment = { Top = 1, Center = 2, Bottom = 3 },
 	TextTruncate = { None = 0, AtEnd = 1, SplitWord = 2 },
@@ -610,6 +646,10 @@ TweenInfo = {
 	end,
 }
 
+--[[ #234: varje `TextChatService:DisplayBubble` som gjorts, i ordning.
+     Provets enda satt att se att Ugnetas replik gick till HENNE. ]]
+local __bubblor = {}
+
 local __services = {
 	ReplicatedStorage = nil,   -- sätts efter att __Core byggts
 	Workspace = workspace,     -- kameran hämtar den som tjänst
@@ -726,6 +766,11 @@ local __services = {
 	     sant for att mata att panelen da INTE startar av sig sjalv. ]]
 	GuiService = {
 		ReducedMotionEnabled = false,
+		--[[ #234: gamepadens fokus. Sammanfattningens stangningsknapp
+		     pekas hit sa att styrkorset hittar den, och det GAMLA fokuset
+		     lamnas tillbaka nar rutan stangs. Faltet ar skrivbart, precis
+		     som i Roblox, och det ar det som gor bada halvorna matbara. ]]
+		SelectedObject = nil,
 		--[[ Topbaren tar 36 px överst pa en riktig klient. Talet stod inte
 		     har forut, och da matte HUD-grinden inset noll — alltsa ett
 		     hornet som ar tommare an spelarens. ]]
@@ -807,6 +852,54 @@ local __services = {
 			}
 			table.insert(__tweens, t)
 			return t
+		end,
+	},
+	--[[ ══ TEXTCHATSERVICE OCH BUBBELKONFIGURATIONEN (#234) ════════════
+
+	     VARJE TAL HAR NEDAN AR ROBLOX EGET STANDARDVARDE, last ur
+	     create.roblox.com/docs/reference/engine/classes/BubbleChatConfiguration
+	     (uppdaterad 2026-09-18) — inte valt for att passa provet. Det ar
+	     hela poangen: `UgnetaBubbla.konfigurera` ska kunna visas ANDRA
+	     dem, och det gar bara om utgangslaget ar motorns.
+
+	       Enabled            false   bubblor ar AVSTANGDA som standard
+	       MaxDistance        100     studs, matt fran KAMERAN
+	       BubbleDuration     30      sekunder
+	       TextSize           16
+	       BackgroundColor3   250,250,250
+	       TextColor3         57,59,61
+
+	     `MinimizeDistance` ar ett undantag och redovisas som ett: doc-sidan
+	     listar egenskapen men INGET standardvarde. 40 ar Roblox kanda
+	     beteendegrans, och den star har bara for att vara ETT VARDE SKILT
+	     fran vart eget — provet mater att modulen SATTER egenskapen, inte
+	     vad motorn hade forut.
+
+	     `BubbleChatConfiguration` ar `NotCreatable` och ar ett barn till
+	     tjansten i en riktig place. Stubben speglar det: den skapas har och
+	     hittas med `FindFirstChildOfClass`, precis som produktionen letar.
+
+	     `DisplayBubble` SPARAR sina anrop i `__bubblor`. Utan det gick det
+	     att prova att modulen inte kraschar, men inte att repliken faktiskt
+	     gick till hennes ansikte — och kontraktets punkt 10 handlar om att
+	     bubblan och loggen far SAMMA text. ]]
+	TextChatService = {
+		_config = {
+			ClassName = "BubbleChatConfiguration",
+			Enabled = false,
+			MaxDistance = 100,
+			MinimizeDistance = 40,
+			BubbleDuration = 30,
+			TextSize = 16,
+			BackgroundColor3 = Color3.fromRGB(250, 250, 250),
+			TextColor3 = Color3.fromRGB(57, 59, 61),
+		},
+		FindFirstChildOfClass = function(self, klass)
+			if klass == "BubbleChatConfiguration" then return self._config end
+			return nil
+		end,
+		DisplayBubble = function(_, del, text)
+			table.insert(__bubblor, { del = del, text = text })
 		end,
 	},
 	Debris = { AddItem = function() end },
@@ -1053,6 +1146,9 @@ game = {
 	BindToClose = function(_, fn) __senasteBindToClose = fn end,
 }
 __ReplicatedStorage = __rs
+--[[ #234: bubblorna, for den spec som mater att repliken gick till
+     Ugnetas ansikte och inte bara till loggen. ]]
+__BUBBLOR = __bubblor
 script = { Parent = __Core }
 
 --[[ En riggstub: det MovementController rör och inget mer. ]]

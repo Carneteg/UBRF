@@ -31,9 +31,22 @@ ok(langa.length===0,"direkt feedback hålls kort (≤72 tecken för enkla feedba
 
 /* Kör träningsmotorn isolerat. larare.js gör inget DOM-arbete när window
    saknas, så samma produktionsfunktioner kan provas utan en kopia av logiken. */
-const ctx={console};
+/* RIDMODELLEN LADDAS FORST (#234). `src/larare.js` laser numera
+   kontaktkanonens egna trosklar ur `K` — `TYGEL_HART`, `TYGEL_BAND_MAX`,
+   `SITS_PARAD`, `SITS_NEUTRAL` — i stallet for att skriva av dem som
+   literaler i UGNETA_TEMA. Det ar ratt hall: en andra sanning om vad
+   "hart" ar hade kunnat glida utan att nagot blev rott.
+
+   Men det betyder att larare.js inte langre gar att kora ensam. Samma
+   ordning som index.html och tools/exportera-ridkanon.mjs anvander galler
+   darfor har: model.js, sedan ovningsdef.js, sedan larare.js.
+
+   `window:{}` finns av samma skal som i exporten — modulerna installerar
+   ingen UX nar det inte finns nagon DOM, men de laser objektet. */
+const ctx={console,window:{}};
 vm.createContext(ctx);
-vm.runInContext(fs.readFileSync("src/riding/ovningsdef.js","utf8")+"\n"+src+`\nglobalThis.__UG={
+vm.runInContext(fs.readFileSync("src/model.js","utf8")+"\n"
+  +fs.readFileSync("src/riding/ovningsdef.js","utf8")+"\n"+src+`\nglobalThis.__UG={
   kvalitet:ugnetaKvalitet,
   jamfor:ugnetaJamfor,
   forsta:ugnetaForstaForsok,

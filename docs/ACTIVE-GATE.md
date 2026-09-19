@@ -169,6 +169,66 @@ Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
 
 **Ingen merge i det här uppdraget.**
 
+## Parallellt sanktionerat spår — UgnetaController Ride First (#234)
+
+Uppdrag från Tobias 2026-09-19 (`START NOW` i issue #234):
+**UgnetaController ska driva lektionens pedagogik före, under och efter
+ritten**, på egen feature branch `claude/234-ugneta-ridefirst-20260919`
+ur `origin/main` @ `5d0741b`. Delkontraktet för `ShowPostRideSummary()`
+ligger som egen kommentar på samma issue och är lika bindande.
+
+Den här filen **registrerar** att spåret är aktivt. Acceptanskriterierna
+står i #234 och är Tobias, inte en builders.
+
+Beroendekedjan är kvitterad i ordern: #233 (serverauktoritativ semantisk
+ridavsikt) och #17 (touch) är mergade, och #244:s Coach Banner är den
+arkitektur sammanfattningen bygger vidare på — den gamla nederpanelen
+väcks inte till liv.
+
+### Redovisade avvikelser och beslut inne i uppdraget
+
+**1. Temadatan ligger i webbens källa, inte i `RidKanon.luau` direkt.**
+`RidKanon.luau` är en genererad fil och `dubbel-sanning`-jobbet i
+`grindar.yml` fäller en handredigering. Temafiltret, mönsterreglerna,
+cooldownen och orsaksspråket står därför i `src/larare.js` som
+`UGNETA_TEMA` och exporteras till `RidKanon.UGNETA.TEMA` av
+`tools/exportera-ridkanon.mjs`, precis som `UGNETA_LIVE` och
+`UGNETA_KVALITET` redan gör. Trösklarna skrivs inte av: `TYGEL_HART`,
+`TYGEL_BAND_MAX`, `SITS_PARAD` och `SITS_NEUTRAL` läses ur `K` i
+`src/model.js`.
+
+**2. `BubbleChatConfiguration` är global — bieffekten redovisas.**
+Klassen är en `NotCreatable` singleton under `TextChatService`, och
+`MaxDistance`/`MinimizeDistance` går inte att sätta per bubbla:
+`BubbleChatMessageProperties`, som `OnBubbleAdded` kan lämna, bär bara
+utseende. Beställningens "begränsa till Ugneta om arkitekturen tillåter"
+går alltså inte. Det som GÅR är att begränsa hur LÄNGE den gäller, och
+det görs: värdena sparas vid passets början och lämnas tillbaka vid dess
+slut. Kvarstående bieffekt: under en lektion syns andra spelares bubblor
+längre bort än vanligt på den klienten. Räckvidden är 210 studs, mätt mot
+den byggda banan (hörn 186,6 + kamera 23,0 = 209,6) av
+`ugneta-gestalt.spec`, inte uppskattad ur "cirka 25 × 75 m".
+
+**3. Paritet.** Kanonen och språknycklarna är delade och ligger i webbens
+källor; presentationen (bubbla, reservlogg, ScreenGui) är
+Roblox-specifik, vilket paritetsregeln uttryckligen tillåter. Webben har
+ännu ingen temafiltrerad feedback och ingen post-ride-ruta — den
+återstår, och den kan byggas ur `UGNETA_TEMA` utan att någon regel
+behöver uppfinnas om igen. Det är en **öppen paritetsskuld**, inte en
+löst punkt.
+
+**4. Två teman, inte ett.** Ordern säger "initialt exempelvis Handen".
+Kanonen bär `handen` och `sitsen`; lektionen startar i `handen`. Det
+andra temat finns för att temafiltret ska gå att MÄTA — en filterregel
+med bara ett tema går inte att visa att den filtrerar.
+
+Byggare: **Claude**. Review: **ChatGPT**. Acceptans: **Tobias**.
+Högsta status en builder får sätta är `READY_FOR_CHATGPT_REVIEW`.
+
+**Ingen merge i det här uppdraget.** Visuell fidelity, fysisk
+mobilkänsla och NPC-läsbarhet i Studio är `NOT_TESTED` och ligger kvar
+på Tobias human gate.
+
 ## Accepted / merged
 
 ### P0 Läktare — issue #81 / PR #114

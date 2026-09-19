@@ -79,7 +79,18 @@ local function poseAv(rig: { [string]: any }?): { [string]: any }?
 	return { x = pos.X, z = pos.Z, yaw = yaw }
 end
 
-local function dismount()
+--[[ ── VARFÖR RITTEN TOG SLUT (#234) ──────────────────────────────────
+
+     `dismount` har alltid kunnat anropas från fem håll, och det har inte
+     spelat någon roll vilket: städningen är densamma. Med #234 spelar det
+     roll, därför att bara två av dem är en riktig PASSÖVERGÅNG som får
+     visa en sammanfattning. Skälet skickas därför vidare till
+     `LektionController.avbryt`, som äger regeln — se dess not.
+
+     Orsaken är ett argument och inte en modulvariabel med flit: en flagga
+     som sätts före anropet kan bli kvar och göra nästa avsittning till
+     fel sort. ]]
+local function dismount(orsak: string?)
 	if not ride then return end
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
@@ -99,7 +110,7 @@ local function dismount()
 	     försvinner, riggen är borta ur workspace, servern flyttar
 	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
 	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
-	LektionController.avbryt()
+	LektionController.avbryt(orsak)
 	--[[ Hjälpen hör till ritten. Den ska inte ligga kvar över en spelare
 	     som just klivit av. ]]
 	KontrollHjalp.dolj()
@@ -135,19 +146,66 @@ end
 	serverns ord, vilket är en legitim rättelse och inte en egen
 	uppsittning. `dismount` är idempotent (`if not ride then return end`),
 	och vakten här gör att upprepade tryck varken städar två gånger eller
-	skickar en andra begäran. ]]
+	skickar en andra begäran.
+
+	── STÄDNINGEN ÄR OMEDELBAR, SAMMANFATTNINGEN ÄR DET INTE ────────────
+
+	Senior review 2026-09-19: den lokala begäran behandlades som en
+	auktoritativ passövergång, så `ShowPostRideSummary` kunde öppnas innan
+	servern ens sett anropet. Nekade servern — hon satt inte upp, sessionen
+	var oregistrerad — eller föll fjärranropet, hade spelaren fått en
+	sammanfattning av en ritt som inte tagit slut.
+
+	De två sakerna är nu skilda åt, och bara den ena väntar:
+
+	  SÄKERHET   `dismount("avsittning")` kör direkt, precis som förut.
+	             Lärarytan släcks, den väntande fortsättningen kastas,
+	             pekreglagen rivs, inmatningen kopplas ur. Oförändrat.
+	  RUTAN      parkeras i `UgnetaController` och öppnas först när något
+	             med auktoritet sagt att avsittningen gick igenom.
+
+	TVÅ BEKRÄFTELSEVÄGAR, och båda är serverns:
+
+	  1. `MountChanged` utan oss som ryttare. Servern fyrar den INNE i sin
+	     `dismount` (`setRider`), alltså före fjärranropet returnerar — det
+	     är normalt den som kommer först.
+	  2. `DismountRequest`-svaret. `HorseService.dismount` svarar
+	     `(true)` eller `(false, skäl)`; allt utom true är ett nej.
+
+	Uteblir båda visas ingenting. Det finns ingen timer som räddar en
+	obekräftad avsittning, och det är avsiktligt — fail closed. ]]
+--[[ Modellen vi bett om att få sitta av från, tills servern svarat.
+     `nil` betyder att ingen begäran är obesvarad, och den är vakten som
+     gör att bara EN av de två bekräftelsevägarna räknas. ]]
+local vantandeAvsittning: Model? = nil
+
+local function avsittningBekraftad(ok: boolean)
+	if not vantandeAvsittning then return end
+	vantandeAvsittning = nil
+	LektionController.slutBekraftat(ok)
+end
+
 local function begarAvsittning()
 	if not ride then return end
-	dismount()
+	--[[ SPELAREN BAD OM DET — och det är ännu inte sant. Modellen märks
+	     FÖRE städningen, därför att `dismount` nollar `ride`. ]]
+	vantandeAvsittning = ride.model
+	dismount("avsittning")
 	task.spawn(function()
-		local ok, err = pcall(function()
-			Net.get("DismountRequest"):InvokeServer()
+		local ok, svar = pcall(function()
+			return Net.get("DismountRequest"):InvokeServer()
 		end)
 		if not ok then
 			--[[ Uteblivet eller felande svar får inte återuppliva något
-			     lokalt. Servern rättar oss via MountChanged om den vill. ]]
-			warn("[Horse] DismountRequest misslyckades: " .. tostring(err))
+			     lokalt, och det får inte heller öppna någon ruta. Servern
+			     rättar oss via MountChanged om den vill. ]]
+			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
+			avsittningBekraftad(false)
+			return
 		end
+		--[[ `HorseService.dismount` svarar `(true)` eller `(false, skäl)`.
+		     Bara ett rent true är ett avslutat pass. ]]
+		avsittningBekraftad(svar == true)
 	end)
 end
 
@@ -156,7 +214,12 @@ local function mount(model: Model, rittId: string?)
 	     avsikt till DEN HAR ritten (#233, ChatGPT-review av #241). Utan
 	     det kunde ett fordrojt paket fran en tidigare ritt landa efter
 	     nasta uppsittning och accepteras mot fel ritt eller fel hast. ]]
-	if ride then dismount() end
+	--[[ En ny uppsittning ersätter den gamla. Inget pass avslutades. ]]
+	if ride then dismount("byte") end
+	--[[ Sitter hon upp igen är en obesvarad avsittningsbegäran överspelad.
+	     Utan raden hade ett sent `MountChanged` om den GAMLA hästen kunnat
+	     bekräfta ett slut mitt i den nya ritten. ]]
+	vantandeAvsittning = nil
 
 	local rig, err = RigAdapter.build(model)
 	if not rig then
@@ -198,6 +261,10 @@ local function mount(model: Model, rittId: string?)
 		     ritten fått `rittId = nil` och servern hade nekat varje
 		     hjälp. ]]
 		rittId = rittId or model:GetAttribute("RidSession"),
+		--[[ #234: senaste serverbekräftade tillståndets märke, och om det
+		     ännu inte konsumerats av loopen. Sätts i `RidTillstand`. ]]
+		tillstandId = nil :: string?,
+		tillstandNy = false,
 	}
 
 	local character = player.Character
@@ -252,7 +319,11 @@ local function mount(model: Model, rittId: string?)
 	     (BuildKit.newBuilding i roblox/buildings/Anlaggningen.luau).
 	     Ridbanan och sargen hänger direkt under den. ]]
 	local anlaggning = workspace:FindFirstChild("Anläggning")
-	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
+	--[[ #234: serverns märke på ritten följer med in i lektionen. Det är
+	     den identitet startreplikens vakt bärs av — en identitet klienten
+	     inte kan hitta på. Se `UgnetaController.startKvitterad`. ]]
+	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
+		ride.rittId)
 	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
 	     frågan "vad gör jag nu?" som mest aktuell. ]]
 	KontrollHjalp.vidUppsittning()
@@ -438,7 +509,19 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 			mount(model)
 		end
 	elseif ride and ride.model == model then
-		dismount()
+		--[[ SERVERNS ORD. Den auktoritativa avsittningen, och därmed en
+		     giltig passövergång. ]]
+		dismount("server")
+	elseif vantandeAvsittning == model then
+		--[[ SVARET PÅ EN BEGÄRD AVSITTNING (#234).
+
+		     Den lokala städningen har redan kört, så `ride` är nil och
+		     grenen ovanför missar. Det här är ändå servern som säger att
+		     spelaren inte sitter upp på den hästen längre — alltså exakt
+		     den auktoritativa bekräftelse sammanfattningen väntar på, och
+		     den som kommer FÖRST: `HorseService.dismount` fyrar
+		     `MountChanged` inne i `setRider`, före sin egen return. ]]
+		avsittningBekraftad(true)
 	end
 end)
 
@@ -484,6 +567,18 @@ Net.get("RidTillstand").OnClientEvent:Connect(function(tillstand)
 	     Ett svar som kommer efter avsittningen faller redan på `ride`. ]]
 	if tillstand.hast ~= ride.model then return end
 	if tillstand.ritt ~= ride.rittId then return end
+	--[[ ── #234: PAKETETS MÄRKE ────────────────────────────────────────
+	     Ugnetas mönsterräknare får inte räkna samma serverbekräftade
+	     tillstånd två gånger. Märket är rittens id plus paketets version,
+	     alltså exakt de två fält som redan skiljer ETT tillstånd från ett
+	     annat här ovanför — ingen ny identitet uppfinns.
+
+	     `tillstandNy` är flaggan loopen konsumerar. Kommer samma version
+	     igen sätts flaggan igen, men märket är detsamma, och `UgnetaTema`
+	     kastar det. Det är skillnaden mot att bara räkna paket: en
+	     återspelning ska vara osynlig, inte tyst. ]]
+	ride.tillstandId = tostring(ride.rittId) .. "#" .. tostring(tillstand.version)
+	ride.tillstandNy = true
 	ride.movement:reconcile(tillstand.gangart, tillstand.ryggar, tillstand.version)
 end)
 
@@ -563,12 +658,19 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	     som äger dem. #162 blockerare 2 mäts fortsatt av klientprovet. ]]
 end)
 
-player.CharacterRemoving:Connect(dismount)
+--[[ Karaktären försvinner — död, respawn eller omladdning. Det är en
+     SÄKERHETSHÄNDELSE och inget avslutat pass, och lyssnaren måste
+     dessutom svälja sitt argument: signalen skickar karaktären, och den
+     hade landat i `orsak` om `dismount` kopplats in direkt. ]]
+player.CharacterRemoving:Connect(function()
+	dismount("respawn")
+end)
 
 RunService.RenderStepped:Connect(function(dt)
 	if not ride then return end
 	if not ride.rig.root:IsDescendantOf(workspace) then
-		dismount()
+		--[[ Riggen är borta ur workspace. Säkerhetshändelse, inget pass. ]]
+		dismount("rigg")
 		return
 	end
 
@@ -680,7 +782,15 @@ RunService.RenderStepped:Connect(function(dt)
 	     EFTER avläsningen och FÖRE renderingen av samma skäl som allt
 	     annat i den här ordningen: den ska se bildrutans mätning, inte
 	     förra bildrutans, och den rör varken rörelse eller kamera. ]]
-	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig))
+	--[[ Märket lämnas BARA den bildruta ett nytt tillstånd kom in. Övriga
+	     bildrutor är lokala avläsningar, och de ska utvärderas: en
+	     tygelflank varar kortare än ett paketintervall. ]]
+	local handelseId: string? = nil
+	if ride.tillstandNy then
+		handelseId = ride.tillstandId
+		ride.tillstandNy = false
+	end
+	LektionController.steg(dt, ride.telemetri, poseAv(ride.rig), handelseId)
 
 	ride.animation:step(loco, dt)
 	ride.rider:step(loco, dt)

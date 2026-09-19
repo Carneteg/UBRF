@@ -59,6 +59,25 @@ local TouchControls = require(script.Parent.TouchControls)
 --[[ #244: undervisningens text bor här numera. Modulen ritar bara det den
      får — orden kommer fortfarande ur katalogen och kanonen. ]]
 local CoachBanner = require(script.Parent.CoachBanner)
+--[[ #234: Ride First-lagret. Tre moduler, tre tydligt skilda ansvar, och
+     ingen av dem duplicerar lektionens kedja:
+
+       UgnetaTema        REGELN — temafilter, mönster, cooldown, orsak.
+                         Ren logik i HorseCore, utan en enda Instance.
+       UgnetaBubbla      REPLIKEN — bubblan över gestalten och den lokala
+                         reservloggen. Samma replik på båda ytorna.
+       PostRideSummary   EFTERÅT — den lokala sammanfattningen, i samma
+                         ScreenGui som bannern.
+
+     Den här modulen är fortfarande ytan som binder ihop dem, precis som
+     den band ihop chip, banner och valrad förut. ]]
+local UgnetaTema = require(game:GetService("ReplicatedStorage").HorseCore.UgnetaTema)
+local UgnetaBubbla = require(script.Parent.UgnetaBubbla)
+local PostRideSummary = require(script.Parent.PostRideSummary)
+--[[ Gestalten äger figuren; den här modulen frågar den bara VAR bubblan
+     ska hänga. Beroendet går åt ett håll — `UgnetaGestalt` känner inte
+     till HUD:en — så det finns ingen cykel att lösa. ]]
+local UgnetaGestalt = require(script.Parent.UgnetaGestalt)
 
 local UgnetaController = {}
 
@@ -137,6 +156,72 @@ local DIM_ORD = setmetatable({}, {
 
 local liveTid = 0
 local liveSagt = ""
+
+--[[ ── RIDE FIRST-PASSET (#234) ────────────────────────────────────────
+
+	`pass` är sessionen ur `UgnetaTema` — alltså ALLT den här lektionens
+	feedback minns. Den skapas i `startaPass` och SLÄPPS i `avslutaPass`.
+	Att den släpps och inte nollställs fält för fält är hela svaret på
+	kontraktets punkt 9: nästa ritt får en ny tabell, och en läcka hade
+	krävt att någon medvetet bar över den.
+
+	`startKvitterad` är en ANDRA vakt, och de två har olika betydelser:
+
+	  sessionens egen `startSagd`  "den här sessionen har redan hälsat"
+	  `startKvitterad`             "den här RITTEN har redan hälsat"
+
+	Den andra behövs för att en respawn eller en serverrättelse river
+	ritten och bygger en ny session — och beställningen är uttrycklig:
+	startrepliken får inte upprepas då.
+
+	── VAKTENS IDENTITET KOMMER FRÅN SERVERN (senior review 2026-09-19) ──
+
+	Vakten bar TEMASTRÄNGEN förut, och det höll inte. "handen" är inte en
+	ritt — det är en sorts undervisning — så två helt skilda ritter delade
+	vakt, och påståendet om reconnect var dessutom obevisbart: en verklig
+	reconnect ger en NY klient med ett tomt modulminne.
+
+	Identiteten är nu `RidSession`, serverns eget märke på ritten
+	(`HorseService.setRider` → `nyttRittId`, replikerat som attribut på
+	hästmodellen). Det är samma märke `init.client` redan binder varje
+	ridavsikt till, alltså en identitet KLIENTEN INTE KAN HITTA PÅ:
+
+	  samma märke igen   servern anser det vara samma ritt. En upprepad
+	                     `MountChanged`, en StateSync-rättelse eller en
+	                     respawn som sätter upp spelaren på nytt hälsar
+	                     inte igen.
+	  nytt märke         servern har startat en ny ritt, och den hälsar.
+	  inget märke        okänd identitet — modellen saknar attribut. Då
+	                     faller vakten tillbaka på temat, som förut. Det
+	                     är sämre, men det är det enda som finns.
+
+	VAD DET INTE ÄR: ett bevis om reconnect. En verklig reconnect skapar
+	både en ny klient OCH en ny serverritt, alltså ett nytt märke — och då
+	SKA hon hälsa, för det är en ny lektion. Att påstå att startrepliken
+	undertrycks tvärs över en reconnect vore fel, och det påstås inte
+	längre. Verklig reconnect är `NOT_TESTED`; bänken har en klient.
+
+	Nollställs när ett pass avslutas GILTIGT, alltså när spelaren faktiskt
+	red klart. ]]
+local pass: UgnetaTema.Session? = nil
+local startKvitterad: string? = nil
+
+--[[ ── DET OBEKRÄFTADE SLUTET (#234, senior review 2026-09-19) ─────────
+
+	En lokal avsittningsBEGÄRAN är en önskan, inte ett avslutat pass.
+	`init.client.begarAvsittning` städar lokalt och omedelbart — det är
+	säkerhet och rörs inte — men servern kan neka, fjärranropet kan falla
+	och svaret kan utebli. En sammanfattning som redan öppnats då har
+	påstått att ritten var slut innan någon med auktoritet sagt det.
+
+	Sessionen PARKERAS därför här i stället för att kastas eller visas, och
+	`bekraftaSlut` är den enda vägen vidare. Ingen timer väntar på den:
+	blir den aldrig bekräftad visas ingenting, och nästa `startaPass`
+	släpper den. Fail closed, samma hållning som ett saknat `orsak`.
+
+	Den parkerade sessionen kan inte visa något av sig själv — den är en
+	tabell utan klocka och utan yta. ]]
+local vantandeSlut: UgnetaTema.Session? = nil
 
 --[[ ══ UTLÄGGNINGEN MÅSTE KÖRAS OM NÄR YTAN ÄNDRAS (#206) ═══════════
 
@@ -279,6 +364,19 @@ local function bygg()
 	--[[ BANNERN. Den bor i den här ytan och bygger ingen egen ScreenGui —
 	     kontraktet i #244 förbjuder en andra. ]]
 	CoachBanner.montera(g)
+	--[[ #234: reservloggen och sammanfattningen bor i SAMMA yta, av samma
+	     skäl. Ingen av dem skapar en ScreenGui, och `montera` är
+	     idempotent — ett andra `bygg` finns inte (vakten överst), men
+	     modulerna bär ändå sin egen vakt så att en framtida omstart av
+	     ytan inte kan lämna två. ]]
+	UgnetaBubbla.montera(g)
+	PostRideSummary.montera(g)
+	--[[ Vägen ut ur sammanfattningen: rutan stänger sig själv och säger
+	     till här. Ingen teleport, ingen serverbegäran — passets data är
+	     redan släppt när rutan visas. ]]
+	PostRideSummary.vidStang(function()
+		UgnetaBubbla.rensa()
+	end)
 
 	--[[ LIVE-CHIPET. Uppe i kanten, aldrig över ridvägen, och utan
 		porträtt eller rubrik — det är skillnaden mot ett besked.
@@ -469,6 +567,8 @@ function UgnetaController.steg(dt: number)
 	--[[ Bannerns visningstid går HÄR, i klientens enda loop. Modulen har
 	     ingen egen timer och ingen `task.delay` — se noten i dess huvud. ]]
 	CoachBanner.steg(dt)
+	--[[ #234: reservloggens rader åldras i samma loop och av samma skäl. ]]
+	UgnetaBubbla.steg(dt)
 	if liveTid > 0 then
 		liveTid -= dt
 		if liveTid <= 0 then
@@ -502,6 +602,11 @@ function UgnetaController.sakerhetTarOver()
 	if vk then vk.Visible = false end
 	liveTid = 0
 	liveSagt = ""
+	--[[ SÄKERHET FÖRE UNDERVISNING. En replik om en häst spelaren inte
+	     sitter på längre ska inte bli stående i reservloggen heller.
+	     Bubblan i världen tonar ut av sig själv — den hänger på Ugneta,
+	     inte på ekipaget, och kan inte överleva gestalten. ]]
+	UgnetaBubbla.rensa()
 	--[[ SÄKERHET FÖRE UNDERVISNING. En väntande fortsättning får inte
 	     överleva ett säkerhetsavbrott: annars kunde ett R-tryck efter
 	     avsittningen starta ett försök på en häst som inte finns. ]]
@@ -674,6 +779,272 @@ function UgnetaController.fortsatt(): boolean
 	local fn = fortsattFn
 	if fn then fn() end
 	return true
+end
+
+--[[ ══ RIDE FIRST: FÖRE, UNDER OCH EFTER (#234) ════════════════════════
+
+	Allt nedanför hör till ETT pass. Ingången är `startaPass`, hjärtslaget
+	är `ritt`, och vägen ut är `avslutaPass`. `LektionController` ropar
+	alla tre; ingenting här anropar sig självt, och ingenting här har en
+	egen timer.
+
+	VAD DET INTE ÄR: en andra lektionskedja. Passet mäter inget försök,
+	stänger inget moment och flyttar ingen progression — det observerar
+	VANOR och säger högst en sak i taget. Lektionens egen kedja
+	(presentation → rider → efter) är orörd ovanför.
+
+	VAD DET INTE FÅR: någon ridauktoritet. Ingen rad här sätter `mounted`,
+	skickar en avsikt, teleporterar någon eller skriver ett betyg.
+	Sammanfattningen PRESENTERAR telemetri som redan samlats.
+]]
+
+--[[ Repliken går till BÅDA ytorna i samma anrop — bubblan över Ugneta och
+	den lokala reservloggen. Kontraktets punkt 10 är att de ska få SAMMA
+	text, och det hålls genom att det bara finns en sträng: en andra
+	formatering här hade kunnat glida.
+
+	Texten kommer ur språkkatalogen, aldrig ur en literal. Nyckeln kommer
+	ur `RidKanon.UGNETA.TEMA`, alltså ur kanonen. ]]
+local function saga(nyckel: string?): string
+	if type(nyckel) ~= "string" or nyckel == "" then return "" end
+	local text = Sprak.t(nyckel)
+	if text == "" then return "" end
+	UgnetaBubbla.sag(text, UgnetaGestalt.bubbelDel())
+	return text
+end
+
+--[[ FÖRE. Startar passet och säger exakt en inledande replik.
+
+	Anropas ur `LektionController.start`, som i sin tur körs av `mount` —
+	alltså först när servern bekräftat uppsittningen. Klienten startar
+	ingen lektion åt sig själv.
+
+	`rittId` är serverns märke på ritten (`RidSession`) och är det vakten
+	mot en upprepad startreplik bärs av; se noten vid `startKvitterad`.
+	`init.client` läser det ur hästmodellens attribut och lämnar det hit
+	genom `LektionController.start` — klienten hittar det inte på.
+
+	Ett OKÄNT tema startar ingen lektion alls; se `UgnetaTema.ny`. ]]
+function UgnetaController.startaPass(temaId: string?, rittId: string?): string
+	bygg()
+	--[[ ── BUBBELCHATTEN KONFIGURERAS PER PASS, INTE PER SESSION ───────
+
+	     Första utkastet satte räckvidden EN gång, i `bygg`. Det gick inte
+	     ihop med att `avslutaPass` lämnar tillbaka de globala värdena:
+	     redan den första avsittningen — även en respawn — återställde
+	     `MaxDistance` till Roblox 100 studs, och sedan fanns det ingen väg
+	     tillbaka. Ugneta hade varit läsbar på sin första lektion och en
+	     prick på alla följande.
+
+	     Provet fällde det ("räckvidden är kanonens mätta tal — 100 studs"),
+	     och rättelsen är att paret hör ihop: `konfigurera` vid passets
+	     början, `aterstall` vid dess slut. Båda är idempotenta. ]]
+	--[[ Ett nytt pass får aldrig visa förra passets ruta. Kontraktets
+	     punkt 6: respawn och snabb mount/dismount ska inte kunna lämna
+	     gammal data uppe. Ett obekräftat slut släpps i samma andetag —
+	     den avsittningen är överspelad av att spelaren sitter upp igen. ]]
+	if PostRideSummary.oppen() then PostRideSummary.stang() end
+	vantandeSlut = nil
+	--[[ ── OKÄNT TEMA FALLER STÄNGT ───────────────────────────────────
+	     `UgnetaTema.ny` skiljer nil (= ta standardtemat) från en okänd
+	     sträng (= fel hos den som ropar). Sessionen skapas därför FÖRE
+	     bubbelchatten konfigureras: ett pass som inte blir av ska inte
+	     heller ha rört klientens globala chattvärden. ]]
+	local sess = UgnetaTema.ny(temaId)
+	pass = sess
+	if not sess then
+		if temaId ~= nil then
+			warn("[Ugneta] okänt tema " .. tostring(temaId)
+				.. " — ingen lektion startas")
+		end
+		return ""
+	end
+	UgnetaBubbla.konfigurera()
+	--[[ ── VILKEN RITT HAR REDAN HÄLSAT? ──────────────────────────────
+	     Märket är serverns när det finns, och temat när modellen saknar
+	     attributet. Prefixet gör de två omöjliga att förväxla: ett
+	     serverid kan aldrig råka lika ett "tema:handen". ]]
+	local marke = if rittId ~= nil and rittId ~= ""
+		then "ritt:" .. rittId
+		else "tema:" .. sess.tema
+	local r = UgnetaTema.startReplik(sess)
+	if not r then return "" end
+	if startKvitterad == marke then return "" end
+	startKvitterad = marke
+	return saga(r.nyckel)
+end
+
+--[[ UNDER. En bildruta av temafiltrerad observation.
+
+	`tm` är ridningens telemetri — samma avläsning lektionen mäter på, inte
+	en egen. `handelseId` är märket på ett serverbekräftat tillstånd;
+	`LektionController` lämnar det bara den bildruta ett NYTT paket kom in,
+	och `UgnetaTema` kastar ett id den redan sett. Två paket med samma
+	version kan alltså inte räknas två gånger.
+
+	Returnerar texten som sades, eller tom sträng. Returvärdet finns för
+	provet och för den som vill spegla repliken någon annanstans — det är
+	INTE en andra väg att visa den. ]]
+function UgnetaController.ritt(dt: number, tm: { [string]: any }?,
+	handelseId: string?): string
+	local sess = pass
+	if not sess then return "" end
+	local r = UgnetaTema.steg(sess, dt, tm, handelseId)
+	if not r then return "" end
+	return saga(r.nyckel)
+end
+
+--[[ Passets sammanfattning, översatt. `UgnetaTema.summering` lämnar
+	NYCKLAR och orsaker; den här funktionen sätter spelarens språk på dem
+	och lämnar en tabell som följer det visuella delkontraktet.
+
+	Arbetsdelningen är `Sprak`s egen: modulen som vet vem som tittar
+	översätter, regeln som vet vad som hände gör det inte. ]]
+local function sammanstall(sess: UgnetaTema.Session): { [string]: any }?
+	local s = UgnetaTema.summering(sess)
+	if not s then return nil end
+	local rader = {}
+	for _, rad in s.telemetri do
+		table.insert(rader, {
+			etikett = Sprak.t(rad.nyckel),
+			varde = rad.varde,
+			--[[ Orsaken FÖLJER MED in i vyn. Den ritas inte ut, men den gör
+			     det möjligt att mäta att "Hästen slappnar av" är en
+			     dagsformsrad och "Din mjukhet" en ryttarrad — och att de
+			     aldrig byter plats. ]]
+			orsak = rad.orsak,
+		})
+	end
+	return {
+		telemetri = rader,
+		ugnetaKommentar = if s.kommentar then Sprak.t(s.kommentar)
+			else Sprak.t("ugneta.summering.utan_kommentar"),
+		kommentarOrsak = s.kommentarOrsak,
+		teoriText = {
+			overRubrik = Sprak.t("ugneta.teori.rubrik"),
+			karnregel = Sprak.t(s.teori.regel),
+			brodtext = Sprak.t(s.teori.text),
+			kalla = s.teori.kalla,
+		},
+		knappText = Sprak.t("ugneta.summering.tillbaka"),
+	}
+end
+
+--[[ VÄGEN FRÅN EN AVSLUTAD SESSION TILL RUTAN. Två anropare —
+	`avslutaPass` för serverns egen avsittning och `bekraftaSlut` för en
+	bekräftad avsittningsbegäran — och EN väg, så att de två inte kan
+	glida isär i vilka villkor de kräver.
+
+	Underlagsvillkoret står här och ingen annanstans: ett pass som aldrig
+	såg en ridd bildruta får ingen ruta, oavsett hur ritten tog slut. ]]
+local function oppnaSummering(sess: UgnetaTema.Session): boolean
+	if not UgnetaTema.harUnderlag(sess) then return false end
+	--[[ Ett giltigt avslutat pass har hälsat färdigt. Nästa lektion får
+	     sin startreplik igen. ]]
+	startKvitterad = nil
+	bygg()
+	PostRideSummary.visa(sammanstall(sess))
+	return true
+end
+
+--[[ EFTER. Visar sammanfattningen. Kontraktets namn, med flit.
+
+	`data` får lämnas av den som redan har en färdig tabell — det är så
+	provet matar in gränsfall utan att behöva rida ett pass. Utan argument
+	byggs tabellen ur det aktuella passet. ]]
+function UgnetaController.ShowPostRideSummary(data: { [string]: any }?)
+	bygg()
+	if type(data) == "table" then
+		PostRideSummary.visa(data)
+		return
+	end
+	local sess = pass
+	if not sess then return end
+	PostRideSummary.visa(sammanstall(sess))
+end
+
+--[[ Passet är slut. `lage` avgörs INTE här: `LektionController.avbryt`
+	får orsaken från `init.client`, som är den enda som vet varför ritten
+	tog slut, och översätter den till ett av tre lägen.
+
+	  "auktoritativt"  servern har flyttat uppsittningen. Serverns ord ÄR
+	                   auktoriteten, och rutan öppnas nu.
+	  "avvaktar"       spelaren BAD om att få sitta av. Lokal städning är
+	                   redan gjord (säkerhet), men servern har inte svarat.
+	                   Sessionen parkeras; se `vantandeSlut`.
+	  allt annat       respawn, rigg borta, hästbyte, saknad orsak. Inget
+	                   avslutat pass, ingen ruta, ingen väntan.
+
+	DET HÄR VAR EN BLOCKERARE. `avsittning` räknades förut som en giltig
+	passövergång rakt av, alltså öppnades sammanfattningen på klientens
+	egen begäran — innan `DismountRequest` ens nått servern. Nekade servern
+	(hon satt inte upp, sessionen var borta) hade spelaren fått en
+	sammanfattning av en ritt som inte tagit slut.
+
+	Sessionen SLÄPPS alltid ur `pass`, giltig eller inte. Det är punkt 9:
+	nästa ritt börjar från en ny tabell. ]]
+function UgnetaController.avslutaPass(lage: string?): boolean
+	local sess = pass
+	pass = nil
+	--[[ Bubbelchattens globala värden lämnas tillbaka när undervisningen
+	     slutar — se `UgnetaBubbla.aterstall`. ]]
+	UgnetaBubbla.aterstall()
+	if not sess then return false end
+	--[[ Ett NYTT slut ersätter ett tidigare obekräftat. Raden ligger efter
+	     `if not sess` med flit: ett andra `avbryt` utan pass är ingen ny
+	     händelse och får inte kasta en väntan som fortfarande gäller. ]]
+	vantandeSlut = nil
+	if lage == "avvaktar" then
+		--[[ Ett pass utan underlag parkeras inte alls — det kan ändå
+		     aldrig bli en ruta, och en parkerad tom session hade bara
+		     varit skräp att städa. ]]
+		if UgnetaTema.harUnderlag(sess) then vantandeSlut = sess end
+		return false
+	end
+	if lage ~= "auktoritativt" then return false end
+	return oppnaSummering(sess)
+end
+
+--[[ SERVERN HAR SVARAT PÅ AVSITTNINGSBEGÄRAN.
+
+	`ok` är serverns ord, och bara serverns: `DismountRequest` svarade
+	true, eller en `MountChanged` visade att spelaren inte längre sitter
+	upp. Allt annat — ett nej med skäl, ett fel i fjärranropet, ett
+	uteblivet svar — är inget avslutat pass, och då visas ingen ruta.
+
+	IDEMPOTENT, och det är hela poängen: de två bekräftelsevägarna kan
+	båda nå hit för samma avsittning (servern fyrar `MountChanged` inne i
+	sin `dismount`, alltså FÖRE fjärranropet returnerar), och den första
+	konsumerar väntan. Ingen av dem kan öppna en andra ruta.
+
+	Returnerar true bara när en ruta faktiskt öppnades. ]]
+function UgnetaController.bekraftaSlut(ok: boolean?): boolean
+	local sess = vantandeSlut
+	vantandeSlut = nil
+	if not sess then return false end
+	if ok ~= true then return false end
+	return oppnaSummering(sess)
+end
+
+--[[ Väntar en avsittning på serverns ord just nu? Provets fönster in i
+	det läget — och ett läge som inte går att läsa går inte att mäta. ]]
+function UgnetaController.vantarPaServern(): boolean
+	return vantandeSlut ~= nil
+end
+
+--[[ Står sammanfattningen uppe? `init.client` frågar innan den tolkar en
+	tangent, av samma skäl som den frågar `vantar()`. ]]
+function UgnetaController.summeringOppen(): boolean
+	return PostRideSummary.oppen()
+end
+
+function UgnetaController.stangSummering(): boolean
+	return PostRideSummary.stang()
+end
+
+--[[ Provets fönster in i passet. ]]
+function UgnetaController.passSession(): UgnetaTema.Session?
+	return pass
 end
 
 function UgnetaController.start()

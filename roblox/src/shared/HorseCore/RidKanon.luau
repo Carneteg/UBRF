@@ -728,6 +728,116 @@ RidKanon.UGNETA = {
 		BRA = 0.55,
 	},
 	PLATS = { u = 0.5, bortomC = 1.4, bredd = 20, langd = 60 },
+	--[[ #234: Ride First-temat — temafiltret, mönsterreglerna,
+	     cooldownen och orsaksspråket. Ur src/larare.js. ]]
+	TEMA = {
+		COOLDOWN = 7,
+		DAGSFORM_HALL = 3,
+		DAGSFORM_TROSK = 0.62,
+		ORDNING = { "handen", "sitsen" },
+		handen = {
+			dagsform = {
+				falt = "spanning",
+				nyckel = "ugneta.dagsform.spand",
+				orsak = "dagsform",
+			},
+			falt = { "tygel", "parad", "paradKvalitet", "mjukhet", "spanning" },
+			id = "handen",
+			matare = { {
+				falt = "spanning",
+				invertera = true,
+				nyckel = "ugneta.summering.hasten_slappnar",
+				orsak = "dagsform",
+			}, {
+				falt = "mjukhet",
+				invertera = false,
+				nyckel = "ugneta.summering.din_mjukhet",
+				orsak = "ryttare",
+			} },
+			monster = {
+				hard_tygel = {
+					antal = 3,
+					aterstall = 4,
+					fonster = 6,
+					nollas_av = { "mjuk_tygel" },
+					nyckel = "ugneta.tema.handen.hard_hand",
+					orsak = "ryttare",
+				},
+			},
+			signal = {
+				hard_tygel = {
+					ater = 0.58,
+					falt = "tygel",
+					orsak = "ryttare",
+					over = 0.72,
+				},
+				mjuk_tygel = {
+					band = { 0.22, 0.58 },
+					bra = true,
+					falt = "tygel",
+					hall = 1.2,
+					orsak = "ryttare",
+				},
+			},
+			start = "ugneta.tema.handen.start",
+			teori = {
+				kalla = "Ridhandboken del 7",
+				regel = "ugneta.teori.handen.regel",
+				text = "ugneta.teori.handen.text",
+			},
+		},
+		sitsen = {
+			dagsform = {
+				falt = "spanning",
+				nyckel = "ugneta.dagsform.spand",
+				orsak = "dagsform",
+			},
+			falt = { "sits", "balans", "mjukhet", "spanning" },
+			id = "sitsen",
+			matare = { {
+				falt = "spanning",
+				invertera = true,
+				nyckel = "ugneta.summering.hasten_slappnar",
+				orsak = "dagsform",
+			}, {
+				falt = "balans",
+				invertera = false,
+				nyckel = "ugneta.summering.din_balans",
+				orsak = "ryttare",
+			} },
+			monster = {
+				tung_sits = {
+					antal = 3,
+					aterstall = 4,
+					fonster = 6,
+					nollas_av = { "lugn_sits" },
+					nyckel = "ugneta.tema.sitsen.tung_sits",
+					orsak = "ryttare",
+				},
+			},
+			signal = {
+				lugn_sits = {
+					band = { 0, 0.2 },
+					bra = true,
+					falt = "sits",
+					hall = 1.2,
+					orsak = "ryttare",
+				},
+				tung_sits = {
+					ater = 0.2,
+					falt = "sits",
+					orsak = "ryttare",
+					over = 0.78,
+				},
+			},
+			start = "ugneta.tema.sitsen.start",
+			teori = {
+				kalla = "Ridhandboken del 6",
+				regel = "ugneta.teori.sitsen.regel",
+				text = "ugneta.teori.sitsen.text",
+			},
+		},
+	},
 }
 
 --[[ G02-D: inspelningens kontrakt, ur src/riding/ovningsdef.js

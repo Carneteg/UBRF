@@ -188,7 +188,11 @@ end
      ingen plats att ställa Ugneta på, och då körs lektionen ändå — HUD:en
      är inte beroende av gestalten. En saknad byggnad ska inte tysta
      undervisningen, bara gestalten. ]]
-function LektionController.start(ridhus: Instance?)
+--[[ `rittId` är serverns märke på ritten (`RidSession`). `init.client`
+     läser det ur hästmodellens attribut och lämnar det vidare; det är den
+     identitet startreplikens vakt bärs av. Saknas det faller vakten
+     tillbaka på temat — se `UgnetaController.startaPass`. ]]
+function LektionController.start(ridhus: Instance?, rittId: string?)
 	pass = Lektion.nyttPass()
 	liveCd, liveSagt = 0, ""
 	lage = "ny"
@@ -212,6 +216,21 @@ function LektionController.start(ridhus: Instance?)
 		liveCd, liveSagt = 0, ""
 	end)
 	UgnetaGestalt.visa(ridhus)
+	--[[ ── #234 RIDE FIRST: PASSETS FÖRSTA REPLIK ────────────────────
+
+	     Den läggs HÄR och ingen annanstans, och det är hela §1 i
+	     beställningen: `start` körs av `init.client.mount`, som i sin tur
+	     bara körs på serverns `MountChanged` eller på ett accepterat
+	     `MountRequest`. Klienten startar alltså ingen lektion åt sig
+	     själv, sätter inget `mounted` och kringgår varken ägarskap,
+	     reservation, utrustning eller välfärd — den reagerar på att
+	     servern redan sagt ja.
+
+	     Repliken sägs EN gång per RITT, och vilken ritt det är avgör
+	     servern genom `rittId`. Vakten sitter i `UgnetaController`; se
+	     noten vid `startKvitterad` där, inklusive vad den INTE påstår om
+	     en verklig reconnect. ]]
+	UgnetaController.startaPass(nil, rittId)
 end
 
 function LektionController.pagar(): boolean
@@ -311,11 +330,33 @@ local function presentera(p: Lektion.Pass)
 end
 
 --[[ ETT STEG. Anropas varje bildruta med ritt-telemetrin. ]]
+--[[ #234: Ugneta vänder sig mot ryttaren. Ren klientpresentation — se
+     `UgnetaGestalt.blickMot`. Anropas FÖRE lektionens egna returer, så att
+     hon fortsätter vrida sig mjukt även medan ett kort står uppe: en figur
+     som fryser mitt i en vridning för att spelaren läser är sämre än ingen
+     vridning alls. ]]
+local function blicken(dt: number, pose: { [string]: any }?)
+	if type(pose) ~= "table" then
+		UgnetaGestalt.blickMot(nil, dt)
+		return
+	end
+	local x, z = pose.x, pose.z
+	if type(x) ~= "number" or type(z) ~= "number" then
+		UgnetaGestalt.blickMot(nil, dt)
+		return
+	end
+	--[[ Höjden spelar ingen roll: hon vrids bara kring Y. Att skicka noll
+	     är därför inte ett antagande om var ryttaren är, utan ett fält
+	     mottagaren inte läser. ]]
+	UgnetaGestalt.blickMot(Vector3.new(x, 0, z), dt)
+end
+
 function LektionController.steg(dt: number, tm: { [string]: any }?,
-	pose: { [string]: any }?)
+	pose: { [string]: any }?, handelseId: string?)
 	local p = pass
 	if not p or p.klar then return end
 	UgnetaController.steg(dt)
+	blicken(dt, pose)
 
 	if lage == "ny" then
 		presentera(p)
@@ -341,6 +382,24 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	     bildrutor, så en snabb klient inte får "mer underlag" än en
 	     långsam på samma ritt. ]]
 	Lektion.matning(p, tm, dt)
+
+	--[[ ── #234 RIDE FIRST: TEMATS EGEN OBSERVATION ───────────────────
+
+	     Den ligger i SAMMA gren som mätningen och läser SAMMA bildruta —
+	     alltså bara när ryttaren faktiskt sitter upp och inget kort står
+	     uppe. Det är avsiktligt: ridningen är fryst medan ett kort väntar,
+	     och en cooldown som tickade bakom kortet hade gjort tystnaden
+	     olika lång beroende på hur snabbt spelaren läser.
+
+	     `handelseId` är märket på ett NYTT serverbekräftat tillstånd.
+	     `init.client` lämnar det bara den bildruta ett paket kom in, och
+	     `UgnetaTema` kastar ett id den redan sett — två paket med samma
+	     version kan alltså inte räknas två gånger.
+
+	     INGEN ANDRA BEDÖMNING. Raden nedan flyttar inget försök, stänger
+	     inget moment och rör inte `Lektion`. Den observerar vanor; `Ugneta`
+	     rangordnar fortfarande försöket alldeles själv längre ned. ]]
+	UgnetaController.ritt(dt, tm, handelseId)
 
 	--[[ LIVE: några ord, och aldrig samma ord två gånger i rad. ]]
 	liveCd -= dt
@@ -388,8 +447,58 @@ end
 
 --[[ Slut på ritten, av vilket skäl som helst. Säkerhet före undervisning:
      chipet släcks, kortet stängs, den väntande fortsättningen kastas och
-     gestalten tas bort. ]]
-function LektionController.avbryt()
+     gestalten tas bort.
+
+     ── #234: VILKA SLUT SOM ÄR ETT AVSLUTAT PASS ────────────────────────
+
+     `orsak` kommer från `init.client`, som är den enda som vet VARFÖR
+     ritten tog slut. Två av skälen är en riktig passövergång och resten
+     är inte det:
+
+       "server"      servern flyttade uppsittningen. Serverns ord ÄR
+                     auktoriteten, och rutan får öppnas nu.
+
+       "avsittning"  spelaren BAD om att få sitta av. Det är ännu inte
+                     sant: `DismountRequest` är på väg, och servern kan neka.
+                     Passet parkeras och väntar på bekräftelse.
+
+       "respawn"     karaktären försvann. Inget pass avslutades — hon dog
+                     eller laddades om.
+       "rigg"        riggen är borta ur workspace. En säkerhetshändelse.
+       "byte"        en ny uppsittning ersätter den gamla.
+
+     De tre sista får ALDRIG öppna sammanfattningen. Det är kontraktets
+     "inte vid respawn, nätverkskorrigering eller ogiltig dismount", och
+     det avgörs här — inte av en gissning inne i vyn.
+
+     ── "avsittning" ÄR INTE LÄNGRE ETT GILTIGT SLUT I SIG ───────────
+
+     Tabellen hette `GILTIGT_SLUT` och bar `avsittning = true`. Senior
+     review 2026-09-19 fällde det: klientens EGEN begäran behandlades
+     som auktoritet, så rutan kunde öppnas innan servern sagt ja — och
+     nekade den, eller föll fjärranropet, hade spelaren fått en
+     sammanfattning av en ritt som inte tagit slut.
+
+     SÄKERHETSSTÄDNINGEN ÄR OFÖRÄNDRAD. Den sker fortfarande lokalt och
+     omedelbart, utan att fråga någon; det är bara RUTAN som väntar.
+     Bekräftelsen kommer in genom `slutBekraftat` nedan.
+
+     Ett saknat `orsak` behandlas som ogiltigt. Fail closed: en ny
+     anropsväg som glömmer skicka skälet ska ge FÄRRE rutor, inte fler. ]]
+local SLUT_LAGE: { [string]: string } = {
+	server = "auktoritativt",
+	avsittning = "avvaktar",
+}
+
+function LektionController.avbryt(orsak: string?)
+	--[[ Heter `slutLage` och inte `lage`: modulens `lage` är lektionens FAS
+	     (ny/presentation/rider/efter/ingen) och nollställs två rader ned.
+	     Ett `lage` till här hade skuggat den, och `lage = "ingen"` hade
+	     skrivit till skuggan i stället för till lektionen. Provet fällde
+	     precis det: den auktoritativa avsittningen öppnade ingen ruta,
+	     för passet låg kvar i "rider". Samma felklass som `d`/`dt` i
+	     `UgnetaTema`. ]]
+	local slutLage = if orsak ~= nil then SLUT_LAGE[orsak] else nil
 	pass = nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"
@@ -405,7 +514,30 @@ function LektionController.avbryt()
 	UgnetaController.vidReplay(nil)
 	UgnetaController.vidVidare(nil)
 	UgnetaController.sakerhetTarOver()
+	--[[ ── #234: EFTER ────────────────────────────────────────────────
+	     Ligger EFTER `sakerhetTarOver` med flit. Säkerheten släcker chip,
+	     banner, val och reservlogg; först när ytan är ren visas
+	     sammanfattningen. Omvänd ordning hade låtit säkerhetsvägen släcka
+	     rutan den just öppnat.
+
+	     Anropet görs ÄVEN när slutet är ogiltigt — passet ska släppas då
+	     också, och bubbelchattens globala värden lämnas tillbaka. Det är
+	     `avslutaPass` som avgör om något VISAS, och om något ska VÄNTA. ]]
+	UgnetaController.avslutaPass(slutLage)
 	UgnetaGestalt.dolj()
+end
+
+--[[ SERVERN SVARADE PÅ EN AVSITTNINGSBEGÄRAN.
+
+	     Anropas av `init.client` när — och bara när — något med auktoritet
+	     uttalat sig: `DismountRequest` returnerade, eller `MountChanged`
+	     visade att spelaren inte längre sitter upp. `ok = false` täcker
+	     både ett nej med skäl och ett fjärranrop som föll.
+
+	     Den här modulen äger inte regeln — den vidarebefordrar bara ordet
+	     till passet, av samma skäl som `avbryt` inte gissar orsaken. ]]
+function LektionController.slutBekraftat(ok: boolean?): boolean
+	return UgnetaController.bekraftaSlut(ok)
 end
 
 return LektionController

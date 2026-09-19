@@ -238,8 +238,19 @@ PARITET = [
     #   regel som hela listan: en modul far bara referera det som star
     #   over. ]]
     ("CoachBanner",      "src/client/CoachBanner.luau"),
-    ("UgnetaController", "src/client/UgnetaController.luau"),
+    #[[ #234: Ride First-lagret. Ordningen ar beroendeordningen och inte
+    #   smaksak: `UgnetaTema` laser RidKanon, `UgnetaBubbla` laser
+    #   TouchControls och UgnetaTema, och `UgnetaController` laser bada
+    #   plus `UgnetaGestalt` (for att veta var bubblan ska hanga).
+    #   `UgnetaGestalt` har darfor FLYTTATS upp fore controllern. Ligger en
+    #   av dem bara i EN av listorna blir require:t nil i den andra bunten,
+    #   och det syns forst som "attempt to index nil" langt fran orsaken —
+    #   precis den fallgropen noten vid Inspelning ovan beskriver. ]]
+    ("UgnetaTema",       "src/shared/HorseCore/UgnetaTema.luau"),
     ("UgnetaGestalt",    "src/client/UgnetaGestalt.luau"),
+    ("UgnetaBubbla",     "src/client/UgnetaBubbla.luau"),
+    ("PostRideSummary",  "src/client/PostRideSummary.luau"),
+    ("UgnetaController", "src/client/UgnetaController.luau"),
     ("ReplayController", "src/client/ReplayController.luau"),
     # Kedjan som binder ihop dem. Utan den var HUD:en bara anropbar.
     ("LektionController", "src/client/LektionController.luau"),
@@ -251,6 +262,13 @@ PARITET = [
 # huset, vilket ar precis det placeringen undviker.
 GESTALT = BYGGE + [
     ("RidKanon",      "src/shared/HorseCore/RidKanon.luau"),
+    #[[ #234: bubbelrackvidden ar ett TAL ur kanonen, och det ska matas mot
+    #   den byggda banan och hennes faktiska plats — inte mot en uppskattad
+    #   "25 x 75 m". Modulen ar ren logik och drar inga beroenden in i
+    #   byggbanken. `Gaits` behovs for kamerans avstand bakom ryttaren, som
+    #   ar en del av det varsta fallet. ]]
+    ("Gaits",         "src/shared/HorseCore/Gaits.luau"),
+    ("UgnetaTema",    "src/shared/HorseCore/UgnetaTema.luau"),
     ("UgnetaGestalt", "src/client/UgnetaGestalt.luau"),
 ]
 
@@ -302,8 +320,19 @@ KLIENT = SPEL + [
     #   require:t nil i den andra, och det syns forst som ett
     #   "attempt to index nil" langt fran orsaken. ]]
     ("CoachBanner",         "src/client/CoachBanner.luau"),
-    ("UgnetaController",    "src/client/UgnetaController.luau"),
+    #[[ #234: Ride First-lagret. Ordningen ar beroendeordningen och inte
+    #   smaksak: `UgnetaTema` laser RidKanon, `UgnetaBubbla` laser
+    #   TouchControls och UgnetaTema, och `UgnetaController` laser bada
+    #   plus `UgnetaGestalt` (for att veta var bubblan ska hanga).
+    #   `UgnetaGestalt` har darfor FLYTTATS upp fore controllern. Ligger en
+    #   av dem bara i EN av listorna blir require:t nil i den andra bunten,
+    #   och det syns forst som "attempt to index nil" langt fran orsaken —
+    #   precis den fallgropen noten vid Inspelning ovan beskriver. ]]
+    ("UgnetaTema",          "src/shared/HorseCore/UgnetaTema.luau"),
     ("UgnetaGestalt",       "src/client/UgnetaGestalt.luau"),
+    ("UgnetaBubbla",        "src/client/UgnetaBubbla.luau"),
+    ("PostRideSummary",     "src/client/PostRideSummary.luau"),
+    ("UgnetaController",    "src/client/UgnetaController.luau"),
     ("ReplayController",    "src/client/ReplayController.luau"),
     ("LektionController",   "src/client/LektionController.luau"),
     # Kontrollhjalpen: bara init.client.luau require:ar den, sa den behovs
@@ -569,6 +598,19 @@ def bygg(spec_rel: str) -> pathlib.Path:
     elif "driv-broms" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "klient" in spec_rel:
+        moduler, stubbar = KLIENT, "tests/stubs.luau"
+    #[[ #234: de tva nya specarna kor i KLIENTbanken och inte i PARITET.
+    #   Skalet ar detsamma som `coachbanner` har: de mater att SPELAREN far
+    #   det den gor — startrepliken vid en serverbekraftad uppsittning och
+    #   sammanfattningen vid en auktoritativ avsittning — och bada vagarna
+    #   gar genom `init.client.luau`. En spec som anropar controllern sjalv
+    #   hade aldrig sett om klienten anropar den.
+    #
+    #   Grenarna star FORE "gestalt" och "ugneta" av samma skal som
+    #   `coachbanner` star fore "klient": namnen faller igenom till fel
+    #   bunt annars. "ugneta-gestalt" innehaller inte "ugneta-tema", sa den
+    #   fangas fortfarande av gestaltgrenen nedan. ]]
+    elif "ugneta-tema" in spec_rel or "ugneta-summering" in spec_rel:
         moduler, stubbar = KLIENT, "tests/stubs.luau"
     elif "gestalt" in spec_rel:
         moduler, stubbar = GESTALT, "tests/stubs-bygge.luau"

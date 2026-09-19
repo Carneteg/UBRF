@@ -442,6 +442,131 @@ const UGNETA_KVALITET={
    HorseCore/Lektion.SKILLNAD så den inte kan glömmas bort. */
 const UGNETA_DIM_CUE={linje:"vagen",rytm:"framat",balans:"sits",
   timing:"timing",mjukhet:"hand",respons:"lugn",tempo:"framat"};
+/* ══ RIDE FIRST: LEKTIONENS TEMA (#234) ═══════════════════════════════
+
+   Produktbeslutet FUN FIRST · RIDE FIRST · LEARN NATURALLY säger att
+   spelaren kommer för att RIDA. Ugneta ska därför inte kommentera allt
+   hon ser — hon ska driva EN sak i taget. Tabellen nedan är det "en sak i
+   taget" uttryckt som data: vilka signaler ett tema alls får läsa, hur
+   många gånger i följd något måste hända innan hon säger något, vad som
+   nollställer serien, och vilken TEORI passet avslutas med.
+
+   TRE REGLER SOM TABELLEN BÄR, och som inte får ligga som specialfall i
+   någon controller:
+
+     1. TEMAFILTRET. En signal som inte står i det AKTIVA temats `signal`
+        utvärderas inte alls. Temat `handen` läser tygel och parad; att
+        den skulle börja tycka till om sitsen kräver ett temabyte, inte
+        ett undantag i en if-sats.
+     2. MÖNSTRET FÖRE KOMMENTAREN. Ett enstaka fel är ingen vana. `antal`
+        och `fonster` säger hur många gånger inom hur lång tid, och
+        `nollas_av` säger vilken KORREKT signal som avtrubbar serien.
+     3. ORSAKSSPRÅKET. Varje replik bär `orsak`: "ryttare" är något
+        spelaren kan ändra, "dagsform" är hästens dag — något att anpassa
+        sig till. De två får aldrig blandas ihop, och det är därför
+        orsaken står i DATAN och inte i formuleringen.
+
+   TALEN ÄR INTE NYA. Tröskeln för ett hårt tygeltag är `K.TYGEL_HART`
+   och återarmeringen `K.TYGEL_BAND_MAX` — kontaktbandets egen övre kant,
+   ur src/model.js. Sitsens tal är `K.SITS_PARAD` och `K.SITS_NEUTRAL`.
+   Att skriva av dem hit hade gett en andra sanning om vad "hårt" är.
+
+   TEORITEXTEN är utdrag ur Markus Holsts Ridhandbok, sammanfattad i
+   src/ovningar.js (KUNSKAP `inverkan`, del 7, och `sits`, del 6). Den
+   HITTAS INTE PÅ här: fälten nedan bär språknycklar och en källrad, och
+   texten står i src/spel/sprak.js. */
+const UGNETA_TEMA={
+  /* Vilket tema lektionen börjar i, och vilka som finns. Ride First-starten
+     tar det första. */
+  ORDNING:["handen","sitsen"],
+  /* Minst så här många sekunder mellan två Ugneta-repliker. Beställningens
+     tal (#234): "Minst 7 sekunders cooldown". Den är monoton och mäts i
+     lektionens egen klocka, aldrig i väggklockan. */
+  COOLDOWN:7.0,
+  /* Hur länge en dagsform-observation måste hålla i sig innan hon nämner
+     den. Ett tal för PRESENTATION — hur tålmodig hon är — inte en
+     ridregel, och därför står det här och inte i ridmodellen. */
+  DAGSFORM_HALL:3.0,
+  /* Över det här ligger hästens spänning så högt att det är hennes dag som
+     talar, inte ryttarens hand. Samma sort som talet ovan: en tröskel för
+     när hon SÄGER något, inte för vad som händer i ridningen. */
+  DAGSFORM_TROSK:0.62,
+  handen:{
+    id:"handen",
+    /* Exakt en replik vid en giltig lektionsstart. */
+    start:"ugneta.tema.handen.start",
+    teori:{regel:"ugneta.teori.handen.regel", text:"ugneta.teori.handen.text",
+      kalla:"Ridhandboken del 7"},
+    /* Telemetrifälten temat alls läser. Ett fält utanför listan är
+       osynligt för temat — det är temafiltrets golv. */
+    falt:["tygel","parad","paradKvalitet","mjukhet","spanning"],
+    /* SIGNALERNA. `over`/`under` är utlösningen, `ater` återarmeringen:
+       en flank räknas en gång och först när värdet varit tillbaka på
+       andra sidan. Utan återarmering hade en enda hård hand räknats en
+       gång per bildruta. */
+    signal:{
+      hard_tygel:{falt:"tygel", over:K.TYGEL_HART, ater:K.TYGEL_BAND_MAX,
+        orsak:"ryttare"},
+      /* DEN KORREKTA SIGNALEN ÄR ETT HÅLL, INTE EN SLÄPP.
+
+         Första utkastet lät varje eftergift under kontaktbandets överkant
+         räknas som rätt. Det gick inte: tre hårda tygeltag i följd ÄR
+         hårt-släpp-hårt-släpp-hårt, så serien nollställdes mellan varje
+         tag och kunde aldrig nå tre. Mönstret hade varit omätbart.
+
+         Rätt är i stället att handen LIGGER KVAR i kontaktbandet — mellan
+         `TYGEL_BAND_MIN` och `TYGEL_BAND_MAX` — i `hall` sekunder. Det är
+         också vad Ridhandboken del 7 beskriver som en jämn förbindelse,
+         till skillnad från att bara sluta ta i. */
+      mjuk_tygel:{falt:"tygel", band:[K.TYGEL_BAND_MIN, K.TYGEL_BAND_MAX],
+        hall:1.2, orsak:"ryttare", bra:true},
+    },
+    monster:{
+      hard_tygel:{antal:3, fonster:6.0, aterstall:4.0,
+        nollas_av:["mjuk_tygel"], orsak:"ryttare",
+        nyckel:"ugneta.tema.handen.hard_hand"},
+    },
+    /* HÄSTENS DAG, inte ryttarens fel. Egen språkfamilj (`ugneta.dagsform.`)
+       och egen orsak, så att en review kan se skillnaden i datan. */
+    dagsform:{falt:"spanning", nyckel:"ugneta.dagsform.spand", orsak:"dagsform"},
+    /* Passets 1–2 resultatrader. `invertera` finns för att låg spänning är
+       ett BRA värde: mätaren visar hur mycket hästen slappnat av. */
+    matare:[
+      {nyckel:"ugneta.summering.hasten_slappnar", falt:"spanning",
+        invertera:true, orsak:"dagsform"},
+      {nyckel:"ugneta.summering.din_mjukhet", falt:"mjukhet",
+        invertera:false, orsak:"ryttare"},
+    ],
+  },
+  sitsen:{
+    id:"sitsen",
+    start:"ugneta.tema.sitsen.start",
+    teori:{regel:"ugneta.teori.sitsen.regel", text:"ugneta.teori.sitsen.text",
+      kalla:"Ridhandboken del 6"},
+    falt:["sits","balans","mjukhet","spanning"],
+    signal:{
+      tung_sits:{falt:"sits", over:K.SITS_PARAD, ater:K.SITS_NEUTRAL,
+        orsak:"ryttare"},
+      /* Samma form som `mjuk_tygel` ovan, och av samma skäl: en sits som
+         lyfts en gång är inte en lugn sits, en sits som ligger stilla i
+         neutralläget är det. */
+      lugn_sits:{falt:"sits", band:[0, K.SITS_NEUTRAL], hall:1.2,
+        orsak:"ryttare", bra:true},
+    },
+    monster:{
+      tung_sits:{antal:3, fonster:6.0, aterstall:4.0,
+        nollas_av:["lugn_sits"], orsak:"ryttare",
+        nyckel:"ugneta.tema.sitsen.tung_sits"},
+    },
+    dagsform:{falt:"spanning", nyckel:"ugneta.dagsform.spand", orsak:"dagsform"},
+    matare:[
+      {nyckel:"ugneta.summering.hasten_slappnar", falt:"spanning",
+        invertera:true, orsak:"dagsform"},
+      {nyckel:"ugneta.summering.din_balans", falt:"balans",
+        invertera:false, orsak:"ryttare"},
+    ],
+  },
+};
 /* ETT MÄTVÄRDE, ELLER INGET.
 
    G02-D-specen: "If a metric is unavailable, say so or use a valid
