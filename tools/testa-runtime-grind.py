@@ -66,7 +66,8 @@ def kor_grinden(extra_env=None, argv=("--torrkor",), cwd=None):
     #   ger tomt och SHA-sparren fyrar FORE den utgang provet ville mata.
     #   Provet lamnar darfor alltid en giltig head; att sparren SJALV
     #   fungerar matas av `utan_head_sha` nedan. ]]
-    env.setdefault("GITHUB_SHA", "0" * 40)
+    env.pop("GITHUB_SHA", None)
+    env.setdefault("UBRF_HEAD_SHA", "0" * 40)
     env.update(extra_env or {})
     #[[ DRIVAREN LASER SITT EGET ROT ur `__file__`. Kor man repots kopia
     #   med `cwd` satt till ett muterat trad mater den alltsa REPOT, och
@@ -91,8 +92,21 @@ def rod(kod, ut, vad):
 
 def utan_head_sha():
     """Evidensen ska bindas till en head. Ingen head, ingen matning."""
-    kod, ut = kor_grinden({"GITHUB_SHA": "inte-en-sha"})
+    kod, ut = kor_grinden({"UBRF_HEAD_SHA": "inte-en-sha"})
     rod(kod, ut, "HEAD-SHA")
+
+
+def head_sha_ur_egen_variabel():
+    """GITHUB_* gar inte att satta i en workflows `env:` — runnern
+    ignorerar overskrivningen tyst. Drivaren maste darfor lasa sitt EGET
+    namn FORST, annars binds evidensen till PR:ens merge-commit i
+    stallet for dess head. Matt i korning 35424956776: env-listan sa
+    27cad7c3, utdatan sa 3c7369ca."""
+    egen = "a" * 40
+    kod, ut = kor_grinden({"UBRF_HEAD_SHA": egen, "GITHUB_SHA": "b" * 40})
+    assert kod == 0, ut[-600:]
+    assert ("head: " + egen) in ut, (
+        "drivaren band inte evidensen till UBRF_HEAD_SHA:" + chr(10) + ut[-600:])
 
 
 def saknad_nyckel():
@@ -329,7 +343,7 @@ def smoken_raknar_noll_som_fel():
 
 if __name__ == "__main__":
     skriv("RUNTIME-GRINDENS SJALVPROV (#252 DEL C)")
-    for fn in (utan_head_sha, saknad_nyckel, saknat_universe, saknat_placeid,
+    for fn in (utan_head_sha, head_sha_ur_egen_variabel, saknad_nyckel, saknat_universe, saknat_placeid,
                placeid_som_inte_ar_tal, startplacen_ar_forbjuden,
                en_annan_place_ar_tillaten, inaktuell_identitet,
                identiteten_ar_aktuell_i_repot,

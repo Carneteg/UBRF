@@ -14,7 +14,10 @@ Miljon (allt kravs, inget far saknas tyst):
     ROBLOX_API_KEY      secret. Skrivs ALDRIG ut.
     UBRF_UNIVERSE_ID    repository variable, 10766192504.
     UBRF_CI_PLACE_ID    CI-placens id. Se tools/skapa-ci-place.py.
-    GITHUB_SHA          valfri; annars `git rev-parse HEAD`.
+    UBRF_HEAD_SHA       den commit evidensen binds till. GITHUB_* ar
+                        reserverade och gar inte att satta i `env:`,
+                        darfor ett eget namn. Faller tillbaka pa
+                        GITHUB_SHA och sedan `git rev-parse HEAD`.
 
 ══ FAIL CLOSED ════════════════════════════════════════════════════════
 
@@ -287,15 +290,34 @@ def main():
     args = ap.parse_args()
     delar = args.delar or ["alla"]
 
-    sha = os.environ.get("GITHUB_SHA", "").strip()
+    #[[ ══ VILKEN HEAD BINDS EVIDENSEN TILL? ═══════════════════════════
+    #
+    #   `UBRF_HEAD_SHA` och inte `GITHUB_SHA`. Forsta utkastet satte
+    #   `GITHUB_SHA: ${{ github.event.pull_request.head.sha }}` i
+    #   workflowen — men GITHUB_*-variabler ar RESERVERADE, och runnern
+    #   ignorerar en `env:`-overskrivning av dem. Loggen visade det satta
+    #   vardet medan processen fick runnerns eget. Foljden mattes i
+    #   korning 35424956776: `GITHUB_SHA: 27cad7c3…` i env-listan,
+    #   `head: 3c7369ca…` i utdatan — alltsa PR:ens MERGE-commit, inte
+    #   dess head. Evidens som pastar fel SHA ar precis det problem
+    #   Studio/Rojo-integritetsparet redan fangat en gang.
+    #
+    #   Bada redovisas nu: `head` ar den commit evidensen BINDS till, och
+    #   `arbetstrad` ar vad checkouten faktiskt gav. Skiljer de sig sags
+    #   det rakt ut i stallet for att tyst valjas bort. ]]
+    sha = (os.environ.get("UBRF_HEAD_SHA", "").strip()
+           or os.environ.get("GITHUB_SHA", "").strip())
+    arbetstrad = kor("git", "rev-parse", "HEAD").stdout.strip()
     if not sha:
-        r = kor("git", "rev-parse", "HEAD")
-        sha = r.stdout.strip()
+        sha = arbetstrad
     if not re.fullmatch(r"[0-9a-f]{40}", sha or ""):
         raise Rott("ingen giltig HEAD-SHA att binda evidensen till: %r" % sha)
 
     print("RUNTIME-GRINDEN — #252 DEL C")
     print("  head: %s" % sha)
+    if arbetstrad and arbetstrad != sha:
+        print("  arbetstrad: %s  (checkoutens commit; pa en PR ar det "
+              "merge-commiten)" % arbetstrad)
 
     kontrollera_identitet()
     kontrollera_remotekoppling()

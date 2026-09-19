@@ -57,6 +57,8 @@ jobs:
       # ett fel i paketet syns för sig och inte som ett API-fel. Det här
       # steget är inte grinden — det säger torrkörningen själv ut.
       - name: Placen går att bygga ur head, och identiteten är aktuell
+        env:
+          UBRF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 tools/runtime-grind.py --torrkor
 
       # Läsande inventering, ingen nyckel, inga skrivningar. Ligger före
@@ -75,5 +77,7 @@ jobs:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # GITHUB_* ar reserverade och gar INTE att overskriva har;
+          # runnern ignorerar dem tyst. Darfor ett eget namn.
+          UBRF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 tools/runtime-grind.py
