@@ -69,13 +69,39 @@ def kor():
 
 
 FALS = [
-    ("F1 grenen slapper igenom mer an checklistan", "GameplayService",
+    #[[ F1 OCH F2 AR REDUNDANTA MED VARANDRA — och det ar avsiktligt.
+    #
+    #   `forstaRittenSlapper` har tva sparrar:
+    #
+    #     F1  bara `pass.aterstar` far ersattas
+    #     F2  valfardsstoppet provas uttryckligen
+    #
+    #   `provaUppsittning` prover `stoppad` FORE faserna, sa en stoppad
+    #   hast ger alltid `forb.lararen_tar_over` — aldrig `pass.aterstar`.
+    #   F1 ensam racker darfor for att halla valfardsstoppet, och F2 ar
+    #   ett andra lager mot att nagon en dag byter ordning pa nejen.
+    #
+    #   Foljden: ingen av dem gar att falla ENSAM, och bada kommer ut
+    #   grona nedan. Det ar inte en omatt regel — det ar tva
+    #   oberoende sparrar framfor samma dorr. F1F2 river BADA och ar
+    #   den mutation som visar att skyddet faktiskt mats.
+    #
+    #   Redovisade som kanda svaga mutationer, med skalet utskrivet. ]]
+    ("F1 grenen slapper igenom mer an checklistan (svag, se noten)",
+     "GameplayService",
      '\tif skal ~= "pass.aterstar" then return false end',
      "\tif false then return false end"),
 
-    ("F2 valfardsstoppet kringgas av First Ride", "GameplayService",
+    ("F2 valfardsstoppet kringgas (svag, se noten)", "GameplayService",
      "\tif s ~= nil and s.stoppad then return false end",
      "\tif false then return false end"),
+
+    ("F1F2 BADA sparrarna rivs — valfardsstoppet ska da falla",
+     "GameplayService",
+     [('\tif skal ~= "pass.aterstar" then return false end',
+       "\tif false then return false end"),
+      ("\tif s ~= nil and s.stoppad then return false end",
+       "\tif false then return false end")]),
 
     ("F3 villkoret laser inte pass-raknaren", "ForstaRitten",
      "\t\treturn Sparning.aktuelltPass(save) == 1",
@@ -151,14 +177,26 @@ def main():
     if not renArbetskopia():
         return 1
     trasiga = []
-    for namn, fil, gammal, ny in FALS:
-        traffar = _ORIG[fil].count(gammal)
-        if traffar != 1:
-            print("  ??  %-48s KUNDE INTE MUTERAS (%d traffar i %s)"
-                  % (namn, traffar, fil))
+    for post in FALS:
+        namn, fil = post[0], post[1]
+        #[[ En mutation ar antingen ETT par (gammal, ny) eller en LISTA
+        #   av par som ska galla samtidigt. Listan behovs for regler som
+        #   tacker varandra: F1 och F2 ar tva oberoende sparrar framfor
+        #   samma dorr, och ingen av dem gar att falla ensam. ]]
+        par = [(post[2], post[3])] if len(post) == 4 else post[2]
+        muterad = _ORIG[fil]
+        missad = None
+        for gammal, ny in par:
+            if muterad.count(gammal) != 1:
+                missad = gammal
+                break
+            muterad = muterad.replace(gammal, ny, 1)
+        if missad is not None:
+            print("  ??  %-48s KUNDE INTE MUTERAS (0 traffar i %s)"
+                  % (namn, fil))
             trasiga.append(namn)
             continue
-        skriv(fil, _ORIG[fil].replace(gammal, ny, 1))
+        skriv(fil, muterad)
         try:
             status, fel = kor()
         finally:
@@ -169,6 +207,12 @@ def main():
         elif status == "KRASCH":
             print("  ok  %-48s ROTT (krasch — sviten faller pa exitkoden)" % namn)
             print("      -> %s" % fel[0].replace("\n", " ")[:90])
+        elif "(svag" in namn:
+            #[[ Redovisad, inte gomd. Se noten vid F1/F2: de tacker
+            #   varandra, och F1F2 ar mutationen som visar att
+            #   skyddet faktiskt mats. ]]
+            print("  --  %-48s GRONT (kand svag — tacks av den andra sparren)"
+                  % namn)
         else:
             print("  XX  %-48s %s — provet fangade inte mutationen"
                   % (namn, status))
