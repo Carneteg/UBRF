@@ -141,8 +141,33 @@ end
      släpper sessionen, och nästa uppsittning skapar en NY. Att nollställa
      fält för hand hade lämnat frågan "glömde vi något?" öppen vid varje
      nytt fält. ]]
+--[[ ── nil BETYDER STANDARD, EN OKAND STRANG BETYDER FEL ──────────────
+
+     De tva ar inte samma sak, och forsta utkastet behandlade dem sa:
+     `finns(temaId)` var falskt for bada, och bada blev `forsta()`. Senior
+     review 2026-09-19 fallde det med ratta — en felstavad eller framtida
+     temastrang blev da TYST 'handen', alltsa en annan undervisning an den
+     som bestalldes, utan ett spar nagonstans.
+
+       nil            ingen har valt tema -> kanonens forsta, som forut,
+       kand strang    det temat,
+       allt annat     INGEN session.
+
+     Att returnera nil och inte en session pa standardtemat ar avsiktligt.
+     En okand temastrang ar ett fel hos den som ropar, och det ska synas
+     som UTEBLIVEN undervisning i stallet for att gomma sig som FEL
+     undervisning. `UgnetaController.startaPass` varnar och startar inget
+     pass — fail closed, samma hallning som ett saknat `orsak` i
+     `LektionController.avbryt`. ]]
 function UgnetaTema.ny(temaId: string?): Session?
-	local id = if UgnetaTema.finns(temaId) then temaId :: string else UgnetaTema.forsta()
+	local id: string
+	if temaId == nil then
+		id = UgnetaTema.forsta()
+	elseif UgnetaTema.finns(temaId) then
+		id = temaId :: string
+	else
+		return nil
+	end
 	if not UgnetaTema.finns(id) then return nil end
 	return {
 		tema = id,

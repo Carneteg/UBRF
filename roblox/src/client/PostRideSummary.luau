@@ -64,7 +64,10 @@ local HORN_PX = 22                                   -- panelens hörnradie
 local KNAPP_HORN = 18
 local RAND_PX = 4                                    -- NoteBox vänsterrand
 local SKUGGA_PX = 6                                  -- droppskuggans offset
-local KNAPP_MIN_HOJD = 48                            -- tumgreppets golv + luft
+--[[ TUMGREPPETS GOLV. `docs/KONTROLLMATRIS.md` regel 5, samma tal som
+     KontrollHjalp raknar sina knappar mot. Det ar inte en riktlinje har:
+     panelens ENDA vag ut ar den har knappen. ]]
+local KNAPP_GOLV = 44
 
 local ANDEL_B = 0.72
 local MIN_B = 280
@@ -102,6 +105,7 @@ PostRideSummary.MAX_KORT = MAX_KORT
 PostRideSummary.SKUGGA_PX = SKUGGA_PX
 PostRideSummary.RAM_PX = RAM_PX
 PostRideSummary.RAND_PX = RAND_PX
+PostRideSummary.KNAPP_GOLV = KNAPP_GOLV
 
 export type Layout = {
 	bredd: number, hojd: number, skala: number,
@@ -129,18 +133,55 @@ function PostRideSummary.layout(W: number, H: number, antal: number): Layout
 	local full = 2 * PAD + innehall + gap
 
 	local tak = HOJDLUFT * h
-	local skala = if tak > 0 and full > tak
-		then math.max(SKALA_GOLV, tak / full)
-		else 1
+	--[[ ── KNAPPEN KRYMPER INTE UNDER TUMGREPPETS GOLV ────────────────
+
+	     Forsta utkastet skalade knappen som allt annat och lat golvet
+	     vara `48 * SKALA_GOLV` = 28,8 px. Senior review 2026-09-19 fallde
+	     det, och matningen var enkel: pa en lag telefon blev den FAKTISKA
+	     traffytan 36-41 px, alltsa under KONTROLLMATRIS regel 5:s 44 — och
+	     provet accepterade det, for det krävde bara 28.
+
+	     Rattelsen ar att knappen ar OSKALBAR under 44 px och att skalan
+	     raknas med den som en FAST post. Tva fall, och hojden valjer:
+
+	       A  skalan racker anda till 44 px knapp (skala >= 44/48). Da
+	          skalar allt likformigt, precis som forut.
+	       B  skalan ar lagre. Da star knappen still pa 44 och det ar
+	          RESTEN som krymper for att panelen ska rymmas.
+
+	     De tva moter varandra exakt vid skala 44/48: dar ger bade
+	     `tak/full` och `(tak - 44)/rest` samma tal, sa funktionen har
+	     ingen trappa att fastna i.
+
+	     Utan fall B hade en lag viewport tagit hojd ur knappen i stallet
+	     for ur texten — alltsa lost ett layoutproblem pa tumgreppets
+	     bekostnad, vilket ar precis fel prioritering nar knappen ar enda
+	     vagen ut. ]]
+	local rest = full - KNAPP_HOJD
+	local skala = 1
+	if tak > 0 and full > tak then
+		local likformig = tak / full
+		if likformig >= KNAPP_GOLV / KNAPP_HOJD then
+			skala = likformig
+		elseif rest > 0 then
+			skala = (tak - KNAPP_GOLV) / rest
+		else
+			skala = 0
+		end
+		skala = math.clamp(skala, SKALA_GOLV, 1)
+	end
+	--[[ Golvet ar absolut. Klampningen ovan kan inte sanka det, och
+	     `laggUt` golvar med `math.floor` — 44,0 blir 44, aldrig 43. ]]
+	local knapp = math.max(KNAPP_GOLV, KNAPP_HOJD * skala)
 
 	return {
 		bredd = math.floor(bredd),
-		hojd = math.floor(full * skala),
+		hojd = math.floor(rest * skala + knapp),
 		skala = skala,
 		matare = matare * skala,
 		kommentar = KOMMENTAR_HOJD * skala,
 		teori = TEORI_HOJD * skala,
-		knapp = math.max(KNAPP_MIN_HOJD * SKALA_GOLV, KNAPP_HOJD * skala),
+		knapp = knapp,
 	}
 end
 

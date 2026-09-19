@@ -467,7 +467,19 @@ end
 	att något ritas — samma disciplin som `ReplayController.radLayout`.
 	Golvet är att panelen ryms innanför 94 % av höjden OCH att knappen är
 	med i den höjden: en stängningsknapp utanför bild är inte en
-	designdetalj, det är hela vägen ut ur rutan. ]]
+	designdetalj, det är hela vägen ut ur rutan.
+
+	── 44 PX, INTE 28 (senior review 2026-09-19, blockerare 1) ──────────
+
+	Provet krävde `L.knapp >= 28`, och det var ett golv som inte mätte
+	något: produktionen kunde ge 36–41 px på en låg telefon och ändå bli
+	grön. `docs/KONTROLLMATRIS.md` regel 5 säger 44, och det är det tal
+	KontrollHjalp redan räknar sina knappar mot.
+
+	Mätningen görs på TVÅ nivåer, därför att den rena räkningen kan ha
+	rätt medan bygget har fel: `laggUt` golvar med `math.floor`, och 43,9
+	px räknat blir 43 px ritat. Först `layout`, sedan den BYGGDA
+	knappens storlek genom produktionens egen omläggning. ]]
 print("\n── Panelen ryms på telefon, iPad och PC ──")
 do
 	--[[ GUI-ytan är viewporten minus topbarens 36 px, precis som
@@ -480,17 +492,42 @@ do
 		{ namn = "iPad Pro landskap", W = 1376, H = 996 },
 		{ namn = "PC 1080p", W = 1920, H = 1044 },
 	}
+	prova("golvet i koden ÄR KONTROLLMATRIS regel 5, inte en egen siffra",
+		PostRideSummary.KNAPP_GOLV == 44,
+		("(%s px)"):format(tostring(PostRideSummary.KNAPP_GOLV)))
 	for _, y in YTOR do
 		for antal = 0, 2 do
 			local L = PostRideSummary.layout(y.W, y.H, antal)
 			local ryms = L.hojd <= math.floor(0.94 * y.H) + 1
 				and L.bredd <= math.floor(0.92 * y.W) + 1
-				and L.knapp >= 28 and L.skala > 0.60
+				and L.knapp >= 44 and L.skala > 0.60
 			prova(("%s, %d mätare"):format(y.namn, antal), ryms,
 				("(%dx%d px · skala %.2f · knapp %.0f px)"):format(L.bredd,
 					L.hojd, L.skala, L.knapp))
 		end
 	end
+
+	--[[ ── OCH DEN FAKTISKA TRÄFFYTAN ───────────────────────────────
+	     Genom produktionens egen väg: ytan ändrar storlek, `laggUt` körs
+	     om (#206), och knappens BYGGDA höjd läses ur instansen. Två
+	     mätare är värsta fallet — det är då panelen är högst och skalan
+	     som lägst. `+36` är topbaren, som `laggUt` drar av själv. ]]
+	local yta = sokI(gui, "UBRFUgneta")
+	UgnetaController.ShowPostRideSummary(data())
+	for _, y in YTOR do
+		yta.AbsoluteSize = Vector3.new(y.W, y.H + 36, 0)
+		yta:GetPropertyChangedSignal("AbsoluteSize"):Fire()
+		local box = hitta("KnappBox")
+		local kn = PostRideSummary.knapp()
+		--[[ Knappen fyller behållaren (1,0 · 1,0), så behållarens höjd ÄR
+		     träffytan. Båda mäts, annars vore den ena ett antagande. ]]
+		prova(("%s: byggd träffyta är minst 44 px"):format(y.namn),
+			box ~= nil and box.Size.Y.Offset >= 44
+				and kn ~= nil and kn.Size.Y.Scale == 1
+				and kn.Size.Y.Offset == 0,
+			("(%s px)"):format(tostring(box and box.Size.Y.Offset)))
+	end
+	PostRideSummary.stang()
 end
 
 --[[ ══ 12. RESERVLOGGEN OCH RESERVZONERNA ════════════════════════════
@@ -633,6 +670,150 @@ do
 	Net.get("MountChanged").OnClientEvent:Fire(hast, nil)
 	prova("ett pass utan en enda ridd bildruta ger ingen ruta",
 		PostRideSummary.oppen() == false)
+end
+
+--[[ ══ 8b. EN LOKAL AVSITTNINGSBEGÄRAN ÄR INTE ETT AVSLUTAT PASS ═════
+
+	Senior review 2026-09-19, blockerare 3: `avsittning` räknades som ett
+	giltigt slut rakt av, alltså kunde sammanfattningen öppnas på
+	KLIENTENS EGEN begäran — innan `DismountRequest` nått servern, och
+	oavsett vad servern sedan svarade. Nekade den, eller föll anropet, fick
+	spelaren en sammanfattning av en ritt som inte tagit slut.
+
+	Mätningen går genom spelarens egen väg: handlingen `Input.AVSITT` på
+	`ContextActionService`, alltså `begarAvsittning`. Serverns svar styrs
+	genom `DismountRequest.OnServerInvoke` — samma form `HorseService
+	.dismount` svarar i: `(true)` eller `(false, skäl)`.
+
+	SÄKERHETSSTÄDNINGEN MÄTS OCKSÅ. Rättelsen får inte ha gjort den
+	långsammare: lektionen ska vara nere direkt, oberoende av servern.
+
+	GRÄNSEN: bänkens `task.spawn` kör synkront, så fönstret mellan begäran
+	och svar existerar inte i tid här. Det mäts i stället i sitt eget
+	ögonblick — inne i serverhandlaren, när städningen är gjord och svaret
+	ännu inte lämnat. Att fönstret är LÅNGT i verkligheten är just skälet
+	till att det inte får öppna någon ruta. ]]
+print("\n── 8b. Rutan väntar på serverns ord ──")
+do
+	local dt = 1 / 30
+	local cas = game:GetService("ContextActionService")
+	local hast3 = __makeHastModell("Nanna")
+	hast3.Parent = workspace
+
+	local function rid(sekunder)
+		for _ = 1, math.floor(sekunder / dt) do RunService.RenderStepped:Fire(dt) end
+	end
+	local function kvittera()
+		local kn = hitta("Knapp")
+		if kn and kn.Visible then kn.Activated:Fire() end
+	end
+	--[[ En ridd stund med underlag, redo att sitta av från. ]]
+	local function nyttPass()
+		PostRideSummary.stang()
+		Net.get("MountChanged").OnClientEvent:Fire(hast3, player)
+		rid(0.5); kvittera(); rid(2)
+	end
+	--[[ SPELARENS EGEN VÄG. Handlingen slås upp på namn i stället för på
+	     tangent: flera handlingar kan bära `E`, och provet ska mäta
+	     avsittningen och inte vad `pairs` råkade hitta först. ]]
+	local function tryckSittAv(): boolean
+		local fn = cas._bound[Input.AVSITT]
+		if type(fn) ~= "function" then return false end
+		fn(Input.AVSITT, Enum.UserInputState.Begin, { KeyCode = Enum.KeyCode.E })
+		return true
+	end
+
+	--[[ ── SERVERNS SVAR, OCH BÄNKENS GRÄNS ─────────────────────
+
+	     `Networking.DEFINITIONS` säger att `DismountRequest` är en
+	     `RemoteFunction`. Klientsidan når den genom `WaitForChild`, och
+	     bänkens `WaitForChild` skapar en `RemoteEvent` — vars
+	     `InvokeServer` alltid svarar `true`. Ett NEJ går alltså inte att
+	     mata genom `OnServerInvoke` här. Det är en bänkbrist och den
+	     redovisas som en sådan, inte som en mätning.
+
+	     Svaret stubbas därför på INSTANSEN, i exakt den form
+	     `HorseService.dismount` faktiskt svarar i: `(true)` eller
+	     `(false, skäl)`. Det som provas nedan är vad KLIENTEN gör med
+	     svaret. Vilken KLASS fjärrobjektet har är en annan fråga, och den
+	     ägs av `Networking.DEFINITIONS` och integritetsgrinden.
+
+	     Bokföringen i `_skickat` behålls, så att prov som räknar trafik
+	     fortfarande ser anropet. ]]
+	local remote = Net.get("DismountRequest")
+	local origInvoke = remote.InvokeServer
+	local function svaraMed(svar)
+		remote.InvokeServer = function(self, ...)
+			table.insert(self._skickat, { ... })
+			return svar()
+		end
+	end
+
+	--[[ ── 1. SERVERN NEKAR ──────────────────────────────────────────── ]]
+	nyttPass()
+	local sess = UgnetaController.passSession()
+	prova("passet har underlag innan begäran",
+		sess ~= nil and sess.ramar > 0,
+		("(%d bildrutor)"):format(if sess then sess.ramar else 0))
+	svaraMed(function() return false, "pass.rider_inte" end)
+	prova("handlingen finns och gick in", tryckSittAv() == true)
+	prova("FALSIFIERING: ett NEKAT DismountRequest öppnar INGEN ruta",
+		PostRideSummary.oppen() == false)
+	prova("väntan är konsumerad, inte lämnad hängande",
+		UgnetaController.vantarPaServern() == false)
+	prova("men säkerhetsstädningen kördes ändå — lektionen är nere",
+		LektionController.pagar() == false)
+
+	--[[ ── 2. FJÄRRANROPET FALLER ────────────────────────────────────── ]]
+	nyttPass()
+	svaraMed(function() error("nätverket bröts") end)
+	tryckSittAv()
+	prova("FALSIFIERING: ett FELANDE DismountRequest öppnar INGEN ruta",
+		PostRideSummary.oppen() == false)
+	prova("och inget hänger kvar och väntar",
+		UgnetaController.vantarPaServern() == false)
+
+	--[[ ── 3. SERVERN SÄGER JA ────────────────────────────────────────── ]]
+	nyttPass()
+	local oppenUnderAnropet = nil
+	svaraMed(function()
+		--[[ MITT I ANROPET: den lokala städningen är gjord, servern har
+		     ännu inte svarat. Står rutan uppe HÄR är blockeraren kvar. ]]
+		oppenUnderAnropet = PostRideSummary.oppen()
+		return true
+	end)
+	tryckSittAv()
+	prova("rutan stod INTE uppe medan servern ännu inte svarat",
+		oppenUnderAnropet == false,
+		("(%s)"):format(tostring(oppenUnderAnropet)))
+	prova("men serverns ja öppnar den", PostRideSummary.oppen() == true)
+	prova("och exakt EN panel finns", rakna("PostRideSummary") == 1,
+		("(%d)"):format(rakna("PostRideSummary")))
+
+	--[[ ── 4. BÅDA BEKRÄFTELSEVÄGARNA, SAMMA AVSITTNING ──────────────
+	     Servern fyrar `MountChanged` INNE i sin `dismount` (`setRider`),
+	     alltså före fjärranropet returnerar. Båda når klienten, och bara
+	     en av dem får räknas. ]]
+	nyttPass()
+	svaraMed(function()
+		Net.get("MountChanged").OnClientEvent:Fire(hast3, nil)
+		return true
+	end)
+	tryckSittAv()
+	prova("MountChanged + svar ger EN ruta, inte två",
+		PostRideSummary.oppen() == true and rakna("PostRideSummary") == 1,
+		("(%d paneler)"):format(rakna("PostRideSummary")))
+
+	--[[ ── 5. ETT SENT PAKET OM EN REDAN AVSLUTAD RITT ───────────────
+	     Väntan är konsumerad. Ett upprepat avsittningspaket får inte
+	     öppna en andra ruta — särskilt inte efter att spelaren stängt. ]]
+	PostRideSummary.stang()
+	Net.get("MountChanged").OnClientEvent:Fire(hast3, nil)
+	Net.get("MountChanged").OnClientEvent:Fire(hast3, nil)
+	prova("ett sent avsittningspaket öppnar ingen ny ruta",
+		PostRideSummary.oppen() == false)
+
+	remote.InvokeServer = origInvoke
 end
 
 print("")

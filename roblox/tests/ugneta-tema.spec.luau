@@ -170,6 +170,48 @@ do
 		UgnetaTema.varde(UgnetaTema.def("sitsen"), ram({ tygel = 0.9 }), "tygel") == nil)
 end
 
+--[[ ══ 2b. ETT OKÄNT TEMA FALLER STÄNGT ════════════════════════════
+
+	Senior review 2026-09-19, blockerare 2: `ny(temaId)` behandlade nil och
+	en okänd sträng lika — båda blev `forsta()`. En felstavad temasträng
+	blev alltså TYST "handen", och spelaren fick en annan undervisning än
+	den som beställdes, utan ett spår någonstans.
+
+	nil betyder fortfarande standard; det är en frånvaro av val, inte ett
+	fel. Allt annat okänt ger INGEN session. ]]
+print("\n── 2b. nil är standard, en okänd sträng är ett fel ──")
+do
+	local standard = UgnetaTema.ny(nil)
+	prova("nil ger kanonens första tema",
+		standard ~= nil and standard.tema == UgnetaTema.forsta(),
+		("(%s)"):format(if standard then standard.tema else "ingen"))
+	local kant = UgnetaTema.ny("sitsen")
+	prova("en känd sträng ger precis det temat",
+		kant ~= nil and kant.tema == "sitsen",
+		("(%s)"):format(if kant then kant.tema else "ingen"))
+
+	--[[ FYRA FORMER AV "inte ett tema", och ingen av dem får bli handen. ]]
+	prova("en felstavad sträng ger INGEN session — inte tyst handen",
+		UgnetaTema.ny("hnaden") == nil,
+		("(%s)"):format(tostring(UgnetaTema.ny("hnaden"))))
+	prova("och inte heller en tom sträng", UgnetaTema.ny("") == nil)
+	prova("och inte heller ett framtida tema som inte finns än",
+		UgnetaTema.ny("skanklarna") == nil)
+	prova("och inte heller ett icke-strängvärde", UgnetaTema.ny(42) == nil)
+
+	--[[ GENOM PRODUKTIONENS VÄG. Regeln är värdelös om ytan ändå startar
+	     ett standardpass ovanpå den. ]]
+	local bubblorFore = #__BUBBLOR
+	local sagt = UgnetaController.startaPass("hnaden", "ritt-okand")
+	prova("startaPass med okänt tema säger ingenting",
+		sagt == "" and #__BUBBLOR == bubblorFore,
+		("(\"%s\" · %d nya bubblor)"):format(sagt, #__BUBBLOR - bubblorFore))
+	prova("och startar inget pass alls",
+		UgnetaController.passSession() == nil)
+	prova("en bildruta på ett pass som inte finns är också tyst",
+		UgnetaController.ritt(DT, ram({ tygel = 0.95 })) == "")
+end
+
 --[[ ══ 3 och 4. MÖNSTRET FÖRE KOMMENTAREN ═══════════════════════════ ]]
 print("\n── 3/4. Tre i följd, inte ett enstaka fel ──")
 do
@@ -477,6 +519,11 @@ end
 print("\n── 1. Startrepliken, exakt en gång per giltig lektionsstart ──")
 local hast = __makeHastModell("Bamse")
 hast.Parent = workspace
+--[[ SERVERNS MÄRKE PÅ RITTEN. `HorseService.setRider` sätter `RidSession`
+     på modellen FÖRE den fyrar `MountChanged`, och `init.client` läser
+     det där. Bänken gör samma sak, så att vakten mot en upprepad
+     startreplik mäts på den identitet den faktiskt bär. ]]
+hast:SetAttribute("RidSession", "ritt-1")
 local STARTTEXT = Sprak.t("ugneta.tema.handen.start")
 
 --[[ Loggens innehåll direkt efter startrepliken. Se noten vid mätningen. ]]
@@ -521,6 +568,40 @@ do
 	prova("och inte heller efter en respawn", raknaStart() == 1,
 		("(%d gånger)"):format(raknaStart()))
 	prova("men lektionen går igen efter respawnen", LektionController.pagar() == true)
+
+	--[[ ── VAKTENS IDENTITET ÄR SERVERNS, INTE KLIENTENS ─────────────
+
+	     Senior review 2026-09-19, blockerare 4. Vakten bar TEMASTRÄNGEN,
+	     alltså ett klientlokalt minne av "vi har hälsat om handen någon
+	     gång" — och "handen" är inte en ritt. Den bär nu `RidSession`,
+	     serverns eget märke, läst ur modellens attribut av `init.client`.
+
+	     Mätningen ISOLERAR märket: respawnen ovan är ett ogiltigt slut, så
+	     `startKvitterad` nollställs inte av den. Det enda som skiljer de
+	     två uppsittningarna nedan är alltså vilket märke servern satt.
+
+	     GRÄNSEN, UTTALAD: det här är INTE ett reconnect-prov. En verklig
+	     reconnect skapar en ny klient (tomt modulminne) OCH en ny
+	     serverritt (nytt märke) — och då SKA hon hälsa, för det är en ny
+	     lektion. Bänken har en klient och kan inte skapa den andra.
+	     Verklig reconnect är NOT_TESTED, och påstås inte. ]]
+	prova("hästen bär serverns rittmärke",
+		hast:GetAttribute("RidSession") == "ritt-1",
+		("(%s)"):format(tostring(hast:GetAttribute("RidSession"))))
+
+	player.CharacterRemoving:Fire(player.Character)
+	hast:SetAttribute("RidSession", "ritt-2")
+	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+	prova("ett NYTT rittmärke från servern hälsar igen", raknaStart() == 2,
+		("(%d gånger)"):format(raknaStart()))
+
+	--[[ Och samma märke två gånger gör det fortfarande inte. Utan den här
+	     raden hade mätningen ovan kunnat vara grön för att vakten slutat
+	     fungera helt i stället för att den bytt identitet. ]]
+	player.CharacterRemoving:Fire(player.Character)
+	Net.get("MountChanged").OnClientEvent:Fire(hast, player)
+	prova("men samma märke två gånger hälsar inte", raknaStart() == 2,
+		("(%d gånger)"):format(raknaStart()))
 end
 
 --[[ ══ 10. SAMMA REPLIK PÅ BÅDA YTORNA ═══════════════════════════════ ]]

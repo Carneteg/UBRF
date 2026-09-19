@@ -146,22 +146,66 @@ end
 	serverns ord, vilket är en legitim rättelse och inte en egen
 	uppsittning. `dismount` är idempotent (`if not ride then return end`),
 	och vakten här gör att upprepade tryck varken städar två gånger eller
-	skickar en andra begäran. ]]
+	skickar en andra begäran.
+
+	── STÄDNINGEN ÄR OMEDELBAR, SAMMANFATTNINGEN ÄR DET INTE ────────────
+
+	Senior review 2026-09-19: den lokala begäran behandlades som en
+	auktoritativ passövergång, så `ShowPostRideSummary` kunde öppnas innan
+	servern ens sett anropet. Nekade servern — hon satt inte upp, sessionen
+	var oregistrerad — eller föll fjärranropet, hade spelaren fått en
+	sammanfattning av en ritt som inte tagit slut.
+
+	De två sakerna är nu skilda åt, och bara den ena väntar:
+
+	  SÄKERHET   `dismount("avsittning")` kör direkt, precis som förut.
+	             Lärarytan släcks, den väntande fortsättningen kastas,
+	             pekreglagen rivs, inmatningen kopplas ur. Oförändrat.
+	  RUTAN      parkeras i `UgnetaController` och öppnas först när något
+	             med auktoritet sagt att avsittningen gick igenom.
+
+	TVÅ BEKRÄFTELSEVÄGAR, och båda är serverns:
+
+	  1. `MountChanged` utan oss som ryttare. Servern fyrar den INNE i sin
+	     `dismount` (`setRider`), alltså före fjärranropet returnerar — det
+	     är normalt den som kommer först.
+	  2. `DismountRequest`-svaret. `HorseService.dismount` svarar
+	     `(true)` eller `(false, skäl)`; allt utom true är ett nej.
+
+	Uteblir båda visas ingenting. Det finns ingen timer som räddar en
+	obekräftad avsittning, och det är avsiktligt — fail closed. ]]
+--[[ Modellen vi bett om att få sitta av från, tills servern svarat.
+     `nil` betyder att ingen begäran är obesvarad, och den är vakten som
+     gör att bara EN av de två bekräftelsevägarna räknas. ]]
+local vantandeAvsittning: Model? = nil
+
+local function avsittningBekraftad(ok: boolean)
+	if not vantandeAvsittning then return end
+	vantandeAvsittning = nil
+	LektionController.slutBekraftat(ok)
+end
+
 local function begarAvsittning()
 	if not ride then return end
-	--[[ SPELAREN BAD OM DET. Det är en giltig passövergång: servern
-	     validerar avsittningen, och nekar den kommer `MountChanged` och
-	     startar ett nytt pass — som i sin tur stänger sammanfattningen. ]]
+	--[[ SPELAREN BAD OM DET — och det är ännu inte sant. Modellen märks
+	     FÖRE städningen, därför att `dismount` nollar `ride`. ]]
+	vantandeAvsittning = ride.model
 	dismount("avsittning")
 	task.spawn(function()
-		local ok, err = pcall(function()
-			Net.get("DismountRequest"):InvokeServer()
+		local ok, svar = pcall(function()
+			return Net.get("DismountRequest"):InvokeServer()
 		end)
 		if not ok then
 			--[[ Uteblivet eller felande svar får inte återuppliva något
-			     lokalt. Servern rättar oss via MountChanged om den vill. ]]
-			warn("[Horse] DismountRequest misslyckades: " .. tostring(err))
+			     lokalt, och det får inte heller öppna någon ruta. Servern
+			     rättar oss via MountChanged om den vill. ]]
+			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
+			avsittningBekraftad(false)
+			return
 		end
+		--[[ `HorseService.dismount` svarar `(true)` eller `(false, skäl)`.
+		     Bara ett rent true är ett avslutat pass. ]]
+		avsittningBekraftad(svar == true)
 	end)
 end
 
@@ -172,6 +216,10 @@ local function mount(model: Model, rittId: string?)
 	     nasta uppsittning och accepteras mot fel ritt eller fel hast. ]]
 	--[[ En ny uppsittning ersätter den gamla. Inget pass avslutades. ]]
 	if ride then dismount("byte") end
+	--[[ Sitter hon upp igen är en obesvarad avsittningsbegäran överspelad.
+	     Utan raden hade ett sent `MountChanged` om den GAMLA hästen kunnat
+	     bekräfta ett slut mitt i den nya ritten. ]]
+	vantandeAvsittning = nil
 
 	local rig, err = RigAdapter.build(model)
 	if not rig then
@@ -271,7 +319,11 @@ local function mount(model: Model, rittId: string?)
 	     (BuildKit.newBuilding i roblox/buildings/Anlaggningen.luau).
 	     Ridbanan och sargen hänger direkt under den. ]]
 	local anlaggning = workspace:FindFirstChild("Anläggning")
-	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
+	--[[ #234: serverns märke på ritten följer med in i lektionen. Det är
+	     den identitet startreplikens vakt bärs av — en identitet klienten
+	     inte kan hitta på. Se `UgnetaController.startKvitterad`. ]]
+	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
+		ride.rittId)
 	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
 	     frågan "vad gör jag nu?" som mest aktuell. ]]
 	KontrollHjalp.vidUppsittning()
@@ -460,6 +512,16 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 		--[[ SERVERNS ORD. Den auktoritativa avsittningen, och därmed en
 		     giltig passövergång. ]]
 		dismount("server")
+	elseif vantandeAvsittning == model then
+		--[[ SVARET PÅ EN BEGÄRD AVSITTNING (#234).
+
+		     Den lokala städningen har redan kört, så `ride` är nil och
+		     grenen ovanför missar. Det här är ändå servern som säger att
+		     spelaren inte sitter upp på den hästen längre — alltså exakt
+		     den auktoritativa bekräftelse sammanfattningen väntar på, och
+		     den som kommer FÖRST: `HorseService.dismount` fyrar
+		     `MountChanged` inne i `setRider`, före sin egen return. ]]
+		avsittningBekraftad(true)
 	end
 end)
 
