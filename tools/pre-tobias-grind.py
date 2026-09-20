@@ -44,7 +44,24 @@ SLUTAR = "### WORLD_MANIFEST_SLUTAR ###"
 def kor(cmd, cwd=ROT):
     """Kör och ge (ok, utdata). Ett krascher är RÖTT, inte hoppat."""
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=900)
+        #[[ ENCODING EXPLICIT, och det ar ingen detalj.
+        #
+        #   `text=True` ensamt avkodar med PLATTFORMENS lokalkodning. Pa
+        #   den har maskinen ar den cp1252, medan specarna skriver UTF-8.
+        #   Slutraden "alla grona" blev da mojibake, kravet `slut` foll,
+        #   och grinden rapporterade FAIL for ATTA undergrindar vars
+        #   specar var grona i `kor.sh` samma minut.
+        #
+        #   Uppmatt:
+        #       text=True            -> "alla grÃ¶na"  traff: False
+        #       encoding="utf-8"     -> "alla gröna"        traff: True
+        #
+        #   CI kor UTF-8 och var alltsa gron hela tiden. Felet syntes
+        #   bara lokalt — for den som korde grinden for att fa ett svar.
+        #   `errors="replace"` sa att en enstaka trasig byte inte kastar
+        #   bort hela loggen. ]]
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=900)
         return p.returncode == 0, (p.stdout or "") + (p.stderr or "")
     except Exception as e:                                   # noqa: BLE001
         return False, f"gick inte att köra: {e}"

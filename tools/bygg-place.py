@@ -25,6 +25,25 @@ ModuleScript har och Script i Rojo:
     fil.client.luau        -> LocalScript
     fil.luau               -> ModuleScript
 """
+
+#[[ PEP 604 (`str | None`) kraver Python >= 3.10. Den har maskinen kor
+#   3.7.9, och da foll HELA den lokala grindkedjan pa en syntaxrad:
+#
+#       TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+#       FIRST_PLAYABLE_PREFLIGHT: FAIL - placen gick inte att bygga
+#
+#   Meddelandet ljog: placen gick utmarkt att bygga, tolken kunde bara
+#   inte lasa annoteringen. CI kor 3.12 och var gron, sa felet syntes
+#   bara for den som korde grinden lokalt — alltsa precis den som
+#   behovde svaret.
+#
+#   `from __future__ import annotations` gor varje annotering till en
+#   strang som aldrig evalueras. Den finns sedan 3.7.0, andrar ingen
+#   korning, och later filen behalla den modernare skrivningen. Samma
+#   skal som Gate 0 angav for `kolla-generisk-hast.py`: en grind man
+#   inte kan lita pa lokalt ar varre an ingen grind. ]]
+from __future__ import annotations
+
 import argparse
 import json
 import pathlib
