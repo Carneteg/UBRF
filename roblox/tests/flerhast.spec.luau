@@ -323,6 +323,80 @@ do
 		select(2, lika(fore2, identitet(LedService.lage(p2)))) or "-")
 end
 
+--[[ == 9. SKALNING: 1, 2, 4 OCH 8 SAMTIDIGA LEDNINGAR ==============
+
+	DETERMINISTISK BANKMATNING, INTE RUNTIME — och skalet ar matt, inte
+	antaget: en syntetisk aktor gar inte att leda i den riktiga motorn.
+	`LedService._sync` anropar `ev:FireClient(player, ...)` (rad 1119), och
+	en vanlig tabell ger «Unable to cast value to Object». Ingen `Player`
+	gar att skapa i nagon trad, och `HorseCore/Aktor.luau` — det deklarerade
+	testsatet — finns inte pa den har grenen. Bankens stubbade `FireClient`
+	tar daremot en tabell, sa det ar har flera sessioner gar att stalla upp.
+
+	INGEN TIDSTROSKEL PASTAS. Tiden skrivs ut som evidens; det som FALLER
+	provet ar korrekthet vid skala — att alla sessioner lever och att varje
+	hast fortfarande har ratt ledare nar atta ledningar stegas tillsammans.
+	En tidsgrans i en bank pa en maskin vore ett uppfunnet tal. ]]
+print("\n-- 9. Skalning: 1, 2, 4, 8 samtidiga ledningar --")
+
+local function skala(n)
+	LedService._glomForProv()
+	local par = {}
+	for i = 1, n do
+		--[[ Sex site-enheter isar: langt bortom RACKVIDD, sa att ingen
+			session kan rakna en grannes hast som sin. ]]
+		local bx = 140 + i * 6
+		local h = nyHast("skala_" .. n .. "_" .. i, varld(bx, 80))
+		local sp, r = nySpelare("Skala" .. n .. "_" .. i, varld(bx + 1.0, 80))
+		local ok = LedService.borja(sp, h, h)
+		par[i] = { sp = sp, h = h, r = r, ok = ok }
+	end
+	local startade = 0
+	for _, x in ipairs(par) do if x.ok then startade += 1 end end
+
+	local t0 = os.clock()
+	for _ = 1, 60 do LedService._steg(1 / 30) end
+	local ms = (os.clock() - t0) * 1000
+
+	local levande, rattAgare = 0, 0
+	for _, x in ipairs(par) do
+		if LedService.aktiv(x.sp) ~= nil then levande += 1 end
+		if LedService.ledsAv(x.h) == x.sp then rattAgare += 1 end
+	end
+	return { n = n, startade = startade, levande = levande,
+		rattAgare = rattAgare, ms = ms, perSession = ms / n }
+end
+
+local matningar = {}
+for _, n in ipairs({ 1, 2, 4, 8 }) do
+	local r = skala(n)
+	matningar[#matningar + 1] = r
+	check(("%d samtidiga ledningar startade alla"):format(n),
+		r.startade == n, ("%d av %d"):format(r.startade, n))
+	check(("...alla %d lever efter 60 steg"):format(n),
+		r.levande == n, ("%d av %d"):format(r.levande, n))
+	check(("...och varje hast har kvar RATT ledare vid %d"):format(n),
+		r.rattAgare == n, ("%d av %d"):format(r.rattAgare, n))
+end
+
+do
+	local rader = {}
+	for _, r in ipairs(matningar) do
+		rader[#rader + 1] = ("n=%d: %.2f ms / 60 steg (%.3f ms per session)")
+			:format(r.n, r.ms, r.perSession)
+	end
+	print("       kostnad (evidens, ingen troskel): " .. table.concat(rader, " | "))
+	--[[ Det enda som FALLER har ar en kostnad som skenar: atta sessioner
+		far inte kosta mer an tjugo ganger en. Taket ar avsiktligt slappt —
+		det letar efter n-kvadrat-beteende, inte efter en prestandagrans. ]]
+	local en = matningar[1].ms
+	local atta = matningar[#matningar].ms
+	check("kostnaden skenar inte med antalet sessioner",
+		en <= 0 or atta <= en * 20,
+		("1 -> %.2f ms, 8 -> %.2f ms (kvot %.1f)"):format(en, atta,
+			en > 0 and atta / en or 0))
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit
