@@ -317,6 +317,34 @@ do
 		math.abs(efter - fore) > 1,
 		("kurs %.1f -> %.1f grader"):format(fore, efter))
 
+	--[[ ══ OCH FORSOKET MATS INTE MEDAN KORTET STAR UPPE ══════════
+
+		Det HAR ar vakten som skyddar forsoket nu nar hasten inte langre
+		fryses: `LektionController.steg` returnerar pa
+		`UgnetaController.vantar()` innan den rakar upp `pass.tid`.
+
+		MATT HAR OCH INTE I `klient.spec`, och skalet ar en falsifiering
+		som kom ut GRON. Den forsta versionen av matningen lag vid
+		PRESENTATIONSKORTET, dar `lage` ar "presentation" — och da
+		returnerar `steg` redan pa `lage ~= "rider"` en rad senare. Tva
+		vakter tackte varandra, och en mutation som rev den ena andrade
+		ingenting. Matningen sag ut att mata skyddet men matte den andra
+		vakten.
+
+		Mitt i ritten ar `lage` "rider", och da ar `vantar()`-vakten den
+		ENDA som star mellan kortet och en tickande matning. ]]
+	do
+		local pRider = LektionController.pass()
+		prova("lektionen ar i lage rider — ratt vakt star pa tur",
+			LektionController.lage() == "rider",
+			("lage=%s"):format(tostring(LektionController.lage())))
+		local tidFore = pRider.tid
+		bildrutor(20)
+		prova("och forsoket mats INTE medan kortet star uppe",
+			math.abs(pRider.tid - tidFore) < 1e-6,
+			("tid %.3f -> %.3f"):format(tidFore, pRider.tid))
+	end
+
 	--[[ Kortet gar fortfarande att svara pa. ]]
 	nollaSkickat()
 	gaTiden(Input.IMPULS_SPARR + 0.05)

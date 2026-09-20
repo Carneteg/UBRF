@@ -612,7 +612,13 @@ do
 				hum.WalkSpeed > 0, ("(WalkSpeed %.2f)"):format(hum.WalkSpeed))
 			ridBildrutor(1.0)
 			local tidEfter = LektionController.pass().tid
-			prova("men forsoket mats INTE medan kortet vantar",
+			--[[ FALSIFIERINGEN SA ATT DEN HAR RADEN INTE MATER VAKTEN.
+				Har ar `lage` "presentation", och `steg` returnerar redan pa
+				`lage ~= "rider"` — en mutation som river `vantar()`-vakten
+				andrar alltsa ingenting har. Raden star kvar for att den ar
+				sann och billig, men SKYDDET matas dar det binder: mitt i
+				ritten, i `klient-lektionspaus.spec` punkt 5c. ]]
+			prova("forsoket star stilla medan presentationskortet vantar",
 				math.abs(tidEfter - tidFore) < 1e-6,
 				("(tid %.3f -> %.3f)"):format(tidFore, tidEfter))
 			prova("och kortet star kvar tills spelaren svarar",
