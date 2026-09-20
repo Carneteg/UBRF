@@ -671,22 +671,33 @@ do
 		check("en punkt innanför taket lämnas orörd",
 			(orord - Vector3.new(nara.X, 3, nara.Z)).Magnitude < 1e-6)
 
-		--[[ STALENESS: en smula bortom taket gallras ur spåret. Spårgrenen
-			kräver att hon lämnat boxen, så provet sätter den flaggan —
-			samma fält `_steg` själv sätter när hon fysiskt gått ut. ]]
+		--[[ SPELARENS AVSTÅND GALLRAR INTE LÄNGRE (reviewrond 1–3).
+
+			Mätningen hette förut «inaktuella smulor gallras ur spåret»
+			och krävde att allt bortom `MAL_AVVIK` försvann. Den regeln
+			är borttagen: en smula långt från spelaren är rutthistorik
+			hästen kanske inte gått än, och att kasta den var precis det
+			som lämnade henne med ett mål bakom en vägg.
+
+			DEN VAR DESSUTOM GRÖN AV FEL SKÄL. Det som tömde spåret här
+			var inte gallringen utan hoppvakten: den mätte avståndet till
+			SISTA SMULAN, och provet lägger en 40 m bort. När vakten
+			rättades till att mäta spelarens förra läge — vilket är vad
+			den menar — blev raden röd och visade vad den egentligen
+			mätte. Nu mäter den den regel som gäller. ]]
 		local l = LedService.lage(spelare)
 		if l then
 			l.lamnatBox = true
 			l.spar = { rot.Position + Vector3.new(2 * M, 0, 0),
 				rot.Position + Vector3.new(40 * M, 0, 0) }
 			LedService._steg(1 / 30)
-			local kvar = 0
+			local langtBort = 0
 			for _, sm in ipairs(l.spar) do
 				local dd = sm - rot.Position
-				if math.sqrt(dd.X * dd.X + dd.Z * dd.Z) / M > 7.05 then kvar += 1 end
+				if math.sqrt(dd.X * dd.X + dd.Z * dd.Z) / M > 7.05 then langtBort += 1 end
 			end
-			check("inaktuella smulor gallras ur spåret",
-				kvar == 0, ("%d kvar bortom taket"):format(kvar))
+			check("en smula långt från spelaren är rutthistorik och ligger kvar",
+				langtBort >= 1, ("%d kvar bortom gamla taket"):format(langtBort))
 
 			--[[ OCH REGELN PRÖVAS DIREKT, av samma skäl som taket ovan:
 				spårgrenen kräver att hästen lämnat en box, och mutationen

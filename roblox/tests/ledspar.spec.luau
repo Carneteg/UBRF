@@ -354,6 +354,71 @@ check("och delmålet ligger i den riktning spelaren gick, inte bakåt",
 	l and l.delmal and ("delmål X %.1f, hästen X %.1f"):format(
 		l.delmal.X, hastkropp.Position.X) or "-")
 
+--[[ ══ 4. RINGBUFFERTEN FÅR INTE KASTA OFÖRBRUKAD RUTT ════════
+
+	ChatGPT:s tredje reviewrond, på `c92b08e`. Taket löd
+	`if #spar > 40 then table.remove(spar, 1) end` — och den raden tar
+	bort FRAMSIDAN, alltid, oavsett om hon gått dit eller inte.
+
+	Reproduktionen: spelaren går ett varv med 6 m radie, hela tiden
+	innanför kopplets 9 m; hästen står kvar i mitten. Varje smula på
+	cirkeln ligger 6 m bort, alltså långt utanför `START_R` — hon har
+	inte gått en enda av dem. Smulor läggs var 0,6 m, sa efter 24,6 m
+	ar bufferten full och den äldsta oanvända vägen börjar falla bort.
+
+	Det är samma invariant som hela specen — en giltig ledning får inte
+	förlora rutthistorik hon inte gått — men brottet sker i minnestaket
+	i stället for i gallringen. ]]
+print("")
+print("-- 4. Ringbufferten far inte kasta oforbrukad rutt --")
+
+do
+	LedService._glomForProv()
+	local MITT = vec(300, 3, 300)
+	local hastR, hastkroppR = nyHast("hast_ring", MITT)
+	local spR, rotR = nySpelare("Ledare_ring", MITT + vec(2 * M, 0, 0))
+	local okR = LedService.borja(spR, hastR, hastR)
+	check("ledningen startar for ringprovet", okR == true)
+	local lR = LedService.lage(spR)
+	if lR then lR.lamnatBox = true end
+
+	--[[ Ett varv med 6 m radie. Kopplet ar 9 m, sa sessionen ar giltig
+		hela tiden — det matas nedan och ar inte ett antagande. ]]
+	local R, forsta, maxSpar, maxKoppel = 6 * M, nil, 0, 0
+	for i = 1, 140 do
+		local a = (i / 126) * 2 * math.pi
+		rotR.CFrame = CFrame.new(MITT + vec(math.cos(a) * R, 0, math.sin(a) * R))
+		LedService._steg(DT)
+		local l = LedService.lage(spR)
+		if l == nil then break end
+		if forsta == nil and #l.spar > 0 then forsta = l.spar[1] end
+		if #l.spar > maxSpar then maxSpar = #l.spar end
+		local d = (vec(rotR.Position.X, 0, rotR.Position.Z)
+			- vec(hastkroppR.Position.X, 0, hastkroppR.Position.Z)).Magnitude / M
+		if d > maxKoppel then maxKoppel = d end
+	end
+
+	local lSlut = LedService.lage(spR)
+	check("ledningen ar giltig hela varvet — annars mater provet fel sak",
+		lSlut ~= nil and maxKoppel < 9.0, ("maxkoppel %.2f m, grans 9,00"):format(maxKoppel))
+	check("och bufferten fylldes — annars provas inget tak",
+		maxSpar >= 40, ("sparet nadde %d"):format(maxSpar))
+	check("spelaren gick langre an taket racker till",
+		lSlut ~= nil, "sessionen lever")
+
+	--[[ HÄSTEN RÖRDE SIG ALDRIG. Ingen smula pa cirkeln ar inom
+		`START_R`, sa ingen kan vara forbrukad. Den forsta som lades ska
+		darfor fortfarande ligga forst. ]]
+	check("den forsta oforbrukade smulan ligger kvar frami spare",
+		forsta ~= nil and lSlut ~= nil and #lSlut.spar > 0
+			and (lSlut.spar[1] - forsta).Magnitude < 0.01,
+		forsta and lSlut and #lSlut.spar > 0
+			and ("forst nu %.1f,%.1f — lades %.1f,%.1f"):format(
+				lSlut.spar[1].X, lSlut.spar[1].Z, forsta.X, forsta.Z) or "-")
+	check("och sparet ar fortfarande begransat",
+		lSlut ~= nil and #lSlut.spar <= 40, ("%d smulor"):format(lSlut and #lSlut.spar or -1))
+end
+
 print("")
 if fails > 0 then
 	print(("ledspar.spec: %d mätning(ar) föll."):format(fails))

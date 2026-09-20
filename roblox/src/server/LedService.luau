@@ -85,6 +85,7 @@ local KOPPEL_TID = 0.75        -- s: sa lange maste hon vara for langt bort
 	Satt strax under kopplets slapp-avstand — ett mal som ligger langre
 	bort an kopplet racker ar per definition orimligt. ]]
 local MAL_AVVIK  = 7.0         -- m: sa langt fran spelaren far malpunkten ligga
+local SPAR_TAK   = 40          -- smulor: minnestaket, se noten vid inläggningen
 
 --[[ Hur mycket snabbare spelaren gar an hasten SKRITTAR. Marginalen
 	finns for att hon ska kunna ga fore utan att kopplet strammar — men
@@ -293,6 +294,8 @@ export type Led = {
 	badGa: boolean,
 	ankare: Vector3,
 	ankartid: number,
+	sparFullt: boolean,
+	forraSpelarPos: Vector3?,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -948,6 +951,7 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 		delmal = nil,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position, ankartid = 0,
+		sparFullt = false, forraSpelarPos = nil,
 	}
 	--[[ REPET (#182 del 2). Byggs SIST, nar tillstandet finns: ett rep
 		utan en ledning bakom sig vore en lognaktig bild. ]]
@@ -1624,18 +1628,60 @@ local function steg(_dt: number)
 			Ringbufferten är kort med flit — den ska bära genom en dörr,
 			inte minnas en rundtur. ]]
 		local spar = l.spar
-		local senaste = spar[#spar]
 		--[[ ETT HOPP ÄR INGEN VÄG. Flyttas spelaren långt på en bildruta —
 			respawn, en spec som ställer henne någon annanstans — är spåret
 			dit inte gångbart, och hästen skulle skickas till en punkt hon
-			aldrig kan nå. Då kastas spåret. ]]
-		if senaste and (senaste - rot.Position).Magnitude > 3.0 * M then
+			aldrig kan nå. Då kastas spåret.
+
+			HOPPET MÄTS MOT SPELARENS FÖRRA LÄGE, inte mot sista smulan.
+			Smulan var en proxy som bara höll så länge vi antecknade var
+			0,6 m. När taket pausar antecknandet (se noten nedan) blir
+			avståndet till sista smulan större för varje steg, och vakten
+			tömde då hela spåret fast spelaren gick något hundradels varv
+			i taget. Mätt i bänken: ett varv med 6 m radie lämnade 4 smulor
+			av 40. Förra läget är det vakten faktiskt menar. ]]
+		local forra = l.forraSpelarPos
+		if forra and (rot.Position - forra).Magnitude > 3.0 * M then
 			table.clear(spar)
-			senaste = nil
 		end
+		l.forraSpelarPos = rot.Position
+		local senaste = spar[#spar]
+		--[[ ══ TAKET FÅR INTE ÄTA FRAMSIDAN (reviewrond 3) ═══════════
+
+			Raden löd `if #spar > 40 then table.remove(spar, 1) end`, och
+			den tar bort FRAMSIDAN — alltid, oavsett om hon gått dit.
+
+			Reproducerat i review: spelaren går ett varv med 6 m radie,
+			hela tiden innanför kopplets 9 m, med hästen kvar i mitten.
+			Varje smula ligger 6 m bort, alltså långt utanför `START_R`:
+			hon har inte gått en enda. Ändå började den äldsta vägen falla
+			bort så fort bufferten nått taket. Samma invariant som
+			gallringen skyddar, brutet i minneshanteringen i stället.
+
+			POLICYN: är bufferten full och framsidan oförbrukad, så slutar
+			vi ANTECKNA. Minnet förblir bundet vid `SPAR_TAK`, och ingen
+			väg hon har kvar att gå raderas. Att i stället kasta framsidan
+			vore att påstå ett framsteg som inte hänt.
+
+			VARFÖR DEN NYASTE ÄNDEN ÄR DEN BILLIGA ATT TAPPA: hon går
+			spåret framifrån. Framsidan är hennes nästa steg; baksidan är
+			det hon behöver sist. När hon förbrukar något frigörs plats och
+			antecknandet börjar igen av sig självt.
+
+			OCH VAD DET KOSTAR, utskrivet: går spelaren en omväg just medan
+			bufferten är full, hamnar den omvägen inte i spåret. Då är hon
+			redan så långt efter att bufferten räcker till — och då är det
+			planeraren och kopplet som är skydden, inte spåret.
+
+			`sparFullt` finns för att läget ska gå att SE i runtime i
+			stället för att vara tyst. ]]
 		if not senaste or (senaste - rot.Position).Magnitude > 0.6 * M then
-			table.insert(spar, rot.Position)
-			if #spar > 40 then table.remove(spar, 1) end
+			if #spar < SPAR_TAK then
+				table.insert(spar, rot.Position)
+				l.sparFullt = false
+			else
+				l.sparFullt = true
+			end
 		end
 		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
 			HON STÅR STILL.
