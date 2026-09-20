@@ -1232,6 +1232,37 @@ local function planera(l: Led, pivot: BasePart, mal: Vector3, reserv: Vector3?)
 		--[[ Första vägpunkten ligger i hästens egen fot; att gå dit är att
 			stå still. ]]
 		l.navIx = math.min(2, #l.navVag)
+		--[[ ══ EN NY VÄG FÅR BÖRJA MED REN KLOCKA ═══════════════════
+
+			MÄTT I STUDIO under M3.1, i gluggen mellan Tvärvägg 1:1 och 1:2.
+			Hästen låg kilad mot väggens norra sida — flanken nådde Z 185,68
+			och väggen börjar 185,70, alltså två hundradels studs mellan dem.
+			Hennes mål låg rakt söder om väggen.
+
+			Planeraren KLARADE det. `ComputeAsync` från exakt den posen ger
+			sex vägpunkter rakt genom gluggen — uppmätt efteråt på samma
+			koordinater. Men i körningen var `navVag` tom bildrutan efter:
+
+			     9,9 s   nav 2/5   en väg på fem punkter fanns
+			    10,1 s   nav 1/0   den var borta
+
+			Skyldig ar «EN VÄG SOM INTE BÄR SKA KASTAS» i `_steg`: den kastar
+			vagen nar `stillaSedan > NAV_STILLA`. Klockan stod redan på fem
+			sekunder från tiden FÖRE vägen fanns, så varje ny väg revs innan
+			hon hunnit ta ett enda steg på den. Alla sex planöken gick samma
+			väg, och sedan släppte kopplet på `led.fastnat`.
+
+			Den regelns EGEN avsikt är att mäta tid PÅ VÄGEN — «hon låg på en
+			vägpunkt hon inte kunde nå». Klockan nollställs därför när vägen
+			installeras, så att den mäter just det. Ingen tidsgräns är ändrad.
+
+			`navPlaner` rörs INTE här. Nollställningen av den ligger i `_steg`
+			bakom `navigerar(l)`-grenens `continue`, så en häst som följer en
+			väg får inga nya försök gratis. Taket består, och bär ingen av de
+			sex vägarna släpper kopplet som förr. ]]
+		l.stillaSedan = 0
+		l.ankare = pivot.Position
+		l.ankartid = 0
 	end)
 end
 

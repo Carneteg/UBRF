@@ -711,6 +711,9 @@ def valjBunt(spec_rel: str):
     #[[ M3: sparet som rutthistorik. Samma bunt, samma skal. ]]
     elif "ledspar" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ M3.1: navvagens livslangd i hornet. Samma bunt, samma skal. ]]
+    elif "ledvag" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning-integration" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:
