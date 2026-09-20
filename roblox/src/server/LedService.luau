@@ -1382,42 +1382,30 @@ local function gallraSpar(spar: { Vector3 }, hastPos: Vector3)
 
 		FYSISK NÄRHET TILL NÅGOT LÄNGRE FRAM ÄR INTE FRAMSTEG.
 
-		══ OCH DÄRFÖR TVÅ FRAMIFRÅN-REGLER, INTE EN ════════════════════
+	══ OCH NÄRHET ÄR INTE FRAMSTEG — INTE HELLER TILL NÄSTA GRANNE ══
 
-		Enbart «inom `START_R`» räckte inte, och det syntes direkt i
-		Studio. Ledningen börjar med spelaren bredvid hästen, så den
-		FÖRSTA smulan läggs vid boxdörren — 2,1 m från henne, alltså
-		utanför `START_R`. När hon sedan gått ut i gången ligger den
-		bakom henne och når aldrig gallringen. Hon fick den som mål och
-		vände tillbaka mot boxen medan spelaren drog norrut:
+	Regeln skrevs om två gånger innan den blev riktig, och båda de
+	underkända formerna var samma fel i olika kläder.
 
-		    pass 1   led.fastnat, hästen 497,5 · 190,5
-		    pass 2   led.fastnat, hästen 506,6 · 222,2
+	  1 · GLOBALT NÄRMASTE. Kastade allt före den närmaste smulan i
+	      hela spåret. En väg som böjer tillbaka har en SENARE smula
+	      närmast, och hela sträckan hon hade kvar försvann:
+	      fyra smålor, den fjärde 0,5 m bort — 1 av 4 kvar.
 
-		Andra regeln är lika lokal och lika monoton: är hon NÄRMARE
-		nästa smula än den hon står inför, så har hon passerat den. Det
-		jämför bara två grannar, tar bort som mest en i taget, och kan
-		därför aldrig hoppa över en sträcka — för att nå en smula längre
-		fram måste den gå genom smulor som ligger LÄNGRE bort, och där
-		stannar loopen.
+	  2 · «NÄSTA GRANNE NÄRMARE». Samma fel, en granne i taget. En rutt
+	      som böjer sig successivt tillbaka mot en eftersäpande häst
+	      har fallande avstånd hela vägen — 4,00 · 3,16 · 2,24 · 0,50 —
+	      och loopen gick framåt genom alla tre. Också 1 av 4.
 
-		Prövat mot reviewens eget prob: nästa på rutten 2,0 m, den som
-		korsar tillbaka 0,5 m. Andra regeln frågar om smulan EFTER den
-		första ligger närmare än 2,0 — den ligger 4,0 bort, så loopen
-		stannar och ingen gallras.
+	DET ENDA BEVISET ATT HON GÅTT EN PUNKT ÄR ATT HON HAR VARIT DÄR.
+	Ingen geometrisk genväg duger: varje form av «hon är nära något
+	senare» kan konstrueras till ett falskt framsteg, eftersom rutten
+	själv får böja sig hur som helst. Därför `START_R`, och bara det:
+	hon var framme.
 
-		Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
-	while #spar > 1 do
-		local d1 = avstandM(spar[1], hastPos)
-		if d1 < START_R then
-			--[[ Hon har kommit fram till den. ]]
-			table.remove(spar, 1)
-		elseif avstandM(spar[2], hastPos) < d1 then
-			--[[ Nästa på vägen ligger närmare: hon har passerat den här. ]]
-			table.remove(spar, 1)
-		else
-			break
-		end
+	Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
+	while #spar > 1 and avstandM(spar[1], hastPos) < START_R do
+		table.remove(spar, 1)
 	end
 end
 

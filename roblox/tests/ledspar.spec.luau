@@ -191,25 +191,31 @@ do
 				(vec(korsande[1].X, 0, korsande[1].Z) - vec(hast.X, 0, hast.Z)).Magnitude / M)
 				or "spåret tomt")
 
-		--[[ ANDRA HALVAN AV REGELN: har hon passerat en smula sa gallras
-			den, aven om hon aldrig kom inom `START_R`. Matt i Studio:
-			ledningens FORSTA smula laggs vid boxdorren, 2,1 m fran henne,
-			och nar hon gatt ut i gangen ligger den bakom. Utan den har
-			halvan blev den hennes mal och hon vande tillbaka mot boxen —
-			tva pass foll pa `led.fastnat`.
+		--[[ ══ SUCCESSIVT NÄRMARE ÄR INTE FRAMSTEG ════════════════
 
-			«Passerad» matas lokalt: ar hon narmare NASTA smula an den hon
-			star infor. Det jamfor tva grannar, tar bort en i taget, och
-			kan darfor inte hoppa over en stracka. ]]
+			ChatGPT:s andra reviewrond, på `399ffab`. Första rättelsen bytte
+			global närmaste mot «är nästa smula närmare än den första, så är
+			den första passerad». Det är SAMMA FEL, en granne i taget.
+
+			En rutt som böjer sig successivt tillbaka mot en eftersäpande
+			häst har avstånd som faller hela vägen:
+
+			    p1 4,00 m   p2 3,16 m   p3 2,24 m   p4 0,50 m
+
+			Loopen gick då framåt genom alla tre och lämnade 1 av 4, fast
+			hon aldrig varit vid någon av dem. NÄRHET ÄR INTE FRAMSTEG —
+			varken till något längre fram eller till nästa granne. Det enda
+			beviset att hon gått en punkt är att hon HAR VARIT där. ]]
 		do
-			local passerad = {
-				hast + vec(0, 0, -3.0 * M),         -- bakom henne, 3,0 m
-				hast + vec(0, 0, 2.5 * M),          -- framfor, 2,5 m
-				hast + vec(0, 0, 6.0 * M),
+			local bojer = {
+				hast + vec(4.0 * M, 0, 0),            -- 4,00 m
+				hast + vec(3.0 * M, 0, 1.0 * M),      -- 3,16 m
+				hast + vec(2.0 * M, 0, 1.0 * M),      -- 2,24 m
+				hast + vec(0.5 * M, 0, 0),            -- 0,50 m
 			}
-			LedService._gallraSpar(passerad, hast)
-			check("en smula hon har passerat gallras aven utanfor START_R",
-				#passerad == 2, ("%d kvar av 3"):format(#passerad))
+			LedService._gallraSpar(bojer, hast)
+			check("successivt narmare framtida smulor far inte bli falskt framsteg",
+				#bojer == 4, ("%d kvar av 4"):format(#bojer))
 		end
 	end
 end
