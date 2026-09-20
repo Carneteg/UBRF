@@ -97,6 +97,43 @@ end
 --[[ Tomtkoordinat → värld, samma omräkning som tjänsten. ]]
 local function varld(x, y) return vec(x * M, 3, (170 - y) * M) end
 
+--[[ ══ SCENBYTE ÄR INTE ETT STEG (reviewrond 6) ═════════════════════
+
+	Bänken har ingen fysik, så specen FLYTTAR aktörerna dit scenariot
+	behöver dem. Det gick bra så länge hoppvakten svarade med
+	`table.clear(spar)`: varje sådan förflyttning nollade spåret.
+
+	Rond 6 tog bort den raderingen — ett hopp får inte längre påstå att
+	hästen gått den antecknade vägen. Då blev bänkens egna teleporter
+	synliga. Två av dem är SCENBYTEN över tio respektive knappt fyra
+	meter, och scenarierna kallar dem själva gång: «hon når ridbanan»,
+	«rutten fortsätter västerut». Så nu går de — 0,5 m per bildruta,
+	häst och spelare tillsammans så att kopplet håller.
+
+	DÖRRUTGÅNGEN LÄMNAS SOM DEN ÄR, med flit. Där är teleporten poängen:
+	spelaren ska stå kvar på boxsidan i samma bildruta som hästen
+	passerar dörrplanet, för det är den engångsgallringen provet mäter.
+	Går man även den blir provet grönt utan att gallringen körs — mätt:
+	med gallringen borttagen blev specen ändå grön. ]]
+local function ga(par, steg)
+	local n = 0
+	while n < 400 do
+		local klara = true
+		for _, p in ipairs(par) do
+			local nu = p.del.Position
+			local d = p.till - nu
+			if d.Magnitude > 0.05 then
+				klara = false
+				p.del.CFrame = CFrame.new(nu + d.Unit * math.min(steg or (0.5 * M), d.Magnitude))
+			end
+		end
+		LedService._steg(1 / 30)
+		n += 1
+		if klara then break end
+	end
+	return n
+end
+
 print("\n── Att börja leda ──")
 
 LedService._glomForProv()
@@ -158,8 +195,9 @@ check("när hon fysiskt lämnat boxen ser tjänsten det",
 check("men målet är fortfarande inte nått", LedService.harNattMal(spelare) == false)
 
 --[[ ── Hon når ridbanan ───────────────────────────────────────────── ]]
-rot.CFrame = CFrame.new(varld(132, 70))
-hastKropp.CFrame = CFrame.new(varld(132, 72))
+--[[ De GÅR dit tillsammans — se noten vid `ga`. ]]
+ga({ { del = rot, till = varld(132, 70) },
+     { del = hastKropp, till = varld(132, 72) } })
 LedService._steg(1 / 30)
 check("när hon fysiskt står i ridbanan ser tjänsten det",
 	LedService.harNattMal(spelare) == true)
@@ -170,8 +208,8 @@ print("\n── Följandet ──")
 	en RÖRELSERIKTNING, inte en punkt. Skillnaden är hela blockeraren:
 	`MoveTo` skjuter kroppen mot punkten oavsett hur den står, och en häst
 	som går i sidled in i en 1,20 m öppning fastnar. ]]
-rot.CFrame = CFrame.new(varld(132, 60))
-hastKropp.CFrame = CFrame.new(varld(132, 66))
+ga({ { del = rot, till = varld(132, 60) },
+     { del = hastKropp, till = varld(132, 66) } })
 LedService._steg(1 / 30)
 --[[ ══ FÖLJNINGEN ÄR CONSTRAINTS NU (#182 del 2) ═══════════════════
 
@@ -772,6 +810,8 @@ do
 		Nu gallras det EN gång, vid övergången. Smulor som skapas
 		EFTERÅT ska ligga kvar även om de hamnar på boxsidan av planet —
 		precis som de gör när rutten fortsätter västerut. ]]
+	--[[ Spelaren GÅR västerut hit; scenbytet var 3,8 m på en bildruta. ]]
+	ga({ { del = rotS, till = vec(DX - 2.4, 3, DZ + 6) } })
 	for i = 1, 14 do
 		rotS.CFrame = CFrame.new(vec(DX - 2 - i * 0.4, 3, DZ + 6))
 		LedService._steg(1 / 30)

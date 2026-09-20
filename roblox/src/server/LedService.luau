@@ -297,6 +297,9 @@ export type Led = {
 	ankartid: number,
 	sparFullt: boolean,
 	forraSpelarPos: Vector3?,
+	--[[ Engangsflagga: gallringen vid boxutgangen ska ta aven den smula
+		som laggs SENARE i samma bildruta. Se noten vid utgangen. ]]
+	gallraVidUtgang: boolean,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -952,7 +955,7 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 		delmal = nil,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position, ankartid = 0,
-		sparFullt = false, forraSpelarPos = nil,
+		sparFullt = false, forraSpelarPos = nil, gallraVidUtgang = false,
 	}
 	--[[ REPET (#182 del 2). Byggs SIST, nar tillstandet finns: ett rep
 		utan en ledning bakom sig vore en lognaktig bild. ]]
@@ -1591,16 +1594,27 @@ local function steg(_dt: number)
 					oavsett vilken sida om dörrplanet de hamnar på. Bara de
 					som fanns i kön I UTGÅNGSÖGONBLICKET, och som låg på
 					boxsidan, försvinner. ]]
-				if l.dorrMitt and l.dorrUt then
-					local kvar = {}
-					for _, c in ipairs(l.spar) do
-						if (c - l.dorrMitt):Dot(l.dorrUt) > 0 then
-							table.insert(kvar, c)
-						end
-					end
-					table.clear(l.spar)
-					for _, c in ipairs(kvar) do table.insert(l.spar, c) end
-				end
+				--[[ ══ GALLRINGEN SKER EFTER ANTECKNANDET (reviewrond 6) ══
+
+					Gallringen låg FÖRUT precis här, och tog bara de smulor
+					som redan fanns i kön. Men antecknandet kör längre ner i
+					samma `steg`. Står spelaren kvar på boxsidan i den
+					bildruta då hon passerar dörrplanet — och det gör han
+					ofta, han släpper ju fram henne — lades hans läge till
+					som första smula DIREKT EFTER gallringen, och hon drogs
+					tillbaka in genom dörren hon just kommit ut ur.
+
+					Det doldes av hoppvaktens `table.clear`: nästa gång
+					spelaren flyttades ett stycke tömdes spåret ändå. När
+					rond 6 tog bort den raderingen blev smulan synlig —
+					491,5 · 277,2, en enda, på boxsidan. Felet fanns hela
+					tiden; ingenting mätte det.
+
+					Därför står här bara en ENGÅNGSFLAGGA, och gallringen
+					görs efter antecknandet. Engångs av exakt samma skäl som
+					ovan: gallras det varje bildruta äter gallringen upp
+					hela den västra rutten. ]]
+				l.gallraVidUtgang = true
 
 				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
@@ -1742,6 +1756,21 @@ local function steg(_dt: number)
 				table.insert(spar, rot.Position)
 			else
 				l.sparFullt = true
+			end
+		end
+		--[[ ENGANGSGALLRINGEN VID UTGANGEN, ANDRA HALVAN. Flaggan sattes
+			hogre upp i samma bildruta, nar hon passerade dorrplanet. Nu
+			ar antecknandet gjort, sa den smula som lades till just nu
+			gallras med — och flaggan slacks. Den kor alltsa EN gang. ]]
+		if l.gallraVidUtgang then
+			l.gallraVidUtgang = false
+			if l.dorrMitt and l.dorrUt then
+				local kvar = {}
+				for _, c in ipairs(spar) do
+					if (c - l.dorrMitt):Dot(l.dorrUt) > 0 then table.insert(kvar, c) end
+				end
+				table.clear(spar)
+				for _, c in ipairs(kvar) do table.insert(spar, c) end
 			end
 		end
 		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
