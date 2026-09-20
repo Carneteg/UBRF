@@ -419,6 +419,83 @@ do
 		lSlut ~= nil and #lSlut.spar <= 40, ("%d smulor"):format(lSlut and #lSlut.spar or -1))
 end
 
+--[[ ══ 5. EN ÅTERUPPTAGEN ANTECKNING FÅR INTE BYGGA EN BRO ═════
+
+	ChatGPT:s fjärde reviewrond, på `1ae5c53`. Rond 3 slutade kasta
+	framsidan — men när hästen sedan förbrukar EN smula och en plats
+	blir ledig, läggs spelarens NUVARANDE läge till efter den gamla
+	svansen. Har hon gått en omväg medan antecknandet var pausat blir
+	det ett enda påhittat segment tvärs över hela det osedda stycket.
+
+	Uppmätt i review: ett segment på 6,26 m — en väg ingen har gått.
+
+	Spåret slutade alltså radera sanning och började tillverka den i
+	stället. Måttet nedan är det enkla: inget segment i spåret får vara
+	längre än det tjänsten själv kallar ett hopp. ]]
+print("")
+print("-- 5. Aterupptagen anteckning far inte bygga en bro --")
+
+do
+	LedService._glomForProv()
+	local MITT = vec(700, 3, 700)
+	local hastB, kroppB = nyHast("hast_bro", MITT)
+	local spB, rotB = nySpelare("Ledare_bro", MITT + vec(2 * M, 0, 0))
+	check("ledningen startar for broprovet", LedService.borja(spB, hastB, hastB) == true)
+	local lB = LedService.lage(spB)
+	if lB then lB.lamnatBox = true end
+
+	--[[ 1 · fyll bufferten pa en 6 m-cirkel, hasten kvar i mitten. ]]
+	local R = 6 * M
+	for i = 1, 130 do
+		local a = (i / 126) * 2 * math.pi
+		rotB.CFrame = CFrame.new(MITT + vec(math.cos(a) * R, 0, math.sin(a) * R))
+		LedService._steg(DT)
+	end
+	lB = LedService.lage(spB)
+	check("bufferten ar full och antecknandet pausat",
+		lB ~= nil and #lB.spar >= 40, ("%d smulor"):format(lB and #lB.spar or -1))
+
+	--[[ 2 · spelaren gar en OSEDD omvag medan det ar pausat — vidare
+		runt SAMMA cirkel. Da halls hon 6 m fran hasten hela tiden,
+		alltsa innanfor kopplets 9 m, och sessionen lever. Forsta
+		versionen gick diagonalt bort, kom 12,8 m ifran och slapptes
+		— provet matte da en dod session och kom ut gront. ]]
+	local svans = lB and lB.spar[#lB.spar]
+	for i = 131, 156 do
+		local a = (i / 126) * 2 * math.pi
+		rotB.CFrame = CFrame.new(MITT + vec(math.cos(a) * R, 0, math.sin(a) * R))
+		LedService._steg(DT)
+	end
+	lB = LedService.lage(spB)
+	local gap = svans and (vec(rotB.Position.X, 0, rotB.Position.Z)
+		- vec(svans.X, 0, svans.Z)).Magnitude / M or 0
+	check("det finns ett oantecknat gap mellan svansen och spelaren",
+		gap > 3.0, ("%.2f m"):format(gap))
+	check("och sessionen lever — annars mater provet en dod ledning",
+		LedService.lage(spB) ~= nil,
+		("koppel %.2f m"):format((vec(rotB.Position.X, 0, rotB.Position.Z)
+			- vec(kroppB.Position.X, 0, kroppB.Position.Z)).Magnitude / M))
+
+	--[[ 3 · hasten forbrukar EN smula: hon stalls pa den framsta, sa att
+		en plats blir ledig. Sedan tillbaka, och ett steg till. ]]
+	if lB and #lB.spar > 0 then kroppB.CFrame = CFrame.new(lB.spar[1]) end
+	LedService._steg(DT)
+	kroppB.CFrame = CFrame.new(MITT)
+	for _ = 1, 3 do LedService._steg(DT) end
+
+	lB = LedService.lage(spB)
+	local langsta = 0
+	if lB then
+		for i = 2, #lB.spar do
+			local d = (vec(lB.spar[i].X, 0, lB.spar[i].Z)
+				- vec(lB.spar[i-1].X, 0, lB.spar[i-1].Z)).Magnitude / M
+			if d > langsta then langsta = d end
+		end
+	end
+	check("aterupptagen loggning skapar inte ett ogangbart hopp i rutthistoriken",
+		langsta <= 3.0, ("sista/langsta segmentet %.2f m, hoppgransen 3,00"):format(langsta))
+end
+
 print("")
 if fails > 0 then
 	print(("ledspar.spec: %d mätning(ar) föll."):format(fails))

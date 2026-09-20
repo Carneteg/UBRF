@@ -86,6 +86,7 @@ local KOPPEL_TID = 0.75        -- s: sa lange maste hon vara for langt bort
 	bort an kopplet racker ar per definition orimligt. ]]
 local MAL_AVVIK  = 7.0         -- m: sa langt fran spelaren far malpunkten ligga
 local SPAR_TAK   = 40          -- smulor: minnestaket, se noten vid inläggningen
+local HOPP       = 3.0         -- m: langre an sa pa en bildruta ar inget steg
 
 --[[ Hur mycket snabbare spelaren gar an hasten SKRITTAR. Marginalen
 	finns for att hon ska kunna ga fore utan att kopplet strammar — men
@@ -1641,10 +1642,22 @@ local function steg(_dt: number)
 			i taget. Mätt i bänken: ett varv med 6 m radie lämnade 4 smulor
 			av 40. Förra läget är det vakten faktiskt menar. ]]
 		local forra = l.forraSpelarPos
-		if forra and (rot.Position - forra).Magnitude > 3.0 * M then
+		if forra and (rot.Position - forra).Magnitude > HOPP * M then
 			table.clear(spar)
 		end
 		l.forraSpelarPos = rot.Position
+
+		--[[ ALLT GÅNGET → SÅ FÅR SPÅRET SÅS OM.
+
+			Är bara en smula kvar och hon står på den har hon gått hela
+			den väg vi antecknat. Då — och bara då — går det att tömma
+			spåret utan att någon oförbrukad väg går förlorad, och nästa
+			rad sår ett nytt frö vid spelaren. Utan det skulle ett spår
+			som pausats med ett för stort gap aldrig kunna börja om. ]]
+		if #spar == 1 and avstandM(spar[1], pivot.Position) < START_R then
+			table.clear(spar)
+		end
+
 		local senaste = spar[#spar]
 		--[[ ══ TAKET FÅR INTE ÄTA FRAMSIDAN (reviewrond 3) ═══════════
 
@@ -1675,8 +1688,31 @@ local function steg(_dt: number)
 
 			`sparFullt` finns för att läget ska gå att SE i runtime i
 			stället för att vara tyst. ]]
-		if not senaste or (senaste - rot.Position).Magnitude > 0.6 * M then
-			if #spar < SPAR_TAK then
+		--[[ ══ EN ÅTERUPPTAGEN ANTECKNING FÅR INTE BYGGA EN BRO ═══════
+
+			Rond 3 slutade kasta framsidan. Men när hästen sedan förbrukade
+			en smula och en plats blev ledig, lades spelarens NUVARANDE läge
+			till efter den gamla svansen — och hade hon gått en omväg medan
+			det var pausat blev det ett enda påhittat segment tvärs över hela
+			det osedda stycket. Uppmätt i review: 6,26 m. I bänken 9,74.
+
+			Spåret slutade alltså radera sanning och började tillverka den.
+
+			GRÄNSEN ÄR TJÄNSTENS EGEN: `HOPP`, samma tal som säger att en
+			förflyttning på en bildruta inte är en väg. Ett segment längre
+			än så är inte heller en väg, och får därför inte antecknas.
+			Inget nytt tal är uppfunnet.
+
+			Går gapet inte att brygga står spåret kvar som det är: det slutar
+			där vi sist VET att hon gick. Hästen går dit, förbrukar det, och
+			då sår reseeden ovan ett nytt frö vid spelaren. ]]
+		if not senaste then
+			table.insert(spar, rot.Position)
+			l.sparFullt = false
+		elseif (senaste - rot.Position).Magnitude > 0.6 * M then
+			if (senaste - rot.Position).Magnitude > HOPP * M then
+				l.sparFullt = true
+			elseif #spar < SPAR_TAK then
 				table.insert(spar, rot.Position)
 				l.sparFullt = false
 			else
