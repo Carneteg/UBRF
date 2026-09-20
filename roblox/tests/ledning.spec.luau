@@ -1021,6 +1021,120 @@ do
 end
 
 
+--[[ ══ SMULAN FRÅN SJÄLVA UTGÅNGSBILDRUTAN ═══════════════════════════
+
+	ChatGPT:s åttonde reviewrond, på `1f0b60e`. Rond 7 gallrar den
+	LEDANDE serien av boxsidiga smulor och stannar vid första smulan på
+	gångsidan. Det är rätt för rutthistorik — men det räcker inte, och
+	skälet är en ordningsfråga.
+
+	Ligger det redan en utsidespunkt i kön när hon passerar dörrplanet,
+	så hamnar spelarens boxsidiga läge från SAMMA bildruta EFTER den:
+
+	    [ gammal box , UTE , ny box från utgångsbildrutan ]
+	         ^gallras    ^stopp      ^överlever
+
+	Hon förbrukar sedan UTE, spelaren går normalt ut i 0,5 m steg — och
+	den bevarade boxsmulan väljs som delmål tillbaka in i boxen. Mätt i
+	review: `delmal plan −2,00`, utan hopp och med sessionen vid liv.
+
+	DE TVÅ FALLEN MÅSTE SKILJAS ÅT. En genuin SENARE återgång till
+	boxsidan är framtida väg och ska leva (rond 7). Smulan som skapas i
+	själva den fysiska utgångsbildrutan är spelarens läge INNAN hon kom
+	ut — den är historik, oavsett var i kön den hamnar. ]]
+print("\n── Smulan från utgångsbildrutan är historik, inte framtid ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 800, 600
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr utgångsruta"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hU, kroppU = nyHast("utgangshast", vec(DX - 5, 3, DZ))
+	local spU, rotU = nySpelare("Utgangsryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for utgangsrutan", LedService.borja(spU, hU, hU) == true)
+	local lU = LedService.lage(spU)
+	local function plan(p)
+		local li = LedService.lage(spU)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ 1 · gammal boxhistorik OCH en utsidespunkt som redan ligger i kön. ]]
+	local GAMMAL = vec(DX - 4.5, 3, DZ)
+	local UTE    = vec(DX + 3, 3, DZ + 8)
+	if lU then
+		table.clear(lU.spar)
+		table.insert(lU.spar, GAMMAL)
+		table.insert(lU.spar, UTE)
+	end
+	check("kon ar gammal box + en utsidespunkt",
+		lU ~= nil and #lU.spar == 2 and plan(GAMMAL) < 0 and plan(UTE) > 0,
+		("plan %+.2f %+.2f"):format(plan(GAMMAL), plan(UTE)))
+
+	--[[ 2 · UTGÅNGSBILDRUTAN. Hästen passerar planet; spelaren står kvar
+		på boxsidan. Hans läge ligger mer än 0,6 m från sista smulan, så
+		den vanliga loggningen antecknar det — EFTER `UTE`. ]]
+	local EXITPOS = vec(DX - 6, 3, DZ)
+	rotU.CFrame = CFrame.new(EXITPOS)
+	kroppU.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	LedService._steg(1 / 30)
+
+	lU = LedService.lage(spU)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spU) == true)
+	check("ledningen lever — inget hopp, inget slapp", lU ~= nil,
+		("koppel %.2f m"):format((kroppU.Position - rotU.Position).Magnitude / M))
+
+	local inneKvar, antal = false, 0
+	for _, c in ipairs(lU and lU.spar or {}) do
+		antal += 1
+		if plan(c) <= 0 then inneKvar = true end
+	end
+	--[[ DEN FÖRSTA RÖDA MÄTNINGEN. Med enbart ledande gallring
+		överlever exit-frame-smulan, för den ligger efter `UTE`. ]]
+	check("smulan fran utgangsbildrutan far inte overleva",
+		not inneKvar,
+		("boxsidig smula kvar=%s; %d smulor"):format(tostring(inneKvar), antal))
+
+	--[[ 3 · HON FÖRBRUKAR UTSIDESPUNKTEN, och spelaren går normalt ut
+		i 0,5 m steg. Nu ska ingenting peka tillbaka in i boxen. ]]
+	kroppU.CFrame = CFrame.new(UTE)
+	LedService._steg(1 / 30)
+	kroppU.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 2))
+	local varstaPlan = math.huge
+	for i = 1, 24 do
+		local nu = rotU.Position
+		local mot = vec(DX + 6, 3, DZ + 4)
+		local d = mot - nu
+		if d.Magnitude > 0.05 then
+			rotU.CFrame = CFrame.new(nu + d.Unit * math.min(0.5 * M, d.Magnitude))
+		end
+		LedService._steg(1 / 30)
+		local li = LedService.lage(spU)
+		if li and li.delmal then
+			local p = plan(li.delmal)
+			if p < varstaPlan then varstaPlan = p end
+		end
+	end
+	--[[ DEN ANDRA RÖDA MÄTNINGEN — reviewens egen: delmal plan −2,00. ]]
+	check("bevarad ny boxsmula far inte senare bli valt mal tillbaka in",
+		varstaPlan > 0,
+		("samsta delmal plan %+.2f"):format(varstaPlan))
+
+	anl:Destroy()
+end
+
+
 --[[ ══ HON GÅR UT I GÅNGEN, INTE TVÄRS ÖVER DEN (#182) ═════════════════
 
 	Mätt i Studio på `6350c15`, bildruta 237:
