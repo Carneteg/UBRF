@@ -6,7 +6,7 @@
 |---|---|
 | Aktiv gate | **First Playable closure — de maskinellt körbara resterna** |
 | Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
-| Head | `e50dc8e` |
+| Head | `5a72312` |
 | Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
 | Överordnad plan | issue #259 |
 | Builder | **Claude** |
@@ -55,6 +55,8 @@ Varje rad har evidens i PR #264. Ingen av dem är `PRODUCT_ACCEPTED`.
 | M3.1 — hörnet vid Tvärvägg 1:2 | `READY_FOR_CHATGPT_REVIEW` | planeraren löste det sex gånger; alla sex revs bildrutan efter |
 | M3.2 — spelarens egen dörrväg | `READY_FOR_CHATGPT_REVIEW` | 13 av 13 stängda vid start, två öppnade med X på riktig prompt |
 | M3.3 — uppsittning, ritt, avsittning | `READY_FOR_CHATGPT_REVIEW` | samma session: skritt 4,35, galopp 16,81 studs/s, styrning, efterritt |
+| Ridhusets avgränsning | `READY_FOR_CHATGPT_REVIEW` | **ingen defekt** — utgången skedde genom den kontraktsenliga norra porten; fyra stängda sargsektioner höll vid 40 studs/s |
+| Efterrittens omdöme | `LOGIC_PASS` | `"TRY AGAIN"` / `"Good the softness. Work on the timing."` blev `Visible` efter ett riktigt lektionsförsök |
 
 ### Prestandaraden, utskriven
 
@@ -94,7 +96,8 @@ Ingen av posterna nedan får läsas som grön.
 |---|---|
 | Tobias kamerakänsla i Studio | `CAMERA_HUMAN_FEEL_REVIEW_DEFERRED_BY_PRODUCT_OWNER` |
 | Fysisk iPad och iPhone | `PHYSICAL_DEVICE_DEFERRED` — `TouchControls.luau:614` bär själv noten |
-| Om prompter och HUD **syns** | `NOT_TESTED` — `capture_screenshot` ger svart 3D-fält i harnessen |
+| Om prompter, HUD och Ugneta-ytan **syns** | `HUMAN_VISUAL_DEFERRED` — `capture_screenshot` ger svart 3D-fält. Logiken är mätt: ytan blir `Visible` med rätt text |
+| Om utrustningen **ser rätt ut** på modellen | `HUMAN_VISUAL_DEFERRED` — 19 delar sitter fast och är icke-transparenta; utseendet avgör Tobias |
 | Visuell fidelity side-by-side | ligger hos ChatGPT; paketet är klart |
 | `PRODUCT_ACCEPTED` | endast Tobias |
 
