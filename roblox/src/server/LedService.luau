@@ -1382,16 +1382,42 @@ local function gallraSpar(spar: { Vector3 }, hastPos: Vector3)
 
 		FYSISK NÄRHET TILL NÅGOT LÄNGRE FRAM ÄR INTE FRAMSTEG.
 
-		Priset är utskrivet: börjar ledningen med hästen FÖRE spelaren —
-		hon får stå upp till `RACKVIDD` 4 m bort — ligger de första
-		smulorna bakom henne och gallras aldrig, för hon når dem inte.
-		Då går hon dit först och vänder. Det är en omväg, och den är
-		långt billigare än att tappa vägen: mätt i Studio slutade det
-		förra felet med hästen kilad mot en vägg tills kopplet brast.
+		══ OCH DÄRFÖR TVÅ FRAMIFRÅN-REGLER, INTE EN ════════════════════
+
+		Enbart «inom `START_R`» räckte inte, och det syntes direkt i
+		Studio. Ledningen börjar med spelaren bredvid hästen, så den
+		FÖRSTA smulan läggs vid boxdörren — 2,1 m från henne, alltså
+		utanför `START_R`. När hon sedan gått ut i gången ligger den
+		bakom henne och når aldrig gallringen. Hon fick den som mål och
+		vände tillbaka mot boxen medan spelaren drog norrut:
+
+		    pass 1   led.fastnat, hästen 497,5 · 190,5
+		    pass 2   led.fastnat, hästen 506,6 · 222,2
+
+		Andra regeln är lika lokal och lika monoton: är hon NÄRMARE
+		nästa smula än den hon står inför, så har hon passerat den. Det
+		jämför bara två grannar, tar bort som mest en i taget, och kan
+		därför aldrig hoppa över en sträcka — för att nå en smula längre
+		fram måste den gå genom smulor som ligger LÄNGRE bort, och där
+		stannar loopen.
+
+		Prövat mot reviewens eget prob: nästa på rutten 2,0 m, den som
+		korsar tillbaka 0,5 m. Andra regeln frågar om smulan EFTER den
+		första ligger närmare än 2,0 — den ligger 4,0 bort, så loopen
+		stannar och ingen gallras.
 
 		Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
-	while #spar > 1 and avstandM(spar[1], hastPos) < START_R do
-		table.remove(spar, 1)
+	while #spar > 1 do
+		local d1 = avstandM(spar[1], hastPos)
+		if d1 < START_R then
+			--[[ Hon har kommit fram till den. ]]
+			table.remove(spar, 1)
+		elseif avstandM(spar[2], hastPos) < d1 then
+			--[[ Nästa på vägen ligger närmare: hon har passerat den här. ]]
+			table.remove(spar, 1)
+		else
+			break
+		end
 	end
 end
 

@@ -190,6 +190,27 @@ do
 			#korsande > 0 and ("forsta ligger %.2f m bort"):format(
 				(vec(korsande[1].X, 0, korsande[1].Z) - vec(hast.X, 0, hast.Z)).Magnitude / M)
 				or "spåret tomt")
+
+		--[[ ANDRA HALVAN AV REGELN: har hon passerat en smula sa gallras
+			den, aven om hon aldrig kom inom `START_R`. Matt i Studio:
+			ledningens FORSTA smula laggs vid boxdorren, 2,1 m fran henne,
+			och nar hon gatt ut i gangen ligger den bakom. Utan den har
+			halvan blev den hennes mal och hon vande tillbaka mot boxen —
+			tva pass foll pa `led.fastnat`.
+
+			«Passerad» matas lokalt: ar hon narmare NASTA smula an den hon
+			star infor. Det jamfor tva grannar, tar bort en i taget, och
+			kan darfor inte hoppa over en stracka. ]]
+		do
+			local passerad = {
+				hast + vec(0, 0, -3.0 * M),         -- bakom henne, 3,0 m
+				hast + vec(0, 0, 2.5 * M),          -- framfor, 2,5 m
+				hast + vec(0, 0, 6.0 * M),
+			}
+			LedService._gallraSpar(passerad, hast)
+			check("en smula hon har passerat gallras aven utanfor START_R",
+				#passerad == 2, ("%d kvar av 3"):format(#passerad))
+		end
 	end
 end
 
