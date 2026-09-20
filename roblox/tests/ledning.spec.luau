@@ -1259,6 +1259,170 @@ do
 end
 
 
+--[[ ══ NÄRHET ÄR INTE PROVENIENS ═══════════════════════════════════
+
+	ChatGPT:s tionde reviewrond, på `f8877d6`. Rond 9 bytte ut
+	suffixregeln mot ett «tidsbevis» som i själva verket var ett
+	AVSTÅND: svansen räknades som ledarens nuläge om den låg inom
+	0,6 m från honom.
+
+	DET ÄR ROND 5:s INVARIANT IGEN. Närhet mellan två punkter säger
+	ingenting om NÄR de uppstod. En gammal, pausad svans kan ligga
+	tjugo centimeter från en spelare som kom dit långt senare, och då
+	raderade rond 9 framtida rutt på ett sammanträffande.
+
+	    sparFullt = true
+	    ledaren     plan +0,10
+	    svansen     plan −0,10       gap 0,20 m  <  0,6 m
+	    -> raderades
+
+	BEVISET MÅSTE VARA TIDSLIGT. Det finns redan i tillståndet, och det
+	är exakt: antecknandet sker BARA när loggen är levande, och pausen
+	släpper BARA när kön är tom. Kön är därför homogen — alla smulor i
+	den hör till samma antecknandeomgång — och med levande logg ÄR
+	svansen det senaste provet. Är loggen pausad är den per definition
+	inte det, hur nära ledaren den än råkar ligga.
+
+	Den homogeniteten är inget påstående i en kommentar; den mäts i
+	nästa sektion. ]]
+print("\n── Närhet är inte proveniens ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 1200, 900
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr narsvans"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	--[[ Hon staller sig inom RACKVIDD (4,0 m) sa ledningen far borja;
+		forsta versionen satte henne 4,25 m bort och nekades. ]]
+	local hN, kroppN = nyHast("narsvanshast", vec(DX - 2, 3, DZ + 2))
+	local spN, rotN = nySpelare("Narsvansryttare", vec(DX + 0.3, 3, DZ))
+	check("ledningen startar for narhetsprovet", LedService.borja(spN, hN, hN) == true)
+	local lN = LedService.lage(spN)
+	local function plan(p)
+		local li = LedService.lage(spN)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ Pausad kö med en framtida återgång sist — och den ligger NÄRA
+		ledaren, inte långt bort som i rond 9. ]]
+	local GAMMAL = vec(DX - 4.5, 3, DZ)
+	local UTE    = vec(DX + 3, 3, DZ - 8)
+	local SVANS  = vec(DX - 0.3, 3, DZ)
+	if lN then
+		table.clear(lN.spar)
+		for _, p in ipairs({ GAMMAL, UTE, SVANS }) do table.insert(lN.spar, p) end
+		lN.sparFullt = true
+	end
+	local gap = (SVANS - rotN.Position).Magnitude / M
+	check("svansen ligger NARA ledaren — det ar hela poangen",
+		gap < 0.6, ("gap %.2f m, under antecknandets 0,6 m"):format(gap))
+	check("kon ar pausad, ledaren ute, svansen inne",
+		lN ~= nil and lN.sparFullt == true
+			and plan(rotN.Position) > 0 and plan(SVANS) < 0,
+		("sparFullt=%s  ledaren %+.2f  svansen %+.2f"):format(
+			tostring(lN and lN.sparFullt), plan(rotN.Position), plan(SVANS)))
+
+	--[[ Hon gar ut. Kopplet haller, och ingen smula ar gangen. ]]
+	kroppN.CFrame = CFrame.new(vec(DX + 2, 3, DZ + 11.58))
+	local koppel = (kroppN.Position - rotN.Position).Magnitude / M
+	local START_R, narmast = 1.8, math.huge
+	for _, q in ipairs({ GAMMAL, UTE, SVANS }) do
+		local d = (q - kroppN.Position).Magnitude / M
+		if d < narmast then narmast = d end
+	end
+	check("kopplet haller och ingen smula ar gangen",
+		koppel < 9.0 and narmast > START_R,
+		("koppel %.2f m, narmaste smula %.2f m"):format(koppel, narmast))
+
+	LedService._steg(1 / 30)
+	lN = LedService.lage(spN)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spN) == true)
+	check("ledningen lever", lN ~= nil)
+
+	local svansKvar, gammalKvar = false, false
+	for _, c in ipairs(lN and lN.spar or {}) do
+		if (c - SVANS).Magnitude < 0.05 then svansKvar = true end
+		if (c - GAMMAL).Magnitude < 0.05 then gammalKvar = true end
+	end
+	--[[ DEN RÖDA MÄTNINGEN. ]]
+	check("narhet till spelaren ar inte tidsbevis: stale framtida svans inom 0,6 m far inte raderas",
+		svansKvar,
+		("svans kvar=%s; gap %.2f m; %d smulor kvar; sparFullt=%s"):format(
+			tostring(svansKvar), gap, #(lN and lN.spar or {}),
+			tostring(lN and lN.sparFullt)))
+	check("den gamla historiken inne i boxen gallras fortfarande",
+		not gammalKvar, ("gammal kvar=%s"):format(tostring(gammalKvar)))
+
+	anl:Destroy()
+end
+
+
+--[[ ══ PAUSEN ANTECKNAR INTE — DET ÄR PROVENIENSENS GRUND ══════════
+
+	Rättelsen i rond 10 vilar på en enda egenskap: antecknandet sker
+	bara när loggen är LEVANDE, och pausen släpper bara när kön är tom.
+	Då är kön homogen — alla smulor i den hör till samma omgång — och
+	med levande logg ÄR svansen det senaste provet.
+
+	Den egenskapen får inte vara ett påstående i en kommentar. Här mäts
+	den: med `sparFullt` satt läggs ingen smula till hur mycket
+	spelaren än går, och kön krymper bara framifrån. ]]
+print("\n── Pausen antecknar inte, och kön förblir homogen ──")
+do
+	LedService._glomForProv()
+	local MITT = vec(1400, 3, 1100)
+	local hH, kroppH = nyHast("homogenhast", MITT)
+	local spH, rotH = nySpelare("Homogenryttare", MITT + vec(2 * M, 0, 0))
+	check("ledningen startar for homogenitetsprovet",
+		LedService.borja(spH, hH, hH) == true)
+	local lH = LedService.lage(spH)
+	if lH then lH.lamnatBox = true end
+
+	--[[ Sa en kand ko och pausa den. ]]
+	local A = MITT + vec(3 * M, 0, 0)
+	local B = MITT + vec(3 * M, 0, 4 * M)
+	if lH then
+		table.clear(lH.spar)
+		table.insert(lH.spar, A)
+		table.insert(lH.spar, B)
+		lH.sparFullt = true
+	end
+	local fore = lH and #lH.spar or -1
+
+	--[[ Spelaren gar en lang vag medan det ar pausat. Innanfor kopplet. ]]
+	local lades, vaxte = 0, false
+	for i = 1, 30 do
+		local a = (i / 30) * 2 * math.pi
+		rotH.CFrame = CFrame.new(MITT + vec(math.cos(a) * 5 * M, 0, math.sin(a) * 5 * M))
+		LedService._steg(1 / 30)
+		local li = LedService.lage(spH)
+		if li == nil then break end
+		if #li.spar > fore then vaxte = true end
+		lades = #li.spar
+	end
+	lH = LedService.lage(spH)
+	check("ingen smula antecknas medan loggen ar pausad",
+		lH ~= nil and not vaxte and lades <= fore,
+		("kon gick %d -> %d, vaxte=%s"):format(fore, lades, tostring(vaxte)))
+	check("och pausen star kvar sa lange kon inte ar tom",
+		lH ~= nil and (#lH.spar == 0 or lH.sparFullt == true),
+		("%d smulor, sparFullt=%s"):format(
+			#(lH and lH.spar or {}), tostring(lH and lH.sparFullt)))
+end
+
+
 --[[ ══ HON GÅR UT I GÅNGEN, INTE TVÄRS ÖVER DEN (#182) ═════════════════
 
 	Mätt i Studio på `6350c15`, bildruta 237:
