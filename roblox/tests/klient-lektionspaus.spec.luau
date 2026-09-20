@@ -202,6 +202,159 @@ do
 	ReplayController.stang()
 end
 
+--[[ == 5. LEKTIONSKORTET FAR INTE FRYSA STYRNINGEN =================
+
+	LESSON_CARD_RIDING_INPUT_ACCEPTANCE. Uppmätt i Studio 2026-09-20,
+	uppsutten på Trixie i ridbanan, med `D` HÅLLEN (`action: "press"`,
+	`UserInputService:IsKeyDown(D) == true` bekräftat) i 2,5 sekunder:
+
+		LektionController.vantar()   true   (lage = "efter")
+		yaw före                     -156,8 grader
+		yaw efter                    -156,8 grader
+		förflyttning                 0,0 studs
+
+	Hästen svarade inte alls. Samma tangent, med kortet kvitterat, gav
+	omedelbart en obruten båge -58 grader -> +66 grader.
+
+	Orsaken är EN rad: pausgrenen anropar `ride.movement:release()` så
+	snart `vantar()` är sann, och `release` nollar styrutslaget och
+	hoppar över `movement:step` — det enda stället som skriver hästens
+	kurs. Punkt 2 ovan löste halva problemet (#263 P1): en HJÄLP besvarar
+	kortet. Men styrning är ingen hjälp, så A och D föll fortfarande i
+	tomma intet.
+
+	PRODUKTREGELN: ett kort som SYNS får aldrig i sig självt bli ett
+	rörelselås. Bara en uttrycklig intervention som verkligen kräver
+	skritt eller halt får stoppa framdrivningen. Replayen är en sådan —
+	spelaren har själv valt att titta på sin ritt — och den mäts som
+	hård paus i punkt 4 och 5d.
+
+	MATNINGEN AR HASTENS EGEN KURS, inte ett fält i klienten:
+	`MovementController:step` skriver `root.CFrame` genom `CFrame.lookAt`,
+	och ingenting annat rör den. Ändras den har styrningen nått fram. ]]
+print("\n-- 5. Kortet far inte frysa styrningen --")
+
+--[[ A och D gar genom CAS-handlingen `HorseControl`, inte genom DRIV.
+	Samma princip som `drivTryck`: in dar tangenten gar in. ]]
+local function styrTryck(keyCode, lage)
+	local fn = CAS._bound["HorseControl"]
+	if fn == nil then return false end
+	fn("HorseControl", lage or Enum.UserInputState.Begin, { KeyCode = keyCode })
+	return true
+end
+
+local function kurs(h)
+	local lv = h:FindFirstChild("HumanoidRootPart").CFrame.LookVector
+	return math.deg(math.atan2(lv.X, lv.Z))
+end
+
+local function fart(h)
+	return h:FindFirstChildOfClass("Humanoid").WalkSpeed
+end
+
+do
+	local h5 = nyRitt()
+	prova("kortet star uppe — reproduktionens forutsattning",
+		LektionController.vantar() == true)
+	prova("och HorseControl ar bunden", styrTryck(Enum.KeyCode.A) == true)
+
+	local fore = kurs(h5)
+	bildrutor(12)
+	local efter = kurs(h5)
+	styrTryck(Enum.KeyCode.A, Enum.UserInputState.End)
+	prova("A svanger hasten FAST kortet star uppe",
+		math.abs(efter - fore) > 1,
+		("kurs %.1f -> %.1f grader"):format(fore, efter))
+
+	--[[ 5b. Styrning ar ingen hjalp. Kortet ska sta kvar. ]]
+	prova("men styrningen KVITTERAR inte kortet",
+		LektionController.vantar() == true,
+		("vantar=%s"):format(tostring(LektionController.vantar())))
+	prova("och ingen ridavsikt gick ivag pa en styrning",
+		#skickade() == 0, table.concat(skickade(), ", "))
+
+	--[[ At andra hallet, sa att provet inte kan vara gront av en drift
+		som rakar ga at ratt hall. ]]
+	local fore2 = kurs(h5)
+	styrTryck(Enum.KeyCode.D)
+	bildrutor(12)
+	local efter2 = kurs(h5)
+	styrTryck(Enum.KeyCode.D, Enum.UserInputState.End)
+	prova("och D svanger at andra hallet",
+		(efter2 - fore2) * (efter - fore) < 0,
+		("kurs %.1f -> %.1f grader"):format(fore2, efter2))
+end
+
+--[[ 5c. FRAMDRIVNINGEN stoppas inte av ett kort som dyker upp mitt i
+	ritten. Kortet reses genom `UgnetaController.visa` — exakt samma
+	anrop som `presentera` och `efterForsok` gor, alltsa produktens egen
+	vag och ingen provkrok. ]]
+do
+	local h6 = nyRitt()
+	gaTiden(Input.IMPULS_SPARR + 0.05)
+	drivTryck()
+	bildrutor(10)
+	prova("hasten gar efter ett DRIV", fart(h6) > 0,
+		("WalkSpeed %.2f"):format(fart(h6)))
+	prova("och kortet ar kvitterat av hjalpen",
+		LektionController.vantar() == false)
+
+	UgnetaController.visa("Prov", { "Ett kort mitt i ritten" }, true, "Fortsatt")
+	prova("ett nytt kort star uppe mitt i ritten",
+		LektionController.vantar() == true)
+	local fartMedKort = fart(h6)
+	bildrutor(6)
+	prova("framdrivningen fortsatter bakom kortet",
+		fart(h6) > 0, ("WalkSpeed %.2f -> %.2f"):format(fartMedKort, fart(h6)))
+
+	--[[ Och styrningen nar fram ocksa mitt i ritten, inte bara i halt. ]]
+	local fore = kurs(h6)
+	styrTryck(Enum.KeyCode.D)
+	bildrutor(12)
+	local efter = kurs(h6)
+	styrTryck(Enum.KeyCode.D, Enum.UserInputState.End)
+	prova("och styrningen nar fram mitt i ritten",
+		math.abs(efter - fore) > 1,
+		("kurs %.1f -> %.1f grader"):format(fore, efter))
+
+	--[[ Kortet gar fortfarande att svara pa. ]]
+	nollaSkickat()
+	gaTiden(Input.IMPULS_SPARR + 0.05)
+	drivTryck()
+	bildrutor(1)
+	prova("kortet gar att besvara med en hjalp som forr",
+		LektionController.vantar() == false)
+	prova("och hjalpen verkade — en avsikt gick ivag",
+		#skickade() == 1, table.concat(skickade(), ", "))
+end
+
+--[[ 5d. REPLAYEN AR KVAR SOM HARD PAUS, ocksa for styrningen. Punkt 4
+	mater hjalpen; den har mater tygeln. ]]
+do
+	local h7 = nyRitt()
+	for _ = 1, 8 do
+		if not LektionController.vantar() then break end
+		LektionController.gaVidare()
+		bildrutor(1)
+	end
+	local r = Inspelning.ny("storvolt", "bamse")
+	for i = 1, 30 do
+		Inspelning.sampla(r, 0.06, { gangart = "trav" }, { x = i, z = i, yaw = 0 })
+	end
+	ReplayController.oppna(Inspelning.avsluta(r))
+	prova("replayen ar aktiv", LektionController.replayAktiv() == true)
+
+	local fore = kurs(h7)
+	styrTryck(Enum.KeyCode.D)
+	bildrutor(12)
+	local efter = kurs(h7)
+	styrTryck(Enum.KeyCode.D, Enum.UserInputState.End)
+	prova("styrningen svanger INTE hasten bakom replayen",
+		math.abs(efter - fore) < 0.001,
+		("kurs %.3f -> %.3f grader"):format(fore, efter))
+	ReplayController.stang()
+end
+
 if fel > 0 then
 	print(("\nKLIENT-LEKTIONSPAUS: %d fel"):format(fel))
 	error(("%d fel"):format(fel))

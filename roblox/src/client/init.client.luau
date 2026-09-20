@@ -683,14 +683,43 @@ RunService.RenderStepped:Connect(function(dt)
 
 	     Nu besvarar en hjälp kortet OCH verkar i samma bildruta. Det är
 	     det enda rimliga: kortet ber om en skänkelhjälp, och när hon ger
-	     den ska hästen gå — inte be henne trycka en knapp först.
+	     den ska hästen gå — inte be henne trycka en knapp först. ]]
 
-	     REPLAYEN ÄR KVAR SOM HÅRD PAUS. Att titta på sin egen ritt ska
-	     inte gå att avbryta med en tygel, och `movement:release()` gäller
-	     där precis som förut. Skillnaden är bara vad ett VÄNTANDE kort
-	     gör med en hjälp. ]]
-	if LektionController.replayAktiv()
-		or (LektionController.vantar() and not hjalp) then
+	--[[ ══ ETT KORT SOM SYNS ÄR INGET RÖRELSELÅS ════════════════════
+	     LESSON_CARD_RIDING_INPUT_ACCEPTANCE (PO-order 2026-09-20).
+
+	     #263 P1 ovan löste halva problemet. En HJÄLP besvarade kortet —
+	     men styrning är ingen hjälp, så `vantar() and not hjalp` var
+	     sant i varje bildruta där ryttaren bara höll en tygel. Då kördes
+	     `release()`, `movement:step` hoppades över, och `step` är enda
+	     stället som skriver hästens kurs.
+
+	     Uppmätt i Studio 2026-09-20, uppsutten på Trixie i ridbanan, med
+	     `D` bevisligen nere (`UserInputService:IsKeyDown(D) == true`) i
+	     2,5 s medan `vantar()` var sann:
+
+	         yaw före  −156,8°      yaw efter  −156,8°      flytt 0,0 studs
+
+	     Samma tangent med kortet kvitterat gav omedelbart en obruten båge
+	     −58° → +66°. Hästen var alltså inte trasig; kortet höll henne.
+
+	     REGELN: att visa coaching får aldrig i sig självt stoppa
+	     ridningen. Bara en uttrycklig intervention som verkligen kräver
+	     skritt eller halt får ta framdrivningen — och en sådan ska säga
+	     det själv, inte härledas ur att någon panel råkar vara synlig.
+
+	     I dag finns exakt EN sådan: REPLAYEN. Den är inte ett
+	     lektionskort utan en analys spelaren själv öppnat med `R`
+	     eller `T` för att titta på sin ritt, och att rida vidare bakom
+	     den vore att titta på en inspelning av något annat än det som
+	     händer. Den är därför kvar som hård paus, mätt i punkt 4 och 5d
+	     i `klient-lektionspaus.spec`.
+
+	     Kortets egen skyddsuppgift är kvar och ligger där den hör hemma:
+	     `LektionController.steg` mäter ingenting medan `vantar()` är
+	     sann, så försöket kan inte bli ogiltigt av att hon rider under
+	     tiden. Att FRYSA hästen var aldrig det som skyddade mätningen. ]]
+	if LektionController.replayAktiv() then
 		--[[ ══ PAUSEN MÅSTE STANNA HÄSTEN, INTE BARA SLUTA STYRA HENNE ══
 
 		     Stycket ovanför säger "hästen stegas inte", och det stämde —
@@ -723,8 +752,15 @@ RunService.RenderStepped:Connect(function(dt)
 
 	--[[ Hjälpen besvarar kortet. `fortsatt()` gör exakt det knappen gör
 	     och returnerar false när det inte fanns något att kvittera — då
-	     har raden ingen verkan, vilket är rätt. ]]
-	if LektionController.vantar() then LektionController.fortsatt() end
+	     har raden ingen verkan, vilket är rätt.
+
+	     `hjalp`-villkoret är NYTT och nödvändigt sedan pausgrenen ovan
+	     bara stoppar på replayen: utan det hade varje bildruta med ett
+	     kort uppe kvitterat det, och kortet försvunnit av sig självt
+	     innan spelaren hunnit läsa en rad. Ett kort ska besvaras av ett
+	     SVAR — en hjälp eller ett tryck på knappen — och en tygel är
+	     inget svar. Mätt i `klient-lektionspaus.spec` punkt 5b. ]]
+	if hjalp and LektionController.vantar() then LektionController.fortsatt() end
 
 	--[[ ── AVSIKTEN SKICKAS, INTE RESULTATET (#233 Fas 4b) ─────────────
 
