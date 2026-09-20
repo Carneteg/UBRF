@@ -369,6 +369,226 @@ do
 end
 
 print("")
+
+--[[ == CAMERA_FEEL: DE FEM OTACKTA FALLEN ==========================
+
+	Kartlagt mot orderns tio fall innan nagot skrevs. Fall 2, 3 och 7 ar
+	redan tackta ovan, sa de rors inte. Det som saknades ar magnituden vid
+	uppsittning, en RIKTIG vandning (inte bara nollpassagen), stopp/start,
+	ny hast efter en ritt, och lagt bildfrekvens.
+
+	INGEN «kanns bra» pastas har. Varje matning ar ett tal ur kamerans
+	egen `step`, och tolkningen lamnas till Tobias. ]]
+
+print("\n-- FALL 1: uppsittningen far inte snappa --")
+do
+	--[[ TVA FALT SOM LATT FORVAXLAS, och jag gjorde det forst.
+
+		· `cam.vikt` ar den UPPLOSTA blandningen, satt sist i `step`:
+		  `local vb = if raOga then w else 1` — «ingen sadel => full
+		  bomvikt». Banken har ingen sittande karaktar, sa `ogonpunkt()`
+		  ger nil och `vikt` blir 1. Det ar den dokumenterade
+		  degraderingen, inte ett fel.
+		· `Kameralage.las(cam.lage).vikt` ar LAGETS vikt — den som ar 0
+		  i ryttarperspektiv. Det ar den som ska matas.
+
+		Forsta versionen av det har provet matte `cam.vikt` och blev rod
+		pa ratt beteende. ]]
+	local dt = 1 / 60
+	local cam = newCam()
+	check("lagets vikt ar sadeln direkt vid uppsittning",
+		Kameralage.las(cam.lage).vikt == 0,
+		("lage %.2f, upplost %.2f"):format(Kameralage.las(cam.lage).vikt, cam.vikt or -1))
+
+	--[[ INGEN SNAPP NAR HASTEN STAR STILL.
+
+		FORSTA VERSIONEN MATTE SIG SJALV. Den las `egen = cam.yaw` och
+		matade in samma varde som heading — da ar matningen sann aven om
+		`new()` satter kursen till noll. Falsifieringen visade det: K1,
+		som river initieringen ur `new()`, kom ut GRON.
+
+		Nu raknas den vantade kursen ur RIGGEN, oberoende av kameran, och
+		riggen vrids forst sa att noll inte kan vara ratt svar av en
+		slump. ]]
+	local KURS = 2.1
+	local r = __makeRig()
+	r.root.CFrame = CFrame.lookAt(r.root.CFrame.Position,
+		r.root.CFrame.Position + Vector3.new(math.sin(KURS), 0, math.cos(KURS)))
+	local vantad = math.atan2(r.root.CFrame.LookVector.X, r.root.CFrame.LookVector.Z)
+	local cam2 = CameraController.new(r)
+	check("kameran startar pa RIGGENS kurs, inte pa noll",
+		math.abs(cam2.yaw - vantad) < 1e-4 and math.abs(vantad) > 0.5,
+		("kamera %.4f, rigg %.4f rad"):format(cam2.yaw, vantad))
+	cam2:step(loco({ heading = vantad, gait = "halt" }), dt)
+	local e1 = math.abs(cam2.yaw - vantad)
+	cam2:step(loco({ heading = vantad, gait = "halt" }), dt)
+	local e2 = math.abs(cam2.yaw - vantad)
+	check("och star stilla nar hasten star stilla",
+		e1 < 1e-6 and e2 < 1e-6, ("%.8f / %.8f rad"):format(e1, e2))
+
+	--[[ Och nar kursen VERKLIGEN skiljer sig ska overgangen vara en
+		utjamning, inte ett hopp: forsta bildrutan far ta en liten del av
+		felet, aldrig hela. ]]
+	for _, mal in ipairs({ 1.5, 3.0, -2.2 }) do
+		local c = newCam()
+		local start = c.yaw
+		local totalt = math.abs(mal - start)
+		c:step(loco({ heading = mal, gait = "halt" }), dt)
+		local forsta = math.abs(c.yaw - start)
+		check(("overgangen till kurs %.1f ar en utjamning, inte ett hopp"):format(mal),
+			totalt < 1e-9 or forsta / totalt < 0.25,
+			("%.1f%% av felet pa forsta bildrutan"):format(
+				totalt > 0 and forsta / totalt * 100 or 0))
+	end
+end
+
+print("\n-- FALL 4: snabb vandning vanster<->hoger --")
+do
+	local dt = 1 / 60
+	local cam = newCam()
+	--[[ Kor in kameran i en stadig hogersvang, kasta sedan om till
+		vanster, och mat att kursen inte vispar forbi malet. ]]
+	for _ = 1, 60 do cam:step(loco({ heading = 1.2, turnRate = 2.0 }), dt) end
+	local fore = cam.yaw
+	local mest = 0
+	for _ = 1, 90 do
+		cam:step(loco({ heading = -1.2, turnRate = -2.0 }), dt)
+		local avvik = cam.yaw - (-1.2)
+		if math.abs(avvik) > mest then mest = math.abs(avvik) end
+	end
+	check("kameran nar fram efter omkastningen",
+		math.abs(cam.yaw - (-1.2)) < 0.05, ("%.4f rad kvar"):format(math.abs(cam.yaw + 1.2)))
+	check("och tar kortaste vagen — ingen piska forbi malet",
+		mest <= math.abs(fore - (-1.2)) + 1e-6,
+		("varsta avvikelse %.3f rad, startavstand %.3f"):format(mest, math.abs(fore + 1.2)))
+	--[[ Monotont: en omkastning ska inte oscillera. ]]
+	local cam2 = newCam()
+	for _ = 1, 60 do cam2:step(loco({ heading = 1.2 }), dt) end
+	local sist, vandningar = cam2.yaw, 0
+	local riktning = 0
+	for _ = 1, 90 do
+		cam2:step(loco({ heading = -1.2 }), dt)
+		local d = cam2.yaw - sist
+		local r = if d > 1e-9 then 1 elseif d < -1e-9 then -1 else 0
+		if r ~= 0 and riktning ~= 0 and r ~= riktning then vandningar += 1 end
+		if r ~= 0 then riktning = r end
+		sist = cam2.yaw
+	end
+	check("kursen svanger over utan att oscillera", vandningar == 0,
+		("%d riktningsbyten"):format(vandningar))
+end
+
+print("\n-- FALL 5: stopp, start och gangartsbyte --")
+do
+	local dt = 1 / 60
+	local cam = newCam()
+	for _ = 1, 120 do cam:step(loco({ gait = "canter", speed = 5.6 }), dt) end
+	local d0, f0 = cam.dist, cam.fov
+	--[[ Tvart ned till halt. Avstand och synfalt ska GLIDA, inte snappa. ]]
+	local storsta = 0
+	local fd, ff = d0, f0
+	for _ = 1, 120 do
+		cam:step(loco({ gait = "halt", speed = 0 }), dt)
+		local hopp = math.abs(cam.dist - fd)
+		if hopp > storsta then storsta = hopp end
+		fd, ff = cam.dist, cam.fov
+	end
+	check("gangartsbytet ger ingen diskontinuitet i avstandet",
+		storsta < 0.25, ("storsta steg %.4f studs per bildruta"):format(storsta))
+	check("avstandet landade pa haltens bom", math.abs(cam.dist - fd) < 1e-6)
+	check("och synfaltet foljde med ned", cam.fov < f0,
+		("%.1f -> %.1f"):format(f0, cam.fov))
+	--[[ Och tillbaka upp igen, samma krav. ]]
+	local storsta2 = 0
+	fd = cam.dist
+	for _ = 1, 120 do
+		cam:step(loco({ gait = "canter", speed = 5.6 }), dt)
+		local hopp = math.abs(cam.dist - fd)
+		if hopp > storsta2 then storsta2 = hopp end
+		fd = cam.dist
+	end
+	check("och inget hopp pa vagen upp heller",
+		storsta2 < 0.25, ("storsta steg %.4f studs"):format(storsta2))
+end
+
+print("\n-- FALL 8: ny hast efter en ritt --")
+do
+	local dt = 1 / 60
+	local cam = newCam()
+	--[[ Rid, begar en feedbackvinkel, och sitt av. ]]
+	for _ = 1, 60 do cam:step(loco({ heading = 2.5, gait = "canter" }), dt) end
+	cam:begarFeedback("utifran", "prov")
+	for _ = 1, 10 do cam:step(loco({ heading = 2.5, gait = "canter" }), dt) end
+	local vikteFore = cam.vikt
+	cam:release()
+	check("en vinkel var uppe fore avsittningen", vikteFore > 0,
+		("vikt %.2f"):format(vikteFore))
+
+	--[[ NASTA HAST: en HELT NY controller, som produktionen gor i mount(). ]]
+	local cam2 = newCam()
+	cam2:step(loco({ heading = 0, gait = "halt" }), dt)
+	--[[ LAGETS vikt, inte den upplosta — se noten i fall 1. ]]
+	check("den nya ritten borjar i sadeln, inte i forra rittens vinkel",
+		Kameralage.las(cam2.lage).vikt == 0,
+		("lage %.2f"):format(Kameralage.las(cam2.lage).vikt))
+	check("och kursen ar den nya hastens, inte den gamlas",
+		math.abs(cam2.yaw) < 0.30, ("%.4f rad"):format(cam2.yaw))
+	--[[ `lageNamn` foljer den UPPLOSTA vikten, som ar "feedback" i
+		banken eftersom ingen karaktar sitter i sadeln. Att krava
+		"ryttare" har vore att krava att degraderingen inte fanns. ]]
+	check("och den gamla vinkelbegaran overlevde INTE avsittningen",
+		Kameralage.aktiv(cam2.lage) == false,
+		tostring(Kameralage.aktiv(cam2.lage)))
+end
+
+print("\n-- FALL 9: lag bildfrekvens --")
+do
+	--[[ Utjamningen ar `1 - exp(-dt/tau)` och SKA darfor ge samma
+		kurva oavsett stegstorlek. Det ar bildfrekvensoberoendet som
+		`docs/GATE-01-RIDING-FEEL.md` kraver, matt pa kameran.
+
+		HORISONTEN AR 0,2 SEKUNDER, INTE 1,0 — och det ar falsifieringens
+		fortjanst. Forsta versionen matte efter en hel sekund, och da har
+		aven en bildrutebunden utjamning (fast andel per ram) hunnit
+		konvergera: 1,0000 mot 0,9866 vid 15 FPS, alltsa inom varje rimlig
+		tolerans. Mutation K5 kom ut GRON pa den har raden och rod bara pa
+		fall 5. Vid 0,2 s ar skillnaden i stallet 0,785 mot 0,578, och
+		raden mater det den pastar sig mata. ]]
+	local TAU_HORISONT = 0.2
+	local function efter(dt)
+		local cam = newCam()
+		local steg = math.floor(TAU_HORISONT / dt + 0.5)
+		for _ = 1, steg do cam:step(loco({ heading = 1.0, gait = "trot" }), dt) end
+		return cam.yaw, cam.dist, cam.fov
+	end
+	local y60, d60, f60 = efter(1 / 60)
+	local y30, d30, f30 = efter(1 / 30)
+	local y15, d15, f15 = efter(1 / 15)
+	check("kursen efter 0,2 s ar densamma vid 60 och 30 FPS",
+		math.abs(y60 - y30) < 0.01, ("%.4f mot %.4f rad"):format(y60, y30))
+	check("...och vid 15 FPS", math.abs(y60 - y15) < 0.02,
+		("%.4f mot %.4f rad (diff %.4f)"):format(y60, y15, math.abs(y60 - y15)))
+	check("avstandet ar bildfrekvensoberoende",
+		math.abs(d60 - d30) < 0.05 and math.abs(d60 - d15) < 0.10,
+		("%.3f / %.3f / %.3f studs"):format(d60, d30, d15))
+	check("synfaltet ocksa",
+		math.abs(f60 - f30) < 0.2 and math.abs(f60 - f15) < 0.4,
+		("%.3f / %.3f / %.3f grader"):format(f60, f30, f15))
+
+	--[[ Och over en hel sekund ska slutlaget vara identiskt — den svagare
+		men fortfarande meningsfulla kontrollen. ]]
+	local function efterEn(dt)
+		local cam = newCam()
+		for _ = 1, math.floor(1.0 / dt + 0.5) do
+			cam:step(loco({ heading = 1.0, gait = "trot" }), dt)
+		end
+		return cam.yaw
+	end
+	check("och slutlaget efter en sekund ar detsamma",
+		math.abs(efterEn(1 / 60) - efterEn(1 / 15)) < 0.01,
+		("%.5f mot %.5f rad"):format(efterEn(1 / 60), efterEn(1 / 15)))
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else
