@@ -1640,10 +1640,37 @@ local function steg(_dt: number)
 			avståndet till sista smulan större för varje steg, och vakten
 			tömde då hela spåret fast spelaren gick något hundradels varv
 			i taget. Mätt i bänken: ett varv med 6 m radie lämnade 4 smulor
-			av 40. Förra läget är det vakten faktiskt menar. ]]
+			av 40. Förra läget är det vakten faktiskt menar.
+
+			══ HOPPET MÄRKER, DET RADERAR INTE (reviewrond 6) ═══════════
+
+			Raden löd `table.clear(spar)`, och den gjorde två saker i ett
+			svep: den upptäckte att spelarens rörelse var diskontinuerlig,
+			OCH den påstod att hästen därmed hade gått hela den antecknade
+			vägen. Bara det första är sant.
+
+			Reproducerat: giltig ledning, fyra oförbrukade smulor, spelaren
+			flyttas 3,75 m på en bildruta och står efteråt 8,00 m bort —
+			innanför `KOPPEL`, så sessionen lever vidare. Ändå blev
+			4 punkter 1 och framsidan flyttade sig 17,25 studs. Rutt hon
+			hade kvar att gå försvann utan att någon gått den.
+
+			Och vakten nådde inte ens sitt eget mål: med spåret tömt lades
+			spelarens NYA läge till som första smula nästa rad, så bron
+			tvärs över teleporten byggdes ändå — 0,00 m från hoppmålet.
+
+			RÄTTELSEN är den klistriga pausen rond 5 redan byggde. Hoppet
+			märker kedjan bruten; den oförbrukade vägen ligger kvar tills
+			hon gått den, och då sår reseeden ett nytt frö vid spelaren.
+			Ingenting läggs till efter hoppet, så det påhittade segmentet
+			uppstår aldrig — vakten behåller hela sin ursprungliga poäng
+			och tappar bara påståendet den inte kunde bevisa.
+
+			Kopplet är fortfarande det som avgör om sessionen ÖVERLEVER ett
+			hopp. Bär den inte, släpper `led.koppel` som förut. ]]
 		local forra = l.forraSpelarPos
 		if forra and (rot.Position - forra).Magnitude > HOPP * M then
-			table.clear(spar)
+			l.sparFullt = true
 		end
 		l.forraSpelarPos = rot.Position
 
@@ -1658,9 +1685,9 @@ local function steg(_dt: number)
 			table.clear(spar)
 		end
 
-		--[[ En TOM kedja är ingen bruten kedja. Spåret töms av reseeden
-			ovan eller av hoppvakten, och i båda fallen börjar nästa smula
-			en ny och obruten kedja. ]]
+		--[[ En TOM kedja är ingen bruten kedja. Spåret töms bara av
+			reseeden ovan — alltså när hon gått allt vi antecknat — och
+			då börjar nästa smula en ny och obruten kedja. ]]
 		if #spar == 0 then l.sparFullt = false end
 
 		local senaste = spar[#spar]
