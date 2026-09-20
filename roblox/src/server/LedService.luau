@@ -1758,19 +1758,41 @@ local function steg(_dt: number)
 				l.sparFullt = true
 			end
 		end
-		--[[ ENGANGSGALLRINGEN VID UTGANGEN, ANDRA HALVAN. Flaggan sattes
-			hogre upp i samma bildruta, nar hon passerade dorrplanet. Nu
-			ar antecknandet gjort, sa den smula som lades till just nu
-			gallras med — och flaggan slacks. Den kor alltsa EN gang. ]]
+		--[[ ENGÅNGSGALLRINGEN VID UTGÅNGEN, ANDRA HALVAN. Flaggan sattes
+			högre upp i samma bildruta, när hon passerade dörrplanet. Nu
+			är antecknandet gjort, så den smula som lades till just nu
+			gallras med — och flaggan släcks. Den kör alltså EN gång.
+
+			══ BARA DEN LEDANDE SERIEN (reviewrond 7) ══════════════════
+
+			Raderna filtrerade förut HELA kön på dörrplanets sida. Men
+			PLANSIDA ÄR INTE FÖRBRUKNING, och det är samma fel som hela
+			den här serien handlar om: ett geometriskt sammanträffande
+			som får betyda «hon har gått här».
+
+			Spåret är ORDNAT. En smula som ligger SENARE i kön och råkar
+			hamna på boxsidan är FRAMTIDA VÄG — rutten kan mycket väl
+			vika tillbaka förbi dörrplanet längre fram. Reproducerat i
+			review, med kön gammal-inne · ute · återgång · ute och koppel
+			5,90 m: återgången raderades, enbart på plansida, fast hon
+			låg 3,89 m från hästen och alltså långt utanför `START_R`.
+
+			Nu gallras bara den LEDANDE serien av boxsidiga smulor. Den
+			är per definition historiken före utgången: spåret byggs
+			framifrån och spelaren stod inne i boxen. Första smulan på
+			gångsidan avslutar gallringen, och allt därefter är framtid.
+
+			Rond 6b:s poäng är oförändrad. Står spelaren kvar på boxsidan
+			i utgångsbildrutan ligger hans nya smula sist i en kö som är
+			boxsidig hela vägen — alltså i den ledande serien — och den
+			går med. ]]
 		if l.gallraVidUtgang then
 			l.gallraVidUtgang = false
 			if l.dorrMitt and l.dorrUt then
-				local kvar = {}
-				for _, c in ipairs(spar) do
-					if (c - l.dorrMitt):Dot(l.dorrUt) > 0 then table.insert(kvar, c) end
+				while #spar > 0
+					and (spar[1] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
+					table.remove(spar, 1)
 				end
-				table.clear(spar)
-				for _, c in ipairs(kvar) do table.insert(spar, c) end
 			end
 		end
 		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
