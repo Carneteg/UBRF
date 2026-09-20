@@ -300,6 +300,9 @@ export type Led = {
 	--[[ Engangsflagga: gallringen vid boxutgangen ska ta aven den smula
 		som laggs SENARE i samma bildruta. Se noten vid utgangen. ]]
 	gallraVidUtgang: boolean,
+	--[[ Fonstret mellan HENNES utgang och SPELARENS. Sa lange det star
+		oppet ar hans lage platsen hon just lamnat, inte vag hon ska ga. ]]
+	utgangsfonster: boolean,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -955,7 +958,7 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 		delmal = nil,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
 		stillaSedan = 0, badGa = false, ankare = pivot.Position, ankartid = 0,
-		sparFullt = false, forraSpelarPos = nil, gallraVidUtgang = false,
+		sparFullt = false, forraSpelarPos = nil, gallraVidUtgang = false, utgangsfonster = false,
 	}
 	--[[ REPET (#182 del 2). Byggs SIST, nar tillstandet finns: ett rep
 		utan en ledning bakom sig vore en lognaktig bild. ]]
@@ -1615,6 +1618,7 @@ local function steg(_dt: number)
 					ovan: gallras det varje bildruta äter gallringen upp
 					hela den västra rutten. ]]
 				l.gallraVidUtgang = true
+				l.utgangsfonster = true
 
 				noteraUppnatt(player, l.hastId, "lamnatBox")
 				LedService._sync(player)
@@ -1748,7 +1752,63 @@ local function steg(_dt: number)
 			nått sista smulan sår reseeden ovan en ny kedja vid spelaren.
 			`HOPP` används nu bara till det den kan bevisa: att avfärda en
 			omöjlig förflyttning på en bildruta, i vakten ovanför. ]]
-		if not senaste then
+		--[[ ══ SMULAN FRÅN UTGÅNGSBILDRUTAN (reviewrond 8) ═══════════
+
+			Rond 7 gallrar den LEDANDE serien av boxsidiga smulor och
+			stannar vid första smulan på gångsidan. Det är rätt för
+			rutthistorik — men det räcker inte, och skälet är ordningen.
+
+			Ligger det redan en utsidespunkt i kön när hon passerar
+			dörrplanet hamnar spelarens boxsidiga läge från SAMMA
+			bildruta EFTER den:
+
+			    [ gammal box , UTE , ny box från utgångsbildrutan ]
+			         ^gallras    ^stopp      ^överlever
+
+			Hon förbrukar sedan `UTE`, spelaren går normalt ut i 0,5 m
+			steg, och den bevarade boxsmulan väljs som delmål TILLBAKA IN
+			i boxen. Mätt i review: `delmal plan −2,00`, utan hopp och
+			med sessionen vid liv.
+
+			DE TVÅ FALLEN ÄR INTE SAMMA SAK, och skillnaden är inte
+			geometrisk utan tidslig:
+
+			  · en SENARE återgång till boxsidan är framtida väg — den
+			    ska leva, och det är rond 7,
+			  · spelarens läge medan hon är UTE och han ännu är KVAR är
+			    platsen hon just lämnat. Det är historik, oavsett var i
+			    kön det hamnar.
+
+			FÖNSTRET, inte bildrutan. Första versionen av rättelsen
+			hoppade bara över själva utgångsbildrutan, och provet var
+			fortfarande rött: hon förbrukade utsidespunkten, kön blev
+			tom, och reseeden sådde ett nytt frö vid spelaren — som
+			fortfarande stod inne. `delmal plan −2,00` igen.
+
+			Därför löper fönstret från den bildruta HON passerar planet
+			till den bildruta HAN gör det. Under tiden antecknas inget.
+			Sedan stängs det för gott, och allt därefter — även en
+			genuin återgång in i boxen — antecknas som vanligt.
+
+			Skillnaden mot rond 7 är TIDSLIG, inte geometrisk. Plansidan
+			används bara för att beskriva fönstret, aldrig som bevis för
+			att framtida rutt är gången. ]]
+		local exitFrameHistorik = false
+		if l.utgangsfonster then
+			if l.dorrMitt and l.dorrUt then
+				if (rot.Position - l.dorrMitt):Dot(l.dorrUt) <= 0 then
+					exitFrameHistorik = true
+				else
+					l.utgangsfonster = false
+				end
+			else
+				l.utgangsfonster = false
+			end
+		end
+
+		if exitFrameHistorik then
+			-- spelarens läge hör till tiden före utgången; det antecknas inte
+		elseif not senaste then
 			table.insert(spar, rot.Position)
 		elseif not l.sparFullt
 			and (senaste - rot.Position).Magnitude > 0.6 * M then

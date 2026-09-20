@@ -1111,14 +1111,26 @@ do
 	kroppU.CFrame = CFrame.new(UTE)
 	LedService._steg(1 / 30)
 	kroppU.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 2))
-	local varstaPlan = math.huge
-	for i = 1, 24 do
+
+	--[[ Spelaren gar UT, 0,5 m per bildruta. Mats gor det inte an: sa
+		lange han sjalv star kvar inne ar det RATT att hon gar mot honom.
+		Forsta versionen av provet raknade med de bildrutorna och var rod
+		av fel skal. ]]
+	for _ = 1, 24 do
 		local nu = rotU.Position
 		local mot = vec(DX + 6, 3, DZ + 4)
 		local d = mot - nu
 		if d.Magnitude > 0.05 then
 			rotU.CFrame = CFrame.new(nu + d.Unit * math.min(0.5 * M, d.Magnitude))
 		end
+		LedService._steg(1 / 30)
+	end
+	check("spelaren ar ute i gangen nu", plan(rotU.Position) > 0,
+		("spelarens plan %+.2f"):format(plan(rotU.Position)))
+
+	--[[ NU mats det. Bada ar ute; ingenting far peka tillbaka in. ]]
+	local varstaPlan = math.huge
+	for _ = 1, 16 do
 		LedService._steg(1 / 30)
 		local li = LedService.lage(spU)
 		if li and li.delmal then
