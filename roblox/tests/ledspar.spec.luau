@@ -152,6 +152,45 @@ do
 	LedService._gallraSpar(sista, hast)
 	check("den sista smulan gallras aldrig bort — hon blir aldrig mållös",
 		#sista == 1, ("%d kvar av 1"):format(#sista))
+
+	--[[ ══ EN VÄG SOM KORSAR SIG SJÄLV ═══════════════════════════════
+
+		ChatGPT:s slutreview på `3ecaa16` reproducerade det här, och det
+		är samma fel som hela specen finns för — rak linje i stället för
+		färdväg, en gång till.
+
+		Gallringen sökte den GLOBALT närmaste smulan i hela spåret och
+		kastade allt före den. En väg som böjer tillbaka — spelaren
+		rundar något och passerar nära hästen igen — har då en SENARE
+		smula fysiskt närmast, och hela sträckan hon har kvar att gå
+		raderades i ett svep.
+
+		    fyra oförbrukade smulor på rutten
+		    den fjärde korsar tillbaka till 0,5 m från hästen
+		    nästa hon faktiskt ska gå till ligger 2,0 m bort
+		    -> med global sökning: 1 av 4 kvar
+
+		2,0 m är mer än `START_R` (1,80). Hon har alltså inte nått någon
+		av dem, och ingen får gallras. Förbrukning måste vara MONOTON i
+		ruttens ordning: bara framsteg framifrån räknas, aldrig fysisk
+		närhet till något längre fram. ]]
+	do
+		local korsande = {
+			hast + vec(2.0 * M, 0, 0),          -- nästa på vägen, 2,0 m
+			hast + vec(4.0 * M, 0, 0),
+			hast + vec(4.0 * M, 0, 3.0 * M),
+			hast + vec(0.0 * M, 0, 0.5 * M),    -- böjer tillbaka, 0,5 m
+		}
+		LedService._gallraSpar(korsande, hast)
+		check("en väg som korsar sig själv gallrar INGEN oförbrukad smula",
+			#korsande == 4, ("%d kvar av 4"):format(#korsande))
+		check("och den första kvar är fortfarande nästa på rutten",
+			#korsande > 0
+				and math.abs(korsande[1].X - (hast.X + 2.0 * M)) < 0.01,
+			#korsande > 0 and ("forsta ligger %.2f m bort"):format(
+				(vec(korsande[1].X, 0, korsande[1].Z) - vec(hast.X, 0, hast.Z)).Magnitude / M)
+				or "spåret tomt")
+	end
 end
 
 --[[ ══ 2 och 3. SCENARIOT — spelaren rundar hindret ═══════════════
@@ -160,7 +199,8 @@ end
 
 	    hindret   en vägg längs Z = 186, från X = 474 och österut
 	    hästen    484 · 184        norr om väggen
-	    spelaren  går väst längs Z = 184 till X = 471 — förbi väggens
+	    spelaren  startar intill henne och går väst längs Z = 184 till
+	              X = 471 — förbi väggens
 	              västra ände — och sedan söderut
 
 	SPELARENS SLUTLÄGE ÄR VALT SÅ ATT HÄSTEN ÄR KVAR INOM KOPPLET. Bandet
@@ -177,7 +217,14 @@ local VAGG_Z = 186
 
 LedService._glomForProv()
 local hast, hastkropp = nyHast("hast_spar", HAST)
-local sp, rot = nySpelare("Ledare_spar", vec(496, 3, 184))
+--[[ SPELAREN STARTAR INTILL HÄSTEN, inte tolv studs bort. En ledning
+	börjar där man når henne, och smulorna börjar därför vid hennes
+	egen kropp. Första versionen satte spelaren på 496 — exakt
+	`RACKVIDD` 4 m bort — och då låg de första smulorna BAKOM hästen.
+	Med monoton förbrukning når hon dem aldrig, så de gallras aldrig,
+	och hon skulle gå dit först och vända. Det är en verklig men
+	ovanlig ytterkant; scenariot här ska mäta hindret, inte den. ]]
+local sp, rot = nySpelare("Ledare_spar", vec(485, 3, 184))
 local okStart, skalStart = LedService.borja(sp, hast, hast)
 check("ledningen startar", okStart == true, tostring(skalStart))
 
@@ -192,7 +239,7 @@ local function ga(fran, till, steg)
 		LedService._steg(DT)
 	end
 end
-ga(vec(496, 3, 184), vec(471, 3, 184), 40)
+ga(vec(485, 3, 184), vec(471, 3, 184), 40)
 ga(vec(471, 3, 184), SLUT, 40)
 
 l = LedService.lage(sp)

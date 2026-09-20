@@ -1355,28 +1355,41 @@ end
 	lämnat en box, och inget bänkscenario nådde dit. En regel som bara går
 	att mäta genom ett scenario man inte kan bygga är obevisad. ]]
 local function gallraSpar(spar: { Vector3 }, hastPos: Vector3)
-	--[[ TVÅ SAKER GÅR BORT, OCH BÅDA ÄR «hästen har passerat dem».
+	--[[ FÖRBRUKNINGEN ÄR MONOTON I RUTTENS ORDNING — bara framifrån.
 
-		1 · allt FÖRE hennes egen punkt på vägen. Spåret är ordnat
-		    äldst först och hon går det i samma ordning, så smulorna
-		    före den hon står närmast ligger bakom henne. Utan den
-		    regeln överlever den allra första smulan tills hon gått
-		    TILLBAKA till den — mätt i bänken blev delmålet 495,4 · 184
-		    för en häst på 484 · 184 som skulle västerut.
+		En smula är förbrukad när hästen har KOMMIT FRAM TILL den, inom
+		`START_R`. Inget annat. Gallringen går därför framifrån och
+		stannar vid den första hon inte nått; allt bakom den ligger kvar
+		som väg hon har att gå.
 
-		2 · och den hon står PÅ, inom `START_R`. Se noten vid anropet:
-		    en punkt hon inte tänker gå till får inte vara hennes mål.
+		══ VARFÖR DEN INTE FÅR SÖKA NÄRMASTE SMULA ═══════════════════
 
-	Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
-	local narmast, bastAvst = 1, math.huge
-	for i = 1, #spar do
-		local d = avstandM(spar[i], hastPos)
-		if d < bastAvst then bastAvst = d narmast = i end
-	end
-	for _ = 2, narmast do
-		if #spar <= 1 then break end
-		table.remove(spar, 1)
-	end
+		Den sökte förut den GLOBALT närmaste smulan i hela spåret och
+		kastade allt före den. Det var samma fel som hela regeln finns
+		för att stänga — rak linje i stället för färdväg — och ChatGPT:s
+		slutreview på `3ecaa16` reproducerade det:
+
+		    fyra oförbrukade smulor på rutten
+		    den fjärde korsar tillbaka till 0,5 m från hästen
+		    nästa hon faktiskt ska gå till ligger 2,0 m bort
+		    -> 1 av 4 kvar
+
+		En väg som böjer tillbaka — spelaren rundar ett hinder och
+		passerar nära hästen igen — har en SENARE smula fysiskt
+		närmast. Hela sträckan hon hade kvar raderades då i ett svep,
+		och hon lämnades med ett mål på andra sidan omvägen. 2,0 m är
+		dessutom mer än `START_R`: hon hade inte nått någon av dem.
+
+		FYSISK NÄRHET TILL NÅGOT LÄNGRE FRAM ÄR INTE FRAMSTEG.
+
+		Priset är utskrivet: börjar ledningen med hästen FÖRE spelaren —
+		hon får stå upp till `RACKVIDD` 4 m bort — ligger de första
+		smulorna bakom henne och gallras aldrig, för hon når dem inte.
+		Då går hon dit först och vänder. Det är en omväg, och den är
+		långt billigare än att tappa vägen: mätt i Studio slutade det
+		förra felet med hästen kilad mot en vägg tills kopplet brast.
+
+		Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
 	while #spar > 1 and avstandM(spar[1], hastPos) < START_R do
 		table.remove(spar, 1)
 	end
