@@ -64,6 +64,7 @@ local Net = Core.Networking
 local HorseService = require(script.Parent.HorseService)
 local StallService = require(script.Parent.StallService)
 local SparService = require(script.Parent.SparService)
+local Aktor = require(ReplicatedStorage.HorseCore.Aktor)
 --[[ #259 Gate 1A: takten framfor de klientanropade fjarrfunktionerna.
 	En delad skopa, inte en per handlare — se `Skopa.luau`. ]]
 local Skopa = require(script.Parent.Skopa)
@@ -185,11 +186,19 @@ end
 	FireClient härifrån var felet senior review fällde: en klient som
 	anslöt sent startade utan hästId, steg och ready-state. ]]
 local function skicka(player: Player)
-	Net.get("PreparationSync"):FireClient(player, vyFor(player))
+	--[[ #252 DEL C: vyn gar till aktorens KLIENT. En aktor utan klient
+	     — testsatet i runtime-grinden, eller en spelare som just kopplat
+	     ned — far ingen sandning. Sanningen ar oforandrad; det ar bara
+	     presentationen som inte har nagon mottagare. ]]
+	local k = Aktor.klient(player)
+	if not k then return end
+	Net.get("PreparationSync"):FireClient(k, vyFor(player))
 end
 
 local function skickaPass(player: Player)
-	Net.get("PassSync"):FireClient(player, Pass.vy(passState[player], nastaRev(player)))
+	local k = Aktor.klient(player)
+	if not k then return end
+	Net.get("PassSync"):FireClient(k, Pass.vy(passState[player], nastaRev(player)))
 end
 
 --[[ Passnumret för dagen som börjar. Ur sparningen, alltså serverns tal.
@@ -1403,7 +1412,18 @@ end
 
 --[[ ── Livscykel ───────────────────────────────────────────────────── ]]
 
-local function glom(player: Player)
+--[[ ── DEN SOM LAMNAR (#252 DEL C) ───────────────────────
+
+	Handlaren var en lokal `glom`, och `Players.PlayerRemoving` var enda
+	vagen in i den. Runtime-grinden maste kunna kora EXAKT den har
+	vagen — `lamnar -> slappBuret -> satSynlig` — utan en riktig
+	`Player`, och en signal gar inte att fyra fran koden.
+
+	Alternativet hade varit att provet anropade `slappBuret` sjalvt.
+	Det hade varit en ANDRA sanning om vad «spelaren lamnade» betyder,
+	och da mater grinden till slut sig sjalv. Handlaren far darfor ett
+	namn; `PlayerRemoving` kopplar samma funktion som forut. ]]
+function GameplayService.lamnar(player: Player)
 	--[[ #235 FAS 1: en spelare som gar far inte lamna en sadel «tagen»
 		for alltid. Registret slapps och fronten far tillbaka sin
 		utrustning — inga orphans, varken i state eller i varlden. ]]
@@ -1569,7 +1589,7 @@ function GameplayService.start()
 	--[[ Ingen `GetPlayers()`-loop här heller (#162 re-review): den band mot
 		ett `passnummer()` som föll till 1 när saven ännu var nil.
 		`efterLaddning` kör hooken direkt för dem som redan är redo. ]]
-	Players.PlayerRemoving:Connect(glom)
+	Players.PlayerRemoving:Connect(GameplayService.lamnar)
 
 	--[[ En rigg som kommer in senare ska plockas upp av den som väntar på
 		henne. Det är krav 2: `waiting_model` ska läka av sig själv. ]]

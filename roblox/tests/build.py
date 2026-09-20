@@ -160,6 +160,9 @@ FORBEREDELSE = SPEL + [
     #   FORE tjansterna: HorseService, StallService, LedService och
     #   GameplayService require:ar den alla fyra. ]]
     ("Skopa",        "src/server/Skopa.luau"),
+    # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
+    # och LedService fragar den om aktoren har en klient att skicka till.
+    ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("HorseService", "src/server/HorseService.luau"),
     # SparService FORE StallService: StallService.hastminnen laser saven ur
     # den. Ordningen ar samma som init.server.luau har.
@@ -399,6 +402,9 @@ KOHERENS = GEOMETRI + [
     #   FORE tjansterna: HorseService, StallService, LedService och
     #   GameplayService require:ar den alla fyra. ]]
     ("Skopa",        "src/server/Skopa.luau"),
+    # AKTOREN (#252 DEL C) FORE tjansterna: GameplayService, HorseService
+    # och LedService fragar den om aktoren har en klient att skicka till.
+    ("Aktor",        "src/shared/HorseCore/Aktor.luau"),
     ("HorseService",    "src/server/HorseService.luau"),
     ("SparService",     "src/server/SparService.luau"),
     ("StallService",    "src/server/StallService.luau"),

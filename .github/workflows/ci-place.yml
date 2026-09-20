@@ -1,0 +1,47 @@
+name: CI-place
+
+# #252 DEL C punkt 0. Körs FÖR HAND, en gång, och skapar som mest EN place.
+#
+# Varför en egen workflow: `ROBLOX_API_KEY` finns bara som repository
+# secret, inte på någon utvecklarmaskin. Skapandet måste därför ske här,
+# och nyckeln skrivs aldrig ut.
+#
+# Utan `skapa: ja` inventerar jobbet bara upplevelsens places och rör
+# ingenting. Finns redan en place som heter «UBRF CI» skapas ingen ny.
+# Startplacen rörs aldrig, av någon väg.
+#
+# Open Cloud har ingen dokumenterad Create Place (mätt 2026-09-19 mot
+# create.roblox.com: Get och Update på cloud/v2, publicering på
+# universes/v1, ingen POST .../places). Skriptet provar de odokumenterade
+# kandidatvägarna en gång var och rapporterar exakt vad Roblox svarade —
+# går ingen igenom skrivs klickvägen ut i stället för att något hittas på.
+
+on:
+  workflow_dispatch:
+    inputs:
+      skapa:
+        description: 'Skriv "ja" för att faktiskt försöka skapa placen'
+        required: true
+        default: 'nej'
+
+jobs:
+  ci-place:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Inventera upplevelsens places
+        env:
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+        run: python3 tools/skapa-ci-place.py
+
+      - name: Skapa CI-placen
+        if: ${{ inputs.skapa == 'ja' }}
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+        run: python3 tools/skapa-ci-place.py --skapa
