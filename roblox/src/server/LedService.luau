@@ -1849,9 +1849,31 @@ local function steg(_dt: number)
 		if l.gallraVidUtgang then
 			l.gallraVidUtgang = false
 			if l.dorrMitt and l.dorrUt then
+				--[[ LEDANDE OCH AVSLUTANDE SERIE, INTE HELA KON.
+
+					Den LEDANDE serien ar rutthistoriken fran innan hon
+					borjade ga ut. Den AVSLUTANDE ar dar ledaren star just
+					nu — han slapper fram henne och blir kvar innanfor
+					dorren, sa hans senaste smulor ligger sist i kon och pa
+					boxsidan. Ocksa det ar bakom henne.
+
+					Mellan tva gangsidiga smulor ligger daremot en GENUIN
+					atergang: en punkt rutten viker tillbaka till langre
+					fram. Den ror vi inte — det ar rond 7.
+
+					    [ box box | UTE | box | UTE | box box ]
+					      ^gallras         ^lever        ^gallras
+
+					Reproducerat i MOTORN, inte bara i banken: med bara den
+					ledande serien overlevde spelarens egen smula pa plan
+					−2,70, och delmalet pekade dit efter att bada var ute. ]]
 				while #spar > 0
 					and (spar[1] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
 					table.remove(spar, 1)
+				end
+				while #spar > 0
+					and (spar[#spar] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
+					table.remove(spar, #spar)
 				end
 			end
 		end
