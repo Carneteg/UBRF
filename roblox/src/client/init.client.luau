@@ -371,10 +371,6 @@ InteractionController.setLedStatus(function(model: Model?)
 	     samma väg statusraden redan gick, så de två kan inte glida isär.
 	     Se noten vid `PreparationController.kontext`. ]]
 	PreparationController.satLeder(model ~= nil)
-	--[[ Och ledknappens egen regel läses om direkt. `ledningKonkurrerar`
-	     svarar annorlunda nu, och utan den här raden hade knappen burit
-	     föregående läges svar tills nästa `PreparationSync` råkade komma. ]]
-	InteractionController.uppdatera()
 end)
 
 InteractionController.setAvslagVisare(function(skal: any, extra: any?)
@@ -396,17 +392,37 @@ end)
      SERVERN AVGÖR FORTFARANDE ALLT annat — rätt häst, avstånd, om hon
      leds av någon annan, om hon rids, om spelaren redan leder. Den här
      raden flyttar ingen behörighet; den slutar bara gömma knappen. ]]
---[[ PO-order 2026-09-20 SMALNAR beslutet ovan, den river det inte:
-     knappen finns fortfarande i VARJE fas, men inte i samma ögonblick som
-     fasen själv står i nederkanten och ber om ett tryck. De två undantag
-     som gör att ledningsloopen ändå inte kan låsa — `leda`-fasen och en
-     ledning som redan pågår — bor i `ledningKonkurrerar`, tillsammans med
-     skälet till att de behövs. ]]
+--[[ ══ VARFÖR LEDKNAPPEN INTE GÖMS UNDER ETT SKÖTSELSTEG ════════════
+
+     PO-ordern 2026-09-20 ber om att «suppress irrelevant horse prompts
+     such as Lead/Mount when they compete with that step». Regeln BYGGDES
+     — `PreparationController.ledningKonkurrerar`, med undantag för
+     `leda`-fasen och för en ledning som redan pågår — och backades sedan
+     ut, för mätningen visade att den gör ledningen omöjlig att nå:
+
+         skötselpanelen visas      `Config.STEG_RACKVIDD` = 12 studs
+         servern släpper ledning   `LedService.RACKVIDD` 4,0 m × M 3
+                                   = 12 studs
+
+     SAMMA RADIE. Panelen står uppe på exakt det avstånd där servern
+     släpper kopplet, så «göm knappen medan panelen står uppe» lämnar
+     ingen position kvar där knappen både syns och fungerar: innanför 12
+     studs finns ingen knapp, utanför svarar servern `led.for_langt`.
+     Ledningen hade bara gått att nå i `leda`-fasen — alltså precis den
+     låsning produktbeslutet 2026-09-17 ovan öppnade, och precis den
+     Lead-regression samma order förbjuder.
+
+     Knappen står därför kvar som förut. Konkurrensen Tobias såg är
+     verklig och obesvarad; den hör ihop med prompt-kolumnen i
+     `InteractionController.PROMPT_STEG` — en ORDNING, inte en gömning —
+     och beslutet om vad som ska ge vika är Tobias, inte mitt.
+     `klient-uikontext.spec` avsnitt 3 mäter att knappen finns i varje
+     fas, så en återinförd regel blir röd där i stället för hos
+     spelaren. ]]
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
-	if model:GetAttribute("HorseId") ~= id then return false end
-	return not PreparationController.ledningKonkurrerar()
+	return model:GetAttribute("HorseId") == id
 end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review

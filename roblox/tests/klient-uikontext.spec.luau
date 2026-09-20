@@ -43,10 +43,9 @@
 	     bär ledningens egen instruktion och dess nej,
 	  4. ridning: kortet är borta och hela ytan är släckt,
 	  5. återvändandet: kortet kommer tillbaka med SAMMA progression,
-	  6. konkurrensen: `LedPrompt` finns inte medan ett skötselsteg står
-	     och väntar på ett tryck, med de två undantag som gör att
-	     ledningsloopen ändå inte kan låsa — och varför `MountPrompt`
-	     inte fick någon sådan regel (avsnitt 3c).
+	  6. konkurrensen: varför VARKEN `LedPrompt` eller `MountPrompt` fick
+	     en undertryckningsregel, och att ledningen därför är nåbar i
+	     varje fas (avsnitt 3, 3b och 3c).
 
 	Kedjan drivs genom PRODUKTIONENS egna vägar: `PreparationController
 	.tillampa` (samma väg som `PreparationSync`) och `LedSync
@@ -220,60 +219,75 @@ do
 	PC.uppdateraKontext()
 end
 
-print("\n── 3. Konkurrensen: ett mål, en instruktion, en handling ──")
+print("\n── 3. Konkurrensen: regeln som mättes och inte gick att skeppa ──")
 
+--[[ PO-ordern ber om att «suppress irrelevant horse prompts such as
+	Lead/Mount when they compete with that step». Regeln BYGGDES och
+	backades ut. Skälet är ett tal, och det mäts här så att ingen behöver
+	ta mitt ord för det:
+
+	    skötselpanelen visas      `Config.STEG_RACKVIDD`
+	    servern släpper kopplet   `LedService` RACKVIDD 4,0 m × M 3
+
+	Är de LIKA finns ingen position kvar där ledknappen både syns och
+	fungerar: innanför radien göms den, utanför svarar servern
+	`led.for_langt`. Ledningen hade bara gått att nå i `leda`-fasen —
+	alltså precis den låsning produktbeslutet 2026-09-17 öppnade.
+
+	`LedService` ligger inte i klientbunten, så dess tal kan inte läsas
+	härifrån; det står som en konstant i den här kommentaren och i
+	`init.client`. Det som MÄTS är följden: knappen finns i varje fas.
+	Återinförs regeln blir avsnittet rött här i stället för hos
+	spelaren. ]]
 do
 	visa(Preparation.STATUS.FORBEREDER)
 	local p = promptar()
 	prova("ett skötselsteg står och väntar på ett tryck",
 		PC.skotselstegVantar() == true and PC.nastaFas() ~= nil,
 		("fas %s"):format(tostring(PC.nastaFas())))
-	prova("då finns ingen ledknapp på hästen", p.LedPrompt == nil,
-		if p.LedPrompt then "LedPrompt kvar" else "(borta)")
-	--[[ Uppsittningen är borta här av ett ANNAT skäl: `redo` är falskt så
-		länge en fas återstår. Raden mäter alltså inte konkurrensregeln —
-		se avsnitt 3c för varför Mount inte har någon. ]]
-	prova("och ingen uppsittningsknapp heller — `redo` är falskt",
+	prova("skötselns radie är 12 studs — samma som serverns ledgräns",
+		Config.STEG_RACKVIDD == 12,
+		("STEG_RACKVIDD %s mot LedService 4,0 m × 3 = 12"):format(
+			tostring(Config.STEG_RACKVIDD)))
+	prova("och därför står ledknappen kvar mitt i skötselsteget",
+		p.LedPrompt ~= nil,
+		if p.LedPrompt then "(kvar)" else "LedPrompt gömd — ledningen onåbar")
+	--[[ Uppsittningen är borta av ett ANNAT skäl: `redo` är falskt så
+		länge en fas återstår. Raden mäter alltså ingen konkurrensregel —
+		se avsnitt 3c för varför Mount inte fick någon. ]]
+	prova("ingen uppsittningsknapp — `redo` är falskt",
 		p.MountPrompt == nil and PC.redo() == false,
 		if p.MountPrompt then "MountPrompt kvar" else "(borta)")
-	--[[ «Rida nu» RÖRS INTE. Ordern namnger Lead och Mount, och genvägen
-		till sadeln är FUN FIRST / RIDE FIRST:s eget svar på «jag vill inte
-		göra det här steget». Faller den här raden har städningen tagit
-		med sig produktkärnan. ]]
-	prova("men «Rida nu» står kvar — genvägen är aldrig irrelevant",
+	prova("och «Rida nu» står kvar — genvägen är aldrig irrelevant",
 		p.RidaNuPrompt ~= nil,
 		if p.RidaNuPrompt then "(kvar)" else "RidaNuPrompt borttagen")
-
-	--[[ UTOM RÄCKHÅLL finns ingen panel, alltså ingen konkurrens — och då
-		ska ledknappen tillbaka. Utan det här vore regeln "ledningen är
-		borta så snart du har en häst". ]]
-	kropp.CFrame = CFrame.new(hastRot.CFrame.Position
-		+ Vector3.new(Config.STEG_RACKVIDD * 4, 0, 0))
-	PC.uppdateraKontext()
-	IC.uppdatera()
-	prova("utom räckhåll konkurrerar ingenting, och ledknappen är tillbaka",
-		PC.ledningKonkurrerar() == false and promptar().LedPrompt ~= nil)
-	kropp.CFrame = CFrame.new(hastRot.CFrame.Position)
-	PC.uppdateraKontext()
-	IC.uppdatera()
 end
 
-print("\n── 3b. Undantaget som håller ledningsloopen öppen ──")
+print("\n── 3b. Ledningen är nåbar i VARJE fas ──")
 
 do
-	--[[ #162 blockerare 2: `leda` bockas av genom att hon FYSISKT leds
-		till ridhuset. Göms knappen när `leda` står på tur finns ingen väg
-		att fästa kopplet, och loopen låser. Faller den här raden är den
-		buggen tillbaka. ]]
+	--[[ Produktbeslut 2026-09-17, och #162 blockerare 2: `leda` bockas av
+		genom att hon FYSISKT leds till ridhuset. Göms knappen någon gång
+		innan dess finns ingen väg att fästa kopplet, och loopen låser.
+		Svepet går igenom hela dagen, en fas i taget. ]]
+	state = Preparation.nyState(HAST_ID, 1)
+	local saknas = {}
 	for _, f in ipairs(Preparation.stegFaser()) do
+		visa(Preparation.STATUS.FORBEREDER)
+		if PC.nastaFas() ~= f.id then
+			table.insert(saknas, ("turordning %s≠%s"):format(
+				tostring(PC.nastaFas()), f.id))
+		elseif promptar().LedPrompt == nil then
+			table.insert(saknas, f.id)
+		end
 		if f.id ~= "leda" then gorFas(f.id) end
 	end
+	prova("ledknappen finns i varje fas i förberedelsen",
+		#saknas == 0,
+		if #saknas > 0 then table.concat(saknas, ", ") else "alla faser")
 	visa(Preparation.STATUS.FORBEREDER)
-	prova("nu står `leda` på tur", PC.nastaFas() == "leda",
-		tostring(PC.nastaFas()))
-	prova("och då konkurrerar ledningen inte — den ÄR steget",
-		PC.ledningKonkurrerar() == false)
-	prova("ledknappen finns", promptar().LedPrompt ~= nil)
+	prova("och `leda` är den fas som står kvar på tur",
+		PC.nastaFas() == "leda", tostring(PC.nastaFas()))
 end
 
 print("\n── 3c. Varför «Mount» inte fick någon konkurrensregel ──")
@@ -361,8 +375,8 @@ do
 	prova("men instruktionsytan lever — den är den relevanta ytan nu",
 		l.interaktion.Visible == true and l.instruktion.Text ~= "",
 		('"%s"'):format(tostring(l.instruktion.Text)))
-	prova("och släpp-knappen rivs aldrig medan kopplet sitter",
-		PC.ledningKonkurrerar() == false and promptar().LedPrompt ~= nil)
+	prova("och släpp-knappen står kvar — man ska kunna släppa igen",
+		promptar().LedPrompt ~= nil)
 
 	print("\n── 5. Tillbaka i boxen: samma progression ──")
 	Net.get("LedSync").OnClientEvent:Fire({ leder = false, hastId = nil,

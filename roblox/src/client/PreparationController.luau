@@ -1997,50 +1997,23 @@ function PreparationController.hastId(): string?
 	return senasteVy and senasteVy.hastId or nil
 end
 
---[[ ══ 1 MÅL → 1 INSTRUKTION → 1 HANDLING (PO-order 2026-09-20) ═══════
+--[[ ══ STÅR ETT SKÖTSELSTEG OCH VÄNTAR PÅ ETT TRYCK? ════════════════
 
-	"While a care step is active, suppress irrelevant horse prompts such
-	as Lead/Mount when they compete with that step."
+	Panelen finns bara när det gör det: `interaktionPagar` kräver både
+	något att välja på och att spelaren är inom serverns räckvidd, så
+	ytans egen synlighet ÄR svaret. Att räkna om villkoret hade gett en
+	andra sanning om samma sak.
 
-	Mätt i Studio 2026-09-20 på `a0d6730`, stående vid Trixie med `halsa`
-	på tur: nederkanten frågade «Walk up from the side. Say her name
-	before you touch her.» med tre svar, och PÅ hästen stod samtidigt
-	`LedPrompt` och `RidaNuPrompt`. Ett mål, fem erbjudanden.
-
-	Den här funktionen svarar bara på EN fråga: står ett skötselsteg och
-	väntar på ett tryck just nu? Panelen finns bara när det gör det —
-	`interaktionPagar` kräver både något att välja på och att spelaren är
-	inom serverns räckvidd — så ytans egen synlighet ÄR svaret. Att räkna
-	om villkoret här hade gett en andra sanning om samma sak.
-
-	«RIDA NU» RÖRS INTE. Ordern namnger Lead och Mount, och inte den, och
-	det är konsekvent med FUN FIRST / RIDE FIRST: genvägen till sadeln är
-	spelets eget svar på «jag vill inte göra det här steget» och är därför
-	relevant i precis de lägen de andra två inte är. ]]
+	Funktionen är en AVLÄSNING och styr ingenting. Den skrevs för
+	PO-orderns 2026-09-20 tredje punkt — "suppress irrelevant horse
+	prompts such as Lead/Mount when they compete with that step" — och den
+	punkten gick inte att skeppa. Se noten vid `setLedCheck` i
+	`init.client.luau` för mätningen som stoppade den. Avläsningen står
+	kvar för att `klient-uikontext.spec` uttrycker kontraktet i den, och
+	för att en framtida variant av regeln ska ha en sanning att fråga i
+	stället för att räkna om panelens villkor en tredje gång. ]]
 function PreparationController.skotselstegVantar(): boolean
 	return interaktion ~= nil and interaktion.Visible
-end
-
---[[ Konkurrerar LEDNINGEN med steget? Samma fråga som ovan, med två
-	undantag som båda är nödvändiga:
-
-	  leder redan   släpp-knappen får aldrig rivas undan. Samma regel som
-	                `InteractionController.removeLed` redan bär: en knapp
-	                som försvinner mitt i ledningen lämnar spelaren fast i
-	                andra änden av repet.
-	  fasen `leda`  då ÄR ledningen stegets egen handling. `GameplayService`
-	                bockar av `leda` genom `LedService.harNattMal`, alltså
-	                genom att hon FYSISKT leds dit — göms knappen då låser
-	                loopen, vilket är exakt #162 blockerare 2.
-
-	Noten vid `InteractionController.farVisasLed` beskriver den låsningen,
-	och produktbeslutet 2026-09-17 som öppnade ledningen i varje fas.
-	Ordern 2026-09-20 SMALNAR det beslutet: knappen är kvar i varje fas,
-	men inte i samma ögonblick som fasen själv ber om ett tryck. ]]
-function PreparationController.ledningKonkurrerar(): boolean
-	if leder then return false end
-	if PreparationController.nastaFas() == "leda" then return false end
-	return PreparationController.skotselstegVantar()
 end
 
 --[[ Provets fönster in. Tilldelningen kommer ur serverns vy; den som
