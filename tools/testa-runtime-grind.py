@@ -68,6 +68,12 @@ def kor_grinden(extra_env=None, argv=("--torrkor",), cwd=None):
     #   fungerar matas av `utan_head_sha` nedan. ]]
     env.pop("GITHUB_SHA", None)
     env.setdefault("UBRF_HEAD_SHA", "0" * 40)
+    #[[ BARNETS UTDATA SKA VARA UTF-8. Provet lasar roret som UTF-8, men
+    #   drivaren skriver i konsolens kodning nar utdata gar till ett ror
+    #   — pa Windows cp1252. Tankstreck blev `?` och nio av nitton
+    #   textassertioner foll pa ett verktyg som fungerade. Samma klass av
+    #   fel som M1 rattade i `pre-tobias-grind.py`. ]]
+    env["PYTHONIOENCODING"] = "utf-8"
     env.update(extra_env or {})
     #[[ DRIVAREN LASER SITT EGET ROT ur `__file__`. Kor man repots kopia
     #   med `cwd` satt till ett muterat trad mater den alltsa REPOT, och
@@ -247,10 +253,24 @@ def mountrequest_utan_namngiven_handlare():
     try:
         p = tmp / "roblox" / "src" / "server" / "HorseService.luau"
         s = p.read_text(encoding="utf-8")
-        s = s.replace(
-            'Net.get("MountRequest").OnServerInvoke = HorseService.mountRequest',
-            'Net.get("MountRequest").OnServerInvoke = function(p, m)\n'
-            '\t\treturn HorseService.tryMount(p, m)\n\tend')
+        #[[ MUTATIONEN MASTE TRAFFA DEN FORM SOM FAKTISKT FINNS.
+        #
+        #   Den skrevs mot #256:s raka koppling. Pa #264 ligger Gate 1A:s
+        #   `Skopa.grind` utanpa, sa `replace` hittade ingenting, ingen
+        #   mutation skedde, och falsifieringen rapporterade «grinden blev
+        #   GRON» — vilket den ocksa hade gjort om kontrollen varit trasig.
+        #   En mutation som inte muterar ar inget prov. Darfor bada
+        #   formerna, OCH en vakt mot att ingen av dem traffade. ]]
+        anonym = ('Net.get("MountRequest").OnServerInvoke = function(p, m)\n'
+                  '\t\treturn HorseService.tryMount(p, m)\n\tend')
+        fore = s
+        s = re.sub(
+            r'Net\.get\("MountRequest"\)\.OnServerInvoke\s*=\s*'
+            r'(?:Skopa\.grind\(\s*"MountRequest"\s*,\s*'
+            r'HorseService\.mountRequest\s*\)|HorseService\.mountRequest)',
+            lambda _m: anonym, s, count=1)
+        assert s != fore, ("mutationen traffade ingenting — HorseService "
+                           "kopplar MountRequest pa ett satt provet inte kanner")
         p.write_text(s, encoding="utf-8")
         ny_identitet(tmp)
         kod, ut = kor_grinden(cwd=tmp)

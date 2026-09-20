@@ -180,8 +180,19 @@ def kontrollera_remotekoppling():
     att lasa tillbaka ur motorn, sa pastaendet maste bindas HAR — annars
     kan kopplingen tas bort utan att nagot blir rott."""
     text = HORSESERVICE.read_text(encoding="utf-8")
-    vantad = 'Net.get("MountRequest").OnServerInvoke = HorseService.mountRequest'
-    if vantad not in text:
+    #[[ TVA FORMER AR GILTIGA, och det ar Gate 1A som gjorde det sa.
+    #   #256 kopplade remoten rakt; pa #264 ligger `Skopa.grind` utanpa.
+    #   Kontrollens AVSIKT ar oforandrad: remoten ska till slut na den
+    #   NAMNGIVNA handlaren, sa att smokens avsnitt 7 provar samma
+    #   funktion som spelaren nar — inte en kopia av dess villkor.
+    #   Att i stallet ta bort `Skopa.grind` hade offrat rate limiting
+    #   for en textmatchning. ]]
+    rakt = 'Net.get("MountRequest").OnServerInvoke = HorseService.mountRequest'
+    via_skopa = re.search(
+        r'Net\.get\("MountRequest"\)\.OnServerInvoke\s*=\s*'
+        r'Skopa\.grind\(\s*"MountRequest"\s*,\s*HorseService\.mountRequest\s*\)',
+        text) is not None
+    if rakt not in text and not via_skopa:
         raise Rott("HorseService kopplar inte MountRequest till "
                    "`HorseService.mountRequest`. Smokens avsnitt 7 skulle "
                    "da prova en funktion remoten inte anvander.")
