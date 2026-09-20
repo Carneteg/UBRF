@@ -496,6 +496,87 @@ do
 		langsta <= 3.0, ("sista/langsta segmentet %.2f m, hoppgransen 3,00"):format(langsta))
 end
 
+--[[ ══ 6. NÄRA ÄNDPUNKTER ÄR INTE KONTINUITET ══════════════
+
+	ChatGPT:s femte reviewrond, på `82621c0`. Rond 4 vaktade gapet
+	mot `HOPP` — men `HOPP` bevisar bara att EN BILDRUTA inte var en
+	teleport. Efter ett osett intervall bevisar det ingenting alls.
+
+	Spelaren kan gå ett helt varv medan antecknandet är pausat och
+	komma tillbaka nära svansen. Då är ändpunkterna nära varandra,
+	gapet understiger `HOPP`, och hela varvet komprimeras till ett
+	enda direktsegment. Uppmätt i review: 36,16 m omväg till 2,09 m.
+
+	PAUSEN ÄR DÄRFÖR KLISTRIG. När kedjan en gång brutits läggs inget
+	mer till den — den får gås färdigt och sås om. ]]
+print("")
+print("-- 6. Nara andpunkter ar inte kontinuitet --")
+
+do
+	LedService._glomForProv()
+	local MITT = vec(900, 3, 900)
+	local hastK, kroppK = nyHast("hast_klistrig", MITT)
+	local spK, rotK = nySpelare("Ledare_klistrig", MITT + vec(2 * M, 0, 0))
+	check("ledningen startar for klistrighetsprovet",
+		LedService.borja(spK, hastK, hastK) == true)
+	local lK = LedService.lage(spK)
+	if lK then lK.lamnatBox = true end
+
+	local R = 6 * M
+	local function garTill(i)
+		local a = (i / 42) * 2 * math.pi
+		rotK.CFrame = CFrame.new(MITT + vec(math.cos(a) * R, 0, math.sin(a) * R))
+		LedService._steg(DT)
+	end
+
+	--[[ 1 · fyll bufferten. FARRE OCH LANGRE STEG an i provet ovan:
+		smulor laggs per 0,6 m rorelse, men `led.fastnat` raknar
+		SEKUNDER. Forsta versionen tog 8,5 s och sessionen slapptes
+		mitt i — provet matte da en dod ledning. 42 steg per varv ger
+		0,9 m per steg och halet ryms val under NAV_FASTNAT. ]]
+	local n = 0
+	for i = 1, 60 do
+		garTill(i)
+		n = i
+		local l = LedService.lage(spK)
+		if l and #l.spar >= 40 then break end
+	end
+	lK = LedService.lage(spK)
+	check("bufferten ar full", lK ~= nil and #lK.spar >= 40,
+		("%d smulor"):format(lK and #lK.spar or -1))
+	local svans = lK and lK.spar[#lK.spar]
+
+	--[[ 2 · ETT HELT VARV medan det ar pausat. Banlangden ar 2*pi*6 =
+		37,7 m, och hon slutar dar hon borjade — alltsa nara svansen.
+		Hela tiden 6 m fran hasten, alltsa innanfor kopplet. ]]
+	--[[ NASTAN ETT HELT VARV: 40 av 42 steg. Vagen daremellan ar 36 m,
+		och hon slutar 1,8 m fran svansen — alltsa over trosklen for
+		att anteckna (0,6 m) men UNDER `HOPP` (3,0 m). Det ar precis
+		det fallet reviewen matte: 36,16 m komprimerat till 2,09 m.
+		Slutar hon exakt pa svansen laggs ingenting till alls, och da
+		provas inget — forsta versionen gjorde det och kom ut gron. ]]
+	for i = n + 1, n + 40 do garTill(i) end
+	lK = LedService.lage(spK)
+	check("sessionen lever efter varvet", lK ~= nil)
+	local gap = (svans and lK) and (vec(rotK.Position.X, 0, rotK.Position.Z)
+		- vec(svans.X, 0, svans.Z)).Magnitude / M or -1
+	check("och hon ar tillbaka NARA svansen — annars provas inte fallet",
+		gap >= 0 and gap < 3.0, ("andpunktsgap %.2f m, omvagen var 37,7 m"):format(gap))
+
+	--[[ 3 · hasten forbrukar en smula sa att en plats blir ledig. ]]
+	if lK and #lK.spar > 0 then kroppK.CFrame = CFrame.new(lK.spar[1]) end
+	LedService._steg(DT)
+	kroppK.CFrame = CFrame.new(MITT)
+	for _ = 1, 3 do LedService._steg(DT) end
+
+	lK = LedService.lage(spK)
+	local nySvans = lK and #lK.spar > 0 and lK.spar[#lK.spar] or nil
+	check("nara andpunkter far inte komprimera en lang osedd omvag till direktsegment",
+		svans ~= nil and nySvans ~= nil and (nySvans - svans).Magnitude < 0.01,
+		(svans and nySvans) and ("svansen var %.1f,%.1f — ar nu %.1f,%.1f"):format(
+			svans.X, svans.Z, nySvans.X, nySvans.Z) or "-")
+end
+
 print("")
 if fails > 0 then
 	print(("ledspar.spec: %d mätning(ar) föll."):format(fails))

@@ -1658,6 +1658,11 @@ local function steg(_dt: number)
 			table.clear(spar)
 		end
 
+		--[[ En TOM kedja är ingen bruten kedja. Spåret töms av reseeden
+			ovan eller av hoppvakten, och i båda fallen börjar nästa smula
+			en ny och obruten kedja. ]]
+		if #spar == 0 then l.sparFullt = false end
+
 		local senaste = spar[#spar]
 		--[[ ══ TAKET FÅR INTE ÄTA FRAMSIDAN (reviewrond 3) ═══════════
 
@@ -1668,53 +1673,46 @@ local function steg(_dt: number)
 			hela tiden innanför kopplets 9 m, med hästen kvar i mitten.
 			Varje smula ligger 6 m bort, alltså långt utanför `START_R`:
 			hon har inte gått en enda. Ändå började den äldsta vägen falla
-			bort så fort bufferten nått taket. Samma invariant som
-			gallringen skyddar, brutet i minneshanteringen i stället.
+			bort så fort bufferten nått taket.
 
 			POLICYN: är bufferten full och framsidan oförbrukad, så slutar
 			vi ANTECKNA. Minnet förblir bundet vid `SPAR_TAK`, och ingen
 			väg hon har kvar att gå raderas. Att i stället kasta framsidan
 			vore att påstå ett framsteg som inte hänt.
 
-			VARFÖR DEN NYASTE ÄNDEN ÄR DEN BILLIGA ATT TAPPA: hon går
-			spåret framifrån. Framsidan är hennes nästa steg; baksidan är
-			det hon behöver sist. När hon förbrukar något frigörs plats och
-			antecknandet börjar igen av sig självt.
+			Den nyaste änden är den billiga att tappa: hon går spåret
+			framifrån, så framsidan är hennes nästa steg och baksidan det
+			hon behöver sist. `sparFullt` gör läget synligt i runtime.
 
-			OCH VAD DET KOSTAR, utskrivet: går spelaren en omväg just medan
-			bufferten är full, hamnar den omvägen inte i spåret. Då är hon
-			redan så långt efter att bufferten räcker till — och då är det
-			planeraren och kopplet som är skydden, inte spåret.
+			Kostnaden: en omväg spelaren tar medan det är pausat hamnar
+			inte i spåret. Då är hon redan så långt efter att bufferten
+			räcker till, och då är planeraren och kopplet skydden. ]]
+		--[[ ══ PAUSEN ÄR KLISTRIG — NÄRA ÄNDPUNKTER ÄR INTE KONTINUITET ══
 
-			`sparFullt` finns för att läget ska gå att SE i runtime i
-			stället för att vara tyst. ]]
-		--[[ ══ EN ÅTERUPPTAGEN ANTECKNING FÅR INTE BYGGA EN BRO ═══════
+			Rond 3 slutade kasta framsidan, men när en plats blev ledig
+			lades spelarens nuvarande läge till efter den gamla svansen —
+			ett påhittat segment tvärs över allt osett. Rond 4 vaktade det
+			gapet mot `HOPP`.
 
-			Rond 3 slutade kasta framsidan. Men när hästen sedan förbrukade
-			en smula och en plats blev ledig, lades spelarens NUVARANDE läge
-			till efter den gamla svansen — och hade hon gått en omväg medan
-			det var pausat blev det ett enda påhittat segment tvärs över hela
-			det osedda stycket. Uppmätt i review: 6,26 m. I bänken 9,74.
+			DET RÄCKTE INTE, och skälet är principiellt: `HOPP` bevisar bara
+			att EN BILDRUTA inte var en teleport. Efter ett osett intervall
+			bevisar det ingenting. Spelaren kan gå ett helt varv medan det
+			är pausat och komma tillbaka intill svansen — uppmätt i review
+			36,16 m komprimerat till 2,09 m, i bänken 36 m till 1,79.
 
-			Spåret slutade alltså radera sanning och började tillverka den.
+			NÄRA ÄNDPUNKTER ÄR INTE KONTINUITET.
 
-			GRÄNSEN ÄR TJÄNSTENS EGEN: `HOPP`, samma tal som säger att en
-			förflyttning på en bildruta inte är en väg. Ett segment längre
-			än så är inte heller en väg, och får därför inte antecknas.
-			Inget nytt tal är uppfunnet.
-
-			Går gapet inte att brygga står spåret kvar som det är: det slutar
-			där vi sist VET att hon gick. Hästen går dit, förbrukar det, och
-			då sår reseeden ovan ett nytt frö vid spelaren. ]]
+			När kedjan en gång brutits läggs därför inget mer till den, hur
+			nära spelaren än kommer. Den får gås färdigt, och när hästen
+			nått sista smulan sår reseeden ovan en ny kedja vid spelaren.
+			`HOPP` används nu bara till det den kan bevisa: att avfärda en
+			omöjlig förflyttning på en bildruta, i vakten ovanför. ]]
 		if not senaste then
 			table.insert(spar, rot.Position)
-			l.sparFullt = false
-		elseif (senaste - rot.Position).Magnitude > 0.6 * M then
-			if (senaste - rot.Position).Magnitude > HOPP * M then
-				l.sparFullt = true
-			elseif #spar < SPAR_TAK then
+		elseif not l.sparFullt
+			and (senaste - rot.Position).Magnitude > 0.6 * M then
+			if #spar < SPAR_TAK then
 				table.insert(spar, rot.Position)
-				l.sparFullt = false
 			else
 				l.sparFullt = true
 			end
