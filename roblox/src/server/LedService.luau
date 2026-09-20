@@ -181,6 +181,7 @@ local NAV_OMPLAN_PAUS  = 1.0   -- s: kortaste tid mellan två planeringar
 local NAV_MAX_PLANER   = 6     -- fler än så och vi ger upp i stället för att mala
 local NAV_FASTNAT      = 8.0   -- s helt stilla trots order: kopplet släpper
 local NAV_ANKARE       = 0.25  -- m hon måste förflytta sig för att räknas som i rörelse
+local NAV_TAKT         = 0.5   -- andel av BEORDRAD fart som räknas som att hon går
 
 --[[ EN LEDD HÄST SKRITTAR. Farten hämtas ur gångartskanonen och skrivs
 	inte av som ett tal: `Gaits.DATA.walk.norm` är skrittens nominella
@@ -290,6 +291,7 @@ export type Led = {
 	stillaSedan: number,
 	badGa: boolean,
 	ankare: Vector3,
+	ankartid: number,
 }
 
 local ledd: { [Player]: Led } = {}
@@ -944,7 +946,7 @@ local function borjaInre(player: Player, modell: Model?, ratt: Model?): (boolean
 		dorrsteg = 1,
 		delmal = nil,
 		navVag = {}, navIx = 1, navPlaner = 0, navSenast = -NAV_OMPLAN_PAUS, planerar = false, tid = 0,
-		stillaSedan = 0, badGa = false, ankare = pivot.Position,
+		stillaSedan = 0, badGa = false, ankare = pivot.Position, ankartid = 0,
 	}
 	--[[ REPET (#182 del 2). Byggs SIST, nar tillstandet finns: ett rep
 		utan en ledning bakom sig vore en lognaktig bild. ]]
@@ -1790,15 +1792,48 @@ local function steg(_dt: number)
 			nollställdes varje bildruta. Ett ankare i världen och ett krav på
 			att hon faktiskt LÄMNAR det kan inte ljuga på samma sätt. ]]
 		l.tid += _dt
+		l.ankartid = (l.ankartid or 0) + _dt
+		--[[ ANKARET HAR EN TAKT, INTE BARA EN RADIE (M3, hela ledrutten).
+
+			Mätt i Studio under hela rutten box E 8 -> ridhuset, tre pass med
+			samma utfall. Hon växlade mellan att följa i 5,74 studs/s och att
+			KRYPA:
+
+			    11,9 -> 15,5 s   hasten 2,2 studs     = 0,6 studs/s
+			                     spelaren 17 studs    = 4,7 studs/s
+			    draget            på, MaxVelocity 6,00
+			    stillaSedan       0,0  0,4  0,1  0,6  1,2  0,1  0,0
+
+			Radien är 0,25 m. En krypning på 0,2 m/s lämnar den på 1,25 s och
+			NOLLSTÄLLER därmed stillaståendet strax innan NAV_STILLA nås. Hon
+			räknades alltså som GÅENDE medan hon förlorade fyra studs i sekunden
+			mot den som ledde henne. Planeraren kopplades aldrig in, och kopplet
+			släppte på `led.tappade_bort` vid waypoint 41 av 94.
+
+			FÖRFLYTTNINGEN ÄR FORTFARANDE MÅTTET — en ankrad häst rapporterade
+			1,59 studs/s utan att röra sig, och det är därför ankaret finns.
+			Det som saknades var att förflyttningen också måste ske i NÅGON takt.
+			Tiden det tog att lämna ankaret jämförs därför med tiden hon fick på
+			sig vid `NAV_TAKT` av den fart hon FAKTISKT beordrats hålla. Hann hon
+			det är hon i rörelse och klockan nollställs som förr; hann hon inte
+			flyttas ankaret ändå — hon är ju någon annanstans — men klockan får
+			gå vidare, så en krypning inte längre kan köpa sig fri en gång per
+			radie. Tröskeln är RELATIV till ordern och inte ett valt tal: går hon
+			långsamt för att hon beordrats långsamt räknas hon fortfarande som
+			gående. ]]
 		if l.badGa then
 			if avstandM(pivot.Position, l.ankare) > NAV_ANKARE then
+				local budget = NAV_ANKARE / math.max(onskadFart * NAV_TAKT, 0.01)
+				local holltTakten = l.ankartid <= budget
 				l.ankare = pivot.Position
-				l.stillaSedan = 0
+				l.ankartid = 0
+				if holltTakten then l.stillaSedan = 0 end
 			else
 				l.stillaSedan += _dt
 			end
 		else
 			l.ankare = pivot.Position
+			l.ankartid = 0
 			l.stillaSedan = 0
 		end
 		l.badGa = false

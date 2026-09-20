@@ -704,6 +704,10 @@ def valjBunt(spec_rel: str):
     #   behover SAMMA bunt som ledning.spec, alltsa INTEGRATION. ]]
     elif "flerhast" in spec_rel:
         moduler, stubbar = INTEGRATION, "tests/stubs.luau"
+    #[[ M3: ankarets takt. Samma bunt som ledning.spec av samma skal —
+    #   provet driver `LedService._steg` pa en riktig rigg. ]]
+    elif "ledtakt" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning-integration" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:
