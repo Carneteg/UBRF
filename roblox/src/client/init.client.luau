@@ -318,7 +318,15 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
 	if model:GetAttribute("HorseId") ~= id then return false end
-	return PreparationController.redo()
+	if not PreparationController.redo() then return false end
+	--[[ PO-order 2026-09-20: «1 goal → 1 instruction → 1 action». Står ett
+	     skötselsteg och väntar på ett tryck äger det stunden. I praktiken
+	     rör raden bara två lägen, för `redo` utesluter en pågående fas:
+	     fyndets obesvarade fråga och eftervården. Båda är lägen där
+	     servern ändå nekar uppsittningen — `Pass` släpper den bara i
+	     `before_ride` — så knappen lovade något spelet sa nej till.
+	     Se noten vid `PreparationController.skotselstegVantar`. ]]
+	return not PreparationController.skotselstegVantar()
 end)
 --[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
 	Se noten i `InteractionController.farVisasLed`: den gamla regeln låste
@@ -347,6 +355,15 @@ InteractionController.setLedStatus(function(model: Model?)
 	DinHast.satLedstatus(if model
 		then tostring(model:GetAttribute("HorseName") or model.Name)
 		else nil)
+	--[[ PO-order 2026-09-20: skötselns framstegskort hör till boxen, inte
+	     till kopplet. Ledningens ENDA övergång driver HUD-kontexten —
+	     samma väg statusraden redan gick, så de två kan inte glida isär.
+	     Se noten vid `PreparationController.kontext`. ]]
+	PreparationController.satLeder(model ~= nil)
+	--[[ Och ledknappens egen regel läses om direkt. `ledningKonkurrerar`
+	     svarar annorlunda nu, och utan den här raden hade knappen burit
+	     föregående läges svar tills nästa `PreparationSync` råkade komma. ]]
+	InteractionController.uppdatera()
 end)
 
 InteractionController.setAvslagVisare(function(skal: any, extra: any?)
@@ -368,10 +385,17 @@ end)
      SERVERN AVGÖR FORTFARANDE ALLT annat — rätt häst, avstånd, om hon
      leds av någon annan, om hon rids, om spelaren redan leder. Den här
      raden flyttar ingen behörighet; den slutar bara gömma knappen. ]]
+--[[ PO-order 2026-09-20 SMALNAR beslutet ovan, den river det inte:
+     knappen finns fortfarande i VARJE fas, men inte i samma ögonblick som
+     fasen själv står i nederkanten och ber om ett tryck. De två undantag
+     som gör att ledningsloopen ändå inte kan låsa — `leda`-fasen och en
+     ledning som redan pågår — bor i `ledningKonkurrerar`, tillsammans med
+     skälet till att de behövs. ]]
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
-	return model:GetAttribute("HorseId") == id
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return not PreparationController.ledningKonkurrerar()
 end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review

@@ -391,13 +391,31 @@ do
 
 	ytor.vaxla.Activated:Fire()
 	local Lut = PreparationController.layout()
-	check("ett tryck fäller UT den: stegen och hjälptexten kommer fram",
+	--[[ HJÄLPRADEN HÖR INTE LÄNGRE HIT NÄR PANELEN STÅR UPPE.
+
+		Den här raden krävde förut `ytor.hjalp.Visible == true`, och det
+		var den gamla ordningen: spårarens hjälprad och panelens
+		instruktion bar SAMMA sträng och stod uppe samtidigt. PO-ordern
+		2026-09-20 säger «the bottom instruction/action area carries the
+		current care instruction … do not duplicate the same instruction
+		in multiple places», och nederkanten vann.
+
+		Utfällningen mäts alltså på STEGLISTAN och på höjden. Att raden
+		kommer tillbaka när panelen INTE finns mäts en bit ned — utan den
+		mätningen hade det här bara varit en borttagen check. ]]
+	check("ett tryck fäller UT den: stegen kommer fram",
 		PreparationController._utvidgad() == true
-			and ytor.steg.Visible == true and ytor.hjalp.Visible == true
+			and ytor.steg.Visible == true
 			and Lut.sparare.y1 > Lut.kompakt.y1,
 		("%d px hög utfälld mot %d px hopfälld, %d steg"):format(
 			Lut.sparare.y1 - Lut.sparare.y0,
 			Lut.kompakt.y1 - Lut.kompakt.y0, Lut.antalSteg))
+	check("och instruktionen står på EN plats, inte två",
+		ytor.interaktion.Visible == true and ytor.hjalp.Visible == false
+			and ytor.instruktion.Text ~= "",
+		('panel %s "%s" · spårarens hjälprad %s'):format(
+			tostring(ytor.interaktion.Visible),
+			tostring(ytor.instruktion.Text), tostring(ytor.hjalp.Visible)))
 	ytor.vaxla.Activated:Fire()
 	check("och ett tryck till fäller ihop den igen",
 		PreparationController._utvidgad() == false

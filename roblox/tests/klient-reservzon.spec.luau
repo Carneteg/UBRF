@@ -356,10 +356,23 @@ for _, sk in ipairs(SKARMAR) do
 		#k == 0, if #k > 0 then table.concat(k, ", ") else "(inget på skärmen)")
 
 	--[[ MUTATION I BÄNKEN: tänds GUI:t medan man rider ska mätningen
-		bli röd — annars mäter raden ovan ingenting. Släcks igen. ]]
+		bli röd — annars mäter raden ovan ingenting. Släcks igen.
+
+		TVÅ GRINDAR SEDAN PO-ORDERN 2026-09-20, och mutationen måste
+		besegra BÅDA. Ytan släcks fortfarande på `ScreenGui`-nivå av
+		`avsluta`, och spåraren är dessutom osynlig utanför skötselns
+		kontext (`layout().spararSyns`). Bara `Enabled = true` gav därför
+		en tom skärm, mutationen slog på noll av sex skärmar och ankaret
+		blev blint — ett prov som slutade mäta för att koden blev
+		säkrare. Den mutationen är alltså inte "tänd ytan" längre utan
+		"riv hela regeln om att kortet hör till skötseln". ]]
 	if g2 then
 		g2.Enabled = true
+		local spa = ytor.sparare
+		local spaFore = spa and spa.Visible
+		if spa then spa.Visible = true end
 		local km = krockar(hudPaSkarmen(W, H), res)
+		if spa then spa.Visible = spaFore end
 		g2.Enabled = false
 		--[[ Räknas i stället för att krävas per skärm. På en iPad ryms
 			både skötselytorna och reglagen utan att mötas, och då slår
