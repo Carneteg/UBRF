@@ -694,19 +694,21 @@ do
 				genom ett scenario.
 
 				GALLRINGEN MÄTER NU HÄSTENS FRAMFART, inte spelarens
-				avstånd (produktbeslut 2026-09-20). Referensen nedan är
-				alltså hästens läge. Kvar blir den smula hon står närmast
-				och allt hon har kvar att gå; det hon passerat faller.
-				Hela regeln med sitt scenario ligger i `ledspar.spec`. ]]
+				avstånd (produktbeslut 2026-09-20), och den är MONOTON i
+				ruttens ordning: den går framifrån och stannar vid den
+				första smula hon inte har nått. Referensen nedan är
+				alltså hästens läge. Hela regeln med sitt scenario, och
+				varför den inte får söka närmaste smula, ligger i
+				`ledspar.spec`. ]]
 			local ref = Vector3.new(0, 3, 0)
 			local trad = {
+				ref + Vector3.new(1 * M, 0, 0),    -- hon står på den
+				ref + Vector3.new(2 * M, 0, 0),    -- nästa, inte nådd
 				ref + Vector3.new(40 * M, 0, 0),
-				ref + Vector3.new(2 * M, 0, 0),
-				ref + Vector3.new(1 * M, 0, 0),
 			}
 			LedService._gallraSpar(trad, ref)
-			check("det hon redan passerat gallras ur spåret direkt",
-				#trad == 1, ('%d kvar av 3'):format(#trad))
+			check("den hon står på gallras, resten av rutten ligger kvar",
+				#trad == 2, ('%d kvar av 3'):format(#trad))
 			--[[ Och en oförbrukad smula långt bort är rutthistorik — den
 				överlever, för spelarens avstånd äger den inte längre. ]]
 			local langtbortSpar = {

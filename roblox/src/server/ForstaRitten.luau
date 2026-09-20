@@ -179,7 +179,7 @@ end
 	med en nybörjarupplevelse. Fail closed åt rätt håll. ]]
 function ForstaRitten.galler(player: Player): boolean
 	--[[ SKYDD 1, RATTAT EFTER RE-REVIEW AV `d4912c0`.
-	
+
 		Forsta versionen fragade `SparService.redo`, och det var for
 		svagt. `redo` betyder att laddningen natt ett SLUTLAGE — inte att
 		slutlaget bar riktig data. Vid saknat datalager, lasfel, framtida
@@ -187,7 +187,7 @@ function ForstaRitten.galler(player: Player): boolean
 		`Sparning.tom()`, alltsa exakt samma nollpassbild som en verkligt
 		ny spelare har. En spelare med tio pass bakom sig hade da fatt
 		nyborjarupplevelsen for att en hamtning strulade.
-	
+
 		`betroddLasning` ar SparServices eget besked om att lasningen gar
 		att lita pa: en ren rad, eller ingen rad alls. Allt annat ar ett
 		nej. Att fraga DAR och inte har ar poangen — tjanstens egen
