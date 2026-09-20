@@ -577,6 +577,120 @@ do
 			svans.X, svans.Z, nySvans.X, nySvans.Z) or "-")
 end
 
+--[[ ══ 7. ETT HOPP FÅR INTE RADERA OFÖRBRUKAD RUTT ═════════
+
+	ChatGPT:s sjätte reviewrond, på `9e29fba`. Hoppvakten gjorde två
+	saker i ett svep: den upptäckte att spelarens rörelse var
+	diskontinuerlig, OCH den påstod att hästen därmed hade förbrukat
+	hela den gamla kedjan. Bara det första är sant.
+
+	Reproducerat i review: giltig ledning, fyra oförbrukade smulor,
+	spelaren flyttas 3,75 m på EN bildruta, och står efteråt 8,00 m
+	bort — alltså innanför `KOPPEL` 9,0. Sessionen lever vidare, men
+	`table.clear(spar)` hade redan tömt rutten: 4 punkter blev 1 och
+	framsidan flyttade sig 17,10 studs.
+
+	SKILJ PÅ DE TVÅ PÅSTÅENDENA. Hoppet får märka kedjan bruten — det
+	är precis den klistriga pausen rond 5 byggde — men den oförbrukade
+	vägen ligger kvar tills hon gått den. Vakten behåller ändå hela sin
+	ursprungliga poäng: inget läggs till efter hoppet, så det påhittade
+	segmentet tvärs över teleporten uppstår aldrig. ]]
+print("")
+print("-- 7. Ett hopp far inte radera oforbrukad rutt --")
+
+do
+	LedService._glomForProv()
+	local MITT = vec(1200, 3, 1200)
+	local hastH, kroppH = nyHast("hast_hopp", MITT)
+	local spH, rotH = nySpelare("Ledare_hopp", MITT + vec(2.30 * M, 0, 0))
+	check("ledningen startar for hoppprovet",
+		LedService.borja(spH, hastH, hastH) == true)
+	local lH = LedService.lage(spH)
+	if lH then lH.lamnatBox = true end
+
+	--[[ 1 · FYRA SANNA, OFÖRBRUKADE SMULOR. Stegen är 0,70 m, alltså
+		över antecknandets 0,6 m. Den närmaste ligger 2,30 m från
+		hästen — utanför `START_R` (1,8 m), så ingen av dem är gången.
+		Hästen står stilla; det är spelaren som rör sig. ]]
+	for _, meter in ipairs({ 2.30, 3.00, 3.70, 4.40 }) do
+		rotH.CFrame = CFrame.new(MITT + vec(meter * M, 0, 0))
+		LedService._steg(DT)
+		kroppH.CFrame = CFrame.new(MITT)
+	end
+	lH = LedService.lage(spH)
+	check("fyra oforbrukade smulor finns", lH ~= nil and #lH.spar == 4,
+		("%d smulor"):format(lH and #lH.spar or -1))
+	local narmast = lH and #lH.spar > 0
+		and (lH.spar[1] - MITT).Magnitude / M or -1
+	check("och ingen av dem ar gangen — narmast ligger utanfor START_R",
+		narmast > 1.8, ("narmaste smula %.2f m fran hasten"):format(narmast))
+	local framsidaFore = lH and lH.spar[1] or nil
+	local antalFore = lH and #lH.spar or -1
+
+	--[[ 2 · ETT HOPP PÅ EN BILDRUTA. 3,75 m > `HOPP` (3,0 m), och
+		slutläget ligger 8,00 m från hästen — alltså INNANFÖR `KOPPEL`
+		(9,0 m), så sessionen är fortsatt giltig. Punkten är räknad, inte
+		gissad: |p| = 8,00 och |p − (4,40; 0)| = 3,75. ]]
+	local HOPPMAL = MITT + vec(7.8747 * M, 0, 1.4104 * M)
+	local hoppLangd = (HOPPMAL - (MITT + vec(4.40 * M, 0, 0))).Magnitude / M
+	check("hoppet ar langre an HOPP", hoppLangd > 3.0,
+		("%.2f m pa en bildruta"):format(hoppLangd))
+	rotH.CFrame = CFrame.new(HOPPMAL)
+	LedService._steg(DT)
+	kroppH.CFrame = CFrame.new(MITT)
+
+	lH = LedService.lage(spH)
+	local koppel = (HOPPMAL - MITT).Magnitude / M
+	check("sessionen lever — kopplet holl", lH ~= nil,
+		("koppel %.2f m mot KOPPEL 9,0"):format(koppel))
+
+	--[[ DEN RÖDA MÄTNINGEN. Med `table.clear` blir det 4 -> 1. ]]
+	local antalEfter = lH and #lH.spar or -1
+	local framsidaEfter = lH and #lH.spar > 0 and lH.spar[1] or nil
+	local frontflytt = (framsidaFore and framsidaEfter)
+		and (framsidaEfter - framsidaFore).Magnitude or -1
+	check("ett hopp far inte radera oforbrukad kedja i levande session",
+		antalEfter == antalFore,
+		("fore %d, efter %d; frontflytt %.2f studs"):format(
+			antalFore, antalEfter, frontflytt))
+
+	--[[ 3 · OCH VAKTEN BEHÅLLER SIN POÄNG: ingenting lades till vid det
+		nya läget, så ingen bro byggdes över teleporten. ]]
+	local narmastNya = 1e9
+	if lH then
+		for _, s in ipairs(lH.spar) do
+			local d = (s - HOPPMAL).Magnitude / M
+			if d < narmastNya then narmastNya = d end
+		end
+	end
+	check("och ingen smula las vid det nya laget — ingen bro over hoppet",
+		narmastNya > 3.0, ("narmaste smula %.2f m fran hoppmalet"):format(narmastNya))
+
+	--[[ 4 · KEDJAN GÅR ATT AVSLUTA. Hon går den färdigt, och när sista
+		smulan är gången sås ett nytt frö vid spelaren. Utan det vore den
+		klistriga pausen en återvändsgränd. ]]
+	local varv = 0
+	while lH and #lH.spar > 1 and varv < 40 do
+		kroppH.CFrame = CFrame.new(lH.spar[1])
+		LedService._steg(DT)
+		lH = LedService.lage(spH)
+		varv += 1
+	end
+	if lH and #lH.spar == 1 then
+		kroppH.CFrame = CFrame.new(lH.spar[1])
+		LedService._steg(DT)
+		rotH.CFrame = CFrame.new(HOPPMAL)
+		LedService._steg(DT)
+		lH = LedService.lage(spH)
+	end
+	local sattOm = lH ~= nil and #lH.spar > 0
+		and (lH.spar[#lH.spar] - HOPPMAL).Magnitude / M < 1.0
+	check("nar hon gatt kedjan fardigt sas ett nytt fro vid spelaren", sattOm,
+		lH and ("%d smulor, sista %.2f m fran spelaren"):format(
+			#lH.spar, #lH.spar > 0 and (lH.spar[#lH.spar] - HOPPMAL).Magnitude / M or -1)
+			or "sessionen slappt")
+end
+
 print("")
 if fails > 0 then
 	print(("ledspar.spec: %d mätning(ar) föll."):format(fails))
