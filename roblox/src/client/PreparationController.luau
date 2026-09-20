@@ -2002,18 +2002,82 @@ end
 	Panelen finns bara när det gör det: `interaktionPagar` kräver både
 	något att välja på och att spelaren är inom serverns räckvidd, så
 	ytans egen synlighet ÄR svaret. Att räkna om villkoret hade gett en
-	andra sanning om samma sak.
-
-	Funktionen är en AVLÄSNING och styr ingenting. Den skrevs för
-	PO-orderns 2026-09-20 tredje punkt — "suppress irrelevant horse
-	prompts such as Lead/Mount when they compete with that step" — och den
-	punkten gick inte att skeppa. Se noten vid `setLedCheck` i
-	`init.client.luau` för mätningen som stoppade den. Avläsningen står
-	kvar för att `klient-uikontext.spec` uttrycker kontraktet i den, och
-	för att en framtida variant av regeln ska ha en sanning att fråga i
-	stället för att räkna om panelens villkor en tredje gång. ]]
+	andra sanning om samma sak. ]]
 function PreparationController.skotselstegVantar(): boolean
 	return interaktion ~= nil and interaktion.Visible
+end
+
+--[[ ══ 1 MÅL → 1 INSTRUKTION → 1 HANDLING ═══════════════════════════
+
+	PO-order 2026-09-20, PRODUCT CLARIFICATION:
+
+	  "Treat prompt visibility by current task relevance, not by «care
+	   panel visible» as a blanket rule."
+
+	Första försöket gömde ledknappen så länge skötselpanelen stod uppe.
+	Det backades ut (`8aba0f3`) och ska inte återuppstå: den regeln var
+	en YTREGEL — den frågade om en panel, inte om vad spelaren håller på
+	med — och den svarade därför likadant i det läge där ledningen ÄR
+	handlingen. Den här funktionen frågar i stället EN sak:
+
+	    vad är spelarens uppgift just nu?
+
+	Tre svar, med var sin källa:
+
+	  "leda"     hon går i kopplet (`LedSync`, via `satLeder`), ELLER
+	             `leda` är den fas servern säger står på tur. I båda
+	             fallen ÄR ledningen uppgiften.
+	  "skotsel"  ett skötsel- eller eftervårdsmoment väntar på ett tryck
+	             och det momentet är inte ledningen.
+	  "rida"     inget moment väntar. Sadeln är nästa relevanta steg.
+
+	ORDNINGEN ÄR INTE GODTYCKLIG. `leder` prövas först, för en spelare som
+	redan håller repet måste alltid kunna släppa det — samma regel som
+	`InteractionController.removeLed` redan bär. `nastaFas() == "leda"`
+	prövas före panelen, för `GameplayService` bockar av `leda` genom att
+	hon FYSISKT leds till ridhuset (`LedService.harNattMal`): göms knappen
+	i den fasen låser loopen, och det är #162 blockerare 2. ]]
+function PreparationController.aktuellUppgift(): string
+	if leder then return "leda" end
+	if PreparationController.nastaFas() == "leda" then return "leda" end
+	if PreparationController.skotselstegVantar() then return "skotsel" end
+	return "rida"
+end
+
+--[[ Äger skötselsteget spelarens fokus just nu?
+
+	EN regel, två konsumenter. `init.client` frågar den för både
+	ledknappen och uppsittningsprompten; att skriva den två gånger hade
+	gett två sanningar om samma sak, och det är precis vad #182 rev ut ur
+	ledningen.
+
+	LEDKNAPPEN: skötsel är det enda läget som stänger den. I "rida" står
+	den kvar som den gjort sedan produktbeslutet 2026-09-17 — klienten
+	ritar knappen på spelarens egen häst, servern äger allt annat. Ordern
+	bär sin egen gräns: «No care UI rule may make the lead step
+	unreachable.» Ledsteget ÄR `leda`-fasen, och den ger "leda" ovan. Det
+	som smalnas är alltså faserna före den, och bara i det ögonblick de
+	själva står i nederkanten och ber om ett tryck.
+
+	UPPSITTNINGEN: servern äger fortfarande OM man får sitta upp (`redo`,
+	`Pass.farSittaUpp`); det här är enbart frågan om knappen ska
+	konkurrera med en instruktion som väntar. Skälet att den behövs är
+	eftervården, och det är precis bilden Tobias skickade: efter ritten är
+	`redo` sant och `Pass.farSittaUpp` släpper med flit en andra
+	uppsittning — så «Sitt upp» stod bredvid «Lossa sadelgjorden». Ordern
+	punkt 3: «During post-ride care, do not show Mount beside an active
+	care instruction merely because a second ride is technically
+	allowed.»
+
+	ATT «leda» SLÄPPER IGENOM UPPSITTNINGEN ÄR MED FLIT. `LedService`
+	släpper kopplet med skälet `led.rider` när man sitter upp, alltså är
+	"led henne till ridhuset och sitt upp" en väg servern själv bygger.
+	Göms knappen medan repet är i handen tas den vägen bort.
+
+	Handlingarna finns kvar på servern i båda leden. Det är knapparna som
+	får vika. ]]
+function PreparationController.skotselstegAgerFokus(): boolean
+	return PreparationController.aktuellUppgift() == "skotsel"
 end
 
 --[[ Provets fönster in. Tilldelningen kommer ur serverns vy; den som

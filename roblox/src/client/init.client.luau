@@ -318,25 +318,27 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
 	if model:GetAttribute("HorseId") ~= id then return false end
-	--[[ ══ VARFÖR «MOUNT» INTE FICK NÅGON KONKURRENSREGEL (2026-09-20) ══
+	--[[ ══ «MOUNT» VIKER FÖR ETT VÄNTANDE SKÖTSELSTEG (2026-09-20) ═════
 
-	     Ordern namnger Lead OCH Mount. Mount visade sig inte behöva en, och
-	     det svaret kom ur en falsifiering som blev GRÖN: en mutation som
-	     rev grinden ur den här funktionen ändrade ingenting, för `redo` är
-	     sant först när ALLA faser är avbockade. En pågående skötselfas kan
-	     alltså aldrig stå samtidigt som den här knappen.
+	     Det finns exakt ETT läge där `redo` och en full panel möts, och
+	     det är EFTERVÅRDEN: `Pass.farSittaUpp` släpper med flit en andra
+	     uppsittning så länge inget eftervårdsmoment är gjort, så «Sitt
+	     upp» stod bredvid «Lossa sadelgjorden». Det är bilden i PO-orderns
+	     acceptansstycke, och punkt 3 avgör den: knappen ska inte stå där
+	     «merely because a second ride is technically allowed».
 
-	     Det finns exakt ETT läge där `redo` och en full panel möts —
-	     EFTERVÅRDEN — och där är knappen INTE irrelevant: `Pass
-	     .farSittaUpp` släpper uttryckligen en andra uppsittning så länge
-	     inget eftervårdsmoment är gjort. En regel här hade tagit bort en
-	     handling servern tillåter, och ordern säger uttryckligen att Mount
-	     inte får regrera.
+	     HANDLINGEN TAS INTE BORT. `MountRequest` svarar precis som förut,
+	     och `Pass.farSittaUpp` är orörd — det här är en
+	     interaktionsprioritet, inte en behörighet. Så fort eftervårdens
+	     moment är gjorda är uppgiften "rida" igen och knappen är tillbaka.
 
-	     Fyndets obesvarade fråga är inte heller ett sådant läge:
-	     `autoForbered` låter med flit bli att kvittera `visitera` medan ett
-	     fynd är osett-men-orapporterat, så `redo` är falskt hela den
-	     vägen. Båda leden mäts i `klient-uikontext.spec` avsnitt 3c. ]]
+	     EN TIDIGARE VERSION AV DEN HÄR GRINDEN MÄTTES SOM ONÖDIG, och den
+	     mätningen var riktig så länge regeln bara frågade «väntar ett
+	     steg?»: i förberedelsen är `redo` falskt ändå, så en mutation som
+	     rev grinden kom ut grön. Skillnaden nu är eftervården, och
+	     `klient-uikontext.spec` avsnitt 3c mäter just den — inte det läge
+	     där `redo` redan svarat nej. ]]
+	if PreparationController.skotselstegAgerFokus() then return false end
 	return PreparationController.redo()
 end)
 --[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
@@ -371,6 +373,13 @@ InteractionController.setLedStatus(function(model: Model?)
 	     samma väg statusraden redan gick, så de två kan inte glida isär.
 	     Se noten vid `PreparationController.kontext`. ]]
 	PreparationController.satLeder(model ~= nil)
+	--[[ Och prompterna räknas om DIREKT. `aktuellUppgift` svarar
+	     annorlunda nu — ledningen äger fokus, eller släppte det — och utan
+	     den här raden hade knapparna burit föregående läges svar tills
+	     nästa `PreparationSync` råkade komma. Servern kan släppa kopplet
+	     utan att spelaren tryckt (för långt, fastnat, satte sig upp), och
+	     då finns ingen sådan sync att vänta på. ]]
+	InteractionController.uppdatera()
 end)
 
 InteractionController.setAvslagVisare(function(skal: any, extra: any?)
@@ -392,37 +401,41 @@ end)
      SERVERN AVGÖR FORTFARANDE ALLT annat — rätt häst, avstånd, om hon
      leds av någon annan, om hon rids, om spelaren redan leder. Den här
      raden flyttar ingen behörighet; den slutar bara gömma knappen. ]]
---[[ ══ VARFÖR LEDKNAPPEN INTE GÖMS UNDER ETT SKÖTSELSTEG ════════════
+--[[ ══ LEDKNAPPEN VIKER FÖR ETT VÄNTANDE SKÖTSELSTEG — MED GRÄNS ════
 
-     PO-ordern 2026-09-20 ber om att «suppress irrelevant horse prompts
-     such as Lead/Mount when they compete with that step». Regeln BYGGDES
-     — `PreparationController.ledningKonkurrerar`, med undantag för
-     `leda`-fasen och för en ledning som redan pågår — och backades sedan
-     ut, för mätningen visade att den gör ledningen omöjlig att nå:
+     PO-order 2026-09-20 PRODUCT CLARIFICATION: «Treat prompt visibility
+     by current task relevance, not by «care panel visible» as a blanket
+     rule.»
+
+     Ett första försök (`8aba0f3`) gjorde just det som ordern förbjuder:
+     det frågade om PANELEN. Mätningen som fällde det står kvar, för den
+     är fortfarande sann och den är hela skälet till gränsen nedan:
 
          skötselpanelen visas      `Config.STEG_RACKVIDD` = 12 studs
          servern släpper ledning   `LedService.RACKVIDD` 4,0 m × M 3
                                    = 12 studs
 
-     SAMMA RADIE. Panelen står uppe på exakt det avstånd där servern
-     släpper kopplet, så «göm knappen medan panelen står uppe» lämnar
-     ingen position kvar där knappen både syns och fungerar: innanför 12
-     studs finns ingen knapp, utanför svarar servern `led.for_langt`.
-     Ledningen hade bara gått att nå i `leda`-fasen — alltså precis den
-     låsning produktbeslutet 2026-09-17 ovan öppnade, och precis den
-     Lead-regression samma order förbjuder.
+     SAMMA RADIE. Innanför 12 studs finns knappen bara om regeln släpper
+     den; utanför svarar servern `led.for_langt`. En ytregel lämnar därför
+     ingen position alls där ledningen både syns och fungerar.
 
-     Knappen står därför kvar som förut. Konkurrensen Tobias såg är
-     verklig och obesvarad; den hör ihop med prompt-kolumnen i
-     `InteractionController.PROMPT_STEG` — en ORDNING, inte en gömning —
-     och beslutet om vad som ska ge vika är Tobias, inte mitt.
-     `klient-uikontext.spec` avsnitt 3 mäter att knappen finns i varje
-     fas, så en återinförd regel blir röd där i stället för hos
-     spelaren. ]]
+     DÄRFÖR FRÅGAR REGELN UPPGIFTEN I STÄLLET. `aktuellUppgift` svarar
+     "leda" i de två lägen där ledningen ÄR handlingen — `leda` står på
+     tur, eller repet är redan i handen — och knappen finns då mitt inne i
+     radien, där servern också säger ja. Ordern punkt 2 och 4 är alltså
+     uppfyllda i själva regeln, inte som undantag bredvid den.
+
+     Det som SMALNAS mot 2026-09-17 är faserna före `leda`, och bara i det
+     ögonblick de själva står i nederkanten och ber om ett tryck. Går man
+     ifrån hästen, eller gör steget, är knappen tillbaka.
+
+     BEHÖRIGHETEN FLYTTAS INTE. `LedBorja` svarar som förut; servern äger
+     rätt häst, avstånd, om hon leds av någon annan, om hon rids. ]]
 InteractionController.setLedCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
-	return model:GetAttribute("HorseId") == id
+	if model:GetAttribute("HorseId") ~= id then return false end
+	return not PreparationController.skotselstegAgerFokus()
 end)
 --[[ Prompt-uppdateringen hänger på ATT EN NY VY ACCEPTERATS, inte på
      RemoteEvent-händelsen. Skillnaden är hela rättelsen efter senior review
