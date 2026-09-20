@@ -597,23 +597,48 @@ do
 
 	print("  · Undantag 2 — den dynamiska målpunkten")
 
-	--[[ 2a. Spelaren är fortfarande den SEMANTISKA destinationen:
-		målpunkten får aldrig avvika mer än taket från henne. Provet
-		tvingar fram avvikelsen genom att fylla spåret och sedan mäta. ]]
+	--[[ 2a. Spelaren är fortfarande den SEMANTISKA destinationen.
+
+		VILLKORET ÄR OMFORMULERAT, INTE BORTTAGET (produktbeslut
+		2026-09-20). Det löd förut: målpunkten får aldrig avvika mer än
+		taket från spelaren. Mätt i Studio under M3 visade sig den
+		formuleringen vara det som körde hästen in i väggen — en smula
+		runt hindret drogs tillbaka längs linjen mot spelaren och hamnade
+		på fel sida. Se noten över `klampMal` i `LedService`.
+
+		En smula är en punkt spelaren SJÄLV gick på. Att gå dit är att gå
+		till henne, längs hennes egen väg, och destinationen byts inte.
+		Villkoret mäts därför nu som: målpunkten ligger inom taket ELLER
+		är en smula ur spelarens eget spår. Allt annat är fortfarande
+		förbjudet, och en godtycklig punkt långt bort faller lika hårt
+		som förr. ]]
 	do
-		local varst = 0
+		local varst, alltidGiltig = 0, true
 		for i = 1, 60 do
 			rot.CFrame = CFrame.new(MIN.PrimaryPart.Position
 				+ Vector3.new(math.cos(i * 0.4) * 5 * M, 0, math.sin(i * 0.4) * 5 * M))
 			LedService._steg(1 / 30)
 			if rigg and rigg.mal then
-				local d = rigg.mal.WorldPosition - rot.Position
+				local mp = rigg.mal.WorldPosition
+				local d = mp - rot.Position
 				local plan = math.sqrt(d.X * d.X + d.Z * d.Z) / M
 				if plan > varst then varst = plan end
+				if plan > 7.05 then
+					local sess = LedService.lage(spelare)
+					local paSpar = false
+					for _, sm in ipairs(sess and sess.spar or {}) do
+						local e = sm - mp
+						if math.sqrt(e.X * e.X + e.Z * e.Z) < 0.05 then
+							paSpar = true
+							break
+						end
+					end
+					if not paSpar then alltidGiltig = false end
+				end
 			end
 		end
-		check("målpunkten avviker aldrig mer än taket från spelaren",
-			varst <= 7.05, ("värst %.2f m, tak 7.00"):format(varst))
+		check("målpunkten är alltid inom taket ELLER en smula ur spelarens eget spår",
+			alltidGiltig, ("värst %.2f m, tak 7.00"):format(varst))
 
 		--[[ OCH TAKET PRÖVAS DIREKT, inte genom ett scenario.
 
@@ -666,7 +691,13 @@ do
 			--[[ OCH REGELN PRÖVAS DIREKT, av samma skäl som taket ovan:
 				spårgrenen kräver att hästen lämnat en box, och mutationen
 				som tog bort gallringen kom ut GRÖN när den bara mättes
-				genom ett scenario. ]]
+				genom ett scenario.
+
+				GALLRINGEN MÄTER NU HÄSTENS FRAMFART, inte spelarens
+				avstånd (produktbeslut 2026-09-20). Referensen nedan är
+				alltså hästens läge. Kvar blir den smula hon står närmast
+				och allt hon har kvar att gå; det hon passerat faller.
+				Hela regeln med sitt scenario ligger i `ledspar.spec`. ]]
 			local ref = Vector3.new(0, 3, 0)
 			local trad = {
 				ref + Vector3.new(40 * M, 0, 0),
@@ -674,11 +705,17 @@ do
 				ref + Vector3.new(1 * M, 0, 0),
 			}
 			LedService._gallraSpar(trad, ref)
-			check("en smula bortom taket gallras ur spåret direkt",
-				#trad == 2, ('%d kvar av 3'):format(#trad))
-			local narast = { ref + Vector3.new(2 * M, 0, 0) }
-			LedService._gallraSpar(narast, ref)
-			check("men en smula innanför taket rörs inte", #narast == 1)
+			check("det hon redan passerat gallras ur spåret direkt",
+				#trad == 1, ('%d kvar av 3'):format(#trad))
+			--[[ Och en oförbrukad smula långt bort är rutthistorik — den
+				överlever, för spelarens avstånd äger den inte längre. ]]
+			local langtbortSpar = {
+				ref + Vector3.new(2 * M, 0, 0),
+				ref + Vector3.new(40 * M, 0, 0),
+			}
+			LedService._gallraSpar(langtbortSpar, ref)
+			check("men en oförbrukad smula 40 m bort ligger kvar", #langtbortSpar == 2,
+				('%d kvar av 2'):format(#langtbortSpar))
 		end
 	end
 

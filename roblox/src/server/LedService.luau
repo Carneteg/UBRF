@@ -1272,29 +1272,85 @@ end
 	maste vanda forst for att inte ga in i dorrkarmen pa tvaren.
 	`AlignOrientation` vrider henne kontinuerligt medan `AlignPosition`
 	drar, sa problemet uppstar inte. Kursen ar mjuk och kan inte snappa. ]]
---[[ INAKTUELLA SMULOR GALLRAS (#182 del 2, arkitektens villkor).
+--[[ ══ SPÅRET ÄR RUTTHISTORIK — BARA HÄSTEN FÅR FÖRBRUKA EN SMULA ═══
 
-	Gränsen är `MAL_AVVIK` och inte `KOPPEL`: en smula som ligger längre
-	bort än målpunkten får ligga kan aldrig bli ett mål ändå, och ska då
-	inte ligga kvar och fördröja de smulor som kan.
+	Produktbeslut 2026-09-20, efter M3:
 
-	DET ÄR OCKSÅ STALENESS-REGELN när spelaren byter riktning. Vänder hon
-	tvärt hamnar de gamla smulorna snabbt utanför taket och faller bort, i
-	stället för att dra hästen dit hon nyss var.
+	  > En ledd häst får inte förlora en OFÖRBRUKAD smula medan ledningen
+	  > fortfarande är giltig. Spelarens avstånd får avgöra kopplet. Det
+	  > får inte radera rutthistorik som hästen ännu inte har gått igenom.
+
+	FÖRUT GALLRADE DEN PÅ SPELARENS AVSTÅND, med `MAL_AVVIK` som gräns.
+	Mätt i Studio, hela ledrutten box E 8 -> ridhuset, sju pass med samma
+	utfall:
+
+	    häst      488,6 · 184,8   v 0,01
+	    spelare   471,3 · 207,2   koppel 9,4 m
+	    delmål    472,8 · 187,1
+	    rör       Tvärvägg 1:2 @ 485 · 186
+	    strålen mot målet   Tvärvägg 1:2 på 5,8 studs
+
+	Hon stod NORR om väggen, målet låg SÖDER om den, och linjen dit gick
+	rakt igenom. Spelaren hade tagit sig runt väggens västra ände — men
+	smulorna längs den vägen, 488 · 184 och 480 · 184 och 475 · 184, låg
+	7,7..9,7 m från spelaren och var därför redan kastade. Kvar fanns
+	bara en punkt på fel sida om väggen.
+
+	OCH TALEN GARANTERADE DET:
+
+	    MAL_AVVIK  7,0 m   så långt från SPELAREN fick en smula ligga
+	    KOPPEL     9,0 m   så långt efter får HÄSTEN hamna
+
+	Spåret gallrades 2 m INNANFÖR kopplet. Det fanns alltså ett band där
+	kopplet höll men vägen redan var borta — hon var garanterat väglös
+	innan hon släpptes.
+
+	NU MÄTS FÖRBRUKNINGEN I STÄLLET, och den ägs av hästen: en smula hon
+	har kommit fram till är gången, resten är väg hon har kvar. Gränsen
+	är `START_R`, samma tal hysteresen börjar gå vid — en punkt hon inte
+	tänker gå till får inte vara hennes mål. Minnet begränsas som förut
+	av ringbufferten, och den sista smulan gallras aldrig, så hon blir
+	aldrig mållös av en städning.
+
+	STALENESS-REGELN ÄR DÄRMED BORTA, med flit. Vänder spelaren tvärt
+	följer hästen den väg hon faktiskt leddes i stället för att skära
+	hörnet — och det är samma sak som att hon går runt väggen.
 
 	EGEN FUNKTION AV SAMMA SKÄL SOM `klampMal`: inbakad i loopen kom
 	mutationen som tog bort den ut GRÖN — spårgrenen kräver att hästen
 	lämnat en box, och inget bänkscenario nådde dit. En regel som bara går
 	att mäta genom ett scenario man inte kan bygga är obevisad. ]]
-local function gallraSpar(spar: { Vector3 }, rotPos: Vector3)
-	while #spar > 0 and avstandM(spar[1], rotPos) > MAL_AVVIK do
+local function gallraSpar(spar: { Vector3 }, hastPos: Vector3)
+	--[[ TVÅ SAKER GÅR BORT, OCH BÅDA ÄR «hästen har passerat dem».
+
+		1 · allt FÖRE hennes egen punkt på vägen. Spåret är ordnat
+		    äldst först och hon går det i samma ordning, så smulorna
+		    före den hon står närmast ligger bakom henne. Utan den
+		    regeln överlever den allra första smulan tills hon gått
+		    TILLBAKA till den — mätt i bänken blev delmålet 495,4 · 184
+		    för en häst på 484 · 184 som skulle västerut.
+
+		2 · och den hon står PÅ, inom `START_R`. Se noten vid anropet:
+		    en punkt hon inte tänker gå till får inte vara hennes mål.
+
+	Den sista smulan gallras aldrig, så hon blir aldrig mållös. ]]
+	local narmast, bastAvst = 1, math.huge
+	for i = 1, #spar do
+		local d = avstandM(spar[i], hastPos)
+		if d < bastAvst then bastAvst = d narmast = i end
+	end
+	for _ = 2, narmast do
+		if #spar <= 1 then break end
+		table.remove(spar, 1)
+	end
+	while #spar > 1 and avstandM(spar[1], hastPos) < START_R do
 		table.remove(spar, 1)
 	end
 end
 
---[[ Provets fönster in. ]]
-function LedService._gallraSpar(spar: { Vector3 }, rotPos: Vector3)
-	gallraSpar(spar, rotPos)
+--[[ Provets fönster in. Referensen är HÄSTENS läge, inte spelarens. ]]
+function LedService._gallraSpar(spar: { Vector3 }, hastPos: Vector3)
+	gallraSpar(spar, hastPos)
 end
 
 --[[ TAKET PÅ MÅLPUNKTENS AVVIKELSE (#182 del 2, arkitektens villkor).
@@ -1309,7 +1365,26 @@ end
 	scenario i bänken nådde dit. En regel som bara går att mäta genom ett
 	scenario man inte kan bygga är obevisad.
 
-	Som ren funktion går den att pröva direkt, med vilket läge som helst. ]]
+	Som ren funktion går den att pröva direkt, med vilket läge som helst.
+
+	TAKET GÄLLER INTE RUTTHISTORIK (produktbeslut 2026-09-20).
+
+	Mätt i Studio under M3: att BEHÅLLA smulan runt hindret räckte inte.
+	Hästen på 488,6 · 184,8 fick smulan 480 · 184 — rätt väg, norr om
+	Tvärvägg 1:2 — men spelaren stod 8,2 m bort, och taket drog punkten
+	tillbaka längs linjen mot henne till 483,5 · 190,1. Det är SÖDER om
+	väggen. Klampningen un-krokade alltså precis den omväg den säger sig
+	bevara, och linjen gick genom väggen igen.
+
+	Arkitektens villkor var att spelaren förblir den SEMANTISKA
+	destinationen. En smula är en punkt spelaren själv gick på — att gå
+	dit är att gå till henne, längs hennes egen väg. Villkoret hålls
+	alltså bättre utan klampningen än med den.
+
+	Funktionen själv är OFÖRÄNDRAD. Det är anroparen som avgör: ett mål
+	ur spåret eller ur en planerad väg skickas utan `spelarPos`, medan
+	reservpunkten bakom spelaren och dörrens delmål klampas som förr.
+	Taket finns därmed kvar för allt som INTE är en gången väg. ]]
 local function klampMal(mal: Vector3, spelarPos: Vector3?, y: number): Vector3
 	local punkt = Vector3.new(mal.X, y, mal.Z)
 	if not spelarPos then return punkt end
@@ -1501,17 +1576,6 @@ local function steg(_dt: number)
 			table.insert(spar, rot.Position)
 			if #spar > 40 then table.remove(spar, 1) end
 		end
-		--[[ Smulor längre bort än kopplet hör inte hit heller. ]]
-		--[[ INAKTUELLA SMULOR KASSERAS. Gransen ar `MAL_AVVIK` och inte
-			`KOPPEL`: en smula som ligger langre bort an malpunkten far
-			ligga kan aldrig bli ett mal anda, och da ska den inte ligga
-			kvar och fordroja de smulor som kan.
-
-			DET AR OCKSA STALENESS-REGELN nar spelaren byter riktning:
-			vander hon tvart hamnar de gamla smulorna snabbt utanfor
-			taket och faller bort, i stallet for att dra hasten dit hon
-			nyss var. ]]
-		gallraSpar(spar, rot.Position)
 		--[[ EN SMULA HÄSTEN STÅR PÅ ÄR FÖRBRUKAD, och det gäller ÄVEN NÄR
 			HON STÅR STILL.
 
@@ -1520,20 +1584,19 @@ local function steg(_dt: number)
 			med den äldsta smulan under sig, och då låg målpunkten inom
 			dödzonen — vilket gjorde att hon stod kvar, vilket gjorde att
 			smulan aldrig gallrades. Spelaren 6,1 m bort, hästen blickstilla,
-			och ingenting i tillståndet såg trasigt ut. En lås-i-sig-själv. ]]
-		--[[ RADIEN ÄR START_R, INTE ETT MINDRE TAL, och det är hela poängen.
+			och ingenting i tillståndet såg trasigt ut. En lås-i-sig-själv.
 
-			Gallringen låg på 1,2 m medan hysteresen börjar gå först vid 1,8 m.
-			En smula som hamnade i bandet däremellan var varken förbrukad eller
+			RADIEN ÄR START_R, INTE ETT MINDRE TAL, och det är hela poängen.
+			Gallringen låg på 1,2 m medan hysteresen börjar gå först vid
+			1,8 m. En smula i bandet däremellan var varken förbrukad eller
 			värd att gå till: mätt i Studio, söder om boxraderna, stod hästen
-			stilla 1,21 m från sin egen brödsmula med spelaren 6,30 m bort och
-			rörde ingenting alls. Samma sorts glapp som dörrens delmål hade.
+			stilla 1,21 m från sin egen brödsmula med spelaren 6,30 m bort
+			och rörde ingenting alls.
 
-			En punkt hon inte tänker gå till får alltså inte vara hennes mål. ]]
-		while #spar > 1 and avstandM(pivot.Position, spar[1]) < START_R do
-			table.remove(spar, 1)
-		end
-
+			DET ÄR NUMERA DEN ENDA GALLRINGEN. Se noten över `gallraSpar`:
+			spelarens avstånd får avgöra kopplet, aldrig radera väg hon inte
+			har gått än. ]]
+		gallraSpar(spar, pivot.Position)
 
 		--[[ MÅLPUNKTEN FÅR ALDRIG LIGGA I DÖDZONEN.
 
@@ -1546,10 +1609,16 @@ local function steg(_dt: number)
 			i tillståndet såg trasigt ut. Duger ingen smula tas punkten
 			bakom spelaren i stället. ]]
 		local bakom = rot.Position - rot.CFrame.LookVector * (FOLJ_BAKOM * M)
+		--[[ ÄR MÅLET RUTTHISTORIK? Se noten över `klampMal`: en smula är
+			en punkt spelaren FAKTISKT gick på, och den får inte dras
+			tillämpas mot henne. Reservpunkten bakom spelaren är däremot
+			härledd ur hennes blickriktning just nu och hör till taket. ]]
+		local urSpar = false
 		for i = 1, #spar do
 			if avstandM(spar[i], rot.Position) >= FOLJ_BAKOM
 				and avstandM(spar[i], pivot.Position) >= START_R then
 				bakom = spar[i]
+				urSpar = true
 				break
 			end
 		end
@@ -1705,6 +1774,10 @@ local function steg(_dt: number)
 				glappet mellan "för nära för att gå" och "för långt för att
 				vara framme", och stod där. Radien måste vara större än
 				START_R, annars finns bandet kvar. ]]
+			--[[ Dörrens delmål är inte en smula. Det är härlett ur dörrens
+				egen geometri, ligger några meter bort, och taket är därför
+				oförändrat här — det löser ändå aldrig ut på de avstånden. ]]
+			urSpar = false
 			if l.dorrsteg == 1 then
 				if avstandM(pivot.Position, ut1) < START_R + 0.4 then
 					l.dorrsteg = 2
@@ -1900,8 +1973,11 @@ local function steg(_dt: number)
 			if navigerar(l) then
 				local w = l.navVag[l.navIx]
 				l.gar = true
+				--[[ En vägpunkt är också rutthistorik — planeraren har lagt den
+					runt hindret. Klampas den mot spelaren un-krokas omvägen,
+					och det är samma fel som spelaravståndsgallringen gjorde. ]]
 				l.badGa = styrMot(pivot, hum, Vector3.new(w.X, pivot.Position.Y, w.Z),
-					onskadFart, _dt, l.rigg, rot.Position)
+					onskadFart, _dt, l.rigg, nil)
 			else
 				--[[ Vägen är slut. Tillbaka till spårföljningen; blev hon
 					ändå inte fri märks det som stillastående igen. ]]
@@ -1936,13 +2012,13 @@ local function steg(_dt: number)
 					en annan gangart, bara ratt att ta igen. Kopplet haller.
 					Regeln ar samma i bada grenarna nedan. ]]
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt, l.rigg, rot.Position)
+					onskadFart, _dt, l.rigg, if urSpar then nil else rot.Position)
 			end
 		else
 			if tillMal > START_R then
 				l.gar = true
 				l.badGa = styrMot(pivot, hum, Vector3.new(bakom.X, pivot.Position.Y, bakom.Z),
-					onskadFart, _dt, l.rigg, rot.Position)
+					onskadFart, _dt, l.rigg, if urSpar then nil else rot.Position)
 			end
 		end
 	end
