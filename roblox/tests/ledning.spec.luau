@@ -901,6 +901,126 @@ do
 end
 
 
+--[[ ══ UTGÅNGSGALLRINGEN FÅR INTE RADERA FRAMTIDA RUTT ═══════════════
+
+	ChatGPT:s sjunde reviewrond, på `da0392e`. Rond 6b flyttade
+	engångsgallringen till efter antecknandet — men den filtrerade HELA
+	kön på dörrplanets sida, och plansida är inte förbrukning.
+
+	Spåret är ORDNAT. En smula som ligger SENARE i kön och råkar hamna på
+	boxsidan är framtida väg: rutten kan mycket väl vika tillbaka förbi
+	dörrplanet längre fram. Att radera den är samma fel som hela den här
+	serien handlar om — ett geometriskt sammanträffande som får betyda
+	«hon har gått här».
+
+	Reviewens fall, ordnat:
+
+	    1  gammal historik inne i boxen   plan −
+	    2  nästa punkt ute i gången       plan +
+	    3  SENARE återgång till boxsidan  plan −      ← framtida väg
+	    4  senare punkt ute               plan +
+
+	Med helköfiltret överlevde 2 och 4 och 3 raderades — enbart på
+	plansida. Koppel 5,90 m, alltså en fullt giltig ledning.
+
+	POLICYN: bara den LEDANDE serien av boxsidiga smulor gallras. Den är
+	per definition historiken före utgången, för spåret byggs framifrån
+	och spelaren stod inne i boxen. Första smulan på gångsidan avslutar
+	gallringen, och allt därefter är framtid. ]]
+print("\n── En framtida återgång är inte förbrukad historik ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 700, 500
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr ordning"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hO, kroppO = nyHast("ordninghast", vec(DX - 5, 3, DZ))
+	local spO, rotO = nySpelare("Ordningsryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for ordningsprovet", LedService.borja(spO, hO, hO) == true)
+	local lO = LedService.lage(spO)
+	check("dorrplanet ar kant for ordningsprovet",
+		lO ~= nil and lO.dorrMitt ~= nil and lO.dorrUt ~= nil)
+
+	local function plan(p)
+		return lO and lO.dorrMitt and lO.dorrUt
+			and (p - lO.dorrMitt):Dot(lO.dorrUt) / M or 0
+	end
+
+	--[[ Kön sätts DIREKT, och det är avsiktligt: fallet handlar om
+		ORDNINGEN i en given kö, inte om hur den blev till. Samma fyra
+		punkter som reviewen mätte. ]]
+	--[[ Punkterna ligger ALLA utanfor `START_R` fran hasten dar hon
+		hamnar, sa ingen av dem kan gallras som gangen. Da finns bara en
+		forklaring kvar till att nagon forsvinner: plansidan. ]]
+	local GAMMAL  = vec(DX - 4.5, 3, DZ)
+	local UTE1    = vec(DX + 3, 3, DZ + 8)
+	local FRAMTID = vec(DX - 2, 3, DZ + 10)
+	local UTE2    = vec(DX + 5, 3, DZ + 14)
+	if lO then
+		table.clear(lO.spar)
+		for _, p in ipairs({ GAMMAL, UTE1, FRAMTID, UTE2 }) do table.insert(lO.spar, p) end
+	end
+	check("kon ar ordnad gammal-inne / ute / framtida atergang / ute",
+		lO ~= nil and #lO.spar == 4
+			and plan(GAMMAL) < 0 and plan(UTE1) > 0
+			and plan(FRAMTID) < 0 and plan(UTE2) > 0,
+		("plan %+.2f %+.2f %+.2f %+.2f"):format(
+			plan(GAMMAL), plan(UTE1), plan(FRAMTID), plan(UTE2)))
+
+	--[[ Spelaren står 5,90 m bort — innanför `KOPPEL`, ledningen giltig.
+		Hästen går UT genom dörren, och gallringen löser ut. ]]
+	rotO.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 5.90 * M))
+	kroppO.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	local START_R = 1.8
+	local narmast = math.huge
+	for _, q in ipairs({ GAMMAL, UTE1, FRAMTID, UTE2 }) do
+		local d2 = (q - kroppO.Position).Magnitude / M
+		if d2 < narmast then narmast = d2 end
+	end
+	check("ingen av smulorna ar gangen — narmast ligger utanfor START_R",
+		narmast > START_R, ("narmaste %.2f m"):format(narmast))
+	LedService._steg(1 / 30)
+
+	lO = LedService.lage(spO)
+	local koppel = lO and (kroppO.Position - rotO.Position).Magnitude / M or -1
+	check("ledningen lever och kopplet holl", lO ~= nil,
+		("koppel %.2f m"):format(koppel))
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spO) == true)
+
+	local harFramtid, harGammal = false, false
+	for _, c in ipairs(lO and lO.spar or {}) do
+		if (c - FRAMTID).Magnitude < 0.01 then harFramtid = true end
+		if (c - GAMMAL).Magnitude < 0.01 then harGammal = true end
+	end
+	--[[ DEN RÖDA MÄTNINGEN. Helköfiltret raderar FRAMTID. ]]
+	check("utgangsgallringen far inte radera en SENARE framtida atergang bara pga plansida",
+		harFramtid,
+		("framtida atergang kvar=%s; %d smulor kvar"):format(
+			tostring(harFramtid), #(lO and lO.spar or {})))
+	--[[ …och rond 6b:s poäng står kvar: historiken före utgången GÅR. ]]
+	check("den gamla historiken inne i boxen gallras fortfarande",
+		not harGammal,
+		("gammal kvar=%s"):format(tostring(harGammal)))
+	--[[ …och hon dras inte tillbaka in. Delmålet ska ligga på gångsidan. ]]
+	check("och delmalet ligger pa gangsidan av dorren",
+		lO ~= nil and lO.delmal ~= nil and plan(lO.delmal) > 0,
+		lO and lO.delmal and ("plan %+.2f"):format(plan(lO.delmal)) or "-")
+
+	anl:Destroy()
+end
+
+
 --[[ ══ HON GÅR UT I GÅNGEN, INTE TVÄRS ÖVER DEN (#182) ═════════════════
 
 	Mätt i Studio på `6350c15`, bildruta 237:
