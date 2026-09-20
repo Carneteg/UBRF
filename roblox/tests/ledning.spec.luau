@@ -1147,6 +1147,118 @@ do
 end
 
 
+--[[ ══ EN PAUSAD SVANS ÄR INTE LEDARENS NULÄGE ══════════════════════
+
+	ChatGPT:s nionde reviewrond, på `c5f4b81`. Rond 8 gallrar också den
+	AVSLUTANDE boxsidiga serien vid utgången, med motiveringen «där står
+	ledaren just nu — han släpper fram henne och blir kvar innanför
+	dörren».
+
+	DEN MOTIVERINGEN ÄR ETT PÅSTÅENDE OM TIDEN, och rond 8 bevisade den
+	aldrig. Den läste bara kön: sist + boxsidig = ledarens nuläge.
+
+	Under den klistriga pausen från rond 5/6 är svansen gammal. Den är
+	det sista som hann antecknas innan taket slog i, och spelaren kan ha
+	gått hur långt som helst sedan dess — i reviewens fall är han redan
+	UTE när hon passerar planet. Då raderar suffixregeln en framtida
+	återgång som ingen har gått, av samma skäl som hela den här serien
+	handlar om: en position i kön fick betyda ett framsteg.
+
+	    sparFullt = true
+	    [ gammal box , UTE , framtida återgång ]   ledaren står UTE
+	                            ^raderades
+
+	Kravet är alltså inte att sluta gallra svansen, utan att först BEVISA
+	att den är ledarens nuläge. ]]
+print("\n── En pausad svans är inte ledarens nuläge ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 1000, 700
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr pausad svans"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hP, kroppP = nyHast("pausadhast", vec(DX - 5, 3, DZ))
+	local spP, rotP = nySpelare("Pausadryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for pausprovet", LedService.borja(spP, hP, hP) == true)
+	local lP = LedService.lage(spP)
+	local function plan(p)
+		local li = LedService.lage(spP)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ 1 · Kön som rond 5/6 lämnar den: pausad, med en framtida
+		återgång sist. Ingen av punkterna ar gången. ]]
+	local GAMMAL  = vec(DX - 4.5, 3, DZ)
+	local UTE     = vec(DX + 3, 3, DZ + 8)
+	local SVANS   = vec(DX - 2, 3, DZ + 10)
+	if lP then
+		table.clear(lP.spar)
+		for _, p in ipairs({ GAMMAL, UTE, SVANS }) do table.insert(lP.spar, p) end
+		lP.sparFullt = true
+	end
+	check("kon ar pausad med en framtida atergang sist",
+		lP ~= nil and lP.sparFullt == true and #lP.spar == 3
+			and plan(GAMMAL) < 0 and plan(UTE) > 0 and plan(SVANS) < 0,
+		("sparFullt=%s  plan %+.2f %+.2f %+.2f"):format(
+			tostring(lP and lP.sparFullt), plan(GAMMAL), plan(UTE), plan(SVANS)))
+
+	--[[ 2 · LEDAREN ÄR REDAN UTE när hon passerar planet. Det är beviset
+		som saknades: svansen kan omöjligt vara hans nuläge. Koppel
+		5,90 m, alltså innanför `KOPPEL`. ]]
+	rotP.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 5.90 * M))
+	kroppP.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	check("ledaren star UTE, och svansen ar inte hans lage",
+		plan(rotP.Position) > 0 and (SVANS - rotP.Position).Magnitude / M > 0.6,
+		("ledarens plan %+.2f, avstand till svansen %.2f m"):format(
+			plan(rotP.Position), (SVANS - rotP.Position).Magnitude / M))
+	local START_R, narmast = 1.8, math.huge
+	for _, q in ipairs({ GAMMAL, UTE, SVANS }) do
+		local d = (q - kroppP.Position).Magnitude / M
+		if d < narmast then narmast = d end
+	end
+	check("ingen av smulorna ar gangen", narmast > START_R,
+		("narmaste %.2f m"):format(narmast))
+
+	LedService._steg(1 / 30)
+	lP = LedService.lage(spP)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spP) == true)
+	check("ledningen lever", lP ~= nil,
+		("koppel %.2f m"):format((kroppP.Position - rotP.Position).Magnitude / M))
+
+	local svansKvar, gammalKvar = false, false
+	for _, c in ipairs(lP and lP.spar or {}) do
+		if (c - SVANS).Magnitude < 0.05 then svansKvar = true end
+		if (c - GAMMAL).Magnitude < 0.05 then gammalKvar = true end
+	end
+	--[[ DEN RÖDA MÄTNINGEN. ]]
+	check("avslutande plansidegallring far inte radera en STALE framtida atergang nar sparloggen ar pausad och ledaren redan ar ute",
+		svansKvar,
+		("framtida svans kvar=%s; %d smulor kvar; sparFullt=%s"):format(
+			tostring(svansKvar), #(lP and lP.spar or {}),
+			tostring(lP and lP.sparFullt)))
+	--[[ …och rond 6b/7 står kvar: historiken före utgången går. ]]
+	check("den gamla historiken inne i boxen gallras fortfarande",
+		not gammalKvar, ("gammal kvar=%s"):format(tostring(gammalKvar)))
+	check("pausen ar kvar — rond 5/6 ar orord",
+		lP ~= nil and lP.sparFullt == true,
+		("sparFullt=%s"):format(tostring(lP and lP.sparFullt)))
+
+	anl:Destroy()
+end
+
+
 --[[ ══ HON GÅR UT I GÅNGEN, INTE TVÄRS ÖVER DEN (#182) ═════════════════
 
 	Mätt i Studio på `6350c15`, bildruta 237:
