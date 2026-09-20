@@ -534,6 +534,48 @@ do
 		PC.kontext() == "skotsel" and ytor().sparare.Visible == true)
 end
 
+print("\n── 7. Ledningens regel lånar inte uppsittningens ──")
+
+--[[ AVSNITTET FINNS FÖR ATT EN MUTATION KOM UT GRÖN.
+
+	`farVisasLed` löd förut `if farVisas(model) then return true end` före
+	allt annat: var hästen REDO ritades ledknappen oavsett vad `ledFor`
+	sa. Falsifieringen som återinförde den raden ändrade ingenting —
+	uppsittningens grind i `init.client` säger ju också nej så fort ett
+	skötselsteg äger fokus, så de två guarderna stod i serie och den
+	yttre räckte.
+
+	DET ÄR PRECIS DÄRFÖR KOPPLINGEN ÄR FARLIG: ledningens synlighet
+	vilade på uppsittningens svar, och den som en dag ändrar Mount-regeln
+	hade flyttat ledknappen på köpet utan att något prov sagt ifrån.
+
+	Mätningen tvingar isär dem. Uppsittningens svar sätts till ETT
+	ORUBBLIGT JA — precis det svar den gamla raden lät passera — medan
+	uppgiften är skötsel. Ledknappen ska ändå vara borta.
+
+	ANDRA RADEN ÄR INTE DEKORATION: utan den hade provet varit grönt även
+	om stubben inte bet, och då hade det mätt ingenting alls. ]]
+do
+	state = Preparation.nyState(HAST_ID, 1)
+	visa(Preparation.STATUS.FORBEREDER)
+	prova("utgångsläget: uppgiften är skötsel",
+		PC.aktuellUppgift() == "skotsel", PC.aktuellUppgift())
+
+	--[[ Sätts SIST i specen. `setReadyCheck` har ingen avläsare, så den
+		äkta grinden ur `init.client` går inte att lägga tillbaka utan att
+		skriva av den — och en avskrift hade varit en andra sanning om
+		regeln. ]]
+	IC.setReadyCheck(function(): boolean return true end)
+	IC.uppdatera()
+	local p = promptar()
+	prova("stubben biter — uppsittningsknappen kommer fram på hennes ja",
+		p.MountPrompt ~= nil,
+		if p.MountPrompt then "(kvar)" else "MountPrompt uteblev — provet mäter inget")
+	prova("men ledknappen är fortfarande borta — den lyder sin egen regel",
+		p.LedPrompt == nil,
+		if p.LedPrompt then "LedPrompt tänd av uppsittningens svar" else "(borta)")
+end
+
 print("")
 if fel > 0 then
 	print(("%d mätningar föll."):format(fel))
