@@ -1884,24 +1884,32 @@ local function steg(_dt: number)
 					koppel 5,90 m och `sparFullt = true` — suffixregeln
 					raderade da en framtida atergang som ingen gatt.
 
-					DARFOR BEVISAS DET NU: svansen maste ligga inom
-					antecknandets egen upplosning, 0,6 m, fran spelarens
-					LAGE JUST NU. Da ar den hans nulage, inte en gissning
-					ur koordningen. Haller beviset inte, ror vi inte
-					svansen — vare sig den ar pausad eller ej.
+					Forsta forsoket (rond 9) bevisade det med ett
+					AVSTAND: svansen raknades som nulage om den lag inom
+					0,6 m fran spelaren. DET VAR ROND 5:s INVARIANT IGEN
+					— narhet mellan tva punkter sager ingenting om NAR de
+					uppstod. En gammal, pausad svans kan ligga tjugo
+					centimeter fran en spelare som kom dit langt senare.
+					Matt i review: ledaren plan +0,10, svansen −0,10, gap
+					0,20 m, `sparFullt = true` — och svansen raderades.
 
-					Ingen ny grans ar uppfunnen: 0,6 m ar samma troskel
-					som avgor nar en ny smula overhuvudtaget antecknas.
+					BEVISET AR TIDSLIGT OCH FINNS I TILLSTANDET, exakt:
 
-					Ett villkor `not l.sparFullt` skrevs forst bredvid
-					det har, men det bar ingenting: narhetsbeviset
-					utesluter redan en pausad svans, och mutationen som
-					tog bort pauskontrollen lamnade specen GRON. Ett
-					villkor ingen matning kan falla ar samre an inget —
-					samma skal som den doda gallringen i rond 7. Pausen
-					sjalv ar orord och provas separat. ]]
-				local svansArNulaget = #spar > 0
-					and (spar[#spar] - rot.Position).Magnitude <= 0.6 * M
+					  · antecknandet sker BARA nar loggen ar levande,
+					  · pausen slapper BARA nar kon ar tom.
+
+					Darfor ar kon HOMOGEN — alla smulor i den hor till
+					samma antecknandeomgang — och med levande logg ar
+					svansen per konstruktion det SENASTE provet. Spelaren
+					kan inte ha gatt mer an 0,6 m sedan det logades, for
+					da hade en ny smula funnits. Ar loggen pausad ar
+					svansen per definition inte senast, hur nara ledaren
+					den an rakar ligga.
+
+					Homogeniteten ar inget pastaende har: den mats i
+					`ledning.spec`, sektionen «Pausen antecknar inte, och
+					kon forblir homogen». ]]
+				local svansArNulaget = #spar > 0 and not l.sparFullt
 				if svansArNulaget then
 					while #spar > 0
 						and (spar[#spar] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
