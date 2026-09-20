@@ -888,6 +888,25 @@ function __rs:FindFirstChild(namn)
 	for _, b in ipairs(self._barn) do if b.Name == namn then return b end end
 	return nil
 end
+--[[ `GetChildren` SAKNADES på ReplicatedStorage, och hålet är samma klass
+	som det på `workspace` ovan: varje Instance i Roblox har metoden, så
+	produktionen är oberörd — men bänken kunde inte RÄKNA barnen, bara
+	slå upp ett.
+
+	Det spelade roll. `FindFirstChild` svarar med ETT även när det finns
+	två, och dubbletten som lät `MinHast:InvokeServer()` hänga för evigt
+	(ROBLOX_RUNTIME_ROUTING, mätt i Studio 2026-09-20) går bara att mäta
+	genom att räkna. Ingen spec kunde göra det förrän nu.
+
+	BARA `_barn` RETURNERAS. `HorseCore` ligger som ett direkt fält på
+	tabellen och är en vanlig modultabell, inte en Instance; att lämna ut
+	den hade gett anropare något utan `Name` och `ClassName` att snubbla
+	på. Listan är ny varje gång, av samma skäl som på `workspace`. ]]
+function __rs:GetChildren()
+	local ut = {}
+	for _, b in ipairs(self._barn or {}) do table.insert(ut, b) end
+	return ut
+end
 --[[ I produktionen SKAPAR servern fjärrmappen och dess objekt, och klienten
      väntar in dem. Bänken har ingen server, så den står in för den: ett
      efterfrågat barn som inte finns skapas här i stället för att klienten

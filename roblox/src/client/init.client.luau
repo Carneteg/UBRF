@@ -267,10 +267,36 @@ local function mount(model: Model, rittId: string?)
 	     frågan "vad gör jag nu?" som mest aktuell. ]]
 	KontrollHjalp.vidUppsittning()
 
+	--[[ ══ EN VARNING SOM ALLTID FYRAR ÄR INGEN VARNING ═══════════════
+
+		Raden varnade förut så fort NÅGOT klipp saknades. I den här builden
+		saknas ALLA arton, och det är ett beslut: `HastGang` driver benen
+		procedurellt just för att hästens kärnrörelse inte ska hänga på en
+		annan skapares assets (se modulens egen not). `AnimationConfig`
+		skapas därför tom av `HorseService`, och ingenting fyller den.
+
+		Följden var en `warn` med arton namn vid VARJE uppsittning, i ett
+		läge som fungerar som avsett. Mätt i Studio 2026-09-20, två gånger
+		i samma pass:
+
+		    [Horse] Saknade animationer (18): Idle, …, Graze
+
+		Det är inte gratis. Runtime-QA:s fråga är "varnar den här builden
+		om något?", och en varning som alltid fyrar gör svaret värdelöst —
+		den drunknade två riktiga `led.`-rader i samma logg.
+
+		Nu varnar raden bara för det den kan betyda något om: en
+		AnimationConfig som är HALVFYLLD. Då är ett saknat id ett riktigt
+		paketeringsfel. Är den tom körs det procedurella läget, och det
+		sägs i klartext en gång i stället. ]]
 	local missing = (ride.animation :: any).missing
-	if missing and #missing > 0 then
-		warn(("[Horse] Saknade animationer (%d): %s")
-			:format(#missing, table.concat(missing, ", ")))
+	local laddade = (ride.animation :: any).laddade or 0
+	if missing and #missing > 0 and laddade > 0 then
+		warn(("[Horse] Saknade animationer (%d av %d): %s")
+			:format(#missing, #missing + laddade, table.concat(missing, ", ")))
+	elseif missing and #missing > 0 then
+		print("[Horse] Inga animationsklipp konfigurerade — benen drivs "
+			.. "procedurellt av HastGang. Det är avsett.")
 	end
 end
 

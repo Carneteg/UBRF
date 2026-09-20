@@ -390,6 +390,72 @@ do
 	prova("och avsittningen efter bytet lämnar noll handlingar", bundna() == 0)
 end
 
+--[[ == EN VARNING SOM ALLTID FYRAR AR INGEN VARNING ==================
+
+	ROBLOX_RUNTIME_ROUTING, matt i Studio 2026-09-20: varje uppsittning
+	skrev
+
+		[Horse] Saknade animationer (18): Idle, ..., Graze
+
+	i en build dar det ar AVSETT att inga klipp finns — `HastGang` driver
+	benen procedurellt just for att hastens karnrorelse inte ska hanga pa
+	en annan skapares assets, och `AnimationConfig` skapas darfor tom.
+
+	Raden drunknade tva riktiga `led.`-varningar i samma logg. En varning
+	som alltid fyrar gor fragan "varnar den har builden om nagot?"
+	vardelos, och det ar den fragan runtime-QA staller.
+
+	Provet mater BADA riktningarna. Att tystnaden finns sager lite; att
+	varningen fortfarande FYRAR nar konfigurationen ar HALVFYLLD ar det
+	som skiljer en rattelse fran ett borttaget larm. ]]
+print("\n-- Animationsvarningen --")
+do
+	local function varningarMed(text)
+		local n = 0
+		for _, v in ipairs(__varningar) do
+			if string.find(v, text, 1, true) then n += 1 end
+		end
+		return n
+	end
+
+	--[[ TOM KONFIGURATION — produktionens lage. ]]
+	local h = nyHast()
+	local fore = varningarMed("Saknade animationer")
+	sittUpp(h)
+	prova("en tom AnimationConfig ger INGEN varning",
+		varningarMed("Saknade animationer") == fore,
+		("(%d -> %d)"):format(fore, varningarMed("Saknade animationer")))
+	Net.get("MountChanged").OnClientEvent:Fire(h, nil)
+	bildrutor(1)
+
+	--[[ HALVFYLLD KONFIGURATION — ett riktigt paketeringsfel. Tva id:n
+		satta, resten tomma; animatorn svarar med ett spar sa att de tva
+		faktiskt LADDAS och `laddade` blir storre an noll. ]]
+	local h2 = nyHast()
+	local cfg = Instance.new("Configuration")
+	cfg.Name = "AnimationConfig"
+	cfg.Parent = h2
+	local satta = 0
+	for _, nyckel in ipairs(Config.ANIMATION_KEYS) do
+		if satta < 2 then
+			cfg:SetAttribute(nyckel, "rbxassetid://1234567")
+			satta += 1
+		end
+	end
+	local animator = h2:FindFirstChild("Animator", true)
+	function animator:LoadAnimation() return __makeTrack() end
+	local fore2 = varningarMed("Saknade animationer")
+	sittUpp(h2)
+	local efter2 = varningarMed("Saknade animationer")
+	prova("en HALVFYLLD AnimationConfig varnar fortfarande",
+		efter2 > fore2, ("(%d -> %d)"):format(fore2, efter2))
+	prova("och varningen sager hur manga av hur manga",
+		varningarMed("av " .. tostring(#Config.ANIMATION_KEYS)) > 0,
+		__varningar[#__varningar] or "-")
+	Net.get("MountChanged").OnClientEvent:Fire(h2, nil)
+	bildrutor(1)
+end
+
 UIS.TouchEnabled = foreTouch
 cam.ViewportSize = foreVp
 

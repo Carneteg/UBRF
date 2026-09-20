@@ -252,10 +252,56 @@ function StallService.hastIdFor(player: Player): string?
 	return dagens and dagens.id or nil
 end
 
+--[[ ══ `MinHast` ÅTERANVÄNDS, DEN NYSKAPAS INTE ═══════════════════════
+
+	`Networking.get` gör redan så för sina tolv objekt, och noten där
+	säger varför: `ReplicatedStorage` är en del av den SPARADE placen.
+	Ett fjärrobjekt servern skapade under en Play-session ligger kvar i
+	filen när någon sparar efteråt, och nästa start hittar det igen.
+
+	Den här filen gjorde i stället `Instance.new` rakt av, och då blev
+	det TVÅ objekt som heter `MinHast`. Roblox tillåter det — namn är
+	inte unika — och `FindFirstChild("MinHast")` svarar då med det
+	FÖRSTA, alltså den sparade kopian, som ingen satte någon
+	`OnServerInvoke` på.
+
+	Uppmätt i Studio 2026-09-20, placen `106030782437053`, Play-läge:
+
+	    ReplicatedStorage-barn med namnet MinHast      2
+	    PreparationHello:InvokeServer()                svarade på 0,06 s
+	    MinHast:InvokeServer()                         återvände ALDRIG
+
+	En `RemoteFunction` utan handlare svarar inte — den yieldar för
+	evigt. Anropartråden är alltså död, tyst, utan fel i Output.
+
+	Det förklarar också noten i `DinHast.luau:386`: «Den HÄNGDE i
+	flerspelarläge». Diagnosen där var fel — det var inte
+	flerspelarläget, det var dubbletten. Klienten slutade fråga och
+	läser numera hästen ur `PreparationController`, vilket är bättre av
+	andra skäl, men remoten lämnades kvar levande och trasig.
+
+	Fel klass under samma namn är en trasig place och inte något att
+	bygga vidare på: då rivs objektet och ett rätt skapas, med en rad i
+	Output. Att lägga ett andra bredvid hade återskapat exakt det här
+	felet. ]]
+local function minHastObjekt(): RemoteFunction
+	local fanns = ReplicatedStorage:FindFirstChild("MinHast")
+	if fanns and fanns:IsA("RemoteFunction") then
+		return fanns :: RemoteFunction
+	end
+	if fanns then
+		warn(("[Stallet] ReplicatedStorage.MinHast var en %s, inte en "
+			.. "RemoteFunction — den revs och ersattes."):format(fanns.ClassName))
+		fanns:Destroy()
+	end
+	local ny = Instance.new("RemoteFunction")
+	ny.Name = "MinHast"
+	ny.Parent = ReplicatedStorage
+	return ny
+end
+
 function StallService.start()
-	local fraga = Instance.new("RemoteFunction")
-	fraga.Name = "MinHast"
-	fraga.Parent = ReplicatedStorage
+	local fraga = minHastObjekt()
 	--[[ AVSLAGSFORMEN AR HANDLARENS EGEN: `MinHast` svarar med en
 		hastpost eller `nil`. `nil` betyder redan "inget svar an" i det
 		har granssnittet, och det ar ratt svar aven for ett nekat

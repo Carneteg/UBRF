@@ -278,6 +278,41 @@ function Integritet.osparade(tjanst: string): { string }
 	return ut
 end
 
+--[[ ══ TVÅ BARN MED SAMMA NAMN ══════════════════════════════════════
+
+	Roblox kräver inte unika syskonnamn, och `FindFirstChild` svarar med
+	det FÖRSTA. En tjänst som skapar sitt fjärrobjekt med `Instance.new`
+	i stället för att återanvända ett som redan ligger i den sparade
+	placen får därför två — och klienten hittar den utan handlare.
+
+	Uppmätt i Studio 2026-09-20 (`106030782437053`, Play): två
+	`RemoteFunction` som hette `MinHast`, och `MinHast:InvokeServer()`
+	återvände aldrig. `10a`–`10e` såg ingenting: namnet står i facit,
+	klassen är rätt, och inget är ospårat. Det som saknades var att
+	någon räknade dem.
+
+	Rättelsen ligger i `StallService`; den här raden finns för att felet
+	inte ska kunna komma tillbaka tyst.
+
+	VERKTYGSSPÅREN UNDANTAS av samma skäl som i `klassificera`: en
+	plugin får lägga två `__`-objekt utan att fälla en produktgrind. ]]
+function Integritet.dubblerade(tjanst: string): { string }
+	local sedda: { [string]: number } = {}
+	for _, post in ipairs(Integritet.inventering(tjanst)) do
+		if not arVerktyg(post.namn) then
+			sedda[post.namn] = (sedda[post.namn] or 0) + 1
+		end
+	end
+	local ut: { string } = {}
+	for namn, antal in sedda do
+		if antal > 1 then
+			table.insert(ut, ("%s x%d"):format(namn, antal))
+		end
+	end
+	table.sort(ut)
+	return ut
+end
+
 --[[ ══ BESKRIVER IDENTITETEN KODEN SOM FAKTISKT LIGGER HÄR? (#171) ═════
 
 	9a–9d prövar att identiteten FINNS, är GENERERAD och har rätt FORM. Ingen
@@ -469,6 +504,15 @@ function Integritet.rader(): { Rad }
 	end
 	rad("10e ospårat i Workspace/ServerStorage — redovisat, inte fällt", true,
 		if #delar == 0 then "inga" else table.concat(delar, " · "))
+
+	--[[ 10f FÄLLER, till skillnad från 10e. Ett dubblerat namn i
+		ReplicatedStorage är inte skräp som ligger och skräpar: det gör
+		`FindFirstChild` tvetydigt för VARJE klient, och den som förlorar
+		lottningen får ett objekt utan handlare. Se noten vid
+		`Integritet.dubblerade` för mätningen som gav raden. ]]
+	local dubbletter = Integritet.dubblerade("ReplicatedStorage")
+	rad("10f inget dubblerat namn i ReplicatedStorage", #dubbletter == 0,
+		if #dubbletter == 0 then "-" else table.concat(dubbletter, ", "))
 
 	return ut
 end

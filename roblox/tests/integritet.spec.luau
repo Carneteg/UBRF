@@ -510,6 +510,75 @@ do
 	mall:Destroy()
 end
 
+--[[ == 10f: TVA BARN MED SAMMA NAMN =================================
+
+	Uppmätt i Studio 2026-09-20, placen `106030782437053` i Play-läge:
+	`ReplicatedStorage` bar TVÅ `RemoteFunction` som hette `MinHast`.
+	Den ena hade `OnServerInvoke`, den andra inte, och klientens
+	`FindFirstChild` svarade med den utan handlare —
+	`MinHast:InvokeServer()` återvände då aldrig. En kontrollmätning i
+	samma pass visade att `PreparationHello:InvokeServer()` svarade på
+	0,06 s, så det var varken bänken eller nätet.
+
+	10a–10e såg ingenting: namnet står i facit, klassen är rätt, och
+	inget är ospårat. Det enda som saknades var att någon RÄKNADE dem.
+
+	Provet mäter genom preflightens egen rad, inte genom
+	`Integritet.dubblerade` direkt — en rad som inte är inkopplad i den
+	grind som faktiskt kör kan vara aldrig så korrekt utan att mäta
+	något. Samma skäl som punkt 9 en gång hade. ]]
+print("\n-- 10f: dubblerat namn i ReplicatedStorage --")
+
+do
+	sattIdentitet(UBRFBuild)
+
+	local ren = matning("10f")
+	check("preflighten mäter 10f", ren ~= nil, ren and ren.namn or "ingen 10f-rad")
+	check("10f är grön när varje namn är unikt",
+		ren ~= nil and ren.ok == true, ren and tostring(ren.detalj) or "-")
+
+	--[[ Den faktiska defekten, återskapad: ett andra objekt med samma
+		namn som ett som redan finns. ]]
+	local forst = Instance.new("RemoteFunction")
+	forst.Name = "MinHast"
+	forst.Parent = RS
+	local dubblett = Instance.new("RemoteFunction")
+	dubblett.Name = "MinHast"
+	dubblett.Parent = RS
+
+	local d = matning("10f")
+	check("dubblerat namn FÄLLER grinden", d ~= nil and d.ok == false,
+		d and tostring(d.detalj) or "-")
+	check("och felet namnger det", d ~= nil
+		and string.find(tostring(d.detalj), "MinHast") ~= nil,
+		d and tostring(d.detalj) or "-")
+	check("och säger HUR MÅNGA — ett antal skiljer två från tio", d ~= nil
+		and string.find(tostring(d.detalj), "x2") ~= nil,
+		d and tostring(d.detalj) or "-")
+	forst:Destroy()
+	dubblett:Destroy()
+
+	local efter = matning("10f")
+	check("och den blir grön igen när dubbletten är borta",
+		efter ~= nil and efter.ok == true, efter and tostring(efter.detalj) or "-")
+
+	--[[ VERKTYGSSPÅREN UNDANTAS, precis som i `klassificera`. En plugin
+		som lägger två `__`-objekt ska inte fälla en produktgrind — och
+		utan det här provet hade undantaget kunnat falla bort tyst. ]]
+	local v1 = Instance.new("RemoteFunction")
+	v1.Name = "__Verktygsspar"
+	v1.Parent = RS
+	local v2 = Instance.new("RemoteFunction")
+	v2.Name = "__Verktygsspar"
+	v2.Parent = RS
+	local verktyg = matning("10f")
+	check("men tva verktygsspar med samma namn faller INTE",
+		verktyg ~= nil and verktyg.ok == true,
+		verktyg and tostring(verktyg.detalj) or "-")
+	v1:Destroy()
+	v2:Destroy()
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

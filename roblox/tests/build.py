@@ -772,6 +772,13 @@ def valjBunt(spec_rel: str):
     #[[ #171: integritetsgrinden mater preflightens punkt 9 och 10 och
     #   behover darfor samma bank som preflighten — inklusive Networking,
     #   den genererade UBRFBuild och Integritet. ]]
+    #[[ ROBLOX_RUNTIME_ROUTING: MinHast far inte bli tva. Provet startar
+    #   SparService och StallService pa riktigt och mater ReplicatedStorage,
+    #   sa det behover samma bunt som forberedelsen -- men INTEGRATION valjs
+    #   for att specen ocksa lasar StallService.hastIdFor mot en riktig
+    #   tilldelning. Ingen annan spec har "fjarrdublett" i namnet. ]]
+    elif "fjarrdublett" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "integritet" in spec_rel:
         moduler, stubbar = SPELBARHET, "tests/stubs-bygge.luau"
     elif "topologi" in spec_rel:
