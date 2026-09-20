@@ -318,15 +318,26 @@ InteractionController.setReadyCheck(function(model: Model): boolean
 	local id = PreparationController.hastId()
 	if not id then return false end
 	if model:GetAttribute("HorseId") ~= id then return false end
-	if not PreparationController.redo() then return false end
-	--[[ PO-order 2026-09-20: «1 goal → 1 instruction → 1 action». Står ett
-	     skötselsteg och väntar på ett tryck äger det stunden. I praktiken
-	     rör raden bara två lägen, för `redo` utesluter en pågående fas:
-	     fyndets obesvarade fråga och eftervården. Båda är lägen där
-	     servern ändå nekar uppsittningen — `Pass` släpper den bara i
-	     `before_ride` — så knappen lovade något spelet sa nej till.
-	     Se noten vid `PreparationController.skotselstegVantar`. ]]
-	return not PreparationController.skotselstegVantar()
+	--[[ ══ VARFÖR «MOUNT» INTE FICK NÅGON KONKURRENSREGEL (2026-09-20) ══
+
+	     Ordern namnger Lead OCH Mount. Mount visade sig inte behöva en, och
+	     det svaret kom ur en falsifiering som blev GRÖN: en mutation som
+	     rev grinden ur den här funktionen ändrade ingenting, för `redo` är
+	     sant först när ALLA faser är avbockade. En pågående skötselfas kan
+	     alltså aldrig stå samtidigt som den här knappen.
+
+	     Det finns exakt ETT läge där `redo` och en full panel möts —
+	     EFTERVÅRDEN — och där är knappen INTE irrelevant: `Pass
+	     .farSittaUpp` släpper uttryckligen en andra uppsittning så länge
+	     inget eftervårdsmoment är gjort. En regel här hade tagit bort en
+	     handling servern tillåter, och ordern säger uttryckligen att Mount
+	     inte får regrera.
+
+	     Fyndets obesvarade fråga är inte heller ett sådant läge:
+	     `autoForbered` låter med flit bli att kvittera `visitera` medan ett
+	     fynd är osett-men-orapporterat, så `redo` är falskt hela den
+	     vägen. Båda leden mäts i `klient-uikontext.spec` avsnitt 3c. ]]
+	return PreparationController.redo()
 end)
 --[[ Ledningen öppnas av att `leda` är spelarens tur — inte av `redo`.
 	Se noten i `InteractionController.farVisasLed`: den gamla regeln låste

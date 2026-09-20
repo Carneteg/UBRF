@@ -43,9 +43,10 @@
 	     bär ledningens egen instruktion och dess nej,
 	  4. ridning: kortet är borta och hela ytan är släckt,
 	  5. återvändandet: kortet kommer tillbaka med SAMMA progression,
-	  6. konkurrensen: `LedPrompt` och `MountPrompt` finns inte medan ett
-	     skötselsteg står och väntar på ett tryck — och de två undantag
-	     som gör att ledningsloopen ändå inte kan låsa.
+	  6. konkurrensen: `LedPrompt` finns inte medan ett skötselsteg står
+	     och väntar på ett tryck, med de två undantag som gör att
+	     ledningsloopen ändå inte kan låsa — och varför `MountPrompt`
+	     inte fick någon sådan regel (avsnitt 3c).
 
 	Kedjan drivs genom PRODUKTIONENS egna vägar: `PreparationController
 	.tillampa` (samma väg som `PreparationSync`) och `LedSync
@@ -229,7 +230,11 @@ do
 		("fas %s"):format(tostring(PC.nastaFas())))
 	prova("då finns ingen ledknapp på hästen", p.LedPrompt == nil,
 		if p.LedPrompt then "LedPrompt kvar" else "(borta)")
-	prova("och ingen uppsittningsknapp heller", p.MountPrompt == nil,
+	--[[ Uppsittningen är borta här av ett ANNAT skäl: `redo` är falskt så
+		länge en fas återstår. Raden mäter alltså inte konkurrensregeln —
+		se avsnitt 3c för varför Mount inte har någon. ]]
+	prova("och ingen uppsittningsknapp heller — `redo` är falskt",
+		p.MountPrompt == nil and PC.redo() == false,
 		if p.MountPrompt then "MountPrompt kvar" else "(borta)")
 	--[[ «Rida nu» RÖRS INTE. Ordern namnger Lead och Mount, och genvägen
 		till sadeln är FUN FIRST / RIDE FIRST:s eget svar på «jag vill inte
@@ -269,6 +274,74 @@ do
 	prova("och då konkurrerar ledningen inte — den ÄR steget",
 		PC.ledningKonkurrerar() == false)
 	prova("ledknappen finns", promptar().LedPrompt ~= nil)
+end
+
+print("\n── 3c. Varför «Mount» inte fick någon konkurrensregel ──")
+
+--[[ FÖRSTA VERSIONEN AV DET HÄR PROVET MÄTTE FEL SAK, och det är därför
+	avsnittet finns.
+
+	Raden "och ingen uppsittningsknapp heller" i avsnitt 3 står i ett läge
+	där `halsa` är på tur — alltså `redo == false`, och då ritar `farVisas`
+	ingen `MountPrompt` ändå. En mutation som rev en Mount-grind ur
+	`setReadyCheck` kom ut GRÖN: provet mätte `redo`, inte regeln.
+
+	Jakten på ett läge där grinden HADE betytt något gav svaret att den
+	inte ska finnas:
+
+	  fyndets fråga   `autoForbered` låter med flit bli att kvittera
+	                  `visitera` medan ett fynd är osett-men-orapporterat,
+	                  så `redo` är falskt hela den vägen. Ingen kollision.
+	  eftervården     `redo` ÄR sant och panelen ÄR full — men `Pass
+	                  .farSittaUpp` släpper uttryckligen en andra
+	                  uppsittning så länge inget eftervårdsmoment är gjort.
+	                  Knappen är alltså RELEVANT, och att gömma den hade
+	                  varit precis den Mount-regression ordern förbjuder.
+
+	Avsnittet mäter båda leden, så att en framtida "städning" som lägger
+	till grinden blir röd här i stället för hos spelaren. ]]
+do
+	--[[ Hela dagen gjord, som servern gör den: momenten genom modulens
+		egen väg, inte genom att sätta `klara` för hand. ]]
+	state = Preparation.nyState(HAST_ID, 1)
+	for _, fas in ipairs(Preparation.stegFaser()) do gorFas(fas.id) end
+	visa(Preparation.STATUS.REDO)
+	prova("när hästen är redo står ingen fas kvar att konkurrera med",
+		PC.redo() == true and PC.nastaFas() == nil
+			and PC.skotselstegVantar() == false,
+		("redo %s · fas %s · steg väntar %s"):format(tostring(PC.redo()),
+			tostring(PC.nastaFas()), tostring(PC.skotselstegVantar())))
+	prova("och uppsittningsknappen finns", promptar().MountPrompt ~= nil)
+
+	--[[ RITTEN OCH AVSITTNINGEN, genom passets egen modul. `PassSync` är
+		den väg servern skickar det här, och `tillampaPass` är klientens
+		mottagare — samma kedja, inte en genväg förbi den. ]]
+	local pass = Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 1))
+	Pass.vidUppsittning(pass)
+	Pass.vidAvsittning(pass)
+	PC.tillampaPass(Pass.vy(pass, 9000))
+	visa(Preparation.STATUS.REDO)
+	local e = ytor()
+	prova("i eftervården möts `redo` och en full panel",
+		e.interaktion.Visible == true and #PC._synligaMoment() > 0
+			and PC.redo() == true and PC.skotselstegVantar() == true,
+		("%d moment"):format(#PC._synligaMoment()))
+	prova("men servern tillåter en andra uppsittning innan eftervården börjat",
+		Pass.farSittaUpp(pass) == true,
+		("Pass.farSittaUpp = %s"):format(tostring(Pass.farSittaUpp(pass))))
+	prova("så knappen ska stå kvar — att gömma den vore en regression",
+		promptar().MountPrompt ~= nil,
+		if promptar().MountPrompt then "(kvar)" else "MountPrompt borttagen")
+
+	--[[ Tillbaka till en vanlig dag för resten av specen: avsnitt 4 och 5
+		mäter ledningen mot skötseln, inte mot en eftervård. ]]
+	PC.tillampaPass(Pass.vy(Pass.nyState(HAST_ID, Pass.byggId(1, HAST_ID, 2)),
+		9001))
+	state = Preparation.nyState(HAST_ID, 1)
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		if fas.id ~= "leda" then gorFas(fas.id) end
+	end
+	visa(Preparation.STATUS.FORBEREDER)
 end
 
 print("\n── 4. Ledningen: kortet är borta, nederkanten står kvar ──")
