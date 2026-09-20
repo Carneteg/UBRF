@@ -51,6 +51,10 @@ Varje rad har evidens i PR #264. Ingen av dem är `PRODUCT_ACCEPTED`.
 | Camera feel | `CAMERA_FEEL_READY_FOR_HUMAN_REVIEW` | mekaniken mätt; känslan **uppskjuten av Tobias** |
 | Visuellt paket | `VISUAL_PACK_READY` | preview verifierad mot head; `CHATGPT_VISUAL_PASS` ej utfärdad |
 | M1 — lokala grindkedjan | pushad | `PRE_TOBIAS_FIRST_PLAYABLE_GATE: PASS` lokalt efter två verktygsfel |
+| M3 — hela ledrutten stall → ridhus | `READY_FOR_CHATGPT_REVIEW` | 94/94 vägpunkter, kopplet aldrig släppt, `malNatt` och målzon |
+| M3.1 — hörnet vid Tvärvägg 1:2 | `READY_FOR_CHATGPT_REVIEW` | planeraren löste det sex gånger; alla sex revs bildrutan efter |
+| M3.2 — spelarens egen dörrväg | `READY_FOR_CHATGPT_REVIEW` | 13 av 13 stängda vid start, två öppnade med X på riktig prompt |
+| M3.3 — uppsittning, ritt, avsittning | `READY_FOR_CHATGPT_REVIEW` | samma session: skritt 4,35, galopp 16,81 studs/s, styrning, efterritt |
 
 ### Prestandaraden, utskriven
 
@@ -100,7 +104,11 @@ Rörs inte utan färskt bevis att de blockerar något:
 
 - 33 hästriggar simuleras alltid (1 564 oankrade delar),
 - `Markkontakt` strålar mot alla hästar två gånger i sekunden,
-- `PathfindingService` ger `NoPath` över långa sträckor i den här världen,
+- ~~`PathfindingService` ger `NoPath` över långa sträckor i den här världen~~
+  — **förklarad 2026-09-20, inte ett fel i tjänsten.** Mätt under M3.2:
+  med de två `portbla (intern)` öppna ger den `Success` och 94 vägpunkter
+  hela vägen stall → ridhus. Med endera stängd: `NoPath`. Det var
+  stängda dörrar, inte sträckan,
 - `TavlingskladerService` startas aldrig av någon,
 - bomkameran (`Kameralage`, feedbackvinkeln) har ingen anropare i produktionskoden,
 - `REFERENCE GAP` i byggnaderna — kräver foto, inte kod.
