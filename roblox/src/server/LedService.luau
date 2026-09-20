@@ -1871,9 +1871,42 @@ local function steg(_dt: number)
 					and (spar[1] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
 					table.remove(spar, 1)
 				end
-				while #spar > 0
-					and (spar[#spar] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
-					table.remove(spar, #spar)
+				--[[ ══ SVANSEN KRAVER TIDSBEVIS (reviewrond 9) ══════
+
+					Raderna ovanfor sa «sist + boxsidig = dar ledaren star
+					just nu». Det ar ett pastaende om TIDEN, och det gick
+					inte att lasa ur kon.
+
+					Under den klistriga pausen fran rond 5/6 ar svansen
+					gammal: det sista som hann antecknas innan taket slog
+					i. Spelaren kan ha gatt hur langt som helst sedan
+					dess. Reproducerat i review med ledaren redan UTE,
+					koppel 5,90 m och `sparFullt = true` — suffixregeln
+					raderade da en framtida atergang som ingen gatt.
+
+					DARFOR BEVISAS DET NU: svansen maste ligga inom
+					antecknandets egen upplosning, 0,6 m, fran spelarens
+					LAGE JUST NU. Da ar den hans nulage, inte en gissning
+					ur koordningen. Haller beviset inte, ror vi inte
+					svansen — vare sig den ar pausad eller ej.
+
+					Ingen ny grans ar uppfunnen: 0,6 m ar samma troskel
+					som avgor nar en ny smula overhuvudtaget antecknas.
+
+					Ett villkor `not l.sparFullt` skrevs forst bredvid
+					det har, men det bar ingenting: narhetsbeviset
+					utesluter redan en pausad svans, och mutationen som
+					tog bort pauskontrollen lamnade specen GRON. Ett
+					villkor ingen matning kan falla ar samre an inget —
+					samma skal som den doda gallringen i rond 7. Pausen
+					sjalv ar orord och provas separat. ]]
+				local svansArNulaget = #spar > 0
+					and (spar[#spar] - rot.Position).Magnitude <= 0.6 * M
+				if svansArNulaget then
+					while #spar > 0
+						and (spar[#spar] - l.dorrMitt):Dot(l.dorrUt) <= 0 do
+						table.remove(spar, #spar)
+					end
 				end
 			end
 		end
