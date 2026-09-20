@@ -97,6 +97,7 @@ IC.setLedStatus(function(model)
 	status.antal += 1
 end)
 
+local Net_LedSync = Networking.get("LedSync")
 local hast = nyHast("trixie", "Trixie")
 IC.uppdatera()
 local p = promptar(hast)
@@ -715,6 +716,44 @@ do
 
 	LC.fortsatt, LC.replay = ursprung.fortsatt, ursprung.replay
 	LC.gaVidare, LC.replayAktiv = ursprung.gaVidare, ursprung.replayAktiv
+end
+
+--[[ == MULTI_HORSE PUNKT 7: SERVERVAGEN IN I `satLeder` =============
+
+	KARNAN AR REDAN TACKT. Avsnittet «En andra hast far inte arva den
+	forstas knapptext» ovan mater precis det, och det upptackte jag forst
+	efter att ha skrivit ett eget — falsifieringen blev rod pa DESS rad,
+	inte pa min. Det som stod kvar otackt ar smalare och star har.
+
+	`satLeder` har TVA ingangar, och noten vid funktionen sager varfor:
+	knappens eget svar OCH serverns `LedSync`, «sa att de tva aldrig kan
+	glida isar». Avsnittet ovan driver den forsta. Det har driver den
+	andra, plus vagen TILLBAKA — att ett slapp fran servern staller bada
+	knapparna ratt igen. ]]
+print("\n-- MULTI_HORSE punkt 7: samma sanning via serverns LedSync --")
+
+do
+	local hastB = nyHast("kennedy", "Kennedy")
+	IC.uppdatera()
+	local pA, pB = promptar(hast), promptar(hastB)
+	local BORJA_A = Sprak.t("led.borja_namn", "Trixie")
+	local BORJA_B = Sprak.t("led.borja_namn", "Kennedy")
+	local SLAPP_A = Sprak.t("led.slapp_namn", "Trixie")
+	status.namn = nil
+
+	Net_LedSync.OnClientEvent:Fire({ leder = true, hastId = "trixie" })
+	check("serverns besked satter SLAPP pa den ledda",
+		pA.LedPrompt.ActionText == SLAPP_A, pA.LedPrompt.ActionText)
+	check("och lamnar den tredje hastens knapp orord",
+		pB.LedPrompt.ActionText == BORJA_B, pB.LedPrompt.ActionText)
+	check("statusraden pekar ut ratt hast", status.namn == "Trixie",
+		tostring(status.namn))
+
+	Net_LedSync.OnClientEvent:Fire({ leder = false, hastId = "trixie" })
+	check("och serverns SLAPP staller bada ratt igen",
+		pA.LedPrompt.ActionText == BORJA_A and pB.LedPrompt.ActionText == BORJA_B,
+		("%s / %s"):format(pA.LedPrompt.ActionText, pB.LedPrompt.ActionText))
+	check("statusraden slacks", status.namn == nil, tostring(status.namn))
 end
 
 if fails > 0 then
