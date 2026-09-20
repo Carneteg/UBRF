@@ -699,6 +699,11 @@ def valjBunt(spec_rel: str):
     #   som saknar bade varlden och klientens InteractionController. ]]
     elif "promptkonflikt" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
+    #[[ MULTI_HORSE: flera ledningar samtidigt. FORE "ledning"-grenen ar
+    #   inte nodvandigt — "flerhast" innehaller inte "ledning" — men den
+    #   behover SAMMA bunt som ledning.spec, alltsa INTEGRATION. ]]
+    elif "flerhast" in spec_rel:
+        moduler, stubbar = INTEGRATION, "tests/stubs.luau"
     elif "ledning-integration" in spec_rel:
         moduler, stubbar = KOHERENS, "tests/stubs.luau"
     elif "ledning" in spec_rel:
