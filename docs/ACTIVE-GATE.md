@@ -46,11 +46,41 @@ Varje rad har evidens i PR #264. Ingen av dem är `PRODUCT_ACCEPTED`.
 | Gate 2A — First Ride | `READY_FOR_CHATGPT_REVIEW` | häst i rörelse utan stallkedjan före |
 | Runtime routing | ChatGPT-review klar | två defekter rättade: `MinHast` fanns i två exemplar och hängde varje anropare; en varning som fyrade vid varje uppsittning |
 | Lektionskortet och styrningen | `READY_FOR_CHATGPT_REVIEW` | ett kort som syns är inget rörelselås; bara replayen stoppar hästen |
-| Full world performance | `DESKTOP_PERFORMANCE_BASELINE_ACCEPTED` | 60 FPS i sex av sju scenarier; ingen tillväxt över 11 min |
+| Full world performance | `DESKTOP_PERFORMANCE_BASELINE_ACCEPTED` | se noten nedan — talen gäller ett litet Studio-fönster, och läckfrihet är **inte** verifierad |
 | Multi-horse leading | `CHATGPT_MULTI_HORSE_REVIEW_PASS_WITH_LIMITS` | två riktiga klienter, två boxrader, noll överhörning |
 | Camera feel | `CAMERA_FEEL_READY_FOR_HUMAN_REVIEW` | mekaniken mätt; känslan **uppskjuten av Tobias** |
 | Visuellt paket | `VISUAL_PACK_READY` | preview verifierad mot head; `CHATGPT_VISUAL_PASS` ej utfärdad |
 | M1 — lokala grindkedjan | pushad | `PRE_TOBIAS_FIRST_PLAYABLE_GATE: PASS` lokalt efter två verktygsfel |
+
+### Prestandaraden, utskriven
+
+Raden stod förut som «60 FPS i sex av sju scenarier; ingen tillväxt över
+11 min». Det övertolkade evidensen på två sätt, och rättas här.
+
+**Mätvillkoren.** Desktop Studio, AMD Ryzen 5 5600X, GTX 1080 Ti,
+`Rendering.QualityLevel` på Automatic. Play-fönstrets viewport var
+**727 × 533** — 0,39 MP mot skrivbordets 5,0. Varje renderrelaterat tal
+gäller det lilla fönstret och är inget hårdvarubetyg.
+
+**Bildfrekvensen.** Uppmätt ur `RenderStepped`, 48 810 ramar över 814 s:
+medel 16,68 ms, 334 ramar ≥ 33 ms (0,68 %), en ram ≥ 50 ms. **Fem av sju
+scenarier** har uppmätt FPS; scenario 1 och 3 har det inte — deras rader
+är `ej uppmätt`.
+
+**Minnet — och det här är rättelsen.** Två punkter över 645 s oavbruten
+ridning:
+
+```
+medelramtid    16,66 ms  ->  16,68 ms
+bildfrekvens   60,0      ->  59,9
+totalminne     2 114 MB  ->  2 003 MB
+instanser      54 527    ->  54 635      (+108)
+```
+
+Två punkter är **inte en kurva**. Det som faktiskt visats är att ingen
+tillväxt i ramtid eller instansantal observerades i just det fönstret.
+**Frånvaro av minnesläcka är inte verifierad**, och en trend går inte att
+skilja från en svängning på två mätpunkter.
 
 ## Uppskjutet — inte godkänt
 
