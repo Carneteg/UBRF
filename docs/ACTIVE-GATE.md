@@ -6,7 +6,7 @@
 |---|---|
 | Aktiv gate | **First Playable closure — de maskinellt körbara resterna** |
 | Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
-| Head | `43f42c3` |
+| Head | `e50dc8e` |
 | Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
 | Överordnad plan | issue #259 |
 | Builder | **Claude** |
@@ -29,7 +29,7 @@ evidens i PR #264.
 |---|---|---|
 | **G0** | Gemensam sanning: den här filen, och `tools/kolla-generisk-hast.py` plattformsoberoende | **klar** — `0bf1ef6`; grinden passerar på Windows med separatornormalisering och en vakt mot undantag som inte pekar på någon fil |
 | **G1** | Säker interaktionsgrund: rate limiting (#258 P1-2), cleanup- och felvägar | **klar** — `Skopa` grindar tretton fjärranrop med deklarerade tak; merge av PR #262 |
-| **G2** | Golden path till uppsittning, provad som en kedja | **klar i allt utom en sträcka** — hela kedjan körd i Studio; ledsträckan stall → ridhus är ännu inte körd i ett svep, se M3 nedan |
+| **G2** | Golden path till uppsittning, provad som en kedja | **klar** — ledsträckan stall → ridhus körd i ett svep, 94/94 vägpunkter, dörrarna öppnade av spelaren själv; se M3.2 |
 | **G3** | Uppsutten ridning och game feel | **mekaniken klar** — skritt 4,35 · trav 9,6 · galopp 16,8 studs/s mätt mot `Gaits`; game feel är Tobias bedömning och är **uppskjuten**, inte godkänd |
 | **G4** | Ride First-pedagogik och UI | **klar i det maskinellt mätbara** — coach banner, Ugneta-feedback och `efterForsok` verifierade i runtime |
 | **G5** | Roblox runtime och enheter | **delvis** — Studio-QA gjord maskinellt; **fysisk iPad och iPhone uppskjutna av produktbeslut**, inte godkända |
