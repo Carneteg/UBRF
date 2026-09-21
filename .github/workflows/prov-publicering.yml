@@ -2,52 +2,34 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# AVVAPNAD. Arm L ar kord — run 35574514273: HTTP 200 (version 13).
+# ARMERAD for M/N (order 5757339608). AVVAPNAS DIREKT EFTERAT.
 #
-# Alla sju skillnaderna tillsammans pa Rojos fil gick igenom. Mangden
-# ar darmed tomd bade var for sig och gemensamt.
+# Arm L (run 35574514273) gav 200: Rojos innehall i VAR serialisering,
+# med alla sju kanda skillnader pa en gang, gick igenom. Mangden ar
+# tomd bade var for sig och gemensamt.
 #
-# EFTERANALYSEN HITTADE DA DEN FAKTISKA SKILLNADEN: L och var artefakt
+# EFTERANALYSEN hittade da den faktiska skillnaden. L och var artefakt
 # har IDENTISKA radmultimangder — noll skiljande rader nar ordningen
-# sorteras bort — och skiljer sig pa exakt en byte:
+# sorteras bort — och skiljer sig pa exakt EN BYTE:
 #
-#   Rojo/L (200): ...</roblox>      INGEN avslutande radbrytning
-#   var    (400): ...</roblox>\n    AVSLUTANDE RADBRYTNING
+#   Rojo och L (200):  ...</roblox>       ingen avslutande radbrytning
+#   var        (400):  ...</roblox>\n     AVSLUTANDE RADBRYTNING
 #
-# tools/bygg-place.py:245 skriver radbrytningen efter rotelementet.
+# tools/bygg-place.py:245 avslutar dokumentet med en radbrytning.
 #
-# J/K (run 35573405949) gav 200/400 och uteslot referentstil och
-# RunContext. Men varje egenskap har provats EN OCH EN mot Rojos fil —
-# aldrig i KOMBINATION. Arm K bar fortfarande tabbar, ProtectedString,
-# Workspace, External och namespace-roten SAMTIDIGT.
+# KORRELATIONEN AR TOTAL over alla sjutton matningar: varje fil utan
+# avslutande radbrytning accepterades, varje fil med avvisades. Den
+# forklarar ocksa varfor bisektionens bas var ogiltig — den kom ur min
+# egen generator och slutade likadant. «Invalid Content stream» ar
+# dessutom precis felet man vantar sig for skrapbytes EFTER
+# dokumentelementet, snarare an for nagot inuti det.
 #
-# «Individuellt ofarlig» ar inte samma sak som «gemensamt ofarlig». En
-# langdgrans, en parser som tal en avvikelse men inte fem, eller en
-# vaxelverkan mellan namespace-roten och External-noderna skulle ge
-# exakt det vi ser: varje enkelarm gron, kombinationen rod.
-#
-# ARM L lagger ALLA SJU pa Rojos fil pa en gang:
-#
-#   L=400 -> orsaken ar en VAXELVERKAN inuti mangden. Bisektera
-#            kombinationen, max tre ronder. Gissa inte vilken.
-#   L=200 -> mangden ar verkligen tomd, bade var for sig och
-#            tillsammans. Da ar giltighetskontrollerad delta-debugging
-#            av den riktiga artefakten ratt metod.
-#
-# TVA FEL SOM FANGADES INNAN L KORDES, bada skulle ha gjort armen
-# ogiltig genom att smuggla in en ATTONDE skillnad:
-#
-#   - Workspace-noden bar referent="RBX0", som krockade med den RBX0
-#     referentomskrivningen redan skapat. Tva instanser pa samma
-#     referent. Alla befintliga referenter skjuts nu upp ett steg
-#     forst, precis som bygg-place.py numrerar nar den stoppar in
-#     Workspace som RBX0.
-#   - External och Workspace infogades i tva anrop efter roten, vilket
-#     gav omvand ordning mot var fil. De infogas nu i ETT block.
-#
-# Bada kontrolleras nu av verktyget, som avbryter om de ateruppstar.
+#   M  var fil  - sista radbrytningen  -> 200 bekraftar
+#   N  Rojos fil + en radbrytning      -> 400 bekraftar at andra hallet
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
@@ -84,45 +66,32 @@ jobs:
           python3 tools/bygg-place.py --ut /tmp/var-kall.rbxlx --sha "$UBRF_HEAD_SHA"
           for f in /tmp/rojo-kall.rbxlx /tmp/var-kall.rbxlx; do
             echo "$f  $(stat -c%s "$f") byte  $(sha256sum "$f" | cut -d' ' -f1)"
+            echo "  sista byten: $(tail -c 14 "$f" | xxd -p)"
           done
 
-      # ARM L byggs genom att KEDJA de tre verktyg som redan finns och
-      # som var och ett bar sina egna bevis — hellre an att duplicera
-      # logiken i ett fjarde verktyg som kunde glida ifran dem.
-      #
-      #   steg 1  referenter -> RBX, RunContext bort
-      #   steg 2  Source: string -> ProtectedString
-      #   steg 3  tabbindrag, External, Workspace, namespace-rot
-      - name: Bygg arm L — alla sju skillnaderna
+      # Verktyget vagrar rora nagot annat an sista byten: langden maste
+      # skilja exakt 1, skillnaden maste ligga SIST, och den omvanda
+      # atgarden maste ge tillbaka infilens exakta bytes.
+      - name: M och N — en byte, med bevis
         run: |
-          echo "=== steg 1: referenter + RunContext ==="
-          python3 tools/kvarvarande-diff.py --in /tmp/rojo-kall.rbxlx --ut /tmp/L/steg1.rbxlx --riktning j
+          echo "=== M: var fil MINUS sista radbrytningen (ska laga) ==="
+          python3 tools/sista-byten.py --in /tmp/var-kall.rbxlx --ut /tmp/MN/M.rbxlx --atgard ta-bort
           echo ""
-          echo "=== steg 2: Source-typ ==="
-          python3 tools/byt-source-typ.py --in /tmp/L/steg1.rbxlx --ut /tmp/L/steg2.rbxlx --till protected
-          echo ""
-          echo "=== steg 3: envelope, fyra pa en gang ==="
-          python3 tools/mutera-xml.py --bas /tmp/L/steg2.rbxlx --alla /tmp/L/L.rbxlx
-          echo ""
-          echo "=== L mot var riktiga artefakt ==="
-          echo "L   : $(stat -c%s /tmp/L/L.rbxlx) byte"
-          echo "var : $(stat -c%s /tmp/var-kall.rbxlx) byte"
-          python3 - <<'PY'
-          import re, xml.etree.ElementTree as ET
-          t = open('/tmp/L/L.rbxlx', encoding='utf-8').read()
-          ET.fromstring(t)
-          refs = re.findall(r'referent="([^"]*)"', t)
-          print('L: XML VALID, referenter=%d unika=%d' % (len(refs), len(set(refs))))
-          assert len(refs) == len(set(refs)), 'dubblerad referent i arm L'
-          assert not '<Ref' in t, 'ovantad <Ref>-egenskap'
-          print('<Ref>-egenskaper: 0')
-          PY
+          echo "=== N: Rojos fil PLUS en radbrytning (ska bryta) ==="
+          python3 tools/sista-byten.py --in /tmp/rojo-kall.rbxlx --ut /tmp/MN/N.rbxlx --atgard lagg-till
 
       # Gron exitkod betyder «matning erhallen», inte «publicering
       # lyckades». Las skriptets ramatning, aldrig exitkoden.
-      - name: L — Rojos innehall i var serialisering
+      - name: M — var artefakt utan avslutande radbrytning
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/L/L.rbxlx --delprov L-alla-skillnader
+        run: python3 tools/prova-publicering.py --fil /tmp/MN/M.rbxlx --delprov M-var-utan-radbrytning
+
+      - name: N — Rojos fil med avslutande radbrytning
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
+        run: python3 tools/prova-publicering.py --fil /tmp/MN/N.rbxlx --delprov N-rojo-med-radbrytning
