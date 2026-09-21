@@ -915,10 +915,42 @@ end
      Det gäller bara uppslag klienten gör på vägen till ett fjärrobjekt.
      Ett prov som vill mäta att något SAKNAS ska använda FindFirstChild,
      som fortsatt svarar nil. ]]
+--[[ FJÄRROBJEKTETS KLASS KOMMER UR KONTRAKTET, INTE UR EN GISSNING.
+
+     Bänken skapade förut VARJE fjärrobjekt som `RemoteEvent`. Det är
+     inte sant: `Networking.DEFINITIONS` säger att `MountRequest` och
+     `DismountRequest` är `RemoteFunction`.
+
+     Skillnaden var inte kosmetisk. `RemoteEvent`-stubbens `InvokeServer`
+     svarar HÅRDKODAT `true` och rör aldrig `OnServerInvoke`. Alltså gick
+     det inte att mäta att servern NEKAR ett fjärranrop — bänken svarade
+     ja åt den, tyst, och varje prov som trodde sig mäta ett nej mätte
+     stubbens `return true`.
+
+     Det föll ut i QA-reviewen av `082062c`: summeringen efter ritten
+     visades på en nekad avsittning, och det första provet som skulle
+     fånga det kunde inte, av exakt det här skälet.
+
+     Klassen läses därför ur `Networking.definitioner()` — samma tabell
+     produktionen själv använder i `Networking.get`, inte en andra lista
+     här. Är modulen inte laddad än faller vi tillbaka på `RemoteEvent`,
+     som förut. ]]
+local function __fjarrklass(barnnamn: string): string
+	--[[ `__fjarrdefinitioner` sätts av `build.py` direkt efter att
+	     `Networking` emitterats — modulerna är lokaler i bunten, så det
+	     är den enda vägen från stubben (som ligger först) till
+	     kontraktet. Listan ägs fortfarande av `Networking`. ]]
+	local def = __fjarrdefinitioner
+	if type(def) == "table" and def[barnnamn] then
+		return def[barnnamn]
+	end
+	return "RemoteEvent"
+end
+
 function __rs:WaitForChild(namn)
 	local fanns = self:FindFirstChild(namn)
 	if fanns then return fanns end
-	local ny = Instance.new(if namn == "HorseRemotes" then "Folder" else "RemoteEvent")
+	local ny = Instance.new(if namn == "HorseRemotes" then "Folder" else __fjarrklass(namn))
 	ny.Name = namn
 	ny.Parent = self
 	--[[ Mappen måste kunna skapa sina egna barn på samma sätt; annars
@@ -927,7 +959,7 @@ function __rs:WaitForChild(namn)
 		function ny:WaitForChild(barnnamn)
 			local b = self:FindFirstChild(barnnamn)
 			if b then return b end
-			local e = Instance.new("RemoteEvent")
+			local e = Instance.new(__fjarrklass(barnnamn))
 			e.Name = barnnamn
 			e.Parent = self
 			return e

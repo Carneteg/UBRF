@@ -115,7 +115,7 @@ local function dismount(skal: Slutskal?)
 	     försvinner, riggen är borta ur workspace, servern flyttar
 	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
 	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
-	LektionController.avbryt(skal)
+	local summering = LektionController.avbryt(skal)
 	--[[ Hjälpen hör till ritten. Den ska inte ligga kvar över en spelare
 	     som just klivit av. ]]
 	KontrollHjalp.dolj()
@@ -127,6 +127,12 @@ local function dismount(skal: Slutskal?)
 	--[[ #235: till fots agar naromradet skarmen igen. ]]
 	Naromrade.satRider(false)
 	ride = nil
+	--[[ Underlaget till efterrittens summering, OVISAT. Rivningen ovan
+	     har hänt oavsett; undervisningens avslut har det inte. Bara
+	     `begarAvsittning` vet om servern godtog avsittningen, så bara
+	     den får visa det. Alla andra vägar hit är avbrott och får ändå
+	     `nil` ur `efterrittFor`. ]]
+	return summering
 end
 
 --[[ SPELAREN BEGÄR AVSITTNING — lokalt först, servern sedan.
@@ -157,16 +163,39 @@ local function begarAvsittning()
 	--[[ DEN ENDA GILTIGA VAGEN UT. Spelaren tryckte sjalv, och servern
 	     far begaran direkt efterat. Summeringen hor hit och ingen
 	     annanstans. ]]
-	dismount("avsittning")
+	local summering = dismount("avsittning")
 	task.spawn(function()
-		local ok, err = pcall(function()
-			Net.get("DismountRequest"):InvokeServer()
+		local ok, svar, skal = pcall(function()
+			return Net.get("DismountRequest"):InvokeServer()
 		end)
 		if not ok then
 			--[[ Uteblivet eller felande svar får inte återuppliva något
 			     lokalt. Servern rättar oss via MountChanged om den vill. ]]
-			warn("[Horse] DismountRequest misslyckades: " .. tostring(err))
+			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
+			return
 		end
+		--[[ ── SERVERNS NEJ ÄR ETT NEJ ────────────────────────────────
+
+			QA-review av `082062c`, blockerare 1. `pcall` svarar `true`
+			så länge fjärranropet inte KASTADE — och `HorseService.
+			dismount` kastar inte när den nekar, den svarar
+			`false, "pass.rider_inte"` eller `false, "hast.oregistrerad"`.
+			`Skopa.grind` lägger till `false, "takt.for_snabbt"`. Alla
+			tre kom förut ut som en fullbordad ritt med summering.
+
+			Två frågor, inte en: gick anropet fram (`ok`), och sa servern
+			ja (`svar`)? Bara när båda är sanna har ritten avslutats
+			auktoritativt, och bara då får undervisningen sitt avslut.
+
+			Rivningen står kvar oavsett. Nekar servern skickar den
+			`MountChanged` och klienten sätter upp igen på serverns ord
+			— en legitim rättelse, och en ritt som fortsätter ska inte
+			ha fått en summering. ]]
+		if svar ~= true then
+			warn("[Horse] avsittningen nekades: " .. tostring(skal))
+			return
+		end
+		LektionController.visaEfterritt(summering)
 	end)
 end
 
@@ -559,9 +588,11 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 			mount(model)
 		end
 	elseif ride and ride.model == model then
-		--[[ Serverns besked, inte spelarens tryck. Den egna avsittningen
-		     har redan summerat i `begarAvsittning`; att summera igen har
-		     hade gett tva besked om samma ritt. ]]
+		--[[ Serverns besked, inte spelarens tryck. Skalet «avbrott» ger
+		     tystnad ur `efterrittFor`, sa den har vagen kan aldrig
+		     summera. Den egna avsittningen summerar i `begarAvsittning`
+		     — efter serverns ja — och tva besked om samma ritt gar
+		     darfor inte att fa. ]]
 		dismount("avbrott")
 	end
 end)

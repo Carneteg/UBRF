@@ -399,9 +399,22 @@ function LektionController.avbryt(skal: string?)
 		FINNS något att summera. En respawn, en riven rigg eller serverns
 		egen rättelse ger tystnad — se skälet i `init.client.dismount`.
 
-		SÄKERHET FÖRE UNDERVISNING GÄLLER FORTFARANDE. Summeringen tas
-		fram FÖRE rivningen nedan, men visas EFTER den, så att den inte
-		kan hålla kvar något ur ritten på skärmen. ]]
+		QA-review av `082062c`, blockerare 1: summeringen VISADES här,
+		och det var för tidigt. Den lokala rivningen sker med flit innan
+		servern hunnit svara — säkerhet före undervisning — men servern
+		kan NEKA avsittningen (`pass.rider_inte`, `hast.oregistrerad`,
+		`takt.for_snabbt`). En nekad avsittning presenterades då ändå som
+		en fullbordad ritt, och #234 kräver att summeringen följer en
+		GILTIG auktoritativ övergång.
+
+		Rivningen och undervisningens avslut är därför två saker nu. Den
+		här funktionen river direkt och LÄMNAR TILLBAKA underlaget; den
+		som vet om serverns svar blev ett ja anropar `visaEfterritt`.
+
+		Att ta fram underlaget FÖRE rivningen är fortfarande nödvändigt:
+		`pass` nollas tre rader ner, och då finns historiken inte kvar
+		att summera. En ögonblicksbild överlever rivningen; en referens
+		till `pass` hade inte gjort det. ]]
 	local summering = Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
 
 	pass = nil
@@ -421,10 +434,20 @@ function LektionController.avbryt(skal: string?)
 	UgnetaController.sakerhetTarOver()
 	UgnetaGestalt.dolj()
 
-	--[[ Och SEDAN summeringen, på en tom yta. Två eller tre punkter med
-	     en knapp att stänga med — samma yta, samma språkvägar och samma
-	     responsiva regler som varje annat Ugneta-besked. Ingen egen
-	     panel, inget nytt lektionssystem. ]]
+	--[[ Ytan är tom nu, och underlaget går tillbaka till anroparen
+	     OVISAT. `begarAvsittning` håller det tills servern sagt ja. ]]
+	return summering
+end
+
+--[[ SERVERN SA JA — då, och först då, får ritten ett avslut.
+
+	Två eller tre punkter med en knapp att stänga med — samma yta, samma
+	språkvägar och samma responsiva regler som varje annat Ugneta-besked.
+	Ingen egen panel, inget nytt lektionssystem.
+
+	`nil` är ett giltigt argument och betyder tystnad, så att anroparen
+	kan skicka vidare det `avbryt` gav utan att först kontrollera det. ]]
+function LektionController.visaEfterritt(summering)
 	if summering then UgnetaController.efterritt(summering) end
 end
 

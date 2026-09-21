@@ -587,7 +587,21 @@ def modulblock(namn: str, rel: str, kropp: str) -> str:
 
     `testa-build.py: deklarerad_men_ej_emitterad` byter ut funktionen och
     kraver att bygget faller."""
-    return f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n"
+    block = f"--[[ ══ {rel} ══ ]]\nlocal {namn} = (function()\n{kropp}\nend)()\n"
+    #[[ FJARRKONTRAKTET VIDARE TILL STUBBEN.
+    #
+    #   Modulerna emitteras som LOKALER, sa stubbarna -- som ligger forst i
+    #   filen -- kan inte na `Networking`. Utan den har raden gissade
+    #   bankens fjarrfabrik `RemoteEvent` for VARJE fjarrobjekt, aven de
+    #   tva som ar `RemoteFunction` i produktion. Det gjorde ett nekat
+    #   fjarranrop omojligt att mata: stubbens `InvokeServer` svarade
+    #   hardkodat `true`.
+    #
+    #   Listan kopieras inte hit. Den lamnas ut ur modulen sjalv via
+    #   `Networking.definitioner()`, som redan finns for `Integritet`. ]]
+    if namn == "Networking":
+        block += "__fjarrdefinitioner = Networking.definitioner()\n"
+    return block
 
 
 _PRODUKT = ("src/", "game/", "buildings/")

@@ -429,6 +429,130 @@ do
 	UgnetaController.dolj()
 end
 
+--[[ == SUMMERINGEN FOLJER SERVERNS JA, INTE SPELARENS TRYCK ========
+
+	QA-review av `082062c`, blockerare 1.
+
+	Ordningen i `begarAvsittning` ar medveten: klienten river LOKALT
+	forst och fragar servern sedan, sa att ett langsamt svar aldrig
+	lamnar lararytan uppe over en spelare som bett om att fa sitta av.
+	Sakerhet fore undervisning.
+
+	Men rivningen ar inte samma sak som att ritten AVSLUTADES. Servern
+	kan neka: `pass.rider_inte`, `hast.oregistrerad`, och `Skopa.grind`
+	lagger till `takt.for_snabbt`. Inget av de tre KASTAR, sa `pcall`
+	svarar `true` — och summeringen visades anda. En nekad avsittning
+	presenterades som en fullbordad ritt.
+
+	── EN FALLGROP SOM FORSTA VERSIONEN AV DET HAR PROVET GICK I ─────
+
+	`UgnetaController.vantar()` ar SANT direkt efter uppsittning: da
+	star lektionskortet uppe. Matte man bara «vantar() efter trycket»
+	sa var svaret `true` i alla tre armarna — bade nejen och jaet — och
+	provet hade varit gront for att det inte kunde se nagon skillnad.
+
+	Ytan tvingas darfor tom omedelbart fore trycket, och att den ar tom
+	kontrolleras. Forst da betyder `vantar() == true` efterat att just
+	summeringen reste sig. ]]
+do
+	print("")
+	print("-- Efterritten kraver serverns ja --")
+
+	local dr = Net.get("DismountRequest")
+	local originalHandlare = dr.OnServerInvoke
+
+	--[[ Ett underlag som SAKERT ger minst en punkt: samma matning
+	     forbattrad fran 0.20 till 0.90 over tva forsok, alltsa langt
+	     over `KVALITET.BATTRE` (0.045). Blir summeringen tom mater
+	     provet ingenting, och da ar bada armarna gronna av fel skal. ]]
+	local function nyttUnderlag()
+		return { provovning = {
+			{ rytm = 0.20, balans = 0.20, mjukhet = 0.20 },
+			{ rytm = 0.90, balans = 0.90, mjukhet = 0.90 },
+		} }
+	end
+
+	--[[ Handlaren maste fangas FORE trycket: `dismount` river ritten och
+	     `UnbindAction(Input.AVSITT)` tar bort bindningen pa vagen. ]]
+	local function sittAv(): boolean
+		local fn = CAS._bound[Input.AVSITT]
+		if fn == nil then return false end
+		fn(Input.AVSITT, Enum.UserInputState.Begin, {})
+		return true
+	end
+
+	--[[ En ritt med underlag, och en TOM yta att mata mot. Returnerar
+	     hasten sa att armen kan stada efter sig. ]]
+	local function riddenRittMedUnderlag(): Model
+		local h = nyRitt()
+		local pass = LektionController.pass()
+		if pass then pass.historik = nyttUnderlag() end
+		UgnetaController.dolj()
+		return h
+	end
+
+	--[[ KONTROLLEN FORST. Utan den kan en tyst arm nedan betyda «grinden
+	     holl» ELLER «det fanns inget att visa», och de tva far inte ga
+	     att blanda ihop. ]]
+	do
+		local h = riddenRittMedUnderlag()
+		prova("KONTROLL: ytan ar tom fore matningen",
+			UgnetaController.vantar() == false)
+		local punkter = LektionController.avbryt("avsittning")
+		prova("KONTROLL: underlaget ger faktiskt en summering",
+			punkter ~= nil and #punkter > 0,
+			("punkter=%d"):format(if punkter then #punkter else -1))
+		prova("och `avbryt` VISAR den inte langre sjalv",
+			UgnetaController.vantar() == false,
+			tostring(UgnetaController.vantar()))
+		h:Destroy()
+	end
+
+	--[[ ARM 1 — SERVERN NEKAR med tjanstens eget skal. ]]
+	do
+		local h = riddenRittMedUnderlag()
+		dr.OnServerInvoke = function() return false, "pass.rider_inte" end
+		prova("ytan ar tom nar trycket sker", UgnetaController.vantar() == false)
+		prova("avsittningen gick att trycka", sittAv() == true)
+		prova("en NEKAD avsittning ger INGEN summering",
+			UgnetaController.vantar() == false,
+			("vantar=%s"):format(tostring(UgnetaController.vantar())))
+		prova("men ritten ar anda riven — sakerhet fore undervisning",
+			LektionController.pagar() == false,
+			("pagar=%s"):format(tostring(LektionController.pagar())))
+		h:Destroy()
+	end
+
+	--[[ ARM 2 — `takt.for_snabbt`. Skopans nej ser annorlunda ut an
+	     tjanstens och kommer fran ett annat stalle i kedjan; en grind som
+	     bara provats mot det ena nejet ar provad mot halva kontraktet. ]]
+	do
+		local h = riddenRittMedUnderlag()
+		dr.OnServerInvoke = function() return false, "takt.for_snabbt" end
+		sittAv()
+		prova("skopans nej ger heller ingen summering",
+			UgnetaController.vantar() == false,
+			("vantar=%s"):format(tostring(UgnetaController.vantar())))
+		h:Destroy()
+	end
+
+	--[[ ARM 3 — SERVERN SAGER JA. Nu, och forst nu, far ritten sitt
+	     avslut. Utan den har armen vore grinden uppfylld av en klient
+	     som aldrig summerar alls. ]]
+	do
+		local h = riddenRittMedUnderlag()
+		dr.OnServerInvoke = function() return true end
+		sittAv()
+		prova("ETT JA FRAN SERVERN GER SUMMERINGEN",
+			UgnetaController.vantar() == true,
+			("vantar=%s"):format(tostring(UgnetaController.vantar())))
+		h:Destroy()
+	end
+
+	UgnetaController.dolj()
+	dr.OnServerInvoke = originalHandlare
+end
+
 if fel > 0 then
 	print(("\nKLIENT-LEKTIONSPAUS: %d fel"):format(fel))
 	error(("%d fel"):format(fel))
