@@ -2,7 +2,17 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for J/K (order 5756932189). AVVAPNAS DIREKT EFTERAT.
+# AVVAPNAD. J/K ar kort — run 35573405949:
+#
+#   J  Rojos fil + BADA vara egenskaper  -> 200 (version 12)
+#   K  var fil  - BADA                   -> 400
+#
+# ENUMERATED_DIFFS_EXHAUSTED. Referentstil och RunContext ar uteslutna.
+#
+# MEN: alla egenskaper ar provade EN OCH EN, aldrig i KOMBINATION. K bar
+# fortfarande tabbar, ProtectedString, Workspace, External och
+# namespace-roten SAMTIDIGT. Nasta prov ska lagga alla pa Rojos fil pa
+# en gang.
 #
 # UTESLUTET HITTILLS, allt matt och inget antaget: formatet (XML
 # fungerar), nyckel, scope, endpoint, auth, tabbindrag, <External>,
@@ -29,8 +39,6 @@ name: Prov — minimal publicering
 # RBX-prefixade referenter.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
