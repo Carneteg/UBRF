@@ -2,9 +2,18 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for BISEKTIONEN (order 5756502284): fyra minimala XML-placer
-# till CI-placen, en egenskap i taget. AVVAPNAS DIREKT EFTERAT — ta bort
-# `pull_request:` och dess `types:`-rad sa fort matningen ar redovisad.
+# AVVAPNAD. Bisektionen ar kord — run 35570164175. ALLA FYRA armarna
+# foll pa 400, inklusive BASEN. Provet mater darfor ingenting:
+# BISECT_BASELINE_INVALID, och ingen slutsats far dras om Workspace,
+# External eller namespace-attributen.
+#
+# ORSAKEN LAG I FORSOKSDESIGNEN: basen kallades «Rojo-stil» men kopierade
+# bara Rojos ROTELEMENT. Indraget forblev VART (tabbar mot Rojos tva
+# mellanslag) och tjansterna lamnades utan barn. Bada holls konstanta
+# over alla fyra armar, sa ingen av dem kunde hitta dem.
+#
+# NASTA DESIGN ska mutera Rojos FAKTISKA bytes — en fil vi vet ger 200 —
+# i stallet for att konstruera en fil som borde vara likvardig.
 #
 # VAD VI VET (run 35569440952 och tidigare):
 #
@@ -13,26 +22,24 @@ name: Prov — minimal publicering
 #   VAR XML       1 645 331 byte  application/xml           -> 400
 #   var minimala        375 byte  application/xml           -> 400
 #
-# XML-vagen fungerar alltsa, och felet ligger i VAR EGEN XML. Tre
-# skillnader mot Rojos envelope star kvar som misstankta, och
-# tools/bisektion-xml.py provar dem en i taget:
+# XML-vagen fungerar alltsa, och felet ligger i VAR EGEN XML.
 #
-#   1  basen       Rojo-stil rot, vara tjanster, inget mer
-#   2  + Workspace-noden ur bygg-place.py
-#   3  + <External>null</External> och <External>nil</External>
-#   4  + xmlns/xsi/schema-location pa roten
+# Bisektionens fyra armar (alla 400, run 35570164175):
 #
-# BASEN AVGOR OM PROVET MATER NAGOT. Gar inte den igenom ar det
-# BISECT_BASELINE_INVALID, och da far ingen slutsats dras om de andra
-# tre. Darfor kors den forst.
+#   1  basen       438 byte  -> 400   <- ogiltig bas, se ovan
+#   2  + Workspace 562 byte  -> 400
+#   3  + External  491 byte  -> 400
+#   4  + namespace 605 byte  -> 400
+#
+# Stegen nedan star kvar som dokumentation av vad som kordes. De ska
+# INTE koras om som de ar: basen maste bytas mot Rojos faktiska bytes
+# innan nasta arm betyder nagonting.
 #
 # Varje arm kors med --delprov, sa att skriptet redovisar ramatningen
 # och INTE klassificerar en orsak pa egen hand: en ensam arm sager
 # ingenting, det ar jamforelsen som mater.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
