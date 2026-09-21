@@ -2,14 +2,22 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for EN matning: den binara Studio-baseplaten, enligt ordern
-# 5756017167. `pull_request`-triggern ar tillbaka just for detta varv.
+# AVVAPNAD. Den binara matningen ar kord och redovisad — run 35566621297,
+# job 106229674956, HTTP 200, {"versionNumber":3}, BINARY_PATH_PASS.
+# `pull_request`-triggern ar borttagen igen sa att en push inte kan
+# republicera baseplaten till CI-placen av vana. `workflow_dispatch` gar
+# anda inte att trigga fran den har grenen: GitHub exponerar bara
+# dispatch fran default-branchen, och filen ligger inte pa main.
 #
-# AVVAPNA IGEN nar matningen ar redovisad — ta bort `pull_request:` och
-# dess `types:`-rad sa att en push inte kan posta till CI-placen av
-# vana. `workflow_dispatch` gar anda inte att trigga fran den har
-# grenen: GitHub exponerar bara dispatch fran default-branchen, och
-# filen ligger inte pa main.
+# ATERARMERA genom att satta tillbaka
+#
+#   pull_request:
+#     types: [opened, synchronize, reopened, ready_for_review]
+#
+# nar nasta kontroll ar godkand. Den kontrollen ar samma baseplate
+# sparad som XML — byt run-raden till `--fil qa/runtime/
+# UBRFCI-known-good.rbxlx` med filens egen sha256. Ingen kodandring
+# behovs: content-type valjs ur magic bytes.
 #
 # KONTROLLEN: qa/runtime/UBRFCI-known-good.rbxl ar en stock Baseplate
 # sparad ur Studio — binar container med Roblox egen magi `<roblox!`,
@@ -27,8 +35,6 @@ name: Prov — minimal publicering
 # valjer typ ur filens FORSTA BYTES, aldrig ur dess namn.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
