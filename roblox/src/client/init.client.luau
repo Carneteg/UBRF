@@ -81,7 +81,21 @@ local function poseAv(rig: { [string]: any }?): { [string]: any }?
 	return { x = pos.X, z = pos.Z, yaw = yaw }
 end
 
-local function dismount()
+--[[ VARFÖR RITTEN TOG SLUT, och inte bara ATT den gjorde det.
+
+	`dismount` hade inget skäl, och därför kunde ingenting nedströms
+	skilja «spelaren steg av» från «karaktären dog» eller «riggen
+	försvann ur workspace». För rivningen spelade det ingen roll — allt
+	ska ner ändå — men Teaching Loop behöver skillnaden: en summering
+	efter en ritt man avslutat är en belöning, samma summering efter en
+	respawn är förvirrande.
+
+	Skälet är därför ett argument, och den som ANROPAR vet det. Utan
+	argument antas det otrygga fallet: ingen summering. En ny anropare
+	som glömmer skälet får alltså tystnad, inte en felaktig summering. ]]
+export type Slutskal = "avsittning" | "avbrott"
+
+local function dismount(skal: Slutskal?)
 	if not ride then return end
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
@@ -101,7 +115,7 @@ local function dismount()
 	     försvinner, riggen är borta ur workspace, servern flyttar
 	     uppsittningen. Lärarytan släcks här, i samma andetag som resten av
 	     ekipaget rivs, så att "Bra rytm" aldrig blir kvar på skärmen. ]]
-	LektionController.avbryt()
+	LektionController.avbryt(skal)
 	--[[ Hjälpen hör till ritten. Den ska inte ligga kvar över en spelare
 	     som just klivit av. ]]
 	KontrollHjalp.dolj()
@@ -140,7 +154,10 @@ end
 	skickar en andra begäran. ]]
 local function begarAvsittning()
 	if not ride then return end
-	dismount()
+	--[[ DEN ENDA GILTIGA VAGEN UT. Spelaren tryckte sjalv, och servern
+	     far begaran direkt efterat. Summeringen hor hit och ingen
+	     annanstans. ]]
+	dismount("avsittning")
 	task.spawn(function()
 		local ok, err = pcall(function()
 			Net.get("DismountRequest"):InvokeServer()
@@ -158,7 +175,7 @@ local function mount(model: Model, rittId: string?)
 	     avsikt till DEN HAR ritten (#233, ChatGPT-review av #241). Utan
 	     det kunde ett fordrojt paket fran en tidigare ritt landa efter
 	     nasta uppsittning och accepteras mot fel ritt eller fel hast. ]]
-	if ride then dismount() end
+	if ride then dismount("avbrott") end
 
 	local rig, err = RigAdapter.build(model)
 	if not rig then
@@ -542,7 +559,10 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 			mount(model)
 		end
 	elseif ride and ride.model == model then
-		dismount()
+		--[[ Serverns besked, inte spelarens tryck. Den egna avsittningen
+		     har redan summerat i `begarAvsittning`; att summera igen har
+		     hade gett tva besked om samma ritt. ]]
+		dismount("avbrott")
 	end
 end)
 
@@ -667,12 +687,16 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	     som äger dem. #162 blockerare 2 mäts fortsatt av klientprovet. ]]
 end)
 
-player.CharacterRemoving:Connect(dismount)
+--[[ Dod eller respawn. INGEN summering: en ritt som tog slut for att
+     karaktaren forsvann ar inget att gratulera till. Wrappen finns for
+     att signalen annars skickar karaktaren som forsta argument — och
+     det hade lasts som ett skal. ]]
+player.CharacterRemoving:Connect(function() dismount("avbrott") end)
 
 RunService.RenderStepped:Connect(function(dt)
 	if not ride then return end
 	if not ride.rig.root:IsDescendantOf(workspace) then
-		dismount()
+		dismount("avbrott")
 		return
 	end
 

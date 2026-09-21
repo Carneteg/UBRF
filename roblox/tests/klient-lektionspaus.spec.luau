@@ -383,6 +383,52 @@ do
 	ReplayController.stang()
 end
 
+--[[ == EFTERRITTENS SUMMERING VISAS BARA VID GILTIG AVSITTNING ======
+
+	Teaching Loop. En summering efter en ritt man avslutat ar en
+	beloning; samma summering efter en respawn ar forvirrande — och
+	efter en riven rigg ar den en yta som ligger kvar over ett ekipage
+	som inte finns.
+
+	`dismount` bar darfor ett skal, och `avbryt` slapper bara igenom
+	«avsittning». Provet matar bada riktningarna, for en grind som bara
+	provats at ena hallet ar ingen grind. ]]
+do
+	print("")
+	print("-- Efterritt: summeringen ar grindad --")
+
+	UgnetaController.dolj()
+	prova("ytan ar tom innan provet", UgnetaController.vantar() == false)
+
+	--[[ AVBROTT: respawn, riven rigg, serverns egen rattelse. Tyst. ]]
+	LektionController.avbryt("avbrott")
+	prova("ett avbrott ger INGEN summering",
+		UgnetaController.vantar() == false,
+		tostring(UgnetaController.vantar()))
+
+	--[[ Utan skal alls ska det ocksa vara tyst: en ny anropare som
+	     glommer argumentet far tystnad, inte en felaktig summering. ]]
+	LektionController.avbryt()
+	prova("utan skal ger det ocksa tystnad",
+		UgnetaController.vantar() == false,
+		tostring(UgnetaController.vantar()))
+
+	--[[ Och sa ytan sjalv: far den punkter reser den ett besked med en
+	     knapp, far den inga sager den ingenting. ]]
+	UgnetaController.efterritt({})
+	prova("en tom summering reser ingen yta",
+		UgnetaController.vantar() == false)
+
+	UgnetaController.efterritt({
+		{ dim = "balans", sort = "battre" },
+		{ dim = "mjukhet", sort = "kvar" },
+	})
+	prova("tva punkter reser ett besked med en knapp",
+		UgnetaController.vantar() == true,
+		tostring(UgnetaController.vantar()))
+	UgnetaController.dolj()
+end
+
 if fel > 0 then
 	print(("\nKLIENT-LEKTIONSPAUS: %d fel"):format(fel))
 	error(("%d fel"):format(fel))

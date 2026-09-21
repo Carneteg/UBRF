@@ -86,4 +86,86 @@ function Ugneta.observationer(ovningId: string,
 	return ut
 end
 
+--[[ ══ EFTER RITTEN: två eller tre punkter, inte en instrumentpanel ══
+
+	Kanon är tydlig med vad det här INTE får bli: «kort, användbar
+	coachning och en enkel summering — utan att förvandla upplevelsen
+	till en dashboard eller blockera Ride First».
+
+	Den här funktionen hittar därför inget nytt på. Den läser passets
+	historik — samma mätvärden som varje försök redan bedömdes på — och
+	rankar dem med `observationer`, alltså exakt de regler som gäller
+	under ritten. En andra bedömningslogik hade kunnat säga något annat
+	än Ugneta sa för fem minuter sedan, och då hade spelaren fått två
+	besked om samma ritt.
+
+	PER ÖVNING jämförs FÖRSTA försöket med det SISTA. Det är det
+	summeringen kan säga som ett enskilt försök inte kan: blev det
+	bättre under passet?
+
+	Övningar med bara ett försök bidrar med sitt eget omdöme, inte en
+	jämförelse — `observationer` med `fore = nil` gör redan rätt sak.
+
+	TAKET ÄR TRE. Fler punkter är en dashboard. ]]
+Ugneta.MAX_SAMMANFATTNING = 3
+
+function Ugneta.sammanfattning(historik: { [string]: { { [string]: number } } })
+	: { { dim: string, sort: string, varde: number, ovningId: string } }
+	local ut = {}
+	--[[ Ordningen ska vara passets, inte hashtabellens: två körningar av
+	     samma ritt får inte ge punkterna i olika ordning. `pairs` över en
+	     tabell med strängnycklar har ingen definierad ordning, så
+	     övningarna sorteras på sitt id. ]]
+	local ids = {}
+	for id in pairs(historik) do table.insert(ids, id) end
+	table.sort(ids)
+
+	for _, id in ipairs(ids) do
+		local lista = historik[id]
+		if lista and #lista > 0 then
+			local sist = lista[#lista]
+			--[[ `fore` bara när det FINNS ett tidigare försök. Med ett
+			     enda försök är jämförelsen inte falsk, den saknas. ]]
+			local forst = if #lista > 1 then lista[1] else nil
+			local obs = Ugneta.observationer(id, sist, forst)
+			--[[ EN punkt per övning. Summeringen ska säga något om
+			     ritten, inte upprepa varje försöksbesked i följd. ]]
+			if obs[1] then
+				table.insert(ut, {
+					dim = obs[1].dim, sort = obs[1].sort,
+					varde = obs[1].varde, ovningId = id,
+				})
+			end
+		end
+	end
+
+	while #ut > Ugneta.MAX_SAMMANFATTNING do table.remove(ut) end
+	return ut
+end
+
+--[[ ── SKA DET SUMMERAS ALLS? ────────────────────────────────────────
+
+	Regeln låg först som ett `if` inne i lektionens rivning, och då gick
+	den inte att pröva: när provet anropade rivningen fanns inget pass,
+	så grinden svarade «tyst» oavsett skäl. Provet var grönt utan att
+	mäta grinden — en falsifiering som tog bort villkoret ändrade
+	ingenting.
+
+	Nu är den en egen regel med ett namn, och då går båda riktningarna
+	att mäta. Det är hela skälet till att den flyttade hit.
+
+	GILTIG AVSITTNING är den enda vägen till en summering. Respawn,
+	riven rigg och serverns egen rättelse ger tystnad — och saknat skäl
+	också, så att en ny anropare som glömmer argumentet får tystnad i
+	stället för ett felaktigt besked. ]]
+function Ugneta.efterrittFor(skal: string?,
+	historik: { [string]: { { [string]: number } } }?)
+	: { { dim: string, sort: string, varde: number, ovningId: string } }?
+	if skal ~= "avsittning" then return nil end
+	if historik == nil then return nil end
+	local punkter = Ugneta.sammanfattning(historik)
+	if #punkter == 0 then return nil end
+	return punkter
+end
+
 return Ugneta

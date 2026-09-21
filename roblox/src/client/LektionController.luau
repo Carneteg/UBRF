@@ -52,6 +52,9 @@
 local Lektion = require(game:GetService("ReplicatedStorage").HorseCore.Lektion)
 local UgnetaController = require(script.Parent.UgnetaController)
 local UgnetaGestalt = require(script.Parent.UgnetaGestalt)
+--[[ Teaching Loop: summeringen rankas av SAMMA modul som varje
+     forsoksbesked, inte av en andra bedomningslogik. ]]
+local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
 local ReplayController = require(script.Parent.ReplayController)
 local Inspelning = require(game:GetService("ReplicatedStorage").HorseCore.Inspelning)
 --[[ Kortets knapptext kommer ur språkkatalogen. Den stod hårdkodad på
@@ -389,7 +392,18 @@ end
 --[[ Slut på ritten, av vilket skäl som helst. Säkerhet före undervisning:
      chipet släcks, kortet stängs, den väntande fortsättningen kastas och
      gestalten tas bort. ]]
-function LektionController.avbryt()
+function LektionController.avbryt(skal: string?)
+	--[[ ── EFTERRITTENS SUMMERING (Teaching Loop) ──────────────────
+
+		Bara efter en avsittning spelaren själv bad om, och bara om det
+		FINNS något att summera. En respawn, en riven rigg eller serverns
+		egen rättelse ger tystnad — se skälet i `init.client.dismount`.
+
+		SÄKERHET FÖRE UNDERVISNING GÄLLER FORTFARANDE. Summeringen tas
+		fram FÖRE rivningen nedan, men visas EFTER den, så att den inte
+		kan hålla kvar något ur ritten på skärmen. ]]
+	local summering = Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
+
 	pass = nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"
@@ -406,6 +420,12 @@ function LektionController.avbryt()
 	UgnetaController.vidVidare(nil)
 	UgnetaController.sakerhetTarOver()
 	UgnetaGestalt.dolj()
+
+	--[[ Och SEDAN summeringen, på en tom yta. Två eller tre punkter med
+	     en knapp att stänga med — samma yta, samma språkvägar och samma
+	     responsiva regler som varje annat Ugneta-besked. Ingen egen
+	     panel, inget nytt lektionssystem. ]]
+	if summering then UgnetaController.efterritt(summering) end
 end
 
 return LektionController

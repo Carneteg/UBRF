@@ -570,6 +570,116 @@ do
 	end
 end
 
+--[[ ══ EFTERRITTENS SUMMERING (Teaching Loop) ══════════════════════
+
+	Kanon: «en enkel 2–3-punktssummering» — inte en dashboard. Provet
+	mäter taket, urvalet och ordningen, och att en summering utan
+	underlag är TOM i stallet for uppfunnen. ]]
+do
+	print("")
+	print("-- Efterrittens summering --")
+
+	--[[ En ovning, tva forsok: jamforelsen ar det summeringen kan saga
+	     som ett enskilt forsok inte kan. ]]
+	local ett = Ugneta.sammanfattning({
+		storvolt = {
+			{ balans = 0.30, mjukhet = 0.40 },
+			{ balans = 0.80, mjukhet = 0.45 },
+		},
+	})
+	check("en ovning med tva forsok ger en punkt", #ett == 1,
+		("%d punkter"):format(#ett))
+	check("och punkten pekar ut FORBATTRINGEN, inte bara ett varde",
+		ett[1] ~= nil and ett[1].sort == "battre" and ett[1].dim == "balans",
+		if ett[1] then ("%s/%s"):format(ett[1].sort, ett[1].dim) else "ingen")
+	check("punkten bar sin ovning", ett[1] ~= nil and ett[1].ovningId == "storvolt",
+		if ett[1] then tostring(ett[1].ovningId) else "ingen")
+
+	--[[ Ett ENDA forsok: ingen jamforelse finns, och da ska den inte
+	     hittas pa. `observationer` med `fore = nil` ger «bra», inte
+	     «battre». ]]
+	local enkel = Ugneta.sammanfattning({
+		storvolt = { { balans = 0.90, mjukhet = 0.80 } },
+	})
+	check("ett enda forsok jamfors inte med sig sjalvt",
+		enkel[1] ~= nil and enkel[1].sort ~= "battre" and enkel[1].sort ~= "kvar",
+		if enkel[1] then tostring(enkel[1].sort) else "ingen")
+
+	--[[ TAKET. Fler punkter ar en dashboard. ]]
+	local manga = {}
+	for i = 1, 8 do
+		manga["ovning" .. i] = { { balans = 0.2 + i * 0.05, mjukhet = 0.5 } }
+	end
+	local kapad = Ugneta.sammanfattning(manga)
+	check("aldrig fler an taket", #kapad <= Ugneta.MAX_SAMMANFATTNING,
+		("%d av hogst %d"):format(#kapad, Ugneta.MAX_SAMMANFATTNING))
+	check("taket ar tre — inte en instrumentpanel",
+		Ugneta.MAX_SAMMANFATTNING == 3,
+		tostring(Ugneta.MAX_SAMMANFATTNING))
+
+	--[[ EN punkt per ovning, inte varje forsoksbesked i foljd. ]]
+	local unika = {}
+	local dubbletter = 0
+	for _, o in ipairs(kapad) do
+		if unika[o.ovningId] then dubbletter += 1 end
+		unika[o.ovningId] = true
+	end
+	check("en punkt per ovning", dubbletter == 0,
+		("%d dubbletter"):format(dubbletter))
+
+	--[[ ORDNINGEN AR DETERMINISTISK, och matt mot en VANTAD ordning.
+
+	     Forsta versionen jamforde tva anrop med varandra. Det var svagt:
+	     `pairs` over samma tabell ger i praktiken samma ordning tva
+	     ganger i rad, sa provet var gront aven utan sorteringen. En
+	     falsifiering som tog bort `table.sort` andrade ingenting — och
+	     ett prov som inte kan bli rott ar ingen vakt.
+
+	     Nu kravs den FAKTISKA ordningen: stigande ovningsid, och de tre
+	     alfabetiskt forsta av de atta. ]]
+	local stigande = true
+	for i = 2, #kapad do
+		if kapad[i - 1].ovningId >= kapad[i].ovningId then stigande = false end
+	end
+	local namn = {}
+	for _, o in ipairs(kapad) do table.insert(namn, o.ovningId) end
+	check("punkterna kommer i stigande ovningsordning", stigande,
+		table.concat(namn, " < "))
+	check("och det ar de tre forsta, inte tre godtyckliga",
+		table.concat(namn, ",") == "ovning1,ovning2,ovning3",
+		table.concat(namn, ","))
+
+	--[[ ── GRINDEN: NAR FAR DET SUMMERAS ALLS? ────────────────────
+
+	     Regeln lag forst som ett `if` inne i lektionens rivning och gick
+	     da inte att prova: nar provet anropade rivningen fanns inget
+	     pass, sa grinden svarade «tyst» oavsett skal. En falsifiering
+	     som tog bort villkoret andrade ingenting — provet var gront utan
+	     att mata grinden.
+
+	     Som egen regel gar bada riktningarna att mata, och det ar hela
+	     skalet till att den flyttade hit. ]]
+	local hist = { storvolt = { { balans = 0.3 }, { balans = 0.9 } } }
+	check("giltig avsittning MED underlag ger en summering",
+		Ugneta.efterrittFor("avsittning", hist) ~= nil)
+	check("ett avbrott ger ingen summering, aven med underlag",
+		Ugneta.efterrittFor("avbrott", hist) == nil)
+	check("respawn ar ett avbrott som alla andra",
+		Ugneta.efterrittFor("dod", hist) == nil)
+	check("saknat skal ger tystnad, inte ett felaktigt besked",
+		Ugneta.efterrittFor(nil, hist) == nil)
+	check("giltig avsittning UTAN underlag ar ocksa tyst",
+		Ugneta.efterrittFor("avsittning", {}) == nil)
+	check("och utan historik alls",
+		Ugneta.efterrittFor("avsittning", nil) == nil)
+
+	--[[ INGET UNDERLAG, INGEN SUMMERING. En tom ritt ska vara tyst. ]]
+	check("tom historik ger ingen summering",
+		#Ugneta.sammanfattning({}) == 0)
+	check("en ovning utan matvarden ger ingen punkt",
+		#Ugneta.sammanfattning({ storvolt = {} }) == 0)
+end
+
 if fails > 0 then
 	print(string.format("%d mätning(ar) föll.", fails))
 else

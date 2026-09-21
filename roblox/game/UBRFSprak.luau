@@ -841,6 +841,14 @@ Sprak.text = {
 		sv = "Jobba på %s.",
 		en = "Work on %s.",
 	},
+	["ugneta.efterritt.rubrik"] = {
+		sv = "Efter ritten",
+		en = "After the ride",
+	},
+	["ugneta.efterritt.stang"] = {
+		sv = "Klar",
+		en = "Done",
+	},
 	["ugneta.borja_lektionen"] = {
 		sv = "Fortsätt för att börja lektionen",
 		en = "Continue to start the lesson",

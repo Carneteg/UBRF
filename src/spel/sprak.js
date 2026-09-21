@@ -463,6 +463,10 @@ const SPRAK = {
   "ugneta.obs.kvar": { sv: "Fortsätt med %s.", en: "Keep working on %s." },
   "ugneta.obs.bra": { sv: "Bra %s.", en: "Good %s." },
   "ugneta.obs.jobba": { sv: "Jobba på %s.", en: "Work on %s." },
+  // Teaching Loop: efterrittens summering. Tva eller tre punkter, sedan
+  // tyst — kanon sager uttryckligen att det inte far bli en dashboard.
+  "ugneta.efterritt.rubrik": { sv: "Efter ritten", en: "After the ride" },
+  "ugneta.efterritt.stang": { sv: "Klar", en: "Done" },
 
   /* ── KORTET SOM PAUSAR RITTEN (produktbeslut 13:29) ──────────────────
      Ridloopen fryser hästen medan ett lektionskort väntar — med flit: hon

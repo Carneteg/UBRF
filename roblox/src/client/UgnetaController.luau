@@ -614,6 +614,36 @@ function UgnetaController.efterForsok(ovningId: string, nu: { [string]: number }
 	return punkter
 end
 
+--[[ ── EFTER RITTEN: två eller tre punkter, sedan tyst ──────────────
+
+	Samma yta, samma ordval och samma språknycklar som varje besked
+	under ritten. Skälet är inte sparsamhet: en summering som ser
+	annorlunda ut än coachningen läses som ett annat system, och
+	kanon säger uttryckligen att det här inte får bli en dashboard.
+
+	ORDEN KOMMER HÄRIFRÅN, inte från anroparen. `DIM_ORD` finns bara på
+	ett ställe, och en andra avskrift i LektionController hade kunnat
+	glida isär utan att något blev rött.
+
+	Knappen är enda vägen ut — ingen timer. Den som just stigit av ska
+	få läsa klart i sin egen takt, och en summering som försvinner av
+	sig själv är en summering hon kanske aldrig såg. ]]
+function UgnetaController.efterritt(punkter: { { dim: string, sort: string } })
+	local rader = {}
+	for _, o in ipairs(punkter) do
+		local ord = DIM_ORD[o.dim] or o.dim
+		local nyckel = if o.sort == "battre" then "ugneta.obs.battre"
+			elseif o.sort == "kvar" then "ugneta.obs.kvar"
+			elseif o.sort == "bra" then "ugneta.obs.bra"
+			else "ugneta.obs.jobba"
+		table.insert(rader, Sprak.t(nyckel, ord))
+	end
+	if #rader == 0 then return end
+	visaBesked(Sprak.t("ugneta.efterritt.rubrik"), rader, true,
+		Sprak.t("ugneta.efterritt.stang"), false, false)
+	return rader
+end
+
 --[[ ── Fortsättningen: spelarens handling ──────────────────────────
 	Valet mellan försöken stänger inte sig självt. Den som kör lektionen
 	registrerar vad som ska hända när spelaren väljer att gå vidare. ]]
