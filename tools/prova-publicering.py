@@ -146,6 +146,11 @@ def main():
                         "(rbx-dom/Rojo), inte fran Roblox sjalvt. En enskild "
                         "korning avgor da ingenting — det ar PARET av tva "
                         "format ur samma serializer som diskriminerar.")
+    p.add_argument("--delprov", metavar="ETIKETT",
+                   help="den har korningen ar EN ARM i ett flerarmat prov "
+                        "(t.ex. bisektionen). Skriptet redovisar da bara "
+                        "ramatningen och klassificerar ingen orsak — "
+                        "slutsatsen kommer ur jamforelsen mellan armarna.")
     p.add_argument("--vantad-sha256",
                    help="kontrollfilens vantade SHA-256. Avviker den postas "
                         "ingenting: en kontroll vars bytes andrats pa vagen "
@@ -156,6 +161,13 @@ def main():
         stopp("--kand-god utan --fil sager ingenting")
     if a.tredjepart and not a.fil:
         stopp("--tredjepart utan --fil sager ingenting")
+    #[[ Utan den har raden foll --delprov tillbaka pa den INBYGGDA
+    #   minimalfilen och postade den. En arm i ett flerarmat prov ska
+    #   alltid peka ut sin egen fil — annars mater armen nagot annat an
+    #   den utger sig for. ]]
+    if a.delprov and not a.fil:
+        stopp("--delprov kraver --fil: en arm ska peka ut sin egen fil, "
+              "inte falla tillbaka pa den inbyggda minimalfilen")
     if a.kand_god and a.tredjepart:
         stopp("--kand-god och --tredjepart motsager varandra: en fil ar "
               "antingen Roblox-skriven eller tredjeparts, inte bada")
@@ -237,6 +249,17 @@ def main():
         print("  Natverksfel — inget svar fran Roblox.")
         print("PROV: INCONCLUSIVE")
         return 1
+
+    if a.delprov:
+        #[[ En arm sager ingenting for sig. Skriptet far darfor inte
+        #   antyda en orsak — jamforelsen mellan armarna ar matningen. ]]
+        print("  Den har korningen ar EN ARM i ett flerarmat prov: %s"
+              % a.delprov)
+        print("  En ensam arm klassificerar ingen orsak. Slutsatsen kommer")
+        print("  ur jamforelsen mellan armarna, och gar basen inte igenom")
+        print("  mater provet ingenting alls.")
+        print("PROV: RAMATNING status=%s arm=%s" % (status, a.delprov))
+        return 0
 
     if a.tredjepart:
         #[[ Rojo/rbx-dom ar en oberoende implementation, men inte Roblox

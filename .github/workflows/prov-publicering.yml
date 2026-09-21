@@ -2,38 +2,37 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# AVVAPNAD. Parprovet ar kort och redovisat — run 35569440952:
-# XML 200 (version 4), binart 200 (version 5). `workflow_dispatch` gar
-# anda inte att trigga fran den har grenen: GitHub exponerar bara
-# dispatch fran default-branchen, och filen ligger inte pa main.
+# ARMERAD for BISEKTIONEN (order 5756502284): fyra minimala XML-placer
+# till CI-placen, en egenskap i taget. AVVAPNAS DIREKT EFTERAT — ta bort
+# `pull_request:` och dess `types:`-rad sa fort matningen ar redovisad.
 #
-# VAD PARPROVET VISADE: Rojo byggde bada formaten ur samma projektfil,
-# samma serializer, samma commit — bara wire-formatet skilde. BADA gick
-# igenom.
+# VAD VI VET (run 35569440952 och tidigare):
 #
 #   Rojo XML      1 645 383 byte  application/xml           -> 200
 #   Rojo binart     849 955 byte  application/octet-stream  -> 200
 #   VAR XML       1 645 331 byte  application/xml           -> 400
 #   var minimala        375 byte  application/xml           -> 400
 #
-# XML-VAGEN FUNGERAR ALLTSA. Felet ligger i VAR EGEN XML, inte i
-# formatet och inte i API:t. Det valter den lutning jag hade innan
-# provet kordes.
+# XML-vagen fungerar alltsa, och felet ligger i VAR EGEN XML. Tre
+# skillnader mot Rojos envelope star kvar som misstankta, och
+# tools/bisektion-xml.py provar dem en i taget:
 #
-# Skillnaderna mellan var envelope och Rojos, som nasta bisektion ska
-# provas mot en och en:
+#   1  basen       Rojo-stil rot, vara tjanster, inget mer
+#   2  + Workspace-noden ur bygg-place.py
+#   3  + <External>null</External> och <External>nil</External>
+#   4  + xmlns/xsi/schema-location pa roten
 #
-#   var:   <roblox xmlns:xmime=... xmlns:xsi=... xsi:noNamespace... version="4">
-#          <External>null</External> + <External>nil</External>
-#          referent="RBX0", tabbindrag
-#   Rojo:  <roblox version="4">
-#          inga External-noder
-#          referent="0", tva mellanslag
+# BASEN AVGOR OM PROVET MATER NAGOT. Gar inte den igenom ar det
+# BISECT_BASELINE_INVALID, och da far ingen slutsats dras om de andra
+# tre. Darfor kors den forst.
 #
-# En binar .rbxl MASTE skickas som application/octet-stream. Skriptet
-# valjer typ ur filens FORSTA BYTES, aldrig ur dess namn.
+# Varje arm kors med --delprov, sa att skriptet redovisar ramatningen
+# och INTE klassificerar en orsak pa egen hand: en ensam arm sager
+# ingenting, det ar jamforelsen som mater.
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
@@ -54,44 +53,52 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Bada filerna byggs HAR, i samma jobb, av samma binar. Da kan de
-      # inte komma ur olika Rojo-versioner — vilket ar hela poangen med
-      # ett parprov: en enda variabel far skilja dem at.
-      - name: Rojo 7.7.0
-        run: |
-          curl -sSL -o /tmp/rojo.zip \
-            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
-          unzip -q /tmp/rojo.zip -d /tmp/rojo
-          sudo install -m 0755 /tmp/rojo/rojo /usr/local/bin/rojo
-          rojo --version
+      # Alla fyra varianterna skrivs av SAMMA generator i samma korning,
+      # sa de inte kan glida isar. Generatorn kontrollerar sjalv att var
+      # variant ar valformad XML och skriver ut hur manga byte den
+      # skiljer sig fran basen.
+      - name: Bygg de fyra varianterna
+        run: python3 tools/bisektion-xml.py --katalog /tmp/bisekt
 
-      - name: Bygg bada formaten ur samma projektfil
+      - name: Varianternas skillnad mot basen
         run: |
-          rojo build roblox/default.project.json --output /tmp/rojo-control.rbxlx
-          rojo build roblox/default.project.json --output /tmp/rojo-control.rbxl
-          echo "=== KONTROLLFILERNA ==="
-          for f in /tmp/rojo-control.rbxlx /tmp/rojo-control.rbxl; do
-            printf '%s\n  storlek : %s byte\n  sha256  : %s\n  magi    : %s\n' \
-              "$f" "$(stat -c%s "$f")" "$(sha256sum "$f" | cut -d' ' -f1)" \
-              "$(head -c 8 "$f" | xxd -p)"
+          echo "head: ${{ github.event.pull_request.head.sha || github.sha }}"
+          for v in 2-workspace 3-external 4-namespace; do
+            echo "=== bas -> $v ==="
+            diff /tmp/bisekt/bisekt-1-bas.rbxlx /tmp/bisekt/bisekt-$v.rbxlx || true
           done
-          echo "  head    : ${{ github.event.pull_request.head.sha || github.sha }}"
-          echo "  projekt : roblox/default.project.json (samma for bada)"
 
       # Gron exitkod betyder «matning erhallen», inte «publicering
-      # lyckades». Las skriptets klassificeringsrad, aldrig exitkoden.
-      # PARPROVETS ORDNING: XML forst, binar sedan. Sekventiellt i samma
-      # jobb, sa tva publiceringar aldrig overlappar pa samma place.
-      - name: 1/2 — XML mot CI-placen
+      # lyckades». Las skriptets ramatning, aldrig exitkoden.
+      #
+      # ORDNINGEN AR AVSIKTLIG: basen forst. Gar inte den igenom mater
+      # provet ingenting, och da ar ingen slutsats om de ovriga giltig.
+      # Sekventiellt i samma jobb, sa tva publiceringar aldrig overlappar
+      # pa samma place.
+      - name: 1/4 — basen
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/rojo-control.rbxlx --tredjepart
+        run: python3 tools/prova-publicering.py --fil /tmp/bisekt/bisekt-1-bas.rbxlx --delprov 1-bas
 
-      - name: 2/2 — binart mot CI-placen
+      - name: 2/4 — bas + Workspace
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/rojo-control.rbxl --tredjepart
+        run: python3 tools/prova-publicering.py --fil /tmp/bisekt/bisekt-2-workspace.rbxlx --delprov 2-workspace
+
+      - name: 3/4 — bas + External
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
+        run: python3 tools/prova-publicering.py --fil /tmp/bisekt/bisekt-3-external.rbxlx --delprov 3-external
+
+      - name: 4/4 — bas + namespace-attribut
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
+        run: python3 tools/prova-publicering.py --fil /tmp/bisekt/bisekt-4-namespace.rbxlx --delprov 4-namespace
