@@ -2,7 +2,13 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for M/N (order 5757339608). AVVAPNAS DIREKT EFTERAT.
+# AVVAPNAD. M/N ar kort — run 35576448203, och saken ar avgjord:
+#
+#   M  var artefakt UTAN avslutande radbrytning  -> 200 (version 14)
+#   N  Rojos fil MED avslutande radbrytning      -> 400
+#
+# TRAILING_NEWLINE_CONFIRMED. En byte efter </roblox> ar skillnaden
+# mellan en place som publiceras och en som avvisas.
 #
 # Arm L (run 35574514273) gav 200: Rojos innehall i VAR serialisering,
 # med alla sju kanda skillnader pa en gang, gick igenom. Mangden ar
@@ -28,8 +34,6 @@ name: Prov — minimal publicering
 #   N  Rojos fil + en radbrytning      -> 400 bekraftar at andra hallet
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
