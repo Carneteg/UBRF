@@ -1,0 +1,48 @@
+name: Prov — minimal publicering
+
+# TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
+#
+# Runtime-grinden nadde Open Cloud for forsta gangen i job 106218507201
+# och fick HTTP 400 «Invalid Content stream». Lokalt ar artefakten giltig
+# XML med samma envelope som de bevarade placerna, sa fragan gar inte att
+# stanga utan ROBLOX_API_KEY — och den finns bara har.
+#
+# Provet postar en MINIMAL giltig place till samma CI-place genom samma
+# endpoint och samma rabyte-POST. Den minimala filen ar en byte-exakt
+# prefix av den fulla artefakten, sa ett annat utfall pekar pa
+# INNEHALLET och inte pa formatet.
+#
+# Det har ar INTE en grind och far aldrig raknas som ett PASS for
+# nagonting. Det ar en matning.
+#
+# `workflow_dispatch` duger inte: filen ligger inte pa default-branchen,
+# och GitHub exponerar bara dispatch darifran. Darfor pull_request.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
+# som grinden, och tva publiceringar samtidigt skriver over varandra —
+# da mater en av korningarna fel bygge. En i taget, over bada
+# workflowsen.
+concurrency:
+  group: runtime-grind
+  cancel-in-progress: false
+
+jobs:
+  prov-publicering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Minimal publicering mot CI-placen
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
+          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
+        run: python3 tools/prova-publicering.py
