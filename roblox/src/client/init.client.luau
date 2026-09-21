@@ -308,6 +308,17 @@ local function mount(model: Model, rittId: string?)
 	     (BuildKit.newBuilding i roblox/buildings/Anlaggningen.luau).
 	     Ridbanan och sargen hänger direkt under den. ]]
 	local anlaggning = workspace:FindFirstChild("Anläggning")
+	--[[ HÄSTEN FÖRE LEKTIONEN. `UgnetaTema` behöver veta vem hon är för
+	     att kunna säga «det där kom från henne», och behöver hennes lynne
+	     för att kunna avgöra OM det gjorde det. Saknas stats tiger den om
+	     spänningen hellre än skyller den på ryttaren.
+
+	     Fälten är riggens egna namn (`Skygghet`), inte hittade på: samma
+	     väg som `MovementController` läser dem. ]]
+	LektionController.satHast(model.Name, {
+		skygghet = tonumber(stats.Skygghet),
+		dagsform = tonumber(stats.Dagsform),
+	})
 	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
 	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
 	     frågan "vad gör jag nu?" som mest aktuell. ]]

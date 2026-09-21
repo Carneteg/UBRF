@@ -222,15 +222,22 @@ end
 	funktionen svarar på den frågan, och bara den: vad ligger inom sin egen
 	aktiveringsräckvidd just nu, närmast först.
 
-	SKILD FRÅN URVALET MED FLIT (senior review av `c3f48c7`). Första
-	utkastet släckte bara de prompter som fick en RAD. Följden i QA-
-	scenariot: telefonen rymmer två rader, sex prompter ligger inom
-	räckvidd, och de fyra som inte fick en rad — grannhästarnas utrustning
-	som filtreras bort, och dörrarna som blir overflow — behöll Roblox egna
-	flytande knappar. Spelaren mötte alltså fortfarande listan PLUS knappar
-	i djupet, vilket är precis den röra #246 finns för att ta bort.
+	SKILD FRÅN URVALET MED FLIT. Vad som ligger inom räckvidd och vad som
+	får en rad är två frågor, och `nara` svarar på den andra.
 
-	Jag läste kontraktets "för samma handling" snävt. Kravet är en yta. ]]
+	── VAD SOM INTE LÄNGRE GÄLLER (rättelse #264) ──────────────────
+
+	Här stod tidigare att ALLT inom räckvidd måste släckas, även det som
+	filtreras bort eller blir overflow — annars skulle spelaren möta
+	listan plus flytande knappar i djupet. Den slutsatsen var fel, och
+	den kostade en spelbar dörr.
+
+	En prompt som släcks utan att få en rad blir nämligen inte prydlig,
+	den blir OSYNLIG OCH OANVÄNDBAR: `Style = Custom` tar bort Roblox
+	egna knappar, och ritar vi ingen rad i stället finns ingen väg in.
+	Tobias hittade det fysiskt — entrédörren gick inte att öppna.
+
+	Regeln är därför: släck bara det du ERSÄTTER. Se rättelsen i `rita`. ]]
 function Naromrade.iRackvidd(fran: Vector3, sok: { Instance }): { ProximityPrompt }
 	local ut: { ProximityPrompt } = {}
 	local avstand: { [ProximityPrompt]: number } = {}
@@ -274,7 +281,9 @@ end
 	`iRackvidd`, som redan sorterat närmast först. Dörrar försvinner alltså
 	inte; de hamnar efter hästens steg i stället för före det.
 
-	URVALET STYR RADERNA — INTE VILKA BILDER SOM SLÄCKS. Se noten ovan. ]]
+	URVALET STYR BÅDE RADERNA OCH SLÄCKNINGEN (rättelse #264). Raden här
+	sa förut motsatsen — att urvalet styr raderna men inte vilka bilder
+	som släcks. Det var det som gjorde dörren oanvändbar. Se noten ovan. ]]
 function Naromrade.nara(fran: Vector3, sok: { Instance },
 	minHast: string?, tak: number?): { ProximityPrompt }
 	local alla = Naromrade.iRackvidd(fran, sok)
@@ -533,21 +542,21 @@ local function rita()
 	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
 	f.Position = UDim2.new(0, KANT, 1, -(platser * (KNAPP_H + LUFT)) - KANT)
 
-	--[[ ── #246 C: ALLT INOM RÄCKVIDD SLÄCKS, INTE BARA RADERNA ──────
+	--[[ ── EN PROMPT SOM SLÄCKS MÅSTE FÅ EN RAD ────────────────────
 
-		Senior review av `c3f48c7`: första utkastet släckte bara de
-		prompter som fick en rad. De som inte fick plats — och grannhästens
-		utrustning, som filtreras bort ur listan — behöll Roblox egna
-		flytande knappar. Ytan var alltså fortfarande dubbel, och just den
-		rörigheten är vad ordern beskriver.
+		Här stod förut «#246 C: ALLT INOM RÄCKVIDD SLÄCKS, INTE BARA
+		RADERNA», med motiveringen att det annars blev listan plus
+		flytande knappar i djupet. Den regeln är BORTTAGEN, och noten
+		står kvar bara för att ingen ska återinföra den.
 
-		Gränsen går vid RÄCKVIDDEN, inte vid urvalet: det touch-adaptern
-		äger är närområdets bilder. Vilka av dem som blir rader är en annan
-		fråga, och den avgörs av `nara`.
+		Varför den var fel: en släckt prompt utan rad är inte diskret, den
+		är omöjlig att använda. Entrédörren blev overflow på telefonen,
+		släcktes, fick ingen rad — och gick inte att öppna. Tobias hittade
+		det i ett riktigt playtest.
 
-		Ordningen spelar roll — tänd först det som lämnat räckvidden, släck
-		sedan det som är kvar — annars kan en prompt som ligger kvar hinna
-		tändas och släckas i samma bildruta. ]]
+		Ordningen spelar fortfarande roll — tänd först det som inte längre
+		visas, släck sedan det som gör det — annars kan en prompt som
+		ligger kvar hinna tändas och släckas i samma bildruta. ]]
 	--[[ ── RÄTTELSE #264: SLÄCK BARA DET DU ERSÄTTER ─────────────────
 
 		SPELTEST 2026-09-21: Tobias såg «Open — Door» och kunde inte

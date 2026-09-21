@@ -467,6 +467,11 @@ const SPRAK = {
   // tyst — kanon sager uttryckligen att det inte far bli en dashboard.
   "ugneta.efterritt.rubrik": { sv: "Efter ritten", en: "After the ride" },
   "ugneta.efterritt.stang": { sv: "Klar", en: "Done" },
+  // Hastens dag, inte ryttarens fel. Webbens `lararSteg` sager
+  // `Det dar kom fran ${n}.` nar hasten ar skygg eller i dalig dagsform;
+  // ryttaren ska inte fa en rattelse for nagot hon inte gjorde.
+  "ugneta.hastens_dag": { sv: "Det där kom från %s.", en: "That came from %s." },
+  "ugneta.hasten": { sv: "hästen", en: "the horse" },
 
   /* ── KORTET SOM PAUSAR RITTEN (produktbeslut 13:29) ──────────────────
      Ridloopen fryser hästen medan ett lektionskort väntar — med flit: hon

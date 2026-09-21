@@ -849,6 +849,14 @@ Sprak.text = {
 		sv = "Klar",
 		en = "Done",
 	},
+	["ugneta.hastens_dag"] = {
+		sv = "Det där kom från %s.",
+		en = "That came from %s.",
+	},
+	["ugneta.hasten"] = {
+		sv = "hästen",
+		en = "the horse",
+	},
 	["ugneta.borja_lektionen"] = {
 		sv = "Fortsätt för att börja lektionen",
 		en = "Continue to start the lesson",

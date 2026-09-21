@@ -317,22 +317,17 @@ function Lektion.hoppaOver(pass: Pass)
 	pass.prov = tomtProv()
 end
 
-function Lektion.liveCue(pass: Pass, q: { [string]: number? }): (string, boolean)
-	local id = Lektion.ovningId(pass)
-	if not id then return "", false end
-	local svag, svagV = nil, math.huge
-	for _, k in Ugneta.dimensionerFor(id) do
-		local v = q[k]
-		if v ~= nil and v < svagV then svag, svagV = k, v end
-	end
-	if not svag then return "", false end
-	local cue = UG.DIM_CUE[svag]
-	if not cue then return "", false end
-	local bra = svagV >= KV.SVAG
-	local rad = UG.LIVE[cue]
-	if not rad then return "", false end
-	return (if bra then rad.bra else rad.fel), bra
-end
+--[[ `Lektion.liveCue` LÅG HÄR OCH ÄR BORTTAGEN (QA-review av `082062c`,
+     blockerare 2).
+
+     Den valde den svagaste dimensionen i varje enskild bildruta och gav
+     tillbaka en replik. Det var precis den regel som gjorde att Ugneta
+     hoppade mellan tre olika saker under samma volt, och den ersätts av
+     `HorseCore/UgnetaTema`: ett tema per pass, mönster före kommentar.
+
+     Funktionen är RADERAD och inte lämnad kvar oanvänd. Två regler för
+     vad Ugneta säger är två sanningar, och den ena hade förr eller senare
+     blivit anropad igen av någon som inte visste om den andra. ]]
 
 --[[ ── Platsen vid sargen ──────────────────────────────────────────
 	Uttryckt i BANANS egna mått, precis som webbens `ugnetaPlats()`:

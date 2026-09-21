@@ -249,7 +249,10 @@ PARITET = [
     ("Telemetri",  "src/shared/HorseCore/Telemetri.luau"),
     # G02-C: Ugnetas bedomningskontrakt lases ur RidKanon.UGNETA.
     ("Ugneta",     "src/shared/HorseCore/Ugneta.luau"),
-    # Lektionens lifecycle: mater, avgor forsok 1 -> 2, valjer live-cue.
+    #[[ QA blockerare 2: ett tema per pass. Ligger EFTER Ugneta, som den
+    #   require:ar, och FORE Lektion. ]]
+    ("UgnetaTema", "src/shared/HorseCore/UgnetaTema.luau"),
+    # Lektionens lifecycle: mater, avgor forsok 1 -> 2.
     ("Lektion",    "src/shared/HorseCore/Lektion.luau"),
     # G02-D: inspelningen och analysen. BADA maste ligga fore
     # LektionController -- den require:ar dem bagge. Ligger de bara i EN av
@@ -312,6 +315,7 @@ KLIENT = SPEL + [
     ("Sparning",     "src/shared/HorseCore/Sparning.luau"),
     ("Networking",   "src/shared/HorseCore/Networking.luau"),
     ("Ugneta",       "src/shared/HorseCore/Ugneta.luau"),
+    ("UgnetaTema",   "src/shared/HorseCore/UgnetaTema.luau"),
     ("Lektion",      "src/shared/HorseCore/Lektion.luau"),
     # G02-D: samma tva moduler som i PARITET, av samma skal. Se noten dar.
     ("Inspelning",   "src/shared/HorseCore/Inspelning.luau"),

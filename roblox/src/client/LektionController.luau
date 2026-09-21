@@ -55,6 +55,11 @@ local UgnetaGestalt = require(script.Parent.UgnetaGestalt)
 --[[ Teaching Loop: summeringen rankas av SAMMA modul som varje
      forsoksbesked, inte av en andra bedomningslogik. ]]
 local Ugneta = require(game:GetService("ReplicatedStorage").HorseCore.Ugneta)
+--[[ QA blockerare 2: ETT tema per pass. Förut valde `Lektion.liveCue`
+     den svagaste dimensionen i VARJE bildruta, så Ugneta hoppade mellan
+     tre olika saker under samma volt. Regeln bor i HorseCore så att
+     webben och Roblox kan dela den. ]]
+local UgnetaTema = require(game:GetService("ReplicatedStorage").HorseCore.UgnetaTema)
 local ReplayController = require(script.Parent.ReplayController)
 local Inspelning = require(game:GetService("ReplicatedStorage").HorseCore.Inspelning)
 --[[ Kortets knapptext kommer ur språkkatalogen. Den stod hårdkodad på
@@ -68,6 +73,17 @@ local LIVE_CD = require(game:GetService("ReplicatedStorage").HorseCore.RidKanon)
 
 local pass: Lektion.Pass? = nil
 local liveCd = 0
+--[[ ── DAGENS TEMA ─────────────────────────────────────────────────
+     Ett per pass, se `HorseCore/UgnetaTema`. `nil` betyder «inte valt
+     än»: valet kräver en mätning och den finns först när hon ridit.
+
+     Hästens sida hålls bredvid: namnet för att kunna säga vem det kom
+     ifrån, kontexten för att kunna avgöra OM det kom från henne. Båda
+     sätts av `satHast` vid uppsittning och nollas vid avsittning — en
+     kvarglömd kontext hade låtit nästa häst ärva föregåendes lynne. ]]
+local tema: UgnetaTema.Tema? = nil
+local hastNamn = ""
+local hastKontext: { [string]: any }? = nil
 local liveSagt = ""
 local lage = "ingen"
 
@@ -191,8 +207,19 @@ end
      ingen plats att ställa Ugneta på, och då körs lektionen ändå — HUD:en
      är inte beroende av gestalten. En saknad byggnad ska inte tysta
      undervisningen, bara gestalten. ]]
+--[[ HÄSTEN SOM RIDS. Anropas av `init.client.mount` innan lektionen
+     startar. `kontext` är riggens egna stats — `skygghet` och
+     `dagsform` när de finns. Saknas de tiger `UgnetaTema` om hästens
+     spänning i stället för att skylla på ryttaren. ]]
+function LektionController.satHast(namn: string?, kontext: { [string]: any }?)
+	hastNamn = namn or ""
+	hastKontext = kontext
+end
+
 function LektionController.start(ridhus: Instance?)
 	pass = Lektion.nyttPass()
+	--[[ Nytt pass, nytt tema. ]]
+	tema = nil
 	liveCd, liveSagt = 0, ""
 	lage = "ny"
 	inspelare = nil
@@ -345,12 +372,34 @@ function LektionController.steg(dt: number, tm: { [string]: any }?,
 	     långsam på samma ritt. ]]
 	Lektion.matning(p, tm, dt)
 
-	--[[ LIVE: några ord, och aldrig samma ord två gånger i rad. ]]
-	liveCd -= dt
-	if liveCd <= 0 then
-		local txt, bra = Lektion.liveCue(p, Lektion.kvalitet(tm))
-		if txt ~= "" and txt ~= liveSagt then
-			liveCd = if bra then LIVE_CD.bra else LIVE_CD.fel
+	--[[ ── LIVE: DAGENS TEMA, OCH TYSTNAD OM ALLT ANNAT ──────────────
+
+		QA-review av `082062c`, blockerare 2. Förut låg spärren och
+		«aldrig samma ord två gånger» här, och VALET av vad hon skulle
+		säga gjordes om varje bildruta av `Lektion.liveCue` — den
+		svagaste dimensionen just då. Hela regeln bor nu i `UgnetaTema`:
+		ett tema, temafiltrerad signal, mönster före kommentar, spärr
+		utan kö och hästens dag skild från ryttarens fel.
+
+		Spärren räknas därför inte längre HÄR. Två spärrar hade betytt
+		två sanningar om när hon får tala. ]]
+	local kvalitet = Lektion.kvalitet(tm)
+	local ovId = Lektion.ovningId(p)
+	if tema == nil and ovId then
+		tema = UgnetaTema.nytt(ovId)
+	end
+	local t = tema
+	if t and ovId then
+		local txt, bra, kalla = UgnetaTema.steg(t, dt, kvalitet,
+			hastKontext, tonumber(tm.spanning), Ugneta.dimensionerFor(ovId))
+		if txt ~= "" then
+			--[[ Hästens rad byggs HÄR och inte i modulen: modulen är
+			     delad med webben och ska inte kunna språkvägarna. Den
+			     svarar med en KÄLLA, ytan väljer orden. ]]
+			if kalla == "hast" then
+				txt = Sprak.t("ugneta.hastens_dag"):format(
+					if hastNamn ~= "" then hastNamn else Sprak.t("ugneta.hasten"))
+			end
 			liveSagt = txt
 			UgnetaController.live(txt, bra)
 		end
@@ -418,6 +467,8 @@ function LektionController.avbryt(skal: string?)
 	local summering = Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
 
 	pass = nil
+	tema = nil
+	hastNamn, hastKontext = "", nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"
 	--[[ SÄKERHET FÖRE UNDERVISNING. Analysen stängs och inspelningen
