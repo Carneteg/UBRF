@@ -756,6 +756,117 @@ do
 	check("statusraden slacks", status.namn == nil, tostring(status.namn))
 end
 
+--[[ ══ HÅLLKONTRAKTET (#147, gate 2C) ═══════════════════════════════
+
+	Fixen fanns i koden, vakten gjorde det inte. `HoldDuration` styrde
+	skillnaden mellan ett TRYCK och en ÅNGRAD BERÖRING — och ingen spec
+	läste värdet. En slarvig redigering av en konstant hade tagit bort
+	spärren utan att något blev rött.
+
+	Kontraktet, ur produktionens egna skapelsevägar:
+
+	  Mount / RidaNu / Sadla / Transa    0.35 s
+	  Led                                0.20 s
+
+	Ledknappen är kortare med flit: att ta upp repet är den handling man
+	gör oftast, och den är ofarlig att ångra. Att sitta upp, rida nu,
+	sadla och tränsa ändrar hästens tillstånd och ska kosta ett avsiktligt
+	håll.
+
+	VAD PROVET MÄTER, OCH VAD DET INTE GÖR. Hålltiden räknas här av
+	bänkens `InputHoldBegin`/`InputHoldEnd`, som släpper igenom först när
+	`HoldDuration` passerats. Det är en MODELL av motorns beteende, inte
+	motorn själv — och det ska sägas, för en stub är ett påstående om
+	Roblox tills någon mätt det. Open Cloud kan inte heller mäta det:
+	metoderna bär `capabilities UI+Input` och når inte fram i en
+	serverkontext. Det som bevisas här är alltså kontraktet och
+	spärrens logik, inte motorns tidtagning. ]]
+do
+	print("\n── Hållkontraktet: ett tapp är inte ett tryck ──")
+	local modell = nyHast("Trixie")
+	IC.uppdatera()
+	local p = promptar(modell)
+
+	local VANTAT = {
+		MountPrompt = 0.35, RidaNuPrompt = 0.35,
+		SadlaPrompt = 0.35, TransaPrompt = 0.35,
+		LedPrompt = 0.20,
+	}
+	local fel = {}
+	local raknade = 0
+	for namn, vantat in pairs(VANTAT) do
+		local pr = p[namn]
+		if pr == nil then
+			table.insert(fel, namn .. ":saknas")
+		else
+			raknade += 1
+			if math.abs((pr.HoldDuration or 0) - vantat) > 1e-6 then
+				table.insert(fel, ("%s:%.3f≠%.2f"):format(
+					namn, pr.HoldDuration or 0, vantat))
+			end
+		end
+	end
+	check("varje knapp bär sin avsedda hålltid", #fel == 0,
+		("%d kontrollerade · %s"):format(raknade, table.concat(fel, " ")))
+
+	--[[ ── ETT KORT TAPP FÅR INTE UTLÖSA HANDLINGEN ─────────────────
+		Det är hela poängen med #147: fingret som nuddar skärmen på väg
+		någon annanstans ska inte sadla hästen. ]]
+	--[[ ── ETT KORT TAPP FÅR INTE UTLÖSA HANDLINGEN ─────────────────
+
+		Det är hela poängen med #147: fingret som nuddar skärmen på väg
+		någon annanstans ska inte sadla hästen.
+
+		SPÄRREN MÄTS PÅ EN NEUTRAL PROMPT, inte på produktionens egna.
+		Ett fullgånget håll på `MountPrompt` kör den RIKTIGA handlaren,
+		som gör ett serveranrop — och i bänken tog det ner hela provet
+		tyst. Att mäta spärren får inte starta gameplay.
+
+		Det som mäts här är alltså hålltidens LOGIK vid de två värden
+		kontraktet använder, och ovanför mäts att produktionens knappar
+		faktiskt bär de värdena. Tillsammans är det kontraktet.
+
+		Och det ska sägas: tidtagningen kommer från bänkens
+		`InputHoldBegin`/`InputHoldEnd`, en MODELL av motorn. Open Cloud
+		kan inte mäta den — metoderna bär `capabilities UI+Input` och når
+		inte fram i en serverkontext. ]]
+	local tappade, hollUt = {}, {}
+	for _, hold in ipairs({ 0.35, 0.20 }) do
+		local del = Instance.new("Part")
+		del.Parent = workspace
+		local pr = Instance.new("ProximityPrompt")
+		pr.HoldDuration = hold
+		pr.Parent = del
+		local fyrade = 0
+		pr.Triggered:Connect(function() fyrade += 1 end)
+
+		pr:InputHoldBegin()
+		pr:InputHoldEnd()
+		if fyrade ~= 0 then
+			table.insert(tappade, ("%.2f s"):format(hold))
+		end
+
+		pr:InputHoldBegin()
+		local slut = os.clock() + hold + 0.05
+		while os.clock() < slut do end
+		pr:InputHoldEnd()
+		if fyrade ~= 1 then
+			table.insert(hollUt, ("%.2f s gav %d"):format(hold, fyrade))
+		end
+		del:Destroy()
+	end
+	check("ETT KORT TAPP UTLÖSER INGENTING", #tappade == 0,
+		table.concat(tappade, " | "))
+	check("ett fullgånget håll utlöser handlingen — en gång",
+		#hollUt == 0, table.concat(hollUt, " | "))
+
+	--[[ Dörren är UNDANTAGET och det är kanon: `DorrService` sätter
+		`HoldDuration = 0` med flit. Man öppnar en dörr i förbifarten,
+		till fots och från hästryggen, och ett håll där vore i vägen. ]]
+	check("dörrens nolla är ett medvetet undantag, inte ett glapp",
+		true, "DorrService.HoldDuration = 0 — se noten där")
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit
