@@ -101,30 +101,33 @@ end
 
 --[[ ══ VÄRLDEN SKA VARA BYGGD INNAN VI MÄTER HENNE ══════════════════
 
-	Servern bygger anläggningen och startar tjänsterna i
-	`init.server.luau`. Open Cloud kan starta vårt skript innan den
-	kedjan är klar, så vi väntar — men med tak, och taket är rött. ]]
-local function vantaPa(vad: string, f: () -> boolean, sekunder: number): boolean
-	local slut = os.clock() + sekunder
-	while os.clock() < slut do
-		local ok, svar = pcall(f)
-		if ok and svar then return true end
-		task.wait(0.1)
-	end
-	warn(("[Smoke] vantade %.0f s forgaves pa %s"):format(sekunder, vad))
-	return false
-end
+	Servern bygger anläggningen och startar tjänsterna i `Start.luau`.
 
-local varldenStar = vantaPa("anlaggningen och tjansterna", function()
-	return workspace:FindFirstChild("Anläggning") ~= nil
-		and ReplicatedStorage:GetAttribute("G01Enabled") == true
-end, 120)
+	FÖRRA VARIANTEN VÄNTADE, OCH DEN VÄNTAN KUNDE ALDRIG LYCKAS. Open
+	Clouds Luau Execution kör inte placens egna Scripts — Roblox
+	dokumenterar det rakt ut: «Server and local scripts within the place
+	also do not automatically run … including invoking any module
+	scripts». `init.server.luau` är ett Script, så det startade aldrig,
+	och de 120 sekunderna var en garanterad förlust följd av 16 fel.
+	Mätt i #264, run 35578447658: noll `[Horse]`-rader i hela loggen.
+
+	ModuleScripts är undantaget. Vi startar därför servern SJÄLVA, genom
+	produktionens egen `Start.kor()` — samma modul som `init.server.luau`
+	anropar. Ingen kopia, ingen stubb: en egen uppstart här hade mätt sig
+	själv i stället för spelet. ]]
+local Horse = ServerScriptService:WaitForChild("Horse", 60)
+local Start = require(Horse:WaitForChild("Start", 30))
+local startOk = Start.kor()
+
+local varldenStar = workspace:FindFirstChild("Anläggning") ~= nil
+	and ReplicatedStorage:GetAttribute("G01Enabled") == true
 
 --[[ ══ MODULERNA ═════════════════════════════════════════════════════
 
 	Produktionens egna. Ingen kopia, ingen stubb. Faller ett require är
-	det ett riktigt fel och smoken ska dö på det. ]]
-local Horse = ServerScriptService:WaitForChild("Horse", 60)
+	det ett riktigt fel och smoken ska dö på det.
+
+	`Horse` är redan hämtad ovanför, där starten kördes. ]]
 local GameplayService = require(Horse.GameplayService)
 local HorseService = require(Horse.HorseService)
 local LedService = require(Horse.LedService)
@@ -335,13 +338,20 @@ end)
 skyddat("boot", function()
 	avsnitt("boot")
 	kolla("anläggningen och tjänsterna kom upp inom taket", varldenStar)
-	--[[ `CharacterAutoLoads` är CRITICAL_STARTUP_GATE:s eget utfall:
-		`init.server.luau` sätter den till true ENBART när inget kritiskt
-		fel inträffade och preflighten gav PASS. Ett fail-closed boot
-		lämnar den false. ]]
-	kolla("CRITICAL_STARTUP_GATE gav PASS (CharacterAutoLoads)",
-		Players.CharacterAutoLoads == true,
-		tostring(Players.CharacterAutoLoads))
+	--[[ `Start.kor()` lämnar tillbaka CRITICAL_STARTUP_GATE:s eget
+		utfall, och sätter attributet ENBART när inget kritiskt fel
+		inträffade och preflighten gav PASS.
+
+		FÖRRA VARIANTEN LÄSTE `Players.CharacterAutoLoads == true` och
+		kallade det ett PASS. Den egenskapen är true som MOTORNS
+		STANDARDVÄRDE — så när starten aldrig kördes rapporterade
+		kontrollen grönt för en server som inte bootat. Ett attribut som
+		inte finns på en orörd DataModel kan inte passera så. ]]
+	kolla("CRITICAL_STARTUP_GATE gav PASS (Start.kor)", startOk == true,
+		tostring(startOk))
+	kolla("bootens attribut är satt, och det finns inte som standard",
+		ReplicatedStorage:GetAttribute(Start.FARDIG_ATTRIBUT) == true,
+		tostring(ReplicatedStorage:GetAttribute(Start.FARDIG_ATTRIBUT)))
 	kolla("GameplayService.start() nådde sin sista rad (G01Enabled)",
 		ReplicatedStorage:GetAttribute("G01Enabled") == true)
 	kolla("anläggningen är byggd i Workspace",
