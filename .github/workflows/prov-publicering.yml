@@ -2,32 +2,33 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# AVVAPNAD. Forsta omgangen (run 35563663575) ar kord och redovisad.
-# Reviewen bestallde «do not publish again yet», sa den automatiska
-# `pull_request`-triggern ar BORTTAGEN med flit: en push ska inte kunna
-# posta till CI-placen igen.
+# ARMERAD for EN matning: den binara Studio-baseplaten, enligt ordern
+# 5756017167. `pull_request`-triggern ar tillbaka just for detta varv.
 #
-# Att aterarmera ar en rad — satt tillbaka
+# AVVAPNA IGEN nar matningen ar redovisad — ta bort `pull_request:` och
+# dess `types:`-rad sa att en push inte kan posta till CI-placen av
+# vana. `workflow_dispatch` gar anda inte att trigga fran den har
+# grenen: GitHub exponerar bara dispatch fran default-branchen, och
+# filen ligger inte pa main.
 #
-#   on:
-#     pull_request:
-#       types: [opened, synchronize, reopened, ready_for_review]
+# KONTROLLEN: qa/runtime/UBRFCI-known-good.rbxl ar en stock Baseplate
+# sparad ur Studio — binar container med Roblox egen magi `<roblox!`,
+# full DataModel, ingen UBRF-kod. Att den ar skriven av Roblox sjalvt
+# gar inte att ifragasatta: det binara formatet kan inte handskrivas,
+# till skillnad fran XML-envelopen.
 #
-# nar nasta kontroll ar godkand. `workflow_dispatch` nedan gar INTE att
-# trigga fran den har grenen: GitHub exponerar bara dispatch fran
-# default-branchen, och filen ligger inte pa main. Den star kvar som
-# dokumentation av hur jobbet ser ut, inte som en vag att kora det.
+# VAD DEN KAN OCH INTE KAN: gar den igenom ar nyckelns scope, CI-placens
+# tillstand, endpointen och auth bevisat i ordning — men XML-vagen ar
+# fortfarande oprovad, eftersom wire-formatet skilde sig. Faller den med
+# samma «Invalid Content stream» kan var generator inte forklara det,
+# och svaret ar API_OR_SETUP.
 #
-# NASTA KONTROLL, nar den bestalls: en OBEROENDE kant-god place — en
-# fil Roblox sjalvt skrivit, sparad ur Studio och verifierat aterppnad —
-# skickad genom samma endpoint med
-#
-#   python3 tools/prova-publicering.py --fil <fil> --kand-god
-#
-# Den handgenererade minimala filen kan aldrig diskriminera, eftersom
-# den delar envelope-antaganden med tools/bygg-place.py.
+# En binar .rbxl MASTE skickas som application/octet-stream. Skriptet
+# valjer typ ur filens FORSTA BYTES, aldrig ur dess namn.
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
@@ -48,6 +49,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Kontrollfilens bytes maste vara DESAMMA i checkouten som de var
+      # nar de granskades. Skriptet kontrollerar det sjalvt via
+      # --vantad-sha256, men raden nedan gor hashen synlig i loggen aven
+      # nar provet stoppar.
+      - name: Kontrollfilens hash i checkouten
+        run: sha256sum qa/runtime/UBRFCI-known-good.rbxl
+
       # Gron exitkod betyder «matning erhallen», inte «publicering
       # lyckades». Las skriptets klassificeringsrad, aldrig exitkoden.
       - name: Publicering mot CI-placen — matning, inte grind
@@ -55,4 +63,8 @@ jobs:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py
+        run: |
+          python3 tools/prova-publicering.py \
+            --fil qa/runtime/UBRFCI-known-good.rbxl \
+            --kand-god \
+            --vantad-sha256 bc77e4edc8685066d6bdab59c2d6aacbb9e37d657a8e35104f5c928fb32c7400
