@@ -2,54 +2,44 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# AVVAPNAD. Mutationsprovet ar kort — run 35570961741. ALLA FEM armarna
-# gav HTTP 200, inklusive basen. Basen ar alltsa giltig, och INGEN av de
-# fyra misstankta egenskaperna ar blockeraren:
+# ARMERAD for SOURCE-TYPPROVET (order 5756689051). AVVAPNAS DIREKT
+# EFTERAT — ta bort `pull_request:` och dess `types:`-rad sa fort
+# matningen ar redovisad.
 #
-#   A  Rojos bytes oforandrade   -> 200 (version 6)
-#   B  indrag -> tabbar          -> 200 (version 7)
-#   C  + External-noderna        -> 200 (version 8)
-#   D  + namespace-attribut      -> 200 (version 9)
-#   E  + Workspace-noden         -> 200 (version 10)
+# VAGEN HIT: mutationsprovet (run 35570961741) gav 200 pa alla fem
+# armar och uteslot tabbar, External, namespace-attribut och Workspace.
+# En instansvis jamforelse mellan var artefakt och Rojos visade da att
+# filerna ar nastan identiska — samma 75 moduler, samma tjanster — utom
+# i EN systematisk sak:
 #
-# Tabbar, External, namespace och Workspace ar darmed alla uteslutna.
-# Skillnaden mellan var artefakt och Rojos ligger nagon annanstans.
+#     var  (400):  <ProtectedString name="Source">   x77
+#     Rojo (200):  <string name="Source">            x77
 #
-# VAD VI VET:
+# ProtectedString ar en sakerhetsskyddad vardetyp. En ingester som inte
+# tar emot skriptkallor under skyddad typ fran en otrodd uppladdning,
+# men accepterar vanlig string, ger exakt det monster vi ser.
 #
-#   Rojo XML      1 645 383 byte  application/xml           -> 200
-#   Rojo binart     849 955 byte  application/octet-stream  -> 200
-#   VAR XML       1 645 331 byte  application/xml           -> 400
-#   var minimala        375 byte  application/xml           -> 400
+# PROVET GAR AT BADA HALLEN, vilket ar poangen:
 #
-# XML-vagen fungerar alltsa, och felet ligger i VAR EGEN XML.
+#   F  Rojos fil, string -> ProtectedString   ska BRYTA en fil som gar igenom
+#   G  var fil, ProtectedString -> string     ska LAGA en fil som faller
 #
-# Den forra bisektionen (run 35570164175) var OGILTIG: alla fyra armar
-# foll, inklusive basen. Basen kallades «Rojo-stil» men kopierade bara
-# Rojos rotelement — indraget forblev vart och tjansterna saknade barn,
-# och bada holls konstanta over alla armar.
+#   F=400 och G=200  -> SOURCE_TYPE_CONFIRMED
+#   F=200 och G=200  -> typen ar inte blockeraren
+#   F=400 och G=400  -> bara delvis korrelation
 #
-# DARFOR MUTERAS NU ROJOS FAKTISKA BYTES i stallet for att konstruera en
-# fil som borde vara likvardig. En mutation av en kant-god fil kan inte
-# bara det felet.
+# G ar den viktigaste armen: den provar VAR FAKTISKA ARTEFAKT, inte en
+# stallforetradare.
 #
-#   A  Rojos bygge, oforandrat        — basen, maste ge 2xx
-#   B  A: tva mellanslags indrag -> tabbar
-#   C  A + <External>null/nil
-#   D  A + xmlns/xsi/schema-location pa roten
-#   E  A + den injicerade Workspace-noden
-#
-# Ger inte A 2xx ar korningen ogiltig och ingenting far laras av B-E.
-#
-# Arm E bar med sig bygg-place.py:s TABBINDRAG i sina fem rader, som
-# ordern begar «exakt serialiserad form». Ar arm B gron ar E ren; ar B
-# rod ar E sammanblandad med den och kan inte tolkas for sig.
-#
-# Varje arm kors med --delprov, sa att skriptet redovisar ramatningen
-# och INTE klassificerar en orsak pa egen hand: en ensam arm sager
-# ingenting, det ar jamforelsen som mater.
+# FALLAN i bytet: stangningstaggen `</string>` anvands ocksa av
+# `<string name="Name">`. En naiv sok-och-ersatt hade dodat varje
+# Name-egenskap i filen. tools/byt-source-typ.py matchar darfor hela
+# elementet och bevisar bytet genom att det OMVANDA bytet maste ge
+# tillbaka originalets exakta bytes.
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
@@ -72,80 +62,53 @@ jobs:
 
       - name: Rojo 7.7.0
         run: |
-          curl -sSL -o /tmp/rojo.zip \
-            https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
+          curl -sSL -o /tmp/rojo.zip             https://github.com/rojo-rbx/rojo/releases/download/v7.7.0/rojo-7.7.0-linux-x86_64.zip
           unzip -q /tmp/rojo.zip -d /tmp/rojo
           sudo install -m 0755 /tmp/rojo/rojo /usr/local/bin/rojo
           rojo --version
 
-      # Basen byggs FARSK ur den exakta head som kors. Arm A ar sedan
-      # dess bytes oforandrade — generatorn avbryter om de inte ar
-      # byte-identiska.
-      - name: Bygg basen och de fem armarna
+      # De tva kallartefakterna: Rojos (kand 200) och var egen (kand 400).
+      # Bada byggs ur exakt den head som kors.
+      - name: Bygg kallartefakterna
+        env:
+          UBRF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          echo "head: ${{ github.event.pull_request.head.sha || github.sha }}"
-          rojo build roblox/default.project.json --output /tmp/rojo-baseline.rbxlx
-          sha256sum /tmp/rojo-baseline.rbxlx
-          python3 tools/mutera-xml.py --bas /tmp/rojo-baseline.rbxlx --katalog /tmp/mut
-
-      # Pastaendet «exakt en egenskap» granskas i loggen, inte pa mitt
-      # ord. Generatorn har redan avbrutit om nagot annat andrats; det
-      # har visar skillnaden for en manniska.
-      - name: Varje arms skillnad mot A
-        run: |
-          for v in B-tabbar C-external D-namespace E-workspace; do
-            echo "=== A -> $v (forsta 12 raderna av diffen) ==="
-            diff /tmp/mut/mut-A-bas.rbxlx /tmp/mut/mut-$v.rbxlx | head -12 || true
+          echo "head: $UBRF_HEAD_SHA"
+          rojo build roblox/default.project.json --output /tmp/rojo-kall.rbxlx
+          python3 tools/bygg-place.py --ut /tmp/var-kall.rbxlx --sha "$UBRF_HEAD_SHA"
+          echo "=== KALLARTEFAKTERNA ==="
+          for f in /tmp/rojo-kall.rbxlx /tmp/var-kall.rbxlx; do
+            echo "$f"
+            echo "  storlek : $(stat -c%s "$f") byte"
+            echo "  sha256  : $(sha256sum "$f" | cut -d' ' -f1)"
+            echo "  Source  : ProtectedString=$(grep -o '<ProtectedString name=\"Source\">' "$f" | wc -l) string=$(grep -o '<string name=\"Source\">' "$f" | wc -l)"
           done
-          echo "=== CDATA-block oforandrade mellan A och B? ==="
-          python3 - <<'PY'
-          import re, pathlib
-          A = pathlib.Path('/tmp/mut/mut-A-bas.rbxlx').read_text(encoding='utf-8')
-          B = pathlib.Path('/tmp/mut/mut-B-tabbar.rbxlx').read_text(encoding='utf-8')
-          ca = re.findall(r'<!\[CDATA\[(.*?)\]\]>', A, re.S)
-          cb = re.findall(r'<!\[CDATA\[(.*?)\]\]>', B, re.S)
-          print('CDATA-block: A=%d B=%d identiska=%s' % (len(ca), len(cb), ca == cb))
-          assert ca == cb, 'arm B rorde skriptkallor — provet ar ogiltigt'
-          PY
+
+      # Bytesverktyget bevisar sjalvt att bara taggnamnen andrats: det
+      # omvanda bytet maste ge tillbaka originalets exakta bytes, CDATA
+      # maste vara oforandrat och antalet <string name="Name"> lika.
+      # Avbryter annars.
+      - name: F och G — byt Source-typ, med bevis
+        run: |
+          echo "=== F: Rojos fil, string -> ProtectedString (ska bryta) ==="
+          python3 tools/byt-source-typ.py --in /tmp/rojo-kall.rbxlx --ut /tmp/fg/F.rbxlx --till protected
+          echo ""
+          echo "=== G: var fil, ProtectedString -> string (ska laga) ==="
+          python3 tools/byt-source-typ.py --in /tmp/var-kall.rbxlx --ut /tmp/fg/G.rbxlx --till string
 
       # Gron exitkod betyder «matning erhallen», inte «publicering
       # lyckades». Las skriptets ramatning, aldrig exitkoden.
-      #
-      # ORDNINGEN AR AVSIKTLIG: basen forst. Gar inte den igenom mater
-      # provet ingenting, och da ar ingen slutsats om de ovriga giltig.
-      # Sekventiellt i samma jobb, sa tva publiceringar aldrig overlappar
-      # pa samma place.
-      - name: 1/5 — basen, Rojos bytes oforandrade
+      # Sekventiellt i samma jobb, sa tva publiceringar aldrig overlappar.
+      - name: F — Rojos fil med ProtectedString
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/mut/mut-A-bas.rbxlx --delprov A-bas
+        run: python3 tools/prova-publicering.py --fil /tmp/fg/F.rbxlx --delprov F-rojo-protected
 
-      - name: 2/5 — indrag -> tabbar
+      - name: G — var fil med string
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/mut/mut-B-tabbar.rbxlx --delprov B-tabbar
-
-      - name: 3/5 — + External-noderna
-        env:
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
-          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/mut/mut-C-external.rbxlx --delprov C-external
-
-      - name: 4/5 — + namespace-attribut
-        env:
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
-          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/mut/mut-D-namespace.rbxlx --delprov D-namespace
-
-      - name: 5/5 — + Workspace-noden
-        env:
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
-          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/mut/mut-E-workspace.rbxlx --delprov E-workspace
+        run: python3 tools/prova-publicering.py --fil /tmp/fg/G.rbxlx --delprov G-var-string
