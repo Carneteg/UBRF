@@ -56,7 +56,8 @@ local aktuelltAvsnitt = "-"
 local DEL = tostring(_G.UBRF_DEL or "alla")
 local AVSNITT = {
 	"identitet", "boot", "varldsintegritet", "bindning", "tackkedjan",
-	"ridanu", "mountrequest", "boxfront", "ledning", "stadning",
+	"ridanu", "mountrequest", "boxfront", "ledning", "flerledning",
+	"stadning",
 }
 
 local function avsnitt(namn: string)
@@ -1042,6 +1043,182 @@ skyddat("ledning", function()
 	kolla("ingen annan står som ledare för hästen", LedService.ledsAv(m) == nil)
 
 	kopplaNer(sateL)
+end)
+
+--[[ ══════════════════════════════════════════════════════════════════
+	9b. FLERLEDNING — två ledda hästar samtidigt
+	══════════════════════════════════════════════════════════════════
+
+	Enhästsledningen ovan säger ingenting om vad som händer när två
+	personer leder var sin häst i samma värld. Det som kan gå fel är
+	inte rörelsen — det är ÄGARSKAPET: att A:s rigg hamnar på B:s häst,
+	att registret svarar fel på vem som leder vem, att ett släpp river
+	den andres fastpunkter, eller att en häst som redan leds går att
+	ta över.
+
+	ALLT DET ÄR STRUKTUR OCH REGISTER, och därmed mätbart här. Fysiken
+	behövs inte för att avgöra om två riggar är samma instans eller om
+	`ledsAv` pekar på rätt spelare. Rörelsen mäts inte här och påstås
+	inte heller — den ligger i KTX-kategorin av samma skäl som i
+	enhästsfallet.
+
+	Två hästar räcker för varje påstående nedan: de fel som finns är
+	förväxlingar mellan två parter, och en tredje häst hade upprepat
+	samma par utan att lägga till en ny felmöjlighet.
+	══════════════════════════════════════════════════════════════════ ]]
+skyddat("flerledning", function()
+	avsnitt("flerledning")
+
+	local sateA, _, rotA = nyttSate("CILedareA", Vector3.new(0, 5, 20))
+	local sateB, _, rotB = nyttSate("CILedareB", Vector3.new(0, 5, 40))
+	StallService.tilldela(sateA)
+	StallService.tilldela(sateB)
+	local idA, idB = StallService.hastIdFor(sateA), StallService.hastIdFor(sateB)
+
+	--[[ Stallet ska ge två OLIKA hästar. Ger det samma häst åt båda är
+		det ett riktigt fel och resten av avsnittet vore meningslöst. ]]
+	kolla("stallet gav två skilda hästar", idA ~= nil and idB ~= nil and idA ~= idB,
+		("%s / %s"):format(tostring(idA), tostring(idB)))
+	if idA == nil or idB == nil or idA == idB then return end
+
+	local hA, hB = hastMed(idA), hastMed(idB)
+	kolla("båda hästarna finns i världen", hA ~= nil and hB ~= nil,
+		("%s / %s"):format(tostring(idA), tostring(idB)))
+	if not hA or not hB then return end
+	if not hA.PrimaryPart or not hB.PrimaryPart then
+		kolla("båda hästarna har en pivot", false)
+		return
+	end
+
+	kolla("ledarna står vid var sin häst",
+		stallVid(sateA, hA, 1) and stallVid(sateB, hB, 1))
+	GameplayService.bind(sateA)
+	GameplayService.bind(sateB)
+
+	local okA, skalA = LedService.borja(sateA, hA, hA)
+	local okB, skalB = LedService.borja(sateB, hB, hB)
+	kolla("A:s ledning börjar", okA == true, tostring(skalA))
+	kolla("B:s ledning börjar medan A leder", okB == true, tostring(skalB))
+	if okA ~= true or okB ~= true then return end
+
+	--[[ ── INGEN STJÄL DEN ANDRES ─────────────────────────────────── ]]
+	kolla("registret ger A sin egen häst", LedService.aktiv(sateA) == hA)
+	kolla("registret ger B sin egen häst", LedService.aktiv(sateB) == hB)
+	kolla("A:s häst leds av A, inte B", LedService.ledsAv(hA) == sateA)
+	kolla("B:s häst leds av B, inte A", LedService.ledsAv(hB) == sateB)
+
+	local rA, rB = LedService.riggFor(sateA), LedService.riggFor(sateB)
+	kolla("båda riggarna byggdes", rA ~= nil and rB ~= nil)
+	if not rA or not rB then return end
+
+	--[[ Samma instans på två riggar vore den värsta varianten: allt
+		ser rätt ut tills den ena släpper och river den andres. ]]
+	kolla("riggarna delar ingen enda instans",
+		rA.mal ~= rB.mal and rA.hastfast ~= rB.hastfast
+			and rA.drag ~= rB.drag and rA.vrid ~= rB.vrid)
+	kolla("A:s målfäste sitter på A:s ryttare", rA.mal.Parent == rotA)
+	kolla("B:s målfäste sitter på B:s ryttare", rB.mal.Parent == rotB)
+	kolla("A:s hästfäste sitter på A:s häst", rA.hastfast.Parent == hA.PrimaryPart)
+	kolla("B:s hästfäste sitter på B:s häst", rB.hastfast.Parent == hB.PrimaryPart)
+
+	--[[ ── TVÅ SKILDA REGLER, INTE EN ────────────────────────────────
+
+		`borjaInre` nekar i ordning: `led.leder_redan` står FÖRE
+		`led.upptagen`. En som redan leder får alltså sitt nej av att
+		HON leder, inte av att hästen är tagen — och ett prov som bara
+		lät B försöka hade mätt fel regel och trott sig ha täckt den
+		andra.
+
+		Båda mäts därför var för sig, och skälet läses ut. Avståndet
+		ställs undan först: `led.for_langt` ligger också före båda, så
+		utan det steget kunde ett nej komma av att sätet stod fel. ]]
+
+	stallVid(sateB, hA, 1)
+	local okB2, skalB2 = LedService.borja(sateB, hA, hA)
+	kolla("den som redan leder får inte en häst till", okB2 ~= true,
+		tostring(skalB2))
+	kolla("och nekas för att hon leder, inte för avståndet",
+		skalB2 == "led.leder_redan", tostring(skalB2))
+	stallVid(sateB, hB, 1)
+
+	--[[ C leder ingenting. Hon är därför den enda som kan nå
+		`led.upptagen` — regeln att två inte kan leda samma häst. ]]
+	local sateC = nyttSate("CILedareC", Vector3.new(0, 5, 60))
+	stallVid(sateC, hA, 1)
+	local okC, skalC = LedService.borja(sateC, hA, hA)
+	kolla("en ledig spelare kan inte ta A:s häst", okC ~= true, tostring(skalC))
+	kolla("och nekas för att hästen är upptagen", skalC == "led.upptagen",
+		tostring(skalC))
+
+	kolla("A leder fortfarande sin häst efter båda försöken",
+		LedService.ledsAv(hA) == sateA and LedService.aktiv(sateA) == hA)
+	kolla("B:s egen ledning överlevde försöken",
+		LedService.ledsAv(hB) == sateB and LedService.aktiv(sateB) == hB)
+	kolla("C fick ingen ledning av ett nekat försök",
+		LedService.aktiv(sateC) == nil)
+
+	--[[ ── A SLÄPPER. B SKA INTE MÄRKA NÅGOT ───────────────────────── ]]
+	local slapptA = LedService.slapp(sateA)
+	kolla("A:s släpp går igenom", slapptA == true)
+	kolla("A:s register är tomt", LedService.aktiv(sateA) == nil)
+	kolla("A:s häst står utan ledare", LedService.ledsAv(hA) == nil)
+	kolla("A:s målfäste är borta", rA.mal == nil or rA.mal.Parent == nil)
+	kolla("A:s hästfäste är borta", rA.hastfast == nil or rA.hastfast.Parent == nil)
+	kolla("A:s AlignPosition är borta", rA.drag == nil or rA.drag.Parent == nil)
+	kolla("A:s AlignOrientation är borta", rA.vrid == nil or rA.vrid.Parent == nil)
+
+	kolla("B LEDER FORTFARANDE efter A:s släpp",
+		LedService.aktiv(sateB) == hB and LedService.ledsAv(hB) == sateB)
+	kolla("B:s målfäste rördes inte", rB.mal ~= nil and rB.mal.Parent == rotB)
+	kolla("B:s hästfäste rördes inte",
+		rB.hastfast ~= nil and rB.hastfast.Parent == hB.PrimaryPart)
+	kolla("B:s AlignPosition rördes inte",
+		rB.drag ~= nil and rB.drag.Parent ~= nil)
+	kolla("B:s AlignOrientation rördes inte",
+		rB.vrid ~= nil and rB.vrid.Parent ~= nil)
+
+	--[[ ── A LEDER IGEN. Släppet får inte ha bränt hästen ─────────── ]]
+	stallVid(sateA, hA, 1)
+	local okIgen, skalIgen = LedService.borja(sateA, hA, hA)
+	kolla("A kan leda igen efter släpp", okIgen == true, tostring(skalIgen))
+	if okIgen == true then
+		local rA2 = LedService.riggFor(sateA)
+		kolla("den nya riggen är en NY rigg, inte den rivna",
+			rA2 ~= nil and rA2.drag ~= nil and rA2.drag ~= rA.drag)
+		kolla("B stördes inte av att A tog om",
+			LedService.aktiv(sateB) == hB and LedService.ledsAv(hB) == sateB)
+		LedService.slapp(sateA)
+	end
+
+	--[[ ── BÅDA SLÄPPTA: INGA FÖRÄLDRALÖSA CONSTRAINTS ──────────────
+		Räknas över HELA världen, inte bara de två hästarna: en rigg som
+		hamnat fel syns bara om man tittar utanför den man förväntar
+		sig. ]]
+	LedService.slapp(sateB)
+	kolla("ingen leder längre", LedService.aktiv(sateA) == nil
+		and LedService.aktiv(sateB) == nil)
+
+	local kvar = {}
+	for _, d in ipairs(workspace:GetDescendants()) do
+		local n = d.Name
+		if n == "LeadTargetAttachment" or n == "LeadRootAttachment"
+			or ((d:IsA("AlignPosition") or d:IsA("AlignOrientation"))
+				and d.Parent ~= nil and d.Parent:IsDescendantOf(workspace)
+				and (n:match("^Lead") ~= nil)) then
+			table.insert(kvar, ("%s (%s)"):format(d:GetFullName(), d.ClassName))
+		end
+	end
+	kolla("inga föräldralösa ledningsobjekt kvar i världen",
+		#kvar == 0, table.concat(kvar, " | "))
+
+	--[[ Rörelsen. Samma skäl som i enhästsfallet — se KTX-blocket. ]]
+	ejMatbar("två ledda hästar följer var sin ryttare",
+		"AlignPosition integrerar inte utan fysik",
+		"struktur och register mätta ovan; rorelsen kraver Studio")
+
+	kopplaNer(sateA)
+	kopplaNer(sateB)
+	kopplaNer(sateC)
 end)
 
 --[[ ══════════════════════════════════════════════════════════════════
