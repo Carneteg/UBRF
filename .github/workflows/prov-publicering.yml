@@ -2,7 +2,19 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for ARM L (order 5757090260). AVVAPNAS DIREKT EFTERAT.
+# AVVAPNAD. Arm L ar kord — run 35574514273: HTTP 200 (version 13).
+#
+# Alla sju skillnaderna tillsammans pa Rojos fil gick igenom. Mangden
+# ar darmed tomd bade var for sig och gemensamt.
+#
+# EFTERANALYSEN HITTADE DA DEN FAKTISKA SKILLNADEN: L och var artefakt
+# har IDENTISKA radmultimangder — noll skiljande rader nar ordningen
+# sorteras bort — och skiljer sig pa exakt en byte:
+#
+#   Rojo/L (200): ...</roblox>      INGEN avslutande radbrytning
+#   var    (400): ...</roblox>\n    AVSLUTANDE RADBRYTNING
+#
+# tools/bygg-place.py:245 skriver radbrytningen efter rotelementet.
 #
 # J/K (run 35573405949) gav 200/400 och uteslot referentstil och
 # RunContext. Men varje egenskap har provats EN OCH EN mot Rojos fil —
@@ -36,8 +48,6 @@ name: Prov — minimal publicering
 # Bada kontrolleras nu av verktyget, som avbryter om de ateruppstar.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
