@@ -141,6 +141,11 @@ def main():
                    help="intyga att --fil ar en OBEROENDE kant-god place: "
                         "skriven av Roblox, sparad ur Studio och verifierat "
                         "aterppnad. Bara da kan utfallet diskriminera.")
+    p.add_argument("--tredjepart", action="store_true",
+                   help="filen kommer fran en OBEROENDE TREDJEPARTS-serializer "
+                        "(rbx-dom/Rojo), inte fran Roblox sjalvt. En enskild "
+                        "korning avgor da ingenting — det ar PARET av tva "
+                        "format ur samma serializer som diskriminerar.")
     p.add_argument("--vantad-sha256",
                    help="kontrollfilens vantade SHA-256. Avviker den postas "
                         "ingenting: en kontroll vars bytes andrats pa vagen "
@@ -149,6 +154,11 @@ def main():
 
     if a.kand_god and not a.fil:
         stopp("--kand-god utan --fil sager ingenting")
+    if a.tredjepart and not a.fil:
+        stopp("--tredjepart utan --fil sager ingenting")
+    if a.kand_god and a.tredjepart:
+        stopp("--kand-god och --tredjepart motsager varandra: en fil ar "
+              "antingen Roblox-skriven eller tredjeparts, inte bada")
     if a.vantad_sha256 and not a.fil:
         stopp("--vantad-sha256 utan --fil sager ingenting")
 
@@ -195,7 +205,9 @@ def main():
     print("  content-type  : %s" % typ)
     print("  kropp         : %s" % kalla)
     print("  sha256        : %s" % sha)
-    print("  oberoende kant-god kontroll: %s" % ("JA" if oberoende else "NEJ"))
+    print("  ursprung      : %s" % ("tredjepart (rbx-dom/Rojo)" if a.tredjepart
+                                    else "Roblox-skriven, kant-god" if oberoende
+                                    else "handgenererad"))
     if not a.fil:
         print("  exakt kropp:")
         for rad in MINIMAL.rstrip("\n").split("\n"):
@@ -225,6 +237,20 @@ def main():
         print("  Natverksfel — inget svar fran Roblox.")
         print("PROV: INCONCLUSIVE")
         return 1
+
+    if a.tredjepart:
+        #[[ Rojo/rbx-dom ar en oberoende implementation, men inte Roblox
+        #   egen. En ensam korning kan darfor inte skilja «var XML ar fel»
+        #   fran «XML-vagen ar trasig». Det ar PARET — samma serializer,
+        #   samma innehall, bara formatet olika — som isolerar variabeln. ]]
+        print("  Filen kommer fran en TREDJEPARTS-serializer (rbx-dom/Rojo),")
+        print("  inte fran Roblox sjalvt. Den har ensamma korningen avgor")
+        print("  darfor ingenting. Klassificeringen kommer ur PARET:")
+        print("    XML 400 + binar 2xx  -> formatet ar enda variabeln")
+        print("    XML 2xx              -> var egen XML ar det avvikande")
+        print("PROV: RAMATNING status=%s format=%s (del av parprov)"
+              % (status, "binar" if binar else "xml"))
+        return 0
 
     if not oberoende:
         print("  Kontrollfilen ar INTE en oberoende kant-god Roblox-place.")
