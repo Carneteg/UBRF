@@ -80,6 +80,54 @@ local function kolla(namn: string, villkor: any, detalj: any?)
 		if detalj == nil then "" else "  [" .. tostring(detalj) .. "]"))
 end
 
+--[[ ══ DET SOM INTE GÅR ATT MÄTA HÄR ═══════════════════════════════════
+
+	Open Clouds Luau Execution kör INTE fysikintegration. Roblox
+	dokumenterar det rakt ut: «In a task, physics simulation does not
+	run», och `RunService:IsRunning()` är false i den här kontexten.
+
+	Hästen leds av `AlignPosition` och `AlignOrientation` — fysik-
+	constraints, enligt arkitekturkontraktet i #235 FAS 4. De skapas
+	korrekt här, vilket mäts och passerar, men de integrerar aldrig. Hon
+	står alltså still, och det säger ingenting om ledningens logik.
+
+	MÄTT, INTE ANTAGET: `motorn stegade bildrutor` gav 239 bildrutor i
+	run 35584589800. Heartbeat FYRAR här. Det är fysikintegrationen som
+	saknas, inte schemaläggaren — och den skillnaden får inte suddas ut
+	genom att kalla allt tidsberoende omätbart.
+
+	VARFÖR EN EGEN KATEGORI I STÄLLET FÖR OK ELLER FEL:
+
+	Som FEL ljuger grinden rött om en produktionsbugg som inte finns.
+	Som OK ljuger fyra av dem grönt — en häst som aldrig rör sig kan
+	inte teleportera och inte oscillera, så påståenden om FRÅNVARO av
+	dålig rörelse uppfylls tomt av FRÅNVARO av rörelse. Det är samma
+	felsort som `CharacterAutoLoads`-passet i #264: grönt av fel skäl.
+
+	Raden räknas därför varken som mätning eller som fel. Den syns i
+	rapporten med sitt skäl, och täckningen finns i Studio i stället.
+
+	EGEN LISTA, INTE `rader`. Drivaren gör `if not rad.get("ok")` på varje
+	rad i `rader` och skriver ut den som FEL — en rad utan dom hade alltså
+	blivit ett falskt rött i sammanfattningen, exakt det vi tar bort här.
+	KTX-raderna returneras därför i `ejMatbaraRader`, som drivaren inte
+	rör. ]]
+local ejMatbara = 0
+local ejRader: { any } = {}
+
+local function ejMatbar(namn: string, skal: string, detalj: any?)
+	ejMatbara += 1
+	table.insert(ejRader, {
+		avsnitt = aktuelltAvsnitt,
+		namn = namn,
+		skal = skal,
+		detalj = if detalj == nil then "" else tostring(detalj),
+	})
+	print(("KTX   %s  [%s]%s"):format(
+		namn, skal,
+		if detalj == nil then "" else "  obs: " .. tostring(detalj)))
+end
+
 --[[ Ett avsnitt som kastade är ett FEL, inte en tystnad. ]]
 local function skyddat(namn: string, f: () -> ())
 	if DEL ~= "alla" and DEL ~= namn then return end
@@ -920,7 +968,12 @@ skyddat("ledning", function()
 		ryttaren gar nagot langsammare an sa. ]]
 	local hastHum = m:FindFirstChildOfClass("Humanoid")
 	local fart = if hastHum and hastHum.WalkSpeed > 0 then hastHum.WalkSpeed else 6
-	kolla("LedService satte en gångfart på hästen", fart > 0,
+	--[[ Farten är en EGENSKAPSAVLÄSNING, inte observerad rörelse. Den
+		säger att `LedService` skrev ett värde, inte att hästen gick i
+		den takten — och utan fysikintegration kan det senare inte
+		mätas här. Se KTX-blocket vid `ejMatbar`. ]]
+	ejMatbar("LedService satte en gångfart på hästen",
+		"egenskapsavlasning, ingen observerad rorelse",
 		("%.2f studs/s"):format(fart))
 	local start = pivot.Position
 	local riktning = Vector3.new(1, 0, 0)
@@ -941,17 +994,22 @@ skyddat("ledning", function()
 
 	kolla("motorn stegade bildrutor", bildrutor >= 200, bildrutor)
 
+	--[[ DE FYRA RÖRELSEMÄTNINGARNA. Villkoren står kvar ordagrant och
+		värdena räknas fortfarande ut och redovisas — det är bara
+		DOMEN som hålls tillbaka, eftersom fysiken inte integrerar här.
+		Tröskelvärdena är orörda och gäller oförändrat i Studio. ]]
 	local flyttad = (efterGang - start).Magnitude / M
-	kolla("hästen FÖLJDE med när målet flyttades",
-		flyttad > 1.0, ("%.2f m"):format(flyttad))
+	ejMatbar("hästen FÖLJDE med när målet flyttades",
+		"AlignPosition integrerar inte utan fysik",
+		("%.2f m (krav > 1.0)"):format(flyttad))
 
 	local avstTillRyttare = (efterGang - ryttarLage).Magnitude / M
-	kolla("hon höll sig inom tolerans från ryttaren",
-		avstTillRyttare <= FOLJ_TOLERANS_M,
+	ejMatbar("hon höll sig inom tolerans från ryttaren",
+		"tomt uppfyllt nar hon star still",
 		("%.2f m (tak %.1f)"):format(avstTillRyttare, FOLJ_TOLERANS_M))
 
-	kolla("ingen enskild bildruta teleporterade henne",
-		maxSteg <= MAX_FRAMSTEG_M,
+	ejMatbar("ingen enskild bildruta teleporterade henne",
+		"tomt uppfyllt nar hon star still",
 		("storsta steg %.3f m (tak %.2f)"):format(maxSteg, MAX_FRAMSTEG_M))
 
 	--[[ OSCILLATION: hur många gånger byter rörelsen tecken längs
@@ -967,8 +1025,8 @@ skyddat("ledning", function()
 			forra = tecken
 		end
 	end
-	kolla("hon oscillerar inte kring stoppunkten",
-		vandningar <= OSC_VANDNINGAR,
+	ejMatbar("hon oscillerar inte kring stoppunkten",
+		"tomt uppfyllt nar hon star still",
 		("%d vandningar (tak %d)"):format(vandningar, OSC_VANDNINGAR))
 
 	--[[ ── SLÄPPET RIVER ALLT ── ]]
@@ -1085,8 +1143,41 @@ for _, inst in ipairs(skrap) do
 	pcall(function() inst:Destroy() end)
 end
 
+--[[ ══ KTX-KATEGORIN FÅR INTE SMITTA UTFALLET ═══════════════════════
+
+	En kategori som varken är PASS eller FAIL är farlig av två skäl, och
+	båda mäts här i stället för att lovas:
+
+	  · om en KTX-rad räknades som mätning blåste den upp täckningen,
+	  · om den räknades som fel gav den ett rött som inte finns.
+
+	Kontrollen använder de VERKLIGA raderna från körningen, inte en
+	attrapp: `rader` ska innehålla exakt mätningarna och ingenting annat,
+	och varje KTX-rad ska ligga i sin egen lista med ett skäl. Går de
+	isär är räkningen fel, och då ska det synas som ett riktigt fel. ]]
+do
+	aktuelltAvsnitt = "harness"
+	local utanDom = 0
+	for _, r in ipairs(rader) do
+		if r.ok == nil then utanDom += 1 end
+	end
+	kolla("ingen KTX-rad har smugit sig in bland matningarna",
+		utanDom == 0, ("%d rader utan dom i rader"):format(utanDom))
+	kolla("KTX-raderna ligger i sin egen lista",
+		#ejRader == ejMatbara,
+		("%d rader, ejMatbara=%d"):format(#ejRader, ejMatbara))
+	kolla("ingen KTX-rad saknar skal",
+		(function()
+			for _, r in ipairs(ejRader) do
+				if r.skal == nil or r.skal == "" then return false end
+			end
+			return true
+		end)(), ejMatbara)
+end
+
 local sekunder = os.clock() - T0
-print(("[Smoke] %d matningar, %d FEL, %.1f s"):format(antal, fel, sekunder))
+print(("[Smoke] %d matningar, %d FEL, %d ej matbara har, %.1f s")
+	:format(antal, fel, ejMatbara, sekunder))
 if antal == 0 then
 	warn("[Smoke] RUNTIME_GRIND: FAIL - noll matningar gjordes")
 	fel += 1
@@ -1098,7 +1189,8 @@ if antal == 0 then
 elseif fel > 0 then
 	warn(("[Smoke] RUNTIME_GRIND: FAIL - %d av %d matningar foll"):format(fel, antal))
 else
-	print(("[Smoke] RUNTIME_GRIND: PASS - %d matningar"):format(antal))
+	print(("[Smoke] RUNTIME_GRIND: PASS - %d matningar (%d ej matbara har)")
+		:format(antal, ejMatbara))
 end
 
 return {
@@ -1107,6 +1199,8 @@ return {
 	mutation = tostring(_G.UBRF_MUTATION or ""),
 	antal = antal,
 	fel = fel,
+	ejMatbara = ejMatbara,
+	ejMatbaraRader = ejRader,
 	sekunder = sekunder,
 	rader = rader,
 }
