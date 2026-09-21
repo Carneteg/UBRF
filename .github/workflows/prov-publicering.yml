@@ -2,9 +2,18 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for MUTATIONSPROVET (order 5756607860). AVVAPNAS DIREKT
-# EFTERAT — ta bort `pull_request:` och dess `types:`-rad sa fort
-# matningen ar redovisad.
+# AVVAPNAD. Mutationsprovet ar kort — run 35570961741. ALLA FEM armarna
+# gav HTTP 200, inklusive basen. Basen ar alltsa giltig, och INGEN av de
+# fyra misstankta egenskaperna ar blockeraren:
+#
+#   A  Rojos bytes oforandrade   -> 200 (version 6)
+#   B  indrag -> tabbar          -> 200 (version 7)
+#   C  + External-noderna        -> 200 (version 8)
+#   D  + namespace-attribut      -> 200 (version 9)
+#   E  + Workspace-noden         -> 200 (version 10)
+#
+# Tabbar, External, namespace och Workspace ar darmed alla uteslutna.
+# Skillnaden mellan var artefakt och Rojos ligger nagon annanstans.
 #
 # VAD VI VET:
 #
@@ -41,8 +50,6 @@ name: Prov — minimal publicering
 # ingenting, det ar jamforelsen som mater.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
