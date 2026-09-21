@@ -242,7 +242,22 @@ def main() -> int:
            'version="4">\n'
            "\t<External>null</External>\n"
            "\t<External>nil</External>\n"
-           + kropp + "\n</roblox>\n")
+           #[[ INGEN radbrytning efter </roblox>. Roblox place-ingester
+           #   avvisar skrapbytes EFTER dokumentelementet, och en enda
+           #   avslutande radbrytning racker: HTTP 400 {"code":
+           #   "InvalidRequest","message":"Invalid Content stream"}.
+           #
+           #   Matt at bada hallen i #264, run 35576448203: var artefakt
+           #   utan byten gav 200, och en Roblox-accepterad fil MED byten
+           #   gav 400. Felmeddelandet pekar utat, pa strommen — inte pa
+           #   nagot i innehallet. Lagg inte tillbaka radbrytningen for
+           #   att filen «ser ostadad ut» i en editor.
+           #
+           #   De bevarade placerna under roblox/releases/ byggdes fore
+           #   fixen och slutar med radbrytning. De ska INTE byggas om:
+           #   historisk evidens ar historisk, och kolla-evidens-place.py
+           #   vaktar deras hashar. ]]
+           + kropp + "\n</roblox>")
 
     #[[ Well-formedness ar inte samma sak som att Studio oppnar filen, men en
     #   trasig XML ar ett fel vi KAN fanga har — och da ska den aldrig lamnas

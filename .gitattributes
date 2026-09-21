@@ -4,7 +4,3 @@
 # Tobias accepterade. `binary` = -text -diff -merge.
 *.rbxlx binary
 
-# Binara Roblox-placer (.rbxl) galler samma sak, och an starkare: en
-# byteforandring i en binar container gor filen olaslig. Tillagd for
-# kontrollfilen i #264.
-*.rbxl binary
