@@ -56,8 +56,8 @@ local aktuelltAvsnitt = "-"
 local DEL = tostring(_G.UBRF_DEL or "alla")
 local AVSNITT = {
 	"identitet", "boot", "varldsintegritet", "bindning", "tackkedjan",
-	"ridanu", "mountrequest", "boxfront", "ledning", "flerledning",
-	"stadning",
+	"ridanu", "mountrequest", "boxfront", "dorrar", "ledning",
+	"flerledning", "stadning",
 }
 
 local function avsnitt(namn: string)
@@ -184,6 +184,9 @@ local StallService = require(Horse.StallService)
 local TackService = require(Horse.TackService)
 local TackRigg = require(Horse.TackRigg)
 local TackForradService = require(Horse.TackForradService)
+--[[ #264 doorblockeraren: dörrarna hade ingen täckning alls förrän
+	speltestet hittade dem. Se avsnittet «dorrar». ]]
+local DorrService = require(Horse.DorrService)
 
 local Preparation = require(ReplicatedStorage.HorseCore.Preparation)
 local Networking = require(ReplicatedStorage.HorseCore.Networking)
@@ -1043,6 +1046,108 @@ skyddat("ledning", function()
 	kolla("ingen annan står som ledare för hästen", LedService.ledsAv(m) == nil)
 
 	kopplaNer(sateL)
+end)
+
+--[[ ══════════════════════════════════════════════════════════════════
+	8b. DÖRRARNA — prompten och handlingen får aldrig glida isär
+	══════════════════════════════════════════════════════════════════
+
+	SPELTEST 2026-09-21: Tobias såg «Open — Door» stå i världen och kunde
+	inte öppna dörren. Rutten genom stallet var därmed stängd.
+
+	Det är den värsta sortens fel i en interaktion: prompten LOVAR en
+	handling som inte finns. En spelare som inte ser någon prompt förstår
+	att det inte går; en som ser en prompt och trycker förgäves tror att
+	hon gör fel.
+
+	Dörrarna hade INGEN täckning alls — varken en spec eller en rad i
+	den här smoken. Det är så ett sådant fel når en spelare.
+
+	Kontraktet, och varje led mäts:
+	  · varje dörrblad har en prompt
+	  · prompten är Enabled
+	  · den går att trycka med ett finger (ClickablePrompt)
+	  · den har en tangent och en handkontrollsknapp
+	  · den har text
+	  · räckvidden är större än noll
+	  · OCH — det som faktiskt fallerade — att TRYCKA den öppnar dörren
+
+	Sista punkten är hela poängen. Allt ovanför kan vara grönt medan
+	dörren står kvar stängd. ]]
+skyddat("dorrar", function()
+	avsnitt("dorrar")
+	local dorrar = DorrService.dorrar()
+	kolla("anläggningen har dörrar alls", #dorrar > 0, #dorrar)
+	if #dorrar == 0 then return end
+
+	local utanPrompt, slackta, ejKlickbara, utanTangent, utanText, utanRackvidd =
+		{}, {}, {}, {}, {}, {}
+	for _, blad in ipairs(dorrar) do
+		local p = blad:FindFirstChildOfClass("ProximityPrompt")
+		if not p then
+			table.insert(utanPrompt, blad:GetFullName())
+		else
+			if p.Enabled ~= true then table.insert(slackta, blad.Name) end
+			if p.ClickablePrompt ~= true then
+				table.insert(ejKlickbara, blad.Name)
+			end
+			if p.KeyboardKeyCode == Enum.KeyCode.Unknown then
+				table.insert(utanTangent, blad.Name)
+			end
+			if p.ActionText == nil or p.ActionText == "" then
+				table.insert(utanText, blad.Name)
+			end
+			if p.MaxActivationDistance <= 0 then
+				table.insert(utanRackvidd, blad.Name)
+			end
+		end
+	end
+	kolla("varje dörr har en prompt", #utanPrompt == 0,
+		table.concat(utanPrompt, " | "))
+	kolla("ingen dörrprompt är släckt", #slackta == 0,
+		table.concat(slackta, " | "))
+	kolla("varje dörrprompt går att trycka med ett finger",
+		#ejKlickbara == 0, table.concat(ejKlickbara, " | "))
+	kolla("varje dörrprompt har en tangent", #utanTangent == 0,
+		table.concat(utanTangent, " | "))
+	kolla("varje dörrprompt har text", #utanText == 0,
+		table.concat(utanText, " | "))
+	kolla("varje dörrprompt har räckvidd", #utanRackvidd == 0,
+		table.concat(utanRackvidd, " | "))
+
+	--[[ ── OCH ATT TRYCKA DEN GÖR NÅGOT ──────────────────────────────
+
+		`Triggered:Fire()` är samma väg spelarens tryck tar. Faller
+		handlaren tyst — och en `Triggered`-handlare som kastar gör just
+		det — står dörren kvar medan prompten fortsätter lova «Öppna».
+		Precis det speltestet såg. ]]
+	local ororda, oppnadeInte, kollisionKvar = {}, {}, {}
+	local provade = 0
+	for _, blad in ipairs(dorrar) do
+		local p = blad:FindFirstChildOfClass("ProximityPrompt")
+		if p then
+			provade += 1
+			local fore = blad.CFrame
+			local okFyr = pcall(function() p.Triggered:Fire() end)
+			if not okFyr then
+				table.insert(ororda, blad.Name .. ":handlaren kastade")
+			elseif blad.CFrame == fore then
+				table.insert(oppnadeInte, blad.Name)
+			end
+			if blad.CanCollide == true and blad.CFrame ~= fore then
+				table.insert(kollisionKvar, blad.Name)
+			end
+			--[[ Stäng igen så att världen lämnas som vi fann den. ]]
+			pcall(function() p.Triggered:Fire() end)
+		end
+	end
+	kolla("ingen dörrhandlare kastade när den trycktes", #ororda == 0,
+		table.concat(ororda, " | "))
+	kolla("ETT TRYCK ÖPPNAR DÖRREN — bladet rör sig", #oppnadeInte == 0,
+		("%d av %d stod kvar: %s"):format(#oppnadeInte, provade,
+			table.concat(oppnadeInte, " | ")))
+	kolla("en öppen dörr kolliderar inte längre", #kollisionKvar == 0,
+		table.concat(kollisionKvar, " | "))
 end)
 
 --[[ ══════════════════════════════════════════════════════════════════
