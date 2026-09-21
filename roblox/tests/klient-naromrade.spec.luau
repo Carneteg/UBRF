@@ -602,18 +602,36 @@ do
 	check("och båda raderna är dagens hästs prioriterade handlingar",
 		badeEgna, table.concat(synliga, " | "))
 
-	--[[ INGEN av de sex behåller Robloxs egna UI — varken overflow
-	     (dörrarna) eller de bortfiltrerade (grannarnas). ]]
+	--[[ ── OMVÄNT MOT FÖRR, OCH DET ÄR RÄTTELSEN (#264) ──────────────
+
+		Här stod förut att INGEN av de sex får behålla Roblox egna UI,
+		och att alla sex ska stå i registret. Det var avsikten i #246 C:
+		en enda interaktionsyta på touch.
+
+		SPELTEST 2026-09-21 visade priset. En prompt som släcks utan att
+		få en rad är varken rad eller knapp — Tobias såg «Open — Door»
+		och kunde inte öppna dörren. Rutten genom stallet var stängd.
+
+		Påståendet intill löd «en bortfiltrerad prompt är fortfarande
+		aktiverbar», och det var sant men bevisade fel sak: att
+		`InputHoldBegin` fungerar från kod säger ingenting om att en
+		SPELARE kan nå den. Utan rad och utan bild finns ingen väg in.
+
+		Kontraktet är nu: SLÄCK BARA DET DU ERSÄTTER. De två som får
+		rader släcks; de fyra som inte får det behåller sin egen bild.
+		Den dubbla ytan är priset, och det är rätt pris — en extra knapp
+		är irriterande, en dörr som inte går att öppna är en blockerare. ]]
 	local kvarNative = {}
 	for _, pr in ipairs(allaSex) do
 		if pr.Style ~= Enum.ProximityPromptStyle.Custom then
 			table.insert(kvarNative, pr.Name)
 		end
 	end
-	check("ingen prompt inom räckvidd behåller Roblox standard-UI",
-		#kvarNative == 0, table.concat(kvarNative, ", "))
-	check("och alla sex står i registret, inte bara de två raderna",
-		N._slackta() == 6, ("%d"):format(N._slackta()))
+	check("bara de som fick en rad har tappat Roblox standard-UI",
+		#kvarNative == 4, ("%d behöll sin bild: %s"):format(#kvarNative,
+			table.concat(kvarNative, ", ")))
+	check("registret rymmer exakt raderna, inte allt inom räckvidd",
+		N._slackta() == 2, ("%d"):format(N._slackta()))
 
 	--[[ AKTIVERINGEN är orörd på en bortfiltrerad prompt: ingen rad, men
 	     promptens egen väg fungerar precis som förut. ]]
@@ -640,7 +658,7 @@ do
 
 	rot.Position = Vector3.new(0, 0, 0)
 	N.satRider(false)
-	check("de släcks igen när hon kommer tillbaka", N._slackta() == 6,
+	check("raderna släcks igen när hon kommer tillbaka", N._slackta() == 2,
 		("%d"):format(N._slackta()))
 	N.stopp()
 	local efterStopp = true
@@ -822,6 +840,70 @@ do
 	N.satRider(false)
 	check("utan pekskärm byggs ingenting", #N._rader() == 0)
 	UIS.TouchEnabled = true
+	N.stopp()
+end
+
+--[[ ══ EN AFFORDANS FÅR BARA TAS BORT AV EN SOM ERSÄTTER DEN ══════════
+
+	SPELTEST 2026-09-21 (#264): Tobias såg «Open — Door» och kunde inte
+	öppna dörren. Rutten genom stallet var stängd.
+
+	`rita()` släckte allt inom RÄCKVIDD men ritade rader bara för
+	URVALET. En prompt under radtaket blev varken rad eller knapp —
+	Roblox bild borttagen, ingen egen satt dit. Modulen beskrev själv
+	felklassen redan vid `nara` («varken rad eller knapp»), men den
+	gången rättades bara ordningen för «Rida nu». Orsaken låg kvar.
+
+	Taket är fem rader, och på en telefon ofta två eller tre. En
+	stallgång rymmer lätt fler prompter än så. Det här provet håller
+	invarianten: SLÄCKTA ska aldrig bli fler än RADERNA. ]]
+do
+	local UIS = game:GetService("UserInputService")
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+	N.satRider(false)
+
+	--[[ Fler prompter än det finns rader, alla inom räckvidd. ]]
+	--[[ `nyPrompt` lämnar TVÅ värden (prompt, del). Skrivet utan
+		parenteser gick båda in i `table.insert`, som då läste delen som
+		ett index — provet kraschade i stället för att mäta. ]]
+	local flock = {}
+	for i = 1, 9 do
+		local p = nyPrompt("Sak" .. i, "Öppna", "Dörr " .. i,
+			Vector3.new(i * 0.3, 0, 0))
+		table.insert(flock, p)
+	end
+	N.satRider(false)
+
+	local rader = #N._rader()
+	local slackta = N._slackta()
+	check("fler prompter än rader ryms — det är premissen",
+		#flock > rader, ("%d prompter, %d rader"):format(#flock, rader))
+	check("INGEN PROMPT SLÄCKS UTAN ATT FÅ EN RAD",
+		slackta <= rader,
+		("%d släckta mot %d rader"):format(slackta, rader))
+
+	--[[ Och det avgörande: var och en som tappat Roblox bild måste ha
+		en rad att tryckas på i stället. ]]
+	local utanVagIn = {}
+	for _, p in ipairs(flock) do
+		if p.Style == Enum.ProximityPromptStyle.Custom then
+			local harRad = false
+			for _, r in ipairs(N._rader()) do
+				if r == p or r == p.Name or r == p.ActionText then harRad = true end
+			end
+			if not harRad and slackta > rader then
+				table.insert(utanVagIn, p.Name)
+			end
+		end
+	end
+	check("ingen prompt står utan väg in", #utanVagIn == 0,
+		table.concat(utanVagIn, " | "))
+
+	for _, p in ipairs(flock) do
+		if p.Parent then p.Parent:Destroy() end
+	end
 	N.stopp()
 end
 

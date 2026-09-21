@@ -523,9 +523,9 @@ local function rita()
 	     avläsning av samma tilldelning servern gjort — ingen ny kanal. ]]
 	local minHast = PreparationController.hastId()
 	local platser = Naromrade.radplatser()
-	--[[ Två frågor, två svar: vad ÄR i närheten, och vad ska bli rader.
-	     Den första styr släckningen, den andra listan. ]]
-	local alla = Naromrade.iRackvidd((rot :: BasePart).Position, { workspace })
+	--[[ EN fråga, ett svar: vad blir rader. Det styr numera BÅDE listan
+	     och släckningen — se rättelsen längre ned. Tidigare fanns två
+	     mängder här, och att de kunde gå isär var hela felet. ]]
 	senaste = Naromrade.nara((rot :: BasePart).Position, { workspace },
 		minHast, platser)
 	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
@@ -548,12 +548,38 @@ local function rita()
 		Ordningen spelar roll — tänd först det som lämnat räckvidden, släck
 		sedan det som är kvar — annars kan en prompt som ligger kvar hinna
 		tändas och släckas i samma bildruta. ]]
-	local inom: { [ProximityPrompt]: boolean } = {}
-	for _, p in ipairs(alla) do inom[p] = true end
+	--[[ ── RÄTTELSE #264: SLÄCK BARA DET DU ERSÄTTER ─────────────────
+
+		SPELTEST 2026-09-21: Tobias såg «Open — Door» och kunde inte
+		öppna dörren. Rutten genom stallet var stängd.
+
+		Raden ovanför löd `for _, p in ipairs(alla) do slack(p) end` —
+		allt inom RÄCKVIDD släcktes, medan rader bara ritas för URVALET.
+		En prompt som föll under radtaket blev därmed varken rad eller
+		knapp: Roblox bild borttagen, ingen egen satt dit.
+
+		Modulen beskrev själv den felklassen redan, vid `nara`:
+		«Eftersom touch-ytan äger promptbilderna var den då varken rad
+		eller knapp.» Den gången rättades ORDNINGEN så att «Rida nu»
+		fick en rad. Orsaken låg kvar: taket är 2–3 rader på en telefon,
+		och i en stallgång konkurrerar dörren med sadel, träns, boxfront
+		och ledknapp. Faller den ur listan är den oåtkomlig.
+
+		Invarianten är enkel och gäller utan undantag: EN AFFORDANS FÅR
+		BARA TAS BORT AV EN SOM ERSÄTTER DEN. Släckningen följer därför
+		urvalet, inte räckvidden.
+
+		Priset är det review av `c3f48c7` ville undvika: en prompt som
+		listan valt bort kan visa Roblox egen knapp igen. Det är en
+		dubbel yta — irriterande. Alternativet var en dörr som inte går
+		att öppna. Ska den dubbleringen bort är det ett FILTRERINGSVAL i
+		`nara`, inte ett skäl att lämna något utan väg in. ]]
+	local visas: { [ProximityPrompt]: boolean } = {}
+	for _, p in ipairs(senaste) do visas[p] = true end
 	for p in pairs(slackta) do
-		if not inom[p] then tandIgen(p) end
+		if not visas[p] then tandIgen(p) end
 	end
-	for _, p in ipairs(alla) do slack(p) end
+	for _, p in ipairs(senaste) do slack(p) end
 
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
