@@ -2,9 +2,14 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for SOURCE-TYPPROVET (order 5756689051). AVVAPNAS DIREKT
-# EFTERAT — ta bort `pull_request:` och dess `types:`-rad sa fort
-# matningen ar redovisad.
+# AVVAPNAD. Source-typprovet ar kort — run 35571485739:
+#
+#   F  Rojos fil med ProtectedString  -> 200 (version 11)
+#   G  var fil med string             -> 400
+#
+# TVARTOM mot hypotesen, och entydigt: ProtectedString accepteras (F),
+# och vanlig string raddar inte var fil (G). SOURCE-TYPEN AR UTESLUTEN
+# fran bada hallen.
 #
 # VAGEN HIT: mutationsprovet (run 35570961741) gav 200 pa alla fem
 # armar och uteslot tabbar, External, namespace-attribut och Workspace.
@@ -38,8 +43,6 @@ name: Prov — minimal publicering
 # tillbaka originalets exakta bytes.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
