@@ -32,6 +32,7 @@ DIAGNOSTIK, INTE EN GRIND. Skriver bara filer — publicerar ingenting.
 import argparse
 import hashlib
 import pathlib
+import re
 import sys
 
 #[[ Ordagrant ur tools/bygg-place.py:239-242. ]]
@@ -47,6 +48,12 @@ ROT_NAMESPACE = (
 #   variera BADE External och indrag, och da vore den inte enarmad.
 #   Ordern ber om samma position och ordning, vilket ar det som bevaras. ]]
 EXTERNAL = "  <External>null</External>\n  <External>nil</External>\n"
+
+#[[ Arm L ska likna VAR fil, dar indraget ar tabbar hela vagen — da ska
+#   aven External-noderna ha tabb, som bygg-place.py:243-244 skriver dem.
+#   Arm C anvander daremot basens tva mellanslag, for att den armen bara
+#   far variera External och inte indraget. ]]
+EXTERNAL_TABB = "\t<External>null</External>\n\t<External>nil</External>\n"
 
 #[[ Workspace-noden i bygg-place.py:s EXAKTA serialiserade form, som
 #   ordern begar — inklusive dess tabbindrag och RBX-referent. Det gor
@@ -166,11 +173,40 @@ def bevisa_rot(a, d):
     return "bara rad 1 skiljer; alla ovriga rader identiska"
 
 
+def alla(text):
+    """Alla fyra envelope-egenskaperna pa en gang, for arm L.
+
+    Indraget vands forst, sa att de infogade noderna far TABBAR precis
+    som tools/bygg-place.py skriver dem. Sedan infogas External OCH
+    Workspace i ETT block, i den ordning var fil har dem: root,
+    External x2, Workspace. Tva separata infogningar efter roten hade
+    gett omvand ordning, eftersom den andra trycker ner den forsta.
+
+    REFERENTKROCKEN: Workspace-noden bar referent="RBX0", och efter
+    referentomskrivningen finns redan en RBX0 i filen. Tva instanser med
+    samma referent vore en ATTONDE, oavsiktlig skillnad — och kanske i
+    sig ett skal for avslag. Alla befintliga referenter skjuts darfor
+    upp ett steg forst, precis som var egen fil numrerar dem nar
+    bygg-place.py stoppar in Workspace som RBX0.
+    """
+    t = mutera_indrag(text)
+    t = re.sub(r'referent="RBX(\d+)"',
+               lambda m: 'referent="RBX%d"' % (int(m.group(1)) + 1), t)
+    t = efter_roten(t, EXTERNAL_TABB + WORKSPACE)
+    return mutera_rot(t)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--bas", required=True, help="Rojos rbxlx-bygge")
-    p.add_argument("--katalog", required=True)
+    p.add_argument("--katalog", help="skriv de fem armarna hit")
+    p.add_argument("--alla", metavar="UTFIL",
+                   help="arm L: lagg ALLA fyra envelope-egenskaperna pa en "
+                        "gang i stallet for en per fil")
     a_arg = p.parse_args()
+
+    if not a_arg.katalog and not a_arg.alla:
+        fel("ange --katalog (fem armar) eller --alla (arm L)")
 
     basvag = pathlib.Path(a_arg.bas)
     if not basvag.is_file() or basvag.stat().st_size == 0:
@@ -179,6 +215,44 @@ def main():
     A = rabytes.decode("utf-8")
     if A.encode("utf-8") != rabytes:
         fel("basen ar inte ren UTF-8 — muteringen far inte andra kodningen")
+
+    if a_arg.alla:
+        L = alla(A)
+        #[[ Bevisen: CDATA orort, och varje egenskap faktiskt pa plats. ]]
+        import re as _re
+        if _re.findall(r"<!\[CDATA\[(.*?)\]\]>", A, _re.S) != \
+           _re.findall(r"<!\[CDATA\[(.*?)\]\]>", L, _re.S):
+            fel("CDATA-innehallet andrades")
+        refs = _re.findall(r'referent="([^"]*)"', L)
+        kontroller = (
+            ("tabbindrag", L.count("\n\t<Item") > 0 and "\n  <Item" not in L),
+            ("External-noder", L.count("<External>") == 2),
+            ("Workspace-nod", '<Item class="Workspace" referent="RBX0">' in L),
+            ("namespace-rot", L.startswith(ROT_NAMESPACE)),
+            #[[ Utan den har raden slapp arm L igenom med tva instanser
+            #   pa referent RBX0, vilket hade varit en attonde skillnad. ]]
+            ("referenter unika", len(refs) == len(set(refs))),
+            ("External FORE Workspace",
+             L.index("<External>") < L.index('class="Workspace"')),
+        )
+        for namn, ok in kontroller:
+            if not ok:
+                fel("arm L saknar %s" % namn)
+        ut = pathlib.Path(a_arg.alla)
+        ut.parent.mkdir(parents=True, exist_ok=True)
+        b = L.encode("utf-8")
+        ut.write_bytes(b)
+        print("ARM L — alla fyra envelope-egenskaperna pa en gang")
+        print("  bas      : %s (%d byte)" % (basvag.name, len(rabytes)))
+        print("  utfil    : %s" % ut.name)
+        print("  storlek  : %d byte   (%+d mot basen)"
+              % (len(b), len(b) - len(rabytes)))
+        print("  sha256   : %s" % hashlib.sha256(b).hexdigest())
+        for namn, _ in kontroller:
+            print("  pa plats : %s" % namn)
+        print("  CDATA-block oforandrade (%d st): JA"
+              % len(_re.findall(r"<!\[CDATA\[(.*?)\]\]>", A, _re.S)))
+        return 0
 
     kat = pathlib.Path(a_arg.katalog)
     kat.mkdir(parents=True, exist_ok=True)

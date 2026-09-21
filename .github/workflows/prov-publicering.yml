@@ -2,43 +2,42 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# AVVAPNAD. J/K ar kort — run 35573405949:
+# ARMERAD for ARM L (order 5757090260). AVVAPNAS DIREKT EFTERAT.
 #
-#   J  Rojos fil + BADA vara egenskaper  -> 200 (version 12)
-#   K  var fil  - BADA                   -> 400
+# J/K (run 35573405949) gav 200/400 och uteslot referentstil och
+# RunContext. Men varje egenskap har provats EN OCH EN mot Rojos fil —
+# aldrig i KOMBINATION. Arm K bar fortfarande tabbar, ProtectedString,
+# Workspace, External och namespace-roten SAMTIDIGT.
 #
-# ENUMERATED_DIFFS_EXHAUSTED. Referentstil och RunContext ar uteslutna.
+# «Individuellt ofarlig» ar inte samma sak som «gemensamt ofarlig». En
+# langdgrans, en parser som tal en avvikelse men inte fem, eller en
+# vaxelverkan mellan namespace-roten och External-noderna skulle ge
+# exakt det vi ser: varje enkelarm gron, kombinationen rod.
 #
-# MEN: alla egenskaper ar provade EN OCH EN, aldrig i KOMBINATION. K bar
-# fortfarande tabbar, ProtectedString, Workspace, External och
-# namespace-roten SAMTIDIGT. Nasta prov ska lagga alla pa Rojos fil pa
-# en gang.
+# ARM L lagger ALLA SJU pa Rojos fil pa en gang:
 #
-# UTESLUTET HITTILLS, allt matt och inget antaget: formatet (XML
-# fungerar), nyckel, scope, endpoint, auth, tabbindrag, <External>,
-# namespace-attribut, Workspace-noden, och source-typen ProtectedString
-# kontra string — den sista provad at bada hallen (F=200, G=400).
+#   L=400 -> orsaken ar en VAXELVERKAN inuti mangden. Bisektera
+#            kombinationen, max tre ronder. Gissa inte vilken.
+#   L=200 -> mangden ar verkligen tomd, bade var for sig och
+#            tillsammans. Da ar giltighetskontrollerad delta-debugging
+#            av den riktiga artefakten ratt metod.
 #
-# KVAR I DEN UPPRAKNADE MANGDEN star tva saker:
+# TVA FEL SOM FANGADES INNAN L KORDES, bada skulle ha gjort armen
+# ogiltig genom att smuggla in en ATTONDE skillnad:
 #
-#     referentstil    var RBX0..RBX82   Rojo 0..81
-#     RunContext      var saknas        Rojo <token name="RunContext">0</token>
+#   - Workspace-noden bar referent="RBX0", som krockade med den RBX0
+#     referentomskrivningen redan skapat. Tva instanser pa samma
+#     referent. Alla befintliga referenter skjuts nu upp ett steg
+#     forst, precis som bygg-place.py numrerar nar den stoppar in
+#     Workspace som RBX0.
+#   - External och Workspace infogades i tva anrop efter roten, vilket
+#     gav omvand ordning mot var fil. De infogas nu i ETT block.
 #
-# Bada laggs pa EN GANG, at bada hallen, sa att mangden toms i samma
-# tva publiceringar:
-#
-#   J  Rojos fil + BADA   -> 400: orsaken finns i mangden, bisektera inuti
-#   K  var fil  - BADA    -> 200: bekraftar fran andra hallet
-#
-#   J=200 och K=400 -> mangden ar TOM pa forklaringar. Blockeraren
-#   ligger utanfor allt jag lyckats rakna upp, och da ar delta-debugging
-#   av den riktiga artefakten ratt nasta metod — inte fler gissningar.
-#
-# Det utfallet ar det troliga: referenter ar OANVANDA i bada filerna
-# (noll <Ref>-egenskaper), och Roblox egen serializer skriver sjalv
-# RBX-prefixade referenter.
+# Bada kontrolleras nu av verktyget, som avbryter om de ateruppstar.
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
@@ -66,8 +65,6 @@ jobs:
           sudo install -m 0755 /tmp/rojo/rojo /usr/local/bin/rojo
           rojo --version
 
-      # De tva kallartefakterna: Rojos (kand 200) och var egen (kand 400).
-      # Bada byggs ur exakt den head som kors.
       - name: Bygg kallartefakterna
         env:
           UBRF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -79,31 +76,43 @@ jobs:
             echo "$f  $(stat -c%s "$f") byte  $(sha256sum "$f" | cut -d' ' -f1)"
           done
 
-      # Verktyget bevisar sjalvt varje pastaende och avbryter annars:
-      # noll <Ref>-egenskaper, referentbytet reversibelt till originalet,
-      # RunContext-andringen reversibel, CDATA oforandrat, antalet
-      # referenter lika fore och efter.
-      - name: J och K — alla kvarvarande skillnader, med bevis
+      # ARM L byggs genom att KEDJA de tre verktyg som redan finns och
+      # som var och ett bar sina egna bevis — hellre an att duplicera
+      # logiken i ett fjarde verktyg som kunde glida ifran dem.
+      #
+      #   steg 1  referenter -> RBX, RunContext bort
+      #   steg 2  Source: string -> ProtectedString
+      #   steg 3  tabbindrag, External, Workspace, namespace-rot
+      - name: Bygg arm L — alla sju skillnaderna
         run: |
-          echo "=== J: Rojos fil + BADA skillnaderna (ska bryta) ==="
-          python3 tools/kvarvarande-diff.py --in /tmp/rojo-kall.rbxlx --ut /tmp/jk/J.rbxlx --riktning j
+          echo "=== steg 1: referenter + RunContext ==="
+          python3 tools/kvarvarande-diff.py --in /tmp/rojo-kall.rbxlx --ut /tmp/L/steg1.rbxlx --riktning j
           echo ""
-          echo "=== K: var fil - BADA skillnaderna (ska laga) ==="
-          python3 tools/kvarvarande-diff.py --in /tmp/var-kall.rbxlx --ut /tmp/jk/K.rbxlx --riktning k
+          echo "=== steg 2: Source-typ ==="
+          python3 tools/byt-source-typ.py --in /tmp/L/steg1.rbxlx --ut /tmp/L/steg2.rbxlx --till protected
+          echo ""
+          echo "=== steg 3: envelope, fyra pa en gang ==="
+          python3 tools/mutera-xml.py --bas /tmp/L/steg2.rbxlx --alla /tmp/L/L.rbxlx
+          echo ""
+          echo "=== L mot var riktiga artefakt ==="
+          echo "L   : $(stat -c%s /tmp/L/L.rbxlx) byte"
+          echo "var : $(stat -c%s /tmp/var-kall.rbxlx) byte"
+          python3 - <<'PY'
+          import re, xml.etree.ElementTree as ET
+          t = open('/tmp/L/L.rbxlx', encoding='utf-8').read()
+          ET.fromstring(t)
+          refs = re.findall(r'referent="([^"]*)"', t)
+          print('L: XML VALID, referenter=%d unika=%d' % (len(refs), len(set(refs))))
+          assert len(refs) == len(set(refs)), 'dubblerad referent i arm L'
+          assert not '<Ref' in t, 'ovantad <Ref>-egenskap'
+          print('<Ref>-egenskaper: 0')
+          PY
 
       # Gron exitkod betyder «matning erhallen», inte «publicering
       # lyckades». Las skriptets ramatning, aldrig exitkoden.
-      # Sekventiellt i samma jobb, sa tva publiceringar aldrig overlappar.
-      - name: J — Rojos fil med vara egenskaper
+      - name: L — Rojos innehall i var serialisering
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/jk/J.rbxlx --delprov J-rojo-med-vara
-
-      - name: K — var fil med Rojos egenskaper
-        env:
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-          UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
-          UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/jk/K.rbxlx --delprov K-var-med-rojos
+        run: python3 tools/prova-publicering.py --fil /tmp/L/L.rbxlx --delprov L-alla-skillnader
