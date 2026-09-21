@@ -192,6 +192,12 @@ local function begarAvsittning()
 			— en legitim rättelse, och en ritt som fortsätter ska inte
 			ha fått en summering. ]]
 		if svar ~= true then
+			--[[ Servern återförenar oss: den skickar `MountChanged` med
+			     oss själva som ryttare om den fortfarande anser att vi
+			     sitter upp, och klientens lyssnare sätter upp igen. Det
+			     PÅSTOD den här koden förut utan att det var sant — se
+			     `HorseService.aterforena`, som lades till för att göra
+			     påståendet till en funktion. ]]
 			warn("[Horse] avsittningen nekades: " .. tostring(skal))
 			return
 		end
@@ -310,14 +316,27 @@ local function mount(model: Model, rittId: string?)
 	local anlaggning = workspace:FindFirstChild("Anläggning")
 	--[[ HÄSTEN FÖRE LEKTIONEN. `UgnetaTema` behöver veta vem hon är för
 	     att kunna säga «det där kom från henne», och behöver hennes lynne
-	     för att kunna avgöra OM det gjorde det. Saknas stats tiger den om
-	     spänningen hellre än skyller den på ryttaren.
+	     för att kunna avgöra OM det gjorde det.
 
-	     Fälten är riggens egna namn (`Skygghet`), inte hittade på: samma
-	     väg som `MovementController` läser dem. ]]
+	     DE TVÅ FÄLTEN KOMMER FRÅN OLIKA HÅLL, och det är inte en
+	     inkonsekvens:
+
+	       `skygghet`  är en EGENSKAP hos hästen och ligger i riggens
+	                   stats, samma väg som `MovementController` läser den.
+	       `dagsform`  är ett TILLSTÅND servern räknar ut vid uppsittning
+	                   ur spelarens egen skötsel. Den finns inte i stats
+	                   och får inte gissas — servern replikerar den som
+	                   attributet `Dagsform` (HorseService.setRider).
+
+	     Re-review av `269bec5`: jag läste förut `stats.Dagsform`, som
+	     ingen någonsin satt. Fältet var alltid `nil`, och regeln föll
+	     tillbaka på skyggheten utan att någon kunde se det.
+
+	     Saknas attributet blir fältet `nil` — och `hastensEgen` svarar då
+	     «går inte att avgöra» i stället för att frikänna hästen. ]]
 	LektionController.satHast(model.Name, {
 		skygghet = tonumber(stats.Skygghet),
-		dagsform = tonumber(stats.Dagsform),
+		dagsform = tonumber(model:GetAttribute("Dagsform")),
 	})
 	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
 	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är

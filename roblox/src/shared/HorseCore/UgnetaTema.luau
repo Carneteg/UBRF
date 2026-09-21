@@ -123,24 +123,45 @@ end
 	Webbens regel: är hästen skygg eller i dålig dagsform tillskrivs
 	spänningen HENNE, inte ryttaren.
 
-	OCH DET VIKTIGA OMVÄNDA: vet vi inget om hästen svarar funktionen
-	`nil` — «går inte att avgöra» — och anroparen tiger. Att falla
-	tillbaka på «då var det nog ryttaren» hade varit att skylla på
+	OCH DET VIKTIGA OMVÄNDA: vet vi inte tillräckligt om hästen svarar
+	funktionen `nil` — «går inte att avgöra» — och anroparen tiger. Att
+	falla tillbaka på «då var det nog ryttaren» hade varit att skylla på
 	spelaren på saknad evidens, och det är precis det den här grinden
-	finns för att hindra. ]]
+	finns för att hindra.
+
+	── PARTIELL KONTEXT ÄR OCKSÅ OKÄND (re-review av `269bec5`) ──────
+
+	Första versionen krävde bara att NÅGOT fält fanns. En häst med känd
+	skygghet men okänd dagsform frikändes därför: `skygghet = 0.05`
+	svarade `false`, alltså «det var inte hennes dag» — fast dagsformen
+	var det enda som kunde ha sagt det. Ryttaren fick rättelsen.
+
+	Regeln är därför asymmetrisk, och asymmetrin är hela poängen:
+
+	  ETT känt fält som säger JA räcker — hon HAR en dålig dag, och
+	  resten kan inte göra det osant.
+
+	  Ett NEJ kräver att ALLA fält är kända. Så länge något saknas kan
+	  det saknade vara just det som skulle ha sagt ja.
+
+	Bevisbördan ligger alltså på den som vill lägga felet på spelaren. ]]
+UgnetaTema.HAST_FALT = { "skygghet", "dagsform" }
+
 function UgnetaTema.hastensEgen(hast: { [string]: any }?): boolean?
 	if hast == nil then return nil end
-	local skygg = hast.skygghet
-	local dagsform = hast.dagsform
-	if type(skygg) ~= "number" and type(dagsform) ~= "number" then
-		return nil
+	local saknas = false
+	for _, falt in UgnetaTema.HAST_FALT do
+		local v = hast[falt]
+		if type(v) ~= "number" then
+			saknas = true
+		elseif falt == "skygghet" and v > UgnetaTema.SKYGG_TROSKEL then
+			return true
+		elseif falt == "dagsform" and v < UgnetaTema.DAGSFORM_TROSKEL then
+			return true
+		end
 	end
-	if type(skygg) == "number" and skygg > UgnetaTema.SKYGG_TROSKEL then
-		return true
-	end
-	if type(dagsform) == "number" and dagsform < UgnetaTema.DAGSFORM_TROSKEL then
-		return true
-	end
+	--[[ Inget känt fält sa ja. Säger vi nej nu måste vi ha sett allt. ]]
+	if saknas then return nil end
 	return false
 end
 

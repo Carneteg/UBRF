@@ -246,6 +246,27 @@ do
 		("nil→%s  tom→%s"):format(tostring(T.hastensEgen(nil)),
 			tostring(T.hastensEgen({}))))
 
+	--[[ PARTIELL KONTEXT ÄR OCKSÅ OKÄND (re-review av `269bec5`).
+
+	     Första versionen krävde bara att NÅGOT fält fanns. En lugn häst
+	     med okänd dagsform frikändes därför — `skygghet = 0.05` svarade
+	     `false`, alltså «inte hennes dag», fast dagsformen var det enda
+	     som kunde ha sagt det. Ryttaren fick rättelsen på saknad evidens.
+
+	     Regeln är asymmetrisk med flit: ett JA från ett känt fält räcker,
+	     ett NEJ kräver att allt är känt. ]]
+	prova("ETT LUGNT LYNNE MEN OKÄND DAGSFORM ÄR OKÄNT, INTE FRIKÄNT",
+		T.hastensEgen({ skygghet = 0.05 }) == nil,
+		tostring(T.hastensEgen({ skygghet = 0.05 })))
+	prova("och en god dagsform med okänt lynne likaså",
+		T.hastensEgen({ dagsform = 0.95 }) == nil,
+		tostring(T.hastensEgen({ dagsform = 0.95 })))
+	--[[ Men ett JA behöver inte hela bilden: är hon skygg spelar det
+	     ingen roll vad dagsformen säger. ]]
+	prova("ett JA räcker även med halva bilden",
+		T.hastensEgen({ skygghet = 0.5 }) == true
+			and T.hastensEgen({ dagsform = 0.2 }) == true)
+
 	local hogSpanning = T.SPANNING_TROSKEL + 0.1
 
 	--[[ Skygg häst, hög spänning: beskedet tillskrivs HENNE. ]]

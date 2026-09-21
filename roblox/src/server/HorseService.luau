@@ -426,12 +426,28 @@ local function setRider(session: Session, player: Player?)
 	     en mätning som hör till någon annan. ]]
 	--[[ Dagsformen avgörs NÄR hon sätts upp på, inte när hon registreras:
 		skötseln sker mellan de två, och det är den som ska synas. ]]
+	--[[ DAGSFORMEN ÄR SERVERNS, OCH KLIENTEN SKA FÅ VETA DEN.
+
+	     Den räknades förut ut här, göts in i `session.energi` och glömdes
+	     sedan bort som eget begrepp. `UgnetaTema` behöver den för att
+	     kunna skilja «hästen har en dålig dag» från «ryttaren sitter
+	     fel», och klienten hade ingen väg till den alls — attributet
+	     `Dagsform` fanns inte, så regeln föll tillbaka på skyggheten.
+
+	     Attributet sätts av samma skäl som `RidSession` några rader ned:
+	     det REPLIKERAS, och då hittar varje väg in i ritten samma värde.
+	     Saknas kroken, eller är det ingen som sitter upp, tas attributet
+	     BORT. Det är avsiktligt: en klient ska läsa «okänd» och tiga,
+	     inte ärva föregående ryttares dagsform. ]]
+	local dagsform: number? = nil
 	if player and dagsformHook then
 		local ok, d = pcall(dagsformHook, player)
 		if ok and typeof(d) == "number" then
-			session.energi = Svar.startEnergi(math.clamp(d, 0, 1))
+			dagsform = math.clamp(d, 0, 1)
+			session.energi = Svar.startEnergi(dagsform)
 		end
 	end
+	session.rig.model:SetAttribute("Dagsform", dagsform)
 
 	session.polletter = RATE_TAK
 	session.lastPollett = os.clock()
@@ -861,6 +877,24 @@ end
 	Dubbel avsittning är i sig inget fel — `Pass` säger det uttryckligen, och
 	sitsens `Occupant`-lyssnare kan nå hit strax efter spelarens egen
 	begäran. Det som ändras är bara att nejet går att läsa. ]]
+--[[ SÄG VAD SOM FAKTISKT GÄLLER.
+
+	Anropas när en avsittning nekats. Servern äger sanningen, så den
+	skickar sitt eget läge till just den klienten: rider hon fortfarande
+	får hon `MountChanged` med sig själv som ryttare, och klientens
+	lyssnare sätter upp henne igen.
+
+	SVARAR `false` NÄR DET INTE FANNS NÅGOT ATT RÄTTA. Är `byRider` tom
+	anser servern inte att hon rider — då var klientens rivning RÄTT, och
+	att skicka något hade varit att hitta på ett läge. Skillnaden är värd
+	ett returvärde: ett prov ska kunna se att tystnaden var ett beslut. ]]
+function HorseService.aterforena(player: Player): boolean
+	local model = byRider[player]
+	if not model then return false end
+	Net.get("MountChanged"):FireClient(player, model, Aktor.klient(player))
+	return true
+end
+
 function HorseService.dismount(player: Player): (boolean, string?)
 	local model = byRider[player]
 	if not model then return false, "pass.rider_inte" end
@@ -1344,10 +1378,34 @@ function HorseService.start()
 
 	Net.get("MountRequest").OnServerInvoke = Skopa.grind("MountRequest",
 		HorseService.mountRequest)
-	Net.get("DismountRequest").OnServerInvoke = Skopa.grind("DismountRequest",
+	--[[ ── ETT NEJ MÅSTE ÅTERFÖRENA, INTE BARA NEKA ──────────────────
+
+	     ChatGPT-re-review av `269bec5`. Klienten river LOKALT innan den
+	     frågar — säkerhet före undervisning — och står alltså av hästen
+	     medan servern svarar. Svarar servern NEJ uppstår en delad
+	     sanning: servern har kvar ryttaren i `byRider`, klienten har
+	     rivit ekipaget.
+
+	     Det värsta fallet är `takt.for_snabbt`. Då når anropet aldrig
+	     `HorseService.dismount`, så ingenting i tjänsten kan upptäcka
+	     att något behöver rättas — och spelaren blir stående bredvid en
+	     häst hon enligt servern fortfarande sitter på.
+
+	     Kommentaren i `begarAvsittning` påstod att «servern rättar oss
+	     via MountChanged om den vill». Den gjorde den inte. Nu gör den
+	     det, och rättelsen ligger utanför `Skopa.grind` så att den
+	     täcker skopans eget nej lika väl som tjänstens. ]]
+	local dismountGrind = Skopa.grind("DismountRequest",
 		function(player)
 			return HorseService.dismount(player)
 		end)
+	Net.get("DismountRequest").OnServerInvoke = function(player, ...)
+		local ok, skal = dismountGrind(player, ...)
+		if ok ~= true then
+			HorseService.aterforena(player)
+		end
+		return ok, skal
+	end
 	Net.get("StateSync").OnServerEvent:Connect(onStateSync)
 	--[[ #233 Fas 4b. Den semantiska vägen in. Ligger bredvid StateSync med
 	     flit: de två är nu tydligt olika saker — den ena är en AVSIKT som

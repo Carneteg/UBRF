@@ -316,6 +316,93 @@ check("och farten är nollad så hon inte slungas iväg",
 	krot.AssemblyLinearVelocity.Magnitude == 0,
 	tostring(krot.AssemblyLinearVelocity.Magnitude))
 
+--[[ ══ 8. ETT NEJ ÅTERFÖRENAR, OCH DAGSFORMEN REPLIKERAS ════════════
+
+	ChatGPT-re-review av `269bec5`, båda punkterna, genom de RIKTIGA
+	produktionsvägarna: `HorseService.start()` installerar bindningen och
+	provet anropar `DismountRequest.OnServerInvoke` — inte en kopia av
+	den. ]]
+print("\n── Ett nej återförenar, och dagsformen replikeras ──")
+do
+	HorseService.start()
+	local dr = Networking.get("DismountRequest")
+	local mc = Networking.get("MountChanged")
+	check("DismountRequest har en riktig handlare",
+		type(dr.OnServerInvoke) == "function")
+
+	--[[ ── DAGSFORMEN ─────────────────────────────────────────────
+
+		Den räknades ut vid uppsittning och göts in i `session.energi`.
+		Klienten hade ingen väg till den: `init.client` läste
+		`stats.Dagsform`, som ingen någonsin satte. Fältet var alltid
+		`nil` och `UgnetaTema` föll tillbaka på skyggheten — utan att
+		något kunde upptäcka det. ]]
+	local spelare8 = { Name = "DagsformSaga", UserId = 8,
+		Character = kar, CharacterAdded = __signal_ny(),
+		CharacterRemoving = __signal_ny() }
+
+	HorseService.setDagsformHook(function() return 0.30 end)
+	check("hon sitter upp", HorseService.tryMount(spelare8, jack) == true)
+	check("DAGSFORMEN REPLIKERAS SOM ATTRIBUT",
+		jack:GetAttribute("Dagsform") == 0.30,
+		tostring(jack:GetAttribute("Dagsform")))
+
+	--[[ ── ÅTERFÖRENINGEN ─────────────────────────────────────────
+
+		Det värsta fallet är `takt.for_snabbt`: anropet når aldrig
+		tjänsten, så ingenting DÄR kan upptäcka att klienten redan rivit
+		sitt ekipage. Skopan töms därför FÖRST, medan hon sitter upp, och
+		sedan nekas en riktig avsittning. ]]
+	do
+		local tak = Skopa.GRANSER.DismountRequest.tak
+		for _ = 1, tak do dr.OnServerInvoke(spelare8) end
+		--[[ Första anropet satte henne faktiskt av. Upp igen, så att
+		     servern verkligen anser att hon rider när nejet kommer. ]]
+		HorseService.tryMount(spelare8, jack)
+
+		mc._skickat = {}
+		local ok, skal = dr.OnServerInvoke(spelare8)
+		check("den nekas av takten", ok == false and skal == "takt.for_snabbt",
+			("%s / %s"):format(tostring(ok), tostring(skal)))
+
+		local aterforenad = false
+		for _, paket in ipairs(mc._skickat) do
+			if paket[1] == spelare8 and paket[2] == jack then
+				aterforenad = true
+			end
+		end
+		check("ETT NEKAT NEJ SKICKAR MountChanged TILL HENNE",
+			aterforenad == true,
+			("%d paket"):format(#mc._skickat))
+		--[[ …och servern har henne kvar. Det är precis den delade
+		     sanningen återföreningen finns för: klienten har rivit,
+		     servern har inte. ]]
+		check("och servern anser fortfarande att hon rider",
+			sits.Occupant == khum, tostring(sits.Occupant))
+	end
+
+	--[[ INGEN UPPFUNNEN ÅTERFÖRENING. Anser servern INTE att hon rider
+	     var klientens rivning rätt, och då ska ingenting skickas. Utan
+	     den här raden vore grinden uppfylld av en server som alltid
+	     skickar `MountChanged`. ]]
+	do
+		check("hon sitter av på riktigt",
+			HorseService.dismount(spelare8) == true)
+		mc._skickat = {}
+		check("ÅTERFÖRENINGEN AVSTÅR NÄR DET INTE FANNS NÅGOT ATT RÄTTA",
+			HorseService.aterforena(spelare8) == false
+				and #mc._skickat == 0,
+			("%d paket"):format(#mc._skickat))
+		--[[ Och attributet följer med henne ut: nästa ryttare ska inte
+		     ärva föregåendes dagsform. ]]
+		check("dagsformen städas vid avsittning",
+			jack:GetAttribute("Dagsform") == nil,
+			tostring(jack:GetAttribute("Dagsform")))
+	end
+
+	HorseService.setDagsformHook(nil)
+end
+
 __markyta = nil
 __delarILada = nil
 
