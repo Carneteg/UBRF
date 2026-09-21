@@ -1121,33 +1121,79 @@ skyddat("dorrar", function()
 		handlaren tyst — och en `Triggered`-handlare som kastar gör just
 		det — står dörren kvar medan prompten fortsätter lova «Öppna».
 		Precis det speltestet såg. ]]
-	local ororda, oppnadeInte, kollisionKvar = {}, {}, {}
-	local provade = 0
+	--[[ MEKANISMEN: går bladet att öppna, och släpper det igenom?
+
+		`provaOppna` finns i tjänsten just för mätning och kör SAMMA
+		`satt` som prompten kör — inte en andra uträkning av det öppna
+		läget, som hade kunnat vara fel utan att någon märkte det. ]]
+	local gickInte = {}
+	for _, blad in ipairs(dorrar) do
+		if DorrService.provaOppna(blad) ~= true then
+			table.insert(gickInte, blad.Name)
+		end
+	end
+	kolla("VARJE DÖRR GÅR ATT ÖPPNA och släpper igenom",
+		#gickInte == 0,
+		("%d av %d: %s"):format(#gickInte, #dorrar,
+			table.concat(gickInte, " | ")))
+
+	--[[ INMATNINGSVÄGEN: når ett tryck ända fram till handlaren?
+
+		`Triggered` är en HÄNDELSE och har ingen `Fire` — ett försök
+		kastar, och min första version av det här provet gjorde just
+		det på alla tretton. Värre: felgrenen hoppade över
+		rörelsekontrollen, så «dörren öppnas» blev grönt UTAN att något
+		tryckts. En tom lista såg ut som ett bevis.
+
+		Roblox dokumenterade väg är `InputHoldBegin`/`InputHoldEnd`
+		(ProximityPrompt.yaml:439,460). Med `HoldDuration = 0` ska det
+		ge `Triggered` direkt. Metoderna bär `capabilities: UI, Input`
+		och kan därför vägra i en serverkontext utan spelare — då är det
+		en kontextgräns och INTE ett produktionsfel, och det ska synas
+		som skillnaden den är. ]]
+	local fyrade, felmed = 0, nil
+	local kopplingar = {}
 	for _, blad in ipairs(dorrar) do
 		local p = blad:FindFirstChildOfClass("ProximityPrompt")
 		if p then
-			provade += 1
-			local fore = blad.CFrame
-			local okFyr = pcall(function() p.Triggered:Fire() end)
-			if not okFyr then
-				table.insert(ororda, blad.Name .. ":handlaren kastade")
-			elseif blad.CFrame == fore then
-				table.insert(oppnadeInte, blad.Name)
-			end
-			if blad.CanCollide == true and blad.CFrame ~= fore then
-				table.insert(kollisionKvar, blad.Name)
-			end
-			--[[ Stäng igen så att världen lämnas som vi fann den. ]]
-			pcall(function() p.Triggered:Fire() end)
+			table.insert(kopplingar,
+				p.Triggered:Connect(function() fyrade += 1 end))
 		end
 	end
-	kolla("ingen dörrhandlare kastade när den trycktes", #ororda == 0,
-		table.concat(ororda, " | "))
-	kolla("ETT TRYCK ÖPPNAR DÖRREN — bladet rör sig", #oppnadeInte == 0,
-		("%d av %d stod kvar: %s"):format(#oppnadeInte, provade,
-			table.concat(oppnadeInte, " | ")))
-	kolla("en öppen dörr kolliderar inte längre", #kollisionKvar == 0,
-		table.concat(kollisionKvar, " | "))
+	for _, blad in ipairs(dorrar) do
+		local p = blad:FindFirstChildOfClass("ProximityPrompt")
+		if p then
+			local ok, fel = pcall(function()
+				p:InputHoldBegin()
+				p:InputHoldEnd()
+			end)
+			if not ok and felmed == nil then felmed = tostring(fel) end
+		end
+	end
+	for _, c in ipairs(kopplingar) do c:Disconnect() end
+
+	if fyrade > 0 then
+		kolla("ETT TRYCK NÅR HANDLAREN — Triggered fyrade",
+			fyrade >= #dorrar, ("%d av %d"):format(fyrade, #dorrar))
+	else
+		ejMatbar("ett tryck når handlaren",
+			"InputHoldBegin/End bar capabilities UI+Input och naadde inte "
+				.. "handlaren i serverkontexten",
+			felmed or ("0 av %d fyrade; mekanismen ar matt separat ovan")
+				:format(#dorrar))
+	end
+
+	--[[ Världen lämnas som den fanns: `provaOppna` stänger själv efter
+		sig, men ett tryck som gick igenom kan ha lämnat en dörr öppen. ]]
+	for _, blad in ipairs(dorrar) do
+		if DorrService.arOppen(blad) then DorrService.satLage(blad, false) end
+	end
+	local kvarOppna = {}
+	for _, blad in ipairs(dorrar) do
+		if DorrService.arOppen(blad) then table.insert(kvarOppna, blad.Name) end
+	end
+	kolla("alla dörrar står stängda när provet är klart",
+		#kvarOppna == 0, table.concat(kvarOppna, " | "))
 end)
 
 --[[ ══════════════════════════════════════════════════════════════════
