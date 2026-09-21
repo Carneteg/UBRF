@@ -2,42 +2,38 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# ARMERAD for PARPROVET (order 5756398490): tva publiceringar till
-# CI-placen, XML och binart ur SAMMA Rojo-bygge. Avvapnas direkt efter.
-# AVVAPNA DIREKT EFTERAT — ta bort `pull_request:` och dess `types:`-rad
-# sa fort matningen ar redovisad. `workflow_dispatch` gar anda inte att
-# trigga fran den har grenen: GitHub exponerar bara dispatch fran
-# default-branchen, och filen ligger inte pa main.
+# AVVAPNAD. Parprovet ar kort och redovisat — run 35569440952:
+# XML 200 (version 4), binart 200 (version 5). `workflow_dispatch` gar
+# anda inte att trigga fran den har grenen: GitHub exponerar bara
+# dispatch fran default-branchen, och filen ligger inte pa main.
 #
-# FRAGAN: den binara Studio-baseplaten publicerades med HTTP 200 medan
-# bade var 1,6 MB-artefakt och en 375 byte stor envelope-fil foll pa
-# HTTP 400 «Invalid Content stream». Ar det VAR XML som ar fel, eller ar
-# det XML-vagen som sadan?
+# VAD PARPROVET VISADE: Rojo byggde bada formaten ur samma projektfil,
+# samma serializer, samma commit — bara wire-formatet skilde. BADA gick
+# igenom.
 #
-# PARPROVET: Rojo bygger BADA formaten ur samma projektfil. Samma
-# serializer (rbx-dom), samma innehall, samma commit — bara wire-formatet
-# skiljer. Det ar den enda uppstallning vi har dar exakt en variabel
-# varierar.
+#   Rojo XML      1 645 383 byte  application/xml           -> 200
+#   Rojo binart     849 955 byte  application/octet-stream  -> 200
+#   VAR XML       1 645 331 byte  application/xml           -> 400
+#   var minimala        375 byte  application/xml           -> 400
 #
-#   XML 400 + binar 2xx  -> formatet ar enda variabeln, binart kravs
-#   XML 2xx              -> var egen XML ar det avvikande
+# XML-VAGEN FUNGERAR ALLTSA. Felet ligger i VAR EGEN XML, inte i
+# formatet och inte i API:t. Det valter den lutning jag hade innan
+# provet kordes.
 #
-# OBS: rbx-dom ar en OBEROENDE TREDJEPART, inte Roblox egen serializer.
-# En ensam korning bevisar darfor ingenting — det ar paret som mater.
-# Skriptet kors med --tredjepart sa att det inte klassificerar orsaken
-# pa egen hand.
+# Skillnaderna mellan var envelope och Rojos, som nasta bisektion ska
+# provas mot en och en:
 #
-# Rojos XML-envelope skiljer sig for ovrigt fran bade var och Roblox
-# egen: den saknar namespaces, schema location och <External>-noderna.
-# Studio accepterar den anda, sa envelope-trohet ar inte det som avgor
-# om en fil gar att lasa.
+#   var:   <roblox xmlns:xmime=... xmlns:xsi=... xsi:noNamespace... version="4">
+#          <External>null</External> + <External>nil</External>
+#          referent="RBX0", tabbindrag
+#   Rojo:  <roblox version="4">
+#          inga External-noder
+#          referent="0", tva mellanslag
 #
 # En binar .rbxl MASTE skickas som application/octet-stream. Skriptet
 # valjer typ ur filens FORSTA BYTES, aldrig ur dess namn.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
