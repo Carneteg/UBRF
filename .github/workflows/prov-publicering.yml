@@ -2,47 +2,35 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# AVVAPNAD. Source-typprovet ar kort — run 35571485739:
+# ARMERAD for J/K (order 5756932189). AVVAPNAS DIREKT EFTERAT.
 #
-#   F  Rojos fil med ProtectedString  -> 200 (version 11)
-#   G  var fil med string             -> 400
+# UTESLUTET HITTILLS, allt matt och inget antaget: formatet (XML
+# fungerar), nyckel, scope, endpoint, auth, tabbindrag, <External>,
+# namespace-attribut, Workspace-noden, och source-typen ProtectedString
+# kontra string — den sista provad at bada hallen (F=200, G=400).
 #
-# TVARTOM mot hypotesen, och entydigt: ProtectedString accepteras (F),
-# och vanlig string raddar inte var fil (G). SOURCE-TYPEN AR UTESLUTEN
-# fran bada hallen.
+# KVAR I DEN UPPRAKNADE MANGDEN star tva saker:
 #
-# VAGEN HIT: mutationsprovet (run 35570961741) gav 200 pa alla fem
-# armar och uteslot tabbar, External, namespace-attribut och Workspace.
-# En instansvis jamforelse mellan var artefakt och Rojos visade da att
-# filerna ar nastan identiska — samma 75 moduler, samma tjanster — utom
-# i EN systematisk sak:
+#     referentstil    var RBX0..RBX82   Rojo 0..81
+#     RunContext      var saknas        Rojo <token name="RunContext">0</token>
 #
-#     var  (400):  <ProtectedString name="Source">   x77
-#     Rojo (200):  <string name="Source">            x77
+# Bada laggs pa EN GANG, at bada hallen, sa att mangden toms i samma
+# tva publiceringar:
 #
-# ProtectedString ar en sakerhetsskyddad vardetyp. En ingester som inte
-# tar emot skriptkallor under skyddad typ fran en otrodd uppladdning,
-# men accepterar vanlig string, ger exakt det monster vi ser.
+#   J  Rojos fil + BADA   -> 400: orsaken finns i mangden, bisektera inuti
+#   K  var fil  - BADA    -> 200: bekraftar fran andra hallet
 #
-# PROVET GAR AT BADA HALLEN, vilket ar poangen:
+#   J=200 och K=400 -> mangden ar TOM pa forklaringar. Blockeraren
+#   ligger utanfor allt jag lyckats rakna upp, och da ar delta-debugging
+#   av den riktiga artefakten ratt nasta metod — inte fler gissningar.
 #
-#   F  Rojos fil, string -> ProtectedString   ska BRYTA en fil som gar igenom
-#   G  var fil, ProtectedString -> string     ska LAGA en fil som faller
-#
-#   F=400 och G=200  -> SOURCE_TYPE_CONFIRMED
-#   F=200 och G=200  -> typen ar inte blockeraren
-#   F=400 och G=400  -> bara delvis korrelation
-#
-# G ar den viktigaste armen: den provar VAR FAKTISKA ARTEFAKT, inte en
-# stallforetradare.
-#
-# FALLAN i bytet: stangningstaggen `</string>` anvands ocksa av
-# `<string name="Name">`. En naiv sok-och-ersatt hade dodat varje
-# Name-egenskap i filen. tools/byt-source-typ.py matchar darfor hela
-# elementet och bevisar bytet genom att det OMVANDA bytet maste ge
-# tillbaka originalets exakta bytes.
+# Det utfallet ar det troliga: referenter ar OANVANDA i bada filerna
+# (noll <Ref>-egenskaper), och Roblox egen serializer skriver sjalv
+# RBX-prefixade referenter.
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
@@ -79,39 +67,35 @@ jobs:
           echo "head: $UBRF_HEAD_SHA"
           rojo build roblox/default.project.json --output /tmp/rojo-kall.rbxlx
           python3 tools/bygg-place.py --ut /tmp/var-kall.rbxlx --sha "$UBRF_HEAD_SHA"
-          echo "=== KALLARTEFAKTERNA ==="
           for f in /tmp/rojo-kall.rbxlx /tmp/var-kall.rbxlx; do
-            echo "$f"
-            echo "  storlek : $(stat -c%s "$f") byte"
-            echo "  sha256  : $(sha256sum "$f" | cut -d' ' -f1)"
-            echo "  Source  : ProtectedString=$(grep -o '<ProtectedString name=\"Source\">' "$f" | wc -l) string=$(grep -o '<string name=\"Source\">' "$f" | wc -l)"
+            echo "$f  $(stat -c%s "$f") byte  $(sha256sum "$f" | cut -d' ' -f1)"
           done
 
-      # Bytesverktyget bevisar sjalvt att bara taggnamnen andrats: det
-      # omvanda bytet maste ge tillbaka originalets exakta bytes, CDATA
-      # maste vara oforandrat och antalet <string name="Name"> lika.
-      # Avbryter annars.
-      - name: F och G — byt Source-typ, med bevis
+      # Verktyget bevisar sjalvt varje pastaende och avbryter annars:
+      # noll <Ref>-egenskaper, referentbytet reversibelt till originalet,
+      # RunContext-andringen reversibel, CDATA oforandrat, antalet
+      # referenter lika fore och efter.
+      - name: J och K — alla kvarvarande skillnader, med bevis
         run: |
-          echo "=== F: Rojos fil, string -> ProtectedString (ska bryta) ==="
-          python3 tools/byt-source-typ.py --in /tmp/rojo-kall.rbxlx --ut /tmp/fg/F.rbxlx --till protected
+          echo "=== J: Rojos fil + BADA skillnaderna (ska bryta) ==="
+          python3 tools/kvarvarande-diff.py --in /tmp/rojo-kall.rbxlx --ut /tmp/jk/J.rbxlx --riktning j
           echo ""
-          echo "=== G: var fil, ProtectedString -> string (ska laga) ==="
-          python3 tools/byt-source-typ.py --in /tmp/var-kall.rbxlx --ut /tmp/fg/G.rbxlx --till string
+          echo "=== K: var fil - BADA skillnaderna (ska laga) ==="
+          python3 tools/kvarvarande-diff.py --in /tmp/var-kall.rbxlx --ut /tmp/jk/K.rbxlx --riktning k
 
       # Gron exitkod betyder «matning erhallen», inte «publicering
       # lyckades». Las skriptets ramatning, aldrig exitkoden.
       # Sekventiellt i samma jobb, sa tva publiceringar aldrig overlappar.
-      - name: F — Rojos fil med ProtectedString
+      - name: J — Rojos fil med vara egenskaper
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/fg/F.rbxlx --delprov F-rojo-protected
+        run: python3 tools/prova-publicering.py --fil /tmp/jk/J.rbxlx --delprov J-rojo-med-vara
 
-      - name: G — var fil med string
+      - name: K — var fil med Rojos egenskaper
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}
           UBRF_CI_PLACE_ID: ${{ vars.UBRF_CI_PLACE_ID }}
-        run: python3 tools/prova-publicering.py --fil /tmp/fg/G.rbxlx --delprov G-var-string
+        run: python3 tools/prova-publicering.py --fil /tmp/jk/K.rbxlx --delprov K-var-med-rojos
