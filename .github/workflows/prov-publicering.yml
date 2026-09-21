@@ -2,25 +2,33 @@ name: Prov — minimal publicering
 
 # TILLFALLIG DIAGNOSTIK for #264. Tas bort nar fragan ar besvarad.
 #
-# Runtime-grinden nadde Open Cloud for forsta gangen i job 106218507201
-# och fick HTTP 400 «Invalid Content stream». Lokalt ar artefakten giltig
-# XML med samma envelope som de bevarade placerna, sa fragan gar inte att
-# stanga utan ROBLOX_API_KEY — och den finns bara har.
+# AVVAPNAD. Forsta omgangen (run 35563663575) ar kord och redovisad.
+# Reviewen bestallde «do not publish again yet», sa den automatiska
+# `pull_request`-triggern ar BORTTAGEN med flit: en push ska inte kunna
+# posta till CI-placen igen.
 #
-# Provet postar en MINIMAL giltig place till samma CI-place genom samma
-# endpoint och samma rabyte-POST. Den minimala filen ar en byte-exakt
-# prefix av den fulla artefakten, sa ett annat utfall pekar pa
-# INNEHALLET och inte pa formatet.
+# Att aterarmera ar en rad — satt tillbaka
 #
-# Det har ar INTE en grind och far aldrig raknas som ett PASS for
-# nagonting. Det ar en matning.
+#   on:
+#     pull_request:
+#       types: [opened, synchronize, reopened, ready_for_review]
 #
-# `workflow_dispatch` duger inte: filen ligger inte pa default-branchen,
-# och GitHub exponerar bara dispatch darifran. Darfor pull_request.
+# nar nasta kontroll ar godkand. `workflow_dispatch` nedan gar INTE att
+# trigga fran den har grenen: GitHub exponerar bara dispatch fran
+# default-branchen, och filen ligger inte pa main. Den star kvar som
+# dokumentation av hur jobbet ser ut, inte som en vag att kora det.
+#
+# NASTA KONTROLL, nar den bestalls: en OBEROENDE kant-god place — en
+# fil Roblox sjalvt skrivit, sparad ur Studio och verifierat aterppnad —
+# skickad genom samma endpoint med
+#
+#   python3 tools/prova-publicering.py --fil <fil> --kand-god
+#
+# Den handgenererade minimala filen kan aldrig diskriminera, eftersom
+# den delar envelope-antaganden med tools/bygg-place.py.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 # SAMMA grupp som runtime-grind.yml. Provet publicerar till SAMMA place
 # som grinden, och tva publiceringar samtidigt skriver over varandra —
@@ -40,7 +48,9 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Minimal publicering mot CI-placen
+      # Gron exitkod betyder «matning erhallen», inte «publicering
+      # lyckades». Las skriptets klassificeringsrad, aldrig exitkoden.
+      - name: Publicering mot CI-placen — matning, inte grind
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
           UBRF_UNIVERSE_ID: ${{ vars.UBRF_UNIVERSE_ID }}

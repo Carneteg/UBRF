@@ -1,29 +1,38 @@
 #!/usr/bin/env python3
-"""KONTROLLPROV for #264: skiljer trasig artefakt fran trasig API-vag.
+"""KONTROLLPROV for #264. Postar en place till CI-placen och REDOVISAR.
 
-Runtime-grinden nadde Open Cloud for forsta gangen i job 106218507201 och
-fick HTTP 400 {"code":"InvalidRequest","message":"Invalid Content stream"}.
-Lokalt ar artefakten giltig XML med samma envelope som de bevarade
-placerna, sa fragan gar inte att stanga utan nyckeln — och nyckeln finns
-bara i CI.
+Runtime-grinden nadde Open Cloud i job 106218507201 och fick HTTP 400
+{"code":"InvalidRequest","message":"Invalid Content stream"}. Provet
+postar en kontrollfil till SAMMA place genom samma endpoint, samma auth
+och samma rabyte-POST som `tools/runtime-grind.py`.
 
-Provet postar en MINIMAL men giltig place till SAMMA place, genom samma
-endpoint, samma auth och samma rabyte-POST som `tools/runtime-grind.py`.
-Den minimala filen ar med flit en BYTE-EXAKT PREFIX av vad
-`tools/bygg-place.py` skriver: samma rotelement, samma tva <External>,
-samma Workspace-Item. Skiljer sig utfallet ar skillnaden alltsa
-INNEHALLET, inte formatet.
+VAD PROVET KAN OCH INTE KAN
+---------------------------
+Forsta omgangen (job 106221302313) postade en handgenererad minimal
+place och fick samma 400. Den drog slutsatsen API_OR_SETUP. Den
+slutsatsen var FOR STARK och ar tillbakadragen:
 
-  minimal OK  + full FAIL  -> ARTIFACT_SPECIFIC
-  minimal FAIL (samma fel) -> API_OR_SETUP
-  nagot annat              -> INCONCLUSIVE
+  Kontrollfilen skrevs for hand med SAMMA envelope-antaganden som
+  `tools/bygg-place.py`. Delar de ett serialiserings- eller schemafel
+  faller bada av exakt samma skal. Att Pythons XML-parser accepterar en
+  fil bevisar inte att Roblox anser den vara en giltig place.
 
-DIAGNOSTIK, INTE EN GRIND. Filen ar tillfallig och ska tas bort nar
-fragan ar besvarad. Den ror aldrig startplacen: samma hardstopp som
-runtime-grind.py:357-361 star ocksa har.
+Darfor: en handgenererad kontroll kan aldrig ge annat an INCONCLUSIVE.
+Bara en OBEROENDE kant-god place — en som Roblox sjalvt har skrivit,
+sparad ur Studio och verifierat aterppnad — diskriminerar. Skicka en
+sadan med `--fil` och `--kand-god`.
+
+Skriptet klassificerar inte orsaken at nagon. Det redovisar ramatningen
+och sager ut vad matningen kan bara.
+
+DIAGNOSTIK, INTE EN GRIND. Gron exitkod betyder «matning erhallen», inte
+«publicering lyckades». Las klassificeringsraden, aldrig exitkoden.
+Filen ar tillfallig och ska tas bort nar fragan ar besvarad.
 """
+import argparse
 import json
 import os
+import pathlib
 import sys
 import urllib.error
 import urllib.request
@@ -31,9 +40,14 @@ import urllib.request
 APIS = "https://apis.roblox.com"
 GAMES = "https://games.roblox.com"
 
-#[[ Byte-exakt samma envelope som tools/bygg-place.py:239-245 skriver,
-#   plus dess Workspace-Item. Tabbar, radbrytningar och attributordning
-#   ar med flit identiska. ]]
+#[[ HARDBUNDET MAL. Ordern tillater exakt ett par, och diagnostiken ska
+#   inte kunna riktas nagon annanstans av en felsatt variabel. Avvikelse
+#   ar ett stopp, inte en varning. ]]
+TILLATET_UNIVERSE = "10766192504"
+TILLATEN_PLACE = "121231609290409"
+
+#[[ Byte-exakt samma envelope som tools/bygg-place.py:239-245 skriver.
+#   Anvands bara nar ingen oberoende fil ges — och ger da INCONCLUSIVE. ]]
 MINIMAL = (
     '<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
     'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
@@ -50,11 +64,15 @@ MINIMAL = (
 )
 
 
+def stopp(text):
+    print("PROV: AVBRUTET — %s" % text)
+    raise SystemExit(2)
+
+
 def krav(namn):
     varde = os.environ.get(namn, "").strip()
     if not varde:
-        print("PROV: AVBRUTET — miljovariabeln %s saknas" % namn)
-        raise SystemExit(2)
+        stopp("miljovariabeln %s saknas" % namn)
     return varde
 
 
@@ -76,76 +94,127 @@ def anrop(metod, url, nyckel, kropp=None, typ="application/json", tak=60):
 
 def rootplace(universe):
     url = "%s/v1/games?universeIds=%s" % (GAMES, universe)
-    with urllib.request.urlopen(url, timeout=30) as svar:
-        data = json.loads(svar.read().decode("utf-8", "replace"))
+    try:
+        with urllib.request.urlopen(url, timeout=30) as svar:
+            data = json.loads(svar.read().decode("utf-8", "replace"))
+    except Exception as e:                      # noqa: BLE001
+        stopp("kunde inte sla upp startplacen (%s). Utan den kontrollen "
+              "postas ingenting." % e)
     poster = data.get("data") or []
     if not poster:
-        print("PROV: AVBRUTET — universe %s gav ingen post hos games-API:t. "
-              "Utan startplatskontrollen postas ingenting." % universe)
-        raise SystemExit(2)
+        stopp("universe %s gav ingen post hos games-API:t" % universe)
     return int(poster[0]["rootPlaceId"])
 
 
-def main():
-    nyckel = krav("ROBLOX_API_KEY")
+def malet():
+    """Hardbunden kontroll av att vi postar exakt dit ordern tillater."""
     universe = krav("UBRF_UNIVERSE_ID")
     place = krav("UBRF_CI_PLACE_ID")
-    if not place.isdigit() or not universe.isdigit():
-        print("PROV: AVBRUTET — universe/place ska vara tal (fick %r och %r)"
-              % (universe, place))
-        raise SystemExit(2)
-
-    #[[ STARTPLACEN. Samma hardstopp som i grinden. Ett diagnostikprov ar
-    #   inte ett skal att sanka sparren. ]]
+    if universe != TILLATET_UNIVERSE:
+        stopp("UBRF_UNIVERSE_ID ar %r, men diagnostiken ar bunden till %r"
+              % (universe, TILLATET_UNIVERSE))
+    if place != TILLATEN_PLACE:
+        stopp("UBRF_CI_PLACE_ID ar %r, men diagnostiken ar bunden till %r"
+              % (place, TILLATEN_PLACE))
+    #[[ Baltet OCH hangslena: aven med ratt konstanter slas startplacen
+    #   upp live, ifall upplevelsens rootPlaceId nagon gang andras. ]]
     start = rootplace(universe)
     if int(place) == start:
-        print("PROV: AVBRUTET — UBRF_CI_PLACE_ID pekar pa STARTPLACEN (%d). "
-              "Provet postar aldrig dit." % start)
-        raise SystemExit(2)
+        stopp("malet ar upplevelsens STARTPLACE (%d). Provet postar aldrig "
+              "dit." % start)
+    return universe, place, start
 
-    kropp = MINIMAL.encode("utf-8")
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--fil", help="place-fil att posta i stallet for den "
+                                 "inbyggda minimala")
+    p.add_argument("--kand-god", action="store_true",
+                   help="intyga att --fil ar en OBEROENDE kant-god place: "
+                        "skriven av Roblox, sparad ur Studio och verifierat "
+                        "aterppnad. Bara da kan utfallet diskriminera.")
+    a = p.parse_args()
+
+    if a.kand_god and not a.fil:
+        stopp("--kand-god utan --fil sager ingenting")
+
+    nyckel = krav("ROBLOX_API_KEY")
+    universe, place, start = malet()
+
+    if a.fil:
+        vag = pathlib.Path(a.fil)
+        if not vag.is_file() or vag.stat().st_size == 0:
+            stopp("filen finns inte eller ar tom: %s" % vag)
+        kropp = vag.read_bytes()
+        kalla = "%s (%d byte)" % (vag.name, len(kropp))
+        oberoende = a.kand_god
+    else:
+        kropp = MINIMAL.encode("utf-8")
+        kalla = "inbyggd minimal place (%d byte)" % len(kropp)
+        oberoende = False
+
     url = "%s/universes/v1/%s/places/%s/versions?versionType=Published" % (
         APIS, universe, place)
 
-    print("KONTROLLPROV — minimal publicering (#264)")
-    print("  universe      : %s" % universe)
-    print("  mal-place     : %s  (startplacen %d ar INTE malet)"
+    print("KONTROLLPROV — publicering mot CI-placen (#264)")
+    print("  universe      : %s  (hardbunden)" % universe)
+    print("  mal-place     : %s  (hardbunden; startplacen %d ar INTE malet)"
           % (place, start))
     print("  url           : %s" % url)
     print("  content-type  : application/xml")
-    print("  kroppens storlek: %d byte" % len(kropp))
-    print("  exakt kropp:")
-    for rad in MINIMAL.rstrip("\n").split("\n"):
-        print("    | %s" % rad)
-    print("")
+    print("  kropp         : %s" % kalla)
+    print("  oberoende kant-god kontroll: %s" % ("JA" if oberoende else "NEJ"))
+    if not a.fil:
+        print("  exakt kropp:")
+        for rad in MINIMAL.rstrip("\n").split("\n"):
+            print("    | %s" % rad)
 
     status, text = anrop("POST", url, nyckel, kropp,
-                         typ="application/xml", tak=120)
+                         typ="application/xml", tak=300)
 
+    #[[ RAMATNINGEN. Star for sig, utan tolkning. ]]
+    print("")
+    print("=== RAMATNING ===")
     print("  HTTP-status   : %s" % status)
     print("  svarskropp    : %s" % text[:800])
-    print("")
-
-    if status == 0:
-        print("PROV: INCONCLUSIVE — natverksfel, inget svar fran Roblox.")
-        return 1
-
+    version = None
     if 200 <= status < 300:
         try:
             version = json.loads(text).get("versionNumber")
         except ValueError:
             version = None
-        print("PROV: MINIMAL PUBLICERING LYCKADES (version %s)." % version)
-        print("MINIMAL_PUBLISH_CONTROL: minimal=OK status=%s" % status)
-        print("Den fulla artefakten foll pa samma endpoint och samma place.")
-        print("=> ARTIFACT_SPECIFIC")
+    print("  versionNumber : %s" % (version if version else "—"))
+    print("  place-version andrad: %s" % ("JA" if version else "NEJ"))
+
+    #[[ TOLKNINGEN. Separat, och avsiktligt forsiktig. ]]
+    print("")
+    print("=== VAD MATNINGEN BAR ===")
+
+    if status == 0:
+        print("  Natverksfel — inget svar fran Roblox.")
+        print("PROV: INCONCLUSIVE")
+        return 1
+
+    if not oberoende:
+        print("  Kontrollfilen ar INTE en oberoende kant-god Roblox-place.")
+        print("  Den ar handgenererad med samma envelope-antaganden som")
+        print("  tools/bygg-place.py. Ett gemensamt serialiserings- eller")
+        print("  schemafel skulle falla bada filerna av samma skal, och")
+        print("  XML-valformning bevisar inte place-giltighet.")
+        print("  Utfallet kan darfor INTE skilja artefaktfel fran")
+        print("  API-/setupfel, oavsett vilken status som kom tillbaka.")
+        print("PROV: INCONCLUSIVE status=%s" % status)
         return 0
 
-    print("PROV: MINIMAL PUBLICERING FOLL OCKSA — status %s." % status)
-    print("MINIMAL_PUBLISH_CONTROL: minimal=FAIL status=%s" % status)
-    print("Envelopen ar byte-exakt densamma som den fulla artefaktens, sa "
-          "innehallet ar inte det som avvisas.")
-    print("=> API_OR_SETUP")
+    print("  Kontrollfilen ar intygad oberoende kant-god.")
+    if 200 <= status < 300:
+        print("  Den gick igenom dar den fulla artefakten foll.")
+        print("  => skillnaden ligger i det vi sjalva genererar.")
+        print("PROV: ARTIFACT_SPECIFIC status=%s" % status)
+    else:
+        print("  Aven en place skriven av Roblox sjalvt avvisas.")
+        print("  => felet ligger inte i det vi genererar.")
+        print("PROV: API_OR_SETUP status=%s" % status)
     return 0
 
 
