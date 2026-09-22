@@ -553,6 +553,10 @@ Sprak.text = {
 		sv = "Hon rids just nu",
 		en = "She is being ridden right now",
 	},
+	["hast.leds_nu"] = {
+		sv = "Hon leds av någon annan just nu",
+		en = "Someone else is leading her right now",
+	},
 	["led.upptagen"] = {
 		sv = "Någon annan leder henne",
 		en = "Someone else is leading her",

@@ -279,6 +279,11 @@ const SPRAK = {
      `led.rider`, som ar att SPELAREN sitter upp — tva olika fel som
      hade blivit omojliga att skilja at med samma text. */
   "led.rids": { sv: "Hon rids just nu", en: "She is being ridden right now" },
+  // Speglingen av `led.rids`: den vagen ar stangd at bada hall. En hast
+  // som leds av nagon annan far ingen ryttare, for de tva systemen
+  // strids annars om samma nätverksagarskap.
+  "hast.leds_nu": { sv: "Hon leds av någon annan just nu",
+    en: "Someone else is leading her right now" },
   "led.upptagen": { sv: "Någon annan leder henne", en: "Someone else is leading her" },
   "led.tappade_bort": { sv: "Hon kom efter — gå tillbaka och ta henne igen",
     en: "She fell behind — go back and take her again" },

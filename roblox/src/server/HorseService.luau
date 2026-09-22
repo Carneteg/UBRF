@@ -569,6 +569,49 @@ function HorseService.setDagsformHook(hook: ((Player) -> number)?)
 	dagsformHook = hook
 end
 
+--[[ ══ LEDS HON REDAN? ══════════════════════════════════
+
+	Robustness Slice A. `LedService` har alltid vägrat att börja LEDA en
+	riden häst (`led.rids`), men motsatta vägen stod öppen: A ledde, B
+	satte sig upp, och båda ägde henne.
+
+	Det är inte en kosmetisk krock. Ledningen tar nätverksägarskapet till
+	servern och sparar det föregående värdet; uppsittningen ger ägarskapet
+	till ryttaren. Delarna sitter i samma assembly (`Motor6D` i
+	`HastRigg`), och Roblox ägarskap gäller per assembly. När A sedan
+	släpper lämnar `LedService` tillbaka det ägarskap den sparade INNAN B
+	satte sig — och rycker det därmed från den aktiva ryttaren. B rider en
+	häst hon inte längre styr.
+
+	LEDNINGENS SANNING BOR KVAR I `LedService`. Den här modulen får en
+	KROK, inte en kopia av `ledd`-tabellen — två böcker över vem som leder
+	vore samma sorts delade sanning som felet ovan.
+
+	SEPARAT FRÅN `mountGate` MED FLIT. Grinden nedan sitter i `tryMount`
+	själv och inte i gameplaylagrets gate, för `setMountGate(nil)` är en
+	rimlig sak att göra i ett prov som vill hoppa över checklistan — och
+	den ska inte samtidigt kunna stänga av en säkerhetsregel.
+
+	── OCH DET ÄR «NÅGON ANNAN», INTE «någon» ────────────────
+
+	Första versionen nekade varje ledd häst, och `integration.spec` fällde
+	den omgående — med rätta. Kärnloopen ÄR att leda sin häst till banan
+	och sitta upp där, utan att släppa repet först. `LedService` har redan
+	den vägen löst: sitter ledaren själv upp släpper den kopplet nästa
+	bildruta med skälet `led.rider` (`LedService.luau:1533-1536`).
+
+	Problemet är två OLIKA ägare, inte två roller hos samma spelare.
+	Kroken lämnar därför ut LEDAREN, inte ett ja/nej, och jämförelsen
+	står här där nejet ges — så att regeln går att läsa på ett ställe.
+
+	Ingen krok registrerad = ingen ledning känd. Hästsystemet ska gå att
+	köra utan gameplaylagret, precis som med `mountGate` och dagsformen. ]]
+local ledareHook: ((Model) -> Player?)? = nil
+
+function HorseService.setLedareHook(hook: ((Model) -> Player?)?)
+	ledareHook = hook
+end
+
 --[[ Lagger till en lyssnare. Ersatter INTE de befintliga — se noten vid
 	`riderHooks`. ]]
 function HorseService.lyssnaRyttare(hook: ((Player, boolean) -> ())?)
@@ -604,6 +647,23 @@ function HorseService.tryMount(player: Player, model: Model): (boolean, string?,
 	end
 	if byRider[player] then
 		return false, "hast.rider_redan"
+	end
+	--[[ EN ÄGARE I TAGET. Se noten vid `setLeddHook`. Kroken är
+	     pcall:ad av samma skäl som ryttarlyssnarna: ett fel i
+	     gameplaylagret ska inte kunna släppa igenom en uppsittning som
+	     regeln säger nej till — därför räknas ett KASTAT anrop som
+	     «hon leds» och inte som «hon är fri». Fail closed. ]]
+	if ledareHook then
+		local ok, ledare = pcall(ledareHook, model)
+		if not ok then
+			warn("[Horse] ledareHook kastade: " .. tostring(ledare))
+			return false, "hast.leds_nu"
+		end
+		--[[ NÅGON ANNANS rep. Sitter LEDAREN själv upp är det kärnloopen,
+		     och `LedService` släpper kopplet själv nästa bildruta. ]]
+		if ledare ~= nil and ledare ~= player then
+			return false, "hast.leds_nu"
+		end
 	end
 
 	local character = player.Character

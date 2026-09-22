@@ -1444,6 +1444,11 @@ function GameplayService.start()
 	HorseService.setMountGate(GameplayService.farSittaUpp)
 	--[[ Belöningen för egen skötsel: dagsformen vid uppsittning. ]]
 	HorseService.setDagsformHook(GameplayService.dagsformFor)
+	--[[ EN ÄGARE I TAGET (Robustness Slice A). Speglingen av
+	     `LedService.satRidenHake` några rader ned: den vägen stängdes
+	     redan, den här står öppen. `ledsAv` är `LedService`s egen
+	     sanning — hästsystemet får fråga, inte föra egen bok. ]]
+	HorseService.setLedareHook(LedService.ledsAv)
 	Net.get("RidaNu").OnServerInvoke = Skopa.grind("RidaNu", function(player)
 		return GameplayService.ridaNu(player)
 	end)
