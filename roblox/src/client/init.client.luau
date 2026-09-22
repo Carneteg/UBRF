@@ -126,6 +126,19 @@ export type Slutskal = "avsittning" | "avbrott"
 	försona. ]]
 local sessionGen = 0
 
+--[[ SERVERN HAR TAGIT HENNE IFRÅN OSS, och det måste gå att minnas.
+
+	En återkallelse kunde landa i en glugg: `avbrytAterforening` rörde
+	bara en RRDAN startad återförening, och kom beskedet innan undantags-
+	grenen i avsittningen hunnit köra fanns ingen loop att avbryta. Grenen
+	startade då en återförening mot attribut som ligger kvar på modellen
+	från före — de är CACHADE, inte sanna — och klienten satte upp sig
+	själv på en häst servern redan tagit ifrån henne.
+
+	Ett fält, inte en tabell: spelaren har en häst i taget, och posten
+	rensas så fort servern säger att vi sitter upp på henne igen. ]]
+local aterkalladModell: Model? = nil
+
 --[[ FRAMATDEKLARATION. `startaAterforening` definieras langre ned, vid
      de andra aterhamtningsdelarna, men `begarAvsittning` hogre upp
      behover den nu. Lokalen finns har; `function startaAterforening(...)`
@@ -240,7 +253,11 @@ local function begarAvsittning()
 				Har servern faktiskt satt av oss stämmer inte längre
 				attributen, och då sätter den ingen upp igen. ]]
 			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
-			if sessionGen == minSession and not ride then
+			--[[ HAR SERVERN HUNNIT SÄGA IFRÅN? Då är attributen på
+			     modellen cachade och bevisar ingenting. Se noten vid
+			     `aterkalladModell`. ]]
+			if sessionGen == minSession and not ride
+				and aterkalladModell ~= hast then
 				startaAterforening(hast)
 			end
 			return
@@ -566,19 +583,28 @@ function startaAterforening(model: Model)
 		häst som servern säger att hon rider. Det var Slice G:s
 		återhämtning, men bara för den som redan haft en ritt.
 
-		Märket gissas inte. Har vi en avbruten ritt för hästen är det
-		HENNES märke vi väntar på; annars är det `RidSession` på
-		modellen, alltså exakt det värde `mount` självt faller tillbaka
-		på och det servern skrev när den satte upp oss. Saknas även det
-		vet vi ingenting och avstår hellre än gissar.
+		MÄRKET KOMMER UR SERVERNS SANNING. Attributet `RidSession` på
+		modellen är vad servern säger NU; `avbrutenRitt` är bara reserv
+		för det som ännu inte replikerat. Förut var ordningen den omvända,
+		och då ärvde en ANDRA ritt på samma häst den förstas märke — posten
+		överlever ju en avslutad ritt. Återhämtningen mätte sig då mot ett
+		märke som inte fanns längre och kom aldrig tillbaka.
 
-		Vakterna är oförändrade: `sammaAuktoritativaRitt` prövar häst,
-		ryttare, rittmärke och medlemskap i världen före varje försök. ]]
+		Märket LÅSES vid första observationen och gäller sedan resten av
+		väntan, så en ändring under tiden fortfarande stoppar oss.
+
+		SAKNAS IDENTITETEN HELT väntar vi i stället — bundet. Servern har
+		redan auktoriserat uppsittningen genom att fyra händelsen; att
+		`RidSession` och `RiderUserId` inte kommit fram är en replikerings-
+		fördröjning, inte ett nej. Ingenting hittas på: vi väntar tills
+		märket dyker upp, tar det som det är, och först då gäller vakterna
+		— som är helt oförändrade. Kommer det aldrig ger vi upp lika tyst
+		som förut. ]]
 	local avbruten = avbrutenRitt
-	local marke = if avbruten ~= nil and avbruten.model == model
-		then avbruten.rittId
-		else model:GetAttribute("RidSession")
-	if marke == nil then return end
+	local marke = model:GetAttribute("RidSession")
+	if marke == nil and avbruten ~= nil and avbruten.model == model then
+		marke = avbruten.rittId
+	end
 	--[[ EN I TAGET. Ett dubblerat `MountChanged` ska inte ge en andra loop. ]]
 	if aterforeningModell == model then return end
 
@@ -596,6 +622,22 @@ function startaAterforening(model: Model)
 			if ride then
 				aterforeningModell = nil
 				return
+			end
+			--[[ Identiteten kan ha kommit fram sedan sist. Första
+			     observationen blir märket; därefter rörs det inte. ]]
+			if marke == nil then
+				marke = model:GetAttribute("RidSession")
+				if marke == nil then
+					--[[ Fortfarande inget. Vänta vidare inom budgeten —
+					     men bara så länge hästen är kvar i världen. ]]
+					if not model:IsDescendantOf(workspace) then
+						aterforeningModell = nil
+						warn("[Horse] återföreningen avbröts — modellen "
+							.. "lämnade världen innan identiteten kom")
+						return
+					end
+					continue
+				end
 			end
 			local ok, skal = sammaAuktoritativaRitt(model, marke)
 			if not ok then
@@ -856,6 +898,9 @@ Prompttext.start()
      något annat än oss, som respawn eller att hästen tas bort. ]]
 Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Player?)
 	if rider == player then
+		--[[ Ett nytt auktoritativt JA om DEN HÄR hästen upphäver en
+		     tidigare återkallelse av henne. ]]
+		if aterkalladModell == model then aterkalladModell = nil end
 		if not ride or ride.model ~= model then
 			--[[ Gick det inte nu kan riggen vara halvreplikerad. Se
 			     noten vid `startaAterforening`. ]]
@@ -868,6 +913,9 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 		     sätta upp oss igen efter att servern sagt att någon annan —
 		     eller ingen — rider henne. Avbrottet sker oavsett om vi
 		     själva har en ritt just nu. ]]
+		--[[ MINNS DET, oavsett om någon lyssnade just nu. Se noten vid
+		     `aterkalladModell`. ]]
+		aterkalladModell = model
 		if aterforeningModell == model then
 			avbrytAterforening()
 		end
@@ -1007,7 +1055,22 @@ end)
      karaktaren forsvann ar inget att gratulera till. Wrappen finns for
      att signalen annars skickar karaktaren som forsta argument — och
      det hade lasts som ett skal. ]]
-player.CharacterRemoving:Connect(function() dismount("avbrott") end)
+--[[ KARAKTÄREN DÖR — OCH DÅ ÄR ALLT SOM ÄR I LUFTEN INERT.
+
+	`dismount("avbrott")` räcker inte. Har spelaren redan bett om en
+	avsittning är `ride` nollad, funktionen returnerar direkt, och
+	`sessionGen` rör sig inte — då vinkade vakten i `begarAvsittning`
+	igenom en summering för en ritt vars ryttare inte finns längre.
+	Räknaren måste gå upp ÄVEN när det inte finns någon lokal ritt att
+	riva, och ett väntande omförsök måste avbrytas.
+
+	En vanlig accepterad avsittning rör inte den här vägen, så dess
+	summering visas fortfarande exakt en gång. ]]
+player.CharacterRemoving:Connect(function()
+	dismount("avbrott")
+	sessionGen += 1
+	avbrytAterforening()
+end)
 
 RunService.RenderStepped:Connect(function(dt)
 	if not ride then return end

@@ -370,6 +370,184 @@ do
 	bildrutor(1)
 end
 
+print("\n══ 4. ORDNINGEN MELLAN HÄNDELSERNA ════════════════════════")
+--[[ ChatGPT-review av `f4cecb8`. Rättelserna ovan höll för de fel de
+     skrevs mot, men fyra ordningsfall gick förbi dem. Alla fyra kör mot
+     den riktiga `init.client`-modulen med simulerad leveransordning. ]]
+
+--[[ ── 4a. EN ÅTERKALLELSE SOM HINNER FÖRE ETT KAST ──────────────────
+
+	Servern säger att INGEN rider henne, och FÖRST därefter körs undantags-
+	grenen i avsittningen. Modellens attribut är kvar från före — de är
+	cachade, inte sanna — så varje vakt släpper igenom och klienten satte
+	upp sig själv på en häst servern redan tagit ifrån henne.
+	`avbrytAterforening` rörde bara en redan startad återförening, och här
+	hade ingen hunnit starta. ]]
+do
+	local h = nyHast()
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+	prova("hon rider", LektionController.pagar() == true)
+
+	local originalHandlare = dr.OnServerInvoke
+	dr.OnServerInvoke = function() error("natet foll") end
+
+	__schemaPa(true)
+	sittAv()
+	bildrutor(1)
+	--[[ ÅTERKALLELSEN KOMMER FÖRST. Kastets gren har inte körts än. ]]
+	Net.get("MountChanged").OnClientEvent:Fire(h, nil)
+	bildrutor(1)
+	__schemaTomKo()
+	bildrutor(2)
+	prova("EN ÅTERKALLELSE FÖRE KASTET STOPPAR ÅTERFÖRENINGEN",
+		LektionController.pagar() == false,
+		tostring(LektionController.pagar()))
+	prova("och attributen är fortfarande kvar — det är poängen",
+		h:GetAttribute("RiderUserId") == player.UserId,
+		tostring(h:GetAttribute("RiderUserId")))
+	__schemaPa(false)
+
+	dr.OnServerInvoke = originalHandlare
+	h:Destroy()
+	bildrutor(1)
+end
+
+--[[ ── 4b. EN NY RITT PÅ SAMMA HÄST ────────────────────────────────
+
+	`avbrutenRitt` överlever en avslutad ritt. Sitter spelaren upp på
+	SAMMA häst igen, med ett nytt rittmärke, valde återhämtningen det
+	GAMLA märket ur posten i stället för modellens nuvarande `RidSession`.
+	Attributet är serverns sanning; posten är bara reserv för det som
+	ännu inte replikerat. ]]
+do
+	local h = nyHast()
+	local forstaMarket = h:GetAttribute("RidSession")
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+	prova("ritt 1 pågår", LektionController.pagar() == true)
+
+	local originalHandlare = dr.OnServerInvoke
+	dr.OnServerInvoke = function() return true end
+	sittAv()
+	bildrutor(2)
+	prova("och är avslutad", LektionController.pagar() == false)
+	dr.OnServerInvoke = originalHandlare
+	UgnetaController.dolj()
+
+	--[[ NY RITT PÅ SAMMA HÄST, nytt märke. Riggen är sen en bildruta. ]]
+	local andraMarket = "ritt-session-nytt-marke"
+	h:SetAttribute("RidSession", andraMarket)
+	rivHumanoid(h)
+	__schemaPa(true)
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+	aterstallHumanoid(h)
+	__schemaTomKo()
+	bildrutor(2)
+	prova("EN NY RITT PÅ SAMMA HÄST ÅTERHÄMTAS MOT SITT EGET MÄRKE",
+		LektionController.pagar() == true,
+		tostring(LektionController.pagar()))
+	prova("och märkena var verkligen olika",
+		forstaMarket ~= andraMarket,
+		("%s -> %s"):format(tostring(forstaMarket), tostring(andraMarket)))
+	__schemaPa(false)
+	h:Destroy()
+	bildrutor(1)
+end
+
+--[[ ── 4c. IDENTITETEN REPLIKERAR SENT ─────────────────────────────
+
+	Servern har redan auktoriserat uppsittningen genom att fyra händelsen.
+	Men `RidSession` och `RiderUserId` har inte kommit fram än, och
+	riggen saknar `Humanoid`. Återhämtningen returnerade direkt på ett
+	`marke == nil` och köade ingenting alls — kontrollerna startade
+	aldrig. Väntan ska vara bunden och identiteten får inte hittas på:
+	första observationen av `RidSession` blir märket, och därefter gäller
+	vakterna oförändrat. ]]
+do
+	hastNr += 1
+	local h = __makeHastModell("Senidentitet" .. hastNr)
+	h.Parent = workspace
+	rivHumanoid(h)
+	prova("REPRODUKTION: varken märke eller ryttare har replikerat",
+		h:GetAttribute("RidSession") == nil
+		and h:GetAttribute("RiderUserId") == nil)
+
+	__schemaPa(true)
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+	prova("ingen ritt ännu", LektionController.pagar() == false)
+
+	--[[ Allt kommer fram. ]]
+	h:SetAttribute("RidSession", "ritt-sen-identitet")
+	h:SetAttribute("RiderUserId", player.UserId)
+	aterstallHumanoid(h)
+	__schemaTomKo()
+	bildrutor(2)
+	prova("SEN IDENTITET GER ÄNDÅ EN RITT",
+		LektionController.pagar() == true,
+		tostring(LektionController.pagar()))
+	__schemaPa(false)
+	h:Destroy()
+	bildrutor(1)
+end
+
+--[[ ── 4d. KARAKTÄREN FÖRSVINNER MEDAN SVARET ÄR I LUFTEN ──────────
+
+	`CharacterRemoving` anropar `dismount("avbrott")`, som returnerar
+	direkt eftersom den begärda avsittningen redan nollat `ride`.
+	`sessionGen` rörde sig alltså inte, och min egen vakt vinkade igenom
+	den gamla summeringen. ]]
+do
+	local function nyttUnderlag()
+		return { provovning = {
+			{ rytm = 0.20, balans = 0.20, mjukhet = 0.20 },
+			{ rytm = 0.90, balans = 0.90, mjukhet = 0.90 },
+		} }
+	end
+	local h = nyHast()
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+	local pass = LektionController.pass()
+	if pass then pass.historik = nyttUnderlag() end
+	UgnetaController.dolj()
+	prova("ritten har underlag och ytan är tom",
+		pass ~= nil and UgnetaController.vantar() == false)
+
+	local originalHandlare = dr.OnServerInvoke
+	local slapp
+	dr.OnServerInvoke = function()
+		local ute = false
+		slapp = function() ute = true end
+		while not ute do task.wait() end
+		return true
+	end
+
+	__schemaPa(true)
+	sittAv()
+	__schemaSteg()
+	bildrutor(1)
+	prova("svaret är i luften", slapp ~= nil)
+
+	--[[ KARAKTÄREN DÖR. Ingen lokal ritt finns kvar att riva. ]]
+	player.CharacterRemoving:Fire(player.Character)
+	bildrutor(1)
+
+	if slapp then slapp() end
+	__schemaTomKo()
+	bildrutor(2)
+	prova("EN DÖD KARAKTÄR GÖR DET VÄNTANDE SVARET INERT",
+		UgnetaController.vantar() == false,
+		tostring(UgnetaController.vantar()))
+	__schemaPa(false)
+
+	dr.OnServerInvoke = originalHandlare
+	UgnetaController.dolj()
+	h:Destroy()
+	bildrutor(1)
+end
+
 print("")
 if fel > 0 then
 	print(("SESSIONSKEDJAN: %d FEL"):format(fel))
