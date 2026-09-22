@@ -425,6 +425,66 @@ function SparService.skriv(player: Player, andra: ((Sparning.Save) -> ())?): boo
 	return ok
 end
 
+--[[ ══ SISTA SKRIVNINGEN FÖR EN SPELARE VID NEDSTÄNGNING ═══════
+
+	Robustness Slice D.
+
+	`skriv` vägrar när en skrivning redan är i luften på samma nyckel —
+	och det är rätt i drift: ändringen ligger kvar i minnet och följer med
+	nästa skrivning. Men vid NEDSTÄNGNING finns ingen nästa. Ett naket
+	`skriv` där hade tyst tappat allt spelaren gjort sedan den pågående
+	skrivningen startade.
+
+	Vi väntar därför ut den som är i luften och gör sedan vår egen. Det
+	är också skälet att vi inte bara startar en andra `UpdateAsync` på
+	samma nyckel: två samtidiga skrivningar ger throttling och kan landa i
+	fel ordning, vilket är precis vad `skriver`-vakten finns för.
+
+	VÄNTAN ÄR BEGRÄNSAD. Roblox ger nedstängningen en budget, och en
+	skrivning som hänger får inte äta upp den för alla andra. Efter taket
+	gör vi försöket ändå — `skriv` svarar då `false` på vakten, och det
+	är ett ärligt nej i stället för en oändlig väntan. ]]
+local STANGNING_VANTETAK = 200
+
+function SparService.stangningFor(player: Player): boolean
+	local varv = 0
+	while skriver[player] and varv < STANGNING_VANTETAK do
+		task.wait()
+		varv += 1
+	end
+	return SparService.skriv(player)
+end
+
+--[[ ══ NEDSTÄNGNINGEN: ALLA STARTAS, SEDAN VÄNTAR VI IN DEM ═════
+
+	Loopen här var serieell: `skriv` yieldar mot lagret och gör upp till
+	tre försök med 1-2-4 sekunders backoff, så EN långsam spelare sköt
+	alla bakom sig framåt i kön. Svansen av listan var risken — med några
+	spelare och en trög nyckel räcker Roblox nedstängningsbudget inte till
+	de sista.
+
+	Varje spelare får därför sin egen tråd, och callbacken returnerar
+	först när de är klara. Det är hela ändringen: samma `skriv`, samma
+	vakt, samma retry — bara inte i kö.
+
+	RÄKNAREN ÄR INTE EN MÄTPUNKT, den är hur vi vet när vi får returnera.
+	`task.wait()` i väntan gör att de startade trådarna faktiskt får köra. ]]
+function SparService.stangning()
+	local kvar = 0
+	for _, player in Players:GetPlayers() do
+		kvar += 1
+		task.spawn(function()
+			--[[ `pcall`: en spelare som kastar får inte lämna räknaren
+			     hängande och därmed hålla kvar hela nedstängningen. ]]
+			pcall(SparService.stangningFor, player)
+			kvar -= 1
+		end)
+	end
+	while kvar > 0 do
+		task.wait()
+	end
+end
+
 --[[ ── BARRIÄREN: LADDNINGEN ÄR KLAR ─────────────────────────────
 	#162 blockerare 1. `ladda()` yieldar i `GetAsync`. Roblox startar varje
 	`PlayerAdded`-anslutning på EGEN TRÅD, så en tjänst som kopplar samma
@@ -547,11 +607,7 @@ function SparService.start()
 	end
 
 	if not RunService:IsStudio() then
-		game:BindToClose(function()
-			for _, player in Players:GetPlayers() do
-				SparService.skriv(player)
-			end
-		end)
+		game:BindToClose(SparService.stangning)
 	end
 
 	print("[Spar] Datalagret igång (" .. BUTIK .. ")")
@@ -565,6 +621,11 @@ end
 	produktion — `GetDataStore` ska inte anropas per spelare — men den gör
 	att fallet "Studio utan API-åtkomst" inte går att prova efter ett
 	lyckat fall i samma process, och det fallet måste gå att prova. ]]
+--[[ Retrytaket, utlamnat for proven. Ett prov som vill fella EN hel
+     skrivning maste fella alla dess forsok, och att skriva siffran 3 i
+     ett prov hade blivit en andra sanning som glider isar. ]]
+SparService._FORSOK_FOR_PROV = FORSOK
+
 function SparService._glomForProv(player: Player)
 	glom(player)
 end

@@ -999,6 +999,8 @@ __datastore = {
 	     och fönstret där en annan `PlayerAdded`-lyssnare ser en halvladdad
 	     save existerar inte i bänken. ]]
 	fordrojLas = false,
+	--[[ Opt-in krok fore varje `UpdateAsync`. Se noten dar. ]]
+	foreSkriv = nil :: ((string) -> ())?,
 	forsok = { las = 0, skriv = 0 },
 }
 
@@ -1008,6 +1010,7 @@ function __datastore.nollstall()
 	__datastore.felSkriv = false
 	__datastore.felButik = false
 	__datastore.fordrojLas = false
+	__datastore.foreSkriv = nil
 	__datastore.forsok = { las = 0, skriv = 0 }
 end
 
@@ -1030,6 +1033,12 @@ function __butik:SetAsync(nyckel, varde)
 end
 function __butik:UpdateAsync(nyckel, fn)
 	__datastore.forsok.skriv += 1
+	--[[ OPT-IN: en krok FORE skrivningen, satt av provet. Den enda vagen
+	     att gora en skrivning langsam pa ETT bestamt nyckel utan att
+	     rora produktionen — och det ar vad nedstangningens fan-out maste
+	     matas mot. `nil` som standard: rors den inte beter sig lagret
+	     precis som forut. ]]
+	if __datastore.foreSkriv then __datastore.foreSkriv(nyckel) end
 	if __datastore.felSkriv then error("DataStore: skrivning misslyckades (stub)") end
 	local nytt = fn(__datastore._data[nyckel])
 	--[[ NIL UR TRANSFORMATORN AVBRYTER SKRIVNINGEN och lämnar det lagrade
@@ -1883,9 +1892,87 @@ end
      gjort ordningsprovet nedan tidsberoende i stället för deterministiskt.
      Det som provas är ordningen mellan anslutning och anrop, inte att Roblox
      schemalägger. ]]
+--[[ ══ EN OPT-IN SCHEMALAGGARE ═══════════════════════════
+
+	`task.spawn` kor SYNKRONT i banken, och det ar ratt for nastan allt:
+	det som provas ar vad en spawn GOR, inte nar. Men da gar varken
+	FAN-OUT eller ETT PAGAENDE ARBETE att uttrycka — en spawn som alltid
+	kor klart pa stallet ser likadan ut som en serie, och ingen trad kan
+	ligga och vanta mitt i nagot.
+
+	`__schemaPa(true)` byter darfor spawn mot en KO AV COROUTINES:
+
+	  task.spawn(fn)   skapar en coroutine och koar den, kor den inte
+	  task.wait()      i en coroutine: lamnar over till schemat
+	                   i huvudtraden: kor nasta vantande ett steg
+	  __schemaSteg()   koar upp en trad ett steg; false nar kon ar tom
+	  __schemaKvar()   hur manga trader som lever — fan-out-matningen
+
+	Da kan ett prov starta ett arbete, lamna det HALVGJORT mitt i en
+	skrivning, och sedan titta pa vad nagon annan gor under tiden.
+
+	AVSTANGD SOM STANDARD. Ror inget prov schemat beter sig banken exakt
+	som forut — `spawn` kor direkt, `wait` svarar 0. ]]
+local __schemaKo: { thread } = {}
+local __schemaAktivt = false
+
+function __schemaPa(pa: boolean)
+	__schemaAktivt = pa and true or false
+	__schemaKo = {}
+end
+
+function __schemaKvar(): number
+	return #__schemaKo
+end
+
+--[[ Kor forsta vantande traden ETT steg. Yieldar den laggs den sist i
+     kon igen; ar den klar faller den bort. False nar kon ar tom. ]]
+--[[ VILKEN trad schemat just nu kor. `coroutine.isyieldable()` duger
+     inte som prov: specen sjalv kan redan ligga i en coroutine, och da
+     svarar den sant aven for den — vantesloopen i produktionen yieldade
+     da sig sjalv och ingen resumade den igen («thread yielded
+     unexpectedly»). Identiteten ar entydig. ]]
+local __schemaAktuell: thread? = nil
+
+function __schemaSteg(): boolean
+	local co = table.remove(__schemaKo, 1)
+	if not co then return false end
+	local forra = __schemaAktuell
+	__schemaAktuell = co
+	local ok, fel = coroutine.resume(co)
+	__schemaAktuell = forra
+	if not ok then
+		warn("[schema] en trad kastade: " .. tostring(fel))
+	elseif coroutine.status(co) ~= "dead" then
+		table.insert(__schemaKo, co)
+	end
+	return true
+end
+
+--[[ Kor tills kon ar tom. Taket finns for att ett prov med en trad som
+     aldrig blir klar ska FALLA, inte hanga. ]]
+function __schemaTomKo(tak: number?)
+	local n = 0
+	while __schemaSteg() do
+		n += 1
+		if n > (tak or 10000) then
+			error("[schema] kon blev aldrig tom — en trad ar fast")
+		end
+	end
+end
+
 task = {
 	delay = function(_, fn) __senasteDelay = fn end,
-	spawn = function(fn, ...) fn(...) end,
+	spawn = function(fn, ...)
+		if __schemaAktivt then
+			local argv = table.pack(...)
+			table.insert(__schemaKo, coroutine.create(function()
+				fn(table.unpack(argv, 1, argv.n))
+			end))
+			return
+		end
+		fn(...)
+	end,
 	--[[ `defer` kor direkt i banken, precis som `spawn`. I Roblox skjuts
 	     den till bildrutans slut; det som provas ar VAD den gor, inte NAR.
 	     `TouchControls` anvander den for att slå ihop flera
@@ -1896,5 +1983,20 @@ task = {
 	     felprovet sju sekunder långt utan att mäta något annat än att
 	     luau kan sova. Antalet FÖRSÖK är det som provas, och det räknar
 	     datalagerstubben. ]]
-	wait = function() return 0 end,
+	--[[ Med schemat pa drar `wait` kon framat — annars hade en
+	     produktionsloop som vantar in sina egna spawnar snurrat for
+	     evigt i banken. Utan schemat ar den no-op som forut. ]]
+	--[[ I en schemalagd trad LAMNAR `wait` over; i huvudtraden DRAR den
+	     schemat framat. Det andra ar det som far produktionens egen
+	     «vanta in mina spawnar»-loop att ga runt i banken. Utan schemat
+	     ar den no-op som forut. ]]
+	wait = function()
+		if not __schemaAktivt then return 0 end
+		if __schemaAktuell ~= nil and coroutine.running() == __schemaAktuell then
+			coroutine.yield()
+		else
+			__schemaSteg()
+		end
+		return 0
+	end,
 }
