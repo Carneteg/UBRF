@@ -1824,12 +1824,18 @@ local function __nyInstans(klass)
 				     innan bandet klipps, och `DescendantAdded` nar den
 				     kommer in. Utan det kan en modul som stadar efter sig
 				     inte visas gora det — se noten vid signalerna. ]]
-				--[[ BARA SIGNALEN, INTE BOKFORINGEN. Forsta versionen tog
-				     ocksa bort noden ur forra foralderns `_barn`, vilket
-				     ar mer likt Roblox men INTE hur den har banken alltid
-				     betett sig — `varldshud.spec` foll direkt. En
-				     harness-andring for ett nytt prov far inte flytta
-				     marken under de gamla. ]]
+				--[[ BOKFORINGEN OCKSA, SEDAN #264.
+				     Den har raden sa forut «bara signalen, inte
+				     bokforingen», med motiveringen att `varldshud.spec`
+				     foll direkt. Men da ljog banken om motorn: en part
+				     som flyttades fran A till B lag kvar i A:GetChildren()
+				     OCH i B:s, och `Parent = B` en andra gang gav B tva
+				     poster av samma barn. Varje prov som raknar barn,
+				     letar efter en riven nod eller foljer ett subtrad
+				     matte alltsa nagot Roblox aldrig gor.
+				     Ett prov far inte halla sig gront genom att banken
+				     har fel; specarna som byggde pa den gamla semantiken
+				     ar rattade i stallet. ]]
 				if rawget(t, "_forstord") then
 					error("The Parent property of a destroyed instance is locked", 2)
 				end
@@ -1846,9 +1852,23 @@ local function __nyInstans(klass)
 				     `DescendantAdded` — en prompt som lossnade fran
 				     varlden gick inte att mata alls.
 				     `Parent` lases ur `_foralder` i `__index` nedan. ]]
+				--[[ UR DEN GAMLA FORALDERNS LISTA FORST. Roblox har en
+				     nod hos exakt en foralder; banken lat den ligga kvar
+				     hos bada. ]]
+				local gammalF = rawget(t, "_foralder")
+				if type(gammalF) == "table" and type(gammalF._barn) == "table" then
+					for i = #gammalF._barn, 1, -1 do
+						if gammalF._barn[i] == t then
+							table.remove(gammalF._barn, i)
+						end
+					end
+				end
 				rawset(t, "_foralder", v)
 				if v and type(v) == "table" then
 					v._barn = v._barn or {}
+					--[[ SAMMA FORALDER IGEN AR INGEN NY POST. Utan
+					     borttagningen ovan gav `Parent = B; Parent = B`
+					     tva poster av samma barn hos B. ]]
 					table.insert(v._barn, t)
 				end
 				if __underWorkspace(t) then

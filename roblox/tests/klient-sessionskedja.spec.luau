@@ -132,6 +132,101 @@ do
 	bildrutor(1)
 end
 
+print("\n══ 1b. DEN INITIALA ÅTERHÄMTNINGEN VÄCKER INGET DÖTT ═══════")
+do
+	--[[ Fel 1:s rättelse öppnar en NY väg in i `mount`: den första
+	     uppsittningen går nu genom samma bundna omförsök som en
+	     återupptagen ritt. Slice G bevisade vakterna på den gamla vägen.
+	     Här bevisas de på den nya — annars vore rättelsen en oprovad
+	     ingång. Riggen läker i varje arm, så det enda som kan stoppa
+	     uppsittningen är vakten. ]]
+	local function koadInitialAterhamtning(): Model
+		local h = nyHast()
+		rivHumanoid(h)
+		__schemaPa(true)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(1)
+		aterstallHumanoid(h)
+		return h
+	end
+
+	local function stadaEfter(h: Model)
+		__schemaTomKo()
+		bildrutor(1)
+		__schemaPa(false)
+		if h.Parent then h:Destroy() end
+		bildrutor(1)
+	end
+
+	do
+		local h = koadInitialAterhamtning()
+		h:SetAttribute("RiderUserId", player.UserId + 7)
+		__schemaTomKo()
+		bildrutor(2)
+		prova("EN ANNAN RYTTARE STOPPAR DEN INITIALA ÅTERHÄMTNINGEN",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		stadaEfter(h)
+	end
+
+	do
+		local h = koadInitialAterhamtning()
+		h:SetAttribute("RidSession", "ett-annat-marke")
+		__schemaTomKo()
+		bildrutor(2)
+		prova("ETT ANNAT RITTMÄRKE STOPPAR DEN",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		stadaEfter(h)
+	end
+
+	do
+		local h = koadInitialAterhamtning()
+		--[[ Modellen tas ur världen. `model.Parent ~= nil` räcker inte —
+		     se fynd 1 i Slice G-reviewen; vakten frågar efter medlemskap. ]]
+		local mapp = Instance.new("Folder")
+		mapp.Name = "Bortkopplad"
+		mapp.Parent = workspace
+		h.Parent = mapp
+		mapp.Parent = nil
+		__schemaTomKo()
+		bildrutor(2)
+		prova("EN MODELL UTANFÖR VÄRLDEN STOPPAR DEN",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		prova("och hästen hade hela tiden en egen förälder",
+			h.Parent == mapp, tostring(h.Parent))
+		__schemaPa(false)
+		h:Destroy()
+		mapp:Destroy()
+		bildrutor(1)
+	end
+
+	do
+		local h = koadInitialAterhamtning()
+		--[[ SERVERN HAR ÅTERKALLAT UPPSITTNINGEN. Ingen rider henne. ]]
+		Net.get("MountChanged").OnClientEvent:Fire(h, nil)
+		__schemaTomKo()
+		bildrutor(2)
+		prova("EN ÅTERKALLAD UPPSITTNING STOPPAR DEN",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		stadaEfter(h)
+	end
+
+	--[[ KONTROLLEN SIST: utan den kan alla fyra tystnader betyda att den
+	     initiala återhämtningen aldrig fungerar i den här uppställningen. ]]
+	do
+		local h = koadInitialAterhamtning()
+		__schemaTomKo()
+		bildrutor(2)
+		prova("KONTROLL: orörd auktoritet sätter upp henne",
+			LektionController.pagar() == true,
+			tostring(LektionController.pagar()))
+		stadaEfter(h)
+	end
+end
+
 print("\n══ 2. ETT KASTAT AVSITTNINGSANROP ════════════════════════════")
 do
 	local h = nyHast()
