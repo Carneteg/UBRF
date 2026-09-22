@@ -1197,6 +1197,22 @@ workspace.ChildRemoved = __signal()
 workspace.DescendantAdded = __signal()
 workspace.DescendantRemoving = __signal()
 
+--[[ Noden OCH allt under den. `DescendantAdded`/`DescendantRemoving`
+     ar descendant-scopade i Roblox: flyttas en mapp med en prompt i
+     fyras signalen for prompten ocksa. Forsta versionen fyrade bara for
+     roten, och da kunde en dorr som revs med sin modell inte matas. ]]
+function __medBarn(nod: any): { any }
+	local ut = { nod }
+	local function ner(n)
+		for _, b in ipairs(rawget(n, "_barn") or {}) do
+			table.insert(ut, b)
+			ner(b)
+		end
+	end
+	ner(nod)
+	return ut
+end
+
 --[[ Ar noden under `workspace`? Signalerna galler tradet, inte varje
      foralder — samma som i Roblox. ]]
 function __underWorkspace(nod: any): boolean
@@ -1204,7 +1220,7 @@ function __underWorkspace(nod: any): boolean
 	local djup = 0
 	while n ~= nil and djup < 64 do
 		if n == workspace then return true end
-		n = rawget(n, "Parent")
+		n = rawget(n, "_foralder")
 		djup += 1
 	end
 	return false
@@ -1258,7 +1274,7 @@ local function __nyInstans(klass)
 		     modulens beslut. ]]
 		AbsoluteSize = vec(0, 0, 0),
 		AbsolutePosition = vec(0, 0, 0),
-		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
+		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, _foralder = nil,
 		--[[ Roblox fyrar den precis innan instansen rivs. Se noten vid
 		     `workspace.DescendantRemoving`. ]]
 		Destroying = __signal(),
@@ -1359,10 +1375,10 @@ local function __nyInstans(klass)
 	--[[ Klientloopen sitter av om riggen inte längre står i världen. Utan
 	     den här kunde den vägen aldrig köras i bänken. ]]
 	function inst:IsDescendantOf(mojligForfader)
-		local f = rawget(self, "Parent")
+		local f = rawget(self, "_foralder")
 		while f do
 			if f == mojligForfader then return true end
-			f = rawget(f, "Parent") or (type(f) == "table" and f.Parent) or nil
+			f = rawget(f, "_foralder") or (type(f) == "table" and f.Parent) or nil
 		end
 		return false
 	end
@@ -1385,10 +1401,25 @@ local function __nyInstans(klass)
 		--[[ Signalerna FORE losskopplingen: en lyssnare ska kunna se var
 		     instansen satt, precis som i Roblox. ]]
 		local ivarlden = __underWorkspace(self)
-		local d = rawget(self, "Destroying")
-		if d then d:Fire() end
-		if ivarlden then workspace.DescendantRemoving:Fire(self) end
-		local far = rawget(self, "Parent")
+		local trad = __medBarn(self)
+		--[[ `Destroying` fyrar for varje nod som rivs, inte bara roten. ]]
+		for _, n in ipairs(trad) do
+			local d = rawget(n, "Destroying")
+			if d then d:Fire() end
+		end
+		if ivarlden then
+			for _, n in ipairs(trad) do
+				workspace.DescendantRemoving:Fire(n)
+			end
+		end
+		--[[ EN FORSTORD INSTANS AR TERMINAL. Roblox laser `Parent`; att
+		     lata banken sla tillbaka den hade gjort det mojligt att prova
+		     ett livscykelsteg som inte finns — och ett prov som vilar pa
+		     en omojlig overgang bevisar ingenting. ]]
+		for _, n in ipairs(trad) do
+			rawset(n, "_forstord", true)
+		end
+		local far = rawget(self, "_foralder")
 		if far and far._barn then
 			for i, b in ipairs(far._barn) do
 				if b == self then table.remove(far._barn, i) break end
@@ -1400,7 +1431,7 @@ local function __nyInstans(klass)
 		     nyckel, sa en senare `x.Parent = ...` gick rakt forbi hooken
 		     och varken `DescendantAdded` eller barnlistan uppdaterades.
 		     En riven prompt gick alltsa inte att satta tillbaka. ]]
-		rawset(self, "Parent", nil)
+		rawset(self, "_foralder", nil)
 	end
 	if klass == "TextButton" then
 		inst.Activated = __signal()
@@ -1580,7 +1611,7 @@ local function __nyInstans(klass)
 			if type(namn) ~= "string" or namn == "" then namn = rawget(nod, "ClassName") end
 			if type(namn) ~= "string" then break end
 			table.insert(led, 1, namn)
-			nod = rawget(nod, "Parent")
+			nod = rawget(nod, "_foralder")
 		end
 		return table.concat(led, ".")
 	end
@@ -1677,6 +1708,7 @@ local function __nyInstans(klass)
 
 	return setmetatable(inst, {
 		__index = function(t, k)
+			if k == "Parent" then return rawget(t, "_foralder") end
 			if __BEVAKADE[k] then return rawget(t, "_p")[k] end
 			--[[ `Position` är inget eget fält på en riktig BasePart: den
 			     läses ur CFrame. Koden som mäter avstånd till en häst
@@ -1684,7 +1716,7 @@ local function __nyInstans(klass)
 			     läser just `Position`, och en rigg som bara satt sin
 			     CFrame gav då nil. Samma härledning som byggstubbarna. ]]
 			if k == "WorldPosition" and rawget(t, "ClassName") == "Attachment" then
-				local f = rawget(t, "Parent")
+				local f = rawget(t, "_foralder")
 				local egen = rawget(t, "Position") or Vector3.new(0, 0, 0)
 				if f and f.Position then return f.Position + egen end
 				return egen
@@ -1699,7 +1731,7 @@ local function __nyInstans(klass)
 			     träns på huvudet och ett träns i origo. ]]
 			if k == "WorldCFrame" and rawget(t, "ClassName") == "Attachment" then
 				local egen = rawget(t, "CFrame")
-				local vard = rawget(t, "Parent")
+				local vard = rawget(t, "_foralder")
 				local vardCF = vard and rawget(vard, "CFrame")
 				if vardCF and egen then return vardCF * egen end
 				return egen
@@ -1759,16 +1791,31 @@ local function __nyInstans(klass)
 				     betett sig — `varldshud.spec` foll direkt. En
 				     harness-andring for ett nytt prov far inte flytta
 				     marken under de gamla. ]]
-				if __underWorkspace(t) then
-					workspace.DescendantRemoving:Fire(t)
+				if rawget(t, "_forstord") then
+					error("The Parent property of a destroyed instance is locked", 2)
 				end
-				rawset(t, "Parent", v)
+				if __underWorkspace(t) then
+					for _, n in ipairs(__medBarn(t)) do
+						workspace.DescendantRemoving:Fire(n)
+					end
+				end
+				--[[ FORALDERN LAGRAS UNDER EN EGEN NYCKEL, och skalet ar
+				     inte prydlighet. `__newindex` fyrar bara for en
+				     FRANVARANDE nyckel. Rawsattes `Parent` gick varje
+				     SENARE omforaldring rakt forbi metatabellen, och da
+				     fyrade varken `DescendantRemoving` eller
+				     `DescendantAdded` — en prompt som lossnade fran
+				     varlden gick inte att mata alls.
+				     `Parent` lases ur `_foralder` i `__index` nedan. ]]
+				rawset(t, "_foralder", v)
 				if v and type(v) == "table" then
 					v._barn = v._barn or {}
 					table.insert(v._barn, t)
 				end
 				if __underWorkspace(t) then
-					workspace.DescendantAdded:Fire(t)
+					for _, n in ipairs(__medBarn(t)) do
+						workspace.DescendantAdded:Fire(n)
+					end
 				end
 			else
 				rawset(t, k, v)
