@@ -548,6 +548,140 @@ do
 	bildrutor(1)
 end
 
+print("\n══ 5. HÄNDELSER FÖR ANDRA HÄSTAR, OCH SENA FÄLT ══════════")
+--[[ Uppföljningsreview av `b9a1362`. Två luckor kvar i 4a och 4c. ]]
+
+--[[ ── 5a. EN ORELATERAD HÄST FÅR INTE RADERA VÅR ÅTERKALLELSE ─────
+
+	`MountChanged` går ut med `FireAllClients` (`HorseService:516`), så
+	klienten får beskedet om VARJE häst — inte bara sin egen. Jag band
+	ogiltigförklaringen till ett enda fält med motiveringen att spelaren
+	har en häst i taget. Det är sant om vad hon RIDER och irrelevant för
+	vad hon får för händelser: ett besked om häst B skrev över
+	återkallelsen av häst A, och sedan återauktoriserade B en återhämtning
+	av A mot A:s gamla attribut. ]]
+do
+	local a = nyHast()
+	local b = nyHast()
+	Net.get("MountChanged").OnClientEvent:Fire(a, player)
+	bildrutor(1)
+	prova("hon rider A", LektionController.pagar() == true)
+
+	local originalHandlare = dr.OnServerInvoke
+	dr.OnServerInvoke = function() error("natet foll") end
+
+	__schemaPa(true)
+	sittAv()
+	bildrutor(1)
+	--[[ Återkallelsen av A kommer först... ]]
+	Net.get("MountChanged").OnClientEvent:Fire(a, nil)
+	bildrutor(1)
+	--[[ ...och sedan ett HELT ORELATERAT besked om B. ]]
+	Net.get("MountChanged").OnClientEvent:Fire(b, nil)
+	bildrutor(1)
+	__schemaTomKo()
+	bildrutor(2)
+	prova("EN ANNAN HÄSTS BESKED RADERAR INTE ÅTERKALLELSEN AV A",
+		LektionController.pagar() == false,
+		tostring(LektionController.pagar()))
+	prova("och A:s attribut är fortfarande gamla — det är poängen",
+		a:GetAttribute("RiderUserId") == player.UserId,
+		tostring(a:GetAttribute("RiderUserId")))
+	__schemaPa(false)
+
+	dr.OnServerInvoke = originalHandlare
+	a:Destroy()
+	b:Destroy()
+	bildrutor(1)
+end
+
+--[[ ── 5b. RYTTAREN ANLÄNDER SOM ANDRA FÄLT ────────────────────────
+
+	Väntan gällde bara `RidSession`. Fanns märket men inte `RiderUserId`
+	föll vakten direkt och loopen tog slut på första Heartbeat. Min egen
+	rapport påstod att båda fälten kunde komma sent; koden bar inte det
+	påståendet. Ett SAKNAT fält ska behandlas som «har inte replikerat
+	än» inom samma budget — ett FRÄMMANDE värde stoppar fortfarande.
+
+	HUR DET LEVERERAS, och varför. Bänkens `Heartbeat:Wait()` returnerar
+	0 utan att lämna tråden, så hela återhämtningsloopen kör klart inuti
+	ett enda schemasteg. Ett attribut som sätts EFTER draneringen kommer
+	alltså alltid för sent, och ett som sätts före är inte «sent» alls —
+	första versionen av det här blocket mätte därför ingenting. Provet
+	räknar i stället väntevarven och levererar fältet vid ett bestämt
+	varv. Bara bänkens egen `Wait` byts ut; ingen produktionskod rörs. ]]
+local riktigWait = RunService.Heartbeat.Wait
+
+--[[ Levererar `varde` som `RiderUserId` vid väntevarv `vidVarv`. ]]
+local function medSentFalt(h: Model, vidVarv: number, varde: any, fn)
+	local varv = 0
+	RunService.Heartbeat.Wait = function(self)
+		varv += 1
+		if varv == vidVarv then h:SetAttribute("RiderUserId", varde) end
+		return 0
+	end
+	fn()
+	RunService.Heartbeat.Wait = riktigWait
+	return varv
+end
+
+do
+	hastNr += 1
+	local h = __makeHastModell("Senryttare" .. hastNr)
+	h:SetAttribute("RidSession", "ritt-sen-ryttare")
+	h.Parent = workspace
+	rivHumanoid(h)
+	prova("REPRODUKTION: märket finns, ryttaren saknas",
+		h:GetAttribute("RidSession") ~= nil
+		and h:GetAttribute("RiderUserId") == nil)
+
+	local varv = medSentFalt(h, 2, player.UserId, function()
+		__schemaPa(true)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(1)
+		aterstallHumanoid(h)
+		__schemaTomKo()
+		bildrutor(2)
+		__schemaPa(false)
+	end)
+	prova("EN SEN RYTTARE VÄNTAS IN INOM BUDGETEN",
+		LektionController.pagar() == true,
+		("pagar=%s efter %d vantevarv"):format(
+			tostring(LektionController.pagar()), varv))
+	prova("och den kom verkligen efter första varvet",
+		varv >= 2, ("%d varv"):format(varv))
+	h:Destroy()
+	bildrutor(1)
+end
+
+--[[ ── 5c. MEN EN FRÄMMANDE ÄGARE STOPPAR FORTFARANDE ──────────────
+
+	Kontrollen som gör 5b meningsfull: att vänta in ett SAKNAT fält får
+	inte bli att vänta bort ett fält som säger nej. Samma leverans, samma
+	varv — bara ett annat användar-id. ]]
+do
+	hastNr += 1
+	local h = __makeHastModell("Frammandeagare" .. hastNr)
+	h:SetAttribute("RidSession", "ritt-frammande")
+	h.Parent = workspace
+	rivHumanoid(h)
+
+	medSentFalt(h, 2, player.UserId + 5, function()
+		__schemaPa(true)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(1)
+		aterstallHumanoid(h)
+		__schemaTomKo()
+		bildrutor(2)
+		__schemaPa(false)
+	end)
+	prova("EN FRÄMMANDE ÄGARE STOPPAR ÄNDÅ",
+		LektionController.pagar() == false,
+		tostring(LektionController.pagar()))
+	h:Destroy()
+	bildrutor(1)
+end
+
 print("")
 if fel > 0 then
 	print(("SESSIONSKEDJAN: %d FEL"):format(fel))

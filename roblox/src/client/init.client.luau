@@ -129,15 +129,23 @@ local sessionGen = 0
 --[[ SERVERN HAR TAGIT HENNE IFRÅN OSS, och det måste gå att minnas.
 
 	En återkallelse kunde landa i en glugg: `avbrytAterforening` rörde
-	bara en RRDAN startad återförening, och kom beskedet innan undantags-
+	bara en REDAN startad återförening, och kom beskedet innan undantags-
 	grenen i avsittningen hunnit köra fanns ingen loop att avbryta. Grenen
 	startade då en återförening mot attribut som ligger kvar på modellen
 	från före — de är CACHADE, inte sanna — och klienten satte upp sig
 	själv på en häst servern redan tagit ifrån henne.
 
-	Ett fält, inte en tabell: spelaren har en häst i taget, och posten
-	rensas så fort servern säger att vi sitter upp på henne igen. ]]
-local aterkalladModell: Model? = nil
+	POSTEN HÖR TILL BEGÄRAN, inte till klienten i allmänhet. Första
+	versionen var ett enda fält, med motiveringen att spelaren har en häst
+	i taget. Det är sant om vad hon RIDER och irrelevant för vad hon FÅR
+	FÖR HÄNDELSER: `MountChanged` går ut med `FireAllClients`, så beskedet
+	om en helt orelaterad häst skrev över återkallelsen av vår — och sedan
+	återauktoriserade den främmande hästen en återhämtning av vår.
+
+	Därför en post om den avsittning som faktiskt väntar på svar, och
+	ingenting annat. Den sätts när begäran skickas, märks bara av ett
+	besked om SAMMA häst, och rivs när svaret är färdigbehandlat. ]]
+local vantandeAvsittning: { hast: Model, aterkallad: boolean }? = nil
 
 --[[ FRAMATDEKLARATION. `startaAterforening` definieras langre ned, vid
      de andra aterhamtningsdelarna, men `begarAvsittning` hogre upp
@@ -230,6 +238,10 @@ local function begarAvsittning()
 	--[[ VILKEN RITT DET HÄR SVARET HÖR TILL. Se noten vid `sessionGen`. ]]
 	sessionGen += 1
 	local minSession = sessionGen
+	--[[ Den här begäran är nu den som kan återkallas. Se noten vid
+	     `vantandeAvsittning`. ]]
+	local vantande = { hast = hast, aterkallad = false }
+	vantandeAvsittning = vantande
 	local summering = dismount("avsittning")
 	task.spawn(function()
 		local ok, svar, skal = pcall(function()
@@ -253,11 +265,12 @@ local function begarAvsittning()
 				Har servern faktiskt satt av oss stämmer inte längre
 				attributen, och då sätter den ingen upp igen. ]]
 			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
-			--[[ HAR SERVERN HUNNIT SÄGA IFRÅN? Då är attributen på
-			     modellen cachade och bevisar ingenting. Se noten vid
-			     `aterkalladModell`. ]]
+			--[[ HAR SERVERN HUNNIT SÄGA IFRÅN OM DEN HÄR HÄSTEN? Då är
+			     attributen på modellen cachade och bevisar ingenting.
+			     Se noten vid `vantandeAvsittning`. ]]
+			if vantandeAvsittning == vantande then vantandeAvsittning = nil end
 			if sessionGen == minSession and not ride
-				and aterkalladModell ~= hast then
+				and not vantande.aterkallad then
 				startaAterforening(hast)
 			end
 			return
@@ -287,6 +300,7 @@ local function begarAvsittning()
 			     `HorseService.aterforena`, som lades till för att göra
 			     påståendet till en funktion. ]]
 			warn("[Horse] avsittningen nekades: " .. tostring(skal))
+			if vantandeAvsittning == vantande then vantandeAvsittning = nil end
 			return
 		end
 		--[[ ── PRESENTATIONEN HÖR TILL SIN EGEN RITT ─────────────────
@@ -300,6 +314,7 @@ local function begarAvsittning()
 			Ett giltigt avslut UTAN efterföljande ritt räknar inte upp
 			`sessionGen` och visar därför fortfarande sin summering,
 			exakt en gång. ]]
+		if vantandeAvsittning == vantande then vantandeAvsittning = nil end
 		if sessionGen ~= minSession then
 			warn("[Horse] efterritten hör till en tidigare ritt — visas inte")
 			return
@@ -627,17 +642,29 @@ function startaAterforening(model: Model)
 			     observationen blir märket; därefter rörs det inte. ]]
 			if marke == nil then
 				marke = model:GetAttribute("RidSession")
-				if marke == nil then
-					--[[ Fortfarande inget. Vänta vidare inom budgeten —
-					     men bara så länge hästen är kvar i världen. ]]
-					if not model:IsDescendantOf(workspace) then
-						aterforeningModell = nil
-						warn("[Horse] återföreningen avbröts — modellen "
-							.. "lämnade världen innan identiteten kom")
-						return
-					end
-					continue
+			end
+			--[[ ── SAKNAT ÄR INTE FRÄMMANDE ────────────────────────────
+
+				Väntan gällde först bara `RidSession`. Fanns märket men
+				inte `RiderUserId` föll vakten nedan på ett `nil ~= vårt`
+				och loopen var slut efter EN Heartbeat — trots att servern
+				redan auktoriserat uppsittningen. De två fälten replikerar
+				inte nödvändigtvis i samma bildruta.
+
+				Ett SAKNAT fält betyder «har inte kommit fram än» och
+				väntas in inom samma budget. Ett fält som FINNS och säger
+				något annat stoppar oss direkt, som förut — det är vakten
+				nedan som avgör det, och den är orörd. ]]
+			if marke == nil or model:GetAttribute("RiderUserId") == nil then
+				--[[ Vänta vidare inom budgeten — men bara så länge
+				     hästen är kvar i världen. ]]
+				if not model:IsDescendantOf(workspace) then
+					aterforeningModell = nil
+					warn("[Horse] återföreningen avbröts — modellen "
+						.. "lämnade världen innan identiteten kom")
+					return
 				end
+				continue
 			end
 			local ok, skal = sammaAuktoritativaRitt(model, marke)
 			if not ok then
@@ -900,7 +927,10 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 	if rider == player then
 		--[[ Ett nytt auktoritativt JA om DEN HÄR hästen upphäver en
 		     tidigare återkallelse av henne. ]]
-		if aterkalladModell == model then aterkalladModell = nil end
+		local vantande = vantandeAvsittning
+		if vantande ~= nil and vantande.hast == model then
+			vantande.aterkallad = false
+		end
 		if not ride or ride.model ~= model then
 			--[[ Gick det inte nu kan riggen vara halvreplikerad. Se
 			     noten vid `startaAterforening`. ]]
@@ -913,9 +943,13 @@ Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Play
 		     sätta upp oss igen efter att servern sagt att någon annan —
 		     eller ingen — rider henne. Avbrottet sker oavsett om vi
 		     själva har en ritt just nu. ]]
-		--[[ MINNS DET, oavsett om någon lyssnade just nu. Se noten vid
-		     `aterkalladModell`. ]]
-		aterkalladModell = model
+		--[[ MINNS DET, oavsett om någon lyssnade just nu — men bara för
+		     den häst beskedet faktiskt gäller. Se noten vid
+		     `vantandeAvsittning`. ]]
+		local vantande = vantandeAvsittning
+		if vantande ~= nil and vantande.hast == model then
+			vantande.aterkallad = true
+		end
 		if aterforeningModell == model then
 			avbrytAterforening()
 		end
