@@ -717,6 +717,222 @@ do
 	h:Destroy()
 end
 
+--[[ == ATERFORENINGEN KAN BEHOVA MER AN ETT FORSOK ==================
+
+	Robustness Slice G.
+
+	Klienten river ritten INNAN `DismountRequest` svarat. Nekar servern
+	skickar den `MountChanged(model, player)` tillbaka. Men `mount` gav
+	upp tyst om `RigAdapter.build` foll — och da stod klienten avsutten
+	medan servern hade en levande ritt. Ingen vag tillbaka.
+
+	Riggen kan vara tillfalligt ofullstandig i just det ogonblicket:
+	replikeringen av en modells delar ar inte atomar, och
+	aterforeningen kommer ofta mitt i.
+
+	PROVET GAR GENOM PRODUKTIONENS LYSSNARE. `RigAdapter.build` byts ut
+	av provet sjalvt — ingen krok i produktionskoden — och stalls
+	tillbaka efterat. ]]
+do
+	print("")
+	print("-- Aterforeningen kan behova mer an ett forsok --")
+
+	local riktigBygg = RigAdapter.build
+	local dr = Net.get("DismountRequest")
+	local originalHandlare = dr.OnServerInvoke
+	local intent = Net.get("RidingIntent")
+
+	local function sistaSekvens(): number?
+		local sista = nil
+		for _, paket in ipairs(intent._skickat or {}) do
+			local n = tonumber(paket[3])
+			if n then sista = n end
+		end
+		return sista
+	end
+
+	--[[ Lat bygget falla de N forsta gangerna, sedan slappa igenom. ]]
+	local function byggFallerNGanger(n)
+		local kvar = n
+		RigAdapter.build = function(m)
+			if kvar > 0 then
+				kvar -= 1
+				return nil, "provets riggfel"
+			end
+			return riktigBygg(m)
+		end
+	end
+
+	local function nekaAvsittning()
+		dr.OnServerInvoke = function() return false, "takt.for_snabbt" end
+	end
+
+	local function sittAv()
+		local fn = CAS._bound[Input.AVSITT]
+		if fn then fn(Input.AVSITT, Enum.UserInputState.Begin, {}) end
+	end
+
+	--[[ ── EN TRANSIENT RIGG LAKER ──────────────────────────────── ]]
+	do
+		local h = nyRitt()
+		h:SetAttribute("RiderUserId", player.UserId)
+		local marke = h:GetAttribute("RidSession")
+		LektionController.fortsatt()
+		bildrutor(1)
+
+		intent._skickat = {}
+		for _ = 1, 3 do
+			gaTiden(Input.IMPULS_SPARR + 0.05)
+			drivTryck()
+			bildrutor(1)
+		end
+		local foreSekvens = sistaSekvens()
+		prova("hon har en sekvens igang", foreSekvens ~= nil and foreSekvens >= 2,
+			tostring(foreSekvens))
+		local passFore = LektionController.pass()
+
+		--[[ Servern nekar, och riggen ar trasig de tva forsta
+		     forsoken — sedan lakar den. ]]
+		nekaAvsittning()
+		byggFallerNGanger(2)
+		sittAv()
+		prova("ritten ar riven efter det lokala nejet",
+			LektionController.pagar() == false)
+
+		--[[ …och sa kommer serverns aterforening. ]]
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(2)
+		RigAdapter.build = riktigBygg
+
+		prova("OMFORSOKET SATTE UPP HENNE IGEN",
+			LektionController.pagar() == true,
+			tostring(LektionController.pagar()))
+		prova("och det ar SAMMA rittmarke",
+			h:GetAttribute("RidSession") == marke, tostring(marke))
+		prova("och SAMMA pass — ingen andra lektion",
+			LektionController.pass() == passFore)
+
+		gaTiden(Input.IMPULS_SPARR + 0.05)
+		drivTryck()
+		bildrutor(1)
+		local efterSekvens = sistaSekvens()
+		prova("OCH SEKVENSEN FORTSATTER — INGEN ETTA",
+			efterSekvens ~= nil and foreSekvens ~= nil and efterSekvens > foreSekvens,
+			("fore=%s efter=%s"):format(tostring(foreSekvens), tostring(efterSekvens)))
+		h:Destroy()
+	end
+
+	--[[ ── SERVERNS FAKTA HAR ANDRATS ────────────────────────────── ]]
+	do
+		local h = nyRitt()
+		h:SetAttribute("RiderUserId", player.UserId)
+		LektionController.fortsatt()
+		bildrutor(1)
+		nekaAvsittning()
+		byggFallerNGanger(99)
+		sittAv()
+		--[[ Nagon ANNAN har tagit henne innan omforsoket hinner. ]]
+		h:SetAttribute("RiderUserId", player.UserId + 1)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(2)
+		RigAdapter.build = riktigBygg
+		prova("EN ANNAN RYTTARE STOPPAR OMFORSOKET",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		h:Destroy()
+	end
+
+	do
+		local h = nyRitt()
+		h:SetAttribute("RiderUserId", player.UserId)
+		LektionController.fortsatt()
+		bildrutor(1)
+		nekaAvsittning()
+		byggFallerNGanger(99)
+		sittAv()
+		h:SetAttribute("RidSession", "ett-annat-marke")
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(2)
+		RigAdapter.build = riktigBygg
+		prova("ETT ANNAT RITTMARKE STOPPAR OMFORSOKET",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		h:Destroy()
+	end
+
+	--[[ ── SERVERN SAGER ATT HON STIGIT AV ───────────────────────── ]]
+	do
+		local h = nyRitt()
+		h:SetAttribute("RiderUserId", player.UserId)
+		LektionController.fortsatt()
+		bildrutor(1)
+		nekaAvsittning()
+		byggFallerNGanger(99)
+		sittAv()
+
+		__schemaPa(true)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		--[[ Omforsoket ligger i kon. NU sager servern att ingen rider. ]]
+		Net.get("MountChanged").OnClientEvent:Fire(h, nil)
+		RigAdapter.build = riktigBygg
+		__schemaTomKo()
+		__schemaPa(false)
+
+		prova("EN AUKTORITATIV AVSITTNING AVBRYTER OMFORSOKET",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		h:Destroy()
+	end
+
+	--[[ ── DUBBLA PAKET GER INTE TVA LOOPAR ──────────────────────── ]]
+	do
+		local h = nyRitt()
+		h:SetAttribute("RiderUserId", player.UserId)
+		LektionController.fortsatt()
+		bildrutor(1)
+		nekaAvsittning()
+		local byggForsok = 0
+		RigAdapter.build = function()
+			byggForsok += 1
+			return nil, "provets riggfel"
+		end
+		sittAv()
+
+		__schemaPa(true)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		local kvar = __schemaKvar()
+		__schemaTomKo()
+		__schemaPa(false)
+		RigAdapter.build = riktigBygg
+
+		prova("TRE PAKET GER EN ENDA LOOP", kvar == 1,
+			("%d tradar i kon"):format(kvar))
+		--[[ …och den loopen ar BUNDEN. Tre samtidiga hade gett tre
+		     ganger sa manga byggforsok. ]]
+		prova("OCH DEN AR BUNDEN", byggForsok > 0 and byggForsok <= 16,
+			("%d byggforsok"):format(byggForsok))
+
+		local sagt = 0
+		for _, rad in ipairs(__varningar) do
+			--[[ ASCII-bit ur varningen. Lua har ingen \u-escape, och en
+			     literal med a-ring i provet ar latt att stava fel.
+			     "MISSLYCKADES efter" ar unikt for just den raden. ]]
+			if string.find(rad, "MISSLYCKADES efter", 1, true) then
+				sagt += 1
+			end
+		end
+		prova("OCH DEN LAMNAR EN EGEN, LETBAR RAD", sagt >= 1,
+			("%d rader"):format(sagt))
+		h:Destroy()
+	end
+
+	RigAdapter.build = riktigBygg
+	dr.OnServerInvoke = originalHandlare
+	UgnetaController.dolj()
+end
+
 if fel > 0 then
 	print(("\nKLIENT-LEKTIONSPAUS: %d fel"):format(fel))
 	error(("%d fel"):format(fel))

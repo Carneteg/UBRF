@@ -246,8 +246,13 @@ local function mount(model: Model, rittId: string?)
 
 	local rig, err = RigAdapter.build(model)
 	if not rig then
+		--[[ SVARET ÄR INTE KOSMETIK. Den som återförenar oss efter ett
+		     nekat nej behöver veta om ritten faktiskt kom tillbaka —
+		     annars går ett misslyckande inte att skilja från ett lyckat
+		     försök. `avbrutenRitt` rörs INTE här: identiteten ska
+		     överleva ett byggfel så att omförsöket kan använda den. ]]
 		warn("[Horse] " .. tostring(err))
-		return
+		return false
 	end
 	local stats = Config.resolveStats(rig.stats)
 
@@ -435,6 +440,96 @@ local function mount(model: Model, rittId: string?)
 		print("[Horse] Inga animationsklipp konfigurerade — benen drivs "
 			.. "procedurellt av HastGang. Det är avsett.")
 	end
+	return true
+end
+
+--[[ ══ ÅTERFÖRENINGEN KAN BEHÖVA MER ÄN ETT FÖRSÖK ════════════
+
+	Robustness Slice G.
+
+	Klienten river ritten INNAN `DismountRequest` svarat. Nekar servern
+	skickar den `MountChanged(model, player)` tillbaka, och lyssnaren
+	monterar om. Men `mount` gav upp tyst om `RigAdapter.build` föll —
+	och då stod klienten avsutten medan servern hade en levande ritt.
+	Ingen väg tillbaka.
+
+	Riggen kan vara tillfälligt ofullständig i just det ögonblicket:
+	replikeringen av en modells delar är inte atomär, och återföreningen
+	kommer ofta mitt i. Ett bundet omförsök låter det läka.
+
+	IDENTITETEN ÄR INTE NY. `avbrutenRitt` bär redan modellen, rittmärket
+	och sekvensen; det enda som behövs här är tålamod och en vakt.
+
+	GENERATIONEN GÖR GAMLA TRÅDAR INERTA. Varje start räknar upp den, och
+	en tråd som ser ett annat tal lägger av. Det är både avbrottet
+	(punkt 8) och skyddet mot dubbla loopar (punkt 7) i samma tal. ]]
+local ATERFORENING_FORSOK = 12
+local aterforeningModell: Model? = nil
+local aterforeningGen = 0
+
+local function avbrytAterforening()
+	aterforeningModell = nil
+	aterforeningGen += 1
+end
+
+--[[ Säger serverns REPLIKERADE fakta fortfarande att det här är samma
+     ritt? Fail closed: allt som inte längre stämmer stoppar. ]]
+local function sammaAuktoritativaRitt(model: Model, marke: any): (boolean, string?)
+	if model.Parent == nil then return false, "modellen har lämnat världen" end
+	local agare = model:GetAttribute("RiderUserId")
+	if agare ~= player.UserId then
+		return false, ("RiderUserId är %s, inte vår"):format(tostring(agare))
+	end
+	local nu = model:GetAttribute("RidSession")
+	if nu ~= marke then
+		return false, ("RidSession är %s, inte %s"):format(tostring(nu), tostring(marke))
+	end
+	return true
+end
+
+local function startaAterforening(model: Model)
+	local avbruten = avbrutenRitt
+	--[[ Bara en KÄND avbruten ritt återförenas. Utan den vet vi inte
+	     vilket märke vi väntar på, och då vore varje omförsök en gissning. ]]
+	if avbruten == nil or avbruten.model ~= model then return end
+	--[[ EN I TAGET. Ett dubblerat `MountChanged` ska inte ge en andra loop. ]]
+	if aterforeningModell == model then return end
+
+	aterforeningGen += 1
+	local min = aterforeningGen
+	aterforeningModell = model
+	local marke = avbruten.rittId
+
+	task.spawn(function()
+		for _ = 1, ATERFORENING_FORSOK do
+			RunService.Heartbeat:Wait()
+			--[[ Avbruten, eller ersatt av en nyare återförening. ]]
+			if aterforeningGen ~= min then return end
+			--[[ En annan ritt hann börja lokalt. Serverns nästa besked
+			     får ställa det till rätta; vi ska inte tränga oss in. ]]
+			if ride then
+				aterforeningModell = nil
+				return
+			end
+			local ok, skal = sammaAuktoritativaRitt(model, marke)
+			if not ok then
+				aterforeningModell = nil
+				warn(("[Horse] återföreningen avbröts — %s"):format(tostring(skal)))
+				return
+			end
+			if mount(model) == true then
+				aterforeningModell = nil
+				return
+			end
+		end
+		aterforeningModell = nil
+		--[[ EGEN, LETBAR RAD. Det här är inte «riggen var trasig» i
+		     allmänhet — det är att servern påstod att spelaren satt upp
+		     och klienten inte kunde följa med dit. ]]
+		warn(("[Horse] ÅTERFÖRENINGEN MISSLYCKADES efter %d försök: servern "
+			.. "säger att %s fortfarande rider %s, men riggen gick inte att "
+			.. "bygga här."):format(ATERFORENING_FORSOK, player.Name, model.Name))
+	end)
 end
 
 --[[ Inomhusläsbarhet, till fots och till häst: väggar mellan kameran och
@@ -676,9 +771,22 @@ Prompttext.start()
 Net.get("MountChanged").OnClientEvent:Connect(function(model: Model, rider: Player?)
 	if rider == player then
 		if not ride or ride.model ~= model then
-			mount(model)
+			--[[ Gick det inte nu kan riggen vara halvreplikerad. Se
+			     noten vid `startaAterforening`. ]]
+			if mount(model) ~= true then
+				startaAterforening(model)
+			end
 		end
-	elseif ride and ride.model == model then
+	else
+		--[[ SERVERN HAR GÅTT VIDARE. Ett väntande omförsök får inte
+		     sätta upp oss igen efter att servern sagt att någon annan —
+		     eller ingen — rider henne. Avbrottet sker oavsett om vi
+		     själva har en ritt just nu. ]]
+		if aterforeningModell == model then
+			avbrytAterforening()
+		end
+	end
+	if rider ~= player and ride and ride.model == model then
 		--[[ Serverns besked, inte spelarens tryck. Skalet «avbrott» ger
 		     tystnad ur `efterrittFor`, sa den har vagen kan aldrig
 		     summera. Den egna avsittningen summerar i `begarAvsittning`
