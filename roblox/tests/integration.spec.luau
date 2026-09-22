@@ -672,6 +672,28 @@ do
 	S.spelare.CharacterRemoving:Fire(k2)
 	check("CharacterRemoving städar också",
 		rig.seat.Occupant == nil and HorseService.horseOf(S.spelare) == nil)
+
+	--[[ ── OCH DEN TAR INTE PASSET MED SIG (Robustness Slice C) ────
+
+		Slice C lade en `CharacterRemoving`-väg som städar burna sadlar.
+		Den får röra tacket och ingenting annat.
+
+		MÄTNINGEN LIGGER HÄR OCH INTE VID RESPAWNEN. Raden ovanför om
+		respawnen mäter efter `CharacterAdded`, och `bind()` bygger om
+		`state` när den är nil (GameplayService rad 222-223) — en
+		nollställning läks alltså bort innan den raden hinner se den.
+		Första versionen av det här provet låg där och kunde inte bli röd.
+
+		Efter `CharacterRemoving`, utan någon ny kropp, finns ingen
+		läkning att gömma sig bakom. ]]
+	--[[ Statusen SKA ändras från `riding` — hon rider ju inte längre.
+	     Det som inte får hända är att den faller till `waiting_model`,
+	     som är precis vad `status` svarar när `state` är borta
+	     (GameplayService rad 141-142). `ready_to_mount` betyder att
+	     skötseln står kvar och hästen är förberedd. ]]
+	check("OCH SKÖTSELN LEVER KVAR EFTER KROPPSBYTET",
+		GameplayService.statusFor(S.spelare) == Preparation.STATUS.REDO,
+		tostring(GameplayService.statusFor(S.spelare)))
 	stadaSession(S)
 end
 

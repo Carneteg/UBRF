@@ -714,9 +714,14 @@ local function agarnyckel(typ: string, hastId: string): string
 	return hastId .. "/" .. typ
 end
 
---[[ Slapper allt den har spelaren bar. Anropas nar hon lamnar, nar
-	karaktaren forsvinner och nar passet tar slut — annars later registret
-	en sadel vara tagen for alltid av nagon som inte finns kvar. ]]
+--[[ Slapper allt den har spelaren bar — annars later registret en sadel
+	vara tagen for alltid av nagon som inte finns kvar.
+
+	TVA ANROPARE, OCH BARA TVA: `lamnar` (hela sessionen) och
+	`karaktarBorta` (kroppen dog eller byttes). Raden har pastod tidigare
+	en tredje, «nar passet tar slut», och den var aldrig kopplad. Ett
+	pastaende om en livscykelvag som inte finns ar varre an inget: nasta
+	lasare litar pa den. ]]
 function GameplayService.slappBuret(player: Player)
 	for nyckel, agare in pairs(burenAv) do
 		if agare == player then
@@ -1423,6 +1428,38 @@ end
 	Det hade varit en ANDRA sanning om vad «spelaren lamnade» betyder,
 	och da mater grinden till slut sig sjalv. Handlaren far darfor ett
 	namn; `PlayerRemoving` kopplar samma funktion som forut. ]]
+--[[ ══ KARAKTAREN FORSVINNER — BARA TACKET, INTE PASSET ═════════
+
+	Robustness Slice C.
+
+	Den burna sadeln är en fysisk del under KARAKTAREN. Dor hon, eller
+	byts kroppen vid en respawn, forsvinner delen med den — men
+	`burenAv` stod kvar och pekade pa spelaren. Sadeln var da reserverad
+	av nagon som inte hade den, och ingen annan kunde ta den forran
+	agaren sjalv rorde forradet igen eller kopplade ner helt.
+
+	`valdUtrustning` foljer med av samma skal. Den ar en AVSIKT — «jag
+	har hamtat Jacks sadel» — och den avsikten dog med handerna. Lamnas
+	den kvar pastar forberedelsevyn att spelaren barer nagot som inte
+	finns, och resten av spelet laser den pastaenden som sanning.
+
+	PASSET ROR VI INTE. `state`, `passState`, `bunden` och avbockade
+	skotselmoment ska overleva en respawn exakt som forut — det ar
+	testat sedan tidigare (`integration.spec`: «skotseln raknas
+	fortfarande som gjord efter respawnen»). Den har vagen ar tack, och
+	ingenting annat.
+
+	IDEMPOTENT. `slappBuret` itererar och rensar; att kora den tva
+	ganger, eller efter `lamnar`, gor ingenting mer. ]]
+function GameplayService.karaktarBorta(player: Player)
+	GameplayService.slappBuret(player)
+	valdUtrustning[player] = nil
+	--[[ Och vyn till den klient som fortfarande finns kvar — en
+	     respawnande spelare ar inte borta, hon har bara ny kropp.
+	     `pcall`: ett fel i presentationen far inte hindra stadningen. ]]
+	pcall(function() skicka(player) end)
+end
+
 function GameplayService.lamnar(player: Player)
 	--[[ #235 FAS 1: en spelare som gar far inte lamna en sadel «tagen»
 		for alltid. Registret slapps och fronten far tillbaka sin
@@ -1589,6 +1626,13 @@ function GameplayService.start()
 		GameplayService.bind(player)
 		player.CharacterAdded:Connect(function()
 			GameplayService.bind(player)
+		end)
+		--[[ Slice C: kroppen dor eller byts. Den burna sadeln lag i
+		     karaktaren och forsvinner med den — registret maste folja
+		     med, annars ar hon reserverad av nagon som inte har henne.
+		     `CharacterRemoving` ar sanningen; ingen pollning. ]]
+		player.CharacterRemoving:Connect(function()
+			GameplayService.karaktarBorta(player)
 		end)
 	end)
 	--[[ Ingen `GetPlayers()`-loop här heller (#162 re-review): den band mot
