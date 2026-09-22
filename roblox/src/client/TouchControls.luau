@@ -187,6 +187,51 @@ local blickFinger: InputObject? = nil
 local blickSist: Vector2? = nil
 local blickHook: ((number, number) -> ())? = nil
 
+--[[ ══ RITTENS EGNA KOPPLINGAR ════════════════════════════
+
+	Robustness Slice B. `mount` körs en gång per RITT, och `kopplaSpak`
+	och `kopplaBlick` öppnade fyra `UserInputService`-kopplingar som
+	`unmount` aldrig rörde. Fyra till för varje uppsittning, hela
+	sessionen.
+
+	De var inte inerta. Handlarna stänger om MODULLOKALER — `aktivFinger`
+	och `blickFinger`/`blickSist`/`blickHook` står här uppe, inte i
+	`mount` — så en kvarlevande handlare från förra ritten passerar sin
+	egen `obj == aktivFinger`-vakt och kör vidare mot en RIVEN ram. Och
+	`flytta` slutar i `Input.setTouch(…)`: den LEVANDE styrningen,
+	räknad ur en förstörd frames geometri.
+
+	Värst vid släpp: `slapp()` nollar `aktivFinger`, så den kopia som
+	råkar köra först vinner vakten och alla andras städning hoppas över.
+
+	EN RITT ÄGER SINA KOPPLINGAR. Påsen är med flit en platt lista och
+	ingen tillståndsmaskin: det enda den behöver kunna är «riv allt som
+	den här uppsittningen skapade».
+
+	Även kopplingarna på ramarna ligger i påsen. De skulle dö med GUI:t
+	ändå, men ett prov ska kunna mäta ägarskapet på ETT ställe — och en
+	regression där GUI:t överlever får inte bli tyst. ]]
+local rittKopplingar: { RBXScriptConnection } = {}
+
+local function ager(k: RBXScriptConnection): RBXScriptConnection
+	table.insert(rittKopplingar, k)
+	return k
+end
+
+local function slappKopplingar()
+	for _, k in ipairs(rittKopplingar) do
+		pcall(function() k:Disconnect() end)
+	end
+	table.clear(rittKopplingar)
+end
+
+--[[ Provkrok: hur många kopplingar äger den här ritten just nu? Bara
+     läsning. Utan den kan ett prov bara mäta läckan indirekt, genom vad
+     en kvarlevande handlare råkar hinna göra. ]]
+function TouchControls._kopplingar(): number
+	return #rittKopplingar
+end
+
 --[[ Hur mycket kameran vrids per dragen pixel. Radianer i sidled och
      studs i höjdled; framtagna så att ett tumdrag tvärs över halva
      skärmen vrider ungefär ett halvt varv. ]]
@@ -239,22 +284,22 @@ local function kopplaSpak(bas: Frame, knop: Frame)
 		Input.setTouch(0, 0)
 	end
 
-	bas.InputBegan:Connect(function(obj: InputObject)
+	ager(bas.InputBegan:Connect(function(obj: InputObject)
 		if obj.UserInputType ~= Enum.UserInputType.Touch then return end
 		if aktivFinger then return end
 		aktivFinger = obj
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
-	end)
+	end))
 
 	--[[ Rörelsen lyssnas på globalt, inte på ramen: drar man tummen utanför
 	     cirkeln ska styrningen ligga kvar på max i stället för att slockna. ]]
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	ager(UserInputService.InputChanged:Connect(function(obj: InputObject)
 		if obj ~= aktivFinger then return end
 		flytta(Vector2.new(obj.Position.X, obj.Position.Y))
-	end)
-	UserInputService.InputEnded:Connect(function(obj: InputObject)
+	end))
+	ager(UserInputService.InputEnded:Connect(function(obj: InputObject)
 		if obj == aktivFinger then slapp() end
-	end)
+	end))
 end
 
 --[[ ── BLICKYTAN ────────────────────────────────────────────────────
@@ -269,15 +314,15 @@ end
      Vänstra tredjedelen lämnas fri: där bor spaken, och en yta under
      den hade gjort varje styrutslag till en kameravridning också. ]]
 local function kopplaBlick(yta: Frame)
-	yta.InputBegan:Connect(function(obj: InputObject)
+	ager(yta.InputBegan:Connect(function(obj: InputObject)
 		if obj.UserInputType ~= Enum.UserInputType.Touch then return end
 		if blickFinger then return end
 		if obj == aktivFinger then return end
 		blickFinger = obj
 		blickSist = Vector2.new(obj.Position.X, obj.Position.Y)
-	end)
+	end))
 
-	UserInputService.InputChanged:Connect(function(obj: InputObject)
+	ager(UserInputService.InputChanged:Connect(function(obj: InputObject)
 		if obj ~= blickFinger then return end
 		local nu = Vector2.new(obj.Position.X, obj.Position.Y)
 		local forra = blickSist or nu
@@ -289,7 +334,7 @@ local function kopplaBlick(yta: Frame)
 			     dra NEDÅT ska sänka blicken — samma håll som fingret. ]]
 			fn(d.X * BLICK_PER_PIXEL_X, -d.Y * BLICK_PER_PIXEL_Y)
 		end
-	end)
+	end))
 
 	--[[ Att släppa nollar BARA fingret. Kameran lämnas där den står —
 	     ingen återfjädring, ingen omcentrering. ]]
@@ -299,7 +344,7 @@ local function kopplaBlick(yta: Frame)
 			blickSist = nil
 		end
 	end
-	UserInputService.InputEnded:Connect(slappBlick)
+	ager(UserInputService.InputEnded:Connect(slappBlick))
 end
 
 --[[ Roblox egna pekreglage flyttar KARAKTÄREN. Sitter hon i sadeln blir
@@ -647,6 +692,10 @@ function TouchControls.mount(input: any, hooks: {
 end
 
 function TouchControls.unmount()
+	--[[ RITTENS KOPPLINGAR FÖRST, före GUI:t rivs. Ordningen spelar roll:
+	     en handlare som fyrar mitt i rivningen ska inte hinna läsa en
+	     halvt förstörd ram. Se noten vid `rittKopplingar`. ]]
+	slappKopplingar()
 	if gui then
 		gui:Destroy()
 		gui = nil
