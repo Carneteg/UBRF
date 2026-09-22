@@ -822,42 +822,150 @@ do
 		h:Destroy()
 	end
 
-	--[[ ── SERVERNS FAKTA HAR ANDRATS ────────────────────────────── ]]
-	do
-		local h = nyRitt()
+	--[[ ── SERVERNS FAKTA HAR ANDRATS ──────────────────────────────
+
+		ChatGPT-review av `4762363`, fynd 2. Forsta versionen lat riggen
+		vara trasig i 99 forsok — men omforsoket ar bundet till 12, och
+		`riktigBygg` stalldes tillbaka FORST EFTERAT. Den avslutande
+		«lektionen ar inte igang» var alltsa sann for att riggen aldrig
+		blev byggbar, oavsett om vakterna fanns. En mutation som tog bort
+		BADA avslagsgrenarna lamnade hela specen gron.
+
+		Ratt form: ETT tvingat byggfel, omforsoket koas, det
+		auktoritativa vardet andras, riggen LAKER — och forst da draneras
+		kon. Da finns bara en sak kvar som kan stoppa uppsittningen, och
+		det ar vakten.
+
+		MISSEN MASTE LIGGA INUTI MATFONSTRET. Andra versionen satte den
+		fore, och `medRaknadeByggen` skrev over den — den forsta `mount`
+		lyckades da direkt, inget omforsok koades, och alla tre proven
+		blev roda av fel skal. ]]
+
+	--[[ En hast som rids, med ritten lokalt riven och serverns nej pa
+	     vag. Riggen ar ORORD har; missen satts i matningen nedan. ]]
+	local function rittRivenMedNekandeServer(h)
 		h:SetAttribute("RiderUserId", player.UserId)
 		LektionController.fortsatt()
 		bildrutor(1)
 		nekaAvsittning()
-		byggFallerNGanger(99)
 		sittAv()
-		--[[ Nagon ANNAN har tagit henne innan omforsoket hinner. ]]
-		h:SetAttribute("RiderUserId", player.UserId + 1)
-		Net.get("MountChanged").OnClientEvent:Fire(h, player)
-		bildrutor(2)
+		return h
+	end
+
+	--[[ Kor `fn` med en rigg som faller `missar` ganger och sedan LAKER.
+	     Raknar de byggen som faktiskt LYCKADES — alltsa rekonstruktioner,
+	     inte forsok. ]]
+	local function medRiggSomLaker(missar, fn)
+		local kvar, byggen = missar, 0
+		RigAdapter.build = function(m)
+			if kvar > 0 then
+				kvar -= 1
+				return nil, "provets riggfel"
+			end
+			byggen += 1
+			return riktigBygg(m)
+		end
+		fn()
 		RigAdapter.build = riktigBygg
-		prova("EN ANNAN RYTTARE STOPPAR OMFORSOKET",
-			LektionController.pagar() == false,
-			tostring(LektionController.pagar()))
+		return byggen
+	end
+
+	--[[ KONTROLLEN FORST. Med samma auktoritet SKA omforsoket bygga om
+	     och satta upp henne — annars ar varje nej nedan gront for att
+	     ingenting nagonsin monterar i den har uppstallningen. ]]
+	do
+		local h = rittRivenMedNekandeServer(nyRitt())
+		local byggen = medRiggSomLaker(1, function()
+			__schemaPa(true)
+			Net.get("MountChanged").OnClientEvent:Fire(h, player)
+			__schemaTomKo()
+			__schemaPa(false)
+		end)
+		prova("KONTROLL: med SAMMA auktoritet monterar omforsoket",
+			LektionController.pagar() == true and byggen == 1,
+			("pagar=%s, %d lyckade riggbyggen"):format(
+				tostring(LektionController.pagar()), byggen))
 		h:Destroy()
 	end
 
+	--[[ ── EN ANNAN RYTTARE ─────────────────────────────────────── ]]
 	do
-		local h = nyRitt()
-		h:SetAttribute("RiderUserId", player.UserId)
-		LektionController.fortsatt()
-		bildrutor(1)
-		nekaAvsittning()
-		byggFallerNGanger(99)
-		sittAv()
-		h:SetAttribute("RidSession", "ett-annat-marke")
-		Net.get("MountChanged").OnClientEvent:Fire(h, player)
-		bildrutor(2)
-		RigAdapter.build = riktigBygg
+		local h = rittRivenMedNekandeServer(nyRitt())
+		local byggen = medRiggSomLaker(1, function()
+			__schemaPa(true)
+			Net.get("MountChanged").OnClientEvent:Fire(h, player)
+			--[[ Nagon ANNAN har tagit henne medan omforsoket vantar.
+			     Riggen ar laker fran och med nu — det enda som kan
+			     stoppa uppsittningen ar vakten. ]]
+			h:SetAttribute("RiderUserId", player.UserId + 1)
+			__schemaTomKo()
+			__schemaPa(false)
+		end)
+		prova("EN ANNAN RYTTARE STOPPAR OMFORSOKET",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		prova("och riggen byggdes aldrig om",
+			byggen == 0, ("%d lyckade riggbyggen"):format(byggen))
+		h:Destroy()
+	end
+
+	--[[ ── ETT ANNAT RITTMARKE ──────────────────────────────────── ]]
+	do
+		local h = rittRivenMedNekandeServer(nyRitt())
+		local byggen = medRiggSomLaker(1, function()
+			__schemaPa(true)
+			Net.get("MountChanged").OnClientEvent:Fire(h, player)
+			h:SetAttribute("RidSession", "ett-annat-marke")
+			__schemaTomKo()
+			__schemaPa(false)
+		end)
 		prova("ETT ANNAT RITTMARKE STOPPAR OMFORSOKET",
 			LektionController.pagar() == false,
 			tostring(LektionController.pagar()))
+		prova("och riggen byggdes aldrig om",
+			byggen == 0, ("%d lyckade riggbyggen"):format(byggen))
 		h:Destroy()
+	end
+
+	--[[ ── EN BORTKOPPLAD FORFADER ──────────────────────────────────
+
+		Fynd 1. `model.Parent ~= nil` bevisar ingenting om varlden: en
+		hast under en mapp som kopplas bort har kvar sin egen foralder
+		hela vagen ner. ChatGPT reproducerade ETT riggbygge och en
+		ateruppvackt lektion UTANFOR workspace. ]]
+	do
+		local mapp = Instance.new("Folder")
+		mapp.Name = "Forfadermapp"
+		mapp.Parent = workspace
+
+		local h = __makeHastModell("Forfaderhast")
+		h:SetAttribute("RidSession", "ritt-forfader-1")
+		h.Parent = mapp
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(1)
+		prova("hon rider hasten som star i mappen",
+			LektionController.pagar() == true,
+			tostring(LektionController.pagar()))
+		rittRivenMedNekandeServer(h)
+
+		local byggen = medRiggSomLaker(1, function()
+			__schemaPa(true)
+			Net.get("MountChanged").OnClientEvent:Fire(h, player)
+			--[[ FORFADERN kopplas bort. Hasten har kvar sin egen
+			     foralder — mappen — hela tiden. ]]
+			mapp.Parent = nil
+			__schemaTomKo()
+			__schemaPa(false)
+		end)
+		prova("EN BORTKOPPLAD FORFADER STOPPAR OMFORSOKET",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		prova("och riggen byggdes aldrig om",
+			byggen == 0, ("%d lyckade riggbyggen"):format(byggen))
+		prova("hasten hade hela tiden en egen foralder — det ar poangen",
+			h.Parent == mapp, tostring(h.Parent))
+		h:Destroy()
+		mapp:Destroy()
 	end
 
 	--[[ ── SERVERN SAGER ATT HON STIGIT AV ───────────────────────── ]]

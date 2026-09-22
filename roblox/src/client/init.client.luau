@@ -475,7 +475,16 @@ end
 --[[ Säger serverns REPLIKERADE fakta fortfarande att det här är samma
      ritt? Fail closed: allt som inte längre stämmer stoppar. ]]
 local function sammaAuktoritativaRitt(model: Model, marke: any): (boolean, string?)
-	if model.Parent == nil then return false, "modellen har lämnat världen" end
+	--[[ MEDLEMSKAP, INTE FORALDER. `model.Parent ~= nil` bevisar
+	     ingenting om varlden: en modell vars FORFADER kopplats bort har
+	     kvar sin egen foralder hela vagen ner. ChatGPT reproducerade
+	     det genom den riktiga lyssnaren — hasten under en bortkopplad
+	     mapp gav ETT riggbygge och en ateruppvackt lektion UTANFOR
+	     workspace. `RenderStepped` stadade efterat, men da hade den
+	     ogiltiga rekonstruktionen redan hant. ]]
+	if not model:IsDescendantOf(workspace) then
+		return false, "modellen ar inte langre i varlden"
+	end
 	local agare = model:GetAttribute("RiderUserId")
 	if agare ~= player.UserId then
 		return false, ("RiderUserId är %s, inte vår"):format(tostring(agare))
