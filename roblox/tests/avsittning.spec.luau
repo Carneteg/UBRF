@@ -403,6 +403,112 @@ do
 	HorseService.setDagsformHook(nil)
 end
 
+--[[ ══ 9. EN TRASIG BOKFÖRING ÄR INTE ETT LÄGE ATT ÅTERVÄNDA TILL ══
+
+	Re-review runda 2, blockerare 2. `hast.oregistrerad` betyder PRECIS
+	att `byRider` ljuger: ryttaren står bokförd på en häst vars session
+	är borta. Att återförena på den uppgiften hade satt upp klienten på
+	en häst servern inte kan köra. ]]
+print("\n── Stale byRider återförenar inte ──")
+do
+	local mc = Networking.get("MountChanged")
+	local spelare9 = { Name = "StaleSaga", UserId = 9, Character = kar,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+
+	check("hon sitter upp", HorseService.tryMount(spelare9, jack) == true)
+	--[[ Sessionen rivs UNDER henne, bokföringen lämnas kvar. Det är
+	     exakt det läge `hast.oregistrerad` rapporterar. ]]
+	HorseService._glomSessionForProv(jack)
+	local ok, skal = HorseService.dismount(spelare9)
+	check("avsittningen svarar hast.oregistrerad",
+		ok == false and skal == "hast.oregistrerad",
+		("%s / %s"):format(tostring(ok), tostring(skal)))
+
+	mc._skickat = {}
+	check("ÅTERFÖRENINGEN VÄGRAR PÅ EN TRASIG BOKFÖRING",
+		HorseService.aterforena(spelare9) == false and #mc._skickat == 0,
+		("%d paket"):format(#mc._skickat))
+	--[[ …och posten är STÄDAD, inte bara ignorerad: nästa uppsittning
+	     ska börja rent i stället för att ärva lögnen. ]]
+	check("och den trasiga posten är städad",
+		HorseService.aterforena(spelare9) == false)
+end
+
+--[[ ══ 10. ETT NEKAT NEJ FÅR INTE TAPPA RITTENS IDENTITET ══════════
+
+	Re-review runda 2, blockerare 1. Servern nollar INGENTING när den
+	nekar — den nekade ju. `session.sekvens` står kvar, och regeln i
+	`onRidingIntent` är `sekvens > session.sekvens`. En klient som
+	startade om sin räknare vid återföreningen hade fått varje hjälp
+	tyst kastad, och hästen hade slutat svara på DRIV och BROMS. ]]
+print("\n── Rittens identitet överlever ett nekat nej ──")
+do
+	local dr = Networking.get("DismountRequest")
+	local intent = Networking.get("RidingIntent")
+	local spelare10 = { Name = "SekvensSaga", UserId = 10, Character = kar,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+
+	--[[ Avsnitt 9 rev jacks session med flit och lamnade henne
+	     oregistrerad. Den registreras om har, annars mater det har
+	     avsnittet foregaendes sopor i stallet for sin egen sak — forsta
+	     korningen gjorde precis det och blev rod pa «hon sitter upp». ]]
+	HorseService._registerForProv(jack)
+	local okUpp10, skalUpp10 = HorseService.tryMount(spelare10, jack)
+	check("hon sitter upp", okUpp10 == true, tostring(skalUpp10))
+	local marke = jack:GetAttribute("RidSession")
+	check("ritten har ett märke", type(marke) == "string", tostring(marke))
+
+	--[[ IMPULSSPÄRREN ÄR ÄKTA TID. `Config.RIDINPUT.ImpulsSparr` minus
+	     serverns marginal, mätt med `os.clock`. Bänken har ingen klocka
+	     att skruva på här, så provet väntar ut den på riktigt. Utan det
+	     hade den andra hjälpen fallit på spärren och provet hade mätt
+	     spärren i stället för sekvensen. ]]
+	local function vantaSparren()
+		local slut = os.clock() + Config.RIDINPUT.ImpulsSparr + 0.02
+		while os.clock() < slut do end
+	end
+
+	--[[ En hjälp accepteras om den ändrar serverns replikerade läge.
+	     `RidVersion` räknas upp i `replikera`, som bara nås av ett
+	     accepterat steg. ]]
+	local function driv(sekvens): boolean
+		local fore = jack:GetAttribute("RidVersion")
+		intent.OnServerEvent:Fire(spelare10, marke, "driv", sekvens)
+		return jack:GetAttribute("RidVersion") ~= fore
+	end
+
+	vantaSparren()
+	check("en hjälp med sekvens 5 accepteras", driv(5) == true)
+
+	--[[ Skopan töms direkt — inte genom `OnServerInvoke`, för det FÖRSTA
+	     anropet hade satt henne av på riktigt och det är inte det här
+	     provet handlar om. Mätningen nedan går ändå genom den riktiga
+	     handlaren. ]]
+	local tak = Skopa.GRANSER.DismountRequest.tak
+	for _ = 1, tak do Skopa.slapp(spelare10, "DismountRequest") end
+
+	local ok, skal = dr.OnServerInvoke(spelare10)
+	check("avsittningen nekas av takten",
+		ok == false and skal == "takt.for_snabbt",
+		("%s / %s"):format(tostring(ok), tostring(skal)))
+	check("MÄRKET ÄR OFÖRÄNDRAT — det är samma ritt",
+		jack:GetAttribute("RidSession") == marke,
+		tostring(jack:GetAttribute("RidSession")))
+
+	vantaSparren()
+	check("NÄSTA HJÄLP I SEKVENSEN ACCEPTERAS FORTFARANDE",
+		driv(6) == true)
+
+	--[[ DEN RAD SOM VISAR VARFÖR DET SPELAR ROLL. Hade klienten startat
+	     om sin räknare vid återföreningen — som den gjorde före den här
+	     rättelsen — vore nästa hjälp en etta. Servern kastar den tyst. ]]
+	vantaSparren()
+	check("men en OMSTARTAD räknare kastas tyst — det var buggen",
+		driv(1) == false)
+
+	HorseService.dismount(spelare10)
+end
+
 __markyta = nil
 __delarILada = nil
 

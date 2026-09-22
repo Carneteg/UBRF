@@ -95,8 +95,34 @@ end
 	som glömmer skälet får alltså tystnad, inte en felaktig summering. ]]
 export type Slutskal = "avsittning" | "avbrott"
 
+--[[ ── DEN AVBRUTNA RITTENS IDENTITET ──────────────────────────────
+
+	Re-review runda 2 av `f6ff67d`, blockerare 1.
+
+	`begarAvsittning` river lokalt innan servern svarat. Svarar servern
+	NEJ återförenar den oss med `MountChanged`, och klientens lyssnare
+	anropade då `mount()` — en HELT NY ritt: `ridSekvens = 0`, nytt pass,
+	nytt tema.
+
+	Servern hade INTE nollat något. Den nekade ju. `session.sekvens` stod
+	kvar på N, och regeln i `onRidingIntent` är `sekvens > session.sekvens`.
+	Klientens nästa hjälp gick alltså ut med 1, lästes som ett återspelat
+	paket och KASTADES TYST. Hästen slutade svara på DRIV och BROMS, och
+	ingenting i loggen sa varför.
+
+	Ritten som just revs sparas därför här, en enda post, och `mount`
+	plockar upp den igen om det är SAMMA häst och SAMMA rittmärke. Är
+	märket ett annat är det en ny ritt och posten ska inte användas —
+	servern har då nollat sin räknare och 0 är rätt. ]]
+local avbrutenRitt: { model: Model, rittId: any, ridSekvens: number }? = nil
+
 local function dismount(skal: Slutskal?)
 	if not ride then return end
+	avbrutenRitt = {
+		model = ride.model,
+		rittId = ride.rittId,
+		ridSekvens = ride.ridSekvens,
+	}
 	Telemetri.sittAv(ride.ritt)
 	Input.unbind()
 	--[[ Avsittningens handling rivs med ritten, av samma skäl som `E`
@@ -104,6 +130,12 @@ local function dismount(skal: Slutskal?)
 	     `UnbindAction` river också pekknappen. ]]
 	ContextActionService:UnbindAction(Input.AVSITT)
 	TouchControls.unmount()
+	--[[ Dagsformslyssnaren först: den skriver i lektionens kontext, och
+	     ska inte kunna skriva i nästa ritts. ]]
+	if ride.dagsformLyssnare then
+		ride.dagsformLyssnare:Disconnect()
+		ride.dagsformLyssnare = nil
+	end
 	ride.movement:release()
 	ride.animation:release()
 	ride.camera:release()
@@ -254,6 +286,19 @@ local function mount(model: Model, rittId: string?)
 		rittId = rittId or model:GetAttribute("RidSession"),
 	}
 
+	--[[ SAMMA RITT IGEN? Då fortsätter räknaren där den var. Se noten
+	     vid `avbrutenRitt`. Posten konsumeras oavsett utfall: den gäller
+	     exakt en återförening, inte varje framtida uppsittning. ]]
+	local avbruten = avbrutenRitt
+	avbrutenRitt = nil
+	local sammaRitt = avbruten ~= nil
+		and avbruten.model == model
+		and avbruten.rittId ~= nil
+		and avbruten.rittId == ride.rittId
+	if sammaRitt and avbruten then
+		ride.ridSekvens = avbruten.ridSekvens
+	end
+
 	local character = player.Character
 	if character then
 		ride.rider:attach(character)
@@ -338,7 +383,23 @@ local function mount(model: Model, rittId: string?)
 		skygghet = tonumber(stats.Skygghet),
 		dagsform = tonumber(model:GetAttribute("Dagsform")),
 	})
-	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"))
+	--[[ …OCH LYSSNA VIDARE. Att läsa attributet en gång här räcker inte:
+	     `MountChanged` och attributreplikeringen är två kanaler utan
+	     garanterad inbördes ordning, så värdet kan mycket väl landa efter
+	     den här raden. Då hade dagsformen varit okänd hela ritten, och
+	     `hastensEgen` hade tigit — säkert, men tyst fel.
+
+	     Kopplingen rivs med ritten (`ride.dagsformLyssnare`), så att en
+	     avsutten häst inte fortsätter skriva i någon annans kontext. ]]
+	ride.dagsformLyssnare = model:GetAttributeChangedSignal("Dagsform")
+		:Connect(function()
+			LektionController.satDagsform(tonumber(model:GetAttribute("Dagsform")))
+		end)
+	--[[ RITTMÄRKET VIDARE. Lektionen hör till EN ritt, och märket är hur
+	     den vet om en ny uppsittning är samma ritt igen — en
+	     återförening efter ett nekat nej — eller en ny. ]]
+	LektionController.start(anlaggning and anlaggning:FindFirstChild("UBRF"),
+		ride and ride.rittId)
 	--[[ Första uppsittningen: visa reglagen en gång, av sig själv. Då är
 	     frågan "vad gör jag nu?" som mest aktuell. ]]
 	KontrollHjalp.vidUppsittning()

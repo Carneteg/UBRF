@@ -84,6 +84,23 @@ local liveCd = 0
 local tema: UgnetaTema.Tema? = nil
 local hastNamn = ""
 local hastKontext: { [string]: any }? = nil
+
+--[[ ── EN AVBRUTEN LEKTION SOM INTE VAR SLUT ───────────────
+
+	Re-review runda 2 av `f6ff67d`, blockerare 1.
+
+	Ett nekat nej river lektionen lokalt, och servern sätter upp
+	spelaren igen med `MountChanged`. Utan den här posten fick hon ett
+	NYTT pass: övningen började om, historiken var borta och dagens tema
+	valdes om från ingenting — fast ritten aldrig tog slut.
+
+	`rittMarke` är serverns märke på den ritt lektionen hör till. Posten
+	är EN och bär samma märke; ett annat märke är en annan ritt, och då
+	ska passet vara nytt. Den konsumeras vid första uppslaget, så en
+	återförening kan inte återanvändas en andra gång. ]]
+local rittMarke: any = nil
+local avbrutet: { marke: any, pass: any, tema: UgnetaTema.Tema?,
+	lage: string }? = nil
 local liveSagt = ""
 local lage = "ingen"
 
@@ -216,12 +233,64 @@ function LektionController.satHast(namn: string?, kontext: { [string]: any }?)
 	hastKontext = kontext
 end
 
-function LektionController.start(ridhus: Instance?)
-	pass = Lektion.nyttPass()
-	--[[ Nytt pass, nytt tema. ]]
-	tema = nil
+--[[ ── DAGSFORMEN FÅR KOMMA SENARE ─────────────────────────
+
+	Re-review runda 2 av `f6ff67d`, blockerare 3.
+
+	Servern sätter attributet `Dagsform` före `MountChanged` fyras. Det
+	räcker inte: attributreplikering och en RemoteEvent är två olika
+	kanaler, och deras inbördes ordning är inte garanterad hos mottagaren.
+	Kom händelsen först läste `satHast` ett `nil`, och eftersom den bara
+	lästes EN gång blev dagsformen okänd för hela ritten.
+
+	Det syntes inte som ett fel. `hastensEgen` svarar `nil` på okänt och
+	tiger — säkert, men tyst fel: hon hade aldrig sagt «det där kom från
+	henne» även när det gjorde det.
+
+	Den här vägen finns för att ta emot värdet NÄR det kommer, oavsett
+	ordning. Den rör bara dagsformen; resten av kontexten står kvar. ]]
+function LektionController.satDagsform(dagsform: number?)
+	local k = hastKontext
+	if k == nil then
+		--[[ Ingen häst satt än. Ett värde utan häst hör ingenstans hemma
+		     och ska inte bäras över till nästa. ]]
+		return false
+	end
+	k.dagsform = dagsform
+	return true
+end
+
+--[[ Läsprob för proven: vilken dagsform bär lektionens hästkontext just
+     nu? Bara läsning — den kan inte ändra något, och den finns för att
+     kedjan attribut → lyssnare → kontext annars bara går att mäta
+     indirekt genom vad Ugneta råkar säga. ]]
+function LektionController.dagsform(): number?
+	local k = hastKontext
+	return if k then k.dagsform else nil
+end
+
+function LektionController.start(ridhus: Instance?, marke: any)
+	--[[ SAMMA RITT SOM NYSS REVS? Då fortsätter lektionen där den var.
+	     Utan märke — fallet för varje anropare som inte vet om någon
+	     ritt — blir det ett nytt pass, precis som förut.
+
+	     `lage` sätts av grenarna och får INTE sättas om längre ner: ett
+	     återupptaget pass ska tillbaka till SITT läge, inte till «ny»
+	     med lektionskortet uppe igen. ]]
+	local spar = avbrutet
+	avbrutet = nil
+	rittMarke = marke
+	if spar ~= nil and marke ~= nil and spar.marke == marke
+		and spar.pass ~= nil then
+		pass = spar.pass
+		tema = spar.tema
+		lage = spar.lage
+	else
+		pass = Lektion.nyttPass()
+		tema = nil
+		lage = "ny"
+	end
 	liveCd, liveSagt = 0, ""
-	lage = "ny"
 	inspelare = nil
 	inspelningar = {}
 	senasteOvning = nil
@@ -466,8 +535,15 @@ function LektionController.avbryt(skal: string?)
 		till `pass` hade inte gjort det. ]]
 	local summering = Ugneta.efterrittFor(skal, if pass then pass.historik else nil)
 
+	--[[ SPARAS FÖR EN EVENTUELL ÅTERFÖRENING. Se noten vid `avbrutet`.
+	     Rivningen nedan sker oavsett — det här är en KOPIA av vad som
+	     revs, inte ett skäl att låta bli att riva. ]]
+	avbrutet = if pass ~= nil
+		then { marke = rittMarke, pass = pass, tema = tema, lage = lage }
+		else nil
 	pass = nil
 	tema = nil
+	rittMarke = nil
 	hastNamn, hastKontext = "", nil
 	liveCd, liveSagt = 0, ""
 	lage = "ingen"

@@ -553,6 +553,170 @@ do
 	dr.OnServerInvoke = originalHandlare
 end
 
+--[[ == DAGSFORMEN FAR KOMMA EFTER UPPSITTNINGEN ====================
+
+	Re-review runda 2, blockerare 3.
+
+	Servern satter attributet `Dagsform` fore den fyrar `MountChanged`.
+	Det racker inte: attributreplikering och en RemoteEvent ar tva olika
+	kanaler, och deras inbordes ordning ar inte garanterad hos
+	mottagaren. Kom handelsen forst las `satHast` ett `nil` — och
+	eftersom vardet bara lastes EN gang var dagsformen okand hela ritten.
+
+	Felet var TYST. `hastensEgen` svarar `nil` pa okant och tiger, sa
+	ingenting sag fel ut; hon hade bara aldrig sagt «det dar kom fran
+	henne», inte ens nar det gjorde det.
+
+	Provet monterar darfor i den DALIGA ordningen med flit: hasten far
+	inget attribut nar `MountChanged` gar, och det satts forst efterat. ]]
+do
+	print("")
+	print("-- Dagsformen far komma efter uppsittningen --")
+
+	local h = __makeHastModell("Dagsformshast")
+	h:SetAttribute("RidSession", "ritt-dagsform-1")
+	h.Parent = workspace
+	--[[ INGET `Dagsform` satt an. Det ar hela poangen. ]]
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+
+	prova("vid uppsittningen ar dagsformen OKAND",
+		LektionController.dagsform() == nil,
+		tostring(LektionController.dagsform()))
+
+	--[[ …och sa landar attributet, en stund senare. ]]
+	h:SetAttribute("Dagsform", 0.30)
+	bildrutor(1)
+	prova("EN SENARE DAGSFORM NAR ANDA FRAM TILL UGNETA",
+		LektionController.dagsform() == 0.30,
+		tostring(LektionController.dagsform()))
+
+	--[[ ── LACKAN SYNS FORST MOT NASTA HAST ─────────────────────
+
+		Forsta versionen satte attributet pa den AVSUTTNA hasten och
+		kollade att kontexten inte tog det. Den var gron aven med
+		rivningen borttagen: efter avsittningen ar `hastKontext` nil,
+		sa `satDagsform` skriver ingenstans anda. Provet matte inget.
+
+		Skadan uppstar forst nar det finns en NY kontext att skriva i.
+		En kvarlevande lyssnare pa hast A skulle da lagga A:s dagsform
+		i B:s kontext — spelaren far veta att B har en dalig dag fast
+		det ar A som har det. ]]
+	Net.get("MountChanged").OnClientEvent:Fire(h, nil)
+	bildrutor(1)
+
+	local h2 = __makeHastModell("Dagsformshast2")
+	h2:SetAttribute("RidSession", "ritt-dagsform-2")
+	h2:SetAttribute("Dagsform", 0.80)
+	h2.Parent = workspace
+	Net.get("MountChanged").OnClientEvent:Fire(h2, player)
+	bildrutor(1)
+	prova("nasta hast bar sin EGEN dagsform",
+		LektionController.dagsform() == 0.80,
+		tostring(LektionController.dagsform()))
+
+	--[[ …och sa rors den GAMLA hastens attribut. ]]
+	h:SetAttribute("Dagsform", 0.10)
+	bildrutor(1)
+	prova("EN AVSUTTEN HAST SKRIVER INTE I NASTA RITTS KONTEXT",
+		LektionController.dagsform() == 0.80,
+		tostring(LektionController.dagsform()))
+
+	Net.get("MountChanged").OnClientEvent:Fire(h2, nil)
+	bildrutor(1)
+	h2:Destroy()
+	h:Destroy()
+end
+
+--[[ == RITTENS RAKNARE OVERLEVER EN ATERFORENING ====================
+
+	Re-review runda 2, blockerare 1.
+
+	Nar servern nekar en avsittning skickar den `MountChanged` tillbaka
+	med spelaren som ryttare — `HorseService.aterforena`. Klientens
+	lyssnare satte da upp en HELT NY ritt med `ridSekvens = 0`.
+
+	Servern hade inte nollat nagot. Den nekade ju. `session.sekvens` stod
+	kvar pa N, och regeln ar `sekvens > session.sekvens`, sa varje
+	foljande hjalp kastades TYST. Hasten slutade svara pa DRIV och BROMS.
+
+	`ride` ar en local i `init.client` och provet lagger ingen krok i
+	produktionskoden for att na den. Sekvensen gar anda att lasa: den
+	foljer med varje `RidingIntent` pa traden. ]]
+do
+	print("")
+	print("-- Rittens raknare overlever en aterforening --")
+
+	local dr = Net.get("DismountRequest")
+	local originalHandlare = dr.OnServerInvoke
+	local intent = Net.get("RidingIntent")
+
+	local function sistaSekvens(): number?
+		local sista = nil
+		for _, paket in ipairs(intent._skickat or {}) do
+			local n = tonumber(paket[3])
+			if n then sista = n end
+		end
+		return sista
+	end
+
+	local h = nyRitt()
+	intent._skickat = {}
+	--[[ Passets IDENTITET, inte bara «pagar det ett pass». En
+	     aterforening som startar om lektionen ger ett NYTT pass med
+	     samma svar pa `pagar()`, sa den fragan kan inte skilja dem at.
+	     Tabellreferensen kan. ]]
+	LektionController.fortsatt()
+	bildrutor(1)
+	local passFore = LektionController.pass()
+	prova("det pagar ett pass innan avsittningen", passFore ~= nil)
+
+	--[[ Tre hjalper, med spärren utvantad mellan varje. ]]
+	for _ = 1, 3 do
+		gaTiden(Input.IMPULS_SPARR + 0.05)
+		drivTryck()
+		bildrutor(1)
+	end
+	local fore = sistaSekvens()
+	prova("hon har hunnit skicka nagra hjalper",
+		fore ~= nil and fore >= 2, tostring(fore))
+
+	--[[ SERVERN NEKAR, och aterforenar sedan precis som
+	     `HorseService.aterforena` gor: `MountChanged` med henne sjalv. ]]
+	dr.OnServerInvoke = function() return false, "takt.for_snabbt" end
+	local fn = CAS._bound[Input.AVSITT]
+	prova("avsittningen gick att trycka", fn ~= nil)
+	if fn then fn(Input.AVSITT, Enum.UserInputState.Begin, {}) end
+	Net.get("MountChanged").OnClientEvent:Fire(h, player)
+	bildrutor(1)
+
+	gaTiden(Input.IMPULS_SPARR + 0.05)
+	drivTryck()
+	bildrutor(1)
+	local efter = sistaSekvens()
+	prova("RAKNAREN FORTSATTER — DEN BORJAR INTE OM PA 1",
+		efter ~= nil and fore ~= nil and efter > fore,
+		("fore=%s  efter=%s"):format(tostring(fore), tostring(efter)))
+
+	--[[ OCH LEKTIONEN AR SAMMA LEKTION. Utan den har raden var
+	     «lektionstillstandet nollstalls inte» ett pastaende utan matning:
+	     en falsifiering som tog bort aterupptagandet gav ingen rod rad
+	     alls. Passet ar en tabell, och samma ritt ska ge samma tabell. ]]
+	prova("LEKTIONEN FORTSATTER — DET AR SAMMA PASS, INTE ETT NYTT",
+		LektionController.pass() == passFore and passFore ~= nil,
+		("samma=%s"):format(tostring(LektionController.pass() == passFore)))
+	--[[ …och kortet star inte uppe igen. Ett nytt pass hade lagt sig i
+	     lage «ny» och pausat ritten bakom en presentation hon redan
+	     kvitterat. ]]
+	prova("och lektionskortet reser sig inte pa nytt",
+		LektionController.vantar() == false,
+		tostring(LektionController.vantar()))
+
+	dr.OnServerInvoke = originalHandlare
+	UgnetaController.dolj()
+	h:Destroy()
+end
+
 if fel > 0 then
 	print(("\nKLIENT-LEKTIONSPAUS: %d fel"):format(fel))
 	error(("%d fel"):format(fel))

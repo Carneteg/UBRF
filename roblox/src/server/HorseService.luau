@@ -251,6 +251,14 @@ end
      via CollectionService — men blocker 1 kräver ett prov som går genom
      den RIKTIGA registreringen och läser de stats hästen faktiskt fick.
      Krokarna kallar samma kod, de duplicerar den inte. ]]
+--[[ RIV SESSIONEN, LÄMNA BOKFÖRINGEN. Enda vägen att framkalla
+     `hast.oregistrerad` i en bänk: läget uppstår i drift när en häst
+     avregistreras under en ryttare, och utan den här kroken går grinden
+     mot stale `byRider` inte att mäta alls. Provkrok, som grannarna. ]]
+function HorseService._glomSessionForProv(model: Model)
+	sessions[model] = nil
+end
+
 function HorseService._registerForProv(model: Model)
 	register(model)
 end
@@ -887,10 +895,28 @@ end
 	SVARAR `false` NÄR DET INTE FANNS NÅGOT ATT RÄTTA. Är `byRider` tom
 	anser servern inte att hon rider — då var klientens rivning RÄTT, och
 	att skicka något hade varit att hitta på ett läge. Skillnaden är värd
-	ett returvärde: ett prov ska kunna se att tystnaden var ett beslut. ]]
+	ett returvärde: ett prov ska kunna se att tystnaden var ett beslut.
+
+	── EN TRASIG BOKFÖRING ÄR INTE ETT LÄGE ATT ÅTERVÄNDA TILL ──────
+
+	Re-review runda 2 av `f6ff67d`. Första versionen läste `byRider` och
+	litade på den. Men `hast.oregistrerad` betyder PRECIS att den kartan
+	ljuger: ryttaren står bokförd på en häst vars session är borta. Att
+	skicka `MountChanged` på den uppgiften hade satt upp klienten på en
+	häst servern inte kan köra — en uppfunnen ritt ovanpå en trasig
+	bokföring.
+
+	Saknas sessionen städas posten i stället, och vi svarar `false`.
+	Klientens rivning var då rätt, och nästa uppsittning börjar från ett
+	rent läge i stället för att ärva lögnen. ]]
 function HorseService.aterforena(player: Player): boolean
 	local model = byRider[player]
 	if not model then return false end
+	if not sessions[model] then
+		byRider[player] = nil
+		warn("[Horse] aterforena: stale byRider utan session, posten stadad")
+		return false
+	end
 	Net.get("MountChanged"):FireClient(player, model, Aktor.klient(player))
 	return true
 end
