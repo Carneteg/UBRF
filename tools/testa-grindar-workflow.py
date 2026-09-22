@@ -45,6 +45,24 @@ try:
 except ImportError:
     sys.exit("PyYAML kravs: pip install pyyaml")
 
+#[[ DEN YTTRE TOLKEN LOSES UPP FORST, MOT EN OROR MILJO.
+#
+#   Fixturen lagger ett falskt `bash` i sin bin-katalog -- det behovs, for
+#   ett steg som `bash roblox/tests/kor.sh` ska fangas och loggas. Men
+#   `kor_block` la samma katalog forst i PATH och startade sedan "bash" PA
+#   NAMN. Pa POSIX vann skalet: det loggade `bash -e __steg.sh` och
+#   avslutade med 0, sa run-blocket kordes ALDRIG och varje beteendeprov
+#   blev gront utan att ha matt nagonting.
+#
+#   Pa Windows dolde plattformen felet. Uppslagningen dar bryr sig om
+#   PATHEXT och hoppar over en filandelselos fil, sa den riktiga Git Bash
+#   hittades anda. Provet var korrekt pa maskinen jag matte pa och inert pa
+#   maskinen det ska skydda. ChatGPT reproducerade 9 av 25 roda med POSIX-
+#   uppslagning (#264, inline 4073138719).
+#
+#   Uppslaget sker har, pa modulniva, innan nagon fixtur finns. ]]
+YTTRE_BASH = shutil.which("bash")
+
 ROT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 YML = os.path.join(ROT, ".github", "workflows", "grindar.yml")
 JOBB = ("grindar", "ridning")
@@ -229,7 +247,7 @@ def kor_block(run, filer, exits=None):
         miljo = dict(os.environ)
         miljo["PATH"] = bin_ + os.pathsep + miljo["PATH"]
         miljo["UBRF_LOGG"] = logg
-        r = subprocess.run(["bash", "-e", "__steg.sh"], cwd=d, env=miljo,
+        r = subprocess.run([YTTRE_BASH, "-e", "__steg.sh"], cwd=d, env=miljo,
                            capture_output=True, encoding="utf-8",
                            errors="replace")
         kord = io.open(logg, encoding="utf-8").read() if os.path.exists(logg) else ""
@@ -312,6 +330,22 @@ def beteende(d):
           rc != 0 and "luau" not in kordes,
           "rc=%d  korde=%r" % (rc, kord.strip().replace("\n", " | ")))
 
+    #[[ 8. TOLKEN FAR INTE SKUGGAS. Bada halvorna i EN matning: fixturens
+    #      falska `bash` ska fanga det NASTLADE anropet inne i blocket, och
+    #      samtidigt inte kunna kapa den yttre korningen. Skuggas den yttre
+    #      loggas `-e __steg.sh` i stallet, och provet nedan blir rott. ]]
+    run = hamta("roblox/tests/kor.sh")
+    if run is not None:
+        rc, ut, kord = kor_block(run, ["roblox/tests/kor.sh"])
+        rader = [l.strip() for l in kord.split("\n") if l.strip()]
+        prova("en falsk bash pa PATH kapar inte den yttre korningen",
+              rc == 0 and rader == ["bash roblox/tests/kor.sh"],
+              "rc=%d  korde=%r" % (rc, rader))
+        prova("den yttre tolken ar absolut och utanfor fixturen",
+              bool(YTTRE_BASH) and os.path.isabs(YTTRE_BASH)
+              and "g8-" not in YTTRE_BASH,
+              str(YTTRE_BASH))
+
 
 def forhandskoll():
     """Namnger ALLA obligatoriska indata som saknas -- inte bara den forsta.
@@ -339,6 +373,10 @@ def main():
     if "--forhandskoll" in sys.argv[1:]:
         return forhandskoll()
     print("-- GRINDARNA AR FAIL CLOSED (G8) --")
+    if not YTTRE_BASH:
+        #[[ Tyst overhoppning ar precis det den har grinden finns emot. ]]
+        print("  FEL  ingen bash i PATH -- beteendeproven kan inte koras")
+        return 1
     d = las()
     struktur(d)
     inventarie(d)

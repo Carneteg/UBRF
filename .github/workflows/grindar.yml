@@ -42,6 +42,24 @@ jobs:
           sudo install -m 0755 /tmp/luau/luau /usr/local/bin/luau
           luau --help >/dev/null && echo "luau installerad"
 
+      # G8 (#264): grinden som vaktar grindarna. Ligger FORE
+      # förhandskollen med flit: tre obligatoriska indata saknas på den
+      # här grenen, och GitHub stoppar jobbet vid första röda steget —
+      # låg självprovet efter dem gick det aldrig att se att det funkar
+      # på Linux. Det beror inte på någon av kontrollerna nedan. Kontrollerna ovan var förut
+      # villkorade på att sina filer fanns, så en raderad kontroll gav ett
+      # grönt steg som inte testat någonting. Provet läser den här filen med
+      # en riktig YAML-parser, håller en fast inventarielista över de
+      # obligatoriska anropen och KÖR run-blocken härifrån i isolerade
+      # fixturer — både att saknad indata fäller och att ett trasigt bygge
+      # inte maskeras av en gammal genererad fil. Ovillkorligt, självklart.
+      - name: Grindarna är fail closed
+        run: |
+          set -euo pipefail
+          test -f tools/testa-grindar-workflow.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-grindar-workflow.py (steget 'Grindarna är fail closed')" >&2; exit 1; }
+          python3 -m pip install --quiet pyyaml
+          python3 tools/testa-grindar-workflow.py
+
       # G8 (#264): FORHANDSKOLL. Stegen nedan fäller var och en på sin egen
       # saknade indata, men GitHub stoppar jobbet vid det första röda steget
       # — saknas tre kontroller upptäcks de en CI-körning i taget. Det här
@@ -290,20 +308,6 @@ jobs:
           set -euo pipefail
           test -f tools/sokvagstest.mjs || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/sokvagstest.mjs (steget 'Sökvägarna — verktygen kör ur en katalog med mellanslag och ä')" >&2; exit 1; }
           node tools/sokvagstest.mjs
-
-      # G8 (#264): grinden som vaktar grindarna. Kontrollerna ovan var förut
-      # villkorade på att sina filer fanns, så en raderad kontroll gav ett
-      # grönt steg som inte testat någonting. Provet läser den här filen med
-      # en riktig YAML-parser, håller en fast inventarielista över de
-      # obligatoriska anropen och KÖR run-blocken härifrån i isolerade
-      # fixturer — både att saknad indata fäller och att ett trasigt bygge
-      # inte maskeras av en gammal genererad fil. Ovillkorligt, självklart.
-      - name: Grindarna är fail closed
-        run: |
-          set -euo pipefail
-          test -f tools/testa-grindar-workflow.py || { echo "OBLIGATORISK KONTROLL SAKNAS: tools/testa-grindar-workflow.py (steget 'Grindarna är fail closed')" >&2; exit 1; }
-          python3 -m pip install --quiet pyyaml
-          python3 tools/testa-grindar-workflow.py
 
   dubbel-sanning:
     runs-on: ubuntu-latest
