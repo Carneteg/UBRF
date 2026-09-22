@@ -6,7 +6,7 @@
 |---|---|
 | Aktiv gate | **First Playable closure — de maskinellt körbara resterna** |
 | Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
-| Head | `5a72312` |
+| Head | `f4cecb8` (sessionskedjan levererad for review; se PR #264) |
 | Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
 | Överordnad plan | issue #259 |
 | Builder | **Claude** |
@@ -16,6 +16,17 @@
 Issue #259 är den överordnade produkt- och leveransplanen. `docs/PRODUCT-CANON.md`
 är fortfarande produktens högsta källa. Den här filen registrerar vad som är
 aktivt — den uppfinner inga krav.
+
+> **Tidsbegränsat produktbeslut 2026-09-22 — Roblox först.** Fram till
+> verifierad First Playable är Roblox enda aktiva leveransmålet; PC och iPad är
+> två kontrollsätt i samma Roblox-spel. Nya webbfeatures och kravet på samtidig
+> webbimplementation är pausade, webben bevaras i befintligt skick, och
+> befintliga tester och regressionsskydd behålls. Beslutet gäller framför
+> paritetskravet i styrningen (#261) och i completion-planen (#259) under den
+> här etappen — utan att skriva om deras historiska evidens och utan att någon
+> gate markeras som klar av det. Fullständig text: `docs/PRODUCT-CANON.md`,
+> «Tidsbegränsat produktbeslut 2026-09-22». Källa: PR #264, kommentar
+> `5779749429`. Återstart av webbfeatures kräver ett nytt produktägarbeslut.
 
 **Den här filen pekade fram till 2026-09-20 ut Gate 0 som aktiv gate.** Det var
 inaktuellt: G0 är levererad, och grenen har sedan dess kört sex gates till.

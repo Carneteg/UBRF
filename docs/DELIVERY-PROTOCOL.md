@@ -266,7 +266,7 @@ Status ska då vara `CHANGES_REQUESTED` eller motsvarande blockerad status, aldr
 
 Roblox är primär spelplattform. HTML/webb är parallell spelbar distribution och snabb testyta.
 
-Kärnregler, hästkunskap, ansvar, UBRF-värld och centrala gameplayparametrar ska hållas i avsiktlig paritet.
+Kärnregler, hästkunskap, ansvar, UBRF-värld och centrala gameplayparametrar ska hållas i avsiktlig paritet. **Under det tidsbegränsade produktbeslutet 2026-09-22 (Roblox först) är kravet på samtidig webbimplementation pausat; avsaknaden redovisas som avvikelse med hänvisning till `docs/PRODUCT-CANON.md`, aldrig som uppnådd paritet.**
 
 En ändring får inte kallas levererad om den bryter den aktiva plattformens huvudloop eller gör den andra plattformens motsvarande upplevelse omöjlig utan att detta uttryckligen beslutats.
 
