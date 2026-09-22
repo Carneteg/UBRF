@@ -1002,6 +1002,102 @@ do
 			LedService.ledsAv(MIN) == spelare)
 	end
 
+	--[[ ── OCH SLÄPPET FÅR INTE RYCKA ÄGARSKAPET FRÅN HENNE ───────
+
+		Reviewblockerare på Slice A. Att ledaren får sitta upp räcker
+		inte: `steg` släpper kopplet nästa bildruta med skälet
+		`led.rider`, och släppet ÅTERSTÄLLER det nätverksägarskap som
+		sparades undan när ledningen började — alltså ett värde från
+		INNAN hon satt upp. Det skulle skriva över det ägarskap
+		`HorseService.setRider` just gav ryttaren, och hon skulle sitta
+		på en häst hon inte styr.
+
+		Det här är den vanligaste vägen i hela kärnloopen: leda sin häst
+		till banan och sitta upp där. ]]
+	do
+		--[[ Foregaende block lamnar ledningen aktiv med flit (kopplet ar
+		     hennes tills tjansten slapper det), sa den maste slappas har
+		     — annars nekas `borja` med `led.leder_redan` och provet mater
+		     ingenting. Forsta versionen gjorde precis det. ]]
+		LedService.slapp(spelare)
+		intill(rot)
+		local okLedEget, skalLedEget = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne inför provet", okLedEget == true,
+			tostring(skalLedEget))
+		local foreUppsittning = MIN.PrimaryPart:GetNetworkOwner()
+
+		local okUppEget = HorseService.tryMount(spelare, MIN)
+		check("och sätter sig upp på sin egen ledda häst", okUppEget == true)
+		local ryttarAgare = MIN.PrimaryPart:GetNetworkOwner()
+		check("ägarskapet gick till RYTTAREN vid uppsittningen",
+			ryttarAgare == spelare,
+			("fore=%s  efter=%s"):format(tostring(foreUppsittning),
+				tostring(ryttarAgare)))
+
+		--[[ Och så släpper tjänsten kopplet SJÄLV, genom `steg` — inte
+		     genom ett direktanrop av `slapp`. Det är den vägen spelaren
+		     faktiskt går. ]]
+		local hum = spelare.Character:FindFirstChildOfClass("Humanoid")
+		if hum then hum.Sit = true end
+		LedService._steg(1 / 30)
+		check("tjänsten släppte kopplet själv", LedService.ledsAv(MIN) == nil)
+
+		check("OCH SLÄPPET RÖRDE INTE RYTTARENS ÄGARSKAP",
+			MIN.PrimaryPart:GetNetworkOwner() == spelare,
+			("%s"):format(tostring(MIN.PrimaryPart:GetNetworkOwner())))
+
+		if hum then hum.Sit = false end
+		HorseService.dismount(spelare)
+	end
+
+	--[[ ── EN LEDNING UTAN RYTTARE ÅTERSTÄLLER SOM FÖRUT ────────────
+
+		Den andra halvan av kontraktet, och den som gör den första
+		mätbar: ändrar man regeln till «återställ aldrig» blir DEN HÄR
+		raden röd i stället. Ett släpp utan ryttare ska lämna tillbaka
+		ägarskapet precis som det alltid gjort. ]]
+	do
+		MIN.PrimaryPart:SetNetworkOwner(spelare)
+		intill(rot)
+		local okLedUtan = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne, utan att sitta upp", okLedUtan == true)
+		check("ledningen tog ägarskapet till servern",
+			MIN.PrimaryPart:GetNetworkOwner() == nil,
+			tostring(MIN.PrimaryPart:GetNetworkOwner()))
+		LedService.slapp(spelare)
+		check("OCH SLÄPPET LÄMNADE TILLBAKA DET SOM FÖRUT",
+			MIN.PrimaryPart:GetNetworkOwner() == spelare,
+			tostring(MIN.PrimaryPart:GetNetworkOwner()))
+	end
+
+	--[[ ── EN KROK SOM KASTAR FÅR INTE KLOTTRA ─────────────────────
+
+		Fail-riktningen, och den stod som ett påstående i en kommentar
+		tills den här raden fanns. Kan vi inte avgöra om någon rider
+		LÅTER VI ÄGARSKAPET VARA: en häst som blir kvar serversimulerad
+		rättas av nästa uppsittning, men en ryttare som får ägarskapet
+		bortryckt har ingen väg tillbaka utom att sitta av. ]]
+	do
+		local riktig = LedService.satRidenKrok
+		MIN.PrimaryPart:SetNetworkOwner(spelare)
+		intill(rot)
+		local okKast = LedService.borja(spelare, MIN, MIN)
+		check("A leder henne inför fail-provet", okKast == true)
+		LedService.satRidenKrok(function()
+			error("krokens egen krasch")
+		end)
+		LedService.slapp(spelare)
+		check("EN KROK SOM KASTAR LÄMNAR ÄGARSKAPET IFRED",
+			MIN.PrimaryPart:GetNetworkOwner() == nil,
+			tostring(MIN.PrimaryPart:GetNetworkOwner()))
+		--[[ Tillbaka till produktionens egen krok. ]]
+		LedService.satRidenKrok(function(modell)
+			local sess = HorseService.sessionFor(modell)
+			return sess ~= nil and sess.rider ~= nil
+		end)
+		local _ = riktig
+	end
+
 	--[[ ── A SLÄPPER → B FÅR SITTA UPP ─────────────────────────────
 		Utan den här armen vore grinden uppfylld av en server som aldrig
 		släpper igenom någon alls. ]]

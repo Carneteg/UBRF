@@ -1022,16 +1022,50 @@ function LedService.slapp(player: Player, skal: string?): (boolean, string?)
 			hennes Humanoid. ]]
 		hum.WalkSpeed = l.tidigareFart
 	end
-	--[[ Ägarskapet tillbaka som det var. ]]
+	--[[ ══ ÄGARSKAPET TILLBAKA — UTOM NÄR NÅGON HUNNIT SÄTTA SIG ══
+
+		Normalfallet är oförändrat: ledningen tog ägarskapet till servern
+		och sparade undan det som gällde innan, och här lämnas det tillbaka.
+		Utan det blir en ledd häst permanent serversimulerad och ridningen
+		får tillbaka den halvsekunds fördröjning ägarskapet finns för att
+		slippa.
+
+		MEN DET SPARADE VÄRDET ÄR GAMMALT. Slice A släpper igenom det
+		vanligaste fallet i hela kärnloopen: spelaren leder sin häst till
+		banan och sätter sig upp där, utan att släppa repet först. Då
+		släpper `steg` kopplet själv nästa bildruta med skälet `led.rider`
+		— och kom vi hit och återställde det undansparade värdet skulle vi
+		skriva över det ägarskap `HorseService.setRider` just gav RYTTAREN.
+		Hon skulle sitta på en häst hon inte styr.
+
+		Sitter någon upp är ägarskapet alltså redan rätt satt av
+		hästsystemet, och det enda korrekta är att INTE röra det.
+
+		`hakar.riden` är samma krok som `borjaInre` redan frågar några
+		hundra rader upp — ingen ny koppling, ingen andra uppfattning om
+		vem som rider.
+
+		FAIL MOT ATT INTE KLOTTRA. Kastar kroken, eller saknas den inte
+		men svarar oklart, låter vi ägarskapet vara. En häst som blir kvar
+		serversimulerad rättas av nästa uppsittning; en ryttare som får
+		ägarskapet bortryckt har ingen väg tillbaka utom att sitta av. ]]
 	local pivot = l.modell.PrimaryPart
 	if pivot then
-		pcall(function()
-			if l.tidigareAuto then
-				pivot:SetNetworkOwnershipAuto()
-			else
-				pivot:SetNetworkOwner(l.tidigareAgare)
-			end
-		end)
+		local ridenNu = false
+		local riden = hakar.riden
+		if riden ~= nil then
+			local ok, svar = pcall(riden, l.modell)
+			ridenNu = (not ok) or (svar == true)
+		end
+		if not ridenNu then
+			pcall(function()
+				if l.tidigareAuto then
+					pivot:SetNetworkOwnershipAuto()
+				else
+					pivot:SetNetworkOwner(l.tidigareAgare)
+				end
+			end)
+		end
 	end
 
 	--[[ Spelarens egen fart tillbaka. Utan den går hon kvar i
