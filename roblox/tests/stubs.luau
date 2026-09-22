@@ -1682,7 +1682,46 @@ local function __nyInstans(klass)
 	     de har metoderna kunde banken inte se skillnad pa en tjanst som gor
 	     det och en som inte gor det — och det var precis den skillnaden som
 	     holl hasten stilla. ]]
+	--[[ ══ ÄGARSKAPET GÅR ATT NEKA OCH ATT FÅ ATT KASTA ═════════
+
+	     Slice F. Utan de har knapparna gar felvagen i aterlamningen inte
+	     att mata: den galler bara nar agarskapet faktiskt inte far
+	     sattas, och i banken lyckades det alltid.
+
+	     STANDARD AR OFORANDRAD — `CanSetNetworkOwnership` svarar `true`
+	     och ingenting kastar, precis som forut. Ett prov satter
+	     `_agarskapNekas` (skalstrangen), `_agarskapKastar` eller
+	     `_satAgarskapKastar` pa DEN del det vill prova.
+
+	     Skalstrangen kommer fran PROVET, inte harifran: Roblox
+	     dokumenterar att en skalstrang finns men inte vilka de ar, och
+	     en bank som hittar pa dem hade blivit ett pastaende om motorn. ]]
+	function inst:CanSetNetworkOwnership()
+		if rawget(self, "_agarskapKastar") then
+			error("CanSetNetworkOwnership: stubben kastar med flit", 0)
+		end
+		local nekas = rawget(self, "_agarskapNekas")
+		if nekas ~= nil then return false, tostring(nekas) end
+		return true
+	end
+
 	function inst:SetNetworkOwner(agare)
+		--[[ FORSOKET RAKNAS ALLTID, aven nar det nekas. Ett prov ska
+		     kunna se att koden FORSOKTE nagot forbjudet.
+
+		     TVA RAKNARE, och skillnaden ar inte kosmetisk: `nil` betyder
+		     «servern tar over» och gors med flit mitt i avsittningen.
+		     En raknare som slog ihop dem kunde inte skilja den
+		     avsiktliga overlamningen till servern fran ett forbjudet
+		     forsok att ge kroppen till spelaren. ]]
+		rawset(self, "_agarskapForsok", (rawget(self, "_agarskapForsok") or 0) + 1)
+		if agare ~= nil then
+			rawset(self, "_agarskapTillSpelare",
+				(rawget(self, "_agarskapTillSpelare") or 0) + 1)
+		end
+		if rawget(self, "_satAgarskapKastar") then
+			error("SetNetworkOwner: stubben kastar med flit", 0)
+		end
 		rawset(self, "_agare", agare)
 		rawset(self, "_agareAuto", false)
 	end

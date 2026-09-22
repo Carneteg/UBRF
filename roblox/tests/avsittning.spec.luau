@@ -509,6 +509,190 @@ do
 	HorseService.dismount(spelare10)
 end
 
+--[[ ══ ÄGARSKAPET TILLBAKA TILL SPELAREN — OCH NÄR DET INTE GÅR ═══
+
+	Robustness Slice F.
+
+	Raden löd `pcall(function() krot:SetNetworkOwner(spelare) end)` och
+	kastade både utfallet och skälet. En misslyckad återlämning lämnade
+	kroppen serverstyrd utan ett spår av varför.
+
+	Provet går genom den RIKTIGA avsittningen och dess fördröjda
+	överlämning, inte genom ett direktanrop av hjälparen.
+
+	SCHEMAT BEHÖVS FÖR ETT AV FALLEN. Bänkens `task.spawn` kör synkront,
+	så överlämningen hinner aldrig ligga och vänta — och då går vakten
+	«samma kropp fortfarande?» inte att pröva. `__schemaPa(true)` köar
+	trådarna så att provet kan byta kropp MELLAN avsittningen och
+	överlämningen. ]]
+print("\n── Ägarskapet tillbaka till spelaren ──")
+
+local function varningarMed(text)
+	local n = 0
+	for _, rad in ipairs(__varningar) do
+		if string.find(rad, text, 1, true) then n += 1 end
+	end
+	return n
+end
+
+do
+	HorseService._registerForProv(jack)
+	local kar2 = kar
+	--[[ `Parent` MASTE VARA SATT. Vakten i den fordrojda overlamningen
+	     ar `krot.Parent and spelare.Parent and spelare.Character ==
+	     karaktar`, och en banktabell utan `Parent` faller pa mitten —
+	     da kordes overlamningen aldrig och varenda matning nedan var
+	     tyst i stallet for rod. Forsta versionen gjorde precis det. ]]
+	local Spelartjanst = game:GetService("Players")
+	local spelareF = { Name = "AgarSaga", UserId = 11, Character = kar2,
+		Parent = Spelartjanst,
+		CharacterAdded = __signal_ny(), CharacterRemoving = __signal_ny() }
+	Spelartjanst._spelare = { spelareF }
+	local krotF = kar2:FindFirstChild("HumanoidRootPart")
+	check("kroppen har en rot att äga", krotF ~= nil)
+
+	--[[ ── DET NORMALA FALLET ───────────────────────────────────── ]]
+	do
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		check("hon sitter upp", HorseService.tryMount(spelareF, jack) == true)
+		local fore = #__varningar
+		HorseService.dismount(spelareF)
+		check("ÄGARSKAPET ÄR TILLBAKA HOS SPELAREN",
+			krotF:GetNetworkOwner() == spelareF,
+			tostring(krotF:GetNetworkOwner()))
+		local nya = 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "ägarskapet åter", 1, true) then
+				nya += 1
+			end
+		end
+		check("och en lyckad överlämning varnar inte", nya == 0,
+			("%d varningar"):format(nya))
+	end
+
+	--[[ ── EN NY KROPP FÅR INTE DEN GAMLAS ÄGARSKAP ─────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		spelareF.Character = kar2
+		check("hon sitter upp igen", HorseService.tryMount(spelareF, jack) == true)
+		krotF:SetNetworkOwner(nil)
+
+		--[[ MÄTPUNKTEN ÄR FÖRSÖKET, INTE SLUTVÄRDET. Avsittningen gör
+		     TVÅ placeringar, och den andra tar tillbaka ägarskapet till
+		     servern innan den lämnar över igen. Slutägaren blir därför
+		     `nil` oavsett om vakten finns — första versionen mätte det
+		     och kunde inte bli röd. Det som skiljer är om överlämningen
+		     ens FÖRSÖKTE ge kroppen till spelaren. ]]
+		local forsokFore = rawget(krotF, "_agarskapTillSpelare") or 0
+		__schemaPa(true)
+		HorseService.dismount(spelareF)
+		--[[ Överlämningen ligger i kön. NU byter hon kropp. ]]
+		local kar3 = __makeKaraktar and __makeKaraktar() or Instance.new("Model")
+		kar3.Name = "NyKropp"
+		spelareF.Character = kar3
+		__schemaTomKo()
+		__schemaPa(false)
+
+		check("EN GAMMAL KROPP FÅR INTE ÄGARSKAPET NÄR KROPPEN BYTTS",
+			(rawget(krotF, "_agarskapTillSpelare") or 0) == forsokFore,
+			("%d -> %d forsok"):format(forsokFore,
+				rawget(krotF, "_agarskapTillSpelare") or 0))
+		spelareF.Character = kar2
+	end
+
+	--[[ ── FÖRHANDSKONTROLLEN SÄGER NEJ ─────────────────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		HorseService.tryMount(spelareF, jack)
+		krotF:SetNetworkOwner(nil)
+		--[[ Skälet kommer från PROVET. Roblox dokumenterar att en
+		     skälsträng finns men inte vilka de är, så varken bänken
+		     eller koden får låtsas känna dem. ]]
+		rawset(krotF, "_agarskapNekas", "ankrad del (provets skal)")
+		--[[ Bara forsoken att ge kroppen till SPELAREN raknas. Det
+		     avsiktliga `SetNetworkOwner(nil)` mitt i avsittningen ar en
+		     annan sak, och forsta versionen av raden slog ihop dem —
+		     `16 -> 18` sag ut som ett forbjudet forsok men var serverns
+		     egen overlamning. ]]
+		local forsokFore = rawget(krotF, "_agarskapTillSpelare") or 0
+		local fore = #__varningar
+
+		HorseService.dismount(spelareF)
+
+		check("ETT NEJ HINDRAR ÖVERLÄMNINGEN",
+			krotF:GetNetworkOwner() ~= spelareF,
+			tostring(krotF:GetNetworkOwner()))
+		check("och inget förbjudet SetNetworkOwner försöktes",
+			(rawget(krotF, "_agarskapTillSpelare") or 0) == forsokFore,
+			("%d -> %d"):format(forsokFore,
+				rawget(krotF, "_agarskapTillSpelare") or 0))
+		local sagt, skalMed = 0, 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "NEKADES", 1, true) then
+				sagt += 1
+				if string.find(__varningar[i], "provets skal", 1, true) then
+					skalMed += 1
+				end
+			end
+		end
+		check("OCH VARNINGEN SÄGER VAD OCH VARFÖR",
+			sagt >= 1 and skalMed >= 1,
+			("%d varningar, %d med skalet"):format(sagt, skalMed))
+		rawset(krotF, "_agarskapNekas", nil)
+	end
+
+	--[[ ── FÖRHANDSKONTROLLEN KASTAR ────────────────────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		HorseService.tryMount(spelareF, jack)
+		krotF:SetNetworkOwner(nil)
+		rawset(krotF, "_agarskapKastar", true)
+		local fore = #__varningar
+
+		HorseService.dismount(spelareF)
+		rawset(krotF, "_agarskapKastar", nil)
+
+		local sagt = 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "förhandskontrollen", 1, true) then
+				sagt += 1
+			end
+		end
+		check("EN KASTANDE FÖRHANDSKONTROLL DÖDAR INTE TRÅDEN",
+			sagt >= 1, ("%d varningar"):format(sagt))
+		--[[ …och överlämningen gjordes ÄNDÅ. En kontroll som inte går
+		     att göra får inte ta bort en överlämning som fungerar. ]]
+		check("och överlämningen gjordes ändå",
+			krotF:GetNetworkOwner() == spelareF,
+			tostring(krotF:GetNetworkOwner()))
+	end
+
+	--[[ ── SJÄLVA SÄTTNINGEN KASTAR ─────────────────────────────── ]]
+	do
+		HorseService._registerForProv(jack)
+		krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+		HorseService.tryMount(spelareF, jack)
+		local fore = #__varningar
+		rawset(krotF, "_satAgarskapKastar", true)
+
+		local levde = pcall(function() HorseService.dismount(spelareF) end)
+		rawset(krotF, "_satAgarskapKastar", nil)
+
+		check("en kastande SetNetworkOwner tar inte ner avsittningen",
+			levde == true, tostring(levde))
+		local sagt = 0
+		for i = fore + 1, #__varningar do
+			if string.find(__varningar[i], "MISSLYCKADES", 1, true) then
+				sagt += 1
+			end
+		end
+		check("OCH DEN LÄMNAR ETT SPÅR", sagt >= 1, ("%d varningar"):format(sagt))
+	end
+end
+
 __markyta = nil
 __delarILada = nil
 

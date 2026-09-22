@@ -901,6 +901,52 @@ local function stannaHast(session: Session)
 	end)
 end
 
+--[[ ══ ÅTERLÄMNINGEN AV KROPPENS ÄGARSKAP ══════════════════
+
+	Robustness Slice F. Raden löd `pcall(function() krot:SetNetworkOwner(
+	spelare) end)` och kastade både utfallet och skälet. En misslyckad
+	återlämning lämnade alltså kroppen serverstyrd utan ett spår av varför.
+
+	FÖRHANDSKONTROLLEN. `BasePart:CanSetNetworkOwnership()` svarar `true`,
+	eller `false` plus ett skäl som sträng — dokumenterat som just det
+	sättet att veta om `SetNetworkOwner` kan anropas utan att kasta.
+
+	VI KÄNNER INTE SKÄLTEXTERNA, och låtsas inte göra det. Roblox
+	dokumenterar ATT en skälsträng kommer, men inte vilka de är; det enda
+	som står om själva förbudet är att servern alltid äger ankrade delar.
+	Koden jämför därför aldrig mot en sträng — den skickar vidare det den
+	fick.
+
+	OCH EN SAKNAD FÖRHANDSKONTROLL FÅR INTE TA BORT EN ÅTERLÄMNING SOM
+	SKULLE HA FUNGERAT. Kastar kontrollen själv — eller finns den inte —
+	säger vi det och försöker ändå. Bara ett uttryckligt `false` stoppar. ]]
+local function aterlamnaAgarskap(krot: BasePart, spelare: Player,
+	karaktar: Model): boolean
+	local vem = ("%s/%s"):format(spelare.Name, karaktar.Name)
+
+	local kunde, kan, skal = pcall(function()
+		return krot:CanSetNetworkOwnership()
+	end)
+	if kunde and kan ~= true then
+		warn(("[Horse] ägarskapet åter till spelaren efter avsittning NEKADES "
+			.. "för %s: %s"):format(vem, tostring(skal)))
+		return false
+	end
+	if not kunde then
+		warn(("[Horse] ägarskapet åter till spelaren efter avsittning: "
+			.. "förhandskontrollen gick inte att göra för %s (%s) — "
+			.. "försöker ändå"):format(vem, tostring(kan)))
+	end
+
+	local satt, fel = pcall(function() krot:SetNetworkOwner(spelare) end)
+	if not satt then
+		warn(("[Horse] ägarskapet åter till spelaren efter avsittning "
+			.. "MISSLYCKADES för %s: %s"):format(vem, tostring(fel)))
+		return false
+	end
+	return true
+end
+
 local function stallAv(modell: Model, karaktar: Model)
 	local krot = karaktar:FindFirstChild("HumanoidRootPart")
 	if not (krot and krot:IsA("BasePart")) then return end
@@ -922,8 +968,11 @@ local function stallAv(modell: Model, karaktar: Model)
 	if spelare then
 		task.spawn(function()
 			for _ = 1, 8 do RunService.Heartbeat:Wait() end
+			--[[ Vakten är oförändrad: roten finns kvar, spelaren finns
+			     kvar, och det är fortfarande SAMMA kropp. En ny kropp har
+			     ett eget ägarskap och ska inte få det här. ]]
 			if krot.Parent and spelare.Parent and spelare.Character == karaktar then
-				pcall(function() krot:SetNetworkOwner(spelare) end)
+				aterlamnaAgarskap(krot, spelare, karaktar)
 			end
 		end)
 	end
