@@ -481,7 +481,6 @@ workspace = {
 		ner(self)
 		return ut
 	end,
-	DescendantAdded = { Connect = function() return { Disconnect = function() end } end },
 }
 
 --[[ Signalfabriken låg förut nedanför tjänsterna. Den flyttades hit när
@@ -1183,6 +1182,33 @@ __signal_ny = __signal
      tystare an det ursprungliga felet och i en helt annan fil. ]]
 workspace.ChildAdded = __signal()
 workspace.ChildRemoved = __signal()
+--[[ ══ VARLDEN FAR EN LIVSCYKEL ═══════════════════════════
+
+	`DescendantAdded` var en INERT stub — `Connect` slangde sin callback.
+	Da gick den dynamiska halvan av `Prompttext.start()` inte att prova
+	alls: modulen kopplar nya prompter genom just den signalen, och i
+	banken hande ingenting.
+
+	`DescendantRemoving` fanns inte. Utan den finns ingen vag att saga
+	«en prompt lamnade varlden», och en modul som stadar efter sig kan
+	inte visas gora det.
+
+	Bada fyras ur `Parent`-sattaren och ur `Destroy` nedan. ]]
+workspace.DescendantAdded = __signal()
+workspace.DescendantRemoving = __signal()
+
+--[[ Ar noden under `workspace`? Signalerna galler tradet, inte varje
+     foralder — samma som i Roblox. ]]
+function __underWorkspace(nod: any): boolean
+	local n = nod
+	local djup = 0
+	while n ~= nil and djup < 64 do
+		if n == workspace then return true end
+		n = rawget(n, "Parent")
+		djup += 1
+	end
+	return false
+end
 
 --[[ ── BEVAKADE EGENSKAPER ─────────────────────────────────────────────
      Egenskaper som koden både SKRIVER och LYSSNAR på. De ligger i en
@@ -1233,6 +1259,9 @@ local function __nyInstans(klass)
 		AbsoluteSize = vec(0, 0, 0),
 		AbsolutePosition = vec(0, 0, 0),
 		_barn = {}, _attr = {}, _p = {}, _sig = {}, _asig = {}, Parent = nil,
+		--[[ Roblox fyrar den precis innan instansen rivs. Se noten vid
+		     `workspace.DescendantRemoving`. ]]
+		Destroying = __signal(),
 	}
 	--[[ `GetPropertyChangedSignal` finns på varje instans i Roblox. Den
 	     fyrar när egenskapen ÄNDRAS — inte vid varje skrivning av samma
@@ -1353,12 +1382,25 @@ local function __nyInstans(klass)
 		return ut
 	end
 	function inst:Destroy()
+		--[[ Signalerna FORE losskopplingen: en lyssnare ska kunna se var
+		     instansen satt, precis som i Roblox. ]]
+		local ivarlden = __underWorkspace(self)
+		local d = rawget(self, "Destroying")
+		if d then d:Fire() end
+		if ivarlden then workspace.DescendantRemoving:Fire(self) end
 		local far = rawget(self, "Parent")
 		if far and far._barn then
 			for i, b in ipairs(far._barn) do
 				if b == self then table.remove(far._barn, i) break end
 			end
 		end
+		--[[ EN FORSTORD INSTANS HAR `Parent = nil`. Stubben lamnade den
+		     kvar pekande pa sin gamla foralder, och det gjorde mer an att
+		     vara oprydligt: `__newindex` fyrar bara for en FRANVARANDE
+		     nyckel, sa en senare `x.Parent = ...` gick rakt forbi hooken
+		     och varken `DescendantAdded` eller barnlistan uppdaterades.
+		     En riven prompt gick alltsa inte att satta tillbaka. ]]
+		rawset(self, "Parent", nil)
 	end
 	if klass == "TextButton" then
 		inst.Activated = __signal()
@@ -1707,10 +1749,26 @@ local function __nyInstans(klass)
 				return
 			end
 			if k == "Parent" then
+				--[[ LAMNAR DEN VARLDEN? Da ska `DescendantRemoving` fyra
+				     innan bandet klipps, och `DescendantAdded` nar den
+				     kommer in. Utan det kan en modul som stadar efter sig
+				     inte visas gora det — se noten vid signalerna. ]]
+				--[[ BARA SIGNALEN, INTE BOKFORINGEN. Forsta versionen tog
+				     ocksa bort noden ur forra foralderns `_barn`, vilket
+				     ar mer likt Roblox men INTE hur den har banken alltid
+				     betett sig — `varldshud.spec` foll direkt. En
+				     harness-andring for ett nytt prov far inte flytta
+				     marken under de gamla. ]]
+				if __underWorkspace(t) then
+					workspace.DescendantRemoving:Fire(t)
+				end
 				rawset(t, "Parent", v)
 				if v and type(v) == "table" then
 					v._barn = v._barn or {}
 					table.insert(v._barn, t)
+				end
+				if __underWorkspace(t) then
+					workspace.DescendantAdded:Fire(t)
 				end
 			else
 				rawset(t, k, v)

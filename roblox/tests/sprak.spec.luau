@@ -324,6 +324,133 @@ end
 	en "attempt to call a nil value" i loggen i stället för ett läsbart
 	slut — rött blev det, men av fel anledning i texten. Här används den
 	om den finns, annars ger `error` den icke-nollskilda exitkoden. ]]
+
+--[[ ══ EN PROMPT LEVER INTE LÄNGRE ÄN SIN DÖRR ═════════════════════
+
+	Robustness Slice E.
+
+	`kopplade` bar tidigare `true` och ingenting mer: fem lyssnare
+	kopplades per prompt och ingen väg fanns tillbaka. En dörr som revs
+	låg kvar som starkt modultillstånd resten av klientsessionen, och
+	dess handlare hade ingen ägare som kunde riva dem.
+
+	Provet går genom den RIKTIGA livscykeln: `Prompttext.start()`,
+	`workspace.DescendantAdded` och `DescendantRemoving` — inte bara
+	`skrivOm`. ]]
+print("\n── En prompt lever inte längre än sin dörr ──")
+do
+	local Prompttext = Prompttext
+	local foreLocale = Sprak.eget()
+	Sprak.satLocale("en-us")
+	Prompttext._glomForProv()
+
+	local rot = Instance.new("Folder")
+	rot.Name = "SliceE"
+	rot.Parent = workspace
+
+	local function nyPrompt(namn, nyckel)
+		local p = Instance.new("ProximityPrompt")
+		p.Name = namn
+		p:SetAttribute("SprakNyckel", nyckel)
+		return p
+	end
+
+	--[[ ── EN PROMPT SOM FANNS INNAN START ─────────────────────── ]]
+	local forst = nyPrompt("Forst", "dorr.oppna")
+	forst.Parent = rot
+	Prompttext.start()
+	check("en prompt som fanns vid start översätts",
+		forst.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		tostring(forst.ActionText))
+	check("och modulen äger den", Prompttext._lyssnare(forst) > 0,
+		("%d lyssnare"):format(Prompttext._lyssnare(forst)))
+
+	--[[ De fem reaktiva vägarna. ]]
+	forst:SetAttribute("SprakNyckel", "dorr.stang")
+	check("SprakNyckel slår igenom",
+		forst.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		tostring(forst.ActionText))
+	forst:SetAttribute("SprakObjekt", "dorr.entren")
+	check("SprakObjekt slår igenom",
+		forst.ObjectText == Sprak.iSprak("en", "dorr.entren"),
+		tostring(forst.ObjectText))
+	forst.ActionText = "Pahittat"
+	check("en överskriven ActionText hävdas tillbaka",
+		forst.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		tostring(forst.ActionText))
+	forst.ObjectText = "Pahittat"
+	check("en överskriven ObjectText hävdas tillbaka",
+		forst.ObjectText == Sprak.iSprak("en", "dorr.entren"),
+		tostring(forst.ObjectText))
+
+	--[[ ── EN SOM KOMMER TILL EFTERÅT ───────────────────────────── ]]
+	local antalFore = Prompttext._kopplade()
+	local sen = nyPrompt("Sen", "dorr.oppna")
+	sen.Parent = rot
+	check("EN NY PROMPT KOPPLAS AV DescendantAdded",
+		Prompttext._kopplade() == antalFore + 1,
+		("%d -> %d"):format(antalFore, Prompttext._kopplade()))
+	check("och den översätts",
+		sen.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		tostring(sen.ActionText))
+	local lyssnareEn = Prompttext._lyssnare(sen)
+	check("den äger ett bestämt antal lyssnare", lyssnareEn > 0,
+		("%d"):format(lyssnareEn))
+
+	--[[ TVÅ SAMTIDIGA ÄR ISOLERADE. ]]
+	forst:SetAttribute("SprakNyckel", "dorr.oppna")
+	sen:SetAttribute("SprakNyckel", "dorr.stang")
+	check("två levande prompter påverkar inte varandra",
+		forst.ActionText == Sprak.iSprak("en", "dorr.oppna")
+			and sen.ActionText == Sprak.iSprak("en", "dorr.stang"),
+		("%s / %s"):format(tostring(forst.ActionText), tostring(sen.ActionText)))
+
+	--[[ ── OCH SÅ RIVS DEN ──────────────────────────────────────── ]]
+	sen:Destroy()
+	check("EN RIVEN PROMPT ÄGS INTE LÄNGRE",
+		Prompttext._kopplade() == antalFore,
+		("%d -> %d"):format(antalFore + 1, Prompttext._kopplade()))
+	check("och inga lyssnare hålls kvar på den",
+		Prompttext._lyssnare(sen) == 0,
+		("%d"):format(Prompttext._lyssnare(sen)))
+
+	--[[ DE GAMLA HÄNDELSERNA ÄR INERTA. Att tabellen är tom räcker
+	     inte: en kvarlevande koppling hade fortsatt kalla `skriv`. ]]
+	sen.ActionText = "Kvarlamnat"
+	sen:SetAttribute("SprakNyckel", "dorr.oppna")
+	sen:SetAttribute("SprakObjekt", "dorr.entren")
+	check("EN RIVEN PROMPTS HÄNDELSER RÖR INGENTING",
+		sen.ActionText == "Kvarlamnat",
+		tostring(sen.ActionText))
+
+	--[[ ── TILLBAKA IGEN ────────────────────────────────────────── ]]
+	sen.ActionText = ""
+	sen.Parent = rot
+	check("SAMMA PROMPT KOPPLAS OM — EN GÅNG",
+		Prompttext._kopplade() == antalFore + 1
+			and Prompttext._lyssnare(sen) == lyssnareEn,
+		("%d agda, %d lyssnare (var %d)"):format(Prompttext._kopplade(),
+			Prompttext._lyssnare(sen), lyssnareEn))
+	check("och den översätts igen",
+		sen.ActionText == Sprak.iSprak("en", "dorr.oppna"),
+		tostring(sen.ActionText))
+
+	--[[ ── MÅNGA VARV ───────────────────────────────────────────── ]]
+	local innanVarven = Prompttext._kopplade()
+	for _ = 1, 8 do
+		local t = nyPrompt("Tillfallig", "dorr.oppna")
+		t.Parent = rot
+		t:Destroy()
+	end
+	check("ÅTTA VARV LÄMNAR INGENTING EFTER SIG",
+		Prompttext._kopplade() == innanVarven,
+		("%d -> %d"):format(innanVarven, Prompttext._kopplade()))
+
+	Prompttext._glomForProv()
+	rot:Destroy()
+	Sprak.satLocale(foreLocale)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

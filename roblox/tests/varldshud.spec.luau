@@ -198,6 +198,24 @@ end
 	prompt. ]]
 print("\n7. Datans egna ord stannar i datan")
 do
+	--[[ ── BÄNKEN KÖR `start()` FLERA GÅNGER, PRODUKTIONEN EN ──────
+
+		Ett tidigare block i den här specen har redan kört
+		`Prompttext.start()`. Sedan `workspace.DescendantAdded` blev en
+		RIKTIG signal i bänken kopplade den kopplingen in varje dörrprompt
+		allteftersom världen byggdes — så modulen äger dem redan när det
+		här blocket börjar.
+
+		Det gjorde två mätningar nedan tysta: mutationen som skriver
+		`Oppningstyp` rakt av blev omedelbart överskriven av modulens egen
+		återhävdning (0 läckor i stället för 1), och översättningen längre
+		ned hoppades över eftersom prompterna redan var kopplade — på
+		svenska.
+
+		I produktion körs `start()` EN gång per klient. Blocket börjar
+		därför från ett glömt tillstånd, precis som
+		`SparService._glomHookarForProv` finns för. ]]
+	Prompttext._glomForProv()
 	local TOKEN = { "dorrgul", "dorrvit", "dorrmork", "dorr", "portbla", "portplat",
 		"portsilver", "valv", "rund", "fonster" }
 	DorrService.start()
