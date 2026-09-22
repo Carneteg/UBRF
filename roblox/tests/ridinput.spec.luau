@@ -771,6 +771,105 @@ do
 		("%.2f"):format(Config.RIDINPUT.ServerMarginal))
 end
 
+--[[ ══ SERVERNS NEJ SKA OCKSÅ VARA ETT SVAR ═══════════════════════
+
+	Ur produktägarens spelbarhetsgranskning (#264). Serverns impulsspärr
+	avvisade en hjälp med ett naket `return`: inget `RidTillstand`, ingen
+	ny `RidVersion`. Klienten hade REDAN predikterat övergången, så de två
+	stod i olika gångarter tills nästa ACCEPTERADE hjälp — och kom ingen
+	sådan låg divergensen kvar.
+
+	Tre rader ner gör takavslaget precis tvärtom och replikerar, med
+	kommentaren «klienten kan ha predikterat ett steg hon inte fick». Det
+	är samma situation. Bara den ena svarade.
+
+	DET DRABBAR ÄRLIG INPUT. Två tryck 0,65 s isär kan nå servern 0,45 s
+	isär vid varierande fördröjning; ingen paketomkastning behövs. Att den
+	synliga divergensen BESTÅR är en slutsats ur klient- och serverkoden,
+	inte något som mätts på ett riktigt nät.
+
+	FACIT UTAN FÖRSTÄRKNING. Kvittensen skickas högst EN gång per
+	cooldown-fönster — bunden till `sisteHjalp` — så spam ger ett svar
+	totalt, inte ett per paket. Rate limiten själv är orörd. ]]
+do
+	print("\n── Serverns nej lämnar inte prediktionen utan facit ──")
+	local remote = Networking.get("RidTillstand")
+	local spar = Config.RIDINPUT.ImpulsSparr - Config.RIDINPUT.ServerMarginal
+
+	--[[ Ren utgångspunkt: fylld skopa, tak i topp, spärren utgången. ]]
+	modell:SetAttribute("GaitCeiling", Gaits.SPELBAR_TOPP)
+	session.stegIndex = Gaits.index("halt")
+	session.intentPolletter = Config.RIDINPUT.SkopaTak
+	vanta(Config.RIDINPUT.ImpulsSparr)
+
+	remote._skickat = {}
+	avsikt(spelare, "driv", 9001)
+	check("KONTROLL: den första hjälpen accepteras och besvaras",
+		#remote._skickat == 1 and session.stegIndex == Gaits.index("walk"),
+		("%d svar, steg %s"):format(#remote._skickat,
+			Ridtrappa.gangart(session.stegIndex)))
+	local versionEfterJa = session.ridVersion
+
+	--[[ NÄSTA HJÄLP KOMMER FÖR TÄTT. Ärlig input, serverns spärr. ]]
+	remote._skickat = {}
+	avsikt(spelare, "driv", 9002)
+	check("ETT NEKAT DRIV GER ÄNDÅ FACIT",
+		#remote._skickat == 1,
+		("%d svar"):format(#remote._skickat))
+	check("och facitet bär den gångart som FAKTISKT gäller",
+		#remote._skickat == 1
+		and remote._skickat[1][2].gangart == Ridtrappa.gangart(session.stegIndex),
+		("gangart=%s steg=%s"):format(
+			tostring(#remote._skickat == 1 and remote._skickat[1][2].gangart),
+			Ridtrappa.gangart(session.stegIndex)))
+	check("och trappan står kvar — spärren är orörd",
+		session.stegIndex == Gaits.index("walk"),
+		Ridtrappa.gangart(session.stegIndex))
+	check("och versionen räknades upp så klienten kan skilja svaren åt",
+		session.ridVersion > versionEfterJa,
+		("%s -> %s"):format(tostring(versionEfterJa), tostring(session.ridVersion)))
+
+	--[[ INGEN FÖRSTÄRKNING. Femtio till inom samma fönster ska inte ge
+	     femtio svar: kvittensen hör till fönstret, inte till paketet. ]]
+	remote._skickat = {}
+	for i = 1, 50 do
+		avsikt(spelare, "driv", 9100 + i)
+	end
+	check("FEMTIO NEKADE PAKET GER INGEN SVARSSTORM",
+		#remote._skickat == 0,
+		("%d svar pa 50 avsikter"):format(#remote._skickat))
+
+	--[[ POSITIV KONTROLL: när fönstret väl gått ut fungerar hjälpen. ]]
+	vanta(spar + 0.02)
+	remote._skickat = {}
+	avsikt(spelare, "driv", 9200)
+	check("KONTROLL: efter fönstret accepteras hjälpen igen",
+		#remote._skickat == 1 and session.stegIndex == Gaits.index("trot"),
+		("%d svar, steg %s"):format(#remote._skickat,
+			Ridtrappa.gangart(session.stegIndex)))
+
+	--[[ TRAPPANS ÄNDLÄGEN: ett nekat driv i topp och ett nekat rygga i
+	     botten får inte heller vara tysta. ]]
+	session.stegIndex = Gaits.index(Gaits.SPELBAR_TOPP)
+	vanta(spar + 0.02)
+	avsikt(spelare, "driv", 9300)
+	remote._skickat = {}
+	avsikt(spelare, "driv", 9301)
+	check("ett nekat driv i toppen ger också facit",
+		#remote._skickat == 1, ("%d svar"):format(#remote._skickat))
+
+	session.stegIndex = Gaits.index("halt")
+	vanta(spar + 0.02)
+	avsikt(spelare, "broms", 9400)
+	remote._skickat = {}
+	avsikt(spelare, "broms", 9401)
+	check("ett nekat broms i botten ger också facit",
+		#remote._skickat == 1, ("%d svar"):format(#remote._skickat))
+
+	session.stegIndex = Gaits.index("halt")
+	modell:SetAttribute("GaitCeiling", Gaits.SPELBAR_TOPP)
+end
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

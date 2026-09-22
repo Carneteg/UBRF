@@ -114,6 +114,24 @@ export type Slutskal = "avsittning" | "avbrott"
 	plockar upp den igen om det är SAMMA häst och SAMMA rittmärke. Är
 	märket ett annat är det en ny ritt och posten ska inte användas —
 	servern har då nollat sin räknare och 0 är rätt. ]]
+--[[ VILKEN RITT ETT SENT SVAR HÖR TILL.
+
+	Räknas upp vid varje avsittningsbegäran och vid varje uppsittning.
+	En coroutine som väntar på servern fångar värdet när den startar och
+	jämför före den rör någon yta: har siffran flyttat sig har spelaren
+	gått vidare, och svaret gäller en ritt som inte finns längre.
+
+	En siffra, inte två: samma räknare avgör både om en summering får
+	visas och om ett misslyckat avsittningsanrop fortfarande är värt att
+	försona. ]]
+local sessionGen = 0
+
+--[[ FRAMATDEKLARATION. `startaAterforening` definieras langre ned, vid
+     de andra aterhamtningsdelarna, men `begarAvsittning` hogre upp
+     behover den nu. Lokalen finns har; `function startaAterforening(...)`
+     nedan tilldelar DEN, inte en global. ]]
+local startaAterforening: (Model) -> ()
+
 local avbrutenRitt: { model: Model, rittId: any, ridSekvens: number }? = nil
 
 local function dismount(skal: Slutskal?)
@@ -195,15 +213,36 @@ local function begarAvsittning()
 	--[[ DEN ENDA GILTIGA VAGEN UT. Spelaren tryckte sjalv, och servern
 	     far begaran direkt efterat. Summeringen hor hit och ingen
 	     annanstans. ]]
+	local hast = ride.model
+	--[[ VILKEN RITT DET HÄR SVARET HÖR TILL. Se noten vid `sessionGen`. ]]
+	sessionGen += 1
+	local minSession = sessionGen
 	local summering = dismount("avsittning")
 	task.spawn(function()
 		local ok, svar, skal = pcall(function()
 			return Net.get("DismountRequest"):InvokeServer()
 		end)
 		if not ok then
-			--[[ Uteblivet eller felande svar får inte återuppliva något
-			     lokalt. Servern rättar oss via MountChanged om den vill. ]]
+			--[[ ── ETT KAST ÄR INTE ETT SVAR ──────────────────────────
+
+				Förut blev det `warn` och `return`. Men rivningen har
+				redan skett — kontrollerna, bindningen och HUD:en är
+				borta — och ett kastat anrop betyder att servern kanske
+				ALDRIG behandlade begäran. Då kommer ingen `MountChanged`
+				som rättar oss, och spelaren står kvar utan väg tillbaka
+				bredvid en häst servern anser att hon rider.
+
+				Ett kast är varken en godkänd avsittning eller ett bevis
+				att ryttaren ska sättas upp igen. Därför frågas serverns
+				egen sanning i stället: `startaAterforening` prövar
+				`RiderUserId`, `RidSession` och medlemskap i världen före
+				varje försök, och är bunden till `ATERFORENING_FORSOK`.
+				Har servern faktiskt satt av oss stämmer inte längre
+				attributen, och då sätter den ingen upp igen. ]]
 			warn("[Horse] DismountRequest misslyckades: " .. tostring(svar))
+			if sessionGen == minSession and not ride then
+				startaAterforening(hast)
+			end
 			return
 		end
 		--[[ ── SERVERNS NEJ ÄR ETT NEJ ────────────────────────────────
@@ -233,11 +272,31 @@ local function begarAvsittning()
 			warn("[Horse] avsittningen nekades: " .. tostring(skal))
 			return
 		end
+		--[[ ── PRESENTATIONEN HÖR TILL SIN EGEN RITT ─────────────────
+
+			Ett fördröjt ja från ritt A la förut upp A:s efterritt rakt
+			över ritt B: coroutinen bar med sig summeringen och frågade
+			aldrig vilken ritt som pågår nu. Har en ny ritt, en respawn
+			eller ett avbrott hunnit emellan är det här svaret en
+			eftersläntrare, och en eftersläntrare ska vara inert.
+
+			Ett giltigt avslut UTAN efterföljande ritt räknar inte upp
+			`sessionGen` och visar därför fortfarande sin summering,
+			exakt en gång. ]]
+		if sessionGen ~= minSession then
+			warn("[Horse] efterritten hör till en tidigare ritt — visas inte")
+			return
+		end
 		LektionController.visaEfterritt(summering)
 	end)
 end
 
 local function mount(model: Model, rittId: string?)
+	--[[ EN NY RITT GOR VARJE VANTANDE SVAR INERT. Se noten vid
+	     `sessionGen`: en coroutine som star och vantar pa serverns
+	     besked om en TIDIGARE ritt far inte rora nagon yta efter
+	     det har. ]]
+	sessionGen += 1
 	--[[ RITTMARKET kommer ur `MountRequest`-svaret och binder varje
 	     avsikt till DEN HAR ritten (#233, ChatGPT-review av #241). Utan
 	     det kunde ett fordrojt paket fran en tidigare ritt landa efter
@@ -496,18 +555,36 @@ local function sammaAuktoritativaRitt(model: Model, marke: any): (boolean, strin
 	return true
 end
 
-local function startaAterforening(model: Model)
+function startaAterforening(model: Model)
+	--[[ ── OCKSÅ DEN FÖRSTA UPPSITTNINGEN ──────────────────────────
+
+		Förut krävdes en `avbrutenRitt` för just den här hästen, annars
+		returnerade funktionen direkt. Den posten skrivs bara i
+		`dismount`, så den finns per definition INTE vid den första
+		uppsittningen — och då fick en halvreplikerad rigg ett enda
+		byggförsök och sedan ingenting. Spelaren blev stående bredvid en
+		häst som servern säger att hon rider. Det var Slice G:s
+		återhämtning, men bara för den som redan haft en ritt.
+
+		Märket gissas inte. Har vi en avbruten ritt för hästen är det
+		HENNES märke vi väntar på; annars är det `RidSession` på
+		modellen, alltså exakt det värde `mount` självt faller tillbaka
+		på och det servern skrev när den satte upp oss. Saknas även det
+		vet vi ingenting och avstår hellre än gissar.
+
+		Vakterna är oförändrade: `sammaAuktoritativaRitt` prövar häst,
+		ryttare, rittmärke och medlemskap i världen före varje försök. ]]
 	local avbruten = avbrutenRitt
-	--[[ Bara en KÄND avbruten ritt återförenas. Utan den vet vi inte
-	     vilket märke vi väntar på, och då vore varje omförsök en gissning. ]]
-	if avbruten == nil or avbruten.model ~= model then return end
+	local marke = if avbruten ~= nil and avbruten.model == model
+		then avbruten.rittId
+		else model:GetAttribute("RidSession")
+	if marke == nil then return end
 	--[[ EN I TAGET. Ett dubblerat `MountChanged` ska inte ge en andra loop. ]]
 	if aterforeningModell == model then return end
 
 	aterforeningGen += 1
 	local min = aterforeningGen
 	aterforeningModell = model
-	local marke = avbruten.rittId
 
 	task.spawn(function()
 		for _ = 1, ATERFORENING_FORSOK do

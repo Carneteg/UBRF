@@ -80,6 +80,10 @@ export type Session = {
 	     den impulsspärren mäts mot, och den är sanningen; klientens egen
 	     spärr är presentation. ]]
 	sisteHjalp: number,
+	--[[ Vilken `sisteHjalp` vi redan skickat ett avslagsfacit for. Se
+	     noten vid impulssparren: en kvittens per fonster, inte per
+	     paket. ]]
+	nekKvitterad: number,
 	--[[ Växer vid varje accepterad ändring. Klienten kastar svar som är
 	     äldre än det den redan sett, så att ett omkastat paket inte kan
 	     dra tillbaka henne till en gångart hon lämnat. ]]
@@ -231,6 +235,7 @@ local function register(model: Model)
 		stegIndex = Gaits.index("halt"),
 		sekvens = 0,
 		sisteHjalp = 0,
+		nekKvitterad = -1,
 		ridVersion = 0,
 		intentPolletter = Config.RIDINPUT.SkopaTak,
 		intentSenast = os.clock(),
@@ -408,6 +413,7 @@ local function nollstallRitt(session: Session)
 	session.stegIndex = Gaits.index("halt")
 	session.sekvens = 0
 	session.sisteHjalp = 0
+	session.nekKvitterad = -1
 	session.intentPolletter = Config.RIDINPUT.SkopaTak
 	session.intentSenast = os.clock()
 end
@@ -1359,7 +1365,26 @@ local function onRidingIntent(player: Player, rittId: any, handling: any, sekven
 	     Marginalen är dokumenterad i `Config.RIDINPUT` och finns för att
 	     två ärliga hjälper 0,60 s isär kan nå servern tätare än så. ]]
 	local sparr = Config.RIDINPUT.ImpulsSparr - Config.RIDINPUT.ServerMarginal
-	if nu - session.sisteHjalp < sparr then return end
+	if nu - session.sisteHjalp < sparr then
+		--[[ ETT NEJ AR OCKSA ETT SVAR (#264, spelbarhetsgranskningen).
+
+			Raden var ett naket `return`. Klienten hade REDAN predikterat
+			overgangen, sa de tva stod i olika gangarter tills nasta
+			ACCEPTERADE hjalp -- och kom ingen sadan lag divergensen kvar.
+			Takavslaget tio rader ner gjorde redan tvartom, av exakt samma
+			skal. Det drabbar arlig input: tva tryck 0,65 s isar kan na
+			hit 0,45 s isar vid varierande fordrojning.
+
+			EN GANG PER FONSTER, inte en gang per paket. Kvittensen hor
+			till den senast accepterade hjalpen, sa 200 spampaket ger ETT
+			extra svar totalt. Sparren sjalv ar helt orord -- den har
+			grenen andrar bara om servern SAGER nagot nar den sager nej. ]]
+		if session.nekKvitterad ~= session.sisteHjalp then
+			session.nekKvitterad = session.sisteHjalp
+			replikera(session)
+		end
+		return
+	end
 
 	--[[ 6. STEGET. Ett, aldrig fler, och aldrig förbi taket uppåt.
 
