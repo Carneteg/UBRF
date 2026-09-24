@@ -14,12 +14,12 @@
 	sjalv — instanser gar att rakna utan att lasa `Source`, vilket ett
 	spelskript inte far. Se Integritet.kallantal och punkt 9e. ]]
 return {
-	kallhash = "9e2fe6fbdc3ac6f13b6def922f656aaeca1a087cd2b677068b1a831227d8f965",
+	kallhash = "b6c28a412e8a4a53f7bd7175cc45175e68c6f034ef8d6c90db1559b1de3dee70",
 	lage = "rojo",
 	kallor = 78,
-	sha = "ab5c2e0b38c61db0599e47d576d5e3877e57500a",
-	miljo_sha = "ab5c2e0b38c61db0599e47d576d5e3877e57500a",
-	genererad = "2026-09-24T09:18:28Z",
+	sha = "b1b08883d6df38f95ccbf4aca677fd64c6e3f4e5",
+	miljo_sha = "b1b08883d6df38f95ccbf4aca677fd64c6e3f4e5",
+	genererad = "2026-09-24T10:50:38Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
