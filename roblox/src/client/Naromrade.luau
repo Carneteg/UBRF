@@ -504,10 +504,9 @@ local function provaHallet()
 		hallRad = nil
 		return
 	end
-	for _, q in ipairs(senaste) do
-		if q == p then return end
+	if hallRad == nil or senaste[hallRad] ~= p then
+		slappHall()
 	end
-	slappHall()
 end
 
 --[[ Släpp bara det håll som började på DEN HÄR raden. ]]
@@ -657,7 +656,7 @@ local function bygg()
 		local platser = Naromrade.radplatser()
 		local sidor = if platser > 0
 			then math.max(1, math.ceil(#relevanta / platser)) else 1
-		sida = sida
+		sida = if sida >= sidor then 1 else sida + 1
 		rita()
 	end)
 	bladdra = v
