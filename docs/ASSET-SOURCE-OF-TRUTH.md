@@ -136,7 +136,23 @@ snart `default.project.json` mappar modellen.
 **Kvarvarande blockerare:** själva filen. `k3` finns bara i startplacen,
 och den vägen ut kräver Studio. Se `[REFERENCE GAP]` nedan.
 
-- `[REFERENCE GAP]` `roblox/assets/hastvisualer-k3.rbxmx` saknas. Den
-  stödda vägen är att öppna startplacen i Studio och exportera modellen;
-  Studio-MCP rapporterade `{"instances":[],"multiplayerGroups":[]}` vid
-  försöket 2026-09-24, alltså ingen ansluten Studio att läsa ur.
+- `[REFERENCE GAP]` `roblox/assets/hastvisualer-k3.rbxmx` saknas —
+  **numera av EXPORTFORMAT, inte av åtkomst.**
+
+  Studio är anslutet sedan 2026-09-24 (place `106030782437053`,
+  `gameId 10766192504`), modellen är läst och inventerad — men den
+  programmatiska exporten skriver **binärt** `.rbxm` oavsett
+  filändelse: `export_rbxm` med `.rbxmx` gav 12 560 byte med magin
+  `<roblox!`, inte `<roblox `. Motorn har ingen dokumenterad
+  Luau-väg som serialiserar en INSTANS till XML — `DataModel` har
+  `SavePlace` (deprekerad, gäller placen) och ingenting för en
+  enskild modell.
+
+  Den kanoniska artefakten är `.rbxlx`, alltså XML, så ett binärt
+  delträd går inte att bädda in.
+
+  **Konkret åtgärd, ett steg:** högerklicka
+  `ServerStorage.HastVisualer.k3` i Studios Explorer →
+  **Save to File…** → spara som `hastvisualer-k3.rbxmx` i
+  `C:\Users\Tobias Carneteg\Desktop\UBRF\roblox\assets\`. Ändelsen `.rbxmx` är det som gör filen till XML.
+  Det ändrar ingenting i placen.
