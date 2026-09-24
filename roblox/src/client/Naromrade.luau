@@ -103,6 +103,10 @@ local senaste: { ProximityPrompt } = {}
      med av skräpsamlaren utan att lämna en post efter sig. ]]
 local slackta: { [ProximityPrompt]: any } = {}
 
+--[[ Andra hästars prompter, som varken ska få en rad eller en bubbla.
+     Fylls av `nara` och läses av `rita`. Se noten där. ]]
+local bortvalda: { [ProximityPrompt]: boolean } = {}
+
 --[[ Vad raden ska heta. Promptens egen `ActionText` är redan spelarens
 	språk — den sätts av tjänsterna ur språkkanonen — och `ObjectText`
 	säger vilken häst eller dörr det gäller. Två rader som annars vore
@@ -310,6 +314,9 @@ end
 function Naromrade.nara(fran: Vector3, sok: { Instance },
 	minHast: string?, tak: number?): { ProximityPrompt }
 	local alla = Naromrade.iRackvidd(fran, sok)
+	--[[ Nollställs per urval: en häst som gått ur räckvidd ska inte ligga
+	     kvar som bortvald och hållas släckt i evighet. ]]
+	table.clear(bortvalda)
 	local rang: { [ProximityPrompt]: number } = {}
 	for i, d in ipairs(alla) do rang[d] = i end
 
@@ -322,10 +329,24 @@ function Naromrade.nara(fran: Vector3, sok: { Instance },
 			elseif minHast == nil then 2
 			else 3
 		--[[ En annan hästs utrustning får ingen RAD när spelaren har en
-		     egen. Dess bild släcks ändå — `rita` läser `iRackvidd`. ]]
+		     egen — och sedan R2 ingen BUBBLA heller.
+
+		     Kommentaren här sa «dess bild släcks ändå», men det slutade
+		     gälla när släckningen kopplades till urvalet i stället för
+		     räckvidden. Granskningen mätte följden: `rows=1
+		     unselectedDefaultPrompts=6` — listan PLUS väggen.
+
+		     Bortvalda hästars prompter bokförs därför här, och `rita`
+		     släcker dem. Det är inte samma sak som den gamla regressionen
+		     med oåtkomliga dörrar: det här är handlingar som inte gäller
+		     spelaren alls, och de blir varken rad eller bubbla MED
+		     AVSIKT. Det som är relevant men inte fick plats behåller sin
+		     bubbla, precis som invarianten kräver. ]]
 		if k ~= 3 then
 			table.insert(ut, d)
 			klass[d] = k
+		else
+			bortvalda[d] = true
 		end
 	end
 	--[[ ── RIDE FIRST GÄLLER OCKSÅ I LISTAN (#246 QA-blockerare) ──────
@@ -385,16 +406,67 @@ end
 	ingen kopia av handlaren: `InputHoldBegin` är exakt vad en tangent
 	eller ett tryck på promptens egen knapp gör, och `HoldDuration`
 	respekteras därför precis som förut. ]]
-local function tryck(p: ProximityPrompt)
-	if p == nil or p.Parent == nil or not p.Enabled then return end
-	p:InputHoldBegin()
-	if p.HoldDuration and p.HoldDuration > 0 then
-		task.delay(p.HoldDuration + 0.05, function()
-			if p.Parent then p:InputHoldEnd() end
-		end)
-	else
-		p:InputHoldEnd()
+--[[ ── ETT HÅLL ÄR ETT HÅLL, INTE EN TIMER ───────────────────────────
+
+	Här stod `InputHoldBegin` följt av `task.delay(HoldDuration + 0.05)`
+	som avslutade hållet OBEROENDE av att spelaren släppte — och hela
+	saken startade på `MouseButton1Click`, som i sin tur fyrar när musen
+	SLÄPPS. Ett kort klick blev alltså en fullbordad håll-handling, och
+	det fanns ingen väg att ångra sig.
+
+	Det är fel på två sätt. Spelaren kunde inte avbryta genom att släppa,
+	och hon kunde utlösa en håll-grind utan att hålla. Grinden finns för
+	att vissa handlingar ska kräva ett medvetet ögonblick.
+
+	Nu är livscykeln verklig: NED börjar hållet, UPP eller att markören
+	lämnar knappen avslutar det, och motorn avgör själv om
+	`HoldDuration` hanns med. Nollduration är oförändrad — där utlöser
+	`InputHoldBegin` direkt, precis som en tangenttryckning.
+
+	Tappas målet, går det ur räckvidd eller rivs ytan släpps hållet
+	också — se `slappTappatHall` nedan, som `rita` kallar, och
+	`slappHall` i `stopp`.
+
+	DEN HÄR NOTEN LJÖG I EN GRANSKNINGSRUNDA. Den beskrev släppet vid
+	tappat mål som om det fanns, och `rita` gjorde ingenting alls åt
+	ett pågående håll. Ett finger som låg kvar på en knapp medan
+	spelaren red iväg höll alltså kvar en prompt som inte längre var
+	inom räckhåll, och hade den nått sin `HoldDuration` hade den
+	utlösts från andra sidan stallet. Nu gör den det noten sa. ]]
+local hallsPrompt: ProximityPrompt? = nil
+
+local function slappHall()
+	local p = hallsPrompt
+	hallsPrompt = nil
+	if p ~= nil and p.Parent ~= nil then
+		pcall(function() p:InputHoldEnd() end)
 	end
+end
+
+--[[ Håller vi något som inte längre går att hålla? Målet kan ha rivits
+     ur världen, gått ur räckvidd eller tappat sin rad. Då släpps hållet
+     — och eftersom `InputHoldEnd` bara utlöser när `HoldDuration` hunnit
+     gå, blir ett avbrutet håll INGEN handling. Det är hela poängen. ]]
+local function slappTappatHall(kvar: { ProximityPrompt })
+	local p = hallsPrompt
+	if p == nil then return end
+	if p.Parent == nil then
+		hallsPrompt = nil
+		return
+	end
+	for _, q in ipairs(kvar) do
+		if q == p then return end
+	end
+	slappHall()
+end
+
+local function borjaHall(p: ProximityPrompt)
+	if p == nil or p.Parent == nil or not p.Enabled then return end
+	--[[ Ett håll i taget. Hinner ett nytt börja innan det förra släppts
+	     avslutas det förra först, annars läcker vi en öppen hållning. ]]
+	slappHall()
+	hallsPrompt = p
+	p:InputHoldBegin()
 end
 
 --[[ ── EN INTERAKTIONSYTA, INTE TVÅ (#246 C) ──────────────────────────
@@ -488,10 +560,15 @@ local function bygg()
 	for i = 1, MAX_RADER do
 		local b = nyKnapp(i)
 		b.Parent = f
-		b.MouseButton1Click:Connect(function()
+		--[[ NED börjar, UPP och att markören lämnar knappen avslutar.
+		     `MouseButton1Click` fyrar först vid släpp och duger därför
+		     inte till att STARTA ett håll. ]]
+		b.MouseButton1Down:Connect(function()
 			local p = senaste[i]
-			if p then tryck(p) end
+			if p then borjaHall(p) end
 		end)
+		b.MouseButton1Up:Connect(function() slappHall() end)
+		b.MouseLeave:Connect(function() slappHall() end)
 		rader[i] = b
 	end
 end
@@ -730,6 +807,8 @@ local function rita()
 		kropp finns ingenting att stå nära. Båda släcker listan hellre än
 		att visa en rad som inte går att lita på. ]]
 	if rider or not (rot and rot:IsA("BasePart")) then
+		--[[ Ingen lista alls — då kan inget håll pågå i den. ]]
+		slappHall()
 		senaste = {}
 		for _, b in ipairs(rader) do b.Visible = false end
 		--[[ Ingen lista — då ska Roblox egna prompter tillbaka, annars blir
@@ -746,6 +825,7 @@ local function rita()
 	     prompter, samma väg som när man rider. En rad som ligger under
 	     rörelsekontrollen eller utanför skärmen är ingen handling. ]]
 	if platser <= 0 then
+		slappHall()
 		senaste = {}
 		for _, b in ipairs(rader) do b.Visible = false end
 		tandAllaIgen()
@@ -756,6 +836,8 @@ local function rita()
 	     mängder här, och att de kunde gå isär var hela felet. ]]
 	senaste = Naromrade.nara((rot :: BasePart).Position, { workspace },
 		minHast, platser)
+	--[[ Först av allt: höll hon i något som inte längre finns i listan? ]]
+	slappTappatHall(senaste)
 	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
 	     kvar över panelen och äter tryck som inte hör listan till. ]]
 	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
@@ -809,12 +891,17 @@ local function rita()
 		dubbel yta — irriterande. Alternativet var en dörr som inte går
 		att öppna. Ska den dubbleringen bort är det ett FILTRERINGSVAL i
 		`nara`, inte ett skäl att lämna något utan väg in. ]]
-	local visas: { [ProximityPrompt]: boolean } = {}
-	for _, p in ipairs(senaste) do visas[p] = true end
+	--[[ EN YTA, INTE TVÅ. Släckt blir det som fått en rad — listan
+	     ersätter bubblan — OCH det som valts bort som en annan hästs sak.
+	     Allt annat behåller sin bubbla: en dörr som inte fick plats i
+	     listan ska fortfarande gå att öppna. ]]
+	local slacks: { [ProximityPrompt]: boolean } = {}
+	for _, p in ipairs(senaste) do slacks[p] = true end
+	for p in pairs(bortvalda) do slacks[p] = true end
 	for p in pairs(slackta) do
-		if not visas[p] then tandIgen(p) end
+		if not slacks[p] then tandIgen(p) end
 	end
-	for _, p in ipairs(senaste) do slack(p) end
+	for p in pairs(slacks) do slack(p) end
 
 	for i, b in ipairs(rader) do
 		local p = senaste[i]
@@ -828,6 +915,14 @@ local function rita()
 end
 
 --[[ Provets fönster in: vad står på skärmen just nu? ]]
+--[[ Radernas prompter i radordning. `_rader` ger texterna; provet som
+     håller på en viss prompt behöver veta VILKEN rad den fick. ]]
+function Naromrade._prompter(): { ProximityPrompt }
+	local ut = {}
+	for i, p in ipairs(senaste) do ut[i] = p end
+	return ut
+end
+
 function Naromrade._rader(): { string }
 	local ut = {}
 	for _, b in ipairs(rader) do
@@ -836,9 +931,27 @@ function Naromrade._rader(): { string }
 	return ut
 end
 
+--[[ Provets väg in. `_tryckPa` är ett helt tryck: ned och upp. Vill man
+     mäta ett AVBRUTET håll finns `_hallNed`/`_slappHall`. ]]
 function Naromrade._tryckPa(i: number)
 	local p = senaste[i]
-	if p then tryck(p) end
+	if p then
+		borjaHall(p)
+		slappHall()
+	end
+end
+
+function Naromrade._hallNed(i: number)
+	local p = senaste[i]
+	if p then borjaHall(p) end
+end
+
+function Naromrade._slappHall()
+	slappHall()
+end
+
+function Naromrade._hallsNu(): ProximityPrompt?
+	return hallsPrompt
 end
 
 --[[ Ridningen äger skärmen medan den pågår. Sätts från `init.client`,
@@ -890,7 +1003,8 @@ function Naromrade.start()
 end
 
 function Naromrade.stopp()
-	--[[ Lämna aldrig en släckt prompt efter sig. ]]
+	--[[ Lämna aldrig ett öppet håll — eller en släckt prompt — efter sig. ]]
+	slappHall()
 	tandAllaIgen()
 	if koppling then
 		koppling:Disconnect()

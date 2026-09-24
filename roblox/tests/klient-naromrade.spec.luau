@@ -788,39 +788,65 @@ do
 	check("och båda raderna är dagens hästs prioriterade handlingar",
 		badeEgna, table.concat(synliga, " | "))
 
-	--[[ ── OMVÄNT MOT FÖRR, OCH DET ÄR RÄTTELSEN (#264) ──────────────
+	--[[ ── KONTRAKTET HAR SVÄNGT TVÅ GÅNGER. HÄR ÄR BÅDA VÄNDNINGARNA ──
 
-		Här stod förut att INGEN av de sex får behålla Roblox egna UI,
-		och att alla sex ska stå i registret. Det var avsikten i #246 C:
-		en enda interaktionsyta på touch.
+		FÖRST stod här att INGEN av de sex får behålla Roblox egna UI och
+		att alla sex ska stå i registret. Det var avsikten i #246 C: en
+		enda interaktionsyta på touch.
 
-		SPELTEST 2026-09-21 visade priset. En prompt som släcks utan att
-		få en rad är varken rad eller knapp — Tobias såg «Open — Door»
-		och kunde inte öppna dörren. Rutten genom stallet var stängd.
+		SEDAN visade speltestet 2026-09-21 priset. En prompt som släcks
+		utan att få en rad är varken rad eller knapp — Tobias såg
+		«Open — Door» och kunde inte öppna dörren. Rutten genom stallet
+		var stängd. Regeln blev «släck bara det du ersätter», och just
+		den regeln står kvar för DÖRRARNA nedan.
 
-		Påståendet intill löd «en bortfiltrerad prompt är fortfarande
-		aktiverbar», och det var sant men bevisade fel sak: att
-		`InputHoldBegin` fungerar från kod säger ingenting om att en
-		SPELARE kan nå den. Utan rad och utan bild finns ingen väg in.
+		NU, R2 2026-09-24, mätte granskningen vad regeln kostade när den
+		tillämpades på allt: `rows=1 unselectedDefaultPrompts=6`. Listan
+		PLUS väggen av bubblor. Den dubbla ytan var inte «rätt pris» —
+		den var själva röran Tobias rapporterade.
 
-		Kontraktet är nu: SLÄCK BARA DET DU ERSÄTTER. De två som får
-		rader släcks; de fyra som inte får det behåller sin egen bild.
-		Den dubbla ytan är priset, och det är rätt pris — en extra knapp
-		är irriterande, en dörr som inte går att öppna är en blockerare. ]]
+		Skillnaden som saknades är VARFÖR en prompt blev utan rad:
+
+		  · UTAN PLATS — dörrarna här. Handlingen gäller spelaren, listan
+		    räckte bara inte till. Att släcka den vore att stänga dörren
+		    igen. Den BEHÅLLER sin bubbla. Invarianten från 2026-09-21 är
+		    orörd.
+
+		  · BORTVALD — grannhästarnas utrustning. Den gäller inte
+		    spelaren alls, och en bubbla för den är bara brus framför
+		    dagens häst. Den släcks, MED AVSIKT och utan rad.
+
+		Fixturens egen not ovanför sa redan det: grannarna «ska filtreras
+		bort ur listan men ändå få sina bilder släckta». Koden hade
+		tappat andra halvan när släckningen knöts till urvalet i stället
+		för till räckvidden.
+
+		Alltså: fyra släckta (två rader + två bortvalda), två kvar med
+		sin bild (dörrarna). ]]
 	local kvarNative = {}
 	for _, pr in ipairs(allaSex) do
 		if pr.Style ~= Enum.ProximityPromptStyle.Custom then
 			table.insert(kvarNative, pr.Name)
 		end
 	end
-	check("bara de som fick en rad har tappat Roblox standard-UI",
-		#kvarNative == 4, ("%d behöll sin bild: %s"):format(#kvarNative,
+	local baraDorrar = #kvarNative == 2
+		and (kvarNative[1] == "DorrAPrompt" or kvarNative[1] == "DorrBPrompt")
+		and (kvarNative[2] == "DorrAPrompt" or kvarNative[2] == "DorrBPrompt")
+	check("DÖRRARNA som inte fick plats behåller sin bild — och bara de",
+		baraDorrar, ("%d behöll sin bild: %s"):format(#kvarNative,
 			table.concat(kvarNative, ", ")))
-	check("registret rymmer exakt raderna, inte allt inom räckvidd",
-		N._slackta() == 2, ("%d"):format(N._slackta()))
+	local grannarSlackta = granne1.Style == Enum.ProximityPromptStyle.Custom
+		and granne2.Style == Enum.ProximityPromptStyle.Custom
+	check("GRANNHÄSTARNAS utrustning är släckt fast den inte fick någon rad",
+		grannarSlackta, ("%s / %s"):format(tostring(granne1.Style),
+			tostring(granne2.Style)))
+	check("registret rymmer raderna och de bortvalda — inte dörrarna",
+		N._slackta() == 4, ("%d"):format(N._slackta()))
 
-	--[[ AKTIVERINGEN är orörd på en bortfiltrerad prompt: ingen rad, men
-	     promptens egen väg fungerar precis som förut. ]]
+	--[[ AKTIVERINGEN är orörd på en bortfiltrerad prompt. Att den inte
+	     syns är ett URVAL, inte ett hinder: rör spelaren dagens häst
+	     igen kommer handlingen tillbaka som rad, och koden bakom är hela
+	     tiden densamma. Jämför dörren, som aldrig får släckas. ]]
 	check("en bortfiltrerad prompt är fortfarande aktiverbar",
 		granne1.Enabled == true and granne1.MaxActivationDistance == 8)
 	local grannFyrade = 0
@@ -844,7 +870,7 @@ do
 
 	rot.Position = Vector3.new(0, 0, 0)
 	N.satRider(false)
-	check("raderna släcks igen när hon kommer tillbaka", N._slackta() == 2,
+	check("släckningen kommer tillbaka när hon gör det", N._slackta() == 4,
 		("%d"):format(N._slackta()))
 	N.stopp()
 	local efterStopp = true
@@ -853,6 +879,45 @@ do
 	end
 	check("och stopp lämnar ingen släckt prompt kvar",
 		efterStopp and N._slackta() == 0, ("%d"):format(N._slackta()))
+
+	--[[ ── ÅTERSTÄLLNING ÄR INTE «SÄTT TILL DEFAULT» ──────────────────
+
+		R2 begärde att städningen återställer FÖREGÅENDE tillstånd. Det
+		är inte samma sak som `Default`: en prompt kan mycket väl ha
+		varit `Custom` innan vi rörde den — ett system med egen rityta
+		ska inte få sin bild påtvingad av att spelaren gick förbi.
+
+		`slack` lagrar `p.Style` och `tandIgen` skriver tillbaka just
+		den. Provet sätter en av grannarna till `Custom` i förväg och
+		mäter att den ligger kvar där. ]]
+	granne2.Style = Enum.ProximityPromptStyle.Custom
+	dorr1.Style = Enum.ProximityPromptStyle.Custom
+	N.start()
+	N.satRider(false)
+	check("en prompt som redan var Custom ändrar inte mening av att släckas",
+		granne2.Style == Enum.ProximityPromptStyle.Custom)
+
+	--[[ TVÅ VÄGAR TILLBAKA, OCH BÅDA MÅSTE MÄTAS: `tandIgen` när hon
+	     går ur räckvidd, `tandAllaIgen` när ytan rivs. De har var sin
+	     kopia av samma rad, och första skrivningen av det här provet
+	     rörde bara den ena — en mutation i `tandIgen` gav noll röda.
+	     Ett prov som bara täcker halva rättelsen är halv evidens. ]]
+	rot.Position = Vector3.new(500, 0, 500)
+	N.satRider(false)
+	check("ur räckvidd: `tandIgen` lämnar tillbaka Custom, inte Default",
+		granne2.Style == Enum.ProximityPromptStyle.Custom,
+		tostring(granne2.Style))
+	rot.Position = Vector3.new(0, 0, 0)
+	N.satRider(false)
+	N.stopp()
+	check("och efter städningen är den fortfarande Custom — inte Default",
+		granne2.Style == Enum.ProximityPromptStyle.Custom,
+		tostring(granne2.Style))
+	check("dörren som aldrig släcktes är också orörd",
+		dorr1.Style == Enum.ProximityPromptStyle.Custom,
+		tostring(dorr1.Style))
+	granne2.Style = Enum.ProximityPromptStyle.Default
+	dorr1.Style = Enum.ProximityPromptStyle.Default
 
 	--[[ PC-vägen är orörd: utan pekskärm släcks ingenting. ]]
 	UIS.TouchEnabled = false
@@ -1141,6 +1206,217 @@ do
 	for _, p in ipairs(flock) do
 		if p.Parent then p.Parent:Destroy() end
 	end
+	N.stopp()
+end
+
+--[[ ══ ETT AVBRUTET HÅLL ÄR INGEN HANDLING (#264 R2) ═══════════════
+
+	Raden startade förut sitt håll på `MouseButton1Click` — som fyrar när
+	musen SLÄPPS — och avslutade det med en `task.delay` på
+	`HoldDuration + 0.05`, oberoende av spelaren. Ett kort klick blev
+	alltså en fullbordad håll-handling, och det fanns ingen väg att ångra
+	sig. Håll-grindar finns för att vissa saker ska kräva ett medvetet
+	ögonblick; den här vägen gav bort ögonblicket gratis.
+
+	Nu är livscykeln verklig: NED börjar, UPP eller att markören lämnar
+	knappen avslutar, och motorn avgör om `HoldDuration` hanns med.
+
+	Granskningen bad om tre avbrott: kort släpp, tappat mål eller räckvidd,
+	och rivning. Alla tre mäts här, var och en mot en `Triggered`-räknare
+	som ska stå kvar på noll, och med en positiv kontroll intill så att
+	nollan inte kan komma av att ingenting alls är kopplat.
+
+	BÄNKEN MÄTER DET HÄR PÅ RIKTIGT: stubbens `InputHoldEnd` fyrar bara om
+	hållet nått `HoldDuration`, precis som Roblox. Se noten i stubs.luau. ]]
+print("\n── Ett avbrutet håll är ingen handling ──")
+do
+	for _, d in ipairs(workspace:GetChildren()) do d:Destroy() end
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local kar = Instance.new("Model")
+	kar.Name = "Spelare"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Position = HAR
+	rot.Parent = kar
+	kar.Parent = workspace
+	Players.LocalPlayer.Character = kar
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+
+	--[[ HÅLL-prompten: ett halvt sekund medvetet ögonblick. ]]
+	local hall, hallDel = nyPrompt("Grinden", "Öppna", "Hagen",
+		Vector3.new(2, 0, 0), 8, 0.5)
+	local fyrade = 0
+	hall.Triggered:Connect(function() fyrade += 1 end)
+	--[[ En granne utan hålltid, till kontrollen «ett håll i taget». ]]
+	local snabb = nyPrompt("Kranen", "Fyll", "Vattnet", Vector3.new(2.2, 0, 0))
+	local snabbtFyrade = 0
+	snabb.Triggered:Connect(function() snabbtFyrade += 1 end)
+
+	N.satRider(false)
+	local function radFor(p)
+		for i, q in ipairs(N._prompter()) do
+			if q == p then return i end
+		end
+		return nil
+	end
+	local iHall = radFor(hall)
+	check("grinden har en rad att hålla på", iHall ~= nil, tostring(iHall))
+
+	--[[ ── 1 · KORT SLÄPP ──────────────────────────────────────────── ]]
+	N._hallNed(iHall)
+	check("hållet pågår medan fingret ligger kvar", N._hallsNu() == hall)
+	N._slappHall()
+	check("ETT KORT SLÄPP UTLÖSER INGENTING", fyrade == 0, ("%d"):format(fyrade))
+	check("och hållet är släppt", N._hallsNu() == nil)
+
+	--[[ POSITIV KONTROLL: räknaren är inte bara död. Ett håll som får
+	     ligga kvar tillräckligt länge SKA utlösa. ]]
+	--[[ VÄNTAN MÄTS PÅ SAMMA KLOCKA SOM STUBBEN LÄSER. `task.wait` i
+	     bänken flyttar inte `os.clock`, och första skrivningen här
+	     gav därför noll utlösningar — en positiv kontroll som var
+	     röd av fel skäl, vilket är exakt lika illa som grön av fel
+	     skäl. Nu snurrar vi tills riktig tid faktiskt gått. ]]
+	N._hallNed(iHall)
+	local till = os.clock() + 0.6
+	while os.clock() < till do end
+	N._slappHall()
+	check("men ett håll som fick ligga kvar utlöser", fyrade == 1,
+		("%d"):format(fyrade))
+
+	--[[ ── 2 · TAPPAT MÅL OCH RÄCKVIDD ─────────────────────────────── ]]
+	fyrade = 0
+	N._hallNed(iHall)
+	check("hållet pågår igen", N._hallsNu() == hall)
+	--[[ Hon rider iväg. Prompten är kvar i världen, men utom räckhåll. ]]
+	rot.Position = Vector3.new(500, 0, 500)
+	N.satRider(false)
+	check("HÅLLET SLÄPPS NÄR MÅLET GÅR UR RÄCKVIDD", N._hallsNu() == nil)
+	task.wait(0.6)
+	check("och ingen handling utlöses från andra sidan stallet",
+		fyrade == 0, ("%d"):format(fyrade))
+
+	--[[ Målet RIVS medan hon håller i det. ]]
+	rot.Position = HAR
+	N.satRider(false)
+	iHall = radFor(hall)
+	N._hallNed(iHall)
+	check("hållet pågår på den rivna prompten", N._hallsNu() == hall)
+	hallDel:Destroy()
+	N.satRider(false)
+	check("HÅLLET SLÄPPS NÄR MÅLET RIVS UR VÄRLDEN", N._hallsNu() == nil)
+	task.wait(0.6)
+	check("och ingenting utlöses på något som inte finns",
+		fyrade == 0, ("%d"):format(fyrade))
+
+	--[[ ── 3 · RIVNING AV YTAN ──────────────────────────────────────── ]]
+	local hall2, del2 = nyPrompt("Grinden2", "Öppna", "Hagen",
+		Vector3.new(2, 0, 0), 8, 0.5)
+	local fyrade2 = 0
+	hall2.Triggered:Connect(function() fyrade2 += 1 end)
+	N.satRider(false)
+	local i2 = radFor(hall2)
+	check("den nya grinden har en rad", i2 ~= nil, tostring(i2))
+	N._hallNed(i2)
+	check("hållet pågår när ytan rivs", N._hallsNu() == hall2)
+	N.stopp()
+	check("RIVNINGEN LÄMNAR INGET ÖPPET HÅLL", N._hallsNu() == nil)
+	task.wait(0.6)
+	check("och rivningen utlöser ingen handling", fyrade2 == 0,
+		("%d"):format(fyrade2))
+
+	--[[ ── 4 · ETT HÅLL I TAGET ──────────────────────────────────────
+
+	     Hinner ett nytt håll börja innan det förra släppts ska det förra
+	     avslutas först — annars ligger en öppen hållning kvar utan väg
+	     tillbaka, och nästa `InputHoldEnd` hade kunnat fyra den. ]]
+	N.start()
+	N.satRider(false)
+	local iG, iK = radFor(hall2), radFor(snabb)
+	check("båda har rader", iG ~= nil and iK ~= nil,
+		("%s / %s"):format(tostring(iG), tostring(iK)))
+	fyrade2, snabbtFyrade = 0, 0
+	N._hallNed(iG)
+	N._hallNed(iK)
+	check("det nya hållet ersatte det gamla", N._hallsNu() == snabb)
+	check("och det gamla utlöste inte när det avbröts", fyrade2 == 0,
+		("%d"):format(fyrade2))
+	N._slappHall()
+	check("den hålltidslösa raden utlöser direkt vid släpp",
+		snabbtFyrade == 1, ("%d"):format(snabbtFyrade))
+
+	--[[ ── 5 · DEN RIKTIGA KNAPPEN, INTE BARA TEST-HOOKARNA ──────────
+
+	     Allt ovanför går genom `_hallNed`/`_slappHall`. De mäter
+	     livscykeln, men INTE att knappen är kopplad till den — och det
+	     var precis där felet satt: raden lyssnade på
+	     `MouseButton1Click`, som fyrar när musen SLÄPPS, och lät en
+	     timer avsluta hållet åt spelaren.
+
+	     Här fyras knappens egna signaler. Då mäts ledningen fram också. ]]
+	--[[ SÖKNINGEN MÅSTE BÖRJA I VÅR EGEN YTA. En fri namnsökning genom
+	     hela `_gui` hittade ett annat «Rad1» — skötselpanelens — och
+	     provet kraschade på en instans utan knappsignaler. Namnet är
+	     inte unikt i spelet; ScreenGui:n är det. ]]
+	local function underNod(nod, namn)
+		if type(nod) ~= "table" then return nil end
+		if nod.Name == namn then return nod end
+		for _, b in ipairs(nod._barn or {}) do
+			local t = underNod(b, namn)
+			if t then return t end
+		end
+		return nil
+	end
+	local function knappFor(i)
+		local min = underNod(game:GetService("Players").LocalPlayer._gui,
+			"UBRFNaromrade")
+		return min and underNod(min, "Rad" .. i) or nil
+	end
+
+	local hall3, del3 = nyPrompt("Grinden3", "Öppna", "Hagen",
+		Vector3.new(2, 0, 0), 8, 0.5)
+	local fyrade3 = 0
+	hall3.Triggered:Connect(function() fyrade3 += 1 end)
+	N.start()
+	N.satRider(false)
+	local i3 = radFor(hall3)
+	local knapp = knappFor(i3)
+	check("raden finns som en RIKTIG knapp med riktiga signaler",
+		i3 ~= nil and knapp ~= nil and knapp.MouseButton1Down ~= nil
+			and knapp.MouseLeave ~= nil,
+		("i=%s knapp=%s"):format(tostring(i3), tostring(knapp ~= nil)))
+
+	--[[ Kort tryck på den riktiga knappen: ned, upp. ]]
+	knapp.MouseButton1Down:Fire()
+	check("KNAPPEN BÖRJAR HÅLLET PÅ NED", N._hallsNu() == hall3)
+	knapp.MouseButton1Up:Fire()
+	check("och ett kort tryck på knappen utlöser ingenting",
+		fyrade3 == 0 and N._hallsNu() == nil, ("%d"):format(fyrade3))
+
+	--[[ Långt tryck på den riktiga knappen. ]]
+	knapp.MouseButton1Down:Fire()
+	local till2 = os.clock() + 0.6
+	while os.clock() < till2 do end
+	knapp.MouseButton1Up:Fire()
+	check("MEN ETT LÅNGT TRYCK PÅ KNAPPEN UTLÖSER", fyrade3 == 1,
+		("%d"):format(fyrade3))
+
+	--[[ Fingret glider av knappen. ]]
+	fyrade3 = 0
+	knapp.MouseButton1Down:Fire()
+	check("hållet pågår medan fingret ligger kvar på knappen",
+		N._hallsNu() == hall3)
+	knapp.MouseLeave:Fire()
+	check("ATT GLIDA AV KNAPPEN SLÄPPER HÅLLET", N._hallsNu() == nil)
+	local till3 = os.clock() + 0.6
+	while os.clock() < till3 do end
+	check("och utlöser ingen handling", fyrade3 == 0, ("%d"):format(fyrade3))
+
+	del3:Destroy()
+
+	del2:Destroy()
 	N.stopp()
 end
 

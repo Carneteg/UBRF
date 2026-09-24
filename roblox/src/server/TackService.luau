@@ -297,10 +297,22 @@ function TackService.satPa(player: Player, modell: Model?, typ: string,
 			samma sak, och när de säger emot varandra får svaret inte
 			vara «klart».
 
-			Nejet är namngivet och läsbart, och tillståndet går att
-			återhämta: hästen ÄR sadlad, så ett nytt försök möter
-			`tack.redan_pa` och kan då släppa handen. Ingen tyst
-			klientdöljning, ingen framtvingad fullbordan. ]]
+			FÖRSTA RÄTTELSEN STANNADE HALVVÄGS. Den svarade nej men
+			lät delen sitta kvar på hästen — och då mötte omförsöket
+			`tack.redan_pa`, föll igenom och svarade JA med en kopia
+			kvar i handen. Granskningen mätte det:
+
+			    first=false/tack.bars_kvar  second=true/nil
+			    heldBefore=larry  heldAfter=larry  saddle=true
+
+			Ett omförsök får inte lyckas med två exemplar av samma sak.
+			Därför ÅTERRULLAS den nyss fästa delen: världen går tillbaka
+			till «buren, inte påsatt», vilket är konsekvent och går att
+			försöka om på riktigt. Samma mönster som det halvbyggda
+			försöket ovanför redan använder.
+
+			Ett avslag konsumerar alltså ingenting: det spelaren håller i
+			ligger kvar, och hästen är lika osadlad som innan. ]]
 		--[[ BARA OM HON FAKTISKT BÄR EN. `satPa` går också den
 		     automatiska vägen, där stallet lägger på utrustningen utan
 		     att någon hållit i den — då svarar `slappBuren` nej med
@@ -312,7 +324,13 @@ function TackService.satPa(player: Player, modell: Model?, typ: string,
 			return TackService.slappBuren(player, typ)
 		end)
 		if barFore and not (ok and slapptes) then
-			warn(("[Tack] %s bär kvar sin %s trots att den sitter på hästen")
+			--[[ Tillbaka till utgångsläget. Tyglarna hör till tränset och
+			     tas med det, precis som i bygget ovanför. ]]
+			if typ == "trans" then
+				pcall(function() TackRigg.taAv(m, "tygel") end)
+			end
+			pcall(function() TackRigg.taAv(m, typ) end)
+			warn(("[Tack] %s bär kvar sin %s — påsättningen rullades tillbaka")
 				:format(player.Name, typ))
 			return false, "tack.bars_kvar"
 		end

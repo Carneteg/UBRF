@@ -452,23 +452,123 @@ do
 		("ok=%s skal=%s"):format(tostring(ok), tostring(skal)))
 	check("och nejet är namngivet och läsbart", skal == "tack.bars_kvar",
 		tostring(skal))
-	--[[ TILLSTÅNDET ÄR SYNLIGT OCH OFÖRÄNDRAT, inte tyst reparerat.
-	     Hästen ÄR sadlad och kopian ligger kvar i handen — det är en
-	     konflikt spelaren kan se och handla på, och nejet säger varför.
+	--[[ ── OCH PÅSÄTTNINGEN ÄR ÅTERRULLAD ───────────────────────────
 
-	     JAG PROVADE ATT TÖMMA HANDEN HÄR och tog tillbaka det:
-	     `tack-fas2` håller en medveten regel om att ett NEJ aldrig får
-	     röra det spelaren håller i, och den regeln är riktig. Att
-	     smyga bort föremålet på ett avslag vore ett andra fel, inte en
-	     rättelse av det första. ]]
-	check("och hästen är faktiskt sadlad", TackService.sadlad(modell) == true)
+	     Det här provet välsignade förut ett permanent dubbeltillstånd:
+	     sadeln på hästen OCH i handen, med motiveringen att konflikten
+	     var «synlig». Granskningen visade vad det kostade — omförsöket
+	     mötte `tack.redan_pa`, föll igenom och svarade JA med båda
+	     exemplaren kvar:
+
+	         first=false/tack.bars_kvar  second=true/nil
+	         heldBefore=larry  heldAfter=larry  saddle=true
+
+	     Ett avslag ska lämna världen som den var. Delen rullas därför
+	     tillbaka, och ett omförsök är ett äkta nytt försök. ]]
+	check("ETT AVSLAG LÄMNAR HÄSTEN OSADLAD", TackService.sadlad(modell) == false,
+		tostring(TackService.sadlad(modell)))
+	check("och sadeln ligger kvar i handen — inget konsumeras av ett nej",
+		TackService.barBuren(spelare, "sadel") == hastId,
+		tostring(TackService.barBuren(spelare, "sadel")))
+
+	--[[ OCH DÅ LYCKAS OMFÖRSÖKET PÅ RIKTIGT: en sadel, på hästen,
+	     ingen i handen. ]]
 	local ok2, skal2 = TackService.satPa(spelare, modell, "sadel", hastId, modell)
-	check("ett nytt försök svarar «redan på» och rör inte handen",
-		ok2 == false and skal2 == "tack.redan_pa"
-			and TackService.barBuren(spelare, "sadel") == hastId,
-		("ok=%s skal=%s bär=%s"):format(tostring(ok2), tostring(skal2),
+	check("OMFÖRSÖKET LYCKAS UTAN DUBBLETT",
+		ok2 == true and TackService.sadlad(modell) == true
+			and TackService.barBuren(spelare, "sadel") == nil,
+		("ok=%s skal=%s sadlad=%s bär=%s"):format(tostring(ok2), tostring(skal2),
+			tostring(TackService.sadlad(modell)),
 			tostring(TackService.barBuren(spelare, "sadel"))))
 end
+
+--[[ ══ SAMMA SAK FÖR TRÄNSET — OCH NÄR SLÄPPET SPRICKER (#264 R2) ═══
+
+	Granskningen bad om täckning för BÅDA bärbara delarna och för BÅDA
+	sätten ett släpp kan misslyckas. Det första provet ovanför mäter
+	sadeln och ett släpp som svarar `false`.
+
+	Tränset är inte en kopia av sadeln. `satPa("trans", …)` sätter också
+	TYGLARNA, så återrullningen måste ta med dem — annars blir priset för
+	ett avslag ett par tyglar utan träns, hängande i luften.
+
+	Och `slappBuren` kan SPRICKA, inte bara svara nej. Det är därför
+	anropet ligger i en `pcall`. Men en `pcall` som fångar ett fel och
+	sedan struntar i sitt eget `ok` är en tystad krasch, inte en hanterad
+	sådan — precis det hålet rättelsen stängde. Här kastas det på riktigt. ]]
+do
+	print("\n── Tränset, och ett släpp som spricker ──")
+
+	--[[ ── A · TRÄNSET, MED TYGLARNA ─────────────────────────────────── ]]
+	local spelare, modell, hastId = nySession("SlappTrans", 9108)
+	local karaktar = spelare.Character
+	GameplayService.valjPar(spelare, hastId)
+	GameplayService.moment(spelare, "iordning", "utr:1")
+	--[[ SADELN MÅSTE PÅ FÖRST. Utan det här steget nekas tränset redan
+	     på `tack.sadeln_forst`, ingenting hinner fästas, och provet blir
+	     grönt utan att ha rört återrullningen. Så såg det ut i första
+	     skrivningen — mätningen fanns, men mätte tomma luften. ]]
+	GameplayService.moment(spelare, "iordning", "utr:2")
+	check("sadeln ligger på — annars nekas tränset av fel skäl",
+		TackService.sadlad(modell) == true, tostring(TackService.sadlad(modell)))
+	check("REPRODUKTION: hon bär tränset",
+		TackService.barBuren(spelare, "trans") == hastId,
+		tostring(TackService.barBuren(spelare, "trans")))
+
+	local riktigSlapp = TackService.slappBuren
+	TackService.slappBuren = function() return false end
+	local okT, skalT = TackService.satPa(spelare, modell, "trans", hastId, modell)
+	TackService.slappBuren = riktigSlapp
+
+	check("ett misslyckat släpp av TRÄNSET svarar inte ja heller",
+		okT == false and skalT == "tack.bars_kvar",
+		("ok=%s skal=%s"):format(tostring(okT), tostring(skalT)))
+	check("hästen är otränsad efter avslaget", TackService.transad(modell) == false,
+		tostring(TackService.transad(modell)))
+	--[[ TYGLARNA ÄR DET SOM SKILJER. De går på med tränset och måste gå
+	     av med det; en halv återrullning är ett eget fel. ]]
+	check("OCH TYGLARNA FÖLJDE MED TILLBAKA — ingen halv återrullning",
+		TackRigg.hittaDel(modell, "tygel") == nil,
+		tostring(TackRigg.hittaDel(modell, "tygel")))
+	check("tränset ligger kvar i handen", TackService.barBuren(spelare, "trans") == hastId)
+	local okT2 = TackService.satPa(spelare, modell, "trans", hastId, modell)
+	check("och omförsöket lyckas utan dubblett",
+		okT2 == true and TackService.transad(modell) == true
+			and TackService.barBuren(spelare, "trans") == nil,
+		("ok=%s tränsad=%s bär=%s"):format(tostring(okT2),
+			tostring(TackService.transad(modell)),
+			tostring(TackService.barBuren(spelare, "trans"))))
+
+	--[[ ── B · SLÄPPET SPRICKER ────────────────────────────────────────
+
+	     Inte «svarar nej» utan «kastar». Utan `pcall` skulle felet resa
+	     upp genom `moment` och spelaren stå kvar utan svar; med `pcall`
+	     men utan att läsa `ok` blir det ett tyst ja. Båda är fel. ]]
+	local sp2, mod2, hast2 = nySession("SlappSpricker", 9109)
+	GameplayService.valjPar(sp2, hast2)
+	GameplayService.moment(sp2, "iordning", "utr:1")
+	check("REPRODUKTION: hon bär sadeln",
+		TackService.barBuren(sp2, "sadel") == hast2)
+
+	local sprack = 0
+	TackService.slappBuren = function()
+		sprack += 1
+		error("släppet sprack på riktigt", 0)
+	end
+	local okS, skalS = TackService.satPa(sp2, mod2, "sadel", hast2, mod2)
+	TackService.slappBuren = riktigSlapp
+
+	check("släppet kastade verkligen", sprack == 1, ("%d"):format(sprack))
+	check("ETT SPRUCKET SLÄPP SVARAR INTE JA",
+		okS == false and skalS == "tack.bars_kvar",
+		("ok=%s skal=%s"):format(tostring(okS), tostring(skalS)))
+	check("och felet reser inte vidare — spelaren får ett svar, inte en krasch",
+		type(skalS) == "string")
+	check("påsättningen är återrullad även när släppet kastade",
+		TackService.sadlad(mod2) == false, tostring(TackService.sadlad(mod2)))
+	check("sadeln ligger kvar i handen", TackService.barBuren(sp2, "sadel") == hast2)
+end
+
 
 
 if fails > 0 then

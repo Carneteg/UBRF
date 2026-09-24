@@ -345,9 +345,6 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 		bara när en FYSISK del faktiskt kom på plats — kvittensen namnger
 		aldrig något som inte sitter där. ]]
 	local pasattDel: string? = nil
-	--[[ Sant när spelaren redan gjort det fysiska momentet själv. Se noten
-	     vid `tack.redan_pa`. ]]
-	local egenUtforare = false
 	local steg = tonumber(momentId:match("^utr:(%d+)$"))
 	if fasId == "iordning" and steg then
 		local modell = bunden[player]
@@ -405,18 +402,23 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 				det är samma regel raden nedanför redan tillämpar — så
 				momentet ska kvitteras på samma grund, inte hoppas över.
 
-				OCH DET VAR SPELARENS ARBETE, inte stallets. `utforare`
-				går därför in som spelarens för just det momentet; annars
-				hade hennes egen omsorg bokförts som «auto», och
-				produktkanon säger att egen omsorg ska peka uppåt. ]]
-			local egetArbete = false
-			if not ok then
-				if skal ~= "tack.redan_pa" then
-					skicka(player)
-					return false, skal
-				end
-				egetArbete = true
+				VEM SOM GJORDE DET GÅR INTE ATT LÄSA UR GEOMETRIN, och
+				första rättelsen försökte ändå. Den bokförde momentet som
+				spelarens så fort utrustningen redan satt på hästen — även
+				mitt i en helt automatisk förberedelse, där stallet självt
+				satt dit den ett varv tidigare. Granskningen mätte
+				`ownU1=auto ownU2=true` i ett rent auto-pass.
+
+				En påsatt sadel är ett faktum om VÄRLDEN, inte om vem som
+				lyfte den. Slutledningen är därför borttagen: momentet
+				kvitteras — det var `fel_tur`-felet — men med den utförare
+				anropet faktiskt bär. Verkligt registrerat handarbete rörs
+				inte; påhittat blir det aldrig. ]]
+			if not ok and skal ~= "tack.redan_pa" then
+				skicka(player)
+				return false, skal
 			end
+			local redanPa = not ok
 			--[[ ── OCH DEN SKA FAKTISKT SITTA DÄR (#182) ──────────────
 				`satPa` svarar ja när bygget gick fram, men VÄRLDEN är
 				sanningen — det är samma regel uppsittningsgrinden läser
@@ -431,15 +433,13 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 			--[[ Kvittensen namnger bara det som FAKTISKT kom på henne nu.
 			     Låg det redan där är det ingen nyhet för spelaren — se
 			     noten vid `tack.pa_plats` längre ned. ]]
-			if not egetArbete then pasattDel = DEL_NYCKEL[typ] end
-			if egetArbete then egenUtforare = true end
+			if not redanPa then pasattDel = DEL_NYCKEL[typ] end
 		end
 	end
 
 	--[[ TREDJE VÄRDET FÖLJER MED (#246 A). Se noten i `Preparation`. ]]
 	local ok, avslag, avslagArg =
-		Preparation.utforMoment(s, fasId, momentId, s.hastId,
-			if egenUtforare then nil else utforare)
+		Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
 	skicka(player)
 	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
 		och tredje värde — samma kanal som nejen redan använder — så att
