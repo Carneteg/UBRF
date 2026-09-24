@@ -87,6 +87,15 @@ def main():
 
     rot = ET.fromstring(nod.radxml)
 
+    # I Roblox-XML AR instansens namn dess <string name="Name">. Rattas den
+    # inte hamnar modellen i placen som "ProvModell" och sokvagen
+    # ServerStorage.HastVisualer.k3 loser inte upp -- hasten blir en lada
+    # igen, fast av ett helt annat skal. `nod.namn` bevisar ingenting om
+    # det: den kommer ur ANROPET, inte ur XML:en.
+    kolla("MODELLENS EGEN Name ar projektfilens, inte filens",
+          rot.findtext("./Properties/string[@name='Name']") == "k3",
+          str(rot.findtext("./Properties/string[@name='Name']")))
+
     # -- 1. REFERENTERNA -------------------------------------------------
     refs = [e.get("referent") for e in rot.iter("Item")]
     kolla("varje instans har en referent", all(refs))
