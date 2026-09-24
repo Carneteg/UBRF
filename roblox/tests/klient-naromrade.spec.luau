@@ -581,6 +581,103 @@ do
 		check("och det ligger till höger om rörelseytan",
 			trangX >= 472, ("x=%d mot ytans %d"):format(trangX, 472))
 
+		--[[ ── OKÄND FORM SKA OCKSÅ GE RESERVAT ────────────────────────
+
+			Reviewns P1: `kontrollSedd` blev sann först när en `GuiButton`
+			känts igen, så fallbacken för «trädet har ändrats» krävde att
+			igenkänningen en gång lyckats. Här finns ett träd med ett
+			vänsterelement som INTE är en `GuiButton` — spelaren kan ha
+			valt ett annat rörelseläge, eller Roblox bytt klass. ]]
+		N._glomKontrollForProv()
+		local okand = knapp("OkandForm", 0, 254, 472, 507)
+		okand.IsA = function(_, k) return k == "Frame" end
+		tg._barn = { okand, hopp }
+		local _, okandY0 = N.rorelseytan()
+		check("OKÄND FORM GER ÄNDÅ RESERVAT", okandY0 < GUI_H,
+			("y0=%s av %d"):format(tostring(okandY0), GUI_H))
+
+		--[[ ── ETT SLÄCKT TRÄD ÄR INGET RESERVAT ──────────────────────
+
+			`ModalEnabled` ger `TouchGui.Enabled = false`, och det gör vi
+			själva under ritt. Då finns ingen kontroll att väja för. ]]
+		N._glomKontrollForProv()
+		tg.Enabled = false
+		local _, slacktY0 = N.rorelseytan()
+		check("ETT SLÄCKT KONTROLLTRÄD GER INGET RESERVAT",
+			slacktY0 >= GUI_H, tostring(slacktY0))
+		tg.Enabled = nil
+		N._glomKontrollForProv()
+
+		--[[ ── HELA RADEN INNANFÖR VYN ────────────────────────────────
+
+			Reviewns andra P1, med dess egen geometri: användbar bredd 390,
+			vänster kontroll x 0..250 från y 40 och nedåt. Sidledsflytten
+			gav förut x=258 och en rad som slutade på 448 — 58 px utanför
+			skärmen. Här ryms ingen användbar rad alls, och då ska listan
+			släckas så att Robloxs egna prompter står kvar. ]]
+		yta.AbsoluteSize = Vector3.new(390, 640, 0)
+		tg._barn = { knapp("SmalRorelseYta", 0, 40, 250, 600) }
+		local smalX, smalGolv = N.blockplats()
+		check("SMAL VY: ingen rad ryms, och då ritas ingen",
+			smalX == nil and smalGolv == nil and N.radplatser() == 0,
+			("x=%s golv=%s platser=%d"):format(tostring(smalX),
+				tostring(smalGolv), N.radplatser()))
+
+		--[[ Och där sidledsflytten FAKTISKT ryms ska hela raden vara inne. ]]
+		yta.AbsoluteSize = Vector3.new(844, 390, 0)
+		tg._barn = { knapp("BredRorelseYta", 0, 40, 250, 350) }
+		local bredX = N.blockplats()
+		check("SIDLED: hela raden ligger innanför den användbara bredden",
+			bredX ~= nil and bredX >= 250 and bredX + 190 <= 844 - 16,
+			("x=%s, hogerkant %s av %d"):format(tostring(bredX),
+				tostring(bredX and bredX + 190), 844))
+
+		--[[ ── DEN RITADE RAMEN, INTE BARA HJÄLPFUNKTIONERNAS SVAR ─────
+
+			Reviewns poäng: en hjälpfunktion kan svara rätt medan ramen
+			ritas någon annanstans. Här läses ramens FAKTISKA position och
+			storlek efter en riktig ritning. ]]
+		local function listramen()
+			for _, b in ipairs(yta._barn or {}) do
+				if b.Name == "Lista" then return b end
+			end
+			return nil
+		end
+		N.satRider(false)
+		local f = listramen()
+		check("ramen finns att mäta", f ~= nil)
+		if f then
+			local px = f.Position and f.Position.X and f.Position.X.Offset or -1
+			local py = f.Position and f.Position.Y and f.Position.Y.Offset or -1
+			local bx = f.Size and f.Size.X and f.Size.X.Offset or -1
+			check("DEN RITADE RAMEN ligger helt innanför vyn",
+				px >= 0 and px + bx <= 844,
+				("x=%d bredd=%d hogerkant=%d av 844"):format(px, bx, px + bx))
+			check("och den ritade ramen börjar till höger om rörelseytan",
+				px >= 250, ("x=%d mot ytans 250"):format(px))
+			check("och ramen har en höjd som rymmer minst en rad",
+				(f.Size and f.Size.Y and f.Size.Y.Offset or 0) >= 60,
+				("hojd=%s"):format(tostring(f.Size and f.Size.Y
+					and f.Size.Y.Offset)))
+		end
+
+		--[[ POSITIV KONTROLL FÖR TANGENTBORD/MUS: utan kontrollträd ska
+		     ingenting av det här röra layouten.
+
+		     TRÄDET MÅSTE FAKTISKT BORT. Första versionen tömde bara dess
+		     barn och lät `TouchGui` ligga kvar — och då gäller reservatet
+		     med rätta, för ett träd utan igenkänd form är precis det fall
+		     P1-1 handlar om. Kontrollen mätte alltså fel sak. ]]
+		for i = #pg._barn, 1, -1 do
+			if pg._barn[i] == tg then table.remove(pg._barn, i) end
+		end
+		N._glomKontrollForProv()
+		yta.AbsoluteSize = Vector3.new(1179, 761, 0)
+		local musX, musGolv = N.blockplats()
+		check("KONTROLL: utan kontrollträd är layouten den gamla",
+			musX == 16 and musGolv == 761,
+			("x=%s golv=%s"):format(tostring(musX), tostring(musGolv)))
+
 		--[[ Städa: kontrollträdet bort, OCH latchen nollad. Den är
 		     sessionslång med flit, så utan det här läckte reservatet in i
 		     nästa provblock och tog kapaciteten där — sex mätningar föll

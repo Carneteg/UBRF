@@ -553,9 +553,30 @@ function Naromrade.rorelseytan(): (number, number)
 	local spelare = Players.LocalPlayer
 	local pg = spelare and spelare:FindFirstChildOfClass("PlayerGui")
 	local tg = pg and pg:FindFirstChild("TouchGui")
+	--[[ ── VAD SOM RÄKNAS SOM «REGLAGEN ÄR I SPEL» ────────────────────
+
+	     Första versionen lät `kontrollSedd` bli sann först när en
+	     `GuiButton` KÄNTS IGEN. Fallbacken som ska täcka «trädet finns
+	     inte än eller har ändrats» krävde alltså att igenkänningen en
+	     gång lyckats — cirkulärt. Känns formen aldrig igen, för att
+	     spelaren valt ett annat rörelseläge eller för att Roblox bytt
+	     klass, startade reservatet aldrig.
+
+	     Signalen är därför att `TouchGui` FINNS, oberoende av om jag kan
+	     tolka innehållet. Det skiljer de tre fallen åt på riktigt:
+
+	       trädet finns, formen känd      -> den uppmätta rektangeln
+	       trädet finns, formen okänd     -> reservat ur viewporten
+	       trädet finns men är släckt     -> inget reservat; det är vad
+	                                         `ModalEnabled` ger, och vi
+	                                         gör det själva under ritt
+	       inget träd, aldrig sett        -> skrivbord och bänk, orört
+	       inget träd, sett tidigare      -> reservat; det försvann just nu ]]
+	local tgPa = tg ~= nil and tg.Enabled ~= false
+	if tgPa then kontrollSedd = true end
 	local hittade = false
 	local x1, y0 = 0, math.huge
-	if tg then
+	if tgPa then
 		for _, d in ipairs(tg:GetDescendants()) do
 			if d:IsA("GuiButton") and d.Visible then
 				local a, b = d.AbsolutePosition, d.AbsoluteSize
@@ -567,11 +588,9 @@ function Naromrade.rorelseytan(): (number, number)
 			end
 		end
 	end
-	if hittade then
-		--[[ SEDD EN GANG RACKER. Se noten vid fallbacken nedan. ]]
-		kontrollSedd = true
-		return x1, y0
-	end
+	if hittade then return x1, y0 end
+	--[[ Trädet finns men formen känns inte igen — då gäller reservatet. ]]
+	if tg ~= nil and not tgPa then return 0, math.huge end
 
 	--[[ ── FALLBACK, OCH VARFÖR DEN ÄR LÅST TILL EN IAKTTAGELSE ──────
 
@@ -603,7 +622,11 @@ function Naromrade.radplatser(): number
 	local g = gui
 	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
 	if h <= 0 then return MAX_RADER end
-	local golv = Naromrade.blockgolv()
+	--[[ NOLL ÄR ETT GILTIGT SVAR sedan #264: finns ingen användbar plats
+	     ska listan inte visas alls, och Robloxs egna prompter stå kvar.
+	     `rita` läser det och släcker ytan. ]]
+	local x, golv = Naromrade.blockplats()
+	if x == nil or golv == nil then return 0 end
 	local ledigt = golv - KANT - LUFT
 	local n = math.floor(ledigt / (KNAPP_H + LUFT))
 	return math.clamp(n, 1, MAX_RADER)
@@ -621,32 +644,56 @@ end
 	till höger om kontrollens högerkant och får sin nederkant tillbaka —
 	hellre en läsbar rad på ovanlig plats än en rad som inte går att
 	trycka på. Regeln «minst en rad, alltid» står kvar. ]]
-function Naromrade.blockgolv(): number
+--[[ ── VAR BLOCKET FÅR BO — ETT SVAR, INTE TVÅ ─────────────────────
+
+	Returnerar vänsterkant och golv, eller `nil` när ingen användbar rad
+	ryms. Tre försök i tur och ordning:
+
+	  1. OVANFÖR kontrollen, i vänsterkanten. Minsta ändringen och där
+	     spelaren letar.
+	  2. BREDVID den — men bara om HELA raden får plats innanför den
+	     användbara bredden. Första versionen returnerade `ytaX1 + LUFT`
+	     utan högergräns: med användbar bredd 390 och en kontroll till
+	     x = 250 blev det 258, och raden slutade på 448 — 58 px utanför
+	     skärmen. Att i stället klampa x tillbaka hade skjutit in knappen
+	     i rörelseytan igen, alltså bytt ett fel mot det andra.
+	  3. INGEN RAD. Då lämnas Robloxs egna prompter tända, och det är den
+	     verkliga aktiveringsvägen — modulen har den redan.
+
+	«MINST EN RAD, ALLTID» GÄLLER INTE LÄNGRE OVILLKORLIGT, och det är
+	ett medvetet brott mot den gamla noten. Regeln skrevs mot
+	skötselpanelen, där ett överlapp bara är trångt. Mot rörelsekontrollen
+	är en överlappande rad oanvändbar och en rad utanför skärmen är värre
+	än ingen: båda ser ut som en handling men går inte att trycka på.
+	Mot panelen gäller regeln oförändrat. ]]
+function Naromrade.blockplats(): (number?, number?)
 	local g = gui
+	local b = if g and g.AbsoluteSize then g.AbsoluteSize.X else 0
 	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
-	if h <= 0 then return 0 end
-	local golv = h
+	if h <= 0 then return KANT, 0 end
 	local ruta = PreparationController.interaktionsruta()
-	if ruta and ruta.y0 then golv = math.min(golv, ruta.y0) end
-	local _, ytaY0 = Naromrade.rorelseytan()
-	if ytaY0 < golv and Naromrade.blockvanster() == KANT then
-		golv = ytaY0
-	end
-	return golv
+	local panelgolv = if ruta and ruta.y0 then math.min(h, ruta.y0) else h
+	local ytaX1, ytaY0 = Naromrade.rorelseytan()
+	if ytaY0 >= h then return KANT, panelgolv end
+
+	local tak = math.min(ytaY0, panelgolv)
+	if tak - KANT - LUFT >= KNAPP_H + LUFT then return KANT, tak end
+
+	local x = math.max(KANT, ytaX1 + LUFT)
+	if b > 0 and x + KNAPP_B <= b - KANT then return x, panelgolv end
+
+	return nil, nil
 end
 
---[[ Blockets vänsterkant. `KANT` så länge det ryms en rad ovanför
-     rörelsekontrollen; annars strax till höger om den. ]]
+--[[ Kvar som läsbara namn för proven och för `rita`. ]]
+function Naromrade.blockgolv(): number
+	local _, golv = Naromrade.blockplats()
+	return golv or 0
+end
+
 function Naromrade.blockvanster(): number
-	local g = gui
-	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
-	if h <= 0 then return KANT end
-	local ytaX1, ytaY0 = Naromrade.rorelseytan()
-	if ytaY0 >= h then return KANT end
-	local ruta = PreparationController.interaktionsruta()
-	local tak = if ruta and ruta.y0 then math.min(ytaY0, ruta.y0) else ytaY0
-	if tak - KANT - LUFT >= KNAPP_H + LUFT then return KANT end
-	return math.max(KANT, ytaX1 + LUFT)
+	local x = Naromrade.blockplats()
+	return x or KANT
 end
 
 local function rita()
@@ -672,6 +719,15 @@ local function rita()
 	     avläsning av samma tilldelning servern gjort — ingen ny kanal. ]]
 	local minHast = PreparationController.hastId()
 	local platser = Naromrade.radplatser()
+	--[[ Ingen användbar plats — släck listan och lämna tillbaka Robloxs
+	     prompter, samma väg som när man rider. En rad som ligger under
+	     rörelsekontrollen eller utanför skärmen är ingen handling. ]]
+	if platser <= 0 then
+		senaste = {}
+		for _, b in ipairs(rader) do b.Visible = false end
+		tandAllaIgen()
+		return
+	end
 	--[[ EN fråga, ett svar: vad blir rader. Det styr numera BÅDE listan
 	     och släckningen — se rättelsen längre ned. Tidigare fanns två
 	     mängder här, och att de kunde gå isär var hela felet. ]]
@@ -684,9 +740,10 @@ local function rita()
 	     skötselpanelen och Robloxs rörelsekontroll kan ta hörnet. ]]
 	local g = gui
 	local hojd = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
-	local botten = math.min(Naromrade.blockgolv(), hojd) - KANT
+	local x, golv = Naromrade.blockplats()
+	local botten = math.min(golv or hojd, hojd) - KANT
 	local topp = botten - platser * (KNAPP_H + LUFT)
-	f.Position = UDim2.fromOffset(Naromrade.blockvanster(), math.max(0, topp))
+	f.Position = UDim2.fromOffset(x or KANT, math.max(0, topp))
 
 	--[[ ── EN PROMPT SOM SLÄCKS MÅSTE FÅ EN RAD ────────────────────
 
