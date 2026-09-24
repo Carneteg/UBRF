@@ -56,6 +56,65 @@ end
 
 --[[ Skylten vid boxen. Osynlig och genomsläpplig — den är bara en bärare
 	för prompten, inte något att gå in i. ]]
+--[[ ══ VAD SOM STÅR OM HÄSTEN I BOXEN ═══════════════════════════════
+
+Raden byggdes förut med en enda `string.format` över fyra fält. Tre av
+dem finns alltid; `ras` gör det inte. `string.format("%s", nil)` KASTAR
+i Luau, så varje `V`-tryck på en box vars häst saknar ras dog i
+`Triggered` — utan text, utan felrad för spelaren.
+
+Det är inte en kantfall: `ras = nil` gäller TOLV hästar i rostern, och
+bland dem `blackrock_jack` — First Ride-hästen själv. Tobias hittade
+det på Troy i ett riktigt playtest 2026-09-24.
+
+FRÅNVARANDE FAKTA UTELÄMNAS, DE HITTAS INTE PÅ. Saknas rasen står det
+ingen ras — inte «okänd», inte `nil`, och absolut ingen gissad ras.
+`docs/PRODUCT-CANON.md` är tydlig: hitta aldrig på en UBRF-detalj för
+att fylla ett hål. Beskrivningen är fortfarande ordagrann från
+ubrf.se/hastar och foderraden kommer ur samma delade data.
+
+Ren funktion, och publik med flit: provet ska kunna mäta texten utan
+att bygga ett stall, och prompten ska kunna mäta samma rader som
+spelaren ser. ]]
+function StallService.boxtext(d: { [string]: any }): { string }
+	local rader = {}
+	if d == nil then return rader end
+
+	--[[ Rasen och typen står i samma led, åtskilda med komma. Finns bara
+	     den ena blir det bara den ena; finns ingen faller ledet bort. ]]
+	local led = {}
+	if d.ras ~= nil and d.ras ~= "" then table.insert(led, tostring(d.ras)) end
+	if d.typ ~= nil and d.typ ~= "" then table.insert(led, tostring(d.typ)) end
+
+	local rad = ("[Stallet] %s"):format(tostring(d.namn))
+	if #led > 0 then rad ..= " — " .. table.concat(led, ", ") end
+	rad ..= "."
+	if d.besk ~= nil and d.besk ~= "" then rad ..= " " .. tostring(d.besk) end
+	table.insert(rader, rad)
+
+	--[[ Foderraden hade samma brist: `%d` mot ett frånvarande `ho` kastar
+	     precis som `%s` mot ett frånvarande `ras`. ]]
+	local f = d.foder
+	if type(f) == "table" then
+		local bitar = {}
+		if type(f.ho) == "number" then
+			table.insert(bitar, ("%d kg hö"):format(f.ho))
+		end
+		if f.kraft ~= nil then
+			table.insert(bitar, ("kraftfoder %s"):format(tostring(f.kraft)))
+		end
+		if #bitar > 0 then
+			local foderrad = "[Stallet] Foder: " .. table.concat(bitar, ", ") .. "."
+			if f.notis ~= nil and f.notis ~= "" then
+				foderrad ..= " " .. tostring(f.notis)
+			end
+			table.insert(rader, foderrad)
+		end
+end
+
+return rader
+end
+
 local function satMarkor(player: Player, dagens: any): Model?
 	local b = bas()
 	if not b then
@@ -92,7 +151,6 @@ local function satMarkor(player: Player, dagens: any): Model?
 		som argument — det översätts inte. ]]
 	prompt.ActionText = "Titta in"
 	prompt:SetAttribute("SprakNyckel", "stall.titta_in")
-	prompt.ObjectText = dagens.namn .. " står här"
 	prompt:SetAttribute("SprakObjekt", "stall.star_har")
 	prompt:SetAttribute("SprakArg", tostring(dagens.namn))
 	prompt.HoldDuration = 0
@@ -117,13 +175,8 @@ local function satMarkor(player: Player, dagens: any): Model?
 
 	prompt.Triggered:Connect(function(spelare)
 		if spelare ~= player then return end
-		--[[ Ingen egen text hittas på: beskrivningen är ordagrann från
-			ubrf.se/hastar och foderraden kommer ur samma delade data. ]]
-		print(("[Stallet] %s — %s, %s. %s"):format(
-			dagens.namn, dagens.ras, dagens.typ, dagens.besk))
-		if dagens.foder then
-			print(("[Stallet] Foder: %d kg hö, kraftfoder %s. %s"):format(
-				dagens.foder.ho, tostring(dagens.foder.kraft), dagens.foder.notis))
+		for _, rad in ipairs(StallService.boxtext(dagens)) do
+			print(rad)
 		end
 	end)
 

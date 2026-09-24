@@ -345,6 +345,9 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 		bara när en FYSISK del faktiskt kom på plats — kvittensen namnger
 		aldrig något som inte sitter där. ]]
 	local pasattDel: string? = nil
+	--[[ Sant när spelaren redan gjort det fysiska momentet själv. Se noten
+	     vid `tack.redan_pa`. ]]
+	local egenUtforare = false
 	local steg = tonumber(momentId:match("^utr:(%d+)$"))
 	if fasId == "iordning" and steg then
 		local modell = bunden[player]
@@ -381,9 +384,38 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 			end
 			local ok, skal = TackService.satPa(player, modell, typ,
 				utrustningId, modell)
+			--[[ ── REDAN PÅ ÄR INTE ETT NEJ ───────────────────────────
+
+				Tobias sadlade Troy själv och tryckte «Rida nu». Svaret
+				blev `forb.fel_tur` med `Utrustning 1/5` — alltså «det är
+				inte din tur att göra det du redan gjort».
+
+				Kedjan: `satPa` svarar `tack.redan_pa` när en del av den
+				sorten redan sitter på hästen, och den här raden
+				returnerade DÅ direkt — innan `Preparation.utforMoment`.
+				Det LOGISKA momentet kvitterades alltså aldrig, medan det
+				FYSISKA var gjort. `ridaNuInre` tolererar `tack.redan_pa`
+				och gick vidare till nästa moment, som därmed var ur tur,
+				och nejet namngav det moment som faktiskt stod på tur.
+
+				`tack.redan_pa` kommer EFTER ägarkontrollen i `satPa`: fel
+				sadel svarar `tack.fel_sadel` långt innan. Att den här
+				sorten redan sitter där betyder alltså att rätt sak är på
+				plats, inte att något är trasigt. Världen är sanningen —
+				det är samma regel raden nedanför redan tillämpar — så
+				momentet ska kvitteras på samma grund, inte hoppas över.
+
+				OCH DET VAR SPELARENS ARBETE, inte stallets. `utforare`
+				går därför in som spelarens för just det momentet; annars
+				hade hennes egen omsorg bokförts som «auto», och
+				produktkanon säger att egen omsorg ska peka uppåt. ]]
+			local egetArbete = false
 			if not ok then
-				skicka(player)
-				return false, skal
+				if skal ~= "tack.redan_pa" then
+					skicka(player)
+					return false, skal
+				end
+				egetArbete = true
 			end
 			--[[ ── OCH DEN SKA FAKTISKT SITTA DÄR (#182) ──────────────
 				`satPa` svarar ja när bygget gick fram, men VÄRLDEN är
@@ -396,13 +428,18 @@ function GameplayService.moment(player: Player, fasId: string, momentId: string,
 				skicka(player)
 				return false, "tack.kunde_inte_byggas"
 			end
-			pasattDel = DEL_NYCKEL[typ]
+			--[[ Kvittensen namnger bara det som FAKTISKT kom på henne nu.
+			     Låg det redan där är det ingen nyhet för spelaren — se
+			     noten vid `tack.pa_plats` längre ned. ]]
+			if not egetArbete then pasattDel = DEL_NYCKEL[typ] end
+			if egetArbete then egenUtforare = true end
 		end
 	end
 
 	--[[ TREDJE VÄRDET FÖLJER MED (#246 A). Se noten i `Preparation`. ]]
 	local ok, avslag, avslagArg =
-		Preparation.utforMoment(s, fasId, momentId, s.hastId, utforare)
+		Preparation.utforMoment(s, fasId, momentId, s.hastId,
+			if egenUtforare then nil else utforare)
 	skicka(player)
 	--[[ KVITTENSEN NAMNGER DELEN OCH HÄSTEN. Den går ut som svarets andra
 		och tredje värde — samma kanal som nejen redan använder — så att

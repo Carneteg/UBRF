@@ -2002,6 +2002,77 @@ do
 	Players._spelare = {}
 end
 
+--[[ ══ BOXTEXTEN KRASCHAR INTE PÅ SAKNAD METADATA (#264) ═══════════════
+
+	Tobias tryckte `V` på Troys box i ett riktigt playtest 2026-09-24 och
+	fick `StallService:122` kastat två gånger. Orsaken stod i källan:
+
+	    print(("[Stallet] %s — %s, %s. %s"):format(
+	        dagens.namn, dagens.ras, dagens.typ, dagens.besk))
+
+	`Troy` har `ras = nil`, och `string.format("%s", nil)` KASTAR i Luau.
+	Det är inget kantfall — `ras = nil` gäller tolv hästar i rostern, och
+	bland dem `blackrock_jack`, alltså First Ride-hästen själv.
+
+	Provet mäter tre saker: att texten går att bygga utan att kasta, att
+	den inte skriver `nil` eller hittar på en ras, och att en komplett
+	post fortfarande får med sig sin. ]]
+do
+	print("\n── Boxtexten tål en häst utan ras ──")
+
+	local function raderFor(d)
+		local ok, ut = pcall(function() return StallService.boxtext(d) end)
+		return ok, ut
+	end
+
+	--[[ TROY, ur den riktiga speldatan — inte en påhittad post. ]]
+	local troy = UBRFSpel.hastar["troy"]
+	check("Troy finns i speldatan", troy ~= nil)
+	check("och han saknar verkligen ras — det är reproduktionen",
+		troy ~= nil and troy.ras == nil, tostring(troy and troy.ras))
+
+	local ok, rader = raderFor(troy)
+	check("BOXTEXTEN KASTAR INTE PÅ TROY", ok, tostring(rader))
+	local text = if ok then table.concat(rader, " | ") else ""
+	check("och den nämner hästen", ok and text:find("Troy") ~= nil, text)
+	check("och den skriver inte nil", ok and text:find("nil") == nil, text)
+	--[[ INGEN PÅHITTAD RAS. `docs/PRODUCT-CANON.md`: hitta aldrig på en
+	     UBRF-detalj för att fylla ett hål. Saknas rasen står det ingen. ]]
+	check("och den hittar inte på en ras",
+		ok and text:find("okänd") == nil and text:find("Okänd") == nil, text)
+
+	--[[ FIRST RIDE-HÄSTEN har samma brist. ]]
+	local jack = UBRFSpel.hastar["blackrock_jack"]
+	local okJ, raderJ = raderFor(jack)
+	check("BOXTEXTEN KASTAR INTE PÅ BLACKROCK JACK", okJ, tostring(raderJ))
+	check("och han saknar också ras", jack ~= nil and jack.ras == nil)
+
+	--[[ KONTROLLEN: en komplett post ska fortfarande få med sin ras,
+	     annars kunde tystnaden ovan betyda att rasen aldrig skrivs ut. ]]
+	local westside = UBRFSpel.hastar["westside"]
+	local okW, raderW = raderFor(westside)
+	local textW = if okW then table.concat(raderW, " | ") else ""
+	check("KONTROLL: en häst MED ras får med den",
+		okW and westside.ras ~= nil and textW:find(westside.ras) ~= nil,
+		textW)
+
+	--[[ Hela rostern, så att ingen enskild häst kan fälla prompten. ]]
+	local fel = {}
+	for id, d in pairs(UBRFSpel.hastar) do
+		local okA = pcall(function() return StallService.boxtext(d) end)
+		if not okA then table.insert(fel, id) end
+	end
+	check("HELA ROSTERN GÅR ATT LÄSA I BOXEN", #fel == 0,
+		table.concat(fel, ", "))
+
+	--[[ Och en tom post får inte kasta heller — prompten kan fyras innan
+	     tilldelningen hunnit fram. ]]
+	local okT = pcall(function() return StallService.boxtext({}) end)
+	check("en tom post kastar inte", okT)
+	local okN = pcall(function() return StallService.boxtext(nil) end)
+	check("och nil kastar inte", okN)
+end
+
 if fails > 0 then
 	error(("skotselpass.spec: %d fel"):format(fails))
 end
