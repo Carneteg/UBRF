@@ -4,10 +4,10 @@
 
 | | |
 |---|---|
-| Aktiv gate | **First Playable closure — de maskinellt körbara resterna** |
+| Aktiv gate | **First Playable — human final QA / product-owner acceptance** |
 | Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
 | Head | se senaste leveranskommentaren i PR #264 (undviker sjalvrefererande SHA) |
-| Aktiv order | **G8_INPUT_RECOVERY_AND_TEST_BUILD** — PR #264, kommentar `5807813997` |
+| Aktiv order | **HUMAN_FINAL_QA / PRODUCT_OWNER_ACCEPTANCE** — ingen ny implementation; maskinlagret är stängt |
 | Senaste produktbeslut | **Webb + Roblox, ingenting annat**, PR #264 kommentar `5806972193` |
 | Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
 | Överordnad plan | issue #259 |
@@ -18,6 +18,20 @@
 Issue #259 är den överordnade produkt- och leveransplanen. `docs/PRODUCT-CANON.md`
 är fortfarande produktens högsta källa. Den här filen registrerar vad som är
 aktivt — den uppfinner inga krav.
+
+**Maskinlagret för First Playable är stängt.** Sista kod-/verktygshuvudet är
+`16b91c0`; den här doc-only-stängningen ändrar ingen kod eller test. Alla 19
+review-trådar i PR #264 är resolverade. Kvar före produktacceptans är enbart
+mänsklig slut-QA: PC First Ride, riktig tangentbords-/mus-/touch-input, de 7
+KTX/fysikpunkterna, fysisk iPad/iPhone, kamera- och ridkänsla samt visuell
+review. Ingen av dessa poster är godkänd ännu, och `PRODUCT_ACCEPTED` sätts
+endast av Tobias.
+
+**Runtime-evidens.** Senaste automatiska `runtime-grind` på `16b91c0` föll
+innan mätning med Open Cloud HTTP 500 (`INTERNAL`, 0 mätningar). Det är
+klassat som infra, inte produktfel: committen ändrade inga mappade Roblox-
+källor och kallhashen är fortfarande `b9e778c7…`, samma kallhash som redan
+har `PASS — 176 matningar` i riktig motor på PR #264.
 
 > **Tidsbegränsat produktbeslut 2026-09-22 — Roblox först.** Fram till
 > verifierad First Playable är Roblox enda aktiva leveransmålet; PC och iPad är
@@ -46,7 +60,7 @@ evidens i PR #264.
 | **G3** | Uppsutten ridning och game feel | **mekaniken klar** — skritt 4,35 · trav 9,6 · galopp 16,8 studs/s mätt mot `Gaits`; game feel är Tobias bedömning och är **uppskjuten**, inte godkänd |
 | **G4** | Ride First-pedagogik och UI | **klar i det maskinellt mätbara** — coach banner, Ugneta-feedback och `efterForsok` verifierade i runtime |
 | **G5** | Roblox runtime och enheter | **delvis** — Studio-QA gjord maskinellt; **fysisk iPad och iPhone uppskjutna av produktbeslut**, inte godkända |
-| **G6** | Release candidate | kö |
+| **G6** | Release candidate | **human final QA / product-owner acceptance pågår** — inget mer maskinarbete återstår före denna kontroll |
 
 En implementations-PR åt gången. Små gates. Ingen självacceptans.
 
@@ -107,11 +121,14 @@ Ingen av posterna nedan får läsas som grön.
 
 | Post | Status |
 |---|---|
+| PC First Ride mot aktuell canonical artefakt | `HUMAN_QA_ONLY` — full kedja med riktig hand/input återstår |
+| Riktig tangentbords-/mus-/touch-input | `HUMAN_QA_ONLY` — kräver faktisk klient/OS-fokus |
+| 7 KTX/fysikpunkter | `HUMAN_QA_ONLY` — kräver Studio/fysik, t.ex. att ledda hästar faktiskt rör sig |
 | Tobias kamerakänsla i Studio | `CAMERA_HUMAN_FEEL_REVIEW_DEFERRED_BY_PRODUCT_OWNER` |
 | Fysisk iPad och iPhone | `PHYSICAL_DEVICE_DEFERRED` — `TouchControls.luau:614` bär själv noten |
 | Om prompter, HUD och Ugneta-ytan **syns** | `HUMAN_VISUAL_DEFERRED` — `capture_screenshot` ger svart 3D-fält. Logiken är mätt: ytan blir `Visible` med rätt text |
 | Om utrustningen **ser rätt ut** på modellen | `HUMAN_VISUAL_DEFERRED` — 19 delar sitter fast och är icke-transparenta; utseendet avgör Tobias |
-| Visuell fidelity side-by-side | ligger hos ChatGPT; paketet är klart |
+| Visuell fidelity side-by-side | `HUMAN_QA_ONLY` — paketet är klart, bedömningen återstår |
 | `PRODUCT_ACCEPTED` | endast Tobias |
 
 ## Backlog — inte First Playable
