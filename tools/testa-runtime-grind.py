@@ -201,16 +201,63 @@ def en_annan_place_ar_tillaten():
 
 # ── Bygget och bindningen ──────────────────────────────────────────────
 
+def _mappade_vagar():
+    """Varje `$path` i projektfilen, som relativa sokvagar under roblox/.
+
+    HANDSKRIVEN LISTA DOG HAR. Kopian raknade upp sina kataloger sjalv --
+    tools, qa, roblox/game, roblox/src, roblox/buildings -- och den listan
+    var en ANDRA SANNING bredvid default.project.json. Nar hastmallen
+    mappades in som roblox/assets/hastvisualer-k3.rbxmx fanns den inte i
+    kopian, och DA foll varje prov som bygger placen pa
+
+        FEL: default.project.json mappar 'assets/...' som inte finns
+
+    i stallet for pa det provet ville mata. Tva prov blev roda av fel
+    skal, och ett sadant rott ar lika varde\u00f6st som ett falskt gront.
+
+    Samma felklass som `rojo_agarskap` i bygg-identitet.py redan loser:
+    listan GENERERAS ur projektfilen, sa nasta mappning foljer med utan
+    att nagon behover minnas det."""
+    import json
+    projekt = json.loads(
+        (ROT / "roblox" / "default.project.json").read_text(encoding="utf-8"))
+    ut = set()
+
+    def ga(nod):
+        for nyckel, varde in nod.items():
+            if nyckel.startswith("$") or not isinstance(varde, dict):
+                continue
+            if "$path" in varde:
+                ut.add(varde["$path"])
+            ga(varde)
+
+    ga(projekt["tree"])
+    return sorted(ut)
+
+
 def _kopia():
     """Ett arbetstrad att mutera i, sa att repot aldrig ror sig."""
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="rgprov-"))
-    for rel in ("tools", "qa", "roblox/game", "roblox/src", "roblox/buildings"):
-        kalla = ROT / rel
+    for rel in ("tools", "qa"):
         mal = tmp / rel
         mal.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(str(kalla), str(mal))
+        shutil.copytree(str(ROT / rel), str(mal))
+    (tmp / "roblox").mkdir(parents=True, exist_ok=True)
     shutil.copy2(str(ROT / "roblox" / "default.project.json"),
                  str(tmp / "roblox" / "default.project.json"))
+    for rel in _mappade_vagar():
+        kalla = ROT / "roblox" / rel
+        mal = tmp / "roblox" / rel
+        if mal.exists():
+            continue
+        mal.parent.mkdir(parents=True, exist_ok=True)
+        if kalla.is_dir():
+            shutil.copytree(str(kalla), str(mal))
+        elif kalla.is_file():
+            shutil.copy2(str(kalla), str(mal))
+        else:
+            raise AssertionError(
+                "projektfilen mappar %r som inte finns i repot" % rel)
     return tmp
 
 

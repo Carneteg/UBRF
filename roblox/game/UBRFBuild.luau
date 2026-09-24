@@ -17,9 +17,9 @@ return {
 	kallhash = "a5abb3f1603524e5e69ed43ffcbfb144ffc056af74fd1eb330da51442b926dc0",
 	lage = "rojo",
 	kallor = 79,
-	sha = "e9c28d561fcde9103579fdb0b43fce606faafff2",
-	miljo_sha = "e9c28d561fcde9103579fdb0b43fce606faafff2",
-	genererad = "2026-09-24T11:51:46Z",
+	sha = "23c6cbe7a7652ef33af6ce5a93530c86765add55",
+	miljo_sha = "23c6cbe7a7652ef33af6ce5a93530c86765add55",
+	genererad = "2026-09-24T11:57:26Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
