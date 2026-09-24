@@ -488,26 +488,49 @@ do
 		e2 ~= nil and string.find(tostring(e2.detalj), "inga") ~= nil,
 		e2 and tostring(e2.detalj) or "-")
 
-	--[[ ── OSPÅRAT SOM KODEN LÄSER ────────────────────────────────────
+	--[[ ── HastVisualer ÄR INTE OSPÅRAD LÄNGRE (#264 R3) ─────────────
 
-		`ServerStorage.HastVisualer` är ospårad — ingen Rojo-väg pekar på
-		den — och samtidigt läser `HastVisual.mall` den vid varje hästbygge.
-		Utan mallen faller inte spelet, men varenda häst går tillbaka till
-		lådor, tyst. Städpolicyn säger "utred, radera inte", och den som
-		utreder måste kunna se skillnaden mot en backup ingen rör. ]]
+		Här stod att `ServerStorage.HastVisualer` är ospårad och därför
+		ska märkas «KRÄVS AV». Det var sant, och det är hela problemet
+		R3 löste: hästmallen `k3` ligger nu i repot som
+		`roblox/assets/hastvisualer-k3.rbxmx` och mappas av
+		projektfilen. Rojo äger mappen.
+
+		Så den nya mätningen är den omvända — och den är starkare:
+		mappen ska INTE rapporteras alls, för det finns ingenting
+		oförklarat med den längre. Hade provet lämnats som det var hade
+		det krävt att grinden fortsätter peka ut något källstyrt. ]]
 	local mall = Instance.new("Folder")
 	mall.Name = "HastVisualer"
 	mall.Parent = SS
 	local e3 = matning("10e")
-	check("ett ospårat objekt koden LÄSER märks ut, inte bara namnges",
-		e3 ~= nil and string.find(tostring(e3.detalj), "KRÄVS AV") ~= nil,
+	check("HastVisualer rapporteras INTE — Rojo äger den nu",
+		e3 ~= nil and string.find(tostring(e3.detalj), "HastVisualer") == nil,
 		e3 and tostring(e3.detalj) or "-")
-	check("och märkningen pekar ut raden i koden",
-		e3 ~= nil and string.find(tostring(e3.detalj), "HastVisual.luau") ~= nil,
-		e3 and tostring(e3.detalj) or "-")
-	check("men den fäller fortfarande ingenting", e3 ~= nil and e3.ok == true,
-		e3 and tostring(e3.ok) or "-")
 	mall:Destroy()
+
+	--[[ ── MEN MEKANISMEN LEVER, OCH MÄTS ──────────────────────────
+
+		Listan är tom just nu. Ett prov som bara mätte en levande post
+		hade dött med posten, och nästa gång något hamnar i samma läge
+		hade märkningen varit otestad. Provet lägger därför in sin egen
+		post. ]]
+	Integritet._kodberoendeForProv("ServerStorage", "ProvBeroende",
+		"server/Provfil.luau:1 — provets egen rad")
+	local skrap = Instance.new("Folder")
+	skrap.Name = "ProvBeroende"
+	skrap.Parent = SS
+	local e4 = matning("10e")
+	check("ett ospårat objekt koden LÄSER märks ut, inte bara namnges",
+		e4 ~= nil and string.find(tostring(e4.detalj), "KRÄVS AV") ~= nil,
+		e4 and tostring(e4.detalj) or "-")
+	check("och märkningen pekar ut raden i koden",
+		e4 ~= nil and string.find(tostring(e4.detalj), "Provfil.luau") ~= nil,
+		e4 and tostring(e4.detalj) or "-")
+	check("men den fäller fortfarande ingenting", e4 ~= nil and e4.ok == true,
+		e4 and tostring(e4.ok) or "-")
+	skrap:Destroy()
+	Integritet._kodberoendeForProv(nil)
 end
 
 --[[ == 10f: TVA BARN MED SAMMA NAMN =================================

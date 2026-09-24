@@ -9,6 +9,12 @@
 	     Referenterna heter RBX0/RBX1/RBX2/RBX3 MED FLIT: byggaren
 	     numrerar sina egna instanser likadant, och kollisionen ar precis
 	     det provet finns for att fanga. -->
+	<!-- Metan och den delade tabellen ligger pa DOKUMENTNIVA och
+	     foljer inte med <Item>. Den riktiga k3 har 2 tabellposter och
+	     167 hanvisningar inifran instanserna (Tags, AeroMeshData,
+	     PhysicalConfigData, ModelMeshData, SlimHash). Fixturen bar
+	     samma form i litet, sa att bararen provas. -->
+	<Meta name="ExplicitAutoJoints">true</Meta>
 	<Item class="Model" referent="RBX0">
 		<Properties>
 			<string name="Name">ProvModell</string>
@@ -60,6 +66,8 @@
 				<Content name="MeshId"><url>rbxassetid://4863471909</url></Content>
 				<Content name="TextureID"><url>rbxassetid://4863472205</url></Content>
 				<Vector3 name="size"><X>1</X><Y>1</Y><Z>2</Z></Vector3>
+				<SharedString name="PhysicalConfigData">prov1==</SharedString>
+				<SharedString name="Tags">prov2==</SharedString>
 			</Properties>
 			<Item class="WeldConstraint" referent="RBX6">
 				<Properties>
@@ -70,4 +78,8 @@
 			</Item>
 		</Item>
 	</Item>
+	<SharedStrings>
+		<SharedString md5="prov1==">QUJD</SharedString>
+		<SharedString md5="prov2=="></SharedString>
+	</SharedStrings>
 </roblox>

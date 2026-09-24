@@ -169,10 +169,21 @@ def main():
             ratext.replace('<Item class="SpecialMesh" referent="RBX2">',
                            '<Item class="Script" referent="RBX2">', 1),
             "Script")
-    delad = ("<SharedStrings><SharedString md5=\"x\">a</SharedString>"
-             "</SharedStrings></roblox>")
-    avvisas("EN DELAD STRANG AVVISAS NAMNGIVET",
-            ratext.replace("</roblox>", delad, 1), "SharedString")
+    #  KONTRAKTET HAR SVANGT, OCH DET AR RATTELSEN.
+    #  Har stod att en delad strang AVVISAS. Det holl sa lange ingen
+    #  riktig modell anvande dem. Den riktiga k3 har 169: 2 tabellposter
+    #  och 167 hanvisningar (Tags, AeroMeshData, PhysicalConfigData,
+    #  ModelMeshData, SlimHash). Avvisandets egen motivering -- "de bor i
+    #  dokumentets egen tabell" -- var ingen anledning att saga nej, utan
+    #  en beskrivning av vad som maste goras.
+    #
+    #  Att bara slanga tabellen hade inte synts i tradet:
+    #  PhysicalConfigData ar kollisionsdata. Det som avvisas nu ar en
+    #  HANVISNING UTAN POST, och en nyckel med tva olika innehall.
+    avvisas("EN HANVISNING UTAN POST I TABELLEN AVVISAS",
+            ratext.replace('<SharedString md5="prov1==">QUJD</SharedString>',
+                           "", 1),
+            "hanvisas utan att")
     avvisas("EN REFERENS UTANFOR MODELLEN AVVISAS",
             ratext.replace('<Ref name="Parent">null</Ref>',
                            '<Ref name="Parent">RBX999</Ref>', 1), "RBX999")
@@ -180,6 +191,39 @@ def main():
              '<string name="Name">Extra</string></Properties></Item></roblox>')
     avvisas("TVA ROTINSTANSER AVVISAS",
             ratext.replace("</roblox>", extra, 1), "EN rotinstans")
+
+    # -- 3b. DOKUMENTNIVAN FOLJER MED ------------------------------------
+    kolla("den delade tabellen bars med noden", len(nod.delade) == 2,
+          str(sorted(nod.delade)))
+    kolla("och dess INNEHALL, inte bara nycklarna",
+          nod.delade.get("prov1==") == "QUJD", repr(nod.delade.get("prov1==")))
+    kolla("Meta bars ocksa -- ExplicitAutoJoints styr joints vid inlasning",
+          nod.meta.get("ExplicitAutoJoints") == "true", str(nod.meta))
+    #  Hanvisningarna ligger INNE i instanserna och ska folja <Item>.
+    hanv = [(e.get("name"), (e.text or "").strip())
+            for e in rot.iter("SharedString") if e.get("name")]
+    kolla("hanvisningarna foljde med instansen",
+          len(hanv) == 2 and all(v in nod.delade for _, v in hanv),
+          str(hanv))
+
+    #  Samma nyckel med OLIKA innehall ar en tyst forvanskning.
+    a = BP.las_modell(FIXTUR, "a.rbxmx", "a")
+    b = BP.las_modell(FIXTUR, "b.rbxmx", "b")
+    b.delade["prov1=="] = "ANNAT"
+    try:
+        BP.samla_dokumentniva([a, b])
+        kolla("SAMMA NYCKEL MED OLIKA INNEHALL AVVISAS", False,
+              "slapptes igenom")
+    except SystemExit as e:
+        kolla("SAMMA NYCKEL MED OLIKA INNEHALL AVVISAS",
+              "TVA olika" in str(e), str(e)[:70])
+    #  Samma nyckel med SAMMA innehall ar deduplicering, inte en krock.
+    c = BP.las_modell(FIXTUR, "c.rbxmx", "c")
+    d = BP.las_modell(FIXTUR, "d.rbxmx", "d")
+    delade, meta = BP.samla_dokumentniva([c, d])
+    kolla("men samma nyckel med samma innehall ar deduplicering",
+          len(delade) == 2 and meta.get("ExplicitAutoJoints") == "true",
+          "%d nycklar" % len(delade))
 
     # -- 4. HELA VAGEN UT ------------------------------------------------
     raknare = [0]

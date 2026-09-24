@@ -47,6 +47,15 @@
         }
       }
     },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "HastVisualer": {
+        "$className": "Folder",
+        "k3": {
+          "$path": "assets/hastvisualer-k3.rbxmx"
+        }
+      }
+    },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {

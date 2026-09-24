@@ -100,6 +100,9 @@ class Nod:
         self.namn = namn
         self.kalla = kalla
         self.radxml = radxml
+        #[[ Dokumentnivasaker som modellen bar med sig. Se `las_modell`. ]]
+        self.delade: dict[str, str] = {}
+        self.meta: dict[str, str] = {}
         self.barn: list["Nod"] = []
 
 
@@ -149,9 +152,35 @@ def fran_katalog(kat: pathlib.Path, namn: str) -> Nod:
 #   Vad som INTE bars igenom, med flit:
 #     . skript i modellen -- ordern forbjuder oreviderad korbar asset-kod,
 #       och en modell ska vara utseende, inte beteende,
-#     . <SharedString>-block -- de bor i dokumentets egen tabell och kan
-#       inte foljas med en losryckt <Item>. Avvisas namngivet i stallet
-#       for att tyst tappa en textur. ]]
+#     . <SharedString>-block bars numera MED -- se nedan.
+#
+#   DE DELADE STRANGARNA, och varfor avvisandet inte holl. Forst vagrade
+#   byggaren varje modell som anvande dem, med motiveringen att de bor i
+#   dokumentets egen tabell. Den riktiga k3 har 169 av dem, och da var
+#   motiveringen inte ett skal att saga nej utan en BESKRIVNING AV VAD
+#   SOM MASTE GORAS.
+#
+#   Sa har ser de ut i filen:
+#
+#     <SharedStrings>                       <- tabellen, pa dokumentniva
+#       <SharedString md5="yuZ...">..</SharedString>
+#     </SharedStrings>
+#     ...inne i en instans:
+#       <SharedString name="PhysicalConfigData">yuZ...</SharedString>
+#
+#   Alltsa: hanvisningarna ligger INNE i instanserna och foljer med
+#   <Item> av sig sjalva; det som saknas ar tabellen. I k3 ar det 167
+#   hanvisningar (Tags, AeroMeshData, PhysicalConfigData, ModelMeshData,
+#   SlimHash) mot 2 poster.
+#
+#   Nycklarna ar INNEHALLSHASHAR, sa tva modeller med samma data far
+#   samma nyckel -- det ar avsiktlig deduplicering, inte en krock.
+#   Samma nyckel med OLIKA innehall vore daremot ett riktigt fel och
+#   avvisas.
+#
+#   Att bara slanga tabellen hade inte synts: PhysicalConfigData ar
+#   kollisionsdata, och en hast med tappad kollision ser likadan ut i
+#   tradet. ]]
 SKRIPTKLASSER = {"Script", "LocalScript", "ModuleScript"}
 
 
@@ -164,12 +193,14 @@ def _modellnamnrum(rel: str) -> str:
 def las_modell(p: pathlib.Path, rel: str, namn: str) -> Nod:
     rot = ET.fromstring(p.read_text(encoding="utf-8"))
 
-    delade = rot.findall(".//SharedString")
-    if delade:
-        raise SystemExit(
-            f"{rel}: modellen har {len(delade)} <SharedString> -- de kan inte "
-            "foljas med utan dokumentets egen tabell. Exportera om utan "
-            "delade strangar, eller utoka byggaren medvetet.")
+    #[[ Tabellen ligger pa dokumentniva och foljer inte med <Item>. ]]
+    tabell = {}
+    for t in rot.findall("SharedStrings"):
+        for e in t.findall("SharedString"):
+            nyckel = e.get("md5")
+            if nyckel is None:
+                raise SystemExit(f"{rel}: en <SharedString> saknar md5.")
+            tabell[nyckel] = e.text or ""
 
     poster = [e for e in rot if e.tag == "Item"]
     if len(poster) != 1:
@@ -209,8 +240,34 @@ def las_modell(p: pathlib.Path, rel: str, namn: str) -> Nod:
             prop.text = namn
             break
 
+    #[[ VARJE hanvisning maste ha en post. En som saknas ar en tappad
+    #   textur eller kollisionsmodell, och den sortens fel syns inte i
+    #   tradet -- bara i spelet. ]]
+    saknade = set()
+    for e in poster[0].iter("SharedString"):
+        if e.get("name") is None:
+            continue
+        v = (e.text or "").strip()
+        if v and v not in tabell:
+            saknade.add(v)
+    if saknade:
+        raise SystemExit(
+            f"{rel}: {len(saknade)} delad(e) strang(ar) hanvisas utan att "
+            "finnas i filens egen tabell.")
+
+    #[[ Metan hor till dokumentet, inte till <Item>. `ExplicitAutoJoints`
+    #   styr om motorn skapar joints automatiskt vid inlasning; tappas
+    #   den kan en riggad modell fa joints den inte ska ha. ]]
+    meta = {}
+    for m in rot.findall("Meta"):
+        if m.get("name"):
+            meta[m.get("name")] = m.text or ""
+
     xml = ET.tostring(poster[0], encoding="unicode")
-    return Nod(poster[0].get("class") or "Model", namn, None, xml)
+    nod = Nod(poster[0].get("class") or "Model", namn, None, xml)
+    nod.delade = tabell
+    nod.meta = meta
+    return nod
 
 
 def fran_sokvag(rel: str, namn: str) -> Nod:
@@ -267,6 +324,42 @@ def xml_for(nod: Nod, raknare: list[int], djup: int) -> str:
         ut.append(xml_for(barn, raknare, djup + 1))
     ut.append(f"{ind}</Item>")
     return "\n".join(ut)
+
+
+def _xml_text(t: str) -> str:
+    """Text i ett XML-element. Tabellen bar base64, men undanta anda."""
+    return (t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+def samla_dokumentniva(rotnoder: list[Nod]) -> tuple[dict, dict]:
+    """Delade strangar och Meta ur alla modeller i tradet.
+
+    Nycklarna ar innehallshashar: samma nyckel med samma innehall ar
+    deduplicering och helt riktigt. Samma nyckel med OLIKA innehall vore
+    en tyst forvanskning av nagons kollisionsdata, och avvisas.
+    """
+    delade: dict[str, str] = {}
+    meta: dict[str, str] = {}
+
+    def ga(n: Nod) -> None:
+        for nyckel, varde in n.delade.items():
+            if nyckel in delade and delade[nyckel] != varde:
+                raise SystemExit(
+                    f"delad strang {nyckel!r} forekommer med TVA olika "
+                    "innehall -- en av dem skulle skrivas over tyst.")
+            delade[nyckel] = varde
+        for nyckel, varde in n.meta.items():
+            if nyckel in meta and meta[nyckel] != varde:
+                raise SystemExit(
+                    f"<Meta name={nyckel!r}> forekommer med tva olika "
+                    f"varden: {meta[nyckel]!r} och {varde!r}.")
+            meta[nyckel] = varde
+        for b in n.barn:
+            ga(b)
+
+    for n in rotnoder:
+        ga(n)
+    return delade, meta
 
 
 def sha_nu() -> str:
@@ -336,6 +429,20 @@ def main() -> int:
     if not any(n.namn == "Workspace" for n in rotnoder):
         rotnoder.insert(0, Nod("Workspace", "Workspace"))
 
+    #[[ Dokumentnivan samlas FORE kroppen skrivs: tabellen maste finnas i
+    #   samma dokument som hanvisningarna, annars ar de lika tappade som
+    #   om de aldrig burits med. ]]
+    delade, meta = samla_dokumentniva(rotnoder)
+    metarader = "".join(
+        f'\t<Meta name="{k}">{_xml_text(v)}</Meta>\n'
+        for k, v in sorted(meta.items()))
+    if delade:
+        deladerader = "\n\t<SharedStrings>\n" + "".join(
+            f'\t\t<SharedString md5="{k}">{_xml_text(v)}</SharedString>\n'
+            for k, v in sorted(delade.items())) + "\t</SharedStrings>"
+    else:
+        deladerader = ""
+
     raknare = [0]
     kropp = "\n".join(xml_for(n, raknare, 1) for n in rotnoder)
     #[[ De tva <External>-raderna star i BORJAN av varje XML-fil Roblox sjalvt
@@ -345,7 +452,8 @@ def main() -> int:
            'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
            'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" '
            'version="4">\n'
-           "\t<External>null</External>\n"
+           + metarader
+           + "\t<External>null</External>\n"
            "\t<External>nil</External>\n"
            #[[ INGEN radbrytning efter </roblox>. Roblox place-ingester
            #   avvisar skrapbytes EFTER dokumentelementet, och en enda
@@ -362,7 +470,7 @@ def main() -> int:
            #   fixen och slutar med radbrytning. De ska INTE byggas om:
            #   historisk evidens ar historisk, och kolla-evidens-place.py
            #   vaktar deras hashar. ]]
-           + kropp + "\n</roblox>")
+           + kropp + deladerader + "\n</roblox>")
 
     #[[ Well-formedness ar inte samma sak som att Studio oppnar filen, men en
     #   trasig XML ar ett fel vi KAN fanga har — och da ska den aldrig lamnas

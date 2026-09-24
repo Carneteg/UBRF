@@ -14,12 +14,12 @@
 	sjalv — instanser gar att rakna utan att lasa `Source`, vilket ett
 	spelskript inte far. Se Integritet.kallantal och punkt 9e. ]]
 return {
-	kallhash = "522d7dd1bdc922a7c7233724b95c208788bbe169f284651d46ad112957645648",
+	kallhash = "a5abb3f1603524e5e69ed43ffcbfb144ffc056af74fd1eb330da51442b926dc0",
 	lage = "rojo",
-	kallor = 78,
-	sha = "57ef358b7fedea71e98a1716b9c5420891b02dfa",
-	miljo_sha = "57ef358b7fedea71e98a1716b9c5420891b02dfa",
-	genererad = "2026-09-24T11:29:42Z",
+	kallor = 79,
+	sha = "571ef36f3843e72b1e752382d51d646f642c860f",
+	miljo_sha = "571ef36f3843e72b1e752382d51d646f642c860f",
+	genererad = "2026-09-24T11:51:01Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt
@@ -27,6 +27,7 @@ return {
 	rojo = {
 		ReplicatedStorage = { "HorseCore", "Stallet", "UBRFBuild", "UBRFKomplex", "UBRFSkotsel", "UBRFSpel", "UBRFSpelData", "UBRFSprak" },
 		ServerScriptService = { "Horse", "Varld" },
+		ServerStorage = { "HastVisualer" },
 		StarterPlayer = { "StarterPlayerScripts" },
 	},
 
@@ -47,6 +48,7 @@ return {
 		"ServerScriptService.Varld.Anlaggningen",
 		"ServerScriptService.Varld.BuildKit",
 		"ServerScriptService.Varld.Geometri",
+		"ServerStorage.HastVisualer.k3",
 		"StarterPlayer.StarterPlayerScripts.Horse",
 	},
 }

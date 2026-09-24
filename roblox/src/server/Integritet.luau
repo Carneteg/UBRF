@@ -121,12 +121,36 @@ local RUNTIME: { [string]: { [string]: string } } = {
 	stor backup ingen rör och en mallmapp koden är beroende av. Raden skrev
 	tidigare ut dem sida vid sida, som samma sak.
 
-	Ett namn får bara stå här med en rad i koden bakom sig. ]]
-local KODBEROENDE: { [string]: { [string]: string } } = {
-	ServerStorage = {
-		HastVisualer = "server/HastVisual.luau:37 — mallarna för hästarnas nät",
-	},
-}
+	Ett namn får bara stå här med en rad i koden bakom sig.
+
+	── OCH LISTAN ÄR TOM NU (#264 R3) ───────────────────────────────
+
+	`ServerStorage.HastVisualer` stod här ensam. Den är inte ospårad
+	längre: hästmallen `k3` exporterades ur startplacen, ligger i
+	`roblox/assets/hastvisualer-k3.rbxmx` och mappas av
+	`default.project.json`. Rojo äger den, bygg-identiteten räknar dess
+	bytes, och `tools/kolla-hastmodell.py` vaktar att den kommer fram hel.
+
+	Att lämna kvar namnet hade varit värre än att ta bort det: raden hade
+	märkt ut en mapp som numera ÄR källstyrd, alltså sagt att något är
+	oförklarat när det är förklarat. En grind som ljuger åt det hållet
+	lär folk att bortse från den.
+
+	Mekanismen står kvar för nästa sak som hamnar i samma läge, och den
+	har ett eget prov genom `Integritet._kodberoendeForProv`. ]]
+local KODBEROENDE: { [string]: { [string]: string } } = {}
+
+--[[ Provets väg in. Mekanismen ska inte tappa sin mätning bara för att
+     den råkar sakna verkliga poster just nu. ]]
+function Integritet._kodberoendeForProv(tjanst: string?, namn: string?,
+	rad: string?)
+	if tjanst == nil then
+		table.clear(KODBEROENDE)
+		return
+	end
+	KODBEROENDE[tjanst] = KODBEROENDE[tjanst] or {}
+	KODBEROENDE[tjanst][namn :: string] = rad :: string
+end
 
 type Runtimeregel = { kalla: string, prov: (Instance) -> boolean }
 
