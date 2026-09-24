@@ -92,27 +92,28 @@ function StallService.boxtext(d: { [string]: any }): { string }
 	if d.besk ~= nil and d.besk ~= "" then rad ..= " " .. tostring(d.besk) end
 	table.insert(rader, rad)
 
-	--[[ Foderraden hade samma brist: `%d` mot ett frånvarande `ho` kastar
-	     precis som `%s` mot ett frånvarande `ras`. ]]
-	local f = d.foder
-	if type(f) == "table" then
-		local bitar = {}
-		if type(f.ho) == "number" then
-			table.insert(bitar, ("%d kg hö"):format(f.ho))
-		end
-		if f.kraft ~= nil then
-			table.insert(bitar, ("kraftfoder %s"):format(tostring(f.kraft)))
-		end
-		if #bitar > 0 then
-			local foderrad = "[Stallet] Foder: " .. table.concat(bitar, ", ") .. "."
-			if f.notis ~= nil and f.notis ~= "" then
-				foderrad ..= " " .. tostring(f.notis)
-			end
-			table.insert(rader, foderrad)
-		end
+	return rader
 end
 
-return rader
+--[[ FODRET, som värden och inte som färdig text.
+
+	Raden hade samma brist som rasen: `%d` mot ett frånvarande `ho` kastar
+	precis som `%s` mot ett frånvarande `ras`. Guarden hör hit, men TEXTEN
+	gör det inte: `tools/kolla-sprak.py` undantar svensk text bara på rader
+	som bär `print(` eller `warn(`, och det är rätt regel — den skiljer
+	utvecklarutskrift från spelartext som ska ha en nyckel. Första
+	rättelsen byggde foderraden här och föll på just det i CI.
+
+	Därför returneras värdena, och prompten formaterar dem på sin egen
+	`print(`-rad. Guarden går att mäta; texten stannar där regeln vill. ]]
+function StallService.foder(d: { [string]: any }): (number?, string?, string?)
+	if d == nil then return nil end
+	local f = d.foder
+	if type(f) ~= "table" then return nil end
+	if type(f.ho) ~= "number" then return nil end
+	return f.ho,
+		if f.kraft ~= nil then tostring(f.kraft) else "—",
+		if f.notis ~= nil and f.notis ~= "" then tostring(f.notis) else ""
 end
 
 local function satMarkor(player: Player, dagens: any): Model?
@@ -177,6 +178,10 @@ local function satMarkor(player: Player, dagens: any): Model?
 		if spelare ~= player then return end
 		for _, rad in ipairs(StallService.boxtext(dagens)) do
 			print(rad)
+		end
+		local ho, kraft, notis = StallService.foder(dagens)
+		if ho then
+			print(("[Stallet] Foder: %d kg hö, kraftfoder %s. %s"):format(ho, kraft, notis))
 		end
 	end)
 

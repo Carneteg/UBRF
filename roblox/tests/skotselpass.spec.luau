@@ -2071,6 +2071,21 @@ do
 	check("en tom post kastar inte", okT)
 	local okN = pcall(function() return StallService.boxtext(nil) end)
 	check("och nil kastar inte", okN)
+
+	--[[ FODERRADENS GUARD hade samma brist: `%d` mot ett frånvarande `ho`
+	     kastar precis som `%s` mot ett frånvarande `ras`. Värdena
+	     returneras separat, och texten formateras på promptens egen
+	     `print(`-rad — se noten i `StallService.foder`. ]]
+	local okF = pcall(function() return StallService.foder(troy) end)
+	check("foderguarden kastar inte på Troy", okF)
+	check("en post utan foder ger inget att skriva ut",
+		StallService.foder({ namn = "X" }) == nil)
+	check("och ett foder utan hömängd ger inte heller något",
+		StallService.foder({ namn = "X", foder = { kraft = "müsli" } }) == nil)
+	local ho, kraft = StallService.foder({ namn = "X",
+		foder = { ho = 7, kraft = "müsli" } })
+	check("KONTROLL: ett komplett foder ger sina värden",
+		ho == 7 and kraft == "müsli", ("%s %s"):format(tostring(ho), tostring(kraft)))
 end
 
 if fails > 0 then
