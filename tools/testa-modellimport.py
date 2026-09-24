@@ -143,7 +143,26 @@ def main():
           and cf.findtext("Y") == "2.25")
     kolla("och storleken", rot.find(".//Vector3[@name='size']") is not None)
     kolla("hela tradet kom med -- inga delar tappade pa vagen",
-          len(refs) == 5, "%d instanser" % len(refs))
+          len(refs) == 7, "%d instanser" % len(refs))
+
+    # MeshPart ar den form den RIKTIGA k3 har: 40 MeshPart, 40 Motor6D,
+    # 2 Part, 2 WeldConstraint. Provas inte den formen sager fixturen
+    # ingenting om filen vi faktiskt ska bara in. MeshPart stavar sin
+    # textur TextureID, SpecialMesh stavar den TextureId -- en av de
+    # detaljer som tyst tappas om man skriver om egenskaper i stallet
+    # for att bara dem ororda.
+    mp = next((e for e in rot.iter("Item")
+               if e.get("class") == "MeshPart"), None)
+    kolla("MeshPart-formen bars ocksa", mp is not None)
+    kolla("MeshPartens MeshId foljde med",
+          "rbxassetid://4863471909" in urler)
+    kolla("och dess TextureID -- med MeshParts egen stavning",
+          mp is not None and mp.find(
+              "./Properties/Content[@name='TextureID']") is not None)
+    wc = next((e for e in rot.iter("Item")
+               if e.get("class") == "WeldConstraint"), None)
+    kolla("WeldConstraint bars med sina bada Part-referenser",
+          wc is not None and len(wc.findall("./Properties/Ref")) == 2)
 
     # -- 3. DET SOM SKA AVVISAS ------------------------------------------
     avvisas("ETT SKRIPT I MODELLEN AVVISAS",
@@ -166,7 +185,7 @@ def main():
     raknare = [0]
     ut = BP.xml_for(nod, raknare, 1)
     kolla("raknaren tar med modellens instanser",
-          raknare[0] == 5, "%d" % raknare[0])
+          raknare[0] == 7, "%d" % raknare[0])
     kolla("och utskriften ar valformad XML", ET.fromstring(ut) is not None)
     kolla("mesh-id:t finns kvar i den utskrivna XML:en",
           "rbxassetid://4863472026" in ut)

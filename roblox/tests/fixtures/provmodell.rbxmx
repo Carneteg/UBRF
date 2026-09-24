@@ -48,5 +48,26 @@
 				</Properties>
 			</Item>
 		</Item>
+		<!-- DEN RIKTIGA k3 ar byggd av MeshPart, inte Part+SpecialMesh:
+		     40 MeshPart, 40 Motor6D, 2 Part, 2 WeldConstraint,
+		     PrimaryPart = HumanoidRootPart. Fixturen bar darfor bada
+		     formerna, sa att grinden och importen provas mot den
+		     form filen faktiskt kommer att ha. MeshPart stavar sin
+		     textur TextureID, SpecialMesh stavar den TextureId. -->
+		<Item class="MeshPart" referent="RBX5">
+			<Properties>
+				<string name="Name">Man</string>
+				<Content name="MeshId"><url>rbxassetid://4863471909</url></Content>
+				<Content name="TextureID"><url>rbxassetid://4863472205</url></Content>
+				<Vector3 name="size"><X>1</X><Y>1</Y><Z>2</Z></Vector3>
+			</Properties>
+			<Item class="WeldConstraint" referent="RBX6">
+				<Properties>
+					<string name="Name">Fast</string>
+					<Ref name="Part0">RBX5</Ref>
+					<Ref name="Part1">RBX1</Ref>
+				</Properties>
+			</Item>
+		</Item>
 	</Item>
 </roblox>

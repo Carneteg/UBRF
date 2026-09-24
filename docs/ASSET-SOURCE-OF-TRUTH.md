@@ -105,7 +105,8 @@ en **källfråga** och inte en implementationsdetalj.
 | asset 5878963783 heter `horse`, `AssetTypeId 10` (Model), skapad av användaren `jameesbound` (id 1013626927) | `https://economy.roblox.com/v2/assets/5878963783/details`, hämtad 2026-09-24 |
 | assetens `Created` och `Updated` är båda `2020-10-26` | samma svar |
 | `IsPublicDomain: true`, `IsForSale: false`, `PriceInRobux: null` | samma svar |
-| modellen finns i startplacen `106030782437053`: 42 delar, 40 nät, 40 Motor6D, `rbxassetid://4863472026` m.fl. | Tobias öppnade placen 2026-09-24 |
+| modellen finns i startplacen `106030782437053` | Tobias öppnade placen 2026-09-24 |
+| **inventerad direkt ur DataModel 2026-09-24:** 84 descendants — 40 `MeshPart`, 40 `Motor6D`, 2 `Part`, 2 `WeldConstraint`; `PrimaryPart = HumanoidRootPart`; **40 unika nät**, `rbxassetid://4863471909` … `4863476316` | Studio-MCP mot place `106030782437053`, `gameId 10766192504` |
 
 Hämtningen är gjord två gånger oberoende av varandra — av ChatGPT i
 granskningen av `259b421` och av Claude i R3 — med samma svar.
