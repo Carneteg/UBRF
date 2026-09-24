@@ -241,11 +241,62 @@ def renArbetskopia():
     return True
 
 
+#[[ ══ UTFALLET HAR TRE KLASSER, INTE TVA (#264 FALSIFIER_REPORTING_FIX) ══
+#
+#   Raknaren var `fangade = len(FALS) - len(trasiga)`, och en accepterat
+#   gron `(svag)`-mutation lades aldrig i `trasiga`. Den raknades alltsa
+#   som FANGAD. Utskriften sa `24 av 24 mutationer fangades` nar 20 var
+#   roda och 4 grona, och den siffran skrevs av rakt in i en rapport.
+#
+#   En accepterat gron mutation ar redovisad, inte fangad. Den far ALDRIG
+#   ingå i fangade-talet — men den ar heller inget fynd, for skalet ar
+#   dokumenterat vid F1/F2 och F20/F21 och paret river bada och ar rott.
+#
+#     RED             ROTT eller KRASCH — provet fangade mutationen
+#     ACCEPTED_GREEN  GRONT, och mutationen ar uttryckligen markerad svag
+#     UNCAUGHT        allt annat: gront utan markering, byggfel, eller en
+#                     mutation som inte gick att applicera alls
+#
+#   Klassningen och sammanfattningen ar rena funktioner, sa att de gar
+#   att prova utan att en enda kallfil skrivs om. Se
+#   tools/testa-falsifiera-forstaritten.py. ]]
+RED, ACCEPTED_GREEN, UNCAUGHT = "RED", "ACCEPTED_GREEN", "UNCAUGHT"
+
+
+def arSvag(namn):
+    return "(svag" in namn
+
+
+def klassa(namn, status):
+    """Status ar ROTT, KRASCH, GRONT, BYGGFEL eller EJ_MUTERAD."""
+    if status in ("ROTT", "KRASCH"):
+        return RED
+    if status == "GRONT" and arSvag(namn):
+        return ACCEPTED_GREEN
+    return UNCAUGHT
+
+
+def sammanfatta(klasser, aterstallningGron):
+    """(rader, exitkod). Exit 0 bara utan UNCAUGHT och med gron aterstallning."""
+    roda = klasser.count(RED)
+    grona = klasser.count(ACCEPTED_GREEN)
+    ofangade = klasser.count(UNCAUGHT)
+    rader = [
+        "RED (fangade):              %d" % roda,
+        "ACCEPTED_GREEN (kanda svaga): %d" % grona,
+        "UNCAUGHT (ofangade):        %d" % ofangade,
+        "RESULTAT: %d av %d mutationer fangades (%d accepterat grona, "
+        "%d ofangade)" % (roda, len(klasser), grona, ofangade),
+    ]
+    ok = ofangade == 0 and aterstallningGron
+    return rader, (0 if ok else 1)
+
+
 def main():
     print("FALSIFIERING — #263 Gate 2A, varje regel ska kunna bli rod\n")
     if not renArbetskopia():
         return 1
-    trasiga = []
+    klasser = []
     for post in FALS:
         namn, fil = post[0], post[1]
         #[[ En mutation ar antingen ETT par (gammal, ny) eller en LISTA
@@ -261,43 +312,47 @@ def main():
                 break
             muterad = muterad.replace(gammal, ny, 1)
         if missad is not None:
+            #[[ En mutation som inte gar att applicera har inte provat
+            #   nagonting. Den ar UNCAUGHT, aven om den ar markerad svag. ]]
             print("  ??  %-48s KUNDE INTE MUTERAS (0 traffar i %s)"
                   % (namn, fil))
-            trasiga.append(namn)
+            klasser.append(klassa(namn, "EJ_MUTERAD"))
             continue
         skriv(fil, muterad)
         try:
             status, fel = kor()
         finally:
             aterstall()
-        if status == "ROTT":
+        klass = klassa(namn, status)
+        klasser.append(klass)
+        if klass == RED and status == "ROTT":
             print("  ok  %-48s ROTT (%d fel)" % (namn, len(fel)))
             print("      -> %s" % fel[0][:90])
-        elif status == "KRASCH":
+        elif klass == RED:
             print("  ok  %-48s ROTT (krasch — sviten faller pa exitkoden)" % namn)
             print("      -> %s" % fel[0].replace("\n", " ")[:90])
-        elif "(svag" in namn:
-            #[[ Redovisad, inte gomd. Se noten vid F1/F2: de tacker
-            #   varandra, och F1F2 ar mutationen som visar att
-            #   skyddet faktiskt mats. ]]
-            print("  --  %-48s GRONT (kand svag — tacks av den andra sparren)"
-                  % namn)
+        elif klass == ACCEPTED_GREEN:
+            #[[ Redovisad, inte gomd — och INTE fangad. Se noten vid
+            #   F1/F2: de tacker varandra, och F1F2 ar mutationen som
+            #   visar att skyddet faktiskt mats. ]]
+            print("  --  %-48s GRONT (ACCEPTED_GREEN — kand svag, tacks av "
+                  "den andra sparren)" % namn)
         else:
             print("  XX  %-48s %s — provet fangade inte mutationen"
                   % (namn, status))
             if status == "BYGGFEL":
                 print("      %s" % fel[0].replace("\n", " ")[:160])
-            trasiga.append(namn)
 
     status, fel = kor()
     print("\nEfter aterstallning av kallorna: %s" % status)
     if status != "GRONT":
         for f in fel[:5]:
             print("      %s" % f)
-        trasiga.append("aterstallning")
-    fangade = len(FALS) - len([t for t in trasiga if t != "aterstallning"])
-    print("\nRESULTAT: %d av %d mutationer fangades" % (fangade, len(FALS)))
-    return 1 if trasiga else 0
+    rader, kod = sammanfatta(klasser, status == "GRONT")
+    print("")
+    for rad in rader:
+        print(rad)
+    return kod
 
 
 if __name__ == "__main__":

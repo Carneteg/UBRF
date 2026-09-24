@@ -79,6 +79,13 @@ if ! python3 ../tools/testa-kolla-generisk-hast.py; then
   echo "GRINDPROVET FOR GENERISK HAST MISSLYCKADES"
   exit 1
 fi
+# #264 FALSIFIER_REPORTING_FIX: falsifieraren raknade accepterat grona
+# mutationer som fangade, och siffran hamnade i en rapport. Provet kor
+# rakningen med stubbad korning -- ingen kallfil skrivs om, ingen luau.
+if ! python3 ../tools/testa-falsifiera-forstaritten.py; then
+  echo "FALSIFIERARPROVET MISSLYCKADES"
+  exit 1
+fi
 # Grind 1 och 5 i kontraktet for Coach Banner (#244): Ugnetas gamla
 # nederpanel ska vara BORTA ur kallan, och bannern ska inte ha nagon
 # fordrojd tradd som kan komma tillbaka och slacka ny text. Samma skal
