@@ -1016,16 +1016,67 @@ do
 	UIS.TouchEnabled = false
 end
 
-print("\n── Skrivbordet rörs inte ──")
+print("\n── Ytan finns där den behövs, och bara där ──")
 
+--[[ ── DET GAMLA KONTRAKTET VAR «SKRIVBORDET RÖRS INTE» ────────────────
+
+	Här stod «utan pekskärm byggs ingenting», och det var regeln fram till
+	Tobias playtest 2026-09-24. Då visade sig regeln vara felet: på PC
+	fanns bara Robloxs egna världsbubblor, en vägg av dem framför hästen,
+	och ingen väg att se vad som faktiskt gick att göra.
+
+	Assertionen är ÄNDRAD, inte försvagad. Den nya regeln är vidare på ett
+	sätt och lika snäv på ett annat: ytan byggs där en lista hör hemma —
+	pekskärm, tangentbord eller mus — och inte annars. En spelare med
+	enbart handkontroll får den fortfarande inte, för där bär styrkorset
+	prompterna. ]]
 do
 	local UIS = game:GetService("UserInputService")
+	local tidigareT, tidigareK, tidigareM =
+		UIS.TouchEnabled, UIS.KeyboardEnabled, UIS.MouseEnabled
+
+	--[[ PC: tangentbord och mus, ingen pekskärm. ]]
 	UIS.TouchEnabled = false
+	UIS.KeyboardEnabled = true
+	UIS.MouseEnabled = true
 	N.stopp()
 	N.start()
 	N.satRider(false)
-	check("utan pekskärm byggs ingenting", #N._rader() == 0)
-	UIS.TouchEnabled = true
+	local rader = N._rader()
+	check("PÅ SKRIVBORDET BYGGS YTAN", #rader > 0,
+		("%d rader"):format(#rader))
+	--[[ OCH RADEN SÄGER VILKEN TANGENT SOM UTLÖSER HANDLINGEN, annars är
+	     listan en skylt utan väg vidare. Bänkens prompter sätter ingen
+	     `KeyboardKeyCode` — produktionens gör det — så provet sätter en
+	     och mäter att den syns, och att den som saknar tangent inte får
+	     någon påhittad. ]]
+	local pMed = nyPrompt("MedTangent", "Öppna", "Dörren",
+		Vector3.new(1, 0, 0))
+	pMed.KeyboardKeyCode = Enum.KeyCode.E
+	N.satRider(false)
+	local medRader = N._rader()
+	local hittad, utanPahitt = false, true
+	for _, t in ipairs(medRader) do
+		if string.find(t, "%[E%]") then hittad = true end
+		if string.find(t, "Led") and string.find(t, "%[") then utanPahitt = false end
+	end
+	check("och raden namnger sin tangent", hittad,
+		table.concat(medRader, " | "))
+	check("medan en prompt utan tangent inte får någon påhittad",
+		utanPahitt, table.concat(medRader, " | "))
+
+	--[[ HANDKONTROLL ENSAM: ingen lista, som förut. ]]
+	UIS.TouchEnabled = false
+	UIS.KeyboardEnabled = false
+	UIS.MouseEnabled = false
+	N.stopp()
+	N.start()
+	N.satRider(false)
+	check("men med enbart handkontroll byggs ingenting",
+		#N._rader() == 0, ("%d rader"):format(#N._rader()))
+
+	UIS.TouchEnabled, UIS.KeyboardEnabled, UIS.MouseEnabled =
+		tidigareT, tidigareK, tidigareM
 	N.stopp()
 end
 

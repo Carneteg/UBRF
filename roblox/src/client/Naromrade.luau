@@ -149,10 +149,33 @@ function Naromrade.kortEtikett(handling: string, objekt: string?): string
 	return ("%s — %s"):format(handling, table.concat(kvar, " "))
 end
 
+--[[ Tangenten som faktiskt utlöser prompten, för den som spelar med
+     tangentbord. Den läses ur prompten själv — ingen egen tabell som kan
+     glida isär från det som verkligen gäller. `Unknown` betyder att
+     prompten inte har någon tangent, och då står det ingen. ]]
+local function tangenttext(p: ProximityPrompt): string?
+	if not UserInputService.KeyboardEnabled then return nil end
+	local ok, kod = pcall(function() return p.KeyboardKeyCode end)
+	if not ok or kod == nil or kod == Enum.KeyCode.Unknown then return nil end
+	--[[ NAMNET LÄSES FÖRSIKTIGT. I motorn är `KeyboardKeyCode` ett
+	     `EnumItem` med `.Name`; provbänken modellerar `Enum.KeyCode.E`
+	     som strängen «E». `tostring` på ett EnumItem ger
+	     «Enum.KeyCode.E», vilket vore fel att visa för en spelare — så
+	     formen prövas i stället för att antas. ]]
+	if typeof(kod) == "EnumItem" then return kod.Name end
+	if type(kod) == "string" and kod ~= "" then return kod end
+	return nil
+end
+
 local function etikett(p: ProximityPrompt): string
 	local handling = p.ActionText
 	if handling == nil or handling == "" then handling = Sprak.t("interaktion.anvand") end
-	return Naromrade.kortEtikett(handling, p.ObjectText)
+	local text = Naromrade.kortEtikett(handling, p.ObjectText)
+	local tangent = tangenttext(p)
+	--[[ Tangenten sist och inom hakparenteser, så att den korta etiketten
+	     fortfarande är det man läser först. ]]
+	if tangent then text ..= "  [" .. tangent .. "]" end
+	return text
 end
 
 --[[ Var prompten sitter i världen. En prompt kan hänga i en `Attachment`
@@ -825,10 +848,37 @@ function Naromrade.satRider(v: boolean)
 	rita()
 end
 
+--[[ Har spelaren en yta där en lista hör hemma? Pekskärm sedan #246,
+     tangentbord och mus sedan #264. Handkontroll rörs fortfarande inte:
+     där bär styrkorset prompterna och en lista tar bara plats. ]]
+local function ytaBehovs(): boolean
+	return UserInputService.TouchEnabled
+		or UserInputService.KeyboardEnabled
+		or UserInputService.MouseEnabled
+end
+
 function Naromrade.start()
-	--[[ SKRIVBORDET RÖRS INTE. Utan pekskärm finns tangenterna, och en
-		extra knapplista hade bara tagit plats. ]]
-	if not UserInputService.TouchEnabled then return end
+	--[[ ── OCH SKRIVBORDET, SEDAN #264 ────────────────────────────────
+
+		Här stod «SKRIVBORDET RÖRS INTE. Utan pekskärm finns tangenterna,
+		och en extra knapplista hade bara tagit plats.» Det höll inte.
+
+		Tobias playtest 2026-09-24: en vägg av Robloxs egna världsbubblor
+		framför hästen — flera hästars utrustning och dörrar samtidigt —
+		och ingen väg att se vad som faktiskt gick att göra. Modulen bär
+		själv mätningen av varför, i noten vid knappvalet: ELVA prompter
+		inom räckhåll, sex delade `E`, och av dem visades EN.
+
+		«Tangenterna finns» är sant och otillräckligt: tangenten hjälper
+		inte den som inte ser vilken handling som ligger under den, eller
+		att det finns fem till bakom den som syns.
+
+		Listan gör samma sak på PC som på pekskärm — den visar vad som
+		går att göra just nu, i ett hörn, och släcker BARA de bubblor den
+		ersätter. Aktiveringen är oförändrad: raden går genom
+		`InputHoldBegin`, och tangenten fungerar som förut eftersom
+		`Style = Custom` bara tar Robloxs egen rityta, inte dess input. ]]
+	if not ytaBehovs() then return end
 	bygg()
 	if koppling then koppling:Disconnect() end
 	koppling = RunService.RenderStepped:Connect(function(dt)
