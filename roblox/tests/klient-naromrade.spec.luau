@@ -1272,7 +1272,15 @@ do
 	     Falsifieringen hittade det här hålet i PROVET, inte i koden:
 	     klampningen fanns men ingen mätning rörde den. ]]
 	N.satRider(false)
-	while N._sida() < select(2, N._sida()) do N._bladdra() end
+	--[[ BUNDEN LOOP MED FLIT. Skrivet som ett oandligt `while` hangde
+	     provet i stallet for att bli rott nar bladdringen stod
+	     stilla — och en timeout ar inget bevis for nagonting. Nu
+	     ar taket antalet sidor, och att vi faktiskt kom fram ar en
+	     egen matning. ]]
+	for _ = 1, select(2, N._sida()) do
+		if N._sida() >= select(2, N._sida()) then break end
+		N._bladdra()
+	end
 	local sistaSidan, antalSidor = N._sida()
 	check("hon står på sista sidan", sistaSidan == antalSidor and antalSidor > 1,
 		("%d av %d"):format(sistaSidan, antalSidor))
