@@ -6,7 +6,9 @@
 |---|---|
 | Aktiv gate | **First Playable closure — de maskinellt körbara resterna** |
 | Aktiv gren | `claude/gate2a-first-ride-20260919`, **PR #264** |
-| Head | `f4cecb8` (sessionskedjan levererad for review; se PR #264) |
+| Head | se senaste leveranskommentaren i PR #264 (undviker sjalvrefererande SHA) |
+| Aktiv order | **G8_INPUT_RECOVERY_AND_TEST_BUILD** — PR #264, kommentar `5807813997` |
+| Senaste produktbeslut | **Webb + Roblox, ingenting annat**, PR #264 kommentar `5806972193` |
 | Bas | `9c1ebeae7337bbfa138016811d9e380aad4ef3eb` (merge av Gate 1A / PR #262) |
 | Överordnad plan | issue #259 |
 | Builder | **Claude** |
