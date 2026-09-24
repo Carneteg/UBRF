@@ -502,6 +502,95 @@ do
 		("utan panel %d · med panel %d"):format(utan, med))
 	check("och utan panel är taket kanonens fem", utan == 5, ("%d"):format(utan))
 
+	--[[ ── ROBLOXS VÄNSTRA RÖRELSEKONTROLL ────────────────────────────
+
+		Uppmätt i Studios emulator 2026-09-24, regular 1179×819: hela
+		närområdesknappen (16,445..206,497) låg inuti
+		`DynamicThumbstickUIModifier`, en `ImageButton` på 572×607 vid
+		(−100, 254) med `InputSink.Activate`. Två sväljande ytor på samma
+		pixlar.
+
+		Provet bygger kontrollen som en `GuiButton` i en `TouchGui` under
+		`PlayerGui` — samma form som motorn, utan att låna dess namn.
+		Rättelsen letar efter KLASSEN, inte namnet, så provet gör det med. ]]
+	do
+		local function v2(x, y) return { X = x, Y = y } end
+		local function knapp(namn, x, y, b, h)
+			return { Name = namn, Visible = true, _barn = {},
+				AbsolutePosition = v2(x, y), AbsoluteSize = v2(b, h),
+				IsA = function(_, k) return k == "GuiButton" end,
+				GetDescendants = function() return {} end }
+		end
+		local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		--[[ Måtten är mätningens, skalade till samma yta som provet kör. ]]
+		local GUI_B, GUI_H = 1179, 761
+		local spak = knapp("RorelseYta", 0, 254, 472, 507)
+		local hopp = knapp("HoppYta", 1009, 551, 120, 120)
+		local tg = { Name = "TouchGui", _barn = { spak, hopp },
+			GetDescendants = function(self) return self._barn end,
+			FindFirstChild = function(self, sokt)
+				for _, b in ipairs(self._barn) do
+					if b.Name == sokt then return b end
+				end
+				return nil
+			end }
+
+		yta.AbsoluteSize = Vector3.new(GUI_B, GUI_H, 0)
+		PreparationController._satRutaForProv(nil)
+
+		--[[ KONTROLLEN FÖRST: utan kontrollträd ska ingenting ha ändrats,
+		     annars kan tystnaden nedan betyda «listan flyttade alltid». ]]
+		local x0, golv0 = N.blockvanster(), N.blockgolv()
+		check("KONTROLL: utan rörelsekontroll står blocket kvar nere till vänster",
+			x0 == 16 and golv0 == GUI_H,
+			("x=%d golv=%d"):format(x0, golv0))
+		local fore = N.radplatser()
+
+		table.insert(pg._barn, tg)
+		local ytaX1, ytaY0 = N.rorelseytan()
+		check("rörelseytan läses ur kontrollträdet, inte ur ett namn",
+			ytaX1 == 472 and ytaY0 == 254,
+			("x1=%s y0=%s"):format(tostring(ytaX1), tostring(ytaY0)))
+
+		--[[ HOPPKNAPPEN ÄR HÖGER OCH SKA INTE RÄKNAS IN. Räknades den med
+		     blev reservatet hela skärmens bredd och listan hemlös. ]]
+		check("och hoppknappen till höger räknas inte in", ytaX1 < GUI_B * 0.5,
+			("x1=%d av %d"):format(ytaX1, GUI_B))
+
+		local efter = N.radplatser()
+		local x1b, golv1 = N.blockvanster(), N.blockgolv()
+		local listTopp = golv1 - 16 - efter * (52 + 8)
+		local listBotten = golv1 - 16
+		check("BLOCKET LIGGER OVANFÖR RÖRELSEYTAN", listBotten <= ytaY0,
+			("underkant %d, ytans överkant %d"):format(listBotten, ytaY0))
+		check("och ingen rad hamnar utanför skärmen", listTopp >= 0,
+			("överkant %d"):format(listTopp))
+		check("och det finns fortfarande minst en rad", efter >= 1,
+			("%d rader (fore %d)"):format(efter, fore))
+		check("blocket står kvar i vänsterkanten när det ryms ovanför",
+			x1b == 16, ("x=%d"):format(x1b))
+
+		--[[ NÄR DET INTE RYMS UPPÅT ska blocket väja i sidled i stället
+		     för att försvinna. Kontrollen får här nästan hela höjden. ]]
+		local hog = knapp("HogRorelseYta", 0, 40, 472, 721)
+		tg._barn = { hog, hopp }
+		local trangX, trangGolv = N.blockvanster(), N.blockgolv()
+		check("TRÅNGT UPPÅT: blocket väjer i sidled i stället för att försvinna",
+			trangX > 472 and trangGolv == GUI_H,
+			("x=%d golv=%d"):format(trangX, trangGolv))
+		check("och det ligger till höger om rörelseytan",
+			trangX >= 472, ("x=%d mot ytans %d"):format(trangX, 472))
+
+		--[[ Städa: kontrollträdet bort, OCH latchen nollad. Den är
+		     sessionslång med flit, så utan det här läckte reservatet in i
+		     nästa provblock och tog kapaciteten där — sex mätningar föll
+		     på en städning som inte var en städning. ]]
+		for i = #pg._barn, 1, -1 do
+			if pg._barn[i] == tg then table.remove(pg._barn, i) end
+		end
+		N._glomKontrollForProv()
+	end
+
 	PreparationController._satRutaForProv(nil)
 	N.stopp()
 	UIS.TouchEnabled = false

@@ -497,16 +497,156 @@ end
 	en skärm spelaren ska kunna handla på, och nödvändiga handlingar måste
 	förbli åtkomliga — då är det panelen som får dela plats, inte listan som
 	försvinner. Prioriteringen i `nara` gör att den enda raden är rätt rad. ]]
+--[[ ── ROBLOXS VÄNSTRA RÖRELSEKONTROLL, SOM YTA ─────────────────────
+
+	Uppmätt 2026-09-24 i Studios enhetsemulator, regular 1179×819:
+
+	    DynamicThumbstickUIModifier  ImageButton  -100,254  572×607
+	    ThumbstickStart              ImageLabel     58,575  148×148
+	    JumpButton                   ImageButton  1009,551  120×120
+
+	Hela närområdesknappen (16,445..206,497) låg INUTI den första. Den
+	träffytan är fem gånger större än den synliga spaken, och den är en
+	`ImageButton` med `InputSink.Activate` — alltså dokumenterat sväljande.
+	Vår egen rad är en `TextButton`, också `Activate`. Två sväljande ytor
+	på exakt samma pixlar.
+
+	NAMNET ANVÄNDS INTE. `DynamicThumbstickFrame` är inget dokumenterat
+	barnnamn, och en rättelse som hänger på det går sönder tyst den dag
+	Roblox döper om det. Ytan läses i stället på det som ÄR dokumenterat:
+	`PlayerGui.TouchGui` är den container dokumentationen själv pekar ut
+	när den visar hur man placerar sig relativt hoppknappen, och
+	`GuiButton` är den dokumenterade formen för «sväljer aktiverings-
+	trycket» (`InputSink` har `Activate` som standard just där).
+
+	Vi tar alltså varje SYNLIG `GuiButton` i den containern vars mitt
+	ligger i skärmens vänstra halva, och unionen av deras rektanglar är
+	ytan listan ska hålla sig undan. Inga namn, ingen `CoreGui`, ingen
+	enhetsmodell.
+
+	`AbsolutePosition` är insetrelativ — samma rymd som vår egen ram,
+	eftersom båda ytorna har `IgnoreGuiInset = false`. De går därför att
+	jämföra rakt av. ]]
+--[[ Har vi någonsin sett en rörelsekontroll? Se noten vid fallbacken. ]]
+local kontrollSedd = false
+
+local RESERV_B = 0.42   -- andel av bredden, när kontrollträdet saknas
+local RESERV_H = 0.70   -- andel av höjden, räknat från nederkanten
+
+--[[ Latchen är sessionslång med flit, så provbänken måste kunna nollställa
+     den mellan block. Samma mönster som `_satRutaForProv` och
+     `_glomSessionForProv`: en uttryckligt provmärkt väg, inte en publik
+     knapp som produktionskoden kan råka trycka på. ]]
+function Naromrade._glomKontrollForProv()
+	kontrollSedd = false
+end
+
+--[[ Returnerar reservatet som `{x1, y0}`: högerkanten och överkanten i
+     gui-pixlar. Resten av rektangeln är ointressant — listan bor nere
+     till vänster, så det är bara de två kanterna den kan väja för. ]]
+function Naromrade.rorelseytan(): (number, number)
+	local g = gui
+	local bredd = if g and g.AbsoluteSize then g.AbsoluteSize.X else 0
+	local hojd = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
+	if bredd <= 0 or hojd <= 0 then return 0, math.huge end
+
+	local spelare = Players.LocalPlayer
+	local pg = spelare and spelare:FindFirstChildOfClass("PlayerGui")
+	local tg = pg and pg:FindFirstChild("TouchGui")
+	local hittade = false
+	local x1, y0 = 0, math.huge
+	if tg then
+		for _, d in ipairs(tg:GetDescendants()) do
+			if d:IsA("GuiButton") and d.Visible then
+				local a, b = d.AbsolutePosition, d.AbsoluteSize
+				if b.X > 0 and b.Y > 0 and (a.X + b.X * 0.5) < bredd * 0.5 then
+					hittade = true
+					x1 = math.max(x1, a.X + b.X)
+					y0 = math.min(y0, a.Y)
+				end
+			end
+		end
+	end
+	if hittade then
+		--[[ SEDD EN GANG RACKER. Se noten vid fallbacken nedan. ]]
+		kontrollSedd = true
+		return x1, y0
+	end
+
+	--[[ ── FALLBACK, OCH VARFÖR DEN ÄR LÅST TILL EN IAKTTAGELSE ──────
+
+	     Kontrollträdet kan saknas av tre helt olika skäl, och de får inte
+	     behandlas lika:
+
+	       1. det har ännu inte byggts, eller försvann en bildruta,
+	       2. Roblox har ändrat strukturen så att vi inte känner igen den,
+	       3. det finns inte på den här ytan alls — skrivbordet, och
+	          provbänken, där `TouchEnabled` kan vara satt utan att någon
+	          rörelsekontroll existerar.
+
+	     Ett rent `TouchEnabled`-villkor blandar ihop 3 med 1 och 2, och
+	     reserverar då en tredjedel av skärmen för en kontroll som aldrig
+	     kommer. Första versionen gjorde precis det och tog kapaciteten
+	     från listan i bänken: sju mätningar föll, bland dem «radkapaciteten
+	     är 2» som blev 1.
+
+	     Därför latchen: vi reserverar bara när vi FAKTISKT sett en
+	     rörelsekontroll den här sessionen. Då täcker fallbacken fall 1 och
+	     2 — kontrollen finns, vi ser den bara inte just nu — medan fall 3
+	     lämnar listan orörd. Andelarna kommer ur mätningen ovan
+	     (472/1179 ≈ 0,40 i sidled, 254/761 ≈ 0,33 uppifrån) med marginal. ]]
+	if not kontrollSedd then return 0, math.huge end
+	return bredd * RESERV_B, hojd * (1 - RESERV_H)
+end
+
 function Naromrade.radplatser(): number
 	local g = gui
 	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
 	if h <= 0 then return MAX_RADER end
-	local golv = h
-	local ruta = PreparationController.interaktionsruta()
-	if ruta and ruta.y0 then golv = math.min(golv, ruta.y0) end
+	local golv = Naromrade.blockgolv()
 	local ledigt = golv - KANT - LUFT
 	local n = math.floor(ledigt / (KNAPP_H + LUFT))
 	return math.clamp(n, 1, MAX_RADER)
+end
+
+--[[ ── VAR BLOCKET FÅR BO ──────────────────────────────────────────
+
+	Två villkor, och de kan inte slås ihop: skötselpanelen bor i samma
+	hörn och växer uppåt, och Robloxs rörelsekontroll ligger över samma
+	pixlar. Golvet är det lägsta av dem.
+
+	VÄJER I SIDLED FÖRST NÄR DET INTE GÅR UPPÅT. Att lyfta blocket över
+	kontrollen är den minsta ändringen och håller listan där spelaren
+	letar efter den. Ryms inte ens EN rad där flyttas blocket i stället
+	till höger om kontrollens högerkant och får sin nederkant tillbaka —
+	hellre en läsbar rad på ovanlig plats än en rad som inte går att
+	trycka på. Regeln «minst en rad, alltid» står kvar. ]]
+function Naromrade.blockgolv(): number
+	local g = gui
+	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
+	if h <= 0 then return 0 end
+	local golv = h
+	local ruta = PreparationController.interaktionsruta()
+	if ruta and ruta.y0 then golv = math.min(golv, ruta.y0) end
+	local _, ytaY0 = Naromrade.rorelseytan()
+	if ytaY0 < golv and Naromrade.blockvanster() == KANT then
+		golv = ytaY0
+	end
+	return golv
+end
+
+--[[ Blockets vänsterkant. `KANT` så länge det ryms en rad ovanför
+     rörelsekontrollen; annars strax till höger om den. ]]
+function Naromrade.blockvanster(): number
+	local g = gui
+	local h = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
+	if h <= 0 then return KANT end
+	local ytaX1, ytaY0 = Naromrade.rorelseytan()
+	if ytaY0 >= h then return KANT end
+	local ruta = PreparationController.interaktionsruta()
+	local tak = if ruta and ruta.y0 then math.min(ytaY0, ruta.y0) else ytaY0
+	if tak - KANT - LUFT >= KNAPP_H + LUFT then return KANT end
+	return math.max(KANT, ytaX1 + LUFT)
 end
 
 local function rita()
@@ -540,7 +680,13 @@ local function rita()
 	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
 	     kvar över panelen och äter tryck som inte hör listan till. ]]
 	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
-	f.Position = UDim2.new(0, KANT, 1, -(platser * (KNAPP_H + LUFT)) - KANT)
+	--[[ Blockets plats räknas, den står inte i en konstant: både
+	     skötselpanelen och Robloxs rörelsekontroll kan ta hörnet. ]]
+	local g = gui
+	local hojd = if g and g.AbsoluteSize then g.AbsoluteSize.Y else 0
+	local botten = math.min(Naromrade.blockgolv(), hojd) - KANT
+	local topp = botten - platser * (KNAPP_H + LUFT)
+	f.Position = UDim2.fromOffset(Naromrade.blockvanster(), math.max(0, topp))
 
 	--[[ ── EN PROMPT SOM SLÄCKS MÅSTE FÅ EN RAD ────────────────────
 
