@@ -808,9 +808,16 @@ do
 		Skillnaden som saknades är VARFÖR en prompt blev utan rad:
 
 		  · UTAN PLATS — dörrarna här. Handlingen gäller spelaren, listan
-		    räckte bara inte till. Att släcka den vore att stänga dörren
-		    igen. Den BEHÅLLER sin bubbla. Invarianten från 2026-09-21 är
-		    orörd.
+		    räckte bara inte till.
+
+		    I R2 behöll de sin bubbla, för listan hade ingen plats att
+		    erbjuda dem. Granskningen mätte priset — `rows=5
+		    nativeDoorPrompts=5` — och det var samma dubbla yta igen.
+
+		    I R3 BLÄDDRAR listan. Dörren har en väg in på nästa sida, och
+		    då får den också släckas. Invarianten från 2026-09-21 är
+		    orörd i sak: ingen prompt släcks utan väg in. Det som ändrats
+		    är att «väg in» inte längre betyder «syns just nu».
 
 		  · BORTVALD — grannhästarnas utrustning. Den gäller inte
 		    spelaren alls, och en bubbla för den är bara brus framför
@@ -829,19 +836,36 @@ do
 			table.insert(kvarNative, pr.Name)
 		end
 	end
-	local baraDorrar = #kvarNative == 2
-		and (kvarNative[1] == "DorrAPrompt" or kvarNative[1] == "DorrBPrompt")
-		and (kvarNative[2] == "DorrAPrompt" or kvarNative[2] == "DorrBPrompt")
-	check("DÖRRARNA som inte fick plats behåller sin bild — och bara de",
-		baraDorrar, ("%d behöll sin bild: %s"):format(#kvarNative,
+	check("INGEN ANDRA YTA: ingen av de sex behåller en infödd bubbla",
+		#kvarNative == 0, ("%d behöll sin bild: %s"):format(#kvarNative,
 			table.concat(kvarNative, ", ")))
+	--[[ Och dörrarna är inte borttappade — de ligger på sida två. ]]
+	local sidaNu, sidorNu = N._sida()
+	check("listan bläddrar, för fyra relevanta ryms inte på två rader",
+		sidorNu == 2 and sidaNu == 1,
+		("sida %d av %d"):format(sidaNu, sidorNu))
+	local naddaSex: { [any]: boolean } = {}
+	for _ = 1, sidorNu do
+		for _, p in ipairs(N._prompter()) do naddaSex[p] = true end
+		N._bladdra()
+	end
+	check("DÖRRARNA NÅS GENOM BLÄDDRINGEN — de är släckta, inte gömda",
+		naddaSex[dorr1] == true and naddaSex[dorr2] == true,
+		("A=%s B=%s"):format(tostring(naddaSex[dorr1]),
+			tostring(naddaSex[dorr2])))
+	--[[ GRANNHÄSTARNA är det som INTE ska gå att nå: bortvalda är
+	     bortvalda, och bläddringen får inte smuggla in dem igen. ]]
+	check("men grannhästarnas utrustning nås inte — bortvald är bortvald",
+		naddaSex[granne1] ~= true and naddaSex[granne2] ~= true,
+		("1=%s 2=%s"):format(tostring(naddaSex[granne1]),
+			tostring(naddaSex[granne2])))
 	local grannarSlackta = granne1.Style == Enum.ProximityPromptStyle.Custom
 		and granne2.Style == Enum.ProximityPromptStyle.Custom
 	check("GRANNHÄSTARNAS utrustning är släckt fast den inte fick någon rad",
 		grannarSlackta, ("%s / %s"):format(tostring(granne1.Style),
 			tostring(granne2.Style)))
-	check("registret rymmer raderna och de bortvalda — inte dörrarna",
-		N._slackta() == 4, ("%d"):format(N._slackta()))
+	check("registret rymmer allt relevant OCH de bortvalda — alla sex",
+		N._slackta() == 6, ("%d"):format(N._slackta()))
 
 	--[[ AKTIVERINGEN är orörd på en bortfiltrerad prompt. Att den inte
 	     syns är ett URVAL, inte ett hinder: rör spelaren dagens häst
@@ -870,7 +894,7 @@ do
 
 	rot.Position = Vector3.new(0, 0, 0)
 	N.satRider(false)
-	check("släckningen kommer tillbaka när hon gör det", N._slackta() == 4,
+	check("släckningen kommer tillbaka när hon gör det", N._slackta() == 6,
 		("%d"):format(N._slackta()))
 	N.stopp()
 	local efterStopp = true
@@ -1157,8 +1181,21 @@ end
 	gången rättades bara ordningen för «Rida nu». Orsaken låg kvar.
 
 	Taket är fem rader, och på en telefon ofta två eller tre. En
-	stallgång rymmer lätt fler prompter än så. Det här provet håller
-	invarianten: SLÄCKTA ska aldrig bli fler än RADERNA. ]]
+	stallgång rymmer lätt fler prompter än så.
+
+	INVARIANTEN HAR FÅTT SIN RIKTIGA FORM (R3 P2). Den löd «släckta ska
+	aldrig bli fler än raderna», och det var en PROXY för det som
+	egentligen gällde: ingen prompt får släckas utan en väg in. Proxyn
+	höll så länge den enda vägen in var en synlig rad.
+
+	Granskningen mätte vad proxyn kostade: `rows=5 nativeDoorPrompts=5`
+	med tio dörrar — listan plus väggen av bubblor, bara flyttad ett steg
+	upp. Listan bläddrar nu, så vägen in kan ligga på sida två.
+
+	Provet mäter därför NÅBARHETEN direkt: varje släckt prompt ska gå att
+	komma åt genom att bläddra. Det är ett strängare krav än det gamla,
+	inte ett svagare — proxyn kunde vara grön med en oåtkomlig prompt så
+	länge antalet stämde. ]]
 do
 	local UIS = game:GetService("UserInputService")
 	UIS.TouchEnabled = true
@@ -1182,26 +1219,73 @@ do
 	local slackta = N._slackta()
 	check("fler prompter än rader ryms — det är premissen",
 		#flock > rader, ("%d prompter, %d rader"):format(#flock, rader))
-	check("INGEN PROMPT SLÄCKS UTAN ATT FÅ EN RAD",
-		slackta <= rader,
-		("%d släckta mot %d rader"):format(slackta, rader))
 
-	--[[ Och det avgörande: var och en som tappat Roblox bild måste ha
-		en rad att tryckas på i stället. ]]
+	--[[ ── NÅBARHETEN, MÄTT GENOM ATT FAKTISKT BLÄDDRA ──────────────
+
+	     Vi går varvet runt i listan och samlar varje prompt som får en
+	     rad på vägen. Sedan jämförs den mängden med de släckta. Ingen
+	     bokföring, ingen intern tabell — samma väg en spelare har. ]]
+	local _, sidor = N._sida()
+	check("listan bläddrar — annars kan de nio inte nås",
+		sidor > 1, ("%d sidor"):format(sidor))
+	local nadda: { [any]: boolean } = {}
+	for _ = 1, sidor do
+		for _, p in ipairs(N._prompter()) do nadda[p] = true end
+		N._bladdra()
+	end
+	local startSida = N._sida()
+	check("och bläddringen går runt tillbaka till första sidan",
+		startSida == 1, ("%d"):format(startSida))
+
 	local utanVagIn = {}
 	for _, p in ipairs(flock) do
-		if p.Style == Enum.ProximityPromptStyle.Custom then
-			local harRad = false
-			for _, r in ipairs(N._rader()) do
-				if r == p or r == p.Name or r == p.ActionText then harRad = true end
-			end
-			if not harRad and slackta > rader then
-				table.insert(utanVagIn, p.Name)
-			end
+		if p.Style == Enum.ProximityPromptStyle.Custom and not nadda[p] then
+			table.insert(utanVagIn, p.Name)
 		end
 	end
-	check("ingen prompt står utan väg in", #utanVagIn == 0,
+	check("INGEN PROMPT SLÄCKS UTAN EN VÄG IN", #utanVagIn == 0,
 		table.concat(utanVagIn, " | "))
+	check("och alla nio nås — inte bara de som råkade rymmas",
+		(function()
+			for _, p in ipairs(flock) do
+				if not nadda[p] then return false end
+			end
+			return true
+		end)(), ("%d släckta"):format(slackta))
+	--[[ DEN ANDRA HALVAN AV ORDERN: ingen infödd bubbla kvar. ]]
+	local kvarNativeFlock = 0
+	for _, p in ipairs(flock) do
+		if p.Style ~= Enum.ProximityPromptStyle.Custom then
+			kvarNativeFlock += 1
+		end
+	end
+	check("OCH INGEN ANDRA YTA: noll infödda bubblor kvar",
+		kvarNativeFlock == 0, ("%d kvar"):format(kvarNativeFlock))
+
+	--[[ ── SIDAN MÅSTE KLAMPAS NÄR LISTAN KRYMPER ──────────────────
+
+	     Hon bläddrar till sista sidan och går sedan därifrån, eller
+	     handlingarna försvinner. Utan klampning blir hon kvar på en sida
+	     som inte finns längre — en tom lista mitt i stallet, utan att
+	     något är fel med världen.
+
+	     Falsifieringen hittade det här hålet i PROVET, inte i koden:
+	     klampningen fanns men ingen mätning rörde den. ]]
+	N.satRider(false)
+	while N._sida() < select(2, N._sida()) do N._bladdra() end
+	local sistaSidan, antalSidor = N._sida()
+	check("hon står på sista sidan", sistaSidan == antalSidor and antalSidor > 1,
+		("%d av %d"):format(sistaSidan, antalSidor))
+	--[[ Sex av de nio försvinner. ]]
+	for i = 4, 9 do
+		if flock[i].Parent then flock[i].Parent:Destroy() end
+	end
+	N.satRider(false)
+	local nuSida, nuSidor = N._sida()
+	check("SIDAN KLAMPAS — hon hamnar inte på en sida som inte finns",
+		nuSida <= nuSidor, ("%d av %d"):format(nuSida, nuSidor))
+	check("och listan visar faktiskt något",
+		#N._rader() > 0, ("%d rader"):format(#N._rader()))
 
 	for _, p in ipairs(flock) do
 		if p.Parent then p.Parent:Destroy() end
@@ -1417,6 +1501,191 @@ do
 	del3:Destroy()
 
 	del2:Destroy()
+	N.stopp()
+end
+
+--[[ ══ RADEN UNDER FINGRET FÅR INTE BYTA HANDLING (#264 R3 P1) ═════
+
+	Granskningen av 259b421 mätte:
+
+	    REVIEW_REORDER row1NowB=true stillHoldingA=true
+
+	Raderna är fem återanvända knappar. Ordningen kommer ur avståndet, så
+	när en närmare prompt dyker upp glider allt ett steg — och rad 1 får en
+	ny handling utan att den gamla lämnat listan. Kontrollen som fanns
+	prövade bara MEDLEMSKAP i listan och såg därför ingenting.
+
+	Följden: knappen visade B medan A fortfarande laddades, och en hålltid
+	som gick i mål hade utlöst den handling spelaren inte läste. Det är
+	värre än ett tappat håll — det är fel handling utförd.
+
+	Identiteten är tryck → RAD → PROMPT. Står inte samma prompt kvar på
+	samma rad avbryts hållet. Provet mäter båda halvorna: att raden
+	verkligen byter, och att hållet INTE följer med. ]]
+print("\n── Raden under fingret byter handling ──")
+do
+	for _, d in ipairs(workspace:GetChildren()) do d:Destroy() end
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local kar = Instance.new("Model")
+	kar.Name = "Spelare"
+	local rot = Instance.new("Part")
+	rot.Name = "HumanoidRootPart"
+	rot.Position = HAR
+	rot.Parent = kar
+	kar.Parent = workspace
+	Players.LocalPlayer.Character = kar
+	UIS.TouchEnabled = true
+	N.stopp()
+	N.start()
+
+	--[[ A ligger närmast och hamnar på rad 1. B ligger längre bort. ]]
+	local dorrA, delA = nyPrompt("DorrA", "Öppna", "A", Vector3.new(1, 0, 0), 8, 0.5)
+	local dorrB, delB = nyPrompt("DorrB", "Öppna", "B", Vector3.new(5, 0, 0), 8, 0.5)
+	local fyradeA, fyradeB = 0, 0
+	dorrA.Triggered:Connect(function() fyradeA += 1 end)
+	dorrB.Triggered:Connect(function() fyradeB += 1 end)
+	N.satRider(false)
+	check("REPRODUKTION: A står på rad 1", N._prompter()[1] == dorrA)
+
+	--[[ Fingret går ned på rad 1 — alltså på A. ]]
+	N._hallNed(1)
+	check("hållet ligger på A, från rad 1",
+		N._hallsNu() == dorrA and N._hallRad() == 1,
+		("rad=%s"):format(tostring(N._hallRad())))
+
+	--[[ B flyttar sig närmare och tar rad 1. Ingen av dem lämnar
+	     räckvidden — det är hela poängen med reproduktionen. ]]
+	delB.Position = Vector3.new(0.2, 0, 0)
+	N.satRider(false)
+	check("row1NowB: raden visar nu B", N._prompter()[1] == dorrB,
+		tostring(N._prompter()[1] and N._prompter()[1].Name))
+	check("och A är FORTFARANDE inom räckvidd — inte bortgången",
+		(function()
+			for _, p in ipairs(N._relevanta()) do
+				if p == dorrA then return true end
+			end
+			return false
+		end)())
+	check("stillHoldingA MÅSTE VARA FALSKT: hållet följde inte med",
+		N._hallsNu() == nil, tostring(N._hallsNu() and N._hallsNu().Name))
+
+	--[[ Och ingenting utlöses — varken den hon tryckte på eller den hon
+	     råkade få under fingret. ]]
+	local till = os.clock() + 0.6
+	while os.clock() < till do end
+	N._slappHall()
+	check("varken A eller B utlöses av ett avbrutet håll",
+		fyradeA == 0 and fyradeB == 0, ("A=%d B=%d"):format(fyradeA, fyradeB))
+
+	--[[ ── POSITIV KONTROLL ─────────────────────────────────────────
+
+	     Nollorna ovan får inte komma av att ingenting är kopplat. Ett
+	     håll som får ligga still på SIN rad ska fullbordas. ]]
+	N.satRider(false)
+	local iB = (function()
+		for i, p in ipairs(N._prompter()) do
+			if p == dorrB then return i end
+		end
+		return nil
+	end)()
+	check("B har en rad att hållas på", iB ~= nil, tostring(iB))
+	N._hallNed(iB)
+	local till2 = os.clock() + 0.6
+	while os.clock() < till2 do end
+	N._slappHall()
+	check("ETT OSTÖRT HÅLL FULLBORDAS", fyradeB == 1, ("%d"):format(fyradeB))
+
+	--[[ ── ETT SLÄPP FRÅN FEL RAD AVSLUTAR INTE ETT NYARE HÅLL ──────
+
+	     Alla fem knappar lever hela tiden. Ett `MouseLeave` som hinner
+	     efter att fingret börjat ett nytt håll på en annan rad skulle
+	     annars avbryta det nya. ]]
+	fyradeA, fyradeB = 0, 0
+	N.satRider(false)
+	local iA = (function()
+		for i, p in ipairs(N._prompter()) do
+			if p == dorrA then return i end
+		end
+		return nil
+	end)()
+	check("båda har var sin rad", iA ~= nil and iB ~= nil,
+		("A=%s B=%s"):format(tostring(iA), tostring(iB)))
+	N._hallNed(iA)
+	check("hållet ligger på A:s rad", N._hallRad() == iA)
+	--[[ En eftersläpande signal från B:s rad. ]]
+	N._slappHallFran(iB)
+	check("ETT SLÄPP FRÅN FEL RAD RÖR INTE HÅLLET",
+		N._hallsNu() == dorrA and N._hallRad() == iA,
+		tostring(N._hallsNu() and N._hallsNu().Name))
+	--[[ Och det egna släppet fungerar fortfarande. ]]
+	local till3 = os.clock() + 0.6
+	while os.clock() < till3 do end
+	N._slappHallFran(iA)
+	check("men släppet från RÄTT rad fullbordar hållet",
+		fyradeA == 1 and N._hallsNu() == nil, ("A=%d"):format(fyradeA))
+
+	--[[ ── OCH SAMMA SAK GENOM DE RIKTIGA KNAPPARNA ────────────────
+
+	     Mätningarna ovan går genom `_hallNed`/`_slappHallFran`. De mäter
+	     regeln, men inte att KNAPPARNA följer den — och det var där
+	     falsifieringen hittade en lucka: en mutation som kopplade varje
+	     knapps `MouseLeave` till ett villkorslöst `slappHall` gav noll
+	     röda, för inget prov rörde knapparna i det här läget.
+
+	     Här fyras signalerna på riktigt: fingret ligger på A:s knapp,
+	     och B:s knapp får ett eftersläpande `MouseLeave`. ]]
+	local function knappFor(i)
+		local function sok(nod, namn)
+			if type(nod) ~= "table" then return nil end
+			if nod.Name == namn then return nod end
+			for _, b in ipairs(nod._barn or {}) do
+				local t = sok(b, namn)
+				if t then return t end
+			end
+			return nil
+		end
+		local min = sok(game:GetService("Players").LocalPlayer._gui,
+			"UBRFNaromrade")
+		return min and sok(min, "Rad" .. i) or nil
+	end
+
+	fyradeA, fyradeB = 0, 0
+	N.satRider(false)
+	iA = (function()
+		for i, p in ipairs(N._prompter()) do
+			if p == dorrA then return i end
+		end
+		return nil
+	end)()
+	iB = (function()
+		for i, p in ipairs(N._prompter()) do
+			if p == dorrB then return i end
+		end
+		return nil
+	end)()
+	local knappA, knappB = knappFor(iA), knappFor(iB)
+	check("båda raderna finns som riktiga knappar",
+		knappA ~= nil and knappB ~= nil and iA ~= iB,
+		("A=%s B=%s"):format(tostring(iA), tostring(iB)))
+
+	knappA.MouseButton1Down:Fire()
+	check("knappen A började hållet", N._hallsNu() == dorrA)
+	--[[ Eftersläpande signaler från GRANNRADEN. ]]
+	knappB.MouseLeave:Fire()
+	knappB.MouseButton1Up:Fire()
+	check("EN GRANNRADS SLÄPP RÖR INTE A:S HÅLL",
+		N._hallsNu() == dorrA and N._hallRad() == iA,
+		tostring(N._hallsNu() and N._hallsNu().Name))
+	local till4 = os.clock() + 0.6
+	while os.clock() < till4 do end
+	knappA.MouseButton1Up:Fire()
+	check("och A:s egen knapp fullbordar hållet",
+		fyradeA == 1 and fyradeB == 0,
+		("A=%d B=%d"):format(fyradeA, fyradeB))
+
+	delA:Destroy()
+	delB:Destroy()
 	N.stopp()
 end
 

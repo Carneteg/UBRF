@@ -89,3 +89,53 @@ Ett nytt referensmaterial är redo för implementation när:
 4. verifieringsstatus är tydlig,
 5. eventuella licensvillkor finns i repo,
 6. tasken kan genomföras även om Google Drive är helt otillgängligt.
+
+## Hästmallen `k3` — proveniens och kvarstående osäkerhet (2026-09-24)
+
+Gäller `ServerStorage.HastVisualer.k3`, den modell hästarnas nät monteras
+ur. Statusen skrivs här i stället för i en PR-kommentar, eftersom det är
+en **källfråga** och inte en implementationsdetalj.
+
+### Vad som är belagt
+
+| fakta | källa |
+|---|---|
+| profilen `k3` anger `kalla = "Creator Store 5878963783 (jameesbound)"` | `roblox/src/shared/HorseCore/Riggprofiler.luau:39` |
+| profilens mått är avlästa ur modellen (`mankhojd = 5.78` studs, tackfästen ur dess egen inbyggda utrustning) | samma fil, noten ovanför `PROFILER` |
+| asset 5878963783 heter `horse`, `AssetTypeId 10` (Model), skapad av användaren `jameesbound` (id 1013626927) | `https://economy.roblox.com/v2/assets/5878963783/details`, hämtad 2026-09-24 |
+| assetens `Created` och `Updated` är båda `2020-10-26` | samma svar |
+| `IsPublicDomain: true`, `IsForSale: false`, `PriceInRobux: null` | samma svar |
+| modellen finns i startplacen `106030782437053`: 42 delar, 40 nät, 40 Motor6D, `rbxassetid://4863472026` m.fl. | Tobias öppnade placen 2026-09-24 |
+
+Hämtningen är gjord två gånger oberoende av varandra — av ChatGPT i
+granskningen av `259b421` och av Claude i R3 — med samma svar.
+
+### Vad som INTE är belagt
+
+1. **`IsPublicDomain` är inte en licensbestämning.** Fältet betyder att
+   assetet är fritt att ta i Roblox egen katalog, under Robloxs villkor.
+   Det säger ingenting om upphovsrätt utanför plattformen och får inte
+   skrivas om till CC0 eller «fri att använda». Ingen licenstext från
+   upphovspersonen finns i repot.
+2. **Att `k3` är den häst Tobias vill ha visuellt.** Det finns ett
+   tidigare material, `Horse Rigged All Gaits.blend`, och ingenting
+   binder ihop de två. De antas **inte** vara utbytbara.
+3. **Att kopian i startplacen är oförändrad** mot 5878963783. Att assetet
+   aldrig uppdaterats sedan 2020 gör det rimligt, men det är inte samma
+   sak som en jämförelse.
+
+### Vägen in i bygget
+
+Byggaren `tools/bygg-place.py` kan sedan 2026-09-24 bära ett `.rbxmx`-
+beroende med bevarade mesh-/textur-id, transformer, joints, PrimaryPart
+och kollisionsfritt omskrivna referenser — se `tools/testa-modellimport.py`.
+`tools/kolla-hastmodell.py` vaktar resultatet och slår på sig själv så
+snart `default.project.json` mappar modellen.
+
+**Kvarvarande blockerare:** själva filen. `k3` finns bara i startplacen,
+och den vägen ut kräver Studio. Se `[REFERENCE GAP]` nedan.
+
+- `[REFERENCE GAP]` `roblox/assets/hastvisualer-k3.rbxmx` saknas. Den
+  stödda vägen är att öppna startplacen i Studio och exportera modellen;
+  Studio-MCP rapporterade `{"instances":[],"multiplayerGroups":[]}` vid
+  försöket 2026-09-24, alltså ingen ansluten Studio att läsa ur.

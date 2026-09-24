@@ -77,6 +77,9 @@ local Naromrade = {}
 	44 px är golvet för en träffyta i `docs/KONTROLLMATRIS.md` regel 5.
 	52 ger marginal och är samma höjd som ridningens egna knappar i
 	`TouchControls`, så att de två ytorna känns som samma spel. ]]
+--[[ Bläddringsraden är avsiktligt LÅG: den är en väg vidare, inte en
+     handling, och ska inte konkurrera med raderna om blicken. ]]
+local BLADDRA_H = 26
 local KNAPP_H = 52
 local KNAPP_B = 190
 local LUFT = 8
@@ -94,10 +97,27 @@ local TAKT = 0.2
 local gui: ScreenGui? = nil
 local ram: Frame? = nil
 local rader: { TextButton } = {}
+local bladdra: TextButton? = nil
 local koppling: RBXScriptConnection? = nil
 local sedan = 0
 local rider = false
 local senaste: { ProximityPrompt } = {}
+--[[ ── BLÄDDRINGEN (R3 P2) ──────────────────────────────────────────
+
+     `sida` är vilken skärmfull av de relevanta handlingarna som står på
+     raderna just nu, och `relevanta` är hela den sorterade mängden.
+
+     Bakgrunden: listan visade så många den fick plats med och lät
+     resten behålla Robloxs egna världsbubblor. Granskningen mätte
+     `rows=5 nativeDoorPrompts=5` med tio dörrar — alltså precis den
+     dubbla ytan ordern förbjöd, bara flyttad ett steg upp.
+
+     Att i stället släcka det som inte fick plats vore den gamla
+     dörr-regressionen igen: släckt utan rad är omöjligt att använda.
+     Den tredje vägen är den här — allt relevant NÅS i listan, en sida i
+     taget — och då får allt relevant också släckas. ]]
+local sida = 1
+local relevanta: { ProximityPrompt } = {}
 --[[ #246 C: prompter vars EGNA UI vi släckt, och stilen de hade innan.
      Nyckeln är prompten själv, så att en som försvinner ur världen tas
      med av skräpsamlaren utan att lämna en post efter sig. ]]
@@ -311,8 +331,12 @@ end
 	URVALET STYR BÅDE RADERNA OCH SLÄCKNINGEN (rättelse #264). Raden här
 	sa förut motsatsen — att urvalet styr raderna men inte vilka bilder
 	som släcks. Det var det som gjorde dörren oanvändbar. Se noten ovan. ]]
-function Naromrade.nara(fran: Vector3, sok: { Instance },
-	minHast: string?, tak: number?): { ProximityPrompt }
+--[[ SORTERINGEN UTAN TAKET. Bruten ut i R3: listan bläddrar numera, och
+     då måste den veta vad som finns bortom första sidan. `nara` är kvar
+     precis som förut — sorteringen plus taket — så allt som redan
+     anropar den får samma svar. ]]
+function Naromrade.sorterade(fran: Vector3, sok: { Instance },
+	minHast: string?): { ProximityPrompt }
 	local alla = Naromrade.iRackvidd(fran, sok)
 	--[[ Nollställs per urval: en häst som gått ur räckvidd ska inte ligga
 	     kvar som bortvald och hållas släckt i evighet. ]]
@@ -370,8 +394,14 @@ function Naromrade.nara(fran: Vector3, sok: { Instance },
 		if handling[a] ~= handling[b] then return handling[a] < handling[b] end
 		return rang[a] < rang[b]
 	end)
-	--[[ Taket klipps EFTER sorteringen: det spelaren menar får aldrig
-		trängas bort av något som råkade hittas först. ]]
+	return ut
+end
+
+--[[ Sorteringen plus taket. Taket klipps EFTER sorteringen: det spelaren
+     menar får aldrig trängas bort av något som råkade hittas först. ]]
+function Naromrade.nara(fran: Vector3, sok: { Instance },
+	minHast: string?, tak: number?): { ProximityPrompt }
+	local ut = Naromrade.sorterade(fran, sok, minHast)
 	local n = math.max(1, math.min(tak or MAX_RADER, MAX_RADER))
 	while #ut > n do table.remove(ut) end
 	return ut
@@ -424,7 +454,7 @@ end
 	`InputHoldBegin` direkt, precis som en tangenttryckning.
 
 	Tappas målet, går det ur räckvidd eller rivs ytan släpps hållet
-	också — se `slappTappatHall` nedan, som `rita` kallar, och
+	också — se `provaHallet` nedan, som `rita` kallar, och
 	`slappHall` i `stopp`.
 
 	DEN HÄR NOTEN LJÖG I EN GRANSKNINGSRUNDA. Den beskrev släppet vid
@@ -434,38 +464,65 @@ end
 	inom räckhåll, och hade den nått sin `HoldDuration` hade den
 	utlösts från andra sidan stallet. Nu gör den det noten sa. ]]
 local hallsPrompt: ProximityPrompt? = nil
+--[[ VILKEN RAD trycket kom ifrån. Utan den är ett håll bara «någon
+     prompt», och raden under fingret kan bytas ut medan hållet pågår —
+     se `provaHallet`. ]]
+local hallRad: number? = nil
 
 local function slappHall()
 	local p = hallsPrompt
 	hallsPrompt = nil
+	hallRad = nil
 	if p ~= nil and p.Parent ~= nil then
 		pcall(function() p:InputHoldEnd() end)
 	end
 end
 
---[[ Håller vi något som inte längre går att hålla? Målet kan ha rivits
-     ur världen, gått ur räckvidd eller tappat sin rad. Då släpps hållet
-     — och eftersom `InputHoldEnd` bara utlöser när `HoldDuration` hunnit
-     gå, blir ett avbrutet håll INGEN handling. Det är hela poängen. ]]
-local function slappTappatHall(kvar: { ProximityPrompt })
+--[[ ── HÅLLET SITTER I EN RAD, INTE I EN LISTA ─────────────────────
+
+	Föregångaren hette `slappTappatHall` och prövade bara att den hållna
+	prompten fanns KVAR NÅGONSTANS i `senaste`. Granskningen visade vad
+	som glappade: raderna är återanvända knappar, och nästa ritning kan
+	ge rad 1 en helt annan prompt utan att den gamla lämnat listan.
+
+	    REVIEW_REORDER row1NowB=true stillHoldingA=true
+
+	Knappen under fingret visade då B medan A fortfarande höll på att
+	laddas. Spelaren såg en handling och höll på en annan — och en
+	hålltid som gick i mål hade utlöst den hon inte läste.
+
+	Identiteten är alltså tryck → RAD → PROMPT, inte tryck → prompt. Står
+	inte samma prompt kvar på SAMMA rad är hållet inte längre det spelaren
+	började, och då avbryts det. Eftersom `InputHoldEnd` bara utlöser när
+	`HoldDuration` hunnit gå blir ett avbrutet håll INGEN handling. ]]
+local function provaHallet()
 	local p = hallsPrompt
 	if p == nil then return end
+	--[[ En riven prompt ska inte skrivas på — bara glömmas. ]]
 	if p.Parent == nil then
 		hallsPrompt = nil
+		hallRad = nil
 		return
 	end
-	for _, q in ipairs(kvar) do
+	for _, q in ipairs(senaste) do
 		if q == p then return end
 	end
 	slappHall()
 end
 
-local function borjaHall(p: ProximityPrompt)
+--[[ Släpp bara det håll som började på DEN HÄR raden. ]]
+local function slappHallFran(rad: number)
+	if hallRad ~= rad then return end
+	slappHall()
+end
+
+local function borjaHall(p: ProximityPrompt, rad: number)
 	if p == nil or p.Parent == nil or not p.Enabled then return end
 	--[[ Ett håll i taget. Hinner ett nytt börja innan det förra släppts
 	     avslutas det förra först, annars läcker vi en öppen hållning. ]]
 	slappHall()
 	hallsPrompt = p
+	hallRad = rad
 	p:InputHoldBegin()
 end
 
@@ -527,6 +584,11 @@ function Naromrade._slackta(): number
 	return n
 end
 
+--[[ FRAMÅTDEKLARERAD. Bläddringsknappen i `bygg` ritar om listan, och
+     `rita` står längre ned — utan den här raden slöt knappen om en
+     GLOBAL `rita` som var nil, och första trycket kraschade. ]]
+local rita: () -> ()
+
 local function bygg()
 	if gui then return end
 	local spelare = Players.LocalPlayer
@@ -565,12 +627,40 @@ local function bygg()
 		     inte till att STARTA ett håll. ]]
 		b.MouseButton1Down:Connect(function()
 			local p = senaste[i]
-			if p then borjaHall(p) end
+			if p then borjaHall(p, i) end
 		end)
-		b.MouseButton1Up:Connect(function() slappHall() end)
-		b.MouseLeave:Connect(function() slappHall() end)
+		--[[ ETT SLÄPP FRÅN EN ANNAN RAD ÄR INTE VÅRT. Signalerna kommer
+		     från fem knappar som alla lever hela tiden; ett `MouseLeave`
+		     som hinner efter att ett nytt håll börjat på en annan rad
+		     skulle annars avsluta det nyare hållet. ]]
+		b.MouseButton1Up:Connect(function() slappHallFran(i) end)
+		b.MouseLeave:Connect(function() slappHallFran(i) end)
 		rader[i] = b
 	end
+
+	--[[ BLÄDDRINGSRADEN. Samma knapptyp och samma yta som raderna — den
+	     är en rad till, inte ett nytt UI-lager. Den fyrar på ett vanligt
+	     klick: att bläddra är inget man ska behöva hålla inne. ]]
+	local v = nyKnapp(0)
+	v.Name = "Bladdra"
+	v.Size = UDim2.fromOffset(KNAPP_B, BLADDRA_H)
+	v.TextSize = 13
+	v.BackgroundTransparency = 0.3
+	v.Visible = false
+	v.Parent = f
+	v.MouseButton1Click:Connect(function()
+		--[[ Ett håll som pågår hör till den sida vi lämnar. ]]
+		slappHall()
+		--[[ RUNT, inte in i en återvändsgränd. En lista som tar slut
+		     på sista sidan kräver att spelaren vet att hon ska gå
+		     tillbaka — och det finns ingen bakåtknapp. ]]
+		local platser = Naromrade.radplatser()
+		local sidor = if platser > 0
+			then math.max(1, math.ceil(#relevanta / platser)) else 1
+		sida = sida
+		rita()
+	end)
+	bladdra = v
 end
 
 --[[ ── HUR MÅNGA RADER RYMS? (#246 E) ──────────────────────────────────
@@ -796,7 +886,7 @@ function Naromrade.blockvanster(): number
 	return x or KANT
 end
 
-local function rita()
+rita = function()
 	local f = ram
 	if not f then return end
 	local spelare = Players.LocalPlayer
@@ -834,10 +924,22 @@ local function rita()
 	--[[ EN fråga, ett svar: vad blir rader. Det styr numera BÅDE listan
 	     och släckningen — se rättelsen längre ned. Tidigare fanns två
 	     mängder här, och att de kunde gå isär var hela felet. ]]
-	senaste = Naromrade.nara((rot :: BasePart).Position, { workspace },
-		minHast, platser)
+	--[[ Hela den sorterade mängden först; raderna får en sida av den. ]]
+	relevanta = Naromrade.sorterade((rot :: BasePart).Position, { workspace },
+		minHast)
+	local sidor = math.max(1, math.ceil(#relevanta / platser))
+	--[[ Sidan klampas varje ritning: listan krymper när hon går därifrån,
+	     och då får hon inte bli kvar på en sida som inte finns. ]]
+	if sida > sidor then sida = sidor end
+	if sida < 1 then sida = 1 end
+	senaste = {}
+	for i = 1, platser do
+		local k = (sida - 1) * platser + i
+		if relevanta[k] == nil then break end
+		senaste[i] = relevanta[k]
+	end
 	--[[ Först av allt: höll hon i något som inte längre finns i listan? ]]
-	slappTappatHall(senaste)
+	provaHallet()
 	--[[ Ramen följer antalet platser, så att den tomma ytan inte ligger
 	     kvar över panelen och äter tryck som inte hör listan till. ]]
 	f.Size = UDim2.fromOffset(KNAPP_B, platser * (KNAPP_H + LUFT))
@@ -895,8 +997,12 @@ local function rita()
 	     ersätter bubblan — OCH det som valts bort som en annan hästs sak.
 	     Allt annat behåller sin bubbla: en dörr som inte fick plats i
 	     listan ska fortfarande gå att öppna. ]]
+	--[[ ALLT RELEVANT släcks, inte bara den synliga sidan — för allt
+	     relevant HAR en väg in nu, genom bläddringen. Det är skillnaden
+	     mot den gamla regressionen: där släcktes saker som inte gick att
+	     nå, här släcks bara sådant som går att nå. ]]
 	local slacks: { [ProximityPrompt]: boolean } = {}
-	for _, p in ipairs(senaste) do slacks[p] = true end
+	for _, p in ipairs(relevanta) do slacks[p] = true end
 	for p in pairs(bortvalda) do slacks[p] = true end
 	for p in pairs(slackta) do
 		if not slacks[p] then tandIgen(p) end
@@ -912,11 +1018,46 @@ local function rita()
 			b.Visible = false
 		end
 	end
+
+	--[[ Bläddringsraden syns bara när den behövs, och den ligger OVANFÖR
+	     listan i stället för att äta en handlingsrad — på en liten skärm
+	     med bara en rad hade en stulen rad betytt noll handlingar. ]]
+	local bl = bladdra
+	if bl then
+		if sidor > 1 then
+			bl.Text = ("▾  Fler handlingar  ·  %d/%d"):format(sida, sidor)
+			bl.Position = UDim2.fromOffset(0, -(BLADDRA_H + LUFT))
+			bl.Visible = true
+		else
+			bl.Visible = false
+		end
+	end
 end
 
 --[[ Provets fönster in: vad står på skärmen just nu? ]]
 --[[ Radernas prompter i radordning. `_rader` ger texterna; provet som
      håller på en viss prompt behöver veta VILKEN rad den fick. ]]
+--[[ Provets vägar in i bläddringen. ]]
+function Naromrade._sida(): (number, number)
+	local platser = Naromrade.radplatser()
+	local sidor = if platser > 0
+		then math.max(1, math.ceil(#relevanta / platser)) else 1
+	return sida, sidor
+end
+
+function Naromrade._bladdra()
+	local v = bladdra
+	if v == nil or not v.Visible then return false end
+	v.MouseButton1Click:Fire()
+	return true
+end
+
+function Naromrade._relevanta(): { ProximityPrompt }
+	local ut = {}
+	for i, p in ipairs(relevanta) do ut[i] = p end
+	return ut
+end
+
 function Naromrade._prompter(): { ProximityPrompt }
 	local ut = {}
 	for i, p in ipairs(senaste) do ut[i] = p end
@@ -936,14 +1077,23 @@ end
 function Naromrade._tryckPa(i: number)
 	local p = senaste[i]
 	if p then
-		borjaHall(p)
-		slappHall()
+		borjaHall(p, i)
+		slappHallFran(i)
 	end
 end
 
 function Naromrade._hallNed(i: number)
 	local p = senaste[i]
-	if p then borjaHall(p) end
+	if p then borjaHall(p, i) end
+end
+
+--[[ Provets väg in i «ett släpp från fel rad». ]]
+function Naromrade._slappHallFran(i: number)
+	slappHallFran(i)
+end
+
+function Naromrade._hallRad(): number?
+	return hallRad
 end
 
 function Naromrade._slappHall()
@@ -1016,7 +1166,11 @@ function Naromrade.stopp()
 	end
 	ram = nil
 	rader = {}
+	bladdra = nil
 	senaste = {}
+	--[[ Nästa gång hon kommer hit börjar listan om från början. ]]
+	relevanta = {}
+	sida = 1
 end
 
 return Naromrade

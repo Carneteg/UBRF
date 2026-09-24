@@ -1,0 +1,52 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<!-- SYNTETISK MODELLFIXTUR for tools/testa-modellimport.py.
+	     Liten med flit, men bar allt som gor modellimporten svar:
+	       . tva delar med var sitt referent,
+	       . en SpecialMesh med MeshId och TextureId,
+	       . en Motor6D vars Part0/Part1 pekar PA delarna,
+	       . Model.PrimaryPart som pekar pa den ena,
+	       . en <Ref> som pekar utat (null).
+	     Referenterna heter RBX0/RBX1/RBX2/RBX3 MED FLIT: byggaren
+	     numrerar sina egna instanser likadant, och kollisionen ar precis
+	     det provet finns for att fanga. -->
+	<Item class="Model" referent="RBX0">
+		<Properties>
+			<string name="Name">ProvModell</string>
+			<Ref name="PrimaryPart">RBX1</Ref>
+		</Properties>
+		<Item class="Part" referent="RBX1">
+			<Properties>
+				<string name="Name">Bal</string>
+				<CoordinateFrame name="CFrame">
+					<X>1.5</X><Y>2.25</Y><Z>-3</Z>
+					<R00>1</R00><R01>0</R01><R02>0</R02>
+					<R10>0</R10><R11>1</R11><R12>0</R12>
+					<R20>0</R20><R21>0</R21><R22>1</R22>
+				</CoordinateFrame>
+				<Vector3 name="size"><X>2</X><Y>1</Y><Z>4</Z></Vector3>
+			</Properties>
+			<Item class="SpecialMesh" referent="RBX2">
+				<Properties>
+					<string name="Name">Nat</string>
+					<Content name="MeshId"><url>rbxassetid://4863472026</url></Content>
+					<Content name="TextureId"><url>rbxassetid://4863472127</url></Content>
+					<Vector3 name="Scale"><X>1</X><Y>1</Y><Z>1</Z></Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Part" referent="RBX3">
+			<Properties>
+				<string name="Name">Ben</string>
+				<Vector3 name="size"><X>1</X><Y>3</Y><Z>1</Z></Vector3>
+			</Properties>
+			<Item class="Motor6D" referent="RBX4">
+				<Properties>
+					<string name="Name">Hoft</string>
+					<Ref name="Part0">RBX1</Ref>
+					<Ref name="Part1">RBX3</Ref>
+					<Ref name="Parent">null</Ref>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+</roblox>
