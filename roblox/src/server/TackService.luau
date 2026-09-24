@@ -284,7 +284,38 @@ function TackService.satPa(player: Player, modell: Model?, typ: string,
 		Underlägget släpper INTE sadeln — det ligger under henne, och
 		spelaren bär sadeln vidare tills den är på. ]]
 	if BARBARA[typ] then
-		pcall(function() TackService.slappBuren(player, typ) end)
+		--[[ ── OCH UTFALLET PRÖVAS (#264) ─────────────────────────────
+
+			Här stod `pcall(function() TackService.slappBuren(...) end)`
+			och sedan `return true`. Bådadera kastades bort: `pcall`:s
+			eget `ok` och `slappBuren`:s returvärde. Gick släppet inte
+			fram svarade `satPa` ändå JA, och spelaren stod kvar med
+			sadeln i handen på en häst som var sadlad.
+
+			Tobias rapporterade precis det i sitt playtest 2026-09-24.
+			Delen på hästen och kopian i handen är två påståenden om
+			samma sak, och när de säger emot varandra får svaret inte
+			vara «klart».
+
+			Nejet är namngivet och läsbart, och tillståndet går att
+			återhämta: hästen ÄR sadlad, så ett nytt försök möter
+			`tack.redan_pa` och kan då släppa handen. Ingen tyst
+			klientdöljning, ingen framtvingad fullbordan. ]]
+		--[[ BARA OM HON FAKTISKT BÄR EN. `satPa` går också den
+		     automatiska vägen, där stallet lägger på utrustningen utan
+		     att någon hållit i den — då svarar `slappBuren` nej med
+		     rätta, för det fanns ingenting att släppa. Första rättelsen
+		     saknade det villkoret och gjorde 65 mätningar i
+		     `integration.spec` röda. ]]
+		local barFore = TackService.barBuren(player, typ) ~= nil
+		local ok, slapptes = pcall(function()
+			return TackService.slappBuren(player, typ)
+		end)
+		if barFore and not (ok and slapptes) then
+			warn(("[Tack] %s bär kvar sin %s trots att den sitter på hästen")
+				:format(player.Name, typ))
+			return false, "tack.bars_kvar"
+		end
 	end
 	return true
 end

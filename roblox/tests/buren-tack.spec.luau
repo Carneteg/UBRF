@@ -409,6 +409,68 @@ do
 		tom.status == "waiting_model" and tom.hastId == nil)
 end
 
+--[[ ══ ETT MISSLYCKAT SLÄPP FÅR INTE SVARA JA (#264) ═══════════════
+
+	Tobias rapporterade i sitt playtest 2026-09-24 att sadeln inte syntes
+	på hästen och att han bar den kvar. Källan bar hålet:
+
+	    if BARBARA[typ] then
+	        pcall(function() TackService.slappBuren(player, typ) end)
+	    end
+	    return true
+
+	Både `pcall`:s eget `ok` och `slappBuren`:s returvärde kastades bort,
+	och `satPa` svarade JA ändå. Delen på hästen och kopian i handen är
+	två påståenden om samma sak; säger de emot varandra får svaret inte
+	vara «klart».
+
+	Provet gör släppet omöjligt och mäter att svaret blir ett namngivet
+	nej i stället för en falsk framgång. Den positiva kontrollen står
+	kvar i blocket ovanför: ett lyckat släpp tömmer handen. ]]
+do
+	print("\n── Ett misslyckat släpp svarar inte ja ──")
+	local spelare, modell, hastId = nySession("Slapp", 9107)
+
+	--[[ Hon bär sadeln, precis som efter «Ta sadeln». ]]
+	--[[ Paret hämtas först, som i blocket ovanför: då bär hon sadeln
+	     vidare medan underlägget går på, och det är precis läget där
+	     släppet ska ske. ]]
+	GameplayService.valjPar(spelare, hastId)
+	GameplayService.moment(spelare, "iordning", "utr:1")
+	check("REPRODUKTION: hon bär sadeln",
+		TackService.barBuren(spelare, "sadel") == hastId,
+		tostring(TackService.barBuren(spelare, "sadel")))
+
+	--[[ Släppet görs omöjligt. Bara bänkens väg byts; produktionskoden
+	     är orörd. ]]
+	local riktigSlapp = TackService.slappBuren
+	TackService.slappBuren = function() return false end
+	local ok, skal = TackService.satPa(spelare, modell, "sadel", hastId, modell)
+	TackService.slappBuren = riktigSlapp
+
+	check("ETT MISSLYCKAT SLÄPP SVARAR INTE JA", ok == false,
+		("ok=%s skal=%s"):format(tostring(ok), tostring(skal)))
+	check("och nejet är namngivet och läsbart", skal == "tack.bars_kvar",
+		tostring(skal))
+	--[[ TILLSTÅNDET ÄR SYNLIGT OCH OFÖRÄNDRAT, inte tyst reparerat.
+	     Hästen ÄR sadlad och kopian ligger kvar i handen — det är en
+	     konflikt spelaren kan se och handla på, och nejet säger varför.
+
+	     JAG PROVADE ATT TÖMMA HANDEN HÄR och tog tillbaka det:
+	     `tack-fas2` håller en medveten regel om att ett NEJ aldrig får
+	     röra det spelaren håller i, och den regeln är riktig. Att
+	     smyga bort föremålet på ett avslag vore ett andra fel, inte en
+	     rättelse av det första. ]]
+	check("och hästen är faktiskt sadlad", TackService.sadlad(modell) == true)
+	local ok2, skal2 = TackService.satPa(spelare, modell, "sadel", hastId, modell)
+	check("ett nytt försök svarar «redan på» och rör inte handen",
+		ok2 == false and skal2 == "tack.redan_pa"
+			and TackService.barBuren(spelare, "sadel") == hastId,
+		("ok=%s skal=%s bär=%s"):format(tostring(ok2), tostring(skal2),
+			tostring(TackService.barBuren(spelare, "sadel"))))
+end
+
+
 if fails > 0 then
 	print(string.format("\n%d mätning(ar) föll.", fails))
 	local avsluta = (os :: any).exit

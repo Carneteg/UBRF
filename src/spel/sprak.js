@@ -331,6 +331,12 @@ const SPRAK = {
   "tack.okand_utrustning": { sv: "Sådan utrustning finns inte", en: "There is no such equipment" },
   /* Ett bygge som inte gick fram ska SÄGA det, inte tyst lämna en häst
      som ser osadlad ut men räknas som sadlad. */
+  // Delen kom pa hasten men kopian i handerna gick inte att slappa.
+  // satPa svarade tidigare true anda, och spelaren stod kvar med
+  // sadeln i handen pa en sadlad hast (#264, Tobias playtest).
+  "tack.bars_kvar": {
+    sv: "Den kom på plats, men du bär fortfarande en — försök igen",
+    en: "It went on, but you are still carrying one — try again" },
   "tack.kunde_inte_byggas": { sv: "Utrustningen kom inte på plats — försök igen",
     en: "The tack did not go on — try again" },
   /* UTRUSTNINGEN PÅ BOXFRONTEN. De tre nycklarna lades vid blockerare 5

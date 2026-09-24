@@ -649,6 +649,10 @@ Sprak.text = {
 		sv = "Sådan utrustning finns inte",
 		en = "There is no such equipment",
 	},
+	["tack.bars_kvar"] = {
+		sv = "Den kom på plats, men du bär fortfarande en — försök igen",
+		en = "It went on, but you are still carrying one — try again",
+	},
 	["tack.kunde_inte_byggas"] = {
 		sv = "Utrustningen kom inte på plats — försök igen",
 		en = "The tack did not go on — try again",
