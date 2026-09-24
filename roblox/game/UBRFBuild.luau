@@ -10,16 +10,26 @@
 	sitt eget commit-SHA, sa det faltet ligger alltid minst ett steg
 	efter. Gata aldrig pa det.
 
-	`kallor` ar antalet mappade kallfiler. Placen kan rakna om DET
+	`kallor` ar antalet mappade SKRIPTfiler. Placen kan rakna om DET
 	sjalv — instanser gar att rakna utan att lasa `Source`, vilket ett
-	spelskript inte far. Se Integritet.kallantal och punkt 9e. ]]
+	spelskript inte far. Se Integritet.kallantal och punkt 9e.
+
+	DET STOD 'kallfiler' HAR, OCH DET SLUTADE STAMMA (#264 R3). Nar
+	hastmallen mappades in blev antalet 79 medan placen bar 78
+	skriptobjekt, och punkt 9e foll i riktig motor: CRITICAL_STARTUP_
+	GATE gav FAIL och ingen spelare slapptes in. Grinden hade ratt —
+	talen gick isar — men den jamforde skript mot skript PLUS modell.
+
+	`modeller` ar de mappade filer som INTE ar Luau. De raknas for
+	sig, sa att en tappad modell fortfarande syns. Se punkt 9f. ]]
 return {
-	kallhash = "a5abb3f1603524e5e69ed43ffcbfb144ffc056af74fd1eb330da51442b926dc0",
+	kallhash = "b9e778c7154d0a525956143acba95792523ec93c1d22365d01cd35fc56ad0fa1",
 	lage = "rojo",
-	kallor = 79,
-	sha = "23c6cbe7a7652ef33af6ce5a93530c86765add55",
-	miljo_sha = "23c6cbe7a7652ef33af6ce5a93530c86765add55",
-	genererad = "2026-09-24T11:57:26Z",
+	kallor = 78,
+	modeller = 1,
+	sha = "ffd3c307acba578e6f99e7476221a2647caefddf",
+	miljo_sha = "ffd3c307acba578e6f99e7476221a2647caefddf",
+	genererad = "2026-09-24T12:07:16Z",
 	vag = "tools/bygg-identitet.py ur roblox/default.project.json",
 
 	--[[ Vad Rojo AGER per tjanst. Integritet.luau skiljer kallstyrt

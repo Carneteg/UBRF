@@ -197,7 +197,7 @@ def rojo_luau(agarskap):
     return "\n".join(rader)
 
 
-def modultext(hash_, sha, lage, antal, nu, agarskap, rotter):
+def modultext(hash_, sha, lage, antal, nu, agarskap, rotter, modeller=0):
     return (
         "--!strict\n"
         "--[[ GENERERAD av tools/bygg-identitet.py — andra inte har.\n"
@@ -211,13 +211,23 @@ def modultext(hash_, sha, lage, antal, nu, agarskap, rotter):
         "\tsitt eget commit-SHA, sa det faltet ligger alltid minst ett steg\n"
         "\tefter. Gata aldrig pa det.\n"
         "\n"
-        "\t`kallor` ar antalet mappade kallfiler. Placen kan rakna om DET\n"
+        "\t`kallor` ar antalet mappade SKRIPTfiler. Placen kan rakna om DET\n"
         "\tsjalv — instanser gar att rakna utan att lasa `Source`, vilket ett\n"
-        "\tspelskript inte far. Se Integritet.kallantal och punkt 9e. ]]\n"
+        "\tspelskript inte far. Se Integritet.kallantal och punkt 9e.\n"
+        "\n"
+        "\tDET STOD 'kallfiler' HAR, OCH DET SLUTADE STAMMA (#264 R3). Nar\n"
+        "\thastmallen mappades in blev antalet 79 medan placen bar 78\n"
+        "\tskriptobjekt, och punkt 9e foll i riktig motor: CRITICAL_STARTUP_\n"
+        "\tGATE gav FAIL och ingen spelare slapptes in. Grinden hade ratt —\n"
+        "\ttalen gick isar — men den jamforde skript mot skript PLUS modell.\n"
+        "\n"
+        "\t`modeller` ar de mappade filer som INTE ar Luau. De raknas for\n"
+        "\tsig, sa att en tappad modell fortfarande syns. Se punkt 9f. ]]\n"
         "return {\n"
         f'\tkallhash = "{hash_}",\n'
         f'\tlage = "{lage}",\n'
         f'\tkallor = {antal},\n'
+        f'\tmodeller = {modeller},\n'
         f'\tsha = "{sha}",\n'
         f'\tmiljo_sha = "{sha}",\n'
         f'\tgenererad = "{nu}",\n'
@@ -279,13 +289,19 @@ def main():
         print(f"build-identitet aktuell: {funnen}  ({len(filer)} kallfiler)")
         return 0
 
-    text = modultext(nu_hash, sha_nu(), args.lage, len(filer),
+    #[[ Skript och icke-skript raknas var for sig: placen kan rakna sina
+    #   LuaSourceContainer men en Model ar ingen sadan. Se punkt 9e/9f. ]]
+    skript = [par for par in filer
+              if par[1].suffix in (".luau", ".lua")]
+    ovrigt = [par for par in filer if par not in skript]
+    text = modultext(nu_hash, sha_nu(), args.lage, len(skript),
                      datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                      rojo_agarskap(projekt["tree"]),
-                     kallrotter(projekt["tree"]))
+                     kallrotter(projekt["tree"]), len(ovrigt))
     MAL.parent.mkdir(parents=True, exist_ok=True)
     MAL.write_text(text, encoding="utf-8")
-    print(f"{MAL.relative_to(ROT)}: kallhash {nu_hash} ur {len(filer)} filer")
+    print(f"{MAL.relative_to(ROT)}: kallhash {nu_hash} ur {len(filer)} filer "
+          f"({len(skript)} skript, {len(ovrigt)} ovriga)")
     return 0
 
 

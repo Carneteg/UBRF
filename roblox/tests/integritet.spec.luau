@@ -280,6 +280,70 @@ end
 	"kan inte mätas" — aldrig grön. Att en REDIGERAD fil glider igenom är
 	känt och står i modulens egen not; det försvaret ligger i
 	`bygg-identitet.py --kontrollera` i CI. ]]
+print("\n── 9f: placen bär lika många MODELLER som identiteten räknade ──")
+
+--[[ 9e räknar SKRIPT, för det är vad `LuaSourceContainer` är. När
+	hästmallen mappades in i #264 R3 räknade identiteten 79 mappade filer
+	mot placens 78 skriptobjekt. 9e föll i RIKTIG MOTOR,
+	CRITICAL_STARTUP_GATE gav FAIL, och ingen spelare släpptes in.
+
+	Grinden hade rätt i att talen gick isär — den jämförde bara skript
+	mot skript PLUS modell.
+
+	Modellerna räknas därför för sig. Utan den här raden vore en tappad
+	hästmall helt omätbar: ingen skriptkontroll ser den, placen startar
+	som vanligt, och varenda häst blir en låda — tyst. Det var precis det
+	felet Tobias rapporterade. ]]
+do
+	local SSt = game:GetService("ServerStorage")
+	local mapp = Instance.new("Folder")
+	mapp.Name = "ProvVisualer"
+	mapp.Parent = SSt
+	local mall = Instance.new("Model")
+	mall.Name = "provmall"
+	mall.Parent = mapp
+
+	local function identitetMed(modeller)
+		sattIdentitet({
+			kallhash = string.rep("c", 64), lage = "rojo", kallor = 0,
+			modeller = modeller,
+			rojo = { ServerStorage = { "ProvVisualer" } },
+			kallrotter = { "ServerStorage.ProvVisualer.provmall" },
+		})
+	end
+
+	identitetMed(1)
+	local r = matning("9f")
+	check("preflighten mäter 9f", r ~= nil, r and r.namn or "ingen 9f-rad")
+	check("rätt antal modeller ger grönt", r ~= nil and r.ok == true,
+		r and tostring(r.detalj) or "-")
+
+	--[[ MODELLEN FÖRSVINNER. Det är hela poängen: ingen skripträkning
+	     hade märkt det. ]]
+	mall:Destroy()
+	local r2 = matning("9f")
+	check("EN TAPPAD MODELL FÄLLER GRINDEN", r2 ~= nil and r2.ok == false,
+		r2 and tostring(r2.detalj) or "-")
+	check("och nejet säger vad placen har mot vad identiteten sa",
+		r2 ~= nil and string.find(tostring(r2.detalj), "placen har 0") ~= nil,
+		r2 and tostring(r2.detalj) or "-")
+
+	--[[ EN ÄLDRE IDENTITET utan fältet kan inte mätas — och då ska svaret
+	     vara just det, inte ett grönt som råkar stämma. ]]
+	sattIdentitet({
+		kallhash = string.rep("c", 64), lage = "rojo", kallor = 0,
+		rojo = { ServerStorage = { "ProvVisualer" } },
+		kallrotter = { "ServerStorage.ProvVisualer.provmall" },
+	})
+	local r3 = matning("9f")
+	check("en identitet utan fältet säger 'kan inte mätas'",
+		r3 ~= nil and string.find(tostring(r3.detalj), "kan inte mätas") ~= nil,
+		r3 and tostring(r3.detalj) or "-")
+
+	mapp:Destroy()
+	sattIdentitet(nil)
+end
+
 print("\n── 9e: placen bär lika många källor som identiteten räknade ──")
 
 do

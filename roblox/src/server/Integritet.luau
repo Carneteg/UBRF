@@ -407,6 +407,35 @@ function Integritet.kallantal(): number?
 	return antal
 end
 
+--[[ Modellerna bland källrötterna. En rot som INTE är ett skript är en
+	modell: `kallrotter` listar varje mappad instans, och de mappade
+	filerna är antingen Luau eller `.rbxmx`. Räknas de inte är en tappad
+	hästmall osynlig — placen startar, och varenda häst blir en låda. ]]
+function Integritet.modellantal(): number?
+	local id = Integritet.identitet()
+	if not id then return nil end
+	local rotter = (id :: any).kallrotter
+	if typeof(rotter) ~= "table" then return nil end
+	local antal = 0
+	for _, vag in ipairs(rotter) do
+		local nod: Instance? = nil
+		for led in tostring(vag):gmatch("[^%.]+") do
+			if nod == nil then
+				local ok, tjansten = pcall(game.GetService, game, led)
+				nod = if ok then tjansten else nil
+			else
+				nod = (nod :: Instance):FindFirstChild(led)
+			end
+			if nod == nil then break end
+		end
+		if nod ~= nil and not nod:IsA("LuaSourceContainer")
+				and not nod:IsA("Folder") then
+			antal += 1
+		end
+	end
+	return antal
+end
+
 --[[ Raderna som Preflighten lägger in. Samma form som dess egna: namn, ok,
 	detalj — så att specen kan läsa dem ur tjänstens utdata i stället för att
 	göra om villkoret. ]]
@@ -455,6 +484,30 @@ function Integritet.rader(): { Rad }
 		elseif faktisk == vantad then ("%d skriptobjekt"):format(faktisk)
 		else ("placen har %d, identiteten säger %d (%+d)"):format(
 			faktisk, vantad :: number, faktisk - (vantad :: number)))
+
+	--[[ ── 9f: OCH MODELLERNA (#264 R3) ────────────────────────────────
+
+		9e räknar SKRIPT, för det är vad `LuaSourceContainer` är. När
+		hästmallen mappades in räknade identiteten 79 mappade filer mot
+		placens 78 skriptobjekt, 9e föll, och CRITICAL_STARTUP_GATE
+		släppte inte in någon. Grinden hade rätt i att talen gick isär —
+		den jämförde bara fel saker.
+
+		Modellerna räknas därför för sig. Utan den här raden hade en
+		tappad hästmall varit helt omätbar: ingen skriptkontroll ser den,
+		och hästen går tillbaka till lådor tyst. Det var hela felet. ]]
+	local vantadeModeller = id and (id :: any).modeller
+	local faktiskaModeller = Integritet.modellantal()
+	rad("9f placen bär lika många modeller som identiteten räknade",
+		typeof(vantadeModeller) ~= "number"
+			or (faktiskaModeller ~= nil and faktiskaModeller == vantadeModeller),
+		if typeof(vantadeModeller) ~= "number" then
+			"identiteten bär inget modeller — äldre verktyg, kan inte mätas"
+		elseif faktiskaModeller == nil then "kan inte mätas"
+		elseif faktiskaModeller == vantadeModeller then
+			("%d modell(er)"):format(faktiskaModeller)
+		else ("placen har %d, identiteten säger %d"):format(
+			faktiskaModeller, vantadeModeller :: number))
 
 	--[[ 10. KVARGLÖMDA RUNTIME-ARTEFAKTER. ]]
 	local okanda = Integritet.okandaRemotes()
