@@ -1369,6 +1369,119 @@ do
 end
 
 
+--[[ ══ EN LEVANDE SVANS ÄR LEDARENS NULÄGE — OCH DEN GALLRAS ════════
+
+	Rond 9 och 10 provar den PAUSADE svansen: den får inte gallras. Den
+	andra halvan av samma regel — med LEVANDE logg är svansen ledarens
+	nuläge och SKA gallras — var obevakad. Auditen av #264 satte
+	`svansArNulaget = false` och hela sviten förblev grön.
+
+	Den är inte redundant med utgångsfönstret från rond 8. Fönstret
+	hindrar bara att NYA smulor antecknas medan han står kvar. En smula
+	han lade INNAN hon passerade planet — han har gått ut förbi dörren
+	och tillbaka in — ligger redan sist i kön:
+
+	    sparFullt = false
+	    [ gammal box , UTE , hans nuläge i boxen ]
+	         ^ledande    ^stopp      ^avslutande serie
+
+	Utan svansgallringen förbrukar hon UTE, han går ut normalt, och
+	hans gamla boxsmula väljs som delmål TILLBAKA IN. Uppmätt med
+	grenen neutraliserad: `samsta delmal plan −2,00`, med ledningen vid
+	liv — samma symptom som rond 8, i det läge rond 8:s prov inte når. ]]
+print("\n── En levande svans är ledarens nuläge och gallras ──")
+do
+	LedService._glomForProv()
+
+	local anl = Instance.new("Model")
+	anl.Name = "Anläggning"
+	anl.Parent = workspace
+	local DX, DZ = 1600, 900
+	local blad = Instance.new("Part")
+	blad.Name = "Boxdörr levande svans"
+	blad.Size = vec(0.18, 4.44, 3.60)
+	blad.CFrame = CFrame.new(vec(DX, 2.22, DZ))
+	blad:SetAttribute("UBRFBoxdorr", true)
+	blad:SetAttribute("Langs", "Z")
+	blad:SetAttribute("Utat", 1)
+	blad:SetAttribute("UBRFOppningsmitt", vec(DX, 2.22, DZ))
+	blad.Parent = anl
+
+	local hL, kroppL = nyHast("levandesvanshast", vec(DX - 5, 3, DZ))
+	local spL, rotL = nySpelare("Levandesvansryttare", vec(DX - 3, 3, DZ))
+	check("ledningen startar for levande-svans-provet",
+		LedService.borja(spL, hL, hL) == true)
+	local lL = LedService.lage(spL)
+	local function plan(p)
+		local li = LedService.lage(spL)
+		if not (li and li.dorrMitt and li.dorrUt) then return 0 end
+		return (p - li.dorrMitt):Dot(li.dorrUt) / M
+	end
+
+	--[[ 1 · Levande logg. Svansen är hans nuläge: han står PÅ den. ]]
+	local GAMMAL = vec(DX - 4.5, 3, DZ)
+	local UTE    = vec(DX + 3, 3, DZ + 8)
+	local SVANS  = vec(DX - 6, 3, DZ)
+	if lL then
+		table.clear(lL.spar)
+		for _, p in ipairs({ GAMMAL, UTE, SVANS }) do table.insert(lL.spar, p) end
+		lL.sparFullt = false
+	end
+	rotL.CFrame = CFrame.new(SVANS)
+	check("kon ar levande, med ledarens boxsidiga nulage sist",
+		lL ~= nil and lL.sparFullt == false and #lL.spar == 3
+			and plan(GAMMAL) < 0 and plan(UTE) > 0 and plan(SVANS) < 0,
+		("sparFullt=%s  plan %+.2f %+.2f %+.2f"):format(
+			tostring(lL and lL.sparFullt), plan(GAMMAL), plan(UTE), plan(SVANS)))
+
+	--[[ 2 · Hon passerar planet; han står kvar inne. ]]
+	kroppL.CFrame = CFrame.new(vec(DX + 4, 3, DZ))
+	LedService._steg(1 / 30)
+	lL = LedService.lage(spL)
+	check("hon raknas som ute ur boxen", LedService.harLamnatBox(spL) == true)
+
+	local svansKvar = false
+	for _, c in ipairs(lL and lL.spar or {}) do
+		if plan(c) <= 0 then svansKvar = true end
+	end
+	check("den levande svansen i boxen gallras vid utgangen",
+		not svansKvar,
+		("boxsidig smula kvar=%s; %d smulor"):format(
+			tostring(svansKvar), #(lL and lL.spar or {})))
+
+	--[[ 3 · Hon förbrukar UTE, han går ut normalt. Ingenting får peka
+		tillbaka in. ]]
+	kroppL.CFrame = CFrame.new(UTE)
+	LedService._steg(1 / 30)
+	kroppL.CFrame = CFrame.new(vec(DX + 4, 3, DZ + 2))
+	for _ = 1, 24 do
+		local nu = rotL.Position
+		local d = vec(DX + 6, 3, DZ + 4) - nu
+		if d.Magnitude > 0.05 then
+			rotL.CFrame = CFrame.new(nu + d.Unit * math.min(0.5 * M, d.Magnitude))
+		end
+		LedService._steg(1 / 30)
+	end
+	check("spelaren ar ute i gangen nu", plan(rotL.Position) > 0,
+		("spelarens plan %+.2f"):format(plan(rotL.Position)))
+	local varstaPlan = math.huge
+	for _ = 1, 16 do
+		LedService._steg(1 / 30)
+		local li = LedService.lage(spL)
+		if li and li.delmal then
+			local p = plan(li.delmal)
+			if p < varstaPlan then varstaPlan = p end
+		end
+	end
+	check("ledningen lever", LedService.lage(spL) ~= nil)
+	check("ledarens gamla boxsmula blir aldrig delmal tillbaka in",
+		varstaPlan > 0,
+		("samsta delmal plan %+.2f"):format(varstaPlan))
+
+	anl:Destroy()
+end
+
+
 --[[ ══ PAUSEN ANTECKNAR INTE — DET ÄR PROVENIENSENS GRUND ══════════
 
 	Rättelsen i rond 10 vilar på en enda egenskap: antecknandet sker

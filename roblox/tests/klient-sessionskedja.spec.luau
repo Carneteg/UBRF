@@ -548,6 +548,73 @@ do
 	bildrutor(1)
 end
 
+--[[ ── 4e. KARAKTÄREN FÖRSVINNER MEDAN EN ÅTERFÖRENING PÅGÅR ──────
+
+	4d bevisar summeringshalvan av rättelsen. Den andra halvan —
+	`avbrytAterforening()` i `CharacterRemoving` — var obevakad: auditen
+	av #264 tog bort raden och hela sviten förblev grön.
+
+	Återföreningens loop frågar BARA sin egen generation, `ride` och
+	serverns attribut. `sessionGen` ser den aldrig. En karaktär som dör
+	medan loopen väntar på en halvreplikerad rigg lämnar alltså
+	attributen orörda — servern har inte hunnit säga något — och utan
+	avbrottet sätter loopen upp en ritt åt en ryttare som inte finns.
+
+	Riggen läker i båda armarna, så det enda som kan stoppa
+	uppsittningen är avbrottet. KONTROLLEN först: samma kö utan
+	`CharacterRemoving` SKA sätta upp henne, annars mäter provet ingenting. ]]
+do
+	local function koadAterforening(): Model
+		local h = nyHast()
+		rivHumanoid(h)
+		__schemaPa(true)
+		Net.get("MountChanged").OnClientEvent:Fire(h, player)
+		bildrutor(1)
+		aterstallHumanoid(h)
+		return h
+	end
+
+	local function stada(h: Model)
+		__schemaTomKo()
+		bildrutor(1)
+		__schemaPa(false)
+		if h.Parent then h:Destroy() end
+		bildrutor(1)
+	end
+
+	do
+		local h = koadAterforening()
+		prova("KONTROLL: återföreningen är köad och ingen ritt pågår än",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		__schemaTomKo()
+		bildrutor(2)
+		prova("KONTROLL: en orörd återförening sätter upp henne",
+			LektionController.pagar() == true,
+			tostring(LektionController.pagar()))
+		--[[ Riv ritten innan nästa arm, med serverns eget besked. ]]
+		Net.get("MountChanged").OnClientEvent:Fire(h, nil)
+		bildrutor(1)
+		stada(h)
+	end
+
+	do
+		local h = koadAterforening()
+		--[[ KARAKTÄREN DÖR medan loopen står i kön. Attributen är
+		     orörda: servern säger fortfarande att hon rider. ]]
+		player.CharacterRemoving:Fire(player.Character)
+		__schemaTomKo()
+		bildrutor(2)
+		prova("EN DÖD KARAKTÄR AVBRYTER EN PÅGÅENDE ÅTERFÖRENING",
+			LektionController.pagar() == false,
+			tostring(LektionController.pagar()))
+		prova("och attributen sa fortfarande att hon red",
+			h:GetAttribute("RiderUserId") == player.UserId,
+			tostring(h:GetAttribute("RiderUserId")))
+		stada(h)
+	end
+end
+
 print("\n══ 5. HÄNDELSER FÖR ANDRA HÄSTAR, OCH SENA FÄLT ══════════")
 --[[ Uppföljningsreview av `b9a1362`. Två luckor kvar i 4a och 4c. ]]
 

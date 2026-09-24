@@ -322,6 +322,36 @@ end
 
 do
 	rent()
+	--[[ ETT LASFEL. Raden FINNS och ar giltig med noll pass, men
+		`GetAsync` kastar hela vagen genom retryn. `ladda` publicerar da
+		en sessionssave med noll pass — exakt samma bild som raden bar.
+
+		Det ar det enda fallet dar provet inte kan skilja utfallen at
+		pa saven: bada ar noll pass. Bara anmarkningen skiljer dem, och
+		det ar dar betroddLasning maste saga nej. Auditen av #264 fann
+		att grenen bara provades i `skotselpass` (`kanSpara = false`),
+		aldrig mot `galler`. ]]
+	local spelare = nySpelare("Lasfel")
+	__datastore._data["spelare_" .. spelare.UserId] =
+		{ v = Sparning.VERSION, pass = 0, rev = 3 }
+	__datastore.felLas = true
+	table.insert(Players._spelare, spelare)
+	Players.PlayerAdded:Fire(spelare)
+	__datastore.felLas = false
+	local save = SparService.save(spelare)
+	check("anmarkningen ar lasfel",
+		SparService.anmarkning(spelare) == "spar.lasfel",
+		tostring(SparService.anmarkning(spelare)))
+	check("laddningen har natt sitt slutlage", SparService.redo(spelare) == true)
+	check("och saven ser ut som noll pass",
+		save ~= nil and save.pass == 0, tostring(save and save.pass))
+	check("men ett lasfel ar INTE en betrodd lasning",
+		SparService.betroddLasning(spelare) == false)
+	check("och First Ride nekas vid lasfel", FR.galler(spelare) == false)
+end
+
+do
+	rent()
 	--[[ EN GILTIG RAD MED NOLL PASS. Den ska SLAPPAS igenom — annars
 		har rattelsen gjort First Ride omojlig for alla. ]]
 	local spelare = nySpelare("Giltig nolla")
