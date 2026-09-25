@@ -899,6 +899,37 @@ function HorseService._paHastrygg(modell: Model, karaktar: Model): boolean
 	return iSidled and (krot.Position.Y - rot.Position.Y) > AVSITT_RYGGHOJD
 end
 
+--[[ ══ #264 PLAYER_FLOW_CLOSURE_R5: EN FASTNAD LANDNING, INTE ETT HOPP ══════
+
+	Bevakningen såg bara «ovanför ryggen». Ett oberoende prov på 941ffeb,
+	genom riktiga tryMount/dismount, satte kroppen 6 studs ovanför hästroten
+	vid hjärtslag 25 med fart uppåt 12 och luftburet tillstånd — ett hopp —
+	och fick en tredje placering med fart 0.
+
+	Det uppmätta felet (c1946fe, R3) var en STÅENDE kropp på ryggen:
+	+4,2 studs, tillstånd Running, fart 0,7 → 0. En luftburen kropp — i
+	hopp eller fall, enligt sitt tillstånd eller sin vertikala fart — står
+	inte på hästen, och får fortsätta. Landar den sedan på ryggen inom
+	fönstret rättas den som förut. ]]
+local AVSITT_LUFTFART = 2.0
+
+function HorseService._luftburen(karaktar: Model): boolean
+	local hum = karaktar:FindFirstChildOfClass("Humanoid")
+	if hum then
+		local ok, tillstand = pcall(function() return hum:GetState() end)
+		if ok and (tillstand == Enum.HumanoidStateType.Freefall
+			or tillstand == Enum.HumanoidStateType.Jumping) then
+			return true
+		end
+	end
+	local krot = karaktar:FindFirstChild("HumanoidRootPart")
+	if krot and krot:IsA("BasePart")
+		and math.abs(krot.AssemblyLinearVelocity.Y) > AVSITT_LUFTFART then
+		return true
+	end
+	return false
+end
+
 local STANNA_HJARTSLAG = 8
 
 local function stannaHast(session: Session)
@@ -1156,7 +1187,8 @@ function HorseService.dismount(player: Player): (boolean, string?)
 				RunService.Heartbeat:Wait()
 				if not (character.Parent and modell.Parent) then return end
 				if (humanoid and humanoid.Sit) or byRider[player] then return end
-				if HorseService._paHastrygg(modell, character) then
+				if HorseService._paHastrygg(modell, character)
+					and not HorseService._luftburen(character) then
 					warn(("[Horse] avsittningen landade på %s — placeras igen"):format(modell.Name))
 					stallAv(modell, character)
 					omplacerad += 1

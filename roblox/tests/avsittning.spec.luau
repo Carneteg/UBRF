@@ -406,6 +406,59 @@ do
 		overtag == 3, string.format("%d övertaganden", overtag))
 end
 
+--[[ ══ 7d. LUFTBUREN RÖRELSE ÄR INTE EN FASTNAD LANDNING (#264 R5) ══════
+
+	Oberoende prov på 941ffeb, genom riktiga tryMount/dismount: efter de två
+	normala placeringarna, vid hjärtslag 25, står kroppen 6 studs ovanför
+	hästroten med fart uppåt 12 och i luftburet tillstånd — ett hopp. Den
+	gamla bevakningen såg bara «ovanför ryggen» och placerade en tredje gång
+	med fart 0. Ett legitimt hopp ska få fortsätta, med sin fart.
+
+	Samma takt som 7c. Två varianter: tillståndet säger luftburen (utan
+	fart), och farten säger det (utan tillstånd). ]]
+local function luftFall(namn, fart, tillstand)
+	krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+	khum:ChangeState(Enum.HumanoidStateType.Running)
+	check(namn .. ": uppsuttet", HorseService.tryMount(spelare, jack) == true)
+	local hb = RunService.Heartbeat
+	local egenWait = hb.Wait
+	local egenAgare = krot.SetNetworkOwner
+	local overtag, efter, slog = 0, nil :: number?, false
+	krot.SetNetworkOwner = function(self, agare)
+		if agare == nil then
+			overtag += 1
+			if overtag == 2 then efter = 0 end
+		end
+		return egenAgare(self, agare)
+	end
+	hb.Wait = function(self)
+		if efter ~= nil and not slog then
+			efter += 1
+			if efter == 25 then
+				slog = true
+				egenPivot(kar, rotJ.CFrame * CFrame.new(0, 6, 0))
+				krot.AssemblyLinearVelocity = Vector3.new(0, fart, 0)
+				if tillstand then khum:ChangeState(tillstand) end
+			end
+		end
+		return egenWait(self)
+	end
+	HorseService.dismount(spelare)
+	for _ = 1, 30 do hb:Wait() end
+	hb.Wait = egenWait
+	krot.SetNetworkOwner = egenAgare
+	check(namn .. ": hoppet spelades upp", slog)
+	check(namn .. ": INGEN TREDJE PLACERING under ett hopp", overtag == 2,
+		string.format("%d övertaganden", overtag))
+	check(namn .. ": och farten är bevarad",
+		math.abs(krot.AssemblyLinearVelocity.Y - fart) < 1e-6,
+		string.format("fart %.2f", krot.AssemblyLinearVelocity.Y))
+	khum:ChangeState(Enum.HumanoidStateType.Running)
+end
+luftFall("7d hopp (Freefall, fart 12)", 12, Enum.HumanoidStateType.Freefall)
+luftFall("7d tillstånd (Jumping, fart 0)", 0, Enum.HumanoidStateType.Jumping)
+luftFall("7d fart (inget tillstånd, fart 12)", 12, nil)
+
 --[[ ══ 8. ETT NEJ ÅTERFÖRENAR, OCH DAGSFORMEN REPLIKERAS ════════════
 
 	ChatGPT-re-review av `269bec5`, båda punkterna, genom de RIKTIGA
