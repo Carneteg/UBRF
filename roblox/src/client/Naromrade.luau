@@ -109,6 +109,10 @@ local MAX_VAL = 4
      steg, återkoppling och hjälpraden med luft. Används för att hålla hela
      panelen inom 40 % av den användbara höjden. ]]
 local PANEL_FAST = 150
+--[[ #264 R2: den minsta användbara panelen — rubrikraden och en
+     handlingsrad med panelens luft. Ryms den ovanför spaken står panelen
+     kvar till vänster; resten bläddras inuti. ]]
+local PANEL_MINSTA = 44 + KNAPP_H + 3 * LUFT + 20
 
 --[[ Hur ofta listan räknas om. Tätare än så kostar utan att synas;
 	glesare gör att en rad ligger kvar när man gått därifrån. ]]
@@ -370,7 +374,7 @@ end
 local FORKANT = 8
 
 local function skanna(fran: Vector3, sok: { Instance }, kant: number):
-	({ ProximityPrompt }, { ProximityPrompt })
+	({ ProximityPrompt }, { ProximityPrompt }, { [ProximityPrompt]: number })
 	local ut: { ProximityPrompt } = {}
 	local fore: { ProximityPrompt } = {}
 	local avstand: { [ProximityPrompt]: number } = {}
@@ -393,7 +397,7 @@ local function skanna(fran: Vector3, sok: { Instance }, kant: number):
 		end
 	end
 	table.sort(ut, function(a, b) return avstand[a] < avstand[b] end)
-	return ut, fore
+	return ut, fore, avstand
 end
 
 function Naromrade.iRackvidd(fran: Vector3, sok: { Instance }): { ProximityPrompt }
@@ -409,6 +413,11 @@ local forkant: { ProximityPrompt } = {}
 local function arDorr(p: ProximityPrompt): boolean
 	return p.Name == "DorrPrompt"
 end
+
+--[[ Den dörr panelen senast visade, och hur mycket närmare en annan måste
+     vara för att ta över. Se `sorterade`. ]]
+local valdDorr: ProximityPrompt? = nil
+local DORR_HYSTERES = 1.5
 
 --[[ ── PRIORITERINGEN ÄR SEMANTISK, INTE BARA AVSTÅND (#246 D) ─────────
 
@@ -441,7 +450,7 @@ end
      anropar den får samma svar. ]]
 function Naromrade.sorterade(fran: Vector3, sok: { Instance },
 	minHast: string?): { ProximityPrompt }
-	local alla, fore = skanna(fran, sok, FORKANT)
+	local alla, fore, avstand = skanna(fran, sok, FORKANT)
 	forkant = fore
 	--[[ Nollställs per urval: en häst som gått ur räckvidd ska inte ligga
 	     kvar som bortvald och hållas släckt i evighet. ]]
@@ -513,17 +522,31 @@ function Naromrade.sorterade(fran: Vector3, sok: { Instance },
 		vill öppna en av dem går fram till den, varpå den blir närmast.
 		Dörrarna sorterades nyss på avstånd inom sin klass, så den första
 		som påträffas är den närmaste. ]]
-	local dorrSedd = false
+	--[[ ── STABILT VAL (#264 PLAYABLE_UI_AND_DISMOUNT_R2) ───────────────
+		Den närmaste dörren bytte varje bildruta för den som stod mitt
+		emellan två: raden blinkade mellan två «Öppna — Dörr» som inte går
+		att skilja åt, och ett håll kunde avbrytas av bytet. Den dörr som
+		redan är vald behålls så länge den är inom räckhåll och inte mer än
+		`DORR_HYSTERES` studs längre bort än den närmaste. ]]
+	local narmast: ProximityPrompt? = nil
+	for _, d in ipairs(ut) do
+		if arDorr(d) then narmast = d break end
+	end
+	local vald = narmast
+	local forra = valdDorr
+	if narmast and forra and forra ~= narmast and avstand[forra] ~= nil
+		and table.find(ut, forra) ~= nil
+		and avstand[forra] <= avstand[narmast] + DORR_HYSTERES then
+		vald = forra
+	end
+	valdDorr = vald
 	local i = 1
 	while i <= #ut do
 		local d = ut[i]
-		if arDorr(d) then
-			if dorrSedd then
-				table.remove(ut, i)
-				bortvalda[d] = true
-				continue
-			end
-			dorrSedd = true
+		if arDorr(d) and d ~= vald then
+			table.remove(ut, i)
+			bortvalda[d] = true
+			continue
 		end
 		i += 1
 	end
@@ -1390,19 +1413,20 @@ function Naromrade.blockplats(): (number?, number?)
 	local ytaX1, ytaY0 = Naromrade.rorelseytan()
 	if ytaY0 >= h then return KANT, panelgolv end
 
-	--[[ OVANFÖR KRÄVER HELA PANELEN, inte en rad (#264, mätt i Studio).
-	     Villkoret var «ryms en knapp ovanför spaken». Panelen är ankrad i
-	     nederkanten och var 322 px hög med eftervårdens fråga; golvet låg
-	     på 212 — överkanten hamnade på −110, och rubrik, nästa steg och
-	     frågans första alternativ låg under toppfältet. Behovet är panelens
-	     uppmätta höjd; innan den är ritad den minsta panel som går att
-	     använda (fast del plus en rad). Ryms den inte gäller sidledsvalet. ]]
-	local behov = PANEL_FAST + KNAPP_H + LUFT
-	local ram = panelRam
-	local rs = ram and (ram :: any).AbsoluteSize
-	if rs ~= nil and type(rs.Y) == "number" and rs.Y > behov then behov = rs.Y end
+	--[[ ── PANELEN STANNAR TILL VÄNSTER (#264 PLAYABLE_UI_AND_DISMOUNT_R2) ──
+
+	     Förra rättelsen krävde att HELA panelen rymdes ovanför spaken och
+	     flyttade den annars i sidled — till mitten av bilden, framför häst
+	     och ryttare (mätt i Studio, iPad Air: x = 501 av 1179). Ordern:
+	     panelen står kvar till vänster och det som inte ryms bläddras eller
+	     rullas INUTI den ytan.
+
+	     Villkoret är därför den minsta panel som går att använda — rubriken
+	     och en handlingsrad. Panelens höjd begränsas sedan till det som
+	     finns ovanför spaken (`placera`, `radplatser`). Sidledsvalet står
+	     kvar som sista utväg för en skärm där inte ens det ryms. ]]
 	local tak = math.min(ytaY0, panelgolv)
-	if tak - KANT >= behov then return KANT, tak end
+	if tak - KANT >= PANEL_MINSTA then return KANT, tak end
 
 	local x = math.max(KANT, ytaX1 + LUFT)
 	if b > 0 and x + KNAPP_B <= b - KANT then return x, panelgolv end
@@ -1463,10 +1487,15 @@ local function placera(pn: Frame)
 			for _, vb in ipairs(valKnappar) do if vb.Visible then n += 1 end end
 			behov = n * (KNAPP_H + LUFT)
 		end
-		local budget = math.max(KNAPP_H, hojd * 0.4 - fast)
-		--[[ Minst två alternativ syns: en fråga med ett synligt svar ser ut
-		     som en ensam knapp. Resten rullar i sektionen. ]]
-		local golvVal = math.min(behov, 2 * KNAPP_H + LUFT)
+		--[[ #264 R2: taket är det som FINNS — 40 % av höjden, men aldrig mer
+		     än utrymmet ovanför golvet (spaken i pekläge). Panelen stannar
+		     till vänster och frågan rullar i stället. ]]
+		local takH = math.min(hojd * 0.4, math.max(botten, 0))
+		local budget = math.max(KNAPP_H, takH - fast)
+		--[[ Minst två alternativ syns när det finns plats: en fråga med ett
+		     synligt svar ser ut som en ensam knapp. Är ytan trång syns ett
+		     och ett halvt — halvan visar att sektionen rullar. ]]
+		local golvVal = math.min(behov, 2 * KNAPP_H + LUFT, math.max(math.floor(KNAPP_H * 1.5), budget))
 		vl.Size = UDim2.new(1, 0, 0, math.clamp(behov, golvVal, math.max(golvVal, budget)))
 	end
 end

@@ -614,11 +614,11 @@ do
 		check("blocket står kvar i vänsterkanten när det ryms ovanför",
 			x1b == 16, ("x=%d"):format(x1b))
 
-		--[[ HELA PANELEN, INTE RADERNA (#264, mätt i Studio): raderna ovan
-		     ryms, men panelen med rubrik, nästa steg och en fråga var 322 px
-		     hög — ankrad i golvet hamnade överkanten ovanför skärmen. Här
-		     får den ritade panelen samma höjd, och då ska den väja i sidled
-		     med nederkanten tillbaka i stället för att sticka upp. ]]
+		--[[ PANELEN STANNAR TILL VÄNSTER (#264 PLAYABLE_UI_AND_DISMOUNT_R2).
+		     Förra regeln flyttade en hög panel (322 px) i sidled — till mitten
+		     av bilden, framför häst och ryttare (mätt i Studio, x = 501).
+		     Ordern: den står kvar till vänster, ovanför spaken, och det som
+		     inte ryms bläddras inuti: färre rader, inte en annan plats. ]]
 		do
 			local pn
 			for _, b in ipairs(yta._barn or {}) do
@@ -629,17 +629,13 @@ do
 				local gammal = pn.AbsoluteSize
 				pn.AbsoluteSize = Vector3.new(300, 322, 0)
 				local hx, hgolv = N.blockplats()
-				check("HÖG PANEL: den ligger inte ovanför spaken när den inte ryms där",
-					hx ~= nil and hx >= 472 and hgolv == GUI_H,
+				check("HÖG PANEL: den står kvar till vänster, ovanför spaken",
+					hx == 16 and hgolv == ytaY0,
 					("x=%s golv=%s"):format(tostring(hx), tostring(hgolv)))
-				check("och hela panelen ligger då innanför skärmen",
-					hgolv ~= nil and hgolv - 16 - 322 >= 0,
-					("överkant %s"):format(tostring(hgolv and hgolv - 16 - 322)))
-				pn.AbsoluteSize = Vector3.new(300, 200, 0)
-				local lx, lgolv = N.blockplats()
-				check("LÅG PANEL: den som ryms ovanför spaken står kvar där",
-					lx == 16 and lgolv == ytaY0,
-					("x=%s golv=%s"):format(tostring(lx), tostring(lgolv)))
+				local platser = N.radplatser()
+				check("och det som inte ryms bläddras: raderna ryms under golvet",
+					platser >= 1 and 150 + platser * (44 + 6) <= ytaY0 - 16,
+					("%d rader under golvet %d"):format(platser, ytaY0))
 				pn.AbsoluteSize = gammal
 			end
 		end
@@ -1371,6 +1367,30 @@ do
 			#fel == 0, table.concat(fel, " | "))
 	end
 
+	--[[ R2: ETT HÅLL FÖLJER INTE MED TILL NÄSTA SIDA. Bläddringen byter
+	     vad rad 1 visar; ett håll som började på sidan förut ska avbrytas
+	     och aldrig fullbordas på det som nu står där. ]]
+	do
+		local fyrade = 0
+		for _, p in ipairs(flock) do
+			p.HoldDuration = 0.3
+			p.Triggered:Connect(function() fyrade += 1 end)
+		end
+		N.satRider(false)
+		local forsta = N._prompter()[1]
+		N._hallNed(1)
+		check("hållet ligger på rad 1:s prompt", N._hallsNu() == forsta and forsta ~= nil)
+		N._bladdra()
+		check("BLÄDDRINGEN AVBRÖT HÅLLET", N._hallsNu() == nil,
+			tostring(N._hallsNu() and N._hallsNu().Name))
+		local till = os.clock() + 0.5
+		while os.clock() < till do end
+		N._slappHall()
+		check("och ingenting fullbordades, varken den gamla eller den nya raden",
+			fyrade == 0, ("%d utlösta"):format(fyrade))
+		for _, p in ipairs(flock) do p.HoldDuration = 0 end
+	end
+
 	--[[ ── SIDAN MÅSTE KLAMPAS NÄR LISTAN KRYMPER ──────────────────
 
 	     Hon bläddrar till sista sidan och går sedan därifrån, eller
@@ -2079,6 +2099,33 @@ do
 			tostring(knapp.TextScaled), tostring(knapp.TextSize)) or "ingen rad")
 	if lang.Parent then lang.Parent:Destroy() end
 	N.stopp()
+end
+
+print("\n── R2: dörrvalet är stabilt ──")
+do
+	--[[ Den som står mitt emellan två dörrar ska inte få raden att hoppa
+	     mellan två likadana «Öppna — Dörr». Den valda dörren behålls tills
+	     en annan är tydligt närmare. ]]
+	local dA, delA = nyPrompt("Dorr", "Öppna", "Dörr A", Vector3.new(503, 0, 0))
+	local dB, delB = nyPrompt("Dorr", "Öppna", "Dörr B", Vector3.new(496.6, 0, 0))
+	local function dorren(fran)
+		local ut = {}
+		for _, p in ipairs(N.sorterade(fran, { workspace }, nil)) do
+			if p.Name == "DorrPrompt" then table.insert(ut, p) end
+		end
+		return ut
+	end
+	local a = dorren(Vector3.new(500, 0, 0))
+	check("EN dörr i taget, den närmaste", #a == 1 and a[1] == dA,
+		("%d dörrar"):format(#a))
+	local b = dorren(Vector3.new(499.4, 0, 0))
+	check("B lite närmare (0,8 studs): valet står kvar på A", #b == 1 and b[1] == dA,
+		b[1] and b[1].ObjectText or "ingen")
+	local c = dorren(Vector3.new(498.5, 0, 0))
+	check("B tydligt närmare (2,6 studs): valet går till B", #c == 1 and c[1] == dB,
+		c[1] and c[1].ObjectText or "ingen")
+	delA:Destroy()
+	delB:Destroy()
 end
 
 if fails > 0 then

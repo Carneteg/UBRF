@@ -667,6 +667,46 @@ do
 	visa(Preparation.STATUS.FORBEREDER)
 end
 
+print("\n── 3f. Frågans alternativ är lika före svaret (R2) ──")
+do
+	--[[ #264 PLAYABLE_UI_AND_DISMOUNT_R2: hälsningens första alternativ är
+	     fel men fick guldet (på tur), och fyndets rätta svar fick det
+	     (`not s.fel`) — båda talade om svaret innan spelaren valt. ]]
+	local NR = Naromrade
+	local function lyfta()
+		local ut = {}
+		for _, v in ipairs(NR._val()) do
+			if v.paTur then table.insert(ut, tostring(v.text)) end
+		end
+		return ut, #NR._val()
+	end
+	state = Preparation.nyState(HAST_ID, 1)
+	visa(Preparation.STATUS.FORBEREDER)
+	NR.satRider(false)
+	local harFel = false
+	for _, v in ipairs(NR._val()) do if v.fel then harFel = true end end
+	local l1, n1 = lyfta()
+	prova("HÄLSNINGEN: inget alternativ lyft före svaret",
+		harFel and n1 >= 2 and #l1 == 0,
+		("%d alternativ, lyfta: %s"):format(n1, table.concat(l1, " | ")))
+
+	local vy = Preparation.vy(state, Preparation.STATUS.FORBEREDER, rev + 1, "Trixie")
+	rev += 1
+	vy.svar = { { id = "fel1", namn = "Fel svar", fel = true }, { id = "ratt", namn = "Rätt svar", fel = false } }
+	vy.fynd = "Något i hoven"
+	PC.tillampa(vy)
+	NR.satRider(false)
+	local l2, n2 = lyfta()
+	prova("FYNDET: det rätta svaret lyfts inte fram",
+		n2 == 2 and #l2 == 0, ("%d alternativ, lyfta: %s"):format(n2, table.concat(l2, " | ")))
+
+	state = Preparation.nyState(HAST_ID, 1)
+	for _, fas in ipairs(Preparation.stegFaser()) do
+		if fas.id ~= "leda" then gorFas(fas.id) end
+	end
+	visa(Preparation.STATUS.FORBEREDER)
+end
+
 print("\n── 4. Ledningen: kortet är borta, nederkanten står kvar ──")
 
 do

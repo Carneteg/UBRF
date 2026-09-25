@@ -289,6 +289,12 @@ local anvandaNu: { [string]: boolean } = {}
 	till exempel fyndets svar — faller panelen tillbaka på den lägsta
 	`LayoutOrder`, vilket är det gamla beteendet. ]]
 local paTurNu: string? = nil
+--[[ #264 PLAYABLE_UI_AND_DISMOUNT_R2: står en FRÅGA på skärmen? Då lyfts
+     inget alternativ fram före svaret — varken serverns första moment
+     (hälsningens första, felaktiga svar fick guld) eller fyndets rätta svar
+     (`not s.fel`, som avslöjade det). Alla alternativ lika, återkopplingen
+     kommer efter svaret genom den befintliga undervisningen. ]]
+local fragaNu = false
 --[[ Är raderna ALTERNATIV (hälsningen, fyndets svar) i stället för en
 	checklista? Härleds ur vyn själv: ett `fel`-märkt alternativ finns bara
 	i en valfas. Används för att kalla hjälpen vid dess rätta namn — en
@@ -1315,6 +1321,7 @@ end
 --[[ En momentknapp. `skicka` är vad ett tryck gör — den skiljer sig mellan
 	skötselmoment, fyndsvar och eftervård, men RADEN är densamma. ]]
 local function momentRad(m: any, ordning: number, paTur: boolean, skicka: () -> ())
+	if fragaNu then paTur = false end
 	local knapp = momentRader[m.id]
 	if not knapp then
 		knapp = Instance.new("TextButton")
@@ -1720,6 +1727,7 @@ function rita(vy: any)
 		inte har är samma sak som ingen tur alls, men den syns senare och
 		är svårare att läsa. ]]
 	paTurNu, arValNu, allaNu = nil, false, false
+	fragaNu = false
 	table.clear(panelVal)
 	table.clear(panelSteg)
 	panelHastnamn = if type(vy.hastnamn) == "string" then vy.hastnamn else nil
@@ -1767,6 +1775,7 @@ function rita(vy: any)
 			raka motsatsen till ordern: en handling, ja, men inte spelarens
 			egen. Här väger alternativen tyngre än höjden. ]]
 		arValNu, allaNu = true, true
+		fragaNu = true
 		for i, s in ipairs(vy.svar) do
 			anvanda[s.id] = true
 			momentRad(lokalt({ id = s.id, namn = s.namn, klar = false, fel = s.fel }),
@@ -1817,6 +1826,11 @@ function rita(vy: any)
 	local nasta = vy.nastaMoment
 	paTurNu = nasta
 	local momenttext = ""
+	--[[ En valfas är en fråga: den känns igen på att något alternativ är
+	     fel (`m.fel`), samma igenkänning som `arValNu` nedan. ]]
+	for _, m in ipairs(vy.moment or {}) do
+		if m.fel then fragaNu = true end
+	end
 	for i, m in ipairs(vy.moment or {}) do
 		anvanda[m.id] = true
 		if m.fel then arValNu = true end
