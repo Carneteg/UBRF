@@ -874,6 +874,21 @@ function HorseService._avsittningsplats(modell: Model, karaktar: Model): (CFrame
 	return nil, "avsitt.ingen_plats"
 end
 
+--[[ #264 R2: hur många hjärtslag efter den sena placeringen utfallet
+	kontrolleras, och vad "på hästryggen" betyder: roten inom hästens
+	fotavtryck i sidled och tydligt över hennes rot i höjd. ]]
+local AVSITT_KONTROLL = 10
+local AVSITT_RYGGHOJD = 1.5
+
+function HorseService._paHastrygg(modell: Model, karaktar: Model): boolean
+	local rot = modell.PrimaryPart or modell:FindFirstChild("HumanoidRootPart")
+	local krot = karaktar:FindFirstChild("HumanoidRootPart")
+	if not (rot and rot:IsA("BasePart") and krot and krot:IsA("BasePart")) then return false end
+	local lokal = rot.CFrame:PointToObjectSpace(krot.Position)
+	local iSidled = math.abs(lokal.X) <= rot.Size.X / 2 and math.abs(lokal.Z) <= rot.Size.Z / 2
+	return iSidled and (krot.Position.Y - rot.Position.Y) > AVSITT_RYGGHOJD
+end
+
 local STANNA_HJARTSLAG = 8
 
 local function stannaHast(session: Session)
@@ -1117,6 +1132,24 @@ function HorseService.dismount(player: Player): (boolean, string?)
 			if humanoid and humanoid.Sit then return end
 			if byRider[player] then return end
 			stallAv(modell, character)
+			--[[ #264 PLAYABLE_UI_AND_DISMOUNT_R2: KONTROLLERA UTFALLET.
+				Mätt i Studio (kandidat e5881dc, ren väg, mitt på banan):
+				1 av 5 avsittningar lämnade henne STÅENDE PÅ HÄSTRYGGEN —
+				servern såg roten 4,2 studs över hästens rot och
+				`FloorMaterial` = hästen, i minst 3 s. Orsaken är INTE
+				fastställd (det felande fallet hann inte loggas). I stället
+				för en gissning om orsaken prövas utfallet: står hon ovanpå
+				hästen en stund efter placeringen placeras hon en gång till,
+				och det loggas så att nästa körning ger belägg. ]]
+			for _ = 1, AVSITT_KONTROLL do
+				RunService.Heartbeat:Wait()
+				if not (character.Parent and modell.Parent) then return end
+				if (humanoid and humanoid.Sit) or byRider[player] then return end
+			end
+			if HorseService._paHastrygg(modell, character) then
+				warn(("[Horse] avsittningen landade på %s — placeras igen"):format(modell.Name))
+				stallAv(modell, character)
+			end
 		end)
 	end
 	return true, nil

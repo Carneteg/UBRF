@@ -316,6 +316,41 @@ check("och farten är nollad så hon inte slungas iväg",
 	krot.AssemblyLinearVelocity.Magnitude == 0,
 	tostring(krot.AssemblyLinearVelocity.Magnitude))
 
+--[[ ══ 7b. UTFALLET KONTROLLERAS (#264 PLAYABLE_UI_AND_DISMOUNT_R2) ════
+
+	Mätt i Studio: 1 av 5 avsittningar mitt på banan lämnade henne stående
+	på hästryggen — orsaken är inte fastställd. Här skrivs den SENA
+	placeringen över precis så som det såg ut: kroppen hamnar på ryggen
+	igen. Avsittningen ska se det och placera en gång till. ]]
+do
+	krot.CFrame = CFrame.new(rotJ.Position.X + 3, rotJ.Position.Y, rotJ.Position.Z)
+	local okUpp2 = HorseService.tryMount(spelare, jack)
+	check("uppsuttet igen inför provet", okUpp2 == true)
+	local n = 0
+	kar.PivotTo = function(self, cf)
+		n += 1
+		if n == 2 then
+			--[[ Den sena placeringen "tar inte": kroppen står på ryggen. ]]
+			return egenPivot(self, rotJ.CFrame * CFrame.new(0, 4.2, 0))
+		end
+		return egenPivot(self, cf)
+	end
+	HorseService.dismount(spelare)
+	kar.PivotTo = egenPivot
+	check("KONTROLLEN SÅG RYGGEN OCH PLACERADE IGEN", n == 3,
+		string.format("%d placeringar", n))
+	check("och hon står inte på hästryggen efteråt",
+		not HorseService._paHastrygg(jack, kar))
+	check("kontrollen känner igen ryggen när hon står där",
+		(function()
+			local fore = kar:GetPivot()
+			egenPivot(kar, rotJ.CFrame * CFrame.new(0, 4.2, 0))
+			local ja = HorseService._paHastrygg(jack, kar)
+			egenPivot(kar, fore)
+			return ja
+		end)())
+end
+
 --[[ ══ 8. ETT NEJ ÅTERFÖRENAR, OCH DAGSFORMEN REPLIKERAS ════════════
 
 	ChatGPT-re-review av `269bec5`, båda punkterna, genom de RIKTIGA
