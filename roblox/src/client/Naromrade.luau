@@ -690,6 +690,7 @@ local hallRad: number? = nil
      Se `motornSlutadeHall`. ]]
 local hallUtlost = false
 local hallOmstartad = false
+local hallSedan = 0
 
 --[[ Vilken prompt som laddas just nu, och sedan när — för fyllningen i
      raden. Sätts av radens eget håll OCH av motorns hållhändelser, så att
@@ -776,13 +777,25 @@ end
 	vi själva gjort startas aldrig om. ]]
 local function motornSlutadeHall(p: ProximityPrompt)
 	if p ~= hallsPrompt or hallUtlost or hallOmstartad then return end
-	if p.Parent == nil or not p.Enabled then return end
+	--[[ ETT FULLT HÅLL ÄR FÄRDIGT, INTE AVBRUTET. Mätt i Studio: motorn fyrar
+	     holdEnded FÖRE Triggered även när hållet lyckas. Hann hållet sin
+	     `HoldDuration` får det aldrig startas om — det hade gett en andra
+	     utlösning medan fingret ligger kvar. ]]
+	if os.clock() - hallSedan >= (p.HoldDuration or 0) - 0.02 then return end
 	hallOmstartad = true
-	if (p.HoldDuration or 0) > 0 then
-		fyllPrompt = p
-		fyllStart = os.clock()
-	end
-	pcall(function() p:InputHoldBegin() end)
+	--[[ EN BILDRUTA SENARE. Mätt i Studio: ett `InputHoldBegin` mitt i
+	     motorns egen avbrottshantering sväljs utan holdBegan; samma anrop
+	     0,3 s senare gav holdBegan och Triggered. ]]
+	task.defer(function()
+		task.wait()
+		if p ~= hallsPrompt or hallUtlost then return end
+		if p.Parent == nil or not p.Enabled then return end
+		if (p.HoldDuration or 0) > 0 then
+			fyllPrompt = p
+			fyllStart = os.clock()
+		end
+		pcall(function() p:InputHoldBegin() end)
+	end)
 end
 
 --[[ Släpp bara det håll som började på DEN HÄR raden. ]]
@@ -800,6 +813,7 @@ local function borjaHall(p: ProximityPrompt, rad: number)
 	hallRad = rad
 	hallUtlost = false
 	hallOmstartad = false
+	hallSedan = os.clock()
 	if (p.HoldDuration or 0) > 0 then
 		fyllPrompt = p
 		fyllStart = os.clock()

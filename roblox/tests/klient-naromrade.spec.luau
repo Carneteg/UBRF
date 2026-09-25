@@ -2301,6 +2301,18 @@ do
 	PPS.PromptButtonHoldEnded:Fire(led)
 	check("R4: ett håll vi själva släppt startas aldrig om", rawget(led, "_hallSedan") == nil)
 
+	--[[ Ett håll som hunnit HELA sin tid är färdigt. Mätt i Studio: motorn
+	     fyrar holdEnded FÖRE Triggered även vid ett lyckat håll. Det får
+	     aldrig startas om — då hade fingret utlöst en gång till. ]]
+	N._hallNed(iL)
+	local t0 = os.clock()
+	while os.clock() - t0 < (led.HoldDuration or 0) + 0.05 do end
+	rawset(led, "_hallSedan", nil)
+	PPS.PromptButtonHoldEnded:Fire(led)
+	check("R4: ETT FULLT HÅLL STARTAS INTE OM (holdEnded före Triggered)",
+		rawget(led, "_hallSedan") == nil)
+	N._slappHall()
+
 	dorr.Parent:Destroy()
 	led.Parent:Destroy()
 	yta.AbsoluteSize = foreStorlek
