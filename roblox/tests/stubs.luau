@@ -742,6 +742,22 @@ local __services = {
 		PromptShown = __signal(),
 		PromptHidden = __signal(),
 	},
+	--[[ #264 R5: `TextService:GetTextSize(text, storlek, font, ram)` finns i
+	     motorn (API-referensen). Bänken har ingen typsättare: varje tecken
+	     är en halv textstorlek bred och raderna bryts vid ramens bredd.
+	     Provet mäter att kroppen frågar texten, inte vilket typsnitt. ]]
+	TextService = {
+		GetTextSize = function(_, text, storlek, _font, ram)
+			local rader, bredast = 0, 0
+			for rad in string.gmatch(text .. "\n", "([^\n]*)\n") do
+				local bredd = #rad * storlek * 0.5
+				rader += math.max(1, math.ceil(bredd / math.max(1, ram.X)))
+				bredast = math.max(bredast, math.min(bredd, ram.X))
+			end
+			if text == "" then rader = 0 end
+			return Vector2.new(bredast, rader * storlek)
+		end,
+	},
 	UserInputService = {
 		_pad = {},
 		GetGamepadState = function(self) return self._pad end,

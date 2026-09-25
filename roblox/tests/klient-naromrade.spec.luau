@@ -2436,32 +2436,66 @@ do
 	lista.Visible = true
 	rubrikRad.AbsoluteSize = Vector3.new(300, 44, 0)
 	lista.AbsoluteSize = Vector3.new(300, 2 * 56 + 8, 0)
+	--[[ Motorns uppmätta låsning på 403adfb: etiketterna och layoutens
+	     innehåll var lika låga som kroppen (14 px), fast texten krävde två
+	     rader. Bänken återskapar det — layouten säger 14 — och kroppen ska
+	     ändå mätas ur texten. ]]
 	local krLay = kropp:FindFirstChildOfClass("UIListLayout")
-	krLay.AbsoluteContentSize = Vector3.new(280, 420, 0)
+	krLay.AbsoluteContentSize = Vector3.new(280, 14, 0)
+	local steg, ater, hjalp
+	for _, d in ipairs(kropp:GetDescendants()) do
+		if d.Name == "Steg" then steg = d end
+		if d.Name == "Aterkoppling" then ater = d end
+		if d.Name == "HjalpText" then hjalp = d end
+	end
+	for _, t in ipairs({ steg, ater, hjalp }) do t.AbsoluteSize = Vector3.new(280, 14, 0) end
+	local KORT = "Walk up from the side. Say her name before you touch her."
+	local langaSteg = {}
+	for i = 1, 30 do
+		table.insert(langaSteg, { namn = ("Steg %d: en lång rad om vad som ska göras, och varför"):format(i),
+			klar = i < 4, paTur = i == 4 })
+	end
+	local fejk = { rubrik = "Förbered", text = KORT, steg = langaSteg, totalt = 30, klara = 3,
+		hastnamn = "Blackrock Jack" }
+	local gamlaPanel, gamlaHast = PreparationController.panel, PreparationController.hastId
+	PreparationController.panel = function() return fejk end
+	PreparationController.hastId = function() return "hast1" end
+	local hk
+	for _, d in ipairs(pn:GetDescendants()) do if d.Name == "Hjalp" then hk = d end end
+	hk.MouseButton1Click:Fire()
 	pn.AbsoluteSize = Vector3.new(300, 150, 0)
 	N.satRider(false)
+	check("R5 KONTROLL: hjälpen är utfälld med lång text", hjalp.Visible == true
+		and #hjalp.Text > 1000, tostring(hjalp.Visible) .. " " .. #hjalp.Text)
 	local LUFT = 8
 	local kroppH = kropp.Size.Y.Offset
+	check("R5: hjälpens etikett får hela sin texthöjd, så att kroppen rullar i stället för att klippa",
+		hjalp.Size.Y.Offset >= 30 * 14, tostring(hjalp.Size.Y.Offset))
 	--[[ Utfyllnad 20 + barnen + ett mellanrum MELLAN varje par av barn. ]]
 	local hojd = 20 + 44 + LUFT + kroppH + LUFT + (2 * 56 + 8)
 	local tak = math.min(254 - 16 - 16, 761 * 0.4)
 	check("R5: LÅNG HJÄLP — HELA PANELEN RYMS UNDER TAKET",
 		hojd <= tak + 0.5, ("panel %.1f, tak %.1f"):format(hojd, tak))
 	check("R5: och kroppen rullar i stället för att växa",
-		kroppH < 420 and kropp.AutomaticCanvasSize == Enum.AutomaticSize.Y,
-		("kropp %.1f av 420"):format(kroppH))
+		kroppH < hjalp.Size.Y.Offset and kropp.AutomaticCanvasSize == Enum.AutomaticSize.Y,
+		("kropp %.1f av %d"):format(kroppH, hjalp.Size.Y.Offset))
 	local nederkant = pn.Position.Y.Offset
 	check("R5: överkanten ligger på skärmen", nederkant - hojd >= 0,
 		("överkant %.1f"):format(nederkant - hojd))
 	check("R5: och nederkanten ovanför rörelseytan", nederkant <= 254,
 		("nederkant %.1f"):format(nederkant))
 
-	--[[ Kort kropp och en rad: den tar bara sin egen höjd. ]]
+	--[[ Hjälpen infälld, en rad: instruktionen på två rader får två rader
+	     — fast motorns layout (14 px) låst sig på en. Det var felet. ]]
+	hk.MouseButton1Click:Fire()
 	lista.AbsoluteSize = Vector3.new(300, 56, 0)
-	krLay.AbsoluteContentSize = Vector3.new(280, 40, 0)
 	N.satRider(false)
-	check("R5: en kort kropp tar bara sin egen höjd", kropp.Size.Y.Offset == 40,
-		tostring(kropp.Size.Y.Offset))
+	check("R5 KONTROLL: hjälpen är infälld", hjalp.Visible == false)
+	check("R5: LÅSNINGEN — tvåradig instruktion får 28 px fast layouten säger 14",
+		kropp.Size.Y.Offset == 28 and steg.Size.Y.Offset == 28,
+		("kropp %s, steg %s"):format(tostring(kropp.Size.Y.Offset), tostring(steg.Size.Y.Offset)))
+
+	PreparationController.panel, PreparationController.hastId = gamlaPanel, gamlaHast
 
 	for i, b in ipairs(pg._barn) do if b == tg then table.remove(pg._barn, i) break end end
 	yta.AbsoluteSize = foreStorlek

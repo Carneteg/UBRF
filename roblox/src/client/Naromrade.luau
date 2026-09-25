@@ -1665,6 +1665,18 @@ local function placera(pn: Frame)
 		local c = lay and (lay :: any).AbsoluteContentSize
 		return if c and c.Y then c.Y else 0
 	end
+	local function textHojd(t: any): number
+		if not (t and t.Visible and t.Text ~= "") then return 0 end
+		local bredd = if t.AbsoluteSize then t.AbsoluteSize.X else 0
+		if bredd > 0 then
+			local ok, m = pcall(function()
+				return game:GetService("TextService"):GetTextSize(t.Text, t.TextSize, t.Font,
+					Vector2.new(bredd, 10000))
+			end)
+			if ok and m then return math.ceil(m.Y) end
+		end
+		return if t.AbsoluteSize then t.AbsoluteSize.Y else 0
+	end
 	local tak = math.max(0, math.min(math.max(0, ovanfor) - KANT, hojd * 0.4))
 	local rr = rubrikEtikett and rubrikEtikett.Parent
 	local fast = 20 + h(rr) + h(ram)
@@ -1686,10 +1698,22 @@ local function placera(pn: Frame)
 	local kr = kroppYta
 	local kroppH = 0
 	if kr then
-		local behov = innehall(kr)
-		if behov <= 0 then
-			behov = h(stegEtikett) + h(aterEtikett) + h(hjalpText)
+		--[[ Kroppens behov mäts ur TEXTEN, inte ur layouten. Uppmätt på
+		     403adfb: etiketternas AutomaticSize begränsas av kroppens egen
+		     höjd, så `AbsoluteContentSize` blev lika litet som kroppen var —
+		     14 px gav 14 px, och instruktionen klipptes efter en rad. Varje
+		     etikett får också sin mätta höjd som golv, så att en kropp som
+		     är lägre än texten verkligen rullar i stället för att klippa. ]]
+		local behov, n = 0, 0
+		for _, t in ipairs({ stegEtikett, aterEtikett, hjalpText } :: { any }) do
+			local th = textHojd(t)
+			if th > 0 then
+				t.Size = UDim2.new(1, 0, 0, th)
+				behov += th
+				n += 1
+			end
 		end
+		if n > 1 then behov += (n - 1) * LUFT end
 		local rum = tak - fast - fragaGolv - (if vl and vl.Visible then LUFT else 0) - LUFT
 		kroppH = math.clamp(behov, 0, math.max(0, rum))
 		kr.Size = UDim2.new(1, 0, 0, kroppH)
